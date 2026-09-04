@@ -89,6 +89,7 @@ import {
   nodeHistoryScanDeps,
   planDigestMigration,
 } from "./lint/green-command-digest.ts";
+import { parseNodeGenerationCiEvidence } from "./lint/node-generation-ci-policy.ts";
 import { computeOutstandingWork, outstandingSummaryLine } from "./lint/outstanding.ts";
 import {
   analyzeRelationImpact,
@@ -3398,58 +3399,76 @@ audit
   .description("Q0 Node-only Bun permanent-ban qualification audit")
   .requiredOption("--generation <path>", "sealed Node generation directory")
   .requiredOption("--f0c-evidence <path>", "F0c aggregate evidence JSON")
+  .requiredOption("--f0c-lane <path...>", "Linux and Windows F0c lane evidence JSON")
   .option("--receipt <path>", "write Q0 receipt JSON")
   .option("--json", "JSON output")
-  .action((opts: { generation: string; f0cEvidence: string; receipt?: string; json?: boolean }) => {
-    try {
-      const repoRoot = process.cwd();
-      const subjectRevision = execFileSync("git", ["rev-parse", "HEAD"], {
-        cwd: repoRoot,
-        encoding: "utf8",
-      }).trim();
-      const generation = verifyNodeGeneration(
-        repoRoot,
-        resolve(repoRoot, opts.generation),
-        subjectRevision,
-      );
-      const observer = new NodeOnlyProcessObserver();
-      const invocation = createNodeInvocation(generation, ["status", "--json"]);
-      observer.invoke(invocation, () => {
-        execFileSync(invocation.command, invocation.args, {
+  .action(
+    (opts: {
+      generation: string;
+      f0cEvidence: string;
+      f0cLane: string[];
+      receipt?: string;
+      json?: boolean;
+    }) => {
+      try {
+        const repoRoot = process.cwd();
+        const subjectRevision = execFileSync("git", ["rev-parse", "HEAD"], {
           cwd: repoRoot,
-          ...invocation.options,
-          stdio: "ignore",
-        });
-      });
-      const result = runNodeBanAudit({
-        repoRoot,
-        subjectRevision,
-        f0c: JSON.parse(readFileSync(opts.f0cEvidence, "utf8")) as NodeBanF0cAggregateBinding,
-        node: {
-          generation_id: generation.receipt.generation_id,
-          subject_revision: generation.receipt.subject_revision,
-          artifact_digest: `sha256:${generation.receipt.compiled_cli.sha256}`,
-          runtime: "node",
-        },
-        processObservations: observer.snapshot(),
-      });
-      if (opts.receipt)
-        writeFileSync(
-          resolve(repoRoot, opts.receipt),
-          `${JSON.stringify(result.receipt)}\n`,
-          "utf8",
+          encoding: "utf8",
+        }).trim();
+        const generation = verifyNodeGeneration(
+          repoRoot,
+          resolve(repoRoot, opts.generation),
+          subjectRevision,
         );
-      process.stdout.write(
-        opts.json
-          ? `${JSON.stringify(result.receipt, null, 2)}\n`
-          : `${nodeBanAuditMessages(result).join("\n")}\n`,
-      );
-      process.exitCode = result.receipt.qualification === "qualified" ? 0 : 1;
-    } catch (error) {
-      process.stderr.write(`node-ban-audit failed: ${String(error)}\n`);
-      process.exitCode = 2;
-    }
-  });
+        const observer = new NodeOnlyProcessObserver();
+        const invocation = createNodeInvocation(generation, ["status", "--json"]);
+        observer.invoke(invocation, () => {
+          execFileSync(invocation.command, invocation.args, {
+            cwd: repoRoot,
+            ...invocation.options,
+            stdio: "ignore",
+          });
+        });
+        const result = runNodeBanAudit({
+          repoRoot,
+          subjectRevision,
+          f0c: JSON.parse(readFileSync(opts.f0cEvidence, "utf8")) as NodeBanF0cAggregateBinding,
+          node: {
+            generation_id: generation.receipt.generation_id,
+            subject_revision: generation.receipt.subject_revision,
+            artifact_digest: `sha256:${generation.receipt.compiled_cli.sha256}`,
+            receipt_digest: generation.receipt.receipt_digest,
+            runtime: "node",
+          },
+          f0cLanes: opts.f0cLane.map((path) => {
+            const evidence = parseNodeGenerationCiEvidence(
+              JSON.parse(readFileSync(resolve(repoRoot, path), "utf8")),
+            );
+            if (!evidence) throw new Error("invalid F0c lane evidence");
+            return evidence;
+          }),
+          processObservations: observer.snapshot(),
+          observedScopes: ["status"],
+        });
+        if (opts.receipt)
+          writeFileSync(
+            resolve(repoRoot, opts.receipt),
+            `${JSON.stringify(result.receipt)}\n`,
+            "utf8",
+          );
+        process.stdout.write(
+          opts.json
+            ? `${JSON.stringify(result.receipt, null, 2)}\n`
+            : `${nodeBanAuditMessages(result).join("\n")}\n`,
+        );
+        process.exitCode = result.receipt.qualification === "qualified" ? 0 : 1;
+      } catch (error) {
+        process.stderr.write(`node-ban-audit failed: ${String(error)}\n`);
+        process.exitCode = 2;
+      }
+    },
+  );
 
 audit
   .command("quality")

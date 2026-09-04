@@ -3,6 +3,22 @@ import { basename } from "node:path";
 const forbiddenExecutable = /^(?:bun|bunx|tsx|bash|sh|powershell|pwsh|cmd)$/i;
 const forbiddenArgument = /^(?:bun|bunx|tsx)(?:\.(?:cmd|exe|bat))?$/i;
 
+export const RUNTIME_IMAGE_SCOPES = [
+  "status",
+  "doctor",
+  "test",
+  "hook",
+  "descendant",
+  "download",
+] as const;
+export type RuntimeImageScope = (typeof RUNTIME_IMAGE_SCOPES)[number];
+
+export function missingRuntimeImageScopes(
+  observed: readonly RuntimeImageScope[],
+): RuntimeImageScope[] {
+  return RUNTIME_IMAGE_SCOPES.filter((scope) => !new Set(observed).has(scope));
+}
+
 export interface RuntimeImageProcessObservation {
   readonly command: string;
   readonly args: readonly string[];

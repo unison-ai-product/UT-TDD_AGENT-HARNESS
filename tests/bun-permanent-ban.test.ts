@@ -6,7 +6,7 @@ import {
   type NodeBanDocuments,
   type NodeBanF0cAggregateBinding,
   type NodeBanGenerationBinding,
-  runNodeBanAudit,
+  runNodeBanAudit as runNodeBanAuditBase,
   verifyNodeBanAuditReceipt,
 } from "../src/lint/bun-permanent-ban.ts";
 import { NodeOnlyProcessObserver } from "../src/runtime/runtime-image-observer.ts";
@@ -27,8 +27,39 @@ const node: NodeBanGenerationBinding = {
   generation_id: "node-q0-generation",
   subject_revision: subjectRevision,
   artifact_digest: artifactDigest,
+  receipt_digest: "d".repeat(64),
   runtime: "node",
 };
+const f0cLanes = [
+  {
+    schema_version: "node-generation-ci.v1" as const,
+    lane: "linux" as const,
+    generation_id: f0c.generation_id,
+    sealed_generation_id: "node-linux",
+    artifact_digest: artifactDigest,
+    subject_revision: subjectRevision,
+    workflow_revision: subjectRevision,
+    run_id: f0c.run_id,
+    run_attempt: f0c.run_attempt,
+    conclusion: "success" as const,
+  },
+  {
+    schema_version: "node-generation-ci.v1" as const,
+    lane: "windows" as const,
+    generation_id: f0c.generation_id,
+    sealed_generation_id: "node-windows",
+    artifact_digest: artifactDigest,
+    subject_revision: subjectRevision,
+    workflow_revision: subjectRevision,
+    run_id: f0c.run_id,
+    run_attempt: f0c.run_attempt,
+    conclusion: "success" as const,
+  },
+];
+const observedScopes = ["status", "doctor", "test", "hook", "descendant", "download"] as const;
+const runNodeBanAudit = (
+  input: Omit<Parameters<typeof runNodeBanAuditBase>[0], "f0cLanes" | "observedScopes">,
+) => runNodeBanAuditBase({ ...input, f0cLanes, observedScopes });
 
 const cleanWorkflow = `name: clean\non: {pull_request: {types: [opened]}}\npermissions: {}\nconcurrency: clean\njobs: {build: {runs-on: ubuntu-latest, steps: []}}\n`;
 const cleanDocuments = (): NodeBanDocuments => ({
@@ -53,6 +84,7 @@ const cleanDocuments = (): NodeBanDocuments => ({
     packageLock: JSON.stringify({ lockfileVersion: 3, packages: { "": {} } }),
     nodeVersion: "24.13.0",
   },
+  debtBaseline: "schema_version: bun-migration-debt.v1\ninventory: []\n",
 });
 
 const nodeObservation = () => {
@@ -106,6 +138,30 @@ describe("Q0 Node-only Bun qualification", () => {
         processObservations: [nodeObservation()],
       }),
     ).toThrow("q0-f0c-workflow-revision-mismatch");
+    expect(() =>
+      runNodeBanAuditBase({
+        repoRoot: process.cwd(),
+        subjectRevision,
+        f0c,
+        node,
+        documents: cleanDocuments(),
+        f0cLanes: [{ ...f0cLanes[0], generation_id: "node-ci-other" }, f0cLanes[1]],
+        processObservations: [nodeObservation()],
+        observedScopes,
+      }),
+    ).toThrow("q0-f0c-lane-evidence-generation-mismatch");
+    expect(() =>
+      runNodeBanAuditBase({
+        repoRoot: process.cwd(),
+        subjectRevision,
+        f0c,
+        node,
+        documents: cleanDocuments(),
+        f0cLanes: [{ ...f0cLanes[0], sealed_generation_id: f0c.generation_id }, f0cLanes[1]],
+        processObservations: [nodeObservation()],
+        observedScopes,
+      }),
+    ).toThrow("q0-f0c-sealed-generation-conflated");
   });
 
   it("CAND-NODEBOOT-201 detects independent static Bun axes", () => {
@@ -179,20 +235,21 @@ describe("Q0 Node-only Bun qualification", () => {
       processObservations: [nodeObservation()],
     });
     expect(result.receipt.qualification).toBe("qualified");
-    expect(verifyNodeBanAuditReceipt(result.receipt, { subjectRevision, f0c, node })).toEqual(
-      result.receipt,
-    );
+    expect(
+      verifyNodeBanAuditReceipt(result.receipt, { subjectRevision, f0c, node, f0cLanes }),
+    ).toEqual(result.receipt);
     expect(() =>
       verifyNodeBanAuditReceipt(result.receipt, {
         subjectRevision,
         f0c: { ...f0c, subject_revision: "c".repeat(40) },
         node,
+        f0cLanes,
       }),
     ).toThrow("q0-receipt-binding-mismatch");
     expect(() =>
       verifyNodeBanAuditReceipt(
         { ...result.receipt, node_artifact_digest: `sha256:${"c".repeat(64)}` },
-        { subjectRevision, f0c, node },
+        { subjectRevision, f0c, node, f0cLanes },
       ),
     ).toThrow(NodeBanAuditError);
     expect(() =>
@@ -201,7 +258,7 @@ describe("Q0 Node-only Bun qualification", () => {
           ...result.receipt,
           findings: [{ detector: "process-observer", path: "bun", rule: "x", detail: "x" }],
         },
-        { subjectRevision, f0c, node },
+        { subjectRevision, f0c, node, f0cLanes },
       ),
     ).toThrow(/digest/);
   });
@@ -255,5 +312,31 @@ describe("Q0 Node-only Bun qualification", () => {
     });
     expect(forgedOutcome.receipt.qualification).toBe("non_compliant");
     expect(forgedOutcome.findings.some((item) => item.detector === "process-observer")).toBe(true);
+  });
+
+  it("keeps frozen debt non-compliant and missing baseline indeterminate", () => {
+    const debt = runNodeBanAudit({
+      repoRoot: process.cwd(),
+      subjectRevision,
+      f0c,
+      node,
+      documents: {
+        ...cleanDocuments(),
+        debtBaseline:
+          "schema_version: bun-migration-debt.v1\ninventory:\n  - finding_id: legacy\n    detector: runtime-portability\n    path: package.json\n    owner: PLAN-L7-462\n    expires_after: final-node-cutover\n",
+      },
+      processObservations: [nodeObservation()],
+    });
+    expect(debt.receipt.qualification).toBe("non_compliant");
+    const missing = runNodeBanAudit({
+      repoRoot: process.cwd(),
+      subjectRevision,
+      f0c,
+      node,
+      documents: { ...cleanDocuments(), debtBaseline: null },
+      processObservations: [nodeObservation()],
+    });
+    expect(missing.receipt.qualification).toBe("indeterminate");
+    expect(missing.receipt.coverage.gaps).toContain("debt-baseline");
   });
 });

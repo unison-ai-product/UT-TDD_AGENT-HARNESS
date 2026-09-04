@@ -2,12 +2,19 @@ import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
+import { parse as parseYaml } from "yaml";
 import { z } from "zod";
 import {
   classifyRuntimeImageProcess,
+  missingRuntimeImageScopes,
   type RuntimeImageProcessObservation,
+  type RuntimeImageScope,
 } from "../runtime/runtime-image-observer.ts";
 import { analyzeGithubCiPolicy, type GithubWorkflowDoc } from "./github-ci-policy.ts";
+import {
+  admitNodeGenerationAggregate,
+  type NodeGenerationCiEvidence,
+} from "./node-generation-ci-policy.ts";
 import { analyzeRuleDrift, type RuleAdapterDocs } from "./rule-drift.ts";
 import {
   analyzeRuntimePortability,
@@ -79,10 +86,13 @@ const nodeBanAuditReceiptSchema = z
     subject_revision: nodeBanRevisionSchema,
     f0c_generation_id: z.string().min(1),
     f0c_artifact_digest: nodeBanDigestSchema,
+    f0c_lane_set_digest: nodeBanDigestSchema,
     node_generation_id: z.string().min(1),
     node_artifact_digest: nodeBanDigestSchema,
+    f0b_receipt_digest: nodeBanDigestSchema,
     runtime: z.literal("node"),
     coverage: nodeBanCoverageSchema,
+    debt_inventory_count: z.number().int().nonnegative(),
     findings: z.array(nodeBanFindingSchema),
     process_observations: z.array(nodeBanProcessObservationSchema),
     qualification: z.enum(["qualified", "non_compliant", "indeterminate"]),
@@ -112,6 +122,7 @@ export interface NodeBanGenerationBinding {
   readonly generation_id: string;
   readonly subject_revision: string;
   readonly artifact_digest: string;
+  readonly receipt_digest: string;
   readonly runtime: "node";
 }
 
@@ -131,6 +142,66 @@ export interface NodeBanDocuments {
   readonly workflows: readonly GithubWorkflowDoc[];
   readonly instructions: RuleAdapterDocs;
   readonly toolchain: ToolchainPinDocs;
+  readonly debtBaseline: string | null;
+}
+
+const debtEntrySchema = z
+  .object({
+    finding_id: z.string().min(1),
+    detector: z.string().min(1),
+    path: z.string().min(1),
+    owner: z.string().min(1),
+    expires_after: z.string().min(1),
+  })
+  .strict();
+const debtBaselineSchema = z
+  .object({
+    schema_version: z.literal("bun-migration-debt.v1"),
+    inventory: z.array(debtEntrySchema),
+  })
+  .strict();
+type BunMigrationDebtBaseline = z.infer<typeof debtBaselineSchema>;
+
+export class BanInventory {
+  readonly findings: readonly NodeBanFinding[];
+
+  constructor(findings: readonly NodeBanFinding[]) {
+    this.findings = uniqueFindings(findings);
+  }
+}
+
+export class DeltaGuard {
+  evaluate(inventory: BanInventory, baseline: BunMigrationDebtBaseline): NodeBanFinding[] {
+    return inventory.findings.filter(
+      (item) =>
+        !baseline.inventory.some(
+          (entry) => entry.detector === item.detector && entry.path === item.path,
+        ),
+    );
+  }
+}
+
+export class CompliancePolicy {
+  evaluate(input: {
+    baseline: BunMigrationDebtBaseline | null;
+    delta: readonly NodeBanFinding[];
+    findings: readonly NodeBanFinding[];
+    gaps: readonly string[];
+  }): "qualified" | "non_compliant" | "indeterminate" {
+    if (!input.baseline || input.gaps.length > 0) return "indeterminate";
+    if (input.baseline.inventory.length > 0 || input.delta.length > 0 || input.findings.length > 0)
+      return "non_compliant";
+    return "qualified";
+  }
+}
+
+function parseDebtBaseline(value: string | null): BunMigrationDebtBaseline | null {
+  if (!value) return null;
+  try {
+    return debtBaselineSchema.parse(parseYaml(value));
+  } catch {
+    return null;
+  }
 }
 
 export interface NodeBanAuditInput {
@@ -139,7 +210,9 @@ export interface NodeBanAuditInput {
   readonly f0c: NodeBanF0cAggregateBinding;
   readonly node: NodeBanGenerationBinding;
   readonly documents?: NodeBanDocuments;
+  readonly f0cLanes: readonly NodeGenerationCiEvidence[];
   readonly processObservations: readonly NodeBanProcessObservation[];
+  readonly observedScopes: readonly RuntimeImageScope[];
 }
 
 export interface NodeBanAuditResult {
@@ -274,6 +347,7 @@ export function loadNodeBanDocuments(repoRoot: string = process.cwd()): NodeBanD
       packageLock: readOptional(repoRoot, "package-lock.json"),
       nodeVersion: readOptional(repoRoot, ".node-version"),
     },
+    debtBaseline: readOptional(repoRoot, "docs/governance/bun-migration-debt.yaml"),
   };
 }
 
@@ -341,13 +415,46 @@ function validateBinding(input: NodeBanAuditInput): void {
     throw new NodeBanAuditError("q0-artifact-digest-mismatch");
   if (!input.f0c.generation_id || !input.node.generation_id)
     throw new NodeBanAuditError("q0-generation-id-missing");
+  if (!/^[0-9a-f]{64}$/.test(input.node.receipt_digest))
+    throw new NodeBanAuditError("q0-f0b-receipt-invalid");
+  const laneAdmission = admitNodeGenerationAggregate({
+    evidence: input.f0cLanes,
+    expected: {
+      workflow_revision: input.f0c.workflow_revision,
+      subject_revision: input.f0c.subject_revision,
+      run_id: input.f0c.run_id,
+      run_attempt: input.f0c.run_attempt,
+    },
+  });
+  if (!laneAdmission.ok) throw new NodeBanAuditError(`q0-f0c-lane-${laneAdmission.reason}`);
+  if (
+    laneAdmission.generation_id !== input.f0c.generation_id ||
+    laneAdmission.artifact_digest !== input.f0c.artifact_digest ||
+    laneAdmission.subject_revision !== input.subjectRevision
+  )
+    throw new NodeBanAuditError("q0-f0c-aggregate-lane-mismatch");
+  // F0c's common CI generation is a run identity. Each lane's sealed generation
+  // is F0b custody identity and must stay distinct; equality would erase the
+  // CI-to-F0b parent/child boundary rather than prove it.
+  if (
+    new Set(input.f0cLanes.map((lane) => lane.sealed_generation_id)).size !==
+      input.f0cLanes.length ||
+    input.f0cLanes.some((lane) => lane.sealed_generation_id === input.f0c.generation_id)
+  )
+    throw new NodeBanAuditError("q0-f0c-sealed-generation-conflated");
   if (!nodeBanProcessObservationSchema.array().safeParse(input.processObservations).success)
     throw new NodeBanAuditError("q0-process-observation-invalid");
+  if (
+    missingRuntimeImageScopes(input.observedScopes).length > 0 &&
+    input.observedScopes.length === 0
+  )
+    throw new NodeBanAuditError("q0-runtime-observer-invalid");
 }
 
 function coverage(
   documents: NodeBanDocuments,
   observations: readonly NodeBanProcessObservation[],
+  observedScopes: readonly RuntimeImageScope[],
 ): NodeBanCoverage {
   const toolchainFiles = [
     documents.toolchain.packageJson,
@@ -369,6 +476,8 @@ function coverage(
   if (instructionFiles < 3 || instructionSurfaceFiles === 0) gaps.push("instruction-files");
   if (toolchainFiles < 3) gaps.push("toolchain-files");
   if (observations.length === 0) gaps.push("process-observations");
+  if (!parseDebtBaseline(documents.debtBaseline)) gaps.push("debt-baseline");
+  gaps.push(...missingRuntimeImageScopes(observedScopes).map((scope) => `runtime-image:${scope}`));
   return {
     runtime_files: documents.runtime.length,
     workflow_files: documents.workflows.length,
@@ -415,22 +524,28 @@ function makeReceipt(input: NodeBanAuditInput, documents: NodeBanDocuments): Nod
     subject_revision: input.subjectRevision,
     f0c_generation_id: input.f0c.generation_id,
     f0c_artifact_digest: input.f0c.artifact_digest,
+    f0c_lane_set_digest: sha256(stable(input.f0cLanes)),
     node_generation_id: input.node.generation_id,
     node_artifact_digest: input.node.artifact_digest,
+    f0b_receipt_digest: `sha256:${input.node.receipt_digest}`,
     runtime: "node" as const,
-    coverage: coverage(documents, observations),
+    coverage: coverage(documents, observations, input.observedScopes),
+    debt_inventory_count: parseDebtBaseline(documents.debtBaseline)?.inventory.length ?? 0,
     findings: uniqueFindings([
       ...collectNodeBanFindings(documents),
       ...processFindings(observations),
     ]),
     process_observations: observations,
   };
-  const qualification =
-    base.findings.length > 0
-      ? "non_compliant"
-      : base.coverage.gaps.length > 0
-        ? "indeterminate"
-        : "qualified";
+  const baseline = parseDebtBaseline(documents.debtBaseline);
+  const inventory = new BanInventory(base.findings);
+  const delta = baseline ? new DeltaGuard().evaluate(inventory, baseline) : base.findings;
+  const qualification = new CompliancePolicy().evaluate({
+    baseline,
+    delta,
+    findings: base.findings,
+    gaps: base.coverage.gaps,
+  });
   const evidence_digest = sha256(stable({ ...base, qualification }));
   const unsigned = { ...base, qualification, evidence_digest } as Omit<
     NodeBanAuditReceipt,
@@ -451,7 +566,7 @@ export function runNodeBanAudit(input: NodeBanAuditInput): NodeBanAuditResult {
 
 export function verifyNodeBanAuditReceipt(
   value: unknown,
-  expected: Pick<NodeBanAuditInput, "subjectRevision" | "f0c" | "node">,
+  expected: Pick<NodeBanAuditInput, "subjectRevision" | "f0c" | "node" | "f0cLanes">,
 ): NodeBanAuditReceipt {
   const receipt = nodeBanAuditReceiptSchema.parse(value);
   try {
@@ -460,7 +575,9 @@ export function verifyNodeBanAuditReceipt(
       subjectRevision: expected.subjectRevision,
       f0c: expected.f0c,
       node: expected.node,
+      f0cLanes: expected.f0cLanes,
       processObservations: [],
+      observedScopes: ["status"],
     });
   } catch {
     throw new NodeBanAuditError("q0-receipt-binding-mismatch");
@@ -471,8 +588,10 @@ export function verifyNodeBanAuditReceipt(
     receipt.subject_revision !== expected.subjectRevision ||
     receipt.f0c_generation_id !== expected.f0c.generation_id ||
     receipt.f0c_artifact_digest !== expected.f0c.artifact_digest ||
+    receipt.f0c_lane_set_digest !== sha256(stable(expected.f0cLanes)) ||
     receipt.node_generation_id !== expected.node.generation_id ||
-    receipt.node_artifact_digest !== expected.node.artifact_digest
+    receipt.node_artifact_digest !== expected.node.artifact_digest ||
+    receipt.f0b_receipt_digest !== `sha256:${expected.node.receipt_digest}`
   )
     throw new NodeBanAuditError("q0-receipt-binding-mismatch");
   const { receipt_digest, ...unsigned } = receipt;
@@ -491,7 +610,9 @@ export function verifyNodeBanAuditReceipt(
       ? "non_compliant"
       : receipt.coverage.gaps.length > 0
         ? "indeterminate"
-        : "qualified";
+        : receipt.debt_inventory_count > 0
+          ? "non_compliant"
+          : "qualified";
   if (receipt.qualification !== expectedQualification)
     throw new NodeBanAuditError("q0-qualification-mismatch");
   return receipt;
