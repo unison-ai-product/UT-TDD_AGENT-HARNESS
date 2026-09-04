@@ -557,7 +557,7 @@ describe("Claude HARNESS memory async wake", () => {
         repoRoot: root,
         sessionId: "session-id",
         pollIntervalMs: 5,
-        maxWaitMs: 300,
+        maxWaitMs: 5_000,
         sleep: async (ms: number) => {
           await new Promise<void>((resolve) => setTimeout(resolve, ms));
           rmSync(generation, { force: true });

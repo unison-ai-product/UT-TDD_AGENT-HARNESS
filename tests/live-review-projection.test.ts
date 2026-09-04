@@ -126,9 +126,9 @@ describe("live review projection (U-RVATT-023..026)", () => {
 
       rmSync(memoryDirectory, { recursive: true, force: true });
       symlinkSync(outside, memoryDirectory, process.platform === "win32" ? "junction" : "dir");
-      expect(
+      expect(() =>
         resolveLiveReviewTaskFile(root, { memoryId: "memory:d3a", memoryPath: sourcePath }),
-      ).toBeNull();
+      ).toThrow("project_memory_root_authored_memory_root_escape");
     } finally {
       rmSync(root, { recursive: true, force: true });
       rmSync(outside, { recursive: true, force: true });
