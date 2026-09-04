@@ -44,6 +44,9 @@ falsify できれば受入とみなすか」の宣言であり、実行主体・
 | UTV4-AC-038 | FR-004 | 詳細設計 (L5) / 仕様 (L6) の改訂をチケット無しで commit する / チケット record に設計本文を格納する / L4 基本設計の本文をチケット完了で accept 扱いにする | 順に: lease 無し書き込みとして deny (AC-007 と同型) / deny (本文は markdown 正本へ digest 束縛のみ) / deny (accept は pair-freeze review のみ) |
 | UTV4-AC-039 | FR-028 | 初期画面ルールの freeze record が無い状態で画面プロトチケットを 2 件以上発行する / 反応を discovery event に記録せずプロトチケットを完了にする | 前者 2 件目が deny / 後者 deny |
 | UTV4-AC-040 | FR-029 | L3 要件文書または L4 基本設計文書に owner を 2 名設定する / owner 以外が L4 文書を freeze する / L5 チケットに owner 2 名 | いずれも deny (AC-004 と同型) |
+| UTV4-AC-041 | FR-030 | 子チケットの admission receipt が欠けた状態で統合チケットを完了にする / takeover receipt 無しに別担当が統合チケットへ commit する | いずれも deny |
+| UTV4-AC-042 | FR-031 | 再集計が上限回数を超えて個別修正へ差し戻される | deny。基本設計 owner への route record が生成される |
+| UTV4-AC-043 | FR-032 | main へ rebase していない (merge-base ≠ main HEAD) candidate を merge admission する / lease が重なる 2 チケットを同時発行する | 前者 deny (rebase 要求)、後者 2 件目 deny (AC-008 と同型) |
 | UTV4-AC-032 | FR-023 | single-provider profile で同 provider の別 session・上位 tier が blind packet で review し receipt を発行する / 同一 session の subagent が review する / receipt に `cross_family` を記録する | 順に: admit され evidence tier は `same_family_separated` / deny / deny (僭称) |
 | UTV4-AC-033 | FR-023 | reviewer session id が author session id と同一、または実在しない session id を持つ receipt / CI が green でない HEAD への verdict | attestation 不成立で deny (typed reason) / deny |
 | UTV4-AC-034 | FR-024 | single-provider profile で高影響境界の merge を人間 review なしに admission する / 利用上限 record なしに hybrid → single-provider へ格下げする / 補償統制の doctor gate が未実装のまま profile を宣言する | いずれも deny |

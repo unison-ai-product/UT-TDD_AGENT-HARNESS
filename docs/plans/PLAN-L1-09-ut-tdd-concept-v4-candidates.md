@@ -192,7 +192,16 @@ PO 指示: 「要件と基本 (設計) は 1 人がまとめる」「上流の P
 L5〜L7 = チケット単位 1 名、L8〜L12 = author と別の検証 owner 1 名)。PoC / 画面プロトは work item record で発行し、
 複数人分担は初期画面ルール freeze record を前提、反応は L2 discovery event へ。BR-015、FR-028 / 029、AC-039 / 040 へ降下。
 
-### 3.6 候補文書の置き場
+### 3.6 標準工程 flow (PO 提示 2026-09-04)
+
+PO が提示したチーム開発の工程 (企画書 → 1 名の要求整理と画面モック → 集団プロトで細分化 → 確定 / PoC 割り振り →
+集団 PoC と画面接続検証 → 要件定義と集団確認 → 基本設計 1 名 → 責務 / 依存別チケット → 統合チェックと再集計 →
+リリース切り分け → 依存単位チケットと main への随時 merge 受入 → 合流点で引き取り統合 → 検査チケット → リリース) を
+概念 §標準工程 flow へ写した。統制点 4 つを要件化: 発散区間の出口 = event / receipt (FR-016 / 028)、合流 owner = 統合
+チケット + takeover receipt (FR-030)、再集計上限 (FR-031)、受入 = rebase 済み candidate の merge admission (FR-032)。
+BR-016、AC-041〜043 へ降下。
+
+### 3.7 候補文書の置き場
 
 参照元構想と同じく `docs/governance/candidates/` に置き、承認前は CLAUDE.md 読込順・`docs/governance/README.md`・
 rule-drift marker・doctor gate から参照しない。承認時に v4.0 を `docs/governance/` へ昇格、v3.1 を `docs/archive/`
