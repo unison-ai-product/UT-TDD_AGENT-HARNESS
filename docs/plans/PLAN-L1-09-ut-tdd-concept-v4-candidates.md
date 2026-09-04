@@ -351,7 +351,9 @@ PO 指示: 「この開発では画面プロトの構成が薄いから、しっ
 PO 追補 (同日): 社内 project の深さ (簡易 DB・全列照合) は精度が必要で人間認識と AI 認識のずれが起きやすい領域だからであり、毎回そこまで
 詰めるとは限らない。採択: 深さを screen id 単位の深度 profile (light / standard / deep) の値にし、必須最小 4 要素 (初期画面ルール・
 inventory / flow・fixture 契約・typed finding) 以外は profile に従う。選定根拠は risk 信号 record (精度要求・discrepancy 実績・データ量・
-外部依存)、deep は既定にしない (FR-056 / AC-068 改訂)。
+外部依存)、deep は既定にしない (FR-056 / AC-068 改訂)。deep の典型 2 種 (PO 同日): 意味ロジック (独立 Gold ledger + CI 反証照合、社内 project
+の Gold 監査 PR #40 / #43 が実録) と、正解のない予測・仮説先行の領域 (仮説 record + S4 decision + 実測 backtest、予測を確定値と
+区別表示) (FR-056 追記 / AC-070)。
 
 ## 4. 工程
 
