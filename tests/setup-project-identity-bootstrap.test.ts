@@ -86,6 +86,118 @@ describe("project identity bootstrap", () => {
     });
   });
 
+  it("CANDIDATE-U-PROJID-001: HEAD blob receipt is internally complete", () => {
+    const root = trackedFixture();
+    const result = loadProjectIdentityFromHead({ repoRoot: root });
+    expect(result).toMatchObject({
+      ok: true,
+      value: {
+        schemaVersion: "ut-tdd.project/v1",
+        repositoryIdentity: "acme/widget",
+        provenance: { path: "ut-tdd.project.json", objectFormat: "sha1" },
+      },
+    });
+    if (result.ok) {
+      expect(result.value.provenance.sourceCommit).toMatch(/^[a-f0-9]{40}$/);
+      expect(result.value.provenance.blobOid).toMatch(/^[a-f0-9]{40}$/);
+      expect(result.value.provenance.contentDigest).toMatch(/^[a-f0-9]{64}$/);
+      expect(result.value.provenance.receiptDigest).toMatch(/^[a-f0-9]{64}$/);
+    }
+  });
+
+  it("CANDIDATE-U-PROJID-003: an untracked or absent HEAD entry is missing", () => {
+    const root = fixture();
+    expect(loadProjectIdentityFromHead({ repoRoot: root })).toMatchObject({
+      ok: false,
+      error: { ruleId: "plan-repository-identity-missing" },
+    });
+  });
+
+  it("CANDIDATE-U-PROJID-004: a tracked symlink mode is treated as missing", () => {
+    if (win) return;
+    const root = fixture();
+    const target = join(root, "target.json");
+    writeFileSync(target, canonicalProjectIdentityBytes("acme/widget"));
+    symlinkSync(target, join(root, "ut-tdd.project.json"));
+    execFileSync("git", ["add", "ut-tdd.project.json"], { cwd: root });
+    execFileSync("git", ["commit", "-qm", "symlink identity"], { cwd: root });
+    expect(loadProjectIdentityFromHead({ repoRoot: root })).toMatchObject({
+      ok: false,
+      error: { ruleId: "plan-repository-identity-missing" },
+    });
+  });
+
+  it("CANDIDATE-U-PROJID-005: a later HEAD is read instead of a stale cache", () => {
+    const root = trackedFixture();
+    const first = loadProjectIdentityFromHead({ repoRoot: root });
+    writeFileSync(join(root, "advance"), "advance\n");
+    execFileSync("git", ["add", "advance"], { cwd: root });
+    execFileSync("git", ["commit", "-qm", "advance"], { cwd: root });
+    const second = loadProjectIdentityFromHead({ repoRoot: root });
+    expect(first.ok && second.ok).toBe(true);
+    if (first.ok && second.ok)
+      expect(second.value.provenance.sourceCommit).not.toBe(first.value.provenance.sourceCommit);
+  });
+
+  it("CANDIDATE-U-PROJID-006: duplicate or unexpected JSON keys are invalid", () => {
+    const root = fixture();
+    commitIdentity(
+      root,
+      Buffer.from(
+        '{"schema_version":"ut-tdd.project/v1","repository_identity":"acme/widget","repository_identity":"acme/widget"}\n',
+      ),
+    );
+    expect(loadProjectIdentityFromHead({ repoRoot: root })).toMatchObject({
+      ok: false,
+      error: { ruleId: "plan-project-config-invalid" },
+    });
+  });
+
+  it("CANDIDATE-U-PROJID-007: grammar-invalid repository identity is denied", () => {
+    const root = fixture();
+    commitIdentity(root, canonicalProjectIdentityBytes("not valid/repository"));
+    expect(loadProjectIdentityFromHead({ repoRoot: root })).toMatchObject({
+      ok: false,
+      error: { ruleId: "plan-repository-identity-invalid" },
+    });
+  });
+
+  it("CANDIDATE-U-PROJID-008: expected identity mismatch is denied", () => {
+    const root = trackedFixture();
+    expect(
+      loadProjectIdentityFromHead({ repoRoot: root, expectedRepositoryIdentity: "other/repo" }),
+    ).toMatchObject({ ok: false, error: { ruleId: "plan-repository-identity-missing" } });
+  });
+
+  it("CANDIDATE-U-PROJID-009: UTF-8 BOM bytes are noncanonical", () => {
+    const root = fixture();
+    commitIdentity(
+      root,
+      Buffer.concat([
+        Buffer.from([0xef, 0xbb, 0xbf]),
+        Buffer.from(canonicalProjectIdentityBytes("acme/widget")),
+      ]),
+    );
+    expect(loadProjectIdentityFromHead({ repoRoot: root })).toMatchObject({
+      ok: false,
+      error: { ruleId: "identity_noncanonical_bytes" },
+    });
+  });
+
+  it("CANDIDATE-U-PROJID-010: valid CRLF JSON is denied by canonical bytes", () => {
+    const root = fixture();
+    commitIdentity(
+      root,
+      Buffer.from(
+        '{\r\n  "schema_version":"ut-tdd.project/v1",\r\n  "repository_identity":"acme/widget"\r\n}\r\n',
+      ),
+    );
+    expect(loadProjectIdentityFromHead({ repoRoot: root })).toMatchObject({
+      ok: false,
+      error: { ruleId: "identity_noncanonical_bytes" },
+    });
+  });
+
   it("CANDIDATE-U-PROJID-003: normalizes SSH origin to owner/repository", () => {
     expect(repositoryIdentityFromOrigin(fixture("git@github.com:owner/repository.git"))).toBe(
       "owner/repository",
@@ -274,6 +386,25 @@ describe("project identity bootstrap", () => {
     expect(loadProjectIdentityFromHead({ repoRoot: second })).toMatchObject({
       value: { repositoryIdentity: "acme/other" },
     });
+  });
+
+  it("CANDIDATE-U-PROJID-025: alternate path spellings resolve the same origin identity", () => {
+    const root = trackedFixture();
+    const alternate = win ? root.toUpperCase() : root;
+    expect(repositoryIdentityFromOrigin(root)).toBe("acme/widget");
+    expect(repositoryIdentityFromOrigin(alternate)).toBe("acme/widget");
+  });
+
+  it("CANDIDATE-U-PROJID-026: path spelling does not enter the identity bytes", () => {
+    const root = fixture();
+    const first = bootstrapProjectIdentity(root);
+    const alternate = win ? root.toUpperCase() : root;
+    const second = bootstrapProjectIdentity(alternate);
+    expect(first).toMatchObject({ ok: true, repositoryIdentity: "acme/widget" });
+    expect(second).toMatchObject({ ok: true, repositoryIdentity: "acme/widget" });
+    expect(readFileSync(join(root, "ut-tdd.project.json"))).toEqual(
+      canonicalProjectIdentityBytes("acme/widget"),
+    );
   });
 
   it("CANDIDATE-U-PROJID-024: committed CRLF bytes are rejected as noncanonical", () => {
