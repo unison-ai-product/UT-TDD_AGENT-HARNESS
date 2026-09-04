@@ -73,10 +73,12 @@ Linux/Windows/aggregate CI、非著者closing review、Reverse R1〜R4は未昇�
 実測した。追加軸はBunなしのsealed readiness、compiled ESM digest binding、manifest digest
 forgery、external bundle pointerであり、wrapperはspawn前にpointer/manifest/identity/Node
 authority、6 payload digest、history genesis/prior、lexical/realpath containmentを検証する。
-これは実bytes fixtureのconsumer-local producer laneを含むが、L6-93の実行可能receipt producer、
-Windows境界、history prefix/replay、rollback、external read/open/stat counter、hooks、aggregate
-CI、closing reviewを含まない。`PLAN-L6-93`はdraftでproducer ownerのREADY Issue/PRを確認できない
-ため、全候補Greenや完了条件1は主張せず、#420はHard blockedのまま保持する。
+これは実bytes fixtureのconsumer-local producer laneを含むが、L6-93の実行可能receipt producerを
+consumer bundleへ接続する実装検証は後続の実装PRで行う。過去の記録時点ではL6-93の実行可能
+receipt producer、Windows境界、history prefix/replay、rollback、external read/open/stat counter、
+hooks、aggregate CI、closing reviewを含まず、producer ownerのREADY Issue/PRを確認できなかった
+ため、全候補Greenや完了条件1を主張せず#420をHard blockedとしていた。この停止理由はPR #507の
+main統合後に解消済みであり、実装PRでは同producerのreceipt-backed接続を検証する。
 
 実装testのlabelsはdocs-only freezeとのalignmentを保つため、`CANDIDATE-U-PACKNODE-*`/
 `CANDIDATE-P-PACKNODE-*`を使用する。各テストは対応候補の一部軸だけを測定し、候補全mutation

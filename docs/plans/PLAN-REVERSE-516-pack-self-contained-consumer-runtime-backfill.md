@@ -12,7 +12,7 @@ forward_routing: gap-only
 promotion_strategy: reuse-as-is
 status: draft
 created: 2026-08-27
-updated: 2026-08-27
+updated: 2026-09-04
 owner: PM / PO / Codex
 parent_design: docs/plans/PLAN-L7-516-pack-self-contained-consumer-runtime.md
 pair_artifact: docs/test-design/harness/L7-pack-self-contained-consumer-runtime-test-design.md
@@ -117,7 +117,9 @@ rollback/history chain、external read/open/stat/process counter、非著者revi
 `00753263`の17 testsとdetached canonical snapshot 17/17 Greenを確認した。manifest canonical
 digest、compiled ESM digest binding、consumer runtime root/realpath containment、Bunなしreadiness、
 active pointerのexternal escape denyを追加測定した。一方、実bytesを供給するL6-93-owned
-NodeBootstrapReceipt producerは現branchにも`src/tests`にも無く、`PLAN-L6-93`はdraftでREADYな
-producer owner Issue/PRを確認できない。従ってR1〜R4、receipt-backed producer、Linux/Windows全境界、
-rollback/history prefix、external read/open/stat counter、closing review、aggregate CIは未完了で、
-本Reverseはdraft/Hard blockedを維持する。#420ではL6-93 producerを新設しない。
+当時はNodeBootstrapReceipt producerが現branchにも`src/tests`にも無く、`PLAN-L6-93`がdraftで
+READYなproducer owner Issue/PRを確認できなかった。現在はPR #507がmainへ統合され、producerは
+利用可能になった。従ってR1〜R4、receipt-backed consumer接続、Linux/Windows全境界、rollback/
+history prefix、external read/open/stat counter、closing review、aggregate CIは実装PRで検証する
+未完了項目として残すが、producer欠落を理由としたHard blockは解除済みである。#420ではL6-93
+producerを新設しない。
