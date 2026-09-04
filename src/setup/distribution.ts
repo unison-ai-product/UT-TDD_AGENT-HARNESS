@@ -1,4 +1,12 @@
 import { satisfies, valid, validRange } from "semver";
+import {
+  AUTHORING_TEMPLATE_ARTIFACT_PATHS,
+  AUTHORING_TEMPLATE_INVENTORY,
+  type AuthoringTemplateInventoryEntry,
+  authoringArtifactPath,
+  authoringSourcePath,
+  validateAuthoringTemplateInventory,
+} from "./authoring-template-inventory.ts";
 import { COMMON_FILES } from "./templates.ts";
 
 export interface CleanDistributionPlan {
@@ -10,6 +18,14 @@ export interface CleanDistributionPlan {
   excludedPaths: string[];
   missingRequired: string[];
   denylistViolations: string[];
+  authoringInventory: {
+    ok: boolean;
+    missingFamilies: string[];
+    duplicateFamilies: string[];
+    unknownFamilies: string[];
+    duplicateArtifactPaths: string[];
+    missingArtifactPaths: string[];
+  };
   releaseIntegrity: {
     required: boolean;
     artifacts: string[];
@@ -166,14 +182,26 @@ function isDeniedCleanPath(path: string): boolean {
   );
 }
 
-function isAllowedCleanPath(path: string): boolean {
+function isAllowedCleanPath(
+  path: string,
+  inventory: readonly AuthoringTemplateInventoryEntry[] = AUTHORING_TEMPLATE_INVENTORY,
+): boolean {
   const p = normalizeDistributionPath(path);
   if (CLEAN_ALLOW_FILES.has(p)) return true;
-  return CLEAN_ALLOW_PREFIXES.some((prefix) => p.startsWith(prefix));
+  return (
+    CLEAN_ALLOW_PREFIXES.some((prefix) => p.startsWith(prefix)) ||
+    authoringArtifactPath(p, inventory) !== null ||
+    authoringSourcePath(p, inventory) !== null
+  );
 }
 
-export function cleanDistributionArtifactPath(path: string): string {
+export function cleanDistributionArtifactPath(
+  path: string,
+  inventory: readonly AuthoringTemplateInventoryEntry[] = AUTHORING_TEMPLATE_INVENTORY,
+): string {
   const p = normalizeDistributionPath(path);
+  const authoring = authoringArtifactPath(p, inventory);
+  if (authoring !== null) return authoring;
   if (p.startsWith("docs/skills/")) return `skills/${p.slice("docs/skills/".length)}`;
   return p;
 }
@@ -181,12 +209,20 @@ export function cleanDistributionArtifactPath(path: string): string {
 export function cleanDistributionSourcePath(
   artifactPath: string,
   sourcePaths: Iterable<string>,
+  inventory: readonly AuthoringTemplateInventoryEntry[] = AUTHORING_TEMPLATE_INVENTORY,
 ): string {
   const artifact = normalizeDistributionPath(artifactPath);
   if (artifact === ".github/workflows/harness-check.yml") {
     return "docs/templates/github/common/pack-harness-check.yml";
   }
   const sources = new Set([...sourcePaths].map(normalizeDistributionPath));
+  const authoring = authoringSourcePath(artifact, inventory);
+  if (authoring !== null) {
+    // The destination itself is the only valid source once the artifact is already in a
+    // clean Pack checkout. In a source checkout, the explicit source path is required.
+    if (sources.has(artifact)) return artifact;
+    return authoring;
+  }
   if (sources.has(artifact)) return artifact;
   if (artifact.startsWith("skills/")) {
     const legacy = `docs/skills/${artifact.slice("skills/".length)}`;
@@ -266,17 +302,26 @@ function satisfiesRequiredNode(version: string | null, required: string | null):
 }
 
 export function buildCleanDistributionPlan(input: {
-  paths: string[];
+  paths: readonly string[];
   sourceTag?: string;
   cleanRepo?: string;
+  authoringInventory?: readonly AuthoringTemplateInventoryEntry[];
 }): CleanDistributionPlan {
   const sourceTag = input.sourceTag ?? "unreleased";
   const cleanRepo = input.cleanRepo ?? DEFAULT_PACK_REPO;
+  const inventory = input.authoringInventory ?? AUTHORING_TEMPLATE_INVENTORY;
+  const inventoryResult = validateAuthoringTemplateInventory(inventory);
   const normalized = [...new Set(input.paths.map(normalizeDistributionPath))].sort();
-  const includedSourcePaths = normalized.filter(
-    (path) => isAllowedCleanPath(path) && !isDeniedCleanPath(path),
-  );
-  const artifactPaths = [...new Set(includedSourcePaths.map(cleanDistributionArtifactPath))].sort();
+  const includedSourcePaths = normalized.filter((path) => isAllowedCleanPath(path, inventory));
+  // Projection must be resolved before the output deny fence: the team source is intentionally
+  // under .ut-tdd, but its destination is a normal docs/templates artifact.
+  const artifactPaths = [
+    ...new Set(
+      includedSourcePaths
+        .map((path) => cleanDistributionArtifactPath(path, inventory))
+        .filter((path) => !isDeniedCleanPath(path)),
+    ),
+  ].sort();
   // D-2 fail-close (PLAN-L7-413 followup): violation は **最終出荷集合 (artifactPaths)** を
   // deny で監視する。include filter の退行や remap の denied 空間衝突で denied path が
   // 出荷側に達したときのみ fire する出力ガード。denied な入力 path 自体は通常の除外
@@ -286,11 +331,28 @@ export function buildCleanDistributionPlan(input: {
   // 側の fence は tests/distribution-acceptance.test.ts の D-2 テストが固定する。
   const denylistViolations = artifactPaths.filter(isDeniedCleanPath);
   const artifactSet = new Set(artifactPaths);
-  const missingRequired = CLEAN_REQUIRED_PATHS.filter((path) => !artifactSet.has(path));
+  const missingRequired = [...CLEAN_REQUIRED_PATHS, ...AUTHORING_TEMPLATE_ARTIFACT_PATHS].filter(
+    (path, index, required) => required.indexOf(path) === index && !artifactSet.has(path),
+  );
   const includedSourceSet = new Set(includedSourcePaths);
-  const excludedPaths = normalized.filter((path) => !includedSourceSet.has(path));
+  // A path can pass the source allowlist and still be removed by the output deny fence
+  // (for example the tracked `src/web/` carve-out). Report that source as excluded too;
+  // otherwise callers see neither an artifact nor an exclusion for a denied input.
+  const excludedPaths = normalized.filter(
+    (path) =>
+      !includedSourceSet.has(path) ||
+      isDeniedCleanPath(cleanDistributionArtifactPath(path, inventory)),
+  );
+  const authoringInventory = {
+    ok: inventoryResult.ok,
+    missingFamilies: [...inventoryResult.missingFamilies],
+    duplicateFamilies: [...inventoryResult.duplicateFamilies],
+    unknownFamilies: [...inventoryResult.unknownFamilies],
+    duplicateArtifactPaths: [...inventoryResult.duplicateArtifactPaths],
+    missingArtifactPaths: [...inventoryResult.missingArtifactPaths],
+  };
   return {
-    ok: missingRequired.length === 0 && denylistViolations.length === 0,
+    ok: inventoryResult.ok && missingRequired.length === 0 && denylistViolations.length === 0,
     channel: "clean-repo-plus-tarball",
     sourceTag,
     cleanRepo,
@@ -298,6 +360,7 @@ export function buildCleanDistributionPlan(input: {
     excludedPaths,
     missingRequired,
     denylistViolations,
+    authoringInventory,
     releaseIntegrity: {
       required: true,
       artifacts: [`${sourceTag}.tar.gz`, `${sourceTag}.tar.gz.sha256`],

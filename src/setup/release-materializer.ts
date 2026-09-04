@@ -1,6 +1,10 @@
 import { createHash } from "node:crypto";
 import { posix } from "node:path";
 import {
+  projectTrackedTeamBlob,
+  validateAuthoringArtifactSet,
+} from "./authoring-template-inventory.ts";
+import {
   buildCleanDistributionPlan,
   type CleanDistributionPlan,
   cleanDistributionArtifactPath,
@@ -136,6 +140,8 @@ export function materializeReleaseArtifacts(
   const sourcePaths = input.entries.map((entry) => entry.path);
   const plan = buildPlan(sourcePaths);
   if (!plan.ok) return { ok: false, error: "invalid_distribution_plan" };
+  const authoringSet = validateAuthoringArtifactSet(plan.artifactPaths);
+  if (!authoringSet.ok) return { ok: false, error: "invalid_distribution_plan" };
 
   const excluded = new Set(plan.excludedPaths);
   const destinations = new Map<string, string>();
@@ -164,6 +170,13 @@ export function materializeReleaseArtifacts(
     const source = sources.get(sourcePath(destination, sourcePaths));
     if (!source) return { ok: false, error: "invalid_distribution_plan" };
     if (!MODES.has(source.mode)) return { ok: false, error: "invalid_artifact" };
+
+    if (source.path === ".ut-tdd/teams/example-review-team.yaml") {
+      const projection = projectTrackedTeamBlob({
+        blobs: [{ path: source.path, mode: source.mode, bytes: source.content }],
+      });
+      if (!projection.ok) return { ok: false, error: "invalid_artifact" };
+    }
 
     let content = new Uint8Array(source.content);
     if (source.mode === "120000" && !validSymlink(destination, content))

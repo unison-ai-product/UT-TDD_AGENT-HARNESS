@@ -24,6 +24,24 @@ import {
 } from "./branch-protection.ts";
 
 export {
+  AUTHORING_TEMPLATE_ARTIFACT_PATHS,
+  AUTHORING_TEMPLATE_INVENTORY,
+  type AuthoringArtifactSetValidation,
+  type AuthoringInventoryValidation,
+  type AuthoringProjectionError,
+  type AuthoringProjectionResult,
+  type AuthoringTemplateFamily,
+  type AuthoringTemplateInventoryEntry,
+  authoringArtifactPath,
+  authoringInventoryRequiredPaths,
+  authoringSourcePath,
+  isAuthoringArtifactPath,
+  projectTrackedTeamBlob,
+  type TrackedGitBlob,
+  validateAuthoringArtifactSet,
+  validateAuthoringTemplateInventory,
+} from "./authoring-template-inventory.ts";
+export {
   admitConsumerLocalRuntime,
   applyConsumerLocalRuntime,
   type ConsumerArtifactIdentity,
@@ -51,6 +69,12 @@ export {
   transformCleanDistributionArtifact,
 } from "./distribution.ts";
 export {
+  inspectPackAuthoringEntries,
+  type PackAuthoringSmokeEntry,
+  type PackAuthoringSmokeResult,
+  runPackAuthoringSmoke,
+} from "./pack-authoring-smoke.ts";
+export {
   admitReleaseAggregate,
   applySealedReleaseAggregate,
   type ReleaseAggregateAdmissionDependencies,
@@ -64,6 +88,15 @@ export {
   type ReleaseManifestTreeEntry,
   type SealedReleaseAggregatePlan,
 } from "./release-aggregate-admission.ts";
+export {
+  digestMaterializedReleaseEntries,
+  type MaterializedReleaseEntry,
+  materializeReleaseArtifacts,
+  type ReleaseEntryMode,
+  type ReleaseMaterializationResult,
+  type ReleaseMaterializerDependencies,
+  type ReleaseSourceEntry,
+} from "./release-materializer.ts";
 export {
   type CanonicalCiEvidence,
   classifyRollbackApply,

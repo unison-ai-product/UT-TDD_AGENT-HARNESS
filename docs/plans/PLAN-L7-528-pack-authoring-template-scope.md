@@ -6,9 +6,9 @@ layer: L7
 drive: agent
 route_signal: feature_addition
 route_mode: add-feature
-status: draft
+status: confirmed
 created: 2026-09-01
-updated: 2026-09-01
+updated: 2026-09-04
 owner: Codex / Luna
 worker_model: gpt-5.6-luna
 parent_design: docs/design/harness/L6-function-design/setup-solo-team.md
@@ -29,6 +29,12 @@ generates:
     artifact_type: markdown_doc
   - artifact_path: docs/test-design/harness/L7-pack-authoring-template-scope-test-design.md
     artifact_type: test_design
+  - artifact_path: src/setup/authoring-template-inventory.ts
+    artifact_type: source_module
+  - artifact_path: src/setup/pack-authoring-smoke.ts
+    artifact_type: source_module
+  - artifact_path: tests/pack-authoring-template-scope.test.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L6-101-pack-independent-multi-consumer-acceptance.md
   requires:
@@ -50,7 +56,32 @@ dependencies:
     - tests/distribution-acceptance.test.ts
     - tests/distribution-scratch-ignore.test.ts
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/482
-review_evidence: []
+review_evidence:
+  - reviewer: claude-opus-5
+    review_kind: cross_agent
+    reviewed_at: "2026-09-01T11:00:08Z"
+    tests_green_at: "2026-09-01T10:50:56Z"
+    verdict: "PASS-WEAK; blocking 0"
+    scope: "PR #511 pair-freezeのexact HEAD a3f038536e16fde712596fb5823b1c9ac840a0cfに対するPack authoring inventory、明示team projection、source/runtime deny境界の非著者レビュー。"
+    worker_model: gpt-5.6-luna
+    reviewer_model: claude-opus-5
+    plan_revision: a3f038536e16fde712596fb5823b1c9ac840a0cf
+    subject_head: a3f038536e16fde712596fb5823b1c9ac840a0cf
+    evidence_path: docs/test-design/harness/L7-pack-authoring-template-scope-test-design.md
+    anchor_commit: a3f038536e16fde712596fb5823b1c9ac840a0cf
+    citations:
+      - "PR #511 canonical receipt e582ee1e1151ca03d78389ddca6429fddbdbf7547b0b5b37acad45af63b0adb9"
+      - "docs/test-design/harness/L7-pack-authoring-template-scope-test-design.md: CANDIDATE-PACKTPL-001..007"
+    green_commands:
+      - kind: unit_test
+        command: "node scripts/run-vitest-snapshot.ts tests/pack-authoring-template-scope.test.ts --reporter=dot"
+        runner: node
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-09-01T10:50:56Z"
+        evidence_path: docs/test-design/harness/L7-pack-authoring-template-scope-test-design.md
+        output_digest: "sha256:3ca80eb32a3548d24b92bf1a7b2c4de04ff5ce6154a3a86d6eb518f7e5e997e9"
+        anchor_commit: a3f038536e16fde712596fb5823b1c9ac840a0cf
 backprop_decision: required
 backprop_decision_reason: "Pack-only authoring assetsのallowlistとsource/runtime deny境界をL6-101のconsumer独立受入へReverseで戻す。"
 ---

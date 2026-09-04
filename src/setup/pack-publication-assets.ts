@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import type { PublicationReleaseIdentity } from "../schema/release-manifest.ts";
+import { validateAuthoringArtifactSet } from "./authoring-template-inventory.ts";
 
 const RELEASE_ID = /^rel-sha256:([a-f0-9]{64})$/;
 const SHA256 = /^sha256:([a-f0-9]{64})$/;
@@ -271,6 +272,11 @@ export function derivePackPublicationAssets(input: {
 }): PackPublicationAssetResult {
   const releaseMatch = RELEASE_ID.exec(input.release.releaseId);
   if (!releaseMatch) return { ok: false, error: "invalid_release" };
+  const authoringSet = validateAuthoringArtifactSet(
+    input.entries.map((entry) => entry.destinationPath),
+  );
+  if (!authoringSet.ok || input.entries.some((entry) => entry.sourcePath.startsWith(".ut-tdd/")))
+    return { ok: false, error: "artifact_mismatch" };
   const manifestError = validateManifestArtifacts(input.release.artifacts);
   if (manifestError) return { ok: false, error: manifestError };
   if (!exactEntries(input.release, input.entries)) return { ok: false, error: "artifact_mismatch" };
