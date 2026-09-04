@@ -28,6 +28,10 @@ dependencies:
     - docs/plans/PLAN-L6-93-node-bootstrap-contract.md
     - docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md
     - docs/plans/PLAN-L7-522-pack-consumer-bun-path-removal.md
+    - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/450
+    - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/500
+    - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/473
+    - docs/plans/PLAN-L7-522-pack-consumer-bun-path-removal.md
     - docs/plans/PLAN-REVERSE-458-node-self-hosted-bun-ban-backfill.md
     - docs/test-design/harness/L7-unit-test-design.md
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/487
@@ -39,18 +43,18 @@ status: draft
 github_issue_id: 487
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:69b6d63d6bc42e97ebd9473254ea6f35
-  command_id: command:pr520-issue487-reverse-scope-revision1
-  admitted_at: 2026-09-04T10:01:00.000+09:00
-  source_digest: sha256:3a86c028ad567eec08cbfeab98b6c2191153c5cd2a8c7e2b982e5e885b85a8cd
-  decision_digest: sha256:4850898c07237d0f90d82e5a0f18914a1043e4efa38f01f4868b68f36aef68c3
-  receipt_digest: sha256:814cb1f48ca5c6e8d998f0a7268dda55adb2ffc26777c049a72e15cc46a0e175
+  receipt_id: certificate:05b490a8f8e8d63e61c732085bb5b17e
+  command_id: command:pr520-issue487-reverse-ownership-revision3
+  admitted_at: 2026-09-04T11:31:00.000+09:00
+  source_digest: sha256:f1e30114b3915076492e84ad48ef9bf02b894378fa743706e62ad882c4cdc67f
+  decision_digest: sha256:f5991834163656341697a8a9cefdcab8f1a205f73510fe91a0ffc38c2452d661
+  receipt_digest: sha256:95e1afdb28fb049dcef3d5de8bff248c9492ee8344cf53bdfe2f3e2f29d21964
   binding:
     path: docs/plans/PLAN-REVERSE-530-bun-final-retirement-backfill.md
     plan_id: PLAN-REVERSE-530-bun-final-retirement-backfill
     asset_id: plan:4727c21e7227fefefdb428f11662676c
-    revision: 2
-    content_digest: sha256:3a86c028ad567eec08cbfeab98b6c2191153c5cd2a8c7e2b982e5e885b85a8cd
+    revision: 3
+    content_digest: sha256:f1e30114b3915076492e84ad48ef9bf02b894378fa743706e62ad882c4cdc67f
   route:
     signal: design_gap
     mode: reverse

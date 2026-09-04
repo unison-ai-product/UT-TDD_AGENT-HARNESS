@@ -42,18 +42,18 @@ status: draft
 github_issue_id: 487
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:21817eae3f56525da888a82dce89bda0
-  command_id: command:pr520-issue487-forward-scope-revision1
-  admitted_at: 2026-09-04T10:00:00.000+09:00
-  source_digest: sha256:440c5aaea34d33de3320b0182f0593835fb546696bc20c7a0afff641ca7e40ed
-  decision_digest: sha256:2a9351045311d1bd8d31fc33500fe4a3b96ce6e6863d8bf3912b0ebf8f14b31f
-  receipt_digest: sha256:5eb3092451ad6d07bde3464ae3d816fe74feca49fe37bea1c7ac400065b2a310
+  receipt_id: certificate:0edd180776d3f4c02380a9df234fbc4d
+  command_id: command:pr520-issue487-forward-ownership-revision3
+  admitted_at: 2026-09-04T11:30:00.000+09:00
+  source_digest: sha256:984e3b1ce5e4fe7d55535af0d8a3d0e738fda6e159530bfd288052a0eaab1662
+  decision_digest: sha256:96a1dbe85637e79ce863360a99e4b2f96dce8f65fbd8dde93dd12a027cfe7c29
+  receipt_digest: sha256:1ab46b102a03f84e69e2ff5cffeb8f1578d0119d6db1ba06b9b3f7c1e9068610
   binding:
     path: docs/plans/PLAN-L7-530-bun-final-retirement.md
     plan_id: PLAN-L7-530-bun-final-retirement
     asset_id: plan:bc9250c9a7c873dcb9f18956677371f7
-    revision: 2
-    content_digest: sha256:440c5aaea34d33de3320b0182f0593835fb546696bc20c7a0afff641ca7e40ed
+    revision: 3
+    content_digest: sha256:984e3b1ce5e4fe7d55535af0d8a3d0e738fda6e159530bfd288052a0eaab1662
   route:
     signal: feature_addition
     mode: add-feature
@@ -138,11 +138,11 @@ sliceが inventory と撤去oracleへ含める reachable surface は次の2系�
   download可能なfixture依存として保持している経路を、production到達と混同せず明示的に
   inventoryし、撤去又は専用fixture隔離を検証する。
 
-`package.json`/`bun.lock`、setup/readiness、source CI、Pack/consumer template、generated
-consumer treeはこのrevisionで再発見された対象ではない。#470（生成成果物）、#471（readiness）、
-#472（source CI）は完了済み所有を再吸収せず、#500のPack CI policyと#450のprogram closureは
-`PLAN-L7-522`の参照・除外境界に残す。#473のNode producer/`build` script撤去契約も
-`PLAN-L6-93`→`PLAN-L7-458`系列の所有であり、本PLANは実装しない。
+`package.json` の `build`、`bunAuthority`、`bun.lock` はIssue #487が所有するfinal deletionの中核であり、
+4要素tuple成立後に本PLANで物理撤去する。#470（生成成果物）、#471（readiness）、#472（source CI）の
+完了済み所有は再吸収せず、#500のPack CI policyと#450のprogram closureは`PLAN-L7-522`の
+参照・除外境界に残す。#473は本Issueを束ねる親programであり別artifact ownerではない。Node producer
+（#484/#515）を再実装せず、そのreceiptをfinal deletionの開始条件として消費する。
 
 テスト名称、Red fixture、migration debt台帳の履歴記録は、実行時にproductionへ到達しない
 限り retained として許可する。allowlistへ混ぜてGreen化したり、検出対象から削除して
@@ -170,11 +170,12 @@ state、別のreceipt trust root、別のBun allowlistを作らない。
 
 - Bun final retirement admission/verifier とその schema/test
 - production reachable-surface inventory と typed report（上記 `scripts/` 2系統）
+- `package.json` の `build`、`bunAuthority`、`bun.lock` と関連toolchain policyの物理撤去
 - `secret-scan-diff.ts` shebang/direct entry と snapshot runnerのBun fixture依存の撤去又は隔離
 - retained Q0 fixture の隔離と detector coverage
 - PLAN/Reverse/test-designの同一revision trace
 
-consumer runtime identity (#463)、Node producer (#473/#484/#515)、#470/#471/#472の完了済み
+consumer runtime identity (#463)、Node producer (#484/#515)、#470/#471/#472の完了済み
 consumer/readiness/source-CI所有、#500のPack CI policy、#450のprogram closure、Pack publication、
 Memory/notification (#424)、worktree lifecycle (#391) はこのPRへ混ぜない。
 
