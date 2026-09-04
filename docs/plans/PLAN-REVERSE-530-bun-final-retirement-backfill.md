@@ -39,18 +39,18 @@ status: draft
 github_issue_id: 487
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:69b6d63d6bc42e97ebd9473254ea6f35
-  command_id: command:pr520-issue487-reverse-scope-revision1
-  admitted_at: 2026-09-04T10:01:00.000+09:00
-  source_digest: sha256:3a86c028ad567eec08cbfeab98b6c2191153c5cd2a8c7e2b982e5e885b85a8cd
-  decision_digest: sha256:4850898c07237d0f90d82e5a0f18914a1043e4efa38f01f4868b68f36aef68c3
-  receipt_digest: sha256:814cb1f48ca5c6e8d998f0a7268dda55adb2ffc26777c049a72e15cc46a0e175
+  receipt_id: certificate:4727c21e7227fefefdb428f11662676c
+  command_id: plan-draft:issue-487:reverse:1
+  admitted_at: 2026-09-04T00:01:00.000Z
+  source_digest: sha256:026e86fe268420312674ff407135830de837b328b81d178cde4f2aa7dc8fab32
+  decision_digest: sha256:4ec6e99485c001055e4e4cddebb2dc0245c086c7eebbcc035303d7366bec411e
+  receipt_digest: sha256:04d5de668ebdec62759a24e35866113f043f9bb92bd03d97bba978a4f29b8426
   binding:
     path: docs/plans/PLAN-REVERSE-530-bun-final-retirement-backfill.md
     plan_id: PLAN-REVERSE-530-bun-final-retirement-backfill
     asset_id: plan:4727c21e7227fefefdb428f11662676c
-    revision: 2
-    content_digest: sha256:3a86c028ad567eec08cbfeab98b6c2191153c5cd2a8c7e2b982e5e885b85a8cd
+    revision: 1
+    content_digest: sha256:026e86fe268420312674ff407135830de837b328b81d178cde4f2aa7dc8fab32
   route:
     signal: design_gap
     mode: reverse
