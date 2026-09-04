@@ -1,0 +1,48 @@
+---
+document_id: UT-TDD-CONCEPT-V4-ACCEPTANCE
+status: draft_candidate
+concept: docs/governance/candidates/ut-tdd-concept-v4.0.md
+requirements: docs/governance/candidates/ut-tdd-concept-v4-requirements.md
+plan: docs/plans/PLAN-L1-09-ut-tdd-concept-v4-candidates.md
+---
+
+# UT-TDD 構想書 v4.0 L10 受入候補 (positive / negative oracle)
+
+## Authority 境界
+
+本書は PLAN-L1-09 の未承認候補であり、test-design でも実装 oracle でもない。承認後、各行は該当する下流 PLAN の
+test-design へ `CANDIDATE-*` として降下し、本書は候補から昇格記録へ役割を変える。ここでの oracle は「何を
+falsify できれば受入とみなすか」の宣言であり、実行主体・実装方式を固定しない。
+
+## 受入候補
+
+| ID | 対応要件 | 刺激 (stimulus) | oracle |
+|---|---|---|---|
+| UTV4-AC-001 | FR-001 | AI が memory / session summary / 自身の解釈から「PO 承認済み」と記録する | approval record が生成されず、provenance 不在として fail-close。監査記録に残る |
+| UTV4-AC-002 | FR-002 | 層別境界表の外にある質問 (進捗確認・実行許可・自力で確定できる事実) を AI が PO へ投げる | deny (反射的エスカレーション)。advisor 相談と実測の要求が返る |
+| UTV4-AC-003 | FR-002 | 高影響境界 (production / destructive / auth / payment / PII / secret / licensing / 外部 API) の変更を AI が承認なしに実行する | fail-close。人間 approval record が無い限り write しない |
+| UTV4-AC-004 | FR-003 | チケットに owner 2 名、または owner 無しを設定する | fail-close。exactly-one owner が満たされるまで assignment 不成立 |
+| UTV4-AC-005 | FR-003 | owner に provider 名 / model 名を設定する | deny。owner は人間ユーザー identity または logical lane のみ |
+| UTV4-AC-006 | FR-004 | 人間ユーザーが発行したチケットと AI lane が受けたチケットを同じ projection で列挙する | 同一 schema で列挙され、owner 種別だけが異なる |
+| UTV4-AC-007 | FR-005 | lease を持たない actor が対象 path を編集して commit する | typed conflict として所有者へ戻り、merge admission が deny |
+| UTV4-AC-008 | FR-005 | 同一 path に 2 つの有効 lease を発行する | 2 つ目の発行が fail-close |
+| UTV4-AC-009 | FR-005 | 期限切れ lease で push する | deny。renewal か takeover receipt が必要 |
+| UTV4-AC-010 | FR-005 | 同一 PR / HEAD / revision に異なる memoryId の review request を 2 件出す | 2 件目が実行前に deny (#421 の要求を継承) |
+| UTV4-AC-011 | FR-006 | record (チケット / verdict / receipt) を markdown だけに書き、構造化 file を作らない | doctor が record 不在として fail-close |
+| UTV4-AC-012 | FR-006 | 同じ record を構造化 file と DB の双方で独立に編集し値を食い違わせる | DB は projection として再構築され、file 側の値が勝つ。差分は finding |
+| UTV4-AC-013 | FR-007 | 実装 PR の中で PLAN frontmatter の一部だけを JSON へ引き剥がす | PR スコープ規律違反として FLAG。専用 Reverse 対 PLAN へ差し戻し |
+| UTV4-AC-014 | FR-008 | 生成 view (表 / doc) を直接編集する | hash 不一致を doctor が検出し fail-close。生成元 identity が提示される |
+| UTV4-AC-015 | FR-008 | 同じ正本から view を 2 回生成する | byte 同一 (決定性) |
+| UTV4-AC-016 | FR-009 | view 上の変更を admission 経由で構造化正本へ戻す | actor / source view / target record / revision を持つ receipt が残り、正本が更新される |
+| UTV4-AC-017 | FR-009 | view 上の変更を markdown 正本へ機械書き戻しする | deny。markdown 正本は人間編集のみ |
+| UTV4-AC-018 | FR-010 | FLAG 1 件だけを根拠に新しい doctor gate を実装する | 単一 episode 昇格として deny。改善候補として Reverse へ route される |
+| UTV4-AC-019 | FR-010 | 改善候補が Requirement / 設計を直接書き換える | deny。proposal / evidence / delta のみ生成 |
+| UTV4-AC-020 | FR-011 | 改善候補が生成されたとき | 同一候補が人間向け digest (generated view) として配られ、採否が decision record に残る |
+| UTV4-AC-021 | FR-012 | 進捗表示を人間が手で更新する / モデルが完了を自己申告する | 進捗 projection は変化しない。チケット・PR・CI・review・merge の事実のみが入力 |
+| UTV4-AC-022 | FR-013 | author と同 family の reviewer verdict、または旧 HEAD の receipt で merge する | merge admission が deny (既存 review custody の再確認) |
+| UTV4-AC-023 | FR-014 | legacy (Bun / personal path) の green を根拠に current failure を相殺する | deny。current identity の failure が残る |
+
+## 非受入
+
+- 上記に無い「完全自動化」「AI による承認代行」「Issue / DB の意味正本化」は受入対象に含めない。
+- 951 PLAN の一括 JSON 化の完了は受入条件にしない。
