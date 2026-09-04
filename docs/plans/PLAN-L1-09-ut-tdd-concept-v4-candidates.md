@@ -159,8 +159,8 @@ admission が無く PR 単位の人手、依存台帳の暫定 → 確定が手�
 ### 2.7 社内 project の実録 2: 人間 orchestrator 型 (unison-ai-product/AI-standardization-platform、PO 提示 2026-09-04)
 
 人間が仕様を手で詰め、チケット単位で AI に指示し、自走させていない開発の実録 (`gh api repos/unison-ai-product/AI-standardization-platform/git/trees/HEAD?recursive=1`、
-`gh pr list / gh issue list --repo unison-ai-product/AI-standardization-platform --state all`、2026-09-04 実行。PR 336 件 / issue 168 件
-(open 84 / closed 84)、実装期間 2026-07-10 handoff 〜 08-07)。
+`gh pr list / gh issue list --repo unison-ai-product/AI-standardization-platform --state all`、2026-09-04 実行。PR 168 件 (merged 163 / closed 5 / open 0、最大 PR 番号 336 — 番号は issue と共有) / issue 168 件
+(open 84 / closed 84)、実装期間 2026-07-10 handoff 〜 08-07。Sol r6 FLAG (receipt 61bb2bb3) で件数誤記を訂正)。
 
 | 現物 (HEAD 2026-09-04) | v4 候補の対応 | 所見 |
 |---|---|---|
@@ -173,6 +173,26 @@ admission が無く PR 単位の人手、依存台帳の暫定 → 確定が手�
 
 所見: この型は v4 の **移行元プロファイル** (standalone = 人間 orchestrator) であり、v4 が機械化する対象はここで人間が手で回している
 チケット切り出し・テスト仕様書・シート齟齬取り・再生成の 4 作業に一致する。概念 §Provider topology に standalone の実態として追記。
+
+### 2.8 社内 project の実録 3: 途中からハーネス概念を入れた実稼働システム (UNISON-TECHNOLOGY/seo-agent、PO 提示 2026-09-04)
+
+社内 VPS で実稼働中の SEO 自動運用システム (AI-office-de-seo の前身)。2026-02 起点で、ハーネス (旧 HELIX) の Reverse / system-map を
+途中 (2026-06〜07) から導入した (`gh api repos/UNISON-TECHNOLOGY/seo-agent/git/trees/HEAD?recursive=1` = tracked 5,635 file、
+`gh pr list --state all` = 135 件 (merged 132)、`gh api .../commits` 直近 800 commit の type 分布、2026-09-04 実行)。
+PO の狙い: 「設計書の製本の重要性と、変更時の更新の重要性が解ける」実例。
+
+| 現物 (HEAD 2026-09-04) | 観測 | v4 候補が答える箇所 |
+|---|---|---|
+| `docs/reverse/system-wide/` 80 file (R0 evidence map / R1〜R4 / 契約 40 本超)、README の全 artifact が `draft*`、`RGC-readiness-and-completion-audit.md` = rgc-not-ready、25 gap が全 open | 途中導入の Reverse は「網羅的に書いたが閉じない」状態で止まる。契約が prose で増殖し、閉じる機構 (admission・receipt) が無い | FR-048 backflow record (1 契約 1 record、batch decision で閉じる)、FR-025 退役 record、原則 7 (単一 episode で昇格しない) |
+| `docs/system-map/sources.md`: R0 catalog (2026-04-10) の UI 27 ページに対し「現行 33 ページと乖離判明済み」、docs inventory 229 file、gap report 孤児 228 / index mismatch 189 | 設計書が変更時に更新されず、後追いの監査で乖離を数える運用。カタログは手書き prose で digest も生成元も無い | FR-046 (図・inventory は record からの生成、同一 record → 同一 digest)、FR-047 (diagram drift は doctor fail-close)、原則 6 (generated view を編集しない) |
+| `docs/system-map/01〜60` の連番監査・設計・WBS 文書、`docs/archive/detailed-design-v3.2-20260410/` (superseded 詳細設計一式)、`docs/archive/mockups-v2-20260410/` | 詳細設計とモックが日付付きで archive へ落ち、現行設計は「連番 doc の最新」を人が追う。製本点が無いので正本がどれか分からない | FR-039 / FR-057 製本点 (製本された screen id のみ正本)、FR-056 modernization register、§ハーネス標準共有機構 (人間はスプシ / 図で読む) |
+| `CLAUDE.md` が「決定台帳 = doc23 §ユーザー決定 (確定 17 件)」「契約文書 = doc24〜27」「不干渉領域」を列挙し、運用報告書はスプレッドシート | 決定と契約の所在を人間が CLAUDE.md に手で書いて AI に読ませている。所在が変われば手更新 | FR-041 judgement / decision record、FR-008 スプシ同期 view、FR-049 role record (運用規約を skill 抽出) |
+| commit type (直近 800): fix 281 / feat 158 / docs 126 / chore 58 / test 41 / refactor 11 | fix が feat の約 1.8 倍。設計と実装の乖離を fix で埋め続ける形。refactor は 1.4% | FR-052 / FR-053 (中チケットの refactor ゲート、projection 発火)、FR-037 (全体影響バグの stop-the-line) |
+| `m1-tl-design-source.md`: Functional Freeze 対象 13 件が「未凍結」表で管理、契約 6 文書へ分割案 | freeze が表の手書き状態で、record でも遷移でもない | FR-058 (provisional / frozen の record 状態と遷移条件) |
+
+結論: 途中導入で起きたことは「文書は増えたが正本が定まらず、変更時に更新されず、閉じない」であり、v4 が製本点・generated view の
+drift fail-close・backflow record・退役 record を **最初から** 持つ理由がここにある。後付けで Reverse を回すコスト (80 file、全 draft) は、
+初期に record と製本点を置くコストより大きい、という実録として §3 の設計判断の根拠に使う。
 
 ## 3. 設計判断
 
