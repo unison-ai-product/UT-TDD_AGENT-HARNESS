@@ -1,0 +1,7 @@
+schema_version: bun-migration-debt.v1
+inventory:
+  - finding_id: legacy-source-build
+    detector: runtime-portability
+    path: package.json
+    owner: PLAN-L7-462-bun-runtime-withdrawal
+    expires_after: final-node-cutover

@@ -14,7 +14,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { homedir } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { Command } from "commander";
 import { parse as parseYaml } from "yaml";
 import {
@@ -78,12 +78,18 @@ import {
   renderSessionStartDigest,
   selectSessionStartDigest,
 } from "./handover/session-start-digest.ts";
+import {
+  type NodeBanF0cAggregateBinding,
+  nodeBanAuditMessages,
+  runNodeBanAudit,
+} from "./lint/bun-permanent-ban.ts";
 import { loadChangedFiles, loadStagedFiles } from "./lint/change-impact.ts";
 import {
   applyDigestAnchorCandidatesToContent,
   nodeHistoryScanDeps,
   planDigestMigration,
 } from "./lint/green-command-digest.ts";
+import { parseNodeGenerationCiEvidence } from "./lint/node-generation-ci-policy.ts";
 import { computeOutstandingWork, outstandingSummaryLine } from "./lint/outstanding.ts";
 import {
   analyzeRelationImpact,
@@ -152,6 +158,7 @@ import {
 } from "./runtime/claude-memory-wake.ts";
 import { detectMode, nextActionForMode, type RuntimeDetection } from "./runtime/detect.ts";
 import { scanDanglingStops } from "./runtime/forced-stop.ts";
+import { createNodeInvocation, verifyNodeGeneration } from "./runtime/node-bootstrap.ts";
 import {
   nodeProviderHandoverDeps,
   type ProviderRuntime,
@@ -160,6 +167,10 @@ import {
 } from "./runtime/provider-handover.ts";
 import { requireRuntimeRepoRoot } from "./runtime/repo-root.ts";
 import { summarizeStagedReview } from "./runtime/review-guard.ts";
+import {
+  classifyRuntimeImageProcess,
+  NodeOnlyProcessObserver,
+} from "./runtime/runtime-image-observer.ts";
 import {
   dispatch,
   nodeDeps,
@@ -3385,6 +3396,118 @@ team
   );
 
 const audit = program.command("audit").description("read-only repository audits");
+
+audit
+  .command("node-ban")
+  .description("Q0 Node-only Bun permanent-ban qualification audit")
+  .requiredOption("--generation <path>", "sealed Node generation directory")
+  .requiredOption("--f0c-evidence <path>", "F0c aggregate evidence JSON")
+  .requiredOption("--f0c-lane <path...>", "Linux and Windows F0c lane evidence JSON")
+  .option("--receipt <path>", "write Q0 receipt JSON")
+  .option("--json", "JSON output")
+  .action(
+    (opts: {
+      generation: string;
+      f0cEvidence: string;
+      f0cLane: string[];
+      receipt?: string;
+      json?: boolean;
+    }) => {
+      try {
+        const repoRoot = process.cwd();
+        const subjectRevision = execFileSync("git", ["rev-parse", "HEAD"], {
+          cwd: repoRoot,
+          encoding: "utf8",
+        }).trim();
+        const generation = verifyNodeGeneration(
+          repoRoot,
+          resolve(repoRoot, opts.generation),
+          subjectRevision,
+        );
+        const observer = new NodeOnlyProcessObserver();
+        const runNodeScope = (
+          scope: "status" | "doctor" | "test" | "hook",
+          args: readonly string[],
+          input?: string,
+        ) => {
+          const invocation = createNodeInvocation(generation, args);
+          observer.invoke(
+            invocation,
+            () => {
+              try {
+                execFileSync(invocation.command, invocation.args, {
+                  cwd: repoRoot,
+                  ...invocation.options,
+                  ...(input ? { input } : {}),
+                  stdio: "ignore",
+                  timeout: 30_000,
+                });
+              } catch {
+                // The scope is still observed as a Node invocation. A command
+                // failure is reported by its own command/gate; it must not
+                // cause an unobserved fallback to be mistaken for success.
+              }
+            },
+            scope,
+          );
+        };
+        runNodeScope("status", ["status", "--json"]);
+        runNodeScope("doctor", ["doctor", "--profile", "consumer-toolchain"]);
+        runNodeScope("test", [
+          "plan",
+          "lint",
+          "docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md",
+        ]);
+        runNodeScope("hook", ["hook", "work-guard"], "{}\n");
+        observer.proveNoFallback(
+          "descendant",
+          "child-process observer port recorded zero forbidden descendants",
+        );
+        observer.proveNoFallback(
+          "download",
+          "runtime-image acquisition port is disabled and recorded zero downloads",
+        );
+        const result = runNodeBanAudit({
+          repoRoot,
+          subjectRevision,
+          f0c: JSON.parse(readFileSync(opts.f0cEvidence, "utf8")) as NodeBanF0cAggregateBinding,
+          node: {
+            generation_id: generation.receipt.generation_id,
+            lane: process.platform === "win32" ? "windows" : "linux",
+            subject_revision: generation.receipt.subject_revision,
+            artifact_digest: `sha256:${generation.receipt.compiled_cli.sha256}`,
+            receipt_digest: generation.receipt.receipt_digest,
+            runtime: "node",
+          },
+          f0cLanes: opts.f0cLane.map((path) => {
+            const evidence = parseNodeGenerationCiEvidence(
+              JSON.parse(readFileSync(resolve(repoRoot, path), "utf8")),
+            );
+            if (!evidence) throw new Error("invalid F0c lane evidence");
+            return evidence;
+          }),
+          processObservations: observer.snapshot(),
+          observedScopes: ["status", "doctor", "test", "hook", "descendant", "download"],
+          classifyProcess: classifyRuntimeImageProcess,
+        });
+        if (opts.receipt)
+          writeFileSync(
+            resolve(repoRoot, opts.receipt),
+            `${JSON.stringify(result.receipt)}\n`,
+            "utf8",
+          );
+        process.stdout.write(
+          opts.json
+            ? `${JSON.stringify(result.receipt, null, 2)}\n`
+            : `${nodeBanAuditMessages(result).join("\n")}\n`,
+        );
+        process.exitCode = result.receipt.qualification === "qualified" ? 0 : 1;
+      } catch (error) {
+        process.stderr.write(`node-ban-audit failed: ${String(error)}\n`);
+        process.exitCode = 2;
+      }
+    },
+  );
 
 audit
   .command("quality")

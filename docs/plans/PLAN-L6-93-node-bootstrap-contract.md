@@ -27,6 +27,12 @@ generates:
     artifact_type: design_doc
   - artifact_path: docs/test-design/harness/L7-node-toolchain-provenance-test-design.md
     artifact_type: test_design
+  - artifact_path: src/schema/cutover-transition.ts
+    artifact_type: source_module
+  - artifact_path: src/runtime/cutover-transition.ts
+    artifact_type: source_module
+  - artifact_path: tests/cutover-transition.test.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L5-26-node-generation-activation.md
   requires: []
@@ -335,6 +341,15 @@ head/version CAS、UNIQUE制約、commit/fsync barrierを使い、loser/crashは
 zod schema正本は`src/schema/cutover-transition.ts`と`src/schema/node-slice-admission.ts`、
 `admitNodeSlice` runtime/testは`src/runtime/node-slice-admission.ts` /
 `tests/node-slice-admission.test.ts`である。
+
+### Cutover artifact ownership
+
+`src/schema/cutover-transition.ts`、`src/runtime/cutover-transition.ts`、
+`tests/cutover-transition.test.ts`の実装・pair test artifact ownerは本PLANである。
+この3 pathは本PLANの`generates`にのみ宣言し、`PLAN-L7-458`および
+`PLAN-REVERSE-458-node-self-hosted-bun-ban-backfill`は設計参照に限定する。
+本PLANは`status: draft`のため、これらのartifactの実装完了やCutoverのconfirmed化を
+この所有宣言から導出しない。
 
 ## 5. 旧Bun配布経路の処遇 (削除禁止条項の保護範囲)
 

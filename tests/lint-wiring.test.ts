@@ -87,7 +87,7 @@ describe("loadLintWiringInput (live repo regression fence)", () => {
     // No dead rules; only explicitly justified pure policies are deferred.
     expect(r.unwired).toEqual([]);
     expect(r.staleDeferred).toEqual([]);
-    expect(r.deferred).toEqual(["node-generation-ci-policy", "tool-adapter"]);
+    expect(r.deferred).toEqual(["tool-adapter"]);
     expect(r.ok).toBe(true);
     // The audits this PLAN re-wired into doctor are now genuinely reachable.
     for (const m of [
