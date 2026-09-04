@@ -34,7 +34,7 @@ additive 方式の L1 delta 文書へ写し、既存 VUP-REQ-01〜10 は不変�
 | UTV4-FR-013 | 独立 review は authoring context から分離し、candidate HEAD と CI generation へ exact 束縛する。author runtime の内部 review を独立 review へ昇格せず、wrong HEAD の receipt を再利用しない。 | 共通 | v3.1 §2.1.2 / PLAN-L7-465 / 517 を継承 (変更なし、再確認) |
 | UTV4-FR-014 | current identity と compatibility identity を分離し、legacy (Bun、personal path、旧 memory 中心継続) の green で current の failure を相殺しない。 | 共通 | ADR-001、Bun BAN (#450) を継承 |
 
-## Compatibility
+## 互換性
 
 v3.1 の L0-L14、正規 V-pair、Forward / Reverse / Recovery、9-mode + routeFiling SSoT、fail-close、cross-family
 review、TypeScript/Node 一本、Pack 配布契約 (PLAN-L6-63 系) は継承する。本書は既存要件を撤回せず、
