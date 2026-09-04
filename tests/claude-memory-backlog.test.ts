@@ -1,4 +1,3 @@
-import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -17,8 +16,10 @@ import {
   summarizeUnclaimedInbox,
   waitForClaudeMemory,
 } from "../src/runtime/claude-memory-wake.ts";
+import { resolveProjectMemoryRoot } from "../src/runtime/project-memory-root.ts";
 import { openHarnessDb } from "../src/state-db/index.ts";
 import { migrate } from "../src/state-db/migration.ts";
+import { ensureTrackedProjectIdentity } from "./support/project-identity-fixture.ts";
 
 const memory: MemoryEntry = {
   memory_id: "memory:project:backlog-227",
@@ -33,12 +34,14 @@ const memory: MemoryEntry = {
 
 function fixture(): string {
   const root = mkdtempSync(join(tmpdir(), "ut-tdd-memory-backlog-"));
-  execFileSync("git", ["init", "-q"], { cwd: root });
+  ensureTrackedProjectIdentity(root, "fixture/claude-memory-backlog");
   return root;
 }
 
 function generationPath(root: string, sessionId: string): string {
-  return join(root, ".git", "ut-tdd-runtime", "claude-memory-wake", `${sessionId}.generation`);
+  const project = resolveProjectMemoryRoot(root);
+  if (!project.ok) throw new Error(project.reason);
+  return join(project.runtimeBusRoot, "claude-memory-wake", `${sessionId}.generation`);
 }
 
 describe("Claude memory delivery backlog visibility", () => {

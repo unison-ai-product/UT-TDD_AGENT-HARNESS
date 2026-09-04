@@ -22,6 +22,7 @@ import type {
 import { issueReviewRequest, projectReviewVerdict } from "../src/feedback/review-attestation.ts";
 import { runPrMerge } from "../src/feedback/review-merge-gate.ts";
 import type { ClaudeReviewInboxEntry } from "../src/runtime/claude-memory-wake.ts";
+import { ensureTrackedProjectIdentity } from "./support/project-identity-fixture.ts";
 
 const head = "a".repeat(40);
 const canonicalRequest: ReviewAttestationRequest = {
@@ -96,6 +97,7 @@ describe("live review projection (U-RVATT-023..026)", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-live-review-task-"));
     const outside = mkdtempSync(join(tmpdir(), "ut-live-review-outside-"));
     try {
+      ensureTrackedProjectIdentity(root, "fixture/live-review-projection");
       const memoryDirectory = join(root, ".ut-tdd", "memory");
       mkdirSync(memoryDirectory, { recursive: true });
       const sourcePath = ".ut-tdd/memory/feedback-d3a.md";
