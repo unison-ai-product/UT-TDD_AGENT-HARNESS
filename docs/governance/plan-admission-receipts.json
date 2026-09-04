@@ -2336,6 +2336,38 @@
         "revision": 5,
         "content_digest": "sha256:0672c808e2c0fd91f07c3eead43b7684a3c4fe881f992f8ccc4359ad7342754c"
       }
+    },
+    {
+      "sequence": 147,
+      "previous_record_digest": "sha256:65ff609bf4510b7dc7fd30332b8ad3cdf8c979e66920b706160c68d28e1cda8a",
+      "record_digest": "sha256:7c119dae5e6e8e5d15f944a5a97b59d125bec56c6c1bde41953d0f60a001b2e2",
+      "command_id": "plan-draft:issue-487:forward:1",
+      "receipt_id": "certificate:bc9250c9a7c873dcb9f18956677371f7",
+      "receipt_digest": "sha256:d06ea2c0c0d12e577fb1fe9d7f54dda0f06f4e662992c6e9188b37e3767cd533",
+      "decision_digest": "sha256:91b9533f00fc1f130eb049b28e10b57fae432059eb1b207ba39bfa30d7c3856a",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-530-bun-final-retirement.md",
+        "plan_id": "PLAN-L7-530-bun-final-retirement",
+        "asset_id": "plan:bc9250c9a7c873dcb9f18956677371f7",
+        "revision": 1,
+        "content_digest": "sha256:11316ccad8122064fe93207fe743ad89cc051a9ea6c72f46293fbaffa0791b71"
+      }
+    },
+    {
+      "sequence": 148,
+      "previous_record_digest": "sha256:7c119dae5e6e8e5d15f944a5a97b59d125bec56c6c1bde41953d0f60a001b2e2",
+      "record_digest": "sha256:cb24193f07f98fb2c469416b1e1962b94a4171b39c207b827b728dc1a5978bb4",
+      "command_id": "plan-draft:issue-487:reverse:1",
+      "receipt_id": "certificate:4727c21e7227fefefdb428f11662676c",
+      "receipt_digest": "sha256:04d5de668ebdec62759a24e35866113f043f9bb92bd03d97bba978a4f29b8426",
+      "decision_digest": "sha256:4ec6e99485c001055e4e4cddebb2dc0245c086c7eebbcc035303d7366bec411e",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-530-bun-final-retirement-backfill.md",
+        "plan_id": "PLAN-REVERSE-530-bun-final-retirement-backfill",
+        "asset_id": "plan:4727c21e7227fefefdb428f11662676c",
+        "revision": 1,
+        "content_digest": "sha256:026e86fe268420312674ff407135830de837b328b81d178cde4f2aa7dc8fab32"
+      }
     }
   ]
 }

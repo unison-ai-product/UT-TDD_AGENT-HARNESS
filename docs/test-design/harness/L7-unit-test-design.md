@@ -2093,6 +2093,13 @@ source-side artifact admissionを、consumer runtime隔離の代替証拠とし�
 | `CAND-NODEBOOT-028` | `retirement_subject`が撤去commitのsubject revisionと不一致 (過去に成立した2 receiptを別commitでの撤去へ流用) | 撤去をfail-close。tuple 3要素一致でも4要素目の不一致で落ちることを固定する |
 | `CAND-NODEBOOT-029` | `scripts/ut-tdd.ps1`のBOM変異 — 独立4case: (a) BOM欠落、(b) BOM 2個以上、(c) **BOM 1個だが byte が異なる** (`EF BB BE` / `EF BF BF` 等)、(d) UTF-16 LE/BEへのencoding差し替え | いずれも`C_ps1`由来の受理4集合外としてfail-close (PLAN-L6-93 §5.2.1)。**POSIX側と同一規則を当てる実装は (a) を通す**ため file別canonical byte列であることを固定し、**BOM個数とencoding familyだけを見る実装は (c) を通す**ため byte等価で判定していることを固定する |
 | `CAND-NODEBOOT-030` | `scripts/ut-tdd`へ先頭BOM (`EF BB BF`) を混入 | `C_posix`由来の受理4集合外としてfail-close。shebang破壊を検出規則として固定する (BOM必須を両fileへ一律適用する実装を落とす) |
+| `CAND-NODEBOOT-208` | Q0後の最終撤去で、productionへ到達可能なBun build/fallback surfaceを1件残す、または検出用retained fixtureをproduction allowlistへ混入する | production reachable surfaceを全件inventoryし、1件でも残ればtyped `NonCompliant`/`Indeterminate`で撤去0。retained fixtureは専用rootに隔離され、生成Pack/consumer/runtimeから到達不能であることを実測する |
+
+`CAND-NODEBOOT-023`、`027`、`028`、`208` の最終撤去実装とpair evidenceの所有者は
+`PLAN-L7-530-bun-final-retirement`、上位へのgap-only backfillは
+`PLAN-REVERSE-530-bun-final-retirement-backfill`である。`PLAN-L6-93`は023/027/028の
+設計契約を保持し、`PLAN-L7-458`はQ0から最終撤去へ渡す順序を参照する。候補IDの記述を
+Green実績と解釈せず、実装PRでRed実測後に正式 `U-*` へ昇格する。
 
 `CAND-NODEBOOT-018`の固定tupleはL5 `NODE-SLICE-LEGACY-BACKFILL-REGISTRY-v1`の
 `legacy.d0-admission` / `legacy.f0a-custody`を正本とする。前者から

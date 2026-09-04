@@ -102,6 +102,8 @@ dependencies:
     - docs/plans/PLAN-L5-26-node-generation-activation.md
     - docs/plans/PLAN-L6-93-node-bootstrap-contract.md
     - docs/plans/PLAN-REVERSE-458-node-self-hosted-bun-ban-backfill.md
+    - docs/plans/PLAN-L7-530-bun-final-retirement.md
+    - docs/plans/PLAN-REVERSE-530-bun-final-retirement-backfill.md
     - docs/test-design/harness/L7-unit-test-design.md
     - docs/test-design/harness/L8-integration-test-design.md
     - docs/test-design/harness/L9-system-test-design.md
@@ -237,7 +239,8 @@ slice admissionはzod `src/schema/node-slice-admission.ts`→kernel
 4. F0cはLinux/Windows jobとaggregateをRed→Green化する。
 5. F0c後のQ0 revisionは利用可能なNode self-host runtime上でNode-only Bun detector/ban auditを実装・実行し、
    authoring/runtime no-fallbackをqualificationする。
-6. repo-wide final deletionのTDD順序とDoDはQ0後の別revisionで定義する。
+6. repo-wide final deletionのTDD順序とDoDはQ0後の後継
+   `PLAN-L7-530-bun-final-retirement` revisionで定義する。
 
 frontmatterの`generates`は本PLANが所有する予定artifact一覧であり、program全体の予定artifact一覧ではない。
 F0aはtoolchain/lock、F0bはbootstrap/generation、F0cはworkflowを生成する。F0c後の後続Q0 revisionが
@@ -394,9 +397,12 @@ D0 design mergeは通常のReviewBundle outer 1 + AttestedTrackedReceiptRecord e
 | F0c CI | `CAND-NODEBOOT-019`, `103..106`, `206` |
 | Q0 | `CAND-NODEBOOT-020`, `201..204` |
 | cutover revision（artifact owner = `PLAN-L6-93-node-bootstrap-contract`） | `CAND-CUTOVER-001..009`, `CAND-CUTOVER-101..113`, `CAND-NODEBOOT-207`, `CAND-NODEBOOT-209..213` |
-| final deletion | `CAND-NODEBOOT-208` |
+| final deletion (Q0後、実装所有者 = `PLAN-L7-530` pair) | `CAND-NODEBOOT-023`, `CAND-NODEBOOT-027`, `CAND-NODEBOOT-028`, `CAND-NODEBOOT-208` |
 
 候補は一つのownerだけを持つ。F0a/F0b/F0cを再結合せず、各sliceのtest+implementation同一commitでのみ正式IDへ昇格する。
+上表の final deletion 4候補の実装artifact/evidence owner は
+`PLAN-L7-530-bun-final-retirement` とその Reverse pair であり、本PLANは候補の設計参照だけを
+保持する。L6-93は023/027/028の契約定義を保持するが、実装所有を重ねない。
 `src/schema/cutover-transition.ts` / `src/runtime/cutover-transition.ts` /
 `tests/cutover-transition.test.ts`のartifact boundary ownerはL6-93のCutover artifact ownership sectionであり、
 slice admission候補の個別Red→Greenは上表のtarget slice ownerが同じpairへ追加する。本PLANはCutoverの設計・
