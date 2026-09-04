@@ -239,6 +239,28 @@ hybrid 基準比較 (FR-024) で見逃し率を継続計測する。これらは
 | 齟齬の検出 | 「機械が認識していること」と「人間が認識していること」の差は、人間が図 / スプシ側で行った追加・削除・変更を直接反映せず **discrepancy record** (対象 record id、人間側の主張、機械側の値、差分の種類) として diff し、admission で正本へ戻すか finding として owner へ返す。逆に record が変わって図が古くなった状態 (diagram drift) は doctor が fail-close する。齟齬は会話ではなく record で解消する。 |
 | 適用層 | L1 (要求 → 要件のトレース図)、L3 (要件 IR ↔ 画面遷移)、L4 (責務 × 依存)、L5 / L6 (ER・API・状態遷移)、チケット (大 → 中 → 小 → 原子の入れ子とレース状況)。各層の図は同じ生成契約を使い、層ごとに描画器を発明しない。 |
 
+## 画面プロト工程の構成 (PO 指示 2026-09-04: 本開発では構成が薄い、しっかり見る)
+
+製本点 (a)(b) だけでは工程が成立しない。画面プロトは **要求を整理し要件を固めるための検証装置** であり、次の構成要素を
+record と generated view で持つ。ハーネス自身の人間向け面 (スプレッドシート view、digest、ダッシュボード、CLI の対話面) も同じ工程を通す
+(dogfooding)。参考実録: 社内 project の L3-ui-prototype 構成 (PLAN-L1-09 §2.6)。
+
+| 構成要素 | 内容 | record / view |
+|---|---|---|
+| 初期画面ルール (freeze) | 画面規約・component / design token・状態語彙 (利用不可 / 未観測 / 部分表示 / 前回確定値 / 算出中 等の縮退状態)・失敗 / 回復の表示規約。分担開始の前提条件 (FR-028) | ルール record (typed) + UI parts catalog (generated) |
+| screen inventory / screen flow | screen id・目的・主 actor・入口出口・参照する要求 candidate。遷移は record から描画 (FR-046) | inventory record、遷移図 (generated) |
+| prototype plan | 検証したい問い (仮説)、build 順序 (基盤 → 共通面 → 機能面 → 管理面)、対象外の明示 | plan record、フェーズ = 中チケット、画面 = 小 / 原子チケット (FR-028 / FR-036) |
+| fixture 契約 | **捏造禁止**: fixture は本番 schema / event envelope と同形、匿名化・切り捨て注記を持つ。**異常系 fixture 必須セット** (権限不足・予算超過・境界違反・保留・鮮度警告・同意未済など、正常系のみのプロトは受入不可) | fixture record (schema 参照 + digest)、必須セットの checklist |
+| mock event 契約 | プロトを駆動する mock event は本番 event schema と同一 envelope。後日の実接続で差し替え可能 | event schema 参照 record |
+| screen finding | 操作で判明した不足・過剰・操作不能・責務ずれを typed に記録し、L1 / L2 へ backflow (FR-048)。L3 契約はそれまで暫定 baseline | finding record → discrepancy / backflow record |
+| 依存の暫定 → 確定 | プロトで発見した要求間・データ依存は「暫定」で依存台帳に入り、要求 / decision record で根拠が確定した時点で「確定」に遷移 (人間ゲート) | 依存 graph の edge state (FR-046) |
+| 受入チェックリスト | 画面ごとの PT-* 観点 (状態網羅・reason 表示・冪等・境界越え拒否・旧仕様文言の不在 等) を AC 候補として要件 IR へ還元 | checklist record → AC 候補 |
+| 機械検証 | layout / 遷移 / 状態表示の Playwright 等による CI 照合。fixture 全列照合。人間の目視は問いに集中 | CI receipt |
+| modernization register | 暫定アセット・superseded 画面・TODO の棚卸し。プロト資産のうち製本されなかったものの退役 (FR-025 / FR-052 大) | register record |
+
+製本点との関係: 上記の record が揃った screen id だけが製本点 (a) で画面仕様へ束ねられる。fixture 契約・異常系セット・screen finding の
+無い画面は compile が `backflow_required` を返す (AC-051 の前段)。
+
 ## 下流から上流への還流 (Reverse) のチーム化 (PO 確認 2026-09-04)
 
 現行の Reverse (R0〜R4、`backprop_decision`、supersedes 双方向) は 1 PLAN 対 1 REVERSE の文書対であり、1 人運用では

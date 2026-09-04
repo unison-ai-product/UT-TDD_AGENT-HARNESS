@@ -69,6 +69,7 @@ A / B の 2 大要求を実現する手段面であり、独立した第 3 の�
 | UTV4-BR-028 | チームは、ハーネス固有の手書き sub-agent 定義に依存せず、provider 非依存の少数の論理 role を各 provider の native な sub-agent 機構へ写像して使え、オーケストレーションを特定の LLM orchestrator に依存させないこと。 | B-③ / E | 二重 role 体系の解消。Provider topology (BR-013 / 014) の実行面 |
 | UTV4-BR-029 | チームは、リファクタリングと退役 (削る作業) をチケット階層ごとの責務として持ち、発火条件を機械が検出して refactor チケットを発行でき、機能追加と混ぜずに behavior-invariant として受入できること。 | B-③ / F | 原子 = TDD 内、小 = 任意 compose、中 = 必須ゲート、大 = 逆方向発行 |
 | UTV4-BR-030 | チームは、PR の merge lane を author から別の人へ渡す (author ≠ reviewer ≠ admitter の三者分離) 構造をチケット責務として持ち、1 人運用では self-admission を記録して監査でき、人が増えた時は record の値だけで別人へ切り替えられること。 | A-① / B-③ | 人数不変性 (BR-013) の admission 面。4 eyes を record 化 |
+| UTV4-BR-031 | チームは、画面プロトを「要求を整理し要件を固める検証装置」として、初期画面ルール・screen inventory / flow・prototype plan・fixture 契約 (捏造禁止・異常系必須)・mock event 契約・screen finding・依存の暫定 → 確定・受入チェックリスト・機械検証・modernization register を備えた工程で回せ、ハーネス自身の人間向け面にも同じ工程を適用できること。 | A-② / D | FR-028 / FR-039 の工程本体。社内 project の L3-ui-prototype 構成を実録に採る |
 
 ## 期待する利用体験
 

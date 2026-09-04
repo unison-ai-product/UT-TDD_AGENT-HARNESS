@@ -338,6 +338,16 @@ admission チケットの消費として位置付ける。非採用: admitter �
 PO 追補 (同日): 「結合テスト以上の実装は review したほうがよい」。採択: 人間 review を階層で傾斜させ、中 (結合) 以上を人間 review 必須、
 対象は結合面に限定 (FR-055 / AC-067)。原子は AI blind のみ、小は AI blind + 別人 admission。1 人運用は AI blind 代替 + self-admission 印。
 
+### 3.18 画面プロト工程の構成 (PO 指示 2026-09-04)
+
+PO 指示: 「この開発では画面プロトの構成が薄いから、しっかり見ておいて欲しい」。実測: v4 候補は製本点 (a)(b) (FR-039) と分担条件
+(FR-028) しか持たず、工程本体 (何を作り・何で検証し・何を record にするか) が無かった。採択: 社内 project の L3-ui-prototype 構成
+(§2.6: screen inventory / flow / prototype plan / fixture 契約と異常系必須セット PT-X / mock event envelope / screen finding /
+依存台帳の暫定 → 確定 / PT-* checklist / Playwright layout CI / modernization register) を record 化して工程本体に採り、
+製本点 (a) の前段条件にする (BR-031 / FR-056 / FR-057 / AC-068 / AC-069)。ハーネス自身の人間向け面 (スプレッドシート view・digest・
+ダッシュボード・CLI 対話面) も同工程を通す (dogfooding)。非採用: モック画像・自由文反応の正本化、正常系のみのプロト受入。
+概念本文には §画面プロト工程の構成 として反映した。
+
 ## 4. 工程
 
 
