@@ -245,6 +245,23 @@ evidence tier は 3 段 (`cross_family` > `same_family_separated` > `intra_runti
 | 再 compile | 上流契約が改訂されたら ticket compiler が影響下チケットを再 compile し、差分 (無効化 / 変更 / 新規) を owner へ返す。手作業でチケットを書き換えない。 |
 | 昇格の抑制 | 1 件の backflow で規則・機構を変えない (原則 7)。同種 backflow の反復は judgement record の calibration へ入り、契約テンプレートや check の改善候補になる。 |
 
+## Sub-agent 機構の再編: 論理 role record と provider-native 写像 (PO 指示 2026-09-04)
+
+実測 (HEAD 2026-09-04): `.claude/agents/` に Claude Code 固有形式の手書き subagent 20 本 (role・model floor・tools・
+プロンプトを焼き付け)、`delegation-routing.ts` に別系統の role 登録 (gate / review / worker)、`agent-guard.ts` は
+subagent ファイル名で allowlist と floor を判定する。同じ「reviewer」が 2 箇所で別定義され (二重 role 体系)、Codex 側に等価物が
+無く、単一 provider 構成や新 provider では成り立たない。
+
+| 論点 | 方式 |
+|---|---|
+| 論理 role record | ハーネスが所有するのは **論理 role** (worker / reviewer / gate / explorer / advisor など少数) の record だけ: capability floor (tier)、許可 tool 種別、証拠義務、authority (closing 可否)、family 分離要件。provider 名・model 名・ファイル形式は record に入れない。 |
+| provider-native 写像 | 各 provider adapter (Claude Code / Codex CLI / 将来 provider) が role record を自社 native 機構 (Claude Code の subagent / Agent tool、Codex の exec + role、team 定義) へ写像する。`.claude/agents/*.md` 等の provider 固有定義は record からの **generated view** であり手書きしない。ドメイン特化 (be-api / db-schema 等) は role ではなく skill / 判断パックの注入で表す (FR-021 / FR-040)。 |
+| guard の根拠 | agent-guard / delegation-routing の allowlist・floor 判定は role record を単一の根拠にし、ファイル名や subagent_type は adapter が record id へ解決する。二重 role 体系を解消する。 |
+| オーケストレーション形式 | 「LLM orchestrator が名前付き subagent を呼ぶ」形式から、**control plane が原子チケット (role + lease + budget) を lane へ dispatch する** 形式へ移す。LLM orchestrator は lane の一つ (統制主体ではない) で、その有無・provider・tier は record の値。合流点の判断は gate role が行い、orchestrator が閉じない。 |
+| 単一 provider 構成 | 論理 role が provider 非依存なので、single-provider / standalone topology (§Provider topology) でも同じ role record と guard が使え、family 分離が不可能な部分だけ evidence tier を落として記録する。 |
+| 移行 | 既存 20 subagent は role record + skill へ分解し、生成 view として再出力する。生成物と手書き定義の一致を doctor で照合し、手書き残置は drift として fail-close。 |
+
+
 
 
 
