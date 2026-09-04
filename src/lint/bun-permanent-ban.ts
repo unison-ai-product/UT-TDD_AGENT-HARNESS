@@ -194,9 +194,9 @@ export class CompliancePolicy {
     findings: readonly NodeBanFinding[];
     gaps: readonly string[];
   }): "qualified" | "non_compliant" | "indeterminate" {
-    if (!input.baseline || input.gaps.length > 0) return "indeterminate";
     if (input.baseline.inventory.length > 0 || input.delta.length > 0 || input.findings.length > 0)
       return "non_compliant";
+    if (!input.baseline || input.gaps.length > 0) return "indeterminate";
     return "qualified";
   }
 }
@@ -653,10 +653,10 @@ export function verifyNodeBanAuditReceipt(
   const expectedQualification =
     receipt.findings.length > 0 || processFindings(receipt.process_observations).length > 0
       ? "non_compliant"
-      : receipt.coverage.gaps.length > 0
-        ? "indeterminate"
-        : receipt.debt_inventory_count > 0
-          ? "non_compliant"
+      : receipt.debt_inventory_count > 0
+        ? "non_compliant"
+        : receipt.coverage.gaps.length > 0
+          ? "indeterminate"
           : "qualified";
   if (receipt.qualification !== expectedQualification)
     throw new NodeBanAuditError("q0-qualification-mismatch");
