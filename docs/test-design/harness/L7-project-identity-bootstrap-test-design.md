@@ -51,6 +51,14 @@ canonical bytes比較 (§3.1.3)、`origin` remote由来のrepository binding (§
 | CANDIDATE-U-PROJID-017 | `doctor`/`node-plan-revision-runner`/`legacy-plan-inventory` などread専用呼び出し元がidentity欠落時に呼ばれる | createを試みず既存のdenyをそのまま返す |
 | CANDIDATE-U-PROJID-018 | working-tree-onlyの未commit生成物がある状態で再実行 | 同じ入力から同じbytesを再生成するのみ。read側はHEAD未到達のためmissingのまま |
 
+Setup orchestration integration (not a project-identity candidate):
+`runSetup` に `bootstrapProjectIdentity` を注入し、identity が
+`identity_repository_unbound` で deny された場合も、deny を
+`SetupResult.projectIdentity` に保持して state/template の通常出力を継続することを確認する。
+identity が作成された場合は実際の bootstrap dependency の結果を `written` の先頭へ一度だけ
+prependし、deny の場合は identity path を追加しない。remote-less local repository の
+identity denial を setup 全体の fatal error として扱ったら Red。
+
 ## commit policy (§3.3、Fail-close contract「commit policy」)
 
 | Candidate | Stimulus | Oracle |

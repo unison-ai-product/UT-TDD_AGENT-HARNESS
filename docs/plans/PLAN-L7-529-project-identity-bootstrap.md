@@ -27,6 +27,8 @@ generates:
     artifact_type: test_design
   - artifact_path: src/setup/project-identity-bootstrap.ts
     artifact_type: source_module
+  - artifact_path: src/kernel/project-identity.ts
+    artifact_type: source_module
   - artifact_path: tests/setup-project-identity-bootstrap.test.ts
     artifact_type: test_code
 dependencies:
@@ -299,6 +301,17 @@ working tree に書く:
   であり、書き換え・再生成をしない。working tree に未commitの生成物が既にある状態で再実行しても
   同じ入力からは同じ bytes を再生成するだけで、内容を変えない (既存の未commitファイルを
   上書きしても差分が出ない、が新規に別contentへ書き換えることはしない)。
+
+#### 3.2.1 setup orchestration と identity denial の境界
+
+`bootstrapProjectIdentity` の typed deny は identity の作成・検証だけを fail-close する。
+`runSetup` はその deny を `SetupResult.projectIdentity` に保持して呼び出し元へ返し、
+identity の deny を理由に setup 全体を throw/中断してはならない。identity ファイルを作成
+できない場合も、既存の setup state 記録・phase 別テンプレート出力・branch-protection
+の emit-only 規則は通常どおり適用する (identity path を `written` に追加しない)。
+これにより origin の無い fixture/local-only repository でも、identity は authoritative に
+ならないまま、残りの導入設定を安全に生成できる。identity denial を握り潰して成功扱いに
+したり、path/name から identity を補完したりすることは許さない。
 
 ### 3.3 commit policy (設計判断エリシテーション形式)
 

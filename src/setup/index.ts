@@ -466,9 +466,11 @@ export function applyBranchProtection(
 export function runSetup(args: SetupArgs, deps: SetupDeps): SetupResult {
   // Dry-run is side-effect free, including the identity bootstrap write.
   const projectIdentity = args.dryRun ? undefined : deps.bootstrapProjectIdentity?.();
-  if (projectIdentity && !projectIdentity.ok) {
-    throw new Error(`${projectIdentity.error.ruleId}: ${projectIdentity.error.message}`);
-  }
+  // Identity is a project binding input, not the owner of the rest of setup.
+  // A typed denial must be reported to the caller while the non-identity setup
+  // artifacts still follow their normal, non-destructive orchestration. This
+  // keeps remote-less local repositories usable without weakening identity
+  // read/create fail-close behavior.
   const scale = detectProjectScale(deps);
   let phase: SetupPhase;
   let decidedBy: SetupState["decidedBy"];

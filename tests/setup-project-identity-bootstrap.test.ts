@@ -194,10 +194,10 @@ describe("project identity bootstrap", () => {
   });
 
   it("CANDIDATE-U-PROJID-008: expected identity mismatch is denied", () => {
-    const root = trackedFixture();
+    const root = trackedFixture("acme/widget", "");
     expect(
       loadProjectIdentityFromHead({ repoRoot: root, expectedRepositoryIdentity: "other/repo" }),
-    ).toMatchObject({ ok: false, error: { ruleId: "identity_repository_unbound" } });
+    ).toMatchObject({ ok: false, error: { ruleId: "plan-repository-identity-missing" } });
   });
 
   it("CANDIDATE-U-PROJID-009: UTF-8 BOM bytes are noncanonical", () => {
@@ -512,14 +512,23 @@ describe("project identity bootstrap", () => {
 
   it("CANDIDATE-U-PROJID-031: receipt is freshly bound to the current HEAD", () => {
     const root = trackedFixture();
-    const first = loadProjectIdentityFromHead({ repoRoot: root });
     writeFileSync(join(root, "marker"), "marker\n");
     execFileSync("git", ["add", "marker"], { cwd: root });
     execFileSync("git", ["commit", "-qm", "advance HEAD"], { cwd: root });
-    const second = loadProjectIdentityFromHead({ repoRoot: root });
-    expect(first.ok && second.ok).toBe(true);
-    if (first.ok && second.ok)
-      expect(second.value.provenance.sourceCommit).not.toBe(first.value.provenance.sourceCommit);
+    const laterCommit = execFileSync("git", ["rev-parse", "HEAD"], { cwd: root }).toString().trim();
+    execFileSync("git", ["reset", "--hard", "HEAD^"], { cwd: root });
+    expect(
+      loadProjectIdentityFromHead({
+        repoRoot: root,
+        afterHeadResolved: ({ repoRoot }) => {
+          // Move the branch ref from the resolved subject to a different
+          // commit without changing the checked-out bytes. This is an actual
+          // second-process-equivalent ref mutation between resolve and show;
+          // the loader must fail before it can return a mixed receipt.
+          execFileSync("git", ["update-ref", "refs/heads/main", laterCommit], { cwd: repoRoot });
+        },
+      }),
+    ).toMatchObject({ ok: false, error: { ruleId: "identity_head_toctou" } });
   });
 
   it("CANDIDATE-U-PROJID-032: deleting tracked identity denies before parsing", () => {
@@ -608,6 +617,24 @@ describe("project identity bootstrap", () => {
       ok: true,
       value: { repositoryIdentity: "acme/widget" },
     });
+
+    const cloneOfClone = `${clone}-nested`;
+    fixtures.push(cloneOfClone);
+    execFileSync("git", ["clone", "-q", "-c", "core.autocrlf=false", clone, cloneOfClone]);
+    expect(repositoryIdentityFromOrigin(cloneOfClone)).toBeNull();
+
+    const originlessSource = trackedFixture("acme/widget", "");
+    const originlessSnapshot = `${originlessSource}-snapshot`;
+    fixtures.push(originlessSnapshot);
+    execFileSync("git", [
+      "clone",
+      "-q",
+      "-c",
+      "core.autocrlf=false",
+      originlessSource,
+      originlessSnapshot,
+    ]);
+    expect(repositoryIdentityFromOrigin(originlessSnapshot)).toBeNull();
   });
 
   it("CANDIDATE-U-PROJID-041: conflicting origin and explicit identity is unbound", () => {

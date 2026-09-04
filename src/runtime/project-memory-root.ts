@@ -2,8 +2,8 @@ import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, lstatSync, realpathSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { loadProjectIdentityFromHead } from "../kernel/project-identity.ts";
 import { memoryStorageRoot } from "../memory/index.ts";
-import { loadProjectIdentityFromHead } from "../plan-asset/adapters/project-identity-loader.ts";
 
 export type ProjectMemoryRootDenyReason =
   | "git_topology_unavailable"

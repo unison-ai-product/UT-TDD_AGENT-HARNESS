@@ -1,4 +1,4 @@
-import { spawnSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -14,6 +14,7 @@ import {
   detectProjectScale,
   emitSetup,
   loadTemplates,
+  nodeSetupDeps,
   PACK_SAFE_TEST_SCRIPT,
   type ProjectScale,
   planSetup,
@@ -1282,5 +1283,60 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     expect(d.ghCalls.some((call) => call.includes("PUT"))).toBe(false);
     // branch protection は dry-run 理由で skip
     expect(r.branchProtection).toEqual({ applied: false, reason: "dry-run" });
+  });
+
+  it("identity bootstrap denial is reported while setup continues", () => {
+    const d = mockDeps({
+      templates: baseTemplates,
+      bootstrapProjectIdentity: () => ({
+        ok: false,
+        error: { ruleId: "identity_repository_unbound", message: "origin remote is missing" },
+      }),
+    });
+    const result = runSetup({ phase: "0-A", dryRun: false, applyBranchProtection: false }, d);
+
+    expect(result.projectIdentity).toMatchObject({
+      ok: false,
+      error: { ruleId: "identity_repository_unbound" },
+    });
+    expect(result.phase).toBe("0-A");
+    expect(d.files.has(statePath)).toBe(true);
+    expect(result.written).toContain("AGENTS.md");
+  });
+
+  it("runSetup invokes the real bootstrap dependency and prepends a created identity", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-setup-identity-"));
+    try {
+      execFileSync("git", ["init", "-q", "-b", "main"], { cwd: root });
+      execFileSync("git", ["config", "user.email", "test@example.invalid"], { cwd: root });
+      execFileSync("git", ["config", "user.name", "UT-TDD test"], { cwd: root });
+      execFileSync("git", ["remote", "add", "origin", "git@github.com:acme/widget.git"], {
+        cwd: root,
+      });
+
+      const result = runSetup(
+        { phase: "0-A", dryRun: false, applyBranchProtection: false },
+        nodeSetupDeps(root),
+      );
+
+      expect(result.projectIdentity).toMatchObject({
+        ok: true,
+        created: true,
+        commitRequired: true,
+        repositoryIdentity: "acme/widget",
+      });
+      expect(result.written[0]).toBe("ut-tdd.project.json");
+      expect(readFileSync(join(root, "ut-tdd.project.json"))).toEqual(
+        Buffer.from(
+          `${JSON.stringify(
+            { schema_version: "ut-tdd.project/v1", repository_identity: "acme/widget" },
+            null,
+            2,
+          )}\n`,
+        ),
+      );
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 });
