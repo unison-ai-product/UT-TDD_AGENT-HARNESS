@@ -131,6 +131,20 @@ FLAG 類型、incident、運用観測、外部技術変化は改善候補 (propo
 Requirement Re-entry から既存 workflow へ戻す。同時に人間向け digest (generated view) としてチームへ配り、
 ナレッジをハーネス改善と人間の学習の両方へ還流する (Issue #303 / #305 / #413 を継承)。
 
+## 参照元構想からの追加採用 4 領域 (PO 指示 2026-09-04)
+
+PO は 2 大要求 (A / B) に加えて、参照元の個人開発ハーネス構想から次の 4 領域を部分採用する意向を示した。
+いずれも 6 Plane のいずれかに写像され、新しい Plane や engine を追加しない。
+
+| 領域 | 写像先 Plane | 採る骨格 | 採らない |
+|---|---|---|---|
+| C. 上流要求エンジン | Sovereignty → Change Contract Compiler | L1 intake (人間 markdown) → L2 discovery (append-only event) → L3 typed IR compile → 人間承認 freeze。AI は未確定値を補完しない | 別 requirement engine、Issue / DB の意味正本化 |
+| D. PoC / プロトタイプ作成 | Assurance Kernel (case-driven model) | Discovery PoC を production 工程と別 axis で識別、S3 verified ≠ terminal、S4 decision record 必須、prototype 反応の構造化還元 | PoC 成果の production への無審査昇格 |
+| E. ハーネスメモリの見直し | Evidence and State Ledger → Adaptation | captured → canonicalized → retired の lifecycle、責務 owner の学習資産、失効 / 矛盾 / 再検証状態 | memory を進捗・正本・承認の代替にすること |
+| F. スキル / ナレッジ管理新体制 | Adaptation → Control Plane | typed applicability registry、最小 packet の決定的 compile、firing telemetry と可逆 quarantine、shadow + 測定 + 独立 review による昇格 | 全 skill 一括注入、削除による整理、単一 episode 昇格 |
+
+要求・要件・受入への降下は UTV4-BR-009〜012 / UTV4-FR-015〜022 / UTV4-AC-024〜031。
+
 ## 正規情報 flow
 
 ~~~text

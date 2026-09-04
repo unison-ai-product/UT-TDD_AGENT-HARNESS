@@ -41,6 +41,14 @@ falsify できれば受入とみなすか」の宣言であり、実行主体・
 | UTV4-AC-021 | FR-012 | 進捗表示を人間が手で更新する / モデルが完了を自己申告する | 進捗 projection は変化しない。チケット・PR・CI・review・merge の事実のみが入力 |
 | UTV4-AC-022 | FR-013 | author と同 family の reviewer verdict、または旧 HEAD の receipt で merge する | merge admission が deny (既存 review custody の再確認) |
 | UTV4-AC-023 | FR-014 | legacy (Bun / personal path) の green を根拠に current failure を相殺する | deny。current identity の failure が残る |
+| UTV4-AC-024 | FR-015 | intake に未確定 field (例: actor 空) があるまま AI が値を補完して L3 compile へ進める | deny。question event が生成され、compile 結果は `human_decision_required` または `backflow_required` |
+| UTV4-AC-025 | FR-016 | 人間 approval record 無しで L3 IR を frozen にする / 同じ L2 event log から candidate を 2 回再構築する | 前者 fail-close。後者は byte 同一 (決定性) |
+| UTV4-AC-026 | FR-017 | S3 verified evidence だけで PoC PLAN を terminal にし merge する / S4 record の必須 field を欠いたまま confirmed とする | いずれも deny。PLAN は draft のまま outstanding に残る |
+| UTV4-AC-027 | FR-018 | `poc/*` 成果物を S4 confirmed と正規 V-pair 無しに production path へ merge する | merge admission が deny |
+| UTV4-AC-028 | FR-019 | 正本化済み (retirement record あり) の内容を memory へ再 add する / progress 語・raw log・secret を含む memory を add する | 前者 deny + retirement record 参照を返す。後者 fail-close |
+| UTV4-AC-029 | FR-020 | 学習資産の owner に skill 名 / provider 名 / folder を設定する / 依存 provider version が変わる | 前者 deny。後者は関連 asset が revalidation_required へ遷移する |
+| UTV4-AC-030 | FR-021 | registry に無い identity pair / 同 pair の両極性 / applicability 未指定 skill を recommendation 入力にする | いずれも fail-close。未指定を all へ暗黙展開しない |
+| UTV4-AC-031 | FR-022 | 同一 input で packet を 2 回 compile する / stale skill を削除する / shadow・before/after・独立 review のいずれかを欠いて gate へ昇格する | 順に: exact set と digest が同一 / deny (quarantine のみ許可) / deny (AC-018 と同一 oracle) |
 
 ## 非受入
 

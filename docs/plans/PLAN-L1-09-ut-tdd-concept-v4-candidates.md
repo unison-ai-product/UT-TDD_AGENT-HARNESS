@@ -93,6 +93,19 @@ git ls-tree -r --name-only b2772064 docs/plans | wc -l   # 951 PLAN (markdown)
 typed spec IR (U8〜U12) は confirmed だが対象は宣言部のみ。record 類 (verdict / receipt / evidence) は
 `.ut-tdd/review/receipts/*.json` のように既に JSON で、PLAN / schedule は markdown である。
 
+### 2.4 PO 追加指示 4 領域 (C〜F) の現状受け皿
+
+```bash
+git ls-tree b2772064 skills/ | wc -l                                  # 81 (skill pack root、applicability は frontmatter prose)
+git ls-tree -r --name-only b2772064 src/skill-engine | wc -l         # 2 (推薦 / 注入の実装)
+git ls-tree -r --name-only b2772064 .ut-tdd/memory | wc -l           # 586 (HARNESS memory、退役機構なし: git grep -il retire b2772064 -- src/memory = 0)
+git grep -l "^kind: poc" b2772064 -- docs/plans | wc -l              # 10 (PoC PLAN、S4 decision record 契約なし)
+git grep -n "S0 backlog" b2772064 -- CLAUDE.md                       # 1 (Scrum / PoC S0〜S4 は workflow 一行のみ)
+```
+
+要求発見 (intake → discovery → compile) の工程は存在せず、typed spec IR (U8〜U12) は宣言部の
+compile のみを対象にしている。
+
 ## 3. 設計判断
 
 ### 3.1 正本の置き場 (advisor design、claude-fable-5、2026-09-04)
@@ -113,6 +126,10 @@ concept 規則: 「正本形式は artifact の主読者で決める。双方向
 採る: Sovereignty / Change Contract Compiler / Control Plane / Assurance Kernel / Evidence Ledger / Adaptation の
 6 Plane、8 原則のうち 7 (Composable Release は既存 Pack 配布契約へ写像)、exactly-one owner、lease / fence、
 startup packet、evidence の段階 (claimed → current)、GitHub を projection とする一方向同期。
+PO 追加指示 (2026-09-04) により、上流要求エンジン (L1 intake → L2 append-only discovery → L3 typed IR compile →
+人間承認 freeze)、Discovery PoC の別 axis 化と S4 decision record、ハーネスメモリの captured → canonicalized →
+retired lifecycle と責務 owner の学習資産、skill applicability の typed registry・最小 packet・telemetry・
+可逆 quarantine・shadow 昇格を追加で採る (UTV4-BR-009〜012)。
 採らない: Python 恒久意味コア (ADR-001 と衝突)、多軸分類 registry による routeFiling 置換
 (別 version-up)、repository / CLI の rename。
 
@@ -131,6 +148,7 @@ rule-drift marker・doctor gate から参照しない。承認時に v4.0 を `d
 | 3 | serial | concept v4.0 昇格 + v3.1 archive + 参照更新 (CLAUDE.md / AGENTS.md / README / repository-structure) |
 | 4 | parallel | L1 delta (VUP-REQ-11〜14、additive) を PLAN-L1 系で起票 / charter §4 に後続テーマ 2 行追加 |
 | 5 | parallel | U23 (PLAN-L4-30 系) を複数人間ユーザー前提へ改訂する Reverse 対 / record 正本 schema の L4-L6 設計 PLAN |
+| 6 | parallel | 4 領域 (C〜F) の L3 設計 PLAN: 要求発見 event / IR compile (VUP-REQ-03 拡張)、PoC S4 record (routeFiling poc kind)、memory retirement + 学習資産 (PLAN-L7-189 系 Reverse 対)、skill applicability registry (`src/skill-engine/`) |
 
 ## 5. 完了条件
 
