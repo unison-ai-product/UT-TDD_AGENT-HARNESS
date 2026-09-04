@@ -3,8 +3,8 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
-  readFileSync,
   readdirSync,
+  readFileSync,
   realpathSync,
   rmSync,
   writeFileSync,
@@ -13,10 +13,7 @@ import { tmpdir } from "node:os";
 import { join, relative, resolve } from "node:path";
 import { Command } from "commander";
 import { afterEach, describe, expect, it } from "vitest";
-import {
-  registerLiveReviewCommands,
-  resolveLiveReviewTaskFile,
-} from "../src/cli/review-live.ts";
+import { registerLiveReviewCommands, resolveLiveReviewTaskFile } from "../src/cli/review-live.ts";
 import { writeMemory } from "../src/memory/service.ts";
 import {
   buildClaudeInboxEntry,
@@ -157,9 +154,7 @@ describe("project-scoped Memory routing integration (PLAN-L7-512 Slice 2)", () =
     git(linked, ["add", "ut-tdd.project.json"]);
     git(linked, ["commit", "-q", "-m", "test: drift linked identity"]);
 
-    expect(() => claudeWorkspaceId(linked)).toThrow(
-      "project_memory_root_project_identity_drift",
-    );
+    expect(() => claudeWorkspaceId(linked)).toThrow("project_memory_root_project_identity_drift");
     expect(() =>
       resolveLiveReviewTaskFile(linked, {
         memoryId: "memory:project:absent",
@@ -232,6 +227,6 @@ describe("project-scoped Memory routing integration (PLAN-L7-512 Slice 2)", () =
       memoryId: memory.memory_id,
       targetWorkspaceId: claudeWorkspaceId(primary),
     });
-    expect(relative(linked, task as string).startsWith("..")) .toBe(true);
+    expect(relative(linked, task as string).startsWith("..")).toBe(true);
   });
 });
