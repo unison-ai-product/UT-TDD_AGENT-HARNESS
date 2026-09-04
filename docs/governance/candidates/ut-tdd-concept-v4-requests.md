@@ -41,10 +41,10 @@ A / B の 2 大要求を実現する手段面であり、独立した第 3 の�
 |---|---|---|---|
 | UTV4-BR-001 | チームは、複数の人間と複数の AI runtime が並行して開発しても、価値・要求・承認・不可逆作用・責務配分の最終 authority を人間側に保持できること。 | B-② / 北極星 | BR-02 (role 境界の機械強制) を人間↔AI 境界へ拡張。CC2 人間主導原則を層別に具体化 |
 | UTV4-BR-002 | チームは、どの層でどの作用に人間が確定・承認・介入するかを一枚の層別境界表で読め、AI はその表の外へ質問を投げず、表の内側を越権しないこと。 | B-② | CLAUDE.md 2026-08-05「反射的エスカレーション禁止」と高影響境界の規約を要求へ昇格 |
-| UTV4-BR-003 | チームは、作業をチケット (exactly-one owner、lease、scope、base/HEAD、証拠) の単位で発行・割当・追跡でき、人間ユーザーも AI lane も同じ割当モデルに載ること。チケットは大 (リリース切り分け) / 中 (責務・依存) / 小 (path) の 3 階層で親子を持つこと。 | B-① | U23 Execution Ledger / GitHub Issue projection (PLAN-L4-30 / L5-23 は confirmed、L6-83〜85 / L7-436〜439 は draft) を複数人間ユーザー前提へ改訂。github-issue-hierarchy.md を継承 |
+| UTV4-BR-003 | チームは、作業をチケット (exactly-one owner、lease、scope、base/HEAD、証拠) の単位で発行・割当・追跡でき、人間ユーザーも AI lane も同じ割当モデルに載ること。チケットは大 (リリース切り分け) / 中 (責務・依存) / 小 (機能・path 群 = PR) / 原子 (単一変更契約 = 実行単位) の 4 階層で入れ子の親子を持ち、下から上へ収束すること。 | B-① | U23 Execution Ledger / GitHub Issue projection (PLAN-L4-30 / L5-23 は confirmed、L6-83〜85 / L7-436〜439 は draft) を複数人間ユーザー前提へ改訂。github-issue-hierarchy.md を継承 |
 | UTV4-BR-004 | チームは、同一ファイル・同一 PLAN・同一 PR に対する並行編集の衝突を lease と fence で事前に検知し、発生した衝突を所有者へ typed に戻せること。 | B-① | foreign-edit guard / PLAN 採番 (#480) / worktree lifecycle (#384、#426) / review request 分裂 (#421) の個別対処を 1 つの要求へ束ねる |
 | UTV4-BR-005 | 利用者は、機械が生成・集計・遷移させる record (チケット・schedule・verdict・receipt・evidence) を構造化正本 (1 record = 1 file) として AI と機械から lossless に読み書きでき、人間が判断のために読む narrative は markdown 正本のまま扱えること。 | A-① | VUP-REQ-03 typed spec IR / VUP-REQ-07 PLAN 資産形式化を継承。charter PLAN-L0-01 §5 第 7 項「DB は authored source を置換しない」と整合 (正本は file、DB は projection) |
-| UTV4-BR-006 | 利用者は、構造化正本と markdown 正本の双方から、表 (スプレッドシート)・ドキュメント・ダッシュボードの人間向け view を即時に生成でき、その view からの変更は admission 経由でのみ構造化正本へ戻ること (markdown 正本への機械書き戻しは行わない)。 | A-② | BR-06 / UX-02 (ダッシュボード) を「generated view」として再定義。生成 view は編集禁止 + 生成元 + hash 照合 |
+| UTV4-BR-006 | 利用者は、構造化正本と markdown 正本の双方から、表 (スプレッドシート)・ドキュメント・ダッシュボードの人間向け view を即時に生成でき、その view からの変更は admission 経由でのみ構造化正本へ戻ること (markdown 正本への機械書き戻しは行わない)。**要求・要件・設計のスプレッドシート同期は必須**であり、人間はこの view を見て判断する。正本は 1 枚に集約せず責務ごとに分散して置く。 | A-② | BR-06 / UX-02 (ダッシュボード) を「generated view」として再定義。生成 view は編集禁止 + 生成元 + hash 照合 |
 | UTV4-BR-007 | チームは、FLAG・incident・運用観測から得た知見を、authority を無断で書き換えずに改善候補として既存 V-model (Reverse / Requirement Re-entry) へ還流でき、同じ知見を人間向け digest として受け取れること。 | B-③ | HARNESS memory (PLAN-L7-189)、右肺 quality loop (VUP-REQ-05)、#303 / #305 / #413 を継承。人間向け還流面を追加 |
 | UTV4-BR-008 | チームは、progress を手作業で更新せず、チケット・PR・CI・review・merge の事実から進捗と詰まりが projection として自動的に見え、統括 owner 1 名 (人間) がその projection を根拠に発散 / 収束・合流・切り分け・escalation の判断だけを行えること。 | B-① / B-② | BR-06 / VUP-REQ-01 (工程管理表の一級化) を team 単位へ拡張 |
 | UTV4-BR-009 | チームは、要求を「人間の intake → 発見 (質問・prototype 反応・candidate 遷移の append-only event) → typed IR への compile → 人間承認で freeze」の一本の工程で扱え、AI が未確定値を補完して要求を確定させることがないこと。 | C / A-① / B-② | VUP-REQ-03 typed spec IR (U8〜U12、宣言部のみ) を要求発見工程へ前方拡張。PLAN-L1-07 の additive delta 方式で載せる |
@@ -56,6 +56,10 @@ A / B の 2 大要求を実現する手段面であり、独立した第 3 の�
 | UTV4-BR-015 | チームは、要件 (L3) と基本設計 (L4) を文書単位で 1 名の人間 owner がまとめ、詳細設計・仕様・実装・検証はチケット単位の 1 名 owner へ分担でき、層ごとの owner cardinality が契約として読めること。 | B-② | 原則 3 Responsibility First を層別に具体化。CLAUDE.md §GitHub Issue Hierarchy「canonical parent は 1 件」と整合 |
 | UTV4-BR-016 | チームは、企画 → 画面モック → 集団プロト → PoC → 要件 → 基本設計 → 詳細 / 仕様チケット → 統合チェック → リリース切り分け → 依存単位実装 → main への随時 merge 受入 → 合流統合 → 検査 → リリース、という標準工程を、発散区間の出口 (event / receipt) と合流点 (統合チケット owner) が機械で読める形で運用できること。 | B-① / B-② | 概念 §標準工程 flow。v3.1 Forward / Reverse / Scrum-PoC を 1 本の team flow へ並べ直す (置換ではない) |
 | UTV4-BR-017 | チームは、並行 AI 開発でチケット発行が人手のボトルネックにならないよう、チケットを上流成果物 (基本設計の責務 / 依存行列、画面 / 仮説 id、admission receipt) から機械的に compile し、人は batch 単位の admission と人間 owner の割当だけを行えること。人数が 1 → N → 1 と変わっても工程とゲートを変えずに運用できること。 | B-① / A-① | A. JSON 化の実利。BR-003 チケット model と BR-005 構造化正本の結合点 |
+| UTV4-BR-018 | チームは、複数の責務 / チケットに跨る欠陥 (全体影響バグ) を影響範囲の機械判定に基づいて stop-the-line incident として扱い、影響下の admission を止め、修正を原子チケットと Reverse の対で行えること。 | B-① / B-② | 原則 7 Controlled Adaptation。CLAUDE.md §運用規律「独自方式のその場開発禁止」の incident 版 |
+| UTV4-BR-019 | チームは、各 project で発生する log・issue・PR・review コメント・finding を project 単位の intake record に集約し、ハーネス自体の改善入力として project 横断の corpus へ一方向 (opt-in、機微遮断) で流せること。 | B-③ | BR-007 / BR-011 の収集点を確定。#413 (project 間隔離) を前提 |
+| UTV4-BR-020 | チームは、画面モック / プロトタイプを L3 compile 時と L5 詳細設計時の 2 点で正式文書 (画面仕様 / 画面詳細、generated) へ製本でき、モック画像やプロト実装を正本にしないこと。 | A-② / D | BR-010 の出口。UX-02 / BR-06 |
+| UTV4-BR-021 | チームは、一般手順を書いた汎用 skill に依存せず、実録 (receipt / finding / verdict / incident / S4 record) から抽出した知識に provenance を束縛して skill・判断パック・機構を生成・昇格できること。 | B-③ / F | BR-012 / BR-014 の学習面。参照元の GENERIC_PROCEDURE 退役と同型 |
 
 ## 期待する利用体験
 

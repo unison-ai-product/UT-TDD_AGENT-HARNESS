@@ -49,6 +49,11 @@ Python 恒久意味コアは採らない (ADR-001: TypeScript/Node 一本)。
 意図の構造化、責務分解、チケット生成、bounded execution、検証、merge、証拠の閉包、改善候補の生成を所有する。
 会話の継続、逐次指示、進捗の手作業更新を完了条件にしない。
 
+思想としては **人間ゲート付きの分散コンピューティング** に近い: 作業は入れ子のチケット (大 → 中 → 小 → 原子) として
+切り出され、lease を持つ actor (人間または AI lane) へ分散実行され、合流点のゲートで人間が収束を判断する。
+正本は 1 枚に集約せず責務ごとに分散して置き、人間が俯瞰するときは生成 view (スプレッドシート) で読む。
+「1 枚にまとまる要求・要件」は品質を持たない、という前提を採る。
+
 ## 7 原則
 
 1. **Human Sovereignty (層別 human-on-the-loop)**: request / selection / approval / decision / disposition を分離し、
@@ -58,11 +63,11 @@ Python 恒久意味コアは採らない (ADR-001: TypeScript/Node 一本)。
    一方向に導出する。Issue 本文、候補、互換入力、unknown から current identity を直接生成しない。
 3. **Responsibility First (exactly-one owner)**: actionable behavior、チケット、finding、learning asset は
    exactly-one primary owner を持つ。owner は人間ユーザーまたは logical lane であり、provider 名ではない。
-4. **Bounded Multi-Actor Execution**: 人間・AI を問わず、作業者を assignment (チケット)、branch / worktree、 人数は record の値であり工程の形ではない: 1 人でもチケットと record を省かず、増減は発行と lease 移転だけで行う (人数不変性)。並行 AI 開発ではチケットは機械が compile し、人は batch で admission する。
+4. **Bounded Multi-Actor Execution**: 人間・AI を問わず、作業者を assignment (チケット)、branch / worktree、 人数は record の値であり工程の形ではない: 1 人でもチケットと record を省かず、増減は発行と lease 移転だけで行う (人数不変性)。並行 AI 開発ではチケットは機械が compile し、人は batch で admission する。 チケットは大・中・小・原子の 4 階層で入れ子にし、原子だけが lease を持つ。
    base / HEAD、lease / fence、budget、allowed path へ束縛する。lease の無い書き込みは衝突として扱う。
 5. **Evidence Closure**: 完了は subject identity・実体・oracle・独立 review・CI generation・main read-after の
    exact join で判定する。宣言、marker、path 存在、自己申告では成立しない (v3.1 §2.1.2 の attacker/defender 分離を継承)。
-6. **Dual-Readable Truth (二重可読な正本)**: 正本形式は artifact の主読者で決める。人間が判断・承認するために
+6. **Dual-Readable Truth (二重可読な正本)**: 正本形式は artifact の主読者で決める。人間が判断・承認するために 正本は分散させる (責務 / record ごとに 1 file)。人間の俯瞰は 1 枚の文書ではなく、要求・要件・設計を同期した **スプレッドシート view (必須)** で行う。
    読む narrative は markdown 正本 (typed spec block で機械可読部を埋め込む)。機械が生成・集計・遷移させる record
    (チケット / schedule / verdict / receipt / evidence) は 1 record = 1 JSON/YAML file の構造化正本とし、
    markdown・spreadsheet・ダッシュボードはすべて generated view とする。双方向書き戻しは構造化正本に対してのみ
@@ -101,7 +106,7 @@ schedule を新たな record 種別として追加する。
 
 チケットは **既定で機械が compile** する: L4 基本設計の typed block (責務 × path × 依存の行列) から詳細設計・仕様・実装チケットと合流点の統合チケットを、L2 の screen id / 仮説 id から画面プロト・PoC チケットを、admission receipt から検証チケットを生成する。人は個票ではなく batch 単位で admission し、AI lane への割当は routing policy で自動、人間 owner の割当だけを手で行う。手発行は例外経路で、理由を record に残す。発行と判断の重みは層で勾配を持つ: L0〜L3 (企画・画面プロト・PoC・要件) は人が発行・割当し機械は候補起草まで、L4 は文書 1 名でチケット化しない、L5 以下は機械 compile が既定。
 
-チケットは **大・中・小の 3 階層** で発行する。大チケット = リリース切り分け単位 (release slice、統括 owner が人手で発行、受入 = release 適格性)。中チケット = 責務 / 依存単位 (L4 行列の責務行から compile、合流点の統合チケットを兼ねる、受入 = 統合 review と子の admission 全件)。小チケット = path 単位の詳細設計・仕様・実装・検証 (compile、AI lane 可、受入 = main への merge admission)。小は必ず中の子、中は必ず大の子で、親を持たないチケットと 2 親を持つチケットは deny する (canonical parent は 1 件)。
+チケットは **大・中・小・原子の 4 階層** で入れ子に発行し、下から上へ収束させる。大 = リリース切り分け単位 (release slice、統括 owner が人手で発行、受入 = release 適格性)。中 = 責務 / 依存単位 (L4 行列の責務行から compile、合流点の統合チケットを兼ねる、受入 = 子の admission 全件 + 統合 review)。小 = 機能 / path 群の単位 (詳細設計・仕様・実装・検証、1 PR = 1 小チケット、受入 = main への merge admission)。原子 = 単一の変更契約 (1 oracle / 1 変更セット、1 commit 相当、AI lane の実行単位、受入 = oracle green + 小チケットへの集約)。原子だけが path lease を持ち、上位階層は子の lease 集合を所有しない。各チケットは親を exactly one 持ち、親無し・2 親・階層飛びは deny する (canonical parent は 1 件)。
 
 queue、assignment (チケット)、owner、branch / worktree、base / HEAD、lease / fence、heartbeat、budget、
 provider capability、PR / review / CI state を管理する。**人間ユーザーも AI lane も同じ assignment model に載る**。
@@ -187,6 +192,15 @@ evidence tier は 3 段 (`cross_family` > `same_family_separated` > `intra_runti
 | 10 | 全体が揃ったらテスト / 検査チケットを発行 → まとめ → チェック → リリース | L8〜L12 + release | 検証チケット (author と別 owner)、release 適格性 | 1 名 |
 
 受入は 2 種を区別する: チケット単位の受入は **main への merge admission** (exact HEAD の CI + 独立 review + rebase 済み) であり、システム受入 (L10〜L12) は release 適格性で別に閉じる。
+
+## 全体影響バグ・改善データ・製本点・実録学習 (PO 指示 2026-09-04)
+
+| 論点 | 方式 |
+|---|---|
+| 全体に影響するバグ | 影響範囲は依存 graph (中チケットの責務 × path 行列) からの projection で機械が判定し、複数の中チケットに跨る欠陥は **stop-the-line incident** として統括 owner の decision record で扱う。対処は (1) 該当する中 / 大チケットの admission を一時停止 (fence)、(2) 修正は原子チケットとして発行し、影響下の小チケットの lease を takeover receipt 付きで一時回収、(3) 契約の誤りなら Reverse (要求 / 設計への還流) を必ず対にする。場当たりの hotfix branch と lease 無視の直接 push は deny。 |
+| 改善データの収集点 | 各 project の event journal (`.ut-tdd/` の receipt / finding / hook event と issue・PR・review コメントの projection) を **project 単位の improvement intake record** に集約し、ハーネス自体の改善入力は project 横断の corpus (namespace = project identity、secret / PII / private transcript を admission で遮断、opt-in) へ一方向で流す。収集点は各 project の harness.db projection、集約点はハーネス repo の Evidence Ledger。Issue / コメント本文を意味正本にはしない (FR-010 / 011)。 |
+| 画面モック / プロトの製本点 | 製本 (正式文書への統合) は 2 点で行う: (a) L2 → L3 compile 時に screen id ごとの prototype record + 反応 event を **画面仕様 (generated)** へ束ね、要件 IR の surface / action / state / AC と結ぶ、(b) L5 詳細設計で画面詳細 (component / 状態 / 失敗 / 回復) として再製本する。製本物は generated view + typed record であり、モック画像や prototype 実装そのものを正本にしない。 |
+| 実録からの学習 | 一般手順を書いた汎用 skill (provider が既知の知識) は退役対象 (FR-025 の GENERIC_PROCEDURE class) とし、skill・判断パック・機構は **実録 (receipt / finding / review verdict / incident / S4 record) から抽出した CASE / SCENE / PATTERN** に provenance を束縛して生成・昇格する。実録 provenance の無い skill は昇格できず、既存 skill は実録との照合で quarantine 判定を受ける。 |
 
 ## 正規情報 flow
 
