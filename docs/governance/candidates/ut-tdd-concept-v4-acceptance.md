@@ -39,7 +39,7 @@ falsify できれば受入とみなすか」の宣言であり、実行主体・
 | UTV4-AC-019 | FR-010 | 改善候補が Requirement / 設計を直接書き換える | deny。proposal / evidence / delta のみ生成 |
 | UTV4-AC-020 | FR-011 | 改善候補が生成されたとき | 同一候補が人間向け digest (generated view) として配られ、採否が decision record に残る |
 | UTV4-AC-021 | FR-012 | 進捗表示を人間が手で更新する / モデルが完了を自己申告する | 進捗 projection は変化しない。チケット・PR・CI・review・merge の事実のみが入力 |
-| UTV4-AC-022 | FR-013 | author と同 family の reviewer verdict、または旧 HEAD の receipt で merge する | merge admission が deny (既存 review custody の再確認) |
+| UTV4-AC-022 | FR-013 | (a) hybrid profile で author と同 family の reviewer verdict で merge する / (b) single-provider profile で FR-023 の attestation (別 session・上位 tier・blind packet・CI green) を満たす同 family reviewer verdict で merge する / (c) いずれの profile でも旧 HEAD の receipt で merge する | (a) deny / (b) admit、evidence tier は `same_family_separated` (AC-032 と同一 oracle) / (c) deny (既存 review custody の再確認) |
 | UTV4-AC-023 | FR-014 | legacy (Bun / personal path) の green を根拠に current failure を相殺する | deny。current identity の failure が残る |
 | UTV4-AC-038 | FR-004 | 詳細設計 (L5) / 仕様 (L6) の改訂をチケット無しで commit する / チケット record に設計本文を格納する / L4 基本設計の本文をチケット完了で accept 扱いにする | 順に: lease 無し書き込みとして deny (AC-007 と同型) / deny (本文は markdown 正本へ digest 束縛のみ) / deny (accept は pair-freeze review のみ) |
 | UTV4-AC-039 | FR-028 | 初期画面ルールの freeze record が無い状態で画面プロトチケットを 2 件以上発行する / 反応を discovery event に記録せずプロトチケットを完了にする | 前者 2 件目が deny / 後者 deny |
