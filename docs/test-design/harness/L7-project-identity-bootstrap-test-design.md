@@ -84,7 +84,7 @@ canonical bytes比較 (§3.1.3)、`origin` remote由来のrepository binding (§
 |---|---|---|
 | CANDIDATE-U-PROJID-036 | `node-plan-revision-runner.ts` の `repositoryIdentity()` port経由で、別origin由来のgrammar-valid stale identityをHEADに持つrepoを読む | loader内部binding (§3.1.4) によりcallerがexpected値を渡さなくてもdenyされる (現状は未対策、027の呼び出し元別ケース) |
 | CANDIDATE-U-PROJID-037 | `legacy-plan-inventory.ts` の `buildLegacyPlanInventory` 経由で036と同じstale identityを読む | 036と同じくloader内部bindingでdenyされる |
-| CANDIDATE-U-PROJID-038 | `project-memory-root.ts` の `projectIdentityFromHead` 経由で036と同じstale identityを読む | 036と同じくloader内部bindingでdenyされる (3呼び出し元がコード変更無しに保護される回帰確認) |
+| CANDIDATE-U-PROJID-038 | `project-memory-root.ts` の `projectIdentityFromHead` (loader を経由しない独立 reader) 経由で036と同じstale identityを読む | `identity_repository_unbound` で deny される。独立 reader 自身が §3.1.4 の binding を行うか、共有 loader へ統合済みであること (loader 側だけの変更で Green にしない)。基準 ref 7b18ee4e では accept される (Red 起点) |
 | CANDIDATE-U-PROJID-039 | `origin` remoteが存在せず、呼び出し側も `expectedRepositoryIdentity` を渡さない状態でHEADにgrammar-valid identityがある | `identity_repository_unbound` でdeny。HEAD値をそのまま信頼しない |
 
 ## 実 repo regression

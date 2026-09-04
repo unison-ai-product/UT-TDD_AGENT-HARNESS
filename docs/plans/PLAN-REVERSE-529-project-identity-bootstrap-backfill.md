@@ -96,7 +96,7 @@ directoryの移動、linked worktreeの追加、junction/symlink/8.3/大小文�
 | 035 | HEAD bytesのJSON key順序が `repository_identity`→`schema_version` に入れ替わっている (値・grammar上はvalid) 場合も034と同じく `identity_noncanonical_bytes` でdeny (field順もcanonical契約の一部) |
 | 036 | `node-plan-revision-runner.ts` の `repositoryIdentity()` port経由で別origin由来のgrammar-valid stale identityをHEADに持つrepoを読むと、loader内部binding (§3.1.4) によりcallerがexpected値を渡さなくてもdenyされる |
 | 037 | `legacy-plan-inventory.ts` の `buildLegacyPlanInventory` 経由で036と同じstale identityを読んでも、036と同じくloader内部bindingでdenyされる |
-| 038 | `project-memory-root.ts` の `projectIdentityFromHead` 経由で036と同じstale identityを読んでも、036と同じくloader内部bindingでdenyされる (3呼び出し元がコード変更無しに保護される回帰確認) |
+| 038 | `project-memory-root.ts` の独立 reader `projectIdentityFromHead` 経由で036と同じstale identityを読んでも `identity_repository_unbound` で deny される。独立 reader 自身の binding または共有 loader への統合を要求し、loader 側だけの変更では Green にしない (基準 ref では accept = Red 起点) |
 | 039 | `origin` remoteが存在せず、呼び出し側も `expectedRepositoryIdentity` を渡さない状態でHEADにgrammar-valid identityがある場合は `identity_repository_unbound` でdeny。HEAD値をそのまま信頼しない |
 | P-001 | 本harness repo自身のtracked identityを、origin (`unison-ai-product/UT-TDD_AGENT-HARNESS`) から再導出したcanonical bytesと比較して一致することを実repoで確認する |
 | P-002 | 一時clean-consumer fixture repo (identity無し) に対しbootstrap契約を実行し、作成→commit→readの一連が成立することを実repoで確認する |

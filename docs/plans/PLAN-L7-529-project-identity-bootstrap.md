@@ -249,10 +249,25 @@ canonical でなければ受理しない)。これも**現状の loader が行�
    `expectedRepositoryIdentity` の両方が存在し、かつ互いに矛盾する場合は、どちらか一方を
    優先せず `identity_repository_unbound` として deny する (§4)。
 
-この変更により、`node-plan-revision-runner.ts`・`legacy-plan-inventory.ts`・
-`project-memory-root.ts` の3呼び出し元は**コード変更なしに**この binding の恩恵を受ける
-(binding が loader 内部に移動するため)。3 呼び出し元は実装 slice の検証対象として明示する
-(§5 slice 3、§6.1 CANDIDATE-U-PROJID-036..038)。
+この変更により、`loadProjectIdentityFromHead` を経由する
+`node-plan-revision-runner.ts:382`・`legacy-plan-inventory.ts:40` の 2 呼び出し元は
+**コード変更なしに**この binding の対象になる (binding が loader 内部に移動するため)。
+
+一方 `project-memory-root.ts` の `projectIdentityFromHead` (L168-195) は §2.5 のとおり
+**loader を経由しない独立 reader** であり、loader 内部の binding では保護されない。基準 ref
+`7b18ee4e` では origin / expected identity の照合を一切行わないため、別 repository 由来の
+grammar-valid な stale identity をそのまま authoritative に受理し得る。本 PLAN はこの経路を
+**実装契約として次のいずれか**で閉じることを要求する (どちらを選ぶかは実装 slice の設計判断、
+両方を満たさない状態は Red):
+
+- (a) `projectIdentityFromHead` を廃止し、`loadProjectIdentityFromHead` (binding 内蔵) へ統合する
+  (独立実装の解消、PLAN-L7-512 の `project_identity_drift` 契約は loader の結果に対して維持する)。
+- (b) 独立 reader を残す場合、同じ `origin` 正規化規則と上記 1〜4 の判定を `projectIdentityFromHead`
+  自身に実装し、`identity_repository_unbound` を同じ reason code で返す。
+
+3 呼び出し元は実装 slice の検証対象として明示する (§5 slice 3、§6.1 CANDIDATE-U-PROJID-036..038)。
+036 / 037 は「loader 経由で保護される」回帰確認、038 は「独立 reader 自体が binding を行う
+(または統合済みである)」ことの確認であり、038 を loader の変更だけで Green にしてはならない。
 
 ### 3.2 create: 決定的入力・所有者・再実行規則
 
@@ -368,9 +383,10 @@ grammar 検証) から導かれる。実装 slice でこれらを独立変異と
 2. `origin` remote 正規化 (`git@`/`https://` 形式 → `owner/repo`) と grammar 検証、
    `setup` 専用の create 経路 (canonical serialization、所有者制限、rerun no-op)。
 3. repository binding を loader 内部の必須ステップへ移す (§3.1.4)。
-   `node-plan-revision-runner.ts`・`legacy-plan-inventory.ts`・
-   `project-memory-root.ts` の3呼び出し元は変更なしでこの binding の対象になることを
-   回帰確認する (in-scope、コード変更は loader 側のみ)。
+   `node-plan-revision-runner.ts`・`legacy-plan-inventory.ts` の 2 呼び出し元は変更なしで
+   この binding の対象になることを回帰確認する (036 / 037)。`project-memory-root.ts` の
+   独立 reader `projectIdentityFromHead` は §3.1.4 (a) 統合または (b) 自前 binding のいずれかで
+   閉じ、038 で確認する (in-scope、この経路は loader 側だけの変更では閉じない)。
 4. `repoRoot` の real path 解決を Git コマンド呼び出し前に固定 (8.3/大小文字/junction 対策)。
 5. `CANDIDATE-U-PROJID-001..039` と `CANDIDATE-P-PROJID-001..003` を同じ oracle で検証する。
 
