@@ -79,8 +79,8 @@ review_evidence:
         scope: targeted
         exit_code: 0
         completed_at: "2026-09-01T10:50:56Z"
-        evidence_path: tests/pack-authoring-template-scope.test.ts
-        output_digest: "sha256:9e238a39f55982b42f2f6646d9d10eb5529e722a61bfe814abb3b55acaf81017fd7"
+        evidence_path: docs/test-design/harness/L7-pack-authoring-template-scope-test-design.md
+        output_digest: "sha256:3ca80eb32a3548d24b92bf1a7b2c4de04ff5ce6154a3a86d6eb518f7e5e997e9"
         anchor_commit: a3f038536e16fde712596fb5823b1c9ac840a0cf
 backprop_decision: required
 backprop_decision_reason: "Pack-only authoring assetsのallowlistとsource/runtime deny境界をL6-101のconsumer独立受入へReverseで戻す。"

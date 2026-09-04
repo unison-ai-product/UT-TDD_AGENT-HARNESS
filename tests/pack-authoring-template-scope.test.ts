@@ -32,6 +32,13 @@ const teamBlob: TrackedGitBlob = {
   bytes: teamBytes,
 };
 
+const authoringEntries = AUTHORING_TEMPLATE_ARTIFACT_PATHS.map((path) => ({
+  path,
+  mode: "100644" as const,
+  content:
+    path === teamArtifact ? teamBytes : readFileSync(join(process.cwd(), ...path.split("/"))),
+}));
+
 function trackedSourcePaths(): string[] {
   return execFileSync("git", ["ls-files", "-z"]).toString("utf8").split("\0").filter(Boolean);
 }
@@ -163,12 +170,7 @@ describe("Issue #482 canonical Pack authoring inventory", () => {
   });
 
   it("U-PACKTPL-004: Pack-only smoke parses all authoring files and team schema", () => {
-    const entries = AUTHORING_TEMPLATE_ARTIFACT_PATHS.map((path) => ({
-      path,
-      mode: "100644" as const,
-      content:
-        path === teamArtifact ? teamBytes : readFileSync(join(process.cwd(), ...path.split("/"))),
-    }));
+    const entries = authoringEntries;
     expect(inspectPackAuthoringEntries(entries)).toEqual({
       ok: true,
       checked: AUTHORING_TEMPLATE_ARTIFACT_PATHS,
@@ -203,12 +205,7 @@ describe("Issue #482 canonical Pack authoring inventory", () => {
   });
 
   it("U-PACKTPL-007: personal, Bun, and legacy artifact injections are denied", () => {
-    const entries = AUTHORING_TEMPLATE_ARTIFACT_PATHS.map((path) => ({
-      path,
-      mode: "100644" as const,
-      content:
-        path === teamArtifact ? teamBytes : readFileSync(join(process.cwd(), ...path.split("/"))),
-    }));
+    const entries = authoringEntries;
     const legacyTemplateName = "he" + "lix";
     for (const path of [
       "docs/templates/plan/personal.md",
