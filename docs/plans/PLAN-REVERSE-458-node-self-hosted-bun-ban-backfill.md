@@ -17,7 +17,17 @@ agent_slots:
     slot_label: TL - Node self-host実装からL4-L6契約へのgap-only backfillとForward再合流判定
   - role: qa
     slot_label: QA - Bun process zero、Node bootstrap receipt、Linux/Windows証拠の照合
-review_evidence: []
+review_evidence:
+  - reviewer: claude-opus-5
+    review_kind: cross_agent
+    reviewed_at: "2026-09-04"
+    verdict: FLAG
+    blocking_count: 3
+    receipt_id: da59eb13
+    scope: >-
+      PLAN-REVERSE-458 の preflight ownership review。Cutover artifact 3 path の re-home、
+      PLAN-L7-458 §0 と本PLAN B4の reciprocal ownership、Q0 detector/runtime observer
+      artifact の実所有を確認対象とし、Reverse の confirmed 化や最終 Bun deletion は対象外。
 generates:
   - artifact_path: docs/plans/PLAN-REVERSE-458-node-self-hosted-bun-ban-backfill.md
     artifact_type: markdown_doc
@@ -25,15 +35,9 @@ generates:
     artifact_type: config
   - artifact_path: src/lint/bun-permanent-ban.ts
     artifact_type: source_module
-  - artifact_path: src/schema/cutover-transition.ts
-    artifact_type: source_module
-  - artifact_path: src/runtime/cutover-transition.ts
-    artifact_type: source_module
   - artifact_path: src/runtime/runtime-image-observer.ts
     artifact_type: source_module
   - artifact_path: tests/bun-permanent-ban.test.ts
-    artifact_type: test_code
-  - artifact_path: tests/cutover-transition.test.ts
     artifact_type: test_code
   - artifact_path: tests/runtime-image-observer.test.ts
     artifact_type: test_code
@@ -92,17 +96,19 @@ admission_receipt:
 
 `PLAN-L7-458` の confirmed 化に伴う `fd7d154e` で `generates` から外れた8件について、
 別の confirmed/completed PLAN に exact path の owner が存在しないことを pair-freeze で確認した。
-本 Reverse は、この8件を未所有のまま残さないための明示的な backfill owner である。実装内容の追加、
+Cutover artifact 3件は、Cutover function contract と path を持つ status=draft の
+`PLAN-L6-93-node-bootstrap-contract`へ re-home する。本 Reverse は残る5件を未所有のまま残さないための
+明示的な backfill owner である。実装内容の追加、
 F0c/Q0 の実行、consumer placement、Bun の物理削除はこの ownership 修正の対象外とする。
 
 | artifact family | backfill ownership |
 |---|---|
 | `docs/governance/bun-migration-debt.yaml` / `src/lint/bun-permanent-ban.ts` / `tests/bun-permanent-ban.test.ts` | 本PLANが Bun debt baseline と Node-only ban detector/test の backfill artifact owner |
-| `src/schema/cutover-transition.ts` / `src/runtime/cutover-transition.ts` / `tests/cutover-transition.test.ts` | 本PLANが CutoverTransition schema/runtime/pair-test の backfill artifact owner |
 | `src/runtime/runtime-image-observer.ts` / `tests/runtime-image-observer.test.ts` | 本PLANが runtime-image observer と pair-test の backfill artifact owner |
 
-`generates` と本節の対象集合は一致し、各 path は本PLANだけが所有する。`PLAN-L7-458` はこれらを
-契約参照として保持するが、生成 owner や実装済み artifact としては扱わない。
+`generates` と本節の対象集合は一致し、各 path は本PLANだけが所有する。Cutover 3 pathの所有は
+`PLAN-L6-93-node-bootstrap-contract`の`generates`と§ Cutover artifact ownershipに一致する。
+`PLAN-L7-458`はQ0 detector/runtime observerの実所有を本Reverseへ委譲し、Cutover 3 pathは設計参照に限定する。
 
 ## 1. 目的
 

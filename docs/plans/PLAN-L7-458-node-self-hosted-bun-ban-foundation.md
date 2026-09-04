@@ -162,24 +162,27 @@ admission_receipt:
 所有権が空中化した。確認対象は `git diff fd7d154e^ fd7d154e -- docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md`
 で得た8件と、現在の全 `docs/plans/PLAN-*` の exact path 照合である。
 
-以下を pair-freeze の採択結果とする。L5-26/L6-93 は Cutover の設計契約を参照・固定する PLAN、
-L7-462 は別の runtime withdrawal artifact を完了した PLAN であり、いずれも以下8件の implementation
-artifact owner ではない。従って8件は既存の `PLAN-REVERSE-458-node-self-hosted-bun-ban-backfill` が
-ownership backfill として引き受ける。本PLANは以下の8件を生成済みとも、F0b custody の一部とも主張しない。
+以下を pair-freeze の採択結果とする。L5-26 は Cutover の上位設計契約を参照・固定し、L6-93 は
+Cutover function contract と3つの実装・pair test pathを所有する status=draft PLANである。
+L7-462 は別の runtime withdrawal artifact を完了した PLAN であり、Q0 detector/runtime observerの
+ownerではない。Cutover 3 pathはL6-93へ re-homeし、残る5件は既存の
+`PLAN-REVERSE-458-node-self-hosted-bun-ban-backfill` が ownership backfill として引き受ける。
+本PLANは以下の5件を生成済みとも、F0b custodyの一部とも主張しない。
 
 | 削除された `generates` artifact | 本文に残った責務主張 | 採択 owner | 理由 |
 |---|---|---|---|
 | `docs/governance/bun-migration-debt.yaml` | §1/§4/§6 の Q0 Bun detector/ban audit と migration debt の管理 | `PLAN-REVERSE-458-node-self-hosted-bun-ban-backfill` | Bun debt baseline の exact artifact を所有する confirmed/completed PLAN がなく、Reverse の backfill 対象に固定する |
 | `src/lint/bun-permanent-ban.ts` | §1/§4/§6 の Node-only Bun detector/ban audit の実装 | `PLAN-REVERSE-458-node-self-hosted-bun-ban-backfill` | `PLAN-L7-462` の完了済み runtime withdrawal 範囲とは異なり、ban detector の owner が存在しない |
 | `tests/bun-permanent-ban.test.ts` | §1/§4/§6 の Bun detector/ban audit test と qualification | `PLAN-REVERSE-458-node-self-hosted-bun-ban-backfill` | 対になる detector test の owner が存在しないため、実装 artifact と同じ Reverse pair へ固定する |
-| `src/schema/cutover-transition.ts` | §3/§4.2 の CutoverTransitionReceipt の zod 正本 | `PLAN-REVERSE-458-node-self-hosted-bun-ban-backfill` | L5-26/L6-93 は設計契約の正本だが、この source path の生成 owner ではない |
-| `src/runtime/cutover-transition.ts` | §3/§4.2 と CAND ownership の Cutover transition 実装先 | `PLAN-REVERSE-458-node-self-hosted-bun-ban-backfill` | cutover 実装を所有する confirmed/completed PLAN がなく、Reverse の明示 backfill に移す |
-| `tests/cutover-transition.test.ts` | §3/§4.2 の Cutover function boundary の pair test | `PLAN-REVERSE-458-node-self-hosted-bun-ban-backfill` | Cutover source と対になる test path の owner がないため、同じ Reverse pair へ固定する |
+| `src/schema/cutover-transition.ts` | §3/§4.2 の CutoverTransitionReceipt の zod 正本 | `PLAN-L6-93-node-bootstrap-contract` | L6-93のCutover function contractに対応するschema ownerへre-homeする |
+| `src/runtime/cutover-transition.ts` | §3/§4.2 と CAND ownership の Cutover transition 実装先 | `PLAN-L6-93-node-bootstrap-contract` | L6-93のCutover contractが実装境界を定義するstatus=draft ownerである |
+| `tests/cutover-transition.test.ts` | §3/§4.2 の Cutover function boundary の pair test | `PLAN-L6-93-node-bootstrap-contract` | L6-93のschema/runtimeと対になるpair test ownerへre-homeする |
 | `src/runtime/runtime-image-observer.ts` | §2/§3 の runtime observer gap と `RuntimeImageScanner` の実装 | `PLAN-REVERSE-458-node-self-hosted-bun-ban-backfill` | runtime-image observer の exact path を所有する PLAN がない |
 | `tests/runtime-image-observer.test.ts` | §2/§3 の runtime observer coverage の test | `PLAN-REVERSE-458-node-self-hosted-bun-ban-backfill` | 対になる observer test の owner がないため、Reverse の backfill 対象へ固定する |
 
-この表の owner は各 artifact について一つだけであり、上記8件は Reverse PLAN の `generates` と
-`## B4 ownership backfill` にも同じ集合で宣言する。将来の実装・test の内容や consumer placement、
+この表の owner は各 artifact について一つだけである。Q0の5件は Reverse PLAN の `generates` と
+`## B4 ownership backfill` に同じ集合で宣言し、Cutoverの3件はL6-93の`generates`と
+`## Cutover artifact ownership`に同じ集合で宣言する。将来の実装・testの内容や consumer placement、
 F0c/Q0/Bun deletion の方式はこの修正では決めない。
 
 本PLANと直接上流L6-93は`status=draft`で同時authoring中のため、`parent`とL6側`blocks` edgeを保持しつつ
@@ -215,13 +218,14 @@ repo-wide final deletionは別revisionであり、F0/Q0完了をBun-ban final完
 
 `NodeBootstrap`はreview済みlock graphからcompiled ESM entrypointを生成・照合し、実際に起動したNode/npm executable identity、external dependency closure、core digest、package-lock digest、build policy、subject revisionを`NodeBootstrapReceipt`へ封印する。CLIとreceiptは同一immutable generationへ置き、append-only activation markerで公開する。readerはvalidated markerの最高complete sequenceだけを採用し、途中失敗や並行readerへpartial generationを見せない。Node失敗時にBun、tsx、bunx、TS直実行へfallbackしない。
 
-`CutoverTransitionReceipt` は将来の契約対象であり、実装 artifact の所有は §0 の Reverse pair に置く。
+`CutoverTransitionReceipt` は将来の契約対象であり、実装 artifact の所有は status=draft の
+`PLAN-L6-93-node-bootstrap-contract`に置く。
 その receipt は
 `schema_version, registry_id, transition_id, sequence, subject_revision, previous_state, current_state,
 evidence_set_digest, review_digest, admission_digest, previous_receipt_digest, receipt_digest`の
 12 fieldだけを持つ。zod 契約は `src/schema/cutover-transition.ts` を参照し、L5
 `CUTOVER-EVIDENCE-REGISTRY-v1`のcanonicalization、2-lane review bundle、row等価条件、CASを実装し、
-対応する source/test artifact の生成は Reverse pair の backfill section で扱う。
+対応する source/test artifact の生成はL6-93のCutover artifact ownership sectionで扱う。
 slice admissionはzod `src/schema/node-slice-admission.ts`→kernel
 `src/runtime/node-slice-admission.ts`→`tests/node-slice-admission.test.ts`のclosureとする。
 
@@ -241,7 +245,8 @@ Node-only Bun detector/ban auditのtest、implementation、実行結果とqualif
 repo-wide物理削除とそのfinal deletion evidenceだけはQ0後の別revisionまで未生成である。
 
 Q0 の test/implementation の具体的な file artifact は、§0 の ownership mapping に従い
-`PLAN-REVERSE-458-node-self-hosted-bun-ban-backfill` が backfill ownership を持つ。
+`PLAN-REVERSE-458-node-self-hosted-bun-ban-backfill` が backfill ownership を持つ。Cutoverの3 pathは
+L6-93が所有し、本PLANとReverseは設計参照だけを持つ。
 
 F0b #484のartifact/path custodyは次のexact集合に限定する。
 
@@ -388,13 +393,14 @@ D0 design mergeは通常のReviewBundle outer 1 + AttestedTrackedReceiptRecord e
 | F0b sealed build | `CAND-NODEBOOT-001..016`, `018`, `102`, `205` |
 | F0c CI | `CAND-NODEBOOT-019`, `103..106`, `206` |
 | Q0 | `CAND-NODEBOOT-020`, `201..204` |
-| cutover revision（artifact backfill owner = `PLAN-REVERSE-458-node-self-hosted-bun-ban-backfill`） | `CAND-CUTOVER-001..009`, `CAND-CUTOVER-101..113`, `CAND-NODEBOOT-207`, `CAND-NODEBOOT-209..213` |
+| cutover revision（artifact owner = `PLAN-L6-93-node-bootstrap-contract`） | `CAND-CUTOVER-001..009`, `CAND-CUTOVER-101..113`, `CAND-NODEBOOT-207`, `CAND-NODEBOOT-209..213` |
 | final deletion | `CAND-NODEBOOT-208` |
 
 候補は一つのownerだけを持つ。F0a/F0b/F0cを再結合せず、各sliceのtest+implementation同一commitでのみ正式IDへ昇格する。
-`src/runtime/cutover-transition.ts` / `tests/cutover-transition.test.ts`のartifact boundary ownerは
-§0 の Reverse pair の backfill sectionであり、slice admission候補の個別Red→Greenは上表のtarget slice
-ownerが同じpairへ追加する。本PLANは Cutover の設計・候補対応を参照し、source/test artifact を所有しない。
+`src/schema/cutover-transition.ts` / `src/runtime/cutover-transition.ts` /
+`tests/cutover-transition.test.ts`のartifact boundary ownerはL6-93のCutover artifact ownership sectionであり、
+slice admission候補の個別Red→Greenは上表のtarget slice ownerが同じpairへ追加する。本PLANはCutoverの設計・
+候補対応を参照し、source/test artifactを所有しない。
 schema/admission kernel/test artifact boundaryも本PLAN ownership表を正本とし、Issue #152のowner projectionは
 この表へ同期する。外部Issue本文はownership正本を上書きしない。
 
