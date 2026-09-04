@@ -379,6 +379,15 @@ inventory / flow・fixture 契約・typed finding) 以外は profile に従う�
 の Gold 監査 PR #40 / #43 が実録) と、正解のない予測・仮説先行の領域 (仮説 record + S4 decision + 実測 backtest、予測を確定値と
 区別表示) (FR-056 追記 / AC-070)。
 
+### 3.19 要求の暫定性と freeze 条件 (PO 指示 2026-09-04)
+
+PO 指摘: AI 間の齟齬で要求が勝手に freeze され、修正しなおしが発生している。要求段階で確定できるのは PoC を通していて要件に固定しても
+違和感が無いときか、明示的に「固定で」と言われたときだけで、それ以外は修正が出る前提にする。採択: 要求 / 要件 record に
+provisional (既定) / frozen の 2 状態、freeze 遷移は人間 decision record か S4 confirmed + 人間 ack のみ、AI / compiler / verdict による
+freeze は deny、provisional 依存チケットは再 compile 前提、view は区別表示、AI 間齟齬は discrepancy record へ (BR-032 / FR-058 / AC-071)。
+freeze 率は目標にせず「freeze 後の改訂件数」を測る。非採用: 文書一括 freeze の既定化、AI による確定代行。
+概念本文には §要求の暫定性 として反映した。
+
 ## 4. 工程
 
 
