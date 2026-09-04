@@ -1,10 +1,5 @@
 import { satisfies, valid, validRange } from "semver";
 import {
-  type ConsumerNodeRuntimeReadinessInput,
-  type ConsumerRuntimeDenyReason,
-  validateConsumerReadiness,
-} from "./consumer-node-runtime.ts";
-import {
   AUTHORING_TEMPLATE_ARTIFACT_PATHS,
   AUTHORING_TEMPLATE_INVENTORY,
   type AuthoringTemplateInventoryEntry,
@@ -12,6 +7,11 @@ import {
   authoringSourcePath,
   validateAuthoringTemplateInventory,
 } from "./authoring-template-inventory.ts";
+import {
+  type ConsumerNodeRuntimeReadinessInput,
+  type ConsumerRuntimeDenyReason,
+  validateConsumerReadiness,
+} from "./consumer-node-runtime.ts";
 import { COMMON_FILES } from "./templates.ts";
 
 export interface CleanDistributionPlan {
