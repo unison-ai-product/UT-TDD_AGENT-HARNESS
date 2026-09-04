@@ -2432,6 +2432,22 @@
         "revision": 3,
         "content_digest": "sha256:f1e30114b3915076492e84ad48ef9bf02b894378fa743706e62ad882c4cdc67f"
       }
+    },
+    {
+      "sequence": 153,
+      "previous_record_digest": "sha256:d5bc7d3d950205ad2c98663a43c3c3016a9d928dc2002e19c4fce2f1f97b44c0",
+      "record_digest": "sha256:dce9c41d1a8b80f8d63b75f7684da8dbbaf3a789407073dcc07ed893cde71565",
+      "command_id": "command:pr520-issue487-reverse-ownership-revision4",
+      "receipt_id": "certificate:79b87abaad993b9fab749bb33b90e170",
+      "receipt_digest": "sha256:b46ed16053b7ababe067537a6f550a3046ae5752b107f15823924643ca44eeda",
+      "decision_digest": "sha256:f5991834163656341697a8a9cefdcab8f1a205f73510fe91a0ffc38c2452d661",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-530-bun-final-retirement-backfill.md",
+        "plan_id": "PLAN-REVERSE-530-bun-final-retirement-backfill",
+        "asset_id": "plan:4727c21e7227fefefdb428f11662676c",
+        "revision": 4,
+        "content_digest": "sha256:4db2ebfa66e911c60bfa258714aaac7690b0b717e14e5fd1f76e2aca901d8bbd"
+      }
     }
   ]
 }

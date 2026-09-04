@@ -43,18 +43,18 @@ status: draft
 github_issue_id: 487
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:05b490a8f8e8d63e61c732085bb5b17e
-  command_id: command:pr520-issue487-reverse-ownership-revision3
+  receipt_id: certificate:79b87abaad993b9fab749bb33b90e170
+  command_id: command:pr520-issue487-reverse-ownership-revision4
   admitted_at: 2026-09-04T11:31:00.000+09:00
-  source_digest: sha256:f1e30114b3915076492e84ad48ef9bf02b894378fa743706e62ad882c4cdc67f
+  source_digest: sha256:4db2ebfa66e911c60bfa258714aaac7690b0b717e14e5fd1f76e2aca901d8bbd
   decision_digest: sha256:f5991834163656341697a8a9cefdcab8f1a205f73510fe91a0ffc38c2452d661
-  receipt_digest: sha256:95e1afdb28fb049dcef3d5de8bff248c9492ee8344cf53bdfe2f3e2f29d21964
+  receipt_digest: sha256:b46ed16053b7ababe067537a6f550a3046ae5752b107f15823924643ca44eeda
   binding:
     path: docs/plans/PLAN-REVERSE-530-bun-final-retirement-backfill.md
     plan_id: PLAN-REVERSE-530-bun-final-retirement-backfill
     asset_id: plan:4727c21e7227fefefdb428f11662676c
-    revision: 3
-    content_digest: sha256:f1e30114b3915076492e84ad48ef9bf02b894378fa743706e62ad882c4cdc67f
+    revision: 4
+    content_digest: sha256:4db2ebfa66e911c60bfa258714aaac7690b0b717e14e5fd1f76e2aca901d8bbd
   route:
     signal: design_gap
     mode: reverse
@@ -117,9 +117,10 @@ Forward/test-designと同じ候補をこの Reverse の実装検証境界にも�
 
 実装後に次を区別して上位へ戻す。
 
-- `reachable_production`: このsliceでは `scripts/git-hooks/secret-scan-diff.ts` のBun shebang/
-  direct-entry と `scripts/run-vitest-snapshot.ts` の `resolveBunBinary`/
-  `UT_TDD_BUN_BINARY` 受渡しだけを実tree inventoryへ置く。1件でも残れば未完了。
+- `reachable_production`: `package.json`の`build`、`bunAuthority`、`bun.lock`に加え、
+  `scripts/git-hooks/secret-scan-diff.ts` のBun shebang/direct-entry と
+  `scripts/run-vitest-snapshot.ts` の `resolveBunBinary` / `UT_TDD_BUN_BINARY`受渡しを
+  実tree inventoryへ置く。1件でも残れば未完了。
 - `retained_fixture`: Q0 detectorが自分自身を検証するための専用fixture。production inventory、
   allowlist、生成Pack、consumer runtimeから参照できないことを実測する。
 - `unobserved`: OS、権限、provider、history、または対象面が観測不能な状態。解決済み扱いせず
@@ -146,7 +147,8 @@ stable昇格、rollback運用まで完了扱いしない。
 
 このReverseは #487 の実装結果を上位設計へ戻す pair-freeze であり、実装・削除・Q0実行・
 release公開そのものではない。#470/#471/#472の完了済みconsumer/readiness/source-CI、#500の
-Pack CI policy、#450 program closure、#473のNode producer/`build` scriptを再吸収しない。
+Pack CI policy、#450 program closure、#473配下のNode producer (#484/#515)を再吸収しない。
+`package.json`の`build`、`bunAuthority`、`bun.lock`のfinal deletionはIssue #487と本pairが一意に所有する。
 `status: draft` の間は、現行mainのproduction artifactの所有を変更せず、実装PRが同一revisionで
 上記scripts境界の必要pathを追加する。
 
