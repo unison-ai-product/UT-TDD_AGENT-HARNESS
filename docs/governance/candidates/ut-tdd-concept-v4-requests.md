@@ -23,6 +23,18 @@ BR-09〜 として合流し、本書は候補から昇格記録へ役割を変�
 
 枠組み: human-on-the-loop。ユーザーと AI の境界責務を正しく分離して「作業・定義・改善」を定義する。
 
+## PO 追加指示 (2026-09-04) — 参照元構想から取り込む 4 領域
+
+PO は同日、参照元の個人開発ハーネス (非公開) から次の 4 領域を**部分採用**する意向を示した。いずれも
+A / B の 2 大要求を実現する手段面であり、独立した第 3 の要求ではない。
+
+| 領域 | 参照元の骨格 | 本書での受け皿 |
+|---|---|---|
+| C. 上流要求エンジン | L1 intake (人間 markdown) → L2 discovery (質問・回答・prototype 反応・candidate 分割/統合・矛盾・defer・agreement を append-only event) → L3 compile (strict typed IR、`compile_ready / backflow_required / human_decision_required / rejected` を exactly one) → 人間承認後だけ freeze | UTV4-BR-009 |
+| D. PoC / プロトタイプ作成 | Discovery PoC を production 工程と別 axis の case-driven model として持ち、S0 backlog → S1 plan → S2 poc → S3 verify → S4 decide。S3 verified は terminal ではなく、S4 decision record (confirmed / rejected / pivot) が無ければ merge / Forward reentry を推測しない。prototype 反応は自由文と構造化 decision を分離して要求 candidate へ還元する | UTV4-BR-010 |
+| E. ハーネスメモリの見直し | memory を最終正本にせず「捕捉 → 正本 (要求 / 設計 / 規則) へ取り込み → 証跡付き退役」の lifecycle を持つ。学習資産は責務 (responsibility) を primary owner とし CASE / SCENE / PATTERN / LOG / VERIFY へ分離、expiry・contradiction・revalidation を状態として持つ | UTV4-BR-011 |
+| F. スキル / ナレッジ管理新体制 | skill の適用範囲を typed identity の versioned registry で持ち、assignment ごとに最小 packet を決定的に compile する。firing / 未使用 / miss を telemetry 化し、stale skill は削除ではなく可逆 quarantine。skill → 機構への昇格は shadow + before/after 測定 + 独立 review + rollback | UTV4-BR-012 |
+
 ## L1 要求候補
 
 | ID | 要求 | 起点 | 既存との関係 |
@@ -35,6 +47,10 @@ BR-09〜 として合流し、本書は候補から昇格記録へ役割を変�
 | UTV4-BR-006 | 利用者は、構造化正本と markdown 正本の双方から、表 (スプレッドシート)・ドキュメント・ダッシュボードの人間向け view を即時に生成でき、その view からの変更は admission 経由でのみ構造化正本へ戻ること (markdown 正本への機械書き戻しは行わない)。 | A-② | BR-06 / UX-02 (ダッシュボード) を「generated view」として再定義。生成 view は編集禁止 + 生成元 + hash 照合 |
 | UTV4-BR-007 | チームは、FLAG・incident・運用観測から得た知見を、authority を無断で書き換えずに改善候補として既存 V-model (Reverse / Requirement Re-entry) へ還流でき、同じ知見を人間向け digest として受け取れること。 | B-③ | HARNESS memory (PLAN-L7-189)、右肺 quality loop (VUP-REQ-05)、#303 / #305 / #413 を継承。人間向け還流面を追加 |
 | UTV4-BR-008 | チームは、progress を手作業で更新せず、チケット・PR・CI・review・merge の事実から進捗と詰まりが projection として自動的に見えること。 | B-① / B-② | BR-06 / VUP-REQ-01 (工程管理表の一級化) を team 単位へ拡張 |
+| UTV4-BR-009 | チームは、要求を「人間の intake → 発見 (質問・prototype 反応・candidate 遷移の append-only event) → typed IR への compile → 人間承認で freeze」の一本の工程で扱え、AI が未確定値を補完して要求を確定させることがないこと。 | C / A-① / B-② | VUP-REQ-03 typed spec IR (U8〜U12、宣言部のみ) を要求発見工程へ前方拡張。PLAN-L1-07 の additive delta 方式で載せる |
+| UTV4-BR-010 | チームは、不確実性の高い課題を production 工程とは別 axis の PoC / プロトタイプとして回し、prototype への反応を要求 candidate へ還元し、S4 判断 record が揃うまで PoC 成果を production 成果と混同しないこと。 | D / A-② | CLAUDE.md §UT-TDD Workflow の Scrum / PoC (S0〜S4) と `kind=poc` (基準 ref で 10 PLAN) を継承し、S3 ≠ terminal と S4 record 必須を明示 |
+| UTV4-BR-011 | チームは、ハーネスメモリを「捕捉 → 正本化 → 証跡付き退役」の lifecycle で扱い、学習資産の owner を責務単位に置き、失効・矛盾・再検証を状態として持てること。memory が正本や進捗の代替にならないこと。 | E / B-③ | PLAN-L7-189 HARNESS memory (基準 ref 586 件)、memory-sync gate、CLAUDE.md「エピソード状態を書かない」規則を lifecycle と状態機械へ昇格。#413 は後続 |
+| UTV4-BR-012 | チームは、skill / ナレッジの適用範囲を typed registry で宣言し、作業ごとに必要最小の知識 packet だけを受け取り、skill の効き目を測って可逆に整理でき、skill から機構への昇格を証拠付きでのみ行えること。 | F / B-③ | CLAUDE.md §Skills「Load only relevant skills」、`skills/` (基準 ref 81 entry)、`src/skill-engine/`、`ut-tdd skill suggest` を registry・telemetry・昇格契約へ拡張 |
 
 ## 期待する利用体験
 
@@ -47,4 +63,5 @@ lease 付きで配り、独立検証し、同一 HEAD の証拠で閉じる。�
 - 951 PLAN の一括 JSON 化 (record 化は新規種別から段階導入)。
 - Issue / DB を意味正本にすること。
 - 完全自動化 (human authority の AI への移譲)。
+- 参照元構想の全面移植 (repository / CLI の rename、Python 恒久意味コア、多軸分類 registry による routeFiling 置換)。
 - provider 固定 topology (provider 名を responsibility や authority の identity にしない)。
