@@ -54,6 +54,13 @@ Python 恒久意味コアは採らない (ADR-001: TypeScript/Node 一本)。
 正本は 1 枚に集約せず責務ごとに分散して置き、人間が俯瞰するときは生成 view (スプレッドシート) で読む。
 「1 枚にまとまる要求・要件」は品質を持たない、という前提を採る。
 
+目指す到達点は **高価な AI に依存せず、人間と AI が品質を守りながら開発できる** ことである。そのためハーネスは
+LLM の判断 (review verdict / finding / advisor 決定 / gate 判定) を使い捨てにせず、入力・結論・その後の結果を
+judgement record として蓄積し、繰り返し現れる判断を安価なモデルの分類器や決定的 check へ段階的に機械判断化する
+(自己学習型ハーネス)。判断軸は良否 (契約に対する正誤) だけでなく **選好** — 開発されたプロダクトが人間にとって
+使いやすいこと、そして AI が裏側で働いても壊しにくいシステムであること — を含み、この判断軸を実録から skill として
+蓄積する。
+
 ## 7 原則
 
 1. **Human Sovereignty (層別 human-on-the-loop)**: request / selection / approval / decision / disposition を分離し、
@@ -202,6 +209,19 @@ evidence tier は 3 段 (`cross_family` > `same_family_separated` > `intra_runti
 | 画面モック / プロトの製本点 | 製本 (正式文書への統合) は 2 点で行う: (a) L2 → L3 compile 時に screen id ごとの prototype record + 反応 event を **画面仕様 (generated)** へ束ね、要件 IR の surface / action / state / AC と結ぶ、(b) L5 詳細設計で画面詳細 (component / 状態 / 失敗 / 回復) として再製本する。製本物は generated view + typed record であり、モック画像や prototype 実装そのものを正本にしない。 |
 | 実録からの学習 | 一般手順を書いた汎用 skill (provider が既知の知識) は退役対象 (FR-025 の GENERIC_PROCEDURE class) とし、skill・判断パック・機構は **実録 (receipt / finding / review verdict / incident / S4 record) から抽出した CASE / SCENE / PATTERN** に provenance を束縛して生成・昇格する。実録 provenance の無い skill は昇格できず、既存 skill は実録との照合で quarantine 判定を受ける。 |
 
+## 判断の蓄積と機械判断化 (自己学習型ハーネス、PO 指示 2026-09-04)
+
+| 論点 | 方式 |
+|---|---|
+| judgement record | LLM が下したあらゆる判断 (review verdict、finding、advisor 決定、gate 判定、triage、分類) を **judgement record** (1 record = 1 JSON、subject identity・入力 digest・判断者 (model / tier / role)・結論・根拠 finding・所要コスト) として Evidence Ledger に残す。会話 transcript は正本にしない。 |
+| 結果との照合 (calibration) | 後続の事実 (CI / oracle 結果、incident、Reverse 発生、人間の override、利用者フィードバック) を judgement record へ back-annotate し、判断種別 × 判断者ごとに正答率・見逃し・過検知を計測する。照合の無い判断は「未検証の意見」であり昇格材料にならない。 |
+| 機械判断化の階段 | 同種の判断が calibration で安定したら **LLM 判断 → 安価モデル / 小型分類器 → 決定的 check (lint / doctor / schema)** の順に降格 (= 機械化) する。各段は shadow 運転 → before/after 比較 → 独立 review を経て gate 化する (FR-022 の昇格経路を再利用)。log を機械判断化できた領域では frontier tier を呼ばない。 |
+| 費用非依存の品質 | frontier tier は「学習済み check が無い判断」と「人間ゲート直前の独立 review」にだけ使う。effort / model ladder は上げる方向だけでなく、機械判断化に応じて **下げる方向** を持つ。品質は蓄積された判断機構と人間ゲートで守り、モデルの高価さを品質の担保にしない。 |
+| 判断軸 skill (良否 + 選好) | 判断軸は 2 軸で蓄積する。**良否軸** = 契約 / oracle / 規約に対する正誤。**選好軸** = (a) プロダクトが人間ユーザーにとって使いやすいか (操作導線・失敗時の回復・認知負荷・一貫性)、(b) AI が裏側で継続的に変更しても壊しにくいシステムか (境界の明示・契約の機械可読性・変更の局所性・観測可能性・fail-close 既定)。選好軸の判断は実録の CASE / PATTERN から skill として抽出し、判断パックの評価観点へ注入する。選好軸の昇格 (規約化) は人間ゲートを必ず通す。 |
+| 適用範囲 | ハーネス自身の運用判断だけでなく、ハーネス上で開発されるプロダクトのレビュー観点にも同じ record・照合・階段を適用する。project 単位の intake record (FR-038) が収集点、ハーネス repo の Evidence Ledger が集約点。 |
+| 人間可読 (組織で使える) | AI が分かるだけの record は組織的には使えない。judgement record・calibration・機械判断化された check・判断軸 skill は、すべて **ハーネス標準共有機構** — 要求 / 要件 / 設計を同期するスプレッドシート view (FR-008) と、画面モック / プロトの製本物 (FR-039) — へ generated view として投影され、人間はそこで読む・承認する・差し戻す。人間可読 view を持たない判断・skill は昇格できない。 |
+
+
 ## 正規情報 flow
 
 ~~~text
@@ -229,6 +249,8 @@ evidence tier は 3 段 (`cross_family` > `same_family_separated` > `intra_runti
 7. unknown を none / unchanged / healthy / green へ変換しない。
 8. 単一 episode で規則や機構へ昇格しない。高価な監査を admission なしで起動しない。
 9. 人間の介入点を層別境界表の外へ増やさない (反射的エスカレーション禁止) し、表の内側を AI が越権しない。
+10. LLM の判断を record 無しに消費しない。calibration 証拠の無い判断を機械判断へ昇格しない。モデルの高価さや
+    tier を品質・authority の代替にしない。
 
 ## v3.1 資産の移行
 
