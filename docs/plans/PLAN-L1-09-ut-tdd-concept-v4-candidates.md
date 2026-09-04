@@ -225,6 +225,26 @@ PO 指摘「画面検証系の CI はほとんど作られていない。デー�
 所見: v4 が前提にする「機械の認識を人間に見せる層」とその鮮度・決定性・三方 join の整合性 check は、ハーネス自身に対してゼロから建てる。
 工程 (§4) の最初の実装 slice は、この (a)(d)(e) をハーネス自身へ dogfooding する形で切る。
 
+### 2.11 参照元構想の直近動向との照合 (2026-09-03〜04、PO 指示で再確認)
+
+参照元の個人開発ハーネス構想 (名称は PO 指示により記載しない) の 9/3〜9/4 の issue / PR / commit を再取得し、本 PLAN の調査項目と照合した
+(取得コマンドは §2.5 と同じ窓、2026-09-04 実行)。こちらの調査への直接回答は無いが、同じ問題へ独立に到達した項目と未着手の項目が分かれる。
+
+| 本 PLAN の論点 | 参照元の直近動向 | 判断 |
+|---|---|---|
+| AI が要求を勝手に freeze / AI 解釈の authority 化 (FR-058) | P0 issue「AI 解釈を PO authority へ昇格する記録と superseded 再浮上を fail-close」、PR「harness memory は coordination-only」 (typed human_authority_claim / runtime_interpretation 分離) | 同方向。あちらは memory 側、こちらは要求 record 側。両方必要 |
+| 製本と変更時更新の drift (FR-046 / 047) | issue「設計書の source_digest pin が実ファイルと照合されず腐る (main 実測 90 pin 中 6 stale)」 | drift fail-close の根拠が 1 件追加 |
+| sub-agent の provider-native 化 (FR-049 / 050) | Concept v4.0 候補 Execution Plane: logical lane が第一級、provider 内部 subagent を独立 authority にしない、**Bench で task class × cost × mutation kill を測って割当** | 同方向。Bench による割当はこちらに無く、FR-043 (降格 ladder) の実測根拠として取り込み候補 |
+| 大チケット = release slice (FR-036) | Functional Release Slice、Capability / Release Portfolio Management (Slice → Module → Bundle → channel) | 配布側があちらの方が厚い。v4 では 大チケットの受入 (L10〜L12) の先に置く候補 |
+| 判断の蓄積 (FR-041〜044) | Adaptation Plane (UIL / RCL / Agentic Audit tier / Synthesis)、shadow verdict promotion | LLM verdict の calibration と cost tier 降格は無い (こちらの追加分) |
+| refactor (FR-052 / 053) | Recovery / Refactoring の trigger admission、SR3 の exactly-one route | チケット階層別の責務は無い (こちらの追加分) |
+| 画面プロト (FR-056 / 057) | L5 screen applicability prototype (prototype_required 分類、walkthrough ledger、静的画像は代替不可) | 重なる。fixture 契約・異常系必須・深度 profile・discrepancy record は無い |
+| スプシ同期 view / 図生成 / discrepancy (FR-008 / 046 / 047)、provisional 状態、PoC budget、4 階層 + admission チケット、人間 review 傾斜、single-provider 偏見対策、費用非依存、チーム規模 backflow | 該当文書 0 件 (sheet / 図 / discrepancy / provisional / budget の語が候補文書に無い) | こちらの追加分として維持 |
+
+取り込み候補 (v4 候補への追記は PO 判断後): Bench による model 割当の実測、Slice / Module / Bundle の配布契約、不変条件のうち
+「gate が対象を検査していない状態を pass にしない」「compatibility green で current failure を相殺しない」「replacement evidence なしで
+retire しない」の 3 本。
+
 ## 3. 設計判断
 
 ### 3.1 正本の置き場 (advisor design、claude-fable-5、2026-09-04)
