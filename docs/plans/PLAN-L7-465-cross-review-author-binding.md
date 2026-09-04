@@ -144,6 +144,15 @@ review_evidence:
    (委譲を実行している runtime) だけを入力とし、commit author も trailer も参照しない。
    本規定は文書に残ったまま実装と乖離していた。
 
+### 既知の限界と後継ポインタ (2026-09-04、PLAN-L7-517 §3.2.2)
+
+本 PLAN の family 依存 gate (`same_family_reviewer` / 反対族 routing / consumer admission) の入力は
+`resolveReviewAuthorFamily` 由来の **unverified claim** であり、claim を変えれば通過可否が変わる。これは
+provenance ではない process-hygiene 制御であって、verified non-authorship を証明しない (PLAN-L7-517 §3.2.2)。
+この限界の解消 (authoring record を commit OID に束縛し Git facts から same-runtime を判定する) は admission
+を変える authentication 類似の変更であり、**PO 承認を要する後継 PLAN として保留**する。PLAN-L7-517 は
+この解消を取り込まない。
+
 ### supersede されていない規定 (有効)
 
 - **§機械化する不変条件 1「同一 family の自己承認を verdict として受理しない (`same_family_reviewer`)」**

@@ -148,35 +148,49 @@ alias table、dispatch 開始宣言、subagent 親継承、commit author 文字�
 値は `unverified_family` のままとし、unknown/mixed 解消、reviewer 適格性、merge authority に使わない。
 claim mismatch は監査できるが、Git facts が verified になったことを意味しない。
 
-### 3.2.2 claim の非対称使用と優先 oracle (Sol FLAG at a86271b1 の解消)
+### 3.2.2 provenance state と review authority の切断 (Sol FLAG at a86271b1 / b116ec0e の解消)
 
-§3.2 / §3.2.1 が「claim を authority の根拠にしない」と述べる一方、§3.6.1 が `authorFamily` claim を入力とする
-既存 gate (`same_family_reviewer_denied`、反対族 routing、consumer admission) を温存していたため、同一値が
-非権威かつ受理判定入力という二重の位置に置かれていた。本節はこれを**用途の方向で分離**して解消する。
+§3.2 / §3.2.1 が「claim を authority の根拠にしない」と述べる一方、旧 §3.6.1 が `authorFamily` claim を入力とする
+既存 gate を温存し、b116ec0e の改訂は「verified facts + opposite-family claim → admit」という行を置いたため、
+同じ verified facts でも claim を same → opposite に変えるだけで deny → admit が反転し、未検証 claim が
+authority を広げる入力になっていた (Sol 指摘、receipt `0798e619…`)。Git facts は provider family を含まないので、
+family claim を判定入力に持つ **admit** を provenance 契約の内側に置く限りこの矛盾は消えない。本節は矛盾を
+「解消」するのではなく、**review authority を本 PLAN の契約から切断する**ことで成立させる。
 
-**非対称原則**: 未検証 claim (`unverified_family`、provider、runtime、actor 申告) は authority を**狭める
-(deny) 入力にはなり得るが、広げる (grant) 入力には決してなり得ない**。review authority、non-author 適格、
-`merge_ready`、provenance grade を**付与**できるのは verified Git facts だけである。
+**本 PLAN の出力は typed provenance state のみ**であり、`admit`・non-author 適格・review authority・
+`merge_ready` は本 PLAN の語彙に存在しない:
 
-| Git facts | family claim | 判定 | 記録 |
-|---|---|---|---|
-| unknown / unresolved | 任意 (same / opposite / 欠落) | deny (`unknown_provenance_unresolved`) | claim は observation として保存 |
-| verified | reviewer と same-family、または欠落 / unknown | deny (`same_family_reviewer_denied`) | claim による deny を監査記録 |
-| verified | opposite-family | admit (authority の根拠は facts のみ) | claim は observation として保存 |
-| verified | facts と矛盾 (claim mismatch) | `conflict` として deny | deny + mismatch イベントを必ず監査記録 (なりすまし検出機会を失わない) |
+| state | 条件 | 本 PLAN が課す効果 |
+|---|---|---|
+| `verified` | 同一 repository の Git object 再取得で全 field 一致 (§3.2) | 効果なし (何も付与しない。「facts が verified である」という記録だけが残る) |
+| `unknown` / `unresolved` | 再取得不能、field 不一致、record 欠落 | deny (`unknown_provenance_unresolved`)。close / merge を進めない (§3.3) |
+| `conflict` | 同一 repository・commit に対し Git facts の異なる record が併存 (§3.2) | deny。先勝ちにしない |
 
-- opposite-family claim は admit の**必要条件**ではあるが**十分条件ではない**。facts unknown の場合は claim の
-  内容に関わらず deny する (行 1 が行 3 に優先する)。
-- 既存 gate (§3.6.1) はこの表の行 2 を実装する **process-separation hygiene** であり、provenance authority
-  ではない。挙動は不変であり、`CANDIDATE-U-AUTHPROV-053`〜`056` が表の 4 行を固定する。
-- 採択記録: gpt-5.6-sol の FLAG (receipt digest `3d43920f…`、2026-09-04) に対し
-  `ut-tdd advisor --decision design` (`claude-fable-5`、effort low、2026-09-04) へ 3 案を提示。A =
-  非対称使用 (本節)、B = 既存 gate を transitional と宣言して authoritative head 以降に Git facts 由来の
-  分離へ置換 (authentication 類似の admission 変更で PO 承認境界に踏み込むため pair-freeze 中の解消手段
-  としては過大、将来 PLAN として起票可)、C = §3.2 の文言を merge_ready / provenance grade に限定して
-  admission / routing での claim 使用を許す (reviewer が flag した dual use の温存で finding 再燃)。
-  advisor 推奨は A、採択 A (override なし)。残リスク: facts unknown → deny の運用頻度は未計測であり、
-  実装 slice で 1 本の計測コマンドを添えて deny 影響を確認する。
+- family / provider / runtime / actor の claim は全て observation として保存されるだけで、上表のどの state
+  遷移の入力にもならない。同一 commit に対する record 間の claim 不一致は **conflict observation として記録
+  するのみ**で、deny / 非 deny のいずれの反転入力にもしない (facts に family が無いため「facts と claim の
+  矛盾」は定義できない。旧 mismatch 行は削除)。
+- **本システムに verified non-authorship は現存しない**。Git author 名は 100% 同一 (§2.1)、trailer は自由記載
+  (§2.2)、authoring attestation は無い (§2.4)。したがって「この reviewer はこの成果物を書いていない」を
+  facts から証明する手段は無く、本 PLAN はそれを証明すると主張しない。
+- **merge authority の根拠は exact-HEAD non-author closing-review protocol** (別 runtime による exact-head
+  receipt、CLAUDE.md §Hybrid 多ランタイム commit 協調) に一本化する。provenance state は「unknown / conflict
+  なら進めない」という fail-close の追加条件であって、merge を許可する根拠にはならない。
+- PLAN-L7-465 由来の family-claim gate (`same_family_reviewer_denied`、反対族 routing、consumer admission)
+  は **provenance ではない process-hygiene 制御**であり、所有は PLAN-L7-465 に留まる。**既知の限界**: 入力は
+  unverified claim であり、claim を変えれば通過可否が変わる。本 PLAN はこの制御に依拠せず、その限界を解消
+  したとも主張しない。限界の解消 (authoring record を commit OID に束縛し Git facts から same-runtime を
+  判定する) は admission を変える authentication 類似の変更であり、PO 承認境界の後継 PLAN として保留する
+  (465 側に限界注記と後継ポインタを置く)。
+- `CANDIDATE-U-AUTHPROV-053`〜`056` は上表 3 state と「claim が state 遷移の入力にならない」ことを固定する。
+- 採択記録: gpt-5.6-sol の FLAG (`3d43920f…`) に対し `ut-tdd advisor --decision design` (`claude-fable-5`、
+  2026-09-04) は A (非対称使用: claim は deny 方向のみ) を推奨し採択したが、Sol が同 head b116ec0e を再度
+  FLAG (`0798e619…`: verified + opposite claim → admit 行で claim が authority を広げる)。再相談で D
+  (本節: admit を語彙から除き authority を切断)、E (Git facts 由来の分離へ置換 = 実装 + PO 境界 + bootstrap
+  全 deny 期間)、F (PO へ即エスカレーション) を提示。advisor 推奨は D (E は終着点として正しいが docs-only
+  pair-freeze の範囲外、F は既存契約から一意に導けるため反射的エスカレーション禁止に該当)。採択 D
+  (override なし)。docs-only であることの確認: `grep -rn "L7-517|author-provenance" src` は 0 件
+  (2026-09-04、b116ec0e) であり、本改訂は実挙動を変えない。
 
 ### 3.2.3 human backfill の境界
 
@@ -237,24 +251,23 @@ self-review も non-author も判定せず、その authority は既存の独立
 
 ### 3.6.1 supersede **しない**範囲 (誤って撤回しないための明示)
 
-以下は 465 の記述のまま**有効である**。いずれも `authorFamily` claim に依存するが、§3.2.2 の非対称原則
-により claim は **deny 方向にしか働かない** (process-separation hygiene)。authority を付与するのは verified
-Git facts のみであり、これらの gate は provenance authority ではない。よって §3.2 / §3.2.1 と矛盾しない。
+以下は 465 の記述のまま**有効である**。いずれも `authorFamily` claim に依存する process-hygiene 制御であり、
+§3.2.2 のとおり本 PLAN の provenance 契約の**外**にある (本 PLAN はこれらに依拠せず、これらの限界を
+解消したとも主張しない)。よって §3.2 / §3.2.1 と矛盾しない。
 
 | 465 の規定 | 存続する理由 |
 |---|---|
-| §機械化する不変条件 1「同一 family の自己承認を verdict として受理しない (`same_family_reviewer`)」 | §3.2.2 表の行 2 (deny 方向) そのもの。attacker/defender 分離の PO 原則も撤回されていない。実装 (`review-verdict-custody.ts` / `review-attestation.ts` の `same_family_reviewer_denied`) は `resolveReviewAuthorFamily` 由来の claim で **deny のみ**を行い、admit を確定しない (admit には facts verified が必要、行 1 が優先) |
-| D1 dispatch の反対族 routing (同族 fallback 禁止、未知 family / 反対族 runtime 不在は delegation 0 / receipt 0) | routing は委譲先の**選択** (hygiene) であって review authority の付与ではない。routing 結果が admit を意味しないことは §3.2.2 行 1 (facts unknown → deny) が保証する |
-| consumer の反対族 provider 起動と `U-RVATT-024` | 同上。同族・未知 claim は deny 方向のみ |
+| §機械化する不変条件 1「同一 family の自己承認を verdict として受理しない (`same_family_reviewer`)」 | 465 所有の process-hygiene 制御。attacker/defender 分離の PO 原則も撤回されていない。実装 (`review-verdict-custody.ts` / `review-attestation.ts` の `same_family_reviewer_denied`) は `resolveReviewAuthorFamily` 由来の unverified claim を入力とする。その限界は 465 の訂正注記に明記され、本 PLAN は依拠しない |
+| D1 dispatch の反対族 routing (同族 fallback 禁止、未知 family / 反対族 runtime 不在は delegation 0 / receipt 0) | 委譲先の**選択**であり provenance state の入力ではない。465 所有の hygiene |
+| consumer の反対族 provider 起動と `U-RVATT-024` | 同上 |
 | `provider-family-authority.ts` port と `unverified_family` 終端 | 465 §D3c が「commit trailer・自己申告・PR marker を family authority として受理してはならない」と既に freeze しており、**本 PLAN と同じ立場**である。受理側実装は authentication / authorization を変える外部権限設計として **PO の明示承認**を要し、本 PLAN では触れない |
 | exact HEAD 限定、session log 再利用、未応答 SLA、`stale_head` 終端 | family 導出に依存しない |
 
 ### 3.6.2 実装との関係
 
-本 PLAN の撤回は**既存 gate の撤去を要求しない**。ただし既存 gate の位置づけは §3.2.2 により
-**deny 専用の process-separation hygiene** へ再分類され、その挙動不変は `CANDIDATE-U-AUTHPROV-053`〜`056`
-で固定する (「hygiene だから緩めてよい」という誤読を機械的に防ぐ)。facts unknown と same-family claim が
-併存する場合の authoritative decision は §3.2.2 表の行 1 (deny) であり、既存 gate の deny と競合しない。`same_family_reviewer_denied` を返す
+本 PLAN の撤回は**既存 gate の撤去を要求しない**。既存 gate は §3.2.2 により本 PLAN の provenance 契約の
+外にある process-hygiene 制御と位置づけ、本 PLAN の実装 slice はその挙動を変えない。facts unknown の場合は
+既存 gate の結果に関わらず provenance state による deny が加わる (`CANDIDATE-U-AUTHPROV-053`)。`same_family_reviewer_denied` を返す
 `review-verdict-custody.ts` / `review-attestation.ts`、および `review-evidence.ts` の
 `checkCrossAgentModelPair` (PLAN の `review_evidence` に**宣言された** worker/reviewer model を
 検査するもので Git trailer とは無関係) は、いずれも本 PLAN と矛盾せず、そのまま有効である。
@@ -269,7 +282,7 @@ Git facts のみであり、これらの gate は provenance authority ではな
 |---|---|---|
 | Git facts | 同一 repository の object 再取得結果が全 field 一致 | 欠落・不一致は `unknown`/typed deny |
 | blob/digest | canonical bytes と OID/digest が一致、digest は非自己参照 | blob mutation、digest mutation、snapshot 差し替えは deny |
-| family/model/actor | claim は `unverified_family`/`human_attested` として保存 | verified/authority に昇格したら Red |
+| family/model/actor | claim は `unverified_family`/`human_attested` として保存し、provenance state 遷移の入力にしない | verified/authority に昇格、または claim の変更で state / deny が変わったら Red |
 | collision/replay | repository identity と commit-set snapshot が一致 | conflict、cross-repo replay、overwrite/delete は deny |
 | legacy | 旧 digest は保存、facts 照合は必須 | grandfather、申告 fallback、unknown close は deny |
 

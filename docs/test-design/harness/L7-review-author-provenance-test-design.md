@@ -108,14 +108,14 @@ canonical digest/snapshot である。provider/model/worker/dispatch/family は 
 | CANDIDATE-U-AUTHPROV-051 | human/reviewer family claim が一致 | claim だけで self-review を判定せず、既存の独立 review gate の結果を変えない |
 | CANDIDATE-U-AUTHPROV-052 | `human_attested` が `verified` として伝播 | Red。昇格禁止 |
 
-## claim の非対称使用と優先 oracle (§3.2.2)
+## provenance state と review authority の切断 (§3.2.2)
 
 | Candidate | Stimulus | Oracle |
 |---|---|---|
-| CANDIDATE-U-AUTHPROV-053 | Git facts unknown + opposite-family claim | deny (`unknown_provenance_unresolved`)。claim は admit を付与しない (行 1 が行 3 に優先) |
-| CANDIDATE-U-AUTHPROV-054 | Git facts verified + same-family / 欠落 claim | deny (`same_family_reviewer_denied`)。既存 gate の挙動不変を固定 |
-| CANDIDATE-U-AUTHPROV-055 | Git facts verified + opposite-family claim | admit。authority の根拠は facts のみで、claim を verified に昇格させない |
-| CANDIDATE-U-AUTHPROV-056 | Git facts verified + facts と矛盾する claim | `conflict` として deny し、mismatch イベントを監査記録 (記録欠落は Red) |
+| CANDIDATE-U-AUTHPROV-053 | Git facts unknown、family claim を same / opposite / 欠落で変異 | いずれも deny (`unknown_provenance_unresolved`)。claim の変異で結果が変わったら Red |
+| CANDIDATE-U-AUTHPROV-054 | Git facts verified、family claim を same / opposite / 欠落で変異 | provenance state は `verified` のまま不変で、admit / non-author / merge_ready を出力しない。claim の変異で state が変わったら Red |
+| CANDIDATE-U-AUTHPROV-055 | 同一 commit に対し claim だけが異なる record が併存 (Git facts は一致) | conflict observation として記録のみ。state は facts で決まり、deny / 非 deny の反転入力にならない |
+| CANDIDATE-U-AUTHPROV-056 | provenance record の出力を `admit` / `non_author` / `merge_ready` として消費する呼び出し | Red。本 PLAN の語彙外であり、merge authority は exact-HEAD non-author closing-review protocol のみ |
 
 ## 実 repo regression
 
