@@ -175,6 +175,12 @@ PO は 2 大要求 (A / B) に加えて、参照元の個人開発ハーネス�
 | single-provider | 同一 provider の worker tier (例: Sonnet / Luna) | 同一 provider の別 session・上位 tier (例: Fable / Sol)。author session と異なる reviewer session を attestation で検証 | authoring context 遮断 (blind packet)、author claim 非提示、session 分離、exact HEAD 束縛、CI green を前提 | `same_family_separated` | 高影響境界・release 適格性の merge に人間 review、merge の 5〜10% を監査 sampling して FLAG 率 / 見逃し率を hybrid 基準と比較、CI oracle の mutation 検証 |
 | standalone | 人間または単一 model | 人間 | 人間 review | `human_review` | 全 merge を人間が承認 |
 
+standalone の実態は **人間 orchestrator 型** (社内 project の実録: 人間が仕様を手で詰め、チケット単位で AI に指示し、自走させない。
+PLAN-L1-09 §2.7)。この型でも record・チケット階層・製本点・generated view は同じものを使い、差は「compile と dispatch を人間が
+手で行う」ことだけである。したがって v4 の compiler / スプシ同期 / 図生成 / admission チケットは、この型で人間が手で回している作業
+(チケット切り出し・PR ごとのテスト仕様書・シートと実装の齟齬取り・型定義の再生成) をそのまま機械側へ移すものであり、人間 orchestrator 型は
+v4 の移行元プロファイルとして第一級に扱う。
+
 evidence tier は 3 段 (`cross_family` > `same_family_separated` > `intra_runtime`) で receipt に記録し、v3.1 の `intra_runtime_subagent` は最下位 tier として残す (同一 session 内 subagent、機械証跡なし)。
 
 **single-provider の要は blind review で偏見を潰すこと** (PO 2026-09-04)。同一 family は同じ訓練由来の盲点・同じ「もっともらしさ」の

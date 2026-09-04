@@ -150,6 +150,24 @@ post-release lifecycle authority (Pack canary #418 以降)、hosted preflight no
 admission が無く PR 単位の人手、依存台帳の暫定 → 確定が手作業。要求分類・依存台帳・プロト検証の 3 機構は移行コストが低く、
 本 project は v4 の最初の適用先候補になる (採否は昇格条件の後、PO 判断)。
 
+### 2.7 社内 project の実録 2: 人間 orchestrator 型 (unison-ai-product/AI-standardization-platform、PO 提示 2026-09-04)
+
+人間が仕様を手で詰め、チケット単位で AI に指示し、自走させていない開発の実録 (`gh api repos/unison-ai-product/AI-standardization-platform/git/trees/HEAD?recursive=1`、
+`gh pr list / gh issue list --repo unison-ai-product/AI-standardization-platform --state all`、2026-09-04 実行。PR 336 件 / issue 168 件
+(open 84 / closed 84)、実装期間 2026-07-10 handoff 〜 08-07)。
+
+| 現物 (HEAD 2026-09-04) | v4 候補の対応 | 所見 |
+|---|---|---|
+| 仕様の正本はオンラインスプレッドシート 4 冊 (要件定義・基本設計・詳細設計・エージェント設計)、md は併読、xlsx は凍結スナップショット (`docs/README_HANDOFF.md`) | FR-008 (スプシ同期 view)、原則 6 | 人間はシートで考える、という実録。v4 は正本を record に置くが、人間の編集面はシートのままにし admission で戻す (書き戻し規律) |
+| `docs/mock_ai_platform/` = 「機能なし完成版 = スコープの正本。モックにない要件は追加しない」 | FR-039 製本点 (a)、FR-057 | プロトがスコープ freeze の正本になった実例。v4 では製本物 (generated) がその役を担う |
+| GitHub Issue `[ST-x-nn/FE|BE]` を人間が切り、1 PR = 1 ST、`Closes #`、PR ごとの `docs/01_spec/test_specs/PR-<n>.md` (TS-ID → test 関数名) | FR-036 小チケット = 1 PR、FR-034 compiler、原子 receipt | チケット切り出しと PR 別テスト仕様書を人間が手で作っている。v4 では compiler と receipt が生成する |
+| `packages/api-types` は `openapi.json` の純関数、conflict は手で解決せず再生成、CI が再生成して差分 0 を検査 | FR-046 (generated view の決定性・digest 一致) | generated view 規律の実運用例 |
+| Issue #334「設計ドキュメントの整合性を取り直す (正本シートと実装の齟齬)」、#333 負債整理、PR #313/#314 を close して #323/#324 で main へ載せ直し、#304「存在しない API への推測つなぎで 404」 | FR-047 discrepancy、FR-048 backflow、FR-004 lease、FR-052 refactor 発火 | lease / 依存 graph / discrepancy record が無いときの齟齬・再着地・推測実装のコストが可視 |
+| `CLAUDE.md` の「正本の所在」「実装の絶対規約」(層の一方向、LLM 呼出は IF 経由、プロンプト直書き禁止、FE 型は生成物のみ) | FR-044 選好軸 (AI が変更しても壊しにくい)、FR-049 role record | 人間が書いた運用規約は選好軸 skill の抽出元 (実録) |
+
+所見: この型は v4 の **移行元プロファイル** (standalone = 人間 orchestrator) であり、v4 が機械化する対象はここで人間が手で回している
+チケット切り出し・テスト仕様書・シート齟齬取り・再生成の 4 作業に一致する。概念 §Provider topology に standalone の実態として追記。
+
 ## 3. 設計判断
 
 ### 3.1 正本の置き場 (advisor design、claude-fable-5、2026-09-04)
