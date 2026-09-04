@@ -306,6 +306,16 @@ PO 提案: 原子は TDD (red → green → refactor) で原子 PR 内に閉じ�
 `refactor` mode (refactor kind の route 条件)。非採用: LLM の気づきだけでの発火、feature PR への refactor 積み増し。
 概念本文には §削る機構 として反映した。
 
+### 3.17 三者分離と merge lane のパス (PO 指示 2026-09-04)
+
+PO 提案: 「PR review の merge lane を別の人へパスをつなぐ構造。チケット責務で他人を入れるべき。個人でやるべき範囲で整理」。
+採択: author / 独立 reviewer / admitter の三者分離を階層別に固定し、小以上に admission チケット (merge lane、assignee ≠ author) を
+compiler が対で発行する (BR-030 / FR-054 / AC-066)。個人でやる範囲 = author と admission 判断、他人へ渡す範囲 = review と
+(人が居れば) admission。1 人運用は self-admission を record に印を付けて監査 sampling (FR-024) 対象にし、人が増えれば assignee の
+値だけが変わる (人数不変性 FR-033)。admitter は receipt のみを入力とし成果物を書き換えない。現行の `ut-tdd pr merge --pr N` 経路は
+admission チケットの消費として位置付ける。非採用: admitter による修正 commit の積み増し (PR スコープ規律 4 と同根)。
+概念本文には §三者分離 として反映した。
+
 ## 4. 工程
 
 

@@ -68,6 +68,7 @@ A / B の 2 大要求を実現する手段面であり、独立した第 3 の�
 | UTV4-BR-027 | チームは、下流 (実装・検証・運用) から上流 (要求・要件・設計) への還流を、人数が増えても上流 owner が bottleneck や重複対応にならない形で、record として集約・判断・再配布できること。 | A-① / B-③ | 現行 Reverse のチーム化。人数不変性 (BR-013) の還流面 |
 | UTV4-BR-028 | チームは、ハーネス固有の手書き sub-agent 定義に依存せず、provider 非依存の少数の論理 role を各 provider の native な sub-agent 機構へ写像して使え、オーケストレーションを特定の LLM orchestrator に依存させないこと。 | B-③ / E | 二重 role 体系の解消。Provider topology (BR-013 / 014) の実行面 |
 | UTV4-BR-029 | チームは、リファクタリングと退役 (削る作業) をチケット階層ごとの責務として持ち、発火条件を機械が検出して refactor チケットを発行でき、機能追加と混ぜずに behavior-invariant として受入できること。 | B-③ / F | 原子 = TDD 内、小 = 任意 compose、中 = 必須ゲート、大 = 逆方向発行 |
+| UTV4-BR-030 | チームは、PR の merge lane を author から別の人へ渡す (author ≠ reviewer ≠ admitter の三者分離) 構造をチケット責務として持ち、1 人運用では self-admission を記録して監査でき、人が増えた時は record の値だけで別人へ切り替えられること。 | A-① / B-③ | 人数不変性 (BR-013) の admission 面。4 eyes を record 化 |
 
 ## 期待する利用体験
 

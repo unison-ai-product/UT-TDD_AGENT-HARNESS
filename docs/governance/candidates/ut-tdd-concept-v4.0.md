@@ -283,6 +283,23 @@ subagent ファイル名で allowlist と floor を判定する。同じ「revie
 | 大 | 機能群統合後に **逆方向で refactor チケットを発行する flow** を持つ: 統合 → 発見 → 該当する中へ refactor 中チケット / 原子を配る。architecture 級の是正と退役 (FR-025 の quarantine → 退役) はここが owner。 | release 適格性審査時、incident / backflow の同種反復、surface class の計測 (invocation 数 / 採用率 / context cost) | 配った refactor チケットの admission と退役 record |
 
 共通則: (1) refactor チケットは **behavior-invariant** (既存 oracle 不変、新規機能 oracle を追加しない) を受入とし、機能 原子と混ぜない
+
+## 三者分離: author / reviewer / admitter と merge lane のパス (PO 指示 2026-09-04)
+
+PR の merge lane を author から別の人へ渡す構造を、チケット責務として固定する。「作る」「独立 review する」「main へ入れる判断を
+する」は別の actor であり、compiler は小チケット以上に **admission チケット** (merge lane、lease 付き、assignee ≠ author) を対で発行する。
+
+| 階層 | author (作る) | 独立 review | admission (別人へパス) |
+|---|---|---|---|
+| 原子 | AI lane または本人 | blind lane (別 family / 別 session) | 小 branch への合流は oracle green で自動 (人の判断なし) |
+| 小 (= PR) | 小 owner | author 以外の人。居なければ AI blind lane (evidence tier を記録) | **main への merge admission は author ≠ admitter**。admission チケットは中 owner または統括へ渡る |
+| 中 | 中 owner (統合) | 統合 review は author 以外 | 中の admission = 統括 (中 owner とは別人) |
+| 大 | 統括 | release 適格性 review | PO / release owner |
+
+個人でやる範囲: author と admission 判断。他人へ渡す範囲: review と (人が居れば) admission。人が 1 人のときは admission を
+**self-admission** として record に印を付け、監査 sampling (FR-024) の対象にする。人が 2 人以上になれば admission チケットの assignee が
+別人へ切り替わるだけで工程は変わらない (人数不変性)。admitter は author の主張ではなく receipt (独立 review verdict・CI generation・
+exact HEAD) だけを見て判断し、admitter 自身が成果物を書き換えることは deny (書き換えは author へ差し戻す)。
 (1 PR = 1 論点)。(2) owner は当該階層の owner (中 = 責務 owner、大 = 統括)。(3) 発火条件は依存 graph / 責務行列 / 計測 record からの
 projection であり、LLM の「気づき」だけで発火させない (気づきは finding として projection に入る)。(4) 現行 `refactor-scout` の
 検出責務と routeFiling の `refactor` mode はこの機構の起点であり、role record (FR-049) と compiler (FR-034) へ移す。
