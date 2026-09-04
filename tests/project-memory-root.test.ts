@@ -1,12 +1,239 @@
-import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { execFileSync, spawnSync } from "node:child_process";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { dirname, join, relative, resolve } from "node:path";
+import { Command } from "commander";
+import { afterEach, describe, expect, it } from "vitest";
+import { registerLiveReviewCommands, resolveLiveReviewTaskFile } from "../src/cli/review-live.ts";
+import { writeMemory } from "../src/memory/service.ts";
+import {
+  buildClaudeInboxEntry,
+  claudeWorkspaceId,
+  publishClaudeInboxEntry,
+} from "../src/runtime/claude-memory-wake.ts";
 import {
   resolveProjectMemoryRoot,
   resolveProjectMemoryRootWithPorts,
 } from "../src/runtime/project-memory-root.ts";
+
+const cliPath = resolve("src/cli.ts");
+const fixtures: Array<{ root: string; primary: string; linked: string }> = [];
+
+function git(cwd: string, args: readonly string[]): string {
+  return execFileSync("git", ["-C", cwd, ...args], {
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  }).trim();
+}
+
+function createLinkedProject(projectId = "example/project-memory-routing"): {
+  root: string;
+  primary: string;
+  linked: string;
+} {
+  const root = mkdtempSync(join(tmpdir(), "ut-project-memory-routing-"));
+  const primary = join(root, "primary");
+  const linked = join(root, "linked");
+  mkdirSync(primary, { recursive: true });
+  git(primary, ["init", "-q", "-b", "main"]);
+  git(primary, ["config", "user.email", "test@example.invalid"]);
+  git(primary, ["config", "user.name", "UT-TDD Test"]);
+  writeFileSync(
+    join(primary, "ut-tdd.project.json"),
+    `${JSON.stringify({ schema_version: "ut-tdd.project/v1", repository_identity: projectId })}\n`,
+    "utf8",
+  );
+  writeFileSync(join(primary, "seed.txt"), "seed\n", "utf8");
+  git(primary, ["add", "ut-tdd.project.json", "seed.txt"]);
+  git(primary, ["commit", "-q", "-m", "test: seed project identity"]);
+  git(primary, ["worktree", "add", "-q", "-b", "linked", linked]);
+  const fixture = { root, primary, linked };
+  fixtures.push(fixture);
+  return fixture;
+}
+
+function runCli(cwd: string, args: readonly string[]) {
+  return spawnSync(process.execPath, [cliPath, ...args], {
+    cwd,
+    encoding: "utf8",
+    env: {
+      ...process.env,
+      CLAUDE_PROJECT_DIR: "",
+      UT_TDD_PROJECT_DIR: cwd,
+    },
+    stdio: ["ignore", "pipe", "pipe"],
+    timeout: 30_000,
+  });
+}
+
+afterEach(() => {
+  while (fixtures.length > 0) {
+    const fixture = fixtures.pop();
+    if (!fixture) continue;
+    if (existsSync(fixture.primary)) {
+      try {
+        git(fixture.primary, ["worktree", "remove", "--force", fixture.linked]);
+      } catch {
+        // The enclosing temporary repository is removed below.
+      }
+    }
+    rmSync(fixture.root, { recursive: true, force: true });
+  }
+});
+
+describe("project-scoped Memory routing integration (PLAN-L7-512 Slice 2)", () => {
+  it("CANDIDATE-P-PMEMROOT-001: linked Memory CLI writes and reads the primary authored corpus only", () => {
+    const { primary, linked } = createLinkedProject();
+    const add = runCli(linked, [
+      "memory",
+      "add",
+      "--kind",
+      "project",
+      "--title",
+      "linked canonical routing",
+      "--body",
+      "written from the linked worktree",
+    ]);
+
+    expect({ status: add.status, stderr: add.stderr }).toEqual({ status: 0, stderr: "" });
+    const primaryMemory = join(primary, ".ut-tdd", "memory");
+    expect(readdirSync(primaryMemory)).toHaveLength(1);
+    expect(existsSync(join(linked, ".ut-tdd", "memory"))).toBe(false);
+
+    const list = runCli(linked, ["memory", "list", "--query", "linked canonical routing"]);
+    expect(list.status).toBe(0);
+    expect(list.stdout).toContain("memory:project:linked-canonical-routing");
+  });
+
+  it("CANDIDATE-P-PMEMROOT-001: linked worktrees share project workspace identity and runtime bus", () => {
+    const { primary, linked } = createLinkedProject();
+    const memory = writeMemory({
+      repoRoot: primary,
+      input: {
+        kind: "project",
+        title: "shared wake route",
+        body: "shared project wake",
+        now: "2026-09-04T00:00:00.000Z",
+      },
+    });
+
+    const primaryWorkspace = claudeWorkspaceId(primary);
+    const linkedWorkspace = claudeWorkspaceId(linked);
+    expect(linkedWorkspace).toBe(primaryWorkspace);
+    const entry = buildClaudeInboxEntry({
+      memory,
+      operationId: "linked-shared-wake",
+      workspaceId: linkedWorkspace,
+      now: "2026-09-04T00:00:01.000Z",
+    });
+    const linkedPath = publishClaudeInboxEntry(linked, entry);
+    const primaryPath = publishClaudeInboxEntry(primary, entry);
+    const roots = resolveProjectMemoryRoot(linked);
+    expect(roots.ok).toBe(true);
+    if (!roots.ok) throw new Error(roots.reason);
+    expect(realpathSync(linkedPath)).toBe(realpathSync(primaryPath));
+    expect(linkedPath).toContain(join(roots.runtimeBusRoot, "claude-memory-wake", "inbox"));
+  });
+
+  it("CANDIDATE-U-PMEMROOT-002: project identity drift denies wake and review Memory access", () => {
+    const { primary, linked } = createLinkedProject();
+    writeFileSync(
+      join(linked, "ut-tdd.project.json"),
+      `${JSON.stringify({
+        schema_version: "ut-tdd.project/v1",
+        repository_identity: "foreign/project",
+      })}\n`,
+      "utf8",
+    );
+    git(linked, ["add", "ut-tdd.project.json"]);
+    git(linked, ["commit", "-q", "-m", "test: drift linked identity"]);
+
+    expect(() => claudeWorkspaceId(linked)).toThrow("project_memory_root_project_identity_drift");
+    expect(() =>
+      resolveLiveReviewTaskFile(linked, {
+        memoryId: "memory:project:absent",
+        memoryPath: ".ut-tdd/memory/project-absent.md",
+      }),
+    ).toThrow("project_memory_root_project_identity_drift");
+    expect(existsSync(join(primary, ".git", "ut-tdd-runtime"))).toBe(false);
+  });
+
+  it("CANDIDATE-P-PMEMROOT-001: live review resolves Memory from the primary corpus", async () => {
+    const { primary, linked } = createLinkedProject();
+    const memory = writeMemory({
+      repoRoot: primary,
+      input: {
+        kind: "feedback",
+        title: "linked review task",
+        body: "review the linked worktree subject",
+        now: "2026-09-04T00:00:00.000Z",
+      },
+    });
+    const task = resolveLiveReviewTaskFile(linked, {
+      memoryId: memory.memory_id,
+      memoryPath: memory.source_path,
+    });
+    expect(task).toBe(join(realpathSync(primary), memory.source_path));
+
+    const program = new Command().exitOverride();
+    registerLiveReviewCommands(program.command("review"), {
+      repoRoot: () => linked,
+      providerAvailable: () => true,
+      validateReviewSubject: () => ({ ok: true }),
+      resolveWakeTarget: () => ({ ok: true, workspaceId: claudeWorkspaceId(linked) }),
+    });
+    const originalWrite = process.stdout.write;
+    const originalExitCode = process.exitCode;
+    process.stdout.write = (() => true) as typeof process.stdout.write;
+    try {
+      await program.parseAsync([
+        "node",
+        "ut-tdd",
+        "review",
+        "live-dispatch",
+        "--memory-id",
+        memory.memory_id,
+        "--memory-path",
+        memory.source_path,
+        "--pr",
+        "424",
+        "--head",
+        "a".repeat(40),
+        "--revision",
+        "issue424-linked-review",
+        "--author-family",
+        "codex",
+        "--json",
+      ]);
+      expect(process.exitCode).toBe(0);
+    } finally {
+      process.stdout.write = originalWrite;
+      process.exitCode = originalExitCode;
+    }
+
+    const roots = resolveProjectMemoryRoot(linked);
+    expect(roots.ok).toBe(true);
+    if (!roots.ok) throw new Error(roots.reason);
+    const inbox = join(roots.runtimeBusRoot, "claude-memory-wake", "inbox");
+    const envelopes = readdirSync(inbox).filter((name) => name.endsWith(".json"));
+    expect(envelopes).toHaveLength(1);
+    expect(JSON.parse(readFileSync(join(inbox, envelopes[0]), "utf8"))).toMatchObject({
+      memoryId: memory.memory_id,
+      targetWorkspaceId: claudeWorkspaceId(primary),
+    });
+    expect(relative(linked, task as string).startsWith("..")).toBe(true);
+  });
+});
 
 const win = process.platform === "win32";
 const primary = win ? "C:\\dev\\product" : "/dev/product";
