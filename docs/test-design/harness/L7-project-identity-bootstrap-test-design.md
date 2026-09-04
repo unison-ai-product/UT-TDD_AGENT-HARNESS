@@ -30,7 +30,7 @@ canonical bytes比較 (§3.1.3)、`origin` remote由来のrepository binding (§
 | CANDIDATE-U-PROJID-006 | 重複key/想定外keyを含むJSONがHEADにある | `plan-project-config-invalid` |
 | CANDIDATE-U-PROJID-007 | `repository_identity` がgrammar不正 (path区切り複数、絶対path形状) | `plan-repository-identity-invalid` |
 | CANDIDATE-U-PROJID-008 | 呼び出し側が渡す `expectedRepositoryIdentity` とHEADの値が不一致 | `plan-repository-identity-missing` |
-| CANDIDATE-U-PROJID-009 | HEADのファイル先頭にUTF-8 BOMが付与されている | decode失敗により `plan-project-config-invalid` |
+| CANDIDATE-U-PROJID-009 | HEADのファイル先頭にUTF-8 BOMが付与されている (decoder は BOM を除去し JSON.parse は成功する) | canonical bytes 比較で `identity_noncanonical_bytes` として deny (基準 ref 7b18ee4e では accept = Red 起点、010 と対) |
 | CANDIDATE-U-PROJID-010 | HEADのファイルがCRLF化されているがJSONとしては有効 | digest再計算 (bytes自己無矛盾性) だけでは検出できない。検出は034のcanonical bytes比較で行う (新規rule) |
 | CANDIDATE-U-PROJID-031 | `HEAD`をOID解決した直後、`ls-tree`/`show`が読む前に別プロセスがHEADを動かす (TOCTOU) | mixed receipt (sourceCommitと実読み取りcommit不一致) を受理せず `identity_head_toctou` でdenyするか bounded retryで一致するまで再試行する。推測採用はRed (新規rule、loader L66-76の実測が根拠) |
 | CANDIDATE-U-PROJID-032 | HEADにtracked entryがあるがworking treeからファイルが削除されている | `identity_worktree_drift` でdeny (002と同種、absenceケース) |

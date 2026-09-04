@@ -67,7 +67,7 @@ directoryの移動、linked worktreeの追加、junction/symlink/8.3/大小文�
 | 006 | 重複key/想定外keyを含む JSON は `plan-project-config-invalid` |
 | 007 | grammar不正 (path区切り・絶対path形状) な `repository_identity` は `plan-repository-identity-invalid` |
 | 008 | `expectedRepositoryIdentity` 不一致は `plan-repository-identity-missing` |
-| 009 | BOM付与ファイルは decode失敗により `plan-project-config-invalid` |
+| 009 | UTF-8 BOM付与ファイルは、decoder が BOM を除去して parse に成功しても、§3.1.3 canonical bytes 比較で `identity_noncanonical_bytes` として deny される (基準 ref では accept = Red 起点、010 と対) |
 | 010 | CRLF化ファイルはvalid JSONとしてparseでき、digest再計算 (bytes自己無矛盾性) だけでは検出できない。検出は034のcanonical bytes比較で行う。create契約はCRLFを生成しない (024と対) |
 | 011 | ssh形式 origin (`git@host:owner/repo.git`) から `owner/repo` を導出して作成 |
 | 012 | https形式 origin から同一repoなら 011 と同じ `owner/repo` を導出 |

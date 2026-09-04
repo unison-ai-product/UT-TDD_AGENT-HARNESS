@@ -343,13 +343,14 @@ grammar 検証) から導かれる。実装 slice でこれらを独立変異と
   同じ repo を指す場合、両者から得る `repository_identity` は同一でなければならない。
 - **case-only path difference**: 大小文字違いの path 表記が同一 repo (同じ inode/volume) を
   指す場合、identity 生成・解決の結果は同一でなければならない (二重 identity を作らない)。
-- **CRLF/BOM mutation**: BOM 付与は `TextDecoder("utf-8", { fatal: true })` の decode 結果に
-  `U+FEFF` を残し、JSON 先頭文字が `{` でなくなるため `JSON.parse` が失敗し
-  `plan-project-config-invalid` で deny する (既存 `decodeConfig` 実装、
-  `project-identity-loader.ts:93-116`、この経路は現状のままで有効)。一方 **CRLF 化された
-  valid JSON は現状の digest 再計算だけでは検出できない** (§2.5、§3.1.3 で訂正済み)。
-  read は §3.1.3 の canonical bytes 比較で `identity_noncanonical_bytes` として deny し、
-  create 契約 (§3.2) は常に LF・BOM無しで書く。
+- **CRLF/BOM mutation**: 基準 ref の `decodeConfig` (`project-identity-loader.ts:93-116`) が使う
+  `TextDecoder("utf-8", { fatal: true })` は **既定 (`ignoreBOM: false`) で UTF-8 BOM を除去する**ため、
+  BOM 付き `{}` は `"{}"` に decode され `JSON.parse` も成功する (実測: PR #516 r1 review、
+  2026-09-04)。したがって **BOM 付与も CRLF 化も、現状の loader では silent accept される**
+  (§2.5、§3.1.3)。旧稿の「BOM は decode 失敗で `plan-project-config-invalid` になる」という記述は
+  誤りであり本改訂で訂正する。両変異は §3.1.3 の canonical bytes 比較 (HEAD 実 bytes と canonical
+  re-serialization の比較) で `identity_noncanonical_bytes` として typed deny し、create 契約
+  (§3.2) は常に LF・BOM無しで書く。基準 ref では 009 (BOM) は accept される (Red 起点)。
 - **stale identity copied from another repository**: 別 repo からコピーされた
   syntactically-valid な `ut-tdd.project.json` は grammar 検証を通過しうる。本 PLAN は
   この binding を**呼び出し側の任意引数ではなく loader 内部の必須ステップ**として §3.1.4 で
