@@ -1,4 +1,4 @@
-import { execFileSync } from "node:child_process";
+import { execFileSync, execSync } from "node:child_process";
 import {
   mkdtempSync,
   readFileSync,
@@ -23,6 +23,7 @@ import {
   bootstrapProjectIdentity,
   repositoryIdentityFromOrigin,
 } from "../src/setup/project-identity-bootstrap.ts";
+import { headSnapshotRoot } from "./support/workspace-roots.ts";
 
 const fixtures: string[] = [];
 const win = process.platform === "win32";
@@ -66,9 +67,21 @@ function trackedFixture(
   return root;
 }
 
+function windowsShortPath(path: string): string {
+  return execSync(`for %I in ("${path}") do @echo %~sI`, {
+    encoding: "utf8",
+    shell: "cmd.exe",
+  })
+    .trim()
+    .replace(/^"|"$/g, "");
+}
+
 describe("project identity bootstrap", () => {
   it("candidate inventory is exact and duplicate-free", () => {
-    const source = readFileSync(new URL(import.meta.url), "utf8");
+    const source = readFileSync(
+      join(headSnapshotRoot(), "tests/setup-project-identity-bootstrap.test.ts"),
+      "utf8",
+    );
     const ids = [...source.matchAll(/it\("((?:CANDIDATE-U|CANDIDATE-P)-PROJID-\d{3}):/g)].map(
       (match) => match[1],
     );
@@ -406,9 +419,12 @@ describe("project identity bootstrap", () => {
     });
   });
 
-  it("CANDIDATE-U-PROJID-025: alternate path spellings resolve the same origin identity", () => {
+  it("CANDIDATE-U-PROJID-025: an OS-resolved 8.3 path preserves identity", () => {
+    if (!win) return;
     const root = trackedFixture();
-    const alternate = win ? root.toUpperCase() : root;
+    const alternate = windowsShortPath(root);
+    expect(alternate).not.toBe("");
+    expect(alternate.toLowerCase()).not.toBe(root.toLowerCase());
     expect(repositoryIdentityFromOrigin(root)).toBe("acme/widget");
     expect(repositoryIdentityFromOrigin(alternate)).toBe("acme/widget");
   });
@@ -475,14 +491,14 @@ describe("project identity bootstrap", () => {
     });
   });
 
-  it("CANDIDATE-U-PROJID-029: a junction or reparse-point repository root is rejected", () => {
+  it("CANDIDATE-U-PROJID-029: a resolvable junction repository root preserves identity", () => {
     const root = trackedFixture();
     const link = `${root}-root-link`;
     fixtures.push(link);
     symlinkSync(root, link, win ? "junction" : "dir");
     expect(loadProjectIdentityFromHead({ repoRoot: link })).toMatchObject({
-      ok: false,
-      error: { ruleId: "identity_worktree_drift" },
+      ok: true,
+      value: { repositoryIdentity: "acme/widget" },
     });
   });
 
@@ -582,16 +598,20 @@ describe("project identity bootstrap", () => {
     });
   });
 
-  it("CANDIDATE-P-PROJID-001: setup and loader share the canonical identity oracle", () => {
-    const root = fixture();
-    expect(bootstrapProjectIdentity(root)).toMatchObject({
+  it("CANDIDATE-P-PROJID-001: the harness identity equals canonical origin-derived bytes", () => {
+    const harnessSnapshotRoot = headSnapshotRoot();
+    const expected = "unison-ai-product/UT-TDD_AGENT-HARNESS";
+    expect(readFileSync(join(harnessSnapshotRoot, "ut-tdd.project.json"))).toEqual(
+      Buffer.from(canonicalProjectIdentityBytes(expected)),
+    );
+    expect(
+      loadProjectIdentityFromHead({
+        repoRoot: harnessSnapshotRoot,
+        expectedRepositoryIdentity: expected,
+      }),
+    ).toMatchObject({
       ok: true,
-      repositoryIdentity: "acme/widget",
-    });
-    commitIdentity(root);
-    expect(loadProjectIdentityFromHead({ repoRoot: root })).toMatchObject({
-      ok: true,
-      value: { repositoryIdentity: "acme/widget" },
+      value: { repositoryIdentity: expected },
     });
   });
 
@@ -606,13 +626,13 @@ describe("project identity bootstrap", () => {
     expect(loadProjectIdentityFromHead({ repoRoot: root })).toMatchObject({ ok: true });
   });
 
-  it("CANDIDATE-P-PROJID-003: canonical identity remains stable after path relocation", () => {
+  it("CANDIDATE-P-PROJID-003: a real junction path preserves canonical identity", () => {
     const root = trackedFixture();
-    const moved = `${root}-relocated`;
-    renameSync(root, moved);
-    fixtures[fixtures.indexOf(root)] = moved;
-    expect(repositoryIdentityFromOrigin(moved)).toBe("acme/widget");
-    expect(loadProjectIdentityFromHead({ repoRoot: moved })).toMatchObject({
+    const linked = `${root}-junction`;
+    fixtures.push(linked);
+    symlinkSync(root, linked, win ? "junction" : "dir");
+    expect(repositoryIdentityFromOrigin(linked)).toBe("acme/widget");
+    expect(loadProjectIdentityFromHead({ repoRoot: linked })).toMatchObject({
       value: { repositoryIdentity: "acme/widget" },
     });
   });

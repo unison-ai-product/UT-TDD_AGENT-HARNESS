@@ -70,9 +70,6 @@ export function loadProjectIdentityFromHead(input: {
 }): Result<TrackedProjectIdentity> {
   try {
     const repoRoot = realpathSync(input.repoRoot);
-    if (lstatSync(input.repoRoot).isSymbolicLink()) {
-      return failed("identity_worktree_drift", "repository root is a symbolic link");
-    }
     const objectFormat = gitText(repoRoot, ["rev-parse", "--show-object-format"]).trim();
     if (objectFormat !== "sha1" && objectFormat !== "sha256") {
       return failed("plan-repository-identity-provenance-invalid", "unsupported object format");
@@ -158,13 +155,6 @@ export function repositoryIdentityFromOrigin(repoRoot: string): string | null {
     if (!remote || remote.includes("\n")) return null;
     const direct = parseRepositoryIdentity(remote);
     if (direct) return direct;
-    // Snapshot/fixture clones have a local path as origin. Follow that local
-    // repository's own origin so the binding remains origin-derived without
-    // treating an arbitrary directory name as an identity.
-    if (existsSync(remote)) {
-      const source = gitText(realpathSync(remote), ["remote", "get-url", "origin"]).trim();
-      return parseRepositoryIdentity(source);
-    }
     return null;
   } catch {
     return null;

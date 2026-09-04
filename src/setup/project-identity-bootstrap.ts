@@ -55,9 +55,6 @@ export function bootstrapProjectIdentity(repoRoot: string): ProjectIdentityBoots
   let root: string;
   try {
     root = realpathSync(repoRoot);
-    if (lstatSync(repoRoot).isSymbolicLink()) {
-      return fail("identity_repository_unbound", "repository root is a symbolic link");
-    }
   } catch {
     return fail("identity_repository_unbound", "repository root is unavailable");
   }
