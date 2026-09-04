@@ -147,7 +147,7 @@ Requirement Re-entry から既存 workflow へ戻す。同時に人間向け dig
 → 観測 → 改善候補 → 人間向け digest / Requirement Re-entry
 ~~~
 
-## System invariant
+## システム不変条件
 
 1. canonical authority より先に runtime behavior を current 化しない。
 2. チケット・finding・learning asset は exactly-one primary owner を持つ。

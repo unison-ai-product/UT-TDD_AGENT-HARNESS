@@ -139,7 +139,7 @@ rule-drift marker・doctor gate から参照しない。承認時に v4.0 を `d
 - [ ] 承認後の昇格・参照更新が 1 PR で行われ、rule-drift / read order gate が green。
 - [ ] 既存 authority との重複・矛盾検査 (VUP-REQ-01〜10、BR-01〜08、U23、PLAN-L6-63 系) の結果が本 PLAN に記録される。
 
-## 6. Scope boundary
+## 6. スコープ境界
 
 本 PLAN は候補の materialize と分解のみを行う。runtime 実装、CLI / `.ut-tdd/` state の変更、DB schema 変更、
 951 PLAN の移行、Issue の意味正本化は行わない。
