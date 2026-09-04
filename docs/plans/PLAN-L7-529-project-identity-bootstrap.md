@@ -81,14 +81,36 @@ ls src/setup
 `src/setup/` には project identity を書き出す module が存在しない。clean consumer は
 事前 seed なしに `loadProjectIdentityFromHead` を満たせない。
 
-### 2.2 read は HEAD の Git blob から厳密に再取得する (working tree は入力にならない)
+### 2.2 read は HEAD の Git blob から厳密に再取得する (working tree は今のところ入力にならない)
 
 `src/plan-asset/adapters/project-identity-loader.ts:61-91` (`loadProjectIdentityFromHead`) は
 `git ls-tree HEAD -- ut-tdd.project.json` の mode/blob を正規表現で検証し
 (`^100644 blob ([a-f0-9]{40|64})\t...$`、L72-75)、一致した blob だけを
 `git show HEAD:ut-tdd.project.json` (L76) で取得する。`validReceipt` (L118-126) は
 `blobOid`/`contentDigest` を bytes から再計算し、宣言値と一致しない receipt を拒否する。
-working tree の同名ファイルはこの経路のどこにも読まれない。
+working tree の同名ファイルはこの経路のどこでも読まれない — **read の実測は working tree との
+diff を検査していない**。working tree drift の fail-close は現状の実装に存在せず、§3.1.1 が
+新規 rule として freeze する。
+
+### 2.2.1 (FLAG是正) HEAD 解決は 4 回の別呼び出しに分かれ、1 commit に束縛されていない
+
+```
+L66  const objectFormat = gitText(input.repoRoot, ["rev-parse", "--show-object-format"]).trim();
+L70  const sourceCommit = gitText(input.repoRoot, ["rev-parse", "HEAD"]).trim();
+L71  const entry = gitText(input.repoRoot, ["ls-tree", "HEAD", "--", projectPath]).trim();
+L76  const bytes = execFileSync("git", ["-C", input.repoRoot, "show", `HEAD:${projectPath}`]);
+```
+
+L70 は `HEAD` を1回 OID へ解決して `sourceCommit` に代入するが、その値は**記録に使われるだけ**
+で、L71 の `ls-tree` と L76 の `show` は変数 `sourceCommit` ではなくリテラル文字列
+`"HEAD"`/`` `HEAD:${projectPath}` ``を再び渡している。したがって L70〜L76 の間に `HEAD` が
+別 commit へ動く (checkout/reset/rebase 等) と、`ls-tree` と `show` が異なる commit を見る
+可能性があり、`sourceCommit` (L70 時点の OID) と実際に読んだ blob (L71/L76 時点の `HEAD` が
+指す commit) が一致しない receipt を生成しうる。`validReceipt` (L118-126) は
+`blobOid`/`contentDigest` を**取得した bytes 自身**から再計算するため、この不一致を検出でき
+ない (bytes とその re-hash は常に一致する。検出できないのは `sourceCommit` と bytes の実際の
+出処が異なる commit である、という TOCTOU そのものである)。§3.1.2 が single-commit binding を
+新規 rule として freeze する。
 
 ```bash
 git show HEAD:ut-tdd.project.json
@@ -144,14 +166,93 @@ repo root を判定する。identity ファイルは**存在するかどうか**
 
 ## 3. 設計判断
 
-### 3.1 read: HEAD-strict、working tree drift は fail-close
+### 3.1 read: HEAD-strict + working tree drift 検査 + single-commit binding + canonical bytes + loader-internal binding
 
-`loadProjectIdentityFromHead` は既存実装のまま凍結する。working tree の同名ファイルの
-存在・内容・変更は read 判定の入力にしない。HEAD の tracked entry が無い・mode不一致・
-blob不一致・grammar不一致・(渡された場合) `expectedRepositoryIdentity` 不一致は、いずれも
-typed deny (`plan-repository-identity-missing` / `plan-project-config-invalid` /
-`plan-repository-identity-invalid` / `plan-repository-identity-provenance-invalid`) とし、
-どれか一つでも working tree の値やユーザー宣言へのフォールバックを許さない。
+Issue #432 の受入条件「既存 tracked identity は厳密に読取り、改変・HEAD drift をfail-close
+する」と本 PLAN の §1/§4 は、HEAD の値を無条件に信頼する「HEAD 勝ち」の read を許さない。
+working tree との差分は検出対象であり、read 判定に無関係な情報ではない。§3.1 は次の 4 点を
+まとめて凍結する (旧稿は working tree drift を「read判定の入力にしない」と記述しており、
+§1/§4 の fail-close 要求と矛盾していた。本改訂は §1/§4 の側に §3 を合わせる)。
+
+#### 3.1.1 working tree drift は typed deny (新規 rule)
+
+`loadProjectIdentityFromHead` の値は HEAD の Git blob を正本とするが、read は同じ
+`repoRoot` の working tree ファイルとの diff を独立に検査する。次のいずれかを
+`identity_worktree_drift` として typed deny する (HEAD の値をそのまま返さない):
+
+- working tree のファイル bytes が HEAD の blob bytes と異なる (未commitの編集)。
+- HEAD に tracked entry があるのに working tree にファイルが存在しない (ローカル削除)。
+- working tree にファイルがあるのに HEAD に tracked entry が無い (untracked、§3.2 の
+  create 前状態はこの分岐に該当するが、read 経路ではなく create 経路の入力として扱う)。
+
+working tree が HEAD の checked-out 内容とバイト同一であるという正常系 (通常の
+`git checkout` 直後の状態) は drift ではなく、read はそのまま成功する。これは**現状の
+loader には無い新規チェック**であり、実装 slice で working tree bytes の読み取りと比較を
+追加する (§5 slice 1)。
+
+#### 3.1.2 single-commit binding で TOCTOU を閉じる (新規 rule)
+
+§2.2.1 の実測のとおり、現行実装は `HEAD` を4回の別呼び出しで参照し、`sourceCommit` を
+記録するだけで `ls-tree`/`show` の実引数には使っていない。本 PLAN は次の手順を凍結する:
+
+1. `HEAD` を **1 回だけ** commit OID に解決し (`git rev-parse HEAD`)、その OID を
+   `sourceCommit` として以降のすべての読み取りに使う。
+2. `ls-tree <sourceCommit> -- ut-tdd.project.json`、`show <sourceCommit>:ut-tdd.project.json`
+   は、リテラル `HEAD` ではなく手順1で解決した OID 文字列を引数に取る。
+3. receipt 検証時 (`validReceipt` 相当) も `blobOid` を `<sourceCommit>:path` から再導出し、
+   `sourceCommit` 自体が実際に読んだ blob の由来であることを固定する。
+4. 手順1の解決と手順2の読み取りの間に `HEAD` が動いた場合 (別プロセスの checkout/reset 等)
+   は、mixed receipt (異なる commit 由来の blob と sourceCommit の組) を受理してはならない。
+   実装は「解決した OID で読み取り、その後にもう一度 `HEAD` を解決して不一致なら
+   deny か bounded retry (上限付き再試行) のいずれかを選ぶ」ことを許すが、**再試行しても
+   不一致が解消しない場合は `identity_head_toctou` として deny**し、古い/新しい値のどちらか
+   を推測で採用しない。
+
+#### 3.1.3 canonical bytes 比較で CRLF/BOM/reorder を検出する (新規 rule)
+
+現行実装 (`decodeConfig`, L93-116) は HEAD の bytes を decode → JSON.parse するだけであり、
+`contentDigest`/`blobOid` も同じ bytes から再計算するため、**CRLF 化や意味的に等価な
+key 順序違いを持つ committed JSON は現状そのまま accept される** (§2.5 参照。旧稿の
+「CRLF化はdigest再計算で検出できる」という記述は誤りであり本改訂で訂正する — digest は
+bytes の自己無矛盾性しか検証せず、bytes が canonical か否かは検証していない)。
+
+本 PLAN は create 契約 (§3.2) が生成する canonical byte form (UTF-8、LF、BOM無し、
+`schema_version`→`repository_identity` の field 順、2-space indent、末尾改行1個) を read
+側の oracle としても採用する: **read は HEAD bytes を一度 decode した内容から canonical
+re-serialization を行い、re-serialize した bytes と HEAD の実 bytes を比較する。一致しなければ
+`identity_noncanonical_bytes` として typed deny する** (中身の値が正しくても、byte表現が
+canonical でなければ受理しない)。これも**現状の loader が行っていない新規チェック**であり、
+実装 slice で追加する (§5 slice 1)。
+
+#### 3.1.4 owner/repository binding は loader 内部で完結させる (新規 rule)
+
+現行実装は `expectedRepositoryIdentity` を**呼び出し側が渡した場合のみ**照合し
+(L42-47)、`node-plan-revision-runner.ts:382`・`legacy-plan-inventory.ts:40`・
+`project-memory-root.ts` の `projectIdentityFromHead` はいずれもこの引数を渡していない
+(§2.4)。したがって別 repository からコピーされた grammar-valid な identity は、これら
+3 呼び出し元の経路では期待値照合なしに authoritative として読まれてしまう。
+
+本 PLAN は repository binding を**呼び出し側のオプション引数ではなく loader 内部の必須
+ステップ**として凍結する:
+
+1. `loadProjectIdentityFromHead` は `git remote get-url origin` を同じ `repoRoot` に対して
+   実行し、§3.2 と同じ正規化規則で `owner/repo` 文字列 (`boundRepositoryIdentity`) を導出する。
+2. `origin` が存在し正規化できた場合、HEAD の `repository_identity` と
+   `boundRepositoryIdentity` が一致しなければ `identity_repository_unbound` として deny する
+   (呼び出し側が `expectedRepositoryIdentity` を渡していなくても、この照合は常に行われる)。
+3. `origin` が存在しない/正規化できない場合、呼び出し側が明示的に
+   `expectedRepositoryIdentity` を渡していれば、それを許容入力 (explicit allow) として
+   HEAD の値と直接比較する (fixture repo・remote無しのlocal-only repoの正当な用途)。
+   呼び出し側が何も渡していなければ `identity_repository_unbound` として deny する
+   (originも呼び出し側の期待値も無い状態で HEAD の値をそのまま信頼しない)。
+4. `origin` 由来の `boundRepositoryIdentity` と呼び出し側が渡した
+   `expectedRepositoryIdentity` の両方が存在し、かつ互いに矛盾する場合は、どちらか一方を
+   優先せず `identity_repository_unbound` として deny する (§4)。
+
+この変更により、`node-plan-revision-runner.ts`・`legacy-plan-inventory.ts`・
+`project-memory-root.ts` の3呼び出し元は**コード変更なしに**この binding の恩恵を受ける
+(binding が loader 内部に移動するため)。3 呼び出し元は実装 slice の検証対象として明示する
+(§5 slice 3、§6.1 CANDIDATE-U-PROJID-036..038)。
 
 ### 3.2 create: 決定的入力・所有者・再実行規則
 
@@ -230,23 +331,26 @@ grammar 検証) から導かれる。実装 slice でこれらを独立変異と
 - **CRLF/BOM mutation**: BOM 付与は `TextDecoder("utf-8", { fatal: true })` の decode 結果に
   `U+FEFF` を残し、JSON 先頭文字が `{` でなくなるため `JSON.parse` が失敗し
   `plan-project-config-invalid` で deny する (既存 `decodeConfig` 実装、
-  `project-identity-loader.ts:93-116`)。CRLF 化は `contentDigest`/`blobOid` を変えるため
-  `validReceipt` の再計算比較で検出可能である。**create 契約 (§3.2) は LF のみを生成し、
-  CRLF/BOM を書き出さない。**
+  `project-identity-loader.ts:93-116`、この経路は現状のままで有効)。一方 **CRLF 化された
+  valid JSON は現状の digest 再計算だけでは検出できない** (§2.5、§3.1.3 で訂正済み)。
+  read は §3.1.3 の canonical bytes 比較で `identity_noncanonical_bytes` として deny し、
+  create 契約 (§3.2) は常に LF・BOM無しで書く。
 - **stale identity copied from another repository**: 別 repo からコピーされた
-  syntactically-valid な `ut-tdd.project.json` は grammar 検証を通過しうるため、
-  `loadProjectIdentityFromHead` の呼び出し側は **可能な限り
-  `expectedRepositoryIdentity` (自リポジトリの `origin` から独立に導出した値) を渡し、
-  不一致を `plan-repository-identity-missing` として deny する**。`expectedRepositoryIdentity`
-  を渡さない呼び出しでは stale identity を防げないため、`setup` の bootstrap 経路は
-  「create する前に必ず `origin` から期待値を導出し、既存ファイルがあればそれと比較する」
-  ことを contract に含める (create-before-check ではなく check-before-create)。
+  syntactically-valid な `ut-tdd.project.json` は grammar 検証を通過しうる。本 PLAN は
+  この binding を**呼び出し側の任意引数ではなく loader 内部の必須ステップ**として §3.1.4 で
+  凍結する。`node-plan-revision-runner.ts`・`legacy-plan-inventory.ts`・
+  `project-memory-root.ts` はいずれも現状 `expectedRepositoryIdentity` を渡していないため
+  (§2.4)、binding を呼び出し側任せにする設計は採らない。
 
 ## 4. Fail-close contract
 
 | 境界 | 正常条件 | 変異時の oracle |
 |---|---|---|
-| read (HEAD-strict) | HEAD の tracked blob が mode/grammar/expected identity 全て一致 | working tree改変、HEAD drift、mode不一致、grammar不一致、expected不一致は typed deny |
+| read (HEAD-strict) | HEAD の tracked blob が mode/grammar/expected identity 全て一致 | mode不一致、grammar不一致、expected不一致は typed deny |
+| read (working tree drift、新規) | working tree bytes が HEAD blob bytes と一致 (または未commit生成物としてcreate経路が扱う) | bytes不一致・一方のみ存在は `identity_worktree_drift` で deny。HEAD値をそのまま返したらRed |
+| read (single-commit binding、新規) | `HEAD` を1回だけ OID解決し、`ls-tree`/`show`/receipt再検証すべてが同じOIDを参照する | 解決後にHEADが動いて mixed receipt (sourceCommitと実読み取りcommitが不一致) を受理したらRed。再試行しても不一致なら `identity_head_toctou` で deny |
+| read (canonical bytes、新規) | HEAD bytesが再parse→canonical re-serializationしたbytesと一致 | CRLF化・reorderなど非canonicalなvalid JSONは `identity_noncanonical_bytes` で deny |
+| read (repository binding、新規) | `origin`由来の期待値、または明示`expectedRepositoryIdentity`のいずれかとHEAD値が一致し、両者矛盾が無い | origin無しかつ明示値も無しは `identity_repository_unbound` で deny。origin由来値と明示値が矛盾したらdeny (どちらか一方を優先しない) |
 | create 入力 | `origin` remote が既知形式で `owner/repo` grammar に正規化できる | remote無し・未知形式・grammar不一致は作成せず deny (fallback無し) |
 | create 決定性 | 同一 origin から同一 canonical bytes | field順/改行/BOM/末尾改行の変異は非決定と見なし Red |
 | create 所有者 | `setup` 専用経路のみが create を試みる | read専用呼び出し元 (doctor/plan-admission/legacy-inventory) が create を試みたら Red |
@@ -258,11 +362,17 @@ grammar 検証) から導かれる。実装 slice でこれらを独立変異と
 
 ## 5. Implementation slices (将来の実装 PR)
 
-1. `origin` remote 正規化 (`git@`/`https://` 形式 → `owner/repo`) と grammar 検証。
-2. `setup` 専用の create 経路 (canonical serialization、所有者制限、rerun no-op)。
-3. `expectedRepositoryIdentity` を bootstrap 経路の check-before-create に接続 (stale copy 検出)。
+1. `loadProjectIdentityFromHead` に working tree drift 検査 (§3.1.1)、single-commit binding
+   (§3.1.2、`ls-tree`/`show`/receipt再検証をリテラル`HEAD`ではなく解決済みOIDへ切替)、
+   canonical bytes 比較 (§3.1.3) を追加する。
+2. `origin` remote 正規化 (`git@`/`https://` 形式 → `owner/repo`) と grammar 検証、
+   `setup` 専用の create 経路 (canonical serialization、所有者制限、rerun no-op)。
+3. repository binding を loader 内部の必須ステップへ移す (§3.1.4)。
+   `node-plan-revision-runner.ts`・`legacy-plan-inventory.ts`・
+   `project-memory-root.ts` の3呼び出し元は変更なしでこの binding の対象になることを
+   回帰確認する (in-scope、コード変更は loader 側のみ)。
 4. `repoRoot` の real path 解決を Git コマンド呼び出し前に固定 (8.3/大小文字/junction 対策)。
-5. `CANDIDATE-U-PROJID-001..030` と `CANDIDATE-P-PROJID-001..003` を同じ oracle で検証する。
+5. `CANDIDATE-U-PROJID-001..039` と `CANDIDATE-P-PROJID-001..003` を同じ oracle で検証する。
 
 consumer runtime placement、Node generation producer、Pack publication、global memory 本文、
 remote mutation、semantic ranking は本 plan の実装 slice に含めない。
@@ -276,7 +386,15 @@ remote mutation、semantic ranking は本 plan の実装 slice に含めない�
 
 Forward/Reverse/test-design が共有する全 U oracle は次のとおりである:
 
-CANDIDATE-U-PROJID-001 CANDIDATE-U-PROJID-002 CANDIDATE-U-PROJID-003 CANDIDATE-U-PROJID-004 CANDIDATE-U-PROJID-005 CANDIDATE-U-PROJID-006 CANDIDATE-U-PROJID-007 CANDIDATE-U-PROJID-008 CANDIDATE-U-PROJID-009 CANDIDATE-U-PROJID-010 CANDIDATE-U-PROJID-011 CANDIDATE-U-PROJID-012 CANDIDATE-U-PROJID-013 CANDIDATE-U-PROJID-014 CANDIDATE-U-PROJID-015 CANDIDATE-U-PROJID-016 CANDIDATE-U-PROJID-017 CANDIDATE-U-PROJID-018 CANDIDATE-U-PROJID-019 CANDIDATE-U-PROJID-020 CANDIDATE-U-PROJID-021 CANDIDATE-U-PROJID-022 CANDIDATE-U-PROJID-023 CANDIDATE-U-PROJID-024 CANDIDATE-U-PROJID-025 CANDIDATE-U-PROJID-026 CANDIDATE-U-PROJID-027 CANDIDATE-U-PROJID-028 CANDIDATE-U-PROJID-029 CANDIDATE-U-PROJID-030
+CANDIDATE-U-PROJID-001 CANDIDATE-U-PROJID-002 CANDIDATE-U-PROJID-003 CANDIDATE-U-PROJID-004 CANDIDATE-U-PROJID-005 CANDIDATE-U-PROJID-006 CANDIDATE-U-PROJID-007 CANDIDATE-U-PROJID-008 CANDIDATE-U-PROJID-009 CANDIDATE-U-PROJID-010 CANDIDATE-U-PROJID-011 CANDIDATE-U-PROJID-012 CANDIDATE-U-PROJID-013 CANDIDATE-U-PROJID-014 CANDIDATE-U-PROJID-015 CANDIDATE-U-PROJID-016 CANDIDATE-U-PROJID-017 CANDIDATE-U-PROJID-018 CANDIDATE-U-PROJID-019 CANDIDATE-U-PROJID-020 CANDIDATE-U-PROJID-021 CANDIDATE-U-PROJID-022 CANDIDATE-U-PROJID-023 CANDIDATE-U-PROJID-024 CANDIDATE-U-PROJID-025 CANDIDATE-U-PROJID-026 CANDIDATE-U-PROJID-027 CANDIDATE-U-PROJID-028 CANDIDATE-U-PROJID-029 CANDIDATE-U-PROJID-030 CANDIDATE-U-PROJID-031 CANDIDATE-U-PROJID-032 CANDIDATE-U-PROJID-033 CANDIDATE-U-PROJID-034 CANDIDATE-U-PROJID-035 CANDIDATE-U-PROJID-036 CANDIDATE-U-PROJID-037 CANDIDATE-U-PROJID-038 CANDIDATE-U-PROJID-039
+
+`031`〜`039` は PR #516 の Sol FLAG (非author closing review, receipt 参照:
+`docs/plans/PLAN-L7-529-project-identity-bootstrap.md` 本改訂コミット) を是正するために
+追加した。内訳: `031` = §3.1.2 single-commit binding の TOCTOU 負系、`032`〜`033` =
+§3.1.1 working tree drift (削除ケースと正常系control)、`034`〜`035` = §3.1.3 canonical
+bytes 比較 (CRLF化・key順序違い)、`036`〜`038` = §3.1.4 repository binding を
+`node-plan-revision-runner.ts`/`legacy-plan-inventory.ts`/`project-memory-root.ts` の
+3呼び出し元それぞれで確認、`039` = origin無し・明示expected値無しの `identity_repository_unbound`。
 
 実 repo regression は `CANDIDATE-P-PROJID-001`、`CANDIDATE-P-PROJID-002`、
 `CANDIDATE-P-PROJID-003` とする。
