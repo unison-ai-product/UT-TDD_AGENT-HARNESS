@@ -29,6 +29,8 @@ export type ProjectIdentityBootstrapResult =
       readonly repositoryIdentity: string;
       readonly path: string;
       readonly created: boolean;
+      /** True until the caller explicitly commits the generated worktree file. */
+      readonly commitRequired: boolean;
     }
   | {
       readonly ok: false;
@@ -76,6 +78,7 @@ export function bootstrapProjectIdentity(repoRoot: string): ProjectIdentityBoots
       repositoryIdentity: loaded.value.repositoryIdentity,
       path: PROJECT_IDENTITY_PATH,
       created: false,
+      commitRequired: false,
     };
   }
 
@@ -94,11 +97,23 @@ export function bootstrapProjectIdentity(repoRoot: string): ProjectIdentityBoots
       if (!Buffer.from(readFileSync(identityPath)).equals(Buffer.from(bytes))) {
         return fail("identity_stale_worktree", "existing untracked identity does not match origin");
       }
-      return { ok: true, repositoryIdentity, path: PROJECT_IDENTITY_PATH, created: false };
+      return {
+        ok: true,
+        repositoryIdentity,
+        path: PROJECT_IDENTITY_PATH,
+        created: false,
+        commitRequired: true,
+      };
     }
     // setup owns this write; no commit, add, or other history mutation is made.
     writeFileSync(identityPath, bytes);
-    return { ok: true, repositoryIdentity, path: PROJECT_IDENTITY_PATH, created: true };
+    return {
+      ok: true,
+      repositoryIdentity,
+      path: PROJECT_IDENTITY_PATH,
+      created: true,
+      commitRequired: true,
+    };
   } catch {
     return fail("identity_write_failed", "project identity could not be written");
   }
