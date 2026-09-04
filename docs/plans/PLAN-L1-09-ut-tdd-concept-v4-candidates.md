@@ -316,6 +316,9 @@ compiler が対で発行する (BR-030 / FR-054 / AC-066)。個人でやる範�
 admission チケットの消費として位置付ける。非採用: admitter による修正 commit の積み増し (PR スコープ規律 4 と同根)。
 概念本文には §三者分離 として反映した。
 
+PO 追補 (同日): 「結合テスト以上の実装は review したほうがよい」。採択: 人間 review を階層で傾斜させ、中 (結合) 以上を人間 review 必須、
+対象は結合面に限定 (FR-055 / AC-067)。原子は AI blind のみ、小は AI blind + 別人 admission。1 人運用は AI blind 代替 + self-admission 印。
+
 ## 4. 工程
 
 

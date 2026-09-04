@@ -293,13 +293,17 @@ PR の merge lane を author から別の人へ渡す構造を、チケット責
 |---|---|---|---|
 | 原子 | AI lane または本人 | blind lane (別 family / 別 session) | 小 branch への合流は oracle green で自動 (人の判断なし) |
 | 小 (= PR) | 小 owner | author 以外の人。居なければ AI blind lane (evidence tier を記録) | **main への merge admission は author ≠ admitter**。admission チケットは中 owner または統括へ渡る |
-| 中 | 中 owner (統合) | 統合 review は author 以外 | 中の admission = 統括 (中 owner とは別人) |
+| 中 | 中 owner (統合) | **人間 review 必須** (author 以外の人)。対象は結合面 = 契約・境界・結合テスト・状態遷移。内部実装は原子 / 小の receipt に委ねる。AI blind は補助 | 中の admission = 統括 (中 owner とは別人) |
 | 大 | 統括 | release 適格性 review | PO / release owner |
 
 個人でやる範囲: author と admission 判断。他人へ渡す範囲: review と (人が居れば) admission。人が 1 人のときは admission を
 **self-admission** として record に印を付け、監査 sampling (FR-024) の対象にする。人が 2 人以上になれば admission チケットの assignee が
 別人へ切り替わるだけで工程は変わらない (人数不変性)。admitter は author の主張ではなく receipt (独立 review verdict・CI generation・
 exact HEAD) だけを見て判断し、admitter 自身が成果物を書き換えることは deny (書き換えは author へ差し戻す)。
+
+人間 review の傾斜: 原子は AI blind のみ、小は AI blind + 別人 admission (receipt を読む)、**結合テスト (中) 以上は人間 review を必須**にする。
+結合層の欠陥は境界を跨ぎ oracle / projection で拾いにくく、同 family の盲点が最も出て、影響範囲が stop-the-line になりやすいためである。
+1 人運用では中の人間 review を AI blind (evidence tier 記録) で代替し、self-admission の印と監査 sampling で補う。
 (1 PR = 1 論点)。(2) owner は当該階層の owner (中 = 責務 owner、大 = 統括)。(3) 発火条件は依存 graph / 責務行列 / 計測 record からの
 projection であり、LLM の「気づき」だけで発火させない (気づきは finding として projection に入る)。(4) 現行 `refactor-scout` の
 検出責務と routeFiling の `refactor` mode はこの機構の起点であり、role record (FR-049) と compiler (FR-034) へ移す。
