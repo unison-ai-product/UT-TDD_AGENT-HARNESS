@@ -42,18 +42,18 @@ status: draft
 github_issue_id: 487
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:bc9250c9a7c873dcb9f18956677371f7
-  command_id: plan-draft:issue-487:forward:1
-  admitted_at: 2026-09-04T00:00:00.000Z
-  source_digest: sha256:11316ccad8122064fe93207fe743ad89cc051a9ea6c72f46293fbaffa0791b71
-  decision_digest: sha256:91b9533f00fc1f130eb049b28e10b57fae432059eb1b207ba39bfa30d7c3856a
-  receipt_digest: sha256:d06ea2c0c0d12e577fb1fe9d7f54dda0f06f4e662992c6e9188b37e3767cd533
+  receipt_id: certificate:21817eae3f56525da888a82dce89bda0
+  command_id: command:pr520-issue487-forward-scope-revision1
+  admitted_at: 2026-09-04T10:00:00.000+09:00
+  source_digest: sha256:440c5aaea34d33de3320b0182f0593835fb546696bc20c7a0afff641ca7e40ed
+  decision_digest: sha256:2a9351045311d1bd8d31fc33500fe4a3b96ce6e6863d8bf3912b0ebf8f14b31f
+  receipt_digest: sha256:5eb3092451ad6d07bde3464ae3d816fe74feca49fe37bea1c7ac400065b2a310
   binding:
     path: docs/plans/PLAN-L7-530-bun-final-retirement.md
     plan_id: PLAN-L7-530-bun-final-retirement
     asset_id: plan:bc9250c9a7c873dcb9f18956677371f7
-    revision: 1
-    content_digest: sha256:11316ccad8122064fe93207fe743ad89cc051a9ea6c72f46293fbaffa0791b71
+    revision: 2
+    content_digest: sha256:440c5aaea34d33de3320b0182f0593835fb546696bc20c7a0afff641ca7e40ed
   route:
     signal: feature_addition
     mode: add-feature
