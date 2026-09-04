@@ -20,6 +20,11 @@ try {
     platform: "node",
     format: "esm",
     target: "node24",
+    // commander is CommonJS and uses a dynamic builtin require. Provide the
+    // Node ESM bridge so the sealed output is executable by Node, not Bun.
+    banner: {
+      js: 'import { createRequire as __nodeCreateRequire } from "node:module"; const require = __nodeCreateRequire(import.meta.url);',
+    },
     metafile: true,
     sourcemap: false,
   });

@@ -163,6 +163,16 @@ describe("F0b sealed Node producer candidate oracles", () => {
     expect(dependencies.every((dependency) => dependency.bundle_files.length > 0)).toBe(true);
   });
 
+  it("CAND-NODEBOOT-B4 real sealed CLI executes under Node", async () => {
+    const real = await buildReal();
+    const output = execFileSync(real.nodePath, [real.compiledCliPath, "--help"], {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    expect(output).toContain("Usage: ut-tdd");
+  });
+
   it("CAND-NODEBOOT-B1 dependency content mutation breaks verification", async () => {
     const real = await buildReal();
     const dependency = real.receipt.external_dependencies[0] as unknown as {
