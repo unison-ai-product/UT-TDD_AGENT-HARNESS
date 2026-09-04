@@ -31,30 +31,27 @@ dependencies:
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/450
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/500
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/473
-    - docs/plans/PLAN-L7-522-pack-consumer-bun-path-removal.md
     - docs/plans/PLAN-REVERSE-458-node-self-hosted-bun-ban-backfill.md
     - docs/test-design/harness/L7-unit-test-design.md
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/487
-    - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/450
-    - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/500
 review_evidence: []
 workflow_phase: R0
 status: draft
 github_issue_id: 487
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:79b87abaad993b9fab749bb33b90e170
-  command_id: command:pr520-issue487-reverse-ownership-revision4
-  admitted_at: 2026-09-04T11:31:00.000+09:00
-  source_digest: sha256:4db2ebfa66e911c60bfa258714aaac7690b0b717e14e5fd1f76e2aca901d8bbd
+  receipt_id: certificate:7e9a100438cc0c8d22c9d303f391de98
+  command_id: command:pr520-issue487-reverse-cleanup-revision5
+  admitted_at: 2026-09-04T11:32:00.000+09:00
+  source_digest: sha256:e65c2b3c1cd4fec80e8ef9cd606759f60cc45c647bf1254ee24bf3b77be09d07
   decision_digest: sha256:f5991834163656341697a8a9cefdcab8f1a205f73510fe91a0ffc38c2452d661
-  receipt_digest: sha256:b46ed16053b7ababe067537a6f550a3046ae5752b107f15823924643ca44eeda
+  receipt_digest: sha256:6bde5f25786cc18fc9c27fc47184920e6ba1e27fa96278ad6a016b0e657b762b
   binding:
     path: docs/plans/PLAN-REVERSE-530-bun-final-retirement-backfill.md
     plan_id: PLAN-REVERSE-530-bun-final-retirement-backfill
     asset_id: plan:4727c21e7227fefefdb428f11662676c
-    revision: 4
-    content_digest: sha256:4db2ebfa66e911c60bfa258714aaac7690b0b717e14e5fd1f76e2aca901d8bbd
+    revision: 5
+    content_digest: sha256:e65c2b3c1cd4fec80e8ef9cd606759f60cc45c647bf1254ee24bf3b77be09d07
   route:
     signal: design_gap
     mode: reverse
@@ -150,7 +147,7 @@ release公開そのものではない。#470/#471/#472の完了済みconsumer/re
 Pack CI policy、#450 program closure、#473配下のNode producer (#484/#515)を再吸収しない。
 `package.json`の`build`、`bunAuthority`、`bun.lock`のfinal deletionはIssue #487と本pairが一意に所有する。
 `status: draft` の間は、現行mainのproduction artifactの所有を変更せず、実装PRが同一revisionで
-上記scripts境界の必要pathを追加する。
+上記package/authority/lock及びscripts境界の必要pathだけを追加する。
 
 上位 `PLAN-L6-93` / `PLAN-L7-458` の直接改訂はこのpair-freeze PRのscope外とする。
 既存上位契約は定義元、`PLAN-L7-530` pairは最終撤去の実装・test・evidenceの唯一のownerと
