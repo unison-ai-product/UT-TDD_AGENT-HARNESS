@@ -196,16 +196,9 @@ jobs:
         if: ${{ steps.classify.outputs.lane == 'full' }}
         run: node src/cli.ts db rebuild --json
 
-      - name: test — scoped 回帰 (vitest run, windows leg)
+      - name: test — Windows full 回帰 (vitest run, windows leg)
         if: ${{ steps.classify.outputs.lane == 'full' }}
-        run: npm run test:fast
-
-      # PLAN-L7-462 step 2 freeze の申し送り: test:cli (runtime-hook-entrypoints 含む) が
-      # CI 未実行で Windows 面が恒久 gate 外だった点の是正。CLI/hook 実発火 oracle を
-      # windows leg でも強制する。
-      - name: test — CLI/hook 実発火 (vitest run test:cli, windows leg)
-        if: ${{ steps.classify.outputs.lane == 'full' }}
-        run: npm run test:cli
+        run: npm run test:windows
 
       - name: doc lane source checks
         if: ${{ steps.classify.outputs.lane == 'doc' }}

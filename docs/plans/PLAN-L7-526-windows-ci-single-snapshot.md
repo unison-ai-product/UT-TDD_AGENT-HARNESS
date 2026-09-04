@@ -6,9 +6,9 @@ layer: L7
 drive: agent
 route_signal: code_smell
 route_mode: refactor
-status: draft
+status: confirmed
 created: 2026-08-31
-updated: 2026-08-31
+updated: 2026-09-04
 owner: Codex / Luna
 github_issue_id: 490
 parent_design: docs/plans/PLAN-L7-510-snapshot-runner-cost.md
@@ -25,6 +25,14 @@ generates:
     artifact_type: markdown_doc
   - artifact_path: docs/test-design/harness/L7-windows-ci-single-snapshot-test-design.md
     artifact_type: test_design
+  - artifact_path: package.json
+    artifact_type: config
+  - artifact_path: .github/workflows/harness-check.yml
+    artifact_type: workflow_config
+  - artifact_path: src/lint/github-ci-policy.ts
+    artifact_type: source_module
+  - artifact_path: tests/windows-ci-single-snapshot.test.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L7-510-snapshot-runner-cost.md
   requires: []
@@ -46,7 +54,32 @@ dependencies:
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/490
 backprop_decision: not_required
 backprop_decision_reason: "既存のテスト集合とrequired gateを変えないCI内部refactorであり、上流product要件を変更しない。"
-review_evidence: []
+review_evidence:
+  - reviewer: claude-opus-5
+    review_kind: cross_agent
+    reviewed_at: "2026-08-31T03:44:31Z"
+    tests_green_at: "2026-08-31T03:43:18Z"
+    verdict: "PASS-WEAK; blocking 0"
+    scope: "PR #491 pair-freezeのexact HEAD d4807e09e06adec59f76daa3daddb118ea654f7fに対するWindows単一snapshot、required gate不変、二重起動否定の非著者レビュー。"
+    worker_model: gpt-5.6-luna
+    reviewer_model: claude-opus-5
+    plan_revision: d4807e09e06adec59f76daa3daddb118ea654f7f
+    subject_head: d4807e09e06adec59f76daa3daddb118ea654f7f
+    evidence_path: docs/test-design/harness/L7-windows-ci-single-snapshot-test-design.md
+    anchor_commit: d4807e09e06adec59f76daa3daddb118ea654f7f
+    citations:
+      - "PR #491 canonical receipt 1bdde1be5943183b09f8615d595d8a5a58229da820f1ac2f9efd37a12e020571"
+      - "docs/test-design/harness/L7-windows-ci-single-snapshot-test-design.md: U-CI490-001..003"
+    green_commands:
+      - kind: unit_test
+        command: "node scripts/run-vitest-snapshot.ts tests/windows-ci-single-snapshot.test.ts --reporter=dot"
+        runner: node
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-08-31T03:43:18Z"
+        evidence_path: docs/test-design/harness/L7-windows-ci-single-snapshot-test-design.md
+        output_digest: "sha256:154a64f96a946888618e7c0903d2571688ffe456d501bf0e7cc43da939673919"
+        anchor_commit: d4807e09e06adec59f76daa3daddb118ea654f7f
 ---
 
 # PLAN-L7-526: Windows required CI の単一 snapshot 統合
