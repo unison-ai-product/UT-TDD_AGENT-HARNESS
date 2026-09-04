@@ -37,6 +37,7 @@ function fixture(remote = "git@github.com:acme/widget.git"): string {
   execFileSync("git", ["init", "-q", "-b", "main"], { cwd: root });
   execFileSync("git", ["config", "user.email", "test@example.invalid"], { cwd: root });
   execFileSync("git", ["config", "user.name", "UT-TDD test"], { cwd: root });
+  execFileSync("git", ["config", "core.autocrlf", "false"], { cwd: root });
   if (remote) execFileSync("git", ["remote", "add", "origin", remote], { cwd: root });
   return root;
 }
@@ -187,7 +188,8 @@ describe("project identity bootstrap", () => {
     const first = bootstrapProjectIdentity(root);
     const before = readFileSync(join(root, "ut-tdd.project.json"));
     const second = bootstrapProjectIdentity(root);
-    expect(first).toEqual(second);
+    expect(first).toMatchObject({ ok: true, created: true, commitRequired: true });
+    expect(second).toMatchObject({ ok: true, created: false, commitRequired: true });
     expect(readFileSync(join(root, "ut-tdd.project.json"))).toEqual(before);
   });
 
@@ -340,7 +342,7 @@ describe("project identity bootstrap", () => {
     const root = fixture("");
     expect(loadProjectIdentityFromHead({ repoRoot: root })).toMatchObject({
       ok: false,
-      error: { ruleId: "identity_repository_unbound" },
+      error: { ruleId: "plan-repository-identity-missing" },
     });
   });
 
