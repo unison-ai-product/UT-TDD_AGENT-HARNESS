@@ -177,6 +177,15 @@ PO は 2 大要求 (A / B) に加えて、参照元の個人開発ハーネス�
 
 evidence tier は 3 段 (`cross_family` > `same_family_separated` > `intra_runtime`) で receipt に記録し、v3.1 の `intra_runtime_subagent` は最下位 tier として残す (同一 session 内 subagent、機械証跡なし)。
 
+**single-provider の要は blind review で偏見を潰すこと** (PO 2026-09-04)。同一 family は同じ訓練由来の盲点・同じ「もっともらしさ」の
+基準を共有するため、family 分離が無い分を blind packet の厳格さで補う。具体的には: (1) packet は author ではなく control plane が
+組む (author の claim・自己評価・意図・identity・過去 verdict を除去、spec / AC / diff / oracle 結果のみ)、(2) claim-blind
+(spec / AC に対する判定) と spec-blind (成果物の内部整合) の 2 lane を別 session で走らせ、両方の FINDING を突き合わせる、
+(3) author と reviewer の session は memory namespace・context を共有しない、(4) reviewer は oracle を自分で再実行し、
+最低 1 件の反証試行 (反例・境界値・仕様外入力) を record に残す (反証ゼロの PASS は PASS-WEAK に格下げ)、(5) reviewer の tier /
+effort は author 以上、prompt pack は author と別、(6) blind verdict は judgement record として back-annotate し、監査 sampling の
+hybrid 基準比較 (FR-024) で見逃し率を継続計測する。これらは hybrid でも適用するが、single-provider では admission 条件になる。
+
 不変条件: (1) profile は project 設定の typed record で宣言し、receipt に evidence tier を記録する。上位 tier を僭称しない。(2) 同一 session の自己 review、author runtime 内部 review の独立 review への昇格は全 profile で禁止。(3) profile の格下げ (hybrid → single-provider) は利用上限・契約停止の record を伴う場合だけ自動で許し、格上げは常に許す。(4) routing・agent-guard・delegation-routing は provider 名ではなく role × tier × session 分離で判定し、provider が 1 つでも fail-close しない。(5) 補償統制は doctor の fail-close gate として機械強制されるまで first-class 昇格を認めない。
 
 参照元でも中間 tier の退役と 2 層 (判断 = frontier、創出 = 実装量産 tier) への集約が検討されており、single-provider profile はその 2 層構成をそのまま 1 provider 内で実現する形である。
