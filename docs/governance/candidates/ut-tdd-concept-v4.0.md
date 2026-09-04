@@ -221,6 +221,16 @@ evidence tier は 3 段 (`cross_family` > `same_family_separated` > `intra_runti
 | 適用範囲 | ハーネス自身の運用判断だけでなく、ハーネス上で開発されるプロダクトのレビュー観点にも同じ record・照合・階段を適用する。project 単位の intake record (FR-038) が収集点、ハーネス repo の Evidence Ledger が集約点。 |
 | 人間可読 (組織で使える) | AI が分かるだけの record は組織的には使えない。judgement record・calibration・機械判断化された check・判断軸 skill は、すべて **ハーネス標準共有機構** — 要求 / 要件 / 設計を同期するスプレッドシート view (FR-008) と、画面モック / プロトの製本物 (FR-039) — へ generated view として投影され、人間はそこで読む・承認する・差し戻す。人間可読 view を持たない判断・skill は昇格できない。 |
 
+## ハーネス標準共有機構: 機械認識の可視化と齟齬検出 (PO 指示 2026-09-04)
+
+| 論点 | 方式 |
+|---|---|
+| 図は generated view | 依存グラフ (PLAN の requires / references、中チケットの責務 × path 行列、admission 履歴)、画面遷移図 (FR-039 の prototype record が持つ surface / action / state)、ER 図 (schema record) は、機械が認識している record から **決定的に描画** し、生成元 id・revision・digest を図に刻む。手描き図・貼り付け画像は正本にならず、参照は generated 図の id で行う。現行の harness.db `graph_nodes` / `dependency_edges` と docs の mermaid 描画が起点。 |
+| テーブル定義はスプシと同型 | DB テーブル・カラム・型・制約・インデックス・FK は表形式 record を正本 view としてスプレッドシートへ同期し (FR-008 の consumer)、ER 図はそこから派生させる。列の編集はスプシ側から admission 経由で戻す。 |
+| 齟齬の検出 | 「機械が認識していること」と「人間が認識していること」の差は、人間が図 / スプシ側で行った追加・削除・変更を直接反映せず **discrepancy record** (対象 record id、人間側の主張、機械側の値、差分の種類) として diff し、admission で正本へ戻すか finding として owner へ返す。逆に record が変わって図が古くなった状態 (diagram drift) は doctor が fail-close する。齟齬は会話ではなく record で解消する。 |
+| 適用層 | L1 (要求 → 要件のトレース図)、L3 (要件 IR ↔ 画面遷移)、L4 (責務 × 依存)、L5 / L6 (ER・API・状態遷移)、チケット (大 → 中 → 小 → 原子の入れ子とレース状況)。各層の図は同じ生成契約を使い、層ごとに描画器を発明しない。 |
+
+
 
 ## 正規情報 flow
 

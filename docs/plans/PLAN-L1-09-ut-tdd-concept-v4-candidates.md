@@ -253,6 +253,18 @@ shadow → before/after → 独立 review を再利用し、単一 episode 昇�
 非採用: LLM 判断の自動 authority 化 (approval 代行) — 北極星と原則 1 に反する。tier を品質根拠として記録することも deny。
 概念本文には §北極星 (到達点の段落)・§判断の蓄積と機械判断化・不変条件 10 として反映した。
 
+### 3.12 機械認識の可視化と齟齬検出 (PO 指示 2026-09-04)
+
+PO 指示: 「依存グラフや画面遷移などを機械的に可視化する仕組みを入れ、図を作ることで機械が認識していることと人間が認識している
+ことの齟齬を減らす。DB テーブルはスプシと相性がよい」。
+
+採択: 図 (依存グラフ / 画面遷移 / ER・テーブル / チケット入れ子) は record からの決定的 generated view とし、生成元 id・revision・
+digest を刻む (BR-026 / FR-046 / AC-058)。テーブル定義はスプシ同期 view を正本 view にし ER 図を派生させる。人間側の図・スプシ編集は
+discrepancy record として diff し admission で戻す、diagram drift は doctor fail-close (FR-047 / AC-059)。起点は現行 harness.db の
+`graph_nodes` / `dependency_edges` と docs の mermaid 描画 (実測: 2026-07-28 の PLAN-L6-94 / L7-465 重複見逃しは projection 鮮度が
+原因であり、図の鮮度を fail-close にする根拠)。非採用: 手描き図・画像の正本化、層ごとの独自描画器。
+概念本文には §ハーネス標準共有機構: 機械認識の可視化と齟齬検出 として反映した。
+
 ## 4. 工程
 
 
