@@ -336,6 +336,15 @@ subagent ファイル名で allowlist と floor を判定する。同じ「revie
 | 指標 | freeze 率を目標にしない。測るのは「freeze 後の改訂件数」 (低いほど freeze 判断が正しい) と「provisional 依存の再 compile 所要」。 |
 | AI 間齟齬 | 要求の解釈が AI 間で食い違ったら、どちらかが確定するのではなく discrepancy record として上流 owner へ上げる (FR-047 / FR-048)。 |
 
+### PoC の行き過ぎ検知 (PO 提示 2026-09-04、実録 4)
+
+PoC 前提で作った実装が製品規模まで育ち、Reverse R0〜R4 を回して凍結し、L0 から再設計する事例がある (PLAN-L1-09 §2.9)。PoC 軸を
+production 工程と別 axis に置く (FR-017) だけでは足りず、**PoC には scope / budget record と exit criteria を持たせ、超過を機械が
+検知して S4 decision を強制する**。PoC record = 問い (仮説)・期限・許容規模 (file / test / 外部接続 / 本番設定の有無)・成立 / 不成立の
+oracle・S4 decision 期日。許容規模や期限を超えた PoC は compiler が `poc_overrun` finding を出し、S4 decision (confirmed → Forward
+reentry / rejected / pivot) が record されるまで新規 PoC チケットの発行を fence する。PoC 成果物は S4 confirmed + 正規 V-pair を経ずに
+production path へ昇格しない (FR-018 と同一)。PoC 期の設定・規約 (AGENT / CI / hook) は production へ引き継がず、設計の結論として起こす。
+
 
 足す機構だけでは並行 AI 開発は肥大する。削る作業を人の気分ではなく **発火条件の projection + チケット compile** で発生させ、
 階層ごとに責務を固定する。

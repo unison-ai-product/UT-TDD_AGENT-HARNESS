@@ -194,6 +194,24 @@ PO の狙い: 「設計書の製本の重要性と、変更時の更新の重要
 drift fail-close・backflow record・退役 record を **最初から** 持つ理由がここにある。後付けで Reverse を回すコスト (80 file、全 draft) は、
 初期に record と製本点を置くコストより大きい、という実録として §3 の設計判断の根拠に使う。
 
+### 2.9 社内 project の実録 4: PoC 先行が行き過ぎて再設計 (UNISON-TECHNOLOGY/career-sheet-assistant、PO 提示 2026-09-04)
+
+PoC 前提で作った実装が製品規模へ育ち、2026-08-18〜19 に Reverse R0〜R4 (PR #4〜#13) を 2 日で回して `e4723e4` で凍結、
+`reference/poc/` (598 file: backend 120 / frontend 70 / tests 151 / docs 176) へ収容し、L0 企画書 v1.0 → v1.1 から再設計を開始した
+(`gh api repos/UNISON-TECHNOLOGY/career-sheet-assistant/git/trees/HEAD?recursive=1` = 652 file、`gh pr list --state all` = 24 件
+(merged 22)、2026-09-04 実行)。
+
+| 現物 (HEAD 2026-09-04) | 観測 | v4 候補の対応 |
+|---|---|---|
+| `reference/README.md`: PoC 文書の `file:line` 引用 472 件のうち内容照合は 28 件のみ、POC-SUMMARY §3 未実証 5 件 / §4 技術負債 9 件、R4 gap register は open のまま | PoC が「動くもの」を優先して文書と実装の照合が追いつかず、製品化の判断材料が後追いになった | FR-017 (別 axis)、FR-018 (S4 を経ない昇格 deny)、**FR-059 (budget record と poc_overrun)** |
+| `docs/governance/README.md`: 正本 / 参照 / 旧版の 3 区分、参照は「編集しない・引用しない・昇格させない・削除しない」、PoC 期の AGENT / CLAUDE / CI / hook は引き継がない | 行き過ぎた後の正しい止血。設定を引き継がないと明文化 | FR-059 (設定は設計結論として起こす)、原則 7 |
+| `docs/governance/l0-decisions.md` (L0-D01〜D28 の安定 ID) + L1 5 sub-doc の frontmatter `covers` + `scripts/check-l0-coverage.mjs` (孤児 / drift / 未被覆を fail-close) | L0 → L1 のデグレ対策を record と機械ゲートで実装した実例 | FR-002 (contract compilation)、FR-046 (トレース図の生成元)、FR-058 (要求の暫定性: v1.0 → v1.1 の改稿を ID 追従で吸収) |
+| PR #25 (open) ADR-002「書類出力は JSON 契約を単一ソースとし 4 系統へ一様変換」、PR #23 (closed) 再検証ハーネス | 再設計側で generated view / 単一 record の方針が採られている | 原則 6 |
+
+所見: PoC が行き過ぎたのは「PoC の終わり」を決める record が無かったため。v4 は PoC に budget (規模・期限) と exit oracle を持たせ、
+超過を機械が検知して S4 decision を強制する (FR-059 / AC-072)。再設計側で採られた L0 決定 ID + covers + fail-close gate は、
+v4 の contract compilation の最小実装例として §3 の根拠に使う。
+
 ## 3. 設計判断
 
 ### 3.1 正本の置き場 (advisor design、claude-fable-5、2026-09-04)
@@ -407,6 +425,13 @@ provisional (既定) / frozen の 2 状態、freeze 遷移は人間 decision rec
 freeze は deny、provisional 依存チケットは再 compile 前提、view は区別表示、AI 間齟齬は discrepancy record へ (BR-032 / FR-058 / AC-071)。
 freeze 率は目標にせず「freeze 後の改訂件数」を測る。非採用: 文書一括 freeze の既定化、AI による確定代行。
 概念本文には §要求の暫定性 として反映した。
+
+### 3.20 PoC の budget record と行き過ぎ検知 (PO 提示 2026-09-04)
+
+実録 4 (§2.9) から、Discovery PoC に scope / budget record (問い・期限・許容規模・exit oracle・S4 期日) を必須にし、超過を compiler が
+poc_overrun finding として出して S4 decision まで新規 PoC チケットを fence する (FR-059 / AC-072)。PoC 期の設定・CI・規約は production へ
+引き継がず設計結論として起こす。非採用: PoC を production 工程へ昇格させる近道、PoC 規模の無制限。概念本文には §要求の暫定性 配下の
+「PoC の行き過ぎ検知」として反映した。
 
 ## 4. 工程
 
