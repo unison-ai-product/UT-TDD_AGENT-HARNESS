@@ -217,7 +217,17 @@ PO 指示: 「要件定義まではチケット発行で割当でよいが設計
 FR-036 として exactly-one parent・lease は小のみ・受入は階層別 (merge admission / 統合 review / release 適格性) で定義。
 AC-047 へ降下。github-issue-hierarchy.md の sub-issue 規約は projection 側の表現として継承する。
 
-### 3.9 候補文書の置き場
+### 3.9 スプシ同期の必須化・4 階層チケット・全体影響バグ・改善データ・製本点・実録学習 (PO 指示 2026-09-04)
+
+PO 指示: (1) JSON 化した要求 / 要件 / 設計のスプレッドシート同期は必須 (人間はこれを見る)、(2) 書類を 1 枚に
+まとめず分散させる、(3) チケットは大・中・小・原子の 4 階層で入れ子に収束、(4) 全体影響バグの対処、(5) 各 project の
+log / issue / コメントからハーネス改善データを集める場所、(6) 画面モック / プロトの製本点、(7) 汎用 skill から
+実録学習への転換、(8) 思想は人間ゲート付き分散コンピューティング。採択: FR-008 (必須 view + 分散正本)、FR-036
+(4 階層、lease は原子のみ)、FR-037 (stop-the-line incident + fence + Reverse 対)、FR-038 (project intake record →
+opt-in 一方向 export → Evidence Ledger)、FR-039 (L3 compile と L5 詳細設計の 2 製本点)、FR-040 (実録 provenance 必須、
+GENERIC_PROCEDURE 退役)。BR-018〜021、AC-047〜052、概念 §北極星 / 原則 4・6 / §全体影響バグ… へ降下。
+
+### 3.10 候補文書の置き場
 
 参照元構想と同じく `docs/governance/candidates/` に置き、承認前は CLAUDE.md 読込順・`docs/governance/README.md`・
 rule-drift marker・doctor gate から参照しない。承認時に v4.0 を `docs/governance/` へ昇格、v3.1 を `docs/archive/`

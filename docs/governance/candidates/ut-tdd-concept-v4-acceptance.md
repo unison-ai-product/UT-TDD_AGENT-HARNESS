@@ -50,7 +50,12 @@ falsify できれば受入とみなすか」の宣言であり、実行主体・
 | UTV4-AC-044 | FR-033 | 1 人フェーズでチケット / lease を発行せずに commit を merge admission へ出す / 2 人目参加時に takeover receipt 無しで scope を分ける | いずれも deny |
 | UTV4-AC-045 | FR-034 | 統括 owner が未宣言のまま合流 takeover を承認する / AI が統括判断 (切り分け・差し戻し先) を decision record として生成する / 進捗値を手入力する | いずれも deny |
 | UTV4-AC-046 | FR-035 | 同一 L4 typed block と policy version から compile を 2 回行う / 責務・依存行列を持たない L4 文書からチケットを compile する / 理由 record 無しに手発行する | 順に: exact set と digest が同一 / 候補 0 件 + finding (推測生成しない) / deny |
-| UTV4-AC-047 | FR-036 | 親を持たない小チケットを発行する / 小チケットに中と大の 2 親を付ける / 子の admission が 1 件でも欠けた中チケットを完了にする / 中チケットに path lease を直接付ける | いずれも deny |
+| UTV4-AC-047 | FR-036 | 親を持たない原子チケットを発行する / 小チケットに中と大の 2 親を付ける / 原子を小を飛ばして中の直下に置く / 子の admission が 1 件でも欠けた中チケットを完了にする / 小・中・大に path lease を直接付ける | いずれも deny |
+| UTV4-AC-048 | FR-008 | 要求 / 要件 / 設計の record を更新してもスプレッドシート view が同期されない / シート側の直接編集が admission を経ずに正本へ反映される / 正本を 1 枚の文書へ集約する要求を置く | 順に: doctor が同期 drift を fail-close / deny (FR-009) / 要求として受理しない |
+| UTV4-AC-049 | FR-037 | 2 つ以上の中チケットに跨る欠陥を incident record 無しに個別 hotfix で merge する / incident 中に影響下の中チケットを admission する / 契約誤りの incident を Reverse 対無しに close する | いずれも deny |
+| UTV4-AC-050 | FR-038 | secret / PII / private transcript を含む event を改善 corpus へ export する / project identity の無い intake record を作る / Issue 本文を正本として要件を上書きする | いずれも deny |
+| UTV4-AC-051 | FR-039 | prototype record と反応 event 無しに L3 の画面仕様を freeze する / モック画像を画面仕様の正本として参照する | 前者 compile が backflow_required / 後者 deny (generated 製本物のみ) |
+| UTV4-AC-052 | FR-040 | 実録 provenance の無い skill を ACTIVE へ昇格する / firing しても結果に相関しない skill を照合なしに残置する | 前者 deny / 後者 quarantine 候補として finding |
 | UTV4-AC-032 | FR-023 | single-provider profile で同 provider の別 session・上位 tier が blind packet で review し receipt を発行する / 同一 session の subagent が review する / receipt に `cross_family` を記録する | 順に: admit され evidence tier は `same_family_separated` / deny / deny (僭称) |
 | UTV4-AC-033 | FR-023 | reviewer session id が author session id と同一、または実在しない session id を持つ receipt / CI が green でない HEAD への verdict | attestation 不成立で deny (typed reason) / deny |
 | UTV4-AC-034 | FR-024 | single-provider profile で高影響境界の merge を人間 review なしに admission する / 利用上限 record なしに hybrid → single-provider へ格下げする / 補償統制の doctor gate が未実装のまま profile を宣言する | いずれも deny |
