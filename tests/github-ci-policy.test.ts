@@ -271,12 +271,23 @@ describe("github-ci-policy lint", () => {
     });
   });
 
-  it("U-CIPOL-015: requires the aggregate gate to depend on both runtime legs", () => {
-    for (const missing of ["harness-check-linux", "harness-check-windows"] as const) {
-      const remaining =
-        missing === "harness-check-linux" ? "harness-check-windows" : "harness-check-linux";
+  it("U-CIPOL-015: requires the aggregate gate to depend on every runtime leg", () => {
+    for (const missing of [
+      "harness-check-linux",
+      "harness-check-windows",
+      "node-generation-linux",
+      "node-generation-windows",
+    ] as const) {
+      const remaining = [
+        "harness-check-linux",
+        "harness-check-windows",
+        "node-generation-linux",
+        "node-generation-windows",
+      ]
+        .filter((leg) => leg !== missing)
+        .join(", ");
       const workflow = SOURCE_WORKFLOW.replace(
-        "needs: [harness-check-linux, harness-check-windows]",
+        "needs: [harness-check-linux, harness-check-windows, node-generation-linux, node-generation-windows]",
         `needs: [${remaining}]`,
       );
       const result = analyzeGithubCiPolicy(docs(workflow));
@@ -285,7 +296,7 @@ describe("github-ci-policy lint", () => {
         file: ".github/workflows/harness-check.yml",
         profile: "source",
         reason: "invalid_aggregate_needs",
-        detail: `harness-check.needs must equal harness-check-linux,harness-check-windows (missing=${missing})`,
+        detail: `harness-check.needs must equal harness-check-linux,harness-check-windows,node-generation-linux,node-generation-windows (missing=${missing})`,
       });
     }
   });
@@ -367,8 +378,8 @@ describe("github-ci-policy lint", () => {
 
     const continueOnError = replaceRequired(
       SOURCE_WORKFLOW,
-      "      - name: require Linux and Windows success",
-      "      - name: require Linux and Windows success\n        continue-on-error: true",
+      "      - name: require harness and Node generation success",
+      "      - name: require harness and Node generation success\n        continue-on-error: true",
     );
     expect(
       analyzeGithubCiPolicy(docs(continueOnError)).violations.map((violation) => violation.reason),
@@ -376,8 +387,8 @@ describe("github-ci-policy lint", () => {
 
     const expressionContinueOnError = replaceRequired(
       SOURCE_WORKFLOW,
-      "    needs: [harness-check-linux, harness-check-windows]",
-      `    continue-on-error: ${"$" + "{{ true }}"}\n    needs: [harness-check-linux, harness-check-windows]`,
+      "    needs: [harness-check-linux, harness-check-windows, node-generation-linux, node-generation-windows]",
+      `    continue-on-error: ${"$" + "{{ true }}"}\n    needs: [harness-check-linux, harness-check-windows, node-generation-linux, node-generation-windows]`,
     );
     expect(
       analyzeGithubCiPolicy(docs(expressionContinueOnError)).violations.map(

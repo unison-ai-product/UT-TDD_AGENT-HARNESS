@@ -272,7 +272,9 @@ function pushViolation(input: {
   });
 }
 
-const RUNTIME_LEGS = ["harness-check-linux", "harness-check-windows"] as const;
+const HARNESS_LEGS = ["harness-check-linux", "harness-check-windows"] as const;
+const NODE_GENERATION_LEGS = ["node-generation-linux", "node-generation-windows"] as const;
+const RUNTIME_LEGS = [...HARNESS_LEGS, ...NODE_GENERATION_LEGS] as const;
 
 // PLAN-L7-455 (troubleshoot): doc-only lane 絞り込みが検証弱化にならないことを fail-close 検査する。
 // 正準の lane 条件式のみを許可し (非正準式は即 violation)、"full" 限定でしか skip してよい
@@ -355,7 +357,32 @@ const commonRuntimeSteps = [
   }),
   run("install deps (frozen)", "npm ci --no-audit --no-fund"),
 ] as const;
+const commonNodeGenerationSteps = [
+  step("checkout", { uses: "actions/checkout@v5", with: { "fetch-depth": 0 } }),
+  step("setup node (sealed generation runtime)", {
+    uses: "actions/setup-node@v4",
+    with: { "node-version": "24.13.0", cache: "npm" },
+  }),
+  run("install deps (frozen)", "npm ci --no-audit --no-fund"),
+] as const;
 const classifyFields = { id: "classify", run: CLASSIFY_COMMAND };
+const nodeGenerationStep = (lane: (typeof NODE_GENERATION_LEGS)[number]) =>
+  step(`build and verify sealed Node generation (${lane.replace("node-generation-", "")})`, {
+    env: {
+      NODE_GENERATION_LANE: lane.replace("node-generation-", ""),
+      NODE_GENERATION_EVIDENCE_FILE: `${githubExpression("runner.temp")}/node-generation-evidence.json`,
+    },
+    run: "node scripts/node-generation-ci.mjs",
+  });
+const nodeGenerationUploadStep = (lane: (typeof NODE_GENERATION_LEGS)[number]) =>
+  step(`upload sealed Node generation evidence (${lane})`, {
+    uses: "actions/upload-artifact@v4",
+    with: {
+      name: lane,
+      path: `${githubExpression("runner.temp")}/node-generation-evidence.json\ndist/node-generations`,
+      "if-no-files-found": "error",
+    },
+  });
 const RUNTIME_STEP_MANIFESTS: Record<(typeof RUNTIME_LEGS)[number], readonly object[]> = {
   "harness-check-linux": [
     ...commonRuntimeSteps,
@@ -441,6 +468,16 @@ node src/cli.ts github guard --head-ref "$HEAD_REF" --base-ref "$BASE_REF" --pr-
     ),
     run("doctor (toolchain scope)", "node src/cli.ts doctor --scope toolchain", LANE_FULL_ONLY_IF),
   ],
+  "node-generation-linux": [
+    ...commonNodeGenerationSteps,
+    nodeGenerationStep("node-generation-linux"),
+    nodeGenerationUploadStep("node-generation-linux"),
+  ],
+  "node-generation-windows": [
+    ...commonNodeGenerationSteps,
+    nodeGenerationStep("node-generation-windows"),
+    nodeGenerationUploadStep("node-generation-windows"),
+  ],
 };
 
 function canonicalSemantic(value: unknown, key = ""): unknown {
@@ -494,6 +531,7 @@ function checkLaneSkipSafety(input: {
         detail: `jobs.${name}.steps must exactly match the ordered canonical semantic manifest`,
       });
     }
+    if (!HARNESS_LEGS.includes(name as (typeof HARNESS_LEGS)[number])) continue;
     const producers = steps.filter((step) => step.id === "classify");
     const producer = producers[0];
     const producerKeys =
@@ -590,7 +628,11 @@ export const REQUIRED_AGGREGATE_COMMAND = RUNTIME_LEGS.map(
 ).join(" && ");
 
 export function aggregateHarnessResultsPass(results: Record<string, string>): boolean {
-  return RUNTIME_LEGS.every((leg) => results[leg] === "success");
+  return HARNESS_LEGS.every((leg) => results[leg] === "success");
+}
+
+export function aggregateNodeGenerationResultsPass(results: Record<string, string>): boolean {
+  return NODE_GENERATION_LEGS.every((leg) => results[leg] === "success");
 }
 
 function checkRuntimeAggregate(input: {
@@ -610,7 +652,10 @@ function checkRuntimeAggregate(input: {
       });
       continue;
     }
-    const expectedRunner = name === "harness-check-linux" ? "ubuntu-latest" : "windows-latest";
+    const expectedRunner =
+      name === "harness-check-linux" || name === "node-generation-linux"
+        ? "ubuntu-latest"
+        : "windows-latest";
     const validSteps =
       Array.isArray(leg.steps) && leg.steps.length > 0 && leg.steps.every(workflowStep);
     const continuesOnError =
@@ -682,8 +727,10 @@ function checkRuntimeAggregate(input: {
       aggregateSteps.some(
         (step) => ![undefined, false].includes(step["continue-on-error"] as undefined | false),
       ) ||
-      aggregateSteps.length !== 1 ||
-      aggregateSteps[0]?.run?.trim() !== REQUIRED_AGGREGATE_COMMAND;
+      !aggregateSteps.some((step) => step.run?.trim() === REQUIRED_AGGREGATE_COMMAND) ||
+      !aggregateSteps.some(
+        (step) => step.run?.trim() === "node scripts/node-generation-ci-aggregate.mjs",
+      );
     for (const leg of RUNTIME_LEGS) {
       if (!failCloseDisabled && aggregateText.includes(aggregateResultExpression(leg))) continue;
       pushViolation({

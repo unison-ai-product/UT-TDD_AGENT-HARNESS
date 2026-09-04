@@ -30,6 +30,10 @@ const ALLOWED_SCRIPT_WRAPPERS = new Set([
 // Node-only build entrypoint として scripts/ に置く。その他の script は
 // 引き続き明示的に登録されない限り fail-close する。
 const ALLOWED_BUILD_SCRIPTS = new Set(["scripts/build-node.mjs"]);
+const ALLOWED_CI_SCRIPTS = new Set([
+  "scripts/node-generation-ci.mjs",
+  "scripts/node-generation-ci-aggregate.mjs",
+]);
 const VITEST_ENTRYPOINT = /\b(?:vitest\s+run|scripts[\\/]run-vitest-snapshot\.ts)\b/;
 
 function usesVitestEntrypoint(
@@ -379,6 +383,7 @@ function analyzeRuntimeDoc(doc: RuntimePortabilityDoc): RuntimePortabilityViolat
     path.startsWith("scripts/") &&
     !ALLOWED_SCRIPT_WRAPPERS.has(path) &&
     !ALLOWED_BUILD_SCRIPTS.has(path) &&
+    !ALLOWED_CI_SCRIPTS.has(path) &&
     !ALLOWED_GIT_HOOK_ENTRYPOINTS.has(path)
   ) {
     violations.push({

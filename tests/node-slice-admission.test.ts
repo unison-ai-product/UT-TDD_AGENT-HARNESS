@@ -229,4 +229,93 @@ describe("F0b slice admission kernel", () => {
     // remaining a valid complete-history non-ancestor of the current HEAD.
     expect(() => assertAncestorClosure(process.cwd(), [head], priorHead)).toThrow("not_ancestor");
   });
+
+  it("CAND-NODEBOOT-019 rejects missing, failed, and cross-revision F0b evidence for F0c", () => {
+    const f0cEvidence = {
+      digest: "c".repeat(64),
+      kind: "f0c.os-jobs",
+      producer: "f0c-ci-owner",
+      subject_revision: subject,
+      decision: "approved" as const,
+    };
+    const f0bReceipt = receiptDigest(
+      "f0b",
+      predecessor,
+      subject,
+      ["c".repeat(64)],
+      "approved",
+      "f0b-sealed-build-owner",
+    );
+    const base = {
+      slice_id: "f0c" as const,
+      subject_revision: subject,
+      predecessor_receipt_digest: f0bReceipt,
+      required_input_receipt_digests: ["c".repeat(64)],
+      producer: "f0c-ci-owner" as const,
+      history: [
+        {
+          schema_version: "node-slice-admission.v1" as const,
+          slice_id: "f0b" as const,
+          predecessor_receipt_digest: predecessor,
+          subject_revision: subject,
+          required_input_receipt_digests: ["c".repeat(64)],
+          decision: "approved" as const,
+          producer: "f0b-sealed-build-owner" as const,
+          receipt_digest: f0bReceipt,
+        },
+      ],
+    };
+    expect(admitNodeSlice(base).reason).toBe("required-input-evidence-mismatch");
+    expect(
+      admitNodeSlice({
+        ...base,
+        requiredInputs: [f0cEvidence],
+        history: [
+          {
+            ...base.history[0],
+            decision: "rejected" as const,
+            receipt_digest: receiptDigest(
+              "f0b",
+              predecessor,
+              subject,
+              ["c".repeat(64)],
+              "rejected",
+              "f0b-sealed-build-owner",
+            ),
+          },
+        ],
+        predecessor_receipt_digest: receiptDigest(
+          "f0b",
+          predecessor,
+          subject,
+          ["c".repeat(64)],
+          "rejected",
+          "f0b-sealed-build-owner",
+        ),
+      }).reason,
+    ).toBe("rejected-prerequisite");
+    const crossSubject = "git-sha1:fedcba9876543210fedcba9876543210fedcba98";
+    const crossRevisionReceipt = receiptDigest(
+      "f0b",
+      predecessor,
+      crossSubject,
+      ["c".repeat(64)],
+      "approved",
+      "f0b-sealed-build-owner",
+    );
+    expect(
+      admitNodeSlice({
+        ...base,
+        predecessor_receipt_digest: crossRevisionReceipt,
+        requiredInputs: [f0cEvidence],
+        history: [
+          {
+            ...base.history[0],
+            subject_revision: crossSubject,
+            receipt_digest: crossRevisionReceipt,
+          },
+        ],
+      }).reason,
+    ).toBe("predecessor-subject-mismatch");
+  });
 });

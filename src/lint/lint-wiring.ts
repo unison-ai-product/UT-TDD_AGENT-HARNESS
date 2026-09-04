@@ -34,6 +34,8 @@ export const RUNTIME_ENTRYPOINTS = ["src/cli.ts"] as const;
 export const DEFERRED_LINTS: Record<string, string> = {
   "tool-adapter":
     "adapter-probe 純関数ライブラリ (catalog/probe/normalize/planDiagramRefresh)。`ut-tdd adapter` 統合は IMP-033 rule-engine / PLAN-L7-50 R8 で deferred (closed-as-library)。",
+  "node-generation-ci-policy":
+    "F0c aggregate admission の純関数ポリシー。CI専用の scripts/node-generation-ci-aggregate.mjs から実行し、CLI doctorの静的lint経路へは接続しない。",
 };
 
 export interface LintWiringInput {

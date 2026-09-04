@@ -84,6 +84,14 @@ generates:
     artifact_type: test_code
   - artifact_path: tests/node-slice-admission.test.ts
     artifact_type: test_code
+  - artifact_path: scripts/node-generation-ci.mjs
+    artifact_type: script
+  - artifact_path: scripts/node-generation-ci-aggregate.mjs
+    artifact_type: script
+  - artifact_path: src/lint/node-generation-ci-policy.ts
+    artifact_type: source_module
+  - artifact_path: tests/node-generation-ci-policy.test.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L6-93-node-bootstrap-contract.md
   requires: []
