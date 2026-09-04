@@ -31,6 +31,7 @@ import {
 } from "./cli/delegation.ts";
 import { registerDistributionCommands } from "./cli/distribution.ts";
 import { registerFeedbackCommands } from "./cli/feedback.ts";
+import { registerNodeBanAuditCommand } from "./cli/node-ban-audit.ts";
 import { registerPlanAdmissionCommands } from "./cli/plan-admission.ts";
 import { registerPlanAssetCommands } from "./cli/plan-asset.ts";
 import { registerPlanDraftCommand } from "./cli/plan-draft.ts";
@@ -3385,6 +3386,8 @@ team
   );
 
 const audit = program.command("audit").description("read-only repository audits");
+
+registerNodeBanAuditCommand(audit);
 
 audit
   .command("quality")

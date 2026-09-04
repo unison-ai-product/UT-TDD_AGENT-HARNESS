@@ -1,0 +1,228 @@
+import { readFileSync } from "node:fs";
+import { describe, expect, it } from "vitest";
+import {
+  collectNodeBanFindings,
+  NodeBanAuditError,
+  type NodeBanDocuments,
+  type NodeBanF0cAggregateBinding,
+  type NodeBanGenerationBinding,
+  NodeOnlyProcessObserver,
+  runNodeBanAudit,
+  verifyNodeBanAuditReceipt,
+} from "../src/runtime/node-ban-audit.ts";
+
+const subjectRevision = "a".repeat(40);
+const artifactDigest = `sha256:${"b".repeat(64)}`;
+const f0c: NodeBanF0cAggregateBinding = {
+  ok: true,
+  schema_version: "node-generation-aggregate.v1",
+  generation_id: "node-ci-q0-run-1-1",
+  artifact_digest: artifactDigest,
+  subject_revision: subjectRevision,
+};
+const node: NodeBanGenerationBinding = {
+  generation_id: "node-q0-generation",
+  subject_revision: subjectRevision,
+  artifact_digest: artifactDigest,
+  runtime: "node",
+};
+
+const cleanWorkflow = `name: clean\non: {pull_request: {types: [opened]}}\npermissions: {}\nconcurrency: clean\njobs: {build: {runs-on: ubuntu-latest, steps: []}}\n`;
+const cleanDocuments = (): NodeBanDocuments => ({
+  runtime: [{ path: "src/clean.ts", text: "export const clean = true;" }],
+  workflows: [
+    {
+      file: ".github/workflows/clean.yml",
+      content: cleanWorkflow,
+      profile: "source",
+      role: "runtime",
+    },
+  ],
+  instructions: {
+    agents: "AGENTS shared markers",
+    claudeProject: "CLAUDE shared markers",
+    claudeRuntime: "runtime shared markers",
+    instructionSurfaces: { ".claude/commands/status.md": "status" },
+  },
+  toolchain: {
+    packageJson: JSON.stringify({}),
+    bunLock: JSON.stringify({}),
+    packageLock: JSON.stringify({ lockfileVersion: 3, packages: { "": {} } }),
+    nodeVersion: "24.13.0",
+  },
+});
+
+const nodeObservation = () => {
+  const observer = new NodeOnlyProcessObserver();
+  return observer.inspect({
+    command: process.execPath,
+    args: ["ut-tdd.mjs", "status", "--json"],
+    options: { shell: false, windowsHide: true },
+  });
+};
+
+describe("Q0 Node-only Bun qualification", () => {
+  it("CAND-NODEBOOT-020 rejects absent, stale, or cross-artifact F0c prerequisites", () => {
+    expect(() =>
+      runNodeBanAudit({
+        repoRoot: process.cwd(),
+        subjectRevision,
+        f0c: { ...f0c, ok: false } as never,
+        node,
+        documents: cleanDocuments(),
+        processObservations: [nodeObservation()],
+      }),
+    ).toThrow("q0-f0c-prerequisite-invalid");
+    expect(() =>
+      runNodeBanAudit({
+        repoRoot: process.cwd(),
+        subjectRevision,
+        f0c: { ...f0c, subject_revision: "c".repeat(40) },
+        node,
+        documents: cleanDocuments(),
+        processObservations: [nodeObservation()],
+      }),
+    ).toThrow("q0-subject-revision-mismatch");
+    expect(() =>
+      runNodeBanAudit({
+        repoRoot: process.cwd(),
+        subjectRevision,
+        f0c: { ...f0c, artifact_digest: `sha256:${"c".repeat(64)}` },
+        node,
+        documents: cleanDocuments(),
+        processObservations: [nodeObservation()],
+      }),
+    ).toThrow("q0-artifact-digest-mismatch");
+  });
+
+  it("CAND-NODEBOOT-201 detects independent static Bun axes", () => {
+    const base = cleanDocuments();
+    expect(
+      collectNodeBanFindings({
+        ...base,
+        runtime: [{ path: "src/probe.ts", text: `spawnSync("${["bu", "n"].join("")}", args);` }],
+      }).some((item) => item.detector === "runtime-portability"),
+    ).toBe(true);
+    const packTemplate = readFileSync(
+      "docs/templates/github/common/pack-harness-check.yml",
+      "utf8",
+    ).replace("node .ut-tdd/bin/ut-tdd.mjs", "bun run .ut-tdd/bin/ut-tdd.mjs");
+    expect(
+      collectNodeBanFindings({
+        ...base,
+        workflows: [
+          {
+            file: "docs/templates/github/common/pack-harness-check.yml",
+            content: packTemplate,
+            profile: "pack",
+            role: "pack_template",
+          },
+        ],
+      }).some((item) => item.detector === "github-ci-policy"),
+    ).toBe(true);
+    expect(
+      collectNodeBanFindings({
+        ...base,
+        instructions: {
+          agents: "run `bun run build`",
+          claudeProject: "shared",
+          claudeRuntime: "shared",
+        },
+      }).some((item) => item.detector === "rule-drift"),
+    ).toBe(true);
+  });
+
+  it("CAND-NODEBOOT-202 blocks Bun, tsx, TypeScript, and shell process paths", () => {
+    const observer = new NodeOnlyProcessObserver();
+    const blocked = ["bun", "bunx", "tsx", "bash"].map((command) =>
+      observer.inspect({
+        command,
+        args: command === "bash" ? ["-c", "node"] : ["run"],
+        options: { shell: false, windowsHide: true },
+      }),
+    );
+    const ts = observer.inspect({
+      command: process.execPath,
+      args: ["src/cli.ts"],
+      options: { shell: false, windowsHide: true },
+    });
+    const shell = observer.inspect({
+      command: process.execPath,
+      args: ["status"],
+      options: { shell: true, windowsHide: true },
+    });
+    expect([...blocked, ts, shell].every((item) => item.outcome === "blocked")).toBe(true);
+    expect([...blocked, ts, shell].every((item) => item.spawned === false)).toBe(true);
+    expect(nodeObservation().outcome).toBe("allowed");
+  });
+
+  it("CAND-NODEBOOT-203/204 emits a deterministic receipt and rejects every binding mutation", () => {
+    const result = runNodeBanAudit({
+      repoRoot: process.cwd(),
+      subjectRevision,
+      f0c,
+      node,
+      documents: cleanDocuments(),
+      processObservations: [nodeObservation()],
+    });
+    expect(result.receipt.qualification).toBe("qualified");
+    expect(verifyNodeBanAuditReceipt(result.receipt, { subjectRevision, f0c, node })).toEqual(
+      result.receipt,
+    );
+    expect(() =>
+      verifyNodeBanAuditReceipt(
+        { ...result.receipt, node_artifact_digest: `sha256:${"c".repeat(64)}` },
+        { subjectRevision, f0c, node },
+      ),
+    ).toThrow(NodeBanAuditError);
+    expect(() =>
+      verifyNodeBanAuditReceipt(
+        {
+          ...result.receipt,
+          findings: [{ detector: "process-observer", path: "bun", rule: "x", detail: "x" }],
+        },
+        { subjectRevision, f0c, node },
+      ),
+    ).toThrow(/digest/);
+  });
+
+  it("fails closed when process coverage is absent and records blocked fallback attempts", () => {
+    const noProcess = runNodeBanAudit({
+      repoRoot: process.cwd(),
+      subjectRevision,
+      f0c,
+      node,
+      documents: cleanDocuments(),
+      processObservations: [],
+    });
+    expect(noProcess.receipt.qualification).toBe("indeterminate");
+    expect(noProcess.receipt.coverage.gaps).toContain("process-observations");
+    const observer = new NodeOnlyProcessObserver();
+    const fallback = observer.inspect({
+      command: "bun",
+      args: ["run", "status"],
+      options: { shell: false, windowsHide: true },
+    });
+    const attempted = runNodeBanAudit({
+      repoRoot: process.cwd(),
+      subjectRevision,
+      f0c,
+      node,
+      documents: cleanDocuments(),
+      processObservations: [fallback],
+    });
+    expect(attempted.receipt.qualification).toBe("qualified");
+    expect(attempted.receipt.process_observations).toContainEqual(fallback);
+
+    const forgedSpawn = runNodeBanAudit({
+      repoRoot: process.cwd(),
+      subjectRevision,
+      f0c,
+      node,
+      documents: cleanDocuments(),
+      processObservations: [{ ...fallback, outcome: "allowed", spawned: true }],
+    });
+    expect(forgedSpawn.receipt.qualification).toBe("non_compliant");
+    expect(forgedSpawn.findings.some((item) => item.detector === "process-observer")).toBe(true);
+  });
+});
