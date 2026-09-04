@@ -139,3 +139,8 @@ stable昇格、rollback運用まで完了扱いしない。
 このReverseは #487 の実装結果を上位設計へ戻す pair-freeze であり、実装・削除・Q0実行・
 release公開そのものではない。`status: draft` の間は、現行mainのproduction artifactの
 所有を変更せず、実装PRが同一revisionで必要なpathを追加する。
+
+上位 `PLAN-L6-93` / `PLAN-L7-458` の直接改訂はこのpair-freeze PRのscope外とする。
+既存上位契約は定義元、`PLAN-L7-530` pairは最終撤去の実装・test・evidenceの唯一のownerと
+して分離し、同一artifactの二重所有を作らない。R3で実装差分を確定した後にだけ、正規の
+PLAN revision経路で上位へのback-referenceとgapを反映する。

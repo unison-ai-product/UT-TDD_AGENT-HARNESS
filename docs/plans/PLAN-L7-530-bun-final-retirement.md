@@ -187,3 +187,10 @@ CIがGreenであることだけから、consumerの複数product隔離やPack正
 公開済みとは主張しない。`status: draft` の間はこの文書以外のproduction artifactを
 `generates`へ追加しない。非著者preflightが候補・ownership・開始ゲートを確認した後に、
 実装PRが必要なpathとGreen evidenceを同一revisionで確定する。
+
+上位の `PLAN-L6-93-node-bootstrap-contract` は `CAND-NODEBOOT-023` / `027` / `028` の
+撤去条件を定義し、`PLAN-L7-458-node-self-hosted-bun-ban-foundation` は Q0 から最終撤去へ
+進む順序を定義する。本PLANはその契約を参照して実装責務を一意に引き受ける後継PLANであり、
+上位PLANのartifact所有を重複して取得しない。本pair-freeze PRでは上位PLANを直接改訂せず、
+実装後のgap-onlyな上位改訂は `PLAN-REVERSE-530-bun-final-retirement-backfill` のR3/R4で
+正規revisionとして行う。
