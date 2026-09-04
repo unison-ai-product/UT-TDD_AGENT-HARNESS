@@ -270,6 +270,23 @@ subagent ファイル名で allowlist と floor を判定する。同じ「revie
 | 単一 provider 構成 | 論理 role が provider 非依存なので、single-provider / standalone topology (§Provider topology) でも同じ role record と guard が使え、family 分離が不可能な部分だけ evidence tier を落として記録する。 |
 | 移行 | 既存 20 subagent は role record + skill へ分解し、生成 view として再出力する。生成物と手書き定義の一致を doctor で照合し、手書き残置は drift として fail-close。 |
 
+## 削る機構: リファクタリングと退役の階層別責務 (PO 指示 2026-09-04)
+
+足す機構だけでは並行 AI 開発は肥大する。削る作業を人の気分ではなく **発火条件の projection + チケット compile** で発生させ、
+階層ごとに責務を固定する。
+
+| 階層 | リファクタリングの責務 | 発火条件 (機械検出) | 受入 |
+|---|---|---|---|
+| 原子 | TDD の red → green → **refactor** を原子 PR の内側で完結する。別チケットを発行しない。 | 常時 (工程の一部) | 原子の oracle green |
+| 小 | 原則として不要。複数原子の合成点 (object / module 化 = 機能合成) を **compose 原子** として任意に 1 件持てる。 | 子原子が全 green になった時点で、重複 / 凝集度 / 境界越え path の projection が閾値超え → compiler が提案 (deny ではない) | 小の merge admission (FR-032) |
+| 中 | **必須ゲート**。結合テストと同じ位置で、責務境界の是正・重複除去・契約の機械可読化を refactor 原子チケット群として compile し、中の受入条件に含める。 | 子の小が全 admission された時 (統合 review 前)。responsibility × path 行列の違反、依存 graph の循環、契約 drift、複数小に跨る重複 | refactor 原子が全 green かつ統合 review PASS |
+| 大 | 機能群統合後に **逆方向で refactor チケットを発行する flow** を持つ: 統合 → 発見 → 該当する中へ refactor 中チケット / 原子を配る。architecture 級の是正と退役 (FR-025 の quarantine → 退役) はここが owner。 | release 適格性審査時、incident / backflow の同種反復、surface class の計測 (invocation 数 / 採用率 / context cost) | 配った refactor チケットの admission と退役 record |
+
+共通則: (1) refactor チケットは **behavior-invariant** (既存 oracle 不変、新規機能 oracle を追加しない) を受入とし、機能 原子と混ぜない
+(1 PR = 1 論点)。(2) owner は当該階層の owner (中 = 責務 owner、大 = 統括)。(3) 発火条件は依存 graph / 責務行列 / 計測 record からの
+projection であり、LLM の「気づき」だけで発火させない (気づきは finding として projection に入る)。(4) 現行 `refactor-scout` の
+検出責務と routeFiling の `refactor` mode はこの機構の起点であり、role record (FR-049) と compiler (FR-034) へ移す。
+
 
 
 
