@@ -93,6 +93,7 @@ const nodeBanAuditReceiptSchema = z
     runtime: z.literal("node"),
     coverage: nodeBanCoverageSchema,
     debt_inventory_count: z.number().int().nonnegative(),
+    debt_inventory_digest: nodeBanDigestSchema,
     findings: z.array(nodeBanFindingSchema),
     process_observations: z.array(nodeBanProcessObservationSchema),
     qualification: z.enum(["qualified", "non_compliant", "indeterminate"]),
@@ -518,6 +519,7 @@ function makeReceipt(input: NodeBanAuditInput, documents: NodeBanDocuments): Nod
   const observations = input.processObservations
     .map((item) => ({ ...item, args: [...item.args] }))
     .sort((left, right) => stable(left).localeCompare(stable(right)));
+  const baseline = parseDebtBaseline(documents.debtBaseline);
   const base = {
     schema_version: nodeBanAuditSchemaVersion,
     candidate_ids: [...NODE_BAN_CANDIDATE_IDS],
@@ -530,14 +532,14 @@ function makeReceipt(input: NodeBanAuditInput, documents: NodeBanDocuments): Nod
     f0b_receipt_digest: `sha256:${input.node.receipt_digest}`,
     runtime: "node" as const,
     coverage: coverage(documents, observations, input.observedScopes),
-    debt_inventory_count: parseDebtBaseline(documents.debtBaseline)?.inventory.length ?? 0,
+    debt_inventory_count: baseline?.inventory.length ?? 0,
+    debt_inventory_digest: sha256(stable(baseline?.inventory ?? [])),
     findings: uniqueFindings([
       ...collectNodeBanFindings(documents),
       ...processFindings(observations),
     ]),
     process_observations: observations,
   };
-  const baseline = parseDebtBaseline(documents.debtBaseline);
   const inventory = new BanInventory(base.findings);
   const delta = baseline ? new DeltaGuard().evaluate(inventory, baseline) : base.findings;
   const qualification = new CompliancePolicy().evaluate({
