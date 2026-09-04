@@ -33,10 +33,10 @@ describe("analyzeLintWiring (pure)", () => {
   });
 
   it("an unreachable module that is DEFERRED-listed = tolerated (ok)", () => {
-    // tool-adapter is the real deferred entry; not reachable here → classified deferred, ok.
+    // Deferred pure policies are classified separately from unreachable dead rules.
     const r = analyzeLintWiring(input(["alpha", "tool-adapter"], ["alpha"]));
     expect(r.ok).toBe(true);
-    expect(r.deferred).toEqual(["tool-adapter"]);
+    expect(r.deferred).toEqual(["node-generation-ci-policy", "tool-adapter"]);
     expect(r.unwired).toEqual([]);
     expect(lintWiringMessages(r)[0]).toContain("tool-adapter");
   });
@@ -84,10 +84,10 @@ describe("extractImportSpecs (comment-stripping robustness)", () => {
 describe("loadLintWiringInput (live repo regression fence)", () => {
   it("every src/lint module is reachable or DEFERRED, and the 4 re-wired audits are reachable", () => {
     const r = analyzeLintWiring(loadLintWiringInput());
-    // No dead rules; tool-adapter is the only intentional deferral.
+    // No dead rules; only explicitly justified pure policies are deferred.
     expect(r.unwired).toEqual([]);
     expect(r.staleDeferred).toEqual([]);
-    expect(r.deferred).toEqual(["tool-adapter"]);
+    expect(r.deferred).toEqual(["node-generation-ci-policy", "tool-adapter"]);
     expect(r.ok).toBe(true);
     // The audits this PLAN re-wired into doctor are now genuinely reachable.
     for (const m of [
