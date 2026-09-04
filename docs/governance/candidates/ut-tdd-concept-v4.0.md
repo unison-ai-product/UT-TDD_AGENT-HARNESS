@@ -258,6 +258,12 @@ record と generated view で持つ。ハーネス自身の人間向け面 (ス�
 | 機械検証 | layout / 遷移 / 状態表示の Playwright 等による CI 照合。fixture 全列照合。人間の目視は問いに集中 | CI receipt |
 | modernization register | 暫定アセット・superseded 画面・TODO の棚卸し。プロト資産のうち製本されなかったものの退役 (FR-025 / FR-052 大) | register record |
 
+**深さは profile の値** (PO 2026-09-04: 「毎回ここまで詰めるとは限らない」)。上の構成要素のうち必須最小は 初期画面ルール freeze・screen inventory /
+flow・fixture 契約 (捏造禁止 + 異常系必須セット)・screen finding (typed) の 4 つで、それ以外 (簡易 DB による検証、fixture 全列照合、
+列単位の Playwright 照合、詳細な受入チェックリスト) は **深度 profile (light / standard / deep)** で選ぶ。profile は screen id
+単位に record で宣言し、選定根拠は risk 信号 — 精度要求 (数値・金額・順位など)、人間認識と AI 認識のずれの実績 (discrepancy /
+backflow の件数)、データ量の多いロジック、外部データ依存 — から導く。deep を既定にしない。light でも 4 つの必須最小は省かない。
+
 製本点との関係: 上記の record が揃った screen id だけが製本点 (a) で画面仕様へ束ねられる。fixture 契約・異常系セット・screen finding の
 無い画面は compile が `backflow_required` を返す (AC-051 の前段)。
 
