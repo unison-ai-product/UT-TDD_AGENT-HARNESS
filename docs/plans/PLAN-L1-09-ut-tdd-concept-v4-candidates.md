@@ -177,7 +177,15 @@ advisor 回答 (要旨):
 検証) とし、doctor gate で機械強制されるまで第一級昇格を認めない (advisor 条件)。advisor が指摘した不足証拠
 (方式別の検出率実測) は工程 8 で取る。concept §Provider topology、UTV4-BR-013、FR-023 / 024、AC-032〜034 へ降下。
 
-### 3.4 候補文書の置き場
+### 3.4 設計のチケット化粒度 (PO 指示 2026-09-04)
+
+PO は「詳細と仕様」をチケット化対象とした。採択: 詳細設計 (L5) と仕様 (L6 機能設計 / typed spec block) の
+作成・改訂・Reverse を work item record で発行し (owner / lease = 対象 design + 対の test-design path / base・HEAD /
+証拠義務 = pair-freeze review・design-language・V-pair 双方向)、L4 基本設計以上の narrative と設計判断は作業としては
+チケット対象だが本文はチケットに入れず markdown 正本へ束縛する。現行 PLAN (kind=design / add-design) の frontmatter が
+近い形を持つため、FR-007 の PLAN frontmatter record 化は design kind から始める。FR-004 / AC-038 へ降下。
+
+### 3.5 候補文書の置き場
 
 参照元構想と同じく `docs/governance/candidates/` に置き、承認前は CLAUDE.md 読込順・`docs/governance/README.md`・
 rule-drift marker・doctor gate から参照しない。承認時に v4.0 を `docs/governance/` へ昇格、v3.1 を `docs/archive/`
