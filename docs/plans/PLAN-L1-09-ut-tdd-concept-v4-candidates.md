@@ -287,6 +287,15 @@ orchestrator は lane の一種で closing authority を持たない (FR-050 / A
 orchestrator への approval 代行。移行は既存 20 subagent の role + skill への分解と生成 view 化であり、専用 PLAN で段階実施する。
 概念本文には §Sub-agent 機構の再編 として反映した。
 
+### 3.15 single-provider における blind review の偏見対策 (PO 指示 2026-09-04)
+
+PO 指示: 「単一 provider の場合は blind review で偏見を潰すことが重要」。採択: family 分離の欠落を blind packet の厳格さで補う
+6 条件 (control plane が packet 生成・author claim 除去 / claim-blind + spec-blind の 2 lane 別 session / memory namespace 非共有 /
+reviewer の oracle 再実行 + 反証試行 1 件以上 (ゼロなら PASS-WEAK) / tier・effort は author 以上で別 prompt pack / judgement record
+として back-annotate し FR-024 sampling で hybrid 基準比較) を single-provider の admission 条件にする (FR-051 / AC-063)。
+現行 v3.1 の blind-reviewer (claim-blind / spec-blind 2 lane、`.claude/agents/blind-reviewer.md`) を継承し、FR-049 の role record
+へ移す。非採用: 同 family の同 session 内 review の独立 review 化 (不変条件 5)。概念本文は §Provider topology に段落追加。
+
 ## 4. 工程
 
 

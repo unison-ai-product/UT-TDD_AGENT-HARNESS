@@ -66,6 +66,7 @@ falsify できれば受入とみなすか」の宣言であり、実行主体・
 | UTV4-AC-060 | FR-048 | 同一契約 id へ 2 lane が別々に backflow を起票する / open backflow の依存下流チケットを merge admission する / 契約改訂後に再 compile せず旧チケットで作業を続ける | 順に 2 件目は event へ集約 (record は 1 件) / deny (fence) / 該当チケットは stale として lease 停止 |
 | UTV4-AC-061 | FR-049 | role record に無い subagent_type で Agent を起動する / 手書きの provider 固有 sub-agent 定義が生成物と不一致のまま残る / role record に provider 名・model 名を直書きする | 順に deny (guard) / doctor fail-close / schema deny |
 | UTV4-AC-062 | FR-050 | LLM orchestrator が gate role を経ずに合流点を閉じる / lease・budget の無い dispatch を行う / single-provider で cross_family を記録する | いずれも deny (後者 2 件は FR-004 / FR-014 と同一 oracle) |
+| UTV4-AC-063 | FR-051 | single-provider で author が packet を組む / author の claim や自己評価が packet に含まれる / reviewer session が author と memory namespace を共有する / 反証試行 record の無い PASS / reviewer tier が author より下 | 順に deny / deny / attestation 不成立で deny / PASS-WEAK へ格下げ / deny |
 | UTV4-AC-032 | FR-023 | single-provider profile で同 provider の別 session・上位 tier が blind packet で review し receipt を発行する / 同一 session の subagent が review する / receipt に `cross_family` を記録する | 順に: admit され evidence tier は `same_family_separated` / deny / deny (僭称) |
 | UTV4-AC-033 | FR-023 | reviewer session id が author session id と同一、または実在しない session id を持つ receipt / CI が green でない HEAD への verdict | attestation 不成立で deny (typed reason) / deny |
 | UTV4-AC-034 | FR-024 | single-provider profile で高影響境界の merge を人間 review なしに admission する / 利用上限 record なしに hybrid → single-provider へ格下げする / 補償統制の doctor gate が未実装のまま profile を宣言する | いずれも deny |
