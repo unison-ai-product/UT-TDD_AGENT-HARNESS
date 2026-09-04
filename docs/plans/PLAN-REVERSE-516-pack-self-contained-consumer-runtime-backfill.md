@@ -102,8 +102,8 @@ remote publication、#418 canaryは本Reverseで再定義しない。
 ## 実装時点のR0 evidence（2026-09-04, exact-head baseline / partial）
 
 `PLAN-L7-516`の実装成果物は PR #463 exact HEAD
-`9235513ce18515b97a8deee598e55363238c902a` である。専用targetは17/17 Green、required CI
-run `33829631086` も Linux/Windows/aggregate 3/3 Green、typecheckとBiomeも成功した。
+`c472bbc6767b5a2d6f9cc52dee6d4830e22a4a7a` である。専用targetは17/17 Green、required CI
+run `33837644210` も Linux/Windows/aggregate 3/3 Green、typecheckとBiomeも成功した。
 filesystem laneはconsumer-local stagingをsealed bundleへrenameし、single active pointerを作成し、
 別cwdからNode wrapperでcompiled entryを起動する。
 
@@ -114,7 +114,7 @@ rollback/history chain、external read/open/stat/process counter、非著者revi
 
 ## R0追加実測（2026-08-28, partial）
 
-exact HEAD `9235513ce18515b97a8deee598e55363238c902a` の17 testsとrequired CI 3/3 Greenを
+exact HEAD `c472bbc6767b5a2d6f9cc52dee6d4830e22a4a7a` の17 testsとrequired CI 3/3 Greenを
 確認した。manifest canonical
 digest、compiled ESM digest binding、consumer runtime root/realpath containment、Bunなしreadiness、
 active pointerのexternal escape denyを追加測定した。一方、実bytesを供給するL6-93-owned

@@ -68,8 +68,8 @@ Linux/Windows/aggregate CI、非著者closing review、Reverse R1〜R4は未昇�
 
 ## 追加実装昇格（2026-09-04 exact-head baseline, partial）
 
-PR #463 exact HEAD `9235513ce18515b97a8deee598e55363238c902a` で17 testsへ更新し、専用targetを
-17/17 Greenで実測した。required CI run `33829631086`もLinux/Windows/aggregate 3/3 Greenである。
+PR #463 exact HEAD `c472bbc6767b5a2d6f9cc52dee6d4830e22a4a7a` で17 testsへ更新し、専用targetを
+17/17 Greenで実測した。required CI run `33837644210`もLinux/Windows/aggregate 3/3 Greenである。
 追加軸はBunなしのsealed readiness、compiled ESM digest binding、manifest digest
 forgery、external bundle pointerであり、wrapperはspawn前にpointer/manifest/identity/Node
 authority、6 payload digest、history genesis/prior、lexical/realpath containmentを検証する。
