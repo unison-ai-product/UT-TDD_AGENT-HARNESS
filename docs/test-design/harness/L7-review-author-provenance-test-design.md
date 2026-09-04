@@ -49,7 +49,7 @@ canonical digest/snapshot である。provider/model/worker/dispatch/family は 
 | CANDIDATE-U-AUTHPROV-017 | 新 schema の同一 identity request | version/facts を含む新 digest は旧 digest と一致しない |
 | CANDIDATE-U-AUTHPROV-018 | 既存 receipt を新 schema で再検証 | receipt 対応を壊さず digest を再計算しない |
 
-## writer/actor/provider claim の非権威化 (§3.2.1/§3.2.2)
+## writer/actor/provider claim の非権威化 (§3.2.1/§3.2.3)
 
 | Candidate | Stimulus | Oracle |
 |---|---|---|
@@ -97,7 +97,7 @@ canonical digest/snapshot である。provider/model/worker/dispatch/family は 
 | CANDIDATE-U-AUTHPROV-045 | family 多数派へ丸める経路を探索 | 丸め込み経路なし |
 | CANDIDATE-U-AUTHPROV-046 | single commit に複数 family claim | claim conflict として保持し Git facts を変更しない |
 
-## receipt、human grade、runtime observation (§3.2.2/§3.3.1)
+## receipt、human grade、runtime observation (§3.2.3/§3.3.1)
 
 | Candidate | Stimulus | Oracle |
 |---|---|---|
@@ -107,6 +107,15 @@ canonical digest/snapshot である。provider/model/worker/dispatch/family は 
 | CANDIDATE-U-AUTHPROV-050 | runtime env/key custody を観測 | trust root にせず、観測だけで authority を与えない |
 | CANDIDATE-U-AUTHPROV-051 | human/reviewer family claim が一致 | claim だけで self-review を判定せず、既存の独立 review gate の結果を変えない |
 | CANDIDATE-U-AUTHPROV-052 | `human_attested` が `verified` として伝播 | Red。昇格禁止 |
+
+## claim の非対称使用と優先 oracle (§3.2.2)
+
+| Candidate | Stimulus | Oracle |
+|---|---|---|
+| CANDIDATE-U-AUTHPROV-053 | Git facts unknown + opposite-family claim | deny (`unknown_provenance_unresolved`)。claim は admit を付与しない (行 1 が行 3 に優先) |
+| CANDIDATE-U-AUTHPROV-054 | Git facts verified + same-family / 欠落 claim | deny (`same_family_reviewer_denied`)。既存 gate の挙動不変を固定 |
+| CANDIDATE-U-AUTHPROV-055 | Git facts verified + opposite-family claim | admit。authority の根拠は facts のみで、claim を verified に昇格させない |
+| CANDIDATE-U-AUTHPROV-056 | Git facts verified + facts と矛盾する claim | `conflict` として deny し、mismatch イベントを監査記録 (記録欠落は Red) |
 
 ## 実 repo regression
 

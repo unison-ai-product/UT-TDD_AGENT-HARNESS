@@ -8,7 +8,7 @@ route_signal: feature_addition
 route_mode: add-feature
 status: draft
 created: 2026-08-27
-updated: 2026-08-31
+updated: 2026-09-04
 owner: PO / TL
 github_issue_id: 437
 parent_design: docs/governance/ut-tdd-agent-harness-requirements_v1.2.md
@@ -148,7 +148,37 @@ alias table、dispatch 開始宣言、subagent 親継承、commit author 文字�
 値は `unverified_family` のままとし、unknown/mixed 解消、reviewer 適格性、merge authority に使わない。
 claim mismatch は監査できるが、Git facts が verified になったことを意味しない。
 
-### 3.2.2 human backfill の境界
+### 3.2.2 claim の非対称使用と優先 oracle (Sol FLAG at a86271b1 の解消)
+
+§3.2 / §3.2.1 が「claim を authority の根拠にしない」と述べる一方、§3.6.1 が `authorFamily` claim を入力とする
+既存 gate (`same_family_reviewer_denied`、反対族 routing、consumer admission) を温存していたため、同一値が
+非権威かつ受理判定入力という二重の位置に置かれていた。本節はこれを**用途の方向で分離**して解消する。
+
+**非対称原則**: 未検証 claim (`unverified_family`、provider、runtime、actor 申告) は authority を**狭める
+(deny) 入力にはなり得るが、広げる (grant) 入力には決してなり得ない**。review authority、non-author 適格、
+`merge_ready`、provenance grade を**付与**できるのは verified Git facts だけである。
+
+| Git facts | family claim | 判定 | 記録 |
+|---|---|---|---|
+| unknown / unresolved | 任意 (same / opposite / 欠落) | deny (`unknown_provenance_unresolved`) | claim は observation として保存 |
+| verified | reviewer と same-family、または欠落 / unknown | deny (`same_family_reviewer_denied`) | claim による deny を監査記録 |
+| verified | opposite-family | admit (authority の根拠は facts のみ) | claim は observation として保存 |
+| verified | facts と矛盾 (claim mismatch) | `conflict` として deny | deny + mismatch イベントを必ず監査記録 (なりすまし検出機会を失わない) |
+
+- opposite-family claim は admit の**必要条件**ではあるが**十分条件ではない**。facts unknown の場合は claim の
+  内容に関わらず deny する (行 1 が行 3 に優先する)。
+- 既存 gate (§3.6.1) はこの表の行 2 を実装する **process-separation hygiene** であり、provenance authority
+  ではない。挙動は不変であり、`CANDIDATE-U-AUTHPROV-053`〜`056` が表の 4 行を固定する。
+- 採択記録: gpt-5.6-sol の FLAG (receipt digest `3d43920f…`、2026-09-04) に対し
+  `ut-tdd advisor --decision design` (`claude-fable-5`、effort low、2026-09-04) へ 3 案を提示。A =
+  非対称使用 (本節)、B = 既存 gate を transitional と宣言して authoritative head 以降に Git facts 由来の
+  分離へ置換 (authentication 類似の admission 変更で PO 承認境界に踏み込むため pair-freeze 中の解消手段
+  としては過大、将来 PLAN として起票可)、C = §3.2 の文言を merge_ready / provenance grade に限定して
+  admission / routing での claim 使用を許す (reviewer が flag した dual use の温存で finding 再燃)。
+  advisor 推奨は A、採択 A (override なし)。残リスク: facts unknown → deny の運用頻度は未計測であり、
+  実装 slice で 1 本の計測コマンドを添えて deny 影響を確認する。
+
+### 3.2.3 human backfill の境界
 
 backfill は `actor_kind=human`、申告 identity、`provenance_grade=human_attested` を append-only ledger に
 残すだけである。人間の認証、commit author との非同一性、provider family、review authority を検証したとは
@@ -207,20 +237,24 @@ self-review も non-author も判定せず、その authority は既存の独立
 
 ### 3.6.1 supersede **しない**範囲 (誤って撤回しないための明示)
 
-以下は 465 の記述のまま**有効である**。いずれも `authorFamily` に依存するが、その `authorFamily`
-は Git 文字列由来ではないため、本 PLAN の撤回対象ではない。
+以下は 465 の記述のまま**有効である**。いずれも `authorFamily` claim に依存するが、§3.2.2 の非対称原則
+により claim は **deny 方向にしか働かない** (process-separation hygiene)。authority を付与するのは verified
+Git facts のみであり、これらの gate は provenance authority ではない。よって §3.2 / §3.2.1 と矛盾しない。
 
 | 465 の規定 | 存続する理由 |
 |---|---|
-| §機械化する不変条件 1「同一 family の自己承認を verdict として受理しない (`same_family_reviewer`)」 | 本 PLAN §3.5 が「その authority は**既存の独立 review admission / gate に留める**」と述べており、撤回ではなく温存である。attacker/defender 分離の PO 原則も撤回されていない。実装 (`review-verdict-custody.ts` / `review-attestation.ts` の `same_family_reviewer_denied`) は `resolveReviewAuthorFamily` 由来の値で判定しており Git 文字列非依存 |
-| D1 dispatch の反対族 routing (同族 fallback 禁止、未知 family / 反対族 runtime 不在は delegation 0 / receipt 0) | 入力は request の `authorFamily` であり Git 文字列非依存 |
-| consumer の反対族 provider 起動と `U-RVATT-024` | 同上 |
+| §機械化する不変条件 1「同一 family の自己承認を verdict として受理しない (`same_family_reviewer`)」 | §3.2.2 表の行 2 (deny 方向) そのもの。attacker/defender 分離の PO 原則も撤回されていない。実装 (`review-verdict-custody.ts` / `review-attestation.ts` の `same_family_reviewer_denied`) は `resolveReviewAuthorFamily` 由来の claim で **deny のみ**を行い、admit を確定しない (admit には facts verified が必要、行 1 が優先) |
+| D1 dispatch の反対族 routing (同族 fallback 禁止、未知 family / 反対族 runtime 不在は delegation 0 / receipt 0) | routing は委譲先の**選択** (hygiene) であって review authority の付与ではない。routing 結果が admit を意味しないことは §3.2.2 行 1 (facts unknown → deny) が保証する |
+| consumer の反対族 provider 起動と `U-RVATT-024` | 同上。同族・未知 claim は deny 方向のみ |
 | `provider-family-authority.ts` port と `unverified_family` 終端 | 465 §D3c が「commit trailer・自己申告・PR marker を family authority として受理してはならない」と既に freeze しており、**本 PLAN と同じ立場**である。受理側実装は authentication / authorization を変える外部権限設計として **PO の明示承認**を要し、本 PLAN では触れない |
 | exact HEAD 限定、session log 再利用、未応答 SLA、`stale_head` 終端 | family 導出に依存しない |
 
 ### 3.6.2 実装との関係
 
-本 PLAN の撤回は**既存 gate の撤去を要求しない**。`same_family_reviewer_denied` を返す
+本 PLAN の撤回は**既存 gate の撤去を要求しない**。ただし既存 gate の位置づけは §3.2.2 により
+**deny 専用の process-separation hygiene** へ再分類され、その挙動不変は `CANDIDATE-U-AUTHPROV-053`〜`056`
+で固定する (「hygiene だから緩めてよい」という誤読を機械的に防ぐ)。facts unknown と same-family claim が
+併存する場合の authoritative decision は §3.2.2 表の行 1 (deny) であり、既存 gate の deny と競合しない。`same_family_reviewer_denied` を返す
 `review-verdict-custody.ts` / `review-attestation.ts`、および `review-evidence.ts` の
 `checkCrossAgentModelPair` (PLAN の `review_evidence` に**宣言された** worker/reviewer model を
 検査するもので Git trailer とは無関係) は、いずれも本 PLAN と矛盾せず、そのまま有効である。
@@ -260,7 +294,7 @@ verifier、Bun deletion、CI/consumer changes は本 plan の実装 slice に含
 
 Forward/Reverse/test-design が共有する全 U oracle は次のとおりである:
 
-CANDIDATE-U-AUTHPROV-001 CANDIDATE-U-AUTHPROV-002 CANDIDATE-U-AUTHPROV-003 CANDIDATE-U-AUTHPROV-004 CANDIDATE-U-AUTHPROV-005 CANDIDATE-U-AUTHPROV-006 CANDIDATE-U-AUTHPROV-007 CANDIDATE-U-AUTHPROV-008 CANDIDATE-U-AUTHPROV-009 CANDIDATE-U-AUTHPROV-010 CANDIDATE-U-AUTHPROV-011 CANDIDATE-U-AUTHPROV-012 CANDIDATE-U-AUTHPROV-013 CANDIDATE-U-AUTHPROV-014 CANDIDATE-U-AUTHPROV-015 CANDIDATE-U-AUTHPROV-016 CANDIDATE-U-AUTHPROV-017 CANDIDATE-U-AUTHPROV-018 CANDIDATE-U-AUTHPROV-019 CANDIDATE-U-AUTHPROV-020 CANDIDATE-U-AUTHPROV-021 CANDIDATE-U-AUTHPROV-022 CANDIDATE-U-AUTHPROV-023 CANDIDATE-U-AUTHPROV-024 CANDIDATE-U-AUTHPROV-025 CANDIDATE-U-AUTHPROV-026 CANDIDATE-U-AUTHPROV-027 CANDIDATE-U-AUTHPROV-028 CANDIDATE-U-AUTHPROV-029 CANDIDATE-U-AUTHPROV-030 CANDIDATE-U-AUTHPROV-031 CANDIDATE-U-AUTHPROV-032 CANDIDATE-U-AUTHPROV-033 CANDIDATE-U-AUTHPROV-034 CANDIDATE-U-AUTHPROV-035 CANDIDATE-U-AUTHPROV-036 CANDIDATE-U-AUTHPROV-037 CANDIDATE-U-AUTHPROV-038 CANDIDATE-U-AUTHPROV-039 CANDIDATE-U-AUTHPROV-040 CANDIDATE-U-AUTHPROV-041 CANDIDATE-U-AUTHPROV-042 CANDIDATE-U-AUTHPROV-043 CANDIDATE-U-AUTHPROV-044 CANDIDATE-U-AUTHPROV-045 CANDIDATE-U-AUTHPROV-046 CANDIDATE-U-AUTHPROV-047 CANDIDATE-U-AUTHPROV-048 CANDIDATE-U-AUTHPROV-049 CANDIDATE-U-AUTHPROV-050 CANDIDATE-U-AUTHPROV-051 CANDIDATE-U-AUTHPROV-052
+CANDIDATE-U-AUTHPROV-001 CANDIDATE-U-AUTHPROV-002 CANDIDATE-U-AUTHPROV-003 CANDIDATE-U-AUTHPROV-004 CANDIDATE-U-AUTHPROV-005 CANDIDATE-U-AUTHPROV-006 CANDIDATE-U-AUTHPROV-007 CANDIDATE-U-AUTHPROV-008 CANDIDATE-U-AUTHPROV-009 CANDIDATE-U-AUTHPROV-010 CANDIDATE-U-AUTHPROV-011 CANDIDATE-U-AUTHPROV-012 CANDIDATE-U-AUTHPROV-013 CANDIDATE-U-AUTHPROV-014 CANDIDATE-U-AUTHPROV-015 CANDIDATE-U-AUTHPROV-016 CANDIDATE-U-AUTHPROV-017 CANDIDATE-U-AUTHPROV-018 CANDIDATE-U-AUTHPROV-019 CANDIDATE-U-AUTHPROV-020 CANDIDATE-U-AUTHPROV-021 CANDIDATE-U-AUTHPROV-022 CANDIDATE-U-AUTHPROV-023 CANDIDATE-U-AUTHPROV-024 CANDIDATE-U-AUTHPROV-025 CANDIDATE-U-AUTHPROV-026 CANDIDATE-U-AUTHPROV-027 CANDIDATE-U-AUTHPROV-028 CANDIDATE-U-AUTHPROV-029 CANDIDATE-U-AUTHPROV-030 CANDIDATE-U-AUTHPROV-031 CANDIDATE-U-AUTHPROV-032 CANDIDATE-U-AUTHPROV-033 CANDIDATE-U-AUTHPROV-034 CANDIDATE-U-AUTHPROV-035 CANDIDATE-U-AUTHPROV-036 CANDIDATE-U-AUTHPROV-037 CANDIDATE-U-AUTHPROV-038 CANDIDATE-U-AUTHPROV-039 CANDIDATE-U-AUTHPROV-040 CANDIDATE-U-AUTHPROV-041 CANDIDATE-U-AUTHPROV-042 CANDIDATE-U-AUTHPROV-043 CANDIDATE-U-AUTHPROV-044 CANDIDATE-U-AUTHPROV-045 CANDIDATE-U-AUTHPROV-046 CANDIDATE-U-AUTHPROV-047 CANDIDATE-U-AUTHPROV-048 CANDIDATE-U-AUTHPROV-049 CANDIDATE-U-AUTHPROV-050 CANDIDATE-U-AUTHPROV-051 CANDIDATE-U-AUTHPROV-052 CANDIDATE-U-AUTHPROV-053 CANDIDATE-U-AUTHPROV-054 CANDIDATE-U-AUTHPROV-055 CANDIDATE-U-AUTHPROV-056
 
 実 repo regression は `CANDIDATE-P-AUTHPROV-001`、`CANDIDATE-P-AUTHPROV-002`、
 `CANDIDATE-P-AUTHPROV-003` とする。
