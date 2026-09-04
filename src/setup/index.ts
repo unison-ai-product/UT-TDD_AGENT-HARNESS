@@ -22,6 +22,10 @@ import {
   type Confirm,
   type GhRunner,
 } from "./branch-protection.ts";
+import {
+  bootstrapProjectIdentity,
+  type ProjectIdentityBootstrapResult,
+} from "./project-identity-bootstrap.ts";
 
 export {
   AUTHORING_TEMPLATE_ARTIFACT_PATHS,
@@ -93,6 +97,14 @@ export {
   type PackAuthoringSmokeResult,
   runPackAuthoringSmoke,
 } from "./pack-authoring-smoke.ts";
+export {
+  bootstrapProjectIdentity,
+  canonicalProjectIdentityBytes,
+  PROJECT_IDENTITY_PATH,
+  type ProjectIdentityBootstrapResult,
+  type ProjectIdentityBootstrapRuleId,
+  repositoryIdentityFromOrigin,
+} from "./project-identity-bootstrap.ts";
 export {
   admitReleaseAggregate,
   applySealedReleaseAggregate,
@@ -202,6 +214,7 @@ export interface SetupResult {
   phase: SetupPhase;
   written: string[];
   branchProtection: { applied: boolean; reason: string };
+  projectIdentity?: ProjectIdentityBootstrapResult;
 }
 
 /** gh 実行 seam (raw token 非依存 = gh の認証状態に委ねる)。test=mock。 */
@@ -217,6 +230,7 @@ export interface SetupDeps {
   confirm: Confirm;
   isInteractive: boolean;
   templates: TemplateSet;
+  bootstrapProjectIdentity?: () => ProjectIdentityBootstrapResult;
 }
 
 const CODEOWNERS_TARGET = join(".github", "CODEOWNERS");
@@ -450,6 +464,11 @@ export function applyBranchProtection(
  * invariant: dryRun=true は副作用ゼロ (state 非書込・remote 非適用、branchProtection.reason="dry-run")。
  */
 export function runSetup(args: SetupArgs, deps: SetupDeps): SetupResult {
+  // Dry-run is side-effect free, including the identity bootstrap write.
+  const projectIdentity = args.dryRun ? undefined : deps.bootstrapProjectIdentity?.();
+  if (projectIdentity && !projectIdentity.ok) {
+    throw new Error(`${projectIdentity.error.ruleId}: ${projectIdentity.error.message}`);
+  }
   const scale = detectProjectScale(deps);
   let phase: SetupPhase;
   let decidedBy: SetupState["decidedBy"];
@@ -476,11 +495,13 @@ export function runSetup(args: SetupArgs, deps: SetupDeps): SetupResult {
     recordSetupState({ phase, decidedAt: deps.now(), decidedBy, signals: scale }, deps);
   }
   const plan = planSetup(phase, { teams: args.teams, dryRun: args.dryRun });
-  const written = emitSetup(plan, deps.templates, deps);
+  const emitted = emitSetup(plan, deps.templates, deps);
+  const written =
+    projectIdentity?.ok && projectIdentity.created ? [projectIdentity.path, ...emitted] : emitted;
   const branchProtection = args.dryRun
     ? { applied: false, reason: "dry-run" }
     : applyBranchProtection(plan, deps, { apply: args.applyBranchProtection });
-  return { phase, written, branchProtection };
+  return { phase, written, branchProtection, ...(projectIdentity ? { projectIdentity } : {}) };
 }
 
 // ── node 実 deps (real I/O / gh / confirm / templates) ──────────────────────
@@ -548,5 +569,6 @@ export function nodeSetupDeps(repoRoot: string): SetupDeps {
     confirm: nodeConfirm,
     isInteractive: Boolean(process.stdin.isTTY) && Boolean(process.stderr.isTTY) && !process.env.CI,
     templates: loadTemplates(repoRoot),
+    bootstrapProjectIdentity: () => bootstrapProjectIdentity(repoRoot),
   };
 }

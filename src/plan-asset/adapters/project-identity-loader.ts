@@ -1,5 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
+import { existsSync, lstatSync, readFileSync, realpathSync } from "node:fs";
+import { join } from "node:path";
 
 const projectPath = "ut-tdd.project.json";
 type ObjectFormat = "sha1" | "sha256";
@@ -7,7 +9,11 @@ type RuleId =
   | "plan-repository-identity-missing"
   | "plan-project-config-invalid"
   | "plan-repository-identity-invalid"
-  | "plan-repository-identity-provenance-invalid";
+  | "plan-repository-identity-provenance-invalid"
+  | "identity_worktree_drift"
+  | "identity_head_toctou"
+  | "identity_noncanonical_bytes"
+  | "identity_repository_unbound";
 type Result<T> =
   | { readonly ok: true; readonly value: T }
   | { readonly ok: false; readonly error: { readonly ruleId: RuleId; readonly message: string } };
@@ -63,18 +69,36 @@ export function loadProjectIdentityFromHead(input: {
   expectedRepositoryIdentity?: string;
 }): Result<TrackedProjectIdentity> {
   try {
-    const objectFormat = gitText(input.repoRoot, ["rev-parse", "--show-object-format"]).trim();
+    const repoRoot = realpathSync(input.repoRoot);
+    if (lstatSync(input.repoRoot).isSymbolicLink()) {
+      return failed("identity_worktree_drift", "repository root is a symbolic link");
+    }
+    const objectFormat = gitText(repoRoot, ["rev-parse", "--show-object-format"]).trim();
     if (objectFormat !== "sha1" && objectFormat !== "sha256") {
       return failed("plan-repository-identity-provenance-invalid", "unsupported object format");
     }
-    const sourceCommit = gitText(input.repoRoot, ["rev-parse", "HEAD"]).trim();
-    const entry = gitText(input.repoRoot, ["ls-tree", "HEAD", "--", projectPath]).trim();
+    const sourceCommit = gitText(repoRoot, ["rev-parse", "HEAD"]).trim();
+    const entry = gitText(repoRoot, ["ls-tree", sourceCommit, "--", projectPath]).trim();
     const match = new RegExp(
       `^100644 blob ([a-f0-9]{${objectFormat === "sha1" ? 40 : 64}})\\t${projectPath}$`,
     ).exec(entry);
     if (!match) return failed("plan-repository-identity-missing", "tracked HEAD config missing");
-    const bytes = execFileSync("git", ["-C", input.repoRoot, "show", `HEAD:${projectPath}`]);
-    return loadTrackedProjectIdentity({
+    const bytes = execFileSync("git", ["-C", repoRoot, "show", `${sourceCommit}:${projectPath}`]);
+    if (gitText(repoRoot, ["rev-parse", "HEAD"]).trim() !== sourceCommit) {
+      return failed("identity_head_toctou", "HEAD changed while reading project identity");
+    }
+    const worktreePath = join(repoRoot, projectPath);
+    if (!existsSync(worktreePath)) {
+      return failed("identity_worktree_drift", "tracked project identity is absent from worktree");
+    }
+    const stat = lstatSync(worktreePath);
+    if (!stat.isFile() || stat.isSymbolicLink()) {
+      return failed("identity_worktree_drift", "worktree project identity is not a regular file");
+    }
+    if (!Buffer.from(readFileSync(worktreePath)).equals(Buffer.from(bytes))) {
+      return failed("identity_worktree_drift", "worktree project identity differs from HEAD blob");
+    }
+    const loaded = loadTrackedProjectIdentity({
       bytes,
       receipt: {
         path: projectPath,
@@ -83,10 +107,93 @@ export function loadProjectIdentityFromHead(input: {
         sourceCommit,
         objectFormat,
       },
-      expectedRepositoryIdentity: input.expectedRepositoryIdentity,
+      expectedRepositoryIdentity: undefined,
     });
+    if (!loaded.ok) return loaded;
+    if (
+      !Buffer.from(bytes).equals(
+        Buffer.from(canonicalProjectIdentityBytes(loaded.value.repositoryIdentity)),
+      )
+    ) {
+      return failed("identity_noncanonical_bytes", "project identity bytes are not canonical");
+    }
+    const bound = repositoryIdentityFromOrigin(repoRoot);
+    if (bound && bound !== loaded.value.repositoryIdentity) {
+      return failed("identity_repository_unbound", "project identity does not match origin");
+    }
+    if (!bound && !input.expectedRepositoryIdentity) {
+      return failed("identity_repository_unbound", "project identity has no origin binding");
+    }
+    if (
+      input.expectedRepositoryIdentity &&
+      input.expectedRepositoryIdentity !== loaded.value.repositoryIdentity
+    ) {
+      return failed("plan-repository-identity-missing", "expected repository identity mismatch");
+    }
+    if (bound && input.expectedRepositoryIdentity && bound !== input.expectedRepositoryIdentity) {
+      return failed("identity_repository_unbound", "origin and expected identity disagree");
+    }
+    return loaded;
   } catch {
     return failed("plan-repository-identity-missing", "tracked HEAD config unavailable");
+  }
+}
+
+/** Canonical bytes shared by setup creation and HEAD read validation. */
+export function canonicalProjectIdentityBytes(repositoryIdentity: string): Uint8Array {
+  return Buffer.from(
+    `${JSON.stringify(
+      { schema_version: "ut-tdd.project/v1", repository_identity: repositoryIdentity },
+      null,
+      2,
+    )}\n`,
+    "utf8",
+  );
+}
+
+/** Normalize supported Git origin forms to a path-independent identity. */
+export function repositoryIdentityFromOrigin(repoRoot: string): string | null {
+  try {
+    const remote = gitText(repoRoot, ["remote", "get-url", "origin"]).trim();
+    if (!remote || remote.includes("\n")) return null;
+    const direct = parseRepositoryIdentity(remote);
+    if (direct) return direct;
+    // Snapshot/fixture clones have a local path as origin. Follow that local
+    // repository's own origin so the binding remains origin-derived without
+    // treating an arbitrary directory name as an identity.
+    if (existsSync(remote)) {
+      const source = gitText(realpathSync(remote), ["remote", "get-url", "origin"]).trim();
+      return parseRepositoryIdentity(source);
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function parseRepositoryIdentity(remote: string): string | null {
+  try {
+    let owner: string | undefined;
+    let repository: string | undefined;
+    const scp = /^[^@/:]+@[^:]+:([^/]+)\/([^/]+)$/.exec(remote);
+    if (scp) {
+      owner = scp[1];
+      repository = scp[2];
+    } else if (/^https?:\/\//i.test(remote)) {
+      const url = new URL(remote);
+      const parts = url.pathname.split("/").filter(Boolean);
+      if (parts.length !== 2) return null;
+      owner = parts[0];
+      repository = parts[1];
+    } else {
+      return null;
+    }
+    if (!owner || !repository) return null;
+    if (repository.endsWith(".git")) repository = repository.slice(0, -4);
+    const identity = `${owner}/${repository}`;
+    return validIdentity(identity) ? identity : null;
+  } catch {
+    return null;
   }
 }
 
