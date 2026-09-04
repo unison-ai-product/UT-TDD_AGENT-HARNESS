@@ -159,6 +159,7 @@ import {
 import { detectMode, nextActionForMode, type RuntimeDetection } from "./runtime/detect.ts";
 import { scanDanglingStops } from "./runtime/forced-stop.ts";
 import { createNodeInvocation, verifyNodeGeneration } from "./runtime/node-bootstrap.ts";
+import { requireProjectMemoryRoot } from "./runtime/project-memory-root.ts";
 import {
   nodeProviderHandoverDeps,
   type ProviderRuntime,
@@ -535,13 +536,16 @@ function readMemoryThroughService(
   repoRoot: string,
   options: MemoryQueryOptions = {},
 ): MemoryReadResult {
+  const project = requireProjectMemoryRoot(repoRoot);
   let db: ReturnType<typeof openHarnessDb> | undefined;
   try {
-    db = openHarnessDb(defaultHarnessDbPath(repoRoot), { repoRoot });
-    return readMemory({ repoRoot, db, options });
+    db = openHarnessDb(defaultHarnessDbPath(project.canonicalProjectRoot), {
+      repoRoot: project.canonicalProjectRoot,
+    });
+    return readMemory({ repoRoot: project.canonicalProjectRoot, db, options });
   } catch {
     // index を開けないこと自体は読み出しの失敗ではない (ファイルが正本)。
-    return readMemory({ repoRoot, options });
+    return readMemory({ repoRoot: project.canonicalProjectRoot, options });
   } finally {
     db?.close();
   }
@@ -4102,8 +4106,9 @@ memory
         : [];
       try {
         const repoRoot = requireRuntimeRepoRoot({ allowCwdFallback: true });
+        const project = requireProjectMemoryRoot(repoRoot);
         const entry = writeMemory({
-          repoRoot,
+          repoRoot: project.canonicalProjectRoot,
           input: {
             kind: opts.kind as MemoryKind,
             title: opts.title,

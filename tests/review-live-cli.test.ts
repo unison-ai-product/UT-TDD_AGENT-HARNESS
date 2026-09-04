@@ -25,6 +25,8 @@ import {
   type ReviewVerdictProjectionResult,
 } from "../src/feedback/review-attestation.ts";
 import type { ClaudeReviewInboxEntry } from "../src/runtime/claude-memory-wake.ts";
+import { resolveProjectMemoryRoot } from "../src/runtime/project-memory-root.ts";
+import { ensureTrackedProjectIdentity } from "./support/project-identity-fixture.ts";
 
 const head = "a".repeat(40);
 const roots: string[] = [];
@@ -37,6 +39,7 @@ function fixture(): {
 } {
   const root = mkdtempSync(join(tmpdir(), "ut-review-live-cli-"));
   roots.push(root);
+  ensureTrackedProjectIdentity(root, "fixture/review-live-cli");
   const memoryDirectory = join(root, ".ut-tdd", "memory");
   mkdirSync(memoryDirectory, { recursive: true });
   const memoryPath = join(memoryDirectory, "feedback-d3a.md");
@@ -86,6 +89,12 @@ function fixture(): {
   const envelopePath = join(root, "envelope.json");
   writeFileSync(envelopePath, JSON.stringify(envelope), "utf8");
   return { root, envelopePath, memoryPath, envelope };
+}
+
+function wakeInboxRoot(root: string): string {
+  const project = resolveProjectMemoryRoot(root);
+  if (!project.ok) throw new Error(project.reason);
+  return join(project.runtimeBusRoot, "claude-memory-wake", "inbox");
 }
 
 afterEach(() => {
@@ -169,7 +178,7 @@ describe("review live CLI composition", () => {
       process.stdout.write = originalWrite;
       process.exitCode = originalExitCode;
     }
-    const inbox = join(root, ".git", "ut-tdd-runtime", "claude-memory-wake", "inbox");
+    const inbox = wakeInboxRoot(root);
     const files = readdirSync(inbox).filter((name) => name.endsWith(".json"));
     expect(files).toHaveLength(1);
     const envelope = JSON.parse(readFileSync(join(inbox, files[0]), "utf8")) as Record<
@@ -233,9 +242,7 @@ describe("review live CLI composition", () => {
     }
     const requests = readdirSync(join(root, ".ut-tdd", "review", "requests"));
     expect(requests).toHaveLength(1);
-    expect(() =>
-      readdirSync(join(root, ".git", "ut-tdd-runtime", "claude-memory-wake", "inbox")),
-    ).toThrow();
+    expect(() => readdirSync(wakeInboxRoot(root))).toThrow();
   });
 
   it("U-RVATT-024: does not resolve Claude workspace for a Codex reviewer", async () => {
@@ -277,9 +284,7 @@ describe("review live CLI composition", () => {
       process.exitCode = originalExitCode;
     }
     expect(resolveWakeTarget).not.toHaveBeenCalled();
-    expect(() =>
-      readdirSync(join(root, ".git", "ut-tdd-runtime", "claude-memory-wake", "inbox")),
-    ).toThrow();
+    expect(() => readdirSync(wakeInboxRoot(root))).toThrow();
     const requests = readdirSync(join(root, ".ut-tdd", "review", "requests"));
     expect(requests).toHaveLength(2);
     expect(
@@ -337,9 +342,7 @@ describe("review live CLI composition", () => {
       realpathSync.native(root),
       expect.objectContaining({ purpose: "review", reviewer: "codex" }),
     );
-    expect(() =>
-      readdirSync(join(root, ".git", "ut-tdd-runtime", "claude-memory-wake", "inbox")),
-    ).toThrow();
+    expect(() => readdirSync(wakeInboxRoot(root))).toThrow();
   });
 
   it("U-RVATT-031 grants Claude only the consumer-derived exact verdict path", () => {
@@ -381,7 +384,10 @@ describe("review live CLI composition", () => {
         at: "2026-08-14T00:01:00.000Z",
       },
     };
-    const runReview = vi.fn(() => projection);
+    const runReview = vi.fn(
+      (_input: { repoRoot: string; provider: "codex" | "claude"; args: readonly string[] }) =>
+        projection,
+    );
     const publishReceipt = vi.fn();
     const program = new Command().exitOverride();
     registerLiveReviewCommands(program.command("review"), {
@@ -405,12 +411,12 @@ describe("review live CLI composition", () => {
     } finally {
       process.stdout.write = originalWrite;
     }
-    expect(runReview).toHaveBeenCalledWith({
+    expect(runReview).toHaveBeenCalledTimes(1);
+    const call = runReview.mock.calls[0]?.[0];
+    expect(call).toEqual({
       repoRoot: root,
       provider: "claude",
       args: expect.arrayContaining([
-        "--task-file",
-        memoryPath,
         "--review-head",
         head,
         "--review-author-family",
@@ -418,6 +424,9 @@ describe("review live CLI composition", () => {
         "--execute",
       ]),
     });
+    const taskFileIndex = call?.args.indexOf("--task-file") ?? -1;
+    expect(taskFileIndex).toBeGreaterThanOrEqual(0);
+    expect(realpathSync(call?.args[taskFileIndex + 1] as string)).toBe(realpathSync(memoryPath));
     expect(publishReceipt).toHaveBeenCalledWith(root, projection);
   });
 

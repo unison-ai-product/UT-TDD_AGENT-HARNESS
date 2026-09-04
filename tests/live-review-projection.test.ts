@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
 import { describe, expect, it, vi } from "vitest";
@@ -22,6 +22,7 @@ import type {
 import { issueReviewRequest, projectReviewVerdict } from "../src/feedback/review-attestation.ts";
 import { runPrMerge } from "../src/feedback/review-merge-gate.ts";
 import type { ClaudeReviewInboxEntry } from "../src/runtime/claude-memory-wake.ts";
+import { ensureTrackedProjectIdentity } from "./support/project-identity-fixture.ts";
 
 const head = "a".repeat(40);
 const canonicalRequest: ReviewAttestationRequest = {
@@ -96,6 +97,7 @@ describe("live review projection (U-RVATT-023..026)", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-live-review-task-"));
     const outside = mkdtempSync(join(tmpdir(), "ut-live-review-outside-"));
     try {
+      ensureTrackedProjectIdentity(root, "fixture/live-review-projection");
       const memoryDirectory = join(root, ".ut-tdd", "memory");
       mkdirSync(memoryDirectory, { recursive: true });
       const sourcePath = ".ut-tdd/memory/feedback-d3a.md";
@@ -110,9 +112,12 @@ describe("live review projection (U-RVATT-023..026)", () => {
         "review task",
       ].join("\n");
       writeFileSync(join(root, sourcePath), content, "utf8");
-      expect(
-        resolveLiveReviewTaskFile(root, { memoryId: "memory:d3a", memoryPath: sourcePath }),
-      ).toBe(join(root, sourcePath));
+      const resolved = resolveLiveReviewTaskFile(root, {
+        memoryId: "memory:d3a",
+        memoryPath: sourcePath,
+      });
+      expect(resolved).not.toBeNull();
+      expect(realpathSync(resolved as string)).toBe(realpathSync(join(root, sourcePath)));
       expect(
         resolveLiveReviewTaskFile(root, { memoryId: "memory:wrong", memoryPath: sourcePath }),
       ).toBeNull();
@@ -124,9 +129,9 @@ describe("live review projection (U-RVATT-023..026)", () => {
 
       rmSync(memoryDirectory, { recursive: true, force: true });
       symlinkSync(outside, memoryDirectory, process.platform === "win32" ? "junction" : "dir");
-      expect(
+      expect(() =>
         resolveLiveReviewTaskFile(root, { memoryId: "memory:d3a", memoryPath: sourcePath }),
-      ).toBeNull();
+      ).toThrow("project_memory_root_authored_memory_root_escape");
     } finally {
       rmSync(root, { recursive: true, force: true });
       rmSync(outside, { recursive: true, force: true });
