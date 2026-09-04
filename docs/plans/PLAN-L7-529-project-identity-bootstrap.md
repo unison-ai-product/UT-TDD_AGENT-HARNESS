@@ -47,7 +47,7 @@ review_evidence:
   - reviewer: claude
     review_kind: cross_agent
     reviewed_at: 2026-09-04T11:40:33Z
-    tests_green_at: 2026-09-04T11:23:00Z
+    tests_green_at: 2026-09-04T11:34:00Z
     verdict: pass
     worker_model: gpt-5.6-luna
     effort: high
@@ -98,18 +98,18 @@ status: confirmed
 github_issue_id: 432
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:86a07e01c5116c050951abe9c164a8bc
-  command_id: command:pr519-confirm-forward-20260904
-  admitted_at: 2026-09-04T12:04:53.129Z
-  source_digest: sha256:9a3c4f73180c3315db97ee2bacd2488c3495d7f9b4f3e6fe4f4d3d1f1ed4235c
+  receipt_id: certificate:a153b736573886dbfe6790ec62e20284
+  command_id: command:pr519-corrected-confirm-forward-20260904
+  admitted_at: 2026-09-04T12:31:13.526Z
+  source_digest: sha256:b02cf49b4f3fb6e89770d9054ea4bf5d612166dbeb64bce799573746a665e5d4
   decision_digest: sha256:51c1eeec856b8f9af41d0990e30e6e11ce7620f4e6c1c837e16f9781a24f3cf0
-  receipt_digest: sha256:4144aa70e76815c60b289b9e3b8c68b8a35fe1d4005528f2985c8dfeb697f14f
+  receipt_digest: sha256:95d5ee18597ae4afaa06eb779ae3ad3b5b6a8d30794f04161bdbf31855a96351
   binding:
     path: docs/plans/PLAN-L7-529-project-identity-bootstrap.md
     plan_id: PLAN-L7-529-project-identity-bootstrap
     asset_id: plan:legacy:3a7a5fd76bfe53fecd79af6d2efa4f262f798cfa4daf8e74d59c5b0256dc6ce0
     revision: 2
-    content_digest: sha256:9a3c4f73180c3315db97ee2bacd2488c3495d7f9b4f3e6fe4f4d3d1f1ed4235c
+    content_digest: sha256:b02cf49b4f3fb6e89770d9054ea4bf5d612166dbeb64bce799573746a665e5d4
   route:
     signal: feature_addition
     mode: add-feature

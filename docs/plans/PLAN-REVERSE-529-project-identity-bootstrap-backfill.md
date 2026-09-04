@@ -29,7 +29,7 @@ review_evidence:
   - reviewer: claude
     review_kind: cross_agent
     reviewed_at: 2026-09-04T11:40:33Z
-    tests_green_at: 2026-09-04T11:23:00Z
+    tests_green_at: 2026-09-04T11:34:00Z
     verdict: pass
     worker_model: gpt-5.6-luna
     effort: high
@@ -81,18 +81,18 @@ status: confirmed
 github_issue_id: 432
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:70b165c12739f9a8ad12695e14bc7c5d
-  command_id: command:pr519-confirm-reverse-20260904
-  admitted_at: 2026-09-04T12:05:08.673Z
-  source_digest: sha256:66ccb24cb8b96e1087c7bb160ae2f9e4866f92c9a29924fa166dff9d137bc1c7
-  decision_digest: sha256:d63a502dfe209beddb83fef731033848f1961e10f9ac478985ab9fb2ad47c585
-  receipt_digest: sha256:9c3fcf6a4537f762913cb9519c5c6e2aab10867b8284d35fd4ec4f7f660307bf
+  receipt_id: certificate:254bf00dfc6b738d4052c01ec379fd8c
+  command_id: command:pr519-corrected-confirm-reverse-20260904
+  admitted_at: 2026-09-04T12:31:21.473Z
+  source_digest: sha256:dc9cbe23b06c23bd607f5d69adab914ef3220ab8f43dbf53f7f38b0e654d85d6
+  decision_digest: sha256:e9efe94e3cbdd933381e694763c42499f27f1d3b7a062a1aa13abbd987314a0f
+  receipt_digest: sha256:4a54c558f3c8ddd240f79c005b8d31c9e3481a089c9182916bd6aa8e52569675
   binding:
     path: docs/plans/PLAN-REVERSE-529-project-identity-bootstrap-backfill.md
     plan_id: PLAN-REVERSE-529-project-identity-bootstrap-backfill
     asset_id: plan:legacy:c55edfa9450c28e334f5def87561d828a8c29368a3387a43116f43e1c16c62fa
     revision: 2
-    content_digest: sha256:66ccb24cb8b96e1087c7bb160ae2f9e4866f92c9a29924fa166dff9d137bc1c7
+    content_digest: sha256:dc9cbe23b06c23bd607f5d69adab914ef3220ab8f43dbf53f7f38b0e654d85d6
   route:
     signal: design_gap
     mode: reverse
@@ -104,7 +104,7 @@ admission_receipt:
   origin:
     plan_id: PLAN-L7-529-project-identity-bootstrap
     revision: 2
-    digest: sha256:0ba6240a7deb3915fc0dfccfd5ec44ba0876c6325cc0308465051e0f4a1c84ca
+    digest: sha256:a5f9659aeb545747f6cd5d44b7339763cf21a16a4244e721e90e216c468e2e82
   transition:
     direction: implementation_to_design
     implementation_disposition: preserved

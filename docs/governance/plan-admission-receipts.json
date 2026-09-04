@@ -2340,33 +2340,33 @@
     {
       "sequence": 147,
       "previous_record_digest": "sha256:65ff609bf4510b7dc7fd30332b8ad3cdf8c979e66920b706160c68d28e1cda8a",
-      "record_digest": "sha256:c1c3d8efbc141e95863e32d9f39d31540f5249f70ea869a0b121912ffd6753ae",
-      "command_id": "command:pr519-confirm-forward-20260904",
-      "receipt_id": "certificate:86a07e01c5116c050951abe9c164a8bc",
-      "receipt_digest": "sha256:4144aa70e76815c60b289b9e3b8c68b8a35fe1d4005528f2985c8dfeb697f14f",
+      "record_digest": "sha256:6fab86fc7b30fbe8f6aa24148a1787ebd3f9ba26b9d7d7d8b2801f60dbc7f91c",
+      "command_id": "command:pr519-corrected-confirm-forward-20260904",
+      "receipt_id": "certificate:a153b736573886dbfe6790ec62e20284",
+      "receipt_digest": "sha256:95d5ee18597ae4afaa06eb779ae3ad3b5b6a8d30794f04161bdbf31855a96351",
       "decision_digest": "sha256:51c1eeec856b8f9af41d0990e30e6e11ce7620f4e6c1c837e16f9781a24f3cf0",
       "binding": {
         "path": "docs/plans/PLAN-L7-529-project-identity-bootstrap.md",
         "plan_id": "PLAN-L7-529-project-identity-bootstrap",
         "asset_id": "plan:legacy:3a7a5fd76bfe53fecd79af6d2efa4f262f798cfa4daf8e74d59c5b0256dc6ce0",
         "revision": 2,
-        "content_digest": "sha256:9a3c4f73180c3315db97ee2bacd2488c3495d7f9b4f3e6fe4f4d3d1f1ed4235c"
+        "content_digest": "sha256:b02cf49b4f3fb6e89770d9054ea4bf5d612166dbeb64bce799573746a665e5d4"
       }
     },
     {
       "sequence": 148,
-      "previous_record_digest": "sha256:c1c3d8efbc141e95863e32d9f39d31540f5249f70ea869a0b121912ffd6753ae",
-      "record_digest": "sha256:00fb72be20d002feb2647dd9fa0de0942562184607ca6d96dbc25f3f446ee16e",
-      "command_id": "command:pr519-confirm-reverse-20260904",
-      "receipt_id": "certificate:70b165c12739f9a8ad12695e14bc7c5d",
-      "receipt_digest": "sha256:9c3fcf6a4537f762913cb9519c5c6e2aab10867b8284d35fd4ec4f7f660307bf",
-      "decision_digest": "sha256:d63a502dfe209beddb83fef731033848f1961e10f9ac478985ab9fb2ad47c585",
+      "previous_record_digest": "sha256:6fab86fc7b30fbe8f6aa24148a1787ebd3f9ba26b9d7d7d8b2801f60dbc7f91c",
+      "record_digest": "sha256:d46357c762271f59c2162ee7f059503a21c3a061a89886b0871d5db433805643",
+      "command_id": "command:pr519-corrected-confirm-reverse-20260904",
+      "receipt_id": "certificate:254bf00dfc6b738d4052c01ec379fd8c",
+      "receipt_digest": "sha256:4a54c558f3c8ddd240f79c005b8d31c9e3481a089c9182916bd6aa8e52569675",
+      "decision_digest": "sha256:e9efe94e3cbdd933381e694763c42499f27f1d3b7a062a1aa13abbd987314a0f",
       "binding": {
         "path": "docs/plans/PLAN-REVERSE-529-project-identity-bootstrap-backfill.md",
         "plan_id": "PLAN-REVERSE-529-project-identity-bootstrap-backfill",
         "asset_id": "plan:legacy:c55edfa9450c28e334f5def87561d828a8c29368a3387a43116f43e1c16c62fa",
         "revision": 2,
-        "content_digest": "sha256:66ccb24cb8b96e1087c7bb160ae2f9e4866f92c9a29924fa166dff9d137bc1c7"
+        "content_digest": "sha256:dc9cbe23b06c23bd607f5d69adab914ef3220ab8f43dbf53f7f38b0e654d85d6"
       }
     }
   ]
