@@ -274,6 +274,19 @@ PO 質問: 「下流から上流のフィードバック機構は現行でも入
 PLAN はその projection とする (BR-027 / FR-048 / AC-060)。新 engine は作らず FR-037 の fence と FR-034 の compiler を再利用。
 概念本文には §下流から上流への還流 (Reverse) のチーム化 として反映した。
 
+### 3.14 Sub-agent 機構の provider-native 再編とオーケストレーション形式 (PO 指示 2026-09-04)
+
+PO 指示: 「ハーネス側の固有 sub-agent をなるべく排除して provider 単位に寄せた sub-agent 機構へ再編すべきではないか。それに伴い
+オーケストラ形式も変わる」。実測 (HEAD、2026-09-04): `ls .claude/agents | wc -l` = 20 (Claude Code 固有形式、model / tools /
+プロンプト焼き付け)、`.claude/CLAUDE.md` に allowlist 再掲、`src/team/delegation-routing.ts` に別系統の role 登録
+(GATE_SUBAGENT_ROLES / REVIEW_GATE_ROLES / WORKER_DELEGATION_ROLES)、`.claude/hooks/agent-guard.ts` はファイル名で allowlist と
+floor を判定。二重 role 体系で Codex 側に等価物が無い。
+採択: 論理 role record (provider 非依存) をハーネス正本にし、provider 固有定義は adapter の generated view、guard は record を
+単一根拠、ドメイン特化は skill 注入へ (BR-028 / FR-049 / AC-061)。オーケストレーションは control plane dispatch へ移し、LLM
+orchestrator は lane の一種で closing authority を持たない (FR-050 / AC-062)。非採用: provider ごとの独自 role 体系の維持、
+orchestrator への approval 代行。移行は既存 20 subagent の role + skill への分解と生成 view 化であり、専用 PLAN で段階実施する。
+概念本文には §Sub-agent 機構の再編 として反映した。
+
 ## 4. 工程
 
 
