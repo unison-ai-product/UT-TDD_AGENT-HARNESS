@@ -1,23 +1,21 @@
 ---
 plan_id: PLAN-REVERSE-529-project-identity-bootstrap-backfill
-title: "PLAN-REVERSE-529: project identity bootstrap backfill (read/create/commit-policy)"
+title: "PLAN-REVERSE-529: project identity bootstrap backfill
+  (read/create/commit-policy)"
 kind: reverse
 layer: cross
 drive: fullstack
 route_signal: design_gap
 route_mode: reverse
-status: draft
-workflow_phase: R0
 confirmed_reverse_type: design
 created: 2026-09-04
 updated: 2026-09-04
 owner: PO / TL
-github_issue_id: 432
 parent_design: docs/plans/PLAN-L7-529-project-identity-bootstrap.md
 pair_artifact: docs/test-design/harness/L7-project-identity-bootstrap-test-design.md
 agent_slots:
   - role: qa
-    slot_label: "QA - read/create/commit-policy 決定性契約を独立変異で再検証する"
+    slot_label: QA - read/create/commit-policy 決定性契約を独立変異で再検証する
 generates:
   - artifact_path: docs/plans/PLAN-REVERSE-529-project-identity-bootstrap-backfill.md
     artifact_type: markdown_doc
@@ -27,7 +25,94 @@ dependencies:
   blocks: []
   references:
     - docs/test-design/harness/L7-project-identity-bootstrap-test-design.md
-review_evidence: []
+review_evidence:
+  - reviewer: claude
+    review_kind: cross_agent
+    reviewed_at: 2026-09-04T11:40:33Z
+    tests_green_at: 2026-09-04T11:23:00Z
+    verdict: pass
+    worker_model: gpt-5.6-luna
+    effort: high
+    reviewer_model: claude-opus-5
+    plan_revision: 7449e560022b835b4b36e97e54caaf7dc14cb27d
+    subject_head: 7449e560022b835b4b36e97e54caaf7dc14cb27d
+    evidence_path: docs/test-design/harness/L7-project-identity-bootstrap-test-design.md
+    anchor_commit: 7449e560022b835b4b36e97e54caaf7dc14cb27d
+    scope: "PR #519 (draft) exact HEAD 7449e560 に対する非著者 Claude Opus preflight
+      (request rv1-ec7fd4ff、verdict=PASS-WEAK / blocking 0)。ownership
+      (src/kernel/project-identity.ts・src/setup/project-identity-bootstrap.ts・
+      tests/setup-project-identity-bootstrap.test.ts の単一宣言)、Forward
+      §3.1.1〜§3.1.4・ §3.2 one-hop custody・§3.2.1 setup orchestration
+      と実装の一致、CANDIDATE-U-PROJID-001..041 / P-001..003 の刺激と oracle の一致を判定した。実装
+      Green・Reverse R4・Issue #432 完了・ #424 provider parity の接続は主張しない。closing
+      review は最終 exact PR HEAD に対して別途取る。"
+    citations:
+      - "docs/test-design/harness/L7-project-identity-bootstrap-test-design.md:
+        CANDIDATE-U-PROJID-001..041 / CANDIDATE-P-PROJID-001..003"
+      - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/actions/runs/33865673481
+    green_commands:
+      - kind: unit_test
+        command: node scripts/run-vitest-snapshot.ts
+          tests/setup-project-identity-bootstrap.test.ts tests/setup.test.ts
+          tests/project-memory-root.test.ts
+          tests/plan-asset/project-identity-loader.test.ts
+          tests/plan-asset/legacy-inventory.test.ts
+          tests/doctor-test-repository-isolation.test.ts tests/plan-lint.test.ts
+          tests/impl-plan-trace.test.ts --reporter=dot
+        runner: node
+        scope: targeted
+        exit_code: 0
+        completed_at: 2026-09-04T11:23:00Z
+        evidence_path: docs/test-design/harness/L7-project-identity-bootstrap-test-design.md
+        output_digest: sha256:f41e87deaddbb4128aafc5b010677e7f62133f1817f9095911bbd3b65d18a60a
+        anchor_commit: 7449e560022b835b4b36e97e54caaf7dc14cb27d
+      - kind: unit_test
+        command: node scripts/run-vitest-snapshot.ts tests/dependency-drift.test.ts
+          --reporter=dot
+        runner: node
+        scope: targeted
+        exit_code: 0
+        completed_at: 2026-09-04T11:34:00Z
+        evidence_path: tests/setup-project-identity-bootstrap.test.ts
+        output_digest: sha256:23d14a66cd9e48ddf4f2d0f33e427c5f7cc90d90d3ab6018d0af7319166e44b1
+        anchor_commit: 7449e560022b835b4b36e97e54caaf7dc14cb27d
+workflow_phase: R0
+status: confirmed
+github_issue_id: 432
+admission_receipt:
+  schema_version: v2
+  receipt_id: certificate:70b165c12739f9a8ad12695e14bc7c5d
+  command_id: command:pr519-confirm-reverse-20260904
+  admitted_at: 2026-09-04T12:05:08.673Z
+  source_digest: sha256:66ccb24cb8b96e1087c7bb160ae2f9e4866f92c9a29924fa166dff9d137bc1c7
+  decision_digest: sha256:d63a502dfe209beddb83fef731033848f1961e10f9ac478985ab9fb2ad47c585
+  receipt_digest: sha256:9c3fcf6a4537f762913cb9519c5c6e2aab10867b8284d35fd4ec4f7f660307bf
+  binding:
+    path: docs/plans/PLAN-REVERSE-529-project-identity-bootstrap-backfill.md
+    plan_id: PLAN-REVERSE-529-project-identity-bootstrap-backfill
+    asset_id: plan:legacy:c55edfa9450c28e334f5def87561d828a8c29368a3387a43116f43e1c16c62fa
+    revision: 2
+    content_digest: sha256:66ccb24cb8b96e1087c7bb160ae2f9e4866f92c9a29924fa166dff9d137bc1c7
+  route:
+    signal: design_gap
+    mode: reverse
+  issue:
+    provider: github
+    issue_id: 432
+    episode_id: E4-432
+    projection_digest: sha256:6b4f2a8352acf03daf26df8f3b7c4e9d94ade3eda59d39f67882306093aa4dbf
+  origin:
+    plan_id: PLAN-L7-529-project-identity-bootstrap
+    revision: 2
+    digest: sha256:0ba6240a7deb3915fc0dfccfd5ec44ba0876c6325cc0308465051e0f4a1c84ca
+  transition:
+    direction: implementation_to_design
+    implementation_disposition: preserved
+  reentry:
+    target_plan_id: PLAN-L7-529-project-identity-bootstrap
+    target_revision: 2
+    phase: forward_merge
+  escape_reason: "Backfill Issue #432 implementation evidence into the frozen design pair"
 ---
 
 # PLAN-REVERSE-529

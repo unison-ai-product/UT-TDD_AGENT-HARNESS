@@ -6,20 +6,19 @@ layer: L7
 drive: fullstack
 route_signal: feature_addition
 route_mode: add-feature
-status: draft
 created: 2026-09-04
 updated: 2026-09-04
 owner: PO / TL
-github_issue_id: 432
 parent_design: docs/governance/ut-tdd-agent-harness-requirements_v1.2.md
 pair_artifact: docs/test-design/harness/L7-project-identity-bootstrap-test-design.md
 backprop_decision: required
-backprop_decision_reason: "read/create/commit-policy の fail-close 境界と namespace 分離を Forward/Reverse で同じ candidate に固定する。"
+backprop_decision_reason: read/create/commit-policy の fail-close 境界と namespace
+  分離を Forward/Reverse で同じ candidate に固定する。
 agent_slots:
   - role: se
-    slot_label: "SE - tracked project identity の read/create 決定性契約を実装する"
+    slot_label: SE - tracked project identity の read/create 決定性契約を実装する
   - role: qa
-    slot_label: "QA - HEAD drift、junction/symlink/8.3/CRLF/BOM、stale identity 差し替えを独立変異で検証する"
+    slot_label: QA - HEAD drift、junction/symlink/8.3/CRLF/BOM、stale identity 差し替えを独立変異で検証する
 generates:
   - artifact_path: docs/plans/PLAN-L7-529-project-identity-bootstrap.md
     artifact_type: markdown_doc
@@ -44,7 +43,90 @@ dependencies:
     - docs/plans/PLAN-L7-512-project-scoped-memory-root.md
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/432
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/424
-review_evidence: []
+review_evidence:
+  - reviewer: claude
+    review_kind: cross_agent
+    reviewed_at: 2026-09-04T11:40:33Z
+    tests_green_at: 2026-09-04T11:23:00Z
+    verdict: pass
+    worker_model: gpt-5.6-luna
+    effort: high
+    reviewer_model: claude-opus-5
+    plan_revision: 7449e560022b835b4b36e97e54caaf7dc14cb27d
+    subject_head: 7449e560022b835b4b36e97e54caaf7dc14cb27d
+    evidence_path: docs/test-design/harness/L7-project-identity-bootstrap-test-design.md
+    anchor_commit: 7449e560022b835b4b36e97e54caaf7dc14cb27d
+    scope: "PR #519 (draft) exact HEAD 7449e560 に対する非著者 Claude Opus preflight
+      (request rv1-ec7fd4ff、verdict=PASS-WEAK / blocking 0)。ownership
+      (src/kernel/project-identity.ts・src/setup/project-identity-bootstrap.ts・
+      tests/setup-project-identity-bootstrap.test.ts の単一宣言)、Forward
+      §3.1.1〜§3.1.4・ §3.2 one-hop custody・§3.2.1 setup orchestration
+      と実装の一致、CANDIDATE-U-PROJID-001..041 / P-001..003 の刺激と oracle の一致を判定した。実装
+      Green・Reverse R4・Issue #432 完了・ #424 provider parity の接続は主張しない。closing
+      review は最終 exact PR HEAD に対して別途取る。"
+    citations:
+      - "docs/test-design/harness/L7-project-identity-bootstrap-test-design.md:
+        CANDIDATE-U-PROJID-001..041 / CANDIDATE-P-PROJID-001..003"
+      - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/actions/runs/33865673481
+    green_commands:
+      - kind: unit_test
+        command: node scripts/run-vitest-snapshot.ts
+          tests/setup-project-identity-bootstrap.test.ts tests/setup.test.ts
+          tests/project-memory-root.test.ts
+          tests/plan-asset/project-identity-loader.test.ts
+          tests/plan-asset/legacy-inventory.test.ts
+          tests/doctor-test-repository-isolation.test.ts tests/plan-lint.test.ts
+          tests/impl-plan-trace.test.ts --reporter=dot
+        runner: node
+        scope: targeted
+        exit_code: 0
+        completed_at: 2026-09-04T11:23:00Z
+        evidence_path: docs/test-design/harness/L7-project-identity-bootstrap-test-design.md
+        output_digest: sha256:f41e87deaddbb4128aafc5b010677e7f62133f1817f9095911bbd3b65d18a60a
+        anchor_commit: 7449e560022b835b4b36e97e54caaf7dc14cb27d
+      - kind: unit_test
+        command: node scripts/run-vitest-snapshot.ts tests/dependency-drift.test.ts
+          --reporter=dot
+        runner: node
+        scope: targeted
+        exit_code: 0
+        completed_at: 2026-09-04T11:34:00Z
+        evidence_path: tests/setup-project-identity-bootstrap.test.ts
+        output_digest: sha256:23d14a66cd9e48ddf4f2d0f33e427c5f7cc90d90d3ab6018d0af7319166e44b1
+        anchor_commit: 7449e560022b835b4b36e97e54caaf7dc14cb27d
+status: confirmed
+github_issue_id: 432
+admission_receipt:
+  schema_version: v2
+  receipt_id: certificate:86a07e01c5116c050951abe9c164a8bc
+  command_id: command:pr519-confirm-forward-20260904
+  admitted_at: 2026-09-04T12:04:53.129Z
+  source_digest: sha256:9a3c4f73180c3315db97ee2bacd2488c3495d7f9b4f3e6fe4f4d3d1f1ed4235c
+  decision_digest: sha256:51c1eeec856b8f9af41d0990e30e6e11ce7620f4e6c1c837e16f9781a24f3cf0
+  receipt_digest: sha256:4144aa70e76815c60b289b9e3b8c68b8a35fe1d4005528f2985c8dfeb697f14f
+  binding:
+    path: docs/plans/PLAN-L7-529-project-identity-bootstrap.md
+    plan_id: PLAN-L7-529-project-identity-bootstrap
+    asset_id: plan:legacy:3a7a5fd76bfe53fecd79af6d2efa4f262f798cfa4daf8e74d59c5b0256dc6ce0
+    revision: 2
+    content_digest: sha256:9a3c4f73180c3315db97ee2bacd2488c3495d7f9b4f3e6fe4f4d3d1f1ed4235c
+  route:
+    signal: feature_addition
+    mode: add-feature
+  issue:
+    provider: github
+    issue_id: 432
+    episode_id: E4-432
+    projection_digest: sha256:6b4f2a8352acf03daf26df8f3b7c4e9d94ade3eda59d39f67882306093aa4dbf
+  origin:
+    plan_id: PLAN-L7-512-project-scoped-memory-root
+    revision: 1
+    digest: sha256:860e09e0646f3f29007833297cfdab14f781a5c862605434746a5fec535844ea
+  reentry:
+    target_plan_id: PLAN-L7-529-project-identity-bootstrap
+    target_revision: 2
+    phase: forward_merge
+  escape_reason: "Issue #432 project identity bootstrap implementation"
 ---
 
 # PLAN-L7-529: setup で tracked project identity を bootstrap する
@@ -407,6 +489,8 @@ grammar 検証) から導かれる。実装 slice でこれらを独立変異と
 | 負系 | junction/symlink/8.3/大小文字/CRLF/BOM/stale copy はいずれも deny または既存正規化で吸収 | いずれかが silent accept になったら Red |
 
 ## 5. Implementation slices (将来の実装 PR)
+
+実装正本は `src/kernel/project-identity.ts` であり、`src/plan-asset/adapters/project-identity-loader.ts` は互換 re-export 境界である。
 
 1. `loadProjectIdentityFromHead` に working tree drift 検査 (§3.1.1)、single-commit binding
    (§3.1.2、`ls-tree`/`show`/receipt再検証をリテラル`HEAD`ではなく解決済みOIDへ切替)、
