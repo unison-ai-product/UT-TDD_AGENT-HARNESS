@@ -1,7 +1,9 @@
 import { execFileSync } from "node:child_process";
 import {
   chmodSync,
+  copyFileSync,
   existsSync,
+  mkdirSync,
   mkdtempSync,
   readdirSync,
   readFileSync,
@@ -10,7 +12,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import * as bootstrap from "../src/runtime/node-bootstrap.ts";
 
@@ -67,6 +69,43 @@ const buildReal = async () => {
   });
   return realGeneration;
 };
+
+function copyFixtureFile(fixtureRoot: string, relativePath: string): void {
+  const target = resolve(fixtureRoot, relativePath);
+  mkdirSync(dirname(target), { recursive: true });
+  copyFileSync(resolve(root, relativePath), target);
+}
+
+function createVerificationFixture(real: bootstrap.NodeGeneration): {
+  root: string;
+  generationPath: string;
+} {
+  const fixtureRoot = mkdtempSync(join(tmpdir(), "ut-tdd-node-verification-"));
+  const files = new Set([
+    "package.json",
+    "package-lock.json",
+    "tsconfig.node.json",
+    "scripts/build-node.mjs",
+    "docs/governance/node-toolchain-provenance.json",
+    ...real.receipt.source_files.map((file) => file.path),
+    ...real.receipt.external_dependencies.flatMap((dependency) => [
+      dependency.package_json_path,
+      ...dependency.bundle_files.map((file) => file.path),
+    ]),
+  ]);
+  for (const file of files) copyFixtureFile(fixtureRoot, file);
+
+  const generationPath = resolve(
+    fixtureRoot,
+    "dist/node-generations",
+    basename(real.generationPath),
+  );
+  mkdirSync(generationPath, { recursive: true });
+  for (const file of ["receipt.json", "ut-tdd.mjs"]) {
+    copyFileSync(resolve(real.generationPath, file), resolve(generationPath, file));
+  }
+  return { root: fixtureRoot, generationPath };
+}
 
 describe("F0b sealed Node producer candidate oracles", () => {
   beforeAll(async () => {
@@ -175,19 +214,21 @@ describe("F0b sealed Node producer candidate oracles", () => {
 
   it("CAND-NODEBOOT-B1 dependency content mutation breaks verification", async () => {
     const real = await buildReal();
+    const fixture = createVerificationFixture(real);
     const dependency = real.receipt.external_dependencies[0] as unknown as {
       bundle_files: Array<{ path: string; sha256: string }>;
     };
     const input = dependency.bundle_files[0];
-    const inputPath = resolve(root, input.path);
+    const inputPath = resolve(fixture.root, input.path);
     const original = readFileSync(inputPath);
     try {
       writeFileSync(inputPath, Buffer.concat([original, Buffer.from("\nmutation\n")]));
-      expect(() => bootstrap.verifyNodeGeneration(root, real.generationPath, candidate)).toThrow(
-        /dependency-(digest|closure)-mismatch/,
-      );
+      expect(() =>
+        bootstrap.verifyNodeGeneration(fixture.root, fixture.generationPath, candidate),
+      ).toThrow(/dependency-(digest|closure)-mismatch/);
     } finally {
       writeFileSync(inputPath, original);
+      rmTestDist(fixture.root);
     }
   });
 
