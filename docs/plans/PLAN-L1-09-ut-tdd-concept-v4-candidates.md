@@ -114,7 +114,7 @@ compile のみを対象にしている。
 
 ### 2.5 参照元の縮退・是正案件からの写像 (issue / merged PR 追突、2026-09-04)
 
-参照元の直近 merged PR と issue を確認した。確認窓は `gh pr list --repo <参照元 repo> --state merged --limit 120 --json number,title,mergedAt` と `gh issue list --repo <参照元 repo> --state all --limit 200 --json number,title,state,labels` の出力 (2026-09-04 実行、各 limit 上限まで返却) であり、repo 名は PO 指示 (2026-09-04) により本文・PR・commit に記載しない。件数はこの limit 窓の上限であって全件数の主張ではない。UT 側の実測痛点と一対一で対応するものを束縛する
+参照元の直近 merged PR と issue を確認した。参照元 repository の識別子は PO 指示 (2026-09-04) により本文書・PR・commit に記載しない (再実行は PO が保持する識別子を `<参照元 repo>` に代入して行う。この節の数値はその条件下でのみ再現し、識別子の秘匿は意図した非再現性である)。確認窓は `gh pr list --repo <参照元 repo> --state merged --limit 120 --json number,title,mergedAt` と `gh issue list --repo <参照元 repo> --state all --limit 200 --json number,title,state,labels` の出力 (2026-09-04 実行、各 limit 上限まで返却) であり、repo 名は PO 指示 (2026-09-04) により本文・PR・commit に記載しない。件数はこの limit 窓の上限であって全件数の主張ではない。UT 側の実測痛点と一対一で対応するものを束縛する
 (新 issue は起こさない。既存 issue の受入条件へ転記する)。
 
 | # | 参照元の解 (要旨) | UT 側の受け皿 | 候補要件 |
