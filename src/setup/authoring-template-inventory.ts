@@ -86,6 +86,27 @@ function validRelativePath(path: string): boolean {
   );
 }
 
+function matchesCanonicalInventoryShape(entry: AuthoringTemplateInventoryEntry): boolean {
+  const expected = AUTHORING_TEMPLATE_INVENTORY.find(
+    (candidate) => candidate.family === entry.family,
+  );
+  if (!expected) return false;
+  if ("sourcePath" in entry) {
+    return (
+      "sourcePath" in expected &&
+      "artifactPath" in expected &&
+      entry.sourcePath === expected.sourcePath &&
+      entry.artifactPath === expected.artifactPath
+    );
+  }
+  return (
+    "sourcePrefix" in expected &&
+    "artifactPrefix" in expected &&
+    entry.sourcePrefix === expected.sourcePrefix &&
+    entry.artifactPrefix === expected.artifactPrefix
+  );
+}
+
 export function validateAuthoringTemplateInventory(
   inventory: readonly AuthoringTemplateInventoryEntry[] = AUTHORING_TEMPLATE_INVENTORY,
 ): AuthoringInventoryValidation {
@@ -114,12 +135,23 @@ export function validateAuthoringTemplateInventory(
   const missingArtifactPaths = [...expectedArtifacts]
     .filter((path) => (artifactCounts.get(path) ?? 0) !== 1)
     .sort();
-  const malformed = inventory.some((entry) =>
-    [
+  const malformed = inventory.some((entry) => {
+    const paths = [
       ...entry.requiredArtifactPaths,
       "sourcePath" in entry ? entry.sourcePath : entry.sourcePrefix,
-    ].some((path) => !validRelativePath(path)),
-  );
+      "artifactPath" in entry ? entry.artifactPath : entry.artifactPrefix,
+    ];
+    if (paths.some((path) => !validRelativePath(path))) return true;
+    if (!matchesCanonicalInventoryShape(entry)) return true;
+    if ("sourcePath" in entry) {
+      return (
+        entry.requiredArtifactPaths.length !== 1 ||
+        entry.requiredArtifactPaths[0] !== entry.artifactPath
+      );
+    }
+    const artifactPrefix = normalized(entry.artifactPrefix);
+    return entry.requiredArtifactPaths.some((path) => !normalized(path).startsWith(artifactPrefix));
+  });
   return Object.freeze({
     ok:
       !malformed &&
@@ -238,11 +270,7 @@ export function validateAuthoringArtifactSet(
     inventory.some((entry) => entry.requiredArtifactPaths.includes(path)),
   );
   const missingArtifactPaths = required.filter((path) => (counts.get(path) ?? 0) !== 1);
-  const unknownArtifactPaths = authoringPaths.filter(
-    (path) =>
-      !required.includes(path) &&
-      inventory.some((entry) => "artifactPath" in entry && isInAuthoringFamilyPath(path, [entry])),
-  );
+  const unknownArtifactPaths = authoringPaths.filter((path) => !required.includes(path));
   return Object.freeze({
     ok:
       sourcePaths.length === 0 &&

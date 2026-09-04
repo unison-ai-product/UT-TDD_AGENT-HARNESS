@@ -162,7 +162,7 @@ describe("Issue #482 canonical Pack authoring inventory", () => {
     });
   });
 
-  it("U-PACKTPL-004/007: Pack-only smoke parses all authoring files and team schema", () => {
+  it("U-PACKTPL-004: Pack-only smoke parses all authoring files and team schema", () => {
     const entries = AUTHORING_TEMPLATE_ARTIFACT_PATHS.map((path) => ({
       path,
       mode: "100644" as const,
@@ -185,5 +185,37 @@ describe("Issue #482 canonical Pack authoring inventory", () => {
       ok: false,
       sourcePaths: [teamSource],
     });
+  });
+
+  it("U-PACKTPL-006: broad docs/templates and .ut-tdd wildcard mutations are denied", () => {
+    const broadDocs = AUTHORING_TEMPLATE_INVENTORY.map((entry, index) =>
+      index === 0 && "sourcePrefix" in entry && "artifactPrefix" in entry
+        ? { ...entry, sourcePrefix: "docs/templates/", artifactPrefix: "docs/templates/" }
+        : entry,
+    );
+    const broadRuntime = AUTHORING_TEMPLATE_INVENTORY.map((entry) =>
+      "sourcePath" in entry
+        ? { ...entry, sourcePath: ".ut-tdd/", artifactPath: "docs/templates/" }
+        : entry,
+    );
+    expect(validateAuthoringTemplateInventory(broadDocs as never).ok).toBe(false);
+    expect(validateAuthoringTemplateInventory(broadRuntime as never).ok).toBe(false);
+  });
+
+  it("U-PACKTPL-007: personal, Bun, and legacy artifact injections are denied", () => {
+    const entries = AUTHORING_TEMPLATE_ARTIFACT_PATHS.map((path) => ({
+      path,
+      mode: "100644" as const,
+      content:
+        path === teamArtifact ? teamBytes : readFileSync(join(process.cwd(), ...path.split("/"))),
+    }));
+    const legacyTemplateName = "he" + "lix";
+    for (const path of [
+      "docs/templates/plan/personal.md",
+      "docs/templates/plan/run-bun.md",
+      `docs/templates/design/${legacyTemplateName}.md`,
+    ]) {
+      expect(inspectPackAuthoringEntries([...entries, { ...entries[0], path }]).ok).toBe(false);
+    }
   });
 });
