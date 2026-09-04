@@ -70,6 +70,7 @@ falsify できれば受入とみなすか」の宣言であり、実行主体・
 | UTV4-AC-064 | FR-052 | 原子 PR に機能変更と refactor を混在させる / 中チケットを refactor ゲート未通過で受入する / refactor チケットが既存 oracle を変更する、または新規機能 oracle を追加する | 順に deny (分割) / deny / deny (behavior-invariant 違反) |
 | UTV4-AC-065 | FR-053 | 閾値超えの projection が無いのに LLM の指摘だけで refactor チケットを発行する / 中の発火条件が閾値超えなのに refactor 原子を compile せず統合 review へ進む / 大の release 審査で退役候補の計測 record を参照しない | 順に deny (finding として保持) / deny / 審査 record 不備で deny |
 | UTV4-AC-066 | FR-054 | 小チケットの PR を author 自身が admission チケット無しに merge する / 参加人数 2 以上で assignee = author の admission チケットを compile する / admitter が成果物を編集して merge する / 1 人運用の self-admission を印無しで記録する | 順に deny / deny (再 assign) / deny (差し戻し) / deny |
+| UTV4-AC-067 | FR-055 | 参加人数 2 以上で中チケットを人間 review record 無しに admission する / 原子に人間 review を必須化する設定を置く / 中の人間 review が結合面ではなく原子の内部実装への差し戻しだけで構成される | 順に deny / deny (介入点の増設、不変条件 9) / finding (結合面 review 不成立) |
 | UTV4-AC-032 | FR-023 | single-provider profile で同 provider の別 session・上位 tier が blind packet で review し receipt を発行する / 同一 session の subagent が review する / receipt に `cross_family` を記録する | 順に: admit され evidence tier は `same_family_separated` / deny / deny (僭称) |
 | UTV4-AC-033 | FR-023 | reviewer session id が author session id と同一、または実在しない session id を持つ receipt / CI が green でない HEAD への verdict | attestation 不成立で deny (typed reason) / deny |
 | UTV4-AC-034 | FR-024 | single-provider profile で高影響境界の merge を人間 review なしに admission する / 利用上限 record なしに hybrid → single-provider へ格下げする / 補償統制の doctor gate が未実装のまま profile を宣言する | いずれも deny |
