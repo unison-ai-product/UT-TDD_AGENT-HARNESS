@@ -167,7 +167,10 @@ import {
 } from "./runtime/provider-handover.ts";
 import { requireRuntimeRepoRoot } from "./runtime/repo-root.ts";
 import { summarizeStagedReview } from "./runtime/review-guard.ts";
-import { NodeOnlyProcessObserver } from "./runtime/runtime-image-observer.ts";
+import {
+  classifyRuntimeImageProcess,
+  NodeOnlyProcessObserver,
+} from "./runtime/runtime-image-observer.ts";
 import {
   dispatch,
   nodeDeps,
@@ -3485,6 +3488,7 @@ audit
           }),
           processObservations: observer.snapshot(),
           observedScopes: ["status", "doctor", "test", "hook", "descendant", "download"],
+          classifyProcess: classifyRuntimeImageProcess,
         });
         if (opts.receipt)
           writeFileSync(

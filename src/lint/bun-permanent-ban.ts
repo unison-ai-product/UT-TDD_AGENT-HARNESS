@@ -4,13 +4,6 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import { parse as parseYaml } from "yaml";
 import { z } from "zod";
-import {
-  classifyRuntimeImageProcess,
-  missingRuntimeImageScopes,
-  RUNTIME_IMAGE_SCOPES,
-  type RuntimeImageProcessObservation,
-  type RuntimeImageScope,
-} from "../runtime/runtime-image-observer.ts";
 import { analyzeGithubCiPolicy, type GithubWorkflowDoc } from "./github-ci-policy.ts";
 import {
   admitNodeGenerationAggregate,
@@ -109,7 +102,22 @@ const nodeBanAuditReceiptSchema = z
 export type NodeBanCandidateId = z.infer<typeof nodeBanCandidateIdSchema>;
 export type NodeBanCoverage = z.infer<typeof nodeBanCoverageSchema>;
 export type NodeBanFinding = z.infer<typeof nodeBanFindingSchema>;
-export type NodeBanProcessObservation = RuntimeImageProcessObservation;
+export type NodeBanRuntimeScope = "status" | "doctor" | "test" | "hook" | "descendant" | "download";
+export interface NodeBanProcessObservation {
+  readonly scope: NodeBanRuntimeScope;
+  readonly mode: "invocation" | "absence";
+  readonly command: string;
+  readonly args: readonly string[];
+  readonly shell: boolean;
+  readonly outcome: "allowed" | "blocked";
+  readonly spawned: boolean;
+  readonly reason: string;
+}
+export type NodeBanProcessClassifier = (
+  command: string,
+  args: readonly string[],
+  shell: boolean,
+) => string;
 export type NodeBanAuditReceipt = z.infer<typeof nodeBanAuditReceiptSchema>;
 
 export const NODE_BAN_CANDIDATE_IDS = [
@@ -119,6 +127,15 @@ export const NODE_BAN_CANDIDATE_IDS = [
   "CAND-NODEBOOT-203",
   "CAND-NODEBOOT-204",
 ] as const satisfies readonly NodeBanCandidateId[];
+
+const NODE_BAN_RUNTIME_SCOPES: readonly NodeBanRuntimeScope[] = [
+  "status",
+  "doctor",
+  "test",
+  "hook",
+  "descendant",
+  "download",
+];
 
 const REVISION = /^[0-9a-f]{40}$/;
 const DIGEST = /^sha256:[0-9a-f]{64}$/;
@@ -222,7 +239,9 @@ export interface NodeBanAuditInput {
   readonly documents?: NodeBanDocuments;
   readonly f0cLanes: readonly NodeGenerationCiEvidence[];
   readonly processObservations: readonly NodeBanProcessObservation[];
-  readonly observedScopes: readonly RuntimeImageScope[];
+  readonly observedScopes: readonly NodeBanRuntimeScope[];
+  /** Runtime-specific classification is injected at the composition boundary. */
+  readonly classifyProcess: NodeBanProcessClassifier;
 }
 
 export interface NodeBanAuditResult {
@@ -258,13 +277,13 @@ function normalizePath(path: string): string {
   return path.replaceAll("\\", "/");
 }
 
-function finding(
-  detector: NodeBanFinding["detector"],
-  path: string,
-  rule: string,
-  detail: string,
-): NodeBanFinding {
-  return { detector, path: normalizePath(path), rule, detail };
+function finding(input: {
+  detector: NodeBanFinding["detector"];
+  path: string;
+  rule: string;
+  detail: string;
+}): NodeBanFinding {
+  return { ...input, path: normalizePath(input.path) };
 }
 
 function uniqueFindings(values: readonly NodeBanFinding[]): NodeBanFinding[] {
@@ -366,14 +385,24 @@ export function collectNodeBanFindings(documents: NodeBanDocuments): NodeBanFind
   for (const violation of analyzeRuntimePortability([...documents.runtime]).violations) {
     if (violation.rule.toLowerCase().includes("bun")) {
       findings.push(
-        finding("runtime-portability", violation.path, violation.rule, violation.message),
+        finding({
+          detector: "runtime-portability",
+          path: violation.path,
+          rule: violation.rule,
+          detail: violation.message,
+        }),
       );
     }
   }
   for (const violation of analyzeGithubCiPolicy([...documents.workflows]).violations) {
     if (violation.reason === "forbidden_bun_execution") {
       findings.push(
-        finding("github-ci-policy", violation.file, violation.reason, violation.detail),
+        finding({
+          detector: "github-ci-policy",
+          path: violation.file,
+          rule: violation.reason,
+          detail: violation.detail,
+        }),
       );
     }
   }
@@ -381,18 +410,25 @@ export function collectNodeBanFindings(documents: NodeBanDocuments): NodeBanFind
   for (const violation of drift.forbiddenMarkers) {
     if (violation.marker.toLowerCase().includes("bun")) {
       findings.push(
-        finding(
-          "rule-drift",
-          violation.file,
-          violation.marker,
-          "forbidden Bun execution instruction",
-        ),
+        finding({
+          detector: "rule-drift",
+          path: violation.file,
+          rule: violation.marker,
+          detail: "forbidden Bun execution instruction",
+        }),
       );
     }
   }
   for (const violation of analyzeToolchainPin(documents.toolchain).violations) {
     if (violation.rule.toLowerCase().includes("bun")) {
-      findings.push(finding("toolchain-pin", "package.json", violation.rule, violation.detail));
+      findings.push(
+        finding({
+          detector: "toolchain-pin",
+          path: "package.json",
+          rule: violation.rule,
+          detail: violation.detail,
+        }),
+      );
     }
   }
   return uniqueFindings(findings);
@@ -466,7 +502,7 @@ function validateObservationCoverage(input: NodeBanAuditInput): void {
   const declaredScopes = new Set(input.observedScopes);
   if (
     input.observedScopes.length !== declaredScopes.size ||
-    input.observedScopes.some((scope) => !RUNTIME_IMAGE_SCOPES.includes(scope)) ||
+    input.observedScopes.some((scope) => !NODE_BAN_RUNTIME_SCOPES.includes(scope)) ||
     input.processObservations.length !== observedFromEvidence.size ||
     observedFromEvidence.size !== declaredScopes.size ||
     [...observedFromEvidence].some((scope) => !declaredScopes.has(scope))
@@ -477,7 +513,7 @@ function validateObservationCoverage(input: NodeBanAuditInput): void {
 function coverage(
   documents: NodeBanDocuments,
   observations: readonly NodeBanProcessObservation[],
-  observedScopes: readonly RuntimeImageScope[],
+  observedScopes: readonly NodeBanRuntimeScope[],
 ): NodeBanCoverage {
   const toolchainFiles = [
     documents.toolchain.packageJson,
@@ -500,7 +536,11 @@ function coverage(
   if (toolchainFiles < 3) gaps.push("toolchain-files");
   if (observations.length === 0) gaps.push("process-observations");
   if (!parseDebtBaseline(documents.debtBaseline)) gaps.push("debt-baseline");
-  gaps.push(...missingRuntimeImageScopes(observedScopes).map((scope) => `runtime-image:${scope}`));
+  gaps.push(
+    ...NODE_BAN_RUNTIME_SCOPES.filter((scope) => !new Set(observedScopes).has(scope)).map(
+      (scope) => `runtime-image:${scope}`,
+    ),
+  );
   return {
     runtime_files: documents.runtime.length,
     workflow_files: documents.workflows.length,
@@ -511,44 +551,43 @@ function coverage(
   };
 }
 
-function processFindings(observations: readonly NodeBanProcessObservation[]): NodeBanFinding[] {
+function processFindings(
+  observations: readonly NodeBanProcessObservation[],
+  classifyProcess: NodeBanProcessClassifier,
+): NodeBanFinding[] {
   return observations.flatMap((observation) => {
     if (observation.mode === "absence") {
       if (observation.scope !== "descendant" && observation.scope !== "download") {
         return [
-          finding(
-            "process-observer",
-            observation.scope,
-            "invalid-absence-proof",
-            "absence proof is only valid for descendant/download ports",
-          ),
+          finding({
+            detector: "process-observer",
+            path: observation.scope,
+            rule: "invalid-absence-proof",
+            detail: "absence proof is only valid for descendant/download ports",
+          }),
         ];
       }
       return observation.spawned || observation.outcome !== "allowed"
         ? [
-            finding(
-              "process-observer",
-              observation.scope,
-              "forbidden-process-execution",
-              `absence proof violated; spawned=${observation.spawned}`,
-            ),
+            finding({
+              detector: "process-observer",
+              path: observation.scope,
+              rule: "forbidden-process-execution",
+              detail: `absence proof violated; spawned=${observation.spawned}`,
+            }),
           ]
         : [];
     }
-    const reason = classifyRuntimeImageProcess(
-      observation.command,
-      observation.args,
-      observation.shell,
-    );
+    const reason = classifyProcess(observation.command, observation.args, observation.shell);
     const expected = reason === "node-only" ? "allowed" : "blocked";
     if (observation.outcome !== expected || (observation.spawned && expected === "blocked")) {
       return [
-        finding(
-          "process-observer",
-          observation.command,
-          "forbidden-process-execution",
-          `${reason}; spawned=${observation.spawned}`,
-        ),
+        finding({
+          detector: "process-observer",
+          path: observation.command,
+          rule: "forbidden-process-execution",
+          detail: `${reason}; spawned=${observation.spawned}`,
+        }),
       ];
     }
     return [];
@@ -581,7 +620,7 @@ function makeReceipt(input: NodeBanAuditInput, documents: NodeBanDocuments): Nod
     debt_inventory_digest: sha256(stable(baseline?.inventory ?? [])),
     findings: uniqueFindings([
       ...collectNodeBanFindings(documents),
-      ...processFindings(observations),
+      ...processFindings(observations, input.classifyProcess),
     ]),
     process_observations: observations,
   };
@@ -614,7 +653,10 @@ export function runNodeBanAudit(input: NodeBanAuditInput): NodeBanAuditResult {
 
 export function verifyNodeBanAuditReceipt(
   value: unknown,
-  expected: Pick<NodeBanAuditInput, "subjectRevision" | "f0c" | "node" | "f0cLanes">,
+  expected: Pick<
+    NodeBanAuditInput,
+    "subjectRevision" | "f0c" | "node" | "f0cLanes" | "classifyProcess"
+  >,
 ): NodeBanAuditReceipt {
   const receipt = nodeBanAuditReceiptSchema.parse(value);
   try {
@@ -626,6 +668,7 @@ export function verifyNodeBanAuditReceipt(
       f0cLanes: expected.f0cLanes,
       processObservations: [],
       observedScopes: ["status"],
+      classifyProcess: expected.classifyProcess,
     });
   } catch {
     throw new NodeBanAuditError("q0-receipt-binding-mismatch");
@@ -655,7 +698,8 @@ export function verifyNodeBanAuditReceipt(
   )
     throw new NodeBanAuditError("q0-process-coverage-mismatch");
   const expectedQualification =
-    receipt.findings.length > 0 || processFindings(receipt.process_observations).length > 0
+    receipt.findings.length > 0 ||
+    processFindings(receipt.process_observations, expected.classifyProcess).length > 0
       ? "non_compliant"
       : receipt.debt_inventory_count > 0
         ? "non_compliant"

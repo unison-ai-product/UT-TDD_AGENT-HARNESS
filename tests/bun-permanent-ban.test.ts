@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   collectNodeBanFindings,
@@ -9,7 +10,11 @@ import {
   runNodeBanAudit as runNodeBanAuditBase,
   verifyNodeBanAuditReceipt,
 } from "../src/lint/bun-permanent-ban.ts";
-import { NodeOnlyProcessObserver } from "../src/runtime/runtime-image-observer.ts";
+import {
+  classifyRuntimeImageProcess,
+  NodeOnlyProcessObserver,
+} from "../src/runtime/runtime-image-observer.ts";
+import { workspaceRead } from "./support/workspace-roots.ts";
 
 const subjectRevision = "a".repeat(40);
 const artifactDigest = `sha256:${"b".repeat(64)}`;
@@ -75,12 +80,16 @@ const completeRuntimeObservations = () => {
   return observer.snapshot();
 };
 const runNodeBanAudit = (
-  input: Omit<Parameters<typeof runNodeBanAuditBase>[0], "f0cLanes" | "observedScopes"> &
+  input: Omit<
+    Parameters<typeof runNodeBanAuditBase>[0],
+    "f0cLanes" | "observedScopes" | "classifyProcess"
+  > &
     Partial<Pick<Parameters<typeof runNodeBanAuditBase>[0], "f0cLanes" | "observedScopes">>,
 ) =>
   runNodeBanAuditBase({
     ...input,
     f0cLanes: input.f0cLanes ?? f0cLanes,
+    classifyProcess: classifyRuntimeImageProcess,
     observedScopes: input.observedScopes ?? [
       ...new Set(input.processObservations.map((observation) => observation.scope)),
     ],
@@ -173,6 +182,7 @@ describe("Q0 Node-only Bun qualification", () => {
         f0cLanes: [{ ...f0cLanes[0], generation_id: "node-ci-other" }, f0cLanes[1]],
         processObservations: [nodeObservation()],
         observedScopes: ["status"],
+        classifyProcess: classifyRuntimeImageProcess,
       }),
     ).toThrow("q0-f0c-lane-evidence-generation-mismatch");
     expect(() =>
@@ -185,6 +195,7 @@ describe("Q0 Node-only Bun qualification", () => {
         f0cLanes: [{ ...f0cLanes[0], sealed_generation_id: f0c.generation_id }, f0cLanes[1]],
         processObservations: [nodeObservation()],
         observedScopes: ["status"],
+        classifyProcess: classifyRuntimeImageProcess,
       }),
     ).toThrow("q0-f0c-sealed-generation-conflated");
   });
@@ -197,8 +208,14 @@ describe("Q0 Node-only Bun qualification", () => {
         runtime: [{ path: "src/probe.ts", text: `spawnSync("${["bu", "n"].join("")}", args);` }],
       }).some((item) => item.detector === "runtime-portability"),
     ).toBe(true);
+    const fixtureRoot = workspaceRead({
+      id: "q0-bun-ban-pack-template",
+      mode: "isolated_fixture",
+      reason: "Q0のPack CI検出oracleを実行スナップショット上のfixtureへ束縛するため",
+      root: process.cwd(),
+    });
     const packTemplate = readFileSync(
-      "docs/templates/github/common/pack-harness-check.yml",
+      join(fixtureRoot, "docs", "templates", "github", "common", "pack-harness-check.yml"),
       "utf8",
     ).replace("node .ut-tdd/bin/ut-tdd.mjs", "bun run .ut-tdd/bin/ut-tdd.mjs");
     expect(
@@ -261,7 +278,13 @@ describe("Q0 Node-only Bun qualification", () => {
     });
     expect(result.receipt.qualification).toBe("qualified");
     expect(
-      verifyNodeBanAuditReceipt(result.receipt, { subjectRevision, f0c, node, f0cLanes }),
+      verifyNodeBanAuditReceipt(result.receipt, {
+        subjectRevision,
+        f0c,
+        node,
+        f0cLanes,
+        classifyProcess: classifyRuntimeImageProcess,
+      }),
     ).toEqual(result.receipt);
     expect(() =>
       verifyNodeBanAuditReceipt(result.receipt, {
@@ -269,12 +292,13 @@ describe("Q0 Node-only Bun qualification", () => {
         f0c: { ...f0c, subject_revision: "c".repeat(40) },
         node,
         f0cLanes,
+        classifyProcess: classifyRuntimeImageProcess,
       }),
     ).toThrow("q0-receipt-binding-mismatch");
     expect(() =>
       verifyNodeBanAuditReceipt(
         { ...result.receipt, node_artifact_digest: `sha256:${"c".repeat(64)}` },
-        { subjectRevision, f0c, node, f0cLanes },
+        { subjectRevision, f0c, node, f0cLanes, classifyProcess: classifyRuntimeImageProcess },
       ),
     ).toThrow(NodeBanAuditError);
     expect(() =>
@@ -283,7 +307,7 @@ describe("Q0 Node-only Bun qualification", () => {
           ...result.receipt,
           findings: [{ detector: "process-observer", path: "bun", rule: "x", detail: "x" }],
         },
-        { subjectRevision, f0c, node, f0cLanes },
+        { subjectRevision, f0c, node, f0cLanes, classifyProcess: classifyRuntimeImageProcess },
       ),
     ).toThrow(/digest/);
   });
