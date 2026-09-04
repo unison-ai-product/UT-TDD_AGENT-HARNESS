@@ -373,7 +373,7 @@ PO 指示: 「依存グラフや画面遷移などを機械的に可視化する
 ことの齟齬を減らす。DB テーブルはスプシと相性がよい」。
 
 採択: 図 (依存グラフ / 画面遷移 / ER・テーブル / チケット入れ子) は record からの決定的 generated view とし、生成元 id・revision・
-digest を刻む (BR-026 / FR-046 / AC-058)。テーブル定義はスプシ同期 view を正本 view にし ER 図を派生させる。人間側の図・スプシ編集は
+digest を刻む (BR-026 / FR-046 / AC-058)。テーブル定義の正本は schema record で、スプシ同期 view と ER 図はそこから生成する。人間側の図・スプシ編集は
 discrepancy record として diff し admission で戻す、diagram drift は doctor fail-close (FR-047 / AC-059)。起点は現行 harness.db の
 `graph_nodes` / `dependency_edges` と docs の mermaid 描画 (実測: 2026-07-28 の PLAN-L6-94 / L7-465 重複見逃しは projection 鮮度が
 原因であり、図の鮮度を fail-close にする根拠)。非採用: 手描き図・画像の正本化、層ごとの独自描画器。
