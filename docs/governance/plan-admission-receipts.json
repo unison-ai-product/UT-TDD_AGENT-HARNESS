@@ -2708,7 +2708,103 @@
     {
       "sequence": 170,
       "previous_record_digest": "sha256:e8a8ef530c585c98c968f0bdbbd93af1e0257f23061f55fec1e3b3a3cf1a2aac",
-      "record_digest": "sha256:0d751c7dbba5bd7e3b1a21a91f95aafa52b8cb73f18184f293b3c86b3cceea74",
+      "record_digest": "sha256:995da438c28ca822b93817a21c18da90200405ffeebf2c07537a5ceefc064466",
+      "command_id": "command:issue528-plan512-revise-v2",
+      "receipt_id": "certificate:cad3e43241013b6585603726a8399246",
+      "receipt_digest": "sha256:24bc489c7aaf24b0e3db90db3ffea87a2d8c477d81c66d8e32ae8c0f6caa5333",
+      "decision_digest": "sha256:15a4d9ec3b5de82cebb58a79d2debab95c077594b437a389cb54145427eac455",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-512-project-scoped-memory-root.md",
+        "plan_id": "PLAN-L7-512-project-scoped-memory-root",
+        "asset_id": "plan:legacy:68706e293ae2c96738a8e3263bac3e01e7cde64cdb7c3ed8e53805922662bc30",
+        "revision": 2,
+        "content_digest": "sha256:87e75d757bcb42cba954be878bbc421a4241eb09e9aadc7297548821b08465db"
+      }
+    },
+    {
+      "sequence": 171,
+      "previous_record_digest": "sha256:995da438c28ca822b93817a21c18da90200405ffeebf2c07537a5ceefc064466",
+      "record_digest": "sha256:84378144bfa3a5cc3a66205124e51c9fd46a1a01a7e241a09da6567834b18dbc",
+      "command_id": "command:issue528-reverse512-revise-v1",
+      "receipt_id": "certificate:af26c09e9a4731417a8de05321a8baa2",
+      "receipt_digest": "sha256:4e55c449027d1df03cbd8ceb867950c78657bd773b83ed23d582c244bd845d62",
+      "decision_digest": "sha256:df7b26128a2bd0f185b87edd613f6eedd0b272f473f23bc5b64d8f169270fbd5",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-512-project-scoped-memory-root-backfill.md",
+        "plan_id": "PLAN-REVERSE-512-project-scoped-memory-root-backfill",
+        "asset_id": "plan:legacy:186048a954aa8dae7b4f8b1f968f6c5d64d758850fa695ed59a11edcdcf63153",
+        "revision": 2,
+        "content_digest": "sha256:fe71ea8093a46da9d84defdf3655ca301415590724a5136130a715f0bb965cab"
+      }
+    },
+    {
+      "sequence": 172,
+      "previous_record_digest": "sha256:84378144bfa3a5cc3a66205124e51c9fd46a1a01a7e241a09da6567834b18dbc",
+      "record_digest": "sha256:477698f51367b4638a0888bcc32e3a3001f9a820fccbbc26e4ac649437bf324d",
+      "command_id": "command:issue528-PLAN-L7-512-project-scoped-memory-root-verified-evidence-r3",
+      "receipt_id": "certificate:a6de387d04018dfd126a7a656d159fdc",
+      "receipt_digest": "sha256:f1b6f4c730e7d5460ffead3e5691cd9b8172c0576c520edb01e39cd3ced673fc",
+      "decision_digest": "sha256:90218c81971644f32fa5843f460777d06b521ffd991e749c481cf0e10853e8f7",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-512-project-scoped-memory-root.md",
+        "plan_id": "PLAN-L7-512-project-scoped-memory-root",
+        "asset_id": "plan:legacy:68706e293ae2c96738a8e3263bac3e01e7cde64cdb7c3ed8e53805922662bc30",
+        "revision": 3,
+        "content_digest": "sha256:ed94d33b6879c4eded974aea8a22f537ef2dfda948d19c1172f68de4c1058674"
+      }
+    },
+    {
+      "sequence": 173,
+      "previous_record_digest": "sha256:477698f51367b4638a0888bcc32e3a3001f9a820fccbbc26e4ac649437bf324d",
+      "record_digest": "sha256:0ef8f4c72162f807c6396492a6c3c1a12d846e01593b245b602d22e424240378",
+      "command_id": "command:issue528-PLAN-REVERSE-512-project-scoped-memory-root-backfill-verified-evidence-r3",
+      "receipt_id": "certificate:e2ec6823bd7b2e1821077b8c3e49dbaf",
+      "receipt_digest": "sha256:de30a162e85580fe79555db5b28244fb4a3cb42562b0fc4a6aa3259a547d2737",
+      "decision_digest": "sha256:1d20c32ec9c1cbf4b5742b2bd3657b78354ccdc716730b2f5cceaeed4043a4e5",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-512-project-scoped-memory-root-backfill.md",
+        "plan_id": "PLAN-REVERSE-512-project-scoped-memory-root-backfill",
+        "asset_id": "plan:legacy:186048a954aa8dae7b4f8b1f968f6c5d64d758850fa695ed59a11edcdcf63153",
+        "revision": 3,
+        "content_digest": "sha256:acdb552b2c1bffd50ebd7cac99fe37200ba11ac8b1075451964844fafa11b7ef"
+      }
+    },
+    {
+      "sequence": 174,
+      "previous_record_digest": "sha256:0ef8f4c72162f807c6396492a6c3c1a12d846e01593b245b602d22e424240378",
+      "record_digest": "sha256:93212a617a9edbf33769696327aa2ab655a184a5a52565d94095cb565f6e0969",
+      "command_id": "command:issue528-PLAN-L7-512-project-scoped-memory-root-measured-evidence-r4",
+      "receipt_id": "certificate:a6c2b9d4814e28377724d4ba777ce544",
+      "receipt_digest": "sha256:ba1fe86a2b9a6f65aae4b5c0ae45242b4d63ce1866be672233ed23256440703f",
+      "decision_digest": "sha256:7bc152f052d22aaf3e288664eb9c223a9e7a649bf66b1fdfd0af3827934f83c5",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-512-project-scoped-memory-root.md",
+        "plan_id": "PLAN-L7-512-project-scoped-memory-root",
+        "asset_id": "plan:legacy:68706e293ae2c96738a8e3263bac3e01e7cde64cdb7c3ed8e53805922662bc30",
+        "revision": 4,
+        "content_digest": "sha256:01416a9390b1c135ada280e088d68acaa668c5ca75a3a77a9a9ec93557a42d26"
+      }
+    },
+    {
+      "sequence": 175,
+      "previous_record_digest": "sha256:93212a617a9edbf33769696327aa2ab655a184a5a52565d94095cb565f6e0969",
+      "record_digest": "sha256:e3af294c02df8dff6bbcc00fafd1b99046fcaff2b3482b8db4c04e4d919543cd",
+      "command_id": "command:issue528-PLAN-REVERSE-512-project-scoped-memory-root-backfill-measured-evidence-r4",
+      "receipt_id": "certificate:b144dbc4071397e7a08e6c3d2890df13",
+      "receipt_digest": "sha256:235d05611522f192059eb3cdc878cce26f107d3e08d139d9a71b979373a5748c",
+      "decision_digest": "sha256:c19d176832c0590480ff8dbd004653dd6bd9d9e3acb78c2a21b33a725ce88a1c",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-512-project-scoped-memory-root-backfill.md",
+        "plan_id": "PLAN-REVERSE-512-project-scoped-memory-root-backfill",
+        "asset_id": "plan:legacy:186048a954aa8dae7b4f8b1f968f6c5d64d758850fa695ed59a11edcdcf63153",
+        "revision": 4,
+        "content_digest": "sha256:26af6d2a049206593f61fe4cc118a663ddf6d5a3bb73331101400c68b11aaefb"
+      }
+    },
+    {
+      "sequence": 176,
+      "previous_record_digest": "sha256:e3af294c02df8dff6bbcc00fafd1b99046fcaff2b3482b8db4c04e4d919543cd",
+      "record_digest": "sha256:e89ad0d8806b4600f1f64a612d263ceb77fdf118bee31fe6fe503fb5234d0e30",
       "command_id": "command:issue420-runtime-adapter-contract-r2",
       "receipt_id": "certificate:124b99afd5c1153fe417904c46ef61b5",
       "receipt_digest": "sha256:325e33dbd6ac44e5177ef541ab03d19b0beecb4f81550aec37c44f2a0e12bf53",
@@ -2722,9 +2818,9 @@
       }
     },
     {
-      "sequence": 171,
-      "previous_record_digest": "sha256:0d751c7dbba5bd7e3b1a21a91f95aafa52b8cb73f18184f293b3c86b3cceea74",
-      "record_digest": "sha256:c5f43bc48c2110975b676b8e38a6f47ed9fc65a81e44286a465b00a39f703f4f",
+      "sequence": 177,
+      "previous_record_digest": "sha256:e89ad0d8806b4600f1f64a612d263ceb77fdf118bee31fe6fe503fb5234d0e30",
+      "record_digest": "sha256:06ceb2a3e6bb6df7e2098b4200ea23797af21f5b34753705ca1ef65c4a30c695",
       "command_id": "command:issue420-runtime-adapter-reverse-r2",
       "receipt_id": "certificate:06bbea24c08322700c8a3b17d6684aca",
       "receipt_digest": "sha256:5b509fb468194269e01b6795b2861ef6f5b72dfd64dd87a3f816c51ff70c331a",
@@ -2738,9 +2834,9 @@
       }
     },
     {
-      "sequence": 172,
-      "previous_record_digest": "sha256:c5f43bc48c2110975b676b8e38a6f47ed9fc65a81e44286a465b00a39f703f4f",
-      "record_digest": "sha256:9ec567918659ac13af1fe4105c0e91ad7a501ced812222c24cd1ecd2a57bc7f3",
+      "sequence": 178,
+      "previous_record_digest": "sha256:06ceb2a3e6bb6df7e2098b4200ea23797af21f5b34753705ca1ef65c4a30c695",
+      "record_digest": "sha256:b02a5e6ce5cc11519f79bd8bc5b432c9dee6bd452e8079f6181d56ca7efe011f",
       "command_id": "command:issue420-runtime-adapter-contract-r3",
       "receipt_id": "certificate:0d62778d31373c2ebccbb367598a9ae2",
       "receipt_digest": "sha256:7dee72cfe7c9926a417c8c1e4662d2495253f424fe479082ca7a003c1588d8f3",

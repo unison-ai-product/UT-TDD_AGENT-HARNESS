@@ -1,6 +1,12 @@
 import { lstatSync, readFileSync } from "node:fs";
 import { isAbsolute, normalize, resolve } from "node:path";
-import type { ClaudeReviewInboxEntry } from "../runtime/claude-memory-wake.ts";
+import type {
+  ClaudeProviderReviewInboxEntry,
+  ClaudeReviewInboxEntry,
+} from "../runtime/claude-memory-wake.ts";
+
+type ClaudeReviewEnvelopeEntry = ClaudeReviewInboxEntry | ClaudeProviderReviewInboxEntry;
+
 import type {
   ReviewAttestation,
   ReviewAttestationRequest,
@@ -122,7 +128,7 @@ function exactKeys(value: object, keys: readonly string[]): boolean {
 /** Load only the canonical request named by the v3 envelope; never infer identity from task prose. */
 export function loadCanonicalLiveReviewRequest(input: {
   repoRoot: string;
-  envelope: ClaudeReviewInboxEntry;
+  envelope: ClaudeReviewEnvelopeEntry;
 }): ReviewAttestationRequest | null {
   const canonical = resolve(
     input.repoRoot,
@@ -172,7 +178,7 @@ export function loadCanonicalLiveReviewRequest(input: {
 
 export function consumeLiveReview(input: {
   repoRoot: string;
-  envelope: ClaudeReviewInboxEntry;
+  envelope: ClaudeReviewEnvelopeEntry;
   ports: LiveReviewConsumerPorts;
 }): LiveReviewVerdictResult {
   const request = loadCanonicalLiveReviewRequest(input);

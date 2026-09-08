@@ -198,7 +198,11 @@ describe("project-scoped Memory routing integration (PLAN-L7-512 Slice 2)", () =
       repoRoot: () => linked,
       providerAvailable: () => true,
       validateReviewSubject: () => ({ ok: true }),
-      resolveWakeTarget: () => ({ ok: true, workspaceId: claudeWorkspaceId(linked) }),
+      resolveWakeTarget: () => ({
+        ok: true,
+        workspaceId: claudeWorkspaceId(linked),
+        sessionId: "claude-session",
+      }),
     });
     const originalWrite = process.stdout.write;
     const originalExitCode = process.exitCode;
