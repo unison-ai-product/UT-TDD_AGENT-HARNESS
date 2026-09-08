@@ -15,18 +15,25 @@ import { describe, expect, it } from "vitest";
 import type { MemoryEntry } from "../src/memory/index.ts";
 import {
   buildClaudeInboxEntry,
+  buildClaudeProviderInboxEntry,
+  buildClaudeProviderReviewInboxEntry,
   buildClaudeReviewInboxEntry,
   CLAUDE_INBOX_SCHEMA,
   CLAUDE_WAKE_GENERATION_SCHEMA,
   claudeWorkspaceId,
+  computeClaudeProviderEntryId,
+  computeClaudeProviderEnvelopeDigest,
   isClaudeMemoryWakeTarget,
   publishClaudeInboxEntry,
   renderClaudeWakeMessage,
   resolveClaudeWakeDelay,
   resolveLiveClaudeWorkspace,
   summarizeUnclaimedInbox,
+  validateClaudeProviderEnvelope,
   waitForClaudeMemory,
 } from "../src/runtime/claude-memory-wake.ts";
+import { resolveProjectMemoryRoot } from "../src/runtime/project-memory-root.ts";
+import { ensureTrackedProjectIdentity } from "./support/project-identity-fixture.ts";
 
 const memory: MemoryEntry = {
   memory_id: "memory:project:review-218",
@@ -46,11 +53,165 @@ function inboxFileStem(entryId: string): string {
 
 function fixture(): string {
   const root = mkdtempSync(join(tmpdir(), "ut-tdd-claude-wake-"));
-  execFileSync("git", ["init", "-q"], { cwd: root });
+  ensureTrackedProjectIdentity(root, "fixture/claude-memory-wake");
   return root;
 }
 
+function wakeRuntimeRoot(root: string): string {
+  const project = resolveProjectMemoryRoot(root);
+  if (!project.ok) throw new Error(project.reason);
+  return join(project.runtimeBusRoot, "claude-memory-wake");
+}
+
 describe("Claude HARNESS memory async wake", () => {
+  it("U-PMEMROOT-007: provider envelope rejects each binding axis independently", async () => {
+    const root = fixture();
+    try {
+      const project = resolveProjectMemoryRoot(root);
+      if (!project.ok) throw new Error(project.reason);
+      const entry = buildClaudeProviderInboxEntry({
+        memory,
+        projectId: project.projectId,
+        operationId: "pmemroot-007",
+        workspaceId: claudeWorkspaceId(root),
+        producer: { provider: "codex", sessionId: "codex-session" },
+        target: { scope: "session", provider: "claude", sessionId: "claude-session" },
+      });
+      const expected = {
+        projectId: project.projectId,
+        memoryId: memory.memory_id,
+        operationId: "pmemroot-007",
+        producer: { provider: "codex" as const, sessionId: "codex-session" },
+        target: {
+          scope: "session" as const,
+          provider: "claude" as const,
+          sessionId: "claude-session",
+        },
+      };
+      const mutations = [
+        ["project_id", { ...entry, projectId: "foreign/project" }],
+        ["memory_id", { ...entry, memoryId: "memory:project:foreign" }],
+        ["operation_id", { ...entry, operationId: "different-operation" }],
+        [
+          "producer_provider",
+          { ...entry, producer: { ...entry.producer, provider: "claude" as const } },
+        ],
+        [
+          "producer_session",
+          { ...entry, producer: { ...entry.producer, sessionId: "other-producer" } },
+        ],
+        ["target_provider", { ...entry, target: { ...entry.target, provider: "codex" as const } }],
+        ["target_session", { ...entry, target: { ...entry.target, sessionId: "other-target" } }],
+      ] as const;
+      let entryPath = publishClaudeInboxEntry(root, entry);
+      const bindingPath = join(
+        wakeRuntimeRoot(root),
+        "envelope-bindings",
+        `${inboxFileStem(entry.id)}.json`,
+      );
+      expect(existsSync(bindingPath)).toBe(true);
+      for (const [axis, mutated] of mutations) {
+        const reboundFields = {
+          ...mutated,
+          envelopeDigest: computeClaudeProviderEnvelopeDigest(mutated),
+        };
+        const rebound = {
+          ...reboundFields,
+          // Keep the immutable inbox filename stable so the consumer reaches
+          // the publisher-owned sidecar and reports the semantic axis.
+          id: entry.id,
+        };
+        const result = validateClaudeProviderEnvelope(rebound, expected);
+        expect(result.ok, axis).toBe(false);
+        if (!result.ok) expect(result.reason, axis).toBe(`${axis}_mismatch`);
+        rmSync(entryPath);
+        entryPath = join(wakeRuntimeRoot(root), "inbox", `${inboxFileStem(entry.id)}.json`);
+        writeFileSync(entryPath, `${JSON.stringify(rebound)}\n`, "utf8");
+        const wake = await waitForClaudeMemory({
+          repoRoot: root,
+          sessionId: "claude-session",
+          provider: "claude",
+          pollIntervalMs: 10,
+          maxWaitMs: 30,
+        });
+        expect(wake.kind, axis).toBe("denied");
+        expect(wake.reason, axis).toBe(`${axis}_mismatch`);
+        expect(existsSync(entryPath), axis).toBe(true);
+        expect(
+          existsSync(join(wakeRuntimeRoot(root), `${inboxFileStem(rebound.id)}.claim`)),
+          axis,
+        ).toBe(false);
+        expect(existsSync(bindingPath), axis).toBe(true);
+      }
+      const spoofFields = {
+        ...entry,
+        memoryId: "memory:project:spoofed",
+      };
+      const spoof = {
+        ...spoofFields,
+        envelopeDigest: computeClaudeProviderEnvelopeDigest(spoofFields),
+      };
+      spoof.id = computeClaudeProviderEntryId(spoof);
+      rmSync(entryPath);
+      const spoofPath = join(wakeRuntimeRoot(root), "inbox", `${inboxFileStem(spoof.id)}.json`);
+      writeFileSync(spoofPath, `${JSON.stringify(spoof)}\n`, "utf8");
+      const spoofWake = await waitForClaudeMemory({
+        repoRoot: root,
+        sessionId: "claude-session",
+        provider: "claude",
+        pollIntervalMs: 10,
+        maxWaitMs: 30,
+      });
+      expect(spoofWake.kind).toBe("denied");
+      expect(spoofWake.reason).toBe("envelope_binding_missing");
+      expect(existsSync(spoofPath)).toBe(true);
+      expect(existsSync(bindingPath)).toBe(true);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("U-PMEMROOT-007 review composition: v4 review claims through the same guard", async () => {
+    const root = fixture();
+    try {
+      const project = resolveProjectMemoryRoot(root);
+      if (!project.ok) throw new Error(project.reason);
+      const digest = "e".repeat(16);
+      const entry = buildClaudeProviderReviewInboxEntry({
+        memory,
+        projectId: project.projectId,
+        operationId: "review-pmemroot-007",
+        workspaceId: claudeWorkspaceId(root),
+        producer: { provider: "codex", sessionId: "codex-review" },
+        target: { scope: "session", provider: "claude", sessionId: "claude-review" },
+        requestDigest: digest,
+        requestPath: `.ut-tdd/review/requests/${digest}.json`,
+        pr: 528,
+        exactHead: "f".repeat(40),
+        reviewRevision: "pmemroot-007-r1",
+        authorFamily: "codex",
+      });
+      const path = publishClaudeInboxEntry(root, entry);
+      const result = await waitForClaudeMemory({
+        repoRoot: root,
+        sessionId: "claude-review",
+        provider: "claude",
+        pollIntervalMs: 10,
+        maxWaitMs: 30,
+      });
+      expect(result.kind).toBe("delivered");
+      expect(result.entry?.purpose).toBe("review");
+      expect(existsSync(path)).toBe(false);
+      expect(
+        existsSync(
+          join(wakeRuntimeRoot(root), "envelope-bindings", `${inboxFileStem(entry.id)}.json`),
+        ),
+      ).toBe(false);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it("U-MEMWAKE-007: live-dispatch from a subject worktree resolves the active main workspace", () => {
     const main = fixture();
     const subject = mkdtempSync(join(tmpdir(), "ut-tdd-claude-wake-subject-"));
@@ -65,7 +226,7 @@ describe("Claude HARNESS memory async wake", () => {
       });
 
       const mainWorkspaceId = claudeWorkspaceId(main);
-      const runtime = join(main, ".git", "ut-tdd-runtime", "claude-memory-wake");
+      const runtime = wakeRuntimeRoot(main);
       mkdirSync(runtime, { recursive: true });
       writeFileSync(
         join(runtime, "main-vscode.generation"),
@@ -96,7 +257,7 @@ describe("Claude HARNESS memory async wake", () => {
   ] as const)("U-MEMWAKE-007: %s is typed fail-close", (_label, reason) => {
     const root = fixture();
     try {
-      const runtime = join(root, ".git", "ut-tdd-runtime", "claude-memory-wake");
+      const runtime = wakeRuntimeRoot(root);
       if (reason !== "no_live_claude_workspace") {
         mkdirSync(runtime, { recursive: true });
         writeFileSync(
@@ -125,7 +286,7 @@ describe("Claude HARNESS memory async wake", () => {
   it("U-MEMWAKE-007: multiple live workspace targets are typed ambiguous", () => {
     const root = fixture();
     try {
-      const runtime = join(root, ".git", "ut-tdd-runtime", "claude-memory-wake");
+      const runtime = wakeRuntimeRoot(root);
       mkdirSync(runtime, { recursive: true });
       for (const [name, workspaceId] of [
         ["main", "a".repeat(64)],
@@ -205,7 +366,7 @@ describe("Claude HARNESS memory async wake", () => {
     try {
       const workspaceId = claudeWorkspaceId(root);
       const v3 = buildClaudeInboxEntry({ memory, operationId: "schema-seed", workspaceId });
-      const inbox = join(root, ".git", "ut-tdd-runtime", "claude-memory-wake", "inbox");
+      const inbox = join(wakeRuntimeRoot(root), "inbox");
       publishClaudeInboxEntry(root, v3);
       rmSync(join(inbox, `${inboxFileStem(v3.id)}.json`));
       const legacy = { ...v3, schemaVersion: "ut-tdd.claude-inbox/v2" } as Record<string, unknown>;
@@ -227,18 +388,21 @@ describe("Claude HARNESS memory async wake", () => {
         pollIntervalMs: 10,
         maxWaitMs: 30,
       });
-      expect(result.kind).toBe("delivered");
+      expect(result.kind).toBe("denied");
+      expect(result.reason).toBe("legacy_schema_unbound");
       expect(result.entry).toMatchObject({
         schemaVersion: "ut-tdd.claude-inbox/v2",
         purpose: "memory",
       });
+      expect(existsSync(join(inbox, "legacy.json"))).toBe(true);
       const noInvalidFallback = await waitForClaudeMemory({
         repoRoot: root,
         sessionId: "invalid-not-memory",
         pollIntervalMs: 10,
         maxWaitMs: 20,
       });
-      expect(noInvalidFallback.kind).toBe("timeout");
+      expect(noInvalidFallback.kind).toBe("denied");
+      expect(noInvalidFallback.reason).toBe("legacy_schema_unbound");
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
@@ -310,16 +474,19 @@ describe("Claude HARNESS memory async wake", () => {
         workspaceId: claudeWorkspaceId(root),
       });
       const path = publishClaudeInboxEntry(root, entry);
-      expect(path).toContain(join(".git", "ut-tdd-runtime", "claude-memory-wake", "inbox"));
+      expect(path).toContain(join("ut-tdd-runtime", "projects"));
+      expect(path).toContain(join("claude-memory-wake", "inbox"));
       const first = await waitForClaudeMemory({
         repoRoot: root,
         sessionId: "claude-live",
+        allowLegacy: true,
         pollIntervalMs: 10,
         maxWaitMs: 20,
       });
       const second = await waitForClaudeMemory({
         repoRoot: root,
         sessionId: "claude-live",
+        allowLegacy: true,
         pollIntervalMs: 10,
         maxWaitMs: 20,
       });
@@ -340,7 +507,7 @@ describe("Claude HARNESS memory async wake", () => {
         workspaceId: "a".repeat(64),
       });
       expect(() => publishClaudeInboxEntry(root, entry)).toThrow(
-        "claude_inbox_git_common_dir_required",
+        "project_memory_root_git_topology_unavailable",
       );
     } finally {
       rmSync(root, { recursive: true, force: true });
@@ -447,6 +614,7 @@ describe("Claude HARNESS memory async wake", () => {
       const wrongTarget = await waitForClaudeMemory({
         repoRoot: root,
         sessionId: "wrong-workspace",
+        allowLegacy: true,
         pollIntervalMs: 10,
         maxWaitMs: 20,
       });
@@ -462,6 +630,7 @@ describe("Claude HARNESS memory async wake", () => {
       const targeted = await waitForClaudeMemory({
         repoRoot: root,
         sessionId: "target-workspace",
+        allowLegacy: true,
         pollIntervalMs: 10,
         maxWaitMs: 20,
       });
@@ -494,12 +663,14 @@ describe("Claude HARNESS memory async wake", () => {
       const first = await waitForClaudeMemory({
         repoRoot: root,
         sessionId: "fifo",
+        allowLegacy: true,
         pollIntervalMs: 10,
         maxWaitMs: 40,
       });
       const second = await waitForClaudeMemory({
         repoRoot: root,
         sessionId: "fifo-2",
+        allowLegacy: true,
         pollIntervalMs: 10,
         maxWaitMs: 40,
       });
@@ -522,14 +693,7 @@ describe("Claude HARNESS memory async wake", () => {
         workspaceId: claudeWorkspaceId(root),
       });
       publishClaudeInboxEntry(root, entry);
-      const stale = join(
-        root,
-        ".git",
-        "ut-tdd-runtime",
-        "claude-memory-wake",
-        "inbox",
-        "stale.json",
-      );
+      const stale = join(wakeRuntimeRoot(root), "inbox", "stale.json");
       writeFileSync(stale, `${JSON.stringify({ invalid: true })}\n`, "utf8");
       utimesSync(stale, now, now);
 
@@ -537,6 +701,7 @@ describe("Claude HARNESS memory async wake", () => {
       const result = await waitForClaudeMemory({
         repoRoot: root,
         sessionId: "prune",
+        allowLegacy: true,
         pollIntervalMs: 10,
         maxWaitMs: 40,
       });
@@ -550,18 +715,12 @@ describe("Claude HARNESS memory async wake", () => {
   it("U-MEMWAKE-006補遺: generation ファイル喪失は superseded として早期収束する", async () => {
     const root = fixture();
     try {
-      const generation = join(
-        root,
-        ".git",
-        "ut-tdd-runtime",
-        "claude-memory-wake",
-        "session-id.generation",
-      );
+      const generation = join(wakeRuntimeRoot(root), "session-id.generation");
       const result = await waitForClaudeMemory({
         repoRoot: root,
         sessionId: "session-id",
         pollIntervalMs: 5,
-        maxWaitMs: 300,
+        maxWaitMs: 5_000,
         sleep: async (ms: number) => {
           await new Promise<void>((resolve) => setTimeout(resolve, ms));
           rmSync(generation, { force: true });
@@ -601,6 +760,7 @@ describe("Claude HARNESS memory async wake", () => {
       await waitForClaudeMemory({
         repoRoot: root,
         sessionId: "audit",
+        allowLegacy: true,
         pollIntervalMs: 10,
         maxWaitMs: 40,
       });

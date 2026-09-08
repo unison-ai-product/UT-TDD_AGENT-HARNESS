@@ -15,12 +15,14 @@ import { issueReviewRequest } from "../feedback/review-attestation.ts";
 import { parseMemoryFile } from "../memory/index.ts";
 import { resolveMemoryTaskFile, writeMemory } from "../memory/service.ts";
 import {
-  buildClaudeReviewInboxEntry,
+  buildClaudeProviderReviewInboxEntry,
   decodeClaudeInboxEntry,
   publishClaudeInboxEntry,
-  resolveLiveClaudeWorkspace,
+  resolveLiveClaudeTarget,
 } from "../runtime/claude-memory-wake.ts";
 import { detectMode } from "../runtime/detect.ts";
+import { requireProjectMemoryRoot } from "../runtime/project-memory-root.ts";
+import { resolveRuntimeSessionId } from "../skill-engine/recommend.ts";
 
 export interface LiveReviewCommandDeps {
   readonly repoRoot: () => string;
@@ -43,7 +45,7 @@ export interface LiveReviewCommandDeps {
     repoRoot: string,
     provider: "codex" | "claude",
   ) =>
-    | { readonly ok: true; readonly workspaceId: string }
+    | { readonly ok: true; readonly workspaceId: string; readonly sessionId: string }
     | { readonly ok: false; readonly reason: LiveReviewWakeRoutingFailure };
   /** Optional provider-native wake surface. Absent Codex surfaces fail closed. */
   readonly publishCodexReviewWake?: (repoRoot: string, wake: CanonicalReviewWake) => void;
@@ -127,6 +129,7 @@ function publishLiveReviewReceipt(
   repoRoot: string,
   projection: Extract<ReviewVerdictProjectionResult, { ok: true }>,
 ): void {
+  const project = requireProjectMemoryRoot(repoRoot);
   const receipt = projection.receipt;
   const body = [
     `PR #${receipt.pr} exact HEAD ${receipt.head} のcanonical review receipt。`,
@@ -136,7 +139,7 @@ function publishLiveReviewReceipt(
     `receiptDigest=${projection.digest}`,
   ].join("\n");
   writeMemory({
-    repoRoot,
+    repoRoot: project.canonicalProjectRoot,
     input: {
       kind: "feedback",
       title: `PR #${receipt.pr} canonical review receipt ${projection.digest}`,
@@ -162,7 +165,7 @@ export function registerLiveReviewCommands(
     runReview: ({ repoRoot, provider, args }) =>
       executeLiveReviewDelegation({ repoRoot, provider, args }),
     publishReceipt: publishLiveReviewReceipt,
-    resolveWakeTarget: (repoRoot) => resolveLiveClaudeWorkspace(repoRoot),
+    resolveWakeTarget: (repoRoot) => resolveLiveClaudeTarget(repoRoot),
     ...overrides,
   };
   review
@@ -189,7 +192,8 @@ export function registerLiveReviewCommands(
       }) => {
         try {
           const repoRoot = resolveRepositoryRoot(deps.repoRoot());
-          const memory = parseMemoryFile(repoRoot, opts.memoryPath);
+          const project = requireProjectMemoryRoot(repoRoot);
+          const memory = parseMemoryFile(project.canonicalProjectRoot, opts.memoryPath);
           if (memory.memory_id !== opts.memoryId)
             throw new Error("review_memory_identity_mismatch");
           const requestedAt = new Date().toISOString();
@@ -219,11 +223,14 @@ export function registerLiveReviewCommands(
                 }
                 const target = deps.resolveWakeTarget(repoRoot, "claude");
                 if (!target.ok) throw new LiveReviewWakeError(target.reason);
-                const notification = buildClaudeReviewInboxEntry({
+                const project = requireProjectMemoryRoot(repoRoot);
+                const notification = buildClaudeProviderReviewInboxEntry({
                   memory,
+                  projectId: project.projectId,
                   operationId: opts.operationId?.trim() || `review-${wake.requestDigest}`,
                   workspaceId: target.workspaceId,
-                  originRuntime: "codex",
+                  producer: { provider: "codex", sessionId: resolveRuntimeSessionId() },
+                  target: { scope: "session", provider: "claude", sessionId: target.sessionId },
                   requestDigest: wake.requestDigest,
                   requestPath: wake.requestPath,
                   pr: wake.request.pr,
@@ -290,5 +297,6 @@ export function resolveLiveReviewTaskFile(
   repoRoot: string,
   input: { memoryId: string; memoryPath: string },
 ): string | null {
-  return resolveMemoryTaskFile({ repoRoot, ...input });
+  const project = requireProjectMemoryRoot(repoRoot);
+  return resolveMemoryTaskFile({ repoRoot: project.canonicalProjectRoot, ...input });
 }

@@ -1,4 +1,3 @@
-import { execFileSync } from "node:child_process";
 import {
   existsSync,
   mkdtempSync,
@@ -14,7 +13,7 @@ import { describe, expect, it } from "vitest";
 import type { MemoryEntry } from "../src/memory/index.ts";
 import {
   buildClaudeInboxEntry,
-  buildClaudeReviewInboxEntry,
+  buildClaudeProviderReviewInboxEntry,
   claudeWorkspaceId,
   evaluateClaudeInboxTerminal,
   parseClaudeInboxPullRequestObservation,
@@ -23,6 +22,8 @@ import {
   summarizeUnclaimedInbox,
   waitForClaudeMemory,
 } from "../src/runtime/claude-memory-wake.ts";
+import { resolveProjectMemoryRoot } from "../src/runtime/project-memory-root.ts";
+import { ensureTrackedProjectIdentity } from "./support/project-identity-fixture.ts";
 
 const memory: MemoryEntry = {
   memory_id: "memory:project:terminal-gc",
@@ -37,16 +38,21 @@ const memory: MemoryEntry = {
 
 function fixture(): string {
   const root = mkdtempSync(join(tmpdir(), "ut-tdd-terminal-gc-"));
-  execFileSync("git", ["init", "-q"], { cwd: root });
+  ensureTrackedProjectIdentity(root, "fixture/claude-terminal-gc");
   return root;
 }
 
 function review(root: string, operationId = "review", exactHead = "c".repeat(40)) {
   const digest = "b".repeat(16);
-  return buildClaudeReviewInboxEntry({
+  const project = resolveProjectMemoryRoot(root);
+  if (!project.ok) throw new Error(project.reason);
+  return buildClaudeProviderReviewInboxEntry({
     memory,
+    projectId: project.projectId,
     operationId,
     workspaceId: claudeWorkspaceId(root),
+    producer: { provider: "codex", sessionId: "codex-terminal-gc" },
+    target: { scope: "session", provider: "claude", sessionId: "claude-terminal-gc" },
     requestDigest: digest,
     requestPath: `.ut-tdd/review/requests/${digest}.json`,
     pr: 444,
@@ -205,12 +211,9 @@ describe("Claude inbox terminal GC", () => {
       expect(existsSync(path)).toBe(true);
       expect(existsSync(replacementPath)).toBe(true);
 
-      const commonDir = execFileSync(
-        "git",
-        ["rev-parse", "--path-format=absolute", "--git-common-dir"],
-        { cwd: root, encoding: "utf8" },
-      ).trim();
-      const runtime = join(commonDir, "ut-tdd-runtime", "claude-memory-wake");
+      const project = resolveProjectMemoryRoot(root);
+      if (!project.ok) throw new Error(project.reason);
+      const runtime = join(project.runtimeBusRoot, "claude-memory-wake");
       const markers = readdirSync(runtime).filter((name) => name.endsWith(".terminal.json"));
       expect(markers).toHaveLength(2);
       const markerPath = markers

@@ -2093,6 +2093,68 @@ source-side artifact admissionを、consumer runtime隔離の代替証拠とし�
 | `CAND-NODEBOOT-028` | `retirement_subject`が撤去commitのsubject revisionと不一致 (過去に成立した2 receiptを別commitでの撤去へ流用) | 撤去をfail-close。tuple 3要素一致でも4要素目の不一致で落ちることを固定する |
 | `CAND-NODEBOOT-029` | `scripts/ut-tdd.ps1`のBOM変異 — 独立4case: (a) BOM欠落、(b) BOM 2個以上、(c) **BOM 1個だが byte が異なる** (`EF BB BE` / `EF BF BF` 等)、(d) UTF-16 LE/BEへのencoding差し替え | いずれも`C_ps1`由来の受理4集合外としてfail-close (PLAN-L6-93 §5.2.1)。**POSIX側と同一規則を当てる実装は (a) を通す**ため file別canonical byte列であることを固定し、**BOM個数とencoding familyだけを見る実装は (c) を通す**ため byte等価で判定していることを固定する |
 | `CAND-NODEBOOT-030` | `scripts/ut-tdd`へ先頭BOM (`EF BB BF`) を混入 | `C_posix`由来の受理4集合外としてfail-close。shebang破壊を検出規則として固定する (BOM必須を両fileへ一律適用する実装を落とす) |
+| `CAND-NODEBOOT-208` | Q0後の最終撤去で、実行・生成・配布・AI指示のreachable Bun surfaceを1件残す、または検出用retained fixtureをproduction allowlistへ混入する | reachable surfaceを全件inventoryし、1件でも残ればtyped `NonCompliant`/`Indeterminate`で撤去0。`ban_enforcement_guard`はpath+symbol単位のdeny専用を検証し、raw文字列件数では判定しない。retained fixtureは専用rootに隔離され、生成Pack/consumer/runtimeから到達不能であることを実測する |
+
+`CAND-NODEBOOT-023`、`027`、`028`、`208` の最終撤去実装とpair evidenceの所有者は
+`PLAN-L7-530-bun-final-retirement`、上位へのgap-only backfillは
+`PLAN-REVERSE-530-bun-final-retirement-backfill`である。`PLAN-L6-93`は023/027/028の
+設計契約を保持し、`PLAN-L7-458`はQ0から最終撤去へ渡す順序を参照する。候補IDの記述を
+Green実績と解釈せず、実装PRでRed実測後に正式 `U-*` へ昇格する。
+
+`PLAN-L7-530` の全tracked-tree inventoryは、候補を広く収集してからfalse positiveを
+各pathで個別分類する `git grep -n -I -i -e bun 6e9aeb99 -- .` と
+`git ls-tree -r --name-only 6e9aeb99 -- . | grep -i bun` の組み合わせを正本とする。
+SHAをpatternに渡す誤りや`scripts/`限定を許さない。#487のreachable scopeは `package.json` の `build`、
+`bunAuthority`、`bun.lock`、`src/cli.ts` の Bun shebang/emitted command、
+`src/state-db/index.ts` の `bun:sqlite` driver、`src/setup/distribution.ts` の `bun.lock`、
+`src/setup/templates.ts` の `bun.lockb`、`.claude/hooks/{agent-guard,session-log,work-guard}.ts` の
+Bun direct-entry、`scripts/git-hooks/secret-scan-diff.ts` の Bun shebang/direct entry、
+`scripts/run-vitest-snapshot.ts` の `resolveBunBinary` / `UT_TDD_BUN_BINARY`、Pack同梱の
+`skills/git.md` と `skills/test-driven-development.md` の `bun run` 指示を含む。PLAN-L7-488/PLAN-L7-491は
+この2 skill fileを所有しないため、#487のreachable scopeとして各pathを独立Redへ束ね、1件でも
+未分類なら`Indeterminate`とする。`ubuntu`、`bundle`などはraw候補に残した上でpath・文脈を
+個別確認し、`non_applicable_false_positive`としてBun実行面から除外する。
+検出器自身の `src/lint/bun-permanent-ban.ts`、`runtime-portability.ts`、`rule-drift.ts`、
+`toolchain-pin.ts`、`github-ci-policy.ts` のBun文字列・regexは
+`ban_enforcement_guard`として保持する。path+symbol単位でspawn/install/download/fallbackがない
+deny専用であることを個別に検証し、同じfile内の実行面は免除しない。
+上記pathは代表例であり閉じた許可リストではない。全subjectのraw候補を意味で分類し、
+`src/doctor/test-repository-isolation.ts:MUTATION_TARGET_ARGS/writeApiName`、
+`src/state-db/stop-refresh.ts:isBunExecutable/refuseBunStopRefresh`も同じ条件で保持する。
+`src/runtime/runtime-image-observer.ts:classifyRuntimeImageProcess`も禁止判定として保持する。
+`retained_compatibility_vocabulary`は非実行の履歴enum・用語・観測入力分類・互換IDに限る。
+frontmatterのgreen_commands.runnerとreview-evidenceのGREEN_COMMAND_RUNNERSは過去Bun証跡の読取互換、
+design-languageのTECHNICAL_WORD_ALLOWLISTとverb-classifyのclassifyVerificationVerbは非実行認識、
+verification-profile-catalog/typesのbun-unitはcommand/executableがNodeの互換IDとして検証する。
+rule-qualityのportability失敗診断は非実行の表示語彙であり、deny専用guardと誤分類しない。
+新規証跡はNodeであり、読取互換はBun実行許可ではない。Bun spawn/import/download/fallback/実行指示へ
+単独変異させればCAND-NODEBOOT-208をRedにし、逆に履歴enum削除による既存証跡破壊をGreenにしない。
+参照先snapshot runnerのBun解決/受渡しは互換IDと別のreachable面として撤去対象に残す。
+setup-smokeの正本はbaseのNode ut-tdd.mjs/wrapper-launcher-contractであり、run-bun退役の説明だけを
+historyへ分類する。Bun必須へ変異した場合は拒否する。write-encoding-guardのBun/Node復旧指示は
+非実行語彙とせず、reachableな指示としてNode-onlyへ是正する。
+存在・分類根拠はexact git ls-tree/showで確認し、working tree/globの推測を証跡にしない。
+READMEと全clean Pack同梱skillsのactive指示をinventoryし、代表例2ファイルだけで閉じない。
+runtime-projectionsの新規runner: bun出力は履歴互換とせず、Node-onlyの新規証跡へ是正する。
+旧DB行は改変しない。PLAN-L7-527 §2.5のdual-lockは保持期間中の条件であり、tuple成立前はparityを維持、
+成立後はbun.lock出荷要求とU-SETUP-013/AT-DIST-001の期待を同じ撤去revisionでNode lock検証へ移す。
+既存のU-PACKBUN-006等の独立guard mutationで、guard削除・常時Green化・allowlist弱体化を
+各々Redにする。検出器自身のBun文字列削除をGreen扱いするoracleは不受理とする。
+最終撤去revisionでは、U-PACKBUN-006のbehavioral oracleと検出器を保持したまま、同oracleが
+凍結するrepository snapshotを物理撤去結果へ同時移行する。`package.json`の旧Bun build期待は
+build不在または正規Node buildのexact期待へ置換し、spawn/import/global debt allowlistは
+実際に撤去したpath/countだけを減算する。旧期待の残置、未撤去rowの先行削除、無関係rowの削除、
+allowlist追加・pin引上げ、guard削除・常時Green化・matcher弱体化を各々独立negativeとする。
+snapshot migrationはPLAN-L7-530が同一revisionで所有し、oracle authorityと検出意味は
+PLAN-L7-522/524に残す。
+`tests/**`、`**/fixtures/**`、`.ut-tdd/**`、`docs/**`、`vendor/**`、`docs/archive/**`は
+raw inventoryに残す。path名だけで除外せず、実行・生成・配布・AI指示からの非到達を個別に証明できた
+候補のみ`retained_fixture`/`history`として分類する。
+scripts各系統、source runtime、setup/templateは独立Redにし、package/authority/lockのfinal deletionは
+4要素tuple成立後だけ許可する。
+#470/#471/#472の完了済み生成consumer/readiness/source CI、#500のPack CI policy、#450 program
+closure、#473配下のNode producer (#484/#515)は再吸収しない。#473は親programであって
+`build` final deletionの別ownerではない。
 
 `CAND-NODEBOOT-018`の固定tupleはL5 `NODE-SLICE-LEGACY-BACKFILL-REGISTRY-v1`の
 `legacy.d0-admission` / `legacy.f0a-custody`を正本とする。前者から

@@ -6,23 +6,22 @@ layer: L7
 drive: agent
 route_signal: feature_addition
 route_mode: add-feature
-status: confirmed
 created: 2026-08-27
-updated: 2026-09-04
+updated: 2026-09-08
 owner: PM / PO / Codex
 parent_design: docs/plans/PLAN-L6-101-pack-independent-multi-consumer-acceptance.md
 pair_artifact: docs/test-design/harness/L7-pack-self-contained-consumer-runtime-test-design.md
 next_pair_freeze: L7
 transition_direction: design_to_implementation
-implementation_disposition: none
+implementation_disposition: preserved
 implementation_target: src/setup/consumer-node-runtime.ts
 agent_slots:
   - role: se
-    slot_label: "SE - sealed generationのconsumer-local materializeとidentity束縛を実装する"
+    slot_label: SE - sealed generationのconsumer-local materializeとidentity束縛を実装する
   - role: qa
-    slot_label: "QA - checkout削除、hostile path、原子更新、Linux/Windows負系を実測する"
+    slot_label: QA - checkout削除、hostile path、原子更新、Linux/Windows負系を実測する
   - role: tl
-    slot_label: "TL - L6-93/L6-101/L7-496の責務境界とreceipt/port順序を非著者検収する"
+    slot_label: TL - L6-93/L6-101/L7-496の責務境界とreceipt/port順序を非著者検収する
 generates:
   - artifact_path: docs/plans/PLAN-L7-516-pack-self-contained-consumer-runtime.md
     artifact_type: markdown_doc
@@ -51,65 +50,100 @@ dependencies:
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/420
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/432
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/415
-github_issue_id: 420
 backprop_decision: required
-backprop_decision_reason: "consumer-local sealed runtimeのidentity・原子更新・checkout非依存をL6受入へ戻すため。"
+backprop_decision_reason: consumer-local sealed runtimeのidentity・原子更新・checkout非依存をL6受入へ戻すため。
 review_evidence:
   - reviewer: claude
     review_kind: cross_agent
-    reviewed_at: "2026-08-28T01:46:56.324Z"
-    tests_green_at: "2026-08-28T01:32:00Z"
-    verdict: "PASS-WEAK / blocking 0"
+    reviewed_at: 2026-08-28T01:46:56.324Z
+    tests_green_at: 2026-08-28T01:32:00Z
+    verdict: PASS-WEAK / blocking 0
     worker_model: gpt-5.6-sol
     reviewer_model: claude-opus-5
     effort: middle
     plan_revision: 2b531830de9f40ffcb09b81d19c97802072b76ec
     subject_head: 2b531830de9f40ffcb09b81d19c97802072b76ec
-    scope: >-
-      PR #455 exact HEADのdocs-only pair-freezeを非著者review。L6-93 §5の限定evidence境界、
-      hostile pathと実producerの実行oracle、独立mutation、production source/source Bun残余の
-      非Scopeを確認した。実装、Green化、Pack publication、canaryは証明しない。
+    scope: "PR #455 exact HEADのdocs-only pair-freezeを非著者review。L6-93
+      §5の限定evidence境界、 hostile pathと実producerの実行oracle、独立mutation、production
+      source/source Bun残余の 非Scopeを確認した。実装、Green化、Pack publication、canaryは証明しない。"
     citations:
-      - ".ut-tdd/review/receipts/01ef7b5981c4e30ddc8d37bf3c9285378480b91535444106846430024ae5552c.json"
-      - "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/455#issuecomment-5447372097"
+      - .ut-tdd/review/receipts/01ef7b5981c4e30ddc8d37bf3c9285378480b91535444106846430024ae5552c.json
+      - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/455#issuecomment-5447372097
     green_commands:
       - kind: unit_test
-        command: "npm run test:doc-lane"
+        command: npm run test:doc-lane
         runner: node
         scope: targeted
         exit_code: 0
-        completed_at: "2026-08-28T01:32:00Z"
+        completed_at: 2026-08-28T01:32:00Z
         evidence_path: docs/test-design/harness/L7-pack-self-contained-consumer-runtime-test-design.md
-        output_digest: "sha256:94ad3c7e2dfa3edf826a2e645a1ab083876da8aef5797af01b78879c03edbc73"
+        output_digest: sha256:94ad3c7e2dfa3edf826a2e645a1ab083876da8aef5797af01b78879c03edbc73
         anchor_commit: 2b531830de9f40ffcb09b81d19c97802072b76ec
   - reviewer: claude-opus-5
     review_kind: cross_agent
-    reviewed_at: "2026-09-04T02:54:12Z"
-    tests_green_at: "2026-09-04T02:38:52Z"
-    verdict: "FLAG / blocking 2"
+    reviewed_at: 2026-09-04T02:54:12Z
+    tests_green_at: 2026-09-04T02:38:52Z
+    verdict: FLAG / blocking 2
     worker_model: gpt-5.6-luna
     reviewer_model: claude-opus-5
     effort: middle
     plan_revision: c472bbc6767b5a2d6f9cc52dee6d4830e22a4a7a
     subject_head: c472bbc6767b5a2d6f9cc52dee6d4830e22a4a7a
-    scope: >-
-      PR #463の実装scopeをexact HEADで非著者review。Node runtime実装、17 tests、
-      Node-only readiness、宣言traceを確認し、非ancestorのGreen anchorと実装scopeの
-      review evidence不足をblockingとして記録した。修正後のclosing PASSは未取得。
+    scope: "PR #463の実装scopeをexact HEADで非著者review。Node runtime実装、17 tests、 Node-only
+      readiness、宣言traceを確認し、非ancestorのGreen anchorと実装scopeの review
+      evidence不足をblockingとして記録した。修正後のclosing PASSは未取得。"
     citations:
-      - ".ut-tdd/review/receipts/d009f8020f81b6f2f33bb09a733fb798c8c1bc20178d88eeac6e9959cf136d0b.json"
-      - "memory:project:pr-463-exact-head-c472bbc6-non-author-closing-review-request"
-      - "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/463"
+      - .ut-tdd/review/receipts/d009f8020f81b6f2f33bb09a733fb798c8c1bc20178d88eeac6e9959cf136d0b.json
+      - memory:project:pr-463-exact-head-c472bbc6-non-author-closing-review-request
+      - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/463
     green_commands:
       - kind: unit_test
-        command: "node scripts/run-vitest-snapshot.ts tests/consumer-node-runtime.test.ts --reporter=dot"
+        command: node scripts/run-vitest-snapshot.ts tests/consumer-node-runtime.test.ts
+          --reporter=dot
         runner: node
         scope: targeted
         exit_code: 0
-        completed_at: "2026-09-04T02:38:48Z"
+        completed_at: 2026-09-04T02:38:48Z
         evidence_path: tests/consumer-node-runtime.test.ts
-        output_digest: "sha256:91fd6f75d9f656b9216a64a99fea0360e336fd78bf6f6d42ac490bef5d5f623b"
+        output_digest: sha256:91fd6f75d9f656b9216a64a99fea0360e336fd78bf6f6d42ac490bef5d5f623b
         anchor_commit: c472bbc6767b5a2d6f9cc52dee6d4830e22a4a7a
+status: confirmed
+github_issue_id: 420
+admission_receipt:
+  schema_version: v2
+  receipt_id: certificate:55d25c6e34362fbfeb5f3b0faee7416a
+  command_id: command:issue420-runtime-adapter-contract-r4-review-followup
+  admitted_at: 2026-09-08T09:59:32.558Z
+  source_digest: sha256:6e4e0d5516e78e7465d260c65482e3302c9304518eb264d39735d049c166a316
+  decision_digest: sha256:7566ad4e97d6059002dedffc0e15cb98e6152ccfae146d797cb3efb435768dc9
+  receipt_digest: sha256:e4e9de2f3e792ec22b3a1987e5b1955ced6205a6f3c7a330ca44f861d55b63bc
+  binding:
+    path: docs/plans/PLAN-L7-516-pack-self-contained-consumer-runtime.md
+    plan_id: PLAN-L7-516-pack-self-contained-consumer-runtime
+    asset_id: plan:legacy:d28966ed1d8861940d1ed5bfc5eaebc7dd7b4a9de4ed7adbd65850095c816307
+    revision: 4
+    content_digest: sha256:6e4e0d5516e78e7465d260c65482e3302c9304518eb264d39735d049c166a316
+  route:
+    signal: feature_addition
+    mode: add-feature
+  issue:
+    provider: github
+    issue_id: 420
+    episode_id: E4-420-runtime-adapter-contract
+    projection_digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+  origin:
+    plan_id: PLAN-L7-516-pack-self-contained-consumer-runtime
+    revision: 3
+    digest: sha256:3678d9fb08231a0867c232e75cd5d3920fc08fdf4d41956f813ad513c689805e
+  transition:
+    direction: design_to_implementation
+    implementation_disposition: preserved
+  reentry:
+    target_plan_id: PLAN-L7-516-pack-self-contained-consumer-runtime
+    target_revision: 4
+    phase: forward_merge
+  escape_reason: Issue420 existing consumer installer physical adapter contract
+    proposal; implementation preserved; fresh pair review required
 ---
 
 # PLAN-L7-516: sealed self-contained consumer Node runtime
@@ -439,3 +473,104 @@ bytesの供給は行っておらず、テストfixtureも固定bytes(`tests/cons
 本PRから主張しない。#420でproducer自体を新設・変更しない。Windows junction/reparse・8.3 alias・
 permission、history prefix/replay、attested rollback、external read/open/stat counter、hooks、
 非著者closing review、Reverse R1〜R4も未実測であり、全15 oracle Greenは主張しない。
+
+## 11. 実adapter補完の契約改訂候補（Issue #420）
+
+既存のpartial実装・歴史的review証跡を維持する。以下の補完は非著者pair review前であり、
+現revisionでの実adapter完成・追加oracle Green・Pack独立導入を主張しない。
+
+
+本節は既存PLANに束縛された未承認の契約補完候補である。
+既存実装を削除せず、ConsumerNodeRuntimePortsとConsumerReceiptを再利用する。
+新しいpublication engine、global lock、独立receipt authorityは導入しない。
+
+### 11.1 入力と責務
+
+- consumer materializerが受ける正本は、既存PF5の検証済みsealed aggregateと同generationの
+  実NodeBootstrapReceiptおよびcompiled ESM bytes。Node producerを再実装しない。
+- NodeBootstrapReceiptの既存verifierでparse/digest/subject/generationを検証する。
+  opaque bytesをhashしただけでproducerの正当性を証明したとは扱わない。
+- ConsumerReceiptの既存7フィールド（materializerVersion、releaseId、sourceRevision、
+  artifactSetDigest、productId、consumerRoot、runtimeRoot）をそのまま投影する。
+  ConsumerNodeRuntimeIdentityとの対応は一意に照合し、別のidentity authorityを作らない。
+- Packへcompiled ESMとreceiptを供給する入口は別の既存publication/materializer責務である。
+  本案から固定runtime配布path、新しいmanifest field、glob、全dist許可を発明しない。
+  入力未供給ならsetupはtyped denyし、source/Pack checkout実行時fallbackへ戻らない。
+
+### 11.2 同一bundle内の4 payload候補
+
+現行の6 payload名とbundle digest計算を保持する。下表は未定義だった4 payloadの構造候補。
+全JSONは既存canonical JSON/digest関数のbytesで封印し、unknown/missing fieldを拒否する。
+ここで作るconsumer receiptはlocal projectionであり、新しい署名・review authorityではない。
+
+| payload | 候補のexact field集合 |
+|---|---|
+| marker.json | identity_digest、operation_id、attempt、generation_id |
+| consumer-receipt.json | consumer（既存ConsumerReceipt）、identity_digest、operation_id、attempt、history_sequence、prior_bundle_digest、prior_history_tip_digest、history_tip_digest |
+| history.jsonlの各record | history_sequence、operation_id、attempt、operation_kind、identity_digest、prior_bundle_digest、prior_history_tip_digest、record_digest |
+| operation-state.json | identity_digest、operation_id、attempt、prior_pointer、history_tip_digest、publication |
+
+- identity_digestは既存ConsumerNodeRuntimeIdentityのcanonical digest。
+- operation_kindはinstall/update/rollback。attemptを上げた再試行も元のoperation_kindを維持する。
+- history record_digestはrecord_digest自身を除くrecordのcanonical digest。
+  history_tip_digestは末尾record_digest。genesisのpriorは既存genesis sentinel。
+- history bytesは旧historyの完全prefixにcanonical record一行とLFをちょうど一つ追加する。
+  同一operation/attempt、sequence gap、prefix差分、prior digest差分は拒否する。
+- prior_pointerはgenesisではnull。それ以外はexact keys bytes_base64、mode、digestのobject。
+  bytes_base64は既存pointerの生bytesをRFC 4648標準base64（paddingあり、空白なし）で保存し、
+  decode→encodeの一致とdigestConsumerRuntimeBytes(decoded bytes)との一致を要求する。
+  modeはstat.modeのpermission bits（mode & 0o777）を非負整数で保持する。
+  JSON再serializeした等価値をbyte-for-byte snapshotの代わりにしない。
+  genesisのhistory_sequenceは0、prior_bundle_digest/prior_history_tip_digestは文字列genesis、
+  最初のrecordもsequence 0。以後は直前sequence+1で、historyは空prefixから開始する。
+  operation_id、attempt、generation_idはbundle.identityと同値、digestは既存sha256形式とする。
+- publicationの型はJSON string、許可値はexact literal "prepared"のみ。null/object/array/boolean/numberや別文字列を拒否する。publicationはimmutableなpreparedのみ。committedへ書き換えてbundle digestを壊さない。
+  committed/uncommitted/unknown/partialは実pointerとsealed bundleの観測から導出する状態である。
+- 同じbundleのbundle_digestをpayload内へ埋めない。payload→files digest→bundle digest→active pointer
+  の一方向に計算し、history/receiptとbundleの循環hashを作らない。
+
+### 11.3 既存portへの接続
+
+snapshotPriorActivePointerのvoid戻り値は変更しない。adapter instanceのprivate stateへ
+snapshotを保持できる。callerがbundle準備時に読んだpriorとlock取得後のsnapshotが異なれば、
+private staging作成前に拒否する。callerの先読みをCAS authorityにしない。
+
+1. readConsumerIdentity / verifySealedAggregate / verifyNodeGenerationは既存verifierを消費する。
+2. consumer namespace内のlockだけを取得し、既存active pointerのbytes・mode・digestを再読する。
+3. prepared payload内prior、history完全prefix、snapshotを一致させてから既存private stagingへ書く。
+4. 全payloadとmanifestをfsync/sealし、既存bundlePathForへno-clobberで封印する。
+5. active pointerは既存3フィールド（bundle_path、entry_path、bundle_digest）のみ。
+   同一filesystem・lock内でprior一致を再確認し、一回のatomic renameをcommit pointとする。
+6. releaseConsumerLockは既存finally規則どおり一回。primary errorをrelease faultで消さない。
+
+OSが必要なdurability/atomicityを提供できない場合、能力を偽って成功にしない。
+Linux/Windowsの実adapter試験で各操作を証明する。物理実装前に上記候補を非著者検収する。
+
+### 11.4 read-only reconcile
+
+| 実観測 | 判定 |
+|---|---|
+| active pointerが当該bundleとexact一致し、全bytes/identity/history/operationを再検証できる | committed |
+| active pointerが保存したpriorとbytes/modeごと一致（genesisなら不在）、当該bundleは非active | uncommitted |
+| 別pointer、部分bundle、digest不一致、観測不能、prior不変性未証明 | unknown/partial、indeterminate |
+
+新processのreconcileでも、callerは既存検証済みbundleとConsumerNodeRuntimeIdentityをadapter構築入力として渡す。
+operation_id/attempt/identity_digestはその入力から期待値を導出し、durable operation-stateと照合する。
+ディレクトリ走査やpayload自己申告から対象operationを採用しない。入力欠落・不一致はunknown/partialとしwrite 0。
+ack-loss時にpointerやpayloadを再書込みしない。既存reconcile高々一回、新write/launch 0を維持する。
+staging/quarantine/orphanをruntime discovery候補にしない。rollbackは既存attested prior generationを
+新operationとして履歴へ追加するだけで、古いbundle/historyを変更しない。
+
+### 11.5 pair oracle補完
+
+既存U/P-PACKNODE候補の対応を維持し、新番号を重複発行しない。次のsubcaseを実adapterのoracleへ追加する。
+
+- 4 payloadのfield欠落/余剰・一軸identity変異・history prefix/sequence/record digest変異。
+- bundle自己digestを必要とせずpayload→manifest→pointerが決定論的に生成される。
+- bundle準備とlock取得の間にprior pointerを別の正当値へ変更し、staging/public write 0で拒否。
+- 各fsync/seal/rename境界のfault、rename成功後ack-loss、別pointer、部分bundle、観測不能。
+- 新processでprivate stateを失ってもdurable payloadとpointerから同じreconcile結果を導出する。
+- Windows/Linux双方のreal filesystem、consumer A/B隔離、setup元削除後の実hook/CLI起動。
+
+既存port単体Greenや手書きbundle fixtureを、実setupからの導入成功へ読み替えない。
+本案の取り込み・pair review後、payload producer/physical adapterとsetup caller配線を原子PRで分離する。

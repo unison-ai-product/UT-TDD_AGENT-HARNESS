@@ -1,4 +1,3 @@
-import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
   existsSync,
@@ -12,10 +11,10 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { MemoryEntry } from "../src/memory/index.ts";
 import {
-  buildClaudeInboxEntry,
+  buildClaudeProviderInboxEntry,
   claudeWorkspaceId,
   publishClaudeInboxEntry,
   waitForClaudeMemory,
@@ -30,11 +29,13 @@ import {
   resolveRequiredClaudeWakeCapability,
   validateClaudeWakeClaimAuthority,
 } from "../src/runtime/claude-wake-generation-upgrade.ts";
+import { resolveProjectMemoryRoot } from "../src/runtime/project-memory-root.ts";
 import {
   admitHistoricalFixturePayload,
   type ClaudeWakeUpgradeFixtureIdentity,
   fixtureIdentityMatches,
 } from "./support/claude-wake-upgrade-fixture.ts";
+import { ensureTrackedProjectIdentity } from "./support/project-identity-fixture.ts";
 
 const workspaceId = "a".repeat(64);
 const runtimeSourceRevision = "1".repeat(40);
@@ -45,8 +46,14 @@ function fixture(): string {
 
 function gitFixture(): string {
   const root = fixture();
-  execFileSync("git", ["init", "-q"], { cwd: root });
+  ensureTrackedProjectIdentity(root, "fixture/claude-wake-generation");
   return root;
+}
+
+function wakeRuntimeRoot(root: string): string {
+  const project = resolveProjectMemoryRoot(root);
+  if (!project.ok) throw new Error(project.reason);
+  return join(project.runtimeBusRoot, "claude-memory-wake");
 }
 
 function digest(bytes: string): string {
@@ -308,12 +315,7 @@ describe("Claude wake generation rolling upgrade", () => {
   it("U-CHSCHEMA-009: retention does not orphan a planned activation rollback", async () => {
     const repoRoot = gitFixture();
     try {
-      const common = execFileSync(
-        "git",
-        ["rev-parse", "--path-format=absolute", "--git-common-dir"],
-        { cwd: repoRoot, encoding: "utf8" },
-      ).trim();
-      const root = join(common, "ut-tdd-runtime", "claude-memory-wake");
+      const root = wakeRuntimeRoot(repoRoot);
       mkdirSync(root, { recursive: true });
       expect(
         activateClaudeWakeGeneration({
@@ -397,8 +399,13 @@ describe("Claude wake generation rolling upgrade", () => {
         updated_at: "2026-08-28T00:00:00.000Z",
         content_hash: "c".repeat(64),
       };
-      const entry = buildClaudeInboxEntry({
+      const project = resolveProjectMemoryRoot(root);
+      if (!project.ok) throw new Error(project.reason);
+      const entry = buildClaudeProviderInboxEntry({
         memory,
+        projectId: project.projectId,
+        producer: { provider: "codex", sessionId: "fixture-producer" },
+        target: { scope: "session", provider: "claude", sessionId: "fixture-claude-session-v1" },
         operationId: "fixture-unclaimed-consume-v1",
         workspaceId: claudeWorkspaceId(root),
       });
@@ -412,12 +419,7 @@ describe("Claude wake generation rolling upgrade", () => {
         }),
       ).toMatchObject({ kind: "delivered", entry: { id: entry.id } });
 
-      const common = execFileSync(
-        "git",
-        ["rev-parse", "--path-format=absolute", "--git-common-dir"],
-        { cwd: root, encoding: "utf8" },
-      ).trim();
-      const runtime = join(common, "ut-tdd-runtime", "claude-memory-wake");
+      const runtime = wakeRuntimeRoot(root);
       const inbox = join(runtime, "inbox");
       const before = existsSync(inbox) ? readdirSync(inbox) : [];
       const replayPath = publishClaudeInboxEntry(root, entry);
@@ -430,6 +432,8 @@ describe("Claude wake generation rolling upgrade", () => {
 
   it("U-CHSCHEMA-011: authority revocation between validation and claim commit writes no claim", async () => {
     const root = gitFixture();
+    let clockMs = Date.now();
+    const clock = vi.spyOn(Date, "now").mockImplementation(() => clockMs);
     try {
       const memory: MemoryEntry = {
         memory_id: "memory:fixture:claim-cas-revocation",
@@ -441,8 +445,13 @@ describe("Claude wake generation rolling upgrade", () => {
         updated_at: "2026-08-28T00:00:00.000Z",
         content_hash: "d".repeat(64),
       };
-      const entry = buildClaudeInboxEntry({
+      const project = resolveProjectMemoryRoot(root);
+      if (!project.ok) throw new Error(project.reason);
+      const entry = buildClaudeProviderInboxEntry({
         memory,
+        projectId: project.projectId,
+        producer: { provider: "codex", sessionId: "fixture-producer" },
+        target: { scope: "session", provider: "claude", sessionId: "old-session" },
         operationId: "claim-cas-revocation",
         workspaceId: claudeWorkspaceId(root),
       });
@@ -453,16 +462,16 @@ describe("Claude wake generation rolling upgrade", () => {
         sessionId: "old-session",
         pollIntervalMs: 10,
         maxWaitMs: 5_000,
+        // Git validation latency is not the oracle; only poll advances time.
+        now: () => new Date(clockMs).toISOString(),
+        sleep: async (ms) => {
+          clockMs += ms;
+        },
         beforeClaimCommit: () => {
           if (revoked) return;
           revoked = true;
-          const common = execFileSync(
-            "git",
-            ["rev-parse", "--path-format=absolute", "--git-common-dir"],
-            { cwd: root, encoding: "utf8" },
-          ).trim();
           activateClaudeWakeGeneration({
-            root: join(common, "ut-tdd-runtime", "claude-memory-wake"),
+            root: wakeRuntimeRoot(root),
             sessionId: "replacement-session",
             workspaceId: claudeWorkspaceId(root),
             generation: "replacement-generation",
@@ -471,16 +480,13 @@ describe("Claude wake generation rolling upgrade", () => {
           });
         },
       });
+      expect(revoked).toBe(true);
       expect(result).toEqual({ kind: "superseded" });
-      const common = execFileSync(
-        "git",
-        ["rev-parse", "--path-format=absolute", "--git-common-dir"],
-        { cwd: root, encoding: "utf8" },
-      ).trim();
-      const runtime = join(common, "ut-tdd-runtime", "claude-memory-wake");
+      const runtime = wakeRuntimeRoot(root);
       expect(readdirSync(runtime).filter((name) => name.endsWith(".claim"))).toEqual([]);
       expect(readdirSync(join(runtime, "inbox"))).toHaveLength(1);
     } finally {
+      clock.mockRestore();
       rmSync(root, { recursive: true, force: true });
     }
   });

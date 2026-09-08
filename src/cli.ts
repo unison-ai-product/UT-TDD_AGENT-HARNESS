@@ -145,7 +145,7 @@ import {
   selectPrecedingSessionFile,
 } from "./runtime/attempt-escalation.ts";
 import {
-  buildClaudeInboxEntry,
+  buildClaudeProviderInboxEntry,
   type ClaudeInboxPullRequestObservation,
   claudeWorkspaceId,
   isClaudeMemoryWakeTarget,
@@ -153,12 +153,14 @@ import {
   publishClaudeInboxEntry,
   recoverClaudeInboxBacklog,
   resolveClaudeWakeDelay,
+  resolveLiveClaudeTarget,
   summarizeUnclaimedInbox,
   waitForClaudeMemory,
 } from "./runtime/claude-memory-wake.ts";
 import { detectMode, nextActionForMode, type RuntimeDetection } from "./runtime/detect.ts";
 import { scanDanglingStops } from "./runtime/forced-stop.ts";
 import { createNodeInvocation, verifyNodeGeneration } from "./runtime/node-bootstrap.ts";
+import { requireProjectMemoryRoot } from "./runtime/project-memory-root.ts";
 import {
   nodeProviderHandoverDeps,
   type ProviderRuntime,
@@ -535,13 +537,16 @@ function readMemoryThroughService(
   repoRoot: string,
   options: MemoryQueryOptions = {},
 ): MemoryReadResult {
+  const project = requireProjectMemoryRoot(repoRoot);
   let db: ReturnType<typeof openHarnessDb> | undefined;
   try {
-    db = openHarnessDb(defaultHarnessDbPath(repoRoot), { repoRoot });
-    return readMemory({ repoRoot, db, options });
+    db = openHarnessDb(defaultHarnessDbPath(project.canonicalProjectRoot), {
+      repoRoot: project.canonicalProjectRoot,
+    });
+    return readMemory({ repoRoot: project.canonicalProjectRoot, db, options });
   } catch {
     // index を開けないこと自体は読み出しの失敗ではない (ファイルが正本)。
-    return readMemory({ repoRoot, options });
+    return readMemory({ repoRoot: project.canonicalProjectRoot, options });
   } finally {
     db?.close();
   }
@@ -1263,6 +1268,8 @@ hook
     if (result.kind === "delivered" && result.message) {
       process.stderr.write(`${result.message}\n`);
       process.exitCode = 2;
+    } else if (result.kind === "denied") {
+      process.stderr.write(`claude-memory-wake: denied (${result.reason})\n`);
     }
   });
 
@@ -4102,8 +4109,9 @@ memory
         : [];
       try {
         const repoRoot = requireRuntimeRepoRoot({ allowCwdFallback: true });
+        const project = requireProjectMemoryRoot(repoRoot);
         const entry = writeMemory({
-          repoRoot,
+          repoRoot: project.canonicalProjectRoot,
           input: {
             kind: opts.kind as MemoryKind,
             title: opts.title,
@@ -4116,11 +4124,18 @@ memory
           const mode = detectMode();
           const originRuntime = mode.currentRuntime === "claude" ? "system" : "codex";
           const operationId = opts.operationId?.trim() || entry.content_hash.slice(0, 16);
-          const notification = buildClaudeInboxEntry({
+          const target = resolveLiveClaudeTarget(repoRoot);
+          if (!target.ok) throw new Error(target.reason);
+          const notification = buildClaudeProviderInboxEntry({
             memory: entry,
+            projectId: project.projectId,
             operationId,
-            workspaceId: claudeWorkspaceId(repoRoot),
-            originRuntime,
+            workspaceId: target.workspaceId,
+            producer: {
+              provider: originRuntime === "codex" ? "codex" : "claude",
+              sessionId: resolveRuntimeSessionId(),
+            },
+            target: { scope: "session", provider: "claude", sessionId: target.sessionId },
           });
           const deliveryPath = publishClaudeInboxEntry(repoRoot, notification);
           process.stdout.write(`memory: notified Claude via ${deliveryPath}\n`);
