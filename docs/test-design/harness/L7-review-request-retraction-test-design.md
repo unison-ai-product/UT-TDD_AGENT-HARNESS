@@ -127,7 +127,7 @@ unknown拒否043と先行実装拒否045は現在も維持し、Git factsだけ�
 
 | Candidate | Stimulus | Oracle |
 |---|---|---|
-| CANDIDATE-U-RETRACT-048 | replacementのrequestまたはclosing receiptが欠落、ackのみ、FLAG、blockingあり | 各独立変異でtyped deny、retraction write 0 |
+| CANDIDATE-U-RETRACT-056 | replacementのrequestまたはclosing receiptが欠落、ackのみ、FLAG、blockingあり | 各独立変異でtyped deny、retraction write 0 |
 | CANDIDATE-U-RETRACT-049 | repository/PR/HEAD/authorFamily/receipt digestを一軸ずつ変更 | 各変異でtyped deny、元request/receipt不変 |
 | CANDIDATE-U-RETRACT-050 | retraction後にleaf receiptまたは中間linkを差し替え | gate側の独立再評価がdeny、writerの成功は代用不可 |
 | CANDIDATE-U-RETRACT-051 | 同一requestに遅延FLAGとretractionが競合 | 二重終端を拒否。不整合が現物にある場合はgateもdeny、FLAG不変 |
