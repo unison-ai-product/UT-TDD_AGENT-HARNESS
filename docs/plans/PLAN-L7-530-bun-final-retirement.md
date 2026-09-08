@@ -42,18 +42,18 @@ status: draft
 github_issue_id: 487
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:f0331355453843d394e5c63e583d5a75
-  command_id: command:pr521-r3-forward-classification-revision9
-  admitted_at: 2026-09-08T03:09:54.525Z
-  source_digest: sha256:23345f3ba93a9c27562234216a5e380f46a5be52b0be5b2a6b9e7dd81f1a726d
-  decision_digest: sha256:d370bf24cd952395fc50997f9e3d1eaac25b78110c0c1c91312932fd7ae21c60
-  receipt_digest: sha256:6bfeb7f85899bb3cd6f26ee15731cd6c50af854e4f9340d16def24fd965a0598
+  receipt_id: certificate:381f3017b10ca9f294b21af3e629212d
+  command_id: command:pr521-r4-forward-oracle-expectation-migration-revision10
+  admitted_at: 2026-09-08T03:50:48.681Z
+  source_digest: sha256:cefa7e5154b792a3da78a5583c77d32f6ceaf9eedf5c1dbe14e4572719697039
+  decision_digest: sha256:7fe4c00a12e332e31a6ec409a312fb5cc918f88c709b8d36c0eb431e3211424e
+  receipt_digest: sha256:3b093b2c8c6500a380d46756d8b1a32c6e3522ae29ee6532bc6eda207ec67a1e
   binding:
     path: docs/plans/PLAN-L7-530-bun-final-retirement.md
     plan_id: PLAN-L7-530-bun-final-retirement
     asset_id: plan:bc9250c9a7c873dcb9f18956677371f7
-    revision: 9
-    content_digest: sha256:23345f3ba93a9c27562234216a5e380f46a5be52b0be5b2a6b9e7dd81f1a726d
+    revision: 10
+    content_digest: sha256:cefa7e5154b792a3da78a5583c77d32f6ceaf9eedf5c1dbe14e4572719697039
   route:
     signal: feature_addition
     mode: add-feature
@@ -71,7 +71,7 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-530-bun-final-retirement
-    target_revision: 9
+    target_revision: 10
     phase: forward_merge
   escape_reason: "Issue #487 final Bun retirement inventory scope revision"
 ---
@@ -298,3 +298,12 @@ PLAN-L7-527 §2.5のdual-lock parityは「parentがdual-lockを保持する期�
 本PLANの4要素tuple成立前はそのparityを維持する。成立後のfinal retirementで保持期間が終了し、
 bun.lockとその出荷要求を撤去する。U-SETUP-013/AT-DIST-001のdual-lock期待も同じ撤去revisionで
 Node package-lock検証へ移す。新規の無条件lock例外や既存履歴の改変は作らない。
+
+
+## r4: U-PACKBUN-006 の同一revision expectation migration
+
+Issue #487の物理撤去は、PLAN-L7-522/524が所有するU-PACKBUN-006の検出器・behavioral oracleを弱めて通してはならない。一方、同oracleが凍結するrepository snapshotのうち、本PLANが撤去対象として所有する値は撤去revisionで同時に移行する。対象は、package.jsonの旧 `bun build src/cli.ts --compile --outfile dist/ut-tdd` 期待と、BUN_SPAWN_DEBT_ALLOWLIST、BUN_IMPORT_DEBT_ALLOWLIST、BUN_GLOBAL_DEBT_ALLOWLIST内の本PLANが実際に撤去したpath/countだけである。
+
+移行後のoracleは、package.jsonのbuildが不在なら不在を、正規Node buildを残すならそのexact値を固定する。三つのdebt allowlistは撤去済みrowだけを減算し、無関係な既存row、negative-control fixture、matcher、typed reason、deny分岐を保持する。旧Bun期待の残置、未撤去rowの先行削除、新規allowlist追加、pin引上げ、guard削除、常時Green化、matcher弱体化はそれぞれ独立Redとする。
+
+このsnapshot expectation migrationの実装差分はIssue #487が同一revisionで所有するが、U-PACKBUN-006のoracle authorityはPLAN-L7-522/524に残る。L7-530はoracleの意味・検出範囲を再定義せず、物理撤去によって真になったrepository stateへ期待値を追随させるだけとする。
