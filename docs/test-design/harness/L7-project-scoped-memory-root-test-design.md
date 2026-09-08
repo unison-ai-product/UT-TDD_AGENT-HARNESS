@@ -38,9 +38,27 @@ updated: 2026-09-08
 - Red→Green: 期待値をhook引数から注入しない旧compositionではv4を正当にconsumeできず、
   sidecar authorityも無かった。Greenではpublisherがentry-bound sidecarを作成し、consumerが
   独立に再検証するため、各semantic axis変異、coherent envelope/id/filename spoof、legacy
-  entryをtyped fail-closeできる。独立mutationの実測値は本PRの検収証跡へ束縛する。
+  entryをtyped fail-closeできる。実測は以下の検収記録へ束縛する。
 - production composition: `tests/runtime-hook-entrypoints.test.ts` の
   `U-MEMWAKE-007: CLI hook delivers` は未知の期待値hook引数を渡さず、live sessionを起動後、
   `memory add --notify-claude` →実hook consumeを通し、delivery成立とterminal cleanupを確認する。
 - legacy root migration/quarantine、Pack parity、R2以降は未完了であり、この証跡では主張しない。
   Opus non-author closing reviewは保留。
+
+### 検収実測（2026-09-08）
+
+- Green anchor: `175eff8b06a2817a733d0e9b9c5a06b46f5ef373`。
+  `node scripts/run-vitest-snapshot.ts tests/claude-memory-wake.test.ts tests/claude-memory-terminal-gc.test.ts tests/runtime-hook-entrypoints.test.ts -t "PMEMROOT-007|U-RVATT-025|U-MEMTERM-001|U-MEMTERM-003|U-MEMWAKE-001補遺|U-MEMWAKE-007: CLI hook delivers" --pool=forks --reporter=dot`
+  は3ファイル、9 passed / 37 skipped、workspace fenceを含む終了コード0。
+  各identity軸は単なるmismatch包含ではなく、軸別typed reasonの完全一致を検査する。
+- Red mutation: `0bd363b39c73f117a32788749c1b1bf3e080b36f`を基点とした隔離検証で、
+  `waitForClaudeMemory`の`validateProviderBinding(...)`呼出を`{ ok: true }`へ置換。
+  `U-PMEMROOT-007: provider envelope rejects each binding axis independently`は
+  `project_id: expected "denied", received "delivered"`で1 failed / 30 skipped、終了コード1。
+  mutation commitは`88c6929da2e17c7c5c6a3ad66027a2d4042818a6`（検証用、出荷しない）。
+  検証ログSHA-256は`7be3b0eee161fda4aedc75b2388afbbbb248c098a4aa6d8a8bced1a83022d09e`。
+  これはproduction binding guardの迂回を検出する証明であり、全個別guardを除去したmutation実測とは主張しない。
+- 先行する`0bd363b3`の実行はtest本体1件が成功したがworkspace fenceが失敗したため、
+  Green証跡から除外した。上記`175eff8b`で検証を取り直している。
+- 型検査、変更対象Biome、`git diff --check`、PLAN admissionはroot検収で成功。
+  Linux/Windows/aggregate CIと非著者closing reviewはPRで取得する。
