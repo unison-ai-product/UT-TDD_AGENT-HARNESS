@@ -2704,6 +2704,38 @@
         "revision": 11,
         "content_digest": "sha256:ebbb3e9d34ee96648da9b6514eaf3ba69064bf551cbfaedd6be471c6d6d95871"
       }
+    },
+    {
+      "sequence": 170,
+      "previous_record_digest": "sha256:e8a8ef530c585c98c968f0bdbbd93af1e0257f23061f55fec1e3b3a3cf1a2aac",
+      "record_digest": "sha256:0d751c7dbba5bd7e3b1a21a91f95aafa52b8cb73f18184f293b3c86b3cceea74",
+      "command_id": "command:issue420-runtime-adapter-contract-r2",
+      "receipt_id": "certificate:124b99afd5c1153fe417904c46ef61b5",
+      "receipt_digest": "sha256:325e33dbd6ac44e5177ef541ab03d19b0beecb4f81550aec37c44f2a0e12bf53",
+      "decision_digest": "sha256:84fa5b519e3b2475735e398829f7187ab640d3f38ea35e2d54dd4d78b8c3c129",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-516-pack-self-contained-consumer-runtime.md",
+        "plan_id": "PLAN-L7-516-pack-self-contained-consumer-runtime",
+        "asset_id": "plan:legacy:d28966ed1d8861940d1ed5bfc5eaebc7dd7b4a9de4ed7adbd65850095c816307",
+        "revision": 2,
+        "content_digest": "sha256:c9a0e1a5915651a7bd08ca45edf85111c783851f8abfd080087cc135d57f322c"
+      }
+    },
+    {
+      "sequence": 171,
+      "previous_record_digest": "sha256:0d751c7dbba5bd7e3b1a21a91f95aafa52b8cb73f18184f293b3c86b3cceea74",
+      "record_digest": "sha256:c5f43bc48c2110975b676b8e38a6f47ed9fc65a81e44286a465b00a39f703f4f",
+      "command_id": "command:issue420-runtime-adapter-reverse-r2",
+      "receipt_id": "certificate:06bbea24c08322700c8a3b17d6684aca",
+      "receipt_digest": "sha256:5b509fb468194269e01b6795b2861ef6f5b72dfd64dd87a3f816c51ff70c331a",
+      "decision_digest": "sha256:7f4609eccf4ccb1908fc1381f619fdec9e5f698998c2034c4b4e9c4da19a4c80",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-516-pack-self-contained-consumer-runtime-backfill.md",
+        "plan_id": "PLAN-REVERSE-516-pack-self-contained-consumer-runtime-backfill",
+        "asset_id": "plan:legacy:a791f4a13fda8d4baa8f510ef73e78491c5f3ea280c939fa5bd60e3fe325af8b",
+        "revision": 2,
+        "content_digest": "sha256:b813bb606bf2a629a69c7bf7931e70cd3adb77a65bbc85231fe622769c6ea5de"
+      }
     }
   ]
 }

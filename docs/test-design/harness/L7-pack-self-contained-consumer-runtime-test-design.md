@@ -85,3 +85,22 @@ producer欠落によるHard blockはPR #507のmain統合後に解消済みであ
 実装testのlabelsはdocs-only freezeとのalignmentを保つため、`CANDIDATE-U-PACKNODE-*`/
 `CANDIDATE-P-PACKNODE-*`を使用する。各テストは対応候補の一部軸だけを測定し、候補全mutation
 matrixの完了やU/P oracleへの昇格を意味しない。
+
+## 実adapter補完のpair review候補（Issue #420、未実測）
+
+PLAN-L7-516 revision 2の§11と対にする。新しいoracle番号を発行せず、既存候補の未測定軸を
+実adapterで測る。既存17-testのGreenを下表の証明へ流用しない。
+
+| 既存候補 | 追加する独立入力・fault | 観測する結果 |
+|---|---|---|
+| CANDIDATE-U-PACKNODE-001 | 実NodeBootstrapReceiptのparse/schema/subject/generation、既存ConsumerReceipt 7フィールドとidentityの一軸不一致 | opaque bytesのhashだけでは受理せず、lock/staging/activation 0 |
+| CANDIDATE-U-PACKNODE-004 | bundle準備後かつlock前にprior pointerを別の正当値へ変更 | lock内snapshotと候補priorの不一致でstaging/public write 0。void portはprivate state保持で実装可能であり、新portを前提にしない |
+| CANDIDATE-U-PACKNODE-005 | payload 4種のfield欠落・余剰・identity digest変異、fsync/seal/rename fault | 一軸ごとにtyped deny/indeterminate。payload自身へ同bundle digestを要求しない |
+| CANDIDATE-U-PACKNODE-006 | rollback入力に未記録・別consumer generationを与える | prior attestationを検証し、旧bundle/historyを変更しない |
+| CANDIDATE-U-PACKNODE-007 | 実setupへ検証済みaggregateと実producer bytesを供給し、setup元削除後に別cwdで両provider hook/CLIを起動 | consumer-localのみで起動。手書きbundleやstub CLIの成功をこのoracleへ流用しない |
+| CANDIDATE-U-PACKNODE-012 | rename成功直後にackを喪失し、adapter private stateの無い新processで再開 | durable payloadとpointerのexact観測だけで同じ結果。reconcile高々一回、新write/launch 0 |
+| CANDIDATE-U-PACKNODE-012 | prior pointerと一致・当該pointerと一致・第三のpointer・部分bundle・観測不能を別入力にする | uncommitted/committed/indeterminateを区別し、unknownを成功へ丸めない |
+
+history完全prefix、sequence、record digest、prior tipの各mutationは既存history候補の下位caseとして
+追加し、同一operation/attemptを再利用しない。Linux/Windows real filesystemでbytes/mode/pathを観測する。
+現段階はpair review候補であり、adapter実装・候補昇格・全境界Greenは未主張。
