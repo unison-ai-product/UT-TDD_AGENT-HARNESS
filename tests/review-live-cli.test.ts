@@ -149,7 +149,11 @@ describe("review live CLI composition", () => {
       repoRoot: () => root,
       providerAvailable: () => true,
       validateReviewSubject: () => ({ ok: true }),
-      resolveWakeTarget: () => ({ ok: true, workspaceId: targetWorkspaceId }),
+      resolveWakeTarget: () => ({
+        ok: true,
+        workspaceId: targetWorkspaceId,
+        sessionId: "claude-session",
+      }),
     });
     const originalWrite = process.stdout.write;
     const originalExitCode = process.exitCode;
@@ -248,7 +252,11 @@ describe("review live CLI composition", () => {
   it("U-RVATT-024: does not resolve Claude workspace for a Codex reviewer", async () => {
     const { root, memoryPath } = fixture();
     execFileSync("git", ["init", "-q"], { cwd: root });
-    const resolveWakeTarget = vi.fn(() => ({ ok: true as const, workspaceId: "f".repeat(64) }));
+    const resolveWakeTarget = vi.fn(() => ({
+      ok: true as const,
+      workspaceId: "f".repeat(64),
+      sessionId: "claude-session",
+    }));
     const program = new Command().exitOverride();
     registerLiveReviewCommands(program.command("review"), {
       repoRoot: () => root,
@@ -300,7 +308,11 @@ describe("review live CLI composition", () => {
   it("U-RVATT-024: uses an injected Codex wake surface without touching Claude workspace", async () => {
     const { root, memoryPath } = fixture();
     execFileSync("git", ["init", "-q"], { cwd: root });
-    const resolveWakeTarget = vi.fn(() => ({ ok: true as const, workspaceId: "f".repeat(64) }));
+    const resolveWakeTarget = vi.fn(() => ({
+      ok: true as const,
+      workspaceId: "f".repeat(64),
+      sessionId: "claude-session",
+    }));
     const publishCodexReviewWake = vi.fn();
     const program = new Command().exitOverride();
     registerLiveReviewCommands(program.command("review"), {

@@ -13,7 +13,7 @@ import { describe, expect, it } from "vitest";
 import type { MemoryEntry } from "../src/memory/index.ts";
 import {
   buildClaudeInboxEntry,
-  buildClaudeReviewInboxEntry,
+  buildClaudeProviderReviewInboxEntry,
   claudeWorkspaceId,
   evaluateClaudeInboxTerminal,
   parseClaudeInboxPullRequestObservation,
@@ -44,10 +44,15 @@ function fixture(): string {
 
 function review(root: string, operationId = "review", exactHead = "c".repeat(40)) {
   const digest = "b".repeat(16);
-  return buildClaudeReviewInboxEntry({
+  const project = resolveProjectMemoryRoot(root);
+  if (!project.ok) throw new Error(project.reason);
+  return buildClaudeProviderReviewInboxEntry({
     memory,
+    projectId: project.projectId,
     operationId,
     workspaceId: claudeWorkspaceId(root),
+    producer: { provider: "codex", sessionId: "codex-terminal-gc" },
+    target: { scope: "session", provider: "claude", sessionId: "claude-terminal-gc" },
     requestDigest: digest,
     requestPath: `.ut-tdd/review/requests/${digest}.json`,
     pr: 444,

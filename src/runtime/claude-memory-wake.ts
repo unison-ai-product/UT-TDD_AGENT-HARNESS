@@ -20,12 +20,14 @@ import {
   activateClaudeWakeGeneration,
   CLAUDE_WAKE_GENERATION_SCHEMA,
   type ClaudeWakeAuthority,
+  inspectClaudeWakeGeneration,
   parseClaudeWakeGeneration,
   validateClaudeWakeClaimAuthority,
 } from "./claude-wake-generation-upgrade.ts";
 import { requireProjectMemoryRoot } from "./project-memory-root.ts";
 
 export const CLAUDE_INBOX_SCHEMA = "ut-tdd.claude-inbox/v3" as const;
+/** Project-bound provider envelopes are deliberately a new exact-key schema. */
 export const CLAUDE_INBOX_LEGACY_SCHEMA = "ut-tdd.claude-inbox/v2" as const;
 export const CLAUDE_WAKE_BODY_MAX_CHARS = 8_000;
 export const CLAUDE_INBOX_BACKLOG_WARN_AGE_MS = 15 * 60 * 1_000;
@@ -57,6 +59,9 @@ export type ClaudeLiveWorkspaceRoutingFailure =
 
 export type ClaudeLiveWorkspaceResolution =
   | { readonly ok: true; readonly workspaceId: string }
+  | { readonly ok: false; readonly reason: ClaudeLiveWorkspaceRoutingFailure };
+export type ClaudeLiveTargetResolution =
+  | { readonly ok: true; readonly workspaceId: string; readonly sessionId: string }
   | { readonly ok: false; readonly reason: ClaudeLiveWorkspaceRoutingFailure };
 export type ClaudeInboxWarningCode =
   | "age"
@@ -147,6 +152,44 @@ interface ClaudeInboxBase {
   readonly createdAt: string;
 }
 
+const INBOX_SOURCE_FILE = Symbol("claudeInboxSourceFile");
+type InboxEntryWithSource = ClaudeInboxEntry & { readonly [INBOX_SOURCE_FILE]?: string };
+
+export type {
+  ClaudeProvider,
+  ClaudeProviderEnvelope,
+  ClaudeProviderEnvelopeDenyReason,
+  ClaudeProviderEnvelopeExpectation,
+  ClaudeProviderEnvelopeValidation,
+  ClaudeProviderInboxEntry,
+  ClaudeProviderMemoryInboxEntry,
+  ClaudeProviderReviewInboxEntry,
+  ClaudeProviderTarget,
+} from "./claude-provider-envelope.ts";
+export {
+  buildClaudeProviderInboxEntry,
+  buildClaudeProviderReviewInboxEntry,
+  CLAUDE_PROVIDER_INBOX_SCHEMA,
+  computeClaudeProviderEntryId,
+  computeClaudeProviderEnvelopeDigest,
+  validateClaudeProviderEnvelope,
+} from "./claude-provider-envelope.ts";
+
+import {
+  CLAUDE_PROVIDER_INBOX_SCHEMA,
+  type ClaudeProvider,
+  type ClaudeProviderEnvelopeDenyReason,
+  type ClaudeProviderEnvelopeExpectation,
+  type ClaudeProviderEnvelopeValidation,
+  type ClaudeProviderInboxEntry,
+  type ClaudeProviderMemoryInboxEntry,
+  type ClaudeProviderReviewInboxEntry,
+  computeClaudeProviderEntryId,
+  computeClaudeProviderEnvelopeDigest,
+  isValidClaudeProviderEnvelopeShape,
+  validateClaudeProviderConsumerEnvelope,
+} from "./claude-provider-envelope.ts";
+
 export interface ClaudeMemoryInboxEntry extends ClaudeInboxBase {
   readonly schemaVersion: typeof CLAUDE_INBOX_SCHEMA;
   readonly purpose: "memory";
@@ -172,13 +215,30 @@ export interface ClaudeLegacyInboxEntry extends ClaudeInboxBase {
 export type ClaudeInboxEntry =
   | ClaudeMemoryInboxEntry
   | ClaudeReviewInboxEntry
+  | ClaudeProviderMemoryInboxEntry
+  | ClaudeProviderReviewInboxEntry
   | ClaudeLegacyInboxEntry;
 
 export interface ClaudeMemoryWakeResult {
-  readonly kind: "delivered" | "timeout" | "superseded";
+  readonly kind: "delivered" | "timeout" | "superseded" | "denied";
   readonly entry?: ClaudeInboxEntry;
   readonly message?: string;
+  readonly reason?: ClaudeProviderEnvelopeDenyReason | "legacy_schema_unbound";
 }
+
+const CLAUDE_PROVIDER_BINDING_SCHEMA = "ut-tdd.claude-provider-binding/v1" as const;
+type ClaudeProviderEnvelopeBinding = ClaudeProviderEnvelopeExpectation & {
+  readonly schemaVersion: typeof CLAUDE_PROVIDER_BINDING_SCHEMA;
+  readonly entryId: string;
+  readonly envelopeDigest: string;
+};
+
+type ClaudeProviderBindingReadResult =
+  | { readonly ok: true; readonly binding: ClaudeProviderEnvelopeBinding }
+  | {
+      readonly ok: false;
+      readonly reason: "envelope_binding_missing" | "envelope_binding_invalid";
+    };
 
 export interface ClaudeInboxBacklogSummary {
   readonly workspaceId: string;
@@ -229,6 +289,111 @@ function inboxFileStem(entryId: string): string {
 
 function runtimeRoot(repoRoot: string): string {
   return join(requireProjectMemoryRoot(repoRoot).runtimeBusRoot, "claude-memory-wake");
+}
+
+function providerBindingPath(repoRoot: string, entryId: string): string {
+  return join(runtimeRoot(repoRoot), "envelope-bindings", `${inboxFileStem(entryId)}.json`);
+}
+
+function providerBindingFor(entry: ClaudeProviderInboxEntry): ClaudeProviderEnvelopeBinding {
+  return {
+    schemaVersion: CLAUDE_PROVIDER_BINDING_SCHEMA,
+    entryId: entry.id,
+    projectId: entry.projectId,
+    memoryId: entry.memoryId,
+    operationId: entry.operationId,
+    producer: entry.producer,
+    target: entry.target,
+    envelopeDigest: entry.envelopeDigest,
+  };
+}
+
+function writeProviderBinding(repoRoot: string, entry: ClaudeInboxEntry): void {
+  if (entry.schemaVersion !== CLAUDE_PROVIDER_INBOX_SCHEMA) return;
+  const binding = providerBindingFor(entry);
+  const path = providerBindingPath(repoRoot, entry.id);
+  ensureDir(dirname(path), { recursive: true });
+  const serialized = JSON.stringify(binding);
+  if (existsSync(path)) {
+    if (readFileSync(path, "utf8").trim() === serialized) return;
+    throw new Error("claude_provider_binding_conflict");
+  }
+  const descriptor = openSync(path, "wx", 0o600);
+  try {
+    writeFileSync(descriptor, `${serialized}\n`);
+  } finally {
+    closeSync(descriptor);
+  }
+}
+
+function removeProviderBinding(repoRoot: string, entry: ClaudeInboxEntry): void {
+  if (entry.schemaVersion !== CLAUDE_PROVIDER_INBOX_SCHEMA) return;
+  try {
+    unlinkSync(providerBindingPath(repoRoot, entry.id));
+  } catch {
+    // 既にterminal cleanupされた場合は冪等に扱う。
+  }
+}
+
+function validateProviderBinding(
+  repoRoot: string,
+  entry: ClaudeProviderInboxEntry,
+  provider: ClaudeProvider,
+  sessionId: string,
+): ClaudeProviderEnvelopeValidation {
+  const bindingResult = readProviderBinding(repoRoot, entry);
+  if (!bindingResult.ok) return bindingResult;
+  return validateClaudeProviderConsumerEnvelope({
+    entry,
+    projectId: requireProjectMemoryRoot(repoRoot).projectId,
+    provider,
+    sessionId,
+    expectedMemoryId: bindingResult.binding.memoryId,
+    expectedOperationId: bindingResult.binding.operationId,
+    expectedProducer: bindingResult.binding.producer,
+  });
+}
+
+function readProviderBinding(
+  repoRoot: string,
+  entry: ClaudeProviderInboxEntry,
+): ClaudeProviderBindingReadResult {
+  const path = providerBindingPath(repoRoot, entry.id);
+  if (!existsSync(path)) return { ok: false, reason: "envelope_binding_missing" };
+  try {
+    const parsed = JSON.parse(readFileSync(path, "utf8")) as Record<string, unknown>;
+    const expectedKeys = [
+      "schemaVersion",
+      "entryId",
+      "projectId",
+      "memoryId",
+      "operationId",
+      "producer",
+      "target",
+      "envelopeDigest",
+    ];
+    if (!hasExactKeys(parsed, expectedKeys))
+      return { ok: false, reason: "envelope_binding_invalid" };
+    const binding = parsed as unknown as ClaudeProviderEnvelopeBinding;
+    const coherent = isValidClaudeProviderEnvelopeShape({
+      ...entry,
+      projectId: binding.projectId,
+      producer: binding.producer,
+      target: binding.target,
+      envelopeDigest: binding.envelopeDigest,
+    });
+    if (
+      binding.schemaVersion !== CLAUDE_PROVIDER_BINDING_SCHEMA ||
+      binding.entryId !== computeClaudeProviderEntryId(binding) ||
+      binding.envelopeDigest !== computeClaudeProviderEnvelopeDigest(binding) ||
+      !coherent
+    ) {
+      return { ok: false, reason: "envelope_binding_invalid" };
+    }
+    return { ok: true, binding };
+  } catch {
+    return { ok: false, reason: "envelope_binding_invalid" };
+  }
 }
 
 function logPath(repoRoot: string): string {
@@ -330,6 +495,7 @@ export function buildClaudeReviewInboxEntry(input: {
 export function publishClaudeInboxEntry(repoRoot: string, entry: ClaudeInboxEntry): string {
   const claimedPath = join(runtimeRoot(repoRoot), `${inboxFileStem(entry.id)}.claim`);
   if (existsSync(claimedPath)) {
+    removeProviderBinding(repoRoot, entry);
     writeAuditLog(repoRoot, {
       event: "publish",
       status: "idempotent_claimed",
@@ -344,6 +510,10 @@ export function publishClaudeInboxEntry(repoRoot: string, entry: ClaudeInboxEntr
   ensureDir(directory, { recursive: true });
   const target = join(directory, `${inboxFileStem(entry.id)}.json`);
   const serialized = JSON.stringify(entry);
+  // Persist the independently consumed expectation before exposing or
+  // reusing the inbox entry. A consumer can never observe a new v4 entry
+  // unbound, including an idempotent retry after a partial prior publish.
+  writeProviderBinding(repoRoot, entry);
   if (existsSync(target)) {
     if (readFileSync(target, "utf8").trim() === serialized) {
       const hook = inspectClaudeMemoryWakeHook(repoRoot);
@@ -427,6 +597,7 @@ export function decodeClaudeInboxEntry(value: string): ClaudeInboxEntry | undefi
     const parsed = JSON.parse(value) as Record<string, unknown>;
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return undefined;
     const legacy = parsed.schemaVersion === CLAUDE_INBOX_LEGACY_SCHEMA;
+    const providerEnvelope = parsed.schemaVersion === CLAUDE_PROVIDER_INBOX_SCHEMA;
     const purpose = legacy ? "memory" : parsed.purpose;
     const baseKeys = [
       "schemaVersion",
@@ -438,27 +609,46 @@ export function decodeClaudeInboxEntry(value: string): ClaudeInboxEntry | undefi
       "targetWorkspaceId",
       "createdAt",
     ];
+    const providerKeys = ["projectId", "producer", "target", "envelopeDigest"];
     const expectedKeys = legacy
       ? baseKeys
-      : purpose === "memory"
-        ? [...baseKeys, "purpose"]
-        : purpose === "review"
-          ? [
-              ...baseKeys,
-              "purpose",
-              "requestDigest",
-              "requestPath",
-              "memoryPath",
-              "pr",
-              "exactHead",
-              "reviewRevision",
-              "authorFamily",
-            ]
-          : [];
+      : providerEnvelope
+        ? purpose === "memory"
+          ? [...baseKeys, "purpose", ...providerKeys]
+          : purpose === "review"
+            ? [
+                ...baseKeys,
+                "purpose",
+                ...providerKeys,
+                "requestDigest",
+                "requestPath",
+                "memoryPath",
+                "pr",
+                "exactHead",
+                "reviewRevision",
+                "authorFamily",
+              ]
+            : []
+        : purpose === "memory"
+          ? [...baseKeys, "purpose"]
+          : purpose === "review"
+            ? [
+                ...baseKeys,
+                "purpose",
+                "requestDigest",
+                "requestPath",
+                "memoryPath",
+                "pr",
+                "exactHead",
+                "reviewRevision",
+                "authorFamily",
+              ]
+            : [];
     if (!hasExactKeys(parsed, expectedKeys)) return undefined;
     const entry = parsed as unknown as ClaudeInboxEntry;
     if (
-      (!legacy && entry.schemaVersion !== CLAUDE_INBOX_SCHEMA) ||
+      (!legacy && !providerEnvelope && entry.schemaVersion !== CLAUDE_INBOX_SCHEMA) ||
+      (providerEnvelope && entry.schemaVersion !== CLAUDE_PROVIDER_INBOX_SCHEMA) ||
       !entry.id ||
       !entry.memoryId.startsWith("memory:") ||
       !entry.body.trim() ||
@@ -470,6 +660,14 @@ export function decodeClaudeInboxEntry(value: string): ClaudeInboxEntry | undefi
       return undefined;
     }
     if (legacy) return { ...entry, purpose: "memory" } as ClaudeLegacyInboxEntry;
+    if (providerEnvelope) {
+      if (!isValidClaudeProviderEnvelopeShape(entry as ClaudeProviderInboxEntry)) {
+        return undefined;
+      }
+      if (entry.purpose === "memory") return entry as ClaudeProviderMemoryInboxEntry;
+      if (entry.purpose !== "review" || !isValidReviewIdentity(entry)) return undefined;
+      return entry as ClaudeProviderReviewInboxEntry;
+    }
     if (entry.purpose === "memory") return entry;
     if (entry.purpose !== "review" || !isValidReviewIdentity(entry)) return undefined;
     return entry;
@@ -478,7 +676,9 @@ export function decodeClaudeInboxEntry(value: string): ClaudeInboxEntry | undefi
   }
 }
 
-function reviewReceiptIdentity(entry: ClaudeReviewInboxEntry): ClaudeInboxReviewReceiptIdentity {
+function reviewReceiptIdentity(
+  entry: ClaudeReviewInboxEntry | ClaudeProviderReviewInboxEntry,
+): ClaudeInboxReviewReceiptIdentity {
   return {
     requestDigest: entry.requestDigest,
     requestPath: entry.requestPath,
@@ -501,7 +701,11 @@ export function evaluateClaudeInboxTerminal(input: {
   replacementExists?: boolean;
 }): ClaudeInboxTerminalDecision {
   if (input.claimed === true) return { terminal: true, reason: "claimed" };
-  if (input.entry.purpose !== "review" || input.entry.schemaVersion !== CLAUDE_INBOX_SCHEMA) {
+  if (
+    input.entry.purpose !== "review" ||
+    (input.entry.schemaVersion !== CLAUDE_INBOX_SCHEMA &&
+      input.entry.schemaVersion !== CLAUDE_PROVIDER_INBOX_SCHEMA)
+  ) {
     return { terminal: false };
   }
   const observation = input.pullRequest;
@@ -514,7 +718,9 @@ export function evaluateClaudeInboxTerminal(input: {
   ) {
     return { terminal: false };
   }
-  const receipt = reviewReceiptIdentity(input.entry);
+  const receipt = reviewReceiptIdentity(
+    input.entry as ClaudeReviewInboxEntry | ClaudeProviderReviewInboxEntry,
+  );
   if (observation.state === "MERGED") {
     return { terminal: true, reason: "pr_merged", receipt };
   }
@@ -775,12 +981,19 @@ function readInbox(repoRoot: string): ClaudeInboxEntry[] {
     .filter((name) => name.endsWith(".json"))
     .map((name) => {
       try {
-        return decodeClaudeInboxEntry(readFileSync(join(directory, name), "utf8"));
+        const entry = decodeClaudeInboxEntry(readFileSync(join(directory, name), "utf8"));
+        if (entry) Object.defineProperty(entry, INBOX_SOURCE_FILE, { value: name });
+        return entry;
       } catch {
         return undefined;
       }
     })
     .filter((entry): entry is ClaudeInboxEntry => entry !== undefined);
+}
+
+function inboxSourceMatchesEntry(entry: ClaudeInboxEntry): boolean {
+  const source = (entry as InboxEntryWithSource)[INBOX_SOURCE_FILE];
+  return !source || source === `${inboxFileStem(entry.id)}.json`;
 }
 
 function summarizeEntries(
@@ -900,6 +1113,18 @@ export function resolveLiveClaudeWorkspace(repoRoot: string): ClaudeLiveWorkspac
   };
 }
 
+export function resolveLiveClaudeTarget(repoRoot: string): ClaudeLiveTargetResolution {
+  const workspace = resolveLiveClaudeWorkspace(repoRoot);
+  if (!workspace.ok) return workspace;
+  const inspected = inspectClaudeWakeGeneration(runtimeRoot(repoRoot), workspace.workspaceId);
+  if (!inspected.ok) return { ok: false, reason: "incompatible_claude_workspace_schema" };
+  return {
+    ok: true,
+    workspaceId: workspace.workspaceId,
+    sessionId: inspected.authority.sessionId,
+  };
+}
+
 function observeClaudeSessions(
   root: string,
   workspaceId: string,
@@ -971,11 +1196,14 @@ function claim(input: {
   at: string;
   authority: ClaudeWakeAuthority;
   leaseToken: string;
+  envelopeGuard?: () => ClaudeProviderEnvelopeValidation;
   beforeCommit?: () => void;
 }): boolean {
   const root = runtimeRoot(input.repoRoot);
   ensureDir(root, { recursive: true });
   if (!validateClaudeWakeClaimAuthority(root, input.authority, input.leaseToken).ok) return false;
+  if (!inboxSourceMatchesEntry(input.entry)) return false;
+  if (input.envelopeGuard && !input.envelopeGuard().ok) return false;
   const path = join(root, `${inboxFileStem(input.entry.id)}.claim`);
   let descriptor: number;
   try {
@@ -985,6 +1213,11 @@ function claim(input: {
   }
   try {
     input.beforeCommit?.();
+    if (input.envelopeGuard && !input.envelopeGuard().ok) {
+      closeSync(descriptor);
+      unlinkSync(path);
+      return false;
+    }
     if (!validateClaudeWakeClaimAuthority(root, input.authority, input.leaseToken).ok) {
       closeSync(descriptor);
       unlinkSync(path);
@@ -1014,6 +1247,14 @@ export function renderClaudeWakeMessage(entry: ClaudeInboxEntry): string {
     memory_id: entry.memoryId,
     operation_id: entry.operationId,
     purpose: entry.purpose,
+    ...(entry.schemaVersion === CLAUDE_PROVIDER_INBOX_SCHEMA
+      ? {
+          project_id: entry.projectId,
+          producer: entry.producer,
+          target: entry.target,
+          envelope_digest: entry.envelopeDigest,
+        }
+      : {}),
     ...(entry.purpose === "review"
       ? {
           request_digest: entry.requestDigest,
@@ -1040,6 +1281,9 @@ export function renderClaudeWakeMessage(entry: ClaudeInboxEntry): string {
 export async function waitForClaudeMemory(input: {
   repoRoot: string;
   sessionId: string;
+  /** Explicit pre-boundary compatibility only; production hooks leave this false. */
+  allowLegacy?: boolean;
+  provider?: ClaudeProvider;
   pollIntervalMs?: number;
   maxWaitMs?: number;
   now?: () => string;
@@ -1059,6 +1303,7 @@ export async function waitForClaudeMemory(input: {
   const pollIntervalMs = Math.max(10, requestedPollMs);
   const maxWaitMs = Math.max(pollIntervalMs, requestedMaxMs);
   const now = input.now ?? (() => new Date().toISOString());
+  const provider = input.provider ?? "claude";
   const sleep =
     input.sleep ?? ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
   const root = runtimeRoot(input.repoRoot);
@@ -1170,6 +1415,43 @@ export async function waitForClaudeMemory(input: {
       unavailable,
     );
     if (entry) {
+      if (entry.schemaVersion !== CLAUDE_PROVIDER_INBOX_SCHEMA && !input.allowLegacy) {
+        writeAuditLog(input.repoRoot, {
+          event: "claim",
+          status: "deny",
+          entryId: entry.id,
+          operationId: entry.operationId,
+          reason: "legacy_schema_unbound",
+        });
+        return { kind: "denied", entry, reason: "legacy_schema_unbound" };
+      }
+      if (!inboxSourceMatchesEntry(entry)) {
+        writeAuditLog(input.repoRoot, {
+          event: "claim",
+          status: "deny",
+          entryId: entry.id,
+          operationId: entry.operationId,
+          reason: "envelope_integrity_mismatch",
+        });
+        return { kind: "denied", entry, reason: "envelope_integrity_mismatch" };
+      }
+      let envelopeGuard: (() => ClaudeProviderEnvelopeValidation) | undefined;
+      if (entry.schemaVersion === CLAUDE_PROVIDER_INBOX_SCHEMA) {
+        envelopeGuard = () =>
+          validateProviderBinding(input.repoRoot, entry, provider, input.sessionId);
+        const envelopeResult = envelopeGuard();
+        if (!envelopeResult.ok) {
+          writeAuditLog(input.repoRoot, {
+            event: "claim",
+            status: "deny",
+            entryId: entry.id,
+            operationId: entry.operationId,
+            reason: envelopeResult.reason,
+          });
+          unclaimable.add(entry.id);
+          return { kind: "denied", entry, reason: envelopeResult.reason };
+        }
+      }
       if (
         claim({
           repoRoot: input.repoRoot,
@@ -1178,6 +1460,7 @@ export async function waitForClaudeMemory(input: {
           at: now(),
           authority: activation.authority,
           leaseToken,
+          envelopeGuard,
           beforeCommit: input.beforeClaimCommit,
         })
       ) {
@@ -1196,8 +1479,12 @@ export async function waitForClaudeMemory(input: {
             { encoding: "utf8", mode: 0o600 },
           );
         }
+        // The terminal marker is the durable claim evidence. Only after it is
+        // present may the independent expectation sidecar be retired.
+        removeProviderBinding(input.repoRoot, entry);
         try {
-          unlinkSync(join(root, "inbox", `${inboxFileStem(entry.id)}.json`));
+          const source = (entry as InboxEntryWithSource)[INBOX_SOURCE_FILE];
+          unlinkSync(join(root, "inbox", source ?? `${inboxFileStem(entry.id)}.json`));
         } catch {
           // claim が配送の正本。inbox GC は次回へ委ねる。
         }
