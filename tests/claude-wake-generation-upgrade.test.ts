@@ -11,7 +11,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { MemoryEntry } from "../src/memory/index.ts";
 import {
   buildClaudeInboxEntry,
@@ -427,6 +427,8 @@ describe("Claude wake generation rolling upgrade", () => {
 
   it("U-CHSCHEMA-011: authority revocation between validation and claim commit writes no claim", async () => {
     const root = gitFixture();
+    let clockMs = Date.now();
+    const clock = vi.spyOn(Date, "now").mockImplementation(() => clockMs);
     try {
       const memory: MemoryEntry = {
         memory_id: "memory:fixture:claim-cas-revocation",
@@ -450,6 +452,11 @@ describe("Claude wake generation rolling upgrade", () => {
         sessionId: "old-session",
         pollIntervalMs: 10,
         maxWaitMs: 5_000,
+        // Git validation latency is not the oracle; only poll advances time.
+        now: () => new Date(clockMs).toISOString(),
+        sleep: async (ms) => {
+          clockMs += ms;
+        },
         beforeClaimCommit: () => {
           if (revoked) return;
           revoked = true;
@@ -463,11 +470,13 @@ describe("Claude wake generation rolling upgrade", () => {
           });
         },
       });
+      expect(revoked).toBe(true);
       expect(result).toEqual({ kind: "superseded" });
       const runtime = wakeRuntimeRoot(root);
       expect(readdirSync(runtime).filter((name) => name.endsWith(".claim"))).toEqual([]);
       expect(readdirSync(join(runtime, "inbox"))).toHaveLength(1);
     } finally {
+      clock.mockRestore();
       rmSync(root, { recursive: true, force: true });
     }
   });
