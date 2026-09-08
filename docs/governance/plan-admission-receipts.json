@@ -2544,6 +2544,22 @@
         "revision": 7,
         "content_digest": "sha256:a7a5bb16c81d40e1a95a54341634404ad2d3bc995b42c8c950b5ea689afc7c4e"
       }
+    },
+    {
+      "sequence": 160,
+      "previous_record_digest": "sha256:6490e2c3781a2bc2d3313d096d07bdd83adc16b91e484f7210c6c04836d66a30",
+      "record_digest": "sha256:abccc7baa89901bbb4c56aaa355633017d9e2970ed2e9f13b5a971fe1d941793",
+      "command_id": "command:pr521-r2-forward-guard-contract-revision7",
+      "receipt_id": "certificate:75d64be2e40c15c3dc35ca6a2de2758a",
+      "receipt_digest": "sha256:b023a08268f3c3691d2aa4fa85a966dd0ad621b1ccf5c4feddaf2e4e95a14816",
+      "decision_digest": "sha256:dcc9ec87cd558be9e0f6f3580ec9cca477b84f895be9d80c4120dbcc33027558",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-530-bun-final-retirement.md",
+        "plan_id": "PLAN-L7-530-bun-final-retirement",
+        "asset_id": "plan:bc9250c9a7c873dcb9f18956677371f7",
+        "revision": 7,
+        "content_digest": "sha256:74d994a7675a5fdcc0f102e9a26e9702bb60577299288b36619e29f4d7cbae1d"
+      }
     }
   ]
 }

@@ -42,18 +42,18 @@ status: draft
 github_issue_id: 487
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:0270576ffe0c1ab8eadd452801c995e4
-  command_id: command:pr521-r2-deny-guard-forward6
-  admitted_at: 2026-09-08T02:22:05.134Z
-  source_digest: sha256:7fa94cd240620dd3c85d4bc9d3ff9341c290363504e655ae38dd1a00877a8da2
-  decision_digest: sha256:863bf73214f96db68ff67db61502b569f37f09a9fb95d1bad40cd77e8b68343a
-  receipt_digest: sha256:3b7b443d799baa41a49c300d9b945bfd5fed995a1dd98b94ac88b0c1c86ff932
+  receipt_id: certificate:75d64be2e40c15c3dc35ca6a2de2758a
+  command_id: command:pr521-r2-forward-guard-contract-revision7
+  admitted_at: 2026-09-08T02:23:46.262Z
+  source_digest: sha256:74d994a7675a5fdcc0f102e9a26e9702bb60577299288b36619e29f4d7cbae1d
+  decision_digest: sha256:dcc9ec87cd558be9e0f6f3580ec9cca477b84f895be9d80c4120dbcc33027558
+  receipt_digest: sha256:b023a08268f3c3691d2aa4fa85a966dd0ad621b1ccf5c4feddaf2e4e95a14816
   binding:
     path: docs/plans/PLAN-L7-530-bun-final-retirement.md
     plan_id: PLAN-L7-530-bun-final-retirement
     asset_id: plan:bc9250c9a7c873dcb9f18956677371f7
-    revision: 6
-    content_digest: sha256:7fa94cd240620dd3c85d4bc9d3ff9341c290363504e655ae38dd1a00877a8da2
+    revision: 7
+    content_digest: sha256:74d994a7675a5fdcc0f102e9a26e9702bb60577299288b36619e29f4d7cbae1d
   route:
     signal: feature_addition
     mode: add-feature
@@ -71,7 +71,7 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-530-bun-final-retirement
-    target_revision: 6
+    target_revision: 7
     phase: forward_merge
   escape_reason: "Issue #487 final Bun retirement inventory scope revision"
 ---
@@ -152,6 +152,7 @@ AI指示からの非到達を個別に証明できた候補だけをその分類
 | `scripts/git-hooks/secret-scan-diff.ts` の Bun shebang/direct-entry | `reachable_production`。#487所有。 |
 | `scripts/run-vitest-snapshot.ts` の `resolveBunBinary`/`UT_TDD_BUN_BINARY` | test/acceptance runnerの到達面。#487所有、専用fixture隔離後にproduction受渡しを撤去。 |
 | `skills/git.md`、`skills/test-driven-development.md` の `bun run` 実行指示 | Pack同梱のruntime instruction surface。既存のPLAN-L7-488/PLAN-L7-491はこの2ファイルを所有していないため、#487所有としてNode/npm指示へ是正する。 |
+| `src/lint/bun-permanent-ban.ts`、`src/lint/runtime-portability.ts`、`src/lint/rule-drift.ts`、`src/lint/toolchain-pin.ts`、`src/lint/github-ci-policy.ts`、`src/doctor/rule-quality.ts` の検出語彙 | `ban_enforcement_guard`。path+symbol単位でdeny専用を証明して保持する。同じfile内の実行・生成・配布・AI指示到達面は免除しない。 |
 | `package.json` の `build`/`bunAuthority`、`bun.lock` | #487がtuple成立後に撤去する中核。 |
 | #470/#471/#472が所有するgenerated consumer/readiness/source-CI面、#500 Pack CI policy、#484/#515 Node producer | `out_of_scope_owned_elsewhere`。raw inventoryには残すが、#487は再所有しない。 |
 | `tests/**`/`**/fixtures/**`/`.ut-tdd/**`/`docs/**`/`vendor/**` の検出語 | path名のみでは分類しない。実行・生成・配布・AI指示からの到達性を個別に確認し、非到達の証拠がある候補だけを `retained_fixture`/`history` とする。 |
@@ -161,6 +162,11 @@ AI指示からの非到達を個別に証明できた候補だけをその分類
 独立Red oracleへ束ね、1件でも未分類・未所有・到達判定不能なら `Indeterminate` として
 撤去を0にする。
 
+`ban_enforcement_guard`はraw文字列を棚卸しから除外する許可ではない。全候補を分類し、未分類は
+`Indeterminate`とする。判定単位はpath+symbolの実行・生成・配布・AI指示到達surfaceであり、
+raw文字列件数ではない。spawn/install/download/fallbackへ到達する処理はguardへ分類しない。
+既存U-PACKBUN-006等の独立guard mutationで、guard削除・常時Green化・allowlist弱体化を
+各々Redにする。検出語彙の保持は許すが、deny能力を削除してGreenとすることは許可しない。
 
 `package.json` の `build`、`bunAuthority`、`bun.lock` はIssue #487が所有するfinal deletionの中核であり、
 4要素tuple成立後に本PLANで物理撤去する。#470（生成成果物）、#471（readiness）、#472（source CI）の
@@ -179,7 +185,7 @@ Redで再現してから、同一commitでGreenへ昇格する。候補とoracle
 
 | candidate | Red | Green oracle |
 |---|---|---|
-| `CAND-NODEBOOT-208` | reachableなBun build/fallback面を1つ残したまま撤去を成功扱いにする | production到達面を全件列挙し、1件でも残れば typed noncompliant/indeterminate で撤去0 |
+| `CAND-NODEBOOT-208` | 実行・生成・配布・AI指示のreachable Bun surfaceを1件残す、またはguard/fixtureで実行面を免除する | reachable surfaceを全件列挙し、1件でも残れば typed noncompliant/indeterminate で撤去0。guardはpath+symbol単位でdeny専用と検出力保持を独立検証し、raw文字列件数を判定単位にしない |
 | `CAND-NODEBOOT-023` | sealed/parity receiptの片側だけを与えて撤去する | 2 receiptの論理積を満たさない場合は撤去・write・activation 0 |
 | `CAND-NODEBOOT-027` | stale/wrong-revision/wrong-generation/wrong-artifactを混ぜる | 4変異を各々拒否し、tuple完全一致だけを受理 |
 | `CAND-NODEBOOT-028` | 過去receiptを別の撤去commitへ流用する | `retirement_subject`不一致を拒否し、現撤去commitだけを受理 |
@@ -210,7 +216,8 @@ Memory/notification (#424)、worktree lifecycle (#391) はこのPRへ混ぜな�
 - 4 candidate の Red実測とGreen oracle、fixture/production分類の全件inventory
 - sealed/parity/F0c/Q0 receiptと4要素 tupleの実値
 - `bun` executable/install/download/invocation/fallback のLinux/Windows実測0
-- source/Pack/consumerのproduction reachable-surface 0
+- source/Pack/consumerのproduction reachable-surface 0（raw文字列件数0ではない）
+- ban_enforcement_guardのdeny専用証明とguard削除・常時Green・allowlist弱体化に対する独立Red
 - `package.json` build、`bunAuthority`、`bun.lock`の撤去結果
 - required CI（Linux/Windows/aggregate）と非著者closing review receipt
 
