@@ -40,18 +40,18 @@ status: draft
 github_issue_id: 487
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:a3ffb99ad2061a8b7b0249a2c9afaed1
-  command_id: command:pr521-r3-reverse-classification-revision9
-  admitted_at: 2026-09-08T03:07:03.979Z
-  source_digest: sha256:08b640f163199a010d07b7a9659dca5a795a2725fbb6dfa517c73b178d5901c3
+  receipt_id: certificate:0c96c68561d86eb8a44ca65603054977
+  command_id: command:pr521-r3-reverse-classification-revision10
+  admitted_at: 2026-09-08T03:10:22.597Z
+  source_digest: sha256:aceb6764b5ecc27ce6e1fe88afb2b03a9e8e5952f2b28486eabadabfab44f8d0
   decision_digest: sha256:24d21181ea5928337d8375cb78c78b151b6160d0ed91300c4072dec7a6b85c11
-  receipt_digest: sha256:cc84182c891da4de15471948a322f6e5e99a3478fd3e95bc72a67469d35fe097
+  receipt_digest: sha256:0c4175184558f29402516d86da1a1a5e7989da0e2fc708b018fb21e6c4e65d14
   binding:
     path: docs/plans/PLAN-REVERSE-530-bun-final-retirement-backfill.md
     plan_id: PLAN-REVERSE-530-bun-final-retirement-backfill
     asset_id: plan:4727c21e7227fefefdb428f11662676c
-    revision: 9
-    content_digest: sha256:08b640f163199a010d07b7a9659dca5a795a2725fbb6dfa517c73b178d5901c3
+    revision: 10
+    content_digest: sha256:aceb6764b5ecc27ce6e1fe88afb2b03a9e8e5952f2b28486eabadabfab44f8d0
   route:
     signal: design_gap
     mode: reverse
@@ -140,7 +140,7 @@ Forward/test-designと同じ候補をこの Reverse の実装検証境界にも�
   inventoryに残し、path・文脈の個別確認後にBun実行面から除外する。
 - `ban_enforcement_guard`: `src/lint/bun-permanent-ban.ts`、`src/lint/runtime-portability.ts`、
   `src/lint/rule-drift.ts`、`src/lint/toolchain-pin.ts`、`src/lint/github-ci-policy.ts`、
-  `src/doctor/rule-quality.ts`の検出用文字列・regex・typed reason。各path+symbolはdeny専用で
+  検出用文字列・regex・typed reason。各path+symbolはdeny専用で
   あることを個別確認し、同一file内のspawn/install/download/fallback実行面はreachableとして
   分離判定する。検出器自身のBun文字列を削除してreachable surface 0を装うことは許可しない。
   既存のU-PACKBUN-006等の独立guard mutationで、guard削除・常時Green化・allowlist弱体化を
@@ -193,7 +193,8 @@ Reverse自身のrevisionと再合流先のrevisionを混同しない。reentry.t
 
 - `ban_enforcement_guard`: 禁止検出・拒否の実処理と、そのmatcher/typed reason。
   既存例に加え、`src/doctor/test-repository-isolation.ts` の `MUTATION_TARGET_ARGS` / Bun.write識別、
-  `src/state-db/stop-refresh.ts` の `isBunExecutable` / `refuseBunStopRefresh` を含む。
+  `src/state-db/stop-refresh.ts` の `isBunExecutable` / `refuseBunStopRefresh`、
+  `src/runtime/runtime-image-observer.ts` の `classifyRuntimeImageProcess` を含む。
   BunではなくGit/Nodeを使う検査自体をBun実行と誤認しない。Bun実行へ到達しないことと
   既存拒否検出力を個別に証明し、guard削除・常時Green・allowlist弱体化は独立Redを維持する。
 - `retained_compatibility_vocabulary`: 履歴証跡を読むenum、識別名、観測済み入力の純粋分類、
@@ -204,6 +205,8 @@ Reverse自身のrevisionと再合流先のrevisionを混同しない。reentry.t
   `src/lint/design-language.ts:TECHNICAL_WORD_ALLOWLIST` のBun、
   `src/runtime/verb-classify.ts:classifyVerificationVerb` の入力分類は用語/観測データの認識であり、
   起動・実行指示生成をしないことを確認してこの分類に置く。
+  `src/doctor/rule-quality.ts` のportability失敗診断のBun語は非実行の表示語彙であり、
+  deny専用guardとしての独立Redを要求しない。
 - 同じ分類に `src/lint/verification-profile-catalog.ts:PROFILES["bun-unit"]` と
   `src/lint/verification-profile-types.ts:VerificationProfileId` の互換IDを置く。
   baseではcommandが `node scripts/run-vitest-snapshot.ts`、executableがNodeであることをGit objectで確認する。
@@ -228,3 +231,16 @@ base `6e9aeb99048d46d599d5fe477fdca5592aa2ff44` の `src/lint/bun-permanent-ban.
 blob `8b287b136b864630544b1035e0897d01eeb1ef7b` として実在する。
 setup-smokeはblob `1bf3fa8a49b5085acbda78854a605bd751103a0d`。
 この観測はレビュー判定の自己解除ではなく、次の非著者reviewへ提示する反証である。
+
+全clean Pack同梱のREADMEおよびskillsをinventoryの対象とする。skills/git.mdと
+skills/test-driven-development.mdは代表例であり、2ファイル限定ではない。全active指示を
+reachableとして個別検証する。歴史説明と現在の実行指示を区別し、出荷対象を一覧から外して免除しない。
+
+`src/state-db/runtime-projections.ts:projectRuntimeTestRunFromSessionEvent` の新規runner: bun出力は
+履歴読取互換ではない。Node-only runtimeの新規証跡へBunを既定値で捏造する到達面として#487で是正する。
+既存DB行を書き換えず、writerの新規出力を独立検証する。Bun実行0だけから証跡の正しさを推定しない。
+
+PLAN-L7-527 §2.5のdual-lock parityは「parentがdual-lockを保持する期間」という条件付き契約である。
+本PLANの4要素tuple成立前はそのparityを維持する。成立後のfinal retirementで保持期間が終了し、
+bun.lockとその出荷要求を撤去する。U-SETUP-013/AT-DIST-001のdual-lock期待も同じ撤去revisionで
+Node package-lock検証へ移す。新規の無条件lock例外や既存履歴の改変は作らない。
