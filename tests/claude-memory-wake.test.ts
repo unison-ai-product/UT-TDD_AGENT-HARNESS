@@ -123,7 +123,7 @@ describe("Claude HARNESS memory async wake", () => {
         };
         const result = validateClaudeProviderEnvelope(rebound, expected);
         expect(result.ok, axis).toBe(false);
-        if (!result.ok) expect(result.reason, axis).toContain("mismatch");
+        if (!result.ok) expect(result.reason, axis).toBe(`${axis}_mismatch`);
         rmSync(entryPath);
         entryPath = join(wakeRuntimeRoot(root), "inbox", `${inboxFileStem(entry.id)}.json`);
         writeFileSync(entryPath, `${JSON.stringify(rebound)}\n`, "utf8");
@@ -135,7 +135,7 @@ describe("Claude HARNESS memory async wake", () => {
           maxWaitMs: 30,
         });
         expect(wake.kind, axis).toBe("denied");
-        expect(wake.reason, axis).toContain("mismatch");
+        expect(wake.reason, axis).toBe(`${axis}_mismatch`);
         expect(existsSync(entryPath), axis).toBe(true);
         expect(
           existsSync(join(wakeRuntimeRoot(root), `${inboxFileStem(rebound.id)}.claim`)),
