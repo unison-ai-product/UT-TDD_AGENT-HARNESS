@@ -14,7 +14,7 @@ import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import type { MemoryEntry } from "../src/memory/index.ts";
 import {
-  buildClaudeInboxEntry,
+  buildClaudeProviderInboxEntry,
   claudeWorkspaceId,
   publishClaudeInboxEntry,
   waitForClaudeMemory,
@@ -399,8 +399,13 @@ describe("Claude wake generation rolling upgrade", () => {
         updated_at: "2026-08-28T00:00:00.000Z",
         content_hash: "c".repeat(64),
       };
-      const entry = buildClaudeInboxEntry({
+      const project = resolveProjectMemoryRoot(root);
+      if (!project.ok) throw new Error(project.reason);
+      const entry = buildClaudeProviderInboxEntry({
         memory,
+        projectId: project.projectId,
+        producer: { provider: "codex", sessionId: "fixture-producer" },
+        target: { scope: "session", provider: "claude", sessionId: "fixture-claude-session-v1" },
         operationId: "fixture-unclaimed-consume-v1",
         workspaceId: claudeWorkspaceId(root),
       });
@@ -440,8 +445,13 @@ describe("Claude wake generation rolling upgrade", () => {
         updated_at: "2026-08-28T00:00:00.000Z",
         content_hash: "d".repeat(64),
       };
-      const entry = buildClaudeInboxEntry({
+      const project = resolveProjectMemoryRoot(root);
+      if (!project.ok) throw new Error(project.reason);
+      const entry = buildClaudeProviderInboxEntry({
         memory,
+        projectId: project.projectId,
+        producer: { provider: "codex", sessionId: "fixture-producer" },
+        target: { scope: "session", provider: "claude", sessionId: "old-session" },
         operationId: "claim-cas-revocation",
         workspaceId: claudeWorkspaceId(root),
       });
