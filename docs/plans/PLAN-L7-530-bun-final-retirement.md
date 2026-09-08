@@ -42,18 +42,18 @@ status: draft
 github_issue_id: 487
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:dc96326c9df67bdf75e829e46d1a0d7a
-  command_id: command:pr521-issue487-forward-inventory-revision4
-  admitted_at: 2026-09-08T01:24:02.868Z
-  source_digest: sha256:3f3fe0e367f3983b9414bf3502707586821b045ef6ed652dda259f57094a5979
+  receipt_id: certificate:c8ec5ed817f248dfff06226a2dffd83b
+  command_id: command:pr521-issue487-forward-classification-revision5
+  admitted_at: 2026-09-08T01:26:14.012Z
+  source_digest: sha256:7e329b8db06f4b65d15039547371afd84107fa4d1d931446dd4dec893819b8d9
   decision_digest: sha256:94706b42f6072bf32897b9a733a200286b383b5b9e7b943587d888a89aa5d150
-  receipt_digest: sha256:62d3014ae34a65c76f8f9c4770085027518564fd04667b9b3292b21fb1539bd5
+  receipt_digest: sha256:c3c28aacaffdbd63cc08e6dd0876eece2445f7b2523a424aba3d7da9a23a8248
   binding:
     path: docs/plans/PLAN-L7-530-bun-final-retirement.md
     plan_id: PLAN-L7-530-bun-final-retirement
     asset_id: plan:bc9250c9a7c873dcb9f18956677371f7
-    revision: 4
-    content_digest: sha256:3f3fe0e367f3983b9414bf3502707586821b045ef6ed652dda259f57094a5979
+    revision: 5
+    content_digest: sha256:7e329b8db06f4b65d15039547371afd84107fa4d1d931446dd4dec893819b8d9
   route:
     signal: feature_addition
     mode: add-feature
@@ -140,7 +140,8 @@ git ls-tree -r --name-only 6e9aeb99 -- . ':(exclude).git/**' | grep -i bun
 
 raw outputは次の固定分類へ必ず割り当てる。`tests/**`、`**/fixtures/**`、`.ut-tdd/**`、
 `docs/**`、`vendor/**`、`docs/archive/**` は検出結果から削除するのではなく、
-`retained_fixture`/`history`として inventory に残し、production到達判定からだけ除外する。
+inventory に残す。ディレクトリ名だけで `retained_fixture`/`history` と判定せず、実行・生成・配布・
+AI指示からの非到達を個別に証明できた候補だけをその分類へ割り当てる。
 
 | base `6e9aeb99` の検出面 | 分類と #487 の扱い |
 |---|---|
