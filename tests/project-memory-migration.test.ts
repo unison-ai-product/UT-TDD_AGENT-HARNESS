@@ -5,6 +5,7 @@ import { dirname, join } from "node:path";
 import { afterEach, expect, it } from "vitest";
 import { ProjectMemoryMigration } from "../src/memory/project-memory-migration.ts";
 import { canonicalProjectIdentityBytes } from "../src/plan-asset/adapters/project-identity-loader.ts";
+import { resolveProjectMemoryRoot } from "../src/runtime/project-memory-root.ts";
 import { collectWorktreeTopology } from "../src/runtime/worktree-topology-collector.ts";
 
 const fixtures: string[] = [];
@@ -20,6 +21,7 @@ function fixture() {
   git(primary, ["config", "user.name", "Test"]);
   git(primary, ["config", "user.email", "test@example.invalid"]);
   git(primary, ["config", "core.autocrlf", "false"]);
+  git(primary, ["remote", "add", "origin", "git@github.com:example/migration.git"]);
   writeFileSync(
     join(primary, "ut-tdd.project.json"),
     canonicalProjectIdentityBytes("example/migration"),
@@ -27,6 +29,8 @@ function fixture() {
   git(primary, ["add", "ut-tdd.project.json"]);
   git(primary, ["commit", "-qm", "test: identity"]);
   git(primary, ["worktree", "add", "-qb", "linked", linked]);
+  expect(resolveProjectMemoryRoot(primary).ok).toBe(true);
+  expect(resolveProjectMemoryRoot(linked).ok).toBe(true);
   return { primary, linked };
 }
 function memory(root: string, name: string, body = "body", id = "memory:project:example") {
@@ -105,6 +109,7 @@ it("fails closed for invalid and unreadable input with no partial inventory", ()
 it("fails closed when any linked HEAD has a foreign project identity", () => {
   const { primary, linked } = fixture();
   memory(primary, "a.md");
+  expect(new ProjectMemoryMigration().dryRun(primary).ok).toBe(true);
   writeFileSync(
     join(linked, "ut-tdd.project.json"),
     canonicalProjectIdentityBytes("foreign/project"),
@@ -118,7 +123,8 @@ it("fails closed when any linked HEAD has a foreign project identity", () => {
       return readFileSync(path, "utf8");
     },
   });
-  expect(service.dryRun(primary)).toEqual({ ok: false, reason: "project_identity_drift" });
+  // The existing loader rejects HEAD/origin disagreement before root identity comparison.
+  expect(service.dryRun(primary)).toEqual({ ok: false, reason: "project_identity_unavailable" });
   expect(reads).toBe(0);
 });
 
