@@ -42,18 +42,18 @@ status: draft
 github_issue_id: 487
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:c8ec5ed817f248dfff06226a2dffd83b
-  command_id: command:pr521-issue487-forward-classification-revision5
-  admitted_at: 2026-09-08T01:26:14.012Z
-  source_digest: sha256:7e329b8db06f4b65d15039547371afd84107fa4d1d931446dd4dec893819b8d9
-  decision_digest: sha256:94706b42f6072bf32897b9a733a200286b383b5b9e7b943587d888a89aa5d150
-  receipt_digest: sha256:c3c28aacaffdbd63cc08e6dd0876eece2445f7b2523a424aba3d7da9a23a8248
+  receipt_id: certificate:0270576ffe0c1ab8eadd452801c995e4
+  command_id: command:pr521-r2-deny-guard-forward6
+  admitted_at: 2026-09-08T02:22:05.134Z
+  source_digest: sha256:7fa94cd240620dd3c85d4bc9d3ff9341c290363504e655ae38dd1a00877a8da2
+  decision_digest: sha256:863bf73214f96db68ff67db61502b569f37f09a9fb95d1bad40cd77e8b68343a
+  receipt_digest: sha256:3b7b443d799baa41a49c300d9b945bfd5fed995a1dd98b94ac88b0c1c86ff932
   binding:
     path: docs/plans/PLAN-L7-530-bun-final-retirement.md
     plan_id: PLAN-L7-530-bun-final-retirement
     asset_id: plan:bc9250c9a7c873dcb9f18956677371f7
-    revision: 5
-    content_digest: sha256:7e329b8db06f4b65d15039547371afd84107fa4d1d931446dd4dec893819b8d9
+    revision: 6
+    content_digest: sha256:7fa94cd240620dd3c85d4bc9d3ff9341c290363504e655ae38dd1a00877a8da2
   route:
     signal: feature_addition
     mode: add-feature
@@ -71,7 +71,7 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-530-bun-final-retirement
-    target_revision: 1
+    target_revision: 6
     phase: forward_merge
   escape_reason: "Issue #487 final Bun retirement inventory scope revision"
 ---
@@ -160,6 +160,7 @@ AI指示からの非到達を個別に証明できた候補だけをその分類
 上記表の `reachable_production` は「scripts 2系統だけ」の閉じた集合ではない。各pathを
 独立Red oracleへ束ね、1件でも未分類・未所有・到達判定不能なら `Indeterminate` として
 撤去を0にする。
+
 
 `package.json` の `build`、`bunAuthority`、`bun.lock` はIssue #487が所有するfinal deletionの中核であり、
 4要素tuple成立後に本PLANで物理撤去する。#470（生成成果物）、#471（readiness）、#472（source CI）の
