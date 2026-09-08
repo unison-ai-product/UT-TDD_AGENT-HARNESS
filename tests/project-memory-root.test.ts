@@ -16,7 +16,10 @@ import { Command } from "commander";
 import { afterEach, describe, expect, it } from "vitest";
 import { registerLiveReviewCommands, resolveLiveReviewTaskFile } from "../src/cli/review-live.ts";
 import { writeMemory } from "../src/memory/service.ts";
-import { canonicalProjectIdentityBytes } from "../src/plan-asset/adapters/project-identity-loader.ts";
+import {
+  canonicalProjectIdentityBytes,
+  loadProjectIdentityFromHead,
+} from "../src/plan-asset/adapters/project-identity-loader.ts";
 import {
   buildClaudeInboxEntry,
   claudeWorkspaceId,
@@ -49,11 +52,9 @@ function createLinkedProject(projectId = "example/project-memory-routing"): {
   git(primary, ["init", "-q", "-b", "main"]);
   git(primary, ["config", "user.email", "test@example.invalid"]);
   git(primary, ["config", "user.name", "UT-TDD Test"]);
-  writeFileSync(
-    join(primary, "ut-tdd.project.json"),
-    `${JSON.stringify({ schema_version: "ut-tdd.project/v1", repository_identity: projectId })}\n`,
-    "utf8",
-  );
+  git(primary, ["config", "core.autocrlf", "false"]);
+  git(primary, ["remote", "add", "origin", `git@github.com:${projectId}.git`]);
+  writeFileSync(join(primary, "ut-tdd.project.json"), canonicalProjectIdentityBytes(projectId));
   writeFileSync(join(primary, "seed.txt"), "seed\n", "utf8");
   git(primary, ["add", "ut-tdd.project.json", "seed.txt"]);
   git(primary, ["commit", "-q", "-m", "test: seed project identity"]);
@@ -150,22 +151,25 @@ describe("project-scoped Memory routing integration (PLAN-L7-512 Slice 2)", () =
     const { primary, linked } = createLinkedProject();
     writeFileSync(
       join(linked, "ut-tdd.project.json"),
-      `${JSON.stringify({
-        schema_version: "ut-tdd.project/v1",
-        repository_identity: "foreign/project",
-      })}\n`,
-      "utf8",
+      canonicalProjectIdentityBytes("foreign/project"),
     );
     git(linked, ["add", "ut-tdd.project.json"]);
     git(linked, ["commit", "-q", "-m", "test: drift linked identity"]);
 
-    expect(() => claudeWorkspaceId(linked)).toThrow("project_memory_root_project_identity_drift");
+    // The shared loader now rejects origin mismatch before root comparison.
+    expect(loadProjectIdentityFromHead({ repoRoot: linked })).toMatchObject({
+      ok: false,
+      error: { ruleId: "identity_repository_unbound" },
+    });
+    expect(() => claudeWorkspaceId(linked)).toThrow(
+      "project_memory_root_project_identity_unavailable",
+    );
     expect(() =>
       resolveLiveReviewTaskFile(linked, {
         memoryId: "memory:project:absent",
         memoryPath: ".ut-tdd/memory/project-absent.md",
       }),
-    ).toThrow("project_memory_root_project_identity_drift");
+    ).toThrow("project_memory_root_project_identity_unavailable");
     expect(existsSync(join(primary, ".git", "ut-tdd-runtime"))).toBe(false);
   });
 
