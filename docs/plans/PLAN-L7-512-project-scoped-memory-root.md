@@ -102,15 +102,15 @@ review_evidence:
         anchor_commit: 086714e6992ed05b1af57e01e23551b75f9bb737
   - reviewer: codex-tl-integration
     review_kind: intra_runtime_subagent
-    reviewed_at: 2026-09-08T05:13:21Z
-    tests_green_at: 2026-09-08T05:13:09Z
+    reviewed_at: 2026-09-08T06:07:40.652Z
+    tests_green_at: 2026-09-08T06:07:40.652Z
     verdict: PASS blocking 0; Claude Opus non-author closing review pending
     worker_model: gpt-5.6-luna
     effort: high
     reviewer_model: codex
-    plan_revision: 89de38593e0a5264480ed5b305c1718bdc3b89b6
-    subject_head: 89de38593e0a5264480ed5b305c1718bdc3b89b6
-    anchor_commit: 89de38593e0a5264480ed5b305c1718bdc3b89b6
+    plan_revision: 24126d45e38451cd4df1a7481b37945678b403ea
+    subject_head: 24126d45e38451cd4df1a7481b37945678b403ea
+    anchor_commit: 24126d45e38451cd4df1a7481b37945678b403ea
     evidence_path: tests/claude-memory-wake.test.ts
     scope: "Issue #528 / PLAN-L7-512 Slice 3 の bounded implementation。project-bound
       provider envelope、publisher create-exclusive binding sidecar、production
@@ -118,15 +118,14 @@ review_evidence:
       は明示的移行条件なしに typed deny と entry 保持とした。U-PMEMROOT-007 の各semantic
       axis、coherent envelope/id/filename spoof、claim 0、entry/sidecar
       retentionを検証した。 Slice 4 migration/quarantine、Slice 5 Pack parity、#439、Bun
-      laneは対象外。 Opus non-author closing
-      reviewは未実施であり、ここでは実装candidateの証跡だけを記録する。"
+      laneは対象外。 Opus non-author closing reviewは未実施であり、ここでは実装candidateの証跡だけを記録する。
+      rootは24126d45のsnapshot終了コード0を確認済み。本改訂の時刻は証跡再確認時刻であり、実行終了時刻の再構成ではない。"
     citations:
       - "src/runtime/claude-provider-envelope.ts: v4 envelope schema, digest,
         and consumer validation"
       - "src/runtime/claude-memory-wake.ts: create-exclusive binding sidecar and
         production claim guard"
-      - "tests/claude-memory-wake.test.ts: CANDIDATE-U-PMEMROOT-007 and review
-        composition"
+      - "tests/claude-memory-wake.test.ts: U-PMEMROOT-007 and review composition"
       - "tests/runtime-hook-entrypoints.test.ts: U-MEMWAKE-007 production hook
         composition"
       - 89de38593e0a5264480ed5b305c1718bdc3b89b6
@@ -140,19 +139,17 @@ review_evidence:
         runner: node
         scope: targeted
         exit_code: 0
-        completed_at: 2026-09-08T05:13:09Z
         evidence_path: tests/claude-memory-wake.test.ts
-        output_digest: sha256:6c5c6e6393684c35d64d518b7454131cc2e04f520a5625e812828d09f0eef2a9
-        anchor_commit: 89de38593e0a5264480ed5b305c1718bdc3b89b6
+        output_digest: sha256:ce28eaf0acf0040c129302d7395d3f8412f86da7ff2aae73d04de6e10b89eee8
+        anchor_commit: 24126d45e38451cd4df1a7481b37945678b403ea
       - kind: typecheck
         command: npm exec -- tsc --noEmit
         runner: node
         scope: targeted
         exit_code: 0
-        completed_at: 2026-09-08T05:01:26Z
         evidence_path: src/runtime/claude-provider-envelope.ts
-        output_digest: sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
-        anchor_commit: 89de38593e0a5264480ed5b305c1718bdc3b89b6
+        output_digest: sha256:2f5336275d1d08fbdf5120854901c27138540d44fb00a06aba3a269a2962cdd8
+        anchor_commit: 24126d45e38451cd4df1a7481b37945678b403ea
       - kind: lint
         command: npm exec -- biome check src/runtime/claude-provider-envelope.ts
           src/runtime/claude-memory-wake.ts tests/claude-memory-wake.test.ts
@@ -160,26 +157,25 @@ review_evidence:
         runner: node
         scope: targeted
         exit_code: 0
-        completed_at: 2026-09-08T05:01:26Z
         evidence_path: src/runtime/claude-provider-envelope.ts
-        output_digest: sha256:56e00a1025f7f903defd822899e6c06d7347b65e2dd0fe4ddac735e1febf28d6
-        anchor_commit: 89de38593e0a5264480ed5b305c1718bdc3b89b6
+        output_digest: sha256:2f5336275d1d08fbdf5120854901c27138540d44fb00a06aba3a269a2962cdd8
+        anchor_commit: 24126d45e38451cd4df1a7481b37945678b403ea
 status: confirmed
 github_issue_id: 528
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:cad3e43241013b6585603726a8399246
-  command_id: command:issue528-plan512-revise-v2
-  admitted_at: 2026-09-08T05:30:00.000Z
-  source_digest: sha256:87e75d757bcb42cba954be878bbc421a4241eb09e9aadc7297548821b08465db
-  decision_digest: sha256:15a4d9ec3b5de82cebb58a79d2debab95c077594b437a389cb54145427eac455
-  receipt_digest: sha256:24bc489c7aaf24b0e3db90db3ffea87a2d8c477d81c66d8e32ae8c0f6caa5333
+  receipt_id: certificate:a6de387d04018dfd126a7a656d159fdc
+  command_id: command:issue528-PLAN-L7-512-project-scoped-memory-root-verified-evidence-r3
+  admitted_at: 2026-09-08T06:07:40.919Z
+  source_digest: sha256:ed94d33b6879c4eded974aea8a22f537ef2dfda948d19c1172f68de4c1058674
+  decision_digest: sha256:90218c81971644f32fa5843f460777d06b521ffd991e749c481cf0e10853e8f7
+  receipt_digest: sha256:f1b6f4c730e7d5460ffead3e5691cd9b8172c0576c520edb01e39cd3ced673fc
   binding:
     path: docs/plans/PLAN-L7-512-project-scoped-memory-root.md
     plan_id: PLAN-L7-512-project-scoped-memory-root
     asset_id: plan:legacy:68706e293ae2c96738a8e3263bac3e01e7cde64cdb7c3ed8e53805922662bc30
-    revision: 2
-    content_digest: sha256:87e75d757bcb42cba954be878bbc421a4241eb09e9aadc7297548821b08465db
+    revision: 3
+    content_digest: sha256:ed94d33b6879c4eded974aea8a22f537ef2dfda948d19c1172f68de4c1058674
   route:
     signal: feature_addition
     mode: add-feature
@@ -190,13 +186,13 @@ admission_receipt:
     projection_digest: sha256:218a5a56c4c720bac923f795c4b973f7d592159f75305a8ee1e39121403e10bf
   origin:
     plan_id: PLAN-L7-512-project-scoped-memory-root
-    revision: 1
-    digest: sha256:860e09e0646f3f29007833297cfdab14f781a5c862605434746a5fec535844ea
+    revision: 2
+    digest: sha256:c37e394b7f34788268b9ff724b3977fb8b6116bd4c09f2045fc24d35dbcb60df
   reentry:
     target_plan_id: PLAN-L7-512-project-scoped-memory-root
-    target_revision: 2
+    target_revision: 3
     phase: forward_merge
-  escape_reason: "Issue #528 project-bound provider envelope implementation evidence"
+  escape_reason: "Issue #528 verified snapshot evidence and canonical oracle citation binding"
 ---
 
 # PLAN-L7-512: project-scoped canonical Memory and notification root

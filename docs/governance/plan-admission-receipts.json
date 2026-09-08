@@ -2736,6 +2736,38 @@
         "revision": 2,
         "content_digest": "sha256:fe71ea8093a46da9d84defdf3655ca301415590724a5136130a715f0bb965cab"
       }
+    },
+    {
+      "sequence": 172,
+      "previous_record_digest": "sha256:84378144bfa3a5cc3a66205124e51c9fd46a1a01a7e241a09da6567834b18dbc",
+      "record_digest": "sha256:477698f51367b4638a0888bcc32e3a3001f9a820fccbbc26e4ac649437bf324d",
+      "command_id": "command:issue528-PLAN-L7-512-project-scoped-memory-root-verified-evidence-r3",
+      "receipt_id": "certificate:a6de387d04018dfd126a7a656d159fdc",
+      "receipt_digest": "sha256:f1b6f4c730e7d5460ffead3e5691cd9b8172c0576c520edb01e39cd3ced673fc",
+      "decision_digest": "sha256:90218c81971644f32fa5843f460777d06b521ffd991e749c481cf0e10853e8f7",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-512-project-scoped-memory-root.md",
+        "plan_id": "PLAN-L7-512-project-scoped-memory-root",
+        "asset_id": "plan:legacy:68706e293ae2c96738a8e3263bac3e01e7cde64cdb7c3ed8e53805922662bc30",
+        "revision": 3,
+        "content_digest": "sha256:ed94d33b6879c4eded974aea8a22f537ef2dfda948d19c1172f68de4c1058674"
+      }
+    },
+    {
+      "sequence": 173,
+      "previous_record_digest": "sha256:477698f51367b4638a0888bcc32e3a3001f9a820fccbbc26e4ac649437bf324d",
+      "record_digest": "sha256:0ef8f4c72162f807c6396492a6c3c1a12d846e01593b245b602d22e424240378",
+      "command_id": "command:issue528-PLAN-REVERSE-512-project-scoped-memory-root-backfill-verified-evidence-r3",
+      "receipt_id": "certificate:e2ec6823bd7b2e1821077b8c3e49dbaf",
+      "receipt_digest": "sha256:de30a162e85580fe79555db5b28244fb4a3cb42562b0fc4a6aa3259a547d2737",
+      "decision_digest": "sha256:1d20c32ec9c1cbf4b5742b2bd3657b78354ccdc716730b2f5cceaeed4043a4e5",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-512-project-scoped-memory-root-backfill.md",
+        "plan_id": "PLAN-REVERSE-512-project-scoped-memory-root-backfill",
+        "asset_id": "plan:legacy:186048a954aa8dae7b4f8b1f968f6c5d64d758850fa695ed59a11edcdcf63153",
+        "revision": 3,
+        "content_digest": "sha256:acdb552b2c1bffd50ebd7cac99fe37200ba11ac8b1075451964844fafa11b7ef"
+      }
     }
   ]
 }
