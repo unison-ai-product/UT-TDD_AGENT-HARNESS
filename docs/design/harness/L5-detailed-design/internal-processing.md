@@ -1107,6 +1107,10 @@ D0-N receiptを再review・再署名し、通常のL8/L9 oracleを再通過し�
 唯一の正規経路である。本付録はその入力 digest の exact preimage と Git object 照合を processing 契約として固定する。
 物理正本 (`.ut-tdd/ledger/harness-ledger.db` が PLAN asset/revision/admission の canonical ledger であること) は
 [physical-data.md](physical-data.md) §2.7.1 が拘束し、本付録はその row を書く前の判定側を拘束する。
+本付録を本 doc に置く根拠は、本 doc が L5 内部処理判定の canonical design 正本 (owner `PLAN-L5-03-internal-processing`、
+pair は `docs/test-design/harness/L8-integration-test-design.md`) であり、物理正本 doc と対をなす位置にあることである。
+admission fence の対象外であることは根拠ではない。実装 artifact の owner は `PLAN-RECOVERY-16` に留まり、
+本付録は判定契約のみを持つ。E.6 の負系は上記 pair test-design 側へ oracle として降ろす。
 
 ### E.1 契約が無いことによる欠陥 (freeze の動機)
 
@@ -1149,6 +1153,7 @@ preimage は次の順序付き列とする。
 
 | 照合 | 不成立時の typed reason |
 |---|---|
+| `sourceCommit` が seal 候補 HEAD と exact 一致し、かつ tracked remote ref (`refs/remotes/origin/*`) から到達可能である | `seal-source-commit-unreachable` |
 | `sourceCommit` に `sourcePath` が blob として存在する | `seal-source-path-absent` |
 | その blob OID が `sourceBlobOid` と一致する | `seal-source-blob-mismatch` |
 | blob bytes から再計算した canonical payload digest と body digest が宣言値と一致する | `seal-source-payload-drift` |
@@ -1158,18 +1163,38 @@ preimage は次の順序付き列とする。
 照合は `project-identity.ts` と同じ preflight 規律 (tracked blob 読み出し + 再確認) に従い、呼び出し側の port として
 注入する。writer transaction を Git I/O へ拡張しない。
 
+到達可能性の照合を欠くと、blob 一致と TOCTOU 再確認だけでは自作 commit object と整合する
+`sourceCommit` / `sourceBlobOid` / digest 一式を用意して全照合を通せてしまい、`sourceAuthorityDigest` を偽造できる
+(PR #543 r1 の blocking finding 1)。したがって上表 1 行目は省略可能な補助検査ではなく必須条件である。
+
 ### E.4 `reviewedImplementationAuthorityDigest`
 
-既存の canonical review receipt を再利用し、新しい authority を作らない。値は
-`.ut-tdd/review/receipts/<digest>.json` の **file bytes の sha256** とする。受理条件は次のすべてである。
+**ローカル artifact を authority にしてはならない。** `.ut-tdd/review/receipts/<digest>.json` の内容や
+ファイル名 digest を受理条件にする設計は成立しない。理由は既存契約そのものである:
+[provider-family-authority.ts](../../../../src/feedback/ports/provider-family-authority.ts) は
+「本 repo に受理側の実装は無い」「自己申告 `reviewerFamily`、PR comment marker、HARNESS memory 本文、
+commit trailer、local JSON/HMAC、同一 OS user が使える鍵は、この port の実装として受理してはならない」と
+定めている。加えて receipt のファイル名 digest は file bytes の sha256 ではなく request digest であり、
+同じ規則で任意 JSON を hand-mint して PASS / 別 family / 任意 head を宣言できる
+(PR #543 r1 の blocking finding 2)。
 
-- `verdict` が `PASS` または `PASS-WEAK` であり、`blockingFindings` が空である
-- `head` が seal を実装した exact HEAD と一致する
-- `reviewerFamily` が著者 family と異なる (`cross_agent` 分離)
-- `reviewRevision` の suffix がファイル名 digest と一致する (receipt 実体とファイル identity の結合)
+したがって本 digest は **live GitHub facts の観測を経た既存 custody 経路の結果**に束縛する。新 authority は作らない。
 
-不成立は `seal-review-authority-invalid` とする。CI run や aggregate 成功は authority として採らない
-(新 authority の導入になるため)。
+| 束縛対象 | 供給元 |
+|---|---|
+| repository / PR 番号 / base ref / head sha / merge 状態 | `review-custody-runner` の `observeStable` が live 観測した値 |
+| 受理判定 | 同 runner の `admitCustodyReceipt` が返す decision |
+
+preimage は observed facts と decision を canonical 順で並べた列とし、framing は E.2 に従う。
+`sourceAuthorityDigest` と同じく、宣言値ではなく観測値を入力とする。
+
+**family 分離について機械証明を主張しない。** `VerifiedProviderIdentity` の発行側が承認・実装されるまで、
+custody の終端は既存どおり `unverified_family` であり、本 seal 契約もその終端を継承する。
+seal 側で family 分離を強証明したことにしてはならない。family 分離の機械化は authentication / authorization を
+変える外部権限設計であり、PO 承認を要する別論点として保持する。
+
+不成立時の typed reason は `seal-review-authority-invalid` とする。CI run や aggregate 成功を authority として
+採らない (新 authority の導入になる)。
 
 ### E.5 `certificateDigest`
 
@@ -1195,9 +1220,19 @@ E.3〜E.5 の各項目について、1 bit 改変で write 0 となる負系を�
 - review receipt の `verdict=FLAG` / `blockingFindings` 非空 / 同一 family / head 不一致
 - 既存 `U-PA-SEAL-001..003` の冪等・conflict・fault injection boundary 集合を弱めない
 
-### E.7 適用範囲
+### E.7 適用範囲 (target 単位、universal rollout ではない)
 
-本契約は tracked terminal revision が 2 以上でローカル ledger に asset が無いすべての PLAN に同一手順で適用する
-(Issue #542 時点で tracked ledger 29 PLAN のうち 28 件が該当)。個別 PLAN 専用の例外手順を作らない。
+本契約の対象は、**PLAN 単位に次の 2 点を実測で確認できたものだけ**とする。tracked terminal revision が 2 以上で
+あることだけを条件にしてはならない。
+
+1. 対象 ledger (`.ut-tdd/ledger/harness-ledger.db`) に当該 PLAN の alias が存在しないこと。
+2. derived legacy asset id が tracked に記録された系譜と一致しないこと (= bootstrap での継続が第三の系譜を作る
+   lineage fork になり、seal 機構が禁じる double genesis に当たること)。
+
+2026-09-08 時点で該当が確認されているのは `PLAN-L6-93-node-bootstrap-contract` と
+`PLAN-RECOVERY-16-plan-revision-authoring` の 2 件のみである。adopt 済みの PLAN (検査した 7 ledger に 12 alias) は
+既存 worktree で正規 `plan revise` を続けられるため対象外であり、一括適用しない。
+
 封印対象ごとの固定 preimage は `ut-tdd:genesis-rebase-migration/v1` 形式で Issue 本文に宣言し
 (先例 Issue #143、L6-93 は Issue #541)、`Inference forbidden: true` を明記する。
+本付録の semantics は新規であり、既存 `review_evidence` を根拠にしない。実装前に非著者 review を取得する。
