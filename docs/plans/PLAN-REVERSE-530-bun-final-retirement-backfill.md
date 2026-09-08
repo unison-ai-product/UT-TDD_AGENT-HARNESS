@@ -40,18 +40,18 @@ status: draft
 github_issue_id: 487
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:0c96c68561d86eb8a44ca65603054977
-  command_id: command:pr521-r3-reverse-classification-revision10
-  admitted_at: 2026-09-08T03:10:22.597Z
-  source_digest: sha256:aceb6764b5ecc27ce6e1fe88afb2b03a9e8e5952f2b28486eabadabfab44f8d0
+  receipt_id: certificate:2c17b939d813c21a40adf91fdbf061a7
+  command_id: command:pr521-r4-reverse-oracle-expectation-migration-revision11
+  admitted_at: 2026-09-08T03:51:06.857Z
+  source_digest: sha256:ebbb3e9d34ee96648da9b6514eaf3ba69064bf551cbfaedd6be471c6d6d95871
   decision_digest: sha256:24d21181ea5928337d8375cb78c78b151b6160d0ed91300c4072dec7a6b85c11
-  receipt_digest: sha256:0c4175184558f29402516d86da1a1a5e7989da0e2fc708b018fb21e6c4e65d14
+  receipt_digest: sha256:1f90e53b96977c633485abcc602114f2da13cf59207c6a40fac3b9abfbb927cc
   binding:
     path: docs/plans/PLAN-REVERSE-530-bun-final-retirement-backfill.md
     plan_id: PLAN-REVERSE-530-bun-final-retirement-backfill
     asset_id: plan:4727c21e7227fefefdb428f11662676c
-    revision: 10
-    content_digest: sha256:aceb6764b5ecc27ce6e1fe88afb2b03a9e8e5952f2b28486eabadabfab44f8d0
+    revision: 11
+    content_digest: sha256:ebbb3e9d34ee96648da9b6514eaf3ba69064bf551cbfaedd6be471c6d6d95871
   route:
     signal: design_gap
     mode: reverse
@@ -244,3 +244,10 @@ PLAN-L7-527 §2.5のdual-lock parityは「parentがdual-lockを保持する期�
 本PLANの4要素tuple成立前はそのparityを維持する。成立後のfinal retirementで保持期間が終了し、
 bun.lockとその出荷要求を撤去する。U-SETUP-013/AT-DIST-001のdual-lock期待も同じ撤去revisionで
 Node package-lock検証へ移す。新規の無条件lock例外や既存履歴の改変は作らない。
+
+
+## r4: U-PACKBUN-006 expectation migration の検収境界
+
+最終撤去revisionでは、PLAN-L7-522/524が所有する検出器・behavioral oracleを変更せず、U-PACKBUN-006が凍結するrepository snapshotだけを同じrevisionへ移行する。package.jsonの旧Bun build期待は撤去後のbuild不在または正規Node build期待へ置換し、BUN_SPAWN_DEBT_ALLOWLIST、BUN_IMPORT_DEBT_ALLOWLIST、BUN_GLOBAL_DEBT_ALLOWLISTからは、本PLANが物理撤去したpath/countだけを削除する。無関係な既存row、negative-control fixture、matcher、typed reason、deny分岐は保持する。
+
+Reverse検収は、(1) 旧Bun期待が残ればRed、(2) 未撤去rowまで消せばRed、(3) guard削除・常時Green化・allowlist追加またはpin引上げでRed、(4) 新snapshotとproduction treeが一致する場合だけGreen、を独立に確認する。L7-530は同一revisionのsnapshot migrationだけを所有し、L7-522/524のoracle authorityを再所有しない。

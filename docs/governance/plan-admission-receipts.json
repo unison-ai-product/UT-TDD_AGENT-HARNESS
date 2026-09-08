@@ -2656,6 +2656,22 @@
         "revision": 10,
         "content_digest": "sha256:cefa7e5154b792a3da78a5583c77d32f6ceaf9eedf5c1dbe14e4572719697039"
       }
+    },
+    {
+      "sequence": 167,
+      "previous_record_digest": "sha256:37602672afd76e9214b430d730d595fc86f31bb681666f6b136b3c4626f0950b",
+      "record_digest": "sha256:c101f6a3ffb3ec03a685bbc2f904ccc9ba4524f1a460cd218ca14e03e8b7866a",
+      "command_id": "command:pr521-r4-reverse-oracle-expectation-migration-revision11",
+      "receipt_id": "certificate:2c17b939d813c21a40adf91fdbf061a7",
+      "receipt_digest": "sha256:1f90e53b96977c633485abcc602114f2da13cf59207c6a40fac3b9abfbb927cc",
+      "decision_digest": "sha256:24d21181ea5928337d8375cb78c78b151b6160d0ed91300c4072dec7a6b85c11",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-530-bun-final-retirement-backfill.md",
+        "plan_id": "PLAN-REVERSE-530-bun-final-retirement-backfill",
+        "asset_id": "plan:4727c21e7227fefefdb428f11662676c",
+        "revision": 11,
+        "content_digest": "sha256:ebbb3e9d34ee96648da9b6514eaf3ba69064bf551cbfaedd6be471c6d6d95871"
+      }
     }
   ]
 }
