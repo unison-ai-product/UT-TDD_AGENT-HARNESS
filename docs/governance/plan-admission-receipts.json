@@ -2340,7 +2340,39 @@
     {
       "sequence": 147,
       "previous_record_digest": "sha256:65ff609bf4510b7dc7fd30332b8ad3cdf8c979e66920b706160c68d28e1cda8a",
-      "record_digest": "sha256:7c119dae5e6e8e5d15f944a5a97b59d125bec56c6c1bde41953d0f60a001b2e2",
+      "record_digest": "sha256:6fab86fc7b30fbe8f6aa24148a1787ebd3f9ba26b9d7d7d8b2801f60dbc7f91c",
+      "command_id": "command:pr519-corrected-confirm-forward-20260904",
+      "receipt_id": "certificate:a153b736573886dbfe6790ec62e20284",
+      "receipt_digest": "sha256:95d5ee18597ae4afaa06eb779ae3ad3b5b6a8d30794f04161bdbf31855a96351",
+      "decision_digest": "sha256:51c1eeec856b8f9af41d0990e30e6e11ce7620f4e6c1c837e16f9781a24f3cf0",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-529-project-identity-bootstrap.md",
+        "plan_id": "PLAN-L7-529-project-identity-bootstrap",
+        "asset_id": "plan:legacy:3a7a5fd76bfe53fecd79af6d2efa4f262f798cfa4daf8e74d59c5b0256dc6ce0",
+        "revision": 2,
+        "content_digest": "sha256:b02cf49b4f3fb6e89770d9054ea4bf5d612166dbeb64bce799573746a665e5d4"
+      }
+    },
+    {
+      "sequence": 148,
+      "previous_record_digest": "sha256:6fab86fc7b30fbe8f6aa24148a1787ebd3f9ba26b9d7d7d8b2801f60dbc7f91c",
+      "record_digest": "sha256:d46357c762271f59c2162ee7f059503a21c3a061a89886b0871d5db433805643",
+      "command_id": "command:pr519-corrected-confirm-reverse-20260904",
+      "receipt_id": "certificate:254bf00dfc6b738d4052c01ec379fd8c",
+      "receipt_digest": "sha256:4a54c558f3c8ddd240f79c005b8d31c9e3481a089c9182916bd6aa8e52569675",
+      "decision_digest": "sha256:e9efe94e3cbdd933381e694763c42499f27f1d3b7a062a1aa13abbd987314a0f",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-529-project-identity-bootstrap-backfill.md",
+        "plan_id": "PLAN-REVERSE-529-project-identity-bootstrap-backfill",
+        "asset_id": "plan:legacy:c55edfa9450c28e334f5def87561d828a8c29368a3387a43116f43e1c16c62fa",
+        "revision": 2,
+        "content_digest": "sha256:dc9cbe23b06c23bd607f5d69adab914ef3220ab8f43dbf53f7f38b0e654d85d6"
+      }
+    },
+    {
+      "sequence": 149,
+      "previous_record_digest": "sha256:d46357c762271f59c2162ee7f059503a21c3a061a89886b0871d5db433805643",
+      "record_digest": "sha256:54a10b80a78a6c3478846ff4e9d0f8e20e1732aa015ff663f0513aaceb7cde6d",
       "command_id": "plan-draft:issue-487:forward:1",
       "receipt_id": "certificate:bc9250c9a7c873dcb9f18956677371f7",
       "receipt_digest": "sha256:d06ea2c0c0d12e577fb1fe9d7f54dda0f06f4e662992c6e9188b37e3767cd533",
@@ -2354,9 +2386,9 @@
       }
     },
     {
-      "sequence": 148,
-      "previous_record_digest": "sha256:7c119dae5e6e8e5d15f944a5a97b59d125bec56c6c1bde41953d0f60a001b2e2",
-      "record_digest": "sha256:cb24193f07f98fb2c469416b1e1962b94a4171b39c207b827b728dc1a5978bb4",
+      "sequence": 150,
+      "previous_record_digest": "sha256:54a10b80a78a6c3478846ff4e9d0f8e20e1732aa015ff663f0513aaceb7cde6d",
+      "record_digest": "sha256:bc00da2a8f724001a64d9bd74246870738d4ed9681722daf0d7da88c94aedc63",
       "command_id": "plan-draft:issue-487:reverse:1",
       "receipt_id": "certificate:4727c21e7227fefefdb428f11662676c",
       "receipt_digest": "sha256:04d5de668ebdec62759a24e35866113f043f9bb92bd03d97bba978a4f29b8426",
@@ -2370,9 +2402,9 @@
       }
     },
     {
-      "sequence": 149,
-      "previous_record_digest": "sha256:cb24193f07f98fb2c469416b1e1962b94a4171b39c207b827b728dc1a5978bb4",
-      "record_digest": "sha256:ece8085097452684116afbdce494ba2bc48f7cdb209a488e10aa3e1b0cb447e1",
+      "sequence": 151,
+      "previous_record_digest": "sha256:bc00da2a8f724001a64d9bd74246870738d4ed9681722daf0d7da88c94aedc63",
+      "record_digest": "sha256:cf6455a93774f96046b68af3cece783b683beae7a2cce014a2ebad7d948f7ca9",
       "command_id": "command:pr520-issue487-forward-scope-revision1",
       "receipt_id": "certificate:21817eae3f56525da888a82dce89bda0",
       "receipt_digest": "sha256:5eb3092451ad6d07bde3464ae3d816fe74feca49fe37bea1c7ac400065b2a310",
@@ -2386,9 +2418,9 @@
       }
     },
     {
-      "sequence": 150,
-      "previous_record_digest": "sha256:ece8085097452684116afbdce494ba2bc48f7cdb209a488e10aa3e1b0cb447e1",
-      "record_digest": "sha256:891964150df15645092149dbdfc3bf2ba44dd099e86d475eb033e8b8a1ace0a8",
+      "sequence": 152,
+      "previous_record_digest": "sha256:cf6455a93774f96046b68af3cece783b683beae7a2cce014a2ebad7d948f7ca9",
+      "record_digest": "sha256:9764bc4a2b5a77bbed7ced12e917f172b758b45be277e40598b330746ce603a9",
       "command_id": "command:pr520-issue487-reverse-scope-revision1",
       "receipt_id": "certificate:69b6d63d6bc42e97ebd9473254ea6f35",
       "receipt_digest": "sha256:814cb1f48ca5c6e8d998f0a7268dda55adb2ffc26777c049a72e15cc46a0e175",
@@ -2402,9 +2434,9 @@
       }
     },
     {
-      "sequence": 151,
-      "previous_record_digest": "sha256:891964150df15645092149dbdfc3bf2ba44dd099e86d475eb033e8b8a1ace0a8",
-      "record_digest": "sha256:4cebe04b9a78a1955fd7d83f3aa5a6296528f8de89588bf4c6e38d6c14db9eb1",
+      "sequence": 153,
+      "previous_record_digest": "sha256:9764bc4a2b5a77bbed7ced12e917f172b758b45be277e40598b330746ce603a9",
+      "record_digest": "sha256:0bbb6b165df0e0de3ec58cf5e967d0fac811f03fa5e8c143b83bff877f04e604",
       "command_id": "command:pr520-issue487-forward-ownership-revision3",
       "receipt_id": "certificate:0edd180776d3f4c02380a9df234fbc4d",
       "receipt_digest": "sha256:1ab46b102a03f84e69e2ff5cffeb8f1578d0119d6db1ba06b9b3f7c1e9068610",
@@ -2418,9 +2450,9 @@
       }
     },
     {
-      "sequence": 152,
-      "previous_record_digest": "sha256:4cebe04b9a78a1955fd7d83f3aa5a6296528f8de89588bf4c6e38d6c14db9eb1",
-      "record_digest": "sha256:d5bc7d3d950205ad2c98663a43c3c3016a9d928dc2002e19c4fce2f1f97b44c0",
+      "sequence": 154,
+      "previous_record_digest": "sha256:0bbb6b165df0e0de3ec58cf5e967d0fac811f03fa5e8c143b83bff877f04e604",
+      "record_digest": "sha256:16206c886f5747986d92a0f081da2924d78c4be80d4db7818cfd1d57ebd97795",
       "command_id": "command:pr520-issue487-reverse-ownership-revision3",
       "receipt_id": "certificate:05b490a8f8e8d63e61c732085bb5b17e",
       "receipt_digest": "sha256:95e1afdb28fb049dcef3d5de8bff248c9492ee8344cf53bdfe2f3e2f29d21964",
@@ -2434,9 +2466,9 @@
       }
     },
     {
-      "sequence": 153,
-      "previous_record_digest": "sha256:d5bc7d3d950205ad2c98663a43c3c3016a9d928dc2002e19c4fce2f1f97b44c0",
-      "record_digest": "sha256:dce9c41d1a8b80f8d63b75f7684da8dbbaf3a789407073dcc07ed893cde71565",
+      "sequence": 155,
+      "previous_record_digest": "sha256:16206c886f5747986d92a0f081da2924d78c4be80d4db7818cfd1d57ebd97795",
+      "record_digest": "sha256:f17898a800995527a18df1b138f065f39d544c845961a43bbef05ff6aef16936",
       "command_id": "command:pr520-issue487-reverse-ownership-revision4",
       "receipt_id": "certificate:79b87abaad993b9fab749bb33b90e170",
       "receipt_digest": "sha256:b46ed16053b7ababe067537a6f550a3046ae5752b107f15823924643ca44eeda",
@@ -2450,9 +2482,9 @@
       }
     },
     {
-      "sequence": 154,
-      "previous_record_digest": "sha256:dce9c41d1a8b80f8d63b75f7684da8dbbaf3a789407073dcc07ed893cde71565",
-      "record_digest": "sha256:5e48933909e5cc864777d51ca33b742d288167bf22b3fd9be0d666280bb987eb",
+      "sequence": 156,
+      "previous_record_digest": "sha256:f17898a800995527a18df1b138f065f39d544c845961a43bbef05ff6aef16936",
+      "record_digest": "sha256:40a78b0497f617f4b6d69179582ea5ef9c9f33a62bb5934125759c4234d47622",
       "command_id": "command:pr520-issue487-reverse-cleanup-revision5",
       "receipt_id": "certificate:7e9a100438cc0c8d22c9d303f391de98",
       "receipt_digest": "sha256:6bde5f25786cc18fc9c27fc47184920e6ba1e27fa96278ad6a016b0e657b762b",
@@ -2466,9 +2498,9 @@
       }
     },
     {
-      "sequence": 155,
-      "previous_record_digest": "sha256:5e48933909e5cc864777d51ca33b742d288167bf22b3fd9be0d666280bb987eb",
-      "record_digest": "sha256:095836177ec6d9f91f8a61db6e9f1927f9f08ca17798d809e9d8c1dd3a75dc6c",
+      "sequence": 157,
+      "previous_record_digest": "sha256:40a78b0497f617f4b6d69179582ea5ef9c9f33a62bb5934125759c4234d47622",
+      "record_digest": "sha256:6e4488b508df807c32a0f50970333349dc82a0be5d94a7b2a5366b0259384afe",
       "command_id": "command:pr521-issue487-forward-inventory-revision4",
       "receipt_id": "certificate:dc96326c9df67bdf75e829e46d1a0d7a",
       "receipt_digest": "sha256:62d3014ae34a65c76f8f9c4770085027518564fd04667b9b3292b21fb1539bd5",
@@ -2482,9 +2514,9 @@
       }
     },
     {
-      "sequence": 156,
-      "previous_record_digest": "sha256:095836177ec6d9f91f8a61db6e9f1927f9f08ca17798d809e9d8c1dd3a75dc6c",
-      "record_digest": "sha256:763d83ef7d54af2db0839250d4706b60ba61fe41e4282ca24c8f2e19daf06845",
+      "sequence": 158,
+      "previous_record_digest": "sha256:6e4488b508df807c32a0f50970333349dc82a0be5d94a7b2a5366b0259384afe",
+      "record_digest": "sha256:b365cf994c99dfc939404f7a42421b7f8aa01297e13f7b9dbcd1e22e46236e55",
       "command_id": "command:pr521-issue487-reverse-inventory-revision6",
       "receipt_id": "certificate:9992c7101ac0cb8766b14a0636967a70",
       "receipt_digest": "sha256:8ffde86b495b5d7c31fdc3868d009a03414c6910402309185f93f108b40db10b",
@@ -2498,9 +2530,9 @@
       }
     },
     {
-      "sequence": 157,
-      "previous_record_digest": "sha256:763d83ef7d54af2db0839250d4706b60ba61fe41e4282ca24c8f2e19daf06845",
-      "record_digest": "sha256:67eff170d47f8d7ba773016dc50f4e0c2ed3d8c11d8a240bb264493e91a1fccc",
+      "sequence": 159,
+      "previous_record_digest": "sha256:b365cf994c99dfc939404f7a42421b7f8aa01297e13f7b9dbcd1e22e46236e55",
+      "record_digest": "sha256:2a319650486b9aea1ff90b57d107d4df9c0f696f49ea488ca65b51f4bb9427cc",
       "command_id": "command:pr521-issue487-forward-classification-revision5",
       "receipt_id": "certificate:c8ec5ed817f248dfff06226a2dffd83b",
       "receipt_digest": "sha256:c3c28aacaffdbd63cc08e6dd0876eece2445f7b2523a424aba3d7da9a23a8248",
@@ -2514,9 +2546,9 @@
       }
     },
     {
-      "sequence": 158,
-      "previous_record_digest": "sha256:67eff170d47f8d7ba773016dc50f4e0c2ed3d8c11d8a240bb264493e91a1fccc",
-      "record_digest": "sha256:5d44b1eb41e39c3a2b8e1d715fa196c957e98115eec65f22c363f8cf95817e41",
+      "sequence": 160,
+      "previous_record_digest": "sha256:2a319650486b9aea1ff90b57d107d4df9c0f696f49ea488ca65b51f4bb9427cc",
+      "record_digest": "sha256:c9aefd5c23954832d2efcc88115ed690ca6778e32d91f2a2993f7712c88ecedb",
       "command_id": "command:pr521-r2-deny-guard-forward6",
       "receipt_id": "certificate:0270576ffe0c1ab8eadd452801c995e4",
       "receipt_digest": "sha256:3b7b443d799baa41a49c300d9b945bfd5fed995a1dd98b94ac88b0c1c86ff932",
@@ -2530,9 +2562,9 @@
       }
     },
     {
-      "sequence": 159,
-      "previous_record_digest": "sha256:5d44b1eb41e39c3a2b8e1d715fa196c957e98115eec65f22c363f8cf95817e41",
-      "record_digest": "sha256:6490e2c3781a2bc2d3313d096d07bdd83adc16b91e484f7210c6c04836d66a30",
+      "sequence": 161,
+      "previous_record_digest": "sha256:c9aefd5c23954832d2efcc88115ed690ca6778e32d91f2a2993f7712c88ecedb",
+      "record_digest": "sha256:28ebf4a2432d346283e97209e98e987d319e4a89f787de78767160faf4236058",
       "command_id": "command:pr521-r2-deny-guard-reverse7",
       "receipt_id": "certificate:37fbe634d28943e62b902979c00b7a78",
       "receipt_digest": "sha256:11754291c17cdcb902ec2b7e2455b675c174358ef267fa3bab8964a9b932223b",
@@ -2546,9 +2578,9 @@
       }
     },
     {
-      "sequence": 160,
-      "previous_record_digest": "sha256:6490e2c3781a2bc2d3313d096d07bdd83adc16b91e484f7210c6c04836d66a30",
-      "record_digest": "sha256:abccc7baa89901bbb4c56aaa355633017d9e2970ed2e9f13b5a971fe1d941793",
+      "sequence": 162,
+      "previous_record_digest": "sha256:28ebf4a2432d346283e97209e98e987d319e4a89f787de78767160faf4236058",
+      "record_digest": "sha256:b4216fe1b47994bfc263c41f0b5fe7f7a11c2b02f74b8e2c64be240705bfb88e",
       "command_id": "command:pr521-r2-forward-guard-contract-revision7",
       "receipt_id": "certificate:75d64be2e40c15c3dc35ca6a2de2758a",
       "receipt_digest": "sha256:b023a08268f3c3691d2aa4fa85a966dd0ad621b1ccf5c4feddaf2e4e95a14816",
@@ -2562,9 +2594,9 @@
       }
     },
     {
-      "sequence": 161,
-      "previous_record_digest": "sha256:abccc7baa89901bbb4c56aaa355633017d9e2970ed2e9f13b5a971fe1d941793",
-      "record_digest": "sha256:075d3c790b71964746357a297b4fd419d7b6050d03ecddb59dcd34c1e189196d",
+      "sequence": 163,
+      "previous_record_digest": "sha256:b4216fe1b47994bfc263c41f0b5fe7f7a11c2b02f74b8e2c64be240705bfb88e",
+      "record_digest": "sha256:649177fcac8b5a4f5072bfcafe76726aa6e7c1f337d7df610a336cf560bf7288",
       "command_id": "command:pr521-r3-reverse-target-revision8",
       "receipt_id": "certificate:780e1797ac06eefb3fea3d5f83a1b384",
       "receipt_digest": "sha256:8635cb22422e11302f0b7a65974e2eb647a2717636b950d17335a43fbc777dc7",
@@ -2578,9 +2610,9 @@
       }
     },
     {
-      "sequence": 162,
-      "previous_record_digest": "sha256:075d3c790b71964746357a297b4fd419d7b6050d03ecddb59dcd34c1e189196d",
-      "record_digest": "sha256:1182199a2bda71c46e61b6459622cf554a8fcb920f83d0712bb48ebded8b2980",
+      "sequence": 164,
+      "previous_record_digest": "sha256:649177fcac8b5a4f5072bfcafe76726aa6e7c1f337d7df610a336cf560bf7288",
+      "record_digest": "sha256:a4123ab7a1b8f076f75fbee07a427dffe582b65075264f1d190589cf4e3801bc",
       "command_id": "command:pr521-r3-forward-classification-revision8",
       "receipt_id": "certificate:7cf101fd5c962f0fd576212d106b954e",
       "receipt_digest": "sha256:5c0bcfb0008db6150ab2a9ccda0b1aed4906b656b88af837621beacf79913a9f",
@@ -2594,9 +2626,9 @@
       }
     },
     {
-      "sequence": 163,
-      "previous_record_digest": "sha256:1182199a2bda71c46e61b6459622cf554a8fcb920f83d0712bb48ebded8b2980",
-      "record_digest": "sha256:9fb24580457d7390fda7e8e936ac46077a966e5865c54afb47bbbd6d8b5b0a1e",
+      "sequence": 165,
+      "previous_record_digest": "sha256:a4123ab7a1b8f076f75fbee07a427dffe582b65075264f1d190589cf4e3801bc",
+      "record_digest": "sha256:9598fcdc2c14a1ea4d3129b3cea4f7be0d5528b90b83726e13df88eca511d69c",
       "command_id": "command:pr521-r3-reverse-classification-revision9",
       "receipt_id": "certificate:a3ffb99ad2061a8b7b0249a2c9afaed1",
       "receipt_digest": "sha256:cc84182c891da4de15471948a322f6e5e99a3478fd3e95bc72a67469d35fe097",
@@ -2610,9 +2642,9 @@
       }
     },
     {
-      "sequence": 164,
-      "previous_record_digest": "sha256:9fb24580457d7390fda7e8e936ac46077a966e5865c54afb47bbbd6d8b5b0a1e",
-      "record_digest": "sha256:851da4779aa9ee6d07224649fb2283c3d55cc305dd7e05eb5309cc94e6a9a9e0",
+      "sequence": 166,
+      "previous_record_digest": "sha256:9598fcdc2c14a1ea4d3129b3cea4f7be0d5528b90b83726e13df88eca511d69c",
+      "record_digest": "sha256:c26fc4970fea2f31d87866f4c1edb9fa1b26e393c97d250345f11258280f9fce",
       "command_id": "command:pr521-r3-forward-classification-revision9",
       "receipt_id": "certificate:f0331355453843d394e5c63e583d5a75",
       "receipt_digest": "sha256:6bfeb7f85899bb3cd6f26ee15731cd6c50af854e4f9340d16def24fd965a0598",
@@ -2626,9 +2658,9 @@
       }
     },
     {
-      "sequence": 165,
-      "previous_record_digest": "sha256:851da4779aa9ee6d07224649fb2283c3d55cc305dd7e05eb5309cc94e6a9a9e0",
-      "record_digest": "sha256:4cd27c8394e1621f637a74aa5617dcc53c121187d48bb50a9abb3df7d5a5d068",
+      "sequence": 167,
+      "previous_record_digest": "sha256:c26fc4970fea2f31d87866f4c1edb9fa1b26e393c97d250345f11258280f9fce",
+      "record_digest": "sha256:730412015162fd145d11f929cd4d8b6e103f233f2b2319cad8e99ca3f0505eb2",
       "command_id": "command:pr521-r3-reverse-classification-revision10",
       "receipt_id": "certificate:0c96c68561d86eb8a44ca65603054977",
       "receipt_digest": "sha256:0c4175184558f29402516d86da1a1a5e7989da0e2fc708b018fb21e6c4e65d14",
