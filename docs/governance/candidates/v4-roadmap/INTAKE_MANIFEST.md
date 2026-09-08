@@ -16,7 +16,7 @@ PLAN-L1-09 と 5 候補文書 (`docs/governance/candidates/ut-tdd-concept-v4*.md
 | 収容 | Markdown 39 本 + `data/*.json` 10 本 = 49 本 (下表 included) |
 | 除外 | `index.html` (生成 viewer、860,348 bytes)、`tools/render_roadmap.py`、`tools/validate_roadmap.py` (下表 archived) |
 | 除外理由 | 生成 HTML は data/*.json と Markdown から再生成できる派生物で drift 源になる。python tool は ADR-001 (TypeScript/Node が product runtime) と衝突し、repo の検証経路へ載せない。data/*.json の継続検証が必要になれば TS/Vitest への移植を別 PLAN で起票する |
-| 退避先 | `C:\dev\_archive\UT_V4_RELEASE_ROADMAP_v2.0-excluded\` (index.html、tools/、ORIGINAL_ZIP_SHA256.txt) |
+| 退避先 | repo 外のローカル archive (PO 管理、パスは非公開)。index.html、tools/、ORIGINAL_ZIP_SHA256.txt を退避 |
 | 正規化 | CRLF → LF。本文の改変は下記「gate 適合の最小改変」の 7 行のみで、それ以外は原本と一致することを収容時に照合済。ファイル名は無改変 |
 | 資料側の自己検査 | `VALIDATION.md` / `data/validation_results.json` は資料作成側のオフライン整合検査の結果であり、UT の CI・review・受入ではない |
 
