@@ -2768,6 +2768,38 @@
         "revision": 3,
         "content_digest": "sha256:acdb552b2c1bffd50ebd7cac99fe37200ba11ac8b1075451964844fafa11b7ef"
       }
+    },
+    {
+      "sequence": 174,
+      "previous_record_digest": "sha256:0ef8f4c72162f807c6396492a6c3c1a12d846e01593b245b602d22e424240378",
+      "record_digest": "sha256:93212a617a9edbf33769696327aa2ab655a184a5a52565d94095cb565f6e0969",
+      "command_id": "command:issue528-PLAN-L7-512-project-scoped-memory-root-measured-evidence-r4",
+      "receipt_id": "certificate:a6c2b9d4814e28377724d4ba777ce544",
+      "receipt_digest": "sha256:ba1fe86a2b9a6f65aae4b5c0ae45242b4d63ce1866be672233ed23256440703f",
+      "decision_digest": "sha256:7bc152f052d22aaf3e288664eb9c223a9e7a649bf66b1fdfd0af3827934f83c5",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-512-project-scoped-memory-root.md",
+        "plan_id": "PLAN-L7-512-project-scoped-memory-root",
+        "asset_id": "plan:legacy:68706e293ae2c96738a8e3263bac3e01e7cde64cdb7c3ed8e53805922662bc30",
+        "revision": 4,
+        "content_digest": "sha256:01416a9390b1c135ada280e088d68acaa668c5ca75a3a77a9a9ec93557a42d26"
+      }
+    },
+    {
+      "sequence": 175,
+      "previous_record_digest": "sha256:93212a617a9edbf33769696327aa2ab655a184a5a52565d94095cb565f6e0969",
+      "record_digest": "sha256:e3af294c02df8dff6bbcc00fafd1b99046fcaff2b3482b8db4c04e4d919543cd",
+      "command_id": "command:issue528-PLAN-REVERSE-512-project-scoped-memory-root-backfill-measured-evidence-r4",
+      "receipt_id": "certificate:b144dbc4071397e7a08e6c3d2890df13",
+      "receipt_digest": "sha256:235d05611522f192059eb3cdc878cce26f107d3e08d139d9a71b979373a5748c",
+      "decision_digest": "sha256:c19d176832c0590480ff8dbd004653dd6bd9d9e3acb78c2a21b33a725ce88a1c",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-512-project-scoped-memory-root-backfill.md",
+        "plan_id": "PLAN-REVERSE-512-project-scoped-memory-root-backfill",
+        "asset_id": "plan:legacy:186048a954aa8dae7b4f8b1f968f6c5d64d758850fa695ed59a11edcdcf63153",
+        "revision": 4,
+        "content_digest": "sha256:26af6d2a049206593f61fe4cc118a663ddf6d5a3bb73331101400c68b11aaefb"
+      }
     }
   ]
 }

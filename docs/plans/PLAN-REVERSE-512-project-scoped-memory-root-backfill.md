@@ -27,22 +27,25 @@ dependencies:
 review_evidence:
   - reviewer: codex-tl-integration
     review_kind: intra_runtime_subagent
-    reviewed_at: 2026-09-08T06:08:47.784Z
-    tests_green_at: 2026-09-08T06:08:47.784Z
+    reviewed_at: 2026-09-08T06:57:32.141Z
+    tests_green_at: 2026-09-08T06:55:46.693Z
     verdict: R1 observed implementation; PASS blocking 0; Claude Opus non-author
       closing review pending
     worker_model: gpt-5.6-luna
     effort: high
     reviewer_model: codex
-    plan_revision: 24126d45e38451cd4df1a7481b37945678b403ea
-    subject_head: 24126d45e38451cd4df1a7481b37945678b403ea
-    anchor_commit: 24126d45e38451cd4df1a7481b37945678b403ea
+    plan_revision: 6ce594c2087d8cd802bc3579b70ade9fbf912b43
+    subject_head: 6ce594c2087d8cd802bc3579b70ade9fbf912b43
+    anchor_commit: 6ce594c2087d8cd802bc3579b70ade9fbf912b43
     evidence_path: tests/claude-memory-wake.test.ts
     scope: "Issue #528 / PLAN-L7-512 Slice 3 のR1観測。publisher-owned binding sidecarを
       production consumer guardへ接続し、Memory/review compositionとU-PMEMROOT-007を
       exact implementation commitで確認した。Slice 4/5、#439、Bun laneは未実装のため
       R2以降へ繰り越す。Opus non-author closing reviewとcanonical merge receiptは未取得。
-      rootは24126d45のsnapshot終了コード0を確認済み。本改訂の時刻は証跡再確認時刻であり、実行終了時刻の再構成ではない。"
+      rootは24126d45のsnapshot終了コード0を確認済み。本改訂の時刻は証跡再確認時刻であり、実行終了時刻の再構成ではない。
+      CI指摘のmax-source-paramsをオブジェクト引数化で是正。HEAD 6ce594c2でsnapshot 3 files/9
+      passed/37 skipped、reference検証・cleanupを含むexit
+      0を06:54:47.721Zに確認。旧時刻欠落entryは本実測で置換し、過去履歴はarchive refに保存。closing未実施。"
     citations:
       - "docs/test-design/harness/L7-project-scoped-memory-root-test-design.md:
         U-PMEMROOT-007"
@@ -59,44 +62,48 @@ review_evidence:
         runner: node
         scope: targeted
         exit_code: 0
+        completed_at: 2026-09-08T06:54:47.721Z
         evidence_path: tests/claude-memory-wake.test.ts
-        output_digest: sha256:ce28eaf0acf0040c129302d7395d3f8412f86da7ff2aae73d04de6e10b89eee8
-        anchor_commit: 24126d45e38451cd4df1a7481b37945678b403ea
+        output_digest: sha256:38c98a6ff2f2983a5e1725fd928369f6e7d780dfa7db2d2d547482a287f9de4e
+        anchor_commit: 6ce594c2087d8cd802bc3579b70ade9fbf912b43
       - kind: typecheck
-        command: npm exec -- tsc --noEmit
+        command: node node_modules/typescript/bin/tsc --noEmit --pretty false
         runner: node
         scope: targeted
         exit_code: 0
-        evidence_path: src/runtime/claude-provider-envelope.ts
-        output_digest: sha256:2f5336275d1d08fbdf5120854901c27138540d44fb00a06aba3a269a2962cdd8
-        anchor_commit: 24126d45e38451cd4df1a7481b37945678b403ea
+        completed_at: 2026-09-08T06:55:46.693Z
+        evidence_path: src/runtime/claude-memory-wake.ts
+        output_digest: sha256:357a451c5b7c3db96ef728aed9a202762618476b23a63b338365ed72bece9cf4
+        anchor_commit: 6ce594c2087d8cd802bc3579b70ade9fbf912b43
       - kind: lint
-        command: npm exec -- biome check src/runtime/claude-provider-envelope.ts
+        command: node node_modules/@biomejs/biome/bin/biome check
+          src/runtime/claude-provider-envelope.ts
           src/runtime/claude-memory-wake.ts tests/claude-memory-wake.test.ts
           tests/runtime-hook-entrypoints.test.ts
         runner: node
         scope: targeted
         exit_code: 0
-        evidence_path: src/runtime/claude-provider-envelope.ts
-        output_digest: sha256:2f5336275d1d08fbdf5120854901c27138540d44fb00a06aba3a269a2962cdd8
-        anchor_commit: 24126d45e38451cd4df1a7481b37945678b403ea
+        completed_at: 2026-09-08T06:55:43.328Z
+        evidence_path: src/runtime/claude-memory-wake.ts
+        output_digest: sha256:357a451c5b7c3db96ef728aed9a202762618476b23a63b338365ed72bece9cf4
+        anchor_commit: 6ce594c2087d8cd802bc3579b70ade9fbf912b43
 workflow_phase: R1
 status: draft
 github_issue_id: 528
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:e2ec6823bd7b2e1821077b8c3e49dbaf
-  command_id: command:issue528-PLAN-REVERSE-512-project-scoped-memory-root-backfill-verified-evidence-r3
-  admitted_at: 2026-09-08T06:08:47.993Z
-  source_digest: sha256:acdb552b2c1bffd50ebd7cac99fe37200ba11ac8b1075451964844fafa11b7ef
-  decision_digest: sha256:1d20c32ec9c1cbf4b5742b2bd3657b78354ccdc716730b2f5cceaeed4043a4e5
-  receipt_digest: sha256:de30a162e85580fe79555db5b28244fb4a3cb42562b0fc4a6aa3259a547d2737
+  receipt_id: certificate:b144dbc4071397e7a08e6c3d2890df13
+  command_id: command:issue528-PLAN-REVERSE-512-project-scoped-memory-root-backfill-measured-evidence-r4
+  admitted_at: 2026-09-08T06:57:32.337Z
+  source_digest: sha256:26af6d2a049206593f61fe4cc118a663ddf6d5a3bb73331101400c68b11aaefb
+  decision_digest: sha256:c19d176832c0590480ff8dbd004653dd6bd9d9e3acb78c2a21b33a725ce88a1c
+  receipt_digest: sha256:235d05611522f192059eb3cdc878cce26f107d3e08d139d9a71b979373a5748c
   binding:
     path: docs/plans/PLAN-REVERSE-512-project-scoped-memory-root-backfill.md
     plan_id: PLAN-REVERSE-512-project-scoped-memory-root-backfill
     asset_id: plan:legacy:186048a954aa8dae7b4f8b1f968f6c5d64d758850fa695ed59a11edcdcf63153
-    revision: 3
-    content_digest: sha256:acdb552b2c1bffd50ebd7cac99fe37200ba11ac8b1075451964844fafa11b7ef
+    revision: 4
+    content_digest: sha256:26af6d2a049206593f61fe4cc118a663ddf6d5a3bb73331101400c68b11aaefb
   route:
     signal: design_gap
     mode: reverse
@@ -107,16 +114,17 @@ admission_receipt:
     projection_digest: sha256:218a5a56c4c720bac923f795c4b973f7d592159f75305a8ee1e39121403e10bf
   origin:
     plan_id: PLAN-L7-512-project-scoped-memory-root
-    revision: 3
-    digest: sha256:ed94d33b6879c4eded974aea8a22f537ef2dfda948d19c1172f68de4c1058674
+    revision: 4
+    digest: sha256:01416a9390b1c135ada280e088d68acaa668c5ca75a3a77a9a9ec93557a42d26
   transition:
     direction: implementation_to_design
     implementation_disposition: preserved
   reentry:
     target_plan_id: PLAN-L7-512-project-scoped-memory-root
-    target_revision: 3
+    target_revision: 4
     phase: forward_merge
-  escape_reason: "Issue #528 verified snapshot evidence and canonical oracle citation binding"
+  escape_reason: "Issue #528 current implementation snapshot evidence and
+    completion timestamp repair"
 ---
 
 # PLAN-REVERSE-512
