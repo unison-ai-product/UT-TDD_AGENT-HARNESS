@@ -1,0 +1,426 @@
+[
+  {
+    "id": "RM-ADD-01",
+    "title": "プレリリース後の本体MPL-2.0切替",
+    "start": "R01",
+    "complete": "R01",
+    "fr_refs": [
+      "UTV4-FR-014",
+      "UTV4-FR-026"
+    ],
+    "migration": "MIG-01",
+    "acceptance": [
+      {
+        "id": "RM-ADD-01-AC-01",
+        "scenario": "M0未完了時はlicense切替を公開経路へ有効化しない",
+        "status": "not_executed"
+      },
+      {
+        "id": "RM-ADD-01-AC-02",
+        "scenario": "過去MIT/第三者noticeを変えず、新版のsourceを案内",
+        "status": "not_executed"
+      },
+      {
+        "id": "RM-ADD-01-AC-03",
+        "scenario": "本体とPackの表示矛盾を検出",
+        "status": "not_executed"
+      }
+    ]
+  },
+  {
+    "id": "RM-ADD-02",
+    "title": "導入先CI soft budgetと検証配置",
+    "start": "R03",
+    "complete": "R04",
+    "fr_refs": [
+      "UTV4-FR-012",
+      "UTV4-FR-013",
+      "UTV4-FR-032"
+    ],
+    "migration": "MIG-09",
+    "acceptance": [
+      {
+        "id": "RM-ADD-02-AC-01",
+        "scenario": "予算超過で未検証PASSを作らない",
+        "status": "not_executed"
+      },
+      {
+        "id": "RM-ADD-02-AC-02",
+        "scenario": "既存workflowを承認なしに置換しない",
+        "status": "not_executed"
+      },
+      {
+        "id": "RM-ADD-02-AC-03",
+        "scenario": "selectorとfullの差分が受入閾値を満たす",
+        "status": "not_executed"
+      }
+    ]
+  },
+  {
+    "id": "RM-ADD-03",
+    "title": "手戻り/review/CI/待機の総原価削減",
+    "start": "R03",
+    "complete": "R09",
+    "fr_refs": [
+      "UTV4-FR-012",
+      "UTV4-FR-031",
+      "UTV4-FR-032",
+      "UTV4-FR-035",
+      "UTV4-FR-042",
+      "UTV4-FR-043"
+    ],
+    "migration": "MIG-08",
+    "acceptance": [
+      {
+        "id": "RM-ADD-03-AC-01",
+        "scenario": "同risk・同変更単位で全attemptを含め原価比較",
+        "status": "not_executed"
+      },
+      {
+        "id": "RM-ADD-03-AC-02",
+        "scenario": "PR数を増やして成功率を水増ししない",
+        "status": "not_executed"
+      },
+      {
+        "id": "RM-ADD-03-AC-03",
+        "scenario": "レビュー待ち短縮で見逃しが増えないか検証",
+        "status": "not_executed"
+      }
+    ]
+  },
+  {
+    "id": "RM-ADD-04",
+    "title": "共通UT準拠の限定BugBot",
+    "start": "R03",
+    "complete": "R06",
+    "fr_refs": [
+      "UTV4-FR-004",
+      "UTV4-FR-005",
+      "UTV4-FR-013",
+      "UTV4-FR-027",
+      "UTV4-FR-037",
+      "UTV4-FR-054"
+    ],
+    "migration": "MIG-05",
+    "acceptance": [
+      {
+        "id": "RM-ADD-04-AC-01",
+        "scenario": "未受入JSON/control/securityでwrite不可",
+        "status": "not_executed"
+      },
+      {
+        "id": "RM-ADD-04-AC-02",
+        "scenario": "Red→Greenと独立reviewを同一subjectへ束縛",
+        "status": "not_executed"
+      },
+      {
+        "id": "RM-ADD-04-AC-03",
+        "scenario": "テスト緩和での擬似修正を拒否",
+        "status": "not_executed"
+      }
+    ]
+  },
+  {
+    "id": "RM-ADD-05",
+    "title": "保存/通知/失敗工程の正規回復",
+    "start": "R02",
+    "complete": "R05",
+    "fr_refs": [
+      "UTV4-FR-005",
+      "UTV4-FR-027",
+      "UTV4-FR-037"
+    ],
+    "migration": "MIG-05",
+    "acceptance": [
+      {
+        "id": "RM-ADD-05-AC-01",
+        "scenario": "ack-loss/replayで二重作用0",
+        "status": "not_executed"
+      },
+      {
+        "id": "RM-ADD-05-AC-02",
+        "scenario": "判定保存失敗時の確認済み証拠だけ再開",
+        "status": "not_executed"
+      },
+      {
+        "id": "RM-ADD-05-AC-03",
+        "scenario": "救済不能な証拠はtyped拒否",
+        "status": "not_executed"
+      }
+    ]
+  },
+  {
+    "id": "RM-ADD-06",
+    "title": "追加固定費を前提にせず既存CI尊重",
+    "start": "R01",
+    "complete": "R04",
+    "fr_refs": [
+      "UTV4-FR-008",
+      "UTV4-FR-012",
+      "UTV4-FR-034"
+    ],
+    "migration": "MIG-09",
+    "acceptance": [
+      {
+        "id": "RM-ADD-06-AC-01",
+        "scenario": "追加常駐サービス無しで基準profileを起動",
+        "status": "not_executed"
+      },
+      {
+        "id": "RM-ADD-06-AC-02",
+        "scenario": "導入前後のworkflow diffを返す",
+        "status": "not_executed"
+      },
+      {
+        "id": "RM-ADD-06-AC-03",
+        "scenario": "開発PC負荷・保守も含め比較",
+        "status": "not_executed"
+      }
+    ]
+  },
+  {
+    "id": "RM-ADD-07",
+    "title": "JSON→制御/回復/安全→BugBotの順序",
+    "start": "R03",
+    "complete": "R06",
+    "fr_refs": [
+      "UTV4-FR-004",
+      "UTV4-FR-005",
+      "UTV4-FR-006",
+      "UTV4-FR-007",
+      "UTV4-FR-027",
+      "UTV4-FR-054"
+    ],
+    "migration": "MIG-03",
+    "acceptance": [
+      {
+        "id": "RM-ADD-07-AC-01",
+        "scenario": "schemaだけでBotを起動しない",
+        "status": "not_executed"
+      },
+      {
+        "id": "RM-ADD-07-AC-02",
+        "scenario": "共通writer/route/receiptを実際に通る",
+        "status": "not_executed"
+      },
+      {
+        "id": "RM-ADD-07-AC-03",
+        "scenario": "旧形式Bot/二重writerを検出",
+        "status": "not_executed"
+      }
+    ]
+  },
+  {
+    "id": "RM-ADD-08",
+    "title": "安全性/攻撃防御/誤操作と復旧",
+    "start": "R01",
+    "complete": "R05",
+    "fr_refs": [
+      "UTV4-FR-001",
+      "UTV4-FR-002",
+      "UTV4-FR-005",
+      "UTV4-FR-013",
+      "UTV4-FR-027",
+      "UTV4-FR-037",
+      "UTV4-FR-038",
+      "UTV4-FR-049",
+      "UTV4-FR-051"
+    ],
+    "migration": "MIG-17",
+    "acceptance": [
+      {
+        "id": "RM-ADD-08-AC-01",
+        "scenario": "非信頼指示で権限取得不可",
+        "status": "not_executed"
+      },
+      {
+        "id": "RM-ADD-08-AC-02",
+        "scenario": "漏洩・scope外作用・偽receiptを拒否",
+        "status": "not_executed"
+      },
+      {
+        "id": "RM-ADD-08-AC-03",
+        "scenario": "正常操作と停止/復帰が成立",
+        "status": "not_executed"
+      }
+    ]
+  },
+  {
+    "id": "RM-ADD-09",
+    "title": "モデル進化に合わせたcontext縮退",
+    "start": "R03",
+    "complete": "R09",
+    "fr_refs": [
+      "UTV4-FR-019",
+      "UTV4-FR-020",
+      "UTV4-FR-021",
+      "UTV4-FR-022",
+      "UTV4-FR-025",
+      "UTV4-FR-041",
+      "UTV4-FR-042",
+      "UTV4-FR-043",
+      "UTV4-FR-045"
+    ],
+    "migration": "MIG-12",
+    "acceptance": [
+      {
+        "id": "RM-ADD-09-AC-01",
+        "scenario": "同モデルのcontext差だけを比較",
+        "status": "not_executed"
+      },
+      {
+        "id": "RM-ADD-09-AC-02",
+        "scenario": "unknown/小標本を改善済み扱いしない",
+        "status": "not_executed"
+      },
+      {
+        "id": "RM-ADD-09-AC-03",
+        "scenario": "必須契約保持と旧packetへの回復",
+        "status": "not_executed"
+      }
+    ]
+  },
+  {
+    "id": "RM-ADD-10",
+    "title": "実トラブルを対策資産へ変換",
+    "start": "R03",
+    "complete": "R09",
+    "fr_refs": [
+      "UTV4-FR-010",
+      "UTV4-FR-011",
+      "UTV4-FR-019",
+      "UTV4-FR-020",
+      "UTV4-FR-025",
+      "UTV4-FR-037",
+      "UTV4-FR-038",
+      "UTV4-FR-040",
+      "UTV4-FR-042",
+      "UTV4-FR-048"
+    ],
+    "migration": "MIG-13",
+    "acceptance": [
+      {
+        "id": "RM-ADD-10-AC-01",
+        "scenario": "実incidentと適用/非適用・失効根拠が結ばれる",
+        "status": "not_executed"
+      },
+      {
+        "id": "RM-ADD-10-AC-02",
+        "scenario": "機構化後も不要なproseを重複注入しない",
+        "status": "not_executed"
+      },
+      {
+        "id": "RM-ADD-10-AC-03",
+        "scenario": "単発重大修理は正規緊急経路で可能",
+        "status": "not_executed"
+      }
+    ]
+  },
+  {
+    "id": "RM-ADD-11",
+    "title": "管理責務/委任/代理/失効",
+    "start": "R01",
+    "complete": "R05",
+    "fr_refs": [
+      "UTV4-FR-001",
+      "UTV4-FR-002",
+      "UTV4-FR-003",
+      "UTV4-FR-029",
+      "UTV4-FR-030",
+      "UTV4-FR-033",
+      "UTV4-FR-034",
+      "UTV4-FR-054",
+      "UTV4-FR-055"
+    ],
+    "migration": "MIG-18",
+    "acceptance": [
+      {
+        "id": "RM-ADD-11-AC-01",
+        "scenario": "旧有効policyで権限変更を認可",
+        "status": "not_executed"
+      },
+      {
+        "id": "RM-ADD-11-AC-02",
+        "scenario": "代理交代後に旧leaseを拒否",
+        "status": "not_executed"
+      },
+      {
+        "id": "RM-ADD-11-AC-03",
+        "scenario": "通常定型処理で毎回PO承認を要求しない",
+        "status": "not_executed"
+      }
+    ]
+  },
+  {
+    "id": "RM-ADD-12",
+    "title": "作業順序予測と資源制約付き動的配布",
+    "start": "R03",
+    "complete": "R09",
+    "fr_refs": [
+      "UTV4-FR-004",
+      "UTV4-FR-005",
+      "UTV4-FR-012",
+      "UTV4-FR-030",
+      "UTV4-FR-031",
+      "UTV4-FR-032",
+      "UTV4-FR-034",
+      "UTV4-FR-035",
+      "UTV4-FR-036",
+      "UTV4-FR-041",
+      "UTV4-FR-042",
+      "UTV4-FR-043",
+      "UTV4-FR-050"
+    ],
+    "migration": "MIG-08",
+    "acceptance": [
+      {
+        "id": "RM-ADD-12-AC-01",
+        "scenario": "予測完了をactual依存成立として消費しない",
+        "status": "not_executed"
+      },
+      {
+        "id": "RM-ADD-12-AC-02",
+        "scenario": "stale計画・資源超過・重複grantを拒否",
+        "status": "not_executed"
+      },
+      {
+        "id": "RM-ADD-12-AC-03",
+        "scenario": "同snapshot/policyで再現し、unknown/fallback/agingが成立",
+        "status": "not_executed"
+      }
+    ]
+  },
+  {
+    "id": "RM-ADD-13",
+    "title": "版別capabilityと新旧移行/互換/退役の運用",
+    "start": "R01",
+    "complete": "R10",
+    "fr_refs": [
+      "UTV4-FR-006",
+      "UTV4-FR-007",
+      "UTV4-FR-014",
+      "UTV4-FR-023",
+      "UTV4-FR-025",
+      "UTV4-FR-026",
+      "UTV4-FR-027"
+    ],
+    "migration": "MIG-20",
+    "acceptance": [
+      {
+        "id": "RM-ADD-13-AC-01",
+        "scenario": "版のcapabilityと実装/受入が一致",
+        "status": "not_executed"
+      },
+      {
+        "id": "RM-ADD-13-AC-02",
+        "scenario": "新writer有効時に旧writerをfence",
+        "status": "not_executed"
+      },
+      {
+        "id": "RM-ADD-13-AC-03",
+        "scenario": "incompatible stateへのdowngradeはwrite 0",
+        "status": "not_executed"
+      }
+    ]
+  }
+]

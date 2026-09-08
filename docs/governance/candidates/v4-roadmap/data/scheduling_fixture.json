@@ -1,0 +1,165 @@
+{
+  "status": "synthetic_example_not_actual_progress",
+  "time_unit": "fixture_unit",
+  "resources": {
+    "worker-a": 1,
+    "worker-b": 1,
+    "ci": 1,
+    "reviewer": 1,
+    "merge": 1
+  },
+  "tasks": [
+    {
+      "id": "A",
+      "label": "共通契約",
+      "requires": [],
+      "stages": [
+        [
+          "worker-a",
+          0,
+          3
+        ],
+        [
+          "ci",
+          3,
+          4
+        ],
+        [
+          "reviewer",
+          4,
+          6
+        ],
+        [
+          "merge",
+          6,
+          7
+        ]
+      ]
+    },
+    {
+      "id": "D",
+      "label": "独立doc",
+      "requires": [],
+      "stages": [
+        [
+          "worker-b",
+          0,
+          2
+        ],
+        [
+          "ci",
+          2,
+          3
+        ],
+        [
+          "reviewer",
+          3,
+          4
+        ],
+        [
+          "merge",
+          4,
+          5
+        ]
+      ]
+    },
+    {
+      "id": "B",
+      "label": "backend",
+      "requires": [
+        "A"
+      ],
+      "stages": [
+        [
+          "worker-a",
+          7,
+          13
+        ],
+        [
+          "ci",
+          13,
+          14
+        ],
+        [
+          "reviewer",
+          14,
+          16
+        ],
+        [
+          "merge",
+          16,
+          17
+        ]
+      ]
+    },
+    {
+      "id": "C",
+      "label": "frontend",
+      "requires": [
+        "A"
+      ],
+      "stages": [
+        [
+          "worker-b",
+          7,
+          11
+        ],
+        [
+          "ci",
+          11,
+          12
+        ],
+        [
+          "reviewer",
+          12,
+          14
+        ],
+        [
+          "merge",
+          14,
+          15
+        ]
+      ]
+    },
+    {
+      "id": "I",
+      "label": "統合",
+      "requires": [
+        "B",
+        "C"
+      ],
+      "stages": [
+        [
+          "worker-a",
+          17,
+          20
+        ],
+        [
+          "ci",
+          20,
+          22
+        ],
+        [
+          "reviewer",
+          22,
+          23
+        ],
+        [
+          "merge",
+          23,
+          24
+        ]
+      ]
+    }
+  ],
+  "expected": {
+    "makespan": 24,
+    "dependency_violation_count": 0,
+    "resource_conflict_count": 0
+  },
+  "notes": [
+    "すべてのdurationは検証用に固定した架空値",
+    "Aの実装終了3ではB/Cを開始せず、必要なmerge-admitted7を待つ",
+    "実際のdispatchでは予測時刻を待つのではなく、成立したreceiptを確認する"
+  ]
+}

@@ -1,0 +1,49 @@
+{
+  "status": "illustrative_design_not_runtime_schema",
+  "owner": "U23-ControlPlane",
+  "authority_boundary": "proposal is never dispatch permission",
+  "required_refs": [
+    "project_id",
+    "repository_id",
+    "subject_head",
+    "work_item_revision",
+    "graph_revision",
+    "policy_revision",
+    "observation_high_water"
+  ],
+  "estimate": {
+    "kind": [
+      "observed",
+      "human_estimate",
+      "hypothesis",
+      "unknown"
+    ],
+    "required": [
+      "stage",
+      "range_or_null",
+      "evidence_ref",
+      "sample_count",
+      "as_of"
+    ]
+  },
+  "plan_output": [
+    "proposal_id",
+    "input_digest",
+    "estimator_revision",
+    "ordered_candidates",
+    "parallel_groups",
+    "blocked_reasons",
+    "resource_windows",
+    "prediction_range_or_unknown",
+    "invalidation_conditions"
+  ],
+  "dispatch_preconditions": [
+    "actual_dependency_evidence",
+    "current_policy_authorization",
+    "capability_match",
+    "resource_capacity",
+    "valid_lease",
+    "CAS_admission",
+    "read_after_confirmation"
+  ]
+}

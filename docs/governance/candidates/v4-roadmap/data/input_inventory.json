@@ -1,0 +1,18 @@
+{
+  "status": "planning_input",
+  "files": [
+    {
+      "name": "UT_POST_PRERELEASE_ROADMAP_MPL2_2026-09-08_v1.3.md",
+      "sha256": "fbd152abf1ca883dca82cf1227a81d99fbf161b4570827b606883cf6be457904",
+      "bytes": 88583
+    },
+    {
+      "name": "UT_PR517_INSERT_BRIEF_v1.3.md",
+      "sha256": "957fee8334fafc65c3fbad92935be251549b25e971a56076287d28b0d92e736c",
+      "bytes": 6242
+    }
+  ],
+  "github_main": "84cd7f896f7dfbd67b38b250b5a943eaee3f6640",
+  "pr517_head": "c21b54fb0d3f2d5a73a7826cc41233634456cac9",
+  "source_ref": "SOURCES.md"
+}

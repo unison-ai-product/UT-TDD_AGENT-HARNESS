@@ -1,0 +1,499 @@
+{
+  "status": "planned_cumulative_scope_not_implementation",
+  "capabilities": [
+    {
+      "id": "CAP-LICENSE",
+      "name": "UT本体のライセンス",
+      "planned_states": {
+        "R00": "MITの初回Canary",
+        "R01": "MPL-2.0へ切替（権利確認済み対象）",
+        "R02": "MPL-2.0へ切替（権利確認済み対象）",
+        "R03": "MPL-2.0へ切替（権利確認済み対象）",
+        "R04": "MPL-2.0へ切替（権利確認済み対象）",
+        "R05": "MPL-2.0へ切替（権利確認済み対象）",
+        "R06": "MPL-2.0へ切替（権利確認済み対象）",
+        "R07": "MPL-2.0へ切替（権利確認済み対象）",
+        "R08": "MPL-2.0へ切替（権利確認済み対象）",
+        "R09": "MPL-2.0へ切替（権利確認済み対象）",
+        "R10": "MPL-2.0へ切替（権利確認済み対象）"
+      },
+      "changes_at": [
+        "R00",
+        "R01"
+      ],
+      "detail": "migration/04_LICENSE_BOUNDARY.md"
+    },
+    {
+      "id": "CAP-UPDATER",
+      "name": "consumer更新・rollback",
+      "planned_states": {
+        "R00": "手動更新/advisory",
+        "R01": "切替契約と試験設計",
+        "R02": "channel/承認/atomic switch/A-B独立回復",
+        "R03": "channel/承認/atomic switch/A-B独立回復",
+        "R04": "channel/承認/atomic switch/A-B独立回復",
+        "R05": "channel/承認/atomic switch/A-B独立回復",
+        "R06": "channel/承認/atomic switch/A-B独立回復",
+        "R07": "channel/承認/atomic switch/A-B独立回復",
+        "R08": "channel/承認/atomic switch/A-B独立回復",
+        "R09": "channel/承認/atomic switch/A-B独立回復",
+        "R10": "channel/承認/atomic switch/A-B独立回復"
+      },
+      "changes_at": [
+        "R00",
+        "R01",
+        "R02"
+      ],
+      "detail": "migration/02_CONSUMER_UPGRADE_AND_ROLLBACK.md"
+    },
+    {
+      "id": "CAP-JSON",
+      "name": "共通JSON正本",
+      "planned_states": {
+        "R00": "現行契約を維持",
+        "R01": "現行契約を維持",
+        "R02": "現行契約を維持",
+        "R03": "新規record・対象pilotの共通writer",
+        "R04": "新規record・対象pilotの共通writer",
+        "R05": "active ticket/attempt/controlに適用",
+        "R06": "active ticket/attempt/controlに適用",
+        "R07": "対象active PLAN/Reverseへ展開",
+        "R08": "対象active PLAN/Reverseへ展開",
+        "R09": "対象active PLAN/Reverseへ展開",
+        "R10": "active旧writer停止・歴史import維持"
+      },
+      "changes_at": [
+        "R00",
+        "R03",
+        "R05",
+        "R07",
+        "R10"
+      ],
+      "detail": "migration/01_AUTHORITY_AND_RECORDS.md"
+    },
+    {
+      "id": "CAP-VIEW",
+      "name": "表・図・人間の齟齬受付",
+      "planned_states": {
+        "R00": "現行export範囲",
+        "R01": "現行export範囲",
+        "R02": "現行export範囲",
+        "R03": "共通record参照＋自家利用prototype",
+        "R04": "実スプシ/依存図/管理viewとadmission往復",
+        "R05": "ticket/lease/配布状態も投影",
+        "R06": "ticket/lease/配布状態も投影",
+        "R07": "screen/ER/全上流traceまで展開",
+        "R08": "screen/ER/全上流traceまで展開",
+        "R09": "screen/ER/全上流traceまで展開",
+        "R10": "screen/ER/全上流traceまで展開"
+      },
+      "changes_at": [
+        "R00",
+        "R03",
+        "R04",
+        "R05",
+        "R07"
+      ],
+      "detail": "migration/03_COMPONENT_CUTOVERS.md"
+    },
+    {
+      "id": "CAP-CI",
+      "name": "低コストconsumer CI",
+      "planned_states": {
+        "R00": "現行検証契約",
+        "R01": "現行検証契約",
+        "R02": "現行検証契約",
+        "R03": "検証計画契約と計測",
+        "R04": "選択検証＋full fallback＋soft予算",
+        "R05": "配布計画とreview/CI容量を連動",
+        "R06": "配布計画とreview/CI容量を連動",
+        "R07": "配布計画とreview/CI容量を連動",
+        "R08": "配布計画とreview/CI容量を連動",
+        "R09": "配布計画とreview/CI容量を連動",
+        "R10": "代表consumerで費用/品質の統合比較"
+      },
+      "changes_at": [
+        "R00",
+        "R03",
+        "R04",
+        "R05",
+        "R10"
+      ],
+      "detail": "workstreams/02_CI_AND_COST.md"
+    },
+    {
+      "id": "CAP-FORECAST",
+      "name": "作業順序・所要予測",
+      "planned_states": {
+        "R00": "明示的な予測機能なし（今回の追加対象）",
+        "R01": "明示的な予測機能なし（今回の追加対象）",
+        "R02": "明示的な予測機能なし（今回の追加対象）",
+        "R03": "依存/資源/見積り根拠のJSON",
+        "R04": "読取専用の順序案・幅/unknown表示",
+        "R05": "実績イベントで再計画、配布とは別判定",
+        "R06": "実績イベントで再計画、配布とは別判定",
+        "R07": "実績イベントで再計画、配布とは別判定",
+        "R08": "実績イベントで再計画、配布とは別判定",
+        "R09": "task/role別の実績校正・what-if",
+        "R10": "予測誤差・計画変更コストを含む受入"
+      },
+      "changes_at": [
+        "R00",
+        "R03",
+        "R04",
+        "R05",
+        "R09",
+        "R10"
+      ],
+      "detail": "workstreams/01_SCHEDULING.md"
+    },
+    {
+      "id": "CAP-DISPATCH",
+      "name": "実際の自動配布",
+      "planned_states": {
+        "R00": "現行手配経路",
+        "R01": "現行手配経路",
+        "R02": "現行手配経路",
+        "R03": "新dispatchは無効",
+        "R04": "予測のみ・writeしない",
+        "R05": "依存/資源/lease/CAS付き自動配布",
+        "R06": "依存/資源/lease/CAS付き自動配布",
+        "R07": "依存/資源/lease/CAS付き自動配布",
+        "R08": "依存/資源/lease/CAS付き自動配布",
+        "R09": "校正済み見積りを順位へ反映（権限不変）",
+        "R10": "校正済み見積りを順位へ反映（権限不変）"
+      },
+      "changes_at": [
+        "R00",
+        "R03",
+        "R04",
+        "R05",
+        "R09"
+      ],
+      "detail": "workstreams/01_SCHEDULING.md"
+    },
+    {
+      "id": "CAP-TICKET",
+      "name": "4階層チケット・合流",
+      "planned_states": {
+        "R00": "既存PLAN/予約/U23資産",
+        "R01": "既存PLAN/予約/U23資産",
+        "R02": "既存PLAN/予約/U23資産",
+        "R03": "ticket/owner/admission型",
+        "R04": "ticket/owner/admission型",
+        "R05": "L4入力から4階層・予約・takeover・合流",
+        "R06": "L4入力から4階層・予約・takeover・合流",
+        "R07": "L2/上流変更からの再compileも統合",
+        "R08": "L2/上流変更からの再compileも統合",
+        "R09": "L2/上流変更からの再compileも統合",
+        "R10": "L2/上流変更からの再compileも統合"
+      },
+      "changes_at": [
+        "R00",
+        "R03",
+        "R05",
+        "R07"
+      ],
+      "detail": "releases/R05_0.5.0.md"
+    },
+    {
+      "id": "CAP-SECURITY",
+      "name": "安全境界",
+      "planned_states": {
+        "R00": "現行必須保護・重大事故の通常修理",
+        "R01": "脅威/保護対象/責任を定義",
+        "R02": "脅威/保護対象/責任を定義",
+        "R03": "信頼/認可/証跡入力を共通契約化",
+        "R04": "consumer検査と権限確認",
+        "R05": "対象作用の隔離/送信/secret/replay/回復受入",
+        "R06": "対象作用の隔離/送信/secret/replay/回復受入",
+        "R07": "対象作用の隔離/送信/secret/replay/回復受入",
+        "R08": "provider変更時にも再確認",
+        "R09": "provider変更時にも再確認",
+        "R10": "全対応profileの統合攻撃/回復検証"
+      },
+      "changes_at": [
+        "R00",
+        "R01",
+        "R03",
+        "R04",
+        "R05",
+        "R08",
+        "R10"
+      ],
+      "detail": "workstreams/03_SECURITY.md"
+    },
+    {
+      "id": "CAP-GOVERNANCE",
+      "name": "管理責任・委任",
+      "planned_states": {
+        "R00": "既存人間判断",
+        "R01": "UT/consumer/実行の責任・代理規約",
+        "R02": "UT/consumer/実行の責任・代理規約",
+        "R03": "認可付きactor/decision/policy",
+        "R04": "判断待ち/予算/責任のview",
+        "R05": "失効・takeover・旧policy認可を機械強制",
+        "R06": "失効・takeover・旧policy認可を機械強制",
+        "R07": "失効・takeover・旧policy認可を機械強制",
+        "R08": "失効・takeover・旧policy認可を機械強制",
+        "R09": "失効・takeover・旧policy認可を機械強制",
+        "R10": "失効・takeover・旧policy認可を機械強制"
+      },
+      "changes_at": [
+        "R00",
+        "R01",
+        "R03",
+        "R04",
+        "R05"
+      ],
+      "detail": "workstreams/04_GOVERNANCE.md"
+    },
+    {
+      "id": "CAP-BUGBOT",
+      "name": "自動バグ修正",
+      "planned_states": {
+        "R00": "通常UT工程で修理",
+        "R01": "通常UT工程で修理",
+        "R02": "通常UT工程で修理",
+        "R03": "新Botは読取/提案のみ",
+        "R04": "検出・提案のみ（修正無効）",
+        "R05": "共通制御をfixture workerで受入",
+        "R06": "限定BugBot→独立検証→通常admission",
+        "R07": "限定BugBot→独立検証→通常admission",
+        "R08": "限定BugBot→独立検証→通常admission",
+        "R09": "対策資産を再利用し再発を追跡",
+        "R10": "対策資産を再利用し再発を追跡"
+      },
+      "changes_at": [
+        "R00",
+        "R03",
+        "R04",
+        "R05",
+        "R06",
+        "R09"
+      ],
+      "detail": "workstreams/06_BUGBOT.md"
+    },
+    {
+      "id": "CAP-RECOVERY",
+      "name": "工程単位の回復",
+      "planned_states": {
+        "R00": "現行受入に必要な事故は修理",
+        "R01": "現行受入に必要な事故は修理",
+        "R02": "updater失敗/既存custodyを通常修理",
+        "R03": "共通attempt/terminal契約",
+        "R04": "共通attempt/terminal契約",
+        "R05": "CAS/ack-loss/再送/失効/再開の一貫処理",
+        "R06": "BugBotが共通回復を利用",
+        "R07": "BugBotが共通回復を利用",
+        "R08": "BugBotが共通回復を利用",
+        "R09": "BugBotが共通回復を利用",
+        "R10": "BugBotが共通回復を利用"
+      },
+      "changes_at": [
+        "R00",
+        "R02",
+        "R03",
+        "R05",
+        "R06"
+      ],
+      "detail": "workstreams/06_BUGBOT.md"
+    },
+    {
+      "id": "CAP-UPSTREAM",
+      "name": "要求・PoC・製本",
+      "planned_states": {
+        "R00": "現行上流工程",
+        "R01": "現行上流工程",
+        "R02": "現行上流工程",
+        "R03": "必要参照と表示面のprototype",
+        "R04": "必要参照と表示面のprototype",
+        "R05": "必要参照と表示面のprototype",
+        "R06": "必要参照と表示面のprototype",
+        "R07": "暫定要求/discovery/S4/画面/製本/compileを統合",
+        "R08": "暫定要求/discovery/S4/画面/製本/compileを統合",
+        "R09": "暫定要求/discovery/S4/画面/製本/compileを統合",
+        "R10": "暫定要求/discovery/S4/画面/製本/compileを統合"
+      },
+      "changes_at": [
+        "R00",
+        "R03",
+        "R07"
+      ],
+      "detail": "releases/R07_0.7.0.md"
+    },
+    {
+      "id": "CAP-BACKFLOW",
+      "name": "還流・影響再計画",
+      "planned_states": {
+        "R00": "現行Reverseを維持",
+        "R01": "現行Reverseを維持",
+        "R02": "現行Reverseを維持",
+        "R03": "backflowの共通入力契約",
+        "R04": "backflowの共通入力契約",
+        "R05": "incident fenceと既存Reverse接続",
+        "R06": "incident fenceと既存Reverse接続",
+        "R07": "集約/batch decision/再compile/再配布",
+        "R08": "集約/batch decision/再compile/再配布",
+        "R09": "集約/batch decision/再compile/再配布",
+        "R10": "集約/batch decision/再compile/再配布"
+      },
+      "changes_at": [
+        "R00",
+        "R03",
+        "R05",
+        "R07"
+      ],
+      "detail": "migration/01_AUTHORITY_AND_RECORDS.md"
+    },
+    {
+      "id": "CAP-ROLE",
+      "name": "論理role/provider-native",
+      "planned_states": {
+        "R00": "現行provider定義",
+        "R01": "現行provider定義",
+        "R02": "現行provider定義",
+        "R03": "最小role・証拠共通型",
+        "R04": "最小role・証拠共通型",
+        "R05": "配布は共通roleを参照、native旧定義はadapter化",
+        "R06": "配布は共通roleを参照、native旧定義はadapter化",
+        "R07": "配布は共通roleを参照、native旧定義はadapter化",
+        "R08": "native生成を既定・手書き二重writer停止",
+        "R09": "native生成を既定・手書き二重writer停止",
+        "R10": "native生成を既定・手書き二重writer停止"
+      },
+      "changes_at": [
+        "R00",
+        "R03",
+        "R05",
+        "R08"
+      ],
+      "detail": "migration/03_COMPONENT_CUTOVERS.md"
+    },
+    {
+      "id": "CAP-SINGLE",
+      "name": "単一providerの独立review",
+      "planned_states": {
+        "R00": "現行で認められたprofileのみ",
+        "R01": "現行で認められたprofileのみ",
+        "R02": "現行で認められたprofileのみ",
+        "R03": "証拠区分/attestation型",
+        "R04": "証拠区分/attestation型",
+        "R05": "現行基準を維持、新緩和を有効化しない",
+        "R06": "現行基準を維持、新緩和を有効化しない",
+        "R07": "現行基準を維持、新緩和を有効化しない",
+        "R08": "分離/反証/補償統制を受入後に利用可能",
+        "R09": "分離/反証/補償統制を受入後に利用可能",
+        "R10": "分離/反証/補償統制を受入後に利用可能"
+      },
+      "changes_at": [
+        "R00",
+        "R03",
+        "R05",
+        "R08"
+      ],
+      "detail": "releases/R08_0.8.0.md"
+    },
+    {
+      "id": "CAP-CONTEXT",
+      "name": "モデル進化に応じたcontext削減",
+      "planned_states": {
+        "R00": "既存最小読取規律",
+        "R01": "既存最小読取規律",
+        "R02": "既存最小読取規律",
+        "R03": "packet/model/実績の記録",
+        "R04": "隔離比較と承認した限定削減",
+        "R05": "隔離比較と承認した限定削減",
+        "R06": "隔離比較と承認した限定削減",
+        "R07": "隔離比較と承認した限定削減",
+        "R08": "model/runtime更新に伴う再評価",
+        "R09": "条件付き注入/rollback/継続縮退",
+        "R10": "条件付き注入/rollback/継続縮退"
+      },
+      "changes_at": [
+        "R00",
+        "R03",
+        "R04",
+        "R08",
+        "R09"
+      ],
+      "detail": "workstreams/05_CONTEXT_AND_INCIDENT_LEARNING.md"
+    },
+    {
+      "id": "CAP-LEARNING",
+      "name": "実トラブルの対策化",
+      "planned_states": {
+        "R00": "実証した欠陥を通常修理",
+        "R01": "実証した欠陥を通常修理",
+        "R02": "実証した欠陥を通常修理",
+        "R03": "incident/judgement/結果を記録",
+        "R04": "incident/judgement/結果を記録",
+        "R05": "共通guard/回復へ接続",
+        "R06": "修理結果・再発を記録",
+        "R07": "修理結果・再発を記録",
+        "R08": "修理結果・再発を記録",
+        "R09": "CASE/適用条件/校正/退役まで循環",
+        "R10": "CASE/適用条件/校正/退役まで循環"
+      },
+      "changes_at": [
+        "R00",
+        "R03",
+        "R05",
+        "R06",
+        "R09"
+      ],
+      "detail": "workstreams/05_CONTEXT_AND_INCIDENT_LEARNING.md"
+    },
+    {
+      "id": "CAP-RETIRE",
+      "name": "旧機構の退役",
+      "planned_states": {
+        "R00": "Bun等の現行退役条件",
+        "R01": "Bun等の現行退役条件",
+        "R02": "Bun等の現行退役条件",
+        "R03": "inventory・移行pilot",
+        "R04": "inventory・移行pilot",
+        "R05": "対象active旧writer停止",
+        "R06": "対象active旧writer停止",
+        "R07": "PLAN/Reverseのwriter切替",
+        "R08": "旧native role writer停止",
+        "R09": "context/skill条件付き退役",
+        "R10": "全MIG監査、残す互換readerにowner/期限"
+      },
+      "changes_at": [
+        "R00",
+        "R03",
+        "R05",
+        "R07",
+        "R08",
+        "R09",
+        "R10"
+      ],
+      "detail": "migration/00_REPLACEMENT_MATRIX.md"
+    },
+    {
+      "id": "CAP-V4",
+      "name": "構想v4の完成判定",
+      "planned_states": {
+        "R00": "現行v3.1受入",
+        "R01": "v4 target採択は別承認",
+        "R02": "v4 target採択は別承認",
+        "R03": "capability単位の適用開始",
+        "R04": "capability単位の適用開始",
+        "R05": "capability単位の適用開始",
+        "R06": "capability単位の適用開始",
+        "R07": "capability単位の適用開始",
+        "R08": "capability単位の適用開始",
+        "R09": "capability単位の適用開始",
+        "R10": "全要求・追加要求・移行/consumer統合受入"
+      },
+      "changes_at": [
+        "R00",
+        "R01",
+        "R03",
+        "R10"
+      ],
+      "detail": "releases/R10_1.0.0.md"
+    }
+  ]
+}
