@@ -40,18 +40,18 @@ status: draft
 github_issue_id: 439
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:81b985d8ab8a455d54d994c16b4f8b70
-  command_id: command:issue439-retraction-current-protocol-revision2
-  admitted_at: 2026-09-08T01:52:45.282Z
-  source_digest: sha256:1c1933aafc70706d7a0e26e79270a59e464b325b660cd25b25d26026933530bc
-  decision_digest: sha256:9928d4d957b0d96d1bf991b008bb9123e482820f6d20e3ae7997b4be810a2525
-  receipt_digest: sha256:00bf2b8276ba8d9995a8b706388d3e968aa4209d82f6cb3f9bc46c0e3f93421f
+  receipt_id: certificate:30ba7b5d339fa3c7f6899060008fc4ef
+  command_id: command:issue439-retraction-consistency-revision3
+  admitted_at: 2026-09-08T02:02:49.285Z
+  source_digest: sha256:f39d2bb4007af3650e132e60a4af2019d5a38babf9708f4fd50d217a04e50064
+  decision_digest: sha256:cd1fe15ab80c26662c7cfdd7878932020a037d052d1bcd920412f3e0452bbfff
+  receipt_digest: sha256:cc208b5da4c02bce5365df27595a63f0b752888778e135608c4fcf6a61ffa735
   binding:
     path: docs/plans/PLAN-L7-518-review-request-retraction.md
     plan_id: PLAN-L7-518-review-request-retraction
     asset_id: plan:legacy:2b4a19f0342ad752af7dbb564e748cbf87be684c6b7ec208aa2fd3726117e9e7
-    revision: 2
-    content_digest: sha256:1c1933aafc70706d7a0e26e79270a59e464b325b660cd25b25d26026933530bc
+    revision: 3
+    content_digest: sha256:f39d2bb4007af3650e132e60a4af2019d5a38babf9708f4fd50d217a04e50064
   route:
     signal: feature_addition
     mode: add-feature
@@ -69,7 +69,7 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-518-review-request-retraction
-    target_revision: 2
+    target_revision: 3
     phase: forward_merge
   escape_reason: Issue439 current closing protocol and typed request terminal repair
 ---
@@ -172,15 +172,17 @@ PLAN-L7-517の現行出力はGit object factsとunverifiedなfamily claimであ�
 現在のexact-HEAD non-author closing-review protocolを再利用する。
 provider familyの暗号学的証明や新しい権限issuerを導入せず、PLAN-L7-517のGit factsをmerge authorityにしない。
 既存same-family拒否はprocess-hygieneとして維持し、その限界を解消したとは主張しない。
+ここでいうclosing receiptの機械受理は既存D1/D3のcanonical verdict条件を指す。request/receiptの
+purpose属性追加やdraft/closingの機械束縛はIssue #498の責務であり、本修正で実現したとは主張しない。
 
 - 対象requestはcanonical custodyに実在し、PASS/PASS-WEAK/FLAGいずれのverdictも持たない。
 - replacementは同一repositoryのcanonical requestで、同一PR・exact HEAD・authorFamilyを持つ。
   別familyへの訂正は本classで扱わず、事例Dの未達境界に留める。
-- replacementは既存のstrict custody経路で受理済みのclosing PASS/PASS-WEAK・blocking 0を持つ。
+- graphを解決したleafは既存のstrict custody経路で受理済みのclosing PASS/PASS-WEAK・blocking 0を持つ。
   PRコメント、Memory本文、preflightの説明、発行者の成功boolean、手書きreceiptを代用しない。
   author/reviewer分離・request identity・receipt時刻・HEAD・CIは既存gateでも再検証する。
-- replacement request digestとreceipt digestをretractionへ束縛する。receipt欠落・差替え・FLAG・
-  未終端・identity不一致ならtyped denyし、retractionのwriteは0。
+- 指定replacementからleafまでのrequest digestとleaf receipt digestをretractionへ束縛する。receipt欠落・差替え・FLAG・
+  未終端leaf・identity不一致ならtyped denyし、retractionのwriteは0。
 - self参照とcycleを拒否する。A→B→Cの既存chainは全linkを検証し、未retractでclosing PASSを持つleaf Cへ
   一意に解決する。中間retraction・leaf request・leaf receiptのdigestを束縛し、欠落・改変時はdenyする。
   pending leafやretracted leafを成功扱いしない。
@@ -199,12 +201,17 @@ provider familyの暗号学的証明や新しい権限issuerを導入せず、PL
 - 束縛する field: `class`、typed `reason_code`、`actor` (provider family と identity)、`at`、
   対象 `reviewRevision`、`pr`、`exactHead`、`replacement_review_revision` (class `superseded` のみ必須)、
   `provenance_snapshot` (class `unclosable` のみ必須、§3.2)。
+- class `superseded` では対象request digest、leaf request digest、leaf closing receipt digest、
+  解決した全中間linkのidentity/digestの順序付き列を必須とする。direct leafなら中間列は空。
+  必須束縛欠落、別repository、canonical bytes不一致ではwrite 0とし、gateでも同じ必須条件を再評価する。
 
 **append-only だけでは double terminal を防げない。** verdict 発行と retraction、および競合する
 retraction 同士は、いずれも request を終端させる操作であり、直列化しなければ並行実行で二重終端や
 ack-loss が起きる。次を契約として固定する。
 
-- **terminal identity は UNIQUE である。** 1 つの `reviewRevision` に対し終端 receipt は
+- **terminal identity は UNIQUE である。** keyは(repository_identity, requestDigest)で、requestDigestは既存
+  reviewIdentityDigest(request)から導く64桁hex、reviewRevisionはその既存rv1形式との一致を検証する。
+  1つのkeyに対し終端receiptは
   **高々 1 件**とする。verdict receipt と retraction receipt は同じ UNIQUE 制約を共有し、
   「verdict も retraction も存在する」状態を作れない。
 - **終端は CAS で成立させる。** 「未終端」を期待値とする compare-and-set が成功したときのみ
@@ -217,6 +224,40 @@ ack-loss が起きる。次を契約として固定する。
   次回起動時に現物 receipt との照合で解決する。
 - **二重 retraction**: 同一内容は idempotent。内容が異なる二重 retraction は CAS で弾かれ
   typed deny となる。
+
+#### 3.3.1 既存receiptとの共存・物理境界
+
+canonical verdict receiptはPLAN-L7-520の既存requestDigest path・create-exclusiveを維持し、上書きしない。
+requestのretractionとattemptのsupersessionは別物であり、attempt auditだけでrequestを終端しない。
+
+同一repositoryのlinked worktreeで共有するterminal registryは、解決済みGit common-dir配下の
+`ut-tdd-runtime/review-request-terminal/<repository-digest>/ledger.sqlite` に置く。
+repository-digestはtracked repository_identityのUTF-8 bytesのSHA-256で、actor/worktree名/絶対pathを混ぜない。
+これはrequest terminal専用であり、Memory corpus・provider busのrootを移動しない。
+別Git common-dirのcloneを自動的に同じregistryへ接続しない。
+
+registryはmint identity/content digestとterminalのappend-only記録を持つ。終端keyにUNIQUEを課し、
+SQLiteのBEGIN IMMEDIATE transactionを同一hostの排他leaseとして使用する。
+verdict発行側とretraction発行側が必ず同じtransaction境界を通る。プロセス終了でtransaction lockは解放され、
+busy/IO failureはtyped deny/indeterminateとし成功へ丸めない。新しいOSユーザー権限・暗号鍵・認証を導入しない。
+
+canonical receipt fileとregistryは二媒体なので、file書込後のcommit/ack failureを成功扱いしない。
+再開時は既存strict custodyで現物verdictを検証し、同一key/contentならterminalへreconcileする。
+不完全・異内容・verdict/retraction競合はdenyし、既存fileを上書き・削除しない。gateは不整合の間denyする。
+
+retraction recordはschema `ut-tdd.review-retraction/v1` とし、以下を必須とする。
+repository_identity、request_digest、review_revision、pr、exact_head、class、reason_code、
+actor.family、actor.identity（非空の監査用識別子）、at（明示timezoneのISO時刻）。
+request_digest/review_revisionは既存canonical identityに再束縛し、actor.identityは独立認証済みと称さない。
+supersededはreason_code=`duplicate_request_replaced`、replacement_request_digest、
+replacement_review_revision、replacement_receipt_digest、leaf_request_digest、leaf_receipt_digest、
+chain（順序付きlink identity/digest列、direct leafなら空）を追加必須とする。
+digestは既存canonicalJsonによるbytesのSHA-256を用い、表記は既存custodyと同じ64桁hexとする。
+欠落・未知schema/class/reason・不正形式はwrite 0。未来のunclosable schemaを自己申告だけで受理しない。
+
+blocking 0は、既存canonical receiptがverdict PASS/PASS-WEAKであり、
+blockingFindingsが未指定または空配列であることとする。null・非配列・非空はdeny。
+registryはreceiptを再作成せず、そのexact bytesのdigestを束縛する。
 
 ### 3.4 merge gate の扱い (採択)
 
@@ -281,6 +322,10 @@ ledger を後から導入しても、削除済みの過去 mint は ledger に�
   ledger の外に **historical record** として列挙する。これは fail-close の入力ではなく、
   「この機構が存在しなかった期間に何が起きたか」の証跡である。
 - **境界以降は例外を作らない。** 導入後の mint に対する手動削除は無条件に `orphaned_mint` とする。
+- **現在実在する未終端requestは取り込む。** 導入境界の全linked-worktree canonical input rootsを列挙し、
+  identity/content digestを保持してledgerへ登録する。境界以前を理由に#519/#526の旧requestを落とさない。
+  不正identity・同identity異bytes・読取不能・途中停止は初期化未完としてgateをdenyし、成功markerを出さない。
+  部分取り込み後の再開は同一inventory digestのidempotent replayのみとし、無音の集合縮小を禁止する。
 
 ### 3.7 本 PLAN が扱わない境界
 
@@ -289,8 +334,8 @@ ledger を後から導入しても、削除済みの過去 mint は ledger に�
   `reviewIdentityDigest` = f(schemaVersion, memoryId, pr, exactHead, authorFamily) から導かれるため、
   `memoryId` が違えば revision も必ず違い、#421 の現行 (同一 revision) ルールでは事例 R を捕まえられない。
   この不変条件の拡張は #421 側の責務であり、本 PLAN は既に生じた重複の**回復**のみを所有する。
-- **author family 誤申告の発生防止は扱わない。** Issue #437 / PLAN-L7-517 が所有する。本 PLAN は
-  本PLANは独立authorityの利用側であって、Git factsをfamily証明へ昇格させる記録機構を持たない (§3.6)。
+- **author family誤申告の発生防止は扱わない。** 独立provider-family authorityはPLAN-L7-465の境界であり、
+  本PLANは利用側である。Issue #437 / PLAN-L7-517はGit factsのみを所有し、family証明の提供元にはしない (§3.6)。
 - **`review_evidence` の手書き運用は扱わない。** Issue #429 が所有する。
 - **配送 entry の終端状態は扱わない。** Claude inbox の GC は Issue #444 が所有する。本 PLAN の
   対象は review request であって通知 entry ではない。
@@ -309,7 +354,8 @@ ledger を後から導入しても、削除済みの過去 mint は ledger に�
 
 - replacement identity の欠落、同一 `(pr, exactHead)` でないもの、self 参照、閉路を typed deny する。
 - chain は leaf へ解決し、leaf が retracted なら typed deny する。
-- leaf が「正規に閉じられない」(`expectedProvider` が著者本人になる) 場合を typed deny する。
+- leafが既存strict custody / same-family拒否 / exact-HEAD closing条件を満たさない場合はtyped denyする。
+  Git authorやprovider claimから実著者を確定したとは主張しない。
 - leafのclosing receiptが欠落・FLAG・blockingあり・identity不一致ならtyped denyする。
 - Git factsやfamily claimだけではleafを有効にしない。Git factsのstate変更だけでsupersededの受理可否を変えない。
 

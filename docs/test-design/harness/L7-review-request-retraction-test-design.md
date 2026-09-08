@@ -26,10 +26,10 @@ updated: 2026-09-08
 
 | Candidate | Stimulus | Oracle |
 |---|---|---|
-| CANDIDATE-U-RETRACT-006 | 申告 `authorFamily` から導く `expectedProvider` が実 author family と一致する request を `unclosable` で retract | 受理。機械述語が成立する |
+| CANDIDATE-U-RETRACT-006 | 独立authority実装・検収後のfixtureで、期待reviewerが実著者と一致するrequestをunclosableでretract | 受理。authority未実装の現在は045でdenyを実測する |
 | CANDIDATE-U-RETRACT-007 | 述語が成立しない (正規に閉じられる) request を `unclosable` と自己申告して retract | typed deny。自己申告を根拠にしない |
 | CANDIDATE-U-RETRACT-008 | authoring provenance が `unknown` の request を `unclosable` で retract | typed deny (§3.4 依存。provenance 未確定では主張できない) |
-| CANDIDATE-U-RETRACT-009 | `unclosable` で replacement identity を指定せず retract | 受理。class `unclosable` は replacement を要求しない |
+| CANDIDATE-U-RETRACT-009 | 独立authority実装・検収後のunclosable fixtureでreplacement identityを省略 | 受理。authority未実装の現在は045でdenyを実測する |
 
 ## class superseded (§3.2 / 事例 R)
 
@@ -37,7 +37,7 @@ updated: 2026-09-08
 |---|---|---|
 | CANDIDATE-U-RETRACT-010 | replacement identity を指定せず `superseded` で retract | typed deny |
 | CANDIDATE-U-RETRACT-011 | 別 `(pr, exactHead)` の identity を replacement として指定 | typed deny |
-| CANDIDATE-U-RETRACT-012 | 既に retracted な identity を replacement として指定 | typed deny |
+| CANDIDATE-U-RETRACT-012 | chain解決後の最終leafがretractedで、未retractのPASS leafに到達しない | typed deny。正当な中間linkの存在自体は拒否理由にしない |
 | CANDIDATE-U-RETRACT-013 | 同一repository/PR/HEAD/authorFamilyの未retract leafと正規closing PASSをreplacementとして指定 | 受理。request・closing receiptの両digestが束縛される |
 
 ## append-only 性 (§3.3)
@@ -47,7 +47,7 @@ updated: 2026-09-08
 | CANDIDATE-U-RETRACT-014 | 同一 request に同一内容の retraction を 2 回要求 | idempotent。receipt は 1 件のまま |
 | CANDIDATE-U-RETRACT-015 | 同一 request に内容の異なる retraction を要求 | typed deny。先行 retraction は不変 |
 | CANDIDATE-U-RETRACT-016 | retraction 後に request ファイルの存在を確認 | 残っている。削除されない |
-| CANDIDATE-U-RETRACT-017 | retraction receipt の必須 field 欠落 (class / reason_code / actor / at / 対象 revision / pr / exactHead) | typed deny。部分的な receipt を書かない |
+| CANDIDATE-U-RETRACT-017 | PLAN518 §3.3.1のschema/repository/request/actor/leaf/chain/digest各必須fieldを独立に欠落・不正化 | typed deny。部分的なreceiptを書かない |
 
 ## merge gate (§3.4)
 
@@ -89,7 +89,7 @@ updated: 2026-09-08
 | CANDIDATE-U-RETRACT-036 | replacement 関係が閉路を作る | typed deny (cycle) |
 | CANDIDATE-U-RETRACT-037 | A→B→C の chain | leaf C を実効 replacement として解決する |
 | CANDIDATE-U-RETRACT-038 | chain の leaf が retracted | typed deny。chain 全体が無効 |
-| CANDIDATE-U-RETRACT-039 | leaf の `expectedProvider` が著者本人になる (正規に閉じられない) | typed deny。dead-end の先送りを許さない |
+| CANDIDATE-U-RETRACT-039 | leafが既存strict custodyのsame-family拒否またはexact-HEAD closing条件を満たさない | typed deny。Git factsから実author familyを導出して代用しない |
 | CANDIDATE-U-RETRACT-040 | leafのGit factsをunknown/conflict/verifiedへ単独変異（正規closing receiptは固定） | Git factsをfamily authorityにせず受理可否は不変。closing receipt欠落時は全てdeny |
 | CANDIDATE-U-RETRACT-041 | tracked artifact 外 (memory / PR 本文) の記述のみを replacement の根拠にする | typed deny。canonical custody を要求する |
 | CANDIDATE-U-RETRACT-042 | 任意の retraction graph に対し gate が再評価 | 実効 replacement が一意に定まるか typed deny のいずれか。発行側の判定を使わず決定論的 |
@@ -114,7 +114,7 @@ updated: 2026-09-08
 
 | Candidate | Stimulus | Oracle |
 |---|---|---|
-| CANDIDATE-P-RETRACT-001 | PR #430 の `rv1-55b815ea…` (申告 codex / 実著者 claude、receipt 無し) を fixture として再現し、merge gate を評価 | 現行実装では deny。本実装では `unclosable` retraction 後に replacement の PASS だけで `merge_ready` へ到達 |
+| CANDIDATE-P-RETRACT-001 | 独立authority実装・検収後にPR #430のdead-end fixtureを再現 | unclosable後にreplacement PASSでmerge_ready。現時点はdenyを維持し、このpositiveやIssue全体完了を主張しない |
 | CANDIDATE-P-RETRACT-002 | PR #441 の競合 2 本 (両方 authorFamily=claude、片方のみ receipt) を fixture として再現 | canonical closing receiptをleafへ束縛するsupersededでmerge_readyへ到達。再reviewや手動削除で代替しない |
 | CANDIDATE-P-RETRACT-004 | 実 repo の全 request / receipt / ledger に対し `orphaned_mint` 判定を実行 | 境界以前の不在を偽陽性にしない。境界以降の消失のみ fail-close する |
 | CANDIDATE-P-RETRACT-003 | 実 repo の全 request / receipt に対し retraction 無しで消えた request を列挙 | 既存の正常終端を偽陽性にしない |
@@ -134,3 +134,6 @@ unknown拒否043と先行実装拒否045は現在も維持し、Git factsだけ�
 | CANDIDATE-U-RETRACT-052 | 停止記録や経過時間だけを与えreplacement closingを省略 | typed deny、request保持。自動timeout除外をしない |
 | CANDIDATE-P-RETRACT-005 | #519の旧1 requestと#526の旧2 requests、新closing receiptをcanonical CLIで終端 | 正規gateでmerge_ready。全旧request/attemptが残る、手動削除0、receipt複製0、再review0 |
 | CANDIDATE-P-RETRACT-006 | ledger導入時に既存未終端requestを配置、別worktreeからgate評価 | 元identity/digestのまま集合に残り、未登録・消失・衝突を成功扱いしない |
+| CANDIDATE-U-RETRACT-053 | blockingFindingsに未指定、空配列、null、非配列、非空配列を独立入力 | 前2件だけblocking 0。他はdeny、型castだけで通さない |
+| CANDIDATE-U-RETRACT-054 | 同一requestを別linked worktreeから同時終端、別projectから同digestでアクセス | 同projectはUNIQUE/CASで高々1件。別projectはread/write/claim 0 |
+| CANDIDATE-U-RETRACT-055 | canonical verdict file作成後・registry commit前で停止 | 成功主張なし。次回strict現物照合でのみreconcile、異内容やpartialはdeny、既存file上書き0 |
