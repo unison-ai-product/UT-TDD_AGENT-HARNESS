@@ -117,7 +117,9 @@ describe("live review projection (U-RVATT-023..026)", () => {
         memoryPath: sourcePath,
       });
       expect(resolved).not.toBeNull();
-      expect(realpathSync(resolved as string)).toBe(realpathSync(join(root, sourcePath)));
+      expect(realpathSync.native(resolved as string)).toBe(
+        realpathSync.native(join(root, sourcePath)),
+      );
       expect(
         resolveLiveReviewTaskFile(root, { memoryId: "memory:wrong", memoryPath: sourcePath }),
       ).toBeNull();

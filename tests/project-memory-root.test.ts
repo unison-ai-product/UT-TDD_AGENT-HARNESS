@@ -141,7 +141,7 @@ describe("project-scoped Memory routing integration (PLAN-L7-512 Slice 2)", () =
     const roots = resolveProjectMemoryRoot(linked);
     expect(roots.ok).toBe(true);
     if (!roots.ok) throw new Error(roots.reason);
-    expect(realpathSync(linkedPath)).toBe(realpathSync(primaryPath));
+    expect(realpathSync.native(linkedPath)).toBe(realpathSync.native(primaryPath));
     expect(linkedPath).toContain(join(roots.runtimeBusRoot, "claude-memory-wake", "inbox"));
   });
 
@@ -184,7 +184,9 @@ describe("project-scoped Memory routing integration (PLAN-L7-512 Slice 2)", () =
       memoryPath: memory.source_path,
     });
     expect(task).not.toBeNull();
-    expect(realpathSync(task as string)).toBe(realpathSync(join(primary, memory.source_path)));
+    expect(realpathSync.native(task as string)).toBe(
+      realpathSync.native(join(primary, memory.source_path)),
+    );
 
     const program = new Command().exitOverride();
     registerLiveReviewCommands(program.command("review"), {

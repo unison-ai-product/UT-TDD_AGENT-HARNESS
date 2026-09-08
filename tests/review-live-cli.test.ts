@@ -426,7 +426,9 @@ describe("review live CLI composition", () => {
     });
     const taskFileIndex = call?.args.indexOf("--task-file") ?? -1;
     expect(taskFileIndex).toBeGreaterThanOrEqual(0);
-    expect(realpathSync(call?.args[taskFileIndex + 1] as string)).toBe(realpathSync(memoryPath));
+    expect(realpathSync.native(call?.args[taskFileIndex + 1] as string)).toBe(
+      realpathSync.native(memoryPath),
+    );
     expect(publishReceipt).toHaveBeenCalledWith(root, projection);
   });
 
