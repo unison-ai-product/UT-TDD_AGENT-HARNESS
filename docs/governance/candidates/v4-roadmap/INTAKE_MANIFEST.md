@@ -17,7 +17,7 @@ PLAN-L1-09 と 5 候補文書 (`docs/governance/candidates/ut-tdd-concept-v4*.md
 | 除外 | `index.html` (生成 viewer、860,348 bytes)、`tools/render_roadmap.py`、`tools/validate_roadmap.py` (下表 archived) |
 | 除外理由 | 生成 HTML は data/*.json と Markdown から再生成できる派生物で drift 源になる。python tool は ADR-001 (TypeScript/Node が product runtime) と衝突し、repo の検証経路へ載せない。data/*.json の継続検証が必要になれば TS/Vitest への移植を別 PLAN で起票する |
 | 退避先 | `C:\dev\_archive\UT_V4_RELEASE_ROADMAP_v2.0-excluded\` (index.html、tools/、ORIGINAL_ZIP_SHA256.txt) |
-| 正規化 | CRLF → LF のみ。本文・ファイル名は無改変。LF 正規化後の内容が原本と一致することを収容時に照合済 |
+| 正規化 | CRLF → LF。本文の改変は下記「gate 適合の最小改変」の 7 行のみで、それ以外は原本と一致することを収容時に照合済。ファイル名は無改変 |
 | 資料側の自己検査 | `VALIDATION.md` / `data/validation_results.json` は資料作成側のオフライン整合検査の結果であり、UT の CI・review・受入ではない |
 
 ## ZIP 取りこぼし監査用の全ファイル表
@@ -79,6 +79,22 @@ sha256 は ZIP 展開直後 (LF 正規化前) の値。監査は「52 行すべ�
 | included | `6b53c0b6143ff3e993dec770e9bae5319a34b5627cb898f5c667a00c2e2480ea` | 3663 | `workstreams/05_CONTEXT_AND_INCIDENT_LEARNING.md` |
 | included | `9697b66285875056bd2ab87dbbdfdd310d4481f6b13bf4217cbd91cdfbf3779b` | 2897 | `workstreams/06_BUGBOT.md` |
 | included | `9027557263abaee0a42f15c9aa2ac31855f93041ae52b4eddcb3417c09e3ef21` | 1334 | `workstreams/07_SCHEDULING_EXAMPLE.md` |
+
+## gate 適合の最小改変 (7 行)
+
+CI の doctor `design-language` (設計系 doc は日本語 prose を正本とし、英語は識別子/開発用語に限る) が
+英語のみの見出し 1 行と表 6 行を fail-close したため、**当該行に日本語ラベルを前置し原文を括弧で保持**した。
+意味・数値・判定結果は変えていない。上表の sha256 は改変前 (原本) の値である。
+
+| file | 行 | 改変前 (先頭部) | 改変後 (先頭部) |
+|---|---|---|---|
+| `00_VERSION_STRATEGY.md` | 14 | `## release progression` | `## リリースの進行 (release progression)` |
+| `VALIDATION.md` | 10 | `IDs / coverage / DAG / prerequisite / migration order` | `ID・対応付け・依存 DAG・前提・移行順 (IDs / coverage / DAG / prerequisite / migration order)` |
+| `VALIDATION.md` | 11 | `Generated Markdown parity` | `生成 Markdown の同一性 (Generated Markdown parity)` |
+| `VALIDATION.md` | 12 | `Relative Markdown links` | `相対 Markdown リンク (Relative Markdown links)` |
+| `VALIDATION.md` | 13 | `Synthetic schedule resource / dependency / stage order` | `架空 schedule の資源・依存・段階順 (Synthetic schedule resource / dependency / stage order)` |
+| `VALIDATION.md` | 14 | `Validator negative self-tests` | `validator の負系 self-test (Validator negative self-tests)` |
+| `VALIDATION.md` | 15 | `PR517 compact handoff` | `PR517 向け短い差し込み (PR517 compact handoff)` |
 
 ## 資料内リンクの注意
 

@@ -11,7 +11,7 @@
 
 **本案では「構想v4の統合受入完了」を配布1.0.0の目標に置く。** 構想の番号だけを理由にpackageを4.0.0へ飛ばさない。これは具体的な版割当提案であり、既発行tag、POの正式なversion採択、runtime実装を意味しない。[GH-PKG][GH-PR517][WEB-SEMVER]
 
-## release progression
+## リリースの進行 (release progression)
 
 - 初回 `0.2.0-canary.1` は現行MITで受入まで閉じる。
 - その後最初のMPL配布を `0.2.0-canary.2` とする案。実発番時に使用済みなら次の未使用canary番号へ移し、計画表を更新する。
