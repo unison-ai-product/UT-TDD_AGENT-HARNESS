@@ -2848,6 +2848,38 @@
         "revision": 3,
         "content_digest": "sha256:3678d9fb08231a0867c232e75cd5d3920fc08fdf4d41956f813ad513c689805e"
       }
+    },
+    {
+      "sequence": 179,
+      "previous_record_digest": "sha256:b02a5e6ce5cc11519f79bd8bc5b432c9dee6bd452e8079f6181d56ca7efe011f",
+      "record_digest": "sha256:d3c4f61f74973d1029961498bc038921a27e11fa80d432b61b1453e319736aaa",
+      "command_id": "command:issue420-runtime-adapter-contract-r4-review-followup",
+      "receipt_id": "certificate:55d25c6e34362fbfeb5f3b0faee7416a",
+      "receipt_digest": "sha256:e4e9de2f3e792ec22b3a1987e5b1955ced6205a6f3c7a330ca44f861d55b63bc",
+      "decision_digest": "sha256:7566ad4e97d6059002dedffc0e15cb98e6152ccfae146d797cb3efb435768dc9",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-516-pack-self-contained-consumer-runtime.md",
+        "plan_id": "PLAN-L7-516-pack-self-contained-consumer-runtime",
+        "asset_id": "plan:legacy:d28966ed1d8861940d1ed5bfc5eaebc7dd7b4a9de4ed7adbd65850095c816307",
+        "revision": 4,
+        "content_digest": "sha256:6e4e0d5516e78e7465d260c65482e3302c9304518eb264d39735d049c166a316"
+      }
+    },
+    {
+      "sequence": 180,
+      "previous_record_digest": "sha256:d3c4f61f74973d1029961498bc038921a27e11fa80d432b61b1453e319736aaa",
+      "record_digest": "sha256:bc94c7f7ed06c89626ed7de3e1f2427f2ee21dce43436d1f87d84f16de2e6c9f",
+      "command_id": "command:issue420-runtime-adapter-reverse-r3-review-followup",
+      "receipt_id": "certificate:7e7a1f696196808281be8cb1363c7eb3",
+      "receipt_digest": "sha256:0d20a7174593d4194bd94cdee9f19126827707008fc585dcfecd779c9a5efce8",
+      "decision_digest": "sha256:d4ac54d00ebd4bdb07fc430ea7ae4485b39c7c1b9a21f58b65280eac3f13bb4f",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-516-pack-self-contained-consumer-runtime-backfill.md",
+        "plan_id": "PLAN-REVERSE-516-pack-self-contained-consumer-runtime-backfill",
+        "asset_id": "plan:legacy:a791f4a13fda8d4baa8f510ef73e78491c5f3ea280c939fa5bd60e3fe325af8b",
+        "revision": 3,
+        "content_digest": "sha256:15ba3b799ee7309dbcf585217fc9c5d001e5b5f8b45b9824f8a1a44b705c259f"
+      }
     }
   ]
 }

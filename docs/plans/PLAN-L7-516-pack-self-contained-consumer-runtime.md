@@ -111,18 +111,18 @@ status: confirmed
 github_issue_id: 420
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:0d62778d31373c2ebccbb367598a9ae2
-  command_id: command:issue420-runtime-adapter-contract-r3
-  admitted_at: 2026-09-08T09:13:30.330Z
-  source_digest: sha256:3678d9fb08231a0867c232e75cd5d3920fc08fdf4d41956f813ad513c689805e
-  decision_digest: sha256:d85f59c1c66e93ddbc77ae44872ea6628cc8cd4a6aa8bd094182fcec48e3daa0
-  receipt_digest: sha256:7dee72cfe7c9926a417c8c1e4662d2495253f424fe479082ca7a003c1588d8f3
+  receipt_id: certificate:55d25c6e34362fbfeb5f3b0faee7416a
+  command_id: command:issue420-runtime-adapter-contract-r4-review-followup
+  admitted_at: 2026-09-08T09:59:32.558Z
+  source_digest: sha256:6e4e0d5516e78e7465d260c65482e3302c9304518eb264d39735d049c166a316
+  decision_digest: sha256:7566ad4e97d6059002dedffc0e15cb98e6152ccfae146d797cb3efb435768dc9
+  receipt_digest: sha256:e4e9de2f3e792ec22b3a1987e5b1955ced6205a6f3c7a330ca44f861d55b63bc
   binding:
     path: docs/plans/PLAN-L7-516-pack-self-contained-consumer-runtime.md
     plan_id: PLAN-L7-516-pack-self-contained-consumer-runtime
     asset_id: plan:legacy:d28966ed1d8861940d1ed5bfc5eaebc7dd7b4a9de4ed7adbd65850095c816307
-    revision: 3
-    content_digest: sha256:3678d9fb08231a0867c232e75cd5d3920fc08fdf4d41956f813ad513c689805e
+    revision: 4
+    content_digest: sha256:6e4e0d5516e78e7465d260c65482e3302c9304518eb264d39735d049c166a316
   route:
     signal: feature_addition
     mode: add-feature
@@ -133,14 +133,14 @@ admission_receipt:
     projection_digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
   origin:
     plan_id: PLAN-L7-516-pack-self-contained-consumer-runtime
-    revision: 2
-    digest: sha256:c9a0e1a5915651a7bd08ca45edf85111c783851f8abfd080087cc135d57f322c
+    revision: 3
+    digest: sha256:3678d9fb08231a0867c232e75cd5d3920fc08fdf4d41956f813ad513c689805e
   transition:
     direction: design_to_implementation
     implementation_disposition: preserved
   reentry:
     target_plan_id: PLAN-L7-516-pack-self-contained-consumer-runtime
-    target_revision: 3
+    target_revision: 4
     phase: forward_merge
   escape_reason: Issue420 existing consumer installer physical adapter contract
     proposal; implementation preserved; fresh pair review required
@@ -524,7 +524,7 @@ permission、history prefix/replay、attested rollback、external read/open/stat
   genesisのhistory_sequenceは0、prior_bundle_digest/prior_history_tip_digestは文字列genesis、
   最初のrecordもsequence 0。以後は直前sequence+1で、historyは空prefixから開始する。
   operation_id、attempt、generation_idはbundle.identityと同値、digestは既存sha256形式とする。
-- publicationはimmutableなpreparedのみ。committedへ書き換えてbundle digestを壊さない。
+- publicationの型はJSON string、許可値はexact literal "prepared"のみ。null/object/array/boolean/numberや別文字列を拒否する。publicationはimmutableなpreparedのみ。committedへ書き換えてbundle digestを壊さない。
   committed/uncommitted/unknown/partialは実pointerとsealed bundleの観測から導出する状態である。
 - 同じbundleのbundle_digestをpayload内へ埋めない。payload→files digest→bundle digest→active pointer
   の一方向に計算し、history/receiptとbundleの循環hashを作らない。
@@ -554,6 +554,9 @@ Linux/Windowsの実adapter試験で各操作を証明する。物理実装前に
 | active pointerが保存したpriorとbytes/modeごと一致（genesisなら不在）、当該bundleは非active | uncommitted |
 | 別pointer、部分bundle、digest不一致、観測不能、prior不変性未証明 | unknown/partial、indeterminate |
 
+新processのreconcileでも、callerは既存検証済みbundleとConsumerNodeRuntimeIdentityをadapter構築入力として渡す。
+operation_id/attempt/identity_digestはその入力から期待値を導出し、durable operation-stateと照合する。
+ディレクトリ走査やpayload自己申告から対象operationを採用しない。入力欠落・不一致はunknown/partialとしwrite 0。
 ack-loss時にpointerやpayloadを再書込みしない。既存reconcile高々一回、新write/launch 0を維持する。
 staging/quarantine/orphanをruntime discovery候補にしない。rollbackは既存attested prior generationを
 新operationとして履歴へ追加するだけで、古いbundle/historyを変更しない。

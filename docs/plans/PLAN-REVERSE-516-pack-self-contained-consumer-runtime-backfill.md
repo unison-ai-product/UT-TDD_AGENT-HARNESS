@@ -10,7 +10,7 @@ route_mode: reverse
 forward_routing: gap-only
 promotion_strategy: reuse-as-is
 created: 2026-08-27
-updated: 2026-09-04
+updated: 2026-09-08
 owner: PM / PO / Codex
 parent_design: docs/plans/PLAN-L7-516-pack-self-contained-consumer-runtime.md
 pair_artifact: docs/test-design/harness/L7-pack-self-contained-consumer-runtime-test-design.md
@@ -40,18 +40,18 @@ status: draft
 github_issue_id: 420
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:06bbea24c08322700c8a3b17d6684aca
-  command_id: command:issue420-runtime-adapter-reverse-r2
-  admitted_at: 2026-09-08T09:04:42.252Z
-  source_digest: sha256:b813bb606bf2a629a69c7bf7931e70cd3adb77a65bbc85231fe622769c6ea5de
-  decision_digest: sha256:7f4609eccf4ccb1908fc1381f619fdec9e5f698998c2034c4b4e9c4da19a4c80
-  receipt_digest: sha256:5b509fb468194269e01b6795b2861ef6f5b72dfd64dd87a3f816c51ff70c331a
+  receipt_id: certificate:7e7a1f696196808281be8cb1363c7eb3
+  command_id: command:issue420-runtime-adapter-reverse-r3-review-followup
+  admitted_at: 2026-09-08T09:59:44.151Z
+  source_digest: sha256:15ba3b799ee7309dbcf585217fc9c5d001e5b5f8b45b9824f8a1a44b705c259f
+  decision_digest: sha256:d4ac54d00ebd4bdb07fc430ea7ae4485b39c7c1b9a21f58b65280eac3f13bb4f
+  receipt_digest: sha256:0d20a7174593d4194bd94cdee9f19126827707008fc585dcfecd779c9a5efce8
   binding:
     path: docs/plans/PLAN-REVERSE-516-pack-self-contained-consumer-runtime-backfill.md
     plan_id: PLAN-REVERSE-516-pack-self-contained-consumer-runtime-backfill
     asset_id: plan:legacy:a791f4a13fda8d4baa8f510ef73e78491c5f3ea280c939fa5bd60e3fe325af8b
-    revision: 2
-    content_digest: sha256:b813bb606bf2a629a69c7bf7931e70cd3adb77a65bbc85231fe622769c6ea5de
+    revision: 3
+    content_digest: sha256:15ba3b799ee7309dbcf585217fc9c5d001e5b5f8b45b9824f8a1a44b705c259f
   route:
     signal: reverse
     mode: reverse
@@ -62,14 +62,14 @@ admission_receipt:
     projection_digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
   origin:
     plan_id: PLAN-L7-516-pack-self-contained-consumer-runtime
-    revision: 2
-    digest: sha256:c9a0e1a5915651a7bd08ca45edf85111c783851f8abfd080087cc135d57f322c
+    revision: 4
+    digest: sha256:6e4e0d5516e78e7465d260c65482e3302c9304518eb264d39735d049c166a316
   transition:
     direction: implementation_to_design
     implementation_disposition: preserved
   reentry:
     target_plan_id: PLAN-L7-516-pack-self-contained-consumer-runtime
-    target_revision: 2
+    target_revision: 4
     phase: forward_merge
   escape_reason: Issue420 existing consumer installer physical adapter contract
     proposal; implementation preserved; fresh pair review required
@@ -168,7 +168,7 @@ consumer wrapperはexit127となり、setupSourceCli絶対pathも残っていた
 ConsumerNodeRuntimePortsの実filesystem adapterと4 payloadの生成経路は未実装で、setup callerへ未接続。
 snapshotPriorActivePointerのvoidだけではCAS不能を意味せず、adapter private state保持で実装できる。
 
-Forward revision 2 §11とpair test-designへ、既存ConsumerReceiptの再利用、循環のないpayload/digest、
-lock内prior照合、read-only durable reconcileの契約補完候補を追加した。4 payload構造は非著者review前。
+Forward revision 3で新設し、revision 4で補完した§11とpair test-designへ、既存ConsumerReceiptの再利用、循環のないpayload/digest、
+lock内prior照合、read-only durable reconcileの契約補完候補を追加した。revision 3の4 payload構造はexact e72dcc8ad2b728b53389971b092d2ebffec45bc5で非著者PASS-WEAK/blocking 0。revision 4の補完はfresh review対象。
 Node producer/receipt schema、PF5、Pack remote publicationは再所有せず、入力未供給をtyped denyで扱う。
 このrevisionはR1の差分特定までであり、R2実装検証、R3非著者検収、R4 backfill、Issue420完了は未主張。
