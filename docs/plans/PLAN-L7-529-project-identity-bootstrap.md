@@ -6,25 +6,30 @@ layer: L7
 drive: fullstack
 route_signal: feature_addition
 route_mode: add-feature
-status: draft
 created: 2026-09-04
 updated: 2026-09-04
 owner: PO / TL
-github_issue_id: 432
 parent_design: docs/governance/ut-tdd-agent-harness-requirements_v1.2.md
 pair_artifact: docs/test-design/harness/L7-project-identity-bootstrap-test-design.md
 backprop_decision: required
-backprop_decision_reason: "read/create/commit-policy の fail-close 境界と namespace 分離を Forward/Reverse で同じ candidate に固定する。"
+backprop_decision_reason: read/create/commit-policy の fail-close 境界と namespace
+  分離を Forward/Reverse で同じ candidate に固定する。
 agent_slots:
   - role: se
-    slot_label: "SE - tracked project identity の read/create 決定性契約を実装する"
+    slot_label: SE - tracked project identity の read/create 決定性契約を実装する
   - role: qa
-    slot_label: "QA - HEAD drift、junction/symlink/8.3/CRLF/BOM、stale identity 差し替えを独立変異で検証する"
+    slot_label: QA - HEAD drift、junction/symlink/8.3/CRLF/BOM、stale identity 差し替えを独立変異で検証する
 generates:
   - artifact_path: docs/plans/PLAN-L7-529-project-identity-bootstrap.md
     artifact_type: markdown_doc
   - artifact_path: docs/test-design/harness/L7-project-identity-bootstrap-test-design.md
     artifact_type: test_design
+  - artifact_path: src/setup/project-identity-bootstrap.ts
+    artifact_type: source_module
+  - artifact_path: src/kernel/project-identity.ts
+    artifact_type: source_module
+  - artifact_path: tests/setup-project-identity-bootstrap.test.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/governance/ut-tdd-agent-harness-requirements_v1.2.md
   requires: []
@@ -38,7 +43,90 @@ dependencies:
     - docs/plans/PLAN-L7-512-project-scoped-memory-root.md
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/432
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/424
-review_evidence: []
+review_evidence:
+  - reviewer: claude
+    review_kind: cross_agent
+    reviewed_at: 2026-09-04T11:40:33Z
+    tests_green_at: 2026-09-04T11:34:00Z
+    verdict: pass
+    worker_model: gpt-5.6-luna
+    effort: high
+    reviewer_model: claude-opus-5
+    plan_revision: 7449e560022b835b4b36e97e54caaf7dc14cb27d
+    subject_head: 7449e560022b835b4b36e97e54caaf7dc14cb27d
+    evidence_path: docs/test-design/harness/L7-project-identity-bootstrap-test-design.md
+    anchor_commit: 7449e560022b835b4b36e97e54caaf7dc14cb27d
+    scope: "PR #519 (draft) exact HEAD 7449e560 に対する非著者 Claude Opus preflight
+      (request rv1-ec7fd4ff、verdict=PASS-WEAK / blocking 0)。ownership
+      (src/kernel/project-identity.ts・src/setup/project-identity-bootstrap.ts・
+      tests/setup-project-identity-bootstrap.test.ts の単一宣言)、Forward
+      §3.1.1〜§3.1.4・ §3.2 one-hop custody・§3.2.1 setup orchestration
+      と実装の一致、CANDIDATE-U-PROJID-001..041 / P-001..003 の刺激と oracle の一致を判定した。実装
+      Green・Reverse R4・Issue #432 完了・ #424 provider parity の接続は主張しない。closing
+      review は最終 exact PR HEAD に対して別途取る。"
+    citations:
+      - "docs/test-design/harness/L7-project-identity-bootstrap-test-design.md:
+        CANDIDATE-U-PROJID-001..041 / CANDIDATE-P-PROJID-001..003"
+      - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/actions/runs/33865673481
+    green_commands:
+      - kind: unit_test
+        command: node scripts/run-vitest-snapshot.ts
+          tests/setup-project-identity-bootstrap.test.ts tests/setup.test.ts
+          tests/project-memory-root.test.ts
+          tests/plan-asset/project-identity-loader.test.ts
+          tests/plan-asset/legacy-inventory.test.ts
+          tests/doctor-test-repository-isolation.test.ts tests/plan-lint.test.ts
+          tests/impl-plan-trace.test.ts --reporter=dot
+        runner: node
+        scope: targeted
+        exit_code: 0
+        completed_at: 2026-09-04T11:23:00Z
+        evidence_path: docs/test-design/harness/L7-project-identity-bootstrap-test-design.md
+        output_digest: sha256:f41e87deaddbb4128aafc5b010677e7f62133f1817f9095911bbd3b65d18a60a
+        anchor_commit: 7449e560022b835b4b36e97e54caaf7dc14cb27d
+      - kind: unit_test
+        command: node scripts/run-vitest-snapshot.ts tests/dependency-drift.test.ts
+          --reporter=dot
+        runner: node
+        scope: targeted
+        exit_code: 0
+        completed_at: 2026-09-04T11:34:00Z
+        evidence_path: tests/setup-project-identity-bootstrap.test.ts
+        output_digest: sha256:23d14a66cd9e48ddf4f2d0f33e427c5f7cc90d90d3ab6018d0af7319166e44b1
+        anchor_commit: 7449e560022b835b4b36e97e54caaf7dc14cb27d
+status: confirmed
+github_issue_id: 432
+admission_receipt:
+  schema_version: v2
+  receipt_id: certificate:a153b736573886dbfe6790ec62e20284
+  command_id: command:pr519-corrected-confirm-forward-20260904
+  admitted_at: 2026-09-04T12:31:13.526Z
+  source_digest: sha256:b02cf49b4f3fb6e89770d9054ea4bf5d612166dbeb64bce799573746a665e5d4
+  decision_digest: sha256:51c1eeec856b8f9af41d0990e30e6e11ce7620f4e6c1c837e16f9781a24f3cf0
+  receipt_digest: sha256:95d5ee18597ae4afaa06eb779ae3ad3b5b6a8d30794f04161bdbf31855a96351
+  binding:
+    path: docs/plans/PLAN-L7-529-project-identity-bootstrap.md
+    plan_id: PLAN-L7-529-project-identity-bootstrap
+    asset_id: plan:legacy:3a7a5fd76bfe53fecd79af6d2efa4f262f798cfa4daf8e74d59c5b0256dc6ce0
+    revision: 2
+    content_digest: sha256:b02cf49b4f3fb6e89770d9054ea4bf5d612166dbeb64bce799573746a665e5d4
+  route:
+    signal: feature_addition
+    mode: add-feature
+  issue:
+    provider: github
+    issue_id: 432
+    episode_id: E4-432
+    projection_digest: sha256:6b4f2a8352acf03daf26df8f3b7c4e9d94ade3eda59d39f67882306093aa4dbf
+  origin:
+    plan_id: PLAN-L7-512-project-scoped-memory-root
+    revision: 1
+    digest: sha256:860e09e0646f3f29007833297cfdab14f781a5c862605434746a5fec535844ea
+  reentry:
+    target_plan_id: PLAN-L7-529-project-identity-bootstrap
+    target_revision: 2
+    phase: forward_merge
+  escape_reason: "Issue #432 project identity bootstrap implementation"
 ---
 
 # PLAN-L7-529: setup で tracked project identity を bootstrap する
@@ -54,6 +142,9 @@ review_evidence: []
   (git `origin` remote から導出した `owner/repo` 文字列) だけから canonical JSON を書く。
   同じ入力なら byte-identical。既存 identity がある repo での再実行は no-op read であり、
   書き換えない。
+- **snapshot clone**: `origin` がlocal Git pathであるdetached snapshotでは、そのGit repositoryの
+  network `origin`をexactly one hopだけ解決する。local path文字列自体からidentityを導出せず、
+  二段目もlocal path・未知形式・origin無しならtyped denyする。
 - **commit**: `setup` は作成した working tree ファイルを **暗黙に commit しない**。identity は
   HEAD に乗って初めて authoritative になる (§3.3)。
 - **namespace**: 異なる origin を持つ project は disjoint な identity を持ち、repository の移動や
@@ -83,7 +174,8 @@ ls src/setup
 
 ### 2.2 read は HEAD の Git blob から厳密に再取得する (working tree は今のところ入力にならない)
 
-`src/plan-asset/adapters/project-identity-loader.ts:61-91` (`loadProjectIdentityFromHead`) は
+基準 ref `7b18ee4e` の `src/plan-asset/adapters/project-identity-loader.ts`
+(`loadProjectIdentityFromHead`) は
 `git ls-tree HEAD -- ut-tdd.project.json` の mode/blob を正規表現で検証し
 (`^100644 blob ([a-f0-9]{40|64})\t...$`、L72-75)、一致した blob だけを
 `git show HEAD:ut-tdd.project.json` (L76) で取得する。`validReceipt` (L118-126) は
@@ -127,7 +219,8 @@ clean consumer** での bootstrap である。
 
 ### 2.3 identity grammar は `owner/repo` 形式に限定される
 
-`validIdentity` (`src/plan-asset/adapters/project-identity-loader.ts:128-135`) は
+基準 ref `7b18ee4e` の `src/plan-asset/adapters/project-identity-loader.ts`
+(`validIdentity`) は
 `/^[A-Za-z0-9](?:[A-Za-z0-9_.-]{0,38})\/[A-Za-z0-9](?:[A-Za-z0-9_.-]{0,99})$/` かつ
 NFC 正規化・trim済み・`.git` 非終端を要求する。絶対path、hostname、worktree pathの文法は
 この regex を満たさない (`/` は1個だけ許容され、Windows path 区切り `\` や drive letter は
@@ -142,8 +235,8 @@ grep -rln "project-identity-loader" src
 #   src/plan-asset/adapters/legacy-plan-inventory.ts
 ```
 
-`node-plan-revision-runner.ts:381-385` は `repositoryIdentity()` port として
-`loadProjectIdentityFromHead` を呼び、`legacy-plan-inventory.ts:40-41` は
+`src/plan-admission/node-plan-revision-runner.ts` は `repositoryIdentity()` port として
+`loadProjectIdentityFromHead` を呼び、`src/plan-asset/adapters/legacy-plan-inventory.ts` は
 `buildLegacyPlanInventory` の入口で同じ関数を呼ぶ。**identity の bootstrap を誤ると、
 plan revision 台帳と legacy inventory の両方が connectionできなくなる。**
 
@@ -227,7 +320,8 @@ canonical でなければ受理しない)。これも**現状の loader が行�
 #### 3.1.4 owner/repository binding は loader 内部で完結させる (新規 rule)
 
 現行実装は `expectedRepositoryIdentity` を**呼び出し側が渡した場合のみ**照合し
-(L42-47)、`node-plan-revision-runner.ts:382`・`legacy-plan-inventory.ts:40`・
+(L42-47)、`src/plan-admission/node-plan-revision-runner.ts`・
+`src/plan-asset/adapters/legacy-plan-inventory.ts`・
 `project-memory-root.ts` の `projectIdentityFromHead` はいずれもこの引数を渡していない
 (§2.4)。したがって別 repository からコピーされた grammar-valid な identity は、これら
 3 呼び出し元の経路では期待値照合なしに authoritative として読まれてしまう。
@@ -250,7 +344,8 @@ canonical でなければ受理しない)。これも**現状の loader が行�
    優先せず `identity_repository_unbound` として deny する (§4)。
 
 この変更により、`loadProjectIdentityFromHead` を経由する
-`node-plan-revision-runner.ts:382`・`legacy-plan-inventory.ts:40` の 2 呼び出し元は
+`src/plan-admission/node-plan-revision-runner.ts`・
+`src/plan-asset/adapters/legacy-plan-inventory.ts` の 2 呼び出し元は
 **コード変更なしに**この binding の対象になる (binding が loader 内部に移動するため)。
 
 一方 `project-memory-root.ts` の `projectIdentityFromHead` (L168-195) は §2.5 のとおり
@@ -279,6 +374,9 @@ working tree に書く:
   既知形式に一致しない、正規化結果が `validIdentity` の grammar (§2.3) を満たさない場合は
   **作成せず typed deny** する (directory 名、hostname、絶対path、UUID 生成へのフォールバックを
   許さない)。
+- **detached snapshot origin**: snapshot runnerが生成するcloneの`origin`がlocal Git pathの場合だけ、
+  そのsource repositoryの`origin`をexactly one hop読んで上記network形式へ正規化する。local path
+  自体をidentityへ変換せず、source側originもlocal path・未知形式・欠落ならdenyする (040)。
 - **決定性**: 同じ `origin` remote に対する複数回の実行は byte-identical な出力を生成する。
   canonical serialization は field 順 `schema_version` → `repository_identity`、UTF-8 (BOM無し)、
   LF 改行、2-space indent、末尾改行 1 個で固定する。
@@ -289,6 +387,17 @@ working tree に書く:
   であり、書き換え・再生成をしない。working tree に未commitの生成物が既にある状態で再実行しても
   同じ入力からは同じ bytes を再生成するだけで、内容を変えない (既存の未commitファイルを
   上書きしても差分が出ない、が新規に別contentへ書き換えることはしない)。
+
+#### 3.2.1 setup orchestration と identity denial の境界
+
+`bootstrapProjectIdentity` の typed deny は identity の作成・検証だけを fail-close する。
+`runSetup` はその deny を `SetupResult.projectIdentity` に保持して呼び出し元へ返し、
+identity の deny を理由に setup 全体を throw/中断してはならない。identity ファイルを作成
+できない場合も、既存の setup state 記録・phase 別テンプレート出力・branch-protection
+の emit-only 規則は通常どおり適用する (identity path を `written` に追加しない)。
+これにより origin の無い fixture/local-only repository でも、identity は authoritative に
+ならないまま、残りの導入設定を安全に生成できる。identity denial を握り潰して成功扱いに
+したり、path/name から identity を補完したりすることは許さない。
 
 ### 3.3 commit policy (設計判断エリシテーション形式)
 
@@ -343,7 +452,8 @@ grammar 検証) から導かれる。実装 slice でこれらを独立変異と
   同じ repo を指す場合、両者から得る `repository_identity` は同一でなければならない。
 - **case-only path difference**: 大小文字違いの path 表記が同一 repo (同じ inode/volume) を
   指す場合、identity 生成・解決の結果は同一でなければならない (二重 identity を作らない)。
-- **CRLF/BOM mutation**: 基準 ref の `decodeConfig` (`project-identity-loader.ts:93-116`) が使う
+- **CRLF/BOM mutation**: 基準 ref `7b18ee4e` の
+  `src/plan-asset/adapters/project-identity-loader.ts` (`decodeConfig`) が使う
   `TextDecoder("utf-8", { fatal: true })` は **既定 (`ignoreBOM: false`) で UTF-8 BOM を除去する**ため、
   BOM 付き `{}` は `"{}"` に decode され `JSON.parse` も成功する (実測: PR #516 r1 review、
   2026-09-04)。したがって **BOM 付与も CRLF 化も、現状の loader では silent accept される**
@@ -366,17 +476,21 @@ grammar 検証) から導かれる。実装 slice でこれらを独立変異と
 | read (working tree drift、新規) | working tree bytes が HEAD blob bytes と一致 (または未commit生成物としてcreate経路が扱う) | bytes不一致・一方のみ存在は `identity_worktree_drift` で deny。HEAD値をそのまま返したらRed |
 | read (single-commit binding、新規) | `HEAD` を1回だけ OID解決し、`ls-tree`/`show`/receipt再検証すべてが同じOIDを参照する | 解決後にHEADが動いて mixed receipt (sourceCommitと実読み取りcommitが不一致) を受理したらRed。再試行しても不一致なら `identity_head_toctou` で deny |
 | read (canonical bytes、新規) | HEAD bytesが再parse→canonical re-serializationしたbytesと一致 | CRLF化・reorderなど非canonicalなvalid JSONは `identity_noncanonical_bytes` で deny |
-| read (repository binding、新規) | `origin`由来の期待値、または明示`expectedRepositoryIdentity`のいずれかとHEAD値が一致し、両者矛盾が無い | origin無しかつ明示値も無しは `identity_repository_unbound` で deny。origin由来値と明示値が矛盾したらdeny (どちらか一方を優先しない) |
-| create 入力 | `origin` remote が既知形式で `owner/repo` grammar に正規化できる | remote無し・未知形式・grammar不一致は作成せず deny (fallback無し) |
+| read (repository binding、新規) | `origin`由来の期待値、または明示`expectedRepositoryIdentity`のいずれかとHEAD値が一致し、両者矛盾が無い | origin無しかつ明示値も無し、またはorigin由来値と明示値の矛盾は `identity_repository_unbound` で deny。origin無しで明示値だけがHEAD値と異なる場合は `plan-repository-identity-missing` |
+| create 入力 | `origin` remote が既知network形式、または040のone-hop Git custodyで `owner/repo` grammar に正規化できる | remote無し・未知形式・grammar不一致は作成せず deny (path/name由来fallback無し) |
 | create 決定性 | 同一 origin から同一 canonical bytes | field順/改行/BOM/末尾改行の変異は非決定と見なし Red |
 | create 所有者 | `setup` 専用経路のみが create を試みる | read専用呼び出し元 (doctor/plan-admission/legacy-inventory) が create を試みたら Red |
 | rerun | 既存 identity がある repo で `setup` は no-op read | 既存ファイルを書き換えたら Red |
 | commit policy | `setup` は working tree に書くのみ、commit しない (§3.3 B) | `setup` が `git commit` を実行したら Red |
 | namespace | 異なる origin は disjoint identity/namespace、repo移動・worktree追加で不変 | 同一 origin で異なる identity、または移動/worktreeで値が変わったら Red |
 | path非埋め込み | identity 文字列に絶対path/hostname/worktree pathを含まない | 埋め込みが検出されたら Red |
+| stale working tree | 未tracked既存fileがcanonical origin bytesと一致 | 不一致・非regular fileは `identity_stale_worktree` でdeny |
+| identity write | canonical bytesを新規fileへ書込み可能 | 書込み失敗は `identity_write_failed` でdenyし、commitしない |
 | 負系 | junction/symlink/8.3/大小文字/CRLF/BOM/stale copy はいずれも deny または既存正規化で吸収 | いずれかが silent accept になったら Red |
 
 ## 5. Implementation slices (将来の実装 PR)
+
+実装正本は `src/kernel/project-identity.ts` であり、`src/plan-asset/adapters/project-identity-loader.ts` は互換 re-export 境界である。
 
 1. `loadProjectIdentityFromHead` に working tree drift 検査 (§3.1.1)、single-commit binding
    (§3.1.2、`ls-tree`/`show`/receipt再検証をリテラル`HEAD`ではなく解決済みOIDへ切替)、
@@ -389,7 +503,7 @@ grammar 検証) から導かれる。実装 slice でこれらを独立変異と
    独立 reader `projectIdentityFromHead` は §3.1.4 (a) 統合または (b) 自前 binding のいずれかで
    閉じ、038 で確認する (in-scope、この経路は loader 側だけの変更では閉じない)。
 4. `repoRoot` の real path 解決を Git コマンド呼び出し前に固定 (8.3/大小文字/junction 対策)。
-5. `CANDIDATE-U-PROJID-001..039` と `CANDIDATE-P-PROJID-001..003` を同じ oracle で検証する。
+5. `CANDIDATE-U-PROJID-001..041` と `CANDIDATE-P-PROJID-001..003` を同じ oracle で検証する。
 
 consumer runtime placement、Node generation producer、Pack publication、global memory 本文、
 remote mutation、semantic ranking は本 plan の実装 slice に含めない。
@@ -403,7 +517,7 @@ remote mutation、semantic ranking は本 plan の実装 slice に含めない�
 
 Forward/Reverse/test-design が共有する全 U oracle は次のとおりである:
 
-CANDIDATE-U-PROJID-001 CANDIDATE-U-PROJID-002 CANDIDATE-U-PROJID-003 CANDIDATE-U-PROJID-004 CANDIDATE-U-PROJID-005 CANDIDATE-U-PROJID-006 CANDIDATE-U-PROJID-007 CANDIDATE-U-PROJID-008 CANDIDATE-U-PROJID-009 CANDIDATE-U-PROJID-010 CANDIDATE-U-PROJID-011 CANDIDATE-U-PROJID-012 CANDIDATE-U-PROJID-013 CANDIDATE-U-PROJID-014 CANDIDATE-U-PROJID-015 CANDIDATE-U-PROJID-016 CANDIDATE-U-PROJID-017 CANDIDATE-U-PROJID-018 CANDIDATE-U-PROJID-019 CANDIDATE-U-PROJID-020 CANDIDATE-U-PROJID-021 CANDIDATE-U-PROJID-022 CANDIDATE-U-PROJID-023 CANDIDATE-U-PROJID-024 CANDIDATE-U-PROJID-025 CANDIDATE-U-PROJID-026 CANDIDATE-U-PROJID-027 CANDIDATE-U-PROJID-028 CANDIDATE-U-PROJID-029 CANDIDATE-U-PROJID-030 CANDIDATE-U-PROJID-031 CANDIDATE-U-PROJID-032 CANDIDATE-U-PROJID-033 CANDIDATE-U-PROJID-034 CANDIDATE-U-PROJID-035 CANDIDATE-U-PROJID-036 CANDIDATE-U-PROJID-037 CANDIDATE-U-PROJID-038 CANDIDATE-U-PROJID-039
+CANDIDATE-U-PROJID-001 CANDIDATE-U-PROJID-002 CANDIDATE-U-PROJID-003 CANDIDATE-U-PROJID-004 CANDIDATE-U-PROJID-005 CANDIDATE-U-PROJID-006 CANDIDATE-U-PROJID-007 CANDIDATE-U-PROJID-008 CANDIDATE-U-PROJID-009 CANDIDATE-U-PROJID-010 CANDIDATE-U-PROJID-011 CANDIDATE-U-PROJID-012 CANDIDATE-U-PROJID-013 CANDIDATE-U-PROJID-014 CANDIDATE-U-PROJID-015 CANDIDATE-U-PROJID-016 CANDIDATE-U-PROJID-017 CANDIDATE-U-PROJID-018 CANDIDATE-U-PROJID-019 CANDIDATE-U-PROJID-020 CANDIDATE-U-PROJID-021 CANDIDATE-U-PROJID-022 CANDIDATE-U-PROJID-023 CANDIDATE-U-PROJID-024 CANDIDATE-U-PROJID-025 CANDIDATE-U-PROJID-026 CANDIDATE-U-PROJID-027 CANDIDATE-U-PROJID-028 CANDIDATE-U-PROJID-029 CANDIDATE-U-PROJID-030 CANDIDATE-U-PROJID-031 CANDIDATE-U-PROJID-032 CANDIDATE-U-PROJID-033 CANDIDATE-U-PROJID-034 CANDIDATE-U-PROJID-035 CANDIDATE-U-PROJID-036 CANDIDATE-U-PROJID-037 CANDIDATE-U-PROJID-038 CANDIDATE-U-PROJID-039 CANDIDATE-U-PROJID-040 CANDIDATE-U-PROJID-041
 
 `031`〜`039` は PR #516 の Sol FLAG (非author closing review, receipt 参照:
 `docs/plans/PLAN-L7-529-project-identity-bootstrap.md` 本改訂コミット) を是正するために
@@ -412,6 +526,8 @@ CANDIDATE-U-PROJID-001 CANDIDATE-U-PROJID-002 CANDIDATE-U-PROJID-003 CANDIDATE-U
 bytes 比較 (CRLF化・key順序違い)、`036`〜`038` = §3.1.4 repository binding を
 `node-plan-revision-runner.ts`/`legacy-plan-inventory.ts`/`project-memory-root.ts` の
 3呼び出し元それぞれで確認、`039` = origin無し・明示expected値無しの `identity_repository_unbound`。
+`040`はdetached snapshot cloneのlocal originをexactly one Git custody hopだけ解決する回帰、
+`041`はnetwork originと明示expected値の矛盾を到達可能な分岐として検証する。
 
 実 repo regression は `CANDIDATE-P-PROJID-001`、`CANDIDATE-P-PROJID-002`、
 `CANDIDATE-P-PROJID-003` とする。

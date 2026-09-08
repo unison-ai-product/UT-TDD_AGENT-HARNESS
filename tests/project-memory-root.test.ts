@@ -16,6 +16,7 @@ import { Command } from "commander";
 import { afterEach, describe, expect, it } from "vitest";
 import { registerLiveReviewCommands, resolveLiveReviewTaskFile } from "../src/cli/review-live.ts";
 import { writeMemory } from "../src/memory/service.ts";
+import { canonicalProjectIdentityBytes } from "../src/plan-asset/adapters/project-identity-loader.ts";
 import {
   buildClaudeInboxEntry,
   claudeWorkspaceId,
@@ -259,11 +260,8 @@ function initTrackedProject(root: string, identity = "fixture/project"): void {
   execFileSync("git", ["init", "-q"], { cwd: root });
   execFileSync("git", ["config", "user.email", "test@example.invalid"], { cwd: root });
   execFileSync("git", ["config", "user.name", "UT-TDD test"], { cwd: root });
-  writeFileSync(
-    join(root, "ut-tdd.project.json"),
-    `${JSON.stringify({ schema_version: "ut-tdd.project/v1", repository_identity: identity })}\n`,
-    "utf8",
-  );
+  execFileSync("git", ["remote", "add", "origin", `git@github.com:${identity}.git`], { cwd: root });
+  writeFileSync(join(root, "ut-tdd.project.json"), canonicalProjectIdentityBytes(identity));
   execFileSync("git", ["add", "ut-tdd.project.json"], { cwd: root });
   execFileSync("git", ["commit", "-qm", "fixture identity"], { cwd: root });
 }
