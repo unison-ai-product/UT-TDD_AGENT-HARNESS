@@ -2140,6 +2140,13 @@ runtime-projectionsの新規runner: bun出力は履歴互換とせず、Node-onl
 成立後はbun.lock出荷要求とU-SETUP-013/AT-DIST-001の期待を同じ撤去revisionでNode lock検証へ移す。
 既存のU-PACKBUN-006等の独立guard mutationで、guard削除・常時Green化・allowlist弱体化を
 各々Redにする。検出器自身のBun文字列削除をGreen扱いするoracleは不受理とする。
+最終撤去revisionでは、U-PACKBUN-006のbehavioral oracleと検出器を保持したまま、同oracleが
+凍結するrepository snapshotを物理撤去結果へ同時移行する。`package.json`の旧Bun build期待は
+build不在または正規Node buildのexact期待へ置換し、spawn/import/global debt allowlistは
+実際に撤去したpath/countだけを減算する。旧期待の残置、未撤去rowの先行削除、無関係rowの削除、
+allowlist追加・pin引上げ、guard削除・常時Green化・matcher弱体化を各々独立negativeとする。
+snapshot migrationはPLAN-L7-530が同一revisionで所有し、oracle authorityと検出意味は
+PLAN-L7-522/524に残す。
 `tests/**`、`**/fixtures/**`、`.ut-tdd/**`、`docs/**`、`vendor/**`、`docs/archive/**`は
 raw inventoryに残す。path名だけで除外せず、実行・生成・配布・AI指示からの非到達を個別に証明できた
 候補のみ`retained_fixture`/`history`として分類する。
