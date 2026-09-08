@@ -208,7 +208,14 @@ it("denies a concurrent process while the actual owner is alive without deleting
     },
   }).execute(f.input);
   expect(result.ok).toBe(true);
-  expect(contender?.status).toBe(0);
+  const diagnostic = JSON.stringify({
+    status: contender?.status,
+    signal: contender?.signal,
+    error: contender?.error?.message,
+    stderr: contender?.stderr,
+  });
+  expect(contender?.error, diagnostic).toBeUndefined();
+  expect(contender?.status, diagnostic).toBe(0);
   expect(JSON.parse(contender?.stdout ?? "{}")).toMatchObject({
     ok: false,
     reason: "owner_unavailable",

@@ -305,11 +305,12 @@ class BoundSources {
           secureDirectory(dirname(path));
           const stat = lstatSync(path, { bigint: true });
           if (!stat.isFile() || stat.isSymbolicLink()) throw new Denied("source_drift");
+          const capturedIdentity = identity(stat);
           const fd = openSync(path, "r");
           const source: BoundSource = {
             path,
             fd,
-            identity: identity(stat),
+            identity: capturedIdentity,
             digest: variant.contentDigest,
             bytes: Buffer.alloc(0),
           };
