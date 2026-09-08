@@ -97,6 +97,9 @@ it("quarantines all conflicting variants without touching sources or canonical c
     files.map((name) => readFileSync(join(result.quarantineRoot, name)).toString()).sort(),
   ).toEqual(before.map((bytes) => bytes.toString()).sort());
   expect(fixtureData.sources.map((path) => readFileSync(path))).toEqual(before);
+  expect(
+    readdirSync(fixtureData.operationRoot).filter((name) => name.endsWith(".pending")),
+  ).toEqual([]);
   expect(new ProjectMemoryMigrationTransaction().execute(fixtureData.input)).toMatchObject({
     ok: true,
     status: "replayed",
@@ -158,6 +161,7 @@ it.each([
   "marker",
   "quarantine",
   "corpus",
+  "inventory",
   "operation",
 ])("denies completion replay after %s tampering", (mutation) => {
   const f = fixture();
@@ -168,8 +172,17 @@ it.each([
   if (mutation === "quarantine")
     rmSync(join(result.quarantineRoot, readdirSync(result.quarantineRoot)[0]));
   if (mutation === "corpus") writeFileSync(f.sources[0], "tampered");
+  if (mutation === "operation") {
+    const path = join(f.operationRoot, "complete.json");
+    const record = JSON.parse(readFileSync(path, "utf8"));
+    record.payload.binding.operationId = "different-operation";
+    record.digest = createHash("sha256")
+      .update(JSON.stringify({ payload: record.payload, identity: record.identity }))
+      .digest("hex");
+    writeFileSync(path, JSON.stringify(record));
+  }
   const input =
-    mutation === "operation" ? { ...f.input, expectedInventoryDigest: "0".repeat(64) } : f.input;
+    mutation === "inventory" ? { ...f.input, expectedInventoryDigest: "0".repeat(64) } : f.input;
   expect(new ProjectMemoryMigrationTransaction().execute(input).ok).toBe(false);
 });
 
@@ -188,4 +201,56 @@ it("denies a concurrent process while the actual owner is alive without deleting
     reason: "owner_unavailable",
   });
   expect(existsSync(join(f.operationRoot, "owner.json"))).toBe(true);
+});
+
+it("does not steal a dead owner's reused PID or trust a copied owner record", () => {
+  const f = fixture();
+  const crashed = worker(f.input, "after-owner");
+  expect(crashed.status === 0).toBe(false);
+  const path = join(f.operationRoot, "owner.json");
+  const record = JSON.parse(readFileSync(path, "utf8"));
+  record.payload.pid = process.pid;
+  record.digest = createHash("sha256")
+    .update(JSON.stringify({ payload: record.payload, identity: record.identity }))
+    .digest("hex");
+  writeFileSync(path, JSON.stringify(record));
+  expect(new ProjectMemoryMigrationTransaction().execute(f.input)).toMatchObject({
+    ok: false,
+    reason: "owner_unavailable",
+  });
+  const contents = readFileSync(path);
+  renameSync(path, `${path}.original`);
+  writeFileSync(path, contents);
+  expect(new ProjectMemoryMigrationTransaction().execute(f.input)).toMatchObject({
+    ok: false,
+    reason: "marker_invalid",
+  });
+  expect(readFileSync(path)).toEqual(contents);
+});
+
+it.each([
+  "foreign-host",
+  "branched-chain",
+])("retains and denies %s ownership evidence", (mutation) => {
+  const f = fixture();
+  expect(worker(f.input, "after-owner").status === 0).toBe(false);
+  const path = join(f.operationRoot, "owner.json");
+  const record = JSON.parse(readFileSync(path, "utf8"));
+  if (mutation === "foreign-host") {
+    record.payload.binding.hostFingerprint = "0".repeat(64);
+    record.digest = createHash("sha256")
+      .update(JSON.stringify({ payload: record.payload, identity: record.identity }))
+      .digest("hex");
+    writeFileSync(path, JSON.stringify(record));
+  } else
+    writeFileSync(
+      join(f.operationRoot, `owner-next-${"0".repeat(64)}.json`),
+      JSON.stringify(record),
+    );
+  const before = readdirSync(f.operationRoot).sort();
+  expect(new ProjectMemoryMigrationTransaction().execute(f.input)).toMatchObject({
+    ok: false,
+    reason: "marker_invalid",
+  });
+  expect(readdirSync(f.operationRoot).sort()).toEqual(before);
 });

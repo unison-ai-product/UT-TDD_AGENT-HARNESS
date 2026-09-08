@@ -48,8 +48,11 @@ export interface MemoryMigrationPorts {
 }
 
 class InventoryDenied extends Error {
-  constructor(readonly reason: Extract<MemoryMigrationDryRun, { ok: false }>["reason"]) {
+  readonly reason: Extract<MemoryMigrationDryRun, { ok: false }>["reason"];
+
+  constructor(reason: Extract<MemoryMigrationDryRun, { ok: false }>["reason"]) {
     super(reason);
+    this.reason = reason;
   }
 }
 
