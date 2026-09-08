@@ -40,18 +40,18 @@ status: draft
 github_issue_id: 487
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:37fbe634d28943e62b902979c00b7a78
-  command_id: command:pr521-r2-deny-guard-reverse7
-  admitted_at: 2026-09-08T02:22:29.740Z
-  source_digest: sha256:a7a5bb16c81d40e1a95a54341634404ad2d3bc995b42c8c950b5ea689afc7c4e
-  decision_digest: sha256:0b15d2f71bdbcce794bf910da6b51732daa8a43294363bf733599a0684244d21
-  receipt_digest: sha256:11754291c17cdcb902ec2b7e2455b675c174358ef267fa3bab8964a9b932223b
+  receipt_id: certificate:0c96c68561d86eb8a44ca65603054977
+  command_id: command:pr521-r3-reverse-classification-revision10
+  admitted_at: 2026-09-08T03:10:22.597Z
+  source_digest: sha256:aceb6764b5ecc27ce6e1fe88afb2b03a9e8e5952f2b28486eabadabfab44f8d0
+  decision_digest: sha256:24d21181ea5928337d8375cb78c78b151b6160d0ed91300c4072dec7a6b85c11
+  receipt_digest: sha256:0c4175184558f29402516d86da1a1a5e7989da0e2fc708b018fb21e6c4e65d14
   binding:
     path: docs/plans/PLAN-REVERSE-530-bun-final-retirement-backfill.md
     plan_id: PLAN-REVERSE-530-bun-final-retirement-backfill
     asset_id: plan:4727c21e7227fefefdb428f11662676c
-    revision: 7
-    content_digest: sha256:a7a5bb16c81d40e1a95a54341634404ad2d3bc995b42c8c950b5ea689afc7c4e
+    revision: 10
+    content_digest: sha256:aceb6764b5ecc27ce6e1fe88afb2b03a9e8e5952f2b28486eabadabfab44f8d0
   route:
     signal: design_gap
     mode: reverse
@@ -69,7 +69,7 @@ admission_receipt:
     implementation_disposition: preserved
   reentry:
     target_plan_id: PLAN-L6-93-node-bootstrap-contract
-    target_revision: 7
+    target_revision: 27
     phase: forward_merge
   escape_reason: "Issue #487 implementation facts backfill to L6 contract"
 ---
@@ -140,7 +140,7 @@ Forward/test-designと同じ候補をこの Reverse の実装検証境界にも�
   inventoryに残し、path・文脈の個別確認後にBun実行面から除外する。
 - `ban_enforcement_guard`: `src/lint/bun-permanent-ban.ts`、`src/lint/runtime-portability.ts`、
   `src/lint/rule-drift.ts`、`src/lint/toolchain-pin.ts`、`src/lint/github-ci-policy.ts`、
-  `src/doctor/rule-quality.ts`の検出用文字列・regex・typed reason。各path+symbolはdeny専用で
+  検出用文字列・regex・typed reason。各path+symbolはdeny専用で
   あることを個別確認し、同一file内のspawn/install/download/fallback実行面はreachableとして
   分離判定する。検出器自身のBun文字列を削除してreachable surface 0を装うことは許可しない。
   既存のU-PACKBUN-006等の独立guard mutationで、guard削除・常時Green化・allowlist弱体化を
@@ -180,3 +180,67 @@ R3で列挙する全到達面の必要pathだけを追加する。
 既存上位契約は定義元、`PLAN-L7-530` pairは最終撤去の実装・test・evidenceの唯一のownerと
 して分離し、同一artifactの二重所有を作らない。R3で実装差分を確定した後にだけ、正規の
 PLAN revision経路で上位へのback-referenceとgapを反映する。
+
+## r3 reentry是正
+
+Reverse自身のrevisionと再合流先のrevisionを混同しない。reentry.target_revisionはPLAN-L6-93のadmission binding revision 27へ束縛する。旧Reverse rev7のtarget_revision 7は誤りであり、本revisionで正規改訂する。
+
+## r3: 非実行語彙とexact Git inventoryの分類補完
+
+分類はpathの閉じた許可リストではなく、各subjectの全raw候補に対するpath+symbolの意味判定である。
+上表・前節のpathは代表例であり、列挙外を自動免除しない。未分類は従来どおりIndeterminate。
+同じfileでもBun起動・import・download・fallback・生成物混入・実行指示はreachable_productionへ分離する。
+
+- `ban_enforcement_guard`: 禁止検出・拒否の実処理と、そのmatcher/typed reason。
+  既存例に加え、`src/doctor/test-repository-isolation.ts` の `MUTATION_TARGET_ARGS` / Bun.write識別、
+  `src/state-db/stop-refresh.ts` の `isBunExecutable` / `refuseBunStopRefresh`、
+  `src/runtime/runtime-image-observer.ts` の `classifyRuntimeImageProcess` を含む。
+  BunではなくGit/Nodeを使う検査自体をBun実行と誤認しない。Bun実行へ到達しないことと
+  既存拒否検出力を個別に証明し、guard削除・常時Green・allowlist弱体化は独立Redを維持する。
+- `retained_compatibility_vocabulary`: 履歴証跡を読むenum、識別名、観測済み入力の純粋分類、
+  用語検査だけを行う非実行語彙。schemaが文字を受理することはBun実行の許可ではない。
+  `src/schema/frontmatter.ts` のgreen_commands.runner enumと
+  `src/lint/review-evidence.ts` の `GREEN_COMMAND_RUNNERS` は過去runner: bun証跡の読取互換として保持する。
+  新規証跡の正規runnerはNodeであり、既存履歴の書換えやBun再実行を要求しない。
+  `src/lint/design-language.ts:TECHNICAL_WORD_ALLOWLIST` のBun、
+  `src/runtime/verb-classify.ts:classifyVerificationVerb` の入力分類は用語/観測データの認識であり、
+  起動・実行指示生成をしないことを確認してこの分類に置く。
+  `src/doctor/rule-quality.ts` のportability失敗診断のBun語は非実行の表示語彙であり、
+  deny専用guardとしての独立Redを要求しない。
+- 同じ分類に `src/lint/verification-profile-catalog.ts:PROFILES["bun-unit"]` と
+  `src/lint/verification-profile-types.ts:VerificationProfileId` の互換IDを置く。
+  baseではcommandが `node scripts/run-vitest-snapshot.ts`、executableがNodeであることをGit objectで確認する。
+  IDだけを理由にBunを起動すると誤認しない。ただし参照先snapshot runnerのBun解決/受渡しは
+  独立したreachable_productionであり、この互換IDを理由に免除しない。
+- `src/doctor/setup-smoke.ts:SETUP_SMOKE_REQUIRED_FILES` はbaseで `.ut-tdd/bin/ut-tdd.mjs`、
+  `nativeInvocation` はNode、検査名は `wrapper-launcher-contract` である。
+  run-bun.tsの残存文字列は既に退役した経路の説明でありhistoryへ分類する。
+  #470所有のNode wrapper検査を再実装しない。現subjectでBun必須へ変異した場合はreachableとして拒否する。
+- 非実行の識別子/説明もraw inventoryから消さない。Bunを起動する復旧案を出力する
+  `src/lint/write-encoding-guard.ts:writeEncodingGuardMessages` 等の現行指示は
+  retained語彙ではなくreachable_productionとしてNode-only指示へ是正する。
+
+CAND-NODEBOOT-208の判定単位は「Bunを実行・導入・生成物へ混入・実行指示する到達面」である。
+non-executing語彙の読取それ自体はBun到達面ではない。互換enum/用語/IDを保持しても、Bun spawn/import/
+download/fallbackまたはBun実行指示へ変異させればRedになる独立oracleを要求する。
+逆に、履歴enumを無条件削除して過去証跡を読めなくすることを成功としない。
+到達性未証明や語彙と実行面の混在はIndeterminateを維持する。
+
+存在確認はworking treeやglob推測ではなく `git ls-tree` / `git show` のexact objectへ束縛する。
+base `6e9aeb99048d46d599d5fe477fdca5592aa2ff44` の `src/lint/bun-permanent-ban.ts` は
+blob `8b287b136b864630544b1035e0897d01eeb1ef7b` として実在する。
+setup-smokeはblob `1bf3fa8a49b5085acbda78854a605bd751103a0d`。
+この観測はレビュー判定の自己解除ではなく、次の非著者reviewへ提示する反証である。
+
+全clean Pack同梱のREADMEおよびskillsをinventoryの対象とする。skills/git.mdと
+skills/test-driven-development.mdは代表例であり、2ファイル限定ではない。全active指示を
+reachableとして個別検証する。歴史説明と現在の実行指示を区別し、出荷対象を一覧から外して免除しない。
+
+`src/state-db/runtime-projections.ts:projectRuntimeTestRunFromSessionEvent` の新規runner: bun出力は
+履歴読取互換ではない。Node-only runtimeの新規証跡へBunを既定値で捏造する到達面として#487で是正する。
+既存DB行を書き換えず、writerの新規出力を独立検証する。Bun実行0だけから証跡の正しさを推定しない。
+
+PLAN-L7-527 §2.5のdual-lock parityは「parentがdual-lockを保持する期間」という条件付き契約である。
+本PLANの4要素tuple成立前はそのparityを維持する。成立後のfinal retirementで保持期間が終了し、
+bun.lockとその出荷要求を撤去する。U-SETUP-013/AT-DIST-001のdual-lock期待も同じ撤去revisionで
+Node package-lock検証へ移す。新規の無条件lock例外や既存履歴の改変は作らない。

@@ -2115,9 +2115,29 @@ Bun direct-entry、`scripts/git-hooks/secret-scan-diff.ts` の Bun shebang/direc
 未分類なら`Indeterminate`とする。`ubuntu`、`bundle`などはraw候補に残した上でpath・文脈を
 個別確認し、`non_applicable_false_positive`としてBun実行面から除外する。
 検出器自身の `src/lint/bun-permanent-ban.ts`、`runtime-portability.ts`、`rule-drift.ts`、
-`toolchain-pin.ts`、`github-ci-policy.ts` および `src/doctor/rule-quality.ts` のBun文字列・regexは
+`toolchain-pin.ts`、`github-ci-policy.ts` のBun文字列・regexは
 `ban_enforcement_guard`として保持する。path+symbol単位でspawn/install/download/fallbackがない
 deny専用であることを個別に検証し、同じfile内の実行面は免除しない。
+上記pathは代表例であり閉じた許可リストではない。全subjectのraw候補を意味で分類し、
+`src/doctor/test-repository-isolation.ts:MUTATION_TARGET_ARGS/writeApiName`、
+`src/state-db/stop-refresh.ts:isBunExecutable/refuseBunStopRefresh`も同じ条件で保持する。
+`src/runtime/runtime-image-observer.ts:classifyRuntimeImageProcess`も禁止判定として保持する。
+`retained_compatibility_vocabulary`は非実行の履歴enum・用語・観測入力分類・互換IDに限る。
+frontmatterのgreen_commands.runnerとreview-evidenceのGREEN_COMMAND_RUNNERSは過去Bun証跡の読取互換、
+design-languageのTECHNICAL_WORD_ALLOWLISTとverb-classifyのclassifyVerificationVerbは非実行認識、
+verification-profile-catalog/typesのbun-unitはcommand/executableがNodeの互換IDとして検証する。
+rule-qualityのportability失敗診断は非実行の表示語彙であり、deny専用guardと誤分類しない。
+新規証跡はNodeであり、読取互換はBun実行許可ではない。Bun spawn/import/download/fallback/実行指示へ
+単独変異させればCAND-NODEBOOT-208をRedにし、逆に履歴enum削除による既存証跡破壊をGreenにしない。
+参照先snapshot runnerのBun解決/受渡しは互換IDと別のreachable面として撤去対象に残す。
+setup-smokeの正本はbaseのNode ut-tdd.mjs/wrapper-launcher-contractであり、run-bun退役の説明だけを
+historyへ分類する。Bun必須へ変異した場合は拒否する。write-encoding-guardのBun/Node復旧指示は
+非実行語彙とせず、reachableな指示としてNode-onlyへ是正する。
+存在・分類根拠はexact git ls-tree/showで確認し、working tree/globの推測を証跡にしない。
+READMEと全clean Pack同梱skillsのactive指示をinventoryし、代表例2ファイルだけで閉じない。
+runtime-projectionsの新規runner: bun出力は履歴互換とせず、Node-onlyの新規証跡へ是正する。
+旧DB行は改変しない。PLAN-L7-527 §2.5のdual-lockは保持期間中の条件であり、tuple成立前はparityを維持、
+成立後はbun.lock出荷要求とU-SETUP-013/AT-DIST-001の期待を同じ撤去revisionでNode lock検証へ移す。
 既存のU-PACKBUN-006等の独立guard mutationで、guard削除・常時Green化・allowlist弱体化を
 各々Redにする。検出器自身のBun文字列削除をGreen扱いするoracleは不受理とする。
 `tests/**`、`**/fixtures/**`、`.ut-tdd/**`、`docs/**`、`vendor/**`、`docs/archive/**`は
