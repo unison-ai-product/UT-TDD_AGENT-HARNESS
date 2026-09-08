@@ -7,13 +7,13 @@ drive: agent
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-08-27
-updated: 2026-09-04
+updated: 2026-09-08
 owner: PM / PO / Codex
 parent_design: docs/plans/PLAN-L6-101-pack-independent-multi-consumer-acceptance.md
 pair_artifact: docs/test-design/harness/L7-pack-self-contained-consumer-runtime-test-design.md
 next_pair_freeze: L7
 transition_direction: design_to_implementation
-implementation_disposition: none
+implementation_disposition: preserved
 implementation_target: src/setup/consumer-node-runtime.ts
 agent_slots:
   - role: se
@@ -111,18 +111,18 @@ status: confirmed
 github_issue_id: 420
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:124b99afd5c1153fe417904c46ef61b5
-  command_id: command:issue420-runtime-adapter-contract-r2
-  admitted_at: 2026-09-08T09:02:33.126Z
-  source_digest: sha256:c9a0e1a5915651a7bd08ca45edf85111c783851f8abfd080087cc135d57f322c
-  decision_digest: sha256:84fa5b519e3b2475735e398829f7187ab640d3f38ea35e2d54dd4d78b8c3c129
-  receipt_digest: sha256:325e33dbd6ac44e5177ef541ab03d19b0beecb4f81550aec37c44f2a0e12bf53
+  receipt_id: certificate:0d62778d31373c2ebccbb367598a9ae2
+  command_id: command:issue420-runtime-adapter-contract-r3
+  admitted_at: 2026-09-08T09:13:30.330Z
+  source_digest: sha256:3678d9fb08231a0867c232e75cd5d3920fc08fdf4d41956f813ad513c689805e
+  decision_digest: sha256:d85f59c1c66e93ddbc77ae44872ea6628cc8cd4a6aa8bd094182fcec48e3daa0
+  receipt_digest: sha256:7dee72cfe7c9926a417c8c1e4662d2495253f424fe479082ca7a003c1588d8f3
   binding:
     path: docs/plans/PLAN-L7-516-pack-self-contained-consumer-runtime.md
     plan_id: PLAN-L7-516-pack-self-contained-consumer-runtime
     asset_id: plan:legacy:d28966ed1d8861940d1ed5bfc5eaebc7dd7b4a9de4ed7adbd65850095c816307
-    revision: 2
-    content_digest: sha256:c9a0e1a5915651a7bd08ca45edf85111c783851f8abfd080087cc135d57f322c
+    revision: 3
+    content_digest: sha256:3678d9fb08231a0867c232e75cd5d3920fc08fdf4d41956f813ad513c689805e
   route:
     signal: feature_addition
     mode: add-feature
@@ -133,14 +133,14 @@ admission_receipt:
     projection_digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
   origin:
     plan_id: PLAN-L7-516-pack-self-contained-consumer-runtime
-    revision: 1
-    digest: sha256:f44ab2cbc80f57f1bc5fb5df49d7b1343d68ee5eb08195f8eaeb97d823c46f30
+    revision: 2
+    digest: sha256:c9a0e1a5915651a7bd08ca45edf85111c783851f8abfd080087cc135d57f322c
   transition:
     direction: design_to_implementation
     implementation_disposition: preserved
   reentry:
     target_plan_id: PLAN-L7-516-pack-self-contained-consumer-runtime
-    target_revision: 2
+    target_revision: 3
     phase: forward_merge
   escape_reason: Issue420 existing consumer installer physical adapter contract
     proposal; implementation preserved; fresh pair review required
@@ -484,7 +484,7 @@ permission、history prefix/replay、attested rollback、external read/open/stat
 既存実装を削除せず、ConsumerNodeRuntimePortsとConsumerReceiptを再利用する。
 新しいpublication engine、global lock、独立receipt authorityは導入しない。
 
-## 入力と責務
+### 11.1 入力と責務
 
 - consumer materializerが受ける正本は、既存PF5の検証済みsealed aggregateと同generationの
   実NodeBootstrapReceiptおよびcompiled ESM bytes。Node producerを再実装しない。
@@ -497,7 +497,7 @@ permission、history prefix/replay、attested rollback、external read/open/stat
   本案から固定runtime配布path、新しいmanifest field、glob、全dist許可を発明しない。
   入力未供給ならsetupはtyped denyし、source/Pack checkout実行時fallbackへ戻らない。
 
-## 同一bundle内の4 payload候補
+### 11.2 同一bundle内の4 payload候補
 
 現行の6 payload名とbundle digest計算を保持する。下表は未定義だった4 payloadの構造候補。
 全JSONは既存canonical JSON/digest関数のbytesで封印し、unknown/missing fieldを拒否する。
@@ -516,14 +516,20 @@ permission、history prefix/replay、attested rollback、external read/open/stat
   history_tip_digestは末尾record_digest。genesisのpriorは既存genesis sentinel。
 - history bytesは旧historyの完全prefixにcanonical record一行とLFをちょうど一つ追加する。
   同一operation/attempt、sequence gap、prefix差分、prior digest差分は拒否する。
-- prior_pointerは存在しない状態か、既存pointerのexact bytes・modeとそのdigestを保持する。
+- prior_pointerはgenesisではnull。それ以外はexact keys bytes_base64、mode、digestのobject。
+  bytes_base64は既存pointerの生bytesをRFC 4648標準base64（paddingあり、空白なし）で保存し、
+  decode→encodeの一致とdigestConsumerRuntimeBytes(decoded bytes)との一致を要求する。
+  modeはstat.modeのpermission bits（mode & 0o777）を非負整数で保持する。
   JSON再serializeした等価値をbyte-for-byte snapshotの代わりにしない。
+  genesisのhistory_sequenceは0、prior_bundle_digest/prior_history_tip_digestは文字列genesis、
+  最初のrecordもsequence 0。以後は直前sequence+1で、historyは空prefixから開始する。
+  operation_id、attempt、generation_idはbundle.identityと同値、digestは既存sha256形式とする。
 - publicationはimmutableなpreparedのみ。committedへ書き換えてbundle digestを壊さない。
   committed/uncommitted/unknown/partialは実pointerとsealed bundleの観測から導出する状態である。
 - 同じbundleのbundle_digestをpayload内へ埋めない。payload→files digest→bundle digest→active pointer
   の一方向に計算し、history/receiptとbundleの循環hashを作らない。
 
-## 既存portへの接続
+### 11.3 既存portへの接続
 
 snapshotPriorActivePointerのvoid戻り値は変更しない。adapter instanceのprivate stateへ
 snapshotを保持できる。callerがbundle準備時に読んだpriorとlock取得後のsnapshotが異なれば、
@@ -540,7 +546,7 @@ private staging作成前に拒否する。callerの先読みをCAS authorityに�
 OSが必要なdurability/atomicityを提供できない場合、能力を偽って成功にしない。
 Linux/Windowsの実adapter試験で各操作を証明する。物理実装前に上記候補を非著者検収する。
 
-## read-only reconcile
+### 11.4 read-only reconcile
 
 | 実観測 | 判定 |
 |---|---|
@@ -552,7 +558,7 @@ ack-loss時にpointerやpayloadを再書込みしない。既存reconcile高々�
 staging/quarantine/orphanをruntime discovery候補にしない。rollbackは既存attested prior generationを
 新operationとして履歴へ追加するだけで、古いbundle/historyを変更しない。
 
-## pair oracle補完
+### 11.5 pair oracle補完
 
 既存U/P-PACKNODE候補の対応を維持し、新番号を重複発行しない。次のsubcaseを実adapterのoracleへ追加する。
 

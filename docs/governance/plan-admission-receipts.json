@@ -2736,6 +2736,22 @@
         "revision": 2,
         "content_digest": "sha256:b813bb606bf2a629a69c7bf7931e70cd3adb77a65bbc85231fe622769c6ea5de"
       }
+    },
+    {
+      "sequence": 172,
+      "previous_record_digest": "sha256:c5f43bc48c2110975b676b8e38a6f47ed9fc65a81e44286a465b00a39f703f4f",
+      "record_digest": "sha256:9ec567918659ac13af1fe4105c0e91ad7a501ced812222c24cd1ecd2a57bc7f3",
+      "command_id": "command:issue420-runtime-adapter-contract-r3",
+      "receipt_id": "certificate:0d62778d31373c2ebccbb367598a9ae2",
+      "receipt_digest": "sha256:7dee72cfe7c9926a417c8c1e4662d2495253f424fe479082ca7a003c1588d8f3",
+      "decision_digest": "sha256:d85f59c1c66e93ddbc77ae44872ea6628cc8cd4a6aa8bd094182fcec48e3daa0",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-516-pack-self-contained-consumer-runtime.md",
+        "plan_id": "PLAN-L7-516-pack-self-contained-consumer-runtime",
+        "asset_id": "plan:legacy:d28966ed1d8861940d1ed5bfc5eaebc7dd7b4a9de4ed7adbd65850095c816307",
+        "revision": 3,
+        "content_digest": "sha256:3678d9fb08231a0867c232e75cd5d3920fc08fdf4d41956f813ad513c689805e"
+      }
     }
   ]
 }

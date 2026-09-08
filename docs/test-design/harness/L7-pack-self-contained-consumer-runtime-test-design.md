@@ -88,7 +88,7 @@ matrixの完了やU/P oracleへの昇格を意味しない。
 
 ## 実adapter補完のpair review候補（Issue #420、未実測）
 
-PLAN-L7-516 revision 2の§11と対にする。新しいoracle番号を発行せず、既存候補の未測定軸を
+PLAN-L7-516 revision 3の§11と対にする。新しいoracle番号を発行せず、既存候補の未測定軸を
 実adapterで測る。既存17-testのGreenを下表の証明へ流用しない。
 
 | 既存候補 | 追加する独立入力・fault | 観測する結果 |
@@ -100,7 +100,9 @@ PLAN-L7-516 revision 2の§11と対にする。新しいoracle番号を発行せ
 | CANDIDATE-U-PACKNODE-007 | 実setupへ検証済みaggregateと実producer bytesを供給し、setup元削除後に別cwdで両provider hook/CLIを起動 | consumer-localのみで起動。手書きbundleやstub CLIの成功をこのoracleへ流用しない |
 | CANDIDATE-U-PACKNODE-012 | rename成功直後にackを喪失し、adapter private stateの無い新processで再開 | durable payloadとpointerのexact観測だけで同じ結果。reconcile高々一回、新write/launch 0 |
 | CANDIDATE-U-PACKNODE-012 | prior pointerと一致・当該pointerと一致・第三のpointer・部分bundle・観測不能を別入力にする | uncommitted/committed/indeterminateを区別し、unknownを成功へ丸めない |
+| CANDIDATE-U-PACKNODE-012 | prior_pointerの非canonical base64、bytes digest不一致、mode不一致、nullと既存pointerの取り違え | JSON再serializeの等価比較へ縮退せず、生bytesとmodeの不一致を拒否する |
 
 history完全prefix、sequence、record digest、prior tipの各mutationは既存history候補の下位caseとして
-追加し、同一operation/attemptを再利用しない。Linux/Windows real filesystemでbytes/mode/pathを観測する。
+追加し、同一operation/attemptを再利用しない。genesisは空prefix・sequence 0・prior文字列genesis、
+次recordはsequence 1を測り、開始値と遷移を個別変異する。Linux/Windows real filesystemでbytes/mode/pathを観測する。
 現段階はpair review候補であり、adapter実装・候補昇格・全境界Greenは未主張。
