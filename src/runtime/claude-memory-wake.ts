@@ -335,12 +335,13 @@ function removeProviderBinding(repoRoot: string, entry: ClaudeInboxEntry): void 
   }
 }
 
-function validateProviderBinding(
-  repoRoot: string,
-  entry: ClaudeProviderInboxEntry,
-  provider: ClaudeProvider,
-  sessionId: string,
-): ClaudeProviderEnvelopeValidation {
+function validateProviderBinding(input: {
+  repoRoot: string;
+  entry: ClaudeProviderInboxEntry;
+  provider: ClaudeProvider;
+  sessionId: string;
+}): ClaudeProviderEnvelopeValidation {
+  const { repoRoot, entry, provider, sessionId } = input;
   const bindingResult = readProviderBinding(repoRoot, entry);
   if (!bindingResult.ok) return bindingResult;
   return validateClaudeProviderConsumerEnvelope({
@@ -1438,7 +1439,12 @@ export async function waitForClaudeMemory(input: {
       let envelopeGuard: (() => ClaudeProviderEnvelopeValidation) | undefined;
       if (entry.schemaVersion === CLAUDE_PROVIDER_INBOX_SCHEMA) {
         envelopeGuard = () =>
-          validateProviderBinding(input.repoRoot, entry, provider, input.sessionId);
+          validateProviderBinding({
+            repoRoot: input.repoRoot,
+            entry,
+            provider,
+            sessionId: input.sessionId,
+          });
         const envelopeResult = envelopeGuard();
         if (!envelopeResult.ok) {
           writeAuditLog(input.repoRoot, {
