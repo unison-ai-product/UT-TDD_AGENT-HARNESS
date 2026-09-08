@@ -414,7 +414,7 @@ describe("review live CLI composition", () => {
     expect(runReview).toHaveBeenCalledTimes(1);
     const call = runReview.mock.calls[0]?.[0];
     expect(call).toEqual({
-      repoRoot: root,
+      repoRoot: expect.any(String),
       provider: "claude",
       args: expect.arrayContaining([
         "--review-head",
@@ -424,12 +424,13 @@ describe("review live CLI composition", () => {
         "--execute",
       ]),
     });
+    expect(realpathSync.native(call?.repoRoot as string)).toBe(realpathSync.native(root));
     const taskFileIndex = call?.args.indexOf("--task-file") ?? -1;
     expect(taskFileIndex).toBeGreaterThanOrEqual(0);
     expect(realpathSync.native(call?.args[taskFileIndex + 1] as string)).toBe(
       realpathSync.native(memoryPath),
     );
-    expect(publishReceipt).toHaveBeenCalledWith(root, projection);
+    expect(publishReceipt).toHaveBeenCalledWith(call?.repoRoot, projection);
   });
 
   it("U-RVATT-036 obtains receipt provider/model/role/time/exit facts through the real delegation CLI", () => {
