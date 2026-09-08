@@ -8,7 +8,7 @@ route_signal: feature_addition
 route_mode: add-feature
 status: confirmed
 created: 2026-08-26
-updated: 2026-09-08
+updated: 2026-09-01
 owner: PO / TL
 github_issue_id: 424
 parent_design: docs/governance/ut-tdd-agent-harness-requirements_v1.2.md
@@ -27,8 +27,6 @@ generates:
     artifact_type: test_design
   - artifact_path: src/runtime/project-memory-root.ts
     artifact_type: source_module
-  - artifact_path: src/runtime/claude-provider-envelope.ts
-    artifact_type: source_module
   - artifact_path: tests/project-memory-root.test.ts
     artifact_type: test_code
 dependencies:
@@ -39,7 +37,6 @@ dependencies:
   references:
     - ut-tdd.project.json
     - src/runtime/project-memory-root.ts
-    - src/runtime/claude-provider-envelope.ts
     - tests/project-memory-root.test.ts
     - src/runtime/claude-memory-wake.ts
     - src/memory/service.ts
@@ -99,60 +96,6 @@ review_evidence:
         evidence_path: docs/plans/PLAN-L7-512-project-scoped-memory-root.md
         output_digest: "sha256:58fa0495e096315c0e67d7d9050497b51fcca04640d419b54aed88a8387ad90b"
         anchor_commit: 086714e6992ed05b1af57e01e23551b75f9bb737
-  - reviewer: codex-tl-integration
-    review_kind: intra_runtime_subagent
-    reviewed_at: "2026-09-08T05:13:21Z"
-    tests_green_at: "2026-09-08T05:13:09Z"
-    verdict: "PASS blocking 0; Claude Opus non-author closing review pending"
-    worker_model: gpt-5.6-luna
-    effort: high
-    reviewer_model: codex
-    plan_revision: 89de38593e0a5264480ed5b305c1718bdc3b89b6
-    subject_head: 89de38593e0a5264480ed5b305c1718bdc3b89b6
-    anchor_commit: 89de38593e0a5264480ed5b305c1718bdc3b89b6
-    evidence_path: tests/claude-memory-wake.test.ts
-    scope: >-
-      Issue #528 / PLAN-L7-512 Slice 3 の bounded implementation。project-bound provider
-      envelope、publisher create-exclusive binding sidecar、production consumer claim guard、
-      Memory/review の実compositionを実装し、legacy v2/v3 は明示的移行条件なしに
-      typed deny と entry 保持とした。U-PMEMROOT-007 の各semantic axis、coherent
-      envelope/id/filename spoof、claim 0、entry/sidecar retentionを検証した。
-      Slice 4 migration/quarantine、Slice 5 Pack parity、#439、Bun laneは対象外。
-      Opus non-author closing reviewは未実施であり、ここでは実装candidateの証跡だけを記録する。
-    citations:
-      - "src/runtime/claude-provider-envelope.ts: v4 envelope schema, digest, and consumer validation"
-      - "src/runtime/claude-memory-wake.ts: create-exclusive binding sidecar and production claim guard"
-      - "tests/claude-memory-wake.test.ts: CANDIDATE-U-PMEMROOT-007 and review composition"
-      - "tests/runtime-hook-entrypoints.test.ts: U-MEMWAKE-007 production hook composition"
-      - "89de38593e0a5264480ed5b305c1718bdc3b89b6"
-    green_commands:
-      - kind: integration_test
-        command: "node scripts/run-vitest-snapshot.ts tests/claude-memory-wake.test.ts tests/claude-memory-terminal-gc.test.ts tests/runtime-hook-entrypoints.test.ts -t \"PMEMROOT-007|U-RVATT-025|U-MEMTERM-001|U-MEMTERM-003|U-MEMWAKE-001補遺|U-MEMWAKE-007: CLI hook delivers\" --pool=forks --reporter=dot"
-        runner: node
-        scope: targeted
-        exit_code: 0
-        completed_at: "2026-09-08T05:13:09Z"
-        evidence_path: tests/claude-memory-wake.test.ts
-        output_digest: "sha256:6c5c6e6393684c35d64d518b7454131cc2e04f520a5625e812828d09f0eef2a9"
-        anchor_commit: 89de38593e0a5264480ed5b305c1718bdc3b89b6
-      - kind: typecheck
-        command: "npm exec -- tsc --noEmit"
-        runner: node
-        scope: targeted
-        exit_code: 0
-        completed_at: "2026-09-08T05:01:26Z"
-        evidence_path: src/runtime/claude-provider-envelope.ts
-        output_digest: "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-        anchor_commit: 89de38593e0a5264480ed5b305c1718bdc3b89b6
-      - kind: lint
-        command: "npm exec -- biome check src/runtime/claude-provider-envelope.ts src/runtime/claude-memory-wake.ts tests/claude-memory-wake.test.ts tests/runtime-hook-entrypoints.test.ts"
-        runner: node
-        scope: targeted
-        exit_code: 0
-        completed_at: "2026-09-08T05:01:26Z"
-        evidence_path: src/runtime/claude-provider-envelope.ts
-        output_digest: "sha256:56e00a1025f7f903defd822899e6c06d7347b65e2dd0fe4ddac735e1febf28d6"
-        anchor_commit: 89de38593e0a5264480ed5b305c1718bdc3b89b6
 ---
 
 # PLAN-L7-512: project-scoped canonical Memory and notification root
@@ -180,12 +123,9 @@ transient notification busとして共有する。絶対pathはidentityに含め
 ## 3. Implementation slices
 
 元のpair-freeze（PR #431）では、実装前の契約だけを凍結し、後続実装の成果物を
-`generates`へ先行登録しなかった。PR #512のSlice 1でcanonical rootとproject identityの
-成果物を着地させ、Issue #528のSlice 3でprovider envelopeとclaim guardを追加した。
-既存のMemory CLI／wake、review-live、hook、terminal testの所有は各既存PLANに残し、
-本PLANへ重複登録しない。本PLANが新たに所有するSlice 3成果物は
-`src/runtime/claude-provider-envelope.ts`だけである。inventory／recovery、Pack parityは
-後続sliceであり、本証跡はそれらを生成済みと主張しない。
+`generates`へ先行登録しなかった。現在のPR #512はその後続のbounded Slice 1実装であり、
+下記2件だけをこのPLANの所有成果物として登録する。Memory CLI／wake、provider envelope、
+inventory／recovery、Pack parityは後続sliceであり、このPRはそれらを生成済みと主張しない。
 
 1. canonical root resolverとproject-namespaced transient bus。
 2. Memory CLI、live review、Claude wakeのcanonical root結線。
