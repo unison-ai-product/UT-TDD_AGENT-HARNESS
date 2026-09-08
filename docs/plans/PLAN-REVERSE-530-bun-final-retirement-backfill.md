@@ -40,18 +40,18 @@ status: draft
 github_issue_id: 487
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:37fbe634d28943e62b902979c00b7a78
-  command_id: command:pr521-r2-deny-guard-reverse7
-  admitted_at: 2026-09-08T02:22:29.740Z
-  source_digest: sha256:a7a5bb16c81d40e1a95a54341634404ad2d3bc995b42c8c950b5ea689afc7c4e
-  decision_digest: sha256:0b15d2f71bdbcce794bf910da6b51732daa8a43294363bf733599a0684244d21
-  receipt_digest: sha256:11754291c17cdcb902ec2b7e2455b675c174358ef267fa3bab8964a9b932223b
+  receipt_id: certificate:780e1797ac06eefb3fea3d5f83a1b384
+  command_id: command:pr521-r3-reverse-target-revision8
+  admitted_at: 2026-09-08T03:00:07.503Z
+  source_digest: sha256:1d3bdc80ce85e905a61b26509ff7afefa1f489bf4e3e48742ae5879b8adfcb2a
+  decision_digest: sha256:24d21181ea5928337d8375cb78c78b151b6160d0ed91300c4072dec7a6b85c11
+  receipt_digest: sha256:8635cb22422e11302f0b7a65974e2eb647a2717636b950d17335a43fbc777dc7
   binding:
     path: docs/plans/PLAN-REVERSE-530-bun-final-retirement-backfill.md
     plan_id: PLAN-REVERSE-530-bun-final-retirement-backfill
     asset_id: plan:4727c21e7227fefefdb428f11662676c
-    revision: 7
-    content_digest: sha256:a7a5bb16c81d40e1a95a54341634404ad2d3bc995b42c8c950b5ea689afc7c4e
+    revision: 8
+    content_digest: sha256:1d3bdc80ce85e905a61b26509ff7afefa1f489bf4e3e48742ae5879b8adfcb2a
   route:
     signal: design_gap
     mode: reverse
@@ -69,7 +69,7 @@ admission_receipt:
     implementation_disposition: preserved
   reentry:
     target_plan_id: PLAN-L6-93-node-bootstrap-contract
-    target_revision: 7
+    target_revision: 27
     phase: forward_merge
   escape_reason: "Issue #487 implementation facts backfill to L6 contract"
 ---
@@ -180,3 +180,7 @@ R3で列挙する全到達面の必要pathだけを追加する。
 既存上位契約は定義元、`PLAN-L7-530` pairは最終撤去の実装・test・evidenceの唯一のownerと
 して分離し、同一artifactの二重所有を作らない。R3で実装差分を確定した後にだけ、正規の
 PLAN revision経路で上位へのback-referenceとgapを反映する。
+
+## r3 reentry是正
+
+Reverse自身のrevisionと再合流先のrevisionを混同しない。reentry.target_revisionはPLAN-L6-93のadmission binding revision 27へ束縛する。旧Reverse rev7のtarget_revision 7は誤りであり、本revisionで正規改訂する。
