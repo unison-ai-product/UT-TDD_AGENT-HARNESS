@@ -1098,3 +1098,106 @@ port欠測をfail-closeする。SQLite、PKI、rotation/revocation、secure cloc
 旧componentへ戻す場合も旧manifestは再利用しない。現在floorより大きい新sequenceで、旧componentと現在互換な
 D0-N receiptを再review・再署名し、通常のL8/L9 oracleを再通過したmanifestだけを受理する。
 受理不能なら旧direct-spawnへ戻さず利用停止する。
+
+## 付録 E: PLAN 系譜 seal の preimage 契約 (PLAN-RECOVERY-16、Issue #542)
+
+`SealedLineageLocalMigration` (`src/plan-asset/ledger/sealed-lineage-local-migration.ts`、artifact owner は
+`PLAN-RECOVERY-16-plan-revision-authoring`) は、tracked history が clean checkout から復元不能な PLAN 系譜を
+`historical_sealed_unrehydratable` として封印し、HEAD 本文を successor asset revision 1 として genesis 移行する
+唯一の正規経路である。本付録はその入力 digest の exact preimage と Git object 照合を processing 契約として固定する。
+物理正本 (`.ut-tdd/ledger/harness-ledger.db` が PLAN asset/revision/admission の canonical ledger であること) は
+[physical-data.md](physical-data.md) §2.7.1 が拘束し、本付録はその row を書く前の判定側を拘束する。
+
+### E.1 契約が無いことによる欠陥 (freeze の動機)
+
+`validate` は 64 hex 構文と `sha(canonicalPayloadJson) === canonicalPayloadDigest` しか検査しない。
+`certificateDigest` / `sourceAuthorityDigest` / `reviewedImplementationAuthorityDigest` は導出も照合もなく
+`sealed_plan_lineages` / `plan_lineage_migration_certificates` / `plan_admission_events` /
+`plan_admission_receipts` / `append_command_receipts` へ転記される。任意の 64 hex を authority として通せるため、
+封印と genesis の証跡が偽装可能である。本付録の照合を欠いた実行は受理しない。
+
+### E.2 framing 規約 (既存 asset id 導出と同一)
+
+digest の preimage は、順序付き文字列列の各要素を「UInt32BE の byte 長 + UTF-8 bytes」で連結し sha256 する。
+これは `plan-revision-command-assembler.ts` の legacy asset id 導出と同一の framing であり、新しい algorithm 族を
+作らない。列の先頭要素は必ず algorithm label とする。
+
+| 導出対象 | algorithm label | 出力形式 |
+|---|---|---|
+| successor asset id | `ut-tdd-plan-rebase-v1` | `plan:rebase:<64 hex>` |
+| source authority digest | `ut-tdd-seal-source-authority-v1` | `<64 hex>` |
+
+successor asset id の preimage は `[label, repositoryIdentity, planId]` とする。`repositoryIdentity` は tracked
+`ut-tdd.project.json` の `repository_identity` であり、HEAD blob 一致と worktree 一致を
+`src/kernel/project-identity.ts` が強制する値だけを使う。任意 seed を与えてはならない。
+
+### E.3 `sourceAuthorityDigest`
+
+preimage は次の順序付き列とする。
+
+```text
+[ut-tdd-seal-source-authority-v1, repositoryIdentity, planId, sourcePath, sourceCommit, sourceBlobOid,
+ canonicalPayloadDigest, bodyDigest, historicalProjectionPath, historicalProjectionBlobOid,
+ historicalProjectionContentDigest]
+```
+
+`sourceBlobOid` は現行入力に存在しないため、封印対象 PLAN 本文の blob OID を新規入力として追加する。既存 seal row は
+リポジトリ内外のいずれの ledger にも存在しない (Issue #542 の全数 read-only 監査で `harness-ledger.db` 7 件すべてが
+`plan_lineage_migration_certificates` 0 row) ため、入力型の拡張による replay identity の変化は既存受理を壊さない。
+
+自己申告値の hash は authority にならない。次を実 Git object へ照合し、いずれか不成立で write 0 とする。
+
+| 照合 | 不成立時の typed reason |
+|---|---|
+| `sourceCommit` に `sourcePath` が blob として存在する | `seal-source-path-absent` |
+| その blob OID が `sourceBlobOid` と一致する | `seal-source-blob-mismatch` |
+| blob bytes から再計算した canonical payload digest と body digest が宣言値と一致する | `seal-source-payload-drift` |
+| `historicalProjectionPath` の blob OID と content digest が同一 `sourceCommit` 帰属で宣言値と一致する | `seal-projection-custody-mismatch` |
+| 照合中に HEAD が変化していない (TOCTOU 再確認) | `seal-source-head-toctou` |
+
+照合は `project-identity.ts` と同じ preflight 規律 (tracked blob 読み出し + 再確認) に従い、呼び出し側の port として
+注入する。writer transaction を Git I/O へ拡張しない。
+
+### E.4 `reviewedImplementationAuthorityDigest`
+
+既存の canonical review receipt を再利用し、新しい authority を作らない。値は
+`.ut-tdd/review/receipts/<digest>.json` の **file bytes の sha256** とする。受理条件は次のすべてである。
+
+- `verdict` が `PASS` または `PASS-WEAK` であり、`blockingFindings` が空である
+- `head` が seal を実装した exact HEAD と一致する
+- `reviewerFamily` が著者 family と異なる (`cross_agent` 分離)
+- `reviewRevision` の suffix がファイル名 digest と一致する (receipt 実体とファイル identity の結合)
+
+不成立は `seal-review-authority-invalid` とする。CI run や aggregate 成功は authority として採らない
+(新 authority の導入になるため)。
+
+### E.5 `certificateDigest`
+
+`certificate_json` を authority まで束縛する形へ拡張し、`certificateDigest` は
+**`sha256(certificate_json)` の一致必須**とする (不一致は `seal-certificate-digest-mismatch`)。
+`certificate_json` は `canonical()` (キー順固定) で次のフィールドを持つ。
+
+```text
+{planId, historicalAssetId, historicalTerminalRevision, historicalTailDigest, successorAssetId,
+ successorRevision, sourceAuthorityDigest, reviewedImplementationAuthorityDigest}
+```
+
+これにより certificate identity が authority の差を識別する。二層 identity (certificate は系譜のみ、authority は
+別列) は採らない。既存 4 フィールド版の certificate row は存在しないため後方互換の負債は生じない。
+
+### E.6 負系 oracle (対で必須)
+
+E.3〜E.5 の各項目について、1 bit 改変で write 0 となる負系を対で置く。最低限、次を独立に持つ。
+
+- 3 digest それぞれの 1 bit 改変 → typed reason で拒否、全 table への write 0
+- E.3 の Git 照合 5 種それぞれの不成立
+- `certificate_json` のフィールド欠落・順序変更 → digest 不一致で拒否
+- review receipt の `verdict=FLAG` / `blockingFindings` 非空 / 同一 family / head 不一致
+- 既存 `U-PA-SEAL-001..003` の冪等・conflict・fault injection boundary 集合を弱めない
+
+### E.7 適用範囲
+
+本契約は tracked terminal revision が 2 以上でローカル ledger に asset が無いすべての PLAN に同一手順で適用する
+(Issue #542 時点で tracked ledger 29 PLAN のうち 28 件が該当)。個別 PLAN 専用の例外手順を作らない。
+封印対象ごとの固定 preimage は `ut-tdd:genesis-rebase-migration/v1` 形式で Issue 本文に宣言し
+(先例 Issue #143、L6-93 は Issue #541)、`Inference forbidden: true` を明記する。
