@@ -1145,9 +1145,12 @@ preimage は次の順序付き列とする。
  historicalProjectionContentDigest]
 ```
 
-`sourceBlobOid` は現行入力に存在しないため、封印対象 PLAN 本文の blob OID を新規入力として追加する。既存 seal row は
-リポジトリ内外のいずれの ledger にも存在しない (Issue #542 の全数 read-only 監査で `harness-ledger.db` 7 件すべてが
-`plan_lineage_migration_certificates` 0 row) ため、入力型の拡張による replay identity の変化は既存受理を壊さない。
+`sourceBlobOid` は現行入力に存在しないため、封印対象 PLAN 本文の blob OID を新規入力として追加する。
+入力型の拡張は `canonical(input)` 由来の command digest と replay identity を変えるため、seal 実行時に対象 ledger で
+既存 `plan_lineage_migration_certificates` row と command id の不在を確認したうえで適用する。
+2026-09-08 に当該 machine の `harness-ledger.db` 7 件を read-only で確認した時点では該当 row は無かったが、
+これは**その時点・その範囲の観測であり、互換性の契約ではない**。他の machine や未検査の ledger に対する
+不在を主張しない。
 
 自己申告値の hash は authority にならない。次を実 Git object へ照合し、いずれか不成立で write 0 とする。
 
@@ -1198,9 +1201,11 @@ seal 側で family 分離を強証明したことにしてはならない。fami
 
 ### E.5 `certificateDigest`
 
-`certificate_json` を authority まで束縛する形へ拡張し、`certificateDigest` は
-**`sha256(certificate_json)` の一致必須**とする (不一致は `seal-certificate-digest-mismatch`)。
-`certificate_json` は `canonical()` (キー順固定) で次のフィールドを持つ。
+`certificate_json` を authority まで束縛する形へ拡張する。`certificate_json` は writer が内部で
+`canonical()` により生成する **byte 列**であり、`certificateDigest` はその byte 列の sha256 と一致必須とする
+(不一致は `seal-certificate-digest-mismatch`)。digest の preimage は object ではなく確定した byte 列である。
+caller から `certificate_json` の byte 列を受け取る設計にはしない (受け取ると非 canonical な直列化を
+digest の preimage にできてしまう)。フィールド集合とキー順は次で固定する。
 
 ```text
 {planId, historicalAssetId, historicalTerminalRevision, historicalTailDigest, successorAssetId,
@@ -1216,7 +1221,12 @@ E.3〜E.5 の各項目について、1 bit 改変で write 0 となる負系を�
 
 - 3 digest それぞれの 1 bit 改変 → typed reason で拒否、全 table への write 0
 - E.3 の Git 照合 5 種それぞれの不成立
-- `certificate_json` のフィールド欠落・順序変更 → digest 不一致で拒否
+- `certificate_json` のフィールド欠落・値改変 → writer が生成する byte 列が変わるため digest 不一致で拒否
+- caller が `certificate_json` の byte 列や `certificateDigest` を独自に供給する経路が存在しないこと
+  (キー順を変えた等価 object を preimage にできない。「等価 object なのに digest 不一致」という矛盾した
+  oracle は置かない。拒否されるのは caller 供給経路そのものである)
+- 自己整合的に偽造された review receipt file (listed 条件をすべて満たすが custody 経路で検証できないもの)
+  → `seal-review-authority-invalid` で拒否。E.4 の live 観測経路を通さない受理が無いことを負系で示す
 - review receipt の `verdict=FLAG` / `blockingFindings` 非空 / 同一 family / head 不一致
 - 既存 `U-PA-SEAL-001..003` の冪等・conflict・fault injection boundary 集合を弱めない
 
