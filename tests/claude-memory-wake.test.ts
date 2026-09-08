@@ -64,7 +64,7 @@ function wakeRuntimeRoot(root: string): string {
 }
 
 describe("Claude HARNESS memory async wake", () => {
-  it("CANDIDATE-U-PMEMROOT-007: provider envelope rejects each binding axis independently", async () => {
+  it("U-PMEMROOT-007: provider envelope rejects each binding axis independently", async () => {
     const root = fixture();
     try {
       const project = resolveProjectMemoryRoot(root);
@@ -171,7 +171,7 @@ describe("Claude HARNESS memory async wake", () => {
     }
   });
 
-  it("CANDIDATE-U-PMEMROOT-007 review composition: v4 review claims through the same guard", async () => {
+  it("U-PMEMROOT-007 review composition: v4 review claims through the same guard", async () => {
     const root = fixture();
     try {
       const project = resolveProjectMemoryRoot(root);
