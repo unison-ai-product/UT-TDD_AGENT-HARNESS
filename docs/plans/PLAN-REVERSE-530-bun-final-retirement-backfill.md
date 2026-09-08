@@ -40,18 +40,18 @@ status: draft
 github_issue_id: 487
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:7e9a100438cc0c8d22c9d303f391de98
-  command_id: command:pr520-issue487-reverse-cleanup-revision5
-  admitted_at: 2026-09-04T11:32:00.000+09:00
-  source_digest: sha256:e65c2b3c1cd4fec80e8ef9cd606759f60cc45c647bf1254ee24bf3b77be09d07
-  decision_digest: sha256:f5991834163656341697a8a9cefdcab8f1a205f73510fe91a0ffc38c2452d661
-  receipt_digest: sha256:6bde5f25786cc18fc9c27fc47184920e6ba1e27fa96278ad6a016b0e657b762b
+  receipt_id: certificate:9992c7101ac0cb8766b14a0636967a70
+  command_id: command:pr521-issue487-reverse-inventory-revision6
+  admitted_at: 2026-09-08T01:24:49.373Z
+  source_digest: sha256:10bb8a0e3ade00563cc23eaffd45f823cf23fe9d6a7572937ac334cfe4093ab8
+  decision_digest: sha256:24d21181ea5928337d8375cb78c78b151b6160d0ed91300c4072dec7a6b85c11
+  receipt_digest: sha256:8ffde86b495b5d7c31fdc3868d009a03414c6910402309185f93f108b40db10b
   binding:
     path: docs/plans/PLAN-REVERSE-530-bun-final-retirement-backfill.md
     plan_id: PLAN-REVERSE-530-bun-final-retirement-backfill
     asset_id: plan:4727c21e7227fefefdb428f11662676c
-    revision: 5
-    content_digest: sha256:e65c2b3c1cd4fec80e8ef9cd606759f60cc45c647bf1254ee24bf3b77be09d07
+    revision: 6
+    content_digest: sha256:10bb8a0e3ade00563cc23eaffd45f823cf23fe9d6a7572937ac334cfe4093ab8
   route:
     signal: design_gap
     mode: reverse
@@ -114,10 +114,30 @@ Forward/test-designと同じ候補をこの Reverse の実装検証境界にも�
 
 実装後に次を区別して上位へ戻す。
 
-- `reachable_production`: `package.json`の`build`、`bunAuthority`、`bun.lock`に加え、
-  `scripts/git-hooks/secret-scan-diff.ts` のBun shebang/direct-entry と
-  `scripts/run-vitest-snapshot.ts` の `resolveBunBinary` / `UT_TDD_BUN_BINARY`受渡しを
-  実tree inventoryへ置く。1件でも残れば未完了。
+- `reachable_production`: `package.json`の`build`、`bunAuthority`、`bun.lock`、
+  `src/cli.ts`のBun shebang/emitted command、`src/state-db/index.ts`のBun driver、
+  `src/setup/distribution.ts`の`bun.lock`、`src/setup/templates.ts`の`bun.lockb`、
+  `.claude/hooks/{agent-guard,session-log,work-guard}.ts`のBun direct-entryに加え、
+  `scripts/git-hooks/secret-scan-diff.ts`のBun shebang/direct-entryと
+  `scripts/run-vitest-snapshot.ts`の`resolveBunBinary`/`UT_TDD_BUN_BINARY`受渡し、
+  `skills/git.md`および`skills/test-driven-development.md`のPack同梱runtime instruction surfaceも
+  含め、全tracked treeからinventoryする。PLAN-L7-488/PLAN-L7-491はこの2 skill fileを所有していないため、
+  未分類のまま残さず#487のreachable scopeとして扱う。
+  正規コマンドは候補を広く収集してから個別分類する
+  次の形で固定し、SHAをpatternとして渡す誤りや`scripts/`限定を許さない。
+
+  ```sh
+  git grep -n -I -i -e bun 6e9aeb99 -- . ':(exclude).git/**'
+  git ls-tree -r --name-only 6e9aeb99 -- . ':(exclude).git/**' | grep -i bun
+  ```
+
+  `tests/**`、`**/fixtures/**`、`.ut-tdd/**`、`docs/**`、`vendor/**`、`docs/archive/**`は
+  raw inventoryから削除せず、実行・生成・配布・AI指示の到達性を個別確認する。path名だけで
+  除外せず、非到達を証明できた候補のみ`retained_fixture`/`history`として扱う。#470/#471/#472/#500/#484/#515の所有面は
+  `out_of_scope_owned_elsewhere`として記録し、#487が再所有しない。1件でも未分類・未所有・
+  到達判定不能なら未完了/`Indeterminate`とする。
+  `ubuntu`、`bundle`など語境界に依存しない候補は`non_applicable_false_positive`としてraw
+  inventoryに残し、path・文脈の個別確認後にBun実行面から除外する。
 - `retained_fixture`: Q0 detectorが自分自身を検証するための専用fixture。production inventory、
   allowlist、生成Pack、consumer runtimeから参照できないことを実測する。
 - `unobserved`: OS、権限、provider、history、または対象面が観測不能な状態。解決済み扱いせず
@@ -147,7 +167,7 @@ release公開そのものではない。#470/#471/#472の完了済みconsumer/re
 Pack CI policy、#450 program closure、#473配下のNode producer (#484/#515)を再吸収しない。
 `package.json`の`build`、`bunAuthority`、`bun.lock`のfinal deletionはIssue #487と本pairが一意に所有する。
 `status: draft` の間は、現行mainのproduction artifactの所有を変更せず、実装PRが同一revisionで
-上記package/authority/lock及びscripts境界の必要pathだけを追加する。
+R3で列挙する全到達面の必要pathだけを追加する。
 
 上位 `PLAN-L6-93` / `PLAN-L7-458` の直接改訂はこのpair-freeze PRのscope外とする。
 既存上位契約は定義元、`PLAN-L7-530` pairは最終撤去の実装・test・evidenceの唯一のownerと

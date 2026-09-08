@@ -42,18 +42,18 @@ status: draft
 github_issue_id: 487
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:0edd180776d3f4c02380a9df234fbc4d
-  command_id: command:pr520-issue487-forward-ownership-revision3
-  admitted_at: 2026-09-04T11:30:00.000+09:00
-  source_digest: sha256:984e3b1ce5e4fe7d55535af0d8a3d0e738fda6e159530bfd288052a0eaab1662
-  decision_digest: sha256:96a1dbe85637e79ce863360a99e4b2f96dce8f65fbd8dde93dd12a027cfe7c29
-  receipt_digest: sha256:1ab46b102a03f84e69e2ff5cffeb8f1578d0119d6db1ba06b9b3f7c1e9068610
+  receipt_id: certificate:dc96326c9df67bdf75e829e46d1a0d7a
+  command_id: command:pr521-issue487-forward-inventory-revision4
+  admitted_at: 2026-09-08T01:24:02.868Z
+  source_digest: sha256:3f3fe0e367f3983b9414bf3502707586821b045ef6ed652dda259f57094a5979
+  decision_digest: sha256:94706b42f6072bf32897b9a733a200286b383b5b9e7b943587d888a89aa5d150
+  receipt_digest: sha256:62d3014ae34a65c76f8f9c4770085027518564fd04667b9b3292b21fb1539bd5
   binding:
     path: docs/plans/PLAN-L7-530-bun-final-retirement.md
     plan_id: PLAN-L7-530-bun-final-retirement
     asset_id: plan:bc9250c9a7c873dcb9f18956677371f7
-    revision: 3
-    content_digest: sha256:984e3b1ce5e4fe7d55535af0d8a3d0e738fda6e159530bfd288052a0eaab1662
+    revision: 4
+    content_digest: sha256:3f3fe0e367f3983b9414bf3502707586821b045ef6ed652dda259f57094a5979
   route:
     signal: feature_addition
     mode: add-feature
@@ -73,7 +73,7 @@ admission_receipt:
     target_plan_id: PLAN-L7-530-bun-final-retirement
     target_revision: 1
     phase: forward_merge
-  escape_reason: "Issue #487 final Bun retirement after Q0 prerequisite receipts"
+  escape_reason: "Issue #487 final Bun retirement inventory scope revision"
 ---
 
 # PLAN-L7-530: Bun 最終撤去の tuple-bound 実装契約
@@ -128,15 +128,37 @@ package script、runtime wrapper、CI、setup、Pack template、consumer generat
 参照可能であってはならない。fixtureを残したことを「Bunが残っている」と数えるかどうかを
 曖昧にせず、scannerに `fixture` と `reachable_production` の区別を持たせる。
 
-base `6e9aeb99` の実treeを `git grep 6e9aeb99 -- scripts` で再調査した結果、この実装
-sliceが inventory と撤去oracleへ含める reachable surface は次の2系統だけである。
+base `6e9aeb99` の全tracked treeを、scriptsだけに限定せず次の広い候補走査で再走査する。
+語境界・拡張子・provider表記を先に絞らず、false positiveを含む候補を全件収集してから
+各pathを個別分類する。SHAはpatternではなくtree-ishとして指定し、binary lockfileは
+`git grep` が読まないためpath inventoryも同時に出す。
 
-- `scripts/git-hooks/secret-scan-diff.ts` の `#!/usr/bin/env bun` と Bun direct-entry
-  分岐。`pre-push` がNodeで呼ぶ通常経路とは別に、shebangによる直接起動が残る。
-- `scripts/run-vitest-snapshot.ts` の `resolveBunBinary`、`UT_TDD_BUN_BINARY`、及び
-  snapshot runnerからのBun executable受渡し。test/acceptance runnerがBunを探索・実行・
-  download可能なfixture依存として保持している経路を、production到達と混同せず明示的に
-  inventoryし、撤去又は専用fixture隔離を検証する。
+```sh
+git grep -n -I -i -e bun 6e9aeb99 -- . ':(exclude).git/**'
+git ls-tree -r --name-only 6e9aeb99 -- . ':(exclude).git/**' | grep -i bun
+```
+
+raw outputは次の固定分類へ必ず割り当てる。`tests/**`、`**/fixtures/**`、`.ut-tdd/**`、
+`docs/**`、`vendor/**`、`docs/archive/**` は検出結果から削除するのではなく、
+`retained_fixture`/`history`として inventory に残し、production到達判定からだけ除外する。
+
+| base `6e9aeb99` の検出面 | 分類と #487 の扱い |
+|---|---|
+| `src/cli.ts:1` の Bun shebang、`src/cli.ts:2237` の emitted Bun command | `reachable_production`。#487所有、Node経路へ撤去。 |
+| `src/state-db/index.ts` の `currentDriver`/`openNative` と `bun:sqlite` | `reachable_production`。#487所有、Node driverへ切替後にBun branchを撤去。 |
+| `src/setup/distribution.ts:162` の `bun.lock`、`src/setup/templates.ts:227` の `bun.lockb` | setup/templateの生成到達面。#487所有、出荷物から撤去または明示的retained fixtureへ隔離。 |
+| `.claude/hooks/{agent-guard,session-log,work-guard}.ts` の Bun shebang/command | source runtimeの直接起動面。#487所有、Node hook entryへ撤去。 |
+| `scripts/git-hooks/secret-scan-diff.ts` の Bun shebang/direct-entry | `reachable_production`。#487所有。 |
+| `scripts/run-vitest-snapshot.ts` の `resolveBunBinary`/`UT_TDD_BUN_BINARY` | test/acceptance runnerの到達面。#487所有、専用fixture隔離後にproduction受渡しを撤去。 |
+| `skills/git.md`、`skills/test-driven-development.md` の `bun run` 実行指示 | Pack同梱のruntime instruction surface。既存のPLAN-L7-488/PLAN-L7-491はこの2ファイルを所有していないため、#487所有としてNode/npm指示へ是正する。 |
+| `package.json` の `build`/`bunAuthority`、`bun.lock` | #487がtuple成立後に撤去する中核。 |
+| #470/#471/#472が所有するgenerated consumer/readiness/source-CI面、#500 Pack CI policy、#484/#515 Node producer | `out_of_scope_owned_elsewhere`。raw inventoryには残すが、#487は再所有しない。 |
+| `tests/**`/`**/fixtures/**`/`.ut-tdd/**`/`docs/**`/`vendor/**` の検出語 | path名のみでは分類しない。実行・生成・配布・AI指示からの到達性を個別に確認し、非到達の証拠がある候補だけを `retained_fixture`/`history` とする。 |
+| `ubuntu`/`bundle` などの語境界に依存しない候補 | `non_applicable_false_positive`。raw候補には残し、path・文脈を個別確認した上でBun実行面の証拠にはしない。 |
+
+上記表の `reachable_production` は「scripts 2系統だけ」の閉じた集合ではない。各pathを
+独立Red oracleへ束ね、1件でも未分類・未所有・到達判定不能なら `Indeterminate` として
+撤去を0にする。
 
 `package.json` の `build`、`bunAuthority`、`bun.lock` はIssue #487が所有するfinal deletionの中核であり、
 4要素tuple成立後に本PLANで物理撤去する。#470（生成成果物）、#471（readiness）、#472（source CI）の
@@ -169,7 +191,7 @@ state、別のreceipt trust root、別のBun allowlistを作らない。
 してから `generates` と同一revisionへ追加する。
 
 - Bun final retirement admission/verifier とその schema/test
-- production reachable-surface inventory と typed report（上記 `scripts/` 2系統）
+- production reachable-surface inventory と typed report（§3 の全到達面。scripts に限定しない）
 - `package.json` の `build`、`bunAuthority`、`bun.lock` と関連toolchain policyの物理撤去
 - `secret-scan-diff.ts` shebang/direct entry と snapshot runnerのBun fixture依存の撤去又は隔離
 - retained Q0 fixture の隔離と detector coverage
