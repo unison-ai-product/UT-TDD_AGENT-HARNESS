@@ -40,18 +40,18 @@ status: draft
 github_issue_id: 487
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:780e1797ac06eefb3fea3d5f83a1b384
-  command_id: command:pr521-r3-reverse-target-revision8
-  admitted_at: 2026-09-08T03:00:07.503Z
-  source_digest: sha256:1d3bdc80ce85e905a61b26509ff7afefa1f489bf4e3e48742ae5879b8adfcb2a
+  receipt_id: certificate:a3ffb99ad2061a8b7b0249a2c9afaed1
+  command_id: command:pr521-r3-reverse-classification-revision9
+  admitted_at: 2026-09-08T03:07:03.979Z
+  source_digest: sha256:08b640f163199a010d07b7a9659dca5a795a2725fbb6dfa517c73b178d5901c3
   decision_digest: sha256:24d21181ea5928337d8375cb78c78b151b6160d0ed91300c4072dec7a6b85c11
-  receipt_digest: sha256:8635cb22422e11302f0b7a65974e2eb647a2717636b950d17335a43fbc777dc7
+  receipt_digest: sha256:cc84182c891da4de15471948a322f6e5e99a3478fd3e95bc72a67469d35fe097
   binding:
     path: docs/plans/PLAN-REVERSE-530-bun-final-retirement-backfill.md
     plan_id: PLAN-REVERSE-530-bun-final-retirement-backfill
     asset_id: plan:4727c21e7227fefefdb428f11662676c
-    revision: 8
-    content_digest: sha256:1d3bdc80ce85e905a61b26509ff7afefa1f489bf4e3e48742ae5879b8adfcb2a
+    revision: 9
+    content_digest: sha256:08b640f163199a010d07b7a9659dca5a795a2725fbb6dfa517c73b178d5901c3
   route:
     signal: design_gap
     mode: reverse
@@ -184,3 +184,47 @@ PLAN revision経路で上位へのback-referenceとgapを反映する。
 ## r3 reentry是正
 
 Reverse自身のrevisionと再合流先のrevisionを混同しない。reentry.target_revisionはPLAN-L6-93のadmission binding revision 27へ束縛する。旧Reverse rev7のtarget_revision 7は誤りであり、本revisionで正規改訂する。
+
+## r3: 非実行語彙とexact Git inventoryの分類補完
+
+分類はpathの閉じた許可リストではなく、各subjectの全raw候補に対するpath+symbolの意味判定である。
+上表・前節のpathは代表例であり、列挙外を自動免除しない。未分類は従来どおりIndeterminate。
+同じfileでもBun起動・import・download・fallback・生成物混入・実行指示はreachable_productionへ分離する。
+
+- `ban_enforcement_guard`: 禁止検出・拒否の実処理と、そのmatcher/typed reason。
+  既存例に加え、`src/doctor/test-repository-isolation.ts` の `MUTATION_TARGET_ARGS` / Bun.write識別、
+  `src/state-db/stop-refresh.ts` の `isBunExecutable` / `refuseBunStopRefresh` を含む。
+  BunではなくGit/Nodeを使う検査自体をBun実行と誤認しない。Bun実行へ到達しないことと
+  既存拒否検出力を個別に証明し、guard削除・常時Green・allowlist弱体化は独立Redを維持する。
+- `retained_compatibility_vocabulary`: 履歴証跡を読むenum、識別名、観測済み入力の純粋分類、
+  用語検査だけを行う非実行語彙。schemaが文字を受理することはBun実行の許可ではない。
+  `src/schema/frontmatter.ts` のgreen_commands.runner enumと
+  `src/lint/review-evidence.ts` の `GREEN_COMMAND_RUNNERS` は過去runner: bun証跡の読取互換として保持する。
+  新規証跡の正規runnerはNodeであり、既存履歴の書換えやBun再実行を要求しない。
+  `src/lint/design-language.ts:TECHNICAL_WORD_ALLOWLIST` のBun、
+  `src/runtime/verb-classify.ts:classifyVerificationVerb` の入力分類は用語/観測データの認識であり、
+  起動・実行指示生成をしないことを確認してこの分類に置く。
+- 同じ分類に `src/lint/verification-profile-catalog.ts:PROFILES["bun-unit"]` と
+  `src/lint/verification-profile-types.ts:VerificationProfileId` の互換IDを置く。
+  baseではcommandが `node scripts/run-vitest-snapshot.ts`、executableがNodeであることをGit objectで確認する。
+  IDだけを理由にBunを起動すると誤認しない。ただし参照先snapshot runnerのBun解決/受渡しは
+  独立したreachable_productionであり、この互換IDを理由に免除しない。
+- `src/doctor/setup-smoke.ts:SETUP_SMOKE_REQUIRED_FILES` はbaseで `.ut-tdd/bin/ut-tdd.mjs`、
+  `nativeInvocation` はNode、検査名は `wrapper-launcher-contract` である。
+  run-bun.tsの残存文字列は既に退役した経路の説明でありhistoryへ分類する。
+  #470所有のNode wrapper検査を再実装しない。現subjectでBun必須へ変異した場合はreachableとして拒否する。
+- 非実行の識別子/説明もraw inventoryから消さない。Bunを起動する復旧案を出力する
+  `src/lint/write-encoding-guard.ts:writeEncodingGuardMessages` 等の現行指示は
+  retained語彙ではなくreachable_productionとしてNode-only指示へ是正する。
+
+CAND-NODEBOOT-208の判定単位は「Bunを実行・導入・生成物へ混入・実行指示する到達面」である。
+non-executing語彙の読取それ自体はBun到達面ではない。互換enum/用語/IDを保持しても、Bun spawn/import/
+download/fallbackまたはBun実行指示へ変異させればRedになる独立oracleを要求する。
+逆に、履歴enumを無条件削除して過去証跡を読めなくすることを成功としない。
+到達性未証明や語彙と実行面の混在はIndeterminateを維持する。
+
+存在確認はworking treeやglob推測ではなく `git ls-tree` / `git show` のexact objectへ束縛する。
+base `6e9aeb99048d46d599d5fe477fdca5592aa2ff44` の `src/lint/bun-permanent-ban.ts` は
+blob `8b287b136b864630544b1035e0897d01eeb1ef7b` として実在する。
+setup-smokeはblob `1bf3fa8a49b5085acbda78854a605bd751103a0d`。
+この観測はレビュー判定の自己解除ではなく、次の非著者reviewへ提示する反証である。
