@@ -2093,7 +2093,7 @@ source-side artifact admissionを、consumer runtime隔離の代替証拠とし�
 | `CAND-NODEBOOT-028` | `retirement_subject`が撤去commitのsubject revisionと不一致 (過去に成立した2 receiptを別commitでの撤去へ流用) | 撤去をfail-close。tuple 3要素一致でも4要素目の不一致で落ちることを固定する |
 | `CAND-NODEBOOT-029` | `scripts/ut-tdd.ps1`のBOM変異 — 独立4case: (a) BOM欠落、(b) BOM 2個以上、(c) **BOM 1個だが byte が異なる** (`EF BB BE` / `EF BF BF` 等)、(d) UTF-16 LE/BEへのencoding差し替え | いずれも`C_ps1`由来の受理4集合外としてfail-close (PLAN-L6-93 §5.2.1)。**POSIX側と同一規則を当てる実装は (a) を通す**ため file別canonical byte列であることを固定し、**BOM個数とencoding familyだけを見る実装は (c) を通す**ため byte等価で判定していることを固定する |
 | `CAND-NODEBOOT-030` | `scripts/ut-tdd`へ先頭BOM (`EF BB BF`) を混入 | `C_posix`由来の受理4集合外としてfail-close。shebang破壊を検出規則として固定する (BOM必須を両fileへ一律適用する実装を落とす) |
-| `CAND-NODEBOOT-208` | Q0後の最終撤去で、productionへ到達可能なBun build/fallback surfaceを1件残す、または検出用retained fixtureをproduction allowlistへ混入する | production reachable surfaceを全件inventoryし、1件でも残ればtyped `NonCompliant`/`Indeterminate`で撤去0。retained fixtureは専用rootに隔離され、生成Pack/consumer/runtimeから到達不能であることを実測する |
+| `CAND-NODEBOOT-208` | Q0後の最終撤去で、実行・生成・配布・AI指示のreachable Bun surfaceを1件残す、または検出用retained fixtureをproduction allowlistへ混入する | reachable surfaceを全件inventoryし、1件でも残ればtyped `NonCompliant`/`Indeterminate`で撤去0。`ban_enforcement_guard`はpath+symbol単位のdeny専用を検証し、raw文字列件数では判定しない。retained fixtureは専用rootに隔離され、生成Pack/consumer/runtimeから到達不能であることを実測する |
 
 `CAND-NODEBOOT-023`、`027`、`028`、`208` の最終撤去実装とpair evidenceの所有者は
 `PLAN-L7-530-bun-final-retirement`、上位へのgap-only backfillは
@@ -2114,6 +2114,12 @@ Bun direct-entry、`scripts/git-hooks/secret-scan-diff.ts` の Bun shebang/direc
 この2 skill fileを所有しないため、#487のreachable scopeとして各pathを独立Redへ束ね、1件でも
 未分類なら`Indeterminate`とする。`ubuntu`、`bundle`などはraw候補に残した上でpath・文脈を
 個別確認し、`non_applicable_false_positive`としてBun実行面から除外する。
+検出器自身の `src/lint/bun-permanent-ban.ts`、`runtime-portability.ts`、`rule-drift.ts`、
+`toolchain-pin.ts`、`github-ci-policy.ts` および `src/doctor/rule-quality.ts` のBun文字列・regexは
+`ban_enforcement_guard`として保持する。path+symbol単位でspawn/install/download/fallbackがない
+deny専用であることを個別に検証し、同じfile内の実行面は免除しない。
+既存のU-PACKBUN-006等の独立guard mutationで、guard削除・常時Green化・allowlist弱体化を
+各々Redにする。検出器自身のBun文字列削除をGreen扱いするoracleは不受理とする。
 `tests/**`、`**/fixtures/**`、`.ut-tdd/**`、`docs/**`、`vendor/**`、`docs/archive/**`は
 raw inventoryに残す。path名だけで除外せず、実行・生成・配布・AI指示からの非到達を個別に証明できた
 候補のみ`retained_fixture`/`history`として分類する。

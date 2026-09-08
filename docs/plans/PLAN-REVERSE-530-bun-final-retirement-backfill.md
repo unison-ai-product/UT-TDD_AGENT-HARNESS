@@ -40,18 +40,18 @@ status: draft
 github_issue_id: 487
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:9992c7101ac0cb8766b14a0636967a70
-  command_id: command:pr521-issue487-reverse-inventory-revision6
-  admitted_at: 2026-09-08T01:24:49.373Z
-  source_digest: sha256:10bb8a0e3ade00563cc23eaffd45f823cf23fe9d6a7572937ac334cfe4093ab8
-  decision_digest: sha256:24d21181ea5928337d8375cb78c78b151b6160d0ed91300c4072dec7a6b85c11
-  receipt_digest: sha256:8ffde86b495b5d7c31fdc3868d009a03414c6910402309185f93f108b40db10b
+  receipt_id: certificate:37fbe634d28943e62b902979c00b7a78
+  command_id: command:pr521-r2-deny-guard-reverse7
+  admitted_at: 2026-09-08T02:22:29.740Z
+  source_digest: sha256:a7a5bb16c81d40e1a95a54341634404ad2d3bc995b42c8c950b5ea689afc7c4e
+  decision_digest: sha256:0b15d2f71bdbcce794bf910da6b51732daa8a43294363bf733599a0684244d21
+  receipt_digest: sha256:11754291c17cdcb902ec2b7e2455b675c174358ef267fa3bab8964a9b932223b
   binding:
     path: docs/plans/PLAN-REVERSE-530-bun-final-retirement-backfill.md
     plan_id: PLAN-REVERSE-530-bun-final-retirement-backfill
     asset_id: plan:4727c21e7227fefefdb428f11662676c
-    revision: 6
-    content_digest: sha256:10bb8a0e3ade00563cc23eaffd45f823cf23fe9d6a7572937ac334cfe4093ab8
+    revision: 7
+    content_digest: sha256:a7a5bb16c81d40e1a95a54341634404ad2d3bc995b42c8c950b5ea689afc7c4e
   route:
     signal: design_gap
     mode: reverse
@@ -69,7 +69,7 @@ admission_receipt:
     implementation_disposition: preserved
   reentry:
     target_plan_id: PLAN-L6-93-node-bootstrap-contract
-    target_revision: 27
+    target_revision: 7
     phase: forward_merge
   escape_reason: "Issue #487 implementation facts backfill to L6 contract"
 ---
@@ -102,7 +102,7 @@ Forward/test-designと同じ候補をこの Reverse の実装検証境界にも�
 
 | candidate | 実装Red | 独立Green oracle |
 |---|---|---|
-| `CAND-NODEBOOT-208` | production reachable な Bun surface を1件残す、またはfixtureをproduction allowlistへ混ぜる | production到達面の全件inventoryが0、fixtureは専用rootで実行時到達不能 |
+| `CAND-NODEBOOT-208` | 実行・生成・配布・AI指示のreachable Bun surfaceを1件残す、またはguard/fixtureをproduction allowlistへ混ぜる | reachable surfaceが0であることを確認し、`ban_enforcement_guard`はpath+symbol単位でdeny専用を証明する。fixtureは専用rootで実行時到達不能。raw文字列件数を判定単位にしない |
 | `CAND-NODEBOOT-023` | sealed/parityの片側欠落・失敗・skipで撤去を進める | 両receiptの論理積を満たさない限り write/activation/削除が0 |
 | `CAND-NODEBOOT-027` | stale、wrong-revision、wrong-generation、wrong-artifactを各々混在させる | 4変異を各々拒否し、tuple完全一致のみ受理 |
 | `CAND-NODEBOOT-028` | 過去成立receiptを別の撤去commitへ流用する | `retirement_subject`不一致を拒否し、現撤去commitだけを受理 |
@@ -138,6 +138,13 @@ Forward/test-designと同じ候補をこの Reverse の実装検証境界にも�
   到達判定不能なら未完了/`Indeterminate`とする。
   `ubuntu`、`bundle`など語境界に依存しない候補は`non_applicable_false_positive`としてraw
   inventoryに残し、path・文脈の個別確認後にBun実行面から除外する。
+- `ban_enforcement_guard`: `src/lint/bun-permanent-ban.ts`、`src/lint/runtime-portability.ts`、
+  `src/lint/rule-drift.ts`、`src/lint/toolchain-pin.ts`、`src/lint/github-ci-policy.ts`、
+  `src/doctor/rule-quality.ts`の検出用文字列・regex・typed reason。各path+symbolはdeny専用で
+  あることを個別確認し、同一file内のspawn/install/download/fallback実行面はreachableとして
+  分離判定する。検出器自身のBun文字列を削除してreachable surface 0を装うことは許可しない。
+  既存のU-PACKBUN-006等の独立guard mutationで、guard削除・常時Green化・allowlist弱体化を
+  各々Redにし、検出器自身のBun文字列削除をGreen扱いしない。
 - `retained_fixture`: Q0 detectorが自分自身を検証するための専用fixture。production inventory、
   allowlist、生成Pack、consumer runtimeから参照できないことを実測する。
 - `unobserved`: OS、権限、provider、history、または対象面が観測不能な状態。解決済み扱いせず
