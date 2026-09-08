@@ -3,24 +3,22 @@ plan_id: PLAN-REVERSE-516-pack-self-contained-consumer-runtime-backfill
 title: "PLAN-REVERSE-516: sealed consumer Node runtime backfill"
 kind: reverse
 layer: cross
-workflow_phase: R0
 confirmed_reverse_type: design
 drive: agent
-route_signal: design_gap
+route_signal: reverse
 route_mode: reverse
 forward_routing: gap-only
 promotion_strategy: reuse-as-is
-status: draft
 created: 2026-08-27
-updated: 2026-09-04
+updated: 2026-09-08
 owner: PM / PO / Codex
 parent_design: docs/plans/PLAN-L7-516-pack-self-contained-consumer-runtime.md
 pair_artifact: docs/test-design/harness/L7-pack-self-contained-consumer-runtime-test-design.md
 agent_slots:
   - role: tl
-    slot_label: "TL - consumer-local sealed runtime差分をL6-101へbackfillする"
+    slot_label: TL - consumer-local sealed runtime差分をL6-101へbackfillする
   - role: qa
-    slot_label: "QA - checkout削除、receipt、path、原子性のR3差分を再検収する"
+    slot_label: QA - checkout削除、receipt、path、原子性のR3差分を再検収する
 generates:
   - artifact_path: docs/plans/PLAN-REVERSE-516-pack-self-contained-consumer-runtime-backfill.md
     artifact_type: markdown_doc
@@ -37,6 +35,44 @@ dependencies:
     - docs/test-design/harness/L7-pack-self-contained-consumer-runtime-test-design.md
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/420
 review_evidence: []
+workflow_phase: R1
+status: draft
+github_issue_id: 420
+admission_receipt:
+  schema_version: v2
+  receipt_id: certificate:7e7a1f696196808281be8cb1363c7eb3
+  command_id: command:issue420-runtime-adapter-reverse-r3-review-followup
+  admitted_at: 2026-09-08T09:59:44.151Z
+  source_digest: sha256:15ba3b799ee7309dbcf585217fc9c5d001e5b5f8b45b9824f8a1a44b705c259f
+  decision_digest: sha256:d4ac54d00ebd4bdb07fc430ea7ae4485b39c7c1b9a21f58b65280eac3f13bb4f
+  receipt_digest: sha256:0d20a7174593d4194bd94cdee9f19126827707008fc585dcfecd779c9a5efce8
+  binding:
+    path: docs/plans/PLAN-REVERSE-516-pack-self-contained-consumer-runtime-backfill.md
+    plan_id: PLAN-REVERSE-516-pack-self-contained-consumer-runtime-backfill
+    asset_id: plan:legacy:a791f4a13fda8d4baa8f510ef73e78491c5f3ea280c939fa5bd60e3fe325af8b
+    revision: 3
+    content_digest: sha256:15ba3b799ee7309dbcf585217fc9c5d001e5b5f8b45b9824f8a1a44b705c259f
+  route:
+    signal: reverse
+    mode: reverse
+  issue:
+    provider: github
+    issue_id: 420
+    episode_id: E4-420-runtime-adapter-contract
+    projection_digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+  origin:
+    plan_id: PLAN-L7-516-pack-self-contained-consumer-runtime
+    revision: 4
+    digest: sha256:6e4e0d5516e78e7465d260c65482e3302c9304518eb264d39735d049c166a316
+  transition:
+    direction: implementation_to_design
+    implementation_disposition: preserved
+  reentry:
+    target_plan_id: PLAN-L7-516-pack-self-contained-consumer-runtime
+    target_revision: 4
+    phase: forward_merge
+  escape_reason: Issue420 existing consumer installer physical adapter contract
+    proposal; implementation preserved; fresh pair review required
 ---
 
 # PLAN-REVERSE-516: sealed consumer Node runtime backfill
@@ -124,3 +160,15 @@ READYなproducer owner Issue/PRを確認できなかった。現在はPR #507が
 history prefix、external read/open/stat counter、closing review、aggregate CIは実装PRで検証する
 未完了項目として残すが、producer欠落を理由としたHard blockは解除済みである。#420ではL6-93
 producerを新設しない。
+
+## R1: 実setup断線の再確認と契約補完候補（2026-09-08）
+
+PR #463の部品実装と既存証跡は保持する。#418の独立fixtureで実setup後にPack checkoutを削除すると、
+consumer wrapperはexit127となり、setupSourceCli絶対pathも残っていた。これは既存のPack非依存要求の未達である。
+ConsumerNodeRuntimePortsの実filesystem adapterと4 payloadの生成経路は未実装で、setup callerへ未接続。
+snapshotPriorActivePointerのvoidだけではCAS不能を意味せず、adapter private state保持で実装できる。
+
+Forward revision 3で新設し、revision 4で補完した§11とpair test-designへ、既存ConsumerReceiptの再利用、循環のないpayload/digest、
+lock内prior照合、read-only durable reconcileの契約補完候補を追加した。revision 3の4 payload構造はexact e72dcc8ad2b728b53389971b092d2ebffec45bc5で非著者PASS-WEAK/blocking 0。revision 4の補完はfresh review対象。
+Node producer/receipt schema、PF5、Pack remote publicationは再所有せず、入力未供給をtyped denyで扱う。
+このrevisionはR1の差分特定までであり、R2実装検証、R3非著者検収、R4 backfill、Issue420完了は未主張。
