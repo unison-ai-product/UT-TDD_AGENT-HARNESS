@@ -27,21 +27,22 @@ dependencies:
 review_evidence:
   - reviewer: codex-tl-integration
     review_kind: intra_runtime_subagent
-    reviewed_at: 2026-09-08T05:13:21Z
-    tests_green_at: 2026-09-08T05:13:09Z
+    reviewed_at: 2026-09-08T06:08:47.784Z
+    tests_green_at: 2026-09-08T06:08:47.784Z
     verdict: R1 observed implementation; PASS blocking 0; Claude Opus non-author
       closing review pending
     worker_model: gpt-5.6-luna
     effort: high
     reviewer_model: codex
-    plan_revision: 89de38593e0a5264480ed5b305c1718bdc3b89b6
-    subject_head: 89de38593e0a5264480ed5b305c1718bdc3b89b6
-    anchor_commit: 89de38593e0a5264480ed5b305c1718bdc3b89b6
+    plan_revision: 24126d45e38451cd4df1a7481b37945678b403ea
+    subject_head: 24126d45e38451cd4df1a7481b37945678b403ea
+    anchor_commit: 24126d45e38451cd4df1a7481b37945678b403ea
     evidence_path: tests/claude-memory-wake.test.ts
     scope: "Issue #528 / PLAN-L7-512 Slice 3 のR1観測。publisher-owned binding sidecarを
       production consumer guardへ接続し、Memory/review compositionとU-PMEMROOT-007を
       exact implementation commitで確認した。Slice 4/5、#439、Bun laneは未実装のため
-      R2以降へ繰り越す。Opus non-author closing reviewとcanonical merge receiptは未取得。"
+      R2以降へ繰り越す。Opus non-author closing reviewとcanonical merge receiptは未取得。
+      rootは24126d45のsnapshot終了コード0を確認済み。本改訂の時刻は証跡再確認時刻であり、実行終了時刻の再構成ではない。"
     citations:
       - "docs/test-design/harness/L7-project-scoped-memory-root-test-design.md:
         U-PMEMROOT-007"
@@ -58,19 +59,17 @@ review_evidence:
         runner: node
         scope: targeted
         exit_code: 0
-        completed_at: 2026-09-08T05:13:09Z
         evidence_path: tests/claude-memory-wake.test.ts
-        output_digest: sha256:6c5c6e6393684c35d64d518b7454131cc2e04f520a5625e812828d09f0eef2a9
-        anchor_commit: 89de38593e0a5264480ed5b305c1718bdc3b89b6
+        output_digest: sha256:ce28eaf0acf0040c129302d7395d3f8412f86da7ff2aae73d04de6e10b89eee8
+        anchor_commit: 24126d45e38451cd4df1a7481b37945678b403ea
       - kind: typecheck
         command: npm exec -- tsc --noEmit
         runner: node
         scope: targeted
         exit_code: 0
-        completed_at: 2026-09-08T05:01:26Z
         evidence_path: src/runtime/claude-provider-envelope.ts
-        output_digest: sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
-        anchor_commit: 89de38593e0a5264480ed5b305c1718bdc3b89b6
+        output_digest: sha256:2f5336275d1d08fbdf5120854901c27138540d44fb00a06aba3a269a2962cdd8
+        anchor_commit: 24126d45e38451cd4df1a7481b37945678b403ea
       - kind: lint
         command: npm exec -- biome check src/runtime/claude-provider-envelope.ts
           src/runtime/claude-memory-wake.ts tests/claude-memory-wake.test.ts
@@ -78,27 +77,26 @@ review_evidence:
         runner: node
         scope: targeted
         exit_code: 0
-        completed_at: 2026-09-08T05:01:26Z
         evidence_path: src/runtime/claude-provider-envelope.ts
-        output_digest: sha256:56e00a1025f7f903defd822899e6c06d7347b65e2dd0fe4ddac735e1febf28d6
-        anchor_commit: 89de38593e0a5264480ed5b305c1718bdc3b89b6
+        output_digest: sha256:2f5336275d1d08fbdf5120854901c27138540d44fb00a06aba3a269a2962cdd8
+        anchor_commit: 24126d45e38451cd4df1a7481b37945678b403ea
 workflow_phase: R1
 status: draft
 github_issue_id: 528
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:af26c09e9a4731417a8de05321a8baa2
-  command_id: command:issue528-reverse512-revise-v1
-  admitted_at: 2026-09-08T05:35:00.000Z
-  source_digest: sha256:fe71ea8093a46da9d84defdf3655ca301415590724a5136130a715f0bb965cab
-  decision_digest: sha256:df7b26128a2bd0f185b87edd613f6eedd0b272f473f23bc5b64d8f169270fbd5
-  receipt_digest: sha256:4e55c449027d1df03cbd8ceb867950c78657bd773b83ed23d582c244bd845d62
+  receipt_id: certificate:e2ec6823bd7b2e1821077b8c3e49dbaf
+  command_id: command:issue528-PLAN-REVERSE-512-project-scoped-memory-root-backfill-verified-evidence-r3
+  admitted_at: 2026-09-08T06:08:47.993Z
+  source_digest: sha256:acdb552b2c1bffd50ebd7cac99fe37200ba11ac8b1075451964844fafa11b7ef
+  decision_digest: sha256:1d20c32ec9c1cbf4b5742b2bd3657b78354ccdc716730b2f5cceaeed4043a4e5
+  receipt_digest: sha256:de30a162e85580fe79555db5b28244fb4a3cb42562b0fc4a6aa3259a547d2737
   binding:
     path: docs/plans/PLAN-REVERSE-512-project-scoped-memory-root-backfill.md
     plan_id: PLAN-REVERSE-512-project-scoped-memory-root-backfill
     asset_id: plan:legacy:186048a954aa8dae7b4f8b1f968f6c5d64d758850fa695ed59a11edcdcf63153
-    revision: 2
-    content_digest: sha256:fe71ea8093a46da9d84defdf3655ca301415590724a5136130a715f0bb965cab
+    revision: 3
+    content_digest: sha256:acdb552b2c1bffd50ebd7cac99fe37200ba11ac8b1075451964844fafa11b7ef
   route:
     signal: design_gap
     mode: reverse
@@ -109,17 +107,16 @@ admission_receipt:
     projection_digest: sha256:218a5a56c4c720bac923f795c4b973f7d592159f75305a8ee1e39121403e10bf
   origin:
     plan_id: PLAN-L7-512-project-scoped-memory-root
-    revision: 2
-    digest: sha256:87e75d757bcb42cba954be878bbc421a4241eb09e9aadc7297548821b08465db
+    revision: 3
+    digest: sha256:ed94d33b6879c4eded974aea8a22f537ef2dfda948d19c1172f68de4c1058674
   transition:
     direction: implementation_to_design
     implementation_disposition: preserved
   reentry:
     target_plan_id: PLAN-L7-512-project-scoped-memory-root
-    target_revision: 2
+    target_revision: 3
     phase: forward_merge
-  escape_reason: "Backfill Issue #528 provider envelope implementation evidence
-    into PLAN-L7-512"
+  escape_reason: "Issue #528 verified snapshot evidence and canonical oracle citation binding"
 ---
 
 # PLAN-REVERSE-512
