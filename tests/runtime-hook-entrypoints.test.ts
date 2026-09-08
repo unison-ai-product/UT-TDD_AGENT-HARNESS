@@ -11,6 +11,7 @@ import {
 import { tmpdir } from "node:os";
 import { delimiter, join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { ensureTrackedProjectIdentity } from "./support/project-identity-fixture.ts";
 
 const repoRoot = process.cwd();
 const cliPath = join(repoRoot, "src", "cli.ts");
@@ -100,7 +101,7 @@ describe("runtime hook entrypoints", () => {
   it("shared CLI session/hook commands record a PLAN digest in a temp repo", () => {
     const cwd = mkdtempSync(join(tmpdir(), "ut-tdd-hook-"));
     try {
-      writeFileSync(join(cwd, "ut-tdd.project.json"), "{}\n");
+      ensureTrackedProjectIdentity(cwd, "fixture/runtime-hook-entrypoints");
       const start = runCli(cwd, ["plan", "use", "PLAN-L4-13"]);
       expect(start.status).toBe(0);
 
@@ -164,7 +165,7 @@ describe("runtime hook entrypoints", () => {
   it("U-MEMWAKE-007: CLI hook delivers a targeted workspace inbox and exits 2", () => {
     const cwd = mkdtempSync(join(tmpdir(), "ut-tdd-hook-wake-delivery-"));
     try {
-      spawnSync("git", ["init", "-q"], { cwd });
+      ensureTrackedProjectIdentity(cwd, "fixture/runtime-hook-wake-delivery");
       const publish = runCli(cwd, [
         "memory",
         "add",
@@ -203,7 +204,7 @@ describe("runtime hook entrypoints", () => {
     try {
       const nested = join(root, "docs", "plans");
       mkdirSync(nested, { recursive: true });
-      writeFileSync(join(root, "ut-tdd.project.json"), "{}\n");
+      ensureTrackedProjectIdentity(root, "fixture/runtime-hook-nested");
       const run = runCli(
         nested,
         ["session", "start"],
@@ -240,6 +241,7 @@ describe("runtime hook entrypoints", () => {
     const cwd = mkdtempSync(join(tmpdir(), "ut-tdd-codex-wrapper-"));
     const binDir = join(cwd, "bin");
     try {
+      ensureTrackedProjectIdentity(cwd, "fixture/runtime-codex-wrapper");
       const fakeCodex = writeFakeCodex(binDir);
       const env = {
         PATH: `${binDir}${delimiter}${process.env.PATH ?? ""}`,
@@ -275,6 +277,7 @@ describe("runtime hook entrypoints", () => {
     const cwd = mkdtempSync(join(tmpdir(), "ut-tdd-codex-task-file-"));
     const binDir = join(cwd, "bin");
     try {
+      ensureTrackedProjectIdentity(cwd, "fixture/runtime-codex-task-file");
       const fakeCodex = writeFakeCodex(binDir);
       writeFileSync(join(cwd, "task.md"), "implement from task file");
       const env = {
@@ -313,6 +316,7 @@ describe("runtime hook entrypoints", () => {
     const cwd = mkdtempSync(join(tmpdir(), "ut-tdd-codex-plan-"));
     const binDir = join(cwd, "bin");
     try {
+      ensureTrackedProjectIdentity(cwd, "fixture/runtime-codex-plan");
       const fakeCodex = writeFakeCodex(binDir);
       const env = {
         PATH: `${binDir}${delimiter}${process.env.PATH ?? ""}`,
@@ -362,6 +366,7 @@ describe("runtime hook entrypoints", () => {
     const cwd = mkdtempSync(join(tmpdir(), "ut-tdd-claude-wrapper-"));
     const binDir = join(cwd, "bin");
     try {
+      ensureTrackedProjectIdentity(cwd, "fixture/runtime-claude-wrapper");
       const fakeClaude = writeFakeClaude(binDir);
       const env = {
         PATH: `${binDir}${delimiter}${process.env.PATH ?? ""}`,
