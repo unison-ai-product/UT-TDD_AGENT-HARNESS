@@ -63,7 +63,14 @@ export class ProjectMemoryMigration {
   constructor(ports: Partial<MemoryMigrationPorts> = {}) {
     this.ports = {
       collect: (root) => collectWorktreeTopology({ repoRoot: root }),
-      read: (path) => readFileSync(path, "utf8"),
+      read: (path) => {
+        const bytes = readFileSync(path);
+        try {
+          return new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(bytes);
+        } catch {
+          throw new InventoryDenied("invalid_memory");
+        }
+      },
       ...ports,
     };
   }

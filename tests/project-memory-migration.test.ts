@@ -1,7 +1,7 @@
 import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { afterEach, expect, it } from "vitest";
 import { ProjectMemoryMigration } from "../src/memory/project-memory-migration.ts";
 import { canonicalProjectIdentityBytes } from "../src/plan-asset/adapters/project-identity-loader.ts";
@@ -111,10 +111,15 @@ it("fails closed when any linked HEAD has a foreign project identity", () => {
   );
   git(linked, ["add", "ut-tdd.project.json"]);
   git(linked, ["commit", "-qm", "test: foreign"]);
-  expect(new ProjectMemoryMigration().dryRun(primary)).toEqual({
-    ok: false,
-    reason: "project_identity_drift",
+  let reads = 0;
+  const service = new ProjectMemoryMigration({
+    read: (path) => {
+      reads++;
+      return readFileSync(path, "utf8");
+    },
   });
+  expect(service.dryRun(primary)).toEqual({ ok: false, reason: "project_identity_drift" });
+  expect(reads).toBe(0);
 });
 
 it("fails closed for incomplete topology before reading sources", () => {
@@ -147,5 +152,42 @@ it("rejects non-regular memory sources and binds the digest to content changes",
   expect(new ProjectMemoryMigration().dryRun(primary)).toEqual({
     ok: false,
     reason: "source_unsafe",
+  });
+});
+
+it("rejects a linked memory directory junction without reading its target", () => {
+  const { primary, linked } = fixture();
+  const external = join(dirname(primary), "external");
+  mkdirSync(external);
+  mkdirSync(join(linked, ".ut-tdd"));
+  symlinkSync(
+    external,
+    join(linked, ".ut-tdd", "memory"),
+    process.platform === "win32" ? "junction" : "dir",
+  );
+  let reads = 0;
+  const service = new ProjectMemoryMigration({
+    read: () => {
+      reads++;
+      return "";
+    },
+  });
+  expect(service.dryRun(primary)).toEqual({ ok: false, reason: "source_unsafe" });
+  expect(reads).toBe(0);
+});
+
+it("rejects malformed UTF-8 and does not silently strip a BOM", () => {
+  const { primary } = fixture();
+  const path = memory(primary, "a.md");
+  const original = readFileSync(path);
+  writeFileSync(path, Buffer.concat([original, Buffer.from([0xff])]));
+  expect(new ProjectMemoryMigration().dryRun(primary)).toEqual({
+    ok: false,
+    reason: "invalid_memory",
+  });
+  writeFileSync(path, Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), original]));
+  expect(new ProjectMemoryMigration().dryRun(primary)).toEqual({
+    ok: false,
+    reason: "invalid_memory",
   });
 });
