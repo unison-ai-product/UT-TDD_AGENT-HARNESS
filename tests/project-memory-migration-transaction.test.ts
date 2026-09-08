@@ -2,11 +2,13 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
   existsSync,
+  lstatSync,
   mkdirSync,
   mkdtempSync,
   readdirSync,
   readFileSync,
   renameSync,
+  rmdirSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -112,6 +114,7 @@ it.each([
   "junction",
 ])("rejects source %s drift after handle binding", (mutation) => {
   const f = fixture();
+  const sourceIdentity = lstatSync(f.sources[1], { bigint: true });
   let changed = false;
   const service = new ProjectMemoryMigrationTransaction({
     fault: (point) => {
@@ -125,12 +128,22 @@ it.each([
       if (mutation === "junction") {
         const directory = join(f.linked, ".ut-tdd", "memory"),
           external = join(f.root, "external");
-        renameSync(directory, external);
+        // Windows rejects renaming a directory with an open child (measured EPERM).
+        // Move the child itself without changing its inode, then replace the empty parent.
+        mkdirSync(external);
+        renameSync(f.sources[1], join(external, "project-conflict.md"));
+        rmdirSync(directory);
         symlinkSync(external, directory, process.platform === "win32" ? "junction" : "dir");
       }
     },
   });
-  expect(service.execute(f.input)).toMatchObject({ ok: false, reason: "source_drift" });
+  const result = service.execute(f.input);
+  if (mutation === "junction") {
+    expect(lstatSync(join(f.linked, ".ut-tdd", "memory")).isSymbolicLink()).toBe(true);
+    const observed = lstatSync(f.sources[1], { bigint: true });
+    expect([observed.dev, observed.ino]).toEqual([sourceIdentity.dev, sourceIdentity.ino]);
+  }
+  expect(result).toMatchObject({ ok: false, reason: "source_drift" });
   expect(existsSync(join(f.operationRoot, "complete.json"))).toBe(false);
 });
 
