@@ -2336,6 +2336,38 @@
         "revision": 5,
         "content_digest": "sha256:0672c808e2c0fd91f07c3eead43b7684a3c4fe881f992f8ccc4359ad7342754c"
       }
+    },
+    {
+      "sequence": 147,
+      "previous_record_digest": "sha256:65ff609bf4510b7dc7fd30332b8ad3cdf8c979e66920b706160c68d28e1cda8a",
+      "record_digest": "sha256:21f1ec8ffa4cedde42f72c5e369cced68c5b8eb47a1a13dc3f9da68436a23476",
+      "command_id": "command:issue439-retraction-current-protocol-revision2",
+      "receipt_id": "certificate:81b985d8ab8a455d54d994c16b4f8b70",
+      "receipt_digest": "sha256:00bf2b8276ba8d9995a8b706388d3e968aa4209d82f6cb3f9bc46c0e3f93421f",
+      "decision_digest": "sha256:9928d4d957b0d96d1bf991b008bb9123e482820f6d20e3ae7997b4be810a2525",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-518-review-request-retraction.md",
+        "plan_id": "PLAN-L7-518-review-request-retraction",
+        "asset_id": "plan:legacy:2b4a19f0342ad752af7dbb564e748cbf87be684c6b7ec208aa2fd3726117e9e7",
+        "revision": 2,
+        "content_digest": "sha256:1c1933aafc70706d7a0e26e79270a59e464b325b660cd25b25d26026933530bc"
+      }
+    },
+    {
+      "sequence": 148,
+      "previous_record_digest": "sha256:21f1ec8ffa4cedde42f72c5e369cced68c5b8eb47a1a13dc3f9da68436a23476",
+      "record_digest": "sha256:49f5865bf712950f2e44956e05e821abc21825f24feb59c750d3f23717a9ae62",
+      "command_id": "command:issue439-retraction-reverse-revision2",
+      "receipt_id": "certificate:40d4e5acc36e82117cd92af19318a5da",
+      "receipt_digest": "sha256:a71ccf0f6426c13872437db7621e04ccfc4435f8ca6028fcc76684defd2a2d49",
+      "decision_digest": "sha256:5e871f2b15755be4017b39dff4cf947400bedd638225f1dd36e0598e3f0109b9",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-518-review-request-retraction-backfill.md",
+        "plan_id": "PLAN-REVERSE-518-review-request-retraction-backfill",
+        "asset_id": "plan:legacy:2fb18f8069e22a3b19fbe187c63885f32af28d8c2374d81920a0f336668a24b9",
+        "revision": 2,
+        "content_digest": "sha256:9504fa943b9189a7e69cbbe31ba14808d6dfc49d7c69c2e2a14e4f0dd590409a"
+      }
     }
   ]
 }

@@ -4,7 +4,7 @@ layer: L7
 executed_at_layer: L7
 status: draft
 plan_id: PLAN-L7-518-review-request-retraction
-updated: 2026-08-27
+updated: 2026-09-08
 ---
 
 # Review request retraction test design
@@ -38,7 +38,7 @@ updated: 2026-08-27
 | CANDIDATE-U-RETRACT-010 | replacement identity を指定せず `superseded` で retract | typed deny |
 | CANDIDATE-U-RETRACT-011 | 別 `(pr, exactHead)` の identity を replacement として指定 | typed deny |
 | CANDIDATE-U-RETRACT-012 | 既に retracted な identity を replacement として指定 | typed deny |
-| CANDIDATE-U-RETRACT-013 | 同一 `(pr, exactHead)` の未 retract identity を replacement として `superseded` retract | 受理。replacement が receipt に束縛される |
+| CANDIDATE-U-RETRACT-013 | 同一repository/PR/HEAD/authorFamilyの未retract leafと正規closing PASSをreplacementとして指定 | 受理。request・closing receiptの両digestが束縛される |
 
 ## append-only 性 (§3.3)
 
@@ -90,7 +90,7 @@ updated: 2026-08-27
 | CANDIDATE-U-RETRACT-037 | A→B→C の chain | leaf C を実効 replacement として解決する |
 | CANDIDATE-U-RETRACT-038 | chain の leaf が retracted | typed deny。chain 全体が無効 |
 | CANDIDATE-U-RETRACT-039 | leaf の `expectedProvider` が著者本人になる (正規に閉じられない) | typed deny。dead-end の先送りを許さない |
-| CANDIDATE-U-RETRACT-040 | leaf の provenance が `unknown` / `conflict` | typed deny |
+| CANDIDATE-U-RETRACT-040 | leafのGit factsをunknown/conflict/verifiedへ単独変異（正規closing receiptは固定） | Git factsをfamily authorityにせず受理可否は不変。closing receipt欠落時は全てdeny |
 | CANDIDATE-U-RETRACT-041 | tracked artifact 外 (memory / PR 本文) の記述のみを replacement の根拠にする | typed deny。canonical custody を要求する |
 | CANDIDATE-U-RETRACT-042 | 任意の retraction graph に対し gate が再評価 | 実効 replacement が一意に定まるか typed deny のいずれか。発行側の判定を使わず決定論的 |
 
@@ -100,7 +100,7 @@ updated: 2026-08-27
 |---|---|---|
 | CANDIDATE-U-RETRACT-043 | provenance が `unknown` / `conflict` の状態で `unclosable` を主張 | typed deny |
 | CANDIDATE-U-RETRACT-044 | `unclosable` retraction 後、merge 前に provenance snapshot を差し替え | merge gate が snapshot 不一致を typed deny |
-| CANDIDATE-U-RETRACT-045 | PLAN-L7-517 の信頼根が未着地の状態で `unclosable` 経路を実行 | 経路が存在しない (先行実装の不在を測る負例) |
+| CANDIDATE-U-RETRACT-045 | 独立provider-family authority未実装で、PLAN-L7-517のGit factsだけを与えてunclosable要求 | typed deny。Git factsを独立authorityに昇格させない |
 
 ## legacy 移行 (§3.6.1)
 
@@ -115,6 +115,22 @@ updated: 2026-08-27
 | Candidate | Stimulus | Oracle |
 |---|---|---|
 | CANDIDATE-P-RETRACT-001 | PR #430 の `rv1-55b815ea…` (申告 codex / 実著者 claude、receipt 無し) を fixture として再現し、merge gate を評価 | 現行実装では deny。本実装では `unclosable` retraction 後に replacement の PASS だけで `merge_ready` へ到達 |
-| CANDIDATE-P-RETRACT-002 | PR #441 の競合 2 本 (両方 authorFamily=claude、片方のみ receipt) を fixture として再現 | `superseded` retraction、または 2 本目への receipt 発行のいずれでも `merge_ready` へ到達し、手動削除を要さない |
+| CANDIDATE-P-RETRACT-002 | PR #441 の競合 2 本 (両方 authorFamily=claude、片方のみ receipt) を fixture として再現 | canonical closing receiptをleafへ束縛するsupersededでmerge_readyへ到達。再reviewや手動削除で代替しない |
 | CANDIDATE-P-RETRACT-004 | 実 repo の全 request / receipt / ledger に対し `orphaned_mint` 判定を実行 | 境界以前の不在を偽陽性にしない。境界以降の消失のみ fail-close する |
 | CANDIDATE-P-RETRACT-003 | 実 repo の全 request / receipt に対し retraction 無しで消えた request を列挙 | 既存の正常終端を偽陽性にしない |
+
+## 2026-09-08 closing receipt束縛の追加候補
+
+以下は未実装candidateであり、pair-freezeのCI成功を実装Greenと扱わない。
+unclosableのpositive候補006/009とsnapshot変更044は独立authorityの検収後に実測する。
+unknown拒否043と先行実装拒否045は現在も維持し、Git factsだけではunclosableを受理しない。
+
+| Candidate | Stimulus | Oracle |
+|---|---|---|
+| CANDIDATE-U-RETRACT-048 | replacementのrequestまたはclosing receiptが欠落、ackのみ、FLAG、blockingあり | 各独立変異でtyped deny、retraction write 0 |
+| CANDIDATE-U-RETRACT-049 | repository/PR/HEAD/authorFamily/receipt digestを一軸ずつ変更 | 各変異でtyped deny、元request/receipt不変 |
+| CANDIDATE-U-RETRACT-050 | retraction後にleaf receiptまたは中間linkを差し替え | gate側の独立再評価がdeny、writerの成功は代用不可 |
+| CANDIDATE-U-RETRACT-051 | 同一requestに遅延FLAGとretractionが競合 | 二重終端を拒否。不整合が現物にある場合はgateもdeny、FLAG不変 |
+| CANDIDATE-U-RETRACT-052 | 停止記録や経過時間だけを与えreplacement closingを省略 | typed deny、request保持。自動timeout除外をしない |
+| CANDIDATE-P-RETRACT-005 | #519の旧1 requestと#526の旧2 requests、新closing receiptをcanonical CLIで終端 | 正規gateでmerge_ready。全旧request/attemptが残る、手動削除0、receipt複製0、再review0 |
+| CANDIDATE-P-RETRACT-006 | ledger導入時に既存未終端requestを配置、別worktreeからgate評価 | 元identity/digestのまま集合に残り、未登録・消失・衝突を成功扱いしない |
