@@ -71,15 +71,37 @@ function fixture() {
   );
   return { root, primary, linked, sources, input, operationRoot };
 }
-function worker(input: object, fault?: string) {
+function worker(input: object, fault?: string, throwBeforeFault = false) {
   const code = `import { ProjectMemoryMigrationTransaction } from ${JSON.stringify(moduleUrl)};
-    const service = new ProjectMemoryMigrationTransaction({ fault: point => { if (point === ${JSON.stringify(fault)}) process.kill(process.pid, 'SIGKILL'); } });
+    import { writeSync } from 'node:fs';
+    process.on('exit', () => writeSync(2, 'normal-exit\\n'));
+    if (${throwBeforeFault}) throw new Error('injected-before-fault');
+    const service = new ProjectMemoryMigrationTransaction({ fault: point => { if (point === ${JSON.stringify(fault)}) {
+      writeSync(2, 'migration-fault:' + point + ':' + process.pid + '\\n');
+      process.kill(process.pid, 'SIGKILL');
+    } } });
     process.stdout.write(JSON.stringify(service.execute(${JSON.stringify(input)})));`;
   return spawnSync(process.execPath, ["--input-type=module", "-e", code], {
     encoding: "utf8",
     timeout: 60000,
     windowsHide: true,
   });
+}
+function expectKilledAt(result: ReturnType<typeof worker>, point: string) {
+  const diagnostic = JSON.stringify({
+    status: result.status,
+    signal: result.signal,
+    error: result.error?.message,
+    stderr: result.stderr,
+  });
+  expect(result.error, diagnostic).toBeUndefined();
+  // Windows reports self-SIGKILL as exit 1 / null, measured with the same Node
+  // executable. Exact synchronous stderr also excludes ordinary JS exit: its
+  // exit hook writes normal-exit (including uncaught exceptions).
+  expect(result.stderr, diagnostic).toBe(`migration-fault:${point}:${result.pid}\n`);
+  expect(result.stdout, diagnostic).toBe("");
+  expect(result.status, diagnostic).toBe(process.platform === "win32" ? 1 : null);
+  expect(result.signal, diagnostic).toBe(process.platform === "win32" ? null : "SIGKILL");
 }
 afterEach(() => {
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
@@ -158,8 +180,7 @@ it.each([
   const f = fixture();
   const before = f.sources.map((path) => readFileSync(path));
   const crashed = worker(f.input, point);
-  expect(crashed.status === 0).toBe(false);
-  expect(crashed.error).toBeUndefined();
+  expectKilledAt(crashed, point);
   const recovered = worker(f.input);
   expect(recovered.status, recovered.stderr).toBe(0);
   expect(JSON.parse(recovered.stdout)).toMatchObject({ ok: true });
@@ -168,6 +189,20 @@ it.each([
     ok: true,
     status: "replayed",
   });
+}, 120000);
+
+it("rejects an ordinary pre-fault exception as crash evidence even when fresh execution succeeds", () => {
+  const f = fixture();
+  const failed = worker(f.input, "after-owner", true);
+  expect(failed.error).toBeUndefined();
+  expect(failed.status).toBe(1);
+  expect(failed.signal).toBeNull();
+  expect(failed.stderr).toContain("injected-before-fault");
+  expect(failed.stderr).toContain("normal-exit\n");
+  expect(() => expectKilledAt(failed, "after-owner")).toThrow();
+  const fresh = worker(f.input);
+  expect(fresh.status, fresh.stderr).toBe(0);
+  expect(JSON.parse(fresh.stdout)).toMatchObject({ ok: true });
 }, 120000);
 
 it.each([
@@ -226,7 +261,7 @@ it("denies a concurrent process while the actual owner is alive without deleting
 it("does not steal a dead owner's reused PID or trust a copied owner record", () => {
   const f = fixture();
   const crashed = worker(f.input, "after-owner");
-  expect(crashed.status === 0).toBe(false);
+  expectKilledAt(crashed, "after-owner");
   const path = join(f.operationRoot, "owner.json");
   const record = JSON.parse(readFileSync(path, "utf8"));
   record.payload.pid = process.pid;
@@ -253,7 +288,7 @@ it.each([
   "branched-chain",
 ])("retains and denies %s ownership evidence", (mutation) => {
   const f = fixture();
-  expect(worker(f.input, "after-owner").status === 0).toBe(false);
+  expectKilledAt(worker(f.input, "after-owner"), "after-owner");
   const path = join(f.operationRoot, "owner.json");
   const record = JSON.parse(readFileSync(path, "utf8"));
   if (mutation === "foreign-host") {
