@@ -71,7 +71,7 @@ describe("sealed lineage local migration", () => {
     ["certificateDigest", "seal-certificate-digest-mismatch"],
     ["sourceAuthorityDigest", "seal-source-authority-invalid"],
     ["reviewedImplementationAuthorityDigest", "seal-review-authority-invalid"],
-  ] as const)("E.6: %s の1 bit改変はwrite 0", async (field, ruleId) => {
+  ] as const)("U-PA-SEAL-004: E.6 %s の1 bit改変はwrite 0", async (field, ruleId) => {
     const { db, Transaction } = await baseFixture();
     const command = input();
     const mutated = { ...command, [field]: flipDigest(command[field]) } as MigrationInput;
@@ -93,7 +93,7 @@ describe("sealed lineage local migration", () => {
     ["projection custody", "seal-projection-custody-mismatch"],
     ["projection terminal", "seal-projection-terminal-mismatch"],
     ["head race", "seal-source-head-toctou"],
-  ] as const)("E.3: %s のGit preflight不成立はwrite 0", async (caseName, ruleId) => {
+  ] as const)("U-PA-SEAL-005: E.3 %s のGit preflight不成立はwrite 0", async (caseName, ruleId) => {
     const { db, Transaction } = await baseFixture();
     const command = input();
     const baseGit = fakeGit(command);
@@ -130,7 +130,7 @@ describe("sealed lineage local migration", () => {
     expect(counts(db)).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
   });
 
-  it("E.3: projection の最大 sequence が重複する場合は terminal を一意に束縛しない", async () => {
+  it("U-PA-SEAL-006: projection の最大 sequence が重複する場合は terminal を一意に束縛しない", async () => {
     const { db, Transaction } = await baseFixture();
     const command = input();
     const baseGit = fakeGit(command);
@@ -173,7 +173,7 @@ describe("sealed lineage local migration", () => {
     expect(counts(db)).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
   });
 
-  it("E.3: Git preflight port が無い場合はfail-closeする", async () => {
+  it("U-PA-SEAL-007: Git preflight port が無い場合はfail-closeする", async () => {
     const { db, Transaction } = await baseFixture();
     const command = input();
     const transaction = new Transaction(db, {
@@ -186,7 +186,7 @@ describe("sealed lineage local migration", () => {
     expect(counts(db)).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
   });
 
-  it("E.4: review authority port が無い場合はfail-closeする", async () => {
+  it("U-PA-SEAL-008: review authority port が無い場合はfail-closeする", async () => {
     const { db, Transaction } = await baseFixture();
     const command = input();
     const transaction = new Transaction(db, { git: fakeGit(command) });
