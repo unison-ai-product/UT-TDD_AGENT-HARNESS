@@ -55,8 +55,10 @@ describe("sealed lineage local migration", () => {
     const { db, Transaction } = await baseFixture();
     const command = input();
     const transaction = new Transaction(db, {
-      after(actual) {
-        if (actual === boundary) throw new Error(`fault:${boundary}`);
+      fault: {
+        after(actual) {
+          if (actual === boundary) throw new Error(`fault:${boundary}`);
+        },
       },
       git: fakeGit(command),
       reviewAuthority: fakeReviewAuthority(),
@@ -127,6 +129,73 @@ describe("sealed lineage local migration", () => {
     expect(transaction.migrate(mutated)).toEqual({ ok: false, ruleId });
     expect(counts(db)).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
   });
+
+  it("E.3: projection の最大 sequence が重複する場合は terminal を一意に束縛しない", async () => {
+    const { db, Transaction } = await baseFixture();
+    const command = input();
+    const baseGit = fakeGit(command);
+    const duplicate = JSON.stringify({
+      records: [
+        {
+          sequence: 3,
+          record_digest: `sha256:${command.historicalTailDigest}`,
+          binding: {
+            plan_id: command.planId,
+            asset_id: command.historicalAssetId,
+            revision: command.historicalTerminalRevision,
+          },
+        },
+        {
+          sequence: 3,
+          record_digest: `sha256:${command.historicalTailDigest}`,
+          binding: {
+            plan_id: command.planId,
+            asset_id: command.historicalAssetId,
+            revision: command.historicalTerminalRevision,
+          },
+        },
+      ],
+    });
+    const git = {
+      ...baseGit,
+      readBlob: (commit: string, path: string) => {
+        const blob = baseGit.readBlob(commit, path);
+        if (path !== command.historicalProjectionPath || !blob) return blob;
+        return { ...blob, bytes: Buffer.from(duplicate, "utf8") };
+      },
+    };
+    const mutated = { ...command, historicalProjectionContentDigest: digest(duplicate) };
+    const transaction = new Transaction(db, { git, reviewAuthority: fakeReviewAuthority() });
+    expect(transaction.migrate(mutated)).toEqual({
+      ok: false,
+      ruleId: "seal-projection-custody-mismatch",
+    });
+    expect(counts(db)).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
+  });
+
+  it("E.3: Git preflight port が無い場合はfail-closeする", async () => {
+    const { db, Transaction } = await baseFixture();
+    const command = input();
+    const transaction = new Transaction(db, {
+      reviewAuthority: fakeReviewAuthority(),
+    });
+    expect(transaction.migrate(command)).toEqual({
+      ok: false,
+      ruleId: "seal-git-preflight-unavailable",
+    });
+    expect(counts(db)).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
+  });
+
+  it("E.4: review authority port が無い場合はfail-closeする", async () => {
+    const { db, Transaction } = await baseFixture();
+    const command = input();
+    const transaction = new Transaction(db, { git: fakeGit(command) });
+    expect(transaction.migrate(command)).toEqual({
+      ok: false,
+      ruleId: "seal-review-authority-invalid",
+    });
+    expect(counts(db)).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
+  });
 });
 
 const PLAN_ID = "PLAN-RECOVERY-16-plan-revision-authoring";
@@ -187,7 +256,7 @@ interface TransactionConstructor {
   new (
     db: HarnessDb,
     options?: {
-      after?(boundary: Boundary): void;
+      fault?: { after(boundary: Boundary): void };
       git?: {
         readHeadCommit(): string;
         isReachableFromTrackedRemote(commit: string): boolean;

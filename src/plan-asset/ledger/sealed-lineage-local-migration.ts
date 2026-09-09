@@ -74,9 +74,7 @@ export interface SealedLineageReviewAuthorityPort {
 export interface SealedLineageMigrationOptions {
   readonly fault?: { after(boundary: SealedLineageBoundary): void };
   readonly git?: SealedLineageGitPreflightPort;
-  readonly gitPreflight?: SealedLineageGitPreflightPort;
   readonly reviewAuthority?: SealedLineageReviewAuthorityPort;
-  readonly review?: SealedLineageReviewAuthorityPort;
 }
 
 /** Node-only production adapter. Review custody remains a separate injected port. */
@@ -147,18 +145,11 @@ export class SealedLineageLocalMigration {
   private readonly git?: SealedLineageGitPreflightPort;
   private readonly reviewAuthority?: SealedLineageReviewAuthorityPort;
 
-  constructor(
-    db: HarnessDb,
-    options: SealedLineageMigrationOptions | { after(boundary: SealedLineageBoundary): void } = {},
-  ) {
+  constructor(db: HarnessDb, options: SealedLineageMigrationOptions = {}) {
     this.db = db;
-    if ("after" in options) {
-      this.fault = options;
-    } else {
-      this.fault = options.fault;
-      this.git = options.git ?? options.gitPreflight;
-      this.reviewAuthority = options.reviewAuthority ?? options.review;
-    }
+    this.fault = options.fault;
+    this.git = options.git;
+    this.reviewAuthority = options.reviewAuthority;
     if (!migratePlanLedger(db).ok) throw new Error("plan-ledger-unavailable");
   }
 
@@ -585,17 +576,26 @@ function projectionHasTerminal(bytes: Uint8Array, input: SealedLineageMigrationI
       records?: readonly Record<string, unknown>[];
     };
     if (!Array.isArray(value.records)) return false;
-    const records = value.records.filter((record) => record.binding?.plan_id === input.planId);
-    const terminal = records.reduce<Record<string, unknown> | undefined>(
-      (current, record) =>
-        !current || Number(record.sequence) > Number(current.sequence) ? record : current,
-      undefined,
-    );
+    const records = value.records.filter((record) => {
+      const binding = record.binding;
+      return (
+        binding &&
+        typeof binding === "object" &&
+        (binding as Record<string, unknown>).plan_id === input.planId &&
+        Number.isSafeInteger(record.sequence) &&
+        Number(record.sequence) > 0
+      );
+    });
+    const maxSequence = Math.max(...records.map((record) => Number(record.sequence)));
+    const terminalCandidates = records.filter((record) => Number(record.sequence) === maxSequence);
+    if (terminalCandidates.length !== 1) return false;
+    const terminal = terminalCandidates[0];
     if (!terminal?.binding || typeof terminal.binding !== "object") return false;
     const binding = terminal.binding as Record<string, unknown>;
     return (
       binding.asset_id === input.historicalAssetId &&
-      Number(binding.revision) === input.historicalTerminalRevision &&
+      Number.isSafeInteger(binding.revision) &&
+      binding.revision === input.historicalTerminalRevision &&
       stripDigestPrefix(String(terminal.record_digest)) === input.historicalTailDigest
     );
   } catch {
