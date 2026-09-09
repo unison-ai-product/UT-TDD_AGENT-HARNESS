@@ -75,6 +75,8 @@ updated: 2026-09-09
 | U-PMEMFENCE-006 | completed operation 後に legacy worktreeへ新規 Memoryを追加する | `inventory_drift` を返し、legacy extraを許可しない |
 | U-PMEMFENCE-007 | completed operation 後に既存 Memoryの同一ID bytesを変更する | `inventory_drift` を返し、同一ID差分を許可しない |
 | U-PMEMFENCE-008 | wake開始後、provider claim直前に同一ID bytes driftを注入する | claim/terminal/receiptを作らず typed `inventory_drift` deny にする |
+| U-PMEMFENCE-009 | tracked identityを持つfresh projectで初回setupを起動する | 完全に存在しないmigrationだけをbootstrapしてcompletion後にsetup writeを許可する |
+| U-PMEMFENCE-010 | uncommitted identityでfresh setupを起動し、identity commit後に再実行する | `project_identity_commit_required` でidentity以外のwriteを0にし、commit後の初回migration/setupだけ成功する |
 
 Fresh setupだけはbootstrap phase境界として、tracked identity確認後にtransactionが完全不存在の場合の初回migrationを許可する。identityが未commitなら `project_identity_commit_required` で停止し、identity以外のsetup writeは0。既存transactionの中断・改変・driftはこのbootstrap例外に含めない。
 

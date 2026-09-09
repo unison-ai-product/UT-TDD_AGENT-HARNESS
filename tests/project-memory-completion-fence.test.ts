@@ -198,7 +198,7 @@ async function assertDeniedEntrances(
 }
 
 describe("Issue #550 project memory completion fence", () => {
-  it("U-PMEMFENCE-000 bootstraps a clean tracked project once before setup writes", () => {
+  it("U-PMEMFENCE-009 bootstraps a clean tracked project once before setup writes", () => {
     const root = fixture();
     const runtimeRoot = join(root, ".ut-tdd", "memory");
     rmSync(runtimeRoot, { recursive: true, force: true });
@@ -211,7 +211,7 @@ describe("Issue #550 project memory completion fence", () => {
     expect(inspectProjectMemoryCompletion(root).ok).toBe(true);
   });
 
-  it("U-PMEMFENCE-000b stops after untracked identity bootstrap until commit", () => {
+  it("U-PMEMFENCE-010 stops after untracked identity bootstrap until commit", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-memory-fence-bootstrap-"));
     roots.push(root);
     git(root, ["init", "-q"]);
