@@ -48,6 +48,7 @@ describe("sealed lineage local migration", () => {
     const transaction = new Transaction(db, {
       git: fakeGit(command),
       reviewAuthority: fakeReviewAuthority(),
+      issueAuthority: fakeIssueAuthority(command),
     });
     expect(transaction.migrate(command)).toMatchObject({ ok: true, replayed: false });
     const unavailableGit = {
@@ -424,6 +425,75 @@ describe("sealed lineage local migration", () => {
     });
     expect(counts(db)).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
   });
+
+  it("U-PA-SEAL-015: E.2から導出されないsuccessor asset idはwrite前に拒否する", async () => {
+    const { db, Transaction } = await baseFixture();
+    const command = withAuthorityDigests({
+      ...input(),
+      successorAssetId: `plan:rebase:${digest("caller-controlled-seed")}`,
+    });
+    const transaction = new Transaction(db, {
+      git: fakeGit(command),
+      reviewAuthority: fakeReviewAuthority(),
+    });
+
+    expect(transaction.migrate(command)).toEqual({
+      ok: false,
+      ruleId: "sealed-lineage-input-invalid",
+    });
+    expect(counts(db)).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
+  });
+
+  it.each([
+    ["port absent", undefined, (command: MigrationInput) => command],
+    ["live read failure", { observe: () => undefined }, (command: MigrationInput) => command],
+    [
+      "wrong issue number",
+      {
+        observe: (command: MigrationInput) => ({
+          number: command.issue.number + 1,
+          bodyDigest: command.issue.preimageDigest,
+          updatedAt: "2026-09-09T00:00:00Z",
+        }),
+      },
+      (command: MigrationInput) => command,
+    ],
+    [
+      "body digest drift",
+      {
+        observe: (command: MigrationInput) => ({
+          number: command.issue.number,
+          bodyDigest: digest("changed issue body"),
+          updatedAt: "2026-09-09T00:00:00Z",
+        }),
+      },
+      (command: MigrationInput) => command,
+    ],
+    [
+      "PLAN episode mismatch",
+      null,
+      (command: MigrationInput) =>
+        withAuthorityDigests({ ...command, issue: { ...command.issue, episodeId: "E4-999" } }),
+    ],
+  ] as const)(
+    "U-PA-SEAL-016: %sはIssue authorityとして受理しない",
+    async (_name, authority, mutate) => {
+      const { db, Transaction } = await baseFixture();
+      const command = mutate(input());
+      const issueAuthority = authority === null ? fakeIssueAuthority(command) : authority;
+      const transaction = new Transaction(db, {
+        git: fakeGit(command),
+        reviewAuthority: fakeReviewAuthority(),
+        issueAuthority,
+      });
+
+      expect(transaction.migrate(command)).toEqual({
+        ok: false,
+        ruleId: "seal-issue-authority-invalid",
+      });
+      expect(counts(db)).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
+    },
+  );
 });
 
 const PLAN_ID = "PLAN-RECOVERY-16-plan-revision-authoring";
@@ -501,6 +571,15 @@ interface TransactionConstructor {
             }
           | undefined;
       };
+      issueAuthority?: {
+        observe(input: MigrationInput):
+          | {
+              number: number;
+              bodyDigest: string;
+              updatedAt: string;
+            }
+          | undefined;
+      };
     },
   ): Transaction;
 }
@@ -527,12 +606,17 @@ async function fixture() {
     transaction: new value.Transaction(value.db, {
       git: fakeGit(command),
       reviewAuthority: fakeReviewAuthority(),
+      issueAuthority: fakeIssueAuthority(command),
     }),
   };
 }
 
 function input(): MigrationInput {
-  const payload = `{"plan_id":"${PLAN_ID}","status":"draft"}`;
+  const payload = stableCanonical({
+    admission_receipt: { issue: { episode_id: "E4-102", issue_id: 102 } },
+    plan_id: PLAN_ID,
+    status: "draft",
+  });
   const historicalTailDigest = digest("record-3");
   const projection = JSON.stringify({
     schema_version: "ut-tdd.plan-admission-receipts/v1",
@@ -622,7 +706,10 @@ function input(): MigrationInput {
 }
 
 function fakeGit(command: MigrationInput) {
-  const source = Buffer.from(`---\nplan_id: ${command.planId}\nstatus: draft\n---\nbody`, "utf8");
+  const source = Buffer.from(
+    `---\nplan_id: ${command.planId}\nstatus: draft\nadmission_receipt:\n  issue:\n    issue_id: 102\n    episode_id: E4-102\n---\nbody`,
+    "utf8",
+  );
   const projection = Buffer.from(
     JSON.stringify({
       schema_version: "ut-tdd.plan-admission-receipts/v1",
@@ -654,6 +741,16 @@ function fakeGit(command: MigrationInput) {
 
 function fakeReviewAuthority() {
   return reviewAuthorityFor(reviewObservation("custody_rejected", ["unverified_family"]));
+}
+
+function fakeIssueAuthority(command: MigrationInput) {
+  return {
+    observe: () => ({
+      number: command.issue.number,
+      bodyDigest: command.issue.preimageDigest,
+      updatedAt: "2026-09-09T00:00:00Z",
+    }),
+  };
 }
 
 type CustodyState = "custody_admitted" | "custody_rejected";

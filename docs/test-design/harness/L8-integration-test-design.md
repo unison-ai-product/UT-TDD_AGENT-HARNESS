@@ -326,9 +326,12 @@ L6 `harness-check` aggregate gate / E13 receipt契約を結合境界で検証す
 | `U-PA-SEAL-012` | 正常な source authority preimage と、`historicalAssetId` / `historicalTerminalRevision` / `historicalTailDigest` を各一軸だけ変えた値。 | 各値から source authority digest を導出する。 | terminal binding 三値の各単独変異は元 digest と異なる digest になる。 | `validateAuthorities` と同一の framed preimage helper を使う oracle fixture。 | terminal 三値を preimage から落とす、または別値へ正規化する実装変異を検出する。 |
 | `U-PA-SEAL-013` | 同一観測に対する `custody_rejected` + `[unverified_family]` と `custody_admitted` + `[]` の review authority。 | review authority digest を比較し、admitted 観測で migration を実行する。 | 二つの digest は異なり、admitted 分岐は `ok=true` で通る。 | 注入 review-authority port と isolated in-memory ledger。 | admitted 分岐未実行、custody state / reasons の preimage 欠落、終端状態の取り違えを検出する。 |
 | `U-PA-SEAL-014` | 同一 rejected 観測に対する E.4 review preimage の列順入替、要素欠落、PR 番号前置ゼロ、custody state 別表現の各単独変異。certificate digest は各 mutated authority digest に合わせて再計算する。 | mutated command を migration に渡す。 | 各変異は `seal-review-authority-invalid` で拒否し、全 table write 0。 | live review observation と framed digest 検証の結合境界。 | caller 側の代替表現、時間値、summary 由来の導出を canonical preimage として受理しない。 |
+| `U-PA-SEAL-015` | E.2 の `[ut-tdd-plan-rebase-v1, repositoryIdentity, planId]` 以外の caller-controlled seed から作った `successorAssetId`。authority と certificate はその偽 ID に合わせて自己整合させる。 | sealed-lineage migration を実行する。 | `sealed-lineage-input-invalid` で拒否し、全 table write 0。 | successor identity derivation と local writer の結合境界。 | 任意 seed の successor asset を genesis として受理しない。 |
+| `U-PA-SEAL-016` | Issue authority port欠測、live read failure、wrong Issue number、body digest drift、PLAN frontmatterのwrong issue / episode。 | sealed-lineage migrationを実行する。 | 各入力を`seal-issue-authority-invalid`で拒否し、全 table write 0。 | tracked PLAN blobのadmission receiptとlive GitHub Issue observationを結ぶpreflight port。 | episode ID推論、手書きbody digest、read failure時の自己申告fallbackを許さない。 |
+| `U-PA-SEAL-017` | LF、CRLF、末尾改行有無だけが異なるIssue本文bytes。 | raw文字列をUTF-8 bytesとしてdigest化し比較する。 | byte列が異なればdigestも異なり、正規化した本文をauthorityに使わない。 | Issue authority adapterのraw body境界。 | 改行正規化で別Issue preimageを同一視しない。 |
 
 実行対応: `tests/plan-asset/sealed-lineage-local-migration.test.ts`
-(`U-PA-SEAL-011..014`)。これらは `src/lint/oracle-test-citation-baseline.ts` への追加対象ではなく、
+(`U-PA-SEAL-011..017`)。これらは `src/lint/oracle-test-citation-baseline.ts` への追加対象ではなく、
 本書の paired test-design 宣言から test-label trace を閉じる。
 
 ## Node build image候補integration pair（Issue #152 D0-N）

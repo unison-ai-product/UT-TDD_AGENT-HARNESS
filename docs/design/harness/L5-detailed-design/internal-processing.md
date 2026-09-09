@@ -1134,7 +1134,9 @@ digest の preimage は、順序付き文字列列の各要素を「UInt32BE の
 
 successor asset id の preimage は `[label, repositoryIdentity, planId]` とする。`repositoryIdentity` は tracked
 `ut-tdd.project.json` の `repository_identity` であり、HEAD blob 一致と worktree 一致を
-`src/kernel/project-identity.ts` が強制する値だけを使う。任意 seed を与えてはならない。
+`src/kernel/project-identity.ts` が強制する値だけを使う。任意 seed を与えてはならない。writer は
+この preimage から `successorAssetId` を再導出して caller 宣言値と照合し、不一致を
+`sealed-lineage-input-invalid` で transaction 開始前に拒否する。
 
 ### E.3 `sourceAuthorityDigest`
 
@@ -1172,6 +1174,21 @@ blocking finding 1)。`historicalTerminalRevision` は符号なし 10 進 ASCII 
 | `historicalProjectionPath` の blob OID と content digest が同一 `sourceCommit` 帰属で宣言値と一致する | `seal-projection-custody-mismatch` |
 | その blob 内で `binding.plan_id = planId` を持つ record 群のうち `sequence` 最大の 1 件が、`binding.asset_id = historicalAssetId` かつ `binding.revision = historicalTerminalRevision` であり、その `record_digest` が `historicalTailDigest` と一致する | `seal-projection-terminal-mismatch` |
 | 照合中に HEAD が変化していない (TOCTOU 再確認) | `seal-source-head-toctou` |
+
+seal の Issue custody は、対象 PLAN 本文の `admission_receipt.issue` が保持する既存の
+`issue_id` / `episode_id` を正本とする。新しい episode IDを推論・採番しない。
+production port は GitHub の live Issue を `body,id,updatedAt` で読み、本文文字列を改行・CRLF・末尾改行を
+正規化せず UTF-8 bytes 化して sha256 する。次をすべて transaction 前に照合する。
+
+| 照合 | 不成立時の typed reason |
+|---|---|
+| PLAN frontmatter の `admission_receipt.issue.issue_id` が `input.issue.number` と一致する | `seal-issue-authority-invalid` |
+| PLAN frontmatter の `admission_receipt.issue.episode_id` が `input.issue.episodeId` と一致する | `seal-issue-authority-invalid` |
+| live Issue number が `input.issue.number` と一致し、raw body UTF-8 digest が `input.issue.preimageDigest` と一致する | `seal-issue-authority-invalid` |
+
+Issue port 欠測、GitHub read failure、本文欠落、number / episode / body digest drift は補完せず
+`seal-issue-authority-invalid`、全 table write 0 とする。`updatedAt` は観測診断であり digest preimageへ
+加えない。同一本文の再観測で replay identity が変わるのを防ぐためである。
 
 照合は `project-identity.ts` と同じ preflight 規律 (tracked blob 読み出し + 再確認) に従い、呼び出し側の port として
 注入する。writer transaction を Git I/O へ拡張しない。
