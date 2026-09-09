@@ -3,8 +3,8 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSyn
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, expect, it } from "vitest";
-import { ProjectMemoryMigration } from "../src/memory/project-memory-migration.ts";
 import { canonicalProjectIdentityBytes } from "../src/plan-asset/adapters/project-identity-loader.ts";
+import { ProjectMemoryMigration } from "../src/runtime/project-memory-migration.ts";
 import { resolveProjectMemoryRoot } from "../src/runtime/project-memory-root.ts";
 import { normalizeTopologyPath } from "../src/runtime/worktree-topology.ts";
 import { collectWorktreeTopology } from "../src/runtime/worktree-topology-collector.ts";

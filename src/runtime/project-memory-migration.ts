@@ -1,16 +1,16 @@
 import { createHash } from "node:crypto";
 import { lstatSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { memoryStorageRoot, parseMemoryFile } from "../memory/index.ts";
 import {
   type ProjectMemoryRootDenyReason,
   resolveProjectMemoryRoot,
-} from "../runtime/project-memory-root.ts";
-import { analyzeWorktreeTopology, normalizeTopologyPath } from "../runtime/worktree-topology.ts";
+} from "./project-memory-root.ts";
+import { analyzeWorktreeTopology, normalizeTopologyPath } from "./worktree-topology.ts";
 import {
   collectWorktreeTopology,
   type WorktreeTopologyCollection,
-} from "../runtime/worktree-topology-collector.ts";
-import { memoryStorageRoot, parseMemoryFile } from "./index.ts";
+} from "./worktree-topology-collector.ts";
 
 export interface MemoryMigrationVariant {
   readonly worktreeRoot: string;
