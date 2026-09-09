@@ -80,7 +80,11 @@ export interface SealedLineageMigrationOptions {
 
 /** Node-only production adapter. Review custody remains a separate injected port. */
 export class SystemSealedLineageGitPreflightPort implements SealedLineageGitPreflightPort {
-  constructor(private readonly repoRoot: string) {}
+  private readonly repoRoot: string;
+
+  constructor(repoRoot: string) {
+    this.repoRoot = repoRoot;
+  }
 
   readHeadCommit(): string {
     return this.git(["rev-parse", "HEAD"]).trim();
