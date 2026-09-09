@@ -31,7 +31,7 @@ generates:
     artifact_type: source_module
   - artifact_path: tests/project-memory-root.test.ts
     artifact_type: test_code
-  - artifact_path: src/memory/project-memory-migration.ts
+  - artifact_path: src/runtime/project-memory-migration.ts
     artifact_type: source_module
   - artifact_path: tests/project-memory-migration.test.ts
     artifact_type: test_code
@@ -248,7 +248,7 @@ transient notification busとして共有する。絶対pathはidentityに含め
 5. clean Pack setupからのCodex/Claude parityと別project isolation E2E。
 
 本改訂はIssue #544のSlice 4aだけを所有し、linked worktree inventoryと
-unique / dedupe / conflictの決定論的分類を実装する。canonical apply、quarantine transaction、
+unique / dedupe / conflictの決定論的分類をruntime境界で実装する。canonical apply、quarantine transaction、
 crash recovery、completion marker、Pack parityは後続へ残す。
 
 ## 4. Scope boundary

@@ -133,7 +133,7 @@ admission_receipt:
 ## R1: Issue #544 Slice 4a observed implementation
 
 Forward trace: `PLAN-L7-512 §3 Slice 4a → Issue #544 → efbdff94bddac6f058b58a5c61fec2e0750ac283
-→ src/memory/project-memory-migration.ts → tests/project-memory-migration.test.ts`。
+→ src/runtime/project-memory-migration.ts → tests/project-memory-migration.test.ts`。
 
 linked worktreeを含むMemory corpusをread-onlyでinventoryし、同一memory IDのvariantを
 content digestで束縛して、unique / dedupe / conflictへ決定論的に分類する実装candidateを観測した。
