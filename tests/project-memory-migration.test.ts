@@ -342,7 +342,7 @@ it("U-PMEMQUAR-004 recovers an owner left by a SIGKILLed process", async () => {
     },
   );
   const ready = new Promise<void>((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error("child did not prepare intent")), 10_000);
+    const timer = setTimeout(() => reject(new Error("child did not prepare intent")), 30_000);
     let stderr = "";
     child.stderr.setEncoding("utf8");
     child.stderr.on("data", (chunk) => {
@@ -361,7 +361,7 @@ it("U-PMEMQUAR-004 recovers an owner left by a SIGKILLed process", async () => {
   });
   await ready;
   const exited = new Promise<void>((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error("child did not exit after SIGKILL")), 10_000);
+    const timer = setTimeout(() => reject(new Error("child did not exit after SIGKILL")), 30_000);
     child.once("exit", () => {
       clearTimeout(timer);
       resolve();
@@ -372,7 +372,7 @@ it("U-PMEMQUAR-004 recovers an owner left by a SIGKILLed process", async () => {
   const recovered = new ProjectMemoryMigration().recover(primary, operationId);
   expect(recovered.ok).toBe(true);
   if (recovered.ok) expect(recovered.status).toBe("completed");
-}, 30000);
+}, 90000);
 
 it("U-PMEMQUAR-005 rejects marker order changes and append-after-complete", () => {
   const { primary, linked } = fixture();

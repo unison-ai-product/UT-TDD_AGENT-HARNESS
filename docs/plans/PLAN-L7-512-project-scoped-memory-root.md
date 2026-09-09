@@ -33,7 +33,17 @@ generates:
     artifact_type: test_code
   - artifact_path: src/runtime/project-memory-migration.ts
     artifact_type: source_module
+  - artifact_path: src/runtime/project-memory-completion-fence.ts
+    artifact_type: source_module
+  - artifact_path: src/kernel/memory-domain.ts
+    artifact_type: source_module
+  - artifact_path: src/doctor/memory-migration.ts
+    artifact_type: source_module
   - artifact_path: tests/project-memory-migration.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/project-memory-completion-fence.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/doctor-memory-fence.test.ts
     artifact_type: test_code
 dependencies:
   parent: docs/governance/ut-tdd-agent-harness-requirements_v1.2.md

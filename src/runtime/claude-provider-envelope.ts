@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
-import type { MemoryEntry } from "../memory/index.ts";
-import { isCanonicalMemorySourcePath } from "../memory/service.ts";
+import type { MemoryDomainEntry as MemoryEntry } from "../kernel/memory-domain.ts";
+import { isCanonicalMemoryDomainSourcePath as isCanonicalMemorySourcePath } from "../kernel/memory-domain.ts";
 
 export const CLAUDE_PROVIDER_INBOX_SCHEMA = "ut-tdd.claude-inbox/v4" as const;
 export type ClaudeProvider = "codex" | "claude";

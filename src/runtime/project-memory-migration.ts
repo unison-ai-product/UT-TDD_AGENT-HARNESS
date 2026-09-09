@@ -13,7 +13,10 @@ import {
 } from "node:fs";
 import { hostname } from "node:os";
 import { join } from "node:path";
-import { memoryStorageRoot, parseMemoryFile } from "../memory/index.ts";
+import {
+  memoryDomainStorageRoot as memoryStorageRoot,
+  parseMemoryDomainFile as parseMemoryFile,
+} from "../kernel/memory-domain.ts";
 import {
   type ProjectMemoryRootDenyReason,
   resolveProjectMemoryRoot,

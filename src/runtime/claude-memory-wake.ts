@@ -13,8 +13,8 @@ import {
 } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import type { MemoryEntry } from "../memory/index.ts";
-import { isCanonicalMemorySourcePath } from "../memory/service.ts";
+import type { MemoryDomainEntry as MemoryEntry } from "../kernel/memory-domain.ts";
+import { isCanonicalMemoryDomainSourcePath as isCanonicalMemorySourcePath } from "../kernel/memory-domain.ts";
 import { ensureDir } from "../shared/fs.ts";
 import {
   activateClaudeWakeGeneration,
