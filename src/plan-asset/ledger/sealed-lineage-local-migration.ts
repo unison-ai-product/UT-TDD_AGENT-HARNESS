@@ -1,6 +1,10 @@
 import { execFileSync } from "node:child_process";
 import { createHash, timingSafeEqual } from "node:crypto";
-import type { CustodyFailureReason } from "../../feedback/review-custody.ts";
+import type {
+  CustodyDecision,
+  CustodyFailureReason,
+  CustodyPullRequestFacts,
+} from "../../feedback/review-custody.ts";
 import type { HarnessDb } from "../../state-db/index.ts";
 import { parseLegacyPlanSource } from "../adapters/legacy-plan-inventory.ts";
 import { ledgerRowDigest, migratePlanLedger } from "./schema.ts";
@@ -84,6 +88,43 @@ export interface SealedLineageIssueAuthorityPort {
   ) => SealedLineageIssueAuthorityObservation | undefined;
 }
 
+/** `admitReviewCustody` の typed decision と同じ live facts を seal 用 observationへ写す。 */
+export class CustodyDecisionSealedLineageReviewAuthorityPort
+  implements SealedLineageReviewAuthorityPort
+{
+  private readonly facts: CustodyPullRequestFacts;
+  private readonly decision: CustodyDecision;
+
+  constructor(facts: CustodyPullRequestFacts, decision: CustodyDecision) {
+    this.facts = facts;
+    this.decision = decision;
+  }
+
+  observe(input: SealedLineageMigrationInput): SealedLineageReviewAuthorityObservation | undefined {
+    if (
+      this.facts.repository !== input.repositoryIdentity ||
+      this.facts.prNumber < 1 ||
+      !this.facts.baseRef ||
+      !/^[0-9a-f]{40}(?:[0-9a-f]{24})?$/.test(this.facts.headSha)
+    )
+      return undefined;
+    if (
+      this.decision.state === "custody_admitted" &&
+      (this.decision.repository !== this.facts.repository ||
+        this.decision.prNumber !== this.facts.prNumber ||
+        this.decision.headSha !== this.facts.headSha)
+    )
+      return undefined;
+    return {
+      pullRequestNumber: this.facts.prNumber,
+      baseRef: this.facts.baseRef,
+      headSha: this.facts.headSha,
+      custodyState: this.decision.state,
+      custodyReasons: this.decision.state === "custody_rejected" ? this.decision.reasons : [],
+    };
+  }
+}
+
 export interface SealedLineageMigrationOptions {
   readonly fault?: { after(boundary: SealedLineageBoundary): void };
   readonly git?: SealedLineageGitPreflightPort;
@@ -151,13 +192,10 @@ export class SystemSealedLineageIssueAuthorityPort implements SealedLineageIssue
       const raw = execFileSync(
         "gh",
         [
-          "issue",
-          "view",
-          String(input.issue.number),
-          "--repo",
-          input.repositoryIdentity,
-          "--json",
-          "number,body,updatedAt",
+          "api",
+          `repos/${input.repositoryIdentity}/issues/${input.issue.number}`,
+          "--header",
+          "Cache-Control: no-cache",
         ],
         { encoding: "utf8", windowsHide: true, stdio: ["ignore", "pipe", "ignore"] },
       );
@@ -165,13 +203,13 @@ export class SystemSealedLineageIssueAuthorityPort implements SealedLineageIssue
       if (
         !Number.isSafeInteger(parsed.number) ||
         typeof parsed.body !== "string" ||
-        typeof parsed.updatedAt !== "string"
+        typeof parsed.updated_at !== "string"
       )
         return undefined;
       return {
         number: Number(parsed.number),
         rawBody: parsed.body,
-        updatedAt: parsed.updatedAt,
+        updatedAt: parsed.updated_at,
       };
     } catch {
       return undefined;
@@ -516,9 +554,7 @@ function validate(input: SealedLineageMigrationInput):
 function validateGitPreflight(
   input: SealedLineageMigrationInput,
   git: SealedLineageGitPreflightPort | undefined,
-):
-  | { ok: true; issueNumber: number; episodeId: string }
-  | { ok: false; ruleId: string } {
+): { ok: true; issueNumber: number; episodeId: string } | { ok: false; ruleId: string } {
   if (!git) return rejected("seal-git-preflight-unavailable");
   let headBefore: string;
   try {

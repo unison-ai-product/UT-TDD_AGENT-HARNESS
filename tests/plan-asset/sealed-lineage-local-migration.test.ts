@@ -477,25 +477,22 @@ describe("sealed lineage local migration", () => {
       (command: MigrationInput) =>
         withAuthorityDigests({ ...command, issue: { ...command.issue, episodeId: "E4-999" } }),
     ],
-  ] as const)(
-    "U-PA-SEAL-016: %sはIssue authorityとして受理しない",
-    async (_name, authority, mutate) => {
-      const { db, Transaction } = await baseFixture();
-      const command = mutate(input());
-      const issueAuthority = authority === null ? fakeIssueAuthority(command) : authority;
-      const transaction = new Transaction(db, {
-        git: fakeGit(command),
-        reviewAuthority: fakeReviewAuthority(),
-        issueAuthority,
-      });
+  ] as const)("U-PA-SEAL-016: %sはIssue authorityとして受理しない", async (_name, authority, mutate) => {
+    const { db, Transaction } = await baseFixture();
+    const command = mutate(input());
+    const issueAuthority = authority === null ? fakeIssueAuthority(command) : authority;
+    const transaction = new Transaction(db, {
+      git: fakeGit(command),
+      reviewAuthority: fakeReviewAuthority(),
+      issueAuthority,
+    });
 
-      expect(transaction.migrate(command)).toEqual({
-        ok: false,
-        ruleId: "seal-issue-authority-invalid",
-      });
-      expect(counts(db)).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
-    },
-  );
+    expect(transaction.migrate(command)).toEqual({
+      ok: false,
+      ruleId: "seal-issue-authority-invalid",
+    });
+    expect(counts(db)).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
+  });
 
   it.each([
     ["LF + terminal newline", "line1\nline2\n", true],
