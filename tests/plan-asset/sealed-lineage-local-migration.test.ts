@@ -53,12 +53,78 @@ describe("sealed lineage local migration", () => {
     "receipt",
   ] as const)("U-PA-SEAL-003: %s faultで全writeをrollbackする", async (boundary) => {
     const { db, Transaction } = await baseFixture();
+    const command = input();
     const transaction = new Transaction(db, {
       after(actual) {
         if (actual === boundary) throw new Error(`fault:${boundary}`);
       },
+      git: fakeGit(command),
+      reviewAuthority: fakeReviewAuthority(),
     });
-    expect(() => transaction.migrate(input())).toThrow(`fault:${boundary}`);
+    expect(() => transaction.migrate(command)).toThrow(`fault:${boundary}`);
+    expect(counts(db)).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
+  });
+
+  it.each([
+    ["certificateDigest", "seal-certificate-digest-mismatch"],
+    ["sourceAuthorityDigest", "seal-source-authority-invalid"],
+    ["reviewedImplementationAuthorityDigest", "seal-review-authority-invalid"],
+  ] as const)("E.6: %s の1 bit改変はwrite 0", async (field, ruleId) => {
+    const { db, Transaction } = await baseFixture();
+    const command = input();
+    const mutated = { ...command, [field]: flipDigest(command[field]) } as MigrationInput;
+    const transaction = new Transaction(db, {
+      git: fakeGit(command),
+      reviewAuthority: fakeReviewAuthority(),
+    });
+    expect(transaction.migrate(mutated)).toEqual({ ok: false, ruleId });
+    expect(counts(db)).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
+  });
+
+  it.each([
+    ["unreachable", "seal-source-commit-unreachable"],
+    ["source path", "seal-source-path-noncanonical"],
+    ["source absent", "seal-source-path-absent"],
+    ["source oid", "seal-source-blob-mismatch"],
+    ["source payload", "seal-source-payload-drift"],
+    ["projection path", "seal-projection-path-noncanonical"],
+    ["projection custody", "seal-projection-custody-mismatch"],
+    ["projection terminal", "seal-projection-terminal-mismatch"],
+    ["head race", "seal-source-head-toctou"],
+  ] as const)("E.3: %s のGit preflight不成立はwrite 0", async (caseName, ruleId) => {
+    const { db, Transaction } = await baseFixture();
+    const command = input();
+    const baseGit = fakeGit(command);
+    let reads = 0;
+    const git = {
+      ...baseGit,
+      readHeadCommit: () => {
+        reads += 1;
+        return caseName === "head race" && reads > 1 ? "e".repeat(40) : command.sourceCommit;
+      },
+      isReachableFromTrackedRemote: () => caseName !== "unreachable",
+      readBlob: (commit: string, path: string) => {
+        const blob = baseGit.readBlob(commit, path);
+        if (caseName === "source absent" && path === command.sourcePath) return undefined;
+        if (caseName === "source oid" && path === command.sourcePath && blob)
+          return { ...blob, blobOid: flipOid(blob.blobOid) };
+        if (caseName === "source payload" && path === command.sourcePath && blob)
+          return { ...blob, bytes: Buffer.from("---\nplan_id: drift\n---\nbody", "utf8") };
+        if (caseName === "projection custody" && path === command.historicalProjectionPath && blob)
+          return { ...blob, bytes: Buffer.from("{}", "utf8") };
+        if (caseName === "projection terminal" && path === command.historicalProjectionPath && blob)
+          return { ...blob, bytes: Buffer.from(JSON.stringify({ records: [] }), "utf8") };
+        return blob;
+      },
+    };
+    const mutated =
+      caseName === "source path"
+        ? { ...command, sourcePath: "docs/plans/not-the-plan.md" }
+        : caseName === "projection path"
+          ? { ...command, historicalProjectionPath: "docs/other.json" }
+          : command;
+    const transaction = new Transaction(db, { git, reviewAuthority: fakeReviewAuthority() });
+    expect(transaction.migrate(mutated)).toEqual({ ok: false, ruleId });
     expect(counts(db)).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
   });
 });
@@ -77,6 +143,7 @@ type Boundary =
 
 interface MigrationInput {
   commandId: string;
+  repositoryIdentity: string;
   planId: string;
   historicalAssetId: string;
   historicalTerminalRevision: number;
@@ -90,6 +157,7 @@ interface MigrationInput {
   bodyDigest: string;
   sourcePath: string;
   sourceCommit: string;
+  sourceBlobOid: string;
   actor: string;
   occurredAt: string;
   certificateDigest: string;
@@ -116,7 +184,28 @@ interface Transaction {
 }
 
 interface TransactionConstructor {
-  new (db: HarnessDb, fault?: { after(boundary: Boundary): void }): Transaction;
+  new (
+    db: HarnessDb,
+    options?: {
+      after?(boundary: Boundary): void;
+      git?: {
+        readHeadCommit(): string;
+        isReachableFromTrackedRemote(commit: string): boolean;
+        readBlob(commit: string, path: string): { blobOid: string; bytes: Uint8Array } | undefined;
+      };
+      reviewAuthority?: {
+        observe(input: MigrationInput):
+          | {
+              pullRequestNumber: number;
+              baseRef: string;
+              headSha: string;
+              custodyState: "custody_admitted" | "custody_rejected";
+              custodyReasons: readonly string[];
+            }
+          | undefined;
+      };
+    },
+  ): Transaction;
 }
 
 async function loadTransaction(): Promise<TransactionConstructor> {
@@ -135,37 +224,146 @@ async function baseFixture() {
 
 async function fixture() {
   const value = await baseFixture();
-  return { ...value, transaction: new value.Transaction(value.db) };
+  const command = input();
+  return {
+    ...value,
+    transaction: new value.Transaction(value.db, {
+      git: fakeGit(command),
+      reviewAuthority: fakeReviewAuthority(),
+    }),
+  };
 }
 
 function input(): MigrationInput {
   const payload = `{"plan_id":"${PLAN_ID}","status":"draft"}`;
-  return {
+  const historicalTailDigest = digest("record-3");
+  const projection = JSON.stringify({
+    schema_version: "ut-tdd.plan-admission-receipts/v1",
+    records: [
+      {
+        sequence: 3,
+        record_digest: `sha256:${historicalTailDigest}`,
+        binding: {
+          plan_id: PLAN_ID,
+          asset_id: "plan:890b18d79d85d8d7cc2591c7146af5e2",
+          revision: 3,
+        },
+      },
+    ],
+  });
+  const base = {
     commandId: "seal-lineage:recovery-16:v1",
+    repositoryIdentity: "unison-ai-product/UT-TDD_AGENT-HARNESS",
     planId: PLAN_ID,
     historicalAssetId: "plan:890b18d79d85d8d7cc2591c7146af5e2",
     historicalTerminalRevision: 3,
-    historicalTailDigest: digest("record-3"),
+    historicalTailDigest,
     historicalProjectionPath: "docs/governance/plan-admission-receipts.json",
     historicalProjectionBlobOid: "b".repeat(40),
-    historicalProjectionContentDigest: digest("tracked projection"),
+    historicalProjectionContentDigest: digest(projection),
     successorAssetId: "plan:recovery-16-successor",
     canonicalPayloadJson: payload,
     canonicalPayloadDigest: digest(payload),
     bodyDigest: digest("body"),
     sourcePath: "docs/plans/PLAN-RECOVERY-16-plan-revision-authoring.md",
     sourceCommit: "a".repeat(40),
+    sourceBlobOid: "c".repeat(40),
     actor: "codex",
     occurredAt: "2026-07-27T03:30:00.000Z",
-    certificateDigest: digest("certificate"),
-    sourceAuthorityDigest: digest("trusted source"),
-    reviewedImplementationAuthorityDigest: digest("reviewed implementation"),
-    trustedStatus: "draft",
+    certificateDigest: "0".repeat(64),
+    sourceAuthorityDigest: "0".repeat(64),
+    reviewedImplementationAuthorityDigest: "0".repeat(64),
+    trustedStatus: "draft" as const,
     issue: {
       number: 102,
       episodeId: "E4-102",
       preimageDigest: digest("issue 102"),
     },
+  };
+  const sourceAuthorityDigest = framedDigest("ut-tdd-seal-source-authority-v1", [
+    base.repositoryIdentity,
+    base.planId,
+    base.sourcePath,
+    base.sourceCommit,
+    base.sourceBlobOid,
+    base.canonicalPayloadDigest,
+    base.bodyDigest,
+    base.historicalProjectionPath,
+    base.historicalProjectionBlobOid,
+    base.historicalProjectionContentDigest,
+    base.historicalAssetId,
+    String(base.historicalTerminalRevision),
+    base.historicalTailDigest,
+  ]);
+  const reviewedImplementationAuthorityDigest = framedDigest("ut-tdd-seal-review-authority-v1", [
+    base.repositoryIdentity,
+    base.planId,
+    "543",
+    "main",
+    "d".repeat(40),
+    "custody_rejected",
+    "unverified_family",
+  ]);
+  const certificateDigest = digest(
+    stableCanonical({
+      historicalAssetId: base.historicalAssetId,
+      historicalTerminalRevision: base.historicalTerminalRevision,
+      historicalTailDigest: base.historicalTailDigest,
+      planId: base.planId,
+      reviewedImplementationAuthorityDigest,
+      sourceAuthorityDigest,
+      successorAssetId: base.successorAssetId,
+      successorRevision: 1,
+    }),
+  );
+  return {
+    ...base,
+    sourceAuthorityDigest,
+    reviewedImplementationAuthorityDigest,
+    certificateDigest,
+  };
+}
+
+function fakeGit(command: MigrationInput) {
+  const source = Buffer.from(`---\nplan_id: ${command.planId}\nstatus: draft\n---\nbody`, "utf8");
+  const projection = Buffer.from(
+    JSON.stringify({
+      schema_version: "ut-tdd.plan-admission-receipts/v1",
+      records: [
+        {
+          sequence: command.historicalTerminalRevision,
+          record_digest: `sha256:${command.historicalTailDigest}`,
+          binding: {
+            plan_id: command.planId,
+            asset_id: command.historicalAssetId,
+            revision: command.historicalTerminalRevision,
+          },
+        },
+      ],
+    }),
+    "utf8",
+  );
+  return {
+    readHeadCommit: () => command.sourceCommit,
+    isReachableFromTrackedRemote: () => true,
+    readBlob: (_commit: string, path: string) =>
+      path === command.sourcePath
+        ? { blobOid: command.sourceBlobOid, bytes: source }
+        : path === command.historicalProjectionPath
+          ? { blobOid: command.historicalProjectionBlobOid, bytes: projection }
+          : undefined,
+  };
+}
+
+function fakeReviewAuthority() {
+  return {
+    observe: () => ({
+      pullRequestNumber: 543,
+      baseRef: "main",
+      headSha: "d".repeat(40),
+      custodyState: "custody_rejected" as const,
+      custodyReasons: ["unverified_family"],
+    }),
   };
 }
 
@@ -188,4 +386,34 @@ function count(db: HarnessDb, table: string): number {
 
 function digest(value: string): string {
   return createHash("sha256").update(value).digest("hex");
+}
+
+function framedDigest(label: string, values: readonly string[]): string {
+  const hash = createHash("sha256");
+  for (const value of [label, ...values]) {
+    const bytes = Buffer.from(value, "utf8");
+    const length = Buffer.allocUnsafe(4);
+    length.writeUInt32BE(bytes.length);
+    hash.update(length).update(bytes);
+  }
+  return hash.digest("hex");
+}
+
+function stableCanonical(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(stableCanonical).join(",")}]`;
+  if (value && typeof value === "object")
+    return `{${Object.entries(value as Record<string, unknown>)
+      .filter(([, child]) => child !== undefined)
+      .sort(([left], [right]) => Buffer.compare(Buffer.from(left), Buffer.from(right)))
+      .map(([key, child]) => `${JSON.stringify(key)}:${stableCanonical(child)}`)
+      .join(",")}}`;
+  return JSON.stringify(value);
+}
+
+function flipDigest(value: string): string {
+  return `${value[0] === "0" ? "1" : "0"}${value.slice(1)}`;
+}
+
+function flipOid(value: string): string {
+  return `${value[0] === "a" ? "b" : "a"}${value.slice(1)}`;
 }
