@@ -20,7 +20,8 @@ import {
   realpathSync,
   writeFileSync,
 } from "node:fs";
-import { dirname, isAbsolute, join, relative, resolve } from "node:path";
+import { isAbsolute, join, relative, resolve } from "node:path";
+import { isCanonicalMemoryDomainSourcePath } from "../kernel/memory-domain.ts";
 import { requireProjectMemoryCompletion } from "../runtime/project-memory-completion-fence.ts";
 import { isSecretLike } from "../secret.ts";
 import { ensureDir } from "../shared/fs.ts";
@@ -68,20 +69,7 @@ export interface MemoryQueryOptions {
 const MEMORY_SOURCE_ROOT = join(".ut-tdd", "memory");
 
 /** decoderが使うpure namespace判定。正本literalはMemoryServiceだけが所有する。 */
-export function isCanonicalMemorySourcePath(sourcePath: string): boolean {
-  if (!sourcePath.trim() || isAbsolute(sourcePath)) return false;
-  const normalized = sourcePath.replaceAll("\\", "/");
-  const root = MEMORY_SOURCE_ROOT.replaceAll("\\", "/");
-  const name = normalized.slice(root.length + 1);
-  return (
-    sourcePath === normalized &&
-    normalized.startsWith(`${root}/`) &&
-    dirname(normalized) === root &&
-    name !== "" &&
-    name !== "." &&
-    name !== ".."
-  );
-}
+export const isCanonicalMemorySourcePath = isCanonicalMemoryDomainSourcePath;
 
 /** canonical root内のregular fileだけを解決し、frontmatter identityまで同時に束縛する。 */
 export function resolveMemoryTaskFile(input: {
