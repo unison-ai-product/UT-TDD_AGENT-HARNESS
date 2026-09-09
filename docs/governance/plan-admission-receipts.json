@@ -2880,6 +2880,54 @@
         "revision": 3,
         "content_digest": "sha256:15ba3b799ee7309dbcf585217fc9c5d001e5b5f8b45b9824f8a1a44b705c259f"
       }
+    },
+    {
+      "sequence": 181,
+      "previous_record_digest": "sha256:bc94c7f7ed06c89626ed7de3e1f2427f2ee21dce43436d1f87d84f16de2e6c9f",
+      "record_digest": "sha256:da08b298930e815a4e808f4345a3f1debdf476b42357fd81485178e241168c47",
+      "command_id": "command:issue439-retraction-current-protocol-revision2",
+      "receipt_id": "certificate:81b985d8ab8a455d54d994c16b4f8b70",
+      "receipt_digest": "sha256:00bf2b8276ba8d9995a8b706388d3e968aa4209d82f6cb3f9bc46c0e3f93421f",
+      "decision_digest": "sha256:9928d4d957b0d96d1bf991b008bb9123e482820f6d20e3ae7997b4be810a2525",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-518-review-request-retraction.md",
+        "plan_id": "PLAN-L7-518-review-request-retraction",
+        "asset_id": "plan:legacy:2b4a19f0342ad752af7dbb564e748cbf87be684c6b7ec208aa2fd3726117e9e7",
+        "revision": 2,
+        "content_digest": "sha256:1c1933aafc70706d7a0e26e79270a59e464b325b660cd25b25d26026933530bc"
+      }
+    },
+    {
+      "sequence": 182,
+      "previous_record_digest": "sha256:da08b298930e815a4e808f4345a3f1debdf476b42357fd81485178e241168c47",
+      "record_digest": "sha256:90100b97f197ec8081f692ca5a7d97015eeb06c2e3c86f7b0c8a34bece558744",
+      "command_id": "command:issue439-retraction-reverse-revision2",
+      "receipt_id": "certificate:40d4e5acc36e82117cd92af19318a5da",
+      "receipt_digest": "sha256:a71ccf0f6426c13872437db7621e04ccfc4435f8ca6028fcc76684defd2a2d49",
+      "decision_digest": "sha256:5e871f2b15755be4017b39dff4cf947400bedd638225f1dd36e0598e3f0109b9",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-518-review-request-retraction-backfill.md",
+        "plan_id": "PLAN-REVERSE-518-review-request-retraction-backfill",
+        "asset_id": "plan:legacy:2fb18f8069e22a3b19fbe187c63885f32af28d8c2374d81920a0f336668a24b9",
+        "revision": 2,
+        "content_digest": "sha256:9504fa943b9189a7e69cbbe31ba14808d6dfc49d7c69c2e2a14e4f0dd590409a"
+      }
+    },
+    {
+      "sequence": 183,
+      "previous_record_digest": "sha256:90100b97f197ec8081f692ca5a7d97015eeb06c2e3c86f7b0c8a34bece558744",
+      "record_digest": "sha256:037ad192726f7fb6f345263575cca3d14841fbe9fc14a3560ad17659af985a0d",
+      "command_id": "command:issue439-retraction-consistency-revision3",
+      "receipt_id": "certificate:30ba7b5d339fa3c7f6899060008fc4ef",
+      "receipt_digest": "sha256:cc208b5da4c02bce5365df27595a63f0b752888778e135608c4fcf6a61ffa735",
+      "decision_digest": "sha256:cd1fe15ab80c26662c7cfdd7878932020a037d052d1bcd920412f3e0452bbfff",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-518-review-request-retraction.md",
+        "plan_id": "PLAN-L7-518-review-request-retraction",
+        "asset_id": "plan:legacy:2b4a19f0342ad752af7dbb564e748cbf87be684c6b7ec208aa2fd3726117e9e7",
+        "revision": 3,
+        "content_digest": "sha256:f39d2bb4007af3650e132e60a4af2019d5a38babf9708f4fd50d217a04e50064"
+      }
     }
   ]
 }
