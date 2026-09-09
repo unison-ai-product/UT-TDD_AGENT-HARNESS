@@ -6,6 +6,7 @@ import { afterEach, expect, it } from "vitest";
 import { ProjectMemoryMigration } from "../src/memory/project-memory-migration.ts";
 import { canonicalProjectIdentityBytes } from "../src/plan-asset/adapters/project-identity-loader.ts";
 import { resolveProjectMemoryRoot } from "../src/runtime/project-memory-root.ts";
+import { normalizeTopologyPath } from "../src/runtime/worktree-topology.ts";
 import { collectWorktreeTopology } from "../src/runtime/worktree-topology-collector.ts";
 
 const fixtures: string[] = [];
@@ -88,9 +89,9 @@ it("retains every variant for conflicting IDs without selecting a winner", () =>
   const variants = result.groups[0].variants;
   expect(variants.map(({ worktreeRoot, sourcePath }) => [worktreeRoot, sourcePath]).sort()).toEqual(
     [
-      [primary, ".ut-tdd/memory/a.md"],
-      [linked, ".ut-tdd/memory/b.md"],
-      [linked, ".ut-tdd/memory/c.md"],
+      [normalizeTopologyPath(primary), ".ut-tdd/memory/a.md"],
+      [normalizeTopologyPath(linked), ".ut-tdd/memory/b.md"],
+      [normalizeTopologyPath(linked), ".ut-tdd/memory/c.md"],
     ].sort(),
   );
   const digestBySource = new Map(
@@ -100,11 +101,11 @@ it("retains every variant for conflicting IDs without selecting a winner", () =>
     ]),
   );
   expect(new Set(digestBySource.values()).size).toBe(2);
-  expect(digestBySource.get(`${primary}:.ut-tdd/memory/a.md`)).toBe(
-    digestBySource.get(`${linked}:.ut-tdd/memory/c.md`),
+  expect(digestBySource.get(`${normalizeTopologyPath(primary)}:.ut-tdd/memory/a.md`)).toBe(
+    digestBySource.get(`${normalizeTopologyPath(linked)}:.ut-tdd/memory/c.md`),
   );
-  expect(digestBySource.get(`${linked}:.ut-tdd/memory/b.md`)).not.toBe(
-    digestBySource.get(`${primary}:.ut-tdd/memory/a.md`),
+  expect(digestBySource.get(`${normalizeTopologyPath(linked)}:.ut-tdd/memory/b.md`)).not.toBe(
+    digestBySource.get(`${normalizeTopologyPath(primary)}:.ut-tdd/memory/a.md`),
   );
 });
 
