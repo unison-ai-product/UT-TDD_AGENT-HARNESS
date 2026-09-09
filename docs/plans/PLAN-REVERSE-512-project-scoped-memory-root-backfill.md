@@ -8,7 +8,7 @@ route_signal: design_gap
 route_mode: reverse
 confirmed_reverse_type: design
 created: 2026-08-26
-updated: 2026-09-08
+updated: 2026-09-09
 owner: PO / TL
 parent_design: docs/plans/PLAN-L7-512-project-scoped-memory-root.md
 pair_artifact: docs/test-design/harness/L7-project-scoped-memory-root-test-design.md
@@ -89,47 +89,60 @@ review_evidence:
         anchor_commit: 6ce594c2087d8cd802bc3579b70ade9fbf912b43
 workflow_phase: R1
 status: draft
-github_issue_id: 528
+github_issue_id: 544
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:b144dbc4071397e7a08e6c3d2890df13
-  command_id: command:issue528-PLAN-REVERSE-512-project-scoped-memory-root-backfill-measured-evidence-r4
-  admitted_at: 2026-09-08T06:57:32.337Z
-  source_digest: sha256:26af6d2a049206593f61fe4cc118a663ddf6d5a3bb73331101400c68b11aaefb
-  decision_digest: sha256:c19d176832c0590480ff8dbd004653dd6bd9d9e3acb78c2a21b33a725ce88a1c
-  receipt_digest: sha256:235d05611522f192059eb3cdc878cce26f107d3e08d139d9a71b979373a5748c
+  receipt_id: certificate:bde28b20f3eeee286da5090da0fe1964
+  command_id: command:issue544-PLAN-REVERSE-512-memory-inventory-r6
+  admitted_at: 2026-09-09T02:44:05.820Z
+  source_digest: sha256:8a5cb9478f54ecc2e9c9b5dc826b01c7ea8764f1233d2ac52f691642c0ba6ac6
+  decision_digest: sha256:2dad47c72577a8b3e5329d1d9f54abd0bce5481652e6f12f8416e0253652831a
+  receipt_digest: sha256:2befaf95fe5584d8ea520c0aed48e893cbfc6ec9fc5a41bcd811f163a3ec6cce
   binding:
     path: docs/plans/PLAN-REVERSE-512-project-scoped-memory-root-backfill.md
     plan_id: PLAN-REVERSE-512-project-scoped-memory-root-backfill
     asset_id: plan:legacy:186048a954aa8dae7b4f8b1f968f6c5d64d758850fa695ed59a11edcdcf63153
-    revision: 4
-    content_digest: sha256:26af6d2a049206593f61fe4cc118a663ddf6d5a3bb73331101400c68b11aaefb
+    revision: 6
+    content_digest: sha256:8a5cb9478f54ecc2e9c9b5dc826b01c7ea8764f1233d2ac52f691642c0ba6ac6
   route:
     signal: design_gap
     mode: reverse
   issue:
     provider: github
-    issue_id: 528
-    episode_id: E4-528-project-memory-envelope-reverse
-    projection_digest: sha256:218a5a56c4c720bac923f795c4b973f7d592159f75305a8ee1e39121403e10bf
+    issue_id: 544
+    episode_id: E4-544-project-memory-inventory-reverse
+    projection_digest: sha256:bea56244b34bd74d709278dcab8fb5fd50024b05be6edc9d61b6ec5123d3f450
   origin:
     plan_id: PLAN-L7-512-project-scoped-memory-root
-    revision: 4
-    digest: sha256:01416a9390b1c135ada280e088d68acaa668c5ca75a3a77a9a9ec93557a42d26
+    revision: 6
+    digest: sha256:e3e3cad039021a5394c5ad09ea1f0084642bba9c0423fd9faa77563e1e52ce19
   transition:
     direction: implementation_to_design
     implementation_disposition: preserved
   reentry:
     target_plan_id: PLAN-L7-512-project-scoped-memory-root
-    target_revision: 4
+    target_revision: 6
     phase: forward_merge
-  escape_reason: "Issue #528 current implementation snapshot evidence and
-    completion timestamp repair"
+  escape_reason: "Issue #544 Slice 4a inventory R1 evidence; R2 through R4 remain pending"
 ---
 
 # PLAN-REVERSE-512
 
 ## Prior R0
+
+## R1: Issue #544 Slice 4a observed implementation
+
+Forward trace: `PLAN-L7-512 §3 Slice 4a → Issue #544 → efbdff94bddac6f058b58a5c61fec2e0750ac283
+→ src/runtime/project-memory-migration.ts → tests/project-memory-migration.test.ts`。
+
+linked worktreeを含むMemory corpusをread-onlyでinventoryし、同一memory IDのvariantを
+content digestで束縛して、unique / dedupe / conflictへ決定論的に分類する実装candidateを観測した。
+実装前Redから、primary・linked worktree、順序非依存、同一内容重複、異内容conflict、
+root外escape拒否を含む8件がGreenへ遷移した。
+
+本R1はinventoryと分類だけを対象とする。canonical apply、quarantine transaction、
+crash recovery、completion marker、clean Pack parity、R2の独立mutation、R3 aggregate、
+R4の上位再合流、非著者closing reviewは未完了であり、本改訂はそれらを完了扱いしない。
 
 ## R1: Issue #528 Slice 3 observed implementation
 

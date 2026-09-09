@@ -7,7 +7,7 @@ drive: fullstack
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-08-26
-updated: 2026-09-08
+updated: 2026-09-09
 owner: PO / TL
 parent_design: docs/governance/ut-tdd-agent-harness-requirements_v1.2.md
 pair_artifact: docs/test-design/harness/L7-project-scoped-memory-root-test-design.md
@@ -30,6 +30,10 @@ generates:
   - artifact_path: src/runtime/claude-provider-envelope.ts
     artifact_type: source_module
   - artifact_path: tests/project-memory-root.test.ts
+    artifact_type: test_code
+  - artifact_path: src/runtime/project-memory-migration.ts
+    artifact_type: source_module
+  - artifact_path: tests/project-memory-migration.test.ts
     artifact_type: test_code
 dependencies:
   parent: docs/governance/ut-tdd-agent-harness-requirements_v1.2.md
@@ -167,40 +171,75 @@ review_evidence:
         evidence_path: src/runtime/claude-memory-wake.ts
         output_digest: sha256:357a451c5b7c3db96ef728aed9a202762618476b23a63b338365ed72bece9cf4
         anchor_commit: 6ce594c2087d8cd802bc3579b70ade9fbf912b43
+  - reviewer: codex-issue544-preflight
+    review_kind: intra_runtime_subagent
+    reviewed_at: 2026-09-09T02:41:26.549Z
+    tests_green_at: 2026-09-09T02:32:41.000Z
+    verdict: PASS blocking 0; Claude Opus non-author closing review pending
+    worker_model: gpt-5.6-luna
+    effort: high
+    reviewer_model: gpt-5.6-sol
+    plan_revision: 69896336069c4fc41184876c16f01230d96dad9e
+    subject_head: 69896336069c4fc41184876c16f01230d96dad9e
+    anchor_commit: 69896336069c4fc41184876c16f01230d96dad9e
+    evidence_path: tests/project-memory-migration.test.ts
+    scope: "Issue #544 / PLAN-L7-512 Slice 4a。linked worktree inventoryとunique /
+      dedupe / conflict分類だけを対象とし、U-PMEMINV-001..008をexact HEADで検証した。canonical
+      apply、quarantine transaction、recovery、completion marker、Pack
+      parity、Reverse R2以降は未完了。"
+    citations:
+      - src/runtime/project-memory-migration.ts
+      - tests/project-memory-migration.test.ts
+      - "docs/test-design/harness/L7-project-scoped-memory-root-test-design.md:
+        U-PMEMINV-001..008"
+    green_commands:
+      - kind: unit_test
+        command: node scripts/run-vitest-snapshot.ts
+          tests/project-memory-migration.test.ts --pool=forks --maxWorkers=2
+          --minWorkers=1 --reporter=dot
+        runner: node
+        scope: targeted
+        exit_code: 0
+        completed_at: 2026-09-09T02:32:41.000Z
+        evidence_path: tests/project-memory-migration.test.ts
+        output_digest: sha256:578308c0fa04dc07aa07c55e63ad66f983759415e2ea445bf84563f7fc6d0f9e
+        anchor_commit: 69896336069c4fc41184876c16f01230d96dad9e
 status: confirmed
-github_issue_id: 528
+github_issue_id: 544
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:a6c2b9d4814e28377724d4ba777ce544
-  command_id: command:issue528-PLAN-L7-512-project-scoped-memory-root-measured-evidence-r4
-  admitted_at: 2026-09-08T06:56:54.021Z
-  source_digest: sha256:01416a9390b1c135ada280e088d68acaa668c5ca75a3a77a9a9ec93557a42d26
-  decision_digest: sha256:7bc152f052d22aaf3e288664eb9c223a9e7a649bf66b1fdfd0af3827934f83c5
-  receipt_digest: sha256:ba1fe86a2b9a6f65aae4b5c0ae45242b4d63ce1866be672233ed23256440703f
+  receipt_id: certificate:c3d66c1db79e70ef608f51f9f8384533
+  command_id: command:issue544-PLAN-L7-512-memory-inventory-r6
+  admitted_at: 2026-09-09T02:41:26.549Z
+  source_digest: sha256:e3e3cad039021a5394c5ad09ea1f0084642bba9c0423fd9faa77563e1e52ce19
+  decision_digest: sha256:6e9ac50f61464271799cc1dd0cba31f02d4f53349e96557d3abb61067f36ec54
+  receipt_digest: sha256:89c201fb18dcf2b324928578fab63c36ea6a4871e84752b131a9a52162b3adc3
   binding:
     path: docs/plans/PLAN-L7-512-project-scoped-memory-root.md
     plan_id: PLAN-L7-512-project-scoped-memory-root
     asset_id: plan:legacy:68706e293ae2c96738a8e3263bac3e01e7cde64cdb7c3ed8e53805922662bc30
-    revision: 4
-    content_digest: sha256:01416a9390b1c135ada280e088d68acaa668c5ca75a3a77a9a9ec93557a42d26
+    revision: 6
+    content_digest: sha256:e3e3cad039021a5394c5ad09ea1f0084642bba9c0423fd9faa77563e1e52ce19
   route:
     signal: feature_addition
     mode: add-feature
   issue:
     provider: github
-    issue_id: 528
-    episode_id: E4-528-project-memory-envelope
-    projection_digest: sha256:218a5a56c4c720bac923f795c4b973f7d592159f75305a8ee1e39121403e10bf
+    issue_id: 544
+    episode_id: E4-544-project-memory-inventory
+    projection_digest: sha256:bea56244b34bd74d709278dcab8fb5fd50024b05be6edc9d61b6ec5123d3f450
   origin:
     plan_id: PLAN-L7-512-project-scoped-memory-root
-    revision: 3
-    digest: sha256:ed94d33b6879c4eded974aea8a22f537ef2dfda948d19c1172f68de4c1058674
+    revision: 5
+    digest: sha256:fffbb99286a1e2e26d50758ad70d27a3314465eeb531ecd39e46464ab71a2c7c
+  transition:
+    direction: design_to_implementation
+    implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-512-project-scoped-memory-root
-    target_revision: 4
+    target_revision: 6
     phase: forward_merge
-  escape_reason: "Issue #528 current implementation snapshot evidence and
-    completion timestamp repair"
+  escape_reason: "Issue #544 exact implementation and preflight evidence"
 ---
 
 # PLAN-L7-512: project-scoped canonical Memory and notification root
@@ -240,6 +279,10 @@ transient notification busとして共有する。絶対pathはidentityに含め
 3. project-bound provider envelopeとclaim guard。
 4. inventory、dedupe、conflict quarantine、transaction recovery、completion fence。
 5. clean Pack setupからのCodex/Claude parityと別project isolation E2E。
+
+本改訂はIssue #544のSlice 4aだけを所有し、linked worktree inventoryと
+unique / dedupe / conflictの決定論的分類をruntime境界で実装する。canonical apply、quarantine transaction、
+crash recovery、completion marker、Pack parityは後続へ残す。
 
 ## 4. Scope boundary
 
