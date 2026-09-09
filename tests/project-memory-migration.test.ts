@@ -44,6 +44,8 @@ function memory(root: string, name: string, body = "body", id = "memory:project:
   );
   return path;
 }
+const canonicalWorktreeRoot = (root: string): string =>
+  normalizeTopologyPath(git(root, ["rev-parse", "--show-toplevel"]).toString("utf8").trim());
 afterEach(() => {
   for (const root of fixtures.splice(0)) rmSync(root, { recursive: true, force: true });
 });
@@ -87,11 +89,13 @@ it("U-PMEMINV-002 retains every conflict variant without selecting a winner", ()
   expect(result.hasConflicts).toBe(true);
   expect(result.groups[0].disposition).toBe("conflict");
   const variants = result.groups[0].variants;
+  const canonicalPrimary = canonicalWorktreeRoot(primary);
+  const canonicalLinked = canonicalWorktreeRoot(linked);
   expect(variants.map(({ worktreeRoot, sourcePath }) => [worktreeRoot, sourcePath]).sort()).toEqual(
     [
-      [normalizeTopologyPath(primary), ".ut-tdd/memory/a.md"],
-      [normalizeTopologyPath(linked), ".ut-tdd/memory/b.md"],
-      [normalizeTopologyPath(linked), ".ut-tdd/memory/c.md"],
+      [canonicalPrimary, ".ut-tdd/memory/a.md"],
+      [canonicalLinked, ".ut-tdd/memory/b.md"],
+      [canonicalLinked, ".ut-tdd/memory/c.md"],
     ].sort(),
   );
   const digestBySource = new Map(
@@ -101,12 +105,14 @@ it("U-PMEMINV-002 retains every conflict variant without selecting a winner", ()
     ]),
   );
   expect(new Set(digestBySource.values()).size).toBe(2);
-  expect(digestBySource.get(`${normalizeTopologyPath(primary)}:.ut-tdd/memory/a.md`)).toBe(
-    digestBySource.get(`${normalizeTopologyPath(linked)}:.ut-tdd/memory/c.md`),
+  expect(digestBySource.get(`${canonicalPrimary}:.ut-tdd/memory/a.md`)).toBe(
+    digestBySource.get(`${canonicalLinked}:.ut-tdd/memory/c.md`),
   );
-  expect(digestBySource.get(`${normalizeTopologyPath(linked)}:.ut-tdd/memory/b.md`)).not.toBe(
-    digestBySource.get(`${normalizeTopologyPath(primary)}:.ut-tdd/memory/a.md`),
+  expect(digestBySource.get(`${canonicalLinked}:.ut-tdd/memory/b.md`)).not.toBe(
+    digestBySource.get(`${canonicalPrimary}:.ut-tdd/memory/a.md`),
   );
+  // TEMP may use an 8.3 alias on Windows. Input spelling must not leak into the inventory.
+  expect(new ProjectMemoryMigration().dryRun(linked)).toEqual(result);
 });
 
 it("U-PMEMINV-003 rejects invalid and unreadable input without partial inventory", () => {
