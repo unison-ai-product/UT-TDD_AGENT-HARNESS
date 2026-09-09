@@ -26,6 +26,12 @@ import {
   writeFileSync,
 } from "node:fs";
 import { basename, dirname, join, relative, resolve, sep } from "node:path";
+import {
+  inspectProjectMemoryCompletion,
+  ProjectMemoryCompletionError,
+  type ProjectMemoryCompletionResult,
+} from "../runtime/project-memory-completion-fence.ts";
+import { ProjectMemoryMigration } from "../runtime/project-memory-migration.ts";
 import { ensureDir } from "../shared/fs.ts";
 import {
   applyBranchProtection as applyBranchProtectionImpl,
@@ -317,6 +323,7 @@ export async function installConsumerRuntimeFromSetup(
     },
   });
   return { bundle, result };
+  memoryMigration: ProjectMemoryCompletionResult;
 }
 
 /** gh 実行 seam (raw token 非依存 = gh の認証状態に委ねる)。test=mock。 */
@@ -333,6 +340,8 @@ export interface SetupDeps {
   isInteractive: boolean;
   templates: TemplateSet;
   bootstrapProjectIdentity?: () => ProjectIdentityBootstrapResult;
+  /** Explicit pure-unit seam; production node deps leave this undefined. */
+  memoryCompletion?: () => ProjectMemoryCompletionResult;
 }
 
 const CODEOWNERS_TARGET = join(".github", "CODEOWNERS");
@@ -565,13 +574,52 @@ export function applyBranchProtection(
  * invariant: dryRun=true は副作用ゼロ (state 非書込・remote 非適用、branchProtection.reason="dry-run")。
  */
 export function runSetup(args: SetupArgs, deps: SetupDeps): SetupResult {
-  // Dry-run is side-effect free, including the identity bootstrap write.
-  const projectIdentity = args.dryRun ? undefined : deps.bootstrapProjectIdentity?.();
-  // Identity is a project binding input, not the owner of the rest of setup.
-  // A typed denial must be reported to the caller while the non-identity setup
-  // artifacts still follow their normal, non-destructive orchestration. This
-  // keeps remote-less local repositories usable without weakening identity
-  // read/create fail-close behavior.
+  // Dry-run is a read-only report and never bootstraps identity or migration.
+  const inspectCompletion = (): ProjectMemoryCompletionResult =>
+    deps.memoryCompletion?.() ?? inspectProjectMemoryCompletion(deps.repoRoot);
+  const requireCompletion = (): Extract<ProjectMemoryCompletionResult, { ok: true }> => {
+    const result = inspectCompletion();
+    if (!result.ok) throw new ProjectMemoryCompletionError(result.reason);
+    return result;
+  };
+  let projectIdentity: ProjectIdentityBootstrapResult | undefined;
+  let memoryMigration: ProjectMemoryCompletionResult;
+  if (args.dryRun) {
+    memoryMigration = inspectCompletion();
+  } else {
+    projectIdentity = deps.bootstrapProjectIdentity?.();
+    if (!projectIdentity?.ok) {
+      throw new ProjectMemoryCompletionError("project_identity_unavailable");
+    }
+    if (projectIdentity.commitRequired) {
+      throw new ProjectMemoryCompletionError("project_identity_commit_required");
+    }
+    const migration = new ProjectMemoryMigration();
+    memoryMigration = inspectCompletion();
+    // The only automatic migration path is a genuinely fresh runtime bus.
+    // Existing interrupted/tampered/drifted transactions require explicit recovery.
+    if (
+      !memoryMigration.ok &&
+      memoryMigration.reason === "migration_incomplete" &&
+      !migration.hasTransaction(deps.repoRoot)
+    ) {
+      const applied = migration.apply(deps.repoRoot);
+      if (!applied.ok) {
+        const reason =
+          applied.reason === "source_changed"
+            ? "inventory_drift"
+            : applied.reason === "transaction_interrupted"
+              ? "migration_incomplete"
+              : applied.reason === "transaction_busy"
+                ? "transaction_tampered"
+                : applied.reason;
+        throw new ProjectMemoryCompletionError(reason);
+      }
+      memoryMigration = inspectCompletion();
+    }
+    if (!memoryMigration.ok) throw new ProjectMemoryCompletionError(memoryMigration.reason);
+    requireCompletion();
+  }
   const scale = detectProjectScale(deps);
   let phase: SetupPhase;
   let decidedBy: SetupState["decidedBy"];
@@ -604,7 +652,13 @@ export function runSetup(args: SetupArgs, deps: SetupDeps): SetupResult {
   const branchProtection = args.dryRun
     ? { applied: false, reason: "dry-run" }
     : applyBranchProtection(plan, deps, { apply: args.applyBranchProtection });
-  return { phase, written, branchProtection, ...(projectIdentity ? { projectIdentity } : {}) };
+  return {
+    phase,
+    written,
+    branchProtection,
+    memoryMigration,
+    ...(projectIdentity ? { projectIdentity } : {}),
+  };
 }
 
 /** Async composition root used when setup is supplied a sealed runtime input. */

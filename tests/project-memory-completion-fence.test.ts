@@ -1,18 +1,19 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
+  existsSync,
   lstatSync,
   mkdirSync,
   mkdtempSync,
   readdirSync,
   readFileSync,
+  renameSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { parseMemoryFile } from "../src/memory/index.ts";
 import { readMemory, writeMemory } from "../src/memory/service.ts";
 import {
   buildClaudeInboxEntry,
@@ -23,7 +24,7 @@ import {
 } from "../src/runtime/claude-memory-wake.ts";
 import { inspectProjectMemoryCompletion } from "../src/runtime/project-memory-completion-fence.ts";
 import { ProjectMemoryMigration } from "../src/runtime/project-memory-migration.ts";
-import { runSetup, type SetupDeps } from "../src/setup/index.ts";
+import { nodeSetupDeps, runSetup, type SetupDeps } from "../src/setup/index.ts";
 import { canonicalProjectIdentityBytes } from "../src/setup/project-identity-bootstrap.ts";
 
 const roots: string[] = [];
@@ -59,6 +60,7 @@ function fixture(body = "body"): string {
   git(root, ["init", "-q"]);
   git(root, ["config", "user.email", "test@example.invalid"]);
   git(root, ["config", "user.name", "test"]);
+  git(root, ["config", "core.autocrlf", "false"]);
   git(root, ["remote", "add", "origin", "git@github.com:example/memory-fence.git"]);
   writeFileSync(
     join(root, "ut-tdd.project.json"),
@@ -66,7 +68,7 @@ function fixture(body = "body"): string {
   );
   mkdirSync(join(root, ".ut-tdd", "memory"), { recursive: true });
   memory(root, "memory.md", body);
-  git(root, ["add", "."]);
+  git(root, ["add", "ut-tdd.project.json", ".ut-tdd/memory/memory.md"]);
   git(root, ["commit", "-qm", "test: completion fence fixture"]);
   return root;
 }
@@ -123,14 +125,27 @@ function setupDeps(root: string): SetupDeps {
     confirm: () => false,
     isInteractive: false,
     templates: {},
+    bootstrapProjectIdentity: () => ({
+      ok: true,
+      repositoryIdentity: "example/memory-fence",
+      path: "ut-tdd.project.json",
+      created: false,
+      commitRequired: false,
+    }),
   };
 }
 
-async function assertDeniedEntrances(root: string, reason: string): Promise<void> {
+async function assertDeniedEntrances(
+  root: string,
+  reason: string,
+  options: { includeSetup?: boolean } = {},
+): Promise<void> {
   const before = tree(root);
-  expect(() =>
-    runSetup({ phase: "0-A", dryRun: false, applyBranchProtection: false }, setupDeps(root)),
-  ).toThrow(reason);
+  if (options.includeSetup !== false) {
+    expect(() =>
+      runSetup({ phase: "0-A", dryRun: false, applyBranchProtection: false }, setupDeps(root)),
+    ).toThrow(reason);
+  }
   const cli = join(process.cwd(), "src", "cli.ts");
   const status = spawnSync(process.execPath, [cli, "status", "--json"], {
     cwd: root,
@@ -183,6 +198,41 @@ async function assertDeniedEntrances(root: string, reason: string): Promise<void
 }
 
 describe("Issue #550 project memory completion fence", () => {
+  it("U-PMEMFENCE-000 bootstraps a clean tracked project once before setup writes", () => {
+    const root = fixture();
+    const runtimeRoot = join(root, ".ut-tdd", "memory");
+    rmSync(runtimeRoot, { recursive: true, force: true });
+    const result = runSetup(
+      { phase: "0-A", dryRun: false, applyBranchProtection: false },
+      setupDeps(root),
+    );
+    expect(result.memoryMigration.ok).toBe(true);
+    expect(existsSync(join(root, ".ut-tdd", "state", "setup.json"))).toBe(true);
+    expect(inspectProjectMemoryCompletion(root).ok).toBe(true);
+  });
+
+  it("U-PMEMFENCE-000b stops after untracked identity bootstrap until commit", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-memory-fence-bootstrap-"));
+    roots.push(root);
+    git(root, ["init", "-q"]);
+    git(root, ["config", "user.email", "test@example.invalid"]);
+    git(root, ["config", "user.name", "test"]);
+    git(root, ["remote", "add", "origin", "git@github.com:example/bootstrap.git"]);
+    expect(() =>
+      runSetup({ phase: "0-A", dryRun: false, applyBranchProtection: false }, nodeSetupDeps(root)),
+    ).toThrow("project_identity_commit_required");
+    expect(existsSync(join(root, "ut-tdd.project.json"))).toBe(true);
+    expect(existsSync(join(root, ".ut-tdd", "state", "setup.json"))).toBe(false);
+    git(root, ["add", "ut-tdd.project.json"]);
+    git(root, ["commit", "-qm", "test: commit project identity"]);
+    const result = runSetup(
+      { phase: "0-A", dryRun: false, applyBranchProtection: false },
+      nodeSetupDeps(root),
+    );
+    expect(result.memoryMigration.ok).toBe(true);
+    expect(existsSync(join(root, ".ut-tdd", "state", "setup.json"))).toBe(true);
+  });
+
   it("U-PMEMFENCE-001 denies an interrupted migration", async () => {
     const root = fixture();
     const interrupted = new ProjectMemoryMigration().apply(root, { crashAfter: "intent" });
@@ -195,7 +245,7 @@ describe("Issue #550 project memory completion fence", () => {
     const root = fixture();
     const applied = new ProjectMemoryMigration().apply(root);
     expect(applied.ok).toBe(true);
-    writeFileSync(join(root, ".ut-tdd", "memory", "memory.md"), "drift");
+    memory(root, "memory.md", "drift");
     await assertDeniedEntrances(root, "inventory_drift");
   });
 
@@ -210,7 +260,7 @@ describe("Issue #550 project memory completion fence", () => {
 
   it("U-PMEMFENCE-004 does not fallback to a legacy corpus sentinel", () => {
     const root = fixture("legacy-sentinel-must-not-be-read");
-    return assertDeniedEntrances(root, "migration_incomplete");
+    return assertDeniedEntrances(root, "migration_incomplete", { includeSetup: false });
   });
 
   it("U-PMEMFENCE-005 accepts a deterministic completed replay", async () => {
@@ -222,22 +272,23 @@ describe("Issue #550 project memory completion fence", () => {
     const second = inspectProjectMemoryCompletion(root);
     expect(first).toEqual(second);
     expect(first.ok).toBe(true);
-    const entry = parseMemoryFile(root, ".ut-tdd/memory/memory.md");
-    expect(
-      writeMemory({
-        repoRoot: root,
-        input: { kind: entry.kind, title: entry.title, body: entry.body, tags: entry.tags },
-      }),
-    ).toEqual(entry);
-    const wakePromise = waitForClaudeMemory({
+    const appended = writeMemory({
       repoRoot: root,
-      sessionId: "completed-session",
-      pollIntervalMs: 10,
-      maxWaitMs: 1_000,
+      input: { kind: "project", title: "post-completion append", body: "append body" },
     });
-    await new Promise((resolve) => setTimeout(resolve, 25));
+    const appendPath = join(root, appended.source_path);
+    const replacementPath = `${appendPath}.replacement`;
+    const backupPath = `${appendPath}.backup`;
+    writeFileSync(replacementPath, readFileSync(appendPath));
+    renameSync(appendPath, backupPath);
+    renameSync(replacementPath, appendPath);
+    rmSync(backupPath, { force: true });
+    expect(inspectProjectMemoryCompletion(root).ok).toBe(true);
+    expect(
+      readMemory({ repoRoot: root, options: { query: "post-completion append" } }).entries,
+    ).toContainEqual(appended);
     const inboxEntry = buildClaudeProviderInboxEntry({
-      memory: entry,
+      memory: appended,
       projectId: first.ok ? first.projectId : "",
       operationId: "completed-wake",
       workspaceId: claudeWorkspaceId(root),
@@ -245,6 +296,73 @@ describe("Issue #550 project memory completion fence", () => {
       target: { scope: "session", provider: "claude", sessionId: "completed-session" },
     });
     publishClaudeInboxEntry(root, inboxEntry);
-    await expect(wakePromise).resolves.toMatchObject({ kind: "delivered" });
+    await expect(
+      waitForClaudeMemory({
+        repoRoot: root,
+        sessionId: "completed-session",
+        pollIntervalMs: 10,
+        maxWaitMs: 1_000,
+      }),
+    ).resolves.toMatchObject({ kind: "delivered" });
+  });
+
+  it("U-PMEMFENCE-006 rejects a new legacy-worktree variant after completion", () => {
+    const root = fixture();
+    const linked = `${root}-linked`;
+    roots.push(linked);
+    const applied = new ProjectMemoryMigration().apply(root);
+    expect(applied, JSON.stringify(applied)).toMatchObject({ ok: true });
+    expect(git(root, ["worktree", "add", "-qb", "linked", linked])).toBe("");
+    memory(linked, "legacy-extra.md", "legacy extra");
+    expect(inspectProjectMemoryCompletion(root)).toMatchObject({
+      ok: false,
+      reason: "inventory_drift",
+    });
+  });
+
+  it("U-PMEMFENCE-007 rejects same-ID digest drift after completion", () => {
+    const root = fixture();
+    expect(new ProjectMemoryMigration().apply(root).ok).toBe(true);
+    memory(root, "memory.md", "same id but changed");
+    expect(inspectProjectMemoryCompletion(root)).toMatchObject({
+      ok: false,
+      reason: "inventory_drift",
+    });
+  });
+
+  it("U-PMEMFENCE-008 rechecks the fence immediately before provider claim", async () => {
+    const root = fixture();
+    const applied = new ProjectMemoryMigration().apply(root);
+    expect(applied.ok).toBe(true);
+    if (!applied.ok) return;
+    const entry = buildClaudeProviderInboxEntry({
+      memory: {
+        memory_id: "memory:project:claim-fence",
+        kind: "project",
+        title: "claim fence",
+        body: "claim fence body",
+        tags: [],
+        source_path: ".ut-tdd/memory/claim-fence.md",
+        updated_at: "2026-09-09T00:00:00.000Z",
+        content_hash: createHash("sha256").update("claim fence body").digest("hex"),
+      },
+      projectId: "example/memory-fence",
+      operationId: "claim-fence",
+      workspaceId: claudeWorkspaceId(root),
+      producer: { provider: "codex", sessionId: "producer" },
+      target: { scope: "session", provider: "claude", sessionId: "claim-fence-session" },
+    });
+    const inboxPath = publishClaudeInboxEntry(root, entry);
+    const result = await waitForClaudeMemory({
+      repoRoot: root,
+      sessionId: "claim-fence-session",
+      pollIntervalMs: 10,
+      maxWaitMs: 1_000,
+      beforeClaimCommit: () => memory(root, "memory.md", "claim-time drift"),
+    });
+    expect(result).toMatchObject({ kind: "denied", reason: "inventory_drift" });
+    expect(existsSync(inboxPath)).toBe(true);
+    expect(tree(root)).not.toContain(".claim");
+    expect(tree(root)).not.toContain(".terminal.json");
   });
 });

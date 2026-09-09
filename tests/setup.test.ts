@@ -1,5 +1,13 @@
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -51,6 +59,19 @@ function mockDeps(
     confirm: () => false,
     isInteractive: false,
     templates: {},
+    bootstrapProjectIdentity: () => ({
+      ok: true,
+      repositoryIdentity: "unit/setup",
+      path: "ut-tdd.project.json",
+      created: false,
+      commitRequired: false,
+    }),
+    memoryCompletion: () => ({
+      ok: true,
+      projectId: "unit/setup",
+      operationId: "unit-setup",
+      inventoryDigest: "a".repeat(64),
+    }),
     ...over,
   };
 }
@@ -1314,7 +1335,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     expect(r.branchProtection).toEqual({ applied: false, reason: "dry-run" });
   });
 
-  it("identity bootstrap denial is reported while setup continues", () => {
+  it("identity bootstrap denial fails closed before setup writes", () => {
     const d = mockDeps({
       templates: baseTemplates,
       bootstrapProjectIdentity: () => ({
@@ -1322,18 +1343,13 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
         error: { ruleId: "identity_repository_unbound", message: "origin remote is missing" },
       }),
     });
-    const result = runSetup({ phase: "0-A", dryRun: false, applyBranchProtection: false }, d);
-
-    expect(result.projectIdentity).toMatchObject({
-      ok: false,
-      error: { ruleId: "identity_repository_unbound" },
-    });
-    expect(result.phase).toBe("0-A");
-    expect(d.files.has(statePath)).toBe(true);
-    expect(result.written).toContain("AGENTS.md");
+    expect(() =>
+      runSetup({ phase: "0-A", dryRun: false, applyBranchProtection: false }, d),
+    ).toThrow("memory_migration_project_identity_unavailable");
+    expect(d.files.has(statePath)).toBe(false);
   });
 
-  it("runSetup invokes the real bootstrap dependency and prepends a created identity", () => {
+  it("runSetup requires committed identity before migration and setup writes", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-setup-identity-"));
     try {
       execFileSync("git", ["init", "-q", "-b", "main"], { cwd: root });
@@ -1343,6 +1359,15 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
         cwd: root,
       });
 
+      expect(() =>
+        runSetup(
+          { phase: "0-A", dryRun: false, applyBranchProtection: false },
+          nodeSetupDeps(root),
+        ),
+      ).toThrow("memory_migration_project_identity_commit_required");
+      expect(existsSync(join(root, "ut-tdd.project.json"))).toBe(true);
+      execFileSync("git", ["add", "ut-tdd.project.json"], { cwd: root });
+      execFileSync("git", ["commit", "-qm", "test: commit project identity"], { cwd: root });
       const result = runSetup(
         { phase: "0-A", dryRun: false, applyBranchProtection: false },
         nodeSetupDeps(root),
@@ -1350,11 +1375,11 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
 
       expect(result.projectIdentity).toMatchObject({
         ok: true,
-        created: true,
-        commitRequired: true,
+        created: false,
+        commitRequired: false,
         repositoryIdentity: "acme/widget",
       });
-      expect(result.written[0]).toBe("ut-tdd.project.json");
+      expect(result.memoryMigration.ok).toBe(true);
       expect(readFileSync(join(root, "ut-tdd.project.json"))).toEqual(
         Buffer.from(
           `${JSON.stringify(

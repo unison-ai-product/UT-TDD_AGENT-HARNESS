@@ -24,6 +24,10 @@ import {
   parseClaudeWakeGeneration,
   validateClaudeWakeClaimAuthority,
 } from "./claude-wake-generation-upgrade.ts";
+import {
+  type ProjectMemoryCompletionDenyReason,
+  requireProjectMemoryCompletion,
+} from "./project-memory-completion-fence.ts";
 import { requireProjectMemoryRoot } from "./project-memory-root.ts";
 
 export const CLAUDE_INBOX_SCHEMA = "ut-tdd.claude-inbox/v3" as const;
@@ -223,7 +227,10 @@ export interface ClaudeMemoryWakeResult {
   readonly kind: "delivered" | "timeout" | "superseded" | "denied";
   readonly entry?: ClaudeInboxEntry;
   readonly message?: string;
-  readonly reason?: ClaudeProviderEnvelopeDenyReason | "legacy_schema_unbound";
+  readonly reason?:
+    | ClaudeProviderEnvelopeDenyReason
+    | "legacy_schema_unbound"
+    | ProjectMemoryCompletionDenyReason;
 }
 
 const CLAUDE_PROVIDER_BINDING_SCHEMA = "ut-tdd.claude-provider-binding/v1" as const;
@@ -494,6 +501,7 @@ export function buildClaudeReviewInboxEntry(input: {
 }
 
 export function publishClaudeInboxEntry(repoRoot: string, entry: ClaudeInboxEntry): string {
+  requireProjectMemoryCompletion(repoRoot);
   const claimedPath = join(runtimeRoot(repoRoot), `${inboxFileStem(entry.id)}.claim`);
   if (existsSync(claimedPath)) {
     removeProviderBinding(repoRoot, entry);
@@ -1199,30 +1207,44 @@ function claim(input: {
   leaseToken: string;
   envelopeGuard?: () => ClaudeProviderEnvelopeValidation;
   beforeCommit?: () => void;
-}): boolean {
+}): { ok: true } | { ok: false; reason?: ProjectMemoryCompletionDenyReason } {
   const root = runtimeRoot(input.repoRoot);
   ensureDir(root, { recursive: true });
-  if (!validateClaudeWakeClaimAuthority(root, input.authority, input.leaseToken).ok) return false;
-  if (!inboxSourceMatchesEntry(input.entry)) return false;
-  if (input.envelopeGuard && !input.envelopeGuard().ok) return false;
+  if (!validateClaudeWakeClaimAuthority(root, input.authority, input.leaseToken).ok)
+    return { ok: false };
+  if (!inboxSourceMatchesEntry(input.entry)) return { ok: false };
+  if (input.envelopeGuard && !input.envelopeGuard().ok) return { ok: false };
   const path = join(root, `${inboxFileStem(input.entry.id)}.claim`);
   let descriptor: number;
   try {
     descriptor = openSync(path, "wx", 0o600);
   } catch {
-    return false;
+    return { ok: false };
   }
   try {
     input.beforeCommit?.();
+    try {
+      requireProjectMemoryCompletion(input.repoRoot);
+    } catch (error) {
+      if (error instanceof Error && "reason" in error) {
+        closeSync(descriptor);
+        unlinkSync(path);
+        return {
+          ok: false,
+          reason: (error as Error & { reason: ProjectMemoryCompletionDenyReason }).reason,
+        };
+      }
+      throw error;
+    }
     if (input.envelopeGuard && !input.envelopeGuard().ok) {
       closeSync(descriptor);
       unlinkSync(path);
-      return false;
+      return { ok: false };
     }
     if (!validateClaudeWakeClaimAuthority(root, input.authority, input.leaseToken).ok) {
       closeSync(descriptor);
       unlinkSync(path);
-      return false;
+      return { ok: false };
     }
     writeFileSync(
       descriptor,
@@ -1239,7 +1261,7 @@ function claim(input: {
       // authority-loss path already closed the descriptor before removing the empty claim.
     }
   }
-  return true;
+  return { ok: true };
 }
 
 export function renderClaudeWakeMessage(entry: ClaudeInboxEntry): string {
@@ -1300,6 +1322,17 @@ export async function waitForClaudeMemory(input: {
   }
   if (!Number.isFinite(requestedMaxMs) || requestedMaxMs <= 0) {
     throw new Error("claude_wake_max_wait_invalid");
+  }
+  try {
+    requireProjectMemoryCompletion(input.repoRoot);
+  } catch (error) {
+    if (error instanceof Error && "reason" in error) {
+      return {
+        kind: "denied",
+        reason: (error as Error & { reason: ProjectMemoryCompletionDenyReason }).reason,
+      };
+    }
+    throw error;
   }
   const pollIntervalMs = Math.max(10, requestedPollMs);
   const maxWaitMs = Math.max(pollIntervalMs, requestedMaxMs);
@@ -1458,18 +1491,17 @@ export async function waitForClaudeMemory(input: {
           return { kind: "denied", entry, reason: envelopeResult.reason };
         }
       }
-      if (
-        claim({
-          repoRoot: input.repoRoot,
-          entry,
-          sessionId: input.sessionId,
-          at: now(),
-          authority: activation.authority,
-          leaseToken,
-          envelopeGuard,
-          beforeCommit: input.beforeClaimCommit,
-        })
-      ) {
+      const claimResult = claim({
+        repoRoot: input.repoRoot,
+        entry,
+        sessionId: input.sessionId,
+        at: now(),
+        authority: activation.authority,
+        leaseToken,
+        envelopeGuard,
+        beforeCommit: input.beforeClaimCommit,
+      });
+      if (claimResult.ok) {
         writeAuditLog(input.repoRoot, {
           event: "claim",
           status: "ok",
@@ -1495,6 +1527,9 @@ export async function waitForClaudeMemory(input: {
           // claim が配送の正本。inbox GC は次回へ委ねる。
         }
         return { kind: "delivered", entry, message: renderClaudeWakeMessage(entry) };
+      }
+      if (claimResult.reason) {
+        return { kind: "denied", entry, reason: claimResult.reason };
       }
       writeAuditLog(input.repoRoot, {
         event: "claim",

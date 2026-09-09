@@ -71,7 +71,12 @@ updated: 2026-09-09
 | U-PMEMFENCE-002 | completed marker 成立後に source corpus を変更する | fence が `inventory_drift` を返し、read/write・claim・wake・receipt を 0 にする |
 | U-PMEMFENCE-003 | completed marker または marker chain を改変する | `transaction_tampered` を返し、全 deny port の write 0 を維持する |
 | U-PMEMFENCE-004 | legacy worktree-local corpus だけを残し completion marker を置かない | silent fallback せず `migration_incomplete` を返し、legacy corpus を読まない |
-| U-PMEMFENCE-005 | completed operation を同じ inventory で replay する | read-only fence が決定論的に Green となり、canonical corpus の read/write と provider wake だけを許可する |
+| U-PMEMFENCE-005 | completed operation 後に canonical rootへ新規一意 Memoryをappendし、同一bytesをatomic rewriteする | prepared variantは不変のまま、append後もinspect/read/provider wakeがGreenとなる |
+| U-PMEMFENCE-006 | completed operation 後に legacy worktreeへ新規 Memoryを追加する | `inventory_drift` を返し、legacy extraを許可しない |
+| U-PMEMFENCE-007 | completed operation 後に既存 Memoryの同一ID bytesを変更する | `inventory_drift` を返し、同一ID差分を許可しない |
+| U-PMEMFENCE-008 | wake開始後、provider claim直前に同一ID bytes driftを注入する | claim/terminal/receiptを作らず typed `inventory_drift` deny にする |
+
+Fresh setupだけはbootstrap phase境界として、tracked identity確認後にtransactionが完全不存在の場合の初回migrationを許可する。identityが未commitなら `project_identity_commit_required` で停止し、identity以外のsetup writeは0。既存transactionの中断・改変・driftはこのbootstrap例外に含めない。
 
 Red anchor は、`inspectProjectMemoryCompletion`（read-only completion fence）が未実装の exact
 commit とし、U-PMEMFENCE-001〜005 の少なくとも incomplete / drift / tamper / legacy fallback /

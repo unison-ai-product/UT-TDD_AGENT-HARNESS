@@ -21,6 +21,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
+import { requireProjectMemoryCompletion } from "../runtime/project-memory-completion-fence.ts";
 import { isSecretLike } from "../secret.ts";
 import { ensureDir } from "../shared/fs.ts";
 import {
@@ -88,6 +89,7 @@ export function resolveMemoryTaskFile(input: {
   memoryId: string;
   memoryPath: string;
 }): string | null {
+  requireProjectMemoryCompletion(input.repoRoot);
   if (!isCanonicalMemorySourcePath(input.memoryPath)) return null;
   const root = resolve(input.repoRoot, MEMORY_SOURCE_ROOT);
   const candidate = resolve(input.repoRoot, input.memoryPath);
@@ -114,6 +116,7 @@ const WRITABLE_MEMORY_KINDS = new Set<MemoryKind>(["project", "feedback", "refer
 
 /** MemoryService 内部だけが所有する正本 storage primitive。 */
 function writeMemoryEntry(repoRoot: string, input: MemoryWriteInput): MemoryEntry {
+  requireProjectMemoryCompletion(repoRoot);
   if (!WRITABLE_MEMORY_KINDS.has(input.kind)) throw new Error(`unknown memory kind: ${input.kind}`);
   const title = input.title.trim();
   const body = input.body.trim();
@@ -357,6 +360,7 @@ export function readMemory(input: {
   db?: MemoryIndexDb;
   options?: MemoryQueryOptions;
 }): MemoryReadResult {
+  requireProjectMemoryCompletion(input.repoRoot);
   const corpus = loadMemoryCorpus(input.repoRoot);
   const selected = queryMemoryEntries(corpus.entries, input.options);
   if (!input.db) {

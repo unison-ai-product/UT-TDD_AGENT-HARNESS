@@ -160,6 +160,10 @@ import {
 import { detectMode, nextActionForMode, type RuntimeDetection } from "./runtime/detect.ts";
 import { scanDanglingStops } from "./runtime/forced-stop.ts";
 import { createNodeInvocation, verifyNodeGeneration } from "./runtime/node-bootstrap.ts";
+import {
+  inspectProjectMemoryCompletion,
+  requireProjectMemoryCompletion,
+} from "./runtime/project-memory-completion-fence.ts";
 import { requireProjectMemoryRoot } from "./runtime/project-memory-root.ts";
 import {
   nodeProviderHandoverDeps,
@@ -484,6 +488,7 @@ function runSessionStartSideEffects({
   deps,
   json = false,
 }: SessionStartSideEffectInput): void {
+  requireProjectMemoryCompletion(repoRoot);
   try {
     scanDanglingStops(deps, input.session_id);
     sweepStaleGuardSlots(nodeAgentSlotsDeps(repoRoot));
@@ -692,6 +697,7 @@ program
     // IMP-139: 未了の正の集計 (非終端 PLAN 層別 + open defer) を additive に surface し
     // 「doctor green = 完了」誤読を機械照合可能にする (gate ではない informational surface)。
     const outstanding = computeOutstandingWork(process.cwd());
+    const memoryMigration = inspectProjectMemoryCompletion(process.cwd());
     // PLAN-L7-362: update-check advisory (fail-open、gate ではない)。基準は harness checkout。
     const update =
       process.env[UPDATE_CHECK_DISABLE_ENV] === "1"
@@ -703,7 +709,17 @@ program
       // 既存 6 フィールド (camelCase 公開契約) に nextAction + outstanding を additive に付加する
       // (A-138 ITEM-1、PLAN-L7-84、IMP-139、taxonomy=current)。判断ゲートの進め方 + 未了量を提示。
       process.stdout.write(
-        `${JSON.stringify({ ...d, nextAction, outstanding, update }, null, 2)}\n`,
+        `${JSON.stringify(
+          {
+            ...d,
+            nextAction,
+            outstanding,
+            update,
+            memoryMigration,
+          },
+          null,
+          2,
+        )}\n`,
       );
     } else {
       process.stdout.write(
@@ -712,6 +728,9 @@ program
       process.stdout.write(`next: ${nextAction}\n`);
       process.stdout.write(`${outstandingSummaryLine(outstanding)}\n`);
       process.stdout.write(`${renderUpdateLine(update)}\n`);
+      process.stdout.write(
+        `memory-migration: ${memoryMigration.ok ? "complete" : `denied (${memoryMigration.reason})`}\n`,
+      );
     }
   });
 

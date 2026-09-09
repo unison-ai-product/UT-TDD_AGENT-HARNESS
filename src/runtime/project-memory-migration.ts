@@ -169,6 +169,25 @@ type MigrationFailureReason = Exclude<
   ProjectMemoryRootDenyReason
 >;
 
+type CompletionObservationReason =
+  | ProjectMemoryRootDenyReason
+  | "migration_incomplete"
+  | "inventory_drift"
+  | "transaction_tampered"
+  | "source_unavailable"
+  | "source_unsafe"
+  | "invalid_memory"
+  | "topology_unavailable";
+
+function completionObservationReason(
+  reason: Extract<MemoryMigrationDryRun, { ok: false }>["reason"],
+): CompletionObservationReason {
+  if (reason === "source_changed") return "inventory_drift";
+  if (reason === "transaction_interrupted") return "migration_incomplete";
+  if (reason === "transaction_busy") return "transaction_tampered";
+  return reason;
+}
+
 class MigrationFailure extends Error {
   readonly reason: MigrationFailureReason;
 
@@ -195,9 +214,24 @@ interface FinishExistingInput {
 
 interface VerifyCompleteInput {
   readonly marker: Marker;
+  readonly intent: Marker;
   readonly prepared: Marker;
   readonly inventory: Extract<MemoryMigrationDryRun, { ok: true }>;
   readonly paths: TransactionPaths;
+}
+
+function isMemoryMigrationVariant(value: unknown): value is MemoryMigrationVariant {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Partial<MemoryMigrationVariant>;
+  return (
+    typeof candidate.memoryId === "string" &&
+    typeof candidate.worktreeRoot === "string" &&
+    typeof candidate.sourcePath === "string" &&
+    typeof candidate.contentDigest === "string" &&
+    typeof candidate.sourceHandleIdentity === "string" &&
+    typeof candidate.sourceSize === "number" &&
+    typeof candidate.sourceMtimeMs === "number"
+  );
 }
 
 const compare = (left: string, right: string) =>
@@ -266,14 +300,14 @@ export class ProjectMemoryMigration {
             (marker) => marker.kind === "intent",
           );
         }
-        if (!intent || intent.payload.inventoryDigest !== inventory.inventoryDigest) {
+        if (!intent) {
           return this.failure("inventory_drift", operationId, paths);
         }
         const complete = markers.find((marker) => marker.kind === "complete");
         if (complete) {
           const prepared = markers.find((marker) => marker.kind === "prepared");
           if (!prepared) throw new MigrationFailure("transaction_tampered");
-          this.verifyComplete({ marker: complete, prepared, inventory, paths });
+          this.verifyComplete({ marker: complete, intent, prepared, inventory, paths });
           return {
             ok: true,
             status: "replayed",
@@ -283,6 +317,9 @@ export class ProjectMemoryMigration {
             markersPath: paths.markersPath,
             quarantined: this.conflicts(inventory),
           };
+        }
+        if (intent.payload.inventoryDigest !== inventory.inventoryDigest) {
+          return this.failure("inventory_drift", operationId, paths);
         }
         return this.finishExisting({
           inventory,
@@ -315,6 +352,120 @@ export class ProjectMemoryMigration {
 
   recover(repoRoot: string, operationId: string): MemoryMigrationApplyResult {
     return this.apply(repoRoot, { operationId });
+  }
+
+  /** Read-only presence check used by setup's one-time bootstrap boundary. */
+  hasTransaction(repoRoot: string): boolean {
+    const resolved = resolveProjectMemoryRoot(repoRoot);
+    if (!resolved.ok) return false;
+    const migrationRoot = join(resolved.runtimeBusRoot, "memory-migration");
+    try {
+      const stat = lstatSync(migrationRoot);
+      if (!stat.isDirectory() || stat.isSymbolicLink()) return true;
+      return readdirSync(migrationRoot).length > 0;
+    } catch (error) {
+      return (error as NodeJS.ErrnoException).code !== "ENOENT";
+    }
+  }
+
+  /**
+   * Read-only completion observation.  Unlike recover/apply this method never
+   * creates a transaction directory or appends a marker.  A valid completion
+   * must be the only migration transaction. Prepared variants remain immutable;
+   * only a new unique entry in the canonical root may be appended afterwards.
+   */
+  inspectCompletion(repoRoot: string):
+    | {
+        readonly ok: true;
+        readonly projectId: string;
+        readonly operationId: string;
+        readonly inventoryDigest: string;
+      }
+    | {
+        readonly ok: false;
+        readonly reason:
+          | ProjectMemoryRootDenyReason
+          | "migration_incomplete"
+          | "inventory_drift"
+          | "transaction_tampered"
+          | "source_unavailable"
+          | "source_unsafe"
+          | "invalid_memory"
+          | "topology_unavailable";
+      } {
+    let inventory: MemoryMigrationDryRun;
+    try {
+      inventory = this.inventory(repoRoot);
+    } catch (error) {
+      return {
+        ok: false,
+        reason: completionObservationReason(
+          error instanceof InventoryDenied ? error.reason : "source_unavailable",
+        ),
+      };
+    }
+    if (!inventory.ok) return { ok: false, reason: completionObservationReason(inventory.reason) };
+    const resolved = resolveProjectMemoryRoot(repoRoot);
+    if (!resolved.ok) return resolved;
+    const migrationRoot = join(resolved.runtimeBusRoot, "memory-migration");
+    let operationDirectories: string[];
+    try {
+      if (!existsSync(migrationRoot)) return { ok: false, reason: "migration_incomplete" };
+      const rootStat = lstatSync(migrationRoot);
+      if (!rootStat.isDirectory() || rootStat.isSymbolicLink()) {
+        return { ok: false, reason: "transaction_tampered" };
+      }
+      operationDirectories = readdirSync(migrationRoot).sort(compare);
+    } catch {
+      return { ok: false, reason: "transaction_tampered" };
+    }
+    if (operationDirectories.length === 0) return { ok: false, reason: "migration_incomplete" };
+    let completed: { readonly operationId: string; readonly inventoryDigest: string } | undefined;
+    let incomplete = false;
+    for (const operationId of operationDirectories) {
+      const operationRoot = join(migrationRoot, operationId);
+      const markerPath = join(operationRoot, "markers.jsonl");
+      try {
+        const stat = lstatSync(operationRoot);
+        if (!stat.isDirectory() || stat.isSymbolicLink()) {
+          return { ok: false, reason: "transaction_tampered" };
+        }
+        const markers = this.readMarkers(markerPath, operationId);
+        const complete = markers.find((marker) => marker.kind === "complete");
+        if (!complete) {
+          incomplete = true;
+          continue;
+        }
+        const prepared = markers.find((marker) => marker.kind === "prepared");
+        if (!prepared) return { ok: false, reason: "transaction_tampered" };
+        const intent = markers.find((marker) => marker.kind === "intent");
+        if (!intent) return { ok: false, reason: "transaction_tampered" };
+        this.verifyComplete({
+          marker: complete,
+          intent,
+          prepared,
+          inventory,
+          paths: {
+            root: operationRoot,
+            repoRoot: resolved.canonicalProjectRoot,
+            quarantine: join(operationRoot, "quarantine"),
+            markersPath: markerPath,
+          },
+        });
+        if (completed) return { ok: false, reason: "transaction_tampered" };
+        completed = {
+          operationId,
+          inventoryDigest: inventory.inventoryDigest,
+        };
+      } catch (error) {
+        if (error instanceof MigrationFailure && error.reason === "inventory_drift") {
+          return { ok: false, reason: "inventory_drift" };
+        }
+        return { ok: false, reason: "transaction_tampered" };
+      }
+    }
+    if (incomplete || !completed) return { ok: false, reason: "migration_incomplete" };
+    return { ok: true, projectId: inventory.projectId, ...completed };
   }
 
   private finishExisting({
@@ -450,6 +601,7 @@ export class ProjectMemoryMigration {
       operationId,
       payload: {
         inventoryDigest: inventory.inventoryDigest,
+        variants: this.inventoryVariants(inventory),
         conflicts: this.conflicts(inventory).map((variant) => ({
           worktreeRoot: variant.worktreeRoot,
           sourcePath: variant.sourcePath,
@@ -521,6 +673,14 @@ export class ProjectMemoryMigration {
       .flatMap((group) =>
         group.variants.map((variant) => ({ ...variant, memoryId: group.memoryId })),
       );
+  }
+
+  private inventoryVariants(
+    inventory: Extract<MemoryMigrationDryRun, { ok: true }>,
+  ): MemoryMigrationVariant[] {
+    return inventory.groups.flatMap((group) =>
+      group.variants.map((variant) => ({ ...variant, memoryId: group.memoryId })),
+    );
   }
 
   private readSource(variant: MemoryMigrationVariant): SourceSnapshot {
@@ -604,14 +764,91 @@ export class ProjectMemoryMigration {
     }
   }
 
-  private verifyComplete({ marker, prepared, inventory, paths }: VerifyCompleteInput): void {
+  private verifyComplete({
+    marker,
+    intent,
+    prepared,
+    inventory,
+    paths,
+  }: VerifyCompleteInput): void {
     if (
-      marker.payload.inventoryDigest !== inventory.inventoryDigest ||
-      marker.payload.quarantineDigest !== this.quarantineManifestDigest(paths.quarantine)
+      typeof marker.payload.inventoryDigest !== "string" ||
+      marker.payload.inventoryDigest !== prepared.payload.inventoryDigest ||
+      marker.payload.inventoryDigest !== intent.payload.inventoryDigest
     ) {
       throw new MigrationFailure("transaction_tampered");
     }
-    this.verifyPrepared(prepared, this.conflicts(inventory), paths);
+    if (marker.payload.quarantineDigest !== this.quarantineManifestDigest(paths.quarantine)) {
+      throw new MigrationFailure("transaction_tampered");
+    }
+    this.verifyCompletionInventory(prepared, intent, inventory, paths.repoRoot);
+    this.verifyPreparedManifest(prepared, paths);
+  }
+
+  private verifyCompletionInventory(
+    prepared: Marker,
+    intent: Marker,
+    inventory: Extract<MemoryMigrationDryRun, { ok: true }>,
+    canonicalRoot: string,
+  ): void {
+    const raw = intent.payload.variants;
+    if (!Array.isArray(raw) || (raw.length === 0 && this.inventoryVariants(inventory).length > 0)) {
+      throw new MigrationFailure("transaction_tampered");
+    }
+    const expected = raw.map((value) => {
+      if (!isMemoryMigrationVariant(value)) throw new MigrationFailure("transaction_tampered");
+      return value;
+    });
+    if (prepared.payload.inventoryDigest !== intent.payload.inventoryDigest) {
+      throw new MigrationFailure("transaction_tampered");
+    }
+    const current = this.inventoryVariants(inventory);
+    const key = (variant: MemoryMigrationVariant): string =>
+      `${variant.memoryId}\0${variant.worktreeRoot}\0${variant.sourcePath}`;
+    const expectedKeys = new Set(expected.map(key));
+    const baselineIds = new Set(expected.map((variant) => variant.memoryId));
+    const currentByKey = new Map(current.map((variant) => [key(variant), variant]));
+    if (currentByKey.size !== current.length) throw new MigrationFailure("inventory_drift");
+    for (const variant of expected) {
+      const actual = currentByKey.get(key(variant));
+      if (
+        !actual ||
+        actual.contentDigest !== variant.contentDigest ||
+        actual.sourceSize !== variant.sourceSize
+      ) {
+        throw new MigrationFailure("inventory_drift");
+      }
+    }
+    for (const variant of current) {
+      if (expectedKeys.has(key(variant))) continue;
+      if (baselineIds.has(variant.memoryId)) throw new MigrationFailure("inventory_drift");
+      const sameId = current.filter((candidate) => candidate.memoryId === variant.memoryId);
+      if (
+        sameId.length !== 1 ||
+        normalizeTopologyPath(variant.worktreeRoot) !== normalizeTopologyPath(canonicalRoot)
+      ) {
+        throw new MigrationFailure("inventory_drift");
+      }
+    }
+  }
+
+  private verifyPreparedManifest(prepared: Marker, paths: TransactionPaths): void {
+    if (!Array.isArray(prepared.payload.files)) throw new MigrationFailure("transaction_tampered");
+    const expected = prepared.payload.files.map((value) => {
+      if (
+        !value ||
+        typeof value !== "object" ||
+        typeof (value as Record<string, unknown>).name !== "string" ||
+        typeof (value as Record<string, unknown>).digest !== "string" ||
+        typeof (value as Record<string, unknown>).size !== "number"
+      ) {
+        throw new MigrationFailure("transaction_tampered");
+      }
+      return value as { name: string; digest: string; size: number };
+    });
+    if (!this.manifestEquals(this.quarantineManifest(paths.quarantine), expected)) {
+      throw new MigrationFailure("transaction_tampered");
+    }
   }
 
   private manifestEquals(left: unknown, right: unknown): boolean {
