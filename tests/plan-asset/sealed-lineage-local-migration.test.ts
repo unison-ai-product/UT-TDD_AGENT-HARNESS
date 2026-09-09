@@ -698,6 +698,30 @@ describe("sealed lineage local migration", () => {
     });
     expect(counts(db)).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
   });
+
+  it("U-PA-SEAL-021: dry-runもIssue authority観測後に最終HEADを再検証する", () => {
+    const command = input();
+    const stableGit = fakeGit(command);
+    let head = command.sourceCommit;
+    const result = assembleSealedLineageMigrationDryRun({
+      commandId: command.commandId,
+      planId: command.planId,
+      actor: command.actor,
+      occurredAt: command.occurredAt,
+      git: { ...stableGit, readHeadCommit: () => head },
+      projectIdentity: fakeProjectIdentity(command),
+      issueAuthority: {
+        observe: () => {
+          head = "e".repeat(40);
+          return fakeIssueAuthority(command).observe();
+        },
+      },
+      reviewFacts: reviewFacts(),
+      custodyDecision: rejectedDecision(["unverified_family"]),
+    });
+
+    expect(result).toEqual({ ok: false, ruleId: "seal-source-head-toctou" });
+  });
 });
 
 const PLAN_ID = "PLAN-RECOVERY-16-plan-revision-authoring";

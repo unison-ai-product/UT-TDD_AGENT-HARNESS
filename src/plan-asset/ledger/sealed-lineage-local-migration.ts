@@ -388,6 +388,8 @@ export function assembleSealedLineageMigrationDryRun(
       observe: () => observedIssue,
     });
     if (!issueCheck.ok) return issueCheck;
+    const finalGitCheck = validateFinalGitCustody(input, request.git);
+    if (!finalGitCheck.ok) return finalGitCheck;
     const canonicalManifest = stableCanonical(input);
     return {
       ok: true,
@@ -443,6 +445,8 @@ export class SealedLineageLocalMigration {
     if (!authority.ok) return authority;
     const issueAuthority = validateIssueAuthority(input, preflight, this.issueAuthority);
     if (!issueAuthority.ok) return issueAuthority;
+    const finalGitCheck = validateFinalGitCustody(input, this.git);
+    if (!finalGitCheck.ok) return finalGitCheck;
     const transaction = new ImmediateLedgerTransaction(this.db);
     return transaction.run(() => {
       const replay = this.replay(input, checked.commandDigest);
@@ -840,6 +844,21 @@ function validateIssueAuthority(
   )
     return rejected("seal-issue-authority-invalid");
   return { ok: true };
+}
+
+function validateFinalGitCustody(
+  input: SealedLineageMigrationInput,
+  git: SealedLineageGitPreflightPort | undefined,
+): { ok: true } | { ok: false; ruleId: string } {
+  if (!git) return rejected("seal-source-head-toctou");
+  try {
+    return git.readHeadCommit() === input.sourceCommit &&
+      git.isReachableFromTrackedRemote(input.sourceCommit)
+      ? { ok: true }
+      : rejected("seal-source-head-toctou");
+  } catch {
+    return rejected("seal-source-head-toctou");
+  }
 }
 
 function deriveSuccessorAssetId(repositoryIdentity: string, planId: string): string {
