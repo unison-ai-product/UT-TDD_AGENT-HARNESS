@@ -3,15 +3,18 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   rmSync,
   symlinkSync,
+  unlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, expect, it } from "vitest";
 import { canonicalProjectIdentityBytes } from "../src/plan-asset/adapters/project-identity-loader.ts";
+import { inspectProjectMemoryCompletion } from "../src/runtime/project-memory-completion-fence.ts";
 import { ProjectMemoryMigration } from "../src/runtime/project-memory-migration.ts";
 import { resolveProjectMemoryRoot } from "../src/runtime/project-memory-root.ts";
 import { normalizeTopologyPath } from "../src/runtime/worktree-topology.ts";
@@ -290,6 +293,28 @@ it("U-PMEMQUAR-003 denies marker tampering and inventory drift before completion
   const tampered = migration.recover(primary, prepared.operationId);
   expect(tampered.ok).toBe(false);
   if (!tampered.ok) expect(tampered.reason).toBe("transaction_tampered");
+});
+
+it("U-PMEMFENCE-014 rejects a same-bytes symlink swapped into quarantine", () => {
+  const { primary, linked } = fixture();
+  memory(primary, "a.md", "primary");
+  memory(linked, "b.md", "linked");
+  const result = new ProjectMemoryMigration().apply(primary);
+  expect(result.ok).toBe(true);
+  if (!result.ok) return;
+  const name = readdirSync(result.quarantineRoot)[0];
+  if (!name) throw new Error("quarantine_entry_missing");
+  const path = join(result.quarantineRoot, name);
+  const external = join(primary, "quarantine-copy");
+  const bytes = readFileSync(path);
+  mkdirSync(external);
+  writeFileSync(join(external, "target.md"), bytes);
+  unlinkSync(path);
+  symlinkSync(external, path, "junction");
+  expect(inspectProjectMemoryCompletion(primary)).toEqual({
+    ok: false,
+    reason: "transaction_tampered",
+  });
 });
 
 it("U-PMEMQUAR-004 recovers an owner left by a SIGKILLed process", async () => {

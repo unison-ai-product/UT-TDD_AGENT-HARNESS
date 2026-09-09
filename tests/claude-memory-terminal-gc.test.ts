@@ -1,11 +1,13 @@
 import {
   existsSync,
+  mkdirSync,
   mkdtempSync,
   readdirSync,
   readFileSync,
   rmSync,
   unlinkSync,
   utimesSync,
+  writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -22,6 +24,7 @@ import {
   summarizeUnclaimedInbox,
   waitForClaudeMemory,
 } from "../src/runtime/claude-memory-wake.ts";
+import { ProjectMemoryMigration } from "../src/runtime/project-memory-migration.ts";
 import { resolveProjectMemoryRoot } from "../src/runtime/project-memory-root.ts";
 import { ensureTrackedProjectIdentity } from "./support/project-identity-fixture.ts";
 
@@ -39,6 +42,13 @@ const memory: MemoryEntry = {
 function fixture(): string {
   const root = mkdtempSync(join(tmpdir(), "ut-tdd-terminal-gc-"));
   ensureTrackedProjectIdentity(root, "fixture/claude-terminal-gc");
+  mkdirSync(join(root, ".ut-tdd", "memory"), { recursive: true });
+  writeFileSync(
+    join(root, ".ut-tdd", "memory", "baseline.md"),
+    "---\nmemory_id: memory:project:terminal-gc-baseline\nkind: project\ntitle: terminal gc baseline\nupdated_at: 2026-09-09\n---\nbaseline\n",
+  );
+  const migration = new ProjectMemoryMigration().apply(root);
+  if (!migration.ok) throw new Error(migration.reason);
   return root;
 }
 
@@ -239,6 +249,39 @@ describe("Claude inbox terminal GC", () => {
       const summary = summarizeUnclaimedInbox(root, entry.targetWorkspaceId);
       expect(summary.pending).toBe(0);
       expect(summary.terminalized).toBe(2);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("U-PMEMFENCE-013: recovery rechecks completion before terminal marker write", () => {
+    const root = fixture();
+    try {
+      const memoryPath = join(root, ".ut-tdd", "memory", "baseline.md");
+      const entry = review(root, "recovery-fence");
+      const inboxPath = publishClaudeInboxEntry(root, entry);
+      const project = resolveProjectMemoryRoot(root);
+      if (!project.ok) throw new Error(project.reason);
+      const markerPath = join(
+        project.runtimeBusRoot,
+        "claude-memory-wake",
+        `${entry.id}.terminal.json`,
+      );
+
+      expect(() =>
+        recoverClaudeInboxBacklog({
+          repoRoot: root,
+          pullRequests: [{ pr: entry.pr, state: "MERGED", headSha: entry.exactHead }],
+          dryRun: false,
+          beforeTerminalCommit: () =>
+            writeFileSync(
+              memoryPath,
+              readFileSync(memoryPath, "utf8").replace("baseline", "drifted"),
+            ),
+        }),
+      ).toThrow("inventory_drift");
+      expect(existsSync(inboxPath)).toBe(true);
+      expect(existsSync(markerPath)).toBe(false);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
