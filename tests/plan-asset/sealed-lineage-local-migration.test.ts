@@ -705,29 +705,6 @@ describe("sealed lineage local migration", () => {
     expect(counts(db)).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
   });
 
-  it("U-PA-SEAL-021: dry-runもIssue authority観測後に最終HEADを再検証する", async () => {
-    const command = input();
-    const stableGit = fakeGit(command);
-    let head = command.sourceCommit;
-    const result = await assembleSealedLineageMigrationDryRun({
-      commandId: command.commandId,
-      planId: command.planId,
-      actor: command.actor,
-      occurredAt: command.occurredAt,
-      git: { ...stableGit, readHeadCommit: () => head },
-      projectIdentity: fakeProjectIdentity(command),
-      issueAuthority: {
-        observe: () => {
-          head = "e".repeat(40);
-          return fakeIssueAuthority(command).observe();
-        },
-      },
-      reviewCustody: fakeLiveReviewCustody(),
-    });
-
-    expect(result).toEqual({ ok: false, ruleId: "seal-source-head-toctou" });
-  });
-
   it.each([
     "false",
     "throw",

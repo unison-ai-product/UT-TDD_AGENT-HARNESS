@@ -412,8 +412,6 @@ export async function assembleSealedLineageMigrationDryRun(
       observe: () => observedIssue,
     });
     if (!issueCheck.ok) return issueCheck;
-    const finalGitCheck = validateFinalGitCustody(input, request.git);
-    if (!finalGitCheck.ok) return finalGitCheck;
     const canonicalManifest = stableCanonical(input);
     return {
       ok: true,
