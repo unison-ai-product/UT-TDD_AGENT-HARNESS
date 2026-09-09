@@ -63,6 +63,21 @@ updated: 2026-09-09
   改変拒否、`SIGKILL`後のowner recovery、marker順序検証だけを対象とする。canonical unique apply、
   append-after-complete、8.3境界、Pack parity、Reverse R2以降の完了は主張しない。
 
+## Issue #550 completion fence oracle (production composition)
+
+| Oracle | Stimulus | Expected |
+|---|---|---|
+| U-PMEMFENCE-001 | migration が owner／intent／prepared で中断した状態から setup・status・SessionStart・Memory read/write・provider wake を起動 | 全入口が同じ typed deny を返し、canonical corpus、legacy corpus、inbox、receipt を書かない |
+| U-PMEMFENCE-002 | completed marker 成立後に source corpus を変更する | fence が `inventory_drift` を返し、read/write・claim・wake・receipt を 0 にする |
+| U-PMEMFENCE-003 | completed marker または marker chain を改変する | `transaction_tampered` を返し、全 deny port の write 0 を維持する |
+| U-PMEMFENCE-004 | legacy worktree-local corpus だけを残し completion marker を置かない | silent fallback せず `migration_incomplete` を返し、legacy corpus を読まない |
+| U-PMEMFENCE-005 | completed operation を同じ inventory で replay する | read-only fence が決定論的に Green となり、canonical corpus の read/write と provider wake だけを許可する |
+
+Red anchor は、`inspectProjectMemoryCompletion`（read-only completion fence）が未実装の exact
+commit とし、U-PMEMFENCE-001〜005 の少なくとも incomplete / drift / tamper / legacy fallback /
+completed replay の各軸を個別に失敗させる。provider envelope の `project_id` 追加、clean Pack
+provider parity E2E、semantic/global memory は本 oracle の対象外である。
+
 ## Slice 3 exact implementation evidence (Issue #528)
 
 - 実装anchor: `89de38593e0a5264480ed5b305c1718bdc3b89b6`
