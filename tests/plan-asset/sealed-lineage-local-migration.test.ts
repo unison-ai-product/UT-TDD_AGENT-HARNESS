@@ -1,6 +1,15 @@
 import { createHash } from "node:crypto";
 import { afterEach, describe, expect, it } from "vitest";
+import type {
+  CustodyDecision,
+  CustodyFailureReason,
+  CustodyPullRequestFacts,
+} from "../../src/feedback/review-custody.ts";
 import { migratePlanLedger } from "../../src/plan-asset/ledger/schema.ts";
+import {
+  CustodyDecisionSealedLineageReviewAuthorityPort,
+  SystemSealedLineageIssueAuthorityPort,
+} from "../../src/plan-asset/ledger/sealed-lineage-local-migration.ts";
 import { type HarnessDb, openHarnessDb } from "../../src/state-db/index.ts";
 
 const opened: HarnessDb[] = [];
@@ -520,6 +529,55 @@ describe("sealed lineage local migration", () => {
     expect(transaction.migrate(command).ok).toBe(accepted);
     expect(count(db, "sealed_plan_lineages")).toBe(accepted ? 1 : 0);
   });
+
+  it.each([
+    ["repository", { repository: "other/repository" }, rejectedDecision(["unverified_family"])],
+    ["pull request", { prNumber: 544 }, rejectedDecision(["unverified_family"])],
+    ["head", { headSha: "e".repeat(40) }, rejectedDecision(["unverified_family"])],
+    ["base", { baseRef: "release" }, rejectedDecision(["unverified_family"])],
+    ["rejected reason content", {}, rejectedDecision(["missing"])],
+    ["rejected reason order", {}, rejectedDecision(["unverified_family", "missing"])],
+    ["admitted subject", {}, admittedDecision({ headSha: "e".repeat(40) })],
+  ] as const)("U-PA-SEAL-018: typed custodyの%s driftを拒否する", async (_name, factPatch, decision) => {
+    const { db, Transaction } = await baseFixture();
+    const command = input();
+    const facts = { ...reviewFacts(), ...factPatch };
+    const transaction = new Transaction(db, {
+      git: fakeGit(command),
+      reviewAuthority: new CustodyDecisionSealedLineageReviewAuthorityPort(facts, decision),
+      issueAuthority: fakeIssueAuthority(command),
+    });
+
+    expect(transaction.migrate(command)).toEqual({
+      ok: false,
+      ruleId: "seal-review-authority-invalid",
+    });
+    expect(counts(db)).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
+  });
+
+  it("U-PA-SEAL-019: System Issue adapterはREST JSONのraw bodyを変更せず返す", () => {
+    const calls: readonly string[][] = [];
+    const mutableCalls = calls as string[][];
+    const rawBody = "line1\r\nline2\r\n";
+    const adapter = new SystemSealedLineageIssueAuthorityPort((args) => {
+      mutableCalls.push([...args]);
+      return JSON.stringify({ number: 102, body: rawBody, updated_at: "2026-09-09T00:00:00Z" });
+    });
+
+    expect(adapter.observe(input())).toEqual({
+      number: 102,
+      rawBody,
+      updatedAt: "2026-09-09T00:00:00Z",
+    });
+    expect(calls).toEqual([
+      [
+        "api",
+        "repos/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/102",
+        "--header",
+        "Cache-Control: no-cache",
+      ],
+    ]);
+  });
 });
 
 const PLAN_ID = "PLAN-RECOVERY-16-plan-revision-authoring";
@@ -769,6 +827,47 @@ function fakeGit(command: MigrationInput) {
 
 function fakeReviewAuthority() {
   return reviewAuthorityFor(reviewObservation("custody_rejected", ["unverified_family"]));
+}
+
+function reviewFacts(): CustodyPullRequestFacts {
+  return {
+    repository: "unison-ai-product/UT-TDD_AGENT-HARNESS",
+    prNumber: 543,
+    baseRef: "main",
+    headSha: "d".repeat(40),
+    state: "OPEN",
+    mergeSha: null,
+    mergedAt: null,
+  };
+}
+
+function rejectedDecision(reasons: readonly CustodyFailureReason[]): CustodyDecision {
+  return { state: "custody_rejected", reasons, details: ["fixture"] };
+}
+
+function admittedDecision(
+  patch: Partial<Extract<CustodyDecision, { state: "custody_admitted" }>> = {},
+): CustodyDecision {
+  return {
+    state: "custody_admitted",
+    repository: "unison-ai-product/UT-TDD_AGENT-HARNESS",
+    prNumber: 543,
+    headSha: "d".repeat(40),
+    receiptKind: "pre_merge_review",
+    reviewRevision: `rv1-${"a".repeat(64)}`,
+    judgmentDigest: "a".repeat(64),
+    receiptDigest: "b".repeat(64),
+    artifactDigest: "c".repeat(64),
+    workflowRef:
+      "unison-ai-product/UT-TDD_AGENT-HARNESS/.github/workflows/harness-check.yml@refs/heads/main",
+    workflowSha: "d".repeat(40),
+    runId: "1",
+    runAttempt: 1,
+    issuer: "https://token.actions.githubusercontent.com",
+    reviewerFamily: "claude",
+    familyAuthority: "fixture",
+    ...patch,
+  };
 }
 
 function fakeIssueAuthority(command: MigrationInput) {

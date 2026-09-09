@@ -329,9 +329,11 @@ L6 `harness-check` aggregate gate / E13 receipt契約を結合境界で検証す
 | `U-PA-SEAL-015` | E.2 の `[ut-tdd-plan-rebase-v1, repositoryIdentity, planId]` 以外の caller-controlled seed から作った `successorAssetId`。authority と certificate はその偽 ID に合わせて自己整合させる。 | sealed-lineage migration を実行する。 | `sealed-lineage-input-invalid` で拒否し、全 table write 0。 | successor identity derivation と local writer の結合境界。 | 任意 seed の successor asset を genesis として受理しない。 |
 | `U-PA-SEAL-016` | Issue authority port欠測、live read failure、wrong Issue number、body digest drift、PLAN frontmatterのwrong issue / episode。 | sealed-lineage migrationを実行する。 | 各入力を`seal-issue-authority-invalid`で拒否し、全 table write 0。 | tracked PLAN blobのadmission receiptとlive GitHub Issue observationを結ぶpreflight port。 | episode ID推論、手書きbody digest、read failure時の自己申告fallbackを許さない。 |
 | `U-PA-SEAL-017` | LF、CRLF、末尾改行有無だけが異なるIssue本文bytes。 | raw文字列をUTF-8 bytesとしてdigest化し比較する。 | byte列が異なればdigestも異なり、正規化した本文をauthorityに使わない。 | Issue authority adapterのraw body境界。 | 改行正規化で別Issue preimageを同一視しない。 |
+| `U-PA-SEAL-018` | stable PR factsと`admitReviewCustody`のtyped `CustodyDecision`。 | seal review authority adapterへ渡す。 | factsとdecisionをそのままcanonical observationへ写し、admitted subject不一致は拒否する。 | review-custody runner出力文字列ではなくdomain decisionを受けるadapter境界。 | `RunnerOutcome.summary`やlocal receipt本文の再parseをauthorityにしない。 |
+| `U-PA-SEAL-019` | REST Issue JSONにCRLFと末尾改行を含むbody。 | system Issue adapterで`gh api repos/{repo}/issues/{n}`を実行する。 | body文字列をbyte変更なく返し、GraphQL/`--jq`を使わない。 | injectable gh argv adapter。 | stdout整形や改行正規化をpreimageへ混入させない。 |
 
 実行対応: `tests/plan-asset/sealed-lineage-local-migration.test.ts`
-(`U-PA-SEAL-011..017`)。これらは `src/lint/oracle-test-citation-baseline.ts` への追加対象ではなく、
+(`U-PA-SEAL-011..019`)。これらは `src/lint/oracle-test-citation-baseline.ts` への追加対象ではなく、
 本書の paired test-design 宣言から test-label trace を閉じる。
 
 ## Node build image候補integration pair（Issue #152 D0-N）

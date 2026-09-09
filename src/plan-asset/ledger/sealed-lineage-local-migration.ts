@@ -187,18 +187,27 @@ export class SystemSealedLineageGitPreflightPort implements SealedLineageGitPref
 
 /** GitHub の live Issue 本文を文字列のまま返し、digest 導出は application 側に残す。 */
 export class SystemSealedLineageIssueAuthorityPort implements SealedLineageIssueAuthorityPort {
+  private readonly exec: SealedLineageIssueGhExec;
+
+  constructor(
+    exec: SealedLineageIssueGhExec = (args) =>
+      execFileSync("gh", [...args], {
+        encoding: "utf8",
+        windowsHide: true,
+        stdio: ["ignore", "pipe", "ignore"],
+      }),
+  ) {
+    this.exec = exec;
+  }
+
   observe(input: SealedLineageMigrationInput): SealedLineageIssueAuthorityObservation | undefined {
     try {
-      const raw = execFileSync(
-        "gh",
-        [
-          "api",
-          `repos/${input.repositoryIdentity}/issues/${input.issue.number}`,
-          "--header",
-          "Cache-Control: no-cache",
-        ],
-        { encoding: "utf8", windowsHide: true, stdio: ["ignore", "pipe", "ignore"] },
-      );
+      const raw = this.exec([
+        "api",
+        `repos/${input.repositoryIdentity}/issues/${input.issue.number}`,
+        "--header",
+        "Cache-Control: no-cache",
+      ]);
       const parsed = JSON.parse(raw) as Record<string, unknown>;
       if (
         !Number.isSafeInteger(parsed.number) ||
@@ -216,6 +225,8 @@ export class SystemSealedLineageIssueAuthorityPort implements SealedLineageIssue
     }
   }
 }
+
+export type SealedLineageIssueGhExec = (args: readonly string[]) => string;
 
 export type SealedLineageMigrationResult =
   | {
