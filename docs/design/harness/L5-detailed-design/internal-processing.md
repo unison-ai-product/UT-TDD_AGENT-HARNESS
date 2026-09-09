@@ -1130,6 +1130,7 @@ digest の preimage は、順序付き文字列列の各要素を「UInt32BE の
 |---|---|---|
 | successor asset id | `ut-tdd-plan-rebase-v1` | `plan:rebase:<64 hex>` |
 | source authority digest | `ut-tdd-seal-source-authority-v1` | `<64 hex>` |
+| 実装 review authority digest | `ut-tdd-seal-review-authority-v1` | `<64 hex>` |
 
 successor asset id の preimage は `[label, repositoryIdentity, planId]` とする。`repositoryIdentity` は tracked
 `ut-tdd.project.json` の `repository_identity` であり、HEAD blob 一致と worktree 一致を
@@ -1157,10 +1158,13 @@ preimage は次の順序付き列とする。
 | 照合 | 不成立時の typed reason |
 |---|---|
 | `sourceCommit` が seal 候補 HEAD と exact 一致し、かつ tracked remote ref (`refs/remotes/origin/*`) から到達可能である | `seal-source-commit-unreachable` |
+| `sourcePath` が `planId` の canonical PLAN path (`docs/plans/<planId>.md`) と exact 一致する | `seal-source-path-noncanonical` |
 | `sourceCommit` に `sourcePath` が blob として存在する | `seal-source-path-absent` |
 | その blob OID が `sourceBlobOid` と一致する | `seal-source-blob-mismatch` |
 | blob bytes から再計算した canonical payload digest と body digest が宣言値と一致する | `seal-source-payload-drift` |
+| `historicalProjectionPath` が tracked projection 正本 path (`docs/governance/plan-admission-receipts.json`) と exact 一致する | `seal-projection-path-noncanonical` |
 | `historicalProjectionPath` の blob OID と content digest が同一 `sourceCommit` 帰属で宣言値と一致する | `seal-projection-custody-mismatch` |
+| その blob 内に `binding.plan_id = planId` かつ `binding.asset_id = historicalAssetId` かつ `binding.revision = historicalTerminalRevision` の record が存在し、その `record_digest` が `historicalTailDigest` と一致する | `seal-projection-binding-mismatch` |
 | 照合中に HEAD が変化していない (TOCTOU 再確認) | `seal-source-head-toctou` |
 
 照合は `project-identity.ts` と同じ preflight 規律 (tracked blob 読み出し + 再確認) に従い、呼び出し側の port として
@@ -1169,6 +1173,12 @@ preimage は次の順序付き列とする。
 到達可能性の照合を欠くと、blob 一致と TOCTOU 再確認だけでは自作 commit object と整合する
 `sourceCommit` / `sourceBlobOid` / digest 一式を用意して全照合を通せてしまい、`sourceAuthorityDigest` を偽造できる
 (PR #543 r1 の blocking finding 1)。したがって上表 1 行目は省略可能な補助検査ではなく必須条件である。
+
+同様に、path 側を canonical に束縛しない照合も自己整合的に通る。到達可能な HEAD 内の任意 blob を
+`sourcePath` / `historicalProjectionPath` に選べば、対応する OID と content digest を再計算するだけで
+OID 照合・payload 照合・TOCTOU 再確認をすべて満たせるため、封印対象の PLAN と projection 正本を
+別 blob に差し替えられる (PR #543 r3 の blocking finding 2)。したがって path 2 行と projection の
+record 束縛行 (`binding.plan_id` / `binding.asset_id` / `binding.revision` と `record_digest`) も必須条件である。
 
 ### E.4 `reviewedImplementationAuthorityDigest`
 
@@ -1188,8 +1198,22 @@ commit trailer、local JSON/HMAC、同一 OS user が使える鍵は、この po
 | repository / PR 番号 / base ref / head sha / merge 状態 | `review-custody-runner` の `observeStable` が live 観測した値 |
 | 受理判定 | 同 runner の `admitCustodyReceipt` が返す decision |
 
-preimage は observed facts と decision を canonical 順で並べた列とし、framing は E.2 に従う。
-`sourceAuthorityDigest` と同じく、宣言値ではなく観測値を入力とする。
+preimage は次の順序付き列とし、framing と label は E.2 に従う。`sourceAuthorityDigest` と同じく、
+宣言値ではなく観測値を入力とする。
+
+```text
+[ut-tdd-seal-review-authority-v1, repositoryIdentity, planId, pullRequestNumber, baseRef, headSha,
+ custodyDecision]
+```
+
+各要素の文字列表現も固定する。`pullRequestNumber` は符号なし 10 進 ASCII (前置ゼロ禁止)、
+`custodyDecision` は `admitCustodyReceipt` が返す decision の enum 値をそのまま ASCII で用い、
+残りは観測値の UTF-8 bytes をそのまま用いる。列の長さ・順序・表現のいずれかが異なる導出は
+本契約の digest ではない。
+
+**時間変動する観測値は preimage に含めない。** merge state status や観測時刻は同一 head でも後から
+変わるため、preimage に入れると同一 payload の replay が冪等でなくなる (changed payload と
+区別できない)。これらは digest の入力ではなく、下記 typed reason による受理条件側で扱う。
 
 **family 分離について機械証明を主張しない。** `VerifiedProviderIdentity` の発行側が承認・実装されるまで、
 custody の終端は既存どおり `unverified_family` であり、本 seal 契約もその終端を継承する。
@@ -1205,11 +1229,13 @@ seal 側で family 分離を強証明したことにしてはならない。fami
 `canonical()` により生成する **byte 列**であり、`certificateDigest` はその byte 列の sha256 と一致必須とする
 (不一致は `seal-certificate-digest-mismatch`)。digest の preimage は object ではなく確定した byte 列である。
 caller から `certificate_json` の byte 列を受け取る設計にはしない (受け取ると非 canonical な直列化を
-digest の preimage にできてしまう)。フィールド集合とキー順は次で固定する。
+digest の preimage にできてしまう)。本契約が固定するのは**フィールド集合**であり、byte 列上のキー順は
+既存 `canonical()` の規約 (キーの辞書順 sort) がそのまま決める。二通りの順序を規定しない。
+以下は `canonical()` が実際に出力する辞書順で示す。
 
 ```text
-{planId, historicalAssetId, historicalTerminalRevision, historicalTailDigest, successorAssetId,
- successorRevision, sourceAuthorityDigest, reviewedImplementationAuthorityDigest}
+{historicalAssetId, historicalTailDigest, historicalTerminalRevision, planId,
+ reviewedImplementationAuthorityDigest, sourceAuthorityDigest, successorAssetId, successorRevision}
 ```
 
 これにより certificate identity が authority の差を識別する。二層 identity (certificate は系譜のみ、authority は
@@ -1220,7 +1246,13 @@ digest の preimage にできてしまう)。フィールド集合とキー順�
 E.3〜E.5 の各項目について、1 bit 改変で write 0 となる負系を対で置く。最低限、次を独立に持つ。
 
 - 3 digest それぞれの 1 bit 改変 → typed reason で拒否、全 table への write 0
-- E.3 の Git 照合 5 種それぞれの不成立
+- E.3 の Git 照合 9 種それぞれの不成立 (到達可能性 / `sourcePath` 非 canonical / blob 不在 / OID 不一致 /
+  payload drift / projection path 非 canonical / projection custody 不一致 / projection record 束縛不一致 /
+  TOCTOU)。とくに、到達可能な HEAD 内の別 blob path を `sourcePath` または `historicalProjectionPath` に
+  差し替えて OID と content digest を再計算した自己整合入力が拒否されること
+- E.4 preimage の列逸脱 (要素順序の入れ替え、要素の欠落、`pullRequestNumber` の前置ゼロ、decision 値の
+  別表現) が同一観測から別 digest を生まないこと。時間変動値 (merge state / 観測時刻) を含めた導出が
+  本契約の digest として受理されないこと
 - `certificate_json` のフィールド欠落・値改変 → writer が生成する byte 列が変わるため digest 不一致で拒否
 - caller が `certificate_json` の byte 列や `certificateDigest` を独自に供給する経路が存在しないこと
   (キー順を変えた等価 object を preimage にできない。「等価 object なのに digest 不一致」という矛盾した
