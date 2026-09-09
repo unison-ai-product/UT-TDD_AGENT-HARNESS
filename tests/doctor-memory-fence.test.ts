@@ -119,7 +119,7 @@ describe("consumer doctor profiles enforce the completion fence", () => {
     expect(measurement.checkIds).toEqual(["setup-smoke"]);
     expect(measurement.result.ok).toBe(false);
     expect(measurement.result.messages.join("\n")).toContain(
-      `memory-migration-completion: ${reason}`,
+      `memory-migration-completion - violation: ${reason}`,
     );
   });
 });

@@ -85,6 +85,7 @@ export function collectDoctorCheckRun(
   const selectedDefinitions = selectDoctorCheckDefinitions(
     buildFullDoctorCheckDefinitions(deps, options),
     scope,
+    profile.invocation === "registry" ? outputIds : undefined,
   ).filter((definition) => outputIdSet.has(definition.id));
   for (const definition of selectedDefinitions) {
     resultsById.set(definition.id, record(definition.id, definition.run));
