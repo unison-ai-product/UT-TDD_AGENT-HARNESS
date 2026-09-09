@@ -668,6 +668,36 @@ describe("sealed lineage local migration", () => {
       }),
     ).toEqual({ ok: false, ruleId: "seal-git-preflight-unavailable" });
   });
+
+  it.each([
+    "review",
+    "issue",
+  ] as const)("U-PA-SEAL-021: %s authority観測中のHEAD移動はtransaction直前にwrite 0で拒否する", async (boundary) => {
+    const { db, Transaction } = await baseFixture();
+    const command = input();
+    const stableGit = fakeGit(command);
+    let head = command.sourceCommit;
+    const git = { ...stableGit, readHeadCommit: () => head };
+    const reviewAuthority = {
+      observe: () => {
+        if (boundary === "review") head = "e".repeat(40);
+        return reviewObservation("custody_rejected", ["unverified_family"]);
+      },
+    };
+    const issueAuthority = {
+      observe: () => {
+        if (boundary === "issue") head = "e".repeat(40);
+        return fakeIssueAuthority(command).observe();
+      },
+    };
+    const transaction = new Transaction(db, { git, reviewAuthority, issueAuthority });
+
+    expect(transaction.migrate(command)).toEqual({
+      ok: false,
+      ruleId: "seal-source-head-toctou",
+    });
+    expect(counts(db)).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
+  });
 });
 
 const PLAN_ID = "PLAN-RECOVERY-16-plan-revision-authoring";
