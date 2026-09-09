@@ -50,6 +50,7 @@ export {
   checkSkillAssignment,
   checkVerificationProfile,
 } from "./lint-gates.ts";
+export { checkMemoryMigrationCompletion } from "./memory-migration.ts";
 export {
   checkBackfill,
   checkBackfillResult,

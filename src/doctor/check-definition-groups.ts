@@ -33,6 +33,7 @@ import {
   checkSkillAssignment,
   checkVerificationProfile,
 } from "./lint-gates.ts";
+import { checkMemoryMigrationCompletion } from "./memory-migration.ts";
 import {
   checkBackfillResult,
   checkForwardConvergence,
@@ -223,6 +224,7 @@ export function buildDoctorCheckDefinitionGroups(
     {
       id: "completion-and-readability",
       definitions: [
+        full("memory-migration-completion", () => checkMemoryMigrationCompletion(deps.repoRoot)),
         full("l6-fr-coverage", () => checkL6FrCoverage(deps.repoRoot)),
         full("readability", () => checkReadability(deps.repoRoot)),
         full("runtime-readability", () => checkRuntimeReadability(deps.repoRoot)),
