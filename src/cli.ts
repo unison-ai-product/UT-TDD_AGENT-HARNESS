@@ -191,12 +191,15 @@ import {
 import { findReference } from "./search/index.ts";
 import {
   admitConsumerLocalRuntime,
+  admitReleaseAggregate,
   type ConsumerLocalRuntimeAdmissionInput,
   nodeSetupDeps,
+  type ReleaseAggregateAdmissionInput,
   runSetupAsync,
   type SetupArgs,
   type SetupConsumerRuntimeInput,
 } from "./setup/index.ts";
+import type { ReleaseChannelAttestation } from "./setup/release-channel-adapter.ts";
 import {
   checkForUpdate,
   defaultHarnessRoot,
@@ -4088,25 +4091,67 @@ program
               "identity/admission_input/compiled_esm_base64/node_bootstrap_receipt_base64 are required",
             );
           const rawAdmission = value.admission_input as Record<string, unknown>;
-          const rawPlan = rawAdmission.plan as Record<string, unknown>;
-          const rawEntries = rawPlan?.entries;
+          const rawAggregate = rawAdmission.aggregate_input as Record<string, unknown>;
+          const rawFinalTree = rawAggregate?.final_tree as Record<string, unknown>;
+          const rawAttestation = rawAggregate?.attestation as Record<string, unknown>;
+          const rawAttestationEntries = rawAttestation?.entries;
           if (
-            !rawPlan ||
-            !Array.isArray(rawEntries) ||
+            !rawAggregate ||
+            !rawFinalTree ||
+            !Array.isArray(rawFinalTree.manifestEntries) ||
+            !Array.isArray(rawFinalTree.sourcePaths) ||
+            !Array.isArray(rawFinalTree.cleanPackAllowlist) ||
+            !Array.isArray(rawFinalTree.channelMappings) ||
+            typeof rawAggregate.repository !== "string" ||
+            typeof rawAggregate.channel !== "string" ||
+            !rawAttestation ||
+            rawAttestation.status !== "attested" ||
+            typeof rawAttestation.releaseId !== "string" ||
+            typeof rawAttestation.artifactSourceCommit !== "string" ||
+            typeof rawAttestation.expectedDigest !== "string" ||
+            typeof rawAttestation.actualDigest !== "string" ||
+            !Array.isArray(rawAttestationEntries) ||
             typeof rawAdmission.control_manifest_base64 !== "string"
           )
-            throw new Error("admission_input.plan.entries/control_manifest_base64 are required");
+            throw new Error(
+              "admission_input.aggregate_input/final_tree/attestation/control_manifest_base64 are required",
+            );
+          const attestation = {
+            status: "attested" as const,
+            releaseId: rawAttestation.releaseId,
+            artifactSourceCommit: rawAttestation.artifactSourceCommit,
+            expectedDigest: rawAttestation.expectedDigest,
+            actualDigest: rawAttestation.actualDigest,
+            entries: rawAttestationEntries.map((entry) => {
+              const item = entry as Record<string, unknown>;
+              if (
+                typeof item.path !== "string" ||
+                typeof item.mode !== "string" ||
+                typeof item.content_base64 !== "string"
+              )
+                throw new Error("aggregate attestation entry is invalid");
+              if (item.mode !== "100644" && item.mode !== "100755" && item.mode !== "120000")
+                throw new Error("aggregate attestation entry mode is invalid");
+              return {
+                path: item.path,
+                mode: item.mode,
+                content: Buffer.from(item.content_base64, "base64"),
+              };
+            }),
+          } satisfies Extract<ReleaseChannelAttestation, { status: "attested" }>;
+          const aggregateInput = {
+            repository: rawAggregate.repository,
+            channel: rawAggregate.channel,
+            finalTree: rawFinalTree,
+          } as unknown as ReleaseAggregateAdmissionInput;
+          const aggregate = await admitReleaseAggregate(aggregateInput, {
+            attestChannel: async () => attestation,
+          });
+          if (!aggregate.ok) throw new Error(`consumer_runtime_aggregate_${aggregate.error}`);
           const admissionInput = {
             ...rawAdmission,
             plan: {
-              ...rawPlan,
-              entries: rawEntries.map((entry) => {
-                const item = entry as Record<string, unknown>;
-                if (typeof item.content_base64 !== "string")
-                  throw new Error("admission entry content_base64 is required");
-                const { content_base64: _content, ...metadata } = item;
-                return { ...metadata, content: Buffer.from(item.content_base64, "base64") };
-              }),
+              ...aggregate.plan,
             },
             controlManifestBytes: Buffer.from(rawAdmission.control_manifest_base64, "base64"),
           } as unknown as ConsumerLocalRuntimeAdmissionInput;

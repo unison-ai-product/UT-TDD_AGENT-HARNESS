@@ -57,8 +57,11 @@ function snapshotTree(root: string): string {
       const child = join(path, name);
       const relativePath = join(prefix, name);
       const stat = statSync(child);
-      if (stat.isDirectory()) visit(child, relativePath);
-      else rows.push(`${relativePath}:${stat.mode & 0o777}:${readFileSync(child).toString("hex")}`);
+      if (stat.isDirectory()) {
+        rows.push(`${relativePath}/:${stat.mode & 0o777}`);
+        visit(child, relativePath);
+      } else
+        rows.push(`${relativePath}:${stat.mode & 0o777}:${readFileSync(child).toString("hex")}`);
     }
   };
   visit(root, "");

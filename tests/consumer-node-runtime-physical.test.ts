@@ -34,6 +34,12 @@ import { digestMaterializedReleaseEntries } from "../src/setup/release-materiali
 const roots: string[] = [];
 const hex = (n: string) => n.repeat(64);
 const strip = (value: string) => value.slice("sha256:".length);
+function historyTipDigest(history: Uint8Array): string {
+  const lines = Buffer.from(history).toString("utf8").trim().split(/\r?\n/);
+  const record = JSON.parse(lines.at(-1) ?? "{}") as { record_digest?: string };
+  if (typeof record.record_digest !== "string") throw new Error("missing history tip");
+  return record.record_digest;
+}
 
 function setupDeps(root: string): SetupDeps {
   return {
@@ -212,10 +218,16 @@ describe("physical consumer Node runtime adapter", () => {
     const supplied = await producerInput(root, checkout);
     const payloads = buildConsumerNodeRuntimePayloads(supplied);
     const bundle = buildConsumerNodeRuntimeBundle({ identity: supplied.identity, ...payloads });
+    let removeAttempts = 0;
     const result = await installConsumerNodeRuntimeOnFilesystem({
       identity: supplied.identity,
       bundle,
       payloads,
+      removeLock: (path) => {
+        removeAttempts += 1;
+        if (removeAttempts === 1) throw new Error("release-unlink-fault");
+        rmSync(path, { recursive: true, force: false });
+      },
       fault: (barrier) => {
         if (barrier === "releaseConsumerLock") throw new Error("release-fault");
       },
@@ -226,6 +238,7 @@ describe("physical consumer Node runtime adapter", () => {
         join(supplied.identity.runtime_root, "locks", `${supplied.identity.product_id}.lock`),
       ),
     ).toBe(false);
+    expect(removeAttempts).toBe(2);
   });
 
   it("CANDIDATE-U-PACKNODE-005/012: update fault preserves prior pointer and bundle bytes", async () => {
@@ -335,6 +348,82 @@ describe("physical consumer Node runtime adapter", () => {
     if (!installed.result.ok)
       throw new Error(`SETUP_INSTALL_ERROR:${JSON.stringify(installed.result)}`);
     expect(installed.result).toMatchObject({ ok: true, status: "committed" });
+    const priorPointerPath = join(root, ".ut-tdd", "runtime", "activation", "active.json");
+    const priorHistory = readFileSync(join(installed.bundle.bundle_path, "history.jsonl"));
+    const priorPointerBytes = readFileSync(priorPointerPath);
+    const priorPointer = {
+      bytes: priorPointerBytes,
+      mode: statSync(priorPointerPath).mode & 0o777,
+      digest: digestConsumerRuntimeBytes(priorPointerBytes),
+    };
+    const historyTip = (
+      JSON.parse(Buffer.from(priorHistory).toString("utf8").trim().split("\n").at(-1) ?? "{}") as {
+        record_digest: string;
+      }
+    ).record_digest;
+    const updateIdentity = { ...supplied.identity, operation_id: "physical-update", attempt: 1 };
+    const updatePayloads = buildConsumerNodeRuntimePayloads({
+      identity: updateIdentity,
+      compiled_esm: supplied.compiled_esm,
+      node_bootstrap_receipt: supplied.node_bootstrap_receipt,
+      prior_bundle_digest: installed.bundle.bundle_digest,
+      prior_history_tip_digest: historyTip,
+      history_sequence: 1,
+      prior_history: priorHistory,
+      prior_pointer: priorPointer,
+      operation_kind: "update",
+    });
+    const updateBundle = buildConsumerNodeRuntimeBundle({
+      identity: updateIdentity,
+      ...updatePayloads,
+      prior_bundle_digest: installed.bundle.bundle_digest,
+      prior_history_tip_digest: historyTip,
+      history_sequence: 1,
+    });
+    const update = await installConsumerNodeRuntimeOnFilesystem({
+      identity: updateIdentity,
+      bundle: updateBundle,
+      payloads: updatePayloads,
+    });
+    expect(update).toMatchObject({ ok: true, status: "committed" });
+    const currentBundle = updateBundle;
+    const currentPointerBytes = readFileSync(priorPointerPath);
+    const currentPointer = {
+      bytes: currentPointerBytes,
+      mode: statSync(priorPointerPath).mode & 0o777,
+      digest: digestConsumerRuntimeBytes(currentPointerBytes),
+    };
+    const currentHistory = readFileSync(join(currentBundle.bundle_path, "history.jsonl"));
+    const rollbackIdentity = {
+      ...supplied.identity,
+      operation_id: "physical-rollback",
+      attempt: 2,
+    };
+    const rollbackPayloads = buildConsumerNodeRuntimePayloads({
+      identity: rollbackIdentity,
+      compiled_esm: supplied.compiled_esm,
+      node_bootstrap_receipt: supplied.node_bootstrap_receipt,
+      prior_bundle_digest: updateBundle.bundle_digest,
+      prior_history_tip_digest: historyTipDigest(currentHistory),
+      history_sequence: 2,
+      prior_history: currentHistory,
+      prior_pointer: currentPointer,
+      operation_kind: "rollback",
+      prior_attestation: supplied.node_bootstrap_receipt,
+    });
+    const rollbackBundle = buildConsumerNodeRuntimeBundle({
+      identity: rollbackIdentity,
+      ...rollbackPayloads,
+      prior_bundle_digest: updateBundle.bundle_digest,
+      prior_history_tip_digest: historyTipDigest(currentHistory),
+      history_sequence: 2,
+    });
+    const rollback = await installConsumerNodeRuntimeOnFilesystem({
+      identity: rollbackIdentity,
+      bundle: rollbackBundle,
+      payloads: rollbackPayloads,
+    });
+    expect(rollback).toMatchObject({ ok: true, status: "committed" });
     rmSync(checkout, { recursive: true, force: true });
     const wrapper = join(root, ".ut-tdd", "bin", "ut-tdd.mjs");
     expect(readFileSync(join(root, ".claude", "settings.json"), "utf8")).toContain(

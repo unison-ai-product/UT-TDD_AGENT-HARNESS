@@ -660,10 +660,15 @@ function containedReal(parent: string, child: string): boolean {
 }
 
 type SetupFileSnapshot = { readonly bytes: Buffer; readonly mode: number } | null;
-type RuntimeTreeSnapshot = ReadonlyMap<
-  string,
-  { readonly bytes: Buffer; readonly mode: number }
-> | null;
+type SetupDirectorySnapshot = { readonly exists: boolean; readonly mode?: number };
+type SetupSnapshot = {
+  readonly files: ReadonlyMap<string, SetupFileSnapshot>;
+  readonly directories: ReadonlyMap<string, SetupDirectorySnapshot>;
+};
+type RuntimeTreeEntry =
+  | { readonly kind: "directory"; readonly mode: number }
+  | { readonly kind: "file"; readonly bytes: Buffer; readonly mode: number };
+type RuntimeTreeSnapshot = { readonly entries: ReadonlyMap<string, RuntimeTreeEntry> } | null;
 
 function setupTargetPaths(): readonly string[] {
   const paths = new Set<string>([PROJECT_IDENTITY_PATH, STATE_PATH]);
@@ -672,23 +677,36 @@ function setupTargetPaths(): readonly string[] {
   return [...paths];
 }
 
-function captureSetupFiles(repoRoot: string): ReadonlyMap<string, SetupFileSnapshot> {
-  const snapshot = new Map<string, SetupFileSnapshot>();
+function captureSetupFiles(repoRoot: string): SetupSnapshot {
+  const files = new Map<string, SetupFileSnapshot>();
+  const directories = new Map<string, SetupDirectorySnapshot>();
   for (const relativePath of setupTargetPaths()) {
     const path = resolve(repoRoot, relativePath);
     if (!existsSync(path)) {
-      snapshot.set(path, null);
-      continue;
+      files.set(path, null);
+    } else {
+      const stat = statSync(path);
+      if (!stat.isFile()) throw new Error("consumer_runtime_setup_snapshot");
+      files.set(path, { bytes: readFileSync(path), mode: stat.mode & 0o777 });
     }
-    const stat = statSync(path);
-    if (!stat.isFile()) throw new Error("consumer_runtime_setup_snapshot");
-    snapshot.set(path, { bytes: readFileSync(path), mode: stat.mode & 0o777 });
+    let parent = dirname(path);
+    while (parent !== resolve(repoRoot) && parent !== dirname(parent)) {
+      if (!directories.has(parent)) {
+        if (!existsSync(parent)) directories.set(parent, { exists: false });
+        else {
+          const stat = statSync(parent);
+          if (!stat.isDirectory()) throw new Error("consumer_runtime_setup_snapshot");
+          directories.set(parent, { exists: true, mode: stat.mode & 0o777 });
+        }
+      }
+      parent = dirname(parent);
+    }
   }
-  return snapshot;
+  return { files, directories };
 }
 
-function restoreSetupFiles(snapshot: ReadonlyMap<string, SetupFileSnapshot>): void {
-  for (const [path, value] of snapshot) {
+function restoreSetupFiles(snapshot: SetupSnapshot): void {
+  for (const [path, value] of snapshot.files) {
     if (value === null) {
       rmSync(path, { recursive: true, force: true });
       continue;
@@ -697,31 +715,62 @@ function restoreSetupFiles(snapshot: ReadonlyMap<string, SetupFileSnapshot>): vo
     writeFileSync(path, value.bytes, { mode: value.mode });
     chmodSync(path, value.mode);
   }
+  for (const [path, value] of [...snapshot.directories.entries()].sort(
+    ([left], [right]) => right.length - left.length,
+  )) {
+    if (!value.exists) {
+      if (existsSync(path) && statSync(path).isDirectory() && readdirSync(path).length === 0)
+        rmSync(path, { recursive: false, force: true });
+      continue;
+    }
+    mkdirSync(path, { recursive: true });
+    chmodSync(path, value.mode ?? 0o755);
+  }
 }
 
 function captureRuntimeTree(root: string): RuntimeTreeSnapshot {
   if (!existsSync(root)) return null;
-  const snapshot = new Map<string, { readonly bytes: Buffer; readonly mode: number }>();
+  const rootStat = statSync(root);
+  if (!rootStat.isDirectory()) throw new Error("consumer_runtime_setup_snapshot");
+  const entries = new Map<string, RuntimeTreeEntry>();
+  entries.set("", { kind: "directory", mode: rootStat.mode & 0o777 });
   const visit = (path: string, relativePath: string): void => {
     for (const name of readdirSync(path)) {
       const child = join(path, name);
       const childRelative = join(relativePath, name);
       const stat = statSync(child);
-      if (stat.isDirectory()) visit(child, childRelative);
-      else if (stat.isFile())
-        snapshot.set(childRelative, { bytes: readFileSync(child), mode: stat.mode & 0o777 });
+      if (stat.isDirectory()) {
+        entries.set(childRelative, { kind: "directory", mode: stat.mode & 0o777 });
+        visit(child, childRelative);
+      } else if (stat.isFile())
+        entries.set(childRelative, {
+          kind: "file",
+          bytes: readFileSync(child),
+          mode: stat.mode & 0o777,
+        });
       else throw new Error("consumer_runtime_setup_snapshot");
     }
   };
   visit(root, "");
-  return snapshot;
+  return { entries };
 }
 
 function restoreRuntimeTree(root: string, snapshot: RuntimeTreeSnapshot): void {
   rmSync(root, { recursive: true, force: true });
   if (snapshot === null) return;
   mkdirSync(root, { recursive: true });
-  for (const [relativePath, value] of snapshot) {
+  for (const [relativePath, value] of [...snapshot.entries.entries()]
+    .filter(([path, entry]) => path !== "" && entry.kind === "directory")
+    .sort(([left], [right]) => left.length - right.length)) {
+    if (value.kind !== "directory") continue;
+    const path = join(root, relativePath);
+    mkdirSync(path, { recursive: false });
+    chmodSync(path, value.mode);
+  }
+  const rootEntry = snapshot.entries.get("");
+  if (rootEntry?.kind === "directory") chmodSync(root, rootEntry.mode);
+  for (const [relativePath, value] of snapshot.entries) {
+    if (value.kind !== "file") continue;
     const path = join(root, relativePath);
     mkdirSync(dirname(path), { recursive: true });
     writeFileSync(path, value.bytes, { mode: value.mode });

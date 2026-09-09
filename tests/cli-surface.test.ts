@@ -1216,6 +1216,29 @@ describe("L7 CLI surface closure", () => {
     }
   });
 
+  it("requires setup ingress to carry an aggregate admission envelope", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-setup-aggregate-envelope-"));
+    const input = join(root, "consumer-runtime-input.json");
+    try {
+      writeFileSync(
+        input,
+        JSON.stringify({
+          identity: {},
+          admission_input: { plan: { entries: [] }, control_manifest_base64: "" },
+          compiled_esm_base64: "",
+          node_bootstrap_receipt_base64: "",
+        }),
+      );
+      const run = runCliIn(root, ["setup", "--consumer-runtime-input", input]);
+
+      expect(run.status).toBe(1);
+      expect(run.stderr).toContain("aggregate_input/final_tree/attestation");
+      expect(readdirSync(root)).toEqual(["consumer-runtime-input.json"]);
+    } finally {
+      removeTestTree(root);
+    }
+  });
+
   it("exposes telemetry scan as a JSON command surface without provider CLI execution", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-cli-telemetry-"));
     try {

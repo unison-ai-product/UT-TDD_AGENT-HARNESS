@@ -103,6 +103,8 @@ export interface ConsumerNodeRuntimeFilesystemOptions {
   readonly fault?: (barrier: string) => void;
   /** Optional aggregate verifier; absence means bundle/payload admission only. */
   readonly verifySealedAggregate?: () => void;
+  /** Physical lock removal seam; production defaults to recursive rmSync. */
+  readonly removeLock?: (path: string) => void;
 }
 
 export interface ConsumerNodeRuntimeReadinessInput {
@@ -617,7 +619,30 @@ const parsePayload = (name) => { try { const value = JSON.parse(payload(name).to
 const marker = parsePayload("marker.json"), consumer = parsePayload("consumer-receipt.json"), operation = parsePayload("operation-state.json");
 const identityDigest = sha256(Buffer.from(canonical(manifest.identity), "utf8"));
 let history;
-try { const lines = payload("history.jsonl").toString("utf8").trim().split(/\\r?\\n/); if (lines.length !== 1) deny("consumer_runtime_resolution_denied"); history = JSON.parse(lines[0]); } catch { deny("consumer_runtime_resolution_denied"); }
+try {
+  const lines = payload("history.jsonl").toString("utf8").trim().split(/\\r?\\n/);
+  if (lines.length === 0 || lines.some((line) => line.length === 0)) deny("consumer_runtime_resolution_denied");
+  const records = lines.map((line) => JSON.parse(line));
+  for (let index = 0; index < records.length; index += 1) {
+    const record = records[index];
+    if (!record || typeof record !== "object" || Array.isArray(record)) deny("consumer_runtime_resolution_denied");
+    if (record.history_sequence !== index || typeof record.record_digest !== "string") deny("consumer_runtime_resolution_denied");
+    if (index === 0 && (record.prior_bundle_digest !== "genesis" || record.prior_history_tip_digest !== "genesis")) deny("consumer_runtime_resolution_denied");
+    if (index > 0 && (typeof record.prior_bundle_digest !== "string" || typeof record.prior_history_tip_digest !== "string")) deny("consumer_runtime_resolution_denied");
+    if (index > 0 && record.prior_history_tip_digest !== records[index - 1].record_digest) deny("consumer_runtime_resolution_denied");
+    const unsigned = {
+      attempt: record.attempt,
+      history_sequence: record.history_sequence,
+      identity_digest: record.identity_digest,
+      operation_id: record.operation_id,
+      operation_kind: record.operation_kind,
+      prior_bundle_digest: record.prior_bundle_digest,
+      prior_history_tip_digest: record.prior_history_tip_digest,
+    };
+    if (sha256(Buffer.from(canonical(unsigned), "utf8")) !== record.record_digest) deny("consumer_runtime_resolution_denied");
+  }
+  history = records[records.length - 1];
+} catch { deny("consumer_runtime_resolution_denied"); }
 if (marker.identity_digest !== identityDigest || marker.operation_id !== manifest.identity.operation_id || marker.attempt !== manifest.identity.attempt || marker.generation_id !== manifest.identity.generation_id) deny("consumer_runtime_resolution_denied");
 if (consumer.identity_digest !== marker.identity_digest || consumer.operation_id !== marker.operation_id || consumer.attempt !== marker.attempt || consumer.history_sequence !== manifest.history_sequence || consumer.prior_bundle_digest !== manifest.prior_bundle_digest || consumer.prior_history_tip_digest !== manifest.prior_history_tip_digest || consumer.history_tip_digest !== history.record_digest) deny("consumer_runtime_resolution_denied");
 if (history.identity_digest !== marker.identity_digest || history.operation_id !== marker.operation_id || history.attempt !== marker.attempt || history.history_sequence !== manifest.history_sequence || history.prior_bundle_digest !== manifest.prior_bundle_digest || history.prior_history_tip_digest !== manifest.prior_history_tip_digest || sha256(Buffer.from(canonical({ attempt: history.attempt, history_sequence: history.history_sequence, identity_digest: history.identity_digest, operation_id: history.operation_id, operation_kind: history.operation_kind, prior_bundle_digest: history.prior_bundle_digest, prior_history_tip_digest: history.prior_history_tip_digest }), "utf8")) !== history.record_digest) deny("consumer_runtime_resolution_denied");
@@ -1074,13 +1099,21 @@ export function createConsumerNodeRuntimeFilesystemPorts(
     releaseConsumerLock: () => {
       let cleanupError: unknown;
       if (state.locked) {
-        try {
-          rmSync(lockPath, { recursive: true, force: false });
-        } catch (error) {
-          cleanupError = error;
+        const removeLock =
+          options.removeLock ?? ((path: string) => rmSync(path, { recursive: true, force: false }));
+        for (let attempt = 0; attempt < 2 && existsSync(lockPath); attempt += 1) {
+          try {
+            removeLock(lockPath);
+          } catch (error) {
+            cleanupError = error;
+          }
         }
+        if (!existsSync(lockPath)) cleanupError = undefined;
+        if (existsSync(lockPath) && cleanupError === undefined)
+          cleanupError = new Error("consumer_runtime_lock_cleanup_incomplete");
       }
-      state.locked = false;
+      if (cleanupError !== undefined && existsSync(lockPath)) state.locked = true;
+      else state.locked = false;
       let faultError: unknown;
       try {
         fault("releaseConsumerLock");
@@ -1113,6 +1146,7 @@ export async function installConsumerNodeRuntimeOnFilesystem(input: {
   readonly payloads: ConsumerNodeRuntimePayloads;
   readonly fault?: (barrier: string) => void;
   readonly verifySealedAggregate?: () => void;
+  readonly removeLock?: (path: string) => void;
 }): Promise<ConsumerNodeRuntimeInstallResult> {
   return installConsumerNodeRuntime({
     identity: input.identity,
