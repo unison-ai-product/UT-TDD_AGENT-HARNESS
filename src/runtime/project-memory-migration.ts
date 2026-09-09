@@ -185,6 +185,21 @@ interface TransactionPaths {
   readonly markersPath: string;
 }
 
+interface FinishExistingInput {
+  readonly inventory: Extract<MemoryMigrationDryRun, { ok: true }>;
+  readonly operationId: string;
+  readonly paths: TransactionPaths;
+  readonly markers: readonly Marker[];
+  readonly crashAfter?: MemoryMigrationApplyOptions["crashAfter"];
+}
+
+interface VerifyCompleteInput {
+  readonly marker: Marker;
+  readonly prepared: Marker;
+  readonly inventory: Extract<MemoryMigrationDryRun, { ok: true }>;
+  readonly paths: TransactionPaths;
+}
+
 const compare = (left: string, right: string) =>
   Buffer.compare(Buffer.from(left), Buffer.from(right));
 
@@ -258,7 +273,7 @@ export class ProjectMemoryMigration {
         if (complete) {
           const prepared = markers.find((marker) => marker.kind === "prepared");
           if (!prepared) throw new MigrationFailure("transaction_tampered");
-          this.verifyComplete(complete, prepared, inventory, paths);
+          this.verifyComplete({ marker: complete, prepared, inventory, paths });
           return {
             ok: true,
             status: "replayed",
@@ -269,13 +284,13 @@ export class ProjectMemoryMigration {
             quarantined: this.conflicts(inventory),
           };
         }
-        return this.finishExisting(
+        return this.finishExisting({
           inventory,
           operationId,
           paths,
-          this.readMarkers(paths.markersPath, operationId),
-          options.crashAfter,
-        );
+          markers: this.readMarkers(paths.markersPath, operationId),
+          crashAfter: options.crashAfter,
+        });
       }
       this.appendMarker(paths.markersPath, {
         kind: "owner",
@@ -285,13 +300,13 @@ export class ProjectMemoryMigration {
       if (options.crashAfter === "owner") return this.interrupted(operationId, paths);
       this.appendIntent(paths.markersPath, operationId, inventory);
       if (options.crashAfter === "intent") return this.interrupted(operationId, paths);
-      return this.finishExisting(
+      return this.finishExisting({
         inventory,
         operationId,
         paths,
-        this.readMarkers(paths.markersPath, operationId),
-        options.crashAfter,
-      );
+        markers: this.readMarkers(paths.markersPath, operationId),
+        crashAfter: options.crashAfter,
+      });
     } catch (error) {
       if (error instanceof MigrationFailure) return this.failure(error.reason, operationId, paths);
       return this.failure("source_unavailable", operationId, paths);
@@ -302,13 +317,13 @@ export class ProjectMemoryMigration {
     return this.apply(repoRoot, { operationId });
   }
 
-  private finishExisting(
-    inventory: Extract<MemoryMigrationDryRun, { ok: true }>,
-    operationId: string,
-    paths: TransactionPaths,
-    markers: readonly Marker[],
-    crashAfter?: MemoryMigrationApplyOptions["crashAfter"],
-  ): MemoryMigrationApplyResult {
+  private finishExisting({
+    inventory,
+    operationId,
+    paths,
+    markers,
+    crashAfter,
+  }: FinishExistingInput): MemoryMigrationApplyResult {
     const prepared = markers.find((marker) => marker.kind === "prepared");
     const variants = this.conflicts(inventory);
     if (!prepared) {
@@ -589,12 +604,7 @@ export class ProjectMemoryMigration {
     }
   }
 
-  private verifyComplete(
-    marker: Marker,
-    prepared: Marker,
-    inventory: Extract<MemoryMigrationDryRun, { ok: true }>,
-    paths: TransactionPaths,
-  ): void {
+  private verifyComplete({ marker, prepared, inventory, paths }: VerifyCompleteInput): void {
     if (
       marker.payload.inventoryDigest !== inventory.inventoryDigest ||
       marker.payload.quarantineDigest !== this.quarantineManifestDigest(paths.quarantine)
