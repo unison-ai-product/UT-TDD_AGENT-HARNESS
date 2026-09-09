@@ -308,6 +308,7 @@ describe("physical consumer Node runtime adapter", () => {
   it("CANDIDATE-U-PACKNODE-001/002/003: setup and configured provider hooks run after producer checkout deletion", async () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-physical-e2e-"));
     roots.push(root);
+    execFileSync("git", ["init", "-q", root], { stdio: "ignore" });
     const checkout = mkdtempSync(join(tmpdir(), "ut-tdd-setup-checkout-"));
     roots.push(checkout);
     const supplied = await producerInput(root, checkout);
