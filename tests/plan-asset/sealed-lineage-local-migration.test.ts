@@ -7,6 +7,7 @@ import type {
 } from "../../src/feedback/review-custody.ts";
 import { migratePlanLedger } from "../../src/plan-asset/ledger/schema.ts";
 import {
+  assembleSealedLineageMigrationDryRun,
   CustodyDecisionSealedLineageReviewAuthorityPort,
   SystemSealedLineageIssueAuthorityPort,
 } from "../../src/plan-asset/ledger/sealed-lineage-local-migration.ts";
@@ -594,6 +595,29 @@ describe("sealed lineage local migration", () => {
       ],
     ]);
   });
+
+  it("U-PA-SEAL-020: dry-run assemblerはtracked Git/Issue/custodyだけから全preimageを導出する", () => {
+    const command = input();
+    const result = assembleSealedLineageMigrationDryRun({
+      commandId: command.commandId,
+      planId: command.planId,
+      actor: command.actor,
+      occurredAt: command.occurredAt,
+      git: fakeGit(command),
+      issueAuthority: fakeIssueAuthority(command),
+      reviewFacts: reviewFacts(),
+      custodyDecision: rejectedDecision(["unverified_family"]),
+    });
+
+    expect(result).toMatchObject({
+      ok: true,
+      input: command,
+      validation: { ok: true },
+    });
+    if (!result.ok) throw new Error(result.ruleId);
+    expect(result.canonicalManifest).toBe(stableCanonical(result.input));
+    expect(result.manifestDigest).toBe(digest(result.canonicalManifest));
+  });
 });
 
 const PLAN_ID = "PLAN-RECOVERY-16-plan-revision-authoring";
@@ -837,7 +861,15 @@ function fakeGit(command: MigrationInput) {
         ? { blobOid: command.sourceBlobOid, bytes: source }
         : path === command.historicalProjectionPath
           ? { blobOid: command.historicalProjectionBlobOid, bytes: projection }
-          : undefined,
+          : path === "ut-tdd.project.json"
+            ? {
+                blobOid: "f".repeat(40),
+                bytes: Buffer.from(
+                  JSON.stringify({ repository_identity: command.repositoryIdentity }),
+                  "utf8",
+                ),
+              }
+            : undefined,
   };
 }
 
