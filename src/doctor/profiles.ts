@@ -167,6 +167,10 @@ export const FULL_DOCTOR_OUTPUT_IDS = [
 ] as const;
 
 export const TOOLCHAIN_DOCTOR_OUTPUT_IDS = ["toolchain-pin"] as const;
+export const CONSUMER_TOOLCHAIN_DOCTOR_OUTPUT_IDS = [
+  "toolchain-pin",
+  "memory-migration-completion",
+] as const;
 export const SOURCE_DOC_LANE_OUTPUT_IDS = [
   "readability",
   "runtime-readability",
@@ -208,7 +212,7 @@ export const DOCTOR_RUN_PROFILES = {
     invocation: "registry",
     scope: "toolchain",
     setupSmoke: false,
-    outputIds: TOOLCHAIN_DOCTOR_OUTPUT_IDS,
+    outputIds: CONSUMER_TOOLCHAIN_DOCTOR_OUTPUT_IDS,
     sourceOnly: false,
   },
   "consumer-setup-smoke": {

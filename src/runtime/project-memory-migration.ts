@@ -733,7 +733,12 @@ export class ProjectMemoryMigration {
     return readdirSync(root)
       .sort(compare)
       .map((name) => {
-        const bytes = readFileSync(join(root, name));
+        const path = join(root, name);
+        const stat = lstatSync(path);
+        if (!stat.isFile() || stat.isSymbolicLink()) {
+          throw new MigrationFailure("transaction_tampered");
+        }
+        const bytes = readFileSync(path);
         return { name, digest: sha256(bytes), size: bytes.byteLength };
       });
   }

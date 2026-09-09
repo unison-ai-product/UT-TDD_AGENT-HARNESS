@@ -4,10 +4,12 @@ import {
   invocationEquals,
   parseHookInvocation,
 } from "../lint/hook-invocation.ts";
+import type { LintResult } from "../plan/lint.ts";
 
 export interface SetupSmokeDeps {
   repoRoot: string;
   readText: (path: string) => string | null;
+  memoryCompletion?: () => LintResult;
 }
 
 interface SetupSmokeCheck {
@@ -80,6 +82,15 @@ export function checkSetupSmoke(deps: SetupSmokeDeps): { ok: boolean; messages: 
     ok: wrapper !== null && !/UT_TDD_SOURCE_CLI_JSON|__UT_TDD|placeholder/i.test(wrapper),
     message: "project-local wrapper has no template placeholder residue",
   });
+
+  if (deps.memoryCompletion) {
+    const completion = deps.memoryCompletion();
+    checks.push({
+      name: "memory-migration-completion",
+      ok: completion.ok,
+      message: completion.messages[0] ?? "memory-migration-completion returned no detail",
+    });
+  }
   // PLAN-L7-522 §2.1 (S1-b): run-bun.ts is retired. The wrapper CLI is the
   // direct Node entrypoint and must remain shell-free.
   checks.push({
