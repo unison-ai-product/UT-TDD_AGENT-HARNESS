@@ -7,7 +7,7 @@ drive: fullstack
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-08-26
-updated: 2026-09-08
+updated: 2026-09-09
 owner: PO / TL
 parent_design: docs/governance/ut-tdd-agent-harness-requirements_v1.2.md
 pair_artifact: docs/test-design/harness/L7-project-scoped-memory-root-test-design.md
@@ -30,6 +30,10 @@ generates:
   - artifact_path: src/runtime/claude-provider-envelope.ts
     artifact_type: source_module
   - artifact_path: tests/project-memory-root.test.ts
+    artifact_type: test_code
+  - artifact_path: src/memory/project-memory-migration.ts
+    artifact_type: source_module
+  - artifact_path: tests/project-memory-migration.test.ts
     artifact_type: test_code
 dependencies:
   parent: docs/governance/ut-tdd-agent-harness-requirements_v1.2.md
@@ -168,39 +172,41 @@ review_evidence:
         output_digest: sha256:357a451c5b7c3db96ef728aed9a202762618476b23a63b338365ed72bece9cf4
         anchor_commit: 6ce594c2087d8cd802bc3579b70ade9fbf912b43
 status: confirmed
-github_issue_id: 528
+github_issue_id: 544
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:a6c2b9d4814e28377724d4ba777ce544
-  command_id: command:issue528-PLAN-L7-512-project-scoped-memory-root-measured-evidence-r4
-  admitted_at: 2026-09-08T06:56:54.021Z
-  source_digest: sha256:01416a9390b1c135ada280e088d68acaa668c5ca75a3a77a9a9ec93557a42d26
-  decision_digest: sha256:7bc152f052d22aaf3e288664eb9c223a9e7a649bf66b1fdfd0af3827934f83c5
-  receipt_digest: sha256:ba1fe86a2b9a6f65aae4b5c0ae45242b4d63ce1866be672233ed23256440703f
+  receipt_id: certificate:bf54b2261c76b1d9abf5cab656fa269c
+  command_id: command:issue544-PLAN-L7-512-memory-inventory-r5
+  admitted_at: 2026-09-09T01:51:18.718Z
+  source_digest: sha256:2fa93de53589a582491a7f22e72020c99a73cbe9120f303b3e85d7a67ba3f91a
+  decision_digest: sha256:4d101895087aa44dff5db69b1cb9dccc2533477cb47384ebe04156874115e91b
+  receipt_digest: sha256:82de3aa24da3d67c7ef3e4afd79bb3d249afba024453b6437555692858234c74
   binding:
     path: docs/plans/PLAN-L7-512-project-scoped-memory-root.md
     plan_id: PLAN-L7-512-project-scoped-memory-root
     asset_id: plan:legacy:68706e293ae2c96738a8e3263bac3e01e7cde64cdb7c3ed8e53805922662bc30
-    revision: 4
-    content_digest: sha256:01416a9390b1c135ada280e088d68acaa668c5ca75a3a77a9a9ec93557a42d26
+    revision: 5
+    content_digest: sha256:2fa93de53589a582491a7f22e72020c99a73cbe9120f303b3e85d7a67ba3f91a
   route:
     signal: feature_addition
     mode: add-feature
   issue:
     provider: github
-    issue_id: 528
-    episode_id: E4-528-project-memory-envelope
-    projection_digest: sha256:218a5a56c4c720bac923f795c4b973f7d592159f75305a8ee1e39121403e10bf
+    issue_id: 544
+    episode_id: E4-544-project-memory-inventory
+    projection_digest: sha256:bea56244b34bd74d709278dcab8fb5fd50024b05be6edc9d61b6ec5123d3f450
   origin:
     plan_id: PLAN-L7-512-project-scoped-memory-root
-    revision: 3
-    digest: sha256:ed94d33b6879c4eded974aea8a22f537ef2dfda948d19c1172f68de4c1058674
+    revision: 4
+    digest: sha256:82d29e1cc8bb4d2152401e14ff74d5b7d618be96671b967e756209afe8c4831b
+  transition:
+    direction: design_to_implementation
+    implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-512-project-scoped-memory-root
-    target_revision: 4
+    target_revision: 5
     phase: forward_merge
-  escape_reason: "Issue #528 current implementation snapshot evidence and
-    completion timestamp repair"
+  escape_reason: "Issue #544 bounded linked-worktree Memory inventory implementation"
 ---
 
 # PLAN-L7-512: project-scoped canonical Memory and notification root
@@ -240,6 +246,10 @@ transient notification busとして共有する。絶対pathはidentityに含め
 3. project-bound provider envelopeとclaim guard。
 4. inventory、dedupe、conflict quarantine、transaction recovery、completion fence。
 5. clean Pack setupからのCodex/Claude parityと別project isolation E2E。
+
+本改訂はIssue #544のSlice 4aだけを所有し、linked worktree inventoryと
+unique / dedupe / conflictの決定論的分類を実装する。canonical apply、quarantine transaction、
+crash recovery、completion marker、Pack parityは後続へ残す。
 
 ## 4. Scope boundary
 

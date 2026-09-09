@@ -4,7 +4,7 @@ layer: L7
 executed_at_layer: L7
 status: draft
 plan_id: PLAN-L7-512-project-scoped-memory-root
-updated: 2026-09-08
+updated: 2026-09-09
 ---
 
 # Project-scoped Memory root test design
@@ -27,6 +27,27 @@ updated: 2026-09-08
 | CANDIDATE-P-PMEMROOT-005 | worker-only memoryのapply中断・source drift・完了後改ざん後に次回起動する | rollback/recovery、次回起動の未完了fence 0、現物digest不一致をtyped deny |
 
 正式oracle IDへの昇格は、対象実装とRed実測を同一commitへ束縛し、Reverse R1で行う。
+
+## Slice 4a inventory oracle (Issue #544)
+
+| Oracle | Stimulus | Expected |
+|---|---|---|
+| U-PMEMINV-001 | primaryとlinked worktreeにunique／同一digest複製を置き、双方からinventory | 同じdigestと並びでunique／dedupeを分類し、source bytes不変 |
+| U-PMEMINV-002 | 同一ID・異digestを3件配置 | winnerを選ばずconflictとして全variantを保持 |
+| U-PMEMINV-003 | frontmatter不正またはread失敗 | `invalid_memory`／`source_unavailable`、partial inventory 0 |
+| U-PMEMINV-004 | linked HEADをforeign project identityへ変更 | source read 0でtyped deny |
+| U-PMEMINV-005 | topology collectorがincomplete observationを返す | source read 0で`topology_unavailable` |
+| U-PMEMINV-006 | non-regular sourceまたはcontent変更 | non-regularは`source_unsafe`、変更時はinventory digest変化 |
+| U-PMEMINV-007 | linked `.ut-tdd/memory`を外部directory junctionへ置換 | target read 0で`source_unsafe` |
+| U-PMEMINV-008 | malformed UTF-8またはBOM付きMemory | 無音正規化せず`invalid_memory` |
+
+- Red anchor: `1456f248`（production module不在によりinventory contract未成立）。
+- Green anchor: `efbdff94bddac6f058b58a5c61fec2e0750ac283`。
+- Green実測: `node scripts/run-vitest-snapshot.ts tests/project-memory-migration.test.ts
+  --pool=forks --maxWorkers=2 --minWorkers=1 --reporter=dot` は8 passed、終了コード0。
+- 本昇格はread-only inventoryと分類だけを対象とする。既存の
+  `CANDIDATE-U-PMEMROOT-005/006/008`が要求するcanonical apply、quarantine、8.3境界の
+  完了は主張せず、後続Slice 4bとReverse R2以降へ残す。
 
 ## Slice 3 exact implementation evidence (Issue #528)
 

@@ -2928,6 +2928,38 @@
         "revision": 3,
         "content_digest": "sha256:f39d2bb4007af3650e132e60a4af2019d5a38babf9708f4fd50d217a04e50064"
       }
+    },
+    {
+      "sequence": 184,
+      "previous_record_digest": "sha256:037ad192726f7fb6f345263575cca3d14841fbe9fc14a3560ad17659af985a0d",
+      "record_digest": "sha256:386f06d0d69c3454386807888f02c74472c36ffce8204e1e4c774f84c9df1982",
+      "command_id": "command:issue544-PLAN-L7-512-memory-inventory-r5",
+      "receipt_id": "certificate:bf54b2261c76b1d9abf5cab656fa269c",
+      "receipt_digest": "sha256:82de3aa24da3d67c7ef3e4afd79bb3d249afba024453b6437555692858234c74",
+      "decision_digest": "sha256:4d101895087aa44dff5db69b1cb9dccc2533477cb47384ebe04156874115e91b",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-512-project-scoped-memory-root.md",
+        "plan_id": "PLAN-L7-512-project-scoped-memory-root",
+        "asset_id": "plan:legacy:68706e293ae2c96738a8e3263bac3e01e7cde64cdb7c3ed8e53805922662bc30",
+        "revision": 5,
+        "content_digest": "sha256:2fa93de53589a582491a7f22e72020c99a73cbe9120f303b3e85d7a67ba3f91a"
+      }
+    },
+    {
+      "sequence": 185,
+      "previous_record_digest": "sha256:386f06d0d69c3454386807888f02c74472c36ffce8204e1e4c774f84c9df1982",
+      "record_digest": "sha256:f3f5beb7f479e052b4501839da9c982d35c83944e8dbbe53adf8bf1d15e8582f",
+      "command_id": "command:issue544-PLAN-REVERSE-512-memory-inventory-r5",
+      "receipt_id": "certificate:062663a095941622b9d8025a1d16a8e2",
+      "receipt_digest": "sha256:897d6c69bb08df0bf7c81c03a7ec67fb49fd5fc48374551b9ee360aedddb0025",
+      "decision_digest": "sha256:57e57483326830add5b6441bb19d696790a7ee92237f7554eecfb6cce239b979",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-512-project-scoped-memory-root-backfill.md",
+        "plan_id": "PLAN-REVERSE-512-project-scoped-memory-root-backfill",
+        "asset_id": "plan:legacy:186048a954aa8dae7b4f8b1f968f6c5d64d758850fa695ed59a11edcdcf63153",
+        "revision": 5,
+        "content_digest": "sha256:de2b706d6f3ac767969ec671e478c664a241dff33b24d24f13d28df62b7abf28"
+      }
     }
   ]
 }
