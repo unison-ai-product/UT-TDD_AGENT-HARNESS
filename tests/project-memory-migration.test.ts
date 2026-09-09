@@ -85,7 +85,27 @@ it("retains every variant for conflicting IDs without selecting a winner", () =>
   if (!result.ok) return;
   expect(result.hasConflicts).toBe(true);
   expect(result.groups[0].disposition).toBe("conflict");
-  expect(result.groups[0].variants).toHaveLength(3);
+  const variants = result.groups[0].variants;
+  expect(variants.map(({ worktreeRoot, sourcePath }) => [worktreeRoot, sourcePath]).sort()).toEqual(
+    [
+      [primary, ".ut-tdd/memory/a.md"],
+      [linked, ".ut-tdd/memory/b.md"],
+      [linked, ".ut-tdd/memory/c.md"],
+    ].sort(),
+  );
+  const digestBySource = new Map(
+    variants.map((variant) => [
+      `${variant.worktreeRoot}:${variant.sourcePath}`,
+      variant.contentDigest,
+    ]),
+  );
+  expect(new Set(digestBySource.values()).size).toBe(2);
+  expect(digestBySource.get(`${primary}:.ut-tdd/memory/a.md`)).toBe(
+    digestBySource.get(`${linked}:.ut-tdd/memory/c.md`),
+  );
+  expect(digestBySource.get(`${linked}:.ut-tdd/memory/b.md`)).not.toBe(
+    digestBySource.get(`${primary}:.ut-tdd/memory/a.md`),
+  );
 });
 
 it("fails closed for invalid and unreadable input with no partial inventory", () => {
