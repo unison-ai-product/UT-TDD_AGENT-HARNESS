@@ -12,7 +12,21 @@ import {
 import { hostname, tmpdir } from "node:os";
 import { delimiter, join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { stringify } from "yaml";
 import { utTddCliProbe } from "../src/cli/distribution.ts";
+import {
+  deriveArtifactInventoryDigest,
+  deriveReleaseId,
+  deriveReleaseRecordDigest,
+} from "../src/schema/release-manifest.ts";
+import {
+  buildConsumerNodeRuntimeBundle,
+  buildConsumerNodeRuntimePayloads,
+  digestConsumerRuntimeBytes,
+} from "../src/setup/consumer-node-runtime.ts";
+import { derivePackPublicationAssets } from "../src/setup/pack-publication-assets.ts";
+import { buildPackPublicationStagingPlan } from "../src/setup/pack-publication-staging.ts";
+import { digestMaterializedReleaseEntries } from "../src/setup/release-materializer.ts";
 import { defaultHarnessDbPath, openHarnessDb, upsertRow } from "../src/state-db/index.ts";
 import { migrate } from "../src/state-db/migration.ts";
 import { MODEL_IDS } from "../src/team/model-policy.ts";
@@ -884,7 +898,49 @@ describe("L7 CLI surface closure", () => {
 
   it("exposes clean distribution planning with preflight, rollback, and contract metadata", () => {
     const binDir = mkdtempSync(join(tmpdir(), "ut-tdd-cli-dist-"));
+    const runtimeRoot = join(repoRoot, ".ut-tdd", "runtime");
     try {
+      const compiled = Buffer.from("export default 0;\n", "utf8");
+      const identity = {
+        product_id: "distribution-fixture",
+        consumer_root: repoRoot,
+        runtime_root: runtimeRoot,
+        operation_id: "distribution-fixture-readiness",
+        attempt: 0,
+        generation_id: "distribution-fixture-generation",
+        subject_revision: "a".repeat(40),
+        artifact_digest: `sha256:${"b".repeat(64)}`,
+        node_executable_identity: `node-${process.version}|sha256:${"c".repeat(64)}`,
+        package_lock_digest: `sha256:${"d".repeat(64)}`,
+        source_graph_digest: `sha256:${"e".repeat(64)}`,
+        compiled_esm_digest: digestConsumerRuntimeBytes(compiled),
+        release_id: `rel-sha256:${"f".repeat(64)}`,
+        materializer_version: "fixture",
+        artifact_set_digest: `sha256:${"1".repeat(64)}`,
+        control_manifest_digest: `sha256:${"2".repeat(64)}`,
+        sealed_policy: "compiled-esm-only" as const,
+      };
+      const payloads = buildConsumerNodeRuntimePayloads({
+        identity,
+        compiled_esm: compiled,
+        node_bootstrap_receipt: Buffer.from("{}\n", "utf8"),
+      });
+      const bundle = buildConsumerNodeRuntimeBundle({ identity, ...payloads });
+      mkdirSync(bundle.bundle_path, { recursive: true });
+      writeFileSync(
+        join(bundle.bundle_path, "bundle-manifest.json"),
+        `${JSON.stringify(bundle)}\n`,
+        "utf8",
+      );
+      mkdirSync(join(runtimeRoot, "activation"), { recursive: true });
+      writeFileSync(
+        join(runtimeRoot, "activation", "active.json"),
+        JSON.stringify({
+          bundle_path: bundle.bundle_path,
+          bundle_digest: bundle.bundle_digest,
+        }),
+        "utf8",
+      );
       const fakeCodex = writeFakeProvider(binDir, "codex");
       writeFakeUtTdd(binDir);
       const run = runCliIn(repoRoot, ["distribution", "plan", "--tag", "v0.1.0", "--json"], {
@@ -922,6 +978,7 @@ describe("L7 CLI surface closure", () => {
       expect(readFileSync(join(binDir, "codex-env.txt"), "utf8")).toContain("args=");
     } finally {
       removeTestTree(binDir);
+      rmSync(runtimeRoot, { recursive: true, force: true });
     }
   }, 20_000);
 
@@ -1234,6 +1291,148 @@ describe("L7 CLI surface closure", () => {
       expect(run.status).toBe(1);
       expect(run.stderr).toContain("aggregate_input/final_tree/attestation");
       expect(readdirSync(root)).toEqual(["consumer-runtime-input.json"]);
+    } finally {
+      removeTestTree(root);
+    }
+  });
+
+  it("accepts a production aggregate envelope through CLI setup admission", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-setup-aggregate-positive-"));
+    const inputPath = join(root, "consumer-runtime-input.json");
+    try {
+      const content = Buffer.from("export default 0;\n", "utf8");
+      const entry = { path: "src/entry.ts", mode: "100644" as const, content };
+      const artifactSetDigest = digestMaterializedReleaseEntries([entry]);
+      const sourceRevision = "a".repeat(40);
+      const releaseId = deriveReleaseId("1", sourceRevision, artifactSetDigest);
+      const publicationArtifacts = [
+        {
+          sourcePath: "releases/stable/entry.ts",
+          destinationPath: entry.path,
+          mode: entry.mode,
+          size: content.length,
+          contentDigest: digestConsumerRuntimeBytes(content),
+        },
+      ];
+      const provisionalRelease = {
+        materializerVersion: "1",
+        artifactSourceCommit: sourceRevision,
+        artifactSetDigest,
+        artifactInventoryDigest: deriveArtifactInventoryDigest(publicationArtifacts),
+        releaseAssetInventoryDigest: `sha256:${"0".repeat(64)}`,
+        releaseRecordDigest: `sha256:${"0".repeat(64)}`,
+        artifacts: publicationArtifacts,
+      };
+      const assets = derivePackPublicationAssets({
+        release: { releaseId, ...provisionalRelease },
+        entries: [
+          {
+            sourcePath: "releases/stable/entry.ts",
+            destinationPath: entry.path,
+            mode: entry.mode,
+            size: content.length,
+            contentDigest: digestConsumerRuntimeBytes(content),
+            content,
+          },
+        ],
+      });
+      if (!assets.ok) throw new Error(assets.error);
+      const release = {
+        ...provisionalRelease,
+        releaseAssetInventoryDigest: assets.value.releaseAssetInventoryDigest,
+      };
+      const manifest = {
+        schema_version: "v2" as const,
+        releases: {
+          [releaseId]: { ...release, releaseRecordDigest: deriveReleaseRecordDigest(release) },
+        },
+        channels: { canary: releaseId, stable: releaseId },
+        channelOrder: ["canary", "stable"],
+      };
+      const controlManifestBytes = Buffer.from(stringify(manifest), "utf8");
+      const staging = buildPackPublicationStagingPlan({
+        manifestInput: manifest,
+        releaseId,
+        controlManifestBytes,
+        entries: [
+          {
+            sourcePath: "releases/stable/entry.ts",
+            destinationPath: entry.path,
+            mode: entry.mode,
+            size: content.length,
+            contentDigest: digestConsumerRuntimeBytes(content),
+            content,
+          },
+        ],
+      });
+      if (!staging.ok) throw new Error(staging.error);
+      const aggregateInput = {
+        repository: "fixture-repository",
+        channel: "stable",
+        final_tree: {
+          manifestEntries: [{ path: "release/manifest.yaml", value: manifest }],
+          sourcePaths: ["releases/stable/entry.ts"],
+          cleanPackAllowlist: ["release/manifest.yaml", entry.path],
+          channelMappings: [
+            {
+              channel: "stable",
+              releaseId,
+              sourceRevision,
+              sourcePath: "releases/stable/entry.ts",
+              destinationPath: entry.path,
+            },
+          ],
+        },
+        attestation: {
+          status: "attested",
+          releaseId,
+          artifactSourceCommit: sourceRevision,
+          expectedDigest: artifactSetDigest,
+          actualDigest: artifactSetDigest,
+          entries: [
+            { path: entry.path, mode: entry.mode, content_base64: content.toString("base64") },
+          ],
+        },
+      };
+      writeFileSync(
+        inputPath,
+        JSON.stringify({
+          identity: { accepted: true },
+          admission_input: {
+            productId: "ut-tdd",
+            consumerRoot: root,
+            runtimeRoot: join(root, ".ut-tdd", "runtime"),
+            manifest: {
+              materializerVersion: "1",
+              releaseId,
+              sourceRevision,
+              artifactSetDigest,
+            },
+            receipt: {
+              materializerVersion: "1",
+              releaseId,
+              sourceRevision,
+              artifactSetDigest,
+              productId: "ut-tdd",
+              consumerRoot: root,
+              runtimeRoot: join(root, ".ut-tdd", "runtime"),
+            },
+            aggregate_input: aggregateInput,
+            control_manifest_base64: controlManifestBytes.toString("base64"),
+          },
+          compiled_esm_base64: content.toString("base64"),
+          node_bootstrap_receipt_base64: Buffer.from("{}\n", "utf8").toString("base64"),
+        }),
+      );
+      const run = runCliIn(root, [
+        "setup",
+        "--solo",
+        "--dry-run",
+        "--consumer-runtime-input",
+        inputPath,
+      ]);
+      expect(run.status, `${run.stdout}\n${run.stderr}`).toBe(0);
+      expect(run.stderr).not.toContain("consumer_runtime_aggregate_");
     } finally {
       removeTestTree(root);
     }
