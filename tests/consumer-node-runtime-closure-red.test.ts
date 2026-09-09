@@ -1,4 +1,13 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -17,21 +26,44 @@ import {
   digestConsumerRuntimeBytes,
   digestConsumerRuntimeValue,
 } from "../src/setup/consumer-node-runtime.ts";
-import { runSetupAsync, type SetupDeps } from "../src/setup/index.ts";
+import {
+  runSetupAsync,
+  type SetupConsumerRuntimeInput,
+  type SetupDeps,
+} from "../src/setup/index.ts";
 import {
   derivePackPublicationAssets,
   type SealedPublicationEntry,
 } from "../src/setup/pack-publication-assets.ts";
-import {
-  buildPackPublicationStagingPlan,
-  deriveControlManifestSnapshotDigest,
-} from "../src/setup/pack-publication-staging.ts";
+import { buildPackPublicationStagingPlan } from "../src/setup/pack-publication-staging.ts";
 import { admitReleaseAggregate } from "../src/setup/release-aggregate-admission.ts";
 import { digestMaterializedReleaseEntries } from "../src/setup/release-materializer.ts";
 
 const roots: string[] = [];
 const revision = "a".repeat(40);
 const hex = (value: string) => value.repeat(64);
+const historyTipDigest = (history: Uint8Array): string => {
+  const records = Buffer.from(history)
+    .toString("utf8")
+    .trimEnd()
+    .split("\n")
+    .map((line) => JSON.parse(line) as { record_digest: string });
+  return records.at(-1)?.record_digest ?? "";
+};
+function snapshotTree(root: string): string {
+  const rows: string[] = [];
+  const visit = (path: string, prefix: string): void => {
+    for (const name of readdirSync(path).sort()) {
+      const child = join(path, name);
+      const relativePath = join(prefix, name);
+      const stat = statSync(child);
+      if (stat.isDirectory()) visit(child, relativePath);
+      else rows.push(`${relativePath}:${stat.mode & 0o777}:${readFileSync(child).toString("hex")}`);
+    }
+  };
+  visit(root, "");
+  return rows.join("\n");
+}
 type RedPayloadInput = Parameters<typeof buildConsumerNodeRuntimePayloads>[0] & {
   readonly prior_history: Uint8Array;
   readonly prior_pointer: {
@@ -128,9 +160,6 @@ async function aggregateFor(root: string) {
     entries: [publicationEntry],
   });
   if (!publicationPlan.ok) throw new Error(publicationPlan.error);
-  const controlManifestSnapshotDigest = deriveControlManifestSnapshotDigest(
-    publicationPlan.plan.manifest,
-  );
   const finalTree = {
     manifestEntries: [
       {
@@ -184,6 +213,7 @@ async function aggregateFor(root: string) {
       consumerRoot: root,
       runtimeRoot: join(root, ".ut-tdd", "runtime"),
     },
+    controlManifestBytes,
   };
   const admission = admitConsumerLocalRuntime(consumerInput);
   if (!admission.ok) throw new Error(admission.error);
@@ -191,7 +221,7 @@ async function aggregateFor(root: string) {
     input: consumerInput,
     admission: admission.admission,
     controlManifestBytes,
-    controlManifestSnapshotDigest,
+    controlManifestSnapshotDigest: admission.admission.controlManifestSnapshotDigest,
   };
 }
 
@@ -245,9 +275,8 @@ async function runtimeFor(root: string) {
     identity,
     compiled_esm: compiled,
     node_bootstrap_receipt: receipt,
-    sealed_aggregate: aggregate.controlManifestBytes,
-    releaseAggregate: aggregate.admission,
-    releaseAggregateInput: aggregate.input,
+    admission: aggregate.admission,
+    admissionInput: aggregate.input,
     controlManifestSnapshotDigest: aggregate.controlManifestSnapshotDigest,
   };
 }
@@ -261,16 +290,14 @@ describe("Issue #420 closure Red oracles: aggregate authority and durable histor
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-red-admission-baseline-"));
     roots.push(root);
     const runtime = await runtimeFor(root);
-    expect(runtime.releaseAggregate).toMatchObject({
+    expect(runtime.admission).toMatchObject({
       productId: "ut-tdd",
       consumerRoot: root,
       runtimeRoot: join(root, ".ut-tdd", "runtime"),
     });
-    expect(runtime.releaseAggregate.plan.kind).toBe("release-aggregate");
-    expect(runtime.releaseAggregateInput.plan).toStrictEqual(runtime.releaseAggregate.plan);
+    expect(runtime.admission.plan.kind).toBe("release-aggregate");
+    expect(runtime.admissionInput.plan).toStrictEqual(runtime.admission.plan);
     expect(runtime.identity.control_manifest_digest).toBe(runtime.controlManifestSnapshotDigest);
-    expect(runtime.sealed_aggregate).toEqual(expect.any(Uint8Array));
-    expect(Buffer.from(runtime.sealed_aggregate).toString("utf8")).toContain("schema_version: v2");
   });
 
   type AggregateMutation = readonly [
@@ -329,6 +356,18 @@ describe("Issue #420 closure Red oracles: aggregate authority and durable histor
     ],
     ["productId", (input) => ({ ...input, productId: "" })],
     [
+      "control manifest sidecar",
+      (input) => ({
+        ...input,
+        controlManifestBytes: Buffer.from(
+          Buffer.from(input.controlManifestBytes)
+            .toString("utf8")
+            .replace(/releaseRecordDigest: sha256:[0-9a-f]/, "releaseRecordDigest: sha256:0"),
+          "utf8",
+        ),
+      }),
+    ],
+    [
       "plan entry path",
       (input) => ({
         ...input,
@@ -366,7 +405,7 @@ describe("Issue #420 closure Red oracles: aggregate authority and durable histor
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-red-admission-"));
     roots.push(root);
     const runtime = await runtimeFor(root);
-    expect(admitConsumerLocalRuntime(mutate(runtime.releaseAggregateInput))).toMatchObject({
+    expect(admitConsumerLocalRuntime(mutate(runtime.admissionInput))).toMatchObject({
       ok: false,
     });
     expect(existsSync(join(root, ".ut-tdd"))).toBe(false);
@@ -376,14 +415,78 @@ describe("Issue #420 closure Red oracles: aggregate authority and durable histor
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-red-admission-raw-"));
     roots.push(root);
     const runtime = await runtimeFor(root);
-    const input = { ...runtime, releaseAggregate: runtime.releaseAggregateInput };
+    const input = { ...runtime, admission: runtime.admissionInput };
     await expect(
       runSetupAsync(
-        { phase: "0-A", dryRun: false, applyBranchProtection: false, consumerRuntime: input },
+        {
+          phase: "0-A",
+          dryRun: false,
+          applyBranchProtection: false,
+          consumerRuntime: input as unknown as SetupConsumerRuntimeInput,
+        },
         setupDeps(root),
       ),
     ).rejects.toThrow(/consumer_runtime_(aggregate|identity|digest)/);
     expect(existsSync(join(root, ".ut-tdd"))).toBe(false);
+  });
+
+  it("CANDIDATE-U-PACKNODE-007: setup accepts the same-process admitted capability", async () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-red-admission-positive-"));
+    roots.push(root);
+    const runtime = await runtimeFor(root);
+    const result = await runSetupAsync(
+      { phase: "0-A", dryRun: false, applyBranchProtection: false, consumerRuntime: runtime },
+      setupDeps(root),
+    );
+    expect(result.consumerRuntime?.result).toMatchObject({ ok: true, status: "committed" });
+  });
+
+  it("CANDIDATE-U-PACKNODE-005/012: downstream setup fault restores prior runtime and setup bytes", async () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-red-setup-rollback-"));
+    roots.push(root);
+    const runtime = await runtimeFor(root);
+    const first = await runSetupAsync(
+      { phase: "0-A", dryRun: false, applyBranchProtection: false, consumerRuntime: runtime },
+      setupDeps(root),
+    );
+    const installed = first.consumerRuntime;
+    if (!installed?.result.ok) throw new Error("initial setup install failed");
+    const before = snapshotTree(root);
+    const pointerPath = join(root, ".ut-tdd", "runtime", "activation", "active.json");
+    const priorPointerBytes = readFileSync(pointerPath);
+    const priorPointer = {
+      bytes: priorPointerBytes,
+      mode: statSync(pointerPath).mode & 0o777,
+      digest: digestConsumerRuntimeBytes(priorPointerBytes),
+    };
+    const priorHistory = readFileSync(join(installed.bundle.bundle_path, "history.jsonl"));
+    const nextRuntime = {
+      ...runtime,
+      identity: { ...runtime.identity, operation_id: "red-admission-update", attempt: 1 },
+      prior_bundle_digest: installed.bundle.bundle_digest,
+      prior_history_tip_digest: historyTipDigest(priorHistory),
+      history_sequence: 1,
+      prior_history: priorHistory,
+      prior_pointer: priorPointer,
+      operation_kind: "update" as const,
+    };
+    const deps = setupDeps(root);
+    deps.isInteractive = true;
+    deps.confirm = () => true;
+    let writes = 0;
+    deps.writeText = (path, content) => {
+      writes += 1;
+      if (writes === 2) throw new Error("setup-downstream-fault");
+      mkdirSync(join(path, ".."), { recursive: true });
+      writeFileSync(path, content);
+    };
+    await expect(
+      runSetupAsync(
+        { phase: "0-A", dryRun: false, applyBranchProtection: false, consumerRuntime: nextRuntime },
+        deps,
+      ),
+    ).rejects.toThrow("setup-downstream-fault");
+    expect(snapshotTree(root)).toBe(before);
   });
 
   it("CANDIDATE-U-PACKNODE-012/014: update payload is prior-history prefix with raw prior pointer", async () => {
@@ -395,7 +498,7 @@ describe("Issue #420 closure Red oracles: aggregate authority and durable histor
     const nextInput: RedPayloadInput = {
       ...runtime,
       prior_bundle_digest: `sha256:${hex("a")}`,
-      prior_history_tip_digest: digestConsumerRuntimeBytes(genesis.history),
+      prior_history_tip_digest: historyTipDigest(genesis.history),
       history_sequence: 1,
       prior_history: genesis.history,
       prior_pointer: {
@@ -475,13 +578,15 @@ describe("Issue #420 closure Red oracles: aggregate authority and durable histor
     const mutationInput: RedPayloadInput = {
       ...runtime,
       prior_bundle_digest: `sha256:${hex("a")}`,
-      prior_history_tip_digest: digestConsumerRuntimeBytes(genesis.history),
+      prior_history_tip_digest: historyTipDigest(genesis.history),
       history_sequence: 1,
       prior_history: genesis.history,
       prior_pointer: {
-        bytes: Buffer.from("prior\n"),
+        bytes: Buffer.from(`{"bundle_digest":"sha256:${"a".repeat(64)}"}\n`),
         mode: 0o444,
-        digest: digestConsumerRuntimeBytes(Buffer.from("prior\n")),
+        digest: digestConsumerRuntimeBytes(
+          Buffer.from(`{"bundle_digest":"sha256:${"a".repeat(64)}"}\n`),
+        ),
       },
       operation_kind: "update",
       ...mutation,
@@ -501,13 +606,15 @@ describe("Issue #420 closure Red oracles: aggregate authority and durable histor
     const nextInput: RedPayloadInput = {
       ...runtime,
       prior_bundle_digest: `sha256:${hex("a")}`,
-      prior_history_tip_digest: digestConsumerRuntimeBytes(genesis.history),
+      prior_history_tip_digest: historyTipDigest(genesis.history),
       history_sequence: 1,
       prior_history: genesis.history,
       prior_pointer: {
-        bytes: Buffer.from("prior\n"),
+        bytes: Buffer.from(`{"bundle_digest":"sha256:${"a".repeat(64)}"}\n`),
         mode: 0o444,
-        digest: digestConsumerRuntimeBytes(Buffer.from("prior\n")),
+        digest: digestConsumerRuntimeBytes(
+          Buffer.from(`{"bundle_digest":"sha256:${"a".repeat(64)}"}\n`),
+        ),
       },
       operation_kind: "rollback",
       prior_attestation: runtime.node_bootstrap_receipt,

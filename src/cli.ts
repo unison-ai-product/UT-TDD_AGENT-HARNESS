@@ -190,6 +190,8 @@ import {
 } from "./runtime/work-guard.ts";
 import { findReference } from "./search/index.ts";
 import {
+  admitConsumerLocalRuntime,
+  type ConsumerLocalRuntimeAdmissionInput,
   nodeSetupDeps,
   runSetupAsync,
   type SetupArgs,
@@ -4072,23 +4074,50 @@ program
         try {
           const value = JSON.parse(readFileSync(opts.consumerRuntimeInput, "utf8")) as {
             identity?: SetupConsumerRuntimeInput["identity"];
-            sealed_aggregate_base64?: unknown;
+            admission_input?: unknown;
             compiled_esm_base64?: unknown;
             node_bootstrap_receipt_base64?: unknown;
           };
           if (
             !value.identity ||
-            typeof value.sealed_aggregate_base64 !== "string" ||
+            !value.admission_input ||
             typeof value.compiled_esm_base64 !== "string" ||
             typeof value.node_bootstrap_receipt_base64 !== "string"
           )
-            throw new Error("identity/sealed_aggregate_base64/compiled_esm_base64/node_bootstrap_receipt_base64 are required");
+            throw new Error(
+              "identity/admission_input/compiled_esm_base64/node_bootstrap_receipt_base64 are required",
+            );
+          const rawAdmission = value.admission_input as Record<string, unknown>;
+          const rawPlan = rawAdmission.plan as Record<string, unknown>;
+          const rawEntries = rawPlan?.entries;
+          if (
+            !rawPlan ||
+            !Array.isArray(rawEntries) ||
+            typeof rawAdmission.control_manifest_base64 !== "string"
+          )
+            throw new Error("admission_input.plan.entries/control_manifest_base64 are required");
+          const admissionInput = {
+            ...rawAdmission,
+            plan: {
+              ...rawPlan,
+              entries: rawEntries.map((entry) => {
+                const item = entry as Record<string, unknown>;
+                if (typeof item.content_base64 !== "string")
+                  throw new Error("admission entry content_base64 is required");
+                const { content_base64: _content, ...metadata } = item;
+                return { ...metadata, content: Buffer.from(item.content_base64, "base64") };
+              }),
+            },
+            controlManifestBytes: Buffer.from(rawAdmission.control_manifest_base64, "base64"),
+          } as unknown as ConsumerLocalRuntimeAdmissionInput;
+          const admitted = admitConsumerLocalRuntime(admissionInput);
+          if (!admitted.ok) throw new Error(`consumer_runtime_aggregate_${admitted.error}`);
           consumerRuntime = {
             identity: value.identity,
-            sealed_aggregate: Buffer.from(value.sealed_aggregate_base64, "base64"),
+            admission: admitted.admission,
             compiled_esm: Buffer.from(value.compiled_esm_base64, "base64"),
             node_bootstrap_receipt: Buffer.from(value.node_bootstrap_receipt_base64, "base64"),
-          } as SetupConsumerRuntimeInput;
+          };
         } catch (error) {
           process.stderr.write(`--consumer-runtime-input invalid: ${String(error)}\n`);
           process.exitCode = 1;

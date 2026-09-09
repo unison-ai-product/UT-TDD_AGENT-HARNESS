@@ -14,7 +14,10 @@ import {
   writeFileSync,
 } from "node:fs";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
-import { parseNodeBootstrapReceiptBytes } from "../runtime/node-bootstrap.ts";
+import {
+  type NodeBootstrapReceipt,
+  parseNodeBootstrapReceiptBytes,
+} from "../runtime/node-bootstrap.ts";
 
 const DIGEST = /^sha256:[a-f0-9]{64}$/;
 const REVISION = /^[a-f0-9]{40}$/;
@@ -73,6 +76,14 @@ export interface ConsumerNodeRuntimeBundleInput {
   readonly prior_bundle_digest?: string;
   readonly prior_history_tip_digest?: string;
   readonly history_sequence?: number;
+}
+
+export type ConsumerNodeRuntimeOperationKind = "install" | "update" | "rollback";
+
+export interface ConsumerNodeRuntimePriorPointer {
+  readonly bytes: Uint8Array;
+  readonly mode: number;
+  readonly digest: string;
 }
 
 /** Bytes admitted from the sealed release aggregate and Node producer. */
@@ -178,6 +189,10 @@ export function buildConsumerNodeRuntimePayloads(input: {
   readonly prior_bundle_digest?: string;
   readonly prior_history_tip_digest?: string;
   readonly history_sequence?: number;
+  readonly prior_history?: Uint8Array;
+  readonly prior_pointer?: ConsumerNodeRuntimePriorPointer | null;
+  readonly operation_kind?: ConsumerNodeRuntimeOperationKind;
+  readonly prior_attestation?: Uint8Array;
 }): ConsumerNodeRuntimePayloads {
   if (!validIdentity(input.identity)) throw new Error("invalid consumer runtime identity");
   const sequence = input.history_sequence ?? 0;
@@ -185,7 +200,46 @@ export function buildConsumerNodeRuntimePayloads(input: {
   const priorTip = input.prior_history_tip_digest ?? GENESIS;
   assertHistory(sequence, priorBundle, priorTip);
   const identityDigest = digestConsumerRuntimeValue(input.identity);
-  const operationKind = sequence === 0 ? "install" : "update";
+  const operationKind = input.operation_kind ?? (sequence === 0 ? "install" : "update");
+  if (sequence === 0 && operationKind !== "install") throw new Error("invalid history operation");
+  if (sequence > 0 && operationKind === "install") throw new Error("invalid history operation");
+  const priorHistory = input.prior_history;
+  const priorPointer = input.prior_pointer;
+  if (
+    sequence > 0 &&
+    (priorHistory !== undefined || priorPointer !== undefined || input.operation_kind)
+  ) {
+    if (!(priorHistory instanceof Uint8Array) || !priorPointer)
+      throw new Error("invalid prior history");
+    const priorRecords = parseHistoryRecords(priorHistory);
+    const priorRecord = priorRecords.at(-1);
+    if (!priorRecord || priorRecord.history_sequence !== sequence - 1)
+      throw new Error("invalid prior history");
+    if (priorRecord.record_digest !== priorTip) throw new Error("invalid prior history tip");
+    if (
+      !DIGEST.test(priorPointer.digest) ||
+      digestConsumerRuntimeBytes(priorPointer.bytes) !== priorPointer.digest
+    )
+      throw new Error("invalid prior pointer");
+    if (!Number.isSafeInteger(priorPointer.mode) || priorPointer.mode !== 0o444)
+      throw new Error("invalid prior pointer");
+    try {
+      const pointer = JSON.parse(Buffer.from(priorPointer.bytes).toString("utf8")) as unknown;
+      if (
+        isRecord(pointer) &&
+        typeof pointer.bundle_digest === "string" &&
+        pointer.bundle_digest !== priorBundle
+      )
+        throw new Error("invalid prior pointer");
+    } catch {
+      throw new Error("invalid prior pointer");
+    }
+    if (operationKind === "rollback") {
+      if (!(input.prior_attestation instanceof Uint8Array))
+        throw new Error("rollback attestation missing");
+      verifyNodeReceiptForIdentity(input.identity, input.prior_attestation, input.compiled_esm);
+    }
+  }
   const marker = {
     identity_digest: identityDigest,
     operation_id: input.identity.operation_id,
@@ -228,12 +282,25 @@ export function buildConsumerNodeRuntimePayloads(input: {
     node_bootstrap_receipt: Buffer.from(input.node_bootstrap_receipt),
     marker: jsonBytes(marker),
     consumer_receipt: jsonBytes(finalReceipt),
-    history: Buffer.from(`${canonical(historyRecord)}\n`, "utf8"),
+    history:
+      priorHistory && sequence > 0
+        ? Buffer.concat([
+            Buffer.from(priorHistory),
+            Buffer.from(`${canonical(historyRecord)}\n`, "utf8"),
+          ])
+        : Buffer.from(`${canonical(historyRecord)}\n`, "utf8"),
     operation_state: jsonBytes({
       identity_digest: identityDigest,
       operation_id: input.identity.operation_id,
       attempt: input.identity.attempt,
-      prior_pointer: null,
+      prior_pointer:
+        priorPointer && sequence > 0
+          ? {
+              bytes_base64: Buffer.from(priorPointer.bytes).toString("base64"),
+              mode: priorPointer.mode,
+              digest: priorPointer.digest,
+            }
+          : null,
       history_tip_digest: historyTip,
       publication: "prepared",
     }),
@@ -306,6 +373,76 @@ function assertHistory(sequence: number, priorBundle: string, priorTip: string):
     throw new Error("invalid genesis history");
   if (sequence > 0 && (!DIGEST.test(priorBundle) || !DIGEST.test(priorTip)))
     throw new Error("invalid prior history identity");
+}
+
+function parseHistoryRecords(bytes: Uint8Array): readonly Record<string, unknown>[] {
+  const raw = Buffer.from(bytes);
+  if (raw.length === 0 || raw[raw.length - 1] !== 0x0a) throw new Error("invalid history");
+  const lines = raw.toString("utf8").split("\n");
+  if (lines.at(-1) !== "") throw new Error("invalid history");
+  const records: Record<string, unknown>[] = [];
+  for (const line of lines.slice(0, -1)) {
+    if (line.length === 0) throw new Error("invalid history");
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(line) as unknown;
+    } catch {
+      throw new Error("invalid history");
+    }
+    if (!isRecord(parsed)) throw new Error("invalid history");
+    const required = [
+      "history_sequence",
+      "operation_id",
+      "attempt",
+      "operation_kind",
+      "identity_digest",
+      "prior_bundle_digest",
+      "prior_history_tip_digest",
+      "record_digest",
+    ];
+    if (Object.keys(parsed).sort().join("\0") !== required.slice().sort().join("\0"))
+      throw new Error("invalid history");
+    if (
+      !Number.isSafeInteger(parsed.history_sequence) ||
+      (parsed.history_sequence as number) < 0 ||
+      typeof parsed.operation_id !== "string" ||
+      !OPERATION_ID.test(parsed.operation_id) ||
+      !Number.isSafeInteger(parsed.attempt) ||
+      (parsed.attempt as number) < 0 ||
+      (parsed.operation_kind !== "install" &&
+        parsed.operation_kind !== "update" &&
+        parsed.operation_kind !== "rollback") ||
+      typeof parsed.identity_digest !== "string" ||
+      !DIGEST.test(parsed.identity_digest) ||
+      typeof parsed.prior_bundle_digest !== "string" ||
+      (parsed.prior_bundle_digest !== GENESIS && !DIGEST.test(parsed.prior_bundle_digest)) ||
+      typeof parsed.prior_history_tip_digest !== "string" ||
+      (parsed.prior_history_tip_digest !== GENESIS &&
+        !DIGEST.test(parsed.prior_history_tip_digest)) ||
+      typeof parsed.record_digest !== "string" ||
+      !DIGEST.test(parsed.record_digest)
+    )
+      throw new Error("invalid history");
+    const unsigned = { ...parsed };
+    delete unsigned.record_digest;
+    if (digestConsumerRuntimeValue(unsigned) !== parsed.record_digest)
+      throw new Error("invalid history");
+    const expectedSequence = records.length;
+    if (parsed.history_sequence !== expectedSequence) throw new Error("invalid history");
+    if (
+      expectedSequence === 0 &&
+      (parsed.prior_bundle_digest !== GENESIS || parsed.prior_history_tip_digest !== GENESIS)
+    )
+      throw new Error("invalid history");
+    if (
+      expectedSequence > 0 &&
+      (parsed.prior_bundle_digest === GENESIS || parsed.prior_history_tip_digest === GENESIS)
+    )
+      throw new Error("invalid history");
+    records.push(parsed);
+  }
+  if (records.length === 0) throw new Error("invalid history");
+  return records;
 }
 
 export function bundlePathFor(identity: ConsumerNodeRuntimeIdentity, bundleDigest: string): string {
@@ -494,12 +631,23 @@ process.exit(result.status ?? 1);
 
 type PointerSnapshot = { readonly bytes: Buffer; readonly mode: number } | null;
 
+export interface ConsumerNodeRuntimeReconcileInput {
+  readonly identity: ConsumerNodeRuntimeIdentity;
+  readonly bundle: ConsumerNodeRuntimeBundle;
+  readonly prior: PointerSnapshot;
+}
+
 function fsyncFile(path: string): void {
-  const fd = openSync(path, "r");
+  let fd: number | undefined;
   try {
-    fsyncSync(fd);
+    fd = openSync(path, "r");
+    try {
+      fsyncSync(fd);
+    } catch (error) {
+      if (process.platform !== "win32") throw error;
+    }
   } finally {
-    closeSync(fd);
+    if (fd !== undefined) closeSync(fd);
   }
 }
 
@@ -529,8 +677,7 @@ function ensureRealContained(parent: string, child: string): void {
   const parentResolved = resolve(parent);
   const childResolved = resolve(child);
   const lexical = relative(parentResolved, childResolved);
-  if (!contained(parentResolved, childResolved))
-    throw new Error("consumer_runtime_external_path");
+  if (!contained(parentResolved, childResolved)) throw new Error("consumer_runtime_external_path");
   if (!existsSync(parentResolved)) mkdirSync(parentResolved, { recursive: true });
   const parentReal = realpathSync.native(parentResolved);
   let nearest = childResolved;
@@ -553,6 +700,51 @@ function readPointer(pointerPath: string): PointerSnapshot {
   if (!existsSync(pointerPath)) return null;
   const bytes = readFileSync(pointerPath);
   return { bytes, mode: statSync(pointerPath).mode & 0o777 };
+}
+
+function pointerBytes(bundle: ConsumerNodeRuntimeBundle): Buffer {
+  return Buffer.from(`${canonical(pointerValue(bundle))}\n`, "utf8");
+}
+
+function samePointer(left: PointerSnapshot, right: PointerSnapshot): boolean {
+  if (left === null || right === null) return left === right;
+  return left.mode === right.mode && left.bytes.equals(right.bytes);
+}
+
+function bundleFilesIntact(bundle: ConsumerNodeRuntimeBundle): boolean {
+  try {
+    const manifest = JSON.parse(
+      readFileSync(join(bundle.bundle_path, "bundle-manifest.json"), "utf8"),
+    ) as unknown;
+    if (validateConsumerNodeRuntimeBundle(manifest)) return false;
+    for (const [name, digest] of Object.entries(bundle.files)) {
+      if (digestConsumerRuntimeBytes(readFileSync(join(bundle.bundle_path, name))) !== digest)
+        return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Read-only durable reconciliation. It never creates, renames, or deletes files. */
+export function reconcileConsumerNodeRuntimeOnFilesystem(
+  input: ConsumerNodeRuntimeReconcileInput,
+): OperationState {
+  if (!validIdentity(input.identity) || validateConsumerNodeRuntimeBundle(input.bundle))
+    return "unknown";
+  const pointerPath = join(input.identity.runtime_root, "activation", "active.json");
+  let observed: PointerSnapshot;
+  try {
+    observed = readPointer(pointerPath);
+  } catch {
+    return "unknown";
+  }
+  const committed = observed?.bytes.equals(pointerBytes(input.bundle)) === true;
+  if (committed) return bundleFilesIntact(input.bundle) ? "committed" : "partial";
+  if (samePointer(observed, input.prior)) return "uncommitted";
+  if (observed === null && input.prior !== null) return "unknown";
+  return "partial";
 }
 
 function pointerValue(bundle: ConsumerNodeRuntimeBundle): Record<string, string> {
@@ -578,7 +770,7 @@ function verifyNodeReceiptForIdentity(
   bytes: Uint8Array,
   compiledEsm: Uint8Array,
 ): void {
-  let receipt;
+  let receipt: NodeBootstrapReceipt;
   try {
     receipt = parseNodeBootstrapReceiptBytes(bytes);
   } catch (error) {
@@ -599,6 +791,58 @@ function verifyNodeReceiptForIdentity(
     `sha256:${receipt.compiled_cli.sha256}` !== identity.compiled_esm_digest
   )
     throw new Error("consumer_runtime_identity_mismatch");
+}
+
+function verifyRuntimePayloads(
+  identity: ConsumerNodeRuntimeIdentity,
+  bundle: ConsumerNodeRuntimeBundle,
+  payloads: ConsumerNodeRuntimePayloads,
+): void {
+  const records = parseHistoryRecords(payloads.history);
+  const last = records.at(-1);
+  if (
+    !last ||
+    last.history_sequence !== bundle.history_sequence ||
+    last.prior_bundle_digest !== bundle.prior_bundle_digest ||
+    last.prior_history_tip_digest !== bundle.prior_history_tip_digest
+  )
+    throw new Error("consumer_runtime_history_invalid");
+  if (records.length > 1) {
+    const operation = validJsonProjection(payloads.operation_state, "operation_state");
+    const expectedKeys = [
+      "attempt",
+      "history_tip_digest",
+      "identity_digest",
+      "operation_id",
+      "prior_pointer",
+      "publication",
+    ];
+    if (Object.keys(operation).sort().join("\0") !== expectedKeys.sort().join("\0"))
+      throw new Error("consumer_runtime_operation_state_invalid");
+    const pointer = operation.prior_pointer;
+    if (
+      !isRecord(pointer) ||
+      Object.keys(pointer).sort().join("\0") !== "bytes_base64\0digest\0mode"
+    )
+      throw new Error("consumer_runtime_operation_state_invalid");
+    if (
+      typeof pointer.bytes_base64 !== "string" ||
+      Buffer.from(pointer.bytes_base64, "base64").toString("base64") !== pointer.bytes_base64 ||
+      typeof pointer.digest !== "string" ||
+      digestConsumerRuntimeBytes(Buffer.from(pointer.bytes_base64, "base64")) !== pointer.digest ||
+      pointer.mode !== 0o444
+    )
+      throw new Error("consumer_runtime_operation_state_invalid");
+  }
+  const consumer = validJsonProjection(payloads.consumer_receipt, "consumer_receipt");
+  if (
+    consumer.history_sequence !== bundle.history_sequence ||
+    consumer.prior_bundle_digest !== bundle.prior_bundle_digest ||
+    consumer.prior_history_tip_digest !== bundle.prior_history_tip_digest ||
+    consumer.history_tip_digest !== last.record_digest ||
+    consumer.identity_digest !== digestConsumerRuntimeValue(identity)
+  )
+    throw new Error("consumer_runtime_resolution_denied");
 }
 
 /**
@@ -643,6 +887,7 @@ export function createConsumerNodeRuntimeFilesystemPorts(
         requirePayloadDigest("node_bootstrap_receipt", "node-bootstrap-receipt.json"),
         requirePayloadDigest("compiled_esm", "ut-tdd.mjs"),
       );
+      verifyRuntimePayloads(identity, bundle, payloads);
       fault("verifySealedAggregate");
     },
     verifyNodeGeneration: () => {
@@ -654,6 +899,7 @@ export function createConsumerNodeRuntimeFilesystemPorts(
         requirePayloadDigest("node_bootstrap_receipt", "node-bootstrap-receipt.json"),
         requirePayloadDigest("compiled_esm", "ut-tdd.mjs"),
       );
+      verifyRuntimePayloads(identity, bundle, payloads);
       fault("verifyNodeGeneration");
     },
     acquireConsumerLock: () => {
@@ -679,6 +925,7 @@ export function createConsumerNodeRuntimeFilesystemPorts(
     createPrivateStaging: (path) => {
       if (resolve(path) !== resolve(stage)) throw new Error("consumer_runtime_external_path");
       ensureRealContained(identity.runtime_root, path);
+      mkdirSync(dirnameOf(path), { recursive: true });
       mkdirSync(path, { recursive: false });
       state.bundleManifest = null;
       fault("createPrivateStaging");
@@ -700,15 +947,17 @@ export function createConsumerNodeRuntimeFilesystemPorts(
       validJsonProjection(files["marker.json"], "marker");
       validJsonProjection(files["consumer-receipt.json"], "consumer_receipt");
       validJsonProjection(files["operation-state.json"], "operation_state");
-      const historyLines = Buffer.from(files["history.jsonl"]).toString("utf8").trim().split(/\r?\n/);
-      if (historyLines.length !== 1) throw new Error("consumer_runtime_history_invalid");
-      validJsonProjection(Buffer.from(historyLines[0], "utf8"), "history");
-      for (const [name, bytes] of Object.entries(files)) writeFileSync(join(path, name), bytes, { mode: 0o444 });
+      parseHistoryRecords(files["history.jsonl"]);
+      verifyRuntimePayloads(identity, bundle, payloads);
+      for (const [name, bytes] of Object.entries(files))
+        writeFileSync(join(path, name), bytes, { mode: 0o444 });
       const manifest = {
         ...bundle,
         files: { ...bundle.files },
       };
-      writeFileSync(join(path, "bundle-manifest.json"), `${canonical(manifest)}\n`, { mode: 0o444 });
+      writeFileSync(join(path, "bundle-manifest.json"), `${canonical(manifest)}\n`, {
+        mode: 0o444,
+      });
       state.bundleManifest = canonical(manifest);
       fault("writeGenerationAndReceipt");
     },
@@ -746,27 +995,62 @@ export function createConsumerNodeRuntimeFilesystemPorts(
         observed?.mode !== state.prior?.mode ||
         observed?.bytes?.equals(state.prior?.bytes ?? Buffer.alloc(0)) !== true
       ) {
-        if (observed !== null || state.prior !== null) throw new Error("consumer_runtime_indeterminate");
+        if (observed !== null || state.prior !== null)
+          throw new Error("consumer_runtime_indeterminate");
       }
       const activation = dirnameOf(pointerPath);
       ensureRealContained(identity.runtime_root, activation);
       mkdirSync(activation, { recursive: true });
-      const pointerTemp = join(activation, `.active-${identity.operation_id}-${identity.attempt}.tmp`);
+      const pointerTemp = join(
+        activation,
+        `.active-${identity.operation_id}-${identity.attempt}.tmp`,
+      );
       if (existsSync(pointerTemp)) throw new Error("consumer_runtime_indeterminate");
       const bytes = Buffer.from(`${canonical(pointerValue(candidate))}\n`, "utf8");
       writeFileSync(pointerTemp, bytes, { mode: 0o444 });
       fsyncFile(pointerTemp);
-      fault("atomicRenameActivePointerCAS");
-      renameSync(pointerTemp, pointerPath);
-      fsyncDirectory(activation);
+      // Windows refuses to replace an existing read-only file with rename(2).
+      // The active pointer remains the single publication point: make only the
+      // old pointer writable for the duration of the atomic replacement, and
+      // restore its exact mode if the pre-rename fault/rename fails. Once the
+      // rename succeeds, any later durability error is indeterminate and must
+      // not be followed by a best-effort rollback to an older pointer.
+      const priorMode = observed?.mode;
+      const needsWindowsWritable = process.platform === "win32" && observed !== null;
+      let madeWindowsWritable = false;
+      let replaced = false;
+      try {
+        if (needsWindowsWritable && priorMode !== undefined) {
+          chmodSync(pointerPath, priorMode | 0o200);
+          madeWindowsWritable = true;
+        }
+        fault("atomicRenameActivePointerCAS");
+        renameSync(pointerTemp, pointerPath);
+        replaced = true;
+        chmodSync(pointerPath, 0o444);
+        fsyncDirectory(activation);
+      } catch (error) {
+        if (!replaced) {
+          try {
+            if (existsSync(pointerTemp)) rmSync(pointerTemp, { force: true });
+          } finally {
+            if (madeWindowsWritable && priorMode !== undefined && existsSync(pointerPath))
+              chmodSync(pointerPath, priorMode);
+          }
+        }
+        throw error;
+      }
     },
     verifyActiveBundle: (candidate) => {
       const pointer = readPointer(pointerPath);
       if (!pointer) throw new Error("consumer_runtime_absent");
       const expected = Buffer.from(`${canonical(pointerValue(candidate))}\n`, "utf8");
       if (!pointer.bytes.equals(expected)) throw new Error("consumer_runtime_indeterminate");
-      const manifest = JSON.parse(readFileSync(join(candidate.bundle_path, "bundle-manifest.json"), "utf8")) as unknown;
-      if (validateConsumerNodeRuntimeBundle(manifest)) throw new Error("consumer_runtime_digest_mismatch");
+      const manifest = JSON.parse(
+        readFileSync(join(candidate.bundle_path, "bundle-manifest.json"), "utf8"),
+      ) as unknown;
+      if (validateConsumerNodeRuntimeBundle(manifest))
+        throw new Error("consumer_runtime_digest_mismatch");
       for (const [name, field] of [
         ["ut-tdd.mjs", "compiled_esm"],
         ["node-bootstrap-receipt.json", "node_bootstrap_receipt"],
@@ -776,28 +1060,37 @@ export function createConsumerNodeRuntimeFilesystemPorts(
         ["operation-state.json", "operation_state"],
       ] as const) {
         const bytes = readFileSync(join(candidate.bundle_path, name));
-        if (digestConsumerRuntimeBytes(bytes) !== candidate.files[name] || !bytes.equals(payloads[field]))
+        if (
+          digestConsumerRuntimeBytes(bytes) !== candidate.files[name] ||
+          !bytes.equals(payloads[field])
+        )
           throw new Error("consumer_runtime_digest_mismatch");
       }
       fault("verifyActiveBundle");
     },
     reconcileDurableOperation: () => {
-      const pointer = readPointer(pointerPath);
-      if (pointer) {
-        const expected = Buffer.from(`${canonical(pointerValue(bundle))}\n`, "utf8");
-        if (pointer.bytes.equals(expected) && existsSync(join(bundle.bundle_path, "bundle-manifest.json"))) return "committed";
-        if (state.prior && pointer.bytes.equals(state.prior.bytes) && pointer.mode === state.prior.mode)
-          return "uncommitted";
-        return "partial";
-      }
-      if (state.prior === null) return "uncommitted";
-      return "unknown";
+      return reconcileConsumerNodeRuntimeOnFilesystem({ identity, bundle, prior: state.prior });
     },
     releaseConsumerLock: () => {
-      fault("releaseConsumerLock");
-      if (!state.locked) return;
-      rmSync(lockPath, { recursive: true, force: false });
+      let cleanupError: unknown;
+      if (state.locked) {
+        try {
+          rmSync(lockPath, { recursive: true, force: false });
+        } catch (error) {
+          cleanupError = error;
+        }
+      }
       state.locked = false;
+      let faultError: unknown;
+      try {
+        fault("releaseConsumerLock");
+      } catch (error) {
+        faultError = error;
+      }
+      if (cleanupError !== undefined && faultError !== undefined)
+        throw { cleanup: cleanupError, fault: faultError };
+      if (cleanupError !== undefined) throw cleanupError;
+      if (faultError !== undefined) throw faultError;
     },
     destroyPrivateStaging: (path) => {
       if (resolve(path) !== resolve(stage)) throw new Error("consumer_runtime_external_path");

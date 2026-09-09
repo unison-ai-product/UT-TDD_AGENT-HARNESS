@@ -6,13 +6,19 @@ import { lstat, mkdir, mkdtemp, readdir, readFile, rm, symlink, writeFile } from
 import { tmpdir } from "node:os";
 import { isAbsolute, join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { deriveReleaseId } from "../src/schema/release-manifest.ts";
+import { stringify } from "yaml";
+import {
+  deriveArtifactInventoryDigest,
+  deriveReleaseId,
+  deriveReleaseRecordDigest,
+} from "../src/schema/release-manifest.ts";
 import {
   admitConsumerLocalRuntime,
   applyConsumerLocalRuntime,
   type ConsumerLocalRuntimeAdmissionInput,
   installConsumerLocalRuntime,
 } from "../src/setup/consumer-local-runtime-admission.ts";
+import { derivePackPublicationAssets } from "../src/setup/pack-publication-assets.ts";
 
 const roots: string[] = [];
 const children: ChildProcess[] = [];
@@ -60,6 +66,7 @@ async function fixture(
     { path: "bin/runtime.js", mode: "100644" as const, content: new TextEncoder().encode(version) },
   ];
   const artifactDigest = digest(entries);
+  const contentDigest = `sha256:${createHash("sha256").update(entries[0].content).digest("hex")}`;
   const sourceRevision = version === "v2" ? "b".repeat(40) : "a".repeat(40);
   const releaseId = deriveReleaseId("1", sourceRevision, artifactDigest);
   const plan = {
@@ -71,6 +78,59 @@ async function fixture(
     expectedDigest: artifactDigest,
     actualDigest: artifactDigest,
     entries,
+  };
+  const publicationEntry = {
+    sourcePath: "releases/stable/runtime.js",
+    destinationPath: entries[0].path,
+    mode: entries[0].mode,
+    size: entries[0].content.length,
+    contentDigest,
+    content: entries[0].content,
+  };
+  const publicationBase = {
+    materializerVersion: "1",
+    artifactSourceCommit: sourceRevision,
+    artifactSetDigest: artifactDigest,
+    artifactInventoryDigest: deriveArtifactInventoryDigest([
+      {
+        sourcePath: publicationEntry.sourcePath,
+        destinationPath: publicationEntry.destinationPath,
+        mode: publicationEntry.mode,
+        size: publicationEntry.size,
+        contentDigest: publicationEntry.contentDigest,
+      },
+    ]),
+    releaseAssetInventoryDigest: `sha256:${"0".repeat(64)}`,
+    releaseRecordDigest: `sha256:${"0".repeat(64)}`,
+    artifacts: [
+      {
+        sourcePath: publicationEntry.sourcePath,
+        destinationPath: publicationEntry.destinationPath,
+        mode: publicationEntry.mode,
+        size: publicationEntry.size,
+        contentDigest: publicationEntry.contentDigest,
+      },
+    ],
+  };
+  const publicationAssets = derivePackPublicationAssets({
+    release: { releaseId, ...publicationBase },
+    entries: [publicationEntry],
+  });
+  if (!publicationAssets.ok) throw new Error(publicationAssets.error);
+  const publicationRelease = {
+    ...publicationBase,
+    releaseAssetInventoryDigest: publicationAssets.value.releaseAssetInventoryDigest,
+  };
+  const publicationManifest = {
+    schema_version: "v2" as const,
+    releases: {
+      [releaseId]: {
+        ...publicationRelease,
+        releaseRecordDigest: deriveReleaseRecordDigest(publicationRelease),
+      },
+    },
+    channels: { canary: releaseId, stable: releaseId },
+    channelOrder: ["canary", "stable"],
   };
   return {
     productId,
@@ -92,6 +152,7 @@ async function fixture(
       sourceRevision: plan.sourceRevision,
       artifactSetDigest: plan.actualDigest,
     },
+    controlManifestBytes: Buffer.from(stringify(publicationManifest), "utf8"),
   };
 }
 

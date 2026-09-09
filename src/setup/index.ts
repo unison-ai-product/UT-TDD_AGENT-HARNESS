@@ -14,15 +14,18 @@
  */
 import { execFileSync } from "node:child_process";
 import {
+  chmodSync,
   existsSync,
+  mkdirSync,
   readdirSync,
   readFileSync,
   readSync,
   realpathSync,
+  rmSync,
+  statSync,
   writeFileSync,
 } from "node:fs";
 import { basename, dirname, join, relative, resolve, sep } from "node:path";
-import { fileURLToPath } from "node:url";
 import { ensureDir } from "../shared/fs.ts";
 import {
   applyBranchProtection as applyBranchProtectionImpl,
@@ -30,19 +33,23 @@ import {
   type GhRunner,
 } from "./branch-protection.ts";
 import {
-  bootstrapProjectIdentity,
-  type ProjectIdentityBootstrapResult,
-} from "./project-identity-bootstrap.ts";
+  type ConsumerLocalRuntimeAdmission,
+  isConsumerLocalRuntimeAdmission,
+} from "./consumer-local-runtime-admission.ts";
 import {
   buildConsumerNodeRuntimeBundle,
   buildConsumerNodeRuntimePayloads,
-  digestConsumerRuntimeBytes,
-  installConsumerNodeRuntimeOnFilesystem,
   type ConsumerNodeRuntimeBundle,
   type ConsumerNodeRuntimeIdentity,
   type ConsumerNodeRuntimeInstallResult,
+  installConsumerNodeRuntimeOnFilesystem,
   renderConsumerNodeWrapper,
 } from "./consumer-node-runtime.ts";
+import {
+  bootstrapProjectIdentity,
+  PROJECT_IDENTITY_PATH,
+  type ProjectIdentityBootstrapResult,
+} from "./project-identity-bootstrap.ts";
 
 export {
   AUTHORING_TEMPLATE_ARTIFACT_PATHS,
@@ -74,6 +81,7 @@ export {
   type ConsumerReceipt,
   type ConsumerRuntimeLayout,
   installConsumerLocalRuntime,
+  isConsumerLocalRuntimeAdmission,
 } from "./consumer-local-runtime-admission.ts";
 export {
   buildConsumerNodeRuntimeBundle,
@@ -86,11 +94,11 @@ export {
   type ConsumerNodeRuntimePorts,
   type ConsumerNodeRuntimeReadinessInput,
   type ConsumerRuntimeDenyReason,
+  createConsumerNodeRuntimeFilesystemPorts,
   digestConsumerRuntimeBytes,
   digestConsumerRuntimeValue,
   installConsumerNodeRuntime,
   installConsumerNodeRuntimeOnFilesystem,
-  createConsumerNodeRuntimeFilesystemPorts,
   quarantinePathFor,
   renderConsumerNodeWrapper,
   stagingPathFor,
@@ -242,13 +250,19 @@ export interface SetupResult {
 /** Sealed runtime input handed from the release materializer to setup. */
 export interface SetupConsumerRuntimeInput {
   readonly identity: ConsumerNodeRuntimeIdentity;
-  /** Digest-bound sealed release aggregate; production ingress must supply it. */
-  readonly sealed_aggregate: Uint8Array;
+  /** Same-process capability returned by admitConsumerLocalRuntime. */
+  readonly admission: ConsumerLocalRuntimeAdmission;
   readonly compiled_esm: Uint8Array;
   readonly node_bootstrap_receipt: Uint8Array;
   readonly prior_bundle_digest?: string;
   readonly prior_history_tip_digest?: string;
   readonly history_sequence?: number;
+  readonly prior_history?: Uint8Array;
+  readonly prior_pointer?:
+    | import("./consumer-node-runtime.ts").ConsumerNodeRuntimePriorPointer
+    | null;
+  readonly operation_kind?: import("./consumer-node-runtime.ts").ConsumerNodeRuntimeOperationKind;
+  readonly prior_attestation?: Uint8Array;
   readonly fault?: (barrier: string) => void;
   readonly verifySealedAggregate?: () => void;
 }
@@ -266,11 +280,20 @@ export interface SetupConsumerRuntimeInstall {
 export async function installConsumerRuntimeFromSetup(
   input: SetupConsumerRuntimeInput,
 ): Promise<SetupConsumerRuntimeInstall> {
+  if (!isConsumerLocalRuntimeAdmission(input.admission))
+    throw new Error("consumer_runtime_aggregate_denied");
+  const admission = input.admission;
   if (
-    !(input.sealed_aggregate instanceof Uint8Array) ||
-    digestConsumerRuntimeBytes(input.sealed_aggregate) !== input.identity.control_manifest_digest
+    admission.productId !== input.identity.product_id ||
+    resolve(admission.consumerRoot) !== resolve(input.identity.consumer_root) ||
+    resolve(admission.runtimeRoot) !== resolve(input.identity.runtime_root) ||
+    admission.identity.releaseId !== input.identity.release_id ||
+    admission.identity.sourceRevision !== input.identity.subject_revision ||
+    admission.identity.materializerVersion !== input.identity.materializer_version ||
+    admission.identity.artifactSetDigest !== input.identity.artifact_set_digest ||
+    admission.controlManifestSnapshotDigest !== input.identity.control_manifest_digest
   )
-    throw new Error("consumer_runtime_digest_mismatch");
+    throw new Error("consumer_runtime_identity_mismatch");
   const payloads = buildConsumerNodeRuntimePayloads(input);
   const bundle = buildConsumerNodeRuntimeBundle({
     identity: input.identity,
@@ -290,8 +313,6 @@ export async function installConsumerRuntimeFromSetup(
     fault: input.fault,
     verifySealedAggregate: () => {
       if (input.verifySealedAggregate) input.verifySealedAggregate();
-      if (digestConsumerRuntimeBytes(input.sealed_aggregate) !== input.identity.control_manifest_digest)
-        throw new Error("consumer_runtime_digest_mismatch");
     },
   });
   return { bundle, result };
@@ -589,12 +610,26 @@ export function runSetup(args: SetupArgs, deps: SetupDeps): SetupResult {
 export async function runSetupAsync(args: SetupArgs, deps: SetupDeps): Promise<SetupResult> {
   if (!args.consumerRuntime || args.dryRun) return runSetup(args, deps);
   assertSetupRuntimeRoot(args.consumerRuntime.identity, deps.repoRoot);
+  const setupSnapshot = captureSetupFiles(deps.repoRoot);
+  const runtimeSnapshot = captureRuntimeTree(args.consumerRuntime.identity.runtime_root);
   // Admission and publication happen before setup emits any consumer files.
   // A denied/failed runtime must not leave a seemingly-installed wrapper or
   // setup state behind for the CLI to discover.
-  const consumerRuntime = await installConsumerRuntimeFromSetup(args.consumerRuntime);
-  const result = runSetup(args, deps);
-  return { ...result, consumerRuntime };
+  try {
+    const consumerRuntime = await installConsumerRuntimeFromSetup(args.consumerRuntime);
+    const result = runSetup(args, deps);
+    return { ...result, consumerRuntime };
+  } catch (error) {
+    try {
+      restoreSetupFiles(setupSnapshot);
+      restoreRuntimeTree(args.consumerRuntime.identity.runtime_root, runtimeSnapshot);
+    } catch (restoreError) {
+      throw new Error(
+        `consumer_runtime_indeterminate:${String(restoreError)};primary:${String(error)}`,
+      );
+    }
+    throw error;
+  }
 }
 
 function assertSetupRuntimeRoot(identity: ConsumerNodeRuntimeIdentity, repoRoot: string): void {
@@ -622,6 +657,76 @@ function assertSetupRuntimeRoot(identity: ConsumerNodeRuntimeIdentity, repoRoot:
 function containedReal(parent: string, child: string): boolean {
   const rel = relative(parent, child);
   return rel !== "" && rel !== ".." && !rel.startsWith(`..${sep}`);
+}
+
+type SetupFileSnapshot = { readonly bytes: Buffer; readonly mode: number } | null;
+type RuntimeTreeSnapshot = ReadonlyMap<
+  string,
+  { readonly bytes: Buffer; readonly mode: number }
+> | null;
+
+function setupTargetPaths(): readonly string[] {
+  const paths = new Set<string>([PROJECT_IDENTITY_PATH, STATE_PATH]);
+  for (const phase of ["0-A", "0-B"] as const)
+    for (const file of planSetup(phase, { dryRun: false }).files) paths.add(file.path);
+  return [...paths];
+}
+
+function captureSetupFiles(repoRoot: string): ReadonlyMap<string, SetupFileSnapshot> {
+  const snapshot = new Map<string, SetupFileSnapshot>();
+  for (const relativePath of setupTargetPaths()) {
+    const path = resolve(repoRoot, relativePath);
+    if (!existsSync(path)) {
+      snapshot.set(path, null);
+      continue;
+    }
+    const stat = statSync(path);
+    if (!stat.isFile()) throw new Error("consumer_runtime_setup_snapshot");
+    snapshot.set(path, { bytes: readFileSync(path), mode: stat.mode & 0o777 });
+  }
+  return snapshot;
+}
+
+function restoreSetupFiles(snapshot: ReadonlyMap<string, SetupFileSnapshot>): void {
+  for (const [path, value] of snapshot) {
+    if (value === null) {
+      rmSync(path, { recursive: true, force: true });
+      continue;
+    }
+    mkdirSync(dirname(path), { recursive: true });
+    writeFileSync(path, value.bytes, { mode: value.mode });
+    chmodSync(path, value.mode);
+  }
+}
+
+function captureRuntimeTree(root: string): RuntimeTreeSnapshot {
+  if (!existsSync(root)) return null;
+  const snapshot = new Map<string, { readonly bytes: Buffer; readonly mode: number }>();
+  const visit = (path: string, relativePath: string): void => {
+    for (const name of readdirSync(path)) {
+      const child = join(path, name);
+      const childRelative = join(relativePath, name);
+      const stat = statSync(child);
+      if (stat.isDirectory()) visit(child, childRelative);
+      else if (stat.isFile())
+        snapshot.set(childRelative, { bytes: readFileSync(child), mode: stat.mode & 0o777 });
+      else throw new Error("consumer_runtime_setup_snapshot");
+    }
+  };
+  visit(root, "");
+  return snapshot;
+}
+
+function restoreRuntimeTree(root: string, snapshot: RuntimeTreeSnapshot): void {
+  rmSync(root, { recursive: true, force: true });
+  if (snapshot === null) return;
+  mkdirSync(root, { recursive: true });
+  for (const [relativePath, value] of snapshot) {
+    const path = join(root, relativePath);
+    mkdirSync(dirname(path), { recursive: true });
+    writeFileSync(path, value.bytes, { mode: value.mode });
+    chmodSync(path, value.mode);
+  }
 }
 
 // ── node 実 deps (real I/O / gh / confirm / templates) ──────────────────────
