@@ -1143,8 +1143,14 @@ preimage は次の順序付き列とする。
 ```text
 [ut-tdd-seal-source-authority-v1, repositoryIdentity, planId, sourcePath, sourceCommit, sourceBlobOid,
  canonicalPayloadDigest, bodyDigest, historicalProjectionPath, historicalProjectionBlobOid,
- historicalProjectionContentDigest]
+ historicalProjectionContentDigest, historicalAssetId, historicalTerminalRevision,
+ historicalTailDigest]
 ```
+
+末尾 3 要素は封印対象の terminal binding であり、preimage に含めることで record の差し替えが digest を
+変える (含めないと下記 terminal 照合を通す別 record を選んでも digest が同一になる。PR #543 r5 の
+blocking finding 1)。`historicalTerminalRevision` は符号なし 10 進 ASCII (前置ゼロ禁止)、
+他は宣言値の UTF-8 bytes をそのまま用いる。
 
 `sourceBlobOid` は現行入力に存在しないため、封印対象 PLAN 本文の blob OID を新規入力として追加する。
 入力型の拡張は `canonical(input)` 由来の command digest と replay identity を変えるため、seal 実行時に対象 ledger で
@@ -1164,7 +1170,7 @@ preimage は次の順序付き列とする。
 | blob bytes から再計算した canonical payload digest と body digest が宣言値と一致する | `seal-source-payload-drift` |
 | `historicalProjectionPath` が tracked projection 正本 path (`docs/governance/plan-admission-receipts.json`) と exact 一致する | `seal-projection-path-noncanonical` |
 | `historicalProjectionPath` の blob OID と content digest が同一 `sourceCommit` 帰属で宣言値と一致する | `seal-projection-custody-mismatch` |
-| その blob 内に `binding.plan_id = planId` かつ `binding.asset_id = historicalAssetId` かつ `binding.revision = historicalTerminalRevision` の record が存在し、その `record_digest` が `historicalTailDigest` と一致する | `seal-projection-binding-mismatch` |
+| その blob 内で `binding.plan_id = planId` を持つ record 群のうち `sequence` 最大の 1 件が、`binding.asset_id = historicalAssetId` かつ `binding.revision = historicalTerminalRevision` であり、その `record_digest` が `historicalTailDigest` と一致する | `seal-projection-terminal-mismatch` |
 | 照合中に HEAD が変化していない (TOCTOU 再確認) | `seal-source-head-toctou` |
 
 照合は `project-identity.ts` と同じ preflight 規律 (tracked blob 読み出し + 再確認) に従い、呼び出し側の port として
@@ -1178,7 +1184,14 @@ preimage は次の順序付き列とする。
 `sourcePath` / `historicalProjectionPath` に選べば、対応する OID と content digest を再計算するだけで
 OID 照合・payload 照合・TOCTOU 再確認をすべて満たせるため、封印対象の PLAN と projection 正本を
 別 blob に差し替えられる (PR #543 r3 の blocking finding 2)。したがって path 2 行と projection の
-record 束縛行 (`binding.plan_id` / `binding.asset_id` / `binding.revision` と `record_digest`) も必須条件である。
+terminal 照合行も必須条件である。
+
+terminal 照合を「一致する record が存在する」に緩めてはならない。同一 `planId` の record は複数の asset と
+revision にわたって共存する — 実測 (main `ea7658ca` の tracked projection、180 record) では
+`PLAN-RECOVERY-16-plan-revision-authoring` に sequence 1〜3 (legacy asset revision 1〜3) と sequence 73
+(rebase asset `plan:rebase:74ca026f…` revision 2) の 4 件が存在する。存在照合だけなら旧 record の
+三値を自己整合的に選んで全照合を通せ、terminal lineage を偽装できる (PR #543 r5 の blocking finding 1)。
+したがって照合は `sequence` 最大の 1 件への一意束縛とし、あわせて三値を preimage に含める。
 
 ### E.4 `reviewedImplementationAuthorityDigest`
 
@@ -1261,9 +1274,14 @@ E.3〜E.5 の各項目について、1 bit 改変で write 0 となる負系を�
 
 - 3 digest それぞれの 1 bit 改変 → typed reason で拒否、全 table への write 0
 - E.3 の Git 照合 9 種それぞれの不成立 (到達可能性 / `sourcePath` 非 canonical / blob 不在 / OID 不一致 /
-  payload drift / projection path 非 canonical / projection custody 不一致 / projection record 束縛不一致 /
+  payload drift / projection path 非 canonical / projection custody 不一致 / projection terminal 不一致 /
   TOCTOU)。とくに、到達可能な HEAD 内の別 blob path を `sourcePath` または `historicalProjectionPath` に
   差し替えて OID と content digest を再計算した自己整合入力が拒否されること
+- 同一 `planId` の非 terminal record (旧 asset / 旧 revision) の三値を宣言した自己整合入力が
+  `seal-projection-terminal-mismatch` で拒否されること。実 projection に複数 record が共存する
+  PLAN を fixture にして負系を置く
+- terminal binding 三値のいずれか 1 要素の改変が `sourceAuthorityDigest` を変えること (preimage 包含の
+  実効性を digest 側でも固定する)
 - E.4 preimage の列逸脱 (要素順序の入れ替え、要素の欠落、`pullRequestNumber` の前置ゼロ、
   `custodyState` / `custodyReasons` の別表現) が同一観測から別 digest を生まないこと。時間変動値
   (merge state / 観測時刻) を含めた導出が本契約の digest として受理されないこと
