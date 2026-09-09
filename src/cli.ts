@@ -4072,17 +4072,20 @@ program
         try {
           const value = JSON.parse(readFileSync(opts.consumerRuntimeInput, "utf8")) as {
             identity?: SetupConsumerRuntimeInput["identity"];
+            sealed_aggregate_base64?: unknown;
             compiled_esm_base64?: unknown;
             node_bootstrap_receipt_base64?: unknown;
           };
           if (
             !value.identity ||
+            typeof value.sealed_aggregate_base64 !== "string" ||
             typeof value.compiled_esm_base64 !== "string" ||
             typeof value.node_bootstrap_receipt_base64 !== "string"
           )
-            throw new Error("identity/compiled_esm_base64/node_bootstrap_receipt_base64 are required");
+            throw new Error("identity/sealed_aggregate_base64/compiled_esm_base64/node_bootstrap_receipt_base64 are required");
           consumerRuntime = {
             identity: value.identity,
+            sealed_aggregate: Buffer.from(value.sealed_aggregate_base64, "base64"),
             compiled_esm: Buffer.from(value.compiled_esm_base64, "base64"),
             node_bootstrap_receipt: Buffer.from(value.node_bootstrap_receipt_base64, "base64"),
           } as SetupConsumerRuntimeInput;

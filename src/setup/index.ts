@@ -36,6 +36,7 @@ import {
 import {
   buildConsumerNodeRuntimeBundle,
   buildConsumerNodeRuntimePayloads,
+  digestConsumerRuntimeBytes,
   installConsumerNodeRuntimeOnFilesystem,
   type ConsumerNodeRuntimeBundle,
   type ConsumerNodeRuntimeIdentity,
@@ -241,6 +242,8 @@ export interface SetupResult {
 /** Sealed runtime input handed from the release materializer to setup. */
 export interface SetupConsumerRuntimeInput {
   readonly identity: ConsumerNodeRuntimeIdentity;
+  /** Digest-bound sealed release aggregate; production ingress must supply it. */
+  readonly sealed_aggregate: Uint8Array;
   readonly compiled_esm: Uint8Array;
   readonly node_bootstrap_receipt: Uint8Array;
   readonly prior_bundle_digest?: string;
@@ -263,6 +266,11 @@ export interface SetupConsumerRuntimeInstall {
 export async function installConsumerRuntimeFromSetup(
   input: SetupConsumerRuntimeInput,
 ): Promise<SetupConsumerRuntimeInstall> {
+  if (
+    !(input.sealed_aggregate instanceof Uint8Array) ||
+    digestConsumerRuntimeBytes(input.sealed_aggregate) !== input.identity.control_manifest_digest
+  )
+    throw new Error("consumer_runtime_digest_mismatch");
   const payloads = buildConsumerNodeRuntimePayloads(input);
   const bundle = buildConsumerNodeRuntimeBundle({
     identity: input.identity,
@@ -280,7 +288,11 @@ export async function installConsumerRuntimeFromSetup(
     bundle,
     payloads,
     fault: input.fault,
-    verifySealedAggregate: input.verifySealedAggregate,
+    verifySealedAggregate: () => {
+      if (input.verifySealedAggregate) input.verifySealedAggregate();
+      if (digestConsumerRuntimeBytes(input.sealed_aggregate) !== input.identity.control_manifest_digest)
+        throw new Error("consumer_runtime_digest_mismatch");
+    },
   });
   return { bundle, result };
 }
@@ -577,8 +589,11 @@ export function runSetup(args: SetupArgs, deps: SetupDeps): SetupResult {
 export async function runSetupAsync(args: SetupArgs, deps: SetupDeps): Promise<SetupResult> {
   if (!args.consumerRuntime || args.dryRun) return runSetup(args, deps);
   assertSetupRuntimeRoot(args.consumerRuntime.identity, deps.repoRoot);
-  const result = runSetup(args, deps);
+  // Admission and publication happen before setup emits any consumer files.
+  // A denied/failed runtime must not leave a seemingly-installed wrapper or
+  // setup state behind for the CLI to discover.
   const consumerRuntime = await installConsumerRuntimeFromSetup(args.consumerRuntime);
+  const result = runSetup(args, deps);
   return { ...result, consumerRuntime };
 }
 

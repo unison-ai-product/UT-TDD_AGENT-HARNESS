@@ -245,8 +245,11 @@ function contained(parent: string, child: string): boolean {
   return rel !== "" && rel !== ".." && !rel.startsWith(`..${sep}`) && !isAbsolute(rel);
 }
 
+const SAFE_PRODUCT_ID = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
+
 function validIdentity(value: unknown): value is ConsumerNodeRuntimeIdentity {
   if (!isRecord(value)) return false;
+  if (typeof value.product_id !== "string" || !SAFE_PRODUCT_ID.test(value.product_id)) return false;
   const id = value as Partial<ConsumerNodeRuntimeIdentity>;
   return (
     typeof id.product_id === "string" &&
@@ -472,6 +475,17 @@ if (!Number.isSafeInteger(manifest.history_sequence) || manifest.history_sequenc
 if (sha256(Buffer.from(canonical({ identity: manifest.identity, files: manifest.files, history_sequence: manifest.history_sequence, prior_bundle_digest: manifest.prior_bundle_digest, prior_history_tip_digest: manifest.prior_history_tip_digest }), "utf8")) !== manifest.bundle_digest) deny("consumer_runtime_digest_mismatch");
 for (const name of required) { let bytes; try { bytes = readFileSync(resolve(bundle, name)); } catch { deny("consumer_runtime_absent"); } if (sha256(bytes) !== manifest.files[name]) deny("consumer_runtime_digest_mismatch"); }
 if (manifest.files["ut-tdd.mjs"] !== manifest.identity.compiled_esm_digest) deny("consumer_runtime_digest_mismatch");
+const payload = (name) => { try { return readFileSync(resolve(bundle, name)); } catch { deny("consumer_runtime_absent"); } };
+const parsePayload = (name) => { try { const value = JSON.parse(payload(name).toString("utf8")); if (!value || typeof value !== "object" || Array.isArray(value)) deny("consumer_runtime_resolution_denied"); return value; } catch { deny("consumer_runtime_resolution_denied"); } };
+const marker = parsePayload("marker.json"), consumer = parsePayload("consumer-receipt.json"), operation = parsePayload("operation-state.json");
+const identityDigest = sha256(Buffer.from(canonical(manifest.identity), "utf8"));
+let history;
+try { const lines = payload("history.jsonl").toString("utf8").trim().split(/\\r?\\n/); if (lines.length !== 1) deny("consumer_runtime_resolution_denied"); history = JSON.parse(lines[0]); } catch { deny("consumer_runtime_resolution_denied"); }
+if (marker.identity_digest !== identityDigest || marker.operation_id !== manifest.identity.operation_id || marker.attempt !== manifest.identity.attempt || marker.generation_id !== manifest.identity.generation_id) deny("consumer_runtime_resolution_denied");
+if (consumer.identity_digest !== marker.identity_digest || consumer.operation_id !== marker.operation_id || consumer.attempt !== marker.attempt || consumer.history_sequence !== manifest.history_sequence || consumer.prior_bundle_digest !== manifest.prior_bundle_digest || consumer.prior_history_tip_digest !== manifest.prior_history_tip_digest || consumer.history_tip_digest !== history.record_digest) deny("consumer_runtime_resolution_denied");
+if (history.identity_digest !== marker.identity_digest || history.operation_id !== marker.operation_id || history.attempt !== marker.attempt || history.history_sequence !== manifest.history_sequence || history.prior_bundle_digest !== manifest.prior_bundle_digest || history.prior_history_tip_digest !== manifest.prior_history_tip_digest || sha256(Buffer.from(canonical({ attempt: history.attempt, history_sequence: history.history_sequence, identity_digest: history.identity_digest, operation_id: history.operation_id, operation_kind: history.operation_kind, prior_bundle_digest: history.prior_bundle_digest, prior_history_tip_digest: history.prior_history_tip_digest }), "utf8")) !== history.record_digest) deny("consumer_runtime_resolution_denied");
+if (operation.identity_digest !== marker.identity_digest || operation.operation_id !== marker.operation_id || operation.attempt !== marker.attempt || operation.history_tip_digest !== history.record_digest) deny("consumer_runtime_resolution_denied");
+const nodeReceipt = parsePayload("node-bootstrap-receipt.json"); const nodeReceiptDigest = nodeReceipt.receipt_digest; delete nodeReceipt.receipt_digest; if (typeof nodeReceiptDigest !== "string" || sha256(Buffer.from(canonical(nodeReceipt), "utf8")) !== "sha256:" + nodeReceiptDigest) deny("consumer_runtime_resolution_denied");
 const result = spawnSync(process.execPath, [entry, ...process.argv.slice(2)], { cwd: consumerRoot, stdio: "inherit", windowsHide: true });
 if (result.error) deny("consumer_runtime_resolution_denied");
 process.exit(result.status ?? 1);
@@ -490,8 +504,9 @@ function fsyncFile(path: string): void {
 }
 
 function fsyncDirectory(path: string): void {
-  const fd = openSync(path, "r");
+  let fd: number | undefined;
   try {
+    fd = openSync(path, "r");
     try {
       fsyncSync(fd);
     } catch (error) {
@@ -500,8 +515,13 @@ function fsyncDirectory(path: string): void {
       // not turn a supported Windows install into a false success elsewhere.
       if (process.platform !== "win32") throw error;
     }
+  } catch (error) {
+    // Windows may reject opening a directory even though the files and the
+    // atomic rename are durable. Treat that platform limitation like a
+    // rejected directory fsync, but never hide it on POSIX.
+    if (process.platform !== "win32") throw error;
   } finally {
-    closeSync(fd);
+    if (fd !== undefined) closeSync(fd);
   }
 }
 
@@ -641,7 +661,16 @@ export function createConsumerNodeRuntimeFilesystemPorts(
       mkdirSync(join(identity.runtime_root, "locks"), { recursive: true });
       mkdirSync(lockPath, { recursive: false });
       state.locked = true;
-      fault("acquireConsumerLock");
+      try {
+        fault("acquireConsumerLock");
+      } catch (error) {
+        // The orchestrator can only mark its lock as acquired after this port
+        // resolves. If an injected/real failure occurs after mkdir, release
+        // the physical lock here so the failed admission cannot strand it.
+        rmSync(lockPath, { recursive: true, force: false });
+        state.locked = false;
+        throw error;
+      }
     },
     snapshotPriorActivePointer: () => {
       state.prior = readPointer(pointerPath);

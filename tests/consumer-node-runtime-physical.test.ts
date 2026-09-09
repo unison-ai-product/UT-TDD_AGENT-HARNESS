@@ -36,7 +36,7 @@ function fixture(root: string) {
     release_id: `rel-sha256:${hex("5")}`,
     materializer_version: "1",
     artifact_set_digest: `sha256:${hex("6")}`,
-    control_manifest_digest: `sha256:${hex("7")}`,
+    control_manifest_digest: digestConsumerRuntimeBytes(Buffer.from("sealed-release-aggregate-v1")),
     sealed_policy: "compiled-esm-only" as const,
   };
   const unsigned = {
@@ -130,7 +130,8 @@ async function producerInput(root: string, checkout: string) {
     sealed_policy: "compiled-esm-only" as const,
   };
   expect(receipt.compiled_cli.sha256).toBe(strip(identity.compiled_esm_digest));
-  return { identity, compiled_esm, node_bootstrap_receipt };
+  const sealed_aggregate = Buffer.from("sealed-release-aggregate-v1");
+  return { identity, sealed_aggregate, compiled_esm, node_bootstrap_receipt };
 }
 
 afterEach(() => {
@@ -151,6 +152,7 @@ describe("physical consumer Node runtime adapter", () => {
       bundle: priorBundle,
       payloads,
     });
+    if (!first.ok) throw new Error(`FIRST_INSTALL_ERROR:${JSON.stringify(first)}`);
     expect(first).toMatchObject({ ok: true, status: "committed" });
     const pointerPath = join(supplied.identity.runtime_root, "activation", "active.json");
     const priorPointer = readFileSync(pointerPath);
@@ -212,6 +214,7 @@ describe("physical consumer Node runtime adapter", () => {
         applyBranchProtection: false,
         consumerRuntime: {
           identity: supplied.identity,
+          sealed_aggregate: supplied.sealed_aggregate,
           compiled_esm: readFileSync(join(checkout, "sealed-generation", "ut-tdd.mjs")),
           node_bootstrap_receipt: readFileSync(join(checkout, "sealed-generation", "receipt.json")),
         },
@@ -223,6 +226,7 @@ describe("physical consumer Node runtime adapter", () => {
     const installed = setup.consumerRuntime;
     expect(installed).toBeDefined();
     if (!installed) throw new Error("setup runtime was not installed");
+    if (!installed.result.ok) throw new Error(`SETUP_INSTALL_ERROR:${JSON.stringify(installed.result)}`);
     expect(installed.result).toMatchObject({ ok: true, status: "committed" });
     rmSync(checkout, { recursive: true, force: true });
     const wrapper = join(root, ".ut-tdd", "bin", "ut-tdd.mjs");
