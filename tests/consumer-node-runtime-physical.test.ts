@@ -6,6 +6,7 @@ import {
   mkdtempSync,
   readFileSync,
   rmSync,
+  statSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -263,6 +264,7 @@ describe("physical consumer Node runtime adapter", () => {
         history_tip_digest: string;
       }
     ).history_tip_digest;
+    const priorHistory = readFileSync(join(priorBundle.bundle_path, "history.jsonl"));
     const nextIdentity = { ...supplied.identity, operation_id: "update-real", attempt: 1 };
     const nextPayloads = buildConsumerNodeRuntimePayloads({
       identity: nextIdentity,
@@ -271,6 +273,13 @@ describe("physical consumer Node runtime adapter", () => {
       prior_bundle_digest: priorBundle.bundle_digest,
       prior_history_tip_digest: historyTip,
       history_sequence: 1,
+      prior_history: priorHistory,
+      prior_pointer: {
+        bytes: priorPointer,
+        mode: statSync(pointerPath).mode & 0o777,
+        digest: digestConsumerRuntimeBytes(priorPointer),
+      },
+      operation_kind: "update",
     });
     const bundle = buildConsumerNodeRuntimeBundle({
       identity: nextIdentity,
@@ -336,7 +345,7 @@ describe("physical consumer Node runtime adapter", () => {
       cwd: tmpdir(),
       encoding: "utf8",
     });
-    expect(run.status).toBe(0);
+    expect(run.status, `${run.stdout}\n${run.stderr}`).toBe(0);
     expect(run.stdout).toContain("Usage");
     const claudeSettings = JSON.parse(
       readFileSync(join(root, ".claude", "settings.json"), "utf8"),
@@ -352,7 +361,7 @@ describe("physical consumer Node runtime adapter", () => {
       }),
       encoding: "utf8",
     });
-    expect(hook.status).toBe(0);
+    expect(hook.status, `${hook.stdout}\n${hook.stderr}`).toBe(0);
     expect(hook.stderr).not.toContain("BLOCK");
     const codexSettings = JSON.parse(readFileSync(join(root, ".codex", "hooks.json"), "utf8")) as {
       hooks: { PreToolUse: Array<{ hooks: Array<{ command: string; args: string[] }> }> };
@@ -366,7 +375,7 @@ describe("physical consumer Node runtime adapter", () => {
       }),
       encoding: "utf8",
     });
-    expect(codexHook.status).toBe(0);
+    expect(codexHook.status, `${codexHook.stdout}\n${codexHook.stderr}`).toBe(0);
     expect(codexHook.stderr).not.toContain("BLOCK");
   });
 
