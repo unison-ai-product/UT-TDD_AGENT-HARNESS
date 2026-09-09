@@ -345,6 +345,7 @@ function deps(over: Partial<DoctorDeps> & { files?: Map<string, string> } = {}):
       [...files.keys()]
         .filter((k) => k.startsWith(`${dir}/`) || k.startsWith(`${dir}\\`))
         .map((k) => k.slice(dir.length + 1)),
+    memoryCompletion: () => ({ ok: true, messages: ["memory-migration-completion - OK (test)"] }),
     ...over,
   };
 }
@@ -641,7 +642,7 @@ describe("runDoctor", () => {
     expect(resolveDoctorRunProfile({ profile: "consumer-toolchain" })).toEqual(
       DOCTOR_RUN_PROFILES["consumer-toolchain"],
     );
-    expect(r.messages).toEqual(["doctor: setup-smoke - OK (checked=23, failed=0)"]);
+    expect(r.messages).toEqual(["doctor: setup-smoke - OK (checked=24, failed=0)"]);
   });
 
   it("runs only the toolchain gate when doctor scope is toolchain", () => {
@@ -705,9 +706,10 @@ describe("runDoctor", () => {
     expect(DOCTOR_RUN_PROFILES["source-toolchain"].outputIds).toEqual(
       doctorOutputIdsForScope("toolchain"),
     );
-    expect(DOCTOR_RUN_PROFILES["consumer-toolchain"].outputIds).toEqual(
-      doctorOutputIdsForScope("toolchain"),
-    );
+    expect(DOCTOR_RUN_PROFILES["consumer-toolchain"].outputIds).toEqual([
+      "toolchain-pin",
+      "memory-migration-completion",
+    ]);
     expect(doctorOutputIdsForScope("toolchain")).toEqual(["toolchain-pin"]);
     expect(selected.map((definition) => definition.id)).toEqual(["toolchain-pin"]);
     expect(run.checks).toHaveLength(1);

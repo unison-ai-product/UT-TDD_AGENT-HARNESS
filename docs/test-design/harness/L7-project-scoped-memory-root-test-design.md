@@ -77,6 +77,10 @@ updated: 2026-09-09
 | U-PMEMFENCE-008 | wake開始後、provider claim直前に同一ID bytes driftを注入する | claim/terminal/receiptを作らず typed `inventory_drift` deny にする |
 | U-PMEMFENCE-009 | tracked identityを持つfresh projectで初回setupを起動する | 完全に存在しないmigrationだけをbootstrapしてcompletion後にsetup writeを許可する |
 | U-PMEMFENCE-010 | uncommitted identityでfresh setupを起動し、identity commit後に再実行する | `project_identity_commit_required` でidentity以外のwriteを0にし、commit後の初回migration/setupだけ成功する |
+| U-PMEMFENCE-011 | consumer-toolchain doctorをincomplete／drift／tamper projectで起動する | completion checkが各typed denyを返し、profile全体をfail-closeする |
+| U-PMEMFENCE-012 | consumer-setup-smoke doctorをincomplete／drift／tamper projectで起動する | setup-smokeへcompletion checkを結線し、各typed denyをfail-closeで報告する |
+| U-PMEMFENCE-013 | Claude inbox recoveryのterminal marker apply直前にMemory driftを注入する | completion fenceが`inventory_drift`を返し、terminal markerを作らずinbox evidenceを保持する |
+| U-PMEMFENCE-014 | completed quarantine entryを同一bytesのsymlinkへ交換する | `transaction_tampered`で拒否し、symlink bytesを正本として受け入れない |
 
 Fresh setupだけはbootstrap phase境界として、tracked identity確認後にtransactionが完全不存在の場合の初回migrationを許可する。identityが未commitなら `project_identity_commit_required` で停止し、identity以外のsetup writeは0。既存transactionの中断・改変・driftはこのbootstrap例外に含めない。
 
