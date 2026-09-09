@@ -483,6 +483,15 @@ describe("sealed lineage local migration", () => {
       (command: MigrationInput) => command,
     ],
     [
+      "PLAN frontmatter issue number mismatch",
+      null,
+      (command: MigrationInput) =>
+        withAuthorityDigests({
+          ...command,
+          issue: { ...command.issue, number: 103 },
+        }),
+    ],
+    [
       "PLAN episode mismatch",
       null,
       (command: MigrationInput) =>
