@@ -5,6 +5,10 @@ import type {
   CustodyFailureReason,
   CustodyPullRequestFacts,
 } from "../../feedback/review-custody.ts";
+import {
+  observeAndAdmitCustodyReceipt,
+  type RunnerEnvironment,
+} from "../../feedback/review-custody-runner.ts";
 import type { HarnessDb } from "../../state-db/index.ts";
 import { parseLegacyPlanSource } from "../adapters/legacy-plan-inventory.ts";
 import { loadProjectIdentityFromHead } from "../adapters/project-identity-loader.ts";
@@ -237,8 +241,28 @@ export interface SealedLineageDryRunRequest {
   readonly git: SealedLineageGitPreflightPort;
   readonly projectIdentity: SealedLineageProjectIdentityPort;
   readonly issueAuthority: SealedLineageIssueAuthorityPort;
-  readonly reviewFacts: CustodyPullRequestFacts;
-  readonly custodyDecision: CustodyDecision;
+  readonly reviewCustody: SealedLineageLiveReviewCustodyPort;
+}
+
+export interface SealedLineageLiveReviewCustodyPort {
+  readonly observe: () => Promise<{
+    readonly facts: CustodyPullRequestFacts;
+    readonly decision: CustodyDecision;
+  }>;
+}
+
+export class SystemSealedLineageLiveReviewCustodyPort
+  implements SealedLineageLiveReviewCustodyPort
+{
+  private readonly environment: RunnerEnvironment;
+
+  constructor(environment: RunnerEnvironment) {
+    this.environment = environment;
+  }
+
+  observe(): Promise<{ facts: CustodyPullRequestFacts; decision: CustodyDecision }> {
+    return observeAndAdmitCustodyReceipt(this.environment);
+  }
 }
 
 export interface SealedLineageProjectIdentityObservation {
@@ -298,9 +322,9 @@ export type SealedLineageDryRunResult =
  * live read-only authorityからseal入力を組み立ててpreflightする。DB writerは生成せず、
  * callerからdigest/Issue custody/repository identityを受け取らない。
  */
-export function assembleSealedLineageMigrationDryRun(
+export async function assembleSealedLineageMigrationDryRun(
   request: SealedLineageDryRunRequest,
-): SealedLineageDryRunResult {
+): Promise<SealedLineageDryRunResult> {
   try {
     const sourceCommit = request.git.readHeadCommit();
     if (!request.git.isReachableFromTrackedRemote(sourceCommit))
@@ -355,9 +379,10 @@ export function assembleSealedLineageMigrationDryRun(
     const observedIssue = request.issueAuthority.observe(base);
     if (!observedIssue || observedIssue.number !== base.issue.number)
       return rejected("seal-issue-authority-invalid");
+    const liveCustody = await request.reviewCustody.observe();
     const reviewAuthority = new CustodyDecisionSealedLineageReviewAuthorityPort(
-      request.reviewFacts,
-      request.custodyDecision,
+      liveCustody.facts,
+      liveCustody.decision,
     );
     const observedReview = reviewAuthority.observe(base);
     if (!observedReview) return rejected("seal-review-authority-invalid");
@@ -377,7 +402,6 @@ export function assembleSealedLineageMigrationDryRun(
         reviewedImplementationAuthorityDigest,
       }),
     };
-    if (request.git.readHeadCommit() !== sourceCommit) return rejected("seal-source-head-toctou");
     const validation = validate(input);
     if (!validation.ok) return validation;
     const gitCheck = validateGitPreflight(input, request.git);
@@ -852,12 +876,16 @@ function validateFinalGitCustody(
 ): { ok: true } | { ok: false; ruleId: string } {
   if (!git) return rejected("seal-source-head-toctou");
   try {
-    return git.readHeadCommit() === input.sourceCommit &&
-      git.isReachableFromTrackedRemote(input.sourceCommit)
-      ? { ok: true }
-      : rejected("seal-source-head-toctou");
+    if (git.readHeadCommit() !== input.sourceCommit) return rejected("seal-source-head-toctou");
   } catch {
     return rejected("seal-source-head-toctou");
+  }
+  try {
+    return git.isReachableFromTrackedRemote(input.sourceCommit)
+      ? { ok: true }
+      : rejected("seal-source-commit-unreachable");
+  } catch {
+    return rejected("seal-source-commit-unreachable");
   }
 }
 

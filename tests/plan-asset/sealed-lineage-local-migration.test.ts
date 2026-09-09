@@ -606,9 +606,9 @@ describe("sealed lineage local migration", () => {
     ]);
   });
 
-  it("U-PA-SEAL-020: dry-run assemblerはtracked Git/Issue/custodyだけから全preimageを導出する", () => {
+  it("U-PA-SEAL-020: dry-run assemblerはtracked Git/Issue/custodyだけから全preimageを導出する", async () => {
     const command = input();
-    const result = assembleSealedLineageMigrationDryRun({
+    const result = await assembleSealedLineageMigrationDryRun({
       commandId: command.commandId,
       planId: command.planId,
       actor: command.actor,
@@ -616,8 +616,7 @@ describe("sealed lineage local migration", () => {
       git: fakeGit(command),
       projectIdentity: fakeProjectIdentity(command),
       issueAuthority: fakeIssueAuthority(command),
-      reviewFacts: reviewFacts(),
-      custodyDecision: rejectedDecision(["unverified_family"]),
+      reviewCustody: fakeLiveReviewCustody(),
     });
 
     expect(result).toMatchObject({
@@ -633,7 +632,7 @@ describe("sealed lineage local migration", () => {
   it.each([
     "identity_noncanonical_bytes",
     "identity_repository_unbound",
-  ] as const)("U-PA-SEAL-020: project identity loaderの%s拒否をfail-closeする", (ruleId) => {
+  ] as const)("U-PA-SEAL-020: project identity loaderの%s拒否をfail-closeする", async (ruleId) => {
     const command = input();
     const projectIdentity = new SystemSealedLineageProjectIdentityPort(
       ".",
@@ -641,7 +640,7 @@ describe("sealed lineage local migration", () => {
       () => ({ ok: false, error: { ruleId, message: "rejected fixture" } }),
     );
     expect(
-      assembleSealedLineageMigrationDryRun({
+      await assembleSealedLineageMigrationDryRun({
         commandId: command.commandId,
         planId: command.planId,
         actor: command.actor,
@@ -649,16 +648,15 @@ describe("sealed lineage local migration", () => {
         git: fakeGit(command),
         projectIdentity,
         issueAuthority: fakeIssueAuthority(command),
-        reviewFacts: reviewFacts(),
-        custodyDecision: rejectedDecision(["unverified_family"]),
+        reviewCustody: fakeLiveReviewCustody(),
       }),
     ).toEqual({ ok: false, ruleId: "seal-git-preflight-unavailable" });
   });
 
-  it("U-PA-SEAL-020: project identity HEAD driftをfail-closeする", () => {
+  it("U-PA-SEAL-020: project identity HEAD driftをfail-closeする", async () => {
     const command = input();
     expect(
-      assembleSealedLineageMigrationDryRun({
+      await assembleSealedLineageMigrationDryRun({
         commandId: command.commandId,
         planId: command.planId,
         actor: command.actor,
@@ -672,8 +670,7 @@ describe("sealed lineage local migration", () => {
           }),
         },
         issueAuthority: fakeIssueAuthority(command),
-        reviewFacts: reviewFacts(),
-        custodyDecision: rejectedDecision(["unverified_family"]),
+        reviewCustody: fakeLiveReviewCustody(),
       }),
     ).toEqual({ ok: false, ruleId: "seal-git-preflight-unavailable" });
   });
@@ -708,11 +705,11 @@ describe("sealed lineage local migration", () => {
     expect(counts(db)).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
   });
 
-  it("U-PA-SEAL-021: dry-runもIssue authority観測後に最終HEADを再検証する", () => {
+  it("U-PA-SEAL-021: dry-runもIssue authority観測後に最終HEADを再検証する", async () => {
     const command = input();
     const stableGit = fakeGit(command);
     let head = command.sourceCommit;
-    const result = assembleSealedLineageMigrationDryRun({
+    const result = await assembleSealedLineageMigrationDryRun({
       commandId: command.commandId,
       planId: command.planId,
       actor: command.actor,
@@ -725,11 +722,45 @@ describe("sealed lineage local migration", () => {
           return fakeIssueAuthority(command).observe();
         },
       },
-      reviewFacts: reviewFacts(),
-      custodyDecision: rejectedDecision(["unverified_family"]),
+      reviewCustody: fakeLiveReviewCustody(),
     });
 
     expect(result).toEqual({ ok: false, ruleId: "seal-source-head-toctou" });
+  });
+
+  it.each([
+    "false",
+    "throw",
+  ] as const)("U-PA-SEAL-021: authority観測後のremote到達性%sをtyped拒否する", async (mode) => {
+    const { db, Transaction } = await baseFixture();
+    const command = input();
+    const stableGit = fakeGit(command);
+    let finalCheck = false;
+    const git = {
+      ...stableGit,
+      isReachableFromTrackedRemote: () => {
+        if (!finalCheck) return true;
+        if (mode === "throw") throw new Error("remote-unavailable");
+        return false;
+      },
+    };
+    const issueAuthority = {
+      observe: () => {
+        finalCheck = true;
+        return fakeIssueAuthority(command).observe();
+      },
+    };
+    const transaction = new Transaction(db, {
+      git,
+      reviewAuthority: fakeReviewAuthority(),
+      issueAuthority,
+    });
+
+    expect(transaction.migrate(command)).toEqual({
+      ok: false,
+      ruleId: "seal-source-commit-unreachable",
+    });
+    expect(counts(db)).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
   });
 });
 
@@ -1047,6 +1078,15 @@ function fakeProjectIdentity(command: MigrationInput) {
       repositoryIdentity: command.repositoryIdentity,
       sourceCommit: command.sourceCommit,
       receiptDigest: digest("project-identity-receipt"),
+    }),
+  };
+}
+
+function fakeLiveReviewCustody() {
+  return {
+    observe: async () => ({
+      facts: reviewFacts(),
+      decision: rejectedDecision(["unverified_family"]),
     }),
   };
 }
