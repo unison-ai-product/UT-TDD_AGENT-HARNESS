@@ -48,7 +48,7 @@ afterEach(() => {
   for (const root of fixtures.splice(0)) rmSync(root, { recursive: true, force: true });
 });
 
-it("inventories actual linked worktrees, dedupes identical content, and never changes sources", () => {
+it("U-PMEMINV-001 inventories linked worktrees without changing sources", () => {
   const { primary, linked } = fixture();
   const paths = [
     memory(primary, "a.md"),
@@ -76,7 +76,7 @@ it("inventories actual linked worktrees, dedupes identical content, and never ch
   expect(reversed.dryRun(primary)).toEqual(result);
 });
 
-it("retains every variant for conflicting IDs without selecting a winner", () => {
+it("U-PMEMINV-002 retains every conflict variant without selecting a winner", () => {
   const { primary, linked } = fixture();
   memory(primary, "a.md");
   memory(linked, "b.md", "different");
@@ -109,7 +109,7 @@ it("retains every variant for conflicting IDs without selecting a winner", () =>
   );
 });
 
-it("fails closed for invalid and unreadable input with no partial inventory", () => {
+it("U-PMEMINV-003 rejects invalid and unreadable input without partial inventory", () => {
   const { primary, linked } = fixture();
   memory(primary, "a.md");
   const invalid = memory(linked, "b.md");
@@ -127,7 +127,7 @@ it("fails closed for invalid and unreadable input with no partial inventory", ()
   expect(service.dryRun(primary)).toEqual({ ok: false, reason: "source_unavailable" });
 });
 
-it("fails closed when any linked HEAD has a foreign project identity", () => {
+it("U-PMEMINV-004 rejects a foreign linked HEAD before reading sources", () => {
   const { primary, linked } = fixture();
   memory(primary, "a.md");
   expect(new ProjectMemoryMigration().dryRun(primary).ok).toBe(true);
@@ -149,7 +149,7 @@ it("fails closed when any linked HEAD has a foreign project identity", () => {
   expect(reads).toBe(0);
 });
 
-it("fails closed for incomplete topology before reading sources", () => {
+it("U-PMEMINV-005 rejects incomplete topology before reading sources", () => {
   const { primary } = fixture();
   let reads = 0;
   const service = new ProjectMemoryMigration({
@@ -168,7 +168,7 @@ it("fails closed for incomplete topology before reading sources", () => {
   expect(reads).toBe(0);
 });
 
-it("rejects non-regular memory sources and binds the digest to content changes", () => {
+it("U-PMEMINV-006 rejects non-regular sources and binds content changes", () => {
   const { primary, linked } = fixture();
   memory(linked, "a.md");
   const first = new ProjectMemoryMigration().dryRun(primary);
@@ -182,7 +182,7 @@ it("rejects non-regular memory sources and binds the digest to content changes",
   });
 });
 
-it("rejects a linked memory directory junction without reading its target", () => {
+it("U-PMEMINV-007 rejects a linked memory junction without reading its target", () => {
   const { primary, linked } = fixture();
   const external = join(dirname(primary), "external");
   mkdirSync(external);
@@ -203,7 +203,7 @@ it("rejects a linked memory directory junction without reading its target", () =
   expect(reads).toBe(0);
 });
 
-it("rejects malformed UTF-8 and does not silently strip a BOM", () => {
+it("U-PMEMINV-008 rejects malformed UTF-8 and does not strip a BOM", () => {
   const { primary } = fixture();
   const path = memory(primary, "a.md");
   const original = readFileSync(path);
