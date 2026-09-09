@@ -166,6 +166,17 @@ describe("runtime hook entrypoints", () => {
     const cwd = mkdtempSync(join(tmpdir(), "ut-tdd-hook-wake-delivery-"));
     try {
       ensureTrackedProjectIdentity(cwd, "fixture/runtime-hook-wake-delivery");
+      const activate = runCli(
+        cwd,
+        ["hook", "claude-memory-wake"],
+        { hook_event_name: "Stop", session_id: "vscode-target" },
+        {
+          CLAUDE_CODE_ENTRYPOINT: "claude-vscode",
+          UT_TDD_CLAUDE_WAKE_POLL_MS: "10",
+          UT_TDD_CLAUDE_WAKE_MAX_MS: "20",
+        },
+      );
+      expect(activate.status).toBe(0);
       const publish = runCli(cwd, [
         "memory",
         "add",

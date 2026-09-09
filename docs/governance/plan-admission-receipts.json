@@ -2368,6 +2368,630 @@
         "revision": 2,
         "content_digest": "sha256:dc9cbe23b06c23bd607f5d69adab914ef3220ab8f43dbf53f7f38b0e654d85d6"
       }
+    },
+    {
+      "sequence": 149,
+      "previous_record_digest": "sha256:d46357c762271f59c2162ee7f059503a21c3a061a89886b0871d5db433805643",
+      "record_digest": "sha256:54a10b80a78a6c3478846ff4e9d0f8e20e1732aa015ff663f0513aaceb7cde6d",
+      "command_id": "plan-draft:issue-487:forward:1",
+      "receipt_id": "certificate:bc9250c9a7c873dcb9f18956677371f7",
+      "receipt_digest": "sha256:d06ea2c0c0d12e577fb1fe9d7f54dda0f06f4e662992c6e9188b37e3767cd533",
+      "decision_digest": "sha256:91b9533f00fc1f130eb049b28e10b57fae432059eb1b207ba39bfa30d7c3856a",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-530-bun-final-retirement.md",
+        "plan_id": "PLAN-L7-530-bun-final-retirement",
+        "asset_id": "plan:bc9250c9a7c873dcb9f18956677371f7",
+        "revision": 1,
+        "content_digest": "sha256:11316ccad8122064fe93207fe743ad89cc051a9ea6c72f46293fbaffa0791b71"
+      }
+    },
+    {
+      "sequence": 150,
+      "previous_record_digest": "sha256:54a10b80a78a6c3478846ff4e9d0f8e20e1732aa015ff663f0513aaceb7cde6d",
+      "record_digest": "sha256:bc00da2a8f724001a64d9bd74246870738d4ed9681722daf0d7da88c94aedc63",
+      "command_id": "plan-draft:issue-487:reverse:1",
+      "receipt_id": "certificate:4727c21e7227fefefdb428f11662676c",
+      "receipt_digest": "sha256:04d5de668ebdec62759a24e35866113f043f9bb92bd03d97bba978a4f29b8426",
+      "decision_digest": "sha256:4ec6e99485c001055e4e4cddebb2dc0245c086c7eebbcc035303d7366bec411e",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-530-bun-final-retirement-backfill.md",
+        "plan_id": "PLAN-REVERSE-530-bun-final-retirement-backfill",
+        "asset_id": "plan:4727c21e7227fefefdb428f11662676c",
+        "revision": 1,
+        "content_digest": "sha256:026e86fe268420312674ff407135830de837b328b81d178cde4f2aa7dc8fab32"
+      }
+    },
+    {
+      "sequence": 151,
+      "previous_record_digest": "sha256:bc00da2a8f724001a64d9bd74246870738d4ed9681722daf0d7da88c94aedc63",
+      "record_digest": "sha256:cf6455a93774f96046b68af3cece783b683beae7a2cce014a2ebad7d948f7ca9",
+      "command_id": "command:pr520-issue487-forward-scope-revision1",
+      "receipt_id": "certificate:21817eae3f56525da888a82dce89bda0",
+      "receipt_digest": "sha256:5eb3092451ad6d07bde3464ae3d816fe74feca49fe37bea1c7ac400065b2a310",
+      "decision_digest": "sha256:2a9351045311d1bd8d31fc33500fe4a3b96ce6e6863d8bf3912b0ebf8f14b31f",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-530-bun-final-retirement.md",
+        "plan_id": "PLAN-L7-530-bun-final-retirement",
+        "asset_id": "plan:bc9250c9a7c873dcb9f18956677371f7",
+        "revision": 2,
+        "content_digest": "sha256:440c5aaea34d33de3320b0182f0593835fb546696bc20c7a0afff641ca7e40ed"
+      }
+    },
+    {
+      "sequence": 152,
+      "previous_record_digest": "sha256:cf6455a93774f96046b68af3cece783b683beae7a2cce014a2ebad7d948f7ca9",
+      "record_digest": "sha256:9764bc4a2b5a77bbed7ced12e917f172b758b45be277e40598b330746ce603a9",
+      "command_id": "command:pr520-issue487-reverse-scope-revision1",
+      "receipt_id": "certificate:69b6d63d6bc42e97ebd9473254ea6f35",
+      "receipt_digest": "sha256:814cb1f48ca5c6e8d998f0a7268dda55adb2ffc26777c049a72e15cc46a0e175",
+      "decision_digest": "sha256:4850898c07237d0f90d82e5a0f18914a1043e4efa38f01f4868b68f36aef68c3",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-530-bun-final-retirement-backfill.md",
+        "plan_id": "PLAN-REVERSE-530-bun-final-retirement-backfill",
+        "asset_id": "plan:4727c21e7227fefefdb428f11662676c",
+        "revision": 2,
+        "content_digest": "sha256:3a86c028ad567eec08cbfeab98b6c2191153c5cd2a8c7e2b982e5e885b85a8cd"
+      }
+    },
+    {
+      "sequence": 153,
+      "previous_record_digest": "sha256:9764bc4a2b5a77bbed7ced12e917f172b758b45be277e40598b330746ce603a9",
+      "record_digest": "sha256:0bbb6b165df0e0de3ec58cf5e967d0fac811f03fa5e8c143b83bff877f04e604",
+      "command_id": "command:pr520-issue487-forward-ownership-revision3",
+      "receipt_id": "certificate:0edd180776d3f4c02380a9df234fbc4d",
+      "receipt_digest": "sha256:1ab46b102a03f84e69e2ff5cffeb8f1578d0119d6db1ba06b9b3f7c1e9068610",
+      "decision_digest": "sha256:96a1dbe85637e79ce863360a99e4b2f96dce8f65fbd8dde93dd12a027cfe7c29",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-530-bun-final-retirement.md",
+        "plan_id": "PLAN-L7-530-bun-final-retirement",
+        "asset_id": "plan:bc9250c9a7c873dcb9f18956677371f7",
+        "revision": 3,
+        "content_digest": "sha256:984e3b1ce5e4fe7d55535af0d8a3d0e738fda6e159530bfd288052a0eaab1662"
+      }
+    },
+    {
+      "sequence": 154,
+      "previous_record_digest": "sha256:0bbb6b165df0e0de3ec58cf5e967d0fac811f03fa5e8c143b83bff877f04e604",
+      "record_digest": "sha256:16206c886f5747986d92a0f081da2924d78c4be80d4db7818cfd1d57ebd97795",
+      "command_id": "command:pr520-issue487-reverse-ownership-revision3",
+      "receipt_id": "certificate:05b490a8f8e8d63e61c732085bb5b17e",
+      "receipt_digest": "sha256:95e1afdb28fb049dcef3d5de8bff248c9492ee8344cf53bdfe2f3e2f29d21964",
+      "decision_digest": "sha256:f5991834163656341697a8a9cefdcab8f1a205f73510fe91a0ffc38c2452d661",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-530-bun-final-retirement-backfill.md",
+        "plan_id": "PLAN-REVERSE-530-bun-final-retirement-backfill",
+        "asset_id": "plan:4727c21e7227fefefdb428f11662676c",
+        "revision": 3,
+        "content_digest": "sha256:f1e30114b3915076492e84ad48ef9bf02b894378fa743706e62ad882c4cdc67f"
+      }
+    },
+    {
+      "sequence": 155,
+      "previous_record_digest": "sha256:16206c886f5747986d92a0f081da2924d78c4be80d4db7818cfd1d57ebd97795",
+      "record_digest": "sha256:f17898a800995527a18df1b138f065f39d544c845961a43bbef05ff6aef16936",
+      "command_id": "command:pr520-issue487-reverse-ownership-revision4",
+      "receipt_id": "certificate:79b87abaad993b9fab749bb33b90e170",
+      "receipt_digest": "sha256:b46ed16053b7ababe067537a6f550a3046ae5752b107f15823924643ca44eeda",
+      "decision_digest": "sha256:f5991834163656341697a8a9cefdcab8f1a205f73510fe91a0ffc38c2452d661",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-530-bun-final-retirement-backfill.md",
+        "plan_id": "PLAN-REVERSE-530-bun-final-retirement-backfill",
+        "asset_id": "plan:4727c21e7227fefefdb428f11662676c",
+        "revision": 4,
+        "content_digest": "sha256:4db2ebfa66e911c60bfa258714aaac7690b0b717e14e5fd1f76e2aca901d8bbd"
+      }
+    },
+    {
+      "sequence": 156,
+      "previous_record_digest": "sha256:f17898a800995527a18df1b138f065f39d544c845961a43bbef05ff6aef16936",
+      "record_digest": "sha256:40a78b0497f617f4b6d69179582ea5ef9c9f33a62bb5934125759c4234d47622",
+      "command_id": "command:pr520-issue487-reverse-cleanup-revision5",
+      "receipt_id": "certificate:7e9a100438cc0c8d22c9d303f391de98",
+      "receipt_digest": "sha256:6bde5f25786cc18fc9c27fc47184920e6ba1e27fa96278ad6a016b0e657b762b",
+      "decision_digest": "sha256:f5991834163656341697a8a9cefdcab8f1a205f73510fe91a0ffc38c2452d661",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-530-bun-final-retirement-backfill.md",
+        "plan_id": "PLAN-REVERSE-530-bun-final-retirement-backfill",
+        "asset_id": "plan:4727c21e7227fefefdb428f11662676c",
+        "revision": 5,
+        "content_digest": "sha256:e65c2b3c1cd4fec80e8ef9cd606759f60cc45c647bf1254ee24bf3b77be09d07"
+      }
+    },
+    {
+      "sequence": 157,
+      "previous_record_digest": "sha256:40a78b0497f617f4b6d69179582ea5ef9c9f33a62bb5934125759c4234d47622",
+      "record_digest": "sha256:6e4488b508df807c32a0f50970333349dc82a0be5d94a7b2a5366b0259384afe",
+      "command_id": "command:pr521-issue487-forward-inventory-revision4",
+      "receipt_id": "certificate:dc96326c9df67bdf75e829e46d1a0d7a",
+      "receipt_digest": "sha256:62d3014ae34a65c76f8f9c4770085027518564fd04667b9b3292b21fb1539bd5",
+      "decision_digest": "sha256:94706b42f6072bf32897b9a733a200286b383b5b9e7b943587d888a89aa5d150",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-530-bun-final-retirement.md",
+        "plan_id": "PLAN-L7-530-bun-final-retirement",
+        "asset_id": "plan:bc9250c9a7c873dcb9f18956677371f7",
+        "revision": 4,
+        "content_digest": "sha256:3f3fe0e367f3983b9414bf3502707586821b045ef6ed652dda259f57094a5979"
+      }
+    },
+    {
+      "sequence": 158,
+      "previous_record_digest": "sha256:6e4488b508df807c32a0f50970333349dc82a0be5d94a7b2a5366b0259384afe",
+      "record_digest": "sha256:b365cf994c99dfc939404f7a42421b7f8aa01297e13f7b9dbcd1e22e46236e55",
+      "command_id": "command:pr521-issue487-reverse-inventory-revision6",
+      "receipt_id": "certificate:9992c7101ac0cb8766b14a0636967a70",
+      "receipt_digest": "sha256:8ffde86b495b5d7c31fdc3868d009a03414c6910402309185f93f108b40db10b",
+      "decision_digest": "sha256:24d21181ea5928337d8375cb78c78b151b6160d0ed91300c4072dec7a6b85c11",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-530-bun-final-retirement-backfill.md",
+        "plan_id": "PLAN-REVERSE-530-bun-final-retirement-backfill",
+        "asset_id": "plan:4727c21e7227fefefdb428f11662676c",
+        "revision": 6,
+        "content_digest": "sha256:10bb8a0e3ade00563cc23eaffd45f823cf23fe9d6a7572937ac334cfe4093ab8"
+      }
+    },
+    {
+      "sequence": 159,
+      "previous_record_digest": "sha256:b365cf994c99dfc939404f7a42421b7f8aa01297e13f7b9dbcd1e22e46236e55",
+      "record_digest": "sha256:2a319650486b9aea1ff90b57d107d4df9c0f696f49ea488ca65b51f4bb9427cc",
+      "command_id": "command:pr521-issue487-forward-classification-revision5",
+      "receipt_id": "certificate:c8ec5ed817f248dfff06226a2dffd83b",
+      "receipt_digest": "sha256:c3c28aacaffdbd63cc08e6dd0876eece2445f7b2523a424aba3d7da9a23a8248",
+      "decision_digest": "sha256:94706b42f6072bf32897b9a733a200286b383b5b9e7b943587d888a89aa5d150",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-530-bun-final-retirement.md",
+        "plan_id": "PLAN-L7-530-bun-final-retirement",
+        "asset_id": "plan:bc9250c9a7c873dcb9f18956677371f7",
+        "revision": 5,
+        "content_digest": "sha256:7e329b8db06f4b65d15039547371afd84107fa4d1d931446dd4dec893819b8d9"
+      }
+    },
+    {
+      "sequence": 160,
+      "previous_record_digest": "sha256:2a319650486b9aea1ff90b57d107d4df9c0f696f49ea488ca65b51f4bb9427cc",
+      "record_digest": "sha256:c9aefd5c23954832d2efcc88115ed690ca6778e32d91f2a2993f7712c88ecedb",
+      "command_id": "command:pr521-r2-deny-guard-forward6",
+      "receipt_id": "certificate:0270576ffe0c1ab8eadd452801c995e4",
+      "receipt_digest": "sha256:3b7b443d799baa41a49c300d9b945bfd5fed995a1dd98b94ac88b0c1c86ff932",
+      "decision_digest": "sha256:863bf73214f96db68ff67db61502b569f37f09a9fb95d1bad40cd77e8b68343a",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-530-bun-final-retirement.md",
+        "plan_id": "PLAN-L7-530-bun-final-retirement",
+        "asset_id": "plan:bc9250c9a7c873dcb9f18956677371f7",
+        "revision": 6,
+        "content_digest": "sha256:7fa94cd240620dd3c85d4bc9d3ff9341c290363504e655ae38dd1a00877a8da2"
+      }
+    },
+    {
+      "sequence": 161,
+      "previous_record_digest": "sha256:c9aefd5c23954832d2efcc88115ed690ca6778e32d91f2a2993f7712c88ecedb",
+      "record_digest": "sha256:28ebf4a2432d346283e97209e98e987d319e4a89f787de78767160faf4236058",
+      "command_id": "command:pr521-r2-deny-guard-reverse7",
+      "receipt_id": "certificate:37fbe634d28943e62b902979c00b7a78",
+      "receipt_digest": "sha256:11754291c17cdcb902ec2b7e2455b675c174358ef267fa3bab8964a9b932223b",
+      "decision_digest": "sha256:0b15d2f71bdbcce794bf910da6b51732daa8a43294363bf733599a0684244d21",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-530-bun-final-retirement-backfill.md",
+        "plan_id": "PLAN-REVERSE-530-bun-final-retirement-backfill",
+        "asset_id": "plan:4727c21e7227fefefdb428f11662676c",
+        "revision": 7,
+        "content_digest": "sha256:a7a5bb16c81d40e1a95a54341634404ad2d3bc995b42c8c950b5ea689afc7c4e"
+      }
+    },
+    {
+      "sequence": 162,
+      "previous_record_digest": "sha256:28ebf4a2432d346283e97209e98e987d319e4a89f787de78767160faf4236058",
+      "record_digest": "sha256:b4216fe1b47994bfc263c41f0b5fe7f7a11c2b02f74b8e2c64be240705bfb88e",
+      "command_id": "command:pr521-r2-forward-guard-contract-revision7",
+      "receipt_id": "certificate:75d64be2e40c15c3dc35ca6a2de2758a",
+      "receipt_digest": "sha256:b023a08268f3c3691d2aa4fa85a966dd0ad621b1ccf5c4feddaf2e4e95a14816",
+      "decision_digest": "sha256:dcc9ec87cd558be9e0f6f3580ec9cca477b84f895be9d80c4120dbcc33027558",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-530-bun-final-retirement.md",
+        "plan_id": "PLAN-L7-530-bun-final-retirement",
+        "asset_id": "plan:bc9250c9a7c873dcb9f18956677371f7",
+        "revision": 7,
+        "content_digest": "sha256:74d994a7675a5fdcc0f102e9a26e9702bb60577299288b36619e29f4d7cbae1d"
+      }
+    },
+    {
+      "sequence": 163,
+      "previous_record_digest": "sha256:b4216fe1b47994bfc263c41f0b5fe7f7a11c2b02f74b8e2c64be240705bfb88e",
+      "record_digest": "sha256:649177fcac8b5a4f5072bfcafe76726aa6e7c1f337d7df610a336cf560bf7288",
+      "command_id": "command:pr521-r3-reverse-target-revision8",
+      "receipt_id": "certificate:780e1797ac06eefb3fea3d5f83a1b384",
+      "receipt_digest": "sha256:8635cb22422e11302f0b7a65974e2eb647a2717636b950d17335a43fbc777dc7",
+      "decision_digest": "sha256:24d21181ea5928337d8375cb78c78b151b6160d0ed91300c4072dec7a6b85c11",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-530-bun-final-retirement-backfill.md",
+        "plan_id": "PLAN-REVERSE-530-bun-final-retirement-backfill",
+        "asset_id": "plan:4727c21e7227fefefdb428f11662676c",
+        "revision": 8,
+        "content_digest": "sha256:1d3bdc80ce85e905a61b26509ff7afefa1f489bf4e3e48742ae5879b8adfcb2a"
+      }
+    },
+    {
+      "sequence": 164,
+      "previous_record_digest": "sha256:649177fcac8b5a4f5072bfcafe76726aa6e7c1f337d7df610a336cf560bf7288",
+      "record_digest": "sha256:a4123ab7a1b8f076f75fbee07a427dffe582b65075264f1d190589cf4e3801bc",
+      "command_id": "command:pr521-r3-forward-classification-revision8",
+      "receipt_id": "certificate:7cf101fd5c962f0fd576212d106b954e",
+      "receipt_digest": "sha256:5c0bcfb0008db6150ab2a9ccda0b1aed4906b656b88af837621beacf79913a9f",
+      "decision_digest": "sha256:f9eb0ab1975400401e47ae35a03f3a01bc411b04f7bdfad8c4eb1a6d7c7d9f82",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-530-bun-final-retirement.md",
+        "plan_id": "PLAN-L7-530-bun-final-retirement",
+        "asset_id": "plan:bc9250c9a7c873dcb9f18956677371f7",
+        "revision": 8,
+        "content_digest": "sha256:1a4725fea68338bf9bae86c3e436c99339ba82403692872af43c5281c533bfce"
+      }
+    },
+    {
+      "sequence": 165,
+      "previous_record_digest": "sha256:a4123ab7a1b8f076f75fbee07a427dffe582b65075264f1d190589cf4e3801bc",
+      "record_digest": "sha256:9598fcdc2c14a1ea4d3129b3cea4f7be0d5528b90b83726e13df88eca511d69c",
+      "command_id": "command:pr521-r3-reverse-classification-revision9",
+      "receipt_id": "certificate:a3ffb99ad2061a8b7b0249a2c9afaed1",
+      "receipt_digest": "sha256:cc84182c891da4de15471948a322f6e5e99a3478fd3e95bc72a67469d35fe097",
+      "decision_digest": "sha256:24d21181ea5928337d8375cb78c78b151b6160d0ed91300c4072dec7a6b85c11",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-530-bun-final-retirement-backfill.md",
+        "plan_id": "PLAN-REVERSE-530-bun-final-retirement-backfill",
+        "asset_id": "plan:4727c21e7227fefefdb428f11662676c",
+        "revision": 9,
+        "content_digest": "sha256:08b640f163199a010d07b7a9659dca5a795a2725fbb6dfa517c73b178d5901c3"
+      }
+    },
+    {
+      "sequence": 166,
+      "previous_record_digest": "sha256:9598fcdc2c14a1ea4d3129b3cea4f7be0d5528b90b83726e13df88eca511d69c",
+      "record_digest": "sha256:c26fc4970fea2f31d87866f4c1edb9fa1b26e393c97d250345f11258280f9fce",
+      "command_id": "command:pr521-r3-forward-classification-revision9",
+      "receipt_id": "certificate:f0331355453843d394e5c63e583d5a75",
+      "receipt_digest": "sha256:6bfeb7f85899bb3cd6f26ee15731cd6c50af854e4f9340d16def24fd965a0598",
+      "decision_digest": "sha256:d370bf24cd952395fc50997f9e3d1eaac25b78110c0c1c91312932fd7ae21c60",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-530-bun-final-retirement.md",
+        "plan_id": "PLAN-L7-530-bun-final-retirement",
+        "asset_id": "plan:bc9250c9a7c873dcb9f18956677371f7",
+        "revision": 9,
+        "content_digest": "sha256:23345f3ba93a9c27562234216a5e380f46a5be52b0be5b2a6b9e7dd81f1a726d"
+      }
+    },
+    {
+      "sequence": 167,
+      "previous_record_digest": "sha256:c26fc4970fea2f31d87866f4c1edb9fa1b26e393c97d250345f11258280f9fce",
+      "record_digest": "sha256:730412015162fd145d11f929cd4d8b6e103f233f2b2319cad8e99ca3f0505eb2",
+      "command_id": "command:pr521-r3-reverse-classification-revision10",
+      "receipt_id": "certificate:0c96c68561d86eb8a44ca65603054977",
+      "receipt_digest": "sha256:0c4175184558f29402516d86da1a1a5e7989da0e2fc708b018fb21e6c4e65d14",
+      "decision_digest": "sha256:24d21181ea5928337d8375cb78c78b151b6160d0ed91300c4072dec7a6b85c11",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-530-bun-final-retirement-backfill.md",
+        "plan_id": "PLAN-REVERSE-530-bun-final-retirement-backfill",
+        "asset_id": "plan:4727c21e7227fefefdb428f11662676c",
+        "revision": 10,
+        "content_digest": "sha256:aceb6764b5ecc27ce6e1fe88afb2b03a9e8e5952f2b28486eabadabfab44f8d0"
+      }
+    },
+    {
+      "sequence": 168,
+      "previous_record_digest": "sha256:730412015162fd145d11f929cd4d8b6e103f233f2b2319cad8e99ca3f0505eb2",
+      "record_digest": "sha256:c6da3ac032fb60f1c7bb1accc73538b10b15182c507814a9c290bdb3e0844515",
+      "command_id": "command:pr521-r4-forward-oracle-expectation-migration-revision10",
+      "receipt_id": "certificate:381f3017b10ca9f294b21af3e629212d",
+      "receipt_digest": "sha256:3b093b2c8c6500a380d46756d8b1a32c6e3522ae29ee6532bc6eda207ec67a1e",
+      "decision_digest": "sha256:7fe4c00a12e332e31a6ec409a312fb5cc918f88c709b8d36c0eb431e3211424e",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-530-bun-final-retirement.md",
+        "plan_id": "PLAN-L7-530-bun-final-retirement",
+        "asset_id": "plan:bc9250c9a7c873dcb9f18956677371f7",
+        "revision": 10,
+        "content_digest": "sha256:cefa7e5154b792a3da78a5583c77d32f6ceaf9eedf5c1dbe14e4572719697039"
+      }
+    },
+    {
+      "sequence": 169,
+      "previous_record_digest": "sha256:c6da3ac032fb60f1c7bb1accc73538b10b15182c507814a9c290bdb3e0844515",
+      "record_digest": "sha256:e8a8ef530c585c98c968f0bdbbd93af1e0257f23061f55fec1e3b3a3cf1a2aac",
+      "command_id": "command:pr521-r4-reverse-oracle-expectation-migration-revision11",
+      "receipt_id": "certificate:2c17b939d813c21a40adf91fdbf061a7",
+      "receipt_digest": "sha256:1f90e53b96977c633485abcc602114f2da13cf59207c6a40fac3b9abfbb927cc",
+      "decision_digest": "sha256:24d21181ea5928337d8375cb78c78b151b6160d0ed91300c4072dec7a6b85c11",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-530-bun-final-retirement-backfill.md",
+        "plan_id": "PLAN-REVERSE-530-bun-final-retirement-backfill",
+        "asset_id": "plan:4727c21e7227fefefdb428f11662676c",
+        "revision": 11,
+        "content_digest": "sha256:ebbb3e9d34ee96648da9b6514eaf3ba69064bf551cbfaedd6be471c6d6d95871"
+      }
+    },
+    {
+      "sequence": 170,
+      "previous_record_digest": "sha256:e8a8ef530c585c98c968f0bdbbd93af1e0257f23061f55fec1e3b3a3cf1a2aac",
+      "record_digest": "sha256:995da438c28ca822b93817a21c18da90200405ffeebf2c07537a5ceefc064466",
+      "command_id": "command:issue528-plan512-revise-v2",
+      "receipt_id": "certificate:cad3e43241013b6585603726a8399246",
+      "receipt_digest": "sha256:24bc489c7aaf24b0e3db90db3ffea87a2d8c477d81c66d8e32ae8c0f6caa5333",
+      "decision_digest": "sha256:15a4d9ec3b5de82cebb58a79d2debab95c077594b437a389cb54145427eac455",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-512-project-scoped-memory-root.md",
+        "plan_id": "PLAN-L7-512-project-scoped-memory-root",
+        "asset_id": "plan:legacy:68706e293ae2c96738a8e3263bac3e01e7cde64cdb7c3ed8e53805922662bc30",
+        "revision": 2,
+        "content_digest": "sha256:87e75d757bcb42cba954be878bbc421a4241eb09e9aadc7297548821b08465db"
+      }
+    },
+    {
+      "sequence": 171,
+      "previous_record_digest": "sha256:995da438c28ca822b93817a21c18da90200405ffeebf2c07537a5ceefc064466",
+      "record_digest": "sha256:84378144bfa3a5cc3a66205124e51c9fd46a1a01a7e241a09da6567834b18dbc",
+      "command_id": "command:issue528-reverse512-revise-v1",
+      "receipt_id": "certificate:af26c09e9a4731417a8de05321a8baa2",
+      "receipt_digest": "sha256:4e55c449027d1df03cbd8ceb867950c78657bd773b83ed23d582c244bd845d62",
+      "decision_digest": "sha256:df7b26128a2bd0f185b87edd613f6eedd0b272f473f23bc5b64d8f169270fbd5",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-512-project-scoped-memory-root-backfill.md",
+        "plan_id": "PLAN-REVERSE-512-project-scoped-memory-root-backfill",
+        "asset_id": "plan:legacy:186048a954aa8dae7b4f8b1f968f6c5d64d758850fa695ed59a11edcdcf63153",
+        "revision": 2,
+        "content_digest": "sha256:fe71ea8093a46da9d84defdf3655ca301415590724a5136130a715f0bb965cab"
+      }
+    },
+    {
+      "sequence": 172,
+      "previous_record_digest": "sha256:84378144bfa3a5cc3a66205124e51c9fd46a1a01a7e241a09da6567834b18dbc",
+      "record_digest": "sha256:477698f51367b4638a0888bcc32e3a3001f9a820fccbbc26e4ac649437bf324d",
+      "command_id": "command:issue528-PLAN-L7-512-project-scoped-memory-root-verified-evidence-r3",
+      "receipt_id": "certificate:a6de387d04018dfd126a7a656d159fdc",
+      "receipt_digest": "sha256:f1b6f4c730e7d5460ffead3e5691cd9b8172c0576c520edb01e39cd3ced673fc",
+      "decision_digest": "sha256:90218c81971644f32fa5843f460777d06b521ffd991e749c481cf0e10853e8f7",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-512-project-scoped-memory-root.md",
+        "plan_id": "PLAN-L7-512-project-scoped-memory-root",
+        "asset_id": "plan:legacy:68706e293ae2c96738a8e3263bac3e01e7cde64cdb7c3ed8e53805922662bc30",
+        "revision": 3,
+        "content_digest": "sha256:ed94d33b6879c4eded974aea8a22f537ef2dfda948d19c1172f68de4c1058674"
+      }
+    },
+    {
+      "sequence": 173,
+      "previous_record_digest": "sha256:477698f51367b4638a0888bcc32e3a3001f9a820fccbbc26e4ac649437bf324d",
+      "record_digest": "sha256:0ef8f4c72162f807c6396492a6c3c1a12d846e01593b245b602d22e424240378",
+      "command_id": "command:issue528-PLAN-REVERSE-512-project-scoped-memory-root-backfill-verified-evidence-r3",
+      "receipt_id": "certificate:e2ec6823bd7b2e1821077b8c3e49dbaf",
+      "receipt_digest": "sha256:de30a162e85580fe79555db5b28244fb4a3cb42562b0fc4a6aa3259a547d2737",
+      "decision_digest": "sha256:1d20c32ec9c1cbf4b5742b2bd3657b78354ccdc716730b2f5cceaeed4043a4e5",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-512-project-scoped-memory-root-backfill.md",
+        "plan_id": "PLAN-REVERSE-512-project-scoped-memory-root-backfill",
+        "asset_id": "plan:legacy:186048a954aa8dae7b4f8b1f968f6c5d64d758850fa695ed59a11edcdcf63153",
+        "revision": 3,
+        "content_digest": "sha256:acdb552b2c1bffd50ebd7cac99fe37200ba11ac8b1075451964844fafa11b7ef"
+      }
+    },
+    {
+      "sequence": 174,
+      "previous_record_digest": "sha256:0ef8f4c72162f807c6396492a6c3c1a12d846e01593b245b602d22e424240378",
+      "record_digest": "sha256:93212a617a9edbf33769696327aa2ab655a184a5a52565d94095cb565f6e0969",
+      "command_id": "command:issue528-PLAN-L7-512-project-scoped-memory-root-measured-evidence-r4",
+      "receipt_id": "certificate:a6c2b9d4814e28377724d4ba777ce544",
+      "receipt_digest": "sha256:ba1fe86a2b9a6f65aae4b5c0ae45242b4d63ce1866be672233ed23256440703f",
+      "decision_digest": "sha256:7bc152f052d22aaf3e288664eb9c223a9e7a649bf66b1fdfd0af3827934f83c5",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-512-project-scoped-memory-root.md",
+        "plan_id": "PLAN-L7-512-project-scoped-memory-root",
+        "asset_id": "plan:legacy:68706e293ae2c96738a8e3263bac3e01e7cde64cdb7c3ed8e53805922662bc30",
+        "revision": 4,
+        "content_digest": "sha256:01416a9390b1c135ada280e088d68acaa668c5ca75a3a77a9a9ec93557a42d26"
+      }
+    },
+    {
+      "sequence": 175,
+      "previous_record_digest": "sha256:93212a617a9edbf33769696327aa2ab655a184a5a52565d94095cb565f6e0969",
+      "record_digest": "sha256:e3af294c02df8dff6bbcc00fafd1b99046fcaff2b3482b8db4c04e4d919543cd",
+      "command_id": "command:issue528-PLAN-REVERSE-512-project-scoped-memory-root-backfill-measured-evidence-r4",
+      "receipt_id": "certificate:b144dbc4071397e7a08e6c3d2890df13",
+      "receipt_digest": "sha256:235d05611522f192059eb3cdc878cce26f107d3e08d139d9a71b979373a5748c",
+      "decision_digest": "sha256:c19d176832c0590480ff8dbd004653dd6bd9d9e3acb78c2a21b33a725ce88a1c",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-512-project-scoped-memory-root-backfill.md",
+        "plan_id": "PLAN-REVERSE-512-project-scoped-memory-root-backfill",
+        "asset_id": "plan:legacy:186048a954aa8dae7b4f8b1f968f6c5d64d758850fa695ed59a11edcdcf63153",
+        "revision": 4,
+        "content_digest": "sha256:26af6d2a049206593f61fe4cc118a663ddf6d5a3bb73331101400c68b11aaefb"
+      }
+    },
+    {
+      "sequence": 176,
+      "previous_record_digest": "sha256:e3af294c02df8dff6bbcc00fafd1b99046fcaff2b3482b8db4c04e4d919543cd",
+      "record_digest": "sha256:e89ad0d8806b4600f1f64a612d263ceb77fdf118bee31fe6fe503fb5234d0e30",
+      "command_id": "command:issue420-runtime-adapter-contract-r2",
+      "receipt_id": "certificate:124b99afd5c1153fe417904c46ef61b5",
+      "receipt_digest": "sha256:325e33dbd6ac44e5177ef541ab03d19b0beecb4f81550aec37c44f2a0e12bf53",
+      "decision_digest": "sha256:84fa5b519e3b2475735e398829f7187ab640d3f38ea35e2d54dd4d78b8c3c129",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-516-pack-self-contained-consumer-runtime.md",
+        "plan_id": "PLAN-L7-516-pack-self-contained-consumer-runtime",
+        "asset_id": "plan:legacy:d28966ed1d8861940d1ed5bfc5eaebc7dd7b4a9de4ed7adbd65850095c816307",
+        "revision": 2,
+        "content_digest": "sha256:c9a0e1a5915651a7bd08ca45edf85111c783851f8abfd080087cc135d57f322c"
+      }
+    },
+    {
+      "sequence": 177,
+      "previous_record_digest": "sha256:e89ad0d8806b4600f1f64a612d263ceb77fdf118bee31fe6fe503fb5234d0e30",
+      "record_digest": "sha256:06ceb2a3e6bb6df7e2098b4200ea23797af21f5b34753705ca1ef65c4a30c695",
+      "command_id": "command:issue420-runtime-adapter-reverse-r2",
+      "receipt_id": "certificate:06bbea24c08322700c8a3b17d6684aca",
+      "receipt_digest": "sha256:5b509fb468194269e01b6795b2861ef6f5b72dfd64dd87a3f816c51ff70c331a",
+      "decision_digest": "sha256:7f4609eccf4ccb1908fc1381f619fdec9e5f698998c2034c4b4e9c4da19a4c80",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-516-pack-self-contained-consumer-runtime-backfill.md",
+        "plan_id": "PLAN-REVERSE-516-pack-self-contained-consumer-runtime-backfill",
+        "asset_id": "plan:legacy:a791f4a13fda8d4baa8f510ef73e78491c5f3ea280c939fa5bd60e3fe325af8b",
+        "revision": 2,
+        "content_digest": "sha256:b813bb606bf2a629a69c7bf7931e70cd3adb77a65bbc85231fe622769c6ea5de"
+      }
+    },
+    {
+      "sequence": 178,
+      "previous_record_digest": "sha256:06ceb2a3e6bb6df7e2098b4200ea23797af21f5b34753705ca1ef65c4a30c695",
+      "record_digest": "sha256:b02a5e6ce5cc11519f79bd8bc5b432c9dee6bd452e8079f6181d56ca7efe011f",
+      "command_id": "command:issue420-runtime-adapter-contract-r3",
+      "receipt_id": "certificate:0d62778d31373c2ebccbb367598a9ae2",
+      "receipt_digest": "sha256:7dee72cfe7c9926a417c8c1e4662d2495253f424fe479082ca7a003c1588d8f3",
+      "decision_digest": "sha256:d85f59c1c66e93ddbc77ae44872ea6628cc8cd4a6aa8bd094182fcec48e3daa0",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-516-pack-self-contained-consumer-runtime.md",
+        "plan_id": "PLAN-L7-516-pack-self-contained-consumer-runtime",
+        "asset_id": "plan:legacy:d28966ed1d8861940d1ed5bfc5eaebc7dd7b4a9de4ed7adbd65850095c816307",
+        "revision": 3,
+        "content_digest": "sha256:3678d9fb08231a0867c232e75cd5d3920fc08fdf4d41956f813ad513c689805e"
+      }
+    },
+    {
+      "sequence": 179,
+      "previous_record_digest": "sha256:b02a5e6ce5cc11519f79bd8bc5b432c9dee6bd452e8079f6181d56ca7efe011f",
+      "record_digest": "sha256:d3c4f61f74973d1029961498bc038921a27e11fa80d432b61b1453e319736aaa",
+      "command_id": "command:issue420-runtime-adapter-contract-r4-review-followup",
+      "receipt_id": "certificate:55d25c6e34362fbfeb5f3b0faee7416a",
+      "receipt_digest": "sha256:e4e9de2f3e792ec22b3a1987e5b1955ced6205a6f3c7a330ca44f861d55b63bc",
+      "decision_digest": "sha256:7566ad4e97d6059002dedffc0e15cb98e6152ccfae146d797cb3efb435768dc9",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-516-pack-self-contained-consumer-runtime.md",
+        "plan_id": "PLAN-L7-516-pack-self-contained-consumer-runtime",
+        "asset_id": "plan:legacy:d28966ed1d8861940d1ed5bfc5eaebc7dd7b4a9de4ed7adbd65850095c816307",
+        "revision": 4,
+        "content_digest": "sha256:6e4e0d5516e78e7465d260c65482e3302c9304518eb264d39735d049c166a316"
+      }
+    },
+    {
+      "sequence": 180,
+      "previous_record_digest": "sha256:d3c4f61f74973d1029961498bc038921a27e11fa80d432b61b1453e319736aaa",
+      "record_digest": "sha256:bc94c7f7ed06c89626ed7de3e1f2427f2ee21dce43436d1f87d84f16de2e6c9f",
+      "command_id": "command:issue420-runtime-adapter-reverse-r3-review-followup",
+      "receipt_id": "certificate:7e7a1f696196808281be8cb1363c7eb3",
+      "receipt_digest": "sha256:0d20a7174593d4194bd94cdee9f19126827707008fc585dcfecd779c9a5efce8",
+      "decision_digest": "sha256:d4ac54d00ebd4bdb07fc430ea7ae4485b39c7c1b9a21f58b65280eac3f13bb4f",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-516-pack-self-contained-consumer-runtime-backfill.md",
+        "plan_id": "PLAN-REVERSE-516-pack-self-contained-consumer-runtime-backfill",
+        "asset_id": "plan:legacy:a791f4a13fda8d4baa8f510ef73e78491c5f3ea280c939fa5bd60e3fe325af8b",
+        "revision": 3,
+        "content_digest": "sha256:15ba3b799ee7309dbcf585217fc9c5d001e5b5f8b45b9824f8a1a44b705c259f"
+      }
+    },
+    {
+      "sequence": 181,
+      "previous_record_digest": "sha256:bc94c7f7ed06c89626ed7de3e1f2427f2ee21dce43436d1f87d84f16de2e6c9f",
+      "record_digest": "sha256:da08b298930e815a4e808f4345a3f1debdf476b42357fd81485178e241168c47",
+      "command_id": "command:issue439-retraction-current-protocol-revision2",
+      "receipt_id": "certificate:81b985d8ab8a455d54d994c16b4f8b70",
+      "receipt_digest": "sha256:00bf2b8276ba8d9995a8b706388d3e968aa4209d82f6cb3f9bc46c0e3f93421f",
+      "decision_digest": "sha256:9928d4d957b0d96d1bf991b008bb9123e482820f6d20e3ae7997b4be810a2525",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-518-review-request-retraction.md",
+        "plan_id": "PLAN-L7-518-review-request-retraction",
+        "asset_id": "plan:legacy:2b4a19f0342ad752af7dbb564e748cbf87be684c6b7ec208aa2fd3726117e9e7",
+        "revision": 2,
+        "content_digest": "sha256:1c1933aafc70706d7a0e26e79270a59e464b325b660cd25b25d26026933530bc"
+      }
+    },
+    {
+      "sequence": 182,
+      "previous_record_digest": "sha256:da08b298930e815a4e808f4345a3f1debdf476b42357fd81485178e241168c47",
+      "record_digest": "sha256:90100b97f197ec8081f692ca5a7d97015eeb06c2e3c86f7b0c8a34bece558744",
+      "command_id": "command:issue439-retraction-reverse-revision2",
+      "receipt_id": "certificate:40d4e5acc36e82117cd92af19318a5da",
+      "receipt_digest": "sha256:a71ccf0f6426c13872437db7621e04ccfc4435f8ca6028fcc76684defd2a2d49",
+      "decision_digest": "sha256:5e871f2b15755be4017b39dff4cf947400bedd638225f1dd36e0598e3f0109b9",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-518-review-request-retraction-backfill.md",
+        "plan_id": "PLAN-REVERSE-518-review-request-retraction-backfill",
+        "asset_id": "plan:legacy:2fb18f8069e22a3b19fbe187c63885f32af28d8c2374d81920a0f336668a24b9",
+        "revision": 2,
+        "content_digest": "sha256:9504fa943b9189a7e69cbbe31ba14808d6dfc49d7c69c2e2a14e4f0dd590409a"
+      }
+    },
+    {
+      "sequence": 183,
+      "previous_record_digest": "sha256:90100b97f197ec8081f692ca5a7d97015eeb06c2e3c86f7b0c8a34bece558744",
+      "record_digest": "sha256:037ad192726f7fb6f345263575cca3d14841fbe9fc14a3560ad17659af985a0d",
+      "command_id": "command:issue439-retraction-consistency-revision3",
+      "receipt_id": "certificate:30ba7b5d339fa3c7f6899060008fc4ef",
+      "receipt_digest": "sha256:cc208b5da4c02bce5365df27595a63f0b752888778e135608c4fcf6a61ffa735",
+      "decision_digest": "sha256:cd1fe15ab80c26662c7cfdd7878932020a037d052d1bcd920412f3e0452bbfff",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-518-review-request-retraction.md",
+        "plan_id": "PLAN-L7-518-review-request-retraction",
+        "asset_id": "plan:legacy:2b4a19f0342ad752af7dbb564e748cbf87be684c6b7ec208aa2fd3726117e9e7",
+        "revision": 3,
+        "content_digest": "sha256:f39d2bb4007af3650e132e60a4af2019d5a38babf9708f4fd50d217a04e50064"
+      }
+    },
+    {
+      "sequence": 184,
+      "previous_record_digest": "sha256:037ad192726f7fb6f345263575cca3d14841fbe9fc14a3560ad17659af985a0d",
+      "record_digest": "sha256:386f06d0d69c3454386807888f02c74472c36ffce8204e1e4c774f84c9df1982",
+      "command_id": "command:issue544-PLAN-L7-512-memory-inventory-r5",
+      "receipt_id": "certificate:bf54b2261c76b1d9abf5cab656fa269c",
+      "receipt_digest": "sha256:82de3aa24da3d67c7ef3e4afd79bb3d249afba024453b6437555692858234c74",
+      "decision_digest": "sha256:4d101895087aa44dff5db69b1cb9dccc2533477cb47384ebe04156874115e91b",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-512-project-scoped-memory-root.md",
+        "plan_id": "PLAN-L7-512-project-scoped-memory-root",
+        "asset_id": "plan:legacy:68706e293ae2c96738a8e3263bac3e01e7cde64cdb7c3ed8e53805922662bc30",
+        "revision": 5,
+        "content_digest": "sha256:2fa93de53589a582491a7f22e72020c99a73cbe9120f303b3e85d7a67ba3f91a"
+      }
+    },
+    {
+      "sequence": 185,
+      "previous_record_digest": "sha256:386f06d0d69c3454386807888f02c74472c36ffce8204e1e4c774f84c9df1982",
+      "record_digest": "sha256:f3f5beb7f479e052b4501839da9c982d35c83944e8dbbe53adf8bf1d15e8582f",
+      "command_id": "command:issue544-PLAN-REVERSE-512-memory-inventory-r5",
+      "receipt_id": "certificate:062663a095941622b9d8025a1d16a8e2",
+      "receipt_digest": "sha256:897d6c69bb08df0bf7c81c03a7ec67fb49fd5fc48374551b9ee360aedddb0025",
+      "decision_digest": "sha256:57e57483326830add5b6441bb19d696790a7ee92237f7554eecfb6cce239b979",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-512-project-scoped-memory-root-backfill.md",
+        "plan_id": "PLAN-REVERSE-512-project-scoped-memory-root-backfill",
+        "asset_id": "plan:legacy:186048a954aa8dae7b4f8b1f968f6c5d64d758850fa695ed59a11edcdcf63153",
+        "revision": 5,
+        "content_digest": "sha256:de2b706d6f3ac767969ec671e478c664a241dff33b24d24f13d28df62b7abf28"
+      }
+    },
+    {
+      "sequence": 186,
+      "previous_record_digest": "sha256:f3f5beb7f479e052b4501839da9c982d35c83944e8dbbe53adf8bf1d15e8582f",
+      "record_digest": "sha256:7ebab84520efbe9793077858f0c8de05a5e08f7e366074868b1bd533e87addcc",
+      "command_id": "command:issue544-PLAN-L7-512-memory-inventory-r6",
+      "receipt_id": "certificate:c3d66c1db79e70ef608f51f9f8384533",
+      "receipt_digest": "sha256:89c201fb18dcf2b324928578fab63c36ea6a4871e84752b131a9a52162b3adc3",
+      "decision_digest": "sha256:6e9ac50f61464271799cc1dd0cba31f02d4f53349e96557d3abb61067f36ec54",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-512-project-scoped-memory-root.md",
+        "plan_id": "PLAN-L7-512-project-scoped-memory-root",
+        "asset_id": "plan:legacy:68706e293ae2c96738a8e3263bac3e01e7cde64cdb7c3ed8e53805922662bc30",
+        "revision": 6,
+        "content_digest": "sha256:e3e3cad039021a5394c5ad09ea1f0084642bba9c0423fd9faa77563e1e52ce19"
+      }
+    },
+    {
+      "sequence": 187,
+      "previous_record_digest": "sha256:7ebab84520efbe9793077858f0c8de05a5e08f7e366074868b1bd533e87addcc",
+      "record_digest": "sha256:c945dddedfc1a11f99a4e1b0846e6f9bdb1502f4a43be2ee80b7f2afd6e294d0",
+      "command_id": "command:issue544-PLAN-REVERSE-512-memory-inventory-r6",
+      "receipt_id": "certificate:bde28b20f3eeee286da5090da0fe1964",
+      "receipt_digest": "sha256:2befaf95fe5584d8ea520c0aed48e893cbfc6ec9fc5a41bcd811f163a3ec6cce",
+      "decision_digest": "sha256:2dad47c72577a8b3e5329d1d9f54abd0bce5481652e6f12f8416e0253652831a",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-512-project-scoped-memory-root-backfill.md",
+        "plan_id": "PLAN-REVERSE-512-project-scoped-memory-root-backfill",
+        "asset_id": "plan:legacy:186048a954aa8dae7b4f8b1f968f6c5d64d758850fa695ed59a11edcdcf63153",
+        "revision": 6,
+        "content_digest": "sha256:8a5cb9478f54ecc2e9c9b5dc826b01c7ea8764f1233d2ac52f691642c0ba6ac6"
+      }
     }
   ]
 }

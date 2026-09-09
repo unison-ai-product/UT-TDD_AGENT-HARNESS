@@ -15,13 +15,14 @@ import { issueReviewRequest } from "../feedback/review-attestation.ts";
 import { parseMemoryFile } from "../memory/index.ts";
 import { resolveMemoryTaskFile, writeMemory } from "../memory/service.ts";
 import {
-  buildClaudeReviewInboxEntry,
+  buildClaudeProviderReviewInboxEntry,
   decodeClaudeInboxEntry,
   publishClaudeInboxEntry,
-  resolveLiveClaudeWorkspace,
+  resolveLiveClaudeTarget,
 } from "../runtime/claude-memory-wake.ts";
 import { detectMode } from "../runtime/detect.ts";
 import { requireProjectMemoryRoot } from "../runtime/project-memory-root.ts";
+import { resolveRuntimeSessionId } from "../skill-engine/recommend.ts";
 
 export interface LiveReviewCommandDeps {
   readonly repoRoot: () => string;
@@ -44,7 +45,7 @@ export interface LiveReviewCommandDeps {
     repoRoot: string,
     provider: "codex" | "claude",
   ) =>
-    | { readonly ok: true; readonly workspaceId: string }
+    | { readonly ok: true; readonly workspaceId: string; readonly sessionId: string }
     | { readonly ok: false; readonly reason: LiveReviewWakeRoutingFailure };
   /** Optional provider-native wake surface. Absent Codex surfaces fail closed. */
   readonly publishCodexReviewWake?: (repoRoot: string, wake: CanonicalReviewWake) => void;
@@ -164,7 +165,7 @@ export function registerLiveReviewCommands(
     runReview: ({ repoRoot, provider, args }) =>
       executeLiveReviewDelegation({ repoRoot, provider, args }),
     publishReceipt: publishLiveReviewReceipt,
-    resolveWakeTarget: (repoRoot) => resolveLiveClaudeWorkspace(repoRoot),
+    resolveWakeTarget: (repoRoot) => resolveLiveClaudeTarget(repoRoot),
     ...overrides,
   };
   review
@@ -222,11 +223,14 @@ export function registerLiveReviewCommands(
                 }
                 const target = deps.resolveWakeTarget(repoRoot, "claude");
                 if (!target.ok) throw new LiveReviewWakeError(target.reason);
-                const notification = buildClaudeReviewInboxEntry({
+                const project = requireProjectMemoryRoot(repoRoot);
+                const notification = buildClaudeProviderReviewInboxEntry({
                   memory,
+                  projectId: project.projectId,
                   operationId: opts.operationId?.trim() || `review-${wake.requestDigest}`,
                   workspaceId: target.workspaceId,
-                  originRuntime: "codex",
+                  producer: { provider: "codex", sessionId: resolveRuntimeSessionId() },
+                  target: { scope: "session", provider: "claude", sessionId: target.sessionId },
                   requestDigest: wake.requestDigest,
                   requestPath: wake.requestPath,
                   pr: wake.request.pr,
