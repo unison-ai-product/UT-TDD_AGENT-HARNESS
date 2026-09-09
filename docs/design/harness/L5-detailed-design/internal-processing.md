@@ -1196,20 +1196,34 @@ commit trailer、local JSON/HMAC、同一 OS user が使える鍵は、この po
 | 束縛対象 | 供給元 |
 |---|---|
 | repository / PR 番号 / base ref / head sha / merge 状態 | `review-custody-runner` の `observeStable` が live 観測した値 |
-| 受理判定 | 同 runner の `admitCustodyReceipt` が返す decision |
+| 受理判定 | `admitReviewCustody` が返す `CustodyDecision` (`src/feedback/review-custody.ts:315-341`) の `state` と `reasons` |
 
 preimage は次の順序付き列とし、framing と label は E.2 に従う。`sourceAuthorityDigest` と同じく、
 宣言値ではなく観測値を入力とする。
 
 ```text
 [ut-tdd-seal-review-authority-v1, repositoryIdentity, planId, pullRequestNumber, baseRef, headSha,
- custodyDecision]
+ custodyState, custodyReasons]
 ```
 
-各要素の文字列表現も固定する。`pullRequestNumber` は符号なし 10 進 ASCII (前置ゼロ禁止)、
-`custodyDecision` は `admitCustodyReceipt` が返す decision の enum 値をそのまま ASCII で用い、
-残りは観測値の UTF-8 bytes をそのまま用いる。列の長さ・順序・表現のいずれかが異なる導出は
-本契約の digest ではない。
+各要素の文字列表現も固定する。`pullRequestNumber` は符号なし 10 進 ASCII (前置ゼロ禁止)。
+`custodyState` は `CustodyDecision.state` の値そのまま (`custody_admitted` または `custody_rejected` の
+2 値のみ) を ASCII で用いる。`custodyReasons` は `state = custody_rejected` のとき `reasons` を宣言順の
+まま `,` (U+002C) で連結した ASCII、`state = custody_admitted` のときは長さ 0 の要素とする
+(framing は UInt32BE 長さ前置なので空要素も一意に表現される)。残りは観測値の UTF-8 bytes を
+そのまま用いる。列の長さ・順序・表現のいずれかが異なる導出は本契約の digest ではない。
+
+**runner の `RunnerOutcome.summary` を preimage に使ってはならない。** `admitCustodyReceipt`
+(`src/feedback/review-custody-runner.ts:223-269`) が返すのは enum ではなく `{exitCode, summary}` であり、
+`summary` には `custody_admitted` / `unverified_family` / 連結済み reasons が混在する自由文字列である。
+これを入力にすると同一 custody 観測から複数の digest が導出できる (PR #543 r4 の blocking finding 1)。
+preimage の入力は runner の戻り値ではなく `admitReviewCustody` の `CustodyDecision` そのものとする。
+
+**`custody_admitted` と `unverified_family` を同一視しない。** 機械 custody がすべて green でも、
+`VerifiedProviderIdentity` 発行側が未実装である限り decision は `state = custody_rejected` /
+`reasons = [unverified_family]` であり、runner はこれを exit 0 に写す。したがって `custodyState` だけでは
+両者を区別できず、`custodyReasons` を対で持つことが必須である。この 2 要素により digest は終端状態を
+そのまま保持し、seal 側で family 分離を強証明したことにはならない (下記の終端継承と整合する)。
 
 **時間変動する観測値は preimage に含めない。** merge state status や観測時刻は同一 head でも後から
 変わるため、preimage に入れると同一 payload の replay が冪等でなくなる (changed payload と
@@ -1250,9 +1264,12 @@ E.3〜E.5 の各項目について、1 bit 改変で write 0 となる負系を�
   payload drift / projection path 非 canonical / projection custody 不一致 / projection record 束縛不一致 /
   TOCTOU)。とくに、到達可能な HEAD 内の別 blob path を `sourcePath` または `historicalProjectionPath` に
   差し替えて OID と content digest を再計算した自己整合入力が拒否されること
-- E.4 preimage の列逸脱 (要素順序の入れ替え、要素の欠落、`pullRequestNumber` の前置ゼロ、decision 値の
-  別表現) が同一観測から別 digest を生まないこと。時間変動値 (merge state / 観測時刻) を含めた導出が
-  本契約の digest として受理されないこと
+- E.4 preimage の列逸脱 (要素順序の入れ替え、要素の欠落、`pullRequestNumber` の前置ゼロ、
+  `custodyState` / `custodyReasons` の別表現) が同一観測から別 digest を生まないこと。時間変動値
+  (merge state / 観測時刻) を含めた導出が本契約の digest として受理されないこと
+- `custody_admitted` と `custody_rejected` + `reasons = [unverified_family]` が別 digest になること
+  (終端状態の取り違えを負系で固定する)。runner の `summary` 文字列を入力にした導出が本契約の digest と
+  一致しないこと
 - `certificate_json` のフィールド欠落・値改変 → writer が生成する byte 列が変わるため digest 不一致で拒否
 - caller が `certificate_json` の byte 列や `certificateDigest` を独自に供給する経路が存在しないこと
   (キー順を変えた等価 object を preimage にできない。「等価 object なのに digest 不一致」という矛盾した
