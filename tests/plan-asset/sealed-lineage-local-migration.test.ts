@@ -10,6 +10,7 @@ import {
   assembleSealedLineageMigrationDryRun,
   CustodyDecisionSealedLineageReviewAuthorityPort,
   SystemSealedLineageIssueAuthorityPort,
+  SystemSealedLineageProjectIdentityPort,
 } from "../../src/plan-asset/ledger/sealed-lineage-local-migration.ts";
 import { type HarnessDb, openHarnessDb } from "../../src/state-db/index.ts";
 
@@ -604,6 +605,7 @@ describe("sealed lineage local migration", () => {
       actor: command.actor,
       occurredAt: command.occurredAt,
       git: fakeGit(command),
+      projectIdentity: fakeProjectIdentity(command),
       issueAuthority: fakeIssueAuthority(command),
       reviewFacts: reviewFacts(),
       custodyDecision: rejectedDecision(["unverified_family"]),
@@ -617,6 +619,54 @@ describe("sealed lineage local migration", () => {
     if (!result.ok) throw new Error(result.ruleId);
     expect(result.canonicalManifest).toBe(stableCanonical(result.input));
     expect(result.manifestDigest).toBe(digest(result.canonicalManifest));
+  });
+
+  it.each([
+    "identity_noncanonical_bytes",
+    "identity_repository_unbound",
+  ] as const)("U-PA-SEAL-020: project identity loaderの%s拒否をfail-closeする", (ruleId) => {
+    const command = input();
+    const projectIdentity = new SystemSealedLineageProjectIdentityPort(
+      ".",
+      command.repositoryIdentity,
+      () => ({ ok: false, error: { ruleId, message: "rejected fixture" } }),
+    );
+    expect(
+      assembleSealedLineageMigrationDryRun({
+        commandId: command.commandId,
+        planId: command.planId,
+        actor: command.actor,
+        occurredAt: command.occurredAt,
+        git: fakeGit(command),
+        projectIdentity,
+        issueAuthority: fakeIssueAuthority(command),
+        reviewFacts: reviewFacts(),
+        custodyDecision: rejectedDecision(["unverified_family"]),
+      }),
+    ).toEqual({ ok: false, ruleId: "seal-git-preflight-unavailable" });
+  });
+
+  it("U-PA-SEAL-020: project identity HEAD driftをfail-closeする", () => {
+    const command = input();
+    expect(
+      assembleSealedLineageMigrationDryRun({
+        commandId: command.commandId,
+        planId: command.planId,
+        actor: command.actor,
+        occurredAt: command.occurredAt,
+        git: fakeGit(command),
+        projectIdentity: {
+          observe: () => ({
+            repositoryIdentity: command.repositoryIdentity,
+            sourceCommit: "e".repeat(40),
+            receiptDigest: digest("project-identity-receipt"),
+          }),
+        },
+        issueAuthority: fakeIssueAuthority(command),
+        reviewFacts: reviewFacts(),
+        custodyDecision: rejectedDecision(["unverified_family"]),
+      }),
+    ).toEqual({ ok: false, ruleId: "seal-git-preflight-unavailable" });
   });
 });
 
@@ -924,6 +974,16 @@ function fakeIssueAuthority(command: MigrationInput) {
       number: command.issue.number,
       rawBody: "issue 102",
       updatedAt: "2026-09-09T00:00:00Z",
+    }),
+  };
+}
+
+function fakeProjectIdentity(command: MigrationInput) {
+  return {
+    observe: () => ({
+      repositoryIdentity: command.repositoryIdentity,
+      sourceCommit: command.sourceCommit,
+      receiptDigest: digest("project-identity-receipt"),
     }),
   };
 }

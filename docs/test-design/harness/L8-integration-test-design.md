@@ -331,9 +331,10 @@ L6 `harness-check` aggregate gate / E13 receipt契約を結合境界で検証す
 | `U-PA-SEAL-017` | LF、CRLF、末尾改行有無だけが異なるIssue本文bytes。 | raw文字列をUTF-8 bytesとしてdigest化し比較する。 | byte列が異なればdigestも異なり、正規化した本文をauthorityに使わない。 | Issue authority adapterのraw body境界。 | 改行正規化で別Issue preimageを同一視しない。 |
 | `U-PA-SEAL-018` | stable PR factsと`admitReviewCustody`のtyped `CustodyDecision`。 | seal review authority adapterへ渡す。 | factsとdecisionをそのままcanonical observationへ写し、admitted subject不一致は拒否する。 | review-custody runner出力文字列ではなくdomain decisionを受けるadapter境界。 | `RunnerOutcome.summary`やlocal receipt本文の再parseをauthorityにしない。 |
 | `U-PA-SEAL-019` | REST Issue JSONにCRLFと末尾改行を含むbody。 | system Issue adapterで`gh api repos/{repo}/issues/{n}`を実行する。 | body文字列をbyte変更なく返し、GraphQL/`--jq`を使わない。 | injectable gh argv adapter。 | stdout整形や改行正規化をpreimageへ混入させない。 |
+| `U-PA-SEAL-020` | callerにはcommand identityとPLAN IDだけを与え、#516/#432のtracked project identity、current Git source/projection、source PLAN admission Issue tuple、REST raw body、typed custody decisionをportから供給する。 | read-only execution assembler/dry-runを実行する。 | DB writerを生成せず、全authority digest、certificate、successor ID、canonical manifestを導出して全preflight Greenを返す。非canonical identity、origin mismatch、HEAD driftはwrite 0。 | seal実行compositionのread境界。 | stale Issue本文の固定digest、caller-supplied authority digest、手書きmanifestを受理しない。 |
 
 実行対応: `tests/plan-asset/sealed-lineage-local-migration.test.ts`
-(`U-PA-SEAL-011..019`)。これらは `src/lint/oracle-test-citation-baseline.ts` への追加対象ではなく、
+(`U-PA-SEAL-011..020`)。これらは `src/lint/oracle-test-citation-baseline.ts` への追加対象ではなく、
 本書の paired test-design 宣言から test-label trace を閉じる。
 
 ## Node build image候補integration pair（Issue #152 D0-N）
