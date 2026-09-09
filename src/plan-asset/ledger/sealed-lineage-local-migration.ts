@@ -255,11 +255,19 @@ type ProjectIdentityLoader = typeof loadProjectIdentityFromHead;
 
 /** #516/#432のcanonical tracked identity loaderをseal dry-runへ適用するsystem port。 */
 export class SystemSealedLineageProjectIdentityPort implements SealedLineageProjectIdentityPort {
+  private readonly repoRoot: string;
+  private readonly expectedRepositoryIdentity?: string;
+  private readonly loader: ProjectIdentityLoader;
+
   constructor(
-    private readonly repoRoot: string,
-    private readonly expectedRepositoryIdentity?: string,
-    private readonly loader: ProjectIdentityLoader = loadProjectIdentityFromHead,
-  ) {}
+    repoRoot: string,
+    expectedRepositoryIdentity?: string,
+    loader: ProjectIdentityLoader = loadProjectIdentityFromHead,
+  ) {
+    this.repoRoot = repoRoot;
+    this.expectedRepositoryIdentity = expectedRepositoryIdentity;
+    this.loader = loader;
+  }
 
   observe(): SealedLineageProjectIdentityObservation | undefined {
     const loaded = this.loader({
