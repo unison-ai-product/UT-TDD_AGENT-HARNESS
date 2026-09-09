@@ -1,5 +1,13 @@
-import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { execFileSync, spawn } from "node:child_process";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, expect, it } from "vitest";
@@ -223,4 +231,135 @@ it("U-PMEMINV-008 rejects malformed UTF-8 and does not strip a BOM", () => {
     ok: false,
     reason: "invalid_memory",
   });
+});
+
+it("U-PMEMQUAR-001 quarantines every conflict variant without source or canonical writes", () => {
+  const { primary, linked } = fixture();
+  const primaryPath = memory(primary, "a.md", "primary");
+  const linkedPath = memory(linked, "b.md", "linked");
+  const before = [readFileSync(primaryPath), readFileSync(linkedPath)];
+
+  const result = new ProjectMemoryMigration().apply(primary);
+
+  expect(result.ok).toBe(true);
+  if (!result.ok) return;
+  expect(result.status).toBe("completed");
+  expect(result.quarantined).toHaveLength(2);
+  expect(result.markersPath).toMatch(/markers\.jsonl$/);
+  expect(result.quarantineRoot).toContain("memory-migration");
+  expect(readFileSync(primaryPath)).toEqual(before[0]);
+  expect(readFileSync(linkedPath)).toEqual(before[1]);
+  expect(existsSync(result.quarantineRoot)).toBe(true);
+});
+
+it("U-PMEMQUAR-002 replays a completed operation without additional writes", () => {
+  const { primary, linked } = fixture();
+  memory(primary, "a.md", "primary");
+  memory(linked, "b.md", "linked");
+
+  const migration = new ProjectMemoryMigration();
+  const first = migration.apply(primary);
+  expect(first.ok).toBe(true);
+  if (!first.ok) return;
+  const markerBefore = readFileSync(first.markersPath);
+
+  const replay = migration.apply(primary, { operationId: first.operationId });
+
+  expect(replay).toEqual({ ...first, status: "replayed" });
+  expect(readFileSync(first.markersPath).toString()).toBe(markerBefore.toString());
+});
+
+it("U-PMEMQUAR-003 denies marker tampering and inventory drift before completion", () => {
+  const { primary, linked } = fixture();
+  memory(primary, "a.md", "primary");
+  memory(linked, "b.md", "linked");
+  const migration = new ProjectMemoryMigration();
+  const prepared = migration.apply(primary, { crashAfter: "prepared" });
+  expect(prepared.ok).toBe(false);
+  if (prepared.ok) return;
+  expect(prepared.reason).toBe("transaction_interrupted");
+  if (!prepared.operationId || !prepared.markersPath) return;
+
+  memory(linked, "b.md", "drifted");
+  const drift = migration.recover(primary, prepared.operationId);
+  expect(drift.ok).toBe(false);
+  if (!drift.ok) expect(drift.reason).toBe("inventory_drift");
+
+  memory(linked, "b.md", "linked");
+  writeFileSync(prepared.markersPath, `${readFileSync(prepared.markersPath)}tampered\n`);
+  const tampered = migration.recover(primary, prepared.operationId);
+  expect(tampered.ok).toBe(false);
+  if (!tampered.ok) expect(tampered.reason).toBe("transaction_tampered");
+});
+
+it("U-PMEMQUAR-004 recovers an owner left by a SIGKILLed process", async () => {
+  const { primary, linked } = fixture();
+  memory(primary, "a.md", "primary");
+  memory(linked, "b.md", "linked");
+  const operationId = "sigkill-recovery";
+  const script = `
+    import { ProjectMemoryMigration } from ${JSON.stringify(
+      "./src/runtime/project-memory-migration.ts",
+    )};
+    const result = new ProjectMemoryMigration().apply(${JSON.stringify(primary)}, {
+      operationId: ${JSON.stringify(operationId)}, crashAfter: "intent"
+    });
+    if (result.ok || result.reason !== "transaction_interrupted") process.exit(71);
+    process.stdout.write("READY\\n");
+    setInterval(() => {}, 1000);
+  `;
+  const child = spawn(
+    process.execPath,
+    ["--experimental-strip-types", "--input-type=module", "-e", script],
+    {
+      cwd: process.cwd(),
+      stdio: ["ignore", "pipe", "pipe"],
+    },
+  );
+  const ready = new Promise<void>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error("child did not prepare intent")), 10_000);
+    let stderr = "";
+    child.stderr.setEncoding("utf8");
+    child.stderr.on("data", (chunk) => {
+      stderr += chunk;
+    });
+    child.stdout.setEncoding("utf8");
+    child.stdout.on("data", (chunk) => {
+      if (!String(chunk).includes("READY")) return;
+      clearTimeout(timer);
+      resolve();
+    });
+    child.once("exit", (code) => {
+      clearTimeout(timer);
+      reject(new Error(`child exited before SIGKILL: ${String(code)} ${stderr}`));
+    });
+  });
+  await ready;
+  const exited = new Promise<void>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error("child did not exit after SIGKILL")), 10_000);
+    child.once("exit", () => {
+      clearTimeout(timer);
+      resolve();
+    });
+  });
+  expect(child.kill("SIGKILL")).toBe(true);
+  await exited;
+  const recovered = new ProjectMemoryMigration().recover(primary, operationId);
+  expect(recovered.ok).toBe(true);
+  if (recovered.ok) expect(recovered.status).toBe("completed");
+}, 30000);
+
+it("U-PMEMQUAR-005 rejects marker order changes and append-after-complete", () => {
+  const { primary, linked } = fixture();
+  memory(primary, "a.md", "primary");
+  memory(linked, "b.md", "linked");
+  const migration = new ProjectMemoryMigration();
+  const first = migration.apply(primary);
+  expect(first.ok).toBe(true);
+  if (!first.ok) return;
+  const lines = readFileSync(first.markersPath, "utf8").trim().split("\n");
+  writeFileSync(first.markersPath, `${[lines[1], lines[0], ...lines.slice(2)].join("\n")}\n`);
+  const reordered = migration.recover(primary, first.operationId);
+  expect(reordered.ok).toBe(false);
+  if (!reordered.ok) expect(reordered.reason).toBe("transaction_tampered");
 });
