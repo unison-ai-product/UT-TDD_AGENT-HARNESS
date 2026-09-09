@@ -92,18 +92,18 @@ status: draft
 github_issue_id: 544
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:062663a095941622b9d8025a1d16a8e2
-  command_id: command:issue544-PLAN-REVERSE-512-memory-inventory-r5
-  admitted_at: 2026-09-09T01:57:46.189Z
-  source_digest: sha256:de2b706d6f3ac767969ec671e478c664a241dff33b24d24f13d28df62b7abf28
-  decision_digest: sha256:57e57483326830add5b6441bb19d696790a7ee92237f7554eecfb6cce239b979
-  receipt_digest: sha256:897d6c69bb08df0bf7c81c03a7ec67fb49fd5fc48374551b9ee360aedddb0025
+  receipt_id: certificate:bde28b20f3eeee286da5090da0fe1964
+  command_id: command:issue544-PLAN-REVERSE-512-memory-inventory-r6
+  admitted_at: 2026-09-09T02:44:05.820Z
+  source_digest: sha256:8a5cb9478f54ecc2e9c9b5dc826b01c7ea8764f1233d2ac52f691642c0ba6ac6
+  decision_digest: sha256:2dad47c72577a8b3e5329d1d9f54abd0bce5481652e6f12f8416e0253652831a
+  receipt_digest: sha256:2befaf95fe5584d8ea520c0aed48e893cbfc6ec9fc5a41bcd811f163a3ec6cce
   binding:
     path: docs/plans/PLAN-REVERSE-512-project-scoped-memory-root-backfill.md
     plan_id: PLAN-REVERSE-512-project-scoped-memory-root-backfill
     asset_id: plan:legacy:186048a954aa8dae7b4f8b1f968f6c5d64d758850fa695ed59a11edcdcf63153
-    revision: 5
-    content_digest: sha256:de2b706d6f3ac767969ec671e478c664a241dff33b24d24f13d28df62b7abf28
+    revision: 6
+    content_digest: sha256:8a5cb9478f54ecc2e9c9b5dc826b01c7ea8764f1233d2ac52f691642c0ba6ac6
   route:
     signal: design_gap
     mode: reverse
@@ -114,14 +114,14 @@ admission_receipt:
     projection_digest: sha256:bea56244b34bd74d709278dcab8fb5fd50024b05be6edc9d61b6ec5123d3f450
   origin:
     plan_id: PLAN-L7-512-project-scoped-memory-root
-    revision: 5
-    digest: sha256:2fa93de53589a582491a7f22e72020c99a73cbe9120f303b3e85d7a67ba3f91a
+    revision: 6
+    digest: sha256:e3e3cad039021a5394c5ad09ea1f0084642bba9c0423fd9faa77563e1e52ce19
   transition:
     direction: implementation_to_design
     implementation_disposition: preserved
   reentry:
     target_plan_id: PLAN-L7-512-project-scoped-memory-root
-    target_revision: 5
+    target_revision: 6
     phase: forward_merge
   escape_reason: "Issue #544 Slice 4a inventory R1 evidence; R2 through R4 remain pending"
 ---
