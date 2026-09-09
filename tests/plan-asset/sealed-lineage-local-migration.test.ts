@@ -253,6 +253,177 @@ describe("sealed lineage local migration", () => {
     });
     expect(counts(db)).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
   });
+
+  it("U-PA-SEAL-011: 非terminal recordの自己整合な三値を宣言してもterminal束縛を迂回できない", async () => {
+    const { db, Transaction } = await baseFixture();
+    const command = input();
+    const historicalTailDigest = digest("record-1");
+    const projection = JSON.stringify({
+      schema_version: "ut-tdd.plan-admission-receipts/v1",
+      records: [
+        {
+          sequence: 1,
+          record_digest: `sha256:${historicalTailDigest}`,
+          binding: {
+            plan_id: command.planId,
+            asset_id: "plan:old-recovery-16-asset",
+            revision: 1,
+          },
+        },
+        {
+          sequence: 3,
+          record_digest: `sha256:${command.historicalTailDigest}`,
+          binding: {
+            plan_id: command.planId,
+            asset_id: command.historicalAssetId,
+            revision: command.historicalTerminalRevision,
+          },
+        },
+      ],
+    });
+    const mutated = withAuthorityDigests({
+      ...command,
+      historicalAssetId: "plan:old-recovery-16-asset",
+      historicalTerminalRevision: 1,
+      historicalTailDigest,
+      historicalProjectionContentDigest: digest(projection),
+    });
+    const baseGit = fakeGit(command);
+    const git = {
+      ...baseGit,
+      readBlob: (commit: string, path: string) => {
+        const blob = baseGit.readBlob(commit, path);
+        return path === command.historicalProjectionPath && blob
+          ? { ...blob, bytes: Buffer.from(projection, "utf8") }
+          : blob;
+      },
+    };
+    const transaction = new Transaction(db, { git, reviewAuthority: fakeReviewAuthority() });
+
+    expect(transaction.migrate(mutated)).toEqual({
+      ok: false,
+      ruleId: "seal-projection-terminal-mismatch",
+    });
+    expect(counts(db)).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
+  });
+
+  it.each([
+    [
+      "historicalAssetId",
+      (command: MigrationInput) => ({ ...command, historicalAssetId: "plan:other-asset" }),
+    ],
+    [
+      "historicalTerminalRevision",
+      (command: MigrationInput) => ({ ...command, historicalTerminalRevision: 2 }),
+    ],
+    [
+      "historicalTailDigest",
+      (command: MigrationInput) => ({ ...command, historicalTailDigest: digest("other-tail") }),
+    ],
+  ] as const)("U-PA-SEAL-012: terminal bindingの%sはsource authority digestを変える", (_field, mutate) => {
+    const command = input();
+    const mutated = mutate(command);
+    expect(sourceAuthorityDigest(mutated)).not.toBe(command.sourceAuthorityDigest);
+  });
+
+  it("U-PA-SEAL-013: custody_admitted分岐を実行し、rejected+unverified_familyと別digestにする", async () => {
+    const command = input();
+    const admittedObservation = reviewObservation("custody_admitted", []);
+    const admitted = withReviewDigest(
+      command,
+      reviewedAuthorityDigest(command, admittedObservation),
+    );
+    expect(admitted.reviewedImplementationAuthorityDigest).not.toBe(
+      command.reviewedImplementationAuthorityDigest,
+    );
+
+    const { db, Transaction } = await baseFixture();
+    const transaction = new Transaction(db, {
+      git: fakeGit(admitted),
+      reviewAuthority: reviewAuthorityFor(admittedObservation),
+    });
+    expect(transaction.migrate(admitted)).toMatchObject({ ok: true, replayed: false });
+    expect(count(db, "sealed_plan_lineages")).toBe(1);
+  });
+
+  it.each([
+    [
+      "column order",
+      [
+        "unison-ai-product/UT-TDD_AGENT-HARNESS",
+        PLAN_ID,
+        "543",
+        "d".repeat(40),
+        "main",
+        "custody_rejected",
+        "unverified_family",
+      ],
+    ],
+    [
+      "column omission",
+      [
+        "unison-ai-product/UT-TDD_AGENT-HARNESS",
+        PLAN_ID,
+        "543",
+        "main",
+        "custody_rejected",
+        "unverified_family",
+      ],
+    ],
+    [
+      "pull request leading zero",
+      [
+        "unison-ai-product/UT-TDD_AGENT-HARNESS",
+        PLAN_ID,
+        "0543",
+        "main",
+        "d".repeat(40),
+        "custody_rejected",
+        "unverified_family",
+      ],
+    ],
+    [
+      "custody alternative representation",
+      [
+        "unison-ai-product/UT-TDD_AGENT-HARNESS",
+        PLAN_ID,
+        "543",
+        "main",
+        "d".repeat(40),
+        "rejected",
+        "unverified_family",
+      ],
+    ],
+    [
+      "custody reasons alternative representation",
+      [
+        "unison-ai-product/UT-TDD_AGENT-HARNESS",
+        PLAN_ID,
+        "543",
+        "main",
+        "d".repeat(40),
+        "custody_rejected",
+        '["unverified_family"]',
+      ],
+    ],
+  ] as const)("U-PA-SEAL-014: E.4 %s preimage deviation is rejected", async (_caseName, values) => {
+    const { db, Transaction } = await baseFixture();
+    const command = input();
+    const mutated = withReviewDigest(
+      command,
+      framedDigest("ut-tdd-seal-review-authority-v1", values),
+    );
+    const transaction = new Transaction(db, {
+      git: fakeGit(mutated),
+      reviewAuthority: fakeReviewAuthority(),
+    });
+
+    expect(transaction.migrate(mutated)).toEqual({
+      ok: false,
+      ruleId: "seal-review-authority-invalid",
+    });
+    expect(counts(db)).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
+  });
 });
 
 const PLAN_ID = "PLAN-RECOVERY-16-plan-revision-authoring";
@@ -482,14 +653,92 @@ function fakeGit(command: MigrationInput) {
 }
 
 function fakeReviewAuthority() {
+  return reviewAuthorityFor(reviewObservation("custody_rejected", ["unverified_family"]));
+}
+
+type CustodyState = "custody_admitted" | "custody_rejected";
+
+interface ReviewObservation {
+  pullRequestNumber: number;
+  baseRef: string;
+  headSha: string;
+  custodyState: CustodyState;
+  custodyReasons: readonly string[];
+}
+
+function reviewObservation(
+  custodyState: CustodyState,
+  custodyReasons: readonly string[],
+): ReviewObservation {
   return {
-    observe: () => ({
-      pullRequestNumber: 543,
-      baseRef: "main",
-      headSha: "d".repeat(40),
-      custodyState: "custody_rejected" as const,
-      custodyReasons: ["unverified_family"],
-    }),
+    pullRequestNumber: 543,
+    baseRef: "main",
+    headSha: "d".repeat(40),
+    custodyState,
+    custodyReasons,
+  };
+}
+
+function reviewAuthorityFor(observation: ReviewObservation) {
+  return { observe: () => observation };
+}
+
+function sourceAuthorityDigest(command: MigrationInput): string {
+  return framedDigest("ut-tdd-seal-source-authority-v1", [
+    command.repositoryIdentity,
+    command.planId,
+    command.sourcePath,
+    command.sourceCommit,
+    command.sourceBlobOid,
+    command.canonicalPayloadDigest,
+    command.bodyDigest,
+    command.historicalProjectionPath,
+    command.historicalProjectionBlobOid,
+    command.historicalProjectionContentDigest,
+    command.historicalAssetId,
+    String(command.historicalTerminalRevision),
+    command.historicalTailDigest,
+  ]);
+}
+
+function reviewedAuthorityDigest(command: MigrationInput, observation: ReviewObservation): string {
+  return framedDigest("ut-tdd-seal-review-authority-v1", [
+    command.repositoryIdentity,
+    command.planId,
+    String(observation.pullRequestNumber),
+    observation.baseRef,
+    observation.headSha,
+    observation.custodyState,
+    observation.custodyReasons.join(","),
+  ]);
+}
+
+function withAuthorityDigests(command: MigrationInput): MigrationInput {
+  return withReviewDigest(
+    { ...command, sourceAuthorityDigest: sourceAuthorityDigest(command) },
+    command.reviewedImplementationAuthorityDigest,
+  );
+}
+
+function withReviewDigest(
+  command: MigrationInput,
+  reviewedImplementationAuthorityDigest: string,
+): MigrationInput {
+  return {
+    ...command,
+    reviewedImplementationAuthorityDigest,
+    certificateDigest: digest(
+      stableCanonical({
+        historicalAssetId: command.historicalAssetId,
+        historicalTerminalRevision: command.historicalTerminalRevision,
+        historicalTailDigest: command.historicalTailDigest,
+        planId: command.planId,
+        reviewedImplementationAuthorityDigest,
+        sourceAuthorityDigest: command.sourceAuthorityDigest,
+        successorAssetId: command.successorAssetId,
+        successorRevision: 1,
+      }),
+    ),
   };
 }
 
