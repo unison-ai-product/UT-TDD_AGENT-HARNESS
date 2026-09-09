@@ -727,6 +727,7 @@ function validate(input: SealedLineageMigrationInput):
       routeDigest: string;
     }
   | { ok: false; ruleId: string } {
+  if (!hasExactMigrationInputShape(input)) return rejected("sealed-lineage-input-invalid");
   const digests = [
     input.historicalTailDigest,
     input.historicalProjectionContentDigest,
@@ -759,6 +760,47 @@ function validate(input: SealedLineageMigrationInput):
     contentDigest: sha(`${input.canonicalPayloadDigest}:${input.bodyDigest}`),
     routeDigest: sha(canonical({ mode: "recovery", signal: "regression_dev" })),
   };
+}
+
+const MIGRATION_INPUT_KEYS = [
+  "actor",
+  "bodyDigest",
+  "canonicalPayloadDigest",
+  "canonicalPayloadJson",
+  "certificateDigest",
+  "commandId",
+  "historicalAssetId",
+  "historicalProjectionBlobOid",
+  "historicalProjectionContentDigest",
+  "historicalProjectionPath",
+  "historicalTailDigest",
+  "historicalTerminalRevision",
+  "issue",
+  "occurredAt",
+  "planId",
+  "repositoryIdentity",
+  "reviewedImplementationAuthorityDigest",
+  "sourceAuthorityDigest",
+  "sourceBlobOid",
+  "sourceCommit",
+  "sourcePath",
+  "successorAssetId",
+  "trustedStatus",
+] as const;
+
+const MIGRATION_ISSUE_KEYS = ["episodeId", "number", "preimageDigest"] as const;
+
+function hasExactMigrationInputShape(input: SealedLineageMigrationInput): boolean {
+  if (!input || typeof input !== "object" || !input.issue || typeof input.issue !== "object")
+    return false;
+  const inputKeys = Object.keys(input).sort();
+  const issueKeys = Object.keys(input.issue).sort();
+  return (
+    inputKeys.length === MIGRATION_INPUT_KEYS.length &&
+    inputKeys.every((key, index) => key === MIGRATION_INPUT_KEYS[index]) &&
+    issueKeys.length === MIGRATION_ISSUE_KEYS.length &&
+    issueKeys.every((key, index) => key === MIGRATION_ISSUE_KEYS[index])
+  );
 }
 
 function validateGitPreflight(

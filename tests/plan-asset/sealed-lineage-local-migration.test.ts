@@ -743,6 +743,81 @@ describe("sealed lineage local migration", () => {
     });
     expect(counts(db)).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
   });
+
+  it.each([
+    "time-varying",
+    "runner-summary",
+  ] as const)("U-PA-SEAL-022: %s review preimageをcanonical authorityとして受理しない", async (variant) => {
+    const { db, Transaction } = await baseFixture();
+    const base = input();
+    const observation = reviewObservation("custody_rejected", ["unverified_family"]);
+    const forged = framedDigest("ut-tdd-seal-review-authority-v1", [
+      base.repositoryIdentity,
+      base.planId,
+      String(observation.pullRequestNumber),
+      observation.baseRef,
+      observation.headSha,
+      variant === "runner-summary" ? "unverified_family" : observation.custodyState,
+      observation.custodyReasons.join(","),
+      ...(variant === "time-varying" ? ["2026-09-09T00:00:00Z"] : []),
+    ]);
+    const command = withReviewDigest(base, forged);
+    const transaction = new Transaction(db, {
+      git: fakeGit(command),
+      reviewAuthority: reviewAuthorityFor(observation),
+      issueAuthority: fakeIssueAuthority(command),
+    });
+    expect(transaction.migrate(command)).toEqual({
+      ok: false,
+      ruleId: "seal-review-authority-invalid",
+    });
+    expect(counts(db)).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
+  });
+
+  it.each([
+    "field-missing",
+    "field-altered",
+  ] as const)("U-PA-SEAL-023: certificate_json %s preimageを拒否する", async (variant) => {
+    const { db, Transaction } = await baseFixture();
+    const command = input();
+    const certificate = {
+      historicalAssetId: command.historicalAssetId,
+      historicalTerminalRevision: command.historicalTerminalRevision,
+      ...(variant === "field-missing" ? {} : { historicalTailDigest: digest("altered") }),
+      planId: command.planId,
+      reviewedImplementationAuthorityDigest: command.reviewedImplementationAuthorityDigest,
+      sourceAuthorityDigest: command.sourceAuthorityDigest,
+      successorAssetId: command.successorAssetId,
+      successorRevision: 1,
+    };
+    const transaction = new Transaction(db, {
+      git: fakeGit(command),
+      reviewAuthority: fakeReviewAuthority(),
+      issueAuthority: fakeIssueAuthority(command),
+    });
+    expect(
+      transaction.migrate({
+        ...command,
+        certificateDigest: digest(stableCanonical(certificate)),
+      }),
+    ).toEqual({ ok: false, ruleId: "seal-certificate-digest-mismatch" });
+    expect(counts(db)).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
+  });
+
+  it("U-PA-SEAL-024: caller-supplied certificate_json fieldを入力として拒否する", async () => {
+    const { db, Transaction } = await baseFixture();
+    const command = input();
+    const transaction = new Transaction(db, {
+      git: fakeGit(command),
+      reviewAuthority: fakeReviewAuthority(),
+      issueAuthority: fakeIssueAuthority(command),
+    });
+    expect(transaction.migrate({ ...command, certificateJson: "{}" } as MigrationInput)).toEqual({
+      ok: false,
+      ruleId: "sealed-lineage-input-invalid",
+    });
+    expect(counts(db)).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
+  });
 });
 
 const PLAN_ID = "PLAN-RECOVERY-16-plan-revision-authoring";
