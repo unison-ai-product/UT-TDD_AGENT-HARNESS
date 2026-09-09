@@ -258,9 +258,10 @@ describe("Issue #550 project memory completion fence", () => {
     await assertDeniedEntrances(root, "transaction_tampered");
   });
 
-  it("U-PMEMFENCE-004 does not fallback to a legacy corpus sentinel", () => {
+  it("U-PMEMFENCE-004 does not fallback to a legacy corpus sentinel", async () => {
     const root = fixture("legacy-sentinel-must-not-be-read");
-    return assertDeniedEntrances(root, "migration_incomplete", { includeSetup: false });
+    await assertDeniedEntrances(root, "migration_incomplete", { includeSetup: false });
+    expect(() => readMemory({ repoRoot: root })).toThrow("migration_incomplete");
   });
 
   it("U-PMEMFENCE-005 accepts a deterministic completed replay", async () => {

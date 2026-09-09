@@ -789,16 +789,22 @@ export class ProjectMemoryMigration {
     if (marker.payload.quarantineDigest !== this.quarantineManifestDigest(paths.quarantine)) {
       throw new MigrationFailure("transaction_tampered");
     }
-    this.verifyCompletionInventory(prepared, intent, inventory, paths.repoRoot);
+    this.verifyCompletionInventory({
+      prepared,
+      intent,
+      inventory,
+      canonicalRoot: paths.repoRoot,
+    });
     this.verifyPreparedManifest(prepared, paths);
   }
 
-  private verifyCompletionInventory(
-    prepared: Marker,
-    intent: Marker,
-    inventory: Extract<MemoryMigrationDryRun, { ok: true }>,
-    canonicalRoot: string,
-  ): void {
+  private verifyCompletionInventory(context: {
+    prepared: Marker;
+    intent: Marker;
+    inventory: Extract<MemoryMigrationDryRun, { ok: true }>;
+    canonicalRoot: string;
+  }): void {
+    const { prepared, intent, inventory, canonicalRoot } = context;
     const raw = intent.payload.variants;
     if (!Array.isArray(raw) || (raw.length === 0 && this.inventoryVariants(inventory).length > 0)) {
       throw new MigrationFailure("transaction_tampered");
