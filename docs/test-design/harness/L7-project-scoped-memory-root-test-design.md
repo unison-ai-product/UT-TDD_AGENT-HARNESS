@@ -49,6 +49,20 @@ updated: 2026-09-09
   `CANDIDATE-U-PMEMROOT-005/006/008`が要求するcanonical apply、quarantine、8.3境界の
   完了は主張せず、後続Slice 4bとReverse R2以降へ残す。
 
+## Slice 4b quarantine / recovery oracle (Issue #545)
+
+| Oracle | Stimulus | Expected |
+|---|---|---|
+| U-PMEMQUAR-001 | 同一ID・異digestの2 variantへmigration apply | source bytesとcanonical corpusを変更せず、両variantをquarantineへ保存して完了 |
+| U-PMEMQUAR-002 | 完了済みoperation IDでmigration applyを再実行 | `replayed`を返し、markerへ追記しない |
+| U-PMEMQUAR-003 | prepared後にsourceを変更、またはmarker末尾へ不正行を追加してrecover | source変更は`inventory_drift`、marker改変は`transaction_tampered`で拒否 |
+| U-PMEMQUAR-004 | intent marker作成後のowner processを`SIGKILL`してrecover | stale ownerを回収し、同じoperationを`completed`へ収束 |
+| U-PMEMQUAR-005 | 完了済みmarkerの先頭2行を入れ替えてrecover | `transaction_tampered`で拒否 |
+
+- 本昇格はconflict variantのquarantine、同一operation replay、prepared後のinventory／marker
+  改変拒否、`SIGKILL`後のowner recovery、marker順序検証だけを対象とする。canonical unique apply、
+  append-after-complete、8.3境界、Pack parity、Reverse R2以降の完了は主張しない。
+
 ## Slice 3 exact implementation evidence (Issue #528)
 
 - 実装anchor: `89de38593e0a5264480ed5b305c1718bdc3b89b6`
