@@ -547,6 +547,10 @@ describe("sealed lineage local migration", () => {
     ["head", { headSha: "e".repeat(40) }, rejectedDecision(["unverified_family"])],
     ["base", { baseRef: "release" }, rejectedDecision(["unverified_family"])],
     ["rejected reason content", {}, rejectedDecision(["missing"])],
+    ["forged local receipt", {}, rejectedDecision(["signature_unverified"])],
+    ["provider failure", {}, rejectedDecision(["provider_failed"])],
+    ["FLAG verdict", {}, rejectedDecision(["verdict_flagged"])],
+    ["same-family or identity mismatch", {}, rejectedDecision(["identity_mismatch"])],
     ["rejected reason order", {}, rejectedDecision(["unverified_family", "missing"])],
     ["admitted subject", {}, admittedDecision({ headSha: "e".repeat(40) })],
   ] as const)("U-PA-SEAL-018: typed custodyの%s driftを拒否する", async (_name, factPatch, decision) => {

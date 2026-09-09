@@ -920,7 +920,10 @@ function validateAuthorities(
     (observation.custodyState !== "custody_admitted" &&
       observation.custodyState !== "custody_rejected") ||
     !isCanonicalCustodyReasons(observation.custodyReasons) ||
-    (observation.custodyState === "custody_admitted" && observation.custodyReasons.length !== 0)
+    (observation.custodyState === "custody_admitted" && observation.custodyReasons.length !== 0) ||
+    (observation.custodyState === "custody_rejected" &&
+      (observation.custodyReasons.length !== 1 ||
+        observation.custodyReasons[0] !== "unverified_family"))
   )
     return rejected("seal-review-authority-invalid");
   const expectedReview = deriveReviewAuthorityDigest(input, observation);
