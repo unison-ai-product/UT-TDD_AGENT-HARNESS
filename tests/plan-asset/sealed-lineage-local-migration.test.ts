@@ -555,6 +555,22 @@ describe("sealed lineage local migration", () => {
     expect(counts(db)).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
   });
 
+  it("U-PA-SEAL-018: typed custodyの正規rejected decisionを受理する", async () => {
+    const { db, Transaction } = await baseFixture();
+    const command = input();
+    const transaction = new Transaction(db, {
+      git: fakeGit(command),
+      reviewAuthority: new CustodyDecisionSealedLineageReviewAuthorityPort(
+        reviewFacts(),
+        rejectedDecision(["unverified_family"]),
+      ),
+      issueAuthority: fakeIssueAuthority(command),
+    });
+
+    expect(transaction.migrate(command)).toMatchObject({ ok: true, replayed: false });
+    expect(count(db, "sealed_plan_lineages")).toBe(1);
+  });
+
   it("U-PA-SEAL-019: System Issue adapterはREST JSONのraw bodyを変更せず返す", () => {
     const calls: readonly string[][] = [];
     const mutableCalls = calls as string[][];
