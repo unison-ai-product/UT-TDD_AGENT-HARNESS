@@ -1098,3 +1098,218 @@ port欠測をfail-closeする。SQLite、PKI、rotation/revocation、secure cloc
 旧componentへ戻す場合も旧manifestは再利用しない。現在floorより大きい新sequenceで、旧componentと現在互換な
 D0-N receiptを再review・再署名し、通常のL8/L9 oracleを再通過したmanifestだけを受理する。
 受理不能なら旧direct-spawnへ戻さず利用停止する。
+
+## 付録 E: PLAN 系譜 seal の preimage 契約 (PLAN-RECOVERY-16、Issue #542)
+
+`SealedLineageLocalMigration` (`src/plan-asset/ledger/sealed-lineage-local-migration.ts`、artifact owner は
+`PLAN-RECOVERY-16-plan-revision-authoring`) は、tracked history が clean checkout から復元不能な PLAN 系譜を
+`historical_sealed_unrehydratable` として封印し、HEAD 本文を successor asset revision 1 として genesis 移行する
+唯一の正規経路である。本付録はその入力 digest の exact preimage と Git object 照合を processing 契約として固定する。
+物理正本 (`.ut-tdd/ledger/harness-ledger.db` が PLAN asset/revision/admission の canonical ledger であること) は
+[physical-data.md](physical-data.md) §2.7.1 が拘束し、本付録はその row を書く前の判定側を拘束する。
+本付録を本 doc に置く根拠は、本 doc が L5 内部処理判定の canonical design 正本 (owner `PLAN-L5-03-internal-processing`、
+pair は `docs/test-design/harness/L8-integration-test-design.md`) であり、物理正本 doc と対をなす位置にあることである。
+admission fence の対象外であることは根拠ではない。実装 artifact の owner は `PLAN-RECOVERY-16` に留まり、
+本付録は判定契約のみを持つ。E.6 の負系は上記 pair test-design 側へ oracle として降ろす。
+
+### E.1 契約が無いことによる欠陥 (freeze の動機)
+
+`validate` は 64 hex 構文と `sha(canonicalPayloadJson) === canonicalPayloadDigest` しか検査しない。
+`certificateDigest` / `sourceAuthorityDigest` / `reviewedImplementationAuthorityDigest` は導出も照合もなく
+`sealed_plan_lineages` / `plan_lineage_migration_certificates` / `plan_admission_events` /
+`plan_admission_receipts` / `append_command_receipts` へ転記される。任意の 64 hex を authority として通せるため、
+封印と genesis の証跡が偽装可能である。本付録の照合を欠いた実行は受理しない。
+
+### E.2 framing 規約 (既存 asset id 導出と同一)
+
+digest の preimage は、順序付き文字列列の各要素を「UInt32BE の byte 長 + UTF-8 bytes」で連結し sha256 する。
+これは `plan-revision-command-assembler.ts` の legacy asset id 導出と同一の framing であり、新しい algorithm 族を
+作らない。列の先頭要素は必ず algorithm label とする。
+
+| 導出対象 | algorithm label | 出力形式 |
+|---|---|---|
+| successor asset id | `ut-tdd-plan-rebase-v1` | `plan:rebase:<64 hex>` |
+| source authority digest | `ut-tdd-seal-source-authority-v1` | `<64 hex>` |
+| 実装 review authority digest | `ut-tdd-seal-review-authority-v1` | `<64 hex>` |
+
+successor asset id の preimage は `[label, repositoryIdentity, planId]` とする。`repositoryIdentity` は tracked
+`ut-tdd.project.json` の `repository_identity` であり、HEAD blob 一致と worktree 一致を
+`src/kernel/project-identity.ts` が強制する値だけを使う。任意 seed を与えてはならない。
+
+### E.3 `sourceAuthorityDigest`
+
+preimage は次の順序付き列とする。
+
+```text
+[ut-tdd-seal-source-authority-v1, repositoryIdentity, planId, sourcePath, sourceCommit, sourceBlobOid,
+ canonicalPayloadDigest, bodyDigest, historicalProjectionPath, historicalProjectionBlobOid,
+ historicalProjectionContentDigest, historicalAssetId, historicalTerminalRevision,
+ historicalTailDigest]
+```
+
+末尾 3 要素は封印対象の terminal binding であり、preimage に含めることで record の差し替えが digest を
+変える (含めないと下記 terminal 照合を通す別 record を選んでも digest が同一になる。PR #543 r5 の
+blocking finding 1)。`historicalTerminalRevision` は符号なし 10 進 ASCII (前置ゼロ禁止)、
+他は宣言値の UTF-8 bytes をそのまま用いる。
+
+`sourceBlobOid` は現行入力に存在しないため、封印対象 PLAN 本文の blob OID を新規入力として追加する。
+入力型の拡張は `canonical(input)` 由来の command digest と replay identity を変えるため、seal 実行時に対象 ledger で
+既存 `plan_lineage_migration_certificates` row と command id の不在を確認したうえで適用する。
+2026-09-08 に当該 machine の `harness-ledger.db` 7 件を read-only で確認した時点では該当 row は無かったが、
+これは**その時点・その範囲の観測であり、互換性の契約ではない**。他の machine や未検査の ledger に対する
+不在を主張しない。
+
+自己申告値の hash は authority にならない。次を実 Git object へ照合し、いずれか不成立で write 0 とする。
+
+| 照合 | 不成立時の typed reason |
+|---|---|
+| `sourceCommit` が seal 候補 HEAD と exact 一致し、かつ tracked remote ref (`refs/remotes/origin/*`) から到達可能である | `seal-source-commit-unreachable` |
+| `sourcePath` が `planId` の canonical PLAN path (`docs/plans/<planId>.md`) と exact 一致する | `seal-source-path-noncanonical` |
+| `sourceCommit` に `sourcePath` が blob として存在する | `seal-source-path-absent` |
+| その blob OID が `sourceBlobOid` と一致する | `seal-source-blob-mismatch` |
+| blob bytes から再計算した canonical payload digest と body digest が宣言値と一致する | `seal-source-payload-drift` |
+| `historicalProjectionPath` が tracked projection 正本 path (`docs/governance/plan-admission-receipts.json`) と exact 一致する | `seal-projection-path-noncanonical` |
+| `historicalProjectionPath` の blob OID と content digest が同一 `sourceCommit` 帰属で宣言値と一致する | `seal-projection-custody-mismatch` |
+| その blob 内で `binding.plan_id = planId` を持つ record 群のうち `sequence` 最大の 1 件が、`binding.asset_id = historicalAssetId` かつ `binding.revision = historicalTerminalRevision` であり、その `record_digest` が `historicalTailDigest` と一致する | `seal-projection-terminal-mismatch` |
+| 照合中に HEAD が変化していない (TOCTOU 再確認) | `seal-source-head-toctou` |
+
+照合は `project-identity.ts` と同じ preflight 規律 (tracked blob 読み出し + 再確認) に従い、呼び出し側の port として
+注入する。writer transaction を Git I/O へ拡張しない。
+
+到達可能性の照合を欠くと、blob 一致と TOCTOU 再確認だけでは自作 commit object と整合する
+`sourceCommit` / `sourceBlobOid` / digest 一式を用意して全照合を通せてしまい、`sourceAuthorityDigest` を偽造できる
+(PR #543 r1 の blocking finding 1)。したがって上表 1 行目は省略可能な補助検査ではなく必須条件である。
+
+同様に、path 側を canonical に束縛しない照合も自己整合的に通る。到達可能な HEAD 内の任意 blob を
+`sourcePath` / `historicalProjectionPath` に選べば、対応する OID と content digest を再計算するだけで
+OID 照合・payload 照合・TOCTOU 再確認をすべて満たせるため、封印対象の PLAN と projection 正本を
+別 blob に差し替えられる (PR #543 r3 の blocking finding 2)。したがって path 2 行と projection の
+terminal 照合行も必須条件である。
+
+terminal 照合を「一致する record が存在する」に緩めてはならない。同一 `planId` の record は複数の asset と
+revision にわたって共存する — 実測 (main `ea7658ca` の tracked projection、180 record) では
+`PLAN-RECOVERY-16-plan-revision-authoring` に sequence 1〜3 (legacy asset revision 1〜3) と sequence 73
+(rebase asset `plan:rebase:74ca026f…` revision 2) の 4 件が存在する。存在照合だけなら旧 record の
+三値を自己整合的に選んで全照合を通せ、terminal lineage を偽装できる (PR #543 r5 の blocking finding 1)。
+したがって照合は `sequence` 最大の 1 件への一意束縛とし、あわせて三値を preimage に含める。
+
+### E.4 `reviewedImplementationAuthorityDigest`
+
+**ローカル artifact を authority にしてはならない。** `.ut-tdd/review/receipts/<digest>.json` の内容や
+ファイル名 digest を受理条件にする設計は成立しない。理由は既存契約そのものである:
+[provider-family-authority.ts](../../../../src/feedback/ports/provider-family-authority.ts) は
+「本 repo に受理側の実装は無い」「自己申告 `reviewerFamily`、PR comment marker、HARNESS memory 本文、
+commit trailer、local JSON/HMAC、同一 OS user が使える鍵は、この port の実装として受理してはならない」と
+定めている。加えて receipt のファイル名 digest は file bytes の sha256 ではなく request digest であり、
+同じ規則で任意 JSON を hand-mint して PASS / 別 family / 任意 head を宣言できる
+(PR #543 r1 の blocking finding 2)。
+
+したがって本 digest は **live GitHub facts の観測を経た既存 custody 経路の結果**に束縛する。新 authority は作らない。
+
+| 束縛対象 | 供給元 |
+|---|---|
+| repository / PR 番号 / base ref / head sha / merge 状態 | `review-custody-runner` の `observeStable` が live 観測した値 |
+| 受理判定 | `admitReviewCustody` が返す `CustodyDecision` (`src/feedback/review-custody.ts:315-341`) の `state` と `reasons` |
+
+preimage は次の順序付き列とし、framing と label は E.2 に従う。`sourceAuthorityDigest` と同じく、
+宣言値ではなく観測値を入力とする。
+
+```text
+[ut-tdd-seal-review-authority-v1, repositoryIdentity, planId, pullRequestNumber, baseRef, headSha,
+ custodyState, custodyReasons]
+```
+
+各要素の文字列表現も固定する。`pullRequestNumber` は符号なし 10 進 ASCII (前置ゼロ禁止)。
+`custodyState` は `CustodyDecision.state` の値そのまま (`custody_admitted` または `custody_rejected` の
+2 値のみ) を ASCII で用いる。`custodyReasons` は `state = custody_rejected` のとき `reasons` を宣言順の
+まま `,` (U+002C) で連結した ASCII、`state = custody_admitted` のときは長さ 0 の要素とする
+(framing は UInt32BE 長さ前置なので空要素も一意に表現される)。残りは観測値の UTF-8 bytes を
+そのまま用いる。列の長さ・順序・表現のいずれかが異なる導出は本契約の digest ではない。
+
+**runner の `RunnerOutcome.summary` を preimage に使ってはならない。** `admitCustodyReceipt`
+(`src/feedback/review-custody-runner.ts:223-269`) が返すのは enum ではなく `{exitCode, summary}` であり、
+`summary` には `custody_admitted` / `unverified_family` / 連結済み reasons が混在する自由文字列である。
+これを入力にすると同一 custody 観測から複数の digest が導出できる (PR #543 r4 の blocking finding 1)。
+preimage の入力は runner の戻り値ではなく `admitReviewCustody` の `CustodyDecision` そのものとする。
+
+**`custody_admitted` と `unverified_family` を同一視しない。** 機械 custody がすべて green でも、
+`VerifiedProviderIdentity` 発行側が未実装である限り decision は `state = custody_rejected` /
+`reasons = [unverified_family]` であり、runner はこれを exit 0 に写す。したがって `custodyState` だけでは
+両者を区別できず、`custodyReasons` を対で持つことが必須である。この 2 要素により digest は終端状態を
+そのまま保持し、seal 側で family 分離を強証明したことにはならない (下記の終端継承と整合する)。
+
+**時間変動する観測値は preimage に含めない。** merge state status や観測時刻は同一 head でも後から
+変わるため、preimage に入れると同一 payload の replay が冪等でなくなる (changed payload と
+区別できない)。これらは digest の入力ではなく、下記 typed reason による受理条件側で扱う。
+
+**family 分離について機械証明を主張しない。** `VerifiedProviderIdentity` の発行側が承認・実装されるまで、
+custody の終端は既存どおり `unverified_family` であり、本 seal 契約もその終端を継承する。
+seal 側で family 分離を強証明したことにしてはならない。family 分離の機械化は authentication / authorization を
+変える外部権限設計であり、PO 承認を要する別論点として保持する。
+
+不成立時の typed reason は `seal-review-authority-invalid` とする。CI run や aggregate 成功を authority として
+採らない (新 authority の導入になる)。
+
+### E.5 `certificateDigest`
+
+`certificate_json` を authority まで束縛する形へ拡張する。`certificate_json` は writer が内部で
+`canonical()` により生成する **byte 列**であり、`certificateDigest` はその byte 列の sha256 と一致必須とする
+(不一致は `seal-certificate-digest-mismatch`)。digest の preimage は object ではなく確定した byte 列である。
+caller から `certificate_json` の byte 列を受け取る設計にはしない (受け取ると非 canonical な直列化を
+digest の preimage にできてしまう)。本契約が固定するのは**フィールド集合**であり、byte 列上のキー順は
+既存 `canonical()` の規約 (キーの辞書順 sort) がそのまま決める。二通りの順序を規定しない。
+以下は `canonical()` が実際に出力する辞書順で示す。
+
+```text
+{historicalAssetId, historicalTailDigest, historicalTerminalRevision, planId,
+ reviewedImplementationAuthorityDigest, sourceAuthorityDigest, successorAssetId, successorRevision}
+```
+
+これにより certificate identity が authority の差を識別する。二層 identity (certificate は系譜のみ、authority は
+別列) は採らない。既存 4 フィールド版の certificate row は存在しないため後方互換の負債は生じない。
+
+### E.6 負系 oracle (対で必須)
+
+E.3〜E.5 の各項目について、1 bit 改変で write 0 となる負系を対で置く。最低限、次を独立に持つ。
+
+- 3 digest それぞれの 1 bit 改変 → typed reason で拒否、全 table への write 0
+- E.3 の Git 照合 9 種それぞれの不成立 (到達可能性 / `sourcePath` 非 canonical / blob 不在 / OID 不一致 /
+  payload drift / projection path 非 canonical / projection custody 不一致 / projection terminal 不一致 /
+  TOCTOU)。とくに、到達可能な HEAD 内の別 blob path を `sourcePath` または `historicalProjectionPath` に
+  差し替えて OID と content digest を再計算した自己整合入力が拒否されること
+- 同一 `planId` の非 terminal record (旧 asset / 旧 revision) の三値を宣言した自己整合入力が
+  `seal-projection-terminal-mismatch` で拒否されること。実 projection に複数 record が共存する
+  PLAN を fixture にして負系を置く
+- terminal binding 三値のいずれか 1 要素の改変が `sourceAuthorityDigest` を変えること (preimage 包含の
+  実効性を digest 側でも固定する)
+- E.4 preimage の列逸脱 (要素順序の入れ替え、要素の欠落、`pullRequestNumber` の前置ゼロ、
+  `custodyState` / `custodyReasons` の別表現) が同一観測から別 digest を生まないこと。時間変動値
+  (merge state / 観測時刻) を含めた導出が本契約の digest として受理されないこと
+- `custody_admitted` と `custody_rejected` + `reasons = [unverified_family]` が別 digest になること
+  (終端状態の取り違えを負系で固定する)。runner の `summary` 文字列を入力にした導出が本契約の digest と
+  一致しないこと
+- `certificate_json` のフィールド欠落・値改変 → writer が生成する byte 列が変わるため digest 不一致で拒否
+- caller が `certificate_json` の byte 列や `certificateDigest` を独自に供給する経路が存在しないこと
+  (キー順を変えた等価 object を preimage にできない。「等価 object なのに digest 不一致」という矛盾した
+  oracle は置かない。拒否されるのは caller 供給経路そのものである)
+- 自己整合的に偽造された review receipt file (listed 条件をすべて満たすが custody 経路で検証できないもの)
+  → `seal-review-authority-invalid` で拒否。E.4 の live 観測経路を通さない受理が無いことを負系で示す
+- review receipt の `verdict=FLAG` / `blockingFindings` 非空 / 同一 family / head 不一致
+- 既存 `U-PA-SEAL-001..003` の冪等・conflict・fault injection boundary 集合を弱めない
+
+### E.7 適用範囲 (target 単位、universal rollout ではない)
+
+本契約の対象は、**PLAN 単位に次の 2 点を実測で確認できたものだけ**とする。tracked terminal revision が 2 以上で
+あることだけを条件にしてはならない。
+
+1. 対象 ledger (`.ut-tdd/ledger/harness-ledger.db`) に当該 PLAN の alias が存在しないこと。
+2. derived legacy asset id が tracked に記録された系譜と一致しないこと (= bootstrap での継続が第三の系譜を作る
+   lineage fork になり、seal 機構が禁じる double genesis に当たること)。
+
+2026-09-08 時点で該当が確認されているのは `PLAN-L6-93-node-bootstrap-contract` と
+`PLAN-RECOVERY-16-plan-revision-authoring` の 2 件のみである。adopt 済みの PLAN (検査した 7 ledger に 12 alias) は
+既存 worktree で正規 `plan revise` を続けられるため対象外であり、一括適用しない。
+
+封印対象ごとの固定 preimage は `ut-tdd:genesis-rebase-migration/v1` 形式で Issue 本文に宣言し
+(先例 Issue #143、L6-93 は Issue #541)、`Inference forbidden: true` を明記する。
+本付録の semantics は新規であり、既存 `review_evidence` を根拠にしない。実装前に非著者 review を取得する。
