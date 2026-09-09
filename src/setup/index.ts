@@ -13,8 +13,15 @@
  *   ④ 検出不能は solo に安全フォールバック (緩い側に倒す)。
  */
 import { execFileSync } from "node:child_process";
-import { existsSync, readdirSync, readFileSync, readSync, writeFileSync } from "node:fs";
-import { basename, dirname, join, relative, sep } from "node:path";
+import {
+  existsSync,
+  readdirSync,
+  readFileSync,
+  readSync,
+  realpathSync,
+  writeFileSync,
+} from "node:fs";
+import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { ensureDir } from "../shared/fs.ts";
 import {
@@ -26,6 +33,15 @@ import {
   bootstrapProjectIdentity,
   type ProjectIdentityBootstrapResult,
 } from "./project-identity-bootstrap.ts";
+import {
+  buildConsumerNodeRuntimeBundle,
+  buildConsumerNodeRuntimePayloads,
+  installConsumerNodeRuntimeOnFilesystem,
+  type ConsumerNodeRuntimeBundle,
+  type ConsumerNodeRuntimeIdentity,
+  type ConsumerNodeRuntimeInstallResult,
+  renderConsumerNodeWrapper,
+} from "./consumer-node-runtime.ts";
 
 export {
   AUTHORING_TEMPLATE_ARTIFACT_PATHS,
@@ -60,6 +76,7 @@ export {
 } from "./consumer-local-runtime-admission.ts";
 export {
   buildConsumerNodeRuntimeBundle,
+  buildConsumerNodeRuntimePayloads,
   bundlePathFor,
   type ConsumerNodeRuntimeBundle,
   type ConsumerNodeRuntimeBundleInput,
@@ -71,6 +88,8 @@ export {
   digestConsumerRuntimeBytes,
   digestConsumerRuntimeValue,
   installConsumerNodeRuntime,
+  installConsumerNodeRuntimeOnFilesystem,
+  createConsumerNodeRuntimeFilesystemPorts,
   quarantinePathFor,
   renderConsumerNodeWrapper,
   stagingPathFor,
@@ -208,6 +227,7 @@ export interface SetupArgs {
   dryRun: boolean;
   applyBranchProtection: boolean;
   teams?: TeamSlugs;
+  consumerRuntime?: SetupConsumerRuntimeInput;
 }
 
 export interface SetupResult {
@@ -215,6 +235,54 @@ export interface SetupResult {
   written: string[];
   branchProtection: { applied: boolean; reason: string };
   projectIdentity?: ProjectIdentityBootstrapResult;
+  consumerRuntime?: SetupConsumerRuntimeInstall;
+}
+
+/** Sealed runtime input handed from the release materializer to setup. */
+export interface SetupConsumerRuntimeInput {
+  readonly identity: ConsumerNodeRuntimeIdentity;
+  readonly compiled_esm: Uint8Array;
+  readonly node_bootstrap_receipt: Uint8Array;
+  readonly prior_bundle_digest?: string;
+  readonly prior_history_tip_digest?: string;
+  readonly history_sequence?: number;
+  readonly fault?: (barrier: string) => void;
+  readonly verifySealedAggregate?: () => void;
+}
+
+export interface SetupConsumerRuntimeInstall {
+  readonly bundle: ConsumerNodeRuntimeBundle;
+  readonly result: ConsumerNodeRuntimeInstallResult;
+}
+
+/**
+ * Production setup ingress for a sealed release aggregate.  The caller must
+ * provide the actual compiled bytes and the producer's NodeBootstrapReceipt;
+ * setup never searches a source checkout or synthesizes a receipt.
+ */
+export async function installConsumerRuntimeFromSetup(
+  input: SetupConsumerRuntimeInput,
+): Promise<SetupConsumerRuntimeInstall> {
+  const payloads = buildConsumerNodeRuntimePayloads(input);
+  const bundle = buildConsumerNodeRuntimeBundle({
+    identity: input.identity,
+    ...payloads,
+    ...(input.prior_bundle_digest === undefined
+      ? {}
+      : { prior_bundle_digest: input.prior_bundle_digest }),
+    ...(input.prior_history_tip_digest === undefined
+      ? {}
+      : { prior_history_tip_digest: input.prior_history_tip_digest }),
+    ...(input.history_sequence === undefined ? {} : { history_sequence: input.history_sequence }),
+  });
+  const result = await installConsumerNodeRuntimeOnFilesystem({
+    identity: input.identity,
+    bundle,
+    payloads,
+    fault: input.fault,
+    verifySealedAggregate: input.verifySealedAggregate,
+  });
+  return { bundle, result };
 }
 
 /** gh 実行 seam (raw token 非依存 = gh の認証状態に委ねる)。test=mock。 */
@@ -238,7 +306,6 @@ const STATE_PATH = join(".ut-tdd", "state", "setup.json");
 const BP_SCRIPT = join("scripts", "setup-branch-protection.sh");
 const MANAGED_START = "<!-- UT-TDD:managed:start -->";
 const MANAGED_END = "<!-- UT-TDD:managed:end -->";
-const SETUP_SOURCE_CLI = join(dirname(fileURLToPath(import.meta.url)), "..", "cli.ts");
 const MERGEABLE_ADAPTER_DOCS = new Set(["AGENTS.md", "CLAUDE.md", join(".claude", "CLAUDE.md")]);
 
 /**
@@ -354,7 +421,7 @@ function renderArtifacts(
   for (const f of plan.files) {
     const name = templateNameFor(f.path);
     let content = templates[name] ?? BUILTIN_GITHUB_TEMPLATES[name] ?? "";
-    content = content.replace(/\{\{UT_TDD_SOURCE_CLI_JSON\}\}/g, JSON.stringify(SETUP_SOURCE_CLI));
+    if (f.path === join(".ut-tdd", "bin", "ut-tdd.mjs")) content = renderConsumerNodeWrapper();
     if (f.path === CODEOWNERS_TARGET && plan.teams) {
       content = content
         .replace(/\{\{TL_TEAM\}\}/g, plan.teams.tl)
@@ -504,6 +571,42 @@ export function runSetup(args: SetupArgs, deps: SetupDeps): SetupResult {
     ? { applied: false, reason: "dry-run" }
     : applyBranchProtection(plan, deps, { apply: args.applyBranchProtection });
   return { phase, written, branchProtection, ...(projectIdentity ? { projectIdentity } : {}) };
+}
+
+/** Async composition root used when setup is supplied a sealed runtime input. */
+export async function runSetupAsync(args: SetupArgs, deps: SetupDeps): Promise<SetupResult> {
+  if (!args.consumerRuntime || args.dryRun) return runSetup(args, deps);
+  assertSetupRuntimeRoot(args.consumerRuntime.identity, deps.repoRoot);
+  const result = runSetup(args, deps);
+  const consumerRuntime = await installConsumerRuntimeFromSetup(args.consumerRuntime);
+  return { ...result, consumerRuntime };
+}
+
+function assertSetupRuntimeRoot(identity: ConsumerNodeRuntimeIdentity, repoRoot: string): void {
+  const expectedRoot = resolve(repoRoot);
+  const expectedRuntime = resolve(expectedRoot, ".ut-tdd", "runtime");
+  if (
+    resolve(identity.consumer_root) !== expectedRoot ||
+    resolve(identity.runtime_root) !== expectedRuntime
+  )
+    throw new Error("consumer_runtime_external_path");
+  try {
+    const rootReal = realpathSync.native(expectedRoot);
+    const identityRootReal = realpathSync.native(identity.consumer_root);
+    if (rootReal !== identityRootReal) throw new Error("consumer_runtime_external_path");
+    if (existsSync(identity.runtime_root)) {
+      const runtimeReal = realpathSync.native(identity.runtime_root);
+      if (!containedReal(rootReal, runtimeReal)) throw new Error("consumer_runtime_external_path");
+    }
+  } catch (error) {
+    if (error instanceof Error && error.message === "consumer_runtime_external_path") throw error;
+    throw new Error("consumer_runtime_external_path");
+  }
+}
+
+function containedReal(parent: string, child: string): boolean {
+  const rel = relative(parent, child);
+  return rel !== "" && rel !== ".." && !rel.startsWith(`..${sep}`);
 }
 
 // ── node 実 deps (real I/O / gh / confirm / templates) ──────────────────────

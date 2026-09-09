@@ -217,13 +217,7 @@ function assertCandidate(root: string, candidate: string): void {
     throw new NodeBootstrapError("node-bootstrap-source-dirty");
   }
 }
-function parseReceipt(path: string): NodeBootstrapReceipt {
-  let value: unknown;
-  try {
-    value = JSON.parse(readFileSync(path, "utf8"));
-  } catch {
-    throw new NodeBootstrapError("node-bootstrap-receipt-invalid");
-  }
+function parseReceiptValue(value: unknown): NodeBootstrapReceipt {
   if (!value || typeof value !== "object" || Array.isArray(value))
     throw new NodeBootstrapError("node-bootstrap-receipt-invalid");
   const receipt = value as Record<string, unknown>;
@@ -274,6 +268,30 @@ function parseReceipt(path: string): NodeBootstrapReceipt {
   if (hash(canonical(unsigned)) !== receipt.receipt_digest)
     throw new NodeBootstrapError("node-bootstrap-receipt-digest-mismatch");
   return receipt as unknown as NodeBootstrapReceipt;
+}
+
+/**
+ * Parse and authenticate the sealed receipt bytes without consulting the source
+ * checkout.  Consumer installation uses this boundary after the producer has
+ * supplied the receipt as an input artifact.
+ */
+export function parseNodeBootstrapReceiptBytes(bytes: Uint8Array): NodeBootstrapReceipt {
+  let value: unknown;
+  try {
+    value = JSON.parse(Buffer.from(bytes).toString("utf8"));
+  } catch {
+    throw new NodeBootstrapError("node-bootstrap-receipt-invalid");
+  }
+  return parseReceiptValue(value);
+}
+
+function parseReceipt(path: string): NodeBootstrapReceipt {
+  try {
+    return parseReceiptValue(JSON.parse(readFileSync(path, "utf8")));
+  } catch (error) {
+    if (error instanceof NodeBootstrapError) throw error;
+    throw new NodeBootstrapError("node-bootstrap-receipt-invalid");
+  }
 }
 function verifyToolchain(receipt: NodeBootstrapReceipt): string {
   if (receipt.node.version !== REVIEWED_NODE_VERSION)

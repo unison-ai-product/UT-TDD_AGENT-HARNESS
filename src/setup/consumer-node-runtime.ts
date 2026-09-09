@@ -1,5 +1,20 @@
 import { createHash } from "node:crypto";
-import { isAbsolute, relative, resolve, sep } from "node:path";
+import {
+  chmodSync,
+  closeSync,
+  existsSync,
+  fsyncSync,
+  mkdirSync,
+  openSync,
+  readFileSync,
+  realpathSync,
+  renameSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
+import { isAbsolute, join, relative, resolve, sep } from "node:path";
+import { parseNodeBootstrapReceiptBytes } from "../runtime/node-bootstrap.ts";
 
 const DIGEST = /^sha256:[a-f0-9]{64}$/;
 const REVISION = /^[a-f0-9]{40}$/;
@@ -58,6 +73,25 @@ export interface ConsumerNodeRuntimeBundleInput {
   readonly prior_bundle_digest?: string;
   readonly prior_history_tip_digest?: string;
   readonly history_sequence?: number;
+}
+
+/** Bytes admitted from the sealed release aggregate and Node producer. */
+export interface ConsumerNodeRuntimePayloads {
+  readonly compiled_esm: Uint8Array;
+  readonly node_bootstrap_receipt: Uint8Array;
+  readonly marker: Uint8Array;
+  readonly consumer_receipt: Uint8Array;
+  readonly history: Uint8Array;
+  readonly operation_state: Uint8Array;
+}
+
+export interface ConsumerNodeRuntimeFilesystemOptions {
+  /** The payload is immutable after this function returns. */
+  readonly payloads: ConsumerNodeRuntimePayloads;
+  /** Optional seam used by fault/partial-publish tests. */
+  readonly fault?: (barrier: string) => void;
+  /** Optional aggregate verifier; absence means bundle/payload admission only. */
+  readonly verifySealedAggregate?: () => void;
 }
 
 export interface ConsumerNodeRuntimeReadinessInput {
@@ -126,6 +160,84 @@ export function digestConsumerRuntimeBytes(bytes: Uint8Array): string {
 
 export function digestConsumerRuntimeValue(value: unknown): string {
   return digestConsumerRuntimeBytes(Buffer.from(canonical(value), "utf8"));
+}
+
+function jsonBytes(value: unknown): Uint8Array {
+  return Buffer.from(`${canonical(value)}\n`, "utf8");
+}
+
+/**
+ * Build the four local projections from the admitted identity.  These are
+ * projections, not a second receipt authority: the producer receipt remains
+ * byte-for-byte in `node-bootstrap-receipt.json`.
+ */
+export function buildConsumerNodeRuntimePayloads(input: {
+  readonly identity: ConsumerNodeRuntimeIdentity;
+  readonly compiled_esm: Uint8Array;
+  readonly node_bootstrap_receipt: Uint8Array;
+  readonly prior_bundle_digest?: string;
+  readonly prior_history_tip_digest?: string;
+  readonly history_sequence?: number;
+}): ConsumerNodeRuntimePayloads {
+  if (!validIdentity(input.identity)) throw new Error("invalid consumer runtime identity");
+  const sequence = input.history_sequence ?? 0;
+  const priorBundle = input.prior_bundle_digest ?? GENESIS;
+  const priorTip = input.prior_history_tip_digest ?? GENESIS;
+  assertHistory(sequence, priorBundle, priorTip);
+  const identityDigest = digestConsumerRuntimeValue(input.identity);
+  const operationKind = sequence === 0 ? "install" : "update";
+  const marker = {
+    identity_digest: identityDigest,
+    operation_id: input.identity.operation_id,
+    attempt: input.identity.attempt,
+    generation_id: input.identity.generation_id,
+  };
+  const consumerReceipt = {
+    consumer: {
+      materializerVersion: input.identity.materializer_version,
+      releaseId: input.identity.release_id,
+      sourceRevision: input.identity.subject_revision,
+      artifactSetDigest: input.identity.artifact_set_digest,
+      productId: input.identity.product_id,
+      consumerRoot: input.identity.consumer_root,
+      runtimeRoot: input.identity.runtime_root,
+    },
+    identity_digest: identityDigest,
+    operation_id: input.identity.operation_id,
+    attempt: input.identity.attempt,
+    history_sequence: sequence,
+    prior_bundle_digest: priorBundle,
+    prior_history_tip_digest: priorTip,
+    history_tip_digest: "pending",
+  };
+  const unsignedRecord = {
+    history_sequence: sequence,
+    operation_id: input.identity.operation_id,
+    attempt: input.identity.attempt,
+    operation_kind: operationKind,
+    identity_digest: identityDigest,
+    prior_bundle_digest: priorBundle,
+    prior_history_tip_digest: priorTip,
+  };
+  const recordDigest = digestConsumerRuntimeValue(unsignedRecord);
+  const historyRecord = { ...unsignedRecord, record_digest: recordDigest };
+  const historyTip = recordDigest;
+  const finalReceipt = { ...consumerReceipt, history_tip_digest: historyTip };
+  return {
+    compiled_esm: Buffer.from(input.compiled_esm),
+    node_bootstrap_receipt: Buffer.from(input.node_bootstrap_receipt),
+    marker: jsonBytes(marker),
+    consumer_receipt: jsonBytes(finalReceipt),
+    history: Buffer.from(`${canonical(historyRecord)}\n`, "utf8"),
+    operation_state: jsonBytes({
+      identity_digest: identityDigest,
+      operation_id: input.identity.operation_id,
+      attempt: input.identity.attempt,
+      prior_pointer: null,
+      history_tip_digest: historyTip,
+      publication: "prepared",
+    }),
+  };
 }
 
 function contained(parent: string, child: string): boolean {
@@ -364,6 +476,327 @@ const result = spawnSync(process.execPath, [entry, ...process.argv.slice(2)], { 
 if (result.error) deny("consumer_runtime_resolution_denied");
 process.exit(result.status ?? 1);
 `;
+}
+
+type PointerSnapshot = { readonly bytes: Buffer; readonly mode: number } | null;
+
+function fsyncFile(path: string): void {
+  const fd = openSync(path, "r");
+  try {
+    fsyncSync(fd);
+  } finally {
+    closeSync(fd);
+  }
+}
+
+function fsyncDirectory(path: string): void {
+  const fd = openSync(path, "r");
+  try {
+    try {
+      fsyncSync(fd);
+    } catch (error) {
+      // Windows does not expose directory handles as fsync targets. File
+      // contents are still flushed and the pointer rename remains atomic; do
+      // not turn a supported Windows install into a false success elsewhere.
+      if (process.platform !== "win32") throw error;
+    }
+  } finally {
+    closeSync(fd);
+  }
+}
+
+function ensureRealContained(parent: string, child: string): void {
+  const parentResolved = resolve(parent);
+  const childResolved = resolve(child);
+  const lexical = relative(parentResolved, childResolved);
+  if (!contained(parentResolved, childResolved))
+    throw new Error("consumer_runtime_external_path");
+  if (!existsSync(parentResolved)) mkdirSync(parentResolved, { recursive: true });
+  const parentReal = realpathSync.native(parentResolved);
+  let nearest = childResolved;
+  while (!existsSync(nearest) && nearest !== dirnameOf(nearest)) nearest = dirnameOf(nearest);
+  if (existsSync(nearest)) {
+    const nearestReal = realpathSync.native(nearest);
+    const physical = relative(parentReal, nearestReal);
+    if (physical === ".." || physical.startsWith(`..${sep}`) || isAbsolute(physical))
+      throw new Error("consumer_runtime_external_path");
+  }
+  if (!lexical) throw new Error("consumer_runtime_external_path");
+}
+
+function dirnameOf(path: string): string {
+  const index = Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\"));
+  return index <= 0 ? path.slice(0, 1) : path.slice(0, index);
+}
+
+function readPointer(pointerPath: string): PointerSnapshot {
+  if (!existsSync(pointerPath)) return null;
+  const bytes = readFileSync(pointerPath);
+  return { bytes, mode: statSync(pointerPath).mode & 0o777 };
+}
+
+function pointerValue(bundle: ConsumerNodeRuntimeBundle): Record<string, string> {
+  return {
+    bundle_path: bundle.bundle_path,
+    entry_path: join(bundle.bundle_path, "ut-tdd.mjs"),
+    bundle_digest: bundle.bundle_digest,
+  };
+}
+
+function validJsonProjection(bytes: Uint8Array, name: string): Record<string, unknown> {
+  try {
+    const parsed: unknown = JSON.parse(Buffer.from(bytes).toString("utf8"));
+    if (!isRecord(parsed)) throw new Error(name);
+    return parsed;
+  } catch {
+    throw new Error(`consumer_runtime_${name}_invalid`);
+  }
+}
+
+function verifyNodeReceiptForIdentity(
+  identity: ConsumerNodeRuntimeIdentity,
+  bytes: Uint8Array,
+  compiledEsm: Uint8Array,
+): void {
+  let receipt;
+  try {
+    receipt = parseNodeBootstrapReceiptBytes(bytes);
+  } catch (error) {
+    throw new Error(error instanceof Error ? error.message : "consumer_runtime_identity_mismatch");
+  }
+  const nodeIdentity = /^node-([^|]+)\|(sha256:[a-f0-9]{64})$/.exec(
+    identity.node_executable_identity,
+  );
+  if (
+    receipt.generation_id !== identity.generation_id ||
+    receipt.subject_revision !== identity.subject_revision ||
+    digestConsumerRuntimeBytes(compiledEsm) !== identity.compiled_esm_digest ||
+    !nodeIdentity ||
+    receipt.node.version !== nodeIdentity[1] ||
+    `sha256:${receipt.node.sha256}` !== nodeIdentity[2] ||
+    `sha256:${receipt.package_lock_sha256}` !== identity.package_lock_digest ||
+    `sha256:${receipt.source_graph_sha256}` !== identity.source_graph_digest ||
+    `sha256:${receipt.compiled_cli.sha256}` !== identity.compiled_esm_digest
+  )
+    throw new Error("consumer_runtime_identity_mismatch");
+}
+
+/**
+ * Production Node filesystem adapter.  It publishes a complete immutable
+ * bundle first, then swaps one active pointer. No public pointer is touched
+ * while a payload is incomplete.
+ */
+export function createConsumerNodeRuntimeFilesystemPorts(
+  identity: ConsumerNodeRuntimeIdentity,
+  bundle: ConsumerNodeRuntimeBundle,
+  options: ConsumerNodeRuntimeFilesystemOptions,
+): ConsumerNodeRuntimePorts {
+  if (!validIdentity(identity)) throw new Error("consumer_runtime_identity_mismatch");
+  const payloads = options.payloads;
+  const stage = stagingPathFor(identity);
+  const pointerPath = join(identity.runtime_root, "activation", "active.json");
+  const lockPath = join(identity.runtime_root, "locks", `${identity.product_id}.lock`);
+  const state: {
+    prior: PointerSnapshot;
+    sealed: boolean;
+    locked: boolean;
+    bundleManifest: string | null;
+  } = { prior: null, sealed: false, locked: false, bundleManifest: null };
+  const fault = (name: string) => options.fault?.(name);
+  const requirePayloadDigest = (name: keyof ConsumerNodeRuntimePayloads, file: string) => {
+    const bytes = payloads[name];
+    if (!(bytes instanceof Uint8Array) || digestConsumerRuntimeBytes(bytes) !== bundle.files[file])
+      throw new Error("consumer_runtime_digest_mismatch");
+    return bytes;
+  };
+  return {
+    readConsumerIdentity: () => {
+      ensureRealContained(identity.consumer_root, identity.runtime_root);
+      fault("readConsumerIdentity");
+    },
+    verifySealedAggregate: () => {
+      if (options.verifySealedAggregate) options.verifySealedAggregate();
+      if (validateConsumerNodeRuntimeBundle(bundle))
+        throw new Error("consumer_runtime_identity_mismatch");
+      verifyNodeReceiptForIdentity(
+        identity,
+        requirePayloadDigest("node_bootstrap_receipt", "node-bootstrap-receipt.json"),
+        requirePayloadDigest("compiled_esm", "ut-tdd.mjs"),
+      );
+      fault("verifySealedAggregate");
+    },
+    verifyNodeGeneration: () => {
+      // Receipt parsing and tuple matching are intentionally repeated at the
+      // generation boundary: a caller cannot replace the admitted bytes after
+      // aggregate verification.
+      verifyNodeReceiptForIdentity(
+        identity,
+        requirePayloadDigest("node_bootstrap_receipt", "node-bootstrap-receipt.json"),
+        requirePayloadDigest("compiled_esm", "ut-tdd.mjs"),
+      );
+      fault("verifyNodeGeneration");
+    },
+    acquireConsumerLock: () => {
+      ensureRealContained(identity.consumer_root, identity.runtime_root);
+      mkdirSync(join(identity.runtime_root, "locks"), { recursive: true });
+      mkdirSync(lockPath, { recursive: false });
+      state.locked = true;
+      fault("acquireConsumerLock");
+    },
+    snapshotPriorActivePointer: () => {
+      state.prior = readPointer(pointerPath);
+      fault("snapshotPriorActivePointer");
+    },
+    createPrivateStaging: (path) => {
+      if (resolve(path) !== resolve(stage)) throw new Error("consumer_runtime_external_path");
+      ensureRealContained(identity.runtime_root, path);
+      mkdirSync(path, { recursive: false });
+      state.bundleManifest = null;
+      fault("createPrivateStaging");
+    },
+    writeGenerationAndReceipt: (path, candidate) => {
+      if (resolve(path) !== resolve(stage) || candidate.bundle_digest !== bundle.bundle_digest)
+        throw new Error("consumer_runtime_identity_mismatch");
+      const files: Record<string, Uint8Array> = {
+        "ut-tdd.mjs": requirePayloadDigest("compiled_esm", "ut-tdd.mjs"),
+        "node-bootstrap-receipt.json": requirePayloadDigest(
+          "node_bootstrap_receipt",
+          "node-bootstrap-receipt.json",
+        ),
+        "marker.json": requirePayloadDigest("marker", "marker.json"),
+        "consumer-receipt.json": requirePayloadDigest("consumer_receipt", "consumer-receipt.json"),
+        "history.jsonl": requirePayloadDigest("history", "history.jsonl"),
+        "operation-state.json": requirePayloadDigest("operation_state", "operation-state.json"),
+      };
+      validJsonProjection(files["marker.json"], "marker");
+      validJsonProjection(files["consumer-receipt.json"], "consumer_receipt");
+      validJsonProjection(files["operation-state.json"], "operation_state");
+      const historyLines = Buffer.from(files["history.jsonl"]).toString("utf8").trim().split(/\r?\n/);
+      if (historyLines.length !== 1) throw new Error("consumer_runtime_history_invalid");
+      validJsonProjection(Buffer.from(historyLines[0], "utf8"), "history");
+      for (const [name, bytes] of Object.entries(files)) writeFileSync(join(path, name), bytes, { mode: 0o444 });
+      const manifest = {
+        ...bundle,
+        files: { ...bundle.files },
+      };
+      writeFileSync(join(path, "bundle-manifest.json"), `${canonical(manifest)}\n`, { mode: 0o444 });
+      state.bundleManifest = canonical(manifest);
+      fault("writeGenerationAndReceipt");
+    },
+    fsyncStaging: (path) => {
+      if (!state.bundleManifest || !existsSync(path)) throw new Error("consumer_runtime_absent");
+      for (const name of [
+        "ut-tdd.mjs",
+        "node-bootstrap-receipt.json",
+        "marker.json",
+        "consumer-receipt.json",
+        "history.jsonl",
+        "operation-state.json",
+        "bundle-manifest.json",
+      ])
+        fsyncFile(join(path, name));
+      fsyncDirectory(path);
+      fault("fsyncStaging");
+    },
+    sealActivationBundle: (path, candidate) => {
+      if (resolve(path) !== resolve(stage)) throw new Error("consumer_runtime_external_path");
+      const parent = dirnameOf(candidate.bundle_path);
+      ensureRealContained(identity.runtime_root, parent);
+      mkdirSync(parent, { recursive: true });
+      if (existsSync(candidate.bundle_path)) throw new Error("consumer_runtime_indeterminate");
+      fault("sealActivationBundle");
+      renameSync(path, candidate.bundle_path);
+      state.sealed = true;
+      chmodSync(candidate.bundle_path, 0o555);
+      fsyncDirectory(parent);
+    },
+    atomicRenameActivePointerCAS: (candidate) => {
+      if (!state.sealed) throw new Error("consumer_runtime_indeterminate");
+      const observed = readPointer(pointerPath);
+      if (
+        observed?.mode !== state.prior?.mode ||
+        observed?.bytes?.equals(state.prior?.bytes ?? Buffer.alloc(0)) !== true
+      ) {
+        if (observed !== null || state.prior !== null) throw new Error("consumer_runtime_indeterminate");
+      }
+      const activation = dirnameOf(pointerPath);
+      ensureRealContained(identity.runtime_root, activation);
+      mkdirSync(activation, { recursive: true });
+      const pointerTemp = join(activation, `.active-${identity.operation_id}-${identity.attempt}.tmp`);
+      if (existsSync(pointerTemp)) throw new Error("consumer_runtime_indeterminate");
+      const bytes = Buffer.from(`${canonical(pointerValue(candidate))}\n`, "utf8");
+      writeFileSync(pointerTemp, bytes, { mode: 0o444 });
+      fsyncFile(pointerTemp);
+      fault("atomicRenameActivePointerCAS");
+      renameSync(pointerTemp, pointerPath);
+      fsyncDirectory(activation);
+    },
+    verifyActiveBundle: (candidate) => {
+      const pointer = readPointer(pointerPath);
+      if (!pointer) throw new Error("consumer_runtime_absent");
+      const expected = Buffer.from(`${canonical(pointerValue(candidate))}\n`, "utf8");
+      if (!pointer.bytes.equals(expected)) throw new Error("consumer_runtime_indeterminate");
+      const manifest = JSON.parse(readFileSync(join(candidate.bundle_path, "bundle-manifest.json"), "utf8")) as unknown;
+      if (validateConsumerNodeRuntimeBundle(manifest)) throw new Error("consumer_runtime_digest_mismatch");
+      for (const [name, field] of [
+        ["ut-tdd.mjs", "compiled_esm"],
+        ["node-bootstrap-receipt.json", "node_bootstrap_receipt"],
+        ["marker.json", "marker"],
+        ["consumer-receipt.json", "consumer_receipt"],
+        ["history.jsonl", "history"],
+        ["operation-state.json", "operation_state"],
+      ] as const) {
+        const bytes = readFileSync(join(candidate.bundle_path, name));
+        if (digestConsumerRuntimeBytes(bytes) !== candidate.files[name] || !bytes.equals(payloads[field]))
+          throw new Error("consumer_runtime_digest_mismatch");
+      }
+      fault("verifyActiveBundle");
+    },
+    reconcileDurableOperation: () => {
+      const pointer = readPointer(pointerPath);
+      if (pointer) {
+        const expected = Buffer.from(`${canonical(pointerValue(bundle))}\n`, "utf8");
+        if (pointer.bytes.equals(expected) && existsSync(join(bundle.bundle_path, "bundle-manifest.json"))) return "committed";
+        if (state.prior && pointer.bytes.equals(state.prior.bytes) && pointer.mode === state.prior.mode)
+          return "uncommitted";
+        return "partial";
+      }
+      if (state.prior === null) return "uncommitted";
+      return "unknown";
+    },
+    releaseConsumerLock: () => {
+      fault("releaseConsumerLock");
+      if (!state.locked) return;
+      rmSync(lockPath, { recursive: true, force: false });
+      state.locked = false;
+    },
+    destroyPrivateStaging: (path) => {
+      if (resolve(path) !== resolve(stage)) throw new Error("consumer_runtime_external_path");
+      rmSync(path, { recursive: true, force: true });
+    },
+    quarantinePrivateStaging: (path) => {
+      if (resolve(path) !== resolve(stage)) throw new Error("consumer_runtime_external_path");
+      const destination = quarantinePathFor(identity, bundle.bundle_digest);
+      ensureRealContained(identity.runtime_root, dirnameOf(destination));
+      mkdirSync(dirnameOf(destination), { recursive: true });
+      if (existsSync(destination)) throw new Error("consumer_runtime_indeterminate");
+      renameSync(path, destination);
+    },
+  };
+}
+
+export async function installConsumerNodeRuntimeOnFilesystem(input: {
+  readonly identity: ConsumerNodeRuntimeIdentity;
+  readonly bundle: ConsumerNodeRuntimeBundle;
+  readonly payloads: ConsumerNodeRuntimePayloads;
+  readonly fault?: (barrier: string) => void;
+  readonly verifySealedAggregate?: () => void;
+}): Promise<ConsumerNodeRuntimeInstallResult> {
+  return installConsumerNodeRuntime({
+    identity: input.identity,
+    bundle: input.bundle,
+    ports: createConsumerNodeRuntimeFilesystemPorts(input.identity, input.bundle, input),
+  });
 }
 
 function failure(input: {

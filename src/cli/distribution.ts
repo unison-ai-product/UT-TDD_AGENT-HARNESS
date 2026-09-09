@@ -9,7 +9,7 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { homedir, tmpdir } from "node:os";
+import { tmpdir } from "node:os";
 import { basename, dirname, isAbsolute, join } from "node:path";
 import type { Command } from "commander";
 import { buildReleasePublicationPlan } from "../github/ops-guard.ts";
@@ -247,16 +247,6 @@ export function registerDistributionCommands(program: Command): void {
       const hasGit = spawnSync("git", ["--version"], { stdio: "ignore" }).status === 0;
       const hasGh = spawnSync("gh", ["--version"], { stdio: "ignore" }).status === 0;
       const packageRoot = opts.packageRoot ? join(repoRoot, opts.packageRoot) : repoRoot;
-      const hookWrapperPath = join(packageRoot, ".ut-tdd", "bin", "ut-tdd.mjs");
-      const packageBinPath = join(
-        packageRoot,
-        "node_modules",
-        ".bin",
-        process.platform === "win32" ? "ut-tdd.cmd" : "ut-tdd",
-      );
-      const sourceSetupEntrypoint = join(packageRoot, "src", "cli.ts");
-      const hasProjectLocalUtTdd = existsSync(hookWrapperPath) || existsSync(packageBinPath);
-      const hasSourceSetupEntrypoint = existsSync(sourceSetupEntrypoint);
       // engines.node は consumer package root の package.json が正本 (第二の pin を持たない)。
       const requiredNodeVersion = ((): string | null => {
         const manifestPath = join(packageRoot, "package.json");
@@ -271,28 +261,6 @@ export function registerDistributionCommands(program: Command): void {
           return null;
         }
       })();
-      const utTddCli = utTddCliProbe();
-      const hasUtTddCli = hasProjectLocalUtTdd || hasSourceSetupEntrypoint || utTddCli.status === 0;
-      const utTddCliObserved =
-        utTddCli.error?.message || utTddCli.stderr.trim() || `exit ${utTddCli.status ?? "unknown"}`;
-      // PLAN-L7-522 §2.2 (S1-a): global 候補の探索先も Bun 配下を見ない。
-      const utTddCliHints = [
-        process.env.APPDATA ? join(process.env.APPDATA, "npm", "ut-tdd.cmd") : "",
-        join(homedir(), ".npm-global", "bin", "ut-tdd"),
-        join(homedir(), ".local", "bin", "ut-tdd"),
-      ].filter((p) => p && existsSync(p));
-      const utTddCliMessage = hasUtTddCli
-        ? undefined
-        : [
-            "Generated Claude/Codex hooks invoke the project-local Node wrapper directly so each project can use its own pinned UT-TDD package.",
-            `Expected wrapper: ${hookWrapperPath}`,
-            `Expected package bin: ${packageBinPath}`,
-            `Expected source setup entrypoint: ${sourceSetupEntrypoint}`,
-            `Observed: ${utTddCliObserved}`,
-            utTddCliHints.length > 0
-              ? `Detected global candidate path(s): ${utTddCliHints.join(", ")}. Prefer the project-local wrapper when multiple projects on one PC pin different harness versions.`
-              : "Add UT-TDD as a project dependency, run setup to emit the project-local Node wrapper, and ensure its Node entrypoint can be resolved without a shell shim.",
-          ].join(" ");
       const exportPlan = buildCleanDistributionPlan({
         paths: collectDistributionCandidatePaths(repoRoot),
         sourceTag: opts.tag,
@@ -303,8 +271,6 @@ export function registerDistributionCommands(program: Command): void {
         requiredNodeVersion,
         hasGit,
         hasGh,
-        hasUtTddCli,
-        utTddCliMessage,
         hasClaude: detection.claude,
         hasCodex: detection.codex,
         repoRoot,

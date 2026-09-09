@@ -189,7 +189,12 @@ import {
   resolveForeignEditOverride,
 } from "./runtime/work-guard.ts";
 import { findReference } from "./search/index.ts";
-import { nodeSetupDeps, runSetup, type SetupArgs } from "./setup/index.ts";
+import {
+  nodeSetupDeps,
+  runSetupAsync,
+  type SetupArgs,
+  type SetupConsumerRuntimeInput,
+} from "./setup/index.ts";
 import {
   checkForUpdate,
   defaultHarnessRoot,
@@ -730,7 +735,7 @@ program
   )
   .option("--json", "JSON output")
   .action(
-    (opts: {
+    async (opts: {
       strictTelemetryProvenance?: boolean;
       strictGreenCommandDigest?: boolean;
       setupSmoke?: boolean;
@@ -4021,8 +4026,12 @@ program
   .option("--tl-team <slug>", "CODEOWNERS の TL team slug")
   .option("--qa-team <slug>", "CODEOWNERS の QA team slug")
   .option("--po-team <slug>", "CODEOWNERS の PO team slug")
+  .option(
+    "--consumer-runtime-input <path>",
+    "sealed consumer runtime input JSON emitted by the release materializer",
+  )
   .action(
-    (opts: {
+    async (opts: {
       solo?: boolean;
       team?: boolean;
       dryRun?: boolean;
@@ -4030,6 +4039,7 @@ program
       tlTeam?: string;
       qaTeam?: string;
       poTeam?: string;
+      consumerRuntimeInput?: string;
     }) => {
       if (opts.solo && opts.team) {
         process.stderr.write("--solo と --team は同時指定できません (どちらか一方)\n");
@@ -4057,13 +4067,39 @@ program
         teamCount === 3
           ? { tl: opts.tlTeam as string, qa: opts.qaTeam as string, po: opts.poTeam as string }
           : undefined;
+      let consumerRuntime: SetupArgs["consumerRuntime"];
+      if (opts.consumerRuntimeInput) {
+        try {
+          const value = JSON.parse(readFileSync(opts.consumerRuntimeInput, "utf8")) as {
+            identity?: SetupConsumerRuntimeInput["identity"];
+            compiled_esm_base64?: unknown;
+            node_bootstrap_receipt_base64?: unknown;
+          };
+          if (
+            !value.identity ||
+            typeof value.compiled_esm_base64 !== "string" ||
+            typeof value.node_bootstrap_receipt_base64 !== "string"
+          )
+            throw new Error("identity/compiled_esm_base64/node_bootstrap_receipt_base64 are required");
+          consumerRuntime = {
+            identity: value.identity,
+            compiled_esm: Buffer.from(value.compiled_esm_base64, "base64"),
+            node_bootstrap_receipt: Buffer.from(value.node_bootstrap_receipt_base64, "base64"),
+          } as SetupConsumerRuntimeInput;
+        } catch (error) {
+          process.stderr.write(`--consumer-runtime-input invalid: ${String(error)}\n`);
+          process.exitCode = 1;
+          return;
+        }
+      }
       const args: SetupArgs = {
         ...(phase ? { phase } : {}),
         dryRun: Boolean(opts.dryRun),
         applyBranchProtection: Boolean(opts.applyBranchProtection),
         ...(teams ? { teams } : {}),
+        ...(consumerRuntime ? { consumerRuntime } : {}),
       };
-      const r = runSetup(args, deps);
+      const r = await runSetupAsync(args, deps);
       process.stdout.write(`phase: ${r.phase}${args.dryRun ? " (dry-run)" : ""}\n`);
       for (const w of r.written) process.stdout.write(`  ${args.dryRun ? "·" : "+"} ${w}\n`);
       process.stdout.write(
