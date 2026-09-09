@@ -72,10 +72,23 @@ export interface SealedLineageReviewAuthorityPort {
   ) => SealedLineageReviewAuthorityObservation | undefined;
 }
 
+export interface SealedLineageIssueAuthorityObservation {
+  readonly number: number;
+  readonly rawBody: string;
+  readonly updatedAt: string;
+}
+
+export interface SealedLineageIssueAuthorityPort {
+  readonly observe: (
+    input: SealedLineageMigrationInput,
+  ) => SealedLineageIssueAuthorityObservation | undefined;
+}
+
 export interface SealedLineageMigrationOptions {
   readonly fault?: { after(boundary: SealedLineageBoundary): void };
   readonly git?: SealedLineageGitPreflightPort;
   readonly reviewAuthority?: SealedLineageReviewAuthorityPort;
+  readonly issueAuthority?: SealedLineageIssueAuthorityPort;
 }
 
 /** Node-only production adapter. Review custody remains a separate injected port. */
@@ -131,6 +144,41 @@ export class SystemSealedLineageGitPreflightPort implements SealedLineageGitPref
   }
 }
 
+/** GitHub の live Issue 本文を文字列のまま返し、digest 導出は application 側に残す。 */
+export class SystemSealedLineageIssueAuthorityPort implements SealedLineageIssueAuthorityPort {
+  observe(input: SealedLineageMigrationInput): SealedLineageIssueAuthorityObservation | undefined {
+    try {
+      const raw = execFileSync(
+        "gh",
+        [
+          "issue",
+          "view",
+          String(input.issue.number),
+          "--repo",
+          input.repositoryIdentity,
+          "--json",
+          "number,body,updatedAt",
+        ],
+        { encoding: "utf8", windowsHide: true, stdio: ["ignore", "pipe", "ignore"] },
+      );
+      const parsed = JSON.parse(raw) as Record<string, unknown>;
+      if (
+        !Number.isSafeInteger(parsed.number) ||
+        typeof parsed.body !== "string" ||
+        typeof parsed.updatedAt !== "string"
+      )
+        return undefined;
+      return {
+        number: Number(parsed.number),
+        rawBody: parsed.body,
+        updatedAt: parsed.updatedAt,
+      };
+    } catch {
+      return undefined;
+    }
+  }
+}
+
 export type SealedLineageMigrationResult =
   | {
       readonly ok: true;
@@ -149,12 +197,14 @@ export class SealedLineageLocalMigration {
   private readonly fault?: { after(boundary: SealedLineageBoundary): void };
   private readonly git?: SealedLineageGitPreflightPort;
   private readonly reviewAuthority?: SealedLineageReviewAuthorityPort;
+  private readonly issueAuthority?: SealedLineageIssueAuthorityPort;
 
   constructor(db: HarnessDb, options: SealedLineageMigrationOptions = {}) {
     this.db = db;
     this.fault = options.fault;
     this.git = options.git;
     this.reviewAuthority = options.reviewAuthority;
+    this.issueAuthority = options.issueAuthority;
     if (!migratePlanLedger(db).ok) throw new Error("plan-ledger-unavailable");
   }
 
@@ -169,6 +219,8 @@ export class SealedLineageLocalMigration {
     if (!preflight.ok) return preflight;
     const authority = validateAuthorities(input, this.reviewAuthority);
     if (!authority.ok) return authority;
+    const issueAuthority = validateIssueAuthority(input, preflight, this.issueAuthority);
+    if (!issueAuthority.ok) return issueAuthority;
     const transaction = new ImmediateLedgerTransaction(this.db);
     return transaction.run(() => {
       const replay = this.replay(input, checked.commandDigest);
@@ -441,6 +493,7 @@ function validate(input: SealedLineageMigrationInput):
     !input.commandId ||
     !input.repositoryIdentity ||
     !input.planId ||
+    input.successorAssetId !== deriveSuccessorAssetId(input.repositoryIdentity, input.planId) ||
     input.historicalAssetId === input.successorAssetId ||
     !Number.isSafeInteger(input.historicalTerminalRevision) ||
     input.historicalTerminalRevision < 1 ||
@@ -463,7 +516,9 @@ function validate(input: SealedLineageMigrationInput):
 function validateGitPreflight(
   input: SealedLineageMigrationInput,
   git: SealedLineageGitPreflightPort | undefined,
-): { ok: true } | { ok: false; ruleId: string } {
+):
+  | { ok: true; issueNumber: number; episodeId: string }
+  | { ok: false; ruleId: string } {
   if (!git) return rejected("seal-git-preflight-unavailable");
   let headBefore: string;
   try {
@@ -504,6 +559,16 @@ function validateGitPreflight(
     sha(parsed.body) !== input.bodyDigest
   )
     return rejected("seal-source-payload-drift");
+  const admissionReceipt = plainRecord(parsed.frontmatter.admission_receipt);
+  const issue = plainRecord(admissionReceipt?.issue);
+  if (
+    !issue ||
+    !Number.isSafeInteger(issue.issue_id) ||
+    typeof issue.episode_id !== "string" ||
+    Number(issue.issue_id) !== input.issue.number ||
+    issue.episode_id !== input.issue.episodeId
+  )
+    return rejected("seal-issue-authority-invalid");
 
   const projectionPath = "docs/governance/plan-admission-receipts.json";
   if (input.historicalProjectionPath !== projectionPath)
@@ -529,7 +594,42 @@ function validateGitPreflight(
   } catch {
     return rejected("seal-source-head-toctou");
   }
-  return headAfter === headBefore ? { ok: true } : rejected("seal-source-head-toctou");
+  return headAfter === headBefore
+    ? { ok: true, issueNumber: Number(issue.issue_id), episodeId: issue.episode_id }
+    : rejected("seal-source-head-toctou");
+}
+
+function validateIssueAuthority(
+  input: SealedLineageMigrationInput,
+  source: { readonly issueNumber: number; readonly episodeId: string },
+  authority: SealedLineageIssueAuthorityPort | undefined,
+): { ok: true } | { ok: false; ruleId: string } {
+  if (!authority) return rejected("seal-issue-authority-invalid");
+  let observed: SealedLineageIssueAuthorityObservation | undefined;
+  try {
+    observed = authority.observe(input);
+  } catch {
+    observed = undefined;
+  }
+  if (
+    !observed ||
+    observed.number !== source.issueNumber ||
+    input.issue.number !== source.issueNumber ||
+    input.issue.episodeId !== source.episodeId ||
+    shaBytes(Buffer.from(observed.rawBody, "utf8")) !== input.issue.preimageDigest
+  )
+    return rejected("seal-issue-authority-invalid");
+  return { ok: true };
+}
+
+function deriveSuccessorAssetId(repositoryIdentity: string, planId: string): string {
+  return `plan:rebase:${framedDigest("ut-tdd-plan-rebase-v1", [repositoryIdentity, planId])}`;
+}
+
+function plainRecord(value: unknown): Record<string, unknown> | undefined {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : undefined;
 }
 
 function validateAuthorities(

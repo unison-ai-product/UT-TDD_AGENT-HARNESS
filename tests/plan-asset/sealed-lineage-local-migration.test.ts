@@ -16,7 +16,7 @@ describe("sealed lineage local migration", () => {
     expect(transaction.migrate(input())).toMatchObject({
       ok: true,
       replayed: false,
-      successorAssetId: "plan:recovery-16-successor",
+      successorAssetId: SUCCESSOR_ASSET_ID,
       successorRevision: 1,
     });
     expect(count(db, "plan_revisions")).toBe(1);
@@ -25,7 +25,7 @@ describe("sealed lineage local migration", () => {
     expect(count(db, "genesis_issue_custody")).toBe(1);
     expect(count(db, "plan_admission_receipts")).toBe(1);
     expect(db.prepare("SELECT asset_id FROM plan_aliases WHERE alias = ?").get(PLAN_ID)).toEqual({
-      asset_id: "plan:recovery-16-successor",
+      asset_id: SUCCESSOR_ASSET_ID,
     });
   });
 
@@ -93,6 +93,7 @@ describe("sealed lineage local migration", () => {
       },
       git: fakeGit(command),
       reviewAuthority: fakeReviewAuthority(),
+      issueAuthority: fakeIssueAuthority(command),
     });
     expect(() => transaction.migrate(command)).toThrow(`fault:${boundary}`);
     expect(counts(db)).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
@@ -342,6 +343,7 @@ describe("sealed lineage local migration", () => {
     const transaction = new Transaction(db, {
       git: fakeGit(admitted),
       reviewAuthority: reviewAuthorityFor(admittedObservation),
+      issueAuthority: fakeIssueAuthority(admitted),
     });
     expect(transaction.migrate(admitted)).toMatchObject({ ok: true, replayed: false });
     expect(count(db, "sealed_plan_lineages")).toBe(1);
@@ -452,7 +454,7 @@ describe("sealed lineage local migration", () => {
       {
         observe: (command: MigrationInput) => ({
           number: command.issue.number + 1,
-          bodyDigest: command.issue.preimageDigest,
+          rawBody: "issue 102",
           updatedAt: "2026-09-09T00:00:00Z",
         }),
       },
@@ -463,7 +465,7 @@ describe("sealed lineage local migration", () => {
       {
         observe: (command: MigrationInput) => ({
           number: command.issue.number,
-          bodyDigest: digest("changed issue body"),
+          rawBody: "changed issue body",
           updatedAt: "2026-09-09T00:00:00Z",
         }),
       },
@@ -494,9 +496,38 @@ describe("sealed lineage local migration", () => {
       expect(counts(db)).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
     },
   );
+
+  it.each([
+    ["LF + terminal newline", "line1\nline2\n", true],
+    ["CRLF + terminal newline", "line1\r\nline2\r\n", false],
+    ["LF without terminal newline", "line1\nline2", false],
+  ] as const)("U-PA-SEAL-017: Issue body bytes %sを正規化しない", async (_name, rawBody, accepted) => {
+    const { db, Transaction } = await baseFixture();
+    const baselineBody = "line1\nline2\n";
+    const command = withAuthorityDigests({
+      ...input(),
+      issue: { ...input().issue, preimageDigest: digest(baselineBody) },
+    });
+    const transaction = new Transaction(db, {
+      git: fakeGit(command),
+      reviewAuthority: fakeReviewAuthority(),
+      issueAuthority: {
+        observe: () => ({
+          number: command.issue.number,
+          rawBody,
+          updatedAt: "2026-09-09T00:00:00Z",
+        }),
+      },
+    });
+
+    expect(transaction.migrate(command).ok).toBe(accepted);
+    expect(count(db, "sealed_plan_lineages")).toBe(accepted ? 1 : 0);
+  });
 });
 
 const PLAN_ID = "PLAN-RECOVERY-16-plan-revision-authoring";
+const SUCCESSOR_ASSET_ID =
+  "plan:rebase:74ca026f9a0b72dca6f4fb164dd4e8f43c9ea3c9b31c4db21dec38a66d9d7d57";
 
 type Boundary =
   | "asset"
@@ -575,7 +606,7 @@ interface TransactionConstructor {
         observe(input: MigrationInput):
           | {
               number: number;
-              bodyDigest: string;
+              rawBody: string;
               updatedAt: string;
             }
           | undefined;
@@ -642,7 +673,7 @@ function input(): MigrationInput {
     historicalProjectionPath: "docs/governance/plan-admission-receipts.json",
     historicalProjectionBlobOid: "b".repeat(40),
     historicalProjectionContentDigest: digest(projection),
-    successorAssetId: "plan:recovery-16-successor",
+    successorAssetId: SUCCESSOR_ASSET_ID,
     canonicalPayloadJson: payload,
     canonicalPayloadDigest: digest(payload),
     bodyDigest: digest("body"),
@@ -747,7 +778,7 @@ function fakeIssueAuthority(command: MigrationInput) {
   return {
     observe: () => ({
       number: command.issue.number,
-      bodyDigest: command.issue.preimageDigest,
+      rawBody: "issue 102",
       updatedAt: "2026-09-09T00:00:00Z",
     }),
   };
