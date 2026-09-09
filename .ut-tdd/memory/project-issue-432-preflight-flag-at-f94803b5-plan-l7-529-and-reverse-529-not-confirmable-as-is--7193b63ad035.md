@@ -1,0 +1,9 @@
+---
+memory_id: memory:project:issue-432-preflight-flag-at-f94803b5-plan-l7-529-and-reverse-529-not-confirmable-as-is--7193b63ad035
+kind: project
+title: "Issue 432 preflight FLAG at f94803b5: PLAN-L7-529 and REVERSE-529 not confirmable as-is"
+tags: ["flag", "issue-432", "plan-l7-529", "plan-reverse-529", "preflight"]
+updated_at: 2026-09-04T07:56:38.481Z
+---
+
+Non-author Claude Opus preflight of PLAN-L7-529 / PLAN-REVERSE-529 at exact subject f94803b5 returned FLAG (full text posted as a comment on issue 432). Four blockers: (1) tests/setup-project-identity-bootstrap.test.ts:585 and :609 CANDIDATE-P-PROJID-001/003 verify mkdtemp+rename fixtures, not the frozen oracles (real harness repo identity vs origin canonical bytes; real case/8.3/junction path forms) -> R3 drift, false verified claim. (2) :409-426 U-PROJID-025/026 do not stimulate 8.3 short-name (toUpperCase only, tautological off Windows). (3) project-identity-loader.ts:73 and project-identity-bootstrap.ts:58 deny unconditionally when repo root is a symlink/junction although PLAN-L7-529 3.5 defers to realpath resolution and denies only unresolvable/mismatch; they also return different rule ids (identity_worktree_drift vs identity_repository_unbound) absent from the section 4 fail-close table; test :478-487 freezes this out-of-contract behaviour. (4) project-identity-loader.ts:161-166 one-hop fallback (local-path origin -> follow that repo's origin) is an acceptance path forbidden by Forward 3.2 and Reverse 014, undocumented, untested by any candidate, yet required by the snapshot runner's local clone; either add an explicit contract clause plus candidate or remove it. Non-blocking: identity_stale_worktree / identity_write_failed missing from the fail-close table; 3.1.4 clause 4 pre-empted by plan-repository-identity-missing at loader:129. Codex owns the fixes; Claude will re-run the preflight at the next exact head on request and the closing review when the PR is open and CI green.

@@ -1,0 +1,9 @@
+---
+memory_id: memory:project:pr-521-preflight-r3-flag-at-exact-head-62b11c78-receipt-b81cdba6-nonexistent-ban-file-in-closed-enumeration-retained-runner-enum-unclassified-setup-smoke-and-bun-unit-profile-omitted-reverse-reentry-target-revision-regressed-27-to-7--8941c28daf5d
+kind: project
+title: "PR 521 preflight r3 FLAG at exact head 62b11c78 (receipt b81cdba6): nonexistent ban file in closed enumeration, retained runner enum unclassified, setup-smoke and bun-unit profile omitted, Reverse reentry target_revision regressed 27 to 7"
+tags: ["flag", "issue-487", "pr-521", "receipt", "review"]
+updated_at: 2026-09-08T02:57:35.114Z
+---
+
+PR 521 (Issue 487 pair-freeze, Codex-authored) preflight r3 by Claude claude-opus-5 at exact head 62b11c785348b9ec71d39835056651c0c58dcba0: FLAG blocking 4, receipt .ut-tdd/review/receipts/b81cdba6828b5ea40a49d17a6cfd40b9a022f8553be00b55cae0fbc19e815304.json at 2026-09-08T02:56Z. Resolved from r2: judgement unit frozen as path plus symbol reachable surface, ledger rev7 canonical. Blockers: (1) ban_enforcement_guard is a closed six-path list whose first member src/lint/bun-permanent-ban.ts does not exist at base 6e9aeb99 while real detectors (src/doctor/test-repository-isolation.ts, src/lint/design-language.ts, src/runtime/verb-classify.ts) have no class; (2) src/schema/frontmatter.ts green_command runner enum keeps bun for 384 PLAN evidence records and src/lint/review-evidence.ts mirrors it, still no retention class; (3) inventory omits src/doctor/setup-smoke.ts native-bun-launcher-contract check requiring .ut-tdd/bin/run-bun.ts and src/lint/verification-profile-catalog.ts bun-unit default profile; (4) PLAN-REVERSE-530 line 72 reentry.target_revision regressed from 27 to 7 while target is PLAN-L6-93 at revision 27. CI 5 of 5 green at this head.

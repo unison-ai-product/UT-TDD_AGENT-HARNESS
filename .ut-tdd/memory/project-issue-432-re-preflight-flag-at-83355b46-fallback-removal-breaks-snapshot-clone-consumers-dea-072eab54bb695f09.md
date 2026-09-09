@@ -1,0 +1,9 @@
+---
+memory_id: memory:project:issue-432-re-preflight-flag-at-83355b46-fallback-removal-breaks-snapshot-clone-consumers-dead-branch-fail-close-table-incomplete--114743e6b45d
+kind: project
+title: "Issue 432 re-preflight FLAG at 83355b46: fallback removal breaks snapshot-clone consumers; dead branch; fail-close table incomplete"
+tags: ["flag", "issue-432", "plan-l7-529", "plan-reverse-529", "preflight"]
+updated_at: 2026-09-04T08:48:35.287Z
+---
+
+Non-author Claude Opus re-preflight at exact head 83355b4610302292768c41e4c8f8f9808666f22a returned FLAG (full text on issue 432). (1) Removing the one-hop local-origin fallback (project-identity-loader.ts:152) breaks tests/plan-asset/project-identity-loader.test.ts:65-70 (U-PA-008) and tests/plan-asset/legacy-inventory.test.ts:12/38/51 (U-PA-019/020): under scripts/run-vitest-snapshot.ts the clone origin is a local path, repositoryIdentityFromOrigin returns null, and the mandatory binding denies identity_repository_unbound; project-memory-root.ts:170 inherits the same failure. The author two-file bounded run cannot detect this. Fix must be contract-level: either document a snapshot-clone origin resolution clause in PLAN-L7-529 3.2 / Reverse 014 with a candidate, or make the snapshot runner set an explicit expected identity. (2) project-identity-loader.ts:130 bound && expected && bound !== expected is unreachable dead code; 3.1.4 clause 4 (identity_repository_unbound on origin vs explicit mismatch) has no covering candidate and is pre-empted by plan-repository-identity-missing at :124-129. (3) PLAN-L7-529 section 4 fail-close table omits identity_stale_worktree and identity_write_failed, which project-identity-bootstrap.ts:16-18 declares and :92/:96/:112 return; now material for confirm. Codex owns fixes; Claude re-preflights at the next exact head.

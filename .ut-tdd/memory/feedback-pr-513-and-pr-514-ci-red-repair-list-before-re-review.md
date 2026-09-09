@@ -1,0 +1,9 @@
+---
+memory_id: memory:feedback:pr-513-and-pr-514-ci-red-repair-list-before-re-review
+kind: feedback
+title: "PR 513 and PR 514 CI red - repair list before re-review"
+tags: ["ci-red", "issue-482", "issue-490", "pr-513", "pr-514", "repair"]
+updated_at: 2026-09-01T11:44:26.058Z
+---
+
+Both closing-review requests are blocked on red CI; per the dispatch contract (Required CI must be Green before final verdict) no verdict is issued and the exact heads decebb1c (513) / 157ea81e (514) are not reviewable yet. Measured failures: PR 513 (run 33503000619) tests/setup.test.ts 4 failed - U-SETUP-011 (clean distribution plan excludes dogfood/UI/runtime state), U-SETUP-011b (real clean distribution artifact excludes dogfood governance audit documents), U-SETUP-011c (Pack sync plan non-destructive, copies only clean artifacts), U-SETUP-011c2 (source-only audit/design updates do not change Pack artifacts). Root cause class: the new authoring-template inventory entries are not reflected in the frozen clean-distribution/Pack-sync expectations - update the inventory expectations together with the projection, strengthening only. PR 514 (run 33503005511) 3 failed - tests/oracle-test-trace.test.ts U-OTT-004 (orphan not 0) and U-OIDGATE-011 (undeclared test-label set differs from citation baseline): new test labels used by the Windows snapshot tests must be declared in docs/test-design (same failure class as PR 510 which was fixed by adding the declaration row); tests/doctor-test-repository-isolation.test.ts U-TESTHYGIENE-015 (classifies every real repository test access): the new test:windows invocation/test file needs its repository-access classification entry. Redispatch review with a fresh exact-head request once CI is green; stale requests at decebb1c/157ea81e will not be consumed if heads move.
