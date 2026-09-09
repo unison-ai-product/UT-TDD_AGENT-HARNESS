@@ -42,6 +42,36 @@ describe("sealed lineage local migration", () => {
     expect(counts(db)).toEqual(baseline);
   });
 
+  it("U-PA-SEAL-009: durable replayはGit/review authorityの一時不在後も再実行できる", async () => {
+    const { db, Transaction } = await baseFixture();
+    const command = input();
+    const transaction = new Transaction(db, {
+      git: fakeGit(command),
+      reviewAuthority: fakeReviewAuthority(),
+    });
+    expect(transaction.migrate(command)).toMatchObject({ ok: true, replayed: false });
+    const unavailableGit = {
+      readHeadCommit: () => {
+        throw new Error("git-unavailable");
+      },
+      isReachableFromTrackedRemote: () => {
+        throw new Error("git-unavailable");
+      },
+      readBlob: () => {
+        throw new Error("git-unavailable");
+      },
+    };
+    const replay = new Transaction(db, {
+      git: unavailableGit,
+      reviewAuthority: {
+        observe: () => {
+          throw new Error("review-authority-unavailable");
+        },
+      },
+    });
+    expect(replay.migrate(command)).toMatchObject({ ok: true, replayed: true });
+  });
+
   it.each([
     "asset",
     "revision",
@@ -124,7 +154,12 @@ describe("sealed lineage local migration", () => {
         ? { ...command, sourcePath: "docs/plans/not-the-plan.md" }
         : caseName === "projection path"
           ? { ...command, historicalProjectionPath: "docs/other.json" }
-          : command;
+          : caseName === "projection terminal"
+            ? {
+                ...command,
+                historicalProjectionContentDigest: digest(JSON.stringify({ records: [] })),
+              }
+            : command;
     const transaction = new Transaction(db, { git, reviewAuthority: fakeReviewAuthority() });
     expect(transaction.migrate(mutated)).toEqual({ ok: false, ruleId });
     expect(counts(db)).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
@@ -168,7 +203,7 @@ describe("sealed lineage local migration", () => {
     const transaction = new Transaction(db, { git, reviewAuthority: fakeReviewAuthority() });
     expect(transaction.migrate(mutated)).toEqual({
       ok: false,
-      ruleId: "seal-projection-custody-mismatch",
+      ruleId: "seal-projection-terminal-mismatch",
     });
     expect(counts(db)).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
   });
@@ -190,6 +225,28 @@ describe("sealed lineage local migration", () => {
     const { db, Transaction } = await baseFixture();
     const command = input();
     const transaction = new Transaction(db, { git: fakeGit(command) });
+    expect(transaction.migrate(command)).toEqual({
+      ok: false,
+      ruleId: "seal-review-authority-invalid",
+    });
+    expect(counts(db)).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
+  });
+
+  it("U-PA-SEAL-010: custody observationの未知・重複reasonはfail-closeする", async () => {
+    const { db, Transaction } = await baseFixture();
+    const command = input();
+    const transaction = new Transaction(db, {
+      git: fakeGit(command),
+      reviewAuthority: {
+        observe: () => ({
+          pullRequestNumber: 543,
+          baseRef: "main",
+          headSha: "d".repeat(40),
+          custodyState: "custody_rejected" as const,
+          custodyReasons: ["unverified_family", "unverified_family"],
+        }),
+      },
+    });
     expect(transaction.migrate(command)).toEqual({
       ok: false,
       ruleId: "seal-review-authority-invalid",

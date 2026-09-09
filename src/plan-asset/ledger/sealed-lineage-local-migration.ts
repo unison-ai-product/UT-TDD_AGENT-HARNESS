@@ -1,5 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { createHash, timingSafeEqual } from "node:crypto";
+import type { CustodyFailureReason } from "../../feedback/review-custody.ts";
 import type { HarnessDb } from "../../state-db/index.ts";
 import { parseLegacyPlanSource } from "../adapters/legacy-plan-inventory.ts";
 import { ledgerRowDigest, migratePlanLedger } from "./schema.ts";
@@ -156,6 +157,10 @@ export class SealedLineageLocalMigration {
   migrate(input: SealedLineageMigrationInput): SealedLineageMigrationResult {
     const checked = validate(input);
     if (!checked.ok) return checked;
+    // Replay is bound only to the durable receipt and rows.  It must remain
+    // available after the source branch moves or an authority port expires.
+    const replay = this.replay(input, checked.commandDigest);
+    if (replay) return replay;
     const preflight = validateGitPreflight(input, this.git);
     if (!preflight.ok) return preflight;
     const authority = validateAuthorities(input, this.reviewAuthority);
@@ -433,6 +438,7 @@ function validate(input: SealedLineageMigrationInput):
     !input.repositoryIdentity ||
     !input.planId ||
     input.historicalAssetId === input.successorAssetId ||
+    !Number.isSafeInteger(input.historicalTerminalRevision) ||
     input.historicalTerminalRevision < 1 ||
     !/^[0-9a-f]{40}(?:[0-9a-f]{24})?$/.test(input.sourceCommit) ||
     !/^[0-9a-f]{40}(?:[0-9a-f]{24})?$/.test(input.sourceBlobOid) ||
@@ -461,12 +467,23 @@ function validateGitPreflight(
   } catch {
     return rejected("seal-source-commit-unreachable");
   }
-  if (headBefore !== input.sourceCommit || !git.isReachableFromTrackedRemote(input.sourceCommit))
+  let reachable = false;
+  try {
+    reachable = git.isReachableFromTrackedRemote(input.sourceCommit);
+  } catch {
+    reachable = false;
+  }
+  if (headBefore !== input.sourceCommit || !reachable)
     return rejected("seal-source-commit-unreachable");
 
   const canonicalSourcePath = `docs/plans/${input.planId}.md`;
   if (input.sourcePath !== canonicalSourcePath) return rejected("seal-source-path-noncanonical");
-  const sourceBlob = git.readBlob(input.sourceCommit, input.sourcePath);
+  let sourceBlob: SealedLineageGitBlob | undefined;
+  try {
+    sourceBlob = git.readBlob(input.sourceCommit, input.sourcePath);
+  } catch {
+    sourceBlob = undefined;
+  }
   if (!sourceBlob) return rejected("seal-source-path-absent");
   if (sourceBlob.blobOid !== input.sourceBlobOid) return rejected("seal-source-blob-mismatch");
   let source: string;
@@ -487,7 +504,12 @@ function validateGitPreflight(
   const projectionPath = "docs/governance/plan-admission-receipts.json";
   if (input.historicalProjectionPath !== projectionPath)
     return rejected("seal-projection-path-noncanonical");
-  const projectionBlob = git.readBlob(input.sourceCommit, input.historicalProjectionPath);
+  let projectionBlob: SealedLineageGitBlob | undefined;
+  try {
+    projectionBlob = git.readBlob(input.sourceCommit, input.historicalProjectionPath);
+  } catch {
+    projectionBlob = undefined;
+  }
   if (
     !projectionBlob ||
     projectionBlob.blobOid !== input.historicalProjectionBlobOid ||
@@ -538,6 +560,11 @@ function validateAuthorities(
     !observation ||
     !Number.isSafeInteger(observation.pullRequestNumber) ||
     observation.pullRequestNumber < 1 ||
+    !/^[0-9a-f]{40}(?:[0-9a-f]{24})?$/.test(observation.headSha) ||
+    !observation.baseRef ||
+    (observation.custodyState !== "custody_admitted" &&
+      observation.custodyState !== "custody_rejected") ||
+    !isCanonicalCustodyReasons(observation.custodyReasons) ||
     (observation.custodyState === "custody_admitted" && observation.custodyReasons.length !== 0)
   )
     return rejected("seal-review-authority-invalid");
@@ -568,6 +595,31 @@ function validateAuthorities(
   return expectedCertificate === input.certificateDigest
     ? { ok: true }
     : rejected("seal-certificate-digest-mismatch");
+}
+
+const custodyReasonOrder: readonly CustodyFailureReason[] = [
+  "missing",
+  "signature_unverified",
+  "signer_mismatch",
+  "identity_mismatch",
+  "receipt_corrupt",
+  "head_raced",
+  "provider_failed",
+  "verdict_flagged",
+  "unverified_family",
+  "audit_unavailable",
+];
+
+function isCanonicalCustodyReasons(reasons: unknown): reasons is readonly CustodyFailureReason[] {
+  if (!Array.isArray(reasons)) return false;
+  let previous = -1;
+  for (const reason of reasons) {
+    if (typeof reason !== "string" || reason.includes(",")) return false;
+    const index = custodyReasonOrder.indexOf(reason as CustodyFailureReason);
+    if (index < 0 || index <= previous) return false;
+    previous = index;
+  }
+  return true;
 }
 
 function projectionHasTerminal(bytes: Uint8Array, input: SealedLineageMigrationInput): boolean {
