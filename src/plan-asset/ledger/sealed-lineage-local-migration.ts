@@ -1,5 +1,8 @@
+import { execFileSync } from "node:child_process";
 import { createHash, timingSafeEqual } from "node:crypto";
+import type { CustodyFailureReason } from "../../feedback/review-custody.ts";
 import type { HarnessDb } from "../../state-db/index.ts";
+import { parseLegacyPlanSource } from "../adapters/legacy-plan-inventory.ts";
 import { ledgerRowDigest, migratePlanLedger } from "./schema.ts";
 import { ImmediateLedgerTransaction } from "./transaction.ts";
 
@@ -15,6 +18,7 @@ export type SealedLineageBoundary =
 
 export interface SealedLineageMigrationInput {
   readonly commandId: string;
+  readonly repositoryIdentity: string;
   readonly planId: string;
   readonly historicalAssetId: string;
   readonly historicalTerminalRevision: number;
@@ -28,6 +32,7 @@ export interface SealedLineageMigrationInput {
   readonly bodyDigest: string;
   readonly sourcePath: string;
   readonly sourceCommit: string;
+  readonly sourceBlobOid: string;
   readonly actor: string;
   readonly occurredAt: string;
   readonly certificateDigest: string;
@@ -39,6 +44,91 @@ export interface SealedLineageMigrationInput {
     readonly episodeId: string;
     readonly preimageDigest: string;
   };
+}
+
+export interface SealedLineageGitBlob {
+  readonly blobOid: string;
+  readonly bytes: Uint8Array;
+}
+
+/** Git の読み出しは writer から分離し、pair test ではこの port を置換する。 */
+export interface SealedLineageGitPreflightPort {
+  readonly readHeadCommit: () => string;
+  readonly isReachableFromTrackedRemote: (commit: string) => boolean;
+  readonly readBlob: (commit: string, path: string) => SealedLineageGitBlob | undefined;
+}
+
+export interface SealedLineageReviewAuthorityObservation {
+  readonly pullRequestNumber: number;
+  readonly baseRef: string;
+  readonly headSha: string;
+  readonly custodyState: "custody_admitted" | "custody_rejected";
+  readonly custodyReasons: readonly string[];
+}
+
+export interface SealedLineageReviewAuthorityPort {
+  readonly observe: (
+    input: SealedLineageMigrationInput,
+  ) => SealedLineageReviewAuthorityObservation | undefined;
+}
+
+export interface SealedLineageMigrationOptions {
+  readonly fault?: { after(boundary: SealedLineageBoundary): void };
+  readonly git?: SealedLineageGitPreflightPort;
+  readonly reviewAuthority?: SealedLineageReviewAuthorityPort;
+}
+
+/** Node-only production adapter. Review custody remains a separate injected port. */
+export class SystemSealedLineageGitPreflightPort implements SealedLineageGitPreflightPort {
+  private readonly repoRoot: string;
+
+  constructor(repoRoot: string) {
+    this.repoRoot = repoRoot;
+  }
+
+  readHeadCommit(): string {
+    return this.git(["rev-parse", "HEAD"]).trim();
+  }
+
+  isReachableFromTrackedRemote(commit: string): boolean {
+    const refs = this.git(["for-each-ref", "--format=%(refname)", "refs/remotes/origin"])
+      .split(/\r?\n/)
+      .map((ref) => ref.trim())
+      .filter(Boolean);
+    return refs.some((ref) => {
+      try {
+        execFileSync("git", ["-C", this.repoRoot, "merge-base", "--is-ancestor", commit, ref], {
+          stdio: "ignore",
+        });
+        return true;
+      } catch {
+        return false;
+      }
+    });
+  }
+
+  readBlob(commit: string, path: string): SealedLineageGitBlob | undefined {
+    try {
+      const tree = this.git(["ls-tree", commit, "--", path]).trim();
+      const match = /^100644 blob ([0-9a-f]{40}(?:[0-9a-f]{24})?)\t(.+)$/.exec(tree);
+      if (!match || match[2] !== path) return undefined;
+      return { blobOid: match[1], bytes: this.gitBytes(["cat-file", "blob", match[1]]) };
+    } catch {
+      return undefined;
+    }
+  }
+
+  private git(args: readonly string[]): string {
+    return this.gitBytes(args).toString("utf8");
+  }
+
+  private gitBytes(args: readonly string[]): Buffer {
+    return execFileSync("git", ["-C", this.repoRoot, ...args], {
+      encoding: "buffer",
+      maxBuffer: 64 * 1024 * 1024,
+      stdio: ["ignore", "pipe", "ignore"],
+    });
+  }
 }
 
 export type SealedLineageMigrationResult =
@@ -57,16 +147,28 @@ export type SealedLineageMigrationResult =
 export class SealedLineageLocalMigration {
   private readonly db: HarnessDb;
   private readonly fault?: { after(boundary: SealedLineageBoundary): void };
+  private readonly git?: SealedLineageGitPreflightPort;
+  private readonly reviewAuthority?: SealedLineageReviewAuthorityPort;
 
-  constructor(db: HarnessDb, fault?: { after(boundary: SealedLineageBoundary): void }) {
+  constructor(db: HarnessDb, options: SealedLineageMigrationOptions = {}) {
     this.db = db;
-    this.fault = fault;
+    this.fault = options.fault;
+    this.git = options.git;
+    this.reviewAuthority = options.reviewAuthority;
     if (!migratePlanLedger(db).ok) throw new Error("plan-ledger-unavailable");
   }
 
   migrate(input: SealedLineageMigrationInput): SealedLineageMigrationResult {
     const checked = validate(input);
     if (!checked.ok) return checked;
+    // Replay is bound only to the durable receipt and rows.  It must remain
+    // available after the source branch moves or an authority port expires.
+    const replay = this.replay(input, checked.commandDigest);
+    if (replay) return replay;
+    const preflight = validateGitPreflight(input, this.git);
+    if (!preflight.ok) return preflight;
+    const authority = validateAuthorities(input, this.reviewAuthority);
+    if (!authority.ok) return authority;
     const transaction = new ImmediateLedgerTransaction(this.db);
     return transaction.run(() => {
       const replay = this.replay(input, checked.commandDigest);
@@ -282,6 +384,10 @@ export class SealedLineageLocalMigration {
       certificate_json: canonical({
         historicalAssetId: input.historicalAssetId,
         historicalTerminalRevision: input.historicalTerminalRevision,
+        historicalTailDigest: input.historicalTailDigest,
+        planId: input.planId,
+        reviewedImplementationAuthorityDigest: input.reviewedImplementationAuthorityDigest,
+        sourceAuthorityDigest: input.sourceAuthorityDigest,
         successorAssetId: input.successorAssetId,
         successorRevision: 1,
       }),
@@ -333,10 +439,13 @@ function validate(input: SealedLineageMigrationInput):
   ];
   if (
     !input.commandId ||
+    !input.repositoryIdentity ||
     !input.planId ||
     input.historicalAssetId === input.successorAssetId ||
+    !Number.isSafeInteger(input.historicalTerminalRevision) ||
     input.historicalTerminalRevision < 1 ||
     !/^[0-9a-f]{40}(?:[0-9a-f]{24})?$/.test(input.sourceCommit) ||
+    !/^[0-9a-f]{40}(?:[0-9a-f]{24})?$/.test(input.sourceBlobOid) ||
     !/^[0-9a-f]{40}(?:[0-9a-f]{24})?$/.test(input.historicalProjectionBlobOid) ||
     digests.some((value) => !/^[0-9a-f]{64}$/.test(value)) ||
     sha(input.canonicalPayloadJson) !== input.canonicalPayloadDigest ||
@@ -349,6 +458,235 @@ function validate(input: SealedLineageMigrationInput):
     contentDigest: sha(`${input.canonicalPayloadDigest}:${input.bodyDigest}`),
     routeDigest: sha(canonical({ mode: "recovery", signal: "regression_dev" })),
   };
+}
+
+function validateGitPreflight(
+  input: SealedLineageMigrationInput,
+  git: SealedLineageGitPreflightPort | undefined,
+): { ok: true } | { ok: false; ruleId: string } {
+  if (!git) return rejected("seal-git-preflight-unavailable");
+  let headBefore: string;
+  try {
+    headBefore = git.readHeadCommit();
+  } catch {
+    return rejected("seal-source-commit-unreachable");
+  }
+  let reachable = false;
+  try {
+    reachable = git.isReachableFromTrackedRemote(input.sourceCommit);
+  } catch {
+    reachable = false;
+  }
+  if (headBefore !== input.sourceCommit || !reachable)
+    return rejected("seal-source-commit-unreachable");
+
+  const canonicalSourcePath = `docs/plans/${input.planId}.md`;
+  if (input.sourcePath !== canonicalSourcePath) return rejected("seal-source-path-noncanonical");
+  let sourceBlob: SealedLineageGitBlob | undefined;
+  try {
+    sourceBlob = git.readBlob(input.sourceCommit, input.sourcePath);
+  } catch {
+    sourceBlob = undefined;
+  }
+  if (!sourceBlob) return rejected("seal-source-path-absent");
+  if (sourceBlob.blobOid !== input.sourceBlobOid) return rejected("seal-source-blob-mismatch");
+  let source: string;
+  try {
+    source = new TextDecoder("utf-8", { fatal: true }).decode(sourceBlob.bytes);
+  } catch {
+    return rejected("seal-source-payload-drift");
+  }
+  const parsed = parseLegacyPlanSource(source);
+  if (
+    !parsed ||
+    stableCanonical(parsed.frontmatter) !== input.canonicalPayloadJson ||
+    sha(input.canonicalPayloadJson) !== input.canonicalPayloadDigest ||
+    sha(parsed.body) !== input.bodyDigest
+  )
+    return rejected("seal-source-payload-drift");
+
+  const projectionPath = "docs/governance/plan-admission-receipts.json";
+  if (input.historicalProjectionPath !== projectionPath)
+    return rejected("seal-projection-path-noncanonical");
+  let projectionBlob: SealedLineageGitBlob | undefined;
+  try {
+    projectionBlob = git.readBlob(input.sourceCommit, input.historicalProjectionPath);
+  } catch {
+    projectionBlob = undefined;
+  }
+  if (
+    !projectionBlob ||
+    projectionBlob.blobOid !== input.historicalProjectionBlobOid ||
+    shaBytes(projectionBlob.bytes) !== input.historicalProjectionContentDigest
+  )
+    return rejected("seal-projection-custody-mismatch");
+  if (!projectionHasTerminal(projectionBlob.bytes, input))
+    return rejected("seal-projection-terminal-mismatch");
+
+  let headAfter: string;
+  try {
+    headAfter = git.readHeadCommit();
+  } catch {
+    return rejected("seal-source-head-toctou");
+  }
+  return headAfter === headBefore ? { ok: true } : rejected("seal-source-head-toctou");
+}
+
+function validateAuthorities(
+  input: SealedLineageMigrationInput,
+  reviewAuthority: SealedLineageReviewAuthorityPort | undefined,
+): { ok: true } | { ok: false; ruleId: string } {
+  const expectedSource = framedDigest("ut-tdd-seal-source-authority-v1", [
+    input.repositoryIdentity,
+    input.planId,
+    input.sourcePath,
+    input.sourceCommit,
+    input.sourceBlobOid,
+    input.canonicalPayloadDigest,
+    input.bodyDigest,
+    input.historicalProjectionPath,
+    input.historicalProjectionBlobOid,
+    input.historicalProjectionContentDigest,
+    input.historicalAssetId,
+    String(input.historicalTerminalRevision),
+    input.historicalTailDigest,
+  ]);
+  if (expectedSource !== input.sourceAuthorityDigest)
+    return rejected("seal-source-authority-invalid");
+  if (!reviewAuthority) return rejected("seal-review-authority-invalid");
+  let observation: SealedLineageReviewAuthorityObservation | undefined;
+  try {
+    observation = reviewAuthority.observe(input);
+  } catch {
+    observation = undefined;
+  }
+  if (
+    !observation ||
+    !Number.isSafeInteger(observation.pullRequestNumber) ||
+    observation.pullRequestNumber < 1 ||
+    !/^[0-9a-f]{40}(?:[0-9a-f]{24})?$/.test(observation.headSha) ||
+    !observation.baseRef ||
+    (observation.custodyState !== "custody_admitted" &&
+      observation.custodyState !== "custody_rejected") ||
+    !isCanonicalCustodyReasons(observation.custodyReasons) ||
+    (observation.custodyState === "custody_admitted" && observation.custodyReasons.length !== 0)
+  )
+    return rejected("seal-review-authority-invalid");
+  const reasons = observation.custodyReasons.join(",");
+  const expectedReview = framedDigest("ut-tdd-seal-review-authority-v1", [
+    input.repositoryIdentity,
+    input.planId,
+    String(observation.pullRequestNumber),
+    observation.baseRef,
+    observation.headSha,
+    observation.custodyState,
+    reasons,
+  ]);
+  if (expectedReview !== input.reviewedImplementationAuthorityDigest)
+    return rejected("seal-review-authority-invalid");
+  const expectedCertificate = sha(
+    canonical({
+      historicalAssetId: input.historicalAssetId,
+      historicalTerminalRevision: input.historicalTerminalRevision,
+      historicalTailDigest: input.historicalTailDigest,
+      planId: input.planId,
+      reviewedImplementationAuthorityDigest: input.reviewedImplementationAuthorityDigest,
+      sourceAuthorityDigest: input.sourceAuthorityDigest,
+      successorAssetId: input.successorAssetId,
+      successorRevision: 1,
+    }),
+  );
+  return expectedCertificate === input.certificateDigest
+    ? { ok: true }
+    : rejected("seal-certificate-digest-mismatch");
+}
+
+const custodyReasonOrder: readonly CustodyFailureReason[] = [
+  "missing",
+  "signature_unverified",
+  "signer_mismatch",
+  "identity_mismatch",
+  "receipt_corrupt",
+  "head_raced",
+  "provider_failed",
+  "verdict_flagged",
+  "unverified_family",
+  "audit_unavailable",
+];
+
+function isCanonicalCustodyReasons(reasons: unknown): reasons is readonly CustodyFailureReason[] {
+  if (!Array.isArray(reasons)) return false;
+  let previous = -1;
+  for (const reason of reasons) {
+    if (typeof reason !== "string" || reason.includes(",")) return false;
+    const index = custodyReasonOrder.indexOf(reason as CustodyFailureReason);
+    if (index < 0 || index <= previous) return false;
+    previous = index;
+  }
+  return true;
+}
+
+function projectionHasTerminal(bytes: Uint8Array, input: SealedLineageMigrationInput): boolean {
+  try {
+    const value = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes)) as {
+      records?: readonly Record<string, unknown>[];
+    };
+    if (!Array.isArray(value.records)) return false;
+    const records = value.records.filter((record) => {
+      const binding = record.binding;
+      return (
+        binding &&
+        typeof binding === "object" &&
+        (binding as Record<string, unknown>).plan_id === input.planId &&
+        Number.isSafeInteger(record.sequence) &&
+        Number(record.sequence) > 0
+      );
+    });
+    const maxSequence = Math.max(...records.map((record) => Number(record.sequence)));
+    const terminalCandidates = records.filter((record) => Number(record.sequence) === maxSequence);
+    if (terminalCandidates.length !== 1) return false;
+    const terminal = terminalCandidates[0];
+    if (!terminal?.binding || typeof terminal.binding !== "object") return false;
+    const binding = terminal.binding as Record<string, unknown>;
+    return (
+      binding.asset_id === input.historicalAssetId &&
+      Number.isSafeInteger(binding.revision) &&
+      binding.revision === input.historicalTerminalRevision &&
+      stripDigestPrefix(String(terminal.record_digest)) === input.historicalTailDigest
+    );
+  } catch {
+    return false;
+  }
+}
+
+function framedDigest(label: string, values: readonly string[]): string {
+  const hash = createHash("sha256");
+  for (const value of [label, ...values]) {
+    const bytes = Buffer.from(value, "utf8");
+    const length = Buffer.allocUnsafe(4);
+    length.writeUInt32BE(bytes.byteLength, 0);
+    hash.update(length).update(bytes);
+  }
+  return hash.digest("hex");
+}
+
+function stableCanonical(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(stableCanonical).join(",")}]`;
+  if (value && typeof value === "object")
+    return `{${Object.entries(value as Record<string, unknown>)
+      .filter(([, child]) => child !== undefined)
+      .sort(([left], [right]) => Buffer.compare(Buffer.from(left), Buffer.from(right)))
+      .map(([key, child]) => `${JSON.stringify(key)}:${stableCanonical(child)}`)
+      .join(",")}}`;
+  return JSON.stringify(value);
+}
+
+function shaBytes(value: Uint8Array): string {
+  return createHash("sha256").update(value).digest("hex");
+}
+
+function stripDigestPrefix(value: string): string {
+  return value.startsWith("sha256:") ? value.slice("sha256:".length) : value;
 }
 
 function rejected(ruleId: string): { ok: false; ruleId: string } {
