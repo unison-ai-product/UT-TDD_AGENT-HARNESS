@@ -838,6 +838,8 @@ export function recoverClaudeInboxBacklog(input: {
   pullRequestState?: (pr: number) => ClaudeInboxPullRequestObservation | undefined;
   dryRun?: boolean;
   now?: string;
+  /** Fault-injection/adapter barrier immediately before terminal marker commit. */
+  beforeTerminalCommit?: () => void;
 }): ClaudeInboxRecoveryResult {
   const root = runtimeRoot(input.repoRoot);
   const dryRun = input.dryRun ?? true;
@@ -876,6 +878,8 @@ export function recoverClaudeInboxBacklog(input: {
     };
     results.push(result);
     if (!dryRun) {
+      input.beforeTerminalCommit?.();
+      requireProjectMemoryCompletion(input.repoRoot);
       ensureDir(root, { recursive: true });
       const path = terminalMarkerPath(root, entry.id);
       if (!existsSync(path))

@@ -7,6 +7,7 @@ export type {
   DoctorScope,
 } from "./profiles.ts";
 export {
+  CONSUMER_TOOLCHAIN_DOCTOR_OUTPUT_IDS,
   consumerSafeDoctorRunProfiles,
   DOCTOR_RUN_PROFILE_IDS,
   DOCTOR_RUN_PROFILES,

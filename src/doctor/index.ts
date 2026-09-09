@@ -10,6 +10,7 @@ import {
   type DoctorOptions,
   resolveDoctorRunProfile,
 } from "./check-registry.ts";
+import { checkMemoryMigrationCompletion } from "./memory-migration.ts";
 import { checkPlanReferenceFreshnessAdvisory } from "./plan-governance.ts";
 import type { DoctorRunProfile } from "./profiles.ts";
 import { buildDoctorResult, type DoctorResult } from "./result.ts";
@@ -162,7 +163,15 @@ export function runDoctorMeasured(
 ): DoctorMeasurement {
   const profile = resolveDoctorRunProfile(options);
   if (profile.invocation === "setup-smoke") {
-    return { result: checkSetupSmoke(deps), checkIds: ["setup-smoke"], profile };
+    return {
+      result: checkSetupSmoke({
+        ...deps,
+        memoryCompletion:
+          deps.memoryCompletion ?? (() => checkMemoryMigrationCompletion(deps.repoRoot)),
+      }),
+      checkIds: ["setup-smoke"],
+      profile,
+    };
   }
 
   const d = detectMode();

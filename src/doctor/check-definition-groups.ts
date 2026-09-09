@@ -224,7 +224,10 @@ export function buildDoctorCheckDefinitionGroups(
     {
       id: "completion-and-readability",
       definitions: [
-        full("memory-migration-completion", () => checkMemoryMigrationCompletion(deps.repoRoot)),
+        fullAndToolchain(
+          "memory-migration-completion",
+          () => deps.memoryCompletion?.() ?? checkMemoryMigrationCompletion(deps.repoRoot),
+        ),
         full("l6-fr-coverage", () => checkL6FrCoverage(deps.repoRoot)),
         full("readability", () => checkReadability(deps.repoRoot)),
         full("runtime-readability", () => checkRuntimeReadability(deps.repoRoot)),

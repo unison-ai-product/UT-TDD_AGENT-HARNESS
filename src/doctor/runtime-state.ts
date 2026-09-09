@@ -8,6 +8,7 @@ import {
   type HandoverPointer,
   handoverStale,
 } from "../handover/index.ts";
+import type { LintResult } from "../plan/lint.ts";
 import {
   type AgentSlotsDeps,
   DEFAULT_STALE_MINUTES,
@@ -29,6 +30,8 @@ export interface DoctorDeps {
   listDir: (dir: string) => string[];
   /** Optional PF3 input; node deps populate it, tests may provide facts directly. */
   worktreeTopology?: WorktreeTopologyProvider;
+  /** Explicit test/adapter seam; node doctor supplies the production fence check. */
+  memoryCompletion?: () => LintResult;
 }
 
 export function handoverDeps(deps: DoctorDeps): HandoverDeps {
