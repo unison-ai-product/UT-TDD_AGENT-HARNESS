@@ -3,7 +3,7 @@ memory_id: memory:feedback:inbox-absence-never-proves-a-review-request-is-absent
 kind: feedback
 title: "Inbox absence never proves a review request is absent: reconcile open PRs and canonical requests by shell-free pull commands"
 tags: ["clean-checkout", "inbox", "memory-canon", "pull-vs-push", "review-detection"]
-updated_at: 2026-09-10T01:42:11.419Z
+updated_at: 2026-09-10T03:11:47.991Z
 ---
 
 review 依頼の検知を Stop-hook の `[UT_TDD_CLAUDE_INBOX]` 配信だけに依存すると、依頼メモリを伴わずに立った
@@ -21,7 +21,10 @@ pull で突き合わせる。inbox 通知は補助であって唯一の入口に
 `execFileSync` に引数配列で `gh` を渡すので、Windows (Node の既定 shell = cmd.exe) でも POSIX でも
 同じ挙動になる。`.ut-tdd/review/requests/` と `.ut-tdd/review/receipts/` は runtime projection であり
 clean checkout には存在しないので、不在は「未消費 request 0 件」として扱う (ENOENT だけを空に読み替え、
-権限エラー・JSON 破損・schema 不一致はそのまま fail-close する)。
+権限エラー・JSON 破損・schema 不一致はそのまま fail-close する)。snippet の schema 検証は canonical
+(`src/feedback/review-attestation.ts` の `isValidReviewRequest` / `isValidReviewReceipt`) と同じ形の検査
+(40-hex head、safe integer の pr、ISO-8601 時刻、family / kind / verdict の列挙値) であり、それを満たさない
+`.json` は列挙せず throw する。authority は canonical 側にあり、snippet は候補の列挙にすぎない。
 
 ```bash
 # open PR 一覧 (number / head 8 桁 / draft / title)
@@ -40,8 +43,10 @@ const ls=d=>{try{return fs.readdirSync(d)}catch(e){if(e.code==="ENOENT")return [
 const fail=message=>{throw new Error("invalid review projection: "+message)};
 const text=v=>typeof v==="string"&&v.trim().length>0;
 const head=v=>typeof v==="string"&&/^[0-9a-f]{40}$/.test(v);
-const request=v=>v&&typeof v==="object"&&text(v.memoryId)&&Number.isInteger(v.pr)&&v.pr>0&&head(v.exactHead)&&text(v.reviewRevision)&&["claude","codex"].includes(v.authorFamily)&&text(v.requestedAt);
-const receipt=v=>{if(!v||typeof v!=="object"||!text(v.memoryId)||!Number.isInteger(v.pr)||v.pr<1||!head(v.head)||!text(v.reviewRevision)||!["claude","codex"].includes(v.reviewerFamily)||!["acknowledged","in_review","verdict"].includes(v.kind)||!text(v.at))return false;if(v.kind!=="verdict")return !Object.hasOwn(v,"verdict")&&!Object.hasOwn(v,"blockingFindings");if(!["PASS","PASS-WEAK","FLAG"].includes(v.verdict))return false;if(v.verdict==="FLAG")return Array.isArray(v.blockingFindings)&&v.blockingFindings.length>0&&v.blockingFindings.every(text);return !Object.hasOwn(v,"blockingFindings")||(Array.isArray(v.blockingFindings)&&v.blockingFindings.length===0)};
+const ts=v=>typeof v==="string"&&/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?(Z|[+-]\d{2}:\d{2})$/.test(v)&&Number.isFinite(Date.parse(v));
+const pr=v=>Number.isSafeInteger(v)&&v>0;
+const request=v=>v&&typeof v==="object"&&text(v.memoryId)&&pr(v.pr)&&head(v.exactHead)&&text(v.reviewRevision)&&["claude","codex"].includes(v.authorFamily)&&ts(v.requestedAt);
+const receipt=v=>{if(!v||typeof v!=="object"||!text(v.memoryId)||!pr(v.pr)||!head(v.head)||!text(v.reviewRevision)||!["claude","codex"].includes(v.reviewerFamily)||!["acknowledged","in_review","verdict"].includes(v.kind)||!ts(v.at))return false;if(v.kind!=="verdict")return !Object.hasOwn(v,"verdict")&&!Object.hasOwn(v,"blockingFindings");if(!["PASS","PASS-WEAK","FLAG"].includes(v.verdict))return false;if(v.verdict==="FLAG")return Array.isArray(v.blockingFindings)&&v.blockingFindings.length>0&&v.blockingFindings.every(text);return !Object.hasOwn(v,"blockingFindings")||(Array.isArray(v.blockingFindings)&&v.blockingFindings.length===0)};
 const open=new Map(JSON.parse(execFileSync("gh",["pr","list","--state","open","--json","number,headRefOid"],{encoding:"utf8"})).map(p=>[p.number,p.headRefOid]));
 const rq=".ut-tdd/review/requests", rc=".ut-tdd/review/receipts";
 const done=new Set();
@@ -62,4 +67,5 @@ EOD close-out の未 push commit / open PR 確認 (`CLAUDE.md` §定期棚卸し
 書いており、Windows では cmd.exe が `|` をパイプと解釈して exit 1 になり「2 本で足りる」が再現しなかった
 (加えて requests 直下の `.md` を JSON.parse して落ちる潜在欠陥もあった)。第 3 世代は `execFileSync` 化したが
 `fs.readdirSync` を無条件に呼び、requests / receipts が無い clean checkout で ENOENT (exit 1) になった。
+第 4 世代は schema 検証を持たず、第 5 世代の検証は `requestedAt="x"` や safe integer 外の `pr` を通し、canonical より緩かった。
 時点事実やコマンドを書くときは、その値・終了コードを両 OS かつ clean checkout で再現できる形で併記すること。
