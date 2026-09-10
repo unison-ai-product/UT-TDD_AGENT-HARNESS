@@ -620,12 +620,21 @@ export async function runSetupAsync(args: SetupArgs, deps: SetupDeps): Promise<S
     const result = runSetup(args, deps);
     return { ...result, consumerRuntime };
   } catch (error) {
+    let setupRestoreError: unknown;
+    let runtimeRestoreError: unknown;
     try {
       restoreSetupFiles(setupSnapshot);
+    } catch (restoreError) {
+      setupRestoreError = restoreError;
+    }
+    try {
       restoreRuntimeTree(args.consumerRuntime.identity.runtime_root, runtimeSnapshot);
     } catch (restoreError) {
+      runtimeRestoreError = restoreError;
+    }
+    if (setupRestoreError !== undefined || runtimeRestoreError !== undefined) {
       throw new Error(
-        `consumer_runtime_indeterminate:${String(restoreError)};primary:${String(error)}`,
+        `consumer_runtime_indeterminate:setup=${String(setupRestoreError)};runtime=${String(runtimeRestoreError)};primary=${String(error)}`,
       );
     }
     throw error;
