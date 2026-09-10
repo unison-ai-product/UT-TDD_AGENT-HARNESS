@@ -3,7 +3,10 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { reviewRequestDigest } from "../src/feedback/review-attestation.ts";
+import {
+  reviewRequestDigest,
+  canonicalizeReviewRequest,
+} from "../src/feedback/review-attestation.ts";
 import type { ReviewReceipt, ReviewRequest } from "../src/feedback/review-dispatch.ts";
 import { reconcileReviewProjection } from "../src/feedback/review-projection-reconciliation.ts";
 
@@ -19,15 +22,16 @@ function makeTempDir(prefix: string): string {
 }
 
 function request(overrides: Partial<ReviewRequest> = {}): ReviewRequest {
-  return {
+  const base = {
     memoryId: "memory:project:pr-558",
     pr: 558,
     exactHead: "a".repeat(40),
-    reviewRevision: "rv1-test",
+    reviewRevision: "legacy-revision",
     authorFamily: "codex",
     requestedAt: "2026-09-10T00:00:00Z",
     ...overrides,
   };
+  return overrides.reviewRevision === undefined ? canonicalizeReviewRequest(base) : base;
 }
 
 function receipt(overrides: Partial<ReviewReceipt> = {}): ReviewReceipt {
@@ -35,7 +39,7 @@ function receipt(overrides: Partial<ReviewReceipt> = {}): ReviewReceipt {
     memoryId: "memory:project:pr-558",
     pr: 558,
     head: "a".repeat(40),
-    reviewRevision: "rv1-test",
+    reviewRevision: request().reviewRevision,
     reviewerFamily: "claude",
     kind: "verdict",
     verdict: "PASS",
@@ -73,6 +77,7 @@ describe("review projection reconciliation (U-RVDISP)", () => {
       ok: true,
       pending: [],
       consumed: [f.digest],
+      flagged: [],
       issues: [],
     });
   });
@@ -101,6 +106,7 @@ describe("review projection reconciliation (U-RVDISP)", () => {
       ok: true,
       pending: [],
       consumed: [],
+      flagged: [],
       issues: [],
     });
   });
@@ -168,7 +174,7 @@ describe("review projection reconciliation (U-RVDISP)", () => {
     expect(result.issues).toContainEqual({ digest: unrelated, reason: "receipt_without_request" });
   });
 
-  it("U-RVDISP-060: a valid FLAG receipt remains pending with a flagged reason", () => {
+  it("U-RVDISP-060: a valid FLAG receipt is consumed with separate flagged output", () => {
     const f = fixture();
     writeFileSync(
       join(f.receipts, `${f.digest}.json`),
@@ -176,10 +182,11 @@ describe("review projection reconciliation (U-RVDISP)", () => {
       "utf8",
     );
     const result = run({ requests: [f.requests], receipts: [f.receipts] });
-    expect(result.ok).toBe(false);
-    expect(result.pending).toEqual([f.digest]);
-    expect(result.issues).toContainEqual({ digest: f.digest, reason: "flagged" });
-    expect(result.issues).not.toContainEqual({ digest: f.digest, reason: "identity_mismatch" });
+    expect(result.ok).toBe(true);
+    expect(result.pending).toEqual([]);
+    expect(result.consumed).toEqual([f.digest]);
+    expect(result.flagged).toEqual([f.digest]);
+    expect(result.issues).toEqual([]);
   });
 
   it("U-RVDISP-061: a null receipt fails closed without throwing", () => {
@@ -190,5 +197,31 @@ describe("review projection reconciliation (U-RVDISP)", () => {
     expect(result.ok).toBe(false);
     expect(result.pending).toEqual([f.digest]);
     expect(result.issues).toContainEqual({ digest: f.digest, reason: "schema_invalid" });
+  });
+
+  it("U-RVDISP-062: receipt_before_request remains a typed projection issue", () => {
+    const f = fixture();
+    writeFileSync(
+      join(f.receipts, `${f.digest}.json`),
+      JSON.stringify(receipt({ at: "2026-09-09T23:59:00Z" })),
+      "utf8",
+    );
+    const result = run({ requests: [f.requests], receipts: [f.receipts] });
+    expect(result.ok).toBe(false);
+    expect(result.pending).toEqual([f.digest]);
+    expect(result.issues).toContainEqual({ digest: f.digest, reason: "receipt_before_request" });
+    expect(result.issues).not.toContainEqual({ digest: f.digest, reason: "identity_mismatch" });
+  });
+
+  it("U-RVDISP-063: rv1 request revision must match its identity digest", () => {
+    const f = fixture();
+    writeFileSync(
+      join(f.requests, `${f.digest}.json`),
+      JSON.stringify(request({ reviewRevision: `rv1-${"b".repeat(64)}` })),
+      "utf8",
+    );
+    const result = run({ requests: [f.requests], receipts: [f.receipts] });
+    expect(result.ok).toBe(false);
+    expect(result.issues).toContainEqual({ digest: f.digest, reason: "invalid_review_revision" });
   });
 });
