@@ -1135,6 +1135,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
         hasClaude: false,
         hasCodex: false,
         repoRoot: "/consumer",
+        consumerRuntime,
       }).ok,
     ).toBe(true);
     expect(
