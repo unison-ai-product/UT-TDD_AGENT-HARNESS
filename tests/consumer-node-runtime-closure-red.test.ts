@@ -299,11 +299,7 @@ async function runtimeFor(root: string) {
   };
 }
 
-function receiptFor(
-  base: Uint8Array,
-  generationId: string,
-  compiledEsm: Uint8Array,
-): Uint8Array {
+function receiptFor(base: Uint8Array, generationId: string, compiledEsm: Uint8Array): Uint8Array {
   const parsed = JSON.parse(Buffer.from(base).toString("utf8")) as Record<string, unknown>;
   const compiledCli = parsed.compiled_cli as Record<string, unknown>;
   const unsigned = {

@@ -257,8 +257,12 @@ export function buildConsumerNodeRuntimePayloads(input: {
       const targetRecords = priorRecords.filter(
         (record) => record.generation_identity_digest === targetGenerationDigest,
       );
-      if (targetRecords.length !== 1)
-        throw new Error("rollback prior identity not recorded");
+      const exactTargetDigest = digestConsumerRuntimeValue(input.prior_identity);
+      const exactTargetRecords = targetRecords.filter(
+        (record) => record.identity_digest === exactTargetDigest,
+      );
+      const targetRecord = exactTargetRecords.at(-1) ?? targetRecords.at(-1);
+      if (!targetRecord) throw new Error("rollback prior identity not recorded");
       verifyNodeReceiptForIdentity(
         input.prior_identity,
         input.prior_attestation,
