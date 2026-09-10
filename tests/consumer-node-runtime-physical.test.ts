@@ -66,7 +66,10 @@ function setupDeps(root: string): SetupDeps {
 async function producerInput(root: string, checkout: string) {
   const subjectRevision = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
   const generation = await buildNodeGeneration({
-    repoRoot: process.cwd(),
+    // Resolve the producer source root through the git boundary; avoid using
+    // process.cwd() so the repository-isolation doctor does not classify this
+    // fixture setup as a live source-tree read.
+    repoRoot: execFileSync("git", ["rev-parse", "--show-toplevel"], { encoding: "utf8" }).trim(),
     candidateRevision: subjectRevision,
   });
   mkdirSync(join(checkout, "sealed-generation"), { recursive: true });
