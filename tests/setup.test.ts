@@ -1121,10 +1121,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
       "Generated Claude/Codex hooks resolve only the consumer-local sealed Node runtime.",
     );
     expect(blocked.checks.find((c) => c.name === "ut-tdd-cli")?.message).toContain(
-      "Do not rely on a global install",
-    );
-    expect(blocked.checks.find((c) => c.name === "ut-tdd-cli")?.message).toContain(
-      "Node.js 22.18 or newer must be available",
+      "Source checkouts and TypeScript package paths are not fallback candidates.",
     );
     // engines.node follows npm range semantics rather than a numeric minimum:
     // a compatible patch is accepted, while a new major outside ^24 is not.
