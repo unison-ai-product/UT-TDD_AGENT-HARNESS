@@ -1560,8 +1560,16 @@ identity は `(memoryId, pr, exactHead, reviewRevision)` とし、入力順・re
 | `U-RVDISP-047`〜`048` | merge先HEAD横断照合 | old request＋current verdict、old requestだけ＋別HEAD MERGED | current verdictがあればold request終端、無ければmerge先request欠落をfail-close |
 | `U-RVDISP-049`〜`050` | author family receipt併存・不正MERGED孤児 | author/cross-family同kind併存、request無し不正SHA MERGED | cross-family verdictを保持し、不正MERGED observationをfail-close |
 | `U-RVDISP-051`〜`052` | 競合verdictの安全側集約・request以前receipt分離 | 先行PASS＋後発FLAG、request以前PASS＋有効後続PASS | blocking findingを失わず、無効先行receiptが有効後続receiptを隠さない |
+| `U-RVDISP-053` | filesystem projection matching baseline | canonical requestと非author PASS receipt | identity一致したrequestだけを消費 |
+| `U-RVDISP-054` | 独立identity変異 | memoryId/pr/head/reviewRevision/reviewer-family/kind-verdict | same-basenameでもpending＋`identity_mismatch` |
+| `U-RVDISP-055` | runtime directory境界 | missing directory、non-json file | missingはempty、non-jsonは無視 |
+| `U-RVDISP-056` | JSON/schema境界 | malformed JSON、schema欠落 | pendingを隠さずtyped reasonでfail-close |
+| `U-RVDISP-057` | filename digest境界 | request digest drift、別basenameのmatching receipt | basenameを権限化せずfilename不一致をfail-close |
+| `U-RVDISP-058` | duplicate/replay | 同一content replay、同digest競合content、入力順反転 | replayは冪等、競合はfail-close、結果は決定論的 |
+| `U-RVDISP-059` | unrelated receipt隔離 | request identityに属さないreceipt | pending requestを抑止せずtyped orphanを保持 |
 
-実行対応: `tests/review-dispatch.test.ts` (`U-RVDISP-001`〜`052`)。
+実行対応: `tests/review-dispatch.test.ts` (`U-RVDISP-001`〜`052`) と
+`tests/review-projection-reconciliation.test.ts` (`U-RVDISP-053`〜`059`)。
 
 Issue #412 実測 (2026-08-26): Red `a5250930` で timestamp-only replay の旧競合挙動を再現し、
 Green `6e8e14bb` で U-RVDISP-021 を更新した。Node detached snapshotでreview-dispatch 52件と
