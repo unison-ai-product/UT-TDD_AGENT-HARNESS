@@ -285,8 +285,8 @@ export async function installConsumerRuntimeFromSetup(
   const admission = input.admission;
   if (
     admission.productId !== input.identity.product_id ||
-    resolve(admission.consumerRoot) !== resolve(input.identity.consumer_root) ||
-    resolve(admission.runtimeRoot) !== resolve(input.identity.runtime_root) ||
+    !sameCanonicalSetupPath(admission.consumerRoot, input.identity.consumer_root) ||
+    !sameCanonicalSetupPath(admission.runtimeRoot, input.identity.runtime_root) ||
     admission.identity.releaseId !== input.identity.release_id ||
     admission.identity.sourceRevision !== input.identity.subject_revision ||
     admission.identity.materializerVersion !== input.identity.materializer_version ||
@@ -630,6 +630,27 @@ export async function runSetupAsync(args: SetupArgs, deps: SetupDeps): Promise<S
     }
     throw error;
   }
+}
+
+/** Compare an admitted path with its identity across Windows 8.3/case/realpath forms. */
+function sameCanonicalSetupPath(left: string, right: string): boolean {
+  try {
+    return canonicalSetupPath(left) === canonicalSetupPath(right);
+  } catch {
+    return false;
+  }
+}
+
+function canonicalSetupPath(path: string): string {
+  let current = resolve(path);
+  const suffix: string[] = [];
+  while (!existsSync(current)) {
+    const parent = dirname(current);
+    if (parent === current) throw new Error("consumer_runtime_external_path");
+    suffix.unshift(basename(current));
+    current = parent;
+  }
+  return resolve(realpathSync.native(current), ...suffix);
 }
 
 function assertSetupRuntimeRoot(identity: ConsumerNodeRuntimeIdentity, repoRoot: string): void {
