@@ -26,6 +26,7 @@ import {
   buildConsumerNodeRuntimeBundle,
   buildConsumerNodeRuntimePayloads,
   digestConsumerRuntimeBytes,
+  digestConsumerRuntimeValue,
   installConsumerNodeRuntimeOnFilesystem,
 } from "../src/setup/consumer-node-runtime.ts";
 import { runSetupAsync, type SetupDeps } from "../src/setup/index.ts";
@@ -226,6 +227,197 @@ afterEach(() => {
 });
 
 describe("physical consumer Node runtime adapter", () => {
+  it("CANDIDATE-U-PACKNODE-012/014: rejects forged prior pointer/history snapshots against the installed active bundle", async () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-physical-prior-forge-"));
+    roots.push(root);
+    const checkout = mkdtempSync(join(tmpdir(), "ut-tdd-physical-prior-forge-pack-"));
+    roots.push(checkout);
+    const supplied = await producerInput(root, checkout);
+    const initialPayloads = buildConsumerNodeRuntimePayloads(supplied);
+    const initialBundle = buildConsumerNodeRuntimeBundle({
+      identity: supplied.identity,
+      ...initialPayloads,
+    });
+    const initial = await installConsumerNodeRuntimeOnFilesystem({
+      identity: supplied.identity,
+      bundle: initialBundle,
+      payloads: initialPayloads,
+    });
+    if (!initial.ok) throw new Error(`INITIAL_INSTALL_ERROR:${JSON.stringify(initial)}`);
+
+    const pointerPath = join(supplied.identity.runtime_root, "activation", "active.json");
+    const installedPointer = readFileSync(pointerPath);
+    const installedHistory = readFileSync(join(initialBundle.bundle_path, "history.jsonl"));
+    const nextIdentity = { ...supplied.identity, operation_id: "forged-prior-update", attempt: 1 };
+    const forgedPointerBytes = Buffer.from(
+      `{"bundle_digest":"sha256:${"f".repeat(64)}"}\n`,
+      "utf8",
+    );
+    const forgedPointer = {
+      bytes: forgedPointerBytes,
+      mode: 0o444,
+      digest: digestConsumerRuntimeBytes(forgedPointerBytes),
+    };
+    const forgedPointerPayloads = buildConsumerNodeRuntimePayloads({
+      identity: nextIdentity,
+      compiled_esm: supplied.compiled_esm,
+      node_bootstrap_receipt: supplied.node_bootstrap_receipt,
+      prior_bundle_digest: initialBundle.bundle_digest,
+      prior_history_tip_digest: historyTipDigest(installedHistory),
+      history_sequence: 1,
+      prior_history: installedHistory,
+      prior_pointer: forgedPointer,
+      operation_kind: "update",
+    });
+    const forgedPointerBundle = buildConsumerNodeRuntimeBundle({
+      identity: nextIdentity,
+      ...forgedPointerPayloads,
+      prior_bundle_digest: initialBundle.bundle_digest,
+      prior_history_tip_digest: historyTipDigest(installedHistory),
+      history_sequence: 1,
+    });
+    const pointerResult = await installConsumerNodeRuntimeOnFilesystem({
+      identity: nextIdentity,
+      bundle: forgedPointerBundle,
+      payloads: forgedPointerPayloads,
+    });
+    expect(pointerResult).toMatchObject({
+      ok: false,
+      reason: "consumer_runtime_identity_mismatch",
+    });
+    expect(readFileSync(pointerPath)).toEqual(installedPointer);
+    expect(existsSync(forgedPointerBundle.bundle_path)).toBe(false);
+
+    const records = Buffer.from(installedHistory)
+      .toString("utf8")
+      .trimEnd()
+      .split("\n")
+      .map((line) => JSON.parse(line) as Record<string, unknown>);
+    const forgedRecord = { ...records[0], operation_id: "never-installed-history" };
+    delete forgedRecord.record_digest;
+    forgedRecord.record_digest = digestConsumerRuntimeValue(forgedRecord);
+    const forgedHistory = Buffer.from(`${JSON.stringify(forgedRecord)}\n`, "utf8");
+    const forgedHistoryPayloads = buildConsumerNodeRuntimePayloads({
+      identity: { ...supplied.identity, operation_id: "forged-prior-history", attempt: 1 },
+      compiled_esm: supplied.compiled_esm,
+      node_bootstrap_receipt: supplied.node_bootstrap_receipt,
+      prior_bundle_digest: initialBundle.bundle_digest,
+      prior_history_tip_digest: historyTipDigest(forgedHistory),
+      history_sequence: 1,
+      prior_history: forgedHistory,
+      prior_pointer: {
+        bytes: installedPointer,
+        mode: 0o444,
+        digest: digestConsumerRuntimeBytes(installedPointer),
+      },
+      operation_kind: "update",
+    });
+    const forgedHistoryBundle = buildConsumerNodeRuntimeBundle({
+      identity: { ...supplied.identity, operation_id: "forged-prior-history", attempt: 1 },
+      ...forgedHistoryPayloads,
+      prior_bundle_digest: initialBundle.bundle_digest,
+      prior_history_tip_digest: historyTipDigest(forgedHistory),
+      history_sequence: 1,
+    });
+    const historyResult = await installConsumerNodeRuntimeOnFilesystem({
+      identity: forgedHistoryBundle.identity,
+      bundle: forgedHistoryBundle,
+      payloads: forgedHistoryPayloads,
+    });
+    expect(historyResult).toMatchObject({
+      ok: false,
+      reason: "consumer_runtime_identity_mismatch",
+    });
+    expect(readFileSync(pointerPath)).toEqual(installedPointer);
+    expect(existsSync(forgedHistoryBundle.bundle_path)).toBe(false);
+  });
+
+  it("CANDIDATE-U-PACKNODE-012/014: rejects rollback to a never-installed generation despite a coherent caller snapshot", async () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-physical-never-installed-"));
+    roots.push(root);
+    const checkout = mkdtempSync(join(tmpdir(), "ut-tdd-physical-never-installed-pack-"));
+    roots.push(checkout);
+    const supplied = await producerInput(root, checkout);
+    const initialPayloads = buildConsumerNodeRuntimePayloads(supplied);
+    const initialBundle = buildConsumerNodeRuntimeBundle({
+      identity: supplied.identity,
+      ...initialPayloads,
+    });
+    const initial = await installConsumerNodeRuntimeOnFilesystem({
+      identity: supplied.identity,
+      bundle: initialBundle,
+      payloads: initialPayloads,
+    });
+    if (!initial.ok) throw new Error(`INITIAL_INSTALL_ERROR:${JSON.stringify(initial)}`);
+    const pointerPath = join(supplied.identity.runtime_root, "activation", "active.json");
+    const installedPointer = readFileSync(pointerPath);
+    const installedHistory = readFileSync(join(initialBundle.bundle_path, "history.jsonl"));
+    const compiledNever = Buffer.from("process.exit(9)\n", "utf8");
+    const neverIdentity = {
+      ...supplied.identity,
+      operation_id: "never-installed-generation",
+      attempt: 1,
+      generation_id: "never-installed-generation",
+      compiled_esm_digest: digestConsumerRuntimeBytes(compiledNever),
+    };
+    const neverReceipt = Buffer.from(
+      readFileSync(join(initialBundle.bundle_path, "node-bootstrap-receipt.json")),
+    );
+    const neverHistoryRecord = {
+      ...(JSON.parse(Buffer.from(installedHistory).toString("utf8").trim()) as Record<string, unknown>),
+      operation_id: neverIdentity.operation_id,
+      identity_digest: digestConsumerRuntimeValue(neverIdentity),
+      generation_identity_digest: digestConsumerRuntimeValue({
+        ...neverIdentity,
+        operation_id: undefined,
+        attempt: undefined,
+      }),
+    };
+    delete neverHistoryRecord.record_digest;
+    neverHistoryRecord.record_digest = digestConsumerRuntimeValue(neverHistoryRecord);
+    const neverHistory = Buffer.from(`${JSON.stringify(neverHistoryRecord)}\n`, "utf8");
+    const neverPointerBytes = Buffer.from(
+      `{"bundle_digest":"sha256:${"e".repeat(64)}"}\n`,
+      "utf8",
+    );
+    const rollbackIdentity = { ...neverIdentity, operation_id: "never-installed-rollback", attempt: 2 };
+    const rollbackPayloads = buildConsumerNodeRuntimePayloads({
+      identity: rollbackIdentity,
+      compiled_esm: compiledNever,
+      node_bootstrap_receipt: neverReceipt,
+      prior_bundle_digest: `sha256:${"e".repeat(64)}`,
+      prior_history_tip_digest: historyTipDigest(neverHistory),
+      history_sequence: 1,
+      prior_history: neverHistory,
+      prior_pointer: {
+        bytes: neverPointerBytes,
+        mode: 0o444,
+        digest: digestConsumerRuntimeBytes(neverPointerBytes),
+      },
+      operation_kind: "rollback",
+      prior_attestation: neverReceipt,
+      prior_identity: neverIdentity,
+    });
+    const rollbackBundle = buildConsumerNodeRuntimeBundle({
+      identity: rollbackIdentity,
+      ...rollbackPayloads,
+      prior_bundle_digest: `sha256:${"e".repeat(64)}`,
+      prior_history_tip_digest: historyTipDigest(neverHistory),
+      history_sequence: 1,
+    });
+    const result = await installConsumerNodeRuntimeOnFilesystem({
+      identity: rollbackIdentity,
+      bundle: rollbackBundle,
+      payloads: rollbackPayloads,
+    });
+    expect(result).toMatchObject({
+      ok: false,
+      reason: "consumer_runtime_identity_mismatch",
+    });
+    expect(readFileSync(pointerPath)).toEqual(installedPointer);
+    expect(existsSync(rollbackBundle.bundle_path)).toBe(false);
+  });
+
   it("CANDIDATE-U-PACKNODE-005: release fault still removes the physical consumer lock", async () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-physical-lock-release-"));
     roots.push(root);
