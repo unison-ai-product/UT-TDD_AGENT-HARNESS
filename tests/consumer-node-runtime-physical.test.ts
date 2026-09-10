@@ -57,6 +57,17 @@ function historyTipDigest(history: Uint8Array): string {
   return record.record_digest;
 }
 
+function canonicalReceiptJson(value: Record<string, unknown>): string {
+  return JSON.stringify(value, (_key, item: unknown) => {
+    if (!item || typeof item !== "object" || Array.isArray(item)) return item;
+    return Object.fromEntries(
+      Object.entries(item as Record<string, unknown>).sort(([left], [right]) =>
+        left.localeCompare(right),
+      ),
+    );
+  });
+}
+
 function setupDeps(root: string): SetupDeps {
   return {
     repoRoot: root,
@@ -396,9 +407,15 @@ describe("physical consumer Node runtime adapter", () => {
       generation_id: "never-installed-generation",
       compiled_esm_digest: digestConsumerRuntimeBytes(compiledNever),
     };
-    const neverReceipt = Buffer.from(
-      readFileSync(join(initialBundle.bundle_path, "node-bootstrap-receipt.json")),
-    );
+    const neverReceiptValue = JSON.parse(
+      readFileSync(join(initialBundle.bundle_path, "node-bootstrap-receipt.json"), "utf8"),
+    ) as Record<string, unknown>;
+    neverReceiptValue.generation_id = neverIdentity.generation_id;
+    delete neverReceiptValue.receipt_digest;
+    neverReceiptValue.receipt_digest = digestConsumerRuntimeBytes(
+      Buffer.from(canonicalReceiptJson(neverReceiptValue), "utf8"),
+    ).slice("sha256:".length);
+    const neverReceipt = Buffer.from(`${canonicalReceiptJson(neverReceiptValue)}\n`, "utf8");
     const {
       operation_id: _neverOperation,
       attempt: _neverAttempt,
