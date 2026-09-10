@@ -12,6 +12,7 @@ import { createGhAttestationVerifier } from "./adapters/gh-attestation-verifier.
 import {
   admitReviewCustody,
   buildReviewCustodyReceipt,
+  type CustodyDecision,
   type CustodyPullRequestFacts,
   type CustodyReceiptDraft,
   type CustodyWorkflowRunFacts,
@@ -31,6 +32,10 @@ export interface RunnerEnvironment {
 }
 
 export type RunnerOutcome = { readonly exitCode: number; readonly summary: string };
+export interface LiveCustodyObservation {
+  readonly facts: CustodyPullRequestFacts;
+  readonly decision: CustodyDecision;
+}
 
 function requireText(input: { env: RunnerEnvironment; name: string }): string {
   const value = input.env.get(input.name);
@@ -221,6 +226,26 @@ export function issueCustodyReceipt(env: RunnerEnvironment): RunnerOutcome {
  * exit 1 にする (判定不能を成功へ丸めない)。
  */
 export async function admitCustodyReceipt(env: RunnerEnvironment): Promise<RunnerOutcome> {
+  const { decision } = await observeAndAdmitCustodyReceipt(env);
+  if (decision.state === "custody_admitted") {
+    env.log(`review-custody admit - OK (custody_admitted, run=${decision.runId})`);
+    return { exitCode: 0, summary: "custody_admitted" };
+  }
+  const reasons = [...decision.reasons];
+  if (reasons.length === 1 && reasons[0] === "unverified_family") {
+    env.log(
+      "review-custody admit - OK (mechanical custody verified; terminal state unverified_family, provider family authority is not approved yet)",
+    );
+    return { exitCode: 0, summary: "unverified_family" };
+  }
+  env.log(`review-custody admit - violation ${reasons.join(",")} (${decision.details.join(",")})`);
+  return { exitCode: 1, summary: reasons.join(",") };
+}
+
+/** stable live factsとdomain custody decisionをsummary文字列へ潰さず返す。 */
+export async function observeAndAdmitCustodyReceipt(
+  env: RunnerEnvironment,
+): Promise<LiveCustodyObservation> {
   const repository = requireText({ env, name: "GITHUB_REPOSITORY" });
   const prNumber = requireInteger({ env, name: "UT_TDD_CUSTODY_PR" });
   const receiptPath = requireText({ env, name: "UT_TDD_CUSTODY_RECEIPT_PATH" });
@@ -254,19 +279,7 @@ export async function admitCustodyReceipt(env: RunnerEnvironment): Promise<Runne
       providerIdentity: null,
     },
   });
-  if (decision.state === "custody_admitted") {
-    env.log(`review-custody admit - OK (custody_admitted, run=${decision.runId})`);
-    return { exitCode: 0, summary: "custody_admitted" };
-  }
-  const reasons = [...decision.reasons];
-  if (reasons.length === 1 && reasons[0] === "unverified_family") {
-    env.log(
-      "review-custody admit - OK (mechanical custody verified; terminal state unverified_family, provider family authority is not approved yet)",
-    );
-    return { exitCode: 0, summary: "unverified_family" };
-  }
-  env.log(`review-custody admit - violation ${reasons.join(",")} (${decision.details.join(",")})`);
-  return { exitCode: 1, summary: reasons.join(",") };
+  return { facts, decision };
 }
 
 function processEnvironment(): RunnerEnvironment {

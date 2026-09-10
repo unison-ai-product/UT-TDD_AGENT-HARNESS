@@ -1,6 +1,17 @@
 import { createHash } from "node:crypto";
 import { afterEach, describe, expect, it } from "vitest";
+import type {
+  CustodyDecision,
+  CustodyFailureReason,
+  CustodyPullRequestFacts,
+} from "../../src/feedback/review-custody.ts";
 import { migratePlanLedger } from "../../src/plan-asset/ledger/schema.ts";
+import {
+  assembleSealedLineageMigrationDryRun,
+  CustodyDecisionSealedLineageReviewAuthorityPort,
+  SystemSealedLineageIssueAuthorityPort,
+  SystemSealedLineageProjectIdentityPort,
+} from "../../src/plan-asset/ledger/sealed-lineage-local-migration.ts";
 import { type HarnessDb, openHarnessDb } from "../../src/state-db/index.ts";
 
 const opened: HarnessDb[] = [];
@@ -16,7 +27,7 @@ describe("sealed lineage local migration", () => {
     expect(transaction.migrate(input())).toMatchObject({
       ok: true,
       replayed: false,
-      successorAssetId: "plan:recovery-16-successor",
+      successorAssetId: SUCCESSOR_ASSET_ID,
       successorRevision: 1,
     });
     expect(count(db, "plan_revisions")).toBe(1);
@@ -25,7 +36,7 @@ describe("sealed lineage local migration", () => {
     expect(count(db, "genesis_issue_custody")).toBe(1);
     expect(count(db, "plan_admission_receipts")).toBe(1);
     expect(db.prepare("SELECT asset_id FROM plan_aliases WHERE alias = ?").get(PLAN_ID)).toEqual({
-      asset_id: "plan:recovery-16-successor",
+      asset_id: SUCCESSOR_ASSET_ID,
     });
   });
 
@@ -48,6 +59,7 @@ describe("sealed lineage local migration", () => {
     const transaction = new Transaction(db, {
       git: fakeGit(command),
       reviewAuthority: fakeReviewAuthority(),
+      issueAuthority: fakeIssueAuthority(command),
     });
     expect(transaction.migrate(command)).toMatchObject({ ok: true, replayed: false });
     const unavailableGit = {
@@ -92,6 +104,7 @@ describe("sealed lineage local migration", () => {
       },
       git: fakeGit(command),
       reviewAuthority: fakeReviewAuthority(),
+      issueAuthority: fakeIssueAuthority(command),
     });
     expect(() => transaction.migrate(command)).toThrow(`fault:${boundary}`);
     expect(counts(db)).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
@@ -341,6 +354,7 @@ describe("sealed lineage local migration", () => {
     const transaction = new Transaction(db, {
       git: fakeGit(admitted),
       reviewAuthority: reviewAuthorityFor(admittedObservation),
+      issueAuthority: fakeIssueAuthority(admitted),
     });
     expect(transaction.migrate(admitted)).toMatchObject({ ok: true, replayed: false });
     expect(count(db, "sealed_plan_lineages")).toBe(1);
@@ -424,9 +438,391 @@ describe("sealed lineage local migration", () => {
     });
     expect(counts(db)).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
   });
+
+  it("U-PA-SEAL-015: E.2から導出されないsuccessor asset idはwrite前に拒否する", async () => {
+    const { db, Transaction } = await baseFixture();
+    const command = withAuthorityDigests({
+      ...input(),
+      successorAssetId: `plan:rebase:${digest("caller-controlled-seed")}`,
+    });
+    const transaction = new Transaction(db, {
+      git: fakeGit(command),
+      reviewAuthority: fakeReviewAuthority(),
+    });
+
+    expect(transaction.migrate(command)).toEqual({
+      ok: false,
+      ruleId: "sealed-lineage-input-invalid",
+    });
+    expect(counts(db)).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
+  });
+
+  it.each([
+    ["port absent", undefined, (command: MigrationInput) => command],
+    ["live read failure", { observe: () => undefined }, (command: MigrationInput) => command],
+    [
+      "wrong issue number",
+      {
+        observe: (command: MigrationInput) => ({
+          number: command.issue.number + 1,
+          rawBody: "issue 102",
+          updatedAt: "2026-09-09T00:00:00Z",
+        }),
+      },
+      (command: MigrationInput) => command,
+    ],
+    [
+      "body digest drift",
+      {
+        observe: (command: MigrationInput) => ({
+          number: command.issue.number,
+          rawBody: "changed issue body",
+          updatedAt: "2026-09-09T00:00:00Z",
+        }),
+      },
+      (command: MigrationInput) => command,
+    ],
+    [
+      "PLAN frontmatter issue number mismatch",
+      null,
+      (command: MigrationInput) =>
+        withAuthorityDigests({
+          ...command,
+          issue: { ...command.issue, number: 103 },
+        }),
+    ],
+    [
+      "PLAN episode mismatch",
+      null,
+      (command: MigrationInput) =>
+        withAuthorityDigests({ ...command, issue: { ...command.issue, episodeId: "E4-999" } }),
+    ],
+  ] as const)("U-PA-SEAL-016: %sはIssue authorityとして受理しない", async (_name, authority, mutate) => {
+    const { db, Transaction } = await baseFixture();
+    const command = mutate(input());
+    const issueAuthority = authority === null ? fakeIssueAuthority(command) : authority;
+    const transaction = new Transaction(db, {
+      git: fakeGit(command),
+      reviewAuthority: fakeReviewAuthority(),
+      issueAuthority,
+    });
+
+    expect(transaction.migrate(command)).toEqual({
+      ok: false,
+      ruleId: "seal-issue-authority-invalid",
+    });
+    expect(counts(db)).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
+  });
+
+  it.each([
+    ["LF + terminal newline", "line1\nline2\n", true],
+    ["CRLF + terminal newline", "line1\r\nline2\r\n", false],
+    ["LF without terminal newline", "line1\nline2", false],
+  ] as const)("U-PA-SEAL-017: Issue body bytes %sを正規化しない", async (_name, rawBody, accepted) => {
+    const { db, Transaction } = await baseFixture();
+    const baselineBody = "line1\nline2\n";
+    const command = withAuthorityDigests({
+      ...input(),
+      issue: { ...input().issue, preimageDigest: digest(baselineBody) },
+    });
+    const transaction = new Transaction(db, {
+      git: fakeGit(command),
+      reviewAuthority: fakeReviewAuthority(),
+      issueAuthority: {
+        observe: () => ({
+          number: command.issue.number,
+          rawBody,
+          updatedAt: "2026-09-09T00:00:00Z",
+        }),
+      },
+    });
+
+    expect(transaction.migrate(command).ok).toBe(accepted);
+    expect(count(db, "sealed_plan_lineages")).toBe(accepted ? 1 : 0);
+  });
+
+  it.each([
+    ["repository", { repository: "other/repository" }, rejectedDecision(["unverified_family"])],
+    ["pull request", { prNumber: 544 }, rejectedDecision(["unverified_family"])],
+    ["head", { headSha: "e".repeat(40) }, rejectedDecision(["unverified_family"])],
+    ["base", { baseRef: "release" }, rejectedDecision(["unverified_family"])],
+    ["rejected reason content", {}, rejectedDecision(["missing"])],
+    ["forged local receipt", {}, rejectedDecision(["signature_unverified"])],
+    ["provider failure", {}, rejectedDecision(["provider_failed"])],
+    ["FLAG verdict", {}, rejectedDecision(["verdict_flagged"])],
+    ["same-family or identity mismatch", {}, rejectedDecision(["identity_mismatch"])],
+    ["rejected reason order", {}, rejectedDecision(["unverified_family", "missing"])],
+    ["admitted subject", {}, admittedDecision({ headSha: "e".repeat(40) })],
+  ] as const)("U-PA-SEAL-018: typed custodyの%s driftを拒否する", async (_name, factPatch, decision) => {
+    const { db, Transaction } = await baseFixture();
+    const command = input();
+    const facts = { ...reviewFacts(), ...factPatch };
+    const transaction = new Transaction(db, {
+      git: fakeGit(command),
+      reviewAuthority: new CustodyDecisionSealedLineageReviewAuthorityPort(facts, decision),
+      issueAuthority: fakeIssueAuthority(command),
+    });
+
+    expect(transaction.migrate(command)).toEqual({
+      ok: false,
+      ruleId: "seal-review-authority-invalid",
+    });
+    expect(counts(db)).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
+  });
+
+  it("U-PA-SEAL-018: typed custodyの正規rejected decisionを受理する", async () => {
+    const { db, Transaction } = await baseFixture();
+    const command = input();
+    const transaction = new Transaction(db, {
+      git: fakeGit(command),
+      reviewAuthority: new CustodyDecisionSealedLineageReviewAuthorityPort(
+        reviewFacts(),
+        rejectedDecision(["unverified_family"]),
+      ),
+      issueAuthority: fakeIssueAuthority(command),
+    });
+
+    expect(transaction.migrate(command)).toMatchObject({ ok: true, replayed: false });
+    expect(count(db, "sealed_plan_lineages")).toBe(1);
+  });
+
+  it("U-PA-SEAL-019: System Issue adapterはREST JSONのraw bodyを変更せず返す", () => {
+    const calls: readonly string[][] = [];
+    const mutableCalls = calls as string[][];
+    const rawBody = "line1\r\nline2\r\n";
+    const adapter = new SystemSealedLineageIssueAuthorityPort((args) => {
+      mutableCalls.push([...args]);
+      return JSON.stringify({ number: 102, body: rawBody, updated_at: "2026-09-09T00:00:00Z" });
+    });
+
+    expect(adapter.observe(input())).toEqual({
+      number: 102,
+      rawBody,
+      updatedAt: "2026-09-09T00:00:00Z",
+    });
+    expect(calls).toEqual([
+      [
+        "api",
+        "repos/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/102",
+        "--header",
+        "Cache-Control: no-cache",
+      ],
+    ]);
+  });
+
+  it("U-PA-SEAL-020: dry-run assemblerはtracked Git/Issue/custodyだけから全preimageを導出する", async () => {
+    const command = input();
+    const result = await assembleSealedLineageMigrationDryRun({
+      commandId: command.commandId,
+      planId: command.planId,
+      actor: command.actor,
+      occurredAt: command.occurredAt,
+      git: fakeGit(command),
+      projectIdentity: fakeProjectIdentity(command),
+      issueAuthority: fakeIssueAuthority(command),
+      reviewCustody: fakeLiveReviewCustody(),
+    });
+
+    expect(result).toMatchObject({
+      ok: true,
+      input: command,
+      validation: { ok: true },
+    });
+    if (!result.ok) throw new Error(result.ruleId);
+    expect(result.canonicalManifest).toBe(stableCanonical(result.input));
+    expect(result.manifestDigest).toBe(digest(result.canonicalManifest));
+  });
+
+  it.each([
+    "identity_noncanonical_bytes",
+    "identity_repository_unbound",
+  ] as const)("U-PA-SEAL-020: project identity loaderの%s拒否をfail-closeする", async (ruleId) => {
+    const command = input();
+    const projectIdentity = new SystemSealedLineageProjectIdentityPort(
+      ".",
+      command.repositoryIdentity,
+      () => ({ ok: false, error: { ruleId, message: "rejected fixture" } }),
+    );
+    expect(
+      await assembleSealedLineageMigrationDryRun({
+        commandId: command.commandId,
+        planId: command.planId,
+        actor: command.actor,
+        occurredAt: command.occurredAt,
+        git: fakeGit(command),
+        projectIdentity,
+        issueAuthority: fakeIssueAuthority(command),
+        reviewCustody: fakeLiveReviewCustody(),
+      }),
+    ).toEqual({ ok: false, ruleId: "seal-git-preflight-unavailable" });
+  });
+
+  it("U-PA-SEAL-020: project identity HEAD driftをfail-closeする", async () => {
+    const command = input();
+    expect(
+      await assembleSealedLineageMigrationDryRun({
+        commandId: command.commandId,
+        planId: command.planId,
+        actor: command.actor,
+        occurredAt: command.occurredAt,
+        git: fakeGit(command),
+        projectIdentity: {
+          observe: () => ({
+            repositoryIdentity: command.repositoryIdentity,
+            sourceCommit: "e".repeat(40),
+            receiptDigest: digest("project-identity-receipt"),
+          }),
+        },
+        issueAuthority: fakeIssueAuthority(command),
+        reviewCustody: fakeLiveReviewCustody(),
+      }),
+    ).toEqual({ ok: false, ruleId: "seal-git-preflight-unavailable" });
+  });
+
+  it.each([
+    "review",
+    "issue",
+  ] as const)("U-PA-SEAL-021: %s authority観測中のHEAD移動はtransaction直前にwrite 0で拒否する", async (boundary) => {
+    const { db, Transaction } = await baseFixture();
+    const command = input();
+    const stableGit = fakeGit(command);
+    let head = command.sourceCommit;
+    const git = { ...stableGit, readHeadCommit: () => head };
+    const reviewAuthority = {
+      observe: () => {
+        if (boundary === "review") head = "e".repeat(40);
+        return reviewObservation("custody_rejected", ["unverified_family"]);
+      },
+    };
+    const issueAuthority = {
+      observe: () => {
+        if (boundary === "issue") head = "e".repeat(40);
+        return fakeIssueAuthority(command).observe();
+      },
+    };
+    const transaction = new Transaction(db, { git, reviewAuthority, issueAuthority });
+
+    expect(transaction.migrate(command)).toEqual({
+      ok: false,
+      ruleId: "seal-source-head-toctou",
+    });
+    expect(counts(db)).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
+  });
+
+  it.each([
+    "false",
+    "throw",
+  ] as const)("U-PA-SEAL-021: authority観測後のremote到達性%sをtyped拒否する", async (mode) => {
+    const { db, Transaction } = await baseFixture();
+    const command = input();
+    const stableGit = fakeGit(command);
+    let finalCheck = false;
+    const git = {
+      ...stableGit,
+      isReachableFromTrackedRemote: () => {
+        if (!finalCheck) return true;
+        if (mode === "throw") throw new Error("remote-unavailable");
+        return false;
+      },
+    };
+    const issueAuthority = {
+      observe: () => {
+        finalCheck = true;
+        return fakeIssueAuthority(command).observe();
+      },
+    };
+    const transaction = new Transaction(db, {
+      git,
+      reviewAuthority: fakeReviewAuthority(),
+      issueAuthority,
+    });
+
+    expect(transaction.migrate(command)).toEqual({
+      ok: false,
+      ruleId: "seal-source-commit-unreachable",
+    });
+    expect(counts(db)).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
+  });
+
+  it.each([
+    "time-varying",
+    "runner-summary",
+  ] as const)("U-PA-SEAL-022: %s review preimageをcanonical authorityとして受理しない", async (variant) => {
+    const { db, Transaction } = await baseFixture();
+    const base = input();
+    const observation = reviewObservation("custody_rejected", ["unverified_family"]);
+    const forged = framedDigest("ut-tdd-seal-review-authority-v1", [
+      base.repositoryIdentity,
+      base.planId,
+      String(observation.pullRequestNumber),
+      observation.baseRef,
+      observation.headSha,
+      variant === "runner-summary" ? "unverified_family" : observation.custodyState,
+      observation.custodyReasons.join(","),
+      ...(variant === "time-varying" ? ["2026-09-09T00:00:00Z"] : []),
+    ]);
+    const command = withReviewDigest(base, forged);
+    const transaction = new Transaction(db, {
+      git: fakeGit(command),
+      reviewAuthority: reviewAuthorityFor(observation),
+      issueAuthority: fakeIssueAuthority(command),
+    });
+    expect(transaction.migrate(command)).toEqual({
+      ok: false,
+      ruleId: "seal-review-authority-invalid",
+    });
+    expect(counts(db)).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
+  });
+
+  it.each([
+    "field-missing",
+    "field-altered",
+  ] as const)("U-PA-SEAL-023: certificate_json %s preimageを拒否する", async (variant) => {
+    const { db, Transaction } = await baseFixture();
+    const command = input();
+    const certificate = {
+      historicalAssetId: command.historicalAssetId,
+      historicalTerminalRevision: command.historicalTerminalRevision,
+      ...(variant === "field-missing" ? {} : { historicalTailDigest: digest("altered") }),
+      planId: command.planId,
+      reviewedImplementationAuthorityDigest: command.reviewedImplementationAuthorityDigest,
+      sourceAuthorityDigest: command.sourceAuthorityDigest,
+      successorAssetId: command.successorAssetId,
+      successorRevision: 1,
+    };
+    const transaction = new Transaction(db, {
+      git: fakeGit(command),
+      reviewAuthority: fakeReviewAuthority(),
+      issueAuthority: fakeIssueAuthority(command),
+    });
+    expect(
+      transaction.migrate({
+        ...command,
+        certificateDigest: digest(stableCanonical(certificate)),
+      }),
+    ).toEqual({ ok: false, ruleId: "seal-certificate-digest-mismatch" });
+    expect(counts(db)).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
+  });
+
+  it("U-PA-SEAL-024: caller-supplied certificate_json fieldを入力として拒否する", async () => {
+    const { db, Transaction } = await baseFixture();
+    const command = input();
+    const transaction = new Transaction(db, {
+      git: fakeGit(command),
+      reviewAuthority: fakeReviewAuthority(),
+      issueAuthority: fakeIssueAuthority(command),
+    });
+    expect(transaction.migrate({ ...command, certificateJson: "{}" } as MigrationInput)).toEqual({
+      ok: false,
+      ruleId: "sealed-lineage-input-invalid",
+    });
+    expect(counts(db)).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
+  });
 });
 
 const PLAN_ID = "PLAN-RECOVERY-16-plan-revision-authoring";
+const SUCCESSOR_ASSET_ID =
+  "plan:rebase:74ca026f9a0b72dca6f4fb164dd4e8f43c9ea3c9b31c4db21dec38a66d9d7d57";
 
 type Boundary =
   | "asset"
@@ -501,6 +897,15 @@ interface TransactionConstructor {
             }
           | undefined;
       };
+      issueAuthority?: {
+        observe(input: MigrationInput):
+          | {
+              number: number;
+              rawBody: string;
+              updatedAt: string;
+            }
+          | undefined;
+      };
     },
   ): Transaction;
 }
@@ -527,12 +932,17 @@ async function fixture() {
     transaction: new value.Transaction(value.db, {
       git: fakeGit(command),
       reviewAuthority: fakeReviewAuthority(),
+      issueAuthority: fakeIssueAuthority(command),
     }),
   };
 }
 
 function input(): MigrationInput {
-  const payload = `{"plan_id":"${PLAN_ID}","status":"draft"}`;
+  const payload = stableCanonical({
+    admission_receipt: { issue: { episode_id: "E4-102", issue_id: 102 } },
+    plan_id: PLAN_ID,
+    status: "draft",
+  });
   const historicalTailDigest = digest("record-3");
   const projection = JSON.stringify({
     schema_version: "ut-tdd.plan-admission-receipts/v1",
@@ -558,7 +968,7 @@ function input(): MigrationInput {
     historicalProjectionPath: "docs/governance/plan-admission-receipts.json",
     historicalProjectionBlobOid: "b".repeat(40),
     historicalProjectionContentDigest: digest(projection),
-    successorAssetId: "plan:recovery-16-successor",
+    successorAssetId: SUCCESSOR_ASSET_ID,
     canonicalPayloadJson: payload,
     canonicalPayloadDigest: digest(payload),
     bodyDigest: digest("body"),
@@ -622,7 +1032,10 @@ function input(): MigrationInput {
 }
 
 function fakeGit(command: MigrationInput) {
-  const source = Buffer.from(`---\nplan_id: ${command.planId}\nstatus: draft\n---\nbody`, "utf8");
+  const source = Buffer.from(
+    `---\nplan_id: ${command.planId}\nstatus: draft\nadmission_receipt:\n  issue:\n    issue_id: 102\n    episode_id: E4-102\n---\nbody`,
+    "utf8",
+  );
   const projection = Buffer.from(
     JSON.stringify({
       schema_version: "ut-tdd.plan-admission-receipts/v1",
@@ -648,12 +1061,90 @@ function fakeGit(command: MigrationInput) {
         ? { blobOid: command.sourceBlobOid, bytes: source }
         : path === command.historicalProjectionPath
           ? { blobOid: command.historicalProjectionBlobOid, bytes: projection }
-          : undefined,
+          : path === "ut-tdd.project.json"
+            ? {
+                blobOid: "f".repeat(40),
+                bytes: Buffer.from(
+                  JSON.stringify({ repository_identity: command.repositoryIdentity }),
+                  "utf8",
+                ),
+              }
+            : undefined,
   };
 }
 
 function fakeReviewAuthority() {
   return reviewAuthorityFor(reviewObservation("custody_rejected", ["unverified_family"]));
+}
+
+function reviewFacts(): CustodyPullRequestFacts {
+  return {
+    repository: "unison-ai-product/UT-TDD_AGENT-HARNESS",
+    prNumber: 543,
+    baseRef: "main",
+    headSha: "d".repeat(40),
+    state: "OPEN",
+    mergeSha: null,
+    mergedAt: null,
+  };
+}
+
+function rejectedDecision(reasons: readonly CustodyFailureReason[]): CustodyDecision {
+  return { state: "custody_rejected", reasons, details: ["fixture"] };
+}
+
+function admittedDecision(
+  patch: Partial<Extract<CustodyDecision, { state: "custody_admitted" }>> = {},
+): CustodyDecision {
+  return {
+    state: "custody_admitted",
+    repository: "unison-ai-product/UT-TDD_AGENT-HARNESS",
+    prNumber: 543,
+    headSha: "d".repeat(40),
+    receiptKind: "pre_merge_review",
+    reviewRevision: `rv1-${"a".repeat(64)}`,
+    judgmentDigest: "a".repeat(64),
+    receiptDigest: "b".repeat(64),
+    artifactDigest: "c".repeat(64),
+    workflowRef:
+      "unison-ai-product/UT-TDD_AGENT-HARNESS/.github/workflows/harness-check.yml@refs/heads/main",
+    workflowSha: "d".repeat(40),
+    runId: "1",
+    runAttempt: 1,
+    issuer: "https://token.actions.githubusercontent.com",
+    reviewerFamily: "claude",
+    familyAuthority: "fixture",
+    ...patch,
+  };
+}
+
+function fakeIssueAuthority(command: MigrationInput) {
+  return {
+    observe: () => ({
+      number: command.issue.number,
+      rawBody: "issue 102",
+      updatedAt: "2026-09-09T00:00:00Z",
+    }),
+  };
+}
+
+function fakeProjectIdentity(command: MigrationInput) {
+  return {
+    observe: () => ({
+      repositoryIdentity: command.repositoryIdentity,
+      sourceCommit: command.sourceCommit,
+      receiptDigest: digest("project-identity-receipt"),
+    }),
+  };
+}
+
+function fakeLiveReviewCustody() {
+  return {
+    observe: async () => ({
+      facts: reviewFacts(),
+      decision: rejectedDecision(["unverified_family"]),
+    }),
+  };
 }
 
 type CustodyState = "custody_admitted" | "custody_rejected";
