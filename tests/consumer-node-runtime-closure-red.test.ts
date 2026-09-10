@@ -830,4 +830,94 @@ describe("Issue #420 closure Red oracles: aggregate authority and durable histor
       }),
     ).toThrow(/rollback prior identity/);
   });
+
+  it("CANDIDATE-U-PACKNODE-012/014: denies rollback when the new operation tuple differs from its target generation", async () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-red-rollback-operation-tuple-"));
+    roots.push(root);
+    const a = await runtimeFor(root);
+    const genesis = buildConsumerNodeRuntimePayloads(a);
+    expect(() =>
+      buildConsumerNodeRuntimePayloads({
+        ...a,
+        identity: {
+          ...a.identity,
+          operation_id: "rollback-tuple-mismatch",
+          attempt: 1,
+          artifact_digest: `sha256:${"9".repeat(64)}`,
+        },
+        prior_bundle_digest: `sha256:${"a".repeat(64)}`,
+        prior_history_tip_digest: historyTipDigest(genesis.history),
+        history_sequence: 1,
+        prior_history: genesis.history,
+        prior_pointer: {
+          bytes: Buffer.from(`{"bundle_digest":"sha256:${"a".repeat(64)}"}\n`),
+          mode: 0o444,
+          digest: digestConsumerRuntimeBytes(
+            Buffer.from(`{"bundle_digest":"sha256:${"a".repeat(64)}"}\n`),
+          ),
+        },
+        operation_kind: "rollback",
+        prior_attestation: a.node_bootstrap_receipt,
+        prior_identity: a.identity,
+      }),
+    ).toThrow(/rollback prior identity mismatch/);
+  });
+
+  it("CANDIDATE-U-PACKNODE-012/014: denies a validly re-digested history splice with a broken prior-tip link", async () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-red-history-splice-"));
+    roots.push(root);
+    const a = await runtimeFor(root);
+    const genesis = buildConsumerNodeRuntimePayloads(a);
+    const b = buildConsumerNodeRuntimePayloads({
+      ...a,
+      identity: { ...a.identity, operation_id: "history-splice-b", attempt: 1 },
+      prior_bundle_digest: `sha256:${"a".repeat(64)}`,
+      prior_history_tip_digest: historyTipDigest(genesis.history),
+      history_sequence: 1,
+      prior_history: genesis.history,
+      prior_pointer: {
+        bytes: Buffer.from(`{"bundle_digest":"sha256:${"a".repeat(64)}"}\n`),
+        mode: 0o444,
+        digest: digestConsumerRuntimeBytes(
+          Buffer.from(`{"bundle_digest":"sha256:${"a".repeat(64)}"}\n`),
+        ),
+      },
+      operation_kind: "update",
+    });
+    const records = Buffer.from(b.history)
+      .toString("utf8")
+      .trimEnd()
+      .split("\n")
+      .map((line) => JSON.parse(line) as Record<string, unknown>);
+    const middle: Record<string, unknown> = {
+      ...records[1],
+      prior_history_tip_digest: `sha256:${"f".repeat(64)}`,
+    };
+    delete middle.record_digest;
+    records[1] = {
+      ...middle,
+      record_digest: digestConsumerRuntimeValue(middle),
+    };
+    const splicedHistory = Buffer.from(
+      `${records.map((record) => JSON.stringify(record)).join("\n")}\n`,
+    );
+    expect(() =>
+      buildConsumerNodeRuntimePayloads({
+        ...a,
+        identity: { ...a.identity, operation_id: "history-splice-c", attempt: 2 },
+        prior_bundle_digest: `sha256:${"b".repeat(64)}`,
+        prior_history_tip_digest: historyTipDigest(splicedHistory),
+        history_sequence: 2,
+        prior_history: splicedHistory,
+        prior_pointer: {
+          bytes: Buffer.from(`{"bundle_digest":"sha256:${"b".repeat(64)}"}\n`),
+          mode: 0o444,
+          digest: digestConsumerRuntimeBytes(
+            Buffer.from(`{"bundle_digest":"sha256:${"b".repeat(64)}"}\n`),
+          ),
+        },
+        operation_kind: "update",
+      }),
+    ).toThrow(/invalid (prior )?history/);
+  });
 });

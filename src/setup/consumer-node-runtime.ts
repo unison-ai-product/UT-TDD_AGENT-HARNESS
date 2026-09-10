@@ -263,6 +263,11 @@ export function buildConsumerNodeRuntimePayloads(input: {
       );
       const targetRecord = exactTargetRecords.at(-1) ?? targetRecords.at(-1);
       if (!targetRecord) throw new Error("rollback prior identity not recorded");
+      if (
+        digestConsumerRuntimeGenerationIdentity(input.identity) !==
+        targetRecord.generation_identity_digest
+      )
+        throw new Error("rollback prior identity mismatch");
       verifyNodeReceiptForIdentity(
         input.prior_identity,
         input.prior_attestation,
@@ -471,6 +476,11 @@ function parseHistoryRecords(bytes: Uint8Array): readonly Record<string, unknown
     if (
       expectedSequence > 0 &&
       (parsed.prior_bundle_digest === GENESIS || parsed.prior_history_tip_digest === GENESIS)
+    )
+      throw new Error("invalid history");
+    if (
+      expectedSequence > 0 &&
+      parsed.prior_history_tip_digest !== records[expectedSequence - 1].record_digest
     )
       throw new Error("invalid history");
     records.push(parsed);
