@@ -318,6 +318,30 @@ export type SealedLineageDryRunResult =
     }
   | { readonly ok: false; readonly ruleId: string };
 
+export interface SealedLineageRecoveryExecutionRequest {
+  readonly dryRun: SealedLineageDryRunRequest;
+  readonly openLedger: () => { readonly db: HarnessDb; readonly close: () => void };
+  readonly runPlanRevision: (input: {
+    readonly seal: Extract<SealedLineageMigrationResult, { ok: true }>;
+    readonly manifestDigest: string;
+  }) =>
+    | { readonly ok: true; readonly output: string }
+    | { readonly ok: false; readonly ruleId: string };
+}
+
+export type SealedLineageRecoveryExecutionResult =
+  | {
+      readonly ok: true;
+      readonly manifestDigest: string;
+      readonly seal: Extract<SealedLineageMigrationResult, { ok: true }>;
+      readonly revisionOutput: string;
+    }
+  | {
+      readonly ok: false;
+      readonly stage: "dry-run" | "seal" | "plan-revise";
+      readonly ruleId: string;
+    };
+
 /**
  * live read-only authorityからseal入力を組み立ててpreflightする。DB writerは生成せず、
  * callerからdigest/Issue custody/repository identityを受け取らない。
@@ -423,6 +447,70 @@ export async function assembleSealedLineageMigrationDryRun(
   } catch {
     return rejected("seal-git-preflight-unavailable");
   }
+}
+
+/**
+ * live authorityを一度だけtyped observationへ束縛し、隔離ledgerのseal成功後だけ
+ * strict revision runnerへ進める。digestやseal inputをcallerから受け取らない。
+ */
+export async function executeSealedLineageRecovery(
+  request: SealedLineageRecoveryExecutionRequest,
+): Promise<SealedLineageRecoveryExecutionResult> {
+  let custodyObservation:
+    | { readonly facts: CustodyPullRequestFacts; readonly decision: CustodyDecision }
+    | undefined;
+  const reviewCustody: SealedLineageLiveReviewCustodyPort = {
+    observe: async () => {
+      custodyObservation ??= await request.dryRun.reviewCustody.observe();
+      return custodyObservation;
+    },
+  };
+  const dryRun = await assembleSealedLineageMigrationDryRun({
+    ...request.dryRun,
+    reviewCustody,
+  });
+  if (!dryRun.ok) return { ok: false, stage: "dry-run", ruleId: dryRun.ruleId };
+  const observed = await reviewCustody.observe();
+  let ledger: ReturnType<SealedLineageRecoveryExecutionRequest["openLedger"]>;
+  try {
+    ledger = request.openLedger();
+  } catch {
+    return { ok: false, stage: "seal", ruleId: "seal-ledger-unavailable" };
+  }
+  let seal: SealedLineageMigrationResult;
+  try {
+    seal = new SealedLineageLocalMigration(ledger.db, {
+      git: request.dryRun.git,
+      reviewAuthority: new CustodyDecisionSealedLineageReviewAuthorityPort(
+        observed.facts,
+        observed.decision,
+      ),
+      issueAuthority: request.dryRun.issueAuthority,
+    }).migrate(dryRun.input);
+  } catch {
+    seal = rejected("seal-execution-failed");
+  } finally {
+    try {
+      ledger.close();
+    } catch {
+      seal = rejected("seal-ledger-close-failed");
+    }
+  }
+  if (!seal.ok) return { ok: false, stage: "seal", ruleId: seal.ruleId };
+  let revision: ReturnType<SealedLineageRecoveryExecutionRequest["runPlanRevision"]>;
+  try {
+    revision = request.runPlanRevision({ seal, manifestDigest: dryRun.manifestDigest });
+  } catch {
+    revision = { ok: false, ruleId: "plan-revision-execution-failed" };
+  }
+  return revision.ok
+    ? {
+        ok: true,
+        manifestDigest: dryRun.manifestDigest,
+        seal,
+        revisionOutput: revision.output,
+      }
+    : { ok: false, stage: "plan-revise", ruleId: revision.ruleId };
 }
 
 export type SealedLineageMigrationResult =
