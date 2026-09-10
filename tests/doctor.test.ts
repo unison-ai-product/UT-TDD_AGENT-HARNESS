@@ -1614,6 +1614,9 @@ describe("runDoctor", () => {
     const flattenedGroupDefinitions = definitionGroups.flatMap((group) => group.definitions);
     const checkIds = definitions.map((definition) => definition.id);
     const groupCheckIds = flattenedGroupDefinitions.map((definition) => definition.id);
+    const fullCheckIds = definitions
+      .filter((definition) => definition.profiles.includes("full"))
+      .map((definition) => definition.id);
     const outputIds = [...FULL_DOCTOR_OUTPUT_IDS];
     expect(indexSource).toContain("resolveDoctorRunProfile");
     expect(indexSource).toContain("const profile = resolveDoctorRunProfile(options)");
@@ -1720,7 +1723,7 @@ describe("runDoctor", () => {
     expect(checkIds).toEqual(expect.arrayContaining(outputIds));
     expect(
       selectDoctorCheckDefinitions(definitions, "full").map((definition) => definition.id),
-    ).toEqual(checkIds);
+    ).toEqual(fullCheckIds);
     expect(doctorOutputIdsForScope("full")).toEqual(outputIds);
     expect(outputIds).toEqual(expect.arrayContaining(expectedHardGates));
     expect(checkIds).not.toContain("plan-reference-freshness");
