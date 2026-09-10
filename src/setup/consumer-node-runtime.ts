@@ -175,6 +175,17 @@ export function digestConsumerRuntimeValue(value: unknown): string {
   return digestConsumerRuntimeBytes(Buffer.from(canonical(value), "utf8"));
 }
 
+/**
+ * A generation can be addressed by its sealed identity independently of the
+ * operation which published it.  History keeps both this stable address and
+ * the full operation identity so rollback does not accidentally bind a target
+ * to the current tip's operation id/attempt.
+ */
+function digestConsumerRuntimeGenerationIdentity(identity: ConsumerNodeRuntimeIdentity): string {
+  const { operation_id: _operationId, attempt: _attempt, ...generationIdentity } = identity;
+  return digestConsumerRuntimeValue(generationIdentity);
+}
+
 function jsonBytes(value: unknown): Uint8Array {
   return Buffer.from(`${canonical(value)}\n`, "utf8");
 }
@@ -242,8 +253,12 @@ export function buildConsumerNodeRuntimePayloads(input: {
         throw new Error("rollback attestation missing");
       if (!input.prior_identity || !validIdentity(input.prior_identity))
         throw new Error("rollback prior identity missing");
-      if (digestConsumerRuntimeValue(input.prior_identity) !== priorRecord.identity_digest)
-        throw new Error("rollback prior identity mismatch");
+      const targetGenerationDigest = digestConsumerRuntimeGenerationIdentity(input.prior_identity);
+      const targetRecords = priorRecords.filter(
+        (record) => record.generation_identity_digest === targetGenerationDigest,
+      );
+      if (targetRecords.length !== 1)
+        throw new Error("rollback prior identity not recorded");
       verifyNodeReceiptForIdentity(
         input.prior_identity,
         input.prior_attestation,
@@ -281,6 +296,7 @@ export function buildConsumerNodeRuntimePayloads(input: {
     attempt: input.identity.attempt,
     operation_kind: operationKind,
     identity_digest: identityDigest,
+    generation_identity_digest: digestConsumerRuntimeGenerationIdentity(input.identity),
     prior_bundle_digest: priorBundle,
     prior_history_tip_digest: priorTip,
   };
@@ -407,6 +423,7 @@ function parseHistoryRecords(bytes: Uint8Array): readonly Record<string, unknown
       "attempt",
       "operation_kind",
       "identity_digest",
+      "generation_identity_digest",
       "prior_bundle_digest",
       "prior_history_tip_digest",
       "record_digest",
@@ -425,6 +442,8 @@ function parseHistoryRecords(bytes: Uint8Array): readonly Record<string, unknown
         parsed.operation_kind !== "rollback") ||
       typeof parsed.identity_digest !== "string" ||
       !DIGEST.test(parsed.identity_digest) ||
+      typeof parsed.generation_identity_digest !== "string" ||
+      !DIGEST.test(parsed.generation_identity_digest) ||
       typeof parsed.prior_bundle_digest !== "string" ||
       (parsed.prior_bundle_digest !== GENESIS && !DIGEST.test(parsed.prior_bundle_digest)) ||
       typeof parsed.prior_history_tip_digest !== "string" ||
@@ -628,6 +647,8 @@ const payload = (name) => { try { return readFileSync(resolve(bundle, name)); } 
 const parsePayload = (name) => { try { const value = JSON.parse(payload(name).toString("utf8")); if (!value || typeof value !== "object" || Array.isArray(value)) deny("consumer_runtime_resolution_denied"); return value; } catch { deny("consumer_runtime_resolution_denied"); } };
 const marker = parsePayload("marker.json"), consumer = parsePayload("consumer-receipt.json"), operation = parsePayload("operation-state.json");
 const identityDigest = sha256(Buffer.from(canonical(manifest.identity), "utf8"));
+const { operation_id: _operationId, attempt: _attempt, ...generationIdentity } = manifest.identity;
+const generationIdentityDigest = sha256(Buffer.from(canonical(generationIdentity), "utf8"));
 let history;
 try {
   const lines = payload("history.jsonl").toString("utf8").trim().split(/\\r?\\n/);
@@ -636,12 +657,13 @@ try {
   for (let index = 0; index < records.length; index += 1) {
     const record = records[index];
     if (!record || typeof record !== "object" || Array.isArray(record)) deny("consumer_runtime_resolution_denied");
-    if (record.history_sequence !== index || typeof record.record_digest !== "string") deny("consumer_runtime_resolution_denied");
+    if (record.history_sequence !== index || typeof record.record_digest !== "string" || typeof record.generation_identity_digest !== "string" || !/^sha256:[a-f0-9]{64}$/.test(record.generation_identity_digest)) deny("consumer_runtime_resolution_denied");
     if (index === 0 && (record.prior_bundle_digest !== "genesis" || record.prior_history_tip_digest !== "genesis")) deny("consumer_runtime_resolution_denied");
     if (index > 0 && (typeof record.prior_bundle_digest !== "string" || typeof record.prior_history_tip_digest !== "string")) deny("consumer_runtime_resolution_denied");
     if (index > 0 && record.prior_history_tip_digest !== records[index - 1].record_digest) deny("consumer_runtime_resolution_denied");
-    const unsigned = {
+const unsigned = {
       attempt: record.attempt,
+      generation_identity_digest: record.generation_identity_digest,
       history_sequence: record.history_sequence,
       identity_digest: record.identity_digest,
       operation_id: record.operation_id,
@@ -655,7 +677,7 @@ try {
 } catch { deny("consumer_runtime_resolution_denied"); }
 if (marker.identity_digest !== identityDigest || marker.operation_id !== manifest.identity.operation_id || marker.attempt !== manifest.identity.attempt || marker.generation_id !== manifest.identity.generation_id) deny("consumer_runtime_resolution_denied");
 if (consumer.identity_digest !== marker.identity_digest || consumer.operation_id !== marker.operation_id || consumer.attempt !== marker.attempt || consumer.history_sequence !== manifest.history_sequence || consumer.prior_bundle_digest !== manifest.prior_bundle_digest || consumer.prior_history_tip_digest !== manifest.prior_history_tip_digest || consumer.history_tip_digest !== history.record_digest) deny("consumer_runtime_resolution_denied");
-if (history.identity_digest !== marker.identity_digest || history.operation_id !== marker.operation_id || history.attempt !== marker.attempt || history.history_sequence !== manifest.history_sequence || history.prior_bundle_digest !== manifest.prior_bundle_digest || history.prior_history_tip_digest !== manifest.prior_history_tip_digest || sha256(Buffer.from(canonical({ attempt: history.attempt, history_sequence: history.history_sequence, identity_digest: history.identity_digest, operation_id: history.operation_id, operation_kind: history.operation_kind, prior_bundle_digest: history.prior_bundle_digest, prior_history_tip_digest: history.prior_history_tip_digest }), "utf8")) !== history.record_digest) deny("consumer_runtime_resolution_denied");
+if (history.identity_digest !== marker.identity_digest || history.generation_identity_digest !== generationIdentityDigest || history.operation_id !== marker.operation_id || history.attempt !== marker.attempt || history.history_sequence !== manifest.history_sequence || history.prior_bundle_digest !== manifest.prior_bundle_digest || history.prior_history_tip_digest !== manifest.prior_history_tip_digest || sha256(Buffer.from(canonical({ attempt: history.attempt, generation_identity_digest: history.generation_identity_digest, history_sequence: history.history_sequence, identity_digest: history.identity_digest, operation_id: history.operation_id, operation_kind: history.operation_kind, prior_bundle_digest: history.prior_bundle_digest, prior_history_tip_digest: history.prior_history_tip_digest }), "utf8")) !== history.record_digest) deny("consumer_runtime_resolution_denied");
 if (operation.identity_digest !== marker.identity_digest || operation.operation_id !== marker.operation_id || operation.attempt !== marker.attempt || operation.history_tip_digest !== history.record_digest) deny("consumer_runtime_resolution_denied");
 const nodeReceipt = parsePayload("node-bootstrap-receipt.json"); const nodeReceiptDigest = nodeReceipt.receipt_digest; delete nodeReceipt.receipt_digest; if (typeof nodeReceiptDigest !== "string" || sha256(Buffer.from(canonical(nodeReceipt), "utf8")) !== "sha256:" + nodeReceiptDigest) deny("consumer_runtime_resolution_denied");
 const result = spawnSync(process.execPath, [entry, ...process.argv.slice(2)], { cwd: consumerRoot, stdio: "inherit", windowsHide: true });
