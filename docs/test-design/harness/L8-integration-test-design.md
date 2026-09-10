@@ -337,9 +337,13 @@ L6 `harness-check` aggregate gate / E13 receipt契約を結合境界で検証す
 | `U-PA-SEAL-022` | E.4の正規review preimageへ時刻、または`RunnerOutcome.summary`相当文字列を追加し、その偽authority digestへcommandを自己整合させる。 | migrationを実行する。 | `seal-review-authority-invalid`、全8 table write 0。 | live typed custody observationとE.4 digest導出境界。 | time-varying値や表示summaryをauthority入力へ追加する変異を検出する。 |
 | `U-PA-SEAL-023` | canonical `certificate_json`から必須fieldを欠落、またはterminal digestを単独改変し、そのJSONのdigestへcommandを自己整合させる。 | migrationを実行する。 | `seal-certificate-digest-mismatch`、全8 table write 0。 | E.6 certificate再導出境界。 | callerが構成した欠損・改変certificateを受理する変異を検出する。 |
 | `U-PA-SEAL-024` | 正規commandへcaller-supplied `certificateJson` fieldを追加する。 | migrationを実行する。 | `sealed-lineage-input-invalid`、全8 table write 0。 | migration inputのexact-shape境界。 | production再導出を迂回するcaller certificate供給経路を作らない。 |
+| `U-PA-SEAL-025` | live authorityだけを入力とするdry-run request、空の隔離PLAN ledger、strict revision runner。 | execution compositionを実行する。 | dry-run、ledger open、seal/genesis rev1、plan reviseの順で各1回実行し、sealの8 tableが揃う。 | read-only assemblerからlocal writer、strict revision runnerへのcomposition境界。 | caller-minted digestや手書きseal inputを介さず正規順序を維持する。 |
+| `U-PA-SEAL-026` | tracked remote到達性を失ったdry-run。 | execution compositionを実行する。 | `dry-run / seal-source-commit-unreachable`で拒否し、ledger open 0、plan revise 0。 | read-only preflightとwriter生成の境界。 | preflight不成立後に隔離ledgerを作成・変更しない。 |
+| `U-PA-SEAL-027` | dry-run後、actual seal直前にlive Issue本文が変化するauthority port。 | execution compositionを実行する。 | `seal / seal-issue-authority-invalid`で拒否し、全8 table write 0、plan revise 0。 | dry-runとwriter側authority再観測の境界。 | dry-run済みmanifestだけで失効したIssue custodyを通さない。 |
+| `U-PA-SEAL-028` | seal成功後に失敗するstrict revision runner。 | execution compositionを実行する。 | `plan-revise` stageのtyped failureを返し、隔離seal 8 tableを保持して再開可能、成功扱いしない。 | 隔離ledger sealとtracked artifact publish Sagaの境界。 | revise失敗を全体成功へ丸めず、primary ledgerへ片肺成果を流さない。 |
 
 実行対応: `tests/plan-asset/sealed-lineage-local-migration.test.ts`
-(`U-PA-SEAL-011..024`)。これらは `src/lint/oracle-test-citation-baseline.ts` への追加対象ではなく、
+(`U-PA-SEAL-011..028`)。これらは `src/lint/oracle-test-citation-baseline.ts` への追加対象ではなく、
 本書の paired test-design 宣言から test-label trace を閉じる。
 
 ## Node build image候補integration pair（Issue #152 D0-N）

@@ -9,6 +9,7 @@ import { migratePlanLedger } from "../../src/plan-asset/ledger/schema.ts";
 import {
   assembleSealedLineageMigrationDryRun,
   CustodyDecisionSealedLineageReviewAuthorityPort,
+  executeSealedLineageRecovery,
   SystemSealedLineageIssueAuthorityPort,
   SystemSealedLineageProjectIdentityPort,
 } from "../../src/plan-asset/ledger/sealed-lineage-local-migration.ts";
@@ -818,6 +819,103 @@ describe("sealed lineage local migration", () => {
     });
     expect(counts(db)).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
   });
+
+  it("U-PA-SEAL-025: live preflightから隔離ledger sealとstrict reviseを順序実行する", async () => {
+    const { db } = await baseFixture();
+    const command = input();
+    const calls: string[] = [];
+    const result = await executeSealedLineageRecovery({
+      dryRun: dryRunRequest(command),
+      openLedger: () => {
+        calls.push("open-ledger");
+        return db;
+      },
+      runPlanRevision: () => {
+        calls.push("plan-revise");
+        return { ok: true, output: "revision-2" };
+      },
+    });
+
+    expect(result).toMatchObject({ ok: true, revisionOutput: "revision-2" });
+    expect(calls).toEqual(["open-ledger", "plan-revise"]);
+    expect(counts(db)).toEqual([1, 1, 1, 1, 1, 1, 1, 1]);
+  });
+
+  it("U-PA-SEAL-026: dry-run fail-closeではledgerもreviseも起動しない", async () => {
+    const command = input();
+    let opened = 0;
+    let revised = 0;
+    const result = await executeSealedLineageRecovery({
+      dryRun: {
+        ...dryRunRequest(command),
+        git: { ...fakeGit(command), isReachableFromTrackedRemote: () => false },
+      },
+      openLedger: () => {
+        opened += 1;
+        throw new Error("must not open");
+      },
+      runPlanRevision: () => {
+        revised += 1;
+        return { ok: true, output: "unexpected" };
+      },
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      stage: "dry-run",
+      ruleId: "seal-source-commit-unreachable",
+    });
+    expect({ opened, revised }).toEqual({ opened: 0, revised: 0 });
+  });
+
+  it("U-PA-SEAL-027: seal authority driftでは全table write 0かつrevise 0", async () => {
+    const { db } = await baseFixture();
+    const command = input();
+    let issueReads = 0;
+    let revised = 0;
+    const result = await executeSealedLineageRecovery({
+      dryRun: {
+        ...dryRunRequest(command),
+        issueAuthority: {
+          observe: () => ({
+            number: command.issue.number,
+            rawBody: issueReads++ === 0 ? "issue 102" : "changed issue",
+            updatedAt: "2026-09-10T00:00:00Z",
+          }),
+        },
+      },
+      openLedger: () => db,
+      runPlanRevision: () => {
+        revised += 1;
+        return { ok: true, output: "unexpected" };
+      },
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      stage: "seal",
+      ruleId: "seal-issue-authority-invalid",
+    });
+    expect(counts(db)).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
+    expect(revised).toBe(0);
+  });
+
+  it("U-PA-SEAL-028: strict revise失敗をtypedに返し隔離seal証跡を保持する", async () => {
+    const { db } = await baseFixture();
+    const command = input();
+    const result = await executeSealedLineageRecovery({
+      dryRun: dryRunRequest(command),
+      openLedger: () => db,
+      runPlanRevision: () => ({ ok: false, ruleId: "plan-revision-failed" }),
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      stage: "plan-revise",
+      ruleId: "plan-revision-failed",
+    });
+    expect(counts(db)).toEqual([1, 1, 1, 1, 1, 1, 1, 1]);
+  });
 });
 
 const PLAN_ID = "PLAN-RECOVERY-16-plan-revision-authoring";
@@ -1135,6 +1233,24 @@ function fakeProjectIdentity(command: MigrationInput) {
       sourceCommit: command.sourceCommit,
       receiptDigest: digest("project-identity-receipt"),
     }),
+  };
+}
+
+function dryRunRequest(command: MigrationInput) {
+  return {
+    commandId: command.commandId,
+    planId: command.planId,
+    actor: command.actor,
+    occurredAt: command.occurredAt,
+    git: fakeGit(command),
+    projectIdentity: fakeProjectIdentity(command),
+    issueAuthority: fakeIssueAuthority(command),
+    reviewCustody: {
+      observe: async () => ({
+        facts: reviewFacts(),
+        decision: rejectedDecision(["unverified_family"]),
+      }),
+    },
   };
 }
 
