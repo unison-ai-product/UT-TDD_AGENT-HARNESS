@@ -192,6 +192,7 @@ export function buildConsumerNodeRuntimePayloads(input: {
   readonly prior_history_tip_digest?: string;
   readonly history_sequence?: number;
   readonly prior_history?: Uint8Array;
+  readonly prior_identity?: ConsumerNodeRuntimeIdentity;
   readonly prior_pointer?: ConsumerNodeRuntimePriorPointer | null;
   readonly operation_kind?: ConsumerNodeRuntimeOperationKind;
   readonly prior_attestation?: Uint8Array;
@@ -239,7 +240,15 @@ export function buildConsumerNodeRuntimePayloads(input: {
     if (operationKind === "rollback") {
       if (!(input.prior_attestation instanceof Uint8Array))
         throw new Error("rollback attestation missing");
-      verifyNodeReceiptForIdentity(input.identity, input.prior_attestation, input.compiled_esm);
+      if (!input.prior_identity || !validIdentity(input.prior_identity))
+        throw new Error("rollback prior identity missing");
+      if (digestConsumerRuntimeValue(input.prior_identity) !== priorRecord.identity_digest)
+        throw new Error("rollback prior identity mismatch");
+      verifyNodeReceiptForIdentity(
+        input.prior_identity,
+        input.prior_attestation,
+        input.compiled_esm,
+      );
     }
   }
   const marker = {

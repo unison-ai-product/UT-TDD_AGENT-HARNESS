@@ -258,6 +258,7 @@ export interface SetupConsumerRuntimeInput {
   readonly prior_history_tip_digest?: string;
   readonly history_sequence?: number;
   readonly prior_history?: Uint8Array;
+  readonly prior_identity?: ConsumerNodeRuntimeIdentity;
   readonly prior_pointer?:
     | import("./consumer-node-runtime.ts").ConsumerNodeRuntimePriorPointer
     | null;
@@ -617,6 +618,7 @@ export async function runSetupAsync(args: SetupArgs, deps: SetupDeps): Promise<S
   // setup state behind for the CLI to discover.
   try {
     const consumerRuntime = await installConsumerRuntimeFromSetup(args.consumerRuntime);
+    if (!consumerRuntime.result.ok) throw new Error(consumerRuntime.result.reason);
     const result = runSetup(args, deps);
     return { ...result, consumerRuntime };
   } catch (error) {

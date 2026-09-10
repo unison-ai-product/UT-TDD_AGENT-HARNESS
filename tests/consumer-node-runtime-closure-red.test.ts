@@ -468,21 +468,23 @@ describe("Issue #420 closure Red oracles: aggregate authority and durable histor
     deps.writeText = () => {
       setupWrites += 1;
     };
-    const result = await runSetupAsync(
-      {
-        phase: "0-A",
-        dryRun: false,
-        applyBranchProtection: false,
-        consumerRuntime: {
-          ...runtime,
-          fault: (barrier) => {
-            if (barrier === "writeGenerationAndReceipt") throw new Error("consumer_runtime_permission");
+    await expect(
+      runSetupAsync(
+        {
+          phase: "0-A",
+          dryRun: false,
+          applyBranchProtection: false,
+          consumerRuntime: {
+            ...runtime,
+            fault: (barrier) => {
+              if (barrier === "writeGenerationAndReceipt")
+                throw new Error("consumer_runtime_permission");
+            },
           },
         },
-      },
-      deps,
-    );
-    expect(result).toMatchObject({ consumerRuntime: { result: { ok: false, status: "failed" } } });
+        deps,
+      ),
+    ).rejects.toThrow("consumer_runtime_permission");
     expect(setupWrites).toBe(0);
   });
 
@@ -663,6 +665,7 @@ describe("Issue #420 closure Red oracles: aggregate authority and durable histor
       },
       operation_kind: "rollback",
       prior_attestation: runtime.node_bootstrap_receipt,
+      prior_identity: runtime.identity,
     };
     const next = buildConsumerNodeRuntimePayloads(nextInput);
     const records = Buffer.from(next.history)
@@ -703,6 +706,7 @@ describe("Issue #420 closure Red oracles: aggregate authority and durable histor
         },
         operation_kind: "rollback",
         prior_attestation: runtime.node_bootstrap_receipt,
+        prior_identity: runtime.identity,
       }),
     ).toThrow(/rollback (attestation|prior)/);
   });

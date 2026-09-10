@@ -426,6 +426,7 @@ describe("physical consumer Node runtime adapter", () => {
       prior_pointer: currentPointer,
       operation_kind: "rollback",
       prior_attestation: supplied.node_bootstrap_receipt,
+      prior_identity: updateIdentity,
     });
     const rollbackBundle = buildConsumerNodeRuntimeBundle({
       identity: rollbackIdentity,
