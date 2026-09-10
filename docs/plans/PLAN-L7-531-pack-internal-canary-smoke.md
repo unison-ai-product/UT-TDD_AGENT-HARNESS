@@ -55,18 +55,18 @@ status: draft
 github_issue_id: 418
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:44f79788376b81c225ce5913fddbc48f
-  command_id: plan-draft:issue-418:forward:1
-  admitted_at: 2026-09-10T07:43:33.667Z
-  source_digest: sha256:b5aa22565d72e0480a4b8f694283ad441c4415837d653276c7d8f5b89f122f27
-  decision_digest: sha256:5ade581c8056e8da453b1e09278fb902ef9d471b73f803e9d9c74932077c8722
-  receipt_digest: sha256:c40a2000288b01ed3d48bf2f2b865a3bd863e804b5f89b228b0d2882526eaf0e
+  receipt_id: certificate:a5ec9ea8f3689c8d24727d97a9804bcf
+  command_id: plan-revise:issue-418:forward:2
+  admitted_at: 2026-09-10T10:27:51.659Z
+  source_digest: sha256:69c9c058d2178425bb0459033b2748785d152d7a9c2a37c01aefbca270709d4e
+  decision_digest: sha256:2ee0d06520a02bb49244002124eeb74804bcde3a28cfe21289bb7681a711d12d
+  receipt_digest: sha256:4adc16d207f8b7ac617c9fc834a0e6939cd80c2a7bd2c3ca470eb13b61755fe7
   binding:
     path: docs/plans/PLAN-L7-531-pack-internal-canary-smoke.md
     plan_id: PLAN-L7-531-pack-internal-canary-smoke
     asset_id: plan:44f79788376b81c225ce5913fddbc48f
-    revision: 1
-    content_digest: sha256:b5aa22565d72e0480a4b8f694283ad441c4415837d653276c7d8f5b89f122f27
+    revision: 2
+    content_digest: sha256:69c9c058d2178425bb0459033b2748785d152d7a9c2a37c01aefbca270709d4e
   route:
     signal: feature_addition
     mode: add-feature
@@ -81,10 +81,10 @@ admission_receipt:
     digest: sha256:6e4e0d5516e78e7465d260c65482e3302c9304518eb264d39735d049c166a316
   reentry:
     target_plan_id: PLAN-L7-531-pack-internal-canary-smoke
-    target_revision: 1
+    target_revision: 2
     phase: forward_merge
-  escape_reason: "Issue #418 Pack-only internal canary smoke pair-freeze
-    (add-feature, PLAN-L6-101 downstream)"
+  escape_reason: "Issue #418 PR #560 Codex FLAG: family-neutral non-author closing
+    receipt obligation"
 ---
 
 # PLAN-L7-531: Pack-only internal canary smoke (Windows/Linux)
@@ -276,7 +276,7 @@ backfill し、`PLAN-L7-515` / `L7-516` / `L7-508` を重複所有しない。
    一致し、第 1 層 staging receipt と byte 一致する (§3.3)。
 4. 再起動相当セッション後にも PLAN/DB/doctor/review smoke が再現する。
 5. failure 時は consumer root 外 write 0、partial install を成功扱いしない。
-6. `PLAN-L7-531`、L12 test-design、`PLAN-REVERSE-531`、CI、Claude non-author closing receipt を
+6. `PLAN-L7-531`、L12 test-design、`PLAN-REVERSE-531`、CI、成果物を書いていない族 (cross-family) の canonical non-author closing receipt (PR-0 は Claude 起票のため Codex 族、Codex worker が書く PR-1 / PR-2 は Claude 族) を
    同一 exact revision へ束縛する。
 7. 本 Issue は internal canary の入口だけを閉じる。#364 は open のまま維持する。
 

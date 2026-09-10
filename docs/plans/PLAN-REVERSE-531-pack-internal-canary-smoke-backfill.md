@@ -47,18 +47,18 @@ status: draft
 github_issue_id: 418
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:c789d97c71c9a9c07942983de88b71ab
-  command_id: plan-draft:issue-418:reverse:1
-  admitted_at: 2026-09-10T07:43:33.667Z
-  source_digest: sha256:1e7a88e0164690ca8d761fc4e19012e0dbbe659d894882dec7b8a0761d280131
-  decision_digest: sha256:e5c499b1c15f02557e3697929219078774b5b48ea2588532d8bd9b90846e9d8c
-  receipt_digest: sha256:1c68869f7a5fbfe988795fee7898b9e3ff8ef5d2af1cb930f9084f43432b348b
+  receipt_id: certificate:52eba0ab1e5b4e8fa1407ddbb36b5296
+  command_id: plan-revise:issue-418:reverse:2
+  admitted_at: 2026-09-10T10:27:51.659Z
+  source_digest: sha256:1ab94c0a9676ee3c2df7b95b34bb11d154417bb2daf14a899f4cbc6bb04ca64c
+  decision_digest: sha256:62dd7163f12ed450694d929543a4ea9042978d4c0167c2ab88980d009ca04780
+  receipt_digest: sha256:fa3a2da8c03bcced44b61ec9536fa5a21d22549ae3b881a784e4dd6a8eba7521
   binding:
     path: docs/plans/PLAN-REVERSE-531-pack-internal-canary-smoke-backfill.md
     plan_id: PLAN-REVERSE-531-pack-internal-canary-smoke-backfill
     asset_id: plan:c789d97c71c9a9c07942983de88b71ab
-    revision: 1
-    content_digest: sha256:1e7a88e0164690ca8d761fc4e19012e0dbbe659d894882dec7b8a0761d280131
+    revision: 2
+    content_digest: sha256:1ab94c0a9676ee3c2df7b95b34bb11d154417bb2daf14a899f4cbc6bb04ca64c
   route:
     signal: reverse
     mode: reverse
@@ -76,9 +76,10 @@ admission_receipt:
     implementation_disposition: preserved
   reentry:
     target_plan_id: PLAN-L7-531-pack-internal-canary-smoke
-    target_revision: 1
+    target_revision: 2
     phase: forward_merge
-  escape_reason: "Issue #418 Pack-only internal canary smoke Reverse backfill pair (R0)"
+  escape_reason: "Issue #418 PR #560 Codex FLAG: family-neutral non-author closing
+    receipt obligation"
 ---
 
 # PLAN-REVERSE-531: Pack-only internal canary smoke の逆向き確認
@@ -146,7 +147,7 @@ gap は L7-531 の contract 改訂 (revision N+1) で閉じ、L6 契約の変更
 ## R4: Forward 再合流条件
 
 - PR-1 (第 1 層) と PR-2 (第 2 層) が別 PR で main 到達し、各々の exact HEAD に Linux/Windows/
-  aggregate Green と Claude non-author closing receipt が存在する。
+  aggregate Green と成果物を書いていない族 (cross-family) の canonical non-author closing receipt (PR-0 は Claude 起票のため Codex 族、Codex worker が書く PR-1 / PR-2 は Claude 族)が存在する。
 - `CANDIDATE-ST-PACKCANARY-001..007` が同番号の `U-ST-PACKCANARY-*` へ 1:1 昇格し、
   同一 implementation revision の Red→Green 実測を引用している。
 - `v0.2.0-canary.1` の publication receipt と第 2 層の再計算 digest が一致している。

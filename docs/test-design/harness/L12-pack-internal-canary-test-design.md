@@ -87,7 +87,7 @@ Candidate は pair-freeze 時点の設計候補であり、実装と同じ revis
 - source/worktree/local Pack checkoutへのruntime fallbackがないことを、単なる文字列検査
   ではなく実materialize・setup・setup元撤去・別cwd起動で確認する。
 - 第 1 層と第 2 層が receipt digest の byte 一致で接合され、独立した 2 つの smoke に劣化しない。
-- Linux/Windows/aggregate CI、PLAN lint、L12受入証跡、Claude non-author closing receipt、
+- Linux/Windows/aggregate CI、PLAN lint、L12受入証跡、成果物を書いていない族 (cross-family) の canonical non-author closing receipt、
   Reverse R1〜R4が同一exact revisionへ束縛される。
 
 ## 6. 現在の実測範囲(未完了の受入を区別する)
