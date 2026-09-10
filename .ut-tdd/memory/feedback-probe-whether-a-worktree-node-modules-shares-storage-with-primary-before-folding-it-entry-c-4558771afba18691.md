@@ -3,7 +3,7 @@ memory_id: memory:feedback:probe-whether-a-worktree-node-modules-shares-storage-
 kind: feedback
 title: "Probe whether a worktree node_modules shares storage with primary before folding it; entry count and rmdir cannot tell junction from independent copy"
 tags: ["correction", "junction", "node-modules", "windows", "worktree"]
-updated_at: 2026-09-09T03:56:53.392Z
+updated_at: 2026-09-10T04:01:58.378Z
 ---
 
 worktree を畳む前に、その `node_modules` が primary と**同一実体を共有しているか**を probe で判定する。
@@ -14,7 +14,9 @@ worktree を畳む前に、その `node_modules` が primary と**同一実体�
 **Why:** この repo の worktree には 3 種類が混在しており、見た目では区別できない。
 (a) primary への symlink / junction (`ls -la` で `-> /c/dev/UT-TDD-agent-harness/node_modules/` と出るものと、
 出ないものがある)、(b) 独立に `npm install` された実体コピー、(c) `node_modules` 無し。
-いずれも `ls node_modules | wc -l` は 92 を返すため**エントリ数では判別できない**。
+(a) と (b) は `ls node_modules | wc -l` が同じ値を返す (2026-09-09 実測: 双方 92) ため**エントリ数では判別できない**。
+(c) だけは 0 (`ls: cannot access 'node_modules': No such file or directory`、pipeline exit 0) で見分けられるが、
+危険なのは (a) と (b) の区別であり、エントリ数はそれに使えない。
 `cmd /c rmdir` も (b) では「ディレクトリが空ではありません」で失敗し、`fsutil reparsepoint query` は
 Git Bash 経由のパス引用で誤動作する。
 
