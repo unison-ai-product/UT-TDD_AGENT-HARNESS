@@ -3,7 +3,7 @@ memory_id: memory:feedback:inbox-absence-never-proves-a-review-request-is-absent
 kind: feedback
 title: "Inbox absence never proves a review request is absent: reconcile open PRs and canonical requests by shell-free pull commands"
 tags: ["clean-checkout", "inbox", "memory-canon", "pull-vs-push", "review-detection"]
-updated_at: 2026-09-10T03:38:40.392Z
+updated_at: 2026-09-10T06:12:42.906Z
 ---
 
 review 依頼の検知を Stop-hook の `[UT_TDD_CLAUDE_INBOX]` 配信だけに依存すると、依頼メモリを伴わずに立った
@@ -25,7 +25,9 @@ clean checkout には存在しないので、不在は「未消費 request 0 件
 (`src/feedback/review-attestation.ts` の `isValidReviewRequest`、`src/feedback/review-dispatch.ts` の
 `analyzeReviewDispatch`) の**構造的 subset** であって同値ではない: 40-hex head、safe integer の pr、ISO-8601 の形の時刻、
 family / kind / verdict の列挙値だけを見る。canonical が追加で拒否する条件 (例: 現在時刻より未来の `requestedAt` / `at` を
-`future_timestamp` で拒否する) は snippet に無い。snippet は候補の列挙であり、採否の authority は canonical 側にある。
+`future_timestamp` で拒否する) は snippet に無い。receipt は basename (request digest) 一致だけでは消費済みとみなさず、
+`memoryId` / `pr` / `head` / `reviewRevision` の identity が request と一致する場合のみ done とし、不一致は
+`ORPHAN-RECEIPT` を付けて pending のまま表示する (canonical の `orphan_receipt:unmatched_identity` に対応)。snippet は候補の列挙であり、採否の authority は canonical 側にある。
 
 ```bash
 # open PR 一覧 (number / head 8 桁 / draft / title)
@@ -50,12 +52,15 @@ const request=v=>v&&typeof v==="object"&&text(v.memoryId)&&pr(v.pr)&&head(v.exac
 const receipt=v=>{if(!v||typeof v!=="object"||!text(v.memoryId)||!pr(v.pr)||!head(v.head)||!text(v.reviewRevision)||!["claude","codex"].includes(v.reviewerFamily)||!["acknowledged","in_review","verdict"].includes(v.kind)||!ts(v.at))return false;if(v.kind!=="verdict")return !Object.hasOwn(v,"verdict")&&!Object.hasOwn(v,"blockingFindings");if(!["PASS","PASS-WEAK","FLAG"].includes(v.verdict))return false;if(v.verdict==="FLAG")return Array.isArray(v.blockingFindings)&&v.blockingFindings.length>0&&v.blockingFindings.every(text);return !Object.hasOwn(v,"blockingFindings")||(Array.isArray(v.blockingFindings)&&v.blockingFindings.length===0)};
 const open=new Map(JSON.parse(execFileSync("gh",["pr","list","--state","open","--json","number,headRefOid"],{encoding:"utf8"})).map(p=>[p.number,p.headRefOid]));
 const rq=".ut-tdd/review/requests", rc=".ut-tdd/review/receipts";
-const done=new Set();
-for(const f of ls(rc).filter(f=>f.endsWith(".json"))){let r;try{r=JSON.parse(fs.readFileSync(rc+"/"+f,"utf8"))}catch(e){fail(`${rc}/${f}: malformed JSON`)}if(!receipt(r))fail(`${rc}/${f}: receipt schema`);done.add(f.slice(0,-5));}
-for(const f of ls(rq).filter(f=>f.endsWith(".json"))){const d=f.slice(0,-5);if(done.has(d))continue;
+const receipts=new Map();
+for(const f of ls(rc).filter(f=>f.endsWith(".json"))){let r;try{r=JSON.parse(fs.readFileSync(rc+"/"+f,"utf8"))}catch(e){fail(`${rc}/${f}: malformed JSON`)}if(!receipt(r))fail(`${rc}/${f}: receipt schema`);receipts.set(f.slice(0,-5),r);}
+const bound=(j,r)=>r&&r.memoryId===j.memoryId&&r.pr===j.pr&&r.head===j.exactHead&&r.reviewRevision===j.reviewRevision;
+for(const f of ls(rq).filter(f=>f.endsWith(".json"))){const d=f.slice(0,-5);
  let j;try{j=JSON.parse(fs.readFileSync(rq+"/"+f,"utf8"))}catch(e){fail(`${rq}/${f}: malformed JSON`)}
  if(!request(j))fail(`${rq}/${f}: request schema`);
- if(open.get(j.pr)===j.exactHead)console.log("PENDING pr="+j.pr+" head="+j.exactHead.slice(0,8));}'
+ const r=receipts.get(d);if(bound(j,r))continue;
+ if(open.get(j.pr)!==j.exactHead)continue;
+ console.log((r?"ORPHAN-RECEIPT unmatched identity, ":"")+"PENDING pr="+j.pr+" head="+j.exactHead.slice(0,8));}'
 ```
 
 EOD close-out の未 push commit / open PR 確認 (`CLAUDE.md` §定期棚卸し) はこの pull 突き合わせと同じ目的であり、
@@ -70,5 +75,7 @@ EOD close-out の未 push commit / open PR 確認 (`CLAUDE.md` §定期棚卸し
 `fs.readdirSync` を無条件に呼び、requests / receipts が無い clean checkout で ENOENT (exit 1) になった。
 第 4 世代は schema 検証を持たず、第 5 世代の検証は `requestedAt="x"` や safe integer 外の `pr` を通し、canonical より緩かった。
 第 6 世代は canonical と「同じ形」と述べたが、future timestamp の拒否が無く、引用した symbol (`isValidReviewReceipt`) も実在しなかった。
+第 7 世代は receipt を basename 一致だけで done 扱いし、identity の異なる receipt を同 basename に置くと pending request が
+無言で隠れた (canonical は `orphan_receipt:unmatched_identity` で request を保持する)。
 snippet に canonical との同値性を主張させない (差分を明記する) のは、canonical の変更に memory が追従できないからである。
 時点事実やコマンドを書くときは、その値・終了コードを両 OS かつ clean checkout で再現できる形で併記すること。
