@@ -101,7 +101,9 @@ function readinessOf(cwd: string, env: NodeJS.ProcessEnv) {
     encoding: "utf8",
     windowsHide: true,
   });
-  expect(run.status, run.stderr || run.stdout).toBe(0);
+  // Setup creates the sealed-runtime wrapper, but readiness remains blocked
+  // until a producer-admitted runtime bundle is published.
+  expect(run.status, run.stderr || run.stdout).toBe(1);
   return (
     JSON.parse(run.stdout) as {
       readiness: {
@@ -155,7 +157,7 @@ function expectNodeConstraintBlocked(
 }
 
 describe("consumer readiness without Bun (PLAN-L7-522 §2.2)", () => {
-  it("U-PACKBUN-001: readiness is ok in a Bun-free environment", () => {
+  it("U-PACKBUN-001: Bun is irrelevant when sealed runtime admission is absent", () => {
     const home = temporaryDirectory();
     const consumer = createCleanConsumer();
     const env = bunFreeEnv(home);
@@ -165,7 +167,8 @@ describe("consumer readiness without Bun (PLAN-L7-522 §2.2)", () => {
     // Bun が本当に到達不能であることを先に固定する (環境が緩いと恒真テストになる)。
     const probe = probeBun(bunFreeEnv(home));
     expect(probe.status).not.toBe(0);
-    expect(readiness.ok).toBe(true);
+    expect(readiness.ok).toBe(false);
+    expect(readiness.checks.find((check) => check.name === "ut-tdd-cli")?.ok).toBe(false);
   });
 
   it("U-PACKBUN-002: readiness uses engines.node and npm semver grammar", () => {

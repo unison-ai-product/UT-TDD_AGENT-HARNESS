@@ -5,6 +5,7 @@ import {
   mkdtempSync,
   readdirSync,
   readFileSync,
+  realpathSync,
   rmSync,
   statSync,
   writeFileSync,
@@ -309,8 +310,8 @@ describe("Issue #420 closure Red oracles: aggregate authority and durable histor
     const runtime = await runtimeFor(root);
     expect(runtime.admission).toMatchObject({
       productId: "ut-tdd",
-      consumerRoot: root,
-      runtimeRoot: join(root, ".ut-tdd", "runtime"),
+      consumerRoot: realpathSync.native(root),
+      runtimeRoot: join(realpathSync.native(root), ".ut-tdd", "runtime"),
     });
     expect(runtime.admission.plan.kind).toBe("release-aggregate");
     expect(runtime.admissionInput.plan).toStrictEqual(runtime.admission.plan);

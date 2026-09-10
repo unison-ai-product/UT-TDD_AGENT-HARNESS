@@ -978,7 +978,7 @@ describe("L7 CLI surface closure", () => {
       expect(readFileSync(join(binDir, "codex-env.txt"), "utf8")).toContain("args=");
     } finally {
       removeTestTree(binDir);
-      rmSync(runtimeRoot, { recursive: true, force: true });
+      removeTestTree(runtimeRoot);
     }
   }, 20_000);
 
