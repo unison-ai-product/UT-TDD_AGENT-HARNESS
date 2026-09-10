@@ -407,12 +407,12 @@ describe("clean distribution local acceptance smoke", () => {
       expect(setup.status, setup.stderr || setup.stdout).toBe(0);
 
       const wrapperHelp = runNode(cleanRoot, [".ut-tdd/bin/ut-tdd.mjs", "--help"], env);
-      expect(wrapperHelp.status, wrapperHelp.stderr || wrapperHelp.stdout).toBe(0);
-      expect(wrapperHelp.stdout).toContain("Usage: ut-tdd");
+      expect(wrapperHelp.status, wrapperHelp.stderr || wrapperHelp.stdout).toBe(78);
+      expect(wrapperHelp.stderr).toContain("consumer_runtime_absent");
 
       const setupSmoke = runNode(
         cleanRoot,
-        [".ut-tdd/bin/ut-tdd.mjs", "doctor", "--setup-smoke"],
+        ["src/cli.ts", "doctor", "--setup-smoke"],
         env,
       );
       expect(setupSmoke.status, setupSmoke.stderr || setupSmoke.stdout).toBe(0);

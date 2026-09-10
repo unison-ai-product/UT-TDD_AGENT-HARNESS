@@ -232,7 +232,15 @@ describe("sealed self-contained consumer Node runtime", () => {
     const { bundle, payloads } = wrapperBundleFor(root);
     const activation = join(root, ".ut-tdd", "runtime", "activation");
     mkdirSync(bundle.bundle_path, { recursive: true });
-    for (const [name, bytes] of Object.entries(payloads))
+    const payloadFiles: Readonly<Record<string, Uint8Array>> = {
+      "ut-tdd.mjs": payloads.compiled_esm,
+      "node-bootstrap-receipt.json": payloads.node_bootstrap_receipt,
+      "marker.json": payloads.marker,
+      "consumer-receipt.json": payloads.consumer_receipt,
+      "history.jsonl": payloads.history,
+      "operation-state.json": payloads.operation_state,
+    };
+    for (const [name, bytes] of Object.entries(payloadFiles))
       writeFileSync(join(bundle.bundle_path, name), bytes);
     writeFileSync(join(bundle.bundle_path, "bundle-manifest.json"), JSON.stringify(bundle));
     mkdirSync(activation, { recursive: true });
