@@ -23,6 +23,7 @@ import {
   buildCleanDistributionPlan,
   buildConsumerReadinessPlan,
   buildPackSyncPlan,
+  type ConsumerNodeRuntimeReadinessInput,
   cleanDistributionSourcePath,
   DEFAULT_PACK_REPO,
   gitAddPathspecCommands,
@@ -32,7 +33,6 @@ import {
   runPackAuthoringSmoke,
   type TrackedGitBlob,
   transformCleanDistributionArtifact,
-  type ConsumerNodeRuntimeReadinessInput,
 } from "../setup/index.ts";
 import { ensureDir } from "../shared/fs.ts";
 
@@ -78,12 +78,17 @@ function readConsumerRuntimeReadiness(repoRoot: string): ConsumerNodeRuntimeRead
       bundle_path?: unknown;
       bundle_digest?: unknown;
     };
-    if (typeof pointer.bundle_path !== "string" || resolve(pointer.bundle_path) !== pointer.bundle_path)
+    if (
+      typeof pointer.bundle_path !== "string" ||
+      resolve(pointer.bundle_path) !== pointer.bundle_path
+    )
       return { status: "blocked", reason: "consumer_runtime_resolution_denied" };
     const rel = relative(runtimeRoot, pointer.bundle_path);
     if (!rel || rel === ".." || rel.startsWith(`..${sep}`) || isAbsolute(rel))
       return { status: "blocked", reason: "consumer_runtime_external_path" };
-    const bundle = JSON.parse(readFileSync(join(pointer.bundle_path, "bundle-manifest.json"), "utf8")) as {
+    const bundle = JSON.parse(
+      readFileSync(join(pointer.bundle_path, "bundle-manifest.json"), "utf8"),
+    ) as {
       identity?: unknown;
       bundle_digest?: unknown;
       bundle_path?: unknown;
@@ -92,7 +97,10 @@ function readConsumerRuntimeReadiness(repoRoot: string): ConsumerNodeRuntimeRead
       prior_bundle_digest?: unknown;
       prior_history_tip_digest?: unknown;
     };
-    if (bundle.bundle_path !== pointer.bundle_path || bundle.bundle_digest !== pointer.bundle_digest)
+    if (
+      bundle.bundle_path !== pointer.bundle_path ||
+      bundle.bundle_digest !== pointer.bundle_digest
+    )
       return { status: "blocked", reason: "consumer_runtime_digest_mismatch" };
     return {
       status: "ready",

@@ -5,8 +5,8 @@ import { wrapperHookArgs } from "../lint/project-hook.ts";
 // model ID は SSoT (src/team/model-policy.ts MODEL_IDS) 参照のみ。生 literal の二重保持は
 // 世代 drift の温床 (A-177 F-5 / PLAN-L7-256: templates が opus-4-7 のまま SSoT と乖離した実績)。
 import { MODEL_IDS } from "../team/model-policy.ts";
-import type { GeneratedFile } from "./index.ts";
 import { renderConsumerNodeWrapper } from "./consumer-node-runtime.ts";
+import type { GeneratedFile } from "./index.ts";
 
 export type TemplateSet = { [name: string]: string };
 
