@@ -249,16 +249,7 @@ describe("physical consumer Node runtime adapter", () => {
     const installedPointer = readFileSync(pointerPath);
     const installedHistory = readFileSync(join(initialBundle.bundle_path, "history.jsonl"));
     const nextIdentity = { ...supplied.identity, operation_id: "forged-prior-update", attempt: 1 };
-    const forgedPointerBytes = Buffer.from(
-      `{"bundle_digest":"sha256:${"f".repeat(64)}"}\n`,
-      "utf8",
-    );
-    const forgedPointer = {
-      bytes: forgedPointerBytes,
-      mode: 0o444,
-      digest: digestConsumerRuntimeBytes(forgedPointerBytes),
-    };
-    const forgedPointerPayloads = buildConsumerNodeRuntimePayloads({
+    const validUpdatePayloads = buildConsumerNodeRuntimePayloads({
       identity: nextIdentity,
       compiled_esm: supplied.compiled_esm,
       node_bootstrap_receipt: supplied.node_bootstrap_receipt,
@@ -266,9 +257,38 @@ describe("physical consumer Node runtime adapter", () => {
       prior_history_tip_digest: historyTipDigest(installedHistory),
       history_sequence: 1,
       prior_history: installedHistory,
-      prior_pointer: forgedPointer,
+      prior_pointer: {
+        bytes: installedPointer,
+        mode: 0o444,
+        digest: digestConsumerRuntimeBytes(installedPointer),
+      },
       operation_kind: "update",
     });
+    const forgedPointerBytes = Buffer.from(
+      `${JSON.stringify({
+        bundle_path: join(supplied.identity.runtime_root, "bundles", "forged-prior"),
+        entry_path: join(supplied.identity.runtime_root, "bundles", "forged-prior", "ut-tdd.mjs"),
+        bundle_digest: initialBundle.bundle_digest,
+      })}\n`,
+      "utf8",
+    );
+    const forgedPointer = {
+      bytes: forgedPointerBytes,
+      mode: 0o444,
+      digest: digestConsumerRuntimeBytes(forgedPointerBytes),
+    };
+    const operationState = JSON.parse(
+      Buffer.from(validUpdatePayloads.operation_state).toString("utf8"),
+    ) as Record<string, unknown>;
+    operationState.prior_pointer = {
+      bytes_base64: forgedPointerBytes.toString("base64"),
+      mode: forgedPointer.mode,
+      digest: forgedPointer.digest,
+    };
+    const forgedPointerPayloads = {
+      ...validUpdatePayloads,
+      operation_state: Buffer.from(`${JSON.stringify(operationState)}\n`, "utf8"),
+    };
     const forgedPointerBundle = buildConsumerNodeRuntimeBundle({
       identity: nextIdentity,
       ...forgedPointerPayloads,
@@ -288,42 +308,52 @@ describe("physical consumer Node runtime adapter", () => {
     expect(readFileSync(pointerPath)).toEqual(installedPointer);
     expect(existsSync(forgedPointerBundle.bundle_path)).toBe(false);
 
-    const records = Buffer.from(installedHistory)
+    const updateRecords = Buffer.from(validUpdatePayloads.history)
       .toString("utf8")
       .trimEnd()
       .split("\n")
       .map((line) => JSON.parse(line) as Record<string, unknown>);
     const forgedRecord: Record<string, unknown> = {
-      ...records[0],
+      ...updateRecords[0],
       operation_id: "never-installed-history",
     };
     delete forgedRecord.record_digest;
     forgedRecord.record_digest = digestConsumerRuntimeValue(forgedRecord);
-    const forgedHistory = Buffer.from(`${JSON.stringify(forgedRecord)}\n`, "utf8");
-    const forgedHistoryPayloads = buildConsumerNodeRuntimePayloads({
-      identity: { ...supplied.identity, operation_id: "forged-prior-history", attempt: 1 },
-      compiled_esm: supplied.compiled_esm,
-      node_bootstrap_receipt: supplied.node_bootstrap_receipt,
-      prior_bundle_digest: initialBundle.bundle_digest,
-      prior_history_tip_digest: historyTipDigest(forgedHistory),
-      history_sequence: 1,
-      prior_history: forgedHistory,
-      prior_pointer: {
-        bytes: installedPointer,
-        mode: 0o444,
-        digest: digestConsumerRuntimeBytes(installedPointer),
-      },
-      operation_kind: "update",
-    });
+    const currentRecord: Record<string, unknown> = {
+      ...updateRecords[1],
+      prior_history_tip_digest: forgedRecord.record_digest,
+    };
+    delete currentRecord.record_digest;
+    currentRecord.record_digest = digestConsumerRuntimeValue(currentRecord);
+    const forgedHistory = Buffer.from(
+      `${JSON.stringify(forgedRecord)}\n${JSON.stringify(currentRecord)}\n`,
+      "utf8",
+    );
+    const forgedReceipt = JSON.parse(
+      Buffer.from(validUpdatePayloads.consumer_receipt).toString("utf8"),
+    ) as Record<string, unknown>;
+    forgedReceipt.prior_history_tip_digest = forgedRecord.record_digest;
+    forgedReceipt.history_tip_digest = currentRecord.record_digest;
+    const forgedOperationState = JSON.parse(
+      Buffer.from(validUpdatePayloads.operation_state).toString("utf8"),
+    ) as Record<string, unknown>;
+    forgedOperationState.history_tip_digest = currentRecord.record_digest;
+    const forgedHistoryPayloads = {
+      ...validUpdatePayloads,
+      consumer_receipt: Buffer.from(`${JSON.stringify(forgedReceipt)}\n`, "utf8"),
+      history: forgedHistory,
+      operation_state: Buffer.from(`${JSON.stringify(forgedOperationState)}\n`, "utf8"),
+    };
+    const forgedHistoryIdentity = nextIdentity;
     const forgedHistoryBundle = buildConsumerNodeRuntimeBundle({
-      identity: { ...supplied.identity, operation_id: "forged-prior-history", attempt: 1 },
+      identity: forgedHistoryIdentity,
       ...forgedHistoryPayloads,
       prior_bundle_digest: initialBundle.bundle_digest,
-      prior_history_tip_digest: historyTipDigest(forgedHistory),
+      prior_history_tip_digest: forgedRecord.record_digest as string,
       history_sequence: 1,
     });
     const historyResult = await installConsumerNodeRuntimeOnFilesystem({
-      identity: forgedHistoryBundle.identity,
+      identity: forgedHistoryIdentity,
       bundle: forgedHistoryBundle,
       payloads: forgedHistoryPayloads,
     });
