@@ -116,9 +116,10 @@ function workflowShape(content = workflowDocument().content): WorkflowDocument {
 }
 
 function mutatedWorkflow(mutator: (workflow: WorkflowDocument) => void): GithubWorkflowDoc {
-  const workflow = workflowShape();
+  const document = workflowDocument();
+  const workflow = workflowShape(document.content);
   mutator(workflow);
-  return { ...workflowDocument(), content: stringifyYaml(workflow) };
+  return { ...document, content: stringifyYaml(workflow) };
 }
 
 function assertWindowsWorkflowContract(document: GithubWorkflowDoc): void {
