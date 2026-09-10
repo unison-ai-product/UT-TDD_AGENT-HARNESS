@@ -828,7 +828,7 @@ describe("sealed lineage local migration", () => {
       dryRun: dryRunRequest(command),
       openLedger: () => {
         calls.push("open-ledger");
-        return db;
+        return { db, close: () => calls.push("close-ledger") };
       },
       runPlanRevision: () => {
         calls.push("plan-revise");
@@ -837,7 +837,7 @@ describe("sealed lineage local migration", () => {
     });
 
     expect(result).toMatchObject({ ok: true, revisionOutput: "revision-2" });
-    expect(calls).toEqual(["open-ledger", "plan-revise"]);
+    expect(calls).toEqual(["open-ledger", "close-ledger", "plan-revise"]);
     expect(counts(db)).toEqual([1, 1, 1, 1, 1, 1, 1, 1]);
   });
 
@@ -884,7 +884,7 @@ describe("sealed lineage local migration", () => {
           }),
         },
       },
-      openLedger: () => db,
+      openLedger: () => ({ db, close: () => undefined }),
       runPlanRevision: () => {
         revised += 1;
         return { ok: true, output: "unexpected" };
@@ -905,7 +905,7 @@ describe("sealed lineage local migration", () => {
     const command = input();
     const result = await executeSealedLineageRecovery({
       dryRun: dryRunRequest(command),
-      openLedger: () => db,
+      openLedger: () => ({ db, close: () => undefined }),
       runPlanRevision: () => ({ ok: false, ruleId: "plan-revision-failed" }),
     });
 
