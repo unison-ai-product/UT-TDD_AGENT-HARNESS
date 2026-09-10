@@ -3,7 +3,7 @@ memory_id: memory:feedback:inbox-absence-never-proves-a-review-request-is-absent
 kind: feedback
 title: "Inbox absence never proves a review request is absent: reconcile open PRs and canonical requests by shell-free pull commands"
 tags: ["clean-checkout", "inbox", "memory-canon", "pull-vs-push", "review-detection"]
-updated_at: 2026-09-10T03:11:47.991Z
+updated_at: 2026-09-10T03:38:40.392Z
 ---
 
 review 依頼の検知を Stop-hook の `[UT_TDD_CLAUDE_INBOX]` 配信だけに依存すると、依頼メモリを伴わずに立った
@@ -21,10 +21,11 @@ pull で突き合わせる。inbox 通知は補助であって唯一の入口に
 `execFileSync` に引数配列で `gh` を渡すので、Windows (Node の既定 shell = cmd.exe) でも POSIX でも
 同じ挙動になる。`.ut-tdd/review/requests/` と `.ut-tdd/review/receipts/` は runtime projection であり
 clean checkout には存在しないので、不在は「未消費 request 0 件」として扱う (ENOENT だけを空に読み替え、
-権限エラー・JSON 破損・schema 不一致はそのまま fail-close する)。snippet の schema 検証は canonical
-(`src/feedback/review-attestation.ts` の `isValidReviewRequest` / `isValidReviewReceipt`) と同じ形の検査
-(40-hex head、safe integer の pr、ISO-8601 時刻、family / kind / verdict の列挙値) であり、それを満たさない
-`.json` は列挙せず throw する。authority は canonical 側にあり、snippet は候補の列挙にすぎない。
+権限エラー・JSON 破損・必須 field の形不一致はそのまま fail-close する)。snippet の検査は canonical
+(`src/feedback/review-attestation.ts` の `isValidReviewRequest`、`src/feedback/review-dispatch.ts` の
+`analyzeReviewDispatch`) の**構造的 subset** であって同値ではない: 40-hex head、safe integer の pr、ISO-8601 の形の時刻、
+family / kind / verdict の列挙値だけを見る。canonical が追加で拒否する条件 (例: 現在時刻より未来の `requestedAt` / `at` を
+`future_timestamp` で拒否する) は snippet に無い。snippet は候補の列挙であり、採否の authority は canonical 側にある。
 
 ```bash
 # open PR 一覧 (number / head 8 桁 / draft / title)
@@ -68,4 +69,6 @@ EOD close-out の未 push commit / open PR 確認 (`CLAUDE.md` §定期棚卸し
 (加えて requests 直下の `.md` を JSON.parse して落ちる潜在欠陥もあった)。第 3 世代は `execFileSync` 化したが
 `fs.readdirSync` を無条件に呼び、requests / receipts が無い clean checkout で ENOENT (exit 1) になった。
 第 4 世代は schema 検証を持たず、第 5 世代の検証は `requestedAt="x"` や safe integer 外の `pr` を通し、canonical より緩かった。
+第 6 世代は canonical と「同じ形」と述べたが、future timestamp の拒否が無く、引用した symbol (`isValidReviewReceipt`) も実在しなかった。
+snippet に canonical との同値性を主張させない (差分を明記する) のは、canonical の変更に memory が追従できないからである。
 時点事実やコマンドを書くときは、その値・終了コードを両 OS かつ clean checkout で再現できる形で併記すること。
