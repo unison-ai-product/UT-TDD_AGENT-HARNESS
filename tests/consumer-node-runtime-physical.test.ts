@@ -28,6 +28,7 @@ import {
   digestConsumerRuntimeBytes,
   digestConsumerRuntimeValue,
   installConsumerNodeRuntimeOnFilesystem,
+  stagingPathFor,
 } from "../src/setup/consumer-node-runtime.ts";
 import { runSetupAsync, type SetupDeps } from "../src/setup/index.ts";
 import { derivePackPublicationAssets } from "../src/setup/pack-publication-assets.ts";
@@ -238,6 +239,60 @@ afterEach(() => {
 });
 
 describe("physical consumer Node runtime adapter", () => {
+  it("CANDIDATE-U-PACKNODE-012/014: genesis cannot replace an existing active runtime", async () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-physical-genesis-replace-"));
+    roots.push(root);
+    const checkout = mkdtempSync(join(tmpdir(), "ut-tdd-physical-genesis-replace-pack-"));
+    roots.push(checkout);
+    const supplied = await producerInput(root, checkout);
+    const initialPayloads = buildConsumerNodeRuntimePayloads(supplied);
+    const initialBundle = buildConsumerNodeRuntimeBundle({
+      identity: supplied.identity,
+      ...initialPayloads,
+    });
+    const initial = await installConsumerNodeRuntimeOnFilesystem({
+      identity: supplied.identity,
+      bundle: initialBundle,
+      payloads: initialPayloads,
+    });
+    expect(initial).toMatchObject({ ok: true, status: "committed" });
+
+    const pointerPath = join(supplied.identity.runtime_root, "activation", "active.json");
+    const pointerBefore = readFileSync(pointerPath);
+    const historyPath = join(initialBundle.bundle_path, "history.jsonl");
+    const historyBefore = readFileSync(historyPath);
+    const replacementIdentity = {
+      ...supplied.identity,
+      operation_id: "forbidden-second-genesis",
+      attempt: 1,
+    };
+    const replacementPayloads = buildConsumerNodeRuntimePayloads({
+      identity: replacementIdentity,
+      compiled_esm: supplied.compiled_esm,
+      node_bootstrap_receipt: supplied.node_bootstrap_receipt,
+    });
+    const replacementBundle = buildConsumerNodeRuntimeBundle({
+      identity: replacementIdentity,
+      ...replacementPayloads,
+    });
+
+    const replacement = await installConsumerNodeRuntimeOnFilesystem({
+      identity: replacementIdentity,
+      bundle: replacementBundle,
+      payloads: replacementPayloads,
+    });
+
+    expect(replacement).toMatchObject({
+      ok: false,
+      status: "failed",
+      reason: "consumer_runtime_identity_mismatch",
+    });
+    expect(readFileSync(pointerPath)).toEqual(pointerBefore);
+    expect(readFileSync(historyPath)).toEqual(historyBefore);
+    expect(existsSync(replacementBundle.bundle_path)).toBe(false);
+    expect(existsSync(stagingPathFor(replacementIdentity))).toBe(false);
+  });
+
   it("CANDIDATE-U-PACKNODE-012/014: rejects forged prior pointer/history snapshots against the installed active bundle", async () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-physical-prior-forge-"));
     roots.push(root);

@@ -839,7 +839,10 @@ function assertPriorSnapshot(input: {
   readonly payloads: ConsumerNodeRuntimePayloads;
   readonly prior: PointerSnapshot;
 }): void {
-  if (input.bundle.history_sequence === 0) return;
+  if (input.bundle.history_sequence === 0) {
+    if (input.prior) throw new Error("consumer_runtime_identity_mismatch");
+    return;
+  }
   if (!input.prior) throw new Error("consumer_runtime_identity_mismatch");
   const suppliedPrior = priorPointerFromOperationState(input.payloads.operation_state);
   if (
