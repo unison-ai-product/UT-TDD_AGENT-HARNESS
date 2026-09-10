@@ -293,7 +293,10 @@ describe("physical consumer Node runtime adapter", () => {
       .trimEnd()
       .split("\n")
       .map((line) => JSON.parse(line) as Record<string, unknown>);
-    const forgedRecord = { ...records[0], operation_id: "never-installed-history" };
+    const forgedRecord: Record<string, unknown> = {
+      ...records[0],
+      operation_id: "never-installed-history",
+    };
     delete forgedRecord.record_digest;
     forgedRecord.record_digest = digestConsumerRuntimeValue(forgedRecord);
     const forgedHistory = Buffer.from(`${JSON.stringify(forgedRecord)}\n`, "utf8");
@@ -363,8 +366,11 @@ describe("physical consumer Node runtime adapter", () => {
     const neverReceipt = Buffer.from(
       readFileSync(join(initialBundle.bundle_path, "node-bootstrap-receipt.json")),
     );
-    const neverHistoryRecord = {
-      ...(JSON.parse(Buffer.from(installedHistory).toString("utf8").trim()) as Record<string, unknown>),
+    const neverHistoryRecord: Record<string, unknown> = {
+      ...(JSON.parse(Buffer.from(installedHistory).toString("utf8").trim()) as Record<
+        string,
+        unknown
+      >),
       operation_id: neverIdentity.operation_id,
       identity_digest: digestConsumerRuntimeValue(neverIdentity),
       generation_identity_digest: digestConsumerRuntimeValue({
@@ -376,11 +382,12 @@ describe("physical consumer Node runtime adapter", () => {
     delete neverHistoryRecord.record_digest;
     neverHistoryRecord.record_digest = digestConsumerRuntimeValue(neverHistoryRecord);
     const neverHistory = Buffer.from(`${JSON.stringify(neverHistoryRecord)}\n`, "utf8");
-    const neverPointerBytes = Buffer.from(
-      `{"bundle_digest":"sha256:${"e".repeat(64)}"}\n`,
-      "utf8",
-    );
-    const rollbackIdentity = { ...neverIdentity, operation_id: "never-installed-rollback", attempt: 2 };
+    const neverPointerBytes = Buffer.from(`{"bundle_digest":"sha256:${"e".repeat(64)}"}\n`, "utf8");
+    const rollbackIdentity = {
+      ...neverIdentity,
+      operation_id: "never-installed-rollback",
+      attempt: 2,
+    };
     const rollbackPayloads = buildConsumerNodeRuntimePayloads({
       identity: rollbackIdentity,
       compiled_esm: compiledNever,

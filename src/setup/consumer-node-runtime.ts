@@ -782,6 +782,102 @@ function samePointer(left: PointerSnapshot, right: PointerSnapshot): boolean {
   return left.mode === right.mode && left.bytes.equals(right.bytes);
 }
 
+function parsePointerSnapshot(bytes: Uint8Array): Record<string, string> {
+  let value: unknown;
+  try {
+    value = JSON.parse(Buffer.from(bytes).toString("utf8")) as unknown;
+  } catch {
+    throw new Error("consumer_runtime_identity_mismatch");
+  }
+  if (!isRecord(value)) throw new Error("consumer_runtime_identity_mismatch");
+  if (
+    Object.keys(value).sort().join("\0") !== "bundle_digest\0bundle_path\0entry_path" ||
+    typeof value.bundle_digest !== "string" ||
+    typeof value.bundle_path !== "string" ||
+    typeof value.entry_path !== "string" ||
+    !DIGEST.test(value.bundle_digest) ||
+    value.bundle_path !== resolve(value.bundle_path) ||
+    value.entry_path !== resolve(value.entry_path)
+  )
+    throw new Error("consumer_runtime_identity_mismatch");
+  return value as Record<string, string>;
+}
+
+function priorPointerFromOperationState(bytes: Uint8Array): ConsumerNodeRuntimePriorPointer | null {
+  const operation = validJsonProjection(bytes, "operation_state");
+  const value = operation.prior_pointer;
+  if (value === null) return null;
+  if (!isRecord(value)) throw new Error("consumer_runtime_identity_mismatch");
+  const encoded = value.bytes_base64;
+  const mode = value.mode;
+  const digest = value.digest;
+  if (
+    typeof encoded !== "string" ||
+    Buffer.from(encoded, "base64").toString("base64") !== encoded ||
+    !Number.isSafeInteger(mode) ||
+    mode !== 0o444 ||
+    typeof digest !== "string" ||
+    !DIGEST.test(digest)
+  )
+    throw new Error("consumer_runtime_identity_mismatch");
+  const pointerBytes = Buffer.from(encoded, "base64");
+  if (digestConsumerRuntimeBytes(pointerBytes) !== digest)
+    throw new Error("consumer_runtime_identity_mismatch");
+  return { bytes: pointerBytes, mode, digest };
+}
+
+function priorHistoryPrefix(bytes: Uint8Array): Buffer {
+  const raw = Buffer.from(bytes);
+  const currentLineStart = raw.lastIndexOf(0x0a, raw.length - 2);
+  if (currentLineStart < 0) throw new Error("consumer_runtime_identity_mismatch");
+  return raw.subarray(0, currentLineStart + 1);
+}
+
+function assertPriorSnapshot(input: {
+  readonly identity: ConsumerNodeRuntimeIdentity;
+  readonly bundle: ConsumerNodeRuntimeBundle;
+  readonly payloads: ConsumerNodeRuntimePayloads;
+  readonly prior: PointerSnapshot;
+}): void {
+  if (input.bundle.history_sequence === 0) return;
+  if (!input.prior) throw new Error("consumer_runtime_identity_mismatch");
+  const suppliedPrior = priorPointerFromOperationState(input.payloads.operation_state);
+  if (
+    !suppliedPrior ||
+    input.prior.mode !== suppliedPrior.mode ||
+    !input.prior.bytes.equals(Buffer.from(suppliedPrior.bytes))
+  )
+    throw new Error("consumer_runtime_identity_mismatch");
+  const pointer = parsePointerSnapshot(input.prior.bytes);
+  if (pointer.bundle_digest !== input.bundle.prior_bundle_digest)
+    throw new Error("consumer_runtime_identity_mismatch");
+  const priorBundlePath = pointer.bundle_path;
+  ensureRealContained(input.identity.runtime_root, priorBundlePath);
+  const manifest = validJsonProjection(
+    readFileSync(join(priorBundlePath, "bundle-manifest.json")),
+    "prior_bundle_manifest",
+  ) as unknown as ConsumerNodeRuntimeBundle;
+  if (
+    validateConsumerNodeRuntimeBundle(manifest) ||
+    manifest.bundle_path !== priorBundlePath ||
+    manifest.bundle_digest !== pointer.bundle_digest ||
+    manifest.history_sequence !== input.bundle.history_sequence - 1
+  )
+    throw new Error("consumer_runtime_identity_mismatch");
+  const activeHistory = readFileSync(join(priorBundlePath, "history.jsonl"));
+  if (
+    digestConsumerRuntimeBytes(activeHistory) !== manifest.files["history.jsonl"] ||
+    !activeHistory.equals(priorHistoryPrefix(input.payloads.history))
+  )
+    throw new Error("consumer_runtime_identity_mismatch");
+  const records = parseHistoryRecords(activeHistory);
+  if (
+    records.length !== input.bundle.history_sequence ||
+    records.at(-1)?.record_digest !== input.bundle.prior_history_tip_digest
+  )
+    throw new Error("consumer_runtime_identity_mismatch");
+}
+
 function bundleFilesIntact(bundle: ConsumerNodeRuntimeBundle): boolean {
   try {
     const manifest = JSON.parse(
@@ -991,6 +1087,7 @@ export function createConsumerNodeRuntimeFilesystemPorts(
     },
     snapshotPriorActivePointer: () => {
       state.prior = readPointer(pointerPath);
+      assertPriorSnapshot({ identity, bundle, payloads, prior: state.prior });
       fault("snapshotPriorActivePointer");
     },
     createPrivateStaging: (path) => {
