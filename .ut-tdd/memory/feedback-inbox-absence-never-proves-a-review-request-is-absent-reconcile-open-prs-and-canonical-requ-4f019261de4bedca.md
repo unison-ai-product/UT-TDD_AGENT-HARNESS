@@ -37,11 +37,18 @@ for(const p of JSON.parse(execFileSync("gh",["pr","list","--state","open","--jso
 node -e '
 const fs=require("fs"),{execFileSync}=require("child_process");
 const ls=d=>{try{return fs.readdirSync(d)}catch(e){if(e.code==="ENOENT")return [];throw e}};
+const fail=message=>{throw new Error("invalid review projection: "+message)};
+const text=v=>typeof v==="string"&&v.trim().length>0;
+const head=v=>typeof v==="string"&&/^[0-9a-f]{40}$/.test(v);
+const request=v=>v&&typeof v==="object"&&text(v.memoryId)&&Number.isInteger(v.pr)&&v.pr>0&&head(v.exactHead)&&text(v.reviewRevision)&&["claude","codex"].includes(v.authorFamily)&&text(v.requestedAt);
+const receipt=v=>{if(!v||typeof v!=="object"||!text(v.memoryId)||!Number.isInteger(v.pr)||v.pr<1||!head(v.head)||!text(v.reviewRevision)||!["claude","codex"].includes(v.reviewerFamily)||!["acknowledged","in_review","verdict"].includes(v.kind)||!text(v.at))return false;if(v.kind!=="verdict")return !Object.hasOwn(v,"verdict")&&!Object.hasOwn(v,"blockingFindings");if(!["PASS","PASS-WEAK","FLAG"].includes(v.verdict))return false;if(v.verdict==="FLAG")return Array.isArray(v.blockingFindings)&&v.blockingFindings.length>0&&v.blockingFindings.every(text);return !Object.hasOwn(v,"blockingFindings")||(Array.isArray(v.blockingFindings)&&v.blockingFindings.length===0)};
 const open=new Map(JSON.parse(execFileSync("gh",["pr","list","--state","open","--json","number,headRefOid"],{encoding:"utf8"})).map(p=>[p.number,p.headRefOid]));
 const rq=".ut-tdd/review/requests", rc=".ut-tdd/review/receipts";
-const done=new Set(ls(rc).map(f=>f.replace(/\.json$/,"")));
+const done=new Set();
+for(const f of ls(rc).filter(f=>f.endsWith(".json"))){let r;try{r=JSON.parse(fs.readFileSync(rc+"/"+f,"utf8"))}catch(e){fail(`${rc}/${f}: malformed JSON`)}if(!receipt(r))fail(`${rc}/${f}: receipt schema`);done.add(f.slice(0,-5));}
 for(const f of ls(rq).filter(f=>f.endsWith(".json"))){const d=f.slice(0,-5);if(done.has(d))continue;
- const j=JSON.parse(fs.readFileSync(rq+"/"+f,"utf8"));
+ let j;try{j=JSON.parse(fs.readFileSync(rq+"/"+f,"utf8"))}catch(e){fail(`${rq}/${f}: malformed JSON`)}
+ if(!request(j))fail(`${rq}/${f}: request schema`);
  if(open.get(j.pr)===j.exactHead)console.log("PENDING pr="+j.pr+" head="+j.exactHead.slice(0,8));}'
 ```
 
