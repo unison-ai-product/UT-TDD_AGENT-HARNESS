@@ -789,23 +789,27 @@ function restoreRuntimeTree(root: string, snapshot: RuntimeTreeSnapshot): void {
   makeRuntimeTreeWritable(root);
   rmSync(root, { recursive: true, force: true });
   if (snapshot === null) return;
-  mkdirSync(root, { recursive: true });
+  // Recreate the topology writable first. Sealed bundle directories are
+  // intentionally read-only (0555); applying those modes before restoring
+  // their files makes the rollback fail on POSIX.
+  mkdirSync(root, { recursive: true, mode: 0o755 });
   for (const [relativePath, value] of [...snapshot.entries.entries()]
     .filter(([path, entry]) => path !== "" && entry.kind === "directory")
     .sort(([left], [right]) => left.length - right.length)) {
     if (value.kind !== "directory") continue;
     const path = join(root, relativePath);
-    mkdirSync(path, { recursive: false });
-    chmodSync(path, value.mode);
+    mkdirSync(path, { recursive: false, mode: 0o755 });
   }
-  const rootEntry = snapshot.entries.get("");
-  if (rootEntry?.kind === "directory") chmodSync(root, rootEntry.mode);
   for (const [relativePath, value] of snapshot.entries) {
     if (value.kind !== "file") continue;
     const path = join(root, relativePath);
     mkdirSync(dirname(path), { recursive: true });
     writeFileSync(path, value.bytes, { mode: value.mode });
     chmodSync(path, value.mode);
+  }
+  for (const [relativePath, value] of snapshot.entries) {
+    if (value.kind !== "directory") continue;
+    chmodSync(join(root, relativePath), value.mode);
   }
 }
 
