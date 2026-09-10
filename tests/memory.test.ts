@@ -11,10 +11,13 @@ import { writeMemory } from "../src/memory/service.ts";
 import { isSecretLike } from "../src/secret.ts";
 import { openHarnessDb } from "../src/state-db/index.ts";
 import { rebuildHarnessDb } from "../src/state-db/projection-writer.ts";
+import { ensureCompletedProjectMemory } from "./support/project-identity-fixture.ts";
 import { removeTestTree } from "./support/temp-tree.ts";
 
 function tempRepo(): string {
-  return mkdtempSync(join(tmpdir(), "ut-tdd-memory-"));
+  const repo = mkdtempSync(join(tmpdir(), "ut-tdd-memory-"));
+  ensureCompletedProjectMemory(repo, "fixture/memory");
+  return repo;
 }
 
 const cleanupRepo = removeTestTree;

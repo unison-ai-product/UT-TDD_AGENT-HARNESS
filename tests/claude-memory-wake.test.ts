@@ -33,7 +33,7 @@ import {
   waitForClaudeMemory,
 } from "../src/runtime/claude-memory-wake.ts";
 import { resolveProjectMemoryRoot } from "../src/runtime/project-memory-root.ts";
-import { ensureTrackedProjectIdentity } from "./support/project-identity-fixture.ts";
+import { ensureCompletedProjectMemory } from "./support/project-identity-fixture.ts";
 
 const memory: MemoryEntry = {
   memory_id: "memory:project:review-218",
@@ -53,7 +53,7 @@ function inboxFileStem(entryId: string): string {
 
 function fixture(): string {
   const root = mkdtempSync(join(tmpdir(), "ut-tdd-claude-wake-"));
-  ensureTrackedProjectIdentity(root, "fixture/claude-memory-wake");
+  ensureCompletedProjectMemory(root, "fixture/claude-memory-wake");
   return root;
 }
 

@@ -25,6 +25,7 @@ import {
   claudeWorkspaceId,
   publishClaudeInboxEntry,
 } from "../src/runtime/claude-memory-wake.ts";
+import { ProjectMemoryMigration } from "../src/runtime/project-memory-migration.ts";
 import {
   resolveProjectMemoryRoot,
   resolveProjectMemoryRootWithPorts,
@@ -59,6 +60,8 @@ function createLinkedProject(projectId = "example/project-memory-routing"): {
   git(primary, ["add", "ut-tdd.project.json", "seed.txt"]);
   git(primary, ["commit", "-q", "-m", "test: seed project identity"]);
   git(primary, ["worktree", "add", "-q", "-b", "linked", linked]);
+  const migration = new ProjectMemoryMigration().apply(primary);
+  if (!migration.ok) throw new Error(`test fixture migration failed: ${migration.reason}`);
   const fixture = { root, primary, linked };
   fixtures.push(fixture);
   return fixture;

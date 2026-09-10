@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { delimiter, dirname, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { buildConsumerReadinessPlan } from "../src/setup/distribution.ts";
+import { ensureCompletedProjectMemory } from "./support/project-identity-fixture.ts";
 
 const temporaryDirectories: string[] = [];
 
@@ -59,6 +60,7 @@ function createCleanConsumer(): string {
       recursive: true,
     },
   );
+  ensureCompletedProjectMemory(consumer, "fixture/setup-bun-readiness");
   return consumer;
 }
 

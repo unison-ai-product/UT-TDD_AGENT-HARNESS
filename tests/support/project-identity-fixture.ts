@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { canonicalProjectIdentityBytes } from "../../src/kernel/project-identity.ts";
+import { ProjectMemoryMigration } from "../../src/runtime/project-memory-migration.ts";
 
 export function ensureTrackedProjectIdentity(
   root: string,
@@ -22,4 +23,14 @@ export function ensureTrackedProjectIdentity(
   );
   execFileSync("git", ["add", "ut-tdd.project.json"], { cwd: root });
   execFileSync("git", ["commit", "-qm", "test: seed project identity"], { cwd: root });
+}
+
+/** Seed the explicit completion authority required by production Memory ports. */
+export function ensureCompletedProjectMemory(
+  root: string,
+  repositoryIdentity = "fixture/ut-tdd-project",
+): void {
+  ensureTrackedProjectIdentity(root, repositoryIdentity);
+  const result = new ProjectMemoryMigration().apply(root);
+  if (!result.ok) throw new Error(`test fixture migration failed: ${result.reason}`);
 }

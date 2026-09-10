@@ -35,7 +35,7 @@ import {
   type ClaudeWakeUpgradeFixtureIdentity,
   fixtureIdentityMatches,
 } from "./support/claude-wake-upgrade-fixture.ts";
-import { ensureTrackedProjectIdentity } from "./support/project-identity-fixture.ts";
+import { ensureCompletedProjectMemory } from "./support/project-identity-fixture.ts";
 
 const workspaceId = "a".repeat(64);
 const runtimeSourceRevision = "1".repeat(40);
@@ -46,7 +46,7 @@ function fixture(): string {
 
 function gitFixture(): string {
   const root = fixture();
-  ensureTrackedProjectIdentity(root, "fixture/claude-wake-generation");
+  ensureCompletedProjectMemory(root, "fixture/claude-wake-generation");
   return root;
 }
 

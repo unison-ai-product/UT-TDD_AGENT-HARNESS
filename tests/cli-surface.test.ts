@@ -353,14 +353,18 @@ describe("L7 CLI surface closure", () => {
     );
   }, 15_000);
 
-  it("runs a named consumer-safe doctor profile without relying on setup-smoke alias", () => {
+  it("fails closed when the consumer-safe profile lacks migration completion", () => {
     const run = runCli(["doctor", "--profile", "consumer-toolchain", "--json"]);
     const payload = JSON.parse(run.stdout);
 
-    expect(run.status).toBe(0);
-    expect(payload.ok).toBe(true);
+    expect(run.status).toBe(1);
+    expect(payload.ok).toBe(false);
     expect(payload.messages).toEqual(
-      expect.arrayContaining([expect.stringContaining("doctor: toolchain-pin - OK")]),
+      expect.arrayContaining([
+        expect.stringContaining(
+          "doctor: memory-migration-completion - violation: migration_incomplete",
+        ),
+      ]),
     );
     expect(payload.messages.join("\n")).not.toContain("plan-governance");
   }, 20_000);
