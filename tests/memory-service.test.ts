@@ -17,11 +17,14 @@ import {
   renderMemoryHealth,
   writeMemory,
 } from "../src/memory/service.ts";
+import { ensureCompletedProjectMemory } from "./support/project-identity-fixture.ts";
 import { removeTestTree } from "./support/temp-tree.ts";
 import { workspaceRead } from "./support/workspace-roots.ts";
 
 function tempRepo(): string {
-  return mkdtempSync(join(tmpdir(), "ut-tdd-memory-service-"));
+  const repo = mkdtempSync(join(tmpdir(), "ut-tdd-memory-service-"));
+  ensureCompletedProjectMemory(repo, "fixture/memory-service");
+  return repo;
 }
 
 /** 旧経路と同じ形の in-memory index。body 列は index の責務ではないので入れない。 */
@@ -463,6 +466,7 @@ describe("MemoryService (PLAN-L7-468 PR-A)", () => {
       "graph/loader.ts",
       "runtime/session-log.ts",
       "state-db/index.ts",
+      "kernel/memory-domain.ts",
     ]);
     const SCAN_ONLY_DIR_ACCESS = new Set(["lint/memory-sync.ts"]);
     expect(tableLiteral.filter((rel) => !ALLOWED_TABLE_ACCESS.has(rel))).toEqual([]);

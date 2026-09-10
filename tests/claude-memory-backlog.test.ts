@@ -19,7 +19,7 @@ import {
 import { resolveProjectMemoryRoot } from "../src/runtime/project-memory-root.ts";
 import { openHarnessDb } from "../src/state-db/index.ts";
 import { migrate } from "../src/state-db/migration.ts";
-import { ensureTrackedProjectIdentity } from "./support/project-identity-fixture.ts";
+import { ensureCompletedProjectMemory } from "./support/project-identity-fixture.ts";
 
 const memory: MemoryEntry = {
   memory_id: "memory:project:backlog-227",
@@ -34,7 +34,7 @@ const memory: MemoryEntry = {
 
 function fixture(): string {
   const root = mkdtempSync(join(tmpdir(), "ut-tdd-memory-backlog-"));
-  ensureTrackedProjectIdentity(root, "fixture/claude-memory-backlog");
+  ensureCompletedProjectMemory(root, "fixture/claude-memory-backlog");
   return root;
 }
 

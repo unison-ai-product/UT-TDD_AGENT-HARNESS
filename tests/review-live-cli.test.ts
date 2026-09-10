@@ -26,7 +26,7 @@ import {
 } from "../src/feedback/review-attestation.ts";
 import type { ClaudeReviewInboxEntry } from "../src/runtime/claude-memory-wake.ts";
 import { resolveProjectMemoryRoot } from "../src/runtime/project-memory-root.ts";
-import { ensureTrackedProjectIdentity } from "./support/project-identity-fixture.ts";
+import { ensureCompletedProjectMemory } from "./support/project-identity-fixture.ts";
 
 const head = "a".repeat(40);
 const roots: string[] = [];
@@ -39,7 +39,7 @@ function fixture(): {
 } {
   const root = mkdtempSync(join(tmpdir(), "ut-review-live-cli-"));
   roots.push(root);
-  ensureTrackedProjectIdentity(root, "fixture/review-live-cli");
+  ensureCompletedProjectMemory(root, "fixture/review-live-cli");
   const memoryDirectory = join(root, ".ut-tdd", "memory");
   mkdirSync(memoryDirectory, { recursive: true });
   const memoryPath = join(memoryDirectory, "feedback-d3a.md");

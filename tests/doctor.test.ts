@@ -699,7 +699,7 @@ describe("runDoctor", () => {
       invocation: "registry",
       scope: "toolchain",
       setupSmoke: false,
-      outputIds: ["toolchain-pin"],
+      outputIds: ["toolchain-pin", "memory-migration-completion"],
       sourceOnly: false,
     });
     expect(DOCTOR_RUN_PROFILES["source-full"].outputIds).toEqual(doctorOutputIdsForScope("full"));
