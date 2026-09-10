@@ -125,6 +125,7 @@ import {
 
 const fullProfile = ["full"] as const;
 const fullAndToolchainProfiles = ["full", "toolchain"] as const;
+const toolchainProfile = ["toolchain"] as const;
 
 export interface DoctorCheckDefinitionGroup {
   id: string;
@@ -145,6 +146,10 @@ function full(
 
 function fullAndToolchain(id: string, run: () => LintResult): DoctorCheckDefinition {
   return { id, profiles: fullAndToolchainProfiles, run };
+}
+
+function toolchainOnly(id: string, run: () => LintResult): DoctorCheckDefinition {
+  return { id, profiles: toolchainProfile, run };
 }
 
 export function buildDoctorCheckDefinitionGroups(
@@ -224,7 +229,7 @@ export function buildDoctorCheckDefinitionGroups(
     {
       id: "completion-and-readability",
       definitions: [
-        fullAndToolchain(
+        toolchainOnly(
           "memory-migration-completion",
           () => deps.memoryCompletion?.() ?? checkMemoryMigrationCompletion(deps.repoRoot),
         ),

@@ -112,7 +112,6 @@ export const FULL_DOCTOR_OUTPUT_IDS = [
   "codex-hook-adapter",
   "codex-wrapper-parity",
   "toolchain-pin",
-  "memory-migration-completion",
   "l6-fr-coverage",
   "readability",
   "runtime-readability",
