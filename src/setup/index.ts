@@ -786,6 +786,7 @@ function captureRuntimeTree(root: string): RuntimeTreeSnapshot {
 }
 
 function restoreRuntimeTree(root: string, snapshot: RuntimeTreeSnapshot): void {
+  makeRuntimeTreeWritable(root);
   rmSync(root, { recursive: true, force: true });
   if (snapshot === null) return;
   mkdirSync(root, { recursive: true });
@@ -806,6 +807,15 @@ function restoreRuntimeTree(root: string, snapshot: RuntimeTreeSnapshot): void {
     writeFileSync(path, value.bytes, { mode: value.mode });
     chmodSync(path, value.mode);
   }
+}
+
+function makeRuntimeTreeWritable(path: string): void {
+  if (!existsSync(path)) return;
+  const stat = statSync(path);
+  if (stat.isDirectory()) {
+    chmodSync(path, 0o755);
+    for (const name of readdirSync(path)) makeRuntimeTreeWritable(join(path, name));
+  } else if (stat.isFile()) chmodSync(path, 0o644);
 }
 
 // ── node 実 deps (real I/O / gh / confirm / templates) ──────────────────────
