@@ -33,6 +33,10 @@ generates:
     artifact_type: source_module
   - artifact_path: tests/consumer-node-runtime.test.ts
     artifact_type: test_code
+  - artifact_path: tests/consumer-node-runtime-closure-red.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/consumer-node-runtime-physical.test.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L6-101-pack-independent-multi-consumer-acceptance.md
   requires:
