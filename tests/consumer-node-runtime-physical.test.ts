@@ -385,7 +385,10 @@ describe("physical consumer Node runtime adapter", () => {
     const pointerPath = join(supplied.identity.runtime_root, "activation", "active.json");
     const installedPointer = readFileSync(pointerPath);
     const installedHistory = readFileSync(join(initialBundle.bundle_path, "history.jsonl"));
-    const compiledNever = Buffer.from("process.exit(9)\n", "utf8");
+    // Keep the sealed producer receipt coherent so the semantic builder accepts
+    // the caller snapshot; the physical adapter must still reject the
+    // generation because its identity was never installed on disk.
+    const compiledNever = supplied.compiled_esm;
     const neverIdentity = {
       ...supplied.identity,
       operation_id: "never-installed-generation",
