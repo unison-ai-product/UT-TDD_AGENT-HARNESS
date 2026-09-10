@@ -299,6 +299,27 @@ async function runtimeFor(root: string) {
   };
 }
 
+function receiptFor(
+  base: Uint8Array,
+  generationId: string,
+  compiledEsm: Uint8Array,
+): Uint8Array {
+  const parsed = JSON.parse(Buffer.from(base).toString("utf8")) as Record<string, unknown>;
+  const compiledCli = parsed.compiled_cli as Record<string, unknown>;
+  const unsigned = {
+    ...parsed,
+    generation_id: generationId,
+    compiled_cli: {
+      ...compiledCli,
+      sha256: digestConsumerRuntimeBytes(compiledEsm).slice(7),
+    },
+  };
+  delete (unsigned as { receipt_digest?: unknown }).receipt_digest;
+  return Buffer.from(
+    `${JSON.stringify({ ...unsigned, receipt_digest: digestConsumerRuntimeValue(unsigned).slice(7) })}\n`,
+  );
+}
+
 afterEach(() => {
   for (const root of roots.splice(0)) removeTestTree(root);
 });
@@ -709,5 +730,108 @@ describe("Issue #420 closure Red oracles: aggregate authority and durable histor
         prior_identity: runtime.identity,
       }),
     ).toThrow(/rollback (attestation|prior)/);
+  });
+
+  it("CANDIDATE-U-PACKNODE-012/014: accepts A→B→A rollback only for a recorded generation with its receipt", async () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-red-rollback-history-target-"));
+    roots.push(root);
+    const a = await runtimeFor(root);
+    const compiledB = Buffer.from("process.exit(1)\n");
+    const identityB = {
+      ...a.identity,
+      operation_id: "rollback-history-b",
+      attempt: 1,
+      generation_id: "generation-blue",
+      compiled_esm_digest: digestConsumerRuntimeBytes(compiledB),
+    };
+    const receiptB = receiptFor(a.node_bootstrap_receipt, identityB.generation_id, compiledB);
+    const genesis = buildConsumerNodeRuntimePayloads(a);
+    const pointerABytes = Buffer.from(`{"bundle_digest":"sha256:${"a".repeat(64)}"}\n`);
+    const pointerA = {
+      bytes: pointerABytes,
+      mode: 0o444,
+      digest: digestConsumerRuntimeBytes(pointerABytes),
+    };
+    const update = buildConsumerNodeRuntimePayloads({
+      identity: identityB,
+      compiled_esm: compiledB,
+      node_bootstrap_receipt: receiptB,
+      prior_bundle_digest: `sha256:${"a".repeat(64)}`,
+      prior_history_tip_digest: historyTipDigest(genesis.history),
+      history_sequence: 1,
+      prior_history: genesis.history,
+      prior_pointer: pointerA,
+      operation_kind: "update",
+    });
+    const updateRecord = JSON.parse(
+      Buffer.from(update.history).toString("utf8").trimEnd().split("\n").at(-1) ?? "{}",
+    ) as { identity_digest?: string };
+    expect(updateRecord.identity_digest).toBe(digestConsumerRuntimeValue(identityB));
+    const rollbackIdentity = {
+      ...a.identity,
+      operation_id: "rollback-history-a",
+      attempt: 2,
+    };
+    const pointerBBytes = Buffer.from(`{"bundle_digest":"sha256:${"b".repeat(64)}"}\n`);
+    const pointerB = {
+      bytes: pointerBBytes,
+      mode: 0o444,
+      digest: digestConsumerRuntimeBytes(pointerBBytes),
+    };
+    expect(() =>
+      buildConsumerNodeRuntimePayloads({
+        identity: rollbackIdentity,
+        compiled_esm: a.compiled_esm,
+        node_bootstrap_receipt: a.node_bootstrap_receipt,
+        prior_bundle_digest: `sha256:${"b".repeat(64)}`,
+        prior_history_tip_digest: historyTipDigest(update.history),
+        history_sequence: 2,
+        prior_history: update.history,
+        prior_pointer: pointerB,
+        operation_kind: "rollback",
+        prior_attestation: a.node_bootstrap_receipt,
+        prior_identity: a.identity,
+      }),
+    ).not.toThrow();
+  });
+
+  it("CANDIDATE-U-PACKNODE-012/014: denies rollback to an unrecorded generation", async () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-red-rollback-unrecorded-"));
+    roots.push(root);
+    const a = await runtimeFor(root);
+    const genesis = buildConsumerNodeRuntimePayloads(a);
+    const compiledUnrecorded = Buffer.from("process.exit(2)\n");
+    const identityUnrecorded = {
+      ...a.identity,
+      operation_id: "rollback-history-missing",
+      attempt: 2,
+      generation_id: "generation-missing",
+      compiled_esm_digest: digestConsumerRuntimeBytes(compiledUnrecorded),
+    };
+    const receiptUnrecorded = receiptFor(
+      a.node_bootstrap_receipt,
+      identityUnrecorded.generation_id,
+      compiledUnrecorded,
+    );
+    const pointerBytes = Buffer.from(`{"bundle_digest":"sha256:${"a".repeat(64)}"}\n`);
+    expect(() =>
+      buildConsumerNodeRuntimePayloads({
+        identity: identityUnrecorded,
+        compiled_esm: compiledUnrecorded,
+        node_bootstrap_receipt: receiptUnrecorded,
+        prior_bundle_digest: `sha256:${"a".repeat(64)}`,
+        prior_history_tip_digest: historyTipDigest(genesis.history),
+        history_sequence: 1,
+        prior_history: genesis.history,
+        prior_pointer: {
+          bytes: pointerBytes,
+          mode: 0o444,
+          digest: digestConsumerRuntimeBytes(pointerBytes),
+        },
+        operation_kind: "rollback",
+        prior_attestation: receiptUnrecorded,
+        prior_identity: identityUnrecorded,
+      }),
+    ).toThrow(/rollback prior identity/);
   });
 });
