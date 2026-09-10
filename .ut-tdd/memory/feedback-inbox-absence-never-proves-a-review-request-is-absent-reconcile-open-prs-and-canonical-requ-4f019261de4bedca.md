@@ -3,7 +3,7 @@ memory_id: memory:feedback:inbox-absence-never-proves-a-review-request-is-absent
 kind: feedback
 title: "Inbox absence never proves a review request is absent: reconcile open PRs and canonical requests by shell-free pull commands"
 tags: ["clean-checkout", "inbox", "memory-canon", "pull-vs-push", "review-detection"]
-updated_at: 2026-09-10T01:15:15.503Z
+updated_at: 2026-09-10T01:42:11.419Z
 ---
 
 review 依頼の検知を Stop-hook の `[UT_TDD_CLAUDE_INBOX]` 配信だけに依存すると、依頼メモリを伴わずに立った
