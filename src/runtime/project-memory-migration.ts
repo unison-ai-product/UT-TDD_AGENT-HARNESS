@@ -806,7 +806,7 @@ export class ProjectMemoryMigration {
   }): void {
     const { prepared, intent, inventory, canonicalRoot } = context;
     const raw = intent.payload.variants;
-    if (!Array.isArray(raw) || (raw.length === 0 && this.inventoryVariants(inventory).length > 0)) {
+    if (!Array.isArray(raw)) {
       throw new MigrationFailure("transaction_tampered");
     }
     const expected = raw.map((value) => {
