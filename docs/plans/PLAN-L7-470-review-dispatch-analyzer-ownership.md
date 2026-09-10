@@ -160,7 +160,15 @@ AC-1〜AC-5が未完了なので `draft` を維持する。一方、次の D1 �
 | stale requestとmerge先HEAD requestの横断照合 | `U-RVDISP-047`〜`048` |
 | author family併存時のcross-family verdict保全、不正MERGED孤児のfail-close | `U-RVDISP-049`〜`050` |
 | 競合FLAGのblocking保全、request以前receiptと有効後続receiptの分離 | `U-RVDISP-051`〜`052` |
-| filesystem projectionのcanonical identity照合とfail-close | `U-RVDISP-053`〜`061` |
+| filesystem projectionのcanonical identity照合とfail-close | `U-RVDISP-053`〜`063` |
+
+### Issue #561 r2 追補 (2026-09-10)
+
+filesystem projectionのFLAGは有効な非author終端receiptとして`consumed`へ進め、blocking情報の
+digestを`flagged`へ分離して保持する。dispatch analyzerが返す`receipt_before_request`等の既知理由は
+projection固有の同名typed reasonへ写像し、`identity_mismatch`へ潰さない。`rv1-<identityDigest>`の
+requestは`isStrictReviewRequest`でbasename/identityとの整合を検証し、不一致を
+`filename_digest_mismatch`としてfail-closeする。対応oracleは`U-RVDISP-060`〜`063`。
 
 ## 4. スコープ外
 
@@ -173,7 +181,7 @@ AC-1〜AC-5が未完了なので `draft` を維持する。一方、次の D1 �
 
 ## 5. AC
 
-- AC-1: `U-RVDISP-001`〜`061` が全件green。
+- AC-1: `U-RVDISP-001`〜`063` が全件green。
 - AC-2: `tsc --noEmit` とBiomeがgreen。
 - AC-3: identity/FSM/replay/diagnosticを独立監査し、未反証attackがない。
 - AC-4: `impl-plan-trace` / `deliverable-plan-trace` で上記2出荷物の孤児が0。

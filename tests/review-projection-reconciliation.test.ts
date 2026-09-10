@@ -4,8 +4,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
-  reviewRequestDigest,
   canonicalizeReviewRequest,
+  reviewRequestDigest,
 } from "../src/feedback/review-attestation.ts";
 import type { ReviewReceipt, ReviewRequest } from "../src/feedback/review-dispatch.ts";
 import { reconcileReviewProjection } from "../src/feedback/review-projection-reconciliation.ts";
@@ -22,7 +22,7 @@ function makeTempDir(prefix: string): string {
 }
 
 function request(overrides: Partial<ReviewRequest> = {}): ReviewRequest {
-  const base = {
+  const base: ReviewRequest = {
     memoryId: "memory:project:pr-558",
     pr: 558,
     exactHead: "a".repeat(40),
@@ -83,19 +83,19 @@ describe("review projection reconciliation (U-RVDISP)", () => {
   });
 
   it.each([
-    ["memoryId", { memoryId: "memory:project:other" }],
-    ["pr", { pr: 559 }],
-    ["head", { head: "b".repeat(40) }],
-    ["reviewRevision", { reviewRevision: "rv1-other" }],
-    ["reviewer-family", { reviewerFamily: "codex" as const }],
-    ["kind-verdict", { kind: "acknowledged" as const, verdict: undefined }],
-  ])("U-RVDISP-054: %s mutation remains pending with typed mismatch", (_axis, mutation) => {
+    ["memoryId", { memoryId: "memory:project:other" }, "identity_mismatch"],
+    ["pr", { pr: 559 }, "identity_mismatch"],
+    ["head", { head: "b".repeat(40) }, "identity_mismatch"],
+    ["reviewRevision", { reviewRevision: "rv1-other" }, "identity_mismatch"],
+    ["reviewer-family", { reviewerFamily: "codex" as const }, "same_family_reviewer"],
+    ["kind-verdict", { kind: "acknowledged" as const, verdict: undefined }, "schema_invalid"],
+  ])("U-RVDISP-054: %s mutation remains pending with typed mismatch", (_axis, mutation, reason) => {
     const f = fixture();
     writeFileSync(join(f.receipts, `${f.digest}.json`), JSON.stringify(receipt(mutation)), "utf8");
     const result = run({ requests: [f.requests], receipts: [f.receipts] });
     expect(result.ok).toBe(false);
     expect(result.pending).toEqual([f.digest]);
-    expect(result.issues).toContainEqual({ digest: f.digest, reason: "identity_mismatch" });
+    expect(result.issues).toContainEqual({ digest: f.digest, reason });
   });
 
   it("U-RVDISP-055: missing directories are empty and non-json files are ignored", () => {
@@ -222,6 +222,6 @@ describe("review projection reconciliation (U-RVDISP)", () => {
     );
     const result = run({ requests: [f.requests], receipts: [f.receipts] });
     expect(result.ok).toBe(false);
-    expect(result.issues).toContainEqual({ digest: f.digest, reason: "invalid_review_revision" });
+    expect(result.issues).toContainEqual({ digest: f.digest, reason: "filename_digest_mismatch" });
   });
 });
