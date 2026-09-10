@@ -24,6 +24,13 @@ credentials.json
 # historical handover docs stay tracked (gitignore never untracks). PLAN-L7-144 follow-up.
 docs/handover/session-handover-*.md
 .ut-tdd/logs/
+# review custody projection (requests / receipts / verdicts)。src/runtime/review-guard.ts:65-68 の
+# isReviewCustodyProjection が 3 つを同一 class として扱い、read-only role の mutated path 判定から
+# 除外している。いずれも機械生成の runtime evidence で正本は harness.db projection。
+# .ut-tdd/review/ 直下の cross-review-*.md 等は明示 tracked な audit 証跡であり対象外
+# (gitignore は既 tracked を untrack しない)。
+.ut-tdd/review/requests/
+.ut-tdd/review/receipts/
 .ut-tdd/review/verdicts/
 # gate 実行証跡 JSON (機械生成 runtime evidence、harness.db projection が正本。
 # tests/gate-static.test.ts U-GATE-006 等の live-tree 書き込み残渣も混入するため未 track。
