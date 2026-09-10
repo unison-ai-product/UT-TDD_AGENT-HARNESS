@@ -326,19 +326,25 @@ describe("clean distribution local acceptance smoke", () => {
         ["src/cli.ts", "distribution", "plan", "--tag", "v0.1.0", "--json"],
         env,
       );
-      expect(distribution.status, distribution.stderr || distribution.stdout).toBe(0);
+      // A clean export has no consumer-local sealed runtime yet.  The
+      // distribution surface remains usable, but readiness must fail closed
+      // until setup admits and publishes that runtime.
+      expect(distribution.status, distribution.stderr || distribution.stdout).toBe(1);
       const distributionJson = JSON.parse(distribution.stdout);
       expect(distributionJson).toMatchObject({
-        ok: true,
+        ok: false,
         export: {
           ok: true,
           missingRequired: [],
           denylistViolations: [],
         },
         readiness: {
-          ok: true,
+          ok: false,
         },
       });
+      expect(distributionJson.readiness.checks).toEqual(
+        expect.arrayContaining([expect.objectContaining({ name: "ut-tdd-cli", ok: false })]),
+      );
       expect(distributionJson.export.artifactPaths).toContain("src/cli.ts");
       expect(distributionJson.export.artifactPaths).toContain("CHANGELOG.md");
       expect(distributionJson.export.artifactPaths).toContain("package-lock.json");

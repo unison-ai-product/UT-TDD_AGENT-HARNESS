@@ -1,9 +1,11 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import {
+  chmodSync,
   copyFileSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   rmSync,
   statSync,
@@ -34,6 +36,19 @@ import { digestMaterializedReleaseEntries } from "../src/setup/release-materiali
 const roots: string[] = [];
 const hex = (n: string) => n.repeat(64);
 const strip = (value: string) => value.slice("sha256:".length);
+
+function removeTestTree(path: string): void {
+  try {
+    const stat = statSync(path);
+    if (stat.isDirectory()) {
+      chmodSync(path, 0o755);
+      for (const name of readdirSync(path)) removeTestTree(join(path, name));
+    } else chmodSync(path, 0o644);
+  } catch {
+    return;
+  }
+  rmSync(path, { recursive: true, force: true });
+}
 function historyTipDigest(history: Uint8Array): string {
   const lines = Buffer.from(history).toString("utf8").trim().split(/\r?\n/);
   const record = JSON.parse(lines.at(-1) ?? "{}") as { record_digest?: string };
@@ -70,6 +85,7 @@ async function producerInput(root: string, checkout: string) {
     // process.cwd() so the repository-isolation doctor does not classify this
     // fixture setup as a live source-tree read.
     repoRoot: execFileSync("git", ["rev-parse", "--show-toplevel"], { encoding: "utf8" }).trim(),
+    outputRoot: checkout,
     candidateRevision: subjectRevision,
   });
   mkdirSync(join(checkout, "sealed-generation"), { recursive: true });
@@ -78,10 +94,7 @@ async function producerInput(root: string, checkout: string) {
     join(generation.generationPath, "receipt.json"),
     join(checkout, "sealed-generation", "receipt.json"),
   );
-  // The producer's output is now represented by the copied sealed-generation
-  // bytes; remove the producer workspace output so the test cannot accidentally
-  // discover it as a fallback or collide with the next producer invocation.
-  rmSync(generation.generationPath, { recursive: true, force: true });
+  removeTestTree(generation.generationPath);
   const compiled_esm = readFileSync(join(checkout, "sealed-generation", "ut-tdd.mjs"));
   const node_bootstrap_receipt = readFileSync(join(checkout, "sealed-generation", "receipt.json"));
   const receipt = JSON.parse(node_bootstrap_receipt.toString("utf8")) as {
@@ -209,7 +222,7 @@ async function producerInput(root: string, checkout: string) {
 }
 
 afterEach(() => {
-  for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
+  for (const root of roots.splice(0)) removeTestTree(root);
 });
 
 describe("physical consumer Node runtime adapter", () => {

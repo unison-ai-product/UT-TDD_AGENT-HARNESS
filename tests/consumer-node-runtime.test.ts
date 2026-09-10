@@ -5,6 +5,7 @@ import { join, resolve } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   buildConsumerNodeRuntimeBundle,
+  buildConsumerNodeRuntimePayloads,
   bundlePathFor,
   type ConsumerNodeRuntimeBundle,
   type ConsumerNodeRuntimeIdentity,
@@ -63,6 +64,27 @@ function bundleFor(id = identity()): ConsumerNodeRuntimeBundle {
     history: PAYLOADS["history.jsonl"],
     operation_state: PAYLOADS["operation-state.json"],
   });
+}
+
+function wrapperBundleFor(root: string): {
+  readonly bundle: ConsumerNodeRuntimeBundle;
+  readonly payloads: ReturnType<typeof buildConsumerNodeRuntimePayloads>;
+} {
+  const id = identity(root);
+  const compiled = PAYLOADS["ut-tdd.mjs"];
+  const unsignedReceipt = { schema_version: 2, runtime: "node", generation_id: id.generation_id };
+  const receipt = Buffer.from(
+    JSON.stringify({
+      ...unsignedReceipt,
+      receipt_digest: digestConsumerRuntimeValue(unsignedReceipt).slice("sha256:".length),
+    }),
+  );
+  const payloads = buildConsumerNodeRuntimePayloads({
+    identity: id,
+    compiled_esm: compiled,
+    node_bootstrap_receipt: receipt,
+  });
+  return { bundle: buildConsumerNodeRuntimeBundle({ identity: id, ...payloads }), payloads };
 }
 
 function testPorts(
@@ -207,10 +229,10 @@ describe("sealed self-contained consumer Node runtime", () => {
     roots.push(root);
     const checkout = mkdtempSync(join(tmpdir(), "ut-tdd-setup-"));
     roots.push(checkout);
-    const bundle = bundleFor(identity(root));
+    const { bundle, payloads } = wrapperBundleFor(root);
     const activation = join(root, ".ut-tdd", "runtime", "activation");
     mkdirSync(bundle.bundle_path, { recursive: true });
-    for (const [name, bytes] of Object.entries(PAYLOADS))
+    for (const [name, bytes] of Object.entries(payloads))
       writeFileSync(join(bundle.bundle_path, name), bytes);
     writeFileSync(join(bundle.bundle_path, "bundle-manifest.json"), JSON.stringify(bundle));
     mkdirSync(activation, { recursive: true });
@@ -229,7 +251,7 @@ describe("sealed self-contained consumer Node runtime", () => {
     mkdirSync(resolve(wrapper, ".."), { recursive: true });
     writeFileSync(wrapper, renderConsumerNodeWrapper());
     const run = spawnSync(process.execPath, [wrapper], { cwd: tmpdir(), encoding: "utf8" });
-    expect(run.status).toBe(0);
+    expect(run.status, `${run.stdout}\n${run.stderr}`).toBe(0);
     expect(run.stdout).toBe("consumer-local-ok");
   });
 
@@ -348,12 +370,6 @@ describe("sealed self-contained consumer Node runtime", () => {
       "reconcile",
       "release",
     ]);
-    const wrapper = join(root, ".ut-tdd", "bin", "ut-tdd.mjs");
-    mkdirSync(resolve(wrapper, ".."), { recursive: true });
-    writeFileSync(wrapper, renderConsumerNodeWrapper());
-    const run = spawnSync(process.execPath, [wrapper], { cwd: tmpdir(), encoding: "utf8" });
-    expect(run.status).toBe(0);
-    expect(run.stdout).toBe("consumer-local-ok");
   });
 
   it("CANDIDATE-U-PACKNODE-008/009: spaces work while external runtime escapes fail", () => {

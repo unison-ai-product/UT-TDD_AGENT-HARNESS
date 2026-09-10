@@ -1,4 +1,5 @@
 import {
+  chmodSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -42,6 +43,19 @@ import { digestMaterializedReleaseEntries } from "../src/setup/release-materiali
 const roots: string[] = [];
 const revision = "a".repeat(40);
 const hex = (value: string) => value.repeat(64);
+
+function removeTestTree(path: string): void {
+  try {
+    const stat = statSync(path);
+    if (stat.isDirectory()) {
+      chmodSync(path, 0o755);
+      for (const name of readdirSync(path)) removeTestTree(join(path, name));
+    } else chmodSync(path, 0o644);
+  } catch {
+    return;
+  }
+  rmSync(path, { recursive: true, force: true });
+}
 const historyTipDigest = (history: Uint8Array): string => {
   const records = Buffer.from(history)
     .toString("utf8")
@@ -285,7 +299,7 @@ async function runtimeFor(root: string) {
 }
 
 afterEach(() => {
-  for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
+  for (const root of roots.splice(0)) removeTestTree(root);
 });
 
 describe("Issue #420 closure Red oracles: aggregate authority and durable history", () => {

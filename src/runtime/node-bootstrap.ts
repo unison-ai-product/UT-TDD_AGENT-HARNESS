@@ -67,6 +67,8 @@ export interface NodeInvocation {
 }
 export interface NodeGenerationBuildInput {
   readonly repoRoot?: string;
+  /** Optional isolated publication root used by callers that need separate build output. */
+  readonly outputRoot?: string;
   readonly candidateRevision: string;
   readonly nodePath?: string;
   readonly npmCliPath?: string;
@@ -608,8 +610,9 @@ export async function buildNodeGeneration(
   const tsconfig = contained(root, "tsconfig.node.json", "node-bootstrap-tsconfig-missing");
   const builder = contained(root, "scripts/build-node.mjs", "node-bootstrap-builder-missing");
   assertToolchainProvenance(provenance, hashFile(nodePath), hashFile(npmPath));
-  const generations = resolve(root, NODE_GENERATIONS);
-  const lease = resolve(root, NODE_LEASE);
+  const outputRoot = resolve(request.outputRoot ?? root);
+  const generations = resolve(outputRoot, NODE_GENERATIONS);
+  const lease = resolve(outputRoot, NODE_LEASE);
   mkdirSync(generations, { recursive: true });
   try {
     mkdirSync(lease, { recursive: false });
