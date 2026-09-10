@@ -3,7 +3,7 @@ memory_id: memory:feedback:git-revert-default-subject-fails-the-conventional-com
 kind: feedback
 title: "git revert default subject fails the conventional-commit guard: use git revert --no-commit and write a lowercase revert: subject"
 tags: ["ci", "commitlint", "git", "ops-guard", "revert"]
-updated_at: 2026-09-10T05:03:27.527Z
+updated_at: 2026-09-10T05:25:04.815Z
 ---
 
 `git revert <sha>` が自動生成する件名 `Revert "<元の件名>"` は、この repo の branch-type guard
@@ -21,8 +21,10 @@ review 側は CI green を前提にするため、closing review の dispatch �
 
 1. revert は `git revert --no-commit <sha>` で staging に取り込み、`git commit -m "revert: <type>(<scope>): <元の件名>"`
    のように conventional な件名を自分で付ける。
-2. 既に既定件名で commit してしまった場合は、push 前なら `git commit --amend` で件名を直す。push 後の共有 branch なら
-   履歴を書き換えず、`ut-tdd` の規律 (push 済み履歴は破壊しない) に従って修正 commit を積むか、PO と相談する。
+2. 既に既定件名で commit してしまった場合は、push 前なら `git commit --amend` (直前でなければ `git rebase -i` の reword)
+   で件名を直す。**修正 commit を後から積んでも直らない** — guard は直近の件名列を検査するので、不正な `Revert "..."`
+   が残る限り exit 1 のままである。push 後の共有 branch では履歴の書き換えが必要になり、`push 済み履歴は破壊しない`
+   の規律と衝突するため、自分で force-push せず PO と修復方針 (reword して force-push するか、branch を作り直すか) を決める。
 3. push 前に guard を流し、直近の件名が全て通ることを確認する (`--head-ref` と `--commit-file` は必須):
 
 ```bash
