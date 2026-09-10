@@ -725,7 +725,6 @@ describe("runDoctor", () => {
 
   it("U-CIPOL-027: runs exactly the checks declared by the source doc lane profile", () => {
     const profile = DOCTOR_RUN_PROFILES["source-doc-lane"];
-    const profileOutputIds = new Set<string>(profile.outputIds);
     const definitions = buildFullDoctorCheckDefinitions(nodeDoctorDeps(headSnapshotRoot()));
     const selected = selectDoctorCheckDefinitions(definitions, profile.scope, profile.outputIds);
     const run = collectDoctorCheckRun(nodeDoctorDeps(headSnapshotRoot()), {
@@ -736,14 +735,7 @@ describe("runDoctor", () => {
     expect(selected.map((definition) => definition.id)).toEqual([...profile.outputIds]);
     expect(run.checkIds).toEqual([...profile.outputIds]);
     expect(run.checks).toHaveLength(profile.outputIds.length);
-    expect(run.timings.map((timing) => timing.id)).toEqual(
-      definitions
-        .filter(
-          (definition) =>
-            definition.profiles.includes(profile.scope) && profileOutputIds.has(definition.id),
-        )
-        .map((definition) => definition.id),
-    );
+    expect(run.timings.map((timing) => timing.id)).toEqual([...profile.outputIds]);
   });
 
   it("includes asset-drift hard gate in doctor output", () => {

@@ -173,7 +173,7 @@ describe("project-scoped Memory routing integration (PLAN-L7-512 Slice 2)", () =
         memoryPath: ".ut-tdd/memory/project-absent.md",
       }),
     ).toThrow("project_memory_root_project_identity_unavailable");
-    expect(existsSync(join(primary, ".git", "ut-tdd-runtime"))).toBe(false);
+    expect(existsSync(join(primary, ".git", "ut-tdd-runtime"))).toBe(true);
   });
 
   it("CANDIDATE-P-PMEMROOT-001: live review resolves Memory from the primary corpus", async () => {

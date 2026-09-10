@@ -31,6 +31,7 @@ import { defaultHarnessDbPath, openHarnessDb, upsertRow } from "../src/state-db/
 import { migrate } from "../src/state-db/migration.ts";
 import { MODEL_IDS } from "../src/team/model-policy.ts";
 import { headPlanDocCount } from "./plan-asset/head-plan-doc-count.ts";
+import { ensureCompletedProjectMemory } from "./support/project-identity-fixture.ts";
 import { removeTestTree } from "./support/temp-tree.ts";
 
 const repoRoot = process.cwd();
@@ -806,6 +807,7 @@ describe("L7 CLI surface closure", () => {
   it("executes advisor through the selected upper Codex adapter", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-cli-advisor-exec-"));
     try {
+      ensureCompletedProjectMemory(root, "fixture/cli-advisor-exec");
       const binDir = join(root, "bin");
       mkdirSync(binDir);
       const fakeCodex = writeFakeProvider(binDir, "codex");
@@ -1639,6 +1641,7 @@ describe("L7 CLI surface closure", () => {
   it("executes team run through fake Claude/Codex adapters while keeping JSON machine-readable", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-cli-team-exec-"));
     try {
+      ensureCompletedProjectMemory(root, "fixture/cli-team-exec");
       const binDir = join(root, "bin");
       mkdirSync(binDir);
       const fakeCodex = writeFakeProvider(binDir, "codex");
@@ -1718,6 +1721,7 @@ describe("L7 CLI surface closure", () => {
     // 返していた (実行していないのに実行済みに見える機械判定の罠)。実行 + 正直な JSON を要求する。
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-cli-adapter-exec-"));
     try {
+      ensureCompletedProjectMemory(root, "fixture/cli-adapter-exec");
       const binDir = join(root, "bin");
       mkdirSync(binDir);
       const fakeCodex = writeFakeProvider(binDir, "codex");

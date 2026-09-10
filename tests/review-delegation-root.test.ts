@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { executeLiveReviewDelegation } from "../src/cli/review-live.ts";
+import { ensureCompletedProjectMemory } from "./support/project-identity-fixture.ts";
 
 const originalClaudeBin = process.env.UT_TDD_CLAUDE_BIN;
 
@@ -57,8 +58,9 @@ describe("review delegation repository-root custody", () => {
       git(root, ["config", "user.name", "UT-TDD test"]);
       git(root, ["add", "README.md"]);
       git(root, ["commit", "--quiet", "-m", "fixture"]);
+      ensureCompletedProjectMemory(root, "fixture/review-delegation-root");
 
-      const taskPath = join(root, ".ut-tdd", "memory", "review.md");
+      const taskPath = join(root, ".ut-tdd", "review", "review.md");
       mkdirSync(dirname(taskPath), { recursive: true });
       writeFileSync(taskPath, "Review the exact HEAD and emit the required verdict.\n", "utf8");
       const claudeBin = createClaudeStub(root);

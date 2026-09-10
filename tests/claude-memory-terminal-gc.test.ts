@@ -26,7 +26,7 @@ import {
 } from "../src/runtime/claude-memory-wake.ts";
 import { ProjectMemoryMigration } from "../src/runtime/project-memory-migration.ts";
 import { resolveProjectMemoryRoot } from "../src/runtime/project-memory-root.ts";
-import { ensureCompletedProjectMemory } from "./support/project-identity-fixture.ts";
+import { ensureTrackedProjectIdentity } from "./support/project-identity-fixture.ts";
 
 const memory: MemoryEntry = {
   memory_id: "memory:project:terminal-gc",
@@ -41,7 +41,7 @@ const memory: MemoryEntry = {
 
 function fixture(): string {
   const root = mkdtempSync(join(tmpdir(), "ut-tdd-terminal-gc-"));
-  ensureCompletedProjectMemory(root, "fixture/claude-terminal-gc");
+  ensureTrackedProjectIdentity(root, "fixture/claude-terminal-gc");
   mkdirSync(join(root, ".ut-tdd", "memory"), { recursive: true });
   writeFileSync(
     join(root, ".ut-tdd", "memory", "baseline.md"),

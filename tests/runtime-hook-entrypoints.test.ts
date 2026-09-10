@@ -435,6 +435,7 @@ describe("runtime hook entrypoints", () => {
     const cwd = mkdtempSync(join(tmpdir(), "ut-tdd-team-wrapper-"));
     const binDir = join(cwd, "bin");
     try {
+      ensureCompletedProjectMemory(cwd, "fixture/runtime-team-wrapper");
       const fakeCodex = writeFakeCodex(binDir);
       const fakeClaude = writeFakeClaude(binDir);
       mkdirSync(join(cwd, ".ut-tdd", "teams"), { recursive: true });

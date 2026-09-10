@@ -507,7 +507,7 @@ describe("Claude HARNESS memory async wake", () => {
         workspaceId: "a".repeat(64),
       });
       expect(() => publishClaudeInboxEntry(root, entry)).toThrow(
-        "project_memory_root_git_topology_unavailable",
+        "memory_migration_git_topology_unavailable",
       );
     } finally {
       rmSync(root, { recursive: true, force: true });
