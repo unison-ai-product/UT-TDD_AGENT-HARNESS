@@ -396,6 +396,11 @@ describe("physical consumer Node runtime adapter", () => {
     const neverReceipt = Buffer.from(
       readFileSync(join(initialBundle.bundle_path, "node-bootstrap-receipt.json")),
     );
+    const {
+      operation_id: _neverOperation,
+      attempt: _neverAttempt,
+      ...neverGenerationIdentity
+    } = neverIdentity;
     const neverHistoryRecord: Record<string, unknown> = {
       ...(JSON.parse(Buffer.from(installedHistory).toString("utf8").trim()) as Record<
         string,
@@ -403,11 +408,7 @@ describe("physical consumer Node runtime adapter", () => {
       >),
       operation_id: neverIdentity.operation_id,
       identity_digest: digestConsumerRuntimeValue(neverIdentity),
-      generation_identity_digest: digestConsumerRuntimeValue({
-        ...neverIdentity,
-        operation_id: undefined,
-        attempt: undefined,
-      }),
+      generation_identity_digest: digestConsumerRuntimeValue(neverGenerationIdentity),
     };
     delete neverHistoryRecord.record_digest;
     neverHistoryRecord.record_digest = digestConsumerRuntimeValue(neverHistoryRecord);
