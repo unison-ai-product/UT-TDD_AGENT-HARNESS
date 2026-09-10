@@ -167,4 +167,28 @@ describe("review projection reconciliation (U-RVDISP)", () => {
     expect(result.pending).toEqual([f.digest]);
     expect(result.issues).toContainEqual({ digest: unrelated, reason: "receipt_without_request" });
   });
+
+  it("U-RVDISP-060: a valid FLAG receipt remains pending with a flagged reason", () => {
+    const f = fixture();
+    writeFileSync(
+      join(f.receipts, `${f.digest}.json`),
+      JSON.stringify(receipt({ verdict: "FLAG", blockingFindings: ["blocking finding"] })),
+      "utf8",
+    );
+    const result = run({ requests: [f.requests], receipts: [f.receipts] });
+    expect(result.ok).toBe(false);
+    expect(result.pending).toEqual([f.digest]);
+    expect(result.issues).toContainEqual({ digest: f.digest, reason: "flagged" });
+    expect(result.issues).not.toContainEqual({ digest: f.digest, reason: "identity_mismatch" });
+  });
+
+  it("U-RVDISP-061: a null receipt fails closed without throwing", () => {
+    const f = fixture();
+    writeFileSync(join(f.receipts, `${f.digest}.json`), "null", "utf8");
+    expect(() => run({ requests: [f.requests], receipts: [f.receipts] })).not.toThrow();
+    const result = run({ requests: [f.requests], receipts: [f.receipts] });
+    expect(result.ok).toBe(false);
+    expect(result.pending).toEqual([f.digest]);
+    expect(result.issues).toContainEqual({ digest: f.digest, reason: "schema_invalid" });
+  });
 });
