@@ -19,6 +19,7 @@ import {
   gitAddPathspecCommands,
   transformCleanDistributionArtifact,
 } from "../src/setup/index.ts";
+import { ensureCompletedProjectMemory } from "./support/project-identity-fixture.ts";
 import { removeTestTree } from "./support/temp-tree.ts";
 
 const repoRoot = process.cwd();
@@ -249,6 +250,7 @@ describe("clean distribution local acceptance smoke", () => {
           cpSync(from, to, { recursive: true });
         }
       }
+      ensureCompletedProjectMemory(cleanRoot, "fixture/distribution-acceptance");
 
       const fakeCodex = writeFakeCodex(cleanRoot);
       writeLocalUtTddShim(cleanRoot);
