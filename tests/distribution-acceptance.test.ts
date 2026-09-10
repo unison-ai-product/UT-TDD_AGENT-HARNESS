@@ -410,11 +410,7 @@ describe("clean distribution local acceptance smoke", () => {
       expect(wrapperHelp.status, wrapperHelp.stderr || wrapperHelp.stdout).toBe(78);
       expect(wrapperHelp.stderr).toContain("consumer_runtime_absent");
 
-      const setupSmoke = runNode(
-        cleanRoot,
-        ["src/cli.ts", "doctor", "--setup-smoke"],
-        env,
-      );
+      const setupSmoke = runNode(cleanRoot, ["src/cli.ts", "doctor", "--setup-smoke"], env);
       expect(setupSmoke.status, setupSmoke.stderr || setupSmoke.stdout).toBe(0);
       expect(setupSmoke.stdout).toContain("doctor: setup-smoke - OK");
 
