@@ -232,7 +232,12 @@ describe("Issue #490 Windows single sealed snapshot contract", () => {
     [
       "missing snapshot step",
       (workflow: WorkflowDocument) => {
-        workflow.jobs?.["harness-check-windows"]?.steps?.splice(3, 1);
+        const steps = workflow.jobs?.["harness-check-windows"]?.steps;
+        if (!steps) return;
+        const snapshotIndex = steps.findIndex(
+          (step) => step.name === "test — Windows full 回帰 (vitest run, windows leg)",
+        );
+        if (snapshotIndex >= 0) steps.splice(snapshotIndex, 1);
       },
     ],
     [
