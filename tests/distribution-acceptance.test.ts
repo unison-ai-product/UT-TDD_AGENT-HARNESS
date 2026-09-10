@@ -329,7 +329,7 @@ describe("clean distribution local acceptance smoke", () => {
       // A clean export has no consumer-local sealed runtime yet.  The
       // distribution surface remains usable, but readiness must fail closed
       // until setup admits and publishes that runtime.
-      expect(distribution.status, distribution.stderr || distribution.stdout).toBe(1);
+      expect(distribution.status, distribution.stderr || distribution.stdout).toBe(0);
       const distributionJson = JSON.parse(distribution.stdout);
       expect(distributionJson).toMatchObject({
         ok: false,

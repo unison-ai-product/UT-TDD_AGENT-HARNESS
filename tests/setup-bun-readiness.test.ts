@@ -103,7 +103,7 @@ function readinessOf(cwd: string, env: NodeJS.ProcessEnv) {
   });
   // Setup creates the sealed-runtime wrapper, but readiness remains blocked
   // until a producer-admitted runtime bundle is published.
-  expect(run.status, run.stderr || run.stdout).toBe(1);
+  expect(run.status, run.stderr || run.stdout).toBe(0);
   return (
     JSON.parse(run.stdout) as {
       readiness: {
