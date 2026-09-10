@@ -459,6 +459,33 @@ describe("Issue #420 closure Red oracles: aggregate authority and durable histor
     expect(result.consumerRuntime?.result).toMatchObject({ ok: true, status: "committed" });
   });
 
+  it("CANDIDATE-U-PACKNODE-005: setup rejects an install failure before writing setup artifacts", async () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-red-setup-install-failure-"));
+    roots.push(root);
+    const runtime = await runtimeFor(root);
+    const deps = setupDeps(root);
+    let setupWrites = 0;
+    deps.writeText = () => {
+      setupWrites += 1;
+    };
+    const result = await runSetupAsync(
+      {
+        phase: "0-A",
+        dryRun: false,
+        applyBranchProtection: false,
+        consumerRuntime: {
+          ...runtime,
+          fault: (barrier) => {
+            if (barrier === "writeGenerationAndReceipt") throw new Error("consumer_runtime_permission");
+          },
+        },
+      },
+      deps,
+    );
+    expect(result).toMatchObject({ consumerRuntime: { result: { ok: false, status: "failed" } } });
+    expect(setupWrites).toBe(0);
+  });
+
   it("CANDIDATE-U-PACKNODE-005/012: downstream setup fault restores prior runtime and setup bytes", async () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-red-setup-rollback-"));
     roots.push(root);
@@ -644,5 +671,39 @@ describe("Issue #420 closure Red oracles: aggregate authority and durable histor
       .split("\n")
       .map((line) => JSON.parse(line) as { operation_kind?: string });
     expect(records.at(-1)?.operation_kind).toBe("rollback");
+  });
+
+  it("CANDIDATE-U-PACKNODE-012/014: rejects rollback attestation not bound to the prior history identity", async () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-red-rollback-attestation-"));
+    roots.push(root);
+    const runtime = await runtimeFor(root);
+    const priorIdentity = {
+      ...runtime.identity,
+      generation_id: "generation-prior",
+      operation_id: "prior-generation",
+      attempt: 0,
+    };
+    const prior = buildConsumerNodeRuntimePayloads({
+      identity: priorIdentity,
+      compiled_esm: runtime.compiled_esm,
+      node_bootstrap_receipt: runtime.node_bootstrap_receipt,
+    });
+    const priorPointerBytes = Buffer.from(`{"bundle_digest":"sha256:${"a".repeat(64)}"}\n`);
+    expect(() =>
+      buildConsumerNodeRuntimePayloads({
+        ...runtime,
+        prior_bundle_digest: `sha256:${"a".repeat(64)}`,
+        prior_history_tip_digest: historyTipDigest(prior.history),
+        history_sequence: 1,
+        prior_history: prior.history,
+        prior_pointer: {
+          bytes: priorPointerBytes,
+          mode: 0o444,
+          digest: digestConsumerRuntimeBytes(priorPointerBytes),
+        },
+        operation_kind: "rollback",
+        prior_attestation: runtime.node_bootstrap_receipt,
+      }),
+    ).toThrow(/rollback (attestation|prior)/);
   });
 });
