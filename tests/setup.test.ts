@@ -560,7 +560,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     );
     expect(wrapper).toContain('deny("consumer_runtime_absent")');
     expect(wrapper).toContain('const runtimeRoot = resolve(consumerRoot, ".ut-tdd", "runtime");');
-    expect(wrapper).toContain("const manifest =");
+    expect(wrapper).toContain("let manifest;");
     expect(wrapper).toContain("spawnSync(process.execPath, [entry, ...process.argv.slice(2)]");
     expect(wrapper).toContain("windowsHide: true");
     expect(wrapper).not.toContain("shell:");
@@ -1118,7 +1118,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
       "ut-tdd-cli",
     ]);
     expect(blocked.checks.find((c) => c.name === "ut-tdd-cli")?.message).toContain(
-      "Generated Claude/Codex hooks invoke the project-local Node wrapper directly",
+      "Generated Claude/Codex hooks resolve only the consumer-local sealed Node runtime.",
     );
     expect(blocked.checks.find((c) => c.name === "ut-tdd-cli")?.message).toContain(
       "Do not rely on a global install",
