@@ -160,7 +160,7 @@ AC-1〜AC-5が未完了なので `draft` を維持する。一方、次の D1 �
 | stale requestとmerge先HEAD requestの横断照合 | `U-RVDISP-047`〜`048` |
 | author family併存時のcross-family verdict保全、不正MERGED孤児のfail-close | `U-RVDISP-049`〜`050` |
 | 競合FLAGのblocking保全、request以前receiptと有効後続receiptの分離 | `U-RVDISP-051`〜`052` |
-| filesystem projectionのcanonical identity照合とfail-close | `U-RVDISP-053`〜`059` |
+| filesystem projectionのcanonical identity照合とfail-close | `U-RVDISP-053`〜`061` |
 
 ## 4. スコープ外
 
@@ -173,7 +173,7 @@ AC-1〜AC-5が未完了なので `draft` を維持する。一方、次の D1 �
 
 ## 5. AC
 
-- AC-1: `U-RVDISP-001`〜`059` が全件green。
+- AC-1: `U-RVDISP-001`〜`061` が全件green。
 - AC-2: `tsc --noEmit` とBiomeがgreen。
 - AC-3: identity/FSM/replay/diagnosticを独立監査し、未反証attackがない。
 - AC-4: `impl-plan-trace` / `deliverable-plan-trace` で上記2出荷物の孤児が0。

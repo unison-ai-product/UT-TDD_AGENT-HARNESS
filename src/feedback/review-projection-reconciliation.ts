@@ -15,7 +15,8 @@ export type ReviewProjectionIssueReason =
   | "filename_digest_mismatch"
   | "duplicate_conflict"
   | "receipt_without_request"
-  | "identity_mismatch";
+  | "identity_mismatch"
+  | "flagged";
 
 export interface ReviewProjectionIssue {
   readonly digest: string;
@@ -33,6 +34,10 @@ interface LoadedJson {
   readonly digest: string;
   readonly value: unknown;
   readonly canonical: string;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 const DIGEST_FILE = /^([a-f0-9]{64})\.json$/;
@@ -147,9 +152,14 @@ export function reconcileReviewProjection(input: {
       pending.push(digest);
       continue;
     }
+    if (!isRecord(artifact.value)) {
+      issues.push(issue(digest, "schema_invalid"));
+      pending.push(digest);
+      continue;
+    }
     const result = analyzeReviewDispatch({
       requests: [request],
-      receipts: [artifact.value as ReviewReceipt],
+      receipts: [artifact.value as unknown as ReviewReceipt],
       prs: [{ pr: request.pr, headSha: request.exactHead, state: "OPEN", checksGreen: true }],
       now: input.now,
     });
@@ -163,6 +173,9 @@ export function reconcileReviewProjection(input: {
     );
     if (schemaInvalid) {
       issues.push(issue(digest, "schema_invalid"));
+      pending.push(digest);
+    } else if (result.entries[0]?.reasons.includes("flagged")) {
+      issues.push(issue(digest, "flagged"));
       pending.push(digest);
     } else if (result.entries[0]?.state !== "merge_ready") {
       issues.push(issue(digest, "identity_mismatch"));

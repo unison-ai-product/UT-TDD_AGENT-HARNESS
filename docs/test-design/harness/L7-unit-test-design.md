@@ -1567,9 +1567,11 @@ identity は `(memoryId, pr, exactHead, reviewRevision)` とし、入力順・re
 | `U-RVDISP-057` | filename digest境界 | request digest drift、別basenameのmatching receipt | basenameを権限化せずfilename不一致をfail-close |
 | `U-RVDISP-058` | duplicate/replay | 同一content replay、同digest競合content、入力順反転 | replayは冪等、競合はfail-close、結果は決定論的 |
 | `U-RVDISP-059` | unrelated receipt隔離 | request identityに属さないreceipt | pending requestを抑止せずtyped orphanを保持 |
+| `U-RVDISP-060` | FLAG verdict projection | identity一致した非author FLAG receipt | pendingを維持し、`flagged`として分類する。`identity_mismatch`へ誤分類しない |
+| `U-RVDISP-061` | null receipt projection | receipt JSONが`null` | TypeErrorを発生させず、対応requestをpending＋`schema_invalid`としてfail-close |
 
 実行対応: `tests/review-dispatch.test.ts` (`U-RVDISP-001`〜`052`) と
-`tests/review-projection-reconciliation.test.ts` (`U-RVDISP-053`〜`059`)。
+`tests/review-projection-reconciliation.test.ts` (`U-RVDISP-053`〜`061`)。
 
 Issue #412 実測 (2026-08-26): Red `a5250930` で timestamp-only replay の旧競合挙動を再現し、
 Green `6e8e14bb` で U-RVDISP-021 を更新した。Node detached snapshotでreview-dispatch 52件と
