@@ -171,7 +171,7 @@ describe("MemoryService (PLAN-L7-468 PR-A)", () => {
   });
 
   // U-MEMORY-012: AC-3 — 破損 1 件で全件読みを落とさない (欠陥 5 の回帰)
-  it("isolates a single malformed memory file instead of failing the whole read", () => {
+  it("isolates malformed files in the corpus and closes the production read port", () => {
     const repo = tempRepo();
     try {
       seedCorpus(repo);
@@ -188,11 +188,7 @@ describe("MemoryService (PLAN-L7-468 PR-A)", () => {
       expect(corpus.findings[0]?.source_path).toBe(".ut-tdd/memory/project-broken.md");
       expect(corpus.findings[0]?.reason).toMatch(/frontmatter is required/);
 
-      const result = readMemory({ repoRoot: repo });
-      expect(result.entries.length).toBeGreaterThan(0);
-      expect(renderMemoryHealth(result)).toContain(
-        "memory unreadable: .ut-tdd/memory/project-broken.md",
-      );
+      expect(() => readMemory({ repoRoot: repo })).toThrow("memory_migration_invalid_memory");
     } finally {
       removeTestTree(repo);
     }
