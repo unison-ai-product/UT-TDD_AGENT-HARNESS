@@ -251,6 +251,7 @@ export interface SetupResult {
   branchProtection: { applied: boolean; reason: string };
   projectIdentity?: ProjectIdentityBootstrapResult;
   consumerRuntime?: SetupConsumerRuntimeInstall;
+  memoryMigration: ProjectMemoryCompletionResult;
 }
 
 /** Sealed runtime input handed from the release materializer to setup. */
@@ -323,7 +324,6 @@ export async function installConsumerRuntimeFromSetup(
     },
   });
   return { bundle, result };
-  memoryMigration: ProjectMemoryCompletionResult;
 }
 
 /** gh 実行 seam (raw token 非依存 = gh の認証状態に委ねる)。test=mock。 */
