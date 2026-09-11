@@ -73,8 +73,11 @@ class FakePort implements ProviderJudgmentEvidencePort {
   }
 }
 
-async function run(port = new FakePort()): Promise<ProviderJudgmentResult> {
-  return produceProviderJudgment({ attempt: identity, port });
+async function run(
+  port = new FakePort(),
+  attempt: ProviderJudgmentAttemptIdentity = identity,
+): Promise<ProviderJudgmentResult> {
+  return produceProviderJudgment({ attempt, port });
 }
 
 describe("D3b provider judgment producer", () => {
@@ -235,6 +238,30 @@ describe("D3b provider judgment producer", () => {
     expect(new TextDecoder().decode(result.artifactBytes)).toContain("証跡の不一致");
     expect(result.judgmentDigest).toMatch(/^[0-9a-f]{64}$/);
     expect(result.providerEvidenceRef).toMatch(/^d3b:[0-9a-f]{64}$/);
+  });
+
+  it.each([
+    ["uppercase HEAD", { headSha: "A".repeat(40) }],
+    ["uppercase request digest", { requestDigest: "B".repeat(64) }],
+    ["uppercase revision digest", { reviewRevision: `rv1-${"C".repeat(64)}` }],
+    ["short HEAD", { headSha: "a".repeat(7) }],
+    ["short request digest", { requestDigest: "b".repeat(7) }],
+    ["short revision digest", { reviewRevision: `rv1-${"c".repeat(7)}` }],
+  ] satisfies readonly [
+    string,
+    Partial<ProviderJudgmentAttemptIdentity>,
+  ][])("U-D3B-006: noncanonical %s identity is rejected before artifact write", async (_name, mutation) => {
+    const attempt = { ...identity, ...mutation };
+    const port = new FakePort();
+    port.readResult = {
+      ...(port.readResult as Extract<ProviderEvidenceReadResult, { status: "available" }>),
+      identity: attempt,
+    };
+    await expect(run(port, attempt)).resolves.toEqual({
+      ok: false,
+      reason: "identity_mismatch",
+    });
+    expect(port.writes).toHaveLength(0);
   });
 
   it.each([
