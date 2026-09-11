@@ -2488,7 +2488,7 @@ digest/ref を入力へ戻してはならない。
 | CANDIDATE-D3B-009 | immutable replay/conflict | 同一content replayは冪等、同一identityの別content・別verdict・別attempt競合は2件目を書かない |
 | CANDIDATE-D3B-010 | D3c boundary | valid D3b + D3c mechanical envelopeでもfamily authority不在なら`unverified_family`、`custody_admitted` 0 |
 
-実装対応は `tests/provider-judgment.test.ts`（実装PRで `U-D3B-001..010` へ昇格）と、後続の
+実装対応は `tests/provider-judgment.test.ts`（実装PRで候補IDを正規oracle IDへ昇格）と、後続の
 `review-custody` integration testに限定する。`src/cli.ts`、`src/setup/*`、#555の
 consumer runtimeはこの pair-freeze では変更しない。候補表だけでは oracle-test-trace の
 確定集合に入れず、実装PRの Red test と同時に昇格する。
