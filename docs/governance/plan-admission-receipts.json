@@ -3600,6 +3600,22 @@
         "revision": 5,
         "content_digest": "sha256:a7eb83945bb0de3bdc5faa5ce89baf7aace70b00658f9d3922f9ea8485618fa5"
       }
+    },
+    {
+      "sequence": 226,
+      "previous_record_digest": "sha256:9c8ac1795c3983909cf5b7f75340e461000fba39b344f590ad1a171192e07c5b",
+      "record_digest": "sha256:77ca9d9c6c7c3e88cd7a54156b7df0da4889918155b0855ac59e8b2972457c27",
+      "command_id": "plan-revise:issue-570:reverse:6",
+      "receipt_id": "certificate:7858cbf692158d5a2545593b68cb22bc",
+      "receipt_digest": "sha256:55435a87c241177fa6a143833cf60e03693086fee602ae3ab015ba987606827b",
+      "decision_digest": "sha256:e952f001576c1c06b31cc92792cce73dbcc95cbb78037ce1e2a72bf5c3ea8235",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-534-d3b-provider-evidence-composition-backfill.md",
+        "plan_id": "PLAN-REVERSE-534-d3b-provider-evidence-composition-backfill",
+        "asset_id": "plan:12a8cb75b3ed72b98621ca0f22d4dc09",
+        "revision": 6,
+        "content_digest": "sha256:0fcb2355b1253222c22cbe55b530b6f4a4633622bb96a350fbb25dc93b8314d8"
+      }
     }
   ]
 }

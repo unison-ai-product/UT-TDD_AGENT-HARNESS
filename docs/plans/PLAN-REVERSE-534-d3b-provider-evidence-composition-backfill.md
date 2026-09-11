@@ -44,18 +44,18 @@ status: draft
 github_issue_id: 570
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:52b827f857b4278fa04c093a0429e541
-  command_id: plan-revise:issue-570:reverse:5
-  admitted_at: 2026-09-11T08:38:28.993Z
-  source_digest: sha256:a7eb83945bb0de3bdc5faa5ce89baf7aace70b00658f9d3922f9ea8485618fa5
-  decision_digest: sha256:232acf3804f6384eb35b95ff4c34c413b54d9b7c1c862e1660aee0ca8abfe9a7
-  receipt_digest: sha256:e391306e96288ab3d679d51c8ece7c2b439da46a54d54c28675f04b51b5c8f76
+  receipt_id: certificate:7858cbf692158d5a2545593b68cb22bc
+  command_id: plan-revise:issue-570:reverse:6
+  admitted_at: 2026-09-11T11:06:35.453Z
+  source_digest: sha256:0fcb2355b1253222c22cbe55b530b6f4a4633622bb96a350fbb25dc93b8314d8
+  decision_digest: sha256:e952f001576c1c06b31cc92792cce73dbcc95cbb78037ce1e2a72bf5c3ea8235
+  receipt_digest: sha256:55435a87c241177fa6a143833cf60e03693086fee602ae3ab015ba987606827b
   binding:
     path: docs/plans/PLAN-REVERSE-534-d3b-provider-evidence-composition-backfill.md
     plan_id: PLAN-REVERSE-534-d3b-provider-evidence-composition-backfill
     asset_id: plan:12a8cb75b3ed72b98621ca0f22d4dc09
-    revision: 5
-    content_digest: sha256:a7eb83945bb0de3bdc5faa5ce89baf7aace70b00658f9d3922f9ea8485618fa5
+    revision: 6
+    content_digest: sha256:0fcb2355b1253222c22cbe55b530b6f4a4633622bb96a350fbb25dc93b8314d8
   route:
     signal: reverse
     mode: reverse
@@ -76,8 +76,8 @@ admission_receipt:
     target_revision: 1
     phase: forward_merge
   escape_reason: "Issue #570 D3b provider evidence composition Reverse backfill
-    pair (R0); revision 5: mirror PLAN-L7-534 rev 7 (hardlink commit, strict
-    terminal, artifact binding, candidates 012/021/022)"
+    pair (R0); revision 6: align R1 and backprop scope with rev 7 hardlink
+    commit (Codex/Sol FLAG 27031890, rename residue)"
 ---
 
 # PLAN-REVERSE-534: D3b provider evidence composition の逆向き確認
@@ -97,8 +97,10 @@ artifact 配置と、L7-465 が所有する `unverified_family` 終端を別の�
 - **invocation fact の実在性**: 成功 attempt の provider / model は現状どこにも記録されないため、
   `projectReviewVerdict` の成功経路に `attempt_completed` を足す。event の欠落・重複・supersede は typed deny で、
   receipt から遡って推定しない (`-004..-006`)。
-- **順序と改変検出** (rev 2、Codex/Sol FLAG d4d0c34e): event は receipt 確定 (rename) より前に append し、
-  append 失敗・rename 失敗のどちらも retry 可能な非終端状態に落ちる。`receiptFileDigest` は receipt file bytes の
+- **順序と改変検出** (rev 2、Codex/Sol FLAG d4d0c34e; rev 6 で確定方式を Forward rev 7 に揃えた): event は
+  receipt 確定 (temp → `fs.linkSync(temp, final)` による atomic no-clobber commit) より前に append し、append 失敗・
+  link 失敗 (`receipt_link_failed`) のどちらも retry 可能な非終端状態に落ちる。rename・precheck 付き上書きは使わない
+  (Forward §3.2 / `-022` と同一の規範。旧記述の rename は rev 6 で撤回)。`receiptFileDigest` は receipt file bytes の
   sha256 で、composition が再計算して改変を `receipt_mutated` で deny する (`-015..-018`)。digest の対象 bytes は
   writer の serialization (`JSON.stringify(…, null, 2)` + LF、UTF-8) そのものであり、`receiptDigest` field の混入や
   request digest と同値の `receiptFileDigest` は `invocation_fact_schema_invalid` で deny する (rev 3、`-019`)。
@@ -118,7 +120,7 @@ artifact 配置と、L7-465 が所有する `unverified_family` 終端を別の�
 | --- | --- | --- |
 | requirements | not_impacted | cross-review の非著者性と custody の fail-close 要求を変更しない。 |
 | L4-basic-design | not_impacted | review custody / provider 分離の責務境界を変更しない。 |
-| L5-detailed-design | updated (additive) | audit event kind に `attempt_completed` (新 field `receiptFileDigest`) を追加し、receipt 確定を temp → append → rename の順序に固定する (DB schema 変更なし)。 |
+| L5-detailed-design | updated (additive) | audit event kind に `attempt_completed` (新 field `receiptFileDigest`) を追加し、receipt 確定を temp 書き込み → event append → `linkSync` atomic no-clobber commit の順序に固定する (rename 不使用、DB schema 変更なし)。 |
 | L6-function-design | not_impacted | D3a / D3b / D3c / D3d の役割定義 (`PLAN-L7-465`) を変更しない。 |
 | L7-unit-test-design | updated | 実装 PR で `U-D3BCOMP-*` を共有 `L7-unit-test-design.md` へ 1:1 登録する。`CANDIDATE-D3B-*` は変更しない。 |
 | L12-acceptance-test-design | not_impacted | #541 seal の受入は #541 側が所有する。 |
