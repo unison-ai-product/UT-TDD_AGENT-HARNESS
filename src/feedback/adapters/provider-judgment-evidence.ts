@@ -58,6 +58,23 @@ function sameBytes(left: Uint8Array, right: Uint8Array): boolean {
   return left.length === right.length && left.every((byte, index) => byte === right[index]);
 }
 
+function sameAttemptIdentity(
+  left: ProviderJudgmentAttemptIdentity,
+  right: ProviderJudgmentAttemptIdentity,
+): boolean {
+  return (
+    left.repository === right.repository &&
+    left.prNumber === right.prNumber &&
+    left.headSha === right.headSha &&
+    left.requestMemoryId === right.requestMemoryId &&
+    left.requestDigest === right.requestDigest &&
+    left.reviewRevision === right.reviewRevision &&
+    left.attempt === right.attempt &&
+    left.authorFamily === right.authorFamily &&
+    left.invocationNonce === right.invocationNonce
+  );
+}
+
 function parsePayload(bytes: Uint8Array): ProviderJudgmentPayload | null {
   try {
     return JSON.parse(
@@ -106,6 +123,7 @@ export class FileProviderJudgmentEvidenceAdapter implements ProviderJudgmentEvid
       return { status: "provider_failure", detail: "evidence envelope invalid" };
     if (
       JSON.stringify(envelope.identity) !== JSON.stringify(identity) ||
+      !sameAttemptIdentity(identity, this.#verifiedInvocation) ||
       envelope.provider !== this.#verifiedInvocation.provider ||
       envelope.model !== this.#verifiedInvocation.model
     ) {
