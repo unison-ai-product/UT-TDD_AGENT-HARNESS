@@ -32,9 +32,10 @@ dependencies:
     - docs/plans/PLAN-RECOVERY-16-sealed-plan-recovery.md
     - docs/test-design/harness/L7-unit-test-design.md
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/541
-review_evidence: []
-workflow_phase: R0
-status: draft
+review_evidence:
+  - "PR #564 exact HEAD 062fa30372a303167f46423909ca7aa6f9acee8c: contract PASS-WEAK / blocking 0; Issue #568 implementation evidence pending"
+workflow_phase: R1
+status: confirmed
 github_issue_id: 562
 ---
 

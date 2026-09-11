@@ -30,6 +30,14 @@ generates:
     artifact_type: test_design
   - artifact_path: docs/plans/PLAN-REVERSE-562-d3b-provider-judgment-backfill.md
     artifact_type: markdown_doc
+  - artifact_path: src/feedback/provider-judgment.ts
+    artifact_type: source_module
+  - artifact_path: src/feedback/ports/provider-judgment-evidence.ts
+    artifact_type: source_module
+  - artifact_path: src/feedback/adapters/provider-judgment-evidence.ts
+    artifact_type: source_module
+  - artifact_path: tests/provider-judgment.test.ts
+    artifact_type: test_suite
 dependencies:
   parent: docs/plans/PLAN-L7-465-cross-review-author-binding.md
   requires:
@@ -46,8 +54,9 @@ dependencies:
     - src/feedback/ports/provider-family-authority.ts
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/562
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/541
-review_evidence: []
-status: draft
+review_evidence:
+  - "PR #564 exact HEAD 062fa30372a303167f46423909ca7aa6f9acee8c: Claude Opus PASS-WEAK / blocking 0; canonical receipt a2a46e5efe3f6ff63ca4fe89d512a2632f2c3b0f39f44d7370851eea88f7df84; CI run 34561108923 5/5 Green"
+status: confirmed
 github_issue_id: 562
 ---
 
