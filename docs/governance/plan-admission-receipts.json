@@ -3456,6 +3456,22 @@
         "revision": 2,
         "content_digest": "sha256:fc190e49646574b2e6b7d4a052b22a4a7da2a547c9313520eabf8b6cadc5388a"
       }
+    },
+    {
+      "sequence": 217,
+      "previous_record_digest": "sha256:d862156c29d591115a4f21213b07dc5bd67fbf9ccfe209f4cbfe0cb3a5bad1b6",
+      "record_digest": "sha256:be0524d3564807dab560469d9afa3a5b8b2a9a09a66ab83588f9e2acac378c26",
+      "command_id": "plan-revise:issue-570:forward:3",
+      "receipt_id": "certificate:fbf229b6c46a308586e4b5d9573f4670",
+      "receipt_digest": "sha256:5d28c983e1ca7a2c6a42dcc62893dcd05832c727bf23504065514aca12919eb4",
+      "decision_digest": "sha256:23849bd370ee1cb9631654b82d531708496a17afdd7ebe6297606f50cb0f92ed",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-534-d3b-provider-evidence-composition.md",
+        "plan_id": "PLAN-L7-534-d3b-provider-evidence-composition",
+        "asset_id": "plan:2eeafb9dd9883770a0f56c936c08bd1f",
+        "revision": 3,
+        "content_digest": "sha256:75133032dc331752854062d733e6deb386ad6ae984f18ffeeea298452b22ac40"
+      }
     }
   ]
 }

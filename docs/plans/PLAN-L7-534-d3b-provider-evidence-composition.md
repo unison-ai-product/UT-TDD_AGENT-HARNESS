@@ -9,7 +9,6 @@ route_signal: feature_addition
 route_mode: add-feature
 created: 2026-09-11
 updated: 2026-09-11
-revision: 2
 owner: Claude / Fable (pair-freeze) · Codex worker (implementation)
 parent_design: docs/plans/PLAN-L6-85-automated-pr-cross-review-merge-contract.md
 pair_artifact: docs/test-design/harness/L7-d3b-provider-evidence-composition-test-design.md
@@ -46,18 +45,18 @@ status: draft
 github_issue_id: 570
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:d9bb9eaacbab9580648e97777f8304ae
-  command_id: plan-revise:issue-570:forward:2
-  admitted_at: 2026-09-11T06:52:27.907Z
-  source_digest: sha256:fc190e49646574b2e6b7d4a052b22a4a7da2a547c9313520eabf8b6cadc5388a
-  decision_digest: sha256:697c1e68edbd0834b86ff62a76cc2eb65b38b1372f757d0a20210a38ca4064cf
-  receipt_digest: sha256:533eb233a26eb6d0409698f3e4a821a263a27271bc7ab9cc958127b018e7bd88
+  receipt_id: certificate:fbf229b6c46a308586e4b5d9573f4670
+  command_id: plan-revise:issue-570:forward:3
+  admitted_at: 2026-09-11T06:53:33.504Z
+  source_digest: sha256:75133032dc331752854062d733e6deb386ad6ae984f18ffeeea298452b22ac40
+  decision_digest: sha256:23849bd370ee1cb9631654b82d531708496a17afdd7ebe6297606f50cb0f92ed
+  receipt_digest: sha256:5d28c983e1ca7a2c6a42dcc62893dcd05832c727bf23504065514aca12919eb4
   binding:
     path: docs/plans/PLAN-L7-534-d3b-provider-evidence-composition.md
     plan_id: PLAN-L7-534-d3b-provider-evidence-composition
     asset_id: plan:2eeafb9dd9883770a0f56c936c08bd1f
-    revision: 2
-    content_digest: sha256:fc190e49646574b2e6b7d4a052b22a4a7da2a547c9313520eabf8b6cadc5388a
+    revision: 3
+    content_digest: sha256:75133032dc331752854062d733e6deb386ad6ae984f18ffeeea298452b22ac40
   route:
     signal: feature_addition
     mode: add-feature
@@ -76,8 +75,8 @@ admission_receipt:
     phase: forward_merge
   escape_reason: "Issue #570 D3b provider evidence composition pair-freeze
     (add-feature; PLAN-L7-562 producer downstream, PLAN-L6-85 rev 2 origin);
-    revision 2: Codex advisory — attempt_completed is a new
-    ReviewCustodyAuditEvent kind (union expansion made explicit in §3.2 / §6)"
+    revision 3: remove stray revision frontmatter key introduced in rev 2 (no
+    other PLAN carries it)"
 ---
 
 # PLAN-L7-534: D3b provider evidence composition
