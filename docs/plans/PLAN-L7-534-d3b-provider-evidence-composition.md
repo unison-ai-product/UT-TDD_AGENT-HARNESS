@@ -9,6 +9,7 @@ route_signal: feature_addition
 route_mode: add-feature
 created: 2026-09-11
 updated: 2026-09-11
+revision: 2
 owner: Claude / Fable (pair-freeze) · Codex worker (implementation)
 parent_design: docs/plans/PLAN-L6-85-automated-pr-cross-review-merge-contract.md
 pair_artifact: docs/test-design/harness/L7-d3b-provider-evidence-composition-test-design.md
@@ -45,18 +46,18 @@ status: draft
 github_issue_id: 570
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:2eeafb9dd9883770a0f56c936c08bd1f
-  command_id: plan-draft:issue-570:forward:1
-  admitted_at: 2026-09-11T06:24:28.146Z
-  source_digest: sha256:0f32da5f2b51d07df1076afacda4615a71b836fe52bc22c25241cbf6c1bb7266
-  decision_digest: sha256:2f8cb6ed06fc2e153f0f30d1ebb63d6fd9cf86058be9034b7fb1b8e08253bfe1
-  receipt_digest: sha256:d67b059050c08c9e3764085a3e83bd660e9a8e8894c91c0e14fa84dc8e26b112
+  receipt_id: certificate:d9bb9eaacbab9580648e97777f8304ae
+  command_id: plan-revise:issue-570:forward:2
+  admitted_at: 2026-09-11T06:52:27.907Z
+  source_digest: sha256:fc190e49646574b2e6b7d4a052b22a4a7da2a547c9313520eabf8b6cadc5388a
+  decision_digest: sha256:697c1e68edbd0834b86ff62a76cc2eb65b38b1372f757d0a20210a38ca4064cf
+  receipt_digest: sha256:533eb233a26eb6d0409698f3e4a821a263a27271bc7ab9cc958127b018e7bd88
   binding:
     path: docs/plans/PLAN-L7-534-d3b-provider-evidence-composition.md
     plan_id: PLAN-L7-534-d3b-provider-evidence-composition
     asset_id: plan:2eeafb9dd9883770a0f56c936c08bd1f
-    revision: 1
-    content_digest: sha256:0f32da5f2b51d07df1076afacda4615a71b836fe52bc22c25241cbf6c1bb7266
+    revision: 2
+    content_digest: sha256:fc190e49646574b2e6b7d4a052b22a4a7da2a547c9313520eabf8b6cadc5388a
   route:
     signal: feature_addition
     mode: add-feature
@@ -74,7 +75,9 @@ admission_receipt:
     target_revision: 1
     phase: forward_merge
   escape_reason: "Issue #570 D3b provider evidence composition pair-freeze
-    (add-feature; PLAN-L7-562 producer downstream, PLAN-L6-85 rev 2 origin)"
+    (add-feature; PLAN-L7-562 producer downstream, PLAN-L6-85 rev 2 origin);
+    revision 2: Codex advisory — attempt_completed is a new
+    ReviewCustodyAuditEvent kind (union expansion made explicit in §3.2 / §6)"
 ---
 
 # PLAN-L7-534: D3b provider evidence composition
@@ -143,7 +146,10 @@ attempt 単位で terminal 判定できるか」は実測で **否** (成功 att
 - `src/cli/delegation.ts` が `projectReviewVerdict` の成功直後 (cleanup より前) に audit event
   `attempt_completed` を append する: `requestDigest` / `attempt` / `exactHead` / `verdictPath` / `recordedAt` /
   `provider` (`plan.provider`) / `model` (`plan.model`) / `exitCode` / `receiptDigest` / `verdictDigest`。
-  既存の `ReviewCustodyAuditEvent` の optional field をそのまま使い、新 field を足さない。
+  `attempt_completed` は現行の `ReviewCustodyAuditEvent` kind union (`attempt_execution_failed` /
+  `attempt_verdict_rejected` / `attempt_outcome_conflict` / `superseded_attempt` / `cleanup_pending`) に
+  **存在しない新 kind** であり、PR-1 が union へ 1 つ追加する。既存 kind の意味と optional field はそのまま使い、
+  新 field を足さない (DB schema 変更なし)。
 - composition は (requestDigest, attempt) に対して `attempt_completed` が **ちょうど 1 件**あり、その後に同 attempt を
   対象とする `superseded_attempt` / `attempt_outcome_conflict` が無く、`receiptDigest` が receipt file の digest と
   一致することを要求する。0 件は `invocation_fact_unavailable`、2 件以上は `invocation_fact_ambiguous`
@@ -201,7 +207,7 @@ attempt 単位で terminal 判定できるか」は実測で **否** (成功 att
 | PR | 論点 | 前提 |
 | --- | --- | --- |
 | PR-0 (本 PR) | 本 PLAN + `PLAN-REVERSE-534` + pair test-design の pair-freeze (docs のみ) | なし |
-| PR-1 | `src/feedback/provider-judgment-composition.ts` 1 module + `delegation.ts` の `attempt_completed` 1 行結線 + テスト。CANDIDATE-U-D3BCOMP-001..010 の Red→Green | PR-0 の非著者 PASS receipt、PR #569 の main 到達 |
+| PR-1 | `src/feedback/provider-judgment-composition.ts` 1 module + audit kind union への `attempt_completed` 追加 + `delegation.ts` の 1 行結線 + テスト。CANDIDATE-U-D3BCOMP-001..010 の Red→Green | PR-0 の非著者 PASS receipt、PR #569 の main 到達 |
 | PR-2 | runner の operator env 拒否 + artifact bytes 再計算 + CLI `review compose-judgment` の最小配線 + テスト。CANDIDATE-U-D3BCOMP-011..014 | PR-1 merge |
 
 PR-1 と PR-2 を 1 PR に統合しない。#541 seal、#540 cutover writer、#487 Bun 削除、primary `harness.db` への
