@@ -21,7 +21,7 @@ agent_slots:
   - role: tl
     slot_label: Sol / Claude Opus - L7-562 producer 契約と L7-534 composition 境界を逆向き検証する
   - role: qa
-    slot_label: Terra - CANDIDATE-U-D3BCOMP-001..014 を独立照合し、operator 文字列受理・fact 推定・
+    slot_label: Terra - CANDIDATE-U-D3BCOMP-001..018 を独立照合し、operator 文字列受理・fact 推定・
       再読込省略・replay 転用を攻撃する
 generates:
   - artifact_path: docs/plans/PLAN-REVERSE-534-d3b-provider-evidence-composition-backfill.md
@@ -44,18 +44,18 @@ status: draft
 github_issue_id: 570
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:12a8cb75b3ed72b98621ca0f22d4dc09
-  command_id: plan-draft:issue-570:reverse:1
-  admitted_at: 2026-09-11T06:24:45.920Z
-  source_digest: sha256:274583a16714f6bb3a5c75a25b5982d02ce9eacab97de55861605379d9c90098
-  decision_digest: sha256:fd03437e455c6b9cdfbe1c74f77f384e1175380aa8af769fe76a19ed682d8a08
-  receipt_digest: sha256:36db7666834ec8020d020080fb0583e5af2e40144898b56a2b6c5a513dba0720
+  receipt_id: certificate:169ab8374c456effc24cf1f98ffb8a72
+  command_id: plan-revise:issue-570:reverse:2
+  admitted_at: 2026-09-11T07:35:15.359Z
+  source_digest: sha256:f48468bfeb2f46a0902ea284f93a08ca30e910d887ab98f42a708f09c93969dc
+  decision_digest: sha256:1b79e1669062f1e4eee12a4a60dc27bc5c4c42ee8df951923cbc5fb87b492e03
+  receipt_digest: sha256:4d9d0f02938ff5cce4dc40675caf4cb99a320bb81eb35791614b7d2ef23c99f0
   binding:
     path: docs/plans/PLAN-REVERSE-534-d3b-provider-evidence-composition-backfill.md
     plan_id: PLAN-REVERSE-534-d3b-provider-evidence-composition-backfill
     asset_id: plan:12a8cb75b3ed72b98621ca0f22d4dc09
-    revision: 1
-    content_digest: sha256:274583a16714f6bb3a5c75a25b5982d02ce9eacab97de55861605379d9c90098
+    revision: 2
+    content_digest: sha256:f48468bfeb2f46a0902ea284f93a08ca30e910d887ab98f42a708f09c93969dc
   route:
     signal: reverse
     mode: reverse
@@ -75,7 +75,9 @@ admission_receipt:
     target_plan_id: PLAN-L7-534-d3b-provider-evidence-composition
     target_revision: 1
     phase: forward_merge
-  escape_reason: "Issue #570 D3b provider evidence composition Reverse backfill pair (R0)"
+  escape_reason: "Issue #570 D3b provider evidence composition Reverse backfill
+    pair (R0); revision 2: mirror PLAN-L7-534 rev 4 (ordering,
+    receiptFileDigest, candidates 015..018)"
 ---
 
 # PLAN-REVERSE-534: D3b provider evidence composition の逆向き確認
@@ -93,8 +95,11 @@ artifact 配置と、L7-465 が所有する `unverified_family` 終端を別の�
   project identity の 4 つだけから来る (`-001..-003`)。verdict envelope の自己申告行・memory・PR comment は
   入力ではない。
 - **invocation fact の実在性**: 成功 attempt の provider / model は現状どこにも記録されないため、
-  `delegation.ts` に `attempt_completed` を 1 行足す。event の欠落・重複・supersede は typed deny で、
+  `projectReviewVerdict` の成功経路に `attempt_completed` を足す。event の欠落・重複・supersede は typed deny で、
   receipt から遡って推定しない (`-004..-006`)。
+- **順序と改変検出** (rev 2、Codex/Sol FLAG d4d0c34e): event は receipt 確定 (rename) より前に append し、
+  append 失敗・rename 失敗のどちらも retry 可能な非終端状態に落ちる。`receiptFileDigest` は receipt file bytes の
+  sha256 で、composition が再計算して改変を `receipt_mutated` で deny する (`-015..-018`)。
 - **evidence document の忠実性**: receipt の verdict / findings をそのまま `provider-judgment-evidence/v1` に写す。
   整列はするが dedup はしない (`-007`、`-008`)。
 - **artifact の自己検証**: producer の戻り値を信用せず再読込して digest / identity を検証する (`-009`)。producer の
@@ -108,7 +113,7 @@ artifact 配置と、L7-465 が所有する `unverified_family` 終端を別の�
 | --- | --- | --- |
 | requirements | not_impacted | cross-review の非著者性と custody の fail-close 要求を変更しない。 |
 | L4-basic-design | not_impacted | review custody / provider 分離の責務境界を変更しない。 |
-| L5-detailed-design | updated (additive) | audit event kind に `attempt_completed` を追加する (既存 optional field のみ使用、DB schema 変更なし)。 |
+| L5-detailed-design | updated (additive) | audit event kind に `attempt_completed` (新 field `receiptFileDigest`) を追加し、receipt 確定を temp → append → rename の順序に固定する (DB schema 変更なし)。 |
 | L6-function-design | not_impacted | D3a / D3b / D3c / D3d の役割定義 (`PLAN-L7-465`) を変更しない。 |
 | L7-unit-test-design | updated | 実装 PR で `U-D3BCOMP-*` を共有 `L7-unit-test-design.md` へ 1:1 登録する。`CANDIDATE-D3B-*` は変更しない。 |
 | L12-acceptance-test-design | not_impacted | #541 seal の受入は #541 側が所有する。 |
@@ -131,6 +136,10 @@ artifact 配置と、L7-465 が所有する `unverified_family` 終端を別の�
 | 012 | PR-2 | artifact bytes を 1 byte 改変 | 再計算 digest ≠ payload の identity 整合失敗、draft 0 |
 | 013 | PR-2 | 別 PR / head の artifact bytes を渡す | `judgment_identity_mismatch`、draft 0 |
 | 014 | PR-2 | CLI 出力に payload / findings を含める実装へ変異 | stdout は artifact path と ref のみ |
+| 015 | PR-1 | receipt file を 1 byte 改変してから compose | `receipt_mutated`、write 0 |
+| 016 | PR-1 | audit append を失敗させて review を完了させる | receipt 不在、`attempt_execution_failed`、次 attempt が開始できる |
+| 017 | PR-1 | rename を失敗させる (宛先既存 / EACCES) | event 有り receipt 無し、次 attempt 開始可、compose は `receipt_unavailable` |
+| 018 | PR-1 | temp 残置のまま次 attempt を開始 | temp は無視して消され、新 attempt の receipt が正しく確定する |
 
 ## R3: gap 分類と backfill
 
@@ -140,6 +149,7 @@ artifact 配置と、L7-465 が所有する `unverified_family` 終端を別の�
 - `attempt_completed` が無い履歴に対して fact を捏造・補完していないか
 - artifact の再読込を省略して producer の戻り値を信用していないか
 - runner に operator 文字列の fallback (deprecated 警告だけ) が残っていないか
+- receipt 書込が event append より先に確定する経路 (receipt-without-fact) が残っていないか
 - bytes 再計算後の identity 照合を省き、別 PR の artifact を転用できないか
 - #541 seal / #540 / #487 / `harness.db` 直接書込が混入していないか
 
@@ -150,7 +160,7 @@ gap は L7-534 の contract 改訂 (revision N+1) で閉じ、`PLAN-L7-562` / `P
 
 - PR-1 (composition module + `attempt_completed`) と PR-2 (runner / CLI) が別 PR で main 到達し、各々の exact HEAD に
   Linux / Windows / aggregate Green と非著者 closing receipt が存在する。
-- `CANDIDATE-U-D3BCOMP-001..014` が同番号の `U-D3BCOMP-*` へ 1:1 昇格し、同一 implementation revision の
+- `CANDIDATE-U-D3BCOMP-001..018` が同番号の `U-D3BCOMP-*` へ 1:1 昇格し、同一 implementation revision の
   Red→Green 実測を引用している。
 - PR #569 が main 到達済みで、composition が呼ぶ producer export が本 PLAN §1 の実測と一致している。
 - PR #557 の実 artifact 生成と #541 seal は本 PLAN の完了に含めない。

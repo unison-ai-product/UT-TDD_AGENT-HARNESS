@@ -48,13 +48,18 @@ runner の bytes 再計算だけを検証する差分 oracle を定義する。
 | `CANDIDATE-U-D3BCOMP-012` | `UT_TDD_CUSTODY_JUDGMENT_ARTIFACT` の bytes を 1 byte 改変 | 再計算 digest と payload の整合検証で deny、draft 0。改変前は draft の `judgmentDigest` / `providerEvidenceRef` が再計算値と一致 |
 | `CANDIDATE-U-D3BCOMP-013` | 別 PR / 別 head / 別 request digest / 別 attempt で生成した正当な artifact bytes を渡す | `judgment_identity_mismatch`、draft 0 |
 | `CANDIDATE-U-D3BCOMP-014` | CLI `review compose-judgment` の stdout に payload / findings / nonce を含める実装へ変異 | stdout は artifact path と `d3b:<digest>` のみ。それ以外の行があれば Red |
+| `CANDIDATE-U-D3BCOMP-015` | 正常な receipt file の 1 byte を改変してから compose | `receipt_mutated` (`attempt_completed.receiptFileDigest` と再計算 sha256 の不一致)。write 0。request digest で照合して通したら Red |
+| `CANDIDATE-U-D3BCOMP-016` | audit append を fault injection で失敗させ、review を完了させる | receipt file 不在、temp 残置 0、`attempt_execution_failed` が記録され、`beginReviewAttempt` が次 attempt を開始できる。receipt が残ったら Red |
+| `CANDIDATE-U-D3BCOMP-017` | temp → receipt の rename を失敗させる (宛先に既存 file / EACCES) | `attempt_completed` 有り・receipt 無し。`beginReviewAttempt` は非終端として次 attempt を開始でき、compose は `receipt_unavailable`。既存 receipt を上書きしたら Red |
+| `CANDIDATE-U-D3BCOMP-018` | temp file を残置したまま次 attempt を開始する | temp は無視して消され、新 attempt の event と receipt が一致する。temp を receipt として採用したら Red |
 
-`001..010` は PR-1 (composition module + `attempt_completed`)、`011..014` は PR-2 (runner / CLI) が所有する。実装 PR で
+`001..010` と `015..018` は PR-1 (composition module + `attempt_completed` + custody 順序化)、`011..014` は PR-2 (runner / CLI) が所有する。実装 PR で
 Red→Green を観測した行だけを同番号の `U-D3BCOMP-*` へ 1:1 で昇格し、共有 `L7-unit-test-design.md` へ登録する。
 
 ## 4. Gate and scope fence
 
 - composition の入力は request / receipt / `attempt_completed` / tracked identity の 4 つだけ (001..006)。
+- event は receipt 確定より前に append し、どの失敗点も retry 可能な非終端に落ちる。receipt 改変は bytes digest で deny (015..018)。
 - evidence document は receipt を写すだけで、dedup・補完・推定をしない (007、008)。
 - producer の戻り値を信用せず artifact を再読込する (009)。replay は write 0 (010)。
 - runner は operator 文字列を presence で拒否し、bytes から再計算し、identity を照合する (011..013)。
