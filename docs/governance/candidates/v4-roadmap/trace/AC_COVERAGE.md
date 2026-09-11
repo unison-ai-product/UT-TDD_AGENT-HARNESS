@@ -1,0 +1,80 @@
+# 受入候補72件の版対応
+
+生成元：data/requirement_trace.json。各候補をtest-designへ降下して実行する計画。すべて未実行であり、表の行があることをテスト通過と数えない。
+
+| AC | 対応FR | 一式受入目標 | 状態 |
+|---|---|---|---|
+| UTV4-AC-001 | UTV4-FR-001 | R05 | 未実行 |
+| UTV4-AC-002 | UTV4-FR-002 | R05 | 未実行 |
+| UTV4-AC-003 | UTV4-FR-002 | R05 | 未実行 |
+| UTV4-AC-004 | UTV4-FR-003 | R05 | 未実行 |
+| UTV4-AC-005 | UTV4-FR-003 | R05 | 未実行 |
+| UTV4-AC-006 | UTV4-FR-004 | R05 | 未実行 |
+| UTV4-AC-007 | UTV4-FR-005 | R05 | 未実行 |
+| UTV4-AC-008 | UTV4-FR-005 | R05 | 未実行 |
+| UTV4-AC-009 | UTV4-FR-005 | R05 | 未実行 |
+| UTV4-AC-010 | UTV4-FR-005 | R05 | 未実行 |
+| UTV4-AC-011 | UTV4-FR-006 | R03 | 未実行 |
+| UTV4-AC-012 | UTV4-FR-006 | R03 | 未実行 |
+| UTV4-AC-013 | UTV4-FR-007 | R07 | 未実行 |
+| UTV4-AC-014 | UTV4-FR-008 | R04 | 未実行 |
+| UTV4-AC-015 | UTV4-FR-008 | R04 | 未実行 |
+| UTV4-AC-016 | UTV4-FR-009 | R04 | 未実行 |
+| UTV4-AC-017 | UTV4-FR-009 | R04 | 未実行 |
+| UTV4-AC-018 | UTV4-FR-010 | R09 | 未実行 |
+| UTV4-AC-019 | UTV4-FR-010 | R09 | 未実行 |
+| UTV4-AC-020 | UTV4-FR-011 | R09 | 未実行 |
+| UTV4-AC-021 | UTV4-FR-012 | R05 | 未実行 |
+| UTV4-AC-022 | UTV4-FR-013 | R08 | 未実行 |
+| UTV4-AC-023 | UTV4-FR-014 | R00 | 未実行 |
+| UTV4-AC-024 | UTV4-FR-015 | R07 | 未実行 |
+| UTV4-AC-025 | UTV4-FR-016 | R07 | 未実行 |
+| UTV4-AC-026 | UTV4-FR-017 | R07 | 未実行 |
+| UTV4-AC-027 | UTV4-FR-018 | R07 | 未実行 |
+| UTV4-AC-028 | UTV4-FR-019 | R09 | 未実行 |
+| UTV4-AC-029 | UTV4-FR-020 | R09 | 未実行 |
+| UTV4-AC-030 | UTV4-FR-021 | R09 | 未実行 |
+| UTV4-AC-031 | UTV4-FR-022 | R09 | 未実行 |
+| UTV4-AC-032 | UTV4-FR-023 | R08 | 未実行 |
+| UTV4-AC-033 | UTV4-FR-023 | R08 | 未実行 |
+| UTV4-AC-034 | UTV4-FR-024 | R08 | 未実行 |
+| UTV4-AC-035 | UTV4-FR-025 | R09 | 未実行 |
+| UTV4-AC-036 | UTV4-FR-026 | R09 | 未実行 |
+| UTV4-AC-037 | UTV4-FR-027 | R05 | 未実行 |
+| UTV4-AC-038 | UTV4-FR-004 | R05 | 未実行 |
+| UTV4-AC-039 | UTV4-FR-028 | R07 | 未実行 |
+| UTV4-AC-040 | UTV4-FR-029 | R07 | 未実行 |
+| UTV4-AC-041 | UTV4-FR-030 | R05 | 未実行 |
+| UTV4-AC-042 | UTV4-FR-031 | R05 | 未実行 |
+| UTV4-AC-043 | UTV4-FR-032 | R05 | 未実行 |
+| UTV4-AC-044 | UTV4-FR-033 | R05 | 未実行 |
+| UTV4-AC-045 | UTV4-FR-034 | R05 | 未実行 |
+| UTV4-AC-046 | UTV4-FR-035 | R07 | 未実行 |
+| UTV4-AC-047 | UTV4-FR-036 | R05 | 未実行 |
+| UTV4-AC-048 | UTV4-FR-008 | R04 | 未実行 |
+| UTV4-AC-049 | UTV4-FR-037 | R05 | 未実行 |
+| UTV4-AC-050 | UTV4-FR-038 | R09 | 未実行 |
+| UTV4-AC-051 | UTV4-FR-039 | R07 | 未実行 |
+| UTV4-AC-052 | UTV4-FR-040 | R09 | 未実行 |
+| UTV4-AC-053 | UTV4-FR-041 | R03 | 未実行 |
+| UTV4-AC-054 | UTV4-FR-042 | R09 | 未実行 |
+| UTV4-AC-055 | UTV4-FR-043 | R09 | 未実行 |
+| UTV4-AC-056 | UTV4-FR-044 | R09 | 未実行 |
+| UTV4-AC-057 | UTV4-FR-045 | R09 | 未実行 |
+| UTV4-AC-058 | UTV4-FR-046 | R07 | 未実行 |
+| UTV4-AC-059 | UTV4-FR-047 | R04 | 未実行 |
+| UTV4-AC-060 | UTV4-FR-048 | R07 | 未実行 |
+| UTV4-AC-061 | UTV4-FR-049 | R08 | 未実行 |
+| UTV4-AC-062 | UTV4-FR-050 | R08 | 未実行 |
+| UTV4-AC-063 | UTV4-FR-051 | R08 | 未実行 |
+| UTV4-AC-064 | UTV4-FR-052 | R05 | 未実行 |
+| UTV4-AC-065 | UTV4-FR-053 | R09 | 未実行 |
+| UTV4-AC-066 | UTV4-FR-054 | R05 | 未実行 |
+| UTV4-AC-067 | UTV4-FR-055 | R05 | 未実行 |
+| UTV4-AC-068 | UTV4-FR-056 | R07 | 未実行 |
+| UTV4-AC-069 | UTV4-FR-057 | R07 | 未実行 |
+| UTV4-AC-070 | UTV4-FR-056 | R07 | 未実行 |
+| UTV4-AC-071 | UTV4-FR-058 | R07 | 未実行 |
+| UTV4-AC-072 | UTV4-FR-059 | R07 | 未実行 |
+
+元の刺激/oracleはPR #517の固定HEADの候補を参照。追加要求はADDITIONS.mdと各workstream。sourceへの参照は[出典](../SOURCES.md)。

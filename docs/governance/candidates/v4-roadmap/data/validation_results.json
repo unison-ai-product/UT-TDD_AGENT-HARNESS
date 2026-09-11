@@ -1,0 +1,73 @@
+{
+  "document_version": "2.0",
+  "result": "pass",
+  "scope": "offline roadmap structure + synthetic fixture only",
+  "github_changes": false,
+  "runtime_tests_executed": false,
+  "independent_review_performed": false,
+  "product_acceptance_claim": false,
+  "checks": [
+    {
+      "check": "JSON parse",
+      "result": "pass",
+      "details": {
+        "files": 9
+      }
+    },
+    {
+      "check": "IDs / coverage / DAG / prerequisite / migration order",
+      "result": "pass",
+      "details": {
+        "releases": 11,
+        "work_packages": 39,
+        "original_BR_mapped": 32,
+        "original_FR_mapped": 59,
+        "original_AC_mapped": 72,
+        "additional_requirements": 13,
+        "release_acceptance_cases": 54,
+        "additional_acceptance_cases": 39,
+        "migration_domains": 20,
+        "capabilities": 20
+      }
+    },
+    {
+      "check": "Generated Markdown parity",
+      "result": "pass",
+      "details": "CHECK OK: 16 generated Markdown files"
+    },
+    {
+      "check": "Relative Markdown links",
+      "result": "pass",
+      "details": {
+        "checked_relative_links": 111,
+        "missing_or_escape": 0
+      }
+    },
+    {
+      "check": "Synthetic schedule resource / dependency / stage order",
+      "result": "pass",
+      "details": {
+        "makespan_fixture_units": 24,
+        "dependency_violation_count": 0,
+        "resource_conflict_count": 0,
+        "task_count": 5
+      }
+    },
+    {
+      "check": "Validator negative self-tests",
+      "result": "pass",
+      "details": {
+        "rejected_invalid_fixtures": 7,
+        "scope": "documentation validator only"
+      }
+    },
+    {
+      "check": "PR517 compact handoff",
+      "result": "pass",
+      "details": {
+        "characters": 2076,
+        "max": 4000
+      }
+    }
+  ]
+}

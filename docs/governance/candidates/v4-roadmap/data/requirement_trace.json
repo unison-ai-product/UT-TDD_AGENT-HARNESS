@@ -1,0 +1,1348 @@
+{
+  "status": "planning_trace_not_implementation_coverage",
+  "pr517_head": "c21b54fb0d3f2d5a73a7826cc41233634456cac9",
+  "requirements": [
+    {
+      "id": "UTV4-FR-001",
+      "summary": "人間authorityの分離",
+      "br": [
+        "UTV4-BR-001"
+      ],
+      "ac": [
+        "UTV4-AC-001"
+      ],
+      "starts": "R01",
+      "complete": "R05",
+      "note": "後続consumerの適用も同じ共通契約を使用。表は計画上の対応であり、実装済み/受入済みを意味しない。",
+      "evidence_status": "not_verified",
+      "source_ref": "GH-PR517-FR"
+    },
+    {
+      "id": "UTV4-FR-002",
+      "summary": "層別human-on-the-loop",
+      "br": [
+        "UTV4-BR-002"
+      ],
+      "ac": [
+        "UTV4-AC-002",
+        "UTV4-AC-003"
+      ],
+      "starts": "R01",
+      "complete": "R05",
+      "note": "後続consumerの適用も同じ共通契約を使用。表は計画上の対応であり、実装済み/受入済みを意味しない。",
+      "evidence_status": "not_verified",
+      "source_ref": "GH-PR517-FR"
+    },
+    {
+      "id": "UTV4-FR-003",
+      "summary": "exactly-one owner",
+      "br": [
+        "UTV4-BR-003"
+      ],
+      "ac": [
+        "UTV4-AC-004",
+        "UTV4-AC-005"
+      ],
+      "starts": "R03",
+      "complete": "R05",
+      "note": "後続consumerの適用も同じ共通契約を使用。表は計画上の対応であり、実装済み/受入済みを意味しない。",
+      "evidence_status": "not_verified",
+      "source_ref": "GH-PR517-FR"
+    },
+    {
+      "id": "UTV4-FR-004",
+      "summary": "共通work item",
+      "br": [
+        "UTV4-BR-003"
+      ],
+      "ac": [
+        "UTV4-AC-006",
+        "UTV4-AC-038"
+      ],
+      "starts": "R03",
+      "complete": "R05",
+      "note": "後続consumerの適用も同じ共通契約を使用。表は計画上の対応であり、実装済み/受入済みを意味しない。",
+      "evidence_status": "not_verified",
+      "source_ref": "GH-PR517-FR"
+    },
+    {
+      "id": "UTV4-FR-005",
+      "summary": "leaseと衝突防止",
+      "br": [
+        "UTV4-BR-004"
+      ],
+      "ac": [
+        "UTV4-AC-007",
+        "UTV4-AC-008",
+        "UTV4-AC-009",
+        "UTV4-AC-010"
+      ],
+      "starts": "R03",
+      "complete": "R05",
+      "note": "後続consumerの適用も同じ共通契約を使用。表は計画上の対応であり、実装済み/受入済みを意味しない。",
+      "evidence_status": "not_verified",
+      "source_ref": "GH-PR517-FR"
+    },
+    {
+      "id": "UTV4-FR-006",
+      "summary": "artifact別正本",
+      "br": [
+        "UTV4-BR-005"
+      ],
+      "ac": [
+        "UTV4-AC-011",
+        "UTV4-AC-012"
+      ],
+      "starts": "R01",
+      "complete": "R03",
+      "note": "後続consumerの適用も同じ共通契約を使用。表は計画上の対応であり、実装済み/受入済みを意味しない。",
+      "evidence_status": "not_verified",
+      "source_ref": "GH-PR517-FR"
+    },
+    {
+      "id": "UTV4-FR-007",
+      "summary": "PLAN frontmatter段階移行",
+      "br": [
+        "UTV4-BR-005"
+      ],
+      "ac": [
+        "UTV4-AC-013"
+      ],
+      "starts": "R01",
+      "complete": "R07",
+      "note": "R03はadapter/移行契約、R05は対象active PLANの段階切替、R07で対象scopeの移行受入。全履歴変換は非目標。",
+      "evidence_status": "not_verified",
+      "source_ref": "GH-PR517-FR"
+    },
+    {
+      "id": "UTV4-FR-008",
+      "summary": "生成view・スプシ同期",
+      "br": [
+        "UTV4-BR-006"
+      ],
+      "ac": [
+        "UTV4-AC-014",
+        "UTV4-AC-015",
+        "UTV4-AC-048"
+      ],
+      "starts": "R03",
+      "complete": "R04",
+      "note": "後続consumerの適用も同じ共通契約を使用。表は計画上の対応であり、実装済み/受入済みを意味しない。",
+      "evidence_status": "not_verified",
+      "source_ref": "GH-PR517-FR"
+    },
+    {
+      "id": "UTV4-FR-009",
+      "summary": "admission経由の書戻し",
+      "br": [
+        "UTV4-BR-006"
+      ],
+      "ac": [
+        "UTV4-AC-016",
+        "UTV4-AC-017"
+      ],
+      "starts": "R03",
+      "complete": "R04",
+      "note": "後続consumerの適用も同じ共通契約を使用。表は計画上の対応であり、実装済み/受入済みを意味しない。",
+      "evidence_status": "not_verified",
+      "source_ref": "GH-PR517-FR"
+    },
+    {
+      "id": "UTV4-FR-010",
+      "summary": "改善候補と正規還流",
+      "br": [
+        "UTV4-BR-007"
+      ],
+      "ac": [
+        "UTV4-AC-018",
+        "UTV4-AC-019"
+      ],
+      "starts": "R03",
+      "complete": "R09",
+      "note": "後続consumerの適用も同じ共通契約を使用。表は計画上の対応であり、実装済み/受入済みを意味しない。",
+      "evidence_status": "not_verified",
+      "source_ref": "GH-PR517-FR"
+    },
+    {
+      "id": "UTV4-FR-011",
+      "summary": "人間向け改善digest",
+      "br": [
+        "UTV4-BR-007"
+      ],
+      "ac": [
+        "UTV4-AC-020"
+      ],
+      "starts": "R03",
+      "complete": "R09",
+      "note": "後続consumerの適用も同じ共通契約を使用。表は計画上の対応であり、実装済み/受入済みを意味しない。",
+      "evidence_status": "not_verified",
+      "source_ref": "GH-PR517-FR"
+    },
+    {
+      "id": "UTV4-FR-012",
+      "summary": "事実からの進捗",
+      "br": [
+        "UTV4-BR-008"
+      ],
+      "ac": [
+        "UTV4-AC-021"
+      ],
+      "starts": "R03",
+      "complete": "R05",
+      "note": "R04に現行PR/CI/receipt view、R05でticket/wait/actual graphへ拡張。",
+      "evidence_status": "not_verified",
+      "source_ref": "GH-PR517-FR"
+    },
+    {
+      "id": "UTV4-FR-013",
+      "summary": "独立reviewとexact identity",
+      "br": [
+        "UTV4-BR-013"
+      ],
+      "ac": [
+        "UTV4-AC-022"
+      ],
+      "starts": "R03",
+      "complete": "R08",
+      "note": "現行独立性は全版で維持。新profile条件を含む要件全体はR08。",
+      "evidence_status": "not_verified",
+      "source_ref": "GH-PR517-FR"
+    },
+    {
+      "id": "UTV4-FR-014",
+      "summary": "current/legacy分離",
+      "br": [
+        "UTV4-BR-014"
+      ],
+      "ac": [
+        "UTV4-AC-023"
+      ],
+      "starts": "R00",
+      "complete": "R00",
+      "note": "現行M0のBun/current境界を成立。以降のschema/role更新にも同じ原則を継承。",
+      "evidence_status": "not_verified",
+      "source_ref": "GH-PR517-FR"
+    },
+    {
+      "id": "UTV4-FR-015",
+      "summary": "要求intake",
+      "br": [
+        "UTV4-BR-009"
+      ],
+      "ac": [
+        "UTV4-AC-024"
+      ],
+      "starts": "R03",
+      "complete": "R07",
+      "note": "後続consumerの適用も同じ共通契約を使用。表は計画上の対応であり、実装済み/受入済みを意味しない。",
+      "evidence_status": "not_verified",
+      "source_ref": "GH-PR517-FR"
+    },
+    {
+      "id": "UTV4-FR-016",
+      "summary": "discoveryからIR compile",
+      "br": [
+        "UTV4-BR-009"
+      ],
+      "ac": [
+        "UTV4-AC-025"
+      ],
+      "starts": "R03",
+      "complete": "R07",
+      "note": "後続consumerの適用も同じ共通契約を使用。表は計画上の対応であり、実装済み/受入済みを意味しない。",
+      "evidence_status": "not_verified",
+      "source_ref": "GH-PR517-FR"
+    },
+    {
+      "id": "UTV4-FR-017",
+      "summary": "PoC別axisとS4",
+      "br": [
+        "UTV4-BR-010"
+      ],
+      "ac": [
+        "UTV4-AC-026"
+      ],
+      "starts": "R03",
+      "complete": "R07",
+      "note": "後続consumerの適用も同じ共通契約を使用。表は計画上の対応であり、実装済み/受入済みを意味しない。",
+      "evidence_status": "not_verified",
+      "source_ref": "GH-PR517-FR"
+    },
+    {
+      "id": "UTV4-FR-018",
+      "summary": "prototype反応とproduction昇格",
+      "br": [
+        "UTV4-BR-010"
+      ],
+      "ac": [
+        "UTV4-AC-027"
+      ],
+      "starts": "R03",
+      "complete": "R07",
+      "note": "後続consumerの適用も同じ共通契約を使用。表は計画上の対応であり、実装済み/受入済みを意味しない。",
+      "evidence_status": "not_verified",
+      "source_ref": "GH-PR517-FR"
+    },
+    {
+      "id": "UTV4-FR-019",
+      "summary": "Memory retirement",
+      "br": [
+        "UTV4-BR-011"
+      ],
+      "ac": [
+        "UTV4-AC-028"
+      ],
+      "starts": "R03",
+      "complete": "R09",
+      "note": "後続consumerの適用も同じ共通契約を使用。表は計画上の対応であり、実装済み/受入済みを意味しない。",
+      "evidence_status": "not_verified",
+      "source_ref": "GH-PR517-FR"
+    },
+    {
+      "id": "UTV4-FR-020",
+      "summary": "学習資産ownerと失効",
+      "br": [
+        "UTV4-BR-011"
+      ],
+      "ac": [
+        "UTV4-AC-029"
+      ],
+      "starts": "R03",
+      "complete": "R09",
+      "note": "後続consumerの適用も同じ共通契約を使用。表は計画上の対応であり、実装済み/受入済みを意味しない。",
+      "evidence_status": "not_verified",
+      "source_ref": "GH-PR517-FR"
+    },
+    {
+      "id": "UTV4-FR-021",
+      "summary": "skill applicability registry",
+      "br": [
+        "UTV4-BR-012"
+      ],
+      "ac": [
+        "UTV4-AC-030"
+      ],
+      "starts": "R03",
+      "complete": "R09",
+      "note": "後続consumerの適用も同じ共通契約を使用。表は計画上の対応であり、実装済み/受入済みを意味しない。",
+      "evidence_status": "not_verified",
+      "source_ref": "GH-PR517-FR"
+    },
+    {
+      "id": "UTV4-FR-022",
+      "summary": "最小packet・telemetry・昇格",
+      "br": [
+        "UTV4-BR-012"
+      ],
+      "ac": [
+        "UTV4-AC-031"
+      ],
+      "starts": "R03",
+      "complete": "R09",
+      "note": "後続consumerの適用も同じ共通契約を使用。表は計画上の対応であり、実装済み/受入済みを意味しない。",
+      "evidence_status": "not_verified",
+      "source_ref": "GH-PR517-FR"
+    },
+    {
+      "id": "UTV4-FR-023",
+      "summary": "provider topology",
+      "br": [
+        "UTV4-BR-013"
+      ],
+      "ac": [
+        "UTV4-AC-032",
+        "UTV4-AC-033"
+      ],
+      "starts": "R03",
+      "complete": "R08",
+      "note": "後続consumerの適用も同じ共通契約を使用。表は計画上の対応であり、実装済み/受入済みを意味しない。",
+      "evidence_status": "not_verified",
+      "source_ref": "GH-PR517-FR"
+    },
+    {
+      "id": "UTV4-FR-024",
+      "summary": "single-provider補償統制",
+      "br": [
+        "UTV4-BR-013"
+      ],
+      "ac": [
+        "UTV4-AC-034"
+      ],
+      "starts": "R03",
+      "complete": "R08",
+      "note": "後続consumerの適用も同じ共通契約を使用。表は計画上の対応であり、実装済み/受入済みを意味しない。",
+      "evidence_status": "not_verified",
+      "source_ref": "GH-PR517-FR"
+    },
+    {
+      "id": "UTV4-FR-025",
+      "summary": "surface分類と退役",
+      "br": [
+        "UTV4-BR-014"
+      ],
+      "ac": [
+        "UTV4-AC-035"
+      ],
+      "starts": "R03",
+      "complete": "R09",
+      "note": "後続consumerの適用も同じ共通契約を使用。表は計画上の対応であり、実装済み/受入済みを意味しない。",
+      "evidence_status": "not_verified",
+      "source_ref": "GH-PR517-FR"
+    },
+    {
+      "id": "UTV4-FR-026",
+      "summary": "legacy inventory・schema退役",
+      "br": [
+        "UTV4-BR-014"
+      ],
+      "ac": [
+        "UTV4-AC-036"
+      ],
+      "starts": "R01",
+      "complete": "R09",
+      "note": "BunはR00、更新/記録inventoryはR02/R03、他surfaceの原子的退役はR09。",
+      "evidence_status": "not_verified",
+      "source_ref": "GH-PR517-FR"
+    },
+    {
+      "id": "UTV4-FR-027",
+      "summary": "receipt custody・GC・projection",
+      "br": [
+        "UTV4-BR-014",
+        "UTV4-BR-004"
+      ],
+      "ac": [
+        "UTV4-AC-037"
+      ],
+      "starts": "R03",
+      "complete": "R05",
+      "note": "M0/R02の必要な既知事故修理は先行。新共通custody/GC全体はR05。",
+      "evidence_status": "not_verified",
+      "source_ref": "GH-PR517-FR"
+    },
+    {
+      "id": "UTV4-FR-028",
+      "summary": "上流PoC/proto ticket",
+      "br": [
+        "UTV4-BR-010",
+        "UTV4-BR-003"
+      ],
+      "ac": [
+        "UTV4-AC-039"
+      ],
+      "starts": "R03",
+      "complete": "R07",
+      "note": "後続consumerの適用も同じ共通契約を使用。表は計画上の対応であり、実装済み/受入済みを意味しない。",
+      "evidence_status": "not_verified",
+      "source_ref": "GH-PR517-FR"
+    },
+    {
+      "id": "UTV4-FR-029",
+      "summary": "層別owner",
+      "br": [
+        "UTV4-BR-015"
+      ],
+      "ac": [
+        "UTV4-AC-040"
+      ],
+      "starts": "R01",
+      "complete": "R07",
+      "note": "管理定義はR01、機械強制はR03/R05、全上流owner適用はR07。",
+      "evidence_status": "not_verified",
+      "source_ref": "GH-PR517-FR"
+    },
+    {
+      "id": "UTV4-FR-030",
+      "summary": "統合ticketとtakeover",
+      "br": [
+        "UTV4-BR-016",
+        "UTV4-BR-004"
+      ],
+      "ac": [
+        "UTV4-AC-041"
+      ],
+      "starts": "R03",
+      "complete": "R05",
+      "note": "後続consumerの適用も同じ共通契約を使用。表は計画上の対応であり、実装済み/受入済みを意味しない。",
+      "evidence_status": "not_verified",
+      "source_ref": "GH-PR517-FR"
+    },
+    {
+      "id": "UTV4-FR-031",
+      "summary": "差戻し回数と上流回帰",
+      "br": [
+        "UTV4-BR-016"
+      ],
+      "ac": [
+        "UTV4-AC-042"
+      ],
+      "starts": "R03",
+      "complete": "R05",
+      "note": "後続consumerの適用も同じ共通契約を使用。表は計画上の対応であり、実装済み/受入済みを意味しない。",
+      "evidence_status": "not_verified",
+      "source_ref": "GH-PR517-FR"
+    },
+    {
+      "id": "UTV4-FR-032",
+      "summary": "rebase/exact-head merge",
+      "br": [
+        "UTV4-BR-016",
+        "UTV4-BR-004"
+      ],
+      "ac": [
+        "UTV4-AC-043"
+      ],
+      "starts": "R03",
+      "complete": "R05",
+      "note": "後続consumerの適用も同じ共通契約を使用。表は計画上の対応であり、実装済み/受入済みを意味しない。",
+      "evidence_status": "not_verified",
+      "source_ref": "GH-PR517-FR"
+    },
+    {
+      "id": "UTV4-FR-033",
+      "summary": "人数不変性",
+      "br": [
+        "UTV4-BR-017"
+      ],
+      "ac": [
+        "UTV4-AC-044"
+      ],
+      "starts": "R03",
+      "complete": "R05",
+      "note": "後続consumerの適用も同じ共通契約を使用。表は計画上の対応であり、実装済み/受入済みを意味しない。",
+      "evidence_status": "not_verified",
+      "source_ref": "GH-PR517-FR"
+    },
+    {
+      "id": "UTV4-FR-034",
+      "summary": "人間統括/WIP判断",
+      "br": [
+        "UTV4-BR-008",
+        "UTV4-BR-015"
+      ],
+      "ac": [
+        "UTV4-AC-045"
+      ],
+      "starts": "R01",
+      "complete": "R05",
+      "note": "後続consumerの適用も同じ共通契約を使用。表は計画上の対応であり、実装済み/受入済みを意味しない。",
+      "evidence_status": "not_verified",
+      "source_ref": "GH-PR517-FR"
+    },
+    {
+      "id": "UTV4-FR-035",
+      "summary": "ticket compiler",
+      "br": [
+        "UTV4-BR-017",
+        "UTV4-BR-003"
+      ],
+      "ac": [
+        "UTV4-AC-046"
+      ],
+      "starts": "R03",
+      "complete": "R07",
+      "note": "R05で確定済みL4行列→下流、R07でL2/検証発行まで全入口を受入。",
+      "evidence_status": "not_verified",
+      "source_ref": "GH-PR517-FR"
+    },
+    {
+      "id": "UTV4-FR-036",
+      "summary": "大中小原子の階層",
+      "br": [
+        "UTV4-BR-003",
+        "UTV4-BR-017"
+      ],
+      "ac": [
+        "UTV4-AC-047"
+      ],
+      "starts": "R03",
+      "complete": "R05",
+      "note": "後続consumerの適用も同じ共通契約を使用。表は計画上の対応であり、実装済み/受入済みを意味しない。",
+      "evidence_status": "not_verified",
+      "source_ref": "GH-PR517-FR"
+    },
+    {
+      "id": "UTV4-FR-037",
+      "summary": "stop-the-line incident",
+      "br": [
+        "UTV4-BR-018"
+      ],
+      "ac": [
+        "UTV4-AC-049"
+      ],
+      "starts": "R03",
+      "complete": "R05",
+      "note": "後続consumerの適用も同じ共通契約を使用。表は計画上の対応であり、実装済み/受入済みを意味しない。",
+      "evidence_status": "not_verified",
+      "source_ref": "GH-PR517-FR"
+    },
+    {
+      "id": "UTV4-FR-038",
+      "summary": "project改善intake/export",
+      "br": [
+        "UTV4-BR-019"
+      ],
+      "ac": [
+        "UTV4-AC-050"
+      ],
+      "starts": "R03",
+      "complete": "R09",
+      "note": "後続consumerの適用も同じ共通契約を使用。表は計画上の対応であり、実装済み/受入済みを意味しない。",
+      "evidence_status": "not_verified",
+      "source_ref": "GH-PR517-FR"
+    },
+    {
+      "id": "UTV4-FR-039",
+      "summary": "L3/L5製本",
+      "br": [
+        "UTV4-BR-020"
+      ],
+      "ac": [
+        "UTV4-AC-051"
+      ],
+      "starts": "R03",
+      "complete": "R07",
+      "note": "後続consumerの適用も同じ共通契約を使用。表は計画上の対応であり、実装済み/受入済みを意味しない。",
+      "evidence_status": "not_verified",
+      "source_ref": "GH-PR517-FR"
+    },
+    {
+      "id": "UTV4-FR-040",
+      "summary": "実録provenanceのskill",
+      "br": [
+        "UTV4-BR-021"
+      ],
+      "ac": [
+        "UTV4-AC-052"
+      ],
+      "starts": "R03",
+      "complete": "R09",
+      "note": "後続consumerの適用も同じ共通契約を使用。表は計画上の対応であり、実装済み/受入済みを意味しない。",
+      "evidence_status": "not_verified",
+      "source_ref": "GH-PR517-FR"
+    },
+    {
+      "id": "UTV4-FR-041",
+      "summary": "judgement record",
+      "br": [
+        "UTV4-BR-023"
+      ],
+      "ac": [
+        "UTV4-AC-053"
+      ],
+      "starts": "R03",
+      "complete": "R03",
+      "note": "judgement型と新判定のwriterをR03で受入。過去判定の捏造backfill禁止。",
+      "evidence_status": "not_verified",
+      "source_ref": "GH-PR517-FR"
+    },
+    {
+      "id": "UTV4-FR-042",
+      "summary": "calibrationと機械判断化",
+      "br": [
+        "UTV4-BR-023"
+      ],
+      "ac": [
+        "UTV4-AC-054"
+      ],
+      "starts": "R03",
+      "complete": "R09",
+      "note": "後続consumerの適用も同じ共通契約を使用。表は計画上の対応であり、実装済み/受入済みを意味しない。",
+      "evidence_status": "not_verified",
+      "source_ref": "GH-PR517-FR"
+    },
+    {
+      "id": "UTV4-FR-043",
+      "summary": "cost/tier降格",
+      "br": [
+        "UTV4-BR-022"
+      ],
+      "ac": [
+        "UTV4-AC-055"
+      ],
+      "starts": "R03",
+      "complete": "R09",
+      "note": "後続consumerの適用も同じ共通契約を使用。表は計画上の対応であり、実装済み/受入済みを意味しない。",
+      "evidence_status": "not_verified",
+      "source_ref": "GH-PR517-FR"
+    },
+    {
+      "id": "UTV4-FR-044",
+      "summary": "良否と選好の分離",
+      "br": [
+        "UTV4-BR-024"
+      ],
+      "ac": [
+        "UTV4-AC-056"
+      ],
+      "starts": "R03",
+      "complete": "R09",
+      "note": "後続consumerの適用も同じ共通契約を使用。表は計画上の対応であり、実装済み/受入済みを意味しない。",
+      "evidence_status": "not_verified",
+      "source_ref": "GH-PR517-FR"
+    },
+    {
+      "id": "UTV4-FR-045",
+      "summary": "判断/学習の人間view",
+      "br": [
+        "UTV4-BR-025"
+      ],
+      "ac": [
+        "UTV4-AC-057"
+      ],
+      "starts": "R03",
+      "complete": "R09",
+      "note": "後続consumerの適用も同じ共通契約を使用。表は計画上の対応であり、実装済み/受入済みを意味しない。",
+      "evidence_status": "not_verified",
+      "source_ref": "GH-PR517-FR"
+    },
+    {
+      "id": "UTV4-FR-046",
+      "summary": "依存/画面/ER図の生成",
+      "br": [
+        "UTV4-BR-026"
+      ],
+      "ac": [
+        "UTV4-AC-058"
+      ],
+      "starts": "R03",
+      "complete": "R07",
+      "note": "R04で既存typed sourceとER/依存view、R05でticket図、R07でproto/上流の全入力を接続。",
+      "evidence_status": "not_verified",
+      "source_ref": "GH-PR517-FR"
+    },
+    {
+      "id": "UTV4-FR-047",
+      "summary": "discrepancyとdiagram drift",
+      "br": [
+        "UTV4-BR-026"
+      ],
+      "ac": [
+        "UTV4-AC-059"
+      ],
+      "starts": "R03",
+      "complete": "R04",
+      "note": "後続consumerの適用も同じ共通契約を使用。表は計画上の対応であり、実装済み/受入済みを意味しない。",
+      "evidence_status": "not_verified",
+      "source_ref": "GH-PR517-FR"
+    },
+    {
+      "id": "UTV4-FR-048",
+      "summary": "backflow集約と再compile",
+      "br": [
+        "UTV4-BR-027"
+      ],
+      "ac": [
+        "UTV4-AC-060"
+      ],
+      "starts": "R03",
+      "complete": "R07",
+      "note": "後続consumerの適用も同じ共通契約を使用。表は計画上の対応であり、実装済み/受入済みを意味しない。",
+      "evidence_status": "not_verified",
+      "source_ref": "GH-PR517-FR"
+    },
+    {
+      "id": "UTV4-FR-049",
+      "summary": "論理role/native生成",
+      "br": [
+        "UTV4-BR-028"
+      ],
+      "ac": [
+        "UTV4-AC-061"
+      ],
+      "starts": "R03",
+      "complete": "R08",
+      "note": "最小のlogical role契約はR03/R05から使用、native生成の全切替はR08。",
+      "evidence_status": "not_verified",
+      "source_ref": "GH-PR517-FR"
+    },
+    {
+      "id": "UTV4-FR-050",
+      "summary": "Control Plane dispatch",
+      "br": [
+        "UTV4-BR-028"
+      ],
+      "ac": [
+        "UTV4-AC-062"
+      ],
+      "starts": "R03",
+      "complete": "R08",
+      "note": "R05は既存adapterに安全dispatch、R08で全profile/nativeへ展開。",
+      "evidence_status": "not_verified",
+      "source_ref": "GH-PR517-FR"
+    },
+    {
+      "id": "UTV4-FR-051",
+      "summary": "blind review偏見対策",
+      "br": [
+        "UTV4-BR-013",
+        "UTV4-BR-014"
+      ],
+      "ac": [
+        "UTV4-AC-063"
+      ],
+      "starts": "R03",
+      "complete": "R08",
+      "note": "後続consumerの適用も同じ共通契約を使用。表は計画上の対応であり、実装済み/受入済みを意味しない。",
+      "evidence_status": "not_verified",
+      "source_ref": "GH-PR517-FR"
+    },
+    {
+      "id": "UTV4-FR-052",
+      "summary": "階層refactor責務",
+      "br": [
+        "UTV4-BR-029"
+      ],
+      "ac": [
+        "UTV4-AC-064"
+      ],
+      "starts": "R03",
+      "complete": "R05",
+      "note": "R05で中の検査/必要なrefactor発行。無修正で合格する判定を候補との整合審査にかける。",
+      "evidence_status": "not_verified",
+      "source_ref": "GH-PR517-FR"
+    },
+    {
+      "id": "UTV4-FR-053",
+      "summary": "refactor発火条件",
+      "br": [
+        "UTV4-BR-029"
+      ],
+      "ac": [
+        "UTV4-AC-065"
+      ],
+      "starts": "R03",
+      "complete": "R09",
+      "note": "構造違反判定はR05、使用実測による全surface発火はR09。",
+      "evidence_status": "not_verified",
+      "source_ref": "GH-PR517-FR"
+    },
+    {
+      "id": "UTV4-FR-054",
+      "summary": "admission ticket三者分離",
+      "br": [
+        "UTV4-BR-030"
+      ],
+      "ac": [
+        "UTV4-AC-066"
+      ],
+      "starts": "R03",
+      "complete": "R05",
+      "note": "後続consumerの適用も同じ共通契約を使用。表は計画上の対応であり、実装済み/受入済みを意味しない。",
+      "evidence_status": "not_verified",
+      "source_ref": "GH-PR517-FR"
+    },
+    {
+      "id": "UTV4-FR-055",
+      "summary": "人間reviewの傾斜",
+      "br": [
+        "UTV4-BR-030",
+        "UTV4-BR-003"
+      ],
+      "ac": [
+        "UTV4-AC-067"
+      ],
+      "starts": "R03",
+      "complete": "R05",
+      "note": "後続consumerの適用も同じ共通契約を使用。表は計画上の対応であり、実装済み/受入済みを意味しない。",
+      "evidence_status": "not_verified",
+      "source_ref": "GH-PR517-FR"
+    },
+    {
+      "id": "UTV4-FR-056",
+      "summary": "画面proto工程・深度",
+      "br": [
+        "UTV4-BR-031"
+      ],
+      "ac": [
+        "UTV4-AC-068",
+        "UTV4-AC-070"
+      ],
+      "starts": "R03",
+      "complete": "R07",
+      "note": "R03/R04自身のUIも既存手順でprototypeし記録。汎用エンジン全体はR07。",
+      "evidence_status": "not_verified",
+      "source_ref": "GH-PR517-FR"
+    },
+    {
+      "id": "UTV4-FR-057",
+      "summary": "製本前段の必要条件",
+      "br": [
+        "UTV4-BR-031"
+      ],
+      "ac": [
+        "UTV4-AC-069"
+      ],
+      "starts": "R03",
+      "complete": "R07",
+      "note": "後続consumerの適用も同じ共通契約を使用。表は計画上の対応であり、実装済み/受入済みを意味しない。",
+      "evidence_status": "not_verified",
+      "source_ref": "GH-PR517-FR"
+    },
+    {
+      "id": "UTV4-FR-058",
+      "summary": "provisional/frozen",
+      "br": [
+        "UTV4-BR-032"
+      ],
+      "ac": [
+        "UTV4-AC-071"
+      ],
+      "starts": "R03",
+      "complete": "R07",
+      "note": "後続consumerの適用も同じ共通契約を使用。表は計画上の対応であり、実装済み/受入済みを意味しない。",
+      "evidence_status": "not_verified",
+      "source_ref": "GH-PR517-FR"
+    },
+    {
+      "id": "UTV4-FR-059",
+      "summary": "PoC budget/超過検知",
+      "br": [
+        "UTV4-BR-005",
+        "UTV4-BR-032"
+      ],
+      "ac": [
+        "UTV4-AC-072"
+      ],
+      "starts": "R03",
+      "complete": "R07",
+      "note": "後続consumerの適用も同じ共通契約を使用。表は計画上の対応であり、実装済み/受入済みを意味しない。",
+      "evidence_status": "not_verified",
+      "source_ref": "GH-PR517-FR"
+    }
+  ],
+  "acceptance": [
+    {
+      "id": "UTV4-AC-001",
+      "requirement": "UTV4-FR-001",
+      "complete": "R05",
+      "status": "not_executed"
+    },
+    {
+      "id": "UTV4-AC-002",
+      "requirement": "UTV4-FR-002",
+      "complete": "R05",
+      "status": "not_executed"
+    },
+    {
+      "id": "UTV4-AC-003",
+      "requirement": "UTV4-FR-002",
+      "complete": "R05",
+      "status": "not_executed"
+    },
+    {
+      "id": "UTV4-AC-004",
+      "requirement": "UTV4-FR-003",
+      "complete": "R05",
+      "status": "not_executed"
+    },
+    {
+      "id": "UTV4-AC-005",
+      "requirement": "UTV4-FR-003",
+      "complete": "R05",
+      "status": "not_executed"
+    },
+    {
+      "id": "UTV4-AC-006",
+      "requirement": "UTV4-FR-004",
+      "complete": "R05",
+      "status": "not_executed"
+    },
+    {
+      "id": "UTV4-AC-007",
+      "requirement": "UTV4-FR-005",
+      "complete": "R05",
+      "status": "not_executed"
+    },
+    {
+      "id": "UTV4-AC-008",
+      "requirement": "UTV4-FR-005",
+      "complete": "R05",
+      "status": "not_executed"
+    },
+    {
+      "id": "UTV4-AC-009",
+      "requirement": "UTV4-FR-005",
+      "complete": "R05",
+      "status": "not_executed"
+    },
+    {
+      "id": "UTV4-AC-010",
+      "requirement": "UTV4-FR-005",
+      "complete": "R05",
+      "status": "not_executed"
+    },
+    {
+      "id": "UTV4-AC-011",
+      "requirement": "UTV4-FR-006",
+      "complete": "R03",
+      "status": "not_executed"
+    },
+    {
+      "id": "UTV4-AC-012",
+      "requirement": "UTV4-FR-006",
+      "complete": "R03",
+      "status": "not_executed"
+    },
+    {
+      "id": "UTV4-AC-013",
+      "requirement": "UTV4-FR-007",
+      "complete": "R07",
+      "status": "not_executed"
+    },
+    {
+      "id": "UTV4-AC-014",
+      "requirement": "UTV4-FR-008",
+      "complete": "R04",
+      "status": "not_executed"
+    },
+    {
+      "id": "UTV4-AC-015",
+      "requirement": "UTV4-FR-008",
+      "complete": "R04",
+      "status": "not_executed"
+    },
+    {
+      "id": "UTV4-AC-016",
+      "requirement": "UTV4-FR-009",
+      "complete": "R04",
+      "status": "not_executed"
+    },
+    {
+      "id": "UTV4-AC-017",
+      "requirement": "UTV4-FR-009",
+      "complete": "R04",
+      "status": "not_executed"
+    },
+    {
+      "id": "UTV4-AC-018",
+      "requirement": "UTV4-FR-010",
+      "complete": "R09",
+      "status": "not_executed"
+    },
+    {
+      "id": "UTV4-AC-019",
+      "requirement": "UTV4-FR-010",
+      "complete": "R09",
+      "status": "not_executed"
+    },
+    {
+      "id": "UTV4-AC-020",
+      "requirement": "UTV4-FR-011",
+      "complete": "R09",
+      "status": "not_executed"
+    },
+    {
+      "id": "UTV4-AC-021",
+      "requirement": "UTV4-FR-012",
+      "complete": "R05",
+      "status": "not_executed"
+    },
+    {
+      "id": "UTV4-AC-022",
+      "requirement": "UTV4-FR-013",
+      "complete": "R08",
+      "status": "not_executed"
+    },
+    {
+      "id": "UTV4-AC-023",
+      "requirement": "UTV4-FR-014",
+      "complete": "R00",
+      "status": "not_executed"
+    },
+    {
+      "id": "UTV4-AC-024",
+      "requirement": "UTV4-FR-015",
+      "complete": "R07",
+      "status": "not_executed"
+    },
+    {
+      "id": "UTV4-AC-025",
+      "requirement": "UTV4-FR-016",
+      "complete": "R07",
+      "status": "not_executed"
+    },
+    {
+      "id": "UTV4-AC-026",
+      "requirement": "UTV4-FR-017",
+      "complete": "R07",
+      "status": "not_executed"
+    },
+    {
+      "id": "UTV4-AC-027",
+      "requirement": "UTV4-FR-018",
+      "complete": "R07",
+      "status": "not_executed"
+    },
+    {
+      "id": "UTV4-AC-028",
+      "requirement": "UTV4-FR-019",
+      "complete": "R09",
+      "status": "not_executed"
+    },
+    {
+      "id": "UTV4-AC-029",
+      "requirement": "UTV4-FR-020",
+      "complete": "R09",
+      "status": "not_executed"
+    },
+    {
+      "id": "UTV4-AC-030",
+      "requirement": "UTV4-FR-021",
+      "complete": "R09",
+      "status": "not_executed"
+    },
+    {
+      "id": "UTV4-AC-031",
+      "requirement": "UTV4-FR-022",
+      "complete": "R09",
+      "status": "not_executed"
+    },
+    {
+      "id": "UTV4-AC-032",
+      "requirement": "UTV4-FR-023",
+      "complete": "R08",
+      "status": "not_executed"
+    },
+    {
+      "id": "UTV4-AC-033",
+      "requirement": "UTV4-FR-023",
+      "complete": "R08",
+      "status": "not_executed"
+    },
+    {
+      "id": "UTV4-AC-034",
+      "requirement": "UTV4-FR-024",
+      "complete": "R08",
+      "status": "not_executed"
+    },
+    {
+      "id": "UTV4-AC-035",
+      "requirement": "UTV4-FR-025",
+      "complete": "R09",
+      "status": "not_executed"
+    },
+    {
+      "id": "UTV4-AC-036",
+      "requirement": "UTV4-FR-026",
+      "complete": "R09",
+      "status": "not_executed"
+    },
+    {
+      "id": "UTV4-AC-037",
+      "requirement": "UTV4-FR-027",
+      "complete": "R05",
+      "status": "not_executed"
+    },
+    {
+      "id": "UTV4-AC-038",
+      "requirement": "UTV4-FR-004",
+      "complete": "R05",
+      "status": "not_executed"
+    },
+    {
+      "id": "UTV4-AC-039",
+      "requirement": "UTV4-FR-028",
+      "complete": "R07",
+      "status": "not_executed"
+    },
+    {
+      "id": "UTV4-AC-040",
+      "requirement": "UTV4-FR-029",
+      "complete": "R07",
+      "status": "not_executed"
+    },
+    {
+      "id": "UTV4-AC-041",
+      "requirement": "UTV4-FR-030",
+      "complete": "R05",
+      "status": "not_executed"
+    },
+    {
+      "id": "UTV4-AC-042",
+      "requirement": "UTV4-FR-031",
+      "complete": "R05",
+      "status": "not_executed"
+    },
+    {
+      "id": "UTV4-AC-043",
+      "requirement": "UTV4-FR-032",
+      "complete": "R05",
+      "status": "not_executed"
+    },
+    {
+      "id": "UTV4-AC-044",
+      "requirement": "UTV4-FR-033",
+      "complete": "R05",
+      "status": "not_executed"
+    },
+    {
+      "id": "UTV4-AC-045",
+      "requirement": "UTV4-FR-034",
+      "complete": "R05",
+      "status": "not_executed"
+    },
+    {
+      "id": "UTV4-AC-046",
+      "requirement": "UTV4-FR-035",
+      "complete": "R07",
+      "status": "not_executed"
+    },
+    {
+      "id": "UTV4-AC-047",
+      "requirement": "UTV4-FR-036",
+      "complete": "R05",
+      "status": "not_executed"
+    },
+    {
+      "id": "UTV4-AC-048",
+      "requirement": "UTV4-FR-008",
+      "complete": "R04",
+      "status": "not_executed"
+    },
+    {
+      "id": "UTV4-AC-049",
+      "requirement": "UTV4-FR-037",
+      "complete": "R05",
+      "status": "not_executed"
+    },
+    {
+      "id": "UTV4-AC-050",
+      "requirement": "UTV4-FR-038",
+      "complete": "R09",
+      "status": "not_executed"
+    },
+    {
+      "id": "UTV4-AC-051",
+      "requirement": "UTV4-FR-039",
+      "complete": "R07",
+      "status": "not_executed"
+    },
+    {
+      "id": "UTV4-AC-052",
+      "requirement": "UTV4-FR-040",
+      "complete": "R09",
+      "status": "not_executed"
+    },
+    {
+      "id": "UTV4-AC-053",
+      "requirement": "UTV4-FR-041",
+      "complete": "R03",
+      "status": "not_executed"
+    },
+    {
+      "id": "UTV4-AC-054",
+      "requirement": "UTV4-FR-042",
+      "complete": "R09",
+      "status": "not_executed"
+    },
+    {
+      "id": "UTV4-AC-055",
+      "requirement": "UTV4-FR-043",
+      "complete": "R09",
+      "status": "not_executed"
+    },
+    {
+      "id": "UTV4-AC-056",
+      "requirement": "UTV4-FR-044",
+      "complete": "R09",
+      "status": "not_executed"
+    },
+    {
+      "id": "UTV4-AC-057",
+      "requirement": "UTV4-FR-045",
+      "complete": "R09",
+      "status": "not_executed"
+    },
+    {
+      "id": "UTV4-AC-058",
+      "requirement": "UTV4-FR-046",
+      "complete": "R07",
+      "status": "not_executed"
+    },
+    {
+      "id": "UTV4-AC-059",
+      "requirement": "UTV4-FR-047",
+      "complete": "R04",
+      "status": "not_executed"
+    },
+    {
+      "id": "UTV4-AC-060",
+      "requirement": "UTV4-FR-048",
+      "complete": "R07",
+      "status": "not_executed"
+    },
+    {
+      "id": "UTV4-AC-061",
+      "requirement": "UTV4-FR-049",
+      "complete": "R08",
+      "status": "not_executed"
+    },
+    {
+      "id": "UTV4-AC-062",
+      "requirement": "UTV4-FR-050",
+      "complete": "R08",
+      "status": "not_executed"
+    },
+    {
+      "id": "UTV4-AC-063",
+      "requirement": "UTV4-FR-051",
+      "complete": "R08",
+      "status": "not_executed"
+    },
+    {
+      "id": "UTV4-AC-064",
+      "requirement": "UTV4-FR-052",
+      "complete": "R05",
+      "status": "not_executed"
+    },
+    {
+      "id": "UTV4-AC-065",
+      "requirement": "UTV4-FR-053",
+      "complete": "R09",
+      "status": "not_executed"
+    },
+    {
+      "id": "UTV4-AC-066",
+      "requirement": "UTV4-FR-054",
+      "complete": "R05",
+      "status": "not_executed"
+    },
+    {
+      "id": "UTV4-AC-067",
+      "requirement": "UTV4-FR-055",
+      "complete": "R05",
+      "status": "not_executed"
+    },
+    {
+      "id": "UTV4-AC-068",
+      "requirement": "UTV4-FR-056",
+      "complete": "R07",
+      "status": "not_executed"
+    },
+    {
+      "id": "UTV4-AC-069",
+      "requirement": "UTV4-FR-057",
+      "complete": "R07",
+      "status": "not_executed"
+    },
+    {
+      "id": "UTV4-AC-070",
+      "requirement": "UTV4-FR-056",
+      "complete": "R07",
+      "status": "not_executed"
+    },
+    {
+      "id": "UTV4-AC-071",
+      "requirement": "UTV4-FR-058",
+      "complete": "R07",
+      "status": "not_executed"
+    },
+    {
+      "id": "UTV4-AC-072",
+      "requirement": "UTV4-FR-059",
+      "complete": "R07",
+      "status": "not_executed"
+    }
+  ]
+}

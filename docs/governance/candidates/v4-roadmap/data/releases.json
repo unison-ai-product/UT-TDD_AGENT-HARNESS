@@ -1,0 +1,1617 @@
+{
+  "document_version": "2.0",
+  "status": "version_allocation_proposal",
+  "concept_target": "4.0",
+  "package_target": "1.0.0",
+  "baseline": {
+    "main": "84cd7f896f7dfbd67b38b250b5a943eaee3f6640",
+    "pr517": "c21b54fb0d3f2d5a73a7826cc41233634456cac9",
+    "package_declared": "0.2.0-canary.1",
+    "license": "MIT"
+  },
+  "releases": [
+    {
+      "id": "R00",
+      "version": "0.2.0-canary.1",
+      "name": "現行プレリリース閉包",
+      "file": "releases/R00_0.2.0-canary.1.md",
+      "status": "planned",
+      "old_m": "M0",
+      "goal": "開発元を参照せず、clean Packのみで上流開発の基本運用を再現する。",
+      "owner": "release owner / runtime・Memory責務owner",
+      "includes": [
+        "#487の到達可能Bun撤去と、禁止detector/互換語彙の分類を成立させる。",
+        "project identity、Memory/provider/session隔離、migration/quarantine、Pack-only parityを現行#424の範囲で閉じる。",
+        "#418のPLAN/DB/doctor/review/merge gateとWindows/Linux再起動相当smokeを対象releaseへ束縛。"
+      ],
+      "excludes": [
+        "v4機能、JSON新体系、予測配布、BugBot、MPL切替を新しいM0依存にしない。",
+        "初回公開だけで#364のA/B・stable受入が完了したとしない。"
+      ],
+      "old_new": [
+        [
+          "旧Bun到達経路",
+          "Node正式実行経路",
+          "BAN検出器と履歴語彙は区別して保持"
+        ],
+        [
+          "worktreeローカルのroot解釈",
+          "canonical project root",
+          "他project隔離と移行失敗時の回復も受入"
+        ]
+      ],
+      "rollout": "現行MITのimmutable tag/assetを確定し、internal canary対象だけへ配布。公開したことと受入完了を別に記録。",
+      "rollback": "失敗したcanaryをstableへ昇格しない。旧正常generationへ復帰し、失敗releaseと履歴は残す。consumer stateは勝手に巻き戻さない。",
+      "remove": "到達可能Bun経路はこの版で除去。古いGit履歴・license・正当なBAN文字列は削除対象ではない。",
+      "development_requires": [],
+      "publication_requires": [],
+      "baseline_refs": [
+        "GH-MAIN",
+        "GH-PKG",
+        "GH-PR517"
+      ],
+      "fr_completed": [
+        "UTV4-FR-014"
+      ],
+      "fr_started": [
+        "UTV4-FR-014"
+      ],
+      "migration_ids": [
+        "MIG-06"
+      ],
+      "acceptance": [
+        {
+          "id": "REL-R00-AC-01",
+          "criterion": "source側path/env/開発DBへの参照を検証し、必要smokeがclean環境で成立。",
+          "status": "not_executed"
+        },
+        {
+          "id": "REL-R00-AC-02",
+          "criterion": "Bun実行/install/downloadが残らず、禁止detectorを弱めない。",
+          "status": "not_executed"
+        },
+        {
+          "id": "REL-R00-AC-03",
+          "criterion": "project混入・壊れたreceipt・部分installを拒否し、正常な再開も通る。",
+          "status": "not_executed"
+        },
+        {
+          "id": "REL-R00-AC-04",
+          "criterion": "必要CI・非著者review・release identityが整合し、人間の公開判断がある。",
+          "status": "not_executed"
+        }
+      ],
+      "runtime_implemented": false,
+      "public_api_stability": "explicitly_versioned_0x",
+      "license_target": "MIT",
+      "slices": [
+        {
+          "id": "SL-R00-01",
+          "title": "Bun/Memory残務を現行契約で閉じる",
+          "output": "既存#487/#424・対応PLANを再読し、未実装と既対応を区別",
+          "verification": "現行回帰と正負oracle",
+          "depends_on": [],
+          "owner_role": "release owner / runtime・Memory責務owner",
+          "state": "planned",
+          "github_issue": null,
+          "ut_plan": null
+        },
+        {
+          "id": "SL-R00-02",
+          "title": "clean releaseから再現",
+          "output": "source checkout削除後の両OS fixture",
+          "verification": "release identityに束縛した#418証拠",
+          "depends_on": [
+            "SL-R00-01"
+          ],
+          "owner_role": "release owner / runtime・Memory責務owner",
+          "state": "planned",
+          "github_issue": null,
+          "ut_plan": null
+        }
+      ]
+    },
+    {
+      "id": "R01",
+      "version": "0.2.0-canary.2",
+      "name": "MPL切替と管理責任の確定",
+      "file": "releases/R01_0.2.0-canary.2.md",
+      "status": "planned",
+      "old_m": "M1",
+      "goal": "UT本体をMPL-2.0へ切り替え、移行後の開発・公開責任を明確にする。",
+      "owner": "PO / 統括メンテナー / release owner",
+      "includes": [
+        "権利処理できるUT本体のLICENSE・package表記・対象ファイル通知をMPL-2.0へ揃える。",
+        "Packの該当コード、実配布versionのsource取得方法、第三者表示を整合。",
+        "開発元/consumer/AIの権限境界、任命・代理・公開・脆弱性受付の意味契約を確定。",
+        "構想v4をtargetとして採択する変更はライセンスPRとは分離。active capabilityと未実装を別に宣言する。"
+      ],
+      "excludes": [
+        "licenseキー・有料化・第三者コードの一律再ライセンス。",
+        "未実装のv4ルールを全資産へ即時強制。"
+      ],
+      "old_new": [
+        [
+          "UT本体のMIT表示",
+          "対象コードのMPL-2.0表示",
+          "過去MIT tag/asset、必要な他者通知を保持"
+        ],
+        [
+          "暗黙の管理兼務",
+          "責務・権限・代理の明示",
+          "実在しない人名・承認を補完しない"
+        ]
+      ],
+      "rollout": "版番号canary.2は本案。実際の発番時に衝突を調べる。ライセンス変更は機能の互換修正と別の公開説明を付け、既存consumerへ無承認適用しない。",
+      "rollback": "ライセンス切替の撤回とruntime rollbackは別。公開済みの許諾を巻き戻す操作はしない。機能失敗なら旧正常generationを指定し、各版の条件を維持。",
+      "remove": "現行配布の誤ったMIT表示は除去するが履歴は保存。MPLを理由に一般的な依存コンプライアンスengineを先行増築しない。",
+      "development_requires": [
+        "R00"
+      ],
+      "publication_requires": [
+        "R00"
+      ],
+      "baseline_refs": [
+        "GH-MAIN",
+        "GH-PKG",
+        "GH-PR517"
+      ],
+      "fr_completed": [],
+      "fr_started": [
+        "UTV4-FR-001",
+        "UTV4-FR-002",
+        "UTV4-FR-006",
+        "UTV4-FR-007",
+        "UTV4-FR-026",
+        "UTV4-FR-029",
+        "UTV4-FR-034"
+      ],
+      "migration_ids": [
+        "MIG-01",
+        "MIG-02",
+        "MIG-15",
+        "MIG-17",
+        "MIG-18"
+      ],
+      "acceptance": [
+        {
+          "id": "REL-R01-AC-01",
+          "criterion": "M0完了後の新commit/新配布にだけMPL切替境界が付く。",
+          "status": "not_executed"
+        },
+        {
+          "id": "REL-R01-AC-02",
+          "criterion": "過去MITと第三者noticeを改変せず、対象sourceへの案内が実際に到達する。",
+          "status": "not_executed"
+        },
+        {
+          "id": "REL-R01-AC-03",
+          "criterion": "導入先の独立成果物を無断でMPLへ変更しない。コピーを含む生成物は区別。",
+          "status": "not_executed"
+        },
+        {
+          "id": "REL-R01-AC-04",
+          "criterion": "責任者・委任・費用上限の未確定をunknownとして残し、架空の承認を作らない。",
+          "status": "not_executed"
+        }
+      ],
+      "runtime_implemented": false,
+      "public_api_stability": "explicitly_versioned_0x",
+      "license_target": "MPL-2.0_for_in_scope_UT_code",
+      "slices": [
+        {
+          "id": "SL-R01-01",
+          "title": "権利/適用境界の棚卸し",
+          "output": "著作権・コピー・依存・生成物の一覧、除外と根拠",
+          "verification": "権利判断と対象集合",
+          "depends_on": [],
+          "owner_role": "PO / 統括メンテナー / release owner",
+          "state": "planned",
+          "github_issue": null,
+          "ut_plan": null
+        },
+        {
+          "id": "SL-R01-02",
+          "title": "ライセンス整合切替",
+          "output": "本体/Pack/license metadataの一括整合",
+          "verification": "表示/対象source取得の確認",
+          "depends_on": [
+            "SL-R01-01"
+          ],
+          "owner_role": "PO / 統括メンテナー / release owner",
+          "state": "planned",
+          "github_issue": null,
+          "ut_plan": null
+        },
+        {
+          "id": "SL-R01-03",
+          "title": "管理とtarget authority採択",
+          "output": "寄稿・公開・例外・supported範囲、#517差分",
+          "verification": "採択recordと旧新参照表",
+          "depends_on": [
+            "SL-R01-02"
+          ],
+          "owner_role": "PO / 統括メンテナー / release owner",
+          "state": "planned",
+          "github_issue": null,
+          "ut_plan": null
+        }
+      ]
+    },
+    {
+      "id": "R02",
+      "version": "0.2.0",
+      "name": "運用基盤stable・安全な更新/切戻し",
+      "file": "releases/R02_0.2.0.md",
+      "status": "planned",
+      "old_m": "M1＋並行運用系列",
+      "goal": "v4全機能を待たず、導入したPackを安全に更新・復旧できるstable基盤を作る。",
+      "owner": "release owner / distribution責務owner",
+      "includes": [
+        "#481: channel候補解決→sealed plan/dry-run→人間承認→隔離取得→原子的generation切替。",
+        "state compatibility判定、doctor/smoke失敗時rollback、中断resume、append-only履歴。",
+        "#364: Product A/Bの異version/channel、片系upgrade/rollback、障害非伝播の完全受入。",
+        "受入用途を阻害するreview保存/terminal/通知の既知欠陥を、既存issue責務で是正。"
+      ],
+      "excludes": [
+        "差分binary配信、無承認のbackground更新、consumerソースの自動変更。",
+        "全v4機能の先行完成、別のupdater正本/配布サービス。"
+      ],
+      "old_new": [
+        [
+          "tag最大値の更新案内中心",
+          "channel/manifest/receiptに基づくupdate planとapply",
+          "既存advisoryは互換入口として共通resolverへ委譲"
+        ],
+        [
+          "手動置換と回復",
+          "generation switchと検証済み切戻し",
+          "consumer stateをruntimeと分離"
+        ]
+      ],
+      "rollout": "canary/rcでA/B検証後stable channelへ。R03の設計・実装は本作業と並行可。ただしR03をstable配布する前にこの更新基盤を受入する。",
+      "rollback": "runtimeは旧sealed generationへ。新stateが旧runtimeで読めない場合はwriteを止め互換移行を行う。更新後の新イベントをsnapshot restoreで捨てない。",
+      "remove": "advisory CLIは互換wrapperとして残してもよい。無署名/未検証取得を主更新経路として残さない。",
+      "development_requires": [
+        "R01"
+      ],
+      "publication_requires": [
+        "R01"
+      ],
+      "baseline_refs": [
+        "GH-MAIN",
+        "GH-PKG",
+        "GH-PR517"
+      ],
+      "fr_completed": [],
+      "fr_started": [],
+      "migration_ids": [
+        "MIG-05",
+        "MIG-15"
+      ],
+      "acceptance": [
+        {
+          "id": "REL-R02-AC-01",
+          "criterion": "破損manifest/receipt/digestや不適合stateでruntime/stateとも不変。",
+          "status": "not_executed"
+        },
+        {
+          "id": "REL-R02-AC-02",
+          "criterion": "Windows/Linuxでswitch中断後に旧世代または新世代の整合状態へ回復できる。",
+          "status": "not_executed"
+        },
+        {
+          "id": "REL-R02-AC-03",
+          "criterion": "Aの更新・review待ち・rollback失敗がBを停止/汚染しない。",
+          "status": "not_executed"
+        },
+        {
+          "id": "REL-R02-AC-04",
+          "criterion": "normal releaseの公開判断とsupported用途が明示され、初回Canary受入を流用して済ませない。",
+          "status": "not_executed"
+        }
+      ],
+      "runtime_implemented": false,
+      "public_api_stability": "explicitly_versioned_0x",
+      "license_target": "MPL-2.0_for_in_scope_UT_code",
+      "slices": [
+        {
+          "id": "SL-R02-01",
+          "title": "候補解決と承認",
+          "output": "#481 resolver/plan/approval slice",
+          "verification": "malformed/無承認でwrite 0",
+          "depends_on": [],
+          "owner_role": "release owner / distribution責務owner",
+          "state": "planned",
+          "github_issue": null,
+          "ut_plan": null
+        },
+        {
+          "id": "SL-R02-02",
+          "title": "取得・切替・回復",
+          "output": "staging/digest/Windows lock/migration gate",
+          "verification": "各phase fault injection",
+          "depends_on": [
+            "SL-R02-01"
+          ],
+          "owner_role": "release owner / distribution責務owner",
+          "state": "planned",
+          "github_issue": null,
+          "ut_plan": null
+        },
+        {
+          "id": "SL-R02-03",
+          "title": "A/B system受入",
+          "output": "異版・片系故障・再開・auditor",
+          "verification": "両OSと非著者closing",
+          "depends_on": [
+            "SL-R02-02"
+          ],
+          "owner_role": "release owner / distribution責務owner",
+          "state": "planned",
+          "github_issue": null,
+          "ut_plan": null
+        }
+      ]
+    },
+    {
+      "id": "R03",
+      "version": "0.3.0",
+      "name": "共通JSON正本・契約API",
+      "file": "releases/R03_0.3.0.md",
+      "status": "planned",
+      "old_m": "M2a",
+      "goal": "後続のCI・配布計画・BugBotが同じ機械契約と認可済みwriterを使える状態にする。",
+      "owner": "record/authority責務owner / QA",
+      "includes": [
+        "要求/設計/ACのtyped参照、project/actor/decision/policy、finding/work item、verification、attempt/receipt、schedule入力を共通型で定義。",
+        "canonical reader/validator、revision・CAS・idempotencyを持つ共通writer。DB/GitHubは再構築可能なprojection。",
+        "新規recordと既存形式を共通adapterで識別。移行対象ごとにauthoritative storeを一つに指定。",
+        "管理の権限変更は旧有効policyで認可。scope・委任・失効をrecordに持つ。",
+        "scheduleの依存/資源/見積り根拠、contextのmodel/packet/対策参照を今から収録し、後付けschema乱立を避ける。",
+        "既存review/advisor/triage等の判断出力を共通judgement recordへ接続するadapterを対象inventoryに対応付け、record無しの新規admissionを拒否。未対応callerは明示して書込みを有効化しない。"
+      ],
+      "excludes": [
+        "全Markdown本文/歴史PLANの一括JSON化。",
+        "能動配布・本番BugBot・MLによる順序最適化。schemaがあるだけで実行許可しない。"
+      ],
+      "old_new": [
+        [
+          "各consumerの独自prose抽出",
+          "共通typed参照とreader",
+          "narrativeはMarkdownで維持"
+        ],
+        [
+          "DB/GitHubとfileの二重編集",
+          "一つの正本writer＋再生成",
+          "旧readerは明示したlegacy recordだけに対応"
+        ]
+      ],
+      "rollout": "旧record読取→read-only shadow→対象recordの移行→新規recordのwriter切替。未移行PLANのfrontmatterは旧正本、移行済みrecordだけJSON正本。",
+      "rollback": "切替前はshadowを破棄可能。切替後はwriter停止・イベント差分保存・逆変換互換性の確認が必要。対応不能ならread-only維持で旧writerへ無理に戻さない。",
+      "remove": "同一recordを読む独自parserを対象ごとに廃止。全歴史用readerはreadonly importとして残す。",
+      "development_requires": [
+        "R01"
+      ],
+      "publication_requires": [
+        "R02"
+      ],
+      "baseline_refs": [
+        "GH-MAIN",
+        "GH-PKG",
+        "GH-PR517"
+      ],
+      "fr_completed": [
+        "UTV4-FR-006",
+        "UTV4-FR-041"
+      ],
+      "fr_started": [
+        "UTV4-FR-003",
+        "UTV4-FR-004",
+        "UTV4-FR-005",
+        "UTV4-FR-008",
+        "UTV4-FR-009",
+        "UTV4-FR-010",
+        "UTV4-FR-011",
+        "UTV4-FR-012",
+        "UTV4-FR-013",
+        "UTV4-FR-015",
+        "UTV4-FR-016",
+        "UTV4-FR-017",
+        "UTV4-FR-018",
+        "UTV4-FR-019",
+        "UTV4-FR-020",
+        "UTV4-FR-021",
+        "UTV4-FR-022",
+        "UTV4-FR-023",
+        "UTV4-FR-024",
+        "UTV4-FR-025",
+        "UTV4-FR-027",
+        "UTV4-FR-028",
+        "UTV4-FR-030",
+        "UTV4-FR-031",
+        "UTV4-FR-032",
+        "UTV4-FR-033",
+        "UTV4-FR-035",
+        "UTV4-FR-036",
+        "UTV4-FR-037",
+        "UTV4-FR-038",
+        "UTV4-FR-039",
+        "UTV4-FR-040",
+        "UTV4-FR-041",
+        "UTV4-FR-042",
+        "UTV4-FR-043",
+        "UTV4-FR-044",
+        "UTV4-FR-045",
+        "UTV4-FR-046",
+        "UTV4-FR-047",
+        "UTV4-FR-048",
+        "UTV4-FR-049",
+        "UTV4-FR-050",
+        "UTV4-FR-051",
+        "UTV4-FR-052",
+        "UTV4-FR-053",
+        "UTV4-FR-054",
+        "UTV4-FR-055",
+        "UTV4-FR-056",
+        "UTV4-FR-057",
+        "UTV4-FR-058",
+        "UTV4-FR-059"
+      ],
+      "migration_ids": [
+        "MIG-02",
+        "MIG-03",
+        "MIG-04",
+        "MIG-06",
+        "MIG-07",
+        "MIG-08",
+        "MIG-09",
+        "MIG-10",
+        "MIG-11",
+        "MIG-12",
+        "MIG-13",
+        "MIG-14",
+        "MIG-16",
+        "MIG-19",
+        "MIG-20"
+      ],
+      "acceptance": [
+        {
+          "id": "REL-R03-AC-01",
+          "criterion": "未知schema/欠落authority/旧revision/他project入力でwrite 0。",
+          "status": "not_executed"
+        },
+        {
+          "id": "REL-R03-AC-02",
+          "criterion": "同一command replayは同一結果、異payloadは拒否。",
+          "status": "not_executed"
+        },
+        {
+          "id": "REL-R03-AC-03",
+          "criterion": "projectionを消してrebuildしても正本内容・identity・判定が一致。",
+          "status": "not_executed"
+        },
+        {
+          "id": "REL-R03-AC-04",
+          "criterion": "writer切替中に二重の正本を作らず、中断後に一方へ確定できる。",
+          "status": "not_executed"
+        },
+        {
+          "id": "REL-R03-AC-05",
+          "criterion": "BugBotの書込み/PR更新はまだdisabledと機械/画面双方に表示。",
+          "status": "not_executed"
+        }
+      ],
+      "runtime_implemented": false,
+      "public_api_stability": "explicitly_versioned_0x",
+      "license_target": "MPL-2.0_for_in_scope_UT_code",
+      "slices": [
+        {
+          "id": "SL-R03-01",
+          "title": "契約inventoryとslice設計",
+          "output": "既存JSON/ledger/schemaと重複照合、source id/版/意味の表",
+          "verification": "旧新参照の抜けゼロ",
+          "depends_on": [],
+          "owner_role": "record/authority責務owner / QA",
+          "state": "planned",
+          "github_issue": null,
+          "ut_plan": null
+        },
+        {
+          "id": "SL-R03-02",
+          "title": "reader/writer/validator実装",
+          "output": "validate/read/propose/admit/replayの共通論理操作",
+          "verification": "型・認可・revision・再試行の正負oracle",
+          "depends_on": [
+            "SL-R03-01"
+          ],
+          "owner_role": "record/authority責務owner / QA",
+          "state": "planned",
+          "github_issue": null,
+          "ut_plan": null
+        },
+        {
+          "id": "SL-R03-03",
+          "title": "record移行pilot",
+          "output": "限定した新規とactive recordを移行、旧writer fence",
+          "verification": "同値性/再構築/中断切戻し",
+          "depends_on": [
+            "SL-R03-02"
+          ],
+          "owner_role": "record/authority責務owner / QA",
+          "state": "planned",
+          "github_issue": null,
+          "ut_plan": null
+        },
+        {
+          "id": "SL-R03-04",
+          "title": "小さい人間向け面のprototype",
+          "output": "schemaに沿う異常系fixtureとfindingを人が記録",
+          "verification": "後続viewの要求を確認",
+          "depends_on": [
+            "SL-R03-03"
+          ],
+          "owner_role": "record/authority責務owner / QA",
+          "state": "planned",
+          "github_issue": null,
+          "ut_plan": null
+        }
+      ]
+    },
+    {
+      "id": "R04",
+      "version": "0.4.0",
+      "name": "低コストCI・共有view・順序予測",
+      "file": "releases/R04_0.4.0.md",
+      "status": "planned",
+      "old_m": "M2b",
+      "goal": "導入先のCI固定負担を下げ、何を先に実行すべきかを人間が根拠付きで見られる版にする。",
+      "owner": "CI/view/scheduling責務owner",
+      "includes": [
+        "consumer既存CIとUT追加分の責務inventory、verification plan、必要集合を照合するaggregate。",
+        "変更影響選択をfullとshadow比較し、成立するscopeだけ選択実行へ。月2,000分soft budget、runner時間/請求/保存/未取得を区別。",
+        "要求/要件/設計のxlsx等のspreadsheet view・依存図・ER・状態表示と、構造化正本への承認付き変更提案。",
+        "read-only scheduler: hard依存・資源・review/CI/merge待ち、残工程、見積り幅から着手/合流順を提案。",
+        "context/事故/実行時間の計測と限定比較を開始。計画計算は原則決定的でLLM常駐なし。"
+      ],
+      "excludes": [
+        "予測だけでチケットをclaim/開始、lease発行、mergeする機能。",
+        "未証明のCI省略、同じlockfileだけを根拠とするPASS流用。",
+        "常駐server/有料security製品の必須化。"
+      ],
+      "old_new": [
+        [
+          "固定的な毎PR全量検査",
+          "risk/影響に束縛した必要検証",
+          "対象不明はfull fallback"
+        ],
+        [
+          "手更新の進捗/図/シート",
+          "source identity付きgenerated view",
+          "narrative本文への自動逆書込みはしない"
+        ],
+        [
+          "経験による順序予想",
+          "schedule proposal＋理由/不確実性",
+          "人間の判断権限は保持"
+        ]
+      ],
+      "rollout": "新profile/selectorをshadow→opt-in→新規consumer推奨へ。既存consumerの切替は個別のplan/承認。schedulerはこの版では常にadvisory。",
+      "rollback": "selectorが不健全なら旧full profileへ戻す。viewは再生成。予測engineを停止しても旧通常工程は動く。費用増見込みは通知し、検査を黙って削らない。",
+      "remove": "移行済みscopeの手更新ビューと重複workflowを無効化。監査用旧成果物は保持。正式なsource回帰自体は無差別に削除しない。",
+      "development_requires": [
+        "R03"
+      ],
+      "publication_requires": [
+        "R03"
+      ],
+      "baseline_refs": [
+        "GH-MAIN",
+        "GH-PKG",
+        "GH-PR517"
+      ],
+      "fr_completed": [
+        "UTV4-FR-008",
+        "UTV4-FR-009",
+        "UTV4-FR-047"
+      ],
+      "fr_started": [],
+      "migration_ids": [
+        "MIG-09",
+        "MIG-10"
+      ],
+      "acceptance": [
+        {
+          "id": "REL-R04-AC-01",
+          "criterion": "選択集合の欠落・skip偽装・旧HEAD/attempt証拠をaggregateが拒否。",
+          "status": "not_executed"
+        },
+        {
+          "id": "REL-R04-AC-02",
+          "criterion": "同じ入力/renderer版から同じ意味payloadとdigestを生成。実バイナリ出力の決定性も指定範囲で検証。",
+          "status": "not_executed"
+        },
+        {
+          "id": "REL-R04-AC-03",
+          "criterion": "予測がunknownの仕事を0分/完了と表示せず、実行状態を変更しない。",
+          "status": "not_executed"
+        },
+        {
+          "id": "REL-R04-AC-04",
+          "criterion": "既存CI/費用policyを無承認変更せず、soft budget超過時も必須検査を維持。",
+          "status": "not_executed"
+        },
+        {
+          "id": "REL-R04-AC-05",
+          "criterion": "提案順の根拠・blocked理由・reviewer不足・更新による失効が確認できる。",
+          "status": "not_executed"
+        }
+      ],
+      "runtime_implemented": false,
+      "public_api_stability": "explicitly_versioned_0x",
+      "license_target": "MPL-2.0_for_in_scope_UT_code",
+      "slices": [
+        {
+          "id": "SL-R04-01",
+          "title": "baselineと影響選択",
+          "output": "代表private consumerの変更系列、既存workflow inventory",
+          "verification": "見逃しと費用の同分母比較",
+          "depends_on": [],
+          "owner_role": "CI/view/scheduling責務owner",
+          "state": "planned",
+          "github_issue": null,
+          "ut_plan": null
+        },
+        {
+          "id": "SL-R04-02",
+          "title": "view往復",
+          "output": "正本更新→生成→discrepancy→承認→再生成",
+          "verification": "改変/旧revision/権限外編集拒否",
+          "depends_on": [
+            "SL-R04-01"
+          ],
+          "owner_role": "CI/view/scheduling責務owner",
+          "state": "planned",
+          "github_issue": null,
+          "ut_plan": null
+        },
+        {
+          "id": "SL-R04-03",
+          "title": "順序予測のshadow",
+          "output": "SCHED-01〜14と固定fixture、ready集合と合流見込み",
+          "verification": "実績と予定の分離・依存違反0",
+          "depends_on": [
+            "SL-R04-02"
+          ],
+          "owner_role": "CI/view/scheduling責務owner",
+          "state": "planned",
+          "github_issue": null,
+          "ut_plan": null
+        },
+        {
+          "id": "SL-R04-04",
+          "title": "CI/default profile切替",
+          "output": "導入先dry-runと承認、同一HEAD/attemptを照合",
+          "verification": "既存保護を維持したpilot",
+          "depends_on": [
+            "SL-R04-03"
+          ],
+          "owner_role": "CI/view/scheduling責務owner",
+          "state": "planned",
+          "github_issue": null,
+          "ut_plan": null
+        }
+      ]
+    },
+    {
+      "id": "R05",
+      "version": "0.5.0",
+      "name": "安全なチケット配布・動的作業計画",
+      "file": "releases/R05_0.5.0.md",
+      "status": "planned",
+      "old_m": "M3a",
+      "goal": "予測と実際の配布を分離したまま、資源制約下で正規に分担・合流・回復できる。",
+      "owner": "Control Plane/U23 owner / security・QA",
+      "includes": [
+        "既存L4責務×path×依存から大中小原子のticketとadmissionをcompile。上流曖昧要求の全compileはR07。",
+        "採番予約・owner・path lease・操作lease・heartbeat・fence・takeoverを共通U23へ統合。",
+        "deterministic ready queue、依存解放/critical path/aging/reviewer・CI容量を使う順序決定、event-driven再計画。",
+        "作用直前に最新依存成立・権限・予算・資源・leaseをCASで再確認。別PC/cloneでも一意。",
+        "実行環境の隔離・送信/秘密/証拠保護、typed attempt/終端/回復、三者分離、incidentと合流/refactor検査。"
+      ],
+      "excludes": [
+        "本番BugBot、根拠不明の完了時刻、最適解を保証する高価なsolver。",
+        "LLMが統括判断を代行、期限を理由に未承認依存を飛び越えること。"
+      ],
+      "old_new": [
+        [
+          "空いたactorへの逐次手渡し",
+          "制約付きdispatchとactual queue",
+          "手動発行は理由付き例外"
+        ],
+        [
+          "ローカル予約/放置worktree",
+          "canonical reservationとtakeover/GC",
+          "historical recordは保存"
+        ],
+        [
+          "完了見込みに頼る先行着手",
+          "actual readiness再検証",
+          "予測は権限も完了も作らない"
+        ]
+      ],
+      "rollout": "R04のshadow計画→dry-run→一つのproject/責務の自動dispatch→複数actor→別cloneへ。旧手配経路も共通admissionを通す。",
+      "rollback": "新規dispatchを止めactive leaseをdrainし、accepted recordと高水位点を保存。検証済みfallback scheduler/手動割当へ切替。leaseを二つ作る旧経路へ戻さない。",
+      "remove": "対象projectの未予約編集、独自queue、直merge、二重role/ownerの権限抜け道を停止。全native agent再編はR08。",
+      "development_requires": [
+        "R04"
+      ],
+      "publication_requires": [
+        "R04"
+      ],
+      "baseline_refs": [
+        "GH-MAIN",
+        "GH-PKG",
+        "GH-PR517"
+      ],
+      "fr_completed": [
+        "UTV4-FR-001",
+        "UTV4-FR-002",
+        "UTV4-FR-003",
+        "UTV4-FR-004",
+        "UTV4-FR-005",
+        "UTV4-FR-012",
+        "UTV4-FR-027",
+        "UTV4-FR-030",
+        "UTV4-FR-031",
+        "UTV4-FR-032",
+        "UTV4-FR-033",
+        "UTV4-FR-034",
+        "UTV4-FR-036",
+        "UTV4-FR-037",
+        "UTV4-FR-052",
+        "UTV4-FR-054",
+        "UTV4-FR-055"
+      ],
+      "fr_started": [],
+      "migration_ids": [
+        "MIG-04",
+        "MIG-05",
+        "MIG-07",
+        "MIG-08",
+        "MIG-16",
+        "MIG-17",
+        "MIG-18"
+      ],
+      "acceptance": [
+        {
+          "id": "REL-R05-AC-01",
+          "criterion": "未成立依存・重複lease・能力/権限不足・stale planの割当が副作用前に拒否。",
+          "status": "not_executed"
+        },
+        {
+          "id": "REL-R05-AC-02",
+          "criterion": "別cloneから同時予約して二重ownerが成立しない。ack-loss/replayでも二重作用0。",
+          "status": "not_executed"
+        },
+        {
+          "id": "REL-R05-AC-03",
+          "criterion": "容量が足りるfixtureで低優先案件もagingにより実行される。恒常過負荷時は待ち上限違反を検知し、能力・期限・scopeの人間判断へ戻す。無限待ちを正常扱いしない。",
+          "status": "not_executed"
+        },
+        {
+          "id": "REL-R05-AC-04",
+          "criterion": "実行中taskを再計画のたびに中断しない。承認した安全checkpoint以外で強制引継ぎしない。",
+          "status": "not_executed"
+        },
+        {
+          "id": "REL-R05-AC-05",
+          "criterion": "安全受入・独立review・controller変更前policyの認可が成立し、fixture workerの端から端まで通る。",
+          "status": "not_executed"
+        },
+        {
+          "id": "REL-R05-AC-06",
+          "criterion": "予測不明でも決定的依存順へfallbackでき、未知を成功にはしない。",
+          "status": "not_executed"
+        }
+      ],
+      "runtime_implemented": false,
+      "public_api_stability": "explicitly_versioned_0x",
+      "license_target": "MPL-2.0_for_in_scope_UT_code",
+      "slices": [
+        {
+          "id": "SL-R05-01",
+          "title": "排他/回復を先に受入",
+          "output": "競合する2 process/2 clone、期限切れ、ack-loss",
+          "verification": "exactly-one winnerと再開",
+          "depends_on": [],
+          "owner_role": "Control Plane/U23 owner / security・QA",
+          "state": "planned",
+          "github_issue": null,
+          "ut_plan": null
+        },
+        {
+          "id": "SL-R05-02",
+          "title": "ticket/compiler/admission接続",
+          "output": "既存U23/PLAN/FSM、root例外、操作lease区別",
+          "verification": "合法/禁止遷移",
+          "depends_on": [
+            "SL-R05-01"
+          ],
+          "owner_role": "Control Plane/U23 owner / security・QA",
+          "state": "planned",
+          "github_issue": null,
+          "ut_plan": null
+        },
+        {
+          "id": "SL-R05-03",
+          "title": "scheduleを実配布へ接続",
+          "output": "proposal/dispatchを別処理にし、CAS時に再検査",
+          "verification": "stale planで副作用0",
+          "depends_on": [
+            "SL-R05-02"
+          ],
+          "owner_role": "Control Plane/U23 owner / security・QA",
+          "state": "planned",
+          "github_issue": null,
+          "ut_plan": null
+        },
+        {
+          "id": "SL-R05-04",
+          "title": "資源・安全・合流受入",
+          "output": "review/CI/人間capacity、異project隔離、refactor境界",
+          "verification": "通常仕事と攻撃/故障からの回復",
+          "depends_on": [
+            "SL-R05-03"
+          ],
+          "owner_role": "Control Plane/U23 owner / security・QA",
+          "state": "planned",
+          "github_issue": null,
+          "ut_plan": null
+        }
+      ]
+    },
+    {
+      "id": "R06",
+      "version": "0.6.0",
+      "name": "UT準拠BugBot",
+      "file": "releases/R06_0.6.0.md",
+      "status": "planned",
+      "old_m": "M3b",
+      "goal": "再現可能な局所不具合を、共通契約の範囲内で修理し独立受入まで閉じる。",
+      "owner": "repair worker owner / independent reviewer",
+      "includes": [
+        "finding→dedupe→route/PLAN/V-pair→scheduler→再現→回帰test→限定修正→独立review→admission。",
+        "再現入力と期待動作を既存契約へ結び、修正前Red/修正後Greenを保存。",
+        "原因別のretry/部分工程回復、回数・時間・token・差分上限、no-progress停止。",
+        "安全/仕様/権限/支出/テスト期待値の自己緩和を拒否。正常修正と故障時回復を検証。"
+      ],
+      "excludes": [
+        "JSON/制御/安全受入前の仮設Bot。",
+        "要求が不明なのに期待値を発明、無制限retry、self-review/無承認merge。",
+        "全種類のバグ修正保証、プロダクト本番への自動デプロイ。"
+      ],
+      "old_new": [
+        [
+          "チャットで手動診断と再委譲",
+          "共通findingからの限定修復worker",
+          "既存routeとadmissionが統制主体"
+        ],
+        [
+          "保存失敗も全reviewやり直し",
+          "同一性確認後の未完了工程再開",
+          "捏造したreceiptで救済しない"
+        ]
+      ],
+      "rollout": "read-only→dry-run→低riskの一種類→対象scope拡大。自動mergeは初期既定off、導入先が事前許可した狭いscopeのみ後から有効化。",
+      "rollback": "repair capabilityをoffにし新規起動を止める。未mergeは履歴付きterminal、merge済み誤修正は新しい通常修正/revert契約で戻す。履歴消去やprotected branch forceはしない。",
+      "remove": "Bot独自parser/queue/receipt/権限は作らないので置換不要。手動修正入口は共通UTの正当なfallbackとして保持。",
+      "development_requires": [
+        "R05"
+      ],
+      "publication_requires": [
+        "R05"
+      ],
+      "baseline_refs": [
+        "GH-MAIN",
+        "GH-PKG",
+        "GH-PR517"
+      ],
+      "fr_completed": [],
+      "fr_started": [],
+      "migration_ids": [],
+      "acceptance": [
+        {
+          "id": "REL-R06-AC-01",
+          "criterion": "R03共通JSONおよびR05制御/安全ゲート未達ならwrite/PR更新を開始しない。",
+          "status": "not_executed"
+        },
+        {
+          "id": "REL-R06-AC-02",
+          "criterion": "修正前Red/後Green、関連回帰、独立review、main状態が同一性で結ばれる。",
+          "status": "not_executed"
+        },
+        {
+          "id": "REL-R06-AC-03",
+          "criterion": "テスト削除/skip/無根拠な期待値変更/guard編集の自己許可を拒否。",
+          "status": "not_executed"
+        },
+        {
+          "id": "REL-R06-AC-04",
+          "criterion": "同一fingerprintの重複repairは一件に集約し、予算/無進捗で正規停止。",
+          "status": "not_executed"
+        },
+        {
+          "id": "REL-R06-AC-05",
+          "criterion": "修正AIと採点器/holdout/approvalの責任を分離。",
+          "status": "not_executed"
+        }
+      ],
+      "runtime_implemented": false,
+      "public_api_stability": "explicitly_versioned_0x",
+      "license_target": "MPL-2.0_for_in_scope_UT_code",
+      "slices": [
+        {
+          "id": "SL-R06-01",
+          "title": "read-only検出とrepair policy",
+          "output": "対象バグ種別/除外scopeを宣言",
+          "verification": "検出精度とルール無複製",
+          "depends_on": [],
+          "owner_role": "repair worker owner / independent reviewer",
+          "state": "planned",
+          "github_issue": null,
+          "ut_plan": null
+        },
+        {
+          "id": "SL-R06-02",
+          "title": "dry-runと再現",
+          "output": "正常・再現不可・契約矛盾を切り分け",
+          "verification": "許可前にソースwrite 0",
+          "depends_on": [
+            "SL-R06-01"
+          ],
+          "owner_role": "repair worker owner / independent reviewer",
+          "state": "planned",
+          "github_issue": null,
+          "ut_plan": null
+        },
+        {
+          "id": "SL-R06-03",
+          "title": "限定writeと受入",
+          "output": "小scope実装、回帰、独立review、通常merge",
+          "verification": "R05ゲート通過が必須",
+          "depends_on": [
+            "SL-R06-02"
+          ],
+          "owner_role": "repair worker owner / independent reviewer",
+          "state": "planned",
+          "github_issue": null,
+          "ut_plan": null
+        },
+        {
+          "id": "SL-R06-04",
+          "title": "再発/原価観測",
+          "output": "全attempt・CI・人手・fallback",
+          "verification": "局所成功を全体品質と偽らない",
+          "depends_on": [
+            "SL-R06-03"
+          ],
+          "owner_role": "repair worker owner / independent reviewer",
+          "state": "planned",
+          "github_issue": null,
+          "ut_plan": null
+        }
+      ]
+    },
+    {
+      "id": "R07",
+      "version": "0.7.0",
+      "name": "上流要求・PoC・再compile",
+      "file": "releases/R07_0.7.0.md",
+      "status": "planned",
+      "old_m": "M4",
+      "goal": "上流の曖昧さを人間が判断し、変更が必要な下流だけを再構成する。",
+      "owner": "requirements/design owner / compiler owner",
+      "includes": [
+        "intake→append-only discovery→typed IR→人間freeze。provisional/frozenを要求単位で保持。",
+        "PoC scope/budget/exit oracleとS4、screen inventory/fixture/異常系/finding/深度profile/独立Goldを実装。",
+        "L3/L5製本、L4責務×依存→L5以下ticket、契約改訂→backflow dedupe→影響下fence→再compile。",
+        "対象active PLAN frontmatter/Reverse状態の新正本への移行を閉じ、過去記録のreaderは保持。",
+        "schedulerに新規/無効化/変更の差分と不確実性を渡し、下流計画だけ更新。"
+      ],
+      "excludes": [
+        "AIによるfreeze・未知値補完、モック画像を正本にすること。",
+        "既存の確定要求を一括provisionalへ戻すこと。",
+        "すべての歴史文書を新形式に変換すること。"
+      ],
+      "old_new": [
+        [
+          "proseの質問/暫定判断",
+          "根拠付きdiscovery/decision record",
+          "人間の自由文入力は維持"
+        ],
+        [
+          "レーン別の重複Reverse",
+          "契約単位のbackflow集約と生成文書",
+          "採択済みnarrativeの人間編集は維持"
+        ],
+        [
+          "手作業で全ticket書換え",
+          "影響差分の再compile",
+          "無関係な仕事を無効化しない"
+        ]
+      ],
+      "rollout": "UT自身の限定scope→承認されたconsumerの一工程→上流全体。旧proseは共通admission経由の入力として残し、二重確定はさせない。",
+      "rollback": "新規compileを停止。確定済み決定・source/旧新ID対応・eventを保持し、互換reader上で人間判断へ戻す。新版のfreezeを消して旧状態へ戻さない。",
+      "remove": "対象active scopeのprose-only状態writer、個別再発行台帳を停止。歴史文書はarchive/read-onlyとして継続。",
+      "development_requires": [
+        "R05"
+      ],
+      "publication_requires": [
+        "R06"
+      ],
+      "baseline_refs": [
+        "GH-MAIN",
+        "GH-PKG",
+        "GH-PR517"
+      ],
+      "fr_completed": [
+        "UTV4-FR-007",
+        "UTV4-FR-015",
+        "UTV4-FR-016",
+        "UTV4-FR-017",
+        "UTV4-FR-018",
+        "UTV4-FR-028",
+        "UTV4-FR-029",
+        "UTV4-FR-035",
+        "UTV4-FR-039",
+        "UTV4-FR-046",
+        "UTV4-FR-048",
+        "UTV4-FR-056",
+        "UTV4-FR-057",
+        "UTV4-FR-058",
+        "UTV4-FR-059"
+      ],
+      "fr_started": [],
+      "migration_ids": [
+        "MIG-03",
+        "MIG-04",
+        "MIG-10",
+        "MIG-14"
+      ],
+      "acceptance": [
+        {
+          "id": "REL-R07-AC-01",
+          "criterion": "同一event log/入力/policyで同じIR/ticket差分集合を生成。",
+          "status": "not_executed"
+        },
+        {
+          "id": "REL-R07-AC-02",
+          "criterion": "human decision無しのfreeze、S3だけのproduction昇格を拒否。",
+          "status": "not_executed"
+        },
+        {
+          "id": "REL-R07-AC-03",
+          "criterion": "同契約の重複backflowが集約され、依存下流のみfence、改訂後に正規再開。",
+          "status": "not_executed"
+        },
+        {
+          "id": "REL-R07-AC-04",
+          "criterion": "lightでも必要なfixture・finding・最低checklistを持ち、deepのGoldを判定器自身から作らない。",
+          "status": "not_executed"
+        },
+        {
+          "id": "REL-R07-AC-05",
+          "criterion": "旧正本のwriter停止と新recordへの対応、参照/履歴の欠落ゼロ。",
+          "status": "not_executed"
+        }
+      ],
+      "runtime_implemented": false,
+      "public_api_stability": "explicitly_versioned_0x",
+      "license_target": "MPL-2.0_for_in_scope_UT_code",
+      "slices": [
+        {
+          "id": "SL-R07-01",
+          "title": "intake/discovery/PoC",
+          "output": "既存IR/routeに接続しS4と暫定状態を実装",
+          "verification": "human authority正負oracle",
+          "depends_on": [],
+          "owner_role": "requirements/design owner / compiler owner",
+          "state": "planned",
+          "github_issue": null,
+          "ut_plan": null
+        },
+        {
+          "id": "SL-R07-02",
+          "title": "screen/製本",
+          "output": "同形fixture、異常系、light必須とchecklist整合",
+          "verification": "正常/異常画面と意味照合",
+          "depends_on": [
+            "SL-R07-01"
+          ],
+          "owner_role": "requirements/design owner / compiler owner",
+          "state": "planned",
+          "github_issue": null,
+          "ut_plan": null
+        },
+        {
+          "id": "SL-R07-03",
+          "title": "backflow/recompile",
+          "output": "dedupe/fence/差分集合/上流batch判断",
+          "verification": "影響集合の完全性",
+          "depends_on": [
+            "SL-R07-02"
+          ],
+          "owner_role": "requirements/design owner / compiler owner",
+          "state": "planned",
+          "github_issue": null,
+          "ut_plan": null
+        },
+        {
+          "id": "SL-R07-04",
+          "title": "active PLAN/Reverse移行",
+          "output": "既存ID/pair/historyの保持",
+          "verification": "一正本・read-after・回復",
+          "depends_on": [
+            "SL-R07-03"
+          ],
+          "owner_role": "requirements/design owner / compiler owner",
+          "state": "planned",
+          "github_issue": null,
+          "ut_plan": null
+        }
+      ]
+    },
+    {
+      "id": "R08",
+      "version": "0.8.0",
+      "name": "provider-nativeと独立性の統一",
+      "file": "releases/R08_0.8.0.md",
+      "status": "planned",
+      "old_m": "M5",
+      "goal": "role正本から各providerへ写像し、契約と検証済み能力で実行先を選ぶ。",
+      "owner": "role/provider owner / review QA",
+      "includes": [
+        "既存roleのcapability/tool/evidence/authorityを一つのrecord体系へ正規化。",
+        "provider固有agent定義を決定的に生成し、guard/delegationの二重定義を解消。",
+        "hybrid/single-provider/standaloneをevidence tier・実在session・blind packet・補償監査付きで受入。",
+        "実測したmodel/runtime×task能力と利用枠をschedulerへ供給し、更新時の安全/context再評価を行う。"
+      ],
+      "excludes": [
+        "特定provider/最新モデルへの自動乗換え、有料契約追加、role名へのmodel固定。",
+        "別sessionというだけで独立性を合格にすること。"
+      ],
+      "old_new": [
+        [
+          "手書きnative subagentと別routing表",
+          "論理role→adapter generated定義",
+          "必要な専門知識はskillに分離"
+        ],
+        [
+          "family名だけの選択",
+          "role×capability×分離条件×profile",
+          "現行の強い独立性条件を無証拠で緩めない"
+        ]
+      ],
+      "rollout": "まず既存providerの生成定義をshadow比較、能力同値を検証して切替。single-providerは対象scopeでopt-in後に受入。",
+      "rollback": "受入済み旧adapter/role bundleへ戻し、新profileのdispatchを止める。旧review receiptのtierを書換えない。",
+      "remove": "移行済みnative手書き定義とguard内重複role表を生成consumerへ変更。旧adapterは次段階の互換期限まで限定保管。",
+      "development_requires": [
+        "R05",
+        "R07"
+      ],
+      "publication_requires": [
+        "R07"
+      ],
+      "baseline_refs": [
+        "GH-MAIN",
+        "GH-PKG",
+        "GH-PR517"
+      ],
+      "fr_completed": [
+        "UTV4-FR-013",
+        "UTV4-FR-023",
+        "UTV4-FR-024",
+        "UTV4-FR-049",
+        "UTV4-FR-050",
+        "UTV4-FR-051"
+      ],
+      "fr_started": [],
+      "migration_ids": [
+        "MIG-11"
+      ],
+      "acceptance": [
+        {
+          "id": "REL-R08-AC-01",
+          "criterion": "同じrole/adapter版から同じnative定義を生成し、手書き残置の矛盾を検出。",
+          "status": "not_executed"
+        },
+        {
+          "id": "REL-R08-AC-02",
+          "criterion": "自己session/他workspace/偽attestation/旧HEADのreviewを拒否。",
+          "status": "not_executed"
+        },
+        {
+          "id": "REL-R08-AC-03",
+          "criterion": "single-providerの補償統制未実装・実測不足をfirst-classに昇格しない。",
+          "status": "not_executed"
+        },
+        {
+          "id": "REL-R08-AC-04",
+          "criterion": "利用枠停止後の再割当が独立性/権限/leaseを維持。",
+          "status": "not_executed"
+        },
+        {
+          "id": "REL-R08-AC-05",
+          "criterion": "private consumerの情報を他providerへ無承認送信しない。",
+          "status": "not_executed"
+        }
+      ],
+      "runtime_implemented": false,
+      "public_api_stability": "explicitly_versioned_0x",
+      "license_target": "MPL-2.0_for_in_scope_UT_code",
+      "slices": [
+        {
+          "id": "SL-R08-01",
+          "title": "role同値化",
+          "output": "現行tools/floor/権限/closing義務の棚卸し",
+          "verification": "旧新生成差分を検証",
+          "depends_on": [],
+          "owner_role": "role/provider owner / review QA",
+          "state": "planned",
+          "github_issue": null,
+          "ut_plan": null
+        },
+        {
+          "id": "SL-R08-02",
+          "title": "adapter/guard切替",
+          "output": "生成定義とdrift拒否",
+          "verification": "authorがroleを自己緩和できない",
+          "depends_on": [
+            "SL-R08-01"
+          ],
+          "owner_role": "role/provider owner / review QA",
+          "state": "planned",
+          "github_issue": null,
+          "ut_plan": null
+        },
+        {
+          "id": "SL-R08-03",
+          "title": "profile受入",
+          "output": "blind session・namespace・oracle再実行・sampling",
+          "verification": "各profile正負証拠",
+          "depends_on": [
+            "SL-R08-02"
+          ],
+          "owner_role": "role/provider owner / review QA",
+          "state": "planned",
+          "github_issue": null,
+          "ut_plan": null
+        },
+        {
+          "id": "SL-R08-04",
+          "title": "能力drift反映",
+          "output": "モデル更新の比較/制限/不明値",
+          "verification": "schedule/contextへ影響範囲のみ通知",
+          "depends_on": [
+            "SL-R08-03"
+          ],
+          "owner_role": "role/provider owner / review QA",
+          "state": "planned",
+          "github_issue": null,
+          "ut_plan": null
+        }
+      ]
+    },
+    {
+      "id": "R09",
+      "version": "0.9.0",
+      "name": "実録対策・context縮退・予測校正",
+      "file": "releases/R09_0.9.0.md",
+      "status": "planned",
+      "old_m": "M6",
+      "goal": "モデルが得意になった一般説明を減らし、必要な実トラブル対策へcontextを集中する。",
+      "owner": "adaptation/context owner / evaluation QA",
+      "includes": [
+        "judgementと後続結果のcalibration、CASE/SCENE/PATTERNと適用/失効/再検証の寿命管理。",
+        "task/model/runtime別に現行packetと縮退packetを同条件・holdout比較し、効果がある範囲だけ適用。",
+        "機構化済み注意文・旧workaround・一般手順を条件付き化/退役し、必須契約/事実/安全制約は保持。",
+        "schedulerの時間/修正/レビュー/費用予測を実績で校正し、unknown fallbackと計画変更コストを維持。",
+        "project opt-inの改善exportとblind boundary、改善の人間向けdigest、可逆quarantine。"
+      ],
+      "excludes": [
+        "全タスクでtoken削減必須、モデル新発売だけを根拠に短縮。",
+        "単一事故から全体policy自動生成、学習AIによる正解集合/権限の変更。",
+        "ML精度や最適性の無根拠保証。"
+      ],
+      "old_new": [
+        [
+          "全件記憶・一般proseの常時注入",
+          "最小typed packetとon-demand retrieval",
+          "source/監査履歴は別に保持"
+        ],
+        [
+          "注意書きの積み増し",
+          "根因修理/guard/回帰/条件付き対策",
+          "重大局所修理を学習待ちにしない"
+        ],
+        [
+          "固定所要時間の並び替え",
+          "根拠付き見積り幅と実績校正",
+          "未知は確定ETAにしない"
+        ]
+      ],
+      "rollout": "限定task×model×roleから有効化。直接の硬いgate昇格は正規設計/独立review/rollbackを経る。計測はR03/R04から蓄積済みのものを使う。",
+      "rollback": "profile/registryを検証済み版へ戻し、対象学習assetをquarantine。incident・calibration・失敗評価は保持。モデルの実revisionが不明なら既知profileへfallback。",
+      "remove": "証拠付きで旧重複prompt/skill/adapter/active archive参照を停止。発火回数0だけで安全策を削除しない。",
+      "development_requires": [
+        "R06",
+        "R07",
+        "R08"
+      ],
+      "publication_requires": [
+        "R08"
+      ],
+      "baseline_refs": [
+        "GH-MAIN",
+        "GH-PKG",
+        "GH-PR517"
+      ],
+      "fr_completed": [
+        "UTV4-FR-010",
+        "UTV4-FR-011",
+        "UTV4-FR-019",
+        "UTV4-FR-020",
+        "UTV4-FR-021",
+        "UTV4-FR-022",
+        "UTV4-FR-025",
+        "UTV4-FR-026",
+        "UTV4-FR-038",
+        "UTV4-FR-040",
+        "UTV4-FR-042",
+        "UTV4-FR-043",
+        "UTV4-FR-044",
+        "UTV4-FR-045",
+        "UTV4-FR-053"
+      ],
+      "fr_started": [],
+      "migration_ids": [
+        "MIG-12",
+        "MIG-13",
+        "MIG-19",
+        "MIG-20"
+      ],
+      "acceptance": [
+        {
+          "id": "REL-R09-AC-01",
+          "criterion": "必要情報欠落・他project/reviewer漏洩・退役asset再浮上を対象ケースで拒否。",
+          "status": "not_executed"
+        },
+        {
+          "id": "REL-R09-AC-02",
+          "criterion": "同条件の総費用/手戻り/見逃し比較とサンプル根拠があり、未観測を劣化なしにしない。",
+          "status": "not_executed"
+        },
+        {
+          "id": "REL-R09-AC-03",
+          "criterion": "学習・計画計算自体のAI/CIコストを含めて改善を確認。",
+          "status": "not_executed"
+        },
+        {
+          "id": "REL-R09-AC-04",
+          "criterion": "予測誤差の評価に中断/遅延/failedも含め、成功例だけで精度を作らない。",
+          "status": "not_executed"
+        },
+        {
+          "id": "REL-R09-AC-05",
+          "criterion": "対策/packet更新が壊れた場合に旧検証済み版へ戻せる。",
+          "status": "not_executed"
+        }
+      ],
+      "runtime_implemented": false,
+      "public_api_stability": "explicitly_versioned_0x",
+      "license_target": "MPL-2.0_for_in_scope_UT_code",
+      "slices": [
+        {
+          "id": "SL-R09-01",
+          "title": "対策assetとcalibration",
+          "output": "入力/結論/後続結果/owner/寿命を接続",
+          "verification": "CI成功だけをGoldにしない",
+          "depends_on": [],
+          "owner_role": "adaptation/context owner / evaluation QA",
+          "state": "planned",
+          "github_issue": null,
+          "ut_plan": null
+        },
+        {
+          "id": "SL-R09-02",
+          "title": "context ablation比較",
+          "output": "同modelで文脈差、別にmodel更新差を測る",
+          "verification": "独立holdout/攻撃/正常系",
+          "depends_on": [
+            "SL-R09-01"
+          ],
+          "owner_role": "adaptation/context owner / evaluation QA",
+          "state": "planned",
+          "github_issue": null,
+          "ut_plan": null
+        },
+        {
+          "id": "SL-R09-03",
+          "title": "限定昇格/退役",
+          "output": "shadow→人間採否→限定rollout→監視",
+          "verification": "悪化で旧検証済みpacket",
+          "depends_on": [
+            "SL-R09-02"
+          ],
+          "owner_role": "adaptation/context owner / evaluation QA",
+          "state": "planned",
+          "github_issue": null,
+          "ut_plan": null
+        },
+        {
+          "id": "SL-R09-04",
+          "title": "予測改善",
+          "output": "計画当時の入力固定、外れ/未完了も集計",
+          "verification": "baseline比較とcalibration",
+          "depends_on": [
+            "SL-R09-03"
+          ],
+          "owner_role": "adaptation/context owner / evaluation QA",
+          "state": "planned",
+          "github_issue": null,
+          "ut_plan": null
+        }
+      ]
+    },
+    {
+      "id": "R10",
+      "version": "1.0.0",
+      "name": "構想v4の統合受入・契約安定版",
+      "file": "releases/R10_1.0.0.md",
+      "status": "planned",
+      "old_m": "M0〜M6統合",
+      "goal": "構想v4の全採択要件を、実導入・移行・運用・回復まで一貫して受け入れる。",
+      "owner": "PO / program owner / release QA",
+      "includes": [
+        "既存#517のBR32/FR59/AC72と本追補を要件ごとに実装・実行証拠へjoin。",
+        "single→multi→single、正常変更、バグ修理、要求変更、incident、モデル更新、update/rollbackを統合実証。",
+        "public CLI/JSON/API、supported schema、migration/import、provider/OS、保守/退役方針を明記。",
+        "v4適合と配布SemVerの対応を確定。package1.0.0は本案でありGitHubの既発番を意味しない。"
+      ],
+      "excludes": [
+        "機能を一つ追加しただけのv4完成宣言。",
+        "全入力・全モデルで安全/自動修正成功という保証。",
+        "consumer未移行を理由に旧MIT版の許諾や履歴を消すこと。"
+      ],
+      "old_new": [
+        [
+          "候補PASS/部品Green中心の進捗",
+          "要求→実装→実行→独立受入→有効capability",
+          "未実装を非適用と偽装しない"
+        ],
+        [
+          "長期並存する旧writer",
+          "v4 scopeの新writerと明示import",
+          "旧履歴readonly readerを必要に応じ保持"
+        ]
+      ],
+      "rollout": "1.0.0-canary.N→1.0.0-rc.N→1.0.0。channel昇格はimmutable artifactと対応証拠を使い、配布物を作り直した場合は新identityで再検証。",
+      "rollback": "1.0.0に依存する新規writerを停止し、互換性判定後に0.9系または同majorの正常版へ。データ差分を落とす無条件snapshot restore禁止。",
+      "remove": "対象scopeの旧能動writer/手書き生成物/obsolete commandを退役。必要なimport/history reader、旧版source、第三者通知は維持。",
+      "development_requires": [
+        "R02",
+        "R03",
+        "R04",
+        "R05",
+        "R06",
+        "R07",
+        "R08",
+        "R09"
+      ],
+      "publication_requires": [
+        "R09"
+      ],
+      "baseline_refs": [
+        "GH-MAIN",
+        "GH-PKG",
+        "GH-PR517"
+      ],
+      "fr_completed": [],
+      "fr_started": [],
+      "migration_ids": [
+        "MIG-02",
+        "MIG-03",
+        "MIG-04",
+        "MIG-05",
+        "MIG-07",
+        "MIG-08",
+        "MIG-09",
+        "MIG-11",
+        "MIG-12",
+        "MIG-13",
+        "MIG-14",
+        "MIG-15",
+        "MIG-16",
+        "MIG-17",
+        "MIG-18",
+        "MIG-19",
+        "MIG-20"
+      ],
+      "acceptance": [
+        {
+          "id": "REL-R10-AC-01",
+          "criterion": "全採択要件のsource→FR→AC→implementation→test/run→receiptが追跡できる。",
+          "status": "not_executed"
+        },
+        {
+          "id": "REL-R10-AC-02",
+          "criterion": "未解消の高影響blockingがなく、非適用は実装不足ではなく根拠付き。",
+          "status": "not_executed"
+        },
+        {
+          "id": "REL-R10-AC-03",
+          "criterion": "移行済みscopeにdual writer、旧authority誤参照、stale receipt流用がない。",
+          "status": "not_executed"
+        },
+        {
+          "id": "REL-R10-AC-04",
+          "criterion": "予測・実行・受入が分離し、実際の順序/資源/独立性違反0を宣言した試験集合で確認。",
+          "status": "not_executed"
+        },
+        {
+          "id": "REL-R10-AC-05",
+          "criterion": "consumer費用と固定費、手戻り、安全性/context/予測をbaselineと同分母で報告。",
+          "status": "not_executed"
+        },
+        {
+          "id": "REL-R10-AC-06",
+          "criterion": "各versionからの更新経路と互換不能時のwrite拒否が再現できる。",
+          "status": "not_executed"
+        }
+      ],
+      "runtime_implemented": false,
+      "public_api_stability": "stabilized_after_acceptance",
+      "license_target": "MPL-2.0_for_in_scope_UT_code",
+      "slices": [
+        {
+          "id": "SL-R10-01",
+          "title": "機能別受入を閉じる",
+          "output": "trace/AC/追加条件の欠落検査",
+          "verification": "受入証拠のcoverage",
+          "depends_on": [],
+          "owner_role": "PO / program owner / release QA",
+          "state": "planned",
+          "github_issue": null,
+          "ut_plan": null
+        },
+        {
+          "id": "SL-R10-02",
+          "title": "legacy移行と統合",
+          "output": "実稼働データcopy、pending operation、別PC、A/B",
+          "verification": "移行/失敗/回復の実測",
+          "depends_on": [
+            "SL-R10-01"
+          ],
+          "owner_role": "PO / program owner / release QA",
+          "state": "planned",
+          "github_issue": null,
+          "ut_plan": null
+        },
+        {
+          "id": "SL-R10-03",
+          "title": "契約安定化とrelease",
+          "output": "CLI/JSON/manifest/help/ライセンス/保守を照合",
+          "verification": "必要CI/独立review/人間GO",
+          "depends_on": [
+            "SL-R10-02"
+          ],
+          "owner_role": "PO / program owner / release QA",
+          "state": "planned",
+          "github_issue": null,
+          "ut_plan": null
+        }
+      ]
+    }
+  ]
+}
