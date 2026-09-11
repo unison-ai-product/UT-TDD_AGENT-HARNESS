@@ -1,17 +1,16 @@
 ---
 plan_id: PLAN-L7-562-d3b-provider-judgment
 title: "PLAN-L7-562 (pair-freeze): D3b verified provider judgment producer"
-kind: pair-freeze
+kind: impl
 layer: L7
-drive: agent
-route_signal: feature_addition
-route_mode: add-feature
+drive: be
+route_signal: forward
+route_mode: forward
 created: 2026-09-11
 updated: 2026-09-11
 owner: Claude / Fable (contract review) · Codex worker (bounded implementation)
 parent_design: docs/plans/PLAN-L7-465-cross-review-author-binding.md
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
-next_pair_freeze: L7
 backprop_decision: required
 backprop_decision_reason: >-
   D3b の検証済み judgment を D3c/D3d の入力へ戻し、D3a exact attempt と
@@ -23,7 +22,7 @@ agent_slots:
   - role: se
     slot_label: "Luna worker - provider judgment domain/port/adapterをこの契約の範囲だけ実装"
   - role: qa
-    slot_label: "Terra - U-D3B-001..010のmutationとwrite-zero oracleを独立実測"
+    slot_label: "Terra - CANDIDATE-D3B-001..010のmutationとwrite-zero oracleを実装時にU-*へ昇格"
 generates:
   - artifact_path: docs/plans/PLAN-L7-562-d3b-provider-judgment.md
     artifact_type: markdown_doc
@@ -48,7 +47,6 @@ dependencies:
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/562
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/541
 review_evidence: []
-workflow_phase: L7
 status: draft
 github_issue_id: 562
 ---
@@ -128,3 +126,6 @@ Red → Green requires Linux/Windows/aggregate CI, exact-head non-author review,
 backfill document before #541 may retry actual seal. The old D3a receipt for PR #557 is not
 reused; a fresh exact-subject provider attempt is required after this producer exists.
 
+この pair-freeze では未実装の oracle を `U-*` として確定しない。L7 test-design の
+`CANDIDATE-D3B-001..010` は実装PRが Red test と同一 revision で追加された時点で
+`U-D3B-001..010` へ昇格し、実装・review・CIの証跡を同じ subject に束縛する。
