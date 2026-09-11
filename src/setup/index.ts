@@ -126,6 +126,9 @@ export {
   runPackAuthoringSmoke,
 } from "./pack-authoring-smoke.ts";
 export {
+  type ApprovalCommitment,
+  type ApprovalCommitmentLoadResult,
+  type ApprovalCommitmentReason,
   createFakeProcessRunnerPort,
   createFileApprovalPort,
   createFilePublicationJournalPort,
@@ -134,21 +137,18 @@ export {
   createNodeGhPorts,
   createNodeProcessRunnerPort,
   createPackPublicationProductionPorts,
-  loadApprovalCommitmentFromOriginMain,
-  validatePackApprovalCommitment,
-  type ApprovalCommitment,
-  type ApprovalCommitmentLoadResult,
-  type ApprovalCommitmentReason,
   type FakeProcessCall,
   type FakeProcessRunnerPort,
   type FileApprovalPortOptions,
   type FilePublicationJournalPort,
   type FilePublicationReceiptPort,
   type GhPublicationPortOptions,
+  loadApprovalCommitmentFromOriginMain,
   type PackPublicationProductionPortOptions,
   type ProcessRequest,
   type ProcessResult,
   type ProcessRunnerPort,
+  validatePackApprovalCommitment,
 } from "./pack-publication-production-ports.ts";
 export {
   bootstrapProjectIdentity,
