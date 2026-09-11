@@ -3,13 +3,18 @@ plan_id: PLAN-REVERSE-562-d3b-provider-judgment-backfill
 title: "PLAN-REVERSE-562: D3b provider judgment backfill"
 kind: reverse
 layer: cross
-drive: agent
+drive: be
 confirmed_reverse_type: design
 route_signal: reverse
 route_mode: reverse
 created: 2026-09-11
 updated: 2026-09-11
 owner: Claude / Fable (contract review) · Codex worker (bounded implementation)
+agent_slots:
+  - role: tl
+    slot_label: "TL - D3b judgment artifactとD3c/D3d入力のbackfill境界を検証する"
+  - role: qa
+    slot_label: "QA - exact subject、write-zero、replay/conflictのReverse差分を再検収する"
 forward_routing: gap-only
 promotion_strategy: reuse-as-is
 backprop_decision: required
@@ -58,4 +63,3 @@ R1 で PLAN-L7-465 と test-design の oracle 引用を束ね、R2 で bounded p
 artifact/refを照合する。R3 で #541 の fresh D3b→D3d→post-merge closure 実測を行い、
 R4 で PLAN-L6-93 の successor genesis/cutover laneへ戻す。provider family の強証明は
 本 reverse の責務外であり、別途 PO 承認を要する。
-
