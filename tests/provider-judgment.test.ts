@@ -1,0 +1,224 @@
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterEach, describe, expect, it } from "vitest";
+import { FileProviderJudgmentEvidenceAdapter } from "../src/feedback/adapters/provider-judgment-evidence.ts";
+import type {
+  PersistedProviderJudgment,
+  ProviderEvidenceReadResult,
+  ProviderJudgmentAttemptIdentity,
+  ProviderJudgmentEvidencePort,
+  ProviderJudgmentWriteResult,
+} from "../src/feedback/ports/provider-judgment-evidence.ts";
+import {
+  type ProviderJudgmentResult,
+  produceProviderJudgment,
+} from "../src/feedback/provider-judgment.ts";
+
+const roots: string[] = [];
+afterEach(() => {
+  for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
+});
+
+const identity: ProviderJudgmentAttemptIdentity = {
+  repository: "unison-ai-product/UT-TDD_AGENT-HARNESS",
+  prNumber: 557,
+  headSha: "a".repeat(40),
+  requestMemoryId: "memory:project:pr-557-review",
+  requestDigest: "b".repeat(64),
+  reviewRevision: `rv1-${"c".repeat(64)}`,
+  attempt: 1,
+  authorFamily: "codex",
+  invocationNonce: "nonce-review-557",
+};
+
+function evidence(overrides: Record<string, unknown> = {}): Uint8Array {
+  return new TextEncoder().encode(
+    JSON.stringify({
+      schema_version: "provider-judgment-evidence/v1",
+      verdict: "PASS-WEAK",
+      blocking_findings: [],
+      ...overrides,
+    }),
+  );
+}
+
+class FakePort implements ProviderJudgmentEvidencePort {
+  readResult: ProviderEvidenceReadResult = {
+    status: "available",
+    identity,
+    provider: "claude",
+    model: "claude-opus-5",
+    bytes: evidence(),
+  };
+  writeResult: ProviderJudgmentWriteResult = { status: "written" };
+  writes: PersistedProviderJudgment[] = [];
+
+  async read(): Promise<ProviderEvidenceReadResult> {
+    return this.readResult;
+  }
+
+  async write(value: PersistedProviderJudgment): Promise<ProviderJudgmentWriteResult> {
+    this.writes.push(value);
+    return this.writeResult;
+  }
+}
+
+async function run(port = new FakePort()): Promise<ProviderJudgmentResult> {
+  return produceProviderJudgment({ attempt: identity, port });
+}
+
+describe("D3b provider judgment producer", () => {
+  it("U-D3B-001: exact attemptからcanonical artifactとd3b refを導出しreplayする", async () => {
+    const port = new FakePort();
+    const first = await run(port);
+    expect(first).toMatchObject({
+      ok: true,
+      payload: { author_family: "codex", reviewer_family: "claude" },
+    });
+    if (!first.ok) throw new Error(first.reason);
+    expect(first.providerEvidenceRef).toBe(`d3b:${first.judgmentDigest}`);
+    expect(first.judgmentDigest).toMatch(/^[0-9a-f]{64}$/);
+    port.writeResult = { status: "replay" };
+    await expect(run(port)).resolves.toMatchObject({ ok: true, replay: true });
+  });
+
+  it.each([
+    ["repository", { repository: "other/repo" }],
+    ["pr", { prNumber: 558 }],
+    ["head", { headSha: "d".repeat(40) }],
+    ["request", { requestDigest: "e".repeat(64) }],
+    ["revision", { reviewRevision: `rv1-${"f".repeat(64)}` }],
+    ["attempt", { attempt: 2 }],
+  ])("U-D3B-002: %s identity mutationをwrite 0で拒否", async (_name, mutation) => {
+    const port = new FakePort();
+    port.readResult = {
+      ...(port.readResult as Extract<ProviderEvidenceReadResult, { status: "available" }>),
+      identity: { ...identity, ...mutation },
+    };
+    await expect(run(port)).resolves.toEqual({ ok: false, reason: "identity_mismatch" });
+    expect(port.writes).toHaveLength(0);
+  });
+
+  it("U-D3B-003: evidence bytesをdigestへ束縛する", async () => {
+    const left = await run();
+    const port = new FakePort();
+    port.readResult = {
+      ...(port.readResult as Extract<ProviderEvidenceReadResult, { status: "available" }>),
+      bytes: evidence({ verdict: "PASS" }),
+    };
+    const right = await run(port);
+    expect(left.ok && right.ok && left.judgmentDigest).not.toBe(right.ok && right.judgmentDigest);
+  });
+
+  it.each([
+    evidence({ unknown: true }),
+    evidence({ schema_version: "d3b.v0" }),
+    evidence({ verdict: 1 }),
+    new Uint8Array([0xff]),
+  ])("U-D3B-004: unknown/malformed schemaを拒否", async (bytes) => {
+    const port = new FakePort();
+    port.readResult = {
+      ...(port.readResult as Extract<ProviderEvidenceReadResult, { status: "available" }>),
+      bytes,
+    };
+    await expect(run(port)).resolves.toEqual({ ok: false, reason: "judgment_schema_invalid" });
+    expect(port.writes).toHaveLength(0);
+  });
+
+  it.each([
+    evidence({ verdict: "PASS", blocking_findings: ["blocked"] }),
+    evidence({ verdict: "FLAG", blocking_findings: [] }),
+    evidence({ verdict: "FLAG", blocking_findings: ["b", "a"] }),
+    evidence({ verdict: "FLAG", blocking_findings: ["a", "a"] }),
+  ])("U-D3B-005: verdictとfindingの矛盾を拒否", async (bytes) => {
+    const port = new FakePort();
+    port.readResult = {
+      ...(port.readResult as Extract<ProviderEvidenceReadResult, { status: "available" }>),
+      bytes,
+    };
+    await expect(run(port)).resolves.toEqual({ ok: false, reason: "judgment_schema_invalid" });
+  });
+
+  it("U-D3B-006: artifactはJCS key順かつ末尾改行1件で固定する", async () => {
+    const port = new FakePort();
+    const result = await run(port);
+    if (!result.ok) throw new Error(result.reason);
+    const text = new TextDecoder().decode(result.artifactBytes);
+    expect(text.endsWith("\n")).toBe(true);
+    expect(text.indexOf('"attempt"')).toBeLessThan(text.indexOf('"author_family"'));
+    expect(text).not.toContain("judgment_digest");
+  });
+
+  it("U-D3B-007: caller supplied digest/refを入力schemaで拒否する", async () => {
+    const port = new FakePort();
+    const result = await produceProviderJudgment({
+      attempt: identity,
+      port,
+      judgmentDigest: "f".repeat(64),
+    } as never);
+    expect(result).toEqual({ ok: false, reason: "identity_mismatch" });
+    expect(port.writes).toHaveLength(0);
+  });
+
+  it.each([
+    ["missing", "evidence_unavailable"],
+    ["superseded", "evidence_superseded"],
+    ["provider_failure", "provider_failure"],
+  ] as const)("U-D3B-008: %sをtyped unavailableへ落とす", async (status, reason) => {
+    const port = new FakePort();
+    port.readResult = { status };
+    await expect(run(port)).resolves.toEqual({ ok: false, reason });
+    expect(port.writes).toHaveLength(0);
+  });
+
+  it.each([
+    ["conflict", "judgment_conflict"],
+    ["failed", "judgment_write_failed"],
+  ] as const)("U-D3B-009: immutable write %sをfail-close", async (status, reason) => {
+    const port = new FakePort();
+    port.writeResult = { status };
+    await expect(run(port)).resolves.toEqual({ ok: false, reason });
+  });
+
+  it.each([
+    ["codex", "same_family_reviewer"],
+    ["other", "identity_mismatch"],
+  ])("U-D3B-010: provider family %sをauthorityへ昇格しない", async (provider, reason) => {
+    const port = new FakePort();
+    port.readResult = {
+      ...(port.readResult as Extract<ProviderEvidenceReadResult, { status: "available" }>),
+      provider: provider as "claude",
+    };
+    await expect(run(port)).resolves.toEqual({ ok: false, reason });
+    expect(port.writes).toHaveLength(0);
+  });
+
+  it("file adapterはcontent replayだけを許し同一identity別contentを拒否する", async () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-d3b-"));
+    roots.push(root);
+    const evidenceRoot = join(root, "evidence");
+    const judgmentsRoot = join(root, "judgments");
+    const attemptDir = join(evidenceRoot, identity.requestDigest, "attempts", "attempt-1");
+    mkdirSync(attemptDir, { recursive: true });
+    writeFileSync(
+      join(attemptDir, "evidence.json"),
+      JSON.stringify({
+        schema_version: "d3b-provider-evidence-envelope/v1",
+        identity,
+        provider: "claude",
+        model: "claude-opus-5",
+        evidence_base64: Buffer.from(evidence()).toString("base64"),
+      }),
+    );
+    const adapter = new FileProviderJudgmentEvidenceAdapter({ evidenceRoot, judgmentsRoot });
+    const first = await produceProviderJudgment({ attempt: identity, port: adapter });
+    const replay = await produceProviderJudgment({ attempt: identity, port: adapter });
+    expect(first).toMatchObject({ ok: true, replay: false });
+    expect(replay).toMatchObject({ ok: true, replay: true });
+    if (!first.ok) throw new Error(first.reason);
+    expect(readFileSync(join(judgmentsRoot, `${first.judgmentDigest}.json`))).toEqual(
+      Buffer.from(first.artifactBytes),
+    );
+  });
+});
