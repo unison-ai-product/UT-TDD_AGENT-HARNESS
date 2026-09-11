@@ -37,7 +37,7 @@ generates:
   - artifact_path: src/feedback/adapters/provider-judgment-evidence.ts
     artifact_type: source_module
   - artifact_path: tests/provider-judgment.test.ts
-    artifact_type: test_suite
+    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L7-465-cross-review-author-binding.md
   requires:
@@ -55,7 +55,20 @@ dependencies:
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/562
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/541
 review_evidence:
-  - "PR #564 exact HEAD 062fa30372a303167f46423909ca7aa6f9acee8c: Claude Opus PASS-WEAK / blocking 0; canonical receipt a2a46e5efe3f6ff63ca4fe89d512a2632f2c3b0f39f44d7370851eea88f7df84; CI run 34561108923 5/5 Green"
+  - reviewer: claude
+    review_kind: cross_agent
+    reviewed_at: 2026-09-11T04:50:00Z
+    tests_green_at: 2026-09-11T04:45:00Z
+    verdict: PASS-WEAK / blocking 0
+    worker_model: gpt-5.6-luna
+    reviewer_model: claude-opus-5
+    effort: middle
+    plan_revision: 062fa30372a303167f46423909ca7aa6f9acee8c
+    subject_head: 062fa30372a303167f46423909ca7aa6f9acee8c
+    scope: "PR #564 exact HEADのD3b pair-freezeを非著者review。provider evidence ref、family境界、candidate oracle、write-zero契約を確認した。実装GreenはIssue #568で別途検証する。"
+    citations:
+      - .ut-tdd/review/receipts/a2a46e5efe3f6ff63ca4fe89d512a2632f2c3b0f39f44d7370851eea88f7df84.json
+      - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/564
 status: confirmed
 github_issue_id: 562
 ---
