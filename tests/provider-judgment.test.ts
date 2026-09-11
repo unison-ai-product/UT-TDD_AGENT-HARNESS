@@ -88,9 +88,15 @@ describe("D3b provider judgment producer", () => {
     ["pr", { prNumber: 558 }],
     ["head", { headSha: "d".repeat(40) }],
     ["request", { requestDigest: "e".repeat(64) }],
+    ["memory", { requestMemoryId: "memory:project:other-review" }],
     ["revision", { reviewRevision: `rv1-${"f".repeat(64)}` }],
     ["attempt", { attempt: 2 }],
-  ])("U-D3B-002: %s identity mutationをwrite 0で拒否", async (_name, mutation) => {
+    ["nonce", { invocationNonce: "nonce-review-other" }],
+    ["author family", { authorFamily: "claude" as const }],
+  ] satisfies readonly [
+    string,
+    Partial<ProviderJudgmentAttemptIdentity>,
+  ][])("U-D3B-002: %s identity mutationをwrite 0で拒否", async (_name, mutation) => {
     const port = new FakePort();
     port.readResult = {
       ...(port.readResult as Extract<ProviderEvidenceReadResult, { status: "available" }>),
@@ -123,6 +129,20 @@ describe("D3b provider judgment producer", () => {
       bytes,
     };
     await expect(run(port)).resolves.toEqual({ ok: false, reason: "judgment_schema_invalid" });
+    expect(port.writes).toHaveLength(0);
+  });
+
+  it.each([
+    "",
+    " claude-opus-5",
+    "claude-opus-5 ",
+  ])("U-D3B-004: invalid model %jを拒否", async (model) => {
+    const port = new FakePort();
+    port.readResult = {
+      ...(port.readResult as Extract<ProviderEvidenceReadResult, { status: "available" }>),
+      model,
+    };
+    await expect(run(port)).resolves.toEqual({ ok: false, reason: "identity_mismatch" });
     expect(port.writes).toHaveLength(0);
   });
 
