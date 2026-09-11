@@ -199,6 +199,10 @@ describe("Issue #424 Slice 5 clean Pack/provider parity", () => {
     const linked = join(dirname(primary), `${basename(primary)}-linked`);
     fixtures.push(linked);
     git(primary, ["worktree", "add", "-q", "-b", "linked", linked]);
+    // The clean Pack has no node_modules; install before invoking its CLI.
+    // Each linked worktree needs its own physical dependency tree.
+    installDependencies(primary);
+    installDependencies(linked);
     const primarySetup = runPack(primary, ["setup", "--solo"]);
     expect(primarySetup.status, `${primarySetup.stdout}\n${primarySetup.stderr}`).toBe(0);
     const linkedSetup = runPack(linked, ["setup", "--solo"]);
@@ -216,8 +220,6 @@ describe("Issue #424 Slice 5 clean Pack/provider parity", () => {
       ok: true,
       projectId: "unison-ai-product/UT-TDD_AGENT-HARNESS-Pack",
     });
-    installDependencies(primary);
-    installDependencies(linked);
     const list = runPack(linked, ["memory", "list", "--query", memory.title]);
     expect(list.status, `${list.stdout}\n${list.stderr}`).toBe(0);
     expect(list.stdout).toContain(memory.memory_id);
