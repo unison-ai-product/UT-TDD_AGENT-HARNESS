@@ -250,7 +250,7 @@ describe("D3b provider judgment producer", () => {
     const adapter = new FileProviderJudgmentEvidenceAdapter({
       evidenceRoot,
       judgmentsRoot,
-      verifiedInvocation: { provider: "claude", model: "claude-opus-5" },
+      verifiedInvocation: { ...identity, provider: "claude", model: "claude-opus-5" },
     });
     const first = await produceProviderJudgment({ attempt: identity, port: adapter });
     const replay = await produceProviderJudgment({ attempt: identity, port: adapter });
@@ -301,7 +301,47 @@ describe("D3b provider judgment producer", () => {
     const adapter = new FileProviderJudgmentEvidenceAdapter({
       evidenceRoot,
       judgmentsRoot,
-      verifiedInvocation: { provider: "claude", model: "claude-opus-5" },
+      verifiedInvocation: { ...identity, provider: "claude", model: "claude-opus-5" },
+    });
+    await expect(produceProviderJudgment({ attempt: identity, port: adapter })).resolves.toEqual({
+      ok: false,
+      reason: "provider_failure",
+    });
+    expect(existsSync(judgmentsRoot)).toBe(false);
+  });
+
+  it.each([
+    ["head", { headSha: "d".repeat(40) }],
+    ["request", { requestDigest: "e".repeat(64) }],
+    ["revision", { reviewRevision: `rv1-${"f".repeat(64)}` }],
+    ["attempt", { attempt: 2 }],
+    ["nonce", { invocationNonce: "nonce-other-invocation" }],
+  ])("file adapterは別%sのverified invocation factを流用しない", async (_axis, drift) => {
+    const root = mkdtempSync(join(tmpdir(), "ut-d3b-invocation-"));
+    roots.push(root);
+    const evidenceRoot = join(root, "evidence");
+    const judgmentsRoot = join(root, "judgments");
+    const attemptDir = join(evidenceRoot, identity.requestDigest, "attempts", "attempt-1");
+    mkdirSync(attemptDir, { recursive: true });
+    writeFileSync(
+      join(attemptDir, "evidence.json"),
+      JSON.stringify({
+        schema_version: "d3b-provider-evidence-envelope/v1",
+        identity,
+        provider: "claude",
+        model: "claude-opus-5",
+        evidence_base64: Buffer.from(evidence()).toString("base64"),
+      }),
+    );
+    const adapter = new FileProviderJudgmentEvidenceAdapter({
+      evidenceRoot,
+      judgmentsRoot,
+      verifiedInvocation: {
+        ...identity,
+        ...drift,
+        provider: "claude",
+        model: "claude-opus-5",
+      },
     });
     await expect(produceProviderJudgment({ attempt: identity, port: adapter })).resolves.toEqual({
       ok: false,
