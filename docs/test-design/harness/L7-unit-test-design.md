@@ -2467,6 +2467,32 @@ mutation gateはdeadline再検査削除、strict unknown-field削除、attach前
 | `U-WTLIFE-006` | `PLAN-L7-501` | activation receipt欠落、owner認証欠落、inventory欠測、terminal欠落、terminal denyを各1軸で入力する | `activation_unresolved`/`owner_unknown`/`inventory_unavailable`/`terminal_missing` を混同せず保持し、terminal receiptがあってもdeny reasonをretireで消さない | `tests/worktree-lifecycle-domain.test.ts` |
 | `U-WTLIFE-010` | `PLAN-L7-501` | 同一 receipt を再送し、異なる digest、attempt不一致、不正遷移を入力する | replay は旧状態を上書きせず、異なる digest は `replay_conflict`、不正遷移は fail-close、event revision に欠番がない | `tests/worktree-lifecycle-domain.test.ts` |
 
+## PLAN-L7-562 D3b verified provider judgment producer 契約 oracle（2026-09-11）
+
+`PLAN-L7-562` は D3a の exact attempt と provider evidence を、D3c/D3d が消費できる
+immutable judgment artifact/ref へ変換する契約である。provider family の強い認証や
+GitHub attestation は所有せず、`unverified_family` 境界を維持する。実装 PR はこの
+宣言集合を 1:1 に昇格し、D3a receipt digest・PR comment・Memory本文・operator supplied
+digest/ref を入力へ戻してはならない。
+
+| 候補ID | 対象 | DbC oracle |
+|---|---|---|
+| CANDIDATE-D3B-001 | valid exact D3a attempt + provider evidence | D3a request 由来の`author_family`と反対側へ導出した`reviewer_family`を含む canonical JCS payload から1 artifact/`d3b:<judgment_digest>`を生成し、同一入力のreplayは同一digestへ収束 |
+| CANDIDATE-D3B-002 | subject / family binding | repository/PR/head/request digest/revision/attempt、author family、派生 reviewer family、実 spawn provider familyを各1軸変異する。same-familyは`same_family_reviewer`、その他は`identity_mismatch`で拒否し、artifact/workflow/seal write 0 |
+| CANDIDATE-D3B-003 | provider evidence binding | evidence bytesを1 byte変異、または`d3b:<judgment_digest>` refだけ差替え、`evidence_digest`不一致で拒否 |
+| CANDIDATE-D3B-004 | strict schema | unknown/missing/type/schema_version差替えを`judgment_schema_invalid`で拒否 |
+| CANDIDATE-D3B-005 | verdict/findings | PASSにblocking finding、FLAGのfinding順序変更、duplicate findingを拒否 |
+| CANDIDATE-D3B-006 | canonical digest | JCS key順、unicode、digest自己参照、uppercase/短縮digest変異を拒否 |
+| CANDIDATE-D3B-007 | caller authority | caller supplied judgment_digest/provider_evidence_ref、PR comment、Memory本文、D3a receipt digestのみの入力を拒否 |
+| CANDIDATE-D3B-008 | unavailable/retry | missing/superseded/provider failureをtyped unavailableへ落とし、artifact/workflow/seal write 0 |
+| CANDIDATE-D3B-009 | immutable replay/conflict | 同一content replayは冪等、同一identityの別content・別verdict・別attempt競合は2件目を書かない |
+| CANDIDATE-D3B-010 | D3c boundary | valid D3b + D3c mechanical envelopeでもfamily authority不在なら`unverified_family`、`custody_admitted` 0 |
+
+実装対応は `tests/provider-judgment.test.ts`（実装PRで候補IDを正規oracle IDへ昇格）と、後続の
+`review-custody` integration testに限定する。`src/cli.ts`、`src/setup/*`、#555の
+consumer runtimeはこの pair-freeze では変更しない。候補表だけでは oracle-test-trace の
+確定集合に入れず、実装PRの Red test と同時に昇格する。
+
 ## PLAN-L7-465 D3c trusted custody 契約 oracle（2026-08-05）
 
 ### D2 component evidence / aggregate循環防止 candidate（Issue #231訂正）
