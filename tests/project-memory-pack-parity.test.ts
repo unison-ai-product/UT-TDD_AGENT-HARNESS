@@ -99,14 +99,6 @@ function createCleanPack(repository = "unison-ai-product/UT-TDD_AGENT-HARNESS-Pa
   git(root, ["remote", "add", "origin", `git@github.com:${repository}.git`]);
   git(root, ["add", "."]);
   git(root, ["commit", "-qm", "test: materialize clean Pack"]);
-  // Identity creation must follow the same setup path as a real Pack
-  // consumer.  Do not pre-seed the tracked file through a source helper: the
-  // bootstrap command is the authority exercised by this parity fixture.
-  const setup = runPack(root, ["setup", "--solo"]);
-  expect(setup.status, `${setup.stdout}\n${setup.stderr}`).toBe(0);
-  expect(resolveProjectMemoryRoot(root)).toMatchObject({ ok: true });
-  git(root, ["add", "ut-tdd.project.json"]);
-  git(root, ["commit", "-qm", "test: commit Pack project identity"]);
   return root;
 }
 
@@ -124,6 +116,17 @@ function installDependencies(root: string): void {
           timeout: 300_000,
         });
   expect(result.status, `${result.stdout}\n${result.stderr}`).toBe(0);
+}
+
+function bootstrapCleanPack(root: string): void {
+  // A clean Pack has no node_modules. Install first, then exercise the
+  // production setup command as the identity authority.
+  installDependencies(root);
+  const setup = runPack(root, ["setup", "--solo"]);
+  expect(setup.status, `${setup.stdout}\n${setup.stderr}`).toBe(0);
+  expect(resolveProjectMemoryRoot(root)).toMatchObject({ ok: true });
+  git(root, ["add", "ut-tdd.project.json"]);
+  git(root, ["commit", "-qm", "test: commit Pack project identity"]);
 }
 
 function runPack(root: string, args: readonly string[], env: NodeJS.ProcessEnv = {}) {
@@ -194,14 +197,10 @@ describe("Issue #424 Slice 5 clean Pack/provider parity", () => {
     const linked = join(dirname(primary), `${basename(primary)}-linked`);
     fixtures.push(linked);
     git(primary, ["worktree", "add", "-q", "-b", "linked", linked]);
-    // The clean Pack has no node_modules; install before invoking its CLI.
-    // Each linked worktree needs its own physical dependency tree.
-    installDependencies(primary);
-    installDependencies(linked);
-    const primarySetup = runPack(primary, ["setup", "--solo"]);
-    expect(primarySetup.status, `${primarySetup.stdout}\n${primarySetup.stderr}`).toBe(0);
-    const linkedSetup = runPack(linked, ["setup", "--solo"]);
-    expect(linkedSetup.status, `${linkedSetup.stdout}\n${linkedSetup.stderr}`).toBe(0);
+    // Each linked worktree needs its own physical dependency tree and
+    // production-created project identity.
+    bootstrapCleanPack(primary);
+    bootstrapCleanPack(linked);
     const memory = writeMemory({
       repoRoot: primary,
       input: {
@@ -250,6 +249,8 @@ describe("Issue #424 Slice 5 clean Pack/provider parity", () => {
   it("CANDIDATE-P-PMEMROOT-003: same Memory ID in another Pack project cannot be read or claimed", async () => {
     const primary = createCleanPack();
     const foreign = createCleanPack("other/Pack");
+    bootstrapCleanPack(primary);
+    bootstrapCleanPack(foreign);
     const memory = writeMemory({
       repoRoot: primary,
       input: {
