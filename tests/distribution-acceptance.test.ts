@@ -326,19 +326,25 @@ describe("clean distribution local acceptance smoke", () => {
         ["src/cli.ts", "distribution", "plan", "--tag", "v0.1.0", "--json"],
         env,
       );
+      // A clean export has no consumer-local sealed runtime yet.  The
+      // distribution surface remains usable, but readiness must fail closed
+      // until setup admits and publishes that runtime.
       expect(distribution.status, distribution.stderr || distribution.stdout).toBe(0);
       const distributionJson = JSON.parse(distribution.stdout);
       expect(distributionJson).toMatchObject({
-        ok: true,
+        ok: false,
         export: {
           ok: true,
           missingRequired: [],
           denylistViolations: [],
         },
         readiness: {
-          ok: true,
+          ok: false,
         },
       });
+      expect(distributionJson.readiness.checks).toEqual(
+        expect.arrayContaining([expect.objectContaining({ name: "ut-tdd-cli", ok: false })]),
+      );
       expect(distributionJson.export.artifactPaths).toContain("src/cli.ts");
       expect(distributionJson.export.artifactPaths).toContain("CHANGELOG.md");
       expect(distributionJson.export.artifactPaths).toContain("package-lock.json");
@@ -401,14 +407,10 @@ describe("clean distribution local acceptance smoke", () => {
       expect(setup.status, setup.stderr || setup.stdout).toBe(0);
 
       const wrapperHelp = runNode(cleanRoot, [".ut-tdd/bin/ut-tdd.mjs", "--help"], env);
-      expect(wrapperHelp.status, wrapperHelp.stderr || wrapperHelp.stdout).toBe(0);
-      expect(wrapperHelp.stdout).toContain("Usage: ut-tdd");
+      expect(wrapperHelp.status, wrapperHelp.stderr || wrapperHelp.stdout).toBe(78);
+      expect(wrapperHelp.stderr).toContain("consumer_runtime_absent");
 
-      const setupSmoke = runNode(
-        cleanRoot,
-        [".ut-tdd/bin/ut-tdd.mjs", "doctor", "--setup-smoke"],
-        env,
-      );
+      const setupSmoke = runNode(cleanRoot, ["src/cli.ts", "doctor", "--setup-smoke"], env);
       expect(setupSmoke.status, setupSmoke.stderr || setupSmoke.stdout).toBe(0);
       expect(setupSmoke.stdout).toContain("doctor: setup-smoke - OK");
 

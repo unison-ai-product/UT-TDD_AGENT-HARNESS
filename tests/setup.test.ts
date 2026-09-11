@@ -7,11 +7,14 @@ import { buildBranchProtectionPayload } from "../src/setup/branch-protection.ts"
 import {
   applyBranchProtection,
   buildCleanDistributionPlan,
+  buildConsumerNodeRuntimeBundle,
+  buildConsumerNodeRuntimePayloads,
   buildConsumerReadinessPlan,
   buildPackSyncPlan,
   cleanDistributionArtifactPath,
   cleanDistributionSourcePath,
   detectProjectScale,
+  digestConsumerRuntimeBytes,
   emitSetup,
   loadTemplates,
   nodeSetupDeps,
@@ -545,29 +548,26 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     for (const p of preview) expect(p).not.toContain("UT-TDD-agent-harness");
   });
 
-  it("U-SETUP-009b: built-in wrapper falls back to the setup Pack CLI", () => {
+  it("U-SETUP-009b: generated wrapper resolves only the sealed consumer Node runtime", () => {
     const deps = mockDeps();
     const plan = planSetup("0-A", { dryRun: false });
 
     emitSetup(plan, {}, deps);
 
     const wrapper = deps.files.get(join("/repo", ".ut-tdd", "bin", "ut-tdd.mjs"));
-    expect(wrapper).toContain('const setupSourceCli = "');
     expect(wrapper).toContain(
-      'const repoLocalHarness = existsSync(repoLocalCli) && existsSync(join(repoRoot, "src", "setup", "index.ts"));',
+      'const pointerPath = resolve(consumerRoot, ".ut-tdd", "runtime", "activation", "active.json");',
     );
-    expect(wrapper).toContain(
-      "const sourceCli = repoLocalHarness ? repoLocalCli : setupSourceCli;",
-    );
-    expect(wrapper).toContain(
-      "const resolvedCli = existsSync(localPackageCli) ? localPackageCli : existsSync(sourceCli) ? sourceCli : null;",
-    );
-    expect(wrapper).toContain(
-      "spawnSync(process.execPath, [resolvedCli, ...process.argv.slice(2)]",
-    );
+    expect(wrapper).toContain('deny("consumer_runtime_absent")');
+    expect(wrapper).toContain('const runtimeRoot = resolve(consumerRoot, ".ut-tdd", "runtime");');
+    expect(wrapper).toContain("let manifest;");
+    expect(wrapper).toContain("spawnSync(process.execPath, [entry, ...process.argv.slice(2)]");
     expect(wrapper).toContain("windowsHide: true");
     expect(wrapper).not.toContain("shell:");
-    expect(wrapper).not.toContain("{{UT_TDD_SOURCE_CLI_JSON}}");
+    expect(wrapper).not.toContain("setupSourceCli");
+    expect(wrapper).not.toContain("repoLocalHarness");
+    expect(wrapper).not.toContain("src/setup/index.ts");
+    expect(wrapper).not.toContain("node_modules/ut-tdd");
 
     const codexHooks = JSON.parse(deps.files.get(join("/repo", ".codex", "hooks.json")) ?? "") as {
       hooks: { PreToolUse: { hooks: { command: string; args: string[] }[] }[] };
@@ -585,10 +585,8 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     expect(claudeSettings.hooks.PreToolUse[0]?.hooks[0]).toMatchObject(agentGuardInvocation);
   });
 
-  // Issue #506: this oracle verifies the generated wrapper's local/setup fallback
-  // resolution, not any Bun-specific runtime behavior (the wrapper content asserted
-  // in U-SETUP-009b contains no Bun branching). Launch via Node directly instead of
-  // the retired Bun fixture launcher.
+  // The generated wrapper is a sealed Node entrypoint. Launch via Node directly and
+  // assert its fail-closed result when no active runtime pointer exists.
   function runWrapperViaNode(cwd: string, args: string[]) {
     return spawnSync(process.execPath, args, { cwd, encoding: "utf8", windowsHide: true });
   }
@@ -633,7 +631,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     }
   });
 
-  it("U-SETUP-009b3: generated Node wrapper falls back to setup Pack CLI when local bin is absent", () => {
+  it("U-SETUP-009b3: generated Node wrapper fails closed when sealed runtime is absent", () => {
     const repo = mkdtempSync(join(tmpdir(), "ut-tdd-wrapper-source-"));
     try {
       const deps = mockDeps({ repoRoot: repo });
@@ -648,8 +646,9 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
 
       const result = runWrapperViaNode(repo, [wrapperPath, "status"]);
 
-      expect(result.status).toBe(0);
-      expect(result.stdout).toContain("mode:");
+      expect(result.status).toBe(78);
+      expect(result.stdout).toBe("");
+      expect(result.stderr).toContain("consumer_runtime_absent");
     } finally {
       rmSync(repo, { recursive: true, force: true });
     }
@@ -1000,6 +999,36 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
   });
 
   it("U-SETUP-012: consumer readiness covers preflight, rollback, contracts, CI, and monorepo root", () => {
+    const compiled = Buffer.from("export default 0;\n", "utf8");
+    const readinessIdentity = {
+      product_id: "setup-readiness",
+      consumer_root: "/repo",
+      runtime_root: "/repo/.ut-tdd/runtime",
+      operation_id: "setup-readiness-operation",
+      attempt: 0,
+      generation_id: "setup-readiness-generation",
+      subject_revision: "a".repeat(40),
+      artifact_digest: `sha256:${"b".repeat(64)}`,
+      node_executable_identity: `node-${process.version}|sha256:${"c".repeat(64)}`,
+      package_lock_digest: `sha256:${"d".repeat(64)}`,
+      source_graph_digest: `sha256:${"e".repeat(64)}`,
+      compiled_esm_digest: digestConsumerRuntimeBytes(compiled),
+      release_id: `rel-sha256:${"f".repeat(64)}`,
+      materializer_version: "fixture",
+      artifact_set_digest: `sha256:${"1".repeat(64)}`,
+      control_manifest_digest: `sha256:${"2".repeat(64)}`,
+      sealed_policy: "compiled-esm-only" as const,
+    };
+    const readinessPayloads = buildConsumerNodeRuntimePayloads({
+      identity: readinessIdentity,
+      compiled_esm: compiled,
+      node_bootstrap_receipt: Buffer.from("{}\n", "utf8"),
+    });
+    const consumerRuntime = {
+      status: "ready" as const,
+      identity: readinessIdentity,
+      bundle: buildConsumerNodeRuntimeBundle({ identity: readinessIdentity, ...readinessPayloads }),
+    };
     const ready = buildConsumerReadinessPlan({
       nodeVersion: "24.13.0",
       requiredNodeVersion: "24.13.0",
@@ -1011,6 +1040,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
       repoRoot: "/repo",
       packageRoot: "/repo/packages/app",
       tag: "v0.1.0",
+      consumerRuntime,
     });
 
     expect(ready.ok).toBe(true);
@@ -1046,6 +1076,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
       hasClaude: false,
       hasCodex: false,
       repoRoot: "/repo",
+      consumerRuntime,
     });
     expect(standaloneReady.ok).toBe(true);
     expect(standaloneReady.mode).toBe("standalone");
@@ -1087,13 +1118,10 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
       "ut-tdd-cli",
     ]);
     expect(blocked.checks.find((c) => c.name === "ut-tdd-cli")?.message).toContain(
-      "Generated Claude/Codex hooks invoke the project-local Node wrapper directly",
+      "Generated Claude/Codex hooks resolve only the consumer-local sealed Node runtime.",
     );
     expect(blocked.checks.find((c) => c.name === "ut-tdd-cli")?.message).toContain(
-      "Do not rely on a global install",
-    );
-    expect(blocked.checks.find((c) => c.name === "ut-tdd-cli")?.message).toContain(
-      "Node.js 22.18 or newer must be available",
+      "Source checkouts and TypeScript package paths are not fallback candidates.",
     );
     // engines.node follows npm range semantics rather than a numeric minimum:
     // a compatible patch is accepted, while a new major outside ^24 is not.
@@ -1107,6 +1135,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
         hasClaude: false,
         hasCodex: false,
         repoRoot: "/consumer",
+        consumerRuntime,
       }).ok,
     ).toBe(true);
     expect(

@@ -9,8 +9,8 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { homedir, tmpdir } from "node:os";
-import { basename, dirname, isAbsolute, join } from "node:path";
+import { tmpdir } from "node:os";
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import type { Command } from "commander";
 import { buildReleasePublicationPlan } from "../github/ops-guard.ts";
 import {
@@ -23,6 +23,7 @@ import {
   buildCleanDistributionPlan,
   buildConsumerReadinessPlan,
   buildPackSyncPlan,
+  type ConsumerNodeRuntimeReadinessInput,
   cleanDistributionSourcePath,
   DEFAULT_PACK_REPO,
   gitAddPathspecCommands,
@@ -68,6 +69,48 @@ function collectDistributionCandidatePaths(repoRoot: string): string[] {
 }
 
 const PACK_SYNC_MANIFEST = ".ut-tdd-pack-sync-manifest.json";
+
+function readConsumerRuntimeReadiness(repoRoot: string): ConsumerNodeRuntimeReadinessInput {
+  const runtimeRoot = resolve(repoRoot, ".ut-tdd", "runtime");
+  const pointerPath = join(runtimeRoot, "activation", "active.json");
+  try {
+    const pointer = JSON.parse(readFileSync(pointerPath, "utf8")) as {
+      bundle_path?: unknown;
+      bundle_digest?: unknown;
+    };
+    if (
+      typeof pointer.bundle_path !== "string" ||
+      resolve(pointer.bundle_path) !== pointer.bundle_path
+    )
+      return { status: "blocked", reason: "consumer_runtime_resolution_denied" };
+    const rel = relative(runtimeRoot, pointer.bundle_path);
+    if (!rel || rel === ".." || rel.startsWith(`..${sep}`) || isAbsolute(rel))
+      return { status: "blocked", reason: "consumer_runtime_external_path" };
+    const bundle = JSON.parse(
+      readFileSync(join(pointer.bundle_path, "bundle-manifest.json"), "utf8"),
+    ) as {
+      identity?: unknown;
+      bundle_digest?: unknown;
+      bundle_path?: unknown;
+      files?: unknown;
+      history_sequence?: unknown;
+      prior_bundle_digest?: unknown;
+      prior_history_tip_digest?: unknown;
+    };
+    if (
+      bundle.bundle_path !== pointer.bundle_path ||
+      bundle.bundle_digest !== pointer.bundle_digest
+    )
+      return { status: "blocked", reason: "consumer_runtime_digest_mismatch" };
+    return {
+      status: "ready",
+      identity: bundle.identity as ConsumerNodeRuntimeReadinessInput["identity"],
+      bundle: bundle as ConsumerNodeRuntimeReadinessInput["bundle"],
+    };
+  } catch {
+    return { status: "blocked", reason: "consumer_runtime_absent" };
+  }
+}
 
 function copyCleanDistributionArtifact(input: {
   sourceRoot: string;
@@ -247,16 +290,6 @@ export function registerDistributionCommands(program: Command): void {
       const hasGit = spawnSync("git", ["--version"], { stdio: "ignore" }).status === 0;
       const hasGh = spawnSync("gh", ["--version"], { stdio: "ignore" }).status === 0;
       const packageRoot = opts.packageRoot ? join(repoRoot, opts.packageRoot) : repoRoot;
-      const hookWrapperPath = join(packageRoot, ".ut-tdd", "bin", "ut-tdd.mjs");
-      const packageBinPath = join(
-        packageRoot,
-        "node_modules",
-        ".bin",
-        process.platform === "win32" ? "ut-tdd.cmd" : "ut-tdd",
-      );
-      const sourceSetupEntrypoint = join(packageRoot, "src", "cli.ts");
-      const hasProjectLocalUtTdd = existsSync(hookWrapperPath) || existsSync(packageBinPath);
-      const hasSourceSetupEntrypoint = existsSync(sourceSetupEntrypoint);
       // engines.node は consumer package root の package.json が正本 (第二の pin を持たない)。
       const requiredNodeVersion = ((): string | null => {
         const manifestPath = join(packageRoot, "package.json");
@@ -271,28 +304,6 @@ export function registerDistributionCommands(program: Command): void {
           return null;
         }
       })();
-      const utTddCli = utTddCliProbe();
-      const hasUtTddCli = hasProjectLocalUtTdd || hasSourceSetupEntrypoint || utTddCli.status === 0;
-      const utTddCliObserved =
-        utTddCli.error?.message || utTddCli.stderr.trim() || `exit ${utTddCli.status ?? "unknown"}`;
-      // PLAN-L7-522 §2.2 (S1-a): global 候補の探索先も Bun 配下を見ない。
-      const utTddCliHints = [
-        process.env.APPDATA ? join(process.env.APPDATA, "npm", "ut-tdd.cmd") : "",
-        join(homedir(), ".npm-global", "bin", "ut-tdd"),
-        join(homedir(), ".local", "bin", "ut-tdd"),
-      ].filter((p) => p && existsSync(p));
-      const utTddCliMessage = hasUtTddCli
-        ? undefined
-        : [
-            "Generated Claude/Codex hooks invoke the project-local Node wrapper directly so each project can use its own pinned UT-TDD package.",
-            `Expected wrapper: ${hookWrapperPath}`,
-            `Expected package bin: ${packageBinPath}`,
-            `Expected source setup entrypoint: ${sourceSetupEntrypoint}`,
-            `Observed: ${utTddCliObserved}`,
-            utTddCliHints.length > 0
-              ? `Detected global candidate path(s): ${utTddCliHints.join(", ")}. Prefer the project-local wrapper when multiple projects on one PC pin different harness versions.`
-              : "Add UT-TDD as a project dependency, run setup to emit the project-local Node wrapper, and ensure its Node entrypoint can be resolved without a shell shim.",
-          ].join(" ");
       const exportPlan = buildCleanDistributionPlan({
         paths: collectDistributionCandidatePaths(repoRoot),
         sourceTag: opts.tag,
@@ -303,14 +314,13 @@ export function registerDistributionCommands(program: Command): void {
         requiredNodeVersion,
         hasGit,
         hasGh,
-        hasUtTddCli,
-        utTddCliMessage,
         hasClaude: detection.claude,
         hasCodex: detection.codex,
         repoRoot,
         packageRoot,
         tag: opts.tag,
         cleanRepo: opts.cleanRepo,
+        consumerRuntime: readConsumerRuntimeReadiness(repoRoot),
       });
       const output = {
         ok: exportPlan.ok && readiness.ok,

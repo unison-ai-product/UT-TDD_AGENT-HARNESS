@@ -189,7 +189,17 @@ import {
   resolveForeignEditOverride,
 } from "./runtime/work-guard.ts";
 import { findReference } from "./search/index.ts";
-import { nodeSetupDeps, runSetup, type SetupArgs } from "./setup/index.ts";
+import {
+  admitConsumerLocalRuntime,
+  admitReleaseAggregate,
+  type ConsumerLocalRuntimeAdmissionInput,
+  nodeSetupDeps,
+  type ReleaseAggregateAdmissionInput,
+  runSetupAsync,
+  type SetupArgs,
+  type SetupConsumerRuntimeInput,
+} from "./setup/index.ts";
+import type { ReleaseChannelAttestation } from "./setup/release-channel-adapter.ts";
 import {
   checkForUpdate,
   defaultHarnessRoot,
@@ -730,7 +740,7 @@ program
   )
   .option("--json", "JSON output")
   .action(
-    (opts: {
+    async (opts: {
       strictTelemetryProvenance?: boolean;
       strictGreenCommandDigest?: boolean;
       setupSmoke?: boolean;
@@ -4021,8 +4031,12 @@ program
   .option("--tl-team <slug>", "CODEOWNERS の TL team slug")
   .option("--qa-team <slug>", "CODEOWNERS の QA team slug")
   .option("--po-team <slug>", "CODEOWNERS の PO team slug")
+  .option(
+    "--consumer-runtime-input <path>",
+    "sealed consumer runtime input JSON emitted by the release materializer",
+  )
   .action(
-    (opts: {
+    async (opts: {
       solo?: boolean;
       team?: boolean;
       dryRun?: boolean;
@@ -4030,6 +4044,7 @@ program
       tlTeam?: string;
       qaTeam?: string;
       poTeam?: string;
+      consumerRuntimeInput?: string;
     }) => {
       if (opts.solo && opts.team) {
         process.stderr.write("--solo と --team は同時指定できません (どちらか一方)\n");
@@ -4057,13 +4072,111 @@ program
         teamCount === 3
           ? { tl: opts.tlTeam as string, qa: opts.qaTeam as string, po: opts.poTeam as string }
           : undefined;
+      let consumerRuntime: SetupArgs["consumerRuntime"];
+      if (opts.consumerRuntimeInput) {
+        try {
+          const value = JSON.parse(readFileSync(opts.consumerRuntimeInput, "utf8")) as {
+            identity?: SetupConsumerRuntimeInput["identity"];
+            admission_input?: unknown;
+            compiled_esm_base64?: unknown;
+            node_bootstrap_receipt_base64?: unknown;
+          };
+          if (
+            !value.identity ||
+            !value.admission_input ||
+            typeof value.compiled_esm_base64 !== "string" ||
+            typeof value.node_bootstrap_receipt_base64 !== "string"
+          )
+            throw new Error(
+              "identity/admission_input/compiled_esm_base64/node_bootstrap_receipt_base64 are required",
+            );
+          const rawAdmission = value.admission_input as Record<string, unknown>;
+          const rawAggregate = rawAdmission.aggregate_input as Record<string, unknown>;
+          const rawFinalTree = rawAggregate?.final_tree as Record<string, unknown>;
+          const rawAttestation = rawAggregate?.attestation as Record<string, unknown>;
+          const rawAttestationEntries = rawAttestation?.entries;
+          if (
+            !rawAggregate ||
+            !rawFinalTree ||
+            !Array.isArray(rawFinalTree.manifestEntries) ||
+            !Array.isArray(rawFinalTree.sourcePaths) ||
+            !Array.isArray(rawFinalTree.cleanPackAllowlist) ||
+            !Array.isArray(rawFinalTree.channelMappings) ||
+            typeof rawAggregate.repository !== "string" ||
+            typeof rawAggregate.channel !== "string" ||
+            !rawAttestation ||
+            rawAttestation.status !== "attested" ||
+            typeof rawAttestation.releaseId !== "string" ||
+            typeof rawAttestation.artifactSourceCommit !== "string" ||
+            typeof rawAttestation.expectedDigest !== "string" ||
+            typeof rawAttestation.actualDigest !== "string" ||
+            !Array.isArray(rawAttestationEntries) ||
+            typeof rawAdmission.control_manifest_base64 !== "string"
+          )
+            throw new Error(
+              "admission_input.aggregate_input/final_tree/attestation/control_manifest_base64 are required",
+            );
+          const attestation = {
+            status: "attested" as const,
+            releaseId: rawAttestation.releaseId,
+            artifactSourceCommit: rawAttestation.artifactSourceCommit,
+            expectedDigest: rawAttestation.expectedDigest,
+            actualDigest: rawAttestation.actualDigest,
+            entries: rawAttestationEntries.map((entry) => {
+              const item = entry as Record<string, unknown>;
+              if (
+                typeof item.path !== "string" ||
+                typeof item.mode !== "string" ||
+                typeof item.content_base64 !== "string"
+              )
+                throw new Error("aggregate attestation entry is invalid");
+              if (item.mode !== "100644" && item.mode !== "100755" && item.mode !== "120000")
+                throw new Error("aggregate attestation entry mode is invalid");
+              return {
+                path: item.path,
+                mode: item.mode,
+                content: Buffer.from(item.content_base64, "base64"),
+              };
+            }),
+          } satisfies Extract<ReleaseChannelAttestation, { status: "attested" }>;
+          const aggregateInput = {
+            repository: rawAggregate.repository,
+            channel: rawAggregate.channel,
+            finalTree: rawFinalTree,
+          } as unknown as ReleaseAggregateAdmissionInput;
+          const aggregate = await admitReleaseAggregate(aggregateInput, {
+            attestChannel: async () => attestation,
+          });
+          if (!aggregate.ok) throw new Error(`consumer_runtime_aggregate_${aggregate.error}`);
+          const admissionInput = {
+            ...rawAdmission,
+            plan: {
+              ...aggregate.plan,
+            },
+            controlManifestBytes: Buffer.from(rawAdmission.control_manifest_base64, "base64"),
+          } as unknown as ConsumerLocalRuntimeAdmissionInput;
+          const admitted = admitConsumerLocalRuntime(admissionInput);
+          if (!admitted.ok) throw new Error(`consumer_runtime_aggregate_${admitted.error}`);
+          consumerRuntime = {
+            identity: value.identity,
+            admission: admitted.admission,
+            compiled_esm: Buffer.from(value.compiled_esm_base64, "base64"),
+            node_bootstrap_receipt: Buffer.from(value.node_bootstrap_receipt_base64, "base64"),
+          };
+        } catch (error) {
+          process.stderr.write(`--consumer-runtime-input invalid: ${String(error)}\n`);
+          process.exitCode = 1;
+          return;
+        }
+      }
       const args: SetupArgs = {
         ...(phase ? { phase } : {}),
         dryRun: Boolean(opts.dryRun),
         applyBranchProtection: Boolean(opts.applyBranchProtection),
         ...(teams ? { teams } : {}),
+        ...(consumerRuntime ? { consumerRuntime } : {}),
       };
-      const r = runSetup(args, deps);
+      const r = await runSetupAsync(args, deps);
       process.stdout.write(`phase: ${r.phase}${args.dryRun ? " (dry-run)" : ""}\n`);
       for (const w of r.written) process.stdout.write(`  ${args.dryRun ? "·" : "+"} ${w}\n`);
       process.stdout.write(

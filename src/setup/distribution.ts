@@ -404,9 +404,9 @@ export function buildConsumerReadinessPlan(input: {
   const nodeCheckName = input.requiredNodeVersion
     ? `node@${input.requiredNodeVersion}`
     : "node engines.node (missing)";
-  const sealedRuntime = input.consumerRuntime
-    ? validateConsumerReadiness(input.consumerRuntime)
-    : undefined;
+  // `hasUtTddCli` is an observation only.  Readiness is granted exclusively
+  // by the consumer-local sealed runtime and its receipt chain.
+  const sealedRuntime = validateConsumerReadiness(input.consumerRuntime);
   const checks = [
     {
       name: nodeCheckName,
@@ -431,22 +431,15 @@ export function buildConsumerReadinessPlan(input: {
     },
     {
       name: "ut-tdd-cli",
-      ok: sealedRuntime ? sealedRuntime.ok : (input.hasUtTddCli ?? true),
-      message: (sealedRuntime ? sealedRuntime.ok : (input.hasUtTddCli ?? true))
+      ok: sealedRuntime.ok,
+      message: sealedRuntime.ok
         ? "consumer-local sealed Node runtime is available for projected hooks"
         : (input.utTddCliMessage ??
-          (sealedRuntime
-            ? [
-                "Generated Claude/Codex hooks resolve only the consumer-local sealed Node runtime.",
-                `Runtime admission: ${sealedRuntime.reason ?? "consumer_runtime_absent"}.`,
-                "Source checkouts and TypeScript package paths are not fallback candidates.",
-              ].join(" ")
-            : [
-                "Generated Claude/Codex hooks invoke the project-local Node wrapper directly so each project can use its own pinned UT-TDD package.",
-                "Add UT-TDD as a project dependency before setup and verify `node .ut-tdd/bin/ut-tdd.mjs --help` in the consumer repo.",
-                "Do not rely on a global install when multiple projects on one PC may pin different harness versions.",
-                "Node.js 22.18 or newer must be available for the wrapper's unflagged TypeScript execution.",
-              ].join(" "))),
+          [
+            "Generated Claude/Codex hooks resolve only the consumer-local sealed Node runtime.",
+            `Runtime admission: ${sealedRuntime.reason ?? "consumer_runtime_absent"}.`,
+            "Source checkouts and TypeScript package paths are not fallback candidates.",
+          ].join(" ")),
     },
     {
       name: "runtime-cli",
@@ -461,7 +454,7 @@ export function buildConsumerReadinessPlan(input: {
   const tag = input.tag ?? "v0.1.0";
   const cleanRepo = input.cleanRepo ?? DEFAULT_PACK_REPO;
   return {
-    ok: nodeOk && input.hasGit && (sealedRuntime ? sealedRuntime.ok : (input.hasUtTddCli ?? true)),
+    ok: nodeOk && input.hasGit && sealedRuntime.ok,
     checks,
     mode,
     workspace: {

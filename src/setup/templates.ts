@@ -5,6 +5,7 @@ import { wrapperHookArgs } from "../lint/project-hook.ts";
 // model ID は SSoT (src/team/model-policy.ts MODEL_IDS) 参照のみ。生 literal の二重保持は
 // 世代 drift の温床 (A-177 F-5 / PLAN-L7-256: templates が opus-4-7 のまま SSoT と乖離した実績)。
 import { MODEL_IDS } from "../team/model-policy.ts";
+import { renderConsumerNodeWrapper } from "./consumer-node-runtime.ts";
 import type { GeneratedFile } from "./index.ts";
 
 export type TemplateSet = { [name: string]: string };
@@ -230,43 +231,10 @@ export const BUILTIN_GITHUB_TEMPLATES: TemplateSet = {
     "*.ico binary",
     "",
   ].join("\n"),
-  "common/ut-tdd.mjs": [
-    "#!/usr/bin/env node",
-    'import { existsSync } from "node:fs";',
-    'import { join } from "node:path";',
-    'import { spawnSync } from "node:child_process";',
-    "",
-    "const repoRoot = process.cwd();",
-    'const localPackageCli = join(repoRoot, "node_modules", "ut-tdd", "src", "cli.ts");',
-    "// Repo-local harness source (Pack checkout topology). Resolved relative to cwd so the",
-    "// wrapper keeps working on CI runners where the setup machine's absolute path does not",
-    "// exist (A-172 C-2). Both files are required so an unrelated consumer src/cli.ts is not",
-    "// misresolved as the harness CLI.",
-    'const repoLocalCli = join(repoRoot, "src", "cli.ts");',
-    'const repoLocalHarness = existsSync(repoLocalCli) && existsSync(join(repoRoot, "src", "setup", "index.ts"));',
-    "const setupSourceCli = {{UT_TDD_SOURCE_CLI_JSON}};",
-    "const sourceCli = repoLocalHarness ? repoLocalCli : setupSourceCli;",
-    "const resolvedCli = existsSync(localPackageCli) ? localPackageCli : existsSync(sourceCli) ? sourceCli : null;",
-    "if (!resolvedCli) {",
-    '  console.error("[ut-tdd-wrapper] Project-local UT-TDD entrypoint was not found.");',
-    '  console.error("[ut-tdd-wrapper] Add UT-TDD as a project dependency or keep the setup Pack checkout available.");',
-    "  process.exit(127);",
-    "}",
-    "const result = spawnSync(process.execPath, [resolvedCli, ...process.argv.slice(2)], {",
-    '  stdio: "inherit",',
-    "  windowsHide: true,",
-    "});",
-    "",
-    "if (result.error) {",
-    '  console.error("[ut-tdd-wrapper] Failed to launch project-local ut-tdd.");',
-    '  console.error("[ut-tdd-wrapper] Add UT-TDD as a project dependency, keep the setup Pack checkout available, or verify `ut-tdd --help` in this repository shell.");',
-    "  console.error(result.error.message);",
-    "  process.exit(127);",
-    "}",
-    "",
-    "process.exit(result.status ?? 0);",
-    "",
-  ].join("\n"),
+  // The source template is replaced with the same sealed active-pointer
+  // wrapper used by the production runtime.  Keeping a second wrapper here
+  // would re-introduce source/Pack/package TypeScript fallbacks.
+  "common/ut-tdd.mjs": renderConsumerNodeWrapper(),
   "adapter/AGENTS.md": [
     "<!-- UT-TDD:managed:start -->",
     "# UT-TDD Agent Harness Adapter",

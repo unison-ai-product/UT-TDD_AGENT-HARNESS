@@ -44,7 +44,7 @@ const RECORDER = [
 ].join("\n");
 
 describe("Claude hook wrapper execution contract (issue #123 / PLAN-L7-522 S1-b)", () => {
-  it("U-HOOKEXEC-001: forwards stdin and every argv token unchanged to the resolved CLI", () => {
+  it("U-HOOKEXEC-001: refuses to launch without the consumer-local sealed runtime", () => {
     const output = join(temporaryDirectory(), "result.json");
     const { root, wrapper } = materializeWrapper(RECORDER);
     const forwarded = ["plain", "contains spaces", 'quote"inside', "a&b", "日本語"];
@@ -57,8 +57,9 @@ describe("Claude hook wrapper execution contract (issue #123 / PLAN-L7-522 S1-b)
       windowsHide: true,
     });
 
-    expect(result.status, result.stderr).toBe(0);
-    expect(JSON.parse(readFileSync(output, "utf8"))).toEqual({ forwarded, stdin });
+    expect(result.status, result.stderr).toBe(78);
+    expect(result.stderr).toContain("consumer_runtime_absent");
+    expect(() => readFileSync(output, "utf8")).toThrow();
   });
 
   it("U-HOOKEXEC-008: fails closed when no project-local entrypoint can be resolved", () => {
@@ -69,13 +70,13 @@ describe("Claude hook wrapper execution contract (issue #123 / PLAN-L7-522 S1-b)
       windowsHide: true,
     });
 
-    expect(result.status).toBe(127);
-    expect(result.stderr).toContain("Project-local UT-TDD entrypoint was not found");
+    expect(result.status).toBe(78);
+    expect(result.stderr).toContain("consumer_runtime_absent");
   });
 
   it("U-HOOKEXEC-008: uses direct executable spawning and never delegates to a shell host", () => {
     expect(WRAPPER_TEMPLATE).toContain(
-      "spawnSync(process.execPath, [resolvedCli, ...process.argv.slice(2)]",
+      "spawnSync(process.execPath, [entry, ...process.argv.slice(2)]",
     );
     expect(WRAPPER_TEMPLATE).toContain("windowsHide: true");
     expect(WRAPPER_TEMPLATE).not.toMatch(

@@ -1,6 +1,9 @@
 import { existsSync, realpathSync } from "node:fs";
 import { basename, dirname, isAbsolute, posix, relative, resolve } from "node:path";
-import { deriveReleaseId } from "../schema/release-manifest.ts";
+import { parse as parseYaml } from "yaml";
+import { deriveReleaseId, parsePublicationManifest } from "../schema/release-manifest.ts";
+import { digestConsumerRuntimeBytes } from "./consumer-node-runtime.ts";
+import { deriveControlManifestSnapshotDigest } from "./pack-publication-staging.ts";
 import {
   applySealedReleaseAggregate,
   type ReleaseAggregateApplyDependencies,
@@ -16,6 +19,7 @@ const SHA256 = /^sha256:[a-f0-9]{64}$/;
 const RELEASE_ID = /^rel-sha256:[a-f0-9]{64}$/;
 const REVISION = /^[a-f0-9]{40}$/;
 const MODES = new Set(["100644", "100755", "120000"]);
+const admittedCapabilities = new WeakSet<object>();
 
 export interface ConsumerArtifactIdentity {
   readonly materializerVersion: string;
@@ -37,6 +41,7 @@ export interface ConsumerLocalRuntimeAdmissionInput {
   readonly plan: SealedReleaseAggregatePlan;
   readonly manifest: ConsumerArtifactIdentity;
   readonly receipt: ConsumerReceipt;
+  readonly controlManifestBytes: Uint8Array;
 }
 
 export interface ConsumerLocalRuntimeAdmission {
@@ -44,6 +49,7 @@ export interface ConsumerLocalRuntimeAdmission {
   readonly consumerRoot: string;
   readonly runtimeRoot: string;
   readonly identity: ConsumerArtifactIdentity;
+  readonly controlManifestSnapshotDigest: string;
   readonly plan: SealedReleaseAggregatePlan;
   readonly layout: ConsumerRuntimeLayout;
 }
@@ -71,6 +77,13 @@ export type ConsumerLocalRuntimeAdmissionError =
 export type ConsumerLocalRuntimeAdmissionResult =
   | { readonly ok: true; readonly admission: ConsumerLocalRuntimeAdmission }
   | { readonly ok: false; readonly error: ConsumerLocalRuntimeAdmissionError };
+
+/** Same-process capability check; structurally matching JSON is not admission. */
+export function isConsumerLocalRuntimeAdmission(
+  value: unknown,
+): value is ConsumerLocalRuntimeAdmission {
+  return isRecord(value) && admittedCapabilities.has(value);
+}
 
 export type ConsumerLocalRuntimeInstallResult =
   | {
@@ -251,6 +264,39 @@ function copyEntries(plan: SealedReleaseAggregatePlan): readonly MaterializedRel
   return Object.freeze(entries);
 }
 
+function admitControlManifest(input: {
+  readonly bytes: Uint8Array;
+  readonly plan: SealedReleaseAggregatePlan;
+}): string | null {
+  try {
+    const parsed = parsePublicationManifest(parseYaml(Buffer.from(input.bytes).toString("utf8")));
+    if (!parsed.ok) return null;
+    const release = parsed.value.releases[input.plan.releaseId];
+    if (
+      !release ||
+      release.materializerVersion !== "1" ||
+      release.artifactSourceCommit !== input.plan.sourceRevision ||
+      release.artifactSetDigest !== input.plan.expectedDigest ||
+      release.artifacts.length !== input.plan.entries.length
+    )
+      return null;
+    for (const [index, artifact] of release.artifacts.entries()) {
+      const entry = input.plan.entries[index];
+      if (
+        !entry ||
+        artifact.destinationPath !== entry.path ||
+        artifact.mode !== entry.mode ||
+        artifact.size !== entry.content.length ||
+        artifact.contentDigest !== digestConsumerRuntimeBytes(entry.content)
+      )
+        return null;
+    }
+    return deriveControlManifestSnapshotDigest(parsed.value);
+  } catch {
+    return null;
+  }
+}
+
 export function admitConsumerLocalRuntime(
   input: ConsumerLocalRuntimeAdmissionInput,
 ): ConsumerLocalRuntimeAdmissionResult {
@@ -279,6 +325,8 @@ export function admitConsumerLocalRuntime(
     return { ok: false, error: "namespace_escape" };
   }
   if (!validPlan(input.plan)) return { ok: false, error: "artifact_unavailable" };
+  if (!(input.controlManifestBytes instanceof Uint8Array))
+    return { ok: false, error: "artifact_unavailable" };
   if (!validIdentity(input.manifest) || !validReceipt(input.receipt))
     return { ok: false, error: "identity_mismatch" };
   if (input.manifest.materializerVersion !== "1" || input.receipt.materializerVersion !== "1") {
@@ -312,6 +360,11 @@ export function admitConsumerLocalRuntime(
     input.manifest.releaseId === input.receipt.releaseId &&
     input.manifest.sourceRevision === input.receipt.sourceRevision;
   if (!planIdentityMatches) return { ok: false, error: "identity_mismatch" };
+  const controlManifestSnapshotDigest = admitControlManifest({
+    bytes: input.controlManifestBytes,
+    plan: input.plan,
+  });
+  if (!controlManifestSnapshotDigest) return { ok: false, error: "identity_mismatch" };
   const sealedPlan = Object.freeze({ ...input.plan, entries });
   const consumerRoot = canonicalConsumerRoot;
   const runtimeRoot = canonicalRuntimeRoot;
@@ -319,16 +372,19 @@ export function admitConsumerLocalRuntime(
   if (Object.values(layout).some((path) => !within(consumerRoot, path))) {
     return { ok: false, error: "namespace_escape" };
   }
+  const admission = Object.freeze({
+    productId: input.productId,
+    consumerRoot,
+    runtimeRoot,
+    identity: Object.freeze({ ...input.manifest }),
+    controlManifestSnapshotDigest,
+    plan: sealedPlan,
+    layout,
+  });
+  admittedCapabilities.add(admission);
   return {
     ok: true,
-    admission: Object.freeze({
-      productId: input.productId,
-      consumerRoot,
-      runtimeRoot,
-      identity: Object.freeze({ ...input.manifest }),
-      plan: sealedPlan,
-      layout,
-    }),
+    admission,
   };
 }
 
