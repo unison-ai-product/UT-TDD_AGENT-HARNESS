@@ -184,7 +184,7 @@ describe("D3b provider judgment producer", () => {
   it.each([
     ["codex", "same_family_reviewer"],
     ["other", "identity_mismatch"],
-  ])("U-D3B-010: provider family %sをauthorityへ昇格しない", async (provider, reason) => {
+  ])("U-D3B-002: provider family %sの不一致を拒否", async (provider, reason) => {
     const port = new FakePort();
     port.readResult = {
       ...(port.readResult as Extract<ProviderEvidenceReadResult, { status: "available" }>),
@@ -220,5 +220,22 @@ describe("D3b provider judgment producer", () => {
     expect(readFileSync(join(judgmentsRoot, `${first.judgmentDigest}.json`))).toEqual(
       Buffer.from(first.artifactBytes),
     );
+
+    const retryIdentity = { ...identity, attempt: 2, invocationNonce: "nonce-review-557-retry" };
+    const retryRoot = join(evidenceRoot, retryIdentity.requestDigest, "attempts", "attempt-2");
+    mkdirSync(retryRoot, { recursive: true });
+    writeFileSync(
+      join(retryRoot, "evidence.json"),
+      JSON.stringify({
+        schema_version: "d3b-provider-evidence-envelope/v1",
+        identity: retryIdentity,
+        provider: "claude",
+        model: "claude-opus-5",
+        evidence_base64: Buffer.from(evidence({ verdict: "PASS" })).toString("base64"),
+      }),
+    );
+    await expect(
+      produceProviderJudgment({ attempt: retryIdentity, port: adapter }),
+    ).resolves.toEqual({ ok: false, reason: "judgment_conflict" });
   });
 });

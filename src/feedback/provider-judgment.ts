@@ -147,10 +147,8 @@ export function providerJudgmentIdentityDigest(payload: ProviderJudgmentPayload)
     request_memory_id: payload.request_memory_id,
     request_digest: payload.request_digest,
     review_revision: payload.review_revision,
-    attempt: payload.attempt,
     author_family: payload.author_family,
     reviewer_family: payload.reviewer_family,
-    invocation_nonce: payload.invocation_nonce,
   });
   return identity.ok ? sha256Hex(identity.value) : null;
 }
