@@ -1,7 +1,9 @@
 import type {
+  ProviderEvidenceReadResult,
   ProviderFamily,
   ProviderJudgmentAttemptIdentity,
   ProviderJudgmentEvidencePort,
+  ProviderJudgmentWriteResult,
 } from "./ports/provider-judgment-evidence.ts";
 import {
   type CanonicalValue,
@@ -160,7 +162,12 @@ export async function produceProviderJudgment(input: {
   if (!hasExactKeys(input, INPUT_KEYS) || !validIdentity(input.attempt)) {
     return { ok: false, reason: "identity_mismatch" };
   }
-  const read = await input.port.read(input.attempt);
+  let read: ProviderEvidenceReadResult;
+  try {
+    read = await input.port.read(input.attempt);
+  } catch {
+    return { ok: false, reason: "provider_failure" };
+  }
   if (read.status === "missing") return { ok: false, reason: "evidence_unavailable" };
   if (read.status === "superseded") return { ok: false, reason: "evidence_superseded" };
   if (read.status === "provider_failure") return { ok: false, reason: "provider_failure" };
@@ -203,7 +210,12 @@ export async function produceProviderJudgment(input: {
   }
   const judgmentDigest = sha256Hex(canonical.value);
   const artifactBytes = new TextEncoder().encode(`${canonical.value}\n`);
-  const write = await input.port.write({ identityDigest, judgmentDigest, bytes: artifactBytes });
+  let write: ProviderJudgmentWriteResult;
+  try {
+    write = await input.port.write({ identityDigest, judgmentDigest, bytes: artifactBytes });
+  } catch {
+    return { ok: false, reason: "judgment_write_failed" };
+  }
   if (write.status === "conflict") return { ok: false, reason: "judgment_conflict" };
   if (write.status === "failed") return { ok: false, reason: "judgment_write_failed" };
   return {

@@ -18,6 +18,7 @@ import type {
   ProviderJudgmentAttemptIdentity,
   ProviderJudgmentEvidencePort,
   ProviderJudgmentWriteResult,
+  VerifiedProviderInvocation,
 } from "../ports/provider-judgment-evidence.ts";
 import {
   type ProviderJudgmentPayload,
@@ -71,10 +72,16 @@ function parsePayload(bytes: Uint8Array): ProviderJudgmentPayload | null {
 export class FileProviderJudgmentEvidenceAdapter implements ProviderJudgmentEvidencePort {
   readonly #evidenceRoot: string;
   readonly #judgmentsRoot: string;
+  readonly #verifiedInvocation: VerifiedProviderInvocation;
 
-  constructor(input: { readonly evidenceRoot: string; readonly judgmentsRoot: string }) {
+  constructor(input: {
+    readonly evidenceRoot: string;
+    readonly judgmentsRoot: string;
+    readonly verifiedInvocation: VerifiedProviderInvocation;
+  }) {
     this.#evidenceRoot = input.evidenceRoot;
     this.#judgmentsRoot = input.judgmentsRoot;
+    this.#verifiedInvocation = input.verifiedInvocation;
   }
 
   async read(identity: ProviderJudgmentAttemptIdentity): Promise<ProviderEvidenceReadResult> {
@@ -97,6 +104,13 @@ export class FileProviderJudgmentEvidenceAdapter implements ProviderJudgmentEvid
     }
     if (envelope === null)
       return { status: "provider_failure", detail: "evidence envelope invalid" };
+    if (
+      JSON.stringify(envelope.identity) !== JSON.stringify(identity) ||
+      envelope.provider !== this.#verifiedInvocation.provider ||
+      envelope.model !== this.#verifiedInvocation.model
+    ) {
+      return { status: "provider_failure", detail: "verified invocation mismatch" };
+    }
     let bytes: Uint8Array;
     try {
       bytes = Uint8Array.from(Buffer.from(envelope.evidence_base64, "base64"));

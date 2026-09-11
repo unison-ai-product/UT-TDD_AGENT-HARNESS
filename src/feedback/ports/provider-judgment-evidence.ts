@@ -1,5 +1,11 @@
 export type ProviderFamily = "claude" | "codex";
 
+/** D3a custody が実 spawn から検証した invocation fact。 */
+export interface VerifiedProviderInvocation {
+  readonly provider: ProviderFamily;
+  readonly model: string;
+}
+
 export interface ProviderJudgmentAttemptIdentity {
   readonly repository: string;
   readonly prNumber: number;

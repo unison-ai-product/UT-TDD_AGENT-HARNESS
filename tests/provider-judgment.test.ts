@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -192,6 +192,14 @@ describe("D3b provider judgment producer", () => {
     expect(port.writes).toHaveLength(0);
   });
 
+  it("U-D3B-008: provider read例外をtyped unavailableへ落とす", async () => {
+    const port = new FakePort();
+    port.read = async () => {
+      throw new Error("read failed");
+    };
+    await expect(run(port)).resolves.toEqual({ ok: false, reason: "provider_failure" });
+  });
+
   it.each([
     ["conflict", "judgment_conflict"],
     ["failed", "judgment_write_failed"],
@@ -199,6 +207,14 @@ describe("D3b provider judgment producer", () => {
     const port = new FakePort();
     port.writeResult = { status };
     await expect(run(port)).resolves.toEqual({ ok: false, reason });
+  });
+
+  it("U-D3B-009: immutable write例外をfail-close", async () => {
+    const port = new FakePort();
+    port.write = async () => {
+      throw new Error("write failed");
+    };
+    await expect(run(port)).resolves.toEqual({ ok: false, reason: "judgment_write_failed" });
   });
 
   it.each([
@@ -231,7 +247,11 @@ describe("D3b provider judgment producer", () => {
         evidence_base64: Buffer.from(evidence()).toString("base64"),
       }),
     );
-    const adapter = new FileProviderJudgmentEvidenceAdapter({ evidenceRoot, judgmentsRoot });
+    const adapter = new FileProviderJudgmentEvidenceAdapter({
+      evidenceRoot,
+      judgmentsRoot,
+      verifiedInvocation: { provider: "claude", model: "claude-opus-5" },
+    });
     const first = await produceProviderJudgment({ attempt: identity, port: adapter });
     const replay = await produceProviderJudgment({ attempt: identity, port: adapter });
     expect(first).toMatchObject({ ok: true, replay: false });
@@ -257,5 +277,36 @@ describe("D3b provider judgment producer", () => {
     await expect(
       produceProviderJudgment({ attempt: retryIdentity, port: adapter }),
     ).resolves.toEqual({ ok: false, reason: "judgment_conflict" });
+  });
+
+  it.each([
+    ["provider", { provider: "codex", model: "claude-opus-5" }],
+    ["model", { provider: "claude", model: "claude-sonnet-5" }],
+  ] as const)("file adapterは自己申告%sをverified spawn factとして受理しない", async (_axis, claimed) => {
+    const root = mkdtempSync(join(tmpdir(), "ut-d3b-spawn-"));
+    roots.push(root);
+    const evidenceRoot = join(root, "evidence");
+    const judgmentsRoot = join(root, "judgments");
+    const attemptDir = join(evidenceRoot, identity.requestDigest, "attempts", "attempt-1");
+    mkdirSync(attemptDir, { recursive: true });
+    writeFileSync(
+      join(attemptDir, "evidence.json"),
+      JSON.stringify({
+        schema_version: "d3b-provider-evidence-envelope/v1",
+        identity,
+        ...claimed,
+        evidence_base64: Buffer.from(evidence()).toString("base64"),
+      }),
+    );
+    const adapter = new FileProviderJudgmentEvidenceAdapter({
+      evidenceRoot,
+      judgmentsRoot,
+      verifiedInvocation: { provider: "claude", model: "claude-opus-5" },
+    });
+    await expect(produceProviderJudgment({ attempt: identity, port: adapter })).resolves.toEqual({
+      ok: false,
+      reason: "provider_failure",
+    });
+    expect(existsSync(judgmentsRoot)).toBe(false);
   });
 });
