@@ -28,6 +28,7 @@ dependencies:
   requires: []
   blocks: []
   references:
+    - docs/plans/PLAN-L7-562-d3b-provider-judgment.md
     - docs/plans/PLAN-L7-465-cross-review-author-binding.md
     - docs/plans/PLAN-RECOVERY-16-sealed-plan-recovery.md
     - docs/test-design/harness/L7-unit-test-design.md
@@ -47,8 +48,8 @@ review_evidence:
     citations:
       - .ut-tdd/review/receipts/a2a46e5efe3f6ff63ca4fe89d512a2632f2c3b0f39f44d7370851eea88f7df84.json
       - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/564
-workflow_phase: R1
-status: confirmed
+workflow_phase: R2
+status: draft
 github_issue_id: 562
 ---
 
