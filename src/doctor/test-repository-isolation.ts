@@ -113,6 +113,11 @@ repositoryReadContracts["tests/support/workspace-roots.ts"] = {
   mode_calls: { head_snapshot: 1, isolated_fixture: 1 },
   reason: "root capability implementation validates both provenance modes",
 };
+repositoryReadContracts["tests/project-memory-pack-parity.test.ts"] = {
+  mode_calls: { head_snapshot: 1 },
+  reason:
+    "clean Pack/provider parity materializes only from the detached execution snapshot, never the live source worktree",
+};
 
 export const REPOSITORY_READ_CONTRACTS: Readonly<Record<string, RepositoryReadContract>> =
   repositoryReadContracts;

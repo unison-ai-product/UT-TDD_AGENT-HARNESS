@@ -1,4 +1,4 @@
-import { execFileSync, spawnSync } from "node:child_process";
+import { execFileSync, spawn, spawnSync } from "node:child_process";
 import {
   chmodSync,
   cpSync,
@@ -16,9 +16,10 @@ import { basename, dirname, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { loadMemoryCorpus, writeMemory } from "../src/memory/service.ts";
 import {
-  buildClaudeInboxEntry,
+  buildClaudeProviderInboxEntry,
   claudeWorkspaceId,
   publishClaudeInboxEntry,
+  resolveLiveClaudeTarget,
   waitForClaudeMemory,
 } from "../src/runtime/claude-memory-wake.ts";
 import { resolveProjectMemoryRoot } from "../src/runtime/project-memory-root.ts";
@@ -31,11 +32,11 @@ import {
   bootstrapProjectIdentity,
   canonicalProjectIdentityBytes,
 } from "../src/setup/project-identity-bootstrap.ts";
+import { headSnapshotRoot } from "./support/workspace-roots.ts";
 
-// Vitest and the detached snapshot runner execute from the repository root.
-// Keep the fixture source relative so the isolation doctor does not treat the
-// test as reading a live repository root via process.cwd().
-const sourceRoot = ".";
+// The clean Pack is materialized from the immutable detached test snapshot,
+// never from the live source worktree.
+const sourceRoot = headSnapshotRoot();
 const fixtures: string[] = [];
 
 function removeTree(path: string): void {
@@ -130,13 +131,62 @@ function installDependencies(root: string): void {
   expect(result.status, `${result.stdout}\n${result.stderr}`).toBe(0);
 }
 
-function runPack(root: string, args: readonly string[]) {
+function runPack(root: string, args: readonly string[], env: NodeJS.ProcessEnv = {}) {
   return spawnSync(process.execPath, [join(root, "src", "cli.ts"), ...args], {
     cwd: root,
     encoding: "utf8",
-    env: { ...process.env, UT_TDD_SKIP_UPDATE_CHECK: "1" },
+    env: {
+      ...process.env,
+      ...env,
+      CLAUDE_PROJECT_DIR: root,
+      UT_TDD_PROJECT_DIR: root,
+      UT_TDD_SKIP_UPDATE_CHECK: "1",
+    },
     timeout: 120_000,
   });
+}
+
+function startClaudeWake(root: string, sessionId: string) {
+  const child = spawn(
+    process.execPath,
+    [join(root, "src", "cli.ts"), "hook", "claude-memory-wake"],
+    {
+      cwd: root,
+      env: {
+        ...process.env,
+        CLAUDE_CODE_ENTRYPOINT: "claude-vscode",
+        CLAUDE_PROJECT_DIR: root,
+        UT_TDD_PROJECT_DIR: root,
+        UT_TDD_CLAUDE_WAKE_POLL_MS: "10",
+        UT_TDD_CLAUDE_WAKE_MAX_MS: "30000",
+        UT_TDD_SKIP_UPDATE_CHECK: "1",
+      },
+      stdio: ["pipe", "pipe", "pipe"],
+      windowsHide: true,
+    },
+  );
+  const stdout: string[] = [];
+  const stderr: string[] = [];
+  child.stdout.on("data", (chunk: Buffer) => stdout.push(chunk.toString()));
+  child.stderr.on("data", (chunk: Buffer) => stderr.push(chunk.toString()));
+  child.stdin.end(JSON.stringify({ hook_event_name: "Stop", session_id: sessionId }));
+  return {
+    child,
+    result: new Promise<{ code: number | null; stdout: string; stderr: string }>((resolve) => {
+      child.once("close", (code) =>
+        resolve({ code, stdout: stdout.join(""), stderr: stderr.join("") }),
+      );
+    }),
+  };
+}
+
+async function waitForClaudeTarget(repoRoot: string): Promise<void> {
+  for (let attempt = 0; attempt < 100; attempt += 1) {
+    const target = resolveLiveClaudeTarget(repoRoot);
+    if (target.ok) return;
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+  throw new Error("clean_pack_claude_target_not_live");
 }
 
 afterEach(() => {
@@ -149,6 +199,8 @@ describe("Issue #424 Slice 5 clean Pack/provider parity", () => {
     const linked = join(dirname(primary), `${basename(primary)}-linked`);
     fixtures.push(linked);
     git(primary, ["worktree", "add", "-q", "-b", "linked", linked]);
+    expect(runPack(primary, ["setup", "--solo"]).status).toBe(0);
+    expect(runPack(linked, ["setup", "--solo"]).status).toBe(0);
     const memory = writeMemory({
       repoRoot: primary,
       input: {
@@ -167,21 +219,32 @@ describe("Issue #424 Slice 5 clean Pack/provider parity", () => {
     const list = runPack(linked, ["memory", "list", "--query", memory.title]);
     expect(list.status, `${list.stdout}\n${list.stderr}`).toBe(0);
     expect(list.stdout).toContain(memory.memory_id);
-    const entry = buildClaudeInboxEntry({
-      memory,
-      operationId: "clean-pack-provider-parity",
-      workspaceId: claudeWorkspaceId(linked),
-    });
-    const published = publishClaudeInboxEntry(primary, entry);
-    const delivered = await waitForClaudeMemory({
-      repoRoot: linked,
-      sessionId: "pack-linked-claude",
-      allowLegacy: true,
-      pollIntervalMs: 10,
-      maxWaitMs: 250,
-    });
-    expect(delivered).toMatchObject({ kind: "delivered", entry: { id: entry.id } });
-    expect(existsSync(published)).toBe(false);
+    const wake = startClaudeWake(linked, "pack-linked-claude");
+    await waitForClaudeTarget(primary);
+    const notified = runPack(primary, [
+      "memory",
+      "add",
+      "--kind",
+      "project",
+      "--title",
+      "clean Pack provider parity notification",
+      "--body",
+      "published from the Pack primary checkout",
+      "--notify-claude",
+      "--operation-id",
+      "clean-pack-provider-parity",
+    ]);
+    expect(notified.status, `${notified.stdout}\n${notified.stderr}`).toBe(0);
+    const delivered = await wake.result;
+    expect(delivered.code, `${delivered.stdout}\n${delivered.stderr}`).toBe(2);
+    expect(delivered.stderr).toContain("[UT_TDD_CLAUDE_INBOX]");
+    expect(delivered.stderr).toContain("clean Pack provider parity notification");
+    const published = notified.stdout
+      .split(/\r?\n/)
+      .find((line) => line.startsWith("memory: notified Claude via "))
+      ?.slice("memory: notified Claude via ".length);
+    expect(published).toBeTruthy();
+    expect(existsSync(published as string)).toBe(false);
   }, 420_000);
 
   it("CANDIDATE-P-PMEMROOT-003: same Memory ID in another Pack project cannot be read or claimed", async () => {
@@ -206,21 +269,37 @@ describe("Issue #424 Slice 5 clean Pack/provider parity", () => {
         body: "must not cross the project namespace",
       },
     });
-    const entry = buildClaudeInboxEntry({
-      memory,
-      operationId: "isolated-pack-memory",
-      workspaceId: claudeWorkspaceId(primary),
+    const foreignMemory = writeMemory({
+      repoRoot: foreign,
+      input: {
+        kind: "project",
+        title: "isolated Pack memory",
+        body: "same ID, foreign project-local copy",
+      },
     });
-    const published = publishClaudeInboxEntry(primary, entry);
-    expect(loadMemoryCorpus(foreign).entries).toEqual([]);
+    expect(foreignMemory.memory_id).toBe(memory.memory_id);
+    const primaryProject = resolveProjectMemoryRoot(primary);
+    expect(primaryProject).toMatchObject({ ok: true });
+    if (!primaryProject.ok) throw new Error(primaryProject.reason);
+    const entry = buildClaudeProviderInboxEntry({
+      memory,
+      projectId: primaryProject.projectId,
+      operationId: "isolated-pack-memory",
+      workspaceId: claudeWorkspaceId(foreign),
+      producer: { provider: "codex", sessionId: "pack-primary-codex" },
+      target: { scope: "session", provider: "claude", sessionId: "foreign-claude" },
+    });
+    const published = publishClaudeInboxEntry(foreign, entry);
+    expect(loadMemoryCorpus(foreign).entries.map((candidate) => candidate.memory_id)).toContain(
+      memory.memory_id,
+    );
     const claim = await waitForClaudeMemory({
       repoRoot: foreign,
       sessionId: "foreign-claude",
-      allowLegacy: true,
       pollIntervalMs: 10,
       maxWaitMs: 80,
     });
-    expect(claim.kind).toBe("timeout");
+    expect(claim).toMatchObject({ kind: "denied", reason: "project_id_mismatch" });
     expect(existsSync(published)).toBe(true);
   }, 420_000);
 });
