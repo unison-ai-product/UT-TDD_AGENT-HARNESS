@@ -46,18 +46,18 @@ status: draft
 github_issue_id: 565
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:d53a1004f602923fa717f7969c802257
-  command_id: plan-draft:issue-565:reverse:1
-  admitted_at: 2026-09-11T03:03:28.724Z
-  source_digest: sha256:cccd43d09bf2fd48273170239b5340ea19fa0cbf2bae4d347d3a1a298e944c05
-  decision_digest: sha256:e9a792b5ba73371b5f76f26aaec7aebb872447840f543d5e6a7fc94a83223e24
-  receipt_digest: sha256:9524cd28294b788fede76b065f391d5f6e9c00a5af0ec1872c69ddcd4f4f0e7b
+  receipt_id: certificate:c6ee3fd74d7e8474cbabd2f8250294fc
+  command_id: plan-revise:issue-565:reverse:2
+  admitted_at: 2026-09-11T04:09:40.329Z
+  source_digest: sha256:9a3f30b27ad54e33b25a1924937dc2bd05b76d0a47c9bed1adf1d90b8504ae75
+  decision_digest: sha256:a7bf36d82816163b4af4f30cdab91988ae4ab0443b6c4e80b98f75c110294345
+  receipt_digest: sha256:ff36641688eda3f52bd895ff6f73ec51db3f5f2c0f28887ff53a484653722842
   binding:
     path: docs/plans/PLAN-REVERSE-532-pack-publication-driver-backfill.md
     plan_id: PLAN-REVERSE-532-pack-publication-driver-backfill
     asset_id: plan:d53a1004f602923fa717f7969c802257
-    revision: 1
-    content_digest: sha256:cccd43d09bf2fd48273170239b5340ea19fa0cbf2bae4d347d3a1a298e944c05
+    revision: 2
+    content_digest: sha256:9a3f30b27ad54e33b25a1924937dc2bd05b76d0a47c9bed1adf1d90b8504ae75
   route:
     signal: reverse
     mode: reverse
@@ -77,7 +77,9 @@ admission_receipt:
     target_plan_id: PLAN-L7-532-pack-publication-driver
     target_revision: 1
     phase: forward_merge
-  escape_reason: "Issue #565 Pack canary publication driver Reverse backfill pair (R0)"
+  escape_reason: "Issue #565 Pack canary publication driver Reverse backfill pair
+    (R0); revision 2: Codex/Sol FLAG 7b4d749a (nonce persistence, ApprovalPort
+    nonce/approver binding)"
 ---
 
 # PLAN-REVERSE-532: Pack canary publication driver の逆向き確認
@@ -100,11 +102,15 @@ Issue #565 の本番 port (`gh` process port、file-backed ApprovalPort、durabl
 - **write 0 境界の継承**: `PLAN-L7-515` §4.1 (最初の write より前の typed deny) と §4.2 (最初の
   ambiguity 以降の write 0) を、`gh` の失敗分類 (`unavailable` / `indeterminate`) と approval
   consume の順序 (照合 → rename → journal) で具体化する (`-C` / `-D` / `-E` / `-F` / `-G`)。
-- **approval の主体**: `PLAN-L7-515` §2 の mutation 単位 approval receipt / nonce を、人間が
-  発行する file として具体化する。driver は発行者にならない。chat 上の PO 承認は着手承認で
+- **approval の主体と束縛**: `PLAN-L7-515` §2 の mutation 単位 approval receipt / nonce と
+  approver identity を、人間が発行する file として具体化する。driver は発行者にならない。
+  consume は sealed intent の 9 field (nonce / approver を含む) byte 一致・durable state・expiry を
+  要求し、operation の authority は 1 identity に束縛する (`-C`)。chat 上の PO 承認は着手承認で
   あり file を代替しない。
 - **secret 境界**: CLAUDE.md §Safety Boundaries の「secret / credential を evidence に書かない」
-  を、stdout / journal / receipt / error message に対する 0 件 oracle へ降下する (`-H`)。
+  を、token / credential は stdout / journal / receipt / error message の 0 件 oracle、approval
+  本文と未 consume nonce は stdout / error message の 0 件 oracle へ降下する (`-H`)。consume 済み
+  nonce は `PLAN-L7-515` §5 と adapter 型のとおり journal / receipt に生値で残す。
 - **receipt の接合**: 生成する `PackPublicationReceipt` は `PLAN-L7-531` §3.2 / §3.3 の第 2 層
   入力であり、asset の name / size / SHA-256 が staging receipt と byte 一致する根拠を保持する。
 
@@ -125,12 +131,12 @@ Issue #565 の本番 port (`gh` process port、file-backed ApprovalPort、durabl
 | --- | --- | --- | --- |
 | 005-A | PR-1 | argv を文字列連結・shell 経由で組む | 配列固定、shell 不経由、fake runner が受けた argv snapshot 一致 |
 | 005-B | PR-1 | 認証主体 / repo / expected main SHA / tag の 1 軸不一致 | 最初の write より前に typed deny、write 0 |
-| 005-C | PR-1 | approval file 欠落・期限切れ・別 operation / intent / state | `approval_missing` / `nonce_replay`、write 0 |
+| 005-C | PR-1 | approval file 欠落・期限切れ・別 operation / intent / state・seal 後の nonce 置換・approver 差替 | `approval_missing` / `nonce_replay` / `approval_binding_mismatch` / `approval_expired` / `approval_state_mismatch`、write 0 |
 | 005-D | PR-1 | 同一 file を 2 回 consume、rename 失敗 | 2 回目は `reconcile` のみ、rename 失敗は deny |
 | 005-E | PR-1 | journal append の persist failure | `indeterminate`、後続 write 0 |
 | 005-F | PR-1 | `mutation_intent` の後に observation 無しで crash | reconciliation のみ、新規 write 0 |
 | 005-G | PR-1 | `gh` 非 0 exit / timeout / 出力上限超過 | mutation 前は `unavailable`、後は `indeterminate`、成功へ丸めない |
-| 005-H | PR-1 | token / approval 本文 / nonce を含む fake 応答 | stdout / journal / receipt / error に生値 0 件 |
+| 005-H | PR-1 | token / approval 本文 / nonce を含む fake 応答と approval fixture | token は全出力で 0 件、approval 本文と未 consume nonce は stdout / error で 0 件、journal / receipt の nonce は consume 済み file と 1:1 一致 |
 | 005-I | PR-1 | port ↔ `gh` 対応表 (§3.2) から 1 行を別 endpoint へ変異 | argv snapshot 不一致で Red |
 | 005-J | PR-1 | asset upload の read-back で size / digest を 1 byte 変異 | `mismatch`、後続 write 0 |
 | 005-K | PR-1 | テストから実 `gh` を spawn | fake runner 以外の process 起動 0 |
@@ -144,9 +150,10 @@ Issue #565 の本番 port (`gh` process port、file-backed ApprovalPort、durabl
 非著者の claim-blind / spec-blind review が、次を攻撃する。
 
 - `gh` の argv を shell 文字列で組んでいないか、template 展開が無いか
-- approval consume が file の存在確認だけで束縛照合を省いていないか
+- approval consume が file の存在確認だけで束縛照合 (nonce / approver を含む 9 field) を省いていないか
 - write 後の失敗で `remoteWrites: 0` と誤報告していないか
-- stdout / journal / receipt / error message に token・approval 本文・nonce が混入していないか
+- stdout / error message に token・approval 本文・未 consume nonce が、journal / receipt に token が
+  混入していないか
 - fake runner を迂回して実 `gh` を起動するテストが無いか
 - CLI 既定 (dry-run) で観測系以外の argv を生成していないか
 

@@ -51,12 +51,12 @@ stdout / stderr の call ledger を正本にする。
 | --- | --- | --- |
 | `CANDIDATE-PACKPUB-005-A` | argv を文字列連結・shell 経由 (`sh -c` / `cmd /c`) で組む実装へ変異 | fake runner が受けた argv が配列で、先頭が `gh`、shell wrapper 0 件。文字列 argv は型で Red |
 | `CANDIDATE-PACKPUB-005-B` | `gh auth status` の主体、`gh repo view` の owner/name、expected main SHA、tag 名の 1 軸を不一致にする | 最初の remote write より前に typed deny、write argv 0 件 |
-| `CANDIDATE-PACKPUB-005-C` | approval file の欠落、`expiresAt` 超過、別 operationId / intentDigest / approvalStateDigest / idempotencyKey | `approval_missing` / `nonce_replay`、該当 mutation とそれ以降の write 0 |
+| `CANDIDATE-PACKPUB-005-C` | approval file の欠落、`expiresAt` 超過、別 operationId / intentDigest / approvalStateDigest / idempotencyKey、seal 後に file の `nonce` を置換、`approver` を `--approver` と異なる identity へ差替、2 file 間で `approver` が不一致 | `approval_missing` / `approval_expired` / `approval_state_mismatch` / `approval_binding_mismatch` (nonce 置換・approver 差替を含む)、既 consume は `nonce_replay`。該当 mutation とそれ以降の write 0。approver 不一致は seal 前 (write 0) |
 | `CANDIDATE-PACKPUB-005-D` | 同一 approval file の 2 回 consume、rename 失敗 (EPERM 注入) | 2 回目は `mode: "reconcile"` のみ (新規 write 0)、rename 失敗は deny で journal に `nonce_consumed` 無し |
 | `CANDIDATE-PACKPUB-005-E` | journal append の persist failure を `mutation_intent` の直前 / 直後に注入 | 直前は write 0、直後は `indeterminate` で後続 write 0。成功へ丸めない |
 | `CANDIDATE-PACKPUB-005-F` | `mutation_intent` の後、`read_back_observation` の前で process を打ち切り、再起動 | 再起動後は reconciliation (観測系 argv のみ) で、同じ mutation の write を replay しない |
 | `CANDIDATE-PACKPUB-005-G` | `gh` 非 0 exit、timeout、stdout 上限超過を mutation 前 / 後に注入 | 前は `unavailable` (write 0)、後は `indeterminate` (後続 write 0)。exit 0 以外を成功にしない |
-| `CANDIDATE-PACKPUB-005-H` | fake 応答と approval fixture に token 風文字列・approval 本文・nonce を含める | stdout / journal / receipt / error message にそれらの生値 0 件 (digest のみ) |
+| `CANDIDATE-PACKPUB-005-H` | fake 応答と approval fixture に token 風文字列・approval 本文・nonce を含める | token 風文字列は stdout / journal / receipt / error message で 0 件。approval 本文 (JSON 全体) と未 consume nonce は stdout / error message で 0 件。journal `nonce` と receipt `nonces` は consume 済み approval file の `nonce` と mutation ごとに 1:1 で byte 一致し、未 consume の nonce を含まない |
 | `CANDIDATE-PACKPUB-005-I` | PLAN §3.2 の port ↔ `gh` 対応表から 1 行の endpoint / method を変異 | 正常系の argv snapshot が対応表と 1:1 で一致し、変異は Red。port 内で次遷移の write を先行しない |
 | `CANDIDATE-PACKPUB-005-J` | asset upload 後の read-back で size / SHA-256 を 1 byte 変異、asset 数を 1 / 3 にする | `mismatch` / `partial_publication`、tag 以降の write 0 |
 | `CANDIDATE-PACKPUB-005-K` | テストコードが `ProcessRunnerPort` を迂回して `child_process` を直接呼ぶ | 実 `gh` の起動 0 件 (fake runner の ledger 以外の process 起動を検出したら Red) |

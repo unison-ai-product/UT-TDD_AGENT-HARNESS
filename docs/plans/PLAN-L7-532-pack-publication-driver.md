@@ -54,18 +54,18 @@ status: draft
 github_issue_id: 565
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:90e28ddae7343065d815328758ff3de0
-  command_id: plan-draft:issue-565:forward:1
-  admitted_at: 2026-09-11T03:03:28.724Z
-  source_digest: sha256:bff8980286c061d7d486438055aebddcb601b9d48272146aee7372b784b53cfe
-  decision_digest: sha256:0cb88b927291674dd2b4a44f44182b49a6ce49331e9885a88961a74a3255b267
-  receipt_digest: sha256:3228a3d8d31804f0a93d49296b306f52316a9bad1ec4126b50eda8ea63a9c703
+  receipt_id: certificate:a8a0da9087a274e2afab5d7504c4ecad
+  command_id: plan-revise:issue-565:forward:2
+  admitted_at: 2026-09-11T04:09:23.590Z
+  source_digest: sha256:2aa1868c6b9b3a4accb150496aa46dc22d5c526fb3dce05e6cc6809c7ca0906c
+  decision_digest: sha256:671c2b6c4b79a47c7b4b79451500bc14c0be18639c67fb03033400f45d027a01
+  receipt_digest: sha256:c4d544890207f81990b5298409b7583fa4d7445b67e32fe3b97836cf624d5dfc
   binding:
     path: docs/plans/PLAN-L7-532-pack-publication-driver.md
     plan_id: PLAN-L7-532-pack-publication-driver
     asset_id: plan:90e28ddae7343065d815328758ff3de0
-    revision: 1
-    content_digest: sha256:bff8980286c061d7d486438055aebddcb601b9d48272146aee7372b784b53cfe
+    revision: 2
+    content_digest: sha256:2aa1868c6b9b3a4accb150496aa46dc22d5c526fb3dce05e6cc6809c7ca0906c
   route:
     signal: feature_addition
     mode: add-feature
@@ -84,7 +84,8 @@ admission_receipt:
     phase: forward_merge
   escape_reason: "Issue #565 Pack canary publication driver pair-freeze
     (add-feature, PLAN-L7-519 downstream; unmet publication input of PLAN-L7-531
-    rev 2)"
+    rev 2); revision 2: Codex/Sol FLAG 7b4d749a (nonce persistence, ApprovalPort
+    nonce/approver binding)"
 ---
 
 # PLAN-L7-532: Pack canary publication driver (production ports + CLI entry)
@@ -138,6 +139,13 @@ advisor 相談: `ut-tdd advisor --decision implementation --current-model claude
 分割する。根拠は規律の明文 (PR #219 の肥大再発防止) であり、advisor の判断内容 (方式 A) は
 そのまま採用する。
 
+### 2.1 revision 2: Codex/Sol cross-review FLAG (receipt `7b4d749a`、exact HEAD `f694a381`) の是正
+
+| 指摘 | 判断 | 反映 |
+| --- | --- | --- |
+| nonce の秘匿 (§3.1 / §3.4 / 005-H) が `PublicationJournalEvent.nonce` / `PackPublicationReceipt.nonces` (型不変) と矛盾 | adapter 型と `PLAN-L7-515` §5 を正本とし、journal / receipt は consume 済み nonce の生値を保持する。秘匿 oracle は token / credential (全出力) と approval 本文・未 consume nonce (stdout / error / evidence) に narrowing する | §3.1、§3.4、§4、§9-5、`CANDIDATE-PACKPUB-005-H` |
+| ApprovalPort consume が nonce / approver を照合せず、`PLAN-L7-515` §2 の identity / nonce 束縛が file 経路で欠落 | consume は sealed intent の 9 field byte 一致 + durable state + expiry を要求し、operation の authority は `--approver` で束縛する。reason を typed に固定する | §3.3、§4、§9-3、`CANDIDATE-PACKPUB-005-C` |
+
 ## 3. 本番 port 契約
 
 ### 3.1 process execution port
@@ -149,8 +157,10 @@ advisor 相談: `ut-tdd advisor --decision implementation --current-model claude
   写像する。mutation 後の timeout / 応答欠落は `indeterminate` (write 済みかもしれない) とし、
   mutation 前の失敗だけを `unavailable` (write 0) とする。成功へ丸めない。
 - credential は `gh` の既存認証 (`gh auth`) にのみ委ね、token を env・argv・file で driver に
-  渡さない。stdout / journal / receipt / error message に token・approval 本文・nonce の生値を
-  出さない (digest だけを記録する)。
+  渡さない。token・credential の生値は stdout / journal / receipt / error message のいずれにも
+  出さない。approval file 本文 (JSON 全体) と nonce の生値は stdout / error message / PR・CI
+  evidence に出さない。journal と receipt が保持する nonce は §3.4 に従う (consume 済み nonce の
+  生値を adapter 型のとおり永続化し、digest へ置換しない)。
 
 ### 3.2 GitHub port と FSM mutation の対応
 
@@ -179,12 +189,25 @@ Pack main への直接 push、force push、tag retarget、既存 asset overwrite
   mutation。内容は `PackPublicationApproval` (transition、mutation、operationId、nonce、approver、
   expiresAt、intentDigest、approvalStateDigest、idempotencyKey) をそのまま JSON にしたもの。
 - 発行者は人間 (PO) であり、driver は発行しない。PR-2 の CLI は preflight で「次に必要な
-  approval の skeleton」(nonce 以外の束縛値) を表示し、PO が nonce を付けて file を置く。
-- `consume` は file の存在確認ではなく、transition / mutation / operationId / intentDigest /
-  approvalStateDigest / idempotencyKey / expiresAt を intent と durable state に照合してから、
-  原子的 rename (`.json` → `.consumed.json`) と journal `nonce_consumed` の append を行う。
-  期限切れ、別 operation、別 intent、別 state、既 consume は `nonce_replay` / `approval_missing`
-  で deny する。consume 済み file は `mode: "reconcile"` としてのみ再利用できる。
+  approval の skeleton」(nonce と approver 以外の束縛値) を表示し、PO が nonce と自分の
+  approver identity を付けて file を置く。
+- **authority の束縛**: 1 operation の authority は 1 identity である。`--execute` 時に CLI は
+  `--approver <identity>` で期待 authority を受け取り、全 approval file の `approver` がこれと
+  byte 一致しなければ intent の seal 前に `approval_binding_mismatch` で deny する (write 0)。
+  adapter が `PackPublicationReceipt.approver` に記録する値はこの identity である。`gh auth
+  status` の認証主体 (実行者) は §3.2 の別軸照合であり、片方の一致で他方を代替しない。
+- `consume` は file の存在確認ではない。consume 時点で file を再読込し、sealed intent が保持する
+  当該 mutation の `PackPublicationApproval` 9 field (transition / mutation / operationId /
+  **nonce** / **approver** / expiresAt / intentDigest / approvalStateDigest / idempotencyKey) と
+  byte 一致すること、`approvalStateDigest` が durable state の現在 digest と一致すること、
+  `expiresAt` が未到来であることを照合してから、原子的 rename (`.json` → `.consumed.json`) と
+  journal `planned_nonce_consumed` の append を行う。deny は `PublicationPortResult` の
+  `status: "mismatch"` で返し、reason は file 欠落 = `approval_missing`、既 consume
+  (`.consumed.json` のみ存在) = `nonce_replay`、seal 後の nonce 置換・approver 差替・その他
+  field 不一致 = `approval_binding_mismatch`、期限切れ = `approval_expired`、durable state
+  不一致 = `approval_state_mismatch` とする。いずれも当該 mutation とそれ以降の remote write 0
+  (mutation 前なら adapter が `denied`、途中なら `partial_publication` として保持)。
+  consume 済み file は `mode: "reconcile"` としてのみ再利用でき、その場合も 9 field 一致を要求する。
 - `.ut-tdd/release/approvals/` は Git 追跡しない (local runtime artifact)。
 
 ### 3.4 durable journal と receipt
@@ -194,6 +217,14 @@ Pack main への直接 push、force push、tag retarget、既存 asset overwrite
   `PLAN-L7-515` §3 の順に永続化する。`digest()` は journal 全行の hash chain。
 - receipt: `.ut-tdd/release/publication/<operationId>/receipt.json`。`PackPublicationReceipt` を
   そのまま保存し、`PLAN-L7-531` §3.2 の第 2 層がこの receipt digest と接合する。
+- **nonce の永続化**: journal の `PublicationJournalEvent.nonce` と receipt の
+  `PackPublicationReceipt.nonces` (mutation → nonce) は、adapter 型と `PLAN-L7-515` §5
+  (receipt は遷移ごとの nonce と approval identity を保持する) のとおり consume 済み nonce の
+  **生値**を保持する。未 consume の nonce と approval file 本文は journal / receipt に書かない。
+  両 file は Git 追跡しない local runtime artifact であり、consume 済み nonce は §3.3 により
+  再利用不能なので秘匿対象ではない。§3.1 の 0 件 oracle は token / credential (全出力) と
+  approval 本文・未 consume nonce (stdout / error / evidence) に限る。
+- `.ut-tdd/release/publication/` は Git 追跡しない (local runtime artifact)。
 - persist failure は例外を成功へ丸めず `indeterminate` とし、後続 write 0。crash / restart 後は
   journal の最後の `read_back_observation` までを reconciliation し、`mutation_intent` に対応する
   observation が無い mutation を成功と推測しない (`PLAN-L7-515` §4.2)。
@@ -202,14 +233,16 @@ Pack main への直接 push、force push、tag retarget、既存 asset overwrite
 
 - `ut-tdd distribution publish-canary --release-id <id> --tag <tag> --staging-dir <dir>`
   を 1 本だけ追加する。既定は **preflight / dry-run** (remote write 0、`gh` は観測系 argv だけ)。
-  実行は `--execute` を必須とし、`--execute` 時も approval file が揃わない mutation の直前で
-  typed deny (write 0 または partial 保持) する。
+  実行は `--execute` と `--approver <identity>` (§3.3 の期待 authority) を必須とし、
+  `--execute` 時も approval file が揃わない・束縛が合わない mutation の直前で typed deny
+  (write 0 または partial 保持) する。
 - 入力は `PLAN-L7-508` の sealed staging 出力 (tar.gz + `.sha256` + control manifest sidecar) だけ。
   source worktree、directory walk、glob、local Pack checkout、開発 DB、環境変数からの補完を
   行わない (staging module の契約をそのまま通す)。
 - 出力: preflight 結果 (intent digest、approval skeleton、expected main SHA、tag)、実行結果
   (`published` / `denied` / `partial_publication` / `indeterminate`、remoteWrites、receipt path)。
-  nonce・token・approval 本文は出力しない。
+  nonce・token・approval 本文は stdout / error message に出力しない (nonce は receipt file の
+  中にだけ残る、§3.4)。
 - legacy `release-plan` は本 PLAN で削除しない。v2 経路が main へ到達した後、`PLAN-L6-63` 側で
   退役を扱う (本 PLAN の非 scope)。
 
@@ -265,13 +298,15 @@ secret の出力混入、fake runner を迂回した実 `gh` 起動を攻撃す�
    (`CANDIDATE-PACKPUB-005-A` / `-I`)。
 2. 認証主体・repo・expected main SHA・tag の実行前照合が Pack repo 以外へ fail-close (write 0)
    (`-B`)。
-3. approval file の欠落・期限切れ・別 operation / intent / state・replay が最初の write より前に
-   typed deny、consume は原子的 (`-C` / `-D`)。
+3. approval file の欠落・期限切れ・別 operation / intent / state・replay、および seal 後の
+   nonce 置換・approver 差替が該当 mutation の write より前に typed deny (§3.3 の reason)、
+   consume は原子的 (`-C` / `-D`)。
 4. journal の persist failure と crash 後の未 observation mutation が `indeterminate` かつ
    reconciliation write 0 (`-E` / `-F`)。
 5. `gh` 非 0 exit / timeout / 出力上限が typed `unavailable` / `indeterminate` で成功へ丸めない
-   (`-G`)。credential・approval 本文・nonce の生値が stdout / journal / receipt / error に 0 件
-   (`-H`)。
+   (`-G`)。credential の生値が stdout / journal / receipt / error に 0 件、approval 本文と
+   未 consume nonce が stdout / error に 0 件、journal / receipt の nonce が consume 済み approval
+   file の値と 1:1 で一致 (`-H`)。
 6. CLI 既定が dry-run で remote write 0、`--execute` 無しの mutation は生成されない (`-M`〜`-O`)。
 7. Linux / Windows / aggregate required CI Green、exact-head の非著者 (Claude 族) closing receipt
    blocking 0 を PR-1 / PR-2 の各々に束縛する。
