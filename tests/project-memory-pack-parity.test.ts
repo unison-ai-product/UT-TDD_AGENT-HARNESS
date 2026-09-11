@@ -9,7 +9,6 @@ import {
   readFileSync,
   rmSync,
   statSync,
-  writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
@@ -28,10 +27,6 @@ import {
   cleanDistributionSourcePath,
   transformCleanDistributionArtifact,
 } from "../src/setup/distribution.ts";
-import {
-  bootstrapProjectIdentity,
-  canonicalProjectIdentityBytes,
-} from "../src/setup/project-identity-bootstrap.ts";
 import { headSnapshotRoot } from "./support/workspace-roots.ts";
 
 // The clean Pack is materialized from the immutable detached test snapshot,
@@ -75,7 +70,7 @@ function walk(root: string): string[] {
   return paths.sort();
 }
 
-function createCleanPack(): string {
+function createCleanPack(repository = "unison-ai-product/UT-TDD_AGENT-HARNESS-Pack"): string {
   const root = mkdtempSync(join(tmpdir(), "ut-tdd-pack-parity-"));
   fixtures.push(root);
   const sourcePaths = walk(sourceRoot);
@@ -100,16 +95,15 @@ function createCleanPack(): string {
   git(root, ["config", "user.email", "test@example.invalid"]);
   git(root, ["config", "user.name", "UT-TDD Pack parity"]);
   git(root, ["config", "core.autocrlf", "false"]);
-  git(root, [
-    "remote",
-    "add",
-    "origin",
-    "git@github.com:unison-ai-product/UT-TDD_AGENT-HARNESS-Pack.git",
-  ]);
+  git(root, ["remote", "add", "origin", `git@github.com:${repository}.git`]);
   git(root, ["add", "."]);
   git(root, ["commit", "-qm", "test: materialize clean Pack"]);
-  const identity = bootstrapProjectIdentity(root);
-  expect(identity).toMatchObject({ ok: true, created: true, commitRequired: true });
+  // Identity creation must follow the same setup path as a real Pack
+  // consumer.  Do not pre-seed the tracked file through a source helper: the
+  // bootstrap command is the authority exercised by this parity fixture.
+  const setup = runPack(root, ["setup", "--solo"]);
+  expect(setup.status, `${setup.stdout}\n${setup.stderr}`).toBe(0);
+  expect(resolveProjectMemoryRoot(root)).toMatchObject({ ok: true });
   git(root, ["add", "ut-tdd.project.json"]);
   git(root, ["commit", "-qm", "test: commit Pack project identity"]);
   return root;
@@ -254,18 +248,7 @@ describe("Issue #424 Slice 5 clean Pack/provider parity", () => {
 
   it("CANDIDATE-P-PMEMROOT-003: same Memory ID in another Pack project cannot be read or claimed", async () => {
     const primary = createCleanPack();
-    const foreign = mkdtempSync(join(tmpdir(), "ut-tdd-pack-parity-foreign-"));
-    fixtures.push(foreign);
-    git(foreign, ["init", "-q", "-b", "main"]);
-    git(foreign, ["config", "user.email", "test@example.invalid"]);
-    git(foreign, ["config", "user.name", "UT-TDD foreign"]);
-    git(foreign, ["remote", "add", "origin", "git@github.com:other/Pack.git"]);
-    writeFileSync(
-      join(foreign, "ut-tdd.project.json"),
-      canonicalProjectIdentityBytes("other/Pack"),
-    );
-    git(foreign, ["add", "ut-tdd.project.json"]);
-    git(foreign, ["commit", "-qm", "test: foreign project identity"]);
+    const foreign = createCleanPack("other/Pack");
     const memory = writeMemory({
       repoRoot: primary,
       input: {
