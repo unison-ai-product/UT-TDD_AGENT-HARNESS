@@ -48,12 +48,14 @@ post-merge custody gateへ逆向きに照合する。
 
 ## 受入条件
 
-1. D3b artifact は D3a exact attempt の repository/PR/head/request/revision/attempt と
-  一致する。
+1. D3b artifact は D3a exact attempt の repository/PR/head/request/revision/attempt、
+   D3a request 由来の author family、反対側へ導出した reviewer family と一致する。D3cへ渡す
+   `provider_evidence_ref` は strict decoder と同じ `d3b:<judgment_digest>` だけを受理する。
 2. D3c/D3d は D3b ref の存在だけで family authority を昇格させず、未承認なら
    `unverified_family` を維持する。
-3. malformed、superseded、identity drift、digest drift、provider unavailable の各負例は
-   artifact/workflow/seal の write 0 で終端する。
+3. malformed、superseded、identity drift、family drift、digest drift、provider unavailable の各負例は
+   artifact/workflow/seal の write 0 で終端する。same-family は `same_family_reviewer` として
+   拒否する。
 4. #541 の actual seal は、fresh exact-subject provider judgment と post-merge custody が
   揃うまで write 0 のままとする。
 

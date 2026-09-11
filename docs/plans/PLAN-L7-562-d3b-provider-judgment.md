@@ -34,12 +34,12 @@ dependencies:
   parent: docs/plans/PLAN-L7-465-cross-review-author-binding.md
   requires:
     - docs/plans/PLAN-L7-465-cross-review-author-binding.md
-    - docs/test-design/harness/L7-unit-test-design.md
   blocks:
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/541
   references:
     - docs/plans/PLAN-REVERSE-562-d3b-provider-judgment-backfill.md
     - docs/plans/PLAN-L7-465-cross-review-author-binding.md
+    - docs/test-design/harness/L7-unit-test-design.md
     - docs/plans/PLAN-L7-518-review-request-retraction.md
     - src/feedback/review-custody.ts
     - src/feedback/review-custody-runner.ts
@@ -51,7 +51,7 @@ status: draft
 github_issue_id: 562
 ---
 
-# PLAN-L7-562: D3b verified provider judgment producer
+# PLAN-L7-562: D3b 検証済み provider judgment producer
 
 ## 1. 目的と境界
 
@@ -65,66 +65,75 @@ content-addressed な immutable artifact と ref を生成する。
 Artifact Attestation、D3c/D3d workflow、D2 required check、#555 の consumer runtime、
 PLAN-L6-93 の seal、#540/#487 の実装は変更しない。
 
-## 2. canonical judgment payload
+## 2. 正規 judgment payload
 
 producer の入力は、既に schema 検証済みの D3a attempt envelope と、同じ invocation
 から provider adapter が返した evidence bytes の組だけとする。caller は digest/ref、
 provider、model、nonce、verdict、findings を個別に上書きできない。
 
-canonical payload は次の field 集合に限定する。
+正規 payload は次の field 集合に限定する。
 
 ```text
 schema_version      = "d3b.v1"
 kind                = "provider_judgment"
-repository          = canonical owner/name
-pr_number           = positive integer
-head_sha            = lower 40-hex exact reviewed head
+repository          = 正規 owner/name
+pr_number           = 正の整数
+head_sha            = reviewed head の lower 40-hex
 request_memory_id   = D3a request identity
-request_digest      = D3a canonical request digest
+request_digest      = D3a 正規 request digest
 review_revision     = D3a review revision
-attempt             = positive integer
-provider            = validated provider invocation fact
-model               = validated model invocation fact
-invocation_nonce    = validated custody-envelope nonce
+attempt             = 正の整数
+provider            = 検証済み provider invocation fact
+model               = 検証済み model invocation fact
+author_family       = D3a request identity 由来の author family (codex | claude)
+reviewer_family     = author_family の反対 family (claude | codex)
+invocation_nonce    = 検証済み custody-envelope nonce
 verdict             = PASS | PASS-WEAK | FLAG
-blocking_findings   = ordered typed finding list (empty only for PASS/PASS-WEAK)
-evidence_digest     = sha256 of provider evidence bytes
+blocking_findings   = 順序付き typed finding list (PASS/PASS-WEAK は空だけ)
+evidence_digest     = provider evidence bytes の sha256
 ```
 
-The digest preimage is RFC 8785/JCS over exactly the fields above except the derived
-`judgment_digest`. `provider`/`model` are observations, not family authority; absent an
-approved external authority D3c must still terminate at `unverified_family`.
+digest の preimage は、派生値 `judgment_digest` を除く上記 field だけを RFC 8785/JCS で
+正規化した bytes とする。`author_family` は D3a request identity から、
+`reviewer_family` はその反対 family から導出する。caller が両 field を指定・上書きしては
+ならない。D3a attempt が記録した実 spawn の provider family は `reviewer_family` と一致
+しなければならない。`provider` / `model` は観測値であり family authority ではないため、
+承認済み external authority が無い D3c は引き続き `unverified_family` で終端する。
 
-The producer writes exactly one immutable JSON artifact at
-`.ut-tdd/review/judgments/<judgment_digest>.json` and returns
-`provider_evidence_ref=judgment:<judgment_digest>`. Replaying the same complete input is an
-idempotent read; a different byte at any identity, verdict, finding, evidence, schema, or
-attempt axis is a conflict and emits no second artifact.
+producer は `.ut-tdd/review/judgments/<judgment_digest>.json` に immutable JSON artifact を
+ちょうど1件書き、D3c consumer の strict decoder と同じ
+`provider_evidence_ref=d3b:<judgment_digest>` を返す。同じ完全入力の replay は冪等な read
+へ収束する。identity、author/reviewer family、verdict、finding、evidence、schema、attempt の
+いずれか1 byteでも異なれば conflict とし、第2 artifact を生成しない。
 
-## 3. fail-close and write-zero rules
+## 3. fail-close と write-zero 規則
 
-- missing, malformed, superseded, or provider-failed evidence produces typed unavailable;
-- exact PR/head/request/revision/attempt mismatch produces `identity_mismatch`;
-- unknown fields, duplicate findings, unordered findings, or PASS with blocking findings
-  produces `judgment_schema_invalid`;
-- caller-supplied digest/ref or hand-authored JSON is never accepted as producer input;
-- artifact write, fsync, or existing-bytes mismatch produces `judgment_write_failed` and
-  leaves artifact count and downstream workflow dispatch at zero;
-- a valid D3b artifact alone does not prove reviewer family and cannot produce
-  `custody_admitted` without the independent D3c/D3d inputs.
+- evidence の missing、malformed、superseded、provider failure は typed unavailable とする;
+- exact PR/head/request/revision/attempt の不一致は `identity_mismatch` とする;
+- D3a request の `author_family` 欠落・未知値、または導出した `reviewer_family` と実 spawn
+  provider family の不一致は、same-family のとき `same_family_reviewer`、それ以外は
+  `identity_mismatch` として artifact/workflow/seal write 0 で拒否する;
+- unknown field、duplicate finding、unordered finding、または blocking finding を持つ PASS は
+  `judgment_schema_invalid` とする;
+- caller-supplied digest/ref または手書き JSON を producer input として受理しない;
+- artifact write、fsync、既存 bytes mismatch は `judgment_write_failed` とし、artifact count と
+  downstream workflow dispatch をゼロのままにする;
+- 有効な D3b artifact 単独では reviewer family を証明できず、独立した D3c/D3d input 無しに
+  `custody_admitted` を生成してはならない。
 
-No #541 seal, database mutation, workflow dispatch, or #540/#487 cutover may occur until the
-producer returns a schema-valid artifact bound to the exact reviewed subject.
+#541 seal、database mutation、workflow dispatch、#540/#487 cutover は、producer が exact
+reviewed subject に束縛された schema-valid artifact を返すまで実行してはならない。
 
-## 4. implementation slices and evidence
+## 4. 実装 slice と証跡
 
-The bounded implementation may add only a provider-judgment domain, its narrow evidence port/
-adapter, the canonical artifact resolver, and the tests named below. Runner/workflow wiring is
-a later slice and must consume the resolver output rather than accepting environment strings.
+bounded implementation が追加できるのは provider-judgment domain、その狭い evidence port/
+adapter、canonical artifact resolver、および下記の test だけとする。runner/workflow wiring は
+後続 slice とし、environment string を受理せず resolver の出力だけを消費する。
 
-Red → Green requires Linux/Windows/aggregate CI, exact-head non-author review, and the reverse
-backfill document before #541 may retry actual seal. The old D3a receipt for PR #557 is not
-reused; a fresh exact-subject provider attempt is required after this producer exists.
+Red → Green には Linux/Windows/aggregate CI、exact-head non-author review、reverse backfill
+document を要求する。これらが揃うまで #541 は actual seal を再試行してはならない。PR #557
+の旧 D3a receipt は再利用せず、この producer が存在した後の fresh exact-subject provider
+attempt を要求する。
 
 この pair-freeze では未実装の oracle を正規IDとして確定しない。L7 test-design の
 候補IDは実装PRが Red test と同一 revision で追加された時点で正規oracleへ昇格し、

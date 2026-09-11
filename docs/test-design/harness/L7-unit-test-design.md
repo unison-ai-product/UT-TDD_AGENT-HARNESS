@@ -2477,9 +2477,9 @@ digest/ref を入力へ戻してはならない。
 
 | 候補ID | 対象 | DbC oracle |
 |---|---|---|
-| CANDIDATE-D3B-001 | valid exact D3a attempt + provider evidence | canonical JCS payloadから1 artifact/1 refを生成し、同一入力のreplayは同一digestへ収束 |
-| CANDIDATE-D3B-002 | subject binding | repository/PR/head/request digest/revision/attemptの各1軸変異を`identity_mismatch`で拒否、artifact/workflow write 0 |
-| CANDIDATE-D3B-003 | provider evidence binding | evidence bytesを1 byte変異、またはrefだけ差替え、`evidence_digest`不一致で拒否 |
+| CANDIDATE-D3B-001 | valid exact D3a attempt + provider evidence | D3a request 由来の`author_family`と反対側へ導出した`reviewer_family`を含む canonical JCS payload から1 artifact/`d3b:<judgment_digest>`を生成し、同一入力のreplayは同一digestへ収束 |
+| CANDIDATE-D3B-002 | subject / family binding | repository/PR/head/request digest/revision/attempt、author family、派生 reviewer family、実 spawn provider familyを各1軸変異する。same-familyは`same_family_reviewer`、その他は`identity_mismatch`で拒否し、artifact/workflow/seal write 0 |
+| CANDIDATE-D3B-003 | provider evidence binding | evidence bytesを1 byte変異、または`d3b:<judgment_digest>` refだけ差替え、`evidence_digest`不一致で拒否 |
 | CANDIDATE-D3B-004 | strict schema | unknown/missing/type/schema_version差替えを`judgment_schema_invalid`で拒否 |
 | CANDIDATE-D3B-005 | verdict/findings | PASSにblocking finding、FLAGのfinding順序変更、duplicate findingを拒否 |
 | CANDIDATE-D3B-006 | canonical digest | JCS key順、unicode、digest自己参照、uppercase/短縮digest変異を拒否 |
