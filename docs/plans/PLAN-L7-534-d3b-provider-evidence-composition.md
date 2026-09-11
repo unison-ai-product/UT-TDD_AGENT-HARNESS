@@ -45,18 +45,18 @@ status: draft
 github_issue_id: 570
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:ec10fee30970ff97049d1a9a3b1dcb77
-  command_id: plan-revise:issue-570:forward:6
-  admitted_at: 2026-09-11T08:01:20.641Z
-  source_digest: sha256:5770ffaca15516994d9d6fb6516c9dc026e14370db8c32b33a696bf0abcb5344
+  receipt_id: certificate:ba1bac310e1a41dabb4c8874c501e670
+  command_id: plan-revise:issue-570:forward:7
+  admitted_at: 2026-09-11T08:38:27.216Z
+  source_digest: sha256:271e369502fe0531e9c58ec30ed2d94a4df1c8a5b8a67bea2286c8165dab9e78
   decision_digest: sha256:a9c7b182766e84abc142ea16c69e8fd99b9504577a0fcfdbff70240875cdc8cc
-  receipt_digest: sha256:8b6745ce35530cd672080f841d3a2fb3e858bae23c514414ec2dd70024c8191f
+  receipt_digest: sha256:74cde8acdb639094713cd874eb76ff05c59ba78e7ed7900b414ae26c6240da01
   binding:
     path: docs/plans/PLAN-L7-534-d3b-provider-evidence-composition.md
     plan_id: PLAN-L7-534-d3b-provider-evidence-composition
     asset_id: plan:2eeafb9dd9883770a0f56c936c08bd1f
-    revision: 6
-    content_digest: sha256:5770ffaca15516994d9d6fb6516c9dc026e14370db8c32b33a696bf0abcb5344
+    revision: 7
+    content_digest: sha256:271e369502fe0531e9c58ec30ed2d94a4df1c8a5b8a67bea2286c8165dab9e78
   route:
     signal: feature_addition
     mode: add-feature
@@ -127,7 +127,13 @@ claude-fable-5、2026-09-11) は次の案から **C** を推奨し採用した:
 | 案 | 内容 | trade-off | 判定 |
 | --- | --- | --- | --- |
 | A | delegation 側で receipt bytes を先に確定し event を append してから receipt を書く | 不変条件は C と同じだが `projectReviewVerdict` の receipt 書込を分離する refactor が要る | 棄却 (変更半径) |
-| **C (採用)** | `projectReviewVerdict` の成功経路内で temp 書込 → digest → event append → rename の順序を保証する | 変更が 1 関数に閉じる。rename 先既存・crash window・temp 残置の規則を契約に持つ必要がある | 採用 |
+| **C (採用)** | `projectReviewVerdict` の成功経路内で temp 書込 → digest → event append → 確定の順序を保証する | 変更が 1 関数に閉じる。確定先既存・crash window・temp 残置の規則を契約に持つ必要がある | 採用 |
+
+rev 7 (Codex/Sol FLAG dc8cb303、blocking 3): 確定を rename で行う案は POSIX rename が上書きするため atomic no-clobber
+ではない (TOCTOU)。advisor 相談 (`--decision implementation`、2026-09-11、fallback claude-fable-5) は
+(X) hardlink 確定 / (Y) `wx` 直書き / (Z) Y + corrupt orphan 退避 のうち **X** を推奨し採用した: `link(2)` と NTFS の
+hardlink 作成は両 OS で atomic かつ既存があれば必ず失敗し、final に現れる receipt は常に完全 bytes になる (Y の
+truncated final、Z の退避=上書き相当の攻撃面を構造で潰す)。
 | B | receipt 先行のまま修復コマンドで event を後付けする | fact 捏造経路 | 棄却 |
 
 | 案 | 内容 | trade-off | 判定 |
@@ -161,19 +167,30 @@ claude-fable-5、2026-09-11) は次の案から **C** を推奨し採用した:
   `attempt_completed` を append する。順序は (1) receipt bytes を receipt と同一ディレクトリの temp file へ書く、
   (2) その bytes の sha256 を `receiptFileDigest` とする、(3) `attempt_completed` を append する
   (`requestDigest` / `attempt` / `exactHead` / `verdictPath` / `recordedAt` / `provider` / `model` /
-  `exitCode` / `receiptFileDigest` / `verdictDigest`)、(4) temp を receipt path へ rename する。rename 先に receipt が
-  既にある場合は上書きせず、既存 bytes と temp bytes を比較して、同一なら temp を捨てて成功 (冪等)、異なれば
-  `attempt_outcome_conflict` を append して fail-close する (rev 6)。delegation.ts は attestation の `provider` / `model` を渡すだけで、event の
+  `exitCode` / `receiptFileDigest` / `verdictDigest`)、(4) `fs.linkSync(temp, final)` で
+  確定する (rev 7、atomic no-clobber。rename・precheck・上書きを使わない)。`EEXIST` のときだけ既存 final bytes の
+  sha256 と temp の sha256 を比較し、同一なら temp を捨てて成功 (冪等)、異なれば `attempt_outcome_conflict` を append
+  して fail-close する (rev 6)。`EEXIST` 以外の errno (`EPERM` / `ENOSYS` / `EINVAL` / `EXDEV`: hardlink 非対応
+  FS や AV 干渉) は `receipt_link_failed` で typed deny (receipt 無し、retry 可)。temp は final と同一ディレクトリ・
+  同一ボリュームに `<digest>.json.tmp-<pid>-<random>` で作り、(1) の直後に file fsync する (dir fsync は Windows で
+  不可のため契約に含めない)。unlink temp は best-effort (失敗はログのみ)。delegation.ts は attestation の `provider` / `model` を渡すだけで、event の
   append 位置を持たない。
 - 失敗点ごとの状態遷移: (3) 失敗 → temp を消し receipt 無しで `attempt_execution_failed` を記録 (retry 可)。
   (4) 失敗または (3)〜(4) 間の crash → event 有り・receipt 無し。この状態を `beginReviewAttempt` は**非終端**
   (retry 可、次 attempt が `superseded_attempt` を残す) と扱い、残った temp は次 attempt 開始時に無視して消す。
+  同一 attempt の re-link は行わず、回復は次 attempt が同一 bytes を再生成して link する経路だけである (`-017`)。
   composition は receipt file が無い attempt を `receipt_unavailable` で deny する。
-- orphan receipt (rev 6): `beginReviewAttempt` は receipt file の存在だけで終端とみなさない。receipt bytes の sha256 と
-  一致する `receiptFileDigest` を持つ `attempt_completed` がある receipt だけを `review_receipt_already_exists` で
-  拒否し、一致する event が無い receipt (本 PLAN 以前の経路が残した receipt-without-fact、または競合 runtime の残置)
+- orphan receipt (rev 6 / rev 7): `beginReviewAttempt` は receipt file の存在だけで終端とみなさない。receipt を終端と
+  みなす条件は **完全に有効な** `attempt_completed` が 1 件あることであり、有効とは (i) schema 有効 (必須 field 全部・
+  `receiptFileDigest` が lowerhex64・`receiptDigest` field 無し)、(ii) identity 有効 (`requestDigest` / `attempt` /
+  `exactHead` が request と一致)、(iii) `receiptFileDigest` == sha256(receipt bytes)、(iv) 同 attempt に
+  `superseded_attempt` / `attempt_outcome_conflict` 無し、の全部を満たすことである。(i)〜(iv) のいずれかを欠く event
+  (malformed / identity 不一致 / digest 不一致) は終端根拠にならず composition も `invocation_fact_schema_invalid` /
+  `identity_mismatch` / `receipt_mutated` で拒否するため、「終端なのに compose 不能」という wedge は作らない
+  (`-021`)。この条件を満たす receipt だけを `review_receipt_already_exists` で拒否し、一致する event が無い receipt (本 PLAN 以前の経路が残した receipt-without-fact、または競合 runtime の残置)
   は orphan として新 attempt の開始を許す。新 attempt の完了時は上記 (4) の比較規則で、同一 bytes なら 1 receipt の
-  まま冪等に完了し、異なる bytes なら上書きせず `attempt_outcome_conflict` で fail-close する。orphan の削除・
+  まま冪等に完了し、異なる bytes なら上書きせず `attempt_outcome_conflict` で fail-close する。並行 attempt が同時に
+  link した場合も勝者は 1 つで、敗者は `EEXIST` → bytes 比較の同じ規則に落ちる (`-022`)。orphan の削除・
   移動は行わない (append-only、write は temp と audit のみ)。同一 identity の bounded retry は
   「次 attempt が exactly once で完了する (receipt 1 個・一致する `attempt_completed` 1 件)」か「typed deny で
   fail-close する」かのどちらかであり、永久 wedge (`review_receipt_already_exists` と fact 不在の共存) を作らない。
@@ -225,7 +242,12 @@ claude-fable-5、2026-09-11) は次の案から **C** を推奨し採用した:
   **受理しない**: どちらかが存在すれば `operator_supplied_judgment_forbidden` で exit 非 0 (silent fallback で
   旧経路を残さない)。
 - runner は `UT_TDD_CUSTODY_JUDGMENT_ARTIFACT` (workflow input として渡される artifact bytes の path) を読み、
-  sha256 を再計算して `judgmentDigest` とし、`providerEvidenceRef = d3b:<judgmentDigest>` を自ら組み立てる。
+  `PLAN-L7-562` の規則どおり payload から派生値 `judgment_digest` を除いた field を JCS canonicalize して sha256 を
+  再計算し、これを `judgmentDigest` とする (file bytes の sha256 ではない)。さらに (rev 7) (a) payload の
+  `judgment_digest` field が再計算値と一致、(b) artifact の basename が `<judgmentDigest>.json`、(c) file bytes が
+  producer (`PLAN-L7-562` の adapter) の canonical serialization と byte 一致、の 3 つを要求し、(a) 不一致は
+  `judgment_digest_mismatch`、(b)(c) 不一致は `judgment_artifact_noncanonical` で deny する (schema を保った
+  空白・key 順序の改変は (c) で止まる)。`providerEvidenceRef = d3b:<judgmentDigest>` はこの再計算値だけから組み立てる。
   artifact payload の `repository` / `pr_number` / `head_sha` / `request_digest` / `attempt` が runner が観測する
   PR facts と request identity に一致しなければ `judgment_identity_mismatch` (bytes を別 PR へ転用する replay を
   塞ぐ)。`schema_version` / `kind` / verdict と `blocking_findings` の整合も producer と同じ規則で検証する。
@@ -253,7 +275,7 @@ claude-fable-5、2026-09-11) は次の案から **C** を推奨し採用した:
 | PR | 論点 | 前提 |
 | --- | --- | --- |
 | PR-0 (本 PR) | 本 PLAN + `PLAN-REVERSE-534` + pair test-design の pair-freeze (docs のみ) | なし |
-| PR-1 | `src/feedback/provider-judgment-composition.ts` 1 module + audit kind union への `attempt_completed` 追加 + `projectReviewVerdict` 成功経路の temp → append → rename 順序化 + `beginReviewAttempt` の非終端規則 + テスト。CANDIDATE-U-D3BCOMP-001..010 と 015..020 の Red→Green | PR-0 の非著者 PASS receipt、PR #569 の main 到達 |
+| PR-1 | `src/feedback/provider-judgment-composition.ts` 1 module + audit kind union への `attempt_completed` 追加 + `projectReviewVerdict` 成功経路の temp → append → link 順序化 + `beginReviewAttempt` の非終端規則 + テスト。CANDIDATE-U-D3BCOMP-001..010 と 015..022 の Red→Green | PR-0 の非著者 PASS receipt、PR #569 の main 到達 |
 | PR-2 | runner の operator env 拒否 + artifact bytes 再計算 + CLI `review compose-judgment` の最小配線 + テスト。CANDIDATE-U-D3BCOMP-011..014 | PR-1 merge |
 
 PR-1 と PR-2 を 1 PR に統合しない。#541 seal、#540 cutover writer、#487 Bun 削除、primary `harness.db` への
@@ -262,7 +284,7 @@ PR-1 と PR-2 を 1 PR に統合しない。#541 seal、#540 cutover writer、#4
 ## 7. TDD / trace / Reverse
 
 pair artifact `docs/test-design/harness/L7-d3b-provider-evidence-composition-test-design.md` が
-`CANDIDATE-U-D3BCOMP-001..020` を所有する (001..010 と 015..020 は PR-1、011..014 は PR-2)。実装 PR で Red→Green を観測した
+`CANDIDATE-U-D3BCOMP-001..022` を所有する (001..010 と 015..022 は PR-1、011..014 は PR-2)。実装 PR で Red→Green を観測した
 行だけを同番号の `U-D3BCOMP-*` へ 1:1 昇格し、共有 `L7-unit-test-design.md` へ登録する。`CANDIDATE-D3B-*`
 (PLAN-L7-562)、`U-REVIEW-*`、`U-CUSTODY-*` を再採番・再所有しない。Reverse は `PLAN-REVERSE-534` (R0) が対になる。
 
@@ -280,9 +302,12 @@ pair artifact `docs/test-design/harness/L7-d3b-provider-evidence-composition-tes
 1. composition が request / receipt / `attempt_completed` からだけ入力を導出し、caller 供給の digest / ref /
    provider / model / family を受理しない (`-001` / `-002` / `-003`)。
 2. invocation fact の欠落・重複・supersede と receipt digest 不一致が typed deny で write 0 (`-004` / `-005` / `-006`)。
-   event → receipt の順序が保証され、append 失敗・rename 失敗のどちらも valid review を receipt-without-fact に
+   event → receipt の順序が保証され、append 失敗・link 失敗のどちらも valid review を receipt-without-fact に
    取り残さず retry 可能で、receipt file 改変が `receipt_mutated` で deny される (`-015` / `-016` / `-017` / `-018`)。
    orphan receipt は一致 event の有無で判定され、次 attempt が上書きなしで冪等完了または typed conflict になる (`-020`)。
+   終端根拠は完全有効な event のみで malformed event は再入可能 (`-021`)、確定は hardlink の atomic no-clobber で
+   並行 attempt でも既存 bytes を保つ (`-022`)。runner は JCS 再計算・basename・canonical bytes の 3 束縛で artifact を
+   検証する (`-012`)。
 3. evidence document が receipt 由来で、重複 finding・identity 不一致を deny する (`-007` / `-008`)。
 4. artifact の再読込検証と producer failure の透過 (`-009` / `-010`)。
 5. runner が operator env を拒否し、bytes から digest / ref を再計算し、別 PR への転用を `judgment_identity_mismatch`

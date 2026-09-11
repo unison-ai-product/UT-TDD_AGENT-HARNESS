@@ -45,17 +45,19 @@ runner の bytes 再計算だけを検証する差分 oracle を定義する。
 | `CANDIDATE-U-D3BCOMP-009` | fake port が `written` を返した直後に artifact bytes を 1 byte 改変 | `artifact_verification_failed`。artifact を残さない (0 件)。producer 戻り値だけで成功にしたら Red |
 | `CANDIDATE-U-D3BCOMP-010` | 正常系を 2 回 compose | 1 回目 `replay: false`、2 回目 `replay: true`、envelope / artifact の bytes 不変、`d3b:<digest>` 一致 |
 | `CANDIDATE-U-D3BCOMP-011` | runner env に `UT_TDD_CUSTODY_JUDGMENT_DIGEST` または `UT_TDD_CUSTODY_PROVIDER_EVIDENCE_REF` を設定 (値が正しくても) | `operator_supplied_judgment_forbidden`、exit 非 0、draft 生成 0。警告付きで受理したら Red |
-| `CANDIDATE-U-D3BCOMP-012` | `UT_TDD_CUSTODY_JUDGMENT_ARTIFACT` の bytes を 1 byte 改変 | 再計算 digest と payload の整合検証で deny、draft 0。改変前は draft の `judgmentDigest` / `providerEvidenceRef` が再計算値と一致 |
+| `CANDIDATE-U-D3BCOMP-012` | `UT_TDD_CUSTODY_JUDGMENT_ARTIFACT` を (a) payload 内容 1 byte 改変、(b) 空白 / key 順序 / 末尾改行だけ改変 (JSON 同値)、(c) basename を別名にする | (a) JCS 再計算 digest ≠ payload `judgment_digest` → `judgment_digest_mismatch`。(b)(c) canonical bytes / basename 不一致 → `judgment_artifact_noncanonical`。draft 0。改変前は draft の `judgmentDigest` / `providerEvidenceRef` が再計算値・basename と一致。file bytes の sha256 を digest にする実装、JSON 同値なら通す実装は Red |
 | `CANDIDATE-U-D3BCOMP-013` | 別 PR / 別 head / 別 request digest / 別 attempt で生成した正当な artifact bytes を渡す | `judgment_identity_mismatch`、draft 0 |
 | `CANDIDATE-U-D3BCOMP-014` | CLI `review compose-judgment` の stdout に payload / findings / nonce を含める実装へ変異 | stdout は artifact path と `d3b:<digest>` のみ。それ以外の行があれば Red |
 | `CANDIDATE-U-D3BCOMP-015` | 正常な receipt file の 1 byte を改変してから compose | `receipt_mutated` (`attempt_completed.receiptFileDigest` と再計算 sha256 の不一致)。write 0。request digest で照合して通したら Red |
 | `CANDIDATE-U-D3BCOMP-016` | audit append を fault injection で失敗させ、review を完了させる | receipt file 不在、temp 残置 0、`attempt_execution_failed` が記録され、`beginReviewAttempt` が次 attempt を開始できる。receipt が残ったら Red |
-| `CANDIDATE-U-D3BCOMP-017` | temp → receipt の rename を失敗させる (EACCES / crash window) | `attempt_completed` 有り・receipt 無し。`beginReviewAttempt` は非終端として次 attempt を開始でき、compose は `receipt_unavailable`。既存 receipt を上書きしたら Red |
+| `CANDIDATE-U-D3BCOMP-017` | temp → receipt の link を失敗させる (非 EEXIST errno / append と link の間の crash window) | 非 EEXIST は `receipt_link_failed` で receipt 無し。crash window は `attempt_completed` 有り・receipt 無し。いずれも `beginReviewAttempt` は非終端として次 attempt を開始でき、compose は `receipt_unavailable`。同一 attempt を re-link したら Red |
 | `CANDIDATE-U-D3BCOMP-018` | temp file を残置したまま次 attempt を開始する | temp は無視して消され、新 attempt の event と receipt が一致する (receipt 1 個・一致する event 1 件 = exactly once)。temp を receipt として採用したら Red |
 | `CANDIDATE-U-D3BCOMP-019` | (a) `attempt_completed` に `receiptDigest` field を足す、(b) `receiptFileDigest` を request digest と同値にする、(c) receipt file を CRLF 化 / key 並び替え / 末尾 LF 除去する | (a)(b) は `invocation_fact_schema_invalid`、(c) は `receipt_mutated`。write 0。JSON を再 parse して同値なら通す実装は Red |
 | `CANDIDATE-U-D3BCOMP-020` | 一致する `attempt_completed` が無い orphan receipt を置いて次 attempt を開始する。(a) 次 attempt の bytes が同一、(b) 異なる、(c) 一致 event 有りの receipt | (a) 開始可、receipt 1 個のまま冪等完了、event 1 件が bytes と一致。(b) 開始可、上書きせず `attempt_outcome_conflict`、既存 bytes 不変。(c) `review_receipt_already_exists`。orphan を削除・上書きしたら Red |
+| `CANDIDATE-U-D3BCOMP-021` | `receiptFileDigest` は receipt bytes と一致するが、(a) 必須 field 欠落、(b) `receiptDigest` field 混入、(c) `exactHead` / `attempt` が request と不一致、の `attempt_completed` を置く | 終端扱いにならず `beginReviewAttempt` が次 attempt を開始できる。compose は (a)(b) `invocation_fact_schema_invalid`、(c) `identity_mismatch`、write 0。digest 一致だけで終端にする実装は Red |
+| `CANDIDATE-U-D3BCOMP-022` | (a) 2 attempt が同一 identity で同時に link する、(b) link を `EPERM` / `EXDEV` で失敗させる | (a) final は 1 個、bytes は先着のまま、敗者は同一 bytes なら冪等完了・異なれば `attempt_outcome_conflict`。(b) `receipt_link_failed`、receipt 無し。rename や precheck 付き上書きで確定する実装は Red |
 
-`001..010` と `015..020` は PR-1 (composition module + `attempt_completed` + custody 順序化)、`011..014` は PR-2 (runner / CLI) が所有する。実装 PR で
+`001..010` と `015..022` は PR-1 (composition module + `attempt_completed` + custody 順序化)、`011..014` は PR-2 (runner / CLI) が所有する。実装 PR で
 Red→Green を観測した行だけを同番号の `U-D3BCOMP-*` へ 1:1 で昇格し、共有 `L7-unit-test-design.md` へ登録する。
 
 ## 4. Gate and scope fence
@@ -63,7 +65,8 @@ Red→Green を観測した行だけを同番号の `U-D3BCOMP-*` へ 1:1 で昇
 - composition の入力は request / receipt / `attempt_completed` / tracked identity の 4 つだけ (001..006)。
 - event は receipt 確定より前に append し、どの失敗点も retry 可能な非終端に落ちる。receipt 改変は bytes digest で deny (015..018)。
 - digest は writer が書いた bytes そのものを対象にし、旧 request digest 値や `receiptDigest` field を黙って受理しない (019)。
-- receipt の存在は一致 event がある場合だけ終端。orphan は上書きなしで冪等回復か typed conflict (020)。
+- receipt の存在は完全有効な event がある場合だけ終端。orphan は上書きなしで冪等回復か typed conflict (020、021)。
+- 確定は hardlink の atomic no-clobber で、race でも既存 bytes を保つ (022)。runner は JCS 再計算・basename・canonical bytes で artifact を束縛する (012)。
 - evidence document は receipt を写すだけで、dedup・補完・推定をしない (007、008)。
 - producer の戻り値を信用せず artifact を再読込する (009)。replay は write 0 (010)。
 - runner は operator 文字列を presence で拒否し、bytes から再計算し、identity を照合する (011..013)。
