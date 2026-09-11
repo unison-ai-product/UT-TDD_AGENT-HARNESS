@@ -51,6 +51,13 @@ CLI/hook実発火 (`cli-surface`、`distribution-acceptance`、`runtime-hook-ent
 | `CANDIDATE-CI490-007` | `DOC_LANE_PREFIXES`へ`docs/plans/`や`docs/test-design/`を追加、workflow headerだけを広げる、未知pathをdoc扱いする | `tests/change-lane.test.ts`とheader集合突合がRed。今回のPLAN/test-design変更はfull laneであり、doc lane skipを得ない。 |
 | `CANDIDATE-CI490-008` | before/after timingのHEAD、run、job、step、timestamp、conclusionのいずれかを別revision/別jobへ差替え、afterを未計測の数値で埋める | beforeは#478 run `33346891983` / HEAD `d597161a...`、afterは実装PR exact HEADに束縛。run/job/step identity欠落・HEAD不一致・prose-only短縮主張を拒否する。 |
 
+この実装PRのworkflow構造oracleは、次の2件をcandidateから限定的に昇格する。
+
+| Unit oracle | 対応する検証 |
+| --- | --- |
+| `U-CI490-004` | 現行workflowを構造parseし、Windows jobのsealed `test:windows` invocation exactly 1、typecheck/db rebuild/toolchain doctorの保持、policy manifest整合を確認する正常系。 |
+| `U-CI490-005` | snapshot step欠落・重複、fast/cli分割、raw vitestの各独立mutationを、workflow構造oracleとpolicy oracleの双方でdenyする。 |
+
 ## Gate and scope fence
 
 - Linux / Windows / aggregateは1つのrequired gate群として扱い、Windowsのtest stepを減らしても

@@ -35,7 +35,7 @@ github-forward-store:2
 node-self-host-bootstrap:1 node-slice-admission:3
 global-setup.ts:1 support/workspace-roots.ts:3
 global-setup-fence:1 vitest-snapshot-runner:3
-hook-native-launcher:1 claude-memory-terminal-gc:1 release-version-identity:2 windows-ci-single-snapshot:1 pack-authoring-template-scope:2
+hook-native-launcher:1 claude-memory-terminal-gc:1 release-version-identity:2 windows-ci-single-snapshot:2 pack-authoring-template-scope:2
 profile/tracked-loader:2
 plan-asset/ledger-schema:4 plan-asset/legacy-inventory:5 plan-asset/legacy-migration-dry-run:13 plan-asset/project-identity-loader:1
 disposition/git-authoring-provenance:3 disposition/projection:6 disposition/tracked-target-registry:2
@@ -84,6 +84,11 @@ repositoryReadContracts["tests/doctor-result-file.test.ts"] = {
   calls: 4,
   reason:
     "doctor envelope oracles build fixtures and measured writer inputs from the detached HEAD observation surface",
+};
+repositoryReadContracts["tests/windows-ci-single-snapshot.test.ts"] = {
+  mode_calls: { isolated_fixture: 2 },
+  reason:
+    "workflow oracle reads package.json scripts and .github/workflows/harness-check.yml from the writable execution fixture",
 };
 
 repositoryReadContracts["tests/doctor.test.ts"] = {
