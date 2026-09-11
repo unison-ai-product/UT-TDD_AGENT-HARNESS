@@ -1066,4 +1066,9 @@ export function createPackPublicationProductionPorts(
 }
 
 export const createGhPackPublicationPorts = createPackPublicationProductionPorts;
+export const createGhPublicationPorts = createPackPublicationProductionPorts;
 export const createNodeGhPorts = createPackPublicationProductionPorts;
+export const createProcessRunnerPort = createNodeProcessRunnerPort;
+export const createFileBackedApprovalPort = createFileApprovalPort;
+export const createDurablePublicationJournalPort = createFilePublicationJournalPort;
+export const createFileReceiptPort = createFilePublicationReceiptPort;
