@@ -2485,7 +2485,7 @@ digest/ref を入力へ戻してはならない。下表の Candidate/U 対応�
 | CANDIDATE-D3B-004 | U-D3B-004 | strict schema。unknown/missing/type/schema_version/UTF-8/model差替えを`judgment_schema_invalid`または`identity_mismatch`で拒否。modelはverified invocation fact以外を受理しない |
 | CANDIDATE-D3B-005 | U-D3B-005 | verdict/findings。PASSにblocking finding、空findingのFLAG、finding順序変更、duplicate findingを拒否 |
 | CANDIDATE-D3B-006 | U-D3B-006 | canonical digest。JCS key順、unicode/uppercase/短縮digestなどの非canonical表現を生成値へ混入させず、digest自己参照除外、末尾改行1件を検査 |
-| CANDIDATE-D3B-007 | U-D3B-007 | caller authority。caller supplied `judgmentDigest`または`providerEvidenceRef`をproducer入力schemaで拒否し、生成値だけを採用 |
+| CANDIDATE-D3B-007 | U-D3B-007 | caller authority。caller supplied `judgmentDigest`、`providerEvidenceRef`、PR comment、Memory本文、D3a receipt digest の各入力をproducer入力schemaで独立に拒否し、生成値だけを採用 |
 | CANDIDATE-D3B-008 | U-D3B-008 | unavailable/retry。missing/superseded/provider failureをtyped unavailableへ落とし、artifact write 0 |
 | CANDIDATE-D3B-009 | U-D3B-009 | immutable replay/conflict。同一content replayは冪等、同一subjectの別content・別verdict・別attempt競合は2件目を書かない |
 | CANDIDATE-D3B-010 | — (後続 D3c) | D3c boundary。valid D3b + D3c mechanical envelopeでもfamily authority不在なら`unverified_family`、`custody_admitted` 0。D3c workflow境界のため、このbounded producer sliceでは昇格しない |

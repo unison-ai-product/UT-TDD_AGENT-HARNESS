@@ -175,5 +175,6 @@ producer slice では未実装のまま正規IDへ昇格しない。実装・rev
 subject に束縛する。候補軸の縮退は行わない。provider-evidence ref差替えは producer
 入力にそのfieldが無いこと自体を `U-D3B-007` の caller-authority 拒否で証明し、strict
 schemaのmissing/type軸は `U-D3B-004`、canonical digestの大文字・短縮表現軸は生成値を
-lower-64hexへ固定する `U-D3B-006` で保持する。これらの対応は test-design の
+lower-64hexへ固定する `U-D3B-006` で保持する。PR comment、Memory本文、D3a receipt digest
+などの旧 caller 軸も `U-D3B-007` で個別に拒否し、単一の複合入力だけで済ませない。これらの対応は test-design の
 Candidate/U mapping と同一であり、未実装の D3c `CANDIDATE-D3B-010` だけは後続へ移管する。

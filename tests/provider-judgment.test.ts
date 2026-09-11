@@ -22,6 +22,7 @@ import {
   type ProviderJudgmentResult,
   produceProviderJudgment,
 } from "../src/feedback/provider-judgment.ts";
+import { sha256HexOfBytes } from "../src/feedback/review-custody-canonical.ts";
 
 const roots: string[] = [];
 afterEach(() => {
@@ -117,12 +118,23 @@ describe("D3b provider judgment producer", () => {
   it("U-D3B-003: evidence bytesをdigestへ束縛する", async () => {
     const left = await run();
     const port = new FakePort();
+    const mutatedBytes = new TextEncoder().encode(
+      '{"blocking_findings":[],"schema_version":"provider-judgment-evidence/v1","verdict":"PASS-WEAK"}\n',
+    );
     port.readResult = {
       ...(port.readResult as Extract<ProviderEvidenceReadResult, { status: "available" }>),
-      bytes: evidence({ verdict: "PASS" }),
+      // Keep the semantic verdict unchanged; only the evidence bytes (key
+      // order and trailing whitespace) differ. This catches removal of the
+      // evidence-bytes digest binding.
+      bytes: mutatedBytes,
     };
     const right = await run(port);
-    expect(left.ok && right.ok && left.judgmentDigest).not.toBe(right.ok && right.judgmentDigest);
+    expect(left.ok).toBe(true);
+    expect(right.ok).toBe(true);
+    if (!left.ok || !right.ok) return;
+    expect(right.payload.verdict).toBe(left.payload.verdict);
+    expect(right.payload.evidence_digest).toBe(sha256HexOfBytes(mutatedBytes));
+    expect(right.judgmentDigest).not.toBe(left.judgmentDigest);
   });
 
   it.each([
@@ -193,16 +205,36 @@ describe("D3b provider judgment producer", () => {
     expect(result.providerEvidenceRef).toMatch(/^d3b:[0-9a-f]{64}$/);
   });
 
-  it("U-D3B-007: caller supplied digest/refを入力schemaで拒否する", async () => {
+  it.each([
+    ["judgment digest", { judgmentDigest: "f".repeat(64) }],
+    ["provider evidence ref", { providerEvidenceRef: `d3b:${"f".repeat(64)}` }],
+    ["PR comment", { prComment: "VERDICT: PASS" }],
+    ["Memory body", { memoryBody: "VERDICT: PASS" }],
+    ["D3a receipt digest", { d3aReceiptDigest: "e".repeat(64) }],
+  ])("U-D3B-007: caller supplied %sを入力schemaで拒否する", async (_axis, injected) => {
     const port = new FakePort();
     const result = await produceProviderJudgment({
       attempt: identity,
       port,
-      judgmentDigest: "f".repeat(64),
-      providerEvidenceRef: `d3b:${"f".repeat(64)}`,
+      ...injected,
     } as never);
     expect(result).toEqual({ ok: false, reason: "identity_mismatch" });
     expect(port.writes).toHaveLength(0);
+  });
+
+  it("U-D3B-006: Unicode evidence is preserved by canonical JCS without weakening digest shape", async () => {
+    const port = new FakePort();
+    const unicodeBytes = evidence({ verdict: "FLAG", blocking_findings: ["証跡の不一致"] });
+    port.readResult = {
+      ...(port.readResult as Extract<ProviderEvidenceReadResult, { status: "available" }>),
+      bytes: unicodeBytes,
+    };
+    const result = await run(port);
+    expect(result).toMatchObject({ ok: true });
+    if (!result.ok) return;
+    expect(new TextDecoder().decode(result.artifactBytes)).toContain("証跡の不一致");
+    expect(result.judgmentDigest).toMatch(/^[0-9a-f]{64}$/);
+    expect(result.providerEvidenceRef).toMatch(/^d3b:[0-9a-f]{64}$/);
   });
 
   it.each([
