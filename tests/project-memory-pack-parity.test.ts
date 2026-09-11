@@ -199,8 +199,10 @@ describe("Issue #424 Slice 5 clean Pack/provider parity", () => {
     const linked = join(dirname(primary), `${basename(primary)}-linked`);
     fixtures.push(linked);
     git(primary, ["worktree", "add", "-q", "-b", "linked", linked]);
-    expect(runPack(primary, ["setup", "--solo"]).status).toBe(0);
-    expect(runPack(linked, ["setup", "--solo"]).status).toBe(0);
+    const primarySetup = runPack(primary, ["setup", "--solo"]);
+    expect(primarySetup.status, `${primarySetup.stdout}\n${primarySetup.stderr}`).toBe(0);
+    const linkedSetup = runPack(linked, ["setup", "--solo"]);
+    expect(linkedSetup.status, `${linkedSetup.stdout}\n${linkedSetup.stderr}`).toBe(0);
     const memory = writeMemory({
       repoRoot: primary,
       input: {
