@@ -8,7 +8,7 @@ status: confirmed
 route_signal: incident
 route_mode: incident
 created: 2026-07-31
-updated: 2026-08-26
+updated: 2026-09-10
 owner: PM / PO
 backprop_decision: not_required
 backprop_decision_reason: "PLAN-L7-465に定義済みのD1 dispatch lifecycleと実装の意味論は変更せず、draft設計PLANと完成済み出荷物のライフサイクルを分離してgenerates所有を確定する。"
@@ -36,6 +36,10 @@ generates:
   - artifact_path: src/feedback/review-attestation.ts
     artifact_type: source_module
   - artifact_path: tests/review-attestation.test.ts
+    artifact_type: test_code
+  - artifact_path: src/feedback/review-projection-reconciliation.ts
+    artifact_type: source_module
+  - artifact_path: tests/review-projection-reconciliation.test.ts
     artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L7-465-cross-review-author-binding.md
@@ -156,6 +160,15 @@ AC-1〜AC-5が未完了なので `draft` を維持する。一方、次の D1 �
 | stale requestとmerge先HEAD requestの横断照合 | `U-RVDISP-047`〜`048` |
 | author family併存時のcross-family verdict保全、不正MERGED孤児のfail-close | `U-RVDISP-049`〜`050` |
 | 競合FLAGのblocking保全、request以前receiptと有効後続receiptの分離 | `U-RVDISP-051`〜`052` |
+| filesystem projectionのcanonical identity照合とfail-close | `U-RVDISP-053`〜`063` |
+
+### Issue #561 r2 追補 (2026-09-10)
+
+filesystem projectionのFLAGは有効な非author終端receiptとして`consumed`へ進め、blocking情報の
+digestを`flagged`へ分離して保持する。dispatch analyzerが返す`receipt_before_request`等の既知理由は
+projection固有の同名typed reasonへ写像し、`identity_mismatch`へ潰さない。`rv1-<identityDigest>`の
+requestは`isStrictReviewRequest`でbasename/identityとの整合を検証し、不一致を
+`filename_digest_mismatch`としてfail-closeする。対応oracleは`U-RVDISP-060`〜`063`。
 
 ## 4. スコープ外
 
@@ -168,7 +181,7 @@ AC-1〜AC-5が未完了なので `draft` を維持する。一方、次の D1 �
 
 ## 5. AC
 
-- AC-1: `U-RVDISP-001`〜`052` が全件green。
+- AC-1: `U-RVDISP-001`〜`063` が全件green。
 - AC-2: `tsc --noEmit` とBiomeがgreen。
 - AC-3: identity/FSM/replay/diagnosticを独立監査し、未反証attackがない。
 - AC-4: `impl-plan-trace` / `deliverable-plan-trace` で上記2出荷物の孤児が0。
@@ -192,6 +205,14 @@ AC-1〜AC-5が未完了なので `draft` を維持する。一方、次の D1 �
   --reporter=dot --maxWorkers=1 --minWorkers=1` 130 pass / 0 fail（review-dispatch 52、PLAN lint 78）、
   Biome対象2ファイル Green、`npx tsc --noEmit --pretty false` Green。
 - 残存制約: CI exact-head と non-author closing review はPR側の検収で実施する。
+
+### Issue #558 追補 (2026-09-10)
+
+request/receipt filesystem projectionはbasename一致を必要条件とするが、消費権限にはしない。
+request digestで候補を引いた後、既存dispatch analyzerの
+`(memoryId, pr, exactHead, reviewRevision)`、cross-family、terminal verdict規則を再利用して照合する。
+同一basenameのidentity不一致はrequestをpendingに保ち、malformed/schema/digest/duplicate conflictは
+typed reason付きでfail-closeする。CLI wiring、custody/dispatch再設計、durable Memoryの手編集は対象外とする。
 
 ## レビュー状態
 
