@@ -45,18 +45,18 @@ status: draft
 github_issue_id: 570
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:4f7e4ce20d94b4bedea05230222d2a7d
-  command_id: plan-revise:issue-570:forward:4
-  admitted_at: 2026-09-11T07:35:13.604Z
-  source_digest: sha256:d18556c44c32a301b68ed1081fdb70ab56c064252d849726a3bc1305966a503d
-  decision_digest: sha256:ac4dc985af6fa10784f9fefcb56dc81af883c7aaf4ce38c07e0af8953e27b650
-  receipt_digest: sha256:86bf1859364183897f82402d2afc834a993f128da7ddcbd1736af02cbab0b540
+  receipt_id: certificate:1b0a794031ffd3f48b6b10c3e297c019
+  command_id: plan-revise:issue-570:forward:5
+  admitted_at: 2026-09-11T07:37:55.764Z
+  source_digest: sha256:38469c4e54fbc79f1511a2533d43d6c9767f33efa20aecc561efcb93fce18365
+  decision_digest: sha256:0fb41247b979038ecfb3e98c29727e420fa40889a31e0f0d659a008f8c9c528d
+  receipt_digest: sha256:05546fc3afe4b30ef589500eb915ad176be221e6dea4d4818021adfce076e875
   binding:
     path: docs/plans/PLAN-L7-534-d3b-provider-evidence-composition.md
     plan_id: PLAN-L7-534-d3b-provider-evidence-composition
     asset_id: plan:2eeafb9dd9883770a0f56c936c08bd1f
-    revision: 4
-    content_digest: sha256:d18556c44c32a301b68ed1081fdb70ab56c064252d849726a3bc1305966a503d
+    revision: 5
+    content_digest: sha256:38469c4e54fbc79f1511a2533d43d6c9767f33efa20aecc561efcb93fce18365
   route:
     signal: feature_addition
     mode: add-feature
@@ -75,9 +75,9 @@ admission_receipt:
     phase: forward_merge
   escape_reason: "Issue #570 D3b provider evidence composition pair-freeze
     (add-feature; PLAN-L7-562 producer downstream, PLAN-L6-85 rev 2 origin);
-    revision 4: Codex/Sol FLAG d4d0c34e (event-before-receipt ordering via
-    temp/append/rename, receiptFileDigest, receipt_mutated, candidates 015..018;
-    advisor design C)"
+    revision 5: Codex repair guidance (canonical receipt serialization, legacy
+    value non-acceptance invocation_fact_schema_invalid, exactly-once retry,
+    candidate 019)"
 ---
 
 # PLAN-L7-534: D3b provider evidence composition
@@ -166,10 +166,22 @@ claude-fable-5、2026-09-11) は次の案から **C** を推奨し採用した:
 - 失敗点ごとの状態遷移: (3) 失敗 → temp を消し receipt 無しで `attempt_execution_failed` を記録 (retry 可)。
   (4) 失敗または (3)〜(4) 間の crash → event 有り・receipt 無し。この状態を `beginReviewAttempt` は**非終端**
   (retry 可、次 attempt が `superseded_attempt` を残す) と扱い、残った temp は次 attempt 開始時に無視して消す。
-  composition は receipt file が無い attempt を `receipt_unavailable` で deny する。
+  composition は receipt file が無い attempt を `receipt_unavailable` で deny する。同一 identity の bounded retry は
+  「次 attempt が exactly once で完了する (receipt 1 個・一致する `attempt_completed` 1 件)」か「typed deny で
+  fail-close する」かのどちらかであり、永久 wedge (`review_receipt_already_exists` と fact 不在の共存) を作らない。
 - `receiptFileDigest` は receipt file bytes の sha256 (lowerhex 64) であり、composition は receipt file を再読込して
   再計算値と照合する (不一致 = 改変 → `receipt_mutated`、write 0)。既存 `cleanup_pending.receiptDigest` は request
   digest のままで意味を変えず、`attempt_completed` には `receiptDigest` field を持たせない (同名二義を作らない)。
+- canonical serialization (rev 5): digest の対象は `projectReviewVerdict` が書く bytes そのもの、すなわち
+  `JSON.stringify(receipt, null, 2)` + LF 1 個、UTF-8 (BOM 無し) である (実測: `review-attestation.ts` の
+  create-exclusive writer)。receipt object (`memoryId` / `pr` / `head` / `reviewRevision` / `reviewerFamily` /
+  `kind` / `verdict` / `blockingFindings` / `at`) は自身の digest を含まないので除外規則は不要。composition は
+  file bytes をそのまま hash し、JSON を再 parse・再 serialize しない (CRLF 化・key 並び替え・空白変更はすべて
+  `receipt_mutated`)。
+- 互換 (rev 5): `attempt_completed` は本 PLAN で新設する kind なので旧値は存在しない。それでも event に
+  `receiptDigest` field がある、`receiptFileDigest` が欠落・非 lowerhex64・request digest と同値のいずれかなら
+  `invocation_fact_schema_invalid` で deny し、request digest を receipt digest として黙って受理しない。
+  `cleanup_pending` の既存 `receiptDigest` (request digest) は composition の入力ではなく、読み替えもしない。
   `attempt_completed` は現行の `ReviewCustodyAuditEvent` kind union (`attempt_execution_failed` /
   `attempt_verdict_rejected` / `attempt_outcome_conflict` / `superseded_attempt` / `cleanup_pending`) に
   **存在しない新 kind** であり、PR-1 が union へ 1 つ追加する。既存 kind の意味と optional field はそのまま使い、
@@ -233,7 +245,7 @@ claude-fable-5、2026-09-11) は次の案から **C** を推奨し採用した:
 | PR | 論点 | 前提 |
 | --- | --- | --- |
 | PR-0 (本 PR) | 本 PLAN + `PLAN-REVERSE-534` + pair test-design の pair-freeze (docs のみ) | なし |
-| PR-1 | `src/feedback/provider-judgment-composition.ts` 1 module + audit kind union への `attempt_completed` 追加 + `projectReviewVerdict` 成功経路の temp → append → rename 順序化 + `beginReviewAttempt` の非終端規則 + テスト。CANDIDATE-U-D3BCOMP-001..010 と 015..018 の Red→Green | PR-0 の非著者 PASS receipt、PR #569 の main 到達 |
+| PR-1 | `src/feedback/provider-judgment-composition.ts` 1 module + audit kind union への `attempt_completed` 追加 + `projectReviewVerdict` 成功経路の temp → append → rename 順序化 + `beginReviewAttempt` の非終端規則 + テスト。CANDIDATE-U-D3BCOMP-001..010 と 015..019 の Red→Green | PR-0 の非著者 PASS receipt、PR #569 の main 到達 |
 | PR-2 | runner の operator env 拒否 + artifact bytes 再計算 + CLI `review compose-judgment` の最小配線 + テスト。CANDIDATE-U-D3BCOMP-011..014 | PR-1 merge |
 
 PR-1 と PR-2 を 1 PR に統合しない。#541 seal、#540 cutover writer、#487 Bun 削除、primary `harness.db` への
@@ -242,7 +254,7 @@ PR-1 と PR-2 を 1 PR に統合しない。#541 seal、#540 cutover writer、#4
 ## 7. TDD / trace / Reverse
 
 pair artifact `docs/test-design/harness/L7-d3b-provider-evidence-composition-test-design.md` が
-`CANDIDATE-U-D3BCOMP-001..018` を所有する (001..010 と 015..018 は PR-1、011..014 は PR-2)。実装 PR で Red→Green を観測した
+`CANDIDATE-U-D3BCOMP-001..019` を所有する (001..010 と 015..019 は PR-1、011..014 は PR-2)。実装 PR で Red→Green を観測した
 行だけを同番号の `U-D3BCOMP-*` へ 1:1 昇格し、共有 `L7-unit-test-design.md` へ登録する。`CANDIDATE-D3B-*`
 (PLAN-L7-562)、`U-REVIEW-*`、`U-CUSTODY-*` を再採番・再所有しない。Reverse は `PLAN-REVERSE-534` (R0) が対になる。
 
