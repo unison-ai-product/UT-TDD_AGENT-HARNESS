@@ -69,6 +69,16 @@ review_evidence:
     citations:
       - .ut-tdd/review/receipts/a2a46e5efe3f6ff63ca4fe89d512a2632f2c3b0f39f44d7370851eea88f7df84.json
       - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/564
+    green_commands:
+      - kind: plan_lint
+        command: node src/cli.ts plan lint
+        runner: node
+        scope: targeted
+        exit_code: 0
+        completed_at: 2026-09-11T04:45:00Z
+        evidence_path: docs/plans/PLAN-L7-562-d3b-provider-judgment.md
+        output_digest: sha256:9e11c1efc65e3373b8145b8b272d53f99a46ba525644cec98927652f7ec3edea
+        anchor_commit: 062fa30372a303167f46423909ca7aa6f9acee8c
 status: confirmed
 github_issue_id: 562
 ---
