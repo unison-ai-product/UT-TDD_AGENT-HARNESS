@@ -32,7 +32,10 @@ import {
   canonicalProjectIdentityBytes,
 } from "../src/setup/project-identity-bootstrap.ts";
 
-const sourceRoot = process.cwd();
+// Vitest and the detached snapshot runner execute from the repository root.
+// Keep the fixture source relative so the isolation doctor does not treat the
+// test as reading a live repository root via process.cwd().
+const sourceRoot = ".";
 const fixtures: string[] = [];
 
 function removeTree(path: string): void {
