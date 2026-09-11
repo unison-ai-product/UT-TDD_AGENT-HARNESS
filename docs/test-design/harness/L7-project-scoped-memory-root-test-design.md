@@ -4,7 +4,7 @@ layer: L7
 executed_at_layer: L7
 status: draft
 plan_id: PLAN-L7-512-project-scoped-memory-root
-updated: 2026-09-09
+updated: 2026-09-11
 ---
 
 # Project-scoped Memory root test design
@@ -21,8 +21,8 @@ updated: 2026-09-09
 | CANDIDATE-U-PMEMROOT-008 | symlink/junction/8.3 root escape | typed deny |
 | CANDIDATE-U-PMEMROOT-009 | linked worktreeからDB rebuild／Memory projectionを実行し、current worktreeだけにlegacy corpusを置く | projection readerもprimary canonical corpusだけを読み、legacy fallback 0。current/primaryを入れ替えてもidentity集合とdigestが一致 |
 | CANDIDATE-P-PMEMROOT-001 | mainとlinked worktree間のMemory/Claude通知 | 同一corpus/busを観測 |
-| CANDIDATE-P-PMEMROOT-002 | Packだけでsetup後にCodex/Claudeを起動 | source/Pack checkout参照0でparity成立 |
-| CANDIDATE-P-PMEMROOT-003 | 同名Memoryを持つ別projectを並行起動 | cross-project read/claim 0 |
+| CANDIDATE-P-PMEMROOT-002 | clean Packだけでsetup --solo後、Codex起点の`memory add --notify-claude`をlinked worktreeのNode Claude hookで受信 | source/Pack checkout参照0、v4 provider envelope、実hook delivery・terminal cleanup成立 |
+| CANDIDATE-P-PMEMROOT-003 | 同一Memory IDを持つ別projectへprojectIdが異なるv4 envelopeを投入 | foreign projectは`project_id_mismatch`でdenyし、read/claim/write 0、inbox/bindingは保持 |
 | CANDIDATE-P-PMEMROOT-004 | 全linked worktreeに同一ID・異digestを配置してmigration | canonical write 0、全variant quarantine、completion replay一致 |
 | CANDIDATE-P-PMEMROOT-005 | worker-only memoryのapply中断・source drift・完了後改ざん後に次回起動する | rollback/recovery、次回起動の未完了fence 0、現物digest不一致をtyped deny |
 
