@@ -70,7 +70,7 @@ review_evidence:
       - .ut-tdd/review/receipts/a2a46e5efe3f6ff63ca4fe89d512a2632f2c3b0f39f44d7370851eea88f7df84.json
       - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/564
     green_commands:
-      - kind: plan_lint
+      - kind: vmodel_lint
         command: node src/cli.ts plan lint
         runner: node
         scope: targeted
