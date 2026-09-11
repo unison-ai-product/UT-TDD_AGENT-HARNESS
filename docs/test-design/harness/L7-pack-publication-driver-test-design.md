@@ -51,7 +51,7 @@ stdout / stderr の call ledger を正本にする。
 | --- | --- | --- |
 | `CANDIDATE-PACKPUB-005-A` | argv を文字列連結・shell 経由 (`sh -c` / `cmd /c`) で組む実装へ変異 | fake runner が受けた argv が配列で、先頭が `gh`、shell wrapper 0 件。文字列 argv は型で Red |
 | `CANDIDATE-PACKPUB-005-B` | `gh auth status` の主体、`gh repo view` の owner/name、expected main SHA、tag 名の 1 軸を不一致にする | 最初の remote write より前に typed deny、write argv 0 件 |
-| `CANDIDATE-PACKPUB-005-C` | approval file の欠落、`expiresAt` 超過、別 operationId / intentDigest / approvalStateDigest / idempotencyKey、seal 後に file の `nonce` を置換、`approver` を `--approver` と異なる identity へ差替、2 file 間で `approver` が不一致 | `approval_missing` / `approval_expired` / `approval_state_mismatch` / `approval_binding_mismatch` (nonce 置換・approver 差替を含む)、既 consume は `nonce_replay`。該当 mutation とそれ以降の write 0。approver 不一致は seal 前 (write 0) |
+| `CANDIDATE-PACKPUB-005-C` | approval file の欠落、`expiresAt` 超過、別 operationId / intentDigest / approvalStateDigest / idempotencyKey、seal 後に file の `nonce` を置換、seal 後に file の `approver` を sealed intent と異なる identity へ差替 | `approval_missing` / `approval_expired` / `approval_state_mismatch` / `approval_binding_mismatch` (seal 後の nonce 置換・approver 差替)、既 consume は `nonce_replay`。該当 mutation とそれ以降の write 0。seal 前の commitment 照合は 005-P / 005-Q / 005-R が所有する |
 | `CANDIDATE-PACKPUB-005-D` | 同一 approval file の 2 回 consume、rename 失敗 (EPERM 注入) | 2 回目は `mode: "reconcile"` のみ (新規 write 0)、rename 失敗は deny で journal に `nonce_consumed` 無し |
 | `CANDIDATE-PACKPUB-005-E` | journal append の persist failure を `mutation_intent` の直前 / 直後に注入 | 直前は write 0、直後は `indeterminate` で後続 write 0。成功へ丸めない |
 | `CANDIDATE-PACKPUB-005-F` | `mutation_intent` の後、`read_back_observation` の前で process を打ち切り、再起動 | 再起動後は reconciliation (観測系 argv のみ) で、同じ mutation の write を replay しない |
@@ -65,7 +65,7 @@ stdout / stderr の call ledger を正本にする。
 | `CANDIDATE-PACKPUB-005-N` | `--execute` で途中の mutation の approval file を欠落させる | 該当 mutation の直前で deny、以前の immutable object (PR / draft / asset) は保持、`partial_publication` を報告 |
 | `CANDIDATE-PACKPUB-005-O` | CLI 入力に staging 外の path、glob、環境変数由来の entry を混ぜる | `PLAN-L7-508` staging module の typed deny (`commit_entry_mismatch` 等) をそのまま返し、補完 0 |
 | `CANDIDATE-PACKPUB-005-P` | wrong-commitment: approval file 一式を自己整合した別 nonce 群へ差し替える (commitment record は `origin/main` のまま) | `sha256(nonce)` が record の `nonce_sha256` と不一致 → `approval_commitment_mismatch`、seal 到達 0、remote write 0 |
-| `CANDIDATE-PACKPUB-005-Q` | wrong-approver: approval file の `approver` を record と異なる identity にする (nonce は一致) | `approval_commitment_mismatch`、seal 到達 0、remote write 0。receipt 生成 0 |
+| `CANDIDATE-PACKPUB-005-Q` | wrong-approver: `origin/main` の commitment record の `approver` だけを別 identity に変異する (approval file 一式と `nonce_sha256` は不変)。対照として file 側の `approver` だけを変異した場合も同じ deny | `approval_commitment_mismatch`、seal 到達 0、remote write 0、receipt 生成 0。005-P (nonce 側) / 005-R (record の所在・identity) と reason 経路を共有しても stimulus は独立 |
 | `CANDIDATE-PACKPUB-005-R` | wrong-authority: (a) record を working tree にだけ置く、(b) local HEAD にだけ commit する、(c) `origin/main` の record が別 operationId / intentDigest / idempotencyKey、(d) record の `expiresAt` 到来 | (a)(b) `approval_commitment_missing`、(c) `approval_commitment_mismatch`、(d) `approval_expired`。いずれも seal 到達 0、remote write 0。working tree / HEAD fallback を書いた実装は (a)(b) で Red |
 
 `CANDIDATE-PACKPUB-005-A..L` と `-P..R` は PR-1 (port module)、`-M..O` は PR-2 (CLI 入口) が所有する。

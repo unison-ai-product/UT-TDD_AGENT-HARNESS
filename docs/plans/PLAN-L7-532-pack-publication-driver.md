@@ -54,18 +54,18 @@ status: draft
 github_issue_id: 565
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:32513696e04860df6b4606ef36718093
-  command_id: plan-revise:issue-565:forward:3
-  admitted_at: 2026-09-11T04:46:04.152Z
-  source_digest: sha256:da9b41b276c1cab420555c9908793eade1db00e1dacfd01a14a7f47545f8144d
-  decision_digest: sha256:8ad9cfca9fa4cdb3ed4c41eb6e44b41ae8317192a3322ec816c0b58b2defc543
-  receipt_digest: sha256:54b15e2b99d9e4aaecd61b927d510d5431f5eb11262d9ee3dc87c886465b7d5f
+  receipt_id: certificate:50aaaa034aa072cda5f38a93c8cf4aa6
+  command_id: plan-revise:issue-565:forward:4
+  admitted_at: 2026-09-11T05:17:45.260Z
+  source_digest: sha256:67c1906bb306931ea636f31763431e71868cfea6a538cb09506f4cacd49e4780
+  decision_digest: sha256:d10a75a33e51c879e0e7d8035533779167a49325f5bcce0c45c8b9c14d3c61fd
+  receipt_digest: sha256:3d5d29080c45db720044c270534146eb1e2310e5c90200f2091e11fa13883019
   binding:
     path: docs/plans/PLAN-L7-532-pack-publication-driver.md
     plan_id: PLAN-L7-532-pack-publication-driver
     asset_id: plan:90e28ddae7343065d815328758ff3de0
-    revision: 3
-    content_digest: sha256:da9b41b276c1cab420555c9908793eade1db00e1dacfd01a14a7f47545f8144d
+    revision: 4
+    content_digest: sha256:67c1906bb306931ea636f31763431e71868cfea6a538cb09506f4cacd49e4780
   route:
     signal: feature_addition
     mode: add-feature
@@ -84,9 +84,8 @@ admission_receipt:
     phase: forward_merge
   escape_reason: "Issue #565 Pack canary publication driver pair-freeze
     (add-feature, PLAN-L7-519 downstream; unmet publication input of PLAN-L7-531
-    rev 2); revision 3: Codex/Sol FLAG r2 0d1a7c8e (independent approval
-    commitment record on origin/main, wrong-commitment/approver/authority
-    oracles)"
+    rev 2); revision 4: Codex/Sol FLAG r3 9f23ca87 (candidate ranges include
+    P..R; commitment-record approver mutated independently of approval files)"
 ---
 
 # PLAN-L7-532: Pack canary publication driver (production ports + CLI entry)
@@ -165,6 +164,14 @@ preflight で確定できる: `pack-publication-adapter.ts` の `intentIdentity`
 
 反映: §3.3 (commitment record、authority、consume の照合順)、§4 (`--approver` 削除、preflight の commitment 草案)、§5 (手順 3 の commitment PR)、
 §9-3、`CANDIDATE-PACKPUB-005-C` と新規 `-P` / `-Q` / `-R` (wrong-commitment / wrong-approver / wrong-authority、各 deny + write 0)。
+
+### 2.3 revision 4: Codex/Sol cross-review FLAG r3 (receipt `9f23ca87`、exact HEAD `6c998fb6`) の是正
+
+指摘: rev 3 は §6 (PR-1 = A..L) と §7 (所有 = A..O) の候補範囲が P..R を含まず、pair test-design の 005-C が
+削除済みの `--approver` を変異対象に書いていた。方式 (独立 commitment) は受理。
+反映: §6 PR-1 に P..R を追加、§7 の所有範囲を A..R に更新、test-design 005-C から `--approver` を除去し
+sealed intent との差替に限定、005-Q を commitment record 側の approver 変異 (approval file 不変) として
+005-C / 005-R と独立に定義。deny / write 0 の oracle はそれぞれ別 reason で区別する。
 
 ## 3. 本番 port 契約
 
@@ -306,7 +313,7 @@ Pack main への直接 push、force push、tag retarget、既存 asset overwrite
 | PR | 論点 | 前提 |
 | --- | --- | --- |
 | PR-0 (本 PR) | 本 PLAN + `PLAN-REVERSE-532` + pair test-design の pair-freeze (docs のみ) | なし |
-| PR-1 | 本番 port module 1 個 (`src/setup/pack-publication-production-ports.ts`: ProcessRunnerPort、gh port 群、file ApprovalPort、journal / receipt port) + fake runner テスト。CANDIDATE-PACKPUB-005-A..L の Red→Green | PR-0 の非著者 PASS receipt |
+| PR-1 | 本番 port module 1 個 (`src/setup/pack-publication-production-ports.ts`: ProcessRunnerPort、gh port 群、file ApprovalPort、journal / receipt port) + fake runner テスト。CANDIDATE-PACKPUB-005-A..L と -P..R の Red→Green | PR-0 の非著者 PASS receipt |
 | PR-2 | CLI 入口 `distribution publish-canary` の最小配線 + CLI テスト。CANDIDATE-PACKPUB-005-M..O の Red→Green | PR-1 merge |
 
 PR-1 と PR-2 を 1 PR に統合しない。scope 構造を指す FLAG は close→分割再出で応じる。
@@ -314,8 +321,8 @@ PR-1 と PR-2 を 1 PR に統合しない。scope 構造を指す FLAG は close
 ## 7. TDD / trace / Reverse
 
 pair artifact `docs/test-design/harness/L7-pack-publication-driver-test-design.md` が
-`CANDIDATE-PACKPUB-005-A..O` を所有する。実装 PR で同番号の `U-PACKPUB-DRIVER-*` へ 1:1
-昇格する。既存 `CANDIDATE-PACKPUB-003-*` (adapter FSM)、`U-PACKPUB-STAGE-*`、
+`CANDIDATE-PACKPUB-005-A..R` を所有する (A..L と P..R は PR-1、M..O は PR-2)。実装 PR で
+同番号の `U-PACKPUB-DRIVER-*` へ 1:1 昇格する。既存 `CANDIDATE-PACKPUB-003-*` (adapter FSM)、`U-PACKPUB-STAGE-*`、
 `CANDIDATE-PACKPUB-004` (rollback) を再採番・再所有しない。
 
 R1 では `PLAN-L7-515` §3 の port 順序と §4 の fail-close 契約を本番 port が変えていないことを

@@ -21,7 +21,7 @@ agent_slots:
   - role: tl
     slot_label: Sol / Claude Opus - L7-515 port 契約と L7-532 本番 port 実装の境界を逆向き検証する
   - role: qa
-    slot_label: Terra - CANDIDATE-PACKPUB-005-A..O を独立照合し、shell 経由 argv・approval
+    slot_label: Terra - CANDIDATE-PACKPUB-005-A..R を独立照合し、shell 経由 argv・approval
       存在確認・secret 混入・実 gh 起動を攻撃する
 generates:
   - artifact_path: docs/plans/PLAN-REVERSE-532-pack-publication-driver-backfill.md
@@ -46,18 +46,18 @@ status: draft
 github_issue_id: 565
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:abf043fd5d6923dc3f8b594be17d36c8
-  command_id: plan-revise:issue-565:reverse:3
-  admitted_at: 2026-09-11T04:46:05.849Z
-  source_digest: sha256:c64328731ae18269d3020ced1746f9fab69e7ec7128b8461c1286dcc7888a6b5
-  decision_digest: sha256:bd8be2a304be8e101f61a411170c869fa3fc485fceb7a17f5a9ade55d5b599e8
-  receipt_digest: sha256:a9b52a9038b0e1fc654ba44def4fe769a39bc5f3a6825808f04a3e2ce3db2f7e
+  receipt_id: certificate:49e0c04ba87914b65561605cefc5b077
+  command_id: plan-revise:issue-565:reverse:4
+  admitted_at: 2026-09-11T05:17:47.985Z
+  source_digest: sha256:70134725c46ab4f019a0d7cbbad77e482ad955fffe05bea62aa49df745b0430b
+  decision_digest: sha256:7764415b59faf34340d2bcb2deeb8a955a97c88c317a5bcb7fd4eee3efb760e6
+  receipt_digest: sha256:07a1d46b600d27eec266f2921159ffc7ceed140d3c7618908ff1effe43eb3785
   binding:
     path: docs/plans/PLAN-REVERSE-532-pack-publication-driver-backfill.md
     plan_id: PLAN-REVERSE-532-pack-publication-driver-backfill
     asset_id: plan:d53a1004f602923fa717f7969c802257
-    revision: 3
-    content_digest: sha256:c64328731ae18269d3020ced1746f9fab69e7ec7128b8461c1286dcc7888a6b5
+    revision: 4
+    content_digest: sha256:70134725c46ab4f019a0d7cbbad77e482ad955fffe05bea62aa49df745b0430b
   route:
     signal: reverse
     mode: reverse
@@ -78,9 +78,8 @@ admission_receipt:
     target_revision: 1
     phase: forward_merge
   escape_reason: "Issue #565 Pack canary publication driver Reverse backfill pair
-    (R0); revision 3: Codex/Sol FLAG r2 0d1a7c8e (independent approval
-    commitment record on origin/main, wrong-commitment/approver/authority
-    oracles)"
+    (R0); revision 4: Codex/Sol FLAG r3 9f23ca87 (candidate ranges include P..R;
+    commitment-record approver mutated independently of approval files)"
 ---
 
 # PLAN-REVERSE-532: Pack canary publication driver の逆向き確認
@@ -136,7 +135,7 @@ Issue #565 の本番 port (`gh` process port、file-backed ApprovalPort、durabl
 | 005-C | PR-1 | approval file 欠落・期限切れ・別 operation / intent / state・seal 後の nonce 置換・approver 差替 | `approval_missing` / `nonce_replay` / `approval_binding_mismatch` / `approval_expired` / `approval_state_mismatch`、write 0 |
 | 005-D | PR-1 | 同一 file を 2 回 consume、rename 失敗 | 2 回目は `reconcile` のみ、rename 失敗は deny |
 | 005-P | PR-1 | approval file の nonce を差し替え (sha256 が commitment と不一致) | `approval_commitment_mismatch`、seal 前、write 0 |
-| 005-Q | PR-1 | approval file の approver を commitment と異なる identity へ差替 | `approval_commitment_mismatch`、seal 前、write 0 |
+| 005-Q | PR-1 | `origin/main` の commitment record の approver を approval file と異なる identity にする (file 不変) | `approval_commitment_mismatch`、seal 前、write 0 |
 | 005-R | PR-1 | commitment を working tree / local HEAD にだけ置く、`origin/main` の record が別 operation / intent | `approval_commitment_missing` / `approval_commitment_mismatch`、seal 前、write 0 |
 | 005-E | PR-1 | journal append の persist failure | `indeterminate`、後続 write 0 |
 | 005-F | PR-1 | `mutation_intent` の後に observation 無しで crash | reconciliation のみ、新規 write 0 |
