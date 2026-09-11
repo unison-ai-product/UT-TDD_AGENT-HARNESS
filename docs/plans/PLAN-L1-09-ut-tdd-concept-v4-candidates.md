@@ -8,9 +8,9 @@ status: draft
 route_signal: research
 route_mode: research
 created: 2026-09-04
-updated: 2026-09-04
+updated: 2026-09-08
 owner: PO / Claude
-github_issue_id: null
+github_issue_id: 530
 pair_artifact: docs/governance/candidates/ut-tdd-concept-v4-acceptance.md
 related_l0: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
 related_br: docs/design/harness/L1-requirements/business-requirements.md
@@ -36,6 +36,8 @@ generates:
     artifact_type: markdown_doc
   - artifact_path: docs/governance/candidates/ut-tdd-concept-v4-acceptance.md
     artifact_type: markdown_doc
+  - artifact_path: docs/governance/candidates/v4-roadmap/INTAKE_MANIFEST.md
+    artifact_type: markdown_doc
 dependencies:
   parent: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
   requires: []
@@ -49,6 +51,7 @@ dependencies:
     - docs/governance/vmodel-upgrade-schedule.md
     - docs/plans/PLAN-L4-30-execution-ledger-github-architecture.md
     - docs/governance/github-issue-hierarchy.md
+    - docs/governance/candidates/v4-roadmap/README.md
 ---
 
 # PLAN-L1-09: 構想書 v4.0 候補 (チーム開発版 Verified Change Harness) の L1/L3/L10 分解
@@ -244,6 +247,28 @@ PO 指摘「画面検証系の CI はほとんど作られていない。デー�
 取り込み候補 (v4 候補への追記は PO 判断後): Bench による model 割当の実測、Slice / Module / Bundle の配布契約、不変条件のうち
 「gate が対象を検査していない状態を pass にしない」「compatibility green で current failure を相殺しない」「replacement evidence なしで
 retire しない」の 3 本。
+
+### 2.12 起点の実測 2: リリース・置換・移行ロードマップ v2.0 の受領 (2026-09-08)
+
+PO 提示 (2026-09-08) の計画資料「UT_V4_RELEASE_ROADMAP_v2.0」を S0 (issue #531、PR #537) で
+`docs/governance/candidates/v4-roadmap/` (非正本、原文収容) へ収容した。収容物・原本 ZIP の
+sha256・除外物 (`index.html`、`tools/*.py`) と除外理由・LF 正規化の照合結果は
+`docs/governance/candidates/v4-roadmap/INTAKE_MANIFEST.md` を参照 (本節では複製しない)。
+
+資料側 baseline (INTAKE_MANIFEST.md 収容時点の `02_CURRENT_BASELINE.md` 記載: main
+`84cd7f896f7dfbd67b38b250b5a943eaee3f6640`、#517 HEAD `c21b54fb0d3f2d5a73a7826cc41233634456cac9`) を
+本 worktree で再確認した:
+
+```bash
+git show origin/main:package.json | grep -nE '"version"|"license"|bun'
+# "version": "0.2.0-canary.1" / "license": "MIT" / bunAuthority: "legacy_migration_debt" /
+# "build": "bun build src/cli.ts --compile --outfile dist/ut-tdd" (bun build 表記残存: #521 は契約 merge であり物理撤去は #487 実装待ち)
+```
+
+資料の自己検査 (`VALIDATION.md` / `data/validation_results.json`) は資料作成側のオフライン整合検査
+(`python tools/render_roadmap.py --check` / `python tools/validate_roadmap.py`、非収容) の結果であり、
+UT の CI・review・受入ではない (INTAKE_MANIFEST.md「資料側の自己検査」)。python tool は ADR-001
+(TypeScript/Node が product runtime) と衝突するため本 repo の検証経路へ載せない。
 
 ## 3. 設計判断
 
@@ -466,6 +491,119 @@ poc_overrun finding として出して S4 decision まで新規 PoC チケット
 引き継がず設計結論として起こす。非採用: PoC を production 工程へ昇格させる近道、PoC 規模の無制限。概念本文には §要求の暫定性 配下の
 「PoC の行き過ぎ検知」として反映した。
 
+### 3.21 構想 v4.0 と package 版の分離、版割当の提案 (DEC-01 / DEC-11)
+
+ロードマップ資料は 4 つの版軸 (構想/要求の版・実配布 package の版・record/schema/policy 版・計画書自体の版)
+を混同しないと明記する (`00_VERSION_STRATEGY.md`)。構想 v4.0 の統合受入を package **1.0.0 案**へ、
+途中の capability 開放を **0.3〜0.9** の各 minor へ対応付ける提案であり、資料自身が「具体的な版割当提案で
+あり、既発行 tag、PO の正式な version 採択、runtime 実装を意味しない」と明記する (`00_VERSION_STRATEGY.md`
+「本案では」段落)。**tag 未発行・PO 未採択であり、本節はこの提案を紹介するのみで採択を宣言しない。**
+
+R00〜R10 の 11 行 (`01_RELEASE_MATRIX.md`、行数は `grep -c '^| \[R' docs/governance/candidates/v4-roadmap/01_RELEASE_MATRIX.md` = 11 で確認):
+
+| 版 | 使えるもの (要約) | 開発前提 | 公開前提 | 元 M |
+|---|---|---|---|---|
+| R00 0.2.0-canary.1 | 現行プレリリース閉包 (clean Pack のみで基本運用再現) | 現行 M0 入力 | 現行 GO 条件 | M0 |
+| R01 0.2.0-canary.2 | UT 本体 MPL-2.0 切替と管理責任確定 | R00 | R00 | M1 |
+| R02 0.2.0 | 運用基盤 stable・安全な更新/切戻し | R01 | R01 | M1＋並行運用系列 |
+| R03 0.3.0 | 共通 JSON 正本・契約 API | R01 | R02 | M2a |
+| R04 0.4.0 | 低コスト CI・共有 view・順序予測 (read-only) | R03 | R03 | M2b |
+| R05 0.5.0 | 安全なチケット配布・動的作業計画 | R04 | R04 | M3a |
+| R06 0.6.0 | UT 準拠 BugBot (再現→修正→独立受入) | R05 | R05 | M3b |
+| R07 0.7.0 | 上流要求・PoC・再 compile | R05 | R06 | M4 |
+| R08 0.8.0 | provider-native と独立性の統一 | R05, R07 | R07 | M5 |
+| R09 0.9.0 | 実録対策・context 縮退・予測校正 | R06, R07, R08 | R08 | M6 |
+| R10 1.0.0 | 構想 v4 の統合受入・契約安定版 | R02〜R09 全て | R09 | M0〜M6 統合 |
+
+DAG の要点 (`execution/01_DEPENDENCIES_AND_WORK_PACKAGES.md`): R00→R01 の後、R02 (更新/A-B stable) と
+R03 JSON→R04 CI/view/予測→R05 配布/安全が並行できる。R05 から R06 BugBot、R07 上流→R08 native の 2 系統が
+分岐し、R06+R07+R08 が揃って R09 学習/校正へ合流、R02〜R09 全てが揃って R10 統合に至る。これはタスク完了予測
+ではなく設計上の HARD 依存であり、先行 scope の開発着手が前倒しでも、有効化 (公開前提列) は前倒ししない。
+
+### 3.22 実装前契約判断 DEC-01〜16 の登録
+
+`execution/03_CONTRACT_DECISIONS.md` は実装着手前に解くべき契約論点を DEC-01〜16 として登録する
+(件数確認: `grep -c '^| DEC-' docs/governance/candidates/v4-roadmap/execution/03_CONTRACT_DECISIONS.md` = 16)。
+いずれも資料側の**推奨**であり、本節記載の「状態」列は全件「未採択」である。
+
+| ID | 論点 | 資料の推奨 | 決定期限版 | 状態 | 高影響境界 |
+|---|---|---|---|---|---|
+| DEC-01 | 構想 v4 と package 0.2 の番号混同 | 構想 v4 到達 = package 1.0 案、途中 0.3〜0.9 | R01 | 未採択 | 公開 package の版採択は product scope として PO 権限 |
+| DEC-02 | file 正本と既存 transactional 予約 ledger | 旧を移行前 authority に据え、共通 event/一 control writer/CAS adapter 受入後に切替 | R03 設計、R05 有効化 | 未採択 | 分散裁定は ADR 候補 |
+| DEC-03 | L4 作業追跡と L4 非チケット化条項 | L4 の narrative owner は 1 名、文書追跡 assignment と L5 以下実行 ticket を区別 | R03 | 未採択 | — |
+| DEC-04 | 全 ticket 親必須だと最上位 (大) が成立しない | 大 = root は親無し、非 root だけ exactly-one | R05 | 未採択 | — |
+| DEC-05 | 原子のみ path lease だが admission にも lease | code path lease と操作認可 lease を別型で区別 | R03 設計、R05 強制 | 未採択 | — |
+| DEC-06 | strict rebase/exact-head と再 review 連鎖 | 初期は candidate 安定化と merge 直列区間、証拠継承は default off | R04〜R05 | 未採択 | — |
+| DEC-07 | light 必須 4 要素と製本 checklist 必須の重複 | 全 profile に機械生成の最低 checklist、deep のみ列網羅/独立 Gold 追加 | R03 プロト前 | 未採択 | — |
+| DEC-08 | 中の refactor ゲートが無意味な変更を強制しうる | 検査は必須、違反無しは根拠付き no-change、必要時のみ修正 ticket | R05 | 未採択 | — |
+| DEC-09 | 単一 episode 昇格禁止と重大欠陥即修理の両立 | 局所修理/封じ込めと汎用 policy 昇格を別操作にする | R05 前 | 未採択 | — |
+| DEC-10 | view 直接編集禁止とシート編集要求の両立 | 表示は readonly、編集提案 surface→discrepancy→admission | R04 | 未採択 | — |
+| DEC-11 | v4 宣言で未実装ルールが全面有効化されうる誤解 | target concept と active capability/移行 scope を分離 | R01〜R03 | 未採択 | authority/read order と manifest gate |
+| DEC-12 | 2,000 分・soft budget と実行上限 | 通常目標 + 導入先の例外金額/上限、未検証 PASS 禁止 | R04 | 未採択 | 費用 (実契約/請求) を伴うため PO 判断の印 |
+| DEC-13 | 新モデルほど context 削減するという誤解 | 同条件 ablation で範囲限定、必須契約は保持 | R04 評価、R09 昇格 | 未採択 | — |
+| DEC-14 | 「人間統括」と自動順序判断の両立 | 人間は優先度/予算/例外 policy、通常 ready 順は決定的処理 | R05 | 未採択 | — |
+| DEC-15 | role か完全移行までの循環 (BugBot が role 移行完了を待つ) | R03 最小 role 契約→R05 既存 adapter 接続→R08 全 native 生成 | R03〜R08 | 未採択 | — |
+| DEC-16 | 旧 event が残る状態での downgrade | write 停止・高水位点・互換移行・新 event 保持、不可なら readonly/forward repair | R02〜全版 | 未採択 | — |
+
+運用則 (`execution/03_CONTRACT_DECISIONS.md` 末尾): 未解決なら対象機能/移行を有効化しない。ただし独立した
+責務の作業・既存経路の通常修理・無副作用 shadow は継続する。
+
+### 3.23 旧新置換 MIG-01〜20 と既存 authority / issue の写像
+
+`migration/00_REPLACEMENT_MATRIX.md` は 20 領域の旧→新置換を MIG-01〜20 として登録する
+(件数確認: `grep -c '^| MIG-' docs/governance/candidates/v4-roadmap/migration/00_REPLACEMENT_MATRIX.md` = 20)。
+準備/既定/旧 writer 停止/退役審査は版番号で示され、UT 側の既存受け皿は `migration/05_SURFACE_AND_SCHEMA_PLAN.md`
+と `02_CURRENT_BASELINE.md` から次の通り写像される (要旨、全 20 件の詳細は原本表を参照):
+
+| MIG | 旧→新 (要約) | 版 (準備/既定/旧 writer 停止/退役審査) | 既存受け皿 |
+|---|---|---|---|
+| MIG-01 license | 本体 MIT/Pack 対応表示 → 権利処理済み UT コードを MPL-2.0 | R01/R01/R01/R01 | `LICENSE` / `package.json` |
+| MIG-02 authority | v3.1 正本参照 + v4 候補 → v4 target + 有効 capability/実装状態 | R01/R03/R10/R10 | `docs/governance/ut-tdd-agent-harness-concept_v3.1.md`、#517 |
+| MIG-03 record | file/Markdown/実行 ledger 分散正本 → record class 別 JSON 正本 + 共通 writer、DB は projection | R03/R03/R07/R10 | harness.db projection 層 |
+| MIG-04 PLAN | frontmatter が状態/依存/review を保持 → active PLAN の record 化 frontmatter + 本文参照 | R03/R05/R07/R10 | `docs/plans/**` の status/dependencies/review_evidence |
+| MIG-05 custody | request/attempt/receipt 欠損の個別回復 → typed terminal/correction 世代 + 共通 admission | R02/R05/R05/R10 | `.ut-tdd/review/receipts`、review wrapper (#439/#505/#493) |
+| MIG-06 Memory 通信 | worktree/provider 別 root・通知分散 → project identity 束縛の bus + 共通 delivery/terminal | R00/R00/R00/R03 | `.ut-tdd/memory` / `src/memory` (#424) |
+| MIG-07 予約/チケット | 手選択 PLAN 番号と断片割当 → U23 共通 work item/予約 + 原子 lease | R03/R05/R05/R10 | `plan_id_reservation_events` (#480)、U23 PLAN-L4-30 |
+| MIG-08 作業順序 | 依存/WIP はあるが順序予測契約が未具体化 → proposal→actual readiness→制約付き dispatch | R03/R05/R05/R10 | (該当契約なし、新規) |
+| MIG-09 consumer CI | 固定 workflow/既存 CI との重複 → verification plan + risk/予算に応じた選択実行 | R03/R04/R04/R10 | `.github/workflows/harness-check.yml` |
+| MIG-10 view | 断片 export/手更新の表/図 → source identity 付き spreadsheet/図 + discrepancy 受付 | R03/R04/R04/R07 | `src/export/document-export.ts` |
+| MIG-11 role | 手書き native agent + routing/guard の二重定義 → 論理 role record → provider-native 生成 | R03/R08/R08/R10 | `.claude/agents/*.md`、`src/team/delegation-routing.ts` |
+| MIG-12 context | 一般説明・全履歴・重複 tool 出力の蓄積 → 最小 contract packet + 条件付き retrieval | R03/R09/R09/R10 | `skills/`、`src/skill-engine/` |
+| MIG-13 知識資産 | memory/skill の無期限 prose と手整理 → applicability/寿命/実録 provenance/quarantine | R03/R09/R09/R10 | `.ut-tdd/memory` (PLAN-L7-189 系) |
+| MIG-14 Reverse | PLAN/REVERSE 文書対をレーン別管理 → backflow record + 影響集合 + 文書 projection | R03/R07/R07/R10 | 正規 Reverse 対 (R0〜R4) |
+| MIG-15 updater | tag advisory + 手動更新 → channel plan/承認/generation switch/rollback | R01/R02/R02/R10 | `src/setup/update-check.ts` (#481/#364) |
+| MIG-16 worktree | 放置 branch/dirty/未 push の個別対処 → owner/lease/ancestor/clean に基づく GC plan | R03/R05/R05/R10 | issue #384/#426/#444 (terminal GC) |
+| MIG-17 security | prompt/協調 scope に寄った制約 → モデル外認可 + 実行/送信/情報/証拠隔離 | R01/R05/R05/R10 | 既存 guard 群 |
+| MIG-18 管理 | 暗黙兼務/代理/例外 → 人間 owner・旧 policy 認可・委任失効・read-only 管理 view | R01/R05/R05/R10 | (該当契約なし、新規) |
+| MIG-19 適応/モデル | 上方向 tier 選択と手動見直し → calibration・下方向 routing・対策寿命 | R03/R09/R09/R10 | CLAUDE.md §Model / Effort Routing、`escalateShallowResponse` (上方向のみ) |
+| MIG-20 schema/互換面 | 旧 field/token/schema/archive が active surface へ残存 → inventory + 移行 receipt で原子的退役 | R03/R09/R10/R10 | `#487` Bun 撤去、旧 9-mode 残骸 |
+
+MIG-01 (UT 本体の MPL-2.0 切替、RM-ADD-01) は licensing の高影響境界であり、advisor 相談の有無に関わらず
+**実施前に PO 承認を要する**。本 PLAN と S2〜S5 は「R01 で切り替える要求/受入/ロードマップ」を候補として記述するのみで、
+LICENSE / package.json / notice の実変更は R01 の専用 PR で行い、過去の MIT 配布は変更しない (`migration/04_LICENSE_BOUNDARY.md`)。
+
+置換しないもの (`migration/00_REPLACEMENT_MATRIX.md`「置換しないもの」): TypeScript/Node、L0-L14、正規
+V-pair、Forward/Reverse/Recovery、routeFiling の責務、独立検証、Git 成果物の事実、consumer の主権は継承する。
+
+### 3.24 差し込み先と PR 粒度の対応表 (S2〜S5 の freeze)
+
+| 子 issue | PR 対象文書 | 差し込む内容 | 資料側の出所パス | 依存 |
+|---|---|---|---|---|
+| S2 #533 | `docs/governance/candidates/ut-tdd-concept-v4.0.md` | 到達目標、compiler/planner/dispatcher 分離、版別有効化の責務 | `execution/02_PR517_INTEGRATION.md`「反映先」、`00_VERSION_STRATEGY.md` | S1 (本 PLAN) の freeze |
+| S3 #534 | `docs/governance/candidates/ut-tdd-concept-v4-requests.md` | RM-ADD-01〜13 を既存 BR への refinement とし、真の追加のみ新 BR (UTV4-BR-033〜) を起こす | `trace/ADDITIONS.md` | S1 |
+| S4 #535 | `docs/governance/candidates/ut-tdd-concept-v4-requirements.md` | 順序予測・共通 JSON・actual readiness・CAS/資源/aging/再計画・版互換/移行を FR (UTV4-FR-060〜) へ、consumer 更新は一本道 | `execution/02_PR517_INTEGRATION.md`「主要条件」、`migration/05_SURFACE_AND_SCHEMA_PLAN.md` | S1 |
+| S5 #536 | `docs/governance/candidates/ut-tdd-concept-v4-acceptance.md` | UTV4-AC-073〜、SCHED-01〜14、REL-Rxx-AC 要点、updater fault point を受入へ | `workstreams/01_SCHEDULING.md`、`01_RELEASE_MATRIX.md` | S1 |
+
+SL-R00-01〜SL-R10-03 (39 個、確認コマンド: `grep -c '^| SL-' docs/governance/candidates/v4-roadmap/execution/01_DEPENDENCIES_AND_WORK_PACKAGES.md` = 39) は
+本 PLAN 側で正式採番せず、既存 issue へ接続する方針とする。対応の一例 (`02_CURRENT_BASELINE.md`「既存 Issue の
+処理順を決めるルール」、`execution/01_DEPENDENCIES_AND_WORK_PACKAGES.md` の SL 定義から): SL-R00-01 (Bun/Memory
+残務) → #487 / #424、SL-R00-02 (clean release 再現) → #418、SL-R02-01〜03 (updater/A-B) → #481 / #364、
+SL-R03-01〜04 (契約 inventory〜prototype) → 該当契約なし・R03 設計 PLAN で新規起票、SL-R05-01〜04 (排他/回復/
+schedule/資源) → #480 拡張。全 39 件の一対一表は S2〜S5 の各差し込み PR で対象 SL のみ確定し、本節では方針の
+み示す (資料が全件進捗監査ではないと明記するため、`02_CURRENT_BASELINE.md` 冒頭)。
+
+順序契約: S0 (#531) → S1 (本 PLAN、#532) → S2〜S5 (#533〜#536、並行可)。S1 merge 前に S2〜S5 を着工しない。
+
 ## 4. 工程
 
 
@@ -479,6 +617,7 @@ poc_overrun finding として出して S4 decision まで新規 PoC チケット
 | 7 | parallel | §2.5 A1〜A7 / B1〜B7 を該当 issue の受入条件へ転記 (issue は新設しない)。B2 / B3 の縮退は利用実測 (FR-025) を先に取る |
 | 8 | serial | 既存 verdict 履歴 (`.ut-tdd/review/receipts`、`review_evidence`) から cross_agent と intra_runtime_subagent の FLAG / PASS-WEAK 率を集計し、same_family_separated 昇格の妥当性を実測で裏取りする |
 | 6 | parallel | 4 領域 (C〜F) の L3 設計 PLAN: 要求発見 event / IR compile (VUP-REQ-03 拡張)、PoC S4 record (routeFiling poc kind)、memory retirement + 学習資産 (PLAN-L7-189 系 Reverse 対)、skill applicability registry (`src/skill-engine/`) |
+| 9 | serial | S0 (#531) 収容の上に S1 (本 PLAN、#532) で契約 freeze、S2〜S5 (#533〜#536、並行可) で 5 候補文書へロードマップ v2.0 の要約を差し込む。各 PR は Codex family 非著者 review、merge は `ut-tdd pr merge` 経由、base は #517 branch。S1 merge 前に S2〜S5 を着工しない |
 
 ## 5. 完了条件
 
@@ -486,8 +625,10 @@ poc_overrun finding として出して S4 decision まで新規 PoC チケット
 - [ ] PO 承認 record が typed provenance で残る (memory / chat / AI 解釈から生成しない)。
 - [ ] 承認後の昇格・参照更新が 1 PR で行われ、rule-drift / read order gate が green。
 - [ ] 既存 authority との重複・矛盾検査 (VUP-REQ-01〜10、BR-01〜08、U23、PLAN-L6-63 系) の結果が本 PLAN に記録される。
+- [ ] S2〜S5 完了後に BR→FR→AC→版/MIG の trace が全射で、`plan lint` / `doctor --profile source-doc-lane` green。
 
 ## 6. スコープ境界
 
 本 PLAN は候補の materialize と分解のみを行う。runtime 実装、CLI / `.ut-tdd/` state の変更、DB schema 変更、
-949 PLAN の移行、Issue の意味正本化は行わない。
+949 PLAN の移行、Issue の意味正本化は行わない。ロードマップ取り込みは文書のみ。LICENSE / package.json /
+runtime / CI / DB の実変更は含まない (R01 以降の専用 PR)。
