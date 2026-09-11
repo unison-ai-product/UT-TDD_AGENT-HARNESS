@@ -41,7 +41,7 @@ stdout / stderr の call ledger を正本にする。
 | --- | --- | --- |
 | `ProcessRunnerPort` | `gh` を argv 配列で `spawnSync` 相当に起動、timeout / 出力上限付き | fake runner (call ledger) |
 | `PackPublicationPorts.pack / release / tag / visibility / canary / auditor / reconcile` | `ProcessRunnerPort` 経由の `gh api` / uploads endpoint、read-back は再取得 + 再計算 | 同上 (fake runner の応答から観測を構成) |
-| `PackPublicationPorts.approval` | file-backed。照合 → 原子的 rename → journal `nonce_consumed` | temp dir の fixture file |
+| `PackPublicationPorts.approval` | file-backed。commitment (`origin/main` record) と seal 前照合 → consume 時に 9 field + commitment 再照合 → 原子的 rename → journal `nonce_consumed` | temp dir の fixture file + fixture git repo の `origin/main` に置いた commitment record |
 | `PackPublicationPorts.durableState` | append-only jsonl + fsync、hash chain digest | temp dir、persist failure を注入可能 |
 | `PackPublicationPorts.receipt` | `receipt.json` の一度書き | temp dir |
 
@@ -64,8 +64,11 @@ stdout / stderr の call ledger を正本にする。
 | `CANDIDATE-PACKPUB-005-M` | CLI を `--execute` 無しで実行 | remote write argv 0 件、観測系 argv のみ。intent digest と approval skeleton を出力し nonce を含まない |
 | `CANDIDATE-PACKPUB-005-N` | `--execute` で途中の mutation の approval file を欠落させる | 該当 mutation の直前で deny、以前の immutable object (PR / draft / asset) は保持、`partial_publication` を報告 |
 | `CANDIDATE-PACKPUB-005-O` | CLI 入力に staging 外の path、glob、環境変数由来の entry を混ぜる | `PLAN-L7-508` staging module の typed deny (`commit_entry_mismatch` 等) をそのまま返し、補完 0 |
+| `CANDIDATE-PACKPUB-005-P` | wrong-commitment: approval file 一式を自己整合した別 nonce 群へ差し替える (commitment record は `origin/main` のまま) | `sha256(nonce)` が record の `nonce_sha256` と不一致 → `approval_commitment_mismatch`、seal 到達 0、remote write 0 |
+| `CANDIDATE-PACKPUB-005-Q` | wrong-approver: approval file の `approver` を record と異なる identity にする (nonce は一致) | `approval_commitment_mismatch`、seal 到達 0、remote write 0。receipt 生成 0 |
+| `CANDIDATE-PACKPUB-005-R` | wrong-authority: (a) record を working tree にだけ置く、(b) local HEAD にだけ commit する、(c) `origin/main` の record が別 operationId / intentDigest / idempotencyKey、(d) record の `expiresAt` 到来 | (a)(b) `approval_commitment_missing`、(c) `approval_commitment_mismatch`、(d) `approval_expired`。いずれも seal 到達 0、remote write 0。working tree / HEAD fallback を書いた実装は (a)(b) で Red |
 
-`CANDIDATE-PACKPUB-005-A..L` は PR-1 (port module)、`-M..O` は PR-2 (CLI 入口) が所有する。
+`CANDIDATE-PACKPUB-005-A..L` と `-P..R` は PR-1 (port module)、`-M..O` は PR-2 (CLI 入口) が所有する。
 実装 PR で Red→Green を観測した行だけを同番号の `U-PACKPUB-DRIVER-*` へ 1:1 で昇格し、
 共有 `L7-unit-test-design.md` へ登録する。
 

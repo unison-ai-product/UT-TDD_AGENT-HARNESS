@@ -46,18 +46,18 @@ status: draft
 github_issue_id: 565
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:c6ee3fd74d7e8474cbabd2f8250294fc
-  command_id: plan-revise:issue-565:reverse:2
-  admitted_at: 2026-09-11T04:09:40.329Z
-  source_digest: sha256:9a3f30b27ad54e33b25a1924937dc2bd05b76d0a47c9bed1adf1d90b8504ae75
-  decision_digest: sha256:a7bf36d82816163b4af4f30cdab91988ae4ab0443b6c4e80b98f75c110294345
-  receipt_digest: sha256:ff36641688eda3f52bd895ff6f73ec51db3f5f2c0f28887ff53a484653722842
+  receipt_id: certificate:abf043fd5d6923dc3f8b594be17d36c8
+  command_id: plan-revise:issue-565:reverse:3
+  admitted_at: 2026-09-11T04:46:05.849Z
+  source_digest: sha256:c64328731ae18269d3020ced1746f9fab69e7ec7128b8461c1286dcc7888a6b5
+  decision_digest: sha256:bd8be2a304be8e101f61a411170c869fa3fc485fceb7a17f5a9ade55d5b599e8
+  receipt_digest: sha256:a9b52a9038b0e1fc654ba44def4fe769a39bc5f3a6825808f04a3e2ce3db2f7e
   binding:
     path: docs/plans/PLAN-REVERSE-532-pack-publication-driver-backfill.md
     plan_id: PLAN-REVERSE-532-pack-publication-driver-backfill
     asset_id: plan:d53a1004f602923fa717f7969c802257
-    revision: 2
-    content_digest: sha256:9a3f30b27ad54e33b25a1924937dc2bd05b76d0a47c9bed1adf1d90b8504ae75
+    revision: 3
+    content_digest: sha256:c64328731ae18269d3020ced1746f9fab69e7ec7128b8461c1286dcc7888a6b5
   route:
     signal: reverse
     mode: reverse
@@ -78,8 +78,9 @@ admission_receipt:
     target_revision: 1
     phase: forward_merge
   escape_reason: "Issue #565 Pack canary publication driver Reverse backfill pair
-    (R0); revision 2: Codex/Sol FLAG 7b4d749a (nonce persistence, ApprovalPort
-    nonce/approver binding)"
+    (R0); revision 3: Codex/Sol FLAG r2 0d1a7c8e (independent approval
+    commitment record on origin/main, wrong-commitment/approver/authority
+    oracles)"
 ---
 
 # PLAN-REVERSE-532: Pack canary publication driver の逆向き確認
@@ -105,7 +106,8 @@ Issue #565 の本番 port (`gh` process port、file-backed ApprovalPort、durabl
 - **approval の主体と束縛**: `PLAN-L7-515` §2 の mutation 単位 approval receipt / nonce と
   approver identity を、人間が発行する file として具体化する。driver は発行者にならない。
   consume は sealed intent の 9 field (nonce / approver を含む) byte 一致・durable state・expiry を
-  要求し、operation の authority は 1 identity に束縛する (`-C`)。chat 上の PO 承認は着手承認で
+  要求する (`-C`)。期待 approver と nonce digest の供給源は approval file でも CLI 引数でもなく、
+  cross-review 済みで `origin/main` にある commitment record だけである (`-P` / `-Q` / `-R`)。chat 上の PO 承認は着手承認で
   あり file を代替しない。
 - **secret 境界**: CLAUDE.md §Safety Boundaries の「secret / credential を evidence に書かない」
   を、token / credential は stdout / journal / receipt / error message の 0 件 oracle、approval
@@ -133,6 +135,9 @@ Issue #565 の本番 port (`gh` process port、file-backed ApprovalPort、durabl
 | 005-B | PR-1 | 認証主体 / repo / expected main SHA / tag の 1 軸不一致 | 最初の write より前に typed deny、write 0 |
 | 005-C | PR-1 | approval file 欠落・期限切れ・別 operation / intent / state・seal 後の nonce 置換・approver 差替 | `approval_missing` / `nonce_replay` / `approval_binding_mismatch` / `approval_expired` / `approval_state_mismatch`、write 0 |
 | 005-D | PR-1 | 同一 file を 2 回 consume、rename 失敗 | 2 回目は `reconcile` のみ、rename 失敗は deny |
+| 005-P | PR-1 | approval file の nonce を差し替え (sha256 が commitment と不一致) | `approval_commitment_mismatch`、seal 前、write 0 |
+| 005-Q | PR-1 | approval file の approver を commitment と異なる identity へ差替 | `approval_commitment_mismatch`、seal 前、write 0 |
+| 005-R | PR-1 | commitment を working tree / local HEAD にだけ置く、`origin/main` の record が別 operation / intent | `approval_commitment_missing` / `approval_commitment_mismatch`、seal 前、write 0 |
 | 005-E | PR-1 | journal append の persist failure | `indeterminate`、後続 write 0 |
 | 005-F | PR-1 | `mutation_intent` の後に observation 無しで crash | reconciliation のみ、新規 write 0 |
 | 005-G | PR-1 | `gh` 非 0 exit / timeout / 出力上限超過 | mutation 前は `unavailable`、後は `indeterminate`、成功へ丸めない |
@@ -151,6 +156,8 @@ Issue #565 の本番 port (`gh` process port、file-backed ApprovalPort、durabl
 
 - `gh` の argv を shell 文字列で組んでいないか、template 展開が無いか
 - approval consume が file の存在確認だけで束縛照合 (nonce / approver を含む 9 field) を省いていないか
+- 期待 nonce digest / approver を approval file や CLI 引数から導出していないか (commitment の
+  working tree / local HEAD fallback が無いか)
 - write 後の失敗で `remoteWrites: 0` と誤報告していないか
 - stdout / error message に token・approval 本文・未 consume nonce が、journal / receipt に token が
   混入していないか
@@ -164,7 +171,7 @@ gap は L7-532 の contract 改訂 (revision N+1) で閉じ、`PLAN-L7-515` / `P
 
 - PR-1 (port module) と PR-2 (CLI 入口) が別 PR で main 到達し、各々の exact HEAD に
   Linux / Windows / aggregate Green と Claude 族の非著者 closing receipt が存在する。
-- `CANDIDATE-PACKPUB-005-A..O` が同番号の `U-PACKPUB-DRIVER-*` へ 1:1 昇格し、同一
+- `CANDIDATE-PACKPUB-005-A..R` が同番号の `U-PACKPUB-DRIVER-*` へ 1:1 昇格し、同一
   implementation revision の Red→Green 実測を引用している。
 - 実 Pack repository への write がテスト・CI・レビューのいずれにも 0 件。
 - `v0.2.0-canary.1` の実公開と receipt は #364 の運用記録とし、本 PLAN の完了に含めない。

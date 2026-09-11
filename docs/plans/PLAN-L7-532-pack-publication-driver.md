@@ -54,18 +54,18 @@ status: draft
 github_issue_id: 565
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:a8a0da9087a274e2afab5d7504c4ecad
-  command_id: plan-revise:issue-565:forward:2
-  admitted_at: 2026-09-11T04:09:23.590Z
-  source_digest: sha256:2aa1868c6b9b3a4accb150496aa46dc22d5c526fb3dce05e6cc6809c7ca0906c
-  decision_digest: sha256:671c2b6c4b79a47c7b4b79451500bc14c0be18639c67fb03033400f45d027a01
-  receipt_digest: sha256:c4d544890207f81990b5298409b7583fa4d7445b67e32fe3b97836cf624d5dfc
+  receipt_id: certificate:32513696e04860df6b4606ef36718093
+  command_id: plan-revise:issue-565:forward:3
+  admitted_at: 2026-09-11T04:46:04.152Z
+  source_digest: sha256:da9b41b276c1cab420555c9908793eade1db00e1dacfd01a14a7f47545f8144d
+  decision_digest: sha256:8ad9cfca9fa4cdb3ed4c41eb6e44b41ae8317192a3322ec816c0b58b2defc543
+  receipt_digest: sha256:54b15e2b99d9e4aaecd61b927d510d5431f5eb11262d9ee3dc87c886465b7d5f
   binding:
     path: docs/plans/PLAN-L7-532-pack-publication-driver.md
     plan_id: PLAN-L7-532-pack-publication-driver
     asset_id: plan:90e28ddae7343065d815328758ff3de0
-    revision: 2
-    content_digest: sha256:2aa1868c6b9b3a4accb150496aa46dc22d5c526fb3dce05e6cc6809c7ca0906c
+    revision: 3
+    content_digest: sha256:da9b41b276c1cab420555c9908793eade1db00e1dacfd01a14a7f47545f8144d
   route:
     signal: feature_addition
     mode: add-feature
@@ -84,8 +84,9 @@ admission_receipt:
     phase: forward_merge
   escape_reason: "Issue #565 Pack canary publication driver pair-freeze
     (add-feature, PLAN-L7-519 downstream; unmet publication input of PLAN-L7-531
-    rev 2); revision 2: Codex/Sol FLAG 7b4d749a (nonce persistence, ApprovalPort
-    nonce/approver binding)"
+    rev 2); revision 3: Codex/Sol FLAG r2 0d1a7c8e (independent approval
+    commitment record on origin/main, wrong-commitment/approver/authority
+    oracles)"
 ---
 
 # PLAN-L7-532: Pack canary publication driver (production ports + CLI entry)
@@ -144,7 +145,26 @@ advisor 相談: `ut-tdd advisor --decision implementation --current-model claude
 | 指摘 | 判断 | 反映 |
 | --- | --- | --- |
 | nonce の秘匿 (§3.1 / §3.4 / 005-H) が `PublicationJournalEvent.nonce` / `PackPublicationReceipt.nonces` (型不変) と矛盾 | adapter 型と `PLAN-L7-515` §5 を正本とし、journal / receipt は consume 済み nonce の生値を保持する。秘匿 oracle は token / credential (全出力) と approval 本文・未 consume nonce (stdout / error / evidence) に narrowing する | §3.1、§3.4、§4、§9-5、`CANDIDATE-PACKPUB-005-H` |
-| ApprovalPort consume が nonce / approver を照合せず、`PLAN-L7-515` §2 の identity / nonce 束縛が file 経路で欠落 | consume は sealed intent の 9 field byte 一致 + durable state + expiry を要求し、operation の authority は `--approver` で束縛する。reason を typed に固定する | §3.3、§4、§9-3、`CANDIDATE-PACKPUB-005-C` |
+| ApprovalPort consume が nonce / approver を照合せず、`PLAN-L7-515` §2 の identity / nonce 束縛が file 経路で欠落 | consume は sealed intent の 9 field byte 一致 + durable state + expiry を要求し、reason を typed に固定する (rev 2)。authority の供給源は rev 3 で置換 | §3.3、§4、§9-3、`CANDIDATE-PACKPUB-005-C` |
+
+### 2.2 revision 3: Codex/Sol cross-review FLAG r2 (receipt `0d1a7c8e`、exact HEAD `a5e1da14`) の是正
+
+指摘: rev 2 の期待値 (nonce / approver) は検証対象と同じ approval file から seal した intent に由来し、
+authority も caller 供給の `--approver` である。自己整合した差替入力 (file 一式 + flag) を deny できない。
+
+advisor 相談: `ut-tdd advisor --decision design --current-model claude-fable-5 --plan PLAN-L7-532 --execute`
+(2026-09-11、provider=claude、model=claude-fable-5)。推奨は **A**。前提 (intentDigest は approvals を含まず
+preflight で確定できる: `pack-publication-adapter.ts` の `intentIdentity` は approvals の前に計算され、
+各 approval の `intentDigest` はそれと比較される) を repo 実測で確認した。
+
+| 案 | 内容 | trade-off | 判定 |
+| --- | --- | --- | --- |
+| **A (採用)** | approval commitment を tracked record として cross-review 済み PR で main に入れ、driver は fetch 後の `origin/main` tree から読む (working tree / local HEAD fallback 無し)。期待 approver と各 mutation の nonce sha256 はこの record だけから導出し、`--approver` を削除する | 信頼根が既存の exact-HEAD / cross-review 経路と同じで新規機構が最小。commitment PR の review が形骸化すると崩れるため process violation FLAG の対象に含める。nonce 再発行時は commitment の再 PR が要る | 採用 |
+| B | PO が `--approval-commitment <sha256>` を CLI で渡し、approver は `gh auth status` から取る | flag は caller 供給であり、自分の nonce 群から digest を計算して渡せば自己整合セットが通る (FLAG と同型)。`gh` の実行者は承認者の証明にならない | 棄却 |
+| C | commitment を GitHub issue comment / release note に置き preflight で `gh api` 取得 | preflight に remote read と network 依存が入り、comment は編集・成りすまし耐性が弱い。fetch / parse / 権限判定の新規機構が A より多い | 棄却 |
+
+反映: §3.3 (commitment record、authority、consume の照合順)、§4 (`--approver` 削除、preflight の commitment 草案)、§5 (手順 3 の commitment PR)、
+§9-3、`CANDIDATE-PACKPUB-005-C` と新規 `-P` / `-Q` / `-R` (wrong-commitment / wrong-approver / wrong-authority、各 deny + write 0)。
 
 ## 3. 本番 port 契約
 
@@ -191,24 +211,40 @@ Pack main への直接 push、force push、tag retarget、既存 asset overwrite
 - 発行者は人間 (PO) であり、driver は発行しない。PR-2 の CLI は preflight で「次に必要な
   approval の skeleton」(nonce と approver 以外の束縛値) を表示し、PO が nonce と自分の
   approver identity を付けて file を置く。
-- **authority の束縛**: 1 operation の authority は 1 identity である。`--execute` 時に CLI は
-  `--approver <identity>` で期待 authority を受け取り、全 approval file の `approver` がこれと
-  byte 一致しなければ intent の seal 前に `approval_binding_mismatch` で deny する (write 0)。
-  adapter が `PackPublicationReceipt.approver` に記録する値はこの identity である。`gh auth
-  status` の認証主体 (実行者) は §3.2 の別軸照合であり、片方の一致で他方を代替しない。
+- **approval commitment (独立信頼根)**: 期待値は approval file からも CLI 引数からも導出しない。PO は
+  `docs/governance/pack-release-approvals/<operationId>.json` (tracked、schema
+  `ut-tdd.pack-approval-commitment/v1`) を cross-review 済みの通常 PR で main へ入れる。内容は
+  `operationId` / `releaseId` / `tagName` / `intentDigest` / `idempotencyKey` / `approver` (承認者の固定識別子。
+  `gh` 実行者や git author ではない) / `expiresAt` / `mutations` (必要 mutation ごとの `nonce_sha256`)。
+  nonce の生値は含めない。`nonce_sha256` は approval file の `nonce` 文字列 (JSON 文字列値そのもの、
+  UTF-8、末尾改行なし) の sha256 小文字 hex とする。
+- **authority の束縛**: driver は `--execute` の preflight で `git fetch origin main` (argv 固定) の後、
+  `git show origin/main:<commitment path>` 相当で record を読む。working tree、local HEAD、他 branch からの
+  読取や fallback は書かない (fail-close)。record が `origin/main` に無い、`operationId` / `intentDigest` /
+  `idempotencyKey` / `releaseId` / `tagName` が intent と一致しない、schema 不正、`expiresAt` 到来は
+  `approval_commitment_missing` / `approval_commitment_mismatch` / `approval_expired` で seal 前に deny
+  する (write 0)。期待 approver は record の `approver`、各 mutation の期待 nonce digest は record の
+  `mutations` だけから決まり、`PackPublicationReceipt.approver` にはこの値を記録する。1 operation の
+  authority は 1 identity である。
+- **seal 前の照合**: intent を seal する前に、各 approval file の `approver` が commitment の `approver` と
+  byte 一致し、`sha256(nonce)` が commitment の当該 mutation の `nonce_sha256` と一致することを要求する。
+  不一致は `approval_commitment_mismatch` (write 0)。approval file 一式と CLI 引数をすべて差し替えても、
+  `origin/main` の record に一致しない限り seal に到達しない。
 - `consume` は file の存在確認ではない。consume 時点で file を再読込し、sealed intent が保持する
   当該 mutation の `PackPublicationApproval` 9 field (transition / mutation / operationId /
   **nonce** / **approver** / expiresAt / intentDigest / approvalStateDigest / idempotencyKey) と
-  byte 一致すること、`approvalStateDigest` が durable state の現在 digest と一致すること、
+  byte 一致すること、`sha256(nonce)` と `approver` が commitment と再び一致すること、
+  `approvalStateDigest` が durable state の現在 digest と一致すること、
   `expiresAt` が未到来であることを照合してから、原子的 rename (`.json` → `.consumed.json`) と
   journal `planned_nonce_consumed` の append を行う。deny は `PublicationPortResult` の
   `status: "mismatch"` で返し、reason は file 欠落 = `approval_missing`、既 consume
-  (`.consumed.json` のみ存在) = `nonce_replay`、seal 後の nonce 置換・approver 差替・その他
-  field 不一致 = `approval_binding_mismatch`、期限切れ = `approval_expired`、durable state
-  不一致 = `approval_state_mismatch` とする。いずれも当該 mutation とそれ以降の remote write 0
+  (`.consumed.json` のみ存在) = `nonce_replay`、commitment との不一致 = `approval_commitment_mismatch`、
+  seal 後の nonce 置換・approver 差替・その他 field 不一致 = `approval_binding_mismatch`、期限切れ =
+  `approval_expired`、durable state 不一致 = `approval_state_mismatch` とする。いずれも当該 mutation とそれ以降の remote write 0
   (mutation 前なら adapter が `denied`、途中なら `partial_publication` として保持)。
   consume 済み file は `mode: "reconcile"` としてのみ再利用でき、その場合も 9 field 一致を要求する。
-- `.ut-tdd/release/approvals/` は Git 追跡しない (local runtime artifact)。
+- `.ut-tdd/release/approvals/` は Git 追跡しない (local runtime artifact)。commitment record
+  (`docs/governance/pack-release-approvals/`) は追跡し、nonce 生値を含まないので公開して差し支えない。
 
 ### 3.4 durable journal と receipt
 
@@ -233,13 +269,15 @@ Pack main への直接 push、force push、tag retarget、既存 asset overwrite
 
 - `ut-tdd distribution publish-canary --release-id <id> --tag <tag> --staging-dir <dir>`
   を 1 本だけ追加する。既定は **preflight / dry-run** (remote write 0、`gh` は観測系 argv だけ)。
-  実行は `--execute` と `--approver <identity>` (§3.3 の期待 authority) を必須とし、
-  `--execute` 時も approval file が揃わない・束縛が合わない mutation の直前で typed deny
-  (write 0 または partial 保持) する。
+  実行は `--execute` を必須とし、期待 authority と nonce digest は §3.3 の commitment record
+  (`origin/main`) だけから読む (`--approver` のような caller 供給の authority 引数は持たない)。
+  `--execute` 時も commitment が無い・合わない場合は seal 前に、approval file が揃わない・束縛が
+  合わない場合は当該 mutation の直前で typed deny (write 0 または partial 保持) する。
 - 入力は `PLAN-L7-508` の sealed staging 出力 (tar.gz + `.sha256` + control manifest sidecar) だけ。
   source worktree、directory walk、glob、local Pack checkout、開発 DB、環境変数からの補完を
   行わない (staging module の契約をそのまま通す)。
-- 出力: preflight 結果 (intent digest、approval skeleton、expected main SHA、tag)、実行結果
+- 出力: preflight 結果 (intent digest、approval skeleton、commitment record の草案 = local approval
+  file が存在すればその `nonce_sha256` と `approver` を埋めたもの、expected main SHA、tag)、実行結果
   (`published` / `denied` / `partial_publication` / `indeterminate`、remoteWrites、receipt path)。
   nonce・token・approval 本文は stdout / error message に出力しない (nonce は receipt file の
   中にだけ残る、§3.4)。
@@ -253,7 +291,11 @@ Pack main への直接 push、force push、tag retarget、既存 asset overwrite
 2. `publish-canary` を dry-run で実行し、expected main SHA / tag / intent digest と approval
    skeleton を得る。
 3. PO が mutation 単位の approval file (§3.3) を発行する。1 mutation = 1 file = 1 nonce。
-4. `--execute` で実行する。各 mutation の直前で approval を consume し、直後に read-back を
+   dry-run が出力する commitment 草案 (nonce 生値なし) を
+   `docs/governance/pack-release-approvals/<operationId>.json` として通常の cross-review PR で
+   main へ入れる。この PR は process violation FLAG の対象に含める。
+4. `--execute` で実行する。driver は fetch 後の `origin/main` から commitment を読み、seal 前に
+   approval file を照合する (§3.3)。各 mutation の直前で approval を consume し、直後に read-back を
    journal へ永続化する。`indeterminate` で停止した場合は reconciliation のみを再実行し、
    新規 write を replay しない。
 5. receipt (§3.4) を `PLAN-L7-531` PR-2 の第 2 層入力として引き渡す。実公開の記録は #364 側の
@@ -300,7 +342,8 @@ secret の出力混入、fake runner を迂回した実 `gh` 起動を攻撃す�
    (`-B`)。
 3. approval file の欠落・期限切れ・別 operation / intent / state・replay、および seal 後の
    nonce 置換・approver 差替が該当 mutation の write より前に typed deny (§3.3 の reason)、
-   consume は原子的 (`-C` / `-D`)。
+   consume は原子的 (`-C` / `-D`)。commitment record と一致しない nonce (`-P`)、approver (`-Q`)、
+   `origin/main` に無い・別 operation / intent の record (`-R`) は seal 前に deny、write 0。
 4. journal の persist failure と crash 後の未 observation mutation が `indeterminate` かつ
    reconciliation write 0 (`-E` / `-F`)。
 5. `gh` 非 0 exit / timeout / 出力上限が typed `unavailable` / `indeterminate` で成功へ丸めない
