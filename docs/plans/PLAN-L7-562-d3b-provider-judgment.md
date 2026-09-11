@@ -22,7 +22,7 @@ agent_slots:
   - role: se
     slot_label: "Luna worker - provider judgment domain/port/adapterをこの契約の範囲だけ実装"
   - role: qa
-    slot_label: "Terra - CANDIDATE-D3B-001..010のmutationとwrite-zero oracleを実装時にU-*へ昇格"
+    slot_label: "Terra - U-D3B-001..009のmutationとwrite-zero oracleを検証し、D3c境界010はcandidateに残す"
 generates:
   - artifact_path: docs/plans/PLAN-L7-562-d3b-provider-judgment.md
     artifact_type: markdown_doc
@@ -93,9 +93,11 @@ Issue #541 が必要とする D3b `judgment_digest` と `provider_evidence_ref` 
 provider adapter が返した構造化 judgment evidence を一度だけ canonicalize し、
 content-addressed な immutable artifact と ref を生成する。
 
-この PLAN は契約と oracle のみを所有する。provider family の強い認証、GitHub
-Artifact Attestation、D3c/D3d workflow、D2 required check、#555 の consumer runtime、
-PLAN-L6-93 の seal、#540/#487 の実装は変更しない。
+この PLAN の契約と candidate oracle は PR #564 で freeze 済みであり、Issue #568 の
+revision は §4 の bounded producer 実装と `U-D3B-001..009` の検証資産を同じ PLAN 所有へ
+追加する。provider family の強い認証、GitHub Artifact Attestation、D3c/D3d workflow、
+D2 required check、#555 の consumer runtime、PLAN-L6-93 の seal、#540/#487 の実装は
+変更しない。
 
 ## 2. 正規 judgment payload
 
@@ -167,6 +169,7 @@ document を要求する。これらが揃うまで #541 は actual seal を再�
 の旧 D3a receipt は再利用せず、この producer が存在した後の fresh exact-subject provider
 attempt を要求する。
 
-この pair-freeze では未実装の oracle を正規IDとして確定しない。L7 test-design の
-候補IDは実装PRが Red test と同一 revision で追加された時点で正規oracleへ昇格し、
-実装・review・CIの証跡を同じ subject に束縛する。
+PR #569 では Red を先行させた `CANDIDATE-D3B-001..009` を同番号の `U-D3B-*` へ
+昇格した。`CANDIDATE-D3B-010` は D3c workflow の write-zero 境界であり、この bounded
+producer slice では未実装のまま正規IDへ昇格しない。実装・review・CIの証跡を同じ
+subject に束縛する。
