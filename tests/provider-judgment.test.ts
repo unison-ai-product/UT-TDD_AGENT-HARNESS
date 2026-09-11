@@ -140,6 +140,18 @@ describe("D3b provider judgment producer", () => {
     expect(port.writes).toHaveLength(0);
   });
 
+  it("U-D3B-004: required evidence field欠落を拒否", async () => {
+    const port = new FakePort();
+    port.readResult = {
+      ...(port.readResult as Extract<ProviderEvidenceReadResult, { status: "available" }>),
+      bytes: new TextEncoder().encode(
+        JSON.stringify({ schema_version: "provider-judgment-evidence/v1", verdict: "PASS-WEAK" }),
+      ),
+    };
+    await expect(run(port)).resolves.toEqual({ ok: false, reason: "judgment_schema_invalid" });
+    expect(port.writes).toHaveLength(0);
+  });
+
   it.each([
     "",
     " claude-opus-5",
@@ -176,6 +188,9 @@ describe("D3b provider judgment producer", () => {
     expect(text.endsWith("\n")).toBe(true);
     expect(text.indexOf('"attempt"')).toBeLessThan(text.indexOf('"author_family"'));
     expect(text).not.toContain("judgment_digest");
+    expect(result.payload.evidence_digest).toMatch(/^[0-9a-f]{64}$/);
+    expect(result.judgmentDigest).toMatch(/^[0-9a-f]{64}$/);
+    expect(result.providerEvidenceRef).toMatch(/^d3b:[0-9a-f]{64}$/);
   });
 
   it("U-D3B-007: caller supplied digest/refを入力schemaで拒否する", async () => {
@@ -184,6 +199,7 @@ describe("D3b provider judgment producer", () => {
       attempt: identity,
       port,
       judgmentDigest: "f".repeat(64),
+      providerEvidenceRef: `d3b:${"f".repeat(64)}`,
     } as never);
     expect(result).toEqual({ ok: false, reason: "identity_mismatch" });
     expect(port.writes).toHaveLength(0);

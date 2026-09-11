@@ -172,4 +172,8 @@ attempt を要求する。
 PR #569 では Red を先行させた `CANDIDATE-D3B-001..009` を同番号の `U-D3B-*` へ
 昇格した。`CANDIDATE-D3B-010` は D3c workflow の write-zero 境界であり、この bounded
 producer slice では未実装のまま正規IDへ昇格しない。実装・review・CIの証跡を同じ
-subject に束縛する。
+subject に束縛する。候補軸の縮退は行わない。provider-evidence ref差替えは producer
+入力にそのfieldが無いこと自体を `U-D3B-007` の caller-authority 拒否で証明し、strict
+schemaのmissing/type軸は `U-D3B-004`、canonical digestの大文字・短縮表現軸は生成値を
+lower-64hexへ固定する `U-D3B-006` で保持する。これらの対応は test-design の
+Candidate/U mapping と同一であり、未実装の D3c `CANDIDATE-D3B-010` だけは後続へ移管する。
