@@ -126,6 +126,6 @@ Red → Green requires Linux/Windows/aggregate CI, exact-head non-author review,
 backfill document before #541 may retry actual seal. The old D3a receipt for PR #557 is not
 reused; a fresh exact-subject provider attempt is required after this producer exists.
 
-この pair-freeze では未実装の oracle を `U-*` として確定しない。L7 test-design の
-`CANDIDATE-D3B-001..010` は実装PRが Red test と同一 revision で追加された時点で
-`U-D3B-001..010` へ昇格し、実装・review・CIの証跡を同じ subject に束縛する。
+この pair-freeze では未実装の oracle を正規IDとして確定しない。L7 test-design の
+候補IDは実装PRが Red test と同一 revision で追加された時点で正規oracleへ昇格し、
+実装・review・CIの証跡を同じ subject に束縛する。
