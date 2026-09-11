@@ -274,8 +274,17 @@ describe("D3b provider judgment producer", () => {
         evidence_base64: Buffer.from(evidence({ verdict: "PASS" })).toString("base64"),
       }),
     );
+    const retryAdapter = new FileProviderJudgmentEvidenceAdapter({
+      evidenceRoot,
+      judgmentsRoot,
+      verifiedInvocation: {
+        ...retryIdentity,
+        provider: "claude",
+        model: "claude-opus-5",
+      },
+    });
     await expect(
-      produceProviderJudgment({ attempt: retryIdentity, port: adapter }),
+      produceProviderJudgment({ attempt: retryIdentity, port: retryAdapter }),
     ).resolves.toEqual({ ok: false, reason: "judgment_conflict" });
   });
 
