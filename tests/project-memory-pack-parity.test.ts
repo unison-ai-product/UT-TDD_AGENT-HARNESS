@@ -242,7 +242,8 @@ describe("Issue #424 Slice 5 clean Pack/provider parity", () => {
     const delivered = await wake.result;
     expect(delivered.code, `${delivered.stdout}\n${delivered.stderr}`).toBe(2);
     expect(delivered.stderr).toContain("[UT_TDD_CLAUDE_INBOX]");
-    expect(delivered.stderr).toContain("clean Pack provider parity notification");
+    expect(delivered.stderr).toContain("published from the Pack primary checkout");
+    expect(delivered.stderr).toContain('"operation_id":"clean-pack-provider-parity"');
     const published = notified.stdout
       .split(/\r?\n/)
       .find((line) => line.startsWith("memory: notified Claude via "))
