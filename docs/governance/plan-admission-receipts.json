@@ -3744,6 +3744,22 @@
         "revision": 1,
         "content_digest": "sha256:efd67cb89dbf6e187fd998c062972332a868e868ee5b70993be4080a9ccb6647"
       }
+    },
+    {
+      "sequence": 235,
+      "previous_record_digest": "sha256:86006e46a12d2e650ee74bbf4e230ea72980fca535061ce043777f54edbbac00",
+      "record_digest": "sha256:c1293a340ba214c743546947a0af799e9b93fd231903636fd1a69b05bf524ce8",
+      "command_id": "plan-draft:issue-565:atomic-ref-cas:reverse:1",
+      "receipt_id": "certificate:c2cca3078405ca12046369e68763beb8",
+      "receipt_digest": "sha256:fb06f643eba04285b2acf93120ba121eee400f37bd0276eb1e85adadd3f69785",
+      "decision_digest": "sha256:daa22f7f62c7323a9f6832d54a2f474c7b675f112168d8254942d08fca09a2a0",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-565-pack-publication-atomic-ref-cas.md",
+        "plan_id": "PLAN-REVERSE-565-pack-publication-atomic-ref-cas",
+        "asset_id": "plan:c2cca3078405ca12046369e68763beb8",
+        "revision": 1,
+        "content_digest": "sha256:cc8ac0600a421b5abe8ae032629b939aa5e334c763f2d7e2447e4a1dddf50811"
+      }
     }
   ]
 }
