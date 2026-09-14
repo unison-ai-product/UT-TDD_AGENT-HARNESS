@@ -630,6 +630,12 @@ advisor 推奨どおりプレリリース本線 (R00) 残 PR の後、4 段階�
 扱い (BR: 管理知能・PLAN 停止、FR: チケット record schema と Kernel 検証、AC: 発行 deny / write-0、digest 不在 deny、空白期間 0)、
 本節では候補 concept の記述に留める。新 ADR (ADR-001 supersede) は v4 昇格 PR (工程 3) で起こす。runtime / gate の実変更は含まない。
 
+版への割付 (PO 指示 2026-09-14 追加): R03 (共通 JSON 正本化) で MIG-04 を「PLAN 延命の record 化」ではなく**チケット発行側の土台**
+(チケット record schema / 参照契約 digest / owner・lease / allowed path / reader・writer・validator・authority 更新・回復) として実装し、
+同じ R03 で**管理知能の要件定義** (L1: 分類対象・責務・層別勾配・信頼根にしない境界、L3: 入出力 JSON 契約・Kernel 検証項目・判断 record と
+校正・compiler / planner / dispatcher 分離) を行う。実装は R04 (planner shadow) / R05 (dispatcher 有効化 = PLAN 新規発行停止の宣言)。
+`01_RELEASE_MATRIX.md` の R03 / R04 / R05 の「使えるもの」と整合し、schema があるだけで発行を許可しない (主要条件 1・2)。
+
 ## 4. 工程
 
 
