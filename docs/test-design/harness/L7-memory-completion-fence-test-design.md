@@ -65,6 +65,17 @@ completion core transaction substrate)、`013..015` は PR-2 (production 結線)
 正規writerによるcanonical import、実取り込み集合、`canonicalCorpusDigest`、`previous_complete_digest`を検証する。実装 PR で Red→Green を観測した行だけを
 同番号の `U-PMEMFENCE-*` へ 1:1 で昇格し、共有 `L7-unit-test-design.md` へ登録する。
 
+### 3.1 PR-1 実装 trace (PLAN revision 7)
+
+PR-1 の実装と unit oracle は、それぞれ `src/runtime/project-memory-completion-fence.ts` と
+`tests/project-memory-completion-fence.test.ts` に固定する。`001..012` の core 判定に加えて、
+`016..021` の replay corpus mismatch、operation chain の一意 tip、legacy owner の null 互換、
+record-digest tamper を同じ read-only API で検証する。production composition (`013..015`) は PR-2 の責務として含めない。
+
+各 deny result は `readAllowed: false` と `writeAllowed: false` を返し、検査・replay とも
+transaction marker、canonical corpus、inbox、receipt を変更しない。成功時だけ canonical corpus digest と
+chain tip の `operationId` を返す。
+
 ## 4. Gate and scope fence
 
 - completion 時点の snapshot digest を fence の期待値として保持する実装は、004〜006 のいずれかで Red になることをもって
