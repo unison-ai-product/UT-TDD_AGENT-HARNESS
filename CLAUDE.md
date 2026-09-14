@@ -212,8 +212,10 @@ PR #167、自己 supersede 7 件 #183)。以下を**再締結**する。新規�
    必要になったら実装を止めて契約改訂へ戻る。
 2. **merge**: closing review の PASS verdict 受領前に merge しない (exact-HEAD プロトコル、
    §Hybrid 多ランタイム commit 協調)。例外なし。
-3. **review**: cross-review は成果物を書いていない family の frontier tier で行い、
-   委譲は正規経路 (`ut-tdd codex|claude --role <role>`) のみ (§委譲と判断層)。
+3. **review**: 初回 closing review は成果物を書いていない family の frontier tier で行い、
+   委譲は正規経路 (`ut-tdd codex|claude --role <role>`) のみ (§委譲と判断層)。FLAG 後の
+   **軽作業の是正は reviewer lane が自分で行い merge まで持つ**。author family へ差し戻すのは
+   上流契約の齟齬だけ (§review lane の是正権限と merge)。
 4. **資源**: doctor singleton / 並列上限 8 / foreign-edit override one-shot
    (§Shared Guard Discipline)。exit 2 は待つ。別形式での再起動をしない。
 5. **メモリ**: `ut-tdd memory add` 経由のみ。手書き禁止。エピソード状態を書かない
@@ -242,10 +244,37 @@ close された)。新規機構は作らず、既存工程の遵守を規律と�
 3. **1 PR = 1 論点**: 新規 source_module 1 個 + 対になるテスト + 最小配線まで。
    CLI surface / audit / 別 consumer は別 PR。
 4. **scope 構造を指す FLAG は close→分割再出が既定**。同一 PR への是正 commit
-   積み増しで応じない。
+   積み増しで応じない (ここで禁じるのは scope 構造 FLAG への積み増し。軽作業の是正 commit は
+   §review lane の是正権限と merge に従い reviewer lane が積む)。
 
 この規律から外れた PR は内容の当否に関わらず FLAG (process violation) とする
 (宣言の初出: issue #218、2026-08-03)。
+
+### review lane の是正権限と merge (PO ルール 2026-09-14、両ランタイム共通)
+
+FLAG のたびに author family へ差し戻すと、CI (13〜14 分) → request → consume → receipt の往復が
+FLAG の数だけ発生して収束しない (実測: PR #572 は r1〜r4 で CI 11 run、PR #574 は簿記 red 2 回 +
+FLAG 6 件)。PO 判断 (2026-09-14): 「レビューが差し戻すと永遠に詰まる。merge のための軽作業まで
+cross-family で戻す意味はない。上流齟齬でそもそも違う以外は author family に返さない」。issue #579。
+
+1. **reviewer lane が是正して merge まで持つ**: closing review を担う family の lane (Claude 側 =
+   Opus が review、Sonnet が是正。Codex 側 = Sol が review、Luna が是正) は、FLAG の**軽作業**を
+   lane 内で是正し、同 lane の reviewer が exact head を再検して blocking 0 なら正規経路
+   (`ut-tdd pr merge`) で merge する。author family へは返さない。
+2. **軽作業の定義**: FLAG 是正のうち (a) 上位契約 (PLAN 設計判断節 / 設計文書 / test-design の
+   凍結 oracle) の変更を伴わない、(b) 新規 source_module を追加しない、(c) 是正 3 回以内で
+   blocking 0 に収束する、の全てを満たすもの。(c) を超えたら close→分割再出 (§PR スコープ規律 4)。
+3. **差し戻しは契約齟齬だけ**: 上位契約そのものが違うと reviewer が判定した場合は lane で直さず、
+   契約改訂 (設計文書 / PLAN 設計判断、pair-freeze) へ戻す。これが author family / 設計 owner へ返す
+   唯一の経路であり、実装の手直しを返す経路ではない。
+4. **同 family 是正の担保**: review session と是正 session を分離し、packet は author claim・自己評価・
+   前回 verdict を除いて control 側が組む (blind packet)。再検は exact head に束縛し、反証試行を
+   verdict に残す (反証ゼロの PASS は PASS-WEAK)。receipt の evidence tier は
+   `same_family_separated` とし `cross_agent` を僭称しない (doctor の tier 対応は機構変更として別途)。
+5. **他ランタイム成果への commit**: FLAG 後の同 PR 内 remediation commit は reviewer lane の正規作業と
+   する (§Hybrid 多ランタイム commit 協調の例外)。条件は、path 明示 stage、history 非破壊 (reset /
+   force 禁止)、commit ごとの author family 記録、PR コメントでの是正内容の記録。
+6. **Codex worker の役割**: 初回実装 + 契約齟齬時の契約改訂。是正の往復には入らない。
 
 ### Hybrid 多ランタイム commit 協調 (Claude ↔ Codex、必須)
 
@@ -257,7 +286,9 @@ close された)。新規機構は作らず、既存工程の遵守を規律と�
   force で破棄・デグレさせない**。working tree の foreign 変更は **既定で「相手ランタイムの正規作業」と
   みなす** (overstep と決めつけない)。判断が付かなければ revert せず PO へ確認する。
 - 自分の成果は **相手の commit の上に積む** (rebase/stack)。相手のファイルには触れず、自分の意図ファイル
-  のみを path 明示で stage する (`git add <path>`、`git add -A` / `git add .` 禁止)。
+  のみを path 明示で stage する (`git add <path>`、`git add -A` / `git add .` 禁止)。例外は
+  §review lane の是正権限と merge に基づく FLAG 後の remediation commit (同 PR 内、path 明示 stage、
+  history 非破壊、author family 記録) のみ。
 - **commit 直前に `git status` + `git diff --staged` (or `ut-tdd review --staged` / `--uncommitted`) を
   確認**し、自分が authored した意図ファイルのみが staged であることを検証する。
 - push は origin と相手の commit を含めて整合する状態でのみ行う。push 済み履歴は決して破壊しない。
@@ -340,7 +371,9 @@ Task-kind ベースの割当 (PO rule 2026-07-14、旧 tier 記述を supersede)
   task-kind 例外 (PO rule 2026-07-08)。
 - Implementation work in `hybrid` is cross-executed and cross-reviewed: the
   non-orchestrating provider executes, and review returns to the other
-  provider (tier-router implementation lane, PO rule 2026-07-08).
+  provider (tier-router implementation lane, PO rule 2026-07-08). FLAG 後の
+  軽作業の是正は reviewer lane 内で行い merge まで持つ (PO rule 2026-09-14、
+  §review lane の是正権限と merge)。
 - Design/implementation review uses a top reviewer model: GPT frontier
   (`gpt-5.6-sol`) or Claude Opus (`claude-opus-5`) or above, behind the
   explicit frontier gate.

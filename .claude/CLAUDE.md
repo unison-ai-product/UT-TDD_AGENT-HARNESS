@@ -170,6 +170,10 @@ trade-off を記録した PLAN とする。spot-check で (a) この対象に該
   completed)。
 - 単一 runtime しか使えない場合のみ `intra_runtime_subagent` を記録する
   (cross_agent を僭称しない)。
+- **FLAG 後の軽作業是正は reviewer lane 内で行い merge まで持つ** (PO ルール 2026-09-14、
+  正本: `../CLAUDE.md` §review lane の是正権限と merge)。Claude 側は Opus が review、Sonnet が
+  是正 (別 session、blind packet、exact head 再検)。author family (Codex) へ返すのは上位契約の
+  齟齬だけ。evidence tier は `same_family_separated` として記録し cross_agent を僭称しない。
 
 ### 唯一の回避条件: 利用上限による停止
 
@@ -250,7 +254,9 @@ mechanism in `docs/plans/PLAN-L6-53-adversarial-review-mechanism.md`. In `hybrid
 the blind review should run on the provider that did not author the change (Claude
 subagent for Codex-authored work, `ut-tdd codex --role blind-reviewer` for
 Claude-authored work) so attacker/defender providers stay separated; single-runtime
-modes record `intra_runtime_subagent` evidence instead.
+modes record `intra_runtime_subagent` evidence instead. FLAG 後の軽作業の是正は
+reviewer lane (Sonnet 是正 → Opus 再検) が merge まで持ち、author family へは上位契約の
+齟齬だけを返す (`../CLAUDE.md` §review lane の是正権限と merge)。
 
 Source-snapshot exploration is not an active Claude Code subagent route. Use
 project-focused agents for repository inspection and treat migration snapshots
