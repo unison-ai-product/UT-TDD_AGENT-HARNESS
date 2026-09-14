@@ -73,6 +73,11 @@ completion core transaction substrate)、`013..015` は PR-2 (production 結線)
 - fence の ok と replay の deny は独立に判定する。replay は `PLAN-L7-512` §2 の temporal equality を守る (007 / 016)。
 - apply は個別 file 単位・schema 検証付き・append-only marker (010、011)。既存 marker の書き換え・re-baseline は本 artifact の
   oracle ではない。
+- 010は既存dry-runの全体denyを変更せず、回復applyだけで個別parseを分離する。valid uniqueのno-clobber import、dedupe write 0、
+  conflict quarantine、invalid除外とresult記録を同一fixtureで検証する。
+- 016はcomplete replayで`canonicalCorpusDigest`照合がintentの`inventoryDigest`比較に先行することを検証する。未完了operationの
+  inventory変更は従来どおり`inventory_drift`であり、reasonを一律置換しない。
+- 017〜019 / 021のchain正例も正規writerから生成し、tamper刺激だけをmarker改変で作る。
 - `PLAN-L7-529` の read / create / commit-policy 契約と test-design を変更しない (014 は 529 §6 の positive control を含む)。
 - candidate の存在だけを Green 証跡、#550 / #424 の完了、Pack parity の根拠にしない。
 
