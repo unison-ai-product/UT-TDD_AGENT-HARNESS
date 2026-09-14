@@ -8,7 +8,7 @@ confirmed_reverse_type: design
 route_signal: reverse
 route_mode: reverse
 created: 2026-09-11
-updated: 2026-09-11
+updated: 2026-09-14
 owner: Claude / Fable (pair-freeze) · Codex worker (implementation)
 forward_routing: gap-only
 promotion_strategy: reuse-as-is
@@ -44,18 +44,18 @@ status: draft
 github_issue_id: 550
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:b25589eb563f723d8dec7bec6ccfade7
-  command_id: plan-revise:issue-550:reverse:7
-  admitted_at: 2026-09-11T06:05:42.007Z
-  source_digest: sha256:682d7f6d798e65c259c6faefeeb9460b1acfa3dec494bb956c62fb3f98333322
-  decision_digest: sha256:1c2b52824bb2fd18b019f95988baa0501dcaab7159600121fd7acaf42003cac0
-  receipt_digest: sha256:c602b54e6659c6c39c733604096b341adb208b32fa909cc3ad34a96f631d9c89
+  receipt_id: certificate:d54eaa9755ce6d231b8b3e71405a1949
+  command_id: plan-revise:issue-550:reverse:8
+  admitted_at: 2026-09-14T09:55:04.633Z
+  source_digest: sha256:24f0b9e2d353e4ab9c80b3b10f21cee9cede81c934803bfb6f13ca72286901d5
+  decision_digest: sha256:64748364014186a6373e013046ab981406ce782175bdd8362fc534d111bb6e52
+  receipt_digest: sha256:b661ee0267d577b09d0c311e894f39f07d188e866a36ba52b4622c764797f9f3
   binding:
     path: docs/plans/PLAN-REVERSE-533-memory-completion-fence-backfill.md
     plan_id: PLAN-REVERSE-533-memory-completion-fence-backfill
     asset_id: plan:9c79745cc74906d8a41f0e144021d912
-    revision: 7
-    content_digest: sha256:682d7f6d798e65c259c6faefeeb9460b1acfa3dec494bb956c62fb3f98333322
+    revision: 8
+    content_digest: sha256:24f0b9e2d353e4ab9c80b3b10f21cee9cede81c934803bfb6f13ca72286901d5
   route:
     signal: reverse
     mode: reverse
@@ -76,8 +76,10 @@ admission_receipt:
     target_revision: 1
     phase: forward_merge
   escape_reason: "Issue #550 completion fence Reverse backfill pair (R0); revision
-    7: Codex/Sol FLAG 4a2efa0c (uniform absent-as-null rule; tamper via Slice 4b
-    record digest chain; evaluation order)"
+    8: Claude Opus FLAG cacd892c finding 1 (PR-1 completion core transaction
+    substrate; replay_corpus_mismatch precedence as the only existing-reason
+    change) + Sol preflight FLAG 2 (022 crash-window recovery, 023 writer-entry
+    tampered precedence)"
 ---
 
 # PLAN-REVERSE-533: Memory migration completion fence の逆向き確認
@@ -96,6 +98,8 @@ provider wake / claim / doctor) の接合面として確認する。L7-512 が�
   条項としてそのまま守る (同一 operation の再 apply は temporal equality、変更後は `replay_corpus_mismatch`)。fence の
   妥当性はこの条項の対象ではなく、canonical root の operation chain + residue だけで決まる。全 worktree inventory を fence の
   期待値に使う実装 (PR #554) はこの条項の過剰解釈であり、親契約の変更ではない (`CANDIDATE-U-PMEMFENCE-004..007`、`016`)。
+  complete replayではintentの全worktree `inventoryDigest`比較より先にcanonical corpusを照合する。`inventory_drift`は未完了operationの
+  source snapshot保護に残し、complete replayへは適用しない。
 - **marker chain の再利用と operation chain**: `owner → intent → prepared → complete` の hash chain と `replayed` 判定は Slice 4b
   (`U-PMEMQUAR-002/003/005`) をそのまま使い、fence は tamper 検出と replay の temporal equality にだけ chain digest を使う
   (`002`、`003`)。複数 operation は `owner` marker の `previous_complete_digest` (additive field) で chain を成し、tip の
@@ -105,7 +109,12 @@ provider wake / claim / doctor) の接合面として確認する。L7-512 が�
 - **residue の集合差分**: linked worktree の untracked memory を `(memory_id, content_digest)` の集合差分で観測し、
   mtime を使わない (`008`、`009`)。`invalid_memory` / `source_unsafe` は Slice 4a の typed reason を再利用する。
 - **回復の append-only**: 新 operation の apply は Slice 4b の transaction 経路を使い、個別ファイル単位で記録する
-  (`010`、`011`)。
+  (`010`、`011`)。read-only fence が検証する `canonicalCorpusDigest` と `previous_complete_digest` は同じPR-1の既存 writer
+  additive changeが発行し、手書きmarkerを正例fixtureにしない (`020`)。
+  既存inventory / dry-runの全体denyは維持し、回復applyだけが個別parse結果を分離する。valid uniqueはcanonicalへno-clobber import、
+  dedupeはwrite 0、conflictはquarantine、invalidは除外してresultへ残すため、valid分のcompleteと全量成功の非主張を両立する (`010`)。
+  canonical write と imported marker append の間の crash は、intent claim・元 source・canonical bytes・digest・size の全一致でだけ
+  marker を再構成し、不一致は `transaction_tampered` にする (`022`)。tampered precedence は writer 入口でも保つ (`023`)。
 - **529 境界**: setup bootstrap 例外と `project_identity_commit_required` は `PLAN-L7-529` §6 (remote-less identity
   denial を fatal にしない) と両立させる (`014`)。
 
@@ -115,8 +124,8 @@ provider wake / claim / doctor) の接合面として確認する。L7-512 が�
 | --- | --- | --- |
 | requirements | not_impacted | project-scoped Memory root と fail-close の既存要求を変更しない。 |
 | L4-basic-design | not_impacted | primary / linked worktree の責務境界を変更しない。 |
-| L5-detailed-design | updated (additive) | `owner` marker に `previous_complete_digest` を additive に追加する (本 PLAN が所有。既存 marker の形式・既存 oracle・DB schema は変更しない)。 |
-| L6-function-design | not_impacted | root 解決・inventory・quarantine の正本は `PLAN-L7-512` に保持する。 |
+| L5-detailed-design | updated (bounded) | `owner.previous_complete_digest`、completeの`canonicalCorpusDigest`、実取り込み集合、個別import disposition、complete replayのreason precedenceを追加する。既存marker hash chain・DB schemaは変更しない。 |
+| L6-function-design | updated (bounded) | root解決・inventory正本は`PLAN-L7-512`に保持する。既存writerへ回復applyの個別importとcomplete replay分岐を追加するが、dry-run全体denyと未完了operationの`inventory_drift`は維持する。 |
 | L7-unit-test-design | updated | 実装 PR で `U-PMEMFENCE-*` を共有 `L7-unit-test-design.md` へ 1:1 登録する。既存 `U-PMEMINV-*` / `U-PMEMQUAR-*` は変更しない。 |
 | L12-acceptance-test-design | not_impacted | clean Pack provider parity E2E は #424 後続 slice が所有する。 |
 
@@ -164,9 +173,10 @@ gap は L7-533 の contract 改訂 (revision N+1) で閉じ、`PLAN-L7-512` / `P
 
 ## R4: Forward 再合流条件
 
-- PR-1 (fence module) と PR-2 (production 結線) が別 PR で main 到達し、各々の exact HEAD に Linux / Windows /
+- PR-1 (read-only fence + 既存 migration writer の bounded additive changeから成るcompletion core transaction substrate) と
+  PR-2 (production 結線) が別 PR で main 到達し、各々の exact HEAD に Linux / Windows /
   aggregate Green と Claude 族の非著者 closing receipt が存在する。
-- `CANDIDATE-U-PMEMFENCE-001..021` が同番号の `U-PMEMFENCE-*` へ 1:1 昇格し、同一 implementation revision の
+- `CANDIDATE-U-PMEMFENCE-001..023` が同番号の `U-PMEMFENCE-*` へ 1:1 昇格し、同一 implementation revision の
   Red→Green 実測を引用している。
 - PR #554 が close され、その実装のうち baseline snapshot 依存部分が採用されていない。
 - #424 の provider parity E2E と #413 は本 PLAN の完了に含めない。
