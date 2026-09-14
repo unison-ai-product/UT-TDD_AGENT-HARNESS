@@ -8,7 +8,7 @@ drive: agent
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-09-11
-updated: 2026-09-11
+updated: 2026-09-14
 owner: Claude / Fable (pair-freeze) · Codex worker (implementation)
 parent_design: docs/plans/PLAN-L7-512-project-scoped-memory-root.md
 pair_artifact: docs/test-design/harness/L7-memory-completion-fence-test-design.md
@@ -19,9 +19,10 @@ backprop_decision_reason: completion fence の正本 (canonical root + marker ch
   で逆向き照合し、PLAN-L7-529 の setup identity 契約を変更していないことを検証する。
 agent_slots:
   - role: se
-    slot_label: Luna worker - fence module (PR-1) と production 結線 (PR-2) を別 PR で最小実装する
+    slot_label: Luna worker - completion core transaction substrate (PR-1) と
+      production 結線 (PR-2) を別 PR で最小実装する
   - role: qa
-    slot_label: Terra - CANDIDATE-U-PMEMFENCE-001..015 の Red oracle (worktree
+    slot_label: Terra - CANDIDATE-U-PMEMFENCE-001..023 の Red oracle (worktree
       add/remove・tracked pull の正常系を含む) を先に作る
   - role: tl
     slot_label: Sol / Claude Opus - baseline の正本・residue 集合差分・write 0・provider
@@ -54,18 +55,18 @@ status: draft
 github_issue_id: 550
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:3fa1e99903c3913009d817b48e36b3fb
-  command_id: plan-revise:issue-550:forward:7
-  admitted_at: 2026-09-11T06:05:39.830Z
-  source_digest: sha256:cb18541c152bb4877d5960d51dca368d618dd3019361bd2db138bf78246cf51f
-  decision_digest: sha256:1667d9b5feedf831cdb661e6c368d2d13e5fb1aab5c1560e9a2c4cc2c1b475f5
-  receipt_digest: sha256:faa8dec5f5aa6775ad5d3792b665d49790d2cde6edbacaea566c7044ac6e2c6a
+  receipt_id: certificate:3b3206ce145ed0f10ae05c86c37c0354
+  command_id: plan-revise:issue-550:forward:8
+  admitted_at: 2026-09-14T09:54:36.259Z
+  source_digest: sha256:eba2e00c122bc81a8492775316dea1247aac7f981f95d65e81881c529bcf025d
+  decision_digest: sha256:94be6228b9c2a4135d60a28d31e1e484175501445baa8bac43159f583d8f754e
+  receipt_digest: sha256:3807b5cb68464ae82a8bcbb4d26ca619a246e66651287789db36f975a11978f3
   binding:
     path: docs/plans/PLAN-L7-533-memory-completion-fence.md
     plan_id: PLAN-L7-533-memory-completion-fence
     asset_id: plan:fb4a53df298985d3204d2e9b3bfa55d1
-    revision: 7
-    content_digest: sha256:cb18541c152bb4877d5960d51dca368d618dd3019361bd2db138bf78246cf51f
+    revision: 8
+    content_digest: sha256:eba2e00c122bc81a8492775316dea1247aac7f981f95d65e81881c529bcf025d
   route:
     signal: feature_addition
     mode: add-feature
@@ -83,9 +84,11 @@ admission_receipt:
     target_revision: 1
     phase: forward_merge
   escape_reason: "Issue #550 completion fence contract pair-freeze after PR #554
-    FLAG B1 (canonical-root baseline; PLAN-L7-512 rev 6 downstream); revision 7:
-    Codex/Sol FLAG 4a2efa0c (uniform absent-as-null rule; tamper via Slice 4b
-    record digest chain; evaluation order)"
+    FLAG B1 (canonical-root baseline; PLAN-L7-512 rev 6 downstream); revision 8:
+    Claude Opus FLAG cacd892c finding 1 (PR-1 completion core transaction
+    substrate; replay_corpus_mismatch precedence as the only existing-reason
+    change) + Sol preflight FLAG 2 (022 crash-window recovery, 023 writer-entry
+    tampered precedence)"
 ---
 
 # PLAN-L7-533: Memory migration completion fence の正本を canonical root に限定する契約
@@ -137,9 +140,29 @@ frontmatter schema 検証を通し hand-written memory の洗浄経路にしな�
 | 指摘 | 判断 | 反映 |
 | --- | --- | --- |
 | B1: `PLAN-L7-512` §2 は同一 operation の replay を「現物 corpus digest が completion 状態と一致するときだけ」許すが、rev 1 は canonical の変更後も `replayed` を要求しており親契約と矛盾 | 親を改訂・supersede せず、**live fence の妥当性**と **replay** を分離する。fence の ok は marker chain + residue だけで決まり、corpus の変更は fence を変えない。同一 operation の再 apply は 512 どおり現物 digest 一致を要求し、変更後は `replay_corpus_mismatch` (write 0、marker 0) で deny する | §3.3、§9-1、`CANDIDATE-U-PMEMFENCE-007` / `016` |
+| rev 8 (`93e7a83d`、Claude Opus FLAG finding 1 + Sol preflight FLAG 2): §6 PR-1 の閉じた列挙が oracle 016 の `replay_corpus_mismatch` (既存 reason 経路の変更) を含まず実現不能。加えて canonical write → imported marker append の crash window と、writer 入口での tampered precedence が oracle に無い | PR-1 を completion core transaction substrate に訂正し、`inventory_drift` より先に canonical digest を照合する順序変更を唯一の既存経路変更として明示 (§2.2)。crash window 回復と writer 入口 precedence を `022` / `023` として登録 | §2.2、§6、`CANDIDATE-U-PMEMFENCE-022` / `023` |
 | rev 7 (`4a2efa0c`): 「欠落 root = null」と「新形式 marker の field 剥がし = `transaction_tampered`」は byte 形状で区別できず、決定論的実装が存在しない | field の有無を世代判別子にせず、欠落 ≡ null で uniform に読む。改変は Slice 4b の record digest chain (`markerDigest`) で検出し、判定順序 tampered → incomplete → ambiguous → ok を固定する | §3.1、`CANDIDATE-U-PMEMFENCE-021` 改訂 |
 | rev 5 (`30dd7d14`): 既存 Slice 4b の `owner` marker は `previous_complete_digest` を持たず、legacy complete → 新 operation の解釈が実装依存 | 欠落 = null、null を持てるのは root 1 件のみ、2 件以上は `operation_chain_ambiguous`、本 PLAN 以降の apply が書く marker は欠落禁止 (`transaction_tampered`) と bounded に固定する | §3.1、`CANDIDATE-U-PMEMFENCE-020` / `021` |
 | B2: 回復で operation directory が append されるが、current operation の選択規則・precedence が無い (operationId は時間的 authority ではない) | 各 operation の `owner` marker に `previous_complete_digest` (直前 operation の `complete` digest、初回は null) を持たせて **chain** を作り、authoritative current operation = 他の operation から参照されない唯一の `complete` 済み tip とする。complete + incomplete、complete + tampered、複数 complete の precedence を typed reason で固定し、mtime / operationId / ディレクトリ順で選ばない | §3.1、§3.2、§4.2、§9-2、`CANDIDATE-U-PMEMFENCE-017..019` |
+
+### 2.2 revision 8: PR-1 の read-only / writer 境界の是正
+
+PR-1 を fence module 1 個だけに限定した旧 §6 は、同じ PR-1 に割り当てた `010` / `011` / `016` / `020` と実現不能な矛盾を持っていた。
+これらは観測だけでは成立せず、正規 migration writer が canonical import、取り込み集合、canonical corpus digest、
+`previous_complete_digest` を発行して初めて検証できる。したがって PR-1 の論点を **completion core transaction substrate** に訂正し、
+read-only 判定 module と、その判定が読む証跡を生成する既存 writer の bounded additive change を同じ実装 revision に束縛する。
+これは production入口への結線ではなく、§3 / §4 のcore内部契約である。PR-2の入口群、setup、doctorは引き続き変更しない。
+
+writer の bounded change には、既存reason経路の次の限定変更も含む。同一operationのcomplete後は、intentの全worktree
+`inventoryDigest`不一致より先にcomplete markerの`canonicalCorpusDigest`と現物canonical corpusを照合し、不一致を
+`replay_corpus_mismatch`として返す。`inventory_drift`は未完了operationのsource snapshot / inventory同一性を守るreasonとして維持し、
+complete replayには使わない。このprecedence変更は`016`だけに適用し、一般のinventory denyを弱めない。
+
+rev 8 は加えて、Sol の PR-1 実装 preflight (FLAG 2) が実測した 2 点を oracle として登録する。(i) canonical write と imported marker
+append の間に crash window が実在する。回復は、intent の claim・元 source・canonical 現物 bytes・digest・size の全てが一致する場合に
+限り imported marker を再構成し、1 つでも不一致なら `transaction_tampered` (write 0) とする (`022`)。(ii) `transaction_tampered` の
+precedence は read fence だけでなく writer 入口 (`ProjectMemoryMigration.apply()`) でも保たれ、tampered chain の上では inventory /
+import に進まない (`023`)。いずれも PR-1 の bounded change の内側であり、新規 source_module も production 結線も要しない。
 
 ## 3. fence 契約
 
@@ -153,7 +176,7 @@ completion fence の正本は次の 2 つだけである。
    `previous_complete_digest` (直前 operation の `complete` marker digest。初回 operation は null) を持ち、operation 同士は
    この参照で **operation chain** を成す (Slice 4b の marker 形式への additive field。既存 marker と `U-PMEMQUAR-*` は変更しない)。
    **authoritative current operation** は、`complete` に到達し、かつ他のどの operation からも `previous_complete_digest` で
-   参照されていない唯一の tip である。tip の選択に mtime / ctime / operationId の辞書順 /    tip の選択に mtime / ctime / operationId の辞書順 / ディレクトリ列挙順を使わない。
+   参照されていない唯一の tip である。tip の選択に mtime / ctime / operationId の辞書順 / ディレクトリ列挙順を使わない。
    **legacy marker 互換 (uniform)**: 本 PLAN より前に Slice 4b が書いた `owner` marker は `previous_complete_digest` を
    持たない。field の有無を世代判別子にしない。読み取り規則は 1 つだけ: **欠落は null と同値**であり、null (欠落を含む) を
    持てるのは chain の root 1 件だけである。null / 欠落の operation が 2 件以上あれば `operation_chain_ambiguous` (write 0)。
@@ -227,6 +250,10 @@ residue(W) = { f ∈ untracked(memoryStorageRoot(W)) | (memory_id(f), content_di
   不合格は `invalid_memory` として取り込まず、canonical root へ write 0。**hand-written memory を legacy dir 経由で canonical へ
   洗浄する経路にしない。**
 - 同一 memory_id・異 digest は Slice 4b どおり quarantine へ保存し canonical を上書きしない。
+- 既存`inventory()` / `dryRun()`の全体fail-close (`U-PMEMINV-003`) は変更しない。回復applyだけが、topologyとsource handleを
+  同じ安全条件で再観測した後、各candidateを個別parseし、invalidを`invalid_memory`として記録対象から除外する。valid unique residueは
+  destinationをmemory IDから決定したcanonical pathへno-clobberでimportし、dedupeはwrite 0、conflictはquarantineする。
+  invalidが混在してもvalid分のtransactionはcompleteできるが、resultはinvalid一覧を保持して全量成功を主張しない。
 
 ## 5. 結線点と境界
 
@@ -258,7 +285,7 @@ Claude session と Codex session から同じ repository を観測したとき�
 | PR | 論点 | 前提 |
 | --- | --- | --- |
 | PR-0 (本 PR) | 本 PLAN + `PLAN-REVERSE-533` + pair test-design の pair-freeze (docs のみ) | なし |
-| PR-1 | fence module 1 個 (`src/runtime/project-memory-completion-fence.ts`: §3 の read-only 判定と §4.1 の residue 集合差分) + test。CANDIDATE 001..012 の Red→Green | PR-0 の非著者 PASS receipt |
+| PR-1 | completion core transaction substrate: read-only fence module (`src/runtime/project-memory-completion-fence.ts`) と、その正規証跡を発行する既存 writer (`src/runtime/project-memory-migration.ts`) の bounded change + test。writer は residue の正常分canonical import、実取り込み集合、`canonicalCorpusDigest`、`previous_complete_digest`を追加し、complete replayでは`inventory_drift`より先にcanonical digestを照合して`replay_corpus_mismatch`を返す。未完了operationの`inventory_drift`と既存dry-run全体denyは維持し、production入口へは結線しない。CANDIDATE 001..012 / 016..023 の Red→Green | PR-0 の非著者 PASS receipt |
 | PR-2 | production 結線 (§5.1 の入口、setup bootstrap 例外、doctor profile) + test。CANDIDATE 013..015。B2 を 529 準拠へ戻す | PR-1 merge |
 
 PR #554 は close→分割再出で応じる (scope 構造 FLAG の既定)。PR #554 の実装は PR-1 / PR-2 の参照元にしてよいが、
@@ -306,4 +333,4 @@ claim-blind / spec-blind review で、baseline snapshot の残存、mtime 依存
 
 1. 本 PLAN と `PLAN-REVERSE-533` の pair-freeze に非著者 PASS receipt と CI Green が揃うこと。
 2. PR #554 が close されていること (分割再出)。
-3. PR-1 は fence module 1 個に、PR-2 は §5.1 の結線に閉じること。方式変更が必要になったら PR を close して本 PLAN の契約改訂へ戻る。
+3. PR-1 は §3 / §4 の completion core transaction substrate (read-only fence + 既存 migration writer の正規証跡発行) に、PR-2 は §5.1 の production 結線に閉じること。PR-1 は setup / status / SessionStart / Memory service / provider wake / claim / doctor を変更しない。方式変更が必要になったら PR を close して本 PLAN の契約改訂へ戻る。
