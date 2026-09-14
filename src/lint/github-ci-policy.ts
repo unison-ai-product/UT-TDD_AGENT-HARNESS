@@ -400,8 +400,8 @@ const RUNTIME_STEP_MANIFESTS: Record<(typeof RUNTIME_LEGS)[number], readonly obj
 git log --format=%s -n 20 > .ut-tdd-commit-subjects.txt
 node src/cli.ts github guard --head-ref "$HEAD_REF" --base-ref "$BASE_REF" --pr-title "$PR_TITLE" --pr-body-file .ut-tdd-pr-body.txt --commit-file .ut-tdd-commit-subjects.txt`,
     }),
-    // Issue #598 (一時措置): PLAN 編集の admission receipt 照合を CI hard gate にする。lane 条件なし
-    // (doc lane でも走る)。v4 R05 の PLAN 新規発行停止で本 step と共に削除する。
+    // Issue #598 (一時措置): source repository の PLAN admission receipt を全実行で照合する。
+    // consumer template は genesis projection 未生成のため対象外。v4 R05 で本 step と共に削除する。
     step("plan admission-check (PLAN 編集の receipt 照合、fail-close)", {
       env: {
         BASE_SHA: githubExpression("github.event.pull_request.base.sha || github.event.before"),
