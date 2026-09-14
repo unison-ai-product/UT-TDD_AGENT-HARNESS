@@ -65,12 +65,17 @@ dedicated authorityである。FSM順序、release identity、promotion、rollba
   read-backと共に要求し、欠落・`=`・parse不能をfail-closeする。
 - bypass actorは専用GitHub App installation 1件だけで、unconditional force/main updateは生成されない。
 - receipt欠落・破損をremote successへ丸めず、完全journalとremote read-backが同じreceiptを再構成できる場合だけ回復する。
+- `planned_nonce_consumed` appendはL7-519 adapterの`authorize()`責務に残し、production ApprovalPortへ移さない。
+- expected actor/repo/main/tagの4軸preflight、raw asset upload/download、tree/blob/sidecar再計算、annotated tag
+  dereferenceを実API schemaで構成し、production portsと`publishPackCanary`のfull FSMで一体検証する。
 
 ## R3: 攻撃面
 
 PR merge APIへの差戻し、expected OID無しlease、`--force`、ruleset無効化、human/PAT authority、client lock、read-backだけの
 CAS主張、seal後PR作成の循環、外部手作りPR、preparation receipt replay、same-head `up-to-date`の成功扱い、
 payloadのargv化、receipt直書き、incomplete journalからの成功推測を独立に攻撃する。
+さらにadapter本体のscope混入、未使用identity preflight、fake-only API field、base64 asset upload、listing digest信用、
+個別port testだけでfull FSMを主張する実装を攻撃する。
 
 ## R4: Forward再合流
 

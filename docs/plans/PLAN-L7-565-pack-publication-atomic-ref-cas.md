@@ -131,6 +131,37 @@ endpoint、method、短いidentity/refだけとし、base64 blob、asset bytes�
 `powershell -Command`、response fileへの暗黙退避を禁止する。Windowsのcommand-line長に依存せず、multi-MiB payloadでも
 argvの総byte数と最大argument長が不変であることをoracleにする。
 
+### 4.1 実GitHub APIに束縛したproduction観測
+
+- identity preflightは、sealed authorityが指定するexpected actor、Pack repository ID/name、expected main OID、
+  expected tag nameの4軸を独立に比較する。actorが空でないことだけを検査してはならない。tagはexact nameのrefを
+  観測して不在を確認し、404以外の非0 exit/timeout/output-limitを「不在」へ丸めない。このpreflightはproduction
+  composition rootから必ず呼ばれ、全4軸attested前のremote writeは0である。
+- asset uploadは`https://uploads.github.com/repos/<repo>/releases/<remote-id>/assets?name=<encoded-name>`へ
+  `Content-Type: application/octet-stream`でsealed assetの**raw bytes**をstdin送信する。base64 JSONや通常
+  `api.github.com/repos/.../assets`へのPOSTは禁止する。read-backはrelease assets一覧からexact nameのasset IDを一意に
+  解決し、`repos/<repo>/releases/assets/<asset-id>`を`Accept: application/octet-stream`で取得したraw stdout bytesの
+  size/SHA-256を再計算する。listingのdigest fieldだけをauthorityにしない。
+- release commit観測は`commits/<oid>`からcommit/tree OIDを得て、`git/trees/<tree>?recursive=1`と各`git/blobs/<oid>`を
+  取得する。manifest sidecar bytesをparseし、releaseId/sourceRevision/materializerVersion/control snapshotを導出し、
+  sealed entriesのpath/mode/size/digestとtreeを再計算する。GitHub commit応答に存在しないmetadata fieldを要求しない。
+- annotated tag観測は`git/ref/tags/<tag>`のobject type/OIDを取得し、type=`tag`なら`git/tags/<tag-object-oid>`を
+  dereferenceしてtarget commit OIDを得る。そのtargetだけを`git/commits/<oid>`で検証する。tag object OIDをcommit
+  endpointへ直接渡さない。全observeは実API schemaと異なるfake-only fieldを拒否する。
+
+### 4.2 production composition とPR-1 scope
+
+後続production-port PRは`PLAN-L7-519`のadapter本体を変更しない。特に`PublicationRun.authorize()`が
+`approval.consume()`の`mode: new`後に`planned_nonce_consumed`をjournalへappendする責務を維持する。file-backed
+ApprovalPortはapproval fileのatomic consumeとbinding照合だけを持ち、このjournal責務をproduction portへ移さない。
+in-memory/別ApprovalPortを含む全compositionでadapterが同じ順序を保証する。
+
+production portsのcomposition rootと既存`publishPackCanary`をfake process runnerで接続し、preflightから
+`planned -> pack_commit -> release_draft -> assets -> tag -> release_visible -> canary`のfull FSMを1回通す。
+個別portテストの集合を代用にせず、journal順序、exact 2 assets、receipt、全remote read-back、§4.1のendpoint/method/
+headers/query/stdinを対応表と1:1でassertする。production port内のstub auditor、constant expected metadata、常時
+unavailable reconcile、fake専用response fieldはfail-openとして禁止する。
+
 ## 5. journal、crash reconciliation、receipt publish
 
 reconciliationはwrite 0である。receiptが無くても、journalがsealed intentに束縛された全mutationについて
@@ -160,7 +191,7 @@ expected `E`、head `H`、post-read OIDをまとめてdigest束縛する。
 - `PLAN-L7-508`: sealed exact entries、file mode、exact 2 assets、control snapshot digestだけを入力にする。local sourceや
   Pack checkoutからの補完は追加しない。
 - `PLAN-L7-519`: FSMのport順序と最初のambiguity以降write 0は維持する。production portだけがmain mutation primitiveを
-  exact leaseへ差し替える。
+  exact leaseへ差し替える。`authorize()`と`planned_nonce_consumed` appendはadapter所有のまま変更しない。
 - #574は本pair-freeze前の実現不能契約に基づくため、そのdiffを正本化せず、本PLANのclosing review後にPR-1を
   新しいbranch/headから再構築する。
 
@@ -168,7 +199,7 @@ expected `E`、head `H`、post-read OIDをまとめてdigest束縛する。
 
 本PRは本PLAN、Reverse pair、専用test-design、旧confirmed PLANの訂正back-referenceだけを含むdocs-only contract PRと
 する。production source/test code、credential/ruleset変更、Pack remote mutationを含めない。後続PR-1はproduction portsと
-Red→Green、PR-2はCLI wiringに分ける。
+Red→Greenだけに閉じ、`pack-publication-adapter.ts`を変更しない。PR-2はCLI wiringに分ける。
 
 完了条件は、TOCTOU攻撃、wrong/overprivileged authority、exact lease拒否、post-write read-back drift、large stdin、
 receipt前crash、partial/corrupt receipt、atomic no-clobber競合のcandidateがpair artifactに凍結され、plan lint、readability、
