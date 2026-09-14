@@ -58,14 +58,19 @@ dedicated authorityである。FSM順序、release identity、promotion、rollba
 
 - exact leaseに含むexpected OIDはsealed intentのexpected main SHAとbyte一致する。
 - pushed headはadmitted PR exact headとbyte一致し、そのtreeはsealed stagingから再計算したexpected treeと一致する。
+- branch/PR writeは独立したfresh preparation operationのapproval/journal/receiptに属し、non-author review後のread-only
+  publication admissionが初めてmain CAS intentをsealする。外部手作りPRと別operation receiptはauthorityにならない。
 - server rejection、response loss、post-write read-back driftはいずれもsuccess 0・後続write 0である。
+- remoteが同じheadへ先行した`up-to-date` exit 0は当該operationの成功ではない。porcelainのactual-update statusを
+  read-backと共に要求し、欠落・`=`・parse不能をfail-closeする。
 - bypass actorは専用GitHub App installation 1件だけで、unconditional force/main updateは生成されない。
 - receipt欠落・破損をremote successへ丸めず、完全journalとremote read-backが同じreceiptを再構成できる場合だけ回復する。
 
 ## R3: 攻撃面
 
 PR merge APIへの差戻し、expected OID無しlease、`--force`、ruleset無効化、human/PAT authority、client lock、read-backだけの
-CAS主張、payloadのargv化、receipt直書き、incomplete journalからの成功推測を独立に攻撃する。
+CAS主張、seal後PR作成の循環、外部手作りPR、preparation receipt replay、same-head `up-to-date`の成功扱い、
+payloadのargv化、receipt直書き、incomplete journalからの成功推測を独立に攻撃する。
 
 ## R4: Forward再合流
 

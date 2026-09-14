@@ -61,10 +61,31 @@ Git protocolのexact leaseへ置換する。
 read-before-writeをCASの根拠にしない。
 
 PRは廃止しない。publication branchのexact headを通常PRでreview/admitし、そのhead OIDとexpected main OIDを
-sealed intentおよびmutation approvalへ束縛する。PR merge APIは呼ばず、review済みheadをexact leaseでmainへ
+publication intentおよびmutation approvalへ束縛する。PR merge APIは呼ばず、review済みheadをexact leaseでmainへ
 fast-forwardする。成功後はmain ref、commit、tree、manifest sidecarをremoteから再取得し、全identity一致後だけ
 `read_back_observation`をjournalへ確定する。lease拒否、unknown response、read-back不一致は
 `indeterminate`または`mismatch`で停止し、後続writeを0にする。
+
+### 1.1 fresh preparation operation とpublication admission
+
+旧FSMはpublication intentをsealした後にbranch/PRを作るため、「review済みPRをpreflightで要求する」と循環する。
+これを次の2 operationへ明確に分離する。
+
+1. `publication_preparation`: sealed staging identity、expected main OID、deterministic branch name、operation ID、
+   idempotency keyを先にsealする。branch commitとPR createをそれぞれ人間approval/nonceで認可し、専用preparation
+   journalへ`planned_nonce_consumed -> mutation_intent -> read_back_observation`を記録する。PR number、exact head OID、
+   base OID、tree digestをatomic no-clobber preparation receiptへ確定する。このphaseはmain、Release、asset、tag、pointerを
+   一切変更しない。
+2. non-author review/check完了後、`publication_admission`: preparation receipt、PRの現在head/base、closing review receipt、
+   required checks、staging identityをread-onlyで再観測する。すべてが同一fresh preparation operationへ一致した場合だけ
+   publication intentとmutation approvalsをsealする。既存FSMの`pack_commit`はbranch/PR作成を再実行せず、admitted
+   reviewed headのmain CASだけを所有し、以後のrelease FSMへ進む。
+
+freshnessは、preparation operation ID/idempotency keyが未使用で、receiptが指すPR head/baseが現在値と一致し、そのPRが
+別publication operation、別staging digest、別expected main OIDのadmissionに一度も使用されていないことである。
+外部で手作りしたbranch/PR、receipt無しPR、別operationのreceipt再利用、review後のhead更新はtyped deny、main write 0。
+preparation write失敗/response loss/crashはpreparation journalだけからwrite 0 reconciliationし、publication admissionへ
+進めない。preparationとpublicationは別journal/receipt/nonce集合を持ち、前者のnonceを後者へ再利用しない。
 
 ## 2. 不可能性と方式選択
 
@@ -92,8 +113,9 @@ OID付きlease、専用App authority、fast-forward refspecの積を満たす1�
   mutation approvalで時間と対象を狭める。human account、PAT、source-repository CI identity、汎用botをauthorityにせず、
   Administration write、Issues、Actions、Secrets権限を付与しない。ruleset観測に追加read permissionが必要な場合は、
   mutation credentialへwrite権限を足さず独立read-only attestation portへ分離する。
-- preflightはrepository ID/name、installation ID、ruleset ID、target ref、expected main OID、review済みPR numberと
-  exact head OID、required review/check結論、merge-baseがexpected mainであることを観測してsealする。caller supplied
+- publication admissionはrepository ID/name、installation ID、ruleset ID、target ref、expected main OID、preparation
+  receipt、review済みPR numberとexact head OID、required review/check結論、merge-baseがexpected mainであることを
+  観測してsealする。caller supplied
   loginや`gh auth status`の表示だけをbypass authority証明にしない。
 - credentialはargv、journal、receipt、stdout、errorへ出さない。credential helperまたはstdin専用portで渡し、
   runnerがsecretを含むenv snapshotを証跡化しない。authority観測不能・不一致・権限過剰は最初のremote write前に
@@ -123,6 +145,13 @@ no-clobber publishし、directoryをfsyncしてから成功を返す。既存rec
 schema/digest不正なら上書きせずconflictとする。process crashで残ったtempは非authoritativeとして無視できる。
 partial/corrupt final receiptもremote成功のauthorityにせず、完全journalとremote再観測から同じreceiptが再構成できる
 場合だけtyped recoveryを許す。receipt自体をremote successの唯一の根拠にしない。
+
+exact lease pushには`--porcelain`を必須とし、exit code 0とread-back一致だけでは成功にしない。競合writerがexpected
+`E`から同じreviewed head `H`へ先にmainを進めると、Gitはlease比較を伴う更新をせず`up-to-date`でexit 0になり得る。
+porcelainが当該`refs/heads/main`の**実更新status**を1件だけ報告した場合に限ってこのoperationのCAS mutationを成功とする。
+`=`/`[up to date]`、status行欠落・複数・parse不能、reject、response lossは、read-backが`H`でも当該operationの成功に
+丸めず`indeterminate`/`cas_not_applied_by_operation`とし、後続write 0。journal observationはactual-update statusと
+expected `E`、head `H`、post-read OIDをまとめてdigest束縛する。
 
 ## 6. 上位契約との整合
 
