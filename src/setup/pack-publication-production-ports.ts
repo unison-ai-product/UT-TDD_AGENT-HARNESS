@@ -937,9 +937,11 @@ export interface FileApprovalPortOptions {
   readonly commitmentLoader?: () => ApprovalCommitmentLoadResult;
   readonly commitmentExpected?: ApprovalCommitmentExpected;
   readonly rename?: (source: string, destination: string) => void;
+  readonly afterRename?: (source: string, destination: string) => void;
   readonly durableState: {
     readonly digest: () => string;
     readonly append: (event: PublicationJournalEvent) => void | Promise<void>;
+    readonly events: () => readonly PublicationJournalEvent[];
   };
   readonly now?: () => Date;
   readonly onCommitmentError?: (reason: ApprovalCommitmentReason) => void;
@@ -995,6 +997,19 @@ function parseApproval(path: string): PackPublicationApproval | null {
   } catch {
     return null;
   }
+}
+
+function plannedNonceConsumedEvent(approval: PackPublicationApproval): PublicationJournalEvent {
+  return {
+    transition: approval.transition,
+    mutation: approval.mutation,
+    kind: "planned_nonce_consumed",
+    intentDigest: approval.intentDigest,
+    nonce: approval.nonce,
+    detailDigest: sha256(
+      stable({ mode: "new", approvalStateDigest: approval.approvalStateDigest }),
+    ),
+  };
 }
 
 function validPersistedReceipt(
@@ -1063,9 +1078,32 @@ export function createFileApprovalPort(
       const existing = existsSync(source) ? parseApproval(source) : null;
       if (existing === null && existsSync(consumed)) {
         const prior = parseApproval(consumed);
-        return prior && sameApproval(prior, approval)
-          ? attested({ mode: "reconcile" })
-          : mismatch("nonce_replay");
+        if (!prior || !sameApproval(prior, approval)) return mismatch("nonce_replay");
+        let events: readonly PublicationJournalEvent[];
+        let currentDigest: string;
+        try {
+          events = options.durableState.events();
+          currentDigest = options.durableState.digest();
+        } catch {
+          return { status: "indeterminate", reason: "journal_recovery_unavailable" };
+        }
+        const consumedEvent = events.some(
+          (event) =>
+            event.kind === "planned_nonce_consumed" &&
+            event.transition === approval.transition &&
+            event.mutation === approval.mutation &&
+            event.intentDigest === approval.intentDigest &&
+            event.nonce === approval.nonce,
+        );
+        if (consumedEvent) return attested({ mode: "reconcile" });
+        if (currentDigest !== approval.approvalStateDigest)
+          return { status: "indeterminate", reason: "journal_recovery_ambiguous" };
+        try {
+          await Promise.resolve(options.durableState.append(plannedNonceConsumedEvent(approval)));
+        } catch {
+          return { status: "indeterminate", reason: "journal_persist_failed" };
+        }
+        return attested({ mode: "new" });
       }
       if (!existing) return mismatch("approval_missing");
       if (!sameApproval(existing, approval)) return mismatch("approval_binding_mismatch");
@@ -1074,22 +1112,12 @@ export function createFileApprovalPort(
       try {
         if (existsSync(consumed)) return mismatch("nonce_replay");
         (options.rename ?? renameSync)(source, consumed);
+        options.afterRename?.(source, consumed);
       } catch {
         return mismatch("approval_consume_failed");
       }
       try {
-        await Promise.resolve(
-          options.durableState.append({
-            transition: approval.transition,
-            mutation: approval.mutation,
-            kind: "planned_nonce_consumed",
-            intentDigest: approval.intentDigest,
-            nonce: approval.nonce,
-            detailDigest: sha256(
-              stable({ mode: "new", approvalStateDigest: approval.approvalStateDigest }),
-            ),
-          }),
-        );
+        await Promise.resolve(options.durableState.append(plannedNonceConsumedEvent(approval)));
       } catch {
         let journalDigestAfterAppend: string;
         try {

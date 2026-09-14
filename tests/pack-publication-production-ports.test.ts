@@ -327,6 +327,69 @@ describe("PLAN-L7-532 PR-1 production ports", () => {
     expect(journal.events()).toHaveLength(1);
   });
 
+  it("CANDIDATE-PACKPUB-005-D / -F: rename crash recovers missing journal event before new consume", async () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-packpub-"));
+    const fixture = approvalFixture(root);
+    const approvalPort = createFileApprovalPort({
+      root: join(root, "approvals"),
+      operationId: "op-1",
+      commitment: fixture.commitment,
+      commitmentExpected: fixture.expected,
+      durableState: fixture.journal,
+      afterRename: () => {
+        throw new Error("process crash before journal append");
+      },
+    });
+    await expect(approvalPort.consume(fixture.approval)).resolves.toEqual({
+      status: "mismatch",
+      reason: "approval_consume_failed",
+    });
+    expect(fixture.journal.events()).toHaveLength(0);
+    await expect(
+      createFileApprovalPort({
+        root: join(root, "approvals"),
+        operationId: "op-1",
+        commitment: fixture.commitment,
+        commitmentExpected: fixture.expected,
+        durableState: fixture.journal,
+      }).consume(fixture.approval),
+    ).resolves.toEqual({ status: "attested", value: { mode: "new" } });
+    expect(fixture.journal.events()).toHaveLength(1);
+  });
+
+  it("CANDIDATE-PACKPUB-005-F: foreign journal drift cannot masquerade as consume recovery", async () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-packpub-"));
+    const fixture = approvalFixture(root);
+    const approvalPort = createFileApprovalPort({
+      root: join(root, "approvals"),
+      operationId: "op-1",
+      commitment: fixture.commitment,
+      commitmentExpected: fixture.expected,
+      durableState: fixture.journal,
+      afterRename: () => {
+        throw new Error("process crash before journal append");
+      },
+    });
+    await approvalPort.consume(fixture.approval);
+    fixture.journal.append({
+      transition: "planned",
+      mutation: "planned",
+      kind: "mutation_intent",
+      intentDigest: fixture.approval.intentDigest,
+      nonce: "foreign",
+      detailDigest: `sha256:${"4".repeat(64)}`,
+    });
+    await expect(
+      createFileApprovalPort({
+        root: join(root, "approvals"),
+        operationId: "op-1",
+        commitment: fixture.commitment,
+        commitmentExpected: fixture.expected,
+        durableState: fixture.journal,
+      }).consume(fixture.approval),
+    ).resolves.toEqual({ status: "indeterminate", reason: "journal_recovery_ambiguous" });
+  });
+
   it("CANDIDATE-PACKPUB-005-J / -L: read-back and CAS boundaries are typed", async () => {
     const ports = createPackPublicationProductionPorts({ runner: ghRunner(), operationId: "op-1" });
     const drift = await ports.pack.mergePullRequestCas({
