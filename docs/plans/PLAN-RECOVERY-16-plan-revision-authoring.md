@@ -35,8 +35,6 @@ generates:
     artifact_type: source_module
   - artifact_path: src/plan-admission/plan-revision-ledger-adapter.ts
     artifact_type: source_module
-  - artifact_path: src/plan-admission/plan-ledger-rehydrator.ts
-    artifact_type: source_module
   - artifact_path: src/plan-asset/ledger/plan-revision-bootstrap.ts
     artifact_type: source_module
   - artifact_path: src/plan-asset/ledger/plan-revision-ledger.ts
