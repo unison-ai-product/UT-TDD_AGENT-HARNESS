@@ -8,7 +8,7 @@ drive: agent
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-09-11
-updated: 2026-09-14
+updated: 2026-09-11
 owner: Claude / Fable (pair-freeze) · Codex worker (implementation)
 parent_design: docs/plans/PLAN-L7-512-project-scoped-memory-root.md
 pair_artifact: docs/test-design/harness/L7-memory-completion-fence-test-design.md
@@ -19,9 +19,9 @@ backprop_decision_reason: completion fence の正本 (canonical root + marker ch
   で逆向き照合し、PLAN-L7-529 の setup identity 契約を変更していないことを検証する。
 agent_slots:
   - role: se
-    slot_label: Luna worker - completion core transaction substrate (PR-1) と production 結線 (PR-2) を別 PR で最小実装する
+    slot_label: Luna worker - fence module (PR-1) と production 結線 (PR-2) を別 PR で最小実装する
   - role: qa
-    slot_label: Terra - CANDIDATE-U-PMEMFENCE-001..021 の Red oracle (worktree
+    slot_label: Terra - CANDIDATE-U-PMEMFENCE-001..015 の Red oracle (worktree
       add/remove・tracked pull の正常系を含む) を先に作る
   - role: tl
     slot_label: Sol / Claude Opus - baseline の正本・residue 集合差分・write 0・provider
@@ -141,19 +141,6 @@ frontmatter schema 検証を通し hand-written memory の洗浄経路にしな�
 | rev 5 (`30dd7d14`): 既存 Slice 4b の `owner` marker は `previous_complete_digest` を持たず、legacy complete → 新 operation の解釈が実装依存 | 欠落 = null、null を持てるのは root 1 件のみ、2 件以上は `operation_chain_ambiguous`、本 PLAN 以降の apply が書く marker は欠落禁止 (`transaction_tampered`) と bounded に固定する | §3.1、`CANDIDATE-U-PMEMFENCE-020` / `021` |
 | B2: 回復で operation directory が append されるが、current operation の選択規則・precedence が無い (operationId は時間的 authority ではない) | 各 operation の `owner` marker に `previous_complete_digest` (直前 operation の `complete` digest、初回は null) を持たせて **chain** を作り、authoritative current operation = 他の operation から参照されない唯一の `complete` 済み tip とする。complete + incomplete、complete + tampered、複数 complete の precedence を typed reason で固定し、mtime / operationId / ディレクトリ順で選ばない | §3.1、§3.2、§4.2、§9-2、`CANDIDATE-U-PMEMFENCE-017..019` |
 
-### 2.2 revision 8: PR-1 の read-only / writer 境界の是正
-
-PR-1 を fence module 1 個だけに限定した旧 §6 は、同じ PR-1 に割り当てた `010` / `011` / `016` / `020` と実現不能な矛盾を持っていた。
-これらは観測だけでは成立せず、正規 migration writer が canonical import、取り込み集合、canonical corpus digest、
-`previous_complete_digest` を発行して初めて検証できる。したがって PR-1 の論点を **completion core transaction substrate** に訂正し、
-read-only 判定 module と、その判定が読む証跡を生成する既存 writer の bounded additive change を同じ実装 revision に束縛する。
-これは production入口への結線ではなく、§3 / §4 のcore内部契約である。PR-2の入口群、setup、doctorは引き続き変更しない。
-
-writer の bounded change には、既存reason経路の次の限定変更も含む。同一operationのcomplete後は、intentの全worktree
-`inventoryDigest`不一致より先にcomplete markerの`canonicalCorpusDigest`と現物canonical corpusを照合し、不一致を
-`replay_corpus_mismatch`として返す。`inventory_drift`は未完了operationのsource snapshot / inventory同一性を守るreasonとして維持し、
-complete replayには使わない。このprecedence変更は`016`だけに適用し、一般のinventory denyを弱めない。
-
 ## 3. fence 契約
 
 ### 3.1 正本と観測対象
@@ -166,7 +153,7 @@ completion fence の正本は次の 2 つだけである。
    `previous_complete_digest` (直前 operation の `complete` marker digest。初回 operation は null) を持ち、operation 同士は
    この参照で **operation chain** を成す (Slice 4b の marker 形式への additive field。既存 marker と `U-PMEMQUAR-*` は変更しない)。
    **authoritative current operation** は、`complete` に到達し、かつ他のどの operation からも `previous_complete_digest` で
-   参照されていない唯一の tip である。tip の選択に mtime / ctime / operationId の辞書順 / ディレクトリ列挙順を使わない。
+   参照されていない唯一の tip である。tip の選択に mtime / ctime / operationId の辞書順 /    tip の選択に mtime / ctime / operationId の辞書順 / ディレクトリ列挙順を使わない。
    **legacy marker 互換 (uniform)**: 本 PLAN より前に Slice 4b が書いた `owner` marker は `previous_complete_digest` を
    持たない。field の有無を世代判別子にしない。読み取り規則は 1 つだけ: **欠落は null と同値**であり、null (欠落を含む) を
    持てるのは chain の root 1 件だけである。null / 欠落の operation が 2 件以上あれば `operation_chain_ambiguous` (write 0)。
@@ -240,10 +227,6 @@ residue(W) = { f ∈ untracked(memoryStorageRoot(W)) | (memory_id(f), content_di
   不合格は `invalid_memory` として取り込まず、canonical root へ write 0。**hand-written memory を legacy dir 経由で canonical へ
   洗浄する経路にしない。**
 - 同一 memory_id・異 digest は Slice 4b どおり quarantine へ保存し canonical を上書きしない。
-- 既存`inventory()` / `dryRun()`の全体fail-close (`U-PMEMINV-003`) は変更しない。回復applyだけが、topologyとsource handleを
-  同じ安全条件で再観測した後、各candidateを個別parseし、invalidを`invalid_memory`として記録対象から除外する。valid unique residueは
-  destinationをmemory IDから決定したcanonical pathへno-clobberでimportし、dedupeはwrite 0、conflictはquarantineする。
-  invalidが混在してもvalid分のtransactionはcompleteできるが、resultはinvalid一覧を保持して全量成功を主張しない。
 
 ## 5. 結線点と境界
 
@@ -275,7 +258,7 @@ Claude session と Codex session から同じ repository を観測したとき�
 | PR | 論点 | 前提 |
 | --- | --- | --- |
 | PR-0 (本 PR) | 本 PLAN + `PLAN-REVERSE-533` + pair test-design の pair-freeze (docs のみ) | なし |
-| PR-1 | completion core transaction substrate: read-only fence module (`src/runtime/project-memory-completion-fence.ts`) と、その正規証跡を発行する既存 writer (`src/runtime/project-memory-migration.ts`) の bounded change + test。writer は residue の正常分canonical import、実取り込み集合、`canonicalCorpusDigest`、`previous_complete_digest`を追加し、complete replayでは`inventory_drift`より先にcanonical digestを照合して`replay_corpus_mismatch`を返す。未完了operationの`inventory_drift`と既存dry-run全体denyは維持し、production入口へは結線しない。CANDIDATE 001..012 / 016..021 の Red→Green | PR-0 の非著者 PASS receipt |
+| PR-1 | fence module 1 個 (`src/runtime/project-memory-completion-fence.ts`: §3 の read-only 判定と §4.1 の residue 集合差分) + test。CANDIDATE 001..012 の Red→Green | PR-0 の非著者 PASS receipt |
 | PR-2 | production 結線 (§5.1 の入口、setup bootstrap 例外、doctor profile) + test。CANDIDATE 013..015。B2 を 529 準拠へ戻す | PR-1 merge |
 
 PR #554 は close→分割再出で応じる (scope 構造 FLAG の既定)。PR #554 の実装は PR-1 / PR-2 の参照元にしてよいが、
@@ -323,4 +306,4 @@ claim-blind / spec-blind review で、baseline snapshot の残存、mtime 依存
 
 1. 本 PLAN と `PLAN-REVERSE-533` の pair-freeze に非著者 PASS receipt と CI Green が揃うこと。
 2. PR #554 が close されていること (分割再出)。
-3. PR-1 は §3 / §4 の completion core transaction substrate (read-only fence + 既存 migration writer の正規証跡発行) に、PR-2 は §5.1 の production 結線に閉じること。PR-1 は setup / status / SessionStart / Memory service / provider wake / claim / doctor を変更しない。方式変更が必要になったら PR を close して本 PLAN の契約改訂へ戻る。
+3. PR-1 は fence module 1 個に、PR-2 は §5.1 の結線に閉じること。方式変更が必要になったら PR を close して本 PLAN の契約改訂へ戻る。

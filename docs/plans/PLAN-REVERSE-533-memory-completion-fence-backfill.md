@@ -8,7 +8,7 @@ confirmed_reverse_type: design
 route_signal: reverse
 route_mode: reverse
 created: 2026-09-11
-updated: 2026-09-14
+updated: 2026-09-11
 owner: Claude / Fable (pair-freeze) · Codex worker (implementation)
 forward_routing: gap-only
 promotion_strategy: reuse-as-is
@@ -96,8 +96,6 @@ provider wake / claim / doctor) の接合面として確認する。L7-512 が�
   条項としてそのまま守る (同一 operation の再 apply は temporal equality、変更後は `replay_corpus_mismatch`)。fence の
   妥当性はこの条項の対象ではなく、canonical root の operation chain + residue だけで決まる。全 worktree inventory を fence の
   期待値に使う実装 (PR #554) はこの条項の過剰解釈であり、親契約の変更ではない (`CANDIDATE-U-PMEMFENCE-004..007`、`016`)。
-  complete replayではintentの全worktree `inventoryDigest`比較より先にcanonical corpusを照合する。`inventory_drift`は未完了operationの
-  source snapshot保護に残し、complete replayへは適用しない。
 - **marker chain の再利用と operation chain**: `owner → intent → prepared → complete` の hash chain と `replayed` 判定は Slice 4b
   (`U-PMEMQUAR-002/003/005`) をそのまま使い、fence は tamper 検出と replay の temporal equality にだけ chain digest を使う
   (`002`、`003`)。複数 operation は `owner` marker の `previous_complete_digest` (additive field) で chain を成し、tip の
@@ -107,10 +105,7 @@ provider wake / claim / doctor) の接合面として確認する。L7-512 が�
 - **residue の集合差分**: linked worktree の untracked memory を `(memory_id, content_digest)` の集合差分で観測し、
   mtime を使わない (`008`、`009`)。`invalid_memory` / `source_unsafe` は Slice 4a の typed reason を再利用する。
 - **回復の append-only**: 新 operation の apply は Slice 4b の transaction 経路を使い、個別ファイル単位で記録する
-  (`010`、`011`)。read-only fence が検証する `canonicalCorpusDigest` と `previous_complete_digest` は同じPR-1の既存 writer
-  additive changeが発行し、手書きmarkerを正例fixtureにしない (`020`)。
-  既存inventory / dry-runの全体denyは維持し、回復applyだけが個別parse結果を分離する。valid uniqueはcanonicalへno-clobber import、
-  dedupeはwrite 0、conflictはquarantine、invalidは除外してresultへ残すため、valid分のcompleteと全量成功の非主張を両立する (`010`)。
+  (`010`、`011`)。
 - **529 境界**: setup bootstrap 例外と `project_identity_commit_required` は `PLAN-L7-529` §6 (remote-less identity
   denial を fatal にしない) と両立させる (`014`)。
 
@@ -120,8 +115,8 @@ provider wake / claim / doctor) の接合面として確認する。L7-512 が�
 | --- | --- | --- |
 | requirements | not_impacted | project-scoped Memory root と fail-close の既存要求を変更しない。 |
 | L4-basic-design | not_impacted | primary / linked worktree の責務境界を変更しない。 |
-| L5-detailed-design | updated (bounded) | `owner.previous_complete_digest`、completeの`canonicalCorpusDigest`、実取り込み集合、個別import disposition、complete replayのreason precedenceを追加する。既存marker hash chain・DB schemaは変更しない。 |
-| L6-function-design | updated (bounded) | root解決・inventory正本は`PLAN-L7-512`に保持する。既存writerへ回復applyの個別importとcomplete replay分岐を追加するが、dry-run全体denyと未完了operationの`inventory_drift`は維持する。 |
+| L5-detailed-design | updated (additive) | `owner` marker に `previous_complete_digest` を additive に追加する (本 PLAN が所有。既存 marker の形式・既存 oracle・DB schema は変更しない)。 |
+| L6-function-design | not_impacted | root 解決・inventory・quarantine の正本は `PLAN-L7-512` に保持する。 |
 | L7-unit-test-design | updated | 実装 PR で `U-PMEMFENCE-*` を共有 `L7-unit-test-design.md` へ 1:1 登録する。既存 `U-PMEMINV-*` / `U-PMEMQUAR-*` は変更しない。 |
 | L12-acceptance-test-design | not_impacted | clean Pack provider parity E2E は #424 後続 slice が所有する。 |
 
@@ -169,8 +164,7 @@ gap は L7-533 の contract 改訂 (revision N+1) で閉じ、`PLAN-L7-512` / `P
 
 ## R4: Forward 再合流条件
 
-- PR-1 (read-only fence + 既存 migration writer の bounded additive changeから成るcompletion core transaction substrate) と
-  PR-2 (production 結線) が別 PR で main 到達し、各々の exact HEAD に Linux / Windows /
+- PR-1 (fence module) と PR-2 (production 結線) が別 PR で main 到達し、各々の exact HEAD に Linux / Windows /
   aggregate Green と Claude 族の非著者 closing receipt が存在する。
 - `CANDIDATE-U-PMEMFENCE-001..021` が同番号の `U-PMEMFENCE-*` へ 1:1 昇格し、同一 implementation revision の
   Red→Green 実測を引用している。
