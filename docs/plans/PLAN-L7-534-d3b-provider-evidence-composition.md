@@ -45,18 +45,18 @@ status: draft
 github_issue_id: 570
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:ba1bac310e1a41dabb4c8874c501e670
-  command_id: plan-revise:issue-570:forward:7
-  admitted_at: 2026-09-11T08:38:27.216Z
-  source_digest: sha256:271e369502fe0531e9c58ec30ed2d94a4df1c8a5b8a67bea2286c8165dab9e78
-  decision_digest: sha256:a9c7b182766e84abc142ea16c69e8fd99b9504577a0fcfdbff70240875cdc8cc
-  receipt_digest: sha256:74cde8acdb639094713cd874eb76ff05c59ba78e7ed7900b414ae26c6240da01
+  receipt_id: certificate:962ff92d68cdb7ee52efa4ba777acf9d
+  command_id: plan-revise:issue-570:forward:8
+  admitted_at: 2026-09-14T01:39:16.658Z
+  source_digest: sha256:b774ab61d31de2f0972e0ae42365049abc4cab7ab3d2f8ac8911ed947952822e
+  decision_digest: sha256:95314c78c8795bd3feb9ebb8332f0e77adc6a8c6125efa7a3be35562abee476c
+  receipt_digest: sha256:5ea78a53d205eacf97f1c88d800e8d298a08c42a5f46dd05589588a8fb2c1e08
   binding:
     path: docs/plans/PLAN-L7-534-d3b-provider-evidence-composition.md
     plan_id: PLAN-L7-534-d3b-provider-evidence-composition
     asset_id: plan:2eeafb9dd9883770a0f56c936c08bd1f
-    revision: 7
-    content_digest: sha256:271e369502fe0531e9c58ec30ed2d94a4df1c8a5b8a67bea2286c8165dab9e78
+    revision: 8
+    content_digest: sha256:b774ab61d31de2f0972e0ae42365049abc4cab7ab3d2f8ac8911ed947952822e
   route:
     signal: feature_addition
     mode: add-feature
@@ -75,10 +75,9 @@ admission_receipt:
     phase: forward_merge
   escape_reason: "Issue #570 D3b provider evidence composition pair-freeze
     (add-feature; PLAN-L7-562 producer downstream, PLAN-L6-85 rev 2 origin);
-    revision 6: Codex/Sol FLAG e3023aa5 (orphan receipt recovery without
-    overwrite: idempotent same-bytes / attempt_outcome_conflict, terminal only
-    with matching attempt_completed; candidate 006 aligned to
-    receiptFileDigest/receipt_mutated; candidate 020)"
+    revision 8: Codex/Sol FLAG 1c6186c0 (payload judgment_digest field
+    requirement contradicted PLAN-L7-562 preimage rule; runner now verifies
+    basename digest + canonical bytes only; candidate 012 aligned)"
 ---
 
 # PLAN-L7-534: D3b provider evidence composition
@@ -242,12 +241,16 @@ truncated final、Z の退避=上書き相当の攻撃面を構造で潰す)。
   **受理しない**: どちらかが存在すれば `operator_supplied_judgment_forbidden` で exit 非 0 (silent fallback で
   旧経路を残さない)。
 - runner は `UT_TDD_CUSTODY_JUDGMENT_ARTIFACT` (workflow input として渡される artifact bytes の path) を読み、
-  `PLAN-L7-562` の規則どおり payload から派生値 `judgment_digest` を除いた field を JCS canonicalize して sha256 を
-  再計算し、これを `judgmentDigest` とする (file bytes の sha256 ではない)。さらに (rev 7) (a) payload の
-  `judgment_digest` field が再計算値と一致、(b) artifact の basename が `<judgmentDigest>.json`、(c) file bytes が
-  producer (`PLAN-L7-562` の adapter) の canonical serialization と byte 一致、の 3 つを要求し、(a) 不一致は
-  `judgment_digest_mismatch`、(b)(c) 不一致は `judgment_artifact_noncanonical` で deny する (schema を保った
-  空白・key 順序の改変は (c) で止まる)。`providerEvidenceRef = d3b:<judgmentDigest>` はこの再計算値だけから組み立てる。
+  `PLAN-L7-562` の規則どおり payload の全 field を JCS canonicalize して sha256 を再計算し、これを
+  `judgmentDigest` とする (file bytes の sha256 ではない)。artifact payload は派生値 `judgment_digest` を **field と
+  して持たない** (`PLAN-L7-562` §2: preimage は派生値を除く field のみ、producer test U-D3B-006 が artifact bytes に
+  `judgment_digest` を含まないことを固定)。rev 7 の「payload の `judgment_digest` field が再計算値と一致」要求は
+  この上流契約と矛盾していたため rev 8 で撤回し、Issue #570 の payload 契約無変更境界を維持する。runner は
+  (a) artifact の basename `<digest>.json` の digest が再計算値 `judgmentDigest` と一致、(b) file bytes が producer
+  (`PLAN-L7-562` の adapter) の canonical serialization (JCS key 順 + 末尾改行 1 個) と byte 一致、の 2 つを要求し、
+  (a) 不一致は `judgment_digest_mismatch`、(b) 不一致は `judgment_artifact_noncanonical` で deny する (schema を
+  保った空白・key 順序の改変は (b) で止まる。payload に `judgment_digest` field が現れる artifact は producer が
+  生成し得ない bytes であり (b) で `judgment_artifact_noncanonical`)。`providerEvidenceRef = d3b:<judgmentDigest>` はこの再計算値だけから組み立てる。
   artifact payload の `repository` / `pr_number` / `head_sha` / `request_digest` / `attempt` が runner が観測する
   PR facts と request identity に一致しなければ `judgment_identity_mismatch` (bytes を別 PR へ転用する replay を
   塞ぐ)。`schema_version` / `kind` / verdict と `blocking_findings` の整合も producer と同じ規則で検証する。

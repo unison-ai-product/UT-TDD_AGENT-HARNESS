@@ -44,18 +44,18 @@ status: draft
 github_issue_id: 570
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:7858cbf692158d5a2545593b68cb22bc
-  command_id: plan-revise:issue-570:reverse:6
-  admitted_at: 2026-09-11T11:06:35.453Z
-  source_digest: sha256:0fcb2355b1253222c22cbe55b530b6f4a4633622bb96a350fbb25dc93b8314d8
-  decision_digest: sha256:e952f001576c1c06b31cc92792cce73dbcc95cbb78037ce1e2a72bf5c3ea8235
-  receipt_digest: sha256:55435a87c241177fa6a143833cf60e03693086fee602ae3ab015ba987606827b
+  receipt_id: certificate:d5a4b1afeb1e8a41547ee49bf835f3ac
+  command_id: plan-revise:issue-570:reverse:7
+  admitted_at: 2026-09-14T01:39:18.689Z
+  source_digest: sha256:beedd9086926136563482600fdf093eaa18705b799b437ea424c171e44739765
+  decision_digest: sha256:03d370ebc6eb3c99553a20589b3ce4e00ff765bb0c5a0b3c47333c4bef2d7201
+  receipt_digest: sha256:779071e1fe5601d95e3b9992c9e1c67e42f123c8e1fca488f642e0c54a556855
   binding:
     path: docs/plans/PLAN-REVERSE-534-d3b-provider-evidence-composition-backfill.md
     plan_id: PLAN-REVERSE-534-d3b-provider-evidence-composition-backfill
     asset_id: plan:12a8cb75b3ed72b98621ca0f22d4dc09
-    revision: 6
-    content_digest: sha256:0fcb2355b1253222c22cbe55b530b6f4a4633622bb96a350fbb25dc93b8314d8
+    revision: 7
+    content_digest: sha256:beedd9086926136563482600fdf093eaa18705b799b437ea424c171e44739765
   route:
     signal: reverse
     mode: reverse
@@ -76,8 +76,8 @@ admission_receipt:
     target_revision: 1
     phase: forward_merge
   escape_reason: "Issue #570 D3b provider evidence composition Reverse backfill
-    pair (R0); revision 6: align R1 and backprop scope with rev 7 hardlink
-    commit (Codex/Sol FLAG 27031890, rename residue)"
+    pair (R0); revision 7: candidate 012 oracle aligned with Forward rev 8 (no
+    payload judgment_digest field, Codex/Sol FLAG 1c6186c0)"
 ---
 
 # PLAN-REVERSE-534: D3b provider evidence composition の逆向き確認
@@ -140,7 +140,7 @@ artifact 配置と、L7-465 が所有する `unverified_family` 終端を別の�
 | 009 | PR-1 | producer 戻り後に artifact bytes を改変 (fake port) | `artifact_verification_failed`、artifact 残置 0 |
 | 010 | PR-1 | 同一 attempt を 2 回 compose | 2 回目は `replay: true`、envelope / artifact の write 0 |
 | 011 | PR-2 | `UT_TDD_CUSTODY_JUDGMENT_DIGEST` / `PROVIDER_EVIDENCE_REF` を設定 | `operator_supplied_judgment_forbidden`、exit 非 0、draft 0 |
-| 012 | PR-2 | artifact を (a) 内容 1 byte 改変、(b) 空白 / key 順序だけ改変、(c) basename を別名に | (a) `judgment_digest_mismatch`、(b)(c) `judgment_artifact_noncanonical`、draft 0 |
+| 012 | PR-2 | artifact を (a) 内容 1 byte 改変、(b) 空白 / key 順序だけ改変、(c) basename を別名に、(d) payload に `judgment_digest` field を挿入 | (a)(c) 再計算 digest ≠ basename → `judgment_digest_mismatch`、(b)(d) `judgment_artifact_noncanonical` (payload は派生値 field を持たない、`PLAN-L7-562` U-D3B-006)、draft 0 |
 | 013 | PR-2 | 別 PR / head の artifact bytes を渡す | `judgment_identity_mismatch`、draft 0 |
 | 014 | PR-2 | CLI 出力に payload / findings を含める実装へ変異 | stdout は artifact path と ref のみ |
 | 015 | PR-1 | receipt file を 1 byte 改変してから compose | `receipt_mutated`、write 0 |
