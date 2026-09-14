@@ -1,227 +1,98 @@
-import { execFileSync, spawn, spawnSync } from "node:child_process";
-import {
-  chmodSync,
-  cpSync,
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  readdirSync,
-  readFileSync,
-  rmSync,
-  statSync,
-  writeFileSync,
-} from "node:fs";
-import { tmpdir } from "node:os";
-import { basename, dirname, join } from "node:path";
+import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { loadMemoryCorpus, writeMemory } from "../src/memory/service.ts";
 import {
-  buildClaudeProviderInboxEntry,
-  claudeWorkspaceId,
-  publishClaudeInboxEntry,
-  resolveLiveClaudeTarget,
-  waitForClaudeMemory,
-} from "../src/runtime/claude-memory-wake.ts";
-import { resolveProjectMemoryRoot } from "../src/runtime/project-memory-root.ts";
-import {
-  buildCleanDistributionPlan,
-  cleanDistributionSourcePath,
-  transformCleanDistributionArtifact,
-} from "../src/setup/distribution.ts";
-import { headSnapshotRoot } from "./support/workspace-roots.ts";
+  createCleanPack,
+  createConsumerProject,
+  fixtureRoots,
+  removeFixtureTree,
+  runConsumer,
+  setupConsumerFromPack,
+  startConsumerWake,
+  stopConsumerWakeProcesses,
+  waitForConsumerWakeTarget,
+  writeConsumerRuntimeInput,
+} from "./support/pack-consumer-runtime.ts";
 
-// The clean Pack is materialized from the immutable detached test snapshot,
-// never from the live source worktree.
-const sourceRoot = headSnapshotRoot();
-const fixtures: string[] = [];
-
-function removeTree(path: string): void {
-  try {
-    const stat = statSync(path);
-    if (stat.isDirectory()) {
-      chmodSync(path, 0o755);
-      for (const name of readdirSync(path)) removeTree(join(path, name));
-    } else chmodSync(path, 0o644);
-  } catch {
-    return;
-  }
-  rmSync(path, { recursive: true, force: true });
-}
-
-function git(cwd: string, args: readonly string[]): string {
-  return execFileSync("git", ["-C", cwd, ...args], {
-    encoding: "utf8",
-    stdio: ["ignore", "pipe", "pipe"],
-  }).trim();
-}
-
-function walk(root: string): string[] {
-  const ignored = new Set([".git", "node_modules", "dist"]);
-  const paths: string[] = [];
-  const visit = (directory: string, prefix = ""): void => {
-    for (const entry of readdirSync(directory, { withFileTypes: true })) {
-      if (ignored.has(entry.name)) continue;
-      const relative = prefix ? `${prefix}/${entry.name}` : entry.name;
-      const absolute = join(directory, entry.name);
-      if (entry.isDirectory()) visit(absolute, relative);
-      else if (entry.isFile()) paths.push(relative.replaceAll("\\", "/"));
-    }
+function runConfiguredHook(root: string, provider: "claude" | "codex") {
+  const settingsPath = provider === "claude" ? ".claude/settings.json" : ".codex/hooks.json";
+  const settings = JSON.parse(readFileSync(join(root, settingsPath), "utf8")) as {
+    hooks: { PreToolUse: Array<{ hooks: Array<{ command: string; args: string[] }> }> };
   };
-  visit(root);
-  return paths.sort();
-}
-
-function createCleanPack(repository = "unison-ai-product/UT-TDD_AGENT-HARNESS-Pack"): string {
-  const root = mkdtempSync(join(tmpdir(), "ut-tdd-pack-parity-"));
-  fixtures.push(root);
-  const sourcePaths = walk(sourceRoot);
-  const plan = buildCleanDistributionPlan({
-    paths: sourcePaths,
-    sourceTag: "v0.2.0-canary.1",
-  });
-  expect(plan.ok, JSON.stringify(plan)).toBe(true);
-  for (const artifactPath of plan.artifactPaths) {
-    const sourcePath = cleanDistributionSourcePath(artifactPath, sourcePaths);
-    const from = join(sourceRoot, sourcePath);
-    const to = join(root, artifactPath);
-    mkdirSync(dirname(to), { recursive: true });
-    if (artifactPath === "package.json") {
-      writeFileSync(
-        to,
-        transformCleanDistributionArtifact(artifactPath, readFileSync(from, "utf8")),
-      );
-    } else cpSync(from, to, { recursive: true });
-  }
-  git(root, ["init", "-q", "-b", "main"]);
-  git(root, ["config", "user.email", "test@example.invalid"]);
-  git(root, ["config", "user.name", "UT-TDD Pack parity"]);
-  git(root, ["config", "core.autocrlf", "false"]);
-  git(root, ["remote", "add", "origin", `git@github.com:${repository}.git`]);
-  git(root, ["add", "."]);
-  git(root, ["commit", "-qm", "test: materialize clean Pack"]);
-  return root;
-}
-
-function installDependencies(root: string): void {
-  const result =
-    process.platform === "win32"
-      ? spawnSync(
-          join(process.env.SystemRoot ?? "C:\\Windows", "System32", "cmd.exe"),
-          ["/d", "/c", "npm", "ci", "--ignore-scripts", "--no-audit", "--no-fund"],
-          { cwd: root, encoding: "utf8", timeout: 300_000 },
-        )
-      : spawnSync("npm", ["ci", "--ignore-scripts", "--no-audit", "--no-fund"], {
-          cwd: root,
-          encoding: "utf8",
-          timeout: 300_000,
-        });
-  expect(result.status, `${result.stdout}\n${result.stderr}`).toBe(0);
-}
-
-function bootstrapCleanPack(root: string): void {
-  // A clean Pack has no node_modules. Install first, then exercise the
-  // production setup command as the identity authority.
-  installDependencies(root);
-  const setup = runPack(root, ["setup", "--solo"]);
-  expect(setup.status, `${setup.stdout}\n${setup.stderr}`).toBe(0);
-  git(root, ["add", "ut-tdd.project.json"]);
-  git(root, ["commit", "-qm", "test: commit Pack project identity"]);
-  // Runtime resolution is intentionally fail-closed until identity bytes are
-  // tracked and bound to the repository HEAD.
-  expect(resolveProjectMemoryRoot(root)).toMatchObject({ ok: true });
-}
-
-function runPack(root: string, args: readonly string[], env: NodeJS.ProcessEnv = {}) {
-  return spawnSync(process.execPath, [join(root, "src", "cli.ts"), ...args], {
+  const command = settings.hooks.PreToolUse[0].hooks[0];
+  expect(command.args.join(" ")).toContain(".ut-tdd/bin/ut-tdd.mjs");
+  return spawnSync(command.command, command.args, {
     cwd: root,
     encoding: "utf8",
+    windowsHide: true,
+    input: JSON.stringify({
+      tool_name: "Agent",
+      tool_input: { subagent_type: "pmo-haiku", model: "haiku" },
+    }),
     env: {
       ...process.env,
-      ...env,
       CLAUDE_PROJECT_DIR: root,
       UT_TDD_PROJECT_DIR: root,
       UT_TDD_SKIP_UPDATE_CHECK: "1",
     },
-    timeout: 120_000,
   });
 }
 
-function startClaudeWake(root: string, sessionId: string) {
-  const child = spawn(
-    process.execPath,
-    [join(root, "src", "cli.ts"), "hook", "claude-memory-wake"],
-    {
-      cwd: root,
-      env: {
-        ...process.env,
-        CLAUDE_CODE_ENTRYPOINT: "claude-vscode",
-        CLAUDE_PROJECT_DIR: root,
-        UT_TDD_PROJECT_DIR: root,
-        UT_TDD_CLAUDE_WAKE_POLL_MS: "10",
-        UT_TDD_CLAUDE_WAKE_MAX_MS: "30000",
-        UT_TDD_SKIP_UPDATE_CHECK: "1",
-      },
-      stdio: ["pipe", "pipe", "pipe"],
-      windowsHide: true,
-    },
-  );
-  const stdout: string[] = [];
-  const stderr: string[] = [];
-  child.stdout.on("data", (chunk: Buffer) => stdout.push(chunk.toString()));
-  child.stderr.on("data", (chunk: Buffer) => stderr.push(chunk.toString()));
-  child.stdin.end(JSON.stringify({ hook_event_name: "Stop", session_id: sessionId }));
-  return {
-    child,
-    result: new Promise<{ code: number | null; stdout: string; stderr: string }>((resolve) => {
-      child.once("close", (code) =>
-        resolve({ code, stdout: stdout.join(""), stderr: stderr.join("") }),
-      );
-    }),
-  };
-}
-
-async function waitForClaudeTarget(repoRoot: string): Promise<void> {
-  for (let attempt = 0; attempt < 100; attempt += 1) {
-    const target = resolveLiveClaudeTarget(repoRoot);
-    if (target.ok) return;
-    await new Promise((resolve) => setTimeout(resolve, 10));
-  }
-  throw new Error("clean_pack_claude_target_not_live");
+function removeInput(inputPath: string): void {
+  rmSync(inputPath, { force: true });
 }
 
 afterEach(() => {
-  for (const root of fixtures.splice(0)) removeTree(root);
+  stopConsumerWakeProcesses();
+  for (const root of fixtureRoots.splice(0)) removeFixtureTree(root);
 });
 
 describe("Issue #424 Slice 5 clean Pack/provider parity", () => {
-  it("CANDIDATE-P-PMEMROOT-002: clean Pack setup shares Memory and Claude wake across linked worktrees", async () => {
-    const primary = createCleanPack();
-    const linked = join(dirname(primary), `${basename(primary)}-linked`);
-    fixtures.push(linked);
-    git(primary, ["worktree", "add", "-q", "-b", "linked", linked]);
-    // Each linked worktree needs its own physical dependency tree and
-    // production-created project identity.
-    bootstrapCleanPack(primary);
-    bootstrapCleanPack(linked);
-    const memory = writeMemory({
-      repoRoot: primary,
-      input: {
-        kind: "project",
-        title: "clean Pack shared memory",
-        body: "published from the Pack primary checkout",
-        now: "2026-09-11T00:00:00.000Z",
-      },
-    });
-    expect(resolveProjectMemoryRoot(linked)).toMatchObject({
-      ok: true,
-      projectId: "unison-ai-product/UT-TDD_AGENT-HARNESS-Pack",
-    });
-    const list = runPack(linked, ["memory", "list", "--query", memory.title]);
-    expect(list.status, `${list.stdout}\n${list.stderr}`).toBe(0);
-    expect(list.stdout).toContain(memory.memory_id);
-    const wake = startClaudeWake(linked, "pack-linked-claude");
-    await waitForClaudeTarget(primary);
-    const notified = runPack(primary, [
+  it("CANDIDATE-P-PMEMROOT-002: consumer runtime keeps CLI, both provider hooks, Memory, and Claude wake after Pack removal", async () => {
+    const pack = createCleanPack();
+    const consumer = createConsumerProject("fixture/consumer-primary");
+    const input = await writeConsumerRuntimeInput(pack, consumer);
+    setupConsumerFromPack(pack, consumer, input);
+    removeInput(input);
+    removeFixtureTree(pack);
+
+    const cli = runConsumer(consumer, ["--help"]);
+    expect(cli.status, `${cli.stdout}\n${cli.stderr}`).toBe(0);
+    expect(cli.stdout).toContain("Usage");
+    expect(existsSync(join(consumer, ".ut-tdd", "bin", "ut-tdd.mjs"))).toBe(true);
+    const wrapperBytes = readFileSync(join(consumer, ".ut-tdd", "bin", "ut-tdd.mjs"), "utf8");
+    expect(wrapperBytes).not.toContain(pack);
+    for (const file of [".claude/settings.json", ".codex/hooks.json"])
+      expect(readFileSync(join(consumer, file), "utf8")).not.toMatch(
+        /(?:src[\\/]cli\.ts|src[\\/]setup[\\/]index\.ts|UT_TDD_SOURCE_CLI|SETUP_SOURCE_CLI)/,
+      );
+
+    for (const provider of ["claude", "codex"] as const) {
+      const hook = runConfiguredHook(consumer, provider);
+      expect(hook.status, `${provider}: ${hook.stdout}\n${hook.stderr}`).toBe(0);
+      expect(hook.stderr).not.toContain("BLOCK");
+    }
+
+    const added = runConsumer(consumer, [
+      "memory",
+      "add",
+      "--kind",
+      "project",
+      "--title",
+      "clean Pack shared memory",
+      "--body",
+      "published from the consumer runtime",
+    ]);
+    expect(added.status, `${added.stdout}\n${added.stderr}`).toBe(0);
+    const listed = runConsumer(consumer, ["memory", "list", "--query", "clean Pack shared memory"]);
+    expect(listed.status, `${listed.stdout}\n${listed.stderr}`).toBe(0);
+    expect(listed.stdout).toContain("clean Pack shared memory");
+
+    const wake = startConsumerWake(consumer, "pack-consumer-claude");
+    await waitForConsumerWakeTarget(consumer);
+    const notified = runConsumer(consumer, [
       "memory",
       "add",
       "--kind",
@@ -229,7 +100,7 @@ describe("Issue #424 Slice 5 clean Pack/provider parity", () => {
       "--title",
       "clean Pack provider parity notification",
       "--body",
-      "published from the Pack primary checkout",
+      "published from the consumer runtime",
       "--notify-claude",
       "--operation-id",
       "clean-pack-provider-parity",
@@ -238,7 +109,7 @@ describe("Issue #424 Slice 5 clean Pack/provider parity", () => {
     const delivered = await wake.result;
     expect(delivered.code, `${delivered.stdout}\n${delivered.stderr}`).toBe(2);
     expect(delivered.stderr).toContain("[UT_TDD_CLAUDE_INBOX]");
-    expect(delivered.stderr).toContain("published from the Pack primary checkout");
+    expect(delivered.stderr).toContain("published from the consumer runtime");
     expect(delivered.stderr).toContain('"operation_id":"clean-pack-provider-parity"');
     const published = notified.stdout
       .split(/\r?\n/)
@@ -248,50 +119,131 @@ describe("Issue #424 Slice 5 clean Pack/provider parity", () => {
     expect(existsSync(published as string)).toBe(false);
   }, 420_000);
 
-  it("CANDIDATE-P-PMEMROOT-003: same Memory ID in another Pack project cannot be read or claimed", async () => {
-    const primary = createCleanPack();
-    const foreign = createCleanPack("other/Pack");
-    bootstrapCleanPack(primary);
-    bootstrapCleanPack(foreign);
-    const memory = writeMemory({
-      repoRoot: primary,
-      input: {
-        kind: "project",
-        title: "isolated Pack memory",
-        body: "must not cross the project namespace",
-      },
-    });
-    const foreignMemory = writeMemory({
-      repoRoot: foreign,
-      input: {
-        kind: "project",
-        title: "isolated Pack memory",
-        body: "same ID, foreign project-local copy",
-      },
-    });
-    expect(foreignMemory.memory_id).toBe(memory.memory_id);
-    const primaryProject = resolveProjectMemoryRoot(primary);
-    expect(primaryProject).toMatchObject({ ok: true });
-    if (!primaryProject.ok) throw new Error(primaryProject.reason);
-    const entry = buildClaudeProviderInboxEntry({
-      memory,
-      projectId: primaryProject.projectId,
-      operationId: "isolated-pack-memory",
-      workspaceId: claudeWorkspaceId(foreign),
-      producer: { provider: "codex", sessionId: "pack-primary-codex" },
-      target: { scope: "session", provider: "claude", sessionId: "foreign-claude" },
-    });
-    const published = publishClaudeInboxEntry(foreign, entry);
-    expect(loadMemoryCorpus(foreign).entries.map((candidate) => candidate.memory_id)).toContain(
-      memory.memory_id,
+  it("CANDIDATE-P-PMEMROOT-003: a foreign consumer cannot read or claim another project's Memory/provider entry", async () => {
+    const pack = createCleanPack();
+    const primary = createConsumerProject("fixture/consumer-primary");
+    const foreign = createConsumerProject("fixture/consumer-foreign");
+    const primaryInput = await writeConsumerRuntimeInput(pack, primary);
+    setupConsumerFromPack(pack, primary, primaryInput);
+    removeInput(primaryInput);
+    const foreignInput = await writeConsumerRuntimeInput(pack, foreign);
+    setupConsumerFromPack(pack, foreign, foreignInput);
+    removeInput(foreignInput);
+    removeFixtureTree(pack);
+
+    const added = runConsumer(primary, [
+      "memory",
+      "add",
+      "--kind",
+      "project",
+      "--title",
+      "isolated Pack memory",
+      "--body",
+      "must not cross the project namespace",
+    ]);
+    expect(added.status, `${added.stdout}\n${added.stderr}`).toBe(0);
+    const primaryList = runConsumer(primary, ["memory", "list", "--query", "isolated Pack memory"]);
+    expect(primaryList.stdout).toContain("isolated Pack memory");
+    const foreignList = runConsumer(foreign, ["memory", "list", "--query", "isolated Pack memory"]);
+    expect(foreignList.status, `${foreignList.stdout}\n${foreignList.stderr}`).toBe(0);
+    expect(foreignList.stdout).not.toContain("isolated Pack memory");
+
+    // Produce a real provider envelope through the consumer CLI, then stop the
+    // primary wake before delivery so the foreign runtime can be challenged with
+    // the original project-bound bytes. No source/Pack CLI is used below this boundary.
+    const wake = startConsumerWake(primary, "pack-primary-codex");
+    await waitForConsumerWakeTarget(primary);
+    wake.child.kill();
+    await wake.result;
+    const notified = runConsumer(primary, [
+      "memory",
+      "add",
+      "--kind",
+      "project",
+      "--title",
+      "isolated Pack provider entry",
+      "--body",
+      "primary project only",
+      "--notify-claude",
+      "--operation-id",
+      "isolated-pack-provider",
+    ]);
+    expect(notified.status, `${notified.stdout}\n${notified.stderr}`).toBe(0);
+    const published = notified.stdout
+      .split(/\r?\n/)
+      .find((line) => line.startsWith("memory: notified Claude via "))
+      ?.slice("memory: notified Claude via ".length);
+    expect(published).toBeTruthy();
+
+    const foreignWake = startConsumerWake(foreign, "foreign-claude");
+    await waitForConsumerWakeTarget(foreign);
+    const foreignWakeRoot = findWakeRoot(foreign);
+    mkdirSync(join(foreignWakeRoot, "inbox"), { recursive: true });
+    mkdirSync(join(foreignWakeRoot, "envelope-bindings"), { recursive: true });
+    const entry = JSON.parse(readFileSync(published as string, "utf8")) as {
+      [key: string]: unknown;
+      projectId: string;
+      memoryId: string;
+      operationId: string;
+      producer: Record<string, string>;
+      target: Record<string, string>;
+    };
+    const generationFile = readdirSync(foreignWakeRoot).find((name) =>
+      name.endsWith(".generation"),
     );
-    const claim = await waitForClaudeMemory({
-      repoRoot: foreign,
-      sessionId: "foreign-claude",
-      pollIntervalMs: 10,
-      maxWaitMs: 80,
-    });
-    expect(claim).toMatchObject({ kind: "denied", reason: "project_id_mismatch" });
-    expect(existsSync(published)).toBe(true);
+    if (!generationFile) throw new Error("foreign_claude_generation_missing");
+    const workspaceId = (
+      JSON.parse(readFileSync(join(foreignWakeRoot, generationFile), "utf8")) as {
+        workspaceId: string;
+      }
+    ).workspaceId;
+    const target = { ...entry.target, sessionId: "foreign-claude" };
+    const envelopeDigest = createHash("sha256")
+      .update(
+        JSON.stringify({
+          schemaVersion: "ut-tdd.claude-inbox/v4",
+          projectId: entry.projectId,
+          memoryId: entry.memoryId,
+          operationId: entry.operationId,
+          producer: entry.producer,
+          target,
+        }),
+      )
+      .digest("hex");
+    const forged = {
+      ...entry,
+      id: `${entry.memoryId}:project:${entry.projectId}:op:${entry.operationId}:env:${envelopeDigest.slice(0, 16)}`,
+      targetWorkspaceId: workspaceId,
+      target,
+      envelopeDigest,
+    };
+    const safeId = forged.id.replace(/[^A-Za-z0-9._-]/g, "_").slice(0, 147);
+    const forgedName = `${safeId}_${createHash("sha256").update(forged.id).digest("hex").slice(0, 12)}.json`;
+    writeFileSync(join(foreignWakeRoot, "inbox", forgedName), `${JSON.stringify(forged)}\n`);
+    writeFileSync(
+      join(foreignWakeRoot, "envelope-bindings", forgedName),
+      `${JSON.stringify({
+        schemaVersion: "ut-tdd.claude-provider-binding/v1",
+        entryId: forged.id,
+        projectId: forged.projectId,
+        memoryId: forged.memoryId,
+        operationId: forged.operationId,
+        producer: forged.producer,
+        target: forged.target,
+        envelopeDigest: forged.envelopeDigest,
+      })}\n`,
+    );
+    const foreignWakeResult = await foreignWake.result;
+    expect(foreignWakeResult.code).not.toBe(2);
+    expect(foreignWakeResult.stderr).toContain("project_id_mismatch");
+    expect(existsSync(join(foreignWakeRoot, "inbox", forgedName))).toBe(true);
+    expect(readdirSync(foreignWakeRoot).some((name) => name.endsWith(".claim"))).toBe(false);
   }, 420_000);
 });
+
+function findWakeRoot(root: string): string {
+  const projects = join(root, ".git", "ut-tdd-runtime", "projects");
+  const namespace = readdirSync(projects).find((name) => !name.startsWith("."));
+  if (!namespace) throw new Error("consumer_runtime_project_namespace_missing");
+  return join(projects, namespace, "claude-memory-wake");
+}
