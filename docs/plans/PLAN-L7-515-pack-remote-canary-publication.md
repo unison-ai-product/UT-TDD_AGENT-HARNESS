@@ -1,12 +1,12 @@
 ---
 plan_id: PLAN-L7-515-pack-remote-canary-publication
-title: "PLAN-L7-515 (add-impl): human-approved Pack remote canary publication adapter pair-freeze"
+title: "PLAN-L7-515 (add-impl): human-approved Pack remote canary publication
+  adapter pair-freeze"
 kind: add-impl
 layer: L7
 drive: agent
 route_signal: feature_addition
 route_mode: add-feature
-status: confirmed
 created: 2026-08-27
 updated: 2026-08-28
 owner: Codex / Luna
@@ -14,15 +14,16 @@ parent_design: docs/plans/PLAN-L6-63-pack-staged-release-rollback.md
 pair_artifact: docs/test-design/harness/L7-pack-publication-remote-test-design.md
 next_pair_freeze: L8
 backprop_decision: required
-backprop_decision_reason: "human-approved remote publicationのauthority、CAS、partial/indeterminate境界をPLAN-REVERSE-515でL6契約へ逆向き検証し、既存local stagingとconsumer受入へ正しく接続する。"
-github_issue_id: 414
+backprop_decision_reason: human-approved remote
+  publicationのauthority、CAS、partial/indeterminate境界をPLAN-REVERSE-515でL6契約へ逆向き検証し、既存local
+  stagingとconsumer受入へ正しく接続する。
 agent_slots:
   - role: se
-    slot_label: "Luna worker - sealed remote publication intentと注入portの実装"
+    slot_label: Luna worker - sealed remote publication intentと注入portの実装
   - role: qa
-    slot_label: "Terra - approval/CAS/nonce/partial faultのRed oracleを実装する"
+    slot_label: Terra - approval/CAS/nonce/partial faultのRed oracleを実装する
   - role: tl
-    slot_label: "Sol - remote mutation境界、exact identity、fail-closeを非著者検収する"
+    slot_label: Sol - remote mutation境界、exact identity、fail-closeを非著者検収する
 generates:
   - artifact_path: docs/plans/PLAN-L7-515-pack-remote-canary-publication.md
     artifact_type: markdown_doc
@@ -44,36 +45,77 @@ dependencies:
 review_evidence:
   - reviewer: claude
     review_kind: cross_agent
-    reviewed_at: "2026-08-28T02:24:23.877Z"
-    tests_green_at: "2026-08-28T02:04:40Z"
-    verdict: "PASS-WEAK / blocking 0"
+    reviewed_at: 2026-08-28T02:24:23.877Z
+    tests_green_at: 2026-08-28T02:04:40Z
+    verdict: PASS-WEAK / blocking 0
     worker_model: gpt-5.6-sol
     reviewer_model: claude-opus-5
     effort: low
     plan_revision: 92d16905e85d2550b28b27b9f86874f07c4a0151
     subject_head: 92d16905e85d2550b28b27b9f86874f07c4a0151
-    scope: >-
-      PR #457 exact HEADのdocs-only pair-freeze closureを非著者review。
-      PLAN/test-designのconfirmed化に必要な契約整合と、引用した#438 receipt・CIの
-      evidence fidelityを確認した。remote publication実装、remote mutation、R2-R4、
-      Pack canary実行は証明しない。
+    scope: "PR #457 exact HEADのdocs-only pair-freeze closureを非著者review。
+      PLAN/test-designのconfirmed化に必要な契約整合と、引用した#438 receipt・CIの evidence
+      fidelityを確認した。remote publication実装、remote mutation、R2-R4、 Pack
+      canary実行は証明しない。"
     citations:
-      - ".ut-tdd/review/receipts/fc1c358580b053f2eaebbbfd55ff81a19542385e294a995afc78f35e42056a9c.json"
-      - "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/457#issuecomment-5447630566"
-      - "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/actions/runs/33134090758"
+      - .ut-tdd/review/receipts/fc1c358580b053f2eaebbbfd55ff81a19542385e294a995afc78f35e42056a9c.json
+      - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/457#issuecomment-5447630566
+      - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/actions/runs/33134090758
     green_commands:
       - kind: unit_test
-        command: "npm run test"
+        command: npm run test
         runner: node
         scope: full
         exit_code: 0
-        completed_at: "2026-08-28T02:04:40Z"
+        completed_at: 2026-08-28T02:04:40Z
         evidence_path: docs/test-design/harness/L7-pack-publication-remote-test-design.md
-        output_digest: "sha256:d2ae4a8cf48c21f4a402d679a73b993ca511f03fbab4b6a8b8703583695c1722"
+        output_digest: sha256:d2ae4a8cf48c21f4a402d679a73b993ca511f03fbab4b6a8b8703583695c1722
         anchor_commit: 92d16905e85d2550b28b27b9f86874f07c4a0151
+status: confirmed
+github_issue_id: 414
+admission_receipt:
+  schema_version: v2
+  receipt_id: certificate:87633b4278f4c2ee712d47c5ad675628
+  command_id: plan-revise:issue-565:legacy-515:2
+  admitted_at: 2026-09-14T11:07:56.407Z
+  source_digest: sha256:4e5e9b599e10f5cf7160c225acbb90f7eca0cab60e61d0dc2e8a3038d4f33a29
+  decision_digest: sha256:330f267cb75f1bb02bec58846fbea4a60b17f7150a8c08786492de34924bf352
+  receipt_digest: sha256:856037d6afa62c3f5f952cb024a10e5026fb7f3da532b74634dfc9a214701537
+  binding:
+    path: docs/plans/PLAN-L7-515-pack-remote-canary-publication.md
+    plan_id: PLAN-L7-515-pack-remote-canary-publication
+    asset_id: plan:legacy:dd38e3644941b703f78c60d86401764ac143a4deab467e4b321c64a8f0da8007
+    revision: 2
+    content_digest: sha256:4e5e9b599e10f5cf7160c225acbb90f7eca0cab60e61d0dc2e8a3038d4f33a29
+  route:
+    signal: feature_addition
+    mode: add-feature
+  issue:
+    provider: github
+    issue_id: 414
+    episode_id: E4-414-pack-remote-canary-publication
+    projection_digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+  origin:
+    plan_id: PLAN-L7-565-pack-publication-atomic-ref-cas
+    revision: 1
+    digest: sha256:efd67cb89dbf6e187fd998c062972332a868e868ee5b70993be4080a9ccb6647
+  reentry:
+    target_plan_id: PLAN-L7-515-pack-remote-canary-publication
+    target_revision: 2
+    phase: forward_merge
+  escape_reason: "Issue #565 correction of PLAN-L7-515 (legacy PLAN, rev 1 adopt +
+    rev 2): the GitHub PR merge API precondition is head-OID only; remote main
+    CAS primitive and execution authority are superseded by PLAN-L7-565 rev 1.
+    FSM / approval / journal / read-back contracts unchanged"
 ---
 
 # PLAN-L7-515: human-approved Pack remote canary publication adapter
+
+> **訂正 (2026-09-14)**: §3 の「protected Pack `main` へ approval 済み PR の CAS merge」のうち、
+> GitHub Pull Requests merge API に expected base OID の原子的な precondition があるという前提は誤りだった。
+> 同 API の `sha` は PR head OID だけを検査し、base の再観測と merge write の間に TOCTOU が残る。
+> publication FSM、approval、journal、read-back の契約は維持し、remote main CAS primitive と実行 authority
+> だけを `PLAN-L7-565-pack-publication-atomic-ref-cas` が supersede する。
 
 ## Closure evidence
 

@@ -3776,6 +3776,22 @@
         "revision": 5,
         "content_digest": "sha256:f17423fa1aca2120c33a0ab49b0af2822b2556165af20cd4fb43ad5acfc1fb59"
       }
+    },
+    {
+      "sequence": 237,
+      "previous_record_digest": "sha256:1543eafc3432e6116528da514fca852f593af026d053590df2183d5a2333c6f5",
+      "record_digest": "sha256:5f7261f96d247b132da5d99f7b7ea345d43f9a991953076c167efa7021e063f2",
+      "command_id": "plan-revise:issue-565:legacy-515:2",
+      "receipt_id": "certificate:87633b4278f4c2ee712d47c5ad675628",
+      "receipt_digest": "sha256:856037d6afa62c3f5f952cb024a10e5026fb7f3da532b74634dfc9a214701537",
+      "decision_digest": "sha256:330f267cb75f1bb02bec58846fbea4a60b17f7150a8c08786492de34924bf352",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-515-pack-remote-canary-publication.md",
+        "plan_id": "PLAN-L7-515-pack-remote-canary-publication",
+        "asset_id": "plan:legacy:dd38e3644941b703f78c60d86401764ac143a4deab467e4b321c64a8f0da8007",
+        "revision": 2,
+        "content_digest": "sha256:4e5e9b599e10f5cf7160c225acbb90f7eca0cab60e61d0dc2e8a3038d4f33a29"
+      }
     }
   ]
 }
