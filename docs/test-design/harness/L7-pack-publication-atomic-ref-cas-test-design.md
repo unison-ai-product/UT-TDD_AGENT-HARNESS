@@ -31,6 +31,7 @@ production codeと共有`U-*`登録は後続implementation PRまで追加しな�
 | `CANDIDATE-PACKPUB-CAS-012` | expected `E`、reviewed head `H`で、push直前に競合writerがmainを同じ`H`へ進め、pushが`up-to-date` exit 0、read-back `H`を返す | porcelainの`=`/`[up to date]`は`cas_not_applied_by_operation`/`indeterminate`、success 0、後続write 0。actual-update status 1件とread-back一致の対照だけ成功 |
 | `CANDIDATE-PACKPUB-CAS-013` | preparation Appにbypassを与える、CAS AppにPull requests writeを与える、token/installation/operationを相互交換・同時保持する | preparationはnon-bypass Contents+PR write、CASはbypass Contents writeのみ。permission/identity/token lifecycleの各軸不一致は該当phase前にdeny、write 0 |
 | `CANDIDATE-PACKPUB-CAS-014` | preparation/admission分離をno-op branch/PR port、dummy attestation、旧mutationのwrite省略で偽装し、またはpreparation nonceをpublicationで再利用する | real preparation入口だけがbranch/PR mutationを発行し専用journal/receiptを生成。publication入口のbranch/PR call 0、nonce集合の積集合0。adapter source変更はbounded adapter sliceだけで許可 |
+| `CANDIDATE-PACKPUB-CAS-015` | release visible直後crash、second preparation/review各待機点restart、first PR/head/receipt/nonce/tokenのsecond流用、prep token保持、CAS AppへのPR write追加を各々注入 | visible後はsuccess 0のdurable pause。pointer専用second preparation→review→admission→CASだけが進み、各operation/nonce/journal/receipt/tokenはfirst cycleと交差0。待機中write 0、mutation intent後crashは観測reconcileのみ |
 
 ## 3. 継承するproduction-port oracle
 
@@ -39,7 +40,7 @@ production codeと共有`U-*`登録は後続implementation PRまで追加しな�
 | `CANDIDATE-PACKPUB-005-B` | expected actor/repo/main/tagを1軸ずつ変異し、またはidentity preflightをcompositionから外す | 各軸固有のtyped deny、全remote write 0。actor non-emptyだけの検査と未使用helperはRed |
 | `CANDIDATE-PACKPUB-005-G` | mutation開始後のgh非0 exit、timeout、stdout/stderr output-limitを各々注入 | `indeterminate`、後続write 0。tag readの404だけが不在で、その他失敗を`attested(null)`へ丸めない |
 | `CANDIDATE-PACKPUB-005-H` | fake応答へtoken風文字列、全approvalへ異なるnonceを混入 | token文字列はstdout/journal/receipt/errorで0件。receipt noncesはconsume済みapproval mutation集合と1:1 byte一致し、未consume nonce 0件 |
-| `CANDIDATE-PACKPUB-005-I` | endpoint/method/header/query/stdinの各1行を§4.1対応から変異 | production ports + `publishPackCanary` full FSM ledgerがplanned→canaryの全argvとjournal順序を1:1照合し、個別portだけではGreenにしない |
+| `CANDIDATE-PACKPUB-005-I` | endpoint/method/header/query/stdinの各1行を§4.1対応から変異 | production ports + `publishPackCanary` full FSM ledgerがfirst preparation/review/admission、planned→release_visible、durable pause、second preparation/review/admission、canary CAS/resumeの全argvとjournal順序を1:1照合し、個別portだけではGreenにしない |
 | `CANDIDATE-PACKPUB-005-J` | assetをbase64 JSONで送る、通常APIへupload、listing digestだけ信用、download bytes/size/digestを1 byte変異 | uploads endpointのraw stdinがsealed bytesと一致し、download raw bytes再計算不一致で停止。exact name/IDとexact 2 assetsを要求 |
 | `CANDIDATE-PACKPUB-005-P` | approval filesを自己整合した別nonce群へ全差替し、origin/main commitmentは不変 | 各`sha256(nonce)`不一致でseal前`approval_commitment_mismatch`、write 0 |
 | `CANDIDATE-PACKPUB-005-Q` | (a) record approverだけ変異しfile不変、(b) file approverだけ変異しrecord不変 | 両刺激を独立caseで`approval_commitment_mismatch`/`approval_binding_mismatch`、receipt 0、write 0 |
