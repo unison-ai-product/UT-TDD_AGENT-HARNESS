@@ -7,7 +7,7 @@ drive: fullstack
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-08-26
-updated: 2026-09-09
+updated: 2026-09-11
 owner: PO / TL
 parent_design: docs/governance/ut-tdd-agent-harness-requirements_v1.2.md
 pair_artifact: docs/test-design/harness/L7-project-scoped-memory-root-test-design.md
@@ -34,6 +34,8 @@ generates:
   - artifact_path: src/runtime/project-memory-migration.ts
     artifact_type: source_module
   - artifact_path: tests/project-memory-migration.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/project-memory-pack-parity.test.ts
     artifact_type: test_code
 dependencies:
   parent: docs/governance/ut-tdd-agent-harness-requirements_v1.2.md
