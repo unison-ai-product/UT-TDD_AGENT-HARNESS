@@ -296,6 +296,37 @@ describe("PLAN-L7-532 PR-1 production ports", () => {
     expect(journal.events()).toHaveLength(1);
   });
 
+  it("CANDIDATE-PACKPUB-005-E / -F: post-write append failure preserves consumed event for reconcile", async () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-packpub-"));
+    const fixture = approvalFixture(root);
+    const journal = createFilePublicationJournalPort({
+      root: join(root, "publication"),
+      operationId: "op-1",
+      afterAppend: () => {
+        throw new Error("fsync-return failure");
+      },
+    });
+    const approvalPort = createFileApprovalPort({
+      root: join(root, "approvals"),
+      operationId: "op-1",
+      commitment: fixture.commitment,
+      commitmentExpected: fixture.expected,
+      durableState: journal,
+    });
+    await expect(approvalPort.consume(fixture.approval)).resolves.toEqual({
+      status: "indeterminate",
+      reason: "journal_persist_failed",
+    });
+    expect(existsSync(join(root, "approvals", "op-1", "planned.planned.json"))).toBe(false);
+    expect(existsSync(join(root, "approvals", "op-1", "planned.planned.consumed.json"))).toBe(true);
+    expect(journal.events()).toHaveLength(1);
+    await expect(approvalPort.consume(fixture.approval)).resolves.toEqual({
+      status: "attested",
+      value: { mode: "reconcile" },
+    });
+    expect(journal.events()).toHaveLength(1);
+  });
+
   it("CANDIDATE-PACKPUB-005-J / -L: read-back and CAS boundaries are typed", async () => {
     const ports = createPackPublicationProductionPorts({ runner: ghRunner(), operationId: "op-1" });
     const drift = await ports.pack.mergePullRequestCas({

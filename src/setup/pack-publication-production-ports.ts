@@ -1059,6 +1059,7 @@ export function createFileApprovalPort(
         approval,
         consumed: true,
       });
+      const journalDigestBeforeAppend = options.durableState.digest();
       const existing = existsSync(source) ? parseApproval(source) : null;
       if (existing === null && existsSync(consumed)) {
         const prior = parseApproval(consumed);
@@ -1090,6 +1091,14 @@ export function createFileApprovalPort(
           }),
         );
       } catch {
+        let journalDigestAfterAppend: string;
+        try {
+          journalDigestAfterAppend = options.durableState.digest();
+        } catch {
+          return { status: "indeterminate", reason: "journal_persist_failed" };
+        }
+        if (journalDigestAfterAppend !== journalDigestBeforeAppend)
+          return { status: "indeterminate", reason: "journal_persist_failed" };
         try {
           (options.rename ?? renameSync)(consumed, source);
         } catch {
@@ -1111,6 +1120,7 @@ export function createFilePublicationJournalPort(input: {
   readonly root: string;
   readonly operationId: string;
   readonly beforeAppend?: (event: PublicationJournalEvent) => void;
+  readonly afterAppend?: (event: PublicationJournalEvent) => void;
 }): FilePublicationJournalPort {
   const path = join(input.root, input.operationId, "journal.jsonl");
   const readLines = (): PublicationJournalEvent[] => {
@@ -1134,6 +1144,7 @@ export function createFilePublicationJournalPort(input: {
       } finally {
         closeSync(handle);
       }
+      input.afterAppend?.(event);
     },
     digest() {
       let tip = "";
