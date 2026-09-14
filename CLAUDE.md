@@ -212,8 +212,10 @@ PR #167、自己 supersede 7 件 #183)。以下を**再締結**する。新規�
    必要になったら実装を止めて契約改訂へ戻る。
 2. **merge**: closing review の PASS verdict 受領前に merge しない (exact-HEAD プロトコル、
    §Hybrid 多ランタイム commit 協調)。例外なし。
-3. **review**: cross-review は成果物を書いていない family の frontier tier で行い、
-   委譲は正規経路 (`ut-tdd codex|claude --role <role>`) のみ (§委譲と判断層)。
+3. **review**: closing review (再検を含む) は成果物を書いていない family の frontier tier で行い、
+   委譲は正規経路 (`ut-tdd codex|claude --role <role>`) のみ (§委譲と判断層)。FLAG 後の
+   **軽作業の是正は同 PR 内で author family が行い、同じ非著者 reviewer が exact head を再検する**。
+   close→再出や契約改訂へ戻すのは上流契約の齟齬だけ (§FLAG 後の限定是正と merge)。
 4. **資源**: doctor singleton / 並列上限 8 / foreign-edit override one-shot
    (§Shared Guard Discipline)。exit 2 は待つ。別形式での再起動をしない。
 5. **メモリ**: `ut-tdd memory add` 経由のみ。手書き禁止。エピソード状態を書かない
@@ -242,10 +244,41 @@ close された)。新規機構は作らず、既存工程の遵守を規律と�
 3. **1 PR = 1 論点**: 新規 source_module 1 個 + 対になるテスト + 最小配線まで。
    CLI surface / audit / 別 consumer は別 PR。
 4. **scope 構造を指す FLAG は close→分割再出が既定**。同一 PR への是正 commit
-   積み増しで応じない。
+   積み増しで応じない (ここで禁じるのは scope 構造 FLAG への積み増し。軽作業の是正 commit は
+   §FLAG 後の限定是正と merge に従い author family が同 PR 内に積む)。
 
 この規律から外れた PR は内容の当否に関わらず FLAG (process violation) とする
 (宣言の初出: issue #218、2026-08-03)。
+
+### FLAG 後の限定是正と merge (PO ルール 2026-09-14、両ランタイム共通)
+
+FLAG のたびに PR を close→再出したり契約改訂へ戻したりすると、CI (13〜14 分) → request → consume →
+receipt の往復が FLAG の数だけ発生して収束しない (実測: PR #572 は r1〜r4 で CI 11 run、PR #574 は
+簿記 red 2 回 + FLAG 6 件)。PO 判断 (2026-09-14): 「レビューが差し戻すと永遠に詰まる。merge のための
+軽作業まで戻す意味はない。上流齟齬でそもそも違う以外は返さない」。issue #579。
+
+judgement の族分離は concept v3.1 (hybrid の worker / reviewer 別 runtime は MUST) と canonical merge
+dispatch (same-family verdict は `same_family_reviewer` で拒否) が機械強制しており、本節はそれを
+緩めない。収束させるのは **差し戻し先** であって review の族ではない。
+
+1. **同 PR 内で往復する**: 非著者 family の frontier reviewer (Codex 著 = Claude Opus、Claude 著 =
+   Codex Sol) が FLAG を出したら、**author family が同 PR 内で軽作業を是正** し、**同じ非著者
+   reviewer が新 exact head を再検** する。blocking 0 なら author 側 control lane が正規経路
+   (`ut-tdd pr merge`) で merge する。close→再出も、契約改訂への差し戻しも、軽作業では行わない。
+2. **軽作業の定義**: FLAG 是正のうち (a) 上位契約 (PLAN 設計判断節 / 設計文書 / test-design の
+   凍結 oracle) の変更を伴わない、(b) 新規 source_module を追加しない、(c) 是正 3 回以内で
+   blocking 0 に収束する、の全てを満たすもの。(c) を超えたら close→分割再出 (§PR スコープ規律 4)。
+3. **差し戻しは契約齟齬だけ**: 上位契約そのものが違うと reviewer が判定した場合は PR 内で直さず、
+   契約改訂 (設計文書 / PLAN 設計判断、pair-freeze) へ戻す。これが設計 owner へ返す唯一の経路であり、
+   実装の手直しを返す経路ではない。
+4. **再検の担保**: 再検 packet は author claim・自己評価・前回 verdict を除いて control 側が組む
+   (blind packet)。再検は新 exact head に束縛し (receipt の再利用禁止)、反証試行を verdict に残す
+   (反証ゼロの PASS は PASS-WEAK)。receipt の evidence tier は従来どおり `cross_agent`。
+5. **是正 commit は常に author family が積む**: biome format 等の機械的是正であっても reviewer family は
+   commit しない (成果物を書いた時点で非著者ではなくなり、再検の族分離が壊れる)。reviewer は FLAG の
+   `FINDING:` 行で是正内容を指し、author family が同 PR 内に path 明示 stage・history 非破壊 (reset / force
+   禁止) で積み、PR コメントに是正内容を記録する。§Hybrid 多ランタイム commit 協調の例外は設けない。
+6. **Codex worker の役割**: 初回実装 + 自 PR の軽作業是正 + 契約齟齬時の契約改訂。
 
 ### Hybrid 多ランタイム commit 協調 (Claude ↔ Codex、必須)
 
@@ -257,7 +290,9 @@ close された)。新規機構は作らず、既存工程の遵守を規律と�
   force で破棄・デグレさせない**。working tree の foreign 変更は **既定で「相手ランタイムの正規作業」と
   みなす** (overstep と決めつけない)。判断が付かなければ revert せず PO へ確認する。
 - 自分の成果は **相手の commit の上に積む** (rebase/stack)。相手のファイルには触れず、自分の意図ファイル
-  のみを path 明示で stage する (`git add <path>`、`git add -A` / `git add .` 禁止)。
+  のみを path 明示で stage する (`git add <path>`、`git add -A` / `git add .` 禁止)。FLAG 後の
+  是正 commit も author family が積む (§FLAG 後の限定是正と merge 5。reviewer family の代理 commit は
+  認めない)。
 - **commit 直前に `git status` + `git diff --staged` (or `ut-tdd review --staged` / `--uncommitted`) を
   確認**し、自分が authored した意図ファイルのみが staged であることを検証する。
 - push は origin と相手の commit を含めて整合する状態でのみ行う。push 済み履歴は決して破壊しない。
@@ -340,7 +375,9 @@ Task-kind ベースの割当 (PO rule 2026-07-14、旧 tier 記述を supersede)
   task-kind 例外 (PO rule 2026-07-08)。
 - Implementation work in `hybrid` is cross-executed and cross-reviewed: the
   non-orchestrating provider executes, and review returns to the other
-  provider (tier-router implementation lane, PO rule 2026-07-08).
+  provider (tier-router implementation lane, PO rule 2026-07-08). FLAG 後の
+  軽作業の是正は同 PR 内で author family が行い、同じ非著者 reviewer が exact head を
+  再検する (PO rule 2026-09-14、§FLAG 後の限定是正と merge)。
 - Design/implementation review uses a top reviewer model: GPT frontier
   (`gpt-5.6-sol`) or Claude Opus (`claude-opus-5`) or above, behind the
   explicit frontier gate.
