@@ -8,7 +8,7 @@ status: draft
 route_signal: research
 route_mode: research
 created: 2026-09-04
-updated: 2026-09-08
+updated: 2026-09-14
 owner: PO / Claude
 github_issue_id: 530
 pair_artifact: docs/governance/candidates/ut-tdd-concept-v4-acceptance.md
@@ -294,7 +294,7 @@ PO 追加指示 (2026-09-04) により、上流要求エンジン (L1 intake →
 人間承認 freeze)、Discovery PoC の別 axis 化と S4 decision record、ハーネスメモリの captured → canonicalized →
 retired lifecycle と責務 owner の学習資産、skill applicability の typed registry・最小 packet・telemetry・
 可逆 quarantine・shadow 昇格を追加で採る (UTV4-BR-009〜012)。
-採らない: Python 恒久意味コア (ADR-001 と衝突)、多軸分類 registry による routeFiling 置換
+採らない: 多軸分類 registry による routeFiling 置換 (Python 恒久意味コアの不採用は §3.25 で撤回し、管理知能層として採用へ変更)
 (別 version-up)、repository / CLI の rename。
 
 ### 3.3 Provider topology (advisor design、claude-fable-5、2026-09-04)
@@ -593,6 +593,7 @@ V-pair、Forward/Reverse/Recovery、routeFiling の責務、独立検証、Git �
 | S3 #534 | `docs/governance/candidates/ut-tdd-concept-v4-requests.md` | RM-ADD-01〜13 を既存 BR への refinement とし、真の追加のみ新 BR (UTV4-BR-033〜) を起こす | `trace/ADDITIONS.md` | S1 |
 | S4 #535 | `docs/governance/candidates/ut-tdd-concept-v4-requirements.md` | 順序予測・共通 JSON・actual readiness・CAS/資源/aging/再計画・版互換/移行を FR (UTV4-FR-060〜) へ、consumer 更新は一本道 | `execution/02_PR517_INTEGRATION.md`「主要条件」、`migration/05_SURFACE_AND_SCHEMA_PLAN.md` | S1 |
 | S5 #536 | `docs/governance/candidates/ut-tdd-concept-v4-acceptance.md` | UTV4-AC-073〜、SCHED-01〜14、REL-Rxx-AC 要点、updater fault point を受入へ | `workstreams/01_SCHEDULING.md`、`01_RELEASE_MATRIX.md` | S1 |
+| #575 | `docs/governance/candidates/ut-tdd-concept-v4.0.md`、本 PLAN §3.25 | 管理知能 (Python 別プロセス) による意味分類とチケット発行、PLAN 新規発行停止と 4 段階移行 | PO 指示 2026-09-14、`execution/02_PR517_INTEGRATION.md` 主要条件 2、`migration/00_REPLACEMENT_MATRIX.md` MIG-04/07/14 | S1 (S2 と並行可。S2 が同じ節を触る場合は後着が統合) |
 
 SL-R00-01〜SL-R10-03 (39 個、確認コマンド: `grep -c '^| SL-' docs/governance/candidates/v4-roadmap/execution/01_DEPENDENCIES_AND_WORK_PACKAGES.md` = 39) は
 本 PLAN 側で正式採番せず、既存 issue へ接続する方針とする。対応の一例 (`02_CURRENT_BASELINE.md`「既存 Issue の
@@ -603,6 +604,31 @@ schedule/資源) → #480 拡張。全 39 件の一対一表は S2〜S5 の各�
 み示す (資料が全件進捗監査ではないと明記するため、`02_CURRENT_BASELINE.md` 冒頭)。
 
 順序契約: S0 (#531) → S1 (本 PLAN、#532) → S2〜S5 (#533〜#536、並行可)。S1 merge 前に S2〜S5 を着工しない。
+
+### 3.25 管理知能 (Python) による意味分類・チケット発行と PLAN 新規発行停止 (PO 指示 2026-09-14)
+
+PO 指示: 「plan 系は手戻りが多くて責務を盛りすぎている。作業チケット化して簡略する」「plan はそもそも二重管理に近いし、
+作業前の許可証的な扱いになるから、上位から見たらただの作業チケット」「開発ハーネス上に管理知能を Python で入れて意味分類して
+チケット発行する」「次世代のバージョンになるのだから ADR を絶対に扱う意味がわからない」。
+
+実測 (main `cedee07d`): PLAN 963 件 (REVERSE 211、draft 276)。PLAN-L7-534 は実装着手前に Forward rev 8 + Reverse rev 7。
+PR #574 は実装 test は落ちず PLAN 簿記 (generates / status / review_evidence) で 2 回 CI red (`merged-plan-status`)。
+PLAN の設計判断・AC・oracle は L1/L3/L4〜L6/test-design の写しであり、固有機能は作業許可である。
+
+advisor 相談 (`ut-tdd advisor --decision design`、claude-fable-5、2026-09-14): 推奨は「管理知能は TS で書く (Python 必然性の実証が
+出た時点で ADR 改訂)」「PLAN 停止は本線 7 PR 後、併存 4 段階」「confirmed PLAN の決定を覆すので別 issue」。前提検証: 本 PLAN は
+draft であり confirmed ではない (別 issue #575 は起票したが supersession 手続は不要)。
+
+| 案 | 内容 | 評価 |
+|---|---|---|
+| (a) | 管理知能を Python 別プロセスとし、実行系は TS 継承。v4 昇格時に新 ADR が ADR-001 を supersede | **採択 (PO 指示)**。意味分類・判断 record の校正・分類器の機械判断化は Python の ML / データ処理資産が厚く、保守者の主言語でもある (ADR-001 自身が「チーム保守が Python 一択化する等あれば再評価」と留保)。管理知能を信頼根にしない (Kernel が検証) ことで二言語境界の risk を封じる |
+| (b) | ADR-001 維持、管理知能を harness 非同梱の外部 tool | 却下。チケット発行は工程の中核で外部 tool では所有境界が立たない |
+| (c) | 管理知能も TS (advisor 推奨) | override。ADR-001 は v3 世代の実行系決定であり、次世代の管理知能層を旧 ADR に従属させない (PO)。override 根拠 = PO 指示 + ADR-001 の再評価留保 + 上記の実測 |
+
+採択: 概念 §管理知能とチケット発行 / 不変条件 11 / Ledger 表の PLAN 行 / 情報 flow / v3.1 資産の移行を改訂。PLAN 停止の時期は
+advisor 推奨どおりプレリリース本線 (R00) 残 PR の後、4 段階併存移行 (許可証の空白期間を作らない)。BR / FR / AC への降下は S3〜S5 で
+扱い (BR: 管理知能・PLAN 停止、FR: チケット record schema と Kernel 検証、AC: 発行 deny / write-0、digest 不在 deny、空白期間 0)、
+本節では候補 concept の記述に留める。新 ADR (ADR-001 supersede) は v4 昇格 PR (工程 3) で起こす。runtime / gate の実変更は含まない。
 
 ## 4. 工程
 
