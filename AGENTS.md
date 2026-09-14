@@ -158,11 +158,11 @@ route blind review to the provider that did not author the change so
 attacker/defender providers stay separated. The Claude subagent counterpart is
 `.claude/agents/blind-reviewer.md`.
 
-FLAG 後の**軽作業の是正は reviewer lane が自分で行い merge まで持つ** (PO ルール
-2026-09-14、正本: `CLAUDE.md` §review lane の是正権限と merge)。Codex が reviewer の PR
-(Claude 著) では Sol が review、Luna が是正 (別 session、blind packet、exact head 再検) を
-行い、author family へ返すのは上位契約の齟齬だけ。blind-reviewer role 自体は read-only の
-まま (是正は fixer role の別 session)。evidence tier は `same_family_separated`。
+FLAG 後の**軽作業の是正は同 PR 内で往復する** (PO ルール 2026-09-14、正本: `CLAUDE.md`
+§FLAG 後の限定是正と merge)。Codex 著 PR では Claude Opus が FLAG → Codex (Luna、別 session)
+が同 PR 内で是正 → Opus が新 exact head を再検。Claude 著 PR では Sol が FLAG → Claude が
+是正 → Sol が再検し、Claude control lane が wrapper merge する。blind-reviewer role 自体は
+read-only のまま。契約改訂へ戻すのは上位契約の齟齬だけ。
 
 Model / effort routing defaults (task-kind ベース、PO rule 2026-07-14):
 

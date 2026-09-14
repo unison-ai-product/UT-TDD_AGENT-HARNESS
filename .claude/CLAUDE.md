@@ -170,10 +170,10 @@ trade-off を記録した PLAN とする。spot-check で (a) この対象に該
   completed)。
 - 単一 runtime しか使えない場合のみ `intra_runtime_subagent` を記録する
   (cross_agent を僭称しない)。
-- **FLAG 後の軽作業是正は reviewer lane 内で行い merge まで持つ** (PO ルール 2026-09-14、
-  正本: `../CLAUDE.md` §review lane の是正権限と merge)。Claude 側は Opus が review、Sonnet が
-  是正 (別 session、blind packet、exact head 再検)。author family (Codex) へ返すのは上位契約の
-  齟齬だけ。evidence tier は `same_family_separated` として記録し cross_agent を僭称しない。
+- **FLAG 後の軽作業是正は同 PR 内で往復する** (PO ルール 2026-09-14、正本: `../CLAUDE.md`
+  §FLAG 後の限定是正と merge)。Codex 著 PR では Claude Opus (blind-reviewer) が FLAG → Codex が
+  同 PR 内で是正 → Opus が新 exact head を再検。Claude 著 PR では Sol が FLAG → Claude (Sonnet 是正、
+  別 session) → Sol が再検 → Claude control lane が wrapper merge。review の族分離は変えない。
 
 ### 唯一の回避条件: 利用上限による停止
 
@@ -255,8 +255,8 @@ the blind review should run on the provider that did not author the change (Clau
 subagent for Codex-authored work, `ut-tdd codex --role blind-reviewer` for
 Claude-authored work) so attacker/defender providers stay separated; single-runtime
 modes record `intra_runtime_subagent` evidence instead. FLAG 後の軽作業の是正は
-reviewer lane (Sonnet 是正 → Opus 再検) が merge まで持ち、author family へは上位契約の
-齟齬だけを返す (`../CLAUDE.md` §review lane の是正権限と merge)。
+author family が同 PR 内で行い、同じ非著者 reviewer が新 exact head を再検する。契約改訂へ
+戻すのは上位契約の齟齬だけ (`../CLAUDE.md` §FLAG 後の限定是正と merge)。
 
 Source-snapshot exploration is not an active Claude Code subagent route. Use
 project-focused agents for repository inspection and treat migration snapshots
