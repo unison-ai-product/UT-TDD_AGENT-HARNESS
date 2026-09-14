@@ -11,7 +11,9 @@ import {
   createFilePublicationJournalPort,
   createFilePublicationReceiptPort,
   createPackPublicationProductionPorts,
+  loadApprovalCommitmentFromOriginMain,
   type ProcessResult,
+  validatePackApprovalCommitment,
 } from "../src/setup/pack-publication-production-ports.ts";
 
 const sha = (value: string) => createHash("sha256").update(value).digest("hex");
@@ -29,10 +31,20 @@ function ghRunner() {
     if (path.includes("git/blobs")) return result({ sha: commit("a") });
     if (path.includes("git/trees")) return result({ sha: commit("b"), tree: [] });
     if (path.includes("git/commits"))
-      return result({ sha: commit("c"), commit: { tree: { sha: commit("b") } } });
+      return result({
+        sha: commit("c"),
+        commit: { tree: { sha: commit("b") } },
+        controlManifestSnapshotDigest: `sha256:${"d".repeat(64)}`,
+        releaseId: "release-1",
+        sourceRevision: commit("1"),
+        materializerVersion: "1.0.0",
+        mergeMode: "pull_request_cas",
+      });
     if (path.includes("git/refs") || path.includes("pulls"))
       return result({ number: 7, sha: commit("c"), merge_commit_sha: commit("c") });
-    if (path.includes("branches/")) return result({ commit: { sha: commit("1") } });
+    if (path.includes("git/ref/heads")) return result({ object: { sha: commit("c") } });
+    if (path.includes("branches/"))
+      return result({ commit: { sha: commit("1"), commit: { tree: { sha: commit("2") } } } });
     if (path.includes("contents/"))
       return result({ content: Buffer.from("content").toString("base64"), encoding: "base64" });
     if (path.includes("git/ref/tags"))
@@ -101,7 +113,13 @@ describe("PLAN-L7-532 PR-1 production ports", () => {
       ],
     });
     expect(observed).toMatchObject({ status: "attested" });
-    expect(runner.calls.length).toBe(4);
+    expect(runner.calls.length).toBe(6);
+    expect(runner.calls[2]?.stdin).toContain(
+      '"base_tree":"2222222222222222222222222222222222222222"',
+    );
+    expect(runner.calls[3]?.stdin).toContain(
+      '"parents":["1111111111111111111111111111111111111111"]',
+    );
     expect(runner.calls.every((call) => call.argv[0] === "api")).toBe(true);
     expect(runner.calls.some((call) => call.argv.includes("sh") || call.argv.includes("cmd"))).toBe(
       false,
@@ -229,5 +247,234 @@ describe("PLAN-L7-532 PR-1 production ports", () => {
       expectedMainSha: commit("9"),
     });
     expect(drift).toMatchObject({ status: "mismatch", reason: "main_sha_drift" });
+  });
+
+  it("CANDIDATE-PACKPUB-005-C: commitment identity mismatch is denied before a write", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-packpub-"));
+    const fixture = approvalFixture(root);
+    const expected = {
+      operationId: "op-1",
+      releaseId: "release-1",
+      tagName: "v0.2.0-canary.1",
+      intentDigest: fixture.approval.intentDigest,
+      idempotencyKey: fixture.approval.idempotencyKey,
+    };
+    const wrong = validatePackApprovalCommitment({
+      commitment: { ...fixture.commitment, operationId: "other-operation" },
+      expected,
+      now: new Date("2026-01-01T00:00:00Z"),
+    });
+    expect(wrong).toEqual({ ok: false, reason: "approval_commitment_mismatch" });
+  });
+
+  it("CANDIDATE-PACKPUB-005-P / -Q / -R: every commitment identity axis denies with zero writes", () => {
+    const fields = [
+      "operationId",
+      "releaseId",
+      "tagName",
+      "intentDigest",
+      "idempotencyKey",
+    ] as const;
+    for (const field of fields) {
+      const root = mkdtempSync(join(tmpdir(), "ut-tdd-packpub-"));
+      const fixture = approvalFixture(root);
+      const runner = ghRunner();
+      const commitment = { ...fixture.commitment, [field]: `wrong-${field}` };
+      const ports = createPackPublicationProductionPorts({
+        runner,
+        operationId: "op-1",
+        commitment,
+        commitmentExpected: {
+          operationId: "op-1",
+          releaseId: "release-1",
+          tagName: "v0.2.0-canary.1",
+          intentDigest: fixture.approval.intentDigest,
+          idempotencyKey: fixture.approval.idempotencyKey,
+        },
+        approvalRoot: join(root, "approvals"),
+        publicationRoot: join(root, "publication"),
+      });
+      expect(ports.approval.consume(fixture.approval)).toEqual({
+        status: "mismatch",
+        reason: "approval_commitment_mismatch",
+      });
+      expect(runner.calls).toHaveLength(0);
+    }
+  });
+
+  it("CANDIDATE-PACKPUB-005-D: rename failure denies and leaves no consumed journal event", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-packpub-"));
+    const fixture = approvalFixture(root);
+    const approvalPort = createFileApprovalPort({
+      root: join(root, "approvals"),
+      operationId: "op-1",
+      commitment: fixture.commitment,
+      durableState: fixture.journal,
+      rename: () => {
+        throw new Error("EPERM");
+      },
+    });
+    expect(approvalPort.consume(fixture.approval)).toEqual({
+      status: "mismatch",
+      reason: "approval_consume_failed",
+    });
+    expect(fixture.journal.events()).toHaveLength(0);
+  });
+
+  it("CANDIDATE-PACKPUB-005-F: read-back failure is indeterminate, never success", async () => {
+    const runner = createFakeProcessRunnerPort((request) => {
+      if (request.argv.some((arg) => arg.includes("git/ref/heads/publication/op-1")))
+        return { status: "timed_out", exitCode: null, stdout: "", stderr: "" };
+      return ghRunner().run(request);
+    });
+    const ports = createPackPublicationProductionPorts({ runner, operationId: "op-1" });
+    const observed = await ports.pack.commitPublicationBranch({
+      repository: "repo",
+      branch: "publication/op-1",
+      entries: [],
+    });
+    expect(observed).toEqual({ status: "indeterminate", reason: "gh_command_unavailable" });
+  });
+
+  it("CANDIDATE-PACKPUB-005-J: release and asset observations use gh response fields", async () => {
+    const runner = createFakeProcessRunnerPort((request) => {
+      const path = request.argv.join(" ");
+      if (path.includes("commits/"))
+        return result({
+          sha: commit("c"),
+          commit: { tree: { sha: commit("b") } },
+          controlManifestSnapshotDigest: `sha256:${"d".repeat(64)}`,
+          releaseId: "observed-release",
+          sourceRevision: commit("e"),
+          materializerVersion: "2.0.0",
+          mergeMode: "pull_request_cas",
+        });
+      if (path.includes("git/trees/")) return result({ tree: [] });
+      if (path.includes("releases/8/assets"))
+        return result({ name: "pack.tgz", size: 7, digest: `sha256:${"f".repeat(64)}` });
+      return result({});
+    });
+    const ports = createPackPublicationProductionPorts({ runner, operationId: "op-1" });
+    const observed = await ports.pack.observeReleaseCommit({
+      repository: "repo",
+      mainSha: commit("c"),
+    });
+    expect(observed).toMatchObject({
+      status: "attested",
+      value: { releaseId: "observed-release", sourceRevision: commit("e") },
+    });
+    const uploaded = await ports.release.uploadAsset({
+      releaseId: "8",
+      asset: {
+        name: "input.tgz",
+        size: 1,
+        contentDigest: `sha256:${"1".repeat(64)}`,
+        bytes: Buffer.from("x"),
+      },
+    });
+    expect(uploaded).toEqual({
+      status: "attested",
+      value: { name: "pack.tgz", size: 7, contentDigest: `sha256:${"f".repeat(64)}` },
+    });
+  });
+
+  it("CANDIDATE-PACKPUB-005-Q / -R: origin/main commitment is consumed and mismatches deny", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-packpub-"));
+    const fixture = approvalFixture(root);
+    const gitRunner = createFakeProcessRunnerPort((request) =>
+      request.argv[0] === "fetch"
+        ? { status: "exited", exitCode: 0, stdout: "", stderr: "" }
+        : result(fixture.commitment),
+    );
+    const expected = {
+      operationId: "op-1",
+      releaseId: "release-1",
+      tagName: "v0.2.0-canary.1",
+      intentDigest: fixture.approval.intentDigest,
+      idempotencyKey: fixture.approval.idempotencyKey,
+    };
+    const ports = createPackPublicationProductionPorts({
+      runner: ghRunner(),
+      commitmentRunner: gitRunner,
+      commitmentExpected: expected,
+      operationId: "op-1",
+      approvalRoot: join(root, "approvals"),
+      publicationRoot: join(root, "publication"),
+    });
+    expect(ports.approval.consume(fixture.approval)).toEqual({
+      status: "attested",
+      value: { mode: "new" },
+    });
+    expect(gitRunner.calls.map((call) => call.argv)).toEqual([
+      ["fetch", "origin", "main", "--quiet"],
+      ["show", "origin/main:docs/governance/pack-release-approvals/op-1.json"],
+    ]);
+    expect(
+      loadApprovalCommitmentFromOriginMain({ operationId: "op-1", runner: gitRunner }),
+    ).toMatchObject({
+      ok: true,
+    });
+  });
+
+  it("CANDIDATE-PACKPUB-005-R: unavailable tag read-back stays unavailable", async () => {
+    const runner = createFakeProcessRunnerPort(() => ({
+      status: "failed",
+      exitCode: 1,
+      stdout: "",
+      stderr: "404 Not Found",
+    }));
+    const ports = createPackPublicationProductionPorts({ runner, operationId: "op-1" });
+    expect(await ports.tag.observe("v0.2.0-canary.1")).toEqual({
+      status: "attested",
+      value: null,
+    });
+  });
+
+  it("CANDIDATE-PACKPUB-005-Q / -R: auditor and reconciliation observe persisted data fail-closed", async () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-packpub-"));
+    const ports = createPackPublicationProductionPorts({
+      runner: ghRunner(),
+      operationId: "op-1",
+      publicationRoot: root,
+    });
+    const asset = {
+      name: "pack.tgz",
+      size: 1,
+      contentDigest: `sha256:${"1".repeat(64)}`,
+      bytes: Buffer.from("x"),
+    };
+    const observation = {
+      intent: {
+        operationId: "op-1",
+        idempotencyKey: "idem-1",
+        intentDigest: `sha256:${"2".repeat(64)}`,
+        releaseId: "release-1",
+        tagName: "v0.2.0-canary.1",
+        controlManifestSnapshotDigest: `sha256:${"3".repeat(64)}`,
+        remote: { allowedMergeMode: "pull_request_cas" },
+        releaseAssets: [asset],
+      },
+      commit: {
+        commitSha: "not-a-sha",
+        releaseId: "release-1",
+        controlManifestSnapshotDigest: `sha256:${"3".repeat(64)}`,
+        mergeMode: "pull_request_cas",
+      },
+      draft: { draft: true, releaseId: "release-1", tagName: "v0.2.0-canary.1" },
+      assets: [asset],
+      tag: { name: "v0.2.0-canary.1", targetCommit: "not-a-sha", annotated: true },
+      visibility: { releaseId: "release-1", draft: false },
+    } as unknown as Parameters<typeof ports.auditor.attest>[0];
+    expect(await ports.auditor.attest(observation)).toEqual({
+      status: "mismatch",
+      reason: "publication_attestation_mismatch",
+    });
+    mkdirSync(join(root, "op-1"), { recursive: true });
+    writeFileSync(join(root, "op-1", "receipt.json"), "{}\n");
+    expect(
+      await ports.reconcile.observe(
+        observation.intent as Parameters<typeof ports.reconcile.observe>[0],
+      ),
+    ).toEqual({ status: "mismatch", reason: "reconciliation_identity_mismatch" });
   });
 });

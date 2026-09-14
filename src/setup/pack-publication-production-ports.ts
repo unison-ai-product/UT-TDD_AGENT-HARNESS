@@ -18,6 +18,7 @@ import type {
   PackMainObservation,
   PackPublicationApproval,
   PackPublicationPorts,
+  PackPublicationReceipt,
   PublicationJournalEvent,
   PublicationPortResult,
   ReleaseAssetObservation,
@@ -48,6 +49,7 @@ const DEFAULT_TIMEOUT_MS = 30_000;
 const DEFAULT_MAX_OUTPUT_BYTES = 1_048_576;
 const DEFAULT_PACK_REPO = "unison-ai-product/UT-TDD_AGENT-HARNESS-Pack";
 const SHA256 = /^[a-f0-9]{64}$/;
+const DIGEST = /^sha256:[a-f0-9]{64}$/;
 const SHA1 = /^[a-f0-9]{40}$/;
 
 function byteLength(value: string): number {
@@ -180,7 +182,10 @@ function runJson<T>(input: {
   });
   if (result.status !== "exited" || result.exitCode !== 0)
     return result.status === "failed" && result.exitCode !== null && !mutation
-      ? { status: "unavailable", reason: "gh_command_failed" }
+      ? {
+          status: "unavailable",
+          reason: /\b404\b|not found/i.test(result.stderr) ? "gh_not_found" : "gh_command_failed",
+        }
       : { status: mutation ? "indeterminate" : "unavailable", reason: "gh_command_unavailable" };
   try {
     return attested(JSON.parse(result.stdout) as T);
@@ -231,6 +236,14 @@ export interface GhPublicationPortOptions {
   readonly expectedReleaseId?: string;
   readonly expectedSourceRevision?: string;
   readonly expectedMaterializerVersion?: string;
+}
+
+export interface ApprovalCommitmentExpected {
+  readonly operationId: string;
+  readonly releaseId: string;
+  readonly tagName: string;
+  readonly intentDigest: string;
+  readonly idempotencyKey: string;
 }
 
 export interface GhIdentityObservation {
@@ -309,7 +322,16 @@ function branchCommitSha(value: unknown): string | null {
   if (direct) return direct;
   if (typeof value !== "object" || value === null) return null;
   const commit = (value as { commit?: { sha?: unknown } }).commit?.sha;
-  return typeof commit === "string" && SHA1.test(commit) ? commit : null;
+  if (typeof commit === "string" && SHA1.test(commit)) return commit;
+  const object = (value as { object?: { sha?: unknown } }).object?.sha;
+  return typeof object === "string" && SHA1.test(object) ? object : null;
+}
+
+function branchTreeSha(value: unknown): string | null {
+  if (typeof value !== "object" || value === null) return null;
+  const commit = (value as { commit?: { commit?: { tree?: { sha?: unknown } } } }).commit?.commit;
+  const sha = commit?.tree?.sha;
+  return typeof sha === "string" && SHA1.test(sha) ? sha : null;
 }
 
 function parseMainObservation(
@@ -350,6 +372,12 @@ function createPackPorts(options: GhPublicationPortOptions): PackPublicationPort
       return value ? attested(value) : mismatch("main_observation_invalid");
     },
     async commitPublicationBranch(input) {
+      const base = ghApi({ runner, args: [apiPath(options, `branches/${mainBranch}`)] });
+      if (base.status !== "attested")
+        return base as PublicationPortResult<{ readonly branchCommit: string }>;
+      const baseSha = branchCommitSha(base.value);
+      const baseTreeSha = branchTreeSha(base.value);
+      if (!baseSha || !baseTreeSha) return mismatch("base_commit_response_invalid");
       const blobShas: { readonly path: string; readonly mode: string; readonly sha: string }[] = [];
       for (const entry of input.entries) {
         const blob = ghApi({
@@ -376,6 +404,7 @@ function createPackPorts(options: GhPublicationPortOptions): PackPublicationPort
         args: [apiPath(options, "git/trees"), "-X", "POST", "--input", "-"],
         mutation: true,
         stdin: JSON.stringify({
+          base_tree: baseTreeSha,
           tree: blobShas.map((entry) => ({
             path: entry.path,
             mode: entry.mode,
@@ -390,16 +419,13 @@ function createPackPorts(options: GhPublicationPortOptions): PackPublicationPort
       if (!treeSha) return mismatch("tree_response_invalid");
       const commit = ghApi({
         runner,
-        args: [
-          apiPath(options, "git/commits"),
-          "-X",
-          "POST",
-          "-f",
-          "message=UT-TDD pack publication",
-          "-f",
-          `tree=${treeSha}`,
-        ],
+        args: [apiPath(options, "git/commits"), "-X", "POST", "--input", "-"],
         mutation: true,
+        stdin: JSON.stringify({
+          message: "UT-TDD pack publication",
+          tree: treeSha,
+          parents: [baseSha],
+        }),
       });
       if (commit.status !== "attested")
         return commit as PublicationPortResult<{ readonly branchCommit: string }>;
@@ -420,7 +446,17 @@ function createPackPorts(options: GhPublicationPortOptions): PackPublicationPort
       });
       if (ref.status !== "attested")
         return ref as PublicationPortResult<{ readonly branchCommit: string }>;
-      return attested({ branchCommit: commitSha });
+      const readBack = ghApi({
+        runner,
+        args: [apiPath(options, `git/ref/heads/${input.branch}`)],
+        mutation: true,
+      });
+      if (readBack.status !== "attested")
+        return readBack as PublicationPortResult<{ readonly branchCommit: string }>;
+      const observedSha = branchCommitSha(readBack.value);
+      return observedSha === commitSha
+        ? attested({ branchCommit: observedSha })
+        : mismatch("branch_read_back_mismatch");
     },
     async createPullRequest(input) {
       const result = ghApi({
@@ -486,13 +522,30 @@ function createPackPorts(options: GhPublicationPortOptions): PackPublicationPort
       if (treeResult.status !== "attested")
         return treeResult as PublicationPortResult<PackCommitObservation>;
       const treeDigest = sha256(stable(treeResult.value));
+      const controlManifestSnapshotDigest = stringField(
+        commit.value,
+        "controlManifestSnapshotDigest",
+      );
+      const releaseId = stringField(commit.value, "releaseId");
+      const sourceRevision = stringField(commit.value, "sourceRevision");
+      const materializerVersion = stringField(commit.value, "materializerVersion");
+      const mergeMode = stringField(commit.value, "mergeMode");
+      if (
+        !controlManifestSnapshotDigest ||
+        !DIGEST.test(controlManifestSnapshotDigest) ||
+        !releaseId ||
+        !sourceRevision ||
+        !materializerVersion ||
+        mergeMode !== "pull_request_cas"
+      )
+        return mismatch("release_commit_metadata_missing");
       return attested({
         commitSha,
         treeDigest,
-        controlManifestSnapshotDigest: options.expectedControlManifestSnapshotDigest ?? "",
-        releaseId: options.expectedReleaseId ?? "",
-        sourceRevision: options.expectedSourceRevision ?? "",
-        materializerVersion: options.expectedMaterializerVersion ?? "",
+        controlManifestSnapshotDigest,
+        releaseId,
+        sourceRevision,
+        materializerVersion,
         mergeMode: "pull_request_cas",
       });
     },
@@ -577,11 +630,12 @@ function createReleasePorts(options: GhPublicationPortOptions): PackPublicationP
       });
       if (result.status !== "attested")
         return result as PublicationPortResult<ReleaseAssetObservation>;
-      return attested({
-        name: input.asset.name,
-        size: input.asset.size,
-        contentDigest: input.asset.contentDigest,
-      });
+      const name = stringField(result.value, "name");
+      const size = numberField(result.value, "size");
+      const contentDigest = stringField(result.value, "digest");
+      return name && size !== null && contentDigest && DIGEST.test(contentDigest)
+        ? attested({ name, size, contentDigest })
+        : mismatch("asset_upload_response_invalid");
     },
     async observeAsset(input) {
       const result = ghApi({ runner, args: [api(`releases/${input.releaseId}/assets`)] });
@@ -605,10 +659,10 @@ function createTagPorts(options: GhPublicationPortOptions): PackPublicationPorts
   return {
     async observe(name) {
       const result = ghApi({ runner, args: [api(`git/ref/tags/${name}`)] });
-      if (result.status !== "attested") {
-        if (result.status === "unavailable") return attested(null);
+      if (result.status === "unavailable" && result.reason === "gh_not_found")
+        return attested(null);
+      if (result.status !== "attested")
         return result as PublicationPortResult<TagObservation | null>;
-      }
       const object =
         typeof result.value === "object" && result.value !== null
           ? (result.value as { object?: { sha?: unknown; type?: unknown } }).object
@@ -879,6 +933,9 @@ export interface FileApprovalPortOptions {
   readonly root: string;
   readonly operationId: string;
   readonly commitment: ApprovalCommitment | null;
+  readonly commitmentLoader?: () => ApprovalCommitmentLoadResult;
+  readonly commitmentExpected?: ApprovalCommitmentExpected;
+  readonly rename?: (source: string, destination: string) => void;
   readonly durableState: { readonly digest: () => string };
   readonly now?: () => Date;
   readonly onCommitmentError?: (reason: ApprovalCommitmentReason) => void;
@@ -936,14 +993,53 @@ function parseApproval(path: string): PackPublicationApproval | null {
   }
 }
 
+function validPersistedReceipt(
+  receipt: PackPublicationReceipt,
+  intent: {
+    readonly operationId: string;
+    readonly idempotencyKey: string;
+    readonly intentDigest: string;
+    readonly releaseId: string;
+    readonly sourceRevision: string;
+    readonly releaseVersion: string;
+    readonly tagName: string;
+  },
+): boolean {
+  const unsigned = { ...receipt, receiptDigest: "" };
+  return (
+    receipt.operationId === intent.operationId &&
+    receipt.idempotencyKey === intent.idempotencyKey &&
+    receipt.intentDigest === intent.intentDigest &&
+    receipt.releaseId === intent.releaseId &&
+    receipt.sourceRevision === intent.sourceRevision &&
+    receipt.releaseVersion === intent.releaseVersion &&
+    receipt.tagName === intent.tagName &&
+    receipt.receiptDigest === sha256(stable(unsigned))
+  );
+}
+
 export function createFileApprovalPort(
   options: FileApprovalPortOptions,
 ): PackPublicationPorts["approval"] {
   const now = options.now ?? (() => new Date());
   return {
     consume(approval) {
-      const commitment = options.commitment;
+      const loaded = options.commitmentLoader?.();
+      if (loaded && !loaded.ok) return mismatch(loaded.reason);
+      const commitment = loaded?.ok ? loaded.commitment : options.commitment;
       if (!commitment) return mismatch("approval_commitment_missing");
+      const expected = options.commitmentExpected ?? {
+        operationId: options.operationId,
+        releaseId: commitment.releaseId,
+        tagName: commitment.tagName,
+        intentDigest: approval.intentDigest,
+        idempotencyKey: approval.idempotencyKey,
+      };
+      const validated = validatePackApprovalCommitment({ commitment, expected, now: now() });
+      if (!validated.ok) {
+        options.onCommitmentError?.(validated.reason);
+        return mismatch(validated.reason);
+      }
       const expectedNonce = commitmentEntry(commitment, approval.mutation);
       if (
         expectedNonce === null ||
@@ -976,7 +1072,7 @@ export function createFileApprovalPort(
         return mismatch("approval_state_mismatch");
       try {
         if (existsSync(consumed)) return mismatch("nonce_replay");
-        renameSync(source, consumed);
+        (options.rename ?? renameSync)(source, consumed);
       } catch {
         return mismatch("approval_consume_failed");
       }
@@ -1053,6 +1149,8 @@ export interface PackPublicationProductionPortOptions extends GhPublicationPortO
   readonly approvalRoot?: string;
   readonly publicationRoot?: string;
   readonly now?: () => Date;
+  readonly commitmentRunner?: ProcessRunnerPort;
+  readonly commitmentExpected?: ApprovalCommitmentExpected;
 }
 
 /** Composition root for PR-1; CLI wiring remains a PR-2 concern. */
@@ -1068,9 +1166,19 @@ export function createPackPublicationProductionPorts(
     root: input.approvalRoot ?? join(".ut-tdd", "release", "approvals"),
     operationId: input.operationId,
     commitment: input.commitment ?? null,
+    commitmentLoader:
+      input.commitment === undefined
+        ? () =>
+            loadApprovalCommitmentFromOriginMain({
+              operationId: input.operationId,
+              runner: input.commitmentRunner,
+            })
+        : undefined,
+    commitmentExpected: input.commitmentExpected,
     durableState: journal,
     now: input.now,
   });
+  const receiptPath = join(publicationRoot, input.operationId, "receipt.json");
   const ports = {
     approval,
     durableState: journal,
@@ -1079,9 +1187,53 @@ export function createPackPublicationProductionPorts(
     tag: createTagPorts(input),
     visibility: createVisibilityPorts(input),
     canary: createCanaryPorts(input),
-    auditor: { attest: async () => attested({ attested: true as const }) },
+    auditor: {
+      attest: async (observation) => {
+        const expectedAssets = observation.intent.releaseAssets;
+        if (
+          !SHA1.test(observation.commit.commitSha) ||
+          !DIGEST.test(observation.commit.treeDigest) ||
+          observation.commit.releaseId !== observation.intent.releaseId ||
+          !SHA1.test(observation.commit.sourceRevision) ||
+          !observation.commit.materializerVersion ||
+          observation.commit.controlManifestSnapshotDigest !==
+            observation.intent.controlManifestSnapshotDigest ||
+          observation.commit.mergeMode !== observation.intent.remote.allowedMergeMode ||
+          !observation.draft.draft ||
+          observation.draft.releaseId !== observation.intent.releaseId ||
+          observation.draft.releaseVersion !== observation.intent.releaseVersion ||
+          observation.draft.tagName !== observation.intent.tagName ||
+          observation.draft.targetCommit !== observation.commit.commitSha ||
+          observation.tag.targetCommit !== observation.commit.commitSha ||
+          observation.tag.name !== observation.intent.tagName ||
+          !observation.tag.annotated ||
+          observation.visibility.releaseId !== observation.intent.releaseId ||
+          observation.visibility.draft ||
+          observation.assets.length !== observation.intent.releaseAssets.length ||
+          observation.assets.some(
+            (asset, index) =>
+              asset.name !== expectedAssets[index]?.name ||
+              asset.size !== expectedAssets[index]?.size ||
+              asset.contentDigest !== expectedAssets[index]?.contentDigest,
+          )
+        )
+          return mismatch("publication_attestation_mismatch");
+        return attested({ attested: true as const });
+      },
+    },
     reconcile: {
-      observe: async () => ({ status: "unavailable" as const, reason: "receipt_absent" }),
+      observe: async (intent) => {
+        try {
+          if (!existsSync(receiptPath))
+            return { status: "unavailable" as const, reason: "receipt_absent" };
+          const receipt = JSON.parse(readFileSync(receiptPath, "utf8")) as PackPublicationReceipt;
+          return validPersistedReceipt(receipt, intent)
+            ? attested(receipt)
+            : mismatch("reconciliation_identity_mismatch");
+        } catch {
+          return { status: "unavailable" as const, reason: "receipt_unavailable" };
+        }
+      },
     },
     receipt: createFilePublicationReceiptPort({
       root: publicationRoot,
