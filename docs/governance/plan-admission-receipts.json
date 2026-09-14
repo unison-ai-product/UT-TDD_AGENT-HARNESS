@@ -3728,6 +3728,22 @@
         "revision": 9,
         "content_digest": "sha256:e06ccad9da91e71ba60ff6cf9be93b34d668f9cd2aa24718302432f0ade5b081"
       }
+    },
+    {
+      "sequence": 234,
+      "previous_record_digest": "sha256:62c9323a87de54f48cf799133de68c8117b220b4dab848bd7f4ca64c8d2f1b44",
+      "record_digest": "sha256:86006e46a12d2e650ee74bbf4e230ea72980fca535061ce043777f54edbbac00",
+      "command_id": "plan-draft:issue-565:atomic-ref-cas:1",
+      "receipt_id": "certificate:a030bc07104b52cdc17f76e9beceb0df",
+      "receipt_digest": "sha256:c6dfc917dd6c420edb629392513d0499ee0817566a9f03cbba334186d3aece29",
+      "decision_digest": "sha256:a46fff25c28c3cf1213ce45af46fda178aff88564aa5594db22341fa00f63763",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-565-pack-publication-atomic-ref-cas.md",
+        "plan_id": "PLAN-L7-565-pack-publication-atomic-ref-cas",
+        "asset_id": "plan:a030bc07104b52cdc17f76e9beceb0df",
+        "revision": 1,
+        "content_digest": "sha256:efd67cb89dbf6e187fd998c062972332a868e868ee5b70993be4080a9ccb6647"
+      }
     }
   ]
 }
