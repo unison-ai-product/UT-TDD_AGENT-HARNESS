@@ -91,6 +91,18 @@ jobs:
             --pr-body-file .ut-tdd-pr-body.txt \
             --commit-file .ut-tdd-commit-subjects.txt
 
+      # Issue #598 (一時措置、2026-09-14): plan draft / plan revise を経ない PLAN 編集
+      # (admission_receipt の欠落・stale・legacy 直接編集) を review ではなく CI で止める。
+      # 実測: #594 / #595 で receipt 系の抜けが review まで素通りし、CI green → review FLAG の
+      # 往復を生んだ。lane 条件は付けず、source repository の全実行で照合する。
+      # consumer template は genesis projection をまだ生成しないため本PRでは変更しない。
+      # v4 R05 (PLAN 新規発行停止) で PLAN admission ごと削除する (#592 の削除対照表)。
+      # base は PR なら base.sha、main push なら before。gate 本体は src/plan-admission/diff-fence.ts。
+      - name: plan admission-check (PLAN 編集の receipt 照合、fail-close)
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: node src/cli.ts plan admission-check --base "$BASE_SHA" --head "${{ github.sha }}"
+
       - name: typecheck (tsc --noEmit)
         if: ${{ steps.classify.outputs.lane == 'full' }}
         run: npm run typecheck
