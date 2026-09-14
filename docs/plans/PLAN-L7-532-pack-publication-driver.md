@@ -51,8 +51,63 @@ dependencies:
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/364
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/418
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/414
-review_evidence: []
-status: draft
+review_evidence:
+  - reviewer: codex
+    review_kind: cross_agent
+    reviewed_at: "2026-09-11T05:50:19Z"
+    tests_green_at: "2026-09-11T05:47:57Z"
+    verdict: "PASS-WEAK / blocking 0"
+    worker_model: claude-opus-5
+    reviewer_model: gpt-5.6-sol
+    plan_revision: 2244fe207f51ccde979ed7fa530a2c6d690c20e4
+    subject_head: 2244fe207f51ccde979ed7fa530a2c6d690c20e4
+    scope: >-
+      PR #566 の PLAN-L7-532 pair-freeze を Codex/Sol が非著者 review。
+      P/Q/R の ownership と promotion range、sealed intent に対する approval
+      commitment の wrong-commitment / wrong-approver / wrong-authority deny/write-0
+      oracle、および PLAN-L7-515 の mutation-nonce / seal-before-write 境界を確認。
+      implementation、remote mutation、merge は実施していない。
+    citations:
+      - "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/566#issuecomment-5630103994"
+      - "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/actions/runs/34565430525"
+    green_commands:
+      - kind: typecheck
+        command: "npm run typecheck"
+        runner: ci
+        scope: full
+        exit_code: 0
+        completed_at: "2026-09-11T05:42:41Z"
+        evidence_path: docs/plans/PLAN-L7-532-pack-publication-driver.md
+        output_digest: "sha256:bebe2a51a799345103b2df74c1a98625bc38c952448ed1d753effe8df7f0c5b8"
+        anchor_commit: 2244fe207f51ccde979ed7fa530a2c6d690c20e4
+      - kind: doctor
+        command: "node src/cli.ts doctor --strict-green-command-digest"
+        runner: ci
+        scope: gate
+        exit_code: 0
+        completed_at: "2026-09-11T05:42:41Z"
+        evidence_path: docs/plans/PLAN-L7-532-pack-publication-driver.md
+        output_digest: "sha256:bebe2a51a799345103b2df74c1a98625bc38c952448ed1d753effe8df7f0c5b8"
+        anchor_commit: 2244fe207f51ccde979ed7fa530a2c6d690c20e4
+      - kind: unit_test
+        command: "npm run test"
+        runner: ci
+        scope: full
+        exit_code: 0
+        completed_at: "2026-09-11T05:47:39Z"
+        evidence_path: docs/plans/PLAN-L7-532-pack-publication-driver.md
+        output_digest: "sha256:bebe2a51a799345103b2df74c1a98625bc38c952448ed1d753effe8df7f0c5b8"
+        anchor_commit: 2244fe207f51ccde979ed7fa530a2c6d690c20e4
+      - kind: lint
+        command: "npm run lint"
+        runner: ci
+        scope: full
+        exit_code: 0
+        completed_at: "2026-09-11T05:42:41Z"
+        evidence_path: docs/plans/PLAN-L7-532-pack-publication-driver.md
+        output_digest: "sha256:bebe2a51a799345103b2df74c1a98625bc38c952448ed1d753effe8df7f0c5b8"
+        anchor_commit: 2244fe207f51ccde979ed7fa530a2c6d690c20e4
+status: confirmed
 github_issue_id: 565
 admission_receipt:
   schema_version: v2
