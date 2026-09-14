@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { PlanRevisionManifest } from "../src/cli/plan-revise.ts";
+import { canonicalPlanContentDigest } from "../src/plan-admission/diff-fence.ts";
 import { NodeAtomicDraftPublisher } from "../src/plan-admission/node-atomic-draft-publisher.ts";
 import {
   NodePlanRevisionRunner,
@@ -28,6 +29,96 @@ afterEach(() => {
 });
 
 describe("NodePlanRevisionRunner", () => {
+  it("U-PA-REV-039: 空ledgerをtracked terminal rev Nから再水和しasset不変でN+1を発行する", () => {
+    const f = rehydrationFixture();
+    const baseSource = readFileSync(join(f.root, f.manifest.source.path), "utf8");
+
+    expect(f.runner.run(f.input)).toMatchObject({
+      status: "created",
+      receipt: { assetId: f.manifest.base.asset_id, revision: 8 },
+    });
+    expect(
+      f.db
+        .prepare("SELECT revision FROM plan_revisions WHERE asset_id = ? ORDER BY revision")
+        .all(f.manifest.base.asset_id)
+        .map((row) => Number(row.revision)),
+    ).toEqual([7, 8]);
+    expect(
+      f.db
+        .prepare("SELECT asset_id FROM plan_aliases WHERE alias = ? AND valid_to_revision IS NULL")
+        .all(f.manifest.plan_id),
+    ).toEqual([{ asset_id: f.manifest.base.asset_id }]);
+    const parsed = parseLegacyPlanSource(baseSource);
+    if (!parsed) throw new Error("rehydrated source invalid");
+    const receiptFreeFrontmatter = { ...parsed.frontmatter };
+    delete receiptFreeFrontmatter.admission_receipt;
+    expect(
+      f.db
+        .prepare(
+          `SELECT canonical_payload_json, canonical_payload_digest, body_digest
+           FROM plan_revisions WHERE asset_id = ? AND revision = 7`,
+        )
+        .get(f.manifest.base.asset_id),
+    ).toEqual({
+      canonical_payload_json: stableJsonForTest(receiptFreeFrontmatter),
+      canonical_payload_digest: sha(stableJsonForTest(receiptFreeFrontmatter)).slice(7),
+      body_digest: sha(parsed.body).slice(7),
+    });
+  });
+
+  it("U-PA-REV-040: tracked terminalのcontent digest不一致は再水和せずwrite 0", () => {
+    const f = rehydrationFixture(sha("forged-content"));
+
+    expect(() => f.runner.run(f.input)).toThrow(
+      "plan-revision-rehydration-content-digest-mismatch",
+    );
+    expect(writeSet(f.db)).toEqual(f.before);
+  });
+
+  it("U-PA-REV-041: stale ledgerは中間revisionを捏造せずterminalだけ再水和する", () => {
+    const f = rehydrationFixture();
+    seedAdopted(f.db, f.manifest.base.asset_id, f.manifest.plan_id, '{"revision":1}', false);
+
+    expect(f.runner.run(f.input)).toMatchObject({ status: "created", receipt: { revision: 8 } });
+    expect(
+      f.db
+        .prepare("SELECT revision FROM plan_revisions WHERE asset_id = ? ORDER BY revision")
+        .all(f.manifest.base.asset_id)
+        .map((row) => Number(row.revision)),
+    ).toEqual([1, 7, 8]);
+  });
+
+  it.each([
+    ["missing", [], "plan-revision-rehydration-projection-missing"],
+    ["asset mismatch", [{ asset_id: "plan:other" }], "plan-revision-rehydration-asset-mismatch"],
+    [
+      "path mismatch",
+      [{ path: "docs/plans/PLAN-L6-32.md" }],
+      "plan-revision-rehydration-path-mismatch",
+    ],
+    [
+      "ambiguous",
+      [{}, { asset_id: "plan:other" }],
+      "plan-revision-rehydration-projection-ambiguous",
+    ],
+  ])("U-PA-REV-042: projection %sはwrite 0", (_name, bindings, ruleId) => {
+    const f = rehydrationFixture();
+    rewriteProjection(f, bindings);
+
+    expect(() => f.runner.run(f.input)).toThrow(ruleId);
+    expect(writeSet(f.db)).toEqual(f.before);
+  });
+
+  it("U-PA-REV-043: canonical payload digest不一致はwrite 0", () => {
+    const f = rehydrationFixture();
+    f.manifest.base.revision_digest = sha("forged-canonical-payload");
+
+    expect(() => f.runner.run(f.input)).toThrow(
+      "plan-revision-rehydration-canonical-digest-mismatch",
+    );
+    expect(writeSet(f.db)).toEqual(f.before);
+  });
+
   it("U-PA-REV-016: adopt済みNをN+1へ発行しpublisherへsource/projection CASを渡す", () => {
     const f = fixture("adopted");
     const stage = vi.spyOn(f.publisher, "stage");
@@ -498,6 +589,130 @@ function fixture(mode: Mode, drift: Drift = {}) {
   };
 }
 
+function rehydrationFixture(terminalContentDigest?: string) {
+  const drift: Drift = { forgedLegacyAssetId: "plan:rehydrated" };
+  const f = fixture("legacy", drift);
+  const receiptFreeSource = readFileSync(join(f.root, f.manifest.source.path), "utf8");
+  const contentDigest = canonicalPlanContentDigest(receiptFreeSource);
+  if (!contentDigest) throw new Error("rehydration fixture source invalid");
+  const baseSource = receiptFreeSource.replace(
+    "generates: []\n",
+    `generates: []\nadmission_receipt:\n  schema_version: v2\n  receipt_id: certificate:rehydration-terminal-7\n  command_id: plan-revise:issue-596:terminal:7\n  admitted_at: 2026-09-14T00:00:00.000Z\n  source_digest: ${contentDigest}\n  decision_digest: ${sha("rehydration-terminal-decision")}\n  receipt_digest: ${sha("rehydration-terminal-receipt")}\n  binding:\n    path: ${f.manifest.source.path}\n    plan_id: ${f.manifest.plan_id}\n    asset_id: ${f.manifest.base.asset_id}\n    revision: 7\n    content_digest: ${contentDigest}\n  route:\n    signal: forward\n    mode: forward\n`,
+  );
+  writeFileSync(join(f.root, f.manifest.source.path), baseSource, "utf8");
+  drift.headSource = baseSource;
+  const record = {
+    sequence: 1,
+    previousRecordDigest: null,
+    commandId: "plan-revise:issue-596:terminal:7",
+    receiptId: "certificate:rehydration-terminal-7",
+    receiptDigest: sha("rehydration-terminal-receipt"),
+    decisionDigest: sha("rehydration-terminal-decision"),
+    binding: {
+      path: f.manifest.source.path,
+      planId: f.manifest.plan_id,
+      assetId: f.manifest.base.asset_id,
+      revision: 7,
+      contentDigest: terminalContentDigest ?? contentDigest,
+    },
+  };
+  const recordDigest = trackedReceiptRecordDigest(record);
+  writeFileSync(
+    join(f.root, f.manifest.projection.path),
+    `${JSON.stringify({
+      schema_version: "ut-tdd.plan-admission-receipts/v1",
+      records: [
+        {
+          sequence: record.sequence,
+          previous_record_digest: record.previousRecordDigest,
+          record_digest: recordDigest,
+          command_id: record.commandId,
+          receipt_id: record.receiptId,
+          receipt_digest: record.receiptDigest,
+          decision_digest: record.decisionDigest,
+          binding: {
+            path: record.binding.path,
+            plan_id: record.binding.planId,
+            asset_id: record.binding.assetId,
+            revision: record.binding.revision,
+            content_digest: record.binding.contentDigest,
+          },
+        },
+      ],
+    })}\n`,
+    "utf8",
+  );
+  f.manifest.base.revision = 7;
+  const parsedPayload = JSON.parse(canonicalPlanPayload(baseSource).payload);
+  delete parsedPayload.admission_receipt;
+  f.manifest.base.revision_digest = sha(stableJsonForTest(parsedPayload));
+  f.manifest.base.source_content_digest = sha(baseSource);
+  f.manifest.base.projection_tail_digest = recordDigest;
+  f.manifest.source.content = baseSource.replace("title: Base", "title: Revised");
+  return f;
+}
+
+function rewriteProjection(
+  f: ReturnType<typeof rehydrationFixture>,
+  bindingOverrides: readonly Record<string, unknown>[],
+): void {
+  const current = JSON.parse(readFileSync(join(f.root, f.manifest.projection.path), "utf8"))
+    .records[0];
+  let previousRecordDigest: string | null = null;
+  const records = bindingOverrides.map((overrides, index) => {
+    const record = {
+      sequence: index + 1,
+      previousRecordDigest,
+      commandId: `${current.command_id}:${index}`,
+      receiptId: `${current.receipt_id}:${index}`,
+      receiptDigest: current.receipt_digest,
+      decisionDigest: current.decision_digest,
+      binding: {
+        path: current.binding.path,
+        planId: current.binding.plan_id,
+        assetId: current.binding.asset_id,
+        revision: current.binding.revision,
+        contentDigest: current.binding.content_digest,
+        ...toCamelBinding(overrides),
+      },
+    };
+    const recordDigest = trackedReceiptRecordDigest(record);
+    previousRecordDigest = recordDigest;
+    return {
+      sequence: record.sequence,
+      previous_record_digest: record.previousRecordDigest,
+      record_digest: recordDigest,
+      command_id: record.commandId,
+      receipt_id: record.receiptId,
+      receipt_digest: record.receiptDigest,
+      decision_digest: record.decisionDigest,
+      binding: {
+        path: record.binding.path,
+        plan_id: record.binding.planId,
+        asset_id: record.binding.assetId,
+        revision: record.binding.revision,
+        content_digest: record.binding.contentDigest,
+      },
+    };
+  });
+  const projection = `${JSON.stringify({
+    schema_version: "ut-tdd.plan-admission-receipts/v1",
+    records,
+  })}\n`;
+  writeFileSync(join(f.root, f.manifest.projection.path), projection, "utf8");
+  f.manifest.base.projection_tail_digest = previousRecordDigest ?? sha("null");
+}
+
+function toCamelBinding(value: Record<string, unknown>): Record<string, unknown> {
+  return {
+    ...(value.path === undefined ? {} : { path: value.path }),
+    ...(value.plan_id === undefined ? {} : { planId: value.plan_id }),
+    ...(value.asset_id === undefined ? {} : { assetId: value.asset_id }),
+    ...(value.revision === undefined ? {} : { revision: value.revision }),
+    ...(value.content_digest === undefined ? {} : { contentDigest: value.content_digest }),
+  };
+}
+
 function projectionWithDifferentValidTail(): string {
   const record = {
     sequence: 1,
@@ -617,6 +832,7 @@ function writeSet(db: ReturnType<typeof openHarnessDb>) {
   return [
     "plan_assets",
     "plan_revisions",
+    "plan_alias_events",
     "plan_aliases",
     "plan_admission_events",
     "plan_admission_receipts",
@@ -625,4 +841,14 @@ function writeSet(db: ReturnType<typeof openHarnessDb>) {
 }
 function sha(value: string): `sha256:${string}` {
   return `sha256:${createHash("sha256").update(value).digest("hex")}`;
+}
+
+function stableJsonForTest(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(stableJsonForTest).join(",")}]`;
+  if (value && typeof value === "object")
+    return `{${Object.entries(value as Record<string, unknown>)
+      .sort(([left], [right]) => Buffer.compare(Buffer.from(left), Buffer.from(right)))
+      .map(([key, item]) => `${JSON.stringify(key)}:${stableJsonForTest(item)}`)
+      .join(",")}}`;
+  return JSON.stringify(value);
 }

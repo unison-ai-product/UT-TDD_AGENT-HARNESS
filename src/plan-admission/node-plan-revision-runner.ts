@@ -19,6 +19,7 @@ import {
   PlanDraftCleanupPendingError,
   PlanDraftService,
 } from "./plan-draft-service.ts";
+import { rehydratePlanLedgerBase } from "./plan-ledger-rehydrator.ts";
 import {
   assemblePlanRevisionCommand,
   canonicalPlanPayload,
@@ -100,11 +101,14 @@ export class NodePlanRevisionRunner {
         return { status: "replayed" as const, receipt: prior.receipt as PlanRevisionReceipt };
       }
       const base = this.preflightBase(input.manifest);
-      const adopted = Boolean(
+      const snapshot = this.preflightMutable(input.manifest, base);
+      const locallyAdopted = Boolean(
         db
           .prepare("SELECT 1 FROM plan_assets WHERE asset_id = ?")
           .get(input.manifest.base.asset_id),
       );
+      const rehydrationRequired = needsRehydration(db, input.manifest, locallyAdopted);
+      const adopted = locallyAdopted || rehydrationRequired;
       const legacy =
         !adopted ||
         revisionUsesLegacyBootstrap(db, input.manifest.base.asset_id, input.manifest.command_id);
@@ -121,8 +125,16 @@ export class NodePlanRevisionRunner {
         legacy,
       });
       validatePlanRevisionCommand(command);
+      if (rehydrationRequired)
+        rehydratePlanLedgerBase({
+          db,
+          manifest: input.manifest,
+          projectionText: snapshot.projectionText,
+          sourceCommit: base.sourceCommit,
+          sourceBlobOid: base.sourceBlobOid,
+          source: base.headSource,
+        });
       if (adopted) assertAdoptedBase(db, input.manifest);
-      const snapshot = this.preflightMutable(input.manifest, base);
       const renderer = new RevisionRenderer(
         new TrackedReceiptRenderer<PlanRevisionExecutionPayload>({
           read: () => snapshot.projectionText,
@@ -487,6 +499,20 @@ function assertAdoptedBase(db: HarnessDb, manifest: PlanRevisionManifest): void 
     !digestEqual(latest.canonical_payload_digest, manifest.base.revision_digest)
   )
     throw new Error("plan-revision-ledger-base-drift");
+}
+
+function needsRehydration(
+  db: HarnessDb,
+  manifest: PlanRevisionManifest,
+  assetExists: boolean,
+): boolean {
+  if (!assetExists) return !manifest.base.asset_id.startsWith("plan:legacy:");
+  const latest = db
+    .prepare(
+      "SELECT revision FROM plan_revisions WHERE asset_id = ? ORDER BY revision DESC LIMIT 1",
+    )
+    .get(manifest.base.asset_id);
+  return !latest || Number(latest.revision) < manifest.base.revision;
 }
 
 function requireRepositoryIdentity(provider: (() => string) | undefined): string {
