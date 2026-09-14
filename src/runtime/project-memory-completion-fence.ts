@@ -74,7 +74,7 @@ interface Corpus {
   readonly index: ReadonlySet<string>;
 }
 
-type MarkerKind = "owner" | "intent" | "prepared" | "complete";
+type MarkerKind = "owner" | "intent" | "imported" | "prepared" | "complete";
 
 interface Marker {
   readonly sequence: number;
@@ -101,7 +101,6 @@ interface FenceState {
   readonly tip: Operation;
 }
 
-const MARKER_KINDS: readonly MarkerKind[] = ["owner", "intent", "prepared", "complete"];
 const operationIdPattern = /^[A-Za-z0-9._-]{1,160}$/;
 
 function sha256(value: string | Buffer): string {
@@ -288,6 +287,8 @@ function parseMarkers(path: string, operationId: string): readonly Marker[] {
   }
   const markers: Marker[] = [];
   let previous: string | null = null;
+  let preparedSeen = false;
+  let completeSeen = false;
   for (const [index, line] of lines.entries()) {
     let value: unknown;
     try {
@@ -297,10 +298,16 @@ function parseMarkers(path: string, operationId: string): readonly Marker[] {
     }
     if (!isRecord(value)) throw new FenceTamperError();
     const marker = value as Partial<Marker>;
-    const expectedKind = MARKER_KINDS[index];
+    const kind = marker.kind;
+    const kindOrderValid =
+      (index === 0 && kind === "owner") ||
+      (index === 1 && kind === "intent") ||
+      (index >= 2 && kind === "imported" && !preparedSeen && !completeSeen) ||
+      (index >= 2 && kind === "prepared" && !preparedSeen && !completeSeen) ||
+      (index >= 3 && kind === "complete" && preparedSeen && !completeSeen);
     if (
       marker.sequence !== index + 1 ||
-      marker.kind !== expectedKind ||
+      !kindOrderValid ||
       marker.operationId !== operationId ||
       !isRecord(marker.payload) ||
       typeof marker.recordDigest !== "string" ||
@@ -308,6 +315,8 @@ function parseMarkers(path: string, operationId: string): readonly Marker[] {
     ) {
       throw new FenceTamperError();
     }
+    if (kind === "prepared") preparedSeen = true;
+    if (kind === "complete") completeSeen = true;
     const unsigned = {
       sequence: marker.sequence,
       kind: marker.kind,

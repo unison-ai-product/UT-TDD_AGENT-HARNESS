@@ -247,14 +247,9 @@ describe("PLAN-L7-533 PR-1 completion fence core", () => {
   it("U-PMEMFENCE-007/016: replay is deterministic, then denies corpus mismatch without marker writes", () => {
     const root = fixture().primary;
     const applied = complete(root);
-    expect(replayProjectMemoryCompletion(root, applied.operationId)).toMatchObject({
-      ok: false,
-      reason: "replay_corpus_mismatch",
-    });
     const initial = inspectProjectMemoryCompletion(root);
     expect(initial.ok).toBe(true);
     if (!initial.ok) throw new Error("completion fence fixture failed");
-    sealCanonicalDigest(applied.markersPath, initial.canonicalCorpusDigest);
     const afterSeal = runtimeSnapshot(root);
     expect(replayProjectMemoryCompletion(root, applied.operationId)).toMatchObject({
       ok: true,
@@ -307,30 +302,30 @@ describe("PLAN-L7-533 PR-1 completion fence core", () => {
     if (!result.ok) expect(result.residue?.join("\n")).toContain("legacy.md");
   });
 
-  it("U-PMEMFENCE-010: apply rejects invalid residue before writing a marker", () => {
+  it("U-PMEMFENCE-010: apply quarantines invalid residue while preserving valid imports", () => {
     const { primary, linked } = fixture(true);
     if (!linked) throw new Error("fixture setup failed");
     complete(primary);
     const invalid = memoryPath(linked, "invalid.md");
     mkdirSync(join(linked, ".ut-tdd", "memory"), { recursive: true });
     writeFileSync(invalid, "not a memory document\n");
-    const before = runtimeSnapshot(primary);
-    expect(
-      new ProjectMemoryMigration().apply(primary, { operationId: "invalid-residue" }),
-    ).toMatchObject({
-      ok: false,
-      reason: "invalid_memory",
-    });
-    expect(inspectProjectMemoryCompletion(primary)).toMatchObject({
-      ok: false,
-      reason: "invalid_memory",
-      readAllowed: false,
-      writeAllowed: false,
-    });
-    expect(runtimeSnapshot(primary)).toBe(before);
+    const valid = memoryPath(linked, "valid.md");
+    writeFileSync(valid, memoryText("valid", "valid body"));
+    const applied = new ProjectMemoryMigration().apply(primary, { operationId: "invalid-residue" });
+    expect(applied).toMatchObject({ ok: true, status: "completed" });
+    if (!applied.ok) throw new Error(applied.reason);
+    expect(applied.invalidMemory.some((path) => path.endsWith(".ut-tdd/memory/invalid.md"))).toBe(
+      true,
+    );
+    expect(applied.imported.map((entry) => entry.memoryId)).toContain("memory:project:valid");
+    const validImport = applied.imported.find((entry) => entry.memoryId === "memory:project:valid");
+    expect(validImport).toBeDefined();
+    expect(readFileSync(join(primary, validImport?.destinationPath ?? ""), "utf8")).toContain(
+      "valid body",
+    );
   });
 
-  it("U-PMEMFENCE-011: observe-then-apply does not claim a TOCTOU residue was imported", () => {
+  it("U-PMEMFENCE-011: apply re-inventories and truthfully imports a post-observation residue", () => {
     const { primary, linked } = fixture(true);
     if (!linked) throw new Error("fixture setup failed");
     expect(new ProjectMemoryMigration().dryRun(primary)).toMatchObject({ ok: true });
@@ -339,15 +334,34 @@ describe("PLAN-L7-533 PR-1 completion fence core", () => {
     const beforeApply = runtimeSnapshot(primary);
     const applied = new ProjectMemoryMigration().apply(primary, { operationId: "toctou-recovery" });
     expect(applied).toMatchObject({ ok: true, status: "completed" });
-    expect(inspectProjectMemoryCompletion(primary)).toMatchObject({
-      ok: false,
-      reason: "legacy_residue",
-    });
+    expect(inspectProjectMemoryCompletion(primary)).toMatchObject({ ok: true });
     expect(runtimeSnapshot(primary)).not.toBe(beforeApply);
     if (applied.ok) {
       const prepared = readFileSync(applied.markersPath, "utf8");
-      expect(prepared).not.toContain("toctou.md");
+      expect(prepared).toContain("toctou.md");
     }
+  });
+
+  it("U-PMEMFENCE-022: a durable per-import marker permits recovery after the first canonical write", () => {
+    const { primary, linked } = fixture(true);
+    if (!linked) throw new Error("fixture setup failed");
+    writeFileSync(memoryPath(linked, "first.md"), memoryText("first", "first body"));
+    writeFileSync(memoryPath(linked, "second.md"), memoryText("second", "second body"));
+    const interrupted = new ProjectMemoryMigration().apply(primary, {
+      operationId: "partial-import",
+      crashAfter: "first_import",
+    });
+    expect(interrupted).toMatchObject({ ok: false, reason: "transaction_interrupted" });
+    if (interrupted.ok) throw new Error("fault injection did not interrupt");
+    const durable = readFileSync(interrupted.markersPath, "utf8");
+    expect(durable).toContain('"kind":"imported"');
+    const recovered = new ProjectMemoryMigration().recover(primary, "partial-import");
+    expect(recovered).toMatchObject({ ok: true, status: "completed" });
+    if (!recovered.ok) throw new Error(recovered.reason);
+    expect(recovered.imported.map((entry) => entry.memoryId).sort()).toEqual([
+      "memory:project:first",
+      "memory:project:second",
+    ]);
   });
 
   it("U-PMEMFENCE-012: preserves typed project-root denial", () => {
@@ -458,6 +472,22 @@ describe("PLAN-L7-533 PR-1 completion fence core", () => {
     expect(
       new ProjectMemoryMigration().apply(root, {
         operationId: "incomplete-operation",
+        crashAfter: "intent",
+      }),
+    ).toMatchObject({ ok: false, reason: "transaction_interrupted" });
+    writeFileSync(applied.markersPath, `${readFileSync(applied.markersPath, "utf8")}tampered\n`);
+    expect(inspectProjectMemoryCompletion(root)).toMatchObject({
+      ok: false,
+      reason: "transaction_tampered",
+    });
+  });
+
+  it("U-PMEMFENCE-023: tamper wins even when the incomplete operation sorts first", () => {
+    const root = fixture().primary;
+    const applied = complete(root);
+    expect(
+      new ProjectMemoryMigration().apply(root, {
+        operationId: "aaa-incomplete",
         crashAfter: "intent",
       }),
     ).toMatchObject({ ok: false, reason: "transaction_interrupted" });
