@@ -822,7 +822,8 @@ export interface ApprovalCommitment {
 export type ApprovalCommitmentReason =
   | "approval_commitment_missing"
   | "approval_commitment_mismatch"
-  | "approval_expired";
+  | "approval_expired"
+  | "approval_commitment_context_missing";
 
 function commitmentEntry(commitment: ApprovalCommitment, mutation: string): string | null {
   const entry = commitment.mutations[mutation];
@@ -936,7 +937,10 @@ export interface FileApprovalPortOptions {
   readonly commitmentLoader?: () => ApprovalCommitmentLoadResult;
   readonly commitmentExpected?: ApprovalCommitmentExpected;
   readonly rename?: (source: string, destination: string) => void;
-  readonly durableState: { readonly digest: () => string };
+  readonly durableState: {
+    readonly digest: () => string;
+    readonly append: (event: PublicationJournalEvent) => void | Promise<void>;
+  };
   readonly now?: () => Date;
   readonly onCommitmentError?: (reason: ApprovalCommitmentReason) => void;
 }
@@ -1023,18 +1027,14 @@ export function createFileApprovalPort(
 ): PackPublicationPorts["approval"] {
   const now = options.now ?? (() => new Date());
   return {
-    consume(approval) {
+    async consume(approval) {
       const loaded = options.commitmentLoader?.();
       if (loaded && !loaded.ok) return mismatch(loaded.reason);
       const commitment = loaded?.ok ? loaded.commitment : options.commitment;
       if (!commitment) return mismatch("approval_commitment_missing");
-      const expected = options.commitmentExpected ?? {
-        operationId: options.operationId,
-        releaseId: commitment.releaseId,
-        tagName: commitment.tagName,
-        intentDigest: approval.intentDigest,
-        idempotencyKey: approval.idempotencyKey,
-      };
+      const expected = options.commitmentExpected;
+      if (!expected || expected.operationId !== options.operationId)
+        return mismatch("approval_commitment_context_missing");
       const validated = validatePackApprovalCommitment({ commitment, expected, now: now() });
       if (!validated.ok) {
         options.onCommitmentError?.(validated.reason);
@@ -1075,6 +1075,27 @@ export function createFileApprovalPort(
         (options.rename ?? renameSync)(source, consumed);
       } catch {
         return mismatch("approval_consume_failed");
+      }
+      try {
+        await Promise.resolve(
+          options.durableState.append({
+            transition: approval.transition,
+            mutation: approval.mutation,
+            kind: "planned_nonce_consumed",
+            intentDigest: approval.intentDigest,
+            nonce: approval.nonce,
+            detailDigest: sha256(
+              stable({ mode: "new", approvalStateDigest: approval.approvalStateDigest }),
+            ),
+          }),
+        );
+      } catch {
+        try {
+          (options.rename ?? renameSync)(consumed, source);
+        } catch {
+          return { status: "indeterminate", reason: "journal_persist_failed" };
+        }
+        return { status: "indeterminate", reason: "journal_persist_failed" };
       }
       return attested({ mode: "new" });
     },

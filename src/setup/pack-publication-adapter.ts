@@ -764,18 +764,6 @@ class PublicationRun {
         remoteWrites: this.remoteWrites,
         prewrite: this.remoteWrites === 0,
       });
-    if (
-      !(await this.journal(approval, "planned_nonce_consumed", {
-        mode: result.value.mode,
-        approvalStateDigest: approval.approvalStateDigest,
-      }))
-    )
-      return {
-        status: "indeterminate",
-        stage: approval.transition,
-        reason: "journal_persist_failed",
-        remoteWrites: this.remoteWrites,
-      };
     return result.value.mode;
   }
 

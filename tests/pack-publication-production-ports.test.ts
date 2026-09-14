@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -91,7 +91,18 @@ function approvalFixture(root: string) {
   const dir = join(root, "approvals", "op-1");
   mkdirSync(dir, { recursive: true });
   writeFileSync(join(dir, "planned.planned.json"), `${JSON.stringify(approval)}\n`);
-  return { journal, approval, commitment };
+  return {
+    journal,
+    approval,
+    commitment,
+    expected: {
+      operationId: "op-1",
+      releaseId: "release-1",
+      tagName: "v0.2.0-canary.1",
+      intentDigest: approval.intentDigest,
+      idempotencyKey: approval.idempotencyKey,
+    },
+  };
 }
 
 describe("PLAN-L7-532 PR-1 production ports", () => {
@@ -143,31 +154,32 @@ describe("PLAN-L7-532 PR-1 production ports", () => {
     expect(runner.calls).toHaveLength(2);
   });
 
-  it("CANDIDATE-PACKPUB-005-C / -D / -P / -Q / -R: binds and consumes the committed approval once", () => {
+  it("CANDIDATE-PACKPUB-005-C / -D / -P / -Q / -R: binds and consumes the committed approval once", async () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-packpub-"));
     const fixture = approvalFixture(root);
     const approvalPort = createFileApprovalPort({
       root: join(root, "approvals"),
       operationId: "op-1",
       commitment: fixture.commitment,
+      commitmentExpected: fixture.expected,
       durableState: fixture.journal,
     });
-    expect(approvalPort.consume(fixture.approval)).toEqual({
+    await expect(approvalPort.consume(fixture.approval)).resolves.toEqual({
       status: "attested",
       value: { mode: "new" },
     });
-    expect(approvalPort.consume(fixture.approval)).toEqual({
+    await expect(approvalPort.consume(fixture.approval)).resolves.toEqual({
       status: "attested",
       value: { mode: "reconcile" },
     });
-    expect(approvalPort.consume({ ...fixture.approval, nonce: "wrong" })).toEqual({
+    await expect(approvalPort.consume({ ...fixture.approval, nonce: "wrong" })).resolves.toEqual({
       status: "mismatch",
       reason: "approval_commitment_mismatch",
     });
     expect(JSON.stringify(fixture.commitment)).not.toContain(fixture.approval.nonce);
   });
 
-  it("CANDIDATE-PACKPUB-005-E / -F / -G: durable failures are observable and never success", () => {
+  it("CANDIDATE-PACKPUB-005-E / -F / -G: durable failures are observable and never success", async () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-packpub-"));
     const journal = createFilePublicationJournalPort({
       root,
@@ -193,19 +205,22 @@ describe("PLAN-L7-532 PR-1 production ports", () => {
       stderr: "",
     }));
     const ports = createPackPublicationProductionPorts({ runner, operationId: "op-1" });
-    return expect(ports.pack.observeBefore()).resolves.toMatchObject({ status: "unavailable" });
+    await expect(ports.pack.observeBefore()).resolves.toMatchObject({ status: "unavailable" });
   });
 
-  it("CANDIDATE-PACKPUB-005-H: journal and receipt contain only the durable consumed nonce", () => {
+  it("CANDIDATE-PACKPUB-005-H: journal and receipt contain only the durable consumed nonce", async () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-packpub-"));
     const fixture = approvalFixture(root);
-    fixture.journal.append({
-      transition: "planned",
-      mutation: "planned",
-      kind: "planned_nonce_consumed",
-      intentDigest: fixture.approval.intentDigest,
-      nonce: fixture.approval.nonce,
-      detailDigest: `sha256:${"2".repeat(64)}`,
+    const approvalPort = createFileApprovalPort({
+      root: join(root, "approvals"),
+      operationId: "op-1",
+      commitment: fixture.commitment,
+      commitmentExpected: fixture.expected,
+      durableState: fixture.journal,
+    });
+    await expect(approvalPort.consume(fixture.approval)).resolves.toEqual({
+      status: "attested",
+      value: { mode: "new" },
     });
     const receipt = createFilePublicationReceiptPort({
       root: join(root, "publication"),
@@ -237,6 +252,48 @@ describe("PLAN-L7-532 PR-1 production ports", () => {
       receiptDigest: `sha256:${"b".repeat(64)}`,
     });
     expect(fixture.journal.events()[0]?.nonce).toBe(fixture.approval.nonce);
+    expect(fixture.journal.events()).toHaveLength(1);
+    expect(fixture.journal.events()[0]?.kind).toBe("planned_nonce_consumed");
+  });
+
+  it("CANDIDATE-PACKPUB-005-E / -F: append failure compensates rename and retry consumes once", async () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-packpub-"));
+    const fixture = approvalFixture(root);
+    let failAppend = true;
+    const journal = createFilePublicationJournalPort({
+      root: join(root, "publication"),
+      operationId: "op-1",
+      beforeAppend: () => {
+        if (failAppend) throw new Error("injected");
+      },
+    });
+    const approvalPort = createFileApprovalPort({
+      root: join(root, "approvals"),
+      operationId: "op-1",
+      commitment: fixture.commitment,
+      commitmentExpected: fixture.expected,
+      durableState: journal,
+    });
+    await expect(approvalPort.consume(fixture.approval)).resolves.toEqual({
+      status: "indeterminate",
+      reason: "journal_persist_failed",
+    });
+    expect(existsSync(join(root, "approvals", "op-1", "planned.planned.json"))).toBe(true);
+    expect(existsSync(join(root, "approvals", "op-1", "planned.planned.consumed.json"))).toBe(
+      false,
+    );
+    expect(journal.events()).toHaveLength(0);
+    failAppend = false;
+    await expect(
+      createFileApprovalPort({
+        root: join(root, "approvals"),
+        operationId: "op-1",
+        commitment: fixture.commitment,
+        commitmentExpected: fixture.expected,
+        durableState: journal,
+      }).consume(fixture.approval),
+    ).resolves.toEqual({ status: "attested", value: { mode: "new" } });
+    expect(journal.events()).toHaveLength(1);
   });
 
   it("CANDIDATE-PACKPUB-005-J / -L: read-back and CAS boundaries are typed", async () => {
@@ -267,7 +324,7 @@ describe("PLAN-L7-532 PR-1 production ports", () => {
     expect(wrong).toEqual({ ok: false, reason: "approval_commitment_mismatch" });
   });
 
-  it("CANDIDATE-PACKPUB-005-P / -Q / -R: every commitment identity axis denies with zero writes", () => {
+  it("CANDIDATE-PACKPUB-005-P / -Q / -R: every commitment identity axis denies with zero writes", async () => {
     const fields = [
       "operationId",
       "releaseId",
@@ -294,7 +351,7 @@ describe("PLAN-L7-532 PR-1 production ports", () => {
         approvalRoot: join(root, "approvals"),
         publicationRoot: join(root, "publication"),
       });
-      expect(ports.approval.consume(fixture.approval)).toEqual({
+      await expect(ports.approval.consume(fixture.approval)).resolves.toEqual({
         status: "mismatch",
         reason: "approval_commitment_mismatch",
       });
@@ -302,19 +359,20 @@ describe("PLAN-L7-532 PR-1 production ports", () => {
     }
   });
 
-  it("CANDIDATE-PACKPUB-005-D: rename failure denies and leaves no consumed journal event", () => {
+  it("CANDIDATE-PACKPUB-005-D: rename failure denies and leaves no consumed journal event", async () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-packpub-"));
     const fixture = approvalFixture(root);
     const approvalPort = createFileApprovalPort({
       root: join(root, "approvals"),
       operationId: "op-1",
       commitment: fixture.commitment,
+      commitmentExpected: fixture.expected,
       durableState: fixture.journal,
       rename: () => {
         throw new Error("EPERM");
       },
     });
-    expect(approvalPort.consume(fixture.approval)).toEqual({
+    await expect(approvalPort.consume(fixture.approval)).resolves.toEqual({
       status: "mismatch",
       reason: "approval_consume_failed",
     });
@@ -378,7 +436,7 @@ describe("PLAN-L7-532 PR-1 production ports", () => {
     });
   });
 
-  it("CANDIDATE-PACKPUB-005-Q / -R: origin/main commitment is consumed and mismatches deny", () => {
+  it("CANDIDATE-PACKPUB-005-Q / -R: origin/main commitment is consumed and mismatches deny", async () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-packpub-"));
     const fixture = approvalFixture(root);
     const gitRunner = createFakeProcessRunnerPort((request) =>
@@ -401,7 +459,7 @@ describe("PLAN-L7-532 PR-1 production ports", () => {
       approvalRoot: join(root, "approvals"),
       publicationRoot: join(root, "publication"),
     });
-    expect(ports.approval.consume(fixture.approval)).toEqual({
+    await expect(ports.approval.consume(fixture.approval)).resolves.toEqual({
       status: "attested",
       value: { mode: "new" },
     });
