@@ -90,6 +90,12 @@ admission_receipt:
 
 # PLAN-L7-532: Pack canary publication driver (production ports + CLI entry)
 
+> **訂正 (2026-09-14)**: §3.2 の `mergePullRequestCas` は、GitHub Pull Requests merge API の
+> `sha=<PR head>`を expected base OID のCASとして扱っていたため実現不能だった。main再観測後の merge
+> writeにもTOCTOUが残る。#574 のproduction実装をこの契約へ継ぎ足さず、原子性を弱めない後継
+> `PLAN-L7-565-pack-publication-atomic-ref-cas` のpair-freeze後にPR-1を再構築する。本PLANのその他の
+> approval、FSM、read-back、staging境界は後継へ継承する。
+
 ## 1. 目的と前提
 
 Issue #565 は、`PLAN-L7-519` が実装した port 注入型 publication adapter
