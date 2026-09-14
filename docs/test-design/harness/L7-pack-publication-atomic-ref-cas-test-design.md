@@ -46,7 +46,7 @@ production codeと共有`U-*`登録は後続implementation PRまで追加しな�
 | `CANDIDATE-PACKPUB-005-P` | approval filesを自己整合した別nonce群へ全差替し、origin/main commitmentは不変 | 各`sha256(nonce)`不一致でseal前`approval_commitment_mismatch`、write 0 |
 | `CANDIDATE-PACKPUB-005-Q` | (a) record approverだけ変異しfile不変、(b) file approverだけ変異しrecord不変 | 両刺激を独立caseで`approval_commitment_mismatch`/`approval_binding_mismatch`、receipt 0、write 0 |
 | `CANDIDATE-PACKPUB-005-R` | recordを(a) working treeだけ、(b) local HEADだけに置く、(c) identityを変異、(d) record expiresAtを到来させる | origin/mainだけがauthority。(a)(b) missing、(c) mismatch、(d) expired、全てseal前write 0 |
-| `CANDIDATE-PACKPUB-PORT-013` | production-port sliceでadapter authorizationを変更する、またはbounded adapter sliceでplanned event appendをApprovalPortへ移す | production以外を含むadapter testでnew consume直後に`planned_nonce_consumed`が1件、その後mutation_intent。adapter変更はpreparation/admission抽出だけ、production-port sliceのadapter diffはscope Red |
+| `CANDIDATE-PACKPUB-PORT-013` | (a) PR-Aで`reviewedHeadOid`をcaller自由入力、lease成功観測を`mainSha`単独、actual-update field未検証のままjournal、またはplanned event appendをApprovalPortへ移す、(b) PR-Bでadapter本体/test、port型、authorization/journal順序を変更する | PR-Aのadapter testはfresh preparation receipt＋再観測PR headだけを`applyReviewedHeadWithLease`へ渡し、`targetRef`/expected/head/`actualUpdateStatus: "updated"`/post-readの各1軸driftと`up-to-date`をtyped failure・後続write 0にし、検証済み成功観測全体を`read_back_observation`へdigest束縛する。new consume直後に`planned_nonce_consumed`が1件、その後mutation_intent。PR-A変更pathはadapter本体/testの2件だけ、PR-Bの両path diffはscope Red |
 | `CANDIDATE-PACKPUB-PORT-014` | commit metadataをfake-only fieldで返す、sidecar/blobを未取得、tag objectをcommitとして読む | 実API形fixtureだけでcommit/tree/blob/manifestを再計算しannotated tagをdereference。捏造fieldを除いてもfull FSM Green |
 
 ## 4. 実装証跡

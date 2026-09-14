@@ -90,8 +90,10 @@ preparation write失敗/response loss/crashはpreparation journalだけからwri
 この分離には既存adapterのbounded refactorが必要であり、production-port sliceへ混入させない。先行adapter sliceは、
 branch commit/PR createを`preparePackPublication`へ移し、`publishPackCanary`はadmitted preparation receiptから開始する
 2入口へ分ける。旧呼出をno-op portでattestedに見せる、dummy branch/PR observationを注入する、既存mutationを呼んだ
-ままwriteだけ省略する実装は禁止する。共通authorization helperは`mode: new`の各approval consume直後に
-`planned_nonce_consumed`をappendする責務を維持し、preparation nonceとpublication nonceを別集合として重複拒否する。
+ままwriteだけ省略する実装は禁止する。共通authorization helperは
+`src/setup/pack-publication-adapter.ts`内の`PublicationRun.authorize()`と`PublicationRun.mutate()`に固定し、別moduleへ
+抽出しない。`mode: new`の各approval consume直後に`planned_nonce_consumed`をappendする責務を維持し、preparation
+nonceとpublication nonceを別集合として重複拒否する。
 
 ### 1.2 release visible後のsecond canary preparation cycle
 
@@ -189,13 +191,28 @@ argvの総byte数と最大argument長が不変であることをoracleにする�
 
 ### 4.2 adapter slice とproduction compositionのscope
 
-先行adapter sliceだけが§1.1の2入口分離を所有する。`PublicationRun.authorize()`または抽出後の共通helperが
-`approval.consume()`の`mode: new`後に`planned_nonce_consumed`をjournalへappendする責務を維持する。file-backed
-ApprovalPortはapproval fileのatomic consumeとbinding照合だけを持ち、このjournal責務をproduction portへ移さない。
-in-memory/別ApprovalPortを含む全compositionでadapterが同じ順序を保証する。
+先行adapter sliceだけが§1.1の2入口分離とmain lease port契約の置換を所有する。既存
+`PackPublicationPorts.pack.mergePullRequestCas`は`applyReviewedHeadWithLease`へ置換し、export型
+`PackMainLeaseInput`を`{ repository, targetRef: "refs/heads/main", expectedMainOid, reviewedHeadOid }`、export型
+`PackMainLeaseObservation`を
+`{ targetRef, expectedMainOid, reviewedHeadOid, actualUpdateStatus: "updated", postReadOid }`に固定する。
+`reviewedHeadOid`はfresh preparation receiptとadmission時に再観測したPR headが一致した値だけから渡し、自由なcaller
+入力を許さない。このinterface置換、first/second admissionからの呼出、全5 fieldの一致検証、および成功観測全体を
+`read_back_observation.detailDigest`へ束縛する処理はadapter sliceの責務である。`=`/`[up to date]`、status欠落・複数・
+parse不能、reject、expected/head/post-read不一致は成功観測型へ変換せずtyped failureとする。
 
-後続production-port sliceはadapter本体を変更せず、freeze済み2入口へ実portをcompositionする。adapter sliceはGitHub API、
-filesystem production port、credentialを実装せず、production-port sliceはFSM/authorization順序を再定義しない。
+共通helperは`src/setup/pack-publication-adapter.ts`の既存`PublicationRun.authorize()`と
+`PublicationRun.mutate()`に固定する。`approval.consume()`の`mode: new`後に`planned_nonce_consumed`をjournalへappendする
+責務を維持し、lease成功観測はfield検証後にだけ`read_back_observation`へappendする。file-backed ApprovalPortはapproval
+fileのatomic consumeとbinding照合だけを持ち、このjournal責務をproduction portへ移さない。in-memory/別ApprovalPortを
+含む全compositionでadapterが同じ順序を保証する。
+
+後続production-port sliceはadapter本体を変更せず、`src/setup/pack-publication-production-ports.ts`の
+`createPackPublicationProductionPorts()`でfreeze済み2入口と`applyReviewedHeadWithLease`へ実portをcompositionする。この
+sliceが所有するのは、固定argvの`git push --porcelain
+--force-with-lease=refs/heads/main:<expectedMainOid> origin <reviewedHeadOid>:refs/heads/main`、porcelain actual-update 1件のparse、
+post-read、production process/credential portである。adapter sliceはGitHub API、filesystem production port、credentialを
+実装せず、production-port sliceはport型、FSM、authorization/journal順序を再定義しない。
 
 production portsのcomposition rootと既存`publishPackCanary`をfake process runnerで接続し、first preparation/review/admission、
 `planned -> pack_commit -> release_draft -> assets -> tag -> release_visible`、durable pause、second canary
@@ -238,8 +255,10 @@ expected `E`、head `H`、post-read OIDをまとめてdigest束縛する。
 - `PLAN-L7-508`: sealed exact entries、file mode、exact 2 assets、control snapshot digestだけを入力にする。local sourceや
   Pack checkoutからの補完は追加しない。
 - `PLAN-L7-519`: FSM順序と最初のambiguity以降write 0は維持する。先行bounded adapter sliceがpreparation/admissionを
-  2入口へ分け、production portがmain mutation primitiveをexact leaseへ差し替える。`authorize()`相当と
-  `planned_nonce_consumed` appendはadapter所有のままproduction portへ移さない。
+  2入口へ分け、`mergePullRequestCas`を`applyReviewedHeadWithLease`の固定入出力へ置換し、そのcaller検証とjournal束縛を
+  所有する。後続production-port sliceはそのinterfaceのexact lease process実装だけを所有する。`PublicationRun.authorize()`、
+  `PublicationRun.mutate()`、`planned_nonce_consumed`/`read_back_observation` appendはadapter所有のままproduction portへ
+  移さない。
 - #574は本pair-freeze前の実現不能契約に基づくため、そのdiffを正本化せず、本PLANのclosing review後にPR-1を
   新しいbranch/headから再構築する。
 
@@ -247,13 +266,16 @@ expected `E`、head `H`、post-read OIDをまとめてdigest束縛する。
 
 本PRは本PLAN、Reverse pair、専用test-design、旧confirmed PLANの訂正back-referenceだけを含むdocs-only contract PRと
 する。production source/test code、credential/ruleset変更、Pack remote mutationを含めない。後続実装はPR-Aをbounded
-adapter preparation/admission分離、PR-Bをproduction ports/composition、PR-CをCLI wiringへ分ける。PR-Bはadapter本体を
-変更せず、PR-Aはproduction portを変更しない。
+adapter contract/refactor、PR-Bをproduction ports/composition、PR-CをCLI wiringへ分ける。PR-Aの変更pathは
+`src/setup/pack-publication-adapter.ts`と`tests/pack-publication-adapter.test.ts`の2件だけに閉じ、
+`preparePackPublication`/`publishPackCanary`の2入口、durable resume、`PublicationRun.authorize()`/`mutate()`、
+`applyReviewedHeadWithLease`の型・caller検証・journal束縛だけを変更する。PR-Bはadapter本体とadapter testを変更せず、PR-Aは
+`src/setup/pack-publication-production-ports.ts`、production-port test、credential/rulesetを変更しない。
 
 | slice | owner | artifact境界 | hard predecessor |
 | --- | --- | --- | --- |
-| PR-A | Luna adapter worker + Terra oracle | adapterのfirst/second preparation・admission・durable resume入口、共通authorization、phase別nonce testだけ | 本pair-freeze closing PASS |
-| PR-B | 別Luna production-port worker + Terra oracle | production ports、2 authority adapter、second cycle込みfull-FSM composition test。adapter diff 0 | PR-A main到達 |
+| PR-A | Luna adapter worker + Terra oracle | 上記2 pathだけ。first/second preparation・admission・durable resume入口、既存`PublicationRun.authorize()`/`mutate()`、`applyReviewedHeadWithLease`のreviewed head入力・actual-update出力・caller検証・journal束縛、phase別nonce test | 本pair-freeze closing PASS |
+| PR-B | 別Luna production-port worker + Terra oracle | `src/setup/pack-publication-production-ports.ts`、production-port test、2 authority adapter、exact lease/porcelain/post-read実装、second cycle込みfull-FSM composition test。adapter本体/test diff 0 | PR-A main到達 |
 | PR-C | Luna CLI worker | preparation/admission/publish CLI wiring。domain/port変更0 | PR-B main到達 |
 
 完了条件は、TOCTOU攻撃、wrong/overprivileged authority、exact lease拒否、post-write read-back drift、large stdin、

@@ -68,8 +68,13 @@ dedicated authorityである。FSM順序、release identity、promotion、rollba
   entry変更があるoperationでWorkflows writeを必須、変更無しでは同権限を過剰としてdenyする。CAS Appは常にPR/Workflows
   writeなしである。unconditional force/main updateは生成されない。
 - receipt欠落・破損をremote successへ丸めず、完全journalとremote read-backが同じreceiptを再構成できる場合だけ回復する。
-- bounded adapter sliceがpreparation/admissionを2入口へ分ける一方、`planned_nonce_consumed` appendはL7-519 adapterの
-  authorization helper責務に残し、production ApprovalPortへ移さない。no-op portで旧FSMを偽装せず、phase間でnonceを再利用しない。
+- bounded adapter sliceがpreparation/admissionを2入口へ分け、`mergePullRequestCas`を
+  `applyReviewedHeadWithLease({ repository, targetRef, expectedMainOid, reviewedHeadOid })`へ置換する。成功観測の
+  `{ targetRef, expectedMainOid, reviewedHeadOid, actualUpdateStatus: "updated", postReadOid }`は同sliceのcallerが全fieldを
+  検証してからjournal digestへ束縛する。`PublicationRun.authorize()`/`mutate()`と`planned_nonce_consumed`/
+  `read_back_observation` appendはL7-519 adapter責務に残し、production ApprovalPortへ移さない。production-port sliceは
+  exact lease/porcelain/post-readの実装だけを所有しadapter diff 0とする。no-op portで旧FSMを偽装せず、phase間でnonceを
+  再利用しない。
 - expected actor/repo/main/tagの4軸preflight、raw asset upload/download、tree/blob/sidecar再計算、annotated tag
   dereferenceを実API schemaで構成し、production portsと`publishPackCanary`のfull FSMで一体検証する。
 - release visible後はdurable pauseし、pointer専用second preparation→non-author review→admission→exact CASへ進む。各phaseの
