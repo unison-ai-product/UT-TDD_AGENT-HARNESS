@@ -274,10 +274,10 @@ dispatch (same-family verdict は `same_family_reviewer` で拒否) が機械強
 4. **再検の担保**: 再検 packet は author claim・自己評価・前回 verdict を除いて control 側が組む
    (blind packet)。再検は新 exact head に束縛し (receipt の再利用禁止)、反証試行を verdict に残す
    (反証ゼロの PASS は PASS-WEAK)。receipt の evidence tier は従来どおり `cross_agent`。
-5. **他ランタイム成果への commit**: 是正 commit は author family が積むのが既定。reviewer family が
-   biome format 等の機械的是正を代わりに積む場合は §Hybrid 多ランタイム commit 協調の例外とし、
-   path 明示 stage、history 非破壊 (reset / force 禁止)、commit ごとの author family 記録、PR コメント
-   での是正内容の記録を条件とする。その commit も同じ非著者 reviewer の再検対象になる。
+5. **是正 commit は常に author family が積む**: biome format 等の機械的是正であっても reviewer family は
+   commit しない (成果物を書いた時点で非著者ではなくなり、再検の族分離が壊れる)。reviewer は FLAG の
+   `FINDING:` 行で是正内容を指し、author family が同 PR 内に path 明示 stage・history 非破壊 (reset / force
+   禁止) で積み、PR コメントに是正内容を記録する。§Hybrid 多ランタイム commit 協調の例外は設けない。
 6. **Codex worker の役割**: 初回実装 + 自 PR の軽作業是正 + 契約齟齬時の契約改訂。
 
 ### Hybrid 多ランタイム commit 協調 (Claude ↔ Codex、必須)
@@ -290,9 +290,9 @@ dispatch (same-family verdict は `same_family_reviewer` で拒否) が機械強
   force で破棄・デグレさせない**。working tree の foreign 変更は **既定で「相手ランタイムの正規作業」と
   みなす** (overstep と決めつけない)。判断が付かなければ revert せず PO へ確認する。
 - 自分の成果は **相手の commit の上に積む** (rebase/stack)。相手のファイルには触れず、自分の意図ファイル
-  のみを path 明示で stage する (`git add <path>`、`git add -A` / `git add .` 禁止)。例外は
-  §FLAG 後の限定是正と merge 5 に基づく機械的 remediation commit (同 PR 内、path 明示 stage、
-  history 非破壊、author family 記録) のみ。
+  のみを path 明示で stage する (`git add <path>`、`git add -A` / `git add .` 禁止)。FLAG 後の
+  是正 commit も author family が積む (§FLAG 後の限定是正と merge 5。reviewer family の代理 commit は
+  認めない)。
 - **commit 直前に `git status` + `git diff --staged` (or `ut-tdd review --staged` / `--uncommitted`) を
   確認**し、自分が authored した意図ファイルのみが staged であることを検証する。
 - push は origin と相手の commit を含めて整合する状態でのみ行う。push 済み履歴は決して破壊しない。
