@@ -87,6 +87,12 @@ freshnessは、preparation operation ID/idempotency keyが未使用で、receipt
 preparation write失敗/response loss/crashはpreparation journalだけからwrite 0 reconciliationし、publication admissionへ
 進めない。preparationとpublicationは別journal/receipt/nonce集合を持ち、前者のnonceを後者へ再利用しない。
 
+この分離には既存adapterのbounded refactorが必要であり、production-port sliceへ混入させない。先行adapter sliceは、
+branch commit/PR createを`preparePackPublication`へ移し、`publishPackCanary`はadmitted preparation receiptから開始する
+2入口へ分ける。旧呼出をno-op portでattestedに見せる、dummy branch/PR observationを注入する、既存mutationを呼んだ
+ままwriteだけ省略する実装は禁止する。共通authorization helperは`mode: new`の各approval consume直後に
+`planned_nonce_consumed`をappendする責務を維持し、preparation nonceとpublication nonceを別集合として重複拒否する。
+
 ## 2. 不可能性と方式選択
 
 GitHub Pull Requests merge APIの`sha` parameterはPR head OIDのpreconditionであり、base OIDのpreconditionでは
@@ -107,10 +113,14 @@ OID付きlease、専用App authority、fast-forward refspecの積を満たす1�
 
 ## 3. authority とpreflight
 
-- 実行主体はPack repository rulesetで`always` bypass actorへ明示登録した専用GitHub App installationとする。
-  GitHub rulesetのbypass grant自体はoperation単位には狭められず、token有効中のmain write能力を持つ。この残存能力を
+- authorityは同時利用できない2つのGitHub App installationへ分離する。`preparation authority`はruleset bypassを持たず、
+  publication branchのGit object作成に必要なContents writeとPR作成に必要なPull requests writeだけを持つ。
+  `publication CAS authority`はrulesetの`always` bypass actorで、Contents writeだけを持ちPull requests writeを持たない。
+  installation ID、token、operation ID、approval、journalを共有せず、preparation tokenはadmission前に破棄し、CAS tokenは
+  admission完了後にだけmintする。片方を他方のoperationへ渡した場合はauthority mismatch、write 0とする。
+- publication CAS authorityのbypass grant自体はoperation単位には狭められず、token有効中のmain write能力を持つ。この残存能力を
   隠さず、単一Pack repository・短寿命installation token・Contents writeの最小permission・実行直前mint/直後破棄・
-  mutation approvalで時間と対象を狭める。human account、PAT、source-repository CI identity、汎用botをauthorityにせず、
+  mutation approvalで時間と対象を狭める。両authorityともhuman account、PAT、source-repository CI identity、汎用botを使わず、
   Administration write、Issues、Actions、Secrets権限を付与しない。ruleset観測に追加read permissionが必要な場合は、
   mutation credentialへwrite権限を足さず独立read-only attestation portへ分離する。
 - publication admissionはrepository ID/name、installation ID、ruleset ID、target ref、expected main OID、preparation
@@ -149,12 +159,15 @@ argvの総byte数と最大argument長が不変であることをoracleにする�
   dereferenceしてtarget commit OIDを得る。そのtargetだけを`git/commits/<oid>`で検証する。tag object OIDをcommit
   endpointへ直接渡さない。全observeは実API schemaと異なるfake-only fieldを拒否する。
 
-### 4.2 production composition とPR-1 scope
+### 4.2 adapter slice とproduction compositionのscope
 
-後続production-port PRは`PLAN-L7-519`のadapter本体を変更しない。特に`PublicationRun.authorize()`が
+先行adapter sliceだけが§1.1の2入口分離を所有する。`PublicationRun.authorize()`または抽出後の共通helperが
 `approval.consume()`の`mode: new`後に`planned_nonce_consumed`をjournalへappendする責務を維持する。file-backed
 ApprovalPortはapproval fileのatomic consumeとbinding照合だけを持ち、このjournal責務をproduction portへ移さない。
 in-memory/別ApprovalPortを含む全compositionでadapterが同じ順序を保証する。
+
+後続production-port sliceはadapter本体を変更せず、freeze済み2入口へ実portをcompositionする。adapter sliceはGitHub API、
+filesystem production port、credentialを実装せず、production-port sliceはFSM/authorization順序を再定義しない。
 
 production portsのcomposition rootと既存`publishPackCanary`をfake process runnerで接続し、preflightから
 `planned -> pack_commit -> release_draft -> assets -> tag -> release_visible -> canary`のfull FSMを1回通す。
@@ -190,16 +203,24 @@ expected `E`、head `H`、post-read OIDをまとめてdigest束縛する。
   release object、canary先行、stable promotion、supersede-forward rollbackの順序は変更しない。
 - `PLAN-L7-508`: sealed exact entries、file mode、exact 2 assets、control snapshot digestだけを入力にする。local sourceや
   Pack checkoutからの補完は追加しない。
-- `PLAN-L7-519`: FSMのport順序と最初のambiguity以降write 0は維持する。production portだけがmain mutation primitiveを
-  exact leaseへ差し替える。`authorize()`と`planned_nonce_consumed` appendはadapter所有のまま変更しない。
+- `PLAN-L7-519`: FSM順序と最初のambiguity以降write 0は維持する。先行bounded adapter sliceがpreparation/admissionを
+  2入口へ分け、production portがmain mutation primitiveをexact leaseへ差し替える。`authorize()`相当と
+  `planned_nonce_consumed` appendはadapter所有のままproduction portへ移さない。
 - #574は本pair-freeze前の実現不能契約に基づくため、そのdiffを正本化せず、本PLANのclosing review後にPR-1を
   新しいbranch/headから再構築する。
 
 ## 7. PR分割と完了条件
 
 本PRは本PLAN、Reverse pair、専用test-design、旧confirmed PLANの訂正back-referenceだけを含むdocs-only contract PRと
-する。production source/test code、credential/ruleset変更、Pack remote mutationを含めない。後続PR-1はproduction portsと
-Red→Greenだけに閉じ、`pack-publication-adapter.ts`を変更しない。PR-2はCLI wiringに分ける。
+する。production source/test code、credential/ruleset変更、Pack remote mutationを含めない。後続実装はPR-Aをbounded
+adapter preparation/admission分離、PR-Bをproduction ports/composition、PR-CをCLI wiringへ分ける。PR-Bはadapter本体を
+変更せず、PR-Aはproduction portを変更しない。
+
+| slice | owner | artifact境界 | hard predecessor |
+| --- | --- | --- | --- |
+| PR-A | Luna adapter worker + Terra oracle | adapterの2入口、共通authorization、phase別nonce testだけ | 本pair-freeze closing PASS |
+| PR-B | 別Luna production-port worker + Terra oracle | production ports、2 authority adapter、full-FSM composition test。adapter diff 0 | PR-A main到達 |
+| PR-C | Luna CLI worker | preparation/admission/publish CLI wiring。domain/port変更0 | PR-B main到達 |
 
 完了条件は、TOCTOU攻撃、wrong/overprivileged authority、exact lease拒否、post-write read-back drift、large stdin、
 receipt前crash、partial/corrupt receipt、atomic no-clobber競合のcandidateがpair artifactに凍結され、plan lint、readability、
