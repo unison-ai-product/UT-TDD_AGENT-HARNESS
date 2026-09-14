@@ -126,10 +126,11 @@ describe("NodePlanRevisionRunner", () => {
 
   it("U-PA-REV-044: superseded asset history does not shadow the selected terminal asset", () => {
     const f = rehydrationFixture();
-    rewriteProjection(f, [
-      { asset_id: "plan:superseded", revision: 6, content_digest: sha("old-content") },
-      {},
-    ], true);
+    rewriteProjection(
+      f,
+      [{ asset_id: "plan:superseded", revision: 6, content_digest: sha("old-content") }, {}],
+      true,
+    );
 
     expect(f.runner.run(f.input)).toMatchObject({
       status: "created",
@@ -679,7 +680,8 @@ function rewriteProjection(
     .records[0];
   let previousRecordDigest: string | null = null;
   const records = bindingOverrides.map((overrides, index) => {
-    const preserveReceiptIdentity = preserveFinalReceiptIdentity && index === bindingOverrides.length - 1;
+    const preserveReceiptIdentity =
+      preserveFinalReceiptIdentity && index === bindingOverrides.length - 1;
     const record = {
       sequence: index + 1,
       previousRecordDigest,

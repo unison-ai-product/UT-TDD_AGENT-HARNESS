@@ -110,8 +110,7 @@ function prepare(input: PlanLedgerRehydrationInput) {
     throw new Error("plan-revision-rehydration-asset-mismatch");
   const identityMismatches = selectedAsset.filter(
     (record) =>
-      record.binding.planId !== manifest.plan_id ||
-      record.binding.path !== manifest.source.path,
+      record.binding.planId !== manifest.plan_id || record.binding.path !== manifest.source.path,
   );
   if (identityMismatches.some((record) => record.binding.planId !== manifest.plan_id))
     throw new Error("plan-revision-rehydration-plan-id-mismatch");
