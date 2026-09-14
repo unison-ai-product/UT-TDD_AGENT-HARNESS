@@ -5,7 +5,7 @@ executed_at_layer: L7
 artifact_type: test_design
 status: draft
 plan_id: PLAN-L7-533-memory-completion-fence
-updated: 2026-09-11
+updated: 2026-09-14
 ---
 
 # PLAN-L7-533 test design
@@ -58,7 +58,9 @@ tracked memory だけで drift が起き、テストの意図 (legacy extra の�
 | `CANDIDATE-U-PMEMFENCE-020` | legacy 互換: Slice 4b 形式 (`previous_complete_digest` 欠落) の complete operation を root として置き、residue を作って §4.2 の新 operation を apply | fence ok。新 operation の `owner` marker は legacy complete の `complete` digest を明示の `previous_complete_digest` に持ち、tip = 新 operation。legacy root を `transaction_tampered` / `operation_chain_ambiguous` にしたら Red |
 | `CANDIDATE-U-PMEMFENCE-021` | (a) null / 欠落 root の complete operation を 2 件置く、(b) 新形式 operation の `owner` marker から `previous_complete_digest` を除去し recordDigest を再計算しない、(c) legacy root (field 無し、digest 整合) の上に (b) の子を置く、(d) (b) の marker の recordDigest を改変後 payload で再計算して置く (chain 偽造) | (a) `operation_chain_ambiguous`。(b)(c) `transaction_tampered` (Slice 4b の record digest chain で検出。field の有無で判定したら Red)。(d) 後続 marker の `previousRecordDigest` 不一致で `transaction_tampered`、owner 単独 (後続無し) の operation なら `migration_incomplete`。判定順序 tampered → incomplete → ambiguous を守らなければ Red。いずれも write 0 |
 
-`001..012` と `016..021` は PR-1 (fence module)、`013..015` は PR-2 (production 結線) が所有する。実装 PR で Red→Green を観測した行だけを
+`001..012` と `016..021` は PR-1 (read-only fence + 既存 migration writer の bounded additive changeから成る
+completion core transaction substrate)、`013..015` は PR-2 (production 結線) が所有する。PR-1の正例は手書きmarkerで代替せず、
+正規writerによるcanonical import、実取り込み集合、`canonicalCorpusDigest`、`previous_complete_digest`を検証する。実装 PR で Red→Green を観測した行だけを
 同番号の `U-PMEMFENCE-*` へ 1:1 で昇格し、共有 `L7-unit-test-design.md` へ登録する。
 
 ## 4. Gate and scope fence

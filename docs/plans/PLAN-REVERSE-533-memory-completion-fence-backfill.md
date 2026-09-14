@@ -8,7 +8,7 @@ confirmed_reverse_type: design
 route_signal: reverse
 route_mode: reverse
 created: 2026-09-11
-updated: 2026-09-11
+updated: 2026-09-14
 owner: Claude / Fable (pair-freeze) · Codex worker (implementation)
 forward_routing: gap-only
 promotion_strategy: reuse-as-is
@@ -105,7 +105,8 @@ provider wake / claim / doctor) の接合面として確認する。L7-512 が�
 - **residue の集合差分**: linked worktree の untracked memory を `(memory_id, content_digest)` の集合差分で観測し、
   mtime を使わない (`008`、`009`)。`invalid_memory` / `source_unsafe` は Slice 4a の typed reason を再利用する。
 - **回復の append-only**: 新 operation の apply は Slice 4b の transaction 経路を使い、個別ファイル単位で記録する
-  (`010`、`011`)。
+  (`010`、`011`)。read-only fence が検証する `canonicalCorpusDigest` と `previous_complete_digest` は同じPR-1の既存 writer
+  additive changeが発行し、手書きmarkerを正例fixtureにしない (`020`)。
 - **529 境界**: setup bootstrap 例外と `project_identity_commit_required` は `PLAN-L7-529` §6 (remote-less identity
   denial を fatal にしない) と両立させる (`014`)。
 
@@ -164,7 +165,8 @@ gap は L7-533 の contract 改訂 (revision N+1) で閉じ、`PLAN-L7-512` / `P
 
 ## R4: Forward 再合流条件
 
-- PR-1 (fence module) と PR-2 (production 結線) が別 PR で main 到達し、各々の exact HEAD に Linux / Windows /
+- PR-1 (read-only fence + 既存 migration writer の bounded additive changeから成るcompletion core transaction substrate) と
+  PR-2 (production 結線) が別 PR で main 到達し、各々の exact HEAD に Linux / Windows /
   aggregate Green と Claude 族の非著者 closing receipt が存在する。
 - `CANDIDATE-U-PMEMFENCE-001..021` が同番号の `U-PMEMFENCE-*` へ 1:1 昇格し、同一 implementation revision の
   Red→Green 実測を引用している。
