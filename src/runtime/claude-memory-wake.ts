@@ -13,7 +13,7 @@ import {
 } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import type { MemoryEntry } from "../memory/index.ts";
+import { type MemoryEntry, parseMemoryFile } from "../memory/index.ts";
 import { isCanonicalMemorySourcePath } from "../memory/service.ts";
 import { ensureDir } from "../shared/fs.ts";
 import {
@@ -176,6 +176,7 @@ export {
 } from "./claude-provider-envelope.ts";
 
 import {
+  buildClaudeProviderReviewInboxEntry,
   CLAUDE_PROVIDER_INBOX_SCHEMA,
   type ClaudeProvider,
   type ClaudeProviderEnvelopeDenyReason,
@@ -289,6 +290,141 @@ function inboxFileStem(entryId: string): string {
 
 function runtimeRoot(repoRoot: string): string {
   return join(requireProjectMemoryRoot(repoRoot).runtimeBusRoot, "claude-memory-wake");
+}
+
+/** Project-scoped Codex review wake surface (shares the strict provider envelope v4). */
+export const CODEX_MEMORY_WAKE_SURFACE_SCHEMA = "ut-tdd.codex-memory-wake/v1" as const;
+export const CODEX_MEMORY_WAKE_ROOT = "codex-memory-wake" as const;
+export const CODEX_REVIEW_TARGET_SESSION = "codex-review-inbox" as const;
+
+export interface CodexReviewWakeInput {
+  readonly purpose: "review";
+  readonly reviewer: "codex" | "claude";
+  readonly requestDigest: string;
+  readonly requestPath: string;
+  readonly request: {
+    readonly memoryId: string;
+    readonly pr: number;
+    readonly exactHead: string;
+    readonly reviewRevision: string;
+    readonly authorFamily: "codex" | "claude";
+    readonly requestedAt: string;
+  };
+  readonly memoryPath: string;
+}
+
+function codexWakeRuntimeRoot(repoRoot: string): string {
+  return join(requireProjectMemoryRoot(repoRoot).runtimeBusRoot, CODEX_MEMORY_WAKE_ROOT);
+}
+
+export function codexWakeInboxRoot(repoRoot: string): string {
+  return join(codexWakeRuntimeRoot(repoRoot), "inbox");
+}
+
+/** Persist a Codex review wake; a file projection is not delivery confirmation. */
+export function publishCodexReviewWake(repoRoot: string, wake: CodexReviewWakeInput): string {
+  if (wake.reviewer !== "codex") throw new Error("codex_review_wake_target_invalid");
+  const project = requireProjectMemoryRoot(repoRoot);
+  const memory = parseMemoryFile(project.canonicalProjectRoot, wake.memoryPath);
+  if (memory.memory_id !== wake.request.memoryId) {
+    throw new Error("codex_review_wake_memory_identity_mismatch");
+  }
+  const entry = buildClaudeProviderReviewInboxEntry({
+    memory,
+    projectId: project.projectId,
+    operationId: `review-${wake.requestDigest}`,
+    workspaceId: project.projectNamespace,
+    producer: { provider: "claude", sessionId: "claude-review-dispatch" },
+    target: { scope: "session", provider: "codex", sessionId: CODEX_REVIEW_TARGET_SESSION },
+    requestDigest: wake.requestDigest,
+    requestPath: wake.requestPath,
+    pr: wake.request.pr,
+    exactHead: wake.request.exactHead,
+    reviewRevision: wake.request.reviewRevision,
+    authorFamily: wake.request.authorFamily,
+    now: wake.request.requestedAt,
+  });
+  const directory = codexWakeInboxRoot(repoRoot);
+  ensureDir(directory, { recursive: true });
+  const path = join(directory, `${inboxFileStem(entry.id)}.json`);
+  const serialized = `${JSON.stringify(entry)}\n`;
+  if (existsSync(path)) {
+    if (readFileSync(path, "utf8") === serialized) return path;
+    throw new Error("codex_review_wake_projection_conflict");
+  }
+  const descriptor = openSync(path, "wx", 0o600);
+  try {
+    writeFileSync(descriptor, serialized);
+  } finally {
+    closeSync(descriptor);
+  }
+  return path;
+}
+
+export type CodexMemoryWakeSurface =
+  | {
+      readonly schema: typeof CODEX_MEMORY_WAKE_SURFACE_SCHEMA;
+      readonly status: "pending";
+      readonly deliveryConfirmed: false;
+      readonly envelopePath: string;
+      readonly requestDigest: string;
+      readonly pr: number;
+      readonly exactHead: string;
+      readonly reviewRevision: string;
+      readonly reason: "codex_review_pending";
+    }
+  | {
+      readonly schema: typeof CODEX_MEMORY_WAKE_SURFACE_SCHEMA;
+      readonly status: "empty";
+      readonly deliveryConfirmed: false;
+    };
+
+/** Return the oldest valid Codex review envelope for a machine-readable hook. */
+export function readCodexReviewWake(repoRoot: string): CodexMemoryWakeSurface {
+  const project = requireProjectMemoryRoot(repoRoot);
+  const directory = join(project.runtimeBusRoot, CODEX_MEMORY_WAKE_ROOT, "inbox");
+  if (!existsSync(directory)) {
+    return { schema: CODEX_MEMORY_WAKE_SURFACE_SCHEMA, status: "empty", deliveryConfirmed: false };
+  }
+  const candidates: Array<{ path: string; entry: ClaudeProviderReviewInboxEntry }> = [];
+  for (const name of readdirSync(directory)
+    .filter((value) => value.endsWith(".json"))
+    .sort()) {
+    const path = join(directory, name);
+    try {
+      const stat = statSync(path);
+      if (!stat.isFile()) continue;
+      const entry = decodeClaudeInboxEntry(readFileSync(path, "utf8"));
+      if (
+        !entry ||
+        entry.schemaVersion !== CLAUDE_PROVIDER_INBOX_SCHEMA ||
+        entry.purpose !== "review" ||
+        entry.projectId !== project.projectId ||
+        entry.target.provider !== "codex" ||
+        name !== `${inboxFileStem(entry.id)}.json`
+      )
+        continue;
+      candidates.push({ path, entry: entry as ClaudeProviderReviewInboxEntry });
+    } catch {
+      // Malformed or concurrently removed entries are not surfaced as delivery.
+    }
+  }
+  candidates.sort((a, b) => a.entry.createdAt.localeCompare(b.entry.createdAt));
+  const candidate = candidates[0];
+  if (!candidate) {
+    return { schema: CODEX_MEMORY_WAKE_SURFACE_SCHEMA, status: "empty", deliveryConfirmed: false };
+  }
+  return {
+    schema: CODEX_MEMORY_WAKE_SURFACE_SCHEMA,
+    status: "pending",
+    deliveryConfirmed: false,
+    envelopePath: candidate.path,
+    requestDigest: candidate.entry.requestDigest,
+    pr: candidate.entry.pr,
+    exactHead: candidate.entry.exactHead,
+    reviewRevision: candidate.entry.reviewRevision,
+    reason: "codex_review_pending",
+  };
 }
 
 function providerBindingPath(repoRoot: string, entryId: string): string {

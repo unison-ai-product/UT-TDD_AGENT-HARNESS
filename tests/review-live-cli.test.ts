@@ -1,6 +1,7 @@
 import { execFileSync } from "node:child_process";
 import {
   chmodSync,
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readdirSync,
@@ -25,6 +26,11 @@ import {
   type ReviewVerdictProjectionResult,
 } from "../src/feedback/review-attestation.ts";
 import type { ClaudeReviewInboxEntry } from "../src/runtime/claude-memory-wake.ts";
+import {
+  codexWakeInboxRoot,
+  publishCodexReviewWake,
+  readCodexReviewWake,
+} from "../src/runtime/claude-memory-wake.ts";
 import { resolveProjectMemoryRoot } from "../src/runtime/project-memory-root.ts";
 import { ensureTrackedProjectIdentity } from "./support/project-identity-fixture.ts";
 
@@ -355,6 +361,47 @@ describe("review live CLI composition", () => {
       expect.objectContaining({ purpose: "review", reviewer: "codex" }),
     );
     expect(() => readdirSync(wakeInboxRoot(root))).toThrow();
+  });
+
+  it("U-RVATT-024: production Codex publisher writes project-isolated pending wake", () => {
+    const first = fixture();
+    const second = fixture();
+    try {
+      const request = issueReviewRequest({
+        repoRoot: first.root,
+        strict: true,
+        request: {
+          memoryId: "memory:d3a",
+          pr: 319,
+          exactHead: head,
+          reviewRevision: "review-codex-production",
+          authorFamily: "claude",
+          requestedAt: "2026-08-14T00:00:00.000Z",
+        },
+      });
+      if (!request.ok) throw new Error(request.reason);
+      const wake = {
+        purpose: "review" as const,
+        reviewer: "codex" as const,
+        requestDigest: request.digest,
+        requestPath: request.path,
+        request: request.request,
+        memoryPath: relative(first.root, first.memoryPath).replaceAll("\\", "/"),
+      };
+      const path = publishCodexReviewWake(first.root, wake);
+      expect(path).toContain(join("codex-memory-wake", "inbox"));
+      expect(codexWakeInboxRoot(first.root)).not.toBe(codexWakeInboxRoot(second.root));
+      expect(existsSync(wakeInboxRoot(first.root))).toBe(false);
+      expect(readCodexReviewWake(first.root)).toMatchObject({
+        status: "pending",
+        deliveryConfirmed: false,
+        requestDigest: request.digest,
+      });
+      expect(existsSync(join(first.root, ".git", "ut-tdd-runtime", "projects"))).toBe(true);
+    } finally {
+      rmSync(first.root, { recursive: true, force: true });
+      rmSync(second.root, { recursive: true, force: true });
+    }
   });
 
   it("U-RVATT-031 grants Claude only the consumer-derived exact verdict path", () => {

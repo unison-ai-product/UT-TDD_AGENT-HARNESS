@@ -38,6 +38,13 @@
             "args": ["src/cli.ts", "session", "start"],
             "timeout": 5,
             "statusMessage": "session-log: session start (fail-open)"
+          },
+          {
+            "type": "command",
+            "command": "node",
+            "args": ["src/cli.ts", "hook", "codex-memory-wake"],
+            "timeout": 5,
+            "statusMessage": "codex-memory-wake: surface pending review envelope (delivery unconfirmed)"
           }
         ]
       }
@@ -65,6 +72,13 @@
             "args": ["src/cli.ts", "session", "summary"],
             "timeout": 5,
             "statusMessage": "session-log: PLAN digest summary (fail-open)"
+          },
+          {
+            "type": "command",
+            "command": "node",
+            "args": ["src/cli.ts", "hook", "codex-memory-wake"],
+            "timeout": 5,
+            "statusMessage": "codex-memory-wake: surface pending review envelope (delivery unconfirmed)"
           }
         ]
       }

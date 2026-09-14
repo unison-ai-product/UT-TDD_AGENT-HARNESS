@@ -49,6 +49,7 @@ import { acquireDoctorLock, doctorLockBlockedMessage } from "./doctor/singleton-
 import { renderElicitationContext, selectElicitationContext } from "./elicitation/context.ts";
 import { appendDesignDecision, DESIGN_DECISION_LOG_PATH } from "./elicitation/record.ts";
 import { computeSkillMetrics } from "./feedback/engine.ts";
+import type { CanonicalReviewWake } from "./feedback/live-review-projection.ts";
 import { registerForwardWorkflowCommands } from "./forward/adapters/cli-registrar.ts";
 import { evaluateGateReview, loadReviewChecklistIfPresent } from "./gate/review-tier.ts";
 import { writeGateRunEvidence } from "./gate/run-evidence.ts";
@@ -151,6 +152,8 @@ import {
   isClaudeMemoryWakeTarget,
   parseClaudeInboxPullRequestObservation,
   publishClaudeInboxEntry,
+  publishCodexReviewWake as publishCodexReviewWakeEnvelope,
+  readCodexReviewWake,
   recoverClaudeInboxBacklog,
   resolveClaudeWakeDelay,
   resolveLiveClaudeTarget,
@@ -1284,6 +1287,18 @@ hook
   });
 
 hook
+  .command("codex-memory-wake")
+  .description("surface one pending project-scoped Codex review wake as machine-readable JSON")
+  .action(() => {
+    const repoRoot = requireRuntimeRepoRoot({ allowCwdFallback: true });
+    const surface = readCodexReviewWake(repoRoot);
+    // A pending projection is not a consumed review. Keep deliveryConfirmed
+    // false so Codex/automation cannot mistake a hook observation for a receipt.
+    process.stdout.write(`${JSON.stringify(surface)}\n`);
+    if (surface.status === "pending") process.exitCode = 2;
+  });
+
+hook
   .command("post-tool-use")
   .description("record PostToolUse through the shared session-log core")
   .option("--session <id>", SESSION_OPTION_DESCRIPTION)
@@ -2235,7 +2250,12 @@ const review = program
     process.exitCode = doctor.ok ? 0 : 1;
   });
 
-registerLiveReviewCommands(review);
+/** Production Codex reviewer route: persist only into the Codex project inbox. */
+function publishCodexReviewWake(repoRoot: string, wake: CanonicalReviewWake): void {
+  publishCodexReviewWakeEnvelope(repoRoot, wake);
+}
+
+registerLiveReviewCommands(review, { publishCodexReviewWake });
 
 program
   .command("cutover")
