@@ -22,7 +22,7 @@ agent_slots:
   - role: tl
     slot_label: Sol / Claude Opus - L7-512 completion 条項と L7-533 fence 正本の境界を逆向き検証する
   - role: qa
-    slot_label: Terra - CANDIDATE-U-PMEMFENCE-001..021 を独立照合し、baseline snapshot
+    slot_label: Terra - CANDIDATE-U-PMEMFENCE-001..023 を独立照合し、baseline snapshot
       残存・mtime 依存・全量 apply・schema 迂回を攻撃する
 generates:
   - artifact_path: docs/plans/PLAN-REVERSE-533-memory-completion-fence-backfill.md
@@ -44,18 +44,18 @@ status: draft
 github_issue_id: 550
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:d54eaa9755ce6d231b8b3e71405a1949
-  command_id: plan-revise:issue-550:reverse:8
-  admitted_at: 2026-09-14T09:55:04.633Z
-  source_digest: sha256:24f0b9e2d353e4ab9c80b3b10f21cee9cede81c934803bfb6f13ca72286901d5
-  decision_digest: sha256:64748364014186a6373e013046ab981406ce782175bdd8362fc534d111bb6e52
-  receipt_digest: sha256:b661ee0267d577b09d0c311e894f39f07d188e866a36ba52b4622c764797f9f3
+  receipt_id: certificate:97f1f92114580a33d1fda8499e0dfb03
+  command_id: plan-revise:issue-550:reverse:9
+  admitted_at: 2026-09-14T10:38:52.177Z
+  source_digest: sha256:e06ccad9da91e71ba60ff6cf9be93b34d668f9cd2aa24718302432f0ade5b081
+  decision_digest: sha256:40dad2e5730d03a622d3ca96afe9c388f16836d50d794e6c1bb9e8e6b5305ca7
+  receipt_digest: sha256:e79c3acb839b67e816a5482ddb6140777ab560f6a3aa4f3ec6797a52bab8f95e
   binding:
     path: docs/plans/PLAN-REVERSE-533-memory-completion-fence-backfill.md
     plan_id: PLAN-REVERSE-533-memory-completion-fence-backfill
     asset_id: plan:9c79745cc74906d8a41f0e144021d912
-    revision: 8
-    content_digest: sha256:24f0b9e2d353e4ab9c80b3b10f21cee9cede81c934803bfb6f13ca72286901d5
+    revision: 9
+    content_digest: sha256:e06ccad9da91e71ba60ff6cf9be93b34d668f9cd2aa24718302432f0ade5b081
   route:
     signal: reverse
     mode: reverse
@@ -76,10 +76,8 @@ admission_receipt:
     target_revision: 1
     phase: forward_merge
   escape_reason: "Issue #550 completion fence Reverse backfill pair (R0); revision
-    8: Claude Opus FLAG cacd892c finding 1 (PR-1 completion core transaction
-    substrate; replay_corpus_mismatch precedence as the only existing-reason
-    change) + Sol preflight FLAG 2 (022 crash-window recovery, 023 writer-entry
-    tampered precedence)"
+    9: range notation 001..023 / 016..023 aligned in §7 / Reverse qa slot
+    (Claude Opus review f723873a non-blocking note)"
 ---
 
 # PLAN-REVERSE-533: Memory migration completion fence の逆向き確認

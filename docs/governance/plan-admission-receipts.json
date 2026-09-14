@@ -3712,6 +3712,22 @@
         "revision": 9,
         "content_digest": "sha256:ddc519ea1675f3df17b948bc2ff66dc33cfcd22ff2fba15ff48de1cd52ddb40e"
       }
+    },
+    {
+      "sequence": 233,
+      "previous_record_digest": "sha256:10b943cbfb9b43c6e663bb1b469ff02400a3bd608b6f7f3173439e79b54b8710",
+      "record_digest": "sha256:62c9323a87de54f48cf799133de68c8117b220b4dab848bd7f4ca64c8d2f1b44",
+      "command_id": "plan-revise:issue-550:reverse:9",
+      "receipt_id": "certificate:97f1f92114580a33d1fda8499e0dfb03",
+      "receipt_digest": "sha256:e79c3acb839b67e816a5482ddb6140777ab560f6a3aa4f3ec6797a52bab8f95e",
+      "decision_digest": "sha256:40dad2e5730d03a622d3ca96afe9c388f16836d50d794e6c1bb9e8e6b5305ca7",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-533-memory-completion-fence-backfill.md",
+        "plan_id": "PLAN-REVERSE-533-memory-completion-fence-backfill",
+        "asset_id": "plan:9c79745cc74906d8a41f0e144021d912",
+        "revision": 9,
+        "content_digest": "sha256:e06ccad9da91e71ba60ff6cf9be93b34d668f9cd2aa24718302432f0ade5b081"
+      }
     }
   ]
 }
