@@ -30,7 +30,22 @@ production codeと共有`U-*`登録は後続implementation PRまで追加しな�
 | `CANDIDATE-PACKPUB-CAS-011` | fresh operationでseal前にreview済みPRを要求する循環、外部手作りbranch/PR、receipt無し、別operation receipt replay、review後head更新を注入 | preparationだけがbranch/PR writeを行い、各writeに専用approval/journalがある。non-author review後のadmissionはread-onlyでfresh receipt/head/base/stagingを束縛し、不一致はmain write 0 |
 | `CANDIDATE-PACKPUB-CAS-012` | expected `E`、reviewed head `H`で、push直前に競合writerがmainを同じ`H`へ進め、pushが`up-to-date` exit 0、read-back `H`を返す | porcelainの`=`/`[up to date]`は`cas_not_applied_by_operation`/`indeterminate`、success 0、後続write 0。actual-update status 1件とread-back一致の対照だけ成功 |
 
-## 3. 実装証跡
+## 3. 継承するproduction-port oracle
+
+| Candidate | Red stimulus | Green oracle |
+| --- | --- | --- |
+| `CANDIDATE-PACKPUB-005-B` | expected actor/repo/main/tagを1軸ずつ変異し、またはidentity preflightをcompositionから外す | 各軸固有のtyped deny、全remote write 0。actor non-emptyだけの検査と未使用helperはRed |
+| `CANDIDATE-PACKPUB-005-G` | mutation開始後のgh非0 exit、timeout、stdout/stderr output-limitを各々注入 | `indeterminate`、後続write 0。tag readの404だけが不在で、その他失敗を`attested(null)`へ丸めない |
+| `CANDIDATE-PACKPUB-005-H` | fake応答へtoken風文字列、全approvalへ異なるnonceを混入 | token文字列はstdout/journal/receipt/errorで0件。receipt noncesはconsume済みapproval mutation集合と1:1 byte一致し、未consume nonce 0件 |
+| `CANDIDATE-PACKPUB-005-I` | endpoint/method/header/query/stdinの各1行を§4.1対応から変異 | production ports + `publishPackCanary` full FSM ledgerがplanned→canaryの全argvとjournal順序を1:1照合し、個別portだけではGreenにしない |
+| `CANDIDATE-PACKPUB-005-J` | assetをbase64 JSONで送る、通常APIへupload、listing digestだけ信用、download bytes/size/digestを1 byte変異 | uploads endpointのraw stdinがsealed bytesと一致し、download raw bytes再計算不一致で停止。exact name/IDとexact 2 assetsを要求 |
+| `CANDIDATE-PACKPUB-005-P` | approval filesを自己整合した別nonce群へ全差替し、origin/main commitmentは不変 | 各`sha256(nonce)`不一致でseal前`approval_commitment_mismatch`、write 0 |
+| `CANDIDATE-PACKPUB-005-Q` | (a) record approverだけ変異しfile不変、(b) file approverだけ変異しrecord不変 | 両刺激を独立caseで`approval_commitment_mismatch`/`approval_binding_mismatch`、receipt 0、write 0 |
+| `CANDIDATE-PACKPUB-005-R` | recordを(a) working treeだけ、(b) local HEADだけに置く、(c) identityを変異、(d) record expiresAtを到来させる | origin/mainだけがauthority。(a)(b) missing、(c) mismatch、(d) expired、全てseal前write 0 |
+| `CANDIDATE-PACKPUB-PORT-013` | PR-1でadapter `authorize()`からplanned event appendを削除しApprovalPortへ移す | production以外を含むadapter testでnew consume直後に`planned_nonce_consumed`が1件、その後mutation_intent。adapter source diffがあればscope Red |
+| `CANDIDATE-PACKPUB-PORT-014` | commit metadataをfake-only fieldで返す、sidecar/blobを未取得、tag objectをcommitとして読む | 実API形fixtureだけでcommit/tree/blob/manifestを再計算しannotated tagをdereference。捏造fieldを除いてもfull FSM Green |
+
+## 4. 実装証跡
 
 後続PR-1は、fake ledgerに加えて隔離bare remoteを用い、2 writerのinterleavingで`--force-with-lease`のserver-side拒否を
 実測する。Windowsではpayload境界を実process runnerで通すが実`gh`とnetworkは起動しない。各candidateを同番号の
