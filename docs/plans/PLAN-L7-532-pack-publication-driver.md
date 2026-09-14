@@ -27,6 +27,8 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-532-pack-publication-driver.md
     artifact_type: markdown_doc
+  - artifact_path: tests/pack-publication-production-ports.test.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L7-519-pack-publication-adapter.md
   requires:

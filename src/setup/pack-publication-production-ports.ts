@@ -167,13 +167,17 @@ function mismatch(reason: string): PublicationPortResult<never> {
   return { status: "mismatch", reason };
 }
 
-function runJson<T>(
-  runner: ProcessRunnerPort,
-  argv: readonly string[],
-  mutation = false,
-  stdin?: string,
-): PublicationPortResult<T> {
-  const result = runner.run({ argv, ...(stdin === undefined ? {} : { stdin }) });
+function runJson<T>(input: {
+  readonly runner: ProcessRunnerPort;
+  readonly argv: readonly string[];
+  readonly mutation?: boolean;
+  readonly stdin?: string;
+}): PublicationPortResult<T> {
+  const mutation = input.mutation ?? false;
+  const result = input.runner.run({
+    argv: input.argv,
+    ...(input.stdin === undefined ? {} : { stdin: input.stdin }),
+  });
   if (result.status !== "exited" || result.exitCode !== 0)
     return result.status === "failed" && result.exitCode !== null && !mutation
       ? { status: "unavailable", reason: "gh_command_failed" }
@@ -251,19 +255,16 @@ export function attestGhPublicationIdentity(input: {
   // identity line; the credential/token itself is never copied to a result.
   const authenticatedAs = /account\s+([^\s(]+)/i.exec(auth.stdout)?.[1];
   if (!authenticatedAs) return mismatch("gh_auth_subject_missing");
-  const repo = runJson<{ readonly nameWithOwner?: unknown }>(input.runner, [
-    "repo",
-    "view",
-    repository,
-    "--json",
-    "nameWithOwner",
-  ]);
+  const repo = runJson<{ readonly nameWithOwner?: unknown }>({
+    runner: input.runner,
+    argv: ["repo", "view", repository, "--json", "nameWithOwner"],
+  });
   if (repo.status !== "attested" || repo.value.nameWithOwner !== repository)
     return mismatch("repository_identity_mismatch");
-  const main = runJson<{ readonly commit?: { readonly sha?: unknown } }>(input.runner, [
-    "api",
-    repoPath(repository, "branches/main"),
-  ]);
+  const main = runJson<{ readonly commit?: { readonly sha?: unknown } }>({
+    runner: input.runner,
+    argv: ["api", repoPath(repository, "branches/main")],
+  });
   const mainSha =
     main.status === "attested" && typeof main.value.commit?.sha === "string"
       ? main.value.commit.sha
@@ -276,13 +277,18 @@ export function attestGhPublicationIdentity(input: {
   return attested({ repository, authenticatedAs, mainSha });
 }
 
-function ghApi(
-  runner: ProcessRunnerPort,
-  args: readonly string[],
-  mutation = false,
-  stdin?: string,
-): PublicationPortResult<unknown> {
-  return runJson(runner, ["api", ...args], mutation, stdin);
+function ghApi(input: {
+  readonly runner: ProcessRunnerPort;
+  readonly args: readonly string[];
+  readonly mutation?: boolean;
+  readonly stdin?: string;
+}): PublicationPortResult<unknown> {
+  return runJson({
+    runner: input.runner,
+    argv: ["api", ...input.args],
+    mutation: input.mutation,
+    stdin: input.stdin,
+  });
 }
 
 function apiPath(options: GhPublicationPortOptions, suffix: string): string {
@@ -331,9 +337,9 @@ function createPackPorts(options: GhPublicationPortOptions): PackPublicationPort
   return {
     async observeBefore() {
       const [branch, manifest, pointer] = await Promise.all([
-        ghApi(runner, [apiPath(options, `branches/${mainBranch}`)]),
-        ghApi(runner, [apiPath(options, `contents/${controlPath}?ref=${mainBranch}`)]),
-        ghApi(runner, [apiPath(options, `contents/${pointerPath}?ref=${mainBranch}`)]),
+        ghApi({ runner, args: [apiPath(options, `branches/${mainBranch}`)] }),
+        ghApi({ runner, args: [apiPath(options, `contents/${controlPath}?ref=${mainBranch}`)] }),
+        ghApi({ runner, args: [apiPath(options, `contents/${pointerPath}?ref=${mainBranch}`)] }),
       ]);
       if (branch.status !== "attested") return branch as PublicationPortResult<PackMainObservation>;
       if (manifest.status !== "attested")
@@ -346,9 +352,9 @@ function createPackPorts(options: GhPublicationPortOptions): PackPublicationPort
     async commitPublicationBranch(input) {
       const blobShas: { readonly path: string; readonly mode: string; readonly sha: string }[] = [];
       for (const entry of input.entries) {
-        const blob = ghApi(
+        const blob = ghApi({
           runner,
-          [
+          args: [
             apiPath(options, "git/blobs"),
             "-X",
             "POST",
@@ -357,19 +363,19 @@ function createPackPorts(options: GhPublicationPortOptions): PackPublicationPort
             "-f",
             "encoding=base64",
           ],
-          true,
-        );
+          mutation: true,
+        });
         if (blob.status !== "attested")
           return blob as PublicationPortResult<{ readonly branchCommit: string }>;
         const sha = parseSha(blob.value);
         if (!sha) return mismatch("blob_response_invalid");
         blobShas.push({ path: entry.path, mode: entry.mode, sha });
       }
-      const tree = ghApi(
+      const tree = ghApi({
         runner,
-        [apiPath(options, "git/trees"), "-X", "POST", "--input", "-"],
-        true,
-        JSON.stringify({
+        args: [apiPath(options, "git/trees"), "-X", "POST", "--input", "-"],
+        mutation: true,
+        stdin: JSON.stringify({
           tree: blobShas.map((entry) => ({
             path: entry.path,
             mode: entry.mode,
@@ -377,14 +383,14 @@ function createPackPorts(options: GhPublicationPortOptions): PackPublicationPort
             sha: entry.sha,
           })),
         }),
-      );
+      });
       if (tree.status !== "attested")
         return tree as PublicationPortResult<{ readonly branchCommit: string }>;
       const treeSha = parseSha(tree.value);
       if (!treeSha) return mismatch("tree_response_invalid");
-      const commit = ghApi(
+      const commit = ghApi({
         runner,
-        [
+        args: [
           apiPath(options, "git/commits"),
           "-X",
           "POST",
@@ -393,15 +399,15 @@ function createPackPorts(options: GhPublicationPortOptions): PackPublicationPort
           "-f",
           `tree=${treeSha}`,
         ],
-        true,
-      );
+        mutation: true,
+      });
       if (commit.status !== "attested")
         return commit as PublicationPortResult<{ readonly branchCommit: string }>;
       const commitSha = parseSha(commit.value);
       if (!commitSha) return mismatch("commit_response_invalid");
-      const ref = ghApi(
+      const ref = ghApi({
         runner,
-        [
+        args: [
           apiPath(options, "git/refs"),
           "-X",
           "POST",
@@ -410,16 +416,16 @@ function createPackPorts(options: GhPublicationPortOptions): PackPublicationPort
           "-f",
           `sha=${commitSha}`,
         ],
-        true,
-      );
+        mutation: true,
+      });
       if (ref.status !== "attested")
         return ref as PublicationPortResult<{ readonly branchCommit: string }>;
       return attested({ branchCommit: commitSha });
     },
     async createPullRequest(input) {
-      const result = ghApi(
+      const result = ghApi({
         runner,
-        [
+        args: [
           apiPath(options, "pulls"),
           "-X",
           "POST",
@@ -430,8 +436,8 @@ function createPackPorts(options: GhPublicationPortOptions): PackPublicationPort
           "-f",
           "title=UT-TDD pack publication",
         ],
-        true,
-      );
+        mutation: true,
+      });
       if (result.status !== "attested")
         return result as PublicationPortResult<{ readonly pullRequest: string }>;
       const number = numberField(result.value, "number");
@@ -444,9 +450,9 @@ function createPackPorts(options: GhPublicationPortOptions): PackPublicationPort
       if (before.status !== "attested")
         return before as PublicationPortResult<{ readonly mainSha: string }>;
       if (before.value.mainSha !== input.expectedMainSha) return mismatch("main_sha_drift");
-      const result = ghApi(
+      const result = ghApi({
         runner,
-        [
+        args: [
           apiPath(options, `pulls/${input.pullRequest}/merge`),
           "-X",
           "PUT",
@@ -455,15 +461,15 @@ function createPackPorts(options: GhPublicationPortOptions): PackPublicationPort
           "-f",
           "merge_method=merge",
         ],
-        true,
-      );
+        mutation: true,
+      });
       if (result.status !== "attested")
         return result as PublicationPortResult<{ readonly mainSha: string }>;
       const sha = parseSha(result.value, "sha") ?? parseSha(result.value, "merge_commit_sha");
       return sha ? attested({ mainSha: sha }) : mismatch("merge_response_invalid");
     },
     async observeReleaseCommit(input) {
-      const commit = ghApi(runner, [apiPath(options, `commits/${input.mainSha}`)]);
+      const commit = ghApi({ runner, args: [apiPath(options, `commits/${input.mainSha}`)] });
       if (commit.status !== "attested")
         return commit as PublicationPortResult<PackCommitObservation>;
       const commitSha = parseSha(commit.value);
@@ -473,7 +479,10 @@ function createPackPorts(options: GhPublicationPortOptions): PackPublicationPort
           : null;
       if (!commitSha || typeof tree !== "string" || !SHA1.test(tree))
         return mismatch("release_commit_response_invalid");
-      const treeResult = ghApi(runner, [apiPath(options, `git/trees/${tree}?recursive=1`)]);
+      const treeResult = ghApi({
+        runner,
+        args: [apiPath(options, `git/trees/${tree}?recursive=1`)],
+      });
       if (treeResult.status !== "attested")
         return treeResult as PublicationPortResult<PackCommitObservation>;
       const treeDigest = sha256(stable(treeResult.value));
@@ -496,9 +505,9 @@ function createReleasePorts(options: GhPublicationPortOptions): PackPublicationP
   const api = (suffix: string) => repoPath(repository, suffix);
   return {
     async createDraft(input) {
-      const result = ghApi(
+      const result = ghApi({
         runner,
-        [
+        args: [
           api("releases"),
           "-X",
           "POST",
@@ -513,8 +522,8 @@ function createReleasePorts(options: GhPublicationPortOptions): PackPublicationP
           "-f",
           `name=${input.releaseVersion}`,
         ],
-        true,
-      );
+        mutation: true,
+      });
       if (result.status !== "attested")
         return result as PublicationPortResult<DraftReleaseObservation>;
       const id = stringField(result.value, "id") ?? numberField(result.value, "id");
@@ -530,7 +539,7 @@ function createReleasePorts(options: GhPublicationPortOptions): PackPublicationP
         : mismatch("draft_response_invalid");
     },
     async observeDraft(input) {
-      const result = ghApi(runner, [api(`releases/${input.releaseId}`)]);
+      const result = ghApi({ runner, args: [api(`releases/${input.releaseId}`)] });
       if (result.status !== "attested")
         return result as PublicationPortResult<DraftReleaseObservation>;
       const tagName = stringField(result.value, "tag_name");
@@ -552,9 +561,9 @@ function createReleasePorts(options: GhPublicationPortOptions): PackPublicationP
         : mismatch("draft_response_invalid");
     },
     async uploadAsset(input) {
-      const result = ghApi(
+      const result = ghApi({
         runner,
-        [
+        args: [
           api(`releases/${input.releaseId}/assets`),
           "-X",
           "POST",
@@ -563,9 +572,9 @@ function createReleasePorts(options: GhPublicationPortOptions): PackPublicationP
           "-f",
           `name=${input.asset.name}`,
         ],
-        true,
-        Buffer.from(input.asset.bytes).toString("base64"),
-      );
+        mutation: true,
+        stdin: Buffer.from(input.asset.bytes).toString("base64"),
+      });
       if (result.status !== "attested")
         return result as PublicationPortResult<ReleaseAssetObservation>;
       return attested({
@@ -575,7 +584,7 @@ function createReleasePorts(options: GhPublicationPortOptions): PackPublicationP
       });
     },
     async observeAsset(input) {
-      const result = ghApi(runner, [api(`releases/${input.releaseId}/assets`)]);
+      const result = ghApi({ runner, args: [api(`releases/${input.releaseId}/assets`)] });
       if (result.status !== "attested")
         return result as PublicationPortResult<ReleaseAssetObservation>;
       if (!Array.isArray(result.value)) return mismatch("asset_response_invalid");
@@ -595,7 +604,7 @@ function createTagPorts(options: GhPublicationPortOptions): PackPublicationPorts
   const api = (suffix: string) => repoPath(options.repository ?? DEFAULT_PACK_REPO, suffix);
   return {
     async observe(name) {
-      const result = ghApi(runner, [api(`git/ref/tags/${name}`)]);
+      const result = ghApi({ runner, args: [api(`git/ref/tags/${name}`)] });
       if (result.status !== "attested") {
         if (result.status === "unavailable") return attested(null);
         return result as PublicationPortResult<TagObservation | null>;
@@ -606,7 +615,7 @@ function createTagPorts(options: GhPublicationPortOptions): PackPublicationPorts
           : undefined;
       const sha = object && typeof object.sha === "string" ? object.sha : null;
       if (!sha || !SHA1.test(sha)) return mismatch("tag_response_invalid");
-      const commit = ghApi(runner, [api(`git/commits/${sha}`)]);
+      const commit = ghApi({ runner, args: [api(`git/commits/${sha}`)] });
       if (commit.status !== "attested")
         return commit as PublicationPortResult<TagObservation | null>;
       const target = parseSha(commit.value);
@@ -615,9 +624,9 @@ function createTagPorts(options: GhPublicationPortOptions): PackPublicationPorts
         : mismatch("tag_response_invalid");
     },
     async createAnnotatedCas(input) {
-      const tag = ghApi(
+      const tag = ghApi({
         runner,
-        [
+        args: [
           api("git/tags"),
           "-X",
           "POST",
@@ -630,16 +639,24 @@ function createTagPorts(options: GhPublicationPortOptions): PackPublicationPorts
           "-f",
           `message=${input.name}`,
         ],
-        true,
-      );
+        mutation: true,
+      });
       if (tag.status !== "attested") return tag as PublicationPortResult<TagObservation>;
       const tagSha = parseSha(tag.value);
       if (!tagSha) return mismatch("tag_response_invalid");
-      const ref = ghApi(
+      const ref = ghApi({
         runner,
-        [api("git/refs"), "-X", "POST", "-f", `ref=refs/tags/${input.name}`, "-f", `sha=${tagSha}`],
-        true,
-      );
+        args: [
+          api("git/refs"),
+          "-X",
+          "POST",
+          "-f",
+          `ref=refs/tags/${input.name}`,
+          "-f",
+          `sha=${tagSha}`,
+        ],
+        mutation: true,
+      });
       if (ref.status !== "attested") return ref as PublicationPortResult<TagObservation>;
       return attested({ name: input.name, targetCommit: input.targetCommit, annotated: true });
     },
@@ -653,17 +670,17 @@ function createVisibilityPorts(
   const api = (suffix: string) => repoPath(options.repository ?? DEFAULT_PACK_REPO, suffix);
   return {
     async makeVisible(input) {
-      const result = ghApi(
+      const result = ghApi({
         runner,
-        [api(`releases/${input.releaseId}`), "-X", "PATCH", "-f", "draft=false"],
-        true,
-      );
+        args: [api(`releases/${input.releaseId}`), "-X", "PATCH", "-f", "draft=false"],
+        mutation: true,
+      });
       if (result.status !== "attested")
         return result as PublicationPortResult<VisibilityObservation>;
       return attested({ releaseId: input.releaseId, draft: false });
     },
     async observe(releaseId) {
-      const result = ghApi(runner, [api(`releases/${releaseId}`)]);
+      const result = ghApi({ runner, args: [api(`releases/${releaseId}`)] });
       if (result.status !== "attested")
         return result as PublicationPortResult<VisibilityObservation>;
       const draft =
@@ -867,16 +884,16 @@ export interface FileApprovalPortOptions {
   readonly onCommitmentError?: (reason: ApprovalCommitmentReason) => void;
 }
 
-function approvalPath(
-  root: string,
-  operationId: string,
-  approval: PackPublicationApproval,
-  consumed = false,
-): string {
+function approvalPath(input: {
+  readonly root: string;
+  readonly operationId: string;
+  readonly approval: PackPublicationApproval;
+  readonly consumed?: boolean;
+}): string {
   return join(
-    root,
-    operationId,
-    `${approval.transition}.${approval.mutation}${consumed ? ".consumed" : ""}.json`,
+    input.root,
+    input.operationId,
+    `${input.approval.transition}.${input.approval.mutation}${input.consumed ? ".consumed" : ""}.json`,
   );
 }
 
@@ -935,8 +952,17 @@ export function createFileApprovalPort(
       )
         return mismatch("approval_commitment_mismatch");
       if (Date.parse(approval.expiresAt) <= now().getTime()) return mismatch("approval_expired");
-      const source = approvalPath(options.root, options.operationId, approval);
-      const consumed = approvalPath(options.root, options.operationId, approval, true);
+      const source = approvalPath({
+        root: options.root,
+        operationId: options.operationId,
+        approval,
+      });
+      const consumed = approvalPath({
+        root: options.root,
+        operationId: options.operationId,
+        approval,
+        consumed: true,
+      });
       const existing = existsSync(source) ? parseApproval(source) : null;
       if (existing === null && existsSync(consumed)) {
         const prior = parseApproval(consumed);
