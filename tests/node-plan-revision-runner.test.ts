@@ -97,9 +97,14 @@ describe("NodePlanRevisionRunner", () => {
       "plan-revision-rehydration-path-mismatch",
     ],
     [
-      "ambiguous",
-      [{}, { asset_id: "plan:other" }],
-      "plan-revision-rehydration-projection-ambiguous",
+      "plan identity mismatch",
+      [{ plan_id: "PLAN-L6-32" }],
+      "plan-revision-rehydration-plan-id-mismatch",
+    ],
+    [
+      "duplicate terminal",
+      [{}, {}],
+      "plan-revision-projection-invalid:record[1]:path-revision-duplicate",
     ],
   ])("U-PA-REV-042: projection %sはwrite 0", (_name, bindings, ruleId) => {
     const f = rehydrationFixture();
