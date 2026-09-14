@@ -70,6 +70,8 @@ dedicated authorityである。FSM順序、release identity、promotion、rollba
   authorization helper責務に残し、production ApprovalPortへ移さない。no-op portで旧FSMを偽装せず、phase間でnonceを再利用しない。
 - expected actor/repo/main/tagの4軸preflight、raw asset upload/download、tree/blob/sidecar再計算、annotated tag
   dereferenceを実API schemaで構成し、production portsと`publishPackCanary`のfull FSMで一体検証する。
+- release visible後はdurable pauseし、pointer専用second preparation→non-author review→admission→exact CASへ進む。各phaseの
+  operation/nonce/journal/receiptとfresh prep/CAS tokenをfirst cycleから分離し、crash時は最後のdurable phaseからwrite 0で再開する。
 
 ## R3: 攻撃面
 
@@ -77,6 +79,8 @@ PR merge APIへの差戻し、expected OID無しlease、`--force`、ruleset無�
 CAS主張、seal後PR作成の循環、外部手作りPR、preparation receipt replay、no-op port偽装、phase間nonce再利用、
 preparation/CAS authority tokenの相互代用、same-head `up-to-date`の成功扱い、
 payloadのargv化、receipt直書き、incomplete journalからの成功推測を独立に攻撃する。
+release visibleをpublishedへ丸める、second PR/reviewを省略する、first receipt/head/nonce/tokenをsecond cycleへ流用する、
+review待ちにpreparation tokenを保持する、CAS AppへPull requests writeを足す実装も独立に攻撃する。
 さらにadapter本体のscope混入、未使用identity preflight、fake-only API field、base64 asset upload、listing digest信用、
 個別port testだけでfull FSMを主張する実装を攻撃する。
 

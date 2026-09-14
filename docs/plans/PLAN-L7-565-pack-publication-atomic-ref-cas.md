@@ -93,6 +93,26 @@ branch commit/PR createを`preparePackPublication`へ移し、`publishPackCanary
 ままwriteだけ省略する実装は禁止する。共通authorization helperは`mode: new`の各approval consume直後に
 `planned_nonce_consumed`をappendする責務を維持し、preparation nonceとpublication nonceを別集合として重複拒否する。
 
+### 1.2 release visible後のsecond canary preparation cycle
+
+`PLAN-L7-515`のcanary pointerはrelease visible後に初めて作成可能なので、first pack PRのpreparation receiptを流用しない。
+adapterはrelease visibilityの`read_back_observation`をdurableに確定した後、remote release identityとafter control-manifest
+snapshotをsealして`awaiting_canary_preparation`として停止する。これはpublished成功ではなく、immutable release objectsを
+保持したdurable resumable stateであり、同じpublication operation/idempotency keyだけが次へ進める。
+
+次にpointer専用`canary_preparation` operationを開始し、pointer/control-manifest bytes、release Pack commit/tree、visible
+Release、before main/pointer snapshot、deterministic second branch nameをsealする。non-bypass preparation Appをfresh tokenで
+mintし、second branch commitとPR createを各々専用human approval/nonceで実行し、first preparationとは別のjournalとatomic
+no-clobber receiptへPR number/head/base/tree/snapshot identityを確定してtokenを破棄する。non-author review/check後、read-only
+`canary_admission`がfresh receipt、現在PR head/base、review/check、release identity、before snapshotを再観測してpointer CAS
+intentをsealする。その後だけbypass CAS App tokenをfresh mintし、second reviewed headをexact leaseでmainへ更新する。
+
+second cycleも`planned_nonce_consumed -> mutation_intent -> read_back_observation`をadapter共通authorization helperで記録し、
+first preparation、release publication、canary preparation、canary CASのoperation ID、nonce集合、journal、receipt、tokenを相互に
+再利用しない。crash/restartは最後のdurable phaseから観測だけで再開し、branch/PR/CAS mutationを推測・replayしない。
+preparation tokenをreview待ち中に保持・再利用すること、CAS AppへPull requests writeを追加すること、first PR/headをsecond
+admissionへ流用することはtyped denyである。
+
 ## 2. 不可能性と方式選択
 
 GitHub Pull Requests merge APIの`sha` parameterはPR head OIDのpreconditionであり、base OIDのpreconditionでは
@@ -118,6 +138,8 @@ OID付きlease、専用App authority、fast-forward refspecの積を満たす1�
   `publication CAS authority`はrulesetの`always` bypass actorで、Contents writeだけを持ちPull requests writeを持たない。
   installation ID、token、operation ID、approval、journalを共有せず、preparation tokenはadmission前に破棄し、CAS tokenは
   admission完了後にだけmintする。片方を他方のoperationへ渡した場合はauthority mismatch、write 0とする。
+  first/second preparationは同じApp installationを使えてもtokenはoperationごとにfresh mint/破棄し、同じtokenを跨いで
+  再利用しない。各CAS tokenも対応admission後にfresh mintし、別CAS operationへ再利用しない。
 - publication CAS authorityのbypass grant自体はoperation単位には狭められず、token有効中のmain write能力を持つ。この残存能力を
   隠さず、単一Pack repository・短寿命installation token・Contents writeの最小permission・実行直前mint/直後破棄・
   mutation approvalで時間と対象を狭める。両authorityともhuman account、PAT、source-repository CI identity、汎用botを使わず、
@@ -169,8 +191,9 @@ in-memory/別ApprovalPortを含む全compositionでadapterが同じ順序を保�
 後続production-port sliceはadapter本体を変更せず、freeze済み2入口へ実portをcompositionする。adapter sliceはGitHub API、
 filesystem production port、credentialを実装せず、production-port sliceはFSM/authorization順序を再定義しない。
 
-production portsのcomposition rootと既存`publishPackCanary`をfake process runnerで接続し、preflightから
-`planned -> pack_commit -> release_draft -> assets -> tag -> release_visible -> canary`のfull FSMを1回通す。
+production portsのcomposition rootと既存`publishPackCanary`をfake process runnerで接続し、first preparation/review/admission、
+`planned -> pack_commit -> release_draft -> assets -> tag -> release_visible`、durable pause、second canary
+preparation/review/admission、`canary` CAS/resumeまでのfull FSMを1回通す。
 個別portテストの集合を代用にせず、journal順序、exact 2 assets、receipt、全remote read-back、§4.1のendpoint/method/
 headers/query/stdinを対応表と1:1でassertする。production port内のstub auditor、constant expected metadata、常時
 unavailable reconcile、fake専用response fieldはfail-openとして禁止する。
@@ -189,6 +212,11 @@ no-clobber publishし、directoryをfsyncしてから成功を返す。既存rec
 schema/digest不正なら上書きせずconflictとする。process crashで残ったtempは非authoritativeとして無視できる。
 partial/corrupt final receiptもremote成功のauthorityにせず、完全journalとremote再観測から同じreceiptが再構成できる
 場合だけtyped recoveryを許す。receipt自体をremote successの唯一の根拠にしない。
+
+release visible後のpause marker、second preparation receipt、canary admission receiptはpublication receiptと同じcanonical
+serialization/atomic no-clobber規則に従う。restart時はphase chainを検証し、visible observationが完全でもsecond receipt欠落なら
+`awaiting_canary_preparation`、review未完なら`awaiting_canary_review`としてsuccess 0・write 0で返す。second mutation intent後に
+observationが無ければ`indeterminate`とし、新tokenをmintせずread-only reconciliationだけを許す。
 
 exact lease pushには`--porcelain`を必須とし、exit code 0とread-back一致だけでは成功にしない。競合writerがexpected
 `E`から同じreviewed head `H`へ先にmainを進めると、Gitはlease比較を伴う更新をせず`up-to-date`でexit 0になり得る。
@@ -218,8 +246,8 @@ adapter preparation/admission分離、PR-Bをproduction ports/composition、PR-C
 
 | slice | owner | artifact境界 | hard predecessor |
 | --- | --- | --- | --- |
-| PR-A | Luna adapter worker + Terra oracle | adapterの2入口、共通authorization、phase別nonce testだけ | 本pair-freeze closing PASS |
-| PR-B | 別Luna production-port worker + Terra oracle | production ports、2 authority adapter、full-FSM composition test。adapter diff 0 | PR-A main到達 |
+| PR-A | Luna adapter worker + Terra oracle | adapterのfirst/second preparation・admission・durable resume入口、共通authorization、phase別nonce testだけ | 本pair-freeze closing PASS |
+| PR-B | 別Luna production-port worker + Terra oracle | production ports、2 authority adapter、second cycle込みfull-FSM composition test。adapter diff 0 | PR-A main到達 |
 | PR-C | Luna CLI worker | preparation/admission/publish CLI wiring。domain/port変更0 | PR-B main到達 |
 
 完了条件は、TOCTOU攻撃、wrong/overprivileged authority、exact lease拒否、post-write read-back drift、large stdin、
