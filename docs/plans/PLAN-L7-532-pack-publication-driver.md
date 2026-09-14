@@ -54,18 +54,18 @@ status: draft
 github_issue_id: 565
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:50aaaa034aa072cda5f38a93c8cf4aa6
-  command_id: plan-revise:issue-565:forward:4
-  admitted_at: 2026-09-11T05:17:45.260Z
-  source_digest: sha256:67c1906bb306931ea636f31763431e71868cfea6a538cb09506f4cacd49e4780
-  decision_digest: sha256:d10a75a33e51c879e0e7d8035533779167a49325f5bcce0c45c8b9c14d3c61fd
-  receipt_digest: sha256:3d5d29080c45db720044c270534146eb1e2310e5c90200f2091e11fa13883019
+  receipt_id: certificate:61824ae781a8ac0564c2e0cbac8993de
+  command_id: plan-revise:issue-565:forward:5
+  admitted_at: 2026-09-14T11:07:52.006Z
+  source_digest: sha256:f17423fa1aca2120c33a0ab49b0af2822b2556165af20cd4fb43ad5acfc1fb59
+  decision_digest: sha256:67200bf37c7fa5e17e92637d94b1f4e997b6904a8a69c7f82aad58ee13af871e
+  receipt_digest: sha256:54fc05e6319d31e03ee6b95b7cfba70f2bd2083475d0a1fce70ad8feff4eb041
   binding:
     path: docs/plans/PLAN-L7-532-pack-publication-driver.md
     plan_id: PLAN-L7-532-pack-publication-driver
     asset_id: plan:90e28ddae7343065d815328758ff3de0
-    revision: 4
-    content_digest: sha256:67c1906bb306931ea636f31763431e71868cfea6a538cb09506f4cacd49e4780
+    revision: 5
+    content_digest: sha256:f17423fa1aca2120c33a0ab49b0af2822b2556165af20cd4fb43ad5acfc1fb59
   route:
     signal: feature_addition
     mode: add-feature
@@ -75,20 +75,27 @@ admission_receipt:
     episode_id: E4-565-pack-publication-driver
     projection_digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
   origin:
-    plan_id: PLAN-L7-531-pack-internal-canary-smoke
-    revision: 2
-    digest: sha256:69c9c058d2178425bb0459033b2748785d152d7a9c2a37c01aefbca270709d4e
+    plan_id: PLAN-L7-565-pack-publication-atomic-ref-cas
+    revision: 1
+    digest: sha256:efd67cb89dbf6e187fd998c062972332a868e868ee5b70993be4080a9ccb6647
   reentry:
     target_plan_id: PLAN-L7-532-pack-publication-driver
     target_revision: 1
     phase: forward_merge
   escape_reason: "Issue #565 Pack canary publication driver pair-freeze
     (add-feature, PLAN-L7-519 downstream; unmet publication input of PLAN-L7-531
-    rev 2); revision 4: Codex/Sol FLAG r3 9f23ca87 (candidate ranges include
-    P..R; commitment-record approver mutated independently of approval files)"
+    rev 2); revision 5: correction note — mergePullRequestCas is not a base-OID
+    CAS (GitHub PR merge API sha = head only); remote main mutation primitive
+    and authority superseded by PLAN-L7-565 rev 1"
 ---
 
 # PLAN-L7-532: Pack canary publication driver (production ports + CLI entry)
+
+> **訂正 (2026-09-14)**: §3.2 の `mergePullRequestCas` は、GitHub Pull Requests merge API の
+> `sha=<PR head>`を expected base OID のCASとして扱っていたため実現不能だった。main再観測後の merge
+> writeにもTOCTOUが残る。#574 のproduction実装をこの契約へ継ぎ足さず、原子性を弱めない後継
+> `PLAN-L7-565-pack-publication-atomic-ref-cas` のpair-freeze後にPR-1を再構築する。本PLANのその他の
+> approval、FSM、read-back、staging境界は後継へ継承する。
 
 ## 1. 目的と前提
 

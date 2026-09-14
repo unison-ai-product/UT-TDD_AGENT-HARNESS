@@ -3760,6 +3760,22 @@
         "revision": 1,
         "content_digest": "sha256:cc8ac0600a421b5abe8ae032629b939aa5e334c763f2d7e2447e4a1dddf50811"
       }
+    },
+    {
+      "sequence": 236,
+      "previous_record_digest": "sha256:c1293a340ba214c743546947a0af799e9b93fd231903636fd1a69b05bf524ce8",
+      "record_digest": "sha256:1543eafc3432e6116528da514fca852f593af026d053590df2183d5a2333c6f5",
+      "command_id": "plan-revise:issue-565:forward:5",
+      "receipt_id": "certificate:61824ae781a8ac0564c2e0cbac8993de",
+      "receipt_digest": "sha256:54fc05e6319d31e03ee6b95b7cfba70f2bd2083475d0a1fce70ad8feff4eb041",
+      "decision_digest": "sha256:67200bf37c7fa5e17e92637d94b1f4e997b6904a8a69c7f82aad58ee13af871e",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-532-pack-publication-driver.md",
+        "plan_id": "PLAN-L7-532-pack-publication-driver",
+        "asset_id": "plan:90e28ddae7343065d815328758ff3de0",
+        "revision": 5,
+        "content_digest": "sha256:f17423fa1aca2120c33a0ab49b0af2822b2556165af20cd4fb43ad5acfc1fb59"
+      }
     }
   ]
 }
