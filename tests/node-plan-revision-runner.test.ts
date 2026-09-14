@@ -124,6 +124,19 @@ describe("NodePlanRevisionRunner", () => {
     expect(writeSet(f.db)).toEqual(f.before);
   });
 
+  it("U-PA-REV-044: superseded asset history does not shadow the selected terminal asset", () => {
+    const f = rehydrationFixture();
+    rewriteProjection(f, [
+      { asset_id: "plan:superseded", revision: 6, content_digest: sha("old-content") },
+      {},
+    ], true);
+
+    expect(f.runner.run(f.input)).toMatchObject({
+      status: "created",
+      receipt: { assetId: f.manifest.base.asset_id, revision: 8 },
+    });
+  });
+
   it("U-PA-REV-016: adopt済みNをN+1へ発行しpublisherへsource/projection CASを渡す", () => {
     const f = fixture("adopted");
     const stage = vi.spyOn(f.publisher, "stage");
@@ -660,16 +673,18 @@ function rehydrationFixture(terminalContentDigest?: string) {
 function rewriteProjection(
   f: ReturnType<typeof rehydrationFixture>,
   bindingOverrides: readonly Record<string, unknown>[],
+  preserveFinalReceiptIdentity = false,
 ): void {
   const current = JSON.parse(readFileSync(join(f.root, f.manifest.projection.path), "utf8"))
     .records[0];
   let previousRecordDigest: string | null = null;
   const records = bindingOverrides.map((overrides, index) => {
+    const preserveReceiptIdentity = preserveFinalReceiptIdentity && index === bindingOverrides.length - 1;
     const record = {
       sequence: index + 1,
       previousRecordDigest,
-      commandId: `${current.command_id}:${index}`,
-      receiptId: `${current.receipt_id}:${index}`,
+      commandId: preserveReceiptIdentity ? current.command_id : `${current.command_id}:${index}`,
+      receiptId: preserveReceiptIdentity ? current.receipt_id : `${current.receipt_id}:${index}`,
       receiptDigest: current.receipt_digest,
       decisionDigest: current.decision_digest,
       binding: {

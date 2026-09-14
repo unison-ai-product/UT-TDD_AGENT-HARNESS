@@ -2750,5 +2750,6 @@ auditor、late CAS、receipt、cleanupを一軸ずつ変異し、typed resultと
 | `U-PA-REV-041` | local ledgerがprojection terminalより古い | 既存行を維持しterminalだけを追加してN+1を発行。欠落中間revisionを捏造しない |
 | `U-PA-REV-042` | projection recordのasset、path、identity、欠落・重複を各単独変異する | 対応するtyped rehydration failure、全write 0 |
 | `U-PA-REV-043` | exact source blobから再計算したcanonical payload digestをmanifest baseと不一致にする | cache挿入前にfail-close、全write 0 |
+| `U-PA-REV-044` | 同一PLAN/pathにsuperseded asset履歴とmanifest-selected assetのterminal receiptが共存する | selected assetだけをauthorityとしてNへ再水和し、旧assetはshadowしない |
 
-実行対応: `tests/node-plan-revision-runner.test.ts` (`U-PA-REV-039〜043`)。
+実行対応: `tests/node-plan-revision-runner.test.ts` (`U-PA-REV-039〜044`)。

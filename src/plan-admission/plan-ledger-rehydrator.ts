@@ -94,31 +94,30 @@ function prepare(input: PlanLedgerRehydrationInput) {
   const projection = parseTrackedReceiptProjection(input.projectionText);
   if (!projection.ok)
     throw new Error(`plan-revision-rehydration-projection-invalid:${projection.errors.join(",")}`);
-  const samePlan = projection.value.records.filter(
-    (record) =>
-      record.binding.planId === manifest.plan_id ||
-      record.binding.path === manifest.source.path ||
-      record.binding.assetId === manifest.base.asset_id,
+  // A PLAN may have historical receipts under a superseded asset id. The
+  // manifest-selected asset is authoritative; only records claiming that
+  // exact asset may participate in rehydration or contradict its identity.
+  const selectedAsset = projection.value.records.filter(
+    (record) => record.binding.assetId === manifest.base.asset_id,
   );
-  const identityKeys = new Set(
-    samePlan.map((record) =>
-      stableJson([record.binding.planId, record.binding.path, record.binding.assetId]),
-    ),
-  );
-  if (identityKeys.size > 1) throw new Error("plan-revision-rehydration-projection-ambiguous");
-  const identityMismatches = samePlan.filter(
+  if (
+    selectedAsset.length === 0 &&
+    projection.value.records.some(
+      (record) =>
+        record.binding.planId === manifest.plan_id || record.binding.path === manifest.source.path,
+    )
+  )
+    throw new Error("plan-revision-rehydration-asset-mismatch");
+  const identityMismatches = selectedAsset.filter(
     (record) =>
       record.binding.planId !== manifest.plan_id ||
-      record.binding.path !== manifest.source.path ||
-      record.binding.assetId !== manifest.base.asset_id,
+      record.binding.path !== manifest.source.path,
   );
   if (identityMismatches.some((record) => record.binding.planId !== manifest.plan_id))
     throw new Error("plan-revision-rehydration-plan-id-mismatch");
   if (identityMismatches.some((record) => record.binding.path !== manifest.source.path))
     throw new Error("plan-revision-rehydration-path-mismatch");
-  if (identityMismatches.some((record) => record.binding.assetId !== manifest.base.asset_id))
-    throw new Error("plan-revision-rehydration-asset-mismatch");
-  const records = samePlan.filter(
+  const records = selectedAsset.filter(
     (record) =>
       record.binding.planId === manifest.plan_id &&
       record.binding.path === manifest.source.path &&
