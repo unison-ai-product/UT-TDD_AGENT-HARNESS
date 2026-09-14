@@ -55,18 +55,18 @@ status: draft
 github_issue_id: 550
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:3b3206ce145ed0f10ae05c86c37c0354
-  command_id: plan-revise:issue-550:forward:8
-  admitted_at: 2026-09-14T09:54:36.259Z
-  source_digest: sha256:eba2e00c122bc81a8492775316dea1247aac7f981f95d65e81881c529bcf025d
-  decision_digest: sha256:94be6228b9c2a4135d60a28d31e1e484175501445baa8bac43159f583d8f754e
-  receipt_digest: sha256:3807b5cb68464ae82a8bcbb4d26ca619a246e66651287789db36f975a11978f3
+  receipt_id: certificate:ae424c3a1996042388a8d47c9275122a
+  command_id: plan-revise:issue-550:forward:9
+  admitted_at: 2026-09-14T10:38:46.121Z
+  source_digest: sha256:ddc519ea1675f3df17b948bc2ff66dc33cfcd22ff2fba15ff48de1cd52ddb40e
+  decision_digest: sha256:c2fad4a0b857407b1fbc087b8b025a8040f5457978abf6d6b5e212c8d94b361c
+  receipt_digest: sha256:6331d93dd9aa50328f838dc22a6ec68838d66f8a51f706755cf93bd8259e85d8
   binding:
     path: docs/plans/PLAN-L7-533-memory-completion-fence.md
     plan_id: PLAN-L7-533-memory-completion-fence
     asset_id: plan:fb4a53df298985d3204d2e9b3bfa55d1
-    revision: 8
-    content_digest: sha256:eba2e00c122bc81a8492775316dea1247aac7f981f95d65e81881c529bcf025d
+    revision: 9
+    content_digest: sha256:ddc519ea1675f3df17b948bc2ff66dc33cfcd22ff2fba15ff48de1cd52ddb40e
   route:
     signal: feature_addition
     mode: add-feature
@@ -84,11 +84,9 @@ admission_receipt:
     target_revision: 1
     phase: forward_merge
   escape_reason: "Issue #550 completion fence contract pair-freeze after PR #554
-    FLAG B1 (canonical-root baseline; PLAN-L7-512 rev 6 downstream); revision 8:
-    Claude Opus FLAG cacd892c finding 1 (PR-1 completion core transaction
-    substrate; replay_corpus_mismatch precedence as the only existing-reason
-    change) + Sol preflight FLAG 2 (022 crash-window recovery, 023 writer-entry
-    tampered precedence)"
+    FLAG B1 (canonical-root baseline; PLAN-L7-512 rev 6 downstream); revision 9:
+    range notation 001..023 / 016..023 aligned in §7 / Reverse qa slot (Claude
+    Opus review f723873a non-blocking note)"
 ---
 
 # PLAN-L7-533: Memory migration completion fence の正本を canonical root に限定する契約
@@ -293,8 +291,8 @@ baseline snapshot を fence 期待値に使う部分は採用しない。
 
 ## 7. TDD / trace / Reverse
 
-pair artifact `docs/test-design/harness/L7-memory-completion-fence-test-design.md` が `CANDIDATE-U-PMEMFENCE-001..021` を所有する
-(001..012 と 016..021 は PR-1、013..015 は PR-2)。
+pair artifact `docs/test-design/harness/L7-memory-completion-fence-test-design.md` が `CANDIDATE-U-PMEMFENCE-001..023` を所有する
+(001..012 と 016..023 は PR-1、013..015 は PR-2)。
 PR #554 が test-design に置いた `U-PMEMFENCE-001..014` は正規 ID として採用しない (Red 実測の同一 revision 束縛が無く、006 は
 tracked memory の checkout で通る誤った oracle だった)。実装 PR で同番号の `U-PMEMFENCE-*` へ 1:1 昇格する。既存
 `U-PMEMINV-*` / `U-PMEMQUAR-*` / `CANDIDATE-U-PMEMROOT-*` / `CANDIDATE-U-PROJID-*` を再採番・再所有しない。
