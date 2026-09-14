@@ -7,7 +7,7 @@ drive: agent
 route_signal: regression_dev
 route_mode: recovery
 created: 2026-07-17
-updated: 2026-07-27
+updated: 2026-09-14
 owner: PO / TL
 backprop_decision: required
 backprop_decision_reason: Redesign supersessionとplan admissionを同時に満たすrevision
@@ -25,6 +25,8 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-RECOVERY-16-plan-revision-authoring.md
     artifact_type: markdown_doc
+  - artifact_path: src/plan-admission/plan-ledger-rehydrator.ts
+    artifact_type: source_module
   - artifact_path: src/cli/plan-revise.ts
     artifact_type: source_module
   - artifact_path: src/plan-admission/node-plan-revision-runner.ts
@@ -93,18 +95,18 @@ status: confirmed
 github_issue_id: 102
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:236c9151622bb09826abfb69b9f1be97
-  command_id: plan-recovery-16-20260727-10
-  admitted_at: 2026-07-27T14:25:00+09:00
-  source_digest: sha256:4972eb44cab2f56834fb758b471f6fd5557561c5794b1cb823822a7e4ac48c30
-  decision_digest: sha256:c6e74f085830ff373e9868d3565cb11fc1c51188fd188a2991ff7cb38c0d2d63
-  receipt_digest: sha256:1fbe943b554eae76edd2827108cfba8f9f7474a4507feb2d3eee830b2eb8b7ec
+  receipt_id: certificate:8869355e1c1e983d9f9ea1bf5d6781cf
+  command_id: plan-revise:issue-596:recovery-16:3
+  admitted_at: 2026-09-14T08:52:04.930Z
+  source_digest: sha256:da63043a8a9871f9254f19c5f68f85df8e555380f57cd46b96c5090d64599dce
+  decision_digest: sha256:f1011cc43faa551cbb86abfd6163140c1d2a68b889e2835f691397af46dd2c94
+  receipt_digest: sha256:0524f5edc340a1d21db5f9511a07c60b5ccb780a335b9a9250603d5df5fd30c4
   binding:
     path: docs/plans/PLAN-RECOVERY-16-plan-revision-authoring.md
     plan_id: PLAN-RECOVERY-16-plan-revision-authoring
     asset_id: plan:rebase:74ca026f9a0b72dca6f4fb164dd4e8f43c9ea3c9b31c4db21dec38a66d9d7d57
-    revision: 2
-    content_digest: sha256:4972eb44cab2f56834fb758b471f6fd5557561c5794b1cb823822a7e4ac48c30
+    revision: 3
+    content_digest: sha256:da63043a8a9871f9254f19c5f68f85df8e555380f57cd46b96c5090d64599dce
   route:
     signal: regression_dev
     mode: recovery
@@ -122,7 +124,10 @@ admission_receipt:
     target_revision: 2
     phase: forward_merge
   escape_reason: "Issue #102 reproduces a missing revision authoring path that
-    makes redesign admission and supersession mutually unsatisfiable"
+    makes redesign admission and supersession mutually unsatisfiable; revision 3
+    (Issue #596): declare src/plan-admission/plan-ledger-rehydrator.ts in
+    generates via canonical plan revise (ledger cache rehydrated from tracked
+    receipts)"
 ---
 
 # PLAN-RECOVERY-16: legacy PLAN revision authoring recovery

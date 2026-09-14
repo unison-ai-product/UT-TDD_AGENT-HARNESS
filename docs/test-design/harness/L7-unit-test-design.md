@@ -2740,3 +2740,16 @@ auditor、late CAS、receipt、cleanupを一軸ずつ変異し、typed resultと
 | `U-PACKPUB-REMOTE-032` | 003-S2 post-journal identity | target差替え後のtransition 0 |
 
 実行対応: `tests/pack-publication-adapter.test.ts` (`U-PACKPUB-REMOTE-010〜032`)。
+
+### PLAN revision ledger cache rehydration oracle (Issue #596)
+
+| ID | fixture / mutation | expected |
+| --- | --- | --- |
+| `U-PA-REV-039` | worktree-local ledgerが空で、tracked projectionとexact Git blobがterminal revision Nを証明する | terminal Nだけをcacheへ再水和し、asset IDを維持してN+1を発行。中間revision 0 |
+| `U-PA-REV-040` | projectionのterminal content digestだけを変異する | ledger・PLAN・projectionへのwrite 0でfail-close |
+| `U-PA-REV-041` | local ledgerがprojection terminalより古い | 既存行を維持しterminalだけを追加してN+1を発行。欠落中間revisionを捏造しない |
+| `U-PA-REV-042` | projection recordのasset、path、identity、欠落・重複を各単独変異する | 対応するtyped rehydration failure、全write 0 |
+| `U-PA-REV-043` | exact source blobから再計算したcanonical payload digestをmanifest baseと不一致にする | cache挿入前にfail-close、全write 0 |
+| `U-PA-REV-044` | 同一PLAN/pathにsuperseded asset履歴とmanifest-selected assetのterminal receiptが共存する | selected assetだけをauthorityとしてNへ再水和し、旧assetはshadowしない |
+
+実行対応: `tests/node-plan-revision-runner.test.ts` (`U-PA-REV-039〜044`)。
