@@ -178,6 +178,7 @@ export interface ReviewCustodyAuditEvent {
     | "attempt_execution_failed"
     | "attempt_verdict_rejected"
     | "attempt_outcome_conflict"
+    | "attempt_completed"
     | "superseded_attempt"
     | "cleanup_pending";
   readonly requestDigest: string;
@@ -191,6 +192,8 @@ export interface ReviewCustodyAuditEvent {
   readonly receiptDigest?: string;
   readonly exitCode?: number;
   readonly verdictDigest?: string;
+  /** sha256 of the exact bytes committed to the review receipt path. */
+  readonly receiptFileDigest?: string;
   readonly oldAttemptDigest?: string;
   readonly supersededAttempt?: number;
 }
@@ -200,6 +203,27 @@ export function appendReviewCustodyAudit(repoRoot: string, event: ReviewCustodyA
   ensureDir(dirname(path), { recursive: true });
   // O_APPEND + 単一JSON行で、linked worktree間の監査イベントを混線させない。
   appendFileSync(path, `${canonicalJson(event)}\n`, { encoding: "utf8", mode: 0o600 });
+}
+
+/** A successful strict attempt is terminal only after this event and receipt agree. */
+export function isAttemptCompletedEvent(value: ReviewCustodyAuditEvent): boolean {
+  return (
+    value.kind === "attempt_completed" &&
+    isReviewDigest(value.requestDigest) &&
+    Number.isSafeInteger(value.attempt) &&
+    value.attempt > 0 &&
+    /^[0-9a-f]{40}$/.test(value.exactHead) &&
+    typeof value.verdictPath === "string" &&
+    value.verdictPath.length > 0 &&
+    typeof value.recordedAt === "string" &&
+    value.recordedAt.length > 0 &&
+    isReviewProvider(value.provider ?? "") &&
+    typeof value.model === "string" &&
+    value.model.trim().length > 0 &&
+    value.exitCode === 0 &&
+    isReviewDigest(value.receiptFileDigest ?? "") &&
+    isReviewDigest(value.verdictDigest ?? "")
+  );
 }
 
 function digestFile(path: string): string | undefined {
@@ -255,6 +279,29 @@ function isAttemptFailureEvent(input: {
     event.reason.trim().length > 0 &&
     (event.verdictDigest === undefined || DIGEST_PATTERN.test(event.verdictDigest)) &&
     digestFile(event.verdictPath) === event.verdictDigest
+  );
+}
+
+function isRetryableAttemptEvent(input: {
+  repoRoot: string;
+  event: ReviewCustodyAuditEvent;
+  request: ReviewCustodyRequest;
+  attempt: number;
+}): boolean {
+  if (isAttemptFailureEvent(input)) return true;
+  const { repoRoot, event, request, attempt } = input;
+  if (!isAttemptCompletedEvent(event)) return false;
+  if (
+    event.requestDigest !== reviewIdentityDigest(request) ||
+    event.attempt !== attempt ||
+    event.exactHead !== request.exactHead ||
+    event.verdictPath !== reviewVerdictPath(repoRoot, event.requestDigest, attempt)
+  )
+    return false;
+  // Completion before hardlink is a recoverable crash window. Once the final
+  // receipt exists, the same event is terminal and beginReviewAttempt rejects.
+  return !existsSync(
+    join(resolve(repoRoot), ".ut-tdd", "review", "receipts", `${event.requestDigest}.json`),
   );
 }
 
@@ -449,17 +496,39 @@ export function beginReviewAttempt(input: {
     "receipts",
     `${digest}.json`,
   );
-  if (existsSync(receiptPath)) return { ok: false, reason: "review_receipt_already_exists" };
+  let requestEvents: ReviewCustodyAuditEvent[];
+  try {
+    requestEvents = auditEventsFor(input.repoRoot, digest);
+  } catch {
+    return { ok: false, reason: "attempt_outcome_indeterminate" };
+  }
+  const completed = requestEvents.filter(
+    (event) =>
+      event.kind === "attempt_completed" &&
+      event.requestDigest === digest &&
+      isAttemptCompletedEvent(event) &&
+      existsSync(receiptPath) &&
+      event.receiptFileDigest === digestFile(receiptPath),
+  );
+  if (existsSync(receiptPath) && completed.length === 1)
+    return { ok: false, reason: "review_receipt_already_exists" };
+  // A pre-composition receipt or a crash-window temp file is not terminal.
+  // Leave append-only evidence intact and permit a bounded retry.
+  if (existsSync(receiptPath)) {
+    try {
+      const directory = dirname(receiptPath);
+      for (const entry of readdirSync(directory)) {
+        if (entry.startsWith(`.${digest}.json.tmp-`))
+          rmSync(join(directory, entry), { force: true });
+      }
+    } catch {
+      return { ok: false, reason: "review_custody_audit_unavailable" };
+    }
+  }
   const used = attemptNumbers(input.repoRoot, digest);
   const attempt = (used.at(-1) ?? 0) + 1;
   if (used.length > 0) {
     const previousAttempt = used.at(-1) as number;
-    let requestEvents: ReviewCustodyAuditEvent[];
-    try {
-      requestEvents = auditEventsFor(input.repoRoot, digest);
-    } catch {
-      return { ok: false, reason: "attempt_outcome_indeterminate" };
-    }
     const outcomes = requestEvents.filter(
       (event) =>
         (event.kind === "attempt_execution_failed" || event.kind === "attempt_verdict_rejected") &&
@@ -472,18 +541,28 @@ export function beginReviewAttempt(input: {
     ) {
       return { ok: false, reason: "attempt_outcome_indeterminate" };
     }
-    if (
-      outcomes.length !== 1 ||
-      !isAttemptFailureEvent({
-        repoRoot: input.repoRoot,
-        event: outcomes[0],
-        request: input.request,
-        attempt: previousAttempt,
-      })
-    ) {
+    const previousOutcome = outcomes[0];
+    const retryable =
+      outcomes.length === 1
+        ? isRetryableAttemptEvent({
+            repoRoot: input.repoRoot,
+            event: previousOutcome,
+            request: input.request,
+            attempt: previousAttempt,
+          })
+        : requestEvents.some(
+            (event) =>
+              event.attempt === previousAttempt &&
+              isRetryableAttemptEvent({
+                repoRoot: input.repoRoot,
+                event,
+                request: input.request,
+                attempt: previousAttempt,
+              }),
+          );
+    if (!retryable && !(existsSync(receiptPath) && outcomes.length === 0))
       return { ok: false, reason: "attempt_outcome_indeterminate" };
-    }
-    const failureIndex = requestEvents.indexOf(outcomes[0]);
+    const failureIndex = previousOutcome ? requestEvents.indexOf(previousOutcome) : -1;
     if (
       requestEvents
         .slice(0, failureIndex)
@@ -513,8 +592,8 @@ export function beginReviewAttempt(input: {
         provider: input.provider,
         model: input.model,
         supersededAttempt: previousAttempt,
-        oldAttemptDigest: outcomes[0].verdictDigest ?? "verdict_absent",
-        ...(outcomes[0].verdictDigest ? { verdictDigest: outcomes[0].verdictDigest } : {}),
+        oldAttemptDigest: previousOutcome?.verdictDigest ?? "verdict_absent",
+        ...(previousOutcome?.verdictDigest ? { verdictDigest: previousOutcome.verdictDigest } : {}),
       });
     } catch {
       return { ok: false, reason: "review_custody_audit_unavailable" };
