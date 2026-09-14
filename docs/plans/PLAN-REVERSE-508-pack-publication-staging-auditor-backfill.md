@@ -35,6 +35,16 @@ review_evidence:
     citations:
       - ".ut-tdd/review/receipts/6945ce76a9e1c90246e2a61a1a50058ffb46664b494480e08b8c2c4f8036755b.json"
       - "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/actions/runs/32946157460"
+    green_commands:
+      - kind: unit_test
+        command: "node scripts/run-vitest-snapshot.ts tests/pack-publication-staging.test.ts --reporter=dot"
+        runner: node
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-08-26T08:20:48Z"
+        evidence_path: tests/pack-publication-staging.test.ts
+        output_digest: "sha256:4221e846816dce13f1d6581eab3042dc43e552f8075e122690eb533b73567c46"
+        anchor_commit: 8143ce40f6df3f56ebcee9d745d6f38422e1912f
   - reviewer: codex-tl-preflight
     review_kind: intra_runtime_subagent
     reviewed_at: "2026-09-14T02:56:08Z"
