@@ -27,6 +27,8 @@ production codeと共有`U-*`登録は後続implementation PRまで追加しな�
 | `CANDIDATE-PACKPUB-CAS-008` | 各mutationのobservation欠落、重複、順序逆転、unknown mutation、nonce/intent drift | `indeterminate`/`mismatch`、receipt success 0、remote write 0 |
 | `CANDIDATE-PACKPUB-CAS-009` | temp write/fsync/publish/directory fsyncの各境界でcrash、既存同一/異種receiptと競合 | finalは完全な旧bytesか完全な新bytesだけ。同一bytesはreplay、異種/破損finalはno-clobber conflict、tempはauthorityにならない |
 | `CANDIDATE-PACKPUB-CAS-010` | corrupt final receipt + 完全journal + remote一致/不一致 | 一致時だけ決定的再構成、不一致/観測不能はsuccess 0。corrupt receipt単独をpublished根拠にしない |
+| `CANDIDATE-PACKPUB-CAS-011` | fresh operationでseal前にreview済みPRを要求する循環、外部手作りbranch/PR、receipt無し、別operation receipt replay、review後head更新を注入 | preparationだけがbranch/PR writeを行い、各writeに専用approval/journalがある。non-author review後のadmissionはread-onlyでfresh receipt/head/base/stagingを束縛し、不一致はmain write 0 |
+| `CANDIDATE-PACKPUB-CAS-012` | expected `E`、reviewed head `H`で、push直前に競合writerがmainを同じ`H`へ進め、pushが`up-to-date` exit 0、read-back `H`を返す | porcelainの`=`/`[up to date]`は`cas_not_applied_by_operation`/`indeterminate`、success 0、後続write 0。actual-update status 1件とread-back一致の対照だけ成功 |
 
 ## 3. 実装証跡
 
