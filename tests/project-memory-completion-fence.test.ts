@@ -149,6 +149,21 @@ function cloneOperation(
   return String(markers.at(-1)?.recordDigest);
 }
 
+function sealCanonicalDigest(markersPath: string, canonicalCorpusDigest: string): void {
+  const lines = readFileSync(markersPath, "utf8").trim().split("\n");
+  const markers = lines.map((line) => JSON.parse(line) as Record<string, unknown>);
+  const last = markers.at(-1);
+  if (!last || last.kind !== "complete") throw new Error("complete marker required");
+  last.payload = {
+    ...(last.payload as Record<string, unknown>),
+    canonicalCorpusDigest,
+  };
+  const unsigned = { ...last };
+  delete unsigned.recordDigest;
+  last.recordDigest = digest(unsigned);
+  writeFileSync(markersPath, `${markers.map((marker) => JSON.stringify(marker)).join("\n")}\n`);
+}
+
 afterEach(() => {
   for (const root of fixtures.splice(0)) rmSync(root, { recursive: true, force: true });
 });
@@ -232,13 +247,33 @@ describe("PLAN-L7-533 PR-1 completion fence core", () => {
   it("U-PMEMFENCE-007/016: replay is deterministic, then denies corpus mismatch without marker writes", () => {
     const root = fixture().primary;
     const applied = complete(root);
-    const before = runtimeSnapshot(root);
+    expect(replayProjectMemoryCompletion(root, applied.operationId)).toMatchObject({
+      ok: false,
+      reason: "replay_corpus_mismatch",
+    });
+    const initial = inspectProjectMemoryCompletion(root);
+    expect(initial.ok).toBe(true);
+    if (!initial.ok) throw new Error("completion fence fixture failed");
+    sealCanonicalDigest(applied.markersPath, initial.canonicalCorpusDigest);
+    const afterSeal = runtimeSnapshot(root);
     expect(replayProjectMemoryCompletion(root, applied.operationId)).toMatchObject({
       ok: true,
       status: "replayed",
       operationId: applied.operationId,
     });
-    expect(runtimeSnapshot(root)).toBe(before);
+    expect(runtimeSnapshot(root)).toBe(afterSeal);
+    const linked = join(root, "..", "replay-linked");
+    fixtures.push(linked);
+    git(root, ["worktree", "add", "-q", "-b", "replay-linked", linked]);
+    utimesSync(
+      memoryPath(linked, "seed.md"),
+      new Date("2020-01-01T00:00:00.000Z"),
+      new Date("2020-01-01T00:00:00.000Z"),
+    );
+    expect(replayProjectMemoryCompletion(root, applied.operationId)).toMatchObject({
+      ok: true,
+      status: "replayed",
+    });
     writeMemory({
       repoRoot: root,
       input: { kind: "project", title: "replay mutation", body: "changed after completion" },
@@ -249,7 +284,7 @@ describe("PLAN-L7-533 PR-1 completion fence core", () => {
       readAllowed: false,
       writeAllowed: false,
     });
-    expect(runtimeSnapshot(root)).toBe(before);
+    expect(runtimeSnapshot(root)).toBe(afterSeal);
     expect(inspectProjectMemoryCompletion(root)).toMatchObject({ ok: true });
   });
 
@@ -272,7 +307,7 @@ describe("PLAN-L7-533 PR-1 completion fence core", () => {
     if (!result.ok) expect(result.residue?.join("\n")).toContain("legacy.md");
   });
 
-  it("U-PMEMFENCE-010/011: invalid legacy memory is denied and read/write remain closed", () => {
+  it("U-PMEMFENCE-010: apply rejects invalid residue before writing a marker", () => {
     const { primary, linked } = fixture(true);
     if (!linked) throw new Error("fixture setup failed");
     complete(primary);
@@ -280,6 +315,12 @@ describe("PLAN-L7-533 PR-1 completion fence core", () => {
     mkdirSync(join(linked, ".ut-tdd", "memory"), { recursive: true });
     writeFileSync(invalid, "not a memory document\n");
     const before = runtimeSnapshot(primary);
+    expect(
+      new ProjectMemoryMigration().apply(primary, { operationId: "invalid-residue" }),
+    ).toMatchObject({
+      ok: false,
+      reason: "invalid_memory",
+    });
     expect(inspectProjectMemoryCompletion(primary)).toMatchObject({
       ok: false,
       reason: "invalid_memory",
@@ -287,6 +328,26 @@ describe("PLAN-L7-533 PR-1 completion fence core", () => {
       writeAllowed: false,
     });
     expect(runtimeSnapshot(primary)).toBe(before);
+  });
+
+  it("U-PMEMFENCE-011: observe-then-apply does not claim a TOCTOU residue was imported", () => {
+    const { primary, linked } = fixture(true);
+    if (!linked) throw new Error("fixture setup failed");
+    expect(new ProjectMemoryMigration().dryRun(primary)).toMatchObject({ ok: true });
+    const residue = memoryPath(linked, "toctou.md");
+    writeFileSync(residue, memoryText("toctou", "arrived after observe"));
+    const beforeApply = runtimeSnapshot(primary);
+    const applied = new ProjectMemoryMigration().apply(primary, { operationId: "toctou-recovery" });
+    expect(applied).toMatchObject({ ok: true, status: "completed" });
+    expect(inspectProjectMemoryCompletion(primary)).toMatchObject({
+      ok: false,
+      reason: "legacy_residue",
+    });
+    expect(runtimeSnapshot(primary)).not.toBe(beforeApply);
+    if (applied.ok) {
+      const prepared = readFileSync(applied.markersPath, "utf8");
+      expect(prepared).not.toContain("toctou.md");
+    }
   });
 
   it("U-PMEMFENCE-012: preserves typed project-root denial", () => {
@@ -301,28 +362,109 @@ describe("PLAN-L7-533 PR-1 completion fence core", () => {
     expect(() => requireProjectMemoryCompletion(root)).toThrow(ProjectMemoryCompletionError);
   });
 
-  it("U-PMEMFENCE-017/019/020/021: requires one marker-chain tip and never chooses by name", () => {
+  it("U-PMEMFENCE-017: complete plus an incomplete operation is denied", () => {
+    const root = fixture().primary;
+    complete(root);
+    expect(
+      new ProjectMemoryMigration().apply(root, {
+        operationId: "interrupted-child",
+        crashAfter: "intent",
+      }),
+    ).toMatchObject({ ok: false, reason: "transaction_interrupted" });
+    expect(inspectProjectMemoryCompletion(root)).toMatchObject({
+      ok: false,
+      reason: "migration_incomplete",
+      operationId: "interrupted-child",
+    });
+  });
+
+  it("U-PMEMFENCE-018: tampering an ancestor denies even with a complete tip", () => {
     const root = fixture().primary;
     const applied = complete(root);
-    const secondDigest = cloneOperation(applied.markersPath, "second-operation", "root");
+    cloneOperation(applied.markersPath, "second-operation", "root");
+    writeFileSync(applied.markersPath, `${readFileSync(applied.markersPath, "utf8")}tampered\n`);
+    expect(inspectProjectMemoryCompletion(root)).toMatchObject({
+      ok: false,
+      reason: "transaction_tampered",
+    });
+  });
+
+  it("U-PMEMFENCE-019: missing predecessor and multiple roots are ambiguous", () => {
+    const root = fixture().primary;
+    const applied = complete(root);
+    cloneOperation(applied.markersPath, "unknown-predecessor", "missing-digest");
     expect(inspectProjectMemoryCompletion(root)).toMatchObject({
       ok: false,
       reason: "operation_chain_ambiguous",
     });
-    // Replace the artificial root with a correctly chained child and verify the tip.
-    rmSync(join(dirname(applied.markersPath), "second-operation"), {
+    rmSync(join(dirname(dirname(applied.markersPath)), "unknown-predecessor"), {
       recursive: true,
       force: true,
     });
+    cloneOperation(applied.markersPath, "second-root", null);
+    expect(inspectProjectMemoryCompletion(root)).toMatchObject({
+      ok: false,
+      reason: "operation_chain_ambiguous",
+    });
+  });
+
+  it("U-PMEMFENCE-020: legacy null root chains to an explicit child tip", () => {
+    const root = fixture().primary;
+    const applied = complete(root);
+    const lines = readFileSync(applied.markersPath, "utf8").trim().split("\n");
+    const rootDigest = String(
+      (JSON.parse(lines.at(-1) as string) as { recordDigest: string }).recordDigest,
+    );
+    const childDigest = cloneOperation(applied.markersPath, "second-operation", rootDigest);
+    expect(childDigest).not.toBe(rootDigest);
+    expect(inspectProjectMemoryCompletion(root)).toMatchObject({
+      ok: true,
+      operationId: "second-operation",
+    });
+    const childMarkers = readFileSync(
+      join(dirname(dirname(applied.markersPath)), "second-operation", "markers.jsonl"),
+      "utf8",
+    );
+    expect(childMarkers).toContain(`"previous_complete_digest":"${rootDigest}"`);
+  });
+
+  it("U-PMEMFENCE-021: stripped owner field is tampered before ambiguity evaluation", () => {
+    const root = fixture().primary;
+    const applied = complete(root);
     const lines = readFileSync(applied.markersPath, "utf8").trim().split("\n");
     const rootDigest = String(
       (JSON.parse(lines.at(-1) as string) as { recordDigest: string }).recordDigest,
     );
     cloneOperation(applied.markersPath, "second-operation", rootDigest);
+    const childMarkersPath = join(
+      dirname(dirname(applied.markersPath)),
+      "second-operation",
+      "markers.jsonl",
+    );
+    const childLines = readFileSync(childMarkersPath, "utf8").trim().split("\n");
+    const owner = JSON.parse(childLines[0]) as { payload: Record<string, unknown> };
+    delete owner.payload.previous_complete_digest;
+    childLines[0] = JSON.stringify(owner);
+    writeFileSync(childMarkersPath, `${childLines.join("\n")}\n`);
     expect(inspectProjectMemoryCompletion(root)).toMatchObject({
-      ok: true,
-      operationId: "second-operation",
+      ok: false,
+      reason: "transaction_tampered",
     });
-    expect(secondDigest).not.toBe(rootDigest);
+  });
+
+  it("U-PMEMFENCE-021 precedence: tampered marker wins over incomplete operation", () => {
+    const root = fixture().primary;
+    const applied = complete(root);
+    expect(
+      new ProjectMemoryMigration().apply(root, {
+        operationId: "incomplete-operation",
+        crashAfter: "intent",
+      }),
+    ).toMatchObject({ ok: false, reason: "transaction_interrupted" });
+    writeFileSync(applied.markersPath, `${readFileSync(applied.markersPath, "utf8")}tampered\n`);
+    expect(inspectProjectMemoryCompletion(root)).toMatchObject({
+      ok: false,
+      reason: "transaction_tampered",
+    });
   });
 });

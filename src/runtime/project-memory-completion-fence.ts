@@ -3,7 +3,6 @@ import { createHash } from "node:crypto";
 import { existsSync, lstatSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { parseMemoryFile } from "../memory/index.ts";
-import { type MemoryMigrationDryRun, ProjectMemoryMigration } from "./project-memory-migration.ts";
 import {
   type ProjectMemoryRootDenyReason,
   resolveProjectMemoryRoot,
@@ -510,15 +509,6 @@ function readPreviousCompleteDigest(markers: readonly Marker[]): string | null {
   return value;
 }
 
-function mapMigrationFailure(
-  reason: Extract<MemoryMigrationDryRun, { ok: false }>["reason"],
-): ProjectMemoryCompletionDenyReason {
-  if (reason === "source_changed") return "inventory_drift";
-  if (reason === "transaction_interrupted") return "migration_incomplete";
-  if (reason === "transaction_busy") return "transaction_tampered";
-  return reason;
-}
-
 /** Read-only completion observation. It never creates or mutates runtime state. */
 export function inspectProjectMemoryCompletion(repoRoot: string): ProjectMemoryCompletionResult {
   const state = loadState(repoRoot);
@@ -534,8 +524,11 @@ export function inspectProjectMemoryCompletion(repoRoot: string): ProjectMemoryC
 }
 
 /**
- * Check same-operation replay without appending a marker. Legacy Slice 4b
- * markers use `inventoryDigest`; newer markers may carry `canonicalCorpusDigest`.
+ * Check same-operation replay without appending a marker. The replay anchor
+ * must be an explicit canonical-only digest. An old marker's all-worktree
+ * `inventoryDigest` is deliberately not accepted as a fallback: it includes
+ * topology and volatile file metadata and would reject harmless worktree
+ * changes or touches.
  */
 export function replayProjectMemoryCompletion(
   repoRoot: string,
@@ -554,18 +547,10 @@ export function replayProjectMemoryCompletion(
         canonicalCorpusDigest: state.corpus.digest,
       });
   } else {
-    const migration = new ProjectMemoryMigration().dryRun(repoRoot);
-    if (!migration.ok)
-      return failure(mapMigrationFailure(migration.reason), {
-        operationId,
-        canonicalCorpusDigest: state.corpus.digest,
-      });
-    if (migration.inventoryDigest !== operation.complete.payload.inventoryDigest) {
-      return failure("replay_corpus_mismatch", {
-        operationId,
-        canonicalCorpusDigest: state.corpus.digest,
-      });
-    }
+    return failure("replay_corpus_mismatch", {
+      operationId,
+      canonicalCorpusDigest: state.corpus.digest,
+    });
   }
   return {
     ok: true,
