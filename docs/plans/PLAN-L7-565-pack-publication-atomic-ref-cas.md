@@ -134,8 +134,13 @@ OID付きlease、専用App authority、fast-forward refspecの積を満たす1�
 ## 3. authority とpreflight
 
 - authorityは同時利用できない2つのGitHub App installationへ分離する。`preparation authority`はruleset bypassを持たず、
-  publication branchのGit object作成に必要なContents writeとPR作成に必要なPull requests writeだけを持つ。
+  publication branchのGit object作成に必要なContents writeとPR作成に必要なPull requests writeを持つ。さらにsealed
+  staging entriesとexpected main treeをpath/mode/bytesで比較し、`.github/workflows/**`の追加・更新・削除が1件以上ある
+  preparation operationに限ってWorkflows writeを要求する。workflow差分が0件なのにWorkflows writeを持つtokenは
+  `authority_overprivileged`、workflow差分があるのに権限が無ければ`authority_insufficient`としてbranch write前にdenyする。
+  workflow entryをsealed artifact集合から除外する、expected mainの旧bytesで置換する、差分判定から隠すことは禁止する。
   `publication CAS authority`はrulesetの`always` bypass actorで、Contents writeだけを持ちPull requests writeを持たない。
+  CAS Appにはworkflow差分の有無にかかわらずWorkflows writeも付与しない。
   installation ID、token、operation ID、approval、journalを共有せず、preparation tokenはadmission前に破棄し、CAS tokenは
   admission完了後にだけmintする。片方を他方のoperationへ渡した場合はauthority mismatch、write 0とする。
   first/second preparationは同じApp installationを使えてもtokenはoperationごとにfresh mint/破棄し、同じtokenを跨いで
@@ -154,7 +159,8 @@ OID付きlease、専用App authority、fast-forward refspecの積を満たす1�
   typed deny、write 0とする。
 - temporary Git object databaseはsealed staging entriesとremoteで観測したexpected main/reviewed headだけから作る。
   source worktree、開発DB/PLAN/evidence、local Pack checkoutからbytesを補完しない。file modeを含むtree identityが
-  sealed expected treeと一致しなければpushしない。
+  sealed expected treeと一致しなければpushしない。preparation permission判定に用いるworkflow change setも、この同じ
+  sealed expected tree対expected main treeの差分から導出し、caller flagやdirectory walkをauthorityにしない。
 
 ## 4. large payload とprocess境界
 
