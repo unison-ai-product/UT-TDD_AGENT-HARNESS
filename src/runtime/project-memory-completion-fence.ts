@@ -76,6 +76,16 @@ interface Corpus {
 
 type MarkerKind = "owner" | "intent" | "imported" | "prepared" | "complete";
 
+function isMarkerKind(value: unknown): value is MarkerKind {
+  return (
+    value === "owner" ||
+    value === "intent" ||
+    value === "imported" ||
+    value === "prepared" ||
+    value === "complete"
+  );
+}
+
 interface Marker {
   readonly sequence: number;
   readonly kind: MarkerKind;
@@ -299,6 +309,7 @@ function parseMarkers(path: string, operationId: string): readonly Marker[] {
     if (!isRecord(value)) throw new FenceTamperError();
     const marker = value as Partial<Marker>;
     const kind = marker.kind;
+    if (!isMarkerKind(kind)) throw new FenceTamperError();
     const kindOrderValid =
       (index === 0 && kind === "owner") ||
       (index === 1 && kind === "intent") ||
@@ -319,7 +330,7 @@ function parseMarkers(path: string, operationId: string): readonly Marker[] {
     if (kind === "complete") completeSeen = true;
     const unsigned = {
       sequence: marker.sequence,
-      kind: marker.kind,
+      kind,
       operationId: marker.operationId,
       payload: marker.payload,
       previousRecordDigest: marker.previousRecordDigest ?? null,

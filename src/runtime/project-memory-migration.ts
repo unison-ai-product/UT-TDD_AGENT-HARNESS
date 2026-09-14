@@ -15,10 +15,10 @@ import {
 import { hostname } from "node:os";
 import { join } from "node:path";
 import {
+  type MemoryEntry,
   memoryFileNameFor,
   memoryStorageRoot,
   parseMemoryFile,
-  type MemoryEntry,
 } from "../memory/index.ts";
 import {
   type ProjectMemoryRootDenyReason,
@@ -38,6 +38,10 @@ export interface MemoryMigrationVariant {
   readonly sourceHandleIdentity: string;
   readonly sourceSize: number;
   readonly sourceMtimeMs: number;
+}
+
+function sourceIdentityKey(worktreeRoot: string, sourcePath: string): string {
+  return `${normalizeTopologyPath(worktreeRoot)}\0${sourcePath}`;
 }
 
 export interface MemoryMigrationGroup {
@@ -74,7 +78,12 @@ export type MemoryMigrationDryRun =
 export interface MemoryMigrationApplyOptions {
   readonly operationId?: string;
   /** Test/fault-injection seam: return an interrupted transaction after this marker. */
-  readonly crashAfter?: "owner" | "intent" | "first_import" | "prepared";
+  readonly crashAfter?:
+    | "owner"
+    | "intent"
+    | "write_before_import_marker"
+    | "first_import"
+    | "prepared";
 }
 
 export type MemoryMigrationApplyResult =
@@ -375,13 +384,23 @@ export class ProjectMemoryMigration {
         const durableImports = markers
           .filter((marker) => marker.kind === "imported")
           .map((marker) => this.importFromMarker(marker));
-        if (durableImports.length === 0) {
-          if (intent.payload.inventoryDigest !== inventory.inventoryDigest) {
-            return this.failure("inventory_drift", operationId, paths);
-          }
-        } else {
-          this.assertImportIntent(intent, inventory, paths.repoRoot, durableImports);
+        const recoveredImports = this.recoverUnmarkedImports(
+          intent,
+          inventory,
+          paths.repoRoot,
+          durableImports,
+        );
+        for (const entry of recoveredImports) {
+          this.appendMarker(paths.markersPath, {
+            kind: "imported",
+            operationId,
+            payload: { file: entry },
+          });
         }
+        this.assertImportIntent(intent, inventory, paths.repoRoot, [
+          ...durableImports,
+          ...recoveredImports,
+        ]);
         return this.finishExisting({
           inventory,
           operationId,
@@ -529,7 +548,10 @@ export class ProjectMemoryMigration {
   }
 
   /** Resolve the chain tip without relying on operation id or filesystem time. */
-  private previousCompleteDigest(runtimeBusRoot: string, excludeOperationId?: string): string | null {
+  private previousCompleteDigest(
+    runtimeBusRoot: string,
+    excludeOperationId?: string,
+  ): string | null {
     const migrationRoot = join(runtimeBusRoot, "memory-migration");
     if (!existsSync(migrationRoot)) return null;
     const rootStat = lstatSync(migrationRoot);
@@ -651,7 +673,9 @@ export class ProjectMemoryMigration {
     });
   }
 
-  private importClaims(candidates: readonly MemoryMigrationVariant[]): Array<Record<string, unknown>> {
+  private importClaims(
+    candidates: readonly MemoryMigrationVariant[],
+  ): Array<Record<string, unknown>> {
     return candidates.map((variant) => ({
       memoryId: variant.memoryId,
       sourceWorktreeRoot: normalizeTopologyPath(variant.worktreeRoot),
@@ -667,8 +691,7 @@ export class ProjectMemoryMigration {
     canonicalRoot: string,
     durable: readonly MemoryMigrationImport[],
   ): void {
-    if (!Array.isArray(intent.payload.imports))
-      throw new MigrationFailure("transaction_tampered");
+    if (!Array.isArray(intent.payload.imports)) throw new MigrationFailure("transaction_tampered");
     const remaining = this.importClaims(this.importCandidates(inventory, canonicalRoot));
     const completed = durable.map(({ destinationPath: _destinationPath, ...entry }) => entry);
     const actual = [...completed, ...remaining].sort((left, right) =>
@@ -679,6 +702,69 @@ export class ProjectMemoryMigration {
     );
     if (canonicalJson(actual) !== canonicalJson(expected))
       throw new MigrationFailure("inventory_drift");
+  }
+
+  private recoverUnmarkedImports(
+    intent: Marker,
+    inventory: Extract<MemoryMigrationDryRun, { ok: true }>,
+    canonicalRoot: string,
+    durable: readonly MemoryMigrationImport[],
+  ): MemoryMigrationImport[] {
+    if (!Array.isArray(intent.payload.imports)) throw new MigrationFailure("transaction_tampered");
+    const durableSources = new Set(
+      durable.map((entry) => sourceIdentityKey(entry.sourceWorktreeRoot, entry.sourcePath)),
+    );
+    const canonicalPath = normalizeTopologyPath(canonicalRoot);
+    const recovered: MemoryMigrationImport[] = [];
+    for (const value of intent.payload.imports) {
+      if (!value || typeof value !== "object" || Array.isArray(value))
+        throw new MigrationFailure("transaction_tampered");
+      const claim = value as Record<string, unknown>;
+      if (
+        typeof claim.memoryId !== "string" ||
+        typeof claim.sourceWorktreeRoot !== "string" ||
+        typeof claim.sourcePath !== "string" ||
+        typeof claim.contentDigest !== "string" ||
+        typeof claim.size !== "number"
+      ) {
+        throw new MigrationFailure("transaction_tampered");
+      }
+      if (durableSources.has(sourceIdentityKey(claim.sourceWorktreeRoot, claim.sourcePath)))
+        continue;
+      const group = inventory.groups.find((candidate) => candidate.memoryId === claim.memoryId);
+      const source = group?.variants.find(
+        (variant) =>
+          normalizeTopologyPath(variant.worktreeRoot) === claim.sourceWorktreeRoot &&
+          variant.sourcePath === claim.sourcePath &&
+          variant.contentDigest === claim.contentDigest &&
+          variant.sourceSize === claim.size,
+      );
+      if (!source) throw new MigrationFailure("transaction_tampered");
+      const canonicalVariants = group?.variants.filter(
+        (variant) => normalizeTopologyPath(variant.worktreeRoot) === canonicalPath,
+      );
+      if (!canonicalVariants || canonicalVariants.length === 0) continue;
+      const canonical = canonicalVariants.find(
+        (variant) =>
+          variant.contentDigest === claim.contentDigest && variant.sourceSize === claim.size,
+      );
+      if (!canonical) throw new MigrationFailure("transaction_tampered");
+      const sourceSnapshot = this.readSource(source);
+      this.verifySource(source, sourceSnapshot);
+      const canonicalSnapshot = this.readSource(canonical);
+      this.verifySource(canonical, canonicalSnapshot);
+      if (sourceSnapshot.content !== canonicalSnapshot.content)
+        throw new MigrationFailure("inventory_drift");
+      recovered.push({
+        memoryId: claim.memoryId,
+        sourceWorktreeRoot: claim.sourceWorktreeRoot,
+        sourcePath: claim.sourcePath,
+        destinationPath: canonical.sourcePath,
+        contentDigest: claim.contentDigest,
+        size: claim.size,
+      });
+    }
+    return recovered;
   }
 
   private readMarkers(path: string, operationId: string): Marker[] {
@@ -830,11 +916,9 @@ export class ProjectMemoryMigration {
   }
 
   private importsFromMarker(marker: Marker): MemoryMigrationImport[] {
-    if (!Array.isArray(marker.payload.imported))
-      throw new MigrationFailure("transaction_tampered");
+    if (!Array.isArray(marker.payload.imported)) throw new MigrationFailure("transaction_tampered");
     return marker.payload.imported.map((value) => {
-      if (!value || typeof value !== "object")
-        throw new MigrationFailure("transaction_tampered");
+      if (!value || typeof value !== "object") throw new MigrationFailure("transaction_tampered");
       const candidate = value as Partial<MemoryMigrationImport>;
       if (
         typeof candidate.memoryId !== "string" ||
@@ -879,17 +963,19 @@ export class ProjectMemoryMigration {
     const root = memoryStorageRoot(repoRoot);
     if (!existsSync(root)) return sha256("[]");
     const stat = lstatSync(root);
-    if (!stat.isDirectory() || stat.isSymbolicLink())
-      throw new MigrationFailure("source_unsafe");
+    if (!stat.isDirectory() || stat.isSymbolicLink()) throw new MigrationFailure("source_unsafe");
     const files: Array<{ path: string; memoryId: string; digest: string; size: number }> = [];
     for (const name of readdirSync(root).sort(compare)) {
       if (!name.endsWith(".md")) continue;
       const path = join(root, name);
       const file = lstatSync(path);
-      if (!file.isFile() || file.isSymbolicLink())
-        throw new MigrationFailure("source_unsafe");
+      if (!file.isFile() || file.isSymbolicLink()) throw new MigrationFailure("source_unsafe");
       const bytes = readFileSync(path);
-      const entry = this.parseImportEntry(repoRoot, `.ut-tdd/memory/${name}`, bytes.toString("utf8"));
+      const entry = this.parseImportEntry(
+        repoRoot,
+        `.ut-tdd/memory/${name}`,
+        bytes.toString("utf8"),
+      );
       files.push({
         path: `.ut-tdd/memory/${name}`,
         memoryId: entry.memory_id,
@@ -909,8 +995,7 @@ export class ProjectMemoryMigration {
     }
     // parseMemoryFile intentionally permits legacy empty updated_at values;
     // migration import is stricter and must not become a cleansing path.
-    if (!entry.memory_id || !entry.updated_at.trim())
-      throw new MigrationFailure("invalid_memory");
+    if (!entry.memory_id || !entry.updated_at.trim()) throw new MigrationFailure("invalid_memory");
     return entry;
   }
 
@@ -928,9 +1013,12 @@ export class ProjectMemoryMigration {
       }
       if (bytes.byteLength !== imported.size || sha256(bytes) !== imported.contentDigest)
         throw new MigrationFailure("inventory_drift");
-      const entry = this.parseImportEntry(repoRoot, imported.destinationPath, bytes.toString("utf8"));
-      if (entry.memory_id !== imported.memoryId)
-        throw new MigrationFailure("transaction_tampered");
+      const entry = this.parseImportEntry(
+        repoRoot,
+        imported.destinationPath,
+        bytes.toString("utf8"),
+      );
+      if (entry.memory_id !== imported.memoryId) throw new MigrationFailure("transaction_tampered");
     }
   }
 
@@ -941,7 +1029,10 @@ export class ProjectMemoryMigration {
     const canonical = new Set(
       inventory.groups
         .flatMap((group) => group.variants)
-        .filter((variant) => normalizeTopologyPath(variant.worktreeRoot) === normalizeTopologyPath(canonicalRoot))
+        .filter(
+          (variant) =>
+            normalizeTopologyPath(variant.worktreeRoot) === normalizeTopologyPath(canonicalRoot),
+        )
         .map((variant) => `${variant.memoryId}\0${variant.contentDigest}`),
     );
     const candidates: MemoryMigrationVariant[] = [];
@@ -958,7 +1049,10 @@ export class ProjectMemoryMigration {
       }
     }
     return candidates.sort((left, right) =>
-      compare(`${left.memoryId}\0${left.worktreeRoot}\0${left.sourcePath}`, `${right.memoryId}\0${right.worktreeRoot}\0${right.sourcePath}`),
+      compare(
+        `${left.memoryId}\0${left.worktreeRoot}\0${left.sourcePath}`,
+        `${right.memoryId}\0${right.worktreeRoot}\0${right.sourcePath}`,
+      ),
     );
   }
 
@@ -970,10 +1064,17 @@ export class ProjectMemoryMigration {
     crashAfter?: MemoryMigrationApplyOptions["crashAfter"],
   ): MemoryMigrationImport[] {
     const imported: MemoryMigrationImport[] = [...recorded];
-    const recordedBySource = new Map(recorded.map((entry) => [entry.sourcePath, entry]));
+    const recordedBySource = new Map(
+      recorded.map((entry) => [
+        sourceIdentityKey(entry.sourceWorktreeRoot, entry.sourcePath),
+        entry,
+      ]),
+    );
     mkdirSync(memoryStorageRoot(canonicalRoot), { recursive: true });
     for (const variant of candidates) {
-      const prior = recordedBySource.get(variant.sourcePath);
+      const prior = recordedBySource.get(
+        sourceIdentityKey(variant.worktreeRoot, variant.sourcePath),
+      );
       if (prior) {
         if (
           prior.memoryId !== variant.memoryId ||
@@ -1006,6 +1107,8 @@ export class ProjectMemoryMigration {
         } catch {
           throw new MigrationFailure("source_unavailable");
         }
+        if (crashAfter === "write_before_import_marker")
+          throw new MigrationFailure("transaction_interrupted");
       }
       const importedEntry: MemoryMigrationImport = {
         memoryId: entry.memory_id,

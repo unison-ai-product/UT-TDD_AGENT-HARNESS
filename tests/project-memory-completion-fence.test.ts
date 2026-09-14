@@ -345,14 +345,17 @@ describe("PLAN-L7-533 PR-1 completion fence core", () => {
   it("U-PMEMFENCE-022: a durable per-import marker permits recovery after the first canonical write", () => {
     const { primary, linked } = fixture(true);
     if (!linked) throw new Error("fixture setup failed");
-    writeFileSync(memoryPath(linked, "first.md"), memoryText("first", "first body"));
-    writeFileSync(memoryPath(linked, "second.md"), memoryText("second", "second body"));
+    const linkedTwo = join(dirname(linked), "linked-two");
+    git(primary, ["worktree", "add", "-q", "-b", "linked-two", linkedTwo]);
+    writeFileSync(memoryPath(linked, "same.md"), memoryText("first", "first body"));
+    writeFileSync(memoryPath(linkedTwo, "same.md"), memoryText("second", "second body"));
     const interrupted = new ProjectMemoryMigration().apply(primary, {
       operationId: "partial-import",
       crashAfter: "first_import",
     });
     expect(interrupted).toMatchObject({ ok: false, reason: "transaction_interrupted" });
-    if (interrupted.ok) throw new Error("fault injection did not interrupt");
+    if (interrupted.ok || !interrupted.markersPath)
+      throw new Error("fault injection did not interrupt");
     const durable = readFileSync(interrupted.markersPath, "utf8");
     expect(durable).toContain('"kind":"imported"');
     const recovered = new ProjectMemoryMigration().recover(primary, "partial-import");
@@ -362,6 +365,61 @@ describe("PLAN-L7-533 PR-1 completion fence core", () => {
       "memory:project:first",
       "memory:project:second",
     ]);
+  });
+
+  it("U-PMEMFENCE-022: recovery adopts an exact canonical write whose import marker was not durable", () => {
+    const { primary, linked } = fixture(true);
+    if (!linked) throw new Error("fixture setup failed");
+    writeFileSync(memoryPath(linked, "marker-gap.md"), memoryText("marker-gap", "durable body"));
+    const interrupted = new ProjectMemoryMigration().apply(primary, {
+      operationId: "write-before-marker",
+      crashAfter: "write_before_import_marker",
+    });
+    expect(interrupted).toMatchObject({ ok: false, reason: "transaction_interrupted" });
+    if (interrupted.ok || !interrupted.markersPath)
+      throw new Error("fault injection did not interrupt");
+    expect(readFileSync(interrupted.markersPath, "utf8")).not.toContain('"kind":"imported"');
+
+    const recovered = new ProjectMemoryMigration().recover(primary, "write-before-marker");
+    expect(recovered).toMatchObject({ ok: true, status: "completed" });
+    if (!recovered.ok) throw new Error(recovered.reason);
+    expect(recovered.imported).toHaveLength(1);
+    expect(recovered.imported[0]?.memoryId).toBe("memory:project:marker-gap");
+  });
+
+  it.each([
+    ["changed size", (path: string) => writeFileSync(path, `${readFileSync(path, "utf8")}x`)],
+    [
+      "same-size digest drift",
+      (path: string) =>
+        writeFileSync(path, readFileSync(path, "utf8").replace("durable body", "durable bodx")),
+    ],
+    ["missing source", (_path: string, source: string) => rmSync(source)],
+  ])("U-PMEMFENCE-022: %s cannot authorize reconstruction of a missing import marker", (_label, mutate) => {
+    const { primary, linked } = fixture(true);
+    if (!linked) throw new Error("fixture setup failed");
+    const source = memoryPath(linked, "marker-gap-negative.md");
+    const operationId = "write-before-marker-negative";
+    writeFileSync(source, memoryText("marker-gap-negative", "durable body"));
+    const interrupted = new ProjectMemoryMigration().apply(primary, {
+      operationId,
+      crashAfter: "write_before_import_marker",
+    });
+    expect(interrupted).toMatchObject({ ok: false, reason: "transaction_interrupted" });
+    if (interrupted.ok || !interrupted.markersPath)
+      throw new Error("fault injection did not interrupt");
+    const markerBytes = readFileSync(interrupted.markersPath);
+    const canonicalName = readdirSync(join(primary, ".ut-tdd", "memory")).find(
+      (name) => name !== "seed.md",
+    );
+    if (!canonicalName) throw new Error("canonical write was not durable");
+    mutate(join(primary, ".ut-tdd", "memory", canonicalName), source);
+
+    expect(new ProjectMemoryMigration().recover(primary, operationId)).toMatchObject({
+      ok: false,
+      reason: "transaction_tampered",
+    });
+    expect(readFileSync(interrupted.markersPath)).toEqual(markerBytes);
   });
 
   it("U-PMEMFENCE-012: preserves typed project-root denial", () => {
@@ -496,5 +554,10 @@ describe("PLAN-L7-533 PR-1 completion fence core", () => {
       ok: false,
       reason: "transaction_tampered",
     });
+    expect(
+      new ProjectMemoryMigration().apply(root, {
+        operationId: "zzz-writer-must-not-mask-tamper",
+      }),
+    ).toMatchObject({ ok: false, reason: "transaction_tampered" });
   });
 });
