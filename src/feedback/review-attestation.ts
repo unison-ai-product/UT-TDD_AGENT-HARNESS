@@ -1,16 +1,31 @@
-import { createHash } from "node:crypto";
-import { closeSync, existsSync, openSync, readFileSync, writeFileSync, writeSync } from "node:fs";
+import { createHash, randomUUID } from "node:crypto";
+import {
+  closeSync,
+  existsSync,
+  fsyncSync,
+  linkSync,
+  mkdirSync,
+  openSync,
+  readFileSync,
+  rmSync,
+  unlinkSync,
+  writeFileSync,
+  writeSync,
+} from "node:fs";
 import { join } from "node:path";
 import { ensureDir } from "../shared/fs.ts";
 import type { ReviewReceipt } from "./review-dispatch.ts";
 import { extractVerdict, type ReviewVerdictName } from "./review-verdict-contract.ts";
 import {
+  appendReviewCustodyAudit,
   assertReviewVerdictPath,
   canonicalJson,
   canonicalReviewRevision,
+  isAttemptCompletedEvent,
   isStrictReviewRequest,
   REVIEW_VERDICT_SCHEMA_VERSION,
   type ReviewVerdictEnvelope,
+  readReviewCustodyAudit,
   recordReviewAttemptFailure,
   recordReviewAttemptVerdictRejection,
   reviewIdentityDigest,
@@ -133,32 +148,137 @@ function persist(input: {
   return { path, digest: valueDigest };
 }
 
-function writeReceiptCreateExclusive(
-  path: string,
-  receipt: ReviewReceipt,
-):
+type StrictReceiptWriteResult =
   | { readonly ok: true }
-  | { readonly ok: false; readonly reason: "verdict_identity_conflict" | "receipt_unreadable" } {
-  const serialized = `${JSON.stringify(receipt, null, 2)}\n`;
+  | {
+      readonly ok: false;
+      readonly reason: "receipt_write_failed" | "receipt_link_failed" | "verdict_identity_conflict";
+    };
+
+/**
+ * Commit a strict receipt only after the immutable invocation fact is appended.
+ * The final path is established with a hardlink so a concurrent writer cannot
+ * expose a partial file or overwrite an existing receipt.
+ */
+function writeStrictReceiptWithCompletion(input: {
+  repoRoot: string;
+  request: ReviewAttestationRequest;
+  attempt: number;
+  provider: "codex" | "claude";
+  model: string;
+  verdictPath: string;
+  receipt: ReviewReceipt;
+  completedAt: string;
+}): StrictReceiptWriteResult {
+  const digest = reviewRequestDigest(input.request);
+  const directory = join(input.repoRoot, ".ut-tdd", "review", "receipts");
+  const target = join(directory, `${digest}.json`);
+  const bytes = Buffer.from(`${JSON.stringify(input.receipt, null, 2)}\n`, "utf8");
+  const receiptFileDigest = createHash("sha256").update(bytes).digest("hex");
+  const verdictDigest = existsSync(input.verdictPath)
+    ? createHash("sha256").update(readFileSync(input.verdictPath)).digest("hex")
+    : undefined;
+  const auditEvent = {
+    kind: "attempt_completed" as const,
+    requestDigest: digest,
+    attempt: input.attempt,
+    exactHead: input.request.exactHead,
+    verdictPath: input.verdictPath,
+    recordedAt: input.completedAt,
+    reason: "review_completed",
+    provider: input.provider,
+    model: input.model,
+    exitCode: 0,
+    receiptFileDigest,
+    ...(verdictDigest ? { verdictDigest } : {}),
+  };
+  const lock = join(directory, `.${digest}.receipt.lock`);
+  mkdirSync(directory, { recursive: true });
   try {
-    const fd = openSync(path, "wx", 0o600);
     try {
-      writeSync(fd, serialized, undefined, "utf8");
-    } finally {
-      closeSync(fd);
-    }
-    return { ok: true };
-  } catch (error) {
-    if (!(error instanceof Error) || !("code" in error) || error.code !== "EEXIST")
-      return { ok: false, reason: "receipt_unreadable" };
-    try {
-      const existing = JSON.parse(readFileSync(path, "utf8")) as unknown;
-      return canonicalJson(existing) === canonicalJson(receipt)
-        ? { ok: true }
-        : { ok: false, reason: "verdict_identity_conflict" };
+      mkdirSync(lock);
     } catch {
-      return { ok: false, reason: "receipt_unreadable" };
+      return { ok: false, reason: "receipt_link_failed" };
     }
+    // A complete event plus identical final bytes is an idempotent replay.
+    // An orphan final file is deliberately not treated as terminal.
+    try {
+      const events = readReviewCustodyAudit(input.repoRoot).filter(
+        (event) => event.requestDigest === digest && event.attempt === input.attempt,
+      );
+      const completed = events.filter(isAttemptCompletedEvent);
+      if (
+        completed.length === 1 &&
+        existsSync(target) &&
+        Buffer.from(readFileSync(target)).equals(bytes) &&
+        completed[0].receiptFileDigest === receiptFileDigest
+      ) {
+        return { ok: true };
+      }
+    } catch {
+      return { ok: false, reason: "receipt_write_failed" };
+    }
+    const temporary = join(directory, `.${digest}.json.tmp-${process.pid}-${randomUUID()}`);
+    let descriptor: number | undefined;
+    try {
+      descriptor = openSync(temporary, "wx", 0o600);
+      writeSync(descriptor, bytes);
+      fsyncSync(descriptor);
+      closeSync(descriptor);
+      descriptor = undefined;
+    } catch {
+      if (descriptor !== undefined) closeSync(descriptor);
+      rmSync(temporary, { force: true });
+      return { ok: false, reason: "receipt_write_failed" };
+    }
+    try {
+      appendReviewCustodyAudit(input.repoRoot, auditEvent);
+    } catch {
+      rmSync(temporary, { force: true });
+      // A successful provider invocation whose receipt could not be audited is
+      // made retryable by recording a typed failed-attempt event.
+      recordReviewAttemptFailure({
+        repoRoot: input.repoRoot,
+        request: input.request,
+        attempt: input.attempt,
+        provider: input.provider,
+        model: input.model,
+        exitCode: 1,
+        verdictPath: input.verdictPath,
+        reason: "receipt_audit_append_failed",
+        now: input.completedAt,
+      });
+      return { ok: false, reason: "receipt_write_failed" };
+    }
+    try {
+      linkSync(temporary, target);
+      unlinkSync(temporary);
+      return { ok: true };
+    } catch (error) {
+      const code = error && typeof error === "object" && "code" in error ? error.code : undefined;
+      if (code === "EEXIST") {
+        let existing: Buffer;
+        try {
+          existing = readFileSync(target);
+        } catch {
+          rmSync(temporary, { force: true });
+          return { ok: false, reason: "receipt_link_failed" };
+        }
+        rmSync(temporary, { force: true });
+        if (existing.equals(bytes)) return { ok: true };
+        appendReviewCustodyAudit(input.repoRoot, {
+          ...auditEvent,
+          kind: "attempt_outcome_conflict",
+          reason: "attempt_outcome_conflict",
+          oldAttemptDigest: createHash("sha256").update(existing).digest("hex"),
+        });
+        return { ok: false, reason: "verdict_identity_conflict" };
+      }
+      rmSync(temporary, { force: true });
+      return { ok: false, reason: "receipt_link_failed" };
+    }
+  } finally {
+    rmSync(lock, { recursive: true, force: true });
   }
 }
 
@@ -401,11 +521,16 @@ export function projectReviewVerdict(input: {
     const directory = join(input.repoRoot, ".ut-tdd", "review", "receipts");
     ensureDir(directory, { recursive: true });
     const path = join(directory, `${reviewRequestDigest(input.request)}.json`);
-    // Always enter the create-exclusive writer.  The path may become occupied
-    // after any prior observation (for example by a competing runtime), so an
-    // existence pre-check cannot establish custody.  The writer's EEXIST path
-    // performs the same-content/id-conflict decision without overwriting it.
-    const persisted = writeReceiptCreateExclusive(path, receipt);
+    const persisted = writeStrictReceiptWithCompletion({
+      repoRoot: input.repoRoot,
+      request: input.request,
+      attempt: expectedAttempt as number,
+      provider: input.attestation.provider,
+      model: input.attestation.model,
+      verdictPath: input.verdictFile,
+      receipt,
+      completedAt: input.attestation.completedAt,
+    });
     if (!persisted.ok) return persisted;
     return { ok: true, receipt, path, digest: reviewRequestDigest(input.request) };
   }
