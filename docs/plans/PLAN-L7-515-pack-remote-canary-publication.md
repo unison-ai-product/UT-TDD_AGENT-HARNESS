@@ -75,6 +75,12 @@ review_evidence:
 
 # PLAN-L7-515: human-approved Pack remote canary publication adapter
 
+> **訂正 (2026-09-14)**: §3 の「protected Pack `main` へ approval 済み PR の CAS merge」のうち、
+> GitHub Pull Requests merge API に expected base OID の原子的な precondition があるという前提は誤りだった。
+> 同 API の `sha` は PR head OID だけを検査し、base の再観測と merge write の間に TOCTOU が残る。
+> publication FSM、approval、journal、read-back の契約は維持し、remote main CAS primitive と実行 authority
+> だけを `PLAN-L7-565-pack-publication-atomic-ref-cas` が supersede する。
+
 ## Closure evidence
 
 PR #438 exact HEAD `2923c66e7431fffe6c41567fd8da7cf5acd7a158`には、canonical receipt
