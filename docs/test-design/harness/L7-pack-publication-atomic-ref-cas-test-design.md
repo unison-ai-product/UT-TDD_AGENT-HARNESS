@@ -29,6 +29,8 @@ production codeと共有`U-*`登録は後続implementation PRまで追加しな�
 | `CANDIDATE-PACKPUB-CAS-010` | corrupt final receipt + 完全journal + remote一致/不一致 | 一致時だけ決定的再構成、不一致/観測不能はsuccess 0。corrupt receipt単独をpublished根拠にしない |
 | `CANDIDATE-PACKPUB-CAS-011` | fresh operationでseal前にreview済みPRを要求する循環、外部手作りbranch/PR、receipt無し、別operation receipt replay、review後head更新を注入 | preparationだけがbranch/PR writeを行い、各writeに専用approval/journalがある。non-author review後のadmissionはread-onlyでfresh receipt/head/base/stagingを束縛し、不一致はmain write 0 |
 | `CANDIDATE-PACKPUB-CAS-012` | expected `E`、reviewed head `H`で、push直前に競合writerがmainを同じ`H`へ進め、pushが`up-to-date` exit 0、read-back `H`を返す | porcelainの`=`/`[up to date]`は`cas_not_applied_by_operation`/`indeterminate`、success 0、後続write 0。actual-update status 1件とread-back一致の対照だけ成功 |
+| `CANDIDATE-PACKPUB-CAS-013` | preparation Appにbypassを与える、CAS AppにPull requests writeを与える、token/installation/operationを相互交換・同時保持する | preparationはnon-bypass Contents+PR write、CASはbypass Contents writeのみ。permission/identity/token lifecycleの各軸不一致は該当phase前にdeny、write 0 |
+| `CANDIDATE-PACKPUB-CAS-014` | preparation/admission分離をno-op branch/PR port、dummy attestation、旧mutationのwrite省略で偽装し、またはpreparation nonceをpublicationで再利用する | real preparation入口だけがbranch/PR mutationを発行し専用journal/receiptを生成。publication入口のbranch/PR call 0、nonce集合の積集合0。adapter source変更はbounded adapter sliceだけで許可 |
 
 ## 3. 継承するproduction-port oracle
 
@@ -42,7 +44,7 @@ production codeと共有`U-*`登録は後続implementation PRまで追加しな�
 | `CANDIDATE-PACKPUB-005-P` | approval filesを自己整合した別nonce群へ全差替し、origin/main commitmentは不変 | 各`sha256(nonce)`不一致でseal前`approval_commitment_mismatch`、write 0 |
 | `CANDIDATE-PACKPUB-005-Q` | (a) record approverだけ変異しfile不変、(b) file approverだけ変異しrecord不変 | 両刺激を独立caseで`approval_commitment_mismatch`/`approval_binding_mismatch`、receipt 0、write 0 |
 | `CANDIDATE-PACKPUB-005-R` | recordを(a) working treeだけ、(b) local HEADだけに置く、(c) identityを変異、(d) record expiresAtを到来させる | origin/mainだけがauthority。(a)(b) missing、(c) mismatch、(d) expired、全てseal前write 0 |
-| `CANDIDATE-PACKPUB-PORT-013` | PR-1でadapter `authorize()`からplanned event appendを削除しApprovalPortへ移す | production以外を含むadapter testでnew consume直後に`planned_nonce_consumed`が1件、その後mutation_intent。adapter source diffがあればscope Red |
+| `CANDIDATE-PACKPUB-PORT-013` | production-port sliceでadapter authorizationを変更する、またはbounded adapter sliceでplanned event appendをApprovalPortへ移す | production以外を含むadapter testでnew consume直後に`planned_nonce_consumed`が1件、その後mutation_intent。adapter変更はpreparation/admission抽出だけ、production-port sliceのadapter diffはscope Red |
 | `CANDIDATE-PACKPUB-PORT-014` | commit metadataをfake-only fieldで返す、sidecar/blobを未取得、tag objectをcommitとして読む | 実API形fixtureだけでcommit/tree/blob/manifestを再計算しannotated tagをdereference。捏造fieldを除いてもfull FSM Green |
 
 ## 4. 実装証跡
