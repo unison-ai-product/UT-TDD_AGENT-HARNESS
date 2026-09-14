@@ -124,9 +124,11 @@ function bootstrapCleanPack(root: string): void {
   installDependencies(root);
   const setup = runPack(root, ["setup", "--solo"]);
   expect(setup.status, `${setup.stdout}\n${setup.stderr}`).toBe(0);
-  expect(resolveProjectMemoryRoot(root)).toMatchObject({ ok: true });
   git(root, ["add", "ut-tdd.project.json"]);
   git(root, ["commit", "-qm", "test: commit Pack project identity"]);
+  // Runtime resolution is intentionally fail-closed until identity bytes are
+  // tracked and bound to the repository HEAD.
+  expect(resolveProjectMemoryRoot(root)).toMatchObject({ ok: true });
 }
 
 function runPack(root: string, args: readonly string[], env: NodeJS.ProcessEnv = {}) {
