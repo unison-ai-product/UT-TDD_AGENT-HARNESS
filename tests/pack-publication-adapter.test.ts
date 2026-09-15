@@ -9,14 +9,14 @@ import {
   admitPackPublication,
   derivePackPublicationIntentDigest,
   derivePackPublicationTreeDigest,
+  publishPackCanary as executePackCanary,
+  type PackPublicationAdmission,
   type PackPublicationApproval,
   type PackPublicationApprovalDraft,
-  type PackPublicationAdmission,
   type PackPublicationIntentInput,
   type PackPublicationPorts,
   parseSealedPackageVersionIdentity,
   preparePackPublication,
-  publishPackCanary as executePackCanary,
   sealPackPublicationIntent,
 } from "../src/setup/pack-publication-adapter.ts";
 import {
