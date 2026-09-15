@@ -154,7 +154,7 @@ afterEach(() => {
 });
 
 describe("PLAN-L7-533 PR-1 completion fence core", () => {
-  it("U-PMEMFENCE-001/003: denies missing or interrupted migration as incomplete", () => {
+  it("U-PMEMFENCE-001 U-PMEMFENCE-003: denies missing or interrupted migration as incomplete", () => {
     const missing = fixture().primary;
     expect(inspectProjectMemoryCompletion(missing)).toMatchObject({
       ok: false,
@@ -192,7 +192,7 @@ describe("PLAN-L7-533 PR-1 completion fence core", () => {
     expect(runtimeSnapshot(root)).toBe(afterTamper);
   });
 
-  it("U-PMEMFENCE-004/005: worktree add and removal do not change a live fence", () => {
+  it("U-PMEMFENCE-004 U-PMEMFENCE-005: worktree add and removal do not change a live fence", () => {
     const { primary, linked } = fixture(true);
     const applied = complete(primary);
     const first = inspectProjectMemoryCompletion(primary);
@@ -229,7 +229,7 @@ describe("PLAN-L7-533 PR-1 completion fence core", () => {
       expect(second.canonicalCorpusDigest).not.toBe(first.canonicalCorpusDigest);
   });
 
-  it("U-PMEMFENCE-007/016: replay is deterministic, then denies corpus mismatch without marker writes", () => {
+  it("U-PMEMFENCE-007 U-PMEMFENCE-016: replay is deterministic, then denies corpus mismatch without marker writes", () => {
     const root = fixture().primary;
     const applied = complete(root);
     const initial = inspectProjectMemoryCompletion(root);
@@ -268,7 +268,7 @@ describe("PLAN-L7-533 PR-1 completion fence core", () => {
     expect(inspectProjectMemoryCompletion(root)).toMatchObject({ ok: true });
   });
 
-  it("U-PMEMFENCE-008/009: detects legacy residue by identity/digest set, independent of mtime", () => {
+  it("U-PMEMFENCE-008 U-PMEMFENCE-009: detects legacy residue by identity/digest set, independent of mtime", () => {
     const { primary, linked } = fixture(true);
     if (!linked) throw new Error("fixture setup failed");
     complete(primary);
