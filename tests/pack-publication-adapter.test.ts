@@ -1944,7 +1944,7 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
             value: {
               pullRequest: "42",
               reviewedHeadOid: "7".repeat(40),
-              conclusion: "rejected" as const,
+              conclusion: "rejected" as never,
               closingReceiptDigest: sha("closing-review"),
             },
           }),
