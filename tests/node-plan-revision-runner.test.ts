@@ -953,7 +953,18 @@ function realPlanL693RehydrationFixture() {
     encoding: "utf8",
     cwd: process.cwd(),
   }).trim();
-  const realProjectionText = readFileSync(projectionPath, "utf8");
+  // projectionも作業木ではなく、terminal receiptがrev27だった時点のcommitから読む。
+  // 作業木の現行projectionはPLAN-L6-93の正規revise (rev28以降) で伸びるため、
+  // それを読むとこのfixtureの前提が壊れる (実測: PR #612 のrev28/29追記で赤化)。
+  const projectionCommit = "85ae4af7d8e291e2a8f1b568c7de8f286c571837";
+  const realProjectionText = execFileSync(
+    "git",
+    ["show", `${projectionCommit}:${projectionPath}`],
+    {
+      encoding: "utf8",
+      cwd: process.cwd(),
+    },
+  );
   const projection = JSON.parse(realProjectionText) as {
     records: ReadonlyArray<{
       record_digest: string;
