@@ -94,23 +94,23 @@ review_evidence:
         evidence_path: docs/plans/PLAN-L6-93-node-bootstrap-contract.md
         output_digest: sha256:edc5d7c882bfa3e78ce485e6264893da2b35e6ab78ec83b2ee5334e326934976
         anchor_commit: 2cd9640c9388bd7624e921b18a8702e9ec9e61c0
-status: draft
+status: confirmed
 sub_doc: function-spec
 github_issue_id: 152
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:5bc411405e6235205fd17e46f336137d
-  command_id: plan-revise:issue-540:cutover-prefix-contract:29
-  admitted_at: 2026-09-15T06:12:33.048Z
-  source_digest: sha256:bedfe0f1cbfcf538cc41dbdd62bf44cbb78b1cb58e7f74c8dbd3b729cebc0210
-  decision_digest: sha256:919b4d44f356d260bdec5829b5f6c60b659baead9ceecd740ddda2f72d266a24
-  receipt_digest: sha256:1e161b6ba25418195bce4e750a4f79339892edc2f095b933efc05a749b215d05
+  receipt_id: certificate:94d2db643d8e9d5297936c3b77b37eb8
+  command_id: plan-revise:issue-540:cutover-prefix-implementation:30
+  admitted_at: 2026-09-15T10:58:56.242Z
+  source_digest: sha256:9f14ffe14e1e391b3f3c1bff196c8a2eef49c45b478c5e3b2f81695925f97ecb
+  decision_digest: sha256:e80ea72612b9d29d45909a9ea29d9da49e7f30dae15e50d77e0dcf401cb05bbe
+  receipt_digest: sha256:02f9369c3f092d5a017250732711d833f60fd882c33642d01aefb5ba0796bfb1
   binding:
     path: docs/plans/PLAN-L6-93-node-bootstrap-contract.md
     plan_id: PLAN-L6-93-node-bootstrap-contract
     asset_id: plan:legacy:80a50dd958ae451ea13030276eb8c145a8fdc3104ec145560457f97a07594881
-    revision: 29
-    content_digest: sha256:bedfe0f1cbfcf538cc41dbdd62bf44cbb78b1cb58e7f74c8dbd3b729cebc0210
+    revision: 30
+    content_digest: sha256:9f14ffe14e1e391b3f3c1bff196c8a2eef49c45b478c5e3b2f81695925f97ecb
   route:
     signal: feature_addition
     mode: add-feature
@@ -122,20 +122,20 @@ admission_receipt:
   origin:
     plan_id: PLAN-L6-01-function-spec
     revision: 2
-    digest: sha256:17aa0a9879af76091a2bc03bd96019c185eeaaadff6fbecdfad53d255be5fa95
+    digest: sha256:17aa0a9879af76091a2bc03bd96019c185eeaaad9ceecd740ddda2f72d266a24
   transition:
     direction: design_to_implementation
     implementation_disposition: none
     implementation_target:
       target_plan_id: PLAN-L6-93-node-bootstrap-contract
-      target_revision: 27
+      target_revision: 29
   reentry:
     target_plan_id: PLAN-L6-93-node-bootstrap-contract
-    target_revision: 27
+    target_revision: 29
     phase: forward_merge
-  escape_reason: "Issue #540 cutover prefix contract pair-freeze after Method A
-    restore-then-revise rehydration of PLAN-L6-93 rev27 to rev28; docs-only
-    contract adoption, status draft, implementation excluded."
+  escape_reason: "Issue #540 cutover prefix schema/writer/pair-test implementation
+    at exact branch HEAD; four prefix edges only, sealed edge and Bun physical
+    retirement remain excluded."
 ---
 
 # PLAN-L6-93: sealed Node bootstrap function redesign
