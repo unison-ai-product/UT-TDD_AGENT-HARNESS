@@ -408,8 +408,13 @@ export class ProjectMemoryMigration {
             invalidMemory: this.invalidMemoryFromMarker(prepared),
           };
         }
-        // Incomplete operations still retain the all-worktree inventory
-        // binding; only completed replay uses the canonical digest above.
+        // Incomplete operations retain the all-worktree inventory binding;
+        // only completed replay uses the canonical digest above.  Do not
+        // allow a changed canonical or linked corpus to be treated as the
+        // same in-flight operation.
+        if (intent.payload.inventoryDigest !== inventory.inventoryDigest) {
+          return this.failure("inventory_drift", operationId, paths);
+        }
         const durableImports = markers
           .filter((marker) => marker.kind === "imported")
           .map((marker) => this.importFromMarker(marker));
@@ -537,12 +542,21 @@ export class ProjectMemoryMigration {
       });
       if (crashAfter === "prepared") return this.interrupted(operationId, paths);
     } else {
-      this.verifyPreparedManifest(prepared, paths);
+      this.verifyPreparedManifest(prepared, paths, variants);
       imported = this.importsFromMarker(prepared);
       invalidMemory = this.invalidMemoryFromMarker(prepared);
       this.verifyCanonicalImports(imported, paths.repoRoot);
     }
-    for (const variant of variants) this.verifySource(variant, this.readSource(variant));
+    const intent = markers.find((marker) => marker.kind === "intent");
+    if (prepared && intent) {
+      this.verifySourcesAgainstIntent(intent, variants);
+    } else {
+      for (const variant of variants) this.verifySource(variant, this.readSource(variant));
+    }
+    const latest = this.inventory(paths.repoRoot, { allowInvalidLinked: true });
+    if (!latest.ok || latest.inventoryDigest !== inventory.inventoryDigest) {
+      throw new MigrationFailure("inventory_drift");
+    }
     const canonicalCorpusDigest = this.canonicalCorpusDigest(paths.repoRoot);
     const finalDigest = this.quarantineManifestDigest(paths.quarantine);
     this.appendMarker(paths.markersPath, {
@@ -740,30 +754,56 @@ export class ProjectMemoryMigration {
       throw new MigrationFailure("inventory_drift");
     if (!Array.isArray(intent.payload.conflicts))
       throw new MigrationFailure("transaction_tampered");
-    const expectedLinkedConflicts = intent.payload.conflicts.filter(
+    const expectedConflicts = intent.payload.conflicts.filter(
       (value): value is Record<string, unknown> =>
-        Boolean(value) &&
-        typeof value === "object" &&
-        !Array.isArray(value) &&
-        typeof (value as Record<string, unknown>).worktreeRoot === "string" &&
-        normalizeTopologyPath(String((value as Record<string, unknown>).worktreeRoot)) !==
-          normalizeTopologyPath(canonicalRoot),
+        Boolean(value) && typeof value === "object" && !Array.isArray(value),
     );
-    const actualLinkedConflicts = this.conflicts(inventory)
-      .filter(
-        (variant) =>
-          normalizeTopologyPath(variant.worktreeRoot) !== normalizeTopologyPath(canonicalRoot),
-      )
-      .map((variant) => ({
-        worktreeRoot: variant.worktreeRoot,
-        sourcePath: variant.sourcePath,
-        contentDigest: variant.contentDigest,
-        sourceHandleIdentity: variant.sourceHandleIdentity,
-        sourceSize: variant.sourceSize,
-        sourceMtimeMs: variant.sourceMtimeMs,
-      }));
-    if (canonicalJson(actualLinkedConflicts) !== canonicalJson(expectedLinkedConflicts))
+    const actualConflicts = this.conflicts(inventory).map((variant) => ({
+      worktreeRoot: variant.worktreeRoot,
+      sourcePath: variant.sourcePath,
+      contentDigest: variant.contentDigest,
+      sourceHandleIdentity: variant.sourceHandleIdentity,
+      sourceSize: variant.sourceSize,
+      sourceMtimeMs: variant.sourceMtimeMs,
+    }));
+    if (canonicalJson(actualConflicts) !== canonicalJson(expectedConflicts))
       throw new MigrationFailure("inventory_drift");
+  }
+
+  private verifySourcesAgainstIntent(
+    intent: Marker,
+    variants: readonly MemoryMigrationVariant[],
+  ): void {
+    if (!Array.isArray(intent.payload.conflicts))
+      throw new MigrationFailure("transaction_tampered");
+    for (const variant of variants) {
+      const recorded = intent.payload.conflicts.find(
+        (value): value is Record<string, unknown> =>
+          Boolean(value) &&
+          typeof value === "object" &&
+          !Array.isArray(value) &&
+          normalizeTopologyPath(String((value as Record<string, unknown>).worktreeRoot)) ===
+            normalizeTopologyPath(variant.worktreeRoot) &&
+          value.sourcePath === variant.sourcePath,
+      );
+      if (!recorded) throw new MigrationFailure("inventory_drift");
+      if (
+        typeof recorded.contentDigest !== "string" ||
+        typeof recorded.sourceHandleIdentity !== "string" ||
+        typeof recorded.sourceSize !== "number" ||
+        typeof recorded.sourceMtimeMs !== "number"
+      ) {
+        throw new MigrationFailure("transaction_tampered");
+      }
+      const expected = {
+        ...variant,
+        contentDigest: recorded.contentDigest,
+        sourceHandleIdentity: recorded.sourceHandleIdentity,
+        sourceSize: recorded.sourceSize,
+        sourceMtimeMs: recorded.sourceMtimeMs,
+      };
+      this.verifySource(expected, this.readSource(variant));
+    }
   }
 
   private recoverUnmarkedImports({
@@ -958,9 +998,13 @@ export class ProjectMemoryMigration {
     return sha256(canonicalJson(this.quarantineManifest(root)));
   }
 
-  private verifyPreparedManifest(marker: Marker, paths: TransactionPaths): void {
+  private verifyPreparedManifest(
+    marker: Marker,
+    paths: TransactionPaths,
+    variants?: readonly MemoryMigrationVariant[],
+  ): void {
     if (!Array.isArray(marker.payload.files)) throw new MigrationFailure("transaction_tampered");
-    const expected = marker.payload.files.map((value) => {
+    const recorded = marker.payload.files.map((value) => {
       if (
         !value ||
         typeof value !== "object" ||
@@ -972,8 +1016,18 @@ export class ProjectMemoryMigration {
       }
       return value as { name: string; digest: string; size: number };
     });
+    const expected = variants
+      ? variants.map((variant, index) => ({
+          name: quarantineFileName(variant, index),
+          digest: variant.contentDigest,
+          size: variant.sourceSize,
+        }))
+      : recorded;
     if (!this.manifestEquals(this.quarantineManifest(paths.quarantine), expected)) {
       throw new MigrationFailure("transaction_tampered");
+    }
+    if (variants && !this.manifestEquals(recorded, expected)) {
+      throw new MigrationFailure("inventory_drift");
     }
   }
 
