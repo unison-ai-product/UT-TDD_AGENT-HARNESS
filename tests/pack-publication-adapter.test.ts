@@ -1923,6 +1923,47 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
               closingReceiptDigest: sha("closing-review"),
             },
           }),
+          observeRequiredChecks: async () => ({
+            status: "attested" as const,
+            value: {
+              headOid: "8".repeat(40),
+              checks: [{ name: "harness-check", conclusion: "success" as const }],
+            },
+          }),
+        },
+      }),
+    ],
+    [
+      "review not approved",
+      (configured: PackPublicationPorts) => ({
+        ...configured,
+        pack: {
+          ...configured.pack,
+          observeReviewEvidence: async () => ({
+            status: "attested" as const,
+            value: {
+              pullRequest: "42",
+              reviewedHeadOid: "7".repeat(40),
+              conclusion: "rejected" as const,
+              closingReceiptDigest: sha("closing-review"),
+            },
+          }),
+        },
+      }),
+    ],
+    [
+      "required checks for a different head",
+      (configured: PackPublicationPorts) => ({
+        ...configured,
+        pack: {
+          ...configured.pack,
+          observeRequiredChecks: async () => ({
+            status: "attested" as const,
+            value: {
+              headOid: "8".repeat(40),
+              checks: [{ name: "harness-check", conclusion: "success" as const }],
+            },
+          }),
         },
       }),
     ],
