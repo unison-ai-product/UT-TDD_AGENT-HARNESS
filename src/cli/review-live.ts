@@ -16,7 +16,9 @@ import { parseMemoryFile } from "../memory/index.ts";
 import { resolveMemoryTaskFile, writeMemory } from "../memory/service.ts";
 import {
   buildClaudeProviderReviewInboxEntry,
+  consumeCodexReviewWake,
   decodeClaudeInboxEntry,
+  publishCodexReviewWake as publishCodexReviewWakeEnvelope,
   publishClaudeInboxEntry,
   resolveLiveClaudeTarget,
 } from "../runtime/claude-memory-wake.ts";
@@ -280,6 +282,7 @@ export function registerLiveReviewCommands(
             publishReceipt: (projection) => deps.publishReceipt(repoRoot, projection),
           },
         });
+        if (result.ok) consumeCodexReviewWake(repoRoot, opts.envelope);
         if (opts.json) process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
         else
           process.stdout.write(`review live-consume: ${result.ok ? "completed" : result.reason}\n`);
@@ -291,6 +294,22 @@ export function registerLiveReviewCommands(
         process.exitCode = 1;
       }
     });
+}
+
+/**
+ * Production composition: the Codex reviewer route is never optional when the
+ * real CLI is assembled. Tests may still inject the other ports, but this
+ * publisher must remain the project-scoped runtime implementation.
+ */
+export function registerProductionLiveReviewCommands(
+  review: Command,
+  overrides: Partial<LiveReviewCommandDeps> = {},
+): void {
+  registerLiveReviewCommands(review, {
+    ...overrides,
+    publishCodexReviewWake: (repoRoot, wake) =>
+      publishCodexReviewWakeEnvelope(repoRoot, wake),
+  });
 }
 
 export function resolveLiveReviewTaskFile(

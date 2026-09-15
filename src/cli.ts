@@ -36,7 +36,7 @@ import { registerPlanAssetCommands } from "./cli/plan-asset.ts";
 import { registerPlanDraftCommand } from "./cli/plan-draft.ts";
 import { registerPlanRevisionCommand } from "./cli/plan-revise.ts";
 import { registerPrMergeCommands } from "./cli/pr-merge.ts";
-import { registerLiveReviewCommands } from "./cli/review-live.ts";
+import { registerProductionLiveReviewCommands } from "./cli/review-live.ts";
 import { contextSuggest } from "./context/doc-router.ts";
 import {
   DOCTOR_RUN_PROFILE_IDS,
@@ -49,7 +49,6 @@ import { acquireDoctorLock, doctorLockBlockedMessage } from "./doctor/singleton-
 import { renderElicitationContext, selectElicitationContext } from "./elicitation/context.ts";
 import { appendDesignDecision, DESIGN_DECISION_LOG_PATH } from "./elicitation/record.ts";
 import { computeSkillMetrics } from "./feedback/engine.ts";
-import type { CanonicalReviewWake } from "./feedback/live-review-projection.ts";
 import { registerForwardWorkflowCommands } from "./forward/adapters/cli-registrar.ts";
 import { evaluateGateReview, loadReviewChecklistIfPresent } from "./gate/review-tier.ts";
 import { writeGateRunEvidence } from "./gate/run-evidence.ts";
@@ -152,7 +151,6 @@ import {
   isClaudeMemoryWakeTarget,
   parseClaudeInboxPullRequestObservation,
   publishClaudeInboxEntry,
-  publishCodexReviewWake as publishCodexReviewWakeEnvelope,
   readCodexReviewWake,
   recoverClaudeInboxBacklog,
   resolveClaudeWakeDelay,
@@ -2250,12 +2248,7 @@ const review = program
     process.exitCode = doctor.ok ? 0 : 1;
   });
 
-/** Production Codex reviewer route: persist only into the Codex project inbox. */
-function publishCodexReviewWake(repoRoot: string, wake: CanonicalReviewWake): void {
-  publishCodexReviewWakeEnvelope(repoRoot, wake);
-}
-
-registerLiveReviewCommands(review, { publishCodexReviewWake });
+registerProductionLiveReviewCommands(review);
 
 program
   .command("cutover")

@@ -19,6 +19,7 @@ import { claudeReviewVerdictEditRule } from "../src/cli/delegation.ts";
 import {
   executeLiveReviewDelegation,
   registerLiveReviewCommands,
+  registerProductionLiveReviewCommands,
   validateLiveReviewSubject,
 } from "../src/cli/review-live.ts";
 import {
@@ -27,6 +28,7 @@ import {
 } from "../src/feedback/review-attestation.ts";
 import type { ClaudeReviewInboxEntry } from "../src/runtime/claude-memory-wake.ts";
 import {
+  consumeCodexReviewWake,
   codexWakeInboxRoot,
   publishCodexReviewWake,
   readCodexReviewWake,
@@ -401,6 +403,101 @@ describe("review live CLI composition", () => {
     } finally {
       rmSync(first.root, { recursive: true, force: true });
       rmSync(second.root, { recursive: true, force: true });
+    }
+  });
+
+  it("U-RVATT-024: consumed Codex wake is terminalized and FIFO advances", () => {
+    const { root, memoryPath } = fixture();
+    try {
+      const makeRequest = (revision: string, requestedAt: string) => {
+        const issued = issueReviewRequest({
+          repoRoot: root,
+          strict: true,
+          request: {
+            memoryId: "memory:d3a",
+            pr: 319,
+            exactHead: head,
+            reviewRevision: revision,
+            authorFamily: "claude",
+            requestedAt,
+          },
+        });
+        if (!issued.ok) throw new Error(issued.reason);
+        return issued;
+      };
+      const first = makeRequest("review-codex-fifo-1", "2026-08-14T00:00:00.000Z");
+      const second = makeRequest("review-codex-fifo-2", "2026-08-14T00:01:00.000Z");
+      const wake = (issued: Extract<typeof first, { ok: true }>) => ({
+        purpose: "review" as const,
+        reviewer: "codex" as const,
+        requestDigest: issued.digest,
+        requestPath: issued.path,
+        request: issued.request,
+        memoryPath: relative(root, memoryPath).replaceAll("\\", "/"),
+      });
+      const firstPath = publishCodexReviewWake(root, wake(first));
+      publishCodexReviewWake(root, wake(second));
+      expect(readCodexReviewWake(root)).toMatchObject({
+        status: "pending",
+        requestDigest: first.digest,
+      });
+
+      consumeCodexReviewWake(root, firstPath);
+      expect(existsSync(firstPath)).toBe(false);
+      expect(readCodexReviewWake(root)).toMatchObject({
+        status: "pending",
+        requestDigest: second.digest,
+      });
+      expect(
+        readdirSync(codexWakeInboxRoot(root)).some((name) => name.endsWith(".terminal.json")),
+      ).toBe(true);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("U-RVATT-024: production CLI composition persists the Codex wake", async () => {
+    const { root, memoryPath } = fixture();
+    try {
+      const program = new Command().exitOverride();
+      registerProductionLiveReviewCommands(program.command("review"), {
+        repoRoot: () => root,
+        providerAvailable: () => true,
+        validateReviewSubject: () => ({ ok: true }),
+      });
+      const originalWrite = process.stdout.write;
+      process.stdout.write = (() => true) as typeof process.stdout.write;
+      try {
+        await program.parseAsync([
+          "node",
+          "ut-tdd",
+          "review",
+          "live-dispatch",
+          "--memory-id",
+          "memory:d3a",
+          "--memory-path",
+          relative(root, memoryPath).replaceAll("\\", "/"),
+          "--pr",
+          "319",
+          "--head",
+          head,
+          "--revision",
+          "review-codex-production-cli",
+          "--author-family",
+          "claude",
+          "--json",
+        ]);
+      } finally {
+        process.stdout.write = originalWrite;
+      }
+      expect(readCodexReviewWake(root)).toMatchObject({
+        status: "pending",
+        pr: 319,
+        exactHead: head,
+      });
+    } finally {
+      process.exitCode = 0;
+      rmSync(root, { recursive: true, force: true });
     }
   });
 

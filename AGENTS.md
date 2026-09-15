@@ -411,3 +411,9 @@ not silently diverge.
 - Codex delegation: `ut-tdd codex --role <role> --task "..."`
 - Claude delegation: `ut-tdd claude --role <role> --task "..."`
 - Team run: `ut-tdd team run --definition .ut-tdd/teams/<team>.yaml`
+
+When the project-local Codex SessionStart/Stop hook reports a pending
+`codex-memory-wake` envelope, treat the JSON surface as a delivery prompt and
+immediately consume that exact path with `node src/cli.ts review live-consume --envelope <envelopePath> --json`. A surfaced envelope is not a review receipt;
+the consume command is required to run the opposite-family reviewer and to
+terminalize the inbox entry so later requests are not starved.

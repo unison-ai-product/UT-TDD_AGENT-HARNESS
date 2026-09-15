@@ -11,7 +11,7 @@ import {
   unlinkSync,
   writeFileSync,
 } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { type MemoryEntry, parseMemoryFile } from "../memory/index.ts";
 import { isCanonicalMemorySourcePath } from "../memory/service.ts";
@@ -321,6 +321,94 @@ export function codexWakeInboxRoot(repoRoot: string): string {
   return join(codexWakeRuntimeRoot(repoRoot), "inbox");
 }
 
+function codexWakeTerminalPath(repoRoot: string, entryId: string): string {
+  return join(codexWakeInboxRoot(repoRoot), `${inboxFileStem(entryId)}.terminal.json`);
+}
+
+function codexWakeTerminalIds(repoRoot: string): Set<string> {
+  const directory = codexWakeInboxRoot(repoRoot);
+  const ids = new Set<string>();
+  if (!existsSync(directory)) return ids;
+  for (const name of readdirSync(directory).filter((value) => value.endsWith(".terminal.json"))) {
+    try {
+      const marker = JSON.parse(readFileSync(join(directory, name), "utf8")) as {
+        schema?: unknown;
+        entryId?: unknown;
+        purpose?: unknown;
+        reason?: unknown;
+      };
+      if (
+        marker.schema === CLAUDE_INBOX_TERMINAL_SCHEMA &&
+        typeof marker.entryId === "string" &&
+        marker.purpose === "review" &&
+        marker.reason === "claimed"
+      ) {
+        ids.add(marker.entryId);
+      }
+    } catch {
+      // A malformed marker cannot suppress a pending envelope.
+    }
+  }
+  return ids;
+}
+
+/**
+ * Mark a surfaced Codex envelope consumed and remove only its inbox projection.
+ * The terminal marker retains the authenticated identity as durable evidence, so
+ * a later SessionStart/Stop cannot resurface the same request or starve newer ones.
+ */
+export function consumeCodexReviewWake(repoRoot: string, envelopePath: string): void {
+  const project = requireProjectMemoryRoot(repoRoot);
+  const inbox = codexWakeInboxRoot(repoRoot);
+  const normalizedInbox = resolve(inbox).toLowerCase();
+  const normalizedPath = resolve(envelopePath).toLowerCase();
+  if (!normalizedPath.startsWith(`${normalizedInbox}${process.platform === "win32" ? "\\" : "/"}`)) {
+    return;
+  }
+  const entry = decodeClaudeInboxEntry(readFileSync(envelopePath, "utf8"));
+  if (
+    !entry ||
+    entry.schemaVersion !== CLAUDE_PROVIDER_INBOX_SCHEMA ||
+    entry.purpose !== "review" ||
+    entry.projectId !== project.projectId ||
+    entry.target.provider !== "codex"
+  ) {
+    throw new Error("codex_review_wake_envelope_invalid");
+  }
+  const expectedPath = resolve(inbox, `${inboxFileStem(entry.id)}.json`);
+  if (resolve(envelopePath).toLowerCase() !== expectedPath.toLowerCase()) {
+    throw new Error("codex_review_wake_envelope_path_invalid");
+  }
+  const markerPath = codexWakeTerminalPath(repoRoot, entry.id);
+  const marker = {
+    schema: CLAUDE_INBOX_TERMINAL_SCHEMA,
+    entryId: entry.id,
+    reason: "claimed" as const,
+    terminalAt: new Date().toISOString(),
+    purpose: "review" as const,
+    requestDigest: entry.requestDigest,
+    requestPath: entry.requestPath,
+    memoryPath: entry.memoryPath,
+    pr: entry.pr,
+    exactHead: entry.exactHead,
+    reviewRevision: entry.reviewRevision,
+    authorFamily: entry.authorFamily,
+  } satisfies ClaudeInboxTerminalMarker;
+  if (!existsSync(markerPath)) {
+    const descriptor = openSync(markerPath, "wx", 0o600);
+    try {
+      writeFileSync(descriptor, `${JSON.stringify(marker)}\n`);
+    } finally {
+      closeSync(descriptor);
+    }
+  }
+  try {
+    unlinkSync(expectedPath);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+  }
+}
+
 /** Persist a Codex review wake; a file projection is not delivery confirmation. */
 export function publishCodexReviewWake(repoRoot: string, wake: CodexReviewWakeInput): string {
   if (wake.reviewer !== "codex") throw new Error("codex_review_wake_target_invalid");
@@ -386,6 +474,7 @@ export function readCodexReviewWake(repoRoot: string): CodexMemoryWakeSurface {
   if (!existsSync(directory)) {
     return { schema: CODEX_MEMORY_WAKE_SURFACE_SCHEMA, status: "empty", deliveryConfirmed: false };
   }
+  const terminal = codexWakeTerminalIds(repoRoot);
   const candidates: Array<{ path: string; entry: ClaudeProviderReviewInboxEntry }> = [];
   for (const name of readdirSync(directory)
     .filter((value) => value.endsWith(".json"))
@@ -401,6 +490,7 @@ export function readCodexReviewWake(repoRoot: string): CodexMemoryWakeSurface {
         entry.purpose !== "review" ||
         entry.projectId !== project.projectId ||
         entry.target.provider !== "codex" ||
+        terminal.has(entry.id) ||
         name !== `${inboxFileStem(entry.id)}.json`
       )
         continue;
