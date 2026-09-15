@@ -1484,7 +1484,6 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
   });
 
   it("U-PACKPUB-REMOTE-025: 003-M2 pointer response loss is indeterminate without duplicate CAS", async () => {
-    const base = ports();
     const append = vi.fn(async () => {
       throw new Error("lost");
     });
