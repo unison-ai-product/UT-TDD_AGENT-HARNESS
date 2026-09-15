@@ -461,5 +461,6 @@ describe("PLAN-L6-93 cutover prefix", () => {
       () => initializeCutoverChain({ ...base, evidence: sliceAdmissionReplay }),
       "cutover-admission-not-ready",
     );
+    expect(projectCutoverState([]).state).toBe("uninitialized");
   });
 });
