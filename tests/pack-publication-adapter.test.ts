@@ -1490,7 +1490,7 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
     });
     const result = await publishPackCanary(
       sealedIntent(),
-      ports({ canary: { ...base.canary, appendCas: append } }),
+      ports({ canary: { ...ports().canary, appendCas: append } }),
     );
     expect(result).toMatchObject({
       status: "indeterminate",
@@ -1517,28 +1517,39 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
 
   it("U-PACKPUB-REMOTE-027: 003-O same-operation reconciliation returns the existing valid receipt with write-zero", async () => {
     const intent = sealedIntent();
-    const first = await publishPackCanary(intent, ports());
+    const firstSetup = await admitPreparedPublication(intent, ports());
+    const first = await rawPublishPackCanary(
+      firstSetup.admission.publicationIntent,
+      ports(),
+      firstSetup.admission,
+    );
     if (first.status !== "published") throw new Error(first.reason);
     const base = ports();
     const commit = vi.fn();
-    const result = await publishPackCanary(
-      intent,
-      ports({
-        approval: { consume: async () => ({ status: "attested", value: { mode: "reconcile" } }) },
-        reconcile: { observe: async () => ({ status: "attested", value: first.receipt }) },
-        pack: { ...base.pack, commitPublicationBranch: commit },
-      }),
+    const configured = ports({
+      approval: { consume: async () => ({ status: "attested", value: { mode: "reconcile" } }) },
+      reconcile: { observe: async () => ({ status: "attested", value: first.receipt }) },
+      pack: { ...base.pack, commitPublicationBranch: commit },
+    });
+    const setup = await admitPreparedPublication(intent, configured);
+    const result = await rawPublishPackCanary(
+      setup.admission.publicationIntent,
+      configured,
+      setup.admission,
     );
     expect(result).toMatchObject({ status: "published", remoteWrites: 0 });
     expect(commit).not.toHaveBeenCalled();
 
-    const unavailable = await publishPackCanary(
-      intent,
-      ports({
-        approval: { consume: async () => ({ status: "attested", value: { mode: "reconcile" } }) },
-        reconcile: { observe: async () => ({ status: "mismatch", reason: "receipt_absent" }) },
-        pack: { ...base.pack, commitPublicationBranch: commit },
-      }),
+    const unavailablePorts = ports({
+      approval: { consume: async () => ({ status: "attested", value: { mode: "reconcile" } }) },
+      reconcile: { observe: async () => ({ status: "mismatch", reason: "receipt_absent" }) },
+      pack: { ...base.pack, commitPublicationBranch: commit },
+    });
+    const unavailableSetup = await admitPreparedPublication(intent, unavailablePorts);
+    const unavailable = await rawPublishPackCanary(
+      unavailableSetup.admission.publicationIntent,
+      unavailablePorts,
+      unavailableSetup.admission,
     );
     expect(unavailable).toMatchObject({
       status: "denied",
@@ -1550,18 +1561,26 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
 
   it("U-PACKPUB-REMOTE-028: 003-P foreign reconciliation receipt is rejected without new writes", async () => {
     const intent = sealedIntent();
-    const first = await publishPackCanary(intent, ports());
+    const firstSetup = await admitPreparedPublication(intent, ports());
+    const first = await rawPublishPackCanary(
+      firstSetup.admission.publicationIntent,
+      ports(),
+      firstSetup.admission,
+    );
     if (first.status !== "published") throw new Error(first.reason);
     const foreign = { ...first.receipt, operationId: "foreign" };
     const base = ports();
     const commit = vi.fn();
-    const result = await publishPackCanary(
-      intent,
-      ports({
-        approval: { consume: async () => ({ status: "attested", value: { mode: "reconcile" } }) },
-        reconcile: { observe: async () => ({ status: "attested", value: foreign }) },
-        pack: { ...base.pack, commitPublicationBranch: commit },
-      }),
+    const configured = ports({
+      approval: { consume: async () => ({ status: "attested", value: { mode: "reconcile" } }) },
+      reconcile: { observe: async () => ({ status: "attested", value: foreign }) },
+      pack: { ...base.pack, commitPublicationBranch: commit },
+    });
+    const setup = await admitPreparedPublication(intent, configured);
+    const result = await rawPublishPackCanary(
+      setup.admission.publicationIntent,
+      configured,
+      setup.admission,
     );
     expect(result).toMatchObject({
       status: "indeterminate",
@@ -1575,37 +1594,37 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
     const consumed: string[] = [];
     const base = ports();
     const writes: string[] = [];
-    const result = await publishPackCanary(
-      sealedIntent(),
-      ports({
-        approval: {
-          consume: async (approval) => {
-            consumed.push(approval.mutation);
-            return { status: "attested", value: { mode: "new" } };
-          },
+    const configured = ports();
+    const result = await publishPackCanary(sealedIntent(), {
+      ...configured,
+      approval: {
+        consume: async (approval) => {
+          consumed.push(approval.mutation);
+          return { status: "attested", value: { mode: "new" } };
         },
-        pack: {
-          ...base.pack,
-          commitPublicationBranch: async (value) => {
-            writes.push("branch_commit");
-            return base.pack.commitPublicationBranch(value);
-          },
-          createPullRequest: async (value) => {
-            writes.push("pr_create");
-            return base.pack.createPullRequest(value);
-          },
-          applyReviewedHeadWithLease: async (value) => {
-            writes.push("main_lease");
-            return base.pack.applyReviewedHeadWithLease(value);
-          },
+      },
+      pack: {
+        ...configured.pack,
+        commitPublicationBranch: async (value) => {
+          writes.push("branch_commit");
+          return base.pack.commitPublicationBranch(value);
         },
-      }),
-    );
+        createPullRequest: async (value) => {
+          writes.push("pr_create");
+          return base.pack.createPullRequest(value);
+        },
+        applyReviewedHeadWithLease: async (value) => {
+          writes.push("main_lease");
+          return configured.pack.applyReviewedHeadWithLease(value);
+        },
+      },
+    });
     expect(result.status).toBe("published");
     expect(consumed).toEqual([
       "planned",
       "pack_branch_commit",
       "pack_pr_create",
+      "planned",
       "pack_main_lease",
       "release_draft_create",
       expect.stringMatching(/^asset_upload:/),
@@ -1955,13 +1974,13 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
     const intent = sealedIntent();
     const configured = ports();
     const { admission } = await admitPreparedPublication(intent, configured);
-    const publicationEvents: string[] = [];
+    const publicationEvents: Array<{ kind: string; mutation: string }> = [];
     const result = await executePackCanary(
       admission.publicationIntent,
       ports({
         publicationState: {
           append: async (event) => {
-            publicationEvents.push(event.kind);
+            publicationEvents.push({ kind: event.kind, mutation: event.mutation });
           },
           digest: configured.publicationState.digest,
         },
@@ -1969,8 +1988,15 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
       admission,
     );
     expect(result.status).toBe("published");
-    expect(publicationEvents.filter((kind) => kind === "planned_nonce_consumed")).toHaveLength(1);
-    expect(publicationEvents[0]).toBe("planned_nonce_consumed");
-    expect(publicationEvents[1]).toBe("mutation_intent");
+    expect(
+      publicationEvents.filter(
+        (event) => event.mutation === "planned" && event.kind === "planned_nonce_consumed",
+      ),
+    ).toHaveLength(1);
+    expect(publicationEvents.slice(0, 3)).toEqual([
+      { mutation: "planned", kind: "planned_nonce_consumed" },
+      { mutation: "planned", kind: "mutation_intent" },
+      { mutation: "planned", kind: "read_back_observation" },
+    ]);
   });
 });
