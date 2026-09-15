@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
-import { loadProjectIdentityFromHead } from "../plan-asset/adapters/project-identity-loader.ts";
+import { loadProjectIdentityFromHead } from "../kernel/project-identity.ts";
 import { FileProviderJudgmentEvidenceAdapter } from "./adapters/provider-judgment-evidence.ts";
 import type { ProviderJudgmentAttemptIdentity } from "./ports/provider-judgment-evidence.ts";
 import {
