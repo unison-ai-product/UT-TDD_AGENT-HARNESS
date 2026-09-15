@@ -2187,6 +2187,13 @@ wrong evidence、replay、skip/reverse、digest mutation、projection直接更�
 正式oracleを宣言せず、各test実装とRed実測の同一commitで個別IDへ昇格する。review+admission済みD0 draft下の非activation
 F0a/F0b/F0c build/verifyとQ0 fixture/detector workはslice FSM順序内で許可し、production activation、
 hook/runtime switch、Bun final deletion、cutoverだけをL6 confirmed+D0 admissionまで禁止する。
+
+Issue #540 の実装commitでは、上記candidateを次の判別可能な正式oracleへ昇格する。
+`U-CUTOVER-001`はgenesis exactly-once、`002`は4 edgeの隣接fold、`003`はowner/ancestry、
+`004`はadmission authority/attestation、`005`はskip/stale/replay、`006`は独立digest mutation、
+`007`はlength-frame決定性、`008`はtransaction fault時partial write 0、`009`はL6/Q0 direct
+reference authorityを検証する。各negativeは対象外のdigestを正規再計算したfixtureを使い、別guardの偶発Redで
+当該predicateを証明しない。
 `CAND-CUTOVER-003/005`は`CUTOVER-EVIDENCE-REGISTRY-v1`を唯一のoracleとし、F0a/F0b/F0c receiptの
 各slice commit subjectをfixture化する。candidate HEADが全commitのdescendantなら受理し、stale/replay/
 non-ancestorなら拒否する。同一subject fixtureを要求しない。transition receiptのsubjectはcandidate HEADと

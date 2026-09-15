@@ -1,0 +1,402 @@
+import { mkdtempSync, rmSync } from "node:fs";
+import { createRequire } from "node:module";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
+import { afterEach, describe, expect, it } from "vitest";
+import {
+  appendCutoverTransition,
+  type CutoverCommandInput,
+  CutoverTransitionError,
+  type CutoverValidationPorts,
+  cutoverAdmissionReceiptDigest,
+  cutoverAdmissionRecordDigest,
+  cutoverEvidenceReceiptDigest,
+  cutoverEvidenceRecordDigest,
+  cutoverTransitionReceiptDigest,
+  initializeCutoverChain,
+  projectCutoverState,
+} from "../src/runtime/cutover-transition.ts";
+import {
+  CUTOVER_ADMISSION_PRODUCER_MAP,
+  CUTOVER_EVIDENCE_REGISTRY,
+  type CutoverAdmissionReceipt,
+  type ImplementedCutoverEdgeId,
+  type SliceEvidenceReceipt,
+} from "../src/schema/cutover-transition.ts";
+
+const roots: string[] = [];
+const nodeRequire = createRequire(import.meta.url);
+const candidate = `git-sha1:${"1".repeat(40)}`;
+const producerAncestor = `git-sha1:${"2".repeat(40)}`;
+const artifactDigest = `sha256:${"3".repeat(64)}`;
+const l6Digest = "4".repeat(64);
+const q0Digest = "5".repeat(64);
+
+afterEach(() => {
+  for (const root of roots.splice(0)) rmSync(root, { force: true, recursive: true });
+});
+
+function root(): string {
+  const value = mkdtempSync(join(tmpdir(), "ut-cutover-"));
+  roots.push(value);
+  return value;
+}
+
+function ports(overrides: Partial<CutoverValidationPorts> = {}): CutoverValidationPorts {
+  return {
+    attestationVerifier: { verify: () => true },
+    isAncestor: () => true,
+    validateReferencedReceipt: () => true,
+    validateDirectReceipt: () => true,
+    ...overrides,
+  };
+}
+
+function attestation(authorityId: string) {
+  return {
+    schemaVersion: "evidence-attestation/v1" as const,
+    algorithm: "hmac-sha256" as const,
+    authorityId,
+    keyVersion: "v1",
+    signature: "test-signature",
+  };
+}
+
+function admission(edgeId: ImplementedCutoverEdgeId, priorDigest: string): CutoverAdmissionReceipt {
+  const authority = CUTOVER_ADMISSION_PRODUCER_MAP[edgeId];
+  const core = {
+    schema_version: "cutover-admission.v1" as const,
+    edge_id: edgeId,
+    candidate_head: candidate,
+    artifact_digest: artifactDigest,
+    prior_validated_receipt_digest: priorDigest,
+    l6_confirmation_receipt_digest: l6Digest,
+    execution_mode: "hybrid" as const,
+    decision: "approved" as const,
+    producer_owner_id: authority.producerOwnerId,
+    attestation_producer: authority.attestationProducer,
+    authority_id: authority.authorityId,
+  };
+  const record_digest = cutoverAdmissionRecordDigest(core);
+  const signed = { ...core, record_digest, attestation: attestation(authority.authorityId) };
+  return { ...signed, receipt_digest: cutoverAdmissionReceiptDigest(signed) };
+}
+
+function resignAdmission(
+  receipt: CutoverAdmissionReceipt,
+  authorityId: string,
+): CutoverAdmissionReceipt {
+  const {
+    record_digest: _recordDigest,
+    attestation: _attestation,
+    receipt_digest: _receiptDigest,
+    ...unsignedReceipt
+  } = receipt;
+  const unsigned = { ...unsignedReceipt, authority_id: authorityId };
+  const record_digest = cutoverAdmissionRecordDigest(unsigned);
+  const signed = { ...unsigned, record_digest, attestation: attestation(authorityId) };
+  return { ...signed, receipt_digest: cutoverAdmissionReceiptDigest(signed) };
+}
+
+function evidenceReceipt(
+  edgeId: ImplementedCutoverEdgeId,
+  kind: SliceEvidenceReceipt["kind_id"],
+  producer: string,
+  revisionRule: "candidate-head" | "producer-ancestor",
+  admissionReceipt: CutoverAdmissionReceipt,
+): SliceEvidenceReceipt {
+  const reference =
+    kind === "review.bundle"
+      ? {
+          reference_kind: "review-bundle" as const,
+          referenced_receipt_digest: "6".repeat(64),
+          payload_object_receipt_digest: null,
+          payload_digest: null,
+        }
+      : kind === "admission.approved"
+        ? {
+            reference_kind: "cutover-admission" as const,
+            referenced_receipt_digest: admissionReceipt.receipt_digest,
+            payload_object_receipt_digest: null,
+            payload_digest: null,
+          }
+        : {
+            reference_kind: "payload-object" as const,
+            referenced_receipt_digest: null,
+            payload_object_receipt_digest:
+              kind === "design.l6-confirmed" ? l6Digest : "7".repeat(64),
+            payload_digest: `sha256:${"8".repeat(64)}`,
+          };
+  const core = {
+    schema_version: "cutover-evidence.v1" as const,
+    edge_id: edgeId,
+    kind_id: kind,
+    producer_owner_id: producer,
+    attestation_producer: "ci" as const,
+    subject_revision: revisionRule === "candidate-head" ? candidate : producerAncestor,
+    success: true,
+    ...reference,
+  };
+  const unsigned = {
+    ...core,
+    record_digest: "".padStart(64, "0"),
+    attestation: attestation("evidence"),
+  };
+  const record_digest = cutoverEvidenceRecordDigest(unsigned);
+  const signed = { ...core, record_digest, attestation: attestation("evidence") };
+  return { ...signed, receipt_digest: cutoverEvidenceReceiptDigest(signed) };
+}
+
+function command(
+  repoRoot: string,
+  edgeId: ImplementedCutoverEdgeId,
+  sequence: number,
+  previous: string | null,
+  overrides: Partial<CutoverCommandInput> = {},
+): CutoverCommandInput {
+  const prior = previous ?? q0Digest;
+  const admissionReceipt = admission(edgeId, prior);
+  const evidence = CUTOVER_EVIDENCE_REGISTRY[edgeId].map(([kind, producer, revisionRule]) =>
+    evidenceReceipt(edgeId, kind, producer, revisionRule, admissionReceipt),
+  );
+  return {
+    repoRoot,
+    edgeId,
+    sequence,
+    subjectRevision: candidate,
+    artifactDigest,
+    executionMode: "hybrid",
+    expectedPreviousReceiptDigest: previous,
+    admissionPriorReceiptDigest: prior,
+    evidence,
+    admission: admissionReceipt,
+    ports: ports(),
+    ...overrides,
+  };
+}
+
+function expectReason(action: () => unknown, reason: string): void {
+  try {
+    action();
+    throw new Error("expected cutover failure");
+  } catch (error) {
+    expect(error).toBeInstanceOf(CutoverTransitionError);
+    expect((error as CutoverTransitionError).reason).toBe(reason);
+  }
+}
+
+function overwriteStoredEvidence(
+  repoRoot: string,
+  evidence: readonly SliceEvidenceReceipt[],
+): void {
+  const { DatabaseSync } = nodeRequire("node:sqlite") as {
+    DatabaseSync: new (
+      path: string,
+    ) => {
+      prepare(sql: string): { run(...params: unknown[]): unknown };
+      close(): void;
+    };
+  };
+  const db = new DatabaseSync(resolve(repoRoot, ".ut-tdd", "ledger", "cutover-ledger.db"));
+  try {
+    db.prepare("UPDATE cutover_receipts SET evidence_json=? WHERE sequence=0").run(
+      JSON.stringify(evidence),
+    );
+  } finally {
+    db.close();
+  }
+}
+
+describe("PLAN-L6-93 cutover prefix", () => {
+  it("U-CUTOVER-001 initializes genesis exactly once and projects committed state", () => {
+    const repoRoot = root();
+    expect(projectCutoverState([])).toEqual({
+      state: "uninitialized",
+      sequence: null,
+      receiptDigest: null,
+    });
+    const receipt = initializeCutoverChain(command(repoRoot, "cutover.genesis", 0, null));
+    expect(projectCutoverState([receipt])).toEqual({
+      state: "inventory_frozen",
+      sequence: 0,
+      receiptDigest: receipt.receipt_digest,
+    });
+    expectReason(
+      () => initializeCutoverChain(command(repoRoot, "cutover.genesis", 0, null)),
+      "cutover-genesis-already-initialized",
+    );
+  });
+
+  it("U-CUTOVER-002 folds only the four adjacent prefix edges", () => {
+    const repoRoot = root();
+    const receipts = [initializeCutoverChain(command(repoRoot, "cutover.genesis", 0, null))];
+    for (const edge of [
+      "cutover.inventory-frozen.node-shadow",
+      "cutover.node-shadow.node-primary",
+      "cutover.node-primary.bun-removed",
+    ] as const) {
+      receipts.push(
+        appendCutoverTransition(
+          command(repoRoot, edge, receipts.length, receipts.at(-1)?.receipt_digest ?? null),
+        ),
+      );
+    }
+    expect(projectCutoverState(receipts).state).toBe("bun_removed");
+  });
+
+  it("U-CUTOVER-003 rejects wrong evidence owner and non-ancestor evidence", () => {
+    const repoRoot = root();
+    expectReason(
+      () =>
+        appendCutoverTransition(
+          command(repoRoot, "cutover.inventory-frozen.node-shadow", 1, "a".repeat(64)),
+        ),
+      "cutover-chain-uninitialized",
+    );
+    const initialized = initializeCutoverChain(command(repoRoot, "cutover.genesis", 0, null));
+    const validNext = command(
+      repoRoot,
+      "cutover.inventory-frozen.node-shadow",
+      1,
+      initialized.receipt_digest,
+    );
+    const wrongOwner = validNext.evidence.map((entry, index) =>
+      index === 0 ? { ...entry, producer_owner_id: "wrong-owner" } : entry,
+    );
+    expectReason(
+      () => appendCutoverTransition({ ...validNext, evidence: wrongOwner }),
+      "cutover-admission-not-ready",
+    );
+    expectReason(
+      () =>
+        appendCutoverTransition({
+          ...command(
+            repoRoot,
+            "cutover.inventory-frozen.node-shadow",
+            1,
+            initialized.receipt_digest,
+          ),
+          ports: ports({ isAncestor: () => false }),
+        }),
+      "cutover-revision-mismatch",
+    );
+  });
+
+  it("U-CUTOVER-004 rejects wrong admission authority and untrusted attestation", () => {
+    const repoRoot = root();
+    const base = command(repoRoot, "cutover.genesis", 0, null);
+    expectReason(
+      () =>
+        initializeCutoverChain({
+          ...base,
+          admission: resignAdmission(base.admission, "wrong"),
+        }),
+      "cutover-admission-not-ready",
+    );
+    expectReason(
+      () =>
+        initializeCutoverChain({
+          ...base,
+          ports: ports({ attestationVerifier: { verify: () => false } }),
+        }),
+      "cutover-admission-not-ready",
+    );
+  });
+
+  it("U-CUTOVER-005 rejects skip, stale head, and replay without append", () => {
+    const repoRoot = root();
+    const genesis = initializeCutoverChain(command(repoRoot, "cutover.genesis", 0, null));
+    expectReason(
+      () =>
+        appendCutoverTransition(
+          command(repoRoot, "cutover.node-shadow.node-primary", 1, genesis.receipt_digest),
+        ),
+      "cutover-transition-invalid",
+    );
+    const shadow = appendCutoverTransition(
+      command(repoRoot, "cutover.inventory-frozen.node-shadow", 1, genesis.receipt_digest),
+    );
+    expectReason(
+      () =>
+        appendCutoverTransition(
+          command(repoRoot, "cutover.inventory-frozen.node-shadow", 2, shadow.receipt_digest),
+        ),
+      "cutover-transition-invalid",
+    );
+  });
+
+  it("U-CUTOVER-006 detects independent receipt digest mutation", () => {
+    const repoRoot = root();
+    const base = command(repoRoot, "cutover.genesis", 0, null);
+    const mutated = base.evidence.map((entry, index) =>
+      index === 0 ? { ...entry, payload_digest: `sha256:${"9".repeat(64)}` } : entry,
+    );
+    expectReason(
+      () => initializeCutoverChain({ ...base, evidence: mutated }),
+      "cutover-admission-not-ready",
+    );
+    const receipt = initializeCutoverChain(command(root(), "cutover.genesis", 0, null));
+    expect(() => projectCutoverState([{ ...receipt, receipt_digest: "f".repeat(64) }])).toThrow(
+      "cutover-chain-invalid",
+    );
+
+    const storedRoot = root();
+    const storedCommand = command(storedRoot, "cutover.genesis", 0, null);
+    const storedGenesis = initializeCutoverChain(storedCommand);
+    const storedMutation = storedCommand.evidence.map((entry, index) =>
+      index === 0 ? { ...entry, success: false } : entry,
+    );
+    overwriteStoredEvidence(storedRoot, storedMutation);
+    expectReason(
+      () =>
+        appendCutoverTransition(
+          command(
+            storedRoot,
+            "cutover.inventory-frozen.node-shadow",
+            1,
+            storedGenesis.receipt_digest,
+          ),
+        ),
+      "cutover-chain-invalid",
+    );
+  });
+
+  it("U-CUTOVER-007 produces deterministic framed digests", () => {
+    const first = initializeCutoverChain(command(root(), "cutover.genesis", 0, null));
+    const second = initializeCutoverChain(command(root(), "cutover.genesis", 0, null));
+    expect(first).toEqual(second);
+    const { receipt_digest: _receiptDigest, ...unsigned } = first;
+    expect(first.receipt_digest).toBe(cutoverTransitionReceiptDigest(unsigned));
+  });
+
+  it("U-CUTOVER-008 rolls back a fault after receipt insert", () => {
+    const repoRoot = root();
+    expectReason(
+      () =>
+        initializeCutoverChain({
+          ...command(repoRoot, "cutover.genesis", 0, null),
+          faultAfterReceiptInsert: true,
+        }),
+      "cutover-atomic-commit-failed",
+    );
+    expect(initializeCutoverChain(command(repoRoot, "cutover.genesis", 0, null)).sequence).toBe(0);
+  });
+
+  it("U-CUTOVER-009 fails closed when L6/Q0 reference authority is absent", () => {
+    const repoRoot = root();
+    const base = command(repoRoot, "cutover.genesis", 0, null);
+    expectReason(
+      () =>
+        initializeCutoverChain({ ...base, ports: ports({ validateDirectReceipt: () => false }) }),
+      "cutover-admission-not-ready",
+    );
+    expectReason(
+      () =>
+        initializeCutoverChain({
+          ...base,
+          ports: ports({ validateReferencedReceipt: () => false }),
+        }),
+      "cutover-admission-not-ready",
+    );
+  });
+});
