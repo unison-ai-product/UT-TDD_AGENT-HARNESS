@@ -3,27 +3,25 @@ plan_id: PLAN-L6-600-codex-review-wake-contract
 title: "PLAN-L6-600 (add-design): Codex review wake の契約 freeze"
 kind: add-design
 layer: L6
-sub_doc: function-spec
 drive: be
 route_signal: feature_addition
 route_mode: add-feature
-status: draft
 created: 2026-09-15
 updated: 2026-09-15
 owner: Codex / TL
-github_issue_id: 600
 parent_design: docs/plans/PLAN-L7-472-claude-memory-async-wake.md
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 next_pair_freeze: L7
 backprop_decision: not_required
-backprop_decision_reason: "既存の cross-review と async wake 要件を Codex provider 側へ具体化する docs-only 差分であり、L0-L3 要件を変更しない。"
+backprop_decision_reason: 既存の cross-review と async wake 要件を Codex provider
+  側へ具体化する docs-only 差分であり、L0-L3 要件を変更しない。
 agent_slots:
   - role: tl
-    slot_label: "TL - canonical request、wake、receipt の信頼境界を freeze する"
+    slot_label: TL - canonical request、wake、receipt の信頼境界を freeze する
   - role: se
-    slot_label: "SE - project inbox、FIFO、terminal marker、hook surface の契約を定義する"
+    slot_label: SE - project inbox、FIFO、terminal marker、hook surface の契約を定義する
   - role: qa
-    slot_label: "QA - publish failure、backlog、orphan、retry の反証可能な oracle を定義する"
+    slot_label: QA - publish failure、backlog、orphan、retry の反証可能な oracle を定義する
 generates:
   - artifact_path: docs/plans/PLAN-L6-600-codex-review-wake-contract.md
     artifact_type: markdown_doc
@@ -44,6 +42,40 @@ dependencies:
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/600
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/604
 review_evidence: []
+status: draft
+sub_doc: function-spec
+github_issue_id: 600
+admission_receipt:
+  schema_version: v2
+  receipt_id: certificate:dd832691e9533143c32fd04a79bff1be
+  command_id: plan-l6-600-draft-20260915-contract-freeze
+  admitted_at: 2026-09-15T12:00:00.000+09:00
+  source_digest: sha256:3a9944dd94672995af02b1b13045d13a4cd5f661d6687a0c93a7ec77e93e37e9
+  decision_digest: sha256:540dd571e718cd9a1e90af04fd5808a5fc11e80aed1f5590951634c072fa67ac
+  receipt_digest: sha256:6fe6a098a39488920f81ad954611c39a2480d43c58a2a25046e428c39acdffe6
+  binding:
+    path: docs/plans/PLAN-L6-600-codex-review-wake-contract.md
+    plan_id: PLAN-L6-600-codex-review-wake-contract
+    asset_id: plan:dd832691e9533143c32fd04a79bff1be
+    revision: 1
+    content_digest: sha256:3a9944dd94672995af02b1b13045d13a4cd5f661d6687a0c93a7ec77e93e37e9
+  route:
+    signal: feature_addition
+    mode: add-feature
+  issue:
+    provider: github
+    issue_id: 600
+    episode_id: E4-600-codex-review-wake-contract
+    projection_digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+  origin:
+    plan_id: PLAN-L7-472-claude-memory-async-wake
+    revision: 1
+    digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+  reentry:
+    target_plan_id: PLAN-L7-472-claude-memory-async-wake
+    target_revision: 1
+    phase: forward_merge
+  escape_reason: "Issue #600 Codex review wake contract pair-freeze"
 ---
 
 # PLAN-L6-600: Codex review wake の契約 freeze
