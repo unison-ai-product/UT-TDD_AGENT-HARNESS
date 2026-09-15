@@ -114,17 +114,46 @@ function reviewViolationReason(issue: CrossAgentModelIssue | undefined): string 
   return "same_model_or_missing";
 }
 
+/** frontmatter ブロック (最初の `---\n...\n---`) があればその中身、無ければ content 全体を返す。 */
+function frontmatterBlock(content: string): string {
+  const m = content.match(/^---\n([\s\S]*?)\n---/);
+  return m ? m[1] : content;
+}
+
 /**
- * frontmatter に `review_evidence:` ブロックが存在し ≥1 entry (`- reviewer:`) を持つか判定。
- * presence 検出のみ (shape 検証は zod frontmatterSchema が担う)。
+ * YAML mapping として解析した `review_evidence` が、`reviewer` キー (非空文字列) を持つ entry を
+ * ≥1 件含む配列か判定 (presence 検出のみ、shape 検証は zod frontmatterSchema が担う)。
+ *
+ * 解析対象: content が frontmatter ブロック (`^---\n...\n---`) を持てばその中身、無ければ
+ * content 全体を YAML として解析する (bare frontmatter text を渡すテストとの互換のため)。
+ * コメント行・空行・entry 内のキー順・flow style (`[{...}]`) のいずれにも依存しない —
+ * 正規表現ではなく `parseYaml` の結果を検査するため、`extractReviewEntries` と presence 判定が
+ * 一致する (issue #503: 旧実装は `- reviewer:` の行順序に依存する正規表現で、コメント行や
+ * キー順違いのある正当な YAML を false 判定していた)。
+ * YAML parse 失敗・非 mapping・`review_evidence` 欠落・空配列・非配列は false。
  */
 export function hasReviewEvidence(content: string): boolean {
-  return /^review_evidence:\s*\n\s+-\s+reviewer:/m.test(content);
+  let doc: unknown;
+  try {
+    doc = parseYaml(frontmatterBlock(content));
+  } catch {
+    return false;
+  }
+  if (typeof doc !== "object" || doc === null || Array.isArray(doc)) return false;
+  const ev = (doc as { review_evidence?: unknown }).review_evidence;
+  if (!Array.isArray(ev) || ev.length === 0) return false;
+  return ev.some(
+    (e) =>
+      typeof e === "object" &&
+      e !== null &&
+      typeof (e as { reviewer?: unknown }).reviewer === "string" &&
+      (e as { reviewer: string }).reviewer.trim() !== "",
+  );
 }
 
 /**
  * frontmatter (最初の `---` ブロック) を yaml で解析し review_evidence entry を抽出 (IMP-076)。
- * presence 検出の正規表現とは別に、cross_agent distinctness 検査のため entry レベルで読む。
+ * presence 検出とは別に、cross_agent distinctness 検査のため entry レベルで読む。
  * parse 失敗 / review_evidence 不在は entry なしとして扱う。
  * 必須PLANの evidence 欠落は analyzeReviewEvidence 側で violation 化する。
  */
