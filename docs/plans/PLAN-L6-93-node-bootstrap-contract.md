@@ -99,18 +99,18 @@ sub_doc: function-spec
 github_issue_id: 152
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:85e706c277f7b7ffc8b59ac4e31a0754
-  command_id: plan-revise:issue-540:drift-adoption:28
-  admitted_at: 2026-09-15T06:10:28.318Z
-  source_digest: sha256:5e0a375801c14b0c00444b6e5ccdfdce8aeb732557204cc88e57ff24deaed8ea
-  decision_digest: sha256:6f3650bdb9f9e691411f4a696f7dcde6b0069f7faaf02c0ac1b7f56ce7df9054
-  receipt_digest: sha256:f081b5a91393f7684150b56f9ace008904c9d2c3cda10ff141195bc54bc62bae
+  receipt_id: certificate:5bc411405e6235205fd17e46f336137d
+  command_id: plan-revise:issue-540:cutover-prefix-contract:29
+  admitted_at: 2026-09-15T06:12:33.048Z
+  source_digest: sha256:bedfe0f1cbfcf538cc41dbdd62bf44cbb78b1cb58e7f74c8dbd3b729cebc0210
+  decision_digest: sha256:919b4d44f356d260bdec5829b5f6c60b659baead9ceecd740ddda2f72d266a24
+  receipt_digest: sha256:1e161b6ba25418195bce4e750a4f79339892edc2f095b933efc05a749b215d05
   binding:
     path: docs/plans/PLAN-L6-93-node-bootstrap-contract.md
     plan_id: PLAN-L6-93-node-bootstrap-contract
     asset_id: plan:legacy:80a50dd958ae451ea13030276eb8c145a8fdc3104ec145560457f97a07594881
-    revision: 28
-    content_digest: sha256:5e0a375801c14b0c00444b6e5ccdfdce8aeb732557204cc88e57ff24deaed8ea
+    revision: 29
+    content_digest: sha256:bedfe0f1cbfcf538cc41dbdd62bf44cbb78b1cb58e7f74c8dbd3b729cebc0210
   route:
     signal: feature_addition
     mode: add-feature
@@ -133,25 +133,9 @@ admission_receipt:
     target_plan_id: PLAN-L6-93-node-bootstrap-contract
     target_revision: 27
     phase: forward_merge
-  escape_reason: "Method A restore-then-revise drift adoption for Issue #540;
-    drift range
-    d3c0df76e7cdba6dd0dbe51103028428ef9db37f..1c6d1c6200b8beb60d63f83da62820a17\
-    1942066: 76ed1bfe docs: rehome Q0 reverse artifact ownership; 2102aba fix:
-    bind provenance registry to landing receipt; 1a9d3bf docs(node): align
-    bootstrap contract with node-only custody; d0f964a1 docs(node): freeze
-    toolchain provenance registry (#499); 1f9d1f92 docs: remediate legacy slice
-    receipt evidence; 89e3c7e7 docs(node): freeze F0a review preimage; c01f1d94
-    docs(node): seal retrospective F0a custody evidence; e643c6ee docs(node):
-    align legacy F0a trust registry; 0baf7570 docs(node): close F0b admission
-    pre-gate flags; f6333b0c docs(node): close F0b admission pre-gate (#488);
-    5e0b8fe5 docs(plan): merge PR #410/#423/#430 closing review evidence;
-    2cd9640c through 34a937d9 PR #430 r8..r1 FLAG fixes; 4bd43303 docs(plan):
-    freeze old Bun distribution handling. PR references in range: #134, #152,
-    #403, #409, #410, #411, #423, #429, #430, #437, #439, #488, #499, #540.
-    Saved main HEAD=1c6d1c6200b8beb60d63f83da62820a171942066,
-    blob_oid=7b39433b278ff9a97c4d0166d8dc1ca54d4c4ad2,
-    canonical_digest=sha256:5e0a375801c14b0c00444b6e5ccdfdce8aeb732557204cc88e5\
-    7ff24deaed8ea."
+  escape_reason: "Issue #540 cutover prefix contract pair-freeze after Method A
+    restore-then-revise rehydration of PLAN-L6-93 rev27 to rev28; docs-only
+    contract adoption, status draft, implementation excluded."
 ---
 
 # PLAN-L6-93: sealed Node bootstrap function redesign
@@ -371,6 +355,50 @@ zod schema正本は`src/schema/cutover-transition.ts`と`src/schema/node-slice-a
 `PLAN-REVERSE-458-node-self-hosted-bun-ban-backfill`は設計参照に限定する。
 本PLANは`status: draft`のため、これらのartifactの実装完了やCutoverのconfirmed化を
 この所有宣言から導出しない。
+
+### Issue #540: cutover prefixの実装順序と検収境界
+
+Issue #473配下の#540が、上記3 pathのschema/writer/pair testを実装する。
+既存のartifact ownerは本PLANのまま、新PLAN・新receipt authority・別producerを作らない。
+本改訂はdocs-onlyのpair-freeze候補であり、statusはdraftを維持する。非著者がこのcontract revisionと
+L7の対応oracleをreviewしてPASSするまで実装を開始しない。3 pathを実体化する実装PRで
+初めてconfirmedへの遷移とexact-head review evidenceを揃える。実在しないgeneratesを
+confirmedで宣言せず、過去の§5限定PASSを§4又はPLAN全体の承認へ流用しない。
+
+実装対象は`cutover.genesis`、`cutover.inventory-frozen.node-shadow`、
+`cutover.node-shadow.node-primary`、`cutover.node-primary.bun-removed`の4 edge。
+L5の`CUTOVER-EVIDENCE-REGISTRY-v1`と`CUTOVER-ADMISSION-PRODUCER-MAP-v1`を
+唯一のkind/count/producer/revision/authority規則として参照し、ここへ別の表を複製しない。
+`CutoverAdmissionReceipt`の14 field、execution mode、nested attestation、prior closureは§4を維持する。
+legacy backfill専用のnode-slice-admission writerをproduction cutover authorityへ転用しない。
+
+実装順序は、(1) 本契約とpair oracleの非著者freeze、(2) schema/writer/testのTDDと
+Linux/Windows/aggregate検証、(3) exact-head closing reviewとmain統合、(4) #487の
+撤去candidate検証である。writerの利用可能性とproductionでの遷移成立は別の証拠である。
+#540のfixtureで4 edgeを通しても本環境のcutover成立を主張せず、production activationは
+引き続きL6 confirmed/D0及び各edgeのfresh evidence成立まで0とする。
+`node_primary → bun_removed`のinventory.zero/pack.acceptanceは#487の実candidateから得る。
+`cutover.bun-removed.sealed`とdebt #153の解消は#487後段であり、本sliceは未対応edgeを
+受理しない。L5の5 edge契約を削除せず、sealed完成をprefix実装の完了へ読み替えない。
+CLI、新規evidence producer配線、Bun物理削除、consumer setup配線は#540へ混ぜない。
+
+#### Pair checks
+
+| 観点 | 実装前に必要な判別証拠 |
+| --- | --- |
+| Genesis / prior closure | 既存authorityが供給するQ0 predecessorを検証し、absent・wrong kind・broken closureを拒否する。二重のgenesisはappendしない。 |
+| Reducer / edge guard | 4つのsupported edgeを各1回通し、skip・reverse・unsupported sealed edge・wrong previous stateをappendなしで拒否する。 |
+| Evidence / replay | registry kind・producer・authority・revision rule・execution mode・prior digestの各mutationを、他のvalid inputを保ったまま拒否する。 |
+| Digest mutation | 対象guardの判定を観測できるよう、必要な無関係envelopeだけを再計算し、incidentallyなdigest mismatchに隠れないことを確認する。 |
+| CAS / durable append | 1つのheadへの2 contenderでappendがちょうど1件となり、loserと各transaction failureでreceipt/headのpartial stateを残さない。 |
+| Projection | stateがcommitted chainから導出され、direct projection editだけではauthorityをmintできずforkも隠せない。 |
+| Production admission | writer availabilityやfixture successからruntime activationやreal Bun removalを導出せず、L6/D0/fresh evidence gateを保持する。 |
+
+L7 unit-test designの12-field `transition receipt`と、Issue #540の14-field
+`CutoverAdmissionReceipt`は別schema・別reference levelとして検証する。transitionの
+`admission_digest`はadmission.approvedのevidence receipt digestを指し、admission core digestを
+直接参照しない。genesisのsequence 0/null CASと、後続のsequence +1 / prior transition digest CASを
+同じchain契約として保持し、CAS loserを自動retryしない。
 
 ## 5. 旧Bun配布経路の処遇 (削除禁止条項の保護範囲)
 
