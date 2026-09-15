@@ -10,11 +10,13 @@ import {
   derivePackPublicationIntentDigest,
   derivePackPublicationTreeDigest,
   type PackPublicationApproval,
+  type PackPublicationApprovalDraft,
+  type PackPublicationAdmission,
   type PackPublicationIntentInput,
   type PackPublicationPorts,
   parseSealedPackageVersionIdentity,
   preparePackPublication,
-  publishPackCanary,
+  publishPackCanary as executePackCanary,
   sealPackPublicationIntent,
 } from "../src/setup/pack-publication-adapter.ts";
 import {
@@ -25,6 +27,14 @@ import { buildPackPublicationStagingPlan } from "../src/setup/pack-publication-s
 
 const sha = (value: Uint8Array | string) =>
   `sha256:${createHash("sha256").update(value).digest("hex")}`;
+const stable = (value: unknown): string => {
+  if (value === null || typeof value !== "object") return JSON.stringify(value);
+  if (Array.isArray(value)) return `[${value.map(stable).join(",")}]`;
+  return `{${Object.entries(value as Record<string, unknown>)
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([key, item]) => `${JSON.stringify(key)}:${stable(item)}`)
+    .join(",")}}`;
+};
 const sourceRevision = "a".repeat(40);
 const artifactSetDigest = `sha256:${"b".repeat(64)}`;
 const content = Buffer.from("abc");
@@ -167,17 +177,7 @@ function input(plan = stagingPlan()): PackPublicationIntentInput {
     },
   };
   const intentDigest = derivePackPublicationIntentDigest(seed);
-  const mutations = [
-    "planned",
-    "pack_branch_commit",
-    "pack_pr_create",
-    "pack_main_lease",
-    "release_draft_create",
-    ...plan.releaseAssets.map((asset) => `asset_upload:${asset.name}` as const),
-    "tag_create",
-    "release_visibility",
-    "canary_pointer_append",
-  ] as const;
+  const mutations = ["planned", "pack_branch_commit", "pack_pr_create"] as const;
   const transition = (mutation: (typeof mutations)[number]) =>
     mutation.startsWith("asset_upload:")
       ? ("assets" as const)
@@ -207,6 +207,43 @@ function input(plan = stagingPlan()): PackPublicationIntentInput {
   return { ...seed, approvals };
 }
 
+function publicationApprovalDrafts(
+  intent: ReturnType<typeof sealedIntent>,
+): PackPublicationApprovalDraft[] {
+  const mutations = [
+    "planned",
+    "pack_main_lease",
+    "release_draft_create",
+    ...intent.releaseAssets.map((asset) => `asset_upload:${asset.name}` as const),
+    "tag_create",
+    "release_visibility",
+    "canary_pointer_append",
+  ] as const;
+  const transition = (mutation: (typeof mutations)[number]) =>
+    mutation.startsWith("asset_upload:")
+      ? ("assets" as const)
+      : (
+          {
+            planned: "planned",
+            pack_main_lease: "pack_commit",
+            release_draft_create: "release_draft",
+            tag_create: "tag",
+            release_visibility: "release_visible",
+            canary_pointer_append: "canary",
+          } as const
+        )[mutation as Exclude<(typeof mutations)[number], `asset_upload:${string}`>];
+  return mutations.map((mutation, index) => ({
+    transition: transition(mutation),
+    mutation,
+    operationId: intent.operationId,
+    nonce: `publication-nonce-${index}`,
+    approver: "release-owner",
+    expiresAt: "2099-01-01T00:00:00Z",
+    approvalStateDigest: `sha256:${"6".repeat(64)}`,
+    idempotencyKey: intent.idempotencyKey,
+  }));
+}
+
 function sealedIntent() {
   const result = sealPackPublicationIntent(input());
   if (!result.ok) throw new Error(result.error);
@@ -220,7 +257,26 @@ function ports(overrides: Partial<PackPublicationPorts> = {}): PackPublicationPo
   let createdTag: { name: string; targetCommit: string; annotated: true } | null = null;
   const base: PackPublicationPorts = {
     approval: { consume: async () => ({ status: "attested", value: { mode: "new" } }) },
-    durableState: { append: vi.fn(), digest: () => `sha256:${"5".repeat(64)}` },
+    preparationState: {
+      append: vi.fn(),
+      digest: () => `sha256:${"5".repeat(64)}`,
+      observePreparation: async () => ({
+        status: "attested",
+        value: {
+          readBackObservationDigest: sha(
+            stable({
+              pullRequest: "42",
+              headOid: "7".repeat(40),
+              baseOid: "1".repeat(40),
+              treeDigest: derivePackPublicationTreeDigest(plan),
+              controlManifestSnapshotDigest: plan.controlManifestSnapshotDigest,
+            }),
+          ),
+          preparationJournalDigest: `sha256:${"5".repeat(64)}`,
+        },
+      }),
+    },
+    publicationState: { append: vi.fn(), digest: () => `sha256:${"5".repeat(64)}` },
     pack: {
       observeBefore: async () => ({
         status: "attested",
@@ -243,6 +299,36 @@ function ports(overrides: Partial<PackPublicationPorts> = {}): PackPublicationPo
           baseOid: "1".repeat(40),
           treeDigest: derivePackPublicationTreeDigest(plan),
           controlManifestSnapshotDigest: plan.controlManifestSnapshotDigest,
+        },
+      }),
+      observePullRequest: async () => ({
+        status: "attested",
+        value: {
+          pullRequest: "42",
+          headOid: "7".repeat(40),
+          baseOid: "1".repeat(40),
+          treeDigest: derivePackPublicationTreeDigest(plan),
+          controlManifestSnapshotDigest: plan.controlManifestSnapshotDigest,
+        },
+      }),
+      observeReviewEvidence: async () => ({
+        status: "attested",
+        value: { reviewEvidenceDigest: sha("review") },
+      }),
+      observeRequiredChecks: async () => ({
+        status: "attested",
+        value: { requiredChecksDigest: sha("checks") },
+      }),
+      observeMergeBase: async () => ({
+        status: "attested",
+        value: { mergeBaseOid: "1".repeat(40) },
+      }),
+      observeFreshness: async () => ({
+        status: "attested",
+        value: {
+          operationIdUnused: true,
+          idempotencyKeyUnused: true,
+          pullRequestUnused: true,
         },
       }),
       applyReviewedHeadWithLease: async () => ({
@@ -333,8 +419,37 @@ function ports(overrides: Partial<PackPublicationPorts> = {}): PackPublicationPo
     auditor: { attest: async () => ({ status: "attested", value: { attested: true } }) },
     reconcile: { observe: async () => ({ status: "unavailable", reason: "unused" }) },
     receipt: { persist: vi.fn() },
+    preparationReceipt: { persist: vi.fn() },
   };
   return { ...base, ...overrides } as PackPublicationPorts;
+}
+
+const rawPublishPackCanary = executePackCanary;
+
+async function admitPreparedPublication(
+  intent: ReturnType<typeof sealedIntent>,
+  configured: PackPublicationPorts,
+) {
+  const preparation = await preparePackPublication(intent, configured);
+  if (!preparation.ok || preparation.status !== "prepared") throw new Error("preparation failed");
+  const admitted = await admitPackPublication({
+    intent,
+    preparation: preparation.receipt,
+    ports: configured,
+    publicationApprovals: publicationApprovalDrafts(intent),
+  });
+  if (!admitted.ok) throw new Error(admitted.error);
+  return { preparation, admission: admitted.admission };
+}
+
+async function publishPackCanary(
+  intent: ReturnType<typeof sealedIntent>,
+  configured: PackPublicationPorts = ports(),
+  existingAdmission?: PackPublicationAdmission,
+) {
+  if (existingAdmission) return rawPublishPackCanary(intent, configured, existingAdmission);
+  const { admission } = await admitPreparedPublication(intent, configured);
+  return rawPublishPackCanary(admission.publicationIntent, configured, admission);
 }
 
 function withOperationLedger(value: PackPublicationPorts, ledger: string[]): PackPublicationPorts {
@@ -463,10 +578,10 @@ describe("remote Pack canary publication", () => {
     const result = sealPackPublicationIntent(input());
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(Object.keys(result.intent.approvals)).toHaveLength(10);
+    expect(Object.keys(result.intent.approvals)).toHaveLength(3);
     expect(
       new Set(Object.values(result.intent.approvals).map((approval) => approval.nonce)).size,
-    ).toBe(10);
+    ).toBe(3);
   });
 
   it("AUX-PACKPUB-REMOTE-011: rejects nonce reuse before remote writes", () => {
@@ -527,7 +642,12 @@ describe("remote Pack canary publication", () => {
     if (!result.ok) throw new Error(result.error);
     const outcome = await publishPackCanary(
       result.intent,
-      ports({ durableState: { append, digest: () => `sha256:${"5".repeat(64)}` } }),
+      ports({
+        publicationState: {
+          append,
+          digest: () => `sha256:${"5".repeat(64)}`,
+        },
+      }),
     );
     expect(outcome.status).toBe("published");
     expect(outcome.remoteWrites).toBe(9);
@@ -667,11 +787,12 @@ describe("remote Pack canary publication", () => {
     const result = await publishPackCanary(
       sealed.intent,
       ports({
-        durableState: {
+        preparationState: {
           append: async () => {
             throw new Error("disk");
           },
           digest: () => "unused",
+          observePreparation: ports().preparationState.observePreparation,
         },
         pack: { ...ports().pack, commitPublicationBranch: commit },
       }),
@@ -1491,22 +1612,19 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
     const preparation = await preparePackPublication(intent, configured);
     expect(preparation).toMatchObject({ ok: true, status: "prepared", remoteWrites: 2 });
     if (!preparation.ok || preparation.status !== "prepared") return;
-    const admitted = admitPackPublication({
+    const admitted = await admitPackPublication({
       intent,
       preparation: preparation.receipt,
-      observedPullRequest: {
-        pullRequest: preparation.receipt.pullRequest,
-        headOid: preparation.receipt.reviewedHeadOid,
-        baseOid: preparation.receipt.baseOid,
-        treeDigest: preparation.receipt.treeDigest,
-        controlManifestSnapshotDigest: preparation.receipt.controlManifestSnapshotDigest,
-      },
-      reviewEvidenceDigest: sha("review"),
-      requiredChecksDigest: sha("checks"),
+      ports: configured,
+      publicationApprovals: publicationApprovalDrafts(intent),
     });
     expect(admitted.ok).toBe(true);
     if (!admitted.ok) return;
-    const published = await publishPackCanary(intent, configured, admitted.admission);
+    const published = await publishPackCanary(
+      admitted.admission.publicationIntent,
+      configured,
+      admitted.admission,
+    );
     expect(published.status).toBe("published");
     expect(branchCommit).toHaveBeenCalledTimes(1);
     expect(createPullRequest).toHaveBeenCalledTimes(1);
@@ -1524,23 +1642,16 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
     const base = ports();
     const preparation = await preparePackPublication(intent, base);
     if (!preparation.ok || preparation.status !== "prepared") throw new Error("preparation failed");
-    const admission = admitPackPublication({
+    const admission = await admitPackPublication({
       intent,
       preparation: preparation.receipt,
-      observedPullRequest: {
-        pullRequest: preparation.receipt.pullRequest,
-        headOid: preparation.receipt.reviewedHeadOid,
-        baseOid: preparation.receipt.baseOid,
-        treeDigest: preparation.receipt.treeDigest,
-        controlManifestSnapshotDigest: preparation.receipt.controlManifestSnapshotDigest,
-      },
-      reviewEvidenceDigest: sha("review"),
-      requiredChecksDigest: sha("checks"),
+      ports: base,
+      publicationApprovals: publicationApprovalDrafts(intent),
     });
     if (!admission.ok) throw new Error(admission.error);
     const draft = vi.fn(base.release.createDraft);
     const result = await publishPackCanary(
-      intent,
+      admission.admission.publicationIntent,
       ports({
         pack: {
           ...base.pack,
@@ -1574,11 +1685,12 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
     const result = await publishPackCanary(
       sealedIntent(),
       ports({
-        durableState: {
+        preparationState: {
           append: async () => {
             throw new Error("disk");
           },
           digest: () => sha("state"),
+          observePreparation: ports().preparationState.observePreparation,
         },
         pack: { ...base.pack, commitPublicationBranch: commit },
       }),
@@ -1669,5 +1781,174 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
       remoteWrites: 4,
     });
     expect(upload).not.toHaveBeenCalled();
+  });
+
+  it("CAS-011/CAS-014: publication without an admission is a typed deny", async () => {
+    const intent = sealedIntent();
+    const consume = vi.fn();
+    const branch = vi.fn();
+    const result = await executePackCanary(
+      intent,
+      ports({
+        approval: { consume },
+        pack: { ...ports().pack, commitPublicationBranch: branch },
+      }),
+    );
+    expect(result).toEqual({
+      status: "denied",
+      stage: "preflight",
+      reason: "admission_required",
+      remoteWrites: 0,
+    });
+    expect(consume).not.toHaveBeenCalled();
+    expect(branch).not.toHaveBeenCalled();
+  });
+
+  it("CAS-011: admission rejects a preparation receipt whose journal read-back binding is forged", async () => {
+    const intent = sealedIntent();
+    const configured = ports();
+    const preparation = await preparePackPublication(intent, configured);
+    if (!preparation.ok || preparation.status !== "prepared") throw new Error("preparation failed");
+    const unsigned = {
+      ...preparation.receipt,
+      readBackObservationDigest: sha("forged-read-back"),
+      receiptDigest: "",
+    };
+    const forged = { ...unsigned, receiptDigest: sha(stable(unsigned)) };
+    const admission = await admitPackPublication({
+      intent,
+      preparation: forged,
+      ports: configured,
+      publicationApprovals: publicationApprovalDrafts(intent),
+    });
+    expect(admission).toEqual({ ok: false, error: "admission_identity_mismatch" });
+  });
+
+  it("CAS-014: preparation and publication seal separate intents, nonce sets, and journals", async () => {
+    const intent = sealedIntent();
+    const preparationAppend = vi.fn();
+    const publicationAppend = vi.fn();
+    const configured = ports({
+      preparationState: {
+        ...ports().preparationState,
+        append: preparationAppend,
+      },
+      publicationState: {
+        ...ports().publicationState,
+        append: publicationAppend,
+      },
+    });
+    const { admission } = await admitPreparedPublication(intent, configured);
+    expect(intent.phase).toBe("preparation");
+    expect(admission.publicationIntent.phase).toBe("publication");
+    expect(admission.publicationIntent.intentDigest).not.toBe(intent.intentDigest);
+    const preparationNonces = new Set(
+      Object.values(intent.approvals).map((approval) => approval.nonce),
+    );
+    const publicationNonces = Object.values(admission.publicationIntent.approvals).map(
+      (approval) => approval.nonce,
+    );
+    expect(publicationNonces.some((nonce) => preparationNonces.has(nonce))).toBe(false);
+    const preparationEventsBeforePublication = preparationAppend.mock.calls.length;
+    const result = await executePackCanary(admission.publicationIntent, configured, admission);
+    expect(result.status).toBe("published");
+    expect(preparationAppend).toHaveBeenCalledTimes(preparationEventsBeforePublication);
+    expect(publicationAppend).toHaveBeenCalled();
+    expect(publicationAppend.mock.calls[0][0].intentDigest).toBe(
+      admission.publicationIntent.intentDigest,
+    );
+  });
+
+  it.each([
+    ["targetRef", { targetRef: "refs/heads/other" }],
+    ["expectedMainOid", { expectedMainOid: "2".repeat(40) }],
+    ["reviewedHeadOid", { reviewedHeadOid: "3".repeat(40) }],
+    ["actualUpdateStatus", { actualUpdateStatus: "up-to-date" }],
+    ["postReadOid", { postReadOid: "4".repeat(40) }],
+  ] as const)("PORT-013: lease observation drift on %s is typed and stops release writes", async (_axis, drift) => {
+    const intent = sealedIntent();
+    const configured = ports();
+    const { admission } = await admitPreparedPublication(intent, configured);
+    const draft = vi.fn();
+    const result = await executePackCanary(
+      admission.publicationIntent,
+      ports({
+        pack: {
+          ...configured.pack,
+          applyReviewedHeadWithLease: async () => ({
+            status: "attested",
+            value: {
+              targetRef: "refs/heads/main",
+              expectedMainOid: intent.remote.expectedMainSha,
+              reviewedHeadOid: "7".repeat(40),
+              actualUpdateStatus: "updated",
+              postReadOid: "7".repeat(40),
+              ...drift,
+            } as never,
+          }),
+        },
+        release: { ...configured.release, createDraft: draft },
+      }),
+      admission,
+    );
+    expect(result).toMatchObject({
+      status: "partial_publication",
+      stage: "pack_commit",
+      reason: "lease_observation_mismatch",
+      remoteWrites: 1,
+    });
+    expect(draft).not.toHaveBeenCalled();
+  });
+
+  it("PORT-013: the up-to-date lease response is not treated as this operation's CAS", async () => {
+    const intent = sealedIntent();
+    const configured = ports();
+    const { admission } = await admitPreparedPublication(intent, configured);
+    const result = await executePackCanary(
+      admission.publicationIntent,
+      ports({
+        pack: {
+          ...configured.pack,
+          applyReviewedHeadWithLease: async () => ({
+            status: "attested",
+            value: {
+              targetRef: "refs/heads/main",
+              expectedMainOid: intent.remote.expectedMainSha,
+              reviewedHeadOid: "7".repeat(40),
+              actualUpdateStatus: "up-to-date",
+              postReadOid: "7".repeat(40),
+            } as never,
+          }),
+        },
+      }),
+      admission,
+    );
+    expect(result).toMatchObject({
+      status: "partial_publication",
+      reason: "lease_observation_mismatch",
+    });
+  });
+
+  it("PORT-013: publication journals planned nonce consumption once before mutation intent", async () => {
+    const intent = sealedIntent();
+    const configured = ports();
+    const { admission } = await admitPreparedPublication(intent, configured);
+    const publicationEvents: string[] = [];
+    const result = await executePackCanary(
+      admission.publicationIntent,
+      ports({
+        publicationState: {
+          append: async (event) => {
+            publicationEvents.push(event.kind);
+          },
+          digest: configured.publicationState.digest,
+        },
+      }),
+      admission,
+    );
+    expect(result.status).toBe("published");
+    expect(publicationEvents.filter((kind) => kind === "planned_nonce_consumed")).toHaveLength(1);
+    expect(publicationEvents[0]).toBe("planned_nonce_consumed");
+    expect(publicationEvents[1]).toBe("mutation_intent");
   });
 });
