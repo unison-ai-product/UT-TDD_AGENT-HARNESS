@@ -1024,17 +1024,15 @@ describe("remote Pack canary publication", () => {
     const sealed = sealPackPublicationIntent(input());
     if (!sealed.ok) throw new Error(sealed.error);
     const base = ports();
-    const result = await publishPackCanary(
-      sealed.intent,
-      ports({
-        canary: {
-          ...base.canary,
-          appendCas: async () => {
-            throw new Error("lost");
-          },
+    const result = await publishPackCanary(sealed.intent, {
+      ...base,
+      canary: {
+        ...base.canary,
+        appendCas: async () => {
+          throw new Error("lost");
         },
-      }),
-    );
+      },
+    });
     expect(result).toMatchObject({ status: "indeterminate", stage: "canary", remoteWrites: 9 });
   });
 
@@ -1487,10 +1485,11 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
     const append = vi.fn(async () => {
       throw new Error("lost");
     });
-    const result = await publishPackCanary(
-      sealedIntent(),
-      ports({ canary: { ...ports().canary, appendCas: append } }),
-    );
+    const base = ports();
+    const result = await publishPackCanary(sealedIntent(), {
+      ...base,
+      canary: { ...base.canary, appendCas: append },
+    });
     expect(result).toMatchObject({
       status: "indeterminate",
       stage: "canary",
@@ -1526,7 +1525,12 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
     const base = ports();
     const commit = vi.fn();
     const configured = ports({
-      approval: { consume: async () => ({ status: "attested", value: { mode: "reconcile" } }) },
+      approval: {
+        consume: async (approval) => ({
+          status: "attested",
+          value: { mode: approval.nonce.startsWith("publication-") ? "reconcile" : "new" },
+        }),
+      },
       reconcile: { observe: async () => ({ status: "attested", value: first.receipt }) },
       pack: { ...base.pack, commitPublicationBranch: commit },
     });
@@ -1540,7 +1544,12 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
     expect(commit).not.toHaveBeenCalled();
 
     const unavailablePorts = ports({
-      approval: { consume: async () => ({ status: "attested", value: { mode: "reconcile" } }) },
+      approval: {
+        consume: async (approval) => ({
+          status: "attested",
+          value: { mode: approval.nonce.startsWith("publication-") ? "reconcile" : "new" },
+        }),
+      },
       reconcile: { observe: async () => ({ status: "mismatch", reason: "receipt_absent" }) },
       pack: { ...base.pack, commitPublicationBranch: commit },
     });
@@ -1571,7 +1580,12 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
     const base = ports();
     const commit = vi.fn();
     const configured = ports({
-      approval: { consume: async () => ({ status: "attested", value: { mode: "reconcile" } }) },
+      approval: {
+        consume: async (approval) => ({
+          status: "attested",
+          value: { mode: approval.nonce.startsWith("publication-") ? "reconcile" : "new" },
+        }),
+      },
       reconcile: { observe: async () => ({ status: "attested", value: foreign }) },
       pack: { ...base.pack, commitPublicationBranch: commit },
     });

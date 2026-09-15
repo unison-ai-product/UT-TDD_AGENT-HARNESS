@@ -1565,6 +1565,10 @@ async function publishAdmittedPackCanary(input: {
       };
   }
 
+  const planned = await run.authorize("planned");
+  if (typeof planned !== "string") return planned;
+  if (planned === "reconcile") return reconcile(intent, ports, run.count());
+
   const leaseInput: PackMainLeaseInput = {
     repository: intent.remote.repository,
     targetRef: "refs/heads/main",
