@@ -12,12 +12,14 @@
  * 旧経路 (`selectMemoryEntries(db)`) は DB 側 body を読む read model だった。本 service が
  * 読み路を引き継ぐため、呼び元は service を通す (境界は tests/memory-service.test.ts が固定)。
  */
+import { createHash } from "node:crypto";
 import {
   existsSync,
   lstatSync,
   readdirSync,
   readFileSync,
   realpathSync,
+  type Stats,
   writeFileSync,
 } from "node:fs";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
@@ -52,6 +54,39 @@ export interface MemoryCorpus {
   /** parse に失敗して読み飛ばした個別ファイル。空でなければ surface する。 */
   findings: MemoryLoadFinding[];
 }
+
+export interface StrictCanonicalMemorySnapshotEntry {
+  readonly sourcePath: string;
+  readonly memoryId: string;
+  readonly content: string;
+  readonly contentDigest: string;
+  readonly size: number;
+}
+
+export type StrictCanonicalMemorySnapshot =
+  | {
+      readonly ok: true;
+      readonly entries: readonly StrictCanonicalMemorySnapshotEntry[];
+      readonly canonicalCorpusDigest: string;
+    }
+  | {
+      readonly ok: false;
+      readonly reason: "invalid_memory" | "source_unsafe" | "snapshot_unstable";
+    };
+
+export interface StrictCanonicalMemorySnapshotPorts {
+  readonly lstat: (path: string) => Stats;
+  readonly realpath: (path: string) => string;
+  readonly readdir: (path: string) => string[];
+  readonly readText: (path: string) => string;
+}
+
+const nodeStrictSnapshotPorts: StrictCanonicalMemorySnapshotPorts = {
+  lstat: (path) => lstatSync(path),
+  realpath: (path) => realpathSync(path),
+  readdir: (path) => readdirSync(path),
+  readText: (path) => readFileSync(path, "utf8"),
+};
 
 export interface MemoryReadResult extends MemoryCorpus {
   freshness: MemoryFreshness;
@@ -270,6 +305,107 @@ export function loadMemoryCorpus(repoRoot: string): MemoryCorpus {
     }
   }
   return { entries, findings };
+}
+
+function comparePathBytes(left: string, right: string): number {
+  return Buffer.compare(Buffer.from(left), Buffer.from(right));
+}
+
+function sha256(value: string): string {
+  return createHash("sha256").update(value).digest("hex");
+}
+
+function sameFileIdentity(left: Stats, right: Stats): boolean {
+  return (
+    left.isFile() &&
+    right.isFile() &&
+    !left.isSymbolicLink() &&
+    !right.isSymbolicLink() &&
+    left.dev === right.dev &&
+    left.ino === right.ino &&
+    left.size === right.size &&
+    left.mtimeMs === right.mtimeMs
+  );
+}
+
+/**
+ * Completion fence 用の fail-close snapshot。
+ *
+ * 一覧表示用の loadMemoryCorpus() と異なり、1件でも不正・unsafe・read drift があれば
+ * corpus 全体を返さない。本文を読む production 面を MemoryService 内へ閉じ込める。
+ */
+export function loadStrictCanonicalMemorySnapshot(
+  repoRoot: string,
+  ports: StrictCanonicalMemorySnapshotPorts = nodeStrictSnapshotPorts,
+): StrictCanonicalMemorySnapshot {
+  const root = memoryRoot(repoRoot);
+  if (!existsSync(root)) {
+    return { ok: true, entries: [], canonicalCorpusDigest: sha256("[]") };
+  }
+  try {
+    const rootBefore = ports.lstat(root);
+    if (!rootBefore.isDirectory() || rootBefore.isSymbolicLink()) {
+      return { ok: false, reason: "source_unsafe" };
+    }
+    const rootReal = ports.realpath(root);
+    const entries: StrictCanonicalMemorySnapshotEntry[] = [];
+    for (const fileName of ports.readdir(root).sort(comparePathBytes)) {
+      if (!fileName.endsWith(".md")) continue;
+      const sourcePath = relativeMemoryPath(fileName);
+      const path = join(root, fileName);
+      const before = ports.lstat(path);
+      if (!before.isFile() || before.isSymbolicLink()) {
+        return { ok: false, reason: "source_unsafe" };
+      }
+      const real = ports.realpath(path);
+      const relativeReal = relative(rootReal, real);
+      if (!relativeReal || relativeReal.startsWith("..") || isAbsolute(relativeReal)) {
+        return { ok: false, reason: "source_unsafe" };
+      }
+      const content = ports.readText(path);
+      const after = ports.lstat(path);
+      if (!sameFileIdentity(before, after)) {
+        return { ok: false, reason: "snapshot_unstable" };
+      }
+      let entry: MemoryEntry;
+      try {
+        entry = parseMemoryFile(repoRoot, sourcePath, content);
+      } catch {
+        return { ok: false, reason: "invalid_memory" };
+      }
+      entries.push({
+        sourcePath,
+        memoryId: entry.memory_id,
+        content,
+        contentDigest: entry.content_hash,
+        size: Buffer.byteLength(content),
+      });
+    }
+    const rootAfter = ports.lstat(root);
+    if (
+      !rootAfter.isDirectory() ||
+      rootAfter.isSymbolicLink() ||
+      rootBefore.dev !== rootAfter.dev ||
+      rootBefore.ino !== rootAfter.ino ||
+      rootBefore.mtimeMs !== rootAfter.mtimeMs
+    ) {
+      return { ok: false, reason: "snapshot_unstable" };
+    }
+    entries.sort((left, right) => comparePathBytes(left.sourcePath, right.sourcePath));
+    const digestEntries = entries.map(({ sourcePath, memoryId, contentDigest, size }) => ({
+      path: sourcePath,
+      memoryId,
+      digest: contentDigest,
+      size,
+    }));
+    return {
+      ok: true,
+      entries,
+      canonicalCorpusDigest: sha256(JSON.stringify(digestEntries)),
+    };
+  } catch {
+    return { ok: false, reason: "snapshot_unstable" };
+  }
 }
 
 /**

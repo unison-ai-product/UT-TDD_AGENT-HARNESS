@@ -3,6 +3,7 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   rmSync,
   symlinkSync,
@@ -290,6 +291,51 @@ it("U-PMEMQUAR-003 denies marker tampering and inventory drift before completion
   const tampered = migration.recover(primary, prepared.operationId);
   expect(tampered.ok).toBe(false);
   if (!tampered.ok) expect(tampered.reason).toBe("transaction_tampered");
+});
+
+it("U-PMEMQUAR-003 denies canonical-side conflict drift after prepared without writes", () => {
+  const { primary, linked } = fixture();
+  memory(primary, "a.md", "primary");
+  memory(linked, "b.md", "linked");
+  const migration = new ProjectMemoryMigration();
+  const prepared = migration.apply(primary, { crashAfter: "prepared" });
+  expect(prepared).toMatchObject({ ok: false, reason: "transaction_interrupted" });
+  if (prepared.ok || !prepared.operationId || !prepared.markersPath) return;
+
+  memory(primary, "a.md", "canonical drift");
+  const beforeMarkers = readFileSync(prepared.markersPath);
+  const beforeQuarantine = readdirSync(prepared.quarantineRoot as string)
+    .sort()
+    .map((name) => [name, readFileSync(join(prepared.quarantineRoot as string, name))]);
+  const recovered = migration.recover(primary, prepared.operationId);
+
+  expect(recovered).toMatchObject({ ok: false, reason: "inventory_drift" });
+  expect(readFileSync(prepared.markersPath)).toEqual(beforeMarkers);
+  expect(
+    readdirSync(prepared.quarantineRoot as string)
+      .sort()
+      .map((name) => [name, readFileSync(join(prepared.quarantineRoot as string, name))]),
+  ).toEqual(beforeQuarantine);
+  expect(readFileSync(prepared.markersPath, "utf8")).not.toContain('"kind":"complete"');
+});
+
+it("U-PMEMQUAR-003 denies non-conflict canonical drift after prepared without writes", () => {
+  const { primary, linked } = fixture();
+  memory(primary, "a.md", "primary");
+  memory(linked, "b.md", "linked");
+  memory(primary, "unique.md", "stable", "memory:project:unique");
+  const migration = new ProjectMemoryMigration();
+  const prepared = migration.apply(primary, { crashAfter: "prepared" });
+  expect(prepared).toMatchObject({ ok: false, reason: "transaction_interrupted" });
+  if (prepared.ok || !prepared.operationId || !prepared.markersPath) return;
+
+  memory(primary, "unique.md", "canonical drift", "memory:project:unique");
+  const beforeMarkers = readFileSync(prepared.markersPath);
+  const recovered = migration.recover(primary, prepared.operationId);
+
+  expect(recovered).toMatchObject({ ok: false, reason: "inventory_drift" });
+  expect(readFileSync(prepared.markersPath)).toEqual(beforeMarkers);
+  expect(readFileSync(prepared.markersPath, "utf8")).not.toContain('"kind":"complete"');
 });
 
 it("U-PMEMQUAR-004 recovers an owner left by a SIGKILLed process", async () => {
