@@ -7,7 +7,7 @@ drive: agent
 route_signal: regression_dev
 route_mode: recovery
 created: 2026-07-17
-updated: 2026-09-14
+updated: 2026-09-15
 owner: PO / TL
 backprop_decision: required
 backprop_decision_reason: Redesign supersessionとplan admissionを同時に満たすrevision
@@ -95,18 +95,18 @@ status: confirmed
 github_issue_id: 102
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:8869355e1c1e983d9f9ea1bf5d6781cf
-  command_id: plan-revise:issue-596:recovery-16:3
-  admitted_at: 2026-09-14T08:52:04.930Z
-  source_digest: sha256:da63043a8a9871f9254f19c5f68f85df8e555380f57cd46b96c5090d64599dce
-  decision_digest: sha256:f1011cc43faa551cbb86abfd6163140c1d2a68b889e2835f691397af46dd2c94
-  receipt_digest: sha256:0524f5edc340a1d21db5f9511a07c60b5ccb780a335b9a9250603d5df5fd30c4
+  receipt_id: certificate:ebe64b715863a5775f62195734c8ef9a
+  command_id: plan-revise:issue-541:recovery-16:4
+  admitted_at: 2026-09-15T02:01:11.158Z
+  source_digest: sha256:1128687449b9a0ac0774cb98b988ab302577962ca73c6995e4501ab4579f678c
+  decision_digest: sha256:438886bf4cc155b44f8969f50066eb2c894d38019de00d3ebdfa2bb0b2aa63b4
+  receipt_digest: sha256:03afdfb83d93b98602034ef5bbd1aa7dc4206021897dd5ae379e0739ffc4f9da
   binding:
     path: docs/plans/PLAN-RECOVERY-16-plan-revision-authoring.md
     plan_id: PLAN-RECOVERY-16-plan-revision-authoring
     asset_id: plan:rebase:74ca026f9a0b72dca6f4fb164dd4e8f43c9ea3c9b31c4db21dec38a66d9d7d57
-    revision: 3
-    content_digest: sha256:da63043a8a9871f9254f19c5f68f85df8e555380f57cd46b96c5090d64599dce
+    revision: 4
+    content_digest: sha256:1128687449b9a0ac0774cb98b988ab302577962ca73c6995e4501ab4579f678c
   route:
     signal: regression_dev
     mode: recovery
@@ -123,11 +123,8 @@ admission_receipt:
     target_plan_id: PLAN-L6-86-drive-plan-admission-contract
     target_revision: 2
     phase: forward_merge
-  escape_reason: "Issue #102 reproduces a missing revision authoring path that
-    makes redesign admission and supersession mutually unsatisfiable; revision 3
-    (Issue #596): declare src/plan-admission/plan-ledger-rehydrator.ts in
-    generates via canonical plan revise (ledger cache rehydrated from tracked
-    receipts)"
+  escape_reason: "Issue #541: legacy asset の決定的再水和を §2 に正規化し seal を fallback
+    化する契約改訂 (revision 4、docs-only)"
 ---
 
 # PLAN-RECOVERY-16: legacy PLAN revision authoring recovery
@@ -152,6 +149,11 @@ HEAD 本文を successor asset revision 1 として genesis 移行した上で�
 `ut-tdd plan revise --manifest` により本 revision を append した (Issue #143 方向、
 PO 案 A 採択 2026-07-27)。
 
+revision 4 (Issue #541、2026-09-15): §2 に決定的再水和の正規化と seal fallback の
+発動条件を追記した。旧解釈 (legacy asset は seal + successor genesis が唯一経路) は本
+revision が supersede する。Issue #541 の契約は本 revision に従い、`plan:legacy:` asset の
+再水和対応 (node-plan-revision-runner の除外解除) を実装 PR で行う。
+
 ## 1. 再現と根因
 
 Issue #98 のRedesignで新規PLANの正規receiptを発行し、supersedes先へ後継back-referenceを
@@ -174,6 +176,19 @@ transactionへbootstrapし、その直後にrevision 2をappendする。任意se
 repository identityとplan IDから既存migration規約どおり導出する。adopt済みassetは最新revisionを
 再構築し、`PlanAsset.revise()`へ接続する。
 
+tracked projection (`docs/governance/plan-admission-receipts.json`) の record_digest 付き
+terminal record と HEAD 本文の content digest / canonical payload digest が一致する場合、
+`plan-ledger-rehydrator` による決定的再水和は「推測復元」に該当せず、worktree ローカル
+ledger の再構築として正規経路とする。この再水和は asset prefix (`plan:<sha>` /
+`plan:legacy:` / `plan:rebase:`) で区別しない。再水和は projection の record 表記
+(asset_id / revision) をそのまま復元し、alias 解決や revision の推測を行わない。
+再水和に成功した asset は legacy bootstrap 経路 (revision 1 起点) へ落とさず、
+二重系譜を作らない。
+
+以下は再水和不能な場合の fallback である。fallback は (a) 当該 asset の terminal record が
+projection に存在しない、(b) HEAD 本文の content digest が terminal record の content_digest
+と不一致、(c) canonical payload digest が manifest base の revision_digest と不一致、の
+いずれかに該当する場合のみ発動する。条件外で seal + successor genesis を選ぶことは禁止する。
 tracked history が clean checkout から復元不能な場合は、推測で DB row を捏造せず
 `SealedLineageLocalMigration` で歴史系譜を `historical_sealed_unrehydratable` として seal し、
 HEAD 本文を successor asset revision 1 として genesis 移行する (Issue #143)。seal と
@@ -203,6 +218,7 @@ Redesign bundleの原子性契約 (replacement `supersedes` とorigin back-refer
 | 3 | strict manifest、HEAD blob/preimage/projection tail drift | `plan revise` assembler / Node runner |
 | 4 | source+projection publish/restore、receipt revision exact binding | generic authoring Saga / renderer |
 | 5 | Redesign origin+replacement bundle、片肺fault、admission/supersession両Green | (PLAN-RECOVERY-17 へ移管) |
+| 6 | plan:legacy: asset の terminal record 再水和 → N+1 revise 成功、rev N→N+1 の previous_record_digest 連続性、digest 不一致で fallback 判定 (負系) | rehydrator / Node runner (Issue #541) |
 
 ## 5. DoD
 
@@ -227,3 +243,5 @@ Redesign bundleの原子性契約 (replacement `supersedes` とorigin back-refer
       (PLAN-RECOVERY-17 へ移管。同 PLAN の DoD が引き継ぐ。)
 - [x] PLAN-L7-441未完のprocess-kill境界を明示し、通常例外のatomicityをcrash convergenceと混同しない。
       根拠: §3 の明示宣言 (crash-safe を過大主張しない) を維持。
+- [ ] plan:legacy: asset (実データ: PLAN-L6-93 rev 27) を tracked projection から再水和し
+      revision 28 を発行できる。根拠: 実装 PR のテスト (Issue #541)。
