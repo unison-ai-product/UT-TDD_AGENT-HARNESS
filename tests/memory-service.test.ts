@@ -463,6 +463,9 @@ describe("MemoryService (PLAN-L7-468 PR-A)", () => {
       "graph/loader.ts",
       "runtime/session-log.ts",
       "state-db/index.ts",
+      // The completion fence reads the canonical corpus to validate its
+      // digest, but it is deliberately read-only and never owns storage.
+      "runtime/project-memory-completion-fence.ts",
     ]);
     const SCAN_ONLY_DIR_ACCESS = new Set(["lint/memory-sync.ts"]);
     expect(tableLiteral.filter((rel) => !ALLOWED_TABLE_ACCESS.has(rel))).toEqual([]);
@@ -476,6 +479,13 @@ describe("MemoryService (PLAN-L7-468 PR-A)", () => {
       expect(text, `${rel} must not read memory content directly`).not.toContain("readFileSync");
       expect(text, `${rel} must not parse memory content directly`).not.toContain(
         "parseMemoryFile",
+      );
+    }
+    const READ_ONLY_MEMORY_ACCESS = new Set(["runtime/project-memory-completion-fence.ts"]);
+    for (const rel of READ_ONLY_MEMORY_ACCESS) {
+      const text = readFileSync(join(root, rel), "utf8");
+      expect(text, `${rel} must not mutate memory storage`).not.toMatch(
+        /\b(?:writeFileSync|appendFileSync|mkdirSync|rmSync|renameSync)\b/,
       );
     }
     // 読み手 (CLI / digest) が格納面へ戻ることを個別に禁止する。
