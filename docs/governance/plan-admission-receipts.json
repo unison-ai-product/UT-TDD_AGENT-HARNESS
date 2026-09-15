@@ -3856,6 +3856,38 @@
         "revision": 29,
         "content_digest": "sha256:bedfe0f1cbfcf538cc41dbdd62bf44cbb78b1cb58e7f74c8dbd3b729cebc0210"
       }
+    },
+    {
+      "sequence": 242,
+      "previous_record_digest": "sha256:54c9fc8eb5f4b35122ce52d07a4a5bb17d06817f4b1be0750a140df8ddd45e00",
+      "record_digest": "sha256:0ccc90906c6d80f63f3492b980cc7fd68d038ae71f260874b735a8043446fb6a",
+      "command_id": "plan-revise:issue-550:memoryservice-snapshot-contract-clean:10",
+      "receipt_id": "certificate:ff782cb9349f1b73e892c81846d5cb77",
+      "receipt_digest": "sha256:b6933773a5b748cf66256c1287d8dd4bb29fdc78177c6c3fce7f89c1342f2c68",
+      "decision_digest": "sha256:55c425c877e5d07d6f47efe484757f5d7c6cfe5c8a31aaf24575e790f77b5cc4",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-533-memory-completion-fence.md",
+        "plan_id": "PLAN-L7-533-memory-completion-fence",
+        "asset_id": "plan:fb4a53df298985d3204d2e9b3bfa55d1",
+        "revision": 10,
+        "content_digest": "sha256:703880c5310ec324685d19f1ef88785de51e33acb95bb345e7aab23430949d8f"
+      }
+    },
+    {
+      "sequence": 243,
+      "previous_record_digest": "sha256:0ccc90906c6d80f63f3492b980cc7fd68d038ae71f260874b735a8043446fb6a",
+      "record_digest": "sha256:c29cebce2d2e10fcb357457ab403dc988e43ce0fcd92d68a862d67ca956b78b6",
+      "command_id": "plan-revise:issue-550:reverse-clean:10",
+      "receipt_id": "certificate:e0c6d8cf76a2ed16e05b6b0461a219f3",
+      "receipt_digest": "sha256:f7e4302ebd6fefc2dcd9344898f09d1f3b6f63026eccbeed08a8045bea87259d",
+      "decision_digest": "sha256:6a38c57d4f50787b7390e6506990ac67a297f160a16678444af6bf4bd32bcbab",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-533-memory-completion-fence-backfill.md",
+        "plan_id": "PLAN-REVERSE-533-memory-completion-fence-backfill",
+        "asset_id": "plan:9c79745cc74906d8a41f0e144021d912",
+        "revision": 10,
+        "content_digest": "sha256:06fb28a015671c1bafdea70890a243b90ee61328d4ca27785b270824a0146dda"
+      }
     }
   ]
 }

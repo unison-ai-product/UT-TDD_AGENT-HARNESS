@@ -44,18 +44,18 @@ status: draft
 github_issue_id: 550
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:97f1f92114580a33d1fda8499e0dfb03
-  command_id: plan-revise:issue-550:reverse:9
-  admitted_at: 2026-09-14T10:38:52.177Z
-  source_digest: sha256:e06ccad9da91e71ba60ff6cf9be93b34d668f9cd2aa24718302432f0ade5b081
-  decision_digest: sha256:40dad2e5730d03a622d3ca96afe9c388f16836d50d794e6c1bb9e8e6b5305ca7
-  receipt_digest: sha256:e79c3acb839b67e816a5482ddb6140777ab560f6a3aa4f3ec6797a52bab8f95e
+  receipt_id: certificate:e0c6d8cf76a2ed16e05b6b0461a219f3
+  command_id: plan-revise:issue-550:reverse-clean:10
+  admitted_at: 2026-09-15T09:36:12.041Z
+  source_digest: sha256:06fb28a015671c1bafdea70890a243b90ee61328d4ca27785b270824a0146dda
+  decision_digest: sha256:6a38c57d4f50787b7390e6506990ac67a297f160a16678444af6bf4bd32bcbab
+  receipt_digest: sha256:f7e4302ebd6fefc2dcd9344898f09d1f3b6f63026eccbeed08a8045bea87259d
   binding:
     path: docs/plans/PLAN-REVERSE-533-memory-completion-fence-backfill.md
     plan_id: PLAN-REVERSE-533-memory-completion-fence-backfill
     asset_id: plan:9c79745cc74906d8a41f0e144021d912
-    revision: 9
-    content_digest: sha256:e06ccad9da91e71ba60ff6cf9be93b34d668f9cd2aa24718302432f0ade5b081
+    revision: 10
+    content_digest: sha256:06fb28a015671c1bafdea70890a243b90ee61328d4ca27785b270824a0146dda
   route:
     signal: reverse
     mode: reverse
@@ -76,8 +76,9 @@ admission_receipt:
     target_revision: 1
     phase: forward_merge
   escape_reason: "Issue #550 completion fence Reverse backfill pair (R0); revision
-    9: range notation 001..023 / 016..023 aligned in §7 / Reverse qa slot
-    (Claude Opus review f723873a non-blocking note)"
+    10: Memory service strict canonical snapshot contract and
+    U-PMEMFENCE-024..026 are pair-bound without changing production entry
+    wiring."
 ---
 
 # PLAN-REVERSE-533: Memory migration completion fence の逆向き確認
@@ -106,6 +107,10 @@ provider wake / claim / doctor) の接合面として確認する。L7-512 が�
   (`020`、`021`)。
 - **residue の集合差分**: linked worktree の untracked memory を `(memory_id, content_digest)` の集合差分で観測し、
   mtime を使わない (`008`、`009`)。`invalid_memory` / `source_unsafe` は Slice 4a の typed reason を再利用する。
+- **Memory service 本文reader境界**: fence / writer は canonical corpus 本文を直接読む代わりに、Memory service の
+  strict canonical snapshot を使う。snapshot はpath byte順、schema、bytes、size、digest、stable readを同一結果へ束縛し、
+  parse隔離用の `loadMemoryCorpus()` をfail-close入力へ再利用しない (`024..026`)。この変更は L5/L6 の
+  service read contractをboundedに補強するだけで、production入口へのfence結線はPR-2へ残す。
 - **回復の append-only**: 新 operation の apply は Slice 4b の transaction 経路を使い、個別ファイル単位で記録する
   (`010`、`011`)。read-only fence が検証する `canonicalCorpusDigest` と `previous_complete_digest` は同じPR-1の既存 writer
   additive changeが発行し、手書きmarkerを正例fixtureにしない (`020`)。
@@ -123,7 +128,7 @@ provider wake / claim / doctor) の接合面として確認する。L7-512 が�
 | requirements | not_impacted | project-scoped Memory root と fail-close の既存要求を変更しない。 |
 | L4-basic-design | not_impacted | primary / linked worktree の責務境界を変更しない。 |
 | L5-detailed-design | updated (bounded) | `owner.previous_complete_digest`、completeの`canonicalCorpusDigest`、実取り込み集合、個別import disposition、complete replayのreason precedenceを追加する。既存marker hash chain・DB schemaは変更しない。 |
-| L6-function-design | updated (bounded) | root解決・inventory正本は`PLAN-L7-512`に保持する。既存writerへ回復applyの個別importとcomplete replay分岐を追加するが、dry-run全体denyと未完了operationの`inventory_drift`は維持する。 |
+| L6-function-design | updated (bounded) | root解決・inventory正本は`PLAN-L7-512`に保持する。Memory service strict snapshotをfence / writerの唯一の本文readerにし、既存writerへ回復applyの個別importとcomplete replay分岐を追加するが、dry-run全体denyと未完了operationの`inventory_drift`は維持する。 |
 | L7-unit-test-design | updated | 実装 PR で `U-PMEMFENCE-*` を共有 `L7-unit-test-design.md` へ 1:1 登録する。既存 `U-PMEMINV-*` / `U-PMEMQUAR-*` は変更しない。 |
 | L12-acceptance-test-design | not_impacted | clean Pack provider parity E2E は #424 後続 slice が所有する。 |
 
@@ -149,6 +154,9 @@ provider wake / claim / doctor) の接合面として確認する。L7-512 が�
 | 010 | PR-1 | residue に schema 不正 file を混ぜて apply | 不正は `invalid_memory` で取り込み 0、正常分だけ marker に記録 |
 | 011 | PR-1 | observe 後・apply 前に residue を追加 | 取り込んだものだけ記録、未取り込みは次回 apply が拾う |
 | 012 | PR-1 | identity 欠落 / drift / root escape / common-dir 不正 | `PLAN-L7-512` の typed deny をそのまま返す、write 0 |
+| 024 | PR-1 | canonical corpusへfrontmatter不正fileを1件混入 | `invalid_memory`、snapshot entries/digestを返さずwrite 0。per-entry finding隔離で通したらRed |
+| 025 | PR-1 | canonical rootまたはmemory fileをsymlink / junction / non-regularへ1軸変異 | `source_unsafe`、realpath escape / enumeration / canonical write 0 |
+| 026 | PR-1 | read前後でbytes / size / handle-statを1軸変異するsnapshot fault | `snapshot_unstable`、digest/indexを返さずwrite 0 |
 | 013 | PR-2 | Claude / Codex の入口から同一 repository を観測 | reason と write 0 が一致、session 紐付き状態 0 |
 | 014 | PR-2 | tracked identity + transaction 不在 / identity 未 commit / remote 無し | 初回 bootstrap 許可 / `project_identity_commit_required` で migration のみ保留・state/template 継続 / 非 fatal |
 | 015 | PR-2 | consumer-toolchain / consumer-setup-smoke doctor を ok / incomplete / tamper / residue で起動 | 正例 1 + 負例 3 が各 typed reason で fail-close |

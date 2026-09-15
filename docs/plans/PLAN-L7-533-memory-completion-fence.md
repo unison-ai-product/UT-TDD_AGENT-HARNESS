@@ -55,18 +55,18 @@ status: draft
 github_issue_id: 550
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:ae424c3a1996042388a8d47c9275122a
-  command_id: plan-revise:issue-550:forward:9
-  admitted_at: 2026-09-14T10:38:46.121Z
-  source_digest: sha256:ddc519ea1675f3df17b948bc2ff66dc33cfcd22ff2fba15ff48de1cd52ddb40e
-  decision_digest: sha256:c2fad4a0b857407b1fbc087b8b025a8040f5457978abf6d6b5e212c8d94b361c
-  receipt_digest: sha256:6331d93dd9aa50328f838dc22a6ec68838d66f8a51f706755cf93bd8259e85d8
+  receipt_id: certificate:ff782cb9349f1b73e892c81846d5cb77
+  command_id: plan-revise:issue-550:memoryservice-snapshot-contract-clean:10
+  admitted_at: 2026-09-15T09:34:58.077Z
+  source_digest: sha256:703880c5310ec324685d19f1ef88785de51e33acb95bb345e7aab23430949d8f
+  decision_digest: sha256:55c425c877e5d07d6f47efe484757f5d7c6cfe5c8a31aaf24575e790f77b5cc4
+  receipt_digest: sha256:b6933773a5b748cf66256c1287d8dd4bb29fdc78177c6c3fce7f89c1342f2c68
   binding:
     path: docs/plans/PLAN-L7-533-memory-completion-fence.md
     plan_id: PLAN-L7-533-memory-completion-fence
     asset_id: plan:fb4a53df298985d3204d2e9b3bfa55d1
-    revision: 9
-    content_digest: sha256:ddc519ea1675f3df17b948bc2ff66dc33cfcd22ff2fba15ff48de1cd52ddb40e
+    revision: 10
+    content_digest: sha256:703880c5310ec324685d19f1ef88785de51e33acb95bb345e7aab23430949d8f
   route:
     signal: feature_addition
     mode: add-feature
@@ -79,14 +79,15 @@ admission_receipt:
     plan_id: PLAN-L7-512-project-scoped-memory-root
     revision: 6
     digest: sha256:e3e3cad039021a5394c5ad09ea1f0084642bba9c0423fd9faa77563e1e52ce19
+  transition:
+    direction: design_to_implementation
+    implementation_disposition: preserved
   reentry:
     target_plan_id: PLAN-L7-533-memory-completion-fence
     target_revision: 1
     phase: forward_merge
-  escape_reason: "Issue #550 completion fence contract pair-freeze after PR #554
-    FLAG B1 (canonical-root baseline; PLAN-L7-512 rev 6 downstream); revision 9:
-    range notation 001..023 / 016..023 aligned in §7 / Reverse qa slot (Claude
-    Opus review f723873a non-blocking note)"
+  escape_reason: "Issue #550 PR #609 U-MEMORY-018 boundary correction: strict
+    MemoryService canonical snapshot contract before PR-1 reissue"
 ---
 
 # PLAN-L7-533: Memory migration completion fence の正本を canonical root に限定する契約
@@ -161,6 +162,14 @@ append の間に crash window が実在する。回復は、intent の claim・�
 限り imported marker を再構成し、1 つでも不一致なら `transaction_tampered` (write 0) とする (`022`)。(ii) `transaction_tampered` の
 precedence は read fence だけでなく writer 入口 (`ProjectMemoryMigration.apply()`) でも保たれ、tampered chain の上では inventory /
 import に進まない (`023`)。いずれも PR-1 の bounded change の内側であり、新規 source_module も production 結線も要しない。
+
+### 2.3 revision 10: MemoryService strict canonical snapshot 境界
+
+PR #609 の Claude Opus closing FLAG は、fence が canonical corpus 本文を直接読むことを検出した。これは U-MEMORY-018 の「本文を読む面は Memory service 経由」という境界に反する。既存の loadMemoryCorpus() は一覧表示用に個別parse失敗を finding として隔離する API であり、fence の fail-close 判定に再利用してはならない。
+
+PR-1 は Memory service に strict canonical corpus snapshot API を追加し、fence と migration writer はこの API だけから canonical corpus を得る。snapshot は呼出時点の canonical root の regular file を byte 読みし、lexical path・realpath containment・symlink / junction / non-regular 拒否、frontmatter schema、byte size、content digest、stable read を同じ結果へ束縛する。1件でも不正・unsafe・read driftなら invalid_memory / source_unsafe / snapshot_unstable の typed denyとして corpus 全体を返さず、fence / writer は write 0 とする。成功snapshotはpath byte順の entries、(memory_id, content_digest) index、canonical corpus digestを返す。旧 loadMemoryCorpus() のper-entry finding隔離の意味論は変更しない。
+
+この変更は service 本文readerの所有を増やすため、PR-1 の明示scopeへ加える。production入口 (setup / status / SessionStart / provider wake / claim / doctor) を変えないというPR-1/PR-2分割は不変である。
 
 ## 3. fence 契約
 
@@ -283,7 +292,7 @@ Claude session と Codex session から同じ repository を観測したとき�
 | PR | 論点 | 前提 |
 | --- | --- | --- |
 | PR-0 (本 PR) | 本 PLAN + `PLAN-REVERSE-533` + pair test-design の pair-freeze (docs のみ) | なし |
-| PR-1 | completion core transaction substrate: read-only fence module (`src/runtime/project-memory-completion-fence.ts`) と、その正規証跡を発行する既存 writer (`src/runtime/project-memory-migration.ts`) の bounded change + test。writer は residue の正常分canonical import、実取り込み集合、`canonicalCorpusDigest`、`previous_complete_digest`を追加し、complete replayでは`inventory_drift`より先にcanonical digestを照合して`replay_corpus_mismatch`を返す。未完了operationの`inventory_drift`と既存dry-run全体denyは維持し、production入口へは結線しない。CANDIDATE 001..012 / 016..023 の Red→Green | PR-0 の非著者 PASS receipt |
+| PR-1 | completion core transaction substrate: Memory service のstrict canonical corpus snapshot API、read-only fence module (`src/runtime/project-memory-completion-fence.ts`) と、その正規証跡を発行する既存 writer (`src/runtime/project-memory-migration.ts`) の bounded change + test。fence / writerは本文を直接読まずsnapshotだけを使う。writer は residue の正常分canonical import、実取り込み集合、`canonicalCorpusDigest`、`previous_complete_digest`を追加し、complete replayでは`inventory_drift`より先にcanonical digestを照合して`replay_corpus_mismatch`を返す。未完了operationの`inventory_drift`と既存dry-run全体denyは維持し、production入口へは結線しない。CANDIDATE 001..012 / 016..026 の Red→Green | PR-0 の非著者 PASS receipt |
 | PR-2 | production 結線 (§5.1 の入口、setup bootstrap 例外、doctor profile) + test。CANDIDATE 013..015。B2 を 529 準拠へ戻す | PR-1 merge |
 
 PR #554 は close→分割再出で応じる (scope 構造 FLAG の既定)。PR #554 の実装は PR-1 / PR-2 の参照元にしてよいが、
@@ -291,8 +300,8 @@ baseline snapshot を fence 期待値に使う部分は採用しない。
 
 ## 7. TDD / trace / Reverse
 
-pair artifact `docs/test-design/harness/L7-memory-completion-fence-test-design.md` が `CANDIDATE-U-PMEMFENCE-001..023` を所有する
-(001..012 と 016..023 は PR-1、013..015 は PR-2)。
+pair artifact `docs/test-design/harness/L7-memory-completion-fence-test-design.md` が `CANDIDATE-U-PMEMFENCE-001..026` を所有する
+(001..012 と 016..026 は PR-1、013..015 は PR-2)。
 PR #554 が test-design に置いた `U-PMEMFENCE-001..014` は正規 ID として採用しない (Red 実測の同一 revision 束縛が無く、006 は
 tracked memory の checkout で通る誤った oracle だった)。実装 PR で同番号の `U-PMEMFENCE-*` へ 1:1 昇格する。既存
 `U-PMEMINV-*` / `U-PMEMQUAR-*` / `CANDIDATE-U-PMEMROOT-*` / `CANDIDATE-U-PROJID-*` を再採番・再所有しない。
@@ -331,4 +340,4 @@ claim-blind / spec-blind review で、baseline snapshot の残存、mtime 依存
 
 1. 本 PLAN と `PLAN-REVERSE-533` の pair-freeze に非著者 PASS receipt と CI Green が揃うこと。
 2. PR #554 が close されていること (分割再出)。
-3. PR-1 は §3 / §4 の completion core transaction substrate (read-only fence + 既存 migration writer の正規証跡発行) に、PR-2 は §5.1 の production 結線に閉じること。PR-1 は setup / status / SessionStart / Memory service / provider wake / claim / doctor を変更しない。方式変更が必要になったら PR を close して本 PLAN の契約改訂へ戻る。
+3. PR-1 は §2.3 / §3 / §4 の completion core transaction substrate (Memory service strict snapshot + read-only fence + 既存 migration writer の正規証跡発行) に、PR-2 は §5.1 の production 結線に閉じること。PR-1 は setup / status / SessionStart / provider wake / claim / doctor を変更しない。方式変更が必要になったら PR を close して本 PLAN の契約改訂へ戻る。

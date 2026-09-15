@@ -59,8 +59,11 @@ tracked memory だけで drift が起き、テストの意図 (legacy extra の�
 | `CANDIDATE-U-PMEMFENCE-021` | (a) null / 欠落 root の complete operation を 2 件置く、(b) 新形式 operation の `owner` marker から `previous_complete_digest` を除去し recordDigest を再計算しない、(c) legacy root (field 無し、digest 整合) の上に (b) の子を置く、(d) (b) の marker の recordDigest を改変後 payload で再計算して置く (chain 偽造) | (a) `operation_chain_ambiguous`。(b)(c) `transaction_tampered` (Slice 4b の record digest chain で検出。field の有無で判定したら Red)。(d) 後続 marker の `previousRecordDigest` 不一致で `transaction_tampered`、owner 単独 (後続無し) の operation なら `migration_incomplete`。判定順序 tampered → incomplete → ambiguous を守らなければ Red。いずれも write 0 |
 | `CANDIDATE-U-PMEMFENCE-022` | 回復 apply の canonical write 直後・imported marker append 直前で fault injection (`write_before_import_marker`) し、同一 operation を再 apply。(a) intent の claim・元 source・canonical 現物 bytes・digest・size が全て一致、(b) canonical 現物を 1 byte 改変、(c) size は同じで digest 不一致、(d) 元 source を削除 | (a) imported marker を再構成して complete へ進み、canonical の重複 write 0。(b)(c)(d) `transaction_tampered`、write 0、marker 追記 0。一致条件を 1 つでも省いて再構成したら Red |
 | `CANDIDATE-U-PMEMFENCE-023` | 018 / 021(b) の tampered chain の上に valid unique residue を置き、read fence ではなく writer 入口 `ProjectMemoryMigration.apply()` を直接呼ぶ | `transaction_tampered`。inventory / import / marker 追記に進まず write 0。writer 入口が fence を経ずに import へ進んだら Red (read fence の呼び出しだけで済ませたテストは 023 の Green にならない) |
+| `CANDIDATE-U-PMEMFENCE-024` | canonical corpusに正規fileとfrontmatter不正fileを置き、strict snapshotをfence / writerから読む | `invalid_memory`、entries / digestを返さずwrite 0。旧`loadMemoryCorpus()`のfinding隔離を流用してokにしたらRed |
+| `CANDIDATE-U-PMEMFENCE-025` | canonical rootまたはmemory fileをsymlink / junction / non-regularへ1軸変異し、strict snapshotを読む | `source_unsafe`、realpath escape / directory enumeration / canonical write 0。path literalだけを検査して通したらRed |
+| `CANDIDATE-U-PMEMFENCE-026` | read前後でcanonical fileのbytes、size、またはhandle/statを1軸変異するsnapshot faultを注入 | `snapshot_unstable`、digest/indexを返さずwrite 0。read前のdigestだけを信頼して通したらRed |
 
-`001..012` と `016..023` は PR-1 (read-only fence + 既存 migration writer の bounded additive changeから成る
+`001..012` と `016..026` は PR-1 (Memory service strict snapshot + read-only fence + 既存 migration writer の bounded additive changeから成る
 completion core transaction substrate)、`013..015` は PR-2 (production 結線) が所有する。PR-1の正例は手書きmarkerで代替せず、
 正規writerによるcanonical import、実取り込み集合、`canonicalCorpusDigest`、`previous_complete_digest`を検証する。実装 PR で Red→Green を観測した行だけを
 同番号の `U-PMEMFENCE-*` へ 1:1 で昇格し、共有 `L7-unit-test-design.md` へ登録する。
@@ -82,6 +85,8 @@ completion core transaction substrate)、`013..015` は PR-2 (production 結線)
 - 017〜019 / 021のchain正例も正規writerから生成し、tamper刺激だけをmarker改変で作る。
 - 022 は canonical write と imported marker append の間の crash window を fault injection で再現し、回復の再構成条件 (claim・source・bytes・digest・size の全一致) を負例 3 つで検証する。
 - 023 は writer 入口 (`apply()`) で `transaction_tampered` precedence を検証する。read fence の単体呼び出しは 023 の証跡にしない。
+- 024〜026 は `loadMemoryCorpus()` の一覧用finding隔離をfenceへ再利用せず、Memory service strict snapshotだけから
+  canonical corpusを得ることを検証する。snapshot成功時はpath byte順・entry index・canonical digestが同一readに束縛される。
 - `PLAN-L7-529` の read / create / commit-policy 契約と test-design を変更しない (014 は 529 §6 の positive control を含む)。
 - candidate の存在だけを Green 証跡、#550 / #424 の完了、Pack parity の根拠にしない。
 
