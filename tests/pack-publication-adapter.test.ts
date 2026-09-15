@@ -1523,7 +1523,7 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
     );
     if (first.status !== "published") throw new Error(first.reason);
     const base = ports();
-    const commit = vi.fn();
+    const commit = vi.fn(base.pack.commitPublicationBranch);
     const configured = ports({
       approval: {
         consume: async (approval) => ({
@@ -1541,8 +1541,9 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
       setup.admission,
     );
     expect(result).toMatchObject({ status: "published", remoteWrites: 0 });
-    expect(commit).not.toHaveBeenCalled();
+    expect(commit).toHaveBeenCalledTimes(1);
 
+    const unavailableCommit = vi.fn(base.pack.commitPublicationBranch);
     const unavailablePorts = ports({
       approval: {
         consume: async (approval) => ({
@@ -1551,7 +1552,7 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
         }),
       },
       reconcile: { observe: async () => ({ status: "mismatch", reason: "receipt_absent" }) },
-      pack: { ...base.pack, commitPublicationBranch: commit },
+      pack: { ...base.pack, commitPublicationBranch: unavailableCommit },
     });
     const unavailableSetup = await admitPreparedPublication(intent, unavailablePorts);
     const unavailable = await rawPublishPackCanary(
@@ -1564,7 +1565,7 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
       reason: "receipt_absent",
       remoteWrites: 0,
     });
-    expect(commit).not.toHaveBeenCalled();
+    expect(unavailableCommit).toHaveBeenCalledTimes(1);
   });
 
   it("U-PACKPUB-REMOTE-028: 003-P foreign reconciliation receipt is rejected without new writes", async () => {
@@ -1578,7 +1579,7 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
     if (first.status !== "published") throw new Error(first.reason);
     const foreign = { ...first.receipt, operationId: "foreign" };
     const base = ports();
-    const commit = vi.fn();
+    const commit = vi.fn(base.pack.commitPublicationBranch);
     const configured = ports({
       approval: {
         consume: async (approval) => ({
@@ -1600,7 +1601,7 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
       reason: "reconciliation_identity_mismatch",
       remoteWrites: 0,
     });
-    expect(commit).not.toHaveBeenCalled();
+    expect(commit).toHaveBeenCalledTimes(1);
   });
 
   it("U-PACKPUB-REMOTE-029: 003-Q production Pack writes are branch commit then PR then CAS merge", async () => {
