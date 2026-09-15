@@ -166,6 +166,33 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 | U-MEMORY-020 | `memoryIdFor` / `MemoryService.writeMemory` | ASCII safe titleは既存slugを維持し、非ASCII・句読点など正規化で情報を失うtitleはsha256 12桁suffixを付ける。同一kindの異なるlossy title 2件は異なるmemory_id/source_pathへ保存され、source file 2件を保持する。既存のlegacy無suffix pathが同じkind/titleなら再利用し、新旧duplicateを作らない。 |
 | U-MEMORY-021 | `MemoryService.writeMemory` | 既存pathのkind/title/body/tags/memory_idが異なる再書込みは副作用前にfail-closeし既存bytesを不変に保つ。同一内容の再試行だけは冪等に既存entryを返し、symlink・非regular・破損frontmatterも上書きしない。 |
 
+### §1.8.2 U-PMEMFENCE (Memory migration completion fence / PLAN-L7-533)
+
+実装引用: `tests/project-memory-completion-fence.test.ts`。
+
+| ID | Target | Oracle |
+|---|---|---|
+| U-PMEMFENCE-001 | `inspectProjectMemoryCompletion` | marker が無い状態は `migration_incomplete` とし、read/write を許可しない。 |
+| U-PMEMFENCE-002 | `inspectProjectMemoryCompletion` | marker chain の改変は `transaction_tampered` とし、書込みを発生させない。 |
+| U-PMEMFENCE-003 | `inspectProjectMemoryCompletion` | owner/intent までで中断した migration は `migration_incomplete` とし、read/write を許可しない。 |
+| U-PMEMFENCE-004 | `inspectProjectMemoryCompletion` | completion 後の `git worktree add` で fence の ok、project、operation が変わらない。 |
+| U-PMEMFENCE-005 | `inspectProjectMemoryCompletion` | completion 時に存在した linked worktree の removal で fence の ok、project、operation が変わらない。 |
+| U-PMEMFENCE-006 | `inspectProjectMemoryCompletion` | canonical corpus の変更は fence を deny せず、報告する canonical digest だけを更新する。 |
+| U-PMEMFENCE-007 | `replayProjectMemoryCompletion` | canonical corpus を変更しない同一 operation の replay は `replayed` となり、marker を追記しない。 |
+| U-PMEMFENCE-008 | `inspectProjectMemoryCompletion` | canonical に無い linked worktree の untracked memory を identity/digest 集合差分で `legacy_residue` として検出する。 |
+| U-PMEMFENCE-009 | `inspectProjectMemoryCompletion` | residue 検出は mtime に依存せず、保存された時刻のファイルも検出する。 |
+| U-PMEMFENCE-010 | `ProjectMemoryMigration.apply` | invalid residue は `invalidMemory` として隔離し、valid import は保持して取り込む。 |
+| U-PMEMFENCE-011 | `ProjectMemoryMigration.apply` | observe 後に追加された residue を再 inventory し、取り込んだ file だけを marker に記録する。 |
+| U-PMEMFENCE-012 | `inspectProjectMemoryCompletion` / `requireProjectMemoryCompletion` | project root の identity 欠落は既存の typed denial を返し、read/write を許可しない。 |
+| U-PMEMFENCE-016 | `replayProjectMemoryCompletion` | canonical corpus 変更後の replay は `replay_corpus_mismatch` とし、canonical/marker write を発生させない。 |
+| U-PMEMFENCE-017 | `inspectProjectMemoryCompletion` | complete 済み tip に連なる incomplete operation は `migration_incomplete` として deny する。 |
+| U-PMEMFENCE-018 | `inspectProjectMemoryCompletion` | ancestor operation の marker 改変は、complete tip があっても `transaction_tampered` として deny する。 |
+| U-PMEMFENCE-019 | `inspectProjectMemoryCompletion` | predecessor 欠落または複数 root は operation tip を自動選択せず `operation_chain_ambiguous` とする。 |
+| U-PMEMFENCE-020 | `ProjectMemoryMigration.apply` / `inspectProjectMemoryCompletion` | legacy root の欠落 field を null として扱い、明示 predecessor を持つ child operation を受け入れる。 |
+| U-PMEMFENCE-021 | `inspectProjectMemoryCompletion` | owner field の tamper は ambiguity 判定より先に `transaction_tampered` として deny する。 |
+| U-PMEMFENCE-022 | `ProjectMemoryMigration.recover` | durable import marker または exact canonical write の照合で中断 recovery を完了でき、内容不一致や source 欠落は復元を許可しない。 |
+| U-PMEMFENCE-023 | `ProjectMemoryMigration.apply` | tampered marker は incomplete operation の並び順に関係なく `transaction_tampered` を優先して返す。 |
+
 ### §1.9 U-SLOT (agent-slots 由来、PLAN-L7-08 / IMP-050)
 
 | U-ID | 関数 | oracle |

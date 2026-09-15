@@ -255,6 +255,35 @@ interface VerifyCompleteInput {
   readonly paths: TransactionPaths;
 }
 
+interface AppendIntentInput {
+  readonly path: string;
+  readonly operationId: string;
+  readonly inventory: Extract<MemoryMigrationDryRun, { ok: true }>;
+  readonly canonicalProjectRoot: string;
+}
+
+interface AssertImportIntentInput {
+  readonly intent: Marker;
+  readonly inventory: Extract<MemoryMigrationDryRun, { ok: true }>;
+  readonly canonicalRoot: string;
+  readonly durable: readonly MemoryMigrationImport[];
+}
+
+interface RecoverUnmarkedImportsInput {
+  readonly intent: Marker;
+  readonly inventory: Extract<MemoryMigrationDryRun, { ok: true }>;
+  readonly canonicalRoot: string;
+  readonly durable: readonly MemoryMigrationImport[];
+}
+
+interface ImportCanonicalCandidatesInput {
+  readonly candidates: readonly MemoryMigrationVariant[];
+  readonly canonicalRoot: string;
+  readonly recorded: readonly MemoryMigrationImport[];
+  readonly record: (entry: MemoryMigrationImport) => void;
+  readonly crashAfter?: MemoryMigrationApplyOptions["crashAfter"];
+}
+
 const compare = (left: string, right: string) =>
   Buffer.compare(Buffer.from(left), Buffer.from(right));
 
@@ -343,7 +372,12 @@ export class ProjectMemoryMigration {
         const owner = markers.find((marker) => marker.kind === "owner");
         if (owner) this.assertOwnerAvailable(owner);
         if (!intent && markers.length === 1 && owner) {
-          this.appendIntent(paths.markersPath, operationId, inventory, paths.repoRoot);
+          this.appendIntent({
+            path: paths.markersPath,
+            operationId,
+            inventory,
+            canonicalProjectRoot: paths.repoRoot,
+          });
           intent = this.readMarkers(paths.markersPath, operationId).find(
             (marker) => marker.kind === "intent",
           );
@@ -384,12 +418,12 @@ export class ProjectMemoryMigration {
         const durableImports = markers
           .filter((marker) => marker.kind === "imported")
           .map((marker) => this.importFromMarker(marker));
-        const recoveredImports = this.recoverUnmarkedImports(
+        const recoveredImports = this.recoverUnmarkedImports({
           intent,
           inventory,
-          paths.repoRoot,
-          durableImports,
-        );
+          canonicalRoot: paths.repoRoot,
+          durable: durableImports,
+        });
         for (const entry of recoveredImports) {
           this.appendMarker(paths.markersPath, {
             kind: "imported",
@@ -397,10 +431,12 @@ export class ProjectMemoryMigration {
             payload: { file: entry },
           });
         }
-        this.assertImportIntent(intent, inventory, paths.repoRoot, [
-          ...durableImports,
-          ...recoveredImports,
-        ]);
+        this.assertImportIntent({
+          intent,
+          inventory,
+          canonicalRoot: paths.repoRoot,
+          durable: [...durableImports, ...recoveredImports],
+        });
         return this.finishExisting({
           inventory,
           operationId,
@@ -419,7 +455,12 @@ export class ProjectMemoryMigration {
         },
       });
       if (options.crashAfter === "owner") return this.interrupted(operationId, paths);
-      this.appendIntent(paths.markersPath, operationId, inventory, paths.repoRoot);
+      this.appendIntent({
+        path: paths.markersPath,
+        operationId,
+        inventory,
+        canonicalProjectRoot: paths.repoRoot,
+      });
       if (options.crashAfter === "intent") return this.interrupted(operationId, paths);
       return this.finishExisting({
         inventory,
@@ -477,18 +518,18 @@ export class ProjectMemoryMigration {
         .filter((marker) => marker.kind === "imported")
         .map((marker) => this.importFromMarker(marker));
       this.verifyCanonicalImports(recordedImports, paths.repoRoot);
-      imported = this.importCanonicalCandidates(
-        this.importCandidates(inventory, paths.repoRoot),
-        paths.repoRoot,
-        recordedImports,
-        (entry) =>
+      imported = this.importCanonicalCandidates({
+        candidates: this.importCandidates(inventory, paths.repoRoot),
+        canonicalRoot: paths.repoRoot,
+        recorded: recordedImports,
+        record: (entry) =>
           this.appendMarker(paths.markersPath, {
             kind: "imported",
             operationId,
             payload: { file: entry },
           }),
         crashAfter,
-      );
+      });
       this.appendMarker(paths.markersPath, {
         kind: "prepared",
         operationId,
@@ -649,12 +690,12 @@ export class ProjectMemoryMigration {
     }
   }
 
-  private appendIntent(
-    path: string,
-    operationId: string,
-    inventory: Extract<MemoryMigrationDryRun, { ok: true }>,
-    canonicalProjectRoot: string,
-  ): void {
+  private appendIntent({
+    path,
+    operationId,
+    inventory,
+    canonicalProjectRoot,
+  }: AppendIntentInput): void {
     this.appendMarker(path, {
       kind: "intent",
       operationId,
@@ -685,12 +726,12 @@ export class ProjectMemoryMigration {
     }));
   }
 
-  private assertImportIntent(
-    intent: Marker,
-    inventory: Extract<MemoryMigrationDryRun, { ok: true }>,
-    canonicalRoot: string,
-    durable: readonly MemoryMigrationImport[],
-  ): void {
+  private assertImportIntent({
+    intent,
+    inventory,
+    canonicalRoot,
+    durable,
+  }: AssertImportIntentInput): void {
     if (!Array.isArray(intent.payload.imports)) throw new MigrationFailure("transaction_tampered");
     const remaining = this.importClaims(this.importCandidates(inventory, canonicalRoot));
     const completed = durable.map(({ destinationPath: _destinationPath, ...entry }) => entry);
@@ -702,14 +743,40 @@ export class ProjectMemoryMigration {
     );
     if (canonicalJson(actual) !== canonicalJson(expected))
       throw new MigrationFailure("inventory_drift");
+    if (!Array.isArray(intent.payload.conflicts))
+      throw new MigrationFailure("transaction_tampered");
+    const expectedLinkedConflicts = intent.payload.conflicts.filter(
+      (value): value is Record<string, unknown> =>
+        Boolean(value) &&
+        typeof value === "object" &&
+        !Array.isArray(value) &&
+        typeof (value as Record<string, unknown>).worktreeRoot === "string" &&
+        normalizeTopologyPath(String((value as Record<string, unknown>).worktreeRoot)) !==
+          normalizeTopologyPath(canonicalRoot),
+    );
+    const actualLinkedConflicts = this.conflicts(inventory)
+      .filter(
+        (variant) =>
+          normalizeTopologyPath(variant.worktreeRoot) !== normalizeTopologyPath(canonicalRoot),
+      )
+      .map((variant) => ({
+        worktreeRoot: variant.worktreeRoot,
+        sourcePath: variant.sourcePath,
+        contentDigest: variant.contentDigest,
+        sourceHandleIdentity: variant.sourceHandleIdentity,
+        sourceSize: variant.sourceSize,
+        sourceMtimeMs: variant.sourceMtimeMs,
+      }));
+    if (canonicalJson(actualLinkedConflicts) !== canonicalJson(expectedLinkedConflicts))
+      throw new MigrationFailure("inventory_drift");
   }
 
-  private recoverUnmarkedImports(
-    intent: Marker,
-    inventory: Extract<MemoryMigrationDryRun, { ok: true }>,
-    canonicalRoot: string,
-    durable: readonly MemoryMigrationImport[],
-  ): MemoryMigrationImport[] {
+  private recoverUnmarkedImports({
+    intent,
+    inventory,
+    canonicalRoot,
+    durable,
+  }: RecoverUnmarkedImportsInput): MemoryMigrationImport[] {
     if (!Array.isArray(intent.payload.imports)) throw new MigrationFailure("transaction_tampered");
     const durableSources = new Set(
       durable.map((entry) => sourceIdentityKey(entry.sourceWorktreeRoot, entry.sourcePath)),
@@ -1056,13 +1123,13 @@ export class ProjectMemoryMigration {
     );
   }
 
-  private importCanonicalCandidates(
-    candidates: readonly MemoryMigrationVariant[],
-    canonicalRoot: string,
-    recorded: readonly MemoryMigrationImport[],
-    record: (entry: MemoryMigrationImport) => void,
-    crashAfter?: MemoryMigrationApplyOptions["crashAfter"],
-  ): MemoryMigrationImport[] {
+  private importCanonicalCandidates({
+    candidates,
+    canonicalRoot,
+    recorded,
+    record,
+    crashAfter,
+  }: ImportCanonicalCandidatesInput): MemoryMigrationImport[] {
     const imported: MemoryMigrationImport[] = [...recorded];
     const recordedBySource = new Map(
       recorded.map((entry) => [
