@@ -97,9 +97,8 @@ request の実体を生成しない。PR #604 の既存実装を正本へ昇格�
 ### 1.1 canonical request と wake の順序
 
 `review live-dispatch` は subject（exact HEAD と PR binding）を検証し、canonical request を
-`.ut-tdd/review/requests/<requestDigest>.json` へ content-addressed に永続化した後にだけ、typed
-Codex wake を発行する。既存実装どおり同一path・同一canonical bytesの再発行は冪等成功とし、
-同一pathの異なるbytesはconflictで拒否して上書きしない。request が作成できない、または request の identity が不正な場合は
+`.ut-tdd/review/requests/<requestDigest>.json` へ exclusive-create で永続化した後にだけ、typed
+Codex wake を発行する。request が作成できない、または request の identity が不正な場合は
 Codex inbox、hook surface、deferred/backlog の downstream write を 0 にする。
 
 request 永続化後の wake 失敗は、次の既存 result shape に収束させる。
@@ -121,12 +120,6 @@ type CodexWakeDispatchFailure = {
 `backlog` は canonical request の identity を再発行せずに再配送するための typed state である。
 既存 request を削除・上書き・再 mint してはならない。wake publish が同じ canonical bytes の
 retry であれば一件へ収束し、同じ identity の異なる bytes は conflict として fail-close する。
-production adapterが`CodexReviewWakeBacklogStore`を所有し、
-`<runtimeBusRoot>/codex-memory-wake/backlog/<requestDigest>.json`へmode `0600`の
-create-or-validateでcanonical backlog entryを永続化する。SessionStart/Stop hookがconsumerを起動するたび、
-inbox surface前に`createdAt`、同値時`requestDigest`順で一件を再publishする。同一bytesは冪等、異内容、
-request欠落、project不一致はtyped conflictとしてbytesを保持する。成功時だけbacklog entryをterminal markerへ
-移し、失敗時は保持する。再配送のowner、trigger、write countは実装oracleで直接観測する。
 
 ### 1.2 project-scoped Codex inbox
 
@@ -152,7 +145,7 @@ publish は inbox directory を安全に作成した後、mode `0600` の exclus
 
 ### 1.3 machine-readable hook surface
 
-Codex project hook の `SessionStart` と `Stop` の両方から、同じ current project の
+Codex project hook の `SessionStart` または `Stop` から、同じ current project の
 `node src/cli.ts hook codex-memory-wake` を呼ぶ。hook surface は stdout の JSON object と exit code
 を契約とし、schema は `ut-tdd.codex-memory-wake/v1` とする。
 
@@ -180,31 +173,26 @@ hook の stderr/stdout を review verdict、receipt、merge authority の入力�
 
 ### 1.4 claim、consume、terminalize、FIFO、orphan
 
-Codex は hook が返した **exact `envelopePath`** を、同じproject namespace内の
-`codex-memory-wake/claims/<entryStem>.<targetSessionId>.json`へatomic renameしてclaimした後、
+Codex は hook が返した **exact `envelopePath`** を
 `node src/cli.ts review live-consume --envelope <path> --json` へ渡す。consumer は canonical
 request、provider envelope v4、project/target、PR、exact HEAD、review revision、反対族 provider を
 再検証し、Codex の reviewer delegation と canonical receipt projection が成功した後だけ inbox を
 terminalize する。
 
-- surface だけでは claim 済みとみなさない。atomic renameに成功した一つのCodex sessionだけがconsumeでき、
-  `targetSessionId`はenvelopeのtarget sessionと一致必須である。失敗時は同一bytesをinboxへatomic restoreし、
-  claim/inboxの両方を残す片肺状態を許さない。
+- surface だけでは claim 済みとみなさない。receipt-producing consumer が成功するまで
+  `deliveryConfirmed=false` の pending entry を保持する。
 - 成功時は entry identity、request identity、PR、HEAD、revision、author family、terminal reason
   `claimed` を持つ terminal marker を mode `0600` で exclusive-create し、対応する inbox projection
   だけを削除する。marker は監査 retention（既存 runtime の7日）後に明示 namespace から prune する。
-- terminal判定はprocess exit codeではなく、canonical request identityへ一致するcanonical receiptの存在と
-  再検証結果だけで決める。receiptが存在しないprovider unavailable、identity mismatch、verdict/receipt
-  write failureはtyped fail-closeとしrestoreする。receiptが既に正しく永続化された後の
-  `derived_verdict_publish_failed`等のnon-zero exitはterminalizeを妨げず、派生表示失敗を別監査事象として残す。
+- consumer の provider unavailable、identity mismatch、verdict/receipt write failure、exit
+  non-zero は typed fail-close とし、terminal marker と inbox 削除を行わない。次の hook cycle で
+  同じ envelope を再配送できる。
 - FIFO は valid Codex review entries を `createdAt`、同値時は entry identity の deterministic
   順で一件ずつ surface する。古い entry の失敗や orphan が後続 valid request を head-of-line
   block しないが、orphan を valid receipt として進めたり、黙って削除したりしない。
 - malformed、schema 非互換、project/target 不一致、entry stem/path 不一致、terminal marker
   との identity 不一致は `codex_review_wake_envelope_invalid` 相当の typed invalid state として
   fail-close する。元の bytes は保持し、管理者が修復または再発行できる状態を残す。
-- terminal markerは作成から7日間保持し、それ以前のpruneを拒否する。7日到達後のSessionStart/Stopだけが
-  project namespace内のmarkerをpruneでき、foreign project、active claim、inbox/backlogは削除しない。
 
 ### 1.5 production composition の境界
 
