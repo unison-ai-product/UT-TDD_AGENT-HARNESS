@@ -185,13 +185,14 @@ function validReceipt(value: unknown): value is ReviewReceipt {
   );
 }
 
-function completedEventStatus(
-  event: ReviewCustodyAuditEvent,
-  repoRoot: string,
-  requestDigest: string,
-  request: PersistedReviewRequest,
-  attempt: number,
-): "valid" | "schema" | "identity" {
+function completedEventStatus(input: {
+  event: ReviewCustodyAuditEvent;
+  repoRoot: string;
+  requestDigest: string;
+  request: PersistedReviewRequest;
+  attempt: number;
+}): "valid" | "schema" | "identity" {
+  const { event, repoRoot, requestDigest, request, attempt } = input;
   if (event.kind !== "attempt_completed") return "identity";
   if (!exactKeys(event, COMPLETED_KEYS)) return "schema";
   if (!isAttemptCompletedEvent(event)) return "schema";
@@ -211,13 +212,14 @@ function mapProducerFailure(
   return result;
 }
 
-function writeEvidenceEnvelope(
-  path: string,
-  identity: ProviderJudgmentAttemptIdentity,
-  provider: "codex" | "claude",
-  model: string,
-  receipt: ReviewReceipt,
-): { ok: true; created: boolean } | { ok: false; reason: ProviderJudgmentCompositionFailure } {
+function writeEvidenceEnvelope(input: {
+  path: string;
+  identity: ProviderJudgmentAttemptIdentity;
+  provider: "codex" | "claude";
+  model: string;
+  receipt: ReviewReceipt;
+}): { ok: true; created: boolean } | { ok: false; reason: ProviderJudgmentCompositionFailure } {
+  const { path, identity, provider, model, receipt } = input;
   const envelope = {
     schema_version: "d3b-provider-evidence-envelope/v1",
     identity,
@@ -306,7 +308,13 @@ export async function composeProviderJudgment(
   }
   const completed = events.filter((event) => event.kind === "attempt_completed");
   const statuses = completed.map((event) =>
-    completedEventStatus(event, input.repoRoot, input.requestDigest, request, input.attempt),
+    completedEventStatus({
+      event,
+      repoRoot: input.repoRoot,
+      requestDigest: input.requestDigest,
+      request,
+      attempt: input.attempt,
+    }),
   );
   if (statuses.some((status) => status === "schema"))
     return { ok: false, reason: "invocation_fact_schema_invalid" };
@@ -343,13 +351,13 @@ export async function composeProviderJudgment(
     invocationNonce: request.invocationNonce as string,
   };
   const evidence = evidencePath(input.repoRoot, input.requestDigest, input.attempt);
-  const envelope = writeEvidenceEnvelope(
-    evidence,
+  const envelope = writeEvidenceEnvelope({
+    path: evidence,
     identity,
     provider,
-    event.model as string,
+    model: event.model as string,
     receipt,
-  );
+  });
   if (!envelope.ok) return envelope;
   let produced: ProviderJudgmentResult;
   try {

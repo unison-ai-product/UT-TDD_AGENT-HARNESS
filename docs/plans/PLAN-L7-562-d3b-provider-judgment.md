@@ -12,17 +12,16 @@ owner: Claude / Fable (contract review) · Codex worker (bounded implementation)
 parent_design: docs/plans/PLAN-L7-465-cross-review-author-binding.md
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 backprop_decision: required
-backprop_decision_reason: >-
-  D3b の検証済み judgment を D3c/D3d の入力へ戻し、D3a exact attempt と
-  provider evidence の結合条件を上位契約へ逆向きに固定する。手書き digest や
-  operator supplied ref を許さないため、契約・テスト対を先に確定する。
+backprop_decision_reason: D3b の検証済み judgment を D3c/D3d の入力へ戻し、D3a exact attempt
+  と provider evidence の結合条件を上位契約へ逆向きに固定する。手書き digest や operator supplied ref
+  を許さないため、契約・テスト対を先に確定する。
 agent_slots:
   - role: tl
-    slot_label: "Sol / Claude Opus - D3a envelope、canonical preimage、D3c custody境界の非著者検収"
+    slot_label: Sol / Claude Opus - D3a envelope、canonical preimage、D3c custody境界の非著者検収
   - role: se
-    slot_label: "Luna worker - provider judgment domain/port/adapterをこの契約の範囲だけ実装"
+    slot_label: Luna worker - provider judgment domain/port/adapterをこの契約の範囲だけ実装
   - role: qa
-    slot_label: "Terra - U-D3B-001..009のmutationとwrite-zero oracleを検証し、D3c境界010はcandidateに残す"
+    slot_label: Terra - U-D3B-001..009のmutationとwrite-zero oracleを検証し、D3c境界010はcandidateに残す
 generates:
   - artifact_path: docs/plans/PLAN-L7-562-d3b-provider-judgment.md
     artifact_type: markdown_doc
@@ -37,6 +36,8 @@ generates:
   - artifact_path: src/feedback/adapters/provider-judgment-evidence.ts
     artifact_type: source_module
   - artifact_path: tests/provider-judgment.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/provider-judgment-composition.test.ts
     artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L7-465-cross-review-author-binding.md
@@ -65,7 +66,9 @@ review_evidence:
     effort: middle
     plan_revision: 062fa30372a303167f46423909ca7aa6f9acee8c
     subject_head: 062fa30372a303167f46423909ca7aa6f9acee8c
-    scope: "PR #564 exact HEADのD3b pair-freezeを非著者review。provider evidence ref、family境界、candidate oracle、write-zero契約を確認した。実装GreenはIssue #568で別途検証する。"
+    scope: "PR #564 exact HEADのD3b pair-freezeを非著者review。provider evidence
+      ref、family境界、candidate oracle、write-zero契約を確認した。実装GreenはIssue
+      #568で別途検証する。"
     citations:
       - .ut-tdd/review/receipts/a2a46e5efe3f6ff63ca4fe89d512a2632f2c3b0f39f44d7370851eea88f7df84.json
       - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/564
@@ -80,7 +83,23 @@ review_evidence:
         output_digest: sha256:9e11c1efc65e3373b8145b8b272d53f99a46ba525644cec98927652f7ec3edea
         anchor_commit: 062fa30372a303167f46423909ca7aa6f9acee8c
 status: confirmed
-github_issue_id: 562
+admission_receipt:
+  schema_version: v2
+  receipt_id: certificate:d9614547866eb2fb5036defb1a56ffc7
+  command_id: plan-revise:issue-562:forward:2
+  admitted_at: 2026-09-15T01:59:37.426Z
+  source_digest: sha256:ca4b824ddc4f7ba98f915d2961497bc32ec28cd4f3f480572aac58123d774ea2
+  decision_digest: sha256:eb5fcfcbbdff0131a0077da42220f806b8dab946bfad736315efdf075a12ebce
+  receipt_digest: sha256:59fffac1d35c8310d30a3ee49ca1545edfe953962249f7bf91256e0e351f4a80
+  binding:
+    path: docs/plans/PLAN-L7-562-d3b-provider-judgment.md
+    plan_id: PLAN-L7-562-d3b-provider-judgment
+    asset_id: plan:legacy:fcd6f1ba743ea1ef53e0dcc332bfa81b04a7f0c7262a05a9be62861c3284c806
+    revision: 2
+    content_digest: sha256:ca4b824ddc4f7ba98f915d2961497bc32ec28cd4f3f480572aac58123d774ea2
+  route:
+    signal: forward
+    mode: forward
 ---
 
 # PLAN-L7-562: D3b 検証済み provider judgment producer

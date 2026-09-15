@@ -512,6 +512,12 @@ export function beginReviewAttempt(input: {
   );
   if (existsSync(receiptPath) && completed.length === 1)
     return { ok: false, reason: "review_receipt_already_exists" };
+  // A completion fact paired with a changed final receipt is not a retryable
+  // orphan: accepting a new attempt would turn a create-exclusive receipt into
+  // an overwrite path. Keep the original bytes for forensic inspection and
+  // fail closed until the mutation is reconciled.
+  if (existsSync(receiptPath) && requestEvents.some((event) => event.kind === "attempt_completed"))
+    return { ok: false, reason: "review_receipt_already_exists" };
   // A pre-composition receipt or a crash-window temp file is not terminal.
   // Leave append-only evidence intact and permit a bounded retry.
   if (existsSync(receiptPath)) {
@@ -543,23 +549,13 @@ export function beginReviewAttempt(input: {
     }
     const previousOutcome = outcomes[0];
     const retryable =
-      outcomes.length === 1
-        ? isRetryableAttemptEvent({
-            repoRoot: input.repoRoot,
-            event: previousOutcome,
-            request: input.request,
-            attempt: previousAttempt,
-          })
-        : requestEvents.some(
-            (event) =>
-              event.attempt === previousAttempt &&
-              isRetryableAttemptEvent({
-                repoRoot: input.repoRoot,
-                event,
-                request: input.request,
-                attempt: previousAttempt,
-              }),
-          );
+      outcomes.length === 1 &&
+      isRetryableAttemptEvent({
+        repoRoot: input.repoRoot,
+        event: previousOutcome,
+        request: input.request,
+        attempt: previousAttempt,
+      });
     if (!retryable && !(existsSync(receiptPath) && outcomes.length === 0))
       return { ok: false, reason: "attempt_outcome_indeterminate" };
     const failureIndex = previousOutcome ? requestEvents.indexOf(previousOutcome) : -1;
