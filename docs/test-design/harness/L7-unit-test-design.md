@@ -1716,6 +1716,27 @@ content-addressed に投影する。D1 analyzer には投影済み artifact だ�
 | `U-RVATT-023` | canonical-before-typed-review-wake | `tests/live-review-projection.test.ts` / `tests/claude-memory-wake.test.ts`。live dispatchのrequest writerをinvalid / write failureへ変異。v3 `purpose=memory`とin-flight v2の本文/tagをPR review依頼へ変異し、v3 review identity欠落・不一致、unknown schemaも入力 | request失敗時v3 review wake 0。成功時だけrequest 1→review wake 1。v2とv3 memory、invalid v3 review、unknown schemaはreview delegation/receipt 0 |
 | `U-RVATT-024` | delegated-attestation-before-display | `tests/live-review-projection.test.ts` / `tests/cli-delegation.test.ts`。interactive session/CLI optionのprovider自己申告、verdict欠落、identity mismatch、receipt write failureに加え、Codex/Claude著者を同族childへroute、未知family、反対族runtime不在を各1点変異。live-dispatchのwake targetもreviewer providerへ束縛し、Codex reviewerをClaude workspaceへ誤配送する変異を拒否 | 負例はreceipt/comment/memory 0。Codex著者→Claude child、Claude著者→Codex childのspawn provider/model/role/time/exitCodeに束縛したattestationだけreceipt 1→派生表示。Codex受信面が未提供ならClaude workspaceを参照せずtyped unavailableでcanonical requestだけをbacklog保持 |
 | `U-RVATT-025` | retry収束 | `tests/live-review-projection.test.ts` / `tests/claude-memory-wake.test.ts`。同一identity / operationを2回dispatchし、同じverdictを2回返却 | request/receipt/wakeは各content-addressed identityへ1件で収束し、conflict 0 |
+
+### Issue #600 Codex review wake contract (PLAN-L6-600 docs-only pair-freeze)
+
+これは Issue #600 の実装前契約であり、まだ source/test code が実装していないため、以下は
+`CANDIDATE-*` として扱う。Claude async wake の `U-MEMWAKE-*`、review receipt の `U-RVATT-*`、
+および既存 provider envelope v4 の schema を再定義しない。Codex wake は canonical request を
+信頼根とし、hook の surface は配送成功や receipt を意味しない。
+
+| ID | fixture / mutation | falsifiable oracle |
+| --- | --- | --- |
+| `CANDIDATE-CODEXWAKE-001` | `review live-dispatch` の canonical request writer を失敗させる、または wake publisher を unavailable にする | request が無い場合は Codex inbox write 0。request が先に永続化された後の失敗は `ok=false`、typed reason、同じ `requestDigest/requestPath` の `backlog` を返し、request を再 mint/削除しない |
+| `CANDIDATE-CODEXWAKE-002` | project identity、provider target、request digest/path、PR、exact HEAD、review revision、author family を各1点変異する | project-scoped inbox以外への write 0。provider envelope v4 の不一致は fail-close し、別 workspace/global/current-worktree 宛ての配送を行わない |
+| `CANDIDATE-CODEXWAKE-003` | 同一内容の直列/並列 retry と同一 identity の異内容 retry | 同一 canonical bytes は inbox 一件へ収束し、異内容は `codex_review_wake_projection_conflict`、既存 bytes 不変 |
+| `CANDIDATE-CODEXWAKE-004` | valid entry を2件以上置き、oldest consumer を成功/失敗させる | hook surface は `ut-tdd.codex-memory-wake/v1` の stdout JSON。pending は exit 2/`deliveryConfirmed=false`。成功 consume 後だけ terminal marker + projection removal、失敗時は inbox を保持し次 cycle で同じ pathを再配送。成功後は次の entryへ FIFO advance |
+| `CANDIDATE-CODEXWAKE-005` | malformed JSON、schema非互換、project/target不一致、path escape、stem mismatch、terminal marker identity mismatch を各1点投入 | orphan は receipt/comment/memory 0、typed invalid/fail-close、元 bytes 保持。orphan が後続 valid entry の surface を head-of-line block せず、黙って削除・別宛先再配送しない |
+| `CANDIDATE-CODEXWAKE-006` | production `src/cli.ts` composition を publisher注入あり/なしへ変異し、Claude著 request を dispatch | production composition は必ず project-scoped Codex publisher を注入し、Codex inbox pending を生成。deps無し `registerLiveReviewCommands(review)` へ戻す変異は RED。test-only injected ports の green では代替しない |
+
+実装対応予定は `tests/review-live-cli.test.ts`、`tests/live-review-projection.test.ts`、
+`tests/claude-memory-wake.test.ts`、`tests/runtime-hook-entrypoints.test.ts` である。候補の
+`CANDIDATE-*` は implementation PR の exact HEAD、実行コマンド、exit code、write count、
+content-addressed path を citation してから `U-*` へ昇格する。
 | `U-RVATT-026` | exact HEAD再dispatch | `tests/live-review-projection.test.ts`。HEAD Aのrequest/PASS後にPR HEADをBへ更新し、A receiptを入力 | Bの新requestが必要。A receiptで`merge_ready`にせず、B receipt到達までwrapper deny |
 | `U-RVATT-027` | repository snapshot lifecycle | `tests/review-live-cli.test.ts` / `tests/live-review-projection.test.ts`。実CLI compositionを起動し、provider stubへ正規delegationしてprovider/model/role/time/exitCode由来receiptを生成後、既存merge-gate GitHub ports fixtureへ接続する。request/receipt/HEADを各1点欠落・変異 | canonical task resolverを実行し、正常系だけreceipt→同一HEAD wrapper allow。wrong-head receiptを含む3負例はdenyし、wrapper成功receipt後のD2-D `bypass_merge`は0 |
 | `U-RVATT-029` | verdict file path の伝達 | `tests/review-live-cli.test.ts`。環境変数を一切参照せず、契約本文から literal path を抽出して verdict file を書く provider stub を実 delegation CLI へ通す。契約が env 変数名だけを渡す実装へ戻す変異を投入 | env を読めない reviewer でも verdict file が生成され receipt が成立する。env 名のみを渡す実装では path を抽出できず `reviewer_execution_failed` で RED (2026-08-14 実測: delegated Claude が `VERDICT: PASS` を stdout へ返しながら permission により env を解決できず receipt 0 → wrapper deny)。契約文の綴りを見る source-text assertion では代替しない |
