@@ -535,9 +535,16 @@ function needsRehydration(input: {
 function projectionHasEmbeddedReceiptRecord(projectionText: string, headSource: string): boolean {
   const parsedSource = parseLegacyPlanSource(headSource);
   const embeddedReceipt = parsedSource?.frontmatter.admission_receipt;
-  if (typeof embeddedReceipt !== "object" || embeddedReceipt === null) return false;
+  // Absent authority (no admission_receipt key, or unparseable source) permits
+  // the legacy fallback. A present-but-malformed admission_receipt is not
+  // absence -- it is a corrupt authority and must fail closed rather than
+  // silently falling back (PLAN-RECOVERY-16 rev 5 §2).
+  if (embeddedReceipt === undefined) return false;
+  if (typeof embeddedReceipt !== "object" || embeddedReceipt === null)
+    throw new Error("plan-revision-rehydration-receipt-mismatch");
   const receiptId = (embeddedReceipt as Record<string, unknown>).receipt_id;
-  if (typeof receiptId !== "string") return false;
+  if (typeof receiptId !== "string" || receiptId.length === 0)
+    throw new Error("plan-revision-rehydration-receipt-mismatch");
   const parsed = parseTrackedReceiptProjection(projectionText);
   if (!parsed.ok) throw new Error(`plan-revision-projection-invalid:${parsed.errors.join(",")}`);
   return parsed.value.records.some((record) => record.receiptId === receiptId);

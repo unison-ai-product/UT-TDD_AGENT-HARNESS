@@ -2760,6 +2760,8 @@ auditor、late CAS、receipt、cleanupを一軸ずつ変異し、typed resultと
 | `U-PA-REV-052` | 同一plan_id/pathへ、embedded receipt一致recordより新しいsequenceのrecordを (別asset配下に) 追加する | lineage ambiguousとしてfail-closeでwrite 0。より新しい系譜をshadowしない |
 | `U-PA-REV-053` | HEAD sourceにadmission_receiptが埋め込まれていない (fallback回帰防止) | 再水和せず従来のrevision 1 legacy bootstrap経路を選ぶ |
 | `U-PA-REV-054` | admission_receiptは埋め込まれているがreceipt_idに対応するprojection recordが存在しない (fallback回帰防止) | 再水和せず従来のrevision 1 legacy bootstrap経路を選ぶ |
+| `U-PA-REV-055` | admission_receiptは存在するがreceipt_idが欠落している (壊れたauthority、absence詐称) | fallbackせずfail-close。write 0、legacy_plan_bootstrap_provenanceも0件 |
+| `U-PA-REV-056` | admission_receiptがobject以外 (壊れたauthority、absence詐称) | fallbackせずfail-close。write 0、legacy_plan_bootstrap_provenanceも0件 |
 | `U-PA-REV-049` | 実データ regression: mainの`PLAN-L6-93-node-bootstrap-contract`とtracked projection上のterminal receipt (`plan:legacy:80a50dd9...`, revision 27) を実ファイルから読み取りfixture化する | 空ledgerからrevision 28を決定的に再水和。legacy_plan_bootstrap_provenance・sealed_plan_lineagesは0件 |
 
-実行対応: `tests/node-plan-revision-runner.test.ts` (`U-PA-REV-039〜054`)。
+実行対応: `tests/node-plan-revision-runner.test.ts` (`U-PA-REV-039〜056`)。

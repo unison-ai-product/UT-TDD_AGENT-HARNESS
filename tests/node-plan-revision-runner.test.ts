@@ -304,6 +304,44 @@ describe("NodePlanRevisionRunner", () => {
     );
   });
 
+  it("U-PA-REV-055: admission_receiptが存在するのにreceipt_idが欠落していればfallbackせずwrite 0でfail-closeする", () => {
+    const drift: Drift = {};
+    const f = fixture("legacy", drift);
+    const baseSource = readFileSync(join(f.root, f.manifest.source.path), "utf8");
+    const withReceipt = baseSource.replace(
+      "generates: []\n",
+      `generates: []\nadmission_receipt:\n  schema_version: v2\n  admitted_at: 2026-09-14T00:00:00.000Z\n  source_digest: ${sha("placeholder")}\n  decision_digest: ${sha("placeholder-decision")}\n  receipt_digest: ${sha("placeholder-receipt")}\n  binding:\n    path: ${f.manifest.source.path}\n    plan_id: ${f.manifest.plan_id}\n    asset_id: ${f.manifest.base.asset_id}\n    revision: 1\n    content_digest: ${sha("placeholder")}\n  route:\n    signal: forward\n    mode: forward\n`,
+    );
+    writeFileSync(join(f.root, f.manifest.source.path), withReceipt, "utf8");
+    drift.headSource = withReceipt;
+    f.manifest.source.content = withReceipt.replace("title: Base", "title: Revised");
+    f.manifest.base.source_content_digest = sha(withReceipt);
+    f.manifest.base.revision_digest = sha(canonicalPlanPayload(withReceipt).payload);
+
+    expect(() => f.runner.run(f.input)).toThrow("plan-revision-rehydration-receipt-mismatch");
+    expect(writeSet(f.db)).toEqual(f.before);
+    expect(rows(f.db, "legacy_plan_bootstrap_provenance")).toBe(0);
+  });
+
+  it("U-PA-REV-056: admission_receiptがobjectでなければfallbackせずwrite 0でfail-closeする", () => {
+    const drift: Drift = {};
+    const f = fixture("legacy", drift);
+    const baseSource = readFileSync(join(f.root, f.manifest.source.path), "utf8");
+    const withReceipt = baseSource.replace(
+      "generates: []\n",
+      "generates: []\nadmission_receipt: not-an-object\n",
+    );
+    writeFileSync(join(f.root, f.manifest.source.path), withReceipt, "utf8");
+    drift.headSource = withReceipt;
+    f.manifest.source.content = withReceipt.replace("title: Base", "title: Revised");
+    f.manifest.base.source_content_digest = sha(withReceipt);
+    f.manifest.base.revision_digest = sha(canonicalPlanPayload(withReceipt).payload);
+
+    expect(() => f.runner.run(f.input)).toThrow("plan-revision-rehydration-receipt-mismatch");
+    expect(writeSet(f.db)).toEqual(f.before);
+    expect(rows(f.db, "legacy_plan_bootstrap_provenance")).toBe(0);
+  });
+
   it("U-PA-REV-049: 実データ regression — PLAN-L6-93のtracked terminal rev27からrev28を決定的に再水和する", () => {
     const f = realPlanL693RehydrationFixture();
 
