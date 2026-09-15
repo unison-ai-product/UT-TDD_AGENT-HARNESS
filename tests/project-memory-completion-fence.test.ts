@@ -149,21 +149,6 @@ function cloneOperation(
   return String(markers.at(-1)?.recordDigest);
 }
 
-function sealCanonicalDigest(markersPath: string, canonicalCorpusDigest: string): void {
-  const lines = readFileSync(markersPath, "utf8").trim().split("\n");
-  const markers = lines.map((line) => JSON.parse(line) as Record<string, unknown>);
-  const last = markers.at(-1);
-  if (!last || last.kind !== "complete") throw new Error("complete marker required");
-  last.payload = {
-    ...(last.payload as Record<string, unknown>),
-    canonicalCorpusDigest,
-  };
-  const unsigned = { ...last };
-  delete unsigned.recordDigest;
-  last.recordDigest = digest(unsigned);
-  writeFileSync(markersPath, `${markers.map((marker) => JSON.stringify(marker)).join("\n")}\n`);
-}
-
 afterEach(() => {
   for (const root of fixtures.splice(0)) rmSync(root, { recursive: true, force: true });
 });

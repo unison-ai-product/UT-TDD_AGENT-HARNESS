@@ -167,10 +167,6 @@ interface InventoryOptions {
   readonly allowInvalidLinked?: boolean;
 }
 
-interface InventoryWithInvalid {
-  readonly invalidMemory: readonly string[];
-}
-
 function sha256(value: string | Buffer): string {
   return createHash("sha256").update(value).digest("hex");
 }
@@ -251,7 +247,6 @@ interface FinishExistingInput {
 interface VerifyCompleteInput {
   readonly marker: Marker;
   readonly prepared: Marker;
-  readonly inventory: Extract<MemoryMigrationDryRun, { ok: true }>;
   readonly paths: TransactionPaths;
 }
 
@@ -400,7 +395,7 @@ export class ProjectMemoryMigration {
           if (actualCanonical !== expectedCanonical) {
             return this.failure("replay_corpus_mismatch", operationId, paths);
           }
-          this.verifyComplete({ marker: complete, prepared, inventory, paths });
+          this.verifyComplete({ marker: complete, prepared, paths });
           return {
             ok: true,
             status: "replayed",
@@ -1193,29 +1188,7 @@ export class ProjectMemoryMigration {
     return imported;
   }
 
-  private verifyPrepared(
-    marker: Marker,
-    variants: readonly MemoryMigrationVariant[],
-    paths: TransactionPaths,
-  ): void {
-    const expected = variants.map((variant, index) => ({
-      name: quarantineFileName(variant, index),
-      digest: variant.contentDigest,
-      size: variant.sourceSize,
-    }));
-    const payload = marker.payload.files;
-    if (!Array.isArray(payload)) throw new MigrationFailure("transaction_tampered");
-    const actual = this.quarantineManifest(paths.quarantine);
-    if (!this.manifestEquals(actual, expected)) {
-      throw new MigrationFailure("transaction_tampered");
-    }
-    const recorded = marker.payload.files;
-    if (!Array.isArray(recorded) || !this.manifestEquals(actual, recorded)) {
-      throw new MigrationFailure("transaction_tampered");
-    }
-  }
-
-  private verifyComplete({ marker, prepared, inventory, paths }: VerifyCompleteInput): void {
+  private verifyComplete({ marker, prepared, paths }: VerifyCompleteInput): void {
     if (
       typeof marker.payload.inventoryDigest !== "string" ||
       typeof prepared.payload.inventoryDigest !== "string" ||
