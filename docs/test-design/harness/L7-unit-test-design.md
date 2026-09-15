@@ -2773,10 +2773,22 @@ auditor、late CAS、receipt、cleanupを一軸ずつ変異し、typed resultと
 | ID | fixture / mutation | expected |
 | --- | --- | --- |
 | `U-PA-REV-039` | worktree-local ledgerが空で、tracked projectionとexact Git blobがterminal revision Nを証明する | terminal Nだけをcacheへ再水和し、asset IDを維持してN+1を発行。中間revision 0 |
-| `U-PA-REV-040` | projectionのterminal content digestだけを変異する | ledger・PLAN・projectionへのwrite 0でfail-close |
+| `U-PA-REV-040` | HEAD本文のcontent digestだけを変異する (embedded receiptとprojection recordは一致のまま) | ledger・PLAN・projectionへのwrite 0でfail-close |
 | `U-PA-REV-041` | local ledgerがprojection terminalより古い | 既存行を維持しterminalだけを追加してN+1を発行。欠落中間revisionを捏造しない |
-| `U-PA-REV-042` | projection recordのasset、path、identity、欠落・重複を各単独変異する | 対応するtyped rehydration failure、全write 0 |
+| `U-PA-REV-042` | projection recordを同一receipt_idのままasset・path・identityを各単独変異 / 対応receipt_idのrecord欠落 / 重複 | 単独変異は`plan-revision-rehydration-receipt-mismatch`、欠落はauthority不在として再水和せず従来経路、重複は`plan-revision-projection-invalid`、いずれも全write 0 |
 | `U-PA-REV-043` | exact source blobから再計算したcanonical payload digestをmanifest baseと不一致にする | cache挿入前にfail-close、全write 0 |
 | `U-PA-REV-044` | 同一PLAN/pathにsuperseded asset履歴とmanifest-selected assetのterminal receiptが共存する | selected assetだけをauthorityとしてNへ再水和し、旧assetはshadowしない |
+| `U-PA-REV-045` | `plan:legacy:`プレフィクス資産で、HEAD embedded admission_receiptの全項目がtracked projection recordと完全一致する | asset prefixを問わずlegacy bootstrap/sealへ落とさず決定的に再水和しN+1を発行。legacy_plan_bootstrap_provenance・sealed_plan_lineages・plan_lineage_migration_certificatesは0件 |
+| `U-PA-REV-046` | `plan:<sha>` (非legacy prefix) 資産で、HEAD embedded admission_receiptの全項目がtracked projection recordと完全一致する | 045と同じ再水和成立をprefix非依存で確認。legacy_plan_bootstrap_provenance・sealed_plan_lineagesは0件 |
+| `U-PA-REV-047` | 再水和append実行後にtracked projectionを再読込する | 新tail recordのprevious_record_digestが再水和対象terminal recordのrecord_digestと連続する |
+| `U-PA-REV-048` | tracked terminal recordのcontent digestだけを変異する | fail-closeでwrite 0。legacy bootstrap/sealへ迂回しない |
+| `U-PA-REV-050` | manifest.base.revision_digest (canonical payload digest) を改変する | fail-closeでwrite 0 |
+| `U-PA-REV-051` | HEAD embedded admission_receiptのreceipt_digestだけを改変しprojection recordと不一致にする | 全項目一致するrecordが無くなりfail-closeでwrite 0 |
+| `U-PA-REV-052` | 同一plan_id/pathへ、embedded receipt一致recordより新しいsequenceのrecordを (別asset配下に) 追加する | lineage ambiguousとしてfail-closeでwrite 0。より新しい系譜をshadowしない |
+| `U-PA-REV-053` | HEAD sourceにadmission_receiptが埋め込まれていない (fallback回帰防止) | 再水和せず従来のrevision 1 legacy bootstrap経路を選ぶ |
+| `U-PA-REV-054` | admission_receiptは埋め込まれているがreceipt_idに対応するprojection recordが存在しない (fallback回帰防止) | 再水和せず従来のrevision 1 legacy bootstrap経路を選ぶ |
+| `U-PA-REV-055` | admission_receiptは存在するがreceipt_idが欠落している (壊れたauthority、absence詐称) | fallbackせずfail-close。write 0、legacy_plan_bootstrap_provenanceも0件 |
+| `U-PA-REV-056` | admission_receiptがobject以外 (壊れたauthority、absence詐称) | fallbackせずfail-close。write 0、legacy_plan_bootstrap_provenanceも0件 |
+| `U-PA-REV-049` | 実データ regression: mainの`PLAN-L6-93-node-bootstrap-contract`とtracked projection上のterminal receipt (`plan:legacy:80a50dd9...`, revision 27) を実ファイルから読み取りfixture化する | 空ledgerからrevision 28を決定的に再水和。legacy_plan_bootstrap_provenance・sealed_plan_lineagesは0件 |
 
-実行対応: `tests/node-plan-revision-runner.test.ts` (`U-PA-REV-039〜044`)。
+実行対応: `tests/node-plan-revision-runner.test.ts` (`U-PA-REV-039〜056`)。
