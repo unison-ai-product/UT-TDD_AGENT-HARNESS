@@ -72,6 +72,12 @@ export interface PackPublicationIntent {
   readonly releaseVersion: string;
   readonly tagName: string;
   readonly approvals: Readonly<Record<string, PackPublicationApproval>>;
+  /** Preparation and publication are distinct sealed operations. */
+  readonly phase: "preparation" | "publication";
+  readonly preparationReceiptDigest?: string;
+  readonly reviewEvidenceDigest?: string;
+  readonly requiredChecksDigest?: string;
+  readonly mergeBaseOid?: string;
   readonly intentDigest: string;
 }
 
@@ -159,17 +165,26 @@ export interface PackPublicationPreparationReceipt {
   readonly baseOid: string;
   readonly treeDigest: string;
   readonly controlManifestSnapshotDigest: string;
+  readonly readBackObservationDigest: string;
+  readonly preparationJournalDigest: string;
   readonly receiptDigest: string;
 }
 
 export interface PackPublicationAdmission {
   readonly kind: "pack-publication-admission-v1";
+  readonly preparationIntent: PackPublicationIntent;
   readonly preparation: PackPublicationPreparationReceipt;
   readonly observedPullRequest: PackPublicationPullRequestObservation;
   readonly reviewEvidenceDigest: string;
   readonly requiredChecksDigest: string;
+  readonly mergeBaseOid: string;
+  readonly publicationIntent: PackPublicationIntent;
   readonly admissionDigest: string;
 }
+
+export type PackPublicationApprovalDraft = Omit<PackPublicationApproval, "intentDigest"> & {
+  readonly intentDigest?: string;
+};
 
 export interface DraftReleaseObservation {
   readonly releaseId: string;
@@ -243,7 +258,26 @@ export interface PackPublicationPorts {
       | PublicationPortResult<{ readonly mode: "new" | "reconcile" }>
       | Promise<PublicationPortResult<{ readonly mode: "new" | "reconcile" }>>;
   };
-  readonly durableState: {
+  readonly preparationState: {
+    readonly append: (event: PublicationJournalEvent) => void | Promise<void>;
+    readonly digest: () => string;
+    readonly observePreparation: (input: {
+      readonly operationId: string;
+      readonly idempotencyKey: string;
+      readonly receiptDigest: string;
+    }) =>
+      | PublicationPortResult<{
+          readonly readBackObservationDigest: string;
+          readonly preparationJournalDigest: string;
+        }>
+      | Promise<
+          PublicationPortResult<{
+            readonly readBackObservationDigest: string;
+            readonly preparationJournalDigest: string;
+          }>
+        >;
+  };
+  readonly publicationState: {
     readonly append: (event: PublicationJournalEvent) => void | Promise<void>;
     readonly digest: () => string;
   };
@@ -265,6 +299,50 @@ export interface PackPublicationPorts {
     }) =>
       | PublicationPortResult<PackPublicationPullRequestObservation>
       | Promise<PublicationPortResult<PackPublicationPullRequestObservation>>;
+    readonly observePullRequest?: (input: {
+      readonly repository: string;
+      readonly pullRequest: string;
+    }) =>
+      | PublicationPortResult<PackPublicationPullRequestObservation>
+      | Promise<PublicationPortResult<PackPublicationPullRequestObservation>>;
+    readonly observeReviewEvidence?: (input: {
+      readonly repository: string;
+      readonly pullRequest: string;
+    }) =>
+      | PublicationPortResult<{ readonly reviewEvidenceDigest: string }>
+      | Promise<PublicationPortResult<{ readonly reviewEvidenceDigest: string }>>;
+    readonly observeRequiredChecks?: (input: {
+      readonly repository: string;
+      readonly pullRequest: string;
+    }) =>
+      | PublicationPortResult<{ readonly requiredChecksDigest: string }>
+      | Promise<PublicationPortResult<{ readonly requiredChecksDigest: string }>>;
+    readonly observeMergeBase?: (input: {
+      readonly repository: string;
+      readonly pullRequest: string;
+      readonly expectedMainOid: string;
+    }) =>
+      | PublicationPortResult<{ readonly mergeBaseOid: string }>
+      | Promise<PublicationPortResult<{ readonly mergeBaseOid: string }>>;
+    readonly observeFreshness?: (input: {
+      readonly repository: string;
+      readonly pullRequest: string;
+      readonly operationId: string;
+      readonly idempotencyKey: string;
+      readonly preparationReceiptDigest: string;
+    }) =>
+      | PublicationPortResult<{
+          readonly operationIdUnused: true;
+          readonly idempotencyKeyUnused: true;
+          readonly pullRequestUnused: true;
+        }>
+      | Promise<
+          PublicationPortResult<{
+            readonly operationIdUnused: true;
+            readonly idempotencyKeyUnused: true;
+            readonly pullRequestUnused: true;
+          }>
+        >;
     readonly applyReviewedHeadWithLease: (
       input: PackMainLeaseInput,
     ) =>
@@ -362,6 +440,9 @@ export interface PackPublicationPorts {
       | Promise<PublicationPortResult<PackPublicationReceipt>>;
   };
   readonly receipt: { readonly persist: (receipt: PackPublicationReceipt) => void | Promise<void> };
+  readonly preparationReceipt: {
+    readonly persist: (receipt: PackPublicationPreparationReceipt) => void | Promise<void>;
+  };
   readonly cleanup?: { readonly run: () => void | Promise<void> };
 }
 
@@ -502,11 +583,13 @@ export function derivePackPublicationStagingPlanDigest(plan: SealedPackPublicati
   );
 }
 
-function mutationsFor(plan: SealedPackPublicationPlan): readonly PublicationMutation[] {
+function mutationsFor(
+  plan: { readonly releaseAssets: readonly PackPublicationReleaseAsset[] },
+  phase: PackPublicationIntent["phase"] = "publication",
+): readonly PublicationMutation[] {
+  if (phase === "preparation") return ["planned", "pack_branch_commit", "pack_pr_create"];
   return [
     "planned",
-    "pack_branch_commit",
-    "pack_pr_create",
     "pack_main_lease",
     "release_draft_create",
     ...plan.releaseAssets.map((asset) => `asset_upload:${asset.name}` as const),
@@ -540,6 +623,7 @@ function intentIdentity(
   const release = input.plan.manifest.releases[input.plan.releaseId];
   const intent = {
     kind: "pack-publication-intent-v2" as const,
+    phase: "preparation" as const,
     operationId: input.operationId,
     idempotencyKey: input.idempotencyKey,
     releaseId: input.plan.releaseId,
@@ -643,7 +727,7 @@ export function sealPackPublicationIntent(
   const identity = intentIdentity(input);
   if (!validStagingPlan(input.plan) || !validInventory(identity))
     return { ok: false, error: "invalid_inventory" };
-  const required = mutationsFor(input.plan);
+  const required = mutationsFor(input.plan, "preparation");
   const approvals: Record<string, PackPublicationApproval> = {};
   const nonces = new Set<string>();
   for (const approval of input.approvals ?? []) {
@@ -675,20 +759,12 @@ export function sealPackPublicationIntent(
   };
 }
 
+export const sealPackPublicationPreparationIntent = sealPackPublicationIntent;
+
 function validateSealedIntent(intent: PackPublicationIntent): boolean {
   const bare = { ...intent, approvals: undefined, intentDigest: "" };
   delete (bare as { approvals?: unknown }).approvals;
-  const required = [
-    "planned",
-    "pack_branch_commit",
-    "pack_pr_create",
-    "pack_main_lease",
-    "release_draft_create",
-    ...intent.releaseAssets.map((asset) => `asset_upload:${asset.name}` as const),
-    "tag_create",
-    "release_visibility",
-    "canary_pointer_append",
-  ] satisfies readonly PublicationMutation[];
+  const required = mutationsFor(intent, intent.phase);
   const approvals = Object.values(intent.approvals);
   const nonces = new Set(approvals.map((approval) => approval.nonce));
   const approvalKeys = Object.keys(intent.approvals);
@@ -709,7 +785,12 @@ function validateSealedIntent(intent: PackPublicationIntent): boolean {
         Boolean(approval.expiresAt) &&
         SHA256.test(approval.approvalStateDigest),
     );
-  return intent.intentDigest === sha256(stable(bare)) && validInventory(intent) && approvalsValid;
+  return (
+    intent.intentDigest === sha256(stable(bare)) &&
+    validInventory(intent) &&
+    approvalsValid &&
+    (intent.phase === "preparation" || intent.phase === "publication")
+  );
 }
 
 function eventDigest(value: unknown): string {
@@ -756,11 +837,22 @@ class PublicationRun {
   private remoteWrites: number;
   private readonly intent: PackPublicationIntent;
   private readonly ports: PackPublicationPorts;
+  private readonly state:
+    | PackPublicationPorts["preparationState"]
+    | PackPublicationPorts["publicationState"];
 
-  constructor(intent: PackPublicationIntent, ports: PackPublicationPorts, initialRemoteWrites = 0) {
+  constructor(
+    intent: PackPublicationIntent,
+    ports: PackPublicationPorts,
+    initialRemoteWrites = 0,
+    state:
+      | PackPublicationPorts["preparationState"]
+      | PackPublicationPorts["publicationState"] = ports.publicationState,
+  ) {
     this.intent = intent;
     this.ports = ports;
     this.remoteWrites = initialRemoteWrites;
+    this.state = state;
   }
 
   count(): number {
@@ -773,7 +865,7 @@ class PublicationRun {
     detail: unknown,
   ): Promise<boolean> {
     try {
-      await this.ports.durableState.append({
+      await this.state.append({
         transition: approval.transition,
         mutation: approval.mutation,
         kind,
@@ -997,37 +1089,216 @@ function validPreparationReceipt(
     receipt.baseOid === intent.remote.expectedMainSha &&
     receipt.treeDigest === intent.expectedTreeDigest &&
     receipt.controlManifestSnapshotDigest === intent.controlManifestSnapshotDigest &&
+    SHA256.test(receipt.readBackObservationDigest) &&
+    SHA256.test(receipt.preparationJournalDigest) &&
     receipt.receiptDigest === preparationReceiptDigest(unsigned)
   );
 }
 
-export function admitPackPublication(input: {
+export async function admitPackPublication(input: {
   readonly intent: PackPublicationIntent;
   readonly preparation: PackPublicationPreparationReceipt;
-  readonly observedPullRequest: PackPublicationPullRequestObservation;
-  readonly reviewEvidenceDigest: string;
-  readonly requiredChecksDigest: string;
-}): PackPublicationAdmissionResult {
-  const { intent, preparation, observedPullRequest } = input;
+  readonly ports: PackPublicationPorts;
+  readonly publicationApprovals: readonly PackPublicationApprovalDraft[];
+}): Promise<PackPublicationAdmissionResult> {
+  const { intent, preparation, ports } = input;
+  const deny = (): PackPublicationAdmissionResult => ({
+    ok: false,
+    error: "admission_identity_mismatch",
+  });
   if (
+    intent.phase !== "preparation" ||
     !validateSealedIntent(intent) ||
-    !validPreparationReceipt(intent, preparation) ||
-    observedPullRequest.pullRequest !== preparation.pullRequest ||
-    observedPullRequest.headOid !== preparation.reviewedHeadOid ||
-    observedPullRequest.baseOid !== preparation.baseOid ||
-    observedPullRequest.treeDigest !== preparation.treeDigest ||
-    observedPullRequest.controlManifestSnapshotDigest !==
-      preparation.controlManifestSnapshotDigest ||
-    !SHA256.test(input.reviewEvidenceDigest) ||
-    !SHA256.test(input.requiredChecksDigest)
+    !validPreparationReceipt(intent, preparation)
   )
-    return { ok: false, error: "admission_identity_mismatch" };
+    return deny();
+  const journal = ports.preparationState.observePreparation;
+  const observePullRequest = ports.pack.observePullRequest;
+  const observeReviewEvidence = ports.pack.observeReviewEvidence;
+  const observeRequiredChecks = ports.pack.observeRequiredChecks;
+  const observeMergeBase = ports.pack.observeMergeBase;
+  const observeFreshness = ports.pack.observeFreshness;
+  if (
+    !journal ||
+    !observePullRequest ||
+    !observeReviewEvidence ||
+    !observeRequiredChecks ||
+    !observeMergeBase ||
+    !observeFreshness
+  )
+    return deny();
+  const journalObserved = await observeAttested({
+    stage: "preflight",
+    remoteWrites: 0,
+    invoke: () =>
+      journal({
+        operationId: intent.operationId,
+        idempotencyKey: intent.idempotencyKey,
+        receiptDigest: preparation.receiptDigest,
+      }),
+    prewrite: true,
+  });
+  if ("failure" in journalObserved) return deny();
+  if (
+    journalObserved.value.readBackObservationDigest !== preparation.readBackObservationDigest ||
+    journalObserved.value.preparationJournalDigest !== preparation.preparationJournalDigest
+  )
+    return deny();
+  const observed = await observeAttested({
+    stage: "preflight",
+    remoteWrites: 0,
+    invoke: () =>
+      observePullRequest({
+        repository: intent.remote.repository,
+        pullRequest: preparation.pullRequest,
+      }),
+    prewrite: true,
+  });
+  const review = await observeAttested({
+    stage: "preflight",
+    remoteWrites: 0,
+    invoke: () =>
+      observeReviewEvidence({
+        repository: intent.remote.repository,
+        pullRequest: preparation.pullRequest,
+      }),
+    prewrite: true,
+  });
+  const checks = await observeAttested({
+    stage: "preflight",
+    remoteWrites: 0,
+    invoke: () =>
+      observeRequiredChecks({
+        repository: intent.remote.repository,
+        pullRequest: preparation.pullRequest,
+      }),
+    prewrite: true,
+  });
+  const mergeBase = await observeAttested({
+    stage: "preflight",
+    remoteWrites: 0,
+    invoke: () =>
+      observeMergeBase({
+        repository: intent.remote.repository,
+        pullRequest: preparation.pullRequest,
+        expectedMainOid: intent.remote.expectedMainSha,
+      }),
+    prewrite: true,
+  });
+  const freshness = await observeAttested({
+    stage: "preflight",
+    remoteWrites: 0,
+    invoke: () =>
+      observeFreshness({
+        repository: intent.remote.repository,
+        pullRequest: preparation.pullRequest,
+        operationId: intent.operationId,
+        idempotencyKey: intent.idempotencyKey,
+        preparationReceiptDigest: preparation.receiptDigest,
+      }),
+    prewrite: true,
+  });
+  const [before, pointerBefore, tagBefore] = await Promise.all([
+    observeAttested({
+      stage: "preflight",
+      remoteWrites: 0,
+      invoke: () => ports.pack.observeBefore(),
+      prewrite: true,
+    }),
+    observeAttested({
+      stage: "preflight",
+      remoteWrites: 0,
+      invoke: () => ports.canary.observeBefore(),
+      prewrite: true,
+    }),
+    observeAttested({
+      stage: "preflight",
+      remoteWrites: 0,
+      invoke: () => ports.tag.observe(intent.tagName),
+      prewrite: true,
+    }),
+  ]);
+  if ("failure" in observed) return deny();
+  if ("failure" in review) return deny();
+  if ("failure" in checks) return deny();
+  if ("failure" in mergeBase) return deny();
+  if ("failure" in freshness) return deny();
+  if ("failure" in before) return deny();
+  if ("failure" in pointerBefore) return deny();
+  if ("failure" in tagBefore) return deny();
+  if (
+    tagBefore.value !== null ||
+    before.value.mainSha !== intent.remote.expectedMainSha ||
+    before.value.mainStateDigest !== intent.remote.expectedMainStateDigest ||
+    before.value.pointerObjectDigest !== intent.remote.expectedPointerObjectDigest ||
+    before.value.controlManifestSnapshotDigest !==
+      intent.remote.beforeControlManifestSnapshotDigest ||
+    pointerBefore.value.mainSha !== intent.remote.expectedMainSha ||
+    pointerBefore.value.mainStateDigest !== intent.remote.expectedMainStateDigest ||
+    pointerBefore.value.pointerObjectDigest !== intent.remote.expectedPointerObjectDigest ||
+    pointerBefore.value.controlManifestSnapshotDigest !==
+      intent.remote.beforeControlManifestSnapshotDigest ||
+    observed.value.pullRequest !== preparation.pullRequest ||
+    observed.value.headOid !== preparation.reviewedHeadOid ||
+    observed.value.baseOid !== preparation.baseOid ||
+    observed.value.treeDigest !== preparation.treeDigest ||
+    observed.value.controlManifestSnapshotDigest !== preparation.controlManifestSnapshotDigest ||
+    mergeBase.value.mergeBaseOid !== intent.remote.expectedMainSha ||
+    !SHA256.test(review.value.reviewEvidenceDigest) ||
+    !SHA256.test(checks.value.requiredChecksDigest) ||
+    !freshness.value.operationIdUnused ||
+    !freshness.value.idempotencyKeyUnused ||
+    !freshness.value.pullRequestUnused
+  )
+    return deny();
+  const { approvals: _preparationApprovals, ...preparationIdentity } = intent;
+  const publicationIdentity = {
+    ...preparationIdentity,
+    phase: "publication" as const,
+    preparationReceiptDigest: preparation.receiptDigest,
+    reviewEvidenceDigest: review.value.reviewEvidenceDigest,
+    requiredChecksDigest: checks.value.requiredChecksDigest,
+    mergeBaseOid: mergeBase.value.mergeBaseOid,
+    intentDigest: "",
+  };
+  const publicationDigest = sha256(stable(publicationIdentity));
+  const required = mutationsFor(intent, "publication");
+  const approvals: Record<string, PackPublicationApproval> = {};
+  const prepNonces = new Set(Object.values(intent.approvals).map((approval) => approval.nonce));
+  const nonces = new Set<string>();
+  for (const draft of input.publicationApprovals) {
+    if (
+      approvals[draft.mutation] ||
+      nonces.has(draft.nonce) ||
+      prepNonces.has(draft.nonce) ||
+      !required.includes(draft.mutation) ||
+      draft.transition !== transitionFor(draft.mutation) ||
+      draft.operationId !== intent.operationId ||
+      draft.idempotencyKey !== intent.idempotencyKey ||
+      !draft.nonce ||
+      !draft.approver ||
+      !draft.expiresAt ||
+      !SHA256.test(draft.approvalStateDigest)
+    )
+      return deny();
+    nonces.add(draft.nonce);
+    approvals[draft.mutation] = Object.freeze({ ...draft, intentDigest: publicationDigest });
+  }
+  if (Object.keys(approvals).length !== required.length) return deny();
+  const publicationIntent = Object.freeze({
+    ...publicationIdentity,
+    intentDigest: publicationDigest,
+    approvals: Object.freeze(approvals),
+  });
   const unsigned = {
     kind: "pack-publication-admission-v1" as const,
+    preparationIntent: intent,
     preparation,
-    observedPullRequest,
-    reviewEvidenceDigest: input.reviewEvidenceDigest,
-    requiredChecksDigest: input.requiredChecksDigest,
+    observedPullRequest: observed.value,
+    reviewEvidenceDigest: review.value.reviewEvidenceDigest,
+    requiredChecksDigest: checks.value.requiredChecksDigest,
+    mergeBaseOid: mergeBase.value.mergeBaseOid,
+    publicationIntent,
     admissionDigest: "",
   };
   return {
@@ -1048,15 +1319,30 @@ function validAdmission(
   admission: PackPublicationAdmission,
 ): boolean {
   const unsigned = { ...admission, admissionDigest: "" };
+  const publicationNonces = Object.values(admission.publicationIntent.approvals).map(
+    (approval) => approval.nonce,
+  );
+  const preparationReceiptNonces = new Set(
+    Object.values(admission.preparationIntent.approvals).map((approval) => approval.nonce),
+  );
   return (
+    intent.phase === "publication" &&
     admission.kind === "pack-publication-admission-v1" &&
-    validPreparationReceipt(intent, admission.preparation) &&
+    admission.publicationIntent.intentDigest === intent.intentDigest &&
+    admission.publicationIntent.phase === "publication" &&
+    validateSealedIntent(intent) &&
+    validPreparationReceipt(admission.publicationIntent, admission.preparation) &&
     admission.observedPullRequest.pullRequest === admission.preparation.pullRequest &&
     admission.observedPullRequest.headOid === admission.preparation.reviewedHeadOid &&
     admission.observedPullRequest.baseOid === admission.preparation.baseOid &&
     admission.observedPullRequest.treeDigest === admission.preparation.treeDigest &&
     admission.observedPullRequest.controlManifestSnapshotDigest ===
       admission.preparation.controlManifestSnapshotDigest &&
+    admission.mergeBaseOid === intent.remote.expectedMainSha &&
+    admission.publicationIntent.preparationReceiptDigest === admission.preparation.receiptDigest &&
+    admission.preparationIntent.phase === "preparation" &&
+    validateSealedIntent(admission.preparationIntent) &&
+    publicationNonces.every((nonce) => !preparationReceiptNonces.has(nonce)) &&
     SHA256.test(admission.reviewEvidenceDigest) &&
     SHA256.test(admission.requiredChecksDigest) &&
     admission.admissionDigest === sha256(stable(unsigned))
@@ -1075,7 +1361,7 @@ export async function preparePackPublication(
       reason: "sealed_intent_mismatch",
       remoteWrites: 0,
     };
-  const run = new PublicationRun(intent, ports);
+  const run = new PublicationRun(intent, ports, 0, ports.preparationState);
   const [before, pointerBefore, tagBefore] = await Promise.all([
     observeAttested({
       stage: "preflight",
@@ -1187,31 +1473,23 @@ export async function preparePackPublication(
     baseOid: observed.baseOid,
     treeDigest: observed.treeDigest,
     controlManifestSnapshotDigest: observed.controlManifestSnapshotDigest,
+    readBackObservationDigest: eventDigest(observed),
+    preparationJournalDigest: ports.preparationState.digest(),
     receiptDigest: "",
   };
   const receipt = Object.freeze({ ...unsigned, receiptDigest: preparationReceiptDigest(unsigned) });
+  try {
+    await ports.preparationReceipt.persist(receipt);
+  } catch {
+    return {
+      ok: false,
+      status: "indeterminate",
+      stage: "pack_commit",
+      reason: "preparation_receipt_persist_failed",
+      remoteWrites: run.count(),
+    };
+  }
   return { ok: true, status: "prepared", receipt, remoteWrites: run.count() };
-}
-
-function admissionFromPreparation(
-  intent: PackPublicationIntent,
-  preparation: PackPublicationPreparationReceipt,
-): PackPublicationAdmission {
-  const result = admitPackPublication({
-    intent,
-    preparation,
-    observedPullRequest: {
-      pullRequest: preparation.pullRequest,
-      headOid: preparation.reviewedHeadOid,
-      baseOid: preparation.baseOid,
-      treeDigest: preparation.treeDigest,
-      controlManifestSnapshotDigest: preparation.controlManifestSnapshotDigest,
-    },
-    reviewEvidenceDigest: sha256("legacy-adapter-compatibility"),
-    requiredChecksDigest: sha256("legacy-adapter-compatibility"),
-  });
-  if (!result.ok) throw new Error(result.error);
-  return result.admission;
 }
 
 async function publishAdmittedPackCanary(input: {
@@ -1219,9 +1497,8 @@ async function publishAdmittedPackCanary(input: {
   readonly ports: PackPublicationPorts;
   readonly admission: PackPublicationAdmission;
   readonly initialRemoteWrites: number;
-  readonly preflightAlreadyVerified?: boolean;
 }): Promise<PackPublicationResult> {
-  const { intent, ports, admission, initialRemoteWrites, preflightAlreadyVerified = false } = input;
+  const { intent, ports, admission, initialRemoteWrites } = input;
   if (!validateSealedIntent(intent))
     return {
       status: "denied",
@@ -1236,8 +1513,8 @@ async function publishAdmittedPackCanary(input: {
       reason: "admission_identity_mismatch",
       remoteWrites: initialRemoteWrites,
     };
-  const run = new PublicationRun(intent, ports, initialRemoteWrites);
-  if (!preflightAlreadyVerified) {
+  const run = new PublicationRun(intent, ports, initialRemoteWrites, ports.publicationState);
+  {
     const [before, pointerBefore, tagBefore] = await Promise.all([
       observeAttested({
         stage: "preflight",
@@ -1526,7 +1803,7 @@ async function publishAdmittedPackCanary(input: {
         Object.entries(intent.approvals).map(([key, value]) => [key, value.nonce]),
       ),
     ),
-    durableExecutionStateDigest: ports.durableState.digest(),
+    durableExecutionStateDigest: ports.publicationState.digest(),
     receiptDigest: "",
   };
   const receipt = Object.freeze({ ...unsigned, receiptDigest: sha256(stable(unsigned)) });
@@ -1563,27 +1840,14 @@ export async function publishPackCanary(
   ports: PackPublicationPorts,
   admission?: PackPublicationAdmission,
 ): Promise<PackPublicationResult> {
-  if (admission)
-    return publishAdmittedPackCanary({
-      intent,
-      ports,
-      admission,
-      initialRemoteWrites: 0,
-      preflightAlreadyVerified: true,
-    });
-  const preparation = await preparePackPublication(intent, ports);
-  if (!preparation.ok) {
-    const { ok: _ok, ...failure } = preparation;
-    return failure;
-  }
-  if (preparation.status === "reconciled") return preparation.result;
-  return publishAdmittedPackCanary({
-    intent,
-    ports,
-    admission: admissionFromPreparation(intent, preparation.receipt),
-    initialRemoteWrites: preparation.remoteWrites,
-    preflightAlreadyVerified: true,
-  });
+  if (!admission)
+    return {
+      status: "denied",
+      stage: "preflight",
+      reason: "admission_required",
+      remoteWrites: 0,
+    };
+  return publishAdmittedPackCanary({ intent, ports, admission, initialRemoteWrites: 0 });
 }
 
 export const executePackPublication = publishPackCanary;
