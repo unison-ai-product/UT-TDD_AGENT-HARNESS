@@ -409,14 +409,19 @@ describe("review live CLI composition", () => {
   it("U-RVATT-024: consumed Codex wake is terminalized and FIFO advances", () => {
     const { root, memoryPath } = fixture();
     try {
-      const makeRequest = (revision: string, requestedAt: string) => {
+      const makeRequest = (
+        revision: string,
+        requestedAt: string,
+        pr = 319,
+        exactHead = head,
+      ) => {
         const issued = issueReviewRequest({
           repoRoot: root,
           strict: true,
           request: {
             memoryId: "memory:d3a",
-            pr: 319,
-            exactHead: head,
+            pr,
+            exactHead,
             reviewRevision: revision,
             authorFamily: "claude",
             requestedAt,
@@ -426,7 +431,12 @@ describe("review live CLI composition", () => {
         return issued;
       };
       const first = makeRequest("review-codex-fifo-1", "2026-08-14T00:00:00.000Z");
-      const second = makeRequest("review-codex-fifo-2", "2026-08-14T00:01:00.000Z");
+      const second = makeRequest(
+        "review-codex-fifo-2",
+        "2026-08-14T00:01:00.000Z",
+        320,
+        "b".repeat(40),
+      );
       const wake = (issued: Extract<typeof first, { ok: true }>) => ({
         purpose: "review" as const,
         reviewer: "codex" as const,
