@@ -1,6 +1,31 @@
 import { z } from "zod";
 import { gitObjectIdSchema, receiptDigestSchema } from "./node-slice-admission.ts";
 
+function compareCodeUnits(left: string, right: string): number {
+  return left < right ? -1 : left > right ? 1 : 0;
+}
+
+/** Cutover receipt preimageをRFC 8785のUTF-16 code-unit順へ固定する。 */
+export function canonicalizeCutoverValue(value: unknown): string | null {
+  if (value === null) return "null";
+  if (typeof value === "boolean") return value ? "true" : "false";
+  if (typeof value === "string") return JSON.stringify(value);
+  if (typeof value === "number") return Number.isSafeInteger(value) ? String(value) : null;
+  if (Array.isArray(value)) {
+    const parts = value.map(canonicalizeCutoverValue);
+    return parts.some((part) => part === null) ? null : `[${parts.join(",")}]`;
+  }
+  if (typeof value !== "object" || value === undefined) return null;
+  const record = value as Readonly<Record<string, unknown>>;
+  const parts: string[] = [];
+  for (const key of Object.keys(record).sort(compareCodeUnits)) {
+    const encoded = canonicalizeCutoverValue(record[key]);
+    if (encoded === null) return null;
+    parts.push(`${JSON.stringify(key)}:${encoded}`);
+  }
+  return `{${parts.join(",")}}`;
+}
+
 export const CUTOVER_REGISTRY_ID = "CUTOVER-EVIDENCE-REGISTRY-v1" as const;
 
 export const cutoverEdgeIdSchema = z.enum([
