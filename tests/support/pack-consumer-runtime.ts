@@ -13,8 +13,8 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { stringify } from "yaml";
-import { buildNodeGeneration } from "../../src/runtime/node-bootstrap.ts";
 import { resolveLiveClaudeTarget } from "../../src/runtime/claude-memory-wake.ts";
+import { buildNodeGeneration } from "../../src/runtime/node-bootstrap.ts";
 import {
   deriveArtifactInventoryDigest,
   deriveReleaseId,
