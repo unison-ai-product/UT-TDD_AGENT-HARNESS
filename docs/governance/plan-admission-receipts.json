@@ -3856,6 +3856,38 @@
         "revision": 29,
         "content_digest": "sha256:bedfe0f1cbfcf538cc41dbdd62bf44cbb78b1cb58e7f74c8dbd3b729cebc0210"
       }
+    },
+    {
+      "sequence": 242,
+      "previous_record_digest": "sha256:54c9fc8eb5f4b35122ce52d07a4a5bb17d06817f4b1be0750a140df8ddd45e00",
+      "record_digest": "sha256:d3f2eadea39150493948c2f8fac7ce83aa3d419dbae341c2bf0dc3eefcd29219",
+      "command_id": "plan-draft:issue-424:memory-clean-cut:2",
+      "receipt_id": "certificate:6bb11608096fa63d92d993a129cab136",
+      "receipt_digest": "sha256:5b2ce6f575ae3cae4d4ad5e570cfef0c80395f17bcd768851bff4f66dc71c098",
+      "decision_digest": "sha256:3d465f1800234e2e3b9da18836395b70595808c737e3576744c375dbed2d1c33",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-104-memory-clean-cut-replacement.md",
+        "plan_id": "PLAN-L6-104-memory-clean-cut-replacement",
+        "asset_id": "plan:6bb11608096fa63d92d993a129cab136",
+        "revision": 1,
+        "content_digest": "sha256:5e05d3835164cd42c563329ae3eee17a6e564e1c2856c23dd90f182e84d2cca6"
+      }
+    },
+    {
+      "sequence": 243,
+      "previous_record_digest": "sha256:d3f2eadea39150493948c2f8fac7ce83aa3d419dbae341c2bf0dc3eefcd29219",
+      "record_digest": "sha256:e62677d73ce04b3fcdcb1bba67f44c2317e40a3cc19a14692379282278b06224",
+      "command_id": "plan-revise:issue-424:reverse-512-non-applicability:7",
+      "receipt_id": "certificate:e44f3ef4527ed8d574f570c0aa12b499",
+      "receipt_digest": "sha256:edb1575a8daf5727d2c2d814e30dd08b568dbf626ead5d17251273fdbc9e4928",
+      "decision_digest": "sha256:9575e05b828844ead3621a59f5f1dee2debff95f3b22395c23caa6c5e5f3ad55",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-512-project-scoped-memory-root-backfill.md",
+        "plan_id": "PLAN-REVERSE-512-project-scoped-memory-root-backfill",
+        "asset_id": "plan:legacy:186048a954aa8dae7b4f8b1f968f6c5d64d758850fa695ed59a11edcdcf63153",
+        "revision": 7,
+        "content_digest": "sha256:0849a59269b40078b0e3aee01552e866c4eee4a68b06f274c5827ca04656a8da"
+      }
     }
   ]
 }
