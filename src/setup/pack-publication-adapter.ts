@@ -970,6 +970,37 @@ class PublicationRun {
       };
     return { value: result.value };
   }
+
+  async plan(): Promise<PackPublicationResult | "new" | "reconcile"> {
+    const authorization = await this.authorize("planned");
+    if (typeof authorization !== "string" || authorization === "reconcile") return authorization;
+    const approval = this.intent.approvals.planned;
+    if (
+      !(await this.journal(approval, "mutation_intent", {
+        phase: "publication",
+        operationId: this.intent.operationId,
+      }))
+    )
+      return {
+        status: "indeterminate",
+        stage: approval.transition,
+        reason: "journal_persist_failed",
+        remoteWrites: this.remoteWrites,
+      };
+    if (
+      !(await this.journal(approval, "read_back_observation", {
+        phase: "publication",
+        operationId: this.intent.operationId,
+      }))
+    )
+      return {
+        status: "indeterminate",
+        stage: approval.transition,
+        reason: "journal_persist_failed",
+        remoteWrites: this.remoteWrites,
+      };
+    return authorization;
+  }
 }
 
 async function reconcile(
@@ -1565,7 +1596,7 @@ async function publishAdmittedPackCanary(input: {
       };
   }
 
-  const planned = await run.authorize("planned");
+  const planned = await run.plan();
   if (typeof planned !== "string") return planned;
   if (planned === "reconcile") return reconcile(intent, ports, run.count());
 
