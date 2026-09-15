@@ -476,10 +476,7 @@ describe("review-evidence lint (review 前置の機械強制、IMP-071)", () => 
     expect(hasReviewEvidence(emptyArray)).toBe(false);
     expect(hasReviewEvidence(malformed)).toBe(false);
 
-    const p = parseReviewPlan(
-      "PLAN-COMMENT.md",
-      `---\n${withComments}---\n`,
-    );
+    const p = parseReviewPlan("PLAN-COMMENT.md", `---\n${withComments}---\n`);
     expect(p.hasEvidence).toBe(true);
   });
 
