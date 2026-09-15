@@ -1,7 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, lstatSync, readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 import { parseMemoryFile } from "../memory/index.ts";
 import {
   type ProjectMemoryRootDenyReason,
@@ -205,8 +205,8 @@ function readCorpus(root: string, repoRoot: string): Corpus {
   const files: CorpusFile[] = [];
   for (const name of readdirSync(root).sort(compareNames)) {
     if (!name.endsWith(".md")) continue;
-    const sourcePath = `.ut-tdd/memory/${name}`;
     const path = join(root, name);
+    const sourcePath = relative(repoRoot, path).replaceAll("\\", "/");
     const stable = readFileStable(path);
     let entry: ReturnType<typeof parseMemoryFile>;
     try {
@@ -268,9 +268,9 @@ function findResidue(canonicalRoot: string, canonical: Corpus): readonly string[
     }
     for (const name of readdirSync(memoryRoot).sort(compareNames)) {
       if (!name.endsWith(".md")) continue;
-      const sourcePath = `.ut-tdd/memory/${name}`;
-      if (isTracked(worktree, sourcePath)) continue;
       const path = join(memoryRoot, name);
+      const sourcePath = relative(worktree, path).replaceAll("\\", "/");
+      if (isTracked(worktree, sourcePath)) continue;
       const stable = readFileStable(path);
       let entry: ReturnType<typeof parseMemoryFile>;
       try {
