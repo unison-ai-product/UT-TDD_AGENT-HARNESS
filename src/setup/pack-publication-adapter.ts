@@ -833,6 +833,13 @@ function validReceipt(receipt: PackPublicationReceipt, intent: PackPublicationIn
   );
 }
 
+interface PublicationRunOptions {
+  readonly initialRemoteWrites?: number;
+  readonly state:
+    | PackPublicationPorts["preparationState"]
+    | PackPublicationPorts["publicationState"];
+}
+
 class PublicationRun {
   private remoteWrites: number;
   private readonly intent: PackPublicationIntent;
@@ -844,10 +851,7 @@ class PublicationRun {
   constructor(
     intent: PackPublicationIntent,
     ports: PackPublicationPorts,
-    initialRemoteWrites = 0,
-    state:
-      | PackPublicationPorts["preparationState"]
-      | PackPublicationPorts["publicationState"] = ports.publicationState,
+    { initialRemoteWrites = 0, state }: PublicationRunOptions,
   ) {
     this.intent = intent;
     this.ports = ports;
@@ -1392,7 +1396,7 @@ export async function preparePackPublication(
       reason: "sealed_intent_mismatch",
       remoteWrites: 0,
     };
-  const run = new PublicationRun(intent, ports, 0, ports.preparationState);
+  const run = new PublicationRun(intent, ports, { state: ports.preparationState });
   const [before, pointerBefore, tagBefore] = await Promise.all([
     observeAttested({
       stage: "preflight",
@@ -1544,7 +1548,10 @@ async function publishAdmittedPackCanary(input: {
       reason: "admission_identity_mismatch",
       remoteWrites: initialRemoteWrites,
     };
-  const run = new PublicationRun(intent, ports, initialRemoteWrites, ports.publicationState);
+  const run = new PublicationRun(intent, ports, {
+    initialRemoteWrites,
+    state: ports.publicationState,
+  });
   {
     const [before, pointerBefore, tagBefore] = await Promise.all([
       observeAttested({
