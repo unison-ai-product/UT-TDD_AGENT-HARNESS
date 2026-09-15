@@ -2194,6 +2194,19 @@ Issue #540 の実装commitでは、上記candidateを次の判別可能な正式
 `007`はlength-frame決定性、`008`はtransaction fault時partial write 0、`009`はL6/Q0 direct
 reference authorityを検証する。各negativeは対象外のdigestを正規再計算したfixtureを使い、別guardの偶発Redで
 当該predicateを証明しない。
+
+| Oracle ID | 判別対象 |
+| --- | --- |
+| `U-CUTOVER-001` | genesis exactly-once と二重 genesis の拒否 |
+| `U-CUTOVER-002` | 4 edge の隣接 transition と reducer fold |
+| `U-CUTOVER-003` | evidence producer owner と revision ancestry |
+| `U-CUTOVER-004` | admission authority、attestation、execution mode、prior receipt |
+| `U-CUTOVER-005` | skip、stale、replay、reverse transition の拒否 |
+| `U-CUTOVER-006` | receipt、evidence、admission の独立 digest mutation |
+| `U-CUTOVER-007` | length-frame と RFC 8785 canonicalization の決定性 |
+| `U-CUTOVER-008` | transaction fault 時の partial write 0 |
+| `U-CUTOVER-009` | L6 confirmation、Q0 admission、slice admission の authority 再利用 |
+
 `CAND-CUTOVER-003/005`は`CUTOVER-EVIDENCE-REGISTRY-v1`を唯一のoracleとし、F0a/F0b/F0c receiptの
 各slice commit subjectをfixture化する。candidate HEADが全commitのdescendantなら受理し、stale/replay/
 non-ancestorなら拒否する。同一subject fixtureを要求しない。transition receiptのsubjectはcandidate HEADと
