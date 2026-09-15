@@ -453,6 +453,36 @@ describe("review-evidence lint (review 前置の機械強制、IMP-071)", () => 
     expect(hasReviewEvidence(emptyKey)).toBe(false);
   });
 
+  it("U-REVIEW-001: hasReviewEvidence — comment lines, key order, and flow style don't defeat presence (issue #503)", () => {
+    const withComments = `plan_id: PLAN-COMMENT\nstatus: confirmed\nreview_evidence:\n  # comment line one\n  # comment line two\n  - reviewer: sol\n    review_kind: intra_runtime_subagent\n`;
+    const withBlankThenComment = `plan_id: PLAN-BLANK\nstatus: confirmed\nreview_evidence:\n\n  # comment\n  - reviewer: sol\n    review_kind: intra_runtime_subagent\n`;
+    const reorderedKeys = `plan_id: PLAN-ORDER\nstatus: confirmed\nreview_evidence:\n  - review_kind: intra_runtime_subagent\n    reviewer: sol\n`;
+    const flowStyle = `plan_id: PLAN-FLOW\nstatus: confirmed\nreview_evidence: [{reviewer: code-reviewer, review_kind: intra_runtime_subagent}]\n`;
+    expect(hasReviewEvidence(withComments)).toBe(true);
+    expect(hasReviewEvidence(withBlankThenComment)).toBe(true);
+    expect(hasReviewEvidence(reorderedKeys)).toBe(true);
+    expect(hasReviewEvidence(flowStyle)).toBe(true);
+
+    const wrap = (body: string) => `---\n${body}---\n# body text\n`;
+    expect(hasReviewEvidence(wrap(withComments))).toBe(true);
+    expect(hasReviewEvidence(wrap(withBlankThenComment))).toBe(true);
+    expect(hasReviewEvidence(wrap(reorderedKeys))).toBe(true);
+    expect(hasReviewEvidence(wrap(flowStyle))).toBe(true);
+
+    const noReviewer = `plan_id: PLAN-NOREV\nstatus: confirmed\nreview_evidence:\n  - review_kind: intra_runtime_subagent\n`;
+    const emptyArray = `plan_id: PLAN-EMPTYARR\nstatus: confirmed\nreview_evidence: []\n`;
+    const malformed = `plan_id: PLAN-MALFORMED\nstatus: confirmed\nreview_evidence:\n  - reviewer: [unterminated\n`;
+    expect(hasReviewEvidence(noReviewer)).toBe(false);
+    expect(hasReviewEvidence(emptyArray)).toBe(false);
+    expect(hasReviewEvidence(malformed)).toBe(false);
+
+    const p = parseReviewPlan(
+      "PLAN-COMMENT.md",
+      `---\n${withComments}---\n`,
+    );
+    expect(p.hasEvidence).toBe(true);
+  });
+
   it("U-REVIEW-002: parseReviewPlan — plan_id/kind/status/hasEvidence を抽出", () => {
     const content = `plan_id: PLAN-L4-05-workflow-orchestration\nkind: add-design\nstatus: confirmed\nreview_evidence:\n  - reviewer: code-reviewer\n    review_kind: intra_runtime_subagent\n    reviewed_at: "2026-06-05"\n    verdict: approve\n`;
     const p = parseReviewPlan("PLAN-L4-05-workflow-orchestration.md", content);
