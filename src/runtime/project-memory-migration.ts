@@ -285,6 +285,7 @@ const compare = (left: string, right: string) =>
 /** Read-only observation, not an apply capability or a proof against concurrent source mutation. */
 export class ProjectMemoryMigration {
   private readonly ports: MemoryMigrationPorts;
+  private readonly inventoryWorktrees = new WeakMap<object, readonly string[]>();
 
   constructor(ports: Partial<MemoryMigrationPorts> = {}) {
     this.ports = {
@@ -409,12 +410,8 @@ export class ProjectMemoryMigration {
           };
         }
         // Incomplete operations retain the all-worktree inventory binding;
-        // only completed replay uses the canonical digest above.  Do not
-        // allow a changed canonical or linked corpus to be treated as the
-        // same in-flight operation.
-        if (intent.payload.inventoryDigest !== inventory.inventoryDigest) {
-          return this.failure("inventory_drift", operationId, paths);
-        }
+        // canonical imports are projected out because they are this operation's
+        // own durable residue.  Other canonical or linked changes remain drift.
         const durableImports = markers
           .filter((marker) => marker.kind === "imported")
           .map((marker) => this.importFromMarker(marker));
@@ -424,6 +421,13 @@ export class ProjectMemoryMigration {
           canonicalRoot: paths.repoRoot,
           durable: durableImports,
         });
+        const operationImports = [...durableImports, ...recoveredImports];
+        if (
+          intent.payload.inventoryDigest !==
+          this.inventoryDigestForOperation(inventory, operationImports, paths.repoRoot)
+        ) {
+          return this.failure("inventory_drift", operationId, paths);
+        }
         for (const entry of recoveredImports) {
           this.appendMarker(paths.markersPath, {
             kind: "imported",
@@ -435,7 +439,7 @@ export class ProjectMemoryMigration {
           intent,
           inventory,
           canonicalRoot: paths.repoRoot,
-          durable: [...durableImports, ...recoveredImports],
+          durable: operationImports,
         });
         return this.finishExisting({
           inventory,
@@ -554,7 +558,11 @@ export class ProjectMemoryMigration {
       for (const variant of variants) this.verifySource(variant, this.readSource(variant));
     }
     const latest = this.inventory(paths.repoRoot, { allowInvalidLinked: true });
-    if (!latest.ok || latest.inventoryDigest !== inventory.inventoryDigest) {
+    if (
+      !latest.ok ||
+      this.inventoryDigestForOperation(latest, imported, paths.repoRoot) !==
+        intent?.payload.inventoryDigest
+    ) {
       throw new MigrationFailure("inventory_drift");
     }
     const canonicalCorpusDigest = this.canonicalCorpusDigest(paths.repoRoot);
@@ -1261,6 +1269,47 @@ export class ProjectMemoryMigration {
     return canonicalJson(left) === canonicalJson(right);
   }
 
+  private inventoryDigestForOperation(
+    inventory: Extract<MemoryMigrationDryRun, { ok: true }>,
+    imported: readonly MemoryMigrationImport[],
+    canonicalRoot: string,
+  ): string {
+    if (imported.length === 0) return inventory.inventoryDigest;
+    const worktrees = this.inventoryWorktrees.get(inventory);
+    if (!worktrees) throw new MigrationFailure("transaction_tampered");
+    const canonicalPath = normalizeTopologyPath(canonicalRoot);
+    const importedCanonical = new Set(
+      imported.map(
+        (entry) =>
+          `${entry.memoryId}\0${entry.destinationPath}\0${entry.contentDigest}\0${String(entry.size)}`,
+      ),
+    );
+    const groups = inventory.groups
+      .map((group) => {
+        const variants = group.variants.filter(
+          (variant) =>
+            !(
+              normalizeTopologyPath(variant.worktreeRoot) === canonicalPath &&
+              importedCanonical.has(
+                `${variant.memoryId}\0${variant.sourcePath}\0${variant.contentDigest}\0${String(variant.sourceSize)}`,
+              )
+            ),
+        );
+        return {
+          memoryId: group.memoryId,
+          disposition:
+            new Set(variants.map((variant) => variant.contentDigest)).size > 1
+              ? "conflict"
+              : variants.length > 1
+                ? "dedupe"
+                : "unique",
+          variants,
+        } satisfies MemoryMigrationGroup;
+      })
+      .filter((group) => group.variants.length > 0);
+    return sha256(canonicalJson({ projectId: inventory.projectId, worktrees, groups }));
+  }
+
   private inventory(repoRoot: string, options: InventoryOptions = {}): MemoryMigrationDryRun {
     const root = resolveProjectMemoryRoot(repoRoot);
     if (!root.ok) return root;
@@ -1311,7 +1360,7 @@ export class ProjectMemoryMigration {
           variants,
         }),
       );
-    return {
+    const result: Extract<MemoryMigrationDryRun, { ok: true }> = {
       ok: true,
       projectId: root.projectId,
       inventoryDigest: createHash("sha256")
@@ -1321,6 +1370,8 @@ export class ProjectMemoryMigration {
       groups,
       ...(invalidMemory.length > 0 ? { invalidMemory: invalidMemory.sort(compare) } : {}),
     };
+    this.inventoryWorktrees.set(result, worktrees);
+    return result;
   }
 
   private collectMemory(
