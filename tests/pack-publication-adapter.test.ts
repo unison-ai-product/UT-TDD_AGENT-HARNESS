@@ -1651,32 +1651,33 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
 
   it("CANDIDATE-PACKPUB-PORT-013: preparation owns branch/PR writes and admission owns the exact lease", async () => {
     const intent = sealedIntent();
-    const base = ports();
-    const branchCommit = vi.fn(base.pack.commitPublicationBranch);
-    const createPullRequest = vi.fn(base.pack.createPullRequest);
-    const applyLease = vi.fn(base.pack.applyReviewedHeadWithLease);
-    const configured = ports({
+    const configured = ports();
+    const branchCommit = vi.fn(configured.pack.commitPublicationBranch);
+    const createPullRequest = vi.fn(configured.pack.createPullRequest);
+    const applyLease = vi.fn(configured.pack.applyReviewedHeadWithLease);
+    const wired = {
+      ...configured,
       pack: {
-        ...base.pack,
+        ...configured.pack,
         commitPublicationBranch: branchCommit,
         createPullRequest,
         applyReviewedHeadWithLease: applyLease,
       },
-    });
-    const preparation = await preparePackPublication(intent, configured);
+    } satisfies PackPublicationPorts;
+    const preparation = await preparePackPublication(intent, wired);
     expect(preparation).toMatchObject({ ok: true, status: "prepared", remoteWrites: 2 });
     if (!preparation.ok || preparation.status !== "prepared") return;
     const admitted = await admitPackPublication({
       intent,
       preparation: preparation.receipt,
-      ports: configured,
+      ports: wired,
       publicationApprovals: publicationApprovalDrafts(intent),
     });
     expect(admitted.ok).toBe(true);
     if (!admitted.ok) return;
     const published = await publishPackCanary(
       admitted.admission.publicationIntent,
-      configured,
+      wired,
       admitted.admission,
     );
     expect(published.status).toBe("published");
