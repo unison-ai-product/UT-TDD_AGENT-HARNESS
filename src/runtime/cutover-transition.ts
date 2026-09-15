@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { mkdirSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, resolve } from "node:path";
+import { canonicalize } from "../feedback/review-custody-canonical.ts";
 import type { EvidenceAttestationVerifierPort } from "../plan-asset/ports/evidence-attestation.ts";
 import {
   CUTOVER_ADMISSION_PRODUCER_MAP,
@@ -124,7 +125,9 @@ function sha256(bytes: string | Buffer): string {
 }
 
 function frame(value: unknown): Buffer {
-  const bytes = Buffer.from(JSON.stringify(value), "utf8");
+  const canonical = canonicalize(value);
+  if (!canonical.ok) throw new CutoverTransitionError("cutover-admission-not-ready");
+  const bytes = Buffer.from(canonical.value, "utf8");
   return Buffer.concat([Buffer.from(`${bytes.length}:`, "ascii"), bytes]);
 }
 

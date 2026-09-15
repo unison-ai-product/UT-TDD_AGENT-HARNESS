@@ -413,6 +413,18 @@ describe("PLAN-L6-93 cutover prefix", () => {
     expect(first).toEqual(second);
     const { receipt_digest: _receiptDigest, ...unsigned } = first;
     expect(first.receipt_digest).toBe(cutoverTransitionReceiptDigest(unsigned));
+
+    const base = command(root(), "cutover.genesis", 0, null).admission;
+    const reorderedAttestation = {
+      signature: base.attestation.signature,
+      keyVersion: base.attestation.keyVersion,
+      authorityId: base.attestation.authorityId,
+      algorithm: base.attestation.algorithm,
+      schemaVersion: base.attestation.schemaVersion,
+    };
+    expect(cutoverAdmissionReceiptDigest({ ...base, attestation: reorderedAttestation })).toBe(
+      base.receipt_digest,
+    );
   });
 
   it("U-CUTOVER-008 rolls back a fault after receipt insert", () => {
