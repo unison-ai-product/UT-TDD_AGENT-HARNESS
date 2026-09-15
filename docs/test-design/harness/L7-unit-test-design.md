@@ -245,7 +245,7 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 
 | U-ID | 対象関数 | DbC oracle |
 |---|---|---|
-| U-REVIEW-001 | `hasReviewEvidence` | `review_evidence:` 直後に `- reviewer:` entry ≥1 → true / key だけ・無し → false (presence のみ、shape は zod) |
+| U-REVIEW-001 | `hasReviewEvidence` | frontmatter (or bare YAML) の `review_evidence` 配列に `reviewer` を持つ entry ≥1 → true (コメント行・空行・キー順・flow style に依存しない) / key だけ・空配列・reviewer なし・YAML 不正・無し → false (presence のみ、shape は zod) |
 | U-REVIEW-002 | `parseReviewPlan` | plan_id/kind/status/hasEvidence を frontmatter から抽出 |
 | U-REVIEW-003 | `analyzeReviewEvidence` (missing) | confirmed の design/impl 系で evidence 無し → `missing` + `ok=false` |
 | U-REVIEW-004 | `analyzeReviewEvidence` (ok) | design/add-design/impl/add-impl すべて evidence あり → `missing=[]`/`ok=true` |
