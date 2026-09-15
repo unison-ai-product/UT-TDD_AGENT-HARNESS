@@ -464,11 +464,27 @@ describe("MemoryService (PLAN-L7-468 PR-A)", () => {
       "runtime/session-log.ts",
       "state-db/index.ts",
     ]);
+    // Completion fence は canonical corpus を検証するための read-only runtime
+    // projection。一般の runtime をこの面へ許可しないよう、別集合かつ
+    // write primitive 不在の oracle で固定する。
+    const READ_ONLY_RUNTIME_DIR_ACCESS = new Set(["runtime/project-memory-completion-fence.ts"]);
     const SCAN_ONLY_DIR_ACCESS = new Set(["lint/memory-sync.ts"]);
     expect(tableLiteral.filter((rel) => !ALLOWED_TABLE_ACCESS.has(rel))).toEqual([]);
     expect(
-      dirLiteral.filter((rel) => !ALLOWED_DIR_ACCESS.has(rel) && !SCAN_ONLY_DIR_ACCESS.has(rel)),
+      dirLiteral.filter(
+        (rel) =>
+          !ALLOWED_DIR_ACCESS.has(rel) &&
+          !READ_ONLY_RUNTIME_DIR_ACCESS.has(rel) &&
+          !SCAN_ONLY_DIR_ACCESS.has(rel),
+      ),
     ).toEqual([]);
+    for (const rel of READ_ONLY_RUNTIME_DIR_ACCESS) {
+      if (!dirLiteral.includes(rel)) continue;
+      const text = readFileSync(join(root, rel), "utf8");
+      expect(text, `${rel} must not contain memory-write primitives`).not.toMatch(
+        /\b(?:appendFileSync|copyFileSync|mkdirSync|renameSync|rmSync|unlinkSync|writeFileSync)\b/,
+      );
+    }
     // scan-only の面は「git に path を尋ねるだけ」であること。本文を読み始めたら赤くする。
     for (const rel of SCAN_ONLY_DIR_ACCESS) {
       if (!dirLiteral.includes(rel)) continue;
