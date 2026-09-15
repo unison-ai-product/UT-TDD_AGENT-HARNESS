@@ -147,6 +147,24 @@ function evidenceReceipt(
   return { ...signed, receipt_digest: cutoverEvidenceReceiptDigest(signed) };
 }
 
+function resignEvidence(
+  receipt: SliceEvidenceReceipt,
+  overrides: Partial<
+    Omit<SliceEvidenceReceipt, "record_digest" | "attestation" | "receipt_digest">
+  >,
+): SliceEvidenceReceipt {
+  const {
+    record_digest: _recordDigest,
+    attestation: previousAttestation,
+    receipt_digest: _receiptDigest,
+    ...unsignedReceipt
+  } = receipt;
+  const unsigned = { ...unsignedReceipt, ...overrides };
+  const record_digest = cutoverEvidenceRecordDigest(unsigned);
+  const signed = { ...unsigned, record_digest, attestation: previousAttestation };
+  return { ...signed, receipt_digest: cutoverEvidenceReceiptDigest(signed) };
+}
+
 function command(
   repoRoot: string,
   edgeId: ImplementedCutoverEdgeId,
@@ -293,6 +311,34 @@ describe("PLAN-L6-93 cutover prefix", () => {
         }),
       "cutover-admission-not-ready",
     );
+
+    const modeDrift = resignAdmission(
+      { ...base.admission, execution_mode: "codex-only" },
+      base.admission.authority_id,
+    );
+    expectReason(
+      () => initializeCutoverChain({ ...base, admission: modeDrift }),
+      "cutover-admission-not-ready",
+    );
+
+    const priorDrift = resignAdmission(
+      { ...base.admission, prior_validated_receipt_digest: "9".repeat(64) },
+      base.admission.authority_id,
+    );
+    const evidenceForPriorDrift = base.evidence.map((item) =>
+      item.kind_id === "admission.approved"
+        ? resignEvidence(item, { referenced_receipt_digest: priorDrift.receipt_digest })
+        : item,
+    );
+    expectReason(
+      () =>
+        initializeCutoverChain({
+          ...base,
+          admission: priorDrift,
+          evidence: evidenceForPriorDrift,
+        }),
+      "cutover-admission-not-ready",
+    );
     expectReason(
       () =>
         initializeCutoverChain({
@@ -396,6 +442,16 @@ describe("PLAN-L6-93 cutover prefix", () => {
           ...base,
           ports: ports({ validateReferencedReceipt: () => false }),
         }),
+      "cutover-admission-not-ready",
+    );
+
+    const sliceAdmissionReplay = base.evidence.map((item) =>
+      item.kind_id === "admission.approved"
+        ? resignEvidence(item, { referenced_receipt_digest: q0Digest })
+        : item,
+    );
+    expectReason(
+      () => initializeCutoverChain({ ...base, evidence: sliceAdmissionReplay }),
       "cutover-admission-not-ready",
     );
   });
