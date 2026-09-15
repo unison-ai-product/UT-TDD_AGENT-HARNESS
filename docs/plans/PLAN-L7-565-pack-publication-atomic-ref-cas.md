@@ -29,6 +29,8 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-565-pack-publication-atomic-ref-cas.md
     artifact_type: markdown_doc
+  - artifact_path: tests/pack-publication-production-ports.test.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L6-63-pack-staged-release-rollback.md
   requires:
