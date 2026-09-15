@@ -314,11 +314,19 @@ function ports(overrides: Partial<PackPublicationPorts> = {}): PackPublicationPo
       }),
       observeReviewEvidence: async () => ({
         status: "attested",
-        value: { reviewEvidenceDigest: sha("review") },
+        value: {
+          pullRequest: "42",
+          reviewedHeadOid: "7".repeat(40),
+          conclusion: "approved",
+          closingReceiptDigest: sha("closing-review"),
+        },
       }),
       observeRequiredChecks: async () => ({
         status: "attested",
-        value: { requiredChecksDigest: sha("checks") },
+        value: {
+          headOid: "7".repeat(40),
+          checks: [{ name: "harness-check", conclusion: "success" }],
+        },
       }),
       observeMergeBase: async () => ({
         status: "attested",
@@ -1880,6 +1888,167 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
     expect(admission).toEqual({ ok: false, error: "admission_identity_mismatch" });
   });
 
+  it.each([
+    [
+      "head moved after review",
+      (configured: PackPublicationPorts) => ({
+        ...configured,
+        pack: {
+          ...configured.pack,
+          observePullRequest: async () => ({
+            status: "attested" as const,
+            value: {
+              pullRequest: "42",
+              headOid: "8".repeat(40),
+              baseOid: "1".repeat(40),
+              treeDigest: derivePackPublicationTreeDigest(stagingPlan()),
+              controlManifestSnapshotDigest: stagingPlan().controlManifestSnapshotDigest,
+            },
+          }),
+        },
+      }),
+    ],
+    [
+      "review of a different head",
+      (configured: PackPublicationPorts) => ({
+        ...configured,
+        pack: {
+          ...configured.pack,
+          observeReviewEvidence: async () => ({
+            status: "attested" as const,
+            value: {
+              pullRequest: "42",
+              reviewedHeadOid: "8".repeat(40),
+              conclusion: "approved" as const,
+              closingReceiptDigest: sha("closing-review"),
+            },
+          }),
+        },
+      }),
+    ],
+    [
+      "failing required check",
+      (configured: PackPublicationPorts) => ({
+        ...configured,
+        pack: {
+          ...configured.pack,
+          observeRequiredChecks: async () => ({
+            status: "attested" as const,
+            value: {
+              headOid: "7".repeat(40),
+              checks: [{ name: "harness-check", conclusion: "failure" }],
+            },
+          }),
+        },
+      }),
+    ],
+    [
+      "reused operation id",
+      (configured: PackPublicationPorts) => ({
+        ...configured,
+        pack: {
+          ...configured.pack,
+          observeFreshness: async () => ({
+            status: "attested" as const,
+            value: {
+              operationIdUnused: false,
+              idempotencyKeyUnused: true,
+              pullRequestUnused: true,
+            },
+          }),
+        },
+      }),
+    ],
+    [
+      "reused idempotency key",
+      (configured: PackPublicationPorts) => ({
+        ...configured,
+        pack: {
+          ...configured.pack,
+          observeFreshness: async () => ({
+            status: "attested" as const,
+            value: {
+              operationIdUnused: true,
+              idempotencyKeyUnused: false,
+              pullRequestUnused: true,
+            },
+          }),
+        },
+      }),
+    ],
+    [
+      "PR already used by another admission",
+      (configured: PackPublicationPorts) => ({
+        ...configured,
+        pack: {
+          ...configured.pack,
+          observeFreshness: async () => ({
+            status: "attested" as const,
+            value: {
+              operationIdUnused: true,
+              idempotencyKeyUnused: true,
+              pullRequestUnused: false,
+            },
+          }),
+        },
+      }),
+    ],
+    [
+      "merge-base drift",
+      (configured: PackPublicationPorts) => ({
+        ...configured,
+        pack: {
+          ...configured.pack,
+          observeMergeBase: async () => ({
+            status: "attested" as const,
+            value: { mergeBaseOid: "8".repeat(40) },
+          }),
+        },
+      }),
+    ],
+  ] as const)("CAS-011/CAS-014: admission denies %s with no main write", async (_name, configure) => {
+    const intent = sealedIntent();
+    const configured = ports();
+    const applyLease = vi.fn(configured.pack.applyReviewedHeadWithLease);
+    const prepared = await preparePackPublication(intent, configured);
+    if (!prepared.ok || prepared.status !== "prepared") throw new Error("preparation failed");
+    const result = await admitPackPublication({
+      intent,
+      preparation: prepared.receipt,
+      ports: configure({
+        ...configured,
+        pack: { ...configured.pack, applyReviewedHeadWithLease: applyLease },
+      }),
+      publicationApprovals: publicationApprovalDrafts(intent),
+    });
+    expect(result).toEqual({ ok: false, error: "admission_identity_mismatch" });
+    expect(applyLease).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    "observePullRequest",
+    "observeReviewEvidence",
+    "observeRequiredChecks",
+    "observeMergeBase",
+    "observeFreshness",
+  ] as const)("CAS-011: admission denies when %s observation port is missing", async (portName) => {
+    const intent = sealedIntent();
+    const configured = ports();
+    const prepared = await preparePackPublication(intent, configured);
+    if (!prepared.ok || prepared.status !== "prepared") throw new Error("preparation failed");
+    const applyLease = vi.fn(configured.pack.applyReviewedHeadWithLease);
+    const pack = { ...configured.pack, applyReviewedHeadWithLease: applyLease };
+    delete pack[portName];
+    const result = await admitPackPublication({
+      intent,
+      preparation: prepared.receipt,
+      ports: { ...configured, pack },
+      publicationApprovals: publicationApprovalDrafts(intent),
+    });
+    expect(result).toEqual({ ok: false, error: "admission_identity_mismatch" });
+    expect(applyLease).not.toHaveBeenCalled();
+  });
+
   it("CAS-014: preparation and publication seal separate intents, nonce sets, and journals", async () => {
     const intent = sealedIntent();
     const preparationAppend = vi.fn();
@@ -1898,6 +2067,24 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
     expect(intent.phase).toBe("preparation");
     expect(admission.publicationIntent.phase).toBe("publication");
     expect(admission.publicationIntent.intentDigest).not.toBe(intent.intentDigest);
+    expect(admission.reviewEvidenceDigest).toBe(
+      sha(
+        stable({
+          pullRequest: "42",
+          reviewedHeadOid: "7".repeat(40),
+          conclusion: "approved",
+          closingReceiptDigest: sha("closing-review"),
+        }),
+      ),
+    );
+    expect(admission.requiredChecksDigest).toBe(
+      sha(
+        stable({
+          headOid: "7".repeat(40),
+          checks: [{ name: "harness-check", conclusion: "success" }],
+        }),
+      ),
+    );
     const preparationNonces = new Set(
       Object.values(intent.approvals).map((approval) => approval.nonce),
     );

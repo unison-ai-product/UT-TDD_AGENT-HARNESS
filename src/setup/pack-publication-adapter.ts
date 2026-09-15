@@ -149,6 +149,23 @@ export interface PackPublicationPullRequestObservation {
   readonly controlManifestSnapshotDigest: string;
 }
 
+export interface PackPublicationReviewObservation {
+  readonly pullRequest: string;
+  readonly reviewedHeadOid: string;
+  readonly conclusion: "approved";
+  readonly closingReceiptDigest: string;
+}
+
+export interface PackPublicationRequiredCheckObservation {
+  readonly name: string;
+  readonly conclusion: string;
+}
+
+export interface PackPublicationRequiredChecksObservation {
+  readonly headOid: string;
+  readonly checks: readonly PackPublicationRequiredCheckObservation[];
+}
+
 export interface PackPublicationPreparationReceipt {
   readonly kind: "pack-publication-preparation-receipt-v1";
   readonly operationId: string;
@@ -309,14 +326,14 @@ export interface PackPublicationPorts {
       readonly repository: string;
       readonly pullRequest: string;
     }) =>
-      | PublicationPortResult<{ readonly reviewEvidenceDigest: string }>
-      | Promise<PublicationPortResult<{ readonly reviewEvidenceDigest: string }>>;
+      | PublicationPortResult<PackPublicationReviewObservation>
+      | Promise<PublicationPortResult<PackPublicationReviewObservation>>;
     readonly observeRequiredChecks?: (input: {
       readonly repository: string;
       readonly pullRequest: string;
     }) =>
-      | PublicationPortResult<{ readonly requiredChecksDigest: string }>
-      | Promise<PublicationPortResult<{ readonly requiredChecksDigest: string }>>;
+      | PublicationPortResult<PackPublicationRequiredChecksObservation>
+      | Promise<PublicationPortResult<PackPublicationRequiredChecksObservation>>;
     readonly observeMergeBase?: (input: {
       readonly repository: string;
       readonly pullRequest: string;
@@ -332,15 +349,15 @@ export interface PackPublicationPorts {
       readonly preparationReceiptDigest: string;
     }) =>
       | PublicationPortResult<{
-          readonly operationIdUnused: true;
-          readonly idempotencyKeyUnused: true;
-          readonly pullRequestUnused: true;
+          readonly operationIdUnused: boolean;
+          readonly idempotencyKeyUnused: boolean;
+          readonly pullRequestUnused: boolean;
         }>
       | Promise<
           PublicationPortResult<{
-            readonly operationIdUnused: true;
-            readonly idempotencyKeyUnused: true;
-            readonly pullRequestUnused: true;
+            readonly operationIdUnused: boolean;
+            readonly idempotencyKeyUnused: boolean;
+            readonly pullRequestUnused: boolean;
           }>
         >;
     readonly applyReviewedHeadWithLease: (
@@ -1279,8 +1296,14 @@ export async function admitPackPublication(input: {
     observed.value.treeDigest !== preparation.treeDigest ||
     observed.value.controlManifestSnapshotDigest !== preparation.controlManifestSnapshotDigest ||
     mergeBase.value.mergeBaseOid !== intent.remote.expectedMainSha ||
-    !SHA256.test(review.value.reviewEvidenceDigest) ||
-    !SHA256.test(checks.value.requiredChecksDigest) ||
+    review.value.pullRequest !== preparation.pullRequest ||
+    !SHA1.test(review.value.reviewedHeadOid) ||
+    review.value.reviewedHeadOid !== preparation.reviewedHeadOid ||
+    review.value.conclusion !== "approved" ||
+    !SHA256.test(review.value.closingReceiptDigest) ||
+    checks.value.headOid !== review.value.reviewedHeadOid ||
+    checks.value.checks.length === 0 ||
+    checks.value.checks.some((check) => !check.name || check.conclusion !== "success") ||
     !freshness.value.operationIdUnused ||
     !freshness.value.idempotencyKeyUnused ||
     !freshness.value.pullRequestUnused
@@ -1291,8 +1314,8 @@ export async function admitPackPublication(input: {
     ...preparationIdentity,
     phase: "publication" as const,
     preparationReceiptDigest: preparation.receiptDigest,
-    reviewEvidenceDigest: review.value.reviewEvidenceDigest,
-    requiredChecksDigest: checks.value.requiredChecksDigest,
+    reviewEvidenceDigest: sha256(stable(review.value)),
+    requiredChecksDigest: sha256(stable(checks.value)),
     mergeBaseOid: mergeBase.value.mergeBaseOid,
     intentDigest: "",
   };
@@ -1330,8 +1353,8 @@ export async function admitPackPublication(input: {
     preparationIntent: intent,
     preparation,
     observedPullRequest: observed.value,
-    reviewEvidenceDigest: review.value.reviewEvidenceDigest,
-    requiredChecksDigest: checks.value.requiredChecksDigest,
+    reviewEvidenceDigest: sha256(stable(review.value)),
+    requiredChecksDigest: sha256(stable(checks.value)),
     mergeBaseOid: mergeBase.value.mergeBaseOid,
     publicationIntent,
     admissionDigest: "",
@@ -1873,9 +1896,8 @@ async function publishAdmittedPackCanary(input: {
 
 /**
  * Runs the publication FSM from a reviewed, admitted preparation.  The
- * compatibility path without an admission is intentionally kept only for
- * existing callers: it performs the preparation as a separate operation and
- * then enters this function with the resulting receipt.
+ * Callers must provide an admitted preparation; omitting it is a typed deny
+ * with no preparation or publication writes.
  */
 export async function publishPackCanary(
   intent: PackPublicationIntent,
