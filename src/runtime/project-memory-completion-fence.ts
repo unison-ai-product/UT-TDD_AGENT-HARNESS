@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, lstatSync, readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
-import { parseMemoryFile } from "../memory/index.ts";
+import { memoryStorageRoot, parseMemoryFile } from "../memory/index.ts";
 import {
   type ProjectMemoryRootDenyReason,
   resolveProjectMemoryRoot,
@@ -261,7 +261,7 @@ function findResidue(canonicalRoot: string, canonical: Corpus): readonly string[
   for (const fact of topology.facts) {
     const worktree = fact.worktreePathKey;
     if (stablePath(worktree) === canonicalPath) continue;
-    const memoryRoot = join(worktree, ".ut-tdd", "memory");
+    const memoryRoot = memoryStorageRoot(worktree);
     if (!existsSync(memoryRoot)) continue;
     if (!directoryIsSafe(join(worktree, ".ut-tdd")) || !directoryIsSafe(memoryRoot)) {
       throw new FenceReadError("source_unsafe");
