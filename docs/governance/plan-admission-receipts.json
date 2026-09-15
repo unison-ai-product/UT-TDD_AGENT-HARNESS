@@ -3792,6 +3792,38 @@
         "revision": 2,
         "content_digest": "sha256:4e5e9b599e10f5cf7160c225acbb90f7eca0cab60e61d0dc2e8a3038d4f33a29"
       }
+    },
+    {
+      "sequence": 238,
+      "previous_record_digest": "sha256:5f7261f96d247b132da5d99f7b7ea345d43f9a991953076c167efa7021e063f2",
+      "record_digest": "sha256:b9871a597427bcfe20155ca6700ee095a59b47ca56d99fe11748ae6f6fc93437",
+      "command_id": "plan-revise:issue-541:recovery-16:4",
+      "receipt_id": "certificate:ebe64b715863a5775f62195734c8ef9a",
+      "receipt_digest": "sha256:03afdfb83d93b98602034ef5bbd1aa7dc4206021897dd5ae379e0739ffc4f9da",
+      "decision_digest": "sha256:438886bf4cc155b44f8969f50066eb2c894d38019de00d3ebdfa2bb0b2aa63b4",
+      "binding": {
+        "path": "docs/plans/PLAN-RECOVERY-16-plan-revision-authoring.md",
+        "plan_id": "PLAN-RECOVERY-16-plan-revision-authoring",
+        "asset_id": "plan:rebase:74ca026f9a0b72dca6f4fb164dd4e8f43c9ea3c9b31c4db21dec38a66d9d7d57",
+        "revision": 4,
+        "content_digest": "sha256:1128687449b9a0ac0774cb98b988ab302577962ca73c6995e4501ab4579f678c"
+      }
+    },
+    {
+      "sequence": 239,
+      "previous_record_digest": "sha256:b9871a597427bcfe20155ca6700ee095a59b47ca56d99fe11748ae6f6fc93437",
+      "record_digest": "sha256:e360f06816a21788508115404ace6da9ef0b9eb97d25d565ef3b73ce7f3dd324",
+      "command_id": "plan-revise:issue-541:recovery-16:5",
+      "receipt_id": "certificate:bee97017c18dd1c0382acb7e596d8e49",
+      "receipt_digest": "sha256:5d725af2f27b8032aa5f1741ad1f8fbf2247eae008e4dad21ba52771a5505509",
+      "decision_digest": "sha256:a581599835fb35dd486db501cc2c0093f7d433dbb0c73ca8418f565442618287",
+      "binding": {
+        "path": "docs/plans/PLAN-RECOVERY-16-plan-revision-authoring.md",
+        "plan_id": "PLAN-RECOVERY-16-plan-revision-authoring",
+        "asset_id": "plan:rebase:74ca026f9a0b72dca6f4fb164dd4e8f43c9ea3c9b31c4db21dec38a66d9d7d57",
+        "revision": 5,
+        "content_digest": "sha256:09a27995e7d40d593cc30c6ea022f127285823798d9e8e1181d2f989811ff166"
+      }
     }
   ]
 }
