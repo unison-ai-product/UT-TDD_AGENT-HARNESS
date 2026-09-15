@@ -23,7 +23,7 @@ export type PublicationMutation =
   | "planned"
   | "pack_branch_commit"
   | "pack_pr_create"
-  | "pack_pr_merge"
+  | "pack_main_lease"
   | "release_draft_create"
   | `asset_upload:${string}`
   | "tag_create"
@@ -49,7 +49,7 @@ export interface PackPublicationRemoteIdentity {
   readonly expectedMainStateDigest: string;
   readonly expectedPointerObjectDigest: string;
   readonly beforeControlManifestSnapshotDigest: string;
-  readonly allowedMergeMode: "pull_request_cas";
+  readonly allowedMergeMode: "exact_ref_lease";
   readonly derivationRule: "entries-and-sidecar-v2";
 }
 
@@ -115,7 +115,60 @@ export interface PackCommitObservation {
   readonly releaseId: string;
   readonly sourceRevision: string;
   readonly materializerVersion: string;
-  readonly mergeMode: "pull_request_cas";
+  readonly mergeMode: "exact_ref_lease";
+}
+
+/** The only input shape accepted by the main ref lease port. */
+export interface PackMainLeaseInput {
+  readonly repository: string;
+  readonly targetRef: "refs/heads/main";
+  readonly expectedMainOid: string;
+  readonly reviewedHeadOid: string;
+}
+
+/** A lease result is successful only when the server reports one actual update. */
+export interface PackMainLeaseObservation {
+  readonly targetRef: "refs/heads/main";
+  readonly expectedMainOid: string;
+  readonly reviewedHeadOid: string;
+  readonly actualUpdateStatus: "updated";
+  readonly postReadOid: string;
+}
+
+export interface PackPublicationPullRequestObservation {
+  readonly pullRequest: string;
+  readonly headOid: string;
+  readonly baseOid: string;
+  readonly treeDigest: string;
+  readonly controlManifestSnapshotDigest: string;
+}
+
+export interface PackPublicationPreparationReceipt {
+  readonly kind: "pack-publication-preparation-receipt-v1";
+  readonly operationId: string;
+  readonly idempotencyKey: string;
+  readonly releaseId: string;
+  readonly sourceRevision: string;
+  readonly stagingPlanDigest: string;
+  readonly repository: string;
+  readonly publicationBranch: string;
+  readonly expectedMainOid: string;
+  readonly branchCommitOid: string;
+  readonly pullRequest: string;
+  readonly reviewedHeadOid: string;
+  readonly baseOid: string;
+  readonly treeDigest: string;
+  readonly controlManifestSnapshotDigest: string;
+  readonly receiptDigest: string;
+}
+
+export interface PackPublicationAdmission {
+  readonly kind: "pack-publication-admission-v1";
+  readonly preparation: PackPublicationPreparationReceipt;
+  readonly observedPullRequest: PackPublicationPullRequestObservation;
+  readonly reviewEvidenceDigest: string;
+  readonly requiredChecksDigest: string;
+  readonly admissionDigest: string;
 }
 
 export interface DraftReleaseObservation {
@@ -210,15 +263,13 @@ export interface PackPublicationPorts {
       readonly branch: string;
       readonly expectedMainSha: string;
     }) =>
-      | PublicationPortResult<{ readonly pullRequest: string }>
-      | Promise<PublicationPortResult<{ readonly pullRequest: string }>>;
-    readonly mergePullRequestCas: (input: {
-      readonly repository: string;
-      readonly pullRequest: string;
-      readonly expectedMainSha: string;
-    }) =>
-      | PublicationPortResult<{ readonly mainSha: string }>
-      | Promise<PublicationPortResult<{ readonly mainSha: string }>>;
+      | PublicationPortResult<PackPublicationPullRequestObservation>
+      | Promise<PublicationPortResult<PackPublicationPullRequestObservation>>;
+    readonly applyReviewedHeadWithLease: (
+      input: PackMainLeaseInput,
+    ) =>
+      | PublicationPortResult<PackMainLeaseObservation>
+      | Promise<PublicationPortResult<PackMainLeaseObservation>>;
     readonly observeReleaseCommit: (input: {
       readonly repository: string;
       readonly mainSha: string;
@@ -456,7 +507,7 @@ function mutationsFor(plan: SealedPackPublicationPlan): readonly PublicationMuta
     "planned",
     "pack_branch_commit",
     "pack_pr_create",
-    "pack_pr_merge",
+    "pack_main_lease",
     "release_draft_create",
     ...plan.releaseAssets.map((asset) => `asset_upload:${asset.name}` as const),
     "tag_create",
@@ -474,7 +525,7 @@ function transitionFor(mutation: PublicationMutation): PublicationTransition {
     planned: "planned",
     pack_branch_commit: "pack_commit",
     pack_pr_create: "pack_commit",
-    pack_pr_merge: "pack_commit",
+    pack_main_lease: "pack_commit",
     release_draft_create: "release_draft",
     tag_create: "tag",
     release_visibility: "release_visible",
@@ -575,7 +626,7 @@ export function sealPackPublicationIntent(
     !SHA256.test(input.remote.expectedMainStateDigest) ||
     !SHA256.test(input.remote.expectedPointerObjectDigest) ||
     input.remote.beforeControlManifestSnapshotDigest !== input.plan.controlManifestSnapshotDigest ||
-    input.remote.allowedMergeMode !== "pull_request_cas" ||
+    input.remote.allowedMergeMode !== "exact_ref_lease" ||
     input.remote.derivationRule !== "entries-and-sidecar-v2"
   )
     return { ok: false, error: "invalid_remote_identity" };
@@ -631,7 +682,7 @@ function validateSealedIntent(intent: PackPublicationIntent): boolean {
     "planned",
     "pack_branch_commit",
     "pack_pr_create",
-    "pack_pr_merge",
+    "pack_main_lease",
     "release_draft_create",
     ...intent.releaseAssets.map((asset) => `asset_upload:${asset.name}` as const),
     "tag_create",
@@ -702,13 +753,14 @@ function validReceipt(receipt: PackPublicationReceipt, intent: PackPublicationIn
 }
 
 class PublicationRun {
-  private remoteWrites = 0;
+  private remoteWrites: number;
   private readonly intent: PackPublicationIntent;
   private readonly ports: PackPublicationPorts;
 
-  constructor(intent: PackPublicationIntent, ports: PackPublicationPorts) {
+  constructor(intent: PackPublicationIntent, ports: PackPublicationPorts, initialRemoteWrites = 0) {
     this.intent = intent;
     this.ports = ports;
+    this.remoteWrites = initialRemoteWrites;
   }
 
   count(): number {
@@ -902,12 +954,122 @@ async function observeAttested<T>(
   return { value: observed.value };
 }
 
-export async function publishPackCanary(
+export type PackPublicationPreparationResult =
+  | {
+      readonly ok: true;
+      readonly status: "prepared";
+      readonly receipt: PackPublicationPreparationReceipt;
+      readonly remoteWrites: number;
+    }
+  | {
+      readonly ok: true;
+      readonly status: "reconciled";
+      readonly result: PackPublicationResult;
+      readonly remoteWrites: number;
+    }
+  | ({ readonly ok: false } & PackPublicationResult);
+
+function preparationReceiptDigest(
+  receipt: Omit<PackPublicationPreparationReceipt, "receiptDigest">,
+): string {
+  return sha256(stable(receipt));
+}
+
+function validPreparationReceipt(
+  intent: PackPublicationIntent,
+  receipt: PackPublicationPreparationReceipt,
+): boolean {
+  const unsigned = { ...receipt, receiptDigest: "" };
+  return (
+    receipt.kind === "pack-publication-preparation-receipt-v1" &&
+    receipt.operationId === intent.operationId &&
+    receipt.idempotencyKey === intent.idempotencyKey &&
+    receipt.releaseId === intent.releaseId &&
+    receipt.sourceRevision === intent.sourceRevision &&
+    receipt.stagingPlanDigest === intent.stagingPlanDigest &&
+    receipt.repository === intent.remote.repository &&
+    receipt.publicationBranch === intent.remote.publicationBranch &&
+    receipt.expectedMainOid === intent.remote.expectedMainSha &&
+    SHA1.test(receipt.branchCommitOid) &&
+    Boolean(receipt.pullRequest) &&
+    SHA1.test(receipt.reviewedHeadOid) &&
+    receipt.reviewedHeadOid === receipt.branchCommitOid &&
+    receipt.baseOid === intent.remote.expectedMainSha &&
+    receipt.treeDigest === intent.expectedTreeDigest &&
+    receipt.controlManifestSnapshotDigest === intent.controlManifestSnapshotDigest &&
+    receipt.receiptDigest === preparationReceiptDigest(unsigned)
+  );
+}
+
+export function admitPackPublication(input: {
+  readonly intent: PackPublicationIntent;
+  readonly preparation: PackPublicationPreparationReceipt;
+  readonly observedPullRequest: PackPublicationPullRequestObservation;
+  readonly reviewEvidenceDigest: string;
+  readonly requiredChecksDigest: string;
+}): PackPublicationAdmissionResult {
+  const { intent, preparation, observedPullRequest } = input;
+  if (
+    !validateSealedIntent(intent) ||
+    !validPreparationReceipt(intent, preparation) ||
+    observedPullRequest.pullRequest !== preparation.pullRequest ||
+    observedPullRequest.headOid !== preparation.reviewedHeadOid ||
+    observedPullRequest.baseOid !== preparation.baseOid ||
+    observedPullRequest.treeDigest !== preparation.treeDigest ||
+    observedPullRequest.controlManifestSnapshotDigest !==
+      preparation.controlManifestSnapshotDigest ||
+    !SHA256.test(input.reviewEvidenceDigest) ||
+    !SHA256.test(input.requiredChecksDigest)
+  )
+    return { ok: false, error: "admission_identity_mismatch" };
+  const unsigned = {
+    kind: "pack-publication-admission-v1" as const,
+    preparation,
+    observedPullRequest,
+    reviewEvidenceDigest: input.reviewEvidenceDigest,
+    requiredChecksDigest: input.requiredChecksDigest,
+    admissionDigest: "",
+  };
+  return {
+    ok: true,
+    admission: Object.freeze({
+      ...unsigned,
+      admissionDigest: sha256(stable(unsigned)),
+    }),
+  };
+}
+
+export type PackPublicationAdmissionResult =
+  | { readonly ok: true; readonly admission: PackPublicationAdmission }
+  | { readonly ok: false; readonly error: "admission_identity_mismatch" };
+
+function validAdmission(
+  intent: PackPublicationIntent,
+  admission: PackPublicationAdmission,
+): boolean {
+  const unsigned = { ...admission, admissionDigest: "" };
+  return (
+    admission.kind === "pack-publication-admission-v1" &&
+    validPreparationReceipt(intent, admission.preparation) &&
+    admission.observedPullRequest.pullRequest === admission.preparation.pullRequest &&
+    admission.observedPullRequest.headOid === admission.preparation.reviewedHeadOid &&
+    admission.observedPullRequest.baseOid === admission.preparation.baseOid &&
+    admission.observedPullRequest.treeDigest === admission.preparation.treeDigest &&
+    admission.observedPullRequest.controlManifestSnapshotDigest ===
+      admission.preparation.controlManifestSnapshotDigest &&
+    SHA256.test(admission.reviewEvidenceDigest) &&
+    SHA256.test(admission.requiredChecksDigest) &&
+    admission.admissionDigest === sha256(stable(unsigned))
+  );
+}
+
+export async function preparePackPublication(
   intent: PackPublicationIntent,
   ports: PackPublicationPorts,
-): Promise<PackPublicationResult> {
+): Promise<PackPublicationPreparationResult> {
   if (!validateSealedIntent(intent))
     return {
+      ok: false,
       status: "denied",
       stage: "preflight",
       reason: "sealed_intent_mismatch",
@@ -934,9 +1096,9 @@ export async function publishPackCanary(
       prewrite: true,
     }),
   ]);
-  if ("failure" in before) return before.failure;
-  if ("failure" in pointerBefore) return pointerBefore.failure;
-  if ("failure" in tagBefore) return tagBefore.failure;
+  if ("failure" in before) return { ok: false, ...before.failure };
+  if ("failure" in pointerBefore) return { ok: false, ...pointerBefore.failure };
+  if ("failure" in tagBefore) return { ok: false, ...tagBefore.failure };
   if (
     before.value.mainSha !== intent.remote.expectedMainSha ||
     before.value.mainStateDigest !== intent.remote.expectedMainStateDigest ||
@@ -950,6 +1112,7 @@ export async function publishPackCanary(
       intent.remote.beforeControlManifestSnapshotDigest
   )
     return {
+      ok: false,
       status: "denied",
       stage: "preflight",
       reason: "initial_identity_drift",
@@ -957,6 +1120,7 @@ export async function publishPackCanary(
     };
   if (tagBefore.value !== null)
     return {
+      ok: false,
       status: "denied",
       stage: "preflight",
       reason: "duplicate_or_retargeted_tag",
@@ -964,9 +1128,11 @@ export async function publishPackCanary(
     };
 
   const planned = await run.authorize("planned");
-  if (typeof planned !== "string") return planned;
-  if (planned === "reconcile") return reconcile(intent, ports, run.count());
-
+  if (typeof planned !== "string") return { ok: false, ...planned };
+  if (planned === "reconcile") {
+    const result = await reconcile(intent, ports, run.count());
+    return { ok: true, status: "reconciled", result, remoteWrites: run.count() };
+  }
   const branch = await run.mutate("pack_branch_commit", intent.commitEntries, () =>
     ports.pack.commitPublicationBranch({
       repository: intent.remote.repository,
@@ -974,8 +1140,11 @@ export async function publishPackCanary(
       entries: intent.commitEntries,
     }),
   );
-  if ("failure" in branch) return branch.failure;
-  if ("reconcile" in branch) return reconcile(intent, ports, run.count());
+  if ("failure" in branch) return { ok: false, ...branch.failure };
+  if ("reconcile" in branch) {
+    const result = await reconcile(intent, ports, run.count());
+    return { ok: true, status: "reconciled", result, remoteWrites: run.count() };
+  }
   const pullRequest = await run.mutate("pack_pr_create", branch.value, () =>
     ports.pack.createPullRequest({
       repository: intent.remote.repository,
@@ -983,15 +1152,161 @@ export async function publishPackCanary(
       expectedMainSha: intent.remote.expectedMainSha,
     }),
   );
-  if ("failure" in pullRequest) return pullRequest.failure;
-  if ("reconcile" in pullRequest) return reconcile(intent, ports, run.count());
-  const merged = await run.mutate("pack_pr_merge", pullRequest.value, () =>
-    ports.pack.mergePullRequestCas({
-      repository: intent.remote.repository,
-      pullRequest: pullRequest.value.pullRequest,
-      expectedMainSha: intent.remote.expectedMainSha,
-    }),
-  );
+  if ("failure" in pullRequest) return { ok: false, ...pullRequest.failure };
+  if ("reconcile" in pullRequest) {
+    const result = await reconcile(intent, ports, run.count());
+    return { ok: true, status: "reconciled", result, remoteWrites: run.count() };
+  }
+  const observed = pullRequest.value;
+  if (
+    observed.baseOid !== intent.remote.expectedMainSha ||
+    observed.treeDigest !== intent.expectedTreeDigest ||
+    observed.controlManifestSnapshotDigest !== intent.controlManifestSnapshotDigest ||
+    observed.headOid !== branch.value.branchCommit
+  )
+    return {
+      ok: false,
+      status: "partial_publication",
+      stage: "pack_commit",
+      reason: "preparation_identity_mismatch",
+      remoteWrites: run.count(),
+    };
+  const unsigned = {
+    kind: "pack-publication-preparation-receipt-v1" as const,
+    operationId: intent.operationId,
+    idempotencyKey: intent.idempotencyKey,
+    releaseId: intent.releaseId,
+    sourceRevision: intent.sourceRevision,
+    stagingPlanDigest: intent.stagingPlanDigest,
+    repository: intent.remote.repository,
+    publicationBranch: intent.remote.publicationBranch,
+    expectedMainOid: intent.remote.expectedMainSha,
+    branchCommitOid: branch.value.branchCommit,
+    pullRequest: observed.pullRequest,
+    reviewedHeadOid: observed.headOid,
+    baseOid: observed.baseOid,
+    treeDigest: observed.treeDigest,
+    controlManifestSnapshotDigest: observed.controlManifestSnapshotDigest,
+    receiptDigest: "",
+  };
+  const receipt = Object.freeze({ ...unsigned, receiptDigest: preparationReceiptDigest(unsigned) });
+  return { ok: true, status: "prepared", receipt, remoteWrites: run.count() };
+}
+
+function admissionFromPreparation(
+  intent: PackPublicationIntent,
+  preparation: PackPublicationPreparationReceipt,
+): PackPublicationAdmission {
+  const result = admitPackPublication({
+    intent,
+    preparation,
+    observedPullRequest: {
+      pullRequest: preparation.pullRequest,
+      headOid: preparation.reviewedHeadOid,
+      baseOid: preparation.baseOid,
+      treeDigest: preparation.treeDigest,
+      controlManifestSnapshotDigest: preparation.controlManifestSnapshotDigest,
+    },
+    reviewEvidenceDigest: sha256("legacy-adapter-compatibility"),
+    requiredChecksDigest: sha256("legacy-adapter-compatibility"),
+  });
+  if (!result.ok) throw new Error(result.error);
+  return result.admission;
+}
+
+async function publishAdmittedPackCanary(input: {
+  readonly intent: PackPublicationIntent;
+  readonly ports: PackPublicationPorts;
+  readonly admission: PackPublicationAdmission;
+  readonly initialRemoteWrites: number;
+  readonly preflightAlreadyVerified?: boolean;
+}): Promise<PackPublicationResult> {
+  const { intent, ports, admission, initialRemoteWrites, preflightAlreadyVerified = false } = input;
+  if (!validateSealedIntent(intent))
+    return {
+      status: "denied",
+      stage: "preflight",
+      reason: "sealed_intent_mismatch",
+      remoteWrites: 0,
+    };
+  if (!validAdmission(intent, admission))
+    return {
+      status: "denied",
+      stage: "preflight",
+      reason: "admission_identity_mismatch",
+      remoteWrites: initialRemoteWrites,
+    };
+  const run = new PublicationRun(intent, ports, initialRemoteWrites);
+  if (!preflightAlreadyVerified) {
+    const [before, pointerBefore, tagBefore] = await Promise.all([
+      observeAttested({
+        stage: "preflight",
+        remoteWrites: 0,
+        invoke: () => ports.pack.observeBefore(),
+        prewrite: true,
+      }),
+      observeAttested({
+        stage: "preflight",
+        remoteWrites: 0,
+        invoke: () => ports.canary.observeBefore(),
+        prewrite: true,
+      }),
+      observeAttested({
+        stage: "preflight",
+        remoteWrites: 0,
+        invoke: () => ports.tag.observe(intent.tagName),
+        prewrite: true,
+      }),
+    ]);
+    if ("failure" in before) return before.failure;
+    if ("failure" in pointerBefore) return pointerBefore.failure;
+    if ("failure" in tagBefore) return tagBefore.failure;
+    if (
+      before.value.mainSha !== intent.remote.expectedMainSha ||
+      before.value.mainStateDigest !== intent.remote.expectedMainStateDigest ||
+      before.value.pointerObjectDigest !== intent.remote.expectedPointerObjectDigest ||
+      before.value.controlManifestSnapshotDigest !==
+        intent.remote.beforeControlManifestSnapshotDigest ||
+      pointerBefore.value.mainSha !== intent.remote.expectedMainSha ||
+      pointerBefore.value.mainStateDigest !== intent.remote.expectedMainStateDigest ||
+      pointerBefore.value.pointerObjectDigest !== intent.remote.expectedPointerObjectDigest ||
+      pointerBefore.value.controlManifestSnapshotDigest !==
+        intent.remote.beforeControlManifestSnapshotDigest
+    )
+      return {
+        status: "denied",
+        stage: "preflight",
+        reason: "initial_identity_drift",
+        remoteWrites: initialRemoteWrites,
+      };
+    if (tagBefore.value !== null)
+      return {
+        status: "denied",
+        stage: "preflight",
+        reason: "duplicate_or_retargeted_tag",
+        remoteWrites: initialRemoteWrites,
+      };
+  }
+
+  const leaseInput: PackMainLeaseInput = {
+    repository: intent.remote.repository,
+    targetRef: "refs/heads/main",
+    expectedMainOid: intent.remote.expectedMainSha,
+    reviewedHeadOid: admission.preparation.reviewedHeadOid,
+  };
+  const merged = await run.mutate("pack_main_lease", leaseInput, async () => {
+    const result = await ports.pack.applyReviewedHeadWithLease(leaseInput);
+    if (
+      result.status === "attested" &&
+      (result.value.targetRef !== leaseInput.targetRef ||
+        result.value.expectedMainOid !== leaseInput.expectedMainOid ||
+        result.value.reviewedHeadOid !== leaseInput.reviewedHeadOid ||
+        result.value.actualUpdateStatus !== "updated" ||
+        result.value.postReadOid !== leaseInput.reviewedHeadOid)
+    )
+      return { status: "mismatch", reason: "lease_observation_mismatch" };
+    return result;
+  });
   if ("failure" in merged) return merged.failure;
   if ("reconcile" in merged) return reconcile(intent, ports, run.count());
 
@@ -1001,12 +1316,12 @@ export async function publishPackCanary(
     invoke: () =>
       ports.pack.observeReleaseCommit({
         repository: intent.remote.repository,
-        mainSha: merged.value.mainSha,
+        mainSha: merged.value.postReadOid,
       }),
   });
   if ("failure" in commit) return commit.failure;
   if (
-    commit.value.commitSha !== merged.value.mainSha ||
+    commit.value.commitSha !== merged.value.postReadOid ||
     commit.value.treeDigest !== intent.expectedTreeDigest ||
     commit.value.controlManifestSnapshotDigest !== intent.controlManifestSnapshotDigest ||
     commit.value.releaseId !== intent.releaseId ||
@@ -1235,6 +1550,40 @@ export async function publishPackCanary(
     }
   }
   return { status: "published", receipt, remoteWrites: run.count(), cleanup };
+}
+
+/**
+ * Runs the publication FSM from a reviewed, admitted preparation.  The
+ * compatibility path without an admission is intentionally kept only for
+ * existing callers: it performs the preparation as a separate operation and
+ * then enters this function with the resulting receipt.
+ */
+export async function publishPackCanary(
+  intent: PackPublicationIntent,
+  ports: PackPublicationPorts,
+  admission?: PackPublicationAdmission,
+): Promise<PackPublicationResult> {
+  if (admission)
+    return publishAdmittedPackCanary({
+      intent,
+      ports,
+      admission,
+      initialRemoteWrites: 0,
+      preflightAlreadyVerified: true,
+    });
+  const preparation = await preparePackPublication(intent, ports);
+  if (!preparation.ok) {
+    const { ok: _ok, ...failure } = preparation;
+    return failure;
+  }
+  if (preparation.status === "reconciled") return preparation.result;
+  return publishAdmittedPackCanary({
+    intent,
+    ports,
+    admission: admissionFromPreparation(intent, preparation.receipt),
+    initialRemoteWrites: preparation.remoteWrites,
+    preflightAlreadyVerified: true,
+  });
 }
 
 export const executePackPublication = publishPackCanary;
