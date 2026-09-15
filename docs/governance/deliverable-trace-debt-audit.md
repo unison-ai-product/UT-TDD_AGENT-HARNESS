@@ -35,6 +35,7 @@ orphan と duplicate ownership を別集合として双方向突合し、remedia
 | `scripts/git-hooks/secret-scan-diff.ts` | orphan-deliverable | `PLAN-REVERSE-450-test-traceability-detector-backfill` | W3/W4 機械生成の棚卸し: 過去の未追跡成果物 | 2026-08-31 |
 | `scripts/ut-tdd` | orphan-deliverable | `PLAN-REVERSE-450-test-traceability-detector-backfill` | W3/W4 機械生成の棚卸し: 過去の未追跡成果物 | 2026-08-31 |
 | `tests/delegation-routing.test.ts` | orphan-deliverable | `PLAN-REVERSE-450-test-traceability-detector-backfill` | W3/W4 機械生成の棚卸し: 過去の未追跡成果物 | 2026-08-31 |
+| `tests/pack-publication-production-ports.test.ts` | orphan-deliverable | `PLAN-REVERSE-450-test-traceability-detector-backfill` | W3/W4 機械生成の棚卸し: 過去の未追跡成果物 | 2026-08-31 |
 | `tests/plan-asset/evidence-policy.test.ts` | orphan-deliverable | `PLAN-REVERSE-450-test-traceability-detector-backfill` | W3/W4 機械生成の棚卸し: 過去の未追跡成果物 | 2026-08-31 |
 | `tests/secret-scan-diff.test.ts` | orphan-deliverable | `PLAN-REVERSE-450-test-traceability-detector-backfill` | W3/W4 機械生成の棚卸し: 過去の未追跡成果物 | 2026-08-31 |
 | `tests/setup-agent-floor.test.ts` | orphan-deliverable | `PLAN-REVERSE-450-test-traceability-detector-backfill` | W3/W4 機械生成の棚卸し: 過去の未追跡成果物 | 2026-08-31 |
@@ -203,7 +204,6 @@ orphan と duplicate ownership を別集合として双方向突合し、remedia
 | `docs/plans/PLAN-REVERSE-419-forward-fsm-backfill.md` | duplicate-artifact-ownership | `PLAN-REVERSE-450-test-traceability-detector-backfill` | W2 機械生成の棚卸し: 複数 PLAN による generates 宣言 | 2026-08-31 |
 | `docs/plans/PLAN-REVERSE-420-vmodel-contract-compiler-backfill.md` | duplicate-artifact-ownership | `PLAN-REVERSE-450-test-traceability-detector-backfill` | W2 機械生成の棚卸し: 複数 PLAN による generates 宣言 | 2026-08-31 |
 | `docs/plans/PLAN-REVERSE-421-generic-right-arm-backfill.md` | duplicate-artifact-ownership | `PLAN-REVERSE-450-test-traceability-detector-backfill` | W2 機械生成の棚卸し: 複数 PLAN による generates 宣言 | 2026-08-31 |
-| `docs/plans/PLAN-REVERSE-467-repository-document-ledger-backfill.md` | duplicate-artifact-ownership | `PLAN-REVERSE-450-test-traceability-detector-backfill` | W2 機械生成の棚卸し: 複数 PLAN による generates 宣言 | 2026-08-31 |
 | `docs/plans/PLAN-REVERSE-423-engine-swap-domain-backfill.md` | duplicate-artifact-ownership | `PLAN-REVERSE-450-test-traceability-detector-backfill` | W2 機械生成の棚卸し: 複数 PLAN による generates 宣言 | 2026-08-31 |
 | `docs/plans/PLAN-REVERSE-424-semantic-assessment-backfill.md` | duplicate-artifact-ownership | `PLAN-REVERSE-450-test-traceability-detector-backfill` | W2 機械生成の棚卸し: 複数 PLAN による generates 宣言 | 2026-08-31 |
 | `docs/plans/PLAN-REVERSE-425-detector-meta-verifier-backfill.md` | duplicate-artifact-ownership | `PLAN-REVERSE-450-test-traceability-detector-backfill` | W2 機械生成の棚卸し: 複数 PLAN による generates 宣言 | 2026-08-31 |
@@ -215,6 +215,7 @@ orphan と duplicate ownership を別集合として双方向突合し、remedia
 | `docs/plans/PLAN-REVERSE-439-cross-review-merge-backfill.md` | duplicate-artifact-ownership | `PLAN-REVERSE-450-test-traceability-detector-backfill` | W2 機械生成の棚卸し: 複数 PLAN による generates 宣言 | 2026-08-31 |
 | `docs/plans/PLAN-REVERSE-444-engine-swap-g8-evidence-backfill.md` | duplicate-artifact-ownership | `PLAN-REVERSE-450-test-traceability-detector-backfill` | W2 機械生成の棚卸し: 複数 PLAN による generates 宣言 | 2026-08-31 |
 | `docs/plans/PLAN-REVERSE-449-cli-shell-completion-backfill.md` | duplicate-artifact-ownership | `PLAN-REVERSE-450-test-traceability-detector-backfill` | W2 機械生成の棚卸し: 複数 PLAN による generates 宣言 | 2026-08-31 |
+| `docs/plans/PLAN-REVERSE-467-repository-document-ledger-backfill.md` | duplicate-artifact-ownership | `PLAN-REVERSE-450-test-traceability-detector-backfill` | W2 機械生成の棚卸し: 複数 PLAN による generates 宣言 | 2026-08-31 |
 | `docs/plans/PLAN-REVERSE-56-artifact-progress-state.md` | duplicate-artifact-ownership | `PLAN-REVERSE-450-test-traceability-detector-backfill` | W2 機械生成の棚卸し: 複数 PLAN による generates 宣言 | 2026-08-31 |
 | `docs/process/gates.md` | duplicate-artifact-ownership | `PLAN-REVERSE-450-test-traceability-detector-backfill` | W2 機械生成の棚卸し: 複数 PLAN による generates 宣言 | 2026-08-31 |
 | `docs/process/modes/README.md` | duplicate-artifact-ownership | `PLAN-REVERSE-450-test-traceability-detector-backfill` | W2 機械生成の棚卸し: 複数 PLAN による generates 宣言 | 2026-08-31 |

@@ -50,17 +50,17 @@ supersedes:
   - PLAN-L7-532-pack-publication-driver
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:a030bc07104b52cdc17f76e9beceb0df
-  command_id: plan-draft:issue-565:atomic-ref-cas:1
-  admitted_at: 2026-09-14T11:07:44.641Z
+  receipt_id: certificate:8061e8e6a8d69c896415f82ea6693193
+  command_id: plan-revise:issue-565:forward:6
+  admitted_at: 2026-09-15T10:30:00+09:00
   source_digest: sha256:efd67cb89dbf6e187fd998c062972332a868e868ee5b70993be4080a9ccb6647
-  decision_digest: sha256:a46fff25c28c3cf1213ce45af46fda178aff88564aa5594db22341fa00f63763
-  receipt_digest: sha256:c6dfc917dd6c420edb629392513d0499ee0817566a9f03cbba334186d3aece29
+  decision_digest: sha256:bee6cf6ddd5d4f0d440aaaad5b8c7fcdef9791e4269b921435e4a1f91e8c400e
+  receipt_digest: sha256:fe4dbb046cb401314888a5edaa8063e7056bcea97c87091024d8c1f767f36d2e
   binding:
     path: docs/plans/PLAN-L7-565-pack-publication-atomic-ref-cas.md
     plan_id: PLAN-L7-565-pack-publication-atomic-ref-cas
     asset_id: plan:a030bc07104b52cdc17f76e9beceb0df
-    revision: 1
+    revision: 2
     content_digest: sha256:efd67cb89dbf6e187fd998c062972332a868e868ee5b70993be4080a9ccb6647
   route:
     signal: feature_addition
