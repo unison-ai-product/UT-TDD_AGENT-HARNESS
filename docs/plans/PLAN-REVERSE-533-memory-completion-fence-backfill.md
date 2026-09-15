@@ -106,6 +106,10 @@ provider wake / claim / doctor) の接合面として確認する。L7-512 が�
   (`020`、`021`)。
 - **residue の集合差分**: linked worktree の untracked memory を `(memory_id, content_digest)` の集合差分で観測し、
   mtime を使わない (`008`、`009`)。`invalid_memory` / `source_unsafe` は Slice 4a の typed reason を再利用する。
+- **Memory service 本文reader境界**: fence / writer は canonical corpus 本文を直接読む代わりに、Memory service の
+  strict canonical snapshot を使う。snapshot はpath byte順、schema、bytes、size、digest、stable readを同一結果へ束縛し、
+  parse隔離用の `loadMemoryCorpus()` をfail-close入力へ再利用しない (`024..026`)。この変更は L5/L6 の
+  service read contractをboundedに補強するだけで、production入口へのfence結線はPR-2へ残す。
 - **回復の append-only**: 新 operation の apply は Slice 4b の transaction 経路を使い、個別ファイル単位で記録する
   (`010`、`011`)。read-only fence が検証する `canonicalCorpusDigest` と `previous_complete_digest` は同じPR-1の既存 writer
   additive changeが発行し、手書きmarkerを正例fixtureにしない (`020`)。
@@ -123,7 +127,7 @@ provider wake / claim / doctor) の接合面として確認する。L7-512 が�
 | requirements | not_impacted | project-scoped Memory root と fail-close の既存要求を変更しない。 |
 | L4-basic-design | not_impacted | primary / linked worktree の責務境界を変更しない。 |
 | L5-detailed-design | updated (bounded) | `owner.previous_complete_digest`、completeの`canonicalCorpusDigest`、実取り込み集合、個別import disposition、complete replayのreason precedenceを追加する。既存marker hash chain・DB schemaは変更しない。 |
-| L6-function-design | updated (bounded) | root解決・inventory正本は`PLAN-L7-512`に保持する。既存writerへ回復applyの個別importとcomplete replay分岐を追加するが、dry-run全体denyと未完了operationの`inventory_drift`は維持する。 |
+| L6-function-design | updated (bounded) | root解決・inventory正本は`PLAN-L7-512`に保持する。Memory service strict snapshotをfence / writerの唯一の本文readerにし、既存writerへ回復applyの個別importとcomplete replay分岐を追加するが、dry-run全体denyと未完了operationの`inventory_drift`は維持する。 |
 | L7-unit-test-design | updated | 実装 PR で `U-PMEMFENCE-*` を共有 `L7-unit-test-design.md` へ 1:1 登録する。既存 `U-PMEMINV-*` / `U-PMEMQUAR-*` は変更しない。 |
 | L12-acceptance-test-design | not_impacted | clean Pack provider parity E2E は #424 後続 slice が所有する。 |
 
@@ -149,6 +153,9 @@ provider wake / claim / doctor) の接合面として確認する。L7-512 が�
 | 010 | PR-1 | residue に schema 不正 file を混ぜて apply | 不正は `invalid_memory` で取り込み 0、正常分だけ marker に記録 |
 | 011 | PR-1 | observe 後・apply 前に residue を追加 | 取り込んだものだけ記録、未取り込みは次回 apply が拾う |
 | 012 | PR-1 | identity 欠落 / drift / root escape / common-dir 不正 | `PLAN-L7-512` の typed deny をそのまま返す、write 0 |
+| 024 | PR-1 | canonical corpusへfrontmatter不正fileを1件混入 | `invalid_memory`、snapshot entries/digestを返さずwrite 0。per-entry finding隔離で通したらRed |
+| 025 | PR-1 | canonical rootまたはmemory fileをsymlink / junction / non-regularへ1軸変異 | `source_unsafe`、realpath escape / enumeration / canonical write 0 |
+| 026 | PR-1 | read前後でbytes / size / handle-statを1軸変異するsnapshot fault | `snapshot_unstable`、digest/indexを返さずwrite 0 |
 | 013 | PR-2 | Claude / Codex の入口から同一 repository を観測 | reason と write 0 が一致、session 紐付き状態 0 |
 | 014 | PR-2 | tracked identity + transaction 不在 / identity 未 commit / remote 無し | 初回 bootstrap 許可 / `project_identity_commit_required` で migration のみ保留・state/template 継続 / 非 fatal |
 | 015 | PR-2 | consumer-toolchain / consumer-setup-smoke doctor を ok / incomplete / tamper / residue で起動 | 正例 1 + 負例 3 が各 typed reason で fail-close |
