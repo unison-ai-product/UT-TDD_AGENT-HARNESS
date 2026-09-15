@@ -254,7 +254,7 @@ function sealedIntent() {
 function ports(overrides: Partial<PackPublicationPorts> = {}): PackPublicationPorts {
   const plan = stagingPlan();
   const mainSha = "7".repeat(40);
-  let canaryObservations = 0;
+  let mainUpdated = false;
   let createdTag: { name: string; targetCommit: string; annotated: true } | null = null;
   const base: PackPublicationPorts = {
     approval: { consume: async () => ({ status: "attested", value: { mode: "new" } }) },
@@ -332,16 +332,19 @@ function ports(overrides: Partial<PackPublicationPorts> = {}): PackPublicationPo
           pullRequestUnused: true,
         },
       }),
-      applyReviewedHeadWithLease: async () => ({
-        status: "attested",
-        value: {
-          targetRef: "refs/heads/main",
-          expectedMainOid: "1".repeat(40),
-          reviewedHeadOid: "7".repeat(40),
-          actualUpdateStatus: "updated",
-          postReadOid: mainSha,
-        },
-      }),
+      applyReviewedHeadWithLease: async () => {
+        mainUpdated = true;
+        return {
+          status: "attested",
+          value: {
+            targetRef: "refs/heads/main",
+            expectedMainOid: "1".repeat(40),
+            reviewedHeadOid: "7".repeat(40),
+            actualUpdateStatus: "updated",
+            postReadOid: mainSha,
+          },
+        };
+      },
       observeReleaseCommit: async () => ({
         status: "attested",
         value: {
@@ -395,15 +398,13 @@ function ports(overrides: Partial<PackPublicationPorts> = {}): PackPublicationPo
     },
     canary: {
       observeBefore: async () => {
-        canaryObservations += 1;
         return {
           status: "attested",
           value: {
             pointerObjectDigest: `sha256:${"3".repeat(64)}`,
             controlManifestSnapshotDigest: plan.controlManifestSnapshotDigest,
-            mainSha: canaryObservations <= 3 ? "1".repeat(40) : mainSha,
-            mainStateDigest:
-              canaryObservations <= 3 ? `sha256:${"2".repeat(64)}` : `sha256:${"9".repeat(64)}`,
+            mainSha: mainUpdated ? mainSha : "1".repeat(40),
+            mainStateDigest: mainUpdated ? `sha256:${"9".repeat(64)}` : `sha256:${"2".repeat(64)}`,
           },
         } as const;
       },
@@ -469,7 +470,8 @@ async function publishPackCanary(
       remoteWrites: preparation.remoteWrites,
     } as PackPublicationResult;
   const { admission } = admitted;
-  return rawPublishPackCanary(admission.publicationIntent, configured, admission);
+  const result = await rawPublishPackCanary(admission.publicationIntent, configured, admission);
+  return { ...result, remoteWrites: result.remoteWrites + preparation.remoteWrites };
 }
 
 function withOperationLedger(value: PackPublicationPorts, ledger: string[]): PackPublicationPorts {
@@ -917,7 +919,7 @@ describe("remote Pack canary publication", () => {
           ...base.tag,
           observe: async () => {
             observations += 1;
-            if (observations === 1) return { status: "attested", value: null };
+            if (observations <= 3) return { status: "attested", value: null };
             throw new Error("lost");
           },
         },
@@ -1000,7 +1002,7 @@ describe("remote Pack canary publication", () => {
           observeBefore: async () => {
             observations += 1;
             const observed = await base.canary.observeBefore();
-            if (observed.status !== "attested" || observations === 1) return observed;
+            if (observed.status !== "attested" || observations <= 3) return observed;
             return {
               status: "attested",
               value: { ...observed.value, pointerObjectDigest: sha("foreign") },
@@ -1463,7 +1465,7 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
           observeBefore: async () => {
             count += 1;
             const observed = await base.canary.observeBefore();
-            if (observed.status !== "attested" || count === 1) return observed;
+            if (observed.status !== "attested" || count <= 3) return observed;
             return {
               status: "attested",
               value: { ...observed.value, pointerObjectDigest: sha("foreign") },
