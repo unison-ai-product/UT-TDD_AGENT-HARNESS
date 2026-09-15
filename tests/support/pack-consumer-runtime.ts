@@ -14,6 +14,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { stringify } from "yaml";
 import { buildNodeGeneration } from "../../src/runtime/node-bootstrap.ts";
+import { resolveLiveClaudeTarget } from "../../src/runtime/claude-memory-wake.ts";
 import {
   deriveArtifactInventoryDigest,
   deriveReleaseId,
@@ -389,18 +390,13 @@ export function startConsumerWake(consumerRoot: string, sessionId: string) {
 }
 
 export async function waitForConsumerWakeTarget(consumerRoot: string): Promise<void> {
-  const projectsRoot = join(consumerRoot, ".git", "ut-tdd-runtime", "projects");
   for (let attempt = 0; attempt < 200; attempt += 1) {
-    try {
-      const namespace = readdirSync(projectsRoot).find((name) => !name.startsWith("."));
-      if (namespace) {
-        const wakeRoot = join(projectsRoot, namespace, "claude-memory-wake");
-        const generation = readdirSync(wakeRoot).find((name) => name.endsWith(".generation"));
-        if (generation) return;
-      }
-    } catch {
-      // The consumer process creates the project namespace asynchronously.
-    }
+    // A generation marker is the first activation write, not the readiness
+    // boundary.  Stopping the fixture process after that marker but before its
+    // capability and authority records are durable leaves a valid-looking
+    // marker which must correctly fail closed at the consumer boundary.  Wait
+    // for the same complete authority resolution used by production instead.
+    if (resolveLiveClaudeTarget(consumerRoot).ok) return;
     await new Promise((resolve) => setTimeout(resolve, 25));
   }
   throw new Error("consumer_claude_wake_target_not_live");
