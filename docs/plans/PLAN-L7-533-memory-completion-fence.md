@@ -30,6 +30,8 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-533-memory-completion-fence.md
     artifact_type: markdown_doc
+  - artifact_path: tests/project-memory-completion-fence.test.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L7-512-project-scoped-memory-root.md
   requires:
@@ -55,18 +57,18 @@ status: draft
 github_issue_id: 550
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:ae424c3a1996042388a8d47c9275122a
-  command_id: plan-revise:issue-550:forward:9
-  admitted_at: 2026-09-14T10:38:46.121Z
-  source_digest: sha256:ddc519ea1675f3df17b948bc2ff66dc33cfcd22ff2fba15ff48de1cd52ddb40e
-  decision_digest: sha256:c2fad4a0b857407b1fbc087b8b025a8040f5457978abf6d6b5e212c8d94b361c
-  receipt_digest: sha256:6331d93dd9aa50328f838dc22a6ec68838d66f8a51f706755cf93bd8259e85d8
+  receipt_id: certificate:6bc5aaa2a95e1c9bd9fdb8982836a9c2
+  command_id: plan-revise:issue-550:forward:10
+  admitted_at: 2026-09-15T05:25:20.532Z
+  source_digest: sha256:b1ebef876f75038fc0e6b478674a338a3a71c0dd45d81660ef58f7c1e98931da
+  decision_digest: sha256:32cf321473cf2b46ae3fe997b7ffbc6d0c119dc87039659cc2e88f475359ea0f
+  receipt_digest: sha256:cb849e46d9dd6d7b22968e1e41d06080670e205c9f82b4687e25ca20df32678a
   binding:
     path: docs/plans/PLAN-L7-533-memory-completion-fence.md
     plan_id: PLAN-L7-533-memory-completion-fence
     asset_id: plan:fb4a53df298985d3204d2e9b3bfa55d1
-    revision: 9
-    content_digest: sha256:ddc519ea1675f3df17b948bc2ff66dc33cfcd22ff2fba15ff48de1cd52ddb40e
+    revision: 10
+    content_digest: sha256:b1ebef876f75038fc0e6b478674a338a3a71c0dd45d81660ef58f7c1e98931da
   route:
     signal: feature_addition
     mode: add-feature
@@ -83,10 +85,8 @@ admission_receipt:
     target_plan_id: PLAN-L7-533-memory-completion-fence
     target_revision: 1
     phase: forward_merge
-  escape_reason: "Issue #550 completion fence contract pair-freeze after PR #554
-    FLAG B1 (canonical-root baseline; PLAN-L7-512 rev 6 downstream); revision 9:
-    range notation 001..023 / 016..023 aligned in §7 / Reverse qa slot (Claude
-    Opus review f723873a non-blocking note)"
+  escape_reason: "Issue #550 PR-1 completion core implementation deliverable trace
+    registration (revision 10)"
 ---
 
 # PLAN-L7-533: Memory migration completion fence の正本を canonical root に限定する契約

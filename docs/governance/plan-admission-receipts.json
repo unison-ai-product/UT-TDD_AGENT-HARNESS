@@ -3824,6 +3824,22 @@
         "revision": 5,
         "content_digest": "sha256:09a27995e7d40d593cc30c6ea022f127285823798d9e8e1181d2f989811ff166"
       }
+    },
+    {
+      "sequence": 240,
+      "previous_record_digest": "sha256:e360f06816a21788508115404ace6da9ef0b9eb97d25d565ef3b73ce7f3dd324",
+      "record_digest": "sha256:e9ea44edc5f30b56a5c9498247b104fda65be994df5726181fb506c53c8723ca",
+      "command_id": "plan-revise:issue-550:forward:10",
+      "receipt_id": "certificate:6bc5aaa2a95e1c9bd9fdb8982836a9c2",
+      "receipt_digest": "sha256:cb849e46d9dd6d7b22968e1e41d06080670e205c9f82b4687e25ca20df32678a1",
+      "decision_digest": "sha256:32cf321473cf2b46ae3fe997b7ffbc6d0c119dc87039659cc2e88f475359ea0f",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-533-memory-completion-fence.md",
+        "plan_id": "PLAN-L7-533-memory-completion-fence",
+        "asset_id": "plan:fb4a53df298985d3204d2e9b3bfa55d1",
+        "revision": 10,
+        "content_digest": "sha256:b1ebef876f75038fc0e6b478674a338a3a71c0dd45d81660ef58f7c1e98931da"
+      }
     }
   ]
 }
