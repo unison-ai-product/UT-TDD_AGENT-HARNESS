@@ -48,9 +48,10 @@ dependencies:
 review_evidence:
   - reviewer: codex
     review_kind: cross_agent
-    reviewed_at: "2026-08-27T03:30:12Z"
-    tests_green_at: "2026-08-27T03:17:17Z"
-    verdict: "§5 旧 Bun 配布経路の処遇契約 freeze に対する非著者 closing review 成立 (PASS / blocking 0)。PLAN 全体の confirm ではないため status は draft"
+    reviewed_at: 2026-08-27T03:30:12Z
+    tests_green_at: 2026-08-27T03:17:17Z
+    verdict: §5 旧 Bun 配布経路の処遇契約 freeze に対する非著者 closing review 成立 (PASS / blocking
+      0)。PLAN 全体の confirm ではないため status は draft
     worker_model: claude-opus-5
     reviewer_model: gpt-5.6-sol
     effort: low
@@ -58,56 +59,58 @@ review_evidence:
     subject_head: 2cd9640c9388bd7624e921b18a8702e9ec9e61c0
     evidence_path: docs/test-design/harness/L7-unit-test-design.md
     anchor_commit: 2cd9640c9388bd7624e921b18a8702e9ec9e61c0
-    scope: >-
-      PR #430 exact HEAD 2cd9640c に対する非著者 closing review。著者 family は claude、
+    scope: "PR #430 exact HEAD 2cd9640c に対する非著者 closing review。著者 family は claude、
       reviewer family は codex。canonical request
-      rv1-8aa6ba19798e516c67fd771cec70ea9eb2214dbdf0bd9bf215c549283ec0626b の receipt が
-      verdict=PASS / blocking 0 / reviewerFamily=codex を記録している。対象は §5 の
-      wrapper 検出契約と CANDIDATE-NODEBOOT-021..030 の r1〜r8 FLAG 是正の閉塞のみで、
-      PLAN-L6-93 全体の confirm、Bun retirement の完了、Issue #134/#411 の完了は主張しない。
-      先行して mint された rv1-55b815ea… は author_family を codex と誤申告しており無効。
-      当該 request は自己 review を強制する構造だったため使用せず、正しい author_family=claude で
-      再 mint した上記 identity のみを正本とする (Issue #437 / Issue #439)。
+      rv1-8aa6ba19798e516c67fd771cec70ea9eb2214dbdf0bd9bf215c549283ec0626b の
+      receipt が verdict=PASS / blocking 0 / reviewerFamily=codex を記録している。対象は §5
+      の wrapper 検出契約と CANDIDATE-NODEBOOT-021..030 の r1〜r8 FLAG 是正の閉塞のみで、
+      PLAN-L6-93 全体の confirm、Bun retirement の完了、Issue #134/#411 の完了は主張しない。 先行して
+      mint された rv1-55b815ea… は author_family を codex と誤申告しており無効。 当該 request は自己
+      review を強制する構造だったため使用せず、正しい author_family=claude で 再 mint した上記 identity
+      のみを正本とする (Issue #437 / Issue #439)。"
     citations:
-      - ".ut-tdd/review/receipts/8aa6ba19798e516c67fd771cec70ea9eb2214dbdf0bd9bf215c549283ec0626b.json"
-      - "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/actions/runs/33035309149"
-      - "docs/test-design/harness/L7-unit-test-design.md: CANDIDATE-NODEBOOT-021..030"
+      - .ut-tdd/review/receipts/8aa6ba19798e516c67fd771cec70ea9eb2214dbdf0bd9bf215c549283ec0626b.json
+      - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/actions/runs/33035309149
+      - "docs/test-design/harness/L7-unit-test-design.md:
+        CANDIDATE-NODEBOOT-021..030"
     green_commands:
       - kind: unit_test
-        command: "GitHub harness-check run 33035309149 (harness-check-linux / harness-check-windows / harness-check aggregate)"
+        command: GitHub harness-check run 33035309149 (harness-check-linux /
+          harness-check-windows / harness-check aggregate)
         runner: ci
         scope: full
         exit_code: 0
-        completed_at: "2026-08-27T03:17:17Z"
+        completed_at: 2026-08-27T03:17:17Z
         evidence_path: docs/test-design/harness/L7-unit-test-design.md
-        output_digest: "sha256:bab243e124dec46e8be98ef149482f0bcbbcd05bf59f01f78f41a6ff84a87c6f"
+        output_digest: sha256:bab243e124dec46e8be98ef149482f0bcbbcd05bf59f01f78f41a6ff84a87c6f
         anchor_commit: 2cd9640c9388bd7624e921b18a8702e9ec9e61c0
       - kind: vmodel_lint
-        command: "node src/cli.ts plan lint docs/plans/PLAN-L6-93-node-bootstrap-contract.md"
+        command: node src/cli.ts plan lint
+          docs/plans/PLAN-L6-93-node-bootstrap-contract.md
         runner: node
         scope: targeted
         exit_code: 0
-        completed_at: "2026-08-27T03:17:17Z"
+        completed_at: 2026-08-27T03:17:17Z
         evidence_path: docs/plans/PLAN-L6-93-node-bootstrap-contract.md
-        output_digest: "sha256:edc5d7c882bfa3e78ce485e6264893da2b35e6ab78ec83b2ee5334e326934976"
+        output_digest: sha256:edc5d7c882bfa3e78ce485e6264893da2b35e6ab78ec83b2ee5334e326934976
         anchor_commit: 2cd9640c9388bd7624e921b18a8702e9ec9e61c0
 status: draft
 sub_doc: function-spec
 github_issue_id: 152
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:f7efb74757a4f49afa8b883d930cedd5
-  command_id: pr154-trust-boundary-l6-20260724
-  admitted_at: 2026-07-24T17:10:00.000Z
-  source_digest: sha256:3c8030fa3d772ca8b7dd6f45d0c5076a6d04443a82a5c4230560490d3a09f1b7
-  decision_digest: sha256:0319964350e137078c4526993df2313d608b02ba677372227484793269a5de32
-  receipt_digest: sha256:65b25f470553027bc796b38e89be60439b00f8de9518afc7eeeea336df23579a
+  receipt_id: certificate:5bc411405e6235205fd17e46f336137d
+  command_id: plan-revise:issue-540:cutover-prefix-contract:29
+  admitted_at: 2026-09-15T06:12:33.048Z
+  source_digest: sha256:bedfe0f1cbfcf538cc41dbdd62bf44cbb78b1cb58e7f74c8dbd3b729cebc0210
+  decision_digest: sha256:919b4d44f356d260bdec5829b5f6c60b659baead9ceecd740ddda2f72d266a24
+  receipt_digest: sha256:1e161b6ba25418195bce4e750a4f79339892edc2f095b933efc05a749b215d05
   binding:
     path: docs/plans/PLAN-L6-93-node-bootstrap-contract.md
     plan_id: PLAN-L6-93-node-bootstrap-contract
     asset_id: plan:legacy:80a50dd958ae451ea13030276eb8c145a8fdc3104ec145560457f97a07594881
-    revision: 27
-    content_digest: sha256:3c8030fa3d772ca8b7dd6f45d0c5076a6d04443a82a5c4230560490d3a09f1b7
+    revision: 29
+    content_digest: sha256:bedfe0f1cbfcf538cc41dbdd62bf44cbb78b1cb58e7f74c8dbd3b729cebc0210
   route:
     signal: feature_addition
     mode: add-feature
@@ -130,7 +133,9 @@ admission_receipt:
     target_plan_id: PLAN-L6-93-node-bootstrap-contract
     target_revision: 27
     phase: forward_merge
-  escape_reason: PR 154 trust boundary closure
+  escape_reason: "Issue #540 cutover prefix contract pair-freeze after Method A
+    restore-then-revise rehydration of PLAN-L6-93 rev27 to rev28; docs-only
+    contract adoption, status draft, implementation excluded."
 ---
 
 # PLAN-L6-93: sealed Node bootstrap function redesign
@@ -350,6 +355,50 @@ zod schema正本は`src/schema/cutover-transition.ts`と`src/schema/node-slice-a
 `PLAN-REVERSE-458-node-self-hosted-bun-ban-backfill`は設計参照に限定する。
 本PLANは`status: draft`のため、これらのartifactの実装完了やCutoverのconfirmed化を
 この所有宣言から導出しない。
+
+### Issue #540: cutover prefixの実装順序と検収境界
+
+Issue #473配下の#540が、上記3 pathのschema/writer/pair testを実装する。
+既存のartifact ownerは本PLANのまま、新PLAN・新receipt authority・別producerを作らない。
+本改訂はdocs-onlyのpair-freeze候補であり、statusはdraftを維持する。非著者がこのcontract revisionと
+L7の対応oracleをreviewしてPASSするまで実装を開始しない。3 pathを実体化する実装PRで
+初めてconfirmedへの遷移とexact-head review evidenceを揃える。実在しないgeneratesを
+confirmedで宣言せず、過去の§5限定PASSを§4又はPLAN全体の承認へ流用しない。
+
+実装対象は`cutover.genesis`、`cutover.inventory-frozen.node-shadow`、
+`cutover.node-shadow.node-primary`、`cutover.node-primary.bun-removed`の4 edge。
+L5の`CUTOVER-EVIDENCE-REGISTRY-v1`と`CUTOVER-ADMISSION-PRODUCER-MAP-v1`を
+唯一のkind/count/producer/revision/authority規則として参照し、ここへ別の表を複製しない。
+`CutoverAdmissionReceipt`の14 field、execution mode、nested attestation、prior closureは§4を維持する。
+legacy backfill専用のnode-slice-admission writerをproduction cutover authorityへ転用しない。
+
+実装順序は、(1) 本契約とpair oracleの非著者freeze、(2) schema/writer/testのTDDと
+Linux/Windows/aggregate検証、(3) exact-head closing reviewとmain統合、(4) #487の
+撤去candidate検証である。writerの利用可能性とproductionでの遷移成立は別の証拠である。
+#540のfixtureで4 edgeを通しても本環境のcutover成立を主張せず、production activationは
+引き続きL6 confirmed/D0及び各edgeのfresh evidence成立まで0とする。
+`node_primary → bun_removed`のinventory.zero/pack.acceptanceは#487の実candidateから得る。
+`cutover.bun-removed.sealed`とdebt #153の解消は#487後段であり、本sliceは未対応edgeを
+受理しない。L5の5 edge契約を削除せず、sealed完成をprefix実装の完了へ読み替えない。
+CLI、新規evidence producer配線、Bun物理削除、consumer setup配線は#540へ混ぜない。
+
+#### Pair checks
+
+| 観点 | 実装前に必要な判別証拠 |
+| --- | --- |
+| Genesis / prior closure | 既存authorityが供給するQ0 predecessorを検証し、absent・wrong kind・broken closureを拒否する。二重のgenesisはappendしない。 |
+| Reducer / edge guard | 4つのsupported edgeを各1回通し、skip・reverse・unsupported sealed edge・wrong previous stateをappendなしで拒否する。 |
+| Evidence / replay | registry kind・producer・authority・revision rule・execution mode・prior digestの各mutationを、他のvalid inputを保ったまま拒否する。 |
+| Digest mutation | 対象guardの判定を観測できるよう、必要な無関係envelopeだけを再計算し、incidentallyなdigest mismatchに隠れないことを確認する。 |
+| CAS / durable append | 1つのheadへの2 contenderでappendがちょうど1件となり、loserと各transaction failureでreceipt/headのpartial stateを残さない。 |
+| Projection | stateがcommitted chainから導出され、direct projection editだけではauthorityをmintできずforkも隠せない。 |
+| Production admission | writer availabilityやfixture successからruntime activationやreal Bun removalを導出せず、L6/D0/fresh evidence gateを保持する。 |
+
+L7 unit-test designの12-field `transition receipt`と、Issue #540の14-field
+`CutoverAdmissionReceipt`は別schema・別reference levelとして検証する。transitionの
+`admission_digest`はadmission.approvedのevidence receipt digestを指し、admission core digestを
+直接参照しない。genesisのsequence 0/null CASと、後続のsequence +1 / prior transition digest CASを
+同じchain契約として保持し、CAS loserを自動retryしない。
 
 ## 5. 旧Bun配布経路の処遇 (削除禁止条項の保護範囲)
 
