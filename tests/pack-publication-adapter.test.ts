@@ -6,12 +6,14 @@ import {
   deriveReleaseRecordDigest,
 } from "../src/schema/release-manifest.ts";
 import {
+  admitPackPublication,
   derivePackPublicationIntentDigest,
   derivePackPublicationTreeDigest,
   type PackPublicationApproval,
   type PackPublicationIntentInput,
   type PackPublicationPorts,
   parseSealedPackageVersionIdentity,
+  preparePackPublication,
   publishPackCanary,
   sealPackPublicationIntent,
 } from "../src/setup/pack-publication-adapter.ts";
@@ -160,7 +162,7 @@ function input(plan = stagingPlan()): PackPublicationIntentInput {
       expectedMainStateDigest: `sha256:${"2".repeat(64)}`,
       expectedPointerObjectDigest: `sha256:${"3".repeat(64)}`,
       beforeControlManifestSnapshotDigest: plan.controlManifestSnapshotDigest,
-      allowedMergeMode: "pull_request_cas" as const,
+      allowedMergeMode: "exact_ref_lease" as const,
       derivationRule: "entries-and-sidecar-v2" as const,
     },
   };
@@ -169,7 +171,7 @@ function input(plan = stagingPlan()): PackPublicationIntentInput {
     "planned",
     "pack_branch_commit",
     "pack_pr_create",
-    "pack_pr_merge",
+    "pack_main_lease",
     "release_draft_create",
     ...plan.releaseAssets.map((asset) => `asset_upload:${asset.name}` as const),
     "tag_create",
@@ -184,7 +186,7 @@ function input(plan = stagingPlan()): PackPublicationIntentInput {
             planned: "planned",
             pack_branch_commit: "pack_commit",
             pack_pr_create: "pack_commit",
-            pack_pr_merge: "pack_commit",
+            pack_main_lease: "pack_commit",
             release_draft_create: "release_draft",
             tag_create: "tag",
             release_visibility: "release_visible",
@@ -213,7 +215,7 @@ function sealedIntent() {
 
 function ports(overrides: Partial<PackPublicationPorts> = {}): PackPublicationPorts {
   const plan = stagingPlan();
-  const mainSha = "6".repeat(40);
+  const mainSha = "7".repeat(40);
   let canaryObservations = 0;
   let createdTag: { name: string; targetCommit: string; annotated: true } | null = null;
   const base: PackPublicationPorts = {
@@ -233,8 +235,26 @@ function ports(overrides: Partial<PackPublicationPorts> = {}): PackPublicationPo
         status: "attested",
         value: { branchCommit: "7".repeat(40) },
       }),
-      createPullRequest: async () => ({ status: "attested", value: { pullRequest: "42" } }),
-      mergePullRequestCas: async () => ({ status: "attested", value: { mainSha } }),
+      createPullRequest: async () => ({
+        status: "attested",
+        value: {
+          pullRequest: "42",
+          headOid: "7".repeat(40),
+          baseOid: "1".repeat(40),
+          treeDigest: derivePackPublicationTreeDigest(plan),
+          controlManifestSnapshotDigest: plan.controlManifestSnapshotDigest,
+        },
+      }),
+      applyReviewedHeadWithLease: async () => ({
+        status: "attested",
+        value: {
+          targetRef: "refs/heads/main",
+          expectedMainOid: "1".repeat(40),
+          reviewedHeadOid: "7".repeat(40),
+          actualUpdateStatus: "updated",
+          postReadOid: mainSha,
+        },
+      }),
       observeReleaseCommit: async () => ({
         status: "attested",
         value: {
@@ -246,7 +266,7 @@ function ports(overrides: Partial<PackPublicationPorts> = {}): PackPublicationPo
           releaseId: plan.releaseId,
           sourceRevision,
           materializerVersion: "v2",
-          mergeMode: "pull_request_cas",
+          mergeMode: "exact_ref_lease",
         },
       }),
     },
@@ -1089,7 +1109,7 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
               releaseId: releaseId(),
               sourceRevision,
               materializerVersion: "v2",
-              mergeMode: "pull_request_cas",
+              mergeMode: "exact_ref_lease",
             },
           }),
         },
@@ -1431,9 +1451,9 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
             writes.push("pr_create");
             return base.pack.createPullRequest(value);
           },
-          mergePullRequestCas: async (value) => {
-            writes.push("pr_merge_cas");
-            return base.pack.mergePullRequestCas(value);
+          applyReviewedHeadWithLease: async (value) => {
+            writes.push("main_lease");
+            return base.pack.applyReviewedHeadWithLease(value);
           },
         },
       }),
@@ -1443,7 +1463,7 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
       "planned",
       "pack_branch_commit",
       "pack_pr_create",
-      "pack_pr_merge",
+      "pack_main_lease",
       "release_draft_create",
       expect.stringMatching(/^asset_upload:/),
       expect.stringMatching(/^asset_upload:/),
@@ -1451,7 +1471,101 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
       "release_visibility",
       "canary_pointer_append",
     ]);
-    expect(writes).toEqual(["branch_commit", "pr_create", "pr_merge_cas"]);
+    expect(writes).toEqual(["branch_commit", "pr_create", "main_lease"]);
+  });
+
+  it("CANDIDATE-PACKPUB-PORT-013: preparation owns branch/PR writes and admission owns the exact lease", async () => {
+    const intent = sealedIntent();
+    const base = ports();
+    const branchCommit = vi.fn(base.pack.commitPublicationBranch);
+    const createPullRequest = vi.fn(base.pack.createPullRequest);
+    const applyLease = vi.fn(base.pack.applyReviewedHeadWithLease);
+    const configured = ports({
+      pack: {
+        ...base.pack,
+        commitPublicationBranch: branchCommit,
+        createPullRequest,
+        applyReviewedHeadWithLease: applyLease,
+      },
+    });
+    const preparation = await preparePackPublication(intent, configured);
+    expect(preparation).toMatchObject({ ok: true, status: "prepared", remoteWrites: 2 });
+    if (!preparation.ok || preparation.status !== "prepared") return;
+    const admitted = admitPackPublication({
+      intent,
+      preparation: preparation.receipt,
+      observedPullRequest: {
+        pullRequest: preparation.receipt.pullRequest,
+        headOid: preparation.receipt.reviewedHeadOid,
+        baseOid: preparation.receipt.baseOid,
+        treeDigest: preparation.receipt.treeDigest,
+        controlManifestSnapshotDigest: preparation.receipt.controlManifestSnapshotDigest,
+      },
+      reviewEvidenceDigest: sha("review"),
+      requiredChecksDigest: sha("checks"),
+    });
+    expect(admitted.ok).toBe(true);
+    if (!admitted.ok) return;
+    const published = await publishPackCanary(intent, configured, admitted.admission);
+    expect(published.status).toBe("published");
+    expect(branchCommit).toHaveBeenCalledTimes(1);
+    expect(createPullRequest).toHaveBeenCalledTimes(1);
+    expect(applyLease).toHaveBeenCalledTimes(1);
+    expect(applyLease).toHaveBeenCalledWith({
+      repository: intent.remote.repository,
+      targetRef: "refs/heads/main",
+      expectedMainOid: intent.remote.expectedMainSha,
+      reviewedHeadOid: preparation.receipt.reviewedHeadOid,
+    });
+  });
+
+  it("CANDIDATE-PACKPUB-PORT-013: a lease observation drift is typed failure before release writes", async () => {
+    const intent = sealedIntent();
+    const base = ports();
+    const preparation = await preparePackPublication(intent, base);
+    if (!preparation.ok || preparation.status !== "prepared") throw new Error("preparation failed");
+    const admission = admitPackPublication({
+      intent,
+      preparation: preparation.receipt,
+      observedPullRequest: {
+        pullRequest: preparation.receipt.pullRequest,
+        headOid: preparation.receipt.reviewedHeadOid,
+        baseOid: preparation.receipt.baseOid,
+        treeDigest: preparation.receipt.treeDigest,
+        controlManifestSnapshotDigest: preparation.receipt.controlManifestSnapshotDigest,
+      },
+      reviewEvidenceDigest: sha("review"),
+      requiredChecksDigest: sha("checks"),
+    });
+    if (!admission.ok) throw new Error(admission.error);
+    const draft = vi.fn(base.release.createDraft);
+    const result = await publishPackCanary(
+      intent,
+      ports({
+        pack: {
+          ...base.pack,
+          applyReviewedHeadWithLease: async () => ({
+            status: "attested",
+            value: {
+              targetRef: "refs/heads/main",
+              expectedMainOid: intent.remote.expectedMainSha,
+              reviewedHeadOid: admission.admission.preparation.reviewedHeadOid,
+              actualUpdateStatus: "updated",
+              postReadOid: "f".repeat(40),
+            },
+          }),
+        },
+        release: { ...base.release, createDraft: draft },
+      }),
+      admission.admission,
+    );
+    expect(result).toMatchObject({
+      status: "partial_publication",
+      stage: "pack_commit",
+      reason: "lease_observation_mismatch",
+      remoteWrites: 1,
+    });
+    expect(draft).not.toHaveBeenCalled();
   });
 
   it("U-PACKPUB-REMOTE-030: 003-R journal persistence failure prevents its mutation", async () => {
