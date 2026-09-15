@@ -1,7 +1,7 @@
 import { mkdtempSync, rmSync } from "node:fs";
-import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   appendCutoverTransition,
@@ -25,7 +25,6 @@ import {
 } from "../src/schema/cutover-transition.ts";
 
 const roots: string[] = [];
-const nodeRequire = createRequire(import.meta.url);
 const candidate = `git-sha1:${"1".repeat(40)}`;
 const producerAncestor = `git-sha1:${"2".repeat(40)}`;
 const artifactDigest = `sha256:${"3".repeat(64)}`;
@@ -207,14 +206,6 @@ function overwriteStoredEvidence(
   repoRoot: string,
   evidence: readonly SliceEvidenceReceipt[],
 ): void {
-  const { DatabaseSync } = nodeRequire("node:sqlite") as {
-    DatabaseSync: new (
-      path: string,
-    ) => {
-      prepare(sql: string): { run(...params: unknown[]): unknown };
-      close(): void;
-    };
-  };
   const db = new DatabaseSync(resolve(repoRoot, ".ut-tdd", "ledger", "cutover-ledger.db"));
   try {
     db.prepare("UPDATE cutover_receipts SET evidence_json=? WHERE sequence=0").run(
@@ -298,6 +289,7 @@ describe("PLAN-L6-93 cutover prefix", () => {
         }),
       "cutover-revision-mismatch",
     );
+    expect(projectCutoverState([initialized]).state).toBe("inventory_frozen");
   });
 
   it("U-CUTOVER-004 rejects wrong admission authority and untrusted attestation", () => {
@@ -311,6 +303,7 @@ describe("PLAN-L6-93 cutover prefix", () => {
         }),
       "cutover-admission-not-ready",
     );
+    expect(projectCutoverState([]).state).toBe("uninitialized");
 
     const modeDrift = resignAdmission(
       { ...base.admission, execution_mode: "codex-only" },
@@ -369,6 +362,7 @@ describe("PLAN-L6-93 cutover prefix", () => {
         ),
       "cutover-transition-invalid",
     );
+    expect(projectCutoverState([genesis, shadow]).state).toBe("node_shadow");
   });
 
   it("U-CUTOVER-006 detects independent receipt digest mutation", () => {
@@ -381,6 +375,7 @@ describe("PLAN-L6-93 cutover prefix", () => {
       () => initializeCutoverChain({ ...base, evidence: mutated }),
       "cutover-admission-not-ready",
     );
+    expect(projectCutoverState([]).state).toBe("uninitialized");
     const receipt = initializeCutoverChain(command(root(), "cutover.genesis", 0, null));
     expect(() => projectCutoverState([{ ...receipt, receipt_digest: "f".repeat(64) }])).toThrow(
       "cutover-chain-invalid",
