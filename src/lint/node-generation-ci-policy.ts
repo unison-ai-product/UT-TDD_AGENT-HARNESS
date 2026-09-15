@@ -43,6 +43,7 @@ export type NodeGenerationAggregateAdmission =
         | "evidence-count-mismatch"
         | "evidence-lane-mismatch"
         | "evidence-conclusion-not-success"
+        | "attempt_binding_mismatch"
         | "evidence-binding-mismatch"
         | "evidence-generation-mismatch"
         | "evidence-artifact-mismatch";
@@ -138,10 +139,16 @@ export function admitNodeGenerationAggregate(input: {
   if (
     entries.some(
       (item) =>
+        item.run_id !== input.expected.run_id || item.run_attempt !== input.expected.run_attempt,
+    )
+  )
+    return reject("attempt_binding_mismatch");
+  if (
+    entries.some(
+      (item) =>
         item.workflow_revision !== input.expected.workflow_revision ||
         item.subject_revision !== input.expected.subject_revision ||
-        item.run_id !== input.expected.run_id ||
-        item.run_attempt !== input.expected.run_attempt,
+        item.run_id !== input.expected.run_id,
     )
   )
     return reject("evidence-binding-mismatch");
