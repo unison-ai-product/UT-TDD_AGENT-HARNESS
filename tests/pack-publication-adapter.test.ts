@@ -14,6 +14,7 @@ import {
   type PackPublicationApproval,
   type PackPublicationApprovalDraft,
   type PackPublicationIntentInput,
+  type PackPublicationResult,
   type PackPublicationPorts,
   parseSealedPackageVersionIdentity,
   preparePackPublication,
@@ -400,9 +401,9 @@ function ports(overrides: Partial<PackPublicationPorts> = {}): PackPublicationPo
           value: {
             pointerObjectDigest: `sha256:${"3".repeat(64)}`,
             controlManifestSnapshotDigest: plan.controlManifestSnapshotDigest,
-            mainSha: canaryObservations === 1 ? "1".repeat(40) : mainSha,
+            mainSha: canaryObservations <= 3 ? "1".repeat(40) : mainSha,
             mainStateDigest:
-              canaryObservations === 1 ? `sha256:${"2".repeat(64)}` : `sha256:${"9".repeat(64)}`,
+              canaryObservations <= 3 ? `sha256:${"2".repeat(64)}` : `sha256:${"9".repeat(64)}`,
           },
         } as const;
       },
@@ -446,9 +447,28 @@ async function publishPackCanary(
   intent: ReturnType<typeof sealedIntent>,
   configured: PackPublicationPorts = ports(),
   existingAdmission?: PackPublicationAdmission,
-) {
+): Promise<PackPublicationResult> {
   if (existingAdmission) return rawPublishPackCanary(intent, configured, existingAdmission);
-  const { admission } = await admitPreparedPublication(intent, configured);
+  const preparation = await preparePackPublication(intent, configured);
+  if (!preparation.ok) {
+    const { ok: _ok, ...failure } = preparation;
+    return failure as PackPublicationResult;
+  }
+  if (preparation.status !== "prepared") return preparation.result;
+  const admitted = await admitPackPublication({
+    intent,
+    preparation: preparation.receipt,
+    ports: configured,
+    publicationApprovals: publicationApprovalDrafts(intent),
+  });
+  if (!admitted.ok)
+    return {
+      status: "denied",
+      stage: "preflight",
+      reason: admitted.error,
+      remoteWrites: preparation.remoteWrites,
+    } as PackPublicationResult;
+  const { admission } = admitted;
   return rawPublishPackCanary(admission.publicationIntent, configured, admission);
 }
 
