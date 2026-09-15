@@ -1,6 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
+import { parseLegacyPlanSource } from "../plan-asset/adapters/legacy-plan-inventory.ts";
 import { loadProjectIdentityFromHead } from "../plan-asset/adapters/project-identity-loader.ts";
 import { LegacyPlanRevisionBootstrapTransaction } from "../plan-asset/ledger/plan-revision-bootstrap.ts";
 import {
@@ -107,7 +108,13 @@ export class NodePlanRevisionRunner {
           .prepare("SELECT 1 FROM plan_assets WHERE asset_id = ?")
           .get(input.manifest.base.asset_id),
       );
-      const rehydrationRequired = needsRehydration(db, input.manifest, locallyAdopted);
+      const rehydrationRequired = needsRehydration({
+        db,
+        manifest: input.manifest,
+        assetExists: locallyAdopted,
+        projectionText: snapshot.projectionText,
+        headSource: base.headSource,
+      });
       const adopted = locallyAdopted || rehydrationRequired;
       const legacy =
         !adopted ||
@@ -501,18 +508,39 @@ function assertAdoptedBase(db: HarnessDb, manifest: PlanRevisionManifest): void 
     throw new Error("plan-revision-ledger-base-drift");
 }
 
-function needsRehydration(
-  db: HarnessDb,
-  manifest: PlanRevisionManifest,
-  assetExists: boolean,
-): boolean {
-  if (!assetExists) return !manifest.base.asset_id.startsWith("plan:legacy:");
+function needsRehydration(input: {
+  db: HarnessDb;
+  manifest: PlanRevisionManifest;
+  assetExists: boolean;
+  projectionText: string;
+  headSource: string;
+}): boolean {
+  const { db, manifest, assetExists, projectionText, headSource } = input;
+  if (!assetExists) {
+    // Rehydration eligibility is gated by the HEAD embedded admission_receipt
+    // proving a live tracked-projection record, never by asset id prefix or
+    // manifest self-report (PLAN-RECOVERY-16 rev 5 §correction). Any deeper
+    // integrity/lineage mismatch is fail-close inside rehydratePlanLedgerBase,
+    // not a silent fallback here.
+    return projectionHasEmbeddedReceiptRecord(projectionText, headSource);
+  }
   const latest = db
     .prepare(
       "SELECT revision FROM plan_revisions WHERE asset_id = ? ORDER BY revision DESC LIMIT 1",
     )
     .get(manifest.base.asset_id);
   return !latest || Number(latest.revision) < manifest.base.revision;
+}
+
+function projectionHasEmbeddedReceiptRecord(projectionText: string, headSource: string): boolean {
+  const parsedSource = parseLegacyPlanSource(headSource);
+  const embeddedReceipt = parsedSource?.frontmatter.admission_receipt;
+  if (typeof embeddedReceipt !== "object" || embeddedReceipt === null) return false;
+  const receiptId = (embeddedReceipt as Record<string, unknown>).receipt_id;
+  if (typeof receiptId !== "string") return false;
+  const parsed = parseTrackedReceiptProjection(projectionText);
+  if (!parsed.ok) throw new Error(`plan-revision-projection-invalid:${parsed.errors.join(",")}`);
+  return parsed.value.records.some((record) => record.receiptId === receiptId);
 }
 
 function requireRepositoryIdentity(provider: (() => string) | undefined): string {

@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -10,7 +11,10 @@ import {
   NodePlanRevisionRunner,
   revisionUsesLegacyBootstrap,
 } from "../src/plan-admission/node-plan-revision-runner.ts";
-import { canonicalPlanPayload } from "../src/plan-admission/plan-revision-command-assembler.ts";
+import {
+  canonicalPlanPayload,
+  stableJson as productionStableJson,
+} from "../src/plan-admission/plan-revision-command-assembler.ts";
 import { evaluatePlanAdmission, type PlanAdmissionRequest } from "../src/plan-admission/policy.ts";
 import { trackedReceiptRecordDigest } from "../src/plan-admission/tracked-receipt-projection.ts";
 import { deriveLegacyAssetId } from "../src/plan-asset/adapters/legacy-plan-adapter.ts";
@@ -89,26 +93,39 @@ describe("NodePlanRevisionRunner", () => {
   });
 
   it.each([
-    ["missing", [], "plan-revision-rehydration-projection-missing"],
-    ["asset mismatch", [{ asset_id: "plan:other" }], "plan-revision-rehydration-asset-mismatch"],
+    [
+      "missing (authority不在はrehydrationせず従来経路)",
+      [],
+      false,
+      "plan-revision-legacy-asset-id-mismatch",
+    ],
+    [
+      "asset mismatch",
+      [{ asset_id: "plan:other" }],
+      true,
+      "plan-revision-rehydration-receipt-mismatch",
+    ],
     [
       "path mismatch",
       [{ path: "docs/plans/PLAN-L6-32.md" }],
-      "plan-revision-rehydration-path-mismatch",
+      true,
+      "plan-revision-rehydration-receipt-mismatch",
     ],
     [
       "plan identity mismatch",
       [{ plan_id: "PLAN-L6-32" }],
-      "plan-revision-rehydration-plan-id-mismatch",
+      true,
+      "plan-revision-rehydration-receipt-mismatch",
     ],
     [
       "duplicate terminal",
       [{}, {}],
+      false,
       "plan-revision-projection-invalid:record[1]:path-revision-duplicate",
     ],
-  ])("U-PA-REV-042: projection %sはwrite 0", (_name, bindings, ruleId) => {
+  ])("U-PA-REV-042: projection %sはwrite 0", (_name, bindings, preserveReceiptIdentity, ruleId) => {
     const f = rehydrationFixture();
-    rewriteProjection(f, bindings);
+    rewriteProjection(f, bindings, preserveReceiptIdentity);
 
     expect(() => f.runner.run(f.input)).toThrow(ruleId);
     expect(writeSet(f.db)).toEqual(f.before);
@@ -136,6 +153,182 @@ describe("NodePlanRevisionRunner", () => {
       status: "created",
       receipt: { assetId: f.manifest.base.asset_id, revision: 8 },
     });
+  });
+
+  it("U-PA-REV-045: plan:legacy:プレフィクス資産もHEAD embedded receiptとの完全一致からlegacy bootstrap/sealへ落ちず決定的に再水和される", () => {
+    const f = rehydrationFixture(undefined, { legacyPrefixed: true });
+    expect(f.manifest.base.asset_id.startsWith("plan:legacy:")).toBe(true);
+
+    expect(f.runner.run(f.input)).toMatchObject({
+      status: "created",
+      receipt: { assetId: f.manifest.base.asset_id, revision: 8 },
+    });
+    expect(
+      f.db
+        .prepare("SELECT revision FROM plan_revisions WHERE asset_id = ? ORDER BY revision")
+        .all(f.manifest.base.asset_id)
+        .map((row) => Number(row.revision)),
+    ).toEqual([7, 8]);
+    expect(
+      f.db
+        .prepare("SELECT 1 FROM legacy_plan_bootstrap_provenance WHERE asset_id = ?")
+        .get(f.manifest.base.asset_id),
+    ).toBeUndefined();
+    expect(
+      f.db
+        .prepare(
+          "SELECT 1 FROM sealed_plan_lineages WHERE historical_asset_id = ? OR successor_asset_id = ?",
+        )
+        .get(f.manifest.base.asset_id, f.manifest.base.asset_id),
+    ).toBeUndefined();
+    expect(rows(f.db, "plan_lineage_migration_certificates")).toBe(0);
+    expect(revisionUsesLegacyBootstrap(f.db, f.manifest.base.asset_id, f.manifest.command_id)).toBe(
+      false,
+    );
+  });
+
+  it("U-PA-REV-046: plan:<sha> (非legacy prefix) 資産もHEAD embedded receiptとの完全一致から決定的に再水和される", () => {
+    const shaAssetId = `plan:${rawSha("non-legacy-sha-asset")}`;
+    const f = rehydrationFixture(undefined, { forcedAssetId: shaAssetId });
+    expect(f.manifest.base.asset_id.startsWith("plan:legacy:")).toBe(false);
+
+    expect(f.runner.run(f.input)).toMatchObject({
+      status: "created",
+      receipt: { assetId: shaAssetId, revision: 8 },
+    });
+    expect(
+      f.db
+        .prepare("SELECT revision FROM plan_revisions WHERE asset_id = ? ORDER BY revision")
+        .all(shaAssetId)
+        .map((row) => Number(row.revision)),
+    ).toEqual([7, 8]);
+    expect(
+      f.db
+        .prepare("SELECT 1 FROM legacy_plan_bootstrap_provenance WHERE asset_id = ?")
+        .get(shaAssetId),
+    ).toBeUndefined();
+    expect(
+      f.db
+        .prepare(
+          "SELECT 1 FROM sealed_plan_lineages WHERE historical_asset_id = ? OR successor_asset_id = ?",
+        )
+        .get(shaAssetId, shaAssetId),
+    ).toBeUndefined();
+    expect(rows(f.db, "plan_lineage_migration_certificates")).toBe(0);
+  });
+
+  it("U-PA-REV-047: 再水和append後、新tail recordはtracked terminal recordへprevious_record_digestで連続する", () => {
+    const f = rehydrationFixture(undefined, { legacyPrefixed: true });
+    const priorTerminal = JSON.parse(
+      readFileSync(join(f.root, f.manifest.projection.path), "utf8"),
+    ).records.at(-1);
+
+    f.runner.run(f.input);
+
+    const appended = JSON.parse(
+      readFileSync(join(f.root, f.manifest.projection.path), "utf8"),
+    ).records.at(-1);
+    expect(appended.previous_record_digest).toBe(priorTerminal.record_digest);
+  });
+
+  it("U-PA-REV-048: terminal content digest不一致はwrite 0でfail-closeしlegacy bootstrap/sealへ迂回しない", () => {
+    const f = rehydrationFixture(sha("forged-content"), { legacyPrefixed: true });
+
+    expect(() => f.runner.run(f.input)).toThrow(
+      "plan-revision-rehydration-content-digest-mismatch",
+    );
+    expect(writeSet(f.db)).toEqual(f.before);
+  });
+
+  it("U-PA-REV-050: canonical payload digest不一致はwrite 0でfail-closeする", () => {
+    const f = rehydrationFixture(undefined, { legacyPrefixed: true });
+    f.manifest.base.revision_digest = sha("forged-canonical-payload-rehydration");
+
+    expect(() => f.runner.run(f.input)).toThrow(
+      "plan-revision-rehydration-canonical-digest-mismatch",
+    );
+    expect(writeSet(f.db)).toEqual(f.before);
+  });
+
+  it("U-PA-REV-051: embedded receipt項目 (receipt_digest) 改変はprojection recordとの完全一致に失敗しwrite 0でfail-closeする", () => {
+    const f = rehydrationFixture(undefined, { legacyPrefixed: true });
+    const tamperedSource = f.baseSource.replace(
+      `receipt_digest: ${sha("rehydration-terminal-receipt")}`,
+      `receipt_digest: ${sha("forged-receipt-digest")}`,
+    );
+    expect(tamperedSource).not.toBe(f.baseSource);
+    writeFileSync(join(f.root, f.manifest.source.path), tamperedSource, "utf8");
+    f.drift.headSource = tamperedSource;
+    f.manifest.base.source_content_digest = sha(tamperedSource);
+
+    expect(() => f.runner.run(f.input)).toThrow("plan-revision-rehydration-receipt-mismatch");
+    expect(writeSet(f.db)).toEqual(f.before);
+  });
+
+  it("U-PA-REV-052: 同一plan_id/pathへより新しいsequenceのrecordが存在するlineageはambiguousとしてwrite 0でfail-closeする", () => {
+    const f = rehydrationFixture(undefined, { legacyPrefixed: true });
+    appendNewerLineageRecord(f);
+
+    expect(() => f.runner.run(f.input)).toThrow("plan-revision-rehydration-lineage-ambiguous");
+    expect(writeSet(f.db)).toEqual(f.before);
+  });
+
+  it("U-PA-REV-053: HEAD sourceにadmission_receiptが埋め込まれていない資産は再水和されず従来のlegacy bootstrapへ進む (fallback回帰防止)", () => {
+    const f = fixture("legacy");
+    expect(f.manifest.base.asset_id.startsWith("plan:legacy:")).toBe(true);
+
+    expect(f.runner.run(f.input)).toMatchObject({ status: "created", receipt: { revision: 2 } });
+    expect(revisionUsesLegacyBootstrap(f.db, f.manifest.base.asset_id, f.manifest.command_id)).toBe(
+      true,
+    );
+    expect(rows(f.db, "plan_assets")).toBe(1);
+  });
+
+  it("U-PA-REV-054: embedded receiptのreceipt_idに対応するprojection recordが存在しない資産は再水和されず従来のlegacy bootstrapへ進む (fallback回帰防止)", () => {
+    const drift: Drift = {};
+    const f = fixture("legacy", drift);
+    const baseSource = readFileSync(join(f.root, f.manifest.source.path), "utf8");
+    const withReceipt = baseSource.replace(
+      "generates: []\n",
+      `generates: []\nadmission_receipt:\n  schema_version: v2\n  receipt_id: certificate:no-matching-record\n  command_id: plan-revise:no-matching-record\n  admitted_at: 2026-09-14T00:00:00.000Z\n  source_digest: ${sha("placeholder")}\n  decision_digest: ${sha("placeholder-decision")}\n  receipt_digest: ${sha("placeholder-receipt")}\n  binding:\n    path: ${f.manifest.source.path}\n    plan_id: ${f.manifest.plan_id}\n    asset_id: ${f.manifest.base.asset_id}\n    revision: 1\n    content_digest: ${sha("placeholder")}\n  route:\n    signal: forward\n    mode: forward\n`,
+    );
+    writeFileSync(join(f.root, f.manifest.source.path), withReceipt, "utf8");
+    drift.headSource = withReceipt;
+    f.manifest.source.content = withReceipt.replace("title: Base", "title: Revised");
+    f.manifest.base.source_content_digest = sha(withReceipt);
+    f.manifest.base.revision_digest = sha(canonicalPlanPayload(withReceipt).payload);
+
+    expect(f.runner.run(f.input)).toMatchObject({ status: "created", receipt: { revision: 2 } });
+    expect(revisionUsesLegacyBootstrap(f.db, f.manifest.base.asset_id, f.manifest.command_id)).toBe(
+      true,
+    );
+  });
+
+  it("U-PA-REV-049: 実データ regression — PLAN-L6-93のtracked terminal rev27からrev28を決定的に再水和する", () => {
+    const f = realPlanL693RehydrationFixture();
+
+    expect(f.runner.run(f.input)).toMatchObject({
+      status: "created",
+      receipt: { assetId: f.assetId, revision: 28 },
+    });
+    expect(
+      f.db
+        .prepare("SELECT revision FROM plan_revisions WHERE asset_id = ? ORDER BY revision")
+        .all(f.assetId)
+        .map((row) => Number(row.revision)),
+    ).toEqual([27, 28]);
+    expect(
+      f.db
+        .prepare("SELECT 1 FROM legacy_plan_bootstrap_provenance WHERE asset_id = ?")
+        .get(f.assetId),
+    ).toBeUndefined();
+    expect(
+      f.db
+        .prepare(
+          "SELECT 1 FROM sealed_plan_lineages WHERE historical_asset_id = ? OR successor_asset_id = ?",
+        )
+        .get(f.assetId, f.assetId),
+    ).toBeUndefined();
   });
 
   it("U-PA-REV-016: adopt済みNをN+1へ発行しpublisherへsource/projection CASを渡す", () => {
@@ -608,8 +801,15 @@ function fixture(mode: Mode, drift: Drift = {}) {
   };
 }
 
-function rehydrationFixture(terminalContentDigest?: string) {
-  const drift: Drift = { forgedLegacyAssetId: "plan:rehydrated" };
+function rehydrationFixture(
+  tamperBodyMarker?: string,
+  options: { legacyPrefixed?: boolean; forcedAssetId?: string } = {},
+) {
+  const drift: Drift = {
+    forgedLegacyAssetId:
+      options.forcedAssetId ??
+      (options.legacyPrefixed ? deriveLegacyAssetId("repo:test", "PLAN-L6-31") : "plan:rehydrated"),
+  };
   const f = fixture("legacy", drift);
   const receiptFreeSource = readFileSync(join(f.root, f.manifest.source.path), "utf8");
   const contentDigest = canonicalPlanContentDigest(receiptFreeSource);
@@ -632,7 +832,7 @@ function rehydrationFixture(terminalContentDigest?: string) {
       planId: f.manifest.plan_id,
       assetId: f.manifest.base.asset_id,
       revision: 7,
-      contentDigest: terminalContentDigest ?? contentDigest,
+      contentDigest,
     },
   };
   const recordDigest = trackedReceiptRecordDigest(record);
@@ -665,10 +865,221 @@ function rehydrationFixture(terminalContentDigest?: string) {
   const parsedPayload = JSON.parse(canonicalPlanPayload(baseSource).payload);
   delete parsedPayload.admission_receipt;
   f.manifest.base.revision_digest = sha(stableJsonForTest(parsedPayload));
-  f.manifest.base.source_content_digest = sha(baseSource);
   f.manifest.base.projection_tail_digest = recordDigest;
   f.manifest.source.content = baseSource.replace("title: Base", "title: Revised");
-  return f;
+
+  // tamperBodyMarker: HEAD advanced *after* the receipt was minted, without a
+  // matching new revision (real-world drift, cf. U-PA-REV-049's historical
+  // blob lookup). The embedded receipt / projection record keep declaring the
+  // original (real) content digest, but recomputing canonicalPlanContentDigest
+  // from the now-tampered body no longer matches it — this is the correct
+  // fixture shape for the content-digest-mismatch oracle under rev 5 (the
+  // embedded-receipt<->record match itself must still succeed).
+  const effectiveSource = tamperBodyMarker
+    ? `${baseSource}\n<!-- ${tamperBodyMarker} -->\n`
+    : baseSource;
+  if (tamperBodyMarker) {
+    writeFileSync(join(f.root, f.manifest.source.path), effectiveSource, "utf8");
+    drift.headSource = effectiveSource;
+  }
+  f.manifest.base.source_content_digest = sha(effectiveSource);
+  return { ...f, drift, baseSource: effectiveSource };
+}
+
+/**
+ * Issue #541 実データ regression: mainのPLAN-L6-93 tracked terminal receipt (rev27)
+ * とdocs/governance/plan-admission-receipts.jsonの実projectionをfixtureへコピーし
+ * (実ファイルの読み取りのみ、mainの当該ファイルは書き換えない)、空ledgerからrev28を
+ * 決定的に再水和できることを検証する。base sourceは、rev27 admission_receiptの
+ * content_digestへ一致する実際のGit blob (履歴commit) から採る。
+ */
+function realPlanL693RehydrationFixture() {
+  const root = join(tmpdir(), `ut-tdd-plan-revision-runner-real-${process.pid}-${roots.length}`);
+  roots.push(root);
+  mkdirSync(join(root, "docs", "plans"), { recursive: true });
+  mkdirSync(join(root, "docs", "governance"), { recursive: true });
+  const planId = "PLAN-L6-93-node-bootstrap-contract";
+  const sourcePath = `docs/plans/${planId}.md`;
+  const projectionPath = "docs/governance/plan-admission-receipts.json" as const;
+  const assetId = "plan:legacy:80a50dd958ae451ea13030276eb8c145a8fdc3104ec145560457f97a07594881";
+  // 実プロジェクトルートで、rev27 receiptのcontent_digestが指す実Git blob (historical
+  // commit) を読み取る。現HEADの当該ファイルはrev27より後にreceiptを介さず改稿されており
+  // (実測: canonicalPlanContentDigestがrev27の記録値と不一致)、rev27の正しいbase sourceは
+  // このhistorical blobである。
+  const historicalCommit = "d3c0df76e7cdba6dd0dbe51103028428ef9db37f";
+  const baseSource = execFileSync("git", ["show", `${historicalCommit}:${sourcePath}`], {
+    encoding: "utf8",
+    cwd: process.cwd(),
+  });
+  const sourceBlobOid = execFileSync("git", ["rev-parse", `${historicalCommit}:${sourcePath}`], {
+    encoding: "utf8",
+    cwd: process.cwd(),
+  }).trim();
+  const realProjectionText = readFileSync(projectionPath, "utf8");
+  const projection = JSON.parse(realProjectionText) as {
+    records: ReadonlyArray<{
+      record_digest: string;
+      binding: { asset_id: string; revision: number };
+    }>;
+  };
+  const terminal = projection.records
+    .filter((record) => record.binding.asset_id === assetId)
+    .reduce((max, record) => (record.binding.revision > max.binding.revision ? record : max));
+  if (terminal.binding.revision !== 27)
+    throw new Error(
+      `fixture assumption drifted: terminal revision is ${terminal.binding.revision}`,
+    );
+  const tailRecordDigest = projection.records.at(-1)?.record_digest;
+  if (!tailRecordDigest) throw new Error("real projection has no tail record");
+
+  writeFileSync(join(root, sourcePath), baseSource, "utf8");
+  writeFileSync(join(root, projectionPath), realProjectionText, "utf8");
+
+  const parsed = parseLegacyPlanSource(baseSource);
+  if (!parsed) throw new Error("real PLAN-L6-93 historical blob failed to parse");
+  const receiptFreeFrontmatter = { ...parsed.frontmatter };
+  delete receiptFreeFrontmatter.admission_receipt;
+  const canonicalPayload = productionStableJson(receiptFreeFrontmatter);
+  const revisionDigest = sha(canonicalPayload);
+
+  const revisedSource = baseSource.replace(
+    'title: "PLAN-L6-93: sealed Node bootstrap function redesign"',
+    'title: "PLAN-L6-93: sealed Node bootstrap function redesign (issue541 regression fixture)"',
+  );
+  if (revisedSource === baseSource) throw new Error("fixture revision anchor missing");
+
+  const admission: PlanAdmissionRequest = {
+    routeSignal: "feature_addition",
+    routeMode: "add-feature",
+    kind: "add-design",
+    layer: "L6",
+    subDoc: "function-spec",
+    drive: "fullstack",
+    branch: "work/add-feature-issue541-rehydrate-legacy-impl",
+    status: "draft",
+    issue: {
+      provider: "github",
+      issueId: 541,
+      episodeId: "E4-541-rehydrate-legacy",
+      projectionDigest: sha("issue541-real-fixture"),
+    },
+    origin: { planId, revision: 27, digest: revisionDigest },
+    transitionDirection: "design_to_implementation",
+    implementationDisposition: "none",
+    reentry: { targetPlanId: planId, targetRevision: 28, phase: "forward_merge" },
+    escapeReason: "regression fixture for issue #541 legacy rehydration, no production activation",
+  };
+  const decision = evaluatePlanAdmission(admission);
+  if (!decision.ok)
+    throw new Error(`real fixture admission invalid: ${decision.violations.join(",")}`);
+  const manifest: PlanRevisionManifest = {
+    version: 1,
+    command_id: "command:issue541-real-rehydration-regression",
+    plan_id: planId,
+    actor: "codex",
+    recorded_at: "2026-09-15T00:00:00.000Z",
+    base: {
+      asset_id: assetId,
+      revision: 27,
+      revision_digest: revisionDigest,
+      source_commit: historicalCommit,
+      source_blob_oid: sourceBlobOid,
+      source_content_digest: sha(baseSource),
+      projection_tail_digest: tailRecordDigest,
+    },
+    admission: {
+      route_signal: admission.routeSignal,
+      route_mode: admission.routeMode,
+      kind: admission.kind,
+      layer: admission.layer,
+      sub_doc: "function-spec",
+      drive: admission.drive,
+      branch: admission.branch,
+      status: admission.status,
+      issue: {
+        provider: "github",
+        issue_id: 541,
+        episode_id: "E4-541-rehydrate-legacy",
+        projection_digest: sha("issue541-real-fixture"),
+      },
+      origin: { plan_id: planId, revision: 27, digest: revisionDigest },
+      transition_direction: "design_to_implementation",
+      implementation_disposition: "none",
+      reentry: { target_plan_id: planId, target_revision: 28, phase: "forward_merge" },
+      escape_reason:
+        "regression fixture for issue #541 legacy rehydration, no production activation",
+    },
+    source: { path: sourcePath, content: revisedSource },
+    projection: { path: projectionPath },
+  };
+  const db = openHarnessDb(":memory:");
+  expect(migratePlanLedger(db)).toEqual({ ok: true, version: 7 });
+  vi.spyOn(db, "close").mockImplementation(() => undefined);
+  const publisher = new NodeAtomicDraftPublisher({ rootDir: root });
+  const runner = new NodePlanRevisionRunner({
+    repoRoot: root,
+    sourceCommit: () => historicalCommit,
+    sourceBlobOid: (commit) => (commit === historicalCommit ? sourceBlobOid : "mismatched"),
+    readText: (path: string) => readFileSync(path, "utf8"),
+    headText: (commit) => (commit === historicalCommit ? baseSource : "mismatched"),
+    repositoryIdentity: () => "repo:issue541-real-fixture",
+    openDb: () => db,
+    publisher: () => publisher,
+  });
+  return { root, db, assetId, runner, manifest, input: { manifest, admission, decision } };
+}
+
+/**
+ * Issue #541 rev5 lineage-ambiguity oracle: rehydrationFixtureが埋め込んだterminal
+ * receiptと同じplan_id/pathへ、より新しいsequenceのrecordを (別assetとして) 追加する。
+ * 再水和対象はembedded receiptと完全一致するrecordであっても、同じplan_id/pathに
+ * それより新しいsequenceのrecordがあれば、stale lineageの再水和としてfail-closeしな
+ * ければならない。
+ */
+function appendNewerLineageRecord(f: ReturnType<typeof rehydrationFixture>): void {
+  const current = JSON.parse(readFileSync(join(f.root, f.manifest.projection.path), "utf8")) as {
+    schema_version: string;
+    records: Array<Record<string, unknown>>;
+  };
+  const priorTerminal = current.records.at(-1) as { sequence: number; record_digest: string };
+  const newerRecord = {
+    sequence: priorTerminal.sequence + 1,
+    previousRecordDigest: priorTerminal.record_digest,
+    commandId: "plan-revise:issue-596:terminal:8-superseding",
+    receiptId: "certificate:rehydration-terminal-8-superseding",
+    receiptDigest: sha("newer-lineage-receipt"),
+    decisionDigest: sha("newer-lineage-decision"),
+    binding: {
+      path: f.manifest.source.path,
+      planId: f.manifest.plan_id,
+      assetId: "plan:superseding-lineage",
+      revision: 1,
+      contentDigest: sha("newer-lineage-content"),
+    },
+  };
+  const recordDigest = trackedReceiptRecordDigest(newerRecord);
+  current.records.push({
+    sequence: newerRecord.sequence,
+    previous_record_digest: newerRecord.previousRecordDigest,
+    record_digest: recordDigest,
+    command_id: newerRecord.commandId,
+    receipt_id: newerRecord.receiptId,
+    receipt_digest: newerRecord.receiptDigest,
+    decision_digest: newerRecord.decisionDigest,
+    binding: {
+      path: newerRecord.binding.path,
+      plan_id: newerRecord.binding.planId,
+      asset_id: newerRecord.binding.assetId,
+      revision: newerRecord.binding.revision,
+      content_digest: newerRecord.binding.contentDigest,
+    },
+  });
+  writeFileSync(join(f.root, f.manifest.projection.path), `${JSON.stringify(current)}\n`, "utf8");
+  f.manifest.base.projection_tail_digest = recordDigest;
+}
+
+function rawSha(value: string): string {
+  return createHash("sha256").update(value).digest("hex");
 }
 
 function rewriteProjection(
