@@ -136,12 +136,7 @@ export function admitNodeGenerationAggregate(input: {
     input.expected.run_attempt < 1
   )
     return reject("evidence-binding-mismatch");
-  if (
-    entries.some(
-      (item) =>
-        item.run_id !== input.expected.run_id || item.run_attempt !== input.expected.run_attempt,
-    )
-  )
+  if (entries.some((item) => item.run_attempt !== input.expected.run_attempt))
     return reject("attempt_binding_mismatch");
   if (
     entries.some(
