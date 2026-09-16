@@ -98,6 +98,35 @@ function resignAdmission(
   return { ...signed, receipt_digest: cutoverAdmissionReceiptDigest(signed) };
 }
 
+function resignAdmissionAuthorityOnly(
+  receipt: CutoverAdmissionReceipt,
+  authorityId: string,
+): CutoverAdmissionReceipt {
+  const {
+    record_digest: _recordDigest,
+    receipt_digest: _receiptDigest,
+    ...unsignedReceipt
+  } = receipt;
+  const unsigned = { ...unsignedReceipt, authority_id: authorityId };
+  const record_digest = cutoverAdmissionRecordDigest(unsigned);
+  const signed = { ...unsigned, record_digest, attestation: receipt.attestation };
+  return { ...signed, receipt_digest: cutoverAdmissionReceiptDigest(signed) };
+}
+
+function resignAdmissionAttestationOnly(
+  receipt: CutoverAdmissionReceipt,
+  authorityId: string,
+): CutoverAdmissionReceipt {
+  const {
+    record_digest: _recordDigest,
+    receipt_digest: _receiptDigest,
+    ...unsignedReceipt
+  } = receipt;
+  const record_digest = cutoverAdmissionRecordDigest(unsignedReceipt);
+  const signed = { ...unsignedReceipt, record_digest, attestation: attestation(authorityId) };
+  return { ...signed, receipt_digest: cutoverAdmissionReceiptDigest(signed) };
+}
+
 function evidenceReceipt(
   edgeId: ImplementedCutoverEdgeId,
   kind: SliceEvidenceReceipt["kind_id"],
@@ -333,13 +362,24 @@ describe("PLAN-L6-93 cutover prefix", () => {
   it("U-CUTOVER-004 rejects wrong admission authority and untrusted attestation", () => {
     const repoRoot = root();
     const base = command(repoRoot, "cutover.genesis", 0, null);
-    const wrongAuthority = resignAdmission(base.admission, "wrong");
+    const wrongAuthority = resignAdmissionAuthorityOnly(base.admission, "wrong");
     expectReason(
       () =>
         initializeCutoverChain({
           ...base,
           admission: wrongAuthority,
           evidence: evidenceForAdmission(base.evidence, wrongAuthority),
+        }),
+      "cutover-admission-not-ready",
+    );
+
+    const wrongAttestation = resignAdmissionAttestationOnly(base.admission, "wrong-attestation");
+    expectReason(
+      () =>
+        initializeCutoverChain({
+          ...base,
+          admission: wrongAttestation,
+          evidence: evidenceForAdmission(base.evidence, wrongAttestation),
         }),
       "cutover-admission-not-ready",
     );
@@ -377,7 +417,11 @@ describe("PLAN-L6-93 cutover prefix", () => {
       () =>
         initializeCutoverChain({
           ...base,
-          ports: ports({ attestationVerifier: { verify: () => false } }),
+          ports: ports({
+            attestationVerifier: {
+              verify: (_input, value) => value.authorityId !== base.admission.authority_id,
+            },
+          }),
         }),
       "cutover-admission-not-ready",
     );
@@ -440,6 +484,39 @@ describe("PLAN-L6-93 cutover prefix", () => {
       "cutover-admission-not-ready",
     );
     expect(projectCutoverState([]).state).toBe("uninitialized");
+
+    const admissionRecordMutation = {
+      ...base.admission,
+      record_digest: "f".repeat(64),
+    };
+    const admissionRecordMutationWithReceipt = {
+      ...admissionRecordMutation,
+      receipt_digest: cutoverAdmissionReceiptDigest(admissionRecordMutation),
+    };
+    expectReason(
+      () =>
+        initializeCutoverChain({
+          ...base,
+          admission: admissionRecordMutationWithReceipt,
+          evidence: evidenceForAdmission(base.evidence, admissionRecordMutationWithReceipt),
+        }),
+      "cutover-admission-not-ready",
+    );
+
+    const admissionReceiptMutation = {
+      ...base.admission,
+      receipt_digest: "e".repeat(64),
+    };
+    expectReason(
+      () =>
+        initializeCutoverChain({
+          ...base,
+          admission: admissionReceiptMutation,
+          evidence: evidenceForAdmission(base.evidence, admissionReceiptMutation),
+        }),
+      "cutover-admission-not-ready",
+    );
+
     const receipt = initializeCutoverChain(command(root(), "cutover.genesis", 0, null));
     expect(() => projectCutoverState([{ ...receipt, receipt_digest: "f".repeat(64) }])).toThrow(
       "cutover-chain-invalid",
