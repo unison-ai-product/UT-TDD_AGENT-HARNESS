@@ -14,6 +14,7 @@ import {
 } from "../lint/node-generation-ci-policy.ts";
 import { gitObjectIdSchema } from "../schema/node-slice-admission.ts";
 import { assertCompleteGitHistory, NodeSliceAdmissionError } from "./node-slice-admission.ts";
+import { classifyRuntimeImageProcess } from "./runtime-image-observer.ts";
 
 const RAW_REVISION = /^[0-9a-f]{40}$/;
 const PREFIXED_REVISION = /^git-sha1:([0-9a-f]{40})$/;
@@ -205,7 +206,7 @@ export function admitFinalBunRetirement(input: BunRetirementInput): BunRetiremen
       f0c: input.f0c,
       node: input.f0b,
       f0cLanes: input.f0cLanes,
-      classifyProcess: () => "node",
+      classifyProcess: classifyRuntimeImageProcess,
     });
   } catch {
     throw new BunRetirementError("q0_binding_invalid");

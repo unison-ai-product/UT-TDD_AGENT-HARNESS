@@ -42,7 +42,7 @@ const lanes = ["linux", "windows"].map((lane) => ({
   schema_version: "node-generation-ci.v1" as const,
   lane: lane as "linux" | "windows",
   generation_id: f0c.generation_id,
-  sealed_generation_id: `node-${lane}`,
+  sealed_generation_id: lane === "linux" ? f0b.generation_id : "node-windows-sealed-1",
   artifact_digest: digest,
   subject_revision: subject,
   workflow_revision: subject,
@@ -51,7 +51,34 @@ const lanes = ["linux", "windows"].map((lane) => ({
   conclusion: "success" as const,
 }));
 const documents = (): NodeBanDocuments => ({
-  runtime: [{ path: "src/clean.ts", text: "export const clean = true;" }],
+  runtime: [
+    {
+      path: "package.json",
+      text: JSON.stringify({
+        type: "module",
+        bin: { "ut-tdd": "./src/cli.ts" },
+        engines: { node: "24.13.0" },
+        scripts: {
+          build: "node scripts/build-node.mjs",
+          test: "vitest run",
+          "test:fast": "vitest run",
+          "test:db": "npm run db",
+          "test:cli": "vitest run",
+          "test:node-fallback": "vitest run",
+          typecheck: "tsc --noEmit",
+        },
+      }),
+    },
+    {
+      path: "tsconfig.json",
+      text: JSON.stringify({ compilerOptions: { strict: true, types: ["node"] } }),
+    },
+    { path: "src/state-db/index.ts", text: 'nodeRequire("node:sqlite");' },
+    { path: "src/clean.ts", text: "export const clean = true;" },
+    { path: ".claude/hooks/session-log.ts", text: "export const hook = true;" },
+    { path: "scripts/ut-tdd", text: '#!/usr/bin/env sh\nset -e\nexec "$ROOT/dist/ut-tdd" "$@"\n' },
+    { path: "scripts/ut-tdd.ps1", text: '& node "src/cli.ts" @args\n' },
+  ],
   workflows: [
     {
       file: ".github/workflows/clean.yml",
@@ -67,9 +94,26 @@ const documents = (): NodeBanDocuments => ({
     instructionSurfaces: { "status.md": "status" },
   },
   toolchain: {
-    packageJson: JSON.stringify({}),
+    packageJson: JSON.stringify({
+      packageManager:
+        "npm@11.6.2+sha512-7iKzNfy8lWYs3zq4oFPa8EXZz5xt9gQNKJZau3B1ErLBb6bF7sBJ00x09485DOvRT2l5Gerbl3VlZNT57MxJVA==",
+      engines: { node: "24.13.0", npm: "11.6.2" },
+      devDependencies: { "@biomejs/biome": "2.4.15", esbuild: "0.21.5" },
+      utTdd: {
+        nodeToolchain: {
+          phase: "node_production",
+          nodeAuthority: "sealed",
+          executableReceipt: "required",
+        },
+      },
+    }),
     bunLock: null,
-    packageLock: JSON.stringify({ lockfileVersion: 3, packages: { "": {} } }),
+    packageLock: JSON.stringify({
+      lockfileVersion: 3,
+      packages: {
+        "": { devDependencies: { "@biomejs/biome": "2.4.15", esbuild: "0.21.5" } },
+      },
+    }),
     nodeVersion: "24.13.0",
   },
   debtBaseline: "schema_version: bun-migration-debt.v1\ninventory: []\n",
@@ -88,7 +132,7 @@ function q0Receipt() {
     );
   observer.proveNoFallback("descendant", "none");
   observer.proveNoFallback("download", "none");
-  return runNodeBanAudit({
+  const result = runNodeBanAudit({
     repoRoot: process.cwd(),
     subjectRevision: subject,
     f0c,
@@ -98,7 +142,8 @@ function q0Receipt() {
     processObservations: observer.snapshot(),
     observedScopes: ["status", "doctor", "test", "hook", "descendant", "download"],
     classifyProcess: classifyRuntimeImageProcess,
-  }).receipt;
+  });
+  return result.receipt;
 }
 function cleanInput(overrides: Partial<BunRetirementInput> = {}): BunRetirementInput {
   return {
