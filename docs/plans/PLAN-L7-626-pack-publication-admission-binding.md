@@ -45,7 +45,7 @@ admission_receipt:
   receipt_id: certificate:529eea3e2017a6d17049746ae353398d
   command_id: plan-draft:issue-626:admission-binding:1
   admitted_at: 2026-09-16T10:00:00.000+09:00
-  source_digest: sha256:c2657640d2217afe383fd42ee8bdf8b489112884cb0a90e996e3fe885c461a9e
+  source_digest: sha256:1f0bdcd3fee43dd410c70d6096d792705e29ec43a92f76ea7f6a5cf39437fafc
   decision_digest: sha256:fdaab1bcae764745ddc92ec7604cfa10e446b57c5f4bc51d45a03a92ab7c427e
   receipt_digest: sha256:3ca0543848b549cd4c1f7b3c5c8050754b6fc617da42c4a63b14bcf3517829dc
   binding:
@@ -53,7 +53,7 @@ admission_receipt:
     plan_id: PLAN-L7-626-pack-publication-admission-binding
     asset_id: plan:529eea3e2017a6d17049746ae353398d
     revision: 1
-    content_digest: sha256:c2657640d2217afe383fd42ee8bdf8b489112884cb0a90e996e3fe885c461a9e
+    content_digest: sha256:1f0bdcd3fee43dd410c70d6096d792705e29ec43a92f76ea7f6a5cf39437fafc
   route:
     signal: feature_addition
     mode: add-feature
@@ -85,10 +85,12 @@ operation/idempotency freshness を read-only に再観測し、`publication_adm
 intent を返す pure validation であり、remote、Pack checkout、filesystem staging、
 branch/PR、main、Release、tag、asset、channel pointer を変更しない。
 
-#625 の preparation receiptは、PR #635 の base `main` と exact head
-`fced4a1416f770f2ee3935024068eaa512c4dcd6`、canonical receipt sequence 263 の
-`certificate:7018d3e985a7ebf6e9cd7d90b29e2ba9` を read-only 再観測の対象 identity として
-引き継ぐ。PR #635 のCI/reviewはこの PLAN の admission 成立を代用しない。
+#625 の preparation receiptは、PR #639 の current-main 再同期で確定した exact head
+`2fac4cd96eb4e619f7f663069bf0a4c81813096a`、canonical receipt sequence 272 の
+`certificate:d60d960748407167021c4131789e9fd9` を read-only 再観測の対象 identity として
+引き継ぐ。PR #639 の CI/review はこの PLAN の admission 成立を代用しない。current main
+merge commit は `b94de1c60a9aab106a619c9282f69ad3f0d3855f` であり、観測対象の receipt tail は
+`sha256:505fef3b2a6eafab929af49ff41f88eacf6172ca87ec2304a05e5b5c879476cd` である。
 
 ## 2. 入力と再観測束縛
 

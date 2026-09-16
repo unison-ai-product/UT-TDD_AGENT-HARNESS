@@ -61,7 +61,7 @@ admission_receipt:
     provider: github
     issue_id: 626
     episode_id: E4-626-pack-publication-admission-binding
-    projection_digest: sha256:4e5c8b8b398076d56a72deb696afa871b9c259e667c9bb65f22ef2816ca1d8b
+    projection_digest: sha256:4e5c8b8b398076d56a72deb696afa871b9c259e667c9bb65f22ef2816ca1d8b4
   origin:
     plan_id: PLAN-L7-626-pack-publication-admission-binding
     revision: 1

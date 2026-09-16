@@ -18,9 +18,10 @@ mutation、branch/PR作成、main CAS、Release、tag、asset、channel pointer�
 
 ## 2. 固定fixture identity
 
-- preparation receipt: #625 canonical `certificate:7018d3e985a7ebf6e9cd7d90b29e2ba9`
-- preparation PR observation: PR #635、base `main`、exact head
-  `fced4a1416f770f2ee3935024068eaa512c4dcd6`
+- preparation receipt: #625/#639 canonical `certificate:d60d960748407167021c4131789e9fd9`
+  (sequence 272; current main merge `b94de1c60a9aab106a619c9282f69ad3f0d3855f`)
+- preparation PR observation: PR #639、base `main`、exact head
+  `2fac4cd96eb4e619f7f663069bf0a4c81813096a`
 - staging identity: receiptのtree/manifest/entry digest、expected main OID、branch、PR
   number/head/base/treeを1つのimmutable fixtureとして持つ
 - review/check fixture: receiptのPR headへ結び付いた non-author closing review、
