@@ -774,7 +774,7 @@ describe("PLAN-L7-534 §3.2 custody ordering (attempt_completed → hardlink rec
     } finally {
       faults.unlinkError = undefined;
     }
-    expect(result).toEqual({ ok: true });
+    expect(result).toMatchObject({ ok: true, digest });
     expect(readFileSync(receiptPathOf(root, digest)).length).toBeGreaterThan(0);
     // The temp survives the failed unlink (best-effort), but the receipt is linked.
     expect(tempsOf(root, digest)).toHaveLength(1);
