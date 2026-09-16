@@ -45,7 +45,7 @@ review_evidence:
   - reviewer: codex
     review_kind: intra_runtime_subagent
     reviewed_at: 2026-09-16T10:02:00.000Z
-    tests_green_at: 2026-09-16T09:40:00.000Z
+    tests_green_at: 2026-09-16T09:42:00.000Z
     verdict: approve
     scope: Issue
     worker_model: codex
@@ -85,18 +85,18 @@ status: confirmed
 github_issue_id: 487
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:10a024b2771d974e4186e5dec7c1ccdf
-  command_id: pr641-issue487-confirmed-preflight-1789552759594
-  admitted_at: 2026-09-16T10:02:30.000Z
-  source_digest: sha256:ab80468b5b6e967d96c357ed49a7b93ec5fd58a7ad32f7d46b16df653f1a6bd0
-  decision_digest: sha256:2eb379bf44f4892e83bb878d6bbc48c6df48383357b8aef7d3f10ca20d815ff4
-  receipt_digest: sha256:4498a0ed8c541f86ca9edbc30ef233637e137892ded6d6b6725fd3c91d40fcfb
+  receipt_id: certificate:ed541d255e424fd7f53d4c8638baea80
+  command_id: pr641-issue487-review-fix-1789552837752
+  admitted_at: 2026-09-16T10:04:00.000Z
+  source_digest: sha256:b8068f0ec4bef11555de5461d732cff06a1ba262f3f0db20f4d782974ff83264
+  decision_digest: sha256:dcfd4f320b127233b54c2c406eca3586f714954ed12ecc57a783d590623ae82b
+  receipt_digest: sha256:d3affdecabf3f92185380f339807747398fedae70c5df8c57087e0fb71734aed
   binding:
     path: docs/plans/PLAN-L7-530-bun-final-retirement.md
     plan_id: PLAN-L7-530-bun-final-retirement
     asset_id: plan:bc9250c9a7c873dcb9f18956677371f7
-    revision: 12
-    content_digest: sha256:ab80468b5b6e967d96c357ed49a7b93ec5fd58a7ad32f7d46b16df653f1a6bd0
+    revision: 13
+    content_digest: sha256:b8068f0ec4bef11555de5461d732cff06a1ba262f3f0db20f4d782974ff83264
   route:
     signal: feature_addition
     mode: add-feature
@@ -114,10 +114,9 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-530-bun-final-retirement
-    target_revision: 11
+    target_revision: 12
     phase: forward_merge
-  escape_reason: "Issue #487 final Bun retirement preflight review and
-    implementation confirmation"
+  escape_reason: "Issue #487 correct preflight test completion ordering"
 ---
 
 # PLAN-L7-530: Bun 最終撤去の tuple-bound 実装契約
