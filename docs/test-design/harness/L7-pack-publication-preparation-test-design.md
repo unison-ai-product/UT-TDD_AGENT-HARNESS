@@ -35,6 +35,10 @@ canary pointerのoracleは#626/#627および`PLAN-L7-565`の後続sliceが所有
 このpair testでreview receiptを偽造してadmissionを成功扱いにしたり、
 `publishPackCanary`を呼び出して遠隔公開を実行したりしない。
 
+このテスト設計は `PLAN-REVERSE-625-pack-publication-preparation` のpair artifactでもある。
+Reverseは既存のCANDIDATE-PACKPUB-PREP-001..008を再利用し、preparation実装・telemetry・
+remote writeの契約を追加または弱めない。
+
 ## 4. 完了判定
 
 候補8行を対応する実装oracleへ1対1で昇格し、各行のtyped reason、write count、

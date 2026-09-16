@@ -21,7 +21,8 @@ agent_slots:
 generates: []
 dependencies:
   parent: docs/plans/PLAN-L7-565-pack-publication-atomic-ref-cas.md
-  requires: []
+  requires:
+    - docs/plans/PLAN-REVERSE-625-pack-publication-preparation.md
   references:
     - docs/plans/PLAN-L7-515-pack-remote-canary-publication.md
     - docs/plans/PLAN-L7-532-pack-publication-driver.md
@@ -33,18 +34,18 @@ status: draft
 github_issue_id: 625
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:7018d3e985a7ebf6e9cd7d90b29e2ba9
-  command_id: plan-draft:issue-625:preparation:1
-  admitted_at: 2026-09-16T08:10:00.000Z
-  source_digest: sha256:fa31903b6d9b1e1c5d691a2dd44980c704d38c33ec29001d0f74b317c88effca
-  decision_digest: sha256:4ff903718fb019eef6ac02ab3589b474981bc1a86ee54c0805b31adf8a8e017e
-  receipt_digest: sha256:ea6eed5b6093afe79d0c0801c37e4b4cbccd42c0fdbafc79696b2eb93013df1b
+  receipt_id: certificate:12ae7559b4cc704816ba5ef588a50932
+  command_id: plan-revise:issue-625:forward:2
+  admitted_at: 2026-09-16T09:00:00.000Z
+  source_digest: sha256:442bc8d61c6d3defec77c870311eef8c4f9773875367f1b71045a513d3622313
+  decision_digest: sha256:5c21129947b813565682106ad9e8c66f1d8960934e9b4f1917362f94ab069137
+  receipt_digest: sha256:2266cf4e20b02d932de30ec04dff7abb9b37f90f4e3afb8127e5dea31bb04b32
   binding:
     path: docs/plans/PLAN-L7-625-pack-publication-preparation.md
     plan_id: PLAN-L7-625-pack-publication-preparation
     asset_id: plan:7018d3e985a7ebf6e9cd7d90b29e2ba9
-    revision: 1
-    content_digest: sha256:fa31903b6d9b1e1c5d691a2dd44980c704d38c33ec29001d0f74b317c88effca
+    revision: 2
+    content_digest: sha256:442bc8d61c6d3defec77c870311eef8c4f9773875367f1b71045a513d3622313
   route:
     signal: feature_addition
     mode: add-feature
@@ -59,10 +60,9 @@ admission_receipt:
     digest: sha256:656cfc06ba39837ff70bb729ed6d5f6f90c4df7765e83aa4d0629b0d4cfa285c
   reentry:
     target_plan_id: PLAN-L7-625-pack-publication-preparation
-    target_revision: 1
+    target_revision: 2
     phase: forward_merge
-  escape_reason: "Issue #624 の三分割に従い、旧#608の巨大実装から準備receiptとpublication
-    intentだけを契約として分離する。admission・publish・remote mutationは後続sliceへ残す。"
+  escape_reason: "Issue #625 の必須 Reverse pairing を既存 add-impl 契約へ追加する。"
 ---
 
 # PLAN-L7-625: Pack公開準備の契約freeze

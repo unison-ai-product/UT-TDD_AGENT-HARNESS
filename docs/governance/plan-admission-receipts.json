@@ -4208,6 +4208,54 @@
         "revision": 1,
         "content_digest": "sha256:fa31903b6d9b1e1c5d691a2dd44980c704d38c33ec29001d0f74b317c88effca"
       }
+    },
+    {
+      "sequence": 264,
+      "previous_record_digest": "sha256:42937136dc85a61329d89f485b21ed427f3b44f70856327a1a5efcadd09bf3c9",
+      "record_digest": "sha256:eec3e953778533b186d28a9b15e75dcb74d4e60fe716324f7500c27465d5e822",
+      "command_id": "plan-revise:issue-625:forward:2",
+      "receipt_id": "certificate:12ae7559b4cc704816ba5ef588a50932",
+      "receipt_digest": "sha256:2266cf4e20b02d932de30ec04dff7abb9b37f90f4e3afb8127e5dea31bb04b32",
+      "decision_digest": "sha256:5c21129947b813565682106ad9e8c66f1d8960934e9b4f1917362f94ab069137",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-625-pack-publication-preparation.md",
+        "plan_id": "PLAN-L7-625-pack-publication-preparation",
+        "asset_id": "plan:7018d3e985a7ebf6e9cd7d90b29e2ba9",
+        "revision": 2,
+        "content_digest": "sha256:442bc8d61c6d3defec77c870311eef8c4f9773875367f1b71045a513d3622313"
+      }
+    },
+    {
+      "sequence": 265,
+      "previous_record_digest": "sha256:eec3e953778533b186d28a9b15e75dcb74d4e60fe716324f7500c27465d5e822",
+      "record_digest": "sha256:45a2ac74ec3a5919e2f6d46083c1582dea49baa43df943c69266de29dcc869a6",
+      "command_id": "plan-draft:issue-625:preparation:reverse:1",
+      "receipt_id": "certificate:18a3e140dc9b81cafab45c531089904b",
+      "receipt_digest": "sha256:e7ef7fe2b86bb3d8a74e0dfc5487d7e3bdf2f50e6ebdb174060880d537cd285a",
+      "decision_digest": "sha256:674a49bb7d5aa1fef1abd30f200a4135d1f9b8b62f0bcbf7349c11660f4d3445",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-625-pack-publication-preparation.md",
+        "plan_id": "PLAN-REVERSE-625-pack-publication-preparation",
+        "asset_id": "plan:18a3e140dc9b81cafab45c531089904b",
+        "revision": 1,
+        "content_digest": "sha256:a3a5bf846526864cecd2054206b71322a0ae52ad9edef620fd00bd8ab05fc8fa"
+      }
+    },
+    {
+      "sequence": 266,
+      "previous_record_digest": "sha256:45a2ac74ec3a5919e2f6d46083c1582dea49baa43df943c69266de29dcc869a6",
+      "record_digest": "sha256:63e182548372201d136fd02ff46a90f5f304b97e30c39b8e1e9f8dc8877b3c92",
+      "command_id": "plan-revise:issue-625:reverse:2",
+      "receipt_id": "certificate:17fb3b4187073dd233a498a606f7b161",
+      "receipt_digest": "sha256:088d022bade6cfbb7744f602cc25ce8c31bce680e37d7a32e45cb1f8e0f2a382",
+      "decision_digest": "sha256:12256fd1b6b73e28ac58fcfc11cf945411ed896acb4d1d0276a0559e9a426a8f",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-625-pack-publication-preparation.md",
+        "plan_id": "PLAN-REVERSE-625-pack-publication-preparation",
+        "asset_id": "plan:18a3e140dc9b81cafab45c531089904b",
+        "revision": 2,
+        "content_digest": "sha256:6e6d5a741ce160f3c3833809586e0e3683092bf05b46b83d982b842a882ad872"
+      }
     }
   ]
 }
