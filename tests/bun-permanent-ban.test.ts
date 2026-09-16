@@ -114,7 +114,7 @@ const cleanDocuments = (): NodeBanDocuments => ({
   },
   toolchain: {
     packageJson: JSON.stringify({}),
-    bunLock: JSON.stringify({}),
+    bunLock: null,
     packageLock: JSON.stringify({ lockfileVersion: 3, packages: { "": {} } }),
     nodeVersion: "24.13.0",
   },
