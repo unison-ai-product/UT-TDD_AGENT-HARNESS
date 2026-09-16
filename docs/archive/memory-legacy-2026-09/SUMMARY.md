@@ -23,8 +23,8 @@ legacy corpus は runtime の read root (`.ut-tdd/memory`) の外にあり、い
 
 ## untracked corpus (local archive、commit しない)
 
-- files: 414
-- set digest (sha256 over per-file sha256): `6de0c477332097a41c2b3851957575a1895440a8754ff17d38255e6194811f62`
+- files: 425
+- set digest (sha256 over per-file sha256): `891e20040cd0002a6667e87cfa31f537d2dd9edd645aaea1b3c717a92e5ea98c`
 - local archive root (gitignored): `.ut-tdd/archive/memory-legacy-2026-09`
 
 untracked corpus の path・title・本文は secret / PII レビュー前のため記録しない。
