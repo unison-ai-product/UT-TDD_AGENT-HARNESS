@@ -34,18 +34,18 @@ status: draft
 github_issue_id: 625
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:12ae7559b4cc704816ba5ef588a50932
-  command_id: plan-revise:issue-625:forward:2
-  admitted_at: 2026-09-16T09:00:00.000Z
-  source_digest: sha256:442bc8d61c6d3defec77c870311eef8c4f9773875367f1b71045a513d3622313
+  receipt_id: certificate:dda6d34ac79ed55e4f00f0cde199de59
+  command_id: plan-revise:issue-625:forward:3
+  admitted_at: 2026-09-16T10:00:00.000+00:00
+  source_digest: sha256:599412f2b55d4ae22d5e1a676b62127e968b4f564004be6705f40a837c2f90f3
   decision_digest: sha256:5c21129947b813565682106ad9e8c66f1d8960934e9b4f1917362f94ab069137
-  receipt_digest: sha256:2266cf4e20b02d932de30ec04dff7abb9b37f90f4e3afb8127e5dea31bb04b32
+  receipt_digest: sha256:2061ad261c93bb1dcef06d35f002b8fb4a1c744c45d197dd8e2955063e4079b7
   binding:
     path: docs/plans/PLAN-L7-625-pack-publication-preparation.md
     plan_id: PLAN-L7-625-pack-publication-preparation
     asset_id: plan:7018d3e985a7ebf6e9cd7d90b29e2ba9
-    revision: 2
-    content_digest: sha256:442bc8d61c6d3defec77c870311eef8c4f9773875367f1b71045a513d3622313
+    revision: 3
+    content_digest: sha256:599412f2b55d4ae22d5e1a676b62127e968b4f564004be6705f40a837c2f90f3
   route:
     signal: feature_addition
     mode: add-feature
