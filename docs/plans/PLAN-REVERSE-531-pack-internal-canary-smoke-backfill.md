@@ -47,18 +47,18 @@ status: draft
 github_issue_id: 418
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:26f273691238fda4dc3af2cf50906685
-  command_id: plan-revise:issue-418:reverse:3
-  admitted_at: 2026-09-16T10:39:25.153Z
-  source_digest: sha256:f763aaa1a538094f8974c7012d0fbfaf80c70109fd583c999f4b26ee30e59125
-  decision_digest: sha256:aa6ad78ab893139f8844ca8a557de05a6b38a1fce40c9664b21d00c550b19f12
-  receipt_digest: sha256:3dd6a02ad51b3c632aa59e5ccc7e9cf5421dac86870e35d3da93dc244885b845
+  receipt_id: certificate:ac747c3c57219eca439f2a6668895eaf
+  command_id: plan-revise:issue-418:reverse:4
+  admitted_at: 2026-09-16T12:05:00.000Z
+  source_digest: sha256:af3bf78eac813e5fc69fe62b0164261169b61ff8ebe3f454ba39eb96d8589518
+  decision_digest: sha256:325122d6cd9e758445f79651b0da76f2ff8a0f2181eae931221c11148dc9578f
+  receipt_digest: sha256:cbc5040cacd9a6e9dd24ff81acaeb3eeed2cb4a1e4e256babbf6b066b98a1036
   binding:
     path: docs/plans/PLAN-REVERSE-531-pack-internal-canary-smoke-backfill.md
     plan_id: PLAN-REVERSE-531-pack-internal-canary-smoke-backfill
     asset_id: plan:c789d97c71c9a9c07942983de88b71ab
-    revision: 3
-    content_digest: sha256:f763aaa1a538094f8974c7012d0fbfaf80c70109fd583c999f4b26ee30e59125
+    revision: 4
+    content_digest: sha256:af3bf78eac813e5fc69fe62b0164261169b61ff8ebe3f454ba39eb96d8589518
   route:
     signal: reverse
     mode: reverse
