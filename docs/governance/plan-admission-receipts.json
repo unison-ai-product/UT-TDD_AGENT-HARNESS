@@ -3872,6 +3872,22 @@
         "revision": 1,
         "content_digest": "sha256:3a9944dd94672995af02b1b13045d13a4cd5f661d6687a0c93a7ec77e93e37e9"
       }
+    },
+    {
+      "sequence": 243,
+      "previous_record_digest": "sha256:02c7f2310e1da010ebd408dc23c02db9c51ebbbc75542522dcca69640a723810",
+      "record_digest": "sha256:66da3e7edf20ef2b95eefef4e27a5284d5c09cbc51aef1b3e2a08fadf19c0c86",
+      "command_id": "plan-l6-600-revise-r2-e4c6bc735b4cc2ac",
+      "receipt_id": "certificate:712349216b45c7e321a726af1a978171",
+      "receipt_digest": "sha256:e1ae2feb9cb1d228f5c026fe4772af1716a0f8229d0e54602f15bf8db532438d",
+      "decision_digest": "sha256:88cb4472205d1c36e4b64a214877a150ed6f40b50a688d24573bfab6e520e4c9",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-600-codex-review-wake-contract.md",
+        "plan_id": "PLAN-L6-600-codex-review-wake-contract",
+        "asset_id": "plan:dd832691e9533143c32fd04a79bff1be",
+        "revision": 2,
+        "content_digest": "sha256:448167bed9092aa1a0593b277cdf291bdd2a65e5fbfd4bb79fde23e364515ee3"
+      }
     }
   ]
 }
