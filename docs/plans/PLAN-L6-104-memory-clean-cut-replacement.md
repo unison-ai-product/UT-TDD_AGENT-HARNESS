@@ -54,18 +54,18 @@ supersedes:
   - PLAN-L7-512-project-scoped-memory-root
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:8e0b44be8e6aa67b6b086f201f13629f
-  command_id: plan-revise:issue-424:memory-clean-cut:3
-  admitted_at: 2026-09-16T02:26:17.355Z
-  source_digest: sha256:664be8f2e502741d1f9f6f03cf00cca3fffb20d8246b7e7ff4d9cd40a659ff57
-  decision_digest: sha256:811a349100ef8d57b75f4464c6812b4caef31052e3cbdf1c0349f7d40db7c1b2
-  receipt_digest: sha256:0bd4a45c269934da7ce073c7442cd576dd7c65560ebe81b9a6ba5a03d681ac73
+  receipt_id: certificate:e212e6e6008689070d0e88c6e5321a9c
+  command_id: plan-revise:issue-424:memory-clean-cut:4
+  admitted_at: 2026-09-16T02:39:41.530Z
+  source_digest: sha256:681847898234e3d840b1f6d18204054b3c9a366b1992922df8f28c80a0b87546
+  decision_digest: sha256:c940ea2f416d66a6a51df7a9a58fb2efb503eb91d184cde520b98ca8b615ccd9
+  receipt_digest: sha256:ee47edf6c7319b3f0b844cde5f2021832a186f52cc6acc6a04e7dc497e78b864
   binding:
     path: docs/plans/PLAN-L6-104-memory-clean-cut-replacement.md
     plan_id: PLAN-L6-104-memory-clean-cut-replacement
     asset_id: plan:6bb11608096fa63d92d993a129cab136
-    revision: 3
-    content_digest: sha256:664be8f2e502741d1f9f6f03cf00cca3fffb20d8246b7e7ff4d9cd40a659ff57
+    revision: 4
+    content_digest: sha256:681847898234e3d840b1f6d18204054b3c9a366b1992922df8f28c80a0b87546
   route:
     signal: redesign
     mode: redesign
@@ -86,13 +86,13 @@ admission_receipt:
       target_revision: 1
   reentry:
     target_plan_id: PLAN-L6-104-memory-clean-cut-replacement
-    target_revision: 3
+    target_revision: 4
     phase: forward_merge
-  escape_reason: "PR #628 closing review finding: the section 10 ledger custody
-    statement bound no re-verifiable evidence. This revision records the
-    re-measured read-only observations with their commands and digests, and
-    limits the claim to what a third party can reproduce, because the
-    pre-transfer digest was not retained"
+  escape_reason: Re-bind PLAN-L6-104 after a direct edit landed on the branch
+    outside the canonical path (commit 86511e89 tightened the section 7 curation
+    ledger contract). The content is kept as authored; this revision re-issues
+    it through plan revise so the embedded binding matches the file again and
+    plan admission-check stops failing closed
   supersedes:
     - PLAN-L7-512-project-scoped-memory-root
 ---
