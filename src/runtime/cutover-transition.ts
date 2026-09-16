@@ -514,6 +514,10 @@ function loadReceipts(
 }
 
 function appendAtomically(input: CutoverCommandInput, genesis: boolean): CutoverTransitionReceipt {
+  // Keep an unimplemented (but structurally valid) sealed edge from reaching the
+  // state table.  `input.edgeId` is external runtime input despite its static type.
+  if (!implementedCutoverEdgeIdSchema.safeParse(input.edgeId).success)
+    throw new CutoverTransitionError("cutover-transition-invalid");
   const db = openDatabase(input.repoRoot);
   try {
     db.exec("BEGIN IMMEDIATE");

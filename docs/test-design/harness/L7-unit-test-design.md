@@ -2201,7 +2201,7 @@ reference authorityを検証する。各negativeは対象外のdigestを正規�
 | `U-CUTOVER-002` | 4 edge の隣接 transition と reducer fold |
 | `U-CUTOVER-003` | evidence producer owner と revision ancestry |
 | `U-CUTOVER-004` | admission authority、attestation、execution mode、prior receipt |
-| `U-CUTOVER-005` | skip、stale、replay、reverse transition の拒否 |
+| `U-CUTOVER-005` | skip、stale、replay、reverse transition と stale CAS loser の拒否（head への二重 contender は append ちょうど1件） |
 | `U-CUTOVER-006` | receipt、evidence、admission の独立 digest mutation |
 | `U-CUTOVER-007` | length-frame と RFC 8785 canonicalization の決定性 |
 | `U-CUTOVER-008` | transaction fault 時の partial write 0 |
