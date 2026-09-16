@@ -4296,7 +4296,7 @@
       "command_id": "plan-revise:issue-625:reverse:2",
       "receipt_id": "certificate:17fb3b4187073dd233a498a606f7b161",
       "receipt_digest": "sha256:088d022bade6cfbb7744f602cc25ce8c31bce680e37d7a32e45cb1f8e0f2a382",
-      "decision_digest": "sha256:12256fd1b6b73e28ac58fcfc11cf945411ed896ac4b8d1d0276a0559e9a426a8f",
+      "decision_digest": "sha256:12256fd1b6b73e28ac58fcfc11cf945411ed896acb4d1d0276a0559e9a426a8f",
       "binding": {
         "path": "docs/plans/PLAN-REVERSE-625-pack-publication-preparation.md",
         "plan_id": "PLAN-REVERSE-625-pack-publication-preparation",
