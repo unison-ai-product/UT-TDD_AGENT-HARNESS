@@ -24,9 +24,7 @@ generates:
     artifact_type: markdown_doc
 dependencies:
   parent: docs/plans/PLAN-L7-565-pack-publication-atomic-ref-cas.md
-  requires:
-    - docs/plans/PLAN-L7-625-pack-publication-preparation.md
-    - docs/plans/PLAN-L6-626-pack-publication-admission-binding.md
+  requires: []
   blocks: []
   references:
     - docs/plans/PLAN-L7-565-pack-publication-atomic-ref-cas.md
