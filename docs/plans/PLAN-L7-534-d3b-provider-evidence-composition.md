@@ -25,6 +25,10 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-534-d3b-provider-evidence-composition.md
     artifact_type: markdown_doc
+  - artifact_path: src/feedback/provider-judgment-composition.ts
+    artifact_type: source_module
+  - artifact_path: tests/provider-judgment-composition.test.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L6-85-automated-pr-cross-review-merge-contract.md
   requires:
@@ -45,18 +49,18 @@ status: draft
 github_issue_id: 570
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:962ff92d68cdb7ee52efa4ba777acf9d
-  command_id: plan-revise:issue-570:forward:8
-  admitted_at: 2026-09-14T01:39:16.658Z
-  source_digest: sha256:b774ab61d31de2f0972e0ae42365049abc4cab7ab3d2f8ac8911ed947952822e
-  decision_digest: sha256:95314c78c8795bd3feb9ebb8332f0e77adc6a8c6125efa7a3be35562abee476c
-  receipt_digest: sha256:5ea78a53d205eacf97f1c88d800e8d298a08c42a5f46dd05589588a8fb2c1e08
+  receipt_id: certificate:9619a6b6118d40dc688c1793b4f1f0af
+  command_id: plan-revise:issue-570:forward:9
+  admitted_at: 2026-09-16T13:40:00+09:00
+  source_digest: sha256:93e1536e5cbd6aa184d92f2de22dd75752fa2bbef03981b82713c5848806b88c
+  decision_digest: sha256:a30a3dd56ca6d334697765a1f8ccbb7e54dcd7fced8a764d3816d4c2aec723c1
+  receipt_digest: sha256:8273a0cbeea4c4a8655a069e392bca673f14e8cb32c48d3d916fd5966ad64321
   binding:
     path: docs/plans/PLAN-L7-534-d3b-provider-evidence-composition.md
     plan_id: PLAN-L7-534-d3b-provider-evidence-composition
     asset_id: plan:2eeafb9dd9883770a0f56c936c08bd1f
-    revision: 8
-    content_digest: sha256:b774ab61d31de2f0972e0ae42365049abc4cab7ab3d2f8ac8911ed947952822e
+    revision: 9
+    content_digest: sha256:93e1536e5cbd6aa184d92f2de22dd75752fa2bbef03981b82713c5848806b88c
   route:
     signal: feature_addition
     mode: add-feature
@@ -69,15 +73,16 @@ admission_receipt:
     plan_id: PLAN-L6-85-automated-pr-cross-review-merge-contract
     revision: 2
     digest: sha256:7f822e8cbc533306baccbf4702fc01c3ebb9133a4b3baec8ac84359c99ed156f
+  transition:
+    direction: design_to_implementation
+    implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-534-d3b-provider-evidence-composition
     target_revision: 1
     phase: forward_merge
-  escape_reason: "Issue #570 D3b provider evidence composition pair-freeze
-    (add-feature; PLAN-L7-562 producer downstream, PLAN-L6-85 rev 2 origin);
-    revision 8: Codex/Sol FLAG 1c6186c0 (payload judgment_digest field
-    requirement contradicted PLAN-L7-562 preimage rule; runner now verifies
-    basename digest + canonical bytes only; candidate 012 aligned)"
+  escape_reason: "Issue #570 PR-1 implementation: add source/test deliverables to
+    the existing D3b composition PLAN without changing the frozen custody
+    contract."
 ---
 
 # PLAN-L7-534: D3b provider evidence composition
