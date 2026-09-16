@@ -47,17 +47,17 @@ sub_doc: function-spec
 github_issue_id: 600
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:741fefc548feec3fc6d48aa84968ef32
-  command_id: plan-l6-600-revise-r5-73b2796799f5
-  admitted_at: 2026-09-16T06:03:43.262Z
+  receipt_id: certificate:aef43eebfeba584e5b80e9bd2c77d920
+  command_id: plan-draft:issue-600:codex-review-wake-contract:rechain
+  admitted_at: 2026-09-16T07:20:00+09:00
   source_digest: sha256:47dc5c35538457e1ad37a0c563079cf2e2a74944af7cc878d36921b5d13897ff
-  decision_digest: sha256:a52e4f384b08a332672be63eed8a632c6a3dd74b31d1f7cff8c674fef841e327
-  receipt_digest: sha256:1f96c2e2f1b47e08a0d71f0e640a960083a85cae809bb7138c5906d4db0a39e4
+  decision_digest: sha256:355a054d5bf59ad808e20436e70d54531172943339804e7c120e0d713b87b05e
+  receipt_digest: sha256:ad9163b70677fb0a731b727b3ffbee62289ff8c21b4c61a7d9ea696d89b5b9c7
   binding:
     path: docs/plans/PLAN-L6-600-codex-review-wake-contract.md
     plan_id: PLAN-L6-600-codex-review-wake-contract
-    asset_id: plan:dd832691e9533143c32fd04a79bff1be
-    revision: 5
+    asset_id: plan:aef43eebfeba584e5b80e9bd2c77d920
+    revision: 1
     content_digest: sha256:47dc5c35538457e1ad37a0c563079cf2e2a74944af7cc878d36921b5d13897ff
   route:
     signal: feature_addition
@@ -75,7 +75,7 @@ admission_receipt:
     target_plan_id: PLAN-L7-472-claude-memory-async-wake
     target_revision: 1
     phase: forward_merge
-  escape_reason: "Issue #600 Codex review wake contract pair-freeze revision 5"
+  escape_reason: "Issue #600 Codex review wake contract re-chain after main #620"
 ---
 
 # PLAN-L6-600: Codex review wake の契約 freeze
