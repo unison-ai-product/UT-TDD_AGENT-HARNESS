@@ -3984,6 +3984,102 @@
         "revision": 4,
         "content_digest": "sha256:681847898234e3d840b1f6d18204054b3c9a366b1992922df8f28c80a0b87546"
       }
+    },
+    {
+      "sequence": 250,
+      "previous_record_digest": "sha256:d85f8b135c1ba40705c24b2ed2e350e955cd6fb6607c8ca161aed0fe75122795",
+      "record_digest": "sha256:27ef011d36ab55a6912415bb6b0c62f7b33ae4e639a04951ceb77d81de5d4d48",
+      "command_id": "plan-revise:issue-424:legacy-512:8",
+      "receipt_id": "certificate:4444faedd7733ce1dfe654604296a5f0",
+      "receipt_digest": "sha256:d14dc2e05cdf0a939aa52eb960b477480ff868e5c4bf1b10a8fe5f5cd9f31609",
+      "decision_digest": "sha256:2a1df69cbbded270c50e52b16b80ec8304570e898b26e67f3da421a98882ac5a",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-512-project-scoped-memory-root.md",
+        "plan_id": "PLAN-L7-512-project-scoped-memory-root",
+        "asset_id": "plan:legacy:68706e293ae2c96738a8e3263bac3e01e7cde64cdb7c3ed8e53805922662bc30",
+        "revision": 8,
+        "content_digest": "sha256:5d56d6618b106d585dc6d662b19db0e777ab3d4b617b1899ee9f94df81736aa2"
+      }
+    },
+    {
+      "sequence": 251,
+      "previous_record_digest": "sha256:27ef011d36ab55a6912415bb6b0c62f7b33ae4e639a04951ceb77d81de5d4d48",
+      "record_digest": "sha256:2f50447905f89f9a4c02cd683b2909fa5f6cbc1b892edaf6708fe64caf8c9267",
+      "command_id": "plan-draft:issue-424:memory-clean-cut-impl:1",
+      "receipt_id": "certificate:6f7505a570cabcffc4899bfc7f83cc98",
+      "receipt_digest": "sha256:f3b91a5f548fba41b54602d8a2b3efe6be6dfdac6cc2eff63b575816ea9a7f48",
+      "decision_digest": "sha256:9ccbb67275e50728e8844db36b4f7c81f12fca5e44e3bc1052dc44eabb8302c3",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-566-memory-clean-cut-replacement.md",
+        "plan_id": "PLAN-L7-566-memory-clean-cut-replacement",
+        "asset_id": "plan:6f7505a570cabcffc4899bfc7f83cc98",
+        "revision": 1,
+        "content_digest": "sha256:c30ef41c357f89e40d199f792199f4947ea130e0c2f86eb9e17fd080214fbc64"
+      }
+    },
+    {
+      "sequence": 252,
+      "previous_record_digest": "sha256:2f50447905f89f9a4c02cd683b2909fa5f6cbc1b892edaf6708fe64caf8c9267",
+      "record_digest": "sha256:5e593be8deb771038538a99e5660a15da315c8b45034dfd90be11c64987c8420",
+      "command_id": "plan-draft:issue-424:memory-clean-cut-impl:reverse:1",
+      "receipt_id": "certificate:e3491ae517cd2e52ee50387694b8b65d",
+      "receipt_digest": "sha256:e5febf0c6d03898d589f706c03aa3df0094d6642f2286ee9f9edd5dd3a3bf86e",
+      "decision_digest": "sha256:a17e8398029c0cd22f60b996fc4be5003cddeb159d9676175d4668ccc01f47b7",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-566-memory-clean-cut-replacement.md",
+        "plan_id": "PLAN-REVERSE-566-memory-clean-cut-replacement",
+        "asset_id": "plan:e3491ae517cd2e52ee50387694b8b65d",
+        "revision": 1,
+        "content_digest": "sha256:dd253cef6938d31d31b574ff3ec6542a37b5b99dd1c4ae3b4d57f4d752794c52"
+      }
+    },
+    {
+      "sequence": 253,
+      "previous_record_digest": "sha256:5e593be8deb771038538a99e5660a15da315c8b45034dfd90be11c64987c8420",
+      "record_digest": "sha256:0eb3427d1e517f1b0ee8c3f405cef5881951eb814d6e5e05ec4bb323cd470769",
+      "command_id": "plan-revise:issue-424:memory-clean-cut-impl:2",
+      "receipt_id": "certificate:e9a586a9cfd2880665a218f2b7a1350a",
+      "receipt_digest": "sha256:2587d744847591a12da14bb4924cc005b351726fc13b2fa760df24b63d7e8ec4",
+      "decision_digest": "sha256:e545cb9c11a6cae0db59780975288d09d7810979100af4f7df486f2d4e95631b",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-566-memory-clean-cut-replacement.md",
+        "plan_id": "PLAN-L7-566-memory-clean-cut-replacement",
+        "asset_id": "plan:6f7505a570cabcffc4899bfc7f83cc98",
+        "revision": 2,
+        "content_digest": "sha256:a320820d565232986afd4de613b403bfa74c49d24b0f7f171f87d51b907e0726"
+      }
+    },
+    {
+      "sequence": 254,
+      "previous_record_digest": "sha256:0eb3427d1e517f1b0ee8c3f405cef5881951eb814d6e5e05ec4bb323cd470769",
+      "record_digest": "sha256:de5261766cedb99082b8a3bbc61f59f42d2b5c8de64bab0d0f312e69730820e9",
+      "command_id": "plan-revise:issue-424:memory-clean-cut-impl:3",
+      "receipt_id": "certificate:59fbf115c1a30319c420116b1ce9797f",
+      "receipt_digest": "sha256:12fb05dc7e42d3b6ed232cc1dff29a406e9f23b53147f71f6f441bc1961a61ea",
+      "decision_digest": "sha256:b0f8aa5118e13dde6b9a29a80de1d3529b89da962a5696e218a02ef03489d9de",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-566-memory-clean-cut-replacement.md",
+        "plan_id": "PLAN-L7-566-memory-clean-cut-replacement",
+        "asset_id": "plan:6f7505a570cabcffc4899bfc7f83cc98",
+        "revision": 3,
+        "content_digest": "sha256:504eae95dad31418be7f634a76e26529c7269195900cf033d2368fa29a1bf6e4"
+      }
+    },
+    {
+      "sequence": 255,
+      "previous_record_digest": "sha256:de5261766cedb99082b8a3bbc61f59f42d2b5c8de64bab0d0f312e69730820e9",
+      "record_digest": "sha256:afc96295efb64c6712036e6a4bd75d8753207645a0e6d0059f8254543ae1c8a3",
+      "command_id": "plan-revise:issue-424:legacy-512:9",
+      "receipt_id": "certificate:901bf74d6e8d531edfc3701e1180cbd7",
+      "receipt_digest": "sha256:86d8a61c95ea08fcb26c3ee96b5cdd665a00d2f601a0493e054d5677838696ab",
+      "decision_digest": "sha256:c3a5688e66d1351107dbbed6fbe75b64ad628284158710e424ff59c412785a2e",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-512-project-scoped-memory-root.md",
+        "plan_id": "PLAN-L7-512-project-scoped-memory-root",
+        "asset_id": "plan:legacy:68706e293ae2c96738a8e3263bac3e01e7cde64cdb7c3ed8e53805922662bc30",
+        "revision": 9,
+        "content_digest": "sha256:b98c4e702040756c256c62f69a322a842bb4e74bc0fc27f9e8e2dbf6e89bbd8c"
+      }
     }
   ]
 }

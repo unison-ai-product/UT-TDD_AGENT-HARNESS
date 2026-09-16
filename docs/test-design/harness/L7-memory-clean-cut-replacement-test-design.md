@@ -79,11 +79,11 @@ updated: 2026-09-15
 
 | Candidate | 所有 PR | Stimulus / mutation | 独立 oracle |
 | --- | --- | --- | --- |
-| `CANDIDATE-U-MEMCUT-012` | PR-1 | `src/`・`scripts/`・`.claude/hooks/` の import graph を、TypeScript の module 解決で走査する。mutation として、任意の production module に migration module の import を 1 行戻す | `project-memory-migration` への edge が 0、module file が不在、`ProjectMemoryMigration` symbol の出現が 0。mutation で Red |
-| `CANDIDATE-U-MEMCUT-013` | PR-1 | `src/doctor/test-repository-isolation.ts` の `CONTRACT_ROWS` を test file の集合と照合する。負例として、test file だけを削除して行を残す | 行が 0 件で `test-repository-isolation` が OK。負例は `stale-contract:tests/project-memory-migration.test.ts` で Red |
-| `CANDIDATE-U-MEMCUT-014` | PR-1 | migration test の削除後に、oracle-test-trace を実 repository に対して実行する。負例として、test だけを削除して宣言を残す | `U-PMEMINV-*` (8 件) と `U-PMEMQUAR-*` (5 件) の宣言 site が 0、orphan が 0、baseline への退避が 0 (baseline は縮小のみ)。負例は該当 13 件の orphan で Red |
-| `CANDIDATE-U-MEMCUT-015` | PR-1 | migration file の削除後に plan-artifact-existence を実行する (`PLAN-L7-512` は confirmed で、`generates` に削除対象の 2 path を持つ) | phantom-artifact が 0。`generates` の整合は canonical な `plan revise --manifest` 経路で行い、receipt を手で編集しない。負例 (generates を据え置く) は 2 path の phantom-artifact で Red |
-| `CANDIDATE-U-MEMCUT-016` | PR-1 | PR-1 の diff と継承 test を検査する | `src/runtime/project-memory-root.ts` と `src/runtime/claude-provider-envelope.ts` の diff が 0。`tests/project-memory-root.test.ts`・`tests/project-memory-pack-parity.test.ts`・`tests/claude-memory-wake.test.ts` の label 集合が不変で、かつ Green。`src/`・`tests/`・`scripts/` での `project-memory-migration` の出現が 0 (docs に残るのは correction note / 非適用注記 / archive だけ) |
+| `U-MEMCUT-012` | PR-1 | `src/`・`scripts/`・`.claude/hooks/` の import graph を、TypeScript の module 解決で走査する。mutation として、任意の production module に migration module の import を 1 行戻す | `project-memory-migration` への edge が 0、module file が不在、`ProjectMemoryMigration` symbol の出現が 0。mutation で Red |
+| `U-MEMCUT-013` | PR-1 | `src/doctor/test-repository-isolation.ts` の `CONTRACT_ROWS` を test file の集合と照合する。負例として、test file だけを削除して行を残す | 行が 0 件で `test-repository-isolation` が OK。負例は `stale-contract:tests/project-memory-migration.test.ts` で Red |
+| `U-MEMCUT-014` | PR-1 | migration test の削除後に、oracle-test-trace を実 repository に対して実行する。負例として、test だけを削除して宣言を残す | `U-PMEMINV-*` (8 件) と `U-PMEMQUAR-*` (5 件) の宣言 site が 0、orphan が 0、baseline への退避が 0 (baseline は縮小のみ)。負例は該当 13 件の orphan で Red |
+| `U-MEMCUT-015` | PR-1 | migration file の削除後に plan-artifact-existence を実行する (`PLAN-L7-512` は confirmed で、`generates` に削除対象の 2 path を持つ) | phantom-artifact が 0。`generates` の整合は canonical な `plan revise --manifest` 経路で行い、receipt を手で編集しない。負例 (generates を据え置く) は 2 path の phantom-artifact で Red |
+| `U-MEMCUT-016` | PR-1 | PR-1 の diff と継承 test を検査する | `src/runtime/project-memory-root.ts` と `src/runtime/claude-provider-envelope.ts` の diff が 0。`tests/project-memory-root.test.ts`・`tests/project-memory-pack-parity.test.ts`・`tests/claude-memory-wake.test.ts` の label 集合が不変で、かつ Green。`src/`・`tests/`・`scripts/` での `project-memory-migration` の出現が 0 (docs に残るのは correction note / 非適用注記 / archive だけ) |
 
 ### 4.3 corpus 置換: rename digest manifest と untracked の非 commit (PR-2)
 
