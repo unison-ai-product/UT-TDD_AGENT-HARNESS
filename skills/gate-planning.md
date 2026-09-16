@@ -22,11 +22,11 @@ decision_points:
     over: "treating \"code written\" or \"looks right\" as sufficient to close"
     because: "only machine evidence and recorded review findings clear a gate; subjective code-looks-right assessments are not falsifiable"
   - when: "Running Vitest locally or in CI"
-    choose: "use `bun run test`"
-    over: "using bare `bun test`"
-    because: "the native runner has sync-timeout flakiness; CI uses Vitest via `bun run test`, so bare `bun test` can pass locally and still fail CI"
+    choose: "use `npm run test`"
+    over: "using bare `npm test`"
+    because: "the native runner has sync-timeout flakiness; CI uses Vitest via `npm run test`, so bare `npm test` can pass locally and still fail CI"
   - when: "Checking Biome formatting before a gate"
-    choose: "run `bun run lint` (which invokes `biome check`)"
+    choose: "run `npm run lint` (which invokes `biome check`)"
     over: "running `biome lint` alone"
     because: "`biome lint` does not check formatting; format violations accumulate silently and break the next push"
   - when: "`ut-tdd doctor` exits 0 for a layer"
@@ -61,7 +61,7 @@ accumulate false-green state and hide V-model descent gaps.
 
 A unit of work is complete only when ALL hold:
 
-1. `bun run typecheck`, `bun run lint` (Biome check), and `bun run test`
+1. `npm run typecheck`, `npm run lint` (Biome check), and `npm run test`
    (Vitest) are green.
 2. `ut-tdd doctor` exits 0 (no governance violation).
 3. `ut-tdd plan lint` exits 0 (PLAN schema valid, dependencies exist,
@@ -79,7 +79,7 @@ review findings clear a gate.
 ## Gate design rules
 
 - **Falsifiable condition.** "Passes review" is not falsifiable; "`ut-tdd
-  doctor` exits 0 and `bun run test` passes with no skipped tests" is.
+  doctor` exits 0 and `npm run test` passes with no skipped tests" is.
 - **Name the checking command.** Every condition maps to a `ut-tdd`/CI command
   or an explicit human review action.
 - **Record the result, not the intent.** Evidence goes into `.ut-tdd/audit/` or
@@ -110,7 +110,7 @@ evidence in single-runtime mode — never self-review alone.
 
 ## Anti-patterns that defeat enforcement
 
-- `bun test` instead of `bun run test` (Vitest) — native runner has sync-timeout
+- `npm test` instead of `npm run test` (Vitest) — native runner has sync-timeout
   flakiness; CI uses Vitest.
 - `biome lint` without `biome check` — format violations accumulate and break the
   next push.

@@ -84,9 +84,9 @@ Run in order; stop at the first failure and fix before continuing:
 ut-tdd doctor              # structural governance: orphans, missing pairs, PLAN schema
 ut-tdd vmodel lint         # V-model layer obligations: absence-fail-close
 ut-tdd plan lint           # PLAN schema, dependency existence, schedule section
-bun run typecheck          # TypeScript: zero errors
-bun run lint               # Biome check: format + lint, zero violations
-bun run test               # Vitest: no skipped tests without rationale
+npm run typecheck          # TypeScript: zero errors
+npm run lint               # Biome check: format + lint, zero violations
+npm run test               # Vitest: no skipped tests without rationale
 ```
 
 Never pipe any of these through `| tail` — truncation hides the root error.

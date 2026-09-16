@@ -61,7 +61,7 @@ is the Red step for a fix — it confirms the defect is real and gives the
 regression fence.
 
 ```
-bun run test tests/<affected>.test.ts
+npm run test tests/<affected>.test.ts
 ```
 
 The test must fail on the current HEAD with the exact error being fixed. Commit
@@ -90,7 +90,7 @@ harder to review and harder to revert if it introduces a secondary defect.
 Run the full gate sequence:
 
 ```
-bun run typecheck && bun run lint && bun run test && ut-tdd doctor
+npm run typecheck && npm run lint && npm run test && ut-tdd doctor
 ```
 
 All gates must be Green before committing the fix.
@@ -109,7 +109,7 @@ All gates must be Green before committing the fix.
 A fix PLAN under Recovery or Incident is closed only when:
 
 - [ ] Regression test is Green and committed before the fix commit.
-- [ ] `bun run typecheck && bun run lint && bun run test && ut-tdd doctor`
+- [ ] `npm run typecheck && npm run lint && npm run test && ut-tdd doctor`
   all green on the fix HEAD.
 - [ ] Root cause documented in the PLAN or `.ut-tdd/audit/` entry (what
   allowed the defect to exist, not just what the defect was).

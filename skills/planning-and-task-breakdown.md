@@ -92,7 +92,7 @@ Schedule steps are numbered and annotated with execution mode:
 2. [並列] Author L6 unit-test design doc — PLAN-L6-NN
 3. [直列] pair-freeze review: ut-tdd review --uncommitted
 4. [直列] implement src/ — PLAN-L7-NN
-5. [直列] trace-freeze: bun run test && ut-tdd doctor
+5. [直列] trace-freeze: npm run test && ut-tdd doctor
 6. [直列] accept: ut-tdd review --uncommitted (no blocking findings)
 ```
 
