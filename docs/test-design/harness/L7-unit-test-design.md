@@ -1737,6 +1737,32 @@ content-addressed に投影する。D1 analyzer には投影済み artifact だ�
 `tests/review-live-cli.test.ts` (`U-RVATT-036`)。
 既存`U-RVATT-001`〜`022`の検出集合を縮めない。
 
+### Issue #600 Codex review wake contract (PLAN-L6-600 docs-only pair-freeze)
+
+これは Issue #600 の実装前契約であり、まだ source/test code が実装していないため、以下は
+`CANDIDATE-*` として扱う。Claude async wake の `U-MEMWAKE-*`、review receipt の `U-RVATT-*`、
+および既存 provider envelope v4 の schema を再定義しない。Codex wake は canonical request を
+信頼根とし、hook の surface は配送成功や receipt を意味しない。
+
+| ID | fixture / mutation | falsifiable oracle |
+| --- | --- | --- |
+| `CANDIDATE-CODEXWAKE-001` | canonical request create-or-validateを初回失敗、同一bytes retry、異bytes conflictへ変異する | request無しではinbox/backlog write 0。同一canonical bytesは同一requestへ冪等収束し、異bytesは上書きせずconflict。wake失敗後もrequestを再mint/削除しない |
+| `CANDIDATE-CODEXWAKE-002` | project identity、provider target、request digest/path、PR、exact HEAD、review revision、author family を各1点変異する | project-scoped inbox以外への write 0。provider envelope v4 の不一致は fail-close し、別 workspace/global/current-worktree 宛ての配送を行わない |
+| `CANDIDATE-CODEXWAKE-003` | 同一内容の直列/並列retry、異内容retry、同一entryを2 Codex sessionが同時claimする | 同一canonical bytesは一件へ収束し、異内容は既存bytes不変。一つのtarget sessionだけatomic claim成功、敗者はconsume/receipt/terminal write 0 |
+| `CANDIDATE-CODEXWAKE-004` | valid entryを2件置き、oldest consumerをreceipt前失敗、receipt永続化後の派生表示失敗、完全成功へ変異する | pendingはexit 2。receipt無しはclaimをinboxへrestore、receipt有りはprocess non-zeroでもterminalize。成功後だけ次entryへFIFO advance |
+| `CANDIDATE-CODEXWAKE-005` | malformed JSON、schema非互換、project/target不一致、path escape、stem mismatch、terminal marker identity mismatch を各1点投入 | orphan は receipt/comment/memory 0、typed invalid/fail-close、元 bytes 保持。orphan が後続 valid entry の surface を head-of-line blockせず、黙って削除・別宛先再配送しない |
+| `CANDIDATE-CODEXWAKE-006` | production `src/cli.ts` composition と `.codex/hooks.json` のSessionStart/Stop登録を各1点削除し、空inboxも実hookで起動する | productionはpublisherを必須注入し両hook eventから同じproject commandを起動。未注入又は片hook欠落はRED。空inboxはexact JSONとexit 0、test-only portsでは代替不可 |
+| `CANDIDATE-CODEXWAKE-007` | wake失敗backlogを再起動し、同一bytes、異bytes、request欠落、foreign projectへ変異する | SessionStart/Stopごとにproduction backlog ownerがoldest一件を再配送。同一bytesは一件へ収束、成功時だけterminal化、各invalidはtyped denyで元bytes保持 |
+| `CANDIDATE-CODEXWAKE-008` | terminal markerのfake clockを7日未満、境界、超過へ動かし、foreign project/active claim/inbox/backlogも配置する | 7日未満はmarker保持、境界以後だけ同一project markerをprune。foreign/claim/inbox/backlogのdelete count 0 |
+| `CANDIDATE-CODEXWAKE-009` | `CODEX_REVIEW_TARGET_SESSION` を未設定、空文字、妥当な値へ変異する | 未設定/空文字は `codex_review_target_session_unavailable` で fail-close し、inbox/backlog/hook write 0。妥当な値だけ対象 session へ一件を作る |
+| `CANDIDATE-CODEXWAKE-010` | claim 後に consumer を crash/kill し、15 分以内の lease、15 分境界、期限後、heartbeat 更新、terminal marker 有無を変異する | `leaseExpiresAt <= claimedAt + 15 minutes` を満たす期限前または heartbeat 済み claim は保持。15 分超過かつ terminal marker 無しだけ同一bytesを inbox へ atomic restore し、次回 session が再claimできる。foreign/terminal claim の回収・削除 0 |
+| `CANDIDATE-CODEXWAKE-011` | invalid entry のみ、valid+invalid 混在、invalid を修復した再実行を投入する | invalid-only は `status:"invalid"` / `invalidCount` / `codex_review_wake_envelope_invalid` / exit 2 を返し元 bytes保持。valid+invalid は valid を `status:"pending"` で surface しつつ `invalidCount` で invalid を typed state として可視化し、invalid を削除・receipt化しない。修復後だけ通常の pending/empty へ遷移 |
+
+実装対応予定は `tests/review-live-cli.test.ts`、`tests/live-review-projection.test.ts`、
+`tests/claude-memory-wake.test.ts`、`tests/runtime-hook-entrypoints.test.ts` である。候補の
+`CANDIDATE-*` は implementation PR の exact HEAD、実行コマンド、exit code、write count、
+content-addressed path を citation してから `U-*` へ昇格する。
+
 ## PLAN-L7-457 fence streaming hash / harness.db VACUUM oracle (issue #118、2026-07-22)
 
 対象 = `tests/support/chunked-hash.ts`（fence/snapshot共通のstreaming hashヘルパー）、
@@ -2187,26 +2213,6 @@ wrong evidence、replay、skip/reverse、digest mutation、projection直接更�
 正式oracleを宣言せず、各test実装とRed実測の同一commitで個別IDへ昇格する。review+admission済みD0 draft下の非activation
 F0a/F0b/F0c build/verifyとQ0 fixture/detector workはslice FSM順序内で許可し、production activation、
 hook/runtime switch、Bun final deletion、cutoverだけをL6 confirmed+D0 admissionまで禁止する。
-
-Issue #540 の実装commitでは、上記candidateを次の判別可能な正式oracleへ昇格する。
-`U-CUTOVER-001`はgenesis exactly-once、`002`は4 edgeの隣接fold、`003`はowner/ancestry、
-`004`はadmission authority/attestation、`005`はskip/stale/replay、`006`は独立digest mutation、
-`007`はlength-frame決定性、`008`はtransaction fault時partial write 0、`009`はL6/Q0 direct
-reference authorityを検証する。各negativeは対象外のdigestを正規再計算したfixtureを使い、別guardの偶発Redで
-当該predicateを証明しない。
-
-| Oracle ID | 判別対象 |
-| --- | --- |
-| `U-CUTOVER-001` | genesis exactly-once と二重 genesis の拒否 |
-| `U-CUTOVER-002` | 4 edge の隣接 transition と reducer fold |
-| `U-CUTOVER-003` | evidence producer owner と revision ancestry |
-| `U-CUTOVER-004` | admission authority、attestation、execution mode、prior receipt |
-| `U-CUTOVER-005` | skip、stale、replay、reverse transition と stale CAS loser の拒否（head への二重 contender は append ちょうど1件） |
-| `U-CUTOVER-006` | receipt、evidence、admission の独立 digest mutation |
-| `U-CUTOVER-007` | length-frame と RFC 8785 canonicalization の決定性 |
-| `U-CUTOVER-008` | transaction fault 時の partial write 0 |
-| `U-CUTOVER-009` | L6 confirmation、Q0 admission、slice admission の authority 再利用 |
-
 `CAND-CUTOVER-003/005`は`CUTOVER-EVIDENCE-REGISTRY-v1`を唯一のoracleとし、F0a/F0b/F0c receiptの
 各slice commit subjectをfixture化する。candidate HEADが全commitのdescendantなら受理し、stale/replay/
 non-ancestorなら拒否する。同一subject fixtureを要求しない。transition receiptのsubjectはcandidate HEADと
