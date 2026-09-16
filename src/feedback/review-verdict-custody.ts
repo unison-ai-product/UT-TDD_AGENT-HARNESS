@@ -209,6 +209,9 @@ export function appendReviewCustodyAudit(repoRoot: string, event: ReviewCustodyA
 export function isAttemptCompletedEvent(value: ReviewCustodyAuditEvent): boolean {
   return (
     value.kind === "attempt_completed" &&
+    // PLAN-L7-534 §3.2 (i): the receipt digest lives only in receiptFileDigest; a
+    // receiptDigest field (request digest in cleanup_pending) is a schema violation.
+    !("receiptDigest" in value) &&
     isReviewDigest(value.requestDigest) &&
     Number.isSafeInteger(value.attempt) &&
     value.attempt > 0 &&
@@ -502,28 +505,39 @@ export function beginReviewAttempt(input: {
   } catch {
     return { ok: false, reason: "attempt_outcome_indeterminate" };
   }
+  // PLAN-L7-534 §3.2: a receipt is terminal only with one fully valid
+  // attempt_completed — (i) schema, (ii) identity, (iii) receiptFileDigest ==
+  // sha256(receipt bytes), (iv) no superseded_attempt / attempt_outcome_conflict
+  // for that attempt. Anything less is an orphan and a bounded retry may start.
+  const receiptDigestNow = existsSync(receiptPath) ? digestFile(receiptPath) : undefined;
   const completed = requestEvents.filter(
     (event) =>
-      event.kind === "attempt_completed" &&
-      event.requestDigest === digest &&
       isAttemptCompletedEvent(event) &&
-      existsSync(receiptPath) &&
-      event.receiptFileDigest === digestFile(receiptPath),
+      event.requestDigest === digest &&
+      event.exactHead === input.request.exactHead &&
+      event.verdictPath === reviewVerdictPath(input.repoRoot, digest, event.attempt) &&
+      receiptDigestNow !== undefined &&
+      event.receiptFileDigest === receiptDigestNow &&
+      !requestEvents.some(
+        (other) =>
+          (other.kind === "superseded_attempt" && other.supersededAttempt === event.attempt) ||
+          (other.kind === "attempt_outcome_conflict" && other.attempt === event.attempt),
+      ),
   );
-  if (existsSync(receiptPath) && completed.length === 1)
+  if (receiptDigestNow !== undefined && completed.length === 1)
     return { ok: false, reason: "review_receipt_already_exists" };
-  // A pre-composition receipt or a crash-window temp file is not terminal.
-  // Leave append-only evidence intact and permit a bounded retry.
-  if (existsSync(receiptPath)) {
-    try {
-      const directory = dirname(receiptPath);
+  // A crash-window temp file is never a receipt: ignore and remove it at the
+  // start of every attempt, whether or not a (orphan) receipt exists (§3.2, -018).
+  try {
+    const directory = dirname(receiptPath);
+    if (existsSync(directory)) {
       for (const entry of readdirSync(directory)) {
         if (entry.startsWith(`.${digest}.json.tmp-`))
           rmSync(join(directory, entry), { force: true });
       }
-    } catch {
-      return { ok: false, reason: "review_custody_audit_unavailable" };
     }
+  } catch {
+    return { ok: false, reason: "review_custody_audit_unavailable" };
   }
   const used = attemptNumbers(input.repoRoot, digest);
   const attempt = (used.at(-1) ?? 0) + 1;
@@ -542,6 +556,13 @@ export function beginReviewAttempt(input: {
       return { ok: false, reason: "attempt_outcome_indeterminate" };
     }
     const previousOutcome = outcomes[0];
+    // Exactly one failure outcome is the PLAN-L7-520 retry path. Zero outcomes is
+    // retryable only through PLAN-L7-534 §3.2: a crash window (one valid
+    // attempt_completed, receipt absent) or an orphan receipt without a matching
+    // event. Two or more outcomes stay indeterminate (U-RVATT-040 case D).
+    const completedForPrevious = requestEvents.filter(
+      (event) => event.kind === "attempt_completed" && event.attempt === previousAttempt,
+    );
     const retryable =
       outcomes.length === 1
         ? isRetryableAttemptEvent({
@@ -550,18 +571,16 @@ export function beginReviewAttempt(input: {
             request: input.request,
             attempt: previousAttempt,
           })
-        : requestEvents.some(
-            (event) =>
-              event.attempt === previousAttempt &&
+        : outcomes.length === 0 &&
+          (receiptDigestNow !== undefined ||
+            (completedForPrevious.length === 1 &&
               isRetryableAttemptEvent({
                 repoRoot: input.repoRoot,
-                event,
+                event: completedForPrevious[0],
                 request: input.request,
                 attempt: previousAttempt,
-              }),
-          );
-    if (!retryable && !(existsSync(receiptPath) && outcomes.length === 0))
-      return { ok: false, reason: "attempt_outcome_indeterminate" };
+              })));
+    if (!retryable) return { ok: false, reason: "attempt_outcome_indeterminate" };
     const failureIndex = previousOutcome ? requestEvents.indexOf(previousOutcome) : -1;
     if (
       requestEvents

@@ -1,18 +1,15 @@
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import { loadProjectIdentityFromHead } from "../kernel/project-identity.ts";
 import { FileProviderJudgmentEvidenceAdapter } from "./adapters/provider-judgment-evidence.ts";
 import type { ProviderJudgmentAttemptIdentity } from "./ports/provider-judgment-evidence.ts";
-import {
-  type ProviderJudgmentResult,
-  produceProviderJudgment,
-  providerJudgmentIdentityDigest,
-} from "./provider-judgment.ts";
+import { type ProviderJudgmentResult, produceProviderJudgment } from "./provider-judgment.ts";
 import {
   isValidReviewRequest,
   type ReviewAttestationRequest as PersistedReviewRequest,
 } from "./review-attestation.ts";
+import { type CanonicalValue, canonicalize, sha256Hex } from "./review-custody-canonical.ts";
 import type { ReviewReceipt } from "./review-dispatch.ts";
 import {
   isAttemptCompletedEvent,
@@ -76,6 +73,7 @@ export type ProviderJudgmentCompositionFailure =
   | "evidence_superseded"
   | "receipt_mutated"
   | "evidence_schema_invalid"
+  | "evidence_conflict"
   | "artifact_verification_failed"
   | "evidence_unavailable"
   | "provider_failure"
@@ -178,9 +176,9 @@ function validReceipt(value: unknown): value is ReviewReceipt {
     receipt.kind === "verdict" &&
     (receipt.verdict === "PASS" || receipt.verdict === "PASS-WEAK" || receipt.verdict === "FLAG") &&
     Array.isArray(receipt.blockingFindings) &&
-    receipt.blockingFindings.every(
-      (finding) => typeof finding === "string" && finding.trim() === finding,
-    ) &&
+    // Finding shape (trim / duplicates) is judged by deriveReceiptFindings as
+    // evidence_schema_invalid; here only the receipt document schema is checked.
+    receipt.blockingFindings.every((finding) => typeof finding === "string") &&
     typeof receipt.at === "string"
   );
 }
@@ -218,8 +216,9 @@ function writeEvidenceEnvelope(input: {
   provider: "codex" | "claude";
   model: string;
   receipt: ReviewReceipt;
+  findings: readonly string[];
 }): { ok: true; created: boolean } | { ok: false; reason: ProviderJudgmentCompositionFailure } {
-  const { path, identity, provider, model, receipt } = input;
+  const { path, identity, provider, model, receipt, findings } = input;
   const envelope = {
     schema_version: "d3b-provider-evidence-envelope/v1",
     identity,
@@ -229,10 +228,8 @@ function writeEvidenceEnvelope(input: {
       `${JSON.stringify({
         schema_version: "provider-judgment-evidence/v1",
         verdict: receipt.verdict,
-        // Findings are already validated as canonical order below.  Do not
-        // sort here: accepting an unordered receipt would hide a malformed
-        // provider judgment instead of returning a typed schema denial.
-        blocking_findings: [...(receipt.blockingFindings ?? [])],
+        // Sorted ascending by deriveReceiptFindings (§3.1); duplicates were denied there.
+        blocking_findings: [...findings],
       })}\n`,
       "utf8",
     ).toString("base64"),
@@ -244,7 +241,7 @@ function writeEvidenceEnvelope(input: {
     if (existing)
       return existing.equals(bytes)
         ? { ok: true, created: false }
-        : { ok: false, reason: "identity_mismatch" };
+        : { ok: false, reason: "evidence_conflict" };
     writeFileSync(path, bytes, { encoding: "utf8", flag: "wx", mode: 0o600 });
     return { ok: true, created: true };
   } catch {
@@ -252,25 +249,68 @@ function writeEvidenceEnvelope(input: {
       const existing = readFileSync(path);
       return existing.equals(bytes)
         ? { ok: true, created: false }
-        : { ok: false, reason: "identity_mismatch" };
+        : { ok: false, reason: "evidence_conflict" };
     } catch {
       return { ok: false, reason: "judgment_write_failed" };
     }
   }
 }
 
-function verifyReceiptEvidence(
+/**
+ * PLAN-L7-534 §3.1: the evidence document is derived from the receipt only. Findings
+ * are sorted ascending; a duplicate or malformed finding is `evidence_schema_invalid`
+ * (never silently deduplicated). Verdict / findings consistency is the producer's
+ * check and its `judgment_schema_invalid` passes through unchanged (-008).
+ */
+function deriveReceiptFindings(
   receipt: ReviewReceipt,
-): ProviderJudgmentCompositionFailure | undefined {
+): { ok: true; findings: string[] } | { ok: false; reason: "evidence_schema_invalid" } {
   const findings = receipt.blockingFindings ?? [];
-  if (new Set(findings).size !== findings.length) return "judgment_schema_invalid";
   if (!findings.every((finding) => typeof finding === "string" && finding.trim() === finding))
-    return "judgment_schema_invalid";
-  if (findings.some((finding, index) => index > 0 && findings[index - 1] >= finding))
-    return "judgment_schema_invalid";
-  if (receipt.verdict === "FLAG" ? findings.length === 0 : findings.length !== 0)
-    return "judgment_schema_invalid";
-  return undefined;
+    return { ok: false, reason: "evidence_schema_invalid" };
+  if (new Set(findings).size !== findings.length)
+    return { ok: false, reason: "evidence_schema_invalid" };
+  return { ok: true, findings: [...findings].sort() };
+}
+
+function verifyJudgmentArtifact(input: {
+  artifactPath: string;
+  produced: Extract<ProviderJudgmentResult, { ok: true }>;
+  identity: ProviderJudgmentAttemptIdentity;
+  provider: "codex" | "claude";
+  model: string;
+  expectedProvider: "codex" | "claude";
+}): boolean {
+  const { artifactPath, produced, identity, provider, model, expectedProvider } = input;
+  let artifactBytes: Buffer;
+  try {
+    artifactBytes = readFileSync(artifactPath);
+  } catch {
+    return false;
+  }
+  const payload = produced.payload;
+  const canonical = canonicalize(payload as unknown as CanonicalValue);
+  if (!canonical.ok) return false;
+  const recomputedDigest = sha256Hex(canonical.value);
+  return (
+    recomputedDigest === produced.judgmentDigest &&
+    basename(artifactPath) === `${recomputedDigest}.json` &&
+    produced.providerEvidenceRef === `d3b:${recomputedDigest}` &&
+    Buffer.from(`${canonical.value}\n`, "utf8").equals(artifactBytes) &&
+    Buffer.from(produced.artifactBytes).equals(artifactBytes) &&
+    payload.repository === identity.repository &&
+    payload.pr_number === identity.prNumber &&
+    payload.head_sha === identity.headSha &&
+    payload.request_memory_id === identity.requestMemoryId &&
+    payload.request_digest === identity.requestDigest &&
+    payload.review_revision === identity.reviewRevision &&
+    payload.attempt === identity.attempt &&
+    payload.author_family === identity.authorFamily &&
+    payload.reviewer_family === expectedProvider &&
+    payload.invocation_nonce === identity.invocationNonce &&
+    payload.provider === provider &&
+    payload.model === model
+  );
 }
 
 /** Compose only from custody files and the verified invocation event. */
@@ -303,12 +343,17 @@ export async function composeProviderJudgment(
     receipt.reviewRevision !== request.reviewRevision
   )
     return { ok: false, reason: "identity_mismatch" };
-  const evidenceError = verifyReceiptEvidence(receipt);
-  if (evidenceError) return { ok: false, reason: evidenceError };
+  const derived = deriveReceiptFindings(receipt);
+  if (!derived.ok) return { ok: false, reason: derived.reason };
   let events: ReviewCustodyAuditEvent[];
   try {
+    // Keep every event of the request: a superseded_attempt that targets this
+    // attempt is recorded under the *next* attempt number (§3.2 (iv)).
     events = readReviewCustodyAudit(input.repoRoot).filter(
-      (event) => event.requestDigest === input.requestDigest && event.attempt === input.attempt,
+      (event) =>
+        event.requestDigest === input.requestDigest &&
+        (event.attempt === input.attempt ||
+          (event.kind === "superseded_attempt" && event.supersededAttempt === input.attempt)),
     );
   } catch {
     return { ok: false, reason: "invocation_fact_unavailable" };
@@ -333,9 +378,9 @@ export async function composeProviderJudgment(
   if (
     events.some(
       (candidate) =>
-        (candidate.kind === "superseded_attempt" ||
-          candidate.kind === "attempt_outcome_conflict") &&
-        candidate.attempt === input.attempt,
+        (candidate.kind === "superseded_attempt" &&
+          candidate.supersededAttempt === input.attempt) ||
+        (candidate.kind === "attempt_outcome_conflict" && candidate.attempt === input.attempt),
     )
   )
     return { ok: false, reason: "evidence_superseded" };
@@ -364,6 +409,7 @@ export async function composeProviderJudgment(
     provider,
     model: event.model as string,
     receipt,
+    findings: derived.findings,
   });
   if (!envelope.ok) return envelope;
   let produced: ProviderJudgmentResult;
@@ -385,30 +431,21 @@ export async function composeProviderJudgment(
     return mapProducerFailure(produced);
   }
   const artifactPath = judgmentPath(input.repoRoot, produced.judgmentDigest);
-  try {
-    const artifactBytes = readFileSync(artifactPath);
-    const payload = produced.payload;
-    if (
-      !Buffer.from(produced.artifactBytes).equals(artifactBytes) ||
-      providerJudgmentIdentityDigest(payload) !==
-        providerJudgmentIdentityDigest({
-          ...payload,
-          repository: identity.repository,
-          pr_number: identity.prNumber,
-          head_sha: identity.headSha,
-          request_memory_id: identity.requestMemoryId,
-          request_digest: identity.requestDigest,
-          review_revision: identity.reviewRevision,
-          attempt: identity.attempt,
-          author_family: identity.authorFamily,
-          reviewer_family: expectedProvider,
-          invocation_nonce: identity.invocationNonce,
-        })
-    ) {
-      if (envelope.created) rmSync(evidence, { force: true });
-      return { ok: false, reason: "artifact_verification_failed" };
-    }
-  } catch {
+  // §3.3: re-read the artifact and verify it against values the composition derived
+  // itself — JCS recomputation of the payload digest (PLAN-L7-562 rule), the file
+  // name, canonical bytes, and the full identity including attempt, nonce, provider
+  // and model (the identity digest alone omits those four). A failure leaves no
+  // artifact behind (-009).
+  const verified = verifyJudgmentArtifact({
+    artifactPath,
+    produced,
+    identity,
+    provider,
+    model: event.model as string,
+    expectedProvider,
+  });
+  if (!verified) {
+    rmSync(artifactPath, { force: true });
     if (envelope.created) rmSync(evidence, { force: true });
     return { ok: false, reason: "artifact_verification_failed" };
   }

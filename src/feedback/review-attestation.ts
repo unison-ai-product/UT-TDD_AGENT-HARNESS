@@ -158,7 +158,9 @@ type StrictReceiptWriteResult =
 /**
  * Commit a strict receipt only after the immutable invocation fact is appended.
  * The final path is established with a hardlink so a concurrent writer cannot
- * expose a partial file or overwrite an existing receipt.
+ * expose a partial file or overwrite an existing receipt. No lock directory is
+ * taken: PLAN-L7-534 §3.2 relies on the link's atomic no-clobber alone, because a
+ * lock left behind by a crash would wedge every later attempt (rev 7).
  */
 function writeStrictReceiptWithCompletion(input: {
   repoRoot: string;
@@ -192,14 +194,8 @@ function writeStrictReceiptWithCompletion(input: {
     receiptFileDigest,
     ...(verdictDigest ? { verdictDigest } : {}),
   };
-  const lock = join(directory, `.${digest}.receipt.lock`);
   mkdirSync(directory, { recursive: true });
-  try {
-    try {
-      mkdirSync(lock);
-    } catch {
-      return { ok: false, reason: "receipt_link_failed" };
-    }
+  {
     // A complete event plus identical final bytes is an idempotent replay.
     // An orphan final file is deliberately not treated as terminal.
     try {
@@ -214,6 +210,17 @@ function writeStrictReceiptWithCompletion(input: {
         completed[0].receiptFileDigest === receiptFileDigest
       ) {
         return { ok: true };
+      }
+      // PLAN-L7-534 §3.2 / -017: an attempt whose attempt_completed already exists
+      // is never re-linked and never appends a second invocation fact. With a
+      // receipt present the create-exclusive decision is bytes equality (typed
+      // conflict on foreign bytes); without one (crash window) the typed deny is
+      // receipt_link_failed and recovery is the next attempt regenerating the bytes.
+      if (events.some((event) => event.kind === "attempt_completed")) {
+        if (!existsSync(target)) return { ok: false, reason: "receipt_link_failed" };
+        return Buffer.from(readFileSync(target)).equals(bytes)
+          ? { ok: true }
+          : { ok: false, reason: "verdict_identity_conflict" };
       }
     } catch {
       return { ok: false, reason: "receipt_write_failed" };
@@ -277,8 +284,6 @@ function writeStrictReceiptWithCompletion(input: {
       rmSync(temporary, { force: true });
       return { ok: false, reason: "receipt_link_failed" };
     }
-  } finally {
-    rmSync(lock, { recursive: true, force: true });
   }
 }
 

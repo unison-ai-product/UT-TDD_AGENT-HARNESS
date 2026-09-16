@@ -594,7 +594,7 @@ describe("PLAN-L7-520 append-only receipt supersession", () => {
     }
   });
 
-  it("CANDIDATE-U-RVATT-040 case B / negative 043/045: canonical receipt is create-exclusive", () => {
+  it("CANDIDATE-U-RVATT-040 case B / negative 043/045: canonical receipt is create-exclusive (retry after mutation re-specified by PLAN-L7-534 §3.2 / CANDIDATE-U-D3BCOMP-020(b))", () => {
     const { root, request, digest } = fixture();
     try {
       const first = beginReviewAttempt({
@@ -625,12 +625,36 @@ describe("PLAN-L7-520 append-only receipt supersession", () => {
       expect(conflict).toEqual({ ok: false, reason: "verdict_identity_conflict" });
       expect(readFileSync(receiptPath)).toEqual(mutated);
       expect(readFileSync(receiptPath)).not.toEqual(before);
+      // PLAN-L7-534 §3.2: the mutated receipt no longer has a matching
+      // attempt_completed (receiptFileDigest != sha256 of the bytes), so it is an
+      // orphan and a bounded retry may start. The retry regenerates the original
+      // bytes, hits EEXIST against the foreign bytes and fail-closes with a typed
+      // conflict — never overwriting the existing file (create-exclusive kept).
+      const retry = beginReviewAttempt({
+        repoRoot: root,
+        request,
+        provider: "claude",
+        model: "claude-opus-5",
+      });
+      expect(retry).toMatchObject({ ok: true, attempt: 2 });
+      if (!retry.ok) throw new Error(retry.reason);
+      writeFileSync(retry.path, verdictText(request, 2), "utf8");
+      const replayed = projectReviewVerdict({
+        repoRoot: root,
+        request,
+        attestation: attestation(request, 2, 0),
+        verdictFile: retry.path,
+      });
+      expect(replayed).toEqual({ ok: false, reason: "verdict_identity_conflict" });
+      expect(readFileSync(receiptPath)).toEqual(mutated);
+      expect(
+        readReviewCustodyAudit(root).filter(
+          (event) => event.kind === "attempt_outcome_conflict" && event.attempt === 2,
+        ),
+      ).toHaveLength(1);
       expect(
         beginReviewAttempt({ repoRoot: root, request, provider: "claude", model: "claude-opus-5" }),
-      ).toEqual({
-        ok: false,
-        reason: "review_receipt_already_exists",
-      });
+      ).toEqual({ ok: false, reason: "attempt_outcome_indeterminate" });
     } finally {
       cleanup(root);
     }
