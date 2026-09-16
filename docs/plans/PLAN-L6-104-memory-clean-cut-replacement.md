@@ -54,18 +54,18 @@ supersedes:
   - PLAN-L7-512-project-scoped-memory-root
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:8e52469411d4d61e5a3ca8ab281f71da
-  command_id: plan-revise:issue-424:memory-clean-cut:2
-  admitted_at: 2026-09-16T01:38:45.587Z
-  source_digest: sha256:befd0906ae6ee105af3c28c468858d00db58b51bdeec7c04cbfc521cffb30ec0
-  decision_digest: sha256:c902bd2ff10ff8b63ae6101b431125652f87b9d1a9e140430ee760f52930bdad
-  receipt_digest: sha256:3f9a555b12e8e91ceb9b5987dc84db55d6b7db0b981b37883e4561d9ffd23958
+  receipt_id: certificate:8e0b44be8e6aa67b6b086f201f13629f
+  command_id: plan-revise:issue-424:memory-clean-cut:3
+  admitted_at: 2026-09-16T02:26:17.355Z
+  source_digest: sha256:664be8f2e502741d1f9f6f03cf00cca3fffb20d8246b7e7ff4d9cd40a659ff57
+  decision_digest: sha256:811a349100ef8d57b75f4464c6812b4caef31052e3cbdf1c0349f7d40db7c1b2
+  receipt_digest: sha256:0bd4a45c269934da7ce073c7442cd576dd7c65560ebe81b9a6ba5a03d681ac73
   binding:
     path: docs/plans/PLAN-L6-104-memory-clean-cut-replacement.md
     plan_id: PLAN-L6-104-memory-clean-cut-replacement
     asset_id: plan:6bb11608096fa63d92d993a129cab136
-    revision: 2
-    content_digest: sha256:befd0906ae6ee105af3c28c468858d00db58b51bdeec7c04cbfc521cffb30ec0
+    revision: 3
+    content_digest: sha256:664be8f2e502741d1f9f6f03cf00cca3fffb20d8246b7e7ff4d9cd40a659ff57
   route:
     signal: redesign
     mode: redesign
@@ -86,12 +86,13 @@ admission_receipt:
       target_revision: 1
   reentry:
     target_plan_id: PLAN-L6-104-memory-clean-cut-replacement
-    target_revision: 2
+    target_revision: 3
     phase: forward_merge
-  escape_reason: "Issue #424 PR-0 execution record: the PLAN-L7-512 back-reference
-    was issued as rev 7 through a verified ledger snapshot transfer, and the
-    PLAN-L7-533 pair was withdrawn as draft plus a withdrawal note because
-    admission forbids archived (contract gap filed as Issue #623)"
+  escape_reason: "PR #628 closing review finding: the section 10 ledger custody
+    statement bound no re-verifiable evidence. This revision records the
+    re-measured read-only observations with their commands and digests, and
+    limits the claim to what a third party can reproduce, because the
+    pre-transfer digest was not retained"
   supersedes:
     - PLAN-L7-512-project-scoped-memory-root
 ---
@@ -257,9 +258,30 @@ fallback `gpt-5.6-sol`、adversarial) に諮り、次の 3 案から **X2** を�
 | X1 | lineage を持つ worktree 自体に PR-0 branch を checkout して実行する | 同じ結果を得られるが、Issue #544 レーンの worktree の branch と作業状態を変える | 棄却 |
 | Y | `redesign` 以外の route へ引き直し、supersede 宣言を後続 PR へ回す | route certificate と実態 (Slice 4 契約の差替え) が食い違う。設計判断そのものの変更になる | 棄却 |
 
-移送時に確認した事項: 取得元 worktree `C:/dev/ut-issue528-project-memory-envelope`、`integrity_check=ok`、
-`journal_mode=delete`、WAL 残存なし、`user_version=7`、asset `plan:legacy:68706e29…` の revision 1-6 と
-有効な alias 2 件。移送後に同じ項目を再照合した。
+移送時に確認した事項と、その後に再測定できる範囲を分けて記す。ledger は untracked な worktree-local state
+であり、tracked diff と receipt chain が証明するのは 4 PLAN の内容と receipt 連鎖だけである。**移送前の digest は
+保存しなかったため、「移送前後で同一だった」ことの第三者検証はできない。** 以下は本 revision 発行時点で
+read-only に再測定した観測値であり、同じ worktree を持つ者は同じ command で再現できる。
+
+| 対象 | 値 (2026-09-16 実測) |
+| --- | --- |
+| 取得元 `C:/dev/ut-issue528-project-memory-envelope/.ut-tdd/ledger/harness-ledger.db` | 491,520 bytes、`sha256:422f361e0294de659abd90e881e23747602d4a30a10029d00e23bdd4fab915e1` |
+| 移送先 `C:/dev/ut424-512rev7/.ut-tdd/ledger/harness-ledger.db` | 561,152 bytes、`sha256:4957f9ad10e6a1eba4e30558c724b364dfad33dbb151270ee2fd97e9b206b8b2` |
+| 両者の `PRAGMA integrity_check` / `journal_mode` / `user_version` | `ok` / `delete` / `7` |
+| 取得元の `plan_revisions` | 2 asset、いずれも legacy、revision 1-6 |
+| 移送先の `plan_revisions` | 5 asset。legacy `186048a9…` は 1-6 のまま、legacy `68706e29…` は 1-**7** (本 PR の rev 7)、加えて PR-0 で発行した `plan:6bb11608…` (1-2)、`plan:fb4a53df…` (9-10)、`plan:9c79745c…` (9-10) |
+
+再測定コマンド (read-only、破壊的操作なし):
+
+```bash
+node -e "const {DatabaseSync}=require('node:sqlite');const db=new DatabaseSync(PATH,{readOnly:true});
+for(const q of ['PRAGMA integrity_check','PRAGMA journal_mode','PRAGMA user_version'])console.log(q,db.prepare(q).get());
+console.log(db.prepare('SELECT asset_id, COUNT(*) n, MIN(revision) minr, MAX(revision) maxr FROM plan_revisions GROUP BY asset_id').all());db.close()"
+```
+
+移送先 ledger の lineage 形状 (legacy `68706e29…` が 1-6 を保持したまま 7 を追加している) は、移送が lineage を
+作り直したのではなく引き継いだことと整合する。ただしこれは整合であって同一性の証明ではない。移送そのものの
+custody claim は本節の観測範囲に限定し、それ以上を主張しない。
 
 rev 7 の注記には、rev 6 発行後に canonical revise を経ずに commit `6efae246` で入った
 `updated: 2026-09-11` と `tests/project-memory-pack-parity.test.ts` の `generates` 登録を、本 revision で
