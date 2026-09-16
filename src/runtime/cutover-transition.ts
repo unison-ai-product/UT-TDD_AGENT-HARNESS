@@ -2,7 +2,6 @@ import { createHash } from "node:crypto";
 import { mkdirSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, resolve } from "node:path";
-import type { EvidenceAttestationVerifierPort } from "../plan-asset/ports/evidence-attestation.ts";
 import {
   CUTOVER_ADMISSION_PRODUCER_MAP,
   CUTOVER_EVIDENCE_REGISTRY,
@@ -42,8 +41,25 @@ export class CutoverTransitionError extends Error {
   }
 }
 
+/**
+ * Cutover ledgerはPlan Assetのportを逆参照しない。ここで必要なのは署名入力を
+ * 検証できる最小の構造だけであり、runtime→plan-asset edgeを持ち込まない。
+ */
+interface CutoverAttestationVerifier {
+  verify(
+    input: { readonly producer: "ci"; readonly recordDigest: string },
+    attestation: {
+      readonly schemaVersion: "evidence-attestation/v1";
+      readonly algorithm: "hmac-sha256";
+      readonly authorityId: string;
+      readonly keyVersion: string;
+      readonly signature: string;
+    },
+  ): boolean;
+}
+
 export interface CutoverValidationPorts {
-  readonly attestationVerifier: EvidenceAttestationVerifierPort;
+  readonly attestationVerifier: CutoverAttestationVerifier;
   readonly isAncestor: (producerRevision: string, candidateRevision: string) => boolean;
   readonly validateReferencedReceipt: (
     evidence: SliceEvidenceReceipt,
