@@ -65,6 +65,15 @@ Design and implementation should be judged by these pillars:
 英語/原語のまま。Windows 文字化けは UTF-8 化 (`.editorconfig` charset=utf-8 / `.gitattributes` eol=lf) と
 `readability` gate (mojibake fail-close) で防ぐ前提であり、**文字化け回避を理由に doc を英語化しない**。
 
+### GitHub 記載言語 (PO ルール 2026-09-16)
+
+GitHub の Issue / PR / Discussion のタイトル、本文、コメント、レビュー記録、ラベル説明、リリースノートは、
+**日本語を原則**とする。タイトルも例外にしない。コード・関数名・型名・変数名・CLI コマンド・PLAN / Issue / PR ID・
+パス・URL・ログ・機械生成フィールド・外部仕様の引用は、正確性を優先して英語または原語のまま記載してよい。
+英語の技術用語を含める場合は、周囲の説明と判断理由を日本語で書く。外部引用やログを原文のまま貼る場合も、
+要点と対応内容を日本語で併記する。Claude / Codex のどちらが起票・更新してもこの規則を適用し、既存記載を更新する際は
+無関係なスコープを広げず、変更対象のタイトル・本文・コメントだけを日本語化する。
+
 ### 設計判断エリシテーション (PO ルール 2026-07-13)
 
 PO への質問は **設計判断 (trade-off が実在する方式選択 / spec 未確定点) に限る**。
