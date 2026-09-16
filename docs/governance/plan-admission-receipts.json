@@ -4354,9 +4354,41 @@
       }
     },
     {
-      "sequence": 268,
-      "previous_record_digest": "sha256:948c38923bfd0f9cb2d753f51fd41dacd178eded856bb04853e4d22578f7bfaf",
-      "record_digest": "sha256:eab6a80085339f9d1e07fdfc849ff4d6270b55bdfae4ebf9eaa4f9e346abf4eb",
+      "sequence": 273,
+      "previous_record_digest": "sha256:505fef3b2a6eafab929af49ff41f88eacf6172ca87ec2304a05e5b5c879476cd",
+      "record_digest": "sha256:28729736cc81a1f328e692db603c311bc0ced396d013470aa2e781cfe581cef3",
+      "command_id": "pr641-issue487-final-retirement-1789552201126",
+      "receipt_id": "certificate:82d7f5676056c5c7e16effe9fac549b5",
+      "receipt_digest": "sha256:9d5da8eec3a07160c82286a13b99fdc36a43102e5b34bc599d47f87f803e371a",
+      "decision_digest": "sha256:13f90dce290e80f897d5156ae086fd4041bda57a3824c834efe1d3d2789a625a",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-530-bun-final-retirement.md",
+        "plan_id": "PLAN-L7-530-bun-final-retirement",
+        "asset_id": "plan:bc9250c9a7c873dcb9f18956677371f7",
+        "revision": 11,
+        "content_digest": "sha256:937c5437f20b99535e682e02b9299cda04956d5d0bacdd24cc8b5f8cb34bfc38"
+      }
+    },
+    {
+      "sequence": 274,
+      "previous_record_digest": "sha256:28729736cc81a1f328e692db603c311bc0ced396d013470aa2e781cfe581cef3",
+      "record_digest": "sha256:97be972302b5e3cc726a8dff3384dbb561e2dd9bbe2d49273c67d081963f89c7",
+      "command_id": "pr641-l7-354-bun-lock-supersession-1789552230337",
+      "receipt_id": "certificate:3e1a5e0e46ff8e823a70640922258c33",
+      "receipt_digest": "sha256:a314bb1be1cac34e79b2f99ad9f95eb2a9b324f4c63e134732e420db6aaa01f7",
+      "decision_digest": "sha256:35c8e49de4691847e827a510267357abe18bb5c12b7be5d14d88c7fcc927cb0a",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-354-toolchain-biome-exact-pin.md",
+        "plan_id": "PLAN-L7-354-toolchain-biome-exact-pin",
+        "asset_id": "plan:legacy:ec303beeae170d11c4baa0973f7a5d4ec76de22a99c65f4c8f2001c16e048419",
+        "revision": 2,
+        "content_digest": "sha256:0b3dcef1042b77db8de5b8942992d842186ea3ffbf270943dd28bbc0a491e3ff"
+      }
+    },
+    {
+      "sequence": 275,
+      "previous_record_digest": "sha256:97be972302b5e3cc726a8dff3384dbb561e2dd9bbe2d49273c67d081963f89c7",
+      "record_digest": "sha256:3743d362128ffeeba1eb1d3163949e7bf340ea46dc9300c51503799234e80057",
       "command_id": "pr641-issue487-confirmed-preflight-1789552759594",
       "receipt_id": "certificate:10a024b2771d974e4186e5dec7c1ccdf",
       "receipt_digest": "sha256:4498a0ed8c541f86ca9edbc30ef233637e137892ded6d6b6725fd3c91d40fcfb",
@@ -4370,9 +4402,9 @@
       }
     },
     {
-      "sequence": 269,
-      "previous_record_digest": "sha256:eab6a80085339f9d1e07fdfc849ff4d6270b55bdfae4ebf9eaa4f9e346abf4eb",
-      "record_digest": "sha256:1a013b7d78ae97413387dd1bb5df743eb034c21defcfe61d068acc0b2ef4e764",
+      "sequence": 276,
+      "previous_record_digest": "sha256:3743d362128ffeeba1eb1d3163949e7bf340ea46dc9300c51503799234e80057",
+      "record_digest": "sha256:2526ed5df1e6ac58f1b38d95aef1f600d9af00cb283d9ed2529bd8b2c5e2544f",
       "command_id": "pr641-issue487-review-fix-1789552837752",
       "receipt_id": "certificate:ed541d255e424fd7f53d4c8638baea80",
       "receipt_digest": "sha256:d3affdecabf3f92185380f339807747398fedae70c5df8c57087e0fb71734aed",
