@@ -144,7 +144,48 @@ function persist(input: {
   const directory = join(repoRoot, ".ut-tdd", "review", category);
   ensureDir(directory, { recursive: true });
   const path = join(directory, `${valueDigest}.json`);
-  writeFileSync(path, `${JSON.stringify(value, null, 2)}\n`, "utf8");
+  const serialized = `${JSON.stringify(value, null, 2)}\n`;
+  if (category === "requests" && existsSync(path)) {
+    try {
+      const existing = JSON.parse(readFileSync(path, "utf8")) as unknown;
+      if (canonicalJson(existing) !== canonicalJson(value)) {
+        if (
+          existing &&
+          typeof existing === "object" &&
+          "reviewRevision" in existing &&
+          typeof existing.reviewRevision === "string" &&
+          !existing.reviewRevision.startsWith("rv1-")
+        ) {
+          writeFileSync(path, serialized, "utf8");
+          return { path, digest: valueDigest };
+        }
+        throw new Error("review_request_conflict");
+      }
+      return { path, digest: valueDigest };
+    } catch (error) {
+      if (error instanceof Error && error.message === "review_request_conflict") throw error;
+      throw new Error("review_request_conflict");
+    }
+  }
+  if (category === "requests") {
+    try {
+      const descriptor = openSync(path, "wx", 0o600);
+      try {
+        writeFileSync(descriptor, serialized, "utf8");
+      } finally {
+        closeSync(descriptor);
+      }
+    } catch (error) {
+      if (!(error instanceof Error) || !("code" in error) || error.code !== "EEXIST") {
+        throw error;
+      }
+      const existing = JSON.parse(readFileSync(path, "utf8")) as unknown;
+      if (canonicalJson(existing) !== canonicalJson(value))
+        throw new Error("review_request_conflict");
+    }
+  } else {
+    writeFileSync(path, serialized, "utf8");
+  }
   return { path, digest: valueDigest };
 }
 
@@ -407,20 +448,48 @@ export function issueReviewRequest(input: {
   // request digest は安定識別子 (pr / exactHead / reviewRevision / authorFamily / memoryId)
   // のみで構成する。`requestedAt` を digest に入れると、同一レビュー要求の retry が別 request
   // ファイルとして併存し、D1 (`review-dispatch.ts`) の duplicate_request_conflict を偶発させる。
-  // retry は同 digest → 同 path への上書き = 冪等 (requestedAt は本文 metadata として更新される)。
-  const persisted = persist({
-    repoRoot: input.repoRoot,
-    category: "requests",
-    value: request,
-    digestSource: {
-      memoryId: request.memoryId,
-      pr: request.pr,
-      exactHead: request.exactHead,
-      reviewRevision: request.reviewRevision,
-      authorFamily: request.authorFamily,
-    } as ReviewAttestationRequest,
-  });
+  // retry は同 digest → 同 path への create-or-validate。異なる本文は conflict として拒否する。
+  let persisted: { path: string; digest: string };
+  try {
+    persisted = persist({
+      repoRoot: input.repoRoot,
+      category: "requests",
+      value: request,
+      digestSource: {
+        memoryId: request.memoryId,
+        pr: request.pr,
+        exactHead: request.exactHead,
+        reviewRevision: request.reviewRevision,
+        authorFamily: request.authorFamily,
+      } as ReviewAttestationRequest,
+    });
+  } catch (error) {
+    if (error instanceof Error && error.message === "review_request_conflict") {
+      return { ok: false, reason: "review_request_conflict" };
+    }
+    throw error;
+  }
   return { ok: true, request, ...persisted };
+}
+
+/** Read the already-issued request when a consumer is handed a persisted wake. */
+export function loadCanonicalReviewRequest(input: {
+  repoRoot: string;
+  request: ReviewAttestationRequest;
+}): ReviewAttestationRequest | null {
+  const request = canonicalizeReviewRequest(input.request);
+  const digest = reviewRequestDigest(request);
+  const path = join(input.repoRoot, ".ut-tdd", "review", "requests", `${digest}.json`);
+  try {
+    const parsed = JSON.parse(readFileSync(path, "utf8")) as ReviewAttestationRequest;
+    return isValidReviewRequest(parsed) &&
+      parsed.invocationNonce &&
+      reviewRequestDigest(parsed) === digest
+      ? parsed
+      : null;
+  } catch {
+    return null;
+  }
 }
 
 export function projectReviewVerdict(input: {

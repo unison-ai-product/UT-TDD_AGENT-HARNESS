@@ -36,7 +36,7 @@ import { registerPlanAssetCommands } from "./cli/plan-asset.ts";
 import { registerPlanDraftCommand } from "./cli/plan-draft.ts";
 import { registerPlanRevisionCommand } from "./cli/plan-revise.ts";
 import { registerPrMergeCommands } from "./cli/pr-merge.ts";
-import { registerLiveReviewCommands } from "./cli/review-live.ts";
+import { registerProductionLiveReviewCommands } from "./cli/review-live.ts";
 import { contextSuggest } from "./context/doc-router.ts";
 import {
   DOCTOR_RUN_PROFILE_IDS,
@@ -157,6 +157,7 @@ import {
   summarizeUnclaimedInbox,
   waitForClaudeMemory,
 } from "./runtime/claude-memory-wake.ts";
+import { readCodexReviewWake } from "./runtime/codex-review-wake.ts";
 import { detectMode, nextActionForMode, type RuntimeDetection } from "./runtime/detect.ts";
 import { scanDanglingStops } from "./runtime/forced-stop.ts";
 import { createNodeInvocation, verifyNodeGeneration } from "./runtime/node-bootstrap.ts";
@@ -1284,6 +1285,16 @@ hook
   });
 
 hook
+  .command("codex-memory-wake")
+  .description("surface one pending project-scoped Codex review wake as machine-readable JSON")
+  .action(() => {
+    const repoRoot = requireRuntimeRepoRoot({ allowCwdFallback: true });
+    const surface = readCodexReviewWake(repoRoot);
+    process.stdout.write(`${JSON.stringify(surface)}\n`);
+    if (surface.status === "pending" || surface.status === "invalid") process.exitCode = 2;
+  });
+
+hook
   .command("post-tool-use")
   .description("record PostToolUse through the shared session-log core")
   .option("--session <id>", SESSION_OPTION_DESCRIPTION)
@@ -2235,7 +2246,7 @@ const review = program
     process.exitCode = doctor.ok ? 0 : 1;
   });
 
-registerLiveReviewCommands(review);
+registerProductionLiveReviewCommands(review);
 
 program
   .command("cutover")

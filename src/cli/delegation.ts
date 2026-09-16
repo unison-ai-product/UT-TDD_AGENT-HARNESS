@@ -5,6 +5,7 @@ import { resolveRepositoryRoot } from "../feedback/repository-root.ts";
 import {
   canonicalizeReviewRequest,
   issueReviewRequest,
+  loadCanonicalReviewRequest,
   projectReviewVerdict,
   REVIEW_VERDICT_FILE_ENV,
   type ReviewAttestationRequest,
@@ -495,11 +496,21 @@ function runtimeCommand(
             strict: true,
           });
           if (!issued.ok) {
-            process.stderr.write(`${issued.reason}\n`);
-            process.exitCode = 1;
-            return;
+            if (issued.reason !== "review_request_conflict") {
+              process.stderr.write(`${issued.reason}\n`);
+              process.exitCode = 1;
+              return;
+            }
+            const existing = loadCanonicalReviewRequest({ repoRoot, request: reviewRequest });
+            if (!existing) {
+              process.stderr.write(`${issued.reason}\n`);
+              process.exitCode = 1;
+              return;
+            }
+            reviewRequest = existing;
+          } else {
+            reviewRequest = issued.request;
           }
-          reviewRequest = issued.request;
           const attempt = beginReviewAttempt({
             repoRoot,
             request: reviewRequest,

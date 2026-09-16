@@ -40,6 +40,17 @@
             "statusMessage": "session-log: session start (fail-open)"
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": ["src/cli.ts", "hook", "codex-memory-wake"],
+            "timeout": 5,
+            "statusMessage": "codex-memory-wake: surface project-scoped review backlog (fail-closed)"
+          }
+        ]
       }
     ],
     "PostToolUse": [
@@ -65,6 +76,17 @@
             "args": ["src/cli.ts", "session", "summary"],
             "timeout": 5,
             "statusMessage": "session-log: PLAN digest summary (fail-open)"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": ["src/cli.ts", "hook", "codex-memory-wake"],
+            "timeout": 5,
+            "statusMessage": "codex-memory-wake: surface project-scoped review backlog (fail-closed)"
           }
         ]
       }

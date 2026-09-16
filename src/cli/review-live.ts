@@ -20,6 +20,14 @@ import {
   publishClaudeInboxEntry,
   resolveLiveClaudeTarget,
 } from "../runtime/claude-memory-wake.ts";
+import {
+  CodexReviewWakeError,
+  claimCodexReviewWake,
+  consumeCodexReviewWake,
+  isCodexReviewWakePath,
+  publishCodexReviewWake,
+  restoreCodexReviewWakeClaim,
+} from "../runtime/codex-review-wake.ts";
 import { detectMode } from "../runtime/detect.ts";
 import { requireProjectMemoryRoot } from "../runtime/project-memory-root.ts";
 import { resolveRuntimeSessionId } from "../skill-engine/recommend.ts";
@@ -266,7 +274,9 @@ export function registerLiveReviewCommands(
     .action((opts: { envelope: string; json?: boolean }) => {
       try {
         const repoRoot = resolveRepositoryRoot(deps.repoRoot());
-        const envelope = decodeClaudeInboxEntry(readFileSync(opts.envelope, "utf8"));
+        const codexWake = isCodexReviewWakePath(repoRoot, opts.envelope);
+        const claimedPath = codexWake ? claimCodexReviewWake(repoRoot, opts.envelope) : undefined;
+        const envelope = decodeClaudeInboxEntry(readFileSync(claimedPath ?? opts.envelope, "utf8"));
         if (!envelope || envelope.purpose !== "review") {
           throw new Error("invalid_review_envelope");
         }
@@ -280,6 +290,10 @@ export function registerLiveReviewCommands(
             publishReceipt: (projection) => deps.publishReceipt(repoRoot, projection),
           },
         });
+        if (codexWake && claimedPath) {
+          if (result.ok) consumeCodexReviewWake(repoRoot, claimedPath);
+          else restoreCodexReviewWakeClaim(repoRoot, claimedPath);
+        }
         if (opts.json) process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
         else
           process.stdout.write(`review live-consume: ${result.ok ? "completed" : result.reason}\n`);
@@ -291,6 +305,24 @@ export function registerLiveReviewCommands(
         process.exitCode = 1;
       }
     });
+}
+
+/** Production composition keeps the Codex wake publisher mandatory. */
+export function registerProductionLiveReviewCommands(
+  review: Command,
+  overrides: Partial<LiveReviewCommandDeps> = {},
+): void {
+  registerLiveReviewCommands(review, {
+    ...overrides,
+    publishCodexReviewWake: (repoRoot, wake) => {
+      try {
+        publishCodexReviewWake(repoRoot, wake);
+      } catch (error) {
+        if (error instanceof CodexReviewWakeError) throw new LiveReviewWakeError(error.reason);
+        throw error;
+      }
+    },
+  });
 }
 
 export function resolveLiveReviewTaskFile(

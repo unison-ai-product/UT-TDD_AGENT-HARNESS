@@ -22,7 +22,10 @@ export type LiveReviewWakeRoutingFailure =
   | "ambiguous_live_claude_workspace"
   | "stale_claude_workspace"
   | "incompatible_claude_workspace_schema"
-  | "codex_review_wake_unavailable";
+  | "codex_review_wake_unavailable"
+  | "codex_review_target_session_unavailable"
+  | "codex_review_wake_projection_conflict"
+  | "review_wake_publish_failed";
 
 export class LiveReviewWakeError extends Error {
   readonly reason: LiveReviewWakeRoutingFailure;
