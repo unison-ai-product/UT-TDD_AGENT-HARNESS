@@ -1,10 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import {
-  assertCompleteGitHistory,
-  NodeSliceAdmissionError,
-} from "../runtime/node-slice-admission.ts";
-import { classifyRuntimeImageProcess } from "../runtime/runtime-image-observer.ts";
+import { existsSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { gitObjectIdSchema } from "../schema/node-slice-admission.ts";
 import {
   collectNodeBanFindings,
@@ -22,6 +19,12 @@ import {
 const RAW_REVISION = /^[0-9a-f]{40}$/;
 const PREFIXED_REVISION = /^git-sha1:([0-9a-f]{40})$/;
 const DIGEST = /^sha256:[0-9a-f]{64}$/;
+const FORBIDDEN_EXECUTABLE = /^(?:bun|bunx|tsx|bash|sh|powershell|pwsh|cmd)$/i;
+const FORBIDDEN_ARGUMENT = /^(?:bun|bunx|tsx)(?:\.(?:cmd|exe|bat))?$/i;
+
+class HistoryIncompleteError extends Error {
+  readonly code = "history_incomplete";
+}
 
 export type BunRetirementReason =
   | "f0b_receipt_missing"
@@ -131,6 +134,58 @@ function currentHead(repoRoot: string): string {
   }
 }
 
+/** Shared admission invariant kept local to lint so the detector does not cross into runtime. */
+function assertCompleteGitHistory(repoRoot: string, commits: readonly string[]): void {
+  const git = (args: readonly string[]): string => {
+    try {
+      return execFileSync("git", ["-C", repoRoot, ...args], {
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "pipe"],
+      }).trim();
+    } catch {
+      throw new HistoryIncompleteError("history_incomplete");
+    }
+  };
+  if (!existsSync(resolve(repoRoot, ".git")))
+    throw new HistoryIncompleteError("history_incomplete");
+  if (git(["rev-parse", "--is-shallow-repository"]) !== "false")
+    throw new HistoryIncompleteError("history_incomplete");
+  try {
+    const shallowPath = git(["rev-parse", "--git-path", "shallow"]);
+    if (existsSync(shallowPath) && readFileSync(shallowPath, "utf8").trim())
+      throw new HistoryIncompleteError("history_incomplete");
+  } catch (error) {
+    if (error instanceof HistoryIncompleteError) throw error;
+  }
+  try {
+    if (
+      git(["config", "--get-regexp", "^(remote\\..*\\.promisor|extensions\\.partialclonefilter)"])
+    )
+      throw new HistoryIncompleteError("history_incomplete");
+  } catch (error) {
+    if (error instanceof HistoryIncompleteError) throw error;
+  }
+  for (const commit of commits) {
+    try {
+      execFileSync("git", ["-C", repoRoot, "cat-file", "-e", `${commit}^{commit}`], {
+        stdio: "ignore",
+      });
+    } catch {
+      throw new HistoryIncompleteError("history_incomplete");
+    }
+  }
+}
+
+function classifyObservedProcess(command: string, args: readonly string[], shell: boolean): string {
+  if (shell) return "shell-runtime";
+  const executable = command.replace(/^.*[\\/]/, "").replace(/\.(?:cmd|exe|bat)$/i, "");
+  if (FORBIDDEN_EXECUTABLE.test(executable)) return `${executable.toLowerCase()}-runtime`;
+  if (!/^node$/i.test(executable)) return "non-node-runtime";
+  return args.some((arg) => FORBIDDEN_ARGUMENT.test(arg) || /\.(?:ts|tsx)$/i.test(arg))
+    ? "source-or-bun-fallback"
+    : "node-only";
+}
+
 function isAncestor(repoRoot: string, ancestor: string, subject: string): boolean {
   try {
     execFileSync("git", ["-C", repoRoot, "merge-base", "--is-ancestor", ancestor, subject], {
@@ -209,7 +264,7 @@ export function admitFinalBunRetirement(input: BunRetirementInput): BunRetiremen
       f0c: input.f0c,
       node: input.f0b,
       f0cLanes: input.f0cLanes,
-      classifyProcess: classifyRuntimeImageProcess,
+      classifyProcess: classifyObservedProcess,
     });
   } catch {
     throw new BunRetirementError("q0_binding_invalid");
@@ -241,7 +296,7 @@ export function admitFinalBunRetirement(input: BunRetirementInput): BunRetiremen
   try {
     assertCompleteGitHistory(input.repoRoot, [f0cSubject, retirementSubject]);
   } catch (error) {
-    if (error instanceof NodeSliceAdmissionError && error.code === "history_incomplete")
+    if (error instanceof HistoryIncompleteError && error.code === "history_incomplete")
       throw new BunRetirementError("history_incomplete");
     throw new BunRetirementError("predecessor_not_ancestor");
   }
