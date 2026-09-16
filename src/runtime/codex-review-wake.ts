@@ -11,10 +11,7 @@ import {
   unlinkSync,
   writeFileSync,
 } from "node:fs";
-import { dirname, isAbsolute, join, relative, resolve } from "node:path";
-import type { CanonicalReviewWake } from "../feedback/live-review-projection.ts";
-import { loadCanonicalLiveReviewRequest } from "../feedback/live-review-projection.ts";
-import { reviewRequestDigest } from "../feedback/review-attestation.ts";
+import { dirname, isAbsolute, join, normalize, relative, resolve } from "node:path";
 import { parseMemoryFile } from "../memory/index.ts";
 import {
   buildClaudeProviderReviewInboxEntry,
@@ -34,7 +31,35 @@ export const CODEX_MEMORY_WAKE_TERMINAL_SCHEMA = "ut-tdd.codex-memory-wake-termi
 export const CODEX_MEMORY_WAKE_LEASE_MS = 15 * 60 * 1_000;
 export const CODEX_MEMORY_WAKE_TERMINAL_RETENTION_MS = 7 * 24 * 60 * 60 * 1_000;
 
-type ReviewWakeRequest = CanonicalReviewWake["request"];
+interface ReviewWakeRequest {
+  readonly memoryId: string;
+  readonly pr: number;
+  readonly exactHead: string;
+  readonly reviewRevision: string;
+  readonly authorFamily: "codex" | "claude";
+  readonly requestedAt: string;
+  readonly invocationNonce?: string;
+}
+
+export interface CanonicalReviewWake {
+  readonly purpose: "review";
+  readonly reviewer: "codex" | "claude";
+  readonly requestDigest: string;
+  readonly requestPath: string;
+  readonly request: ReviewWakeRequest;
+  readonly memoryPath: string;
+}
+
+interface ClaudeReviewEnvelopeEntry {
+  readonly memoryId: string;
+  readonly memoryPath: string;
+  readonly requestDigest: string;
+  readonly requestPath: string;
+  readonly pr: number;
+  readonly exactHead: string;
+  readonly reviewRevision: string;
+  readonly authorFamily: "codex" | "claude";
+}
 
 export type CodexReviewWakeFailure =
   | "codex_review_target_session_unavailable"
@@ -152,6 +177,109 @@ function targetSession(): string {
   const value = process.env.CODEX_REVIEW_TARGET_SESSION?.trim();
   if (!value) throw new CodexReviewWakeError("codex_review_target_session_unavailable");
   return value;
+}
+
+function canonicalJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
+  if (value && typeof value === "object") {
+    return `{${Object.entries(value as Record<string, unknown>)
+      .filter(([, entry]) => entry !== undefined)
+      .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0))
+      .map(([key, entry]) => `${JSON.stringify(key)}:${canonicalJson(entry)}`)
+      .join(",")}}`;
+  }
+  return JSON.stringify(value) ?? "null";
+}
+
+function reviewRequestDigest(request: ReviewWakeRequest): string {
+  return createHash("sha256")
+    .update(
+      canonicalJson({
+        schemaVersion: "review-request/v1",
+        memoryId: request.memoryId,
+        pr: request.pr,
+        exactHead: request.exactHead,
+        authorFamily: request.authorFamily,
+      }),
+      "utf8",
+    )
+    .digest("hex");
+}
+
+function isValidReviewRequest(value: ReviewWakeRequest): boolean {
+  return (
+    typeof value.memoryId === "string" &&
+    value.memoryId.trim().length > 0 &&
+    Number.isSafeInteger(value.pr) &&
+    value.pr > 0 &&
+    typeof value.exactHead === "string" &&
+    /^[0-9a-f]{40}$/.test(value.exactHead) &&
+    typeof value.reviewRevision === "string" &&
+    value.reviewRevision.trim().length > 0 &&
+    (value.authorFamily === "codex" || value.authorFamily === "claude") &&
+    typeof value.requestedAt === "string" &&
+    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?(Z|[+-]\d{2}:\d{2})$/.test(
+      value.requestedAt,
+    ) &&
+    Number.isFinite(Date.parse(value.requestedAt))
+  );
+}
+
+function exactKeys(value: object, keys: readonly string[]): boolean {
+  const actual = Object.keys(value).sort();
+  const expected = [...keys].sort();
+  return actual.length === expected.length && actual.every((key, index) => key === expected[index]);
+}
+
+/** Load only the canonical request named by the v3 envelope. */
+function loadCanonicalLiveReviewRequest(input: {
+  repoRoot: string;
+  envelope: ClaudeReviewEnvelopeEntry;
+}): ReviewWakeRequest | null {
+  const canonical = resolve(
+    input.repoRoot,
+    ".ut-tdd",
+    "review",
+    "requests",
+    `${input.envelope.requestDigest}.json`,
+  );
+  const supplied = isAbsolute(input.envelope.requestPath)
+    ? resolve(input.envelope.requestPath)
+    : resolve(input.repoRoot, input.envelope.requestPath);
+  if (normalize(supplied) !== normalize(canonical)) return null;
+  try {
+    const requestFile = lstatSync(canonical);
+    if (!requestFile.isFile() || requestFile.isSymbolicLink()) return null;
+    const parsed = JSON.parse(readFileSync(canonical, "utf8")) as Record<string, unknown>;
+    if (
+      !parsed ||
+      Array.isArray(parsed) ||
+      !exactKeys(parsed, [
+        "memoryId",
+        "pr",
+        "exactHead",
+        "reviewRevision",
+        "authorFamily",
+        "requestedAt",
+        "invocationNonce",
+      ])
+    )
+      return null;
+    const request = parsed as unknown as ReviewWakeRequest;
+    if (!isValidReviewRequest(request) || !request.invocationNonce) return null;
+    if (reviewRequestDigest(request) !== input.envelope.requestDigest) return null;
+    if (
+      request.memoryId !== input.envelope.memoryId ||
+      request.pr !== input.envelope.pr ||
+      request.exactHead !== input.envelope.exactHead ||
+      request.reviewRevision !== input.envelope.reviewRevision ||
+      request.authorFamily !== input.envelope.authorFamily
+    )
+      return null;
+    return request;
+  } catch {
+    return null;
+  }
 }
 
 function writeExclusive(path: string, value: string): "created" | "idempotent" {
