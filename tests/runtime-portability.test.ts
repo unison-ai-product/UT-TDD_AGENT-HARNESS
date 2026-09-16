@@ -16,14 +16,14 @@ const validDocs: RuntimePortabilityDoc[] = [
     text: JSON.stringify({
       type: "module",
       bin: { "ut-tdd": "./src/cli.ts" },
-      engines: { node: "24.13.0", bun: ">=1.3" },
+      engines: { node: "24.13.0" },
       scripts: {
-        build: "bun build src/cli.ts --compile --outfile dist/ut-tdd",
+        build: "node scripts/build-node.mjs",
         test: "vitest run",
         "test:fast":
           "vitest run --exclude tests/cli-surface.test.ts --exclude tests/drive-db-registration.test.ts --exclude tests/projection-writer.test.ts",
         "test:db":
-          "bun run src/cli.ts db rebuild && vitest run tests/db-projection-ingestion.test.ts tests/drive-db-registration.test.ts tests/projection-writer.test.ts",
+          "npm run db && vitest run tests/db-projection-ingestion.test.ts tests/drive-db-registration.test.ts tests/projection-writer.test.ts",
         "test:cli": "vitest run tests/cli-surface.test.ts tests/runtime-hook-entrypoints.test.ts",
         "test:node-fallback": "vitest run tests/state-db.test.ts tests/runtime-portability.test.ts",
         typecheck: "tsc --noEmit",
@@ -36,7 +36,7 @@ const validDocs: RuntimePortabilityDoc[] = [
   },
   {
     path: "src/state-db/index.ts",
-    text: 'nodeRequire("bun:sqlite"); nodeRequire("node:sqlite");',
+    text: 'nodeRequire("node:sqlite");',
   },
   { path: "src/runtime/adapter.ts", text: "export const adapter = true;" },
   { path: ".claude/hooks/session-log.ts", text: "export const hook = true;" },
@@ -51,7 +51,7 @@ const validDocs: RuntimePortabilityDoc[] = [
 ];
 
 describe("runtime-portability lint", () => {
-  it("U-RPORT-001: accepts TS/Bun core with Node types and thin wrappers", () => {
+  it("U-RPORT-001: accepts sealed Node core with Node types and thin wrappers", () => {
     const result = analyzeRuntimePortability(validDocs);
 
     expect(result.ok).toBe(true);

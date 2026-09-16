@@ -15,7 +15,6 @@ function fixture(
     packageManager?: string;
     lockVersion?: number;
     lockEsbuild?: string;
-    bunEsbuild?: string;
     authority?: Record<string, string>;
   } = {},
 ) {
@@ -29,10 +28,9 @@ function fixture(
       nodeToolchain:
         overrides.authority ??
         ({
-          phase: "node_candidate",
-          nodeAuthority: "candidate",
-          bunAuthority: "legacy_migration_debt",
-          executableReceipt: "deferred_to_f0b",
+          phase: "node_production",
+          nodeAuthority: "sealed",
+          executableReceipt: "required",
         } as const),
     },
   });
@@ -44,18 +42,10 @@ function fixture(
       },
     },
   });
-  const bunLock = JSON.stringify({
-    workspaces: {
-      "": {
-        devDependencies: { ...direct, esbuild: overrides.bunEsbuild ?? direct.esbuild },
-      },
-    },
-    packages: {},
-  });
   return {
     packageJson,
     packageLock,
-    bunLock,
+    bunLock: null,
     nodeVersion: overrides.nodeFile ?? "24.13.0",
   };
 }
@@ -64,7 +54,7 @@ describe("toolchain pin lint", () => {
   it("accepts the sealed F0a policy and three matching direct graphs", () => {
     const result = analyzeToolchainPin(fixture());
     expect(result.ok).toBe(true);
-    expect(toolchainPinMessages(result)[0]).toContain("phase=node_candidate");
+    expect(toolchainPinMessages(result)[0]).toContain("phase=node_production");
   });
 
   it("rejects .node-version or engines.node one-sided drift", () => {
@@ -106,10 +96,18 @@ describe("toolchain pin lint", () => {
     ).toEqual(expect.arrayContaining(["npm-lock-version-mismatch", "npm-lock-root-drift"]));
   });
 
-  it("rejects Bun transition direct parity mutation", () => {
+  it("rejects npm direct graph mutation", () => {
     expect(
-      analyzeToolchainPin(fixture({ bunEsbuild: "0.21.4" })).violations.map((v) => v.rule),
-    ).toEqual(expect.arrayContaining(["bun-direct-parity-drift", "esbuild-version-mismatch"]));
+      analyzeToolchainPin(fixture({ lockEsbuild: "0.21.4" })).violations.map((v) => v.rule),
+    ).toContain("esbuild-version-mismatch");
+  });
+
+  it("rejects reintroduction of the retired Bun lockfile", () => {
+    const result = analyzeToolchainPin({
+      ...fixture(),
+      bunLock: JSON.stringify({ workspaces: { "": { devDependencies: direct } } }),
+    });
+    expect(result.violations.map((v) => v.rule)).toContain("bun-lock-present");
   });
 
   it("rejects runtime authority ambiguity", () => {
@@ -119,7 +117,6 @@ describe("toolchain pin lint", () => {
           authority: {
             phase: "node_candidate",
             nodeAuthority: "candidate",
-            bunAuthority: "candidate",
             executableReceipt: "deferred_to_f0b",
           },
         }),
@@ -130,6 +127,6 @@ describe("toolchain pin lint", () => {
   it("wires the real repo policy into doctor", () => {
     const result = checkToolchainPin(process.cwd());
     expect(result.ok).toBe(true);
-    expect(result.messages[0]).toContain("phase=node_candidate");
+    expect(result.messages[0]).toContain("phase=node_production");
   });
 });
