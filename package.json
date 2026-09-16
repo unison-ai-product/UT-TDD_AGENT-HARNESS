@@ -13,10 +13,9 @@
   "utTdd": {
     "artifactProfile": "source",
     "nodeToolchain": {
-      "phase": "node_candidate",
-      "nodeAuthority": "candidate",
-      "bunAuthority": "legacy_migration_debt",
-      "executableReceipt": "deferred_to_f0b"
+      "phase": "node_production",
+      "nodeAuthority": "sealed",
+      "executableReceipt": "required"
     }
   },
   "bin": {
@@ -28,7 +27,7 @@
   },
   "scripts": {
     "dev": "node src/cli.ts",
-    "build": "bun build src/cli.ts --compile --outfile dist/ut-tdd",
+    "build": "node scripts/build-node.mjs",
     "typecheck": "tsc --noEmit",
     "lint": "biome check src tests",
     "format": "biome check --write src tests",
