@@ -22,10 +22,6 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-530-bun-final-retirement.md
     artifact_type: markdown_doc
-  - artifact_path: src/lint/bun-final-retirement.ts
-    artifact_type: source_module
-  - artifact_path: tests/bun-final-retirement.test.ts
-    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L6-93-node-bootstrap-contract.md
   requires: []
@@ -81,11 +77,6 @@ admission_receipt:
 ---
 
 # PLAN-L7-530: Bun 最終撤去の tuple-bound 実装契約
-
-実装artifactは `src/lint/bun-final-retirement.ts`、独立admission oracleは
-`tests/bun-final-retirement.test.ts` が同一PLANの所有である。テストはF0b/F0c/Q0の
-receipt欠落・tuple各軸不一致・reachable/indeterminate surfaceを個別にRedへ落とし、
-detectorの意味とallowlistを変更せずGreenへ昇格させる。
 
 ## 1. 目的と開始ゲート
 
