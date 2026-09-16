@@ -90,6 +90,10 @@ import {
   planDigestMigration,
 } from "./lint/green-command-digest.ts";
 import { parseNodeGenerationCiEvidence } from "./lint/node-generation-ci-policy.ts";
+
+// Final retirement admission reuses the independent detector through the CLI runtime graph.
+export { collectFinalRetirementFindings } from "./lint/bun-final-retirement.ts";
+
 import { computeOutstandingWork, outstandingSummaryLine } from "./lint/outstanding.ts";
 import {
   analyzeRelationImpact,
