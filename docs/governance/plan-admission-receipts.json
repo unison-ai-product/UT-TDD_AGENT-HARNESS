@@ -4192,6 +4192,22 @@
         "revision": 1,
         "content_digest": "sha256:47dc5c35538457e1ad37a0c563079cf2e2a74944af7cc878d36921b5d13897ff"
       }
+    },
+    {
+      "sequence": 263,
+      "previous_record_digest": "sha256:38c8d967e9d76a28728164fd2a7884e64f4c8a84d36a4d21c1c91c812d39d1da",
+      "record_digest": "sha256:42937136dc85a61329d89f485b21ed427f3b44f70856327a1a5efcadd09bf3c9",
+      "command_id": "plan-draft:issue-625:preparation:1",
+      "receipt_id": "certificate:7018d3e985a7ebf6e9cd7d90b29e2ba9",
+      "receipt_digest": "sha256:ea6eed5b6093afe79d0c0801c37e4b4cbccd42c0fdbafc79696b2eb93013df1b",
+      "decision_digest": "sha256:4ff903718fb019eef6ac02ab3589b474981bc1a86ee54c0805b31adf8a8e017e",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-625-pack-publication-preparation.md",
+        "plan_id": "PLAN-L7-625-pack-publication-preparation",
+        "asset_id": "plan:7018d3e985a7ebf6e9cd7d90b29e2ba9",
+        "revision": 1,
+        "content_digest": "sha256:fa31903b6d9b1e1c5d691a2dd44980c704d38c33ec29001d0f74b317c88effca"
+      }
     }
   ]
 }
