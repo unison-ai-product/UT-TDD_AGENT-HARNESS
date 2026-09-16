@@ -95,18 +95,18 @@ status: confirmed
 github_issue_id: 102
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:3bf790ecebfa3a8548f4d62be7414052
-  command_id: plan-revise:issue-541:recovery-16:7
-  admitted_at: 2026-09-16T20:20:00+09:00
-  source_digest: sha256:5130a75c5712ce2e948c62ad5d429510dfffeee03d3ba8d63e30aecd285a0f22
-  decision_digest: sha256:0c602385dfe6a8424d499cca7898473adf1b099ffe8b726f21112627913af488
-  receipt_digest: sha256:db55bc5c88211eceaa426d60b5548a4405364eb5d011474eea857e2f85539772
+  receipt_id: certificate:bee97017c18dd1c0382acb7e596d8e49
+  command_id: plan-revise:issue-541:recovery-16:5
+  admitted_at: 2026-09-15T03:24:37.283Z
+  source_digest: sha256:09a27995e7d40d593cc30c6ea022f127285823798d9e8e1181d2f989811ff166
+  decision_digest: sha256:a581599835fb35dd486db501cc2c0093f7d433dbb0c73ca8418f565442618287
+  receipt_digest: sha256:5d725af2f27b8032aa5f1741ad1f8fbf2247eae008e4dad21ba52771a5505509
   binding:
     path: docs/plans/PLAN-RECOVERY-16-plan-revision-authoring.md
     plan_id: PLAN-RECOVERY-16-plan-revision-authoring
     asset_id: plan:rebase:74ca026f9a0b72dca6f4fb164dd4e8f43c9ea3c9b31c4db21dec38a66d9d7d57
-    revision: 7
-    content_digest: sha256:5130a75c5712ce2e948c62ad5d429510dfffeee03d3ba8d63e30aecd285a0f22
+    revision: 5
+    content_digest: sha256:09a27995e7d40d593cc30c6ea022f127285823798d9e8e1181d2f989811ff166
   route:
     signal: regression_dev
     mode: recovery
@@ -262,9 +262,11 @@ Redesign bundleの原子性契約 (replacement `supersedes` とorigin back-refer
       (PLAN-RECOVERY-17 へ移管。同 PLAN の DoD が引き継ぐ。)
 - [x] PLAN-L7-441未完のprocess-kill境界を明示し、通常例外のatomicityをcrash convergenceと混同しない。
       根拠: §3 の明示宣言 (crash-safe を過大主張しない) を維持。
-- [x] plan:legacy: asset (実データ: PLAN-L6-93 rev 27) を tracked projection から再水和し
-      revision 28 を発行できる。根拠: U-PA-REV-049 と U-PA-REV-057 の実Git object / 正規 CLI 実測 (Issue #541)。
-- [x] integrity mismatch 3 軸 (content / canonical payload / embedded receipt 項目) と
-      lineage ambiguity が個別の oracle で write 0 fail-close し、seal 経路へ落ちない。根拠: U-PA-REV-040 / 050 / 051 / 052 (Issue #541)。
-- [x] fallback は embedded receipt 不在・対応 record 不在の 2 条件でのみ選ばれ、
-      再水和成功時は legacy bootstrap / seal / successor genesis の write が 0 である。根拠: U-PA-REV-045 / 049 / 057 (Issue #541)。
+- [ ] plan:legacy: asset (実データ: PLAN-L6-93 rev 27) を tracked projection から再水和し
+      revision 28 を発行できる。根拠: 実装 PR のテスト (Issue #541)。
+- [ ] integrity mismatch 3 軸 (content / canonical payload / embedded receipt 項目) と
+      lineage ambiguity が個別の oracle で write 0 fail-close し、seal 経路へ落ちない。
+      根拠: 実装 PR のテスト (Issue #541)。
+- [ ] fallback は embedded receipt 不在・対応 record 不在の 2 条件でのみ選ばれ、
+      再水和成功時は legacy bootstrap / seal / successor genesis の write が 0 である。
+      根拠: 実装 PR のテスト (Issue #541)。
