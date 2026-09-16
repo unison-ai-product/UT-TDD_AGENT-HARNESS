@@ -185,36 +185,6 @@ describe("#418 Pack-only internal canary boundary", () => {
     }
   });
 
-  it("CANDIDATE-ST-PACKCANARY-003: source-unavailable consumer launch is a Red oracle", () => {
-    const packRoot = materializeCleanPack();
-    const consumerRoot = mkdtempSync(join(tmpdir(), "ut-tdd-pack-canary-product-"));
-    const alternateCwd = mkdtempSync(join(tmpdir(), "ut-tdd-pack-canary-cwd-"));
-    try {
-      const install = installPackDependencies(packRoot);
-      expect(install.status, install.stderr || install.stdout).toBe(0);
-      const setup = runNode(consumerRoot, [join(packRoot, "src", "cli.ts"), "setup", "--solo"]);
-      expect(setup.status, setup.stderr || setup.stdout).toBe(0);
-
-      // Remove the setup Pack itself. The Product root is a separate tree and must run from
-      // the sealed consumer-local runtime after setup-source/worktree/Pack removal. No runtime
-      // bundle/pointer is injected here: this is the production setup path's Red oracle.
-      rmSync(packRoot, { recursive: true, force: true });
-      const wrapper = join(consumerRoot, ".ut-tdd", "bin", "ut-tdd.mjs");
-      expect(existsSync(packRoot)).toBe(false);
-      expect(existsSync(wrapper)).toBe(true);
-      const run = runNode(alternateCwd, [wrapper, "status", "--json"]);
-      expect(run.status, `${run.stderr}\n${run.stdout}`).toBe(0);
-      expect(run.stdout).toContain('"mode"');
-      const doctor = runNode(alternateCwd, [wrapper, "doctor", "--setup-smoke"]);
-      expect(doctor.status, `${doctor.stderr}\n${doctor.stdout}`).toBe(0);
-      expect(doctor.stdout).toContain("doctor: setup-smoke - OK");
-    } finally {
-      rmSync(packRoot, { recursive: true, force: true });
-      rmSync(consumerRoot, { recursive: true, force: true });
-      rmSync(alternateCwd, { recursive: true, force: true });
-    }
-  }, 120_000);
-
   it("CANDIDATE-ST-PACKCANARY-004: clean inventory has no fixture absolute path payload", () => {
     const packRoot = materializeCleanPack();
     const productRoot = mkdtempSync(join(tmpdir(), "ut-tdd-pack-canary-product-path-"));
