@@ -37,18 +37,18 @@ status: draft
 github_issue_id: 627
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:bbea476248b5c85bce3521539dbd2948
-  command_id: plan-revise:issue-627:admitted-publish:2
-  admitted_at: 2026-09-16T17:05:00+09:00
-  source_digest: sha256:64e4b622e6c4748a649916775274d67e4e0cf86bc04e514e684df925f163dee6
+  receipt_id: certificate:7812836b3af64e17717de98b4e3b7b23
+  command_id: plan-revise:issue-627:admitted-publish:3
+  admitted_at: 2026-09-16T17:35:00+09:00
+  source_digest: sha256:b8317ac312b153eeb2d974e7d20a3fb2836280185876ae99c80eb2759e8589b2
   decision_digest: sha256:5eedbddaa22fd28817f68005804b75dd3b0b2b56f35b299619e97415d68b50e7
-  receipt_digest: sha256:982a102dcfa0ed475d8f187285e1c5bf4dc0c9c6e63d01ba192d904eda9836a9
+  receipt_digest: sha256:d33d74cce9edaead5b32e67a6d2c42c9f00f4a17b39735c6a6c665b11a24d49a
   binding:
     path: docs/plans/PLAN-L6-627-pack-publication-admitted-publish.md
     plan_id: PLAN-L6-627-pack-publication-admitted-publish
     asset_id: plan:302ed04103668f826b436e909f012d75
-    revision: 2
-    content_digest: sha256:64e4b622e6c4748a649916775274d67e4e0cf86bc04e514e684df925f163dee6
+    revision: 3
+    content_digest: sha256:b8317ac312b153eeb2d974e7d20a3fb2836280185876ae99c80eb2759e8589b2
   route:
     signal: feature_addition
     mode: add-feature
