@@ -41,23 +41,62 @@ dependencies:
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/500
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/487
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/473
-review_evidence: []
-status: draft
+review_evidence:
+  - reviewer: codex
+    review_kind: intra_runtime_subagent
+    reviewed_at: 2026-09-16T10:02:00.000Z
+    tests_green_at: 2026-09-16T09:40:00.000Z
+    verdict: approve
+    scope: Issue
+    worker_model: codex
+    reviewer_model: codex
+    plan_revision: PLAN-L7-530@11
+    subject_head: 5a183e7db92e2722636b18e9532eec3ea4200648
+    green_commands:
+      - kind: unit_test
+        command: node node_modules/vitest/vitest.mjs run
+          tests/bun-final-retirement.test.ts --reporter=dot
+        runner: node
+        scope: targeted
+        exit_code: 0
+        completed_at: 2026-09-16T09:40:00.000Z
+        evidence_path: tests/bun-final-retirement.test.ts
+        output_digest: sha256:886299f354b2637754ba460c6fb87ded81581d6ee966017ccf7f863df79b32f3
+        anchor_commit: 5a183e7db92e2722636b18e9532eec3ea4200648
+      - kind: typecheck
+        command: npm run typecheck -- --pretty false
+        runner: node
+        scope: full
+        exit_code: 0
+        completed_at: 2026-09-16T09:40:30.000Z
+        evidence_path: src/lint/bun-final-retirement.ts
+        output_digest: sha256:b8c72bf3244f354bdb059458c4c6ead04fabf119b8855e91ee797b8dbf1e9b32
+        anchor_commit: 5a183e7db92e2722636b18e9532eec3ea4200648
+      - kind: lint
+        command: npx biome check src/cli.ts src/lint/bun-final-retirement.ts
+        runner: node
+        scope: targeted
+        exit_code: 0
+        completed_at: 2026-09-16T09:41:00.000Z
+        evidence_path: src/lint/bun-final-retirement.ts
+        output_digest: sha256:b8c72bf3244f354bdb059458c4c6ead04fabf119b8855e91ee797b8dbf1e9b32
+        anchor_commit: 5a183e7db92e2722636b18e9532eec3ea4200648
+status: confirmed
 github_issue_id: 487
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:82d7f5676056c5c7e16effe9fac549b5
-  command_id: pr641-issue487-final-retirement-1789552201126
-  admitted_at: 2026-09-16T09:50:01.126Z
-  source_digest: sha256:937c5437f20b99535e682e02b9299cda04956d5d0bacdd24cc8b5f8cb34bfc38
-  decision_digest: sha256:13f90dce290e80f897d5156ae086fd4041bda57a3824c834efe1d3d2789a625a
-  receipt_digest: sha256:9d5da8eec3a07160c82286a13b99fdc36a43102e5b34bc599d47f87f803e371a
+  receipt_id: certificate:10a024b2771d974e4186e5dec7c1ccdf
+  command_id: pr641-issue487-confirmed-preflight-1789552759594
+  admitted_at: 2026-09-16T10:02:30.000Z
+  source_digest: sha256:ab80468b5b6e967d96c357ed49a7b93ec5fd58a7ad32f7d46b16df653f1a6bd0
+  decision_digest: sha256:2eb379bf44f4892e83bb878d6bbc48c6df48383357b8aef7d3f10ca20d815ff4
+  receipt_digest: sha256:4498a0ed8c541f86ca9edbc30ef233637e137892ded6d6b6725fd3c91d40fcfb
   binding:
     path: docs/plans/PLAN-L7-530-bun-final-retirement.md
     plan_id: PLAN-L7-530-bun-final-retirement
     asset_id: plan:bc9250c9a7c873dcb9f18956677371f7
-    revision: 11
-    content_digest: sha256:937c5437f20b99535e682e02b9299cda04956d5d0bacdd24cc8b5f8cb34bfc38
+    revision: 12
+    content_digest: sha256:ab80468b5b6e967d96c357ed49a7b93ec5fd58a7ad32f7d46b16df653f1a6bd0
   route:
     signal: feature_addition
     mode: add-feature
@@ -75,10 +114,10 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-530-bun-final-retirement
-    target_revision: 10
+    target_revision: 11
     phase: forward_merge
-  escape_reason: "Issue #487 final Bun retirement implementation artifact and
-    independent oracle ownership"
+  escape_reason: "Issue #487 final Bun retirement preflight review and
+    implementation confirmation"
 ---
 
 # PLAN-L7-530: Bun 最終撤去の tuple-bound 実装契約
