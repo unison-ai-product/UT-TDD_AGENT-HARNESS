@@ -136,7 +136,7 @@ Slice 1/3 の canonical project root、`src/runtime/project-memory-root.ts`、`s
    - PR 番号、exact head、review request、verdict、handoff、進捗から独立している。
    - secret / PII / 個人環境を含まない。
    - 同義語を統合済みで、他の entry と矛盾しない。
-7. **登録と台帳**: 採用 entry は `ut-tdd memory add` で 1 件ずつ登録する。curation ledger には source archive path、digest、adopt / reject の理由を記録する。
+7. **登録と台帳**: 採用 entry は `ut-tdd memory add` で 1 件ずつ登録する。curation ledger には、tracked source の archive path、untracked source の内容 digest と opaque な local-archive custody id (path は記録しない)、adopt / reject の理由を記録する。各 adopt 行には、`memory add` の registration receipt (operation id、memory id、canonical source path、content digest、exit code) の digest も束縛し、手書き file の同値性だけでは採用を正当化できない。
 8. **直列 PR**: PR-0 は docs pair-freeze、PR-1 は migration module / test / `CONTRACT_ROWS` 行の撤去と参照の修正、PR-2 は corpus 置換を 1 トピックで行う。PR-2 には rename digest manifest、generated summary、curation ledger、non-read integration test、db rebuild を含める。各 PR は最新の projection tail の上で作り直す。
 
 ### 3.2 実装 PLAN (`implementation_target`) の選定

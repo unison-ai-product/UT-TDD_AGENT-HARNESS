@@ -101,9 +101,9 @@ updated: 2026-09-15
 
 | Candidate | 所有 PR | Stimulus / mutation | 独立 oracle |
 | --- | --- | --- | --- |
-| `CANDIDATE-U-MEMCUT-024` | PR-2 | ledger の各行を manifest と照合する。負例: digest を 1 文字改変、manifest 外の source path、理由の欠落 | 全行が source archive path (untracked は digest のみ)、source digest、adopt / reject、6 基準の判定と根拠参照、理由を持ち、digest が manifest と一致する。負例はそれぞれ Red |
+| `CANDIDATE-U-MEMCUT-024` | PR-2 | ledger の各行を manifest と照合する。負例: digest を 1 文字改変、manifest 外の tracked source path、untracked row への path 混入、registration receipt の欠落、理由の欠落 | 全行が tracked source の archive path、または untracked source の内容 digest と opaque な local-archive custody id (path なし)、source digest、adopt / reject、6 基準の判定と根拠参照、理由、採用行では registration receipt digest を持ち、digest が manifest と一致する。負例はそれぞれ Red |
 | `CANDIDATE-U-MEMCUT-025` | PR-2 | adopt 行を canonical root の entry 集合と照合する。負例: ledger に無い canonical entry、entry の無い adopt 行 | adopt 行の `memory_id` 集合が canonical entry 集合と等しい。同義語の統合は `merged_from` で多対一を明示し、統合元の行も残す。負例は Red |
-| `CANDIDATE-U-MEMCUT-026` | PR-2 | ledger に記録した kind / title / body / tags で、`ut-tdd memory add` を scratch の canonical root に対して再実行する | 生成 file の、file 名・`memory_id`・`updated_at` 以外の frontmatter 値と本文が、canonical root の file と一致する (手書きの file は再生成と一致しないので Red になる)。frontmatter の `memory_id` / `kind` / `title` / `tags` / `updated_at` の欠落が 0 |
+| `CANDIDATE-U-MEMCUT-026` | PR-2 | ledger に記録した kind / title / body / tags で、`ut-tdd memory add` を scratch の canonical root に対して実行し、command の registration receipt (operation id、memory id、出力 source path、content digest、exit code) を取得する。負例: receipt の欠落 / 改変、receipt を伴わない同値な手書き file、canonical root 外への出力 | receipt の digest が adopt 行の ledger と一致し、exit code が 0、出力 source path が canonical root 配下で、生成 file の file 名・`memory_id`・`updated_at` 以外の frontmatter 値と本文が canonical root の file と一致する。receipt のない手書き file は内容が同値でも Red。frontmatter の `memory_id` / `kind` / `title` / `tags` / `updated_at` の欠落が 0 |
 | `CANDIDATE-U-MEMCUT-027` | PR-2 | adopt entry の本文を除外 screen にかける。負例 fixture: PR 番号、commit hash、review request / verdict / receipt / handoff への参照、secret に見える値、個人環境の絶対 path | 負例はそれぞれ Red。screen は必要条件であって十分条件ではない (最終判断は 028 の reviewer が行う)。採用件数の固定値 assertion を持たない |
 | `CANDIDATE-U-MEMCUT-028` | PR-2 | ledger の reviewer 記録を検査する | reviewer の model family が author と異なり、frontier tier であり、判定対象の exact head に束縛されている。同一 family / head 欠落は Red |
 
