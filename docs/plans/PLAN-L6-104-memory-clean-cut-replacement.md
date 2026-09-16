@@ -54,18 +54,18 @@ supersedes:
   - PLAN-L7-512-project-scoped-memory-root
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:6bb11608096fa63d92d993a129cab136
-  command_id: plan-draft:issue-424:memory-clean-cut:2
-  admitted_at: 2026-09-15T11:34:11.626Z
-  source_digest: sha256:5e05d3835164cd42c563329ae3eee17a6e564e1c2856c23dd90f182e84d2cca6
-  decision_digest: sha256:3d465f1800234e2e3b9da18836395b70595808c737e3576744c375dbed2d1c33
-  receipt_digest: sha256:5b2ce6f575ae3cae4d4ad5e570cfef0c80395f17bcd768851bff4f66dc71c098
+  receipt_id: certificate:8e52469411d4d61e5a3ca8ab281f71da
+  command_id: plan-revise:issue-424:memory-clean-cut:2
+  admitted_at: 2026-09-16T01:38:45.587Z
+  source_digest: sha256:befd0906ae6ee105af3c28c468858d00db58b51bdeec7c04cbfc521cffb30ec0
+  decision_digest: sha256:c902bd2ff10ff8b63ae6101b431125652f87b9d1a9e140430ee760f52930bdad
+  receipt_digest: sha256:3f9a555b12e8e91ceb9b5987dc84db55d6b7db0b981b37883e4561d9ffd23958
   binding:
     path: docs/plans/PLAN-L6-104-memory-clean-cut-replacement.md
     plan_id: PLAN-L6-104-memory-clean-cut-replacement
     asset_id: plan:6bb11608096fa63d92d993a129cab136
-    revision: 1
-    content_digest: sha256:5e05d3835164cd42c563329ae3eee17a6e564e1c2856c23dd90f182e84d2cca6
+    revision: 2
+    content_digest: sha256:befd0906ae6ee105af3c28c468858d00db58b51bdeec7c04cbfc521cffb30ec0
   route:
     signal: redesign
     mode: redesign
@@ -76,8 +76,8 @@ admission_receipt:
     projection_digest: sha256:3752d540f8d100945ac0f194391370fa52ceb76ecd501d3a6f010927eb87450e
   origin:
     plan_id: PLAN-L7-512-project-scoped-memory-root
-    revision: 6
-    digest: sha256:e3e3cad039021a5394c5ad09ea1f0084642bba9c0423fd9faa77563e1e52ce19
+    revision: 7
+    digest: sha256:bc545df7ce01902776ca8cb1056eab057150be61dea337221f68bb058ef02ac8
   transition:
     direction: design_to_implementation
     implementation_disposition: discarded
@@ -86,11 +86,12 @@ admission_receipt:
       target_revision: 1
   reentry:
     target_plan_id: PLAN-L6-104-memory-clean-cut-replacement
-    target_revision: 1
+    target_revision: 2
     phase: forward_merge
-  escape_reason: "PO replacement decision 2026-09-15 (Issue #424 comment
-    5678404390, Issue #550 comment 5678404737): retire PLAN-L7-512 Slice 4
-    migration and descend from the clean-cut replacement contract"
+  escape_reason: "Issue #424 PR-0 execution record: the PLAN-L7-512 back-reference
+    was issued as rev 7 through a verified ledger snapshot transfer, and the
+    PLAN-L7-533 pair was withdrawn as draft plus a withdrawal note because
+    admission forbids archived (contract gap filed as Issue #623)"
   supersedes:
     - PLAN-L7-512-project-scoped-memory-root
 ---
@@ -227,6 +228,8 @@ Issue #424 は、上記がすべて Green になるまで open のままとす�
 
 ## 9. PR-0 時点の実行制約 (未解消)
 
+本節 1 と 2 は PR-0 の実行で解消した。経路と証跡は §10 に記録する。3 は未確定のまま PR-1 へ引き継ぐ。
+
 判断 3 の実行経路には、PR-0 の起票時点で次の制約を実測している。いずれも判断 3 自体は変えない。PR-0 は canonical 経路で実行を試み、その結果を PR 本文に記録する。
 
 1. **`PLAN-L7-512` の back-reference**: origin/main `13c5bb2d` での実測値は次のとおり。
@@ -237,3 +240,42 @@ Issue #424 は、上記がすべて Green になるまで open のままとす�
    - plan-supersession は、supersede 対象の本文に後継 PLAN の core-id (`PLAN-L6-104`) を要求する (`src/lint/plan-supersession.ts`)。
 2. **533 の archive**: `evaluatePlanAdmission` は、draft / revise を問わず `status: archived` を `plan-admission-archived-forbidden` で拒否する (`src/plan-admission/policy.ts`、`tests/plan-admission.test.ts` の U-PADM-005)。receipt を持つ PLAN の status 変更は canonical 経路以外では admission-check を通らない。
 3. **実装 PLAN**: §3.2 の A について、`PLAN-L7-566` の番号予約、kind、起票 PR (PR-1 に含めるのが凍結分割の補足にあたるか) が未確定である。
+
+## 10. PR-0 実行結果 (2026-09-16、§9 の制約 1 と 2 の解消)
+
+### 1. `PLAN-L7-512` の back-reference (解消)
+
+canonical `plan revise --manifest` で rev 7 を発行し、supersede の back-reference を入れた
+(receipt `certificate:d1c827ae9693b1f1b7702f609b773526`、projection sequence 244)。
+
+実行経路の判断は `ut-tdd advisor --decision implementation --current-model claude-opus-5` (2026-09-16、
+fallback `gpt-5.6-sol`、adversarial) に諮り、次の 3 案から **X2** を採択した。
+
+| 案 | 内容 | trade-off | 判定 |
+| --- | --- | --- | --- |
+| **X2 (採用)** | 真の lineage を持つ worktree の worktree-local ledger を整合確認のうえ限定移送し、そこで canonical revise を実行する | 他レーンの worktree を変えない。ledger は untracked な worktree-local state なので移送自体は tracked evidence を作らない。drift を rev 7 に吸収するため、由来の明記が条件 | 採用 |
+| X1 | lineage を持つ worktree 自体に PR-0 branch を checkout して実行する | 同じ結果を得られるが、Issue #544 レーンの worktree の branch と作業状態を変える | 棄却 |
+| Y | `redesign` 以外の route へ引き直し、supersede 宣言を後続 PR へ回す | route certificate と実態 (Slice 4 契約の差替え) が食い違う。設計判断そのものの変更になる | 棄却 |
+
+移送時に確認した事項: 取得元 worktree `C:/dev/ut-issue528-project-memory-envelope`、`integrity_check=ok`、
+`journal_mode=delete`、WAL 残存なし、`user_version=7`、asset `plan:legacy:68706e29…` の revision 1-6 と
+有効な alias 2 件。移送後に同じ項目を再照合した。
+
+rev 7 の注記には、rev 6 発行後に canonical revise を経ずに commit `6efae246` で入った
+`updated: 2026-09-11` と `tests/project-memory-pack-parity.test.ts` の `generates` 登録を、本 revision で
+明示的に吸収する旨と、それが直接編集を遡って canonical と認めるものではない旨を書いた。rev 6 の
+embedded content digest `sha256:e3e3cad0…` と drift 後の HEAD content digest `sha256:e43a97bd…` も残した。
+
+### 2. 533 の撤回 (解消、ただし archived は不可)
+
+`PLAN-L7-533-memory-completion-fence` (rev 10、sequence 245) と
+`PLAN-REVERSE-533-memory-completion-fence-backfill` (rev 10、sequence 246) を canonical revise で改訂し、
+撤回注記を入れた。**status は `draft` のまま据え置いた。** `evaluatePlanAdmission` が
+`plan-admission-archived-forbidden` で archived を拒否し、receipt 制度下の PLAN を archived にする正規経路が
+存在しないためである。schema の `VALID_STATUSES` と各 lint は archived を扱うのに admission だけが拒否する
+という契約の不整合は Issue #623 に起票した。撤回の意味は注記が正本であり、`draft` は「未着手のまま撤回済み」を
+表す。
+
+### 3. 残余 (未解消)
+
+§9 の 3 (`PLAN-L7-566` の番号予約、kind、起票 PR) は未確定のまま PR-1 へ引き継ぐ。

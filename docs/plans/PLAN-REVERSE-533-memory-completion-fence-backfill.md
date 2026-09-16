@@ -44,18 +44,18 @@ status: draft
 github_issue_id: 550
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:97f1f92114580a33d1fda8499e0dfb03
-  command_id: plan-revise:issue-550:reverse:9
-  admitted_at: 2026-09-14T10:38:52.177Z
-  source_digest: sha256:e06ccad9da91e71ba60ff6cf9be93b34d668f9cd2aa24718302432f0ade5b081
-  decision_digest: sha256:40dad2e5730d03a622d3ca96afe9c388f16836d50d794e6c1bb9e8e6b5305ca7
-  receipt_digest: sha256:e79c3acb839b67e816a5482ddb6140777ab560f6a3aa4f3ec6797a52bab8f95e
+  receipt_id: certificate:70eb4b78d9c97b6c35f31f7a14ac6e66
+  command_id: plan-revise:issue-424:withdraw-533-reverse:10
+  admitted_at: 2026-09-16T01:35:31.477Z
+  source_digest: sha256:5795a7f3a6b854be8ce8d9110364ef30f6f0f737ea3eab4e4b350e181479fc04
+  decision_digest: sha256:204f496fae240ad7eae7997f7ca01ea634b14c26c932297703301b2bd42213cf
+  receipt_digest: sha256:51c17b63ead7b4713c0b6ef408c08ce08ef68581d8e5743de63dd723d6bef5f1
   binding:
     path: docs/plans/PLAN-REVERSE-533-memory-completion-fence-backfill.md
     plan_id: PLAN-REVERSE-533-memory-completion-fence-backfill
     asset_id: plan:9c79745cc74906d8a41f0e144021d912
-    revision: 9
-    content_digest: sha256:e06ccad9da91e71ba60ff6cf9be93b34d668f9cd2aa24718302432f0ade5b081
+    revision: 10
+    content_digest: sha256:5795a7f3a6b854be8ce8d9110364ef30f6f0f737ea3eab4e4b350e181479fc04
   route:
     signal: reverse
     mode: reverse
@@ -65,23 +65,31 @@ admission_receipt:
     episode_id: E4-550-memory-completion-fence
     projection_digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
   origin:
-    plan_id: PLAN-L7-512-project-scoped-memory-root
-    revision: 6
-    digest: sha256:e3e3cad039021a5394c5ad09ea1f0084642bba9c0423fd9faa77563e1e52ce19
+    plan_id: PLAN-L6-104-memory-clean-cut-replacement
+    revision: 1
+    digest: sha256:5e05d3835164cd42c563329ae3eee17a6e564e1c2856c23dd90f182e84d2cca6
   transition:
     direction: implementation_to_design
     implementation_disposition: preserved
   reentry:
     target_plan_id: PLAN-L7-533-memory-completion-fence
-    target_revision: 1
+    target_revision: 10
     phase: forward_merge
-  escape_reason: "Issue #550 completion fence Reverse backfill pair (R0); revision
-    9: range notation 001..023 / 016..023 aligned in §7 / Reverse qa slot
-    (Claude Opus review f723873a non-blocking note)"
+  escape_reason: "Issue #424 withdrawal of the unimplemented Reverse pair by the
+    PO replacement decision 2026-09-15; successor
+    PLAN-L6-104-memory-clean-cut-replacement"
 ---
 
 # PLAN-REVERSE-533: Memory migration completion fence の逆向き確認
 
+
+> **撤回注記 (2026-09-16)**: 本 PLAN は未実装のまま、PO 判断 (2026-09-15、Issue #424) により撤回する。
+> 後継は `PLAN-L6-104-memory-clean-cut-replacement` であり、project memory corpus は移行せず clean-cut で
+> 置換する。Issue #550 は not planned として close 済み。
+>
+> 状態は `draft` のまま据え置く。`status: archived` は admission policy が `plan-admission-archived-forbidden`
+> で拒否するため、receipt 制度下の PLAN には正規経路が存在しない (Issue #623 に契約の穴として記録した)。
+> 撤回の意味は本注記が正本であり、`draft` は「未着手のまま撤回済み」を表す。
 ## R0: 対象境界
 
 Issue #550 の completion fence を、`PLAN-L7-512` の Slice 4a (inventory) / 4b (quarantine / recovery) 契約、

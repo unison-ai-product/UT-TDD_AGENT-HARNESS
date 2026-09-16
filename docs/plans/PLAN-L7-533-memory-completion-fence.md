@@ -55,18 +55,18 @@ status: draft
 github_issue_id: 550
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:ae424c3a1996042388a8d47c9275122a
-  command_id: plan-revise:issue-550:forward:9
-  admitted_at: 2026-09-14T10:38:46.121Z
-  source_digest: sha256:ddc519ea1675f3df17b948bc2ff66dc33cfcd22ff2fba15ff48de1cd52ddb40e
-  decision_digest: sha256:c2fad4a0b857407b1fbc087b8b025a8040f5457978abf6d6b5e212c8d94b361c
-  receipt_digest: sha256:6331d93dd9aa50328f838dc22a6ec68838d66f8a51f706755cf93bd8259e85d8
+  receipt_id: certificate:834f0da61067a76cdc97c0313cd92557
+  command_id: plan-revise:issue-424:withdraw-533-forward:10
+  admitted_at: 2026-09-16T01:35:13.211Z
+  source_digest: sha256:cbb8a9aa33bd412cacdd1b2e7d68d6a5ccc207f47f8a988cde8a96d2e438cdca
+  decision_digest: sha256:ab1343b611df04a5c917fedbd7dafe48cf8e0ad0672c505df4b4c5520e3bab33
+  receipt_digest: sha256:206604bcc2304a5dc397b5e27fa9df1a0be1b68528252b685c7bca03961e3e1f
   binding:
     path: docs/plans/PLAN-L7-533-memory-completion-fence.md
     plan_id: PLAN-L7-533-memory-completion-fence
     asset_id: plan:fb4a53df298985d3204d2e9b3bfa55d1
-    revision: 9
-    content_digest: sha256:ddc519ea1675f3df17b948bc2ff66dc33cfcd22ff2fba15ff48de1cd52ddb40e
+    revision: 10
+    content_digest: sha256:cbb8a9aa33bd412cacdd1b2e7d68d6a5ccc207f47f8a988cde8a96d2e438cdca
   route:
     signal: feature_addition
     mode: add-feature
@@ -76,21 +76,31 @@ admission_receipt:
     episode_id: E4-550-memory-completion-fence
     projection_digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
   origin:
-    plan_id: PLAN-L7-512-project-scoped-memory-root
-    revision: 6
-    digest: sha256:e3e3cad039021a5394c5ad09ea1f0084642bba9c0423fd9faa77563e1e52ce19
+    plan_id: PLAN-L6-104-memory-clean-cut-replacement
+    revision: 1
+    digest: sha256:5e05d3835164cd42c563329ae3eee17a6e564e1c2856c23dd90f182e84d2cca6
+  transition:
+    direction: design_to_implementation
+    implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-533-memory-completion-fence
-    target_revision: 1
+    target_revision: 10
     phase: forward_merge
-  escape_reason: "Issue #550 completion fence contract pair-freeze after PR #554
-    FLAG B1 (canonical-root baseline; PLAN-L7-512 rev 6 downstream); revision 9:
-    range notation 001..023 / 016..023 aligned in §7 / Reverse qa slot (Claude
-    Opus review f723873a non-blocking note)"
+  escape_reason: "Issue #424 withdrawal: unimplemented draft withdrawn by the PO
+    replacement decision 2026-09-15 (#550 closed not planned); successor
+    PLAN-L6-104-memory-clean-cut-replacement"
 ---
 
 # PLAN-L7-533: Memory migration completion fence の正本を canonical root に限定する契約
 
+
+> **撤回注記 (2026-09-16)**: 本 PLAN は未実装のまま、PO 判断 (2026-09-15、Issue #424) により撤回する。
+> 後継は `PLAN-L6-104-memory-clean-cut-replacement` であり、project memory corpus は移行せず clean-cut で
+> 置換する。Issue #550 は not planned として close 済み。
+>
+> 状態は `draft` のまま据え置く。`status: archived` は admission policy が `plan-admission-archived-forbidden`
+> で拒否するため、receipt 制度下の PLAN には正規経路が存在しない (Issue #623 に契約の穴として記録した)。
+> 撤回の意味は本注記が正本であり、`draft` は「未着手のまま撤回済み」を表す。
 ## 1. 目的と前提
 
 Issue #550 は、`PLAN-L7-512` Slice 4a/4b (inventory / quarantine / recovery) の成果を production
