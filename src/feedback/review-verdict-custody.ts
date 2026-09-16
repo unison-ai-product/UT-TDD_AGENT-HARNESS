@@ -225,6 +225,8 @@ export function isAttemptCompletedEvent(value: ReviewCustodyAuditEvent): boolean
     value.model.trim().length > 0 &&
     value.exitCode === 0 &&
     isReviewDigest(value.receiptFileDigest ?? "") &&
+    // §3.2 互換節 / -019(b): the request digest is never the receipt file digest.
+    value.receiptFileDigest !== value.requestDigest &&
     isReviewDigest(value.verdictDigest ?? "")
   );
 }

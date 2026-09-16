@@ -307,6 +307,7 @@ describe("provider judgment composition", () => {
       ...withReceiptDigest.event,
       receiptDigest: withReceiptDigest.requestDigest,
     });
+    const beforeA = snapshotWrites(withReceiptDigest.root);
     expect(
       await composeProviderJudgment({
         repoRoot: withReceiptDigest.root,
@@ -314,24 +315,29 @@ describe("provider judgment composition", () => {
         attempt: 1,
       }),
     ).toEqual({ ok: false, reason: "invocation_fact_schema_invalid" });
+    expect(snapshotWrites(withReceiptDigest.root)).toEqual(beforeA);
 
     const requestDigestAsFile = createFixture({ event: false });
     appendReviewCustodyAudit(requestDigestAsFile.root, {
       ...requestDigestAsFile.event,
       receiptFileDigest: requestDigestAsFile.requestDigest,
     });
-    // The request digest is a valid lowerhex64 but never equals sha256(receipt bytes).
+    // §3.2 互換節 / -019(b): the request digest as receiptFileDigest is a schema
+    // violation, denied before any byte comparison.
+    const beforeB = snapshotWrites(requestDigestAsFile.root);
     expect(
       await composeProviderJudgment({
         repoRoot: requestDigestAsFile.root,
         requestDigest: requestDigestAsFile.requestDigest,
         attempt: 1,
       }),
-    ).toEqual({ ok: false, reason: "receipt_mutated" });
+    ).toEqual({ ok: false, reason: "invocation_fact_schema_invalid" });
+    expect(snapshotWrites(requestDigestAsFile.root)).toEqual(beforeB);
 
     const missingField = createFixture({ event: false });
     const { verdictDigest: _dropped, ...withoutVerdictDigest } = missingField.event;
     appendReviewCustodyAudit(missingField.root, withoutVerdictDigest as ReviewCustodyAuditEvent);
+    const beforeC = snapshotWrites(missingField.root);
     expect(
       await composeProviderJudgment({
         repoRoot: missingField.root,
@@ -339,9 +345,11 @@ describe("provider judgment composition", () => {
         attempt: 1,
       }),
     ).toEqual({ ok: false, reason: "invocation_fact_schema_invalid" });
+    expect(snapshotWrites(missingField.root)).toEqual(beforeC);
 
     const driftedHead = createFixture({ event: false });
     appendReviewCustodyAudit(driftedHead.root, { ...driftedHead.event, exactHead: "b".repeat(40) });
+    const beforeD = snapshotWrites(driftedHead.root);
     expect(
       await composeProviderJudgment({
         repoRoot: driftedHead.root,
@@ -349,6 +357,7 @@ describe("provider judgment composition", () => {
         attempt: 1,
       }),
     ).toEqual({ ok: false, reason: "identity_mismatch" });
+    expect(snapshotWrites(driftedHead.root)).toEqual(beforeD);
   });
 
   it("CANDIDATE-U-D3BCOMP-007: duplicate or malformed findings are evidence_schema_invalid; ascending order is derived, not required", async () => {
@@ -442,7 +451,37 @@ describe("PLAN-L7-534 §3.2 custody ordering (attempt_completed → hardlink rec
     ).toMatchObject({ ok: true, attempt: 2 });
   });
 
-  it("CANDIDATE-U-D3BCOMP-017/022(b): non-EEXIST link failure is receipt_link_failed; the crash window (event, no receipt) is non-terminal and compose denies receipt_unavailable", async () => {
+  it("CANDIDATE-U-D3BCOMP-022(b): each non-EEXIST link errno reaches linkSync and is receipt_link_failed with exactly one event and no receipt", () => {
+    for (const code of ["EPERM", "EXDEV"]) {
+      const { root, request, digest } = custodyFixture();
+      const first = beginReviewAttempt({
+        repoRoot: root,
+        request,
+        provider: "claude",
+        model: "claude-opus-5",
+      });
+      if (!first.ok) throw new Error(first.reason);
+      writeFileSync(first.path, verdictText(request, 1), "utf8");
+      faults.linkError = code;
+      const result = projectReviewVerdict({
+        repoRoot: root,
+        request,
+        attestation: attestation(request, 1, 0),
+        verdictFile: first.path,
+      });
+      faults.linkError = undefined;
+      expect(result).toEqual({ ok: false, reason: "receipt_link_failed" });
+      expect(existsSync(receiptPathOf(root, digest))).toBe(false);
+      expect(tempsOf(root, digest)).toEqual([]);
+      expect(
+        readReviewCustodyAudit(root).filter(
+          (event) => event.kind === "attempt_completed" && event.attempt === 1,
+        ),
+      ).toHaveLength(1);
+    }
+  });
+
+  it("CANDIDATE-U-D3BCOMP-017: the crash window (event, no receipt) is never re-linked, is non-terminal, and compose denies receipt_unavailable", async () => {
     const { root, request, digest } = custodyFixture();
     const first = beginReviewAttempt({
       repoRoot: root,
@@ -452,24 +491,32 @@ describe("PLAN-L7-534 §3.2 custody ordering (attempt_completed → hardlink rec
     });
     if (!first.ok) throw new Error(first.reason);
     writeFileSync(first.path, verdictText(request, 1), "utf8");
-    for (const code of ["EPERM", "EXDEV"]) {
-      faults.linkError = code;
-      const result = projectReviewVerdict({
+    faults.linkError = "EPERM";
+    expect(
+      projectReviewVerdict({
         repoRoot: root,
         request,
         attestation: attestation(request, 1, 0),
         verdictFile: first.path,
-      });
-      expect(result).toEqual({ ok: false, reason: "receipt_link_failed" });
-      expect(existsSync(receiptPathOf(root, digest))).toBe(false);
-      expect(tempsOf(root, digest)).toEqual([]);
-    }
+      }),
+    ).toEqual({ ok: false, reason: "receipt_link_failed" });
     faults.linkError = undefined;
-    // The attempt_completed event was appended before the link (crash window).
+    // Fault cleared: re-projecting the same attempt must not re-link, must not
+    // append a second invocation fact and must not create a receipt.
+    expect(
+      projectReviewVerdict({
+        repoRoot: root,
+        request,
+        attestation: attestation(request, 1, 0),
+        verdictFile: first.path,
+      }),
+    ).toEqual({ ok: false, reason: "receipt_link_failed" });
+    expect(existsSync(receiptPathOf(root, digest))).toBe(false);
+    expect(tempsOf(root, digest)).toEqual([]);
     const completed = readReviewCustodyAudit(root).filter(
       (event) => event.kind === "attempt_completed" && event.attempt === 1,
     );
-    expect(completed.length).toBeGreaterThanOrEqual(1);
+    expect(completed).toHaveLength(1);
     await expect(
       composeProviderJudgment({ repoRoot: root, requestDigest: digest, attempt: 1 }),
     ).resolves.toEqual({ ok: false, reason: "receipt_unavailable" });

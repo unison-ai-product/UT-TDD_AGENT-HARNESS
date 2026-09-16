@@ -333,7 +333,21 @@ export async function composeProviderJudgment(
   const request = requestValue;
   const project = loadProjectIdentityFromHead({ repoRoot: input.repoRoot });
   if (!project.ok) return { ok: false, reason: "request_unavailable" };
-  const rawReceipt = readJson(receiptPath(input.repoRoot, input.requestDigest));
+  // Read the receipt bytes exactly once: the same Buffer is hash-checked against
+  // attempt_completed.receiptFileDigest below and parsed into the evidence document,
+  // so a swap between two reads cannot compose from unverified content.
+  let receiptBytes: Buffer;
+  try {
+    receiptBytes = readFileSync(receiptPath(input.repoRoot, input.requestDigest));
+  } catch {
+    return { ok: false, reason: "receipt_unavailable" };
+  }
+  let rawReceipt: unknown;
+  try {
+    rawReceipt = JSON.parse(receiptBytes.toString("utf8")) as unknown;
+  } catch {
+    return { ok: false, reason: "receipt_unavailable" };
+  }
   if (!validReceipt(rawReceipt)) return { ok: false, reason: "receipt_unavailable" };
   const receipt = rawReceipt;
   if (
@@ -384,7 +398,6 @@ export async function composeProviderJudgment(
     )
   )
     return { ok: false, reason: "evidence_superseded" };
-  const receiptBytes = readFileSync(receiptPath(input.repoRoot, input.requestDigest));
   if (digest(receiptBytes) !== event.receiptFileDigest)
     return { ok: false, reason: "receipt_mutated" };
   const provider = event.provider as "codex" | "claude";
