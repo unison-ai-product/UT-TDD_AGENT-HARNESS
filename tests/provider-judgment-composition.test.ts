@@ -36,8 +36,14 @@ import { removeTestTree } from "./support/temp-tree.ts";
 const faults: {
   failAuditAppendOnce: boolean;
   linkError: string | undefined;
+  unlinkError: string | undefined;
   mutateArtifactAfterWrite: boolean;
-} = { failAuditAppendOnce: false, linkError: undefined, mutateArtifactAfterWrite: false };
+} = {
+  failAuditAppendOnce: false,
+  linkError: undefined,
+  unlinkError: undefined,
+  mutateArtifactAfterWrite: false,
+};
 
 vi.mock("node:fs", async (importOriginal) => {
   const actual = await importOriginal<typeof import("node:fs")>();
@@ -49,7 +55,15 @@ vi.mock("node:fs", async (importOriginal) => {
     }
     return actual.linkSync(existing, target);
   };
-  return { ...actual, linkSync, default: { ...actual, linkSync } };
+  const unlinkSync: typeof actual.unlinkSync = (path) => {
+    if (faults.unlinkError) {
+      const error = new Error(`injected ${faults.unlinkError}`) as NodeJS.ErrnoException;
+      error.code = faults.unlinkError;
+      throw error;
+    }
+    return actual.unlinkSync(path);
+  };
+  return { ...actual, linkSync, unlinkSync, default: { ...actual, linkSync, unlinkSync } };
 });
 
 vi.mock("../src/feedback/review-verdict-custody.ts", async (importOriginal) => {
@@ -358,6 +372,19 @@ describe("provider judgment composition", () => {
       }),
     ).toEqual({ ok: false, reason: "identity_mismatch" });
     expect(snapshotWrites(driftedHead.root)).toEqual(beforeD);
+
+    // -021(c) attempt drift: the event's attempt disagrees with the verdictPath it names.
+    const driftedAttempt = createFixture({ event: false });
+    appendReviewCustodyAudit(driftedAttempt.root, { ...driftedAttempt.event, attempt: 2 });
+    const beforeE = snapshotWrites(driftedAttempt.root);
+    expect(
+      await composeProviderJudgment({
+        repoRoot: driftedAttempt.root,
+        requestDigest: driftedAttempt.requestDigest,
+        attempt: 1,
+      }),
+    ).toEqual({ ok: false, reason: "identity_mismatch" });
+    expect(snapshotWrites(driftedAttempt.root)).toEqual(beforeE);
   });
 
   it("CANDIDATE-U-D3BCOMP-007: duplicate or malformed findings are evidence_schema_invalid; ascending order is derived, not required", async () => {
@@ -678,6 +705,11 @@ describe("PLAN-L7-534 §3.2 custody ordering (attempt_completed → hardlink rec
         ...event,
         exactHead: "b".repeat(40),
       }),
+      // -021(c) attempt drift: attempt field disagrees with the verdictPath it names.
+      (event: ReviewCustodyAuditEvent): ReviewCustodyAuditEvent => ({
+        ...event,
+        attempt: 2,
+      }),
     ]) {
       const { root, request, digest } = custodyFixture();
       const first = beginReviewAttempt({
@@ -709,11 +741,52 @@ describe("PLAN-L7-534 §3.2 custody ordering (attempt_completed → hardlink rec
         return event.kind === "attempt_completed" ? JSON.stringify(mutate(event)) : line;
       });
       writeFileSync(auditPath, `${rewritten.join("\n")}\n`);
-      expect(
-        beginReviewAttempt({ repoRoot: root, request, provider: "claude", model: "claude-opus-5" }),
-      ).toMatchObject({ ok: true, attempt: 2 });
+      const next = beginReviewAttempt({
+        repoRoot: root,
+        request,
+        provider: "claude",
+        model: "claude-opus-5",
+      });
+      expect(next).toMatchObject({ ok: true, attempt: 2 });
       expect(readFileSync(receiptPathOf(root, digest)).length).toBeGreaterThan(0);
     }
+  });
+
+  it("CANDIDATE-U-D3BCOMP-022(c): a failing best-effort temp unlink after a successful link is still ok with one receipt and one event", () => {
+    const { root, request, digest } = custodyFixture();
+    const first = beginReviewAttempt({
+      repoRoot: root,
+      request,
+      provider: "claude",
+      model: "claude-opus-5",
+    });
+    if (!first.ok) throw new Error(first.reason);
+    writeFileSync(first.path, verdictText(request, 1), "utf8");
+    faults.unlinkError = "EPERM";
+    let result: ReturnType<typeof projectReviewVerdict>;
+    try {
+      result = projectReviewVerdict({
+        repoRoot: root,
+        request,
+        attestation: attestation(request, 1, 0),
+        verdictFile: first.path,
+      });
+    } finally {
+      faults.unlinkError = undefined;
+    }
+    expect(result).toEqual({ ok: true });
+    expect(readFileSync(receiptPathOf(root, digest)).length).toBeGreaterThan(0);
+    // The temp survives the failed unlink (best-effort), but the receipt is linked.
+    expect(tempsOf(root, digest)).toHaveLength(1);
+    expect(
+      readReviewCustodyAudit(root).filter(
+        (event) => event.kind === "attempt_completed" && event.attempt === 1,
+      ),
+    ).toHaveLength(1);
+    // The linked receipt is terminal: no further attempt may start.
+    expect(
+      beginReviewAttempt({ repoRoot: root, request, provider: "claude", model: "claude-opus-5" }),
+    ).toMatchObject({ ok: false });
   });
 });
 

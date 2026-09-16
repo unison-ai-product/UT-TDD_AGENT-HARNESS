@@ -259,8 +259,6 @@ function writeStrictReceiptWithCompletion(input: {
     }
     try {
       linkSync(temporary, target);
-      unlinkSync(temporary);
-      return { ok: true };
     } catch (error) {
       const code = error && typeof error === "object" && "code" in error ? error.code : undefined;
       if (code === "EEXIST") {
@@ -268,10 +266,10 @@ function writeStrictReceiptWithCompletion(input: {
         try {
           existing = readFileSync(target);
         } catch {
-          rmSync(temporary, { force: true });
+          discardTemporary(temporary);
           return { ok: false, reason: "receipt_link_failed" };
         }
-        rmSync(temporary, { force: true });
+        discardTemporary(temporary);
         if (existing.equals(bytes)) return { ok: true };
         appendReviewCustodyAudit(input.repoRoot, {
           ...auditEvent,
@@ -281,9 +279,22 @@ function writeStrictReceiptWithCompletion(input: {
         });
         return { ok: false, reason: "verdict_identity_conflict" };
       }
-      rmSync(temporary, { force: true });
+      discardTemporary(temporary);
       return { ok: false, reason: "receipt_link_failed" };
     }
+    // §3.2: the receipt is linked; removing the temp is best-effort and its
+    // failure never changes the outcome (the final receipt and its
+    // attempt_completed already agree).
+    discardTemporary(temporary);
+    return { ok: true };
+  }
+}
+
+function discardTemporary(path: string): void {
+  try {
+    unlinkSync(path);
+  } catch {
+    // best-effort (§3.2): a lingering temp is swept by the next attempt start.
   }
 }
 

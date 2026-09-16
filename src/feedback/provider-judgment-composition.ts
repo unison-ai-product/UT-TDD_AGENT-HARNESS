@@ -367,6 +367,11 @@ export async function composeProviderJudgment(
       (event) =>
         event.requestDigest === input.requestDigest &&
         (event.attempt === input.attempt ||
+          // -021(c): an attempt_completed whose attempt field drifted away from the
+          // verdictPath it names still belongs to this attempt's identity check.
+          (event.kind === "attempt_completed" &&
+            event.verdictPath ===
+              reviewVerdictPath(input.repoRoot, input.requestDigest, input.attempt)) ||
           (event.kind === "superseded_attempt" && event.supersededAttempt === input.attempt)),
     );
   } catch {
