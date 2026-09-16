@@ -136,23 +136,67 @@ review_evidence:
         evidence_path: src/runtime/cutover-transition.ts
         output_digest: sha256:f2ee308869e9a33833931fbb76db52a97f367b1bd8b515665187c1f5b4c0c798
         anchor_commit: e52240e19799d687bdf0a1906f89717628b85fbd
+  - reviewer: claude-opus-blind-reviewer
+    review_kind: cross_agent
+    reviewed_at: 2026-09-16T06:00:27.492Z
+    tests_green_at: 2026-09-16T05:50:27Z
+    verdict: "PR #620 exact head 18349dc8 Claude Opus blind preflight review PASS
+      (blocking 0): PLAN-L6-93 §4 の四つの cutover prefix edge の実装と pair test を非著者
+      family が exact head で検証"
+    worker_model: gpt-5.6-luna
+    reviewer_model: claude-opus-5
+    effort: middle
+    plan_revision: 18349dc882da80a3b8b90fa4f40db1047f4d7e8b
+    subject_head: 18349dc882da80a3b8b90fa4f40db1047f4d7e8b
+    evidence_path: tests/cutover-transition.test.ts
+    anchor_commit: 18349dc882da80a3b8b90fa4f40db1047f4d7e8b
+    scope: "PR #620 exact head 18349dc8 に対する非著者 (Claude family) exact-head review。著者
+      family は codex。 canonical request rv1-d4a5412f700a8926… の receipt が
+      verdict を記録する。対象は §4 の四つの cutover prefix edge の実装
+      (src/schema/cutover-transition.ts、src/runtime/cutover-transition.ts) と
+      pair test (tests/cutover-transition.test.ts、U-CUTOVER-001..009)。8b1a846d の
+      FLAG (kind/count/exit-success/projection 直接編集の oracle 欠落、confirm の証跡束縛、本文の
+      draft 残置) は本 head と本 revision で是正した。"
+    citations:
+      - .ut-tdd/review/receipts/d4a5412f700a89265aad2a531a50517400bf8b9b7a4e45794c8bcfb618095cf1.json
+      - .ut-tdd/review/packets/pr620-22c7ba37/control-lane-measurements.txt
+    green_commands:
+      - kind: unit_test
+        command: npx vitest run tests/cutover-transition.test.ts (fence env = exact-head
+          worktree)
+        runner: node
+        scope: targeted
+        exit_code: 0
+        completed_at: 2026-09-16T05:50:27Z
+        evidence_path: tests/cutover-transition.test.ts
+        output_digest: sha256:8929869a8584bd0645d63c44ef0114b37bef65e2de08e18551d2e904631ed172
+        anchor_commit: 18349dc882da80a3b8b90fa4f40db1047f4d7e8b
+      - kind: typecheck
+        command: npx tsc --noEmit -p .
+        runner: node
+        scope: full
+        exit_code: 0
+        completed_at: 2026-09-16T05:50:27Z
+        evidence_path: src/runtime/cutover-transition.ts
+        output_digest: sha256:8929869a8584bd0645d63c44ef0114b37bef65e2de08e18551d2e904631ed172
+        anchor_commit: 18349dc882da80a3b8b90fa4f40db1047f4d7e8b
 status: confirmed
 sub_doc: function-spec
 github_issue_id: 152
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:b1b1fcef230277d92f0f6e1f482f8b82
-  command_id: plan-revise:issue-540:cutover-prefix-implementation:r31:44d642ac579e
-  admitted_at: 2026-09-16T13:30:00+09:00
-  source_digest: sha256:5fc411bd9cde38c329631e03bd98c4a74c9e98775b76a2aa8162575d5b05ca42
-  decision_digest: sha256:3aed6909ae7637b20d3b639da9f9b8e4b7443ff71247cc53dd9e5784d3fff5f8
-  receipt_digest: sha256:d438ceeba1c8f785a9035f020e462c764f025bb4888449e632fd7061d4b03e02
+  receipt_id: certificate:4ea21edfcb7734b765c6f4c3f96f0d04
+  command_id: plan-revise:issue-540:cutover-prefix-implementation:r32:894b7e14ae00
+  admitted_at: 2026-09-16T06:01:36.131Z
+  source_digest: sha256:29b0346acc9de3731c229b3b8cf1f253e60016d7a93ba900a06371113e2744f0
+  decision_digest: sha256:7f9c4336ccb2ff020da033fa1d116fdca6d5b0c3fffc1ff1d2e2823e817ac37e
+  receipt_digest: sha256:ca2369ced26ece3524fed213c39ebee136aedbafd3f15ba29e40127834bd8470
   binding:
     path: docs/plans/PLAN-L6-93-node-bootstrap-contract.md
     plan_id: PLAN-L6-93-node-bootstrap-contract
     asset_id: plan:legacy:80a50dd958ae451ea13030276eb8c145a8fdc3104ec145560457f97a07594881
-    revision: 31
-    content_digest: sha256:5fc411bd9cde38c329631e03bd98c4a74c9e98775b76a2aa8162575d5b05ca42
+    revision: 32
+    content_digest: sha256:29b0346acc9de3731c229b3b8cf1f253e60016d7a93ba900a06371113e2744f0
   route:
     signal: feature_addition
     mode: add-feature
@@ -173,11 +217,11 @@ admission_receipt:
       target_revision: 29
   reentry:
     target_plan_id: PLAN-L6-93-node-bootstrap-contract
-    target_revision: 29
+    target_revision: 32
     phase: forward_merge
-  escape_reason: "Issue #540 cutover prefix implementation at exact branch HEAD;
-    four prefix edges only, sealed edge and Bun physical retirement remain
-    excluded."
+  escape_reason: "Issue #540 PR #620: bind the confirmed status to the exact-head
+    non-author review evidence at 894b7e14ae00 and remove the stale draft-status
+    body text (closing-review FLAG findings 1-2 on 8b1a846d)"
 ---
 
 # PLAN-L6-93: sealed Node bootstrap function redesign
@@ -383,8 +427,8 @@ physical writerは`.ut-tdd/ledger/cutover-ledger.db` SQLiteの`BEGIN IMMEDIATE`�
 head/version CAS、UNIQUE制約、commit/fsync barrierを使い、loser/crashはrollback+retry 0とする。
 
 `initializeCutoverChain`、`appendCutoverTransition`、`projectCutoverState`の将来実装先は
-`src/runtime/cutover-transition.ts`、pair testは`tests/cutover-transition.test.ts`である。現在のD0 PRは
-このfunctions→source→test生成契約だけをfreezeし、source/test artifactを実装済みとは主張しない。
+`src/runtime/cutover-transition.ts`、pair testは`tests/cutover-transition.test.ts`である。D0 PR (rev 29) はこのfunctions→source→test生成契約だけをfreezeし、Issue #540 の実装PR #620 がこの3 pathを実体化した
+(rev 32 で exact-head review evidence を束ねる)。
 zod schema正本は`src/schema/cutover-transition.ts`と`src/schema/node-slice-admission.ts`、
 `admitNodeSlice` runtime/testは`src/runtime/node-slice-admission.ts` /
 `tests/node-slice-admission.test.ts`である。
@@ -395,16 +439,16 @@ zod schema正本は`src/schema/cutover-transition.ts`と`src/schema/node-slice-a
 `tests/cutover-transition.test.ts`の実装・pair test artifact ownerは本PLANである。
 この3 pathは本PLANの`generates`にのみ宣言し、`PLAN-L7-458`および
 `PLAN-REVERSE-458-node-self-hosted-bun-ban-backfill`は設計参照に限定する。
-本PLANは`status: draft`のため、これらのartifactの実装完了やCutoverのconfirmed化を
-この所有宣言から導出しない。
+これらのartifactの実装完了とconfirmedへの遷移は所有宣言からではなく、PR #620 の exact head に束縛した
+非著者 review evidence (rev 32 の `review_evidence`) から導出する。
 
 ### Issue #540: cutover prefixの実装順序と検収境界
 
 Issue #473配下の#540が、上記3 pathのschema/writer/pair testを実装する。
 既存のartifact ownerは本PLANのまま、新PLAN・新receipt authority・別producerを作らない。
-本改訂はdocs-onlyのpair-freeze候補であり、statusはdraftを維持する。非著者がこのcontract revisionと
-L7の対応oracleをreviewしてPASSするまで実装を開始しない。3 pathを実体化する実装PRで
-初めてconfirmedへの遷移とexact-head review evidenceを揃える。実在しないgeneratesを
+rev 29 はdocs-onlyのpair-freezeとしてdraftを維持し、非著者がcontract revisionとL7の対応oracleをreviewして
+PASSするまで実装を開始しなかった。3 pathを実体化した実装PR #620 で、confirmedへの遷移と exact-head review
+evidence (rev 32、非著者 Claude Opus blind review、subject_head 18349dc882da; その後の merge commit は admission projection の再チェーンのみで src/tests は同一) を揃えた。実在しないgeneratesを
 confirmedで宣言せず、過去の§5限定PASSを§4又はPLAN全体の承認へ流用しない。
 
 実装対象は`cutover.genesis`、`cutover.inventory-frozen.node-shadow`、
