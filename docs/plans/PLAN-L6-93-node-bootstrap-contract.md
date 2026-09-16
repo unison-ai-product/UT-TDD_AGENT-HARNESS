@@ -94,23 +94,65 @@ review_evidence:
         evidence_path: docs/plans/PLAN-L6-93-node-bootstrap-contract.md
         output_digest: sha256:edc5d7c882bfa3e78ce485e6264893da2b35e6ab78ec83b2ee5334e326934976
         anchor_commit: 2cd9640c9388bd7624e921b18a8702e9ec9e61c0
-status: draft
+  - reviewer: codex-primary-preflight
+    review_kind: intra_runtime_subagent
+    reviewed_at: 2026-09-16T12:52:39+09:00
+    tests_green_at: 2026-09-16T12:52:30+09:00
+    verdict: preflight_complete
+    worker_model: gpt-5.6-luna
+    plan_revision: e52240e19799d687bdf0a1906f89717628b85fbd
+    subject_head: e52240e19799d687bdf0a1906f89717628b85fbd
+    evidence_path: tests/cutover-transition.test.ts
+    anchor_commit: e52240e19799d687bdf0a1906f89717628b85fbd
+    scope: Single implementation PR preflight for four cutover prefix edges; final
+      non-author closing review remains required.
+    green_commands:
+      - kind: unit_test
+        command: node scripts/run-vitest-snapshot.ts tests/cutover-transition.test.ts
+          --reporter=dot
+        runner: node
+        scope: targeted
+        exit_code: 0
+        completed_at: 2026-09-16T12:52:39+09:00
+        evidence_path: tests/cutover-transition.test.ts
+        output_digest: sha256:8964d73003f4bb068bde7d95a6f4e45a3c1939bab260f96208533e640ee7ac01
+        anchor_commit: e52240e19799d687bdf0a1906f89717628b85fbd
+      - kind: typecheck
+        command: node node_modules/typescript/bin/tsc --noEmit
+        runner: node
+        scope: targeted
+        exit_code: 0
+        completed_at: 2026-09-16T12:52:39+09:00
+        evidence_path: src/runtime/cutover-transition.ts
+        output_digest: sha256:f2ee308869e9a33833931fbb76db52a97f367b1bd8b515665187c1f5b4c0c798
+        anchor_commit: e52240e19799d687bdf0a1906f89717628b85fbd
+      - kind: lint
+        command: node node_modules/@biomejs/biome/bin/biome check
+          src/runtime/cutover-transition.ts tests/cutover-transition.test.ts
+        runner: node
+        scope: targeted
+        exit_code: 0
+        completed_at: 2026-09-16T12:52:39+09:00
+        evidence_path: src/runtime/cutover-transition.ts
+        output_digest: sha256:f2ee308869e9a33833931fbb76db52a97f367b1bd8b515665187c1f5b4c0c798
+        anchor_commit: e52240e19799d687bdf0a1906f89717628b85fbd
+status: confirmed
 sub_doc: function-spec
 github_issue_id: 152
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:5bc411405e6235205fd17e46f336137d
-  command_id: plan-revise:issue-540:cutover-prefix-contract:29
-  admitted_at: 2026-09-15T06:12:33.048Z
-  source_digest: sha256:bedfe0f1cbfcf538cc41dbdd62bf44cbb78b1cb58e7f74c8dbd3b729cebc0210
-  decision_digest: sha256:919b4d44f356d260bdec5829b5f6c60b659baead9ceecd740ddda2f72d266a24
-  receipt_digest: sha256:1e161b6ba25418195bce4e750a4f79339892edc2f095b933efc05a749b215d05
+  receipt_id: certificate:86c4f31192184901597be3605d5a11ce
+  command_id: plan-revise:issue-540:cutover-prefix-implementation:e52240e1
+  admitted_at: 2026-09-16T12:54:00+09:00
+  source_digest: sha256:f55f159399d4d971197713d3458f58659d1ccf00bfa8fe5b09446d3ee7679767
+  decision_digest: sha256:3aed6909ae7637b20d3b639da9f9b8e4b7443ff71247cc53dd9e5784d3fff5f8
+  receipt_digest: sha256:232d18ffdc4abde3087eb911de8ef0fcfd790b0dee247ad2b5bf779225718a43
   binding:
     path: docs/plans/PLAN-L6-93-node-bootstrap-contract.md
     plan_id: PLAN-L6-93-node-bootstrap-contract
     asset_id: plan:legacy:80a50dd958ae451ea13030276eb8c145a8fdc3104ec145560457f97a07594881
-    revision: 29
-    content_digest: sha256:bedfe0f1cbfcf538cc41dbdd62bf44cbb78b1cb58e7f74c8dbd3b729cebc0210
+    revision: 30
+    content_digest: sha256:f55f159399d4d971197713d3458f58659d1ccf00bfa8fe5b09446d3ee7679767
   route:
     signal: feature_addition
     mode: add-feature
@@ -128,14 +170,14 @@ admission_receipt:
     implementation_disposition: none
     implementation_target:
       target_plan_id: PLAN-L6-93-node-bootstrap-contract
-      target_revision: 27
+      target_revision: 29
   reentry:
     target_plan_id: PLAN-L6-93-node-bootstrap-contract
-    target_revision: 27
+    target_revision: 29
     phase: forward_merge
-  escape_reason: "Issue #540 cutover prefix contract pair-freeze after Method A
-    restore-then-revise rehydration of PLAN-L6-93 rev27 to rev28; docs-only
-    contract adoption, status draft, implementation excluded."
+  escape_reason: "Issue #540 cutover prefix implementation at exact branch HEAD;
+    four prefix edges only, sealed edge and Bun physical retirement remain
+    excluded."
 ---
 
 # PLAN-L6-93: sealed Node bootstrap function redesign
