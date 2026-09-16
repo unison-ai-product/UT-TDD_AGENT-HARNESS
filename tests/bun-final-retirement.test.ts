@@ -1,17 +1,17 @@
 import { execFileSync } from "node:child_process";
 import { describe, expect, it } from "vitest";
 import {
-  type NodeBanDocuments,
-  type NodeBanF0cAggregateBinding,
-  type NodeBanGenerationBinding,
-  runNodeBanAudit,
-} from "../src/lint/bun-permanent-ban.ts";
-import {
   admitFinalBunRetirement,
   BunRetirementError,
   type BunRetirementInput,
   collectFinalGuardSurfaceIndex,
 } from "../src/lint/bun-final-retirement.ts";
+import {
+  type NodeBanDocuments,
+  type NodeBanF0cAggregateBinding,
+  type NodeBanGenerationBinding,
+  runNodeBanAudit,
+} from "../src/lint/bun-permanent-ban.ts";
 import {
   classifyRuntimeImageProcess,
   NodeOnlyProcessObserver,
