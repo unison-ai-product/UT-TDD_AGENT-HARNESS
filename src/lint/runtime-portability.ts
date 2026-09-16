@@ -135,7 +135,6 @@ const BUN_SPAWN_DEBT_ALLOWLIST = new Map<string, number>([
 const BUN_IMPORT_DEBT_ALLOWLIST = new Map<string, number>([
   // bun:sqlite / node:sqlite 二重ドライバ (PLAN-L7-45)。node:sqlite 主は
   // sqliteFallbackViolations が別途強制する。
-  ["src/state-db/index.ts", 2],
   // 検出語彙 (lint fixture 文字列)。本 lint 自身の pattern 定義行は char class 表記のため
   // 自己一致しない (pin 0 = 収載不要)。
   ["tests/runtime-portability.test.ts", 5],
