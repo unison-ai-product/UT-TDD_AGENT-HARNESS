@@ -20,6 +20,8 @@ export const LEGACY_MEMORY_LOCAL_ARCHIVE_ROOT = ".ut-tdd/archive/memory-legacy-2
 export const LEGACY_MEMORY_MANIFEST_PATH = `${LEGACY_MEMORY_ARCHIVE_ROOT}/MANIFEST.json`;
 export const LEGACY_MEMORY_SUMMARY_PATH = `${LEGACY_MEMORY_ARCHIVE_ROOT}/SUMMARY.md`;
 export const LEGACY_MEMORY_MANIFEST_SCHEMA = "ut-tdd.memory-legacy-archive-manifest/v1";
+/** Files inside the archive root that are not corpus entries. */
+export const LEGACY_MEMORY_ARCHIVE_META_FILES: readonly string[] = ["MANIFEST.json", "SUMMARY.md"];
 
 export interface LegacyArchiveTrackedRow {
   /** Source path at the PR-2 base HEAD, always under `.ut-tdd/memory/`. */
@@ -165,4 +167,96 @@ export function readLegacyArchiveManifest(repoRoot: string): LegacyArchiveManife
     throw new Error(`unexpected legacy archive manifest schema: ${String(raw?.schema_version)}`);
   }
   return raw as LegacyArchiveManifest;
+}
+
+// ---- pure verifiers (the oracles of CANDIDATE-U-MEMCUT-017 / 018 / 020 run through these) ----
+
+export interface LegacyArchiveFinding {
+  kind:
+    | "source-missing-from-manifest"
+    | "manifest-row-not-in-source"
+    | "archive-file-missing"
+    | "archive-file-not-in-manifest"
+    | "archive-path-mismatch"
+    | "digest-mismatch"
+    | "bytes-mismatch"
+    | "untracked-leak";
+  subject: string;
+}
+
+const basenameOf = (path: string): string => path.replaceAll("\\", "/").split("/").at(-1) ?? "";
+
+/**
+ * CANDIDATE-U-MEMCUT-017: base-HEAD tracked sources, manifest rows and archive files must be a
+ * basename bijection. Counts are compared to each other, never to a constant.
+ */
+export function verifyLegacyArchiveSets(input: {
+  baseTrackedPaths: readonly string[];
+  manifest: LegacyArchiveManifest;
+  archiveFiles: readonly string[];
+}): LegacyArchiveFinding[] {
+  const findings: LegacyArchiveFinding[] = [];
+  const sources = new Set(input.baseTrackedPaths.map(basenameOf));
+  const rows = new Map(input.manifest.tracked.map((row) => [basenameOf(row.source_path), row]));
+  const archive = new Set(
+    input.archiveFiles
+      .map(basenameOf)
+      .filter((name) => !LEGACY_MEMORY_ARCHIVE_META_FILES.includes(name)),
+  );
+  for (const name of sources) {
+    if (!rows.has(name)) findings.push({ kind: "source-missing-from-manifest", subject: name });
+  }
+  for (const [name, row] of rows) {
+    if (!sources.has(name)) findings.push({ kind: "manifest-row-not-in-source", subject: name });
+    if (!archive.has(name)) findings.push({ kind: "archive-file-missing", subject: name });
+    if (row.archive_path !== legacyArchivePathFor(row.source_path))
+      findings.push({ kind: "archive-path-mismatch", subject: name });
+  }
+  for (const name of archive) {
+    if (!rows.has(name)) findings.push({ kind: "archive-file-not-in-manifest", subject: name });
+  }
+  return findings;
+}
+
+/** CANDIDATE-U-MEMCUT-018: archive bytes must reproduce the manifest row digest and size. */
+export function verifyLegacyArchiveRow(
+  row: LegacyArchiveTrackedRow,
+  archiveBytes: Buffer,
+): LegacyArchiveFinding[] {
+  const findings: LegacyArchiveFinding[] = [];
+  if (sha256Hex(archiveBytes) !== row.sha256)
+    findings.push({ kind: "digest-mismatch", subject: row.archive_path });
+  if (archiveBytes.byteLength !== row.bytes)
+    findings.push({ kind: "bytes-mismatch", subject: row.archive_path });
+  return findings;
+}
+
+/**
+ * CANDIDATE-U-MEMCUT-020: the committed manifest and summary carry no untracked path, title or
+ * body. The untracked section is exactly {count, set_digest, local_archive_root}, and no line of
+ * the summary names a corpus file outside the tracked archive rows.
+ */
+export function verifyLegacyArchiveUntrackedOpacity(input: {
+  manifest: LegacyArchiveManifest;
+  summary: string;
+}): LegacyArchiveFinding[] {
+  const findings: LegacyArchiveFinding[] = [];
+  const keys = Object.keys(input.manifest.untracked).sort();
+  if (keys.join(",") !== "count,local_archive_root,set_digest")
+    findings.push({
+      kind: "untracked-leak",
+      subject: `manifest.untracked keys: ${keys.join(",")}`,
+    });
+  if (!/^[0-9a-f]{64}$/.test(input.manifest.untracked.set_digest))
+    findings.push({ kind: "untracked-leak", subject: "manifest.untracked.set_digest" });
+  const tracked = new Set(input.manifest.tracked.map((row) => basenameOf(row.source_path)));
+  for (const match of input.summary.matchAll(/[A-Za-z0-9_.-]+\.md/g)) {
+    const name = match[0];
+    if (name === "SUMMARY.md") continue;
+    if (!tracked.has(name))
+      findings.push({ kind: "untracked-leak", subject: `summary names ${name}` });
+  }
+  if (/^title:/m.test(input.summary) || /^memory_id:/m.test(input.summary))
+    findings.push({ kind: "untracked-leak", subject: "summary carries entry frontmatter" });
+  return findings;
 }
