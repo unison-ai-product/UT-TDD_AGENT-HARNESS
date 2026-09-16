@@ -38,11 +38,11 @@ canary pointerのoracleは#626/#627および`PLAN-L7-565`の後続sliceが所有
 `publishPackCanary`を呼び出して遠隔公開を実行したりしない。
 
 このテスト設計は `PLAN-REVERSE-625-pack-publication-preparation` のpair artifactでもある。
-Reverseは既存のCANDIDATE-PACKPUB-PREP-001..008を再利用し、preparation実装・telemetry・
+Reverseは既存のCANDIDATE-PACKPUB-PREP-001..010を再利用し、preparation実装・telemetry・
 remote writeの契約を追加または弱めない。
 
 ## 4. 完了判定
 
-候補8行を対応する実装oracleへ1対1で昇格し、各行のtyped reason、write count、
+候補10行を対応する実装oracleへ1対1で昇格し、各行のtyped reason、write count、
 journal order、receipt bytesを記録する。PR #625のexact HEAD、Linux/Windows/aggregate
 CI、非著者closing reviewを得るまで、PLANをconfirmedへ変更しない。

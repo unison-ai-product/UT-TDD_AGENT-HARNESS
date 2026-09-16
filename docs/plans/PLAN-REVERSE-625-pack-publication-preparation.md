@@ -30,22 +30,22 @@ dependencies:
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/625
 review_evidence: []
 workflow_phase: R0
-status: confirmed
+status: draft
 github_issue_id: 625
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:17fb3b4187073dd233a498a606f7b161
-  command_id: plan-revise:issue-625:reverse:2
-  admitted_at: 2026-09-16T09:02:00.000Z
-  source_digest: sha256:6e6d5a741ce160f3c3833809586e0e3683092bf05b46b83d982b842a882ad872
-  decision_digest: sha256:12256fd1b6b73e28ac58fcfc11cf945411ed896acb4d1d0276a0559e9a426a8f
-  receipt_digest: sha256:088d022bade6cfbb7744f602cc25ce8c31bce680e37d7a32e45cb1f8e0f2a382
+  receipt_id: certificate:703b049560bb27e11f7d79b27f1fd71d
+  command_id: plan-revise:issue-625:reverse:3
+  admitted_at: 2026-09-16T09:57:27.846Z
+  source_digest: sha256:f7677a1f64b71168b9fe418b15f490b332f8ba11719e3f5def763c931116e76d
+  decision_digest: sha256:d24838a5d5e797e47f3585e699c040ad95c017456cfec92ac8d5f7c388b0491a
+  receipt_digest: sha256:e4d89493a298444e9dc0d4f685f40daff5bb13cace3b9abbcdbb39547cf203cd
   binding:
     path: docs/plans/PLAN-REVERSE-625-pack-publication-preparation.md
     plan_id: PLAN-REVERSE-625-pack-publication-preparation
     asset_id: plan:18a3e140dc9b81cafab45c531089904b
-    revision: 2
-    content_digest: sha256:6e6d5a741ce160f3c3833809586e0e3683092bf05b46b83d982b842a882ad872
+    revision: 3
+    content_digest: sha256:f7677a1f64b71168b9fe418b15f490b332f8ba11719e3f5def763c931116e76d
   route:
     signal: reverse
     mode: reverse
@@ -56,17 +56,17 @@ admission_receipt:
     projection_digest: sha256:352492d0ba7b458d19ae625367e1cf23d3d3379b3ef05e28f87aa10f475b721f
   origin:
     plan_id: PLAN-L7-625-pack-publication-preparation
-    revision: 2
-    digest: sha256:442bc8d61c6d3defec77c870311eef8c4f9773875367f1b71045a513d3622313
+    revision: 3
+    digest: sha256:599412f2b55d4ae22d5e1a676b62127e968b4f564004be6705f40a837c2f90f3
   transition:
     direction: implementation_to_design
     implementation_disposition: preserved
   reentry:
     target_plan_id: PLAN-L7-625-pack-publication-preparation
-    target_revision: 2
+    target_revision: 3
     phase: forward_merge
-  escape_reason: "Issue #625 の add-impl を必須 Reverse
-    pairingへbackfillし、既存準備契約とoracleを変更せず再合流する。"
+  escape_reason: "Issue #625 の必須 Reverse pairing を draft references として維持し、Forward
+    requires から切り離す。"
 ---
 
 # PLAN-REVERSE-625: Pack公開準備の必須Reverse pairing backfill
@@ -81,15 +81,15 @@ sealed staging identity、branch/PR preparation、atomic no-clobber receipt、re
 
 ## R2: 逆向き証明
 
-- Forward PLAN の `dependencies.requires` が本 Reverse を参照し、Reverse の `dependencies.parent` が Forward PLAN を参照するため、required add-impl の双方向 pairing を満たす。
-- pair test-design の CANDIDATE-PACKPUB-PREP-001..008 は既存 preparation oracleを一対一で保持し、新しい実装責務を発生させない。
+- Forward PLAN の `dependencies.references` が本 Reverse を参照し、Reverse の `dependencies.parent` が Forward PLAN を参照するため、required add-impl の双方向 pairing を満たす。Reverse は R0 の draft として参照され、Forward の required dependency にはならない。
+- pair test-design の CANDIDATE-PACKPUB-PREP-001..010 は既存 preparation oracleを一対一で保持し、新しい実装責務を発生させない。
 - receipt は canonical `plan draft` / `plan revise` の出力を使い、既存 recordを改変・再計算・削除しない。
 
 ## R3: 攻撃面
 
-Reverseをreferencesだけに置く片肺リンク、Forwardのrequiresをdraft artifactで満たしたとする偽装、preparation実装への新規差分、telemetry規則の緩和、既存receiptの上書きや再利用を拒否する。
+Forwardのrequiresをdraft artifactで満たしたとする偽装、preparation実装への新規差分、telemetry規則の緩和、既存receiptの上書きや再利用を拒否する。
 
 ## R4: Forward再合流
 
-Forward PLAN revision 2 と Reverse PLAN draft が同一の issue #625、pair test-design、exact receipt projectionへ束縛され、backfill doctorが `reverseOrphans 0 / reverseLinkMissing 0` を返した後に、Forward implementationへ合流する。
+Forward PLAN revision 3 と Reverse PLAN draft が同一の issue #625、pair test-design、exact receipt projectionへ束縛され、backfill doctorが `reverseOrphans 0 / reverseLinkMissing 0` を返した後に、Forward implementationへ合流する。
 `PLAN-L7-625` の status は実装完了・非著者closing evidence取得まで draft のまま保持する。

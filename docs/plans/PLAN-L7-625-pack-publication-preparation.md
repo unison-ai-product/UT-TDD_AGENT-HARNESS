@@ -13,7 +13,8 @@ parent_design: docs/plans/PLAN-L7-565-pack-publication-atomic-ref-cas.md
 pair_artifact: docs/test-design/harness/L7-pack-publication-preparation-test-design.md
 agent_slots:
   - role: se
-    slot_label: Luna worker - sealed stagingから準備receiptを作り、admission向け入力を確定するbounded実装（publication intentは作らない）
+    slot_label: Luna worker - sealed
+      stagingから準備receiptを作り、admission向け入力を確定するbounded実装（publication intentは作らない）
   - role: qa
     slot_label: Terra - 準備mutationのtyped failureとno-write oracle
   - role: tl
@@ -21,9 +22,9 @@ agent_slots:
 generates: []
 dependencies:
   parent: docs/plans/PLAN-L7-565-pack-publication-atomic-ref-cas.md
-  requires:
-    - docs/plans/PLAN-REVERSE-625-pack-publication-preparation.md
+  requires: []
   references:
+    - docs/plans/PLAN-REVERSE-625-pack-publication-preparation.md
     - docs/plans/PLAN-L7-515-pack-remote-canary-publication.md
     - docs/plans/PLAN-L7-532-pack-publication-driver.md
     - docs/test-design/harness/L7-pack-publication-atomic-ref-cas-test-design.md
@@ -34,18 +35,18 @@ status: draft
 github_issue_id: 625
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:dda6d34ac79ed55e4f00f0cde199de59
-  command_id: plan-revise:issue-625:forward:3
-  admitted_at: 2026-09-16T10:00:00.000+00:00
-  source_digest: sha256:599412f2b55d4ae22d5e1a676b62127e968b4f564004be6705f40a837c2f90f3
-  decision_digest: sha256:5c21129947b813565682106ad9e8c66f1d8960934e9b4f1917362f94ab069137
-  receipt_digest: sha256:2061ad261c93bb1dcef06d35f002b8fb4a1c744c45d197dd8e2955063e4079b7
+  receipt_id: certificate:d60d960748407167021c4131789e9fd9
+  command_id: plan-revise:issue-625:forward:4
+  admitted_at: 2026-09-16T09:57:27.846Z
+  source_digest: sha256:eef733b6821c789544cf1934449f76943d4e974dbde2b9708000fa23da1128f1
+  decision_digest: sha256:9dbf49b615411b20e0bd1031c3ab3deb4152d7596ef93b8114dea9f066ada655
+  receipt_digest: sha256:039c5d639931c1e4c81fe9c8c8f2ce9d8f97901c4e4910efae1bc3313c3aef7c
   binding:
     path: docs/plans/PLAN-L7-625-pack-publication-preparation.md
     plan_id: PLAN-L7-625-pack-publication-preparation
     asset_id: plan:7018d3e985a7ebf6e9cd7d90b29e2ba9
-    revision: 3
-    content_digest: sha256:599412f2b55d4ae22d5e1a676b62127e968b4f564004be6705f40a837c2f90f3
+    revision: 4
+    content_digest: sha256:eef733b6821c789544cf1934449f76943d4e974dbde2b9708000fa23da1128f1
   route:
     signal: feature_addition
     mode: add-feature
@@ -60,9 +61,10 @@ admission_receipt:
     digest: sha256:656cfc06ba39837ff70bb729ed6d5f6f90c4df7765e83aa4d0629b0d4cfa285c
   reentry:
     target_plan_id: PLAN-L7-625-pack-publication-preparation
-    target_revision: 2
+    target_revision: 3
     phase: forward_merge
-  escape_reason: "Issue #625 の必須 Reverse pairing を既存 add-impl 契約へ追加する。"
+  escape_reason: "Issue #625 の必須 Reverse pairing を draft references として維持し、Forward
+    requires から切り離す。"
 ---
 
 # PLAN-L7-625: Pack公開準備の契約freeze
