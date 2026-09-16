@@ -4384,6 +4384,22 @@
         "revision": 7,
         "content_digest": "sha256:1b6aa397ad9995b717907d3247e02b3bba3d6c4508874b7654f90fd29b388927"
       }
+    },
+    {
+      "sequence": 269,
+      "previous_record_digest": "sha256:eab6a80085339f9d1e07fdfc849ff4d6270b55bdfae4ebf9eaa4f9e346abf4eb",
+      "record_digest": "sha256:1a013b7d78ae97413387dd1bb5df743eb034c21defcfe61d068acc0b2ef4e764",
+      "command_id": "pr641-issue487-review-fix-1789552837752",
+      "receipt_id": "certificate:ed541d255e424fd7f53d4c8638baea80",
+      "receipt_digest": "sha256:d3affdecabf3f92185380f339807747398fedae70c5df8c57087e0fb71734aed",
+      "decision_digest": "sha256:dcfd4f320b127233b54c2c406eca3586f714954ed12ecc57a783d590623ae82b",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-530-bun-final-retirement.md",
+        "plan_id": "PLAN-L7-530-bun-final-retirement",
+        "asset_id": "plan:bc9250c9a7c873dcb9f18956677371f7",
+        "revision": 13,
+        "content_digest": "sha256:b8068f0ec4bef11555de5461d732cff06a1ba262f3f0db20f4d782974ff83264"
+      }
     }
   ]
 }
