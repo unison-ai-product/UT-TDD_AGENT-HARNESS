@@ -1,6 +1,12 @@
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
+  assertCompleteGitHistory,
+  NodeSliceAdmissionError,
+} from "../runtime/node-slice-admission.ts";
+import { classifyRuntimeImageProcess } from "../runtime/runtime-image-observer.ts";
+import { gitObjectIdSchema } from "../schema/node-slice-admission.ts";
+import {
   collectNodeBanFindings,
   loadNodeBanDocuments,
   type NodeBanAuditReceipt,
@@ -12,9 +18,6 @@ import {
   admitNodeGenerationAggregate,
   type NodeGenerationCiEvidence,
 } from "./node-generation-ci-policy.ts";
-import { gitObjectIdSchema } from "../schema/node-slice-admission.ts";
-import { assertCompleteGitHistory, NodeSliceAdmissionError } from "../runtime/node-slice-admission.ts";
-import { classifyRuntimeImageProcess } from "../runtime/runtime-image-observer.ts";
 
 const RAW_REVISION = /^[0-9a-f]{40}$/;
 const PREFIXED_REVISION = /^git-sha1:([0-9a-f]{40})$/;
