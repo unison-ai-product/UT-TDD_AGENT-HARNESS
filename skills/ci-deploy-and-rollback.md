@@ -60,9 +60,9 @@ not after a problem appears.
 All must be green; a failure blocks the deploy.
 
 ```
-bun run lint          # Biome check (full output — do not pipe to tail)
-bun run test          # Vitest
-bun run typecheck     # tsc --noEmit
+npm run lint          # Biome check (full output — do not pipe to tail)
+npm run test          # Vitest
+npm run typecheck     # tsc --noEmit
 ut-tdd doctor         # harness structural health + plan governance
 ut-tdd plan lint      # PLAN schema, steps, dependency existence
 ut-tdd review --uncommitted

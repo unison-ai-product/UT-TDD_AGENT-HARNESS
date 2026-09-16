@@ -108,7 +108,7 @@ to probe:
 5. Record finding in PLAN `review_evidence` with reviewer identity and outcome.
 
 **G4/G5 (trace-freeze — implementation complete):**
-1. `bun run typecheck`, `bun run lint`, `bun run test` all exit 0 on HEAD.
+1. `npm run typecheck`, `npm run lint`, `npm run test` all exit 0 on HEAD.
 2. `ut-tdd doctor` exits 0.
 3. Confirm no `.skip` or `todo` in Vitest scope without PLAN rationale.
 4. Spot-check three test assertions: do they exercise the specified behaviour or

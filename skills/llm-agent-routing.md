@@ -86,7 +86,7 @@ prose) so L6 unit tests can assert against the contract.
 
 ## L7 implementation gates
 
-- `bun run typecheck` clean — no `any` on model-call paths.
+- `npm run typecheck` clean — no `any` on model-call paths.
 - Unit tests cover: normal response, API error / timeout, and context-overflow
   truncation.
 - After implementation, `ut-tdd review --uncommitted`; capture the `model_runs`
