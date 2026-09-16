@@ -36,6 +36,8 @@ generates:
     artifact_type: config
   - artifact_path: bun.lock
     artifact_type: config
+  - artifact_path: bun.lock
+    artifact_type: config
 dependencies:
   parent: docs/plans/PLAN-L7-345-toolchain-pin-gate.md
   requires: []
@@ -90,7 +92,8 @@ A-183 / PLAN-L7-345 は、Biome の semver range が環境ごとの formatter dr
 ## 変更
 
 - `package.json` の `@biomejs/biome` を `2.4.15` に exact pin する。
-- `bun.lock` の workspace devDependency spec も `2.4.15` に揃える。
+- package lock の workspace devDependency spec も `2.4.15` に揃える。Bun lock の物理撤去は
+  PLAN-L7-530 の tuple-bound final retirement により supersede される。
 - `src/lint/toolchain-pin.ts` に package/lock の静的突合を追加する。
 - `src/doctor/toolchain.ts` から doctor check `toolchain-pin` として配線する。
 - `tests/toolchain-pin.test.ts` と `tests/doctor.test.ts` で caret 検出、exact OK、package/lock mismatch、doctor aggregation を固定する。
