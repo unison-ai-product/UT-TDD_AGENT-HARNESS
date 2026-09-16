@@ -14,13 +14,6 @@ export interface TempTreeCleanupDeps {
 }
 
 export function removeTestTree(path: string, deps: TempTreeCleanupDeps = {}): void {
-  const collectGarbage =
-    deps.collectGarbage ??
-    (() => {
-      const bun = (globalThis as { Bun?: { gc?: (force?: boolean) => void } }).Bun;
-      bun?.gc?.(true);
-    });
-  collectGarbage();
   (deps.remove ?? rmSync)(path, {
     recursive: true,
     force: true,
