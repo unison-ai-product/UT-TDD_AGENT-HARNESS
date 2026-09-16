@@ -8,7 +8,7 @@ status: draft
 route_signal: research
 route_mode: research
 created: 2026-09-04
-updated: 2026-09-14
+updated: 2026-09-16
 owner: PO / Claude
 github_issue_id: 530
 pair_artifact: docs/governance/candidates/ut-tdd-concept-v4-acceptance.md
@@ -611,8 +611,12 @@ PO 指示: 「plan 系は手戻りが多くて責務を盛りすぎている。�
 作業前の許可証的な扱いになるから、上位から見たらただの作業チケット」「開発ハーネス上に管理知能を Python で入れて意味分類して
 チケット発行する」「次世代のバージョンになるのだから ADR を絶対に扱う意味がわからない」。
 
-実測 (main `cedee07d`): PLAN 963 件 (REVERSE 211、draft 276)。PLAN-L7-534 は実装着手前に Forward rev 8 + Reverse rev 7。
-PR #574 は実装 test は落ちず PLAN 簿記 (generates / status / review_evidence) で 2 回 CI red (`merged-plan-status`)。
+実測 (main `cedee07d`、2026-09-14): PLAN 964 件 (`git ls-tree -r --name-only cedee07d docs/plans | grep -c '\.md$'`)、
+REVERSE 212 件 (`git ls-tree -r --name-only cedee07d docs/plans | grep -c '^docs/plans/PLAN-REVERSE-'`)、draft 277 件
+(`git grep -l '^status: draft$' cedee07d -- 'docs/plans/*.md' | wc -l`)。PLAN-L7-534 は実装着手前に Forward rev 8 +
+Reverse rev 7。PR #574 の 2 回の CI red のうち 1 回 (2026-09-14、run 34796522901) は実装ではなく PLAN 簿記
+(`merged-plan-status` の generates / status / review_evidence 違反)、もう 1 回 (2026-09-11、run 34596824333) は
+実コードの `coding-rules` 違反 (`src/setup/pack-publication-production-ports.ts:170/279/870` max-source-params) だった。
 PLAN の設計判断・AC・oracle は L1/L3/L4〜L6/test-design の写しであり、固有機能は作業許可である。
 
 advisor 相談 (`ut-tdd advisor --decision design`、claude-fable-5、2026-09-14): 推奨は「管理知能は TS で書く (Python 必然性の実証が

@@ -41,10 +41,15 @@ v3.1 は V-model L0-L14、4 artifact + 3 段階 freeze、9-mode、配線、5 役
    test-design が既に持つ契約 (設計判断・AC・oracle) を写しながら、同じ 1 file に状態機械・PR 分割・所有登録
    (`generates`)・依存・review 証跡台帳・route certificate・Reverse 対を載せている。8 責務が 1 file に集まるため、gate
    (merged-plan-status / duplicate-artifact-ownership / review-evidence / plan-supersession / oracle-test-trace) の
-   どれを触っても同じ file が赤くなり、手戻りが構造化している。実測 (main `cedee07d`、2026-09-14): PLAN 963 件
-   (REVERSE 211、draft 276)、PLAN-L7-534 は実装着手前に Forward rev 8 + Reverse rev 7、PR #574 は実装ではなく
-   PLAN 簿記 (generates / status / review_evidence) だけで CI red を 2 回出した。上位 (管理層) から見れば PLAN の
-   固有機能は「この作業をしてよい」という許可証だけであり、それは作業チケットである。
+   どれを触っても同じ file が赤くなり、手戻りが構造化している。実測 (main `cedee07d`、2026-09-14): PLAN 964 件
+   (`git ls-tree -r --name-only cedee07d docs/plans | grep -c '\.md$'`)、REVERSE 212 件
+   (`git ls-tree -r --name-only cedee07d docs/plans | grep -c '^docs/plans/PLAN-REVERSE-'`)、draft 277 件
+   (`git grep -l '^status: draft$' cedee07d -- 'docs/plans/*.md' | wc -l`)。PLAN-L7-534 は実装着手前に Forward rev 8 +
+   Reverse rev 7。PR #574 の 2 回の CI red のうち 1 回 (2026-09-14、run 34796522901) は実装ではなく PLAN 簿記
+   (`merged-plan-status` の generates / status / review_evidence 違反) で、もう 1 回 (2026-09-11、run 34596824333) は
+   実コードの `coding-rules` 違反 (`src/setup/pack-publication-production-ports.ts:170/279/870` max-source-params) であり
+   PLAN 簿記ではなかった。上位 (管理層) から見れば PLAN の固有機能は「この作業をしてよい」という許可証だけであり、それは
+   作業チケットである。
 
 本書は PO が提示した個人開発ハーネスの構想 v4.0 候補 (Verified Change Operating System) から、**チーム開発に必要な部分だけ**を翻案する。参照元の 8 Plane のうち、Sovereignty / Change Contract Compiler /
 Control Plane / Assurance Kernel / Evidence Ledger / Adaptation を採り、Execution Plane の provider 非依存 lane と
@@ -156,7 +161,7 @@ v3.1 の doctor / plan lint / review custody / exact-HEAD receipt をそのま�
 |---|---|---|
 | Requirement / 設計 / Policy | 意味 authority | markdown + typed spec block |
 | 契約 (旧 PLAN の設計判断・AC・oracle) | 上位設計文書の revision が持つ (PLAN に写さない) | markdown + typed spec block + revision digest |
-| PLAN (既存 963 件) | readonly 参照 (新規発行停止、変換しない) | markdown (凍結) |
+| PLAN (既存 964 件) | readonly 参照 (新規発行停止、変換しない) | markdown (凍結) |
 | チケット / schedule / verdict / receipt / evidence | 境界付き record | 1 record = 1 JSON/YAML file |
 | Git commit / tree | 成果物の事実 | Git |
 | GitHub / event journal | 協調・実行の事実 | projection |
@@ -414,19 +419,19 @@ record) を意味分類し、責務単位のチケットを発行して下へ配
 
 | 論点 | 方式 |
 |---|---|
-| PLAN の扱い | **新規発行を停止する**。PLAN が担っていた 8 責務は、契約 = 上位設計文書 revision、許可・状態・順序・owner・lease・allowed path = チケット record、review 証跡 = receipt record、所有登録 = チケットの allowed path 集合、Reverse 対 = backflow record へ分解する。既存 963 PLAN は変換せず readonly 参照 (graph projection の入力としては残す)。 |
+| PLAN の扱い | **新規発行を停止する**。PLAN が担っていた 8 責務は、契約 = 上位設計文書 revision、許可・状態・順序・owner・lease・allowed path = チケット record、review 証跡 = receipt record、所有登録 = チケットの allowed path 集合、Reverse 対 = backflow record へ分解する。既存 964 PLAN は変換せず readonly 参照 (graph projection の入力としては残す)。 |
 | チケット record の最小項目 | 発行元 (管理知能 / 管理層 / 手発行 + 理由)、階層 (大・中・小・原子) と exactly-one parent、参照契約 (設計文書 id + revision digest、複数可)、owner と lease、allowed path、依存チケット、完了条件 (receipt の exact join: oracle green + 独立 review + CI generation + main read-after)、budget。設計判断・AC・oracle 本文は持たない。 |
 | 作業中の設計判断 | チケットに書かない。設計文書側の改訂 (pair-freeze) へ戻し、改訂後の revision digest を参照し直す。契約に無い方式が必要になったら実装を止めて上位へ戻る (方式の場当たり発明の禁止をそのまま継承)。 |
 | 管理知能の位置 | 実行系とは**別プロセス** (Python)。入出力は typed JSON (schema は Change Contract Compiler が所有)。管理知能は分類と発行の候補を出す層であり、**信頼根ではない**: 出力チケットは Assurance Kernel (TypeScript) が schema・親子整合・参照 digest の実在・owner/lease 衝突・allowed path 重複を検証してから有効化する。検証を通らない発行は deny + write-0。 |
 | 管理知能の内部 | 意味分類器 (要求 → 責務、設計 typed block → path 群と依存、FLAG / incident → 是正チケット、実録 → 判断 record の校正)、順序予測 (planner、提案のみ)、発行 (dispatcher、lease を伴う actual 発行)。compiler / planner / dispatcher の責務分離は roadmap v2.0 (`v4-roadmap/execution/02_PR517_INTEGRATION.md` 主要条件 2、`workstreams/01_SCHEDULING.md`) を継承し、予測だけで claim・lease・merge をしない。LLM 判断は judgement record として蓄積し、繰り返す分類は安価な分類器 / 決定的 check へ機械判断化する (§判断の蓄積と機械判断化)。 |
 | 着手前検査 (PO 確認 2026-09-14) | チケット発行時に 3 層で着手前検査を行い、結果をチケットに添えて admission の入力にする。(1) **影響範囲 = 機械が決定的に出す** (Kernel 側): allowed path、参照契約 digest、harness.db graph (`graph_nodes` / `dependency_edges`)、他チケットの lease から、触れる契約 id 群・依存下流チケット・path 重複する並行チケット・backflow 候補を影響 record として出す。LLM の推測は入れない。projection の鮮度 digest を record に刻み、stale なら着手 deny (stale graph は「影響なし」の偽の否定証明を出す。issue #169 の実例)。(2) **意味齟齬 = 管理知能 (AI) が finding として出す**: 参照契約と上位要求の意図のずれ、並行チケット間の契約解釈の矛盾、契約に無い方式の前提、影響 record に無い暗黙依存を discrepancy record (FR-047 のチケット単位化) として出す。AI 判定はそれ自体を gate にせず judgement record として蓄積し、繰り返す類型を分類器 / 決定的 check へ機械判断化する。既定の対象は小 (= PR) 以上の発行時と、影響が中以上へ跨ぐとき。(3) **着手承認 = 人間の batch admission**: 影響 record + finding を owner へ提示し、影響が中以上へ跨ぐもの・finding ありのものだけ個別に見る。承認なしの lease 発行は deny。三者分離の admitter 入力をそのまま拡張し、新 engine は建てない (起点: 既存 graph projection、FR-047、`refactor-scout` の検出責務)。 |
 | 発行の層別勾配 | §Control Plane の勾配を継承する: L0〜L3 は人が発行・割当 (管理知能は候補起草まで)、L4 は文書 1 名、L5 以下は管理知能の発行が既定。人は batch admission と人間 owner 割当のみ。 |
-| 移行 | プレリリース本線 (R00) の残 PR は現行 PLAN gate で閉じる。その後 4 段階: (1) チケット record schema と発行経路を PLAN と併存導入、(2) 新規作業をチケット側へ切替、(3) gate の読み先を PLAN frontmatter からチケット + receipt + 設計文書 digest へ差し替え、(4) PLAN 新規発行停止を宣言。許可証の空白期間 (どちらの gate も効かない区間) を作らない。MIG-04 / MIG-07 / MIG-14 (`v4-roadmap/migration/00_REPLACEMENT_MATRIX.md`) をこの順序へ寄せる。 |
+| 移行 | プレリリース本線 (R00) の残 PR は現行 PLAN gate で閉じる。その後 4 段階: (1) チケット record schema と発行経路を PLAN と併存導入 (gate はまだ PLAN frontmatter のみを読む)、(2) gate の読み先を PLAN frontmatter 単独からチケット + receipt + 設計文書 digest との**双方受理**へ拡張する (この時点で gate は PLAN とチケットの両方を許可証として認識できる)、(3) gate が両方を読める状態のまま新規作業をチケット側へ切替する (作業の切替より前に gate 側の受理を広げているため、どちらの gate も効かない空白区間が生じない)、(4) PLAN 新規発行停止を宣言。許可証の空白期間 (どちらの gate も効かない区間) を作らない。MIG-04 / MIG-07 / MIG-14 (`v4-roadmap/migration/00_REPLACEMENT_MATRIX.md`) をこの順序へ寄せる。 |
 | 版への割付 (PO 指示 2026-09-14) | **R03 (共通 JSON 正本化) で土台を作る**: MIG-04 の「PLAN frontmatter の record 化」は PLAN を延命する変換ではなく、**チケット発行側の土台** (チケット record schema、参照契約 digest、owner / lease、allowed path、reader / writer / validator / authority 更新 / 回復) として実装する。同じ R03 で**管理知能の要件定義** (L1 要求: 意味分類の対象と責務、発行の層別勾配、信頼根にしない境界。L3 要件: 入出力 JSON 契約、Kernel 検証項目、判断 record と校正、compiler / planner / dispatcher の責務分離) を行い、実装はしない。R04 で planner (順序予測、提案のみ) を shadow 運用し、R05 で dispatcher (lease を伴う actual 発行) を有効化して PLAN 新規発行停止を宣言する (段階 (4))。R03 の入口で「現行 PLAN の項目のうち gate が実際に消費する項目」を実測し、**PLAN をどこまで短縮しても成立するか**を確定してチケット最小項目の上限とする (推測で項目を設計しない)。 |
 
 不変条件への追加: 「PLAN を新規発行しない。作業許可はチケット record のみが与え、契約はチケットではなく設計文書 revision が持つ」
-(§システム不変条件 11)。ADR-001 (TypeScript/Node 一本) は実行系の決定として継承し、管理知能層 (Python) は v4 昇格時の新 ADR が
-ADR-001 を supersede する。設計判断の経緯 (advisor 相談と override 根拠) は PLAN-L1-09 §3.25 に記録する。
+(§システム不変条件 11)。ADR-001 (TypeScript/Node 一本) は実行系 (hook / CLI / gate / 検証) の決定として継承し、
+管理知能層 (Python) はその限定の外に置く。この二言語構成は v4 昇格時の新 ADR が ADR-001 を supersede して確定する。設計判断の経緯 (advisor 相談と override 根拠) は PLAN-L1-09 §3.25 に記録する。
 
 ## 正規情報 flow
 
@@ -462,10 +467,11 @@ ADR-001 を supersede する。設計判断の経緯 (advisor 相談と override
 
 ## v3.1 資産の移行
 
-PLAN (docs/plans、963 件) は新規発行を停止し、既存分は readonly 参照として凍結する (§管理知能とチケット発行)。PLAN が担っていた
+PLAN (docs/plans、964 件) は新規発行を停止し、既存分は readonly 参照として凍結する (§管理知能とチケット発行)。PLAN が担っていた
 許可・状態・順序・所有・証跡はチケット record と receipt record へ、契約は上位設計文書 revision へ移る。
 L0-L14 と正規 V-pair、Forward / Reverse / Recovery、9-mode と routeFiling SSoT、fail-close、cross-family
-review、TypeScript/Node 一本 (ADR-001)、Pack 配布 (PLAN-L6-63 系) は Kernel / Control Plane へ継承する。
+review、TypeScript/Node 一本 (ADR-001、実行系 = Kernel / Execution に限定。管理知能層 (Python) は例外)、
+Pack 配布 (PLAN-L6-63 系) は Kernel / Control Plane へ継承する。
 §9 の 5 役割は Sovereignty Plane の層別境界表と統合する。旧 Bun runtime、personal legacy path、memory 中心の
 継続、宣言のみの evidence は current identity として再出力しない。
 
