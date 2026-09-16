@@ -158,12 +158,21 @@ function assertCompleteGitHistory(repoRoot: string, commits: readonly string[]):
     if (error instanceof HistoryIncompleteError) throw error;
   }
   try {
-    if (
-      git(["config", "--get-regexp", "^(remote\\..*\\.promisor|extensions\\.partialclonefilter)"])
-    )
-      throw new HistoryIncompleteError("history_incomplete");
+    const promisor = execFileSync(
+      "git",
+      [
+        "-C",
+        repoRoot,
+        "config",
+        "--get-regexp",
+        "^(remote\\..*\\.promisor|extensions\\.partialclonefilter)",
+      ],
+      { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
+    ).trim();
+    if (promisor) throw new HistoryIncompleteError("history_incomplete");
   } catch (error) {
     if (error instanceof HistoryIncompleteError) throw error;
+    // git config exits 1 when no promisor configuration exists.
   }
   for (const commit of commits) {
     try {

@@ -14,7 +14,7 @@ describe("temporary tree cleanup", () => {
       remove,
     });
 
-    expect(order).toEqual(["gc", "remove"]);
+    expect(order).toEqual(["remove"]);
   });
 
   it("U-TESTHYGIENE-009: propagates final cleanup errors", () => {

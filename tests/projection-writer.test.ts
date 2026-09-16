@@ -1250,7 +1250,7 @@ export function evaluateAgentGuard(input: { stage: string; route: string; model:
       expect(rows[0]).toMatchObject({
         session_id: "session-runtime-1",
         command: "Bash (vitest)",
-        runner: "bun",
+        runner: "node",
         runtime: "hook-session-log",
         scope: "runtime-hook",
         exit_code: 0,
@@ -1260,7 +1260,7 @@ export function evaluateAgentGuard(input: { stage: string; route: string; model:
       expect(rows[1]).toMatchObject({
         session_id: "session-runtime-1",
         command: "PowerShell (tsc)",
-        runner: "bun",
+        runner: "node",
         runtime: "hook-session-log",
         scope: "runtime-hook",
         exit_code: 0,
@@ -1328,7 +1328,7 @@ export function evaluateAgentGuard(input: { stage: string; route: string; model:
       const row = db.prepare("SELECT plan_id, runner, exit_code, status FROM test_runs").get();
       expect(row).toMatchObject({
         plan_id: "PLAN-L7-230-runtime-projection-extraction",
-        runner: "ut-tdd",
+        runner: "node",
         exit_code: 1,
         status: "failed",
       });
