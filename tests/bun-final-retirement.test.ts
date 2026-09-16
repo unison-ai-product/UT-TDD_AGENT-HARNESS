@@ -11,7 +11,7 @@ import {
   BunRetirementError,
   type BunRetirementInput,
   collectFinalGuardSurfaceIndex,
-} from "../src/runtime/bun-final-retirement.ts";
+} from "../src/lint/bun-final-retirement.ts";
 import {
   classifyRuntimeImageProcess,
   NodeOnlyProcessObserver,
