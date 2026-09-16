@@ -91,7 +91,7 @@ export function projectRuntimeTestRunFromSessionEvent(input: RuntimeTestRunProje
       session_id: event.session_id,
       plan_id: planId,
       command: event.target ?? `${event.tool} (${verb})`,
-      runner: verb === "doctor" ? "ut-tdd" : "bun",
+      runner: "node",
       runtime: "hook-session-log",
       os: "",
       shell,

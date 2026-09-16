@@ -1,0 +1,163 @@
+import { execFileSync } from "node:child_process";
+import { describe, expect, it } from "vitest";
+import {
+  type NodeBanDocuments,
+  type NodeBanF0cAggregateBinding,
+  type NodeBanGenerationBinding,
+  runNodeBanAudit,
+} from "../src/lint/bun-permanent-ban.ts";
+import {
+  admitFinalBunRetirement,
+  BunRetirementError,
+  type BunRetirementInput,
+  collectFinalGuardSurfaceIndex,
+} from "../src/runtime/bun-final-retirement.ts";
+import {
+  classifyRuntimeImageProcess,
+  NodeOnlyProcessObserver,
+} from "../src/runtime/runtime-image-observer.ts";
+import { gitObjectIdSchema } from "../src/schema/node-slice-admission.ts";
+
+const subject = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
+const digest = `sha256:${"a".repeat(64)}`;
+const f0c: NodeBanF0cAggregateBinding = {
+  ok: true,
+  schema_version: "node-generation-aggregate.v1",
+  generation_id: "node-ci-retirement-run-1",
+  artifact_digest: digest,
+  subject_revision: subject,
+  workflow_revision: subject,
+  run_id: "retirement-run-1",
+  run_attempt: 1,
+};
+const f0b: NodeBanGenerationBinding = {
+  lane: "linux",
+  generation_id: "node-sealed-retirement-1",
+  subject_revision: subject,
+  artifact_digest: digest,
+  receipt_digest: "b".repeat(64),
+  runtime: "node",
+};
+const lanes = ["linux", "windows"].map((lane) => ({
+  schema_version: "node-generation-ci.v1" as const,
+  lane: lane as "linux" | "windows",
+  generation_id: f0c.generation_id,
+  sealed_generation_id: `node-${lane}`,
+  artifact_digest: digest,
+  subject_revision: subject,
+  workflow_revision: subject,
+  run_id: f0c.run_id,
+  run_attempt: f0c.run_attempt,
+  conclusion: "success" as const,
+}));
+const documents = (): NodeBanDocuments => ({
+  runtime: [{ path: "src/clean.ts", text: "export const clean = true;" }],
+  workflows: [
+    {
+      file: ".github/workflows/clean.yml",
+      content: "name: clean",
+      profile: "source",
+      role: "runtime",
+    },
+  ],
+  instructions: {
+    agents: "shared",
+    claudeProject: "shared",
+    claudeRuntime: "shared",
+    instructionSurfaces: { "status.md": "status" },
+  },
+  toolchain: {
+    packageJson: JSON.stringify({}),
+    bunLock: null,
+    packageLock: JSON.stringify({ lockfileVersion: 3, packages: { "": {} } }),
+    nodeVersion: "24.13.0",
+  },
+  debtBaseline: "schema_version: bun-migration-debt.v1\ninventory: []\n",
+});
+function q0Receipt() {
+  const observer = new NodeOnlyProcessObserver();
+  for (const [scope, args] of [
+    ["status", ["status"]],
+    ["doctor", ["doctor"]],
+    ["test", ["test"]],
+    ["hook", ["hook"]],
+  ] as const)
+    observer.inspect(
+      { command: process.execPath, args, options: { shell: false, windowsHide: true } },
+      scope,
+    );
+  observer.proveNoFallback("descendant", "none");
+  observer.proveNoFallback("download", "none");
+  return runNodeBanAudit({
+    repoRoot: process.cwd(),
+    subjectRevision: subject,
+    f0c,
+    node: f0b,
+    f0cLanes: lanes,
+    documents: documents(),
+    processObservations: observer.snapshot(),
+    observedScopes: ["status", "doctor", "test", "hook", "descendant", "download"],
+    classifyProcess: classifyRuntimeImageProcess,
+  }).receipt;
+}
+function cleanInput(overrides: Partial<BunRetirementInput> = {}): BunRetirementInput {
+  return {
+    repoRoot: process.cwd(),
+    f0b,
+    f0c,
+    q0: q0Receipt(),
+    f0cLanes: lanes,
+    retirementSubject: subject,
+    surfaces: collectFinalGuardSurfaceIndex(),
+    ...overrides,
+  };
+}
+
+describe("CAND-NODEBOOT-023/027/028/208 final Bun retirement", () => {
+  it("accepts the complete existing F0b/F0c/Q0 chain and emits prefixed tuple ids", () => {
+    const result = admitFinalBunRetirement(cleanInput());
+    expect(result.ok).toBe(true);
+    expect(gitObjectIdSchema.safeParse(result.tuple.subject_revision).success).toBe(true);
+    expect(result.tuple.subject_revision).toBe(`git-sha1:${subject}`);
+    expect(result.tuple.retirement_subject).toBe(`git-sha1:${subject}`);
+  });
+
+  it.each([
+    ["F0b missing", { f0b: null }, "f0b_receipt_missing"],
+    ["F0c missing", { f0c: null }, "f0c_receipt_missing"],
+    ["Q0 missing", { q0: null }, "q0_receipt_missing"],
+    [
+      "stale retirement subject",
+      { retirementSubject: `git-sha1:${"c".repeat(40)}` },
+      "retirement_subject_mismatch",
+    ],
+    [
+      "wrong artifact",
+      { f0c: { ...f0c, artifact_digest: `sha256:${"c".repeat(64)}` } },
+      "artifact_digest_mismatch",
+    ],
+  ] as const)("denies %s without production admission", (_label, mutation, reason) => {
+    expect(() => admitFinalBunRetirement(cleanInput(mutation))).toThrow(
+      new BunRetirementError(reason),
+    );
+  });
+
+  it.each([
+    "reachable_production",
+    "indeterminate",
+  ] as const)("denies %s surfaces", (classification) => {
+    expect(() =>
+      admitFinalBunRetirement(
+        cleanInput({
+          surfaces: [{ path: "src/cli.ts", symbol: "entry", classification }],
+        }),
+      ),
+    ).toThrow(BunRetirementError);
+  });
+
+  it("denies an empty inventory rather than treating missing evidence as clean", () => {
+    expect(() => admitFinalBunRetirement(cleanInput({ surfaces: [] }))).toThrow(
+      new BunRetirementError("indeterminate_bun_surface"),
+    );
+  });
+});

@@ -225,7 +225,7 @@ export const BUILTIN_GITHUB_TEMPLATES: TemplateSet = {
     "*.bat text eol=crlf",
     "",
     "# Binaries / lockfiles",
-    "bun.lockb binary",
+    "package-lock.json binary",
     "*.png binary",
     "*.jpg binary",
     "*.ico binary",
