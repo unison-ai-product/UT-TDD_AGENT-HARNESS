@@ -1,14 +1,14 @@
-# memory curation ledger 2026-09 (Issue #424 PR-2)
+# legacy memory corpus 採否台帳 2026-09 (Issue #424 PR-2)
 
 legacy memory corpus (PLAN-L6-104 §3.1 判断 6 / 7) の採否台帳。自動分類は候補提示にだけ使い、採用は 6 基準を全て満たす entry に限る。
 採用 entry は `ut-tdd memory add` で 1 件ずつ canonical root へ登録し、その registration receipt の digest を行に束縛する。
 untracked source は内容 digest と opaque な local-archive custody id だけを記録し、path・title・本文は書かない。
 
-- schema: `ut-tdd.memory-curation-ledger/v1`
-- base commit: `3a516df69cff073ebddbf90f4ee2b939c451ba82`
-- author: `claude-sonnet-5` (claude)
-- reviewer: 未記録 (非著者 frontier review の receipt を待つ)
-- rows: 1032 (tracked 607 / untracked 425)、adopt 46、reject 986、merged_from 5
+- スキーマ: `ut-tdd.memory-curation-ledger/v1`
+- 基準 commit (PR-2 base): `3a516df69cff073ebddbf90f4ee2b939c451ba82`
+- 著者 (author family): `claude-sonnet-5` (claude)
+- 非著者 reviewer: 未記録 (非著者 frontier review の receipt を待つ)
+- 行数: 1032 件 (tracked 607 / untracked 425)、採用 (adopt) 46 件、不採用 (reject) 986 件、統合元 (merged_from) 5 件
 
 ## 6 基準
 
@@ -21,7 +21,7 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
 
 機械照合は `tests/memory-curation-ledger.test.ts` (U-MEMCUT-024〜028) が `MANIFEST.json` と canonical root に対して行う。
 
-## 台帳 (machine section)
+## 台帳本体 (機械照合用 JSON)
 
 ```json ut-tdd-memory-curation-ledger
 {
