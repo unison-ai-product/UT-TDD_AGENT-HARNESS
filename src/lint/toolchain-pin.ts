@@ -2,10 +2,9 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 export const NODE_TOOLCHAIN_POLICY = {
-  phase: "node_candidate",
-  nodeAuthority: "candidate",
-  bunAuthority: "legacy_migration_debt",
-  executableReceipt: "deferred_to_f0b",
+  phase: "node_production",
+  nodeAuthority: "sealed",
+  executableReceipt: "required",
   nodeVersion: "24.13.0",
   npmVersion: "11.6.2",
   npmIntegrity:
@@ -16,7 +15,7 @@ export const NODE_TOOLCHAIN_POLICY = {
 
 export interface ToolchainPinDocs {
   packageJson: string | null;
-  bunLock: string | null;
+  bunLock?: string | null;
   packageLock?: string | null;
   nodeVersion?: string | null;
 }
@@ -37,6 +36,7 @@ export interface ToolchainPinViolation {
     | "npm-lock-version-mismatch"
     | "npm-lock-root-drift"
     | "esbuild-version-mismatch"
+    | "bun-lock-present"
     | "bun-direct-parity-drift"
     | "runtime-authority-ambiguous";
   detail: string;
@@ -87,6 +87,19 @@ function packageBiomeSpec(packageJson: string | null): string | null {
 
 function lockWorkspaceSpec(lockText: string | null, packageName: string): string | null {
   if (!lockText) return null;
+  try {
+    const parsed = JSON.parse(lockText) as {
+      packages?: Record<
+        string,
+        { dependencies?: Record<string, unknown>; devDependencies?: Record<string, unknown> }
+      >;
+    };
+    const root = parsed.packages?.[""];
+    const value = root?.devDependencies?.[packageName] ?? root?.dependencies?.[packageName];
+    if (typeof value === "string") return value;
+  } catch {
+    // Historical lock text is not authoritative.
+  }
   const workspace = lockText.match(/"workspaces"\s*:\s*\{[\s\S]*?\n\s*\},\n\s*"packages"/)?.[0];
   const escaped = packageName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   return (workspace ?? lockText).match(new RegExp(`"${escaped}"\\s*:\\s*"([^"]+)"`))?.[1] ?? null;
@@ -110,8 +123,11 @@ export function analyzeToolchainPin(docs: ToolchainPinDocs): ToolchainPinResult 
       ? ((npmLock.packages as Record<string, unknown>)[""] as Record<string, unknown> | undefined)
       : undefined;
   const packageSpec = packageBiomeSpec(docs.packageJson);
-  const lockSpec = lockWorkspaceSpec(docs.bunLock, BIOME_PACKAGE);
+  const lockSpec = lockWorkspaceSpec(docs.packageLock ?? null, BIOME_PACKAGE);
   const violations: ToolchainPinViolation[] = [];
+
+  if (docs.bunLock)
+    violations.push({ rule: "bun-lock-present", detail: "bun.lock must remain physically absent" });
 
   if (!packageSpec) violations.push({ rule: "biome-package-spec-missing", detail: BIOME_PACKAGE });
   else if (!EXACT_VERSION.test(packageSpec))
@@ -172,29 +188,36 @@ export function analyzeToolchainPin(docs: ToolchainPinDocs): ToolchainPinResult 
   }
 
   const packageDirect = allDirect(manifest ?? {});
-  const bunDirect = Object.fromEntries(
-    Object.keys(packageDirect).map((name) => [name, lockWorkspaceSpec(docs.bunLock, name) ?? ""]),
-  );
-  if (!sameMap(packageDirect, bunDirect))
-    violations.push({
-      rule: "bun-direct-parity-drift",
-      detail: "package.json/bun.lock direct graph",
-    });
+  const lockDirect = npmRoot ? allDirect(npmRoot) : {};
+  // Keep the historical Bun parity detector for synthetic/retained fixtures,
+  // but do not require a retired bun.lock in the production toolchain.
+  if (docs.bunLock) {
+    const bunDirect = Object.fromEntries(
+      Object.keys(packageDirect).map((name) => [
+        name,
+        lockWorkspaceSpec(docs.bunLock ?? null, name) ?? "",
+      ]),
+    );
+    if (!sameMap(packageDirect, bunDirect))
+      violations.push({
+        rule: "bun-direct-parity-drift",
+        detail: "package.json/bun.lock direct graph",
+      });
+  }
   if (
     packageDirect.esbuild !== NODE_TOOLCHAIN_POLICY.esbuildVersion ||
     (npmRoot ? allDirect(npmRoot).esbuild : null) !== NODE_TOOLCHAIN_POLICY.esbuildVersion ||
-    bunDirect.esbuild !== NODE_TOOLCHAIN_POLICY.esbuildVersion
+    lockDirect.esbuild !== NODE_TOOLCHAIN_POLICY.esbuildVersion
   )
     violations.push({
       rule: "esbuild-version-mismatch",
-      detail: "esbuild must be exact across graphs",
+      detail: "esbuild must be exact across the npm graph",
     });
 
   const authority = manifest?.utTdd?.nodeToolchain;
   if (
     authority?.phase !== NODE_TOOLCHAIN_POLICY.phase ||
     authority?.nodeAuthority !== NODE_TOOLCHAIN_POLICY.nodeAuthority ||
-    authority?.bunAuthority !== NODE_TOOLCHAIN_POLICY.bunAuthority ||
     authority?.executableReceipt !== NODE_TOOLCHAIN_POLICY.executableReceipt
   )
     violations.push({

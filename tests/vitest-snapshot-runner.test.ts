@@ -23,7 +23,7 @@ import {
   finishSnapshotCleanup,
   measureSnapshotStage,
   removeSnapshot,
-  resolveBunBinary,
+  resolveNodeBinary,
   resolveSnapshotSource,
   runSnapshotTests,
   sealReference,
@@ -91,19 +91,8 @@ describe("vitest snapshot runner", () => {
     expect(writes).toEqual(["snapshot-stage first 12.3ms\n", "snapshot-stage second 12.3ms\n"]);
   });
 
-  it("U-TESTHYGIENE-047: resolves the Bun executable rather than inheriting a Vitest worker Node binary", () => {
-    expect(
-      resolveBunBinary(
-        { which: () => "/runtime/bun.cmd" },
-        { isBun: true, executable: "/native/bun" },
-      ),
-    ).toBe("/native/bun");
-    expect(
-      resolveBunBinary(
-        { which: () => "/runtime/bun" },
-        { isBun: false, executable: "/runtime/node" },
-      ),
-    ).toBe("/runtime/bun");
+  it("U-TESTHYGIENE-047: resolves only the current Node executable", () => {
+    expect(resolveNodeBinary("/runtime/node")).toBe("/runtime/node");
     expect(readFileSync(join(process.cwd(), "scripts/run-vitest-snapshot.ts"), "utf8")).toContain(
       "windowsHide: true",
     );
