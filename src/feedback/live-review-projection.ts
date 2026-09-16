@@ -1,11 +1,15 @@
 import { lstatSync, readFileSync } from "node:fs";
 import { isAbsolute, normalize, resolve } from "node:path";
-import type {
-  ClaudeProviderReviewInboxEntry,
-  ClaudeReviewInboxEntry,
-} from "../runtime/claude-memory-wake.ts";
-
-type ClaudeReviewEnvelopeEntry = ClaudeReviewInboxEntry | ClaudeProviderReviewInboxEntry;
+/** Minimum envelope identity consumed here; keep feedback independent from runtime modules. */
+interface ClaudeReviewEnvelopeEntry {
+  readonly memoryId: string;
+  readonly requestDigest: string;
+  readonly requestPath: string;
+  readonly pr: number;
+  readonly exactHead: string;
+  readonly reviewRevision: string;
+  readonly authorFamily: "codex" | "claude";
+}
 
 import type {
   ReviewAttestation,
