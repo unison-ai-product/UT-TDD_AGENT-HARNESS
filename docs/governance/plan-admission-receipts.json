@@ -3984,6 +3984,22 @@
         "revision": 4,
         "content_digest": "sha256:681847898234e3d840b1f6d18204054b3c9a366b1992922df8f28c80a0b87546"
       }
+    },
+    {
+      "sequence": 250,
+      "previous_record_digest": "sha256:d85f8b135c1ba40705c24b2ed2e350e955cd6fb6607c8ca161aed0fe75122795",
+      "record_digest": "sha256:27ef011d36ab55a6912415bb6b0c62f7b33ae4e639a04951ceb77d81de5d4d48",
+      "command_id": "plan-revise:issue-424:legacy-512:8",
+      "receipt_id": "certificate:4444faedd7733ce1dfe654604296a5f0",
+      "receipt_digest": "sha256:d14dc2e05cdf0a939aa52eb960b477480ff868e5c4bf1b10a8fe5f5cd9f31609",
+      "decision_digest": "sha256:2a1df69cbbded270c50e52b16b80ec8304570e898b26e67f3da421a98882ac5a",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-512-project-scoped-memory-root.md",
+        "plan_id": "PLAN-L7-512-project-scoped-memory-root",
+        "asset_id": "plan:legacy:68706e293ae2c96738a8e3263bac3e01e7cde64cdb7c3ed8e53805922662bc30",
+        "revision": 8,
+        "content_digest": "sha256:5d56d6618b106d585dc6d662b19db0e777ab3d4b617b1899ee9f94df81736aa2"
+      }
     }
   ]
 }

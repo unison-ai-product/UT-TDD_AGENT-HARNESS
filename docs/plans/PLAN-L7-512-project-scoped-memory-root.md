@@ -31,10 +31,6 @@ generates:
     artifact_type: source_module
   - artifact_path: tests/project-memory-root.test.ts
     artifact_type: test_code
-  - artifact_path: src/runtime/project-memory-migration.ts
-    artifact_type: source_module
-  - artifact_path: tests/project-memory-migration.test.ts
-    artifact_type: test_code
   - artifact_path: tests/project-memory-pack-parity.test.ts
     artifact_type: test_code
 dependencies:
@@ -210,18 +206,18 @@ status: confirmed
 github_issue_id: 544
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:d1c827ae9693b1f1b7702f609b773526
-  command_id: plan-revise:issue-424:legacy-512:7
-  admitted_at: 2026-09-16T01:33:20.050Z
-  source_digest: sha256:bc545df7ce01902776ca8cb1056eab057150be61dea337221f68bb058ef02ac8
-  decision_digest: sha256:808ba40862fe325bb47512265345b2ca744cb3e9b133f5196b800388b48ecb3e
-  receipt_digest: sha256:e0062f93659688caa5ba77dca4962184c9bf281484a557508328e9cff6449525
+  receipt_id: certificate:4444faedd7733ce1dfe654604296a5f0
+  command_id: plan-revise:issue-424:legacy-512:8
+  admitted_at: 2026-09-16T03:38:30.858Z
+  source_digest: sha256:5d56d6618b106d585dc6d662b19db0e777ab3d4b617b1899ee9f94df81736aa2
+  decision_digest: sha256:2a1df69cbbded270c50e52b16b80ec8304570e898b26e67f3da421a98882ac5a
+  receipt_digest: sha256:d14dc2e05cdf0a939aa52eb960b477480ff868e5c4bf1b10a8fe5f5cd9f31609
   binding:
     path: docs/plans/PLAN-L7-512-project-scoped-memory-root.md
     plan_id: PLAN-L7-512-project-scoped-memory-root
     asset_id: plan:legacy:68706e293ae2c96738a8e3263bac3e01e7cde64cdb7c3ed8e53805922662bc30
-    revision: 7
-    content_digest: sha256:bc545df7ce01902776ca8cb1056eab057150be61dea337221f68bb058ef02ac8
+    revision: 8
+    content_digest: sha256:5d56d6618b106d585dc6d662b19db0e777ab3d4b617b1899ee9f94df81736aa2
   route:
     signal: feature_addition
     mode: add-feature
@@ -239,13 +235,11 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-512-project-scoped-memory-root
-    target_revision: 7
+    target_revision: 8
     phase: forward_merge
-  escape_reason: "Issue #424 correction: the Slice 4
-    migration/inventory/quarantine/recovery/completion clauses and the two
-    migration generates entries are superseded by PLAN-L6-104; this revision
-    also absorbs the non-canonical direct edit 6efae246 from ledger rev 6
-    without retroactively canonizing it"
+  escape_reason: "Issue #424 PR-1 (PLAN-L6-104 section 5): the Slice 4 migration
+    module and its test are deleted, so the two generates entries that named
+    them are removed from this PLAN; no other clause changes"
 ---
 
 # PLAN-L7-512: project-scoped canonical Memory and notification root
@@ -304,6 +298,10 @@ transient notification busとして共有する。絶対pathはidentityに含め
 本改訂はIssue #544のSlice 4aだけを所有し、linked worktree inventoryと
 unique / dedupe / conflictの決定論的分類をruntime境界で実装する。canonical apply、quarantine transaction、
 crash recovery、completion marker、Pack parityは後続へ残す。
+
+rev 8 (Issue #424 PR-1、2026-09-16): `PLAN-L6-104-memory-clean-cut-replacement` §5 PR-1 により、Slice 4 の
+実装 `src/runtime/project-memory-migration.ts` と `tests/project-memory-migration.test.ts` を削除し、本 PLAN の
+`generates` から同 2 件を外した。Slice 4 は本 PLAN では実装しない (supersede の範囲は rev 7 の注記のとおり)。
 
 ## 4. Scope boundary
 
