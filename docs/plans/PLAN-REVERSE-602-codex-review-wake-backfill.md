@@ -1,5 +1,5 @@
 ---
-plan_id: PLAN-REVERSE-600-codex-review-wake-backfill
+plan_id: PLAN-REVERSE-602-codex-review-wake-backfill
 title: "PLAN-REVERSE-600: Codex review wake backfill"
 kind: reverse
 layer: cross
@@ -22,11 +22,12 @@ agent_slots:
   - role: qa
     slot_label: QA - candidate 昇格と未実装境界を独立照合する
 generates:
-  - artifact_path: docs/plans/PLAN-REVERSE-600-codex-review-wake-backfill.md
+  - artifact_path: docs/plans/PLAN-REVERSE-602-codex-review-wake-backfill.md
     artifact_type: markdown_doc
 dependencies:
   parent: docs/plans/PLAN-L7-600-codex-review-wake-impl.md
-  requires: []
+  requires:
+    - docs/plans/PLAN-L7-600-codex-review-wake-impl.md
   blocks: []
   references:
     - docs/plans/PLAN-L6-600-codex-review-wake-contract.md
@@ -39,18 +40,18 @@ status: draft
 github_issue_id: 600
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:15253ab2eb11638f0ca325f294252b4f
-  command_id: plan-draft:issue-600:codex-review-wake-backfill:1
-  admitted_at: 2026-09-16T19:05:00+09:00
-  source_digest: sha256:6a19e10b05a9b275645c9b9aee3d806dc4a032272358c62391d7600649a1d06f
-  decision_digest: sha256:34b5e30c5b28d164f8be1e414ee9177d266867907ea239c1fc1812f504f76aa0
-  receipt_digest: sha256:194ed1fb4fe6b1c7dfded9f1c091b57b6b127eb6bd0a9c60b9cecb6e4d9bcce7
+  receipt_id: certificate:97d42b4d658cdf05a5032c88d21154b0
+  command_id: plan-draft:issue-600:codex-review-wake-backfill:602:1
+  admitted_at: 2026-09-16T19:25:00+09:00
+  source_digest: sha256:7cf9176314e448798dfc7c72f835d54f02eb1f728163c4e3d2592aa3ea67a5ae
+  decision_digest: sha256:87e0d673044ed2a135ac1d608ad6ab4bb743d7234098369ec494cbd1639bf8de
+  receipt_digest: sha256:ba0854f2b89303fa8799824073564f7844c8c6c22c320999eb0b1717f68c11a8
   binding:
-    path: docs/plans/PLAN-REVERSE-600-codex-review-wake-backfill.md
-    plan_id: PLAN-REVERSE-600-codex-review-wake-backfill
-    asset_id: plan:15253ab2eb11638f0ca325f294252b4f
+    path: docs/plans/PLAN-REVERSE-602-codex-review-wake-backfill.md
+    plan_id: PLAN-REVERSE-602-codex-review-wake-backfill
+    asset_id: plan:97d42b4d658cdf05a5032c88d21154b0
     revision: 1
-    content_digest: sha256:6a19e10b05a9b275645c9b9aee3d806dc4a032272358c62391d7600649a1d06f
+    content_digest: sha256:7cf9176314e448798dfc7c72f835d54f02eb1f728163c4e3d2592aa3ea67a5ae
   route:
     signal: reverse
     mode: reverse
@@ -61,14 +62,14 @@ admission_receipt:
     projection_digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
   origin:
     plan_id: PLAN-L7-600-codex-review-wake-impl
-    revision: 1
-    digest: sha256:acd8cb34e522504adf3c2ef62ca9af2d6c27d64427df7292f6c78e6f16bcc591
+    revision: 2
+    digest: sha256:3d42baf3d4c247c1ac91fcdcc56531fc8b391275c584eb0838eb374c4fbcc6e5
   transition:
     direction: implementation_to_design
     implementation_disposition: preserved
   reentry:
     target_plan_id: PLAN-L7-600-codex-review-wake-impl
-    target_revision: 1
+    target_revision: 2
     phase: forward_merge
   escape_reason: "Issue #600 Codex review wake implementation requires reverse backfill trace"
 ---
@@ -93,3 +94,5 @@ receipt/custody の変更は扱わない。
 
 targeted test、typecheck、Biome、doctor の source/deliverable trace が green であり、
 非著者 review が exact HEAD を再検した後に、L6/L3 正本への必要な backfill を判断する。
+
+

@@ -1739,10 +1739,10 @@ content-addressed に投影する。D1 analyzer には投影済み artifact だ�
 
 ### Issue #600 Codex review wake contract (PLAN-L6-600 docs-only pair-freeze)
 
-これは Issue #600 の実装前契約であり、まだ source/test code が実装していないため、以下は
-`CANDIDATE-*` として扱う。Claude async wake の `U-MEMWAKE-*`、review receipt の `U-RVATT-*`、
-および既存 provider envelope v4 の schema を再定義しない。Codex wake は canonical request を
-信頼根とし、hook の surface は配送成功や receipt を意味しない。
+これは Issue #600 の L6 docs-only pair-freeze と、L7 implementation
+`PLAN-L7-600-codex-review-wake-impl` の対応表である。Claude async wake の `U-MEMWAKE-*`、
+review receipt の `U-RVATT-*`、および既存 provider envelope v4 の schema を再定義しない。
+Codex wake は canonical request を信頼根とし、hook の surface は配送成功や receipt を意味しない。
 
 | ID | fixture / mutation | falsifiable oracle |
 | --- | --- | --- |
@@ -1758,10 +1758,23 @@ content-addressed に投影する。D1 analyzer には投影済み artifact だ�
 | `CANDIDATE-CODEXWAKE-010` | claim 後に consumer を crash/kill し、15 分以内の lease、15 分境界、期限後、heartbeat 更新、terminal marker 有無を変異する | `leaseExpiresAt <= claimedAt + 15 minutes` を満たす期限前または heartbeat 済み claim は保持。15 分超過かつ terminal marker 無しだけ同一bytesを inbox へ atomic restore し、次回 session が再claimできる。foreign/terminal claim の回収・削除 0 |
 | `CANDIDATE-CODEXWAKE-011` | invalid entry のみ、valid+invalid 混在、invalid を修復した再実行を投入する | invalid-only は `status:"invalid"` / `invalidCount` / `codex_review_wake_envelope_invalid` / exit 2 を返し元 bytes保持。valid+invalid は valid を `status:"pending"` で surface しつつ `invalidCount` で invalid を typed state として可視化し、invalid を削除・receipt化しない。修復後だけ通常の pending/empty へ遷移 |
 
-実装対応予定は `tests/review-live-cli.test.ts`、`tests/live-review-projection.test.ts`、
-`tests/claude-memory-wake.test.ts`、`tests/runtime-hook-entrypoints.test.ts` である。候補の
-`CANDIDATE-*` は implementation PR の exact HEAD、実行コマンド、exit code、write count、
-content-addressed path を citation してから `U-*` へ昇格する。
+L7実装で実測した候補は、専用 test の実テスト名へ次のように昇格する。各行の実行根拠は
+`tests/codex-review-wake.test.ts` と `PLAN-L7-600` rev2 の review evidence である。
+
+| 昇格ID | 実テスト名 | 観測した境界 |
+| --- | --- | --- |
+| `U-CODEXWAKE-001` | `CANDIDATE-CODEXWAKE-009 fails closed without a target session and writes no projection` | target session 不在時の fail-close と downstream write 0 |
+| `U-CODEXWAKE-002` | `CANDIDATE-CODEXWAKE-004/011 surfaces valid entries FIFO and preserves invalid bytes` | FIFO surface、invalid bytes保持、deliveryConfirmed=false |
+| `U-CODEXWAKE-003` | `CANDIDATE-CODEXWAKE-003/010 restores an expired claim for the next session` | claim lease期限後の同一bytes restore |
+| `U-CODEXWAKE-004` | `CANDIDATE-CODEXWAKE-008 terminalizes and prunes only after seven days` | terminal marker retention と境界prune |
+| `U-CODEXWAKE-005` | `CANDIDATE-CODEXWAKE-001 rejects a conflicting canonical request instead of overwriting` | canonical request conflict の上書き拒否 |
+| `U-CODEXWAKE-006` | `CANDIDATE-CODEXWAKE-006 production composition publishes after canonical request persistence` | production composition の request-before-wake |
+
+`CANDIDATE-CODEXWAKE-002/005/007/010` はこの実装PRの範囲で未測定のため候補として保持する。
+新たな source module や consumer を追加せず、後続の bounded implementation PR でのみ昇格する。
+
+追加の production hook/consumer coverage は別境界として扱う。候補の昇格は implementation PR の
+exact HEAD、実行コマンド、exit code、write count、content-addressed path を citation できる場合に限る。
 
 ## PLAN-L7-457 fence streaming hash / harness.db VACUUM oracle (issue #118、2026-07-22)
 

@@ -22,9 +22,14 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-600-codex-review-wake-impl.md
     artifact_type: markdown_doc
+  - artifact_path: src/runtime/codex-review-wake.ts
+    artifact_type: source_module
+  - artifact_path: tests/codex-review-wake.test.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L6-600-codex-review-wake-contract.md
-  requires: []
+  requires:
+    - docs/plans/PLAN-REVERSE-600-codex-review-wake-backfill.md
   blocks: []
   references:
     - docs/plans/PLAN-L6-600-codex-review-wake-contract.md
@@ -36,25 +41,62 @@ dependencies:
     - src/cli/review-live.ts
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/600
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/640
-review_evidence: []
+review_evidence:
+  - reviewer: codex-intra-runtime
+    review_kind: intra_runtime_subagent
+    reviewed_at: 2026-09-16T18:50:00+09:00
+    tests_green_at: 2026-09-16T18:49:30+09:00
+    verdict: pass
+    worker_model: gpt-5.6-luna
+    reviewer_model: gpt-5.6-sol
+    scope: 実装対象の targeted wake test、typecheck、Biome を同一draft HEADで確認
+    green_commands:
+      - kind: unit_test
+        command: bun scripts/run-vitest-snapshot.ts tests/codex-review-wake.test.ts
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        evidence_path: tests/codex-review-wake.test.ts
+        output_digest: sha256:7c7b5dbba1a93f43720f66bbf8ed7d3c
+        completed_at: 2026-09-16T18:49:30+09:00
+        anchor_commit: 27137fc6
+      - kind: typecheck
+        command: bunx tsc --noEmit -p tsconfig.json
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        evidence_path: tsconfig.json
+        output_digest: sha256:2f2adf7aa58a3b4e94912ad6fbf2d31e
+        completed_at: 2026-09-16T18:50:00+09:00
+        anchor_commit: 27137fc6
+      - kind: lint
+        command: bunx biome check src/runtime/codex-review-wake.ts
+          tests/codex-review-wake.test.ts
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        evidence_path: biome.json
+        output_digest: sha256:a3e0edc6dc9d9dca9b3ddf2e0b50c64c
+        completed_at: 2026-09-16T18:50:00+09:00
+        anchor_commit: 27137fc6
 backprop_decision: not_required
 backprop_decision_reason: 実装は既存L6契約の具体化に限定し、上流要件の追加を行わない
-status: draft
+status: confirmed
 github_issue_id: 600
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:c00b91ac72bc4447dcd79d9332c2da04
-  command_id: plan-draft:issue-600:codex-review-wake-impl:1
-  admitted_at: 2026-09-16T19:00:00+09:00
-  source_digest: sha256:acd8cb34e522504adf3c2ef62ca9af2d6c27d64427df7292f6c78e6f16bcc591
-  decision_digest: sha256:cb0099724fc183d41f1a376e71ba06bcf3e93ff123b9d7bec912dfaadb2c26b8
-  receipt_digest: sha256:ac80b9b30b13dedf4f78a792bf9f9e8d95002e4477567268e1d690531b25955d
+  receipt_id: certificate:4686ed1b6adc5be201092eb1c2061cdb
+  command_id: plan-revise:issue-600:codex-review-wake-impl:confirm:2
+  admitted_at: 2026-09-16T19:10:00+09:00
+  source_digest: sha256:3d42baf3d4c247c1ac91fcdcc56531fc8b391275c584eb0838eb374c4fbcc6e5
+  decision_digest: sha256:e4f68eb55867157136d94a7dee92f21ea460fa3b714b77fb95c28e8a4cbe0bca
+  receipt_digest: sha256:435e1bc16849d699b391862a1d0bc7cb26b9e333b62c18a1c6134acad6bf3840
   binding:
     path: docs/plans/PLAN-L7-600-codex-review-wake-impl.md
     plan_id: PLAN-L7-600-codex-review-wake-impl
     asset_id: plan:c00b91ac72bc4447dcd79d9332c2da04
-    revision: 1
-    content_digest: sha256:acd8cb34e522504adf3c2ef62ca9af2d6c27d64427df7292f6c78e6f16bcc591
+    revision: 2
+    content_digest: sha256:3d42baf3d4c247c1ac91fcdcc56531fc8b391275c584eb0838eb374c4fbcc6e5
   route:
     signal: feature_addition
     mode: add-feature
@@ -131,3 +173,4 @@ review receipt/custody、Issue close、merge authority、別の consumer surface
   generates に束縛され、impl-plan-trace / deliverable-plan-trace がそれぞれ該当 orphan 0 を返す。
 - 上表の実測済み候補が targeted test で pass し、未実装候補は候補のまま残る。
 - 後段 PLAN-REVERSE-600-codex-review-wake-backfill で L6/L3 の forward 合流判断を行う。
+
