@@ -159,7 +159,7 @@ review_evidence:
       draft 残置) は本 head と本 revision で是正した。"
     citations:
       - .ut-tdd/review/receipts/d4a5412f700a89265aad2a531a50517400bf8b9b7a4e45794c8bcfb618095cf1.json
-      - .ut-tdd/review/packets/pr620-22c7ba37/control-lane-measurements.txt
+      - .ut-tdd/review/packets/pr620-18349dc8/control-lane-measurements.txt
     green_commands:
       - kind: unit_test
         command: npx vitest run tests/cutover-transition.test.ts (fence env = exact-head
@@ -169,7 +169,7 @@ review_evidence:
         exit_code: 0
         completed_at: 2026-09-16T05:50:27Z
         evidence_path: tests/cutover-transition.test.ts
-        output_digest: sha256:8929869a8584bd0645d63c44ef0114b37bef65e2de08e18551d2e904631ed172
+        output_digest: sha256:2c1137ffb9cf387c76b4e1df031521280149c9cca9616736af9e4dee451319ca
         anchor_commit: 18349dc882da80a3b8b90fa4f40db1047f4d7e8b
       - kind: typecheck
         command: npx tsc --noEmit -p .
@@ -178,25 +178,25 @@ review_evidence:
         exit_code: 0
         completed_at: 2026-09-16T05:50:27Z
         evidence_path: src/runtime/cutover-transition.ts
-        output_digest: sha256:8929869a8584bd0645d63c44ef0114b37bef65e2de08e18551d2e904631ed172
+        output_digest: sha256:2c1137ffb9cf387c76b4e1df031521280149c9cca9616736af9e4dee451319ca
         anchor_commit: 18349dc882da80a3b8b90fa4f40db1047f4d7e8b
 status: confirmed
 sub_doc: function-spec
 github_issue_id: 152
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:4ea21edfcb7734b765c6f4c3f96f0d04
-  command_id: plan-revise:issue-540:cutover-prefix-implementation:r32:894b7e14ae00
-  admitted_at: 2026-09-16T06:01:36.131Z
-  source_digest: sha256:29b0346acc9de3731c229b3b8cf1f253e60016d7a93ba900a06371113e2744f0
-  decision_digest: sha256:7f9c4336ccb2ff020da033fa1d116fdca6d5b0c3fffc1ff1d2e2823e817ac37e
-  receipt_digest: sha256:ca2369ced26ece3524fed213c39ebee136aedbafd3f15ba29e40127834bd8470
+  receipt_id: certificate:07f37b94353647ab81182f85b4288d05
+  command_id: plan-revise:issue-540:cutover-prefix-implementation:r33:18349dc882da
+  admitted_at: 2026-09-16T06:03:38.693Z
+  source_digest: sha256:ea0790771498ff7cb9c3d7e9f74592940bdd68d375694ff88680ba2ca65c0c31
+  decision_digest: sha256:8e3bf4d97195f916488ddf762856a0bbc3f18a5423974363f46dd28a1e414462
+  receipt_digest: sha256:8d00d02f6112461665dff65950ad5224776a3360a431a79a4bcd39c99754eb2d
   binding:
     path: docs/plans/PLAN-L6-93-node-bootstrap-contract.md
     plan_id: PLAN-L6-93-node-bootstrap-contract
     asset_id: plan:legacy:80a50dd958ae451ea13030276eb8c145a8fdc3104ec145560457f97a07594881
-    revision: 32
-    content_digest: sha256:29b0346acc9de3731c229b3b8cf1f253e60016d7a93ba900a06371113e2744f0
+    revision: 33
+    content_digest: sha256:ea0790771498ff7cb9c3d7e9f74592940bdd68d375694ff88680ba2ca65c0c31
   route:
     signal: feature_addition
     mode: add-feature
@@ -217,11 +217,13 @@ admission_receipt:
       target_revision: 29
   reentry:
     target_plan_id: PLAN-L6-93-node-bootstrap-contract
-    target_revision: 32
+    target_revision: 33
     phase: forward_merge
   escape_reason: "Issue #540 PR #620: bind the confirmed status to the exact-head
-    non-author review evidence at 894b7e14ae00 and remove the stale draft-status
-    body text (closing-review FLAG findings 1-2 on 8b1a846d)"
+    non-author preflight review evidence at 18349dc882da (Claude Opus PASS,
+    rv1-d4a5412f…), correct the measurement citation to the 18349dc8 packet, and
+    remove the stale draft-status body text (closing-review FLAG findings 1-2 on
+    8b1a846d)"
 ---
 
 # PLAN-L6-93: sealed Node bootstrap function redesign
