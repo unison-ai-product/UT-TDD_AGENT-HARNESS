@@ -217,7 +217,7 @@ const EPISODIC_MARKERS: Array<[RegExp, string]> = [
   [/#\d{2,5}\b/, "issue-number"],
   [/\b[0-9a-f]{7,40}\b/, "commit-hash"],
   [
-    /exact[- ]head|review request|closing review|preflight|verdict|receipt|handoff|handover|re-?chain/i,
+    /exact[- ]head\s+[0-9a-f]{7,}|verdict:?\s*(?:PASS-WEAK|PASS|FLAG)\b|receipt\s+[0-9a-f]{7,}|\brv1-[0-9a-f]{8,}/i,
     "review-episode",
   ],
   [/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/, "timestamp"],

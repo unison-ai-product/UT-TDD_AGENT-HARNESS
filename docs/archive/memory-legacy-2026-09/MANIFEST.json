@@ -3648,8 +3648,8 @@
     }
   ],
   "untracked": {
-    "count": 414,
-    "set_digest": "6de0c477332097a41c2b3851957575a1895440a8754ff17d38255e6194811f62",
+    "count": 425,
+    "set_digest": "891e20040cd0002a6667e87cfa31f537d2dd9edd645aaea1b3c717a92e5ea98c",
     "local_archive_root": ".ut-tdd/archive/memory-legacy-2026-09"
   }
 }
