@@ -7,6 +7,7 @@ import {
   openSync,
   readdirSync,
   readFileSync,
+  realpathSync,
   renameSync,
   unlinkSync,
   writeFileSync,
@@ -191,6 +192,19 @@ function canonicalJson(value: unknown): string {
   return JSON.stringify(value) ?? "null";
 }
 
+/** Windows runners may spell the same checkout with an 8.3 short path. */
+function samePath(left: string, right: string): boolean {
+  try {
+    return realpathSync.native(left) === realpathSync.native(right);
+  } catch {
+    const normalizedLeft = normalize(left);
+    const normalizedRight = normalize(right);
+    return process.platform === "win32"
+      ? normalizedLeft.toLowerCase() === normalizedRight.toLowerCase()
+      : normalizedLeft === normalizedRight;
+  }
+}
+
 function reviewRequestDigest(request: ReviewWakeRequest): string {
   return createHash("sha256")
     .update(
@@ -246,7 +260,7 @@ function loadCanonicalLiveReviewRequest(input: {
   const supplied = isAbsolute(input.envelope.requestPath)
     ? resolve(input.envelope.requestPath)
     : resolve(input.repoRoot, input.envelope.requestPath);
-  if (normalize(supplied) !== normalize(canonical)) return null;
+  if (!samePath(supplied, canonical)) return null;
   try {
     const requestFile = lstatSync(canonical);
     if (!requestFile.isFile() || requestFile.isSymbolicLink()) return null;

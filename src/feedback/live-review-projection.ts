@@ -1,4 +1,4 @@
-import { lstatSync, readFileSync } from "node:fs";
+import { lstatSync, readFileSync, realpathSync } from "node:fs";
 import { isAbsolute, normalize, resolve } from "node:path";
 
 /** Minimum envelope identity consumed here; keep feedback independent from runtime modules. */
@@ -134,6 +134,19 @@ function exactKeys(value: object, keys: readonly string[]): boolean {
   return actual.length === expected.length && actual.every((key, index) => key === expected[index]);
 }
 
+/** Windows runners may spell the same checkout with an 8.3 short path. */
+function samePath(left: string, right: string): boolean {
+  try {
+    return realpathSync.native(left) === realpathSync.native(right);
+  } catch {
+    const normalizedLeft = normalize(left);
+    const normalizedRight = normalize(right);
+    return process.platform === "win32"
+      ? normalizedLeft.toLowerCase() === normalizedRight.toLowerCase()
+      : normalizedLeft === normalizedRight;
+  }
+}
+
 /** Load only the canonical request named by the v3 envelope; never infer identity from task prose. */
 export function loadCanonicalLiveReviewRequest(input: {
   repoRoot: string;
@@ -149,7 +162,7 @@ export function loadCanonicalLiveReviewRequest(input: {
   const supplied = isAbsolute(input.envelope.requestPath)
     ? resolve(input.envelope.requestPath)
     : resolve(input.repoRoot, input.envelope.requestPath);
-  if (normalize(supplied) !== normalize(canonical)) return null;
+  if (!samePath(supplied, canonical)) return null;
   try {
     const requestFile = lstatSync(canonical);
     if (!requestFile.isFile() || requestFile.isSymbolicLink()) return null;
