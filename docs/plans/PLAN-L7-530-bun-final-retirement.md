@@ -22,6 +22,10 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-530-bun-final-retirement.md
     artifact_type: markdown_doc
+  - artifact_path: src/lint/bun-final-retirement.ts
+    artifact_type: source_module
+  - artifact_path: tests/bun-final-retirement.test.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L6-93-node-bootstrap-contract.md
   requires: []
@@ -42,18 +46,18 @@ status: draft
 github_issue_id: 487
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:381f3017b10ca9f294b21af3e629212d
-  command_id: command:pr521-r4-forward-oracle-expectation-migration-revision10
-  admitted_at: 2026-09-08T03:50:48.681Z
-  source_digest: sha256:cefa7e5154b792a3da78a5583c77d32f6ceaf9eedf5c1dbe14e4572719697039
-  decision_digest: sha256:7fe4c00a12e332e31a6ec409a312fb5cc918f88c709b8d36c0eb431e3211424e
-  receipt_digest: sha256:3b093b2c8c6500a380d46756d8b1a32c6e3522ae29ee6532bc6eda207ec67a1e
+  receipt_id: certificate:82d7f5676056c5c7e16effe9fac549b5
+  command_id: pr641-issue487-final-retirement-1789552201126
+  admitted_at: 2026-09-16T09:50:01.126Z
+  source_digest: sha256:937c5437f20b99535e682e02b9299cda04956d5d0bacdd24cc8b5f8cb34bfc38
+  decision_digest: sha256:13f90dce290e80f897d5156ae086fd4041bda57a3824c834efe1d3d2789a625a
+  receipt_digest: sha256:9d5da8eec3a07160c82286a13b99fdc36a43102e5b34bc599d47f87f803e371a
   binding:
     path: docs/plans/PLAN-L7-530-bun-final-retirement.md
     plan_id: PLAN-L7-530-bun-final-retirement
     asset_id: plan:bc9250c9a7c873dcb9f18956677371f7
-    revision: 10
-    content_digest: sha256:cefa7e5154b792a3da78a5583c77d32f6ceaf9eedf5c1dbe14e4572719697039
+    revision: 11
+    content_digest: sha256:937c5437f20b99535e682e02b9299cda04956d5d0bacdd24cc8b5f8cb34bfc38
   route:
     signal: feature_addition
     mode: add-feature
@@ -73,10 +77,16 @@ admission_receipt:
     target_plan_id: PLAN-L7-530-bun-final-retirement
     target_revision: 10
     phase: forward_merge
-  escape_reason: "Issue #487 final Bun retirement inventory scope revision"
+  escape_reason: "Issue #487 final Bun retirement implementation artifact and
+    independent oracle ownership"
 ---
 
 # PLAN-L7-530: Bun 最終撤去の tuple-bound 実装契約
+
+実装artifactは `src/lint/bun-final-retirement.ts`、独立admission oracleは
+`tests/bun-final-retirement.test.ts` が同一PLANの所有である。テストはF0b/F0c/Q0の
+receipt欠落・tuple各軸不一致・reachable/indeterminate surfaceを個別にRedへ落とし、
+detectorの意味とallowlistを変更せずGreenへ昇格させる。
 
 ## 1. 目的と開始ゲート
 
