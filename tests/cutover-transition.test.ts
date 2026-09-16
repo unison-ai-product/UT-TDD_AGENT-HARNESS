@@ -721,4 +721,33 @@ describe("PLAN-L6-93 cutover prefix", () => {
     );
     expect(initializeCutoverChain(base).sequence).toBe(0);
   });
+  it("U-CUTOVER-004 rejects a non-genesis admission whose prior closure is self-consistent but not the ledger head", () => {
+    const repoRoot = root();
+    const genesis = initializeCutoverChain(command(repoRoot, "cutover.genesis", 0, null));
+    const next = command(
+      repoRoot,
+      "cutover.inventory-frozen.node-shadow",
+      1,
+      genesis.receipt_digest,
+    );
+    // 正当に署名された admission を、head ではない prior (fork 側 / 古い receipt) で再署名し、command 側の
+    // 申告値もそれに合わせる。申告値どうしの自己整合は成立するので、ここで落ちるのは ledger head との照合だけである。
+    const stalePrior = "9".repeat(64);
+    const replayedAdmission = resignAdmission(
+      { ...next.admission, prior_validated_receipt_digest: stalePrior },
+      next.admission.authority_id,
+    );
+    expectReason(
+      () =>
+        appendCutoverTransition({
+          ...next,
+          admissionPriorReceiptDigest: stalePrior,
+          admission: replayedAdmission,
+          evidence: evidenceForAdmission(next.evidence, replayedAdmission),
+        }),
+      "cutover-admission-not-ready",
+    );
+    expect(storedReceiptCount(repoRoot)).toBe(1);
+    expect(appendCutoverTransition(next).sequence).toBe(1);
+  });
 });

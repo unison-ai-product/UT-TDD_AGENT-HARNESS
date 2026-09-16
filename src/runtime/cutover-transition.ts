@@ -537,6 +537,10 @@ function appendAtomically(input: CutoverCommandInput, genesis: boolean): Cutover
         throw new CutoverTransitionError("cutover-write-conflict");
       if (EDGE_STATES[input.edgeId].previous !== projection.state)
         throw new CutoverTransitionError("cutover-transition-invalid");
+      // 非 genesis の admission prior closure は呼び出し側の申告値ではなく、同一 transaction 内で
+      // 確定した ledger の直前 receipt に束縛する (PLAN §4: 以後は直前 cutover receipt を prior に要求する)。
+      if (input.admissionPriorReceiptDigest !== projection.receiptDigest)
+        throw new CutoverTransitionError("cutover-admission-not-ready");
     }
     const receipt = buildReceipt(input);
     db.prepare(
