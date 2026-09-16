@@ -25,7 +25,7 @@ import {
 } from "../src/schema/cutover-transition.ts";
 
 const roots: string[] = [];
-const nodeRequire = createRequire(import.meta.url);
+const nodeRequire = createRequire(resolve("package.json"));
 const candidate = `git-sha1:${"1".repeat(40)}`;
 const producerAncestor = `git-sha1:${"2".repeat(40)}`;
 const artifactDigest = `sha256:${"3".repeat(64)}`;
