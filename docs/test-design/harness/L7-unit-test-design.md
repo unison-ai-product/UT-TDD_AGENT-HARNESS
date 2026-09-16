@@ -2809,5 +2809,6 @@ auditor、late CAS、receipt、cleanupを一軸ずつ変異し、typed resultと
 | `U-PA-REV-055` | admission_receiptは存在するがreceipt_idが欠落している (壊れたauthority、absence詐称) | fallbackせずfail-close。write 0、legacy_plan_bootstrap_provenanceも0件 |
 | `U-PA-REV-056` | admission_receiptがobject以外 (壊れたauthority、absence詐称) | fallbackせずfail-close。write 0、legacy_plan_bootstrap_provenanceも0件 |
 | `U-PA-REV-049` | 実データ regression: `PLAN-L6-93-node-bootstrap-contract`のrevision 27 source (historical commit `d3c0df76`) と、terminal receipt (`plan:legacy:80a50dd9...`) がrevision 27だった時点のtracked projection (commit `85ae4af7`) をGit objectから読み取りfixture化する。作業木の現行projectionは読まない (後続revisionの正規追記でfixtureが壊れないようにする) | 空ledgerからrevision 28を決定的に再水和。legacy_plan_bootstrap_provenance・sealed_plan_lineagesは0件 |
+| `U-PA-REV-057` | U-PA-REV-049の実Git object fixtureを、Commanderの正規 `plan revise --manifest` command surfaceへ接続する | CLI経由でもasset不変でrev27→28を発行し、legacy bootstrap / seal lineage write 0 |
 
-実行対応: `tests/node-plan-revision-runner.test.ts` (`U-PA-REV-039〜056`)。
+実行対応: `tests/node-plan-revision-runner.test.ts` (`U-PA-REV-039〜057`)。

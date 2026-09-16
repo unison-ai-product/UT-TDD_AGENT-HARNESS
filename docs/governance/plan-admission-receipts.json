@@ -4240,6 +4240,22 @@
         "revision": 11,
         "content_digest": "sha256:eba26e423266670bf03c6e995b51c7c46d0b2285baebc742e13076286bec2237"
       }
+    },
+    {
+      "sequence": 266,
+      "previous_record_digest": "sha256:d4f2a456fa98b830e77d2c0b4b08836dfb956a9b3a7f1ff391e8da8da6dc0f0c",
+      "record_digest": "sha256:8818bd653f5388e5cf6331b88604b3a5b5ac9691adf13fa04628b6195889d7fd",
+      "command_id": "plan-revise:issue-541:recovery-16:6",
+      "receipt_id": "certificate:b95f6ebf9406389d35b7a00745fb4fa4",
+      "receipt_digest": "sha256:a049d0e3009def0efef0afb5b8491a5e2c64e8606b39fd939922c3ec95158aec",
+      "decision_digest": "sha256:0c602385dfe6a8424d499cca7898473adf1b099ffe8b726f21112627913af488",
+      "binding": {
+        "path": "docs/plans/PLAN-RECOVERY-16-plan-revision-authoring.md",
+        "plan_id": "PLAN-RECOVERY-16-plan-revision-authoring",
+        "asset_id": "plan:rebase:74ca026f9a0b72dca6f4fb164dd4e8f43c9ea3c9b31c4db21dec38a66d9d7d57",
+        "revision": 6,
+        "content_digest": "sha256:7fe8b443744d88f7edac6995466fd91660814e622b8816a8765e3f2630b75237"
+      }
     }
   ]
 }
