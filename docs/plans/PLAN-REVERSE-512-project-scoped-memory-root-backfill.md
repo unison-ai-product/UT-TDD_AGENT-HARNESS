@@ -8,7 +8,7 @@ route_signal: design_gap
 route_mode: reverse
 confirmed_reverse_type: design
 created: 2026-08-26
-updated: 2026-09-09
+updated: 2026-09-15
 owner: PO / TL
 parent_design: docs/plans/PLAN-L7-512-project-scoped-memory-root.md
 pair_artifact: docs/test-design/harness/L7-project-scoped-memory-root-test-design.md
@@ -92,18 +92,18 @@ status: draft
 github_issue_id: 544
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:bde28b20f3eeee286da5090da0fe1964
-  command_id: command:issue544-PLAN-REVERSE-512-memory-inventory-r6
-  admitted_at: 2026-09-09T02:44:05.820Z
-  source_digest: sha256:8a5cb9478f54ecc2e9c9b5dc826b01c7ea8764f1233d2ac52f691642c0ba6ac6
-  decision_digest: sha256:2dad47c72577a8b3e5329d1d9f54abd0bce5481652e6f12f8416e0253652831a
-  receipt_digest: sha256:2befaf95fe5584d8ea520c0aed48e893cbfc6ec9fc5a41bcd811f163a3ec6cce
+  receipt_id: certificate:e44f3ef4527ed8d574f570c0aa12b499
+  command_id: plan-revise:issue-424:reverse-512-non-applicability:7
+  admitted_at: 2026-09-15T11:38:52.541Z
+  source_digest: sha256:0849a59269b40078b0e3aee01552e866c4eee4a68b06f274c5827ca04656a8da
+  decision_digest: sha256:9575e05b828844ead3621a59f5f1dee2debff95f3b22395c23caa6c5e5f3ad55
+  receipt_digest: sha256:edb1575a8daf5727d2c2d814e30dd08b568dbf626ead5d17251273fdbc9e4928
   binding:
     path: docs/plans/PLAN-REVERSE-512-project-scoped-memory-root-backfill.md
     plan_id: PLAN-REVERSE-512-project-scoped-memory-root-backfill
     asset_id: plan:legacy:186048a954aa8dae7b4f8b1f968f6c5d64d758850fa695ed59a11edcdcf63153
-    revision: 6
-    content_digest: sha256:8a5cb9478f54ecc2e9c9b5dc826b01c7ea8764f1233d2ac52f691642c0ba6ac6
+    revision: 7
+    content_digest: sha256:0849a59269b40078b0e3aee01552e866c4eee4a68b06f274c5827ca04656a8da
   route:
     signal: design_gap
     mode: reverse
@@ -111,11 +111,11 @@ admission_receipt:
     provider: github
     issue_id: 544
     episode_id: E4-544-project-memory-inventory-reverse
-    projection_digest: sha256:bea56244b34bd74d709278dcab8fb5fd50024b05be6edc9d61b6ec5123d3f450
+    projection_digest: sha256:f960f7a53836c49cbcf4f65cc0b4ce3782697c06080973aba1b7a618835f1e62
   origin:
-    plan_id: PLAN-L7-512-project-scoped-memory-root
-    revision: 6
-    digest: sha256:e3e3cad039021a5394c5ad09ea1f0084642bba9c0423fd9faa77563e1e52ce19
+    plan_id: PLAN-L6-104-memory-clean-cut-replacement
+    revision: 1
+    digest: sha256:5e05d3835164cd42c563329ae3eee17a6e564e1c2856c23dd90f182e84d2cca6
   transition:
     direction: implementation_to_design
     implementation_disposition: preserved
@@ -123,10 +123,14 @@ admission_receipt:
     target_plan_id: PLAN-L7-512-project-scoped-memory-root
     target_revision: 6
     phase: forward_merge
-  escape_reason: "Issue #544 Slice 4a inventory R1 evidence; R2 through R4 remain pending"
+  escape_reason: "Issue #424 non-applicability note: migration part of R1-R4
+    retired by PLAN-L6-104 supersede of PLAN-L7-512 Slice 4; Slice 1/3
+    root/envelope observations retained"
 ---
 
 # PLAN-REVERSE-512
+
+> **非適用注記 (2026-09-15)**: `PLAN-L6-104-memory-clean-cut-replacement` が `PLAN-L7-512` の Slice 4 (migration / inventory / quarantine / recovery / completion) を supersede したため、本 Reverse のうち migration 部分 (Issue #544 Slice 4a inventory の R1 観測、および R2〜R4 の migration に関わる検証) は適用しない (PO replacement decision 2026-09-15、Issue #424)。Slice 1/3 (canonical root、provider envelope) の R1 観測と、それに対する後続の Reverse 検証は引き続き有効である。
 
 ## Prior R0
 
