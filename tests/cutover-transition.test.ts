@@ -225,6 +225,35 @@ function overwriteStoredEvidence(
   }
 }
 
+function storedReceiptCount(repoRoot: string): number {
+  const { DatabaseSync } = nodeRequire("node:sqlite") as {
+    DatabaseSync: new (
+      path: string,
+    ) => {
+      prepare(sql: string): { get(): unknown };
+      close(): void;
+    };
+  };
+  const db = new DatabaseSync(resolve(repoRoot, ".ut-tdd", "ledger", "cutover-ledger.db"));
+  try {
+    return (db.prepare("SELECT COUNT(*) AS count FROM cutover_receipts").get() as { count: number })
+      .count;
+  } finally {
+    db.close();
+  }
+}
+
+function evidenceForAdmission(
+  evidence: readonly SliceEvidenceReceipt[],
+  admissionReceipt: CutoverAdmissionReceipt,
+): SliceEvidenceReceipt[] {
+  return evidence.map((item) =>
+    item.kind_id === "admission.approved"
+      ? resignEvidence(item, { referenced_receipt_digest: admissionReceipt.receipt_digest })
+      : item,
+  );
+}
+
 describe("PLAN-L6-93 cutover prefix", () => {
   it("U-CUTOVER-001 initializes genesis exactly once and projects committed state", () => {
     const repoRoot = root();
@@ -279,7 +308,7 @@ describe("PLAN-L6-93 cutover prefix", () => {
       initialized.receipt_digest,
     );
     const wrongOwner = validNext.evidence.map((entry, index) =>
-      index === 0 ? { ...entry, producer_owner_id: "wrong-owner" } : entry,
+      index === 0 ? resignEvidence(entry, { producer_owner_id: "wrong-owner" }) : entry,
     );
     expectReason(
       () => appendCutoverTransition({ ...validNext, evidence: wrongOwner }),
@@ -304,11 +333,13 @@ describe("PLAN-L6-93 cutover prefix", () => {
   it("U-CUTOVER-004 rejects wrong admission authority and untrusted attestation", () => {
     const repoRoot = root();
     const base = command(repoRoot, "cutover.genesis", 0, null);
+    const wrongAuthority = resignAdmission(base.admission, "wrong");
     expectReason(
       () =>
         initializeCutoverChain({
           ...base,
-          admission: resignAdmission(base.admission, "wrong"),
+          admission: wrongAuthority,
+          evidence: evidenceForAdmission(base.evidence, wrongAuthority),
         }),
       "cutover-admission-not-ready",
     );
@@ -319,7 +350,12 @@ describe("PLAN-L6-93 cutover prefix", () => {
       base.admission.authority_id,
     );
     expectReason(
-      () => initializeCutoverChain({ ...base, admission: modeDrift }),
+      () =>
+        initializeCutoverChain({
+          ...base,
+          admission: modeDrift,
+          evidence: evidenceForAdmission(base.evidence, modeDrift),
+        }),
       "cutover-admission-not-ready",
     );
 
@@ -327,11 +363,7 @@ describe("PLAN-L6-93 cutover prefix", () => {
       { ...base.admission, prior_validated_receipt_digest: "9".repeat(64) },
       base.admission.authority_id,
     );
-    const evidenceForPriorDrift = base.evidence.map((item) =>
-      item.kind_id === "admission.approved"
-        ? resignEvidence(item, { referenced_receipt_digest: priorDrift.receipt_digest })
-        : item,
-    );
+    const evidenceForPriorDrift = evidenceForAdmission(base.evidence, priorDrift);
     expectReason(
       () =>
         initializeCutoverChain({
@@ -351,7 +383,7 @@ describe("PLAN-L6-93 cutover prefix", () => {
     );
   });
 
-  it("U-CUTOVER-005 rejects skip, stale head, and replay without append", () => {
+  it("U-CUTOVER-005 rejects skip, stale head, replay, and an actual CAS loser without append", () => {
     const repoRoot = root();
     const genesis = initializeCutoverChain(command(repoRoot, "cutover.genesis", 0, null));
     expectReason(
@@ -364,14 +396,37 @@ describe("PLAN-L6-93 cutover prefix", () => {
     const shadow = appendCutoverTransition(
       command(repoRoot, "cutover.inventory-frozen.node-shadow", 1, genesis.receipt_digest),
     );
+    const staleContender = command(
+      repoRoot,
+      "cutover.node-shadow.node-primary",
+      2,
+      shadow.receipt_digest,
+    );
+    const primary = appendCutoverTransition(staleContender);
+    expectReason(() => appendCutoverTransition(staleContender), "cutover-write-conflict");
+    expect(storedReceiptCount(repoRoot)).toBe(3);
     expectReason(
       () =>
         appendCutoverTransition(
-          command(repoRoot, "cutover.inventory-frozen.node-shadow", 2, shadow.receipt_digest),
+          command(repoRoot, "cutover.inventory-frozen.node-shadow", 3, primary.receipt_digest),
         ),
       "cutover-transition-invalid",
     );
-    expect(projectCutoverState([genesis, shadow]).state).toBe("node_shadow");
+    expect(projectCutoverState([genesis, shadow, primary]).state).toBe("node_primary");
+  });
+
+  it("rejects an unsupported sealed edge before any ledger write", () => {
+    const repoRoot = root();
+    const genesis = initializeCutoverChain(command(repoRoot, "cutover.genesis", 0, null));
+    expectReason(
+      () =>
+        appendCutoverTransition({
+          ...command(repoRoot, "cutover.node-primary.bun-removed", 1, genesis.receipt_digest),
+          edgeId: "cutover.bun-removed.sealed" as unknown as ImplementedCutoverEdgeId,
+        }),
+      "cutover-transition-invalid",
+    );
+    expect(storedReceiptCount(repoRoot)).toBe(1);
   });
 
   it("U-CUTOVER-006 detects independent receipt digest mutation", () => {
