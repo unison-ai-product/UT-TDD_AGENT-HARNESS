@@ -52,23 +52,53 @@ dependencies:
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/420
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/424
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/487
-review_evidence: []
-status: draft
+review_evidence:
+  - reviewer: codex-luna-preflight
+    review_kind: intra_runtime_subagent
+    reviewed_at: 2026-09-16T09:36:00Z
+    tests_green_at: 2026-09-16T09:34:00Z
+    verdict: preflight green; Claude Opus non-author exact-head closing review pending
+    scope: "CANDIDATE-ST-PACKCANARY-001/002/004 bounded non-Bun fixture; C003
+      deferred to #420; Bun zero-trace deferred to #487"
+    worker_model: gpt-5.6-luna
+    reviewer_model: gpt-5.6-luna
+    plan_revision: "3"
+    green_commands:
+      - kind: unit_test
+        command: node scripts/run-vitest-snapshot.ts
+          tests/pack-internal-canary-boundary.test.ts --reporter=dot
+        runner: node
+        scope: targeted
+        exit_code: 0
+        completed_at: 2026-09-16T09:34:00Z
+        evidence_path: tests/pack-internal-canary-boundary.test.ts
+        output_digest: sha256:cc8a7beb676a0c873c3f92cb691f6a94aefd2159a205a952ea468428278b0e00
+        anchor_commit: 94d14dbcdf2160cd373efe84d011a0bb234b26ac
+      - kind: lint
+        command: npm exec -- biome check tests/pack-internal-canary-boundary.test.ts
+        runner: node
+        scope: changed-files
+        exit_code: 0
+        completed_at: 2026-09-16T09:34:00Z
+        evidence_path: tests/pack-internal-canary-boundary.test.ts
+        output_digest: sha256:cc8a7beb676a0c873c3f92cb691f6a94aefd2159a205a952ea468428278b0e00
+        anchor_commit: 94d14dbcdf2160cd373efe84d011a0bb234b26ac
+status: confirmed
 github_issue_id: 418
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:8f7d4ae466ab0b7b93beb0c6c61ad65c
-  command_id: plan-revise:issue-418:forward:3:pr638-7cda5d952bec
-  admitted_at: 2026-09-16T09:25:31.440Z
-  source_digest: sha256:801c8108795f545f8d3dbf0175aa4540d296f131494eb8d10b23ba64a05d23b2
-  decision_digest: sha256:7174ed3a77bb0f9597df62e1d00695264e26623e355057474d0edc51d0732adb
-  receipt_digest: sha256:873b1696fb021a34f462926aad40ea7e29678986a4a781cb7e40de1f157ab9b2
+  receipt_id: certificate:544fe3cf7dc2f7361f73d4915170ecfe
+  command_id: plan-revise:issue-418:forward:4:pr638-94d14dbcdf21-b
+  admitted_at: 2026-09-16T09:36:00Z
+  source_digest: sha256:f9a3de706d1611fd316a5b693a7b1069e5138f1bc83d0425b4cefe75e407958b
+  decision_digest: sha256:383ea6f100f3d98fe6551ba68e79514d9f1f98a8a73df16f6d00b2cb6be3de1e
+  receipt_digest: sha256:6aefe53af9ec1deb03e58c08e1a0f6559e5b217e457bb3d5ad07c0afea444103
   binding:
     path: docs/plans/PLAN-L7-531-pack-internal-canary-smoke.md
     plan_id: PLAN-L7-531-pack-internal-canary-smoke
     asset_id: plan:44f79788376b81c225ce5913fddbc48f
-    revision: 3
-    content_digest: sha256:801c8108795f545f8d3dbf0175aa4540d296f131494eb8d10b23ba64a05d23b2
+    revision: 4
+    content_digest: sha256:f9a3de706d1611fd316a5b693a7b1069e5138f1bc83d0425b4cefe75e407958b
   route:
     signal: feature_addition
     mode: add-feature
