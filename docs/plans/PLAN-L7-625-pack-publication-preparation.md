@@ -13,7 +13,7 @@ parent_design: docs/plans/PLAN-L7-565-pack-publication-atomic-ref-cas.md
 pair_artifact: docs/test-design/harness/L7-pack-publication-preparation-test-design.md
 agent_slots:
   - role: se
-    slot_label: Luna worker - sealed stagingから準備receiptとintentを作るbounded実装
+    slot_label: Luna worker - sealed stagingから準備receiptを作り、admission向け入力を確定するbounded実装（publication intentは作らない）
   - role: qa
     slot_label: Terra - 準備mutationのtyped failureとno-write oracle
   - role: tl
@@ -69,19 +69,19 @@ admission_receipt:
 
 ## 1. 目的と境界
 
-Issue #625 は、sealed staging identityからpublication preparationを作り、branch commit・PR観測・publication intentを一つの再現可能な準備receiptへ束縛する。ここでremote main、Release、asset、tag、channel pointerは変更しない。既存の#565全体契約を変更せず、準備だけを#626（admission）と#627（publish deny）から分離する。
+Issue #625 は、sealed staging identityからpublication preparationを作り、branch commit・PR観測を一つの再現可能な準備receiptへ束縛する。publication intentはこのphaseでは生成せず、#626のread-only再観測とnon-author review/checkが成立したpublication admissionで初めてsealする。ここでremote main、Release、asset、tag、channel pointerは変更しない。既存の#565全体契約を変更せず、準備だけを#626（admission）と#627（publish deny）から分離する。
 
 ## 2. 固定契約
 
 * 入力はsealed stagingのtree/manifest digest、expected Pack main OID、deterministic branch name、operation ID、idempotency keyだけとする。current worktreeやPack checkoutから補完しない。
-* branch commitとPR createは別々のhuman approval/nonceを消費し、各consume直後に `planned_nonce_consumed` をappendする。nonce、operation、journal、receiptはadmission/publicationと共有しない。
+* branch commitとPR createは別々のhuman approval/nonceを消費し、各consume直後に `planned_nonce_consumed` をappendする。nonce、operation、journal、receiptはadmission/publicationと共有しない。preparation receiptは#626のread-only admission入力であり、publication intentやmutation approvalを含めない。
 * 各mutationは `mutation_intent` → `read_back_observation` の順で記録し、PR number、exact head/base OID、tree digestをatomic no-clobber preparation receiptへ確定する。
 * preparationはmain/Release/asset/tag/pointer writeを0件に保つ。remote失敗、応答欠落、timeout、stale/replay、観測不一致はtyped denyまたはindeterminateとし、後続writeを0件にする。
 * 同じoperationの完全一致replayだけをreceipt再構成として許可し、staging digest・expected main OID・PR identityのいずれかが変わればfail-closeする。
 
 ## 3. 対象oracle
 
-`CANDIDATE-PACKPUB-PREP-001..008`を、sealed入力、fresh nonce、mutation順序、PR read-back、no-clobber receipt、crash reconciliation、stale/replay、remote write 0の各独立軸へ一対一で昇格する。恒真アサーション、dummy port、旧publication nonceの流用でGreenにしない。
+`CANDIDATE-PACKPUB-PREP-001..010`を、sealed入力、approval欠落、nonce再利用、mutation順序、PR read-back、no-clobber receipt、crash reconciliation、stale/replay、remote write 0、成功receiptのPR identity束縛という各独立軸へ一対一で昇格する。恒真アサーション、dummy port、旧publication nonceの流用でGreenにしない。
 
 ## 4. 後続への引き継ぎ
 

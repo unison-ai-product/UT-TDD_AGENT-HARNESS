@@ -20,13 +20,15 @@ main refの変更と、review/checkを使ったadmission判定はこのsliceに�
 | Candidate | Red stimulus | Green oracle |
 | --- | --- | --- |
 | `CANDIDATE-PACKPUB-PREP-001` | sealed staging digest、expected main OID、branch名、operation ID、idempotency keyのいずれかを変異 | seal前にtyped `preparation_identity_mismatch`、branch/PR write 0 |
-| `CANDIDATE-PACKPUB-PREP-002` | branch commit approvalを欠落・別operation・期限切れ・nonce再利用へ変異 | `approval_missing`/`approval_binding_mismatch`/`approval_expired`、branch write 0 |
-| `CANDIDATE-PACKPUB-PREP-003` | PR create approvalをbranch approvalのnonceまたは別operationへ差替え | nonce集合の交差0、PR write 0、publication nonceの消費0 |
+| `CANDIDATE-PACKPUB-PREP-002` | branch commit approvalを欠落・別operation・期限切れへ変異 | `approval_missing`/`approval_binding_mismatch`/`approval_expired`、branch write 0、PR/main/Release/asset/tag/pointer write 0 |
+| `CANDIDATE-PACKPUB-PREP-003` | PR create approvalをbranch approvalのnonceまたは別operationへ差替え、または同一nonceを再利用 | nonce集合の交差0、PR write 0、publication nonceの消費0、main/Release/asset/tag/pointer write 0 |
 | `CANDIDATE-PACKPUB-PREP-004` | 各mutationの後に `planned_nonce_consumed` を記録しない、または `mutation_intent` より後へ移す | journalが `planned_nonce_consumed → mutation_intent → read_back_observation` の順でない場合はsuccess 0 |
-| `CANDIDATE-PACKPUB-PREP-005` | PR read-backのnumber/head/base/treeをsealed identityと1軸ずつ不一致にする | `preparation_observation_mismatch`、receipt未発行、後続write 0 |
+| `CANDIDATE-PACKPUB-PREP-005` | PR read-backのnumber/head/base/treeをsealed identityと1軸ずつ不一致にする。正常系では全identityを束縛したreceiptを発行する | `preparation_observation_mismatch`、receipt未発行、branch/PR/main/Release/asset/tag/pointer write 0。正常系receiptはPR number/head/base/treeを含む |
 | `CANDIDATE-PACKPUB-PREP-006` | receiptを同一pathへ上書き、temp未fsync、異種receiptを既存receiptへ置換 | atomic no-clobber。完全な既存bytesまたは完全な新bytesだけを残し、異種競合はwrite 0 |
-| `CANDIDATE-PACKPUB-PREP-007` | branch/PR write後、read-backまたはreceipt persist直前にcrash・timeout・応答欠落 | restartはjournal観測だけで再開し、再mutation 0。indeterminateを成功へ丸めない |
-| `CANDIDATE-PACKPUB-PREP-008` | 同一operationの完全一致replay、staging/main/PR identityを変えたreplayをそれぞれ実行 | 完全一致だけ同一receiptを決定的再構成し、変更replayはtyped deny、main/Release/tag/pointer write 0 |
+| `CANDIDATE-PACKPUB-PREP-007` | branch/PR write後、read-backまたはreceipt persist直前にcrash・timeout・応答欠落 | restartはjournal観測だけで再開し、再mutation 0。indeterminateを成功へ丸めない。main/Release/asset/tag/pointer write 0 |
+| `CANDIDATE-PACKPUB-PREP-008` | 同一operationの完全一致replay、staging/main/PR identityを変えたreplayをそれぞれ実行 | 完全一致だけ同一receiptを決定的再構成し、変更replayはtyped deny、main/Release/asset/tag/pointer write 0 |
+| `CANDIDATE-PACKPUB-PREP-009` | preparationの成功および `PREP-001..008` の各失敗で、publication側のmain/Release/asset/tag/pointer portを観測する | すべてのケースで publication intent 未生成、main/Release/asset/tag/pointer write count = 0。preparationがpublication writeを省略しただけの偽装は成功扱いにしない |
+| `CANDIDATE-PACKPUB-PREP-010` | 正常なbranch/PR read-backを、PR number/head/base/treeのいずれかを欠落・別値へ変異したreceiptへ差替える | 成功preparation receiptはPR number、exact head/base OID、tree digest、sealed staging/expected main identityへ束縛される。不一致・欠落は `preparation_observation_mismatch`、receipt write 0 |
 
 ## 3. 後続sliceとの分離
 
