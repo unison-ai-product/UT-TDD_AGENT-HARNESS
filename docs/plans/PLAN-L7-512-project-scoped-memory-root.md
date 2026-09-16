@@ -210,18 +210,18 @@ status: confirmed
 github_issue_id: 544
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:c3d66c1db79e70ef608f51f9f8384533
-  command_id: command:issue544-PLAN-L7-512-memory-inventory-r6
-  admitted_at: 2026-09-09T02:41:26.549Z
-  source_digest: sha256:e3e3cad039021a5394c5ad09ea1f0084642bba9c0423fd9faa77563e1e52ce19
-  decision_digest: sha256:6e9ac50f61464271799cc1dd0cba31f02d4f53349e96557d3abb61067f36ec54
-  receipt_digest: sha256:89c201fb18dcf2b324928578fab63c36ea6a4871e84752b131a9a52162b3adc3
+  receipt_id: certificate:d1c827ae9693b1f1b7702f609b773526
+  command_id: plan-revise:issue-424:legacy-512:7
+  admitted_at: 2026-09-16T01:33:20.050Z
+  source_digest: sha256:bc545df7ce01902776ca8cb1056eab057150be61dea337221f68bb058ef02ac8
+  decision_digest: sha256:808ba40862fe325bb47512265345b2ca744cb3e9b133f5196b800388b48ecb3e
+  receipt_digest: sha256:e0062f93659688caa5ba77dca4962184c9bf281484a557508328e9cff6449525
   binding:
     path: docs/plans/PLAN-L7-512-project-scoped-memory-root.md
     plan_id: PLAN-L7-512-project-scoped-memory-root
     asset_id: plan:legacy:68706e293ae2c96738a8e3263bac3e01e7cde64cdb7c3ed8e53805922662bc30
-    revision: 6
-    content_digest: sha256:e3e3cad039021a5394c5ad09ea1f0084642bba9c0423fd9faa77563e1e52ce19
+    revision: 7
+    content_digest: sha256:bc545df7ce01902776ca8cb1056eab057150be61dea337221f68bb058ef02ac8
   route:
     signal: feature_addition
     mode: add-feature
@@ -231,20 +231,39 @@ admission_receipt:
     episode_id: E4-544-project-memory-inventory
     projection_digest: sha256:bea56244b34bd74d709278dcab8fb5fd50024b05be6edc9d61b6ec5123d3f450
   origin:
-    plan_id: PLAN-L7-512-project-scoped-memory-root
-    revision: 5
-    digest: sha256:fffbb99286a1e2e26d50758ad70d27a3314465eeb531ecd39e46464ab71a2c7c
+    plan_id: PLAN-L6-104-memory-clean-cut-replacement
+    revision: 1
+    digest: sha256:5e05d3835164cd42c563329ae3eee17a6e564e1c2856c23dd90f182e84d2cca6
   transition:
     direction: design_to_implementation
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-512-project-scoped-memory-root
-    target_revision: 6
+    target_revision: 7
     phase: forward_merge
-  escape_reason: "Issue #544 exact implementation and preflight evidence"
+  escape_reason: "Issue #424 correction: the Slice 4
+    migration/inventory/quarantine/recovery/completion clauses and the two
+    migration generates entries are superseded by PLAN-L6-104; this revision
+    also absorbs the non-canonical direct edit 6efae246 from ledger rev 6
+    without retroactively canonizing it"
 ---
 
 # PLAN-L7-512: project-scoped canonical Memory and notification root
+
+> **訂正 (2026-09-16)**: 本 PLAN の Slice 4 に属する migration / inventory / quarantine / recovery /
+> completion 条項と、`generates` の `src/runtime/project-memory-migration.ts` /
+> `tests/project-memory-migration.test.ts` は、PO 判断 (2026-09-15、Issue #424) により
+> `PLAN-L6-104-memory-clean-cut-replacement` が supersede する。Slice 1/3 の project-scoped canonical
+> root、`src/runtime/project-memory-root.ts`、`src/runtime/claude-provider-envelope.ts`、clean Pack
+> parity は本 PLAN の契約として有効なまま継承する。`generates` の 2 件は、実装を撤去する後続 PR
+> (Issue #424 PR-1) の confirm と同時に削除する。
+>
+> **本 revision (rev 7) の吸収範囲**: rev 6 発行後に canonical revise を経ずに commit `6efae246` で
+> 加えられていた `updated: 2026-09-11` と `tests/project-memory-pack-parity.test.ts` の `generates`
+> 登録を、既存 ledger rev 6 (`canonical_payload_digest faf0d000…`) を base として本 revision で明示的に
+> 吸収する。これは `6efae246` の直接編集を遡って canonical と認定するものではなく、観測済みの drift を
+> 失わずに append-only lineage へ復帰させるための是正である。rev 6 の embedded content digest は
+> `sha256:e3e3cad0…`、drift 後の HEAD content digest は `sha256:e43a97bd…`。
 
 ## 1. Outcome
 
