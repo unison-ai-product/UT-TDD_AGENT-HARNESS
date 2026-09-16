@@ -95,18 +95,18 @@ status: confirmed
 github_issue_id: 102
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:b95f6ebf9406389d35b7a00745fb4fa4
-  command_id: plan-revise:issue-541:recovery-16:6
-  admitted_at: 2026-09-16T20:10:00+09:00
-  source_digest: sha256:7fe8b443744d88f7edac6995466fd91660814e622b8816a8765e3f2630b75237
+  receipt_id: certificate:3bf790ecebfa3a8548f4d62be7414052
+  command_id: plan-revise:issue-541:recovery-16:7
+  admitted_at: 2026-09-16T20:20:00+09:00
+  source_digest: sha256:5130a75c5712ce2e948c62ad5d429510dfffeee03d3ba8d63e30aecd285a0f22
   decision_digest: sha256:0c602385dfe6a8424d499cca7898473adf1b099ffe8b726f21112627913af488
-  receipt_digest: sha256:a049d0e3009def0efef0afb5b8491a5e2c64e8606b39fd939922c3ec95158aec
+  receipt_digest: sha256:db55bc5c88211eceaa426d60b5548a4405364eb5d011474eea857e2f85539772
   binding:
     path: docs/plans/PLAN-RECOVERY-16-plan-revision-authoring.md
     plan_id: PLAN-RECOVERY-16-plan-revision-authoring
     asset_id: plan:rebase:74ca026f9a0b72dca6f4fb164dd4e8f43c9ea3c9b31c4db21dec38a66d9d7d57
-    revision: 6
-    content_digest: sha256:7fe8b443744d88f7edac6995466fd91660814e622b8816a8765e3f2630b75237
+    revision: 7
+    content_digest: sha256:5130a75c5712ce2e948c62ad5d429510dfffeee03d3ba8d63e30aecd285a0f22
   route:
     signal: regression_dev
     mode: recovery
@@ -266,7 +266,5 @@ Redesign bundleの原子性契約 (replacement `supersedes` とorigin back-refer
       revision 28 を発行できる。根拠: U-PA-REV-049 と U-PA-REV-057 の実Git object / 正規 CLI 実測 (Issue #541)。
 - [x] integrity mismatch 3 軸 (content / canonical payload / embedded receipt 項目) と
       lineage ambiguity が個別の oracle で write 0 fail-close し、seal 経路へ落ちない。根拠: U-PA-REV-040 / 050 / 051 / 052 (Issue #541)。
-      根拠: 実装 PR のテスト (Issue #541)。
 - [x] fallback は embedded receipt 不在・対応 record 不在の 2 条件でのみ選ばれ、
       再水和成功時は legacy bootstrap / seal / successor genesis の write が 0 である。根拠: U-PA-REV-045 / 049 / 057 (Issue #541)。
-      根拠: 実装 PR のテスト (Issue #541)。
