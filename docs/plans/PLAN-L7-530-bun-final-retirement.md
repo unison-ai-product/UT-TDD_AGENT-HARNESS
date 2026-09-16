@@ -22,10 +22,6 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-530-bun-final-retirement.md
     artifact_type: markdown_doc
-  - artifact_path: src/lint/bun-final-retirement.ts
-    artifact_type: typescript_source
-  - artifact_path: tests/bun-final-retirement.test.ts
-    artifact_type: test_source
 dependencies:
   parent: docs/plans/PLAN-L6-93-node-bootstrap-contract.md
   requires: []
