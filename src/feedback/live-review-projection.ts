@@ -3,6 +3,7 @@ import { isAbsolute, normalize, resolve } from "node:path";
 /** Minimum envelope identity consumed here; keep feedback independent from runtime modules. */
 interface ClaudeReviewEnvelopeEntry {
   readonly memoryId: string;
+  readonly memoryPath: string;
   readonly requestDigest: string;
   readonly requestPath: string;
   readonly pr: number;
