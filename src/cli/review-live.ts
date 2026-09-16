@@ -1,6 +1,6 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, relative, resolve } from "node:path";
 import type { Command } from "commander";
 import type { LiveReviewWakeRoutingFailure } from "../feedback/live-review-projection.ts";
 import {
@@ -153,6 +153,24 @@ function publishLiveReviewReceipt(
   });
 }
 
+/**
+ * The canonical review request may only bind a memory file that lives directly under the
+ * canonical authored root (`.ut-tdd/memory`). Archive paths, linked-worktree paths and
+ * `..` escapes are refused before any read (PLAN-L7-566 PR-2, CANDIDATE-P-MEMCUT-009(b)).
+ */
+export function canonicalAuthoredMemoryPath(
+  canonicalProjectRoot: string,
+  memoryPath: string,
+): string {
+  const authoredRoot = resolve(canonicalProjectRoot, ".ut-tdd", "memory");
+  const target = resolve(canonicalProjectRoot, memoryPath);
+  const rel = relative(authoredRoot, target).replaceAll("\\", "/");
+  if (!rel || rel === "." || rel.startsWith("..") || rel.includes("/") || !rel.endsWith(".md")) {
+    throw new Error("review_memory_path_outside_canonical_root");
+  }
+  return join(".ut-tdd", "memory", rel).replaceAll("\\", "/");
+}
+
 export function registerLiveReviewCommands(
   review: Command,
   overrides: Partial<LiveReviewCommandDeps> = {},
@@ -193,7 +211,11 @@ export function registerLiveReviewCommands(
         try {
           const repoRoot = resolveRepositoryRoot(deps.repoRoot());
           const project = requireProjectMemoryRoot(repoRoot);
-          const memory = parseMemoryFile(project.canonicalProjectRoot, opts.memoryPath);
+          const memoryPath = canonicalAuthoredMemoryPath(
+            project.canonicalProjectRoot,
+            opts.memoryPath,
+          );
+          const memory = parseMemoryFile(project.canonicalProjectRoot, memoryPath);
           if (memory.memory_id !== opts.memoryId)
             throw new Error("review_memory_identity_mismatch");
           const requestedAt = new Date().toISOString();

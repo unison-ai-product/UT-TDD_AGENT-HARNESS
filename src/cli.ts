@@ -1772,7 +1772,11 @@ db.command("rebuild")
   .description("harness.db schema と deterministic projection を再構築")
   .option("--json", "JSON output")
   .action((opts: { json?: boolean }) => {
-    const r = rebuildHarnessDb({ repoRoot: process.cwd() });
+    // Memory projection must come from the canonical project root: a linked worktree cwd
+    // would otherwise project its own legacy .ut-tdd/memory (PLAN-L7-566 PR-2, P-MEMCUT-006).
+    const r = rebuildHarnessDb({
+      repoRoot: requireProjectMemoryRoot(process.cwd()).canonicalProjectRoot,
+    });
     if (opts.json) {
       process.stdout.write(`${JSON.stringify(r, null, 2)}\n`);
       return;
