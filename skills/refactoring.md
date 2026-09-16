@@ -58,7 +58,7 @@ Before writing a single line, answer these questions:
 1. What is the **observable boundary** of the code being changed? (Exported
    functions, CLI exit codes, files written to `.ut-tdd/`, DB rows.)
 2. Does the current test suite cover all observable boundary behaviours? Run
-   `bun run test` and confirm coverage. If not, write characterisation tests
+   `npm run test` and confirm coverage. If not, write characterisation tests
    first (see testing skill) — a refactor without a regression fence is a
    behaviour change with no safety net.
 3. Is the PLAN's `kind` value `refactor`? If `kind=add-impl` is present, the
@@ -68,7 +68,7 @@ Before writing a single line, answer these questions:
 
 ### Step 1 — establish a regression fence
 
-Run `bun run test` and record the baseline pass count. If any test is `.skip`
+Run `npm run test` and record the baseline pass count. If any test is `.skip`
 or `.todo` in the scope of the refactor, either un-skip it or file a PLAN to
 address it. Proceed only when the fence is complete and Green.
 
@@ -79,7 +79,7 @@ extract a helper, collapse two equivalent branches, remove dead code. Run
 the full gate sequence after each change:
 
 ```
-bun run typecheck && bun run lint && bun run test && ut-tdd doctor
+npm run typecheck && npm run lint && npm run test && ut-tdd doctor
 ```
 
 If any gate turns Red, revert the last change before proceeding. Do not
@@ -87,7 +87,7 @@ accumulate multiple structural changes across a Red gate.
 
 ### Step 3 — confirm behaviour invariance
 
-- `bun run test` passes with the same number of Green tests as the baseline
+- `npm run test` passes with the same number of Green tests as the baseline
   (no tests added or removed during refactor — only during subsequent
   Add-feature or TDD work).
 - `ut-tdd doctor` exits 0.
@@ -105,7 +105,7 @@ a descent obligation gap.
 
 - [ ] Regression fence is Green before first structural commit.
 - [ ] Each commit contains exactly one structural change.
-- [ ] `bun run typecheck && bun run lint && bun run test && ut-tdd doctor` green
+- [ ] `npm run typecheck && npm run lint && npm run test && ut-tdd doctor` green
   after every commit.
 - [ ] No new exported API surface added (would require Add-feature routing).
 - [ ] No `.ut-tdd/` state schema or `harness.db` schema changed.

@@ -104,4 +104,4 @@ constraint-violation path, and one migration-step idempotency check.
 - [ ] `ut-tdd plan lint` exits 0.
 - [ ] `ut-tdd doctor` exits 0.
 - [ ] For harness.db changes: `ut-tdd db rebuild` succeeds and projection-writer
-      tests are green (`bun run test`).
+      tests are green (`npm run test`).

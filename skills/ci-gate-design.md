@@ -31,8 +31,8 @@ decision_points:
     choose: "Fix the root cause in source, or file a PLAN-linked rationale if suppressing."
     over: "Silencing with `// biome-ignore`, `// @ts-ignore`, or `.skip` without justification."
     because: "Unlinked suppressions hide real defects from future review and accumulate as untracked technical debt."
-  - when: "`bun run lint` and `biome lint` are both available as ways to check the code."
-    choose: "Use `bun run lint` before push."
+  - when: "`npm run lint` and `biome lint` are both available as ways to check the code."
+    choose: "Use `npm run lint` before push."
     over: "Running `biome lint` alone."
     because: "`biome lint` alone does not check formatting, so format violations pass locally and fail the next CI push."
   - when: "A check passes locally on code that should have failed."
@@ -59,14 +59,14 @@ quality gate (FR-L1-05 static gate, FR-L1-18 cross-detection aggregation).
 The canonical CI run is `harness-check`. Never skip a sub-gate to make CI pass.
 
 ```
-bun run typecheck      # tsc --noEmit, zero errors
-bun run lint           # Biome check (format + lint), zero violations
-bun run test           # Vitest — NOT bun test (its 5s sync timeout is flaky)
+npm run typecheck      # tsc --noEmit, zero errors
+npm run lint           # Biome check (format + lint), zero violations
+npm run test           # Vitest — NOT npm test (its 5s sync timeout is flaky)
 ut-tdd doctor          # fail-close over every harness gate
 ```
 
-`bun run lint` runs Biome in check mode (format + lint). `biome lint` alone does
-not check formatting — always use `bun run lint` before push.
+`npm run lint` runs Biome in check mode (format + lint). `biome lint` alone does
+not check formatting — always use `npm run lint` before push.
 
 ## When a new gate is warranted
 

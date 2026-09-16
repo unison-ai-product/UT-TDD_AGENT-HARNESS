@@ -209,7 +209,7 @@ choosing to refactor because code "looks wrong."
   (complexity/duplication/runtime/change-failure).
 - [ ] Any AI-agent-produced domain data confirmed to route through the
   validated-JSON → domain factory → repository path.
-- [ ] `bun run typecheck && bun run lint && bun run test && ut-tdd doctor`
+- [ ] `npm run typecheck && npm run lint && npm run test && ut-tdd doctor`
   green; `ut-tdd review --uncommitted` has no blocking finding.
 
 ## Boundary with existing skills
