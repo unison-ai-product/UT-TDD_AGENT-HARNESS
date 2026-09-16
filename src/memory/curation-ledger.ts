@@ -271,20 +271,20 @@ export function renderCurationLedgerDocument(ledger: CurationLedger): string {
   const tracked = ledger.rows.filter((row) => row.source === "tracked").length;
   const untracked = ledger.rows.length - tracked;
   const reviewer = ledger.reviewer
-    ? `- reviewer: \`${ledger.reviewer.model}\` (${ledger.reviewer.family}、非著者 frontier)、exact head \`${ledger.reviewer.exact_head}\`、verdict ${ledger.reviewer.verdict}、receipt \`${ledger.reviewer.receipt}\``
-    : "- reviewer: 未記録 (非著者 frontier review の receipt を待つ)";
+    ? `- 非著者 reviewer: \`${ledger.reviewer.model}\` (${ledger.reviewer.family} family、frontier tier)、対象 exact head \`${ledger.reviewer.exact_head}\`、verdict ${ledger.reviewer.verdict}、receipt \`${ledger.reviewer.receipt}\``
+    : "- 非著者 reviewer: 未記録 (非著者 frontier review の receipt を待つ)";
   return [
-    "# memory curation ledger 2026-09 (Issue #424 PR-2)",
+    "# legacy memory corpus 採否台帳 2026-09 (Issue #424 PR-2)",
     "",
     "legacy memory corpus (PLAN-L6-104 §3.1 判断 6 / 7) の採否台帳。自動分類は候補提示にだけ使い、採用は 6 基準を全て満たす entry に限る。",
     "採用 entry は `ut-tdd memory add` で 1 件ずつ canonical root へ登録し、その registration receipt の digest を行に束縛する。",
     "untracked source は内容 digest と opaque な local-archive custody id だけを記録し、path・title・本文は書かない。",
     "",
-    `- schema: \`${ledger.schema_version}\``,
-    `- base commit: \`${ledger.base_commit}\``,
-    `- author: \`${ledger.author.model}\` (${ledger.author.family})`,
+    `- スキーマ: \`${ledger.schema_version}\``,
+    `- 基準 commit (PR-2 base): \`${ledger.base_commit}\``,
+    `- 著者 (author family): \`${ledger.author.model}\` (${ledger.author.family})`,
     reviewer,
-    `- rows: ${ledger.rows.length} (tracked ${tracked} / untracked ${untracked})、adopt ${adopt}、reject ${reject}、merged_from ${merged}`,
+    `- 行数: ${ledger.rows.length} 件 (tracked ${tracked} / untracked ${untracked})、採用 (adopt) ${adopt} 件、不採用 (reject) ${reject} 件、統合元 (merged_from) ${merged} 件`,
     "",
     "## 6 基準",
     "",
@@ -297,7 +297,7 @@ export function renderCurationLedgerDocument(ledger: CurationLedger): string {
     "",
     "機械照合は `tests/memory-curation-ledger.test.ts` (U-MEMCUT-024〜028) が `MANIFEST.json` と canonical root に対して行う。",
     "",
-    "## 台帳 (machine section)",
+    "## 台帳本体 (機械照合用 JSON)",
     "",
     FENCE_OPEN,
     JSON.stringify(ledger, null, 1),
