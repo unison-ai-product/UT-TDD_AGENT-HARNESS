@@ -74,6 +74,15 @@ describe("Node generation CI aggregate admission", () => {
     ).toBe(false);
   });
 
+  it("CAND-NODEBOOT-105: labels a different workflow run as an evidence binding mismatch", () => {
+    expect(
+      admitNodeGenerationAggregate({
+        evidence: [evidence("linux"), { ...evidence("windows"), run_id: "run-2" }],
+        expected,
+      }),
+    ).toEqual({ ok: false, reason: "evidence-binding-mismatch" });
+  });
+
   it("CAND-NODEBOOT-106: does not waive a missing or partial Node evidence pair", () => {
     expect(admitNodeGenerationAggregate({ evidence: [evidence("linux")], expected }).ok).toBe(
       false,
@@ -84,5 +93,28 @@ describe("Node generation CI aggregate admission", () => {
         expected,
       }).ok,
     ).toBe(false);
+  });
+
+  it("CAND-NODEBOOT-105: failed-job-only rerun rejects retained producer artifacts with a typed attempt reason", () => {
+    const attemptOne = [evidence("linux"), evidence("windows")];
+    expect(
+      admitNodeGenerationAggregate({
+        evidence: attemptOne,
+        expected: { ...expected, run_attempt: 2 },
+      }),
+    ).toEqual({ ok: false, reason: "attempt_binding_mismatch" });
+  });
+
+  it("CAND-NODEBOOT-105: full rerun admits only a same-attempt producer pair", () => {
+    const attemptTwo = [
+      { ...evidence("linux"), run_attempt: 2 },
+      { ...evidence("windows"), run_attempt: 2 },
+    ];
+    expect(
+      admitNodeGenerationAggregate({
+        evidence: attemptTwo,
+        expected: { ...expected, run_attempt: 2 },
+      }),
+    ).toMatchObject({ ok: true, run_attempt: 2 });
   });
 });
