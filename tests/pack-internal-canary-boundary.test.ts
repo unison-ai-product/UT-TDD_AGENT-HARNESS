@@ -11,7 +11,6 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { runPackAuthoringSmoke } from "../src/setup/pack-authoring-smoke.ts";
 import {
   AUTHORING_TEMPLATE_ARTIFACT_PATHS,
   buildCleanDistributionPlan,
@@ -19,6 +18,7 @@ import {
   transformCleanDistributionArtifact,
   validateAuthoringArtifactSet,
 } from "../src/setup/index.ts";
+import { runPackAuthoringSmoke } from "../src/setup/pack-authoring-smoke.ts";
 
 function trackedPaths(): string[] {
   return execFileSync("git", ["ls-tree", "-r", "--name-only", "-z", "HEAD"], {
@@ -146,25 +146,23 @@ describe("#418 Pack-only internal canary boundary", () => {
     expect(duplicateResult.duplicateArtifactPaths).toContain(AUTHORING_TEMPLATE_ARTIFACT_PATHS[0]);
   });
 
-  it.each(CANARY_SKILLS_BASELINE)(
-    "CANDIDATE-ST-PACKCANARY-002: skills baseline rejects missing %s",
-    (missingPath) => {
-      const plan = buildCleanDistributionPlan({ paths: trackedPaths() });
-      expect(plan.ok).toBe(true);
-      const entries = plan.artifactPaths.filter((path) => path !== missingPath);
-      expect(inspectCanarySkillsBaseline(entries)).toEqual([`missing:${missingPath}`]);
-    },
-  );
+  it.each(
+    CANARY_SKILLS_BASELINE,
+  )("CANDIDATE-ST-PACKCANARY-002: skills baseline rejects missing %s", (missingPath) => {
+    const plan = buildCleanDistributionPlan({ paths: trackedPaths() });
+    expect(plan.ok).toBe(true);
+    const entries = plan.artifactPaths.filter((path) => path !== missingPath);
+    expect(inspectCanarySkillsBaseline(entries)).toEqual([`missing:${missingPath}`]);
+  });
 
-  it.each(CANARY_SKILLS_BASELINE)(
-    "CANDIDATE-ST-PACKCANARY-002: skills baseline rejects duplicate %s",
-    (duplicatePath) => {
-      const plan = buildCleanDistributionPlan({ paths: trackedPaths() });
-      expect(plan.ok).toBe(true);
-      const entries = [...plan.artifactPaths, duplicatePath];
-      expect(inspectCanarySkillsBaseline(entries)).toEqual([`duplicate:${duplicatePath}`]);
-    },
-  );
+  it.each(
+    CANARY_SKILLS_BASELINE,
+  )("CANDIDATE-ST-PACKCANARY-002: skills baseline rejects duplicate %s", (duplicatePath) => {
+    const plan = buildCleanDistributionPlan({ paths: trackedPaths() });
+    expect(plan.ok).toBe(true);
+    const entries = [...plan.artifactPaths, duplicatePath];
+    expect(inspectCanarySkillsBaseline(entries)).toEqual([`duplicate:${duplicatePath}`]);
+  });
 
   it("CANDIDATE-ST-PACKCANARY-002: materialized authoring bytes reject corruption", () => {
     const packRoot = materializeCleanPack();
