@@ -8,8 +8,8 @@ drive: agent
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-09-10
-updated: 2026-09-10
-owner: Claude / Fable (pair-freeze) · Codex worker (implementation)
+updated: 2026-09-16
+owner: Claude / Fable (pair-freeze) · Codex/Luna worker (bounded implementation)
 parent_design: docs/plans/PLAN-L6-101-pack-independent-multi-consumer-acceptance.md
 pair_artifact: docs/test-design/harness/L12-pack-internal-canary-test-design.md
 next_pair_freeze: L12
@@ -55,18 +55,18 @@ status: draft
 github_issue_id: 418
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:a5ec9ea8f3689c8d24727d97a9804bcf
-  command_id: plan-revise:issue-418:forward:2
-  admitted_at: 2026-09-10T10:27:51.659Z
-  source_digest: sha256:69c9c058d2178425bb0459033b2748785d152d7a9c2a37c01aefbca270709d4e
-  decision_digest: sha256:2ee0d06520a02bb49244002124eeb74804bcde3a28cfe21289bb7681a711d12d
-  receipt_digest: sha256:4adc16d207f8b7ac617c9fc834a0e6939cd80c2a7bd2c3ca470eb13b61755fe7
+  receipt_id: certificate:d70d711f99f9a86253098cd0357f4094
+  command_id: plan-revise:issue-418:forward:3
+  admitted_at: 2026-09-16T10:38:43.962Z
+  source_digest: sha256:1c2d41f4a530b1ca50e4514d0223aab6b2215ec75a5e28eb922b9627f6e9fbf6
+  decision_digest: sha256:a987f5c25aeb1bcf419c4d5159f6c6c3b66761c86a6b44b85e949ae0a4c76d57
+  receipt_digest: sha256:4ff69d64e87545244728a4ca86500ec44802938b3d4ba7b3aef7624fa9b63585
   binding:
     path: docs/plans/PLAN-L7-531-pack-internal-canary-smoke.md
     plan_id: PLAN-L7-531-pack-internal-canary-smoke
     asset_id: plan:44f79788376b81c225ce5913fddbc48f
-    revision: 2
-    content_digest: sha256:69c9c058d2178425bb0459033b2748785d152d7a9c2a37c01aefbca270709d4e
+    revision: 3
+    content_digest: sha256:1c2d41f4a530b1ca50e4514d0223aab6b2215ec75a5e28eb922b9627f6e9fbf6
   route:
     signal: feature_addition
     mode: add-feature
@@ -81,10 +81,10 @@ admission_receipt:
     digest: sha256:6e4e0d5516e78e7465d260c65482e3302c9304518eb264d39735d049c166a316
   reentry:
     target_plan_id: PLAN-L7-531-pack-internal-canary-smoke
-    target_revision: 2
+    target_revision: 3
     phase: forward_merge
-  escape_reason: "Issue #418 PR #560 Codex FLAG: family-neutral non-author closing
-    receipt obligation"
+  escape_reason: "Issue #418 PR #638 FLAG: reslice Pack-only canary implementation
+    boundary before a new implementation PR"
 ---
 
 # PLAN-L7-531: Pack-only internal canary smoke (Windows/Linux)
@@ -100,14 +100,10 @@ slice である。#364 の Product A/B 異 version 共存・片系 upgrade/rollb
 
 本 PLAN は pair-freeze であり、実装・Green・canary 公開・#418 の closure を主張しない。
 
-### 1.1 HARD 前提の実測 (2026-09-10)
+### 1.1 HARD 前提の実測 (2026-09-16)
 
-| #418 の HARD predecessor | 実測 |
-| --- | --- |
-| #414 minimal Pack canary publication adapter の main 到達 | CLOSED。`PLAN-L7-515` confirmed、PR #466 merge |
-| #408 / #134 の Pack・consumer 実行面の Bun 永久 BAN | #408 CLOSED (`PLAN-L7-522` / `L7-527` confirmed)。#134 は親 umbrella として open のまま |
-| Pack main protection (PR、required harness-check、human approval) | 有効: required check `harness-check`、approving review 1 |
-| #419 admission deny 時の PF5 全 port 0 (U-PACKISO-007) | CLOSED |
+先行成果物の実測は契約の実装完了を意味しない。#414/#420/#487 の状態は、それぞれの main 到達と
+canonical receipt により別途検証する。
 
 ### 1.2 起票時点で未充足の入力 (本 PLAN は止めない)
 
@@ -122,16 +118,20 @@ slice である。#364 の Product A/B 異 version 共存・片系 upgrade/rollb
   consumer root 内に memory/notification state が閉じることだけを観測し、cross-worktree
   provider parity を主張しない。
 
-### 1.3 先行成果物の採用
+### 1.3 先行成果物の扱いと実装境界
 
-Codex worker が 2026-09-08 にローカル branch `feat/issue418-pack-canary-nonbun`
-(commit `f3dc2f4a`〜`26bacb9b`、origin 未 push) で、pair artifact
-`docs/test-design/harness/L12-pack-internal-canary-test-design.md` と
-`tests/pack-internal-canary-boundary.test.ts` (CANDIDATE-ST-PACKCANARY-001..004) を先行
-作成している。本 PLAN はこの test-design を pair artifact として採用し、`plan_id` を本 PLAN へ
-束縛して §7 の候補 oracle を追補する。test 実装 (`tests/pack-internal-canary-boundary.test.ts`)
-は C003/C004 が意図的な Red のため pair-freeze PR に含めず、§6 の PR-1 で Red→Green とともに
-取り込む。先行 commit は破棄せず、実装 PR がその上に積む。
+Codex worker が 2026-09-08 に作成した pair artifact と先行テストは、現状の実測範囲を示す
+候補資料として参照する。ただし、先行 branch の bytes、current worktree、Git tree、既存 helper の
+Green は、本 PLAN の実装・受入証跡へ自動昇格しない。
+
+本 revision は、PR #638 の FLAG 5 件を受けた contract-only reslice である。PR-0 は PLAN、
+Reverse、L12 test-design の docs だけを freeze し、test source、production source、publication
+mutation、release receipt を生成・変更しない。
+
+C003/C004/C007 は #420 の consumer-local runtime と setup 元 checkout 撤去が main に到達するまで
+意図的な Red のままとする。C001/C002/C006 の unit 層も、sealed staging input port が実装される
+まで Green と主張しない。同一 worker の preflight や CI Green により draft PLAN を confirmed へ
+遷移させず、confirmed 化は cross-family non-author review と canonical admission のみが行う。
 
 ## 2. 設計判断: smoke の入力 artifact
 
@@ -229,34 +229,36 @@ request custody を代替しない。
 
 | PR | 論点 | 前提 |
 | --- | --- | --- |
-| PR-0 (本 PR) | 本 PLAN + `PLAN-REVERSE-531` + pair test-design の pair-freeze (docs のみ) | なし |
-| PR-1 | 第 1 層 CI smoke: `tests/pack-internal-canary-boundary.test.ts` の Red→Green と最小配線。CANDIDATE 001..004 と 006/007 を `U-ST-PACKCANARY-*` へ昇格 | `PLAN-L7-516` §6 の破壊的 checkout 削除 E2E (#420 production adapter) が main へ到達 |
-| PR-2 | 第 2 層 受入 run 配線 (実行形態は PR-2 の設計判断節で確定)。CANDIDATE 005 の昇格と L12 `AT-DIST-002` 行の追記 | PR-1 merge、canary 公開の PO 承認 |
+| PR-0 (本 revision) | PLAN、Reverse、L12 test-design の contract-only pair-freeze | なし。test source と production source は含めない |
+| PR-1A | 第 1 層 offline smoke の sealed staging input、明示 inventory、C001/C002/C006-unit の Red→Green | PLAN-L7-508 の sealed result (tar.gz + .sha256 + control manifest) と PR-0 の cross-family PASS |
+| PR-1B | #420 の consumer-local runtime、setup 元 checkout 撤去、別 cwd/process/env-clear、path/state oracle (C003/C004/C007) | #420 が main に到達し、#487 の Bun zero-trace 前提が成立 |
+| PR-2 | human-triggered 公開 canary asset の exact 2 件・tag・receipt byte digest 接合 (C005/C006-acceptance) | PR-1A/1B、#565 publication、PO 承認済みの v0.2.0-canary.1 |
 
-PR-1 と PR-2 を 1 PR に統合しない。scope 構造を指す FLAG は close→分割再出で応じる。
+PR-1A は PR-1B の未充足条件を Green/confirmed と主張しない。PR-2 は CI から network、credential、
+remote mutation を行わず、公開後の human-triggered run に限定する。PR-0 の contract freeze と実装 PR を
+1 本へ戻す FLAG は close→分割再出で扱う。
 
 ## 7. TDD / trace / Reverse
 
-pair artifact の候補 oracle は次の通り。001..004 は Codex 先行 test-design (§1.3) を採用し、
-005..007 を本 PLAN で追補する。実装 PR で同番号の `U-ST-PACKCANARY-*` へ 1:1 昇格する。
-既存 `CANDIDATE-PACKISO-001..007`、`CANDIDATE-U-PACKNODE-*`、`U-PACKBUN-*`、
-`CANDIDATE-PACKPUB-*` を再採番・再所有しない。
+pair artifact の候補 oracle は次の通り。CANDIDATE は候補としてのみ保持し、同じ実装 revision
+で Red→Green の実測が揃うまで U-* へ昇格しない。C004 は generated wrapper/config だけでなく
+stdout、stderr、consumer root 内の .ut-tdd runtime state を検査し、skills inventory は helper の
+存在ではなく materialized product 経路の exact inventory を検査する。
 
 | Candidate | 契約軸 | 所有層 |
 | --- | --- | --- |
-| `CANDIDATE-ST-PACKCANARY-001` | clean inventory に source-only / absolute path が混入しない | 第 1 層 |
-| `CANDIDATE-ST-PACKCANARY-002` | authoring template と skills の exact-one inventory | 第 1 層 |
-| `CANDIDATE-ST-PACKCANARY-003` | setup 元撤去後・別 cwd からの sealed runtime 起動、外部参照は typed deny | 第 1 層 |
-| `CANDIDATE-ST-PACKCANARY-004` | generated wrapper/config/runtime state に setup 元 absolute path 0 | 第 1 層 |
-| `CANDIDATE-ST-PACKCANARY-005` | 第 2 層: 公開 asset の SHA-256/size が第 1 層 staging receipt と byte 一致、不一致は `mismatch` deny | 第 2 層 |
-| `CANDIDATE-ST-PACKCANARY-006` | exact 2 asset + tag exact match: legacy 3 asset release、`latest`/prefix 解決、asset 欠落/余剰を deny | 第 2 層 (unit は第 1 層で固定) |
-| `CANDIDATE-ST-PACKCANARY-007` | 再起動相当 (別 process/cwd/env clear) 後の PLAN/DB/doctor/review smoke 再現と Bun trace 0 | 第 1 層 |
+| CANDIDATE-ST-PACKCANARY-001 | source-only/absolute path を clean inventory へ混入させない | PR-1A |
+| CANDIDATE-ST-PACKCANARY-002 | authoring template と skills の exact-one inventory | PR-1A |
+| CANDIDATE-ST-PACKCANARY-003 | setup 元撤去後、別 cwd/process から sealed runtime を起動し外部 path は typed deny | PR-1B |
+| CANDIDATE-ST-PACKCANARY-004 | wrapper/config/stdout/stderr/.ut-tdd state に setup 元 absolute path 0 | PR-1B |
+| CANDIDATE-ST-PACKCANARY-005 | 公開 asset の SHA-256/size と第 1 層 staging receipt の byte 一致 | PR-2 |
+| CANDIDATE-ST-PACKCANARY-006 | exact 2 asset + exact tag。legacy 3 asset、latest/prefix/range、欠落/余剰を deny | PR-1A (unit) / PR-2 (受入) |
+| CANDIDATE-ST-PACKCANARY-007 | 別 process/cwd/env-clear 後の PLAN/DB/doctor/review 再現と Bun trace 0 | PR-1B |
 
-R1 では `PLAN-L6-101` の source 非依存と `PLAN-L6-63` の immutable release identity を照合する。
-R2 では二層接合・fixture 契約・PR 分割を同一 implementation revision へ束縛する。R3 では非著者
-の claim-blind / spec-blind review で、silent fallback、legacy release の誤取得、receipt 申告
-digest の信用、partial install の成功扱いを攻撃する。R4 では不足差分だけを `PLAN-L6-101` へ
-backfill し、`PLAN-L7-515` / `L7-516` / `L7-508` を重複所有しない。
+R1 は sealed staging、consumer-local runtime、immutable identity の責務境界を再確認する。R2 は
+PR-1A/1B/2 の split と Candidate ownership を束縛する。R3 は claim-blind/spec-blind の cross-family
+review で silent fallback、legacy release 誤取得、receipt 申告 digest、partial install を攻撃する。
+R4 は不足差分だけを L6-101/L7-515/L7-516 へ gap-only backfill し、既存所有 oracle を再宣言しない。
 
 ## 8. 非 Scope
 
@@ -269,22 +271,24 @@ backfill し、`PLAN-L7-515` / `L7-516` / `L7-508` を重複所有しない。
 
 ## 9. 完了条件
 
-1. fixture 内に source repo、source worktree、開発用 DB/PLAN/evidence、ローカル Pack checkout が
-   存在しない状態で第 1 層 smoke が Linux/Windows/aggregate で Green。
-2. PATH/env/config/log/receipt の source 側 absolute path 参照 0、`bun` trace 0。
-3. release asset は exact 2 件で、digest/identity/tag/Pack commit が publication receipt と
-   一致し、第 1 層 staging receipt と byte 一致する (§3.3)。
-4. 再起動相当セッション後にも PLAN/DB/doctor/review smoke が再現する。
-5. failure 時は consumer root 外 write 0、partial install を成功扱いしない。
-6. `PLAN-L7-531`、L12 test-design、`PLAN-REVERSE-531`、CI、成果物を書いていない族 (cross-family) の canonical non-author closing receipt (PR-0 は Claude 起票のため Codex 族、Codex worker が書く PR-1 / PR-2 は Claude 族) を
-   同一 exact revision へ束縛する。
-7. 本 Issue は internal canary の入口だけを閉じる。#364 は open のまま維持する。
+1. PR-1A の sealed staging input から、source repo/worktree/current tree/glob/directory walk/
+   full inherited env へ依存せず、第 1 層 smoke が Linux/Windows/aggregate で Green になる。
+2. PR-1B の #420 consumer runtime が setup 元撤去後の別 cwd/process/env-clear で動き、path/state/stdout/
+   stderr/.ut-tdd state に source absolute path がなく、Bun trace が 0 になる。
+3. PR-2 の公開 asset が exact 2 件で、digest/identity/tag/Pack commit と publication receipt、第 1 層
+   staging receipt に byte 単位で一致する。
+4. 失敗時の consumer root 外 write 0、partial install の成功扱い 0、legacy release 誤取得 0。
+5. PLAN/L12/Reverse、CI、成果物を書いていない族の canonical non-author closing receipt を各 exact
+   implementation revision へ束縛する。PR-0 は draft のまま、実装 worker preflight は PLAN status を変更しない。
+6. 本 Issue は internal canary の入口だけを閉じ、#364 を open のまま維持する。
 
 ## 10. 実装開始条件
 
-1. 本 PLAN と `PLAN-REVERSE-531` の pair-freeze に非著者 PASS receipt と CI Green が揃うこと。
-2. `PLAN-L7-516` §6 の破壊的 checkout 削除 E2E が main へ到達していること (PR-1 の前提)。
-3. `v0.2.0-canary.1` が `PLAN-L7-515` adapter 経由で human-approved 公開されていること
-   (PR-2 の前提。公開の実施は PO 承認を要する高影響境界であり、本 PLAN は承認を代替しない)。
-4. production source を第 1 層・第 2 層とも変更しないこと。方式変更が必要になったら PR を
-   close して本 PLAN の契約改訂へ戻る。
+1. PR-0 の contract-only pair-freeze に cross-family non-author PASS と required CI Green が揃うこと。
+2. PR-1A は PLAN-L7-508 の sealed staging result だけを入力にし、Git tree、current worktree、
+   cpSync(process.cwd())、registry npm ci、full inherited env を使用しないこと。
+3. PR-1B は #420 main 到達後にのみ開始し、C003/C004/C007 を先に Green/confirmed としないこと。
+4. PR-2 は human-approved v0.2.0-canary.1 公開後にのみ開始し、receipt/admission 時刻と digest は
+   canonical generator が生成した値だけを受理する。手書き時刻・申告 digest は受理しない。
+5. production source を PR-0 で変更しない。方式変更が必要なら旧実装 PR を膨らませず、本 PLAN の
+   contract revision へ戻る。

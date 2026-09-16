@@ -18,9 +18,9 @@ publication を所有しない、clean Pack fixture の境界検証を定義す�
 source非依存の契約は `PLAN-L6-101` を正本として再利用し、既存の
 `CANDIDATE-PACKISO-*` / `U-PACKISO-*` を再採番・再所有しない。
 
-§3 の Candidate 001..004 は Codex worker の先行作業 (ローカル branch
-`feat/issue418-pack-canary-nonbun`、commit `f3dc2f4a`〜`26bacb9b`、2026-09-08) を採用したもの
-であり、005..007 は `PLAN-L7-531` §3 の二層入力契約に合わせて追補した。
+§3 の Candidate 001..004 は Codex worker の先行作業を候補資料として参照するが、先行 branch の
+bytes、current worktree、Git tree、既存 helper の Green は実装・受入証跡へ昇格しない。005..007 は
+`PLAN-L7-531` §3 の二層入力契約に合わせて追補した。
 
 既存の `tests/distribution-acceptance.test.ts` は clean artifact の materialize、Node/npm
 install、setup、doctor、typecheck を検証している。本書の専用テストはその実装を置き換えず、
@@ -31,6 +31,10 @@ install、setup、doctor、typecheck を検証している。本書の専用テ�
 - source 外の temporary consumer root だけを実行入力とすること
 - source/worktree/local Pack checkout を参照しない再起動相当の wrapper smoke
 - 第 1 層 (sealed local staging) と第 2 層 (公開 asset) の receipt digest 接合
+
+PR-0 はこの契約と Candidate の責務分割だけを扱う docs-only pair-freeze である。実装 PR は
+PR-1A (sealed staging offline)、PR-1B (#420 consumer-local runtime)、PR-2 (公開 asset 受入) に
+分離し、同一 worker の preflight や既存 helper の Green で draft を confirmed に変更しない。
 
 ## 2. 非スコープ
 
@@ -56,13 +60,16 @@ install、setup、doctor、typecheck を検証している。本書の専用テ�
 | `CANDIDATE-ST-PACKCANARY-007` | 第 1 層 | 別 process・別 cwd・環境変数 clear で wrapper を再起動し、`bun` を PATH 上に置く | PLAN authoring/lint、db rebuild、doctor、review smoke が同一 sealed generation で再現し、Bun invocation trace 0 |
 
 Candidate は pair-freeze 時点の設計候補であり、実装と同じ revision の Red→Green 実測が
-揃うまで `U-*` へ昇格しない。001..004・006 (unit)・007 は `PLAN-L7-531` §6 の PR-1、
-005・006 (受入) は PR-2 が昇格する。
+揃うまで `U-*` へ昇格しない。001..002・006 (unit) は `PLAN-L7-531` §6 の PR-1A、003..004・007 は
+PR-1B、005・006 (受入) は PR-2 が昇格する。C003/C004/C007 は #420 main 到達前には意図的 Red の
+ままとする。
 
 ## 4. 実行手順
 
 1. 第 1 層では `PLAN-L7-508` の sealed staging result (tar.gz + `.sha256` + control manifest
-   sidecar) から clean tree を temporary consumer rootへ materializeする。第 2 層では公開済み
+   sidecar) から clean tree を temporary consumer rootへ materializeする。入力は sealed result に
+   限定し、`git ls-tree HEAD`、`cpSync(process.cwd())`、directory walk/glob、local Pack checkout、
+   registry `npm ci`、全環境変数の継承で entry を補完してはならない。第 2 層では公開済み
    `v0.2.0-canary.1` の exact 2 asset を取得し、tag は exact match で解決する。いずれも
    source repositoryをfixtureの入力に残さない。
 2. Node/npmで依存を導入し、`setup --solo`、`doctor --setup-smoke`、status/authoring smokeを
@@ -72,7 +79,10 @@ Candidate は pair-freeze 時点の設計候補であり、実装と同じ revis
    開発用repository、実利用worktreeやユーザーデータを削除して試験してはならない。正式setupが生成した
    sealed bundle/pointerだけを入力として、別cwdからproject-local wrapperを再実行する。
    テストはbundle/pointerを手書き注入しないため、現行setupが生成できなければRedになる。
-4. consumer root外のread/open/stat/write/processを観測し、失敗時もpartial successへ丸めない。
+4. consumer root外のread/open/stat/write/processを観測し、失敗時もpartial successへ丸めない。C004
+   は generated wrapper/config に限定せず、stdout、stderr、receipt、consumer root 内の `.ut-tdd`
+   runtime state も走査する。skills inventory は helper の存在ではなく materialized product 経路の
+   exact inventory を検査する。
 5. 第 2 層では取得した asset の SHA-256/size を第 1 層 staging receipt と照合し、
    publication receipt の release identity・annotated tag が指す Pack commit/tree と一致することを
    独立再計算で確認する (`PLAN-L7-531` §3.3)。
@@ -98,7 +108,9 @@ Codex 先行 branch の `8e4dc229` で `npm`/setupを起動しないmaterialized
 含むexit 0を確認した。6 authoring artifactを既存smokeで読み、skillsの2ファイルが非空であること、
 state templateのJSON破損を既存parserが拒否することを観測した。smoke実装の所有はPLAN-L7-528へ維持する。
 
-このfixtureはHEADのpath一覧と作業treeのbytesからmaterializeする。公開済みrelease artifact、
+このfixtureはHEADのpath一覧と作業treeのbytesからmaterializeする。これは PR-0 の契約と整合しない
+先行作業の実測であり、PR-1A で sealed staging input に置換するまで実装証跡として採用しない。
+公開済みrelease artifact、
 manifest/asset digestや正規publication receiptの検証ではない。skillsについてinventory validatorが
 missing/duplicateを検出するとは主張せず、物理存在・非空だけの実測とする。
 既存C003/C004のsetup元削除後起動・絶対path残存のRedは未修正。
@@ -106,5 +118,5 @@ C004の現実装は生成3ファイルだけを検査し、command output/runtim
 本節の追加で§4の全手順、L12受入、Issue #418完了へ昇格しない。
 
 pair-freeze PR (`PLAN-L7-531` PR-0) は本書と PLAN のみを含み、
-`tests/pack-internal-canary-boundary.test.ts` は PR-1 で Red→Green とともに取り込む。
+`tests/pack-internal-canary-boundary.test.ts` は PR-1A/PR-1B で Red→Green とともに取り込む。
 005..007 は 2026-09-10 時点で実装・実測ともに 0 である。

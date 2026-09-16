@@ -8,7 +8,7 @@ confirmed_reverse_type: design
 route_signal: reverse
 route_mode: reverse
 created: 2026-09-10
-updated: 2026-09-10
+updated: 2026-09-16
 owner: Claude / Fable (pair-freeze) · Codex worker (implementation)
 forward_routing: gap-only
 promotion_strategy: reuse-as-is
@@ -47,18 +47,18 @@ status: draft
 github_issue_id: 418
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:52eba0ab1e5b4e8fa1407ddbb36b5296
-  command_id: plan-revise:issue-418:reverse:2
-  admitted_at: 2026-09-10T10:27:51.659Z
-  source_digest: sha256:1ab94c0a9676ee3c2df7b95b34bb11d154417bb2daf14a899f4cbc6bb04ca64c
-  decision_digest: sha256:62dd7163f12ed450694d929543a4ea9042978d4c0167c2ab88980d009ca04780
-  receipt_digest: sha256:fa3a2da8c03bcced44b61ec9536fa5a21d22549ae3b881a784e4dd6a8eba7521
+  receipt_id: certificate:26f273691238fda4dc3af2cf50906685
+  command_id: plan-revise:issue-418:reverse:3
+  admitted_at: 2026-09-16T10:39:25.153Z
+  source_digest: sha256:f763aaa1a538094f8974c7012d0fbfaf80c70109fd583c999f4b26ee30e59125
+  decision_digest: sha256:aa6ad78ab893139f8844ca8a557de05a6b38a1fce40c9664b21d00c550b19f12
+  receipt_digest: sha256:3dd6a02ad51b3c632aa59e5ccc7e9cf5421dac86870e35d3da93dc244885b845
   binding:
     path: docs/plans/PLAN-REVERSE-531-pack-internal-canary-smoke-backfill.md
     plan_id: PLAN-REVERSE-531-pack-internal-canary-smoke-backfill
     asset_id: plan:c789d97c71c9a9c07942983de88b71ab
-    revision: 2
-    content_digest: sha256:1ab94c0a9676ee3c2df7b95b34bb11d154417bb2daf14a899f4cbc6bb04ca64c
+    revision: 3
+    content_digest: sha256:f763aaa1a538094f8974c7012d0fbfaf80c70109fd583c999f4b26ee30e59125
   route:
     signal: reverse
     mode: reverse
@@ -76,10 +76,10 @@ admission_receipt:
     implementation_disposition: preserved
   reentry:
     target_plan_id: PLAN-L7-531-pack-internal-canary-smoke
-    target_revision: 2
+    target_revision: 3
     phase: forward_merge
-  escape_reason: "Issue #418 PR #560 Codex FLAG: family-neutral non-author closing
-    receipt obligation"
+  escape_reason: "Issue #418 PR #638 FLAG: align Reverse candidate ownership with
+    Pack canary contract reslice"
 ---
 
 # PLAN-REVERSE-531: Pack-only internal canary smoke の逆向き確認
@@ -121,15 +121,21 @@ L7-531 はこれらを二層入力契約 (§3)、fixture 契約 (§4)、smoke �
 
 ## R2: candidate / oracle 対応
 
+実装責務は PR-1A (sealed staging の offline 層)、PR-1B (#420 consumer-local runtime 層)、
+PR-2 (公開 asset の human-triggered 層) に分離する。PR-0 の pair-freeze、同一 worker の
+preflight、既存 helper の Green は PLAN の draft→confirmed 遷移や Candidate の U-* 昇格の
+根拠にならない。各 Candidate は同一 implementation revision の Red→Green 実測と
+cross-family non-author receipt が揃った時だけ昇格する。
+
 | Candidate | 実装 PR | Red 入力 | Green oracle |
 | --- | --- | --- | --- |
-| 001 | PR-1 | source-only / absolute path の混入 | clean inventory 内だけに出荷 |
-| 002 | PR-1 | authoring/skills entry の欠落・重複 | exact-one inventory の fail-close |
-| 003 | PR-1 | setup 元撤去後の起動で外部 path へ解決 | sealed runtime のみで起動、外部参照は typed deny |
-| 004 | PR-1 | generated wrapper/config/state に setup 元 absolute path | 参照 0 |
-| 005 | PR-2 | 公開 asset の SHA-256/size を 1 byte 変異 | 第 1 層 staging receipt と不一致で `mismatch` deny |
-| 006 | PR-1 (unit) / PR-2 (受入) | legacy 3 asset release、`latest`/prefix 解決、asset 欠落/余剰 | exact 2 asset + tag exact match 以外を deny |
-| 007 | PR-1 | 別 process/cwd/env clear 後の再起動、`bun` を PATH に置く | smoke 再現、Bun trace 0 |
+| 001 | PR-1A | source-only / absolute path の混入 | sealed staging の明示 inventory 内だけに出荷 |
+| 002 | PR-1A | authoring/skills entry の欠落・重複 | materialized product inventory の exact-one fail-close |
+| 003 | PR-1B | setup 元撤去後の起動で外部 path へ解決 | sealed runtime のみで起動、外部参照は typed deny |
+| 004 | PR-1B | generated wrapper/config/stdout/stderr/.ut-tdd state に setup 元 absolute path | 参照 0 |
+| 005 | PR-2 | 公開 asset の SHA-256/size を 1 byte 変異 | 第 1 層 staging receipt と不一致で mismatch deny |
+| 006 | PR-1A (unit) / PR-2 (受入) | legacy 3 asset release、latest/prefix 解決、asset 欠落/余剰 | exact 2 asset + tag exact match 以外を deny |
+| 007 | PR-1B | 別 process/cwd/env clear 後の再起動、bun を PATH に置く | smoke 再現、Bun trace 0 |
 
 ## R3: gap 分類と backfill
 
@@ -147,7 +153,7 @@ gap は L7-531 の contract 改訂 (revision N+1) で閉じ、L6 契約の変更
 ## R4: Forward 再合流条件
 
 - PR-1 (第 1 層) と PR-2 (第 2 層) が別 PR で main 到達し、各々の exact HEAD に Linux/Windows/
-  aggregate Green と成果物を書いていない族 (cross-family) の canonical non-author closing receipt (PR-0 は Claude 起票のため Codex 族、Codex worker が書く PR-1 / PR-2 は Claude 族)が存在する。
+  aggregate Green と成果物を書いていない族 (cross-family) の canonical non-author closing receipt (PR-0 は Claude 起票のため Codex 族、Codex worker が書く PR-1A / PR-1B / PR-2 は Claude 族)が存在する。
 - `CANDIDATE-ST-PACKCANARY-001..007` が同番号の `U-ST-PACKCANARY-*` へ 1:1 昇格し、
   同一 implementation revision の Red→Green 実測を引用している。
 - `v0.2.0-canary.1` の publication receipt と第 2 層の再計算 digest が一致している。
