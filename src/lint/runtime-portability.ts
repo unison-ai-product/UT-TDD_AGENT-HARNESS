@@ -117,8 +117,6 @@ const BUN_SPAWN_DEBT_ALLOWLIST = new Map<string, number>([
   ["src/cli/distribution.ts", 2],
   // PLAN-L7-522 S1-b (Issue #470): generated consumer templates no longer
   // launch the removed findBun/run-bun wrapper, so this source has no spawn pin.
-  // UT_TDD_BUN_BINARY fixture 契約の解決元 (`?? "bun"` fallback、guard 済み)。
-  ["scripts/run-vitest-snapshot.ts", 1],
   // Issue #506: the local bun-launcher helper that this file previously used is retired;
   // all 10 call sites now run through Node/npm launchers, so this source has no spawn pin
   // (PLAN-L7-462 exit-criteria progress, does not itself close the criterion — the
@@ -143,12 +141,6 @@ const BUN_IMPORT_DEBT_ALLOWLIST = new Map<string, number>([
   ["tests/runtime-portability.test.ts", 5],
 ]);
 const BUN_GLOBAL_DEBT_ALLOWLIST = new Map<string, number>([
-  // optional chaining で guard された Bun-global (gc / which) 参照。node では no-op。
-  ["scripts/run-vitest-snapshot.ts", 5],
-  // typeof / globalThis guard 付きの Bun 判定 (bun:sqlite 二重ドライバの分岐、Issue #134 debt)。
-  ["src/state-db/index.ts", 1],
-  ["tests/state-db.test.ts", 1],
-  ["tests/support/temp-tree.ts", 1],
   // Issue #506: the U-SETUP-009b wrapper-launch helper's runtime-version probe is retired
   // in favor of a Node-only launcher, so this source has no global pin.
   // 検出語彙 (lint fixture 文字列 / isolation 契約テストの Bun.write fixture / 本 lint 自身)。
@@ -222,12 +214,12 @@ function packageViolations(doc: RuntimePortabilityDoc | undefined): RuntimePorta
       message: "Node runtime contract must declare the Node engine (PLAN-L7-462 step 3).",
     });
   }
-  if (!/\bbun\s+build\b.*--compile\b/.test(pkg.scripts?.build ?? "")) {
+  if (!/\bnode\s+scripts[\\/]build-node\.mjs\b/.test(pkg.scripts?.build ?? "")) {
     violations.push({
       path,
       line: 1,
       rule: "package-missing-compiled-build",
-      message: "Build script must produce the compiled cross-platform core binary.",
+      message: "Build script must invoke the sealed Node builder.",
     });
   }
   const binPath = typeof pkg.bin === "string" ? pkg.bin : pkg.bin?.["ut-tdd"];
@@ -556,7 +548,7 @@ export function analyzeRuntimePortability(docs: RuntimePortabilityDoc[]): Runtim
  * 既知 prefix のみ降下するので node_modules / dist / .git を走査しない。
  */
 function walkRuntimeFiles(repoRoot: string): string[] {
-  const acc: string[] = ["package.json", "tsconfig.json", "bun.lock"];
+  const acc: string[] = ["package.json", "tsconfig.json", "package-lock.json"];
   const descend = (rel: string): void => {
     const abs = join(repoRoot, rel);
     if (!existsSync(abs)) return;
@@ -592,7 +584,7 @@ export function loadRuntimePortabilityDocs(
       (path) =>
         path === "package.json" ||
         path === "tsconfig.json" ||
-        path === "bun.lock" ||
+        path === "package-lock.json" ||
         path.startsWith("src/") ||
         path.startsWith(".claude/hooks/") ||
         path.startsWith("scripts/") ||
