@@ -49,18 +49,18 @@ status: draft
 github_issue_id: 570
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:9619a6b6118d40dc688c1793b4f1f0af
-  command_id: plan-revise:issue-570:forward:9
-  admitted_at: 2026-09-16T13:40:00+09:00
-  source_digest: sha256:93e1536e5cbd6aa184d92f2de22dd75752fa2bbef03981b82713c5848806b88c
-  decision_digest: sha256:a30a3dd56ca6d334697765a1f8ccbb7e54dcd7fced8a764d3816d4c2aec723c1
-  receipt_digest: sha256:8273a0cbeea4c4a8655a069e392bca673f14e8cb32c48d3d916fd5966ad64321
+  receipt_id: certificate:018fa98afeeb2b7f4139eabafad3b7c4
+  command_id: plan-revise:issue-570:pr1-preflight-remediation:r10:9ef7bfb8767a
+  admitted_at: 2026-09-16T07:35:17.000Z
+  source_digest: sha256:167d5451361d7d0ef5486f8a2a7e5d4ab5077aa68a6e56a775fd3d01db4fc6eb
+  decision_digest: sha256:d40eaed72b3f1917a0573f9201e0536dd943093c6007009f8fd9a6b1a1e608e3
+  receipt_digest: sha256:d68ae74e3c962b0a32145f9f93a9ddc1a95125262f78c71f4a8db4e65f89f736
   binding:
     path: docs/plans/PLAN-L7-534-d3b-provider-evidence-composition.md
     plan_id: PLAN-L7-534-d3b-provider-evidence-composition
     asset_id: plan:2eeafb9dd9883770a0f56c936c08bd1f
-    revision: 9
-    content_digest: sha256:93e1536e5cbd6aa184d92f2de22dd75752fa2bbef03981b82713c5848806b88c
+    revision: 10
+    content_digest: sha256:167d5451361d7d0ef5486f8a2a7e5d4ab5077aa68a6e56a775fd3d01db4fc6eb
   route:
     signal: feature_addition
     mode: add-feature
@@ -78,11 +78,13 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-534-d3b-provider-evidence-composition
-    target_revision: 1
+    target_revision: 10
     phase: forward_merge
-  escape_reason: "Issue #570 PR-1 implementation: add source/test deliverables to
-    the existing D3b composition PLAN without changing the frozen custody
-    contract."
+  escape_reason: "Issue #570 PR-1 preflight FLAG remediation (Claude control lane
+    takeover): align §3.3 artifact verification wording with §3.4 / PLAN-L7-562
+    (JCS recomputation, full identity, evidence_conflict) and name the
+    PLAN-L7-520 U-RVATT-040 case B oracle that §3.2's non-terminal rule
+    re-specifies. No custody contract change."
 ---
 
 # PLAN-L7-534: D3b provider evidence composition
@@ -195,7 +197,10 @@ truncated final、Z の退避=上書き相当の攻撃面を構造で潰す)。
   は orphan として新 attempt の開始を許す。新 attempt の完了時は上記 (4) の比較規則で、同一 bytes なら 1 receipt の
   まま冪等に完了し、異なる bytes なら上書きせず `attempt_outcome_conflict` で fail-close する。並行 attempt が同時に
   link した場合も勝者は 1 つで、敗者は `EEXIST` → bytes 比較の同じ規則に落ちる (`-022`)。orphan の削除・
-  移動は行わない (append-only、write は temp と audit のみ)。同一 identity の bounded retry は
+  移動は行わない (append-only、write は temp と audit のみ)。この非終端規則は `PLAN-L7-520` の
+  `CANDIDATE-U-RVATT-040` case B 後段 (改変 receipt を前にした `beginReviewAttempt` が `review_receipt_already_exists`)
+  を置き換える: 改変 receipt は一致 event を失うため次 attempt を開始でき、同一 bytes の再生成は `EEXIST` → bytes 比較で
+  `attempt_outcome_conflict` に落ちる (create-exclusive と上書き禁止は維持)。同一 identity の bounded retry は
   「次 attempt が exactly once で完了する (receipt 1 個・一致する `attempt_completed` 1 件)」か「typed deny で
   fail-close する」かのどちらかであり、永久 wedge (`review_receipt_already_exists` と fact 不在の共存) を作らない。
 - `receiptFileDigest` は receipt file bytes の sha256 (lowerhex 64) であり、composition は receipt file を再読込して
@@ -232,9 +237,13 @@ truncated final、Z の退避=上書き相当の攻撃面を構造で潰す)。
   path admission に従う)。
 - producer は `FileProviderJudgmentEvidenceAdapter({ evidenceRoot, judgmentsRoot: ".ut-tdd/review/judgments",
   verifiedInvocation: { provider, model } })` で呼び、`verifiedInvocation` は §3.2 の event 値だけを渡す。
-- producer が返した `judgmentDigest` の artifact を **再読込**し、bytes の sha256 と file 名、payload の
-  identity (request / attempt / head / families / nonce) が composition の導出値と一致することを検証する。
-  不一致は artifact を残さず `artifact_verification_failed`。成功時の戻り値は
+- producer が返した `judgmentDigest` の artifact を **再読込**し、(a) payload の全 field を JCS canonicalize して再計算した
+  sha256 (`PLAN-L7-562` の規則。file bytes の sha256 ではない) が producer の戻り値・file 名 `<digest>.json`・
+  `providerEvidenceRef` と一致、(b) file bytes が canonical serialization (JCS + 末尾 LF 1 個) と byte 一致、(c) payload の
+  identity (request / attempt / head / families / nonce / provider / model) が composition の導出値と field 単位で一致
+  (identity digest は attempt・nonce・provider・model を preimage に含まないので digest 比較で代替しない)、の 3 点を
+  検証する。不一致は artifact を残さず (judgment artifact と自分が作った envelope を消す) `artifact_verification_failed`。
+  envelope の既存 bytes 不一致は `evidence_conflict`。成功時の戻り値は
   `{ judgmentDigest, providerEvidenceRef: "d3b:<digest>", artifactPath, replay }`。
 - producer の typed failure (`evidence_unavailable` / `evidence_superseded` / `provider_failure` /
   `identity_mismatch` / `same_family_reviewer` / `judgment_schema_invalid` / `judgment_write_failed` /
