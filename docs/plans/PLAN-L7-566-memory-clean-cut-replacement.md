@@ -31,6 +31,8 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-566-memory-clean-cut-replacement.md
     artifact_type: markdown_doc
+  - artifact_path: tests/memory-clean-cut-removal.test.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L6-104-memory-clean-cut-replacement.md
   requires: []
@@ -46,18 +48,18 @@ status: draft
 github_issue_id: 424
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:6f7505a570cabcffc4899bfc7f83cc98
-  command_id: plan-draft:issue-424:memory-clean-cut-impl:1
-  admitted_at: 2026-09-16T03:58:57.032Z
-  source_digest: sha256:c30ef41c357f89e40d199f792199f4947ea130e0c2f86eb9e17fd080214fbc64
-  decision_digest: sha256:9ccbb67275e50728e8844db36b4f7c81f12fca5e44e3bc1052dc44eabb8302c3
-  receipt_digest: sha256:f3b91a5f548fba41b54602d8a2b3efe6be6dfdac6cc2eff63b575816ea9a7f48
+  receipt_id: certificate:e9a586a9cfd2880665a218f2b7a1350a
+  command_id: plan-revise:issue-424:memory-clean-cut-impl:2
+  admitted_at: 2026-09-16T04:23:38.598Z
+  source_digest: sha256:a320820d565232986afd4de613b403bfa74c49d24b0f7f171f87d51b907e0726
+  decision_digest: sha256:e545cb9c11a6cae0db59780975288d09d7810979100af4f7df486f2d4e95631b
+  receipt_digest: sha256:2587d744847591a12da14bb4924cc005b351726fc13b2fa760df24b63d7e8ec4
   binding:
     path: docs/plans/PLAN-L7-566-memory-clean-cut-replacement.md
     plan_id: PLAN-L7-566-memory-clean-cut-replacement
     asset_id: plan:6f7505a570cabcffc4899bfc7f83cc98
-    revision: 1
-    content_digest: sha256:c30ef41c357f89e40d199f792199f4947ea130e0c2f86eb9e17fd080214fbc64
+    revision: 2
+    content_digest: sha256:a320820d565232986afd4de613b403bfa74c49d24b0f7f171f87d51b907e0726
   route:
     signal: feature_addition
     mode: add-feature
@@ -75,11 +77,11 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-566-memory-clean-cut-replacement
-    target_revision: 1
+    target_revision: 2
     phase: forward_merge
-  escape_reason: "Issue #424 PR-1: implementation PLAN named by the PLAN-L6-104
-    redesign receipt implementation_target (add-impl under add-feature, Reverse
-    pair PLAN-REVERSE-566 filed in the same PR per advisor recommendation B)"
+  escape_reason: "Issue #424 PR-1: register tests/memory-clean-cut-removal.test.ts
+    as a test_code deliverable of this PLAN (deliverable-plan-trace
+    orphan-deliverable on PR #631 Linux CI)"
 ---
 
 # PLAN-L7-566: project memory clean-cut replacement implementation
@@ -108,9 +110,10 @@ L6-104 §5 PR-1 の変更契約をそのまま実行する。
   静的 label で citation する。各行は負例 (import を 1 行戻す、CONTRACT_ROWS を据え置く、宣言を据え置く、generates を
   据え置く) を同じ test 内で Red として実測する。
 
-新規 test file の `generates` 登録は、draft PLAN が既存 file を `generates` に持てない規律
-(`merged-plan-status` / `duplicate-artifact-ownership`) に従い、本 PLAN を confirmed へ遷移させる PR-2 の完了時に
-同時に行う。それまでの所有は本節の記述と pair artifact §6 の規律で束縛する。
+新規 test file `tests/memory-clean-cut-removal.test.ts` は本 PLAN の `generates` (test_code) が所有する。
+`deliverable-plan-trace` は出荷物ルート配下の全 file に owner PLAN を要求し、`merged-plan-status` は PR で初めて追加した
+成果物を base tree で `landing_in_subject` と判定して draft 放置とみなさない (`src/lint/merged-plan-status.ts`) ため、
+draft のまま同一 PR で登録できる (rev 2、PR #631 の Linux CI `orphan-deliverable` 赤化の是正)。
 
 ## 3. PR-2: corpus 置換
 

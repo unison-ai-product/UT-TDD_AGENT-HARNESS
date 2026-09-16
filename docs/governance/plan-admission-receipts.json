@@ -4032,6 +4032,22 @@
         "revision": 1,
         "content_digest": "sha256:dd253cef6938d31d31b574ff3ec6542a37b5b99dd1c4ae3b4d57f4d752794c52"
       }
+    },
+    {
+      "sequence": 253,
+      "previous_record_digest": "sha256:5e593be8deb771038538a99e5660a15da315c8b45034dfd90be11c64987c8420",
+      "record_digest": "sha256:0eb3427d1e517f1b0ee8c3f405cef5881951eb814d6e5e05ec4bb323cd470769",
+      "command_id": "plan-revise:issue-424:memory-clean-cut-impl:2",
+      "receipt_id": "certificate:e9a586a9cfd2880665a218f2b7a1350a",
+      "receipt_digest": "sha256:2587d744847591a12da14bb4924cc005b351726fc13b2fa760df24b63d7e8ec4",
+      "decision_digest": "sha256:e545cb9c11a6cae0db59780975288d09d7810979100af4f7df486f2d4e95631b",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-566-memory-clean-cut-replacement.md",
+        "plan_id": "PLAN-L7-566-memory-clean-cut-replacement",
+        "asset_id": "plan:6f7505a570cabcffc4899bfc7f83cc98",
+        "revision": 2,
+        "content_digest": "sha256:a320820d565232986afd4de613b403bfa74c49d24b0f7f171f87d51b907e0726"
+      }
     }
   ]
 }
