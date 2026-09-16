@@ -1,5 +1,6 @@
 import { lstatSync, readFileSync } from "node:fs";
 import { isAbsolute, normalize, resolve } from "node:path";
+
 /** Minimum envelope identity consumed here; keep feedback independent from runtime modules. */
 interface ClaudeReviewEnvelopeEntry {
   readonly memoryId: string;
