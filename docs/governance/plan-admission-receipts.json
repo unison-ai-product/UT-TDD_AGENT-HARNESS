@@ -3856,6 +3856,38 @@
         "revision": 29,
         "content_digest": "sha256:bedfe0f1cbfcf538cc41dbdd62bf44cbb78b1cb58e7f74c8dbd3b729cebc0210"
       }
+    },
+    {
+      "sequence": 242,
+      "previous_record_digest": "sha256:54c9fc8eb5f4b35122ce52d07a4a5bb17d06817f4b1be0750a140df8ddd45e00",
+      "record_digest": "sha256:02c7f2310e1da010ebd408dc23c02db9c51ebbbc75542522dcca69640a723810",
+      "command_id": "plan-l6-600-draft-20260915-contract-freeze",
+      "receipt_id": "certificate:dd832691e9533143c32fd04a79bff1be",
+      "receipt_digest": "sha256:6fe6a098a39488920f81ad954611c39a2480d43c58a2a25046e428c39acdffe6",
+      "decision_digest": "sha256:540dd571e718cd9a1e90af04fd5808a5fc11e80aed1f5590951634c072fa67ac",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-600-codex-review-wake-contract.md",
+        "plan_id": "PLAN-L6-600-codex-review-wake-contract",
+        "asset_id": "plan:dd832691e9533143c32fd04a79bff1be",
+        "revision": 1,
+        "content_digest": "sha256:3a9944dd94672995af02b1b13045d13a4cd5f661d6687a0c93a7ec77e93e37e9"
+      }
+    },
+    {
+      "sequence": 243,
+      "previous_record_digest": "sha256:02c7f2310e1da010ebd408dc23c02db9c51ebbbc75542522dcca69640a723810",
+      "record_digest": "sha256:66da3e7edf20ef2b95eefef4e27a5284d5c09cbc51aef1b3e2a08fadf19c0c86",
+      "command_id": "plan-l6-600-revise-r2-e4c6bc735b4cc2ac",
+      "receipt_id": "certificate:712349216b45c7e321a726af1a978171",
+      "receipt_digest": "sha256:e1ae2feb9cb1d228f5c026fe4772af1716a0f8229d0e54602f15bf8db532438d",
+      "decision_digest": "sha256:88cb4472205d1c36e4b64a214877a150ed6f40b50a688d24573bfab6e520e4c9",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-600-codex-review-wake-contract.md",
+        "plan_id": "PLAN-L6-600-codex-review-wake-contract",
+        "asset_id": "plan:dd832691e9533143c32fd04a79bff1be",
+        "revision": 2,
+        "content_digest": "sha256:448167bed9092aa1a0593b277cdf291bdd2a65e5fbfd4bb79fde23e364515ee3"
+      }
     }
   ]
 }
