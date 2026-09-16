@@ -4386,35 +4386,19 @@
       }
     },
     {
-      "sequence": 275,
-      "previous_record_digest": "sha256:c76f6023b13826068f6035bdd917eff816774f918fb2d3777e224e7b41bc6e32",
-      "record_digest": "sha256:e286dd9cdb39adc51fc363395035c176cbb5217f7e8a9180fb76acfccb8c9636",
-      "command_id": "plan-revise:issue-626:pr645-plan:r10:3eed4f9b6e53",
-      "receipt_id": "certificate:ba224e6f2e3c9e7a5342aeab01ee0170",
-      "receipt_digest": "sha256:13817cbc8ba9f042f621283cf697c25b525e92a20e7509031fb317dd9a355a74",
-      "decision_digest": "sha256:40bba6d86aa4f111399f84fc3f1f493c49bde92d1e4518d7d7d0f734e187cedc",
+      "sequence": 269,
+      "previous_record_digest": "sha256:eab6a80085339f9d1e07fdfc849ff4d6270b55bdfae4ebf9eaa4f9e346abf4eb",
+      "record_digest": "sha256:1a013b7d78ae97413387dd1bb5df743eb034c21defcfe61d068acc0b2ef4e764",
+      "command_id": "pr641-issue487-review-fix-1789552837752",
+      "receipt_id": "certificate:ed541d255e424fd7f53d4c8638baea80",
+      "receipt_digest": "sha256:d3affdecabf3f92185380f339807747398fedae70c5df8c57087e0fb71734aed",
+      "decision_digest": "sha256:dcfd4f320b127233b54c2c406eca3586f714954ed12ecc57a783d590623ae82b",
       "binding": {
-        "path": "docs/plans/PLAN-L7-626-pack-publication-admission-binding.md",
-        "plan_id": "PLAN-L7-626-pack-publication-admission-binding",
-        "asset_id": "plan:529eea3e2017a6d17049746ae353398d",
-        "revision": 10,
-        "content_digest": "sha256:9e0d38448ef674516dc29950f42ae31e5d680cec013a06e8bffa279d9b766300"
-      }
-    },
-    {
-      "sequence": 276,
-      "previous_record_digest": "sha256:e286dd9cdb39adc51fc363395035c176cbb5217f7e8a9180fb76acfccb8c9636",
-      "record_digest": "sha256:043e9bf83e84175acfba61ddcf72ad1fe5ff81c8499aa696b4258a14f4f88d5b",
-      "command_id": "plan-revise:issue-626:pr645-reverse:r10:3eed4f9b6e53",
-      "receipt_id": "certificate:407aaae30cde320fbd677c15e9e7221a",
-      "receipt_digest": "sha256:952fa086f0aed2ca0df6a2120aeb2b9c53aedbeea6aa51cb442cbde1af34b0a5",
-      "decision_digest": "sha256:db2cca973da894dc404f4424536e8a0fb5c657d9bb30fc3b97269644cb111966",
-      "binding": {
-        "path": "docs/plans/PLAN-REVERSE-626-pack-publication-admission-binding-backfill.md",
-        "plan_id": "PLAN-REVERSE-626-pack-publication-admission-binding-backfill",
-        "asset_id": "plan:a00a5eddd4929e67b7e26820aac193f6",
-        "revision": 10,
-        "content_digest": "sha256:f2bb55cbbd0326ec91afb70a262557cbff0ffef3f8ab9320c7b41173ad714442"
+        "path": "docs/plans/PLAN-L7-530-bun-final-retirement.md",
+        "plan_id": "PLAN-L7-530-bun-final-retirement",
+        "asset_id": "plan:bc9250c9a7c873dcb9f18956677371f7",
+        "revision": 13,
+        "content_digest": "sha256:b8068f0ec4bef11555de5461d732cff06a1ba262f3f0db20f4d782974ff83264"
       }
     }
   ]
