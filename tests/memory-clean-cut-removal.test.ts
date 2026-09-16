@@ -21,6 +21,27 @@ const SYMBOL = ["ProjectMemory", "Migration"].join("");
 const WITHDRAWN_PREFIXES = ["U-PMEM" + "INV-", "U-PMEM" + "QUAR-"];
 const PRODUCTION_ROOTS = ["src", "scripts", ".claude/hooks"];
 const OCCURRENCE_ROOTS = ["src", "tests", "scripts"];
+const INHERITED_TEST_LABELS = [
+  "U-MEMWAKE-001",
+  "U-MEMWAKE-002",
+  "U-MEMWAKE-003",
+  "U-MEMWAKE-004",
+  "U-MEMWAKE-005",
+  "U-MEMWAKE-006",
+  "U-MEMWAKE-007",
+  "U-MEMWAKE-008",
+  "U-MEMWAKE-009",
+  "U-PMEMROOT-001",
+  "U-PMEMROOT-002",
+  "U-PMEMROOT-004",
+  "U-PMEMROOT-007",
+  "U-PMEMROOT-008",
+  "U-PMEMROOT-009",
+  "U-RVATT-023",
+  "U-RVATT-024",
+  "U-RVATT-025",
+  "U-RVWAKE-010",
+];
 const INHERITED = [
   "src/runtime/project-memory-root.ts",
   "src/runtime/claude-provider-envelope.ts",
@@ -138,11 +159,41 @@ describe("memory clean-cut PR-1: migration removal (U-MEMCUT-012..016)", () => {
     expect(kept.violations[0]?.missing).toEqual([MODULE_PATH, TEST_PATH]);
   });
 
-  it("U-MEMCUT-016: inherited modules and tests remain, and the name occurs nowhere in src/tests/scripts", () => {
-    for (const p of INHERITED) expect(/\S/.test(readFileSync(join(root, p), "utf8"))).toBe(true);
-    const hits = OCCURRENCE_ROOTS.flatMap((r) => walkTs(join(root, r)))
-      .filter((p) => readFileSync(p, "utf8").includes(MODULE_STEM))
-      .map((p) => relative(root, p).replaceAll("\\", "/"));
-    expect(hits).toEqual([]);
+  it("U-MEMCUT-016: inherited modules and tests remain unchanged, and the name occurs nowhere in src/tests/scripts", () => {
+    // 継承 module / test は非空で、migration module への import edge を持たない (PR diff 0 の機械的な代替。
+    // git diff そのものは review packet の実測で、test は import graph の不変条件を固定する)。
+    const inherited = INHERITED.map((p) => ({
+      path: p,
+      source: readFileSync(join(root, p), "utf8"),
+    }));
+    for (const file of inherited) expect(/\S/.test(file.source)).toBe(true);
+    expect(migrationImportEdges(inherited, MODULE_STEM)).toEqual([]);
+    // 継承 test の label 集合は不変 (削除 PR が継承 oracle を巻き込んでいない)。Green は CI の全 suite が証跡。
+    const inheritedLabels = [
+      ...new Set(
+        inherited
+          .filter((f) => f.path.startsWith("tests/"))
+          .flatMap((f) => [...f.source.matchAll(/\b(U-[A-Z]+-\d{3})\b/g)].map((m) => m[1])),
+      ),
+    ].sort();
+    expect(inheritedLabels).toEqual(INHERITED_TEST_LABELS);
+    // 出現 0 は path と内容の両方で数える (path だけの復活も Red)。
+    const files = OCCURRENCE_ROOTS.flatMap((r) => walkTs(join(root, r))).map((p) => ({
+      path: relative(root, p).replaceAll("\\", "/"),
+      source: readFileSync(p, "utf8"),
+    }));
+    const occurrences = (set: ReadonlyArray<{ path: string; source: string }>) =>
+      set
+        .filter((f) => f.path.includes(MODULE_STEM) || f.source.includes(MODULE_STEM))
+        .map((f) => f.path);
+    expect(occurrences(files)).toEqual([]);
+    // mutation: 削除した module / test を path だけ戻しても Red、内容に stem を戻しても Red
+    expect(occurrences([...files, { path: MODULE_PATH, source: "export {};\n" }])).toEqual([
+      MODULE_PATH,
+    ]);
+    expect(occurrences([...files, { path: TEST_PATH, source: "" }])).toEqual([TEST_PATH]);
+    expect(
+      occurrences([...files, { path: "src/runtime/x.ts", source: `// ${MODULE_STEM}\n` }]),
+    ).toEqual(["src/runtime/x.ts"]);
   });
 });
