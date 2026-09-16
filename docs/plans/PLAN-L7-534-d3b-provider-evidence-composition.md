@@ -8,7 +8,7 @@ drive: agent
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-09-11
-updated: 2026-09-11
+updated: 2026-09-16
 owner: Claude / Fable (pair-freeze) · Codex worker (implementation)
 parent_design: docs/plans/PLAN-L6-85-automated-pr-cross-review-merge-contract.md
 pair_artifact: docs/test-design/harness/L7-d3b-provider-evidence-composition-test-design.md
@@ -44,23 +44,75 @@ dependencies:
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/570
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/568
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/569
-review_evidence: []
-status: draft
+review_evidence:
+  - reviewer: claude-opus-blind-reviewer
+    review_kind: cross_agent
+    reviewed_at: 2026-09-16T08:35:07.164Z
+    tests_green_at: 2026-09-16T08:29:21.000Z
+    verdict: "PASS-WEAK (blocking 0): 非著者 Claude Opus blind preflight r4 at
+      7f95263c、receipt 0554f258…"
+    worker_model: gpt-5.6-luna
+    reviewer_model: claude-opus-5
+    effort: middle
+    plan_revision: 7f95263cbbea88c763a9a62a9a82e3c3880ff023
+    subject_head: 7f95263cbbea88c763a9a62a9a82e3c3880ff023
+    evidence_path: tests/provider-judgment-composition.test.ts
+    anchor_commit: 7f95263cbbea88c763a9a62a9a82e3c3880ff023
+    scope: "PR #633 exact head 7f95263c に対する非著者 (Claude family) blind preflight
+      review。著者 family は codex (初回実装)、FLAG 後の是正は PO ルール 2026-09-16 により Claude
+      control lane が同 PR 内で実施。canonical request rv1-0554f258056b7b35… の receipt
+      が verdict を記録する。対象は §3.1〜§3.3 の composition module
+      (src/feedback/provider-judgment-composition.ts)、§3.2 の custody 順序化・非終端規則
+      (src/feedback/review-attestation.ts /
+      src/feedback/review-verdict-custody.ts) と pair test
+      (tests/provider-judgment-composition.test.ts、CANDIDATE-U-D3BCOMP-001..010
+      / 015..022)。 6d738290 → cee5f72c → 32e62e47 の preflight FLAG (r1 8 件、r2 3
+      件、r3 2 件: identity 検証の attempt / nonce 欠落、artifact 残置、oracle 016-022 未実装、
+      label 偽陽性、typed reason 乖離、lock directory、終端判定 (i)(iv)、temp
+      掃除条件、request-digest receiptFileDigest の schema 化、receipt 単一読み取り、link 後の
+      temp unlink best-effort 化、021(c) attempt drift) は本 head までに是正した。r4 verdict
+      は PASS-WEAK (blocking 0)。"
+    citations:
+      - .ut-tdd/review/receipts/0554f258056b7b35061c149a33ee4a79cfcb4b863efb0809781cd957a5247cf1.json
+      - .ut-tdd/review/packets/pr633-7f95263c/control-lane-measurements.txt
+    green_commands:
+      - kind: unit_test
+        command: npx vitest run tests/review-receipt-supersession.test.ts
+          tests/provider-judgment-composition.test.ts
+          tests/review-verdict-custody.test.ts tests/review-attestation.test.ts
+          (fence env = exact-head worktree)
+        runner: node
+        scope: targeted
+        exit_code: 0
+        completed_at: 2026-09-16T08:29:21.000Z
+        evidence_path: tests/provider-judgment-composition.test.ts
+        output_digest: sha256:14ef2537afddfccdf2de9198511dfc11666435ddaaa97e674265a27dd35c8a06
+        anchor_commit: 7f95263cbbea88c763a9a62a9a82e3c3880ff023
+      - kind: typecheck
+        command: npx tsc --noEmit -p .
+        runner: node
+        scope: full
+        exit_code: 0
+        completed_at: 2026-09-16T08:29:21.000Z
+        evidence_path: src/feedback/provider-judgment-composition.ts
+        output_digest: sha256:4213c5b963b3b8ea6d3a7c546b3d40f7aabd94cbd4b7d3009f36f8a9171bee39
+        anchor_commit: 7f95263cbbea88c763a9a62a9a82e3c3880ff023
+status: confirmed
 github_issue_id: 570
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:018fa98afeeb2b7f4139eabafad3b7c4
-  command_id: plan-revise:issue-570:pr1-preflight-remediation:r10:9ef7bfb8767a
-  admitted_at: 2026-09-16T07:35:17.000Z
-  source_digest: sha256:167d5451361d7d0ef5486f8a2a7e5d4ab5077aa68a6e56a775fd3d01db4fc6eb
-  decision_digest: sha256:d40eaed72b3f1917a0573f9201e0536dd943093c6007009f8fd9a6b1a1e608e3
-  receipt_digest: sha256:d68ae74e3c962b0a32145f9f93a9ddc1a95125262f78c71f4a8db4e65f89f736
+  receipt_id: certificate:23e9834daa097ac3dfcee87bcd7c0cf6
+  command_id: plan-revise:issue-570:pr1-confirm:r11:7f95263cbbea
+  admitted_at: 2026-09-16T08:36:05.531Z
+  source_digest: sha256:eba26e423266670bf03c6e995b51c7c46d0b2285baebc742e13076286bec2237
+  decision_digest: sha256:a1073e0cb5a789b48d6f58db3e03d4959931bc796c93070535807d631951664d
+  receipt_digest: sha256:b7ce4b63bf047dab8af679f7fa611d812e6b3f77a53509ae4088ddb6a59305ea
   binding:
     path: docs/plans/PLAN-L7-534-d3b-provider-evidence-composition.md
     plan_id: PLAN-L7-534-d3b-provider-evidence-composition
     asset_id: plan:2eeafb9dd9883770a0f56c936c08bd1f
-    revision: 10
-    content_digest: sha256:167d5451361d7d0ef5486f8a2a7e5d4ab5077aa68a6e56a775fd3d01db4fc6eb
+    revision: 11
+    content_digest: sha256:eba26e423266670bf03c6e995b51c7c46d0b2285baebc742e13076286bec2237
   route:
     signal: feature_addition
     mode: add-feature
@@ -78,13 +130,12 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-534-d3b-provider-evidence-composition
-    target_revision: 10
+    target_revision: 11
     phase: forward_merge
-  escape_reason: "Issue #570 PR-1 preflight FLAG remediation (Claude control lane
-    takeover): align §3.3 artifact verification wording with §3.4 / PLAN-L7-562
-    (JCS recomputation, full identity, evidence_conflict) and name the
-    PLAN-L7-520 U-RVATT-040 case B oracle that §3.2's non-terminal rule
-    re-specifies. No custody contract change."
+  escape_reason: "Issue #570 PR #633 (PR-1): move PLAN-L7-534 from draft to
+    confirmed on the exact-head non-author preflight review at 7f95263cbbea so
+    the landing source/test deliverables it owns pass merged-plan-status; no
+    contract change."
 ---
 
 # PLAN-L7-534: D3b provider evidence composition
