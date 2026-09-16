@@ -24,6 +24,8 @@ credentials.json
 # historical handover docs stay tracked (gitignore never untracks). PLAN-L7-144 follow-up.
 docs/handover/session-handover-*.md
 .ut-tdd/logs/
+# legacy memory corpus local archive (PLAN-L7-566 PR-2); untracked corpus is never committed
+.ut-tdd/archive/
 # review custody projection (requests / receipts / verdicts)。src/runtime/review-guard.ts:65-68 の
 # isReviewCustodyProjection が 3 つを同一 class として扱い、read-only role の mutated path 判定から
 # 除外している。いずれも機械生成の runtime evidence で正本は harness.db projection。
