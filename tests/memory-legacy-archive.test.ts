@@ -1,7 +1,9 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { analyzeArtifacts } from "../src/lint/readability.ts";
+import { analyzeSecretScan } from "../src/lint/secret-scan.ts";
 import {
   LEGACY_MEMORY_ARCHIVE_META_FILES,
   LEGACY_MEMORY_ARCHIVE_ROOT,
@@ -17,8 +19,6 @@ import {
   verifyLegacyArchiveSets,
   verifyLegacyArchiveUntrackedOpacity,
 } from "../src/memory/legacy-archive-manifest.ts";
-import { analyzeArtifacts } from "../src/lint/readability.ts";
-import { analyzeSecretScan } from "../src/lint/secret-scan.ts";
 import { buildCleanDistributionPlan } from "../src/setup/distribution.ts";
 
 // The PR-2 archive is a repository fact: the manifest, the archive tree and the base-HEAD source
@@ -212,11 +212,11 @@ describe("memory clean-cut PR-2: legacy corpus archive (U-MEMCUT-017..021, P-MEM
     ).toBe(archiveFiles().length + LEGACY_MEMORY_ARCHIVE_META_FILES.length);
     // Falsification: the same predicate on an undenied prefix is not vacuous.
     const undenied = buildCleanDistributionPlan({
-      paths: [...paths, "docs/governance/memory-legacy-2026-09/feedback-probe.md"],
+      paths: [...paths, "docs/process/memory-legacy-2026-09/feedback-probe.md"],
     });
     expect(
-      undenied.artifactPaths.filter((p) => p.startsWith("docs/governance/memory-legacy-2026-09/")),
-    ).toEqual(["docs/governance/memory-legacy-2026-09/feedback-probe.md"]);
+      undenied.artifactPaths.filter((p) => p.startsWith("docs/process/memory-legacy-2026-09/")),
+    ).toEqual(["docs/process/memory-legacy-2026-09/feedback-probe.md"]);
   });
 
   it("P-MEMCUT-030: the archive corpus passes readability and secret-scan without changing scanner scope; a mojibake fixture is Red", () => {
