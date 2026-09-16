@@ -95,9 +95,12 @@ L7-531 はこれらを二層入力契約 (§3)、fixture 契約 (§4)、smoke �
 
 ## R1: Forward 契約の逆向き分解
 
-- **入力 artifact の二層化**: 第 1 層 (CI、offline) は `PLAN-L7-508` の sealed staging result、
+- **入力 artifact の二層化**: 第 1 層 (CI、offline) は `PLAN-L7-508` の sealed staging result の
+  `tar.gz` + `.sha256` **exact 2 asset のみ** (control manifest/receipt は sealed metadata)、
   第 2 層 (受入、human-triggered 1 回) は公開済み `v0.2.0-canary.1` の exact 2 asset。両層は
-  asset SHA-256/size の byte 一致 (`CANDIDATE-ST-PACKCANARY-005`) でのみ接合する。
+  asset SHA-256/size の byte 一致 (`CANDIDATE-ST-PACKCANARY-005`) でのみ接合する。第 1 層は
+  network/DNS/socket/HTTP 0、依存の registry fetch/install/download 0、allowlist から明示構築した
+  child env (`process.env` 直接継承なし) を必須とする。
   `PLAN-L7-515` §2 が asset bytes を sealed intent に含める契約が、この接合の根拠である。
 - **source 非依存**: `CANDIDATE-PACKISO-001` (source 不在での独立導入) を再所有せず、Pack 取得元
   checkout の物理削除後・別 cwd からの wrapper 起動 (`CANDIDATE-ST-PACKCANARY-003`) として
@@ -107,6 +110,11 @@ L7-531 はこれらを二層入力契約 (§3)、fixture 契約 (§4)、smoke �
   (`CANDIDATE-ST-PACKCANARY-006`) へ降下する。
 - **再起動相当**: `PLAN-L7-516` §2.2 の single active pointer 解決が、別 process/cwd/env clear
   後も同一 sealed generation へ束縛されること (`CANDIDATE-ST-PACKCANARY-007`)。
+
+PR-1B の単一ゲート述語は `G-PR1B-001 = valid(#420 main-arrival receipt) AND valid(#487
+bun-zero-trace receipt) AND C003/C004/C007 Green at the same PR-1B implementation revision`。
+receipt の欠落・head不一致・Bun trace 非0、または Candidate 1 件でも Red なら predicate は偽であり、
+PR-1A の C001/C002/C006-unit Green や preflight では代替できない。
 
 ## Backprop scope
 
@@ -129,8 +137,8 @@ cross-family non-author receipt が揃った時だけ昇格する。
 
 | Candidate | 実装 PR | Red 入力 | Green oracle |
 | --- | --- | --- | --- |
-| 001 | PR-1A | source-only / absolute path の混入 | sealed staging の明示 inventory 内だけに出荷 |
-| 002 | PR-1A | authoring/skills entry の欠落・重複 | materialized product inventory の exact-one fail-close |
+| 001 | PR-1A | sealed tar.gz/.sha256 以外の入力、source-only/absolute path、未許可 env、network 試行 | exact 2 asset 検証、network 0、明示 env、source 非混入 |
+| 002 | PR-1A | sealed staging 依存/authoring/skills entry の欠落・重複、registry fetch | sealed staging 依存だけ、registry/install/download 0、exact-one fail-close |
 | 003 | PR-1B | setup 元撤去後の起動で外部 path へ解決 | sealed runtime のみで起動、外部参照は typed deny |
 | 004 | PR-1B | generated wrapper/config/stdout/stderr/.ut-tdd state に setup 元 absolute path | 参照 0 |
 | 005 | PR-2 | 公開 asset の SHA-256/size を 1 byte 変異 | 第 1 層 staging receipt と不一致で mismatch deny |

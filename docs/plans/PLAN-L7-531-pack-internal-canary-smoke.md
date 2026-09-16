@@ -51,22 +51,21 @@ dependencies:
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/424
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/487
 review_evidence: []
-status: draft
 github_issue_id: 418
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:d70d711f99f9a86253098cd0357f4094
-  command_id: plan-revise:issue-418:forward:3
-  admitted_at: 2026-09-16T10:38:43.962Z
-  source_digest: sha256:1c2d41f4a530b1ca50e4514d0223aab6b2215ec75a5e28eb922b9627f6e9fbf6
-  decision_digest: sha256:a987f5c25aeb1bcf419c4d5159f6c6c3b66761c86a6b44b85e949ae0a4c76d57
-  receipt_digest: sha256:4ff69d64e87545244728a4ca86500ec44802938b3d4ba7b3aef7624fa9b63585
+  receipt_id: certificate:69a3f8801c7c565bb2a33c72d1ea1dfd
+  command_id: plan-revise:issue-418:forward:5
+  admitted_at: 2026-09-16T11:30:59.370Z
+  source_digest: sha256:fdf714f545a2d1178d6f118f1b87863938c5983ab2e9da02dc600a03aa8338f2
+  decision_digest: sha256:6de37ebfa510f1396344b28cf11507644441e2937faed22291437adaef940d4c
+  receipt_digest: sha256:7d746911137619885bb3eafd65ff753791299e2dc07ef7958f44be44c729aa65
   binding:
     path: docs/plans/PLAN-L7-531-pack-internal-canary-smoke.md
     plan_id: PLAN-L7-531-pack-internal-canary-smoke
     asset_id: plan:44f79788376b81c225ce5913fddbc48f
-    revision: 3
-    content_digest: sha256:1c2d41f4a530b1ca50e4514d0223aab6b2215ec75a5e28eb922b9627f6e9fbf6
+    revision: 4
+    content_digest: sha256:fdf714f545a2d1178d6f118f1b87863938c5983ab2e9da02dc600a03aa8338f2
   route:
     signal: feature_addition
     mode: add-feature

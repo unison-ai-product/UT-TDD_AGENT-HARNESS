@@ -51,29 +51,34 @@ PR-1A (sealed staging offline)、PR-1B (#420 consumer-local runtime)、PR-2 (公
 
 | Candidate | 層 | Red入力 | Green oracle |
 | --- | --- | --- | --- |
-| `CANDIDATE-ST-PACKCANARY-001` | 第 1 層 | clean distribution planへ source-only path、absolute path、source/worktree/local Pack checkout pathを混入 | artifact pathが相対かつ明示inventory内だけで、source-only入力は出荷集合へ到達しない |
-| `CANDIDATE-ST-PACKCANARY-002` | 第 1 層 | PLAN/design/state/prompt/teamまたは skills の一つをmaterialized entryから欠落・重複させる | authoring inventoryが欠落・重複をfail-closeし、skills baselineと6つのauthoring artifactを各1回検査する |
-| `CANDIDATE-ST-PACKCANARY-003` | 第 1 層 | Pack rootをmaterializeして別Product rootへ正式setupし、Pack root/source/worktreeを撤去して別cwdから起動 | 正式setup経路が生成したsealed consumer runtimeだけで起動し、外部参照時はtyped deny。現行setupがfallbackを残す場合はRed |
-| `CANDIDATE-ST-PACKCANARY-004` | 第 1 層 | 実Packを別Product rootへsetupし、setup元Pack rootを生成wrapper/configから利用不能にする | generated wrapper/config、command output、runtime stateにsetup元の絶対path参照が0 |
+| `CANDIDATE-ST-PACKCANARY-001` | 第 1 層 (PR-1A completion) | sealed `tar.gz` + `.sha256` 以外の入力、source-only/absolute path、未許可 env sentinel、network/socket 試行を混入 | exact 2 asset を SHA-256 検証後にのみ materializeし、network 0、`process.env` 直接継承 0、source-only/absolute path 0。未許可 env または network 試行は Red |
+| `CANDIDATE-ST-PACKCANARY-002` | 第 1 層 (PR-1A completion) | sealed staging 内の依存、PLAN/design/state/prompt/teamまたは skills の一つを欠落・重複させ、registry fetch を許可 | 依存は sealed staging だけから解決し、registry/npm install/download 0、authoring/skills inventory の欠落・重複を fail-close |
+| `CANDIDATE-ST-PACKCANARY-003` | 第 1 層 (PR-1B) | Pack rootをmaterializeして別Product rootへ正式setupし、Pack root/source/worktreeを撤去して別cwdから起動 | 正式setup経路が生成したsealed consumer runtimeだけで起動し、外部参照時はtyped deny。現行setupがfallbackを残す場合はRed |
+| `CANDIDATE-ST-PACKCANARY-004` | 第 1 層 (PR-1B) | 実Packを別Product rootへsetupし、setup元Pack rootを生成wrapper/configから利用不能にする | generated wrapper/config、command output、runtime stateにsetup元の絶対path参照が0 |
 | `CANDIDATE-ST-PACKCANARY-005` | 第 2 層 | 公開済み `v0.2.0-canary.1` の tar.gz または `.sha256` の bytes を 1 byte 変異、または size を変える | 独立再計算した SHA-256/size が第 1 層 sealed staging receipt と一致しないため `mismatch` deny。第 1 層 Green を受入証跡へ読み替えない |
-| `CANDIDATE-ST-PACKCANARY-006` | 第 1 層 (unit) / 第 2 層 (受入) | legacy 3 asset 形式の release (`v0.1.4` 相当)、`latest` / prefix / semver range による tag 解決、asset の欠落・余剰・別名 | exact 2 asset (tar.gz + `.sha256`) かつ tag exact match 以外を typed deny し、legacy release を canary と誤認しない |
-| `CANDIDATE-ST-PACKCANARY-007` | 第 1 層 | 別 process・別 cwd・環境変数 clear で wrapper を再起動し、`bun` を PATH 上に置く | PLAN authoring/lint、db rebuild、doctor、review smoke が同一 sealed generation で再現し、Bun invocation trace 0 |
+| `CANDIDATE-ST-PACKCANARY-006` | 第 1 層 (unit, PR-1A completion) / 第 2 層 (受入) | legacy 3 asset 形式の release (`v0.1.4` 相当)、`latest` / prefix / semver range による tag 解決、asset の欠落・余剰・別名 | exact 2 asset (`tar.gz` + `.sha256`) かつ tag exact match 以外を typed deny し、legacy release を canary と誤認しない |
+| `CANDIDATE-ST-PACKCANARY-007` | 第 1 層 (PR-1B) | 別 process・別 cwd・環境変数 clear で wrapper を再起動し、`bun` を PATH 上に置く | PLAN authoring/lint、db rebuild、doctor、review smoke が同一 sealed generation で再現し、Bun invocation trace 0 |
 
 Candidate は pair-freeze 時点の設計候補であり、実装と同じ revision の Red→Green 実測が
-揃うまで `U-*` へ昇格しない。001..002・006 (unit) は `PLAN-L7-531` §6 の PR-1A、003..004・007 は
-PR-1B、005・006 (受入) は PR-2 が昇格する。C003/C004/C007 は #420 main 到達前には意図的 Red の
-ままとする。
+揃うまで `U-*` へ昇格しない。PR-1A completion は **001..002・006 (unit) の 3 行だけ**である。
+003..004・007 は #420 main 到達と #487 Bun-zero trace を必須とする `G-PR1B-001` の PR-1B 所有、
+005・006 (受入) は PR-2 が昇格する。C003/C004/C007 は #420 main 到達前には意図的 Red のままとする。
 
 ## 4. 実行手順
 
-1. 第 1 層では `PLAN-L7-508` の sealed staging result (tar.gz + `.sha256` + control manifest
-   sidecar) から clean tree を temporary consumer rootへ materializeする。入力は sealed result に
-   限定し、`git ls-tree HEAD`、`cpSync(process.cwd())`、directory walk/glob、local Pack checkout、
-   registry `npm ci`、全環境変数の継承で entry を補完してはならない。第 2 層では公開済み
+1. 第 1 層では `PLAN-L7-508` の sealed staging result (**tar.gz + `.sha256` の exact 2 asset のみ**)
+   から clean tree を temporary consumer rootへ materializeする。control manifest/receipt は sealed
+   metadata であり第 3 の入力 asset ではない。依存は tar.gz 内の sealed staging に供給済みとし、
+   network/DNS/socket/HTTP、registry `npm ci`/`npm install`/download、全環境変数の継承を 0 とする。
+   child process の env は allowlist から明示構築し、`process.env` を渡さない。`git ls-tree HEAD`、
+   `cpSync(process.cwd())`、directory walk/glob、local Pack checkoutで entry を補完してはならない。
+   第 2 層では公開済み
    `v0.2.0-canary.1` の exact 2 asset を取得し、tag は exact match で解決する。いずれも
    source repositoryをfixtureの入力に残さない。
-2. Node/npmで依存を導入し、`setup --solo`、`doctor --setup-smoke`、status/authoring smokeを
-   consumer rootから実行する。
+2. 第 1 層は tar.gz 内の sealed staging に供給済みの依存だけを使い、registry/npm fetch や
+   install/download を行わずに `setup --solo`、`doctor --setup-smoke`、status/authoring smokeを
+   consumer rootから実行する。第 2 層の公開 asset 受入で必要な Node/npm 操作も、受入で封印した
+   bytes と明示的に束縛された依存だけを使う。
 3. Pack rootをsetup元として別Product rootへ `setup --solo` を実行し、テスト専用のsetup元Pack
    checkoutを削除する。最終受入では隔離環境からsource repository/worktreeを参照不能にする。
    開発用repository、実利用worktreeやユーザーデータを削除して試験してはならない。正式setupが生成した
@@ -88,6 +93,9 @@ PR-1B、005・006 (受入) は PR-2 が昇格する。C003/C004/C007 は #420 ma
    独立再計算で確認する (`PLAN-L7-531` §3.3)。
 6. Linux、Windows、aggregateで同じ Candidate/Oracle を実行し、exact release identity、
    PLAN revision、Reverse、CI、non-author closing receiptへ束縛する。
+
+PR-1A completion の判定対象は C001/C002/C006-unit のみであり、C003/C004/C007 の結果を混ぜない。
+後者は #420 main-arrival receipt と #487 Bun-zero-trace receipt を含む `G-PR1B-001` で判定する。
 
 ## 5. 完了条件
 
