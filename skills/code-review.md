@@ -63,9 +63,9 @@ responsibilities; load both when a PLAN needs both.
 Run these before opening any file:
 
 ```
-bun run typecheck
-bun run lint
-bun run test
+npm run typecheck
+npm run lint
+npm run test
 ut-tdd doctor
 ut-tdd review --uncommitted
 ```

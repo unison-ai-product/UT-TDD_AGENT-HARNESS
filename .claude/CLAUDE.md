@@ -34,7 +34,7 @@ only. Do not enable hooks that depend on personal legacy runtime paths.
 fail-close するので、hook を足す・変える場合は両方を同時に更新すること。
 
 実行系は **node** である (`package.json` の `utTdd.nodeToolchain.nodeAuthority`)。Bun は
-`bunAuthority: legacy_migration_debt` であり、hook / CLI / 検査のいずれの起動形にも使わない
+Node authority is sealed; Bun is retired from hook / CLI / inspection entrypoints.
 (#134 Bun permanent ban)。
 
 Historical behavior may be referenced for migration, but implementation must
@@ -304,7 +304,7 @@ point back to (PLAN-RECOVERY-12, issue #85).
 ## Cutover Boundary
 
 UT-TDD imports design concepts from previous framework but current product code is
-TypeScript/Bun. Do not describe legacy Python modules or legacy commands as the
+TypeScript/Node. Do not describe legacy Python modules or legacy commands as the
 current operating path.
 
 Current cutover evidence:

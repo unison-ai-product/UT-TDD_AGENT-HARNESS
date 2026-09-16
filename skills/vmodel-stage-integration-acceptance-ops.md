@@ -232,7 +232,7 @@ path.
   four-rung sequencing and Go/No-Go judgement spec-driven-development does not
   cover.
 - **[[testing.md|testing]]** owns unit/CI test execution mechanics (runner
-  choice, `bun run test`, coverage tooling); this skill owns the higher-level
+  choice, `npm run test`, coverage tooling); this skill owns the higher-level
   test *levels* (integration/system/acceptance/operational) and what each one
   verifies, not how any individual test is run.
 - **[[browser-testing-and-screen-verification.md|browser-testing-and-screen-verification]]**

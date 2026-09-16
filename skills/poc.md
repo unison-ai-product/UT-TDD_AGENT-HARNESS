@@ -71,7 +71,7 @@ drive: Discovery
 status: active
 hypothesis: "Can Vitest handle 500 harness-db projections in under 2 s?"
 poc_criteria:
-  - "bun run test completes under 2000 ms on CI hardware"
+  - "npm run test completes under 2000 ms on CI hardware"
   - "No memory leak observed in 3 consecutive runs"
 decision_outcome: ""   # filled at S4
 generates:

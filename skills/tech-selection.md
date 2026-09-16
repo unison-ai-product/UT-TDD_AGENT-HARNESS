@@ -77,8 +77,8 @@ Both must appear in the PLAN's `generates` field. `ut-tdd plan lint` will fail i
   pillar from `CLAUDE.md` (foundation-first, type-safety, observability, etc.).
 - Do not use "popularity" or "community" as standalone criteria — they are
   proxies; name what they proxy (maintenance risk, hiring, ecosystem maturity).
-- At least one criterion must be a UT-TDD operational constraint: Windows/Bun
-  compatibility, hook integration, `bun run test` / Biome compatibility.
+- At least one criterion must be a UT-TDD operational constraint: Windows/Node
+  compatibility, hook integration, `npm run test` / Biome compatibility.
 
 ## ADR lifecycle in UT-TDD
 

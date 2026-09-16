@@ -91,7 +91,7 @@ Record the test design under `docs/test-design/` paired with the L5 doc;
 
 ## L7 implementation rules
 
-- [ ] Migration code is TypeScript/Bun — no ad-hoc shell/Python that escapes
+- [ ] Migration code uses the TypeScript/Node project toolchain — no ad-hoc shell/Python that escapes
       harness traceability.
 - [ ] Idempotent: re-running on an already-migrated target is safe.
 - [ ] Explicit error handling: on a row failure, log the row id and continue to

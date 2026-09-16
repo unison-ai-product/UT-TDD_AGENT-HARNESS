@@ -38,8 +38,8 @@ decision_points:
     choose: "Confirm all three exist and are referenced in `review_evidence.trace_links`, not just the code change itself."
     over: "Approving the PLAN because the implementation and its direct unit test are present."
     because: "FR-L1-21 review evidence and the layer obligation check require the full sibling set; a missing design or test-design doc is an open V-model obligation even if the code works."
-  - when: "A commit uses `biome lint` instead of `bun run lint` before the review is closed."
-    choose: "Flag it as an anti-pattern and require `bun run lint`."
+  - when: "A commit uses `biome lint` instead of `npm run lint` before the review is closed."
+    choose: "Flag it as an anti-pattern and require `npm run lint`."
     over: "Accepting it since `biome lint` also reports lint violations."
     because: "The skill lists this exact substitution as an anti-pattern: format violations accumulate silently and fail the next CI push."
 ---
@@ -79,9 +79,9 @@ to verify the specified scenarios are actually present.
 **Step 1 — Machine checks:**
 
 ```
-bun run typecheck
-bun run lint
-bun run test
+npm run typecheck
+npm run lint
+npm run test
 ut-tdd doctor
 ut-tdd vmodel lint
 ut-tdd review --uncommitted
@@ -132,5 +132,5 @@ timestamp: <ISO-8601>
   the scenarios in the paired design doc.
 - Accepting a Refactor PLAN without the retrograde check — refactors frequently
   delete tests silently.
-- Using `biome lint` alone instead of `bun run lint` — format violations
+- Using `biome lint` alone instead of `npm run lint` — format violations
   accumulate and fail the next CI push.
