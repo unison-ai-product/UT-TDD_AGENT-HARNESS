@@ -1,3 +1,11 @@
+---
+artifact_type: test_design
+layer: L7
+executed_at_layer: L7
+status: draft
+plan_id: PLAN-L6-627-pack-publication-admitted-publish
+---
+
 # L7 Pack admitted publish 境界テスト設計（#627）
 
 この台帳は、#625 preparation と #626 admission binding の後段で、admitted input だけを publication port へ
