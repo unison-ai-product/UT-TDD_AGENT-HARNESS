@@ -97,7 +97,7 @@ review_evidence:
   - reviewer: codex-primary-preflight
     review_kind: intra_runtime_subagent
     reviewed_at: 2026-09-16T12:52:39+09:00
-    tests_green_at: 2026-09-16T12:52:30+09:00
+    tests_green_at: 2026-09-16T12:52:39+09:00
     verdict: preflight_complete
     worker_model: gpt-5.6-luna
     plan_revision: e52240e19799d687bdf0a1906f89717628b85fbd
@@ -141,18 +141,18 @@ sub_doc: function-spec
 github_issue_id: 152
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:86c4f31192184901597be3605d5a11ce
-  command_id: plan-revise:issue-540:cutover-prefix-implementation:e52240e1
-  admitted_at: 2026-09-16T12:54:00+09:00
-  source_digest: sha256:f55f159399d4d971197713d3458f58659d1ccf00bfa8fe5b09446d3ee7679767
+  receipt_id: certificate:b1b1fcef230277d92f0f6e1f482f8b82
+  command_id: plan-revise:issue-540:cutover-prefix-implementation:r31:44d642ac579e
+  admitted_at: 2026-09-16T13:30:00+09:00
+  source_digest: sha256:5fc411bd9cde38c329631e03bd98c4a74c9e98775b76a2aa8162575d5b05ca42
   decision_digest: sha256:3aed6909ae7637b20d3b639da9f9b8e4b7443ff71247cc53dd9e5784d3fff5f8
-  receipt_digest: sha256:232d18ffdc4abde3087eb911de8ef0fcfd790b0dee247ad2b5bf779225718a43
+  receipt_digest: sha256:d438ceeba1c8f785a9035f020e462c764f025bb4888449e632fd7061d4b03e02
   binding:
     path: docs/plans/PLAN-L6-93-node-bootstrap-contract.md
     plan_id: PLAN-L6-93-node-bootstrap-contract
     asset_id: plan:legacy:80a50dd958ae451ea13030276eb8c145a8fdc3104ec145560457f97a07594881
-    revision: 30
-    content_digest: sha256:f55f159399d4d971197713d3458f58659d1ccf00bfa8fe5b09446d3ee7679767
+    revision: 31
+    content_digest: sha256:5fc411bd9cde38c329631e03bd98c4a74c9e98775b76a2aa8162575d5b05ca42
   route:
     signal: feature_addition
     mode: add-feature
