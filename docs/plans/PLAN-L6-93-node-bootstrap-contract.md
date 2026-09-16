@@ -115,7 +115,7 @@ review_evidence:
         exit_code: 0
         completed_at: 2026-09-16T12:52:39+09:00
         evidence_path: tests/cutover-transition.test.ts
-        output_digest: sha256:8964d73003f4bb068bde7d95a6f4e45a3c1939bab260f96208533e640ee7ac01
+        output_digest: sha256:464776ac206477a8f021173818d08ce20d5bb2254ad89207595d6598f27aad76
         anchor_commit: e52240e19799d687bdf0a1906f89717628b85fbd
       - kind: typecheck
         command: node node_modules/typescript/bin/tsc --noEmit
@@ -124,7 +124,7 @@ review_evidence:
         exit_code: 0
         completed_at: 2026-09-16T12:52:39+09:00
         evidence_path: src/runtime/cutover-transition.ts
-        output_digest: sha256:f2ee308869e9a33833931fbb76db52a97f367b1bd8b515665187c1f5b4c0c798
+        output_digest: sha256:48ff17d60d8617c3fb0aa8e28a219ddd0e431f4a0f595c6623ea8bc8c9c101db
         anchor_commit: e52240e19799d687bdf0a1906f89717628b85fbd
       - kind: lint
         command: node node_modules/@biomejs/biome/bin/biome check
@@ -185,18 +185,18 @@ sub_doc: function-spec
 github_issue_id: 152
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:07f37b94353647ab81182f85b4288d05
-  command_id: plan-revise:issue-540:cutover-prefix-implementation:r33:18349dc882da
-  admitted_at: 2026-09-16T06:03:38.693Z
-  source_digest: sha256:ea0790771498ff7cb9c3d7e9f74592940bdd68d375694ff88680ba2ca65c0c31
-  decision_digest: sha256:8e3bf4d97195f916488ddf762856a0bbc3f18a5423974363f46dd28a1e414462
-  receipt_digest: sha256:8d00d02f6112461665dff65950ad5224776a3360a431a79a4bcd39c99754eb2d
+  receipt_id: certificate:cedde7318ba00a975ce2fa1c67ef1a5e
+  command_id: plan-revise:issue-540:cutover-prefix-implementation:r34:18349dc882da
+  admitted_at: 2026-09-16T06:12:50.426Z
+  source_digest: sha256:f063bf75d8db5ec8aff6b8b03674adcddd629935e540a4331f727311f6c978f3
+  decision_digest: sha256:72f3d084a5aa3a67fd521fa5d9979d12511fea77c90a9ef514f4e340b4487ed7
+  receipt_digest: sha256:1efa88a65afd0a27a08da34700bd69d2e34894bcaad247f815de0edc275529e6
   binding:
     path: docs/plans/PLAN-L6-93-node-bootstrap-contract.md
     plan_id: PLAN-L6-93-node-bootstrap-contract
     asset_id: plan:legacy:80a50dd958ae451ea13030276eb8c145a8fdc3104ec145560457f97a07594881
-    revision: 33
-    content_digest: sha256:ea0790771498ff7cb9c3d7e9f74592940bdd68d375694ff88680ba2ca65c0c31
+    revision: 34
+    content_digest: sha256:f063bf75d8db5ec8aff6b8b03674adcddd629935e540a4331f727311f6c978f3
   route:
     signal: feature_addition
     mode: add-feature
@@ -217,13 +217,12 @@ admission_receipt:
       target_revision: 29
   reentry:
     target_plan_id: PLAN-L6-93-node-bootstrap-contract
-    target_revision: 33
+    target_revision: 34
     phase: forward_merge
-  escape_reason: "Issue #540 PR #620: bind the confirmed status to the exact-head
-    non-author preflight review evidence at 18349dc882da (Claude Opus PASS,
-    rv1-d4a5412f…), correct the measurement citation to the 18349dc8 packet, and
-    remove the stale draft-status body text (closing-review FLAG findings 1-2 on
-    8b1a846d)"
+  escape_reason: "Issue #540 PR #620: the two green_commands output_digest values
+    of the 18349dc8 preflight evidence now equal the sha256 of evidence_path at
+    anchor_commit 18349dc8 (doctor --strict-green-command-digest
+    anchor-digest-mismatch on 35d0b78b)"
 ---
 
 # PLAN-L6-93: sealed Node bootstrap function redesign

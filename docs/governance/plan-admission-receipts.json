@@ -4144,6 +4144,22 @@
         "revision": 33,
         "content_digest": "sha256:ea0790771498ff7cb9c3d7e9f74592940bdd68d375694ff88680ba2ca65c0c31"
       }
+    },
+    {
+      "sequence": 260,
+      "previous_record_digest": "sha256:dc6ab07aa115458562380bd80333973fbfde3c1e00f0dce286ec9fecf859364f",
+      "record_digest": "sha256:25e2486734b60652d3f996b0bf22046afc9043fb11ca886958cce88b46ec42e6",
+      "command_id": "plan-revise:issue-540:cutover-prefix-implementation:r34:18349dc882da",
+      "receipt_id": "certificate:cedde7318ba00a975ce2fa1c67ef1a5e",
+      "receipt_digest": "sha256:1efa88a65afd0a27a08da34700bd69d2e34894bcaad247f815de0edc275529e6",
+      "decision_digest": "sha256:72f3d084a5aa3a67fd521fa5d9979d12511fea77c90a9ef514f4e340b4487ed7",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-93-node-bootstrap-contract.md",
+        "plan_id": "PLAN-L6-93-node-bootstrap-contract",
+        "asset_id": "plan:legacy:80a50dd958ae451ea13030276eb8c145a8fdc3104ec145560457f97a07594881",
+        "revision": 34,
+        "content_digest": "sha256:f063bf75d8db5ec8aff6b8b03674adcddd629935e540a4331f727311f6c978f3"
+      }
     }
   ]
 }
