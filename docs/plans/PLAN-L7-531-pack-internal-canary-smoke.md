@@ -27,6 +27,8 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-531-pack-internal-canary-smoke.md
     artifact_type: markdown_doc
+  - artifact_path: tests/pack-internal-canary-boundary.test.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L6-101-pack-independent-multi-consumer-acceptance.md
   requires:
@@ -55,18 +57,18 @@ status: draft
 github_issue_id: 418
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:a5ec9ea8f3689c8d24727d97a9804bcf
-  command_id: plan-revise:issue-418:forward:2
-  admitted_at: 2026-09-10T10:27:51.659Z
-  source_digest: sha256:69c9c058d2178425bb0459033b2748785d152d7a9c2a37c01aefbca270709d4e
-  decision_digest: sha256:2ee0d06520a02bb49244002124eeb74804bcde3a28cfe21289bb7681a711d12d
-  receipt_digest: sha256:4adc16d207f8b7ac617c9fc834a0e6939cd80c2a7bd2c3ca470eb13b61755fe7
+  receipt_id: certificate:8f7d4ae466ab0b7b93beb0c6c61ad65c
+  command_id: plan-revise:issue-418:forward:3:pr638-7cda5d952bec
+  admitted_at: 2026-09-16T09:25:31.440Z
+  source_digest: sha256:801c8108795f545f8d3dbf0175aa4540d296f131494eb8d10b23ba64a05d23b2
+  decision_digest: sha256:7174ed3a77bb0f9597df62e1d00695264e26623e355057474d0edc51d0732adb
+  receipt_digest: sha256:873b1696fb021a34f462926aad40ea7e29678986a4a781cb7e40de1f157ab9b2
   binding:
     path: docs/plans/PLAN-L7-531-pack-internal-canary-smoke.md
     plan_id: PLAN-L7-531-pack-internal-canary-smoke
     asset_id: plan:44f79788376b81c225ce5913fddbc48f
-    revision: 2
-    content_digest: sha256:69c9c058d2178425bb0459033b2748785d152d7a9c2a37c01aefbca270709d4e
+    revision: 3
+    content_digest: sha256:801c8108795f545f8d3dbf0175aa4540d296f131494eb8d10b23ba64a05d23b2
   route:
     signal: feature_addition
     mode: add-feature
@@ -83,8 +85,7 @@ admission_receipt:
     target_plan_id: PLAN-L7-531-pack-internal-canary-smoke
     target_revision: 2
     phase: forward_merge
-  escape_reason: "Issue #418 PR #560 Codex FLAG: family-neutral non-author closing
-    receipt obligation"
+  escape_reason: "Issue #418 PR #638: bounded non-Bun canary boundary fixture"
 ---
 
 # PLAN-L7-531: Pack-only internal canary smoke (Windows/Linux)
