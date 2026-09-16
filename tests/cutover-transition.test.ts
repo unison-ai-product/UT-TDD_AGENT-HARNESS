@@ -254,6 +254,26 @@ function overwriteStoredEvidence(
   }
 }
 
+function overwriteStoredHead(repoRoot: string, sequence: number, receiptDigest: string): void {
+  const { DatabaseSync } = nodeRequire("node:sqlite") as {
+    DatabaseSync: new (
+      path: string,
+    ) => {
+      prepare(sql: string): { run(...params: unknown[]): unknown };
+      close(): void;
+    };
+  };
+  const db = new DatabaseSync(resolve(repoRoot, ".ut-tdd", "ledger", "cutover-ledger.db"));
+  try {
+    db.prepare("UPDATE cutover_head SET sequence=?, receipt_digest=? WHERE singleton=1").run(
+      sequence,
+      receiptDigest,
+    );
+  } finally {
+    db.close();
+  }
+}
+
 function storedReceiptCount(repoRoot: string): number {
   const { DatabaseSync } = nodeRequire("node:sqlite") as {
     DatabaseSync: new (
@@ -603,5 +623,77 @@ describe("PLAN-L6-93 cutover prefix", () => {
       "cutover-admission-not-ready",
     );
     expect(projectCutoverState([]).state).toBe("uninitialized");
+  });
+  it("U-CUTOVER-003 rejects a registry-kind mutation and an evidence-count mutation with every other field re-signed", () => {
+    const base = command(root(), "cutover.genesis", 0, null);
+    // kind_id だけを別の登録 kind へ差し替える (reference shape は同じ kind 同士を選び、digest は再署名する)。
+    // registry の kind 照合以外は全て正当なので、ここで落ちるのは kind 照合だけである。
+    const pair = base.evidence.flatMap((a) =>
+      base.evidence
+        .filter((b) => b.kind_id !== a.kind_id && b.reference_kind === a.reference_kind)
+        .map((b) => [a, b] as const),
+    )[0];
+    if (!pair) throw new Error("registry must hold two kinds with the same reference shape");
+    const [target, donor] = pair;
+    const kindMutation = base.evidence.map((item) =>
+      item === target ? resignEvidence(item, { kind_id: donor.kind_id }) : item,
+    );
+    expectReason(
+      () => initializeCutoverChain({ ...base, evidence: kindMutation }),
+      "cutover-admission-not-ready",
+    );
+    // 件数だけを変える: 1 件欠落 / 正当な 1 件の重複追加。どちらも registry 件数照合で落ちる。
+    expectReason(
+      () => initializeCutoverChain({ ...base, evidence: base.evidence.slice(1) }),
+      "cutover-admission-not-ready",
+    );
+    expectReason(
+      () => initializeCutoverChain({ ...base, evidence: [...base.evidence, base.evidence[0]] }),
+      "cutover-admission-not-ready",
+    );
+    expect(initializeCutoverChain(base).sequence).toBe(0);
+  });
+
+  it("U-CUTOVER-006 rejects a re-signed exit-success mutation and a direct head projection edit", () => {
+    const base = command(root(), "cutover.genesis", 0, null);
+    // success=false を record/receipt digest ごと再署名する。digest 照合は通るので、
+    // ここで落ちるのは exit-success 述語だけである (述語を削ると本 case が Red になる)。
+    const successMutation = base.evidence.map((item, index) =>
+      index === 0 ? resignEvidence(item, { success: false }) : item,
+    );
+    expectReason(
+      () => initializeCutoverChain({ ...base, evidence: successMutation }),
+      "cutover-admission-not-ready",
+    );
+
+    // projection (cutover_head) を直接書き換えても authority は生まれず、fork も隠せない。
+    const editedRoot = root();
+    const genesis = initializeCutoverChain(command(editedRoot, "cutover.genesis", 0, null));
+    overwriteStoredHead(editedRoot, 1, "f".repeat(64));
+    expectReason(
+      () =>
+        appendCutoverTransition(
+          command(editedRoot, "cutover.inventory-frozen.node-shadow", 1, genesis.receipt_digest),
+        ),
+      "cutover-write-conflict",
+    );
+    expect(storedReceiptCount(editedRoot)).toBe(1);
+
+    const forkedRoot = root();
+    const forkedGenesis = initializeCutoverChain(command(forkedRoot, "cutover.genesis", 0, null));
+    overwriteStoredHead(forkedRoot, 0, "a".repeat(64));
+    expectReason(
+      () =>
+        appendCutoverTransition(
+          command(
+            forkedRoot,
+            "cutover.inventory-frozen.node-shadow",
+            1,
+            forkedGenesis.receipt_digest,
+          ),
+        ),
+      "cutover-write-conflict",
+    );
+    expect(storedReceiptCount(forkedRoot)).toBe(1);
   });
 });
