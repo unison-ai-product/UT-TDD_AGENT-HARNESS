@@ -2146,6 +2146,11 @@ source-side artifact admissionを、consumer runtime隔離の代替証拠とし�
 設計契約を保持し、`PLAN-L7-458`はQ0から最終撤去へ渡す順序を参照する。候補IDの記述を
 Green実績と解釈せず、実装PRでRed実測後に正式 `U-*` へ昇格する。
 
+実装artifactは `src/lint/bun-final-retirement.ts`、独立admission oracleは
+`tests/bun-final-retirement.test.ts` が同一PLANの所有である。テストはF0b/F0c/Q0の
+receipt欠落・tuple各軸不一致・reachable/indeterminate surfaceを個別にRedへ落とし、
+detectorの意味とallowlistを変更せずGreenへ昇格させる。
+
 `PLAN-L7-530` の全tracked-tree inventoryは、候補を広く収集してからfalse positiveを
 各pathで個別分類する `git grep -n -I -i -e bun 6e9aeb99 -- .` と
 `git ls-tree -r --name-only 6e9aeb99 -- . | grep -i bun` の組み合わせを正本とする。
