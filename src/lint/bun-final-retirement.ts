@@ -7,14 +7,14 @@ import {
   type NodeBanF0cAggregateBinding,
   type NodeBanGenerationBinding,
   verifyNodeBanAuditReceipt,
-} from "../lint/bun-permanent-ban.ts";
+} from "./bun-permanent-ban.ts";
 import {
   admitNodeGenerationAggregate,
   type NodeGenerationCiEvidence,
-} from "../lint/node-generation-ci-policy.ts";
+} from "./node-generation-ci-policy.ts";
 import { gitObjectIdSchema } from "../schema/node-slice-admission.ts";
-import { assertCompleteGitHistory, NodeSliceAdmissionError } from "./node-slice-admission.ts";
-import { classifyRuntimeImageProcess } from "./runtime-image-observer.ts";
+import { assertCompleteGitHistory, NodeSliceAdmissionError } from "../runtime/node-slice-admission.ts";
+import { classifyRuntimeImageProcess } from "../runtime/runtime-image-observer.ts";
 
 const RAW_REVISION = /^[0-9a-f]{40}$/;
 const PREFIXED_REVISION = /^git-sha1:([0-9a-f]{40})$/;
