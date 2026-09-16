@@ -696,4 +696,29 @@ describe("PLAN-L6-93 cutover prefix", () => {
     );
     expect(storedReceiptCount(forkedRoot)).toBe(1);
   });
+  it("U-CUTOVER-003 rejects a candidate-head row whose subject is swapped to the producer ancestor, and U-CUTOVER-005 rejects an artifact digest that differs from the admission", () => {
+    const base = command(root(), "cutover.genesis", 0, null);
+    // candidate-head rule の row の subject_revision だけを producer ancestor へ入れ替え、digest を再署名する。
+    // isAncestor port は true のままなので、ここで落ちるのは candidate-head の等値照合だけである。
+    const candidateRows = CUTOVER_EVIDENCE_REGISTRY["cutover.genesis"]
+      .filter(([, , rule]) => rule === "candidate-head")
+      .map(([kind]) => kind);
+    if (candidateRows.length === 0)
+      throw new Error("genesis registry must hold a candidate-head row");
+    const swappedSubject = base.evidence.map((item) =>
+      item.kind_id === candidateRows[0]
+        ? resignEvidence(item, { subject_revision: producerAncestor })
+        : item,
+    );
+    expectReason(
+      () => initializeCutoverChain({ ...base, evidence: swappedSubject }),
+      "cutover-revision-mismatch",
+    );
+    // command の artifact digest だけを admission と食い違わせる。admission 自体は正当に署名されたまま。
+    expectReason(
+      () => initializeCutoverChain({ ...base, artifactDigest: `sha256:${"9".repeat(64)}` }),
+      "cutover-admission-not-ready",
+    );
+    expect(initializeCutoverChain(base).sequence).toBe(0);
+  });
 });
