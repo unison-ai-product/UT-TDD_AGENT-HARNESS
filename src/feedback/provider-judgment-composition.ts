@@ -227,7 +227,10 @@ function writeEvidenceEnvelope(
       `${JSON.stringify({
         schema_version: "provider-judgment-evidence/v1",
         verdict: receipt.verdict,
-        blocking_findings: [...(receipt.blockingFindings ?? [])].sort(),
+        // Findings are already validated as canonical order below.  Do not
+        // sort here: accepting an unordered receipt would hide a malformed
+        // provider judgment instead of returning a typed schema denial.
+        blocking_findings: [...(receipt.blockingFindings ?? [])],
       })}\n`,
       "utf8",
     ).toString("base64"),
@@ -258,9 +261,13 @@ function verifyReceiptEvidence(
   receipt: ReviewReceipt,
 ): ProviderJudgmentCompositionFailure | undefined {
   const findings = receipt.blockingFindings ?? [];
-  if (new Set(findings).size !== findings.length) return "evidence_schema_invalid";
+  if (new Set(findings).size !== findings.length) return "judgment_schema_invalid";
   if (!findings.every((finding) => typeof finding === "string" && finding.trim() === finding))
-    return "evidence_schema_invalid";
+    return "judgment_schema_invalid";
+  if (findings.some((finding, index) => index > 0 && findings[index - 1] >= finding))
+    return "judgment_schema_invalid";
+  if (receipt.verdict === "FLAG" ? findings.length === 0 : findings.length !== 0)
+    return "judgment_schema_invalid";
   return undefined;
 }
 

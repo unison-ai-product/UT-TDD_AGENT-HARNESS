@@ -32,6 +32,36 @@ afterEach(() => {
 });
 
 describe("provider judgment composition", () => {
+  it("CANDIDATE-U-D3BCOMP-001/002: accepts only the request digest and rejects missing custody", async () => {
+    const fixture = createFixture();
+    const extra = await composeProviderJudgment({
+      repoRoot: fixture.root,
+      requestDigest: fixture.requestDigest,
+      attempt: 1,
+      provider: "claude",
+    } as never);
+    expect(extra).toEqual({ ok: false, reason: "identity_mismatch" });
+
+    const missing = await composeProviderJudgment({
+      repoRoot: fixture.root,
+      requestDigest: "f".repeat(64),
+      attempt: 1,
+    });
+    expect(missing).toEqual({ ok: false, reason: "request_unavailable" });
+  });
+
+  it("CANDIDATE-U-D3BCOMP-003: rejects each receipt identity axis independently", async () => {
+    for (const axis of ["head", "reviewRevision", "pr"] as const) {
+      const fixture = createFixture({ receiptMutation: axis });
+      const result = await composeProviderJudgment({
+        repoRoot: fixture.root,
+        requestDigest: fixture.requestDigest,
+        attempt: 1,
+      });
+      expect(result).toEqual({ ok: false, reason: "identity_mismatch" });
+    }
+  });
+
   it("CANDIDATE-U-D3BCOMP-001/002/003/004/006/007/008/009/010/015: derives a replayable judgment only from custody", async () => {
     const fixture = createFixture();
     const first = await composeProviderJudgment({
@@ -107,12 +137,32 @@ describe("provider judgment composition", () => {
       }),
     ).resolves.toEqual({ ok: false, reason: "receipt_mutated" });
   });
+
+  it("CANDIDATE-U-D3BCOMP-007/008: rejects duplicate, unordered, and verdict-inconsistent findings", async () => {
+    for (const options of [
+      { receiptVerdict: "FLAG" as const, receiptFindings: ["same", "same"] },
+      { receiptVerdict: "FLAG" as const, receiptFindings: ["zulu", "alpha"] },
+      { receiptVerdict: "PASS" as const, receiptFindings: ["blocking"] },
+      { receiptVerdict: "FLAG" as const, receiptFindings: [] },
+    ]) {
+      const fixture = createFixture(options);
+      const result = await composeProviderJudgment({
+        repoRoot: fixture.root,
+        requestDigest: fixture.requestDigest,
+        attempt: 1,
+      });
+      expect(result).toEqual({ ok: false, reason: "judgment_schema_invalid" });
+    }
+  });
 });
 
 function createFixture(
   options: {
     event?: boolean;
     eventMutation?: Partial<Pick<ReviewCustodyAuditEvent, "provider" | "model">>;
+    receiptMutation?: "head" | "reviewRevision" | "pr";
+    receiptVerdict?: ReviewReceipt["verdict"];
+    receiptFindings?: string[];
   } = {},
 ): {
   root: string;
@@ -140,13 +190,16 @@ function createFixture(
   writeFileSync(join(requestDir, `${requestDigest}.json`), `${JSON.stringify(request, null, 2)}\n`);
   const receipt: ReviewReceipt = {
     memoryId: request.memoryId,
-    pr: request.pr,
-    head: request.exactHead,
-    reviewRevision: request.reviewRevision,
+    pr: options.receiptMutation === "pr" ? request.pr + 1 : request.pr,
+    head: options.receiptMutation === "head" ? "b".repeat(40) : request.exactHead,
+    reviewRevision:
+      options.receiptMutation === "reviewRevision"
+        ? `rv1-${"e".repeat(64)}`
+        : request.reviewRevision,
     reviewerFamily: "claude",
     kind: "verdict",
-    verdict: "PASS",
-    blockingFindings: [],
+    verdict: options.receiptVerdict ?? "PASS",
+    blockingFindings: options.receiptFindings ?? [],
     at: request.requestedAt,
   };
   const receiptBytes = Buffer.from(`${JSON.stringify(receipt, null, 2)}\n`);
