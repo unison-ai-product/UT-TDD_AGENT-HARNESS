@@ -1240,7 +1240,7 @@ class PublicationRun {
 
   async authorize(
     mutation: PublicationMutation,
-  ): Promise<PackPublicationResult | "new" | "reconcile"> {
+  ): Promise<PackPublicationFailure | "new" | "reconcile"> {
     const approval = this.intent.approvals[mutation];
     if (!approval)
       return {
