@@ -153,6 +153,29 @@ export function registrationReceiptDigest(receipt: RegistrationReceipt): string 
   return sha256Hex(canonical);
 }
 
+/**
+ * Digest over only the fields a replay invocation can actually reproduce from its own output
+ * (memory id / source path / exit code / content digest recomputed over the bytes it wrote).
+ * Deliberately excludes `operation_id`: neither `writeMemory` nor the `memory add` CLI derives an
+ * operation id from the write itself (it is an unrelated delivery-notification parameter, see
+ * `cli.ts`'s `--operation-id`), so `operation_id` is ledger-supplied data that a handwritten ledger
+ * row can set to anything and have it trivially match a receipt that copies it back out. Folding it
+ * into the digest that binds a replay to the ledger's registration let a fabricated registration
+ * object pass `verifyAdoptRegistrationReplay` as long as the caller echoed the same operation_id it
+ * fabricated (Sol r3 FLAG, U-MEMCUT-026). `registrationReceiptDigest` (which does include
+ * operation_id) remains the digest that binds `adopt.receipt_digest` to the ledger's own
+ * self-declared registration in `verifyAdoptRow`; this function is used only for the replay check.
+ */
+function replayReceiptDigest(receipt: RegistrationReceipt): string {
+  const canonical = JSON.stringify({
+    content_digest: receipt.content_digest,
+    exit_code: receipt.exit_code,
+    memory_id: receipt.memory_id,
+    source_path: receipt.source_path,
+  });
+  return sha256Hex(canonical);
+}
+
 function criteriaComplete(row: CurationRow): boolean {
   return CURATION_CRITERIA.every((key) => typeof row.criteria?.[key] === "boolean");
 }
@@ -254,7 +277,12 @@ export function verifyAdoptRegistrationReplay(input: {
     findings.push({ kind: "adopt-replay-memory-id-mismatch", subject });
   if (replay.content_digest !== canonicalMemoryContentDigest(input.canonicalRawText))
     findings.push({ kind: "adopt-replay-content-digest-mismatch", subject });
-  if (registrationReceiptDigest(replay) !== adopt.receipt_digest)
+  // Bound by `replayReceiptDigest`, not `registrationReceiptDigest`/`adopt.receipt_digest`: the
+  // replay must reproduce the ledger's own registration on every field the replay's *own output*
+  // can determine (memory id / source path / exit code / content digest). `operation_id` is
+  // excluded on both sides so a ledger row cannot fabricate a match by echoing its own declared
+  // operation_id back through the replay (see `replayReceiptDigest`).
+  if (replayReceiptDigest(replay) !== replayReceiptDigest(adopt.registration))
     findings.push({ kind: "adopt-replay-receipt-digest-mismatch", subject });
   return findings;
 }
