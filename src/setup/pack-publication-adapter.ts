@@ -1,8 +1,11 @@
 import { createHash } from "node:crypto";
-import type {
-  PackPublicationCommitEntry,
-  PackPublicationReleaseAsset,
-  SealedPackPublicationPlan,
+import { parse as parseYaml } from "yaml";
+import { parsePublicationManifest } from "../schema/release-manifest.ts";
+import {
+  deriveControlManifestSnapshotDigest,
+  type PackPublicationCommitEntry,
+  type PackPublicationReleaseAsset,
+  type SealedPackPublicationPlan,
 } from "./pack-publication-staging.ts";
 import { parsePackageSemver } from "./update-check.ts";
 
@@ -117,6 +120,87 @@ export interface PackCommitObservation {
   readonly materializerVersion: string;
   readonly mergeMode: "pull_request_cas";
 }
+
+/** Read-back identity returned by the preparation-only PR port. */
+export interface PackPublicationPullRequestObservation {
+  readonly pullRequest: string;
+  readonly headOid: string;
+  readonly baseOid: string;
+  readonly treeDigest: string;
+  readonly controlManifestSnapshotDigest: string;
+}
+
+export interface PackPublicationPreparationReceipt {
+  readonly kind: "pack-publication-preparation-receipt-v1";
+  readonly operationId: string;
+  readonly idempotencyKey: string;
+  readonly releaseId: string;
+  readonly sourceRevision: string;
+  readonly stagingPlanDigest: string;
+  readonly repository: string;
+  readonly publicationBranch: string;
+  readonly expectedMainOid: string;
+  readonly branchCommitOid: string;
+  readonly pullRequest: string;
+  readonly reviewedHeadOid: string;
+  readonly baseOid: string;
+  readonly treeDigest: string;
+  readonly controlManifestSnapshotDigest: string;
+  readonly receiptDigest: string;
+}
+
+export interface PackPublicationPreparationInput {
+  readonly plan: SealedPackPublicationPlan;
+  readonly operationId: string;
+  readonly idempotencyKey: string;
+  readonly repository: string;
+  readonly publicationBranch: string;
+  readonly expectedMainOid: string;
+  readonly approvals: readonly PackPublicationApproval[];
+}
+
+export interface PackPublicationPreparationPorts {
+  readonly approval: Pick<PackPublicationPorts["approval"], "consume">;
+  readonly durableState: Pick<PackPublicationPorts["durableState"], "append">;
+  readonly pack: {
+    readonly commitPublicationBranch: PackPublicationPorts["pack"]["commitPublicationBranch"];
+    readonly createPullRequest: (input: {
+      readonly repository: string;
+      readonly branch: string;
+      readonly expectedMainSha: string;
+    }) =>
+      | PublicationPortResult<PackPublicationPullRequestObservation>
+      | Promise<PublicationPortResult<PackPublicationPullRequestObservation>>;
+  };
+  readonly receipt: {
+    readonly persist: (receipt: PackPublicationPreparationReceipt) => void | Promise<void>;
+    /** Read-only lookup used for an exact idempotent replay. */
+    readonly read?: (
+      identity: Pick<
+        PackPublicationPreparationReceipt,
+        "operationId" | "idempotencyKey" | "stagingPlanDigest" | "expectedMainOid"
+      >,
+    ) =>
+      | PackPublicationPreparationReceipt
+      | null
+      | Promise<PackPublicationPreparationReceipt | null>;
+  };
+}
+
+export type PackPublicationPreparationResult =
+  | {
+      readonly ok: true;
+      readonly status: "prepared";
+      readonly receipt: PackPublicationPreparationReceipt;
+      readonly remoteWrites: number;
+    }
+  | {
+      readonly ok: false;
+      readonly status: "denied" | "partial_publication" | "indeterminate";
+      readonly stage: "preflight" | "pack_commit";
+      readonly reason: string;
+      readonly remoteWrites: number;
+    };
 
 export interface DraftReleaseObservation {
   readonly releaseId: string;
@@ -663,6 +747,437 @@ function validateSealedIntent(intent: PackPublicationIntent): boolean {
 
 function eventDigest(value: unknown): string {
   return sha256(stable(value));
+}
+
+function validPreparationPlan(plan: SealedPackPublicationPlan): boolean {
+  const release = plan.manifest.releases[plan.releaseId];
+  if (!release || plan.kind !== "pack-publication-staging") return false;
+  if (!SHA256.test(plan.controlManifestSnapshotDigest)) return false;
+  if (plan.commitEntries.length !== release.artifacts.length + 1) return false;
+  const controlEntries = plan.commitEntries.filter((entry) => entry.path === CONTROL_MANIFEST_PATH);
+  if (
+    controlEntries.length !== 1 ||
+    controlEntries[0]?.kind !== "control-manifest" ||
+    controlEntries[0].mode !== "100644" ||
+    controlEntries[0].size !== controlEntries[0].bytes.length ||
+    !SHA256.test(controlEntries[0].contentDigest) ||
+    controlEntries[0].contentDigest !== sha256(controlEntries[0].bytes)
+  )
+    return false;
+  let controlManifestMatches = false;
+  try {
+    const text = new TextDecoder("utf-8", { fatal: true }).decode(controlEntries[0].bytes);
+    const parsed = parsePublicationManifest(parseYaml(text));
+    controlManifestMatches =
+      parsed.ok &&
+      deriveControlManifestSnapshotDigest(parsed.value) === plan.controlManifestSnapshotDigest;
+  } catch {
+    controlManifestMatches = false;
+  }
+  if (!controlManifestMatches) return false;
+  const artifactEntries = plan.commitEntries.filter(
+    (entry) => entry.path !== CONTROL_MANIFEST_PATH,
+  );
+  if (new Set(artifactEntries.map((entry) => entry.path)).size !== artifactEntries.length)
+    return false;
+  if (
+    !artifactEntries.every(
+      (entry) =>
+        entry.size === entry.bytes.length &&
+        SHA256.test(entry.contentDigest) &&
+        entry.contentDigest === sha256(entry.bytes) &&
+        (entry.mode === "100644" || entry.mode === "100755"),
+    )
+  )
+    return false;
+  if (
+    !release.artifacts.every((artifact) => {
+      const entry = artifactEntries.find(
+        (candidate) => candidate.path === artifact.destinationPath,
+      );
+      return (
+        entry !== undefined &&
+        entry.mode === artifact.mode &&
+        entry.size === artifact.size &&
+        entry.contentDigest === artifact.contentDigest
+      );
+    })
+  )
+    return false;
+  return (
+    plan.releaseAssets.length === 2 &&
+    new Set(plan.releaseAssets.map((asset) => asset.name)).size === 2 &&
+    plan.releaseAssets.every(
+      (asset) =>
+        asset.size === asset.bytes.length &&
+        SHA256.test(asset.contentDigest) &&
+        asset.contentDigest === sha256(asset.bytes),
+    )
+  );
+}
+
+function preparationIdentity(input: PackPublicationPreparationInput): {
+  readonly releaseId: string;
+  readonly sourceRevision: string;
+  readonly stagingPlanDigest: string;
+  readonly treeDigest: string;
+  readonly identityDigest: string;
+} | null {
+  const release = input.plan.manifest.releases[input.plan.releaseId];
+  if (
+    !release ||
+    !validPreparationPlan(input.plan) ||
+    !input.operationId ||
+    !input.idempotencyKey ||
+    !input.repository ||
+    !input.publicationBranch ||
+    !SHA1.test(input.expectedMainOid)
+  )
+    return null;
+  const identity = {
+    kind: "pack-publication-preparation-v1" as const,
+    operationId: input.operationId,
+    idempotencyKey: input.idempotencyKey,
+    releaseId: input.plan.releaseId,
+    sourceRevision: release.artifactSourceCommit,
+    stagingPlanDigest: derivePackPublicationStagingPlanDigest(input.plan),
+    repository: input.repository,
+    publicationBranch: input.publicationBranch,
+    expectedMainOid: input.expectedMainOid,
+    treeDigest: derivePackPublicationTreeDigest(input.plan),
+    controlManifestSnapshotDigest: input.plan.controlManifestSnapshotDigest,
+  };
+  return { ...identity, identityDigest: sha256(stable(identity)) };
+}
+
+export function derivePackPublicationPreparationDigest(
+  input: PackPublicationPreparationInput,
+): string | null {
+  return preparationIdentity(input)?.identityDigest ?? null;
+}
+
+function preparationFailure(
+  status: "denied" | "partial_publication" | "indeterminate",
+  stage: "preflight" | "pack_commit",
+  reason: string,
+  remoteWrites: number,
+): PackPublicationPreparationResult {
+  return { ok: false, status, stage, reason, remoteWrites };
+}
+
+function preparationApproval(
+  approvals: readonly PackPublicationApproval[],
+  mutation: "pack_branch_commit" | "pack_pr_create",
+  identityDigest: string,
+): PackPublicationApproval | null {
+  const matches = approvals.filter((approval) => approval.mutation === mutation);
+  if (matches.length !== 1) return null;
+  const approval = matches[0];
+  if (
+    approval.transition !== "pack_commit" ||
+    approval.operationId === "" ||
+    approval.idempotencyKey === "" ||
+    approval.intentDigest !== identityDigest ||
+    !approval.nonce ||
+    !approval.approver ||
+    !approval.expiresAt ||
+    !SHA256.test(approval.approvalStateDigest)
+  )
+    return null;
+  return approval;
+}
+
+function preparationReceiptDigest(
+  receipt: Omit<PackPublicationPreparationReceipt, "receiptDigest">,
+): string {
+  return sha256(stable(receipt));
+}
+
+/**
+ * Creates only the Pack branch/PR preparation record.  This entry point has
+ * no release, tag, pointer, or main-ref ports, so it cannot publish remotely.
+ */
+export async function preparePackPublication(
+  input: PackPublicationPreparationInput,
+  ports: PackPublicationPreparationPorts,
+): Promise<PackPublicationPreparationResult> {
+  const identity = preparationIdentity(input);
+  if (!identity)
+    return preparationFailure("denied", "preflight", "preparation_identity_mismatch", 0);
+  if (ports.receipt.read) {
+    let existing: PackPublicationPreparationReceipt | null;
+    try {
+      existing = await ports.receipt.read({
+        operationId: input.operationId,
+        idempotencyKey: input.idempotencyKey,
+        stagingPlanDigest: identity.stagingPlanDigest,
+        expectedMainOid: input.expectedMainOid,
+      });
+    } catch {
+      return preparationFailure("indeterminate", "preflight", "receipt_read_failed", 0);
+    }
+    if (existing !== null) {
+      const unsigned = { ...existing, receiptDigest: "" };
+      const exact =
+        existing.kind === "pack-publication-preparation-receipt-v1" &&
+        existing.operationId === input.operationId &&
+        existing.idempotencyKey === input.idempotencyKey &&
+        existing.releaseId === identity.releaseId &&
+        existing.sourceRevision === identity.sourceRevision &&
+        existing.stagingPlanDigest === identity.stagingPlanDigest &&
+        existing.repository === input.repository &&
+        existing.publicationBranch === input.publicationBranch &&
+        existing.expectedMainOid === input.expectedMainOid &&
+        SHA1.test(existing.branchCommitOid) &&
+        Boolean(existing.pullRequest) &&
+        existing.reviewedHeadOid === existing.branchCommitOid &&
+        SHA1.test(existing.reviewedHeadOid) &&
+        existing.baseOid === input.expectedMainOid &&
+        existing.treeDigest === identity.treeDigest &&
+        existing.controlManifestSnapshotDigest === input.plan.controlManifestSnapshotDigest &&
+        existing.receiptDigest === preparationReceiptDigest(unsigned);
+      return exact
+        ? { ok: true, status: "prepared", receipt: existing, remoteWrites: 0 }
+        : preparationFailure("denied", "preflight", "preparation_identity_mismatch", 0);
+    }
+  }
+  if (input.approvals.length < 2)
+    return preparationFailure("denied", "preflight", "approval_missing", 0);
+  if (input.approvals.length > 2)
+    return preparationFailure("denied", "preflight", "approval_binding_mismatch", 0);
+  if (new Set(input.approvals.map((approval) => approval.nonce)).size !== input.approvals.length)
+    return preparationFailure("denied", "preflight", "nonce_replay", 0);
+  const branchApproval = preparationApproval(
+    input.approvals,
+    "pack_branch_commit",
+    identity.identityDigest,
+  );
+  const pullRequestApproval = preparationApproval(
+    input.approvals,
+    "pack_pr_create",
+    identity.identityDigest,
+  );
+  if (!branchApproval || !pullRequestApproval)
+    return preparationFailure("denied", "preflight", "approval_missing", 0);
+  if (
+    branchApproval.operationId !== input.operationId ||
+    pullRequestApproval.operationId !== input.operationId ||
+    branchApproval.idempotencyKey !== input.idempotencyKey ||
+    pullRequestApproval.idempotencyKey !== input.idempotencyKey ||
+    branchApproval.nonce === pullRequestApproval.nonce
+  )
+    return preparationFailure("denied", "preflight", "approval_binding_mismatch", 0);
+  const expiryTimes = [
+    Date.parse(branchApproval.expiresAt),
+    Date.parse(pullRequestApproval.expiresAt),
+  ];
+  if (expiryTimes.some((value) => Number.isNaN(value)))
+    return preparationFailure("denied", "preflight", "approval_binding_mismatch", 0);
+  if (expiryTimes.some((value) => value <= Date.now()))
+    return preparationFailure("denied", "preflight", "approval_expired", 0);
+
+  let remoteWrites = 0;
+  const consume = async (
+    approval: PackPublicationApproval,
+  ): Promise<"new" | "reconcile" | null> => {
+    let result: PublicationPortResult<{ readonly mode: "new" | "reconcile" }>;
+    try {
+      result = await ports.approval.consume(approval);
+    } catch {
+      return null;
+    }
+    if (result.status !== "attested") return null;
+    try {
+      await ports.durableState.append({
+        transition: approval.transition,
+        mutation: approval.mutation,
+        kind: "planned_nonce_consumed",
+        intentDigest: identity.identityDigest,
+        nonce: approval.nonce,
+        detailDigest: eventDigest({ mode: result.value.mode }),
+      });
+    } catch {
+      return null;
+    }
+    return result.value.mode;
+  };
+  const appendIntent = async (
+    approval: PackPublicationApproval,
+    detail: unknown,
+  ): Promise<boolean> => {
+    try {
+      await ports.durableState.append({
+        transition: approval.transition,
+        mutation: approval.mutation,
+        kind: "mutation_intent",
+        intentDigest: identity.identityDigest,
+        nonce: approval.nonce,
+        detailDigest: eventDigest(detail),
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  };
+  const appendObservation = async (
+    approval: PackPublicationApproval,
+    detail: unknown,
+  ): Promise<boolean> => {
+    try {
+      await ports.durableState.append({
+        transition: approval.transition,
+        mutation: approval.mutation,
+        kind: "read_back_observation",
+        intentDigest: identity.identityDigest,
+        nonce: approval.nonce,
+        detailDigest: eventDigest(detail),
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  const branchMode = await consume(branchApproval);
+  if (branchMode === null)
+    return preparationFailure("indeterminate", "preflight", "approval_unavailable", remoteWrites);
+  if (branchMode === "reconcile")
+    return preparationFailure(
+      "indeterminate",
+      "preflight",
+      "reconciliation_required",
+      remoteWrites,
+    );
+  if (!(await appendIntent(branchApproval, input.plan.commitEntries)))
+    return preparationFailure(
+      "indeterminate",
+      "pack_commit",
+      "journal_persist_failed",
+      remoteWrites,
+    );
+  remoteWrites += 1;
+  let branch: PublicationPortResult<{ readonly branchCommit: string }>;
+  try {
+    branch = await ports.pack.commitPublicationBranch({
+      repository: input.repository,
+      branch: input.publicationBranch,
+      entries: input.plan.commitEntries,
+    });
+  } catch {
+    return preparationFailure("indeterminate", "pack_commit", "remote_response_lost", remoteWrites);
+  }
+  if (branch.status !== "attested")
+    return preparationFailure(
+      branch.status === "mismatch" ? "partial_publication" : "indeterminate",
+      "pack_commit",
+      branch.reason,
+      remoteWrites,
+    );
+  if (
+    !SHA1.test(branch.value.branchCommit) ||
+    !(await appendObservation(branchApproval, branch.value))
+  )
+    return preparationFailure(
+      "indeterminate",
+      "pack_commit",
+      "preparation_observation_mismatch",
+      remoteWrites,
+    );
+
+  const pullRequestMode = await consume(pullRequestApproval);
+  if (pullRequestMode === null)
+    return preparationFailure("indeterminate", "pack_commit", "approval_unavailable", remoteWrites);
+  if (pullRequestMode === "reconcile")
+    return preparationFailure(
+      "indeterminate",
+      "pack_commit",
+      "reconciliation_required",
+      remoteWrites,
+    );
+  if (
+    !(await appendIntent(pullRequestApproval, {
+      branchCommit: branch.value.branchCommit,
+      repository: input.repository,
+      branch: input.publicationBranch,
+    }))
+  )
+    return preparationFailure(
+      "indeterminate",
+      "pack_commit",
+      "journal_persist_failed",
+      remoteWrites,
+    );
+  remoteWrites += 1;
+  let pullRequest: PublicationPortResult<PackPublicationPullRequestObservation>;
+  try {
+    pullRequest = await ports.pack.createPullRequest({
+      repository: input.repository,
+      branch: input.publicationBranch,
+      expectedMainSha: input.expectedMainOid,
+    });
+  } catch {
+    return preparationFailure("indeterminate", "pack_commit", "remote_response_lost", remoteWrites);
+  }
+  if (pullRequest.status !== "attested")
+    return preparationFailure(
+      pullRequest.status === "mismatch" ? "partial_publication" : "indeterminate",
+      "pack_commit",
+      pullRequest.reason,
+      remoteWrites,
+    );
+  const observed = pullRequest.value;
+  if (
+    !observed.pullRequest ||
+    !SHA1.test(observed.headOid) ||
+    !SHA1.test(observed.baseOid) ||
+    !SHA256.test(observed.treeDigest) ||
+    !SHA256.test(observed.controlManifestSnapshotDigest) ||
+    observed.headOid !== branch.value.branchCommit ||
+    observed.baseOid !== input.expectedMainOid ||
+    observed.treeDigest !== identity.treeDigest ||
+    observed.controlManifestSnapshotDigest !== input.plan.controlManifestSnapshotDigest ||
+    !(await appendObservation(pullRequestApproval, observed))
+  )
+    return preparationFailure(
+      "partial_publication",
+      "pack_commit",
+      "preparation_observation_mismatch",
+      remoteWrites,
+    );
+
+  const unsigned = {
+    kind: "pack-publication-preparation-receipt-v1" as const,
+    operationId: input.operationId,
+    idempotencyKey: input.idempotencyKey,
+    releaseId: identity.releaseId,
+    sourceRevision: identity.sourceRevision,
+    stagingPlanDigest: identity.stagingPlanDigest,
+    repository: input.repository,
+    publicationBranch: input.publicationBranch,
+    expectedMainOid: input.expectedMainOid,
+    branchCommitOid: branch.value.branchCommit,
+    pullRequest: observed.pullRequest,
+    reviewedHeadOid: observed.headOid,
+    baseOid: observed.baseOid,
+    treeDigest: observed.treeDigest,
+    controlManifestSnapshotDigest: observed.controlManifestSnapshotDigest,
+    receiptDigest: "",
+  };
+  const receipt = Object.freeze({
+    ...unsigned,
+    receiptDigest: preparationReceiptDigest(unsigned),
+  });
+  try {
+    await ports.receipt.persist(receipt);
+  } catch {
+    return preparationFailure(
+      "indeterminate",
+      "pack_commit",
+      "receipt_persist_failed",
+      remoteWrites,
+    );
+  }
+  return { ok: true, status: "prepared", receipt, remoteWrites: 2 };
 }
 
 interface FailureContext {

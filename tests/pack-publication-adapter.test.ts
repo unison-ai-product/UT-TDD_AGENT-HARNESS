@@ -7,11 +7,14 @@ import {
 } from "../src/schema/release-manifest.ts";
 import {
   derivePackPublicationIntentDigest,
+  derivePackPublicationPreparationDigest,
   derivePackPublicationTreeDigest,
   type PackPublicationApproval,
   type PackPublicationIntentInput,
   type PackPublicationPorts,
+  type PackPublicationPreparationPorts,
   parseSealedPackageVersionIdentity,
+  preparePackPublication,
   publishPackCanary,
   sealPackPublicationIntent,
 } from "../src/setup/pack-publication-adapter.ts";
@@ -1555,5 +1558,224 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
       remoteWrites: 4,
     });
     expect(upload).not.toHaveBeenCalled();
+  });
+
+  describe("Issue #625 preparation-only boundary", () => {
+    function preparationInput() {
+      const intent = sealedIntent();
+      const input = {
+        plan: stagingPlan(),
+        operationId: intent.operationId,
+        idempotencyKey: intent.idempotencyKey,
+        repository: intent.remote.repository,
+        publicationBranch: intent.remote.publicationBranch,
+        expectedMainOid: intent.remote.expectedMainSha,
+        approvals: [] as PackPublicationApproval[],
+      };
+      const digest = derivePackPublicationPreparationDigest(input);
+      if (!digest) throw new Error("preparation identity failed");
+      input.approvals = [
+        {
+          ...intent.approvals.pack_branch_commit,
+          intentDigest: digest,
+          mutation: "pack_branch_commit",
+          transition: "pack_commit",
+          nonce: "prep-branch",
+        },
+        {
+          ...intent.approvals.pack_pr_create,
+          intentDigest: digest,
+          mutation: "pack_pr_create",
+          transition: "pack_commit",
+          nonce: "prep-pr",
+        },
+      ];
+      return { input, intent };
+    }
+
+    function preparationPorts(overrides: Partial<PackPublicationPreparationPorts> = {}) {
+      const { intent } = preparationInput();
+      const events: string[] = [];
+      const prep: PackPublicationPreparationPorts = {
+        approval: {
+          consume: async (approval) => {
+            events.push(`consume:${approval.mutation}`);
+            return { status: "attested", value: { mode: "new" } };
+          },
+        },
+        durableState: {
+          append: async (event) => {
+            events.push(`${event.kind}:${event.mutation}`);
+          },
+        },
+        pack: {
+          commitPublicationBranch: async () => ({
+            status: "attested",
+            value: { branchCommit: "7".repeat(40) },
+          }),
+          createPullRequest: async () => ({
+            status: "attested",
+            value: {
+              pullRequest: "42",
+              headOid: "7".repeat(40),
+              baseOid: intent.remote.expectedMainSha,
+              treeDigest: intent.expectedTreeDigest,
+              controlManifestSnapshotDigest: intent.controlManifestSnapshotDigest,
+            },
+          }),
+        },
+        receipt: {
+          persist: async () => {
+            events.push("receipt:persist");
+          },
+        },
+        ...overrides,
+      };
+      return { prep, events };
+    }
+
+    it("CANDIDATE-PACKPUB-PREP-005/010: emits an identity-bound receipt after ordered branch/PR writes", async () => {
+      const { input } = preparationInput();
+      const { prep, events } = preparationPorts();
+      const result = await preparePackPublication(input, prep);
+      expect(result).toMatchObject({ ok: true, status: "prepared", remoteWrites: 2 });
+      if (!result.ok) return;
+      expect(result.receipt).toMatchObject({
+        kind: "pack-publication-preparation-receipt-v1",
+        operationId: input.operationId,
+        idempotencyKey: input.idempotencyKey,
+        expectedMainOid: input.expectedMainOid,
+        branchCommitOid: "7".repeat(40),
+        reviewedHeadOid: "7".repeat(40),
+        baseOid: input.expectedMainOid,
+      });
+      expect(result.receipt.receiptDigest).toMatch(/^sha256:[a-f0-9]{64}$/);
+      expect(events).toEqual([
+        "consume:pack_branch_commit",
+        "planned_nonce_consumed:pack_branch_commit",
+        "mutation_intent:pack_branch_commit",
+        "read_back_observation:pack_branch_commit",
+        "consume:pack_pr_create",
+        "planned_nonce_consumed:pack_pr_create",
+        "mutation_intent:pack_pr_create",
+        "read_back_observation:pack_pr_create",
+        "receipt:persist",
+      ]);
+    });
+
+    it.each([
+      [
+        "approval_missing",
+        (input: ReturnType<typeof preparationInput>["input"]) => ({ ...input, approvals: [] }),
+      ],
+      [
+        "identity mismatch",
+        (input: ReturnType<typeof preparationInput>["input"]) => ({
+          ...input,
+          expectedMainOid: "f".repeat(40),
+        }),
+      ],
+    ])("CANDIDATE-PACKPUB-PREP-001/002: %s performs no remote write", async (_name, mutate) => {
+      const { input } = preparationInput();
+      const { prep } = preparationPorts();
+      const commit = vi.fn(prep.pack.commitPublicationBranch);
+      const result = await preparePackPublication(mutate(input), {
+        ...prep,
+        pack: { ...prep.pack, commitPublicationBranch: commit },
+      });
+      expect(result.ok).toBe(false);
+      expect(commit).not.toHaveBeenCalled();
+    });
+
+    it("CANDIDATE-PACKPUB-PREP-005: PR read-back drift is typed and does not persist a receipt", async () => {
+      const { input } = preparationInput();
+      const { prep } = preparationPorts();
+      const persist = vi.fn();
+      const result = await preparePackPublication(input, {
+        ...prep,
+        receipt: { persist },
+        pack: {
+          ...prep.pack,
+          createPullRequest: async () => ({
+            status: "attested",
+            value: {
+              pullRequest: "42",
+              headOid: "8".repeat(40),
+              baseOid: input.expectedMainOid,
+              treeDigest: input.plan.commitEntries[0]
+                ? derivePackPublicationTreeDigest(input.plan)
+                : "",
+              controlManifestSnapshotDigest: input.plan.controlManifestSnapshotDigest,
+            },
+          }),
+        },
+      });
+      expect(result).toMatchObject({ ok: false, reason: "preparation_observation_mismatch" });
+      expect(persist).not.toHaveBeenCalled();
+    });
+
+    it("CANDIDATE-PACKPUB-PREP-007: receipt persistence failure is indeterminate after exactly two writes", async () => {
+      const { input } = preparationInput();
+      const { prep } = preparationPorts();
+      const result = await preparePackPublication(input, {
+        ...prep,
+        receipt: {
+          persist: async () => {
+            throw new Error("no-clobber");
+          },
+        },
+      });
+      expect(result).toMatchObject({
+        ok: false,
+        status: "indeterminate",
+        reason: "receipt_persist_failed",
+        remoteWrites: 2,
+      });
+    });
+
+    it("CANDIDATE-PACKPUB-PREP-008: exact receipt replay is read-only and identity drift is denied", async () => {
+      const { input } = preparationInput();
+      const first = preparationPorts();
+      const prepared = await preparePackPublication(input, first.prep);
+      if (!prepared.ok) throw new Error(prepared.reason);
+      const commit = vi.fn();
+      const replay = preparationPorts({
+        pack: { ...first.prep.pack, commitPublicationBranch: commit },
+        receipt: { persist: vi.fn(), read: async () => prepared.receipt },
+      });
+      await expect(preparePackPublication(input, replay.prep)).resolves.toMatchObject({
+        ok: true,
+        status: "prepared",
+        remoteWrites: 0,
+      });
+      expect(commit).not.toHaveBeenCalled();
+      await expect(
+        preparePackPublication({ ...input, expectedMainOid: "f".repeat(40) }, replay.prep),
+      ).resolves.toMatchObject({ ok: false, reason: "preparation_identity_mismatch" });
+    });
+
+    it("CANDIDATE-PACKPUB-PREP-001: control-manifest byte drift is denied before branch write", async () => {
+      const { input } = preparationInput();
+      const { prep } = preparationPorts();
+      const original = input.plan.commitEntries.find((entry) => entry.kind === "control-manifest");
+      if (!original) throw new Error("control entry missing");
+      const drifted = {
+        ...input,
+        plan: {
+          ...input.plan,
+          commitEntries: input.plan.commitEntries.map((entry) =>
+            entry === original ? { ...entry, contentDigest: `sha256:${"a".repeat(64)}` } : entry,
+          ),
+        },
+      };
+      const commit = vi.fn(prep.pack.commitPublicationBranch);
+      await expect(
+        preparePackPublication(drifted, {
+          ...prep,
+          pack: { ...prep.pack, commitPublicationBranch: commit },
+        }),
+      ).resolves.toMatchObject({ ok: false, reason: "preparation_identity_mismatch" });
+      expect(commit).not.toHaveBeenCalled();
+    });
   });
 });
