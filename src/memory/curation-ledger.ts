@@ -10,12 +10,19 @@
  * The document that ships is Markdown (`docs/governance/memory-curation-ledger-2026-09.md`) whose
  * machine section is a fenced ```json block; this module owns both directions.
  */
-import { REVIEW_LANE_MODELS } from "../team/model-policy.ts";
 import {
   type LegacyArchiveManifest,
   sha256Hex,
   untrackedSetDigest,
 } from "./legacy-archive-manifest.ts";
+
+// Keep the memory verifier in the low-level memory layer. Importing the team policy here would
+// create a cycle (memory → team → workflow/state-db → graph/vmodel → runtime → memory) while the
+// reviewer record only needs the two immutable frontier identities for the blind-review lane.
+const BLIND_REVIEW_FRONTIER_MODELS: Readonly<Record<CurationReviewer["family"], string>> = {
+  claude: "claude-opus-5",
+  codex: "gpt-5.6-sol",
+};
 
 export const CURATION_LEDGER_PATH = "docs/governance/memory-curation-ledger-2026-09.md";
 export const CURATION_LEDGER_SCHEMA = "ut-tdd.memory-curation-ledger/v1";
@@ -241,7 +248,7 @@ export function verifyCurationReviewer(ledger: CurationLedger): CurationFinding[
   const findings: CurationFinding[] = [];
   if (reviewer.family === ledger.author.family)
     findings.push({ kind: "reviewer-same-family", subject: reviewer.model });
-  const frontier = REVIEW_LANE_MODELS["blind-review"][reviewer.family];
+  const frontier = BLIND_REVIEW_FRONTIER_MODELS[reviewer.family];
   if (reviewer.model !== frontier)
     findings.push({ kind: "reviewer-not-frontier", subject: reviewer.model });
   if (!HEX40.test(reviewer.exact_head))
