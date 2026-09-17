@@ -3,8 +3,9 @@ import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { Command } from "commander";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { PlanRevisionManifest } from "../src/cli/plan-revise.ts";
+import { type PlanRevisionManifest, registerPlanRevisionCommand } from "../src/cli/plan-revise.ts";
 import { canonicalPlanContentDigest } from "../src/plan-admission/diff-fence.ts";
 import { NodeAtomicDraftPublisher } from "../src/plan-admission/node-atomic-draft-publisher.ts";
 import {
@@ -349,6 +350,57 @@ describe("NodePlanRevisionRunner", () => {
       status: "created",
       receipt: { assetId: f.assetId, revision: 28 },
     });
+    expect(
+      f.db
+        .prepare("SELECT revision FROM plan_revisions WHERE asset_id = ? ORDER BY revision")
+        .all(f.assetId)
+        .map((row) => Number(row.revision)),
+    ).toEqual([27, 28]);
+    expect(
+      f.db
+        .prepare("SELECT 1 FROM legacy_plan_bootstrap_provenance WHERE asset_id = ?")
+        .get(f.assetId),
+    ).toBeUndefined();
+    expect(
+      f.db
+        .prepare(
+          "SELECT 1 FROM sealed_plan_lineages WHERE historical_asset_id = ? OR successor_asset_id = ?",
+        )
+        .get(f.assetId, f.assetId),
+    ).toBeUndefined();
+  });
+
+  it("U-PA-REV-057: 実データを正規 plan revise --manifest CLIへ接続しrev27からrev28を発行する", async () => {
+    const f = realPlanL693RehydrationFixture();
+    const manifestPath = join(f.root, "issue541-revise-manifest.json");
+    writeFileSync(manifestPath, `${JSON.stringify(f.manifest)}\n`, "utf8");
+    const output: string[] = [];
+    const program = new Command();
+    const plan = program.command("plan");
+    registerPlanRevisionCommand(plan, {
+      runner: f.runner,
+      readText: (path) => readFileSync(path, "utf8"),
+      writeOutput: (text) => output.push(text),
+    });
+
+    await program.parseAsync(["node", "ut-tdd", "plan", "revise", "--manifest", manifestPath]);
+
+    const result = JSON.parse(output.join("")) as {
+      ok: boolean;
+      result?: { status: string; receipt?: { assetId: string; revision: number } };
+      error?: string;
+    };
+    expect(result).toEqual({
+      ok: true,
+      result: {
+        status: "created",
+        receipt: expect.objectContaining({
+          assetId: f.assetId,
+          revision: 28,
+        }),
+      },
+    });
+    expect(result.error).toBeUndefined();
     expect(
       f.db
         .prepare("SELECT revision FROM plan_revisions WHERE asset_id = ? ORDER BY revision")
