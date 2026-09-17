@@ -42,18 +42,18 @@ status: draft
 github_issue_id: 626
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:711099c53ce63c6cc1bc1852f09441da
-  command_id: plan-revise:issue-626:pr636-reverse:r2:c36c6a9d502e
-  admitted_at: 2026-09-17T01:03:03.820Z
-  source_digest: sha256:68cf99d8bb9a8baf85c2d4c435e0a8a2b6a5644a2fc87bb1518620d0a8665fa5
-  decision_digest: sha256:7a67e57693ed4b28433478fde75133bfca0432b0ca1c6e39453b57e61b1df10e
-  receipt_digest: sha256:c24c0dc718341507be22d0e8d658be6832cd1723b114ed8b2d8af17b7c0fac81
+  receipt_id: certificate:9d0ca6bbdc6003f17761ae2f4e1da8f8
+  command_id: plan-revise:issue-626:pr645-reverse:r3:c01cebb83350
+  admitted_at: 2026-09-17T01:28:45.558Z
+  source_digest: sha256:1cfca197b4fede33c5b40e8bfb1c18532142d19c04c7a95296ffe4f40290cfdf
+  decision_digest: sha256:aee90bef8ffcdeb5781c2c2f38a21261d3d57ce35b0198a9f370de0d88101b87
+  receipt_digest: sha256:c87d792faef3405bc9ebe88a937c642b55e93cb85ea2667479193b72a5325a07
   binding:
     path: docs/plans/PLAN-REVERSE-626-pack-publication-admission-binding-backfill.md
     plan_id: PLAN-REVERSE-626-pack-publication-admission-binding-backfill
     asset_id: plan:a00a5eddd4929e67b7e26820aac193f6
-    revision: 2
-    content_digest: sha256:68cf99d8bb9a8baf85c2d4c435e0a8a2b6a5644a2fc87bb1518620d0a8665fa5
+    revision: 3
+    content_digest: sha256:1cfca197b4fede33c5b40e8bfb1c18532142d19c04c7a95296ffe4f40290cfdf
   route:
     signal: reverse
     mode: reverse
@@ -64,17 +64,18 @@ admission_receipt:
     projection_digest: sha256:4e5c8b8b398076d56a72deb696afa871b9c259e667c9bb65f22ef2816ca1d8b4
   origin:
     plan_id: PLAN-L7-626-pack-publication-admission-binding
-    revision: 2
-    digest: sha256:d20b4fddf2ff1bdca422339da849ce9f12b885b47d7177e5fc2f05cf112558e0
+    revision: 3
+    digest: sha256:0c886b441137b28ce11620e8850d033f8a38c39b10415d34d2badbcb9b1bc540
   transition:
     direction: implementation_to_design
     implementation_disposition: preserved
   reentry:
     target_plan_id: PLAN-REVERSE-626-pack-publication-admission-binding-backfill
-    target_revision: 2
+    target_revision: 3
     phase: forward_merge
-  escape_reason: "Issue #626 PR #636 rev 2: PLAN-L7-626 rev 2 (28 guard、sealing
-    所有、receipt digest 形状の L7 新設) に R0/R1/R3-R4 を同期。"
+  escape_reason: "Issue #626 PR #645 rev 3: PLAN-L7-626 rev 3 (38 guard、freshness
+    の #565 §1.1 準拠、intent identity / approval binding、49 candidate) に
+    R0/R1/R3-R4 を同期。"
 ---
 
 # PLAN-REVERSE-626: Pack公開 admission binding の上位契約backfill
@@ -94,9 +95,18 @@ publication/CAS intent を安全に受け取れない。
 - preparation receipt の staging tree/manifest digest、expected main OID、branch 名、PR number/
   head/base/tree、operation ID、idempotency key は immutable であり、caller 補完を許可しない。
   receipt digest は receipt bytes から導出し、field としては持たない (#625 §2 と同じ field 集合)。
-- admission は repository/authority、PR、review、check、merge-base、staging、freshness を同一
-  観測 digest へ束縛し、28 guard 全件を 1 軸ずつ fail-close する。review receipt digest 形状、
-  非空 required context 集合、required context の被覆、reviewer 非著者は独立必須条件である。
+- admission は repository/authority、PR、review、check、merge-base、staging、freshness、approval
+  を同一観測 digest へ束縛し、38 guard 全件を 1 軸ずつ fail-close する。review receipt digest
+  形状、非空 required context 集合、期待 required context 集合との集合一致、required context の
+  被覆、reviewer 非著者、receipt 存在 / schema、preparation journal 由来の PR、approval の束縛先
+  と集合帰属は独立必須条件である。
+- freshness は PLAN-L7-565 §1.1 のとおり「operation ID / idempotency key が未使用で、同一 PR が
+  別 operation・別 staging digest・別 expected main OID の admission に使用されていない」ことで
+  あり、expected main OID や staging digest を globally single-use にしない。完全一致 replay
+  (同一識別子かつ同一観測束 digest) だけが同一 record の再構成として freshness の例外になる。
+- publication intent identity は admission が導出する canonical digest であり、mutation approval
+  binding は approval nonce をその identity へ束縛した digest である。admission は approval を
+  消費せず、consume と CAS token mint は #627 に残る。
 - closing review receipt digest の形状契約 (`/^sha256:[0-9a-f]{64}$/`) は PLAN-L7-626 §2.2 が L7
   で新設したものであり、R4 で PLAN-L7-565 §1.1 の admission 記述へ backfill する。
 - PLAN-L7-565 §1.1/§3 が admission に割り当てる sealing 項目 (repository ID/name、installation
@@ -120,7 +130,7 @@ observer unavailable の indeterminate は、上位 L6 が要求する副作用�
 
 ## R3-R4: 再合流
 
-R3 で実装 PR の 36 candidate、対象テスト、exact-head CI、非著者 review を照合する。R4 で
+R3 で実装 PR の 49 candidate、対象テスト、exact-head CI、非著者 review を照合する。R4 で
 repository/authority、review/check/base/freshness の不変条件、receipt digest 形状、sealing 項目の
 所有と typed failure を上位 staged-release contract (PLAN-L7-565 §1.1/§3、PLAN-L6-63) へ backfill
 し、#627 の publish/CAS admission 入力へ戻す。remote 実装、Release/tag/pointer、existing adapter
@@ -132,3 +142,6 @@ repository/authority、review/check/base/freshness の不変条件、receipt dig
   `71c7b9bd…`) に合わせ、R0/R1 を PLAN-L7-626 rev 2 (28 guard、sealing 項目の所有、receipt
   digest 形状の L7 新設、合成 fixture) と同期し、admission record を canonical `plan revise` で
   再発行。
+- rev 3 (2026-09-17、Claude control lane): PR #645 の非著者 Codex Sol review (receipt `d5e923c4…`、
+  FLAG 5) に合わせ、R0/R1 を PLAN-L7-626 rev 3 (38 guard、freshness の #565 §1.1 準拠、intent
+  identity / approval binding、49 candidate) と同期。
