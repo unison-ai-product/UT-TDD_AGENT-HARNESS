@@ -21,7 +21,7 @@ import {
   verifyCurationRows,
 } from "../src/memory/curation-ledger.ts";
 import { loadMemoryEntries, parseMemoryFile } from "../src/memory/index.ts";
-import { readLegacyArchiveManifest } from "../src/memory/legacy-archive-manifest.ts";
+import { readLegacyArchiveManifest, sha256Hex } from "../src/memory/legacy-archive-manifest.ts";
 import { writeMemory } from "../src/memory/service.ts";
 
 // The shipped ledger, manifest and canonical corpus are repository facts read from the execution
@@ -102,12 +102,19 @@ function inProcessReplay(
       },
     });
     const rawText = readFileSync(join(dir, written.source_path), "utf8");
+    const contentDigest = canonicalMemoryContentDigest(rawText);
     return {
+      // `operation_id` is assigned here from the replay's *own* output (written path + content
+      // digest), never copied from `adopt.registration.operation_id`. Copying the ledger's
+      // self-declared operation_id back into the replay receipt let a fabricated ledger row match
+      // itself trivially (Sol r3 FLAG, U-MEMCUT-026); `verifyAdoptRegistrationReplay` now excludes
+      // operation_id from the digest it checks (`replayReceiptDigest`), so this value is not
+      // load-bearing for that check either way, but it must still never be ledger-supplied.
       receipt: {
-        operation_id: adopt.registration.operation_id,
+        operation_id: sha256Hex(`replay-invocation/v1\n${written.source_path}\n${contentDigest}\n`),
         memory_id: written.memory_id,
         source_path: written.source_path,
-        content_digest: canonicalMemoryContentDigest(rawText),
+        content_digest: contentDigest,
         exit_code: 0,
       },
       rawText,
@@ -313,8 +320,15 @@ describe("memory clean-cut PR-2: curation ledger binding (U-MEMCUT-024..028)", (
       const written = stdout.match(/memory: wrote (\S+)/)?.[1];
       expect(written, "memory add reports the written path").toBeDefined();
       const cliRawText = readFileSync(join(dir, String(written)), "utf8");
+      // Receipt fields extracted from the subprocess's actual written file (frontmatter memory_id
+      // via `parseMemoryFile`, content digest over the bytes it wrote), not just the reported path
+      // (Sol r3 FLAG: "the subprocess path ... extracts only the written path").
+      const cliEntry = parseMemoryFile(dir, String(written), cliRawText);
       const inProcess = inProcessReplay(row);
       expect(inProcess, adopt.memory_id).not.toBeNull();
+      expect(cliEntry.memory_id, adopt.memory_id).toBe(adopt.memory_id);
+      expect(cliEntry.memory_id, adopt.memory_id).toBe(inProcess?.receipt.memory_id);
+      expect(cliEntry.source_path, adopt.memory_id).toBe(inProcess?.receipt.source_path);
       // Byte-for-byte parity between the CLI subprocess write and the in-process replay write,
       // except `updated_at` (both runs capture a real, slightly different timestamp).
       expect(stripUpdatedAt(cliRawText), adopt.memory_id).toBe(
@@ -400,6 +414,36 @@ describe("memory clean-cut PR-2: curation ledger binding (U-MEMCUT-024..028)", (
         replay: validReplay,
       }).map((f) => f.kind),
     ).toEqual(["adopt-replay-content-digest-mismatch"]);
+
+    // (f) Sol r3 FLAG reproduction: a fully handwritten twin. The canonical bytes are real
+    // (readable on disk), and the fabricated ledger row's operation_id, registration object, and
+    // receipt_digest are all internally self-consistent with each other (registrationReceiptDigest
+    // recomputed correctly, content_digest matching the real canonical bytes) — but `memory add`
+    // was never invoked to produce this row, so no replay was ever obtained. The verifier must
+    // still be Red on that alone: an internally-consistent fabrication is not a substitute for an
+    // actual replay, however well it matches itself or the canonical bytes.
+    const fullyFabricatedRegistration: RegistrationReceipt = {
+      operation_id: "fabricated-op-id-not-from-any-invocation",
+      memory_id: adopt.memory_id,
+      source_path: adopt.registration.source_path,
+      content_digest: canonicalMemoryContentDigest(canonicalRawText),
+      exit_code: 0,
+    };
+    const fullyFabricatedRow: CurationRow = {
+      ...row,
+      adopt: {
+        ...adopt,
+        registration: fullyFabricatedRegistration,
+        receipt_digest: registrationReceiptDigest(fullyFabricatedRegistration),
+      },
+    };
+    expect(
+      verifyAdoptRegistrationReplay({
+        row: fullyFabricatedRow,
+        canonicalRawText,
+        replay: null,
+      }).map((f) => f.kind),
+    ).toEqual(["adopt-replay-missing"]);
   });
 
   it("U-MEMCUT-027: adopted titles and bodies pass the episode / secret / personal-path screen; each negative fixture is Red", () => {
