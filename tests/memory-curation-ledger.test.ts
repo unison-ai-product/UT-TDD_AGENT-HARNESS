@@ -8,6 +8,7 @@ import {
   CURATION_LEDGER_PATH,
   type CurationLedger,
   type CurationRow,
+  canonicalMemoryContentDigest,
   custodyIdFor,
   parseCurationLedgerDocument,
   registrationReceiptDigest,
@@ -145,14 +146,22 @@ describe("memory clean-cut PR-2: curation ledger binding (U-MEMCUT-024..028)", (
     }
   });
 
-  it("U-MEMCUT-026: replaying `memory add` for an adopt row in a scratch canonical root reproduces the registration receipt digest; a receipt-less handwritten twin is Red", () => {
+  it("U-MEMCUT-026: replaying `memory add` for an adopt row in a scratch canonical root reproduces the registration receipt digest and the receipt is bound to the canonical file's actual bytes; a receipt-less handwritten twin or an altered canonical body is Red", () => {
     const ledger = ledgerOf();
     const sample = adoptRows(ledger).slice(0, 3);
     expect(sample.length).toBeGreaterThan(0);
     for (const row of sample) {
       const adopt = row.adopt;
       if (!adopt) throw new Error("adopt row without adopt block");
+      const canonicalPath = join(root, adopt.registration.source_path);
+      const canonicalRawText = readFileSync(canonicalPath, "utf8");
       const canonicalEntry = parseMemoryFile(root, adopt.registration.source_path);
+      // The receipt must bind to the canonical file's actual bytes, not merely to a digest the
+      // test recomputes from the ledger's own recorded value (the U-MEMCUT-026 tautology this
+      // test previously had).
+      expect(canonicalMemoryContentDigest(canonicalRawText)).toBe(
+        adopt.registration.content_digest,
+      );
       const dir = scratchProject();
       const stdout = execFileSync(
         process.execPath,
@@ -182,6 +191,9 @@ describe("memory clean-cut PR-2: curation ledger binding (U-MEMCUT-024..028)", (
       // receipt through the fields the registration binds (content digest of the canonical entry).
       const receipt = { ...adopt.registration, content_digest: adopt.registration.content_digest };
       expect(registrationReceiptDigest(receipt)).toBe(adopt.receipt_digest);
+      // Replay is compared against the canonical root file (test-design row 026), not an
+      // independent ledger-recorded body — the ledger's adopt block carries no body field of
+      // its own, only the receipt binding to the canonical file.
       expect(replay.body).toBe(canonicalEntry.body);
       expect(replay.title).toBe(canonicalEntry.title);
       // Negative: a handwritten file with the same content but no registration receipt cannot bind.
@@ -191,6 +203,19 @@ describe("memory clean-cut PR-2: curation ledger binding (U-MEMCUT-024..028)", (
       expect(registrationReceiptDigest({ ...receipt, exit_code: 1 })).not.toBe(
         adopt.receipt_digest,
       );
+      // Negative: an altered canonical body (mutated in a temp fixture copy, never in the repo)
+      // must no longer reproduce the receipt's content digest — the row goes Red.
+      const alteredDir = scratchProject();
+      const alteredPath = join(alteredDir, ".ut-tdd", "memory", "altered-twin.md");
+      writeFileSync(
+        alteredPath,
+        `${canonicalRawText}
+altered body line
+`,
+        "utf8",
+      );
+      const alteredText = readFileSync(alteredPath, "utf8");
+      expect(canonicalMemoryContentDigest(alteredText)).not.toBe(adopt.registration.content_digest);
     }
   });
 
@@ -211,25 +236,33 @@ describe("memory clean-cut PR-2: curation ledger binding (U-MEMCUT-024..028)", (
     for (const [text, tag] of negatives) expect(screenAdoptText(text), text).toContain(tag);
   });
 
-  it("U-MEMCUT-028: the reviewer record is a non-author frontier model bound to an exact head; same family or missing head is Red", () => {
+  it("U-MEMCUT-028: the reviewer record is a non-author frontier model bound to a real, non-placeholder exact head and receipt; same family, missing/placeholder head, or a placeholder receipt is Red", () => {
     const ledger = ledgerOf();
-    // The ledger is intentionally published before the non-author closing review. Until that
-    // receipt exists, the shipped document is validly pending and the verifier must surface the
-    // missing reviewer instead of making the draft CI red. Once a reviewer is recorded, require
-    // the full valid result and exercise the negative mutations below.
-    const pending = verifyCurationReviewer(ledger);
+    // The ledger is intentionally published before the non-author closing review binds a real
+    // receipt. The shipped reviewer record is a placeholder (all-zero exact_head,
+    // "pending-review-receipt") until the control lane binds the real Codex Sol PASS receipt, so
+    // the verifier must surface it as Red (missing or placeholder), never as a silent pass.
+    const shipped = verifyCurationReviewer(ledger);
     if (ledger.reviewer) {
-      expect(pending).toEqual([]);
       expect(ledger.reviewer.family).not.toBe(ledger.author.family);
+      const isPlaceholder =
+        /^0{40}$/.test(ledger.reviewer.exact_head) ||
+        ledger.reviewer.receipt === "pending-review-receipt";
+      if (isPlaceholder) expect(shipped.length).toBeGreaterThan(0);
+      else expect(shipped).toEqual([]);
     } else {
-      expect(pending).toEqual([{ kind: "reviewer-missing", subject: "ledger.reviewer" }]);
+      expect(shipped).toEqual([{ kind: "reviewer-missing", subject: "ledger.reviewer" }]);
     }
-    const validReviewer: NonNullable<CurationLedger["reviewer"]> = ledger.reviewer ?? {
+
+    // A fully-bound, non-placeholder reviewer record: frontier tier, non-author family, a real
+    // 40-hex exact head (not all zero) and an `rv1-<sha256>` review receipt id shaped like the
+    // ones written under `.ut-tdd/review/receipts/`.
+    const validReviewer: NonNullable<CurationLedger["reviewer"]> = {
       model: "gpt-5.6-sol",
       family: "codex" as const,
-      exact_head: "0".repeat(40),
+      exact_head: "1".repeat(40),
       verdict: "PASS",
-      receipt: "pending-review-receipt",
+      receipt: `rv1-${"a".repeat(64)}`,
     };
     const reviewedLedger = { ...ledger, reviewer: validReviewer };
     expect(verifyCurationReviewer(reviewedLedger)).toEqual([]);
@@ -240,6 +273,20 @@ describe("memory clean-cut PR-2: curation ledger binding (U-MEMCUT-024..028)", (
     expect(verifyCurationReviewer(sameFamily).map((f) => f.kind)).toContain("reviewer-same-family");
     const noHead = { ...reviewedLedger, reviewer: { ...validReviewer, exact_head: "" } };
     expect(verifyCurationReviewer(noHead).map((f) => f.kind)).toContain("reviewer-head-invalid");
+    const allZeroHead = {
+      ...reviewedLedger,
+      reviewer: { ...validReviewer, exact_head: "0".repeat(40) },
+    };
+    expect(verifyCurationReviewer(allZeroHead).map((f) => f.kind)).toContain(
+      "reviewer-head-invalid",
+    );
+    const placeholderReceipt = {
+      ...reviewedLedger,
+      reviewer: { ...validReviewer, receipt: "pending-review-receipt" },
+    };
+    expect(verifyCurationReviewer(placeholderReceipt).map((f) => f.kind)).toContain(
+      "reviewer-receipt-invalid",
+    );
     const workerTier = {
       ...reviewedLedger,
       reviewer: { ...validReviewer, model: "gpt-5.6-luna" },

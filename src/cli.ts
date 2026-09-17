@@ -161,7 +161,10 @@ import {
 import { detectMode, nextActionForMode, type RuntimeDetection } from "./runtime/detect.ts";
 import { scanDanglingStops } from "./runtime/forced-stop.ts";
 import { createNodeInvocation, verifyNodeGeneration } from "./runtime/node-bootstrap.ts";
-import { requireProjectMemoryRoot } from "./runtime/project-memory-root.ts";
+import {
+  requireProjectMemoryRoot,
+  resolveProjectMemoryRoot,
+} from "./runtime/project-memory-root.ts";
 import {
   nodeProviderHandoverDeps,
   type ProviderRuntime,
@@ -1761,8 +1764,12 @@ db.command("rebuild")
   .action((opts: { json?: boolean }) => {
     // Memory projection must come from the canonical project root: a linked worktree cwd
     // would otherwise project its own legacy .ut-tdd/memory (PLAN-L7-566 PR-2, P-MEMCUT-006).
+    // When project identity cannot be resolved (e.g. a nested snapshot clone with no usable
+    // git topology), fall back to the previous behaviour of rebuilding from process.cwd()
+    // instead of hard-failing (U-TESTHYGIENE-043).
+    const projectRoot = resolveProjectMemoryRoot(process.cwd());
     const r = rebuildHarnessDb({
-      repoRoot: requireProjectMemoryRoot(process.cwd()).canonicalProjectRoot,
+      repoRoot: projectRoot.ok ? projectRoot.canonicalProjectRoot : process.cwd(),
     });
     if (opts.json) {
       process.stdout.write(`${JSON.stringify(r, null, 2)}\n`);

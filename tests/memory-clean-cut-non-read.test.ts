@@ -21,6 +21,7 @@ import { loadMemoryEntries, type MemoryEntry, parseMemoryFile } from "../src/mem
 import { LEGACY_MEMORY_ARCHIVE_ROOT, sha256Hex } from "../src/memory/legacy-archive-manifest.ts";
 import { loadMemoryCorpus, readMemory } from "../src/memory/service.ts";
 import { defaultHarnessDbPath, openHarnessDb } from "../src/state-db/index.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 
 // PLAN-L6-104 §3.1 判断 5 / PLAN-L7-566 §3: canonical root, tracked archive and linked-worktree
 // legacy root are placed side by side; every reader, projection, CLI and doctor surface must
@@ -46,7 +47,7 @@ interface Fixture {
 }
 const fixtures: Fixture[] = [];
 afterAll(() => {
-  for (const fixture of fixtures) rmSync(fixture.root, { recursive: true, force: true });
+  for (const fixture of fixtures) removeTestTree(fixture.root);
 });
 
 function git(cwd: string, args: readonly string[]): string {
@@ -381,13 +382,43 @@ describe("memory clean-cut PR-2: projection, CLI and doctor surfaces (P-MEMCUT-0
     }
   });
 
-  it("P-MEMCUT-010: memory-sync counts only .ut-tdd/memory; archive files are never reported as unsynced memory", () => {
+  it("P-MEMCUT-010: memory-sync counts only .ut-tdd/memory; the DB projection's memory rows are canonical-only; `ut-tdd status` / `status --json` never surface memory-derived tokens", () => {
     const fixture = createFixture();
     const input = loadMemorySyncInput(fixture.primary);
     expect(input.files.length).toBeGreaterThan(0);
     for (const file of input.files) {
       expect(file.source_path.startsWith(".ut-tdd/memory/")).toBe(true);
       expect(file.source_path).not.toContain("memory-legacy-2026-09");
+    }
+
+    // DB projection memory rows must stay canonical-only for this fixture.
+    const dbPath = defaultHarnessDbPath(fixture.primary);
+    rmSync(dbPath, { force: true });
+    const rebuild = runCli(fixture.primary, ["db", "rebuild", "--json"]);
+    expect(rebuild.status).toBe(0);
+    const db = openHarnessDb(dbPath, { repoRoot: fixture.primary });
+    try {
+      const rows = db
+        .prepare("SELECT memory_id, source_path, body FROM memory_entries ORDER BY memory_id")
+        .all() as Array<Record<string, unknown>>;
+      expect(rows.length).toBeGreaterThan(0);
+      for (const r of rows) {
+        expect(String(r.source_path).startsWith(".ut-tdd/memory/")).toBe(true);
+        expect(String(r.source_path)).not.toContain("memory-legacy-2026-09");
+        for (const token of FORBIDDEN) expect(String(r.body)).not.toContain(token);
+      }
+    } finally {
+      db.close();
+    }
+
+    // `ut-tdd status` reads mode / outstanding-work / update-check, never memory. It must never
+    // surface a memory-derived token even though the fixture's archive / linked-legacy corpus
+    // carries forbidden tokens elsewhere in the same tree (invariant regression guard).
+    const statusText = runCli(fixture.primary, ["status"]).stdout;
+    const statusJson = runCli(fixture.primary, ["status", "--json"]).stdout;
+    for (const token of FORBIDDEN) {
+      expect(statusText).not.toContain(token);
+      expect(statusJson).not.toContain(token);
     }
   });
 });
