@@ -1172,7 +1172,7 @@ type PublicationRunPorts = {
   readonly durableState: Pick<PackPublicationPorts["durableState"], "append">;
 };
 
-function failure(context: FailureContext): PackPublicationResult {
+function failure(context: FailureContext): PackPublicationFailure {
   const { result, stage, remoteWrites, prewrite = false } = context;
   return {
     status:
