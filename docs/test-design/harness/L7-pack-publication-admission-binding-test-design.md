@@ -40,7 +40,7 @@ plan-admission record を指さない。値は実装 PR の test module 内で�
 fixture から不足する値を worktree、Pack checkout、GitHub API、既存の publication receipt で
 補完しない。各 mutation row は上記 fixture の 1 要素だけを変異させ、他は正常系のまま保つ。
 
-## 3. 40 guard mutation matrix (G40 は §4 の 056)
+## 3. 42 guard mutation matrix (G40–G42 は §4 の 056 / 061 / 063)
 
 各行は他の predicate を成立させた fixture へ一軸だけを注入する。expected result は admission
 record 0、typed deny、remote write 0 であり、別 guard の失敗を Green にしない。契約引用は
@@ -68,7 +68,7 @@ PLAN-L7-626 §3 の同じ行と一致させる。
 | `CANDIDATE-PACKPUB-ADM-018` | G18 | 565 §1.1、626 §2.2-6 | sealed staging record の manifest digest を別値 | `admission_staging_manifest_mismatch`、write 0 |
 | `CANDIDATE-PACKPUB-ADM-019` | G19 | 565 §1.1 | PR `4242` を別 staging digest で admitted 済みに登録 | `admission_pr_staging_conflict`、write 0 |
 | `CANDIDATE-PACKPUB-ADM-020` | G20 | 565 §1.1 | PR `4242` を別 expected main OID で admitted 済みに登録 | `admission_pr_expected_main_conflict`、write 0 |
-| `CANDIDATE-PACKPUB-ADM-021` | G21 | 626 §2.2 | caller `reviewedHead` を観測値と別に供給 | `admission_caller_override`、write 0 |
+| `CANDIDATE-PACKPUB-ADM-021` | G21 | 626 §2.2 | caller `reviewedHead` を観測値と別に供給 (他 field は 058–060、065) | `admission_caller_override`、write 0 |
 | `CANDIDATE-PACKPUB-ADM-022` | G22 | 626 §2.2 | 観測束確定後に base OID field を改変 | `admission_observation_digest_mismatch`、write 0 |
 | `CANDIDATE-PACKPUB-ADM-023` | G23 | 565 §1.1、626 §2.2-3 | reviewer を `author-a` | `admission_review_author_conflict`、write 0 |
 | `CANDIDATE-PACKPUB-ADM-024` | G24 | 565 §3、626 §2.2-4 | checks を `[{context: "unrelated", conclusion: "success"}]` (required 集合は `["pack-check"]` のまま) | `admission_required_context_uncovered`、write 0 |
@@ -117,6 +117,14 @@ G25/G35 は入力出所・形状/equality・被覆・集合一致が異なるた
 
 | `CANDIDATE-PACKPUB-ADM-056` | G40: approval 参照を `[]` に (他は正常系) | `admission_approval_missing`、admitted 0、write 0 |
 | `CANDIDATE-PACKPUB-ADM-057` | approval binding 構成要素: intent identity を固定したまま approval nonce だけを `apv-adm-fixture-0002` に | approval binding digest が変わる (intent identity は不変) |
+| `CANDIDATE-PACKPUB-ADM-058` | G21: caller `baseOid` を観測値と別に供給 | `admission_caller_override`、write 0 |
+| `CANDIDATE-PACKPUB-ADM-059` | G21: caller `checks` を観測値と別に供給 (`[{context: "pack-check", conclusion: "success"}]` を別 head 付きで) | `admission_caller_override`、write 0 |
+| `CANDIDATE-PACKPUB-ADM-060` | G21: caller `closingReceiptDigest` を観測値と別に供給 | `admission_caller_override`、write 0 |
+| `CANDIDATE-PACKPUB-ADM-061` | G41: caller が `preparationReceiptDigest` を導出値と異なる値で供給 | `admission_receipt_digest_override`、write 0。供給しない正常系は導出値が record に入る |
+| `CANDIDATE-PACKPUB-ADM-062` | 正常系に required でない check `{context: "lint-optional", conclusion: "failure"}` を追加 | admitted (非 required check は判定に使わない)、record の required check 結論は `pack-check` のみ |
+| `CANDIDATE-PACKPUB-ADM-063` | G42: caller が intent identity を導出値と異なる値で供給 | `admission_intent_override`、write 0 |
+| `CANDIDATE-PACKPUB-ADM-064` | 正常系 admitted 後に preparation nonce 集合 / preparation journal / token port を観測 | preparation nonce consume 0、journal append 0、token 参照 0 |
+| `CANDIDATE-PACKPUB-ADM-065` | G21: caller が §2.1 (a) 期待値 (repository ID) を configuration と別に供給 | `admission_caller_override`、write 0 |
 
 050–055 と 057 は導出関数を直接呼び、構成要素の 1 つを省く実装 (digest が不変になる) を Red にする。
 parameterized 実行でよいが、各要素を独立 case として報告する。
@@ -127,7 +135,7 @@ admission 成功 fixture でも remote write ledger と approval consume は 0 �
 
 ## 5. 実装 PR への昇格規則
 
-実装 PR は 57 candidate を各 1 件以上の独立 test へ昇格し、実装時に正規の test ID
+実装 PR は 65 candidate を (PLAN-L7-626 §8 の対応表の順で)各 1 件以上の独立 test へ昇格し、実装時に正規の test ID
 (`U-PACKPUB-ADM-*`) を割り当てる。typed reason、入力 digest、observer call 順、admission
 record digest、approval/remote write count を直接検査する。恒真 assertion、dummy observer、既存
 #625 nonce の流用、publish/CAS port の no-op 偽装では Green にしない。production source 変更、
