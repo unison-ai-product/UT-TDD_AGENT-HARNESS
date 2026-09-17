@@ -410,6 +410,8 @@ export type PackPublicationResult =
       readonly remoteWrites: number;
     };
 
+type PackPublicationFailure = Exclude<PackPublicationResult, { readonly status: "published" }>;
+
 const SHA256 = /^sha256:[a-f0-9]{64}$/;
 const SHA1 = /^[a-f0-9]{40}$/;
 const CONTROL_MANIFEST_PATH = "release/manifest.yaml";
@@ -1052,7 +1054,7 @@ export async function preparePackPublication(
     },
   );
   const preparationFailureFromRun = (
-    result: Exclude<PackPublicationResult, { readonly status: "published" }>,
+    result: PackPublicationFailure,
   ): PackPublicationPreparationResult =>
     preparationFailure({
       status: result.status,
@@ -1284,7 +1286,7 @@ class PublicationRun {
     mutation: PublicationMutation,
     detail: unknown,
     invoke: () => PublicationPortResult<T> | Promise<PublicationPortResult<T>>,
-  ): Promise<{ value: T } | { failure: PackPublicationResult } | { reconcile: true }> {
+  ): Promise<{ value: T } | { failure: PackPublicationFailure } | { reconcile: true }> {
     const authorization = await this.authorize(mutation);
     if (typeof authorization !== "string") return { failure: authorization };
     if (authorization === "reconcile") return { reconcile: true };
