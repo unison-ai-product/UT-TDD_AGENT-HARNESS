@@ -153,6 +153,20 @@ export function claudeReviewVerdictEditRule(
   return `Edit(${normalized})`;
 }
 
+/**
+ * `review_request_conflict` 時に、同一 identity の既存 request を再利用する。
+ *
+ * requestedAt は retry ごとに変わるメタデータなので無視するが、invocationNonce は
+ * 呼び出しを束縛する不変値であり、別 nonce の request を既存 request として扱わない。
+ * この判定を delegation の conflict 経路から直接呼び、request の取り違えを防ぐ。
+ */
+export function reuseCanonicalReviewRequestAfterConflict(input: {
+  repoRoot: string;
+  request: ReviewAttestationRequest;
+}): ReviewAttestationRequest | null {
+  return loadCanonicalReviewRequest(input);
+}
+
 export function executeAdapterPlanForCli(
   plan: AdapterPlan,
   input: AdapterExecutionInput,
@@ -501,7 +515,10 @@ function runtimeCommand(
               process.exitCode = 1;
               return;
             }
-            const existing = loadCanonicalReviewRequest({ repoRoot, request: reviewRequest });
+            const existing = reuseCanonicalReviewRequestAfterConflict({
+              repoRoot,
+              request: reviewRequest,
+            });
             if (!existing) {
               process.stderr.write(`${issued.reason}\n`);
               process.exitCode = 1;

@@ -121,7 +121,7 @@ describe("Codex review wake contract", () => {
     });
   });
 
-  it("CANDIDATE-CODEXWAKE-004/011 surfaces valid entries FIFO and preserves invalid bytes", () => {
+  it("CANDIDATE-CODEXWAKE-011 surfaces valid entries and preserves invalid bytes", () => {
     const { root, memoryPath } = fixture();
     process.env.CODEX_REVIEW_TARGET_SESSION = "codex-session-1";
     const first = wake(root, memoryPath, request("wake-first", "2026-09-16T00:00:00.000Z"));
@@ -173,7 +173,7 @@ describe("Codex review wake contract", () => {
     expect(() => readdirSync(terminal)).toThrow();
   });
 
-  it("CANDIDATE-CODEXWAKE-003 restores an expired claim for the next session", () => {
+  it("CANDIDATE-CODEXWAKE-010 restores an expired claim for the next session", () => {
     const { root, memoryPath } = fixture();
     process.env.CODEX_REVIEW_TARGET_SESSION = "codex-session-1";
     const value = wake(root, memoryPath, request("wake-expiry", "2026-09-16T00:00:00.000Z"));
@@ -213,7 +213,7 @@ describe("Codex review wake contract", () => {
     expect(readdirSync(terminal)).toHaveLength(0);
   });
 
-  it("CANDIDATE-CODEXWAKE-005 terminalizes from a durable receipt after derived publication fails", async () => {
+  it("CANDIDATE-CODEXWAKE-004 terminalizes from a durable receipt after derived publication fails", async () => {
     const { root, memoryPath } = fixture();
     process.env.CODEX_REVIEW_TARGET_SESSION = "codex-session-1";
     const value = wake(root, memoryPath, request("wake-receipt", "2026-09-16T00:00:00.000Z"));

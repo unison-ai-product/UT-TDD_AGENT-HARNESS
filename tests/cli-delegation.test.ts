@@ -1,6 +1,14 @@
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { Command } from "commander";
 import { afterEach, describe, expect, it } from "vitest";
-import { adapterExecutionEnv, registerDelegationCommands } from "../src/cli/delegation.ts";
+import {
+  adapterExecutionEnv,
+  registerDelegationCommands,
+  reuseCanonicalReviewRequestAfterConflict,
+} from "../src/cli/delegation.ts";
+import { issueReviewRequest } from "../src/feedback/review-attestation.ts";
 
 const legacyPrefix = ["HE", "LIX"].join("");
 const touchedKeys = [
@@ -88,6 +96,53 @@ describe("CLI delegation command registration", () => {
         "--execute",
         "--json",
       ]);
+    }
+  });
+});
+
+describe("CLI delegation review request conflict recovery", () => {
+  it("reuses only the same invocation nonce while allowing requestedAt to change", () => {
+    const repoRoot = mkdtempSync(join(tmpdir(), "ut-tdd-delegation-review-conflict-"));
+    try {
+      const base = {
+        memoryId: "memory:delegation-review-conflict",
+        pr: 640,
+        exactHead: "a".repeat(40),
+        reviewRevision: "review-conflict-1",
+        authorFamily: "codex" as const,
+      };
+      const first = issueReviewRequest({
+        repoRoot,
+        request: { ...base, requestedAt: "2026-09-17T03:00:00.000Z" },
+        strict: true,
+      });
+      if (!first.ok) throw new Error("expected canonical request to be issued");
+
+      const sameNonce = {
+        ...first.request,
+        requestedAt: "2026-09-17T03:01:00.000Z",
+      };
+      expect(issueReviewRequest({ repoRoot, request: sameNonce, strict: true })).toEqual({
+        ok: false,
+        reason: "review_request_conflict",
+      });
+      expect(reuseCanonicalReviewRequestAfterConflict({ repoRoot, request: sameNonce })).toEqual(
+        first.request,
+      );
+
+      const differentNonce = {
+        ...sameNonce,
+        invocationNonce: "nonce-different-invocation",
+      };
+      expect(issueReviewRequest({ repoRoot, request: differentNonce, strict: true })).toEqual({
+        ok: false,
+        reason: "review_request_conflict",
+      });
+      expect(
+        reuseCanonicalReviewRequestAfterConflict({ repoRoot, request: differentNonce }),
+      ).toBeNull();
+    } finally {
+      rmSync(repoRoot, { recursive: true, force: true });
     }
   });
 });

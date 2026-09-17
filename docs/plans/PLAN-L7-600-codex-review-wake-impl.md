@@ -7,7 +7,7 @@ drive: be
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-09-16
-updated: 2026-09-16
+updated: 2026-09-17
 owner: Codex / TL
 parent_design: docs/plans/PLAN-L6-600-codex-review-wake-contract.md
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
@@ -24,19 +24,28 @@ generates:
     artifact_type: markdown_doc
   - artifact_path: src/runtime/codex-review-wake.ts
     artifact_type: source_module
+  - artifact_path: src/feedback/review-attestation.ts
+    artifact_type: source_module
+  - artifact_path: src/cli/delegation.ts
+    artifact_type: source_module
   - artifact_path: tests/codex-review-wake.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/cli-delegation.test.ts
     artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L6-600-codex-review-wake-contract.md
   requires:
-    - docs/plans/PLAN-REVERSE-600-codex-review-wake-backfill.md
+    - docs/plans/PLAN-REVERSE-602-codex-review-wake-backfill.md
   blocks: []
   references:
     - docs/plans/PLAN-L6-600-codex-review-wake-contract.md
-    - docs/plans/PLAN-REVERSE-600-codex-review-wake-backfill.md
+    - docs/plans/PLAN-REVERSE-602-codex-review-wake-backfill.md
     - docs/test-design/harness/L7-unit-test-design.md
     - src/runtime/codex-review-wake.ts
+    - src/feedback/review-attestation.ts
+    - src/cli/delegation.ts
     - tests/codex-review-wake.test.ts
+    - tests/cli-delegation.test.ts
     - .codex/hooks.json
     - src/cli/review-live.ts
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/600
@@ -44,59 +53,59 @@ dependencies:
 review_evidence:
   - reviewer: codex-intra-runtime
     review_kind: intra_runtime_subagent
-    reviewed_at: 2026-09-16T18:50:00+09:00
-    tests_green_at: 2026-09-16T18:49:30+09:00
+    reviewed_at: 2026-09-17T10:26:00+09:00
+    tests_green_at: 2026-09-17T10:25:46+09:00
     verdict: pass
     worker_model: gpt-5.6-luna
     reviewer_model: gpt-5.6-sol
     scope: 実装対象の targeted wake test、typecheck、Biome を同一draft HEADで確認
     green_commands:
       - kind: unit_test
-        command: bun scripts/run-vitest-snapshot.ts tests/codex-review-wake.test.ts
-        runner: bun
+        command: node scripts/run-vitest-snapshot.ts tests/codex-review-wake.test.ts
+        runner: node
         scope: targeted
         exit_code: 0
         evidence_path: tests/codex-review-wake.test.ts
-        output_digest: sha256:7c7b5dbba1a93f43720f66bbf8ed7d3c
-        completed_at: 2026-09-16T18:49:30+09:00
-        anchor_commit: 27137fc6
+        output_digest: sha256:748956d76a1d5d20a31cf9110512c3dc23c0f45df76f4fb97f99275fe7670deb
+        completed_at: 2026-09-17T10:25:46+09:00
+        anchor_commit: 72aad2d13378597612e503473494ca43cfdff3df
       - kind: typecheck
-        command: bunx tsc --noEmit -p tsconfig.json
-        runner: bun
+        command: npm run typecheck
+        runner: node
         scope: targeted
         exit_code: 0
         evidence_path: tsconfig.json
-        output_digest: sha256:2f2adf7aa58a3b4e94912ad6fbf2d31e
-        completed_at: 2026-09-16T18:50:00+09:00
-        anchor_commit: 27137fc6
+        output_digest: sha256:da3803fb5e8090f8bf4e48607a8b033c35a574705d52e558245935d2f164cd0c
+        completed_at: 2026-09-17T10:25:46+09:00
+        anchor_commit: 72aad2d13378597612e503473494ca43cfdff3df
       - kind: lint
-        command: bunx biome check src/runtime/codex-review-wake.ts
+        command: npm exec -- biome check src/runtime/codex-review-wake.ts
           tests/codex-review-wake.test.ts
-        runner: bun
+        runner: node
         scope: targeted
         exit_code: 0
         evidence_path: biome.json
-        output_digest: sha256:a3e0edc6dc9d9dca9b3ddf2e0b50c64c
-        completed_at: 2026-09-16T18:50:00+09:00
-        anchor_commit: 27137fc6
+        output_digest: sha256:b70d2d1403c671399680ca5c783e86591fde85e10dc57c45be2c8806f0549cf7
+        completed_at: 2026-09-17T10:25:46+09:00
+        anchor_commit: 72aad2d13378597612e503473494ca43cfdff3df
 backprop_decision: not_required
 backprop_decision_reason: 実装は既存L6契約の具体化に限定し、上流要件の追加を行わない
 status: confirmed
 github_issue_id: 600
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:4686ed1b6adc5be201092eb1c2061cdb
-  command_id: plan-revise:issue-600:codex-review-wake-impl:confirm:2
-  admitted_at: 2026-09-16T19:10:00+09:00
-  source_digest: sha256:3d42baf3d4c247c1ac91fcdcc56531fc8b391275c584eb0838eb374c4fbcc6e5
-  decision_digest: sha256:e4f68eb55867157136d94a7dee92f21ea460fa3b714b77fb95c28e8a4cbe0bca
-  receipt_digest: sha256:435e1bc16849d699b391862a1d0bc7cb26b9e333b62c18a1c6134acad6bf3840
+  receipt_id: certificate:7f37ea0f1247dc0a2203b935a31bfb4e
+  command_id: plan-revise:issue-600:codex-review-wake-impl:receipt-fence:10
+  admitted_at: 2026-09-17T01:27:35.617Z
+  source_digest: sha256:d81dafac2b0bd160b6228564a76256e41508128d4d47b7422d0aa6bc09b72b23
+  decision_digest: sha256:e991c8fa00304023ef5087cf9bf457b42a2b8d9f085de7e7a221c6ef11455d44
+  receipt_digest: sha256:45d717a2a7bf3f7b284ec7f7815ed82b75afb6e06a8f7d8aebc4e94b9532b928
   binding:
     path: docs/plans/PLAN-L7-600-codex-review-wake-impl.md
     plan_id: PLAN-L7-600-codex-review-wake-impl
     asset_id: plan:c00b91ac72bc4447dcd79d9332c2da04
-    revision: 2
-    content_digest: sha256:3d42baf3d4c247c1ac91fcdcc56531fc8b391275c584eb0838eb374c4fbcc6e5
+    revision: 10
+    content_digest: sha256:d81dafac2b0bd160b6228564a76256e41508128d4d47b7422d0aa6bc09b72b23
   route:
     signal: feature_addition
     mode: add-feature
@@ -129,9 +138,14 @@ L7 implementation PLAN である。L6 の契約本文や既存の Claude wake �
 
 - src/runtime/codex-review-wake.ts: Codex wake envelope の project-scoped publish、
   FIFO surface、expired claim restore、terminal retention、backlog retry を実装する。
+- src/feedback/review-attestation.ts / src/cli/delegation.ts: conflict retry では
+  `requestedAt` を可変メタデータとして扱い、`invocationNonce` が一致する既存の
+  canonical request だけを再利用する。
 - tests/codex-review-wake.test.ts: L6 candidate のうち現実装が検証する target session、
   FIFO/invalid保持、claim expiry、terminal retention、canonical conflict、production composition
   を命名テストへ束縛する。
+- tests/cli-delegation.test.ts: `review_request_conflict` の同一 nonce 再利用と異なる
+  nonce 拒否を、実際の delegation conflict recovery helper へ束縛する。
 - #640 で変更済みの .codex/hooks.json、review-live composition、request projection は、
   本 PLAN の source/test の最小配線を支える既存差分として参照する。別 consumer や新 CLI surface は
   追加しない。
@@ -141,14 +155,17 @@ L7 implementation PLAN である。L6 の契約本文や既存の Claude wake �
 | L6 candidate | 実装の観測点 | L7 test |
 | --- | --- | --- |
 | CANDIDATE-CODEXWAKE-001 | canonical request conflict は request identity を上書きしない | CANDIDATE-CODEXWAKE-001 |
-| CANDIDATE-CODEXWAKE-003 | claim lease と expired claim restore | CANDIDATE-CODEXWAKE-003/010 |
-| CANDIDATE-CODEXWAKE-004/011 | FIFO surface と invalid bytes 保持 | CANDIDATE-CODEXWAKE-004/011 |
-| CANDIDATE-CODEXWAKE-006 | production composition が canonical request 後に publish | CANDIDATE-CODEXWAKE-006 |
+| CANDIDATE-CODEXWAKE-004 | receipt 永続化後の派生表示失敗でも terminalize する bounded variant | CANDIDATE-CODEXWAKE-004 |
+| CANDIDATE-CODEXWAKE-006 | production composition と hook registration を canonical request 後に検証 | CANDIDATE-CODEXWAKE-006 |
+| CANDIDATE-CODEXWAKE-007 | review 前の backlog は pending のまま保持する bounded safety variant | CANDIDATE-CODEXWAKE-007 |
 | CANDIDATE-CODEXWAKE-008 | terminal marker の7日 retention/prune | CANDIDATE-CODEXWAKE-008 |
-| CANDIDATE-CODEXWAKE-009 | target session 欠落時の fail-close / write 0 | CANDIDATE-CODEXWAKE-009 |
+| CANDIDATE-CODEXWAKE-009 | target session 欠落時の producer fail-close と通常 hook exit 0 | CANDIDATE-CODEXWAKE-009 |
+| CANDIDATE-CODEXWAKE-010 | 期限切れ claim の同一 bytes restore | CANDIDATE-CODEXWAKE-010 |
+| CANDIDATE-CODEXWAKE-011 | valid entry を surface し invalid bytes を保持する bounded variant | CANDIDATE-CODEXWAKE-011 |
 
-CANDIDATE-CODEXWAKE-002/005/007/010 の未実装境界は、実測なしに昇格しない。将来の bounded
-follow-up で test を追加するまで候補のまま保持する。
+CANDIDATE-CODEXWAKE-002/003/005 はこの実装で未測定のため、実測なしに昇格しない。
+004/007/011 は候補全体ではなく、上表に記載した bounded variant のみを実測する。
+将来の bounded follow-up で不足する軸の test を追加するまで候補のまま保持する。
 
 ## 3. 工程と検証
 
@@ -159,8 +176,8 @@ follow-up で test を追加するまで候補のまま保持する。
 
 ## 4. scope boundary
 
-この PLAN が所有する source/test は上記2ファイルだけである。L6 contract、Claude wake、
-review receipt/custody、Issue close、merge authority、別の consumer surface は含めない。
+この PLAN が所有する source/test は上記の generates に列挙した bounded source/test とする。
+L6 contract、Claude wake、Issue close、merge authority、別の consumer surface は含めない。
 
 ## §6 用語更新
 
@@ -169,8 +186,7 @@ review receipt/custody、Issue close、merge authority、別の consumer surface
 
 ## 5. 成否
 
-- src/runtime/codex-review-wake.ts と tests/codex-review-wake.test.ts が本 PLAN の
-  generates に束縛され、impl-plan-trace / deliverable-plan-trace がそれぞれ該当 orphan 0 を返す。
+- 本 PLAN の generates に列挙した source/test が、conflict retry と Codex wake の
+  bounded実装へ束縛され、impl-plan-trace / deliverable-plan-trace がそれぞれ該当 orphan 0 を返す。
 - 上表の実測済み候補が targeted test で pass し、未実装候補は候補のまま残る。
-- 後段 PLAN-REVERSE-600-codex-review-wake-backfill で L6/L3 の forward 合流判断を行う。
-
+- 後段 PLAN-REVERSE-602-codex-review-wake-backfill で L6/L3 の forward 合流判断を行う。

@@ -482,8 +482,10 @@ export function loadCanonicalReviewRequest(input: {
   const path = join(input.repoRoot, ".ut-tdd", "review", "requests", `${digest}.json`);
   try {
     const parsed = JSON.parse(readFileSync(path, "utf8")) as ReviewAttestationRequest;
+    const invocationNonceMatches = parsed.invocationNonce === request.invocationNonce;
     return isValidReviewRequest(parsed) &&
       parsed.invocationNonce &&
+      invocationNonceMatches &&
       reviewRequestDigest(parsed) === digest
       ? parsed
       : null;
