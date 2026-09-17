@@ -120,6 +120,51 @@ describe("memory clean-cut PR-2: curation ledger binding (U-MEMCUT-024..028)", (
         }),
       ),
     ).toContain("reason-missing");
+    // reject row evidence removed
+    expect(
+      kinds(
+        mutate((rows) => {
+          const r = rows.find((row) => row.decision === "reject");
+          if (r) r.evidence = [];
+        }),
+      ),
+    ).toContain("reject-evidence-missing");
+  });
+
+  it("U-MEMCUT-024b: every reject row carries non-empty, non-leaking evidence substantiating the six-criterion decision", () => {
+    const ledger = ledgerOf();
+    const rejects = ledger.rows.filter((row) => row.decision === "reject");
+    expect(rejects.length).toBeGreaterThan(0);
+    // (a) the shipped ledger has zero reject rows with empty evidence.
+    const emptyEvidence = rejects.filter((row) => !row.evidence || row.evidence.length === 0);
+    expect(emptyEvidence.map((row) => row.archive_path ?? row.custody_id)).toEqual([]);
+    for (const row of rejects) {
+      if (row.source === "tracked") {
+        // (c) for tracked reject rows, the recorded `screen:` tags match a recomputation from the
+        // archived file. The verifier itself has no archive content access (manifest + ledger
+        // only), so this recomputation runs here in the test.
+        if (!row.archive_path) throw new Error("tracked reject row missing archive_path");
+        const content = readFileSync(join(root, row.archive_path), "utf8");
+        const expectedTags = new Set(screenAdoptText(content).map((tag) => `screen:${tag}`));
+        const recordedTags = new Set(row.evidence.filter((e) => e.startsWith("screen:")));
+        expect(recordedTags, row.archive_path).toEqual(expectedTags);
+      } else {
+        // (d) no untracked row's evidence leaks a path, title or body: only `custody:` and
+        // `criterion:` prefixed references are allowed.
+        for (const item of row.evidence) {
+          expect(item, row.custody_id).not.toMatch(/\/|\.md/);
+          expect(item, row.custody_id).toMatch(/^(custody:|criterion:)/);
+        }
+      }
+    }
+    // (b) deleting one reject row's evidence (in memory, on a copy) is Red.
+    const manifest = readLegacyArchiveManifest(root);
+    const mutated = JSON.parse(JSON.stringify(ledger)) as CurationLedger;
+    const target = mutated.rows.find((row) => row.decision === "reject");
+    if (target) target.evidence = [];
+    expect(verifyCurationRows({ ledger: mutated, manifest }).map((f) => f.kind)).toContain(
+      "reject-evidence-missing",
+    );
   });
 
   it("U-MEMCUT-025: the adopt memory_id set equals the canonical root entry set; an unlisted canonical entry or an entry-less adopt row is Red", () => {
@@ -148,8 +193,23 @@ describe("memory clean-cut PR-2: curation ledger binding (U-MEMCUT-024..028)", (
 
   it("U-MEMCUT-026: replaying `memory add` for an adopt row in a scratch canonical root reproduces the registration receipt digest and the receipt is bound to the canonical file's actual bytes; a receipt-less handwritten twin or an altered canonical body is Red", () => {
     const ledger = ledgerOf();
-    const sample = adoptRows(ledger).slice(0, 3);
-    expect(sample.length).toBeGreaterThan(0);
+    const allAdopt = adoptRows(ledger);
+    expect(allAdopt.length).toBeGreaterThan(0);
+    // Exhaustive (no subprocess) byte-binding check over every adopt row (46), not just the
+    // subprocess-replay sample below: each row's registration.content_digest must reproduce the
+    // canonical file's *current* bytes. This is the check that must go Red if only one adopted
+    // row's canonical body is altered, regardless of its position in the ledger — the heavier
+    // `memory add` replay stays bounded to a 3-row sample so the suite does not spend 46
+    // subprocess spawns per run.
+    for (const row of allAdopt) {
+      const a = row.adopt;
+      if (!a) throw new Error("adopt row without adopt block");
+      const rawText = readFileSync(join(root, a.registration.source_path), "utf8");
+      expect(canonicalMemoryContentDigest(rawText), a.memory_id).toBe(
+        a.registration.content_digest,
+      );
+    }
+    const sample = allAdopt.slice(0, 3);
     for (const row of sample) {
       const adopt = row.adopt;
       if (!adopt) throw new Error("adopt row without adopt block");
@@ -203,20 +263,32 @@ describe("memory clean-cut PR-2: curation ledger binding (U-MEMCUT-024..028)", (
       expect(registrationReceiptDigest({ ...receipt, exit_code: 1 })).not.toBe(
         adopt.receipt_digest,
       );
-      // Negative: an altered canonical body (mutated in a temp fixture copy, never in the repo)
-      // must no longer reproduce the receipt's content digest — the row goes Red.
-      const alteredDir = scratchProject();
-      const alteredPath = join(alteredDir, ".ut-tdd", "memory", "altered-twin.md");
-      writeFileSync(
-        alteredPath,
-        `${canonicalRawText}
+    }
+    // Negative: an altered canonical body (mutated in a temp fixture copy, never in the repo)
+    // must no longer reproduce the receipt's content digest — the row goes Red. Deliberately uses
+    // the LAST adopt row, which is outside the first-3 subprocess sample above, so this negative
+    // does not depend on the sample slice covering the mutated row (2026-09 finding U-MEMCUT-026:
+    // a reviewer altered only the 4th adopted row's canonical body and every test stayed Green
+    // because only the first 3 rows were checked at all).
+    const lastAdopt = allAdopt.at(-1);
+    if (!lastAdopt?.adopt) throw new Error("no adopt row available for altered-body negative");
+    const lastCanonicalRawText = readFileSync(
+      join(root, lastAdopt.adopt.registration.source_path),
+      "utf8",
+    );
+    const alteredDir = scratchProject();
+    const alteredPath = join(alteredDir, ".ut-tdd", "memory", "altered-twin.md");
+    writeFileSync(
+      alteredPath,
+      `${lastCanonicalRawText}
 altered body line
 `,
-        "utf8",
-      );
-      const alteredText = readFileSync(alteredPath, "utf8");
-      expect(canonicalMemoryContentDigest(alteredText)).not.toBe(adopt.registration.content_digest);
-    }
+      "utf8",
+    );
+    const alteredText = readFileSync(alteredPath, "utf8");
+    expect(canonicalMemoryContentDigest(alteredText)).not.toBe(
+      lastAdopt.adopt.registration.content_digest,
+    );
   });
 
   it("U-MEMCUT-027: adopted titles and bodies pass the episode / secret / personal-path screen; each negative fixture is Red", () => {
