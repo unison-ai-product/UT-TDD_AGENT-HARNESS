@@ -83,7 +83,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-artifact-must-be-frozen-before-closing-review.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress)"
   },
   {
@@ -99,7 +105,10 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-bun-final-retirement-inventory-must-include-shipped-skill-instructions.md",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -115,7 +124,10 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-checked-zip-a-187-catalog-claim-only.md",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (no rule)"
   },
   {
@@ -131,7 +143,12 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-ci-github-event-path-ambient-temp-repo-fixture-pr-event.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/issue-number)"
   },
   {
@@ -147,7 +164,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-claude-action-pr340-ready-merge.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -163,7 +187,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-claude-codex-pr-315-review-d3a-root-commit-claude-merge.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -179,7 +210,12 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-claude-opus-admission-audit-issue108-l-layer-verification-contract-exact-main-2f3f15af.md",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -195,7 +231,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-claude-opus-pre-gate-plan-l7-419-forward-fsm-exact-main-2f3f15af.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -211,7 +253,12 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-claude-opus-release-endpoint-audit-pack-7e11ec15-vs-source-2f3f15af.md",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -227,7 +274,11 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-claude-p0-task-harness-memory-delivery-and-workspace-parity.md",
+    "screen:issue-number",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (issue-number)"
   },
   {
@@ -243,7 +294,12 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-claude-p0-task-runtime-db-runaway-and-snapshot-fixed-cost-containment.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/issue-number)"
   },
   {
@@ -259,7 +315,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-claude-pr-closing-overdue-pr315-pr316-converge-now.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash)"
   },
   {
@@ -275,7 +337,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-claude-pr-pr-315-closing-review-pr-d3a-codex.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -291,7 +360,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-claude-pr-queue-352-355-356-awaiting-codex-review.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -307,7 +383,12 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-claude-queue-update-shared-harness-memory-split-across-worktrees.md",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -323,7 +404,12 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-claude-reviewer-output-stalled-terminate-and-rederive-closing-verdict.md",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (commit-hash/review-episode)"
   },
   {
@@ -339,7 +425,11 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-claude-task-u-1-token-run-projection-aggregation-for-issue-178.md",
+    "screen:issue-number",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (review-episode)"
   },
   {
@@ -391,7 +481,10 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-codex-ut-tdd-claude.md",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (no rule)"
   },
   {
@@ -443,7 +536,10 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-consult-ut-tdd-advisor-before-deciding-design-tradeoffs-not-consulting-is-not-the-same-as-not-escalating-to-po.md",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -495,7 +591,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-correction-pr-339-closing-review-cited-a-cancelled-run-of-an-older-head-canonical-ci-for-d6-5a4fe0f8c66a4e44.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress)"
   },
   {
@@ -511,7 +614,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-correction-pr-341-exact-head-e549cd98b46b-claude-review.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -527,7 +637,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-d-pr-302-merged-d2-d-implementation-entry-unlocked-claude-owner.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress)"
   },
   {
@@ -543,7 +659,12 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-d2-live-review-canonical-writer-claude-d3a-d2-315-review.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/review-episode)"
   },
   {
@@ -559,7 +680,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-d2-review-dispatch-wrapper-deny-merge-bypass.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -649,7 +777,11 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-design-cross-check-done-plan-l6-50-58-clean-2-fixes-applied.md",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -737,7 +869,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-errata-on-merged-l6-release-channel-manifest-section-4-it-names-buildcleandistributionplan-c9fff25e16963a22.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress)"
   },
   {
@@ -753,7 +892,12 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-escalate-to-po-only-when-the-goal-changes-not-when-an-advisor-says-so.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/review-episode)"
   },
   {
@@ -769,7 +913,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-feedback-pr-335-exact-head-4d0b52d6-implementation-review.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -785,7 +935,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-feedback-pr-336-exact-head-5f04b58d-closing-review.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -801,7 +957,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-feedback-pr-337-exact-head-5ba4d2df-closure-review.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -817,7 +979,10 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-filesystem-lock-ownership-read-then-rename-is-not-cas.md",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (no rule)"
   },
   {
@@ -833,7 +998,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-final-role-split-claude-pr-handling-codex-all-non-pr-authoring.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -849,7 +1021,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-flag-3rd-round-pr-349-exact-head-14e1ec18-src-untouched-across-all-remediations-coding-rule-a7264fae15572943.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -865,7 +1044,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-flag-4th-round-pr-349-exact-head-9a086edd-coding-rules-7-unchanged-since-first-flag-switche-ab5b234941c3eda1.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -881,7 +1067,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-flag-5th-round-pr-349-exact-head-4de12a1c-b-1-b-4-b-5-resolved-new-blocking-green-command-d-d31cdf51d6124a4d.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -897,7 +1090,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-flag-6th-round-pr-349-exact-head-3b6d36a8-b-6-f-1-resolved-new-blocking-b-7-secret-scan-fal-56333574d610520d.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -913,7 +1113,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-flag-delta-pr-349-exact-head-029e8fb7-b-1-untouched-src-diff-0-b-4-false-claim-persists-b-5-2c015b3adeb07b5c.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -929,7 +1136,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-flag-pr-349-exact-head-31c69e77-forward-fsm-implementation-ci-3-3-failure-blocking-4-coding-2231e0c08cac9a00.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -945,7 +1159,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-flag-pr-354-exact-head-bdd66595-pf4-acceptance.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -961,7 +1182,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-flag-pr-358-exact-head-bb857f14-l6-freeze.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -977,7 +1205,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-flag-pr-359-exact-head-db00ca0e-master-r4.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/issue-number/timestamp)"
   },
   {
@@ -993,7 +1228,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-flag-pr-365-delta-07b74397-adapter-field-mapping.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -1009,7 +1251,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-flag-pr-365-exact-head-563825f4-s3-freeze.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/issue-number)"
   },
   {
@@ -1025,7 +1274,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-flag-pr-368-exact-head-ae48ac3d-s3-implementation.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -1041,7 +1297,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-forward-inventory-exact-current-pr349-review-pending-pr350-flag-next-255-path-lease.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -1057,7 +1320,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-forward-inventory-exact-main-2f3f15af-after-pr341-merge-no-open-implementation-lane.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -1073,7 +1342,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-forward-lane-inventory-pr341-ci.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -1089,7 +1364,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-forward-snapshot-fence-claude-root.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -1105,7 +1387,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-forward-wait-pr315-pr316-exact-head-ci-and-claude-review.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -1121,7 +1410,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-git-revert-default-subject-fails-the-conventional-commit-guard-use-git-revert-no-commit-and-b1f9190b6f70ec9e.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/review-episode)"
   },
   {
@@ -1173,7 +1468,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-github-pr-commented-review-reviewdecision.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -1189,7 +1490,10 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-gpt-5-6-effort-crossover-tendency-h4.md",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (no rule)"
   },
   {
@@ -1205,7 +1509,11 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-hybrid-commit-coordination-claude-codex.md",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (commit-hash)"
   },
   {
@@ -1221,7 +1529,12 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-hybrid-pr-pr-codex.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/review-episode)"
   },
   {
@@ -1275,7 +1588,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-issue-218-d2-live-vs-code-review-canonical-writer-wiring-gap.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -1291,7 +1610,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-issue-325-closed-manually-after-pr-332-merge-because-closes-keyword-did-not-auto-fire-and-f-9328f24b11436530.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -1307,7 +1633,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-issue-328-design-freeze-request-routed-to-claude-is-out-of-role-claude-is-pr-only-owner-and-0a5e22f44b5050a0.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -1323,7 +1656,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-issue-362-flag-supersedes-initial-closing-request.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -1339,7 +1678,11 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-issue328-d3a-next-design-slice-repo-local-digest-bound-verdict-evidence.md",
+    "screen:issue-number",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (review-episode/issue-number)"
   },
   {
@@ -1355,7 +1698,11 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-issue328-d3a-verdict-placement-advisor-recommends-repo-local-digest-bound-runtime.md",
+    "screen:issue-number",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (review-episode/issue-number)"
   },
   {
@@ -1371,7 +1718,10 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-l6-sub-doc-coarse-bucket-topic-doc-per-topic-slug-plan-l7-245.md",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (no rule)"
   },
   {
@@ -1387,7 +1737,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-lesson-claude-froze-a-redesign-contract-that-issue-178-explicitly-excluded-codex-flag-b1-b2-aa84ad86c8a21398.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -1403,7 +1760,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-lesson-do-not-present-an-impression-as-a-proof-boundary.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:timestamp",
+    "screen:personal-path"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -1419,7 +1782,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-lesson-pr-body-is-part-of-the-artifact-record-fixing-the-plan-without-syncing-the-descripti-4cb86b2ec22311c3.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -1435,7 +1804,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-main-plan-l7-244-draft-pr-290-deliverable-merge-confirm-add-impl-reverse-codex.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/progress)"
   },
   {
@@ -1451,7 +1826,12 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-math-max-0-nan-nan-clamp-sla.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/review-episode)"
   },
   {
@@ -1506,7 +1886,10 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-memory-triage-must-judge-body-content-and-title-based-rescue-reintroduces-episodic-state.md",
+    "screen:timestamp"
+   ],
    "reason": "merged into 印象を証明として書かない: 全称主張は実測で境界の両側を数え、指摘を受けたら同じ性質のものをrepo全体で数え直す"
   },
   {
@@ -1522,7 +1905,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-merge-follow-up-hard-gate-plan-status-confirm-merge-pr349-verdict.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress)"
   },
   {
@@ -1538,7 +1927,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-merge-ordering-never-merge-a-side-pr-while-a-mainline-pr-holds-a-fresh-receipt-at-its-curre-eda100457bdfc049.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -1554,7 +1949,12 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-monitor.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number)"
   },
   {
@@ -1642,7 +2042,12 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-p0-diagnosis-at-exact-main-7dbfa4fd-harness-db-4-41gb-is-100-live-data-from-per-turn-token-d848a79a227c4641.md",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (commit-hash/issue-number/timestamp)"
   },
   {
@@ -1658,7 +2063,11 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pack-independent-release-gap-exact-source-2f3f15af-pack-7e11ec15.md",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -1674,7 +2083,12 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pass-forward-344-fresh-opus-pre-gate-at-exact-main-7dbfa4fd-plan-l7-419-implementation-admi-935b926f95d75bd6.md",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -1726,7 +2140,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pass-merged-pr-350-measurement-only-record-at-85bc864c-merge-52c39774-redesign-stays-with-124-169-lane.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/issue-number/timestamp)"
   },
   {
@@ -1742,7 +2163,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pass-pr-354-exact-head-8fa5e7d9-pf4-delta.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -1758,7 +2186,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pass-pr-358-040a9f85-and-pr-359-25109ce9-delta.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -1774,7 +2209,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pass-pr-358-6fba5534-and-pr-359-0e9a7a89-evidence-fixed.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -1790,7 +2232,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pass-verdict-pr-348-exact-head-3aaab5d3-forward-fsm-evidence-rule-correction-claude-opus-5-931d9644771885a7.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -1806,7 +2255,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pf-3-249-waits-for-pf-2-pr-315-merge.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -1822,7 +2278,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-plan-reverse-473-r3-aggregate-review-request-exact-main.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -1838,7 +2300,11 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-plan-reverse-473-r3-codex-aggregate-evidence-exact-main.md",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (commit-hash)"
   },
   {
@@ -1854,7 +2320,12 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-plan-reverse-473-r3-codex-evidence-exact-main-427e07be.md",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (commit-hash/review-episode)"
   },
   {
@@ -1870,7 +2341,12 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-plan-reverse-473-r3-re-review-at-main-427e07be-pass-extended-to-pf-1-through-pf-3-pf-source-44f2ea2f346472ba.md",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (commit-hash)"
   },
   {
@@ -1886,7 +2362,10 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-po-2026-07-13.md",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (no rule)"
   },
   {
@@ -1938,7 +2417,11 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-po-2026-09-08-run-queued-opus-reviews-in-parallel-one-shot-marker-serialises-them-so-ut-tdd-814542cab4e2cdd3.md",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -1954,7 +2437,12 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-po-correction-claude-remains-pr-response-owner-codex-takes-non-pr-work.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/review-episode/issue-number)"
   },
   {
@@ -1970,7 +2458,12 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-po-transfer-all-active-claude-work-to-codex-stop-claude-mutations.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/review-episode/issue-number)"
   },
   {
@@ -1986,7 +2479,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-post-merge-audit-of-pr-341-at-main-2f3f15af-pass-tree-identical-to-ci-green-pr-head-a-1-to-e79a34280a065b9f.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number/timestamp)"
   },
   {
@@ -2002,7 +2502,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-post-merge-pr-341-r4-exact-main-2f3f15af-claude-final-audit.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number/timestamp)"
   },
   {
@@ -2018,7 +2525,11 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-1-2026-07-14.md",
+    "screen:issue-number",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (progress)"
   },
   {
@@ -2034,7 +2545,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-100-flag-stop-refresh-coalescing-and-durable-failure-gaps.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -2050,7 +2567,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-106-flag-ci-contract-and-l7-test-design-gap.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash)"
   },
   {
@@ -2066,7 +2589,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-285-merge-live-dispatch-post-merge-receipt-kind.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress)"
   },
   {
@@ -2082,7 +2611,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-286-closing-cross-review-flag-codex-exact-head-4634fcdb.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -2098,7 +2634,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-287-merge-method-admit-assertion-flag-correction.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress)"
   },
   {
@@ -2114,7 +2656,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-287-post-merge-custody-corrective-closing-cross-review.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress)"
   },
   {
@@ -2130,7 +2678,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-288-live-dispatch-flag-codex-exact-head-45022164.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -2146,7 +2701,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-290-blind-review-flag-oracle-provenance-uniqueness-3-codex.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -2162,7 +2724,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-290-canonical-mirror-fold-flag-correction.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -2178,7 +2747,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-290-flag-canonical-oracle-u-phover-002-codex.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -2194,7 +2770,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-290-flag-correction-canonical-oracle-provenance.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -2210,7 +2792,12 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-290-oracle-provenance-author-closing-review-request.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/review-episode/issue-number)"
   },
   {
@@ -2226,7 +2813,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-291-exact-head-356d4fa8-memory-timestamp-freshness-flag.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -2242,7 +2836,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-291-feedback-memory-identity-provenance-follow-up.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -2258,7 +2859,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-295-297-nonauthor-closing-review-request-new-exact-heads-post-298-ci-green.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -2274,7 +2882,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-295-exact-head-ccb0a969-nonauthor-closing-review-pass.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -2290,7 +2905,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-297-exact-head-fa30e32e-nonauthor-closing-review-pass.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -2306,7 +2928,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-298-exact-head-2dccca32-nonauthor-closing-review.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/timestamp)"
   },
   {
@@ -2322,7 +2951,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-298-forward-convergence-correction-review.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress)"
   },
   {
@@ -2338,7 +2973,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-298-merged-295-297-stale-ci.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/timestamp)"
   },
   {
@@ -2354,7 +2995,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-298-nonauthor-closing-review-request.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress)"
   },
   {
@@ -2370,7 +3017,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-299-claude-closing-review-flag-bl-1-exactly-1-binding-gated-by-result-ok.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -2386,7 +3040,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-299-closing-authority-clarification-claude-flag-bl-1-supersedes-same-family-pass.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -2402,7 +3063,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-299-d2-b-ci-flag-exact-head-021cb536.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress)"
   },
   {
@@ -2418,7 +3086,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-299-exact-head-38876594-b-3-ambiguous-deny-flag.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -2434,7 +3109,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-299-exact-head-41cd5a5f-deterministic-deny-receipt-flag.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -2450,7 +3132,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-299-exact-head-c1af2933-deny-receipt-binding-flag-follow-up.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -2466,7 +3155,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-299-exact-head-da6b297f-ci-failure-follow-up.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -2482,7 +3178,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-299-exact-head-da6b297f-closing-pass-with-pr-body-evidence-correction.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -2498,7 +3201,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-299-nonauthor-closing-review-request-d2-b-merge-gate-exact-head-38876594.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -2514,7 +3224,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-300-3rd-review-flag-basename-identity-scope-filter-fail-open-misattribution.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -2530,7 +3247,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-300-4th-review-flag-u-planlint-004-windows-red-ntfs-case-insensitive-fixture.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -2546,7 +3270,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-300-claude-cross-review-flag-path-form-default-lint-false-positives.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -2562,7 +3293,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-300-exact-head-38878f77-canonical-path-identity-flag-follow-up.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -2578,7 +3316,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-300-exact-head-538f078a-path-form-default-lint-flag.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -2594,7 +3339,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-300-exact-head-5a656021-delegated-claude-pass-weak-no-blocking.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -2610,7 +3362,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-300-exact-head-5a656021-windows-ci-green-closing-review.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -2626,7 +3385,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-300-exact-head-6d3b29bb-ci-complete-closing-review-request.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -2642,7 +3408,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-300-exact-head-6d3b29bb-windows-scope-filter-flag-follow-up.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -2658,7 +3431,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-300-exact-head-d47100f6-ci-green.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -2674,7 +3454,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-300-exact-head-sha-correction-38878f7731b6-canonical-review-request.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -2690,7 +3476,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-300-issue-296-exact-head-plan-lint-governance.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -2706,7 +3498,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-300-re-review-flag-2nd-windows-path-form-governance-silent-fail-open.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash)"
   },
   {
@@ -2722,7 +3520,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-301-exact-head-4dc5179-verification-correction-closing-pass.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -2738,7 +3543,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-301-exact-head-4dc5179a-flag.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -2754,7 +3566,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-301-nonauthor-closing-review-request-plan-l7-462-cross-agent-retake.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -2770,7 +3589,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-301-verification-command-correction-frontmatter-test-path.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -2786,7 +3612,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-302-d2-d-freeze-flag-exact-head-302e8dcd.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress)"
   },
   {
@@ -2802,7 +3635,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-302-delta-flag-2-exact-head-b52d77fc.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -2818,7 +3658,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-302-delta-flag-3-exact-head-2edb621e.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -2834,7 +3681,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-302-exact-head-2af03ba2-d2-d-freeze-cross-review-flag.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress)"
   },
   {
@@ -2850,7 +3704,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-302-exact-head-2edb621e-closing-delta-pass-blocking-0.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -2866,7 +3727,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-302-exact-head-302e8dcd-closing-delta-review-flag.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/timestamp)"
   },
   {
@@ -2882,7 +3750,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-302-exact-head-b52d77fc-closing-delta-review-flag-blocking-2.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -2898,7 +3773,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-302-review-comment-url.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/timestamp)"
   },
   {
@@ -2914,7 +3795,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-306-claude-closing-review-flag-regex-literal-lexer-swallows-labels.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -2930,7 +3817,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-306-delta-re-review-pass-blocking-0-with-merge-preconditions.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash)"
   },
   {
@@ -2946,7 +3839,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-307-308-309-review-requests-pf-1-fix-delta-pf2-closing-s1-freeze.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -2962,7 +3861,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-309-exact-head-ce951518-non-author-re-review-flag-blocking-3.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/issue-number)"
   },
   {
@@ -2978,7 +3884,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-309-exact-head-e0de8d49-delta-review-pass.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -2994,7 +3907,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-309-flag-exact-head-e0de8d49-delta.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -3010,7 +3930,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-309-flag-workflow-suggest-contract-and-ownership-gaps.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number/timestamp)"
   },
   {
@@ -3026,7 +3953,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-309-renumber-plan-l6-100-pr-311-l6-99-311-doc-only-closing-review.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -3042,7 +3976,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-309-s1-freeze-exact-head-ce951518.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -3058,7 +3999,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-309-s1-freeze-exact-head-e0de8d49-merge.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/timestamp)"
   },
   {
@@ -3074,7 +4022,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-309-s1-freeze-flag-exact-head-b9c3bb75.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -3090,7 +4045,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-310-closing-verdict-flag-blocking-0-c313b0fe-pin-follow-up-codex.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -3106,7 +4068,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-310-exact-head-e064a660-ci-green-claude-closing-delta-review.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -3122,7 +4091,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-310-exact-head-e064a660-claude-closing-delta-pass-weak.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -3138,7 +4114,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-310-exact-head-e064a660-cli-envelope-projection-regression-fixed.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -3154,7 +4137,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-311-doc-only-plan-confirm-claude-closing-review-request.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -3170,7 +4160,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-311-exact-head-c0362028af2f.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -3186,7 +4183,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-311-exact-head-f364e48c-ci-green-claude-closing-review-wake.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -3202,7 +4206,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-311-pass-weak-blocking-0-merge-f364e48c-pr-302-codex-pass-merge-2edb621e.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -3218,7 +4229,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-312-closing-verdict-flag-blocking-3-21e3efa8-version-token.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -3234,7 +4252,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-312-control-manifest-explicit-exclusion-new-exact-head-38e00423-claude-delta-review.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -3250,7 +4275,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-312-delta-verdict-flag-blocking-1-bf499ea8-control-manifest.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -3266,7 +4298,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-312-exact-head-21e3efa8-claude-non-author-pair-freeze-review-request.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -3282,7 +4321,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-312-exact-head-38e00423-ci-green-claude-closing-delta-review.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -3298,7 +4344,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-312-flag-remediation-new-exact-head-bf499ea8-claude-delta-review.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -3314,7 +4367,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-313-codex-claude-worker-worktree-non-author-closing-reviewer.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -3330,7 +4389,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-313-d2-d-pass-blocking-0-exact-head-49a01579-merge.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/timestamp)"
   },
   {
@@ -3346,7 +4412,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-313-exact-head-49a01579-b-1-remediation-claude-delta-review.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -3362,7 +4435,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-313-exact-head-7e00ecc5-all-ci-green-claude-closing-review-ready.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -3378,7 +4458,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-313-exact-head-a21ce820-ci-orphan-deliverables-blocking-follow-up.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -3394,7 +4481,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-313-exact-head-a21ce820-d2-d-cross-review-flag-blocking-3.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -3410,7 +4504,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-313-flag-blocking-1-7e00ecc5-maxbuffer-0.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -3426,7 +4526,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-313-new-exact-head-7e00ecc5-formatting-only-ci-remediation-claude-closing-review.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -3442,7 +4549,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-313-new-exact-head-7e1114f9-d2-d-blocking-remediation-claude-delta-review.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -3458,7 +4572,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-313-remediation-ownership-moves-to-codex-no-overlap.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -3474,7 +4594,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-315-2988fc3b-delta-claude-ci.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -3490,7 +4617,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-315-canonical-remediation-exact-head-aa38cc67.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -3506,7 +4640,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-315-ci-evidence-digest-remediation-exact-head-52be26f2.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -3522,7 +4663,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-315-ec02fc12-closing-review-claude-ci-green.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -3538,7 +4686,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-315-ec02fc12-flag-blocking-1-validsymlink-backslash-target.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/personal-path)"
   },
   {
@@ -3554,7 +4709,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-315-exact-head-aa38cc67-all-ci-green-claude-closing.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -3570,7 +4732,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-315-exact-head-ec02fc12-all-ci-green-claude-closing-ready.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -3586,7 +4755,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-315-exact-head-ec02fc12-claude-closing-review-request.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -3602,7 +4778,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-315-flag-remediation-exact-head-2988fc3b-claude-delta-review.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -3618,7 +4801,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-315-pf-2-materializer-pass-blocking-0-exact-head-aa38cc67-merge.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/timestamp)"
   },
   {
@@ -3634,7 +4824,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-316-315-ci-green-reviewer-verdict.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -3650,7 +4847,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-316-62cfab64-d3a-freeze-review-claude-ci-green.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -3666,7 +4870,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-316-71511b1f-flag-blocking-2-live-attestation-wake.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress)"
   },
   {
@@ -3682,7 +4893,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-316-a5bc6b82-delta-claude-ci.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -3698,7 +4916,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-316-ci-remediation-exact-head-71511b1f-claude-delta-review.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -3714,7 +4939,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-316-d3a-freeze-pass-blocking-0-exact-head-a5bc6b82-merge.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/timestamp)"
   },
   {
@@ -3730,7 +4962,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-316-exact-a5bc6b82-all-ci-green-closing-verdict-required.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -3746,7 +4985,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-316-exact-head-62cfab64-claude-review.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -3762,7 +5008,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-316-exact-head-71511b1f-all-ci-green-claude-closing.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -3778,7 +5031,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-316-flag-remediation-exact-head-a5bc6b82-claude-delta-review.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -3794,7 +5054,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-317-51a373e0-flag-blocking-1-partial-clone-promisor-lazy-fetch-network-0.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -3810,7 +5077,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-317-51a373e0-pf-3-freeze-closing-review-claude-ci.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -3826,7 +5100,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-317-exact-51a373e0-all-ci-green-closing-verdict-required.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -3842,7 +5123,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-317-exact-head-348ad3da-closing-delta-review-pass-merged-140de959.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/timestamp)"
   },
   {
@@ -3858,7 +5146,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-317-merge-path-wrapper-receipt-0-gh-merge-d2-d.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/timestamp)"
   },
   {
@@ -3874,7 +5169,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-317-pf-3-flag-correction-exact-head-348ad3da.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -3890,7 +5192,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-317-pf-3-pair-freeze-claude-closing-review-exact-head-51a373e0.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -3906,7 +5215,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-318-8ff56bc4-d3a-inbox-schema-freeze-closing-review-claude-ci.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -3922,7 +5238,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-318-claude-blind-review-pass-exact-head-8ff56bc4-merge-ready.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -3938,7 +5261,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-318-d3a-schema-follow-up-claude-review-exact-head-8ff56bc4.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -3954,7 +5284,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-318-exact-8ff56bc4-all-ci-green-closing-verdict-required.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -3970,7 +5307,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-318-exact-head-8ff56bc4-closing-review-pass-merged-ca9d231b.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/timestamp)"
   },
   {
@@ -3986,7 +5330,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-318-exact-head-pass-ci-green-immediate-merge-request.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -4002,7 +5353,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-318-merge-path-policy-violation.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -4018,7 +5376,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-319-320-closing-review-claude-non-author-exact-head-7529419a-bdda726a.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -4070,7 +5435,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-319-authorship-settled-claude-authored-dbf59e1b-to-0a6fd103-codex-must-review.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -4086,7 +5457,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-319-blocking-verdict-literal-path-delegated-reviewer.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -4102,7 +5480,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-319-bootstrap-merge-pr-head-live-projection.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -4118,7 +5502,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-319-closing-review-flag-blocking-3-exact-head-7529419a-b-1-cli-port-oracle-exact-head-mutation.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/personal-path)"
   },
   {
@@ -4134,7 +5525,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-319-closing-review-pass-blocking-0-at-exact-head-0a6fd103-partial-independence-disclosed.md",
+    "screen:pr-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -4150,7 +5547,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-319-codex-review-timeout-root-cause-is-main-delegation-lacking-literal-verdict-path-bootstrap-circularity.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/timestamp)"
   },
   {
@@ -4166,7 +5569,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-319-delta-closing-review-claude-non-author-exact-head-dbf59e1b.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -4182,7 +5592,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-319-delta-closing-review-pass-blocking-0-exact-head-dbf59e1b-b-1-b-2-b-3-319-wrapper-merge.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -4198,7 +5615,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-319-escalating-to-po-after-five-reissues-zero-codex-verdict-advisor-condition-met.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -4214,7 +5637,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-319-exact-head-0a6fd103-canonical-self-bootstrap-follow-up.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -4230,7 +5660,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-319-exact-head-0a6fd103-claude-closing-review-request-canonical-wake.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -4246,7 +5683,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-319-exact-head-0a6fd103-claude-closing-review-request-manual-reissue.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -4262,7 +5706,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-319-exact-head-0a6fd103-claude-closing-review-request-non-author.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -4278,7 +5729,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-319-exact-head-0a6fd103-claude-closing-review-request-reissue.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -4294,7 +5752,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-319-exact-head-0a6fd103-claude-closing-review-request.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -4310,7 +5775,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-319-exact-head-0a6fd103-codex-non-author-delta-review-pass.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -4326,7 +5798,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-319-exact-head-0a6fd103-codex-non-author-review-timeout-and-routing-correction.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -4342,7 +5821,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-319-exact-head-514d8efd-ci-red-3-3-memory-gate-blocking-1.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/issue-number)"
   },
   {
@@ -4358,7 +5844,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-319-exact-head-dbf59e1b-all-ci-green-delta-review.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -4374,7 +5867,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-319-exact-head-root-workspace-closing-verdict.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -4390,7 +5890,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-319-flag-blocking-1-inbox-filename-truncation-drops-operationid-retry-dispatch-fails.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -4406,7 +5913,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-319-merge-blocked-on-missing-receipt-codex-delegated-review-must-complete-to-write-it.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -4422,7 +5935,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-319-merged-main-11adcea1-d3a-wired-bootstrap-circularity-resolved-and-my-wrapper-claim-corrected.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -4438,7 +5957,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-319-review-request-declined-family-separation-and-pr-320-pass-reaffirmed-at-bdda726a.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -4454,7 +5980,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-319-self-bootstrap-delegated-review-pass-verdict-file-path-receipt-0-merge-review-verdict-contract-env.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -4470,7 +6003,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-319-self-bootstrap-exact-head-0a6fd103-follow-up.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -4486,7 +6026,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-319-verdict-path-exact-head-0a6fd103-ci-3-3-success-u-rvatt-029-behavioral-codex-delta-review.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress)"
   },
   {
@@ -4502,7 +6049,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-320-closing-pass-blocking-0-wrapper-merge-bun-windows-d2-b-writereceipt-eexist-merge.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -4518,7 +6071,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-320-conflict-resolved-by-merge-commit-35b808c8-claude-authored-resolution-needs-codex-delta-review.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -4534,7 +6093,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-320-exact-head-35b808c8-codex-delta-review-pass.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -4550,7 +6116,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-320-exact-head-all-ci-green-closing-verdict.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -4566,7 +6139,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-320-exact-head-bdda726a-claude-closing-review-request.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -4582,7 +6162,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-320-merged-10b7b3c7-wrapper-path-blocked-by-new-d3a-defect-issue-328.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -4598,7 +6184,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-320-pf-3-root-workspace-closing-review.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -4614,7 +6207,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-320-verdict-already-delivered-2026-08-14-not-unresolved-reissue-loop-needs-stopping.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number/timestamp)"
   },
   {
@@ -4630,7 +6230,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-320-wrapper-deny-b-bun-d2-b-writereceipt-node-receipt.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -4646,7 +6252,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-323-closing-review-cancellation-superseded-by-324.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -4662,7 +6275,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-323-closing-review-flag-blocking-1-exact-head-e58c63f4-u-rvmg-024-source-text-assertion-23bfccb0f98fe3ca.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -4678,7 +6298,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-323-exact-head-e58c63f4-all-ci-green-closing-review.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -4694,7 +6321,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-324-62a722c8-delta-review-table-fixed-blocking-4-remain.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -4710,7 +6344,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-324-aaf5fc7d-oracle-declaration-still-invalid.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash)"
   },
   {
@@ -4726,7 +6366,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-324-claude-closing-review-adapter-doc-bun-rule-drift-ci-3-3-green.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -4778,7 +6424,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-324-d17e74fb-full-re-measurement-completes-delta-pass-four-axes-verified.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -4794,7 +6446,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-324-d7b51a97-delta-flag-blocking-1-bun-fail-open.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number/personal-path)"
   },
   {
@@ -4810,7 +6469,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-324-delta-review-blocking-2-doctor-bun-exact-head-d7b51a97-ci-3-3-success.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -4826,7 +6492,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-324-delta-review-blocking-4-exact-head-61221afe-ci-3-3-success.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -4842,7 +6515,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-324-exact-head-2431ce64-biome-lint-only-failure-doctor-and-full-vitest-green.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -4858,7 +6538,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-324-exact-head-61221afe-delta-flag-blocking-2.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -4874,7 +6561,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-324-exact-head-643e49fb-bun-execution-form-coverage.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -4890,7 +6584,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-324-exact-head-d17e74fb-claude-closing-review-request.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -4906,7 +6607,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-324-exact-head-d17e74fb-closing-delta-review-pass-blocking-0.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -4922,7 +6630,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-324-local-aaf5fc7d-blind-review-flag-blocking-4.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -4938,7 +6653,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-324-local-commit-2431ce64-green-push-remote-643e49fb-ci-red.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -4954,7 +6675,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-324-merged-main-b15084c1-and-pr-320-now-needs-rebase-plus-issue-326-filed-for-remaining-bun-surfaces.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -4970,7 +6697,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-324-oracle-62a722c8-remote-head-ci-3-3-green-author-family-closing-review.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -4986,7 +6719,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-324-plan-l7-462-completed-draft-plan-l7-488-flag-blocking-4-exact-head-007f9db1.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -5002,7 +6742,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-324-remote-head-643e49fb-d7b51a97-superseded-6-3-codex-in-flight.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -5018,7 +6764,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-324-sha-head-643e49fbf69d-ci-3-3-failure-u-rdrift-005-008-4.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -5034,7 +6787,12 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-324-use-existing-plan-l7-462-for-trace-and-decision.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/issue-number)"
   },
   {
@@ -5050,7 +6808,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-330-closing-review-pass-at-exact-head-f75798ab-blocking-0-advisory-2.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -5066,7 +6831,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-330-flag-blocking-1-completed-after-tests-green-at-is-a-violation-reason-code-not-a-schema-field.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/timestamp)"
   },
   {
@@ -5082,7 +6854,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-330-head-churn-five-pushes-in-30-minutes-review-deferred-until-stable-head-with-green-ci.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -5098,7 +6876,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-330-merged-main-1d68a10f-pf-4-landed-and-pf-5-251-pair-freeze-unlocked.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/issue-number)"
   },
   {
@@ -5114,7 +6899,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-332-closing-review-flag-blocking-2-exact-head-b2b69a0a-draft-downgrade-and-309-of-373-identity-drift.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -5130,7 +6922,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-332-delta-review-at-bd2760a0-b-2-fixed-legacy-path-reuse-b-1-draft-status-still-blocks-merge.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -5146,7 +6945,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-332-fifth-review-flag-new-oracle-id-added-to-shrink-only-citation-debt-baseline-instead-d3d563a40d10ee99.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress)"
   },
   {
@@ -5162,7 +6968,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-332-fourth-review-flag-ci-red-root-cause-green-command-completed-at-later-than-corrected-tests-green-at.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress)"
   },
   {
@@ -5178,7 +6991,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-332-merged-main-293663c9-memory-collision-safety-landed-after-six-review-rounds-with-fol-2bac09f2b8f474f1.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/issue-number)"
   },
   {
@@ -5194,7 +7014,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-332-sixth-review-flag-stands-with-measured-remediation-declare-oracle-in-test-design-ins-5a7b54a4a269962e.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress)"
   },
   {
@@ -5210,7 +7037,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-332-third-review-at-70c234d8-code-pass-but-review-evidence-records-pass-verdict-for-a-he-ca1e587fc28b924c.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -5226,7 +7060,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-333-closing-review-flag-exact-head-84a750a4-pf5-pair-freeze-predicate-c-requires-resolve-0c4eff4e6b5f06c7.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -5242,7 +7083,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-333-exact-head-15e76078-for-re-review.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -5258,7 +7106,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-333-merged-main-aaf348df-pf5-pair-freeze-predicate-c-rewritten-as-static-mapping.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress)"
   },
   {
@@ -5274,7 +7129,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-334-closing-review-flag-exact-head-4c226c1e-u-relman-018-oracle-claims-3-identity-mutati-aae9d08e51319842.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -5290,7 +7152,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-334-exact-head-7fba4a05-for-re-review.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -5306,7 +7175,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-334-merged-main-2a86771f-and-correction-snapshot-runner-tests-head-so-working-tree-mutat-ba74543d08548397.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/issue-number)"
   },
   {
@@ -5322,7 +7198,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-335-acfff279-verified-locally-5-of-5-green-and-b-1-mutation-survivor-reproduced-after-pa-828a41611d1ad321.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -5338,7 +7221,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-335-closing-verdict-at-exact-head-acfff279-is-flag-blocking-2-already-returned-three-tim-a31c47fd10965424.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -5354,7 +7244,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-335-exact-head-4d0b52d6-ci-now-green-closing-verdict-pass-confirmed-merge-withheld-becau-9a039fd68d7c60e2.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -5370,7 +7267,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-335-exact-head-4d0b52d6-draft-unblock-and-wrapper-merge-request.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -5386,7 +7290,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-335-exact-head-4d0b52d6-pass-blocking-0-both-blockings-fixed-and-verified-by-killed-muta-7cd11c3877d5909b.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -5402,7 +7313,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-335-fifth-duplicate-request-at-same-exact-head-4d0b52d6-standing-pass-restated-no-re-review.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -5418,7 +7336,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-335-merged-at-exact-head-4d0b52d6-under-po-approval-merge-wrapper-does-not-exist-so-gh-p-c0b5b96bf3a2dd4e.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -5434,7 +7359,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-335-pf5-implementation-closing-review-flag-blocking-2-predicate-c-untested-mutation-surv-9c2643d13730f914.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -5450,7 +7382,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-335-review-applies-to-exact-head-acfff279-after-behavior-invariant-parameter-object-refa-601db7c280615c67.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -5466,7 +7405,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-336-closing-review-at-65bb3c21-pass-blocking-0-audit-sink-moved-to-git-common-dir-outsid-a9289ecd1e0718ab.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -5482,7 +7428,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-336-d3a-design-freeze-closing-review-flag-blocking-3-digest-preimage-undefined-gitignore-05d92fd39697dc3f.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -5498,7 +7451,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-336-exact-head-779aa93b-ci-fully-green-but-flag-blocking-3-stands-because-ci-does-not-in-34901f932ebaeb97.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -5514,7 +7474,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-336-merged-at-exact-head-65bb3c21-closing-the-d3a-custody-freeze-open-pr-count-reached-zero-on-2026-08-19.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/issue-number/timestamp)"
   },
   {
@@ -5530,7 +7497,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-336-re-review-at-93ca017f-three-blockings-fixed-grounded-in-existing-canonical-code-but-15f8c1e8c6863c46.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -5546,7 +7520,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-336-re-review-at-ba26a580-audit-sink-outside-fence-exemption-same-model-retry-unauthoriz-e25499f54a46bfb1.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -5562,7 +7543,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-336-review-at-5f04b58d-audit-sink-moved-inside-cleanup-target-tree-empty-receipts-dir-ma-357da2f029718c33.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -5578,7 +7566,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-337-closing-review-at-a274247d-pass-blocking-0-producer-fixed-to-session-log-ts-and-side-1c71e0312ebf398e.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -5594,7 +7589,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-337-delta-review-at-5ba4d2df-aggregation-and-cost-blockings-resolved-session-coordinator-afe43a95b999eb05.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -5610,7 +7612,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-337-merged-at-exact-head-a274247d-snapshot-fence-producer-frozen-to-session-log-extensio-63c911aaf097c13b.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/issue-number/timestamp)"
   },
   {
@@ -5626,7 +7635,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-337-re-review-at-63012368-inventory-digest-production-cost-115s-vs-5s-hook-budget-produc-071beedb22cfd7cb.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -5642,7 +7658,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-337-re-review-at-9b7099ea-duplicate-artifact-ownership-gate-fires-and-ac-1-unsatisfiable-8af72dd0db904376.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -5658,7 +7681,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-337-recovery-11-snapshot-fence-pair-freeze-flag-blocking-3-and-review-request-exact-head-15edae8a4e6d17a3.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -5674,7 +7704,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-338-at-2028ab73-ci-red-root-cause-is-unpinned-headsnapshot-callsite-count-and-windows-ci-67ae856f56d8ff00.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress)"
   },
   {
@@ -5690,7 +7727,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-338-closing-review-at-7850143b-duplicate-artifact-ownership-ci-red-plus-select-order-cha-1895ee0f79c68a21.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/issue-number)"
   },
   {
@@ -5706,7 +7750,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-338-closing-review-at-8f0f41e6-pass-blocking-0-doc-lane-executes-4-not-102-merge-pending-ci-green.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -5758,7 +7809,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-338-exact-head-2028ab73-ci-red-remediation-handoff.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -5774,7 +7832,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-338-merged-at-exact-head-8f0f41e6-closing-issue-314-verdict-must-go-to-both-pr-comment-a-f34961ff14855f9d.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -5790,7 +7855,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-339-delta-at-1cf0b4cc-oracle-orphans-fixed-but-generates-still-declares-11-pre-owned-pat-ad17149a9fb73d2f.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -5806,7 +7878,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-339-merged-at-exact-head-d60ea682-d3a-custody-implementation-verified-1-1-against-the-fr-ff6d8fa3ce35b49d.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/issue-number/timestamp)"
   },
   {
@@ -5822,7 +7901,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-339-review-at-db0b36bbebc3-flag-blocking-1-generates-declares-11-pre-owned-paths-only-2-ed3765ca68dfed32.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -5838,7 +7924,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-339-second-blocking-u-rvatt-033-and-u-rvatt-036-promoted-to-test-design-without-any-test-363e30b19ce3292c.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -5854,7 +7947,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-340-claude-non-author-closing-review-request-exact-head.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -5870,7 +7969,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-340-codex-cross-review-pass-weak-exact-head.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -5886,7 +7992,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-340-review-request-claude-authored-plan-l7-463-ci-measurement-addendum-needs-codex-non-a-8c15d58aaff29e7e.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -5902,7 +8015,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-341-ci-correction-exact-head-e549cd98-claude-delta-review.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -5918,7 +8038,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-341-delta-closing-review-at-exact-head-7fbe432a-content-pass-only-the-r4-review-evidence-block-remains.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number/timestamp)"
   },
   {
@@ -5934,7 +8061,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-341-exact-e549cd98-source-doc-lane-doctor-green.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -5950,7 +8083,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-341-merged-at-exact-head-19d26a47-as-2f3f15af-open-prs-now-0-a-2-contract-ambiguity-carr-bf31407b7b44590f.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/issue-number/timestamp)"
   },
   {
@@ -5966,7 +8106,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-341-r4-closing-evidence-exact-head-19d26a47-re-review.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/timestamp)"
   },
   {
@@ -5982,7 +8129,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-341-r4-closing-review-at-exact-head-54095c49-flag-blocking-1-review-evidence-attributes-b595bd6b2f921cc4.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/timestamp)"
   },
   {
@@ -5998,7 +8152,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-341-r4-exact-head-54095c49-ci-correction-and-claude-closing-review.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -6014,7 +8175,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-341-r4-exact-head-e15c0c93-root-workspace-claude-closing-review.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -6030,7 +8198,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-341-r4-flag-1-correction-exact-head-7fbe432a5-claude-re-review.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -6046,7 +8221,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-343-closing-review-at-0a75fada-flag-duplicate-fsm-candidate-ledger-caused-by-my-own-pre-6e36d6ea9b4f7c06.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -6062,7 +8244,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-343-merged-at-exact-head-4002f208-as-f4c1bac2-fsm-candidate-duplication-resolved-by-rena-54b52187b551236b.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/issue-number/timestamp)"
   },
   {
@@ -6078,7 +8267,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-344-forward-fsm-exact-main-opus-pre-gate-request.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -6094,7 +8290,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-346-closing-review-at-91f3ae86-flag-blocking-2-fsm-state-has-no-defined-relation-to-fron-78010c5e54969acd.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -6110,7 +8313,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-346-merged-at-exact-head-875312d3-as-665e3cba-fsm-contract-tables-materialized-ledger-vs-030098a38a4eb98e.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -6126,7 +8336,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-348-merged-by-claude-origin-main-7dbfa4fd-post-merge-ci-green-344-fresh-pre-gate-base-fixed.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -6142,7 +8359,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-348-pass-exact-head-3aaab5d3-merge-request-and-344-gate-handoff.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -6158,7 +8382,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-348-root-workspace-ci-green-exact-head-3aaab5d3-review-wake.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -6174,7 +8405,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-350-codex-cross-review-flag-exact-head-47ad591b.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -6190,7 +8428,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-352-sol-closing-flag-exact-head-04528528.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/personal-path)"
   },
   {
@@ -6206,7 +8451,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-355-issue-353-filename-bound-review-request.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -6222,7 +8474,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-355-merged-and-memoryfilenamefor-validation-follow-up.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/issue-number)"
   },
   {
@@ -6238,7 +8497,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-361-claude-claude-non-author-review.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -6254,7 +8520,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-361-codex-non-author-flag-exact-head-8d1dc6be.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -6270,7 +8543,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-361-exact-head-9f2089d-claude-non-author-closing-review-request.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -6286,7 +8566,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-361-exact-head-9f2089d-codex-non-author-closing-pass.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -6302,7 +8589,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-361-flag-remediated-at-exact-head-2bb4e6d5.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -6318,7 +8612,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-365-exact-head-0449c711-opus-pass-and-ci-green-merge-handoff.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -6334,7 +8635,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-365-merge-now-exact-head-0449c711-no-evidence-commit-required.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -6350,7 +8658,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-365-merged-with-plan-l6-102-still-draft-and-issue-360-closed.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/issue-number)"
   },
   {
@@ -6366,7 +8681,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-366-codex-non-author-pass-exact-head-96079e62.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -6382,7 +8704,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-368-delta-review-at-6d6c3b21-flag-blocking-1-reviewrevision-splice-hole.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -6398,7 +8727,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-368-delta-review-at-f86a73fe-flag-blocking-1-imp-077-completed-after-tests-green-at.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -6414,7 +8750,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-368-exact-head-7a9f9afe-root-workspace-claude-closing-review.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -6430,7 +8773,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-368-exact-head-ac755bb-claude-flag-evidence-nesting.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number/timestamp)"
   },
   {
@@ -6446,7 +8796,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-368-exact-head-ac755bb0-claude-closing-re-review.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -6462,7 +8819,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-368-exact-head-ac755bb0-claude-closing-review.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -6478,7 +8842,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-368-pass-4721ffd6-pr-370-pass-6eabc349-mutant-probe-oracle.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -6494,7 +8865,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-368-review-at-7a9f9afe-source-fix-correct-but-the-added-regression-does-not-fail-without-it.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -6510,7 +8888,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-369-exact-head-5816fc0-all-ci-green-claude-closing-review.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -6526,7 +8911,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-369-exact-head-5816fc0-claude-non-author-closing-review-request.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -6542,7 +8934,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-369-exact-head-5816fc0-codex-non-author-closing-pass.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/issue-number)"
   },
   {
@@ -6558,7 +8957,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-369-exact-head-5816fc0-codex-pass-record-for-author-custody.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -6574,7 +8980,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-369-exact-head-7ff171a-codex-flag-immediate-base-landing-gate.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -6590,7 +9003,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-370-exact-head-161135f-claude-flag-session-presence-remediation.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -6606,7 +9026,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-370-exact-head-161135f2-claude-closing-review.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -6622,7 +9049,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-370-exact-head-6eabc349-all-ci-green-claude-closing-review.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -6638,7 +9072,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-370-exact-head-6eabc349-claude-closing-pass.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -6654,7 +9095,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-370-review-at-161135f2-presence-active-contract-vs-impl-vs-oracle.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -6670,7 +9118,12 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-claude-po-2026-07-10.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number)"
   },
   {
@@ -6722,7 +9175,12 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-family--5909b773ed48.md",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (review-episode/personal-path)"
   },
   {
@@ -6774,7 +9232,12 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-merge-cross-family-review-2026-07-14.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number)"
   },
   {
@@ -6826,7 +9289,12 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr-pr-codex-po-2026-07-16.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number)"
   },
   {
@@ -6842,7 +9310,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr306-doc-only-confirm-head-d68a0958-claude-delta-re-review-request.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -6858,7 +9333,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr306-exact-head-0e3e6229-forward-spine-correction-claude-delta-review.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress)"
   },
   {
@@ -6874,7 +9356,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr306-exact-head-11c994eb-ci-green-claude-closing-rereview-ready.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -6890,7 +9379,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr306-exact-head-11c994eb-claude-closing-re-review-request.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -6906,7 +9402,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr306-exact-head-5e47ac23-claude-closing-review-request-corrected.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -6922,7 +9425,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr306-exact-head-69fbb4fa-claude-closing-review-request.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -6938,7 +9448,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr306-exact-head-e5fe3a1e-claude-closing-review-request.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -6954,7 +9471,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr310-exact-head-c313b0fe-ci-green-claude-closing-review-ready.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -6970,7 +9494,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr310-exact-head-c313b0fe-l6-completion-remediation-claude-review.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -6986,7 +9517,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr310-exact-head-c313b0fe-non-author-closing-review-pass-weak.md",
+    "screen:pr-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -7002,7 +9539,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr310-exact-head-d2d30d1b-claude-closing-review-request.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -7018,7 +9562,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr310-exact-head-de07b9a9-ci-remediation-claude-closing-review.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -7034,7 +9585,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr332-exact-head-0e7e3c01-plan-confirmed-closing-review-request.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -7050,7 +9608,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr332-exact-head-70c234d8-ci-evidence-correction-delta-review.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -7066,7 +9631,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr332-exact-head-a9d40657-non-author-closing-review.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -7082,7 +9654,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr334-exact-head-7fba4a05-pf4-identity-oracle-delta-review.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -7098,7 +9677,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr335-exact-head-4d0b52d6-claude-delta-closing-review.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/timestamp)"
   },
   {
@@ -7114,7 +9700,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr335-exact-head-4d0b52d6-pf5-blocking-correction-and-a2-binding-review.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -7130,7 +9723,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr335-exact-head-982a4294-pf5-implementation-non-author-closing-review.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -7146,7 +9746,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr335-exact-head-acfff279-all-ci-green-non-author-closing-review.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -7162,7 +9769,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr335-exact-head-acfff279-pf5-max-source-params-correction-review.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -7178,7 +9792,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr335-exact-head-b99b0cc1-pf5-convergence-correction-non-author-review.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -7194,7 +9815,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr336-exact-head-779aa93b-ci-green-closing-review.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -7210,7 +9838,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr336-exact-head-779aa93b-d3a-design-freeze-claude-cross-review.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -7226,7 +9861,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr336-flag-remediation-exact-head-93ca017f-claude-re-review.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -7242,7 +9884,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr337-exact-head-d8c718d0-snapshot-fence-pair-freeze-claude-review.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -7258,7 +9907,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr337-flag-remediation-exact-head-9b7099ea-claude-re-review.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -7274,7 +9930,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr350-exact-head-85bc864c-codex-non-author-pass.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -7290,7 +9953,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr351-pf3-closing-review-flag-advisory-blocking-eager-collector-ci-exit-timeout.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -7306,7 +9976,12 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr63-blind-cross-review-flag-reentry-certificate-e8-e11-descent-codex.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number)"
   },
   {
@@ -7322,7 +9997,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-pr63-rereview-flag-l6-84-certificate-evidence-binding-codex.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash)"
   },
   {
@@ -7416,7 +10097,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-re-issue-pr-319-exact-head-0a6fd103-closing-review.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -7432,7 +10120,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-re-issue-pr-320-exact-head-bdda726a-closing-review.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -7448,7 +10143,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-rebase-byte-review-main-id--55a75e7a0052.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -7464,7 +10166,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-reissue-pr-319-exact-head-0a6fd103-claude-closing-review-request-non-author.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -7480,7 +10189,12 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-review-reject-then-fix-is-forbidden.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/review-episode)"
   },
   {
@@ -7496,7 +10210,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-review-request-to-codex-pr-350-token-run-projection-granularity-contract-freeze-claude-auth-9178c38f10fc9a4f.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -7512,7 +10233,12 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-shared-memory-data-loss-observed-2026-08-17-same-title-re-add-destroyed-three-review-requests.md",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (commit-hash/review-episode/issue-number)"
   },
   {
@@ -7528,7 +10254,10 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-snapshot-runner-commit-head-commit.md",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (no rule)"
   },
   {
@@ -7544,7 +10273,10 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-spec-driven-is-the-base-principle-coverage-substance.md",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (no rule)"
   },
   {
@@ -7560,7 +10292,10 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-spec-ir-detector-scope-evidence-doc-relation-plan-l7-429.md",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (no rule)"
   },
   {
@@ -7576,7 +10311,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-squash-merge-makes-anchor-unreachable-from-main.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash)"
   },
   {
@@ -7592,7 +10333,10 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-stale-index-lock-po-2026-07-16.md",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (no rule)"
   },
   {
@@ -7608,7 +10352,10 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-standing-directive-round3-plan-prioritization-and-blocking-dependencies.md",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (no rule)"
   },
   {
@@ -7624,7 +10371,10 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-standing-directive-vmodel-gap-round-2-plan-l6-54-58.md",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (no rule)"
   },
   {
@@ -7640,7 +10390,11 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-standing-directive-vmodel-gap-round-3-filed-plan-l4-20-21-l5-14-l6-59-66-reverse-395.md",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (commit-hash)"
   },
   {
@@ -7656,7 +10410,10 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-standing-directive-vmodel-upgrade-gaps-filed-plan-l6-50-53.md",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (review-episode)"
   },
   {
@@ -7672,7 +10429,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-strict-custody-verdict-file-harness-envelope-is-mandatory-and-any-line-starting-with-a-lowe-ec97fbf9e79a32d1.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/review-episode)"
   },
   {
@@ -7688,7 +10451,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-supersede-r3-review-exact-main-39846e9.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -7704,7 +10473,11 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-supersede-r3-review-exact-main-427e07be.md",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (commit-hash/review-episode)"
   },
   {
@@ -7720,7 +10493,12 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-supersede-u-1-task-exact-main-427e07be.md",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (commit-hash/review-episode/issue-number)"
   },
   {
@@ -7736,7 +10514,10 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-task-commit-pr-po-2026-07-16.md",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (no rule)"
   },
   {
@@ -7752,7 +10533,10 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-test-opid-verify.md",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (no rule)"
   },
   {
@@ -7768,7 +10552,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-triage-229-premise-partially-corrected-spawn-agent-is-guarded-not-deferred-real-gaps-are-wa-00260e7faa9243e7.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -7784,7 +10574,11 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-u-1-contract-correction-stop-refresh-unfiltered-on-disk-path-and-plan-l7-454-governance.md",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (commit-hash/review-episode)"
   },
   {
@@ -7800,7 +10594,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-urgent-forward-344-fresh-opus-pre-gate-exact-main-7dbfa4fd.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (commit-hash/review-episode/progress)"
   },
   {
@@ -7852,7 +10652,10 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-verification-baseline-head-not-shared-tree.md",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (review-episode)"
   },
   {
@@ -7940,7 +10743,12 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-vitest-snapshot-runner-windows-workspace-fence-harness-db-hash.md",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (commit-hash/issue-number)"
   },
   {
@@ -7956,7 +10764,10 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-windows-junction-inside-worktree-destroys-shared-node-modules.md",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (review-episode)"
   },
   {
@@ -7972,7 +10783,10 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-windows-junction-into-a-temp-worktree-turned-worktree-removal-into-deletion-of-the-shared-node-modules.md",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (no rule)"
   },
   {
@@ -7988,7 +10802,10 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-windows-worktree-node-modules-junction-is-deleted-through-by-git-worktree-remove-force.md",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (no rule)"
   },
   {
@@ -8004,7 +10821,11 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-work-guard-marker-cross-session-race-powershell-tool-not-session-logged-2026-07-17-audit.md",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (commit-hash/timestamp)"
   },
   {
@@ -8020,7 +10841,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-worktree-branch-pr-205.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -8036,7 +10863,12 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/feedback-worktree-ci-block-pr351-b-3.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number)"
   },
   {
@@ -8052,7 +10884,10 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-2026-07-09-9-codex.md",
+    "screen:timestamp"
+   ],
    "reason": "時点依存の監査/状態スナップショットであり、日付・件数・PLAN番号に強く依存する進捗記述のため恒久ルールとして独立しない (episode_independent不成立)。"
   },
   {
@@ -8068,7 +10903,11 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-claude-2026-07-13-codex.md",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (commit-hash)"
   },
   {
@@ -8084,7 +10923,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-claude-pr-146-doc-ledger-freeze-review.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -8100,7 +10945,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-claude-pr-147-doc-snapshot-review.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -8116,7 +10967,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-claude-pr-154-node-control-plane-d0n-review.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -8132,7 +10989,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-claude-pr-155-node-toolchain-f0a-review.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -8148,7 +11011,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-claude-pr-156-resource-kernel-d0r-review.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -8164,7 +11033,12 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-claude-pr-181-advisor-routing-cross-review-request.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/review-episode)"
   },
   {
@@ -8180,7 +11054,12 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-claude-pr-189-doctor-single-run-cross-review-request.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/review-episode/progress/issue-number)"
   },
   {
@@ -8196,7 +11075,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-claude-pr-197-exact-head-862a7a5f-cross-review-request.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/issue-number)"
   },
   {
@@ -8212,7 +11098,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-claude-pr-197-exact-head-f4fbfa90-artifact-final-review-request.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -8228,7 +11120,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-claude-pr-197-exact-head-f877a576-artifact-review-pass.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -8244,7 +11142,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-claude-pr-198-exact-head-8826e87b-cross-review-request.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/issue-number)"
   },
   {
@@ -8260,7 +11165,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-claude-pr-200-bun-inventory-cross-review-request.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -8276,7 +11188,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-claude-pr-210-exact-head-0cbf3df8-closing-blind-review-flag.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -8292,7 +11211,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-claude-w0-forward-escape-node-worker-review.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash)"
   },
   {
@@ -8308,7 +11233,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-codex-issue-206-oracle-uniqueness.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -8324,7 +11256,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-codex-plan-l6-81-agent-registry-l7-431-433.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash)"
   },
   {
@@ -8340,7 +11278,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-codex-pr-60-po-2026-07-14.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash)"
   },
   {
@@ -8356,7 +11300,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-codex-pr-61.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/issue-number)"
   },
   {
@@ -8372,7 +11322,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-codex-pr-65-plan-l1-08-blind-cross-review.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash)"
   },
   {
@@ -8388,7 +11344,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-codex-request-unblock-merged-plan-status-debt.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/progress)"
   },
   {
@@ -8404,7 +11366,10 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-cross-lineage-admission-receipts-must-not-be-cherry-picked.md",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (review-episode)"
   },
   {
@@ -8420,7 +11385,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-d1-f3-main-green-d3-211-receipt-209.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -8436,7 +11407,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-d1-receipt-a-sla-1-d1-d3-d2-d3-claude.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress)"
   },
   {
@@ -8452,7 +11429,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-d3-trusted-custody-unverified-family-merge-d2.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -8468,7 +11451,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-d3a-merged-ae4e4c12-main-green-d3b-transport-gap-and-verdict-file-decision.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/issue-number)"
   },
   {
@@ -8484,7 +11473,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-engine-swap-codex-l7-421-po-2026-07-13.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash)"
   },
   {
@@ -8500,7 +11495,10 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-engine-swap.md",
+    "screen:timestamp"
+   ],
    "reason": "時点依存の監査/状態スナップショットであり、日付・件数・PLAN番号に強く依存する進捗記述のため恒久ルールとして独立しない (episode_independent不成立)。"
   },
   {
@@ -8516,7 +11514,10 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-fable-5-7-13-rate-limit.md",
+    "screen:timestamp"
+   ],
    "reason": "時点依存の監査/状態スナップショットであり、日付・件数・PLAN番号に強く依存する進捗記述のため恒久ルールとして独立しない (episode_independent不成立)。"
   },
   {
@@ -8568,7 +11569,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-forward-dependency-checkpoint-pr368-exact-7a9f9afe-before-s4.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -8584,7 +11591,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-forward-dependency-checkpoint-pr368-flag-before-s4.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash)"
   },
   {
@@ -8600,7 +11613,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-forward-dependency-checkpoint-pr368-waiting-before-s4.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -8616,7 +11635,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-forward-dependency-checkpoint-pr369-ci-and-s4-lease.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -8632,7 +11657,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-forward-ready-zero-while-pr-365-awaits-canonical-merge.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -8648,7 +11680,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-forward-release-lane-dependency-wait-after-pf-3.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress)"
   },
   {
@@ -8664,7 +11703,10 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-github-merge-head-branch.md",
+    "screen:timestamp"
+   ],
    "reason": "時点依存の監査/状態スナップショットであり、日付・件数・PLAN番号に強く依存する進捗記述のため恒久ルールとして独立しない (episode_independent不成立)。"
   },
   {
@@ -8680,7 +11722,11 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-harness-2026-07-09-high-finding2-plan-l7-302-324.md",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (commit-hash/progress)"
   },
   {
@@ -8696,7 +11742,12 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-incident-detached-stop-db-refresh-bun-runaway-locked-harness-db.md",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (commit-hash/review-episode/issue-number)"
   },
   {
@@ -8712,7 +11763,12 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-incident-parallel-node-test-saturation-cross-lane-taskkill.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number)"
   },
   {
@@ -8728,7 +11784,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-incident-pr-103-merged-with-plan-recovery-16-still-draft.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress)"
   },
   {
@@ -8744,7 +11806,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-incident-pr-210-merged-with-open-flag-2026-08-03.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/timestamp)"
   },
   {
@@ -8760,7 +11829,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-issue-108-admission-audit-at-main-2f3f15af-gap-is-real-and-unmet-but-l6-89-not-implementatio-2e0de39135284229.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -8776,7 +11851,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-issue-193-ci-109.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -8792,7 +11873,12 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-issue-209-blocked-by-redesign-supersede-contract.md",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (commit-hash/review-episode/issue-number)"
   },
   {
@@ -8808,7 +11894,11 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-issue-303-305-filed-drive-model-workflow-autogen-flag-feedback-loop.md",
+    "screen:issue-number",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (issue-number)"
   },
   {
@@ -8824,7 +11914,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-issue-344-forward-fsm-implementation-admission-pre-gate-at-main-f4c1bac2-flag-l6-72-declares-efc0e6a8a842934b.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -8840,7 +11936,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-issue-344-forward-fsm-pre-gate-re-derived-at-main-665e3cba-flag-9-of-12-canonical-events-hav-ccd19ee3726b1752.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/issue-number)"
   },
   {
@@ -8856,7 +11958,12 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-issue-500-exact-head-pack-ci-bun-ban--ff5b04fe0804.md",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (commit-hash/review-episode/issue-number)"
   },
   {
@@ -8872,7 +11979,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-issue-77-snapshot-fence-opus-pre-gate-no-re-freeze-needed-all-five-points-already-frozen-at-0ccd76b9cafbe962.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/issue-number)"
   },
   {
@@ -8888,7 +12002,12 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-main-debt-blocks-all-pr-ci.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/progress/issue-number)"
   },
   {
@@ -8904,7 +12023,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-p0-2-delivery-parity-measured-oldest-first-delivery-plus-prose-only-supersession-keeps-stale-9ec5d7aa7c00b777.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/issue-number/timestamp)"
   },
   {
@@ -8920,7 +12045,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-p0-task-pack-harness-db-4-73gb-root-cause-is-per-turn-token-run-rows-from-external-codex-ses-34d05257282eed74.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/issue-number)"
   },
   {
@@ -8936,7 +12067,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-pack-release-endpoint-audit-at-source-2f3f15af-vs-pack-7e11ec15-flag-pf-1-to-pf-5-have-zero-4fc6f02408fc5b1d.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/issue-number/timestamp)"
   },
   {
@@ -8952,7 +12089,10 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-phase-0-b-branch-protection-3-2026-07-13.md",
+    "screen:timestamp"
+   ],
    "reason": "時点依存の監査/状態スナップショットであり、日付・件数・PLAN番号に強く依存する進捗記述のため恒久ルールとして独立しない (episode_independent不成立)。"
   },
   {
@@ -8968,7 +12108,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-plan-l7-419-forward-fsm-opus-pre-gate-at-main-2f3f15af-flag-not-admissible-7-of-8-fsm-oracle-e88a6ca14250d965.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress)"
   },
   {
@@ -8984,7 +12130,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-plan-l7-462-cross-review-retake-codex-frontier-pr-284-286.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/issue-number)"
   },
   {
@@ -9000,7 +12152,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-plan-l7-462-step-1-pr-279-verdict-merge-step-2-3.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -9016,7 +12174,12 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-po-block-goal-2026-07-28-mechanism-repair-6-7-d0-forward-3-4-codex-train-assignment.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number)"
   },
   {
@@ -9032,7 +12195,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-po-forward-2026-07-31-f1-199-f2-183-f3-191-f4-169.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/issue-number)"
   },
   {
@@ -9048,7 +12217,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-po-forward-d0-pr-train-order-2026-07-30-codex-pr-handling.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/issue-number)"
   },
   {
@@ -9064,7 +12239,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-po-issue-157-codex-goal-handover-2026-07-27.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/issue-number)"
   },
   {
@@ -9080,7 +12261,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-pr-104-codex-2026-07-17.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash)"
   },
   {
@@ -9096,7 +12283,12 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-pr-114-request-codex-review-merge.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number)"
   },
   {
@@ -9112,7 +12304,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-pr-115-request-codex-review-merge.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -9128,7 +12326,12 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-pr-116-request-codex-review-merge.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/issue-number)"
   },
   {
@@ -9144,7 +12347,12 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-pr-125-stop-refresh-windowshide-main-worktree-codex.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/issue-number)"
   },
   {
@@ -9160,7 +12368,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-pr-126-ci-plan-l7-457-generates-3-codex.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/progress)"
   },
   {
@@ -9176,7 +12390,12 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-pr-126-codex-2026-07-22.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/progress/issue-number)"
   },
   {
@@ -9192,7 +12411,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-pr-154-db-projection-claim-blind-boundaries.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/issue-number)"
   },
   {
@@ -9208,7 +12433,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-pr-154-db-projection-coverage-ci-red.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/progress/issue-number)"
   },
   {
@@ -9224,7 +12455,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-pr-154-db-projection-markdown-state-machine.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/issue-number)"
   },
   {
@@ -9240,7 +12477,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-pr-154-db-projection-semantic-boundary.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/issue-number)"
   },
   {
@@ -9256,7 +12499,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-pr-154-forward-route-metadata-correction.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/issue-number)"
   },
   {
@@ -9272,7 +12521,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-pr-154-independent-review-flag.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -9288,7 +12544,12 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-pr-154-managed-trust-overengineering-final-withdrawal.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/review-episode)"
   },
   {
@@ -9304,7 +12565,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-pr-155-spec-blind-flag-and-f0a-remediation.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -9320,7 +12587,12 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-pr-156-claim-review-flag-remediation.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/review-episode)"
   },
   {
@@ -9336,7 +12608,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-pr-196-exact-head-ea4ef71e-fixture-manifest-re-review-request.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -9352,7 +12631,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-pr-197-blocking-state-2026-07-30-dependency-decision-and-artifact-freeze.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -9368,7 +12653,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-pr-202-issue-199-fence-cross-review-codex-exact-head-2a5cadc2.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/issue-number/timestamp)"
   },
   {
@@ -9384,7 +12676,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-pr-204-main-ci-green-203-open.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/issue-number)"
   },
   {
@@ -9400,7 +12698,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-pr-204-merge-issue-203-live-lane-carry-203-close.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -9416,7 +12720,12 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-pr-205-d1-receipt-fable-sol-a-sla-1-po.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/review-episode/progress)"
   },
   {
@@ -9432,7 +12741,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-pr-205-d1-review-dispatch-cross-review-claude-pr-204-flag.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -9448,7 +12763,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-pr-208-exact-head-09e5d84c-ci-baseline.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -9464,7 +12786,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-pr-208-issue-183-cross-review-pr-205-flag-receipt-po.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -9480,7 +12809,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-pr-210-foundation-closure-exact-review-at-a5337a9c.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -9496,7 +12831,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-pr-210-foundation-closure-opus-closing-review-request-at-4bde7404.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -9512,7 +12853,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-pr-210-foundation-closure-opus-closing-review-request-at-b462eba5.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -9528,7 +12875,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-pr-212-exact-head-8e5cae7f-codex-closing-cross-review-request.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -9544,7 +12898,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-pr-214-closing-review-flag-identity-execute-temp-dir-leak.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -9560,7 +12921,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-pr-214-d3b-e2e-receipt-proof-and-close.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -9576,7 +12944,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-pr-214-exact-head-10582f0a-codex-closing-cross-review-request.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -9592,7 +12967,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-pr-214-exact-head-245d649c-codex-closing-cross-review-rerequest.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -9608,7 +12990,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-pr-214-exact-head-3b8e92d5-codex-closing-cross-review-rerequest.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/timestamp)"
   },
   {
@@ -9624,7 +13013,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-pr-219-exact-head-5c0fd9e7-codex-closing-cross-review-rerequest.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -9640,7 +13036,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-pr-219-exact-head-ea7e7815-codex-closing-cross-review-request.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/issue-number)"
   },
   {
@@ -9656,7 +13059,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-pr-276-inbox-retention-flag-exact-head-review.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -9672,7 +13081,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-pr-278-verdict-less-merge-blocking-flag-bl-2.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/timestamp)"
   },
   {
@@ -9688,7 +13103,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-pr-281-verdict-merge-3-flag-follow-up-pr.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -9704,7 +13125,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-pr-285-d3d-trusted-custody-closing-cross-review-codex-exact-head-9dff5570.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -9720,7 +13148,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-pr-288-plan-l7-465-d3-live-cross-review-codex-family-exact-head-ce68bdbb.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -9736,7 +13171,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-pr-290-post-merge-plan-l7-244-ownership-correction.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/issue-number)"
   },
   {
@@ -9752,7 +13194,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-pr-299-merged-d2-b-merge-gate-landed-plan-l7-465.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/timestamp)"
   },
   {
@@ -9768,7 +13217,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-pr-300-merged-and-main-ci-green.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/issue-number)"
   },
   {
@@ -9784,7 +13240,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-pr-306-merged-oracle-cited-but-not-declared-reverse-gate-landed-259.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/timestamp)"
   },
   {
@@ -9800,7 +13263,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-pr-368-exact-head-4721ffd6-closing-pass-and-s4-dependency-checkpoint.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -9816,7 +13286,12 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-pr-88-codex-2026-07-17.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/issue-number)"
   },
   {
@@ -9832,7 +13307,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-pr63-pass-e8-e9-test-design-plan-5.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash)"
   },
   {
@@ -9848,7 +13329,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-pr63-pass-weak-e8-e9-6-artifact-it-reentry-01-1.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash)"
   },
   {
@@ -9864,7 +13351,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-pr63-pr65-merged-flag-resolved-by-claude-2026-07-15.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash)"
   },
   {
@@ -9880,7 +13373,12 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-pr66-plan-reverse-280-r2-skill-root-cli-doc-sync-r3-r4-l7-277.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number)"
   },
   {
@@ -9896,7 +13394,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-process-violation-pr-268-271-verdict-less-merge-2026-08-06.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number/timestamp)"
   },
   {
@@ -9912,7 +13416,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-process-violation-pr-285-plan-l7-465-draft-deliverable-merge-main-2026-08-07.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress)"
   },
   {
@@ -9928,7 +13438,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-process-violation-pr-300-merged-before-claude-closing-pass-receipt-2026-08-13.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:review-episode",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/timestamp)"
   },
   {
@@ -9944,7 +13461,11 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-repository-placement-must-separate-git-durable-state-and-scratch.md",
+    "screen:issue-number",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (review-episode/issue-number/personal-path)"
   },
   {
@@ -9960,7 +13481,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-shared-harness-memory-has-not-been-committed-since-2026-08-13-and-is-split-per-worktree-488-12117f2643a47d5c.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -9976,7 +13503,10 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-skill-admission-gate-codex-freeze-add-impl-plan-l7-411.md",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (review-episode)"
   },
   {
@@ -9992,7 +13522,12 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-stacked-pr-harness-check-trigger-debt.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/review-episode/issue-number)"
   },
   {
@@ -10008,7 +13543,12 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-u-1-diagnosis-the-disk-growth-engine-is-the-unfiltered-ingestion-in-stop-refresh-not-only-pe-37bb3e5cec49e185.md",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (commit-hash/review-episode/issue-number)"
   },
   {
@@ -10024,7 +13564,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-u-1-opus-pre-gate-frozen-no-new-plan-no-supersedes-no-generates-change-stop-refresh-ts-has-e-c4862b6f26257c77.md",
+    "screen:pr-number",
+    "screen:issue-number",
+    "screen:commit-hash",
+    "screen:timestamp"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -10040,7 +13586,10 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-v-model-engine-swap-policy.md",
+    "screen:timestamp"
+   ],
    "reason": "時点依存の監査/状態スナップショットであり、日付・件数・PLAN番号に強く依存する進捗記述のため恒久ルールとして独立しない (episode_independent不成立)。"
   },
   {
@@ -10056,7 +13605,10 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-vitest-full-suite-ut-tdd-gate-runs-g4-doctor-orphan.md",
+    "screen:timestamp"
+   ],
    "reason": "時点依存の監査/状態スナップショットであり、日付・件数・PLAN番号に強く依存する進捗記述のため恒久ルールとして独立しない (episode_independent不成立)。"
   },
   {
@@ -10109,7 +13661,10 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/project-zip-entry-encoding-and-separator-portability.md",
+    "screen:timestamp"
+   ],
    "reason": "時点依存の監査/状態スナップショットであり、日付・件数・PLAN番号に強く依存する進捗記述のため恒久ルールとして独立しない (episode_independent不成立)。"
   },
   {
@@ -10125,7 +13680,11 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/reference-fix-memory-dir-eexist-on-bun.md",
+    "screen:issue-number",
+    "screen:timestamp"
+   ],
    "reason": "PR番号・commit・issue番号・時点実測に強く依存する参照であり、現行の恒久ドキュメントから独立した再利用可能な参照として残せない、または裏付け不明。"
   },
   {
@@ -10177,7 +13736,10 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/reference-junction-worktree-git-worktree-remove-force-main-node-modules.md",
+    "screen:timestamp"
+   ],
    "reason": "merged into worktreeを畳む前にnode_modulesがprimaryと実体共有しているか probe で判定する: entry数や見た目では区別できない"
   },
   {
@@ -10409,7 +13971,11 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "archive:docs/archive/memory-legacy-2026-09/user-po-bun-permanent-ban-node-rust-target.md",
+    "screen:issue-number",
+    "screen:timestamp"
+   ],
    "reason": "既存のCLAUDE.md記載事項と重複するか、PR/issue番号・時点実測に強く依存し恒久ルールとして独立しない。"
   },
   {
@@ -10533,7 +14099,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:733534b60837291cddeaa8d7",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -10734,7 +14307,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:1c5051e47673eb72943ab1b3",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/issue-number/personal-path)"
   },
   {
@@ -10786,7 +14366,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:b057d7272fc1434accd5f8ae",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/review-episode/progress/issue-number)"
   },
   {
@@ -10838,7 +14425,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:fa2f1e51eaf31b9817407bb2",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "merged into worktreeを畳む前にnode_modulesがprimaryと実体共有しているか probe で判定する: entry数や見た目では区別できない"
   },
   {
@@ -10854,7 +14448,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:3c80e6b145964bd89f42c2b3",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -10870,7 +14471,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:b0055949da13df79c36e4487",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/personal-path)"
   },
   {
@@ -10886,7 +14494,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:81e601611793fdb1bc734e71",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "merged into mutation probeのチェックリスト: 消した出現箇所を行番号で確認する、snapshot runnerを使わずworktreeで直接実行する"
   },
   {
@@ -10902,7 +14517,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:4e2024735b66316bef555d4b",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "merged into worktreeを畳む前にnode_modulesがprimaryと実体共有しているか probe で判定する: entry数や見た目では区別できない"
   },
   {
@@ -10918,7 +14540,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:651661864cf13e5f705aa043",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (review-episode)"
   },
   {
@@ -10934,7 +14563,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:2456b79ee12a943c6c2951fc",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (review-episode/timestamp)"
   },
   {
@@ -10950,7 +14586,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:129870afd0ebc04f5cf53dd6",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -10966,7 +14609,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:46b3c131f16727ca9dd89986",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress)"
   },
   {
@@ -10982,7 +14632,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:707baf659a989b52f85dfd91",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -10998,7 +14655,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:191819137b63bb6d3c48a8f2",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -11014,7 +14678,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:00a186f796fbac192a1490d3",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -11030,7 +14701,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:7c90f1928a58556c9a2d01cb",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -11046,7 +14724,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:4dd4728799652849f59db263",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -11062,7 +14747,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:06bb9af53618f32e5df070f6",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -11078,7 +14770,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:e4218ee01b2a66bc5afd1bf8",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -11094,7 +14793,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:fe34fc3a5fdf3010043cba53",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -11110,7 +14816,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:f426f3d442b7e350961bb7a2",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -11126,7 +14839,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:d32cc98baeb3a7170e9573fc",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -11142,7 +14862,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:18dd25be660bca41e2aa17a4",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -11158,7 +14885,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:b711aa4bb8ada4d67ab9a3c2",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -11174,7 +14908,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:928283f43634dab5abe2e46e",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "PR番号・commit hash・issue番号・review request/verdict/receiptへの参照を除去すると、固有のエピソード実行記録以上の恒久ルールが残らない (episode_independent不成立)。"
   },
   {
@@ -11190,7 +14931,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:e9c805bf68f72ca20f0cdc86",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -11206,7 +14954,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:0a5845e539e3c2363a31d9fe",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: decision rule present but carries pr-number/commit-hash/review-episode/issue-number: adopt only if the rule survives without the episode"
   },
   {
@@ -11222,7 +14977,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:7651c26407c96535464243d4",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -11238,7 +15000,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:ebfe99a2ed4b400b9a350f7d",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -11290,7 +15059,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:c626e4b94f90babfd60765ba",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (commit-hash/issue-number)"
   },
   {
@@ -11306,7 +15082,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:f4321c9eb3d91a6075c4469f",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress)"
   },
   {
@@ -11322,7 +15105,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:11cda00cb0534ae76164ac7e",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -11338,7 +15128,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:80d88262944a5680d3aeb2f0",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (commit-hash)"
   },
   {
@@ -11354,7 +15151,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:467af869d6f69e8ecbbac375",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress)"
   },
   {
@@ -11370,7 +15174,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:185f7a4e64b9688e78aad53a",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -11386,7 +15197,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:0475dda0820307dea2da0cd8",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -11402,7 +15220,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:bd3054446a9002979775ac34",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (commit-hash/review-episode)"
   },
   {
@@ -11418,7 +15243,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:5688f153f878a461791a6552",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/personal-path)"
   },
   {
@@ -11434,7 +15266,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:b5714cfb31e223d8a016ea41",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -11450,7 +15289,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:77f5c2833f4d5270b54d9db4",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress)"
   },
   {
@@ -11466,7 +15312,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:53f9843aa14cd6afcabc9b44",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/review-episode)"
   },
   {
@@ -11482,7 +15335,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:2035ba99ac3e4f94ad0a880c",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (commit-hash/review-episode)"
   },
   {
@@ -11498,7 +15358,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:a87f60555da8a6ec7c07e5be",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (commit-hash/personal-path)"
   },
   {
@@ -11514,7 +15381,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:95d8807e8a32dc4dfe5ae9a8",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -11530,7 +15404,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:912d5aeddf108fded32eec41",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress)"
   },
   {
@@ -11546,7 +15427,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:5c3ea04bbb21239aee6e0ff0",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -11562,7 +15450,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:756cb2d28c7c092872313018",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash)"
   },
   {
@@ -11578,7 +15473,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:2231144c7daca2dc9292c18e",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (commit-hash/review-episode/progress)"
   },
   {
@@ -11594,7 +15496,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:9e98813275339ac54d5e8024",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (review-episode)"
   },
   {
@@ -11610,7 +15519,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:d61a8c9d4a071f9a4c465134",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/review-episode)"
   },
   {
@@ -11626,7 +15542,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:0130632b87a408397c1787e7",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/personal-path)"
   },
   {
@@ -11642,7 +15565,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:97dab20ed272d9f401486df1",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -11658,7 +15588,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:96a1b91cc7d6298e2f783bf4",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -11674,7 +15611,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:1ca33192289f3a06301d3d90",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -11690,7 +15634,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:4b609403badd344584d6d379",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -11706,7 +15657,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:4c0e3922bcc07c95ceb4b917",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/personal-path)"
   },
   {
@@ -11722,7 +15680,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:c5ebde0813b075c152b387c5",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -11738,7 +15703,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:c4d821acee7326c3989073ac",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -11754,7 +15726,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:548d2954d5d226a1317bd39c",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -11770,7 +15749,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:e4bf08ca7a3cdb800af54b57",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/personal-path)"
   },
   {
@@ -11786,7 +15772,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:febe55b80c1f5475084829a3",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/progress)"
   },
   {
@@ -11802,7 +15795,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:c1912fc406e936b83013af72",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -11818,7 +15818,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:638cdbdd5cdd6fdce7401f37",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -11834,7 +15841,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:08b2ed93a3e57f7a1c7c0359",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -11850,7 +15864,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:d52ada51e23aa7bcb4e3ffad",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -11866,7 +15887,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:f7bce30d2498779980c6b77c",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/personal-path)"
   },
   {
@@ -11882,7 +15910,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:0fc0b685aa5f96140b30c7d0",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress)"
   },
   {
@@ -11898,7 +15933,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:a796adf175a11b0055de7121",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -11914,7 +15956,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:1b418abcfc104a2b40f359e0",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/progress)"
   },
   {
@@ -11930,7 +15979,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:f165afc7b12cae18be9c6a3a",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress)"
   },
   {
@@ -11946,7 +16002,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:97a5b2c3048056b89004b421",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -11962,7 +16025,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:1fa2c5e53d1fac440ff94585",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -11978,7 +16048,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:8dbb44e53e2d53dae335b86a",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -11994,7 +16071,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:5be967a63020c9151d772849",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress)"
   },
   {
@@ -12010,7 +16094,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:85c145eb28a6c6a3b12bc93f",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress)"
   },
   {
@@ -12026,7 +16117,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:2b16efad05f031ce60efaaa3",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/issue-number)"
   },
   {
@@ -12042,7 +16140,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:18bc3a4d7cc51d9669eed325",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -12058,7 +16163,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:bd4e94fb7e996c79bde75901",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -12074,7 +16186,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:2f0768893ce716f84ff053b3",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress)"
   },
   {
@@ -12090,7 +16209,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:cc898031cb25adfb4189952f",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/personal-path)"
   },
   {
@@ -12106,7 +16232,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:d655032e9464a426a4ca539a",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress)"
   },
   {
@@ -12122,7 +16255,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:dda56410c1c0a56dc707f100",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress)"
   },
   {
@@ -12138,7 +16278,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:612d90baded9556909f51c91",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress)"
   },
   {
@@ -12154,7 +16301,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:0ab4b09f42a4fbf2409cd3a2",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/personal-path)"
   },
   {
@@ -12170,7 +16324,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:7749a25e35a78afb873d0c16",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress)"
   },
   {
@@ -12186,7 +16347,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:0c4def8b072b7836062c7cb5",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress)"
   },
   {
@@ -12202,7 +16370,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:d4980ad3186b4e04925651ac",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (commit-hash/review-episode)"
   },
   {
@@ -12218,7 +16393,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:e15b3336eebade64be188506",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -12234,7 +16416,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:c3c0e2ff60c22588b141bdcf",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (commit-hash/review-episode)"
   },
   {
@@ -12250,7 +16439,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:92aa9255cba65e9773711a61",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/personal-path)"
   },
   {
@@ -12266,7 +16462,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:83497ccbdfac5a80ffdce913",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (commit-hash/review-episode)"
   },
   {
@@ -12282,7 +16485,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:6dd9ac96eba468e5efaba808",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (commit-hash/review-episode)"
   },
   {
@@ -12298,7 +16508,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:d24bd766f85ab4dda8be0fab",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/personal-path)"
   },
   {
@@ -12314,7 +16531,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:3fe8ff7de18ecb266162f36b",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/review-episode/issue-number/personal-path)"
   },
   {
@@ -12330,7 +16554,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:3ae264c34952e1d40733da35",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (commit-hash/review-episode/personal-path)"
   },
   {
@@ -12346,7 +16577,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:d8dee3e33c4ffd88352d076f",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (review-episode/personal-path)"
   },
   {
@@ -12362,7 +16600,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:1c5f5c559648360f23c99570",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (commit-hash/review-episode/personal-path)"
   },
   {
@@ -12378,7 +16623,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:a7a0a6376f483e66e6a93910",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (review-episode)"
   },
   {
@@ -12394,7 +16646,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:44d139290e4925b5390495c6",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress)"
   },
   {
@@ -12410,7 +16669,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:e05ff58b4e0ab9ee1345dcbe",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/personal-path)"
   },
   {
@@ -12426,7 +16692,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:dee1aa1480362d3d4bb71dde",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/personal-path)"
   },
   {
@@ -12442,7 +16715,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:75ead246f9a120f406e4729e",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/personal-path)"
   },
   {
@@ -12458,7 +16738,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:3a448ea88d8158dd8cc66004",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress)"
   },
   {
@@ -12474,7 +16761,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:e16ce8b2c3bb93d536d21d5e",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress)"
   },
   {
@@ -12490,7 +16784,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:a478f9b9f8660040e2d1ae2c",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/personal-path)"
   },
   {
@@ -12506,7 +16807,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:8d02bd7838f3af93f2cc06df",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/personal-path)"
   },
   {
@@ -12522,7 +16830,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:a8e90271a11193feed4535e1",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -12538,7 +16853,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:14c4abaab246db3100f22bab",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -12554,7 +16876,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:e07679ce4c4fecfcc86d222c",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number/timestamp)"
   },
   {
@@ -12570,7 +16899,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:30ec5c36cc7b1ebca193e2a8",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress)"
   },
   {
@@ -12586,7 +16922,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:38ac28fbee7877b26d6c8a95",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -12602,7 +16945,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:d6fc12fdaaf4782cec3cf684",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -12618,7 +16968,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:98c6590928f5c48b7050c5a9",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -12634,7 +16991,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:5262de3475ee626e6b6ae7d7",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -12650,7 +17014,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:b02c8565f63ae50b5bde254f",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -12666,7 +17037,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:70265c9b3230e24259c6c829",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress)"
   },
   {
@@ -12682,7 +17060,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:24545afc105ed0aa6ee8c9d9",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (review-episode/issue-number)"
   },
   {
@@ -12698,7 +17083,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:8880c19e840a32d5203e502f",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -12714,7 +17106,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:a59f8c567d1519ed48ee1232",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress)"
   },
   {
@@ -12730,7 +17129,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:be0251ba486c1f415cd2dadf",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -12746,7 +17152,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:f5405772c5932f913cdc6191",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (commit-hash/review-episode/progress/issue-number/personal-path)"
   },
   {
@@ -12762,7 +17175,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:817687a2c8e2383c702c718f",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress)"
   },
   {
@@ -12778,7 +17198,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:a868ae12f56097f9ac75c2db",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (commit-hash/review-episode)"
   },
   {
@@ -12794,7 +17221,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:f4a1955bcaf7f1f1b6cb0ab3",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -12810,7 +17244,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:3bc0349e4ccada1fb9448a16",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/review-episode)"
   },
   {
@@ -12826,7 +17267,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:4ed78c9d7a70b87807739ac4",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (commit-hash/review-episode/progress)"
   },
   {
@@ -12842,7 +17290,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:fb4f36843fdbeba0e43c2c37",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/personal-path)"
   },
   {
@@ -12858,7 +17313,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:60ba4d6687bb25850948a570",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -12874,7 +17336,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:f1584418fac8b5f08739f0c1",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (review-episode)"
   },
   {
@@ -12890,7 +17359,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:bd0d990a93736c980987d060",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (commit-hash/review-episode/issue-number)"
   },
   {
@@ -12906,7 +17382,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:70ba08822966c98a23252d3e",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (review-episode/issue-number)"
   },
   {
@@ -12922,7 +17405,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:bb660212e8db4d9b76812d91",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/issue-number/personal-path)"
   },
   {
@@ -12938,7 +17428,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:7a6c408cbf28c91c693cf56d",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/issue-number/personal-path)"
   },
   {
@@ -12954,7 +17451,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:3de844a27e7b82bb1723b6c5",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/issue-number/personal-path)"
   },
   {
@@ -12970,7 +17474,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:f9e8e92c09b7aca93efc867c",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/issue-number)"
   },
   {
@@ -12986,7 +17497,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:42c87a5c81b7aac29f3dfbb6",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -13002,7 +17520,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:34af1e2137a2b1d5663903af",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -13018,7 +17543,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:08d394a32a52659440c645a3",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (review-episode/personal-path)"
   },
   {
@@ -13034,7 +17566,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:d7d972252b26f42beb102332",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number)"
   },
   {
@@ -13050,7 +17589,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:1a1b232b8fd69a9ce7c60413",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -13066,7 +17612,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:530f3c4fc0e35af302286cbd",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/personal-path)"
   },
   {
@@ -13082,7 +17635,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:ce4d15d5f8a4c5c3801a81f2",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (commit-hash/review-episode)"
   },
   {
@@ -13098,7 +17658,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:31be45ddddf0d6d3c87ecc83",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress)"
   },
   {
@@ -13114,7 +17681,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:1b099fe3da5ac4a62fb45855",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "時点依存の監査/状態スナップショットであり、日付・件数・PLAN番号に強く依存する進捗記述のため恒久ルールとして独立しない (episode_independent不成立)。"
   },
   {
@@ -13130,7 +17704,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:d249e4ab33de1a25144f431b",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/personal-path)"
   },
   {
@@ -13146,7 +17727,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:07ee0585264d0ca66ee4497c",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -13162,7 +17750,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:99befe40579b012d1ccc5dfa",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -13178,7 +17773,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:e48638ab87e479aa69aa61a6",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -13194,7 +17796,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:8ab3b01aab1240c569b74723",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -13210,7 +17819,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:db046a3becc2f7a58279346c",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -13226,7 +17842,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:360989d2c5b6ccc33f1cc012",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -13242,7 +17865,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:c5bf0d8675050ecb5efd9641",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -13258,7 +17888,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:8591d11671a7a5fc201ec272",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -13274,7 +17911,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:5a6a0fd8fb14872d75c49b28",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/personal-path)"
   },
   {
@@ -13290,7 +17934,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:bac859330de5c49bd85c35e7",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/timestamp)"
   },
   {
@@ -13306,7 +17957,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:add1ae2ff8769254ffb06e97",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -13322,7 +17980,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:e34608219d2ff8901aacb8bb",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/timestamp)"
   },
   {
@@ -13338,7 +18003,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:1e6f247341766ba4b00e25ac",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/timestamp)"
   },
   {
@@ -13354,7 +18026,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:5e0f1ff9b00e6065300fd86b",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/timestamp)"
   },
   {
@@ -13370,7 +18049,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:2bd1e5cc644ce2f08ef8ace1",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number/timestamp)"
   },
   {
@@ -13386,7 +18072,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:e9d8272b427ede6f1c53e717",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -13402,7 +18095,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:621661eca1842c1f6d4cac12",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -13418,7 +18118,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:ee90a58a0827ced058f0d0da",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -13434,7 +18141,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:3a65c8cac60ede1ef273e1f1",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/issue-number)"
   },
   {
@@ -13450,7 +18164,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:09c54914e792f66b1de9c74f",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -13466,7 +18187,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:19483fe7b120af9f98746e3d",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress)"
   },
   {
@@ -13482,7 +18210,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:975e2c9373c3b081a94d0cbc",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -13498,7 +18233,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:ba6d6f83a4514fddb6fa3235",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress)"
   },
   {
@@ -13514,7 +18256,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:26e52d69563c43db37724e73",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -13530,7 +18279,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:4a931370c8c7b3486efc8b04",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -13546,7 +18302,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:7c3457b3091476b364dbfcdf",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -13562,7 +18325,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:0340b554816535d6f6c5f74b",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/issue-number)"
   },
   {
@@ -13578,7 +18348,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:fc9c8d42a2daf53730c4c77c",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -13594,7 +18371,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:ca05c31ef705ae6d6c836b08",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -13610,7 +18394,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:2629ce2c565d1559f8aaf4ae",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -13626,7 +18417,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:e0b09b8a23a702f77c346cf2",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -13642,7 +18440,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:b0535dc3a56a035f8599de9c",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/personal-path)"
   },
   {
@@ -13658,7 +18463,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:dfaa7f10bc3297d54d9f713f",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -13674,7 +18486,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:e15d15267562c04964261585",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/issue-number)"
   },
   {
@@ -13690,7 +18509,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:f17716bf07d2b7170a7b2edb",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -13706,7 +18532,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:b43ac4983e02b378c0f8430d",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -13722,7 +18555,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:5887c05e0358b9f59d7c71c2",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -13738,7 +18578,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:24310530d3fbe983bf90f01e",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -13754,7 +18601,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:e2d055551f738b0671023fd2",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -13770,7 +18624,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:78861bb7c3a327e3a9d38bed",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -13786,7 +18647,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:331ade8c21177bc93a51eac1",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -13802,7 +18670,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:ba826c9cb685c732b5c75543",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -13818,7 +18693,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:673c5a8736ffc0300b72569a",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -13834,7 +18716,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:0abafd4f1061a297af2bf301",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -13850,7 +18739,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:05321e8bb72f39b74a1a120e",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -13866,7 +18762,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:d7485cdf346858b1aa761f29",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -13882,7 +18785,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:1e540adddfb95b898e57cca2",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -13898,7 +18808,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:9672816aeaaff17637e1c678",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -13914,7 +18831,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:e117c175306c1056bb85b439",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -13930,7 +18854,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:7cdeb66b9e91f44ac33d4575",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -13946,7 +18877,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:a31669c364514588bfe869ce",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/issue-number/personal-path)"
   },
   {
@@ -13962,7 +18900,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:357742317bc52c2e15b5c89e",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -13978,7 +18923,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:4859306a5e147959cb4605ff",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -13994,7 +18946,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:f3f259144525f8b72dc94069",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -14010,7 +18969,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:7e6fa9b0239079760edeff63",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -14026,7 +18992,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:5f35c59987a3f5ffd75f6764",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -14042,7 +19015,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:d538113019a46740d68e8822",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -14058,7 +19038,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:843bd94775a10892e730eed2",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -14074,7 +19061,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:56de21a97ad0aaee1d0f5899",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -14090,7 +19084,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:211b52909d3e174d5b3f650f",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress)"
   },
   {
@@ -14106,7 +19107,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:28dd533834a85ee466a0833d",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress)"
   },
   {
@@ -14122,7 +19130,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:63178b488c9f88dc354f220f",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress)"
   },
   {
@@ -14138,7 +19153,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:04c1552188bbe1ca271ddbed",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress)"
   },
   {
@@ -14154,7 +19176,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:22dcbfb62439ad21eebe801f",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -14170,7 +19199,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:c4a016867d4257f9f4319416",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -14186,7 +19222,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:444dc11828b3b94d733c7e91",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/progress/issue-number)"
   },
   {
@@ -14202,7 +19245,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:66e2eb49e5d3025dbc136c6e",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -14218,7 +19268,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:5210d1f5da3bd3d6a9857f46",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -14234,7 +19291,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:b09070441ec9f6c913a5dd1a",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/issue-number/personal-path)"
   },
   {
@@ -14250,7 +19314,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:04d01240a1300eb602211d25",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -14266,7 +19337,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:3b4c529e508434ae245cf7b2",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -14282,7 +19360,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:5dbb60cc26f5876661603c95",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -14298,7 +19383,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:373d7cfc3f4e8390814aabd6",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -14314,7 +19406,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:6ee5da7214aa41bcbf3e1fae",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -14330,7 +19429,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:1abb76e0c38b6722a0e7d66c",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -14346,7 +19452,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:da4bb08b0a67f510c273a2cb",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -14362,7 +19475,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:086215f8753323a8eed8c014",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -14378,7 +19498,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:4a7e6e5f8918fffd2aa1a211",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -14394,7 +19521,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:c3194dfdb53590a836c77e10",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -14410,7 +19544,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:e9b3eb2b36e14a5a199c48f6",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -14426,7 +19567,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:e91abe63fcca7f640211b298",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -14442,7 +19590,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:d076badc84c839888c110b1c",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -14458,7 +19613,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:ec6a9988bf434c55ab593349",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/personal-path)"
   },
   {
@@ -14474,7 +19636,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:bae5240a6421d758adf91f23",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress)"
   },
   {
@@ -14490,7 +19659,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:d325fbb6f39a14620745c8d4",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -14506,7 +19682,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:2904a3c7be508cd6050e3856",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/issue-number)"
   },
   {
@@ -14522,7 +19705,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:96dcf883f1680146b41e912a",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/personal-path)"
   },
   {
@@ -14538,7 +19728,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:ac081eee52e072c0367e2064",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number/personal-path)"
   },
   {
@@ -14554,7 +19751,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:87bed3784433e42ef40b4f8d",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -14570,7 +19774,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:e691e3abaee651e3870bc295",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -14586,7 +19797,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:4b56c851186a2c3c46dad594",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -14602,7 +19820,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:6dbc2eb7abb264d12ce80f54",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -14618,7 +19843,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:775fdbc5e8b12ebcf834816f",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -14634,7 +19866,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:65c90faa9a52530dc6d4b6d4",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -14650,7 +19889,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:fb3479fae1875d305181bc61",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -14666,7 +19912,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:88d81adfa1b5bf6e5711c545",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress)"
   },
   {
@@ -14682,7 +19935,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:48185873587cb5b12446fef1",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -14698,7 +19958,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:9185441ba1f4c605c944e16d",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -14714,7 +19981,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:c003ea3b4c067cd075529041",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -14730,7 +20004,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:3a55b02e876836341d44f98d",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -14746,7 +20027,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:d4635ff3a30249b152d3a123",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -14762,7 +20050,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:9335d5d479162a43d99602f8",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -14778,7 +20073,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:0206bc301afa3ea07b65e517",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -14794,7 +20096,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:a0b3c8722b4588c44cb3620e",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -14810,7 +20119,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:f2c8f11cf9db27c9f74962de",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -14826,7 +20142,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:b22c237e7d4347b320dbb149",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -14842,7 +20165,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:17fd1c98ededfdcd8c2dce05",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -14858,7 +20188,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:0c2a409f66d0912ea66aa116",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -14874,7 +20211,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:d7c798c186f9a35914f4de16",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -14890,7 +20234,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:ef481f113cddd79c106a8aa4",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -14906,7 +20257,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:e5f32d81f240cae8d975a2f7",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -14922,7 +20280,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:61bae89224a962d9c9e5df57",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -14938,7 +20303,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:7e5020a34ece529ff461c651",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -14954,7 +20326,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:115e9051943a93d5fa8e7d13",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -14970,7 +20349,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:4d6ec3be3c61fbfc08e3f9c6",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -14986,7 +20372,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:a7c18a5b55398480bc7fe57b",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -15002,7 +20395,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:5246302ef3875c4ef5fc0be6",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -15018,7 +20418,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:02a05e243c5584a0aafbb04e",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress)"
   },
   {
@@ -15034,7 +20441,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:b41197848d244f40068e6f44",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -15050,7 +20464,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:1c6a5f063f48aaee4571e712",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -15066,7 +20487,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:074e02e961464206814d33b9",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -15082,7 +20510,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:07e6a586373f9eaf181a7ca6",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -15098,7 +20533,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:131db840d4d1681549435a82",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -15114,7 +20556,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:9590ab933e9cee670f11fa72",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number/timestamp)"
   },
   {
@@ -15130,7 +20579,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:858dbccba4c0d8432bd94c05",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -15146,7 +20602,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:2936d4355ad321acaa34922b",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -15162,7 +20625,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:f1a02468f44fc59c477ab9e6",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -15178,7 +20648,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:74196d4c92d3d0e2fa6ad5e5",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -15194,7 +20671,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:bb31d2673d5e490a670489f0",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -15210,7 +20694,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:ff22f05309ee8fb9492935a9",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -15226,7 +20717,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:4ff8ddcfdc411b02993189d1",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -15242,7 +20740,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:df424885322ec2b5963bb017",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -15258,7 +20763,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:4c54391aa4a205526a239d6c",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -15274,7 +20786,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:dd296b8879e44face5cf7d2c",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -15290,7 +20809,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:ff2a77c0feb918417bc21682",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -15306,7 +20832,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:65bbe187b24fe36fc30d7777",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -15322,7 +20855,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:d3c0e4ba8b0e2de15be32e71",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -15338,7 +20878,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:10842e07326e4987e84589fc",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -15354,7 +20901,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:9c6b22b04f7145f6a0b6202d",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -15370,7 +20924,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:f85e02107809707040e212bc",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/issue-number)"
   },
   {
@@ -15386,7 +20947,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:2e23e002abe86d1f4ca9d32a",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/issue-number)"
   },
   {
@@ -15402,7 +20970,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:8569937b4124c40483a63eef",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -15418,7 +20993,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:7504373d84e9e11482ed1d04",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/timestamp)"
   },
   {
@@ -15434,7 +21016,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:647b74ec5c5407e100a07a29",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -15450,7 +21039,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:c91d1035f7b47d2da94ee7d6",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -15466,7 +21062,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:456ee2eb17bd496eece89085",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -15482,7 +21085,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:56bc82d4af41c9f1eb3b020b",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -15498,7 +21108,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:8d3707873e788a54ba24baa4",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/issue-number)"
   },
   {
@@ -15514,7 +21131,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:3e24a6bd6bb05f09b3c57f60",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/issue-number)"
   },
   {
@@ -15530,7 +21154,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:202d3e4ca90dedacc46cb493",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/issue-number)"
   },
   {
@@ -15546,7 +21177,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:3c35b340098addfd18397262",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -15562,7 +21200,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:2e78cf5dc7cb2564224f79a3",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -15578,7 +21223,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:67538c917b006e94fda5031d",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -15594,7 +21246,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:79f032a531290a1579efa7b6",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -15610,7 +21269,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:e95b27b808a1c045713881bd",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -15626,7 +21292,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:17cca0b31cbe653b8e20bdbd",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -15642,7 +21315,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:34c7ca4c78f70589c43762aa",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/personal-path)"
   },
   {
@@ -15658,7 +21338,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:ca044560302d5944d783efaf",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -15674,7 +21361,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:9817e187d98fe820f77824e2",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -15690,7 +21384,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:5881da87a8f5c8beb658e719",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress)"
   },
   {
@@ -15706,7 +21407,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:a7b18e27181672bb346d0f12",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -15722,7 +21430,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:954752554fa35d157a397f8e",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/personal-path)"
   },
   {
@@ -15738,7 +21453,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:867b3217237687d5522d3888",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -15754,7 +21476,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:429efb56264decc3d253afe3",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress)"
   },
   {
@@ -15770,7 +21499,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:b5b02a20e6016a11251910e1",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/issue-number)"
   },
   {
@@ -15786,7 +21522,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:9ff85825bdfce71f5f205dd5",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number/personal-path)"
   },
   {
@@ -15802,7 +21545,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:5f05898bbae7d2c2a0d8fb5c",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -15818,7 +21568,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:14ca1c9473cec188db515e36",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -15834,7 +21591,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:7fc8b55c5641e36784157c61",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -15850,7 +21614,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:54d6e7cbcdcaa9cc23010ed6",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -15866,7 +21637,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:e57463488e386c9f98c7ce97",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -15882,7 +21660,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:c3498b2ab013677d245f0437",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -15898,7 +21683,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:005bd9db6eb0da25fabcb66a",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -15914,7 +21706,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:ab6e681e599e6790d7cf7b96",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -15930,7 +21729,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:6e56bfb0d788da71c940d9eb",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number/timestamp)"
   },
   {
@@ -15946,7 +21752,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:65a7895b9e7d18e3518be5e2",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -15962,7 +21775,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:65c7f11440d8094c5f44bd0b",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -15978,7 +21798,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:3cb8e7648fe77d461f2e785e",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -15994,7 +21821,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:f5678d3580c5cc273f29a48a",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -16010,7 +21844,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:aae93dc1b87a68d1b9fe82d2",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -16026,7 +21867,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:c362d194fb358de5fa200e25",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/personal-path)"
   },
   {
@@ -16042,7 +21890,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:19f0a4d26a6bc00e9306aa1b",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -16058,7 +21913,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:db954c80ef6d9663b66d3be5",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/issue-number/personal-path)"
   },
   {
@@ -16074,7 +21936,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:33fb3dc361cdf362b2d1dbc0",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -16090,7 +21959,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:b7675ca79a0676dbd2c85604",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -16106,7 +21982,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:baf752d1d36437ae2fdf42cf",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress)"
   },
   {
@@ -16122,7 +22005,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:dbaa58c701f5c304c0e6a969",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -16138,7 +22028,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:d23161dd9d3808f6eaff704a",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -16154,7 +22051,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:6b0f9a84d481775b7f402dff",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -16170,7 +22074,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:044f393781ef75cd348f223b",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -16186,7 +22097,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:44408b3710ffddbd98c44569",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/issue-number)"
   },
   {
@@ -16202,7 +22120,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:21b0f517263bbf25341b1cca",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -16218,7 +22143,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:a35b9e42d31c85742a8da7ab",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -16234,7 +22166,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:ebb3a204215b8c0f29336f57",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -16250,7 +22189,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:d7aba9517f55bd948c2b640b",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -16266,7 +22212,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:5ec7ae74f1e8572f3124b492",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress)"
   },
   {
@@ -16282,7 +22235,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:6cf0f957e0304ef207f2e479",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -16298,7 +22258,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:4e26f010c4f66becac6dfae0",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -16314,7 +22281,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:b30a7d6c21138fe4854c761e",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -16330,7 +22304,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:c2f9cc25bfbea22b2215b518",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -16346,7 +22327,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:d772c9c5f3f6ed299d3c343a",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress)"
   },
   {
@@ -16362,7 +22350,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:da5405acbcf5b905a3ae4ee2",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -16378,7 +22373,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:ef14f23a46f670963b860fbf",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -16394,7 +22396,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:000c396ef699d8a6a696d2a5",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/timestamp)"
   },
   {
@@ -16410,7 +22419,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:89364bbcbe629bf5d13228f9",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -16426,7 +22442,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:63b9217c561289b499e74c1e",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/timestamp)"
   },
   {
@@ -16442,7 +22465,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:d0351e63ab03e54958c33cd8",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -16458,7 +22488,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:1a22ccf65f4059aadc5cfa51",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress)"
   },
   {
@@ -16474,7 +22511,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:7ec8f1897b498a76e7102c87",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/issue-number)"
   },
   {
@@ -16490,7 +22534,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:7a74f31b226a0f3ce8c84dec",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -16506,7 +22557,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:5e62a56fb6621ee5dc048dff",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -16522,7 +22580,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:8ea1b24080a33147362d83f2",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -16538,7 +22603,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:d808468d67e3cc67fddb60ee",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -16554,7 +22626,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:e5ac18854695f1927e3e3205",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/personal-path)"
   },
   {
@@ -16570,7 +22649,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:9bc3f0c474ccc85066ba92d0",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -16586,7 +22672,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:71e5e051b5ab70efe904865d",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (commit-hash/review-episode)"
   },
   {
@@ -16602,7 +22695,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:de9d7bd3d6c81e0e89c5f293",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -16618,7 +22718,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:8abb7acedd1cc0ed7ed124b7",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -16634,7 +22741,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:52ff4cd514c40a8169955f92",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -16650,7 +22764,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:993bb60c943f93358a1ef4bc",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -16666,7 +22787,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:8c09306c0c0080537fb86c6f",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -16682,7 +22810,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:3a233454fc40f902efedd15d",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/personal-path/timestamp)"
   },
   {
@@ -16698,7 +22833,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:f4c2a6ce4b5b22cd693ceb16",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -16714,7 +22856,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:094ab16029f77ffbf732a9a8",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -16730,7 +22879,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:4d449c81c660623deba5a9c7",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -16746,7 +22902,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:b3523b2448d69d74b14196f3",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash)"
   },
   {
@@ -16762,7 +22925,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:6ff315d5a5783570a17c42ab",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -16778,7 +22948,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:2805a740b669304be2e834e9",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -16794,7 +22971,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:d3fefc390133a64abdcdecd0",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -16810,7 +22994,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:06d3cd56f69bf16bc8c211c0",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -16826,7 +23017,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:76898c7975587e9bda3d1d40",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -16842,7 +23040,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:f884118a7770b48b3129d83f",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -16858,7 +23063,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:bfba894c7c42307d16ce68e5",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress)"
   },
   {
@@ -16874,7 +23086,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:f073329e92a896ba56146ecf",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -16890,7 +23109,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:4e0e8e94a6b4a0609e5cbf0e",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/progress)"
   },
   {
@@ -16906,7 +23132,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:d982df1052a3ae55c7149f3e",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -16922,7 +23155,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:6bd819dce08cda1be4e8074a",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/issue-number)"
   },
   {
@@ -16938,7 +23178,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:c9660b4e75352047d8df28e1",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -16954,7 +23201,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:a6318729bfa0db2001282397",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/timestamp)"
   },
   {
@@ -16970,7 +23224,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:47b378d6a5024c0946469651",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -16986,7 +23247,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:d87e3e41305d73c72827f6e6",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/issue-number)"
   },
   {
@@ -17002,7 +23270,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:ed5293a390aaac691ea7b35e",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/issue-number)"
   },
   {
@@ -17018,7 +23293,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:7a409633adf2dd1b72d1a968",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -17034,7 +23316,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:a64c0d1c953d75e9dd694c87",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/personal-path)"
   },
   {
@@ -17050,7 +23339,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:fb32a5318dad0fb7b680b213",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress)"
   },
   {
@@ -17066,7 +23362,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:0fcab1bf624f9513475e7462",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -17082,7 +23385,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:100ac2959ecf130292d5f74a",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -17098,7 +23408,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:da6d7cad39aba435b312ddf2",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -17114,7 +23431,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:0414cfcd094100939c656901",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -17130,7 +23454,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:a85c25c18235ad54ec630bd7",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress)"
   },
   {
@@ -17146,7 +23477,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:9cfb9cab874f23b70a320cb4",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -17162,7 +23500,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:d56afeb6473fc2d71d570d8a",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -17178,7 +23523,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:646be7f6d260451742055070",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -17194,7 +23546,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:65e7b3830013e79f66b453f6",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/issue-number)"
   },
   {
@@ -17210,7 +23569,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:f354e3c4c826d0cfe175d64d",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -17226,7 +23592,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:128a40527b9f360ec58202f6",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -17242,7 +23615,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:ccf0365335a611f80fbe1abf",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -17258,7 +23638,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:a35c63cc5351e2d91fbab58e",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -17274,7 +23661,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:a8b30820d16277e2e52ed3f1",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/issue-number)"
   },
   {
@@ -17290,7 +23684,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:f66e727eb4adcd2e3965a4c7",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress)"
   },
   {
@@ -17306,7 +23707,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:1e5ab74baf8daba44b9aaf84",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -17322,7 +23730,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:309e11fc8bcb9c462c38e187",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "時点依存の監査/状態スナップショットであり、日付・件数・PLAN番号に強く依存する進捗記述のため恒久ルールとして独立しない (episode_independent不成立)。"
   },
   {
@@ -17338,7 +23753,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:f0269e7389631d4fc60eb4cb",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number)"
   },
   {
@@ -17354,7 +23776,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:a10574c69887859fa8b60f0d",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/issue-number)"
   },
   {
@@ -17370,7 +23799,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:4e6001df60ab81b06ac0d591",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash)"
   },
   {
@@ -17386,7 +23822,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:491b5795256cbd4856ba1920",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode)"
   },
   {
@@ -17402,7 +23845,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:42b3a617a4254bbe558b799a",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/personal-path)"
   },
   {
@@ -17418,7 +23868,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:b84650978cef9f32e6493e4d",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/issue-number/personal-path)"
   },
   {
@@ -17434,7 +23891,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:d89cb2ee52840796043f605c",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress)"
   },
   {
@@ -17450,7 +23914,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:422aef02410a2bf799d89db3",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (pr-number/commit-hash/review-episode/progress/issue-number/personal-path)"
   },
   {
@@ -17466,7 +23937,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:5e6a991390f5e696f8a01de0",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "PR番号・commit・issue番号・時点実測に強く依存する参照であり、現行の恒久ドキュメントから独立した再利用可能な参照として残せない、または裏付け不明。"
   },
   {
@@ -17482,7 +23960,14 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
     "no_secret_pii": true,
     "deduplicated": false
    },
-   "evidence": [],
+   "evidence": [
+    "custody:local-archive:12628579b3bc31e60c382594",
+    "criterion:reusable=false",
+    "criterion:evidenced=false",
+    "criterion:actionable=false",
+    "criterion:episode_independent=false",
+    "criterion:deduplicated=false"
+   ],
    "reason": "自動分類: episodic (no rule)"
   }
  ]
