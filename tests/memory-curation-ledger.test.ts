@@ -73,7 +73,16 @@ function stripUpdatedAt(rawText: string): string {
 /** Replays one adopt row's registration in-process (`writeMemory`, no subprocess) and builds a
  * `RegistrationReceipt` from the replay's actual output, never from the ledger's own record.
  * Also returns the raw bytes the replay wrote, so a caller can compare them against a real CLI
- * subprocess run of the same row. */
+ * subprocess run of the same row.
+ *
+ * `now` is pinned to the canonical file's own recorded `updated_at` (a test-controlled input, the
+ * same idea as the `--operation-id` pin below): the test-design oracle (U-MEMCUT-026) only
+ * requires the replay to match the canonical file on every frontmatter value and the body *except*
+ * `updated_at` — it does not require `updated_at` to differ. `content_digest` is a whole-file hash
+ * that embeds `updated_at`, so without pinning it a real replay could never reproduce the
+ * historical receipt (every replay happens at a different real time than the original
+ * registration). Pinning removes that one deliberately-excluded field so the digest binds to
+ * everything the oracle actually requires to match. */
 function inProcessReplay(
   row: CurationRow,
 ): { receipt: RegistrationReceipt; rawText: string } | null {
@@ -84,7 +93,13 @@ function inProcessReplay(
     const dir = scratchMemoryRoot();
     const written = writeMemory({
       repoRoot: dir,
-      input: { kind: adopt.kind, title: adopt.title, body: canonicalEntry.body, tags: adopt.tags },
+      input: {
+        kind: adopt.kind,
+        title: adopt.title,
+        body: canonicalEntry.body,
+        tags: adopt.tags,
+        now: canonicalEntry.updated_at,
+      },
     });
     const rawText = readFileSync(join(dir, written.source_path), "utf8");
     return {
