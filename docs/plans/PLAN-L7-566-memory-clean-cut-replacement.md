@@ -34,9 +34,9 @@ generates:
   - artifact_path: docs/governance/memory-curation-ledger-2026-09.md
     artifact_type: markdown_doc
   - artifact_path: docs/archive/memory-legacy-2026-09/MANIFEST.json
-    artifact_type: generated_manifest
+    artifact_type: json_config
   - artifact_path: docs/archive/memory-legacy-2026-09/SUMMARY.md
-    artifact_type: generated_summary
+    artifact_type: markdown_doc
   - artifact_path: src/memory/curation-ledger.ts
     artifact_type: source_module
   - artifact_path: src/memory/legacy-archive-manifest.ts
