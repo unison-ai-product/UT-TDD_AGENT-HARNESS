@@ -1085,6 +1085,29 @@ function hasCompletePreparationJournal(
   });
 }
 
+function journalReadBackMatches(
+  journal: readonly PublicationJournalEvent[],
+  identityDigest: string,
+  branchCommit: string,
+  pullRequest: PackPublicationPullRequestObservation,
+): boolean {
+  const readBack = (mutation: "pack_branch_commit" | "pack_pr_create") =>
+    journal.filter(
+      (event) =>
+        event.intentDigest === identityDigest &&
+        event.mutation === mutation &&
+        event.kind === "read_back_observation",
+    );
+  const branch = readBack("pack_branch_commit");
+  const pr = readBack("pack_pr_create");
+  return (
+    branch.length === 1 &&
+    pr.length === 1 &&
+    branch[0]?.detailDigest === eventDigest({ branchCommit }) &&
+    pr[0]?.detailDigest === eventDigest(pullRequest)
+  );
+}
+
 async function reconcilePreparedPreparation(
   input: PackPublicationPreparationInput,
   identity: NonNullable<ReturnType<typeof preparationIdentity>>,
@@ -1159,6 +1182,20 @@ async function reconcilePreparedPreparation(
       status: "partial_publication",
       stage: "pack_commit",
       reason: "preparation_observation_mismatch",
+      remoteWrites: 0,
+    });
+  if (
+    !journalReadBackMatches(
+      journal,
+      identity.identityDigest,
+      observed.value.branchCommit,
+      observed.value.pullRequest,
+    )
+  )
+    return preparationFailure({
+      status: "indeterminate",
+      stage: "pack_commit",
+      reason: "journal_observation_mismatch",
       remoteWrites: 0,
     });
   try {

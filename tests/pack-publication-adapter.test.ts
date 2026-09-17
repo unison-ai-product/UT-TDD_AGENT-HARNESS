@@ -18,6 +18,7 @@ import {
   type PackPublicationPorts,
   type PackPublicationPreparationPorts,
   type PackPublicationPreparationReceipt,
+  type PublicationJournalEvent,
   parseSealedPackageVersionIdentity,
   preparePackPublication,
   publishPackCanary,
@@ -31,6 +32,14 @@ import { buildPackPublicationStagingPlan } from "../src/setup/pack-publication-s
 
 const sha = (value: Uint8Array | string) =>
   `sha256:${createHash("sha256").update(value).digest("hex")}`;
+const canonical = (value: unknown): string => {
+  if (value === null || typeof value !== "object") return JSON.stringify(value);
+  if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`;
+  return `{${Object.entries(value as Record<string, unknown>)
+    .sort(([left], [right]) => Buffer.compare(Buffer.from(left), Buffer.from(right)))
+    .map(([key, item]) => `${JSON.stringify(key)}:${canonical(item)}`)
+    .join(",")}}`;
+};
 const sourceRevision = "a".repeat(40);
 const artifactSetDigest = `sha256:${"b".repeat(64)}`;
 const content = Buffer.from("abc");
@@ -1642,6 +1651,14 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
     function completePreparationJournal(input: ReturnType<typeof preparationInput>["input"]) {
       const identityDigest = derivePackPublicationPreparationDigest(input);
       if (!identityDigest) throw new Error("preparation identity failed");
+      const branchCommit = "7".repeat(40);
+      const pullRequest = {
+        pullRequest: "42",
+        headOid: branchCommit,
+        baseOid: input.expectedMainOid,
+        treeDigest: derivePackPublicationTreeDigest(input.plan),
+        controlManifestSnapshotDigest: input.plan.controlManifestSnapshotDigest,
+      };
       return ["pack_branch_commit", "pack_pr_create"].flatMap((mutation) =>
         ["planned_nonce_consumed", "mutation_intent", "read_back_observation"].map((kind) => ({
           transition: "pack_commit" as const,
@@ -1649,7 +1666,10 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
           kind: kind as "planned_nonce_consumed" | "mutation_intent" | "read_back_observation",
           intentDigest: identityDigest,
           nonce: input.approvals.find((approval) => approval.mutation === mutation)?.nonce ?? "",
-          detailDigest: `sha256:${"0".repeat(64)}`,
+          detailDigest:
+            kind === "read_back_observation"
+              ? sha(canonical(mutation === "pack_branch_commit" ? { branchCommit } : pullRequest))
+              : `sha256:${"0".repeat(64)}`,
         })),
       );
     }
@@ -2144,6 +2164,43 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
       expect(commit).not.toHaveBeenCalled();
     });
 
+    it.each([
+      "branch commit",
+      "PR observation",
+    ] as const)("CANDIDATE-PACKPUB-PREP-007: forged %s is rejected against journal read-back digest", async (axis) => {
+      const { input } = preparationInput();
+      const { prep } = preparationPorts();
+      const branchCommit = axis === "branch commit" ? "8".repeat(40) : "7".repeat(40);
+      const pullRequest = {
+        pullRequest: axis === "PR observation" ? "43" : "42",
+        headOid: branchCommit,
+        baseOid: input.expectedMainOid,
+        treeDigest: derivePackPublicationTreeDigest(input.plan),
+        controlManifestSnapshotDigest: input.plan.controlManifestSnapshotDigest,
+      };
+      const result = await preparePackPublication(input, {
+        ...prep,
+        durableState: {
+          ...prep.durableState,
+          read: async () => completePreparationJournal(input),
+        },
+        pack: {
+          ...prep.pack,
+          reconcile: async () => ({
+            status: "attested" as const,
+            value: { branchCommit, pullRequest },
+          }),
+        },
+        receipt: { persist: vi.fn(), read: async () => null },
+      });
+      expect(result).toMatchObject({
+        ok: false,
+        status: "indeterminate",
+        reason: "journal_observation_mismatch",
+        remoteWrites: 0,
+      });
+    });
+
     it("CANDIDATE-PACKPUB-PREP-007: receipt persistence failure is indeterminate after exactly two writes", async () => {
       const { input } = preparationInput();
       const { prep } = preparationPorts();
@@ -2161,6 +2218,60 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
         reason: "receipt_persist_failed",
         remoteWrites: 2,
       });
+    });
+
+    it("CANDIDATE-PACKPUB-PREP-007: response loss after mutation intent is restart-safe", async () => {
+      const { input } = preparationInput();
+      const first = preparationPorts();
+      const journal: PublicationJournalEvent[] = [];
+      const commit = vi.fn(async () => {
+        throw new Error("response lost");
+      });
+      const firstResult = await preparePackPublication(input, {
+        ...first.prep,
+        durableState: {
+          append: async (event) => {
+            journal.push(event);
+          },
+        },
+        pack: { ...first.prep.pack, commitPublicationBranch: commit },
+      });
+      expect(firstResult).toMatchObject({
+        ok: false,
+        status: "indeterminate",
+        reason: "remote_response_lost",
+        remoteWrites: 1,
+      });
+      const secondCommit = vi.fn(first.prep.pack.commitPublicationBranch);
+      const second = await preparePackPublication(input, {
+        ...first.prep,
+        durableState: { ...first.prep.durableState, read: async () => journal },
+        pack: {
+          ...first.prep.pack,
+          commitPublicationBranch: secondCommit,
+          reconcile: async () => ({
+            status: "attested" as const,
+            value: {
+              branchCommit: "7".repeat(40),
+              pullRequest: {
+                pullRequest: "42",
+                headOid: "7".repeat(40),
+                baseOid: input.expectedMainOid,
+                treeDigest: derivePackPublicationTreeDigest(input.plan),
+                controlManifestSnapshotDigest: input.plan.controlManifestSnapshotDigest,
+              },
+            },
+          }),
+        },
+        receipt: { persist: vi.fn(), read: async () => null },
+      });
+      expect(second).toMatchObject({
+        ok: false,
+        status: "indeterminate",
+        reason: "journal_chain_invalid",
+        remoteWrites: 0,
+      });
+      expect(secondCommit).not.toHaveBeenCalled();
     });
 
     it("CANDIDATE-PACKPUB-PREP-008: exact receipt replay is read-only and identity drift is denied", async () => {
