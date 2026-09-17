@@ -1765,19 +1765,25 @@ db.command("rebuild")
   .action((opts: { json?: boolean }) => {
     // Memory projection must come from the canonical project root: a linked worktree cwd
     // would otherwise project its own legacy .ut-tdd/memory (PLAN-L7-566 PR-2, P-MEMCUT-006).
-    // The process.cwd() fallback below exists only for the nested-snapshot-clone case (a plain
-    // copied tree with no .git at all, U-TESTHYGIENE-043) where git topology cannot be resolved
-    // at all. Measured: that case yields reason "git_topology_unavailable" with no git-dir to
-    // compare. A linked worktree always has a git-dir distinct from its git-common-dir, and a
-    // drifted/unavailable project identity is measured to yield "project_identity_drift" /
-    // "project_identity_unavailable" from a *resolvable* git topology — those must fail closed
-    // instead of silently falling back to projecting the linked worktree's own legacy memory.
+    // The process.cwd() fallback below exists for the nested-snapshot-clone case (a real `git
+    // clone` of a snapshot tree, U-TESTHYGIENE-043) where the clone has git topology (it is a
+    // clone, so `git rev-parse` resolves) but no usable project identity of its own. Measured on
+    // Windows CI (run 35216823766): that case yields reason "project_identity_unavailable", not
+    // "git_topology_unavailable" — a nested clone is a git repo, so git-dir/git-common-dir both
+    // resolve fine, only `loadProjectIdentityFromHead` comes back empty. A linked worktree always
+    // has a git-dir distinct from its git-common-dir (`isLinkedWorktreeCheckout`), so gating the
+    // fallback on "not a linked worktree" keeps the P-MEMCUT-006 negatives fail-closed: a linked
+    // worktree with an unresolvable or drifted identity must never fall back to `process.cwd()`
+    // and silently project its own legacy memory. "project_identity_drift" (a resolvable but
+    // *disagreeing* identity) stays fail-closed unconditionally in both topologies — drift is
+    // never the nested-snapshot case, it always means two distinct, resolvable identities.
     const projectRoot = resolveProjectMemoryRoot(process.cwd());
     let dbRebuildRepoRoot: string;
     if (projectRoot.ok) {
       dbRebuildRepoRoot = projectRoot.canonicalProjectRoot;
     } else if (
-      projectRoot.reason === "git_topology_unavailable" &&
+      (projectRoot.reason === "git_topology_unavailable" ||
+        projectRoot.reason === "project_identity_unavailable") &&
       !isLinkedWorktreeCheckout(process.cwd())
     ) {
       dbRebuildRepoRoot = process.cwd();
