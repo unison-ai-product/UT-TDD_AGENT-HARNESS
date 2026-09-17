@@ -105,6 +105,7 @@ export interface CurationFinding {
     | "adopt-not-in-canonical"
     | "canonical-not-in-ledger"
     | "adopt-body-episodic"
+    | "reject-evidence-missing"
     | "reviewer-missing"
     | "reviewer-same-family"
     | "reviewer-not-frontier"
@@ -180,6 +181,8 @@ export function verifyCurationRows(input: {
       if (!digests.has(merged)) findings.push({ kind: "merged-from-unknown", subject: merged });
     }
     if (row.decision === "adopt") findings.push(...verifyAdoptRow(row, subject));
+    else if (!row.evidence || row.evidence.length === 0)
+      findings.push({ kind: "reject-evidence-missing", subject });
   }
   if (
     untrackedDigests.length !== input.manifest.untracked.count ||
