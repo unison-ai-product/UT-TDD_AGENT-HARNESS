@@ -8,7 +8,7 @@ drive: agent
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-09-11
-updated: 2026-09-11
+updated: 2026-09-16
 owner: Claude / Fable (pair-freeze) · Codex worker (implementation)
 parent_design: docs/plans/PLAN-L6-85-automated-pr-cross-review-merge-contract.md
 pair_artifact: docs/test-design/harness/L7-d3b-provider-evidence-composition-test-design.md
@@ -25,6 +25,10 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-534-d3b-provider-evidence-composition.md
     artifact_type: markdown_doc
+  - artifact_path: src/feedback/provider-judgment-composition.ts
+    artifact_type: source_module
+  - artifact_path: tests/provider-judgment-composition.test.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L6-85-automated-pr-cross-review-merge-contract.md
   requires:
@@ -40,23 +44,75 @@ dependencies:
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/570
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/568
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/569
-review_evidence: []
-status: draft
+review_evidence:
+  - reviewer: claude-opus-blind-reviewer
+    review_kind: cross_agent
+    reviewed_at: 2026-09-16T08:35:07.164Z
+    tests_green_at: 2026-09-16T08:29:21.000Z
+    verdict: "PASS-WEAK (blocking 0): 非著者 Claude Opus blind preflight r4 at
+      7f95263c、receipt 0554f258…"
+    worker_model: gpt-5.6-luna
+    reviewer_model: claude-opus-5
+    effort: middle
+    plan_revision: 7f95263cbbea88c763a9a62a9a82e3c3880ff023
+    subject_head: 7f95263cbbea88c763a9a62a9a82e3c3880ff023
+    evidence_path: tests/provider-judgment-composition.test.ts
+    anchor_commit: 7f95263cbbea88c763a9a62a9a82e3c3880ff023
+    scope: "PR #633 exact head 7f95263c に対する非著者 (Claude family) blind preflight
+      review。著者 family は codex (初回実装)、FLAG 後の是正は PO ルール 2026-09-16 により Claude
+      control lane が同 PR 内で実施。canonical request rv1-0554f258056b7b35… の receipt
+      が verdict を記録する。対象は §3.1〜§3.3 の composition module
+      (src/feedback/provider-judgment-composition.ts)、§3.2 の custody 順序化・非終端規則
+      (src/feedback/review-attestation.ts /
+      src/feedback/review-verdict-custody.ts) と pair test
+      (tests/provider-judgment-composition.test.ts、CANDIDATE-U-D3BCOMP-001..010
+      / 015..022)。 6d738290 → cee5f72c → 32e62e47 の preflight FLAG (r1 8 件、r2 3
+      件、r3 2 件: identity 検証の attempt / nonce 欠落、artifact 残置、oracle 016-022 未実装、
+      label 偽陽性、typed reason 乖離、lock directory、終端判定 (i)(iv)、temp
+      掃除条件、request-digest receiptFileDigest の schema 化、receipt 単一読み取り、link 後の
+      temp unlink best-effort 化、021(c) attempt drift) は本 head までに是正した。r4 verdict
+      は PASS-WEAK (blocking 0)。"
+    citations:
+      - .ut-tdd/review/receipts/0554f258056b7b35061c149a33ee4a79cfcb4b863efb0809781cd957a5247cf1.json
+      - .ut-tdd/review/packets/pr633-7f95263c/control-lane-measurements.txt
+    green_commands:
+      - kind: unit_test
+        command: npx vitest run tests/review-receipt-supersession.test.ts
+          tests/provider-judgment-composition.test.ts
+          tests/review-verdict-custody.test.ts tests/review-attestation.test.ts
+          (fence env = exact-head worktree)
+        runner: node
+        scope: targeted
+        exit_code: 0
+        completed_at: 2026-09-16T08:29:21.000Z
+        evidence_path: tests/provider-judgment-composition.test.ts
+        output_digest: sha256:14ef2537afddfccdf2de9198511dfc11666435ddaaa97e674265a27dd35c8a06
+        anchor_commit: 7f95263cbbea88c763a9a62a9a82e3c3880ff023
+      - kind: typecheck
+        command: npx tsc --noEmit -p .
+        runner: node
+        scope: full
+        exit_code: 0
+        completed_at: 2026-09-16T08:29:21.000Z
+        evidence_path: src/feedback/provider-judgment-composition.ts
+        output_digest: sha256:4213c5b963b3b8ea6d3a7c546b3d40f7aabd94cbd4b7d3009f36f8a9171bee39
+        anchor_commit: 7f95263cbbea88c763a9a62a9a82e3c3880ff023
+status: confirmed
 github_issue_id: 570
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:962ff92d68cdb7ee52efa4ba777acf9d
-  command_id: plan-revise:issue-570:forward:8
-  admitted_at: 2026-09-14T01:39:16.658Z
-  source_digest: sha256:b774ab61d31de2f0972e0ae42365049abc4cab7ab3d2f8ac8911ed947952822e
-  decision_digest: sha256:95314c78c8795bd3feb9ebb8332f0e77adc6a8c6125efa7a3be35562abee476c
-  receipt_digest: sha256:5ea78a53d205eacf97f1c88d800e8d298a08c42a5f46dd05589588a8fb2c1e08
+  receipt_id: certificate:23e9834daa097ac3dfcee87bcd7c0cf6
+  command_id: plan-revise:issue-570:pr1-confirm:r11:7f95263cbbea
+  admitted_at: 2026-09-16T08:36:05.531Z
+  source_digest: sha256:eba26e423266670bf03c6e995b51c7c46d0b2285baebc742e13076286bec2237
+  decision_digest: sha256:a1073e0cb5a789b48d6f58db3e03d4959931bc796c93070535807d631951664d
+  receipt_digest: sha256:b7ce4b63bf047dab8af679f7fa611d812e6b3f77a53509ae4088ddb6a59305ea
   binding:
     path: docs/plans/PLAN-L7-534-d3b-provider-evidence-composition.md
     plan_id: PLAN-L7-534-d3b-provider-evidence-composition
     asset_id: plan:2eeafb9dd9883770a0f56c936c08bd1f
-    revision: 8
-    content_digest: sha256:b774ab61d31de2f0972e0ae42365049abc4cab7ab3d2f8ac8911ed947952822e
+    revision: 11
+    content_digest: sha256:eba26e423266670bf03c6e995b51c7c46d0b2285baebc742e13076286bec2237
   route:
     signal: feature_addition
     mode: add-feature
@@ -69,15 +125,17 @@ admission_receipt:
     plan_id: PLAN-L6-85-automated-pr-cross-review-merge-contract
     revision: 2
     digest: sha256:7f822e8cbc533306baccbf4702fc01c3ebb9133a4b3baec8ac84359c99ed156f
+  transition:
+    direction: design_to_implementation
+    implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-534-d3b-provider-evidence-composition
-    target_revision: 1
+    target_revision: 11
     phase: forward_merge
-  escape_reason: "Issue #570 D3b provider evidence composition pair-freeze
-    (add-feature; PLAN-L7-562 producer downstream, PLAN-L6-85 rev 2 origin);
-    revision 8: Codex/Sol FLAG 1c6186c0 (payload judgment_digest field
-    requirement contradicted PLAN-L7-562 preimage rule; runner now verifies
-    basename digest + canonical bytes only; candidate 012 aligned)"
+  escape_reason: "Issue #570 PR #633 (PR-1): move PLAN-L7-534 from draft to
+    confirmed on the exact-head non-author preflight review at 7f95263cbbea so
+    the landing source/test deliverables it owns pass merged-plan-status; no
+    contract change."
 ---
 
 # PLAN-L7-534: D3b provider evidence composition
@@ -190,7 +248,10 @@ truncated final、Z の退避=上書き相当の攻撃面を構造で潰す)。
   は orphan として新 attempt の開始を許す。新 attempt の完了時は上記 (4) の比較規則で、同一 bytes なら 1 receipt の
   まま冪等に完了し、異なる bytes なら上書きせず `attempt_outcome_conflict` で fail-close する。並行 attempt が同時に
   link した場合も勝者は 1 つで、敗者は `EEXIST` → bytes 比較の同じ規則に落ちる (`-022`)。orphan の削除・
-  移動は行わない (append-only、write は temp と audit のみ)。同一 identity の bounded retry は
+  移動は行わない (append-only、write は temp と audit のみ)。この非終端規則は `PLAN-L7-520` の
+  `CANDIDATE-U-RVATT-040` case B 後段 (改変 receipt を前にした `beginReviewAttempt` が `review_receipt_already_exists`)
+  を置き換える: 改変 receipt は一致 event を失うため次 attempt を開始でき、同一 bytes の再生成は `EEXIST` → bytes 比較で
+  `attempt_outcome_conflict` に落ちる (create-exclusive と上書き禁止は維持)。同一 identity の bounded retry は
   「次 attempt が exactly once で完了する (receipt 1 個・一致する `attempt_completed` 1 件)」か「typed deny で
   fail-close する」かのどちらかであり、永久 wedge (`review_receipt_already_exists` と fact 不在の共存) を作らない。
 - `receiptFileDigest` は receipt file bytes の sha256 (lowerhex 64) であり、composition は receipt file を再読込して
@@ -227,9 +288,13 @@ truncated final、Z の退避=上書き相当の攻撃面を構造で潰す)。
   path admission に従う)。
 - producer は `FileProviderJudgmentEvidenceAdapter({ evidenceRoot, judgmentsRoot: ".ut-tdd/review/judgments",
   verifiedInvocation: { provider, model } })` で呼び、`verifiedInvocation` は §3.2 の event 値だけを渡す。
-- producer が返した `judgmentDigest` の artifact を **再読込**し、bytes の sha256 と file 名、payload の
-  identity (request / attempt / head / families / nonce) が composition の導出値と一致することを検証する。
-  不一致は artifact を残さず `artifact_verification_failed`。成功時の戻り値は
+- producer が返した `judgmentDigest` の artifact を **再読込**し、(a) payload の全 field を JCS canonicalize して再計算した
+  sha256 (`PLAN-L7-562` の規則。file bytes の sha256 ではない) が producer の戻り値・file 名 `<digest>.json`・
+  `providerEvidenceRef` と一致、(b) file bytes が canonical serialization (JCS + 末尾 LF 1 個) と byte 一致、(c) payload の
+  identity (request / attempt / head / families / nonce / provider / model) が composition の導出値と field 単位で一致
+  (identity digest は attempt・nonce・provider・model を preimage に含まないので digest 比較で代替しない)、の 3 点を
+  検証する。不一致は artifact を残さず (judgment artifact と自分が作った envelope を消す) `artifact_verification_failed`。
+  envelope の既存 bytes 不一致は `evidence_conflict`。成功時の戻り値は
   `{ judgmentDigest, providerEvidenceRef: "d3b:<digest>", artifactPath, replay }`。
 - producer の typed failure (`evidence_unavailable` / `evidence_superseded` / `provider_failure` /
   `identity_mismatch` / `same_family_reviewer` / `judgment_schema_invalid` / `judgment_write_failed` /

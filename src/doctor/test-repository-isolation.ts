@@ -26,13 +26,13 @@ review-delegation-root:1
 runtime-portability:2 screen-impl-pair-freeze:1 setup-bun-removal:2 ban-lint-detection-power:3 bun-permanent-ban:14 self-pair-normative-guard:1 setup-agent-floor:2 setup:8 skill-assignment:1 state-db:1
 sub-doc-catalog-drift:5 sub-doc-section-structure:1 telemetry-closure:1 test-design-naming:1 toolchain-pin:1 tracked-canonical:1
 vmodel-contract-compiler:1 vmodel-source-assets:1 work-guard:1 workspace-roots:3 write-encoding-guard:1
-doctor-test-repository-isolation:1 persistent-db-cleanup-contract:1 project-memory-migration:1
+doctor-test-repository-isolation:1 persistent-db-cleanup-contract:1 memory-clean-cut-removal:1
 secret-scan-diff:1
 feedback-log:2
 github-repository-policy:3
 github-ci-policy:1
 github-forward-store:2
-node-self-host-bootstrap:1 node-slice-admission:3
+node-self-host-bootstrap:1 node-slice-admission:3 node-plan-revision-runner:3
 global-setup.ts:1 support/workspace-roots.ts:3
 global-setup-fence:1 vitest-snapshot-runner:3
 hook-native-launcher:1 claude-memory-terminal-gc:1 release-version-identity:2 windows-ci-single-snapshot:2 pack-authoring-template-scope:2

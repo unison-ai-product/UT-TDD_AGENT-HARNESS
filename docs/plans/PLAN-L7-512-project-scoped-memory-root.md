@@ -31,11 +31,9 @@ generates:
     artifact_type: source_module
   - artifact_path: tests/project-memory-root.test.ts
     artifact_type: test_code
-  - artifact_path: src/runtime/project-memory-migration.ts
-    artifact_type: source_module
-  - artifact_path: tests/project-memory-migration.test.ts
-    artifact_type: test_code
   - artifact_path: tests/project-memory-pack-parity.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/memory-clean-cut-removal.test.ts
     artifact_type: test_code
 dependencies:
   parent: docs/governance/ut-tdd-agent-harness-requirements_v1.2.md
@@ -210,18 +208,18 @@ status: confirmed
 github_issue_id: 544
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:c3d66c1db79e70ef608f51f9f8384533
-  command_id: command:issue544-PLAN-L7-512-memory-inventory-r6
-  admitted_at: 2026-09-09T02:41:26.549Z
-  source_digest: sha256:e3e3cad039021a5394c5ad09ea1f0084642bba9c0423fd9faa77563e1e52ce19
-  decision_digest: sha256:6e9ac50f61464271799cc1dd0cba31f02d4f53349e96557d3abb61067f36ec54
-  receipt_digest: sha256:89c201fb18dcf2b324928578fab63c36ea6a4871e84752b131a9a52162b3adc3
+  receipt_id: certificate:901bf74d6e8d531edfc3701e1180cbd7
+  command_id: plan-revise:issue-424:legacy-512:9
+  admitted_at: 2026-09-16T04:42:11.358Z
+  source_digest: sha256:b98c4e702040756c256c62f69a322a842bb4e74bc0fc27f9e8e2dbf6e89bbd8c
+  decision_digest: sha256:c3a5688e66d1351107dbbed6fbe75b64ad628284158710e424ff59c412785a2e
+  receipt_digest: sha256:86d8a61c95ea08fcb26c3ee96b5cdd665a00d2f601a0493e054d5677838696ab
   binding:
     path: docs/plans/PLAN-L7-512-project-scoped-memory-root.md
     plan_id: PLAN-L7-512-project-scoped-memory-root
     asset_id: plan:legacy:68706e293ae2c96738a8e3263bac3e01e7cde64cdb7c3ed8e53805922662bc30
-    revision: 6
-    content_digest: sha256:e3e3cad039021a5394c5ad09ea1f0084642bba9c0423fd9faa77563e1e52ce19
+    revision: 9
+    content_digest: sha256:b98c4e702040756c256c62f69a322a842bb4e74bc0fc27f9e8e2dbf6e89bbd8c
   route:
     signal: feature_addition
     mode: add-feature
@@ -231,20 +229,38 @@ admission_receipt:
     episode_id: E4-544-project-memory-inventory
     projection_digest: sha256:bea56244b34bd74d709278dcab8fb5fd50024b05be6edc9d61b6ec5123d3f450
   origin:
-    plan_id: PLAN-L7-512-project-scoped-memory-root
-    revision: 5
-    digest: sha256:fffbb99286a1e2e26d50758ad70d27a3314465eeb531ecd39e46464ab71a2c7c
+    plan_id: PLAN-L6-104-memory-clean-cut-replacement
+    revision: 1
+    digest: sha256:5e05d3835164cd42c563329ae3eee17a6e564e1c2856c23dd90f182e84d2cca6
   transition:
     direction: design_to_implementation
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-512-project-scoped-memory-root
-    target_revision: 6
+    target_revision: 9
     phase: forward_merge
-  escape_reason: "Issue #544 exact implementation and preflight evidence"
+  escape_reason: "Issue #424 PR-1: provisionally own
+    tests/memory-clean-cut-removal.test.ts (U-MEMCUT-012..016) until PLAN-L7-566
+    is confirmed in PR-2; draft PLANs cannot own landing deliverables
+    (merged-plan-status)"
 ---
 
 # PLAN-L7-512: project-scoped canonical Memory and notification root
+
+> **訂正 (2026-09-16)**: 本 PLAN の Slice 4 に属する migration / inventory / quarantine / recovery /
+> completion 条項と、`generates` の `src/runtime/project-memory-migration.ts` /
+> `tests/project-memory-migration.test.ts` は、PO 判断 (2026-09-15、Issue #424) により
+> `PLAN-L6-104-memory-clean-cut-replacement` が supersede する。Slice 1/3 の project-scoped canonical
+> root、`src/runtime/project-memory-root.ts`、`src/runtime/claude-provider-envelope.ts`、clean Pack
+> parity は本 PLAN の契約として有効なまま継承する。`generates` の 2 件は、実装を撤去する後続 PR
+> (Issue #424 PR-1) の confirm と同時に削除する。
+>
+> **本 revision (rev 7) の吸収範囲**: rev 6 発行後に canonical revise を経ずに commit `6efae246` で
+> 加えられていた `updated: 2026-09-11` と `tests/project-memory-pack-parity.test.ts` の `generates`
+> 登録を、既存 ledger rev 6 (`canonical_payload_digest faf0d000…`) を base として本 revision で明示的に
+> 吸収する。これは `6efae246` の直接編集を遡って canonical と認定するものではなく、観測済みの drift を
+> 失わずに append-only lineage へ復帰させるための是正である。rev 6 の embedded content digest は
+> `sha256:e3e3cad0…`、drift 後の HEAD content digest は `sha256:e43a97bd…`。
 
 ## 1. Outcome
 
@@ -285,6 +301,15 @@ transient notification busとして共有する。絶対pathはidentityに含め
 本改訂はIssue #544のSlice 4aだけを所有し、linked worktree inventoryと
 unique / dedupe / conflictの決定論的分類をruntime境界で実装する。canonical apply、quarantine transaction、
 crash recovery、completion marker、Pack parityは後続へ残す。
+
+rev 8 (Issue #424 PR-1、2026-09-16): `PLAN-L6-104-memory-clean-cut-replacement` §5 PR-1 により、Slice 4 の
+実装 `src/runtime/project-memory-migration.ts` と `tests/project-memory-migration.test.ts` を削除し、本 PLAN の
+`generates` から同 2 件を外した。Slice 4 は本 PLAN では実装しない (supersede の範囲は rev 7 の注記のとおり)。
+
+rev 9 (同 PR): 撤去を固定する oracle test `tests/memory-clean-cut-removal.test.ts` (`U-MEMCUT-012`〜`016`、
+pair artifact は `L7-memory-clean-cut-replacement-test-design.md` §4.2) を本 PLAN の `generates` が暫定所有する。
+実装 PLAN `PLAN-L7-566` は draft のため出荷物を所有できない (`merged-plan-status`)。566 が confirmed へ遷移する
+Issue #424 PR-2 の完了時に所有を 566 へ移す。
 
 ## 4. Scope boundary
 

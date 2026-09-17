@@ -91,53 +91,70 @@ function prepare(input: PlanLedgerRehydrationInput) {
   if (!digestEqual(sha(input.source), manifest.base.source_content_digest))
     throw new Error("plan-revision-rehydration-source-digest-mismatch");
 
-  const projection = parseTrackedReceiptProjection(input.projectionText);
-  if (!projection.ok)
-    throw new Error(`plan-revision-rehydration-projection-invalid:${projection.errors.join(",")}`);
-  // A PLAN may have historical receipts under a superseded asset id. The
-  // manifest-selected asset is authoritative; only records claiming that
-  // exact asset may participate in rehydration or contradict its identity.
-  const selectedAsset = projection.value.records.filter(
-    (record) => record.binding.assetId === manifest.base.asset_id,
-  );
-  if (
-    selectedAsset.length === 0 &&
-    projection.value.records.some(
-      (record) =>
-        record.binding.planId === manifest.plan_id || record.binding.path === manifest.source.path,
-    )
-  )
-    throw new Error("plan-revision-rehydration-asset-mismatch");
-  const identityMismatches = selectedAsset.filter(
-    (record) =>
-      record.binding.planId !== manifest.plan_id || record.binding.path !== manifest.source.path,
-  );
-  if (identityMismatches.some((record) => record.binding.planId !== manifest.plan_id))
-    throw new Error("plan-revision-rehydration-plan-id-mismatch");
-  if (identityMismatches.some((record) => record.binding.path !== manifest.source.path))
-    throw new Error("plan-revision-rehydration-path-mismatch");
-  const records = selectedAsset.filter(
-    (record) =>
-      record.binding.planId === manifest.plan_id &&
-      record.binding.path === manifest.source.path &&
-      record.binding.assetId === manifest.base.asset_id,
-  );
-  if (records.length === 0) throw new Error("plan-revision-rehydration-projection-missing");
-  const terminalRevision = Math.max(...records.map((record) => record.binding.revision));
-  const terminal = records.filter((record) => record.binding.revision === terminalRevision);
-  if (terminal.length !== 1) throw new Error("plan-revision-rehydration-projection-ambiguous");
-  const record = terminal[0];
-  if (!record || record.binding.revision !== manifest.base.revision)
-    throw new Error("plan-revision-rehydration-revision-mismatch");
-
   const parsed = parseLegacyPlanSource(input.source);
   if (!parsed) throw new Error("plan-revision-rehydration-source-invalid");
   if (parsed.planId !== manifest.plan_id)
     throw new Error("plan-revision-rehydration-plan-id-mismatch");
+  const embeddedReceipt = parsed.frontmatter.admission_receipt;
+  if (!isRecord(embeddedReceipt)) throw new Error("plan-revision-rehydration-receipt-missing");
+  const embeddedBinding = embeddedReceipt.binding;
+  if (!isRecord(embeddedBinding)) throw new Error("plan-revision-rehydration-receipt-mismatch");
+  // The embedded receipt (not the caller-declared manifest.base fields) is
+  // the ground truth for *which* asset/plan/path/revision this rehydration
+  // targets. The manifest is only cross-checked against it below, never used
+  // to pre-filter candidates (PLAN-RECOVERY-16 rev 5 §correction: manifest
+  // self-report must not be the selection basis).
+  if (embeddedBinding.plan_id !== manifest.plan_id)
+    throw new Error("plan-revision-rehydration-plan-id-mismatch");
+  if (embeddedBinding.path !== manifest.source.path)
+    throw new Error("plan-revision-rehydration-path-mismatch");
+  if (embeddedBinding.asset_id !== manifest.base.asset_id)
+    throw new Error("plan-revision-rehydration-asset-mismatch");
+  if (embeddedBinding.revision !== manifest.base.revision)
+    throw new Error("plan-revision-rehydration-revision-mismatch");
+
+  const projection = parseTrackedReceiptProjection(input.projectionText);
+  if (!projection.ok)
+    throw new Error(`plan-revision-rehydration-projection-invalid:${projection.errors.join(",")}`);
+
+  const matches = projection.value.records.filter((record) =>
+    embeddedReceiptMatchesRecord(embeddedReceipt, record),
+  );
+  if (matches.length === 0) {
+    // A projection record with this receipt_id but mismatched binding fields
+    // is an integrity violation (tampered lineage), not authority absence.
+    // Authority absence — no record with this receipt_id at all — is the
+    // only condition that falls back to the legacy bootstrap path.
+    const receiptIdExists = projection.value.records.some(
+      (record) => record.receiptId === embeddedReceipt.receipt_id,
+    );
+    throw new Error(
+      receiptIdExists
+        ? "plan-revision-rehydration-receipt-mismatch"
+        : "plan-revision-rehydration-projection-missing",
+    );
+  }
+  if (matches.length > 1) throw new Error("plan-revision-rehydration-projection-ambiguous");
+  const record = matches[0];
+  if (!record) throw new Error("plan-revision-rehydration-projection-missing");
+
+  // Lineage: a PLAN may have later records under a superseding asset for the
+  // same plan_id/path. The embedded-receipt match is only authoritative for
+  // rehydration if it is also the most recent record recorded for this
+  // plan_id/path across every asset; otherwise this would resurrect a stale
+  // lineage instead of the live one.
+  const lineage = projection.value.records.filter(
+    (candidate) =>
+      candidate.binding.planId === manifest.plan_id &&
+      candidate.binding.path === manifest.source.path,
+  );
+  const latestLineageSequence = Math.max(...lineage.map((candidate) => candidate.sequence));
+  if (record.sequence !== latestLineageSequence)
+    throw new Error("plan-revision-rehydration-lineage-ambiguous");
+
   const contentDigest = canonicalPlanContentDigest(input.source);
   if (!contentDigest || !digestEqual(contentDigest, record.binding.contentDigest))
     throw new Error("plan-revision-rehydration-content-digest-mismatch");
-  assertEmbeddedReceipt(parsed.frontmatter.admission_receipt, record);
 
   const receiptFreeFrontmatter = { ...parsed.frontmatter };
   delete receiptFreeFrontmatter.admission_receipt;
@@ -147,7 +164,7 @@ function prepare(input: PlanLedgerRehydrationInput) {
   if (!digestEqual(canonicalPayloadDigest, manifest.base.revision_digest))
     throw new Error("plan-revision-rehydration-canonical-digest-mismatch");
 
-  const admittedAt = receiptAdmittedAt(parsed.frontmatter.admission_receipt);
+  const admittedAt = receiptAdmittedAt(embeddedReceipt);
   const commandId = `plan-rehydrate-alias:${unprefix(record.recordDigest)}`;
   const aliasEvent = {
     alias_event_id: `alias-event:rehydrate:${unprefix(record.recordDigest)}`,
@@ -210,23 +227,28 @@ function localState(db: HarnessDb, manifest: PlanRevisionManifest) {
   };
 }
 
-function assertEmbeddedReceipt(value: unknown, record: TrackedReceiptRecord): void {
-  if (!isRecord(value)) throw new Error("plan-revision-rehydration-receipt-missing");
+/**
+ * HEAD embedded admission_receiptと1件のtracked projection recordが全項目
+ * (receipt identity + full binding) で一致するかを判定する。選択の唯一の根拠
+ * であり (manifestの自己申告ではない)、per-field比較なのでpartial matchを
+ * 誤って採用しない。
+ */
+function embeddedReceiptMatchesRecord(value: unknown, record: TrackedReceiptRecord): boolean {
+  if (!isRecord(value)) return false;
   const binding = value.binding;
-  if (!isRecord(binding)) throw new Error("plan-revision-rehydration-receipt-mismatch");
-  if (
-    value.receipt_id !== record.receiptId ||
-    value.command_id !== record.commandId ||
-    value.receipt_digest !== record.receiptDigest ||
-    value.decision_digest !== record.decisionDigest ||
-    value.source_digest !== record.binding.contentDigest ||
-    binding.path !== record.binding.path ||
-    binding.plan_id !== record.binding.planId ||
-    binding.asset_id !== record.binding.assetId ||
-    binding.revision !== record.binding.revision ||
-    binding.content_digest !== record.binding.contentDigest
-  )
-    throw new Error("plan-revision-rehydration-receipt-mismatch");
+  if (!isRecord(binding)) return false;
+  return (
+    value.receipt_id === record.receiptId &&
+    value.command_id === record.commandId &&
+    value.receipt_digest === record.receiptDigest &&
+    value.decision_digest === record.decisionDigest &&
+    value.source_digest === record.binding.contentDigest &&
+    binding.path === record.binding.path &&
+    binding.plan_id === record.binding.planId &&
+    binding.asset_id === record.binding.assetId &&
+    binding.revision === record.binding.revision &&
+    binding.content_digest === record.binding.contentDigest
+  );
 }
 
 function receiptAdmittedAt(value: unknown): string {
