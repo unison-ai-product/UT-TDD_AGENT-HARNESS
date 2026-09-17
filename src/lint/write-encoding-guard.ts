@@ -140,7 +140,7 @@ export function writeEncodingGuardMessages(result: ReadabilityResult): string[] 
     .map((v) => `${v.path}:${v.line}:${v.marker}`)
     .join(", ");
   return [
-    `write-encoding-guard — ⚠ UTF-8/readability violation ${result.violations.length}件 (${sample})。PowerShell 書き込みは -Encoding utf8 か Bun/Node fs に寄せて復元してください`,
+    `write-encoding-guard — ⚠ UTF-8/readability violation ${result.violations.length}件 (${sample})。PowerShell 書き込みは -Encoding utf8 か Node fs に寄せて復元してください`,
   ];
 }
 

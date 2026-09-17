@@ -92,7 +92,16 @@ import {
 import { parseNodeGenerationCiEvidence } from "./lint/node-generation-ci-policy.ts";
 
 // Final retirement admission reuses the independent detector through the CLI runtime graph.
-export { collectFinalRetirementFindings } from "./lint/bun-final-retirement.ts";
+import {
+  admitFinalBunRetirement,
+  collectFinalRetirementFindings,
+  collectFinalRetirementSurfaceInventory,
+  type BunRetirementAdmissionReceipt,
+  type BunRetirementF0bReceipt,
+  type BunRetirementF0cReceipt,
+  type BunRetirementQ0Receipt,
+} from "./lint/bun-final-retirement.ts";
+export { collectFinalRetirementFindings };
 
 import { computeOutstandingWork, outstandingSummaryLine } from "./lint/outstanding.ts";
 import {
@@ -3525,6 +3534,58 @@ audit
         process.exitCode = result.receipt.qualification === "qualified" ? 0 : 1;
       } catch (error) {
         process.stderr.write(`node-ban-audit failed: ${String(error)}\n`);
+        process.exitCode = 2;
+      }
+    },
+  );
+
+audit
+  .command("bun-retirement")
+  .description("admit the final Bun retirement from exact F0b/F0c/Q0 receipts")
+  .requiredOption("--f0b <path>", "F0b sealed Node receipt JSON")
+  .requiredOption("--f0c <path>", "F0c aggregate receipt JSON")
+  .requiredOption("--q0 <path>", "Q0 Node-only audit receipt JSON")
+  .requiredOption("--f0c-lane <path...>", "Linux and Windows F0c lane evidence JSON")
+  .requiredOption("--retirement-receipt <path>", "exact final retirement admission receipt JSON")
+  .option("--json", "JSON output")
+  .action(
+    (opts: {
+      f0b: string;
+      f0c: string;
+      q0: string;
+      f0cLane: string[];
+      retirementReceipt: string;
+      json?: boolean;
+    }) => {
+      try {
+        const repoRoot = process.cwd();
+        const readJson = <T>(path: string): T =>
+          JSON.parse(readFileSync(resolve(repoRoot, path), "utf8")) as T;
+        const retirementSubject = execFileSync("git", ["rev-parse", "HEAD"], {
+          cwd: repoRoot,
+          encoding: "utf8",
+        }).trim();
+        const lanes = opts.f0cLane.map((path) => {
+          const evidence = parseNodeGenerationCiEvidence(readJson<unknown>(path));
+          if (!evidence) throw new Error("invalid F0c lane evidence");
+          return evidence;
+        });
+        const result = admitFinalBunRetirement({
+          repoRoot,
+          f0b: readJson<BunRetirementF0bReceipt>(opts.f0b),
+          f0c: readJson<BunRetirementF0cReceipt>(opts.f0c),
+          q0: readJson<BunRetirementQ0Receipt>(opts.q0),
+          f0cLanes: lanes,
+          retirementSubject,
+          retirementReceipt: readJson<BunRetirementAdmissionReceipt>(opts.retirementReceipt),
+          // The inventory is derived from the exact tracked checkout here;
+          // callers cannot provide a hand-maintained all-clean list.
+          surfaces: collectFinalRetirementSurfaceInventory(repoRoot),
+        });
+        process.stdout.write(`${JSON.stringify(result, null, opts.json ? 2 : 0)}\n`);
+        process.exitCode = 0;
+      } catch (error) {
+        process.stderr.write(`bun-retirement-admission failed: ${String(error)}\n`);
         process.exitCode = 2;
       }
     },

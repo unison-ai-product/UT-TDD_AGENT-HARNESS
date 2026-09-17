@@ -61,7 +61,7 @@ The canonical CI run is `harness-check`. Never skip a sub-gate to make CI pass.
 ```
 npm run typecheck      # tsc --noEmit, zero errors
 npm run lint           # Biome check (format + lint), zero violations
-npm run test           # Vitest — NOT npm test (its 5s sync timeout is flaky)
+npm run test           # Vitest
 ut-tdd doctor          # fail-close over every harness gate
 ```
 

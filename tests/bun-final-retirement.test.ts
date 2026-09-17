@@ -1,10 +1,12 @@
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import {
   admitFinalBunRetirement,
   BunRetirementError,
   type BunRetirementInput,
-  collectFinalGuardSurfaceIndex,
+  collectFinalRetirementSurfaceInventory,
+  type BunRetirementAdmissionReceipt,
 } from "../src/lint/bun-final-retirement.ts";
 import {
   type NodeBanDocuments,
@@ -20,6 +22,28 @@ import { gitObjectIdSchema } from "../src/schema/node-slice-admission.ts";
 
 const subject = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
 const digest = `sha256:${"a".repeat(64)}`;
+function stableValue(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(stableValue);
+  if (value && typeof value === "object")
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>)
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([key, item]) => [key, stableValue(item)]),
+    );
+  return value;
+}
+function sha256Value(value: unknown): `sha256:${string}` {
+  return `sha256:${createHash("sha256")
+    .update(JSON.stringify(stableValue(value)))
+    .digest("hex")}`;
+}
+function surfaceInventoryDigest(): `sha256:${string}` {
+  return sha256Value(
+    collectFinalRetirementSurfaceInventory(process.cwd())
+      .map((surface) => `${surface.path}\0${surface.symbol}\0${surface.classification}`)
+      .sort(),
+  );
+}
 const f0c: NodeBanF0cAggregateBinding = {
   ok: true,
   schema_version: "node-generation-aggregate.v1",
@@ -146,14 +170,31 @@ function q0Receipt() {
   return result.receipt;
 }
 function cleanInput(overrides: Partial<BunRetirementInput> = {}): BunRetirementInput {
+  const q0 = q0Receipt();
+  const unsigned = {
+    schema_version: "bun-final-retirement.v1" as const,
+    subject_revision: subject,
+    generation_id: f0b.generation_id,
+    artifact_digest: f0c.artifact_digest,
+    retirement_subject: subject,
+    f0b_receipt_digest: sha256Value(f0b),
+    f0c_receipt_digest: sha256Value(f0c),
+    q0_receipt_digest: q0.receipt_digest,
+    surface_inventory_digest: surfaceInventoryDigest(),
+  };
+  const retirementReceipt: BunRetirementAdmissionReceipt = {
+    ...unsigned,
+    receipt_digest: sha256Value(unsigned),
+  };
   return {
     repoRoot: process.cwd(),
     f0b,
     f0c,
-    q0: q0Receipt(),
+    q0,
     f0cLanes: lanes,
     retirementSubject: subject,
-    surfaces: collectFinalGuardSurfaceIndex(),
+    retirementReceipt,
+    surfaces: collectFinalRetirementSurfaceInventory(process.cwd()),
     ...overrides,
   };
 }
@@ -185,6 +226,60 @@ describe("CAND-NODEBOOT-023/027/028/208 final Bun retirement", () => {
     expect(() => admitFinalBunRetirement(cleanInput(mutation))).toThrow(
       new BunRetirementError(reason),
     );
+  });
+
+  it.each([
+    [
+      "F0b subject drift",
+      { f0b: { ...f0b, subject_revision: `git-sha1:${"c".repeat(40)}` } },
+      "subject_revision_mismatch",
+    ],
+    [
+      "F0c subject drift",
+      { f0c: { ...f0c, subject_revision: `git-sha1:${"c".repeat(40)}` } },
+      "subject_revision_mismatch",
+    ],
+    [
+      "F0b generation drift",
+      { f0b: { ...f0b, generation_id: "node-sealed-other" } },
+      "generation_id_mismatch",
+    ],
+    [
+      "F0c generation drift",
+      { f0c: { ...f0c, generation_id: "node-ci-other" } },
+      "generation_id_mismatch",
+    ],
+  ] as const)("denies independent tuple drift: %s", (_label, mutation, reason) => {
+    expect(() => admitFinalBunRetirement(cleanInput(mutation))).toThrow(
+      new BunRetirementError(reason),
+    );
+  });
+
+  it("denies a stale Q0 subject instead of accepting a receipt from an older chain", () => {
+    const stale = q0Receipt();
+    const mutated = { ...stale, subject_revision: `git-sha1:${"c".repeat(40)}` };
+    expect(() => admitFinalBunRetirement(cleanInput({ q0: mutated }))).toThrow(
+      new BunRetirementError("q0_binding_invalid"),
+    );
+  });
+
+  it("denies a receipt re-used for a later retirement subject even when its tuple is otherwise valid", () => {
+    const previous = execFileSync("git", ["rev-parse", "HEAD^"], { encoding: "utf8" }).trim();
+    const current = cleanInput();
+    const unsigned = {
+      ...current.retirementReceipt!,
+      retirement_subject: `git-sha1:${previous}`,
+    };
+    expect(() =>
+      admitFinalBunRetirement(
+        cleanInput({
+          retirementReceipt: {
+            ...unsigned,
+            receipt_digest: sha256Value(unsigned),
+          },
+        }),
+      ),
+    ).toThrow(new BunRetirementError("retirement_subject_mismatch"));
   });
 
   it.each([

@@ -30,6 +30,7 @@ export type BunRetirementReason =
   | "f0b_receipt_missing"
   | "f0c_receipt_missing"
   | "q0_receipt_missing"
+  | "retirement_receipt_missing"
   | "receipt_schema_invalid"
   | "subject_revision_mismatch"
   | "generation_id_mismatch"
@@ -54,6 +55,27 @@ export type BunRetirementF0bReceipt = NodeBanGenerationBinding;
 export type BunRetirementF0cReceipt = NodeBanF0cAggregateBinding;
 export type BunRetirementQ0Receipt = NodeBanAuditReceipt;
 
+/**
+ * The append-only admission record emitted for the final retirement commit.
+ *
+ * The predecessor receipts are intentionally referenced by digest instead of
+ * being copied into the PLAN.  This makes replay bound to the exact retirement
+ * subject and prevents an ancestor-only receipt set from being reused after a
+ * later retirement commit.
+ */
+export interface BunRetirementAdmissionReceipt {
+  readonly schema_version: "bun-final-retirement.v1";
+  readonly subject_revision: string;
+  readonly generation_id: string;
+  readonly artifact_digest: string;
+  readonly retirement_subject: string;
+  readonly f0b_receipt_digest: string;
+  readonly f0c_receipt_digest: string;
+  readonly q0_receipt_digest: string;
+  readonly surface_inventory_digest: string;
+  readonly receipt_digest: string;
+}
+
 export interface BunRetirementSurface {
   readonly path: string;
   readonly symbol: string;
@@ -61,6 +83,7 @@ export interface BunRetirementSurface {
     | "reachable_production"
     | "ban_enforcement_guard"
     | "retained_fixture"
+    | "retained_compatibility_vocabulary"
     | "non_applicable_false_positive"
     | "indeterminate";
 }
@@ -73,6 +96,8 @@ export interface BunRetirementInput {
   readonly f0cLanes: readonly NodeGenerationCiEvidence[];
   /** Algorithm-prefixed Git object id of the exact retirement commit. */
   readonly retirementSubject: string;
+  /** Append-only record produced for this exact retirement subject. */
+  readonly retirementReceipt: BunRetirementAdmissionReceipt | null | undefined;
   readonly surfaces: readonly BunRetirementSurface[];
 }
 
@@ -89,23 +114,192 @@ export interface BunRetirementResult {
   readonly receipt_digest: string;
 }
 
-const FINAL_GUARD_SURFACE_INDEX = [
-  ["src/lint/runtime-portability.ts", "BUN_GLOBAL_PATTERN"],
-  ["src/lint/bun-permanent-ban.ts", "nodeBanAuditSchemaVersion"],
-  ["src/lint/rule-drift.ts", "containsBunExecutionInstruction"],
-  ["src/lint/toolchain-pin.ts", "analyzeToolchainPin"],
-  ["src/lint/github-ci-policy.ts", "BUN_EXECUTION_PATTERN"],
-  ["src/state-db/stop-refresh.ts", "refuseBunStopRefresh"],
-  ["src/runtime/runtime-image-observer.ts", "classifyRuntimeImageProcess"],
-] as const;
+/** Paths whose Bun vocabulary is exclusively the permanent-ban detector/guard. */
+const FINAL_GUARD_PATHS = new Set([
+  "src/lint/runtime-portability.ts",
+  "src/lint/bun-permanent-ban.ts",
+  "src/lint/rule-drift.ts",
+  "src/lint/toolchain-pin.ts",
+  "src/lint/github-ci-policy.ts",
+  "src/state-db/stop-refresh.ts",
+  "src/runtime/runtime-image-observer.ts",
+  "src/lint/bun-final-retirement.ts",
+  "src/doctor/test-repository-isolation.ts",
+  "src/doctor/setup-smoke.ts",
+  "src/doctor/rule-quality.ts",
+]);
 
-/** Retained deny-only guards. Raw Bun candidates are inventoried separately. */
-export function collectFinalGuardSurfaceIndex(): BunRetirementSurface[] {
-  return FINAL_GUARD_SURFACE_INDEX.map(([path, symbol]) => ({
+const INSTRUCTION_PATHS = new Set([
+  "AGENTS.md",
+  "CLAUDE.md",
+  ".claude/CLAUDE.md",
+  "README.md",
+  "src/lint/write-encoding-guard.ts",
+]);
+
+// These are the document roots that the clean Pack actually ships. Other
+// tracked documentation remains in the raw inventory, but is not a runtime or
+// AI-instruction surface in the Pack and cannot hide a reachable command. This
+// mirrors the distribution boundary rather than a list of individual "clean"
+// Bun entries.
+const PACK_DOCUMENT_PREFIXES = [
+  "docs/process/",
+  "docs/reference/",
+  "docs/skills/",
+  "docs/templates/adapter/",
+  "docs/templates/github/",
+];
+
+const COMPATIBILITY_PATHS = new Set([
+  "src/schema/frontmatter.ts",
+  "src/schema/cutover-transition.ts",
+  "src/runtime/cutover-transition.ts",
+  "src/runtime/verb-classify.ts",
+  "src/runtime/agent-slots.ts",
+  "src/runtime/node-slice-admission.ts",
+  "src/lint/design-language.ts",
+  "src/lint/erasable-syntax.ts",
+  "src/lint/review-evidence.ts",
+  "src/lint/verification-profile.ts",
+  "src/lint/verification-profile-types.ts",
+  "src/lint/verification-profile-catalog.ts",
+  "src/lint/verification-profile-safety.ts",
+]);
+
+const BUN_TOKEN = /\b(?:bun|bunx)\b/iu;
+const ACTIVE_INSTRUCTION =
+  /\b(?:use|run|install|build|execute|exec|command|filesystem|script|setup|launch|invoke|start)\b/iu;
+const RETIRED_POLICY =
+  /\b(?:retired|ban|banned|forbidden|prohibited|legacy|migration|detector|guard|audit|deny|refuse|fallback)\b/iu;
+const ACTIVE_BUN_EXECUTION =
+  /\b(?:spawn|spawnSync|exec|execSync|execFile|execFileSync)\s*\(\s*["'`](?:bun|bunx)(?:\.(?:cmd|exe|bat))?["'`]/iu;
+const ACTIVE_BUN_IMPORT = /\bfrom\s*["'`]bun:/iu;
+
+interface GitBunLine {
+  readonly path: string;
+  readonly line: number;
+  readonly text: string;
+}
+
+function gitTrackedBunLines(repoRoot: string): GitBunLine[] {
+  try {
+    const output = execFileSync(
+      "git",
+      ["-C", repoRoot, "grep", "-n", "-I", "-i", "-E", "\\b(bun|bunx)\\b", "HEAD", "--", "."],
+      {
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "ignore"],
+      },
+    );
+    return output
+      .split(/\r?\n/u)
+      .filter(Boolean)
+      .flatMap((entry) => {
+        const first = entry.indexOf(":");
+        const second = entry.indexOf(":", first + 1);
+        const third = entry.indexOf(":", second + 1);
+        if (first < 0 || second < 0 || third < 0) return [];
+        const path = entry.slice(first + 1, second).replaceAll("\\", "/");
+        const line = Number(entry.slice(second + 1, third));
+        if (!path || !Number.isInteger(line) || line < 1) return [];
+        return [{ path, line, text: entry.slice(third + 1) }];
+      });
+  } catch (error) {
+    if (typeof error === "object" && error !== null && "status" in error && error.status === 1)
+      return [];
+    throw new BunRetirementError("indeterminate_bun_surface");
+  }
+}
+
+function classifyTrackedSurface(
+  path: string,
+  line: string,
+): BunRetirementSurface["classification"] {
+  if (
+    path.startsWith("tests/") ||
+    path.startsWith("vendor/") ||
+    path.startsWith(".ut-tdd/") ||
+    path.includes("/fixtures/") ||
+    path.includes("/fixture/")
+  )
+    return "retained_fixture";
+  if (path.startsWith("docs/")) {
+    if (!PACK_DOCUMENT_PREFIXES.some((prefix) => path.startsWith(prefix)))
+      return "retained_fixture";
+    if (FINAL_GUARD_PATHS.has(path)) return "ban_enforcement_guard";
+    // Excluded governance history is retained because the clean Pack does not
+    // execute it.  Other documentation is classified from its actual line so
+    // a newly added Bun command cannot hide behind a broad docs allowlist.
+    const excludedHistory =
+      path.startsWith("docs/plans/") ||
+      path.startsWith("docs/design/") ||
+      path.startsWith("docs/handover/") ||
+      path.startsWith("docs/archive/") ||
+      path.startsWith("docs/governance/");
+    const activeCommand =
+      /\b(?:bun|bunx)(?:\.(?:cmd|exe|bat))?\s+(?:run|install|build|exec|x)\b/iu.test(line) ||
+      /\b(?:use|run|install|build|execute|launch|invoke)\b[^\n]*(?:bun|bunx)\b/iu.test(line);
+    if (activeCommand && !RETIRED_POLICY.test(line) && !excludedHistory)
+      return "reachable_production";
+    return "retained_fixture";
+  }
+  if (ACTIVE_BUN_EXECUTION.test(line) || ACTIVE_BUN_IMPORT.test(line))
+    return "reachable_production";
+  if (FINAL_GUARD_PATHS.has(path)) return "ban_enforcement_guard";
+  if (INSTRUCTION_PATHS.has(path)) {
+    // Policy statements describing the ban are retained guards.  Only an
+    // active instruction which would send a user/runtime through Bun is a
+    // reachable production surface.
+    return (ACTIVE_INSTRUCTION.test(line) ||
+      /(?:bun|bunx)\s*[/.:]\s*(?:fs|filesystem|runtime)/iu.test(line)) &&
+      !RETIRED_POLICY.test(line)
+      ? "reachable_production"
+      : "ban_enforcement_guard";
+  }
+  if (path.startsWith("skills/")) {
+    return ACTIVE_INSTRUCTION.test(line) && !RETIRED_POLICY.test(line)
+      ? "reachable_production"
+      : "retained_fixture";
+  }
+  if (COMPATIBILITY_PATHS.has(path)) return "retained_compatibility_vocabulary";
+  if (path.startsWith("src/lint/") || path.startsWith("src/doctor/"))
+    return "ban_enforcement_guard";
+  if (path === "src/cli.ts") {
+    if (
+      /process\.versions\.bun|bun-runtime-refused|bun-(?:permanent-ban|final-retirement)|BunRetirement|audit[^\n]*bun|from ["'][^"']*bun/iu.test(
+        line,
+      )
+    )
+      return "ban_enforcement_guard";
+    return "retained_compatibility_vocabulary";
+  }
+  if (/^\s*(?:\/\/|\/\*|\*|\*\/)/u.test(line)) return "retained_compatibility_vocabulary";
+  // Source-side detectors and policy adapters are guards; an executable
+  // script/workflow or generated setup template is an actual reachable
+  // production surface and must be clean after the retirement.
+  if (path.startsWith(".github/") || path.startsWith("scripts/") || path.startsWith("src/setup/"))
+    return "reachable_production";
+  return "ban_enforcement_guard";
+}
+
+/**
+ * Build the final surface inventory from the exact tracked HEAD, rather than
+ * accepting a caller-maintained list of clean entries or reading an uncommitted
+ * working tree.  The supplied list is checked against this inventory by
+ * admission, so adding a new instruction cannot silently keep a hard-coded
+ * clean oracle green.
+ */
+export function collectFinalRetirementSurfaceInventory(repoRoot: string): BunRetirementSurface[] {
+  const surfaces = gitTrackedBunLines(repoRoot).map(({ path, line, text }) => ({
     path,
-    symbol,
-    classification: "ban_enforcement_guard" as const,
+    symbol: `line:${line}:${text.match(BUN_TOKEN)?.[0]?.toLowerCase() ?? "bun"}`,
+    classification: classifyTrackedSurface(path, text),
   }));
+  return surfaces.sort((left, right) =>
+    `${left.path}\0${left.symbol}\0${left.classification}`.localeCompare(
+      `${right.path}\0${right.symbol}\0${right.classification}`,
+    ),
+  );
 }
 
 function rawRevision(value: string): string | null {
@@ -234,7 +428,78 @@ function validF0c(receipt: BunRetirementF0cReceipt): boolean {
   );
 }
 
-function verifySurfaces(surfaces: readonly BunRetirementSurface[]): void {
+function stableValue(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(stableValue);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>)
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([key, item]) => [key, stableValue(item)]),
+    );
+  }
+  return value;
+}
+
+function sha256Value(value: unknown): `sha256:${string}` {
+  return `sha256:${createHash("sha256")
+    .update(JSON.stringify(stableValue(value)))
+    .digest("hex")}`;
+}
+
+function verifyAdmissionReceipt(
+  receipt: BunRetirementAdmissionReceipt,
+  input: {
+    f0b: BunRetirementF0bReceipt;
+    f0c: BunRetirementF0cReceipt;
+    q0: BunRetirementQ0Receipt;
+    subjectRevision: string;
+    retirementSubject: string;
+    surfaceInventoryDigest: string;
+  },
+): void {
+  const unsigned = { ...receipt } as Record<string, unknown>;
+  delete unsigned.receipt_digest;
+  if (
+    receipt.schema_version !== "bun-final-retirement.v1" ||
+    !rawRevision(receipt.subject_revision) ||
+    !rawRevision(receipt.retirement_subject) ||
+    !receipt.generation_id ||
+    !DIGEST.test(receipt.artifact_digest) ||
+    !DIGEST.test(receipt.f0b_receipt_digest) ||
+    !DIGEST.test(receipt.f0c_receipt_digest) ||
+    !DIGEST.test(receipt.q0_receipt_digest) ||
+    !DIGEST.test(receipt.surface_inventory_digest) ||
+    !DIGEST.test(receipt.receipt_digest) ||
+    receipt.receipt_digest !== sha256Value(unsigned)
+  )
+    throw new BunRetirementError("receipt_schema_invalid");
+  if (
+    rawRevision(receipt.subject_revision) !== input.subjectRevision ||
+    rawRevision(receipt.retirement_subject) !== input.retirementSubject
+  )
+    throw new BunRetirementError("retirement_subject_mismatch");
+  if (
+    receipt.generation_id !== input.f0b.generation_id ||
+    receipt.artifact_digest !== input.f0c.artifact_digest ||
+    receipt.f0b_receipt_digest !== sha256Value(input.f0b) ||
+    receipt.f0c_receipt_digest !== sha256Value(input.f0c) ||
+    receipt.q0_receipt_digest !== input.q0.receipt_digest ||
+    receipt.surface_inventory_digest !== input.surfaceInventoryDigest
+  )
+    throw new BunRetirementError("q0_binding_invalid");
+}
+
+function verifySurfaces(
+  repoRoot: string,
+  supplied: readonly BunRetirementSurface[],
+): `sha256:${string}` {
+  const surfaces = collectFinalRetirementSurfaceInventory(repoRoot);
+  const key = (surface: BunRetirementSurface) =>
+    `${surface.path}\0${surface.symbol}\0${surface.classification}`;
+  const expected = surfaces.map(key).sort();
+  const actual = [...supplied].map(key).sort();
+  if (expected.length !== actual.length || expected.some((item, index) => item !== actual[index]))
+    throw new BunRetirementError("indeterminate_bun_surface");
   if (
     surfaces.length === 0 ||
     surfaces.some((surface) => !surface.path.trim() || !surface.symbol.trim())
@@ -244,6 +509,7 @@ function verifySurfaces(surfaces: readonly BunRetirementSurface[]): void {
     throw new BunRetirementError("indeterminate_bun_surface");
   if (surfaces.some((surface) => surface.classification === "reachable_production"))
     throw new BunRetirementError("reachable_bun_surface");
+  return sha256Value(expected);
 }
 
 /**
@@ -254,6 +520,7 @@ export function admitFinalBunRetirement(input: BunRetirementInput): BunRetiremen
   if (!input.f0b) throw new BunRetirementError("f0b_receipt_missing");
   if (!input.f0c) throw new BunRetirementError("f0c_receipt_missing");
   if (!input.q0) throw new BunRetirementError("q0_receipt_missing");
+  if (!input.retirementReceipt) throw new BunRetirementError("retirement_receipt_missing");
   if (!validF0b(input.f0b) || !validF0c(input.f0c))
     throw new BunRetirementError("receipt_schema_invalid");
 
@@ -264,9 +531,23 @@ export function admitFinalBunRetirement(input: BunRetirementInput): BunRetiremen
   if (!f0bSubject || !f0cSubject || !workflowRevision || !retirementSubject)
     throw new BunRetirementError("receipt_schema_invalid");
   if (f0bSubject !== f0cSubject) throw new BunRetirementError("subject_revision_mismatch");
+  if (f0cSubject !== retirementSubject) throw new BunRetirementError("retirement_subject_mismatch");
   if (input.f0b.artifact_digest !== input.f0c.artifact_digest)
     throw new BunRetirementError("artifact_digest_mismatch");
 
+  const lanes = input.f0cLanes;
+  if (
+    lanes.length !== 2 ||
+    new Set(lanes.map((lane) => lane.lane)).size !== 2 ||
+    !lanes.some((lane) => lane.lane === "linux") ||
+    !lanes.some((lane) => lane.lane === "windows")
+  )
+    throw new BunRetirementError("q0_binding_invalid");
+  const nodeLane = lanes.find((lane) => lane.lane === input.f0b!.lane);
+  if (!nodeLane || nodeLane.sealed_generation_id !== input.f0b.generation_id)
+    throw new BunRetirementError("generation_id_mismatch");
+  if (lanes.some((lane) => lane.generation_id !== input.f0c?.generation_id))
+    throw new BunRetirementError("generation_id_mismatch");
   try {
     verifyNodeBanAuditReceipt(input.q0, {
       subjectRevision: f0cSubject,
@@ -279,15 +560,6 @@ export function admitFinalBunRetirement(input: BunRetirementInput): BunRetiremen
     throw new BunRetirementError("q0_binding_invalid");
   }
   if (input.q0.qualification !== "qualified") throw new BunRetirementError("q0_binding_invalid");
-
-  const lanes = input.f0cLanes;
-  if (
-    lanes.length !== 2 ||
-    new Set(lanes.map((lane) => lane.lane)).size !== 2 ||
-    !lanes.some((lane) => lane.lane === "linux") ||
-    !lanes.some((lane) => lane.lane === "windows")
-  )
-    throw new BunRetirementError("q0_binding_invalid");
   const aggregate = admitNodeGenerationAggregate({
     evidence: lanes,
     expected: {
@@ -312,7 +584,15 @@ export function admitFinalBunRetirement(input: BunRetirementInput): BunRetiremen
   if (!isAncestor(input.repoRoot, f0cSubject, retirementSubject))
     throw new BunRetirementError("predecessor_not_ancestor");
 
-  verifySurfaces(input.surfaces);
+  const surfaceInventoryDigest = verifySurfaces(input.repoRoot, input.surfaces);
+  verifyAdmissionReceipt(input.retirementReceipt, {
+    f0b: input.f0b,
+    f0c: input.f0c,
+    q0: input.q0,
+    subjectRevision: f0cSubject,
+    retirementSubject,
+    surfaceInventoryDigest,
+  });
   const tuple: BunRetirementTuple = {
     subject_revision: prefixedRevision(input.f0c.subject_revision),
     generation_id: input.f0b.generation_id,

@@ -7,7 +7,7 @@ drive: fullstack
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-09-04
-updated: 2026-09-04
+updated: 2026-09-17
 owner: PO / Codex
 parent_design: docs/plans/PLAN-L6-93-node-bootstrap-contract.md
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
@@ -41,62 +41,22 @@ dependencies:
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/500
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/487
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/473
-review_evidence:
-  - reviewer: codex
-    review_kind: intra_runtime_subagent
-    reviewed_at: 2026-09-16T10:02:00.000Z
-    tests_green_at: 2026-09-16T09:42:00.000Z
-    verdict: approve
-    scope: Issue
-    worker_model: codex
-    reviewer_model: codex
-    plan_revision: PLAN-L7-530@11
-    subject_head: 5a183e7db92e2722636b18e9532eec3ea4200648
-    green_commands:
-      - kind: unit_test
-        command: node node_modules/vitest/vitest.mjs run
-          tests/bun-final-retirement.test.ts --reporter=dot
-        runner: node
-        scope: targeted
-        exit_code: 0
-        completed_at: 2026-09-16T09:40:00.000Z
-        evidence_path: tests/bun-final-retirement.test.ts
-        output_digest: sha256:886299f354b2637754ba460c6fb87ded81581d6ee966017ccf7f863df79b32f3
-        anchor_commit: 5a183e7db92e2722636b18e9532eec3ea4200648
-      - kind: typecheck
-        command: npm run typecheck -- --pretty false
-        runner: node
-        scope: full
-        exit_code: 0
-        completed_at: 2026-09-16T09:40:30.000Z
-        evidence_path: src/lint/bun-final-retirement.ts
-        output_digest: sha256:b8c72bf3244f354bdb059458c4c6ead04fabf119b8855e91ee797b8dbf1e9b32
-        anchor_commit: 5a183e7db92e2722636b18e9532eec3ea4200648
-      - kind: lint
-        command: npx biome check src/cli.ts src/lint/bun-final-retirement.ts
-        runner: node
-        scope: targeted
-        exit_code: 0
-        completed_at: 2026-09-16T09:41:00.000Z
-        evidence_path: src/lint/bun-final-retirement.ts
-        output_digest: sha256:b8c72bf3244f354bdb059458c4c6ead04fabf119b8855e91ee797b8dbf1e9b32
-        anchor_commit: 5a183e7db92e2722636b18e9532eec3ea4200648
-status: confirmed
+status: draft
 github_issue_id: 487
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:ed541d255e424fd7f53d4c8638baea80
-  command_id: pr641-issue487-review-fix-1789552837752
-  admitted_at: 2026-09-16T10:04:00.000Z
-  source_digest: sha256:b8068f0ec4bef11555de5461d732cff06a1ba262f3f0db20f4d782974ff83264
-  decision_digest: sha256:dcfd4f320b127233b54c2c406eca3586f714954ed12ecc57a783d590623ae82b
-  receipt_digest: sha256:d3affdecabf3f92185380f339807747398fedae70c5df8c57087e0fb71734aed
+  receipt_id: certificate:64f16ffae19aa28ae8eca8d1c1fa1fb9
+  command_id: plan-revise:issue487:final-retirement:r14:1789624386203
+  admitted_at: 2026-09-17T05:53:06.203Z
+  source_digest: sha256:be8e6efeb86af09570c31a02095d9f8aa583f99024b2615d0315eb7cb418e868
+  decision_digest: sha256:da3576839c1eb2901d112e5eae2d0392b6bf1d40e54bc5fcd1940a7b11cd6686
+  receipt_digest: sha256:ed77414298890da8e1e0944c3fa680c3ff34f2d2b0d07e21066d332fa81a783e
   binding:
     path: docs/plans/PLAN-L7-530-bun-final-retirement.md
     plan_id: PLAN-L7-530-bun-final-retirement
     asset_id: plan:bc9250c9a7c873dcb9f18956677371f7
-    revision: 13
-    content_digest: sha256:b8068f0ec4bef11555de5461d732cff06a1ba262f3f0db20f4d782974ff83264
+    revision: 14
+    content_digest: sha256:be8e6efeb86af09570c31a02095d9f8aa583f99024b2615d0315eb7cb418e868
   route:
     signal: feature_addition
     mode: add-feature
@@ -114,9 +74,9 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-530-bun-final-retirement
-    target_revision: 12
+    target_revision: 13
     phase: forward_merge
-  escape_reason: "Issue #487 correct preflight test completion ordering"
+  escape_reason: "Issue #487 final retirement evidence reissued through canonical plan revise"
 ---
 
 # PLAN-L7-530: Bun 最終撤去の tuple-bound 実装契約

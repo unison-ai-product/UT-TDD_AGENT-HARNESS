@@ -23,8 +23,8 @@ decision_points:
     because: "only machine evidence and recorded review findings clear a gate; subjective code-looks-right assessments are not falsifiable"
   - when: "Running Vitest locally or in CI"
     choose: "use `npm run test`"
-    over: "using bare `npm test`"
-    because: "the native runner has sync-timeout flakiness; CI uses Vitest via `npm run test`, so bare `npm test` can pass locally and still fail CI"
+    over: "using an unspecified test command"
+    because: "the repository's canonical test script is the deterministic Vitest snapshot runner"
   - when: "Checking Biome formatting before a gate"
     choose: "run `npm run lint` (which invokes `biome check`)"
     over: "running `biome lint` alone"
@@ -110,8 +110,7 @@ evidence in single-runtime mode — never self-review alone.
 
 ## Anti-patterns that defeat enforcement
 
-- `npm test` instead of `npm run test` (Vitest) — native runner has sync-timeout
-  flakiness; CI uses Vitest.
+- An unspecified test command instead of the repository's canonical `npm run test` script.
 - `biome lint` without `biome check` — format violations accumulate and break the
   next push.
 - Treating `ut-tdd doctor` green as "design is correct" — doctor checks

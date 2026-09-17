@@ -27,8 +27,8 @@ decision_points:
     because: "the `commit-msg` hook does not accept PowerShell here-strings for multi-line messages; only the Bash heredoc form is honored"
   - when: "Verifying Vitest before pushing"
     choose: "run `npm run test`"
-    over: "running bare `npm test`"
-    because: "bare `npm test` has sync-timeout flakiness and is not what CI's `harness-check` runs; a locally-green bare run can still fail CI"
+    over: "using an unspecified test command"
+    because: "the repository's canonical test script is the deterministic Vitest snapshot runner"
   - when: "Checking format/lint before pushing"
     choose: "run `npm run lint` (invokes `biome check`)"
     over: "running `biome lint` alone"
@@ -106,7 +106,7 @@ CI runs `harness-check` on every push. All four must be green before a push:
 | Check | Command | Common failure |
 |---|---|---|
 | Type check | `npm run typecheck` | Missing type declarations |
-| Vitest | `npm run test` | Do NOT use bare `npm test` — sync-timeout flakiness |
+| Vitest | `npm run test` | Use the canonical repository script |
 | Biome | `npm run lint` | Format violations from `biome lint` without `biome check` |
 | Doctor | `ut-tdd doctor` | Governance violations, missing PLAN dependencies |
 

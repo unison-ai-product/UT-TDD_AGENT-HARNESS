@@ -35,8 +35,8 @@ decision_points:
     because: "a prior incident showed mock/real divergence masking a broken migration path"
   - when: "choosing the test-run command for CI or local verification"
     choose: "npm run test"
-    over: "npm test"
-    because: "the native npm test runner has a 5-second sync timeout that produces flaky failures on async tests unrelated to real defects"
+    over: "an unspecified test command"
+    because: "the repository's canonical test script invokes the deterministic Vitest snapshot runner"
 ---
 
 # test driven development
@@ -109,7 +109,6 @@ implementation it exercises provides zero design signal and weaker oracle value
 
 - Writing `it.todo` as a placeholder, then implementing source first and filling
   the test in later — this inverts the cycle order and forfeits Red evidence.
-- Running `npm test` instead of `npm run test` — the native runner has a 5-second
-  sync timeout that makes some async tests flaky without reflecting real failures.
+- Running an unspecified test command instead of the repository's canonical `npm run test` script.
 - Treating `ut-tdd doctor` green as evidence that the test design is correct —
   doctor checks structural governance, not oracle quality or cycle order.

@@ -323,7 +323,7 @@ Verify with `ut-tdd plan lint` plus the targeted doctor checks
 
 - Read target files before editing them.
 - When reading tracked prose or source through PowerShell, specify UTF-8 explicitly
-  (for example `Get-Content -Encoding utf8`) or use Node/Bun filesystem reads.
+  (for example `Get-Content -Encoding utf8`) or use Node filesystem reads.
   Do not trust bare `Get-Content` / ANSI-default output for Japanese text; display
   mojibake can become real file corruption if copied back into docs. Repository
   gates enforce UTF-8 no-BOM and mojibake fail-close through `readability`.
