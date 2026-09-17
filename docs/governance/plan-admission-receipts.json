@@ -4448,6 +4448,22 @@
         "revision": 13,
         "content_digest": "sha256:b8068f0ec4bef11555de5461d732cff06a1ba262f3f0db20f4d782974ff83264"
       }
+    },
+    {
+      "sequence": 279,
+      "previous_record_digest": "sha256:000ffba5483157682abe85444d870a10dce65e6a3f1b747886dd5caa71c61791",
+      "record_digest": "sha256:6c3e5d03e93722bc5b95283fc847aa287f69379d7de8ed6d16c5968f039d3b33",
+      "command_id": "pr641-l7-354-bun-lock-supersession-n3-1789617786553",
+      "receipt_id": "certificate:fd843f91c4cbf8afb2ee7f0f146cd988",
+      "receipt_digest": "sha256:5d5771b6d3f6b1b18adae4e5550925ee8abacc7cc124d8aa40fc2007e978892d",
+      "decision_digest": "sha256:35c8e49de4691847e827a510267357abe18bb5c12b7be5d14d88c7fcc927cb0a",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-354-toolchain-biome-exact-pin.md",
+        "plan_id": "PLAN-L7-354-toolchain-biome-exact-pin",
+        "asset_id": "plan:legacy:ec303beeae170d11c4baa0973f7a5d4ec76de22a99c65f4c8f2001c16e048419",
+        "revision": 3,
+        "content_digest": "sha256:0b3dcef1042b77db8de5b8942992d842186ea3ffbf270943dd28bbc0a491e3ff"
+      }
     }
   ]
 }
