@@ -1085,12 +1085,13 @@ function hasCompletePreparationJournal(
   });
 }
 
-function journalReadBackMatches(
-  journal: readonly PublicationJournalEvent[],
-  identityDigest: string,
-  branchCommit: string,
-  pullRequest: PackPublicationPullRequestObservation,
-): boolean {
+function journalReadBackMatches(input: {
+  readonly journal: readonly PublicationJournalEvent[];
+  readonly identityDigest: string;
+  readonly branchCommit: string;
+  readonly pullRequest: PackPublicationPullRequestObservation;
+}): boolean {
+  const { journal, identityDigest, branchCommit, pullRequest } = input;
   const readBack = (mutation: "pack_branch_commit" | "pack_pr_create") =>
     journal.filter(
       (event) =>
@@ -1185,12 +1186,12 @@ async function reconcilePreparedPreparation(
       remoteWrites: 0,
     });
   if (
-    !journalReadBackMatches(
+    !journalReadBackMatches({
       journal,
-      identity.identityDigest,
-      observed.value.branchCommit,
-      observed.value.pullRequest,
-    )
+      identityDigest: identity.identityDigest,
+      branchCommit: observed.value.branchCommit,
+      pullRequest: observed.value.pullRequest,
+    })
   )
     return preparationFailure({
       status: "indeterminate",
