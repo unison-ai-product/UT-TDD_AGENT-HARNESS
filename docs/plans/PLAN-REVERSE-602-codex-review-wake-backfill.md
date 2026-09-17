@@ -1,6 +1,6 @@
 ---
 plan_id: PLAN-REVERSE-602-codex-review-wake-backfill
-title: "PLAN-REVERSE-600: Codex review wake backfill"
+title: "PLAN-REVERSE-602: Codex review wake backfill"
 kind: reverse
 layer: cross
 drive: be
@@ -8,7 +8,7 @@ route_signal: reverse
 route_mode: reverse
 confirmed_reverse_type: fullback
 created: 2026-09-16
-updated: 2026-09-16
+updated: 2026-09-17
 owner: Codex / TL
 parent_design: docs/plans/PLAN-L7-600-codex-review-wake-impl.md
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
@@ -36,7 +36,7 @@ dependencies:
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/600
 review_evidence: []
 workflow_phase: R0
-status: draft
+status: confirmed
 github_issue_id: 600
 admission_receipt:
   schema_version: v2
@@ -74,7 +74,7 @@ admission_receipt:
   escape_reason: "Issue #600 Codex review wake implementation requires reverse backfill trace"
 ---
 
-# PLAN-REVERSE-600: Codex review wake backfill
+# PLAN-REVERSE-602: Codex review wake backfill
 
 ## R0: 対象境界
 
@@ -94,5 +94,4 @@ receipt/custody の変更は扱わない。
 
 targeted test、typecheck、Biome、doctor の source/deliverable trace が green であり、
 非著者 review が exact HEAD を再検した後に、L6/L3 正本への必要な backfill を判断する。
-
 

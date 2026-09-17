@@ -24,13 +24,7 @@ generates:
     artifact_type: markdown_doc
   - artifact_path: src/runtime/codex-review-wake.ts
     artifact_type: source_module
-  - artifact_path: src/feedback/review-attestation.ts
-    artifact_type: source_module
-  - artifact_path: src/cli/delegation.ts
-    artifact_type: source_module
   - artifact_path: tests/codex-review-wake.test.ts
-    artifact_type: test_code
-  - artifact_path: tests/cli-delegation.test.ts
     artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L6-600-codex-review-wake-contract.md
