@@ -78,6 +78,16 @@ import {
   renderSessionStartDigest,
   selectSessionStartDigest,
 } from "./handover/session-start-digest.ts";
+// Final retirement admission reuses the independent detector through the CLI runtime graph.
+import {
+  admitFinalBunRetirement,
+  type BunRetirementAdmissionReceipt,
+  type BunRetirementF0bReceipt,
+  type BunRetirementF0cReceipt,
+  type BunRetirementQ0Receipt,
+  collectFinalRetirementFindings,
+  collectFinalRetirementSurfaceInventory,
+} from "./lint/bun-final-retirement.ts";
 import {
   type NodeBanF0cAggregateBinding,
   nodeBanAuditMessages,
@@ -91,16 +101,6 @@ import {
 } from "./lint/green-command-digest.ts";
 import { parseNodeGenerationCiEvidence } from "./lint/node-generation-ci-policy.ts";
 
-// Final retirement admission reuses the independent detector through the CLI runtime graph.
-import {
-  admitFinalBunRetirement,
-  collectFinalRetirementFindings,
-  collectFinalRetirementSurfaceInventory,
-  type BunRetirementAdmissionReceipt,
-  type BunRetirementF0bReceipt,
-  type BunRetirementF0cReceipt,
-  type BunRetirementQ0Receipt,
-} from "./lint/bun-final-retirement.ts";
 export { collectFinalRetirementFindings };
 
 import { computeOutstandingWork, outstandingSummaryLine } from "./lint/outstanding.ts";

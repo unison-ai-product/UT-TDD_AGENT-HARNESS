@@ -3,10 +3,10 @@ import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import {
   admitFinalBunRetirement,
+  type BunRetirementAdmissionReceipt,
   BunRetirementError,
   type BunRetirementInput,
   collectFinalRetirementSurfaceInventory,
-  type BunRetirementAdmissionReceipt,
 } from "../src/lint/bun-final-retirement.ts";
 import {
   type NodeBanDocuments,
@@ -266,8 +266,10 @@ describe("CAND-NODEBOOT-023/027/028/208 final Bun retirement", () => {
   it("denies a receipt re-used for a later retirement subject even when its tuple is otherwise valid", () => {
     const previous = execFileSync("git", ["rev-parse", "HEAD^"], { encoding: "utf8" }).trim();
     const current = cleanInput();
+    const receipt = current.retirementReceipt;
+    if (!receipt) throw new Error("cleanInput must provide a retirement receipt");
     const unsigned = {
-      ...current.retirementReceipt!,
+      ...receipt,
       retirement_subject: `git-sha1:${previous}`,
     };
     expect(() =>

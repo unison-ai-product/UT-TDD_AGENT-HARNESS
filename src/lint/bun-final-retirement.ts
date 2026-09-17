@@ -543,7 +543,7 @@ export function admitFinalBunRetirement(input: BunRetirementInput): BunRetiremen
     !lanes.some((lane) => lane.lane === "windows")
   )
     throw new BunRetirementError("q0_binding_invalid");
-  const nodeLane = lanes.find((lane) => lane.lane === input.f0b!.lane);
+  const nodeLane = lanes.find((lane) => lane.lane === input.f0b?.lane);
   if (!nodeLane || nodeLane.sealed_generation_id !== input.f0b.generation_id)
     throw new BunRetirementError("generation_id_mismatch");
   if (lanes.some((lane) => lane.generation_id !== input.f0c?.generation_id))
