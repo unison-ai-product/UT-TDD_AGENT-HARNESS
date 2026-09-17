@@ -41,22 +41,64 @@ dependencies:
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/500
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/487
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/473
-status: draft
+review_evidence:
+  - reviewer: codex-preflight
+    review_kind: intra_runtime_subagent
+    reviewed_at: 2026-09-17T07:28:14.372Z
+    tests_green_at: 2026-09-17T07:27:44.372Z
+    verdict: approve
+    scope: "Issue #487 final Bun retirement detector, exact subject binding, and
+      Node-only reachable-surface inventory."
+    worker_model: gpt-5.6-luna
+    reviewer_model: codex-intra-runtime
+    plan_revision: PLAN-L7-530-rev12-preflight
+    subject_head: 5b1ace92b7bb18cd78230fb35ba76b4996bb2cdb
+    green_commands:
+      - kind: unit_test
+        command: node scripts/run-vitest-snapshot.ts tests/bun-final-retirement.test.ts
+          --reporter=dot
+        runner: node
+        scope: targeted
+        exit_code: 0
+        evidence_path: tests/bun-final-retirement.test.ts
+        output_digest: sha256:429666e95b302fe619764507e99f0da737bde5f7370544c8fc15884a60fc0f0e
+        completed_at: 2026-09-17T07:27:44.372Z
+        anchor_commit: 5b1ace92b7bb18cd78230fb35ba76b4996bb2cdb
+      - kind: typecheck
+        command: npm run typecheck -- --pretty false
+        runner: node
+        scope: full
+        exit_code: 0
+        evidence_path: src/lint/bun-final-retirement.ts
+        output_digest: sha256:210a17d19a7f088c5a1a8e0f62924ead409cf446b0ada60aa20e6d7cac220789
+        completed_at: 2026-09-17T07:27:44.372Z
+        anchor_commit: 5b1ace92b7bb18cd78230fb35ba76b4996bb2cdb
+      - kind: lint
+        command: npx biome check src/lint/bun-final-retirement.ts
+          tests/bun-final-retirement.test.ts
+        runner: node
+        scope: targeted
+        exit_code: 0
+        evidence_path: src/lint/bun-final-retirement.ts
+        output_digest: sha256:ffe6460fa716931d839c92974ceaa255b584cc78830f263af7b984971a951489
+        completed_at: 2026-09-17T07:27:44.372Z
+        anchor_commit: 5b1ace92b7bb18cd78230fb35ba76b4996bb2cdb
+status: confirmed
 github_issue_id: 487
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:e3631c34141660b0aabb2998f7217dfd
-  command_id: plan-revise:issue487:final-retirement:rebase-e446:r15:1789626640114
-  admitted_at: 2026-09-17T06:30:40.113Z
-  source_digest: sha256:be8e6efeb86af09570c31a02095d9f8aa583f99024b2615d0315eb7cb418e868
-  decision_digest: sha256:64909c3a264cd2b87771d77c43300600a9ac8733ef58f14f95fb4f4df66f20df
-  receipt_digest: sha256:95a496539e7d47fad035846ff46d692be9a9d78ff5cf72540dd280920560364b
+  receipt_id: certificate:5e20fed44db7d3f473465b75069f1889
+  command_id: plan-revise:issue487:final-retirement:confirmed-preflight:e446:1789630124372
+  admitted_at: 2026-09-17T07:28:44.372Z
+  source_digest: sha256:0bdca14ea91d9d79b6f35b6d5205428d006af607e93777cd1ffd2394b616dacb
+  decision_digest: sha256:072ee1b00fb6539093afd14673aa988b977ef0e86e0b52924ecab2ffac45436c
+  receipt_digest: sha256:63bde9b77bec262579ea3cc94db07d809a1a63f03fbce1e57a8a709a97770d6a
   binding:
     path: docs/plans/PLAN-L7-530-bun-final-retirement.md
     plan_id: PLAN-L7-530-bun-final-retirement
     asset_id: plan:bc9250c9a7c873dcb9f18956677371f7
-    revision: 11
-    content_digest: sha256:be8e6efeb86af09570c31a02095d9f8aa583f99024b2615d0315eb7cb418e868
+    revision: 12
+    content_digest: sha256:0bdca14ea91d9d79b6f35b6d5205428d006af607e93777cd1ffd2394b616dacb
   route:
     signal: feature_addition
     mode: add-feature
@@ -74,10 +116,10 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-530-bun-final-retirement
-    target_revision: 10
+    target_revision: 11
     phase: forward_merge
-  escape_reason: "Issue #487 final retirement evidence reissued through canonical
-    plan revise after current-main rebase"
+  escape_reason: "Issue #487 final retirement preflight evidence is confirmed
+    through canonical plan revise after current-main rebase"
 ---
 
 # PLAN-L7-530: Bun 最終撤去の tuple-bound 実装契約
