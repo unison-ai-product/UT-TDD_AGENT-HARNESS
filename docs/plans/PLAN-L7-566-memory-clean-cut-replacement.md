@@ -31,6 +31,22 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-566-memory-clean-cut-replacement.md
     artifact_type: markdown_doc
+  - artifact_path: docs/governance/memory-curation-ledger-2026-09.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/archive/memory-legacy-2026-09/MANIFEST.json
+    artifact_type: generated_manifest
+  - artifact_path: docs/archive/memory-legacy-2026-09/SUMMARY.md
+    artifact_type: generated_summary
+  - artifact_path: src/memory/curation-ledger.ts
+    artifact_type: source_module
+  - artifact_path: src/memory/legacy-archive-manifest.ts
+    artifact_type: source_module
+  - artifact_path: tests/memory-clean-cut-non-read.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/memory-curation-ledger.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/memory-legacy-archive.test.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L6-104-memory-clean-cut-replacement.md
   requires: []
