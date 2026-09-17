@@ -270,6 +270,7 @@ describe("CAND-NODEBOOT-023/027/028/208 final Bun retirement", () => {
     if (!receipt) throw new Error("cleanInput must provide a retirement receipt");
     const unsigned = {
       ...receipt,
+      receipt_digest: undefined,
       retirement_subject: `git-sha1:${previous}`,
     };
     expect(() =>
