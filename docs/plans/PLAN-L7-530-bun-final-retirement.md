@@ -45,17 +45,17 @@ status: draft
 github_issue_id: 487
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:64f16ffae19aa28ae8eca8d1c1fa1fb9
-  command_id: plan-revise:issue487:final-retirement:r14:1789624386203
-  admitted_at: 2026-09-17T05:53:06.203Z
+  receipt_id: certificate:e3631c34141660b0aabb2998f7217dfd
+  command_id: plan-revise:issue487:final-retirement:rebase-e446:r15:1789626640114
+  admitted_at: 2026-09-17T06:30:40.113Z
   source_digest: sha256:be8e6efeb86af09570c31a02095d9f8aa583f99024b2615d0315eb7cb418e868
-  decision_digest: sha256:da3576839c1eb2901d112e5eae2d0392b6bf1d40e54bc5fcd1940a7b11cd6686
-  receipt_digest: sha256:ed77414298890da8e1e0944c3fa680c3ff34f2d2b0d07e21066d332fa81a783e
+  decision_digest: sha256:64909c3a264cd2b87771d77c43300600a9ac8733ef58f14f95fb4f4df66f20df
+  receipt_digest: sha256:95a496539e7d47fad035846ff46d692be9a9d78ff5cf72540dd280920560364b
   binding:
     path: docs/plans/PLAN-L7-530-bun-final-retirement.md
     plan_id: PLAN-L7-530-bun-final-retirement
     asset_id: plan:bc9250c9a7c873dcb9f18956677371f7
-    revision: 14
+    revision: 11
     content_digest: sha256:be8e6efeb86af09570c31a02095d9f8aa583f99024b2615d0315eb7cb418e868
   route:
     signal: feature_addition
@@ -74,9 +74,10 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-530-bun-final-retirement
-    target_revision: 13
+    target_revision: 10
     phase: forward_merge
-  escape_reason: "Issue #487 final retirement evidence reissued through canonical plan revise"
+  escape_reason: "Issue #487 final retirement evidence reissued through canonical
+    plan revise after current-main rebase"
 ---
 
 # PLAN-L7-530: Bun 最終撤去の tuple-bound 実装契約
