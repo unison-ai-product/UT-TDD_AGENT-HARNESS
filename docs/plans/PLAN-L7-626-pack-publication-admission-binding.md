@@ -45,18 +45,18 @@ status: draft
 github_issue_id: 626
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:ba224e6f2e3c9e7a5342aeab01ee0170
-  command_id: plan-revise:issue-626:pr645-plan:r10:3eed4f9b6e53
-  admitted_at: 2026-09-17T03:33:26.086Z
-  source_digest: sha256:9e0d38448ef674516dc29950f42ae31e5d680cec013a06e8bffa279d9b766300
-  decision_digest: sha256:40bba6d86aa4f111399f84fc3f1f493c49bde92d1e4518d7d7d0f734e187cedc
-  receipt_digest: sha256:13817cbc8ba9f042f621283cf697c25b525e92a20e7509031fb317dd9a355a74
+  receipt_id: certificate:fc690807a2477ec293e6834c743961a5
+  command_id: plan-revise:issue-627:pr650-p626:r11:c3dbe2bd31ed
+  admitted_at: 2026-09-17T05:15:52.574Z
+  source_digest: sha256:7b0eb277aebb4787fb0542cf04d9e89209098db47e4395b7fd9b94e9e434bef8
+  decision_digest: sha256:74c7eff7386528f74f224820cbec87e8208aedcea8cd16dde195f902d8081463
+  receipt_digest: sha256:fe652785dd2b3f8c121be3a56804a2073eb278a06d5087d170676bc7e47da415
   binding:
     path: docs/plans/PLAN-L7-626-pack-publication-admission-binding.md
     plan_id: PLAN-L7-626-pack-publication-admission-binding
     asset_id: plan:529eea3e2017a6d17049746ae353398d
-    revision: 10
-    content_digest: sha256:9e0d38448ef674516dc29950f42ae31e5d680cec013a06e8bffa279d9b766300
+    revision: 11
+    content_digest: sha256:7b0eb277aebb4787fb0542cf04d9e89209098db47e4395b7fd9b94e9e434bef8
   route:
     signal: feature_addition
     mode: add-feature
@@ -74,25 +74,13 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-626-pack-publication-admission-binding
-    target_revision: 10
+    target_revision: 11
     phase: forward_merge
-  escape_reason: "Issue #626 PR #647 rev 10: 非著者 Codex Sol review r3 の FLAG 1 件を是正
-    (是正 3 回目)。approval 参照の束縛を (operation ID, idempotency key) の組へ拡張し G45
-    の比較元を定義。guard 45、candidate 70。旧 rev 9: 非著者 Codex Sol review r2 (receipt
-    ee2993ef) の FLAG 2 件を是正。receipt strict schema の 3 群 (identity / binding /
-    read_back_observation) を明示、sealed staging record の operation ID /
-    idempotency key を receipt binding に束縛 (G44/G45)。guard 45、candidate 70。旧 rev
-    8: 非著者 Codex Sol review r1 (receipt 17281c87) の FLAG 2 件を是正。G16 を receipt
-    strict schema (余剰 identity field 拒否) の一軸 oracle に置換、reviewed head OID 形状を
-    §2.2 の L7 新設契約として明示し Reverse R1 で backfill。guard 43、candidate 68。旧 rev 7:
-    非著者 Codex Sol review r5 (receipt 8c85f286) の upstream conflict を受け、§2.1 を
-    #625 §2 / PREP-010 に整合 (receipt 4 field + sealed staging identity
-    への束縛、staging identity は §2.2-6 観測のみ)、G18 形状 / G32–G34 record-PR 整合 / G43
-    record 存在、064 を 3 軸へ分割。guard 43、candidate 68。旧 rev 6: 非著者 Codex Sol review
-    r4 (receipt 19e8d523) の FLAG 2 件を Claude control lane が是正 (2(c)
-    超過の条件付き逸脱、advisor progress 判断)。G21 を 5 field へ展開 (058/059/060/065)、G41
-    receipt digest 供給拒否 (061)、G42 intent 供給拒否 (063)、062/064、§8
-    predicate→candidate 対応表。guard 42、candidate 65。publish/CAS は引き続き対象外。"
+  escape_reason: "Issue #627 PR #650 rev 11: 非著者 Codex Sol review r1 (receipt
+    c03145cb) の上位契約齟齬 (admitted record の persist 先と writer 未定義) を是正。§4 に
+    admission ledger (append-only、単一 writer、sequence / previous record digest
+    chain、admission journal event への provenance) と record の provenance
+    群を追加。guard 45、candidate 70。旧 rev 10: PR #647 rev 10 (approval 束縛の組)。"
 ---
 
 # PLAN-L7-626: Pack公開 admission observation binding
@@ -312,6 +300,15 @@ L1300) についても独立と判定した理由を同じ表に書く。remote 
   再構成する (新規 record 0、mutation 0)。識別子が一致して観測束 digest が異なる replay は
   G13 (operation ID) の deny であり再構成しない。preparation receipt 無し (G36)、外部手作り PR
   (G38) は deny、観測不能時の再構成は indeterminate とする。
+- admitted record の persist と provenance (rev 11): admission は admitted record を admission ledger へ
+  append する。ledger は append-only で、各 record は sequence (連番) と previous record digest (直前
+  record の record digest、先頭は null) で連鎖し、record digest は record の canonical bytes から導出する。
+  ledger の writer は本 PLAN の admission 実装だけであり、#627、caller、外部 process は append しない。
+  admission は observation bundle digest を durable な admission journal へ `admission_observation` event
+  として append してから ledger へ append し、record は provenance 群 (ledger sequence、previous record
+  digest、admission journal event digest) を identifiers (operation ID、idempotency key、PR number) /
+  sealed (§2.3) / status と共に持つ。§2.2-7 の freshness と本節の完全一致 replay は同じ ledger を読む。
+  #627 は record を ledger から解決し、chain 整合と journal provenance を検査する (PLAN-L7-627 §2.1)。
 
 ## 5. 後続との分離
 
@@ -385,6 +382,11 @@ lint、admission-check、readability/plan-doc 対象テストを同一 exact HEA
   (FLAG blocking 1、PR 内軽作業、是正 3 回目) を是正。§2.1 (b) の approval 参照の束縛を (operation ID,
   idempotency key) の組へ拡張し、G45 の比較元 key を approval 参照の束縛 key と定義 (record 側だけの
   任意 key では成立しない)。guard 45、candidate 70。
+- rev 11 (2026-09-17、Claude control lane): PR #650 (Issue #627) の非著者 Codex Sol review r1 (receipt
+  `c03145cb…`) が指摘した上位契約齟齬 (admitted record の persist 先と writer が未定義で、#627 が seal 主体を
+  検証できない) を是正。§4 に admission ledger (append-only、単一 writer、sequence / previous record digest
+  の chain、admission journal `admission_observation` event への provenance) と record の provenance 群を追加。
+  guard 45、candidate 70 (048 の正常系 oracle に ledger append 1 / journal event 1 を追加)。
 
 ## 8. predicate→candidate 対応表 (self-audit)
 
@@ -421,3 +423,4 @@ lint、admission-check、readability/plan-doc 対象テストを同一 exact HEA
 | §4 | deny 時 approval consume 0 / remote write 0 | 045 |
 | §4 | admitted 時 remote write 0、approval consume 0、token mint 0、intent 実行 0 | 048 |
 | §4 | receipt 欠落 / malformed では observer を呼ばない | 036、037 (observer call 0) |
+| §4 | admitted record の ledger append (sequence / previous digest 連鎖) と admission journal event の provenance | 048 (append 1、event 1)。消費側の検査は PLAN-L7-627 P37 / P38 |
