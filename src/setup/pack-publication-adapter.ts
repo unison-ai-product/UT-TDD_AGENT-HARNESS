@@ -998,6 +998,13 @@ export async function preparePackPublication(
       remoteWrites: 0,
     });
 
+  if (!pullRequestApproval.ok)
+    return preparationFailure({
+      status: "denied",
+      stage: "preflight",
+      reason: pullRequestApproval.reason,
+      remoteWrites: 0,
+    });
   const branchApprovalValue = branchApproval.approval;
   const pullRequestApprovalValue = pullRequestApproval.approval;
   if (
@@ -1031,14 +1038,6 @@ export async function preparePackPublication(
       reason: "approval_expired",
       remoteWrites: 0,
     });
-  if (!pullRequestApproval.ok)
-    return preparationFailure({
-      status: "denied",
-      stage: "preflight",
-      reason: pullRequestApproval.reason,
-      remoteWrites: 0,
-    });
-
   const run = new PublicationRun(
     {
       intentDigest: identity.identityDigest,
@@ -1047,10 +1046,13 @@ export async function preparePackPublication(
         [pullRequestApprovalValue.mutation]: pullRequestApprovalValue,
       },
     },
-    ports,
+    {
+      approval: ports.approval,
+      durableState: ports.durableState,
+    },
   );
   const preparationFailureFromRun = (
-    result: PackPublicationResult,
+    result: Exclude<PackPublicationResult, { readonly status: "published" }>,
   ): PackPublicationPreparationResult =>
     preparationFailure({
       status: result.status,
@@ -1163,6 +1165,11 @@ interface FailureContext {
   readonly prewrite?: boolean;
 }
 
+type PublicationRunPorts = {
+  readonly approval: Pick<PackPublicationPorts["approval"], "consume">;
+  readonly durableState: Pick<PackPublicationPorts["durableState"], "append">;
+};
+
 function failure(context: FailureContext): PackPublicationResult {
   const { result, stage, remoteWrites, prewrite = false } = context;
   return {
@@ -1195,11 +1202,11 @@ function validReceipt(receipt: PackPublicationReceipt, intent: PackPublicationIn
 class PublicationRun {
   private remoteWrites = 0;
   private readonly intent: Pick<PackPublicationIntent, "intentDigest" | "approvals">;
-  private readonly ports: Pick<PackPublicationPorts, "approval" | "durableState">;
+  private readonly ports: PublicationRunPorts;
 
   constructor(
     intent: Pick<PackPublicationIntent, "intentDigest" | "approvals">,
-    ports: Pick<PackPublicationPorts, "approval" | "durableState">,
+    ports: PublicationRunPorts,
   ) {
     this.intent = intent;
     this.ports = ports;
