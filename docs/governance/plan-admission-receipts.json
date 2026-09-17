@@ -4546,9 +4546,9 @@
       }
     },
     {
-      "sequence": 278,
-      "previous_record_digest": "sha256:81115294ab5378cbdbc6b6ae5e6d06240ab2d41200107331f1da6e6f7c22be8b",
-      "record_digest": "sha256:6c1cfd2a5a8ff980af47c3b290c2b6a7745150536d97c3b55f2030b6c56155ea",
+      "sequence": 285,
+      "previous_record_digest": "sha256:a916e1c8bc680b6a44f043ad7cafd1e949844c85f5a5543a1b0fb26381b2fa0c",
+      "record_digest": "sha256:85ee1edd540374ed625077bc5942378d27a0425aa1d3202179e881a8bb584c3a",
       "command_id": "plan-revise:issue-600:codex-review-wake-backfill:602:current-main-sync:e43277f106a4",
       "receipt_id": "certificate:9cb2643287eea6c657728006e3576a64",
       "receipt_digest": "sha256:5b67ade6579584aa10ea1049393d230e0fa759078e5b61fd38838f28e50c0819",
@@ -4562,9 +4562,9 @@
       }
     },
     {
-      "sequence": 279,
-      "previous_record_digest": "sha256:6c1cfd2a5a8ff980af47c3b290c2b6a7745150536d97c3b55f2030b6c56155ea",
-      "record_digest": "sha256:5d28e1445c646598843f75849bf0312b75afc2ff026d7a7ff6962fc1313edcc9",
+      "sequence": 286,
+      "previous_record_digest": "sha256:85ee1edd540374ed625077bc5942378d27a0425aa1d3202179e881a8bb584c3a",
+      "record_digest": "sha256:4ea8ff1cf708f2461fc29bbc55b3119003cd8cc36b04e936064c7dc18541527a",
       "command_id": "plan-revise:issue-600:codex-review-wake-impl:current-head-green:cb892cc0a78b",
       "receipt_id": "certificate:5723bc313e9282b896e59b185a2a6db4",
       "receipt_digest": "sha256:c26f5e0c65a31b5ebc9eae3b2105c98f69230f2dbc6fe627c061b1616709dff0",
