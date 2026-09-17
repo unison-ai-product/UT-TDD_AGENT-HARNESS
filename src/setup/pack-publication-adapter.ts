@@ -133,19 +133,20 @@ export interface PackPublicationPullRequestObservation {
 
 export interface PackPublicationPreparationReceipt {
   readonly kind: "pack-publication-preparation-receipt-v1";
-  readonly releaseId: string;
-  readonly sourceRevision: string;
-  readonly stagingPlanDigest: string;
-  readonly repository: string;
-  readonly publicationBranch: string;
-  readonly expectedMainOid: string;
-  readonly branchCommitOid: string;
-  readonly pullRequest: string;
-  readonly reviewedHeadOid: string;
-  readonly baseOid: string;
-  readonly treeDigest: string;
-  readonly controlManifestSnapshotDigest: string;
-  readonly receiptDigest: string;
+  /** #626 strict schema group 1: the four PR read-back identity fields. */
+  readonly identity: Readonly<{
+    readonly pullRequest: string;
+    readonly headOid: string;
+    readonly baseOid: string;
+    readonly treeDigest: string;
+  }>;
+  /** #626 strict schema group 2: resolve the sealed staging record by operation. */
+  readonly binding: Readonly<{ readonly operationId: string }>;
+  /** #626 strict schema group 3: the journal PR read-back observation reference. */
+  readonly read_back_observation: Readonly<{
+    readonly journalEventDigest: string;
+    readonly pullRequest: string;
+  }>;
 }
 
 export interface PackPublicationPreparationInput {
@@ -238,9 +239,9 @@ export function createPackPublicationPreparationReceiptStore(path: string): {
       if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed))
         throw new Error("receipt_invalid");
       const receipt = parsed as PackPublicationPreparationReceipt;
-      // The path is the durable operation namespace; operation/idempotency
-      // are intentionally inputs, not fields in the frozen receipt schema.
-      void identity;
+      if (!validPreparationReceiptShape(receipt)) throw new Error("receipt_invalid");
+      if (receipt.binding.operationId !== identity.operationId)
+        throw new Error("receipt_binding_mismatch");
       return receipt;
     },
     persist: async (receipt) => {
@@ -1004,52 +1005,82 @@ function preparationApprovalBindingReason(
   return null;
 }
 
-function preparationReceiptDigest(
-  receipt: Omit<PackPublicationPreparationReceipt, "receiptDigest">,
-): string {
-  return sha256(stable(receipt));
-}
-
 function preparationReceiptFromObservation(input: {
   readonly preparation: PackPublicationPreparationInput;
   readonly identity: NonNullable<ReturnType<typeof preparationIdentity>>;
-  readonly branchCommit: string;
   readonly observed: PackPublicationPullRequestObservation;
+  readonly readBackJournalEventDigest: string;
 }): PackPublicationPreparationReceipt | null {
-  const { preparation, identity, branchCommit, observed } = input;
+  const { preparation, identity, observed, readBackJournalEventDigest } = input;
   if (
-    !SHA1.test(branchCommit) ||
     !/^[1-9][0-9]*$/.test(observed.pullRequest) ||
     !SHA1.test(observed.headOid) ||
     !SHA1.test(observed.baseOid) ||
     !SHA256.test(observed.treeDigest) ||
     !SHA256.test(observed.controlManifestSnapshotDigest) ||
-    observed.headOid !== branchCommit ||
+    !SHA256.test(readBackJournalEventDigest) ||
     observed.baseOid !== preparation.expectedMainOid ||
     observed.treeDigest !== identity.treeDigest ||
     observed.controlManifestSnapshotDigest !== preparation.plan.controlManifestSnapshotDigest
   )
     return null;
-  const unsigned = {
-    kind: "pack-publication-preparation-receipt-v1" as const,
-    releaseId: identity.releaseId,
-    sourceRevision: identity.sourceRevision,
-    stagingPlanDigest: identity.stagingPlanDigest,
-    repository: preparation.repository,
-    publicationBranch: preparation.publicationBranch,
-    expectedMainOid: preparation.expectedMainOid,
-    branchCommitOid: branchCommit,
-    pullRequest: observed.pullRequest,
-    reviewedHeadOid: observed.headOid,
-    baseOid: observed.baseOid,
-    treeDigest: observed.treeDigest,
-    controlManifestSnapshotDigest: observed.controlManifestSnapshotDigest,
-    receiptDigest: "",
-  };
   return Object.freeze({
-    ...unsigned,
-    receiptDigest: preparationReceiptDigest(unsigned),
+    kind: "pack-publication-preparation-receipt-v1" as const,
+    identity: Object.freeze({
+      pullRequest: observed.pullRequest,
+      headOid: observed.headOid,
+      baseOid: observed.baseOid,
+      treeDigest: observed.treeDigest,
+    }),
+    binding: Object.freeze({ operationId: preparation.operationId }),
+    read_back_observation: Object.freeze({
+      journalEventDigest: readBackJournalEventDigest,
+      pullRequest: observed.pullRequest,
+    }),
   });
+}
+
+function validPreparationReceiptShape(value: unknown): value is PackPublicationPreparationReceipt {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
+  const receipt = value as Record<string, unknown>;
+  if (
+    Object.keys(receipt).sort().join("|") !==
+    ["binding", "identity", "kind", "read_back_observation"].join("|")
+  )
+    return false;
+  if (receipt.kind !== "pack-publication-preparation-receipt-v1") return false;
+  const identity = receipt.identity;
+  if (typeof identity !== "object" || identity === null || Array.isArray(identity)) return false;
+  const identityRecord = identity as Record<string, unknown>;
+  if (Object.keys(identityRecord).sort().join("|") !== "baseOid|headOid|pullRequest|treeDigest")
+    return false;
+  if (
+    typeof identityRecord.pullRequest !== "string" ||
+    !/^[1-9][0-9]*$/.test(identityRecord.pullRequest) ||
+    typeof identityRecord.headOid !== "string" ||
+    !SHA1.test(identityRecord.headOid) ||
+    typeof identityRecord.baseOid !== "string" ||
+    !SHA1.test(identityRecord.baseOid) ||
+    typeof identityRecord.treeDigest !== "string" ||
+    !SHA256.test(identityRecord.treeDigest)
+  )
+    return false;
+  const binding = receipt.binding;
+  if (typeof binding !== "object" || binding === null || Array.isArray(binding)) return false;
+  const bindingRecord = binding as Record<string, unknown>;
+  if (Object.keys(bindingRecord).join("|") !== "operationId") return false;
+  if (typeof bindingRecord.operationId !== "string" || !nonBlank(bindingRecord.operationId))
+    return false;
+  const readBack = receipt.read_back_observation;
+  if (typeof readBack !== "object" || readBack === null || Array.isArray(readBack)) return false;
+  const readBackRecord = readBack as Record<string, unknown>;
+  if (Object.keys(readBackRecord).sort().join("|") !== "journalEventDigest|pullRequest")
+    return false;
+  return (
+    typeof readBackRecord.journalEventDigest === "string" &&
+    SHA256.test(readBackRecord.journalEventDigest) &&
+    readBackRecord.pullRequest === identityRecord.pullRequest
+  );
 }
 
 const PREPARATION_MUTATIONS = ["pack_branch_commit", "pack_pr_create"] as const;
@@ -1090,7 +1121,7 @@ function journalReadBackMatches(input: {
   readonly identityDigest: string;
   readonly branchCommit: string;
   readonly pullRequest: PackPublicationPullRequestObservation;
-}): boolean {
+}): string | null {
   const { journal, identityDigest, branchCommit, pullRequest } = input;
   const readBack = (mutation: "pack_branch_commit" | "pack_pr_create") =>
     journal.filter(
@@ -1101,12 +1132,12 @@ function journalReadBackMatches(input: {
     );
   const branch = readBack("pack_branch_commit");
   const pr = readBack("pack_pr_create");
-  return (
+  const matches =
     branch.length === 1 &&
     pr.length === 1 &&
     branch[0]?.detailDigest === eventDigest({ branchCommit }) &&
-    pr[0]?.detailDigest === eventDigest(pullRequest)
-  );
+    pr[0]?.detailDigest === eventDigest(pullRequest);
+  return matches ? (pr[0]?.detailDigest ?? null) : null;
 }
 
 async function reconcilePreparedPreparation(
@@ -1172,31 +1203,37 @@ async function reconcilePreparedPreparation(
       reason: observed.reason,
       remoteWrites: 0,
     });
-  const receipt = preparationReceiptFromObservation({
-    preparation: input,
-    identity,
-    branchCommit: observed.value.branchCommit,
-    observed: observed.value.pullRequest,
-  });
-  if (!receipt)
+  if (observed.value.pullRequest.headOid !== observed.value.branchCommit)
     return preparationFailure({
       status: "partial_publication",
       stage: "pack_commit",
       reason: "preparation_observation_mismatch",
       remoteWrites: 0,
     });
-  if (
-    !journalReadBackMatches({
-      journal,
-      identityDigest: identity.identityDigest,
-      branchCommit: observed.value.branchCommit,
-      pullRequest: observed.value.pullRequest,
-    })
-  )
+  const readBackJournalEventDigest = journalReadBackMatches({
+    journal,
+    identityDigest: identity.identityDigest,
+    branchCommit: observed.value.branchCommit,
+    pullRequest: observed.value.pullRequest,
+  });
+  if (!readBackJournalEventDigest)
     return preparationFailure({
       status: "indeterminate",
       stage: "pack_commit",
       reason: "journal_observation_mismatch",
+      remoteWrites: 0,
+    });
+  const receipt = preparationReceiptFromObservation({
+    preparation: input,
+    identity,
+    observed: observed.value.pullRequest,
+    readBackJournalEventDigest,
+  });
+  if (!receipt)
+    return preparationFailure({
+      status: "partial_publication",
+      stage: "pack_commit",
+      reason: "preparation_observation_mismatch",
       remoteWrites: 0,
     });
   try {
@@ -1246,23 +1283,12 @@ export async function preparePackPublication(
       });
     }
     if (existing !== null) {
-      const unsigned = { ...existing, receiptDigest: "" };
       const exact =
-        existing.kind === "pack-publication-preparation-receipt-v1" &&
-        existing.releaseId === identity.releaseId &&
-        existing.sourceRevision === identity.sourceRevision &&
-        existing.stagingPlanDigest === identity.stagingPlanDigest &&
-        existing.repository === input.repository &&
-        existing.publicationBranch === input.publicationBranch &&
-        existing.expectedMainOid === input.expectedMainOid &&
-        SHA1.test(existing.branchCommitOid) &&
-        /^[1-9][0-9]*$/.test(existing.pullRequest) &&
-        existing.reviewedHeadOid === existing.branchCommitOid &&
-        SHA1.test(existing.reviewedHeadOid) &&
-        existing.baseOid === input.expectedMainOid &&
-        existing.treeDigest === identity.treeDigest &&
-        existing.controlManifestSnapshotDigest === input.plan.controlManifestSnapshotDigest &&
-        existing.receiptDigest === preparationReceiptDigest(unsigned);
+        validPreparationReceiptShape(existing) &&
+        existing.binding.operationId === input.operationId &&
+        existing.identity.baseOid === input.expectedMainOid &&
+        existing.identity.treeDigest === identity.treeDigest &&
+        existing.read_back_observation.pullRequest === existing.identity.pullRequest;
       return exact
         ? { ok: true, status: "prepared", receipt: existing, remoteWrites: 0 }
         : preparationFailure({
@@ -1466,26 +1492,19 @@ export async function preparePackPublication(
       remoteWrites: run.count(),
     });
 
-  const unsigned = {
-    kind: "pack-publication-preparation-receipt-v1" as const,
-    releaseId: identity.releaseId,
-    sourceRevision: identity.sourceRevision,
-    stagingPlanDigest: identity.stagingPlanDigest,
-    repository: input.repository,
-    publicationBranch: input.publicationBranch,
-    expectedMainOid: input.expectedMainOid,
-    branchCommitOid: branch.value.branchCommit,
-    pullRequest: observed.pullRequest,
-    reviewedHeadOid: observed.headOid,
-    baseOid: observed.baseOid,
-    treeDigest: observed.treeDigest,
-    controlManifestSnapshotDigest: observed.controlManifestSnapshotDigest,
-    receiptDigest: "",
-  };
-  const receipt = Object.freeze({
-    ...unsigned,
-    receiptDigest: preparationReceiptDigest(unsigned),
+  const receipt = preparationReceiptFromObservation({
+    preparation: input,
+    identity,
+    observed,
+    readBackJournalEventDigest: eventDigest(observed),
   });
+  if (!receipt)
+    return preparationFailure({
+      status: "partial_publication",
+      stage: "pack_commit",
+      reason: "preparation_observation_mismatch",
+      remoteWrites: run.count(),
+    });
   try {
     await ports.receipt.persist(receipt);
   } catch {

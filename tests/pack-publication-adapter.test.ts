@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
@@ -12,6 +12,7 @@ import {
   createPackPublicationPreparationReceiptStore,
   derivePackPublicationIntentDigest,
   derivePackPublicationPreparationDigest,
+  derivePackPublicationStagingPlanDigest,
   derivePackPublicationTreeDigest,
   type PackPublicationApproval,
   type PackPublicationIntentInput,
@@ -1682,12 +1683,24 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
       if (!result.ok) return;
       expect(result.receipt).toMatchObject({
         kind: "pack-publication-preparation-receipt-v1",
-        expectedMainOid: input.expectedMainOid,
-        branchCommitOid: "7".repeat(40),
-        reviewedHeadOid: "7".repeat(40),
-        baseOid: input.expectedMainOid,
+        identity: {
+          pullRequest: "42",
+          headOid: "7".repeat(40),
+          baseOid: input.expectedMainOid,
+          treeDigest: derivePackPublicationTreeDigest(input.plan),
+        },
+        binding: { operationId: input.operationId },
+        read_back_observation: {
+          pullRequest: "42",
+          journalEventDigest: expect.stringMatching(/^sha256:[a-f0-9]{64}$/),
+        },
       });
-      expect(result.receipt.receiptDigest).toMatch(/^sha256:[a-f0-9]{64}$/);
+      expect(Object.keys(result.receipt).sort()).toEqual([
+        "binding",
+        "identity",
+        "kind",
+        "read_back_observation",
+      ]);
       expect(events).toEqual([
         "consume:pack_branch_commit",
         "planned_nonce_consumed:pack_branch_commit",
@@ -2010,21 +2023,68 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
         if (!created.ok) return;
         await store.persist(created.receipt);
         expect(
-          (
-            await store.read({
-              operationId: input.operationId,
-              idempotencyKey: input.idempotencyKey,
-              stagingPlanDigest: created.receipt.stagingPlanDigest,
-              expectedMainOid: input.expectedMainOid,
-            })
-          )?.receiptDigest,
-        ).toBe(created.receipt.receiptDigest);
+          await store.read({
+            operationId: input.operationId,
+            idempotencyKey: input.idempotencyKey,
+            stagingPlanDigest: derivePackPublicationStagingPlanDigest(input.plan),
+            expectedMainOid: input.expectedMainOid,
+          }),
+        ).toEqual(created.receipt);
         const persistedBytes = await readFile(path);
         await expect(store.persist(created.receipt)).resolves.toBeUndefined();
-        const changed = { ...created.receipt, pullRequest: "43" };
+        const changed = {
+          ...created.receipt,
+          identity: { ...created.receipt.identity, pullRequest: "43" },
+          read_back_observation: { ...created.receipt.read_back_observation, pullRequest: "43" },
+        };
         await expect(store.persist(changed)).rejects.toThrow("receipt_conflict");
         expect(await readFile(path)).toEqual(persistedBytes);
         expect(await readdir(root)).toEqual(["preparation-receipt.json"]);
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    });
+
+    it.each([
+      [
+        "extra top-level field",
+        (receipt: PackPublicationPreparationReceipt) => ({
+          ...receipt,
+          receiptDigest: `sha256:${"a".repeat(64)}`,
+        }),
+      ],
+      [
+        "missing identity group",
+        (receipt: PackPublicationPreparationReceipt) => {
+          const { identity: _identity, ...withoutIdentity } = receipt;
+          return withoutIdentity;
+        },
+      ],
+      [
+        "read-back PR mismatch",
+        (receipt: PackPublicationPreparationReceipt) => ({
+          ...receipt,
+          read_back_observation: { ...receipt.read_back_observation, pullRequest: "43" },
+        }),
+      ],
+    ] as const)("CANDIDATE-PACKPUB-PREP-010: strict receipt schema rejects %s", async (_name, mutate) => {
+      const { input } = preparationInput();
+      const { prep } = preparationPorts();
+      const created = await preparePackPublication(input, prep);
+      if (!created.ok) throw new Error(created.reason);
+      const root = await mkdtemp(join(tmpdir(), "ut625-receipt-schema-"));
+      const path = join(root, "preparation-receipt.json");
+      const store = createPackPublicationPreparationReceiptStore(path);
+      try {
+        await writeFile(path, `${JSON.stringify(mutate(created.receipt))}\n`, "utf8");
+        await expect(
+          store.read({
+            operationId: input.operationId,
+            idempotencyKey: input.idempotencyKey,
+            stagingPlanDigest: derivePackPublicationStagingPlanDigest(input.plan),
+            expectedMainOid: input.expectedMainOid,
+          }),
+        ).rejects.toThrow("receipt_invalid");
       } finally {
         await rm(root, { recursive: true, force: true });
       }
