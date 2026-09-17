@@ -856,13 +856,13 @@ export function derivePackPublicationPreparationDigest(
   return preparationIdentity(input)?.identityDigest ?? null;
 }
 
-function preparationFailure(
-  status: "denied" | "partial_publication" | "indeterminate",
-  stage: "preflight" | "pack_commit",
-  reason: string,
-  remoteWrites: number,
-): PackPublicationPreparationResult {
-  return { ok: false, status, stage, reason, remoteWrites };
+function preparationFailure(options: {
+  readonly status: "denied" | "partial_publication" | "indeterminate";
+  readonly stage: "preflight" | "pack_commit";
+  readonly reason: string;
+  readonly remoteWrites: number;
+}): PackPublicationPreparationResult {
+  return { ok: false, ...options };
 }
 
 function preparationApproval(
@@ -903,7 +903,12 @@ export async function preparePackPublication(
 ): Promise<PackPublicationPreparationResult> {
   const identity = preparationIdentity(input);
   if (!identity)
-    return preparationFailure("denied", "preflight", "preparation_identity_mismatch", 0);
+    return preparationFailure({
+      status: "denied",
+      stage: "preflight",
+      reason: "preparation_identity_mismatch",
+      remoteWrites: 0,
+    });
   if (ports.receipt.read) {
     let existing: PackPublicationPreparationReceipt | null;
     try {
@@ -914,7 +919,12 @@ export async function preparePackPublication(
         expectedMainOid: input.expectedMainOid,
       });
     } catch {
-      return preparationFailure("indeterminate", "preflight", "receipt_read_failed", 0);
+      return preparationFailure({
+        status: "indeterminate",
+        stage: "preflight",
+        reason: "receipt_read_failed",
+        remoteWrites: 0,
+      });
     }
     if (existing !== null) {
       const unsigned = { ...existing, receiptDigest: "" };
@@ -938,15 +948,35 @@ export async function preparePackPublication(
         existing.receiptDigest === preparationReceiptDigest(unsigned);
       return exact
         ? { ok: true, status: "prepared", receipt: existing, remoteWrites: 0 }
-        : preparationFailure("denied", "preflight", "preparation_identity_mismatch", 0);
+        : preparationFailure({
+            status: "denied",
+            stage: "preflight",
+            reason: "preparation_identity_mismatch",
+            remoteWrites: 0,
+          });
     }
   }
   if (input.approvals.length < 2)
-    return preparationFailure("denied", "preflight", "approval_missing", 0);
+    return preparationFailure({
+      status: "denied",
+      stage: "preflight",
+      reason: "approval_missing",
+      remoteWrites: 0,
+    });
   if (input.approvals.length > 2)
-    return preparationFailure("denied", "preflight", "approval_binding_mismatch", 0);
+    return preparationFailure({
+      status: "denied",
+      stage: "preflight",
+      reason: "approval_binding_mismatch",
+      remoteWrites: 0,
+    });
   if (new Set(input.approvals.map((approval) => approval.nonce)).size !== input.approvals.length)
-    return preparationFailure("denied", "preflight", "nonce_replay", 0);
+    return preparationFailure({
+      status: "denied",
+      stage: "preflight",
+      reason: "nonce_replay",
+      remoteWrites: 0,
+    });
   const branchApproval = preparationApproval(
     input.approvals,
     "pack_branch_commit",
@@ -958,7 +988,12 @@ export async function preparePackPublication(
     identity.identityDigest,
   );
   if (!branchApproval || !pullRequestApproval)
-    return preparationFailure("denied", "preflight", "approval_missing", 0);
+    return preparationFailure({
+      status: "denied",
+      stage: "preflight",
+      reason: "approval_missing",
+      remoteWrites: 0,
+    });
   if (
     branchApproval.operationId !== input.operationId ||
     pullRequestApproval.operationId !== input.operationId ||
@@ -966,15 +1001,30 @@ export async function preparePackPublication(
     pullRequestApproval.idempotencyKey !== input.idempotencyKey ||
     branchApproval.nonce === pullRequestApproval.nonce
   )
-    return preparationFailure("denied", "preflight", "approval_binding_mismatch", 0);
+    return preparationFailure({
+      status: "denied",
+      stage: "preflight",
+      reason: "approval_binding_mismatch",
+      remoteWrites: 0,
+    });
   const expiryTimes = [
     Date.parse(branchApproval.expiresAt),
     Date.parse(pullRequestApproval.expiresAt),
   ];
   if (expiryTimes.some((value) => Number.isNaN(value)))
-    return preparationFailure("denied", "preflight", "approval_binding_mismatch", 0);
+    return preparationFailure({
+      status: "denied",
+      stage: "preflight",
+      reason: "approval_binding_mismatch",
+      remoteWrites: 0,
+    });
   if (expiryTimes.some((value) => value <= Date.now()))
-    return preparationFailure("denied", "preflight", "approval_expired", 0);
+    return preparationFailure({
+      status: "denied",
+      stage: "preflight",
+      reason: "approval_expired",
+      remoteWrites: 0,
+    });
 
   let remoteWrites = 0;
   const consume = async (
@@ -1040,21 +1090,26 @@ export async function preparePackPublication(
 
   const branchMode = await consume(branchApproval);
   if (branchMode === null)
-    return preparationFailure("indeterminate", "preflight", "approval_unavailable", remoteWrites);
+    return preparationFailure({
+      status: "indeterminate",
+      stage: "preflight",
+      reason: "approval_unavailable",
+      remoteWrites,
+    });
   if (branchMode === "reconcile")
-    return preparationFailure(
-      "indeterminate",
-      "preflight",
-      "reconciliation_required",
+    return preparationFailure({
+      status: "indeterminate",
+      stage: "preflight",
+      reason: "reconciliation_required",
       remoteWrites,
-    );
+    });
   if (!(await appendIntent(branchApproval, input.plan.commitEntries)))
-    return preparationFailure(
-      "indeterminate",
-      "pack_commit",
-      "journal_persist_failed",
+    return preparationFailure({
+      status: "indeterminate",
+      stage: "pack_commit",
+      reason: "journal_persist_failed",
       remoteWrites,
-    );
+    });
   remoteWrites += 1;
   let branch: PublicationPortResult<{ readonly branchCommit: string }>;
   try {
@@ -1064,36 +1119,46 @@ export async function preparePackPublication(
       entries: input.plan.commitEntries,
     });
   } catch {
-    return preparationFailure("indeterminate", "pack_commit", "remote_response_lost", remoteWrites);
+    return preparationFailure({
+      status: "indeterminate",
+      stage: "pack_commit",
+      reason: "remote_response_lost",
+      remoteWrites,
+    });
   }
   if (branch.status !== "attested")
-    return preparationFailure(
-      branch.status === "mismatch" ? "partial_publication" : "indeterminate",
-      "pack_commit",
-      branch.reason,
+    return preparationFailure({
+      status: branch.status === "mismatch" ? "partial_publication" : "indeterminate",
+      stage: "pack_commit",
+      reason: branch.reason,
       remoteWrites,
-    );
+    });
   if (
     !SHA1.test(branch.value.branchCommit) ||
     !(await appendObservation(branchApproval, branch.value))
   )
-    return preparationFailure(
-      "indeterminate",
-      "pack_commit",
-      "preparation_observation_mismatch",
+    return preparationFailure({
+      status: "indeterminate",
+      stage: "pack_commit",
+      reason: "preparation_observation_mismatch",
       remoteWrites,
-    );
+    });
 
   const pullRequestMode = await consume(pullRequestApproval);
   if (pullRequestMode === null)
-    return preparationFailure("indeterminate", "pack_commit", "approval_unavailable", remoteWrites);
-  if (pullRequestMode === "reconcile")
-    return preparationFailure(
-      "indeterminate",
-      "pack_commit",
-      "reconciliation_required",
+    return preparationFailure({
+      status: "indeterminate",
+      stage: "pack_commit",
+      reason: "approval_unavailable",
       remoteWrites,
-    );
+    });
+  if (pullRequestMode === "reconcile")
+    return preparationFailure({
+      status: "indeterminate",
+      stage: "pack_commit",
+      reason: "reconciliation_required",
+      remoteWrites,
+    });
   if (
     !(await appendIntent(pullRequestApproval, {
       branchCommit: branch.value.branchCommit,
@@ -1101,12 +1166,12 @@ export async function preparePackPublication(
       branch: input.publicationBranch,
     }))
   )
-    return preparationFailure(
-      "indeterminate",
-      "pack_commit",
-      "journal_persist_failed",
+    return preparationFailure({
+      status: "indeterminate",
+      stage: "pack_commit",
+      reason: "journal_persist_failed",
       remoteWrites,
-    );
+    });
   remoteWrites += 1;
   let pullRequest: PublicationPortResult<PackPublicationPullRequestObservation>;
   try {
@@ -1116,15 +1181,20 @@ export async function preparePackPublication(
       expectedMainSha: input.expectedMainOid,
     });
   } catch {
-    return preparationFailure("indeterminate", "pack_commit", "remote_response_lost", remoteWrites);
+    return preparationFailure({
+      status: "indeterminate",
+      stage: "pack_commit",
+      reason: "remote_response_lost",
+      remoteWrites,
+    });
   }
   if (pullRequest.status !== "attested")
-    return preparationFailure(
-      pullRequest.status === "mismatch" ? "partial_publication" : "indeterminate",
-      "pack_commit",
-      pullRequest.reason,
+    return preparationFailure({
+      status: pullRequest.status === "mismatch" ? "partial_publication" : "indeterminate",
+      stage: "pack_commit",
+      reason: pullRequest.reason,
       remoteWrites,
-    );
+    });
   const observed = pullRequest.value;
   if (
     !observed.pullRequest ||
@@ -1138,12 +1208,12 @@ export async function preparePackPublication(
     observed.controlManifestSnapshotDigest !== input.plan.controlManifestSnapshotDigest ||
     !(await appendObservation(pullRequestApproval, observed))
   )
-    return preparationFailure(
-      "partial_publication",
-      "pack_commit",
-      "preparation_observation_mismatch",
+    return preparationFailure({
+      status: "partial_publication",
+      stage: "pack_commit",
+      reason: "preparation_observation_mismatch",
       remoteWrites,
-    );
+    });
 
   const unsigned = {
     kind: "pack-publication-preparation-receipt-v1" as const,
@@ -1170,12 +1240,12 @@ export async function preparePackPublication(
   try {
     await ports.receipt.persist(receipt);
   } catch {
-    return preparationFailure(
-      "indeterminate",
-      "pack_commit",
-      "receipt_persist_failed",
+    return preparationFailure({
+      status: "indeterminate",
+      stage: "pack_commit",
+      reason: "receipt_persist_failed",
       remoteWrites,
-    );
+    });
   }
   return { ok: true, status: "prepared", receipt, remoteWrites: 2 };
 }
