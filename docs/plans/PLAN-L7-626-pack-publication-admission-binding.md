@@ -43,18 +43,18 @@ status: draft
 github_issue_id: 626
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:08e4d01209a71211b079f2c09cc6ceef
-  command_id: plan-revise:issue-626:pr636-plan:r2:c36c6a9d502e
-  admitted_at: 2026-09-17T01:00:38.010Z
-  source_digest: sha256:d20b4fddf2ff1bdca422339da849ce9f12b885b47d7177e5fc2f05cf112558e0
-  decision_digest: sha256:7a81ab2e7d8b53cd69f8de3d11356c07af725cf966967c63286a85926bacc7b1
-  receipt_digest: sha256:a7c2441133c7e48c9107e4a7a4a0cf2cdb732406b565763022c0357f96ce797b
+  receipt_id: certificate:d6c7c3096a8c6f3a6c19a5fb583f2a1b
+  command_id: plan-revise:issue-626:pr645-plan:r3:c01cebb83350
+  admitted_at: 2026-09-17T01:28:31.096Z
+  source_digest: sha256:0c886b441137b28ce11620e8850d033f8a38c39b10415d34d2badbcb9b1bc540
+  decision_digest: sha256:143e6be628e332b5f477fc058c5815ad3b79c99c06f724e8d67c4ec22cc4261b
+  receipt_digest: sha256:0fc8f40b0fbd73f1fbfc641a7ee52c5d3b2f507233466882c366d3d127ea9de0
   binding:
     path: docs/plans/PLAN-L7-626-pack-publication-admission-binding.md
     plan_id: PLAN-L7-626-pack-publication-admission-binding
     asset_id: plan:529eea3e2017a6d17049746ae353398d
-    revision: 2
-    content_digest: sha256:d20b4fddf2ff1bdca422339da849ce9f12b885b47d7177e5fc2f05cf112558e0
+    revision: 3
+    content_digest: sha256:0c886b441137b28ce11620e8850d033f8a38c39b10415d34d2badbcb9b1bc540
   route:
     signal: feature_addition
     mode: add-feature
@@ -72,12 +72,14 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-626-pack-publication-admission-binding
-    target_revision: 2
+    target_revision: 3
     phase: forward_merge
-  escape_reason: "Issue #626 PR #636 rev 2: 非著者 Claude Opus review (receipt
-    71c7b9bd) の FLAG 10 件を Claude control lane が是正。#625 §2 receipt field への整合、合成
-    fixture、PLAN-L7-565 §1.1/§3 sealing 項目の所有、ruleset required context 束縛、28
-    guard 表 (契約引用 / 赤化テスト / 冗長判定)、一軸 candidate 36 件。publish/CAS は引き続き対象外。"
+  escape_reason: "Issue #626 PR #645 rev 3: 非著者 Codex Sol review (receipt
+    d5e923c4) の FLAG 5 件を Claude control lane が是正。admission 入力 (configuration
+    期待値 / approval 参照) と intent identity の定義、required context 集合の期待集合束縛
+    (G31)、freshness の PLAN-L7-565 §1.1 準拠 (G19/G20)、完全一致 replay の定義、一軸分解
+    (G32–G35)、receipt / 手作り PR / approval guard (G29/G30/G36–G38)。guard
+    38、candidate 49。publish/CAS は引き続き対象外。"
 ---
 
 # PLAN-L7-626: Pack公開 admission observation binding
@@ -115,15 +117,30 @@ tree/manifest digest でのみ束縛する。receipt は準備時の branch/PR m
 や admission の approval/nonce を含めない。#625 の preparation nonce、journal、token を #626 が
 consume または再利用することは禁止する (#625 §2、PLAN-L7-565 §1.1)。
 
+receipt が存在しない、schema 不正 (必須 field 欠落 / 形状不正)、または receipt の
+`read_back_observation` が指していない PR (外部手作り PR) は typed deny であり、observer を
+呼ばずに停止する。
+
+admission が receipt 以外に受け取る入力は次の 3 つだけである。
+
+- (a) publication configuration が固定する期待値: Pack repository ID / full name、target ref、
+  ruleset ID、期待 required status check context 集合 (1 件以上)、publication CAS authority の
+  App installation ID。PLAN-L7-565 §3 の authority 分離契約の一部であり、caller が実行時に
+  上書きできない。
+- (b) publication mutation approval の参照: approval nonce と、その nonce が束縛された
+  operation ID。preparation nonce 集合とは別集合であり、admission は nonce を消費しない。
+- (c) read-only observer (§2.2)。
+
 ### 2.2 read-only observation
 
 admission は同じ operation の read-only observer から次を一度の検証束へ取り込む。
 
 1. Repository / authority observation (PLAN-L7-565 §3): Pack repository ID と full name、
    target ref (Pack main)、target ref を保護する ruleset ID とその ruleset が要求する required
-   status check context 集合、publication CAS authority の App installation ID。いずれも
-   sealed staging record / #565 §3 が固定する期待値と byte 一致する。caller supplied login や
-   `gh auth status` 表示を identity 証明にしない。
+   status check context 集合、publication CAS authority の App installation ID。scalar 値は
+   §2.1 (a) の期待値と byte 一致し、observed required context 集合は期待 required context 集合と
+   集合として一致する (過不足いずれも不一致)。caller supplied login や `gh auth status` 表示を
+   identity 証明にしない。
 2. PR observation: receipt の PR number、branch 名、head OID、base OID、tree digest。
 3. Review observation: 同じ PR の reviewed head、結論 `approved`、reviewer identity、non-author
    closing review receipt digest。reviewer は PR author と同一であってはならない。
@@ -135,8 +152,19 @@ admission は同じ operation の read-only observer から次を一度の検証
    と byte 一致する。
 6. Staging identity re-observation: receipt の staging tree/manifest digest、expected main OID、
    branch 名を sealed staging record から再観測し、receipt 値と byte 一致する。
-7. Freshness observation: operation ID、idempotency key、PR number、staging digest
-   (tree + manifest)、expected main OID のいずれも別 admission に未使用である。
+7. Freshness observation (PLAN-L7-565 §1.1): operation ID と idempotency key が未使用であり、
+   receipt の PR が別 operation ID、別 staging digest (tree + manifest)、別 expected main OID の
+   admission に一度も使用されていない。expected main OID や staging digest そのものは globally
+   single-use ではなく、別 PR を同じ main から独立に準備することは妨げない。「未使用」は
+   §4 の完全一致 replay (既存 record の identity digest が今回の観測束 digest と一致) を例外とし、
+   その場合だけ同一 record の再構成として通過する。
+8. Approval observation (PLAN-L7-565 §1.1): §2.1 (b) の各 approval nonce が本 operation ID に
+   束縛され、未消費であり、preparation nonce 集合に属さない。
+
+publication intent identity は caller 入力ではなく、operation ID、repository ID、target ref、
+expected main OID、reviewed head OID、preparation receipt digest の canonical digest として
+admission が導出する。mutation approval binding は各 approval nonce をこの intent identity へ
+結び付けた canonical digest である。
 
 closing review receipt digest の形状は本 PLAN が L7 契約として新設する: `sha256:` + 64 lowercase
 hex (`/^sha256:[0-9a-f]{64}$/`)。上位 PLAN-L7-565 §1.1/§3 はこの形状を固定しておらず、Reverse
@@ -164,7 +192,8 @@ seal 済み値を再観測・再 seal しない。
 | review 結論、reviewer identity、closing receipt digest | §2.2-3 | non-author review の証跡を固定 |
 | required check 結論 | §2.2-4 | context ごとの `success` を固定 |
 | merge-base | §2.2-5 | expected main との整合を固定 |
-| publication intent、mutation approval binding | §2.2 全体 | intent identity と、#627 が消費する approval nonce の束縛先を固定。approval の consume は #627 |
+| publication intent identity | §2.2 導出 | operation / repository / target ref / expected main / reviewed head / receipt digest の canonical digest。#627 はこの identity の intent だけを実行する |
+| mutation approval binding | §2.1 (b)、§2.2-8 | 各 approval nonce → intent identity の canonical digest。approval の consume は #627 |
 | observation bundle digest | §2.2 | 上記全項目の canonical digest |
 
 admission は approval を消費せず、token を mint せず、intent を実行しない。
@@ -172,8 +201,8 @@ admission は approval を消費せず、token を mint せず、intent を実�
 ## 3. guard の正本
 
 #624 が報告した `src/setup/pack-publication-adapter.ts` の 15 条件 (G01–G15) を各々独立した
-一軸 deny oracle として引き継ぎ、§2 の predicate のうち 15 条件が閉じていない 13 条件を
-G16–G28 として追加する。各行は契約引用、一軸 mutant、赤化テスト (pair test-design の
+一軸 deny oracle として引き継ぎ、§2 の predicate のうち 15 条件が閉じていない 23 条件を
+G16–G38 として追加する。1 行の mutant は fixture の 1 要素だけを変える。各行は契約引用、一軸 mutant、赤化テスト (pair test-design の
 candidate)、deny reason、冗長判定を持つ。#624 §4 の要求どおり、生存 3 件 (L1293 / L1299 /
 L1300) についても独立と判定した理由を同じ表に書く。remote write 境界は全行 0 である。
 
@@ -189,34 +218,44 @@ L1300) についても独立と判定した理由を同じ表に書く。remote 
 | G08 (旧L1302) | 565 §1.1「non-author review完了」 | review conclusion = `approved` | `changes_requested` / `commented` | `CANDIDATE-PACKPUB-ADM-008` | `admission_review_not_approved` | 独立: head 一致でも結論が非承認であり得る |
 | G09 (旧L1303) | 本 §2.2 形状契約 (L7 新設、Reverse R1 で backfill)、#624 §4.2 | closing receipt digest ~ `/^sha256:[0-9a-f]{64}$/` | 短縮 / 別 prefix / uppercase | `CANDIDATE-PACKPUB-ADM-009` | `admission_review_receipt_invalid` | 独立: digest は record preimage に封入されるため形状検査が唯一の制約 |
 | G10 (旧L1304) | 本 §2.2-4「同じ reviewed head」 | checks observation head = review head | 別 head の checks | `CANDIDATE-PACKPUB-ADM-010` | `admission_checks_head_mismatch` | 独立: 結論が全 success でも別 head の証跡は無効 |
-| G11 (旧L1305) | 565 §3「required review/check結論」、#624 §4.3 | ruleset required context 集合が 1 件以上 | required context 0 件 / `checks: []` | `CANDIDATE-PACKPUB-ADM-011` | `admission_checks_missing` | 独立: 空集合では G12/G24 の全称判定が vacuous に真になる |
+| G11 (旧L1305) | 565 §3「required review/check結論」、#624 §4.3 | observed required context 集合が 1 件以上 | observed required context 集合だけを `[]` へ (checks は正常系のまま) | `CANDIDATE-PACKPUB-ADM-011` | `admission_checks_missing` | 独立: 空集合では G12/G24 の全称判定が vacuous に真になる。期待集合との一致は G31 |
 | G12 (旧L1306) | 565 §3、本 §2.2-4 | required context を覆う全 check の conclusion = `success` | 1 件を `failure` へ | `CANDIDATE-PACKPUB-ADM-012` | `admission_check_not_success` | 独立: 非空・context 一致でも結論が失敗であり得る |
-| G13 (旧L1307) | 565 §1.1 freshness | operation ID 未使用 | 既使用 operation ID | `CANDIDATE-PACKPUB-ADM-013` | `admission_operation_replay` | 独立: key/PR が新規でも operation の再利用は別経路 |
-| G14 (旧L1308) | 565 §1.1 freshness | idempotency key 未使用 | 既使用 key | `CANDIDATE-PACKPUB-ADM-014` | `admission_idempotency_replay` | 独立: operation ID と key は別に発番される |
-| G15 (旧L1309) | 565 §1.1「別operationのadmissionに未使用」 | PR number 未使用 | 別 admission で使用済み PR | `CANDIDATE-PACKPUB-ADM-015` | `admission_pr_replay` | 独立: 新 operation が既存 PR を再利用する経路を閉じる |
+| G13 (旧L1307) | 565 §1.1 freshness、本 §2.2-7 | operation ID 未使用 (§4 完全一致 replay を除く) | 別観測束の既存 admission が同じ operation ID を使用 | `CANDIDATE-PACKPUB-ADM-013` | `admission_operation_replay` | 独立: key/PR が新規でも operation の再利用は別経路 |
+| G14 (旧L1308) | 565 §1.1 freshness、本 §2.2-7 | idempotency key 未使用 (§4 完全一致 replay を除く) | 別観測束の既存 admission が同じ key を使用 | `CANDIDATE-PACKPUB-ADM-014` | `admission_idempotency_replay` | 独立: operation ID と key は別に発番される |
+| G15 (旧L1309) | 565 §1.1「別operationのadmissionに未使用」 | receipt の PR が別 operation ID の admission に未使用 | 同じ PR を別 operation ID で admitted 済みにする | `CANDIDATE-PACKPUB-ADM-015` | `admission_pr_replay` | 独立: 新 operation が既存 PR を再利用する経路を閉じる |
 | G16 | 625 §2、本 §2.2-2 | observed PR branch = receipt branch 名 | branch 名を別値 | `CANDIDATE-PACKPUB-ADM-016` | `admission_branch_mismatch` | 独立: head/base 一致でも別 branch 上の同一 commit があり得る |
 | G17 | 625 §2、本 §2.2-2 | observed PR tree digest = receipt tree digest | tree digest を別値 | `CANDIDATE-PACKPUB-ADM-017` | `admission_tree_digest_mismatch` | 独立: head OID は commit identity、tree digest は sealed 内容の identity |
-| G18 | 565 §1.1「staging identityをread-onlyで再観測」、本 §2.2-6 | 再観測 staging tree/manifest digest・expected main・branch = receipt 値 | sealed staging record の manifest digest を別値 | `CANDIDATE-PACKPUB-ADM-018` | `admission_staging_identity_mismatch` | 独立: receipt 内部整合だけでは sealed record との drift を検出できない |
-| G19 | 565 §1.1「別staging digestのadmissionに未使用」 | staging digest 未使用 | 既使用 staging digest で新 operation | `CANDIDATE-PACKPUB-ADM-019` | `admission_staging_replay` | 独立: G13–G15 は operation/key/PR しか見ない |
-| G20 | 565 §1.1「別expected main OIDのadmissionに未使用」 | expected main OID 未使用 | 既使用 expected main OID で新 operation | `CANDIDATE-PACKPUB-ADM-020` | `admission_expected_main_replay` | 独立: staging digest が新規でも同じ main へ二重 admission し得る |
+| G18 | 565 §1.1「staging identityをread-onlyで再観測」、本 §2.2-6 | 再観測 manifest digest = receipt manifest digest | sealed staging record の manifest digest を別値 | `CANDIDATE-PACKPUB-ADM-018` | `admission_staging_manifest_mismatch` | 独立: receipt 内部整合だけでは sealed record との drift を検出できない |
+| G19 | 565 §1.1「別staging digestのadmissionに未使用」 | receipt の PR が別 staging digest の admission に未使用 | 同じ PR を別 staging digest で admitted 済みにする | `CANDIDATE-PACKPUB-ADM-019` | `admission_pr_staging_conflict` | 独立: G15 は operation ID の差だけを見る |
+| G20 | 565 §1.1「別expected main OIDのadmissionに未使用」 | receipt の PR が別 expected main OID の admission に未使用 | 同じ PR を別 expected main OID で admitted 済みにする | `CANDIDATE-PACKPUB-ADM-020` | `admission_pr_expected_main_conflict` | 独立: G19 は staging digest の差だけを見る。expected main OID 自体は single-use ではない |
 | G21 | 本 §2.2「caller 上書き禁止」 | caller 供給値 ≠ 観測値なら deny | caller の `reviewedHead` を観測値と別に供給 | `CANDIDATE-PACKPUB-ADM-021` | `admission_caller_override` | 独立: 観測が全一致しても caller 値の混入を無視すれば record が偽装される |
 | G22 | 本 §2.2「観測束の digest 束縛」 | record digest preimage = 観測束 canonical digest | 観測後に 1 field を改変 | `CANDIDATE-PACKPUB-ADM-022` | `admission_observation_digest_mismatch` | 独立: 個別 guard 通過後の改変を閉じる唯一の predicate |
 | G23 | 565 §1.1「non-author review」、本 §2.2-3 | reviewer identity ≠ PR author | author 自身の approved review | `CANDIDATE-PACKPUB-ADM-023` | `admission_review_author_conflict` | 独立: G08 は結論しか見ない |
 | G24 | 565 §3「ruleset ID」、本 §2.2-4 | 全 required context が success check で覆われる | required context 1 件を欠く (無関係 check だけ success) | `CANDIDATE-PACKPUB-ADM-024` | `admission_required_context_uncovered` | 独立: G11/G12 は非空と結論を見るが context 名の被覆を見ない |
-| G25 | 565 §3「repository ID/name」 | observed repository ID と full name = sealed 値 | repository ID を別値 | `CANDIDATE-PACKPUB-ADM-025` | `admission_repository_mismatch` | 独立: 同名 fork や移転で ID が変わる経路を閉じる |
+| G25 | 565 §3「repository ID/name」 | observed repository ID = 期待 repository ID | repository ID を別値 | `CANDIDATE-PACKPUB-ADM-025` | `admission_repository_id_mismatch` | 独立: 同名 fork や移転で ID が変わる経路を閉じる。full name は G35 |
 | G26 | 565 §3「target ref」 | observed target ref = sealed ref | target ref を別 branch | `CANDIDATE-PACKPUB-ADM-026` | `admission_target_ref_mismatch` | 独立: repository 一致でも ref が違えば CAS 対象が変わる |
 | G27 | 565 §3「ruleset ID」 | observed ruleset ID = sealed ruleset ID | ruleset ID を別値 | `CANDIDATE-PACKPUB-ADM-027` | `admission_ruleset_mismatch` | 独立: required context 集合の定義元を固定する |
-| G28 | 565 §3「installation ID」 | observed CAS authority installation ID = sealed 値 | installation ID を別値 | `CANDIDATE-PACKPUB-ADM-028` | `admission_installation_mismatch` | 独立: preparation authority の installation を渡す経路 (authority mismatch) を閉じる |
+| G28 | 565 §3「installation ID」 | observed CAS authority installation ID = 期待値 | installation ID を別値 | `CANDIDATE-PACKPUB-ADM-028` | `admission_installation_mismatch` | 独立: preparation authority の installation を渡す経路 (authority mismatch) を閉じる |
+| G29 | 565 §1.1「mutation approvalsをseal」、本 §2.2-8 | 各 approval nonce の束縛先 = 本 operation ID | approval nonce 1 件を別 operation ID へ束縛 | `CANDIDATE-PACKPUB-ADM-029` | `admission_approval_binding_mismatch` | 独立: 観測束が全一致でも approval が別 operation のものであり得る |
+| G30 | 565 §1.1「preparationのnonceを後者へ再利用しない」 | approval nonce が preparation nonce 集合に属さない | approval nonce 1 件を preparation nonce と同値に | `CANDIDATE-PACKPUB-ADM-030` | `admission_approval_set_conflict` | 独立: G29 は束縛先 operation を見るが集合の帰属を見ない |
+| G31 | 565 §3「ruleset ID」、本 §2.2-1 | observed required context 集合 = 期待 required context 集合 | observed 集合を別の非空集合 `["other-check"]` へ (その context の success check も供給) | `CANDIDATE-PACKPUB-ADM-031` | `admission_required_context_set_mismatch` | 独立: G11/G12/G24 は observed 集合を基準に判定するため、集合ごと差し替える偽装を見ない |
+| G32 | 565 §1.1、本 §2.2-6 | 再観測 staging tree digest = receipt tree digest | sealed staging record の tree digest を別値 | `CANDIDATE-PACKPUB-ADM-032` | `admission_staging_tree_mismatch` | 独立: G18 は manifest digest だけを見る |
+| G33 | 565 §1.1、本 §2.2-6 | 再観測 expected main OID = receipt expected main OID | sealed staging record の expected main を別値 | `CANDIDATE-PACKPUB-ADM-033` | `admission_staging_expected_main_mismatch` | 独立: G04 は merge-base、G33 は sealed record との整合 |
+| G34 | 565 §1.1、本 §2.2-6 | 再観測 branch 名 = receipt branch 名 | sealed staging record の branch 名を別値 | `CANDIDATE-PACKPUB-ADM-034` | `admission_staging_branch_mismatch` | 独立: G16 は PR observation 側、G34 は sealed record 側 |
+| G35 | 565 §3「repository ID/name」 | observed repository full name = 期待 full name | full name を別値 (ID は同値) | `CANDIDATE-PACKPUB-ADM-035` | `admission_repository_name_mismatch` | 独立: rename 後の同一 ID を弾く |
+| G36 | 本 §2.1 | preparation receipt が存在する | receipt 入力を欠落 | `CANDIDATE-PACKPUB-ADM-036` | `admission_receipt_missing` | 独立: observer を呼ぶ前に停止する唯一の predicate |
+| G37 | 本 §2.1 | preparation receipt が #625 §2 の schema に適合 | receipt の PR number field を欠落 | `CANDIDATE-PACKPUB-ADM-037` | `admission_receipt_invalid` | 独立: 存在しても schema 不正な receipt を G36 は通す |
+| G38 | 565 §1.1「外部で手作りしたbranch/PR…はtyped deny」、本 §2.1 | receipt の `read_back_observation` が observed PR を指す | receipt の read_back_observation を別 PR の journal に差替え | `CANDIDATE-PACKPUB-ADM-038` | `admission_pr_unprepared` | 独立: PR number が一致 (G01) しても preparation journal 由来でない PR を閉じる |
 
 したがって #624 の blocking 3 (G03/G09/G11) は補助的な重複ではなく独立した必須 predicate であり、
-生存 3 件 (G01/G05/G06) も上記の理由で独立である。28 guard に冗長なものは無い。
+生存 3 件 (G01/G05/G06) も上記の理由で独立である。38 guard に冗長なものは無い。
 
 ## 4. 判定と no-write 境界
 
-- 全 28 guard が成立したときだけ `publication_admission` を `admitted` とし、§2.3 の項目を
+- 全 38 guard が成立したときだけ `publication_admission` を `admitted` とし、§2.3 の項目を
   seal した record を返す。
-- 値の不一致、replay、required context 欠落、malformed receipt、caller 上書き、reviewer 同一は
-  typed `deny`。read-only observer が unavailable、timeout、応答欠落、schema 判定不能の場合は
+- 値の不一致、replay、required context 欠落 / 集合不一致、receipt 欠落 / malformed、手作り PR、
+  caller 上書き、reviewer 同一、approval 束縛不一致は typed `deny`。read-only observer が unavailable、timeout、応答欠落、schema 判定不能の場合は
   typed `indeterminate`。
 - deny/indeterminate のどちらも admitted record、approval consume、publication mutation へ
   進めず、main/Release/tag/asset/pointer/branch/PR の remote write count は 0。#626 の実装は
@@ -224,9 +263,12 @@ L1300) についても独立と判定した理由を同じ表に書く。remote 
 - 成功した admission も #627 の publish/CAS を実行しない。admitted record を返した後の
   publication side effect、main lease、CAS token mint、Release visibility、canary pointer は
   #627/#565 へ残す。
-- 同一 operation/idempotency/PR と全 identity・観測 digest が完全一致する replay だけは同一
-  admission record の決定的再構成を許可する。1 要素でも変わる replay、preparation receipt
-  無し、外部手作り PR は deny とし、観測不能時の再構成は indeterminate とする。
+- 完全一致 replay: 既存 admission record の識別子 (operation ID、idempotency key、PR number) が
+  一致し、かつ既存 record の観測束 digest が今回の観測束 digest と byte 一致する場合、G13/G14 の
+  freshness predicate は「同一 record の再構成」として成立し、同一 admission record を決定的に
+  再構成する (新規 record 0、mutation 0)。識別子が一致して観測束 digest が異なる replay は
+  G13 (operation ID) の deny であり再構成しない。preparation receipt 無し (G36)、外部手作り PR
+  (G38) は deny、観測不能時の再構成は indeterminate とする。
 
 ## 5. 後続との分離
 
@@ -237,8 +279,9 @@ adapter の大規模再構成は変更しない。
 
 ## 6. 完了条件
 
-28 guard の一軸 Red oracle、indeterminate 3 軸、deny 時 approval consume 0、完全一致 replay、
-drift replay、admitted 時 write-zero、sealing 完全性を pair test-design へ 1 対 1 で固定し、PLAN
+38 guard の一軸 Red oracle、indeterminate 5 軸 (review / checks / repository / merge-base /
+staging observer)、deny 時 approval consume 0、完全一致 replay、drift replay、admitted 時
+write-zero、sealing 完全性、intent identity の一軸感度を pair test-design へ 1 対 1 で固定し、PLAN
 lint、admission-check、readability/plan-doc 対象テストを同一 exact HEAD へ束縛する。実装 PR で
 初めて `U-PACKPUB-ADM-*` を共有 registry へ昇格し、non-author closing review を取得する。
 
@@ -253,3 +296,11 @@ lint、admission-check、readability/plan-doc 対象テストを同一 exact HEA
   predicate を G16–G28 として oracle 化、多軸 candidate を一軸へ分割、admission record を
   canonical `plan revise` で再発行、tl slot_label を補完。author family は claude へ移り、非著者
   review は Codex Sol が行う (PO 判断 2026-09-16)。
+- rev 3 (2026-09-17、Claude control lane): PR #645 exact head `c01cebb8` に対する非著者 Codex Sol
+  review (receipt `d5e923c4…`、FLAG blocking 5、全て PR 内軽作業) を是正。§2.1 に admission 入力
+  (configuration 期待値 / approval 参照 / observer) と receipt 欠落・schema 不正・手作り PR の deny を
+  定義、§2.2-8 と intent identity / approval binding の導出を追加、required context 集合を期待集合と
+  集合一致で束縛 (G31)、freshness を PLAN-L7-565 §1.1 どおり「同一 PR を別 identity で再利用しない」
+  へ修正し expected main OID / staging digest の globally single-use を撤回 (G19/G20)、完全一致
+  replay を G13/G14 の例外として定義 (§4)、G11/G18/G25 を一軸へ分解 (G32–G35)、G29/G30 (approval)、
+  G36–G38 (receipt / 手作り PR) を追加。guard 38、candidate 49。
