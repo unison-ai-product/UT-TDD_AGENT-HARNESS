@@ -92,22 +92,21 @@ review_evidence:
         output_digest: sha256:9712ccc6ebf017bb0311854a795c0e11d12f5cf570017a8bbbe9b3d7edf45def
         anchor_commit: 7f25c06d8f2b3fde9180aa8907f22f1561c9345b
 status: confirmed
-sub_doc: function-spec
 github_issue_id: 102
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:b5898ab5c8188c3e6895ba3f5771a50c
-  command_id: plan-revise:issue-541:recovery-16:12
-  admitted_at: 2026-09-17T01:36:56.365Z
-  source_digest: sha256:ec3c1b83908ef0fd14240307ad65abb3f3cad5b105f771dbe3a59e6f732ef06a
-  decision_digest: sha256:21dc57ed315c9a6313237d600f0d52e955bc60fed6548ea6d00f43aec985c38c
-  receipt_digest: sha256:12706dc104622ec566c9fdfe17f3ed231d5a4c00434342e94c2bef8f667b7f94
+  receipt_id: certificate:2e18c1fd333d4bb7b83ae0617d37fe7e
+  command_id: plan-revise:issue-541:recovery-16:13
+  admitted_at: 2026-09-17T01:37:41.202Z
+  source_digest: sha256:1b6aa397ad9995b717907d3247e02b3bba3d6c4508874b7654f90fd29b388927
+  decision_digest: sha256:ca74e564264b9e0e60b9720b1b71599ca20cb4887a4d34088844eb91305600d6
+  receipt_digest: sha256:a0cc17907488c1a187d67e203beef3bfb5565df309a498e87686d2e67cdca2f1
   binding:
     path: docs/plans/PLAN-RECOVERY-16-plan-revision-authoring.md
     plan_id: PLAN-RECOVERY-16-plan-revision-authoring
     asset_id: plan:rebase:74ca026f9a0b72dca6f4fb164dd4e8f43c9ea3c9b31c4db21dec38a66d9d7d57
-    revision: 6
-    content_digest: sha256:ec3c1b83908ef0fd14240307ad65abb3f3cad5b105f771dbe3a59e6f732ef06a
+    revision: 7
+    content_digest: sha256:1b6aa397ad9995b717907d3247e02b3bba3d6c4508874b7654f90fd29b388927
   route:
     signal: regression_dev
     mode: recovery
@@ -127,10 +126,10 @@ admission_receipt:
     target_plan_id: PLAN-L6-86-drive-plan-admission-contract
     target_revision: 2
     phase: forward_merge
-  escape_reason: "Issue #541 (PR #607 Codex Sol FLAG 3件是正): 決定的再水和の対象を embedded
-    admission_receipt と最新sequenceへ束縛し、integrity mismatch / lineage ambiguity を
-    write-0 fail-close、authority不在だけを seal fallback とする契約改訂 (revision
-    6、docs-only)。正規 plan revise 実行時計から admitted_at を生成する。"
+  escape_reason: "Issue #541 (PR #643 Claude r2 FLAG 是正): rev6を正規 plan revise
+    実行時計で再発行し、決定的再水和のcontent-digest / fallback
+    oracle根拠をU-PA-REV-040/048およびU-PA-REV-053..056へ束縛する契約改訂 (revision
+    7、docs-only)。"
 ---
 
 # PLAN-RECOVERY-16: legacy PLAN revision authoring recovery
