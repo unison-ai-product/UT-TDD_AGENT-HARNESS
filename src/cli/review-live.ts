@@ -1,6 +1,6 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
-import { join, relative, resolve } from "node:path";
+import { join } from "node:path";
 import type { Command } from "commander";
 import type { LiveReviewWakeRoutingFailure } from "../feedback/live-review-projection.ts";
 import {
@@ -12,8 +12,12 @@ import {
 import { resolveRepositoryRoot } from "../feedback/repository-root.ts";
 import type { ReviewVerdictProjectionResult } from "../feedback/review-attestation.ts";
 import { issueReviewRequest } from "../feedback/review-attestation.ts";
-import { parseMemoryFile } from "../memory/index.ts";
-import { resolveMemoryTaskFile, writeMemory } from "../memory/service.ts";
+import {
+  canonicalAuthoredMemoryPath,
+  readCanonicalMemoryByIdentity,
+  resolveMemoryTaskFile,
+  writeMemory,
+} from "../memory/service.ts";
 import {
   buildClaudeProviderReviewInboxEntry,
   decodeClaudeInboxEntry,
@@ -153,23 +157,8 @@ function publishLiveReviewReceipt(
   });
 }
 
-/**
- * The canonical review request may only bind a memory file that lives directly under the
- * canonical authored root (`.ut-tdd/memory`). Archive paths, linked-worktree paths and
- * `..` escapes are refused before any read (PLAN-L7-566 PR-2, CANDIDATE-P-MEMCUT-009(b)).
- */
-export function canonicalAuthoredMemoryPath(
-  canonicalProjectRoot: string,
-  memoryPath: string,
-): string {
-  const authoredRoot = resolve(canonicalProjectRoot, ".ut-tdd", "memory");
-  const target = resolve(canonicalProjectRoot, memoryPath);
-  const rel = relative(authoredRoot, target).replaceAll("\\", "/");
-  if (!rel || rel === "." || rel.startsWith("..") || rel.includes("/") || !rel.endsWith(".md")) {
-    throw new Error("review_memory_path_outside_canonical_root");
-  }
-  return join(".ut-tdd", "memory", rel).replaceAll("\\", "/");
-}
+// Kept as a public compatibility export for CLI consumers and the path-boundary tests.
+export { canonicalAuthoredMemoryPath } from "../memory/service.ts";
 
 export function registerLiveReviewCommands(
   review: Command,
@@ -215,9 +204,12 @@ export function registerLiveReviewCommands(
             project.canonicalProjectRoot,
             opts.memoryPath,
           );
-          const memory = parseMemoryFile(project.canonicalProjectRoot, memoryPath);
-          if (memory.memory_id !== opts.memoryId)
-            throw new Error("review_memory_identity_mismatch");
+          const memory = readCanonicalMemoryByIdentity({
+            repoRoot: project.canonicalProjectRoot,
+            memoryPath,
+            memoryId: opts.memoryId,
+          });
+          if (!memory) throw new Error("review_memory_identity_mismatch");
           const requestedAt = new Date().toISOString();
           const result = dispatchLiveReview({
             repoRoot,
