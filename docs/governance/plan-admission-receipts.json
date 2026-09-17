@@ -4496,6 +4496,38 @@
         "revision": 2,
         "content_digest": "sha256:678d95f13fb60c65aa5b71c88d7b734e676236372e842793cd377c5b4fa37cf0"
       }
+    },
+    {
+      "sequence": 282,
+      "previous_record_digest": "sha256:457e24ed4711f3bfd7361ef45a1101dae82c88f46cc77114e8ad67cf36f2a7b5",
+      "record_digest": "sha256:b074c2ba0799fbee57a3b3b34b834d1f336b3a1d41d4f418e7e9c990664d157e",
+      "command_id": "plan-revise:issue-627:pr650-plan:r3:5270a2006cb5",
+      "receipt_id": "certificate:2e6189cdcc0900f34c426d68c321fe7d",
+      "receipt_digest": "sha256:05a0192e57d7111b5ccbf159cfb1beacce51248f7452f3f12fa5f0252beb25e2",
+      "decision_digest": "sha256:85d1f043917cfde2a0ad2916849c50ec006938d2efffa2486e568a0520b0804a",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-627-pack-publication-admitted-publish.md",
+        "plan_id": "PLAN-L7-627-pack-publication-admitted-publish",
+        "asset_id": "plan:e581e10769f9eedb3e562236142e503c",
+        "revision": 3,
+        "content_digest": "sha256:056171d1ed255c76f14b0263924a080c2097e5b9ffca7b021cfa83ca94a47d42"
+      }
+    },
+    {
+      "sequence": 283,
+      "previous_record_digest": "sha256:b074c2ba0799fbee57a3b3b34b834d1f336b3a1d41d4f418e7e9c990664d157e",
+      "record_digest": "sha256:ffddd4eb23042c974d3f5e608d3202566bcd9718d541715f8318d752f3b512d5",
+      "command_id": "plan-revise:issue-627:pr650-reverse:r3:5270a2006cb5",
+      "receipt_id": "certificate:1862f899c647045cd8a30b3813f6d5e1",
+      "receipt_digest": "sha256:e3304ebf16b35ec1daec25ff0a0c4a4e3ff5fc6f16f846a4464d91a0e8ed7bde",
+      "decision_digest": "sha256:a5e15e58499f6557effb6176ee077fe412e13b3b2810c64070b30789b2c44dba",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-627-pack-publication-admitted-publish-backfill.md",
+        "plan_id": "PLAN-REVERSE-627-pack-publication-admitted-publish-backfill",
+        "asset_id": "plan:6e600c144f17d750eaf3b52c06b2f0e0",
+        "revision": 3,
+        "content_digest": "sha256:fe86425dc1209acb430bc716157ebbbd60bd787bf8124c8b8f2748adbde71919"
+      }
     }
   ]
 }

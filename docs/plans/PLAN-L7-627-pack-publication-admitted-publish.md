@@ -22,13 +22,14 @@ agent_slots:
       mint、exact lease 1 回の main CAS、journal / receipt を publishPackCanary の
       admitted 入口として結線
   - role: qa
-    slot_label: Terra - 39 guard の一軸 mutation、indeterminate 5 軸、replay (remote
-      再観測込み)、write-zero、consume 後 fail-close、token 非漏洩 (argv / stdout / journal
-      / receipt)、post-mint 全分岐 dispose、journal 順序、receipt / record digest 感度の
-      Red oracle (candidate 65)
+    slot_label: Terra - 43 guard の一軸 mutation、indeterminate 5 軸、replay (remote 再観測
+      main / PR head 2 軸込み)、write-zero、consume 後 fail-close、token 非漏洩 (argv /
+      stdout / journal / receipt)、post-mint 全分岐 dispose、journal 順序、receipt /
+      record digest 感度の Red oracle (candidate 71)
   - role: tl
-    slot_label: Codex Sol - 39 guard の契約引用・oracle 対応、#626 admitted record /
-      admission ledger との整合、CAS 境界と write-zero の非著者検収
+    slot_label: Codex Sol - 43 guard の契約引用・oracle 対応、#626 admitted record /
+      admission ledger (genesis 込み chain、journal provenance) との整合、CAS 境界と
+      write-zero の非著者検収
 generates:
   - artifact_path: docs/plans/PLAN-L7-627-pack-publication-admitted-publish.md
     artifact_type: markdown_doc
@@ -49,18 +50,18 @@ status: draft
 github_issue_id: 627
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:9648f72ac6a32bebe32a7855994806b6
-  command_id: plan-revise:issue-627:pr650-plan:r2:c3dbe2bd31ed
-  admitted_at: 2026-09-17T05:17:41.602Z
-  source_digest: sha256:3db24aaa3faeec874d6db38ea7ef7389fdd6a19b3eae1f14c5ccbb2c14166edf
-  decision_digest: sha256:80cd17494c54e5a128561a3c92f09a7a292d2bd0ac16f8825532da0a6e49e1ee
-  receipt_digest: sha256:2a65fab18c1ea3bf3c2b3447af7718615ab6ed0d6fd0c6c72c10bee7ac22a986
+  receipt_id: certificate:2e6189cdcc0900f34c426d68c321fe7d
+  command_id: plan-revise:issue-627:pr650-plan:r3:5270a2006cb5
+  admitted_at: 2026-09-17T05:47:25.811Z
+  source_digest: sha256:056171d1ed255c76f14b0263924a080c2097e5b9ffca7b021cfa83ca94a47d42
+  decision_digest: sha256:85d1f043917cfde2a0ad2916849c50ec006938d2efffa2486e568a0520b0804a
+  receipt_digest: sha256:05a0192e57d7111b5ccbf159cfb1beacce51248f7452f3f12fa5f0252beb25e2
   binding:
     path: docs/plans/PLAN-L7-627-pack-publication-admitted-publish.md
     plan_id: PLAN-L7-627-pack-publication-admitted-publish
     asset_id: plan:e581e10769f9eedb3e562236142e503c
-    revision: 2
-    content_digest: sha256:3db24aaa3faeec874d6db38ea7ef7389fdd6a19b3eae1f14c5ccbb2c14166edf
+    revision: 3
+    content_digest: sha256:056171d1ed255c76f14b0263924a080c2097e5b9ffca7b021cfa83ca94a47d42
   route:
     signal: feature_addition
     mode: add-feature
@@ -78,14 +79,14 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-627-pack-publication-admitted-publish
-    target_revision: 2
+    target_revision: 3
     phase: forward_merge
-  escape_reason: "Issue #627 PR #650 rev 2: 非著者 Codex Sol review r1 (receipt
-    c03145cb) の FLAG 3 件を是正 (是正 1 回目)。§2.1 の seal 主体検証を admission ledger の
-    resolve + chain 整合 (P37) + admission journal provenance (P38) へ拡張
-    (PLAN-L7-626 rev 11 §4 と整合)、§2.2-5 完全一致 replay に remote 再観測を必須化 (P39)、token
-    lifecycle の oracle を argv / stdout・error (060/061) と post-mint 全分岐の dispose
-    (059) へ拡張。guard 39、candidate 65。旧 rev 1: PR #637 の引き取り再起票。"
+  escape_reason: "Issue #627 PR #650 rev 3: 非著者 Codex Sol review r2 (receipt
+    c99f948d) の FLAG 4 件 (全て light in-PR) を是正 (是正 2 回目)。§2.1-3 journal
+    provenance に解決先 event の存在と kind を明示 (P40 / 066–067)、§2.2-5 replay 再観測を PR
+    head 軸でも固定 (P43 / 070)、§2.2-4 preparation / closing receipt digest 形状に guard
+    (P41 / P42、068 / 069)、§2.1-2 chain 整合を genesis から要求 (P37 / 071)。guard
+    43、candidate 71。旧 rev 2: r1 FLAG 3 件の是正 (39 guard、candidate 65)。"
 ---
 
 # PLAN-L7-627: admitted Pack公開の deny 境界と main CAS 結線
@@ -146,11 +147,15 @@ ledger の writer は #626 admission 実装だけであり (#627、caller、外�
    canonical bytes が caller 供給 R と byte 一致する。ledger に無い R、bytes が異なる R は deny。
 2. chain 整合: ledger 先頭から R の sequence までの全 record について、sequence が連番であり、各 record
    の previous record digest が直前 record の canonical bytes から再計算した record digest と一致し、R の
-   record digest も再計算値と一致する。1 箇所でも不一致なら deny (ledger 外から挿入・改変された record を
-   閉じる)。
+   record digest も再計算値と一致する。chain は genesis から検証する: 観測した ledger の先頭 record は
+   sequence 1 かつ previous record digest が null でなければならず、sequence 2 以降から始まる truncated
+   ledger、先頭 record が非 null の previous digest を持つ ledger は deny する (PLAN-L7-626 rev 11 §4)。
+   1 箇所でも不一致なら deny (ledger 外から挿入・改変された record、途中から始まる ledger を閉じる)。
 3. journal provenance: R の admission journal event digest を #626 admission journal (read-only) で解決し、
-   その `admission_observation` event の observation bundle digest が R の observation bundle digest と
-   byte 一致する。event が無い / bundle digest が異なる R は deny。
+   解決した event が存在し、その kind が `admission_observation` であり、その observation bundle digest が
+   R の observation bundle digest と byte 一致する。event が無い R、解決できても kind が
+   `admission_observation` でない event を指す R (bundle digest が一致していても)、bundle digest が異なる
+   R は deny。
 
 ledger / journal が unavailable、timeout、schema 判定不能なら indeterminate とする。署名・token・
 自己申告を seal 主体の証明にしない。ledger と journal は #626 の実装が所有する durable state であり、
@@ -290,15 +295,21 @@ reason、冗長判定を持つ。remote write 境界は P32/P33/P34-044 (CAS 試
 | P37 | 626 §4 rev 11、本 §2.1-2 | ledger chain が先頭から R まで整合 | R の直前 record の bytes を改変 (R の previous record digest は据え置き) | `CANDIDATE-PACKPUB-PUB-062` | `publish_admission_chain_invalid` | 独立: R 自身の bytes と digest が正しくても chain の途中挿入・改変を閉じる |
 | P38 | 626 §4 rev 11、本 §2.1-3 | admission journal event の bundle digest = R の bundle digest | journal event の bundle digest だけを別値 (R / ledger は正常系) | `CANDIDATE-PACKPUB-PUB-063` | `publish_admission_provenance_mismatch` | 独立: ledger と chain が整合していても admission journal に無い record を閉じる |
 | P39 | 565 §5、本 §2.2-5 | 完全一致 replay は remote 再観測 (main = H、PR head = H) を伴う | journal 完全列を保ったまま remote main を別 OID に | `CANDIDATE-PACKPUB-PUB-064` | indeterminate `publish_replay_remote_drift` | 独立: journal だけで成功を推測する経路を閉じる。P20 は intent 不一致、P21 は journal 不完全 |
+| P40 | 626 §4 rev 11、本 §2.1-3 | 参照先 admission journal event が存在し kind = `admission_observation` | (a) 参照先 event を同じ bundle digest を持つ別 kind の event に置換、(b) 参照先 event を journal から除去 (R / ledger は正常系) | `CANDIDATE-PACKPUB-PUB-066`、`067` | `publish_admission_provenance_invalid` | 独立: P38 は解決した event の bundle digest 不一致、P40 は解決先の不在 / kind 不正。bundle digest が一致する別 kind event は P38 を通る |
+| P41 | 626 §2.2、本 §2.2-4 | preparation receipt digest は `/^sha256:[0-9a-f]{64}$/` | R の preparation receipt digest を prefix 無しの 64 hex に (intent identity / bundle digest / ledger / chain は再導出して整合) | `CANDIDATE-PACKPUB-PUB-068` | `publish_preparation_receipt_digest_invalid` | 独立: P17/P18 は OID 形状、P09 は再導出一致。自己整合した malformed record を閉じる |
+| P42 | 626 §2.2、本 §2.2-4 | closing receipt digest は `/^sha256:[0-9a-f]{64}$/` | R の closing receipt digest を `sha256:` + 63 hex に (bundle digest / ledger / chain は再導出して整合) | `CANDIDATE-PACKPUB-PUB-069` | `publish_closing_receipt_digest_invalid` | 独立: P41 と別 member。receipt digest 感度 057 は digest の変化を見るだけで形状を見ない |
+| P43 | 565 §5、本 §2.2-5 | 完全一致 replay は PR 現在 head = H の再観測を伴う | journal 完全列と main = H を保ったまま PR 現在 head を別 OID に | `CANDIDATE-PACKPUB-PUB-070` | indeterminate `publish_replay_remote_drift` | 独立: P39 は main 軸、P43 は PR head 軸。P31 は新規 operation の pre-write であり replay 経路の head 検査除去を捕まえない |
 
-39 guard に冗長なものは無い。P11–P16 は configuration との一致であり、#626 が admission 時に同じ値を
-seal していても、別 configuration の Pack へ record を持ち込む経路を #627 側で独立に閉じる。P02/P03/P37/P38
-は seal 主体検証の 4 段 (存在・bytes・chain・journal provenance) であり、いずれか 1 段を外すと他の 3 段を
-満たす偽造経路が残る。
+43 guard に冗長なものは無い。P11–P16 は configuration との一致であり、#626 が admission 時に同じ値を
+seal していても、別 configuration の Pack へ record を持ち込む経路を #627 側で独立に閉じる。P02/P03/P37/P38/P40
+は seal 主体検証の 4 段 (存在・bytes・chain (genesis 込み)・journal provenance (解決先の存在 / kind /
+bundle digest)) であり、いずれか 1 段を外すと他の段を満たす偽造経路が残る。P41/P42 は §2.2-4 の形状契約を
+receipt digest 2 member について OID (P17/P18) と同じ粒度で固定する。P39/P43 は replay の remote 再観測を
+main / PR head の 2 軸で独立に固定する。
 
 ## 4. 判定と no-write 境界
 
-- 全 39 guard が成立したときだけ step 10 の CAS を 1 回試行し、§2.4 の receipt を返す。
+- 全 43 guard が成立したときだけ step 10 の CAS を 1 回試行し、§2.4 の receipt を返す。
 - indeterminate は §2.2 の ledger / journal / approval port / mint port / pre-write observer の
   unavailable、journal persist 失敗、CAS の実更新 status 不能、post-read 不一致、replay 時の remote drift、
   receipt persist 失敗であり、deny や success に丸めない。
@@ -318,7 +329,7 @@ exact lease process 実装だけを後から差し込む。
 
 ## 6. 完了条件
 
-39 guard の一軸 oracle、indeterminate 5 軸、完全一致 replay (remote 再観測込み)、consume 後 fail-close、
+43 guard の一軸 oracle、indeterminate 5 軸、完全一致 replay (remote 再観測 2 軸込み)、consume 後 fail-close、
 token 非漏洩 3 面と post-mint 全分岐の dispose、journal 順序、receipt / record digest 感度、admitted 時の
 write 1 / 後段 write 0 を pair test-design へ 1 対 1 で固定し、PLAN lint、admission-check、readability /
 plan-doc 対象テストを同一 exact HEAD へ束縛する。実装 PR で初めて `U-PACKPUB-PUB-*` を共有 registry へ
@@ -347,6 +358,13 @@ plan-doc 対象テストを同一 exact HEAD へ束縛する。実装 PR で初�
   (2) §2.2-5 の完全一致 replay に remote 再観測を必須化 (P39、565 §5)。(3) token lifecycle の oracle を 3 面
   (047 / 060 / 061) と post-mint 全分岐の dispose (059) へ拡張。非 blocking の test-design §3 文言矛盾も修正。
   guard 39、candidate 65。
+- rev 3 (2026-09-17、Claude control lane): PR #650 exact head `5270a200` に対する非著者 Codex Sol review r2
+  (receipt `c99f948d…`、FLAG blocking 4、全て light in-PR、是正 2 回目) を是正。(1) §2.1-3 の journal
+  provenance に解決先 event の存在と kind = `admission_observation` を明示し P40 (066 別 kind / 067 不在) を
+  追加。(2) §2.2-5 の replay 再観測を PR head 軸でも独立に固定 (P43 / 070)。(3) §2.2-4 の preparation /
+  closing receipt digest 形状に guard P41 / P42 (068 / 069) を追加。(4) §2.1-2 の chain 整合を genesis
+  (sequence 1、previous digest null) から要求し、truncated ledger の候補 071 を P37 に追加。guard 43、
+  candidate 71。
 
 ## 9. predicate→candidate 対応表 (self-audit)
 
@@ -356,16 +374,16 @@ plan-doc 対象テストを同一 exact HEAD へ束縛する。実装 PR で初�
 | --- | --- | --- |
 | §2.1 | R が供給されている | P01 / 001 |
 | §2.1-1 | ledger が R を解決し bytes 一致 | P02 / 002、P03 / 003 |
-| §2.1-2 | ledger chain 整合 | P37 / 062 |
-| §2.1-3 | admission journal provenance | P38 / 063、観測不能 065 |
+| §2.1-2 | ledger chain 整合 (途中改変 / genesis 境界) | P37 / 062、071 |
+| §2.1-3 | admission journal provenance (解決先の存在 / kind / bundle digest) | P40 / 066–067、P38 / 063、観測不能 065 |
 | §2.1 | strict 4 群 (余剰なし・欠落なし) | P04 / 004、P05 / 005、感度 057 |
 | §2.1 | status = admitted | P06 / 006 |
 | §2.1 | record digest の caller 供給拒否 | P07 / 007 |
 | §2.1 | bundle / intent / approval binding の再導出一致 | P08 / 008、P09 / 009、P10 / 010 |
 | §2.1 (a) | configuration 期待値との一致 (5 scalar + 集合) | P11–P16 / 011–016 |
 | §2.1 | caller が identity を供給できない | P19 / 019–022 |
-| §2.2-4 | OID 形状 | P17 / 017、P18 / 018 |
-| §2.2-5 | 完全一致 replay (remote 再観測込み) / 別 intent deny / 不完全 journal / remote drift | 053、P20 / 023、P21 / 024、P39 / 064 |
+| §2.2-4 | OID 形状 / receipt digest 形状 | P17 / 017、P18 / 018、P41 / 068、P42 / 069 |
+| §2.2-5 | 完全一致 replay (remote 再観測込み) / 別 intent deny / 不完全 journal / remote drift (main / PR head) | 053、P20 / 023、P21 / 024、P39 / 064、P43 / 070 |
 | §2.2-6 | approval 集合非空・束縛・未消費・期限・集合帰属 | P22–P26 / 025–029 |
 | §2.2-6 | consume 直後の `planned_nonce_consumed` | 058、P34 / 042 |
 | §2.2-6 | consume 後 deny で nonce を戻さない | 054 |

@@ -51,7 +51,7 @@ event を導出関数で再計算した自己整合 R を作り、ledger と jou
 P37 / P38 の row だけは、その 1 predicate を分離するために特定の再計算を行わない、または ledger / journal
 側だけを変える)。
 
-## 3. 39 guard mutation matrix
+## 3. 43 guard mutation matrix
 
 各行は他の predicate を成立させた fixture へ一軸だけを注入する。expected result は typed deny または
 indeterminate、receipt 0、remote write 0 であり、例外は CAS 試行後の行 (P32 / P33 / P34-044) で main 試行
@@ -111,6 +111,12 @@ indeterminate、receipt 0、remote write 0 であり、例外は CAS 試行後�
 | `CANDIDATE-PACKPUB-PUB-062` | P37 | 626 §4 rev 11、627 §2.1-2 | ledger sequence 1 の record bytes を改変 (R の previous record digest は据え置き) | `publish_admission_chain_invalid`、write 0 |
 | `CANDIDATE-PACKPUB-PUB-063` | P38 | 626 §4 rev 11、627 §2.1-3 | admission journal event の bundle digest だけを別値 (R / ledger は正常系) | `publish_admission_provenance_mismatch`、write 0 |
 | `CANDIDATE-PACKPUB-PUB-064` | P39 | 565 §5、627 §2.2-5 | 053 の状態 (完全 journal + receipt) で pre-write observer の main を H 以外に | indeterminate `publish_replay_remote_drift`、再構成 0、consume 0、mint 0、write 0 |
+| `CANDIDATE-PACKPUB-PUB-066` | P40 | 626 §4 rev 11、627 §2.1-3 | R の admission journal event digest が解決する event を、同じ bundle digest を持つ別 kind (`admission_denied`) の event に置換 (R / ledger は正常系) | `publish_admission_provenance_invalid`、write 0。P38 (063) では Green のまま (bundle digest は一致) |
+| `CANDIDATE-PACKPUB-PUB-067` | P40 | 626 §4 rev 11、627 §2.1-3 | R の admission journal event digest が指す event を journal から除去 (journal 自体は正常応答) | `publish_admission_provenance_invalid`、write 0。065 (journal timeout) と区別し indeterminate にしない |
+| `CANDIDATE-PACKPUB-PUB-068` | P41 | 626 §2.2、627 §2.2-4 | R の preparation receipt digest を `sha256:` prefix 無しの 64 hex にし、intent identity / bundle digest / ledger bytes / chain / journal event は再導出して自己整合させる | `publish_preparation_receipt_digest_invalid`、write 0。P02/P03/P08/P09/P37/P38 は Green のまま |
+| `CANDIDATE-PACKPUB-PUB-069` | P42 | 626 §2.2、627 §2.2-4 | R の closing receipt digest を `sha256:` + 63 hex にし、bundle digest / ledger bytes / chain / journal event は再導出して自己整合させる | `publish_closing_receipt_digest_invalid`、write 0。P02/P03/P08/P37/P38 は Green のまま |
+| `CANDIDATE-PACKPUB-PUB-070` | P43 | 565 §5、627 §2.2-5 | 053 の状態 (完全 journal + receipt、pre-write observer の main = H) で PR 現在 head を H 以外に | indeterminate `publish_replay_remote_drift`、再構成 0、consume 0、mint 0、write 0。064 と独立 (main は一致) |
+| `CANDIDATE-PACKPUB-PUB-071` | P37 | 626 §4 rev 11、627 §2.1-2 | 観測させる ledger を sequence 2 から始める (sequence 1 を除去、以降の record と R は正常系で chain も整合) / 先頭 record の previous record digest を非 null に | `publish_admission_chain_invalid`、write 0。062 (途中 record 改変) と独立 |
 
 ## 4. indeterminate / replay / write-zero / sealing
 
@@ -130,7 +136,7 @@ indeterminate、receipt 0、remote write 0 であり、例外は CAS 試行後�
 | `CANDIDATE-PACKPUB-PUB-056` | 正常系 receipt の 1 member を変更 (§2.4 の全 member について 1 件ずつ) | receipt digest が変わる |
 | `CANDIDATE-PACKPUB-PUB-057` | 正常系 R の 1 member を変更 (§2.1 strict 4 群の全 member について 1 件ずつ) | record digest が変わる |
 | `CANDIDATE-PACKPUB-PUB-058` | 正常系 fixture で publication journal 列を観測 | `planned_nonce_consumed` (nonce ごと) → `mutation_intent` → `read_back_observation` の順で各 1 件、intent digest が全 event で一致 |
-| `CANDIDATE-PACKPUB-PUB-059` | mint 後の全分岐で token dispose 回数を観測: 030–035、036–041、043–046、051 の各 row と正常系 052 | 各 1 (mint 1 につき dispose 1)。mint 前の deny (001–029、042、048–050、065) は dispose 0 |
+| `CANDIDATE-PACKPUB-PUB-059` | mint 後の全分岐で token dispose 回数を観測: 030–035、036–041、043–046、051 の各 row と正常系 052 | 各 1 (mint 1 につき dispose 1)。mint 前の deny / indeterminate (001–029、042、048–050、064–071) は dispose 0 |
 
 056 / 057 は導出関数を直接呼び、member の 1 つを省く実装 (digest が不変になる) を Red にする。059 は
 parameterized 実行でよいが、各分岐を独立 case として報告し、1 分岐の dispose 欠落を Red にする。
@@ -140,7 +146,7 @@ Release / tag / asset / pointer / branch / PR の port は呼ばれず、spy led
 
 ## 5. 実装 PR への昇格規則
 
-実装 PR は 65 candidate を (PLAN-L7-627 §9 の対応表の順で) 各 1 件以上の独立 test へ昇格し、実装時に正規の
+実装 PR は 71 candidate を (PLAN-L7-627 §9 の対応表の順で) 各 1 件以上の独立 test へ昇格し、実装時に正規の
 test ID (`U-PACKPUB-PUB-*`) を割り当てる。typed reason、record / receipt digest、port call 順と回数、
 approval consume / token mint / dispose / remote write count、argv / stdout / stderr capture を直接検査
 する。恒真 assertion、dummy port、既存 #625 / #626 nonce の流用、lease port の no-op 偽装、Release 以降の

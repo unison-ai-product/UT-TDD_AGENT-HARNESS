@@ -24,9 +24,9 @@ agent_slots:
     slot_label: Codex Sol - L6 before-state CAS / approval 境界と L7 admitted publish
       の同値性を非著者検証
   - role: qa
-    slot_label: Terra - 39 guard、indeterminate、write-zero、replay (remote
-      再観測)、consume 後 fail-close、token lifecycle、admission ledger provenance
-      の逆向き検証
+    slot_label: Terra - 43 guard、indeterminate、write-zero、replay (remote 再観測 main /
+      PR head)、consume 後 fail-close、token lifecycle、admission ledger provenance
+      (genesis / journal event kind) の逆向き検証
 generates:
   - artifact_path: docs/plans/PLAN-REVERSE-627-pack-publication-admitted-publish-backfill.md
     artifact_type: markdown_doc
@@ -47,18 +47,18 @@ status: draft
 github_issue_id: 627
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:0d296822de4e13bd401ae63d0ba6b617
-  command_id: plan-revise:issue-627:pr650-reverse:r2:c3dbe2bd31ed
-  admitted_at: 2026-09-17T05:18:02.012Z
-  source_digest: sha256:678d95f13fb60c65aa5b71c88d7b734e676236372e842793cd377c5b4fa37cf0
-  decision_digest: sha256:b1ce3c36bbaad3bd88d5886f717604e9f2df013e7cd2902db3482236782af59b
-  receipt_digest: sha256:f1cc4194782345c3ba42f645b3ff1fdc5de4ecd251c11771c311816fe3563a35
+  receipt_id: certificate:1862f899c647045cd8a30b3813f6d5e1
+  command_id: plan-revise:issue-627:pr650-reverse:r3:5270a2006cb5
+  admitted_at: 2026-09-17T05:47:40.754Z
+  source_digest: sha256:fe86425dc1209acb430bc716157ebbbd60bd787bf8124c8b8f2748adbde71919
+  decision_digest: sha256:a5e15e58499f6557effb6176ee077fe412e13b3b2810c64070b30789b2c44dba
+  receipt_digest: sha256:e3304ebf16b35ec1daec25ff0a0c4a4e3ff5fc6f16f846a4464d91a0e8ed7bde
   binding:
     path: docs/plans/PLAN-REVERSE-627-pack-publication-admitted-publish-backfill.md
     plan_id: PLAN-REVERSE-627-pack-publication-admitted-publish-backfill
     asset_id: plan:6e600c144f17d750eaf3b52c06b2f0e0
-    revision: 2
-    content_digest: sha256:678d95f13fb60c65aa5b71c88d7b734e676236372e842793cd377c5b4fa37cf0
+    revision: 3
+    content_digest: sha256:fe86425dc1209acb430bc716157ebbbd60bd787bf8124c8b8f2748adbde71919
   route:
     signal: reverse
     mode: reverse
@@ -69,18 +69,18 @@ admission_receipt:
     projection_digest: sha256:17838960b78cd60f6009c493b62726f0aec6d8e92e0f74c8f3b67a6ccb1fd4d4
   origin:
     plan_id: PLAN-L7-627-pack-publication-admitted-publish
-    revision: 2
-    digest: sha256:3db24aaa3faeec874d6db38ea7ef7389fdd6a19b3eae1f14c5ccbb2c14166edf
+    revision: 3
+    digest: sha256:056171d1ed255c76f14b0263924a080c2097e5b9ffca7b021cfa83ca94a47d42
   transition:
     direction: implementation_to_design
     implementation_disposition: preserved
   reentry:
     target_plan_id: PLAN-REVERSE-627-pack-publication-admitted-publish-backfill
-    target_revision: 2
+    target_revision: 3
     phase: forward_merge
-  escape_reason: "Issue #627 PR #650 rev 2: PLAN-L7-627 rev 2 (admission ledger
-    provenance、replay remote 再観測、token lifecycle、39 guard、candidate 65) と同期。旧
-    rev 1: 起票。"
+  escape_reason: "Issue #627 PR #650 rev 3: PLAN-L7-627 rev 3 (journal provenance
+    の解決先 / kind、replay の PR head 軸、receipt digest 形状、chain の genesis 境界、43
+    guard、candidate 71) と同期。旧 rev 2: PLAN-L7-627 rev 2 と同期。"
 ---
 
 # PLAN-REVERSE-627: admitted Pack公開 deny 境界の上位契約backfill
@@ -141,13 +141,13 @@ receipt の member 集合。これらが無いと #627 の main CAS が admitted
 `PLAN-L6-63` の before-state CAS、操作単位 approval、auditor 観測、indeterminate 保持に対し、L7 admitted
 publish の ledger 4 段検証、strict schema、再導出一致、configuration 一致、approval consume / fail-close、
 token lifecycle、pre-write drift、replay の remote 再観測が同じ sealed operation の precondition である
-ことを確認する。全 39 guard の deny と port unavailable の indeterminate は、上位 L6 が要求する副作用前の
+ことを確認する。全 43 guard の deny と port unavailable の indeterminate は、上位 L6 が要求する副作用前の
 write-zero (CAS 到達前) または単一試行後の write-zero (CAS 到達後) へ写像される。完全一致 replay だけは
 同一 receipt bytes を再構成し、1 軸 drift は再利用ではなく新規 deny / indeterminate となる。
 
 ## R3-R4: 再合流
 
-R3 で実装 PR の 65 candidate、対象テスト、exact-head CI、非著者 review を照合する。R4 で seal 主体の 4 段
+R3 で実装 PR の 71 candidate、対象テスト、exact-head CI、非著者 review を照合する。R4 で seal 主体の 4 段
 検証、strict schema / 再導出一致、configuration 一致、consume 後 fail-close、token lifecycle、pre-write
 drift、replay の remote 再観測、最小 receipt schema の不変条件を上位 staged-release contract
 (PLAN-L7-565 §1.1/§3/§5、PLAN-L6-63) へ backfill する。Release / tag / asset / pointer、production ports、
@@ -159,3 +159,6 @@ CLI、既存 adapter の再構成はこの Reverse の責務外とする。
 - rev 2 (2026-09-17、Claude control lane): PR #650 の非著者 Codex Sol review r1 (receipt `c03145cb…`) に合わせ、
   R0/R1 を PLAN-L7-627 rev 2 (admission ledger 4 段検証、replay の remote 再観測、token lifecycle 3 面 +
   dispose、39 guard、candidate 65) と PLAN-L7-626 rev 11 §4 に同期。
+- rev 3 (2026-09-17、Claude control lane): PR #650 の非著者 Codex Sol review r2 (receipt `c99f948d…`) に合わせ、
+  PLAN-L7-627 rev 3 (journal provenance の解決先存在 / kind、replay 再観測の PR head 軸、receipt digest 形状、
+  ledger chain の genesis 境界、43 guard、candidate 71) に同期。
