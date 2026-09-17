@@ -8,7 +8,7 @@ drive: agent
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-09-10
-updated: 2026-09-16
+updated: 2026-09-17
 owner: Claude / Fable (pair-freeze) · Codex/Luna worker (bounded implementation)
 parent_design: docs/plans/PLAN-L6-101-pack-independent-multi-consumer-acceptance.md
 pair_artifact: docs/test-design/harness/L12-pack-internal-canary-test-design.md
@@ -55,18 +55,18 @@ status: draft
 github_issue_id: 418
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:416bfc704ef997ca77b1cf835ed384f4
-  command_id: plan-revise:issue-418:forward:6
-  admitted_at: 2026-09-16T12:00:00.000Z
-  source_digest: sha256:dedad160e2bf037dda52cb7a596eeb1f54c57c2b752e2696554c4ead77e17030
-  decision_digest: sha256:053fd2822b4d7bfdf15f3775a05c22e37a34848994c1ec0c175c8b3dc1ec2c79
-  receipt_digest: sha256:ee9723a979131a243912979cbf6fb5f14d24ea37ea0c8be33337bfaf2b0376c8
+  receipt_id: certificate:4b23bf4c3cce53f9eeb64abc54f063d0
+  command_id: plan-revise:issue-418:forward:7
+  admitted_at: 2026-09-17T01:02:19.680Z
+  source_digest: sha256:925fc49c6b25d7aa865a5d8c926226426cfa3ba9dda853f5a9998fa03779ca76
+  decision_digest: sha256:7746dd9b3348efa18fc99adebe9a8cda294cd0ff457a4b0b97a05e54454b607e
+  receipt_digest: sha256:fc65dc8dd41ce85534bf88fecc5699d022d73785eb2c8f21576a91dced3b788d
   binding:
     path: docs/plans/PLAN-L7-531-pack-internal-canary-smoke.md
     plan_id: PLAN-L7-531-pack-internal-canary-smoke
     asset_id: plan:44f79788376b81c225ce5913fddbc48f
-    revision: 5
-    content_digest: sha256:dedad160e2bf037dda52cb7a596eeb1f54c57c2b752e2696554c4ead77e17030
+    revision: 6
+    content_digest: sha256:925fc49c6b25d7aa865a5d8c926226426cfa3ba9dda853f5a9998fa03779ca76
   route:
     signal: feature_addition
     mode: add-feature
@@ -83,8 +83,8 @@ admission_receipt:
     target_plan_id: PLAN-L7-531-pack-internal-canary-smoke
     target_revision: 3
     phase: forward_merge
-  escape_reason: "Issue #418 PR #638 FLAG: bounded contract revision for Pack-only
-    canary reslice"
+  escape_reason: "Issue #642 Claude FLAG: separate PR-1A inventory from PR-1B
+    runtime smoke and split start/completion predicates"
 ---
 
 # PLAN-L7-531: Pack-only internal canary smoke (Windows/Linux)
@@ -118,13 +118,26 @@ canonical receipt により別途検証する。
   consumer root 内に memory/notification state が閉じることだけを観測し、cross-worktree
   provider parity を主張しない。
 
-PR-1B の開始・完了を判定する単一の falsifiable predicate は次である。
-`G-PR1B-001 = valid(#420 main-arrival receipt) AND valid(#487 bun-zero-trace receipt) AND
-C003/C004/C007 Green at the same PR-1B implementation revision`。#420 の main-arrival receipt は
-Issue #420 の変更が `origin/main` に到達したことを canonical な merge/head 証跡で束縛し、#487 の
-Bun-zero-trace receipt は install/download/invocation の trace が 0 であることを同じ実装 revision
-へ束縛する。いずれかの receipt が欠落・不一致、または C003/C004/C007 のいずれかが Red なら
-PR-1B は未完了であり、PR-1A の完了や preflight Green では代替できない。
+PR-1B の検証 run の開始と完了は、別々の falsifiable predicate とする。開始を実装 PR の
+起票・作業開始条件と混同しない。
+
+`G-PR1B-START-001 = valid(#420 main-arrival receipt) AND
+valid(#487 bun-zero-trace receipt)`。
+
+ここで **#420 main-arrival receipt** は、#420 の canonical merge gate が発行する receipt
+(`pr_number`、対象 PR の exact head、merge commit、結果の `origin/main` SHA、Issue/PLAN
+束縛を含む) とする。**#487 bun-zero-trace receipt** は、#487 の canonical retirement
+oracle が発行する receipt (`implementation_revision`、trace schema/digest、
+`install`/`download`/`invocation` の各 count = 0、対応 CI run を含む) とする。PR コメントや
+自己申告の時刻・digest・「完了」文字列は、いずれの receipt の代替にもならない。
+
+`G-PR1B-COMPLETE-001 = G-PR1B-START-001 AND
+C003/C004/C007 Green at the same PR-1B implementation revision`。
+
+START は PR-1B の canary 検証を開始できる条件だけを表し、#420/#487 の実装・mergeを
+自ら証明しない。COMPLETE は同じ実装 revision に束縛された C003/C004/C007 の全 Green と、
+両 receipt の完全な検証を要求する。いずれかの receipt が欠落・不一致、または Candidate の
+いずれかが Red なら PR-1B は未完了であり、PR-1A の完了や preflight Green では代替できない。
 
 ### 1.3 先行成果物の扱いと実装境界
 
@@ -179,6 +192,11 @@ remote mutation の試行を 0 とする。child process の環境は allowlist 
 `process.env` をそのまま継承してはならない。fixture 生成時に source worktree、directory walk、
 glob、local Pack checkout、開発 DB、PLAN 本文、未許可環境変数から entry を補完しない。
 
+C001 の network 0 は終了コードだけで推測せず、テスト seam へ注入した network/DNS/socket/HTTP
+adapter、child-process spawn、registry/installer client の試行カウンタで観測する。禁止された呼出しは
+typed deny とカウンタ増加を返し、Green は各カウンタが 0、リクエスト記録が空、かつ remote mutation
+がないことの同時成立とする。
+
 ### 3.2 第 2 層: 受入 run (human-triggered、1 回)
 
 canary 公開 (PO 承認、`PLAN-L7-515` adapter 経由) の後に、clean fixture から公開済み tag
@@ -218,19 +236,25 @@ smoke に束ねる唯一の根であり、§7 の `CANDIDATE-ST-PACKCANARY-005` 
 - 失敗時は consumer root 外への write 0、partial install を成功扱いしない。
 - PATH/env/config/log/receipt に source 側 absolute path 参照 0。
 
-## 5. smoke 手順 (第 1 層・第 2 層共通)
+## 5. smoke 手順 (PR ごとの所有を明示)
 
-1. sealed artifact (第 1 層: staging result、第 2 層: 公開 asset) から clean consumer root を
-   materialize し、asset digest と control manifest を独立再計算する。
-2. Node/npm で `setup --solo` を実行し、sealed consumer runtime (`PLAN-L7-516`) を配置する。
-3. Pack 取得元 checkout と source 参照を fixture から物理削除する。
-4. 別 cwd から wrapper を起動し、次の最小閉包を順に実行する:
+1. **[PR-1A]** 第 1 層の sealed staging result (`tar.gz` + `.sha256` の exact 2 asset) だけから
+   clean inventory を構成し、asset digest・明示 inventory・C001/C002/C006-unit の deny oracle を
+   独立再計算する。PR-1A は `setup --solo`、`doctor`、PLAN authoring、review/merge CLIを実行せず、
+   runtime dependency を registry/install/download で補充しない。C001 の network/DNS/socket/HTTP・
+   spawn・installer 試行カウンタはすべて 0 でなければならない。
+2. **[PR-1B]** `G-PR1B-START-001` を検証した後、Node/npm で `setup --solo` を実行し、sealed
+   consumer runtime (`PLAN-L7-516`) を配置する。
+3. **[PR-1B]** Pack 取得元 checkout と source 参照を fixture から物理削除する。
+4. **[PR-1B]** 別 cwd から wrapper を起動し、次の最小閉包を順に実行する:
    PLAN authoring smoke (`PLAN-L7-528` の template scope)、`plan lint`、`db rebuild`、
    consumer doctor profile (`PLAN-RECOVERY-06`)、review request / receipt / merge gate smoke。
-5. consumer runtime/state/history/lock/hook/evidence が consumer root 内だけに存在することを
+5. **[PR-1B]** consumer runtime/state/history/lock/hook/evidence が consumer root 内だけに存在することを
    検査する。
-6. Linux/Windows/aggregate で同じ候補 oracle を実行し、exact release identity・PLAN revision・
+6. **[PR-1B]** Linux/Windows/aggregate で同じ候補 oracle を実行し、exact release identity・PLAN revision・
    Reverse・CI・非著者 closing receipt へ束縛する。
+7. **[PR-2]** 公開済み exact 2 asset を clean fixture へ入力し、C005/C006-acceptance と第 1 層の
+   staging receipt 接合を human-triggered run で実行する。
 
 review request / receipt / merge gate smoke は、consumer root 内の projection
 (`.ut-tdd/review/requests|receipts`) が閉じることを観測するもので、source repo の canonical
@@ -258,11 +282,11 @@ PR-1A の completion smoke は次の 3 行だけで構成する。各行は seal
 | Candidate | PR-1A の Red 入力 / 実行観測 | Green oracle (falsifiable) |
 | --- | --- | --- |
 | CANDIDATE-ST-PACKCANARY-001 | sealed `tar.gz` に source-only/absolute path を混入し、未許可環境変数 sentinel と network/socket 試行を注入 | exact 2 asset を SHA-256 検証後にのみ materialize し、source/absolute path・sentinel の継承・network 試行を 0 とする。child env が allowlist 構築 map で、`process.env` 直接継承なら Red |
-| CANDIDATE-ST-PACKCANARY-002 | sealed staging 内の依存または authoring/skills entry を欠落・重複させ、registry fetch を利用可能にする | 依存を sealed staging からだけ解決し、registry/npm/install/download を 0 と観測し、authoring/skills の exact-one inventory を fail-close する。欠落・重複・外部 fetch は Red |
+| CANDIDATE-ST-PACKCANARY-002 | sealed staging の authoring/skills/inventory entry を欠落・重複させ、registry/installer 呼出しを観測可能にする | PR-1A は CLI/runtime を起動せず、sealed staging の entry だけを検査する。authoring/skills の exact-one inventory と registry/npm/install/download 試行 0 を観測し、欠落・重複・外部 fetch は Red |
 | CANDIDATE-ST-PACKCANARY-006 (unit) | legacy 3 asset、exact 2 asset の欠落/余剰/別名、`latest`/prefix/semver range locator | `tar.gz` + `.sha256` の exact 2 asset と exact identity のみを受理し、legacy/欠落/余剰/別名/非 exact locator を typed deny する |
 
 したがって、C003/C004/C007 の Red→Green、#420 main arrival、#487 Bun-zero trace は PR-1A の
-completion smoke に算入せず、`G-PR1B-001` でのみ判定する。
+completion smoke に算入せず、`G-PR1B-START-001` / `G-PR1B-COMPLETE-001` でのみ判定する。
 
 ## 7. TDD / trace / Reverse
 
@@ -274,7 +298,7 @@ stdout、stderr、consumer root 内の .ut-tdd runtime state を検査し、skil
 | Candidate | 契約軸 | 所有層 |
 | --- | --- | --- |
 | CANDIDATE-ST-PACKCANARY-001 | sealed tar.gz + .sha256 の検証、explicit env、network 0 と source-only/absolute path を clean inventory へ混入させない | PR-1A |
-| CANDIDATE-ST-PACKCANARY-002 | sealed staging 供給の依存と authoring template/skills の exact-one inventory (registry fetch 0) | PR-1A |
+| CANDIDATE-ST-PACKCANARY-002 | sealed staging の authoring template/skills の exact-one inventory、runtime CLIを起動しない registry/install/download 0 | PR-1A |
 | CANDIDATE-ST-PACKCANARY-003 | setup 元撤去後、別 cwd/process から sealed runtime を起動し外部 path は typed deny | PR-1B |
 | CANDIDATE-ST-PACKCANARY-004 | wrapper/config/stdout/stderr/.ut-tdd state に setup 元 absolute path 0 | PR-1B |
 | CANDIDATE-ST-PACKCANARY-005 | 公開 asset の SHA-256/size と第 1 層 staging receipt の byte 一致 | PR-2 |
@@ -297,9 +321,10 @@ R4 は不足差分だけを L6-101/L7-515/L7-516 へ gap-only backfill し、既
 
 ## 9. 完了条件
 
-1. PR-1A の sealed `tar.gz` + `.sha256` **exact 2 asset** input から、network 0、sealed staging 供給の
-   依存、明示構築 env (full `process.env` 継承なし) を満たし、C001/C002/C006-unit **だけ**が
-   Linux/Windows/aggregate で Green になる。
+1. PR-1A の sealed `tar.gz` + `.sha256` **exact 2 asset** input から、CLI/runtime dependency の
+   実行や補充を行わず、sealed staging の authoring/skills/inventory を検査する。C001/C002/C006-unit
+   **だけ**が、network/DNS/socket/HTTP/spawn/installer 試行 0、明示構築 env (full `process.env`
+   継承なし) とともに Linux/Windows/aggregate で Green になる。
 2. PR-1B の #420 consumer runtime が setup 元撤去後の別 cwd/process/env-clear で動き、path/state/stdout/
    stderr/.ut-tdd state に source absolute path がなく、Bun trace が 0 になる。
 3. PR-2 の公開 asset が exact 2 件で、digest/identity/tag/Pack commit と publication receipt、第 1 層
@@ -314,9 +339,11 @@ R4 は不足差分だけを L6-101/L7-515/L7-516 へ gap-only backfill し、既
 1. PR-0 の contract-only pair-freeze に cross-family non-author PASS と required CI Green が揃うこと。
 2. PR-1A は PLAN-L7-508 の sealed staging result だけを入力にし、Git tree、current worktree、
    cpSync(process.cwd())、registry npm ci、full inherited env を使用しないこと。
-3. PR-1B は `G-PR1B-001` が真になる場合にのみ完了する。すなわち #420 main-arrival receipt と
-   #487 Bun-zero-trace receipt が同一 PR-1B implementation revision に束縛され、C003/C004/C007
-   が全て Green であること。これらを PR-1A で先に Green/confirmed としないこと。
+3. PR-1B の検証開始は `G-PR1B-START-001`、完了は `G-PR1B-COMPLETE-001` で判定する。
+   START は #420 main-arrival receipt と #487 Bun-zero-trace receipt が canonical fields 付きで
+   検証できること、COMPLETE は同じ PR-1B implementation revision に C003/C004/C007 の全 Green
+   が束縛されることを要求する。#420/#487 の自己申告、PR コメント、PR-1A の Green/confirmed は
+   いずれの predicate の代替にもならない。
 4. PR-2 は human-approved v0.2.0-canary.1 公開後にのみ開始し、receipt/admission 時刻と digest は
    canonical generator が生成した値だけを受理する。手書き時刻・申告 digest は受理しない。
 5. production source を PR-0 で変更しない。方式変更が必要なら旧実装 PR を膨らませず、本 PLAN の
