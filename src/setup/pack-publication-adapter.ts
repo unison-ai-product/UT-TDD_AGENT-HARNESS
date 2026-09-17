@@ -871,9 +871,12 @@ function preparationApproval(
   approvals: readonly PackPublicationApproval[],
   mutation: "pack_branch_commit" | "pack_pr_create",
   identityDigest: string,
-): PackPublicationApproval | null {
+):
+  | { readonly ok: true; readonly approval: PackPublicationApproval }
+  | { readonly ok: false; readonly reason: "approval_missing" | "approval_binding_mismatch" } {
   const matches = approvals.filter((approval) => approval.mutation === mutation);
-  if (matches.length !== 1) return null;
+  if (matches.length === 0) return { ok: false, reason: "approval_missing" };
+  if (matches.length !== 1) return { ok: false, reason: "approval_binding_mismatch" };
   const approval = matches[0];
   if (
     approval.transition !== "pack_commit" ||
@@ -885,8 +888,8 @@ function preparationApproval(
     !nonBlank(approval.expiresAt) ||
     !SHA256.test(approval.approvalStateDigest)
   )
-    return null;
-  return approval;
+    return { ok: false, reason: "approval_binding_mismatch" };
+  return { ok: true, approval };
 }
 
 function preparationReceiptDigest(
@@ -987,19 +990,22 @@ export async function preparePackPublication(
     "pack_pr_create",
     identity.identityDigest,
   );
-  if (!branchApproval || !pullRequestApproval)
+  if (!branchApproval.ok)
     return preparationFailure({
       status: "denied",
       stage: "preflight",
-      reason: "approval_missing",
+      reason: branchApproval.reason,
       remoteWrites: 0,
     });
+
+  const branchApprovalValue = branchApproval.approval;
+  const pullRequestApprovalValue = pullRequestApproval.approval;
   if (
-    branchApproval.operationId !== input.operationId ||
-    pullRequestApproval.operationId !== input.operationId ||
-    branchApproval.idempotencyKey !== input.idempotencyKey ||
-    pullRequestApproval.idempotencyKey !== input.idempotencyKey ||
-    branchApproval.nonce === pullRequestApproval.nonce
+    branchApprovalValue.operationId !== input.operationId ||
+    pullRequestApprovalValue.operationId !== input.operationId ||
+    branchApprovalValue.idempotencyKey !== input.idempotencyKey ||
+    pullRequestApprovalValue.idempotencyKey !== input.idempotencyKey ||
+    branchApprovalValue.nonce === pullRequestApprovalValue.nonce
   )
     return preparationFailure({
       status: "denied",
@@ -1008,8 +1014,8 @@ export async function preparePackPublication(
       remoteWrites: 0,
     });
   const expiryTimes = [
-    Date.parse(branchApproval.expiresAt),
-    Date.parse(pullRequestApproval.expiresAt),
+    Date.parse(branchApprovalValue.expiresAt),
+    Date.parse(pullRequestApprovalValue.expiresAt),
   ];
   if (expiryTimes.some((value) => Number.isNaN(value)))
     return preparationFailure({
@@ -1025,13 +1031,20 @@ export async function preparePackPublication(
       reason: "approval_expired",
       remoteWrites: 0,
     });
+  if (!pullRequestApproval.ok)
+    return preparationFailure({
+      status: "denied",
+      stage: "preflight",
+      reason: pullRequestApproval.reason,
+      remoteWrites: 0,
+    });
 
   const run = new PublicationRun(
     {
       intentDigest: identity.identityDigest,
       approvals: {
-        [branchApproval.mutation]: branchApproval,
-        [pullRequestApproval.mutation]: pullRequestApproval,
+        [branchApprovalValue.mutation]: branchApprovalValue,
+        [pullRequestApprovalValue.mutation]: pullRequestApprovalValue,
       },
     },
     ports,

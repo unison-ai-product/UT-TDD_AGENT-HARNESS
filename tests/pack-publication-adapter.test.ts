@@ -1775,5 +1775,47 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
       ).resolves.toMatchObject({ ok: false, reason: "preparation_identity_mismatch" });
       expect(commit).not.toHaveBeenCalled();
     });
+
+    it("CANDIDATE-PACKPUB-PREP-002: cross-operation approval is a typed binding denial", async () => {
+      const { input } = preparationInput();
+      const { prep } = preparationPorts();
+      const approvals = input.approvals.map((approval, index) =>
+        index === 0 ? { ...approval, operationId: "foreign-operation" } : approval,
+      );
+      const commit = vi.fn(prep.pack.commitPublicationBranch);
+      const result = await preparePackPublication(
+        { ...input, approvals },
+        { ...prep, pack: { ...prep.pack, commitPublicationBranch: commit } },
+      );
+      expect(result).toMatchObject({
+        ok: false,
+        status: "denied",
+        reason: "approval_binding_mismatch",
+        remoteWrites: 0,
+      });
+      expect(commit).not.toHaveBeenCalled();
+    });
+
+    it("CANDIDATE-PACKPUB-PREP-004: nonce journal failure denies before mutation", async () => {
+      const { input } = preparationInput();
+      const { prep } = preparationPorts();
+      const commit = vi.fn(prep.pack.commitPublicationBranch);
+      const result = await preparePackPublication(input, {
+        ...prep,
+        durableState: {
+          append: async () => {
+            throw new Error("journal unavailable");
+          },
+        },
+        pack: { ...prep.pack, commitPublicationBranch: commit },
+      });
+      expect(result).toMatchObject({
+        ok: false,
+        status: "indeterminate",
+        reason: "journal_persist_failed",
+        remoteWrites: 0,
+      });
+      expect(commit).not.toHaveBeenCalled();
+    });
   });
 });
