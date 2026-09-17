@@ -61,7 +61,7 @@ review_evidence:
         scope: targeted
         exit_code: 0
         evidence_path: tests/codex-review-wake.test.ts
-        output_digest: sha256:1b0f930272bf6e2a86df13fa3630bfe391bfceb32c01def77fd2339c11489faa
+        output_digest: sha256:639c3a852922352969a93dd9ca7e7b7b4f808ec2d7899c80a26390f4b22d6106
         completed_at: 2026-09-17T17:04:37+09:00
         anchor_commit: 8bcd0c796f787edd59eb82c3f00dc7e37798e32b
       - kind: typecheck
@@ -110,18 +110,18 @@ status: confirmed
 github_issue_id: 600
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:4cd56319687f483c1b7e176739604dc9
-  command_id: plan-revise:issue-600:codex-review-wake-impl:confirm-cross-agent:7446c10f8aa4
-  admitted_at: 2026-09-17T09:13:15.260Z
-  source_digest: sha256:b645d997e00592da9fef728aa01911ee7abaa65a49bd338543199f20403d367e
-  decision_digest: sha256:e4f68eb55867157136d94a7dee92f21ea460fa3b714b77fb95c28e8a4cbe0bca
-  receipt_digest: sha256:0c2167571d6cccc1df9dc9053996ded98c7984110fe83a171e1e5d3ec1c696f1
+  receipt_id: certificate:1c71a41ddbedc5304d21c3640440d7ce
+  command_id: plan-revise:issue-600:codex-review-wake-impl:green-digest:3dd6f9462baa
+  admitted_at: 2026-09-17T09:48:36.843Z
+  source_digest: sha256:90fc6799cbf05b61662e060561143ab6eb72609587bf0d1eea00b2a3aff6b205
+  decision_digest: sha256:47c3b73a5a0c68668109034c1a2fea8a0b4898dc05eb732341a315ced3e23752
+  receipt_digest: sha256:5d6a945b14e6d96f5169bf61076218eaf711b0af8635b6eaed11080a3d5b0ee2
   binding:
     path: docs/plans/PLAN-L7-600-codex-review-wake-impl.md
     plan_id: PLAN-L7-600-codex-review-wake-impl
     asset_id: plan:c00b91ac72bc4447dcd79d9332c2da04
-    revision: 16
-    content_digest: sha256:b645d997e00592da9fef728aa01911ee7abaa65a49bd338543199f20403d367e
+    revision: 17
+    content_digest: sha256:90fc6799cbf05b61662e060561143ab6eb72609587bf0d1eea00b2a3aff6b205
   route:
     signal: feature_addition
     mode: add-feature
