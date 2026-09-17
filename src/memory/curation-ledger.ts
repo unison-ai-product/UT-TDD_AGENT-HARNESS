@@ -108,15 +108,31 @@ export interface CurationFinding {
     | "reviewer-missing"
     | "reviewer-same-family"
     | "reviewer-not-frontier"
-    | "reviewer-head-invalid";
+    | "reviewer-head-invalid"
+    | "reviewer-receipt-invalid";
   subject: string;
 }
 
 const HEX64 = /^[0-9a-f]{64}$/;
 const HEX40 = /^[0-9a-f]{40}$/;
+const ALL_ZERO_HEAD = /^0{40}$/;
+// A real review receipt id: the `rv1-<sha256>` form written under `.ut-tdd/review/receipts/`,
+// a bare sha256 digest, or a `certificate:`-prefixed plan-admission style id. The unbound
+// placeholder string "pending-review-receipt" matches none of these.
+const REVIEW_RECEIPT_ID = /^(?:rv1-[0-9a-f]{64}|[0-9a-f]{64}|certificate:[A-Za-z0-9._:-]+)$/;
 
 export function custodyIdFor(sourceDigest: string): string {
   return `local-archive:${sha256Hex(`ut-tdd.memory-legacy-local-archive/v1\n${sourceDigest}\n`).slice(0, 24)}`;
+}
+
+/**
+ * CANDIDATE-U-MEMCUT-026: the digest a canonical `.ut-tdd/memory/*.md` file's raw bytes must
+ * produce to match `RegistrationReceipt.content_digest` (same sha256-over-raw-text scheme as
+ * `MemoryEntry.content_hash` in `src/memory/index.ts`). Exposed so the ledger test can assert the
+ * receipt actually binds to the canonical file's bytes instead of only recomputing its own digest.
+ */
+export function canonicalMemoryContentDigest(rawFileText: string): string {
+  return sha256Hex(rawFileText);
 }
 
 export function registrationReceiptDigest(receipt: RegistrationReceipt): string {
@@ -251,8 +267,10 @@ export function verifyCurationReviewer(ledger: CurationLedger): CurationFinding[
   const frontier = BLIND_REVIEW_FRONTIER_MODELS[reviewer.family];
   if (reviewer.model !== frontier)
     findings.push({ kind: "reviewer-not-frontier", subject: reviewer.model });
-  if (!HEX40.test(reviewer.exact_head))
+  if (!HEX40.test(reviewer.exact_head) || ALL_ZERO_HEAD.test(reviewer.exact_head))
     findings.push({ kind: "reviewer-head-invalid", subject: reviewer.exact_head });
+  if (!REVIEW_RECEIPT_ID.test(reviewer.receipt))
+    findings.push({ kind: "reviewer-receipt-invalid", subject: reviewer.receipt });
   return findings;
 }
 
