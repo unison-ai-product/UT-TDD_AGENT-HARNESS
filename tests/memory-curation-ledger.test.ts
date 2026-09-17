@@ -224,10 +224,11 @@ describe("memory clean-cut PR-2: curation ledger binding (U-MEMCUT-024..028)", (
     } else {
       expect(pending).toEqual([{ kind: "reviewer-missing", subject: "ledger.reviewer" }]);
     }
-    const validReviewer = ledger.reviewer ?? {
+    const validReviewer: NonNullable<CurationLedger["reviewer"]> = ledger.reviewer ?? {
       model: "gpt-5.6-sol",
       family: "codex" as const,
       exact_head: "0".repeat(40),
+      verdict: "PASS",
       receipt: "pending-review-receipt",
     };
     const reviewedLedger = { ...ledger, reviewer: validReviewer };
