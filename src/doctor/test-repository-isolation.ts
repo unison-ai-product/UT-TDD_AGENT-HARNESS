@@ -110,7 +110,7 @@ repositoryReadContracts["tests/setup-bun-readiness.test.ts"] = {
     "Pack readiness runs against a copied clean-consumer fixture rather than the source worktree",
 };
 repositoryReadContracts["tests/bun-final-retirement.test.ts"] = {
-  mode_calls: { isolated_fixture: 2 },
+  mode_calls: { isolated_fixture: 4 },
   reason:
     "final-retirement admission tests read the exact execution HEAD and construct isolated receipt fixtures",
 };

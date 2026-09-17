@@ -167,6 +167,7 @@ const COMPATIBILITY_PATHS = new Set([
 ]);
 
 const BUN_TOKEN = /\b(?:bun|bunx)\b/iu;
+const BUN_TOKEN_FALLBACK = "bun";
 const ACTIVE_INSTRUCTION =
   /\b(?:use|run|install|build|execute|exec|command|filesystem|script|setup|launch|invoke|start)\b/iu;
 const RETIRED_POLICY =
@@ -292,7 +293,7 @@ function classifyTrackedSurface(
 export function collectFinalRetirementSurfaceInventory(repoRoot: string): BunRetirementSurface[] {
   const surfaces = gitTrackedBunLines(repoRoot).map(({ path, line, text }) => ({
     path,
-    symbol: `line:${line}:${text.match(BUN_TOKEN)?.[0]?.toLowerCase() ?? "bun"}`,
+    symbol: `line:${line}:${text.match(BUN_TOKEN)?.[0]?.toLowerCase() ?? BUN_TOKEN_FALLBACK}`,
     classification: classifyTrackedSurface(path, text),
   }));
   return surfaces.sort((left, right) =>
