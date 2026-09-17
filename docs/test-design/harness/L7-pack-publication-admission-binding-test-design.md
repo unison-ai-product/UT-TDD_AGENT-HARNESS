@@ -30,7 +30,7 @@ plan-admission record を指さない。値は実装 PR の test module 内で�
 | expected Pack main OID | `sha1("adm-fixture-expected-main")` の 40 hex | |
 | publication branch | `pack/publication/op-adm-fixture-0001` | deterministic branch 名 |
 | PR number / head OID / base OID / tree digest | `4242` / `sha1("adm-fixture-head")` / expected main OID と同値 / staging tree digest と同値 | base = expected main が正常系 |
-| preparation receipt | #625 §2 の 4 field (PR `4242`、head、base、tree digest) と binding (operation ID `op-adm-fixture-0001`) を持つ receipt。`read_back_observation` は PR `4242` を指す | receipt digest は canonical bytes から admission が導出。staging identity は receipt に置かない |
+| preparation receipt | member は 3 群だけ: identity (PR `4242`、head、base、tree digest)、binding (operation ID `op-adm-fixture-0001`)、read_back_observation (journal event digest `sha256:` + `sha256("adm-fixture-readback")`、PR `4242`) | receipt digest は canonical bytes から admission が導出。staging identity は receipt に置かない |
 | sealed staging record | operation ID `op-adm-fixture-0001` に束縛された record: staging tree / manifest digest、expected main OID、branch、idempotency key (上記と同値) | §2.2-6 の observer が返す。正常系は observed PR と整合 |
 | configuration 期待値 (§2.1 (a)) | repository ID `424200`、full name `example-org/example-pack`、target ref `refs/heads/main`、ruleset ID `77`、期待 required context `["pack-check"]`、CAS installation ID `9001` | 実 Pack repo 名を使わない。preparation installation は `9002` (G28 mutant 用) |
 | approval 参照 (§2.1 (b)) | approval nonce `apv-adm-fixture-0001` (束縛先 `op-adm-fixture-0001`、未消費)。preparation nonce 集合は `{"prep-adm-fixture-0001"}` | |
@@ -41,7 +41,7 @@ plan-admission record を指さない。値は実装 PR の test module 内で�
 fixture から不足する値を worktree、Pack checkout、GitHub API、既存の publication receipt で
 補完しない。各 mutation row は上記 fixture の 1 要素だけを変異させ、他は正常系のまま保つ。
 
-## 3. 43 guard mutation matrix (G40–G43 は §4 の 056 / 061 / 063 / 068)
+## 3. 45 guard mutation matrix (G40–G45 は §4 の 056 / 061 / 063 / 068 / 069 / 070)
 
 各行は他の predicate を成立させた fixture へ一軸だけを注入する。expected result は admission
 record 0、typed deny、remote write 0 であり、別 guard の失敗を Green にしない。契約引用は
@@ -64,7 +64,7 @@ PLAN-L7-626 §3 の同じ行と一致させる。
 | `CANDIDATE-PACKPUB-ADM-013` | G13 | 565 §1.1、626 §2.2-7 | 別観測束の既存 admission record に同じ operation ID を登録 | `admission_operation_replay`、write 0 |
 | `CANDIDATE-PACKPUB-ADM-014` | G14 | 565 §1.1、626 §2.2-7 | 別観測束の既存 admission record に同じ idempotency key を登録 | `admission_idempotency_replay`、write 0 |
 | `CANDIDATE-PACKPUB-ADM-015` | G15 | 565 §1.1 | PR `4242` を別 operation ID で admitted 済みに登録 | `admission_pr_replay`、write 0 |
-| `CANDIDATE-PACKPUB-ADM-016` | G16 | #625 §2、626 §2.1 | receipt に余剰 field `branch: "pack/publication/op-adm-fixture-0001"` を追加 (4 field と binding は正常系のまま) | `admission_receipt_invalid`、observer call 0、write 0 |
+| `CANDIDATE-PACKPUB-ADM-016` | G16 | #625 §2、626 §2.1 strict schema | 正常系 receipt (3 群) に余剰 member `branch: "pack/publication/op-adm-fixture-0001"` を追加 | `admission_receipt_invalid`、observer call 0、write 0 |
 | `CANDIDATE-PACKPUB-ADM-017` | G17 | 625 §2、626 §2.2-2 | observed PR tree digest を別値 | `admission_tree_digest_mismatch`、write 0 |
 | `CANDIDATE-PACKPUB-ADM-018` | G18 | 565 §1.1、626 §2.2-6 | sealed staging record の manifest digest を 63 hex に | `admission_staging_manifest_invalid`、write 0 |
 | `CANDIDATE-PACKPUB-ADM-019` | G19 | 565 §1.1 | PR `4242` を別 staging digest で admitted 済みに登録 | `admission_pr_staging_conflict`、write 0 |
@@ -128,6 +128,8 @@ G25/G35 は入力出所・形状/equality・被覆・集合一致が異なるた
 | `CANDIDATE-PACKPUB-ADM-066` | 正常系 admitted 後に preparation journal を観測 | journal append 0 |
 | `CANDIDATE-PACKPUB-ADM-067` | 正常系 admitted 後に preparation token port を観測 | token 参照 0 |
 | `CANDIDATE-PACKPUB-ADM-068` | G43: receipt の binding 先 sealed staging record を削除 | `admission_staging_record_missing`、write 0 |
+| `CANDIDATE-PACKPUB-ADM-069` | G44: observer が binding `op-adm-fixture-0001` を operation ID `op-adm-fixture-0002` の record (tree / manifest / main / branch / key は同値) に解決 | `admission_staging_operation_mismatch`、write 0 |
+| `CANDIDATE-PACKPUB-ADM-070` | G45: sealed staging record の idempotency key だけを `idem-adm-fixture-0002` に | `admission_staging_key_mismatch`、write 0 |
 | `CANDIDATE-PACKPUB-ADM-065` | G21: caller が §2.1 (a) 期待値 (repository ID) を configuration と別に供給 | `admission_caller_override`、write 0 |
 
 050–055 と 057 は導出関数を直接呼び、構成要素の 1 つを省く実装 (digest が不変になる) を Red にする。
@@ -139,7 +141,7 @@ admission 成功 fixture でも remote write ledger と approval consume は 0 �
 
 ## 5. 実装 PR への昇格規則
 
-実装 PR は 68 candidate を (PLAN-L7-626 §8 の対応表の順で)各 1 件以上の独立 test へ昇格し、実装時に正規の test ID
+実装 PR は 70 candidate を (PLAN-L7-626 §8 の対応表の順で)各 1 件以上の独立 test へ昇格し、実装時に正規の test ID
 (`U-PACKPUB-ADM-*`) を割り当てる。typed reason、入力 digest、observer call 順、admission
 record digest、approval/remote write count を直接検査する。恒真 assertion、dummy observer、既存
 #625 nonce の流用、publish/CAS port の no-op 偽装では Green にしない。production source 変更、

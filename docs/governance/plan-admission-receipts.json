@@ -4608,6 +4608,38 @@
         "revision": 8,
         "content_digest": "sha256:87361f9c86262499605aee40a6c97978a6637c2cd1586642c125c0d42d048165"
       }
+    },
+    {
+      "sequence": 289,
+      "previous_record_digest": "sha256:8b90ddbd457d36ae3f1d523f0f0687978351a279e047d5dbbba1d765543fafe8",
+      "record_digest": "sha256:1e5b2cd335b2919482879c38d22fcba24db3d82a06f1da40a4ffbfb6c17a3dfd",
+      "command_id": "plan-revise:issue-626:pr645-plan:r9:21718d20400c",
+      "receipt_id": "certificate:8ad8efecb191929d33a428644db79ec1",
+      "receipt_digest": "sha256:aacded6118c250baa20be2f5433f9f9456a5374d7edda6d7fa2a94caf69836ad",
+      "decision_digest": "sha256:23bc293eff1ef2aa548c8151eb4e03d259b3c7a2e38410d1628ac0713d186c3f",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-626-pack-publication-admission-binding.md",
+        "plan_id": "PLAN-L7-626-pack-publication-admission-binding",
+        "asset_id": "plan:529eea3e2017a6d17049746ae353398d",
+        "revision": 9,
+        "content_digest": "sha256:04456cf339c0d7b537ef88ff459015e788ca7fbf9b4032d7fc0396adda551c4e"
+      }
+    },
+    {
+      "sequence": 290,
+      "previous_record_digest": "sha256:1e5b2cd335b2919482879c38d22fcba24db3d82a06f1da40a4ffbfb6c17a3dfd",
+      "record_digest": "sha256:49d3e97924562d31452c12142caed5ea57dd1b3beb884334528694c14f695c36",
+      "command_id": "plan-revise:issue-626:pr645-reverse:r9:21718d20400c",
+      "receipt_id": "certificate:8fa00791eef71fa7316f16cd329b577d",
+      "receipt_digest": "sha256:ae754adb3a6fb54abc963f6cd91c8f44b89b5093d1db47d0354d45eff0ed7c0e",
+      "decision_digest": "sha256:aa220497e6bcf5f6e0577a6b056d8a36fa42c1e0e28dfd7a0adba58fd802007b",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-626-pack-publication-admission-binding-backfill.md",
+        "plan_id": "PLAN-REVERSE-626-pack-publication-admission-binding-backfill",
+        "asset_id": "plan:a00a5eddd4929e67b7e26820aac193f6",
+        "revision": 9,
+        "content_digest": "sha256:36c042c3d2fa0753c7e48a8610aae2343407280ee28b77530985bb9c2ee8aacb"
+      }
     }
   ]
 }
