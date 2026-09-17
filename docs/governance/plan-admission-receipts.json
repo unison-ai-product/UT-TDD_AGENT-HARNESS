@@ -4592,6 +4592,22 @@
         "revision": 15,
         "content_digest": "sha256:7b6ddf2a9a440966a10e2b7fddd99868248ac0bd5f8f24de3d3c745288a9e70c"
       }
+    },
+    {
+      "sequence": 288,
+      "previous_record_digest": "sha256:5d67b9c9bf923843849456b026c047d7f6d36b41d081140cdbd9ade5e9a6ebf4",
+      "record_digest": "sha256:9c5e7e0d1a65d39e412bc9e73a4437239a475bf740776903b59105f8daf08c38",
+      "command_id": "plan-revise:issue-600:codex-review-wake-impl:confirm-cross-agent:7446c10f8aa4",
+      "receipt_id": "certificate:4cd56319687f483c1b7e176739604dc9",
+      "receipt_digest": "sha256:0c2167571d6cccc1df9dc9053996ded98c7984110fe83a171e1e5d3ec1c696f1",
+      "decision_digest": "sha256:e4f68eb55867157136d94a7dee92f21ea460fa3b714b77fb95c28e8a4cbe0bca",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-600-codex-review-wake-impl.md",
+        "plan_id": "PLAN-L7-600-codex-review-wake-impl",
+        "asset_id": "plan:c00b91ac72bc4447dcd79d9332c2da04",
+        "revision": 16,
+        "content_digest": "sha256:b645d997e00592da9fef728aa01911ee7abaa65a49bd338543199f20403d367e"
+      }
     }
   ]
 }

@@ -83,24 +83,45 @@ review_evidence:
         output_digest: sha256:b70d2d1403c671399680ca5c783e86591fde85e10dc57c45be2c8806f0549cf7
         completed_at: 2026-09-17T17:04:37+09:00
         anchor_commit: 8bcd0c796f787edd59eb82c3f00dc7e37798e32b
+  - reviewer: claude-opus-5
+    review_kind: cross_agent
+    reviewed_at: 2026-09-17T02:25:26.374Z
+    tests_green_at: 2026-09-17T02:20:00.000Z
+    verdict: flag
+    worker_model: gpt-5.6-luna
+    reviewer_model: claude-opus-5
+    subject_head: e958c694cdd77f4fa7faf6a60ae86d4641c151ce
+    plan_revision: rv1-72c17efae4083b23117a59bb57a51c9c3af7839829dfe1c2624a81353ad6416b
+    scope: "PR #640 Claude Opus non-author preflight; canonical receipt 72c17
+      FLAG(2) を修正対象として記録"
+    green_commands:
+      - kind: doctor
+        command: gh run view 35171993519 --json conclusion
+        runner: ci
+        scope: full
+        exit_code: 0
+        evidence_path: .github/workflows/harness-check.yml
+        output_digest: sha256:f079c200785985cc0b7a4b42522f202c15d3356c5e1a5890aa8708a185bedab7
+        completed_at: 2026-09-17T02:20:00.000Z
+        anchor_commit: e958c694cdd77f4fa7faf6a60ae86d4641c151ce
 backprop_decision: not_required
 backprop_decision_reason: 実装は既存L6契約の具体化に限定し、上流要件の追加を行わない
-status: draft
+status: confirmed
 github_issue_id: 600
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:9148c6c1228df37d848959853a83dcab
-  command_id: plan-revise:issue-600:codex-review-wake-impl:r3-bounded:8bcd0c796f78
-  admitted_at: 2026-09-17T17:06:00+09:00
-  source_digest: sha256:7b6ddf2a9a440966a10e2b7fddd99868248ac0bd5f8f24de3d3c745288a9e70c
-  decision_digest: sha256:cb0099724fc183d41f1a376e71ba06bcf3e93ff123b9d7bec912dfaadb2c26b8
-  receipt_digest: sha256:fa1ca25aa3f2d1e864f9e5c1d568fbd3039092e8f990e390f41e40ac437a3e1b
+  receipt_id: certificate:4cd56319687f483c1b7e176739604dc9
+  command_id: plan-revise:issue-600:codex-review-wake-impl:confirm-cross-agent:7446c10f8aa4
+  admitted_at: 2026-09-17T09:13:15.260Z
+  source_digest: sha256:b645d997e00592da9fef728aa01911ee7abaa65a49bd338543199f20403d367e
+  decision_digest: sha256:e4f68eb55867157136d94a7dee92f21ea460fa3b714b77fb95c28e8a4cbe0bca
+  receipt_digest: sha256:0c2167571d6cccc1df9dc9053996ded98c7984110fe83a171e1e5d3ec1c696f1
   binding:
     path: docs/plans/PLAN-L7-600-codex-review-wake-impl.md
     plan_id: PLAN-L7-600-codex-review-wake-impl
     asset_id: plan:c00b91ac72bc4447dcd79d9332c2da04
-    revision: 15
-    content_digest: sha256:7b6ddf2a9a440966a10e2b7fddd99868248ac0bd5f8f24de3d3c745288a9e70c
+    revision: 16
+    content_digest: sha256:b645d997e00592da9fef728aa01911ee7abaa65a49bd338543199f20403d367e
   route:
     signal: feature_addition
     mode: add-feature
