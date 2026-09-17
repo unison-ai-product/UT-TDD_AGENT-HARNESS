@@ -1,12 +1,17 @@
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   admitFinalBunRetirement,
   type BunRetirementAdmissionReceipt,
   BunRetirementError,
   type BunRetirementInput,
+  classifyTrackedSurface,
   collectFinalRetirementSurfaceInventory,
+  verifyFinalRetirementSurfaces,
 } from "../src/lint/bun-final-retirement.ts";
 import {
   type NodeBanDocuments,
@@ -200,6 +205,63 @@ function cleanInput(overrides: Partial<BunRetirementInput> = {}): BunRetirementI
 }
 
 describe("CAND-NODEBOOT-023/027/028/208 final Bun retirement", () => {
+  it("U-PACKBUN-006: independently keeps synthetic production Bun surfaces Red", () => {
+    const syntheticProduction = [
+      ["src/state-db/index.ts", 'import "bun:sqlite";'],
+      ["package.json", '"build": "bun build src/cli.ts --compile"'],
+      [".claude/hooks/launch.ts", "#!/usr/bin/env bun"],
+      ["src/runtime/runner.ts", 'spawn("bun", ["run", "src/cli.ts"])'],
+    ] as const;
+    expect(syntheticProduction.map(([path, line]) => classifyTrackedSurface(path, line))).toEqual([
+      "reachable_production",
+      "reachable_production",
+      "reachable_production",
+      "reachable_production",
+    ]);
+    // A deletion/allowlist mutation must not turn the independent oracle into
+    // a clean result: every synthetic production surface remains classified.
+    expect(syntheticProduction).toHaveLength(4);
+    expect(
+      syntheticProduction.some(
+        ([path, line]) => classifyTrackedSurface(path, line) !== "reachable_production",
+      ),
+    ).toBe(false);
+  });
+
+  it("U-PACKBUN-006: path-only lockfile evidence is production and unknown paths fail closed", () => {
+    expect(classifyTrackedSurface("bun.lockb", "", true)).toBe("reachable_production");
+    expect(classifyTrackedSurface("scripts/bun", "", true)).toBe("reachable_production");
+    expect(classifyTrackedSurface("tests/fixture.bin", "", true)).toBe("indeterminate");
+  });
+
+  it("U-PACKBUN-006: independent admission oracle rejects a reachable surface", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-bun-surface-oracle-"));
+    try {
+      mkdirSync(join(root, "src"), { recursive: true });
+      writeFileSync(join(root, "src", "runner.ts"), 'spawn("bun", ["run", "src/cli.ts"]);\n');
+      writeFileSync(join(root, "bun.lockb"), Buffer.from([0, 1, 2, 3]));
+      execFileSync("git", ["init", "-q", root]);
+      execFileSync("git", ["-C", root, "config", "user.email", "test@example.invalid"]);
+      execFileSync("git", ["-C", root, "config", "user.name", "UT-TDD test"]);
+      execFileSync("git", ["-C", root, "add", "."]);
+      execFileSync("git", ["-C", root, "commit", "-qm", "synthetic reachable Bun surface"]);
+      const surfaces = collectFinalRetirementSurfaceInventory(root);
+      expect(surfaces).toEqual([
+        { path: "bun.lockb", symbol: "path:bun.lockb", classification: "reachable_production" },
+        {
+          path: "src/runner.ts",
+          symbol: "line:1:bun",
+          classification: "reachable_production",
+        },
+      ]);
+      expect(() => verifyFinalRetirementSurfaces(root, surfaces)).toThrow(
+        new BunRetirementError("reachable_bun_surface"),
+      );
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it("accepts the complete existing F0b/F0c/Q0 chain and emits prefixed tuple ids", () => {
     const result = admitFinalBunRetirement(cleanInput());
     expect(result.ok).toBe(true);

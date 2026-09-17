@@ -168,21 +168,25 @@ const COMPATIBILITY_PATHS = new Set([
 
 const BUN_TOKEN = /\b(?:bun|bunx)\b/iu;
 const BUN_TOKEN_FALLBACK = "bun";
+const BUN_PATH_TOKEN = /(?:^|[./_-])bunx?(?:$|[./_-])|(?:^|[./_-])bun\.lockb$/iu;
 const ACTIVE_INSTRUCTION =
   /\b(?:use|run|install|build|execute|exec|command|filesystem|script|setup|launch|invoke|start)\b/iu;
 const RETIRED_POLICY =
   /\b(?:retired|ban|banned|forbidden|prohibited|legacy|migration|detector|guard|audit|deny|refuse|fallback)\b/iu;
 const ACTIVE_BUN_EXECUTION =
   /\b(?:spawn|spawnSync|exec|execSync|execFile|execFileSync)\s*\(\s*["'`](?:bun|bunx)(?:\.(?:cmd|exe|bat))?["'`]/iu;
-const ACTIVE_BUN_IMPORT = /\bfrom\s*["'`]bun:/iu;
+const ACTIVE_BUN_IMPORT = /(?:\bfrom\s*|\bimport\s*)["'`]bun:/iu;
 
 interface GitBunLine {
   readonly path: string;
   readonly line: number;
   readonly text: string;
+  /** True when the candidate came from the Git tree path inventory, not text. */
+  readonly pathOnly?: boolean;
 }
 
 function gitTrackedBunLines(repoRoot: string): GitBunLine[] {
+  const lines: GitBunLine[] = [];
   try {
     const output = execFileSync(
       "git",
@@ -192,41 +196,95 @@ function gitTrackedBunLines(repoRoot: string): GitBunLine[] {
         stdio: ["ignore", "pipe", "ignore"],
       },
     );
-    return output
-      .split(/\r?\n/u)
-      .filter(Boolean)
-      .flatMap((entry) => {
-        const first = entry.indexOf(":");
-        const second = entry.indexOf(":", first + 1);
-        const third = entry.indexOf(":", second + 1);
-        if (first < 0 || second < 0 || third < 0) return [];
-        const path = entry.slice(first + 1, second).replaceAll("\\", "/");
-        const line = Number(entry.slice(second + 1, third));
-        if (!path || !Number.isInteger(line) || line < 1) return [];
-        return [{ path, line, text: entry.slice(third + 1) }];
-      });
+    lines.push(
+      ...output
+        .split(/\r?\n/u)
+        .filter(Boolean)
+        .flatMap((entry) => {
+          const first = entry.indexOf(":");
+          const second = entry.indexOf(":", first + 1);
+          const third = entry.indexOf(":", second + 1);
+          if (first < 0 || second < 0 || third < 0) return [];
+          const path = entry.slice(first + 1, second).replaceAll("\\", "/");
+          const line = Number(entry.slice(second + 1, third));
+          if (!path || !Number.isInteger(line) || line < 1) return [];
+          return [{ path, line, text: entry.slice(third + 1) }];
+        }),
+    );
   } catch (error) {
-    if (typeof error === "object" && error !== null && "status" in error && error.status === 1)
-      return [];
+    if (!(typeof error === "object" && error !== null && "status" in error && error.status === 1))
+      throw new BunRetirementError("indeterminate_bun_surface");
+  }
+  let paths: string;
+  try {
+    paths = execFileSync(
+      "git",
+      ["-C", repoRoot, "ls-tree", "-r", "--name-only", "HEAD", "--", "."],
+      { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] },
+    );
+  } catch {
     throw new BunRetirementError("indeterminate_bun_surface");
   }
+  const textPaths = new Set(lines.map((entry) => entry.path));
+  for (const path of paths.split(/\r?\n/u).filter(Boolean)) {
+    if (!BUN_PATH_TOKEN.test(path) || textPaths.has(path)) continue;
+    lines.push({ path: path.replaceAll("\\", "/"), line: 0, text: "", pathOnly: true });
+  }
+  return lines;
 }
 
-function classifyTrackedSurface(
+const NON_EXECUTABLE_ARTIFACT = /\.(?:diff|log|md|mdx|json|ya?ml|txt)$/iu;
+const TEST_ORACLE_EVIDENCE =
+  /(?:\b(?:assert|describe|expect|fixture|forbidden|it|mock|mutation|negative|oracle|sample|synthetic|test)\b|["'`])/iu;
+
+function hasRetainedFixtureEvidence(path: string, line: string): boolean {
+  if (!line.trim()) return false;
+  if (path.startsWith(".ut-tdd/") || path.startsWith("docs/"))
+    return NON_EXECUTABLE_ARTIFACT.test(path);
+  if (path.startsWith("vendor/") || path.includes("/fixtures/") || path.includes("/fixture/"))
+    return NON_EXECUTABLE_ARTIFACT.test(path) || TEST_ORACLE_EVIDENCE.test(line);
+  if (path.startsWith("tests/") && /\.(?:test|spec)\.[cm]?[jt]sx?$/iu.test(path))
+    return line.trim().length > 0 && (TEST_ORACLE_EVIDENCE.test(line) || /\bBun\b/iu.test(line));
+  if (path.startsWith("tests/support/")) return line.trim().length > 0;
+  return false;
+}
+
+export function classifyTrackedSurface(
   path: string,
   line: string,
+  pathOnly = false,
 ): BunRetirementSurface["classification"] {
-  if (
+  // A binary/path-only candidate has no semantic evidence.  The root lockfile is
+  // an explicit production artifact.  Named launchers and executable setup
+  // roots are also production surfaces; every other path-only candidate is
+  // unknown and must not be silently retained.
+  if (pathOnly) {
+    if (
+      path === "bun.lockb" ||
+      /(?:^|\/)(?:bun|bunx)(?:\.(?:cmd|exe|bat))?$/iu.test(path) ||
+      /^(?:\.github|\.claude\/hooks|bin|scripts|src\/setup)\//iu.test(path)
+    )
+      return "reachable_production";
+    return "indeterminate";
+  }
+  const fixturePath =
     path.startsWith("tests/") ||
     path.startsWith("vendor/") ||
     path.startsWith(".ut-tdd/") ||
     path.includes("/fixtures/") ||
-    path.includes("/fixture/")
+    path.includes("/fixture/");
+  if (fixturePath)
+    return hasRetainedFixtureEvidence(path, line) ? "retained_fixture" : "indeterminate";
+  if (
+    path === "bun.lock" ||
+    path === "bun.lockb" ||
+    path === "package.json" ||
+    path === "package-lock.json"
   )
-    return "retained_fixture";
+    return "reachable_production";
   if (path.startsWith("docs/")) {
     if (!PACK_DOCUMENT_PREFIXES.some((prefix) => path.startsWith(prefix)))
-      return "retained_fixture";
+      return hasRetainedFixtureEvidence(path, line) ? "retained_fixture" : "indeterminate";
     if (FINAL_GUARD_PATHS.has(path)) return "ban_enforcement_guard";
     // Excluded governance history is retained because the clean Pack does not
     // execute it.  Other documentation is classified from its actual line so
@@ -278,9 +336,16 @@ function classifyTrackedSurface(
   // Source-side detectors and policy adapters are guards; an executable
   // script/workflow or generated setup template is an actual reachable
   // production surface and must be clean after the retirement.
-  if (path.startsWith(".github/") || path.startsWith("scripts/") || path.startsWith("src/setup/"))
+  if (
+    path.startsWith(".github/") ||
+    path.startsWith(".claude/hooks/") ||
+    path.startsWith("scripts/") ||
+    path.startsWith("src/setup/")
+  )
     return "reachable_production";
-  return "ban_enforcement_guard";
+  if (path === ".gitignore" || path === ".gitattributes" || path === ".vscode/extensions.json")
+    return "ban_enforcement_guard";
+  return "indeterminate";
 }
 
 /**
@@ -291,10 +356,13 @@ function classifyTrackedSurface(
  * clean oracle green.
  */
 export function collectFinalRetirementSurfaceInventory(repoRoot: string): BunRetirementSurface[] {
-  const surfaces = gitTrackedBunLines(repoRoot).map(({ path, line, text }) => ({
+  const surfaces = gitTrackedBunLines(repoRoot).map(({ path, line, text, pathOnly }) => ({
     path,
-    symbol: `line:${line}:${text.match(BUN_TOKEN)?.[0]?.toLowerCase() ?? BUN_TOKEN_FALLBACK}`,
-    classification: classifyTrackedSurface(path, text),
+    symbol:
+      pathOnly === true
+        ? `path:${path}`
+        : `line:${line}:${text.match(BUN_TOKEN)?.[0]?.toLowerCase() ?? BUN_TOKEN_FALLBACK}`,
+    classification: classifyTrackedSurface(path, text, pathOnly),
   }));
   return surfaces.sort((left, right) =>
     `${left.path}\0${left.symbol}\0${left.classification}`.localeCompare(
@@ -511,6 +579,14 @@ function verifySurfaces(
   if (surfaces.some((surface) => surface.classification === "reachable_production"))
     throw new BunRetirementError("reachable_bun_surface");
   return sha256Value(expected);
+}
+
+/** Exposed for the independent CAND-NODEBOOT-208 mutation oracle. */
+export function verifyFinalRetirementSurfaces(
+  repoRoot: string,
+  supplied: readonly BunRetirementSurface[],
+): `sha256:${string}` {
+  return verifySurfaces(repoRoot, supplied);
 }
 
 /**
