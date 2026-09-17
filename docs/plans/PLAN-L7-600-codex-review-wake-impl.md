@@ -88,18 +88,18 @@ status: confirmed
 github_issue_id: 600
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:7f37ea0f1247dc0a2203b935a31bfb4e
-  command_id: plan-revise:issue-600:codex-review-wake-impl:receipt-fence:10
-  admitted_at: 2026-09-17T01:27:35.617Z
-  source_digest: sha256:d81dafac2b0bd160b6228564a76256e41508128d4d47b7422d0aa6bc09b72b23
-  decision_digest: sha256:e991c8fa00304023ef5087cf9bf457b42a2b8d9f085de7e7a221c6ef11455d44
-  receipt_digest: sha256:45d717a2a7bf3f7b284ec7f7815ed82b75afb6e06a8f7d8aebc4e94b9532b928
+  receipt_id: certificate:5882b694ec13a5ad19b7988fb8c2a452
+  command_id: plan-revise:issue-600:codex-review-wake-impl:current-main-sync:580edb542741
+  admitted_at: 2026-09-17T04:39:24.189Z
+  source_digest: sha256:025fc21917d6cfbd0e2310c351e0d97c1f68ed7e497c582590b594c56b9604d7
+  decision_digest: sha256:e4f68eb55867157136d94a7dee92f21ea460fa3b714b77fb95c28e8a4cbe0bca
+  receipt_digest: sha256:3b06c371c58ba93c2c9be9c742793f2fb1aad4119eed9ec217ddac7444599d9f
   binding:
     path: docs/plans/PLAN-L7-600-codex-review-wake-impl.md
     plan_id: PLAN-L7-600-codex-review-wake-impl
     asset_id: plan:c00b91ac72bc4447dcd79d9332c2da04
-    revision: 10
-    content_digest: sha256:d81dafac2b0bd160b6228564a76256e41508128d4d47b7422d0aa6bc09b72b23
+    revision: 13
+    content_digest: sha256:025fc21917d6cfbd0e2310c351e0d97c1f68ed7e497c582590b594c56b9604d7
   route:
     signal: feature_addition
     mode: add-feature
