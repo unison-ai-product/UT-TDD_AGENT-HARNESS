@@ -132,8 +132,6 @@ export interface PackPublicationPullRequestObservation {
 
 export interface PackPublicationPreparationReceipt {
   readonly kind: "pack-publication-preparation-receipt-v1";
-  readonly operationId: string;
-  readonly idempotencyKey: string;
   readonly releaseId: string;
   readonly sourceRevision: string;
   readonly stagingPlanDigest: string;
@@ -175,12 +173,12 @@ export interface PackPublicationPreparationPorts {
   readonly receipt: {
     readonly persist: (receipt: PackPublicationPreparationReceipt) => void | Promise<void>;
     /** Read-only lookup used for an exact idempotent replay. */
-    readonly read?: (
-      identity: Pick<
-        PackPublicationPreparationReceipt,
-        "operationId" | "idempotencyKey" | "stagingPlanDigest" | "expectedMainOid"
-      >,
-    ) =>
+    readonly read?: (identity: {
+      readonly operationId: string;
+      readonly idempotencyKey: string;
+      readonly stagingPlanDigest: string;
+      readonly expectedMainOid: string;
+    }) =>
       | PackPublicationPreparationReceipt
       | null
       | Promise<PackPublicationPreparationReceipt | null>;
@@ -934,8 +932,6 @@ export async function preparePackPublication(
       const unsigned = { ...existing, receiptDigest: "" };
       const exact =
         existing.kind === "pack-publication-preparation-receipt-v1" &&
-        existing.operationId === input.operationId &&
-        existing.idempotencyKey === input.idempotencyKey &&
         existing.releaseId === identity.releaseId &&
         existing.sourceRevision === identity.sourceRevision &&
         existing.stagingPlanDigest === identity.stagingPlanDigest &&
@@ -1221,8 +1217,6 @@ export async function preparePackPublication(
 
   const unsigned = {
     kind: "pack-publication-preparation-receipt-v1" as const,
-    operationId: input.operationId,
-    idempotencyKey: input.idempotencyKey,
     releaseId: identity.releaseId,
     sourceRevision: identity.sourceRevision,
     stagingPlanDigest: identity.stagingPlanDigest,

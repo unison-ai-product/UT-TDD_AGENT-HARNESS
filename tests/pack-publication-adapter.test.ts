@@ -1642,8 +1642,6 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
       if (!result.ok) return;
       expect(result.receipt).toMatchObject({
         kind: "pack-publication-preparation-receipt-v1",
-        operationId: input.operationId,
-        idempotencyKey: input.idempotencyKey,
         expectedMainOid: input.expectedMainOid,
         branchCommitOid: "7".repeat(40),
         reviewedHeadOid: "7".repeat(40),
