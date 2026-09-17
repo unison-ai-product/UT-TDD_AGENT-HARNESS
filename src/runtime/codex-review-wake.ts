@@ -174,6 +174,10 @@ function terminalRoot(repoRoot: string): string {
   return join(rootFor(repoRoot), "terminal");
 }
 
+function terminalMarkerPath(repoRoot: string, entryId: string): string {
+  return join(terminalRoot(repoRoot), `${entryStem(entryId)}.json`);
+}
+
 function targetSession(): string {
   const value = process.env.CODEX_REVIEW_TARGET_SESSION?.trim();
   if (!value) throw new CodexReviewWakeError("codex_review_target_session_unavailable");
@@ -414,6 +418,40 @@ function readJson(path: string): unknown {
   }
 }
 
+/** A terminal marker is durable evidence, but malformed/fake bytes never suppress retry. */
+function isTerminalMarkerFor(
+  value: unknown,
+  expected: Pick<CodexWakeClaim, "entryId" | "requestDigest">,
+): boolean {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const marker = value as Partial<CodexWakeTerminal>;
+  return (
+    marker.schema === CODEX_MEMORY_WAKE_TERMINAL_SCHEMA &&
+    marker.entryId === expected.entryId &&
+    marker.requestDigest === expected.requestDigest &&
+    typeof marker.requestPath === "string" &&
+    typeof marker.memoryPath === "string" &&
+    typeof marker.pr === "number" &&
+    Number.isSafeInteger(marker.pr) &&
+    marker.pr > 0 &&
+    typeof marker.exactHead === "string" &&
+    /^[0-9a-f]{40}$/.test(marker.exactHead) &&
+    typeof marker.reviewRevision === "string" &&
+    marker.reviewRevision.length > 0 &&
+    (marker.authorFamily === "codex" || marker.authorFamily === "claude") &&
+    typeof marker.terminalAt === "string" &&
+    Number.isFinite(Date.parse(marker.terminalAt)) &&
+    marker.reason === "claimed"
+  );
+}
+
+function hasTerminalMarker(
+  repoRoot: string,
+  expected: Pick<CodexWakeClaim, "entryId" | "requestDigest">,
+): boolean {
+  return isTerminalMarkerFor(readJson(terminalMarkerPath(repoRoot, expected.entryId)), expected);
+}
+
 function canonicalReviewReceiptPath(repoRoot: string, requestDigest: string): string {
   return join(resolve(repoRoot), ".ut-tdd", "review", "receipts", `${requestDigest}.json`);
 }
@@ -516,6 +554,8 @@ function restoreExpiredClaims(repoRoot: string, nowMs: number): void {
     if (
       !marker ||
       marker.schema !== CODEX_MEMORY_WAKE_CLAIM_SCHEMA ||
+      typeof marker.entryId !== "string" ||
+      typeof marker.requestDigest !== "string" ||
       typeof marker.leaseExpiresAt !== "string"
     )
       continue;
@@ -526,6 +566,19 @@ function restoreExpiredClaims(repoRoot: string, nowMs: number): void {
       `${entryStem(String(marker.entryId))}.json`,
     );
     try {
+      // A crash can leave the claim and its marker after terminalization has
+      // already been durably recorded.  Never resurrect such a wake: the
+      // terminal marker is authoritative for this exact entry/request pair.
+      if (
+        hasTerminalMarker(repoRoot, {
+          entryId: marker.entryId,
+          requestDigest: marker.requestDigest,
+        })
+      ) {
+        if (existsSync(claimPath)) unlinkSync(claimPath);
+        unlinkSync(markerPath);
+        continue;
+      }
       if (existsSync(claimPath)) {
         mkdirSync(codexWakeInboxRoot(repoRoot), { recursive: true });
         if (!existsSync(inboxPath)) renameSync(claimPath, inboxPath);
@@ -772,7 +825,7 @@ export function consumeCodexReviewWake(
     entry.target.sessionId !== session
   )
     throw new Error("codex_review_wake_envelope_invalid");
-  const markerPath = join(terminalRoot(repoRoot), `${entryStem(entry.id)}.json`);
+  const markerPath = terminalMarkerPath(repoRoot, entry.id);
   const marker: CodexWakeTerminal = {
     schema: CODEX_MEMORY_WAKE_TERMINAL_SCHEMA,
     entryId: entry.id,
@@ -786,8 +839,26 @@ export function consumeCodexReviewWake(
     terminalAt: now.toISOString(),
     reason: "claimed",
   };
-  writeExclusive(markerPath, `${JSON.stringify(marker)}\n`);
-  unlinkSync(claimed);
+  try {
+    writeExclusive(markerPath, `${JSON.stringify(marker)}\n`);
+  } catch (error) {
+    // Re-consuming after a crash may encounter the already durable terminal
+    // marker with a different terminalAt.  Preserve that first terminal
+    // timestamp while accepting only an otherwise identical marker.
+    if (
+      !(
+        error instanceof CodexReviewWakeError &&
+        error.reason === "codex_review_wake_projection_conflict" &&
+        isTerminalMarkerFor(readJson(markerPath), marker)
+      )
+    )
+      throw error;
+  }
+  try {
+    unlinkSync(claimed);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+  }
   const claimMarker = claimMarkerPath(repoRoot, entry.id, session);
   if (existsSync(claimMarker)) unlinkSync(claimMarker);
   // The terminal marker is the durable proof that the canonical receipt was

@@ -1,4 +1,5 @@
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
@@ -72,6 +73,57 @@ function wake(root: string, memoryPath: string, input: ReviewAttestationRequest)
     request: issued.request,
     memoryPath: relative(root, memoryPath).replaceAll("\\", "/"),
   };
+}
+
+function codexProjection(
+  root: string,
+  value: ReturnType<typeof wake>,
+  head = value.request.exactHead,
+) {
+  return {
+    ok: true as const,
+    path: join(root, ".ut-tdd", "review", "receipts", `${value.requestDigest}.json`),
+    digest: "projection-digest",
+    receipt: {
+      memoryId: value.request.memoryId,
+      pr: value.request.pr,
+      head,
+      reviewRevision: value.request.reviewRevision,
+      reviewerFamily: "codex" as const,
+      kind: "verdict" as const,
+      verdict: "PASS" as const,
+      blockingFindings: [] as string[],
+      at: "2026-09-16T00:01:00.000Z",
+    },
+  };
+}
+
+function entryStemForTest(entryId: string): string {
+  const safe = entryId.replace(/[^A-Za-z0-9._-]/g, "_").slice(0, 160);
+  return `${safe.slice(0, 147)}_${createHash("sha256").update(entryId).digest("hex").slice(0, 12)}`;
+}
+
+function terminalMarkerForTest(root: string, entry: Record<string, unknown>) {
+  const project = resolveProjectMemoryRoot(root);
+  if (!project.ok) throw new Error(project.reason);
+  const terminalRoot = join(project.runtimeBusRoot, "codex-memory-wake", "terminal");
+  const marker = {
+    schema: "ut-tdd.codex-memory-wake-terminal/v1",
+    entryId: entry.id,
+    requestDigest: entry.requestDigest,
+    requestPath: entry.requestPath,
+    memoryPath: entry.memoryPath,
+    pr: entry.pr,
+    exactHead: entry.exactHead,
+    reviewRevision: entry.reviewRevision,
+    authorFamily: entry.authorFamily,
+    terminalAt: "2026-09-16T00:01:00.000Z",
+    reason: "claimed",
+  };
+  mkdirSync(terminalRoot, { recursive: true });
+  const path = join(terminalRoot, `${entryStemForTest(String(entry.id))}.json`);
+  writeFileSync(path, `${JSON.stringify(marker)}\n`, "utf8");
+  return { terminalRoot, path };
 }
 
 afterEach(() => {
@@ -271,6 +323,163 @@ describe("Codex review wake contract", () => {
       status: "empty",
       deliveryConfirmed: false,
     });
+  });
+
+  it("CANDIDATE-CODEXWAKE-004 restores a claimed wake when the canonical receipt is absent", async () => {
+    const { root, memoryPath } = fixture();
+    process.env.CODEX_REVIEW_TARGET_SESSION = "codex-session-1";
+    const value = wake(
+      root,
+      memoryPath,
+      request("wake-receipt-missing", "2026-09-16T00:00:00.000Z"),
+    );
+    publishCodexReviewWake(root, value);
+    const surface = readCodexReviewWake(root);
+    if (surface.status !== "pending") throw new Error("expected pending wake");
+
+    const program = new Command().exitOverride();
+    registerLiveReviewCommands(program.command("review"), {
+      repoRoot: () => root,
+      providerAvailable: () => true,
+      runReview: () => codexProjection(root, value),
+      // Simulate a provider result whose derived receipt was not persisted.
+      publishReceipt: () => undefined,
+    });
+    const previousWrite = process.stdout.write;
+    const previousExitCode = process.exitCode;
+    process.stdout.write = (() => true) as typeof process.stdout.write;
+    try {
+      await program.parseAsync([
+        "node",
+        "ut-tdd",
+        "review",
+        "live-consume",
+        "--envelope",
+        surface.envelopePath,
+        "--json",
+      ]);
+    } finally {
+      process.stdout.write = previousWrite;
+      process.exitCode = previousExitCode;
+    }
+
+    expect(readCodexReviewWake(root)).toMatchObject({
+      status: "pending",
+      requestDigest: value.requestDigest,
+      deliveryConfirmed: false,
+    });
+    const project = resolveProjectMemoryRoot(root);
+    if (!project.ok) throw new Error(project.reason);
+    const terminal = join(project.runtimeBusRoot, "codex-memory-wake", "terminal");
+    expect(() => readdirSync(terminal)).toThrow();
+  });
+
+  it("CANDIDATE-CODEXWAKE-004 restores a claimed wake when the receipt identity mismatches", async () => {
+    const { root, memoryPath } = fixture();
+    process.env.CODEX_REVIEW_TARGET_SESSION = "codex-session-1";
+    const value = wake(
+      root,
+      memoryPath,
+      request("wake-receipt-mismatch", "2026-09-16T00:00:00.000Z"),
+    );
+    publishCodexReviewWake(root, value);
+    const surface = readCodexReviewWake(root);
+    if (surface.status !== "pending") throw new Error("expected pending wake");
+    const mismatched = codexProjection(root, value, "b".repeat(40));
+    let published = false;
+
+    const program = new Command().exitOverride();
+    registerLiveReviewCommands(program.command("review"), {
+      repoRoot: () => root,
+      providerAvailable: () => true,
+      runReview: () => mismatched,
+      publishReceipt: () => {
+        published = true;
+      },
+    });
+    const previousWrite = process.stdout.write;
+    const previousExitCode = process.exitCode;
+    process.stdout.write = (() => true) as typeof process.stdout.write;
+    try {
+      await program.parseAsync([
+        "node",
+        "ut-tdd",
+        "review",
+        "live-consume",
+        "--envelope",
+        surface.envelopePath,
+        "--json",
+      ]);
+    } finally {
+      process.stdout.write = previousWrite;
+      process.exitCode = previousExitCode;
+    }
+
+    expect(published).toBe(false);
+    expect(readCodexReviewWake(root)).toMatchObject({
+      status: "pending",
+      requestDigest: value.requestDigest,
+      deliveryConfirmed: false,
+    });
+    const project = resolveProjectMemoryRoot(root);
+    if (!project.ok) throw new Error(project.reason);
+    const terminal = join(project.runtimeBusRoot, "codex-memory-wake", "terminal");
+    expect(() => readdirSync(terminal)).toThrow();
+  });
+
+  it("CANDIDATE-CODEXWAKE-010 does not restore an expired claim with a durable terminal marker", () => {
+    const { root, memoryPath } = fixture();
+    process.env.CODEX_REVIEW_TARGET_SESSION = "codex-session-1";
+    const value = wake(
+      root,
+      memoryPath,
+      request("wake-terminal-crash", "2026-09-16T00:00:00.000Z"),
+    );
+    publishCodexReviewWake(root, value);
+    const surface = readCodexReviewWake(root);
+    if (surface.status !== "pending") throw new Error("expected pending wake");
+    const claimed = claimCodexReviewWake(
+      root,
+      surface.envelopePath,
+      new Date("2026-09-16T00:00:00.000Z"),
+    );
+    const entry = JSON.parse(readFileSync(claimed, "utf8")) as Record<string, unknown>;
+    const { terminalRoot, path } = terminalMarkerForTest(root, entry);
+
+    expect(readCodexReviewWake(root, new Date("2026-09-16T00:16:00.000Z"))).toEqual({
+      schema: "ut-tdd.codex-memory-wake/v1",
+      status: "empty",
+      deliveryConfirmed: false,
+    });
+    expect(readFileSync(path, "utf8")).toContain(String(entry.requestDigest));
+    expect(readdirSync(terminalRoot)).toHaveLength(1);
+    expect(() => readFileSync(claimed)).toThrow();
+  });
+
+  it("CANDIDATE-CODEXWAKE-010 accepts an idempotent terminal write after a crash window", () => {
+    const { root, memoryPath } = fixture();
+    process.env.CODEX_REVIEW_TARGET_SESSION = "codex-session-1";
+    const value = wake(
+      root,
+      memoryPath,
+      request("wake-terminal-idempotent", "2026-09-16T00:00:00.000Z"),
+    );
+    publishCodexReviewWake(root, value);
+    const surface = readCodexReviewWake(root);
+    if (surface.status !== "pending") throw new Error("expected pending wake");
+    const claimed = claimCodexReviewWake(
+      root,
+      surface.envelopePath,
+      new Date("2026-09-16T00:00:00.000Z"),
+    );
+    const entry = JSON.parse(readFileSync(claimed, "utf8")) as Record<string, unknown>;
+    const { terminalRoot, path } = terminalMarkerForTest(root, entry);
+
+    consumeCodexReviewWake(root, claimed, new Date("2026-09-16T00:02:00.000Z"));
+
+    expect(() => readFileSync(claimed)).toThrow();
+    expect(readdirSync(terminalRoot)).toHaveLength(1);
+    expect(readFileSync(path, "utf8")).toContain("2026-09-16T00:01:00.000Z");
   });
 
   it("CANDIDATE-CODEXWAKE-001 rejects a conflicting canonical request instead of overwriting", () => {
