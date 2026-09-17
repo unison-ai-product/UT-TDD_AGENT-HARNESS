@@ -7,7 +7,7 @@ drive: agent
 route_signal: regression_dev
 route_mode: recovery
 created: 2026-07-17
-updated: 2026-09-15
+updated: 2026-09-17
 owner: PO / TL
 backprop_decision: required
 backprop_decision_reason: Redesign supersessionとplan admissionを同時に満たすrevision
@@ -95,18 +95,18 @@ status: confirmed
 github_issue_id: 102
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:bee97017c18dd1c0382acb7e596d8e49
-  command_id: plan-revise:issue-541:recovery-16:5
-  admitted_at: 2026-09-15T03:24:37.283Z
-  source_digest: sha256:09a27995e7d40d593cc30c6ea022f127285823798d9e8e1181d2f989811ff166
-  decision_digest: sha256:a581599835fb35dd486db501cc2c0093f7d433dbb0c73ca8418f565442618287
-  receipt_digest: sha256:5d725af2f27b8032aa5f1741ad1f8fbf2247eae008e4dad21ba52771a5505509
+  receipt_id: certificate:2e18c1fd333d4bb7b83ae0617d37fe7e
+  command_id: plan-revise:issue-541:recovery-16:13
+  admitted_at: 2026-09-17T01:37:41.202Z
+  source_digest: sha256:1b6aa397ad9995b717907d3247e02b3bba3d6c4508874b7654f90fd29b388927
+  decision_digest: sha256:ca74e564264b9e0e60b9720b1b71599ca20cb4887a4d34088844eb91305600d6
+  receipt_digest: sha256:a0cc17907488c1a187d67e203beef3bfb5565df309a498e87686d2e67cdca2f1
   binding:
     path: docs/plans/PLAN-RECOVERY-16-plan-revision-authoring.md
     plan_id: PLAN-RECOVERY-16-plan-revision-authoring
     asset_id: plan:rebase:74ca026f9a0b72dca6f4fb164dd4e8f43c9ea3c9b31c4db21dec38a66d9d7d57
-    revision: 5
-    content_digest: sha256:09a27995e7d40d593cc30c6ea022f127285823798d9e8e1181d2f989811ff166
+    revision: 7
+    content_digest: sha256:1b6aa397ad9995b717907d3247e02b3bba3d6c4508874b7654f90fd29b388927
   route:
     signal: regression_dev
     mode: recovery
@@ -119,14 +119,17 @@ admission_receipt:
     plan_id: PLAN-L6-86-drive-plan-admission-contract
     revision: 1
     digest: sha256:cac70ec0cf630a20c1180839dfa7bb3e0b98fc6911448bd9336bd827de5923fc
+  transition:
+    direction: design_to_implementation
+    implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L6-86-drive-plan-admission-contract
     target_revision: 2
     phase: forward_merge
-  escape_reason: "Issue #541 (PR #607 Codex Sol FLAG 3件是正): 再水和対象を embedded
-    admission_receipt へ全項目束縛し最新sequence条件で一意化、integrity mismatch/lineage
-    ambiguityをwrite-0 fail-closeに改め、fallbackをauthority不在に限定する契約改訂 (revision
-    5、docs-only)"
+  escape_reason: "Issue #541 (PR #643 Claude r2 FLAG 是正): rev6を正規 plan revise
+    実行時計で再発行し、決定的再水和のcontent-digest / fallback
+    oracle根拠をU-PA-REV-040/048およびU-PA-REV-053..056へ束縛する契約改訂 (revision
+    7、docs-only)。"
 ---
 
 # PLAN-RECOVERY-16: legacy PLAN revision authoring recovery
@@ -161,6 +164,11 @@ HEAD embedded admission_receipt への全項目束縛と最新 sequence 条件�
 integrity mismatch と lineage ambiguity を fallback ではなく write-0 fail-close に改め、
 fallback を authority 不在 (embedded receipt 不在 / 対応 record 不在) に限定した。
 §4 Step 6 と §5 の oracle を個別判定へ分解した。
+
+revision 7 (Issue #541、2026-09-17、PR #643 Claude FLAG 2 件の是正): rev6 の
+`sub_doc: function-spec` を正規 `plan revise --manifest` で除去し、決定的再水和の
+content-digest と fallback authority 不在条件を U-PA-REV-040/048 および
+U-PA-REV-053..056 の受入根拠へ明示的に束縛した。
 
 ## 1. 再現と根因
 
@@ -262,11 +270,16 @@ Redesign bundleの原子性契約 (replacement `supersedes` とorigin back-refer
       (PLAN-RECOVERY-17 へ移管。同 PLAN の DoD が引き継ぐ。)
 - [x] PLAN-L7-441未完のprocess-kill境界を明示し、通常例外のatomicityをcrash convergenceと混同しない。
       根拠: §3 の明示宣言 (crash-safe を過大主張しない) を維持。
-- [ ] plan:legacy: asset (実データ: PLAN-L6-93 rev 27) を tracked projection から再水和し
-      revision 28 を発行できる。根拠: 実装 PR のテスト (Issue #541)。
-- [ ] integrity mismatch 3 軸 (content / canonical payload / embedded receipt 項目) と
+- [x] plan:legacy: asset (実データ: PLAN-L6-93 rev 27) を tracked projection から再水和し
+      revision 28 を発行できる。
+      根拠: `tests/node-plan-revision-runner.test.ts` U-PA-REV-049 / U-PA-REV-057 と
+      実データに対する process CLI 実測 (`.ut-tdd/audit/issue541-l6-93-rehydration-cli-20260916.md`)。
+- [x] integrity mismatch 3 軸 (content / canonical payload / embedded receipt 項目) と
       lineage ambiguity が個別の oracle で write 0 fail-close し、seal 経路へ落ちない。
-      根拠: 実装 PR のテスト (Issue #541)。
-- [ ] fallback は embedded receipt 不在・対応 record 不在の 2 条件でのみ選ばれ、
+      根拠: content digest 軸は U-PA-REV-040 / -048、embedded receipt 項目・canonical
+      payload・lineage ambiguity は U-PA-REV-050 / -051 / -052 の個別 write-set oracle
+      (Issue #541)。
+- [x] fallback は embedded receipt 不在・対応 record 不在の 2 条件でのみ選ばれ、
       再水和成功時は legacy bootstrap / seal / successor genesis の write が 0 である。
-      根拠: 実装 PR のテスト (Issue #541)。
+      根拠: 不在 authority の各軸は U-PA-REV-053 / -054 / -055 / -056、正規 CLI 接続は
+      U-PA-REV-057 の write-set oracle と process CLI 実測 (Issue #541)。
