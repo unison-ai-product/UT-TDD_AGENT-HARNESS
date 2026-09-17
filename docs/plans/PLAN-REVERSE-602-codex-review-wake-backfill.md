@@ -40,18 +40,18 @@ status: confirmed
 github_issue_id: 600
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:97d42b4d658cdf05a5032c88d21154b0
-  command_id: plan-draft:issue-600:codex-review-wake-backfill:602:1
-  admitted_at: 2026-09-16T19:25:00+09:00
-  source_digest: sha256:7cf9176314e448798dfc7c72f835d54f02eb1f728163c4e3d2592aa3ea67a5ae
-  decision_digest: sha256:87e0d673044ed2a135ac1d608ad6ab4bb743d7234098369ec494cbd1639bf8de
-  receipt_digest: sha256:ba0854f2b89303fa8799824073564f7844c8c6c22c320999eb0b1717f68c11a8
+  receipt_id: certificate:9cb2643287eea6c657728006e3576a64
+  command_id: plan-revise:issue-600:codex-review-wake-backfill:602:current-main-sync:e43277f106a4
+  admitted_at: 2026-09-17T04:41:28.188Z
+  source_digest: sha256:69d5240485e61221fe3a76c01a6bb30d09c244ef3da524fc20ad2518e9536e2a
+  decision_digest: sha256:cb072525c8b80cb9da9060d845feecef0cfcfbba65edda470f8128f25e3a716c
+  receipt_digest: sha256:5b67ade6579584aa10ea1049393d230e0fa759078e5b61fd38838f28e50c0819
   binding:
     path: docs/plans/PLAN-REVERSE-602-codex-review-wake-backfill.md
     plan_id: PLAN-REVERSE-602-codex-review-wake-backfill
     asset_id: plan:97d42b4d658cdf05a5032c88d21154b0
-    revision: 1
-    content_digest: sha256:7cf9176314e448798dfc7c72f835d54f02eb1f728163c4e3d2592aa3ea67a5ae
+    revision: 11
+    content_digest: sha256:69d5240485e61221fe3a76c01a6bb30d09c244ef3da524fc20ad2518e9536e2a
   route:
     signal: reverse
     mode: reverse
@@ -62,14 +62,14 @@ admission_receipt:
     projection_digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
   origin:
     plan_id: PLAN-L7-600-codex-review-wake-impl
-    revision: 2
-    digest: sha256:3d42baf3d4c247c1ac91fcdcc56531fc8b391275c584eb0838eb374c4fbcc6e5
+    revision: 13
+    digest: sha256:025fc21917d6cfbd0e2310c351e0d97c1f68ed7e497c582590b594c56b9604d7
   transition:
     direction: implementation_to_design
     implementation_disposition: preserved
   reentry:
     target_plan_id: PLAN-L7-600-codex-review-wake-impl
-    target_revision: 2
+    target_revision: 13
     phase: forward_merge
   escape_reason: "Issue #600 Codex review wake implementation requires reverse backfill trace"
 ---

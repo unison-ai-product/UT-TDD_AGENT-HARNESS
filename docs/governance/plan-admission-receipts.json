@@ -4544,6 +4544,22 @@
         "revision": 13,
         "content_digest": "sha256:025fc21917d6cfbd0e2310c351e0d97c1f68ed7e497c582590b594c56b9604d7"
       }
+    },
+    {
+      "sequence": 278,
+      "previous_record_digest": "sha256:81115294ab5378cbdbc6b6ae5e6d06240ab2d41200107331f1da6e6f7c22be8b",
+      "record_digest": "sha256:6c1cfd2a5a8ff980af47c3b290c2b6a7745150536d97c3b55f2030b6c56155ea",
+      "command_id": "plan-revise:issue-600:codex-review-wake-backfill:602:current-main-sync:e43277f106a4",
+      "receipt_id": "certificate:9cb2643287eea6c657728006e3576a64",
+      "receipt_digest": "sha256:5b67ade6579584aa10ea1049393d230e0fa759078e5b61fd38838f28e50c0819",
+      "decision_digest": "sha256:cb072525c8b80cb9da9060d845feecef0cfcfbba65edda470f8128f25e3a716c",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-602-codex-review-wake-backfill.md",
+        "plan_id": "PLAN-REVERSE-602-codex-review-wake-backfill",
+        "asset_id": "plan:97d42b4d658cdf05a5032c88d21154b0",
+        "revision": 11,
+        "content_digest": "sha256:69d5240485e61221fe3a76c01a6bb30d09c244ef3da524fc20ad2518e9536e2a"
+      }
     }
   ]
 }
