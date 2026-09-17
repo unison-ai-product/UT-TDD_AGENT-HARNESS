@@ -165,10 +165,12 @@ describe("memory clean-cut PR-2: legacy corpus archive (U-MEMCUT-017..021, P-MEM
     expect(leaked).toBe(0);
   });
 
-  it("U-MEMCUT-020: manifest and summary expose no untracked path, title or body; a leaked name is Red", () => {
+  it("U-MEMCUT-020: manifest and summary expose no untracked path, title or body; a leaked name, an extra top-level manifest field or an extra tracked-row key is each Red", () => {
     const manifest = manifestOf();
     const summary = readFileSync(join(root, LEGACY_MEMORY_SUMMARY_PATH), "utf8");
     expect(verifyLegacyArchiveUntrackedOpacity({ manifest, summary })).toEqual([]);
+    // Extra key inside manifest.untracked, carrying an untracked-looking name: caught both by the
+    // untracked-section key allowlist and by the manifest-wide string scan (Sol r2 FLAG 3).
     const leaked = {
       ...manifest,
       untracked: {
@@ -176,15 +178,44 @@ describe("memory clean-cut PR-2: legacy corpus archive (U-MEMCUT-017..021, P-MEM
         paths: ["secret-note.md"],
       } as LegacyArchiveManifest["untracked"],
     };
-    expect(
-      verifyLegacyArchiveUntrackedOpacity({ manifest: leaked, summary }).map((f) => f.kind),
-    ).toEqual(["untracked-leak"]);
+    const leakedFindings = verifyLegacyArchiveUntrackedOpacity({
+      manifest: leaked,
+      summary,
+    }).map((f) => f.kind);
+    expect(leakedFindings).toContain("untracked-leak");
+    expect(leakedFindings.length).toBeGreaterThanOrEqual(1);
     expect(
       verifyLegacyArchiveUntrackedOpacity({
         manifest,
         summary: `${summary}\n- feedback-some-untracked-lesson.md\n`,
       }).map((f) => f.kind),
     ).toEqual(["untracked-leak"]);
+    // Extra top-level manifest field carrying an untracked path (Sol r2 FLAG 3 negative a).
+    const extraTopLevel = {
+      ...manifest,
+      leaked_untracked_paths: ["feedback-some-untracked-lesson.md"],
+    } as unknown as LegacyArchiveManifest;
+    expect(
+      verifyLegacyArchiveUntrackedOpacity({ manifest: extraTopLevel, summary }).map((f) => f.kind),
+    ).toContain("untracked-leak");
+    // Extra key on a tracked row carrying an untracked body/title (Sol r2 FLAG 3 negative b).
+    const firstRow = manifest.tracked[0];
+    expect(firstRow, "manifest has at least one tracked row").toBeDefined();
+    const extraTrackedRowKey = {
+      ...manifest,
+      tracked: [
+        {
+          ...firstRow,
+          leaked_body: "untracked body text",
+        } as unknown as LegacyArchiveManifest["tracked"][number],
+        ...manifest.tracked.slice(1),
+      ],
+    };
+    expect(
+      verifyLegacyArchiveUntrackedOpacity({ manifest: extraTrackedRowKey, summary }).map(
+        (f) => f.kind,
+      ),
+    ).toContain("untracked-leak");
   });
 
   it("U-MEMCUT-021: the committed summary is byte-identical to the summary regenerated from the manifest", () => {
