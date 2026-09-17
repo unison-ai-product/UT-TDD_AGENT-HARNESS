@@ -159,7 +159,12 @@ export interface PackPublicationPreparationInput {
 
 export interface PackPublicationPreparationPorts {
   readonly approval: Pick<PackPublicationPorts["approval"], "consume">;
-  readonly durableState: Pick<PackPublicationPorts["durableState"], "append">;
+  readonly durableState: Pick<PackPublicationPorts["durableState"], "append"> & {
+    /** Read-only journal inspection used to resume after a lost response. */
+    readonly read?: (
+      identityDigest: string,
+    ) => readonly PublicationJournalEvent[] | Promise<readonly PublicationJournalEvent[]>;
+  };
   readonly pack: {
     readonly commitPublicationBranch: PackPublicationPorts["pack"]["commitPublicationBranch"];
     readonly createPullRequest: (input: {
@@ -169,6 +174,22 @@ export interface PackPublicationPreparationPorts {
     }) =>
       | PublicationPortResult<PackPublicationPullRequestObservation>
       | Promise<PublicationPortResult<PackPublicationPullRequestObservation>>;
+    /** Read-only observation used during journal reconciliation; never mutates Pack. */
+    readonly reconcile?: (input: {
+      readonly repository: string;
+      readonly branch: string;
+      readonly expectedMainSha: string;
+    }) =>
+      | PublicationPortResult<{
+          readonly branchCommit: string;
+          readonly pullRequest: PackPublicationPullRequestObservation;
+        }>
+      | Promise<
+          PublicationPortResult<{
+            readonly branchCommit: string;
+            readonly pullRequest: PackPublicationPullRequestObservation;
+          }>
+        >;
   };
   readonly receipt: {
     readonly persist: (receipt: PackPublicationPreparationReceipt) => void | Promise<void>;
@@ -894,10 +915,153 @@ function preparationApproval(
   return { ok: true, approval };
 }
 
+/**
+ * Keep a mutated preparation identity distinct from an approval that was
+ * actually issued for another operation.  Both cases have an intent digest
+ * mismatch, but only the former is the PREP-001 input identity oracle.
+ */
+function preparationApprovalBindingReason(
+  approvals: readonly PackPublicationApproval[],
+  input: PackPublicationPreparationInput,
+  identityDigest: string,
+): "preparation_identity_mismatch" | "approval_binding_mismatch" | null {
+  const sameApprovalIdentity = approvals.every(
+    (approval) =>
+      approval.operationId === approvals[0]?.operationId &&
+      approval.idempotencyKey === approvals[0]?.idempotencyKey,
+  );
+  if (!sameApprovalIdentity) return "approval_binding_mismatch";
+  const approval = approvals[0];
+  if (!approval) return null;
+  if (
+    approval.operationId !== input.operationId ||
+    approval.idempotencyKey !== input.idempotencyKey ||
+    approval.intentDigest !== identityDigest
+  )
+    return "preparation_identity_mismatch";
+  return null;
+}
+
 function preparationReceiptDigest(
   receipt: Omit<PackPublicationPreparationReceipt, "receiptDigest">,
 ): string {
   return sha256(stable(receipt));
+}
+
+function preparationReceiptFromObservation(
+  input: PackPublicationPreparationInput,
+  identity: NonNullable<ReturnType<typeof preparationIdentity>>,
+  branchCommit: string,
+  observed: PackPublicationPullRequestObservation,
+): PackPublicationPreparationReceipt | null {
+  if (
+    !SHA1.test(branchCommit) ||
+    !/^[1-9][0-9]*$/.test(observed.pullRequest) ||
+    !SHA1.test(observed.headOid) ||
+    !SHA1.test(observed.baseOid) ||
+    !SHA256.test(observed.treeDigest) ||
+    !SHA256.test(observed.controlManifestSnapshotDigest) ||
+    observed.headOid !== branchCommit ||
+    observed.baseOid !== input.expectedMainOid ||
+    observed.treeDigest !== identity.treeDigest ||
+    observed.controlManifestSnapshotDigest !== input.plan.controlManifestSnapshotDigest
+  )
+    return null;
+  const unsigned = {
+    kind: "pack-publication-preparation-receipt-v1" as const,
+    releaseId: identity.releaseId,
+    sourceRevision: identity.sourceRevision,
+    stagingPlanDigest: identity.stagingPlanDigest,
+    repository: input.repository,
+    publicationBranch: input.publicationBranch,
+    expectedMainOid: input.expectedMainOid,
+    branchCommitOid: branchCommit,
+    pullRequest: observed.pullRequest,
+    reviewedHeadOid: observed.headOid,
+    baseOid: observed.baseOid,
+    treeDigest: observed.treeDigest,
+    controlManifestSnapshotDigest: observed.controlManifestSnapshotDigest,
+    receiptDigest: "",
+  };
+  return Object.freeze({
+    ...unsigned,
+    receiptDigest: preparationReceiptDigest(unsigned),
+  });
+}
+
+async function reconcilePreparedPreparation(
+  input: PackPublicationPreparationInput,
+  identity: NonNullable<ReturnType<typeof preparationIdentity>>,
+  ports: PackPublicationPreparationPorts,
+): Promise<PackPublicationPreparationResult | null> {
+  if (!ports.durableState.read || !ports.pack.reconcile) return null;
+  let journal: readonly PublicationJournalEvent[];
+  try {
+    journal = await ports.durableState.read(identity.identityDigest);
+  } catch {
+    return preparationFailure({
+      status: "indeterminate",
+      stage: "preflight",
+      reason: "journal_read_failed",
+      remoteWrites: 0,
+    });
+  }
+  const hasMutationIntent = journal.some(
+    (event) =>
+      event.intentDigest === identity.identityDigest &&
+      (event.kind === "mutation_intent" || event.kind === "read_back_observation") &&
+      (event.mutation === "pack_branch_commit" || event.mutation === "pack_pr_create"),
+  );
+  if (!hasMutationIntent) return null;
+  let observed: PublicationPortResult<{
+    readonly branchCommit: string;
+    readonly pullRequest: PackPublicationPullRequestObservation;
+  }>;
+  try {
+    observed = await ports.pack.reconcile({
+      repository: input.repository,
+      branch: input.publicationBranch,
+      expectedMainSha: input.expectedMainOid,
+    });
+  } catch {
+    return preparationFailure({
+      status: "indeterminate",
+      stage: "pack_commit",
+      reason: "reconciliation_unavailable",
+      remoteWrites: 0,
+    });
+  }
+  if (observed.status !== "attested")
+    return preparationFailure({
+      status: observed.status === "mismatch" ? "denied" : "indeterminate",
+      stage: "pack_commit",
+      reason: observed.reason,
+      remoteWrites: 0,
+    });
+  const receipt = preparationReceiptFromObservation(
+    input,
+    identity,
+    observed.value.branchCommit,
+    observed.value.pullRequest,
+  );
+  if (!receipt)
+    return preparationFailure({
+      status: "partial_publication",
+      stage: "pack_commit",
+      reason: "preparation_observation_mismatch",
+      remoteWrites: 0,
+    });
+  try {
+    await ports.receipt.persist(receipt);
+  } catch {
+    return preparationFailure({
+      status: "indeterminate",
+      stage: "pack_commit",
+      reason: "receipt_persist_failed",
+      remoteWrites: 0,
+    });
+  }
+  return { ok: true, status: "prepared", receipt, remoteWrites: 0 };
 }
 
 /**
@@ -944,7 +1108,7 @@ export async function preparePackPublication(
         existing.publicationBranch === input.publicationBranch &&
         existing.expectedMainOid === input.expectedMainOid &&
         SHA1.test(existing.branchCommitOid) &&
-        Boolean(existing.pullRequest) &&
+        /^[1-9][0-9]*$/.test(existing.pullRequest) &&
         existing.reviewedHeadOid === existing.branchCommitOid &&
         SHA1.test(existing.reviewedHeadOid) &&
         existing.baseOid === input.expectedMainOid &&
@@ -961,6 +1125,8 @@ export async function preparePackPublication(
           });
     }
   }
+  const reconciled = await reconcilePreparedPreparation(input, identity, ports);
+  if (reconciled) return reconciled;
   if (input.approvals.length < 2)
     return preparationFailure({
       status: "denied",
@@ -980,6 +1146,18 @@ export async function preparePackPublication(
       status: "denied",
       stage: "preflight",
       reason: "nonce_replay",
+      remoteWrites: 0,
+    });
+  const identityBindingReason = preparationApprovalBindingReason(
+    input.approvals,
+    input,
+    identity.identityDigest,
+  );
+  if (identityBindingReason)
+    return preparationFailure({
+      status: "denied",
+      stage: "preflight",
+      reason: identityBindingReason,
       remoteWrites: 0,
     });
   const branchApproval = preparationApproval(
@@ -1072,12 +1250,15 @@ export async function preparePackPublication(
   );
   if ("failure" in branch) return preparationFailureFromRun(branch.failure);
   if ("reconcile" in branch)
-    return preparationFailure({
-      status: "indeterminate",
-      stage: "preflight",
-      reason: "reconciliation_required",
-      remoteWrites: run.count(),
-    });
+    return (
+      (await reconcilePreparedPreparation(input, identity, ports)) ??
+      preparationFailure({
+        status: "indeterminate",
+        stage: "preflight",
+        reason: "reconciliation_required",
+        remoteWrites: run.count(),
+      })
+    );
   if (!SHA1.test(branch.value.branchCommit))
     return preparationFailure({
       status: "indeterminate",
@@ -1102,15 +1283,18 @@ export async function preparePackPublication(
   );
   if ("failure" in pullRequest) return preparationFailureFromRun(pullRequest.failure);
   if ("reconcile" in pullRequest)
-    return preparationFailure({
-      status: "indeterminate",
-      stage: "pack_commit",
-      reason: "reconciliation_required",
-      remoteWrites: run.count(),
-    });
+    return (
+      (await reconcilePreparedPreparation(input, identity, ports)) ??
+      preparationFailure({
+        status: "indeterminate",
+        stage: "pack_commit",
+        reason: "reconciliation_required",
+        remoteWrites: run.count(),
+      })
+    );
   const observed = pullRequest.value;
   if (
-    !observed.pullRequest ||
+    !/^[1-9][0-9]*$/.test(observed.pullRequest) ||
     !SHA1.test(observed.headOid) ||
     !SHA1.test(observed.baseOid) ||
     !SHA256.test(observed.treeDigest) ||
