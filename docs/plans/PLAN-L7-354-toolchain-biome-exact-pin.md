@@ -85,17 +85,17 @@ status: confirmed
 github_issue_id: 487
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:3e1a5e0e46ff8e823a70640922258c33
-  command_id: pr641-l7-354-bun-lock-supersession-1789552230337
-  admitted_at: 2026-09-16T09:50:30.337Z
+  receipt_id: certificate:fd843f91c4cbf8afb2ee7f0f146cd988
+  command_id: pr641-l7-354-bun-lock-supersession-n3-1789617786553
+  admitted_at: 2026-09-17T04:03:06.553Z
   source_digest: sha256:0b3dcef1042b77db8de5b8942992d842186ea3ffbf270943dd28bbc0a491e3ff
   decision_digest: sha256:35c8e49de4691847e827a510267357abe18bb5c12b7be5d14d88c7fcc927cb0a
-  receipt_digest: sha256:a314bb1be1cac34e79b2f99ad9f95eb2a9b324f4c63e134732e420db6aaa01f7
+  receipt_digest: sha256:5d5771b6d3f6b1b18adae4e5550925ee8abacc7cc124d8aa40fc2007e978892d
   binding:
     path: docs/plans/PLAN-L7-354-toolchain-biome-exact-pin.md
     plan_id: PLAN-L7-354-toolchain-biome-exact-pin
     asset_id: plan:legacy:ec303beeae170d11c4baa0973f7a5d4ec76de22a99c65f4c8f2001c16e048419
-    revision: 2
+    revision: 3
     content_digest: sha256:0b3dcef1042b77db8de5b8942992d842186ea3ffbf270943dd28bbc0a491e3ff
   route:
     signal: code_smell
