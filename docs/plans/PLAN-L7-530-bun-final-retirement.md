@@ -61,7 +61,7 @@ review_evidence:
         scope: targeted
         exit_code: 0
         evidence_path: tests/bun-final-retirement.test.ts
-        output_digest: sha256:429666e95b302fe619764507e99f0da737bde5f7370544c8fc15884a60fc0f0e
+        output_digest: sha256:d7ae670a271cd1bd07e78f17ad90c60ae4e1de5c4437320af176481ce7e0799c
         completed_at: 2026-09-17T07:27:44.372Z
         anchor_commit: 5b1ace92b7bb18cd78230fb35ba76b4996bb2cdb
       - kind: typecheck
@@ -70,7 +70,7 @@ review_evidence:
         scope: full
         exit_code: 0
         evidence_path: src/lint/bun-final-retirement.ts
-        output_digest: sha256:210a17d19a7f088c5a1a8e0f62924ead409cf446b0ada60aa20e6d7cac220789
+        output_digest: sha256:98dea5a4727cd41fbe88472c7235e56162d9a82bee6fb617e505ed915625e98e
         completed_at: 2026-09-17T07:27:44.372Z
         anchor_commit: 5b1ace92b7bb18cd78230fb35ba76b4996bb2cdb
       - kind: lint
@@ -80,25 +80,25 @@ review_evidence:
         scope: targeted
         exit_code: 0
         evidence_path: src/lint/bun-final-retirement.ts
-        output_digest: sha256:ffe6460fa716931d839c92974ceaa255b584cc78830f263af7b984971a951489
+        output_digest: sha256:98dea5a4727cd41fbe88472c7235e56162d9a82bee6fb617e505ed915625e98e
         completed_at: 2026-09-17T07:27:44.372Z
         anchor_commit: 5b1ace92b7bb18cd78230fb35ba76b4996bb2cdb
 status: confirmed
 github_issue_id: 487
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:5e20fed44db7d3f473465b75069f1889
-  command_id: plan-revise:issue487:final-retirement:confirmed-preflight:e446:1789630124372
-  admitted_at: 2026-09-17T07:28:44.372Z
-  source_digest: sha256:0bdca14ea91d9d79b6f35b6d5205428d006af607e93777cd1ffd2394b616dacb
-  decision_digest: sha256:072ee1b00fb6539093afd14673aa988b977ef0e86e0b52924ecab2ffac45436c
-  receipt_digest: sha256:63bde9b77bec262579ea3cc94db07d809a1a63f03fbce1e57a8a709a97770d6a
+  receipt_id: certificate:8411678bfc385b91f3cd2ed7aa565cd2
+  command_id: plan-revise:issue487:final-retirement:digest-correction:e446:1789632686717
+  admitted_at: 2026-09-17T08:11:26.717Z
+  source_digest: sha256:d6b892087b2094f7d6e6563abe889c20627aed2cf3492d50a46deb04cb2d47bd
+  decision_digest: sha256:44405fd37378a97977d29fa244ea9cb0c5a9161648f0270537499e76e50ab8ff
+  receipt_digest: sha256:f2001dedd50473254cf66470503587caf702db0a601727f9cc59c431ad49ae1d
   binding:
     path: docs/plans/PLAN-L7-530-bun-final-retirement.md
     plan_id: PLAN-L7-530-bun-final-retirement
     asset_id: plan:bc9250c9a7c873dcb9f18956677371f7
-    revision: 12
-    content_digest: sha256:0bdca14ea91d9d79b6f35b6d5205428d006af607e93777cd1ffd2394b616dacb
+    revision: 13
+    content_digest: sha256:d6b892087b2094f7d6e6563abe889c20627aed2cf3492d50a46deb04cb2d47bd
   route:
     signal: feature_addition
     mode: add-feature
@@ -116,10 +116,10 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-530-bun-final-retirement
-    target_revision: 11
+    target_revision: 12
     phase: forward_merge
-  escape_reason: "Issue #487 final retirement preflight evidence is confirmed
-    through canonical plan revise after current-main rebase"
+  escape_reason: "Issue #487 preflight evidence digest corrected through canonical
+    plan revise"
 ---
 
 # PLAN-L7-530: Bun 最終撤去の tuple-bound 実装契約
