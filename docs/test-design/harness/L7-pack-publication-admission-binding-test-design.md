@@ -30,7 +30,8 @@ plan-admission record を指さない。値は実装 PR の test module 内で�
 | expected Pack main OID | `sha1("adm-fixture-expected-main")` の 40 hex | |
 | publication branch | `pack/publication/op-adm-fixture-0001` | deterministic branch 名 |
 | PR number / head OID / base OID / tree digest | `4242` / `sha1("adm-fixture-head")` / expected main OID と同値 / staging tree digest と同値 | base = expected main が正常系 |
-| preparation receipt | 上記を保持する #625 §2 形式の receipt。`read_back_observation` は PR `4242` を指す | receipt digest は canonical bytes から admission が導出 |
+| preparation receipt | #625 §2 の 4 field (PR `4242`、head、base、tree digest) と binding (operation ID `op-adm-fixture-0001`) を持つ receipt。`read_back_observation` は PR `4242` を指す | receipt digest は canonical bytes から admission が導出。staging identity は receipt に置かない |
+| sealed staging record | operation ID `op-adm-fixture-0001` に束縛された record: staging tree / manifest digest、expected main OID、branch、idempotency key (上記と同値) | §2.2-6 の observer が返す。正常系は observed PR と整合 |
 | configuration 期待値 (§2.1 (a)) | repository ID `424200`、full name `example-org/example-pack`、target ref `refs/heads/main`、ruleset ID `77`、期待 required context `["pack-check"]`、CAS installation ID `9001` | 実 Pack repo 名を使わない。preparation installation は `9002` (G28 mutant 用) |
 | approval 参照 (§2.1 (b)) | approval nonce `apv-adm-fixture-0001` (束縛先 `op-adm-fixture-0001`、未消費)。preparation nonce 集合は `{"prep-adm-fixture-0001"}` | |
 | review fixture | reviewed head = PR head、`approved`、reviewer `reviewer-b` (author は `author-a`)、closing receipt digest `sha256:` + `sha256("adm-fixture-closing")` の hex | |
@@ -40,7 +41,7 @@ plan-admission record を指さない。値は実装 PR の test module 内で�
 fixture から不足する値を worktree、Pack checkout、GitHub API、既存の publication receipt で
 補完しない。各 mutation row は上記 fixture の 1 要素だけを変異させ、他は正常系のまま保つ。
 
-## 3. 42 guard mutation matrix (G40–G42 は §4 の 056 / 061 / 063)
+## 3. 43 guard mutation matrix (G40–G43 は §4 の 056 / 061 / 063 / 068)
 
 各行は他の predicate を成立させた fixture へ一軸だけを注入する。expected result は admission
 record 0、typed deny、remote write 0 であり、別 guard の失敗を Green にしない。契約引用は
@@ -65,7 +66,7 @@ PLAN-L7-626 §3 の同じ行と一致させる。
 | `CANDIDATE-PACKPUB-ADM-015` | G15 | 565 §1.1 | PR `4242` を別 operation ID で admitted 済みに登録 | `admission_pr_replay`、write 0 |
 | `CANDIDATE-PACKPUB-ADM-016` | G16 | 625 §2、626 §2.2-2 | observed PR branch を `pack/publication/other` | `admission_branch_mismatch`、write 0 |
 | `CANDIDATE-PACKPUB-ADM-017` | G17 | 625 §2、626 §2.2-2 | observed PR tree digest を別値 | `admission_tree_digest_mismatch`、write 0 |
-| `CANDIDATE-PACKPUB-ADM-018` | G18 | 565 §1.1、626 §2.2-6 | sealed staging record の manifest digest を別値 | `admission_staging_manifest_mismatch`、write 0 |
+| `CANDIDATE-PACKPUB-ADM-018` | G18 | 565 §1.1、626 §2.2-6 | sealed staging record の manifest digest を 63 hex に | `admission_staging_manifest_invalid`、write 0 |
 | `CANDIDATE-PACKPUB-ADM-019` | G19 | 565 §1.1 | PR `4242` を別 staging digest で admitted 済みに登録 | `admission_pr_staging_conflict`、write 0 |
 | `CANDIDATE-PACKPUB-ADM-020` | G20 | 565 §1.1 | PR `4242` を別 expected main OID で admitted 済みに登録 | `admission_pr_expected_main_conflict`、write 0 |
 | `CANDIDATE-PACKPUB-ADM-021` | G21 | 626 §2.2 | caller `reviewedHead` を観測値と別に供給 (他 field は 058–060、065) | `admission_caller_override`、write 0 |
@@ -79,12 +80,12 @@ PLAN-L7-626 §3 の同じ行と一致させる。
 | `CANDIDATE-PACKPUB-ADM-029` | G29 | 565 §1.1、626 §2.2-8 | approval nonce の束縛先を `op-adm-fixture-0002` | `admission_approval_binding_mismatch`、write 0 |
 | `CANDIDATE-PACKPUB-ADM-030` | G30 | 565 §1.1 | approval nonce を `prep-adm-fixture-0001` | `admission_approval_set_conflict`、write 0 |
 | `CANDIDATE-PACKPUB-ADM-031` | G31 | 565 §3、626 §2.2-1 | observed required context を `["other-check"]` へ差替え、`other-check` の success check も供給 (ruleset ID は `77` のまま) | `admission_required_context_set_mismatch`、write 0 |
-| `CANDIDATE-PACKPUB-ADM-032` | G32 | 565 §1.1、626 §2.2-6 | sealed staging record の tree digest を別値 | `admission_staging_tree_mismatch`、write 0 |
-| `CANDIDATE-PACKPUB-ADM-033` | G33 | 565 §1.1、626 §2.2-6 | sealed staging record の expected main OID を別値 | `admission_staging_expected_main_mismatch`、write 0 |
-| `CANDIDATE-PACKPUB-ADM-034` | G34 | 565 §1.1、626 §2.2-6 | sealed staging record の branch 名を別値 | `admission_staging_branch_mismatch`、write 0 |
+| `CANDIDATE-PACKPUB-ADM-032` | G32 | 565 §1.1、#625 §2、626 §2.2-6 | sealed staging record の tree digest を observed PR tree digest と別値に | `admission_staging_tree_mismatch`、write 0 |
+| `CANDIDATE-PACKPUB-ADM-033` | G33 | 565 §1.1、#625 §2、626 §2.2-6 | sealed staging record の expected main OID を observed PR base と別値に | `admission_staging_expected_main_mismatch`、write 0 |
+| `CANDIDATE-PACKPUB-ADM-034` | G34 | 565 §1.1、#625 §2、626 §2.2-6 | sealed staging record の branch 名を observed PR branch と別値に | `admission_staging_branch_mismatch`、write 0 |
 | `CANDIDATE-PACKPUB-ADM-035` | G35 | 565 §3 | repository full name を `example-org/other-pack` | `admission_repository_name_mismatch`、write 0 |
 | `CANDIDATE-PACKPUB-ADM-036` | G36 | 626 §2.1 | preparation receipt を `undefined` | `admission_receipt_missing`、observer call 0、write 0 |
-| `CANDIDATE-PACKPUB-ADM-037` | G37 | 626 §2.1 | receipt の PR number field を欠落 | `admission_receipt_invalid`、observer call 0、write 0 |
+| `CANDIDATE-PACKPUB-ADM-037` | G37 | #625 §2、626 §2.1 | receipt の PR number field を欠落 | `admission_receipt_invalid`、observer call 0、write 0 |
 | `CANDIDATE-PACKPUB-ADM-038` | G38 | 565 §1.1、626 §2.1 | receipt の `read_back_observation` を PR `4243` へ | `admission_pr_unprepared`、write 0 |
 | `CANDIDATE-PACKPUB-ADM-039` | G39 | 565 §1.1、626 §2.2-8 | approval nonce `apv-adm-fixture-0001` を消費済みに (束縛先・集合帰属は正常系) | `admission_approval_consumed`、write 0 |
 
@@ -123,7 +124,10 @@ G25/G35 は入力出所・形状/equality・被覆・集合一致が異なるた
 | `CANDIDATE-PACKPUB-ADM-061` | G41: caller が `preparationReceiptDigest` を導出値と異なる値で供給 | `admission_receipt_digest_override`、write 0。供給しない正常系は導出値が record に入る |
 | `CANDIDATE-PACKPUB-ADM-062` | 正常系に required でない check `{context: "lint-optional", conclusion: "failure"}` を追加 | admitted (非 required check は判定に使わない)、record の required check 結論は `pack-check` のみ |
 | `CANDIDATE-PACKPUB-ADM-063` | G42: caller が intent identity を導出値と異なる値で供給 | `admission_intent_override`、write 0 |
-| `CANDIDATE-PACKPUB-ADM-064` | 正常系 admitted 後に preparation nonce 集合 / preparation journal / token port を観測 | preparation nonce consume 0、journal append 0、token 参照 0 |
+| `CANDIDATE-PACKPUB-ADM-064` | 正常系 admitted 後に preparation nonce 集合を観測 | preparation nonce consume 0 |
+| `CANDIDATE-PACKPUB-ADM-066` | 正常系 admitted 後に preparation journal を観測 | journal append 0 |
+| `CANDIDATE-PACKPUB-ADM-067` | 正常系 admitted 後に preparation token port を観測 | token 参照 0 |
+| `CANDIDATE-PACKPUB-ADM-068` | G43: receipt の binding 先 sealed staging record を削除 | `admission_staging_record_missing`、write 0 |
 | `CANDIDATE-PACKPUB-ADM-065` | G21: caller が §2.1 (a) 期待値 (repository ID) を configuration と別に供給 | `admission_caller_override`、write 0 |
 
 050–055 と 057 は導出関数を直接呼び、構成要素の 1 つを省く実装 (digest が不変になる) を Red にする。
@@ -135,7 +139,7 @@ admission 成功 fixture でも remote write ledger と approval consume は 0 �
 
 ## 5. 実装 PR への昇格規則
 
-実装 PR は 65 candidate を (PLAN-L7-626 §8 の対応表の順で)各 1 件以上の独立 test へ昇格し、実装時に正規の test ID
+実装 PR は 68 candidate を (PLAN-L7-626 §8 の対応表の順で)各 1 件以上の独立 test へ昇格し、実装時に正規の test ID
 (`U-PACKPUB-ADM-*`) を割り当てる。typed reason、入力 digest、observer call 順、admission
 record digest、approval/remote write count を直接検査する。恒真 assertion、dummy observer、既存
 #625 nonce の流用、publish/CAS port の no-op 偽装では Green にしない。production source 変更、

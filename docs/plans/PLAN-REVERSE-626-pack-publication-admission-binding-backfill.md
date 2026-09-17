@@ -22,7 +22,7 @@ agent_slots:
   - role: tl
     slot_label: Codex Sol - L6 staging/admission 境界と L7 read-only binding の同値性を非著者検証
   - role: qa
-    slot_label: Terra - 42 guard、indeterminate、write-zero、replay、intent / approval
+    slot_label: Terra - 43 guard、indeterminate、write-zero、replay、intent / approval
       binding の逆向き検証
 generates:
   - artifact_path: docs/plans/PLAN-REVERSE-626-pack-publication-admission-binding-backfill.md
@@ -43,18 +43,18 @@ status: draft
 github_issue_id: 626
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:712abcbacce552b84f85de2e121cb4e7
-  command_id: plan-revise:issue-626:pr645-reverse:r6:6e0d17f83953
-  admitted_at: 2026-09-17T02:32:39.191Z
-  source_digest: sha256:824d19d423226c964a3838b8e7d8000fcddb58f882004b35b8c76de881158af1
-  decision_digest: sha256:cd1add3bbcc9847aca095932874d127c87a101b567fd545bcf81b0b3e231ada1
-  receipt_digest: sha256:9304e059d41f8ff9e7bb6e74b2be571509e0653914b2bef2af3a8877e0ea274f
+  receipt_id: certificate:feb27cc92dca6f46d927736cba573005
+  command_id: plan-revise:issue-626:pr645-reverse:r7:f8eda30a7554
+  admitted_at: 2026-09-17T02:50:58.446Z
+  source_digest: sha256:4e3ab9ffab1ddd727a1e0cf510562b1892dd727cba2eb9209347e7d32a82dcc1
+  decision_digest: sha256:d6b8866f0543b341d2149b40d45cfc37254a2bef5f26fcd79d56a525273e1c3a
+  receipt_digest: sha256:218d896d9ed5237d950c3d13e0113844aa44ff863afd3fcdf5f95e2c5161562c
   binding:
     path: docs/plans/PLAN-REVERSE-626-pack-publication-admission-binding-backfill.md
     plan_id: PLAN-REVERSE-626-pack-publication-admission-binding-backfill
     asset_id: plan:a00a5eddd4929e67b7e26820aac193f6
-    revision: 6
-    content_digest: sha256:824d19d423226c964a3838b8e7d8000fcddb58f882004b35b8c76de881158af1
+    revision: 7
+    content_digest: sha256:4e3ab9ffab1ddd727a1e0cf510562b1892dd727cba2eb9209347e7d32a82dcc1
   route:
     signal: reverse
     mode: reverse
@@ -65,16 +65,17 @@ admission_receipt:
     projection_digest: sha256:4e5c8b8b398076d56a72deb696afa871b9c259e667c9bb65f22ef2816ca1d8b4
   origin:
     plan_id: PLAN-L7-626-pack-publication-admission-binding
-    revision: 6
-    digest: sha256:845a5acd2b36ca5de983c040978eed02dda413b3e5bf24b3569a47b4a2ed04f7
+    revision: 7
+    digest: sha256:2d75ceada684891888141c7aafc300e72879f0464d122042568b423d66109da3
   transition:
     direction: implementation_to_design
     implementation_disposition: preserved
   reentry:
     target_plan_id: PLAN-REVERSE-626-pack-publication-admission-binding-backfill
-    target_revision: 6
+    target_revision: 7
     phase: forward_merge
-  escape_reason: "Issue #626 PR #645 rev 6: PLAN-L7-626 rev 6 (42 guard、§8
+  escape_reason: "Issue #626 再出 rev 7: PLAN-L7-626 rev 7 (43 guard、§2.1 の #625
+    整合、candidate 68) に R1 と slot を同期。旧 rev 6: PLAN-L7-626 rev 6 (42 guard、§8
     対応表、candidate 65) に R1/R2/R3 と slot を同期。"
 ---
 
@@ -92,11 +93,13 @@ publication/CAS intent を安全に受け取れない。
 
 ## R1: 上位不変条件
 
-- preparation receipt の staging tree/manifest digest、expected main OID、branch 名、PR number/
-  head/base/tree、operation ID、idempotency key は immutable であり、caller 補完を許可しない。
-  receipt digest は receipt bytes から導出し、field としては持たない (#625 §2 と同じ field 集合)。
+- preparation receipt は #625 §2 のとおり PR number / head / base / tree digest の 4 field を確定し、
+  発行元 operation の sealed staging identity (staging tree/manifest digest、expected main OID、branch
+  名、operation ID、idempotency key) へ束縛される (#625 test-design PREP-010)。sealed staging identity
+  は sealed staging record の read-only 観測からのみ取り、receipt / caller から補完しない。receipt
+  digest は receipt bytes から導出し、field としては持たない。
 - admission は repository/authority、PR、review、check、merge-base、staging、freshness、approval
-  を同一観測 digest へ束縛し、42 guard 全件を 1 軸ずつ fail-close する。review receipt digest
+  を同一観測 digest へ束縛し、43 guard 全件を 1 軸ずつ fail-close する。review receipt digest
   形状、非空 required context 集合、期待 required context 集合との集合一致、required context の
   被覆、reviewer 非著者、receipt 存在 / schema、preparation journal 由来の PR、approval の束縛先
   、集合帰属、未消費、非空は独立必須条件である。
@@ -123,14 +126,14 @@ publication/CAS intent を安全に受け取れない。
 
 `PLAN-L6-63` の before-state / read-back / indeterminate 保持に対し、L7 admission の repository/
 authority identity、expected main、PR base/branch/tree、review/check、merge-base、staging 再観測、
-freshness が同じ sealed operation の precondition であることを確認する。全 42 guard の deny と
+freshness が同じ sealed operation の precondition であることを確認する。全 43 guard の deny と
 observer unavailable の indeterminate は、上位 L6 が要求する副作用前の write-zero へ写像される。
 完全一致 replay だけは同一 digest の record を再構成し、1 軸 drift は再利用ではなく新規 deny
 となる。
 
 ## R3-R4: 再合流
 
-R3 で実装 PR の 65 candidate、対象テスト、exact-head CI、非著者 review を照合する。R4 で
+R3 で実装 PR の 68 candidate、対象テスト、exact-head CI、非著者 review を照合する。R4 で
 repository/authority、review/check/base/freshness の不変条件、receipt digest 形状、sealing 項目の
 所有と typed failure を上位 staged-release contract (PLAN-L7-565 §1.1/§3、PLAN-L6-63) へ backfill
 し、#627 の publish/CAS admission 入力へ戻す。remote 実装、Release/tag/pointer、existing adapter
@@ -151,3 +154,6 @@ repository/authority、review/check/base/freshness の不変条件、receipt dig
 - rev 6 (2026-09-17、Claude control lane): Codex Sol review r4 (receipt `19e8d523…`) に合わせ、
   PLAN-L7-626 rev 6 (42 guard、G41/G42 caller 供給拒否、§8 predicate→candidate 対応表、candidate 65)
   と同期。
+- rev 7 (2026-09-17、Claude control lane): Codex Sol review r5 (receipt `8c85f286…`、upstream conflict) を
+  受けた再出。R1 の receipt 記述を #625 §2 / PREP-010 (4 field + sealed staging identity への束縛) に
+  合わせ、PLAN-L7-626 rev 7 (43 guard、G43、candidate 68) と同期。
