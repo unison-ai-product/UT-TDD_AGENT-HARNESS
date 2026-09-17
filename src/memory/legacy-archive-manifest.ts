@@ -186,6 +186,23 @@ export interface LegacyArchiveFinding {
 
 const basenameOf = (path: string): string => path.replaceAll("\\", "/").split("/").at(-1) ?? "";
 
+// Exact key allowlists derived from the `LegacyArchiveManifest` type shape (Sol r2 FLAG 3): a key
+// outside these sets is itself a finding, independent of whether its value happens to look like a
+// leaked filename — an extra top-level field or an extra key on a tracked row must never be
+// silently accepted just because `manifest.untracked`'s own keys are still clean.
+const MANIFEST_TOP_LEVEL_KEYS = [
+  "archive_root",
+  "base_commit",
+  "schema_version",
+  "source_root",
+  "tracked",
+  "untracked",
+].join(",");
+const TRACKED_ROW_KEYS = ["archive_path", "bytes", "sha256", "source_path"].join(",");
+const UNTRACKED_SECTION_KEYS = ["count", "local_archive_root", "set_digest"].join(",");
+
+const sortedKeys = (value: object): string => Object.keys(value).sort().join(",");
+
 /**
  * CANDIDATE-U-MEMCUT-017: base-HEAD tracked sources, manifest rows and archive files must be a
  * basename bijection. Counts are compared to each other, never to a constant.
@@ -241,21 +258,39 @@ export function verifyLegacyArchiveUntrackedOpacity(input: {
   summary: string;
 }): LegacyArchiveFinding[] {
   const findings: LegacyArchiveFinding[] = [];
-  const keys = Object.keys(input.manifest.untracked).sort();
-  if (keys.join(",") !== "count,local_archive_root,set_digest")
+  const topKeys = sortedKeys(input.manifest);
+  if (topKeys !== MANIFEST_TOP_LEVEL_KEYS)
+    findings.push({ kind: "untracked-leak", subject: `manifest keys: ${topKeys}` });
+  input.manifest.tracked.forEach((row, index) => {
+    const rowKeys = sortedKeys(row);
+    if (rowKeys !== TRACKED_ROW_KEYS)
+      findings.push({
+        kind: "untracked-leak",
+        subject: `manifest.tracked[${index}] keys: ${rowKeys}`,
+      });
+  });
+  const untrackedKeys = sortedKeys(input.manifest.untracked);
+  if (untrackedKeys !== UNTRACKED_SECTION_KEYS)
     findings.push({
       kind: "untracked-leak",
-      subject: `manifest.untracked keys: ${keys.join(",")}`,
+      subject: `manifest.untracked keys: ${untrackedKeys}`,
     });
   if (!/^[0-9a-f]{64}$/.test(input.manifest.untracked.set_digest))
     findings.push({ kind: "untracked-leak", subject: "manifest.untracked.set_digest" });
   const tracked = new Set(input.manifest.tracked.map((row) => basenameOf(row.source_path)));
-  for (const match of input.summary.matchAll(/[A-Za-z0-9_.-]+\.md/g)) {
-    const name = match[0];
-    if (name === "SUMMARY.md") continue;
-    if (!tracked.has(name))
-      findings.push({ kind: "untracked-leak", subject: `summary names ${name}` });
-  }
+  const scanForLeakedNames = (text: string, where: string): void => {
+    for (const match of text.matchAll(/[A-Za-z0-9_.-]+\.md/g)) {
+      const name = match[0];
+      if (name === "SUMMARY.md" || name === "MANIFEST.json") continue;
+      if (!tracked.has(name))
+        findings.push({ kind: "untracked-leak", subject: `${where} names ${name}` });
+    }
+  };
+  scanForLeakedNames(input.summary, "summary");
+  // Scan every string value the manifest carries (not just its declared shape), so an untracked
+  // name smuggled into an unexpected key's value is still caught even where the key-allowlist
+  // checks above already flag the key itself — defense in depth for nested structures.
+  scanForLeakedNames(JSON.stringify(input.manifest), "manifest");
   if (/^title:/m.test(input.summary) || /^memory_id:/m.test(input.summary))
     findings.push({ kind: "untracked-leak", subject: "summary carries entry frontmatter" });
   return findings;
