@@ -47,12 +47,13 @@ dependencies:
 review_evidence:
   - reviewer: codex-intra-runtime
     review_kind: intra_runtime_subagent
-    reviewed_at: 2026-09-17T14:05:00+09:00
-    tests_green_at: 2026-09-17T14:04:04+09:00
-    verdict: pass
+    reviewed_at: 2026-09-17T17:04:37+09:00
+    tests_green_at: 2026-09-17T17:04:37+09:00
+    verdict: advisory
     worker_model: gpt-5.6-luna
     reviewer_model: gpt-5.6-sol
-    scope: 実装対象の targeted wake test、typecheck、Biome を同一draft HEADで確認
+    scope: 実装対象の targeted wake test、typecheck、Biome を同一draft HEADで確認。cross-agent
+      closing review待ち
     green_commands:
       - kind: unit_test
         command: node scripts/run-vitest-snapshot.ts tests/codex-review-wake.test.ts
@@ -61,8 +62,8 @@ review_evidence:
         exit_code: 0
         evidence_path: tests/codex-review-wake.test.ts
         output_digest: sha256:1b0f930272bf6e2a86df13fa3630bfe391bfceb32c01def77fd2339c11489faa
-        completed_at: 2026-09-17T14:04:04+09:00
-        anchor_commit: cb892cc0a78bd25429a58d82043e495985f641a7
+        completed_at: 2026-09-17T17:04:37+09:00
+        anchor_commit: 8bcd0c796f787edd59eb82c3f00dc7e37798e32b
       - kind: typecheck
         command: npm run typecheck
         runner: node
@@ -70,8 +71,8 @@ review_evidence:
         exit_code: 0
         evidence_path: tsconfig.json
         output_digest: sha256:da3803fb5e8090f8bf4e48607a8b033c35a574705d52e558245935d2f164cd0c
-        completed_at: 2026-09-17T14:04:04+09:00
-        anchor_commit: cb892cc0a78bd25429a58d82043e495985f641a7
+        completed_at: 2026-09-17T17:04:37+09:00
+        anchor_commit: 8bcd0c796f787edd59eb82c3f00dc7e37798e32b
       - kind: lint
         command: npm exec -- biome check src/runtime/codex-review-wake.ts
           tests/codex-review-wake.test.ts
@@ -80,26 +81,26 @@ review_evidence:
         exit_code: 0
         evidence_path: biome.json
         output_digest: sha256:b70d2d1403c671399680ca5c783e86591fde85e10dc57c45be2c8806f0549cf7
-        completed_at: 2026-09-17T14:04:04+09:00
-        anchor_commit: cb892cc0a78bd25429a58d82043e495985f641a7
+        completed_at: 2026-09-17T17:04:37+09:00
+        anchor_commit: 8bcd0c796f787edd59eb82c3f00dc7e37798e32b
 backprop_decision: not_required
 backprop_decision_reason: 実装は既存L6契約の具体化に限定し、上流要件の追加を行わない
-status: confirmed
+status: draft
 github_issue_id: 600
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:5723bc313e9282b896e59b185a2a6db4
-  command_id: plan-revise:issue-600:codex-review-wake-impl:current-head-green:cb892cc0a78b
-  admitted_at: 2026-09-17T05:09:59.233Z
-  source_digest: sha256:a11ceeb47eae4c33575b7c96f1451d4d850423834bfde12791569e5d21f10b97
-  decision_digest: sha256:e4f68eb55867157136d94a7dee92f21ea460fa3b714b77fb95c28e8a4cbe0bca
-  receipt_digest: sha256:c26f5e0c65a31b5ebc9eae3b2105c98f69230f2dbc6fe627c061b1616709dff0
+  receipt_id: certificate:9148c6c1228df37d848959853a83dcab
+  command_id: plan-revise:issue-600:codex-review-wake-impl:r3-bounded:8bcd0c796f78
+  admitted_at: 2026-09-17T17:06:00+09:00
+  source_digest: sha256:7b6ddf2a9a440966a10e2b7fddd99868248ac0bd5f8f24de3d3c745288a9e70c
+  decision_digest: sha256:cb0099724fc183d41f1a376e71ba06bcf3e93ff123b9d7bec912dfaadb2c26b8
+  receipt_digest: sha256:fa1ca25aa3f2d1e864f9e5c1d568fbd3039092e8f990e390f41e40ac437a3e1b
   binding:
     path: docs/plans/PLAN-L7-600-codex-review-wake-impl.md
     plan_id: PLAN-L7-600-codex-review-wake-impl
     asset_id: plan:c00b91ac72bc4447dcd79d9332c2da04
-    revision: 14
-    content_digest: sha256:a11ceeb47eae4c33575b7c96f1451d4d850423834bfde12791569e5d21f10b97
+    revision: 15
+    content_digest: sha256:7b6ddf2a9a440966a10e2b7fddd99868248ac0bd5f8f24de3d3c745288a9e70c
   route:
     signal: feature_addition
     mode: add-feature
