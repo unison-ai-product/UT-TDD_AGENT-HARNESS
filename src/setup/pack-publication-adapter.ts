@@ -749,6 +749,10 @@ function eventDigest(value: unknown): string {
   return sha256(stable(value));
 }
 
+function nonBlank(value: string): boolean {
+  return value.trim().length > 0;
+}
+
 function validPreparationPlan(plan: SealedPackPublicationPlan): boolean {
   const release = plan.manifest.releases[plan.releaseId];
   if (!release || plan.kind !== "pack-publication-staging") return false;
@@ -827,10 +831,10 @@ function preparationIdentity(input: PackPublicationPreparationInput): {
   if (
     !release ||
     !validPreparationPlan(input.plan) ||
-    !input.operationId ||
-    !input.idempotencyKey ||
-    !input.repository ||
-    !input.publicationBranch ||
+    !nonBlank(input.operationId) ||
+    !nonBlank(input.idempotencyKey) ||
+    !nonBlank(input.repository) ||
+    !nonBlank(input.publicationBranch) ||
     !SHA1.test(input.expectedMainOid)
   )
     return null;
@@ -875,12 +879,12 @@ function preparationApproval(
   const approval = matches[0];
   if (
     approval.transition !== "pack_commit" ||
-    approval.operationId === "" ||
-    approval.idempotencyKey === "" ||
+    !nonBlank(approval.operationId) ||
+    !nonBlank(approval.idempotencyKey) ||
     approval.intentDigest !== identityDigest ||
     !approval.nonce ||
-    !approval.approver ||
-    !approval.expiresAt ||
+    !nonBlank(approval.approver) ||
+    !nonBlank(approval.expiresAt) ||
     !SHA256.test(approval.approvalStateDigest)
   )
     return null;
