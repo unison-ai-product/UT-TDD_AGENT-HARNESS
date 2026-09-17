@@ -53,13 +53,13 @@ PR-1A (sealed staging offline)、PR-1B (#420 consumer-local runtime)、PR-2 (公
 
 | Candidate | 層 | Red入力 | Green oracle |
 | --- | --- | --- | --- |
-| `CANDIDATE-ST-PACKCANARY-001` | 第 1 層 (PR-1A completion) | sealed `tar.gz` + `.sha256` 以外の入力、source-only/absolute path、未許可 env sentinel、network/socket 試行を混入 | exact 2 asset を SHA-256 検証後にのみ materializeし、注入した network/DNS/socket/HTTP・spawn・installer seam の全試行カウンタ 0、`process.env` 直接継承 0、source-only/absolute path 0。未許可 env または network 試行は Red |
+| `CANDIDATE-ST-PACKCANARY-001` | 第 1 層 (PR-1A completion) | sealed `tar.gz` + `.sha256` 以外の入力、source-only/absolute path、network/socket・spawn 試行を混入。provenance 負例として staging と同じ bytes を `cpSync(process.cwd())` で作った fixture | exact 2 asset を SHA-256 検証後にのみ materializeし、注入した network/DNS/socket/HTTP・spawn・installer seam の全試行カウンタ 0、source-only/absolute path 0。provenance probe として sealed `tar.gz` の sentinel 1 byte 変更で clean inventory digest が変わり、sealed asset の open が各 1 回以上、source worktree / local Pack checkout への read/open/stat が 0。`cpSync(process.cwd())` fixture と network/spawn 試行は Red。PR-1A は child を起動しないため env 検査は含めない |
 | `CANDIDATE-ST-PACKCANARY-002` | 第 1 層 (PR-1A completion) | sealed staging の authoring/skills/inventory entry を欠落・重複させ、registry/installer 呼出しを観測可能にする | PR-1A は CLI/runtime を起動せず、sealed entry の exact-one inventory と registry/npm/install/download 試行 0 を検査する。欠落・重複・外部 fetch は Red |
-| `CANDIDATE-ST-PACKCANARY-003` | 第 1 層 (PR-1B) | Pack rootをmaterializeして別Product rootへ正式setupし、Pack root/source/worktreeを撤去して別cwdから起動 | 正式setup経路が生成したsealed consumer runtimeだけで起動し、外部参照時はtyped deny。現行setupがfallbackを残す場合はRed |
-| `CANDIDATE-ST-PACKCANARY-004` | 第 1 層 (PR-1B) | 実Packを別Product rootへsetupし、setup元Pack rootを生成wrapper/configから利用不能にする | generated wrapper/config、command output、runtime stateにsetup元の絶対path参照が0 |
+| `CANDIDATE-ST-PACKCANARY-003` | 第 1 層 (PR-1B) | `PLAN-L7-508` の sealed `tar.gz` を `.sha256` 検証後に一時 dir へ展開した Pack root (PLAN-L7-531 §3.1 (a)) から、offline npm・network seam・allowlist env (§3.1 (b)(c)) の下で別Product rootへ正式setupし、Pack root/source/worktreeを撤去して別cwdから起動。負例: source worktree から `cpSync` した Pack root、registry 到達を要する依存欠落 | 正式setup経路が生成したsealed consumer runtimeだけで起動し、外部参照時はtyped deny。sealed `tar.gz` の sentinel 1 byte 変更が consumer root の inventory digest に現れ、source worktree への read/open/stat 0、network/DNS/socket/HTTP・registry/installer 試行 0。現行setupがfallbackを残す場合、負例が通る場合はRed |
+| `CANDIDATE-ST-PACKCANARY-004` | 第 1 層 (PR-1B) | sealed 展開 Pack root (PLAN-L7-531 §3.1 (a)) を offline で別Product rootへsetupし、setup元Pack rootを生成wrapper/configから利用不能にする | generated wrapper/config、command output、runtime stateにsetup元の絶対path参照が0 |
 | `CANDIDATE-ST-PACKCANARY-005` | 第 2 層 | 公開済み `v0.2.0-canary.1` の tar.gz または `.sha256` の bytes を 1 byte 変異、または size を変える | 独立再計算した SHA-256/size が第 1 層 sealed staging receipt と一致しないため `mismatch` deny。第 1 層 Green を受入証跡へ読み替えない |
 | `CANDIDATE-ST-PACKCANARY-006` | 第 1 層 (unit, PR-1A completion) / 第 2 層 (受入) | legacy 3 asset 形式の release (`v0.1.4` 相当)、`latest` / prefix / semver range による tag 解決、asset の欠落・余剰・別名 | exact 2 asset (`tar.gz` + `.sha256`) かつ tag exact match 以外を typed deny し、legacy release を canary と誤認しない |
-| `CANDIDATE-ST-PACKCANARY-007` | 第 1 層 (PR-1B) | 別 process・別 cwd・環境変数 clear で wrapper を再起動し、`bun` を PATH 上に置く | PLAN authoring/lint、db rebuild、doctor、review smoke が同一 sealed generation で再現し、Bun invocation trace 0 |
+| `CANDIDATE-ST-PACKCANARY-007` | 第 1 層 (PR-1B) | 別 process・別 cwd・allowlist 構築 env (PLAN-L7-531 §3.1 (c)) で wrapper を再起動する。親 process に未許可 env sentinel と credential 風 `GITHUB_TOKEN` を置き、`bun` を PATH 上に置き、network seam を注入する | PLAN authoring/lint、db rebuild、doctor、review smoke が同一 sealed generation で再現し、Bun invocation trace 0、child の env dump・stdout・stderr・consumer root 内 state に sentinel 0、network/DNS/socket/HTTP・registry 試行 0。`process.env` の継承、sentinel の出現は Red |
 
 Candidate は pair-freeze 時点の設計候補であり、実装と同じ revision の Red→Green 実測が
 揃うまで `U-*` へ昇格しない。PR-1A completion は **001..002・006 (unit) の 3 行だけ**である。
@@ -77,15 +77,17 @@ Candidate は pair-freeze 時点の設計候補であり、実装と同じ revis
    `cpSync(process.cwd())`、directory walk/glob、local Pack checkoutから entry を補完しない。
 2. **[PR-1A]** network/DNS/socket/HTTP、child-process spawn、registry/installer client の
    instrumented seam を注入する。禁止された呼出しは typed deny と試行カウンタ増加を返し、
-   C001/C002 の Green は各試行カウンタ 0、リクエスト記録空、full `process.env` 非継承、remote
-   mutation 0 の同時成立とする。第 1 層の依存は sealed inventory に存在することだけを確認し、
+   C001/C002 の Green は各試行カウンタ 0 (spawn 0 を含むため child env は検査対象外)、リクエスト記録空、
+   remote mutation 0、C001 の provenance probe (sealed `tar.gz` の sentinel 1 byte 変更で inventory digest が変わる、
+   sealed asset の open 各 1 回以上、source worktree / local Pack checkout への read/open/stat 0) の同時成立とする。第 1 層の依存は sealed inventory に存在することだけを確認し、
    実行時依存を CLI の起動で補充しない。
-3. **[PR-1B]** `G-PR1B-START-001` を検証した後、Pack rootをsetup元として別Product rootへ
+3. **[PR-1B]** `G-PR1B-START-001` を検証した後、sealed `tar.gz` を `.sha256` 検証後に一時 dir へ展開した Pack root
+   (PLAN-L7-531 §3.1 (a)) をsetup元として、offline npm・network seam・allowlist env (§3.1 (b)(c)) の下で別Product rootへ
    `setup --solo` を実行し、テスト専用のsetup元Pack checkoutを削除する。最終受入では隔離環境から
    source repository/worktreeを参照不能にする。開発用repository、実利用worktreeやユーザーデータを
    削除して試験してはならない。正式setupが生成した sealed bundle/pointerだけを入力とし、
    bundle/pointerを手書き注入しないため、現行setupが生成できなければRedになる。
-4. **[PR-1B]** 別 process・別 cwd・環境変数 clear で consumer-local wrapper を起動し、PLAN
+4. **[PR-1B]** 別 process・別 cwd・allowlist 構築 env (§3.1 (c)) で consumer-local wrapper を起動し、PLAN
    authoring/lint、`db rebuild`、doctor、review request/receipt/merge gate smoke を実行する。
    consumer root外の read/open/stat/write/process と、C003/C004/C007 の path/state/stdout/stderr
    oracleを観測する。skills inventory は helper の存在ではなく materialized product 経路の

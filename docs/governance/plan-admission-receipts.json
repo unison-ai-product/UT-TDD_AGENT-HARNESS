@@ -4640,6 +4640,38 @@
         "revision": 5,
         "content_digest": "sha256:03652ab9a6a77b35878337e05ab258c5d2432037471038ef59749f62ac42007a"
       }
+    },
+    {
+      "sequence": 291,
+      "previous_record_digest": "sha256:7b387ab041eea8135ab2682c6bf08f25b135bfc4ff28678554167278c0db49cc",
+      "record_digest": "sha256:4719a24e3724af817b2a8c82829a81152e1645d785af1defc5ae66797c609e3d",
+      "command_id": "plan-revise:issue-418:pr642-plan:r7:01af96e1d9d9",
+      "receipt_id": "certificate:bc59507c724eaea013783c46a4848e4c",
+      "receipt_digest": "sha256:4e45c4f650c393370d8eb586accb1ad7e61d8c1d959534cf46526ef55f445abd",
+      "decision_digest": "sha256:9613de41048bddc75fabc3e860badf397561e22b9920b646c12ce5b93becd76f",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-531-pack-internal-canary-smoke.md",
+        "plan_id": "PLAN-L7-531-pack-internal-canary-smoke",
+        "asset_id": "plan:44f79788376b81c225ce5913fddbc48f",
+        "revision": 7,
+        "content_digest": "sha256:c0d775b2a3041d0403cae8cf68edd2e4e2c256afecc43d34398a7ffcdbd46869"
+      }
+    },
+    {
+      "sequence": 292,
+      "previous_record_digest": "sha256:4719a24e3724af817b2a8c82829a81152e1645d785af1defc5ae66797c609e3d",
+      "record_digest": "sha256:e049c54b11b709307e51c18886e41faec354c7d5d71e766ec67680edb39241a9",
+      "command_id": "plan-revise:issue-418:pr642-reverse:r6:01af96e1d9d9",
+      "receipt_id": "certificate:47aa05a26f69e3b1977c9947d3b11cc1",
+      "receipt_digest": "sha256:3c21156ecf27dc4cc47b678c6809d550225560f0bd5c36d9a2460072453a7555",
+      "decision_digest": "sha256:bd887807f5907770625d45e42aec3aca3817de8a0b29840a576aac8fab8d14f1",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-531-pack-internal-canary-smoke-backfill.md",
+        "plan_id": "PLAN-REVERSE-531-pack-internal-canary-smoke-backfill",
+        "asset_id": "plan:c789d97c71c9a9c07942983de88b71ab",
+        "revision": 6,
+        "content_digest": "sha256:fbd8554eff3c6a37b15a2b27c6727aa35dffcc5f356e7ec4eb92709b7db815a4"
+      }
     }
   ]
 }

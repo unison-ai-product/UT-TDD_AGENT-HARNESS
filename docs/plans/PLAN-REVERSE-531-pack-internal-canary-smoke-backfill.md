@@ -47,18 +47,18 @@ status: draft
 github_issue_id: 418
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:b2893d99009ef24617056dba6d8ab74b
-  command_id: plan-revise:issue-418:reverse:5
-  admitted_at: 2026-09-17T01:02:45.944Z
-  source_digest: sha256:03652ab9a6a77b35878337e05ab258c5d2432037471038ef59749f62ac42007a
-  decision_digest: sha256:174e953946ffdb0283432ea79357db001b5f49e4c12b5ca01a2387229fc15b0a
-  receipt_digest: sha256:55aaf3a9be5627a941b014523bb742c9797ceb8f6cf659b101cfa53cf2a63a5a
+  receipt_id: certificate:47aa05a26f69e3b1977c9947d3b11cc1
+  command_id: plan-revise:issue-418:pr642-reverse:r6:01af96e1d9d9
+  admitted_at: 2026-09-17T06:52:21.257Z
+  source_digest: sha256:fbd8554eff3c6a37b15a2b27c6727aa35dffcc5f356e7ec4eb92709b7db815a4
+  decision_digest: sha256:bd887807f5907770625d45e42aec3aca3817de8a0b29840a576aac8fab8d14f1
+  receipt_digest: sha256:3c21156ecf27dc4cc47b678c6809d550225560f0bd5c36d9a2460072453a7555
   binding:
     path: docs/plans/PLAN-REVERSE-531-pack-internal-canary-smoke-backfill.md
     plan_id: PLAN-REVERSE-531-pack-internal-canary-smoke-backfill
     asset_id: plan:c789d97c71c9a9c07942983de88b71ab
-    revision: 5
-    content_digest: sha256:03652ab9a6a77b35878337e05ab258c5d2432037471038ef59749f62ac42007a
+    revision: 6
+    content_digest: sha256:fbd8554eff3c6a37b15a2b27c6727aa35dffcc5f356e7ec4eb92709b7db815a4
   route:
     signal: reverse
     mode: reverse
@@ -78,8 +78,9 @@ admission_receipt:
     target_plan_id: PLAN-L7-531-pack-internal-canary-smoke
     target_revision: 3
     phase: forward_merge
-  escape_reason: "Issue #642 Claude FLAG: align Reverse candidate ownership with
-    PR-1A inventory and PR-1B gate predicates"
+  escape_reason: "Issue #418 PR #642 Opus r3 FLAG 2 件の是正に合わせ、R1 の入力契約の所有を
+    PLAN-L7-531 と同期 (PR-1B は provenance probe・offline npm・allowlist env、PR-1A は
+    C001 provenance probe)"
 ---
 
 # PLAN-REVERSE-531: Pack-only internal canary smoke の逆向き確認
@@ -99,8 +100,10 @@ L7-531 はこれらを二層入力契約 (§3)、fixture 契約 (§4)、smoke �
   `tar.gz` + `.sha256` **exact 2 asset のみ** (control manifest/receipt は sealed metadata)、
   第 2 層 (受入、human-triggered 1 回) は公開済み `v0.2.0-canary.1` の exact 2 asset。両層は
   asset SHA-256/size の byte 一致 (`CANDIDATE-ST-PACKCANARY-005`) でのみ接合する。第 1 層は
-  network/DNS/socket/HTTP 0、依存の registry fetch/install/download 0、allowlist から明示構築した
-   child env (`process.env` 直接継承なし) を必須とする。
+  network/DNS/socket/HTTP 0、依存の registry fetch/install/download 0 を必須とする。child process を起動する
+   PR-1B では、sealed `tar.gz` 展開 Pack root の provenance probe、offline npm、allowlist から明示構築した child env
+   (`process.env` 直接継承なし、sentinel 0) を C003/C004/C007 で固定する。child process を起動しない PR-1A は
+   spawn 0 と C001 の provenance probe (sentinel byte、sealed asset open、source worktree read 0) で入力の出所を固定する。
    `PLAN-L7-515` §2 が asset bytes を sealed intent に含める契約が、この接合の根拠である。
 - C001 の network 0 は終了コードで推測せず、network/DNS/socket/HTTP adapter、child-process
   spawn、registry/installer client の instrumented seam を注入して試行カウンタとリクエスト記録を

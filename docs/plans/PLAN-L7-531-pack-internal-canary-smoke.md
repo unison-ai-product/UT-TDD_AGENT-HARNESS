@@ -55,18 +55,18 @@ status: draft
 github_issue_id: 418
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:4b23bf4c3cce53f9eeb64abc54f063d0
-  command_id: plan-revise:issue-418:forward:7
-  admitted_at: 2026-09-17T01:02:19.680Z
-  source_digest: sha256:925fc49c6b25d7aa865a5d8c926226426cfa3ba9dda853f5a9998fa03779ca76
-  decision_digest: sha256:7746dd9b3348efa18fc99adebe9a8cda294cd0ff457a4b0b97a05e54454b607e
-  receipt_digest: sha256:fc65dc8dd41ce85534bf88fecc5699d022d73785eb2c8f21576a91dced3b788d
+  receipt_id: certificate:bc59507c724eaea013783c46a4848e4c
+  command_id: plan-revise:issue-418:pr642-plan:r7:01af96e1d9d9
+  admitted_at: 2026-09-17T06:51:55.617Z
+  source_digest: sha256:c0d775b2a3041d0403cae8cf68edd2e4e2c256afecc43d34398a7ffcdbd46869
+  decision_digest: sha256:9613de41048bddc75fabc3e860badf397561e22b9920b646c12ce5b93becd76f
+  receipt_digest: sha256:4e45c4f650c393370d8eb586accb1ad7e61d8c1d959534cf46526ef55f445abd
   binding:
     path: docs/plans/PLAN-L7-531-pack-internal-canary-smoke.md
     plan_id: PLAN-L7-531-pack-internal-canary-smoke
     asset_id: plan:44f79788376b81c225ce5913fddbc48f
-    revision: 6
-    content_digest: sha256:925fc49c6b25d7aa865a5d8c926226426cfa3ba9dda853f5a9998fa03779ca76
+    revision: 7
+    content_digest: sha256:c0d775b2a3041d0403cae8cf68edd2e4e2c256afecc43d34398a7ffcdbd46869
   route:
     signal: feature_addition
     mode: add-feature
@@ -79,12 +79,18 @@ admission_receipt:
     plan_id: PLAN-L7-516-pack-self-contained-consumer-runtime
     revision: 4
     digest: sha256:6e4e0d5516e78e7465d260c65482e3302c9304518eb264d39735d049c166a316
+  transition:
+    direction: design_to_implementation
+    implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-531-pack-internal-canary-smoke
     target_revision: 3
     phase: forward_merge
-  escape_reason: "Issue #642 Claude FLAG: separate PR-1A inventory from PR-1B
-    runtime smoke and split start/completion predicates"
+  escape_reason: "Issue #418 PR #642 Opus r3 FLAG 2 件を是正 (Claude control lane
+    引き取り): PR-1B の C003/C004/C007 に layer-1 入力契約 (sealed tar.gz 由来 Pack root の
+    provenance probe、offline npm と network 0、allowlist child env) を固定し、PR-1A
+    C001 の反証不能な child env 条項を provenance probe (sentinel byte、sealed asset
+    open、source worktree read 0) へ置換"
 ---
 
 # PLAN-L7-531: Pack-only internal canary smoke (Windows/Linux)
@@ -188,14 +194,40 @@ manifest/receipt は asset identity と digest を照合する sealed metadata �
 registry/npm fetch、`npm ci`、`npm install`、追加 download は禁止する。
 
 第 1 層は Linux/Windows/aggregate の全 CI run で実行し、network/DNS/socket/HTTP、credential、
-remote mutation の試行を 0 とする。child process の環境は allowlist から明示構築した map だけを渡し、
-`process.env` をそのまま継承してはならない。fixture 生成時に source worktree、directory walk、
+remote mutation の試行を 0 とする。child process を起動する PR-1B では、child の環境を allowlist から明示構築した
+map だけとし、`process.env` をそのまま継承してはならない (下記 (c))。child process を起動しない PR-1A では
+spawn 試行 0 がこの条項を包含するため、env 検査を C001 の oracle に含めない。fixture 生成時に source worktree、directory walk、
 glob、local Pack checkout、開発 DB、PLAN 本文、未許可環境変数から entry を補完しない。
 
 C001 の network 0 は終了コードだけで推測せず、テスト seam へ注入した network/DNS/socket/HTTP
 adapter、child-process spawn、registry/installer client の試行カウンタで観測する。禁止された呼出しは
 typed deny とカウンタ増加を返し、Green は各カウンタが 0、リクエスト記録が空、かつ remote mutation
 がないことの同時成立とする。
+
+C001 は入力の出所も bytes の一致だけで推測しない。sealed `tar.gz` 内の sentinel file の 1 byte を変えると
+clean inventory digest が変わること、materializer が sealed `tar.gz` と `.sha256` を実際に open したこと (各 1 回
+以上)、fs seam で観測した source worktree・local Pack checkout 配下への read/open/stat 試行が 0 であることを
+同時に要求する。staging と同じ bytes を `cpSync(process.cwd())` で作った fixture は、sealed asset の open 0 と
+source worktree への read 試行によって Red になる。
+
+PR-1B の setup/runtime 実行 (C003/C004/C007) にも第 1 層の入力契約をそのまま適用し、次の 3 predicate を
+実装者の判断に残さず oracle で固定する。
+
+- **(a) Pack root の出所**: `setup --solo` に渡す Pack root は、`PLAN-L7-508` の sealed `tar.gz` を `.sha256` で
+  検証した後に一時 directory へ展開したものだけとする。source worktree、Git tree、`cpSync(process.cwd())`、
+  local Pack checkout から組み立てた Pack root は Red。出所は bytes の一致ではなく provenance probe で観測する:
+  sealed `tar.gz` 内の sentinel file の 1 byte を変えると setup 後 consumer root の inventory digest が変わること、
+  かつ fs seam で観測した source worktree 配下への read/open/stat 試行が 0 であること。
+- **(b) network 0 と依存の供給**: npm 依存は sealed `tar.gz` に同梱された依存 (展開後 Pack root 内の
+  `node_modules` または sealed tarball cache) だけから供給し、`setup --solo` と後続 CLI は npm を offline 固定
+  (`npm_config_offline=true`、到達不能な deny registry) で実行する。network/DNS/socket/HTTP seam、child-process
+  spawn の引数、registry/installer client の試行カウンタを観測し、registry 解決・fetch・install・download が
+  1 回でもあれば Red。依存欠落を network で補う fallback は typed deny とする。
+- **(c) child env**: CLI / wrapper の child process へは allowlist (最小 `PATH`、一時 `HOME` / `USERPROFILE` /
+  `TEMP` / `TMP`、Windows の `SystemRoot` / `ComSpec`、`npm_config_offline`) から明示構築した map だけを渡す。
+  親 process に未許可 env sentinel (例: `UT_TDD_CANARY_ENV_SENTINEL`、credential 風の `GITHUB_TOKEN`) を置き、
+  child の env dump・stdout・stderr・consumer root 内 state に sentinel が 0 件であることを観測する。
+  `process.env` の spread・直接継承は Red。
 
 ### 3.2 第 2 層: 受入 run (human-triggered、1 回)
 
@@ -243,8 +275,9 @@ smoke に束ねる唯一の根であり、§7 の `CANDIDATE-ST-PACKCANARY-005` 
    独立再計算する。PR-1A は `setup --solo`、`doctor`、PLAN authoring、review/merge CLIを実行せず、
    runtime dependency を registry/install/download で補充しない。C001 の network/DNS/socket/HTTP・
    spawn・installer 試行カウンタはすべて 0 でなければならない。
-2. **[PR-1B]** `G-PR1B-START-001` を検証した後、Node/npm で `setup --solo` を実行し、sealed
-   consumer runtime (`PLAN-L7-516`) を配置する。
+2. **[PR-1B]** `G-PR1B-START-001` を検証した後、sealed `tar.gz` を `.sha256` で検証して一時 directory へ展開した
+   Pack root だけを入力に、§3.1 (a)(b)(c) (provenance probe、offline npm と network seam、allowlist env) の下で
+   `setup --solo` を実行し、sealed consumer runtime (`PLAN-L7-516`) を配置する。
 3. **[PR-1B]** Pack 取得元 checkout と source 参照を fixture から物理削除する。
 4. **[PR-1B]** 別 cwd から wrapper を起動し、次の最小閉包を順に実行する:
    PLAN authoring smoke (`PLAN-L7-528` の template scope)、`plan lint`、`db rebuild`、
@@ -281,7 +314,7 @@ PR-1A の completion smoke は次の 3 行だけで構成する。各行は seal
 
 | Candidate | PR-1A の Red 入力 / 実行観測 | Green oracle (falsifiable) |
 | --- | --- | --- |
-| CANDIDATE-ST-PACKCANARY-001 | sealed `tar.gz` に source-only/absolute path を混入し、未許可環境変数 sentinel と network/socket 試行を注入 | exact 2 asset を SHA-256 検証後にのみ materialize し、source/absolute path・sentinel の継承・network 試行を 0 とする。child env が allowlist 構築 map で、`process.env` 直接継承なら Red |
+| CANDIDATE-ST-PACKCANARY-001 | sealed `tar.gz` に source-only/absolute path を混入し、network/socket・spawn 試行を注入する。provenance 負例として staging と同じ bytes を `cpSync(process.cwd())` で作った fixture を入力にする | exact 2 asset を SHA-256 検証後にのみ materialize し、source/absolute path・network/spawn 試行を 0 とする。sealed `tar.gz` の sentinel 1 byte 変更で inventory digest が変わり、sealed asset の open が各 1 回以上、source worktree / local Pack checkout への read/open/stat が 0。`cpSync(process.cwd())` fixture は Red |
 | CANDIDATE-ST-PACKCANARY-002 | sealed staging の authoring/skills/inventory entry を欠落・重複させ、registry/installer 呼出しを観測可能にする | PR-1A は CLI/runtime を起動せず、sealed staging の entry だけを検査する。authoring/skills の exact-one inventory と registry/npm/install/download 試行 0 を観測し、欠落・重複・外部 fetch は Red |
 | CANDIDATE-ST-PACKCANARY-006 (unit) | legacy 3 asset、exact 2 asset の欠落/余剰/別名、`latest`/prefix/semver range locator | `tar.gz` + `.sha256` の exact 2 asset と exact identity のみを受理し、legacy/欠落/余剰/別名/非 exact locator を typed deny する |
 
@@ -297,13 +330,13 @@ stdout、stderr、consumer root 内の .ut-tdd runtime state を検査し、skil
 
 | Candidate | 契約軸 | 所有層 |
 | --- | --- | --- |
-| CANDIDATE-ST-PACKCANARY-001 | sealed tar.gz + .sha256 の検証、explicit env、network 0 と source-only/absolute path を clean inventory へ混入させない | PR-1A |
+| CANDIDATE-ST-PACKCANARY-001 | sealed tar.gz + .sha256 の検証と provenance probe (sentinel byte、sealed asset open、source worktree read 0)、network/spawn 0、source-only/absolute path を clean inventory へ混入させない | PR-1A |
 | CANDIDATE-ST-PACKCANARY-002 | sealed staging の authoring template/skills の exact-one inventory、runtime CLIを起動しない registry/install/download 0 | PR-1A |
-| CANDIDATE-ST-PACKCANARY-003 | setup 元撤去後、別 cwd/process から sealed runtime を起動し外部 path は typed deny | PR-1B |
-| CANDIDATE-ST-PACKCANARY-004 | wrapper/config/stdout/stderr/.ut-tdd state に setup 元 absolute path 0 | PR-1B |
+| CANDIDATE-ST-PACKCANARY-003 | §3.1 (a) の sealed 展開 Pack root から (b) offline で setup し、setup 元撤去後、別 cwd/process から sealed runtime を起動し外部 path は typed deny | PR-1B |
+| CANDIDATE-ST-PACKCANARY-004 | §3.1 (a) の sealed 展開 Pack root から setup した consumer root で、wrapper/config/stdout/stderr/.ut-tdd state に setup 元 absolute path 0 | PR-1B |
 | CANDIDATE-ST-PACKCANARY-005 | 公開 asset の SHA-256/size と第 1 層 staging receipt の byte 一致 | PR-2 |
 | CANDIDATE-ST-PACKCANARY-006 | exact 2 asset + exact tag。legacy 3 asset、latest/prefix/range、欠落/余剰を deny | PR-1A (unit) / PR-2 (受入) |
-| CANDIDATE-ST-PACKCANARY-007 | 別 process/cwd/env-clear 後の PLAN/DB/doctor/review 再現と Bun trace 0 | PR-1B |
+| CANDIDATE-ST-PACKCANARY-007 | 別 process/cwd と §3.1 (c) の allowlist 構築 env (sentinel 0) の下で PLAN/DB/doctor/review 再現、network/registry 試行 0、Bun trace 0 | PR-1B |
 
 R1 は sealed staging、consumer-local runtime、immutable identity の責務境界を再確認する。R2 は
 PR-1A/1B/2 の split と Candidate ownership を束縛する。R3 は claim-blind/spec-blind の cross-family
@@ -323,9 +356,10 @@ R4 は不足差分だけを L6-101/L7-515/L7-516 へ gap-only backfill し、既
 
 1. PR-1A の sealed `tar.gz` + `.sha256` **exact 2 asset** input から、CLI/runtime dependency の
    実行や補充を行わず、sealed staging の authoring/skills/inventory を検査する。C001/C002/C006-unit
-   **だけ**が、network/DNS/socket/HTTP/spawn/installer 試行 0、明示構築 env (full `process.env`
-   継承なし) とともに Linux/Windows/aggregate で Green になる。
-2. PR-1B の #420 consumer runtime が setup 元撤去後の別 cwd/process/env-clear で動き、path/state/stdout/
+   **だけ**が、network/DNS/socket/HTTP/spawn/installer 試行 0、provenance probe (sentinel byte、sealed asset open、
+   source worktree read 0) とともに Linux/Windows/aggregate で Green になる。
+2. PR-1B の #420 consumer runtime が、§3.1 (a) の sealed 展開 Pack root から (b) offline で setup され、
+   setup 元撤去後の別 cwd/process と (c) allowlist env で動き、path/state/stdout/
    stderr/.ut-tdd state に source absolute path がなく、Bun trace が 0 になる。
 3. PR-2 の公開 asset が exact 2 件で、digest/identity/tag/Pack commit と publication receipt、第 1 層
    staging receipt に byte 単位で一致する。
