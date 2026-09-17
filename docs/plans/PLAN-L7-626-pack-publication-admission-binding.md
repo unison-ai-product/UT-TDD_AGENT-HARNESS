@@ -20,11 +20,11 @@ agent_slots:
     slot_label: Luna worker - preparation receiptのread-only再観測とadmission record pure
       validation
   - role: qa
-    slot_label: Terra - 40 guard の一軸 mutation、indeterminate 5
+    slot_label: Terra - 42 guard の一軸 mutation、indeterminate 5
       軸、replay、write-zero、sealing / intent / approval 感度の Red oracle (candidate
       57)
   - role: tl
-    slot_label: Codex Sol - 40 guard の契約引用・oracle 対応と sealing 所有の非著者検収 (rev 2 以降。rev
+    slot_label: Codex Sol - 42 guard の契約引用・oracle 対応と sealing 所有の非著者検収 (rev 2 以降。rev
       1 は Claude Opus)
 generates:
   - artifact_path: docs/plans/PLAN-L7-626-pack-publication-admission-binding.md
@@ -45,18 +45,18 @@ status: draft
 github_issue_id: 626
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:7f314c2a3729009a91edede52f139d63
-  command_id: plan-revise:issue-626:pr645-plan:r5:7a6f6ba068ad
-  admitted_at: 2026-09-17T02:00:20.370Z
-  source_digest: sha256:30428d25af75d22909d9f051c9c277cfd17767b26dd8701d35189a7a85842728
-  decision_digest: sha256:191818abdb150ab240365e020866d2a66116516e56c8c8b800f6e568035881ee
-  receipt_digest: sha256:132cdfb8832690cbcc445eefb7daf2bd19e24e00ecede53b033cdba1ae0174b3
+  receipt_id: certificate:1bea99153d64722e85a93230def1096e
+  command_id: plan-revise:issue-626:pr645-plan:r6:6e0d17f83953
+  admitted_at: 2026-09-17T02:32:05.108Z
+  source_digest: sha256:845a5acd2b36ca5de983c040978eed02dda413b3e5bf24b3569a47b4a2ed04f7
+  decision_digest: sha256:48059243fbb0677a976c62b33c18d810c23efe60407f995db34940144daa0cfe
+  receipt_digest: sha256:eb71725e7602d25e7bdcf29007966d8d81f8267554371e17f1395a22ee135d12
   binding:
     path: docs/plans/PLAN-L7-626-pack-publication-admission-binding.md
     plan_id: PLAN-L7-626-pack-publication-admission-binding
     asset_id: plan:529eea3e2017a6d17049746ae353398d
-    revision: 5
-    content_digest: sha256:30428d25af75d22909d9f051c9c277cfd17767b26dd8701d35189a7a85842728
+    revision: 6
+    content_digest: sha256:845a5acd2b36ca5de983c040978eed02dda413b3e5bf24b3569a47b4a2ed04f7
   route:
     signal: feature_addition
     mode: add-feature
@@ -74,12 +74,13 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-626-pack-publication-admission-binding
-    target_revision: 5
+    target_revision: 6
     phase: forward_merge
-  escape_reason: "Issue #626 PR #645 rev 5: 非著者 Codex Sol review r3 (receipt
-    b921a632) の FLAG 2 件を Claude control lane が是正 (是正 3 回目)。approval 参照の非空 guard
-    G40 (candidate 056) と approval binding の nonce 一軸感度 (candidate 057)。guard
-    40、candidate 57。publish/CAS は引き続き対象外。"
+  escape_reason: "Issue #626 PR #645 rev 6: 非著者 Codex Sol review r4 (receipt
+    19e8d523) の FLAG 2 件を Claude control lane が是正 (2(c) 超過の条件付き逸脱、advisor
+    progress 判断)。G21 を 5 field へ展開 (058/059/060/065)、G41 receipt digest 供給拒否
+    (061)、G42 intent 供給拒否 (063)、062/064、§8 predicate→candidate 対応表。guard
+    42、candidate 65。publish/CAS は引き続き対象外。"
 ---
 
 # PLAN-L7-626: Pack公開 admission observation binding
@@ -202,8 +203,8 @@ admission は approval を消費せず、token を mint せず、intent を実�
 ## 3. guard の正本
 
 #624 が報告した `src/setup/pack-publication-adapter.ts` の 15 条件 (G01–G15) を各々独立した
-一軸 deny oracle として引き継ぎ、§2 の predicate のうち 15 条件が閉じていない 25 条件を
-G16–G40 として追加する。1 行の mutant は fixture の 1 要素だけを変える。各行は契約引用、一軸 mutant、赤化テスト (pair test-design の
+一軸 deny oracle として引き継ぎ、§2 の predicate のうち 15 条件が閉じていない 27 条件を
+G16–G42 として追加する。1 行の mutant は fixture の 1 要素だけを変える。各行は契約引用、一軸 mutant、赤化テスト (pair test-design の
 candidate)、deny reason、冗長判定を持つ。#624 §4 の要求どおり、生存 3 件 (L1293 / L1299 /
 L1300) についても独立と判定した理由を同じ表に書く。remote write 境界は全行 0 である。
 
@@ -229,7 +230,7 @@ L1300) についても独立と判定した理由を同じ表に書く。remote 
 | G18 | 565 §1.1「staging identityをread-onlyで再観測」、本 §2.2-6 | 再観測 manifest digest = receipt manifest digest | sealed staging record の manifest digest を別値 | `CANDIDATE-PACKPUB-ADM-018` | `admission_staging_manifest_mismatch` | 独立: receipt 内部整合だけでは sealed record との drift を検出できない |
 | G19 | 565 §1.1「別staging digestのadmissionに未使用」 | receipt の PR が別 staging digest の admission に未使用 | 同じ PR を別 staging digest で admitted 済みにする | `CANDIDATE-PACKPUB-ADM-019` | `admission_pr_staging_conflict` | 独立: G15 は operation ID の差だけを見る |
 | G20 | 565 §1.1「別expected main OIDのadmissionに未使用」 | receipt の PR が別 expected main OID の admission に未使用 | 同じ PR を別 expected main OID で admitted 済みにする | `CANDIDATE-PACKPUB-ADM-020` | `admission_pr_expected_main_conflict` | 独立: G19 は staging digest の差だけを見る。expected main OID 自体は single-use ではない |
-| G21 | 本 §2.2「caller 上書き禁止」 | caller 供給値 ≠ 観測値なら deny | caller の `reviewedHead` を観測値と別に供給 | `CANDIDATE-PACKPUB-ADM-021` | `admission_caller_override` | 独立: 観測が全一致しても caller 値の混入を無視すれば record が偽装される |
+| G21 | 本 §2.2「caller 上書き禁止」、§2.1 (a) | caller 供給値 (`reviewedHead` / `baseOid` / `checks` / `closingReceiptDigest` / §2.1 (a) 期待値) ≠ 観測値・configuration 値なら deny | 各 field を 1 件ずつ観測値と別に供給 (5 case) | `CANDIDATE-PACKPUB-ADM-021`、`058`、`059`、`060`、`065` | `admission_caller_override` | 独立: 観測が全一致しても caller 値の混入を無視すれば record が偽装される。field ごとに別 case |
 | G22 | 本 §2.2「観測束の digest 束縛」 | record digest preimage = 観測束 canonical digest | 観測後に 1 field を改変 | `CANDIDATE-PACKPUB-ADM-022` | `admission_observation_digest_mismatch` | 独立: 個別 guard 通過後の改変を閉じる唯一の predicate |
 | G23 | 565 §1.1「non-author review」、本 §2.2-3 | reviewer identity ≠ PR author | author 自身の approved review | `CANDIDATE-PACKPUB-ADM-023` | `admission_review_author_conflict` | 独立: G08 は結論しか見ない |
 | G24 | 565 §3「ruleset ID」、本 §2.2-4 | 全 required context が success check で覆われる | required context 1 件を欠く (無関係 check だけ success) | `CANDIDATE-PACKPUB-ADM-024` | `admission_required_context_uncovered` | 独立: G11/G12 は非空と結論を見るが context 名の被覆を見ない |
@@ -249,13 +250,15 @@ L1300) についても独立と判定した理由を同じ表に書く。remote 
 | G38 | 565 §1.1「外部で手作りしたbranch/PR…はtyped deny」、本 §2.1 | receipt の `read_back_observation` が observed PR を指す | receipt の read_back_observation を別 PR の journal に差替え | `CANDIDATE-PACKPUB-ADM-038` | `admission_pr_unprepared` | 独立: PR number が一致 (G01) しても preparation journal 由来でない PR を閉じる |
 | G39 | 565 §1.1「mutation approvalsをseal」、本 §2.2-8 | 各 approval nonce が未消費 | approval nonce 1 件を消費済みに (束縛先・集合帰属は正常系のまま) | `CANDIDATE-PACKPUB-ADM-039` | `admission_approval_consumed` | 独立: G29/G30 は束縛先と集合帰属を見るが消費状態を見ない |
 | G40 | 565 §1.1「mutation approvalsをseal」、本 §2.2-8 | approval 参照が 1 件以上 | approval 参照を `[]` に | `CANDIDATE-PACKPUB-ADM-056` | `admission_approval_missing` | 独立: 空集合では G29/G30/G39 の全称判定が vacuous に真になる |
+| G41 | 本 §2.1「receipt digest は導出値」 | caller が `preparationReceiptDigest` を供給した場合、導出値と不一致なら deny (供給しない場合は導出値を使う) | caller に導出値と異なる digest を供給 | `CANDIDATE-PACKPUB-ADM-061` | `admission_receipt_digest_override` | 独立: 055 は導出関数の感度、G41 は caller 供給値の混入を閉じる |
+| G42 | 本 §2.2「intent identity は caller 入力ではない」 | caller が intent identity を供給した場合、導出値と不一致なら deny | caller に導出値と異なる intent identity を供給 | `CANDIDATE-PACKPUB-ADM-063` | `admission_intent_override` | 独立: 050–055 は導出感度、G42 は caller 供給値の混入を閉じる |
 
 したがって #624 の blocking 3 (G03/G09/G11) は補助的な重複ではなく独立した必須 predicate であり、
-生存 3 件 (G01/G05/G06) も上記の理由で独立である。40 guard に冗長なものは無い。
+生存 3 件 (G01/G05/G06) も上記の理由で独立である。42 guard に冗長なものは無い。
 
 ## 4. 判定と no-write 境界
 
-- 全 40 guard が成立したときだけ `publication_admission` を `admitted` とし、§2.3 の項目を
+- 全 42 guard が成立したときだけ `publication_admission` を `admitted` とし、§2.3 の項目を
   seal した record を返す。
 - 値の不一致、replay、required context 欠落 / 集合不一致、receipt 欠落 / malformed、手作り PR、
   caller 上書き、reviewer 同一、approval 束縛不一致 / 消費済みは typed `deny`。read-only observer が unavailable、timeout、応答欠落、schema 判定不能の場合は
@@ -282,7 +285,7 @@ adapter の大規模再構成は変更しない。
 
 ## 6. 完了条件
 
-40 guard の一軸 Red oracle、indeterminate 5 軸 (review / checks / repository / merge-base /
+42 guard の一軸 Red oracle、indeterminate 5 軸 (review / checks / repository / merge-base /
 staging observer)、deny 時 approval consume 0、完全一致 replay、drift replay、admitted 時
 write-zero、sealing 完全性、intent identity 6 構成要素と approval nonce の一軸感度を pair test-design へ 1 対 1 で固定し、PLAN
 lint、admission-check、readability/plan-doc 対象テストを同一 exact HEAD へ束縛する。実装 PR で
@@ -316,3 +319,44 @@ lint、admission-check、readability/plan-doc 対象テストを同一 exact HEA
   (receipt `b921a632…`、FLAG blocking 2、PR 内軽作業、是正 3 回目) を是正。approval 参照の非空
   predicate G40 (`admission_approval_missing`、candidate 056) と approval binding の nonce 一軸感度
   (candidate 057) を追加。guard 40、candidate 57。
+- rev 6 (2026-09-17、Claude control lane): PR #645 exact head `6e0d17f8` に対する Codex Sol review r4
+  (receipt `19e8d523…`、FLAG blocking 2、PR 内軽作業) を是正。CLAUDE.md §FLAG 後の限定是正と merge
+  2(c) の是正 3 回を超えるため、advisor (progress、claude-fable-5) の判断に従い、§8 の predicate→
+  candidate 対応表 (self-audit) を成果物に加えた上で同 PR 内で r5 を 1 回だけ行う (不収束なら
+  close→再出)。G21 を 5 field の case へ展開 (058/059/060/065)、G41 (receipt digest の caller 供給
+  拒否、061)、G42 (intent identity の caller 供給拒否、063) を追加し、§8 の棚卸しで見つかった
+  非 required check の無視 (062)、preparation nonce / journal の非消費 (064) を candidate 化。
+  guard 42、candidate 65。
+
+## 8. predicate→candidate 対応表 (self-audit)
+
+§2 / §4 の全 predicate を列挙し、その除去を Red にする guard / candidate を 1 対 1 で示す。
+対応の無い predicate は存在しない (rev 6 時点)。実装 PR はこの表の順で test を昇格する。
+
+| 節 | predicate | guard / candidate |
+| --- | --- | --- |
+| §2.1 | receipt は #625 §2 の field だけ (schema) | G37 / 037 |
+| §2.1 | receipt が存在する | G36 / 036 |
+| §2.1 | receipt digest は canonical bytes から導出 (caller 供給拒否) | G41 / 061、感度 055 |
+| §2.1 | 手作り PR (read_back_observation 不一致) | G38 / 038 |
+| §2.1 | preparation nonce / journal / token を consume・再利用しない | 064 |
+| §2.1 (a) | configuration 期待値を caller が上書きできない | G21 / 065 |
+| §2.1 (b) | approval 参照は 1 件以上 / 束縛先 / 未消費 / 集合帰属 | G40 / 056、G29 / 029、G39 / 039、G30 / 030 |
+| §2.2-1 | repository ID / full name / target ref / ruleset ID / installation ID 一致 | G25 / 025、G35 / 035、G26 / 026、G27 / 027、G28 / 028 |
+| §2.2-1 | required context 集合 = 期待集合 | G31 / 031 |
+| §2.2-2 | PR number / branch / head / base / tree 一致 | G01 / 001、G16 / 016、G02 / 002、G03 / 003、G17 / 017 |
+| §2.2-3 | reviewed head 形状 / 一致、approved、reviewer ≠ author、review PR 一致、closing digest 形状 | G06 / 006、G07 / 007、G08 / 008、G23 / 023、G05 / 005、G09 / 009 |
+| §2.2-4 | checks head 一致、required 非空、被覆、全 success、非 required check は判定に使わない | G10 / 010、G11 / 011、G24 / 024、G12 / 012、062 |
+| §2.2-5 | merge-base = expected main | G04 / 004 |
+| §2.2-6 | staging manifest / tree / expected main / branch の再観測一致 | G18 / 018、G32 / 032、G33 / 033、G34 / 034 |
+| §2.2-7 | operation ID / key 未使用、同一 PR の別 operation / staging / expected main 不使用 | G13 / 013、G14 / 014、G15 / 015、G19 / 019、G20 / 020 |
+| §2.2-7、§4 | 完全一致 replay は再構成、drift replay は deny | 046、047 |
+| §2.2 | intent identity は 6 要素の導出 (caller 供給拒否) | 050–055、G42 / 063 |
+| §2.2 | approval binding = nonce → intent identity | 057 |
+| §2.2 | caller 上書き禁止 (reviewedHead / baseOid / checks / closingReceiptDigest) | G21 / 021、058、059、060 |
+| §2.2 | 観測束 digest 束縛 (1 field 改変で record digest 変化) | G22 / 022、049 |
+| §2.2 | observer の failure / timeout / 欠落 / schema 不正は indeterminate | 040–044 |
+| §2.3 | sealing 項目の完全性 | 049 |
+| §4 | deny 時 approval consume 0 / remote write 0 | 045 |
+| §4 | admitted 時 remote write 0、approval consume 0、token mint 0、intent 実行 0 | 048 |
+| §4 | receipt 欠落 / malformed では observer を呼ばない | 036、037 (observer call 0) |
