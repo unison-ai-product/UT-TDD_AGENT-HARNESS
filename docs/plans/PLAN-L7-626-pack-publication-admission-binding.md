@@ -45,18 +45,18 @@ status: draft
 github_issue_id: 626
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:8ad8efecb191929d33a428644db79ec1
-  command_id: plan-revise:issue-626:pr645-plan:r9:21718d20400c
-  admitted_at: 2026-09-17T03:20:26.344Z
-  source_digest: sha256:04456cf339c0d7b537ef88ff459015e788ca7fbf9b4032d7fc0396adda551c4e
-  decision_digest: sha256:23bc293eff1ef2aa548c8151eb4e03d259b3c7a2e38410d1628ac0713d186c3f
-  receipt_digest: sha256:aacded6118c250baa20be2f5433f9f9456a5374d7edda6d7fa2a94caf69836ad
+  receipt_id: certificate:ba224e6f2e3c9e7a5342aeab01ee0170
+  command_id: plan-revise:issue-626:pr645-plan:r10:3eed4f9b6e53
+  admitted_at: 2026-09-17T03:33:26.086Z
+  source_digest: sha256:9e0d38448ef674516dc29950f42ae31e5d680cec013a06e8bffa279d9b766300
+  decision_digest: sha256:40bba6d86aa4f111399f84fc3f1f493c49bde92d1e4518d7d7d0f734e187cedc
+  receipt_digest: sha256:13817cbc8ba9f042f621283cf697c25b525e92a20e7509031fb317dd9a355a74
   binding:
     path: docs/plans/PLAN-L7-626-pack-publication-admission-binding.md
     plan_id: PLAN-L7-626-pack-publication-admission-binding
     asset_id: plan:529eea3e2017a6d17049746ae353398d
-    revision: 9
-    content_digest: sha256:04456cf339c0d7b537ef88ff459015e788ca7fbf9b4032d7fc0396adda551c4e
+    revision: 10
+    content_digest: sha256:9e0d38448ef674516dc29950f42ae31e5d680cec013a06e8bffa279d9b766300
   route:
     signal: feature_addition
     mode: add-feature
@@ -74,9 +74,11 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-626-pack-publication-admission-binding
-    target_revision: 9
+    target_revision: 10
     phase: forward_merge
-  escape_reason: "Issue #626 PR #647 rev 9: 非著者 Codex Sol review r2 (receipt
+  escape_reason: "Issue #626 PR #647 rev 10: 非著者 Codex Sol review r3 の FLAG 1 件を是正
+    (是正 3 回目)。approval 参照の束縛を (operation ID, idempotency key) の組へ拡張し G45
+    の比較元を定義。guard 45、candidate 70。旧 rev 9: 非著者 Codex Sol review r2 (receipt
     ee2993ef) の FLAG 2 件を是正。receipt strict schema の 3 群 (identity / binding /
     read_back_observation) を明示、sealed staging record の operation ID /
     idempotency key を receipt binding に束縛 (G44/G45)。guard 45、candidate 70。旧 rev
@@ -153,7 +155,9 @@ admission が receipt 以外に受け取る入力は次の 3 つだけである�
   App installation ID。PLAN-L7-565 §3 の authority 分離契約の一部であり、caller が実行時に
   上書きできない。
 - (b) publication mutation approval の参照: approval nonce と、その nonce が束縛された
-  operation ID。preparation nonce 集合とは別集合であり、admission は nonce を消費しない。
+  (operation ID, idempotency key) の組。operation ID と idempotency key は #625 §2 が preparation の
+  入力として seal した値であり、approval はその組へ束縛されて発行される (PLAN-L7-565 §1.1)。
+  preparation nonce 集合とは別集合であり、admission は nonce を消費しない。
 - (c) read-only observer (§2.2)。
 
 ### 2.2 read-only observation
@@ -180,7 +184,7 @@ admission は同じ operation の read-only observer から次を一度の検証
    は observed PR tree digest と、expected main OID は observed PR base OID と、branch 名は observed PR
    branch 名と byte 一致し、manifest digest は `sha256:` + 64 lowercase hex の形状を持つ。sealed
    staging identity の値はこの record からのみ取り、receipt や caller から取らない。record 自身が持つ
-   operation ID は receipt binding の operation ID と、idempotency key は §2.1 (b) の approval が束縛する
+   operation ID は receipt binding の operation ID と、idempotency key は §2.1 (b) の approval 参照が束縛する
    operation の key と byte 一致する (別 operation の record を解決させる経路を閉じる)。
 7. Freshness observation (PLAN-L7-565 §1.1): operation ID と idempotency key が未使用であり、
    receipt の PR が別 operation ID、別 staging digest (tree + manifest)、別 expected main OID の
@@ -283,7 +287,7 @@ L1300) についても独立と判定した理由を同じ表に書く。remote 
 | G41 | 本 §2.1「receipt digest は導出値」 | caller が `preparationReceiptDigest` を供給した場合、導出値と不一致なら deny (供給しない場合は導出値を使う) | caller に導出値と異なる digest を供給 | `CANDIDATE-PACKPUB-ADM-061` | `admission_receipt_digest_override` | 独立: 055 は導出関数の感度、G41 は caller 供給値の混入を閉じる |
 | G43 | #625 test-design PREP-010、本 §2.1/§2.2-6 | receipt の binding が指す sealed staging record が存在する | binding 先の record を削除 | `CANDIDATE-PACKPUB-ADM-068` | `admission_staging_record_missing` | 独立: G36/G37 は receipt 自体、G43 は束縛先の存在を見る |
 | G44 | 565 §1.1「同一 fresh preparation operation」、本 §2.2-6 | sealed staging record の operation ID = receipt binding の operation ID | observer が binding op-A を op-B の record (他は全一致) に解決 | `CANDIDATE-PACKPUB-ADM-069` | `admission_staging_operation_mismatch` | 独立: G43 は存在、G44 は record の所属 operation を見る |
-| G45 | 565 §1.1「operation ID / idempotency key」、本 §2.2-6 | sealed staging record の idempotency key = 選択 operation の key | record の idempotency key だけを別値 | `CANDIDATE-PACKPUB-ADM-070` | `admission_staging_key_mismatch` | 独立: operation ID と key は別に発番される (G13/G14 と同じ理由) |
+| G45 | 565 §1.1「operation ID / idempotency key」、本 §2.1 (b)、§2.2-6 | sealed staging record の idempotency key = approval 参照が束縛する idempotency key | record の idempotency key だけを別値 (approval 参照の束縛 key は正常系のまま) | `CANDIDATE-PACKPUB-ADM-070` | `admission_staging_key_mismatch` | 独立: operation ID と key は別に発番される (G13/G14 と同じ理由) |
 | G42 | 本 §2.2「intent identity は caller 入力ではない」 | caller が intent identity を供給した場合、導出値と不一致なら deny | caller に導出値と異なる intent identity を供給 | `CANDIDATE-PACKPUB-ADM-063` | `admission_intent_override` | 独立: 050–055 は導出感度、G42 は caller 供給値の混入を閉じる |
 
 したがって #624 の blocking 3 (G03/G09/G11) は補助的な重複ではなく独立した必須 predicate であり、
@@ -377,6 +381,10 @@ lint、admission-check、readability/plan-doc 対象テストを同一 exact HEA
   (identity / binding / read_back_observation) を明示して G16/G37 の predicate を確定、§2.2-6 に sealed
   staging record の operation ID / idempotency key と receipt binding の束縛を追加 (G44/G45、candidate
   069/070)。guard 45、candidate 70。
+- rev 10 (2026-09-17、Claude control lane): PR #647 exact head `3eed4f9b` に対する Codex Sol review r3
+  (FLAG blocking 1、PR 内軽作業、是正 3 回目) を是正。§2.1 (b) の approval 参照の束縛を (operation ID,
+  idempotency key) の組へ拡張し、G45 の比較元 key を approval 参照の束縛 key と定義 (record 側だけの
+  任意 key では成立しない)。guard 45、candidate 70。
 
 ## 8. predicate→candidate 対応表 (self-audit)
 
@@ -401,7 +409,7 @@ lint、admission-check、readability/plan-doc 対象テストを同一 exact HEA
 | §2.2-4 | checks head 一致、required 非空、被覆、全 success、非 required check は判定に使わない | G10 / 010、G11 / 011、G24 / 024、G12 / 012、062 |
 | §2.2-5 | merge-base = expected main | G04 / 004 |
 | §2.2-6 | sealed staging record の manifest 形状、tree = PR tree、expected main = PR base、branch = PR branch | G18 / 018、G32 / 032、G33 / 033、G34 / 034 |
-| §2.2-6 | sealed staging record の operation ID = receipt binding、idempotency key = 選択 operation の key | G44 / 069、G45 / 070 |
+| §2.2-6 | sealed staging record の operation ID = receipt binding、idempotency key = approval 参照の束縛 key | G44 / 069、G45 / 070 |
 | §2.2-7 | operation ID / key 未使用、同一 PR の別 operation / staging / expected main 不使用 | G13 / 013、G14 / 014、G15 / 015、G19 / 019、G20 / 020 |
 | §2.2-7、§4 | 完全一致 replay は再構成、drift replay は deny | 046、047 |
 | §2.2 | intent identity は 6 要素の導出 (caller 供給拒否) | 050–055、G42 / 063 |

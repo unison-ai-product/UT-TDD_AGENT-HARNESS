@@ -43,18 +43,18 @@ status: draft
 github_issue_id: 626
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:8fa00791eef71fa7316f16cd329b577d
-  command_id: plan-revise:issue-626:pr645-reverse:r9:21718d20400c
-  admitted_at: 2026-09-17T03:20:33.832Z
-  source_digest: sha256:36c042c3d2fa0753c7e48a8610aae2343407280ee28b77530985bb9c2ee8aacb
-  decision_digest: sha256:aa220497e6bcf5f6e0577a6b056d8a36fa42c1e0e28dfd7a0adba58fd802007b
-  receipt_digest: sha256:ae754adb3a6fb54abc963f6cd91c8f44b89b5093d1db47d0354d45eff0ed7c0e
+  receipt_id: certificate:407aaae30cde320fbd677c15e9e7221a
+  command_id: plan-revise:issue-626:pr645-reverse:r10:3eed4f9b6e53
+  admitted_at: 2026-09-17T03:33:30.749Z
+  source_digest: sha256:f2bb55cbbd0326ec91afb70a262557cbff0ffef3f8ab9320c7b41173ad714442
+  decision_digest: sha256:db2cca973da894dc404f4424536e8a0fb5c657d9bb30fc3b97269644cb111966
+  receipt_digest: sha256:952fa086f0aed2ca0df6a2120aeb2b9c53aedbeea6aa51cb442cbde1af34b0a5
   binding:
     path: docs/plans/PLAN-REVERSE-626-pack-publication-admission-binding-backfill.md
     plan_id: PLAN-REVERSE-626-pack-publication-admission-binding-backfill
     asset_id: plan:a00a5eddd4929e67b7e26820aac193f6
-    revision: 9
-    content_digest: sha256:36c042c3d2fa0753c7e48a8610aae2343407280ee28b77530985bb9c2ee8aacb
+    revision: 10
+    content_digest: sha256:f2bb55cbbd0326ec91afb70a262557cbff0ffef3f8ab9320c7b41173ad714442
   route:
     signal: reverse
     mode: reverse
@@ -65,20 +65,21 @@ admission_receipt:
     projection_digest: sha256:4e5c8b8b398076d56a72deb696afa871b9c259e667c9bb65f22ef2816ca1d8b4
   origin:
     plan_id: PLAN-L7-626-pack-publication-admission-binding
-    revision: 9
-    digest: sha256:04456cf339c0d7b537ef88ff459015e788ca7fbf9b4032d7fc0396adda551c4e
+    revision: 10
+    digest: sha256:9e0d38448ef674516dc29950f42ae31e5d680cec013a06e8bffa279d9b766300
   transition:
     direction: implementation_to_design
     implementation_disposition: preserved
   reentry:
     target_plan_id: PLAN-REVERSE-626-pack-publication-admission-binding-backfill
-    target_revision: 9
+    target_revision: 10
     phase: forward_merge
-  escape_reason: "Issue #626 PR #647 rev 9: PLAN-L7-626 rev 9 (45 guard、candidate
-    70) と同期。旧 rev 8: R1 の backfill 対象に reviewed head 形状契約を追加し PLAN-L7-626 rev 8
-    と同期。旧 rev 7: PLAN-L7-626 rev 7 (43 guard、§2.1 の #625 整合、candidate 68) に R1 と
-    slot を同期。旧 rev 6: PLAN-L7-626 rev 6 (42 guard、§8 対応表、candidate 65) に
-    R1/R2/R3 と slot を同期。"
+  escape_reason: "Issue #626 PR #647 rev 10: PLAN-L7-626 rev 10 (approval 束縛の組)
+    と同期。旧 rev 9: PLAN-L7-626 rev 9 (45 guard、candidate 70) と同期。旧 rev 8: R1 の
+    backfill 対象に reviewed head 形状契約を追加し PLAN-L7-626 rev 8 と同期。旧 rev 7:
+    PLAN-L7-626 rev 7 (43 guard、§2.1 の #625 整合、candidate 68) に R1 と slot を同期。旧
+    rev 6: PLAN-L7-626 rev 6 (42 guard、§8 対応表、candidate 65) に R1/R2/R3 と slot
+    を同期。"
 ---
 
 # PLAN-REVERSE-626: Pack公開 admission binding の上位契約backfill
@@ -164,3 +165,5 @@ repository/authority、review/check/base/freshness の不変条件、receipt dig
   backfill 対象に reviewed head OID の形状契約を追加し、PLAN-L7-626 rev 8 (G16 strict schema) と同期。
 - rev 9 (2026-09-17、Claude control lane): Codex Sol review r2 (PR #647、receipt `ee2993ef…`) に合わせ、
   PLAN-L7-626 rev 9 (receipt strict schema 3 群、G44/G45 record-binding 束縛、45 guard、candidate 70) と同期。
+- rev 10 (2026-09-17、Claude control lane): Codex Sol review r3 (PR #647) に合わせ、approval 参照の束縛を
+  (operation ID, idempotency key) の組とする PLAN-L7-626 rev 10 と同期。

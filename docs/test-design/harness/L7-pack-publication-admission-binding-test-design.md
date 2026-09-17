@@ -33,7 +33,7 @@ plan-admission record を指さない。値は実装 PR の test module 内で�
 | preparation receipt | member は 3 群だけ: identity (PR `4242`、head、base、tree digest)、binding (operation ID `op-adm-fixture-0001`)、read_back_observation (journal event digest `sha256:` + `sha256("adm-fixture-readback")`、PR `4242`) | receipt digest は canonical bytes から admission が導出。staging identity は receipt に置かない |
 | sealed staging record | operation ID `op-adm-fixture-0001` に束縛された record: staging tree / manifest digest、expected main OID、branch、idempotency key (上記と同値) | §2.2-6 の observer が返す。正常系は observed PR と整合 |
 | configuration 期待値 (§2.1 (a)) | repository ID `424200`、full name `example-org/example-pack`、target ref `refs/heads/main`、ruleset ID `77`、期待 required context `["pack-check"]`、CAS installation ID `9001` | 実 Pack repo 名を使わない。preparation installation は `9002` (G28 mutant 用) |
-| approval 参照 (§2.1 (b)) | approval nonce `apv-adm-fixture-0001` (束縛先 `op-adm-fixture-0001`、未消費)。preparation nonce 集合は `{"prep-adm-fixture-0001"}` | |
+| approval 参照 (§2.1 (b)) | approval nonce `apv-adm-fixture-0001` (束縛先 `(op-adm-fixture-0001, idem-adm-fixture-0001)`、未消費)。preparation nonce 集合は `{"prep-adm-fixture-0001"}` | 束縛 key が G45 の比較元 |
 | review fixture | reviewed head = PR head、`approved`、reviewer `reviewer-b` (author は `author-a`)、closing receipt digest `sha256:` + `sha256("adm-fixture-closing")` の hex | |
 | repository observation | ID `424200`、full name `example-org/example-pack`、target ref `refs/heads/main`、ruleset ID `77`、observed required context `["pack-check"]`、installation ID `9001` | 正常系は期待値と一致 |
 | checks fixture | head = reviewed head、`[{context: "pack-check", conclusion: "success"}]` | |
@@ -129,7 +129,7 @@ G25/G35 は入力出所・形状/equality・被覆・集合一致が異なるた
 | `CANDIDATE-PACKPUB-ADM-067` | 正常系 admitted 後に preparation token port を観測 | token 参照 0 |
 | `CANDIDATE-PACKPUB-ADM-068` | G43: receipt の binding 先 sealed staging record を削除 | `admission_staging_record_missing`、write 0 |
 | `CANDIDATE-PACKPUB-ADM-069` | G44: observer が binding `op-adm-fixture-0001` を operation ID `op-adm-fixture-0002` の record (tree / manifest / main / branch / key は同値) に解決 | `admission_staging_operation_mismatch`、write 0 |
-| `CANDIDATE-PACKPUB-ADM-070` | G45: sealed staging record の idempotency key だけを `idem-adm-fixture-0002` に | `admission_staging_key_mismatch`、write 0 |
+| `CANDIDATE-PACKPUB-ADM-070` | G45: sealed staging record の idempotency key だけを `idem-adm-fixture-0002` に (approval 参照の束縛 key は `idem-adm-fixture-0001` のまま) | `admission_staging_key_mismatch`、write 0 |
 | `CANDIDATE-PACKPUB-ADM-065` | G21: caller が §2.1 (a) 期待値 (repository ID) を configuration と別に供給 | `admission_caller_override`、write 0 |
 
 050–055 と 057 は導出関数を直接呼び、構成要素の 1 つを省く実装 (digest が不変になる) を Red にする。
