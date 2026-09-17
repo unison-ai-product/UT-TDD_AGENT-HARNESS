@@ -1026,174 +1026,70 @@ export async function preparePackPublication(
       remoteWrites: 0,
     });
 
-  let remoteWrites = 0;
-  const consume = async (
-    approval: PackPublicationApproval,
-  ): Promise<"new" | "reconcile" | null> => {
-    let result: PublicationPortResult<{ readonly mode: "new" | "reconcile" }>;
-    try {
-      result = await ports.approval.consume(approval);
-    } catch {
-      return null;
-    }
-    if (result.status !== "attested") return null;
-    try {
-      await ports.durableState.append({
-        transition: approval.transition,
-        mutation: approval.mutation,
-        kind: "planned_nonce_consumed",
-        intentDigest: identity.identityDigest,
-        nonce: approval.nonce,
-        detailDigest: eventDigest({ mode: result.value.mode }),
-      });
-    } catch {
-      return null;
-    }
-    return result.value.mode;
-  };
-  const appendIntent = async (
-    approval: PackPublicationApproval,
-    detail: unknown,
-  ): Promise<boolean> => {
-    try {
-      await ports.durableState.append({
-        transition: approval.transition,
-        mutation: approval.mutation,
-        kind: "mutation_intent",
-        intentDigest: identity.identityDigest,
-        nonce: approval.nonce,
-        detailDigest: eventDigest(detail),
-      });
-      return true;
-    } catch {
-      return false;
-    }
-  };
-  const appendObservation = async (
-    approval: PackPublicationApproval,
-    detail: unknown,
-  ): Promise<boolean> => {
-    try {
-      await ports.durableState.append({
-        transition: approval.transition,
-        mutation: approval.mutation,
-        kind: "read_back_observation",
-        intentDigest: identity.identityDigest,
-        nonce: approval.nonce,
-        detailDigest: eventDigest(detail),
-      });
-      return true;
-    } catch {
-      return false;
-    }
-  };
-
-  const branchMode = await consume(branchApproval);
-  if (branchMode === null)
-    return preparationFailure({
-      status: "indeterminate",
-      stage: "preflight",
-      reason: "approval_unavailable",
-      remoteWrites,
+  const run = new PublicationRun(
+    {
+      intentDigest: identity.identityDigest,
+      approvals: {
+        [branchApproval.mutation]: branchApproval,
+        [pullRequestApproval.mutation]: pullRequestApproval,
+      },
+    },
+    ports,
+  );
+  const preparationFailureFromRun = (
+    result: PackPublicationResult,
+  ): PackPublicationPreparationResult =>
+    preparationFailure({
+      status: result.status,
+      stage: run.count() === 0 ? "preflight" : "pack_commit",
+      reason: result.reason,
+      remoteWrites: run.count(),
     });
-  if (branchMode === "reconcile")
+
+  const branch = await run.mutate("pack_branch_commit", input.plan.commitEntries, () =>
+    ports.pack.commitPublicationBranch({
+      repository: input.repository,
+      branch: input.publicationBranch,
+      entries: input.plan.commitEntries,
+    }),
+  );
+  if ("failure" in branch) return preparationFailureFromRun(branch.failure);
+  if ("reconcile" in branch)
     return preparationFailure({
       status: "indeterminate",
       stage: "preflight",
       reason: "reconciliation_required",
-      remoteWrites,
+      remoteWrites: run.count(),
     });
-  if (!(await appendIntent(branchApproval, input.plan.commitEntries)))
-    return preparationFailure({
-      status: "indeterminate",
-      stage: "pack_commit",
-      reason: "journal_persist_failed",
-      remoteWrites,
-    });
-  remoteWrites += 1;
-  let branch: PublicationPortResult<{ readonly branchCommit: string }>;
-  try {
-    branch = await ports.pack.commitPublicationBranch({
-      repository: input.repository,
-      branch: input.publicationBranch,
-      entries: input.plan.commitEntries,
-    });
-  } catch {
-    return preparationFailure({
-      status: "indeterminate",
-      stage: "pack_commit",
-      reason: "remote_response_lost",
-      remoteWrites,
-    });
-  }
-  if (branch.status !== "attested")
-    return preparationFailure({
-      status: branch.status === "mismatch" ? "partial_publication" : "indeterminate",
-      stage: "pack_commit",
-      reason: branch.reason,
-      remoteWrites,
-    });
-  if (
-    !SHA1.test(branch.value.branchCommit) ||
-    !(await appendObservation(branchApproval, branch.value))
-  )
+  if (!SHA1.test(branch.value.branchCommit))
     return preparationFailure({
       status: "indeterminate",
       stage: "pack_commit",
       reason: "preparation_observation_mismatch",
-      remoteWrites,
+      remoteWrites: run.count(),
     });
 
-  const pullRequestMode = await consume(pullRequestApproval);
-  if (pullRequestMode === null)
-    return preparationFailure({
-      status: "indeterminate",
-      stage: "pack_commit",
-      reason: "approval_unavailable",
-      remoteWrites,
-    });
-  if (pullRequestMode === "reconcile")
+  const pullRequest = await run.mutate(
+    "pack_pr_create",
+    {
+      branchCommit: branch.value.branchCommit,
+      repository: input.repository,
+      branch: input.publicationBranch,
+    },
+    () =>
+      ports.pack.createPullRequest({
+        repository: input.repository,
+        branch: input.publicationBranch,
+        expectedMainSha: input.expectedMainOid,
+      }),
+  );
+  if ("failure" in pullRequest) return preparationFailureFromRun(pullRequest.failure);
+  if ("reconcile" in pullRequest)
     return preparationFailure({
       status: "indeterminate",
       stage: "pack_commit",
       reason: "reconciliation_required",
-      remoteWrites,
-    });
-  if (
-    !(await appendIntent(pullRequestApproval, {
-      branchCommit: branch.value.branchCommit,
-      repository: input.repository,
-      branch: input.publicationBranch,
-    }))
-  )
-    return preparationFailure({
-      status: "indeterminate",
-      stage: "pack_commit",
-      reason: "journal_persist_failed",
-      remoteWrites,
-    });
-  remoteWrites += 1;
-  let pullRequest: PublicationPortResult<PackPublicationPullRequestObservation>;
-  try {
-    pullRequest = await ports.pack.createPullRequest({
-      repository: input.repository,
-      branch: input.publicationBranch,
-      expectedMainSha: input.expectedMainOid,
-    });
-  } catch {
-    return preparationFailure({
-      status: "indeterminate",
-      stage: "pack_commit",
-      reason: "remote_response_lost",
-      remoteWrites,
-    });
-  }
-  if (pullRequest.status !== "attested")
-    return preparationFailure({
-      status: pullRequest.status === "mismatch" ? "partial_publication" : "indeterminate",
-      stage: "pack_commit",
-      reason: pullRequest.reason,
-      remoteWrites,
+      remoteWrites: run.count(),
     });
   const observed = pullRequest.value;
   if (
@@ -1205,14 +1101,13 @@ export async function preparePackPublication(
     observed.headOid !== branch.value.branchCommit ||
     observed.baseOid !== input.expectedMainOid ||
     observed.treeDigest !== identity.treeDigest ||
-    observed.controlManifestSnapshotDigest !== input.plan.controlManifestSnapshotDigest ||
-    !(await appendObservation(pullRequestApproval, observed))
+    observed.controlManifestSnapshotDigest !== input.plan.controlManifestSnapshotDigest
   )
     return preparationFailure({
       status: "partial_publication",
       stage: "pack_commit",
       reason: "preparation_observation_mismatch",
-      remoteWrites,
+      remoteWrites: run.count(),
     });
 
   const unsigned = {
@@ -1242,10 +1137,10 @@ export async function preparePackPublication(
       status: "indeterminate",
       stage: "pack_commit",
       reason: "receipt_persist_failed",
-      remoteWrites,
+      remoteWrites: run.count(),
     });
   }
-  return { ok: true, status: "prepared", receipt, remoteWrites: 2 };
+  return { ok: true, status: "prepared", receipt, remoteWrites: run.count() };
 }
 
 interface FailureContext {
@@ -1286,10 +1181,13 @@ function validReceipt(receipt: PackPublicationReceipt, intent: PackPublicationIn
 
 class PublicationRun {
   private remoteWrites = 0;
-  private readonly intent: PackPublicationIntent;
-  private readonly ports: PackPublicationPorts;
+  private readonly intent: Pick<PackPublicationIntent, "intentDigest" | "approvals">;
+  private readonly ports: Pick<PackPublicationPorts, "approval" | "durableState">;
 
-  constructor(intent: PackPublicationIntent, ports: PackPublicationPorts) {
+  constructor(
+    intent: Pick<PackPublicationIntent, "intentDigest" | "approvals">,
+    ports: Pick<PackPublicationPorts, "approval" | "durableState">,
+  ) {
     this.intent = intent;
     this.ports = ports;
   }
