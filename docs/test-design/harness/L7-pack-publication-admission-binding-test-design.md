@@ -107,7 +107,7 @@ G25/G35 は入力出所・形状/equality・被覆・集合一致が異なるた
 | `CANDIDATE-PACKPUB-ADM-045` | G03 deny 時に approval port を観測 | approval consume 0、typed `deny`、全 remote write 0 |
 | `CANDIDATE-PACKPUB-ADM-046` | 既存 admission record (同一識別子・同一観測束 digest) がある状態で完全 replay | 同一 record digest を決定的再構成、新規 record 0、mutation 0 |
 | `CANDIDATE-PACKPUB-ADM-047` | 既存 admission record と識別子が同一で、PR head だけ drift した replay | typed `deny` (`admission_operation_replay`)、再構成 0、mutation 0 |
-| `CANDIDATE-PACKPUB-ADM-048` | 正常系 fixture で admitted | admitted record 1、remote write ledger 0、approval consume 0、CAS token mint 0、intent 実行 0 |
+| `CANDIDATE-PACKPUB-ADM-048` | 正常系 fixture で admitted | admitted record 1、admission ledger append 1 (sequence 連番、previous record digest 連鎖)、admission journal `admission_observation` event 1 (bundle digest 一致)、remote write ledger 0、approval consume 0、CAS token mint 0、intent 実行 0 |
 | `CANDIDATE-PACKPUB-ADM-049` | 正常系 admitted record の preimage から §2.3 の 1 項目を除去 | record digest が変わる (全項目について 1 件ずつ実行) |
 | `CANDIDATE-PACKPUB-ADM-050` | intent identity 構成要素: operation ID だけを `op-adm-fixture-0002` に | intent identity と approval binding digest が変わる (他 5 要素は不変) |
 | `CANDIDATE-PACKPUB-ADM-051` | intent identity 構成要素: repository ID だけを `424201` に | 同上 |
