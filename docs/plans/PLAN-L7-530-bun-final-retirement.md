@@ -87,18 +87,18 @@ status: confirmed
 github_issue_id: 487
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:bcc879cf812f980f1b98debb884a475d
-  command_id: plan-revise:issue487:final-retirement:tuple-contract-revision:e446:1789646117082
-  admitted_at: 2026-09-17T11:55:17.080Z
-  source_digest: sha256:85e69f978fe06b78cd1b243ab292049749eacd78a4d70ef8adc1c14472eff82b
-  decision_digest: sha256:5b502972b3fa0bdcd1d77917fa55a62af0c3ddf22667a06035f2a73ddf631b20
-  receipt_digest: sha256:e6a25d78e2d990c053667ed1fc9d05731dc4ac77ea85e6f9ec5dfdeb2a03ca96
+  receipt_id: certificate:dbced7e167187f9bdf8a3f6a03d96fc8
+  command_id: plan-revise:issue487:final-retirement:tuple-contract-format-correction:e446:1789646298747
+  admitted_at: 2026-09-17T11:58:18.746Z
+  source_digest: sha256:1555be352e5e4f11463723edb3a1b4ccb7d002a162448dbbc1afb183df220695
+  decision_digest: sha256:7e34a64a32e5cc6de83fe8a12ac2bccee16080e4281620fd2773a6da898601de
+  receipt_digest: sha256:c99b21d63e672ff4b8d58424c6838b6ad9afe9314218f14547ceba29f0bf348b
   binding:
     path: docs/plans/PLAN-L7-530-bun-final-retirement.md
     plan_id: PLAN-L7-530-bun-final-retirement
     asset_id: plan:bc9250c9a7c873dcb9f18956677371f7
-    revision: 14
-    content_digest: sha256:85e69f978fe06b78cd1b243ab292049749eacd78a4d70ef8adc1c14472eff82b
+    revision: 15
+    content_digest: sha256:1555be352e5e4f11463723edb3a1b4ccb7d002a162448dbbc1afb183df220695
   route:
     signal: feature_addition
     mode: add-feature
@@ -116,7 +116,7 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-530-bun-final-retirement
-    target_revision: 13
+    target_revision: 14
     phase: forward_merge
   escape_reason: "Issue #487 tuple contract reissued through canonical plan revise
     after bounded review"
@@ -195,7 +195,9 @@ identity、対象Git object、ancestor判定、ledger record digest、撤去comm
 
 これらのtyped denyは候補の件数やreceiptの存在だけで代用しない。各行のRed実測と、
 同じ軸を1つ戻したGreen実測を、同一 implementation revision の test-design trace と
-実receiptへ結び付ける。## 3. 撤去対象と残置fixtureの分離
+実receiptへ結び付ける。
+
+## 3. 撤去対象と残置fixtureの分離
 
 Q0 detectorのfixtureや禁止語テストは、検出能力を検証するための**到達不能な retained
 fixture**として残せる。ただしfixtureは専用fixture root/registryに隔離し、productionの

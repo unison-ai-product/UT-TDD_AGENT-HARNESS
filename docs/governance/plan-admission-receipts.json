@@ -4608,6 +4608,22 @@
         "revision": 14,
         "content_digest": "sha256:85e69f978fe06b78cd1b243ab292049749eacd78a4d70ef8adc1c14472eff82b"
       }
+    },
+    {
+      "sequence": 289,
+      "previous_record_digest": "sha256:0c173fb9c39dd2fa45040d2a473d136b6117d64ab8591cc7252a2aebc7cabd7f",
+      "record_digest": "sha256:a427d5c6e9838e54ce0ee169a7371a02579fbb522ff90bca8bf2b3aa39238749",
+      "command_id": "plan-revise:issue487:final-retirement:tuple-contract-format-correction:e446:1789646298747",
+      "receipt_id": "certificate:dbced7e167187f9bdf8a3f6a03d96fc8",
+      "receipt_digest": "sha256:c99b21d63e672ff4b8d58424c6838b6ad9afe9314218f14547ceba29f0bf348b",
+      "decision_digest": "sha256:7e34a64a32e5cc6de83fe8a12ac2bccee16080e4281620fd2773a6da898601de",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-530-bun-final-retirement.md",
+        "plan_id": "PLAN-L7-530-bun-final-retirement",
+        "asset_id": "plan:bc9250c9a7c873dcb9f18956677371f7",
+        "revision": 15,
+        "content_digest": "sha256:1555be352e5e4f11463723edb3a1b4ccb7d002a162448dbbc1afb183df220695"
+      }
     }
   ]
 }
