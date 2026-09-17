@@ -64,10 +64,10 @@ admission_receipt:
   schema_version: v2
   receipt_id: certificate:aefff77da46304bdff051b15ff4bf4cb
   command_id: plan-revise:issue-424:memory-clean-cut-impl:4
-  admitted_at: 2026-09-17T05:10:11.742Z
+  admitted_at: 2026-09-17T05:11:24.408Z
   source_digest: sha256:ac5224c7616e183c7cf3fd8cdbc2fd61b4cfb5ae912bcf4ea956e596f0673e73
   decision_digest: sha256:de782ca208caf201ad467c21b6d951113c84a4aeb61a3cba42def801d6510791
-  receipt_digest: sha256:6432275da5f6c674b8a7a9662f872988c7a22d06bcc3e313736606463564eb7a
+  receipt_digest: sha256:901746b83765ed275b0e040c25aa18377904d406c72d8805654c4a984f8aaebd
   binding:
     path: docs/plans/PLAN-L7-566-memory-clean-cut-replacement.md
     plan_id: PLAN-L7-566-memory-clean-cut-replacement
