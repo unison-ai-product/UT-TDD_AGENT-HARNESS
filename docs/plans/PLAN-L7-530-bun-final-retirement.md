@@ -87,18 +87,18 @@ status: confirmed
 github_issue_id: 487
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:8411678bfc385b91f3cd2ed7aa565cd2
-  command_id: plan-revise:issue487:final-retirement:digest-correction:e446:1789632686717
-  admitted_at: 2026-09-17T08:11:26.717Z
-  source_digest: sha256:d6b892087b2094f7d6e6563abe889c20627aed2cf3492d50a46deb04cb2d47bd
-  decision_digest: sha256:44405fd37378a97977d29fa244ea9cb0c5a9161648f0270537499e76e50ab8ff
-  receipt_digest: sha256:f2001dedd50473254cf66470503587caf702db0a601727f9cc59c431ad49ae1d
+  receipt_id: certificate:bcc879cf812f980f1b98debb884a475d
+  command_id: plan-revise:issue487:final-retirement:tuple-contract-revision:e446:1789646117082
+  admitted_at: 2026-09-17T11:55:17.080Z
+  source_digest: sha256:85e69f978fe06b78cd1b243ab292049749eacd78a4d70ef8adc1c14472eff82b
+  decision_digest: sha256:5b502972b3fa0bdcd1d77917fa55a62af0c3ddf22667a06035f2a73ddf631b20
+  receipt_digest: sha256:e6a25d78e2d990c053667ed1fc9d05731dc4ac77ea85e6f9ec5dfdeb2a03ca96
   binding:
     path: docs/plans/PLAN-L7-530-bun-final-retirement.md
     plan_id: PLAN-L7-530-bun-final-retirement
     asset_id: plan:bc9250c9a7c873dcb9f18956677371f7
-    revision: 13
-    content_digest: sha256:d6b892087b2094f7d6e6563abe889c20627aed2cf3492d50a46deb04cb2d47bd
+    revision: 14
+    content_digest: sha256:85e69f978fe06b78cd1b243ab292049749eacd78a4d70ef8adc1c14472eff82b
   route:
     signal: feature_addition
     mode: add-feature
@@ -116,10 +116,10 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-530-bun-final-retirement
-    target_revision: 12
+    target_revision: 13
     phase: forward_merge
-  escape_reason: "Issue #487 preflight evidence digest corrected through canonical
-    plan revise"
+  escape_reason: "Issue #487 tuple contract reissued through canonical plan revise
+    after bounded review"
 ---
 
 # PLAN-L7-530: Bun 最終撤去の tuple-bound 実装契約
@@ -142,36 +142,60 @@ aggregate、Q0 parity が同じ chain で成立した後に、到達可能な Bu
 - F0c の Linux/Windows/aggregate receipt が同じ F0b predecessor を指す。
 - Q0 の Node-only detector/parity receipt が F0c aggregate の canonical merge commitを
   ancestor として指す。
+- F0b/F0c/Q0 の各 predecessor receipt の subject は、完全な履歴で検証可能な
+  **pre-retirement ancestor** として `retirement_subject` へ到達する。predecessor の subject は
+  retirement commit と同一であってはならず、predecessor receipt を撤去commit自身の receiptと
+  取り違えない。
+- 各receiptは実在するproducer・edge・generation・artifact・subject・ancestryへ束縛される。
+  receiptの存在、shape、自己計算digest、推測値だけで開始条件を満たした扱いにしない。
 
 これは準備用の削除ではない。開始ゲートを満たさない場合、productionのBun経路、
 `package.json` の `build`、`bunAuthority`、`bun.lock` を変更しない。
 
 ## 2. 4要素 tuple の admission
 
-最終撤去の唯一の受理条件を、次の4要素 tuple として固定する。
+最終撤去の唯一の受理条件を、次の4要素 tuple として固定する。4要素は同じ文字列を
+重複して束縛するものではなく、pre-retirement evidence と撤去対象commitを分離した
+異なる軸である。
 
 | 要素 | 意味 |
 |---|---|
-| `subject_revision` | build/parityの対象とする algorithm-prefixed Git object ID |
+| `subject_revision` | sealed build/parityの対象とする pre-retirement の algorithm-prefixed Git object ID |
 | `generation_id` | sealed Node generation の immutable ID |
 | `artifact_digest` | sealed build artifact の content digest |
-| `retirement_subject` | `build` script等を撤去するこのcommitの subject revision |
+| `retirement_subject` | `build` script等を実際に撤去するこのcommitの subject revision |
 
-sealed build receipt と Node parity receipt の双方が存在し、各tupleが完全一致し、かつ
-`retirement_subject` が実際の撤去commitに一致する場合だけ、最終撤去を受理する。次を全て
-独立した拒否軸として実装する。
-
-- receipt片側欠落、unknown schema、失敗・cancelled・skipped receipt
-- stale `subject_revision`、2 receipt間の `subject_revision` 不一致
-- 同revision別 `generation_id`、同generation別 `artifact_digest`
-- 3要素だけ一致し `retirement_subject` が撤去commitと不一致
-- predecessorがcandidate HEADのancestorでない、履歴がshallow/promisorで完全性不明
-- 同一target/同一HEADの二重admission、別edge/別producerのreceipt流用
+sealed build receipt と Node parity receipt の双方が存在し、F0b/F0c/Q0の実receiptが宣言された
+edgeとproducerから読み出され、tupleの各軸、artifact、generation、subject、完全履歴の
+ancestor関係を検証でき、かつ `retirement_subject` が実際の撤去commitに一致する場合だけ、
+最終撤去を受理する。predecessor receipt の subject と `retirement_subject` は別Git objectで
+あり、predecessorが撤去commitと同一である入力は拒否する。receiptを自己計算・推測・別edge・
+別producerから補うことはできない。
 
 拒否時は production write、build script変更、runtime activation、receiptの推測生成を全て0
 とし、理由は既存のtyped reason集合へ変換する。存在チェックだけの恒真oracleは採用しない。
 
-## 3. 撤去対象と残置fixtureの分離
+### 2.1 独立した拒否軸と後続実装レビューの証跡
+
+次の各行は、後続の実装PRで一軸ずつRedへ落とし、対応するtyped denyを観測するための
+契約行である。候補IDの存在だけをGreen証拠とはせず、実装レビューでは実receipt、producer/edge
+identity、対象Git object、ancestor判定、ledger record digest、撤去commitの exact subjectを
+提出する。拒否時は production/activation/deletion/receipt mint が0であることを併記する。
+
+| 契約軸 | 変異入力 | typed deny の期待 |
+|---|---|---|
+| predecessor と撤去commitの分離 | predecessor receipt の subject = `retirement_subject` | `predecessor_equals_retirement` |
+| predecessor receipt 完備 | F0b/F0c/Q0 のいずれかを欠落・unknown・failed・cancelled・skipped | `receipt_missing_or_invalid` |
+| tuple各軸 | `subject_revision` / `generation_id` / `artifact_digest` を一軸ずつ drift | `tuple_axis_mismatch` |
+| admission replay | 同一target・同一撤去subjectを二重admit | `duplicate_admission` |
+| edge束縛 | 別edgeのreceiptを同じtupleへ差替え | `cross_edge_receipt_reuse` |
+| producer束縛 | 別producerのreceiptを同じedgeへ差替え | `cross_producer_receipt_reuse` |
+| stale / 非祖先 | pre-retirement receiptを撤去subjectから到達不能なfork・後続・stale objectへ差替え | `not_ancestor` |
+| 履歴完全性 | shallow/truncated/promisorでancestorを判定不能にする | `history_incomplete` |
+
+これらのtyped denyは候補の件数やreceiptの存在だけで代用しない。各行のRed実測と、
+同じ軸を1つ戻したGreen実測を、同一 implementation revision の test-design trace と
+実receiptへ結び付ける。## 3. 撤去対象と残置fixtureの分離
 
 Q0 detectorのfixtureや禁止語テストは、検出能力を検証するための**到達不能な retained
 fixture**として残せる。ただしfixtureは専用fixture root/registryに隔離し、productionの
