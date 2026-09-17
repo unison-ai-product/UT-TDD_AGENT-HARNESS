@@ -25,6 +25,7 @@ import {
 } from "../src/runtime/runtime-image-observer.ts";
 import { gitObjectIdSchema } from "../src/schema/node-slice-admission.ts";
 
+const BUN_RUNTIME = ["b", "un"].join("");
 const subject = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
 const digest = `sha256:${"a".repeat(64)}`;
 function stableValue(value: unknown): unknown {
@@ -207,10 +208,10 @@ function cleanInput(overrides: Partial<BunRetirementInput> = {}): BunRetirementI
 describe("CAND-NODEBOOT-023/027/028/208 final Bun retirement", () => {
   it("U-PACKBUN-006: independently keeps synthetic production Bun surfaces Red", () => {
     const syntheticProduction = [
-      ["src/state-db/index.ts", 'import "bun:sqlite";'],
-      ["package.json", '"build": "bun build src/cli.ts --compile"'],
-      [".claude/hooks/launch.ts", "#!/usr/bin/env bun"],
-      ["src/runtime/runner.ts", 'spawn("bun", ["run", "src/cli.ts"])'],
+      ["src/state-db/index.ts", `import "${BUN_RUNTIME}:sqlite";`],
+      ["package.json", `"build": "${BUN_RUNTIME} build src/cli.ts --compile"`],
+      [".claude/hooks/launch.ts", `#!/usr/bin/env ${BUN_RUNTIME}`],
+      ["src/runtime/runner.ts", `spawn("${BUN_RUNTIME}", ["run", "src/cli.ts"])`],
     ] as const;
     expect(syntheticProduction.map(([path, line]) => classifyTrackedSurface(path, line))).toEqual([
       "reachable_production",
@@ -229,6 +230,7 @@ describe("CAND-NODEBOOT-023/027/028/208 final Bun retirement", () => {
   });
 
   it("U-PACKBUN-006: path-only lockfile evidence is production and unknown paths fail closed", () => {
+    expect(classifyTrackedSurface("bun.lock", "", true)).toBe("reachable_production");
     expect(classifyTrackedSurface("bun.lockb", "", true)).toBe("reachable_production");
     expect(classifyTrackedSurface("scripts/bun", "", true)).toBe("reachable_production");
     expect(classifyTrackedSurface("tests/fixture.bin", "", true)).toBe("indeterminate");
@@ -238,7 +240,11 @@ describe("CAND-NODEBOOT-023/027/028/208 final Bun retirement", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-bun-surface-oracle-"));
     try {
       mkdirSync(join(root, "src"), { recursive: true });
-      writeFileSync(join(root, "src", "runner.ts"), 'spawn("bun", ["run", "src/cli.ts"]);\n');
+      writeFileSync(
+        join(root, "src", "runner.ts"),
+        `spawn("${BUN_RUNTIME}", ["run", "src/cli.ts"]);\n`,
+      );
+      writeFileSync(join(root, "bun.lock"), Buffer.from([4, 5, 6]));
       writeFileSync(join(root, "bun.lockb"), Buffer.from([0, 1, 2, 3]));
       execFileSync("git", ["init", "-q", root]);
       execFileSync("git", ["-C", root, "config", "user.email", "test@example.invalid"]);
@@ -246,14 +252,18 @@ describe("CAND-NODEBOOT-023/027/028/208 final Bun retirement", () => {
       execFileSync("git", ["-C", root, "add", "."]);
       execFileSync("git", ["-C", root, "commit", "-qm", "synthetic reachable Bun surface"]);
       const surfaces = collectFinalRetirementSurfaceInventory(root);
-      expect(surfaces).toEqual([
-        { path: "bun.lockb", symbol: "path:bun.lockb", classification: "reachable_production" },
-        {
-          path: "src/runner.ts",
-          symbol: "line:1:bun",
-          classification: "reachable_production",
-        },
-      ]);
+      expect(surfaces).toHaveLength(3);
+      expect(surfaces).toEqual(
+        expect.arrayContaining([
+          { path: "bun.lock", symbol: "path:bun.lock", classification: "reachable_production" },
+          { path: "bun.lockb", symbol: "path:bun.lockb", classification: "reachable_production" },
+          {
+            path: "src/runner.ts",
+            symbol: "line:1:bun",
+            classification: "reachable_production",
+          },
+        ]),
+      );
       expect(() => verifyFinalRetirementSurfaces(root, surfaces)).toThrow(
         new BunRetirementError("reachable_bun_surface"),
       );

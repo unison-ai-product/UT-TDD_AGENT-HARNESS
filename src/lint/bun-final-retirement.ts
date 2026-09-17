@@ -168,7 +168,7 @@ const COMPATIBILITY_PATHS = new Set([
 
 const BUN_TOKEN = /\b(?:bun|bunx)\b/iu;
 const BUN_TOKEN_FALLBACK = "bun";
-const BUN_PATH_TOKEN = /(?:^|[./_-])bunx?(?:$|[./_-])|(?:^|[./_-])bun\.lockb$/iu;
+const BUN_PATH_TOKEN = /(?:^|[./_-])bunx?(?:$|[./_-])|(?:^|[./_-])bun\.lock(?:b)?$/iu;
 const ACTIVE_INSTRUCTION =
   /\b(?:use|run|install|build|execute|exec|command|filesystem|script|setup|launch|invoke|start)\b/iu;
 const RETIRED_POLICY =
@@ -260,6 +260,7 @@ export function classifyTrackedSurface(
   // unknown and must not be silently retained.
   if (pathOnly) {
     if (
+      path === "bun.lock" ||
       path === "bun.lockb" ||
       /(?:^|\/)(?:bun|bunx)(?:\.(?:cmd|exe|bat))?$/iu.test(path) ||
       /^(?:\.github|\.claude\/hooks|bin|scripts|src\/setup)\//iu.test(path)
