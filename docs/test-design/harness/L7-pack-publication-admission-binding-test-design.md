@@ -54,7 +54,7 @@ PLAN-L7-626 §3 の同じ行と一致させる。
 | `CANDIDATE-PACKPUB-ADM-003` | G03 | 565 §1.1、#624 §4.1 | observed PR base を別 OID | `admission_base_mismatch`、write 0 |
 | `CANDIDATE-PACKPUB-ADM-004` | G04 | 565 §3 | merge-base を別 OID | `admission_merge_base_mismatch`、write 0 |
 | `CANDIDATE-PACKPUB-ADM-005` | G05 | 626 §2.2-3 | review receipt の PR を `4243` | `admission_review_pr_mismatch`、write 0 |
-| `CANDIDATE-PACKPUB-ADM-006` | G06 | 626 §2.2-3 | reviewed head を 39 hex / uppercase / 64 hex | `admission_review_head_invalid`、write 0 |
+| `CANDIDATE-PACKPUB-ADM-006` | G06 | 626 §2.2 形状契約 | reviewed head を 39 hex / uppercase / 64 hex | `admission_review_head_invalid`、write 0 |
 | `CANDIDATE-PACKPUB-ADM-007` | G07 | 565 §1.1 | reviewed head を形状正しい別 OID | `admission_review_head_mismatch`、write 0 |
 | `CANDIDATE-PACKPUB-ADM-008` | G08 | 565 §1.1 | conclusion を `changes_requested` | `admission_review_not_approved`、write 0 |
 | `CANDIDATE-PACKPUB-ADM-009` | G09 | 626 §2.2 形状契約、#624 §4.2 | closing receipt digest を 63 hex / `sha1:` prefix / uppercase | `admission_review_receipt_invalid`、write 0 |
@@ -64,7 +64,7 @@ PLAN-L7-626 §3 の同じ行と一致させる。
 | `CANDIDATE-PACKPUB-ADM-013` | G13 | 565 §1.1、626 §2.2-7 | 別観測束の既存 admission record に同じ operation ID を登録 | `admission_operation_replay`、write 0 |
 | `CANDIDATE-PACKPUB-ADM-014` | G14 | 565 §1.1、626 §2.2-7 | 別観測束の既存 admission record に同じ idempotency key を登録 | `admission_idempotency_replay`、write 0 |
 | `CANDIDATE-PACKPUB-ADM-015` | G15 | 565 §1.1 | PR `4242` を別 operation ID で admitted 済みに登録 | `admission_pr_replay`、write 0 |
-| `CANDIDATE-PACKPUB-ADM-016` | G16 | 625 §2、626 §2.2-2 | observed PR branch を `pack/publication/other` | `admission_branch_mismatch`、write 0 |
+| `CANDIDATE-PACKPUB-ADM-016` | G16 | #625 §2、626 §2.1 | receipt に余剰 field `branch: "pack/publication/op-adm-fixture-0001"` を追加 (4 field と binding は正常系のまま) | `admission_receipt_invalid`、observer call 0、write 0 |
 | `CANDIDATE-PACKPUB-ADM-017` | G17 | 625 §2、626 §2.2-2 | observed PR tree digest を別値 | `admission_tree_digest_mismatch`、write 0 |
 | `CANDIDATE-PACKPUB-ADM-018` | G18 | 565 §1.1、626 §2.2-6 | sealed staging record の manifest digest を 63 hex に | `admission_staging_manifest_invalid`、write 0 |
 | `CANDIDATE-PACKPUB-ADM-019` | G19 | 565 §1.1 | PR `4242` を別 staging digest で admitted 済みに登録 | `admission_pr_staging_conflict`、write 0 |

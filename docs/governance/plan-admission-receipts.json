@@ -4576,6 +4576,38 @@
         "revision": 7,
         "content_digest": "sha256:4e3ab9ffab1ddd727a1e0cf510562b1892dd727cba2eb9209347e7d32a82dcc1"
       }
+    },
+    {
+      "sequence": 287,
+      "previous_record_digest": "sha256:51da9c7c51dc9a2637417b26d781a36fd9af18fbd52d57130124461575b5c3fd",
+      "record_digest": "sha256:f6167a047d65e21109f5619fcacf97d01e8373ff88cbc2c48d8bfba99d35a901",
+      "command_id": "plan-revise:issue-626:pr645-plan:r8:70c7caa5b008",
+      "receipt_id": "certificate:a0e5e78c3e4f6bda9ecaaba89e6e6311",
+      "receipt_digest": "sha256:23bc085faf66edf9b4943d7c52a2d792b0902dacabc6cd8421725ab69ebb6f62",
+      "decision_digest": "sha256:5b9e43fbb5ae3f8d07c57c34609a6706d28db3cd2d8d588a0cb205546435fe3a",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-626-pack-publication-admission-binding.md",
+        "plan_id": "PLAN-L7-626-pack-publication-admission-binding",
+        "asset_id": "plan:529eea3e2017a6d17049746ae353398d",
+        "revision": 8,
+        "content_digest": "sha256:3a6afe89bc7d122aa34d9e9fae00a38cb15a90293998898c44b88b45589b61a5"
+      }
+    },
+    {
+      "sequence": 288,
+      "previous_record_digest": "sha256:f6167a047d65e21109f5619fcacf97d01e8373ff88cbc2c48d8bfba99d35a901",
+      "record_digest": "sha256:8b90ddbd457d36ae3f1d523f0f0687978351a279e047d5dbbba1d765543fafe8",
+      "command_id": "plan-revise:issue-626:pr645-reverse:r8:70c7caa5b008",
+      "receipt_id": "certificate:dafc5377f7cb0b3bbf81c6537799e5c2",
+      "receipt_digest": "sha256:f110bfd928859de82a5fc7e5aa5675fea480b6764dd67c18a9ecefb94b9cbe44",
+      "decision_digest": "sha256:6573579b32b1653e78f00835141ab579d92342d8ebb79a8800162428e3b5a3b6",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-626-pack-publication-admission-binding-backfill.md",
+        "plan_id": "PLAN-REVERSE-626-pack-publication-admission-binding-backfill",
+        "asset_id": "plan:a00a5eddd4929e67b7e26820aac193f6",
+        "revision": 8,
+        "content_digest": "sha256:87361f9c86262499605aee40a6c97978a6637c2cd1586642c125c0d42d048165"
+      }
     }
   ]
 }

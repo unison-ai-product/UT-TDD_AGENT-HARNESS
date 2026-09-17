@@ -45,18 +45,18 @@ status: draft
 github_issue_id: 626
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:55f663d3d824a226b6b50027ec84602f
-  command_id: plan-revise:issue-626:pr645-plan:r7:f8eda30a7554
-  admitted_at: 2026-09-17T02:50:51.764Z
-  source_digest: sha256:2d75ceada684891888141c7aafc300e72879f0464d122042568b423d66109da3
-  decision_digest: sha256:47557d681bcc5c9d4e4c80dc825a41232ec66e2ecb7cb207fc9f83cb35c48d7c
-  receipt_digest: sha256:758f4d04755dbc4643c91a9229e0146e37bf7b12eceee52d05366249c055fbe3
+  receipt_id: certificate:a0e5e78c3e4f6bda9ecaaba89e6e6311
+  command_id: plan-revise:issue-626:pr645-plan:r8:70c7caa5b008
+  admitted_at: 2026-09-17T03:02:39.877Z
+  source_digest: sha256:3a6afe89bc7d122aa34d9e9fae00a38cb15a90293998898c44b88b45589b61a5
+  decision_digest: sha256:5b9e43fbb5ae3f8d07c57c34609a6706d28db3cd2d8d588a0cb205546435fe3a
+  receipt_digest: sha256:23bc085faf66edf9b4943d7c52a2d792b0902dacabc6cd8421725ab69ebb6f62
   binding:
     path: docs/plans/PLAN-L7-626-pack-publication-admission-binding.md
     plan_id: PLAN-L7-626-pack-publication-admission-binding
     asset_id: plan:529eea3e2017a6d17049746ae353398d
-    revision: 7
-    content_digest: sha256:2d75ceada684891888141c7aafc300e72879f0464d122042568b423d66109da3
+    revision: 8
+    content_digest: sha256:3a6afe89bc7d122aa34d9e9fae00a38cb15a90293998898c44b88b45589b61a5
   route:
     signal: feature_addition
     mode: add-feature
@@ -74,15 +74,18 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-626-pack-publication-admission-binding
-    target_revision: 7
+    target_revision: 8
     phase: forward_merge
-  escape_reason: "Issue #626 再出 rev 7 (PR #645 close 後): 非著者 Codex Sol review r5
-    (receipt 8c85f286) の upstream conflict を受け、§2.1 を #625 §2 / PREP-010 に整合
-    (receipt 4 field + sealed staging identity への束縛、staging identity は §2.2-6
-    観測のみ)、G18 形状 / G32–G34 record-PR 整合 / G43 record 存在、064 を 3 軸へ分割。guard
-    43、candidate 68。旧 rev 6: 非著者 Codex Sol review r4 (receipt 19e8d523) の FLAG 2
-    件を Claude control lane が是正 (2(c) 超過の条件付き逸脱、advisor progress 判断)。G21 を 5
-    field へ展開 (058/059/060/065)、G41 receipt digest 供給拒否 (061)、G42 intent 供給拒否
+  escape_reason: "Issue #626 PR #647 rev 8: 非著者 Codex Sol review r1 (receipt
+    17281c87) の FLAG 2 件を是正。G16 を receipt strict schema (余剰 identity field 拒否)
+    の一軸 oracle に置換、reviewed head OID 形状を §2.2 の L7 新設契約として明示し Reverse R1 で
+    backfill。guard 43、candidate 68。旧 rev 7: 非著者 Codex Sol review r5 (receipt
+    8c85f286) の upstream conflict を受け、§2.1 を #625 §2 / PREP-010 に整合 (receipt 4
+    field + sealed staging identity への束縛、staging identity は §2.2-6 観測のみ)、G18 形状
+    / G32–G34 record-PR 整合 / G43 record 存在、064 を 3 軸へ分割。guard 43、candidate 68。旧
+    rev 6: 非著者 Codex Sol review r4 (receipt 19e8d523) の FLAG 2 件を Claude control
+    lane が是正 (2(c) 超過の条件付き逸脱、advisor progress 判断)。G21 を 5 field へ展開
+    (058/059/060/065)、G41 receipt digest 供給拒否 (061)、G42 intent 供給拒否
     (063)、062/064、§8 predicate→candidate 対応表。guard 42、candidate 65。publish/CAS
     は引き続き対象外。"
 ---
@@ -181,9 +184,10 @@ expected main OID、reviewed head OID、preparation receipt digest の canonical
 admission が導出する。mutation approval binding は各 approval nonce をこの intent identity へ
 結び付けた canonical digest である。
 
-closing review receipt digest の形状は本 PLAN が L7 契約として新設する: `sha256:` + 64 lowercase
-hex (`/^sha256:[0-9a-f]{64}$/`)。上位 PLAN-L7-565 §1.1/§3 はこの形状を固定しておらず、Reverse
-R1 (PLAN-REVERSE-626) で上位契約へ backfill する。
+本 PLAN が L7 契約として新設する形状は 2 つある。closing review receipt digest は `sha256:` + 64
+lowercase hex (`/^sha256:[0-9a-f]{64}$/`)、reviewed head OID は Git SHA-1 object 形式の 40 lowercase
+hex (`/^[0-9a-f]{40}$/`。SHA-256 object 形式の Pack repository は本契約の対象外)。上位 PLAN-L7-565
+§1.1/§3 はいずれの形状も固定しておらず、Reverse R1 (PLAN-REVERSE-626) で上位契約へ backfill する。
 
 観測された値は caller の `reviewedHead`、`baseOid`、`checks`、`closingReceiptDigest` で
 上書きできず、caller 値が観測値と異なれば typed deny とする。観測値全体 (単独 field では
@@ -228,7 +232,7 @@ L1300) についても独立と判定した理由を同じ表に書く。remote 
 | G03 (旧L1295) | 565 §1.1「PR head/baseが現在値と一致」、#624 §4.1 | observed PR base = receipt base OID | base OID を別値 | `CANDIDATE-PACKPUB-ADM-003` | `admission_base_mismatch` | 独立: G04 の merge-base は別 port の観測であり、base が変わっても merge-base は一致し得る |
 | G04 (旧L1298) | 565 §3「merge-baseがexpected main」 | merge-base = expected main OID | merge-base を別値 | `CANDIDATE-PACKPUB-ADM-004` | `admission_merge_base_mismatch` | 独立: base OID 一致でも history が分岐すれば merge-base は変わる |
 | G05 (旧L1299) | 本 §2.2-3「同じ PR の review」 | closing review の PR number = receipt PR number | review receipt の PR を別値 | `CANDIDATE-PACKPUB-ADM-005` | `admission_review_pr_mismatch` | 独立: G01 が成立しても別 PR の review receipt を差し込める |
-| G06 (旧L1300) | 本 §2.2-3、Git SHA-1 OID 形状 | reviewed head は 40 lowercase hex | malformed / SHA-256 形状 | `CANDIDATE-PACKPUB-ADM-006` | `admission_review_head_invalid` | 独立: G07 は equality であり、malformed 値同士の一致を equality だけでは弾けない |
+| G06 (旧L1300) | 本 §2.2 形状契約 (L7 新設、Reverse R1 で backfill) | reviewed head は 40 lowercase hex | malformed / SHA-256 形状 | `CANDIDATE-PACKPUB-ADM-006` | `admission_review_head_invalid` | 独立: G07 は equality であり、malformed 値同士の一致を equality だけでは弾けない |
 | G07 (旧L1301) | 565 §1.1「review済みhead」 | review head = receipt head | 別 head への review | `CANDIDATE-PACKPUB-ADM-007` | `admission_review_head_mismatch` | 独立: 形状が正しい別 OID を G06 は通す |
 | G08 (旧L1302) | 565 §1.1「non-author review完了」 | review conclusion = `approved` | `changes_requested` / `commented` | `CANDIDATE-PACKPUB-ADM-008` | `admission_review_not_approved` | 独立: head 一致でも結論が非承認であり得る |
 | G09 (旧L1303) | 本 §2.2 形状契約 (L7 新設、Reverse R1 で backfill)、#624 §4.2 | closing receipt digest ~ `/^sha256:[0-9a-f]{64}$/` | 短縮 / 別 prefix / uppercase | `CANDIDATE-PACKPUB-ADM-009` | `admission_review_receipt_invalid` | 独立: digest は record preimage に封入されるため形状検査が唯一の制約 |
@@ -238,7 +242,7 @@ L1300) についても独立と判定した理由を同じ表に書く。remote 
 | G13 (旧L1307) | 565 §1.1 freshness、本 §2.2-7 | operation ID 未使用 (§4 完全一致 replay を除く) | 別観測束の既存 admission が同じ operation ID を使用 | `CANDIDATE-PACKPUB-ADM-013` | `admission_operation_replay` | 独立: key/PR が新規でも operation の再利用は別経路 |
 | G14 (旧L1308) | 565 §1.1 freshness、本 §2.2-7 | idempotency key 未使用 (§4 完全一致 replay を除く) | 別観測束の既存 admission が同じ key を使用 | `CANDIDATE-PACKPUB-ADM-014` | `admission_idempotency_replay` | 独立: operation ID と key は別に発番される |
 | G15 (旧L1309) | 565 §1.1「別operationのadmissionに未使用」 | receipt の PR が別 operation ID の admission に未使用 | 同じ PR を別 operation ID で admitted 済みにする | `CANDIDATE-PACKPUB-ADM-015` | `admission_pr_replay` | 独立: 新 operation が既存 PR を再利用する経路を閉じる |
-| G16 | 625 §2、本 §2.2-2 | observed PR branch = receipt branch 名 | branch 名を別値 | `CANDIDATE-PACKPUB-ADM-016` | `admission_branch_mismatch` | 独立: head/base 一致でも別 branch 上の同一 commit があり得る |
+| G16 | #625 §2、本 §2.1「receipt の field は 4 つ + binding だけ」 | receipt が 4 field と binding 以外の identity field (branch、staging digest、expected main 等) を持たない (strict schema) | receipt に `branch` field を追加 | `CANDIDATE-PACKPUB-ADM-016` | `admission_receipt_invalid` | 独立: G37 は必須 field の欠落、G16 は余剰 field の混入を閉じる。branch の PR 整合は G34 |
 | G17 | 625 §2、本 §2.2-2 | observed PR tree digest = receipt tree digest | tree digest を別値 | `CANDIDATE-PACKPUB-ADM-017` | `admission_tree_digest_mismatch` | 独立: head OID は commit identity、tree digest は sealed 内容の identity |
 | G18 | 565 §1.1「staging identityをread-onlyで再観測」、本 §2.2-6 | sealed staging record の manifest digest が `sha256:` + 64 lowercase hex | sealed staging record の manifest digest を 63 hex に | `CANDIDATE-PACKPUB-ADM-018` | `admission_staging_manifest_invalid` | 独立: manifest digest は record にしか無く、他 guard は参照しない |
 | G19 | 565 §1.1「別staging digestのadmissionに未使用」 | receipt の PR が別 staging digest の admission に未使用 | 同じ PR を別 staging digest で admitted 済みにする | `CANDIDATE-PACKPUB-ADM-019` | `admission_pr_staging_conflict` | 独立: G15 は operation ID の差だけを見る |
@@ -348,6 +352,11 @@ lint、admission-check、readability/plan-doc 対象テストを同一 exact HEA
   合わせ、sealed staging identity は §2.2-6 の read-only 観測からのみ取る形へ組み直し (G18 形状、
   G32–G34 は record と observed PR の整合、G43 record 存在)。candidate 064 を 3 軸へ分割 (064/066/067)。
   guard 43、candidate 68。
+- rev 8 (2026-09-17、Claude control lane): PR #647 exact head `70c7caa5` に対する Codex Sol review r1
+  (receipt `17281c87…`、FLAG blocking 2、PR 内軽作業) を是正。G16 を receipt strict schema (余剰
+  identity field の拒否) の一軸 oracle に置換 (branch の PR 整合は G34 に一本化)、reviewed head OID の
+  形状 (40 lowercase hex) を §2.2 の L7 新設契約として明示し G06 の引用を修正、Reverse R1 に backfill
+  対象として追加。guard 43、candidate 68。
 
 ## 8. predicate→candidate 対応表 (self-audit)
 
@@ -366,8 +375,9 @@ lint、admission-check、readability/plan-doc 対象テストを同一 exact HEA
 | §2.1 (b) | approval 参照は 1 件以上 / 束縛先 / 未消費 / 集合帰属 | G40 / 056、G29 / 029、G39 / 039、G30 / 030 |
 | §2.2-1 | repository ID / full name / target ref / ruleset ID / installation ID 一致 | G25 / 025、G35 / 035、G26 / 026、G27 / 027、G28 / 028 |
 | §2.2-1 | required context 集合 = 期待集合 | G31 / 031 |
-| §2.2-2 | PR number / branch / head / base / tree 一致 | G01 / 001、G16 / 016、G02 / 002、G03 / 003、G17 / 017 |
-| §2.2-3 | reviewed head 形状 / 一致、approved、reviewer ≠ author、review PR 一致、closing digest 形状 | G06 / 006、G07 / 007、G08 / 008、G23 / 023、G05 / 005、G09 / 009 |
+| §2.1 | receipt に余剰 identity field が無い (strict schema) | G16 / 016 |
+| §2.2-2 | PR number / head / base / tree 一致 (branch は §2.2-6 の G34) | G01 / 001、G02 / 002、G03 / 003、G17 / 017 |
+| §2.2-3 | reviewed head 形状 (L7 新設) / 一致、approved、reviewer ≠ author、review PR 一致、closing digest 形状 (L7 新設) | G06 / 006、G07 / 007、G08 / 008、G23 / 023、G05 / 005、G09 / 009 |
 | §2.2-4 | checks head 一致、required 非空、被覆、全 success、非 required check は判定に使わない | G10 / 010、G11 / 011、G24 / 024、G12 / 012、062 |
 | §2.2-5 | merge-base = expected main | G04 / 004 |
 | §2.2-6 | sealed staging record の manifest 形状、tree = PR tree、expected main = PR base、branch = PR branch | G18 / 018、G32 / 032、G33 / 033、G34 / 034 |
