@@ -1,4 +1,4 @@
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import {
   existsSync,
   mkdirSync,
@@ -420,5 +420,118 @@ describe("memory clean-cut PR-2: projection, CLI and doctor surfaces (P-MEMCUT-0
       expect(statusText).not.toContain(token);
       expect(statusJson).not.toContain(token);
     }
+  });
+});
+
+describe("memory clean-cut PR-2: db rebuild fails closed on a linked worktree with unresolved project identity (P-MEMCUT-006 negative, Sol r2 FLAG 1)", () => {
+  interface DriftFixture {
+    root: string;
+    primary: string;
+    linked: string;
+  }
+  const driftFixtures: DriftFixture[] = [];
+  afterAll(() => {
+    for (const fixture of driftFixtures) removeTestTree(fixture.root);
+  });
+
+  /**
+   * Builds a primary repo plus a `git worktree add` linked checkout (git-dir distinct from
+   * git-common-dir, i.e. `isLinkedWorktreeCheckout` is true). `mutateLinked` then breaks the
+   * linked worktree's own project-identity resolution (unavailable or drifted) so
+   * `resolveProjectMemoryRoot(linked)` fails with a reason other than
+   * "git_topology_unavailable" — the case the U-TESTHYGIENE-043 nested-snapshot fallback must
+   * never cover. A legacy `.ut-tdd/memory` entry unique to the linked worktree stands in for the
+   * corpus P-MEMCUT-006 forbids projecting.
+   */
+  function createDriftFixture(
+    suffix: string,
+    mutateLinked: (linked: string) => void,
+  ): DriftFixture & { legacyToken: string } {
+    const root = mkdtempSync(join(tmpdir(), `ut-memcut-drift-${suffix}-`));
+    const primary = join(root, "primary");
+    const linked = join(root, "linked");
+    mkdirSync(primary, { recursive: true });
+    git(primary, ["init", "-q", "-b", "main"]);
+    git(primary, ["config", "user.email", "test@example.invalid"]);
+    git(primary, ["config", "user.name", "UT-TDD Test"]);
+    git(primary, ["config", "core.autocrlf", "false"]);
+    git(primary, ["remote", "add", "origin", `git@github.com:example/memcut-drift-${suffix}.git`]);
+    writeFileSync(
+      join(primary, "ut-tdd.project.json"),
+      canonicalProjectIdentityBytes(`example/memcut-drift-${suffix}`),
+    );
+    writeFileSync(join(primary, "README.md"), "# fixture\n", "utf8");
+    git(primary, ["add", "ut-tdd.project.json", "README.md"]);
+    git(primary, ["commit", "-q", "-m", "test: seed project identity"]);
+    git(primary, ["worktree", "add", "-q", "-b", `linked-${suffix}`, linked]);
+
+    mutateLinked(linked);
+
+    const legacyToken = `LINKED-DRIFT-${suffix.toUpperCase()}-TOKEN-4f21`;
+    const linkedLegacyRoot = join(linked, ".ut-tdd", "memory");
+    mkdirSync(linkedLegacyRoot, { recursive: true });
+    writeFileSync(
+      join(linkedLegacyRoot, "feedback-linked-drift.md"),
+      entry("linked-drift", "Linked drift", legacyToken),
+    );
+
+    const fixture = { root, primary, linked, legacyToken };
+    driftFixtures.push(fixture);
+    return fixture;
+  }
+
+  function runCliExpectFailure(cwd: string, args: readonly string[]) {
+    const result = spawnSync(process.execPath, [cliPath, ...args], {
+      cwd,
+      encoding: "utf8",
+      env: { ...process.env, UT_TDD_DISABLE_HOOKS: "1" },
+    });
+    return {
+      stdout: result.stdout ?? "",
+      stderr: result.stderr ?? "",
+      status: result.status ?? -1,
+    };
+  }
+
+  it("project_identity_unavailable: db rebuild from a linked worktree with no ut-tdd.project.json fails closed and writes no db", () => {
+    const fixture = createDriftFixture("unavailable", (linked) => {
+      // Orphan branch with the identity file removed reproduces the measured
+      // "project_identity_unavailable" deny reason from a *resolvable* git topology
+      // (distinct from the nested-snapshot "git_topology_unavailable" case).
+      git(linked, ["checkout", "-q", "--orphan", "driftbranch"]);
+      git(linked, ["rm", "-rf", "-q", "."]);
+      writeFileSync(join(linked, "other.txt"), "no identity file\n", "utf8");
+      git(linked, ["add", "other.txt"]);
+      git(linked, ["commit", "-q", "-m", "test: drop project identity"]);
+    });
+    const dbPath = defaultHarnessDbPath(fixture.primary);
+    rmSync(dbPath, { force: true });
+    const result = runCliExpectFailure(fixture.linked, ["db", "rebuild", "--json"]);
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain("refusing to project memory");
+    expect(existsSync(dbPath)).toBe(false);
+    expect(existsSync(defaultHarnessDbPath(fixture.linked))).toBe(false);
+    expect(`${result.stdout}\n${result.stderr}`).not.toContain(fixture.legacyToken);
+  });
+
+  it("project_identity_drift: db rebuild from a linked worktree whose identity file disagrees with the canonical root fails closed and writes no db", () => {
+    const fixture = createDriftFixture("drift", (linked) => {
+      // Valid schema, different repository_identity value: reproduces "project_identity_drift"
+      // from a resolvable git topology.
+      writeFileSync(
+        join(linked, "ut-tdd.project.json"),
+        canonicalProjectIdentityBytes("example/memcut-drift-drift-DIFFERENT"),
+      );
+      git(linked, ["add", "ut-tdd.project.json"]);
+      git(linked, ["commit", "-q", "-m", "test: drift project identity"]);
+    });
+    const dbPath = defaultHarnessDbPath(fixture.primary);
+    rmSync(dbPath, { force: true });
+    const result = runCliExpectFailure(fixture.linked, ["db", "rebuild", "--json"]);
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain("refusing to project memory");
+    expect(existsSync(dbPath)).toBe(false);
+    expect(existsSync(defaultHarnessDbPath(fixture.linked))).toBe(false);
+    expect(`${result.stdout}\n${result.stderr}`).not.toContain(fixture.legacyToken);
   });
 });

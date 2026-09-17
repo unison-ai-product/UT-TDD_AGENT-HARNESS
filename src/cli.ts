@@ -161,6 +161,7 @@ import { detectMode, nextActionForMode, type RuntimeDetection } from "./runtime/
 import { scanDanglingStops } from "./runtime/forced-stop.ts";
 import { createNodeInvocation, verifyNodeGeneration } from "./runtime/node-bootstrap.ts";
 import {
+  isLinkedWorktreeCheckout,
   requireProjectMemoryRoot,
   resolveProjectMemoryRoot,
 } from "./runtime/project-memory-root.ts";
@@ -1763,13 +1764,32 @@ db.command("rebuild")
   .action((opts: { json?: boolean }) => {
     // Memory projection must come from the canonical project root: a linked worktree cwd
     // would otherwise project its own legacy .ut-tdd/memory (PLAN-L7-566 PR-2, P-MEMCUT-006).
-    // When project identity cannot be resolved (e.g. a nested snapshot clone with no usable
-    // git topology), fall back to the previous behaviour of rebuilding from process.cwd()
-    // instead of hard-failing (U-TESTHYGIENE-043).
+    // The process.cwd() fallback below exists only for the nested-snapshot-clone case (a plain
+    // copied tree with no .git at all, U-TESTHYGIENE-043) where git topology cannot be resolved
+    // at all. Measured: that case yields reason "git_topology_unavailable" with no git-dir to
+    // compare. A linked worktree always has a git-dir distinct from its git-common-dir, and a
+    // drifted/unavailable project identity is measured to yield "project_identity_drift" /
+    // "project_identity_unavailable" from a *resolvable* git topology — those must fail closed
+    // instead of silently falling back to projecting the linked worktree's own legacy memory.
     const projectRoot = resolveProjectMemoryRoot(process.cwd());
-    const r = rebuildHarnessDb({
-      repoRoot: projectRoot.ok ? projectRoot.canonicalProjectRoot : process.cwd(),
-    });
+    let dbRebuildRepoRoot: string;
+    if (projectRoot.ok) {
+      dbRebuildRepoRoot = projectRoot.canonicalProjectRoot;
+    } else if (
+      projectRoot.reason === "git_topology_unavailable" &&
+      !isLinkedWorktreeCheckout(process.cwd())
+    ) {
+      dbRebuildRepoRoot = process.cwd();
+    } else {
+      process.stderr.write(
+        `ut-tdd db rebuild: refusing to project memory (project_memory_root reason=` +
+          `${projectRoot.reason}); a linked worktree or a repo with drifted/unavailable project ` +
+          "identity must not project legacy memory into harness.db (PLAN-L7-566 P-MEMCUT-006)\n",
+      );
+      process.exitCode = 1;
+      return;
+    }
+    const r = rebuildHarnessDb({ repoRoot: dbRebuildRepoRoot });
     if (opts.json) {
       process.stdout.write(`${JSON.stringify(r, null, 2)}\n`);
       return;

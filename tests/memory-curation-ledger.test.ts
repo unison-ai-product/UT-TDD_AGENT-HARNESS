@@ -11,15 +11,18 @@ import {
   canonicalMemoryContentDigest,
   custodyIdFor,
   parseCurationLedgerDocument,
+  type RegistrationReceipt,
   registrationReceiptDigest,
   renderCurationLedgerDocument,
   screenAdoptText,
+  verifyAdoptRegistrationReplay,
   verifyCurationCoverage,
   verifyCurationReviewer,
   verifyCurationRows,
 } from "../src/memory/curation-ledger.ts";
 import { loadMemoryEntries, parseMemoryFile } from "../src/memory/index.ts";
 import { readLegacyArchiveManifest } from "../src/memory/legacy-archive-manifest.ts";
+import { writeMemory } from "../src/memory/service.ts";
 
 // The shipped ledger, manifest and canonical corpus are repository facts read from the execution
 // root once (test-repository-isolation contract: 1 call).
@@ -51,6 +54,52 @@ function scratchProject(): string {
   execFileSync("git", ["-C", dir, "commit", "-q", "-m", "seed"]);
   mkdirSync(join(dir, ".ut-tdd", "memory"), { recursive: true });
   return dir;
+}
+
+/** No git identity required: `writeMemory` is a pure fs writer, so a bare `.ut-tdd/memory` root
+ * is enough for an in-process replay. Kept separate from `scratchProject` (which is only needed
+ * for the CLI-subprocess parity check) to keep the 46-row replay loop free of `git init` spawns. */
+function scratchMemoryRoot(): string {
+  const dir = mkdtempSync(join(tmpdir(), "ut-memcut-replay-"));
+  scratch.push(dir);
+  mkdirSync(join(dir, ".ut-tdd", "memory"), { recursive: true });
+  return dir;
+}
+
+function stripUpdatedAt(rawText: string): string {
+  return rawText.replace(/^updated_at:.*$/m, "updated_at: <redacted>");
+}
+
+/** Replays one adopt row's registration in-process (`writeMemory`, no subprocess) and builds a
+ * `RegistrationReceipt` from the replay's actual output, never from the ledger's own record.
+ * Also returns the raw bytes the replay wrote, so a caller can compare them against a real CLI
+ * subprocess run of the same row. */
+function inProcessReplay(
+  row: CurationRow,
+): { receipt: RegistrationReceipt; rawText: string } | null {
+  const adopt = row.adopt;
+  if (!adopt) return null;
+  try {
+    const canonicalEntry = parseMemoryFile(root, adopt.registration.source_path);
+    const dir = scratchMemoryRoot();
+    const written = writeMemory({
+      repoRoot: dir,
+      input: { kind: adopt.kind, title: adopt.title, body: canonicalEntry.body, tags: adopt.tags },
+    });
+    const rawText = readFileSync(join(dir, written.source_path), "utf8");
+    return {
+      receipt: {
+        operation_id: adopt.registration.operation_id,
+        memory_id: written.memory_id,
+        source_path: written.source_path,
+        content_digest: canonicalMemoryContentDigest(rawText),
+        exit_code: 0,
+      },
+      rawText,
+    };
+  } catch {
+    return null;
+  }
 }
 
 describe("memory clean-cut PR-2: curation ledger binding (U-MEMCUT-024..028)", () => {
@@ -191,37 +240,41 @@ describe("memory clean-cut PR-2: curation ledger binding (U-MEMCUT-024..028)", (
     }
   });
 
-  it("U-MEMCUT-026: replaying `memory add` for an adopt row in a scratch canonical root reproduces the registration receipt digest and the receipt is bound to the canonical file's actual bytes; a receipt-less handwritten twin or an altered canonical body is Red", () => {
+  it("U-MEMCUT-026: replaying `memory add` for every adopt row reproduces the registration receipt through the verifier, built from the replay's own output; each negative goes through the same verifier and is single-axis Red", () => {
     const ledger = ledgerOf();
     const allAdopt = adoptRows(ledger);
     expect(allAdopt.length).toBeGreaterThan(0);
-    // Exhaustive (no subprocess) byte-binding check over every adopt row (46), not just the
-    // subprocess-replay sample below: each row's registration.content_digest must reproduce the
-    // canonical file's *current* bytes. This is the check that must go Red if only one adopted
-    // row's canonical body is altered, regardless of its position in the ledger — the heavier
-    // `memory add` replay stays bounded to a 3-row sample so the suite does not spend 46
-    // subprocess spawns per run.
+    // Full-corpus replay (no sampling, Sol r2 FLAG 2): every adopt row is replayed in-process via
+    // the same `writeMemory` service function the CLI's `memory add` calls, and the resulting
+    // RegistrationReceipt is built from that replay's own output (memory id / source path / exit
+    // code / a content digest recomputed over the bytes the replay actually wrote) — never taken
+    // from the ledger's self-declared registration object. Measured: an in-process replay of all
+    // 46 adopt rows completes in well under a second; 46 `memory add` subprocess spawns (full node
+    // + CLI startup each) would cost tens of seconds, so only a 3-row sample below pays that cost,
+    // to prove CLI output matches in-process output byte-for-byte.
     for (const row of allAdopt) {
-      const a = row.adopt;
-      if (!a) throw new Error("adopt row without adopt block");
-      const rawText = readFileSync(join(root, a.registration.source_path), "utf8");
-      expect(canonicalMemoryContentDigest(rawText), a.memory_id).toBe(
-        a.registration.content_digest,
-      );
-    }
-    const sample = allAdopt.slice(0, 3);
-    for (const row of sample) {
       const adopt = row.adopt;
       if (!adopt) throw new Error("adopt row without adopt block");
-      const canonicalPath = join(root, adopt.registration.source_path);
-      const canonicalRawText = readFileSync(canonicalPath, "utf8");
+      const canonicalRawText = readFileSync(join(root, adopt.registration.source_path), "utf8");
+      const replayed = inProcessReplay(row);
+      expect(replayed, adopt.memory_id).not.toBeNull();
+      expect(
+        verifyAdoptRegistrationReplay({
+          row,
+          canonicalRawText,
+          replay: replayed?.receipt ?? null,
+        }),
+        adopt.memory_id,
+      ).toEqual([]);
+    }
+
+    // 3-row CLI-subprocess parity sample: the real `ut-tdd memory add` subprocess must write the
+    // same bytes (modulo `updated_at`) as the in-process replay used above, so the full-corpus
+    // in-process loop is a faithful stand-in for the CLI path.
+    for (const row of allAdopt.slice(0, 3)) {
+      const adopt = row.adopt;
+      if (!adopt) throw new Error("adopt row without adopt block");
       const canonicalEntry = parseMemoryFile(root, adopt.registration.source_path);
-      // The receipt must bind to the canonical file's actual bytes, not merely to a digest the
-      // test recomputes from the ledger's own recorded value (the U-MEMCUT-026 tautology this
-      // test previously had).
-      expect(canonicalMemoryContentDigest(canonicalRawText)).toBe(
-        adopt.registration.content_digest,
-      );
       const dir = scratchProject();
       const stdout = execFileSync(
         process.execPath,
@@ -244,51 +297,94 @@ describe("memory clean-cut PR-2: curation ledger binding (U-MEMCUT-024..028)", (
       );
       const written = stdout.match(/memory: wrote (\S+)/)?.[1];
       expect(written, "memory add reports the written path").toBeDefined();
-      const replay = parseMemoryFile(dir, String(written));
-      expect(replay.memory_id).toBe(adopt.memory_id);
-      expect(String(written).replaceAll("\\", "/").startsWith(".ut-tdd/memory/")).toBe(true);
-      // Same kind/title/body/tags → same body-level content; updated_at differs, so compare the
-      // receipt through the fields the registration binds (content digest of the canonical entry).
-      const receipt = { ...adopt.registration, content_digest: adopt.registration.content_digest };
-      expect(registrationReceiptDigest(receipt)).toBe(adopt.receipt_digest);
-      // Replay is compared against the canonical root file (test-design row 026), not an
-      // independent ledger-recorded body — the ledger's adopt block carries no body field of
-      // its own, only the receipt binding to the canonical file.
-      expect(replay.body).toBe(canonicalEntry.body);
-      expect(replay.title).toBe(canonicalEntry.title);
-      // Negative: a handwritten file with the same content but no registration receipt cannot bind.
-      expect(registrationReceiptDigest({ ...receipt, operation_id: "" })).not.toBe(
-        adopt.receipt_digest,
-      );
-      expect(registrationReceiptDigest({ ...receipt, exit_code: 1 })).not.toBe(
-        adopt.receipt_digest,
+      const cliRawText = readFileSync(join(dir, String(written)), "utf8");
+      const inProcess = inProcessReplay(row);
+      expect(inProcess, adopt.memory_id).not.toBeNull();
+      // Byte-for-byte parity between the CLI subprocess write and the in-process replay write,
+      // except `updated_at` (both runs capture a real, slightly different timestamp).
+      expect(stripUpdatedAt(cliRawText), adopt.memory_id).toBe(
+        stripUpdatedAt(inProcess?.rawText ?? ""),
       );
     }
-    // Negative: an altered canonical body (mutated in a temp fixture copy, never in the repo)
-    // must no longer reproduce the receipt's content digest — the row goes Red. Deliberately uses
-    // the LAST adopt row, which is outside the first-3 subprocess sample above, so this negative
-    // does not depend on the sample slice covering the mutated row (2026-09 finding U-MEMCUT-026:
-    // a reviewer altered only the 4th adopted row's canonical body and every test stayed Green
-    // because only the first 3 rows were checked at all).
-    const lastAdopt = allAdopt.at(-1);
-    if (!lastAdopt?.adopt) throw new Error("no adopt row available for altered-body negative");
-    const lastCanonicalRawText = readFileSync(
-      join(root, lastAdopt.adopt.registration.source_path),
-      "utf8",
+  });
+
+  it("U-MEMCUT-026 negatives: verifyAdoptRegistrationReplay is Red for a receipt-less handwritten twin, a fabricated receipt digest, a failed replay, an out-of-root replay path and an altered canonical body — each single-axis", () => {
+    const ledger = ledgerOf();
+    const row = adoptRows(ledger)[0];
+    const adopt = row?.adopt;
+    expect(adopt, "at least one adopt row with a registration").toBeDefined();
+    if (!row || !adopt) throw new Error("no adopt row available for negatives");
+    const canonicalRawText = readFileSync(join(root, adopt.registration.source_path), "utf8");
+    const replayed = inProcessReplay(row);
+    expect(replayed, adopt.memory_id).not.toBeNull();
+    const validReplay = replayed?.receipt;
+    if (!validReplay) throw new Error("in-process replay failed for negatives fixture row");
+
+    // Sanity: the valid replay is Green through the verifier (baseline for the mutations below).
+    expect(verifyAdoptRegistrationReplay({ row, canonicalRawText, replay: validReplay })).toEqual(
+      [],
     );
-    const alteredDir = scratchProject();
-    const alteredPath = join(alteredDir, ".ut-tdd", "memory", "altered-twin.md");
-    writeFileSync(
-      alteredPath,
-      `${lastCanonicalRawText}
-altered body line
-`,
-      "utf8",
-    );
-    const alteredText = readFileSync(alteredPath, "utf8");
-    expect(canonicalMemoryContentDigest(alteredText)).not.toBe(
-      lastAdopt.adopt.registration.content_digest,
-    );
+
+    // (a) receipt-less handwritten twin: the canonical file exists, but no replay was obtained.
+    expect(
+      verifyAdoptRegistrationReplay({ row, canonicalRawText, replay: null }).map((f) => f.kind),
+    ).toEqual(["adopt-replay-missing"]);
+
+    // (b) fabricated ledger row: receipt_digest recomputed to match a changed registration
+    // content_digest, verified against the real (unchanged) replay. The row lies about its own
+    // digest; the replay still reports the true one, so the digests it derives disagree.
+    const fabricatedRegistration = { ...adopt.registration, content_digest: "1".repeat(64) };
+    const fabricatedRow: CurationRow = {
+      ...row,
+      adopt: {
+        ...adopt,
+        registration: fabricatedRegistration,
+        receipt_digest: registrationReceiptDigest(fabricatedRegistration),
+      },
+    };
+    expect(
+      verifyAdoptRegistrationReplay({
+        row: fabricatedRow,
+        canonicalRawText,
+        replay: validReplay,
+      }).map((f) => f.kind),
+    ).toEqual(["adopt-replay-receipt-digest-mismatch"]);
+
+    // (c) replay exit_code 1 (a failed replay that still reported a receipt shape).
+    expect(
+      verifyAdoptRegistrationReplay({
+        row,
+        canonicalRawText,
+        replay: { ...validReplay, exit_code: 1 },
+      }).map((f) => f.kind),
+    ).toContain("adopt-replay-exit-nonzero");
+
+    // (d) replay source_path outside `.ut-tdd/memory/`'s direct children.
+    expect(
+      verifyAdoptRegistrationReplay({
+        row,
+        canonicalRawText,
+        replay: { ...validReplay, source_path: "docs/archive/escaped.md" },
+      }).map((f) => f.kind),
+    ).toContain("adopt-replay-source-path-outside-canonical");
+    expect(
+      verifyAdoptRegistrationReplay({
+        row,
+        canonicalRawText,
+        replay: { ...validReplay, source_path: ".ut-tdd/memory/sub/escaped.md" },
+      }).map((f) => f.kind),
+    ).toContain("adopt-replay-source-path-outside-canonical");
+
+    // (e) altered canonical body (a temp copy, never written into the repo): the replay is
+    // unchanged and correct, but the digest it must reproduce no longer matches.
+    const alteredText = `${canonicalRawText}\naltered body line\n`;
+    expect(
+      verifyAdoptRegistrationReplay({
+        row,
+        canonicalRawText: alteredText,
+        replay: validReplay,
+      }).map((f) => f.kind),
+    ).toEqual(["adopt-replay-content-digest-mismatch"]);
   });
 
   it("U-MEMCUT-027: adopted titles and bodies pass the episode / secret / personal-path screen; each negative fixture is Red", () => {

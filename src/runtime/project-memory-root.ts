@@ -158,6 +158,26 @@ export function resolveProjectMemoryRoot(repoRoot: string): ProjectMemoryRootRes
   });
 }
 
+/**
+ * A linked worktree's git-dir (`.git/worktrees/<name>`) always resolves to a different absolute
+ * path than its git-common-dir (the shared `.git`). A plain checkout, a bare-clone-less snapshot
+ * clone, or a tree with no git topology at all report the same path for both (or throw), so this
+ * predicate only fires true for the genuine linked-worktree case (P-MEMCUT-006).
+ */
+export function isLinkedWorktreeCheckout(repoRoot: string): boolean {
+  try {
+    const gitDir = realpathSync(
+      gitPath(repoRoot, ["rev-parse", "--path-format=absolute", "--git-dir"]),
+    );
+    const commonDir = realpathSync(
+      gitPath(repoRoot, ["rev-parse", "--path-format=absolute", "--git-common-dir"]),
+    );
+    return gitDir !== commonDir;
+  } catch {
+    return false;
+  }
+}
+
 export function requireProjectMemoryRoot(
   repoRoot: string,
 ): Extract<ProjectMemoryRootResult, { ok: true }> {

@@ -101,6 +101,12 @@ export interface CurationFinding {
     | "adopt-registration-missing"
     | "adopt-receipt-digest-mismatch"
     | "adopt-source-path-outside-canonical"
+    | "adopt-replay-missing"
+    | "adopt-replay-exit-nonzero"
+    | "adopt-replay-source-path-outside-canonical"
+    | "adopt-replay-memory-id-mismatch"
+    | "adopt-replay-content-digest-mismatch"
+    | "adopt-replay-receipt-digest-mismatch"
     | "merged-from-unknown"
     | "adopt-not-in-canonical"
     | "canonical-not-in-ledger"
@@ -216,6 +222,40 @@ function verifyAdoptRow(row: CurationRow, subject: string): CurationFinding[] {
   const path = receipt.source_path.replaceAll("\\", "/");
   if (!path.startsWith(".ut-tdd/memory/") || path.slice(".ut-tdd/memory/".length).includes("/"))
     findings.push({ kind: "adopt-source-path-outside-canonical", subject });
+  return findings;
+}
+
+/**
+ * CANDIDATE-U-MEMCUT-026 (Sol r2 FLAG 2): the ledger's adopt→registration binding must be checked
+ * against an actual `memory add` replay, not against the ledger's own self-declared registration
+ * object. `replay` is built by the caller from the *output* of a real replay (in-process
+ * `writeMemory` call or `memory add` subprocess): the memory id / source path / exit code the
+ * replay reported, and a content digest recomputed over the file bytes the replay actually wrote.
+ * `null` means no successful replay was obtained at all (a handwritten twin with no registration,
+ * or a replay that threw) and is itself a finding, never a silent skip.
+ */
+export function verifyAdoptRegistrationReplay(input: {
+  row: CurationRow;
+  /** Current raw bytes of the canonical file the row claims to be bound to. */
+  canonicalRawText: string;
+  replay: RegistrationReceipt | null;
+}): CurationFinding[] {
+  const subject = input.row.archive_path ?? input.row.custody_id ?? input.row.source_digest;
+  const adopt = input.row.adopt;
+  if (!adopt) return [{ kind: "adopt-registration-missing", subject }];
+  if (!input.replay) return [{ kind: "adopt-replay-missing", subject }];
+  const findings: CurationFinding[] = [];
+  const replay = input.replay;
+  if (replay.exit_code !== 0) findings.push({ kind: "adopt-replay-exit-nonzero", subject });
+  const path = replay.source_path.replaceAll("\\", "/");
+  if (!path.startsWith(".ut-tdd/memory/") || path.slice(".ut-tdd/memory/".length).includes("/"))
+    findings.push({ kind: "adopt-replay-source-path-outside-canonical", subject });
+  if (replay.memory_id !== adopt.memory_id)
+    findings.push({ kind: "adopt-replay-memory-id-mismatch", subject });
+  if (replay.content_digest !== canonicalMemoryContentDigest(input.canonicalRawText))
+    findings.push({ kind: "adopt-replay-content-digest-mismatch", subject });
+  if (registrationReceiptDigest(replay) !== adopt.receipt_digest)
+    findings.push({ kind: "adopt-replay-receipt-digest-mismatch", subject });
   return findings;
 }
 
