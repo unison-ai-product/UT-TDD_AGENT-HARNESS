@@ -1,4 +1,7 @@
 import { createHash } from "node:crypto";
+import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { stringify } from "yaml";
 import {
@@ -6,6 +9,7 @@ import {
   deriveReleaseRecordDigest,
 } from "../src/schema/release-manifest.ts";
 import {
+  createPackPublicationPreparationReceiptStore,
   derivePackPublicationIntentDigest,
   derivePackPublicationPreparationDigest,
   derivePackPublicationTreeDigest,
@@ -1635,6 +1639,21 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
       return { prep, events };
     }
 
+    function completePreparationJournal(input: ReturnType<typeof preparationInput>["input"]) {
+      const identityDigest = derivePackPublicationPreparationDigest(input);
+      if (!identityDigest) throw new Error("preparation identity failed");
+      return ["pack_branch_commit", "pack_pr_create"].flatMap((mutation) =>
+        ["planned_nonce_consumed", "mutation_intent", "read_back_observation"].map((kind) => ({
+          transition: "pack_commit" as const,
+          mutation: mutation as "pack_branch_commit" | "pack_pr_create",
+          kind: kind as "planned_nonce_consumed" | "mutation_intent" | "read_back_observation",
+          intentDigest: identityDigest,
+          nonce: input.approvals.find((approval) => approval.mutation === mutation)?.nonce ?? "",
+          detailDigest: `sha256:${"0".repeat(64)}`,
+        })),
+      );
+    }
+
     it("CANDIDATE-PACKPUB-PREP-005/010: emits an identity-bound receipt after ordered branch/PR writes", async () => {
       const { input } = preparationInput();
       const { prep, events } = preparationPorts();
@@ -1664,15 +1683,110 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
 
     it("CANDIDATE-PACKPUB-PREP-009: preparation exposes no publication mutation port", async () => {
       const { input } = preparationInput();
-      const { prep } = preparationPorts();
-      const publicationWrites = vi.fn();
+      const ledger: string[] = [];
+      const production = withOperationLedger(
+        ports({
+          approval: { consume: async () => ({ status: "attested", value: { mode: "new" } }) },
+        }),
+        ledger,
+      );
+      const { prep } = preparationPorts({
+        approval: production.approval,
+        durableState: production.durableState,
+        pack: {
+          commitPublicationBranch: production.pack.commitPublicationBranch,
+          createPullRequest: async ({ repository, branch, expectedMainSha }) => {
+            const result = await production.pack.createPullRequest({
+              repository,
+              branch,
+              expectedMainSha,
+            });
+            if (result.status !== "attested")
+              throw new Error("production fixture PR observation incomplete");
+            return {
+              status: "attested" as const,
+              value: {
+                pullRequest: result.value.pullRequest,
+                headOid: "7".repeat(40),
+                baseOid: input.expectedMainOid,
+                treeDigest: input.plan.commitEntries[0]
+                  ? derivePackPublicationTreeDigest(input.plan)
+                  : "",
+                controlManifestSnapshotDigest: input.plan.controlManifestSnapshotDigest,
+              },
+            };
+          },
+        },
+        receipt: { persist: async () => undefined },
+      });
       expect(Object.keys(prep.pack).sort()).toEqual([
         "commitPublicationBranch",
         "createPullRequest",
       ]);
       const result = await preparePackPublication(input, prep);
       expect(result).toMatchObject({ ok: true, remoteWrites: 2 });
-      expect(publicationWrites).not.toHaveBeenCalled();
+      expect(
+        ledger.filter((path) =>
+          /pack\.mergePullRequestCas|release\.|tag\.|visibility\.|canary\./.test(path),
+        ),
+      ).toEqual([]);
+    });
+
+    it("CANDIDATE-PACKPUB-PREP-009: production publication write ledger stays zero on every deny", async () => {
+      const cases = [
+        (input: ReturnType<typeof preparationInput>["input"]) => ({ ...input, approvals: [] }),
+        (input: ReturnType<typeof preparationInput>["input"]) => ({
+          ...input,
+          expectedMainOid: "f".repeat(40),
+        }),
+        (input: ReturnType<typeof preparationInput>["input"]) => ({
+          ...input,
+          approvals: input.approvals.map((approval) => ({
+            ...approval,
+            expiresAt: "2000-01-01T00:00:00.000Z",
+          })),
+        }),
+        (input: ReturnType<typeof preparationInput>["input"]) => ({
+          ...input,
+          approvals: input.approvals.map((approval) => ({ ...approval, nonce: "same" })),
+        }),
+      ];
+      for (const mutate of cases) {
+        const ledger: string[] = [];
+        const production = withOperationLedger(ports(), ledger);
+        const { prep } = preparationPorts({
+          approval: production.approval,
+          durableState: production.durableState,
+          pack: {
+            commitPublicationBranch: production.pack.commitPublicationBranch,
+            createPullRequest: async ({ repository, branch, expectedMainSha }) => {
+              const result = await production.pack.createPullRequest({
+                repository,
+                branch,
+                expectedMainSha,
+              });
+              if (result.status !== "attested") throw new Error("unexpected fixture failure");
+              return {
+                status: "attested" as const,
+                value: {
+                  pullRequest: result.value.pullRequest,
+                  headOid: "7".repeat(40),
+                  baseOid: expectedMainSha,
+                  treeDigest: derivePackPublicationTreeDigest(stagingPlan()),
+                  controlManifestSnapshotDigest: stagingPlan().controlManifestSnapshotDigest,
+                },
+              };
+            },
+          },
+          receipt: { persist: async () => undefined },
+        });
+        await preparePackPublication(mutate(preparationInput().input), prep);
+        expect(
+          ledger.filter((path) =>
+            /pack\.mergePullRequestCas|release\.|tag\.|visibility\.|canary\./.test(path),
+          ),
+        ).toEqual([]);
+      }
     });
 
     it.each([
@@ -1763,6 +1877,11 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
       const { input } = preparationInput();
       const { prep } = preparationPorts();
       const commit = vi.fn(prep.pack.commitPublicationBranch);
+      const consume = vi.fn(async (approval: PackPublicationApproval) =>
+        approval.nonce === "foreign-nonce"
+          ? ({ status: "mismatch", reason: "approval_binding_mismatch" } as const)
+          : ({ status: "attested", value: { mode: "new" } } as const),
+      );
       await expect(
         preparePackPublication(
           {
@@ -1776,15 +1895,13 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
           {
             ...prep,
             approval: {
-              consume: async (approval) =>
-                approval.nonce === "foreign-nonce"
-                  ? { status: "mismatch", reason: "approval_binding_mismatch" }
-                  : { status: "attested", value: { mode: "new" } },
+              consume,
             },
             pack: { ...prep.pack, commitPublicationBranch: commit },
           },
         ),
       ).resolves.toMatchObject({ ok: false, reason: "approval_binding_mismatch" });
+      expect(consume).toHaveBeenCalledTimes(1);
       expect(commit).not.toHaveBeenCalled();
     });
 
@@ -1853,44 +1970,93 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
     it("CANDIDATE-PACKPUB-PREP-006: receipt persistence is no-clobber across a restart race", async () => {
       const { input } = preparationInput();
       const first = preparationPorts();
+      const root = await mkdtemp(join(tmpdir(), "ut625-receipt-"));
+      const path = join(root, "preparation-receipt.json");
+      const store = createPackPublicationPreparationReceiptStore(path);
+      try {
+        const created = await preparePackPublication(input, {
+          ...first.prep,
+          durableState: { ...first.prep.durableState, read: async () => [] },
+          pack: {
+            ...first.prep.pack,
+            reconcile: async () => ({
+              status: "unavailable" as const,
+              reason: "no journal mutation",
+            }),
+          },
+          receipt: store,
+        });
+        expect(created).toMatchObject({ ok: true, remoteWrites: 2 });
+        if (!created.ok) return;
+        await store.persist(created.receipt);
+        expect(
+          (
+            await store.read({
+              operationId: input.operationId,
+              idempotencyKey: input.idempotencyKey,
+              stagingPlanDigest: created.receipt.stagingPlanDigest,
+              expectedMainOid: input.expectedMainOid,
+            })
+          )?.receiptDigest,
+        ).toBe(created.receipt.receiptDigest);
+        const persistedBytes = await readFile(path);
+        await expect(store.persist(created.receipt)).resolves.toBeUndefined();
+        const changed = { ...created.receipt, pullRequest: "43" };
+        await expect(store.persist(changed)).rejects.toThrow("receipt_conflict");
+        expect(await readFile(path)).toEqual(persistedBytes);
+        expect(await readdir(root)).toEqual(["preparation-receipt.json"]);
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    });
+
+    it("CANDIDATE-PACKPUB-PREP-006/007: restart uses the complete journal and never re-mutates", async () => {
+      const { input } = preparationInput();
+      const first = preparationPorts();
       const persisted: PackPublicationPreparationReceipt[] = [];
       const persist = async (receipt: PackPublicationPreparationReceipt) => {
-        if (persisted.length > 0) throw new Error("receipt_exists");
         persisted.push(receipt);
       };
-      const created = await preparePackPublication(input, {
-        ...first.prep,
-        receipt: { persist },
-      });
-      expect(created).toMatchObject({ ok: true, remoteWrites: 2 });
+      const journal = completePreparationJournal(input);
+      const commit = vi.fn(first.prep.pack.commitPublicationBranch);
+      const createPullRequest = vi.fn(first.prep.pack.createPullRequest);
       const second = await preparePackPublication(input, {
         ...first.prep,
+        durableState: { ...first.prep.durableState, read: async () => journal },
+        pack: {
+          ...first.prep.pack,
+          commitPublicationBranch: commit,
+          createPullRequest,
+          reconcile: async () => ({
+            status: "attested",
+            value: {
+              branchCommit: "7".repeat(40),
+              pullRequest: {
+                pullRequest: "42",
+                headOid: "7".repeat(40),
+                baseOid: input.expectedMainOid,
+                treeDigest: derivePackPublicationTreeDigest(input.plan),
+                controlManifestSnapshotDigest: input.plan.controlManifestSnapshotDigest,
+              },
+            },
+          }),
+        },
         receipt: { persist, read: async () => null },
       });
       expect(second).toMatchObject({
-        ok: false,
-        status: "indeterminate",
-        reason: "receipt_persist_failed",
-        remoteWrites: 2,
+        ok: true,
+        status: "prepared",
+        remoteWrites: 0,
       });
+      expect(commit).not.toHaveBeenCalled();
+      expect(createPullRequest).not.toHaveBeenCalled();
       expect(persisted).toHaveLength(1);
     });
 
     it("CANDIDATE-PACKPUB-PREP-007: journal reconciliation reconstructs without re-mutation", async () => {
       const { input } = preparationInput();
       const { prep } = preparationPorts();
-      const identityDigest = derivePackPublicationPreparationDigest(input);
-      if (!identityDigest) throw new Error("preparation identity failed");
-      const events = ["pack_branch_commit", "pack_pr_create"].flatMap((mutation) =>
-        ["planned_nonce_consumed", "mutation_intent"].map((kind) => ({
-          transition: "pack_commit" as const,
-          mutation: mutation as "pack_branch_commit" | "pack_pr_create",
-          kind: kind as "planned_nonce_consumed" | "mutation_intent",
-          intentDigest: identityDigest,
-          nonce: input.approvals.find((approval) => approval.mutation === mutation)?.nonce ?? "",
-          detailDigest: `sha256:${"0".repeat(64)}`,
-        })),
-      );
+      const events = completePreparationJournal(input);
       const commit = vi.fn(prep.pack.commitPublicationBranch);
       const createPullRequest = vi.fn(prep.pack.createPullRequest);
       const persist = vi.fn();
@@ -1921,6 +2087,61 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
       expect(commit).not.toHaveBeenCalled();
       expect(createPullRequest).not.toHaveBeenCalled();
       expect(persist).toHaveBeenCalledTimes(1);
+    });
+
+    it("CANDIDATE-PACKPUB-PREP-007: partial journal cannot be treated as a complete replay", async () => {
+      const { input } = preparationInput();
+      const { prep } = preparationPorts();
+      const partial = completePreparationJournal(input).slice(0, 4);
+      const commit = vi.fn(prep.pack.commitPublicationBranch);
+      const result = await preparePackPublication(input, {
+        ...prep,
+        durableState: { ...prep.durableState, read: async () => partial },
+        pack: {
+          ...prep.pack,
+          commitPublicationBranch: commit,
+          reconcile: async () => ({
+            status: "attested" as const,
+            value: {
+              branchCommit: "7".repeat(40),
+              pullRequest: {
+                pullRequest: "42",
+                headOid: "7".repeat(40),
+                baseOid: input.expectedMainOid,
+                treeDigest: derivePackPublicationTreeDigest(input.plan),
+                controlManifestSnapshotDigest: input.plan.controlManifestSnapshotDigest,
+              },
+            },
+          }),
+        },
+        receipt: { persist: vi.fn(), read: async () => null },
+      });
+      expect(result).toMatchObject({
+        ok: false,
+        status: "indeterminate",
+        reason: "journal_chain_invalid",
+        remoteWrites: 0,
+      });
+      expect(commit).not.toHaveBeenCalled();
+    });
+
+    it("CANDIDATE-PACKPUB-PREP-007: complete journal without reconcile port cannot re-mutate", async () => {
+      const { input } = preparationInput();
+      const { prep } = preparationPorts();
+      const commit = vi.fn(prep.pack.commitPublicationBranch);
+      const result = await preparePackPublication(input, {
+        ...prep,
+        durableState: { ...prep.durableState, read: async () => completePreparationJournal(input) },
+        pack: { ...prep.pack, commitPublicationBranch: commit },
+        receipt: { persist: vi.fn(), read: async () => null },
+      });
+      expect(result).toMatchObject({
+        ok: false,
+        status: "indeterminate",
+        reason: "reconciliation_unavailable",
+        remoteWrites: 0,
+      });
+      expect(commit).not.toHaveBeenCalled();
     });
 
     it("CANDIDATE-PACKPUB-PREP-007: receipt persistence failure is indeterminate after exactly two writes", async () => {
@@ -1961,6 +2182,43 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
       await expect(
         preparePackPublication({ ...input, expectedMainOid: "f".repeat(40) }, replay.prep),
       ).resolves.toMatchObject({ ok: false, reason: "preparation_identity_mismatch" });
+    });
+
+    it.each([
+      [
+        "main",
+        (input: ReturnType<typeof preparationInput>["input"]) => ({
+          ...input,
+          expectedMainOid: "f".repeat(40),
+        }),
+      ],
+      [
+        "staging",
+        (input: ReturnType<typeof preparationInput>["input"]) => ({
+          ...input,
+          plan: {
+            ...input.plan,
+            controlManifestSnapshotDigest: `sha256:${"f".repeat(64)}`,
+          },
+        }),
+      ],
+      ["PR", (input: ReturnType<typeof preparationInput>["input"]) => input],
+    ] as const)("CANDIDATE-PACKPUB-PREP-008: %s identity drift is independently denied", async (axis, mutate) => {
+      const { input } = preparationInput();
+      const first = preparationPorts();
+      const prepared = await preparePackPublication(input, first.prep);
+      if (!prepared.ok) throw new Error(prepared.reason);
+      const driftedReceipt =
+        axis === "PR" ? { ...prepared.receipt, pullRequest: "43" } : prepared.receipt;
+      const result = await preparePackPublication(mutate(input), {
+        ...first.prep,
+        receipt: { persist: vi.fn(), read: async () => driftedReceipt },
+      });
+      expect(result).toMatchObject({
+        ok: false,
+        reason: "preparation_identity_mismatch",
+        remoteWrites: 0,
+      });
     });
 
     it("CANDIDATE-PACKPUB-PREP-001: control-manifest byte drift is denied before branch write", async () => {

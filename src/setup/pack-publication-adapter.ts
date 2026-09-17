@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { link, open, readFile, unlink } from "node:fs/promises";
 import { parse as parseYaml } from "yaml";
 import { parsePublicationManifest } from "../schema/release-manifest.ts";
 import {
@@ -203,6 +204,67 @@ export interface PackPublicationPreparationPorts {
       | PackPublicationPreparationReceipt
       | null
       | Promise<PackPublicationPreparationReceipt | null>;
+  };
+}
+
+/**
+ * File-backed preparation receipt persistence.  The final path is never
+ * replaced: a same-byte replay is accepted, while a different receipt is a
+ * no-clobber conflict.  The temporary file is synced before its same-volume
+ * hard-link publish, which is atomic on the supported Node filesystems.
+ */
+export function createPackPublicationPreparationReceiptStore(path: string): {
+  readonly persist: (receipt: PackPublicationPreparationReceipt) => Promise<void>;
+  readonly read: NonNullable<PackPublicationPreparationPorts["receipt"]["read"]>;
+} {
+  let sequence = 0;
+  const bytesFor = (receipt: PackPublicationPreparationReceipt) =>
+    Buffer.from(`${stable(receipt)}\n`, "utf8");
+  return {
+    read: async (identity) => {
+      let bytes: Buffer;
+      try {
+        bytes = await readFile(path);
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
+        throw error;
+      }
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(bytes.toString("utf8"));
+      } catch {
+        throw new Error("receipt_invalid");
+      }
+      if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed))
+        throw new Error("receipt_invalid");
+      const receipt = parsed as PackPublicationPreparationReceipt;
+      // The path is the durable operation namespace; operation/idempotency
+      // are intentionally inputs, not fields in the frozen receipt schema.
+      void identity;
+      return receipt;
+    },
+    persist: async (receipt) => {
+      const bytes = bytesFor(receipt);
+      const temporary = `${path}.tmp-${process.pid}-${sequence++}`;
+      let handle: Awaited<ReturnType<typeof open>> | undefined;
+      try {
+        handle = await open(temporary, "wx");
+        await handle.writeFile(bytes);
+        await handle.sync();
+        await handle.close();
+        handle = undefined;
+        try {
+          await link(temporary, path);
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+          const existing = await readFile(path);
+          if (!existing.equals(bytes)) throw new Error("receipt_conflict");
+        }
+      } finally {
+        await handle?.close().catch(() => undefined);
+        await unlink(temporary).catch(() => undefined);
+      }
+    },
   };
 }
 
@@ -990,12 +1052,45 @@ function preparationReceiptFromObservation(input: {
   });
 }
 
+const PREPARATION_MUTATIONS = ["pack_branch_commit", "pack_pr_create"] as const;
+
+function hasCompletePreparationJournal(
+  journal: readonly PublicationJournalEvent[],
+  identityDigest: string,
+): boolean {
+  const matching = journal.filter(
+    (event) =>
+      event.intentDigest === identityDigest &&
+      PREPARATION_MUTATIONS.includes(event.mutation as (typeof PREPARATION_MUTATIONS)[number]),
+  );
+  if (matching.length !== PREPARATION_MUTATIONS.length * 3) return false;
+  const nonces = PREPARATION_MUTATIONS.map((_, index) => matching[index * 3]?.nonce ?? "");
+  if (nonces.some((nonce) => !nonBlank(nonce)) || new Set(nonces).size !== nonces.length)
+    return false;
+  const expected = PREPARATION_MUTATIONS.flatMap((mutation) =>
+    (["planned_nonce_consumed", "mutation_intent", "read_back_observation"] as const).map(
+      (kind) => ({ mutation, kind }),
+    ),
+  );
+  return matching.every((event, index) => {
+    const item = expected[index];
+    return (
+      item !== undefined &&
+      event.mutation === item.mutation &&
+      event.kind === item.kind &&
+      event.transition === "pack_commit" &&
+      event.nonce === matching[index - (index % 3)]?.nonce &&
+      SHA256.test(event.detailDigest)
+    );
+  });
+}
+
 async function reconcilePreparedPreparation(
   input: PackPublicationPreparationInput,
   identity: NonNullable<ReturnType<typeof preparationIdentity>>,
   ports: PackPublicationPreparationPorts,
 ): Promise<PackPublicationPreparationResult | null> {
-  if (!ports.durableState.read || !ports.pack.reconcile) return null;
+  if (!ports.durableState.read) return null;
   let journal: readonly PublicationJournalEvent[];
   try {
     journal = await ports.durableState.read(identity.identityDigest);
@@ -1014,6 +1109,20 @@ async function reconcilePreparedPreparation(
       (event.mutation === "pack_branch_commit" || event.mutation === "pack_pr_create"),
   );
   if (!hasMutationIntent) return null;
+  if (!ports.pack.reconcile)
+    return preparationFailure({
+      status: "indeterminate",
+      stage: "pack_commit",
+      reason: "reconciliation_unavailable",
+      remoteWrites: 0,
+    });
+  if (!hasCompletePreparationJournal(journal, identity.identityDigest))
+    return preparationFailure({
+      status: "indeterminate",
+      stage: "pack_commit",
+      reason: "journal_chain_invalid",
+      remoteWrites: 0,
+    });
   let observed: PublicationPortResult<{
     readonly branchCommit: string;
     readonly pullRequest: PackPublicationPullRequestObservation;
@@ -1128,6 +1237,13 @@ export async function preparePackPublication(
   }
   const reconciled = await reconcilePreparedPreparation(input, identity, ports);
   if (reconciled) return reconciled;
+  if (ports.receipt.read && (!ports.durableState.read || !ports.pack.reconcile))
+    return preparationFailure({
+      status: "indeterminate",
+      stage: "preflight",
+      reason: "reconciliation_unavailable",
+      remoteWrites: 0,
+    });
   if (input.approvals.length < 2)
     return preparationFailure({
       status: "denied",
