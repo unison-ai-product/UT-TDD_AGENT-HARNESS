@@ -40,7 +40,7 @@ plan-admission record を指さない。値は実装 PR の test module 内で�
 fixture から不足する値を worktree、Pack checkout、GitHub API、既存の publication receipt で
 補完しない。各 mutation row は上記 fixture の 1 要素だけを変異させ、他は正常系のまま保つ。
 
-## 3. 39 guard mutation matrix
+## 3. 40 guard mutation matrix (G40 は §4 の 056)
 
 各行は他の predicate を成立させた fixture へ一軸だけを注入する。expected result は admission
 record 0、typed deny、remote write 0 であり、別 guard の失敗を Green にしない。契約引用は
@@ -115,7 +115,10 @@ G25/G35 は入力出所・形状/equality・被覆・集合一致が異なるた
 | `CANDIDATE-PACKPUB-ADM-054` | intent identity 構成要素: reviewed head OID だけを別 OID に | 同上 |
 | `CANDIDATE-PACKPUB-ADM-055` | intent identity 構成要素: preparation receipt digest だけを別 digest に | 同上 |
 
-050–055 は導出関数を直接呼び、構成要素の 1 つを省く実装 (digest が不変になる) を Red にする。
+| `CANDIDATE-PACKPUB-ADM-056` | G40: approval 参照を `[]` に (他は正常系) | `admission_approval_missing`、admitted 0、write 0 |
+| `CANDIDATE-PACKPUB-ADM-057` | approval binding 構成要素: intent identity を固定したまま approval nonce だけを `apv-adm-fixture-0002` に | approval binding digest が変わる (intent identity は不変) |
+
+050–055 と 057 は導出関数を直接呼び、構成要素の 1 つを省く実装 (digest が不変になる) を Red にする。
 parameterized 実行でよいが、各要素を独立 case として報告する。
 
 indeterminate を deny や success へ丸めず、成功観測を欠いたまま #627 の publish/CAS へ進めない。
@@ -124,7 +127,7 @@ admission 成功 fixture でも remote write ledger と approval consume は 0 �
 
 ## 5. 実装 PR への昇格規則
 
-実装 PR は 55 candidate を各 1 件以上の独立 test へ昇格し、実装時に正規の test ID
+実装 PR は 57 candidate を各 1 件以上の独立 test へ昇格し、実装時に正規の test ID
 (`U-PACKPUB-ADM-*`) を割り当てる。typed reason、入力 digest、observer call 順、admission
 record digest、approval/remote write count を直接検査する。恒真 assertion、dummy observer、既存
 #625 nonce の流用、publish/CAS port の no-op 偽装では Green にしない。production source 変更、
