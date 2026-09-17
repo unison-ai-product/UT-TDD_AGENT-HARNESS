@@ -20,9 +20,10 @@ parent_design: docs/plans/PLAN-L7-626-pack-publication-admission-binding.md
 pair_artifact: docs/test-design/harness/L7-pack-publication-admission-binding-test-design.md
 agent_slots:
   - role: tl
-    slot_label: Claude Opus - L6 staging/admission境界とL7 read-only bindingの同値性を検証
+    slot_label: Codex Sol - L6 staging/admission 境界と L7 read-only binding の同値性を非著者検証
   - role: qa
-    slot_label: Terra - 15 guard、indeterminate、write-zero、replayの逆向き検証
+    slot_label: Terra - 39 guard、indeterminate、write-zero、replay、intent / approval
+      binding の逆向き検証
 generates:
   - artifact_path: docs/plans/PLAN-REVERSE-626-pack-publication-admission-binding-backfill.md
     artifact_type: markdown_doc
@@ -42,18 +43,18 @@ status: draft
 github_issue_id: 626
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:9d0ca6bbdc6003f17761ae2f4e1da8f8
-  command_id: plan-revise:issue-626:pr645-reverse:r3:c01cebb83350
-  admitted_at: 2026-09-17T01:28:45.558Z
-  source_digest: sha256:1cfca197b4fede33c5b40e8bfb1c18532142d19c04c7a95296ffe4f40290cfdf
-  decision_digest: sha256:aee90bef8ffcdeb5781c2c2f38a21261d3d57ce35b0198a9f370de0d88101b87
-  receipt_digest: sha256:c87d792faef3405bc9ebe88a937c642b55e93cb85ea2667479193b72a5325a07
+  receipt_id: certificate:1610fdd74d3e528eebc03b78ee661862
+  command_id: plan-revise:issue-626:pr645-reverse:r4:b993b11642fd
+  admitted_at: 2026-09-17T01:43:18.005Z
+  source_digest: sha256:5b5bf843a6c5f60d1248cda4192193561e8e30dda57b839ad3fde964eaef6815
+  decision_digest: sha256:748ab365e315fce041b2d0cd318d383759996f08e9737519f03e335e9c75f480
+  receipt_digest: sha256:8a23c3b23fd32a2773bb0f755ad57989e1b10c5896b74ca8845992176696de38
   binding:
     path: docs/plans/PLAN-REVERSE-626-pack-publication-admission-binding-backfill.md
     plan_id: PLAN-REVERSE-626-pack-publication-admission-binding-backfill
     asset_id: plan:a00a5eddd4929e67b7e26820aac193f6
-    revision: 3
-    content_digest: sha256:1cfca197b4fede33c5b40e8bfb1c18532142d19c04c7a95296ffe4f40290cfdf
+    revision: 4
+    content_digest: sha256:5b5bf843a6c5f60d1248cda4192193561e8e30dda57b839ad3fde964eaef6815
   route:
     signal: reverse
     mode: reverse
@@ -64,18 +65,17 @@ admission_receipt:
     projection_digest: sha256:4e5c8b8b398076d56a72deb696afa871b9c259e667c9bb65f22ef2816ca1d8b4
   origin:
     plan_id: PLAN-L7-626-pack-publication-admission-binding
-    revision: 3
-    digest: sha256:0c886b441137b28ce11620e8850d033f8a38c39b10415d34d2badbcb9b1bc540
+    revision: 4
+    digest: sha256:35c52109e1792b2f62242cc0b0eb2e8f0c189e58acd8f00bd114a4c1cc047626
   transition:
     direction: implementation_to_design
     implementation_disposition: preserved
   reentry:
     target_plan_id: PLAN-REVERSE-626-pack-publication-admission-binding-backfill
-    target_revision: 3
+    target_revision: 4
     phase: forward_merge
-  escape_reason: "Issue #626 PR #645 rev 3: PLAN-L7-626 rev 3 (38 guard、freshness
-    の #565 §1.1 準拠、intent identity / approval binding、49 candidate) に
-    R0/R1/R3-R4 を同期。"
+  escape_reason: "Issue #626 PR #645 rev 4: PLAN-L7-626 rev 4 (39 guard、G39
+    approval 未消費、candidate 55) に R1/R2/R3 と slot を同期。"
 ---
 
 # PLAN-REVERSE-626: Pack公開 admission binding の上位契約backfill
@@ -96,10 +96,10 @@ publication/CAS intent を安全に受け取れない。
   head/base/tree、operation ID、idempotency key は immutable であり、caller 補完を許可しない。
   receipt digest は receipt bytes から導出し、field としては持たない (#625 §2 と同じ field 集合)。
 - admission は repository/authority、PR、review、check、merge-base、staging、freshness、approval
-  を同一観測 digest へ束縛し、38 guard 全件を 1 軸ずつ fail-close する。review receipt digest
+  を同一観測 digest へ束縛し、39 guard 全件を 1 軸ずつ fail-close する。review receipt digest
   形状、非空 required context 集合、期待 required context 集合との集合一致、required context の
   被覆、reviewer 非著者、receipt 存在 / schema、preparation journal 由来の PR、approval の束縛先
-  と集合帰属は独立必須条件である。
+  、集合帰属、未消費は独立必須条件である。
 - freshness は PLAN-L7-565 §1.1 のとおり「operation ID / idempotency key が未使用で、同一 PR が
   別 operation・別 staging digest・別 expected main OID の admission に使用されていない」ことで
   あり、expected main OID や staging digest を globally single-use にしない。完全一致 replay
@@ -123,14 +123,14 @@ publication/CAS intent を安全に受け取れない。
 
 `PLAN-L6-63` の before-state / read-back / indeterminate 保持に対し、L7 admission の repository/
 authority identity、expected main、PR base/branch/tree、review/check、merge-base、staging 再観測、
-freshness が同じ sealed operation の precondition であることを確認する。全 28 guard の deny と
+freshness が同じ sealed operation の precondition であることを確認する。全 39 guard の deny と
 observer unavailable の indeterminate は、上位 L6 が要求する副作用前の write-zero へ写像される。
 完全一致 replay だけは同一 digest の record を再構成し、1 軸 drift は再利用ではなく新規 deny
 となる。
 
 ## R3-R4: 再合流
 
-R3 で実装 PR の 49 candidate、対象テスト、exact-head CI、非著者 review を照合する。R4 で
+R3 で実装 PR の 55 candidate、対象テスト、exact-head CI、非著者 review を照合する。R4 で
 repository/authority、review/check/base/freshness の不変条件、receipt digest 形状、sealing 項目の
 所有と typed failure を上位 staged-release contract (PLAN-L7-565 §1.1/§3、PLAN-L6-63) へ backfill
 し、#627 の publish/CAS admission 入力へ戻す。remote 実装、Release/tag/pointer、existing adapter

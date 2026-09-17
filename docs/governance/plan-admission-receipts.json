@@ -4448,6 +4448,38 @@
         "revision": 3,
         "content_digest": "sha256:1cfca197b4fede33c5b40e8bfb1c18532142d19c04c7a95296ffe4f40290cfdf"
       }
+    },
+    {
+      "sequence": 279,
+      "previous_record_digest": "sha256:045454b30aad9647893244d2eee0ea8633d1bc9cee5738df775ef84e03616853",
+      "record_digest": "sha256:c020c1108d66288aa955cdc159808da27f8f8a8d8ec7aae294c5e4dba65e0882",
+      "command_id": "plan-revise:issue-626:pr645-plan:r4:b993b11642fd",
+      "receipt_id": "certificate:ee8354169dcc7c5b554ec382564e2f3c",
+      "receipt_digest": "sha256:d5ddf53212ffa668830397a2e8f560cac82cc68912d9747dfa67827ed8efabc3",
+      "decision_digest": "sha256:4421e52f49003c9ed292d845805c587e594619b7a1a68463f4e89c1e42d21b3d",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-626-pack-publication-admission-binding.md",
+        "plan_id": "PLAN-L7-626-pack-publication-admission-binding",
+        "asset_id": "plan:529eea3e2017a6d17049746ae353398d",
+        "revision": 4,
+        "content_digest": "sha256:35c52109e1792b2f62242cc0b0eb2e8f0c189e58acd8f00bd114a4c1cc047626"
+      }
+    },
+    {
+      "sequence": 280,
+      "previous_record_digest": "sha256:c020c1108d66288aa955cdc159808da27f8f8a8d8ec7aae294c5e4dba65e0882",
+      "record_digest": "sha256:8685efaf25c62c4e34ed65c774fb0628bafb633b56c63f8d5e9b480dadfbbafc",
+      "command_id": "plan-revise:issue-626:pr645-reverse:r4:b993b11642fd",
+      "receipt_id": "certificate:1610fdd74d3e528eebc03b78ee661862",
+      "receipt_digest": "sha256:8a23c3b23fd32a2773bb0f755ad57989e1b10c5896b74ca8845992176696de38",
+      "decision_digest": "sha256:748ab365e315fce041b2d0cd318d383759996f08e9737519f03e335e9c75f480",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-626-pack-publication-admission-binding-backfill.md",
+        "plan_id": "PLAN-REVERSE-626-pack-publication-admission-binding-backfill",
+        "asset_id": "plan:a00a5eddd4929e67b7e26820aac193f6",
+        "revision": 4,
+        "content_digest": "sha256:5b5bf843a6c5f60d1248cda4192193561e8e30dda57b839ad3fde964eaef6815"
+      }
     }
   ]
 }

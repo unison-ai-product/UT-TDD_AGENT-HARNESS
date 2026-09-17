@@ -40,7 +40,7 @@ plan-admission record を指さない。値は実装 PR の test module 内で�
 fixture から不足する値を worktree、Pack checkout、GitHub API、既存の publication receipt で
 補完しない。各 mutation row は上記 fixture の 1 要素だけを変異させ、他は正常系のまま保つ。
 
-## 3. 38 guard mutation matrix
+## 3. 39 guard mutation matrix
 
 各行は他の predicate を成立させた fixture へ一軸だけを注入する。expected result は admission
 record 0、typed deny、remote write 0 であり、別 guard の失敗を Green にしない。契約引用は
@@ -86,6 +86,7 @@ PLAN-L7-626 §3 の同じ行と一致させる。
 | `CANDIDATE-PACKPUB-ADM-036` | G36 | 626 §2.1 | preparation receipt を `undefined` | `admission_receipt_missing`、observer call 0、write 0 |
 | `CANDIDATE-PACKPUB-ADM-037` | G37 | 626 §2.1 | receipt の PR number field を欠落 | `admission_receipt_invalid`、observer call 0、write 0 |
 | `CANDIDATE-PACKPUB-ADM-038` | G38 | 565 §1.1、626 §2.1 | receipt の `read_back_observation` を PR `4243` へ | `admission_pr_unprepared`、write 0 |
+| `CANDIDATE-PACKPUB-ADM-039` | G39 | 565 §1.1、626 §2.2-8 | approval nonce `apv-adm-fixture-0001` を消費済みに (束縛先・集合帰属は正常系) | `admission_approval_consumed`、write 0 |
 
 G03/G09/G11 は #624 の blocking 3 であり、G09 の形状契約は PLAN-L7-626 §2.2 が L7 で新設し
 PLAN-REVERSE-626 R1 が上位へ backfill する。G01/G05、G06/G07、G11/G12/G24/G31、G18/G32/G33/G34、
@@ -97,17 +98,25 @@ G25/G35 は入力出所・形状/equality・被覆・集合一致が異なるた
 
 | Candidate | Stimulus (1 軸) | Green oracle |
 | --- | --- | --- |
-| `CANDIDATE-PACKPUB-ADM-039` | review observer が timeout | typed `indeterminate`、admission 0、全 remote write 0 |
-| `CANDIDATE-PACKPUB-ADM-040` | checks observer の応答欠落 (`undefined`) | typed `indeterminate`、admission 0、全 remote write 0 |
-| `CANDIDATE-PACKPUB-ADM-041` | repository observer の schema 不正 (ruleset ID が数値でない) | typed `indeterminate`、admission 0、全 remote write 0 |
-| `CANDIDATE-PACKPUB-ADM-042` | merge-base observer が error を返す | typed `indeterminate`、admission 0、全 remote write 0 |
-| `CANDIDATE-PACKPUB-ADM-043` | staging record observer が timeout | typed `indeterminate`、admission 0、全 remote write 0 |
-| `CANDIDATE-PACKPUB-ADM-044` | G03 deny 時に approval port を観測 | approval consume 0、typed `deny`、全 remote write 0 |
-| `CANDIDATE-PACKPUB-ADM-045` | 既存 admission record (同一識別子・同一観測束 digest) がある状態で完全 replay | 同一 record digest を決定的再構成、新規 record 0、mutation 0 |
-| `CANDIDATE-PACKPUB-ADM-046` | 既存 admission record と識別子が同一で、PR head だけ drift した replay | typed `deny` (`admission_operation_replay`)、再構成 0、mutation 0 |
-| `CANDIDATE-PACKPUB-ADM-047` | 正常系 fixture で admitted | admitted record 1、remote write ledger 0、approval consume 0、CAS token mint 0、intent 実行 0 |
-| `CANDIDATE-PACKPUB-ADM-048` | 正常系 admitted record の preimage から §2.3 の 1 項目を除去 | record digest が変わる (全項目について 1 件ずつ実行) |
-| `CANDIDATE-PACKPUB-ADM-049` | intent identity の構成要素 1 件 (reviewed head) を変える | intent identity と approval binding digest が変わる |
+| `CANDIDATE-PACKPUB-ADM-040` | review observer が timeout | typed `indeterminate`、admission 0、全 remote write 0 |
+| `CANDIDATE-PACKPUB-ADM-041` | checks observer の応答欠落 (`undefined`) | typed `indeterminate`、admission 0、全 remote write 0 |
+| `CANDIDATE-PACKPUB-ADM-042` | repository observer の schema 不正 (ruleset ID が数値でない) | typed `indeterminate`、admission 0、全 remote write 0 |
+| `CANDIDATE-PACKPUB-ADM-043` | merge-base observer が error を返す | typed `indeterminate`、admission 0、全 remote write 0 |
+| `CANDIDATE-PACKPUB-ADM-044` | staging record observer が timeout | typed `indeterminate`、admission 0、全 remote write 0 |
+| `CANDIDATE-PACKPUB-ADM-045` | G03 deny 時に approval port を観測 | approval consume 0、typed `deny`、全 remote write 0 |
+| `CANDIDATE-PACKPUB-ADM-046` | 既存 admission record (同一識別子・同一観測束 digest) がある状態で完全 replay | 同一 record digest を決定的再構成、新規 record 0、mutation 0 |
+| `CANDIDATE-PACKPUB-ADM-047` | 既存 admission record と識別子が同一で、PR head だけ drift した replay | typed `deny` (`admission_operation_replay`)、再構成 0、mutation 0 |
+| `CANDIDATE-PACKPUB-ADM-048` | 正常系 fixture で admitted | admitted record 1、remote write ledger 0、approval consume 0、CAS token mint 0、intent 実行 0 |
+| `CANDIDATE-PACKPUB-ADM-049` | 正常系 admitted record の preimage から §2.3 の 1 項目を除去 | record digest が変わる (全項目について 1 件ずつ実行) |
+| `CANDIDATE-PACKPUB-ADM-050` | intent identity 構成要素: operation ID だけを `op-adm-fixture-0002` に | intent identity と approval binding digest が変わる (他 5 要素は不変) |
+| `CANDIDATE-PACKPUB-ADM-051` | intent identity 構成要素: repository ID だけを `424201` に | 同上 |
+| `CANDIDATE-PACKPUB-ADM-052` | intent identity 構成要素: target ref だけを `refs/heads/release` に | 同上 |
+| `CANDIDATE-PACKPUB-ADM-053` | intent identity 構成要素: expected main OID だけを別 OID に | 同上 |
+| `CANDIDATE-PACKPUB-ADM-054` | intent identity 構成要素: reviewed head OID だけを別 OID に | 同上 |
+| `CANDIDATE-PACKPUB-ADM-055` | intent identity 構成要素: preparation receipt digest だけを別 digest に | 同上 |
+
+050–055 は導出関数を直接呼び、構成要素の 1 つを省く実装 (digest が不変になる) を Red にする。
+parameterized 実行でよいが、各要素を独立 case として報告する。
 
 indeterminate を deny や success へ丸めず、成功観測を欠いたまま #627 の publish/CAS へ進めない。
 admission 成功 fixture でも remote write ledger と approval consume は 0 であり、#626 が副作用を
@@ -115,7 +124,7 @@ admission 成功 fixture でも remote write ledger と approval consume は 0 �
 
 ## 5. 実装 PR への昇格規則
 
-実装 PR は 49 candidate を各 1 件以上の独立 test へ昇格し、実装時に正規の test ID
+実装 PR は 55 candidate を各 1 件以上の独立 test へ昇格し、実装時に正規の test ID
 (`U-PACKPUB-ADM-*`) を割り当てる。typed reason、入力 digest、observer call 順、admission
 record digest、approval/remote write count を直接検査する。恒真 assertion、dummy observer、既存
 #625 nonce の流用、publish/CAS port の no-op 偽装では Green にしない。production source 変更、
