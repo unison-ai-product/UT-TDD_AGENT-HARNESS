@@ -948,12 +948,13 @@ function preparationReceiptDigest(
   return sha256(stable(receipt));
 }
 
-function preparationReceiptFromObservation(
-  input: PackPublicationPreparationInput,
-  identity: NonNullable<ReturnType<typeof preparationIdentity>>,
-  branchCommit: string,
-  observed: PackPublicationPullRequestObservation,
-): PackPublicationPreparationReceipt | null {
+function preparationReceiptFromObservation(input: {
+  readonly preparation: PackPublicationPreparationInput;
+  readonly identity: NonNullable<ReturnType<typeof preparationIdentity>>;
+  readonly branchCommit: string;
+  readonly observed: PackPublicationPullRequestObservation;
+}): PackPublicationPreparationReceipt | null {
+  const { preparation, identity, branchCommit, observed } = input;
   if (
     !SHA1.test(branchCommit) ||
     !/^[1-9][0-9]*$/.test(observed.pullRequest) ||
@@ -962,9 +963,9 @@ function preparationReceiptFromObservation(
     !SHA256.test(observed.treeDigest) ||
     !SHA256.test(observed.controlManifestSnapshotDigest) ||
     observed.headOid !== branchCommit ||
-    observed.baseOid !== input.expectedMainOid ||
+    observed.baseOid !== preparation.expectedMainOid ||
     observed.treeDigest !== identity.treeDigest ||
-    observed.controlManifestSnapshotDigest !== input.plan.controlManifestSnapshotDigest
+    observed.controlManifestSnapshotDigest !== preparation.plan.controlManifestSnapshotDigest
   )
     return null;
   const unsigned = {
@@ -972,9 +973,9 @@ function preparationReceiptFromObservation(
     releaseId: identity.releaseId,
     sourceRevision: identity.sourceRevision,
     stagingPlanDigest: identity.stagingPlanDigest,
-    repository: input.repository,
-    publicationBranch: input.publicationBranch,
-    expectedMainOid: input.expectedMainOid,
+    repository: preparation.repository,
+    publicationBranch: preparation.publicationBranch,
+    expectedMainOid: preparation.expectedMainOid,
     branchCommitOid: branchCommit,
     pullRequest: observed.pullRequest,
     reviewedHeadOid: observed.headOid,
@@ -1038,12 +1039,12 @@ async function reconcilePreparedPreparation(
       reason: observed.reason,
       remoteWrites: 0,
     });
-  const receipt = preparationReceiptFromObservation(
-    input,
+  const receipt = preparationReceiptFromObservation({
+    preparation: input,
     identity,
-    observed.value.branchCommit,
-    observed.value.pullRequest,
-  );
+    branchCommit: observed.value.branchCommit,
+    observed: observed.value.pullRequest,
+  });
   if (!receipt)
     return preparationFailure({
       status: "partial_publication",
