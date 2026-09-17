@@ -392,8 +392,6 @@ export function publishCodexReviewWake(repoRoot: string, wake: CanonicalReviewWa
   const path = join(codexWakeInboxRoot(repoRoot), `${entryStem(entry.id)}.json`);
   try {
     writeExclusive(path, `${JSON.stringify(entry)}\n`);
-    const backlog = join(backlogRoot(repoRoot), `${wake.requestDigest}.json`);
-    if (existsSync(backlog)) unlinkSync(backlog);
     return path;
   } catch (error) {
     const reason =
@@ -413,6 +411,66 @@ function readJson(path: string): unknown {
     return JSON.parse(readFileSync(path, "utf8")) as unknown;
   } catch {
     return undefined;
+  }
+}
+
+function canonicalReviewReceiptPath(repoRoot: string, requestDigest: string): string {
+  return join(resolve(repoRoot), ".ut-tdd", "review", "receipts", `${requestDigest}.json`);
+}
+
+/**
+ * A live-consume result is not itself a terminal receipt.  The provider may
+ * have durably projected the canonical receipt and then fail while publishing
+ * a derived comment/memory.  Conversely, a successful process result without
+ * the matching receipt is not enough to consume a wake.  Keep this check
+ * local to the wake boundary so the claim is only terminalized from an
+ * authenticated, canonical receipt.
+ */
+export function hasCanonicalCodexReviewReceipt(
+  repoRoot: string,
+  envelope: ClaudeReviewEnvelopeEntry,
+): boolean {
+  const request = loadCanonicalLiveReviewRequest({ repoRoot, envelope });
+  if (!request) return false;
+  const path = canonicalReviewReceiptPath(repoRoot, envelope.requestDigest);
+  try {
+    const stat = lstatSync(path);
+    if (!stat.isFile() || stat.isSymbolicLink()) return false;
+    const value = JSON.parse(readFileSync(path, "utf8")) as Record<string, unknown>;
+    if (!value || Array.isArray(value)) return false;
+    const reviewer = request.authorFamily === "codex" ? "claude" : "codex";
+    if (
+      value.memoryId !== request.memoryId ||
+      value.pr !== request.pr ||
+      value.head !== request.exactHead ||
+      value.reviewRevision !== request.reviewRevision ||
+      value.reviewerFamily !== reviewer ||
+      value.kind !== "verdict" ||
+      !["PASS", "PASS-WEAK", "FLAG"].includes(value.verdict as string) ||
+      typeof value.at !== "string" ||
+      !Number.isFinite(Date.parse(value.at))
+    )
+      return false;
+    if (
+      Object.hasOwn(value, "blockingFindings") &&
+      (!Array.isArray(value.blockingFindings) ||
+        value.blockingFindings.some((finding) => typeof finding !== "string"))
+    )
+      return false;
+    if (
+      value.verdict === "FLAG" &&
+      (!Array.isArray(value.blockingFindings) || value.blockingFindings.length === 0)
+    )
+      return false;
+    if (
+      (value.verdict === "PASS" || value.verdict === "PASS-WEAK") &&
+      Array.isArray(value.blockingFindings) &&
+      value.blockingFindings.length > 0
+    )
+      return false;
+    return true;
+  } catch {
+    return false;
   }
 }
 
@@ -487,10 +545,35 @@ function redeliverBacklog(repoRoot: string): void {
   if (!process.env.CODEX_REVIEW_TARGET_SESSION?.trim()) return;
   const entries = readdirSync(backlogRoot(repoRoot))
     .filter((name) => name.endsWith(".json"))
-    .sort();
-  for (const name of entries) {
-    const value = readJson(join(backlogRoot(repoRoot), name)) as CodexWakeBacklog | undefined;
-    if (!value || value.schema !== CODEX_MEMORY_WAKE_BACKLOG_SCHEMA) continue;
+    .map((name) => ({
+      name,
+      path: join(backlogRoot(repoRoot), name),
+      value: readJson(join(backlogRoot(repoRoot), name)) as CodexWakeBacklog | undefined,
+    }))
+    .filter(
+      (
+        entry,
+      ): entry is {
+        name: string;
+        path: string;
+        value: CodexWakeBacklog;
+      } =>
+        Boolean(
+          entry.value &&
+            entry.value.schema === CODEX_MEMORY_WAKE_BACKLOG_SCHEMA &&
+            typeof entry.value.createdAt === "string" &&
+            Number.isFinite(Date.parse(entry.value.createdAt)) &&
+            typeof entry.value.requestDigest === "string",
+        ),
+    )
+    .sort(
+      (left, right) =>
+        Date.parse(left.value.createdAt) - Date.parse(right.value.createdAt) ||
+        left.value.requestDigest.localeCompare(right.value.requestDigest),
+    );
+  for (const entry of entries) {
+    const value = entry.value;
+    if (value.schema !== CODEX_MEMORY_WAKE_BACKLOG_SCHEMA) continue;
     try {
       publishCodexReviewWake(repoRoot, {
         purpose: "review",
@@ -501,7 +584,9 @@ function redeliverBacklog(repoRoot: string): void {
         memoryPath: value.memoryPath,
       });
     } catch {
-      // Keep failed backlog bytes for the next SessionStart/Stop.
+      // Keep failed backlog bytes for the next SessionStart/Stop.  A
+      // successful projection only makes the inbox pending; the backlog is
+      // removed by consume after canonical receipt authentication.
     }
   }
 }
@@ -705,4 +790,13 @@ export function consumeCodexReviewWake(
   unlinkSync(claimed);
   const claimMarker = claimMarkerPath(repoRoot, entry.id, session);
   if (existsSync(claimMarker)) unlinkSync(claimMarker);
+  // The terminal marker is the durable proof that the canonical receipt was
+  // authenticated by the caller.  Only now may the retry backlog be removed;
+  // a redelivery that merely reaches inbox must remain pending/retryable.
+  try {
+    unlinkSync(join(backlogRoot(repoRoot), `${entry.requestDigest}.json`));
+  } catch {
+    // Keep the terminal marker authoritative if cleanup races or the backlog
+    // was already removed by an idempotent retry.
+  }
 }

@@ -1290,8 +1290,19 @@ hook
   .action(() => {
     const repoRoot = requireRuntimeRepoRoot({ allowCwdFallback: true });
     const surface = readCodexReviewWake(repoRoot);
-    process.stdout.write(`${JSON.stringify(surface)}\n`);
-    if (surface.status === "pending" || surface.status === "invalid") process.exitCode = 2;
+    // A normal Codex SessionStart/Stop has no review target session.  That is
+    // an empty hook surface, not an invalid envelope, so it must not turn the
+    // ordinary session hook red.  Invalid envelopes still fail closed below.
+    const hookSurface =
+      surface.status === "invalid" && surface.reason === "codex_review_target_session_unavailable"
+        ? {
+            schema: surface.schema,
+            status: "empty" as const,
+            deliveryConfirmed: false as const,
+          }
+        : surface;
+    process.stdout.write(`${JSON.stringify(hookSurface)}\n`);
+    if (hookSurface.status === "pending" || hookSurface.status === "invalid") process.exitCode = 2;
   });
 
 hook

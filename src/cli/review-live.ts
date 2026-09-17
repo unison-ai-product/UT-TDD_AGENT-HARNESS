@@ -24,6 +24,7 @@ import {
   CodexReviewWakeError,
   claimCodexReviewWake,
   consumeCodexReviewWake,
+  hasCanonicalCodexReviewReceipt,
   isCodexReviewWakePath,
   publishCodexReviewWake,
   restoreCodexReviewWakeClaim,
@@ -272,33 +273,53 @@ export function registerLiveReviewCommands(
     .requiredOption("--envelope <path>", "v3 Claude review inbox envelope")
     .option("--json", "JSON output")
     .action((opts: { envelope: string; json?: boolean }) => {
+      let repoRoot: string | undefined;
+      let claimedPath: string | undefined;
+      let claimHandled = false;
       try {
-        const repoRoot = resolveRepositoryRoot(deps.repoRoot());
-        const codexWake = isCodexReviewWakePath(repoRoot, opts.envelope);
-        const claimedPath = codexWake ? claimCodexReviewWake(repoRoot, opts.envelope) : undefined;
+        const currentRepoRoot = resolveRepositoryRoot(deps.repoRoot());
+        repoRoot = currentRepoRoot;
+        const codexWake = isCodexReviewWakePath(currentRepoRoot, opts.envelope);
+        claimedPath = codexWake ? claimCodexReviewWake(currentRepoRoot, opts.envelope) : undefined;
         const envelope = decodeClaudeInboxEntry(readFileSync(claimedPath ?? opts.envelope, "utf8"));
         if (!envelope || envelope.purpose !== "review") {
           throw new Error("invalid_review_envelope");
         }
         const result = consumeLiveReview({
-          repoRoot,
+          repoRoot: currentRepoRoot,
           envelope,
           ports: {
             providerAvailable: deps.providerAvailable,
-            resolveTaskFile: (input) => resolveLiveReviewTaskFile(repoRoot, input),
-            runReview: ({ provider, args }) => deps.runReview({ repoRoot, provider, args }),
-            publishReceipt: (projection) => deps.publishReceipt(repoRoot, projection),
+            resolveTaskFile: (input) => resolveLiveReviewTaskFile(currentRepoRoot, input),
+            runReview: ({ provider, args }) =>
+              deps.runReview({ repoRoot: currentRepoRoot, provider, args }),
+            publishReceipt: (projection) => deps.publishReceipt(currentRepoRoot, projection),
           },
         });
         if (codexWake && claimedPath) {
-          if (result.ok) consumeCodexReviewWake(repoRoot, claimedPath);
-          else restoreCodexReviewWakeClaim(repoRoot, claimedPath);
+          // Process success is only a derived observation.  A canonical
+          // receipt may already be durable even when publishing its human-
+          // facing projections failed; receipt identity decides terminality.
+          if (hasCanonicalCodexReviewReceipt(currentRepoRoot, envelope)) {
+            consumeCodexReviewWake(currentRepoRoot, claimedPath);
+          } else {
+            restoreCodexReviewWakeClaim(currentRepoRoot, claimedPath);
+          }
+          claimHandled = true;
         }
         if (opts.json) process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
         else
           process.stdout.write(`review live-consume: ${result.ok ? "completed" : result.reason}\n`);
         process.exitCode = result.ok ? 0 : 1;
       } catch (error) {
+        if (repoRoot && claimedPath && !claimHandled) {
+          try {
+            restoreCodexReviewWakeClaim(repoRoot, claimedPath);
+          } catch {
+            // Keep the claim visible when restoration itself cannot be
+            // completed; the next lease-expiry sweep remains authoritative.
+          }
+        }
         process.stderr.write(
           `review live-consume: ${error instanceof Error ? error.message : String(error)}\n`,
         );
