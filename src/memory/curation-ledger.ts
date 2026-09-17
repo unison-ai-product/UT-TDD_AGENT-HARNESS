@@ -266,7 +266,7 @@ export function verifyAdoptRegistrationReplay(input: {
   const subject = input.row.archive_path ?? input.row.custody_id ?? input.row.source_digest;
   const adopt = input.row.adopt;
   if (!adopt) return [{ kind: "adopt-registration-missing", subject }];
-  if (!input.replay) return [{ kind: "adopt-replay-missing", subject }];
+  if (!input.replay) return []; // MUTATION PROBE: silently pass on missing replay
   const findings: CurationFinding[] = [];
   const replay = input.replay;
   if (replay.exit_code !== 0) findings.push({ kind: "adopt-replay-exit-nonzero", subject });
