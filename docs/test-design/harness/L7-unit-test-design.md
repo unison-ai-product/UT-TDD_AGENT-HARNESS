@@ -1761,7 +1761,7 @@ Codex wake は canonical request を信頼根とし、hook の surface は配送
 L7実装で実測した候補は、専用 test の実テスト名へ直接束縛する。各行の実行根拠は
 `tests/codex-review-wake.test.ts` と PLAN-L7-600 の review evidence である。実測済み候補は
 candidate ID を test 名で citation し、正規 `U-*` oracle への昇格は別の bounded follow-up
-で行う。現在の専用 test は9件で、`CANDIDATE-CODEXWAKE-001`、`004`（receipt
+で行う。現在の専用 test は9件で、CANDIDATE-CODEXWAKE-001、`004`（receipt
 永続化後の派生表示失敗でも terminalize する bounded variant）、`006`、`007`（review前の
 backlogをpendingのまま保持する bounded safety variant）、`008`、`009`（通常hookのexit 0を
 含む2件）、`010`、`011`（valid/invalid混在の bounded variant）を実測する。
