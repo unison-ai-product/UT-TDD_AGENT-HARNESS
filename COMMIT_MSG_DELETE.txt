@@ -1,1 +1,0 @@
-chore(distribution): remove temporary commit message file
