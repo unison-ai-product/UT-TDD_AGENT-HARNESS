@@ -7,7 +7,7 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
 - スキーマ: `ut-tdd.memory-curation-ledger/v1`
 - 基準 commit (PR-2 base): `3a516df69cff073ebddbf90f4ee2b939c451ba82`
 - 著者 (author family): `claude-sonnet-5` (claude)
-- 非著者 reviewer: 未記録 (非著者 frontier review の receipt を待つ)
+- 非著者 reviewer: `gpt-5.6-sol` (codex family、frontier tier)、対象 exact head `66ff1ac1e7b2ca18e0dc6def0a3b0dae69d78653`、verdict PASS、receipt `rv1-e1ae6a6cb92a0f117a3bed324c0555042ec3d6840bde8592b1cc945726cbf0fc`
 - 行数: 1032 件 (tracked 607 / untracked 425)、採用 (adopt) 46 件、不採用 (reject) 986 件、統合元 (merged_from) 5 件
 
 ## 6 基準
@@ -30,6 +30,13 @@ untracked source は内容 digest と opaque な local-archive custody id だけ
  "author": {
   "model": "claude-sonnet-5",
   "family": "claude"
+ },
+ "reviewer": {
+  "model": "gpt-5.6-sol",
+  "family": "codex",
+  "exact_head": "66ff1ac1e7b2ca18e0dc6def0a3b0dae69d78653",
+  "verdict": "PASS",
+  "receipt": "rv1-e1ae6a6cb92a0f117a3bed324c0555042ec3d6840bde8592b1cc945726cbf0fc"
  },
  "rows": [
   {
