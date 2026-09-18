@@ -31,22 +31,6 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-566-memory-clean-cut-replacement.md
     artifact_type: markdown_doc
-  - artifact_path: docs/governance/memory-curation-ledger-2026-09.md
-    artifact_type: markdown_doc
-  - artifact_path: docs/archive/memory-legacy-2026-09/MANIFEST.json
-    artifact_type: json_config
-  - artifact_path: docs/archive/memory-legacy-2026-09/SUMMARY.md
-    artifact_type: markdown_doc
-  - artifact_path: src/memory/curation-ledger.ts
-    artifact_type: source_module
-  - artifact_path: src/memory/legacy-archive-manifest.ts
-    artifact_type: source_module
-  - artifact_path: tests/memory-clean-cut-non-read.test.ts
-    artifact_type: test_code
-  - artifact_path: tests/memory-curation-ledger.test.ts
-    artifact_type: test_code
-  - artifact_path: tests/memory-legacy-archive.test.ts
-    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L6-104-memory-clean-cut-replacement.md
   requires: []
@@ -62,18 +46,18 @@ status: draft
 github_issue_id: 424
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:aefff77da46304bdff051b15ff4bf4cb
-  command_id: plan-revise:issue-424:memory-clean-cut-impl:4
-  admitted_at: 2026-09-17T05:11:24.408Z
-  source_digest: sha256:ac5224c7616e183c7cf3fd8cdbc2fd61b4cfb5ae912bcf4ea956e596f0673e73
-  decision_digest: sha256:de782ca208caf201ad467c21b6d951113c84a4aeb61a3cba42def801d6510791
-  receipt_digest: sha256:901746b83765ed275b0e040c25aa18377904d406c72d8805654c4a984f8aaebd
+  receipt_id: certificate:59fbf115c1a30319c420116b1ce9797f
+  command_id: plan-revise:issue-424:memory-clean-cut-impl:3
+  admitted_at: 2026-09-16T04:42:05.981Z
+  source_digest: sha256:504eae95dad31418be7f634a76e26529c7269195900cf033d2368fa29a1bf6e4
+  decision_digest: sha256:b0f8aa5118e13dde6b9a29a80de1d3529b89da962a5696e218a02ef03489d9de
+  receipt_digest: sha256:12fb05dc7e42d3b6ed232cc1dff29a406e9f23b53147f71f6f441bc1961a61ea
   binding:
     path: docs/plans/PLAN-L7-566-memory-clean-cut-replacement.md
     plan_id: PLAN-L7-566-memory-clean-cut-replacement
     asset_id: plan:6f7505a570cabcffc4899bfc7f83cc98
-    revision: 4
-    content_digest: sha256:ac5224c7616e183c7cf3fd8cdbc2fd61b4cfb5ae912bcf4ea956e596f0673e73
+    revision: 3
+    content_digest: sha256:504eae95dad31418be7f634a76e26529c7269195900cf033d2368fa29a1bf6e4
   route:
     signal: feature_addition
     mode: add-feature
