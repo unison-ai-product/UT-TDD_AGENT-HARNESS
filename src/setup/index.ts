@@ -94,6 +94,7 @@ export {
   type ConsumerNodeRuntimePorts,
   type ConsumerNodeRuntimeReadinessInput,
   type ConsumerRuntimeDenyReason,
+  canonicalJson,
   createConsumerNodeRuntimeFilesystemPorts,
   digestConsumerRuntimeBytes,
   digestConsumerRuntimeValue,
@@ -101,10 +102,19 @@ export {
   installConsumerNodeRuntimeOnFilesystem,
   quarantinePathFor,
   renderConsumerNodeWrapper,
+  SAFE_PRODUCT_ID,
   stagingPathFor,
   validateConsumerNodeRuntimeBundle,
   validateConsumerReadiness,
 } from "./consumer-node-runtime.ts";
+export {
+  buildConsumerRuntimeRelease,
+  type ConsumerRuntimeRelease,
+  type ConsumerRuntimeReleaseAdmissionInput,
+  type ConsumerRuntimeReleaseDocument,
+  ConsumerRuntimeReleaseValidationError,
+  validateConsumerRuntimeRelease,
+} from "./consumer-runtime-release.ts";
 export type { CleanDistributionPlan, ConsumerReadinessPlan, PackSyncPlan } from "./distribution.ts";
 export {
   buildCleanDistributionPlan,

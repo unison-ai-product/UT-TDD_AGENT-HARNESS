@@ -1217,7 +1217,7 @@ describe("L7 CLI surface closure", () => {
     expect(payload.commands.join("\n")).not.toContain("bun ");
     expect(payload.commands.join("\n")).not.toContain(".sig");
     expect(payload.commands).toContain(
-      "gh release create v0.1.0 .ut-tdd/release/v0.1.0.tar.gz .ut-tdd/release/v0.1.0.tar.gz.sha256 .ut-tdd/release/v0.1.0.manifest.json --repo unison-ai-product/UT-TDD_AGENT-HARNESS-Pack --verify-tag --notes-file .ut-tdd/release/v0.1.0.manifest.json",
+      'gh release create v0.1.0 .ut-tdd/release/v0.1.0.tar.gz .ut-tdd/release/v0.1.0.tar.gz.sha256 .ut-tdd/release/v0.1.0.ut-tdd.mjs .ut-tdd/release/v0.1.0.consumer-runtime.json .ut-tdd/release/v0.1.0.consumer.sha256 --repo unison-ai-product/UT-TDD_AGENT-HARNESS-Pack --verify-tag --notes "UT-TDD Pack consumer runtime v0.1.0"',
     );
     expect(payload.commands).toEqual(
       expect.arrayContaining([
