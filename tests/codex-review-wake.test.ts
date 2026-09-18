@@ -288,7 +288,12 @@ describe("Codex review wake contract", () => {
     });
     if (firstSurface.status !== "pending" || !firstSurface.envelopePath)
       throw new Error("expected first FIFO wake");
-    claimCodexReviewWake(root, firstSurface.envelopePath, new Date("2026-09-16T00:02:00.000Z"));
+    const firstClaim = claimCodexReviewWake(
+      root,
+      firstSurface.envelopePath,
+      new Date("2026-09-16T00:02:00.000Z"),
+    );
+    consumeCodexReviewWake(root, firstClaim, new Date("2026-09-16T00:03:00.000Z"));
 
     const secondSurface = readCodexReviewWake(root);
     expect(secondSurface).toMatchObject({
