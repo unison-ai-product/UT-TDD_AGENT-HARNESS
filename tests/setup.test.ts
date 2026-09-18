@@ -684,6 +684,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
         "README.md",
         "LICENSE",
         "package.json",
+        ".node-version",
         "src/cli.ts",
         "src/setup/index.ts",
         ...COMMON_FILES.filter((entry) => entry.template.startsWith("adapter/")).map(
@@ -781,6 +782,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
       "README.md",
       "LICENSE",
       "package.json",
+      ".node-version",
       "src/cli.ts",
       "src/setup/index.ts",
       ...COMMON_FILES.filter((entry) => entry.template.startsWith("adapter/")).map(
