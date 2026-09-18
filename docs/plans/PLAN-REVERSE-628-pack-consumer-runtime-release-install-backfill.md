@@ -41,18 +41,18 @@ status: draft
 github_issue_id: 418
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:748ef764bbbea943cee1eb43aee87623
-  command_id: plan-draft:issue-418:consumer-runtime-release-install:reverse:1
-  admitted_at: 2026-09-18T10:05:41.692Z
-  source_digest: sha256:e9ac685853cc3ae356827ae52de627b7e296c87ede7f39717eb7c971ba81680c
-  decision_digest: sha256:d2b5387da1a8daceab58cdb89f17d1900d6b5e18581d5f3e13573dcee2ebbeae
-  receipt_digest: sha256:b0f22fa3d74ee420ae0d6a23120338e830ebf5ba711cd128c84b432b0b0a3ca5
+  receipt_id: certificate:0c534e6b8c3b1d8d107643c068000a0e
+  command_id: plan-revise:issue-418:pr665-r1-flag:reverse:r2:a99f7cdbcbfd
+  admitted_at: 2026-09-18T10:29:44.949Z
+  source_digest: sha256:a0b7cb7df5bd169b6e22fbe7821126d93236df2780a84cf60da1c73f0becf876
+  decision_digest: sha256:c8cc5a9edce394d3076bc2782f73b772a570824f9e80384f9f2f968bcc1ece4e
+  receipt_digest: sha256:09fb3de5035e4e6a778ed9c05041ae9447800968172d0a0eb7a176f19c448be6
   binding:
     path: docs/plans/PLAN-REVERSE-628-pack-consumer-runtime-release-install-backfill.md
     plan_id: PLAN-REVERSE-628-pack-consumer-runtime-release-install-backfill
     asset_id: plan:748ef764bbbea943cee1eb43aee87623
-    revision: 1
-    content_digest: sha256:e9ac685853cc3ae356827ae52de627b7e296c87ede7f39717eb7c971ba81680c
+    revision: 2
+    content_digest: sha256:a0b7cb7df5bd169b6e22fbe7821126d93236df2780a84cf60da1c73f0becf876
   route:
     signal: reverse
     mode: reverse
@@ -70,9 +70,10 @@ admission_receipt:
     implementation_disposition: preserved
   reentry:
     target_plan_id: PLAN-L7-628-pack-consumer-runtime-release-install
-    target_revision: 1
+    target_revision: 2
     phase: forward_merge
-  escape_reason: "Issue #418 consumer runtime release install Reverse backfill pair (R0)"
+  escape_reason: "PR #665 Sol r1 FLAG (契約 3 件: receipt の toolchain path、自己 digest
+    の信頼根、consumer receipt の再構成規則) の是正改訂。advisor design 相談済み。"
 ---
 
 # PLAN-REVERSE-628: Pack Release consumer runtime install の逆向き確認
@@ -98,13 +99,13 @@ clean source tarball (`PLAN-L7-508`)、clean fixture E2E (`PLAN-L7-531`) は対�
 | --- | --- |
 | 出力 asset 集合と決定性 | C001 |
 | schema v1 の厳格さ | C002 |
-| producer 端末情報の非混入 | C003 |
+| producer 端末情報の非混入と receipt 無加工 (toolchain path 例外) | C003 |
 | producer の fail-close と部分出力 0 | C004 |
 | Release だけからの install と launcher 起動 | C005 |
 | sha256 による完全性 | C006 |
-| 自己 digest 照合 | C007 |
+| 自己 digest 照合と、整合的偽造を installer 単独で検出しない限界 (PLAN §6.1) | C007 |
 | asset 集合の exact 一致 | C008 |
-| 同一 release 再実行の冪等性 | C009 |
+| 同一 release 再実行の冪等性と保存済み receipt 照合 | C009 |
 | 別 release の typed deny | C010 |
 
 ## R3: gap 分類と backfill
@@ -124,4 +125,4 @@ PR-1 / PR-2 の実測と非著者 review を同一 exact revision に束縛し�
 ## Scope boundary
 
 update / rollback / 異 version 共存 / stable 昇格 (#364)、publication 自動化 (#605 等)、clean fixture E2E (`PLAN-L7-531`) は
-本 Reverse の対象外。
+本 Reverse の対象外。署名鍵による asset 検証も対象外 (PLAN §6.1、高影響境界)。
