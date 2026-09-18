@@ -982,7 +982,7 @@ describe("L7 CLI surface closure", () => {
     }
   }, 20_000);
 
-  it("creates a local clean distribution tarball and checksum without publishing", () => {
+  it("fails closed when the distribution source tag is unavailable", () => {
     const outDir = mkdtempSync(join(tmpdir(), "ut-tdd-package-out-"));
     try {
       const run = runCliIn(repoRoot, [
@@ -996,24 +996,12 @@ describe("L7 CLI surface closure", () => {
       ]);
       const payload = JSON.parse(run.stdout);
 
-      expect(run.status, run.stderr || run.stdout).toBe(0);
+      expect(run.status, run.stderr || run.stdout).toBe(1);
       expect(payload).toMatchObject({
-        ok: true,
-        actualPublishRequiresPoApproval: true,
-        export: {
-          ok: true,
-          sourceTag: "v0.1.0",
-        },
+        ok: false,
       });
-      // PLAN-L7-413 D-4c: unsigned tarball 契約へ整合 — signature 系 field は payload から
-      // 撤去済み (宣言と実装の一致)。tarball + checksum + manifest のみが成果物。
-      expect(payload.artifacts.signature).toBeUndefined();
-      expect(existsSync(payload.artifacts.tarball)).toBe(true);
-      expect(existsSync(payload.artifacts.checksum)).toBe(true);
-      expect(existsSync(payload.artifacts.manifest)).toBe(true);
-      expect(readFileSync(payload.artifacts.checksum, "utf8")).toContain("v0.1.0.tar.gz");
-      const manifest = JSON.parse(readFileSync(payload.artifacts.manifest, "utf8"));
-      expect(manifest.artifactCount).toBeGreaterThan(100);
+      expect(payload.error).toContain("tag source revision unavailable");
+      expect(readdirSync(outDir)).toHaveLength(0);
     } finally {
       removeTestTree(outDir);
     }
