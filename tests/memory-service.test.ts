@@ -763,32 +763,24 @@ describe("ut-tdd memory add --receipt-json (CLI, PLAN-L6-104 §3.1 decision 7)",
     expect(receipt.memory_id).toBe(frontmatterMatch?.[1]);
   });
 
-  it("derives operation_id from the content hash prefix when --operation-id is omitted, stably", () => {
-    const repoOne = createReceiptRepo("example/receipt-op-a");
-    const repoTwo = createReceiptRepo("example/receipt-op-b");
-    const resultOne = runMemoryAdd(repoOne, [
+  it("derives operation_id from the written file's content hash prefix when --operation-id is omitted", () => {
+    // content_hash embeds updated_at, so the default operation_id is not stable across runs; it is
+    // bound to the bytes actually written, which the test re-derives independently from disk.
+    const repo = createReceiptRepo("example/receipt-op-default");
+    const result = runMemoryAdd(repo, [
       "--kind",
       "project",
       "--title",
-      "Stable Operation Id",
+      "Default Operation Id",
       "--body",
       "same body text",
       "--receipt-json",
     ]);
-    const resultTwo = runMemoryAdd(repoTwo, [
-      "--kind",
-      "project",
-      "--title",
-      "Stable Operation Id",
-      "--body",
-      "same body text",
-      "--receipt-json",
-    ]);
-    expect(resultOne.status).toBe(0);
-    expect(resultTwo.status).toBe(0);
-    const receiptOne = JSON.parse(resultOne.stdout.trim().split("\n").pop() as string);
-    const receiptTwo = JSON.parse(resultTwo.stdout.trim().split("\n").pop() as string);
-    expect(receiptOne.operation_id).toMatch(/^[0-9a-f]{16}$/);
-    expect(receiptOne.operation_id).toBe(receiptTwo.operation_id);
+    expect(result.status).toBe(0);
+    const receipt = JSON.parse(result.stdout.trim().split("\n").pop() as string);
+    const written = readFileSync(join(repo, receipt.source_path), "utf8");
+    const fileHash = createHash("sha256").update(written, "utf8").digest("hex");
+    expect(receipt.operation_id).toBe(fileHash.slice(0, 16));
+    expect(receipt.content_digest).toBe(`sha256:${fileHash}`);
   });
 });
