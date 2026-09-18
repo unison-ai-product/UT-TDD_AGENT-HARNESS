@@ -21,6 +21,7 @@ import {
   assertReviewVerdictPath,
   canonicalJson,
   canonicalReviewRevision,
+  hasTerminalReviewReceipt,
   isAttemptCompletedEvent,
   isStrictReviewRequest,
   REVIEW_VERDICT_SCHEMA_VERSION,
@@ -403,6 +404,12 @@ export function issueReviewRequest(input: {
         };
   if (request.reviewRevision.startsWith("rv1-") && !isStrictReviewRequest(request)) {
     return { ok: false, reason: "invalid_review_revision" };
+  }
+  // A valid terminal receipt is checked before persist().  A rejected retry
+  // must not rewrite the request's requestedAt metadata and invalidate the
+  // receipt_before_request merge-gate check.
+  if (hasTerminalReviewReceipt(input.repoRoot, request)) {
+    return { ok: false, reason: "review_receipt_already_exists" };
   }
   // request digest は安定識別子 (pr / exactHead / reviewRevision / authorFamily / memoryId)
   // のみで構成する。`requestedAt` を digest に入れると、同一レビュー要求の retry が別 request

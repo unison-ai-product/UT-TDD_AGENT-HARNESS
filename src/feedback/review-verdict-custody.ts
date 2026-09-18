@@ -244,6 +244,41 @@ function auditEventsFor(repoRoot: string, requestDigest: string): ReviewCustodyA
   return readReviewCustodyAudit(repoRoot).filter((event) => event.requestDigest === requestDigest);
 }
 
+/**
+ * A terminal receipt is authoritative before a new request can be persisted.
+ *
+ * Re-issuing the same identity after a successful review must be a read-only
+ * typed rejection.  In particular, callers must not rewrite `requestedAt`
+ * before the duplicate is rejected: merge-gate compares the original request
+ * time with the receipt time, so a rejected retry must not invalidate a valid
+ * receipt by changing the request file.
+ */
+export function hasTerminalReviewReceipt(repoRoot: string, request: ReviewCustodyRequest): boolean {
+  const requestDigest = reviewIdentityDigest(request);
+  const receiptPath = join(
+    resolve(repoRoot),
+    ".ut-tdd",
+    "review",
+    "receipts",
+    `${requestDigest}.json`,
+  );
+  const receiptFileDigest = digestFile(receiptPath);
+  if (receiptFileDigest === undefined) return false;
+  const events = auditEventsFor(repoRoot, requestDigest);
+  return events.some(
+    (event) =>
+      isAttemptCompletedEvent(event) &&
+      event.exactHead === request.exactHead &&
+      event.verdictPath === reviewVerdictPath(repoRoot, requestDigest, event.attempt) &&
+      event.receiptFileDigest === receiptFileDigest &&
+      !events.some(
+        (other) =>
+          (other.kind === "superseded_attempt" && other.supersededAttempt === event.attempt) ||
+          (other.kind === "attempt_outcome_conflict" && other.attempt === event.attempt),
+      ),
+  );
+}
+
 function sameAttemptOutcome(
   left: ReviewCustodyAuditEvent,
   right: ReviewCustodyAuditEvent,
@@ -511,22 +546,7 @@ export function beginReviewAttempt(input: {
   // attempt_completed — (i) schema, (ii) identity, (iii) receiptFileDigest ==
   // sha256(receipt bytes), (iv) no superseded_attempt / attempt_outcome_conflict
   // for that attempt. Anything less is an orphan and a bounded retry may start.
-  const receiptDigestNow = existsSync(receiptPath) ? digestFile(receiptPath) : undefined;
-  const completed = requestEvents.filter(
-    (event) =>
-      isAttemptCompletedEvent(event) &&
-      event.requestDigest === digest &&
-      event.exactHead === input.request.exactHead &&
-      event.verdictPath === reviewVerdictPath(input.repoRoot, digest, event.attempt) &&
-      receiptDigestNow !== undefined &&
-      event.receiptFileDigest === receiptDigestNow &&
-      !requestEvents.some(
-        (other) =>
-          (other.kind === "superseded_attempt" && other.supersededAttempt === event.attempt) ||
-          (other.kind === "attempt_outcome_conflict" && other.attempt === event.attempt),
-      ),
-  );
-  if (receiptDigestNow !== undefined && completed.length === 1)
+  if (hasTerminalReviewReceipt(input.repoRoot, input.request))
     return { ok: false, reason: "review_receipt_already_exists" };
   // A crash-window temp file is never a receipt: ignore and remove it at the
   // start of every attempt, whether or not a (orphan) receipt exists (§3.2, -018).
