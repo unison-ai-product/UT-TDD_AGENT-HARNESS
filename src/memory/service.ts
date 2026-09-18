@@ -12,6 +12,7 @@
  * 旧経路 (`selectMemoryEntries(db)`) は DB 側 body を読む read model だった。本 service が
  * 読み路を引き継ぐため、呼び元は service を通す (境界は tests/memory-service.test.ts が固定)。
  */
+import { createHash } from "node:crypto";
 import {
   existsSync,
   lstatSync,
@@ -108,6 +109,34 @@ export function resolveMemoryTaskFile(input: {
 /** 正本への書き込みを含む memory storage の単一入口。 */
 export function writeMemory(input: { repoRoot: string; input: MemoryWriteInput }): MemoryEntry {
   return writeMemoryEntry(input.repoRoot, input.input);
+}
+
+/**
+ * `ut-tdd memory add` 登録受領書 (PLAN-L6-104 §3.1 decision 7, U-MEMCUT-026)。
+ *
+ * `content_digest` は呼び手が読み戻した書き込み後の実バイト列から必ず算出する
+ * (発行者主張の memory_id / digest を signed source として扱わない)。
+ */
+export interface MemoryRegistrationReceipt {
+  operation_id: string;
+  memory_id: string;
+  source_path: string;
+  content_digest: string;
+  exit_code: 0;
+}
+
+export function registrationReceiptFor(input: {
+  entry: MemoryEntry;
+  rawText: string;
+  operationId: string;
+}): MemoryRegistrationReceipt {
+  return {
+    operation_id: input.operationId,
+    memory_id: input.entry.memory_id,
+    source_path: input.entry.source_path,
+    content_digest: `sha256:${createHash("sha256").update(input.rawText, "utf8").digest("hex")}`,
+    exit_code: 0,
+  };
 }
 
 const WRITABLE_MEMORY_KINDS = new Set<MemoryKind>(["project", "feedback", "reference", "user"]);
