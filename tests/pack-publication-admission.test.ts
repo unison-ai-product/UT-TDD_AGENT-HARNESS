@@ -8,6 +8,7 @@ import {
   derivePackPublicationAdmissionApprovalBinding,
   derivePackPublicationAdmissionIntentIdentity,
   derivePackPublicationPreparationReceiptDigest,
+  PACK_PUBLICATION_ADMISSION_COVERAGE,
   type PackPublicationAdmissionConfiguration,
   type PackPublicationAdmissionInput,
   type PackPublicationAdmissionLedgerRecord,
@@ -119,6 +120,11 @@ function fixture(
 }
 
 describe("Pack publication admission observation binding", () => {
+  it("declares the bounded candidate coverage explicitly", () => {
+    expect(PACK_PUBLICATION_ADMISSION_COVERAGE.implemented).toHaveLength(6);
+    expect(PACK_PUBLICATION_ADMISSION_COVERAGE.deferred).toHaveLength(5);
+  });
+
   it("admits a complete read-only observation and appends provenance only", async () => {
     const input = fixture();
     const result = await admitPackPublication(input);

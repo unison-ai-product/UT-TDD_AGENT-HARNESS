@@ -7,6 +7,30 @@ import type {
 const SHA1 = /^[a-f0-9]{40}$/;
 const SHA256 = /^sha256:[a-f0-9]{64}$/;
 
+/**
+ * Honest implementation trace for this bounded slice. The remaining PLAN
+ * candidates stay explicit until their independent one-axis oracle lands;
+ * this metadata prevents the focused slice from being mistaken for the full
+ * 70-candidate closure.
+ */
+export const PACK_PUBLICATION_ADMISSION_COVERAGE = Object.freeze({
+  implemented: [
+    "CANDIDATE-PACKPUB-ADM-007",
+    "CANDIDATE-PACKPUB-ADM-036",
+    "CANDIDATE-PACKPUB-ADM-040",
+    "CANDIDATE-PACKPUB-ADM-042",
+    "CANDIDATE-PACKPUB-ADM-048",
+    "CANDIDATE-PACKPUB-ADM-057",
+  ] as const,
+  deferred: [
+    "CANDIDATE-PACKPUB-ADM-001..006",
+    "CANDIDATE-PACKPUB-ADM-008..035",
+    "CANDIDATE-PACKPUB-ADM-041",
+    "CANDIDATE-PACKPUB-ADM-043..056",
+    "CANDIDATE-PACKPUB-ADM-058..070",
+  ] as const,
+});
+
 export interface PackPublicationAdmissionConfiguration {
   readonly repositoryId: number;
   readonly repository: string;

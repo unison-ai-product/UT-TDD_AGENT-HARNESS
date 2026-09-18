@@ -132,6 +132,7 @@ export {
   derivePackPublicationAdmissionIntentIdentity,
   derivePackPublicationAdmissionRecordDigest,
   derivePackPublicationPreparationReceiptDigest,
+  PACK_PUBLICATION_ADMISSION_COVERAGE,
   type PackPublicationAdmissionApprovalReference,
   type PackPublicationAdmissionConfiguration,
   type PackPublicationAdmissionInput,
