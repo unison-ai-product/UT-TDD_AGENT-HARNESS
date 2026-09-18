@@ -193,13 +193,7 @@ describe("Pack consumer runtime release producer contract", () => {
     expect(() => validateConsumerRuntimeRelease(invalid)).toThrow(
       ConsumerRuntimeReleaseValidationError,
     );
-  });
 
-  it("U-PACKRT-004: accepts the schema without any producer workspace path field", () => {
-    expect(validateConsumerRuntimeRelease(validDocument()).release.product_id).toBe("ut-tdd");
-  });
-
-  it("U-PACKRT-003: injects the home directory for producer path fail-close checks", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-packrt-home-"));
     const outside = mkdtempSync(join(tmpdir(), "ut-tdd-packrt-outside-"));
     try {
@@ -227,5 +221,9 @@ describe("Pack consumer runtime release producer contract", () => {
       rmSync(root, { recursive: true, force: true });
       rmSync(outside, { recursive: true, force: true });
     }
+  });
+
+  it("U-PACKRT-004: accepts the schema without any producer workspace path field", () => {
+    expect(validateConsumerRuntimeRelease(validDocument()).release.product_id).toBe("ut-tdd");
   });
 });
