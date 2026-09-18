@@ -48,17 +48,17 @@ Phase 0 の配布パッケージは以下に絞る。
 
 Reverse / Scrum / V-model 全層 DB / detailed telemetry は、初期パッケージの必須範囲から外し、設計資産として後続再実装に回す。
 
-ただし、HELIX snapshot には UT-TDD の中核へほぼ直結する設計・実装アイデアが多い。Phase 0 では **Python code port は行わず、TypeScript/Bun で再実装**する。既存資産は以下の 3 区分で扱う。
+ただし、HELIX snapshot には UT-TDD の中核へほぼ直結する設計・実装アイデアが多い。Phase 0 では **Python code port は行わず、TypeScript/Node で再実装**する。既存資産は以下の 3 区分で扱う。
 
 | 区分 | 対象 | 方針 |
 |---|---|---|
-| **TS/Bun 再実装が必要** | `cli/lib/**`、`cli/helix-*`、hook guard / lint / runtime 判定などの実行ロジック | `src/**` と `ut-tdd` subcommand に作り直す。`.helix` state、HELIX enum、Python state、固定 model 名を除去する |
+| **TS/Node 再実装が必要** | `cli/lib/**`、`cli/helix-*`、hook guard / lint / runtime 判定などの実行ロジック | `src/**` と `ut-tdd` subcommand に作り直す。`.helix` state、HELIX enum、Python state、固定 model 名を除去する |
 | **TS 化せず修正転用 / curate** | `.claude/agents/*.md`、`vendor/helix-source/skills/**/SKILL.md`、`docs/commands/*.md`、plan/handover/team templates | markdown / docs / templates を UT-TDD 正本へ取り込み、role→capability class、command 名、絶対パス、HELIX 用語、Windows 前提を修正する。registry / catalog / injector / CLI 実行部は TS |
 | **無修正参照可 (runtime 転用不可)** | `vendor/helix-source/**`、`docs/v2/**`、旧 PLAN / audit evidence | evidence / regression idea として参照のみ。正本要件・実行時入力にしない |
 
 **runtime として修正せず転用できるものは 0 件**。無修正で使えるのは historical evidence / reference だけである。
 
-TS/Bun 再実装時の機能参照は以下を優先する。
+TS/Node 再実装時の機能参照は以下を優先する。
 
 - PLAN / frontmatter / schema / lint
 - V-model lint / trace validator の再実装

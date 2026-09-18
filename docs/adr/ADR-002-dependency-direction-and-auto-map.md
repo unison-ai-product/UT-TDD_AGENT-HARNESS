@@ -74,7 +74,7 @@ relation graph は `harness.db` に投影し、diagram へ export できるよ�
 
 ### 決定
 
-外部 tool を正本にしてはいけない。core graph collector は TypeScript/Bun で実装し、正規化済み row を `harness.db` に書く。外部 tool は adapter として扱う:
+外部 tool を正本にしてはいけない。core graph collector は TypeScript/Node で実装し、正規化済み row を `harness.db` に書く。外部 tool は adapter として扱う:
 
 1. tool を実行する。
 2. raw output を evidence として保存する。
