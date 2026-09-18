@@ -266,6 +266,26 @@ describe("CAND-NODEBOOT-023/027/028/208 final Bun retirement", () => {
         `{ text: 'spawnSync("${BUN_RUNTIME}", [cliPath]);' },`,
       ),
     ).toBe("retained_fixture");
+    // A template-literal interpolation is code again, so a launch inside `${...}`
+    // is reachable, while a launch in a line comment or block comment is not.
+    expect(
+      classifyTrackedSurface(
+        "tests/support/runner.ts",
+        'const out = `${spawnSync("' + BUN_RUNTIME + '", [cli]).stdout}`;',
+      ),
+    ).toBe("reachable_production");
+    expect(
+      classifyTrackedSurface(
+        "tests/support/runner.ts",
+        `// spawnSync("${BUN_RUNTIME}", [cli]) was the legacy launcher`,
+      ),
+    ).toBe("retained_fixture");
+    expect(
+      classifyTrackedSurface(
+        "tests/support/runner.ts",
+        `/* spawn("${BUN_RUNTIME}", ["run"]) */ run(process.execPath);`,
+      ),
+    ).toBe("retained_fixture");
   });
 
   it("U-PACKBUN-006: independent admission oracle rejects a reachable surface", () => {

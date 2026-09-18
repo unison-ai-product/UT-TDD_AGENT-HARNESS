@@ -250,22 +250,49 @@ function hasRetainedFixtureEvidence(path: string, line: string): boolean {
   return false;
 }
 
-/** True when an ACTIVE_BUN_* match starts outside every quote/backtick span of
- * the line, i.e. the launch or import is code rather than quoted data (a test
- * oracle string or markdown inline code). */
+/** Returns, for every column of `line`, whether that column is executable
+ * code: outside string/backtick literals (a `${...}` interpolation inside a
+ * template literal is code again) and outside a line or block comment.
+ * Comments and quoted data (test oracle strings, markdown inline code) are not
+ * launches the runtime can reach. */
+function codeColumns(line: string): boolean[] {
+  const code = new Array<boolean>(line.length).fill(false);
+  // Stack of open delimiters: a quote char, or "{" for a template interpolation.
+  const open: string[] = [];
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    const top = open[open.length - 1];
+    if (top === '"' || top === "'" || top === "`") {
+      if (ch === "\\") i++;
+      else if (ch === top) open.pop();
+      else if (top === "`" && ch === "$" && line[i + 1] === "{") {
+        open.push("{");
+        i++;
+      }
+      continue;
+    }
+    // Code context (top-level or inside a template interpolation).
+    if (ch === "/" && line[i + 1] === "/") break;
+    if (ch === "/" && line[i + 1] === "*") {
+      const close = line.indexOf("*/", i + 2);
+      if (close < 0) break;
+      i = close + 1;
+      continue;
+    }
+    code[i] = true;
+    if (ch === '"' || ch === "'" || ch === "`") open.push(ch);
+    else if (ch === "{" && top === "{") open.push("{");
+    else if (ch === "}" && top === "{") open.pop();
+  }
+  return code;
+}
+
+/** True when an ACTIVE_BUN_* match starts in executable code (see codeColumns). */
 function hasBunCodeOutsideStringLiteral(line: string): boolean {
+  const code = codeColumns(line);
   for (const pattern of [ACTIVE_BUN_EXECUTION, ACTIVE_BUN_IMPORT]) {
     const global = new RegExp(pattern.source, `${pattern.flags}g`);
-    for (const match of line.matchAll(global)) {
-      let open: string | null = null;
-      for (let i = 0; i < match.index; i++) {
-        const ch = line[i];
-        if (ch === "\\") i++;
-        else if (open === null && (ch === '"' || ch === "'" || ch === "`")) open = ch;
-        else if (ch === open) open = null;
-      }
-      if (open === null) return true;
-    }
+    for (const match of line.matchAll(global)) if (code[match.index]) return true;
   }
   return false;
 }
