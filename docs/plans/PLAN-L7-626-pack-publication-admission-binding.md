@@ -29,6 +29,10 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-626-pack-publication-admission-binding.md
     artifact_type: markdown_doc
+  - artifact_path: src/setup/pack-publication-admission.ts
+    artifact_type: source_module
+  - artifact_path: tests/pack-publication-admission.test.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L7-565-pack-publication-atomic-ref-cas.md
   requires: []
@@ -45,18 +49,18 @@ status: draft
 github_issue_id: 626
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:fc690807a2477ec293e6834c743961a5
-  command_id: plan-revise:issue-627:pr650-p626:r11:c3dbe2bd31ed
-  admitted_at: 2026-09-17T05:15:52.574Z
-  source_digest: sha256:7b0eb277aebb4787fb0542cf04d9e89209098db47e4395b7fd9b94e9e434bef8
-  decision_digest: sha256:74c7eff7386528f74f224820cbec87e8208aedcea8cd16dde195f902d8081463
-  receipt_digest: sha256:fe652785dd2b3f8c121be3a56804a2073eb278a06d5087d170676bc7e47da415
+  receipt_id: certificate:2392a291f2f6fb85ebe96ad2dde36496
+  command_id: plan-revise:issue-626:slice1-trace:r13:5cc67620cd2e
+  admitted_at: 2026-09-18T11:49:32.583Z
+  source_digest: sha256:16c04ed8bdf471de61d3e92796f83106322f0179e944f1fcc085018cb4807805
+  decision_digest: sha256:248fbbdd7d943cbff08ab3dd0996e38cfa27823ad36de2ee72975a8381874eac
+  receipt_digest: sha256:f808b9a804b00c8364f03877562e30e193cf8a5ae9c57c53091bc2d2db93af98
   binding:
     path: docs/plans/PLAN-L7-626-pack-publication-admission-binding.md
     plan_id: PLAN-L7-626-pack-publication-admission-binding
     asset_id: plan:529eea3e2017a6d17049746ae353398d
-    revision: 11
-    content_digest: sha256:7b0eb277aebb4787fb0542cf04d9e89209098db47e4395b7fd9b94e9e434bef8
+    revision: 13
+    content_digest: sha256:16c04ed8bdf471de61d3e92796f83106322f0179e944f1fcc085018cb4807805
   route:
     signal: feature_addition
     mode: add-feature
@@ -64,7 +68,7 @@ admission_receipt:
     provider: github
     issue_id: 626
     episode_id: E4-626-pack-publication-admission-binding
-    projection_digest: sha256:4e5c8b8b398076d56a72deb696afa871b9c259e667c9bb65f22ef2816ca1d8b4
+    projection_digest: sha256:1706324411974aa007e9819bf975f6c047095d49a6f321887308e177d2c647d9
   origin:
     plan_id: PLAN-L7-565-pack-publication-atomic-ref-cas
     revision: 1
@@ -74,13 +78,10 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-626-pack-publication-admission-binding
-    target_revision: 11
+    target_revision: 13
     phase: forward_merge
-  escape_reason: "Issue #627 PR #650 rev 11: 非著者 Codex Sol review r1 (receipt
-    c03145cb) の上位契約齟齬 (admitted record の persist 先と writer 未定義) を是正。§4 に
-    admission ledger (append-only、単一 writer、sequence / previous record digest
-    chain、admission journal event への provenance) と record の provenance
-    群を追加。guard 45、candidate 70。旧 rev 10: PR #647 rev 10 (approval 束縛の組)。"
+  escape_reason: "Issue #626 Slice 1: exact-head review FLAG
+    3件のdocs-only是正（deferred補集合、Slice昇格規則、candidate 048 oracle）"
 ---
 
 # PLAN-L7-626: Pack公開 admission observation binding
@@ -317,15 +318,45 @@ admission validation だけを所有する。#625 の準備生成、#627 の pub
 consume/CAS token mint、Release/tag/asset/pointer、production credential、remote 実装、既存
 adapter の大規模再構成は変更しない。
 
+## 5.1 Slice 1 の実装・trace 境界
+
+実装 PR #664 は、70 candidate 全体を一度に昇格させず、最初の bounded Slice 1 として次の
+6 candidate だけを実装・検証する。source module と focused test は本 PLAN の `generates` に
+登録し、test-design の candidate ID、production symbol、focused test の対応を exact HEAD へ
+束縛する。
+
+| Slice 1 candidate | 実装・検証対象 | 境界 |
+| --- | --- | --- |
+| `CANDIDATE-PACKPUB-ADM-007` | reviewed head mismatch | 実装 PR #664 |
+| `CANDIDATE-PACKPUB-ADM-036` | preparation receipt missing | 実装 PR #664 |
+| `CANDIDATE-PACKPUB-ADM-040` | review observer indeterminate | 実装 PR #664 |
+| `CANDIDATE-PACKPUB-ADM-042` | repository observer schema indeterminate | 実装 PR #664 |
+| `CANDIDATE-PACKPUB-ADM-048` | admitted record / ledger / journal append | 実装 PR #664 |
+| `CANDIDATE-PACKPUB-ADM-057` | approval binding digest sensitivity | 実装 PR #664 |
+
+Slice 1 の対象外 candidate (`001–006`, `008–035`, `037–039`, `041`, `043–047`, `049–056`, `058–070`) は未実装・
+未検証として扱い、後続 Slice の責務に残す。対象外を理由に実装 PR の scope を拡張したり、
+未実装 candidate を Green と主張したりしてはならない。
+
 ## 6. 完了条件
 
 45 guard の一軸 Red oracle、indeterminate 5 軸 (review / checks / repository / merge-base /
 staging observer)、deny 時 approval consume 0、完全一致 replay、drift replay、admitted 時
 write-zero、sealing 完全性、intent identity 6 構成要素と approval nonce の一軸感度を pair test-design へ 1 対 1 で固定し、PLAN
-lint、admission-check、readability/plan-doc 対象テストを同一 exact HEAD へ束縛する。実装 PR で
-初めて `U-PACKPUB-ADM-*` を共有 registry へ昇格し、non-author closing review を取得する。
+lint、admission-check、readability/plan-doc 対象テストを同一 exact HEAD へ束縛する。候補の昇格は Slice 単位で行い、
+Slice 1 は §5.1 の6件だけを対象とする。全 Slice の検証が完了した時点でのみ、PLAN §6 の70 candidate
+全件を共有 registry へ昇格し、non-author closing review を取得する。
 
 ## 7. 改訂記録
+
+- rev 13 (2026-09-18、Codex contract lane): Claude exact-head review の FLAG 3 件を同一 docs-only scope で是正。
+  deferred 補集合へ 037/038/039 を追加し、048 の完全な admitted oracle を test-design 側へ反映、
+  完了条件を Slice 単位の昇格規則へ統一して Slice 1 と70件全件の境界を明示。
+
+- rev 12 (2026-09-18、Codex contract lane): Issue #626 Slice 1 の実装 PR #664 が追加した
+  source module / focused test の所有を `generates` へ登録し、70 candidate の全体契約と
+  bounded Slice 1 (007/036/040/042/048/057) の実装・deferred 境界を明示。#664 の orphan
+  deliverable / test-design trace を解消するための docs-only revision。
 
 - rev 2 (2026-09-17、Claude control lane): PR #636 exact head `c36c6a9d` に対する非著者 Claude
   Opus review (receipt `71c7b9bd…`、FLAG blocking 10、全て PR 内軽作業) を是正。§2.1 を #625 §2
