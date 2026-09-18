@@ -572,7 +572,10 @@ export type PackPublicationResult =
       readonly remoteWrites: number;
     };
 
-type PackPublicationFailure = Exclude<PackPublicationResult, { readonly status: "published" }>;
+export type PackPublicationFailure = Exclude<
+  PackPublicationResult,
+  { readonly status: "published" }
+>;
 
 const SHA256 = /^sha256:[a-f0-9]{64}$/;
 const SHA1 = /^[a-f0-9]{40}$/;
@@ -1365,23 +1368,34 @@ export async function preparePackPublication(
       // operation by re-reading the preparation journal chain this adapter
       // already wrote it under (keyed by the full sealed identity digest, which
       // folds in idempotencyKey and stagingPlanDigest) and require it to still
-      // resolve under the current input's identity; a drift on either no
-      // longer resolves a matching chain.
-      let stagingRecordBindingOk = true;
-      if (ports.durableState.read) {
-        let journal: readonly PublicationJournalEvent[];
-        try {
-          journal = await ports.durableState.read(identity.identityDigest);
-        } catch {
-          return preparationFailure({
-            status: "indeterminate",
-            stage: "preflight",
-            reason: "journal_read_failed",
-            remoteWrites: 0,
-          });
-        }
-        stagingRecordBindingOk = hasCompletePreparationJournal(journal, identity.identityDigest);
+      // resolve under the current input's identity. Fail closed (not a
+      // fall-through trust of the receipt) when the record cannot be
+      // re-resolved: no read port at all is `reconciliation_unavailable`
+      // (the same typed reason the non-replay path already uses for a
+      // missing reconciliation port), and a resolvable-but-mismatched chain
+      // is the same identity-mismatch denial as every other drift.
+      if (!ports.durableState.read)
+        return preparationFailure({
+          status: "indeterminate",
+          stage: "preflight",
+          reason: "reconciliation_unavailable",
+          remoteWrites: 0,
+        });
+      let journal: readonly PublicationJournalEvent[];
+      try {
+        journal = await ports.durableState.read(identity.identityDigest);
+      } catch {
+        return preparationFailure({
+          status: "indeterminate",
+          stage: "preflight",
+          reason: "journal_read_failed",
+          remoteWrites: 0,
+        });
       }
+      const stagingRecordBindingOk = hasCompletePreparationJournal(
+        journal,
+        identity.identityDigest,
+      );
       const exact =
         stagingRecordBindingOk &&
         validPreparationReceiptShape(existing) &&
@@ -1618,7 +1632,13 @@ export async function preparePackPublication(
   return { ok: true, status: "prepared", receipt, remoteWrites: run.count() };
 }
 
-interface FailureContext {
+/**
+ * Exported so tests can derive the expected status/reason of a
+ * port-response denial from this production classifier directly, instead
+ * of hard-coding a string that only coincidentally matches it (PR #646 r3
+ * finding, PREP-003 cross-nonce test).
+ */
+export interface FailureContext {
   readonly result: Exclude<PublicationPortResult<unknown>, { status: "attested" }>;
   readonly stage: "preflight" | PublicationTransition;
   readonly remoteWrites: number;
@@ -1630,7 +1650,7 @@ type PublicationRunPorts = {
   readonly durableState: Pick<PackPublicationPorts["durableState"], "append">;
 };
 
-function failure(context: FailureContext): PackPublicationFailure {
+export function failure(context: FailureContext): PackPublicationFailure {
   const { result, stage, remoteWrites, prewrite = false } = context;
   return {
     status:

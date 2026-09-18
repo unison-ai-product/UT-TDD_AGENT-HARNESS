@@ -9,10 +9,12 @@ import {
   deriveReleaseRecordDigest,
 } from "../src/schema/release-manifest.ts";
 import {
+  failure as classifyPortFailure,
   createPackPublicationPreparationReceiptStore,
   derivePackPublicationIntentDigest,
   derivePackPublicationPreparationDigest,
   derivePackPublicationTreeDigest,
+  type FailureContext,
   type PackPublicationApproval,
   type PackPublicationIntentInput,
   type PackPublicationPorts,
@@ -1906,22 +1908,31 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
       expect(commit).not.toHaveBeenCalled();
     });
 
-    it("CANDIDATE-PACKPUB-PREP-003: cross-nonce substitution is typed by the approval port, not fabricated by the preflight classifier", async () => {
-      // Distinct nonce/reason strings from preparationApprovalBindingReason's
-      // vocabulary ("approval_binding_mismatch" / "preparation_identity_mismatch")
-      // prove this denial is genuinely a pass-through of the remote approval
-      // port's typed response (PublicationRun.authorize -> failure()),
-      // reached only after preflight (including preparationApprovalBindingReason)
-      // passes -- not a coincidental match with the local classifier's own reason
-      // string.
+    it("CANDIDATE-PACKPUB-PREP-003: cross-nonce substitution is typed by the production port-response classifier", async () => {
+      // The approval port returns a raw, unclassified nonce-mismatch
+      // observation (not a pre-picked "approval_binding_mismatch" /
+      // "preparation_identity_mismatch" string from preparationApprovalBindingReason's
+      // own vocabulary, which would only coincidentally match). The expected
+      // status is derived by calling the adapter's own exported `failure()`
+      // classifier with the same {result, stage, remoteWrites, prewrite}
+      // PublicationRun.authorize() passes it, so a change to that
+      // classification (or to the wiring that reaches it) turns this Red
+      // instead of the test asserting a hand-picked literal.
       const { input } = preparationInput();
       const { prep } = preparationPorts();
       const commit = vi.fn(prep.pack.commitPublicationBranch);
+      const rawPortResult = { status: "mismatch", reason: "nonce_mismatch" } as const;
       const consume = vi.fn(async (approval: PackPublicationApproval) =>
         approval.nonce === "foreign-nonce"
-          ? ({ status: "mismatch", reason: "remote_nonce_binding_rejected" } as const)
+          ? rawPortResult
           : ({ status: "attested", value: { mode: "new" } } as const),
       );
+      const expected = classifyPortFailure({
+        result: rawPortResult,
+        stage: "pack_commit",
+        remoteWrites: 0,
+        prewrite: true,
+      } satisfies FailureContext);
       await expect(
         preparePackPublication(
           {
@@ -1940,12 +1951,8 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
             pack: { ...prep.pack, commitPublicationBranch: commit },
           },
         ),
-      ).resolves.toMatchObject({
-        ok: false,
-        status: "denied",
-        reason: "remote_nonce_binding_rejected",
-        remoteWrites: 0,
-      });
+      ).resolves.toMatchObject({ ok: false, ...expected });
+      expect(expected).toMatchObject({ status: "denied", reason: "nonce_mismatch" });
       expect(consume).toHaveBeenCalledTimes(1);
       expect(commit).not.toHaveBeenCalled();
     });
@@ -2469,8 +2476,14 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
       const prepared = await preparePackPublication(input, first.prep);
       if (!prepared.ok) throw new Error(prepared.reason);
       const commit = vi.fn();
+      const journal = completePreparationJournal(input);
       const replay = preparationPorts({
         pack: { ...first.prep.pack, commitPublicationBranch: commit },
+        // The §2.1 sealed-staging-record resolution (this adapter's own
+        // preparation journal chain) must be wired for an exact replay to be
+        // accepted at all now that the replay path fails closed without it
+        // (finding A) -- a replay is never trusted on the receipt alone.
+        durableState: { ...first.prep.durableState, read: async () => journal },
         receipt: { persist: vi.fn(), read: async () => prepared.receipt },
       });
       await expect(preparePackPublication(input, replay.prep)).resolves.toMatchObject({
@@ -2482,6 +2495,46 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
       await expect(
         preparePackPublication({ ...input, expectedMainOid: "f".repeat(40) }, replay.prep),
       ).resolves.toMatchObject({ ok: false, reason: "preparation_identity_mismatch" });
+    });
+
+    it("CANDIDATE-PACKPUB-PREP-008: replay without a resolvable sealed staging record fails closed instead of trusting the receipt", async () => {
+      const { input } = preparationInput();
+      const first = preparationPorts();
+      const prepared = await preparePackPublication(input, first.prep);
+      if (!prepared.ok) throw new Error(prepared.reason);
+      const drifted = { ...input, idempotencyKey: "foreign-idempotency" };
+      // first.prep.durableState has no `read`: the §2.1 sealed staging
+      // record cannot be re-resolved for this operation, so a drifted
+      // idempotencyKey must be denied rather than silently accepted because
+      // the receipt alone still matches on operationId/baseOid/treeDigest.
+      const result = await preparePackPublication(drifted, {
+        ...first.prep,
+        receipt: { persist: vi.fn(), read: async () => prepared.receipt },
+      });
+      expect(result).toMatchObject({
+        ok: false,
+        status: "indeterminate",
+        reason: "reconciliation_unavailable",
+        remoteWrites: 0,
+      });
+    });
+
+    it("CANDIDATE-PACKPUB-PREP-006: receipt store denies read when the queried operationId does not match the stored binding", async () => {
+      const { input } = preparationInput();
+      const { prep } = preparationPorts();
+      const created = await preparePackPublication(input, prep);
+      if (!created.ok) throw new Error(created.reason);
+      const root = await mkdtemp(join(tmpdir(), "ut625-receipt-opmismatch-"));
+      const path = join(root, "preparation-receipt.json");
+      const store = createPackPublicationPreparationReceiptStore(path);
+      try {
+        await store.persist(created.receipt);
+        await expect(
+          store.read({ operationId: "foreign-operation", expectedMainOid: input.expectedMainOid }),
+        ).rejects.toThrow("receipt_binding_mismatch");
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
     });
 
     it.each([
@@ -2539,6 +2592,20 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
         (receipt: PackPublicationPreparationReceipt) => ({
           ...receipt,
           identity: { ...receipt.identity, pullRequest: "43" },
+        }),
+      ],
+      [
+        // Input is unmutated (so the journal/sealed staging record still
+        // resolves, i.e. stagingRecordBindingOk is true) and only the
+        // *stored receipt's* identity.treeDigest is corrupted -- this
+        // isolates adapter.ts's `existing.identity.treeDigest ===
+        // identity.treeDigest` comparison: removing it (and only it) turns
+        // this axis Red while every other axis stays Green.
+        "receipt treeDigest",
+        (input: ReturnType<typeof preparationInput>["input"]) => input,
+        (receipt: PackPublicationPreparationReceipt) => ({
+          ...receipt,
+          identity: { ...receipt.identity, treeDigest: `sha256:${"9".repeat(64)}` },
         }),
       ],
     ] as const)("CANDIDATE-PACKPUB-PREP-008: %s identity drift is independently denied", async (_axis, mutateInput, mutateReceipt) => {
@@ -2609,12 +2676,15 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
       expect(commit).not.toHaveBeenCalled();
     });
 
-    it("CANDIDATE-PACKPUB-PREP-002: approvals unanimously issued for another operation are a preparation identity mismatch", async () => {
-      // Distinct from the single-sided "cross-operation approval" case above:
-      // both approvals agree with each other but disagree with the fresh
-      // input, exercising preparationApprovalBindingReason's
-      // sameApprovalIdentity=true branch (both foreign) instead of its
-      // sameApprovalIdentity=false branch (exactly one foreign).
+    it("approvals unanimously issued for another operation are a preparation identity mismatch (preparationApprovalBindingReason sameApprovalIdentity branch, not a PREP-002/U- oracle of its own)", async () => {
+      // Distinct from the single-sided "cross-operation approval" case above
+      // (CANDIDATE-PACKPUB-PREP-002, which is exactly the test-design oracle:
+      // the branch commit approval mutated to another operation): here both
+      // approvals agree with each other but disagree with the fresh input,
+      // exercising preparationApprovalBindingReason's sameApprovalIdentity=true
+      // branch (both foreign) instead of its sameApprovalIdentity=false branch
+      // (exactly one foreign). Kept as a plain `it` without a PREP-/U- id
+      // since this isn't a declared test-design oracle by itself.
       const { input } = preparationInput();
       const { prep } = preparationPorts();
       const approvals = input.approvals.map((approval) => ({
