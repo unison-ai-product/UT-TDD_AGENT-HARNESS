@@ -637,7 +637,7 @@ describe("memory filename length bound (issue #353)", () => {
   });
 });
 
-describe("registrationReceiptFor (PLAN-L6-104 §3.1 decision 7, U-MEMCUT-026)", () => {
+describe("registrationReceiptFor (PLAN-L6-104 §3.1 decision 7)", () => {
   it("derives content_digest from the exact written bytes, not caller claims", () => {
     const repo = tempRepo();
     try {
