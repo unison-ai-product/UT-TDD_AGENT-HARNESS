@@ -3,6 +3,7 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   rmSync,
   symlinkSync,
@@ -23,6 +24,7 @@ import {
   assertReviewVerdictPath,
   beginReviewAttempt,
   cleanupReviewAttempt,
+  hasTerminalReviewReceipt,
   readReviewCustodyAudit,
   recordReviewAttemptFailure,
   reviewCustodyAuditPath,
@@ -94,7 +96,152 @@ function issue(root: string): { request: ReviewAttestationRequest; digest: strin
   return { request: result.request, digest: result.digest };
 }
 
+function reviewListing(root: string): string[] {
+  const base = join(root, ".ut-tdd", "review");
+  const entries: string[] = [];
+  const walk = (directory: string, prefix = "") => {
+    if (!existsSync(directory)) return;
+    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+      const relative = `${prefix}${entry.name}${entry.isDirectory() ? "/" : ""}`;
+      entries.push(relative);
+      if (entry.isDirectory()) walk(join(directory, entry.name), relative);
+    }
+  };
+  walk(base);
+  return entries.sort();
+}
+
 describe("repo-local review verdict custody (U-RVATT-030..035)", () => {
+  it("U-RVATT-037: terminal receipt後のretryはrequest metadataを書き換えず拒否する", () => {
+    const root = gitRoot();
+    try {
+      const issued = issue(root);
+      const attempt = beginReviewAttempt({
+        repoRoot: root,
+        request: issued.request,
+        provider: "claude",
+        model: "claude-opus-5",
+      });
+      if (!attempt.ok) throw new Error(attempt.reason);
+      writeFileSync(
+        attempt.path,
+        envelope({ request: issued.request, attempt: attempt.attempt }),
+        "utf8",
+      );
+      const projected = projectReviewVerdict({
+        repoRoot: root,
+        request: issued.request,
+        attestation: attestation({ attempt: attempt.attempt }),
+        verdictFile: attempt.path,
+      });
+      expect(projected).toMatchObject({ ok: true });
+      expect(hasTerminalReviewReceipt(root, issued.request)).toBe(true);
+
+      const retry = issueReviewRequest({
+        repoRoot: root,
+        request: {
+          ...issued.request,
+          requestedAt: "2026-08-19T00:05:00.000Z",
+        },
+        strict: true,
+      });
+      expect(retry).toEqual({ ok: false, reason: "review_receipt_already_exists" });
+      const requestPath = join(root, ".ut-tdd", "review", "requests", `${issued.digest}.json`);
+      expect(JSON.parse(readFileSync(requestPath, "utf8")).requestedAt).toBe(
+        issued.request.requestedAt,
+      );
+
+      const requestBytes = readFileSync(requestPath);
+      const auditPath = reviewCustodyAuditPath(root);
+      const auditBytes = readFileSync(auditPath);
+      const reviewTree = reviewListing(root);
+      const retryAgain = issueReviewRequest({
+        repoRoot: root,
+        request: {
+          ...issued.request,
+          requestedAt: "2026-08-19T00:06:00.000Z",
+        },
+        strict: true,
+      });
+      expect(retryAgain).toEqual({ ok: false, reason: "review_receipt_already_exists" });
+      expect(readFileSync(requestPath)).toEqual(requestBytes);
+      expect(readFileSync(auditPath)).toEqual(auditBytes);
+      expect(reviewListing(root)).toEqual(reviewTree);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("orphan receipt と identity-drift event は retry を terminal 扱いしない (U-RVATT-037)", () => {
+    const root = gitRoot();
+    try {
+      const issued = issue(root);
+      const receiptPath = join(root, ".ut-tdd", "review", "receipts", `${issued.digest}.json`);
+      mkdirSync(join(root, ".ut-tdd", "review", "receipts"), { recursive: true });
+      writeFileSync(receiptPath, '{"verdict":"PASS"}\n', "utf8");
+      const receiptBytes = readFileSync(receiptPath);
+      const verdictTreeBeforeOrphanRetry = reviewListing(root).filter((entry) =>
+        entry.startsWith("verdicts/"),
+      );
+
+      const orphanRetry = issueReviewRequest({
+        repoRoot: root,
+        request: { ...issued.request, requestedAt: "2026-08-19T00:05:00.000Z" },
+        strict: true,
+      });
+      expect(orphanRetry).toMatchObject({ ok: true });
+      expect(readFileSync(receiptPath)).toEqual(receiptBytes);
+      expect(reviewListing(root).filter((entry) => entry.startsWith("verdicts/"))).toEqual(
+        verdictTreeBeforeOrphanRetry,
+      );
+
+      appendReviewCustodyAudit(root, {
+        kind: "attempt_completed",
+        requestDigest: issued.digest,
+        attempt: 1,
+        exactHead: "b".repeat(40),
+        verdictPath: reviewVerdictPath(root, issued.digest, 1),
+        recordedAt: "2026-08-19T00:06:00.000Z",
+        reason: "identity drift fixture",
+        provider: "claude",
+        model: "claude-opus-5",
+        exitCode: 0,
+        receiptFileDigest: "0".repeat(64),
+        verdictDigest: "1".repeat(64),
+      });
+      const auditBytes = readFileSync(reviewCustodyAuditPath(root));
+      const verdictTreeBeforeDriftRetry = reviewListing(root).filter((entry) =>
+        entry.startsWith("verdicts/"),
+      );
+      const driftRetry = issueReviewRequest({
+        repoRoot: root,
+        request: { ...issued.request, requestedAt: "2026-08-19T00:07:00.000Z" },
+        strict: true,
+      });
+      expect(driftRetry).toMatchObject({ ok: true });
+      expect(readFileSync(receiptPath)).toEqual(receiptBytes);
+      expect(readFileSync(reviewCustodyAuditPath(root))).toEqual(auditBytes);
+      expect(reviewListing(root).filter((entry) => entry.startsWith("verdicts/"))).toEqual(
+        verdictTreeBeforeDriftRetry,
+      );
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("U-RVATT-038: 壊れた監査JSONLはtyped indeterminateで停止する", () => {
+    const root = gitRoot();
+    try {
+      mkdirSync(join(root, ".ut-tdd", "review"), { recursive: true });
+      writeFileSync(reviewCustodyAuditPath(root), '{"broken":\n', "utf8");
+      const result = issueReviewRequest({ repoRoot: root, request: request(), strict: true });
+      expect(result).toEqual({ ok: false, reason: "attempt_outcome_indeterminate" });
+      expect(existsSync(join(root, ".ut-tdd", "review", "requests"))).toBe(false);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it("U-RVATT-030: digestは64桁で、attempt pathはrepo containmentを厳密に束縛する", () => {
     const root = gitRoot();
     try {
