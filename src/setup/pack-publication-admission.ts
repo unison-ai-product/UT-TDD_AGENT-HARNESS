@@ -364,6 +364,49 @@ function validStagingObservation(
   );
 }
 
+function validPullRequestObservation(
+  value: unknown,
+): value is PackPublicationPullRequestAdmissionObservation {
+  if (!isRecord(value)) return false;
+  return (
+    typeof value.pullRequest === "string" &&
+    /^[1-9][0-9]*$/.test(value.pullRequest) &&
+    typeof value.branch === "string" &&
+    value.branch.length > 0 &&
+    typeof value.headOid === "string" &&
+    SHA1.test(value.headOid) &&
+    typeof value.baseOid === "string" &&
+    SHA1.test(value.baseOid) &&
+    typeof value.treeDigest === "string" &&
+    SHA256.test(value.treeDigest)
+  );
+}
+
+function validReviewObservation(value: unknown): value is PackPublicationReviewObservation {
+  if (!isRecord(value)) return false;
+  return (
+    typeof value.pullRequest === "string" &&
+    typeof value.reviewedHead === "string" &&
+    typeof value.conclusion === "string" &&
+    typeof value.reviewer === "string" &&
+    typeof value.author === "string" &&
+    typeof value.closingReceiptDigest === "string"
+  );
+}
+
+function validChecksObservation(value: unknown): value is PackPublicationCheckObservation {
+  if (!isRecord(value) || typeof value.headOid !== "string" || !Array.isArray(value.checks))
+    return false;
+  return value.checks.every(
+    (check) =>
+      isRecord(check) && typeof check.context === "string" && typeof check.conclusion === "string",
+  );
+}
+
+function validMergeBaseObservation(value: unknown): value is PackPublicationMergeBaseObservation {
+  return isRecord(value) && typeof value.mergeBase === "string" && SHA1.test(value.mergeBase);
+}
+
 function validLedgerRecord(record: PackPublicationAdmissionLedgerRecord): boolean {
   const { recordDigest: _recordDigest, ...withoutDigest } = record;
   return derivePackPublicationAdmissionRecordDigest(withoutDigest) === record.recordDigest;
@@ -511,6 +554,8 @@ export async function admitPackPublication(
   const prFailure = resultFailure(prResult);
   if (prFailure) return prFailure;
   if (prResult.status !== "attested") return indeterminate("pull_request_observation_unavailable");
+  if (!validPullRequestObservation(prResult.value))
+    return indeterminate("pull_request_observation_schema_invalid");
   const pr = prResult.value;
   if (pr.pullRequest !== receipt.identity.pullRequest) return deny("admission_pr_mismatch");
   if (pr.headOid !== receipt.identity.headOid) return deny("admission_head_mismatch");
@@ -525,6 +570,8 @@ export async function admitPackPublication(
   const reviewFailure = resultFailure(reviewResult);
   if (reviewFailure) return reviewFailure;
   if (reviewResult.status !== "attested") return indeterminate("review_observation_unavailable");
+  if (!validReviewObservation(reviewResult.value))
+    return indeterminate("review_observation_schema_invalid");
   const review = reviewResult.value;
   if (review.pullRequest !== pr.pullRequest) return deny("admission_review_pr_mismatch");
   if (!SHA1.test(review.reviewedHead)) return deny("admission_review_head_invalid");
@@ -541,6 +588,8 @@ export async function admitPackPublication(
   const checksFailure = resultFailure(checksResult);
   if (checksFailure) return checksFailure;
   if (checksResult.status !== "attested") return indeterminate("checks_observation_unavailable");
+  if (!validChecksObservation(checksResult.value))
+    return indeterminate("checks_observation_schema_invalid");
   const checks = checksResult.value;
   if (checks.headOid !== review.reviewedHead) return deny("admission_checks_head_mismatch");
   if (
@@ -574,6 +623,8 @@ export async function admitPackPublication(
   if (mergeBaseFailure) return mergeBaseFailure;
   if (mergeBaseResult.status !== "attested")
     return indeterminate("merge_base_observation_unavailable");
+  if (!validMergeBaseObservation(mergeBaseResult.value))
+    return indeterminate("merge_base_observation_schema_invalid");
   if (mergeBaseResult.value.mergeBase !== input.expectedMainOid)
     return deny("admission_merge_base_mismatch");
   let stagingResult: PublicationPortResult<PackPublicationSealedStagingObservation | null>;
