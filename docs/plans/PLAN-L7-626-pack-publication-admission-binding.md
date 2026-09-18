@@ -49,18 +49,18 @@ status: draft
 github_issue_id: 626
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:071721454b4d3525d058268c013002d3
-  command_id: plan-revise:issue-626:slice1-trace:r12:13dd790f6fdd
-  admitted_at: 2026-09-18T11:20:18.459Z
-  source_digest: sha256:893644c55e6610458ad8efda5bad185e6c22cf9cb684f7c634e35ce8eca089fb
-  decision_digest: sha256:e5b95ecb067d0787577c3c1747c965fe9bac6027f0846dab65fb6516e24edb2d
-  receipt_digest: sha256:9bb32d6ce9dbee8a4c3df298998a6a8023b4969d6ba219dd7972fab149a16a43
+  receipt_id: certificate:2392a291f2f6fb85ebe96ad2dde36496
+  command_id: plan-revise:issue-626:slice1-trace:r13:5cc67620cd2e
+  admitted_at: 2026-09-18T11:49:32.583Z
+  source_digest: sha256:16c04ed8bdf471de61d3e92796f83106322f0179e944f1fcc085018cb4807805
+  decision_digest: sha256:248fbbdd7d943cbff08ab3dd0996e38cfa27823ad36de2ee72975a8381874eac
+  receipt_digest: sha256:f808b9a804b00c8364f03877562e30e193cf8a5ae9c57c53091bc2d2db93af98
   binding:
     path: docs/plans/PLAN-L7-626-pack-publication-admission-binding.md
     plan_id: PLAN-L7-626-pack-publication-admission-binding
     asset_id: plan:529eea3e2017a6d17049746ae353398d
-    revision: 12
-    content_digest: sha256:893644c55e6610458ad8efda5bad185e6c22cf9cb684f7c634e35ce8eca089fb
+    revision: 13
+    content_digest: sha256:16c04ed8bdf471de61d3e92796f83106322f0179e944f1fcc085018cb4807805
   route:
     signal: feature_addition
     mode: add-feature
@@ -78,11 +78,10 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-626-pack-publication-admission-binding
-    target_revision: 12
+    target_revision: 13
     phase: forward_merge
-  escape_reason: "Issue #626 Slice 1 trace: register the bounded #664 source/test
-    ownership, normalize the malformed issue projection digest to a schema-valid
-    value, and keep remaining candidates explicitly deferred."
+  escape_reason: "Issue #626 Slice 1: exact-head review FLAG
+    3件のdocs-only是正（deferred補集合、Slice昇格規則、candidate 048 oracle）"
 ---
 
 # PLAN-L7-626: Pack公開 admission observation binding
@@ -335,7 +334,7 @@ adapter の大規模再構成は変更しない。
 | `CANDIDATE-PACKPUB-ADM-048` | admitted record / ledger / journal append | 実装 PR #664 |
 | `CANDIDATE-PACKPUB-ADM-057` | approval binding digest sensitivity | 実装 PR #664 |
 
-Slice 1 の対象外 candidate (`001–006`, `008–035`, `041`, `043–056`, `058–070`) は未実装・
+Slice 1 の対象外 candidate (`001–006`, `008–035`, `037–039`, `041`, `043–047`, `049–056`, `058–070`) は未実装・
 未検証として扱い、後続 Slice の責務に残す。対象外を理由に実装 PR の scope を拡張したり、
 未実装 candidate を Green と主張したりしてはならない。
 
@@ -344,10 +343,15 @@ Slice 1 の対象外 candidate (`001–006`, `008–035`, `041`, `043–056`, `0
 45 guard の一軸 Red oracle、indeterminate 5 軸 (review / checks / repository / merge-base /
 staging observer)、deny 時 approval consume 0、完全一致 replay、drift replay、admitted 時
 write-zero、sealing 完全性、intent identity 6 構成要素と approval nonce の一軸感度を pair test-design へ 1 対 1 で固定し、PLAN
-lint、admission-check、readability/plan-doc 対象テストを同一 exact HEAD へ束縛する。実装 PR で
-初めて `U-PACKPUB-ADM-*` を共有 registry へ昇格し、non-author closing review を取得する。
+lint、admission-check、readability/plan-doc 対象テストを同一 exact HEAD へ束縛する。候補の昇格は Slice 単位で行い、
+Slice 1 は §5.1 の6件だけを対象とする。全 Slice の検証が完了した時点でのみ、PLAN §6 の70 candidate
+全件を共有 registry へ昇格し、non-author closing review を取得する。
 
 ## 7. 改訂記録
+
+- rev 13 (2026-09-18、Codex contract lane): Claude exact-head review の FLAG 3 件を同一 docs-only scope で是正。
+  deferred 補集合へ 037/038/039 を追加し、048 の完全な admitted oracle を test-design 側へ反映、
+  完了条件を Slice 単位の昇格規則へ統一して Slice 1 と70件全件の境界を明示。
 
 - rev 12 (2026-09-18、Codex contract lane): Issue #626 Slice 1 の実装 PR #664 が追加した
   source module / focused test の所有を `generates` へ登録し、70 candidate の全体契約と
