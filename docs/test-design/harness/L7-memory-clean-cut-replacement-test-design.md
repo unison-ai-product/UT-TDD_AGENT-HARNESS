@@ -119,7 +119,7 @@ updated: 2026-09-15
 
 - PR-2 (Issue #424、PLAN-L7-566) で昇格した行: `U-MEMCUT-001`〜`U-MEMCUT-005`、`U-MEMCUT-011`、`U-MEMCUT-017`〜`U-MEMCUT-021`、`U-MEMCUT-024`〜`U-MEMCUT-028`、`P-MEMCUT-006`、`P-MEMCUT-007`、`P-MEMCUT-009`、`P-MEMCUT-010`、`P-MEMCUT-023`、`P-MEMCUT-029`、`P-MEMCUT-030`。citation は `tests/memory-clean-cut-non-read.test.ts`、`tests/memory-legacy-archive.test.ts`、`tests/memory-curation-ledger.test.ts` の静的 label。
   - `024`〜`027` は昇格済みで Green (citation は `tests/memory-curation-ledger.test.ts`)。
-  - `028` も昇格済みだが、現状の ledger は reviewer 記録が placeholder (exact_head 全ゼロ、receipt `pending-review-receipt`) であるため `verifyCurationReviewer` は `reviewer-head-invalid` / receipt 未検証で Red のままである。非著者 frontier review (codex `gpt-5.6-sol`) の実 receipt が ledger の reviewer 記録に束縛された時点で Green になる。
+  - `028` も昇格済み。ledger の reviewer 記録には、非著者 frontier review (codex `gpt-5.6-sol`) の PASS receipt と、その review が判定した exact head を束縛する。テストは、出荷時の ledger で `verifyCurationReviewer` が `[]` を返すことを必須とする。reviewer 記録が欠落しているか placeholder の場合は Red とする (条件分岐で pass させない)。
   - 008 (session start digest)、022 (local 証跡)、031 (hook consume) は candidate のまま。
 - `P-MEMCUT-006` / `P-MEMCUT-009` の Red 起点は PR-2 の実装前 HEAD (`db rebuild` の cwd 起点、review-live の path 無制限) で実測した。004 は file symlink を作れない Windows では skip (Green にしない)、Linux CI で Green。
 

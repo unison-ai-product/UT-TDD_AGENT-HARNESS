@@ -154,26 +154,33 @@ export function registrationReceiptDigest(receipt: RegistrationReceipt): string 
 }
 
 /**
- * Digest over only the fields a replay invocation can actually reproduce from its own output
- * (memory id / source path / exit code / content digest recomputed over the bytes it wrote).
- * Deliberately excludes `operation_id`: neither `writeMemory` nor the `memory add` CLI derives an
- * operation id from the write itself (it is an unrelated delivery-notification parameter, see
- * `cli.ts`'s `--operation-id`), so `operation_id` is ledger-supplied data that a handwritten ledger
- * row can set to anything and have it trivially match a receipt that copies it back out. Folding it
- * into the digest that binds a replay to the ledger's registration let a fabricated registration
- * object pass `verifyAdoptRegistrationReplay` as long as the caller echoed the same operation_id it
- * fabricated (Sol r3 FLAG, U-MEMCUT-026). `registrationReceiptDigest` (which does include
- * operation_id) remains the digest that binds `adopt.receipt_digest` to the ledger's own
- * self-declared registration in `verifyAdoptRow`; this function is used only for the replay check.
+ * Digest over the receipt fields a real `ut-tdd memory add --receipt-json` invocation reports and
+ * that are invariant across replays: `operation_id` (the pin the caller passed with
+ * `--operation-id`, which the test derives from the archived source bytes, never from the ledger),
+ * `memory_id`, `source_path` and `exit_code`. `content_digest` is deliberately compared separately
+ * (see `verifyAdoptRegistrationReplay`): it is a whole-file sha256 that embeds `updated_at`, so a
+ * replay run at a later real time can never reproduce the historical value byte-for-byte; the
+ * test-design oracle (U-MEMCUT-026) requires the replayed file to match the canonical file on
+ * every frontmatter value and the body *except* `updated_at`.
  */
 function replayReceiptDigest(receipt: RegistrationReceipt): string {
   const canonical = JSON.stringify({
-    content_digest: receipt.content_digest,
     exit_code: receipt.exit_code,
     memory_id: receipt.memory_id,
+    operation_id: receipt.operation_id,
     source_path: receipt.source_path,
   });
   return sha256Hex(canonical);
+}
+
+/** The bytes of a canonical memory file with the one replay-variant frontmatter value removed. */
+export function memoryTextWithoutUpdatedAt(rawFileText: string): string {
+  return rawFileText.replace(/^updated_at:.*$/m, "updated_at: <redacted>");
+}
+
+/** `memory add --receipt-json` prints `sha256:<hex>`; the ledger records the bare hex. */
+function bareDigest(digest: string): string {
+  return digest.startsWith("sha256:") ? digest.slice("sha256:".length) : digest;
 }
 
 function criteriaComplete(row: CurationRow): boolean {
@@ -261,7 +268,10 @@ export function verifyAdoptRegistrationReplay(input: {
   row: CurationRow;
   /** Current raw bytes of the canonical file the row claims to be bound to. */
   canonicalRawText: string;
+  /** The receipt the real `memory add --receipt-json` subprocess printed (never test-built). */
   replay: RegistrationReceipt | null;
+  /** The bytes that subprocess actually wrote at `replay.source_path` in its scratch root. */
+  replayRawText?: string;
 }): CurationFinding[] {
   const subject = input.row.archive_path ?? input.row.custody_id ?? input.row.source_digest;
   const adopt = input.row.adopt;
@@ -275,13 +285,21 @@ export function verifyAdoptRegistrationReplay(input: {
     findings.push({ kind: "adopt-replay-source-path-outside-canonical", subject });
   if (replay.memory_id !== adopt.memory_id)
     findings.push({ kind: "adopt-replay-memory-id-mismatch", subject });
-  if (replay.content_digest !== canonicalMemoryContentDigest(input.canonicalRawText))
+  // Content binding, three legs that together close the "handwritten twin" bypass: the ledger's
+  // registration digest must be the canonical file's real digest; the CLI receipt's digest must be
+  // the digest of the bytes the CLI actually wrote (a receipt cannot lie about its own output); and
+  // those bytes must equal the canonical file except `updated_at`.
+  const replayRawText = input.replayRawText ?? "";
+  if (
+    bareDigest(adopt.registration.content_digest) !==
+      canonicalMemoryContentDigest(input.canonicalRawText) ||
+    bareDigest(replay.content_digest) !== canonicalMemoryContentDigest(replayRawText) ||
+    memoryTextWithoutUpdatedAt(replayRawText) !== memoryTextWithoutUpdatedAt(input.canonicalRawText)
+  )
     findings.push({ kind: "adopt-replay-content-digest-mismatch", subject });
-  // Bound by `replayReceiptDigest`, not `registrationReceiptDigest`/`adopt.receipt_digest`: the
-  // replay must reproduce the ledger's own registration on every field the replay's *own output*
-  // can determine (memory id / source path / exit code / content digest). `operation_id` is
-  // excluded on both sides so a ledger row cannot fabricate a match by echoing its own declared
-  // operation_id back through the replay (see `replayReceiptDigest`).
+  // The replay-invariant receipt fields (operation id / memory id / source path / exit code) must
+  // reproduce the ledger's registration. The receipt is CLI output, so a ledger row can no longer
+  // satisfy this by echoing its own declared values through a test-built receipt (Sol r3/r4 FLAG).
   if (replayReceiptDigest(replay) !== replayReceiptDigest(adopt.registration))
     findings.push({ kind: "adopt-replay-receipt-digest-mismatch", subject });
   return findings;
