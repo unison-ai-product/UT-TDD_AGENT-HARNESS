@@ -241,7 +241,10 @@ describe("CAND-NODEBOOT-023/027/028/208 final Bun retirement", () => {
 
   it("U-PACKBUN-006: runtime launcher tests cannot hide an executable Bun path", () => {
     expect(
-      classifyTrackedSurface("tests/runner.test.ts", 'spawn("bun", ["run", "src/cli.ts"]);'),
+      classifyTrackedSurface(
+        "tests/runner.test.ts",
+        `spawn("${BUN_RUNTIME}", ["run", "src/cli.ts"]);`,
+      ),
     ).toBe("reachable_production");
   });
 
