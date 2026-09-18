@@ -89,7 +89,7 @@ analyzeModuleDrift(docs: { listed, actual }) -> { orphans, listedCount, actualCo
 
 ### tool adapter probe 追補 (A-124 / PLAN-L6-33)
 
-この追補は optional graph/diagram development-tool adapters の L6 contract を定義する。core relation graph collector とは分離する。adapters は evidence quality を高められるが、TypeScript/Bun collector と DB projection が gate-normalized truth の source であり続ける。
+この追補は optional graph/diagram development-tool adapters の L6 contract を定義する。core relation graph collector とは分離する。adapters は evidence quality を高められるが、TypeScript/Node collector と DB projection が gate-normalized truth の source であり続ける。
 
 | 関数 | Signature | pre | post | invariant | oracle |
 |---|---|---|---|---|---|

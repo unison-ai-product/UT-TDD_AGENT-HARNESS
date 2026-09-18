@@ -64,5 +64,5 @@ profile resolver contractで明示する。
 
 - hashまたはentry countが変わるZIPは同じsnapshotとして扱わない。
 - 109 source、163 item、21 category、8 profileを混同せず、各projectionで件数を個別検証する。
-- ZIP内Python toolingはproduct runtimeへ移植しない。設計概念をTypeScript/Bun contractへ翻訳する。
+- ZIP内Python toolingはproduct runtimeへ移植しない。設計概念をTypeScript/Node contractへ翻訳する。
 - ZIPがローカルに無い環境でも、本manifestとtracked dispositionからHARNESSの設計判断を再構築できる。
