@@ -536,6 +536,7 @@ export function beginReviewAttempt(input: {
     "receipts",
     `${digest}.json`,
   );
+  const receiptDigestNow = existsSync(receiptPath) ? digestFile(receiptPath) : undefined;
   let requestEvents: ReviewCustodyAuditEvent[];
   try {
     requestEvents = auditEventsFor(input.repoRoot, digest);
