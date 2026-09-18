@@ -34,9 +34,9 @@ decision_points:
     over: "using mocked replacements for harness state"
     because: "a prior incident showed mock/real divergence masking a broken migration path"
   - when: "choosing the test-run command for CI or local verification"
-    choose: "bun run test"
-    over: "bun test"
-    because: "the native bun test runner has a 5-second sync timeout that produces flaky failures on async tests unrelated to real defects"
+    choose: "npm run test"
+    over: "an unspecified test command"
+    because: "the repository's canonical test script invokes the deterministic Vitest snapshot runner"
 ---
 
 # test driven development
@@ -61,7 +61,7 @@ implementation it exercises provides zero design signal and weaker oracle value
 - Derive the test contract from the L6 unit-test design doc paired with the
   PLAN. The L6 doc must exist and be readable before any test is written.
 - Write one `describe` / `it` block in `tests/` that exercises a single
-  behaviour. Run `bun run test` and confirm the test **fails** (Red).
+  behaviour. Run `npm run test` and confirm the test **fails** (Red).
 - If the test passes before any source change it is either a vacuous assertion
   or the feature already exists — both require investigation, not celebration.
 - Commit the failing test as a standalone commit so the Red evidence is in git
@@ -71,15 +71,15 @@ implementation it exercises provides zero design signal and weaker oracle value
 
 - Add only the implementation required to make the new test(s) pass. Do not
   add untested surface area.
-- Run `bun run test` again; confirm all prior tests still pass and the new
+- Run `npm run test` again; confirm all prior tests still pass and the new
   test is now Green.
-- Run `bun run typecheck` and `bun run lint` — no new violations permitted.
+- Run `npm run typecheck` and `npm run lint` — no new violations permitted.
 - Run `ut-tdd doctor` — governance must stay clean.
 
 ### 3. Refactor — improve structure while tests stay Green
 
 - Rename, extract, or reorganise source and tests. No behaviour changes.
-- Re-run the full suite (`bun run typecheck && bun run lint && bun run test &&
+- Re-run the full suite (`npm run typecheck && npm run lint && npm run test &&
   ut-tdd doctor`) after every structural change.
 - If any test turns Red, stop and revert the last change.
 
@@ -88,10 +88,10 @@ implementation it exercises provides zero design signal and weaker oracle value
 - [ ] Each new test file maps to an L6 unit-test design entry in
   `docs/test-design/`.
 - [ ] PLAN `review_evidence` contains a reference to the failing-commit SHA.
-- [ ] `bun run test` exits 0 with no `.skip` or `.todo` left open without a
+- [ ] `npm run test` exits 0 with no `.skip` or `.todo` left open without a
   PLAN-linked rationale.
-- [ ] `bun run typecheck` exits 0.
-- [ ] `bun run lint` exits 0 (Biome check — format + lint, not `biome lint` alone).
+- [ ] `npm run typecheck` exits 0.
+- [ ] `npm run lint` exits 0 (Biome check — format + lint, not `biome lint` alone).
 - [ ] `ut-tdd doctor` exits 0.
 - [ ] `ut-tdd review --uncommitted` produces no blocking findings for L7.
 
@@ -109,7 +109,6 @@ implementation it exercises provides zero design signal and weaker oracle value
 
 - Writing `it.todo` as a placeholder, then implementing source first and filling
   the test in later — this inverts the cycle order and forfeits Red evidence.
-- Running `bun test` instead of `bun run test` — the native runner has a 5-second
-  sync timeout that makes some async tests flaky without reflecting real failures.
+- Running an unspecified test command instead of the repository's canonical `npm run test` script.
 - Treating `ut-tdd doctor` green as evidence that the test design is correct —
   doctor checks structural governance, not oracle quality or cycle order.

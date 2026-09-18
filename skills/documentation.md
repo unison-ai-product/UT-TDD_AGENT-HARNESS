@@ -82,7 +82,7 @@ A UT-TDD README needs at minimum:
 
 1. **Purpose** — one paragraph: what this component does and which system it
    serves.
-2. **Prerequisites** — `bun`, `ut-tdd`, any external dependencies with minimum
+2. **Prerequisites** — `node`/`npm`, `ut-tdd`, any external dependencies with minimum
    versions.
 3. **Quick start** — the minimum command sequence to get a working state.
 4. **Key commands** — a table of the most-used `ut-tdd` commands for this

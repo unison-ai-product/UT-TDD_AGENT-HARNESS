@@ -153,7 +153,7 @@ describe("U-PACKBUN-006: BAN lint detection power (PLAN-L7-522 §3.3)", () => {
     const parsed = JSON.parse(readFileSync(join(process.cwd(), "package.json"), "utf8")) as {
       scripts: Record<string, string>;
     };
-    expect(parsed.scripts.build).toBe(`${B} build src/cli.ts --compile --outfile dist/ut-tdd`);
+    expect(parsed.scripts.build).toBe("node scripts/build-node.mjs");
   });
 });
 
@@ -188,7 +188,6 @@ describe("U-PACKBUN-006 structural supplements (PLAN-L7-522 §3.3)", () => {
     };
     expect(Object.fromEntries(block(`${BU.toUpperCase()}_SPAWN_DEBT_ALLOWLIST`))).toEqual({
       "src/cli/distribution.ts": 2,
-      "scripts/run-vitest-snapshot.ts": 1,
       "tests/dependency-drift.test.ts": 1,
       "tests/runtime-portability.test.ts": 11,
       "tests/doctor-setup-smoke.test.ts": 1,
@@ -196,14 +195,9 @@ describe("U-PACKBUN-006 structural supplements (PLAN-L7-522 §3.3)", () => {
       "src/lint/runtime-portability.ts": 4,
     });
     expect(Object.fromEntries(block(`${BU.toUpperCase()}_IMPORT_DEBT_ALLOWLIST`))).toEqual({
-      "src/state-db/index.ts": 2,
       "tests/runtime-portability.test.ts": 5,
     });
     expect(Object.fromEntries(block(`${BU.toUpperCase()}_GLOBAL_DEBT_ALLOWLIST`))).toEqual({
-      "scripts/run-vitest-snapshot.ts": 5,
-      "src/state-db/index.ts": 1,
-      "tests/state-db.test.ts": 1,
-      "tests/support/temp-tree.ts": 1,
       "tests/runtime-portability.test.ts": 7,
       "tests/doctor-test-repository-isolation.test.ts": 2,
       "src/lint/runtime-portability.ts": 3,

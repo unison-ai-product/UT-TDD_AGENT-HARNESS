@@ -17,7 +17,7 @@ applies_to:
     - Add-feature
     - Reverse
 decision_points:
-  - when: "A command (ut-tdd doctor, bun run test, etc.) fails and produces long output"
+  - when: "A command (ut-tdd doctor, npm run test, etc.) fails and produces long output"
     choose: "Read the full output"
     over: "Truncating with | head or | tail"
     because: "Truncation has caused repeated false-diagnoses where a downstream error message was treated as the root cause"
@@ -61,7 +61,7 @@ and a PLAN is open, apply the error-fix skill for the fix itself.
 ## When to load this skill
 
 - `ut-tdd doctor` exits non-zero and the root cause is not obvious.
-- `bun run test`, `bun run typecheck`, or `bun run lint` fails on CI or locally.
+- `npm run test`, `npm run typecheck`, or `npm run lint` fails on CI or locally.
 - A runtime error appears in `.ut-tdd/` state or a hook entrypoint.
 - An agent subagent output is inconsistent with expected harness state.
 - A forced stop or unexpected session termination occurred (highest-severity
@@ -91,7 +91,7 @@ Determine whether the failure is:
   `CLAUDE_PROJECT_DIR` not set. Check `ut-tdd doctor` environment checks first.
 - **Governance** — orphaned PLAN, missing design doc, broken dependency link,
   schema mismatch. Check `ut-tdd doctor` governance checks and `ut-tdd plan lint`.
-- **Implementation** — a logic error in `src/`. Confirm with `bun run test` and
+- **Implementation** — a logic error in `src/`. Confirm with `npm run test` and
   a targeted test run.
 - **Test oracle** — a test is asserting the wrong thing, or a false-green was
   accepted. Confirm by reading the test and the spec it should be testing.
@@ -116,9 +116,9 @@ of apparent technical severity.
 Before opening a PLAN, confirm the failure is reproducible:
 
 ```
-bun run typecheck
-bun run lint
-bun run test
+npm run typecheck
+npm run lint
+npm run test
 ut-tdd doctor
 ut-tdd status
 ```

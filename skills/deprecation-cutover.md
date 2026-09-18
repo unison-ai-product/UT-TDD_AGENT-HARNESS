@@ -90,7 +90,7 @@ per commit; each boundary carries a `harness-check`-green evidence record in
 
 - [ ] `grep -r "<deprecated-identifier>" docs/ src/ tests/` returns zero hits.
 - [ ] `ut-tdd doctor` passes with zero `asset-drift` findings.
-- [ ] `bun run typecheck` passes — no dangling type references.
+- [ ] `npm run typecheck` passes — no dangling type references.
 - [ ] Tests referencing the removed path are updated or removed with a
       rationale comment (no silent `.skip`).
 - [ ] `ut-tdd review --uncommitted` evidence recorded before merge.

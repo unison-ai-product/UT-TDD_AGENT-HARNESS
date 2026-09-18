@@ -109,6 +109,11 @@ repositoryReadContracts["tests/setup-bun-readiness.test.ts"] = {
   reason:
     "Pack readiness runs against a copied clean-consumer fixture rather than the source worktree",
 };
+repositoryReadContracts["tests/bun-final-retirement.test.ts"] = {
+  mode_calls: { isolated_fixture: 4 },
+  reason:
+    "final-retirement admission tests read the exact execution HEAD and construct isolated receipt fixtures",
+};
 repositoryReadContracts["tests/support/workspace-roots.ts"] = {
   mode_calls: { head_snapshot: 1, isolated_fixture: 1 },
   reason: "root capability implementation validates both provenance modes",

@@ -19,7 +19,7 @@ applies_to:
     - Retrofit
     - Refactor
 decision_points:
-  - when: "A `bun audit` (or equivalent) finding reports a critical or high severity advisory on a new/updated dependency."
+  - when: "An `npm audit` (or equivalent) finding reports a critical or high severity advisory on a new/updated dependency."
     choose: "block accept and document the accepted risk in `docs/design/L5/<plan-id>-dependency-risk.md` before proceeding"
     over: "suppressing or ignoring the advisory to keep the PLAN moving"
     because: "the checklist requires zero critical/high advisories or an explicit documented risk-acceptance; an undocumented pass-through leaves an unreviewed supply-chain exposure in the codebase."
@@ -63,8 +63,8 @@ Run in order before accept gate:
 
 ```
 ut-tdd guardrail          # secret pattern scan across all text files
-bun run lint              # Biome check: includes security-adjacent lint rules
-bun run test              # Vitest: confirm no fixture file leaks credentials
+npm run lint              # Biome check: includes security-adjacent lint rules
+npm run test              # Vitest: confirm no fixture file leaks credentials
 ut-tdd doctor             # structural governance: no orphaned hook or agent path
 ```
 
@@ -74,7 +74,7 @@ For every new or updated entry in `package.json`:
 
 - [ ] Confirm the package is from a known registry (npmjs.com). No `file:`,
       `git+ssh:`, or `http:` protocol references without PO approval.
-- [ ] Run `bun audit` (or equivalent) and confirm zero critical or high severity
+- [ ] Run `npm audit` (or equivalent) and confirm zero critical or high severity
       advisories. If an advisory exists, document the accepted risk in
       `docs/design/L5/<plan-id>-dependency-risk.md` before accept.
 - [ ] Confirm the version pin is not a floating range (`^x.y.z` is acceptable;
@@ -91,7 +91,7 @@ For every new or updated entry in `package.json`:
 
 ### 3. Biome security-lint surface
 
-- [ ] `bun run lint` exits 0 with no suppressions added beyond the pre-change
+- [ ] `npm run lint` exits 0 with no suppressions added beyond the pre-change
       count.
 - [ ] Any new `// biome-ignore` line has a PLAN-linked comment on the same line.
 - [ ] `// @ts-ignore` and `// @ts-expect-error` lines are zero or PLAN-justified.

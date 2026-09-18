@@ -6,8 +6,7 @@
 *.cmd text eol=crlf
 *.bat text eol=crlf
 
-# Binaries / lockfiles
-bun.lockb binary
+# Binaries
 *.png binary
 *.jpg binary
 *.ico binary

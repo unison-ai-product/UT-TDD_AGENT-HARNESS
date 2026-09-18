@@ -26,11 +26,11 @@ decision_points:
     over: "using a PowerShell here-string"
     because: "the `commit-msg` hook does not accept PowerShell here-strings for multi-line messages; only the Bash heredoc form is honored"
   - when: "Verifying Vitest before pushing"
-    choose: "run `bun run test`"
-    over: "running bare `bun test`"
-    because: "bare `bun test` has sync-timeout flakiness and is not what CI's `harness-check` runs; a locally-green bare run can still fail CI"
+    choose: "run `npm run test`"
+    over: "using an unspecified test command"
+    because: "the repository's canonical test script is the deterministic Vitest snapshot runner"
   - when: "Checking format/lint before pushing"
-    choose: "run `bun run lint` (invokes `biome check`)"
+    choose: "run `npm run lint` (invokes `biome check`)"
     over: "running `biome lint` alone"
     because: "`biome lint` alone does not check formatting; format violations pass locally and break `harness-check` on push"
   - when: "A commit touches files under `.github/workflows/`"
@@ -105,13 +105,13 @@ CI runs `harness-check` on every push. All four must be green before a push:
 
 | Check | Command | Common failure |
 |---|---|---|
-| Type check | `bun run typecheck` | Missing type declarations |
-| Vitest | `bun run test` | Do NOT use bare `bun test` — sync-timeout flakiness |
-| Biome | `bun run lint` | Format violations from `biome lint` without `biome check` |
+| Type check | `npm run typecheck` | Missing type declarations |
+| Vitest | `npm run test` | Use the canonical repository script |
+| Biome | `npm run lint` | Format violations from `biome lint` without `biome check` |
 | Doctor | `ut-tdd doctor` | Governance violations, missing PLAN dependencies |
 
 Run all four locally before pushing. `biome lint` alone does not check
-formatting — run `bun run lint` (which invokes `biome check`) to catch both.
+formatting — run `npm run lint` (which invokes `biome check`) to catch both.
 
 ## Branch strategy
 
@@ -130,9 +130,9 @@ workflow-scoped tokens in config files or environment variables.
 
 ## Pre-push checklist
 
-- [ ] `bun run typecheck` exits 0.
-- [ ] `bun run lint` (Biome check + format) exits 0.
-- [ ] `bun run test` (Vitest) exits 0 with no skipped tests in PLAN scope.
+- [ ] `npm run typecheck` exits 0.
+- [ ] `npm run lint` (Biome check + format) exits 0.
+- [ ] `npm run test` (Vitest) exits 0 with no skipped tests in PLAN scope.
 - [ ] `ut-tdd doctor` exits 0.
 - [ ] `git diff --stat HEAD` shows only PLAN-scoped files.
 - [ ] Commit message accepted by `commit-msg` hook (Conventional Commits).
