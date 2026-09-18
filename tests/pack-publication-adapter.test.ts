@@ -12,7 +12,6 @@ import {
   createPackPublicationPreparationReceiptStore,
   derivePackPublicationIntentDigest,
   derivePackPublicationPreparationDigest,
-  derivePackPublicationStagingPlanDigest,
   derivePackPublicationTreeDigest,
   type PackPublicationApproval,
   type PackPublicationIntentInput,
@@ -2038,10 +2037,7 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
         expect(
           await store.read({
             operationId: input.operationId,
-            idempotencyKey: input.idempotencyKey,
-            stagingPlanDigest: derivePackPublicationStagingPlanDigest(input.plan),
             expectedMainOid: input.expectedMainOid,
-            identityDigest: derivePackPublicationPreparationDigest(input) ?? "",
           }),
         ).toEqual(created.receipt);
         const persistedBytes = await readFile(path);
@@ -2081,9 +2077,7 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
       const { prep: prepB } = preparationPorts();
       const createdB = await preparePackPublication({ ...inputB, approvals: approvalsB }, prepB);
       if (!createdB.ok) throw new Error(createdB.reason);
-      expect(createdB.receipt.binding.identityDigest).not.toEqual(
-        createdA.receipt.binding.identityDigest,
-      );
+      expect(createdB.receipt).not.toEqual(createdA.receipt);
 
       const root = await mkdtemp(join(tmpdir(), "ut625-receipt-conflict-"));
       const path = join(root, "preparation-receipt.json");
@@ -2094,13 +2088,45 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
         expect(
           await store.read({
             operationId: inputA.operationId,
-            idempotencyKey: inputA.idempotencyKey,
-            stagingPlanDigest: derivePackPublicationStagingPlanDigest(inputA.plan),
             expectedMainOid: inputA.expectedMainOid,
-            identityDigest: derivePackPublicationPreparationDigest(inputA) ?? "",
           }),
         ).toEqual(createdA.receipt);
         expect(await readdir(root)).toEqual(["preparation-receipt.json"]);
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    });
+
+    it("CANDIDATE-PACKPUB-PREP-006: directory fsync failure fails persist on non-Windows platforms", async () => {
+      const { input } = preparationInput();
+      const { prep } = preparationPorts();
+      const created = await preparePackPublication(input, prep);
+      if (!created.ok) throw new Error(created.reason);
+
+      const root = await mkdtemp(join(tmpdir(), "ut625-receipt-dirsync-fail-"));
+      const path = join(root, "preparation-receipt.json");
+      const fsPort: PackPublicationPreparationReceiptStoreFsPort = {
+        platform: "linux",
+        open: async (target, flags) => {
+          if (target === root) {
+            throw Object.assign(new Error("EPERM: operation not permitted, open"), {
+              code: "EPERM",
+            });
+          }
+          const handle = await open(target, flags);
+          return {
+            writeFile: (data) => handle.writeFile(data),
+            sync: () => handle.sync(),
+            close: () => handle.close(),
+          };
+        },
+        readFile,
+        link,
+        unlink,
+      };
+      const store = createPackPublicationPreparationReceiptStore(path, fsPort);
+      try {
+        await expect(store.persist(created.receipt)).rejects.toThrow(/EPERM/);
       } finally {
         await rm(root, { recursive: true, force: true });
       }
@@ -2185,10 +2211,7 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
         await expect(
           store.read({
             operationId: input.operationId,
-            idempotencyKey: input.idempotencyKey,
-            stagingPlanDigest: derivePackPublicationStagingPlanDigest(input.plan),
             expectedMainOid: input.expectedMainOid,
-            identityDigest: derivePackPublicationPreparationDigest(input) ?? "",
           }),
         ).rejects.toThrow("receipt_invalid");
       } finally {
@@ -2524,8 +2547,15 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
       const prepared = await preparePackPublication(input, first.prep);
       if (!prepared.ok) throw new Error(prepared.reason);
       const driftedReceipt = mutateReceipt(prepared.receipt);
+      // Wires the preparation journal chain (the "sealed staging record" for
+      // this operation, PLAN-L7-626 §2.1) only on the replay call: it must
+      // still resolve under the drifted input's identity digest for the
+      // "staging"/"idempotency" axes to be caught, while leaving the
+      // original, already-verified successful preparation untouched.
+      const journal = completePreparationJournal(input);
       const result = await preparePackPublication(mutateInput(input), {
         ...first.prep,
+        durableState: { ...first.prep.durableState, read: async () => journal },
         receipt: { persist: vi.fn(), read: async () => driftedReceipt },
       });
       expect(result).toMatchObject({

@@ -143,12 +143,13 @@ export interface PackPublicationPreparationReceipt {
   }>;
   /**
    * #626 strict schema group 2: resolve the sealed staging record by
-   * operation. `identityDigest` binds the full preparation identity
-   * (including idempotencyKey and stagingPlanDigest, PLAN-L7-565 §5) so a
-   * replay whose input drifts on any bound field is denied rather than
-   * silently reusing an unrelated receipt.
+   * operation (PLAN-L7-626 §2.1: "receipt の binding (operation ID) で解決し").
+   * The sealed staging identity itself (idempotencyKey, stagingPlanDigest,
+   * ...) is not a receipt field; a replay binds to it by re-resolving the
+   * sealed staging record for this operation (the preparation journal) and
+   * comparing, not by storing a digest on the receipt.
    */
-  readonly binding: Readonly<{ readonly operationId: string; readonly identityDigest: string }>;
+  readonly binding: Readonly<{ readonly operationId: string }>;
   /** #626 strict schema group 3: the journal PR read-back observation reference. */
   readonly read_back_observation: Readonly<{
     readonly journalEventDigest: string;
@@ -205,10 +206,7 @@ export interface PackPublicationPreparationPorts {
     /** Read-only lookup used for an exact idempotent replay. */
     readonly read?: (identity: {
       readonly operationId: string;
-      readonly idempotencyKey: string;
-      readonly stagingPlanDigest: string;
       readonly expectedMainOid: string;
-      readonly identityDigest: string;
     }) =>
       | PackPublicationPreparationReceipt
       | null
@@ -234,6 +232,8 @@ export interface PackPublicationPreparationReceiptStoreFsPort {
   readonly readFile: (target: string) => Promise<Buffer>;
   readonly link: (existingPath: string, newPath: string) => Promise<void>;
   readonly unlink: (target: string) => Promise<void>;
+  /** Defaults to `process.platform`; injectable so tests can force the Windows-only directory-fsync tolerance below without depending on the host OS. */
+  readonly platform?: NodeJS.Platform;
 }
 
 const defaultReceiptStoreFsPort: PackPublicationPreparationReceiptStoreFsPort = {
@@ -248,6 +248,7 @@ const defaultReceiptStoreFsPort: PackPublicationPreparationReceiptStoreFsPort = 
   readFile,
   link,
   unlink,
+  platform: process.platform,
 };
 
 /**
@@ -268,6 +269,7 @@ export function createPackPublicationPreparationReceiptStore(
 } {
   let sequence = 0;
   const directory = dirname(path);
+  const platform = fsPort.platform ?? process.platform;
   const bytesFor = (receipt: PackPublicationPreparationReceipt) =>
     Buffer.from(`${stable(receipt)}\n`, "utf8");
   const syncDirectory = async (): Promise<void> => {
@@ -278,13 +280,17 @@ export function createPackPublicationPreparationReceiptStore(
       handle = await fsPort.open(directory, "r");
       await handle.sync();
     } catch (error) {
-      const code = (error as NodeJS.ErrnoException).code;
       // Node has no directory-fsync primitive on Windows: opening a
       // directory handle or syncing it is rejected (observed as EPERM,
       // sometimes surfaced as EISDIR/ENOTSUP depending on filesystem). The
       // file fsync plus no-clobber rename above already made the publish
       // durable there, so treat the unsupported directory sync as already
-      // satisfied instead of failing a publish that already succeeded.
+      // satisfied there instead of failing a publish that already
+      // succeeded. On every other platform a directory fsync failure is a
+      // real durability failure and must fail persist (PLAN-L7-565 §5:
+      // success is reported only after the directory fsync).
+      if (platform !== "win32") throw error;
+      const code = (error as NodeJS.ErrnoException).code;
       if (code !== "EPERM" && code !== "EISDIR" && code !== "ENOTSUP") throw error;
     } finally {
       await handle?.close().catch(() => undefined);
@@ -309,10 +315,7 @@ export function createPackPublicationPreparationReceiptStore(
         throw new Error("receipt_invalid");
       const receipt = parsed as PackPublicationPreparationReceipt;
       if (!validPreparationReceiptShape(receipt)) throw new Error("receipt_invalid");
-      if (
-        receipt.binding.operationId !== identity.operationId ||
-        receipt.binding.identityDigest !== identity.identityDigest
-      )
+      if (receipt.binding.operationId !== identity.operationId)
         throw new Error("receipt_binding_mismatch");
       return receipt;
     },
@@ -1107,10 +1110,7 @@ function preparationReceiptFromObservation(input: {
       baseOid: observed.baseOid,
       treeDigest: observed.treeDigest,
     }),
-    binding: Object.freeze({
-      operationId: preparation.operationId,
-      identityDigest: identity.identityDigest,
-    }),
+    binding: Object.freeze({ operationId: preparation.operationId }),
     read_back_observation: Object.freeze({
       journalEventDigest: readBackJournalEventDigest,
       pullRequest: observed.pullRequest,
@@ -1146,13 +1146,8 @@ function validPreparationReceiptShape(value: unknown): value is PackPublicationP
   const binding = receipt.binding;
   if (typeof binding !== "object" || binding === null || Array.isArray(binding)) return false;
   const bindingRecord = binding as Record<string, unknown>;
-  if (Object.keys(bindingRecord).sort().join("|") !== "identityDigest|operationId") return false;
+  if (Object.keys(bindingRecord).join("|") !== "operationId") return false;
   if (typeof bindingRecord.operationId !== "string" || !nonBlank(bindingRecord.operationId))
-    return false;
-  if (
-    typeof bindingRecord.identityDigest !== "string" ||
-    !SHA256.test(bindingRecord.identityDigest)
-  )
     return false;
   const readBack = receipt.read_back_observation;
   if (typeof readBack !== "object" || readBack === null || Array.isArray(readBack)) return false;
@@ -1353,10 +1348,7 @@ export async function preparePackPublication(
     try {
       existing = await ports.receipt.read({
         operationId: input.operationId,
-        idempotencyKey: input.idempotencyKey,
-        stagingPlanDigest: identity.stagingPlanDigest,
         expectedMainOid: input.expectedMainOid,
-        identityDigest: identity.identityDigest,
       });
     } catch {
       return preparationFailure({
@@ -1367,10 +1359,33 @@ export async function preparePackPublication(
       });
     }
     if (existing !== null) {
+      // PLAN-L7-626 §2.1: "sealed staging identity の値はこの record からのみ取り、
+      // receipt や caller から取らない" -- idempotencyKey and stagingPlanDigest are
+      // not receipt fields. Resolve the sealed staging record bound to this
+      // operation by re-reading the preparation journal chain this adapter
+      // already wrote it under (keyed by the full sealed identity digest, which
+      // folds in idempotencyKey and stagingPlanDigest) and require it to still
+      // resolve under the current input's identity; a drift on either no
+      // longer resolves a matching chain.
+      let stagingRecordBindingOk = true;
+      if (ports.durableState.read) {
+        let journal: readonly PublicationJournalEvent[];
+        try {
+          journal = await ports.durableState.read(identity.identityDigest);
+        } catch {
+          return preparationFailure({
+            status: "indeterminate",
+            stage: "preflight",
+            reason: "journal_read_failed",
+            remoteWrites: 0,
+          });
+        }
+        stagingRecordBindingOk = hasCompletePreparationJournal(journal, identity.identityDigest);
+      }
       const exact =
+        stagingRecordBindingOk &&
         validPreparationReceiptShape(existing) &&
         existing.binding.operationId === input.operationId &&
-        existing.binding.identityDigest === identity.identityDigest &&
         existing.identity.baseOid === input.expectedMainOid &&
         existing.identity.treeDigest === identity.treeDigest &&
         existing.read_back_observation.pullRequest === existing.identity.pullRequest;
