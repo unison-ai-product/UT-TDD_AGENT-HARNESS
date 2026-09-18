@@ -47,18 +47,18 @@ status: draft
 github_issue_id: 418
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:cf9b8edbe3e224c1f2c6664d035cac19
-  command_id: plan-revise:issue-418:pr665-r1-flag:forward:r2:a99f7cdbcbfd
-  admitted_at: 2026-09-18T10:29:11.664Z
-  source_digest: sha256:4b6a1f74fb626adbd6fa126b19cdaa4e738024ee8e3cb5dfd098af7db4764141
-  decision_digest: sha256:f08117b3377fc8e9d46c9bc6c1fff91034fc6502548e39ed1f1d103653351715
-  receipt_digest: sha256:df0847833050e1e88939fc8a4f38a1854eccadd842a3bd9f76c8994362d38ccb
+  receipt_id: certificate:9405f2904b48a199af7c071086b9ca9f
+  command_id: plan-revise:issue-418:pr665-r2-flag:forward:r3:29fb33f10d40
+  admitted_at: 2026-09-18T10:51:14.153Z
+  source_digest: sha256:69af2e228a14a52948fb1c04a50e4b29eaf7d64850d3a687b227f8277c9bd980
+  decision_digest: sha256:fa861ead84f1c7367cd9d71ead5eaef675c92955bd81df1a112a4014683a0667
+  receipt_digest: sha256:27715cb8a7eb89b0d9a8a0a48087b1b5e716b8629db6fbe4dd4875089e06a94c
   binding:
     path: docs/plans/PLAN-L7-628-pack-consumer-runtime-release-install.md
     plan_id: PLAN-L7-628-pack-consumer-runtime-release-install
     asset_id: plan:cd11a1885b1c948d89519002a2cec009
-    revision: 2
-    content_digest: sha256:4b6a1f74fb626adbd6fa126b19cdaa4e738024ee8e3cb5dfd098af7db4764141
+    revision: 3
+    content_digest: sha256:69af2e228a14a52948fb1c04a50e4b29eaf7d64850d3a687b227f8277c9bd980
   route:
     signal: feature_addition
     mode: add-feature
@@ -76,10 +76,10 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-628-pack-consumer-runtime-release-install
-    target_revision: 2
+    target_revision: 3
     phase: forward_merge
-  escape_reason: "PR #665 Sol r1 FLAG (契約 3 件: receipt の toolchain path、自己 digest
-    の信頼根、consumer receipt の再構成規則) の是正改訂。advisor design 相談済み。"
+  escape_reason: "PR #665 Sol r2 FLAG (previous #2 anchor の外部束縛、#3 runtime_root
+    導出式と独立 oracle) の是正改訂。"
 ---
 
 # PLAN-L7-628: Pack Release から consumer runtime を有効化する producer / installer
@@ -142,8 +142,8 @@ advisor (`ut-tdd advisor --decision design --current-model claude-opus-5 --plan 
 | 所見 | 実測 | 決定 | 棄却した案 |
 | --- | --- | --- | --- |
 | receipt の producer 絶対 path | `NodeBootstrapReceipt` は `node.path` / `npm.cli_path` を `generation_id` と `receipt_digest` に封印する (`src/runtime/node-bootstrap.ts:663-693`) | receipt は無加工で載せる。§4 の禁止対象を「利用者を識別しうる path」に改め、producer は node / npm が user home 配下なら fail-close する (§5.6) | portable projection の新設: node / npm block は consumer 側で照合できない producer provenance であり、path を剥がしても検証可能性は増えず、schema と digest 連鎖だけが増える (最小実装原則) |
-| 自己 digest に外部 trust anchor が無い | 自己照合は同一 Release 内 asset の相互整合であり、全 asset を整合的に再計算した偽造を止められない | 脅威モデルを §6.1 に明記し、installer の照合は破損・取り違え検出に限定する。改ざん検出の信頼根は repo write 権限の統制と、publish 時の独立 digest 記録を source repo 側に残すことに置く。**GitHub の `v*` tag ruleset は tag ref だけを守り、Release asset は tag と独立に差し替え可能**なので、tag を信頼根として主張しない | consumer 側で source から再ビルド照合: 「Release だけから」の目的と矛盾。署名鍵の導入: 高影響境界 (secret / 外部前提) であり PO 承認なしに採らない |
-| consumer identity の再構成規則が未定義 | `admitConsumerLocalRuntime` は `productId` / `consumerRoot` / `runtimeRoot` の入力と receipt の一致を要求する (`src/setup/consumer-local-runtime-admission.ts:31-45,300-342`) | `product_id` は Release 側の値として schema に持つ。consumer root 系は installer が導出して初回だけ receipt を組み、bundle の `consumer-receipt.json` として永続化する。再実行は保存済み receipt を読んで照合し、再導出した値で receipt を作り直さない (§6.3・§6.5) | 毎回 cwd から receipt を組む: 入力と receipt が同じ出所になり、一致検査が恒真になる |
+| 自己 digest に外部 trust anchor が無い | 自己照合は同一 Release 内 asset の相互整合であり、全 asset を整合的に再計算した偽造を止められない。PF-5 の control manifest も consumer には同じ Release 内の複製として届く | rev 2: 脅威モデルを §6.1 に明記。rev 3 (Sol r2 で previous #2 OPEN): installer に Release 外の anchor `--expected-consumer-digest` を必須化し、authority を source repo 側の publish 記録に置く (§5.7・§6.1・§6.2 手順 0)。PF-5 の値は anchor で固定された `consumer-runtime.json` 内で attestation と相互束縛する。**GitHub の `v*` tag ruleset は tag ref だけを守り、Release asset は tag と独立に差し替え可能**なので、tag を信頼根として主張しない | consumer 側で source から再ビルド照合: 「Release だけから」の目的と矛盾。署名鍵の導入: 高影響境界 (secret / 外部前提) であり PO 承認なしに採らない。installer からの network 照合: 外部 API 前提の追加であり採らない |
+| consumer identity の再構成規則が未定義 | `admitConsumerLocalRuntime` は `productId` / `consumerRoot` / `runtimeRoot` の入力と receipt の一致を要求する (`src/setup/consumer-local-runtime-admission.ts:31-45,300-342`) | `product_id` は Release 側の値として schema に持つ。consumer root 系は installer が導出して初回だけ receipt を組み、bundle の `consumer-receipt.json` として永続化する。再実行は保存済み receipt を読んで照合し、再導出した値で receipt を作り直さない (§6.2 手順 3・5)。rev 3 (Sol r2 で previous #3 OPEN): `consumer_root` / `runtime_root` の exact 導出式を launcher の固定解決源から確定し、初回 receipt を独立に組んだ期待値と照合する oracle を C009 に追加 | 毎回 cwd から receipt を組む: 入力と receipt が同じ出所になり、一致検査が恒真になる |
 
 ## 3. Release asset 契約
 
@@ -197,34 +197,54 @@ consumer 固有の値 (`consumer_root`、`runtime_root`、`operation_id`、`atte
 6. receipt の `node.path` / `npm.cli_path`、または producer の作業ディレクトリが user home (`os.homedir()` の canonical path) 配下なら
    fail-close する。canary の producer は user home 外の Node toolchain (例: 公式 installer の既定 install 先、CI runner の
    toolcache) で実行する。
-7. 5 asset の sha256 を stdout に出す。publish 担当はこれとは独立に、ダウンロードし直した asset の sha256 を再計算し、
-   両者を source repo 側の記録 (publish を追跡する Issue のコメント) に残す (§6.1 の信頼根。記録の様式は `PLAN-L7-531` が所有する)。
+7. 5 asset の sha256 と、**consumer anchor digest** (`<tag>.consumer.sha256` ファイル bytes の sha256。この 1 値が
+   `<tag>.ut-tdd.mjs` と `<tag>.consumer-runtime.json` の両方を推移的に固定する) を stdout に出す。publish 担当はこれとは独立に、
+   ダウンロードし直した asset から同じ値を再計算し、両者を source repo 側の記録 (publish を追跡する Issue のコメント) に残す
+   (§6.1 の信頼根。記録の様式は `PLAN-L7-531` が所有する)。
 
 ## 6. installer 契約 (consumer 側、PR-2)
 
 consumer は Release の asset をダウンロードしたディレクトリ (`<release-dir>`) を用意し、consumer root で次を 1 回実行する。
 
 ```sh
-node <release-dir>/<tag>.ut-tdd.mjs setup --solo --consumer-runtime-release <release-dir>
+node <release-dir>/<tag>.ut-tdd.mjs setup --solo --consumer-runtime-release <release-dir>   --expected-consumer-digest sha256:<source repo の publish 記録に載った consumer anchor digest>
 ```
 
 ### 6.1 脅威モデルと信頼根
 
-- installer の照合 (手順 1・2) は、同一 Release 内の asset 同士の相互整合を見る。守るのは **破損・取り違え・部分ダウンロード・
-  別 tag の混入・installer と runtime 入力の食い違い** であり、全 asset を整合的に作り直した意図的な偽造は installer 単独では
-  検出できない。本 PLAN はこれを攻撃耐性として主張しない (CANDIDATE-U-PACKRT-007 がこの限界を test で固定する)。
-- 意図的な偽造に対する信頼根は、(1) Pack repo の write 権限の統制と、(2) publish 時に §5.7 の independent digest 記録を
-  source repo 側に残し、利用者が Release asset の sha256 をその記録と照合できることに置く。
+- Release ディレクトリの中身 (compiled ESM、`consumer-runtime.json`、その中の PF-5 control manifest の複製と attestation、
+  `.consumer.sha256`) は全て同じ publish 操作で置かれる。したがって Release 内の値同士を照合する限り、全 asset を整合的に
+  作り直した偽造は検出できない。PF-5 の `release/manifest.yaml` (`artifactSetDigest`) も consumer には同じ Release 内の複製として
+  届くため、それ自体を installer の信頼根にはできない。
+- installer の信頼根は **Release の外から渡す 1 値** とする: `--expected-consumer-digest` (§5.7 の consumer anchor digest)。
+  値の authority は source repo 側の publish 記録であり、その改ざんには source repo の write 権限と review 経路の突破が要る
+  (Pack repo の Release asset を差し替えるだけでは足りない)。installer は手順 0 でこの値と `<tag>.consumer.sha256` ファイル bytes の
+  sha256 を照合し、不一致・未指定・形式違反を deny する (未指定での install 経路を残さない)。
+- 手順 1〜2 の Release 内照合は、anchor で固定された bytes の相互整合 (破損・取り違え・別 tag の混入・installer と runtime 入力の
+  食い違い) を見る層であり、anchor 無しで偽造を止めるとは主張しない。CANDIDATE-U-PACKRT-007(c) が「anchor 無しなら通過する /
+  anchor 付きなら deny される」の両方を test で固定する。
+- PF-5 との束縛: 手順 4 の `admitReleaseAggregate` が attestation の `expectedDigest` を control manifest の `artifactSetDigest` と
+  照合する既存検査に加え、installer は `release.source_revision` = attestation の `artifactSourceCommit`、`release.tag` と
+  `generation.subject_revision` の対応を検査する。anchor で固定された `consumer-runtime.json` の中で PF-5 の値が食い違う経路を残さない。
 - GitHub の `v*` tag ruleset は tag ref (= source revision) だけを保護し、Release asset は tag と独立に upload / delete できる。
   tag の immutability を asset 完全性の根拠にしない。
 - 署名鍵による検証は高影響境界 (secret / 外部前提) のため本 PLAN の対象外とし、必要になった時点で PO 承認を得て別 PLAN にする。
 
 ### 6.2 手順
 
+0. **anchor 照合**: `--expected-consumer-digest` を `sha256:<64 桁 lowercase hex>` として検証し、`<tag>.consumer.sha256` ファイル
+   bytes の sha256 と一致しなければ `consumer_runtime_anchor_mismatch` で deny する。未指定・形式違反も同じく deny し、
+   consumer root へ 1 byte も書かない。
 1. `<tag>.consumer.sha256` で `<tag>.ut-tdd.mjs` と `<tag>.consumer-runtime.json` を検証する。
 2. **自己 digest 照合**: 実行中のモジュール自身 (`import.meta.url` の実ファイル) の sha256 が `generation.compiled_esm_digest` と
    一致しなければ deny する。installer と runtime 入力の取り違え (別 tag / 別 build の混在) を検出する (§6.1 の範囲)。
-3. identity を consumer 側で導出する: `consumer_root` / `runtime_root` は consumer root の canonical path、`operation_id` は
+3. identity を consumer 側で導出する。`consumer_root` と `runtime_root` の導出規則は exact に次のとおりとする。
+   - `consumer_root` = `realpathSync.native(process.cwd())` (symlink / junction / 8.3 alias を解決した canonical path)。
+   - `runtime_root` = `path.join(consumer_root, ".ut-tdd", "runtime")`。生成 launcher (`renderConsumerNodeWrapper`) は
+     `<launcher の 2 階層上>/.ut-tdd/runtime/activation/active.json` を固定の解決源とし、manifest の `runtime_root` を
+     `samePath` で照合するため、これ以外の値は install 後の起動が必ず exit 78 になる。installer は導出後に
+     `runtime_root` がこの式と一致することを自己検査する。
+   `operation_id` は
    release tag と generation から決定的に導出、`attempt` は 1 から開始。`product_id` は `release.product_id` を使う。残りの
    field は `consumer-runtime.json` と receipt から取る。導出規則は `PLAN-L7-516` §2.1 の tuple をそのまま満たし、新しい
    identity authority を作らない。
@@ -280,7 +300,7 @@ schema・identity 導出を同一 implementation revision へ束縛する。R3 �
    (`CANDIDATE-U-PACKRT-001..004` Green)。
 2. PR-2: Release の asset だけを置いたディレクトリと空の consumer root から `setup --consumer-runtime-release` が
    `active.json` を生成し、launcher が exit 0 で起動する。破損・取り違えた asset、余剰 / 欠落 asset、保存済み receipt と一致しない再実行を deny し、
-   同じ release の再実行は新 write 0。整合的な多 asset 偽造が installer を通過する限界は §6.1 のとおり test で固定する (`CANDIDATE-U-PACKRT-005..010` Green)。
+   同じ release の再実行は新 write 0。anchor 不一致・未指定と整合的な多 asset 偽造を手順 0 で deny する (`CANDIDATE-U-PACKRT-005..010` Green)。
 3. Linux / Windows / aggregate CI Green、成果物を書いていない族の canonical non-author closing receipt を同一 exact revision へ束縛。
 
 ## 11. 実装開始条件
