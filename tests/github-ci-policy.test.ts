@@ -954,8 +954,7 @@ describe("github-ci-policy lint", () => {
   });
 
   it("requires Pack CI to run setup-smoke through the source CLI before the launcher fail-close probe", () => {
-    const pack = PACK_WORKFLOW.replace("      - run: node src/cli.ts doctor --setup-smoke
-", "");
+    const pack = PACK_WORKFLOW.replace("      - run: node src/cli.ts doctor --setup-smoke\n", "");
     expect(pack).not.toBe(PACK_WORKFLOW);
     const result = analyzeGithubCiPolicy(docs(SOURCE_WORKFLOW, pack));
 
