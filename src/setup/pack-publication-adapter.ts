@@ -1407,13 +1407,28 @@ export async function preparePackPublication(
         journal,
         identity.identityDigest,
       );
+      const replayObservation: PackPublicationPullRequestObservation = {
+        pullRequest: existing.identity.pullRequest,
+        headOid: existing.identity.headOid,
+        baseOid: existing.identity.baseOid,
+        treeDigest: existing.identity.treeDigest,
+        controlManifestSnapshotDigest: input.plan.controlManifestSnapshotDigest,
+      };
+      const journalReadBackEventDigest = journalReadBackMatches({
+        journal,
+        identityDigest: identity.identityDigest,
+        branchCommit: existing.identity.headOid,
+        pullRequest: replayObservation,
+      });
       const exact =
         stagingRecordBindingOk &&
         validPreparationReceiptShape(existing) &&
         existing.binding.operationId === input.operationId &&
         existing.identity.baseOid === input.expectedMainOid &&
         existing.identity.treeDigest === identity.treeDigest &&
-        existing.read_back_observation.pullRequest === existing.identity.pullRequest;
+        existing.read_back_observation.pullRequest === existing.identity.pullRequest &&
+        journalReadBackEventDigest !== null &&
+        existing.read_back_observation.journalEventDigest === journalReadBackEventDigest;
       return exact
         ? { ok: true, status: "prepared", receipt: existing, remoteWrites: 0 }
         : preparationFailure({

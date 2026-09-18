@@ -2486,6 +2486,46 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
       await expect(
         preparePackPublication({ ...input, expectedMainOid: "f".repeat(40) }, replay.prep),
       ).resolves.toMatchObject({ ok: false, reason: "preparation_identity_mismatch" });
+
+      const receipt = prepared.receipt;
+      const replayDrifts = [
+        {
+          name: "pull request identity",
+          value: {
+            ...receipt,
+            identity: { ...receipt.identity, pullRequest: "43" },
+            read_back_observation: { ...receipt.read_back_observation, pullRequest: "43" },
+          },
+        },
+        {
+          name: "head identity",
+          value: { ...receipt, identity: { ...receipt.identity, headOid: "8".repeat(40) } },
+        },
+        {
+          name: "journal event digest",
+          value: {
+            ...receipt,
+            read_back_observation: {
+              ...receipt.read_back_observation,
+              journalEventDigest: sha("foreign-journal-event"),
+            },
+          },
+        },
+      ] as const;
+      for (const drift of replayDrifts) {
+        await expect(
+          preparePackPublication(input, {
+            ...replay.prep,
+            receipt: { persist: vi.fn(), read: async () => drift.value },
+          }),
+          drift.name,
+        ).resolves.toMatchObject({
+          ok: false,
+          status: "denied",
+          reason: "preparation_identity_mismatch",
+          remoteWrites: 0,
+        });
+      }
     });
 
     it("CANDIDATE-PACKPUB-PREP-008: replay without a resolvable sealed staging record fails closed instead of trusting the receipt", async () => {
