@@ -1727,14 +1727,15 @@ content-addressed に投影する。D1 analyzer には投影済み artifact だ�
 | `U-RVATT-034` | retry / supersede | 同一digestのattempt-1後に同族model変更でattempt-2、receipt後のattempt追加、別family変異 | `superseded_attempt`監査後に最新attemptだけを1 receiptへ投影。receipt後とfamily変更は拒否 |
 | `U-RVATT-035` | receipt後cleanup | receipt前cleanup、receipt後scratch削除、cleanup失敗を注入 | receipt前は0、receipt後receipt保持。失敗はcommon-dir `cleanup_pending` typed eventへ記録 |
 | `U-RVATT-036` | real composition closure | `tests/review-live-cli.test.ts` と実repo fixtureでdispatch→consume→repo-local verdict→receipt | current exact HEADだけallow、欠落/外部/wrong-headはdeny。stdout-onlyやmerge bypass 0 |
-| `U-RVATT-037` | terminal retry identity/orphan resistance | `tests/review-verdict-custody.test.ts`で orphan receipt と identity-drift audit event を各1点注入し、terminal receipt後の retry を再実行 | orphan/identity-driftだけでは terminal 扱いにせず typed retry を許可し、request/audit/tree bytes を上書きしない。terminal canonical receipt が存在する場合だけ `review_receipt_already_exists` と write 0 |
+| `U-RVATT-037` | terminal retry identity/orphan resistance | `tests/review-verdict-custody.test.ts`で terminal receipt、orphan receipt、identity-drift audit event を各1点注入し、retry を再実行 | orphan/identity-driftだけでは terminal 扱いにせず typed retry を許可し、receipt/audit/verdict-tree bytes を上書きしない（request metadata の再発行は許可）。terminal canonical receipt が存在する場合だけ `review_receipt_already_exists` と write 0 |
+| `U-RVATT-038` | malformed custody audit fail-close | `tests/review-verdict-custody.test.ts`で監査JSONLを不正JSONへ変異し、`issueReviewRequest`を実行 | `attempt_outcome_indeterminate` を返し、reviewer CLIへ `SyntaxError` を漏らさず、request write 0 |
 | `U-RVATT-042` | dispatch subject existence / PR binding | `tests/live-review-projection.test.ts`でsubject検証失敗時のrequest/wake 0、`tests/review-live-cli.test.ts`でGit commit object不在、PR観測不能、PR HEAD不一致を各1点変異 | `git cat-file -e <exactHead>^{commit}`とGitHub `headRefOid`一致をcanonical request永続化前に要求し、`exact_head_not_found` / `pull_request_head_unavailable` / `pull_request_head_mismatch`でfail-close |
 | `U-RVWAKE-010` | 長い identity の inbox 衝突防止 | `tests/claude-memory-wake.test.ts`。legacy の安全化 stem が同じになる長い `memory_id` へ異なる `operationId` を与え、publish/claim/GC の全経路を実行 | operationId の hash suffix を含む別ファイルへ分離され、両 payload が保持される。長さ制限だけで suffix を落とす変異は同一path衝突またはpayload消失で RED |
 
 実行対応: `tests/review-attestation.test.ts` (`U-RVATT-001`〜`009`)、
 `tests/live-review-projection.test.ts` / `tests/claude-memory-wake.test.ts` / `tests/cli-delegation.test.ts` /
 `tests/dependency-drift.test.ts` (`U-RVATT-023`〜`028`)。
-`tests/review-verdict-custody.test.ts` (`U-RVATT-030`〜`035`)、
+`tests/review-verdict-custody.test.ts` (`U-RVATT-030`〜`035`, `037`〜`038`)、
 `tests/review-live-cli.test.ts` (`U-RVATT-036`)。
 既存`U-RVATT-001`〜`022`の検出集合を縮めない。
 
