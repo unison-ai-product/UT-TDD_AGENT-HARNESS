@@ -3,6 +3,7 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   rmSync,
   symlinkSync,
@@ -95,6 +96,21 @@ function issue(root: string): { request: ReviewAttestationRequest; digest: strin
   return { request: result.request, digest: result.digest };
 }
 
+function reviewListing(root: string): string[] {
+  const base = join(root, ".ut-tdd", "review");
+  const entries: string[] = [];
+  const walk = (directory: string, prefix = "") => {
+    if (!existsSync(directory)) return;
+    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+      const relative = `${prefix}${entry.name}${entry.isDirectory() ? "/" : ""}`;
+      entries.push(relative);
+      if (entry.isDirectory()) walk(join(directory, entry.name), relative);
+    }
+  };
+  walk(base);
+  return entries.sort();
+}
+
 describe("repo-local review verdict custody (U-RVATT-030..035)", () => {
   it("U-RVATT-036: terminal receipt後のretryはrequest metadataを書き換えず拒否する", () => {
     const root = gitRoot();
@@ -134,6 +150,63 @@ describe("repo-local review verdict custody (U-RVATT-030..035)", () => {
       expect(JSON.parse(readFileSync(requestPath, "utf8")).requestedAt).toBe(
         issued.request.requestedAt,
       );
+
+      const requestBytes = readFileSync(requestPath);
+      const auditPath = reviewCustodyAuditPath(root);
+      const auditBytes = readFileSync(auditPath);
+      const reviewTree = reviewListing(root);
+      const retryAgain = issueReviewRequest({
+        repoRoot: root,
+        request: {
+          ...issued.request,
+          requestedAt: "2026-08-19T00:06:00.000Z",
+        },
+        strict: true,
+      });
+      expect(retryAgain).toEqual({ ok: false, reason: "review_receipt_already_exists" });
+      expect(readFileSync(requestPath)).toEqual(requestBytes);
+      expect(readFileSync(auditPath)).toEqual(auditBytes);
+      expect(reviewListing(root)).toEqual(reviewTree);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("U-RVATT-037: orphan receipt と identity-drift event は retry を terminal 扱いしない", () => {
+    const root = gitRoot();
+    try {
+      const issued = issue(root);
+      const receiptPath = join(root, ".ut-tdd", "review", "receipts", `${issued.digest}.json`);
+      mkdirSync(join(root, ".ut-tdd", "review", "receipts"), { recursive: true });
+      writeFileSync(receiptPath, '{"verdict":"PASS"}\n', "utf8");
+
+      const orphanRetry = issueReviewRequest({
+        repoRoot: root,
+        request: { ...issued.request, requestedAt: "2026-08-19T00:05:00.000Z" },
+        strict: true,
+      });
+      expect(orphanRetry).toMatchObject({ ok: true });
+
+      appendReviewCustodyAudit(root, {
+        kind: "attempt_completed",
+        requestDigest: issued.digest,
+        attempt: 1,
+        exactHead: "b".repeat(40),
+        verdictPath: reviewVerdictPath(root, issued.digest, 1),
+        recordedAt: "2026-08-19T00:06:00.000Z",
+        reason: "identity drift fixture",
+        provider: "claude",
+        model: "claude-opus-5",
+        exitCode: 0,
+        receiptFileDigest: "0".repeat(64),
+        verdictDigest: "1".repeat(64),
+      });
+      const driftRetry = issueReviewRequest({
+        repoRoot: root,
+        request: { ...issued.request, requestedAt: "2026-08-19T00:07:00.000Z" },
+        strict: true,
+      });
+      expect(driftRetry).toMatchObject({ ok: true });
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
