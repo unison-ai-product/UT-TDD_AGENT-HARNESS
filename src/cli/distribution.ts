@@ -49,7 +49,7 @@ function gitHead(): string | null {
   return result.status === 0 ? result.stdout.trim() : null;
 }
 
-function collectDistributionCandidatePaths(repoRoot: string): string[] {
+function collectFilesystemCandidatePaths(repoRoot: string): string[] {
   const ignored = new Set([".git", "node_modules", "dist"]);
   const out: string[] = [];
   const walk = (dir: string, prefix = ""): void => {
@@ -66,6 +66,37 @@ function collectDistributionCandidatePaths(repoRoot: string): string[] {
   };
   walk(repoRoot);
   return out.sort();
+}
+
+/**
+ * Build the source candidate set from the immutable HEAD tree whenever the
+ * command runs inside Git.  A live filesystem walk is unsafe for source
+ * publication: ignored/untracked files under an allowed prefix (for example
+ * `scripts/` or `src/`) would otherwise become release inputs.  Unpacked Pack
+ * trees have no Git metadata, so they retain the bounded filesystem fallback;
+ * deny/allow fences still apply to that clean tree.
+ */
+export function collectDistributionCandidatePaths(repoRoot: string): string[] {
+  const workTree = spawnSync("git", ["rev-parse", "--is-inside-work-tree"], {
+    cwd: repoRoot,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "ignore"],
+  });
+  const tracked = spawnSync("git", ["ls-tree", "-r", "--name-only", "-z", "HEAD", "--"], {
+    cwd: repoRoot,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "ignore"],
+  });
+  if (tracked.status === 0) {
+    return tracked.stdout.split("\0").filter(Boolean).sort();
+  }
+  if (workTree.status === 0 && workTree.stdout.trim() === "true") {
+    throw new Error("Git work tree has no readable HEAD tree");
+  }
+  if (existsSync(join(repoRoot, ".git"))) {
+    throw new Error("Git metadata exists but the HEAD tree is unavailable");
+  }
+  return collectFilesystemCandidatePaths(repoRoot);
 }
 
 const PACK_SYNC_MANIFEST = ".ut-tdd-pack-sync-manifest.json";
@@ -446,7 +477,7 @@ export function registerDistributionCommands(program: Command): void {
         });
         ensureDir(outDir, { recursive: true });
         const plannedArtifacts = new Set(exportPlan.artifactPaths);
-        const unmanagedExistingPaths = collectDistributionCandidatePaths(outDir).filter(
+        const unmanagedExistingPaths = collectFilesystemCandidatePaths(outDir).filter(
           (path) =>
             !plannedArtifacts.has(path) && !path.startsWith(".git/") && path !== PACK_SYNC_MANIFEST,
         );
@@ -565,7 +596,7 @@ export function registerDistributionCommands(program: Command): void {
         });
         const plannedArtifacts = new Set(exportPlan.artifactPaths);
         const existingBefore = repoExists
-          ? collectDistributionCandidatePaths(repoDir).filter((path) => !plannedArtifacts.has(path))
+          ? collectFilesystemCandidatePaths(repoDir).filter((path) => !plannedArtifacts.has(path))
           : [];
         const prunedPaths: string[] = [];
         let copyError: string | null = null;
@@ -606,9 +637,7 @@ export function registerDistributionCommands(program: Command): void {
 
         const unmanagedExistingPaths =
           repoExists && pruneError === null
-            ? collectDistributionCandidatePaths(repoDir).filter(
-                (path) => !plannedArtifacts.has(path),
-              )
+            ? collectFilesystemCandidatePaths(repoDir).filter((path) => !plannedArtifacts.has(path))
             : existingBefore;
         const manifestDir = join(repoRoot, ".ut-tdd", "pack-sync");
         ensureDir(manifestDir, { recursive: true });

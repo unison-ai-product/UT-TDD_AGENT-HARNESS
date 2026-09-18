@@ -1,4 +1,4 @@
-import { spawnSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import {
   chmodSync,
   cpSync,
@@ -13,6 +13,7 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { collectDistributionCandidatePaths } from "../src/cli/distribution.ts";
 import {
   buildCleanDistributionPlan,
   cleanDistributionSourcePath,
@@ -49,6 +50,10 @@ function runNode(cwd: string, args: string[], env: NodeJS.ProcessEnv = process.e
     env,
     timeout: 300_000,
   });
+}
+
+function runGit(cwd: string, args: string[]): void {
+  execFileSync("git", args, { cwd, stdio: "ignore" });
 }
 
 // Issue #506: node-toolchain equivalent of `bun install --frozen-lockfile` /
@@ -129,6 +134,50 @@ function createCleanDistributionFixture(): string {
 }
 
 describe("clean distribution local acceptance smoke", () => {
+  it("source candidates use the HEAD tree and exclude untracked allowed-prefix files", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-distribution-candidates-"));
+    try {
+      mkdirSync(join(root, "scripts"), { recursive: true });
+      writeFileSync(join(root, "scripts", "tracked.ts"), "export {}\n", "utf8");
+      writeFileSync(join(root, "scripts", "untracked.ts"), "secret workspace state\n", "utf8");
+      runGit(root, ["init", "--quiet"]);
+      runGit(root, ["config", "user.email", "test@example.invalid"]);
+      runGit(root, ["config", "user.name", "UT test"]);
+      runGit(root, ["add", "scripts/tracked.ts"]);
+      runGit(root, ["commit", "--quiet", "-m", "fixture"]);
+
+      expect(collectDistributionCandidatePaths(root)).toEqual(["scripts/tracked.ts"]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("Git work trees without a committed HEAD fail closed instead of using workspace files", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-distribution-unborn-head-"));
+    try {
+      mkdirSync(join(root, "scripts"), { recursive: true });
+      writeFileSync(join(root, "scripts", "untracked.ts"), "workspace state\n", "utf8");
+      runGit(root, ["init", "--quiet"]);
+
+      expect(() => collectDistributionCandidatePaths(root)).toThrow(
+        "Git work tree has no readable HEAD tree",
+      );
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("clean unpacked trees use the filesystem candidate fallback without Git HEAD", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-distribution-clean-tree-"));
+    try {
+      mkdirSync(join(root, "scripts"), { recursive: true });
+      writeFileSync(join(root, "scripts", "pack-entry.js"), "console.log('ok')\n", "utf8");
+      expect(collectDistributionCandidatePaths(root)).toEqual(["scripts/pack-entry.js"]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it("PLAN-L7-413 D-1: sync-stage is idempotent when the outDir already has its manifest", () => {
     const cleanRoot = createCleanDistributionFixture();
     const stageDir = join(cleanRoot, ".stage");
