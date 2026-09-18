@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { link, mkdtemp, open, readdir, readFile, rm, unlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
@@ -19,6 +19,7 @@ import {
   type PackPublicationPorts,
   type PackPublicationPreparationPorts,
   type PackPublicationPreparationReceipt,
+  type PackPublicationPreparationReceiptStoreFsPort,
   type PublicationJournalEvent,
   parseSealedPackageVersionIdentity,
   preparePackPublication,
@@ -1906,13 +1907,20 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
       expect(commit).not.toHaveBeenCalled();
     });
 
-    it("CANDIDATE-PACKPUB-PREP-003: cross-nonce substitution is typed by the approval port", async () => {
+    it("CANDIDATE-PACKPUB-PREP-003: cross-nonce substitution is typed by the approval port, not fabricated by the preflight classifier", async () => {
+      // Distinct nonce/reason strings from preparationApprovalBindingReason's
+      // vocabulary ("approval_binding_mismatch" / "preparation_identity_mismatch")
+      // prove this denial is genuinely a pass-through of the remote approval
+      // port's typed response (PublicationRun.authorize -> failure()),
+      // reached only after preflight (including preparationApprovalBindingReason)
+      // passes -- not a coincidental match with the local classifier's own reason
+      // string.
       const { input } = preparationInput();
       const { prep } = preparationPorts();
       const commit = vi.fn(prep.pack.commitPublicationBranch);
       const consume = vi.fn(async (approval: PackPublicationApproval) =>
         approval.nonce === "foreign-nonce"
-          ? ({ status: "mismatch", reason: "approval_binding_mismatch" } as const)
+          ? ({ status: "mismatch", reason: "remote_nonce_binding_rejected" } as const)
           : ({ status: "attested", value: { mode: "new" } } as const),
       );
       await expect(
@@ -1933,7 +1941,12 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
             pack: { ...prep.pack, commitPublicationBranch: commit },
           },
         ),
-      ).resolves.toMatchObject({ ok: false, reason: "approval_binding_mismatch" });
+      ).resolves.toMatchObject({
+        ok: false,
+        status: "denied",
+        reason: "remote_nonce_binding_rejected",
+        remoteWrites: 0,
+      });
       expect(consume).toHaveBeenCalledTimes(1);
       expect(commit).not.toHaveBeenCalled();
     });
@@ -2028,6 +2041,7 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
             idempotencyKey: input.idempotencyKey,
             stagingPlanDigest: derivePackPublicationStagingPlanDigest(input.plan),
             expectedMainOid: input.expectedMainOid,
+            identityDigest: derivePackPublicationPreparationDigest(input) ?? "",
           }),
         ).toEqual(created.receipt);
         const persistedBytes = await readFile(path);
@@ -2039,6 +2053,97 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
         };
         await expect(store.persist(changed)).rejects.toThrow("receipt_conflict");
         expect(await readFile(path)).toEqual(persistedBytes);
+        expect(await readdir(root)).toEqual(["preparation-receipt.json"]);
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    });
+
+    it("CANDIDATE-PACKPUB-PREP-006: persisting a different-identity receipt over an existing path is a no-clobber conflict", async () => {
+      const { input: inputA } = preparationInput();
+      const { prep: prepA } = preparationPorts();
+      const createdA = await preparePackPublication(inputA, prepA);
+      if (!createdA.ok) throw new Error(createdA.reason);
+
+      const inputB = {
+        ...inputA,
+        operationId: "foreign-operation",
+        idempotencyKey: "foreign-idempotency",
+      };
+      const digestB = derivePackPublicationPreparationDigest(inputB);
+      if (!digestB) throw new Error("preparation identity failed");
+      const approvalsB = inputA.approvals.map((approval) => ({
+        ...approval,
+        operationId: inputB.operationId,
+        idempotencyKey: inputB.idempotencyKey,
+        intentDigest: digestB,
+      }));
+      const { prep: prepB } = preparationPorts();
+      const createdB = await preparePackPublication({ ...inputB, approvals: approvalsB }, prepB);
+      if (!createdB.ok) throw new Error(createdB.reason);
+      expect(createdB.receipt.binding.identityDigest).not.toEqual(
+        createdA.receipt.binding.identityDigest,
+      );
+
+      const root = await mkdtemp(join(tmpdir(), "ut625-receipt-conflict-"));
+      const path = join(root, "preparation-receipt.json");
+      const store = createPackPublicationPreparationReceiptStore(path);
+      try {
+        await store.persist(createdA.receipt);
+        await expect(store.persist(createdB.receipt)).rejects.toThrow("receipt_conflict");
+        expect(
+          await store.read({
+            operationId: inputA.operationId,
+            idempotencyKey: inputA.idempotencyKey,
+            stagingPlanDigest: derivePackPublicationStagingPlanDigest(inputA.plan),
+            expectedMainOid: inputA.expectedMainOid,
+            identityDigest: derivePackPublicationPreparationDigest(inputA) ?? "",
+          }),
+        ).toEqual(createdA.receipt);
+        expect(await readdir(root)).toEqual(["preparation-receipt.json"]);
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    });
+
+    it("CANDIDATE-PACKPUB-PREP-006: persist fsyncs the temp file and the directory, then removes the temp file", async () => {
+      const { input } = preparationInput();
+      const { prep } = preparationPorts();
+      const created = await preparePackPublication(input, prep);
+      if (!created.ok) throw new Error(created.reason);
+
+      const root = await mkdtemp(join(tmpdir(), "ut625-receipt-fsync-"));
+      const path = join(root, "preparation-receipt.json");
+      const opens: string[] = [];
+      const syncs: string[] = [];
+      const unlinks: string[] = [];
+      const fsPort: PackPublicationPreparationReceiptStoreFsPort = {
+        open: async (target, flags) => {
+          opens.push(target);
+          const handle = await open(target, flags);
+          return {
+            writeFile: (data) => handle.writeFile(data),
+            sync: async () => {
+              syncs.push(target);
+              await handle.sync();
+            },
+            close: () => handle.close(),
+          };
+        },
+        readFile,
+        link,
+        unlink: async (target) => {
+          unlinks.push(target);
+          await unlink(target);
+        },
+      };
+      const store = createPackPublicationPreparationReceiptStore(path, fsPort);
+      try {
+        await store.persist(created.receipt);
+        const temporary = opens.find((target) => target !== root && target !== path);
+        if (!temporary) throw new Error("temp file was never opened");
+        expect(syncs).toEqual([temporary, root]);
+        expect(unlinks).toEqual([temporary]);
         expect(await readdir(root)).toEqual(["preparation-receipt.json"]);
       } finally {
         await rm(root, { recursive: true, force: true });
@@ -2083,6 +2188,7 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
             idempotencyKey: input.idempotencyKey,
             stagingPlanDigest: derivePackPublicationStagingPlanDigest(input.plan),
             expectedMainOid: input.expectedMainOid,
+            identityDigest: derivePackPublicationPreparationDigest(input) ?? "",
           }),
         ).rejects.toThrow("receipt_invalid");
       } finally {
@@ -2362,26 +2468,63 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
           ...input,
           expectedMainOid: "f".repeat(40),
         }),
+        (receipt: PackPublicationPreparationReceipt) => receipt,
       ],
       [
+        // Drifts derivePackPublicationStagingPlanDigest (releaseAssets are
+        // part of the staging-plan digest, but not checked against the
+        // release manifest by validPreparationPlan) while keeping the plan
+        // internally valid, so the input reaches the replay comparison
+        // instead of being denied earlier for an invalid plan shape.
         "staging",
+        (input: ReturnType<typeof preparationInput>["input"]) => {
+          const driftedBytes = Buffer.from("drifted-release-asset-bytes");
+          const [first, second] = input.plan.releaseAssets;
+          return {
+            ...input,
+            plan: {
+              ...input.plan,
+              releaseAssets: [
+                {
+                  ...first,
+                  bytes: driftedBytes,
+                  size: driftedBytes.length,
+                  contentDigest: sha(driftedBytes),
+                },
+                second,
+              ] as const,
+            },
+          };
+        },
+        (receipt: PackPublicationPreparationReceipt) => receipt,
+      ],
+      [
+        "idempotency",
         (input: ReturnType<typeof preparationInput>["input"]) => ({
           ...input,
-          plan: {
-            ...input.plan,
-            controlManifestSnapshotDigest: `sha256:${"f".repeat(64)}`,
-          },
+          idempotencyKey: "foreign-idempotency",
+        }),
+        (receipt: PackPublicationPreparationReceipt) => receipt,
+      ],
+      [
+        // Drifts only identity.pullRequest (keeping the strict receipt
+        // shape valid) so the mismatch is caught by the production
+        // read_back_observation/identity self-consistency check instead of
+        // being rejected earlier by the strict shape check.
+        "PR",
+        (input: ReturnType<typeof preparationInput>["input"]) => input,
+        (receipt: PackPublicationPreparationReceipt) => ({
+          ...receipt,
+          identity: { ...receipt.identity, pullRequest: "43" },
         }),
       ],
-      ["PR", (input: ReturnType<typeof preparationInput>["input"]) => input],
-    ] as const)("CANDIDATE-PACKPUB-PREP-008: %s identity drift is independently denied", async (axis, mutate) => {
+    ] as const)("CANDIDATE-PACKPUB-PREP-008: %s identity drift is independently denied", async (_axis, mutateInput, mutateReceipt) => {
       const { input } = preparationInput();
       const first = preparationPorts();
       const prepared = await preparePackPublication(input, first.prep);
       if (!prepared.ok) throw new Error(prepared.reason);
-      const driftedReceipt =
-        axis === "PR" ? { ...prepared.receipt, pullRequest: "43" } : prepared.receipt;
-      const result = await preparePackPublication(mutate(input), {
+      const driftedReceipt = mutateReceipt(prepared.receipt);
+      const result = await preparePackPublication(mutateInput(input), {
         ...first.prep,
         receipt: { persist: vi.fn(), read: async () => driftedReceipt },
       });
@@ -2431,6 +2574,33 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
         ok: false,
         status: "denied",
         reason: "approval_binding_mismatch",
+        remoteWrites: 0,
+      });
+      expect(commit).not.toHaveBeenCalled();
+    });
+
+    it("CANDIDATE-PACKPUB-PREP-002: approvals unanimously issued for another operation are a preparation identity mismatch", async () => {
+      // Distinct from the single-sided "cross-operation approval" case above:
+      // both approvals agree with each other but disagree with the fresh
+      // input, exercising preparationApprovalBindingReason's
+      // sameApprovalIdentity=true branch (both foreign) instead of its
+      // sameApprovalIdentity=false branch (exactly one foreign).
+      const { input } = preparationInput();
+      const { prep } = preparationPorts();
+      const approvals = input.approvals.map((approval) => ({
+        ...approval,
+        operationId: "foreign-operation",
+        idempotencyKey: "foreign-idempotency",
+      }));
+      const commit = vi.fn(prep.pack.commitPublicationBranch);
+      const result = await preparePackPublication(
+        { ...input, approvals },
+        { ...prep, pack: { ...prep.pack, commitPublicationBranch: commit } },
+      );
+      expect(result).toMatchObject({
+        ok: false,
+        status: "denied",
+        reason: "preparation_identity_mismatch",
         remoteWrites: 0,
       });
       expect(commit).not.toHaveBeenCalled();
