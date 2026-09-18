@@ -680,12 +680,12 @@ describe("relation graph real-repo loader (PLAN-L7-142 stale-edge fence)", () =>
     );
     expect(auditImpact.findings.map((f) => f.code)).not.toContain("missing-projection");
     const memoryImpact = analyzeRelationImpact({
-      changedPaths: [".ut-tdd/memory/feedback-pr-1-2026-07-14.md"],
+      changedPaths: [".ut-tdd/memory/feedback-plan--81abf9753343.md"],
       projection,
     });
     expect(memoryImpact.ok).toBe(true);
     expect(memoryImpact.changedNodes.map((n) => n.id)).toContain(
-      "design:.ut-tdd/memory/feedback-pr-1-2026-07-14.md",
+      "design:.ut-tdd/memory/feedback-plan--81abf9753343.md",
     );
     expect(memoryImpact.findings.map((f) => f.code)).not.toContain("missing-projection");
     const g8EvidenceImpact = analyzeRelationImpact({
