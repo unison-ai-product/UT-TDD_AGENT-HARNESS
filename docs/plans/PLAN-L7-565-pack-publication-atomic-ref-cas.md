@@ -7,7 +7,7 @@ drive: agent
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-09-14
-updated: 2026-09-14
+updated: 2026-09-18
 owner: Codex / Sol (contract revision) · Luna worker (implementation after
   pair-freeze)
 parent_design: docs/plans/PLAN-L6-63-pack-staged-release-rollback.md
@@ -45,23 +45,20 @@ dependencies:
 review_evidence: []
 status: draft
 github_issue_id: 565
-supersedes:
-  - PLAN-L7-515-pack-remote-canary-publication
-  - PLAN-L7-532-pack-publication-driver
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:a030bc07104b52cdc17f76e9beceb0df
-  command_id: plan-draft:issue-565:atomic-ref-cas:1
-  admitted_at: 2026-09-14T11:07:44.641Z
-  source_digest: sha256:efd67cb89dbf6e187fd998c062972332a868e868ee5b70993be4080a9ccb6647
-  decision_digest: sha256:a46fff25c28c3cf1213ce45af46fda178aff88564aa5594db22341fa00f63763
-  receipt_digest: sha256:c6dfc917dd6c420edb629392513d0499ee0817566a9f03cbba334186d3aece29
+  receipt_id: certificate:1304243374fc781fc312bcc92b190084
+  command_id: plan-revise:issue-565:prep006-ownership:r2:3d52a82fe351
+  admitted_at: 2026-09-18T04:26:46.253Z
+  source_digest: sha256:eb36d0cbe8e56ee5b96f5087108d052a0e3b848267ed9de948f5895293cfaca5
+  decision_digest: sha256:02720706b721f2c4728c7a44708ab15a1e3eb34349d61bbc5675cb6a2d52ed97
+  receipt_digest: sha256:099b42d719e1edf46275f88bba2008f6c28ab4b948fde860611f47e112eb051a
   binding:
     path: docs/plans/PLAN-L7-565-pack-publication-atomic-ref-cas.md
     plan_id: PLAN-L7-565-pack-publication-atomic-ref-cas
     asset_id: plan:a030bc07104b52cdc17f76e9beceb0df
-    revision: 1
-    content_digest: sha256:efd67cb89dbf6e187fd998c062972332a868e868ee5b70993be4080a9ccb6647
+    revision: 2
+    content_digest: sha256:eb36d0cbe8e56ee5b96f5087108d052a0e3b848267ed9de948f5895293cfaca5
   route:
     signal: feature_addition
     mode: add-feature
@@ -74,17 +71,15 @@ admission_receipt:
     plan_id: PLAN-L7-532-pack-publication-driver
     revision: 4
     digest: sha256:67c1906bb306931ea636f31763431e71868cfea6a538cb09506f4cacd49e4780
+  transition:
+    direction: design_to_implementation
+    implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-565-pack-publication-atomic-ref-cas
-    target_revision: 1
+    target_revision: 2
     phase: forward_merge
-  escape_reason: "Issue #565 Pack publication atomic ref CAS contract supersession
-    pair-freeze (add-feature; PLAN-L7-532 rev 4 origin; GitHub PR merge API
-    cannot express expected base OID CAS, replaced by server-side exact ref
-    lease)"
-  supersedes:
-    - PLAN-L7-515-pack-remote-canary-publication
-    - PLAN-L7-532-pack-publication-driver
+  escape_reason: "PR #646 (#625) Opus r3 FINDING #4: PREP-006 ローカル receipt store
+    の所有を §4.2 に明記する bounded 改訂。契約の方式変更なし (§5 の永続化意味論はそのまま)。"
 ---
 
 # PLAN-L7-565: Pack publication atomic ref CAS contract supersession
@@ -255,6 +250,14 @@ sliceが所有するのは、固定argvの`git push --porcelain
 --force-with-lease=refs/heads/main:<expectedMainOid> origin <reviewedHeadOid>:refs/heads/main`、porcelain actual-update 1件のparse、
 post-read、production process/credential portである。adapter sliceはGitHub API、filesystem production port、credentialを
 実装せず、production-port sliceはport型、FSM、authorization/journal順序を再定義しない。
+
+ここでいう「filesystem production port」は remote publication に属する port 群 (GitHub API、git push の process port、
+credential、release asset の upload 先) を指す。**ローカルの preparation receipt store は adapter slice (#625) が所有する**
+(rev 2、2026-09-18、PO 代理判断 = Claude control lane、advisor progress 相談済み)。根拠は §5 が receipt の永続化
+意味論 (unique temp への一度書き、file fsync、atomic no-clobber publish、directory fsync 後に成功) を本 PLAN 自身で定めており、
+#625 の pair test-design `PREP-006` がその oracle を所有し、`PLAN-L7-626` §2.1 が receipt bytes の digest を admission 入力に
+するため、store の実装が production-port slice に遅れると §5 の意味論を検証する主体が無くなるからである。production-port slice は
+この store を再実装せず、composition で参照するだけとする。
 
 production portsのcomposition rootと既存`publishPackCanary`をfake process runnerで接続し、first preparation/review/admission、
 `planned -> pack_commit -> release_draft -> assets -> tag -> release_visible`、durable pause、second canary
