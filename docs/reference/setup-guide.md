@@ -73,12 +73,14 @@ Windows PowerShell では `<pack-checkout>\scripts\ut-tdd.ps1 setup --solo`。
 ## 3. 動作確認チェックリスト
 
 導入直後に上から順に実行し、期待値と一致することを確認してください。
+#2 / #3 は対象プロジェクトのディレクトリから Pack checkout の wrapper を呼びます
+(Windows は `<pack-checkout>\scripts\ut-tdd.ps1`)。
 
 | # | コマンド | 期待値 |
 |---|---|---|
 | 1 | `node .ut-tdd/bin/ut-tdd.mjs --help` | canary では stderr に `consumer_runtime_absent`、exit 78 (launcher の fail-close。runtime 有効化後は usage が表示される) |
-| 2 | `node src/cli.ts doctor --setup-smoke` | `setup-smoke - OK (failed=0)` |
-| 3 | `node src/cli.ts status` | mode (`standalone` / `claude-only` / `codex-only` / `hybrid`) が表示される |
+| 2 | `<pack-checkout>/scripts/ut-tdd doctor --setup-smoke` | `setup-smoke - OK (failed=0)` |
+| 3 | `<pack-checkout>/scripts/ut-tdd status` | mode (`standalone` / `claude-only` / `codex-only` / `hybrid`) が表示される |
 | 4 | `npm run typecheck` | exit 0 |
 | 5 | `npm run test` | 全 green (配布安全 smoke suite) |
 

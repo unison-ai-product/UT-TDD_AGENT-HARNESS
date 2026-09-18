@@ -293,7 +293,7 @@ scripts/setup-branch-protection.sh
 ```
 
 setup の経路には組み込みテンプレートがあるため、対象プロジェクトにこのリポジトリの `docs/templates/github` ツリーが存在する前でも実行できます。
-setup 直後の導通確認は `node src/cli.ts doctor --setup-smoke` を使います (canary では生成 launcher が fail-close するため。クイックスタートの既知制約を参照)。
+setup 直後の導通確認は、対象プロジェクトのディレクトリで `<pack-checkout>/scripts/ut-tdd doctor --setup-smoke` (Windows は `<pack-checkout>\scripts\ut-tdd.ps1 doctor --setup-smoke`) を使います (canary では生成 launcher が fail-close するため。クイックスタートの既知制約を参照)。
 full `doctor` は、対象リポジトリに UT-TDD の設計 doc / PLAN / test-design が降下した後の
 ガバナンス検証です。ハーネス Pack そのものや、まだ設計文書を持たない consumer repo の
 初期導入判定には使いません。
