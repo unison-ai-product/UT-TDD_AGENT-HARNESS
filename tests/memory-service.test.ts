@@ -1,7 +1,10 @@
+import { execFileSync, spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { join, resolve } from "node:path";
+import { afterAll, describe, expect, it } from "vitest";
+import { canonicalProjectIdentityBytes } from "../src/kernel/project-identity.ts";
 import {
   MEMORY_FILENAME_MAX,
   type MemoryEntry,
@@ -14,6 +17,7 @@ import {
   loadMemoryCorpus,
   queryMemoryEntries,
   readMemory,
+  registrationReceiptFor,
   renderMemoryHealth,
   writeMemory,
 } from "../src/memory/service.ts";
@@ -630,5 +634,161 @@ describe("memory filename length bound (issue #353)", () => {
       (name) => join(".ut-tdd", "memory", name).replaceAll("\\", "/").length > 150,
     );
     expect(overlong).toEqual([]);
+  });
+});
+
+describe("registrationReceiptFor (PLAN-L6-104 §3.1 decision 7, U-MEMCUT-026)", () => {
+  it("derives content_digest from the exact written bytes, not caller claims", () => {
+    const repo = tempRepo();
+    try {
+      const entry = writeMemory({
+        repoRoot: repo,
+        input: { kind: "project", title: "receipt digest fixture", body: "receipt body", tags: [] },
+      });
+      const rawText = readFileSync(join(repo, entry.source_path), "utf8");
+      const receipt = registrationReceiptFor({ entry, rawText, operationId: "op-fixture" });
+      const expectedDigest = `sha256:${createHash("sha256").update(rawText, "utf8").digest("hex")}`;
+      expect(receipt).toEqual({
+        operation_id: "op-fixture",
+        memory_id: entry.memory_id,
+        source_path: entry.source_path,
+        content_digest: expectedDigest,
+        exit_code: 0,
+      });
+    } finally {
+      removeTestTree(repo);
+    }
+  });
+
+  it("changes the digest when a single byte of the written content changes", () => {
+    const repo = tempRepo();
+    try {
+      const entry = writeMemory({
+        repoRoot: repo,
+        input: {
+          kind: "project",
+          title: "receipt mutation fixture",
+          body: "original body",
+          tags: [],
+        },
+      });
+      const rawText = readFileSync(join(repo, entry.source_path), "utf8");
+      const receiptBefore = registrationReceiptFor({ entry, rawText, operationId: "op-mutate" });
+      const mutated = `${rawText}x`;
+      const receiptAfter = registrationReceiptFor({
+        entry,
+        rawText: mutated,
+        operationId: "op-mutate",
+      });
+      expect(receiptAfter.content_digest).not.toBe(receiptBefore.content_digest);
+    } finally {
+      removeTestTree(repo);
+    }
+  });
+});
+
+describe("ut-tdd memory add --receipt-json (CLI, PLAN-L6-104 §3.1 decision 7)", () => {
+  const cliPath = resolve("src/cli.ts");
+  const cliFixtures: string[] = [];
+
+  function git(cwd: string, args: readonly string[]): string {
+    return execFileSync("git", ["-C", cwd, ...args], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    }).trim();
+  }
+
+  function createReceiptRepo(projectId = "example/receipt"): string {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-memory-receipt-"));
+    git(root, ["init", "-q", "-b", "main"]);
+    git(root, ["config", "user.email", "test@example.invalid"]);
+    git(root, ["config", "user.name", "UT-TDD Test"]);
+    git(root, ["config", "core.autocrlf", "false"]);
+    git(root, ["remote", "add", "origin", `git@github.com:${projectId}.git`]);
+    writeFileSync(join(root, "ut-tdd.project.json"), canonicalProjectIdentityBytes(projectId));
+    git(root, ["add", "ut-tdd.project.json"]);
+    git(root, ["commit", "-q", "-m", "test: seed project identity"]);
+    mkdirSync(join(root, ".ut-tdd", "memory"), { recursive: true });
+    cliFixtures.push(root);
+    return root;
+  }
+
+  function runMemoryAdd(cwd: string, args: readonly string[]) {
+    return spawnSync(process.execPath, [cliPath, "memory", "add", ...args], {
+      cwd,
+      encoding: "utf8",
+      env: { ...process.env, CLAUDE_PROJECT_DIR: "", UT_TDD_PROJECT_DIR: cwd },
+      stdio: ["ignore", "pipe", "pipe"],
+      timeout: 30_000,
+    });
+  }
+
+  afterAll(() => {
+    while (cliFixtures.length > 0) {
+      const fixture = cliFixtures.pop();
+      if (fixture) removeTestTree(fixture);
+    }
+  });
+
+  it("prints a receipt JSON line after the wrote line, bound to the given operation id", () => {
+    const repo = createReceiptRepo();
+    const result = runMemoryAdd(repo, [
+      "--kind",
+      "project",
+      "--title",
+      "T",
+      "--body",
+      "B",
+      "--tags",
+      "a,b",
+      "--operation-id",
+      "op-1",
+      "--receipt-json",
+    ]);
+    expect({ status: result.status, stderr: result.stderr }).toEqual({ status: 0, stderr: "" });
+    const lines = result.stdout.trim().split("\n");
+    expect(lines[0]).toMatch(/^memory: wrote /);
+    const receipt = JSON.parse(lines[lines.length - 1]);
+    expect(receipt.operation_id).toBe("op-1");
+    expect(receipt.exit_code).toBe(0);
+    expect(receipt.source_path.replaceAll("\\", "/")).toMatch(/^\.ut-tdd\/memory\//);
+
+    const writtenPath = join(repo, receipt.source_path);
+    const writtenBytes = readFileSync(writtenPath, "utf8");
+    const expectedDigest = `sha256:${createHash("sha256").update(writtenBytes, "utf8").digest("hex")}`;
+    expect(receipt.content_digest).toBe(expectedDigest);
+
+    const frontmatterMatch = writtenBytes.match(/memory_id:\s*(\S+)/);
+    expect(frontmatterMatch).not.toBeNull();
+    expect(receipt.memory_id).toBe(frontmatterMatch?.[1]);
+  });
+
+  it("derives operation_id from the content hash prefix when --operation-id is omitted, stably", () => {
+    const repoOne = createReceiptRepo("example/receipt-op-a");
+    const repoTwo = createReceiptRepo("example/receipt-op-b");
+    const resultOne = runMemoryAdd(repoOne, [
+      "--kind",
+      "project",
+      "--title",
+      "Stable Operation Id",
+      "--body",
+      "same body text",
+      "--receipt-json",
+    ]);
+    const resultTwo = runMemoryAdd(repoTwo, [
+      "--kind",
+      "project",
+      "--title",
+      "Stable Operation Id",
+      "--body",
+      "same body text",
+      "--receipt-json",
+    ]);
+    expect(resultOne.status).toBe(0);
+    expect(resultTwo.status).toBe(0);
+    const receiptOne = JSON.parse(resultOne.stdout.trim().split("\n").pop() as string);
+    const receiptTwo = JSON.parse(resultTwo.stdout.trim().split("\n").pop() as string);
+    expect(receiptOne.operation_id).toMatch(/^[0-9a-f]{16}$/);
+    expect(receiptOne.operation_id).toBe(receiptTwo.operation_id);
   });
 });

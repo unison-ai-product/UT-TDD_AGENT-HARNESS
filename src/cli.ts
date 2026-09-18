@@ -114,6 +114,7 @@ import {
   type MemoryQueryOptions,
   type MemoryReadResult,
   readMemory,
+  registrationReceiptFor,
   renderMemoryHealth,
   writeMemory,
 } from "./memory/service.ts";
@@ -4203,6 +4204,7 @@ memory
   .option("--tags <csv>", "comma-separated tags")
   .option("--notify-claude", "deliver this memory to an active Claude session immediately")
   .option("--operation-id <id>", "stable delivery operation id")
+  .option("--receipt-json", "print the registration receipt as one JSON line")
   .action(
     (opts: {
       title: string;
@@ -4212,6 +4214,7 @@ memory
       tags?: string;
       notifyClaude?: boolean;
       operationId?: string;
+      receiptJson?: boolean;
     }) => {
       const body = opts.bodyFile ? readFileSync(opts.bodyFile, "utf8") : (opts.body ?? "");
       const tags = opts.tags
@@ -4233,10 +4236,10 @@ memory
           },
         });
         process.stdout.write(`memory: wrote ${entry.source_path}\n`);
+        const operationId = opts.operationId?.trim() || entry.content_hash.slice(0, 16);
         if (opts.notifyClaude) {
           const mode = detectMode();
           const originRuntime = mode.currentRuntime === "claude" ? "system" : "codex";
-          const operationId = opts.operationId?.trim() || entry.content_hash.slice(0, 16);
           const target = resolveLiveClaudeTarget(repoRoot);
           if (!target.ok) throw new Error(target.reason);
           const notification = buildClaudeProviderInboxEntry({
@@ -4252,6 +4255,12 @@ memory
           });
           const deliveryPath = publishClaudeInboxEntry(repoRoot, notification);
           process.stdout.write(`memory: notified Claude via ${deliveryPath}\n`);
+        }
+        if (opts.receiptJson) {
+          const writtenPath = join(project.canonicalProjectRoot, entry.source_path);
+          const rawText = readFileSync(writtenPath, "utf8");
+          const receipt = registrationReceiptFor({ entry, rawText, operationId });
+          process.stdout.write(`${JSON.stringify(receipt)}\n`);
         }
       } catch (error) {
         process.stderr.write(`memory: ${error instanceof Error ? error.message : String(error)}\n`);
