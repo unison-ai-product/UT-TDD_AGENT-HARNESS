@@ -67,7 +67,7 @@ violation. `placeholder_deps` allows forward references during design; they must
 resolve before trace-freeze.
 
 **Source-level module dependencies:**
-TypeScript `import` paths across `src/` sub-modules. Detected by `bun run
+TypeScript `import` paths across `src/` sub-modules. Detected by `npm run
 typecheck` and inspectable via `ut-tdd graph export --format mermaid` (relation-graph diagram).
 
 ## Mapping procedure
@@ -101,7 +101,7 @@ pair-freeze:
 
 - [ ] Run `ut-tdd graph export --format mermaid` on HEAD and on the base commit; confirm edges are
       identical for external-facing modules.
-- [ ] `bun run typecheck` exits 0 — no new import errors.
+- [ ] `npm run typecheck` exits 0 — no new import errors.
 - [ ] `ut-tdd doctor` exits 0 — no new orphans or dependency-drift findings.
 - [ ] `ut-tdd review --uncommitted` produces no new cross-module coupling
       findings.

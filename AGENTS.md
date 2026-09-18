@@ -45,7 +45,7 @@ their workflow.
 - `docs/governance/ut-tdd-agent-harness-concept_v3.1.md` - concept for internal rollout
 - `docs/governance/ut-tdd-agent-harness-requirements_v1.2.md` - requirements and acceptance criteria
 - `docs/governance/ut-tdd-agent-harness-extraction-plan_v0.1.md` - extraction / cutover plan from the source snapshot
-- `docs/adr/ADR-001-ut-tdd-harness-redesign-and-language.md` - redesign policy and TypeScript/Bun implementation language
+- `docs/adr/ADR-001-ut-tdd-harness-redesign-and-language.md` - redesign policy and TypeScript/Node implementation language
 - `docs/governance/README.md` - canonical / reference / archive boundary under governance
 
 Migration snapshots and inventories are not Core Reads. Read `docs/migration/`
@@ -58,8 +58,8 @@ boundaries when a verification cycle is being run. Normal work follows the
 Forward descent path from L0 to L14.
 
 ADR-001 is binding: The previous framework is a design source only. UT-TDD core implementation is
-TypeScript/Bun. old W1-W3a Python is not ported as product runtime.
-Thin `.ps1` / `.sh` entrypoints may call the compiled or Bun-based TypeScript
+TypeScript/Node. old W1-W3a Python is not ported as product runtime.
+Thin `.ps1` / `.sh` entrypoints may call the compiled or Node-based TypeScript
 core. The language of repositories governed by UT-TDD is independent of the
 harness implementation language.
 
@@ -323,7 +323,7 @@ Verify with `ut-tdd plan lint` plus the targeted doctor checks
 
 - Read target files before editing them.
 - When reading tracked prose or source through PowerShell, specify UTF-8 explicitly
-  (for example `Get-Content -Encoding utf8`) or use Node/Bun filesystem reads.
+  (for example `Get-Content -Encoding utf8`) or use Node filesystem reads.
   Do not trust bare `Get-Content` / ANSI-default output for Japanese text; display
   mojibake can become real file corruption if copied back into docs. Repository
   gates enforce UTF-8 no-BOM and mojibake fail-close through `readability`.

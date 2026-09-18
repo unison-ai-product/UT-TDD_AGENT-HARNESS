@@ -4,21 +4,21 @@ title: "PLAN-L7-354 (refactor): toolchain biome exact pin gate"
 kind: refactor
 layer: L7
 drive: be
-status: confirmed
 route_signal: code_smell
 route_mode: refactor
 backprop_decision: not_required
-backprop_decision_reason: "Biome の semver range を exact pin にし、doctor で静的検査する非破壊の toolchain drift 対策であり、上位要求や実行モデルの変更は伴わない。"
+backprop_decision_reason: Biome の semver range を exact pin にし、doctor で静的検査する非破壊の
+  toolchain drift 対策であり、上位要求や実行モデルの変更は伴わない。
 created: 2026-07-03
-updated: 2026-07-03
+updated: 2026-09-17
 owner: Codex
 parent_design: docs/plans/PLAN-L7-345-toolchain-pin-gate.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 agent_slots:
   - role: tl
-    slot_label: "TL - toolchain pin gate"
+    slot_label: TL - toolchain pin gate
   - role: qa
-    slot_label: "Explorer - toolchain pin scope review"
+    slot_label: Explorer - toolchain pin scope review
 generates:
   - artifact_path: docs/plans/PLAN-L7-354-toolchain-biome-exact-pin.md
     artifact_type: markdown_doc
@@ -34,8 +34,6 @@ generates:
     artifact_type: test_code
   - artifact_path: package.json
     artifact_type: config
-  - artifact_path: bun.lock
-    artifact_type: config
 dependencies:
   parent: docs/plans/PLAN-L7-345-toolchain-pin-gate.md
   requires: []
@@ -45,40 +43,77 @@ dependencies:
 review_evidence:
   - reviewer: codex-subagent
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-07-03T16:21:00+09:00"
-    tests_green_at: "2026-07-03T16:20:00+09:00"
+    reviewed_at: 2026-07-03T16:21:00+09:00
+    tests_green_at: 2026-07-03T16:20:00+09:00
     verdict: approve
-    scope: "Biome exact pin と toolchain-pin doctor wiring。外部 bunx/biome 実行 probe は fail-open 設計が必要なため非対象とし、package.json / bun.lock の静的突合に限定。"
+    scope: Biome exact pin と toolchain-pin doctor wiring。外部 bunx/biome 実行 probe は
+      fail-open 設計が必要なため非対象とし、package.json / bun.lock の静的突合に限定。
     worker_model: codex
     reviewer_model: codex-intra-runtime
     green_commands:
       - kind: unit_test
-        command: "bun run vitest run tests\\toolchain-pin.test.ts tests\\doctor.test.ts -t \"toolchain|hard gates\" --reporter=dot"
+        command: bun run vitest run tests\toolchain-pin.test.ts tests\doctor.test.ts -t
+          "toolchain|hard gates" --reporter=dot
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-07-03T16:20:00+09:00"
+        completed_at: 2026-07-03T16:20:00+09:00
         evidence_path: tests/toolchain-pin.test.ts
-        output_digest: "sha256:5105744a4d1293502402a913fe1a4d7a554807e4986524b6e6d166c65ca0a363"
+        output_digest: sha256:5105744a4d1293502402a913fe1a4d7a554807e4986524b6e6d166c65ca0a363
         anchor_commit: 3dd979f7c27e772ed28128f8ac98282374b474a8
       - kind: typecheck
-        command: "bun run typecheck"
+        command: bun run typecheck
         runner: bun
         scope: full
         exit_code: 0
-        completed_at: "2026-07-03T16:20:00+09:00"
+        completed_at: 2026-07-03T16:20:00+09:00
         evidence_path: src/lint/toolchain-pin.ts
-        output_digest: "sha256:4cb3b5f3ec327e2fbea9d95630ea7de9d6380dc8c441d3d2379e6bc18e20b8ef"
+        output_digest: sha256:4cb3b5f3ec327e2fbea9d95630ea7de9d6380dc8c441d3d2379e6bc18e20b8ef
         anchor_commit: 3dd979f7c27e772ed28128f8ac98282374b474a8
       - kind: lint
-        command: "bunx biome check src\\doctor\\index.ts src\\doctor\\toolchain.ts src\\lint\\toolchain-pin.ts tests\\toolchain-pin.test.ts tests\\doctor.test.ts package.json"
+        command: bunx biome check src\doctor\index.ts src\doctor\toolchain.ts
+          src\lint\toolchain-pin.ts tests\toolchain-pin.test.ts
+          tests\doctor.test.ts package.json
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-07-03T16:20:00+09:00"
+        completed_at: 2026-07-03T16:20:00+09:00
         evidence_path: src/doctor/toolchain.ts
-        output_digest: "sha256:edd7dcdd81af9c91cdb785163e2a40d350cd2ab35e905453f461ae322d26e0c9"
+        output_digest: sha256:edd7dcdd81af9c91cdb785163e2a40d350cd2ab35e905453f461ae322d26e0c9
         anchor_commit: 3dd979f7c27e772ed28128f8ac98282374b474a8
+status: confirmed
+github_issue_id: 487
+admission_receipt:
+  schema_version: v2
+  receipt_id: certificate:c27cadf14b1cc48f7fa851aaceb24de3
+  command_id: plan-revise:issue487:plan354-bun-lock-supersession:e446:1789630200129
+  admitted_at: 2026-09-17T07:30:00.130Z
+  source_digest: sha256:344656b4a921a2b43864ab2e4fb2e3b78f916799762a8a50532925150b1c7d90
+  decision_digest: sha256:3ec1004db6da74219240ae06b59c571ec03608a1ca92391a4cb8e54dfac5924b
+  receipt_digest: sha256:77d75687054451e2c779437868d6c3539dfda042490905679c00ea729f8db5c6
+  binding:
+    path: docs/plans/PLAN-L7-354-toolchain-biome-exact-pin.md
+    plan_id: PLAN-L7-354-toolchain-biome-exact-pin
+    asset_id: plan:legacy:ec303beeae170d11c4baa0973f7a5d4ec76de22a99c65f4c8f2001c16e048419
+    revision: 2
+    content_digest: sha256:344656b4a921a2b43864ab2e4fb2e3b78f916799762a8a50532925150b1c7d90
+  route:
+    signal: code_smell
+    mode: refactor
+  issue:
+    provider: github
+    issue_id: 487
+    episode_id: E4-487-bun-final-retirement
+    projection_digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+  origin:
+    plan_id: PLAN-L7-530-bun-final-retirement
+    revision: 12
+    digest: sha256:a74a5c174350450f1cae12f1b124498daa253a34e2561fb85f4692325746fbd9
+  reentry:
+    target_plan_id: PLAN-L7-530-bun-final-retirement
+    target_revision: 12
+    phase: forward_merge
+  escape_reason: PLAN-L7-530 final retirement supersedes the obsolete Bun lock artifact
 ---
 
 # PLAN-L7-354: toolchain biome exact pin gate
@@ -90,7 +125,7 @@ A-183 / PLAN-L7-345 は、Biome の semver range が環境ごとの formatter dr
 ## 変更
 
 - `package.json` の `@biomejs/biome` を `2.4.15` に exact pin する。
-- `bun.lock` の workspace devDependency spec も `2.4.15` に揃える。
+- package lock の workspace devDependency spec も `2.4.15` に揃える。Bun lock の物理撤去は PLAN-L7-530 の tuple-bound final retirement により supersede される。
 - `src/lint/toolchain-pin.ts` に package/lock の静的突合を追加する。
 - `src/doctor/toolchain.ts` から doctor check `toolchain-pin` として配線する。
 - `tests/toolchain-pin.test.ts` と `tests/doctor.test.ts` で caret 検出、exact OK、package/lock mismatch、doctor aggregation を固定する。

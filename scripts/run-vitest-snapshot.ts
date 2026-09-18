@@ -37,26 +37,8 @@ function output(command: string, args: string[], cwd: string): string | null {
   return result.status === 0 ? result.stdout.trim() : null;
 }
 
-export function resolveBunBinary(
-  runtime = (globalThis as { Bun?: { which?: (command: string) => string | undefined } }).Bun,
-  current: { isBun: boolean; executable: string } = {
-    isBun: Boolean(process.versions.bun),
-    executable: process.execPath,
-  },
-): string {
-  // Bun上では現在のnative executableが最も強い証拠。Bun.which("bun")はWindowsで
-  // bun.cmdを返し、cmd.exe/conhost.exeを再導入するためfallbackに限定する。
-  // PLAN-L7-462 step 2 以降、bun は harness 実行系ではなく Pack/consumer acceptance
-  // テストの fixture 依存 (UT_TDD_BUN_BINARY 契約) のためだけに解決する。
-  return current.isBun ? current.executable : (runtime?.which?.("bun") ?? "bun");
-}
-
-export function resolveNodeBinary(current = {
-  isBun: Boolean(process.versions.bun),
-  executable: process.execPath,
-}): string {
-  // node 上では現在の executable が正。bun 経由で起動された場合のみ PATH 解決へ落とす。
-  return current.isBun ? "node" : current.executable;
+export function resolveNodeBinary(current = process.execPath): string {
+  return current;
 }
 
 export function resolveNpmCli(nodeBinary = resolveNodeBinary()): string {
@@ -175,9 +157,6 @@ export function injectDefaultBranchRef(
 export function removeSnapshot(snapshotRoot: string, remove = rmSync): void {
   const failures: unknown[] = [];
   try {
-    (globalThis as { Bun?: { gc?: (force?: boolean) => void } }).Bun?.gc?.(
-      true,
-    );
     remove(snapshotRoot, {
       recursive: true,
       force: true,
@@ -413,7 +392,6 @@ export function runSnapshotTests(
   let primaryError: unknown;
   let sealedReferenceFingerprint: string | undefined;
   try {
-    const bun = measureSnapshotStage("resolve-bun", () => resolveBunBinary());
     const node = measureSnapshotStage("resolve-node", () => resolveNodeBinary());
     const npmCli = measureSnapshotStage("resolve-npm", () => resolveNpmCli(node));
     const source = measureSnapshotStage("resolve-source", () =>
@@ -457,7 +435,6 @@ export function runSnapshotTests(
         UT_TDD_TEST_EXECUTION_ROOT: snapshotRoot,
         UT_TDD_TEST_FENCE_ROOT: repoRoot,
         UT_TDD_HEAD_SNAPSHOT_ROOT: referenceRoot,
-        UT_TDD_BUN_BINARY: bun,
         UT_TDD_UPDATE_CHECK_CACHE_DIR: cacheRoot,
         UT_TDD_VITEST_CACHE_DIR: join(cacheRoot, "vite"),
       }),

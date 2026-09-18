@@ -159,7 +159,6 @@ const CLEAN_ALLOW_FILES = new Set([
   "LICENSE",
   "README.md",
   "biome.json",
-  "bun.lock",
   "package-lock.json",
   "docs/governance/README.md",
   "docs/governance/audit-framework.md",
@@ -260,7 +259,7 @@ export function transformCleanDistributionArtifact(artifactPath: string, content
   scripts["test:pack"] = PACK_SAFE_TEST_SCRIPT;
   scripts.test = "npm run test:pack";
   // PLAN-L7-522 §2.1.1: source の build script remains the rollback route, but
-  // generated consumers must not retain a reachable Bun build path.
+  // generated consumers must not retain a reachable non-Node build path.
   delete scripts.build;
   const utTdd = {
     ...((parsed.utTdd as Record<string, unknown> | undefined) ?? {}),
@@ -296,7 +295,7 @@ export function gitAddPathspecCommands(
 }
 
 /**
- * PLAN-L7-522 §2.2 (S1-a): readiness の runtime 検査は Bun ではなく Node を見る。
+ * PLAN-L7-522 §2.2 (S1-a): readiness の runtime 検査は Node authority を見る。
  * 判定基準は consumer package root の `engines.node` であり、ここで別の pin を持たない
  * (第二の正本を作らない)。`required` が空なら fail-close する。
  */

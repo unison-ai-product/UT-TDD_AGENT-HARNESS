@@ -25,7 +25,7 @@ const LS_REMOTE_TIMEOUT_MS = 5000;
 
 /**
  * PLAN-L7-462 step 2: node の spawn は Windows で `.cmd`/`.bat` を PATH 解決しない
- * (bun は解決していたため不可視だった)。adapter の provider `.cmd` shim 方式
+ * (旧runtimeは解決していたため不可視だった)。adapter の provider `.cmd` shim 方式
  * (src/runtime/adapter.ts buildProviderInvocation) を踏襲し、PATH 上の git が
  * command script のときだけ ComSpec 経由 (shell:false) で包む。
  */

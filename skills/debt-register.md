@@ -119,7 +119,7 @@ Discharge steps for a standalone debt PLAN:
 1. [直列] Identify V-model gap: which layer doc or test is absent/broken
 2. [直列] Author or repair the missing artifact (design doc / test design)
 3. [並列] Implement fix in src/ — scoped to the debt_reason
-4. [並列] bun run typecheck && bun run lint && bun run test — green
+4. [並列] npm run typecheck && npm run lint && npm run test — green
 5. [直列] ut-tdd doctor — no new governance failures
 6. [直列] ut-tdd review --uncommitted — debt PLAN review_evidence populated
 7. [直列] Set status: done; ut-tdd handover if session boundary
@@ -132,7 +132,7 @@ caught by `ut-tdd doctor` or `ut-tdd plan lint`:
 
 - An `add-impl` PLAN with no Reverse back-fill PLAN in `dependencies`.
 - A `@ts-ignore` or `// biome-ignore` comment without a PLAN-linked rationale
-  in the same file (detectable by `bun run lint`).
+  in the same file (detectable by `npm run lint`).
 - A design doc path listed in a PLAN `generates` field that does not exist
   on disk.
 - A `trace-freeze` PLAN with `review_evidence: []`.

@@ -1,4 +1,4 @@
-#!/usr/bin/env bun
+#!/usr/bin/env node
 /**
  * UT-TDD Agent Harness CLI (TypeScript core, ADR-001).
  * 薄い OS 別 entrypoint (scripts/ut-tdd, ut-tdd.ps1) が本 core を呼ぶ。
@@ -78,6 +78,16 @@ import {
   renderSessionStartDigest,
   selectSessionStartDigest,
 } from "./handover/session-start-digest.ts";
+// Final retirement admission reuses the independent detector through the CLI runtime graph.
+import {
+  admitFinalBunRetirement,
+  type BunRetirementAdmissionReceipt,
+  type BunRetirementF0bReceipt,
+  type BunRetirementF0cReceipt,
+  type BunRetirementQ0Receipt,
+  collectFinalRetirementFindings,
+  collectFinalRetirementSurfaceInventory,
+} from "./lint/bun-final-retirement.ts";
 import {
   type NodeBanF0cAggregateBinding,
   nodeBanAuditMessages,
@@ -90,6 +100,9 @@ import {
   planDigestMigration,
 } from "./lint/green-command-digest.ts";
 import { parseNodeGenerationCiEvidence } from "./lint/node-generation-ci-policy.ts";
+
+export { collectFinalRetirementFindings };
+
 import { computeOutstandingWork, outstandingSummaryLine } from "./lint/outstanding.ts";
 import {
   analyzeRelationImpact,
@@ -114,6 +127,7 @@ import {
   type MemoryQueryOptions,
   type MemoryReadResult,
   readMemory,
+  registrationReceiptFor,
   renderMemoryHealth,
   writeMemory,
 } from "./memory/service.ts";
@@ -2251,7 +2265,7 @@ program
       mode: opts.dryRun ? "dry-run" : "requires-human-approval",
       from,
       to: opts.to,
-      checks: ["bun run src\\cli.ts doctor", "bun run src\\cli.ts db status --json"],
+      checks: ["node src\\cli.ts doctor", "node src\\cli.ts db status --json"],
       rollback:
         from === "unknown" ? "record source ref before applying cutover" : `git switch ${from}`,
       humanApprovalRequired: true,
@@ -3527,6 +3541,58 @@ audit
   );
 
 audit
+  .command("bun-retirement")
+  .description("admit the final Bun retirement from exact F0b/F0c/Q0 receipts")
+  .requiredOption("--f0b <path>", "F0b sealed Node receipt JSON")
+  .requiredOption("--f0c <path>", "F0c aggregate receipt JSON")
+  .requiredOption("--q0 <path>", "Q0 Node-only audit receipt JSON")
+  .requiredOption("--f0c-lane <path...>", "Linux and Windows F0c lane evidence JSON")
+  .requiredOption("--retirement-receipt <path>", "exact final retirement admission receipt JSON")
+  .option("--json", "JSON output")
+  .action(
+    (opts: {
+      f0b: string;
+      f0c: string;
+      q0: string;
+      f0cLane: string[];
+      retirementReceipt: string;
+      json?: boolean;
+    }) => {
+      try {
+        const repoRoot = process.cwd();
+        const readJson = <T>(path: string): T =>
+          JSON.parse(readFileSync(resolve(repoRoot, path), "utf8")) as T;
+        const retirementSubject = execFileSync("git", ["rev-parse", "HEAD"], {
+          cwd: repoRoot,
+          encoding: "utf8",
+        }).trim();
+        const lanes = opts.f0cLane.map((path) => {
+          const evidence = parseNodeGenerationCiEvidence(readJson<unknown>(path));
+          if (!evidence) throw new Error("invalid F0c lane evidence");
+          return evidence;
+        });
+        const result = admitFinalBunRetirement({
+          repoRoot,
+          f0b: readJson<BunRetirementF0bReceipt>(opts.f0b),
+          f0c: readJson<BunRetirementF0cReceipt>(opts.f0c),
+          q0: readJson<BunRetirementQ0Receipt>(opts.q0),
+          f0cLanes: lanes,
+          retirementSubject,
+          retirementReceipt: readJson<BunRetirementAdmissionReceipt>(opts.retirementReceipt),
+          // The inventory is derived from the exact tracked checkout here;
+          // callers cannot provide a hand-maintained all-clean list.
+          surfaces: collectFinalRetirementSurfaceInventory(repoRoot),
+        });
+        process.stdout.write(`${JSON.stringify(result, null, opts.json ? 2 : 0)}\n`);
+        process.exitCode = 0;
+      } catch (error) {
+        process.stderr.write(`bun-retirement-admission failed: ${String(error)}\n`);
+        process.exitCode = 2;
+      }
+    },
+  );
+
+audit
   .command("quality")
   .description("detect hardcoded values, security risks, and technical debt markers")
   .option("--json", "JSON output")
@@ -4203,6 +4269,7 @@ memory
   .option("--tags <csv>", "comma-separated tags")
   .option("--notify-claude", "deliver this memory to an active Claude session immediately")
   .option("--operation-id <id>", "stable delivery operation id")
+  .option("--receipt-json", "print the registration receipt as one JSON line")
   .action(
     (opts: {
       title: string;
@@ -4212,6 +4279,7 @@ memory
       tags?: string;
       notifyClaude?: boolean;
       operationId?: string;
+      receiptJson?: boolean;
     }) => {
       const body = opts.bodyFile ? readFileSync(opts.bodyFile, "utf8") : (opts.body ?? "");
       const tags = opts.tags
@@ -4233,10 +4301,10 @@ memory
           },
         });
         process.stdout.write(`memory: wrote ${entry.source_path}\n`);
+        const operationId = opts.operationId?.trim() || entry.content_hash.slice(0, 16);
         if (opts.notifyClaude) {
           const mode = detectMode();
           const originRuntime = mode.currentRuntime === "claude" ? "system" : "codex";
-          const operationId = opts.operationId?.trim() || entry.content_hash.slice(0, 16);
           const target = resolveLiveClaudeTarget(repoRoot);
           if (!target.ok) throw new Error(target.reason);
           const notification = buildClaudeProviderInboxEntry({
@@ -4252,6 +4320,12 @@ memory
           });
           const deliveryPath = publishClaudeInboxEntry(repoRoot, notification);
           process.stdout.write(`memory: notified Claude via ${deliveryPath}\n`);
+        }
+        if (opts.receiptJson) {
+          const writtenPath = join(project.canonicalProjectRoot, entry.source_path);
+          const rawText = readFileSync(writtenPath, "utf8");
+          const receipt = registrationReceiptFor({ entry, rawText, operationId });
+          process.stdout.write(`${JSON.stringify(receipt)}\n`);
         }
       } catch (error) {
         process.stderr.write(`memory: ${error instanceof Error ? error.message : String(error)}\n`);

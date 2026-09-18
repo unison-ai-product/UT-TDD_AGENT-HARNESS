@@ -7,7 +7,7 @@ drive: fullstack
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-09-04
-updated: 2026-09-04
+updated: 2026-09-17
 owner: PO / Codex
 parent_design: docs/plans/PLAN-L6-93-node-bootstrap-contract.md
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
@@ -22,6 +22,10 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-530-bun-final-retirement.md
     artifact_type: markdown_doc
+  - artifact_path: src/lint/bun-final-retirement.ts
+    artifact_type: source_module
+  - artifact_path: tests/bun-final-retirement.test.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L6-93-node-bootstrap-contract.md
   requires: []
@@ -37,23 +41,64 @@ dependencies:
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/500
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/487
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/473
-review_evidence: []
-status: draft
+review_evidence:
+  - reviewer: codex-preflight
+    review_kind: intra_runtime_subagent
+    reviewed_at: 2026-09-17T07:28:14.372Z
+    tests_green_at: 2026-09-17T07:27:44.372Z
+    verdict: approve
+    scope: "Issue #487 final Bun retirement detector, exact subject binding, and
+      Node-only reachable-surface inventory."
+    worker_model: gpt-5.6-luna
+    reviewer_model: codex-intra-runtime
+    plan_revision: PLAN-L7-530-rev12-preflight
+    subject_head: 5b1ace92b7bb18cd78230fb35ba76b4996bb2cdb
+    green_commands:
+      - kind: unit_test
+        command: node scripts/run-vitest-snapshot.ts tests/bun-final-retirement.test.ts
+          --reporter=dot
+        runner: node
+        scope: targeted
+        exit_code: 0
+        evidence_path: tests/bun-final-retirement.test.ts
+        output_digest: sha256:d7ae670a271cd1bd07e78f17ad90c60ae4e1de5c4437320af176481ce7e0799c
+        completed_at: 2026-09-17T07:27:44.372Z
+        anchor_commit: 5b1ace92b7bb18cd78230fb35ba76b4996bb2cdb
+      - kind: typecheck
+        command: npm run typecheck -- --pretty false
+        runner: node
+        scope: full
+        exit_code: 0
+        evidence_path: src/lint/bun-final-retirement.ts
+        output_digest: sha256:98dea5a4727cd41fbe88472c7235e56162d9a82bee6fb617e505ed915625e98e
+        completed_at: 2026-09-17T07:27:44.372Z
+        anchor_commit: 5b1ace92b7bb18cd78230fb35ba76b4996bb2cdb
+      - kind: lint
+        command: npx biome check src/lint/bun-final-retirement.ts
+          tests/bun-final-retirement.test.ts
+        runner: node
+        scope: targeted
+        exit_code: 0
+        evidence_path: src/lint/bun-final-retirement.ts
+        output_digest: sha256:98dea5a4727cd41fbe88472c7235e56162d9a82bee6fb617e505ed915625e98e
+        completed_at: 2026-09-17T07:27:44.372Z
+        anchor_commit: 5b1ace92b7bb18cd78230fb35ba76b4996bb2cdb
+status: confirmed
 github_issue_id: 487
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:381f3017b10ca9f294b21af3e629212d
-  command_id: command:pr521-r4-forward-oracle-expectation-migration-revision10
-  admitted_at: 2026-09-08T03:50:48.681Z
-  source_digest: sha256:cefa7e5154b792a3da78a5583c77d32f6ceaf9eedf5c1dbe14e4572719697039
-  decision_digest: sha256:7fe4c00a12e332e31a6ec409a312fb5cc918f88c709b8d36c0eb431e3211424e
-  receipt_digest: sha256:3b093b2c8c6500a380d46756d8b1a32c6e3522ae29ee6532bc6eda207ec67a1e
+  receipt_id: certificate:dbced7e167187f9bdf8a3f6a03d96fc8
+  command_id: plan-revise:issue487:final-retirement:tuple-contract-format-correction:e446:1789646298747
+  admitted_at: 2026-09-17T11:58:18.746Z
+  source_digest: sha256:1555be352e5e4f11463723edb3a1b4ccb7d002a162448dbbc1afb183df220695
+  decision_digest: sha256:7e34a64a32e5cc6de83fe8a12ac2bccee16080e4281620fd2773a6da898601de
+  receipt_digest: sha256:c99b21d63e672ff4b8d58424c6838b6ad9afe9314218f14547ceba29f0bf348b
   binding:
     path: docs/plans/PLAN-L7-530-bun-final-retirement.md
     plan_id: PLAN-L7-530-bun-final-retirement
     asset_id: plan:bc9250c9a7c873dcb9f18956677371f7
-    revision: 10
-    content_digest: sha256:cefa7e5154b792a3da78a5583c77d32f6ceaf9eedf5c1dbe14e4572719697039
+    revision: 15
+    content_digest: sha256:1555be352e5e4f11463723edb3a1b4ccb7d002a162448dbbc1afb183df220695
   route:
     signal: feature_addition
     mode: add-feature
@@ -71,12 +116,18 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-530-bun-final-retirement
-    target_revision: 10
+    target_revision: 14
     phase: forward_merge
-  escape_reason: "Issue #487 final Bun retirement inventory scope revision"
+  escape_reason: "Issue #487 tuple contract reissued through canonical plan revise
+    after bounded review"
 ---
 
 # PLAN-L7-530: Bun 最終撤去の tuple-bound 実装契約
+
+実装artifactは `src/lint/bun-final-retirement.ts`、独立admission oracleは
+`tests/bun-final-retirement.test.ts` が同一PLANの所有である。テストはF0b/F0c/Q0の
+receipt欠落・tuple各軸不一致・reachable/indeterminate surfaceを個別にRedへ落とし、
+detectorの意味とallowlistを変更せずGreenへ昇格させる。
 
 ## 1. 目的と開始ゲート
 
@@ -91,34 +142,60 @@ aggregate、Q0 parity が同じ chain で成立した後に、到達可能な Bu
 - F0c の Linux/Windows/aggregate receipt が同じ F0b predecessor を指す。
 - Q0 の Node-only detector/parity receipt が F0c aggregate の canonical merge commitを
   ancestor として指す。
+- F0b/F0c/Q0 の各 predecessor receipt の subject は、完全な履歴で検証可能な
+  **pre-retirement ancestor** として `retirement_subject` へ到達する。predecessor の subject は
+  retirement commit と同一であってはならず、predecessor receipt を撤去commit自身の receiptと
+  取り違えない。
+- 各receiptは実在するproducer・edge・generation・artifact・subject・ancestryへ束縛される。
+  receiptの存在、shape、自己計算digest、推測値だけで開始条件を満たした扱いにしない。
 
 これは準備用の削除ではない。開始ゲートを満たさない場合、productionのBun経路、
 `package.json` の `build`、`bunAuthority`、`bun.lock` を変更しない。
 
 ## 2. 4要素 tuple の admission
 
-最終撤去の唯一の受理条件を、次の4要素 tuple として固定する。
+最終撤去の唯一の受理条件を、次の4要素 tuple として固定する。4要素は同じ文字列を
+重複して束縛するものではなく、pre-retirement evidence と撤去対象commitを分離した
+異なる軸である。
 
 | 要素 | 意味 |
 |---|---|
-| `subject_revision` | build/parityの対象とする algorithm-prefixed Git object ID |
+| `subject_revision` | sealed build/parityの対象とする pre-retirement の algorithm-prefixed Git object ID |
 | `generation_id` | sealed Node generation の immutable ID |
 | `artifact_digest` | sealed build artifact の content digest |
-| `retirement_subject` | `build` script等を撤去するこのcommitの subject revision |
+| `retirement_subject` | `build` script等を実際に撤去するこのcommitの subject revision |
 
-sealed build receipt と Node parity receipt の双方が存在し、各tupleが完全一致し、かつ
-`retirement_subject` が実際の撤去commitに一致する場合だけ、最終撤去を受理する。次を全て
-独立した拒否軸として実装する。
-
-- receipt片側欠落、unknown schema、失敗・cancelled・skipped receipt
-- stale `subject_revision`、2 receipt間の `subject_revision` 不一致
-- 同revision別 `generation_id`、同generation別 `artifact_digest`
-- 3要素だけ一致し `retirement_subject` が撤去commitと不一致
-- predecessorがcandidate HEADのancestorでない、履歴がshallow/promisorで完全性不明
-- 同一target/同一HEADの二重admission、別edge/別producerのreceipt流用
+sealed build receipt と Node parity receipt の双方が存在し、F0b/F0c/Q0の実receiptが宣言された
+edgeとproducerから読み出され、tupleの各軸、artifact、generation、subject、完全履歴の
+ancestor関係を検証でき、かつ `retirement_subject` が実際の撤去commitに一致する場合だけ、
+最終撤去を受理する。predecessor receipt の subject と `retirement_subject` は別Git objectで
+あり、predecessorが撤去commitと同一である入力は拒否する。receiptを自己計算・推測・別edge・
+別producerから補うことはできない。
 
 拒否時は production write、build script変更、runtime activation、receiptの推測生成を全て0
 とし、理由は既存のtyped reason集合へ変換する。存在チェックだけの恒真oracleは採用しない。
+
+### 2.1 独立した拒否軸と後続実装レビューの証跡
+
+次の各行は、後続の実装PRで一軸ずつRedへ落とし、対応するtyped denyを観測するための
+契約行である。候補IDの存在だけをGreen証拠とはせず、実装レビューでは実receipt、producer/edge
+identity、対象Git object、ancestor判定、ledger record digest、撤去commitの exact subjectを
+提出する。拒否時は production/activation/deletion/receipt mint が0であることを併記する。
+
+| 契約軸 | 変異入力 | typed deny の期待 |
+|---|---|---|
+| predecessor と撤去commitの分離 | predecessor receipt の subject = `retirement_subject` | `predecessor_equals_retirement` |
+| predecessor receipt 完備 | F0b/F0c/Q0 のいずれかを欠落・unknown・failed・cancelled・skipped | `receipt_missing_or_invalid` |
+| tuple各軸 | `subject_revision` / `generation_id` / `artifact_digest` を一軸ずつ drift | `tuple_axis_mismatch` |
+| admission replay | 同一target・同一撤去subjectを二重admit | `duplicate_admission` |
+| edge束縛 | 別edgeのreceiptを同じtupleへ差替え | `cross_edge_receipt_reuse` |
+| producer束縛 | 別producerのreceiptを同じedgeへ差替え | `cross_producer_receipt_reuse` |
+| stale / 非祖先 | pre-retirement receiptを撤去subjectから到達不能なfork・後続・stale objectへ差替え | `not_ancestor` |
+| 履歴完全性 | shallow/truncated/promisorでancestorを判定不能にする | `history_incomplete` |
+
+これらのtyped denyは候補の件数やreceiptの存在だけで代用しない。各行のRed実測と、
+同じ軸を1つ戻したGreen実測を、同一 implementation revision の test-design trace と
+実receiptへ結び付ける。
 
 ## 3. 撤去対象と残置fixtureの分離
 
