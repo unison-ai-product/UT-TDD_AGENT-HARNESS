@@ -452,6 +452,40 @@ function hasTerminalMarker(
   return isTerminalMarkerFor(readJson(terminalMarkerPath(repoRoot, expected.entryId)), expected);
 }
 
+function hasActiveClaimForRequest(repoRoot: string, requestDigest: string): boolean {
+  const directory = claimsRoot(repoRoot);
+  if (!existsSync(directory)) return false;
+  return readdirSync(directory)
+    .filter((name) => name.endsWith(".claim.json"))
+    .some((name) => {
+      const marker = readJson(join(directory, name)) as Partial<CodexWakeClaim> | undefined;
+      return (
+        marker?.schema === CODEX_MEMORY_WAKE_CLAIM_SCHEMA &&
+        marker.requestDigest === requestDigest &&
+        typeof marker.entryId === "string" &&
+        typeof marker.targetSessionId === "string"
+      );
+    });
+}
+
+function hasTerminalMarkerForRequest(repoRoot: string, requestDigest: string): boolean {
+  const directory = terminalRoot(repoRoot);
+  if (!existsSync(directory)) return false;
+  return readdirSync(directory)
+    .filter((name) => name.endsWith(".json"))
+    .some((name) => {
+      const marker = readJson(join(directory, name)) as Partial<CodexWakeTerminal> | undefined;
+      return (
+        typeof marker?.entryId === "string" &&
+        marker.requestDigest === requestDigest &&
+        isTerminalMarkerFor(marker, {
+          entryId: marker.entryId,
+          requestDigest,
+        })
+      );
+    });
+}
+
 function canonicalReviewReceiptPath(repoRoot: string, requestDigest: string): string {
   return join(resolve(repoRoot), ".ut-tdd", "review", "receipts", `${requestDigest}.json`);
 }
@@ -575,8 +609,10 @@ function restoreExpiredClaims(repoRoot: string, nowMs: number): void {
           requestDigest: marker.requestDigest,
         })
       ) {
-        if (existsSync(claimPath)) unlinkSync(claimPath);
-        unlinkSync(markerPath);
+        // Keep both claim bytes and the terminal marker.  A durable terminal
+        // marker suppresses resurrection, but deleting the claim here would
+        // erase the crash-window evidence before the next audit/reconciliation
+        // pass can inspect it.
         continue;
       }
       if (existsSync(claimPath)) {
@@ -627,6 +663,14 @@ function redeliverBacklog(repoRoot: string): void {
   for (const entry of entries) {
     const value = entry.value;
     if (value.schema !== CODEX_MEMORY_WAKE_BACKLOG_SCHEMA) continue;
+    // A backlog item can outlive the first projection attempt.  Never create
+    // a second inbox wake while the original is actively claimed, or after a
+    // matching terminal marker was durably recorded.
+    if (
+      hasActiveClaimForRequest(repoRoot, value.requestDigest) ||
+      hasTerminalMarkerForRequest(repoRoot, value.requestDigest)
+    )
+      continue;
     try {
       publishCodexReviewWake(repoRoot, {
         purpose: "review",

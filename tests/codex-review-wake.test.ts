@@ -78,7 +78,7 @@ function wake(root: string, memoryPath: string, input: ReviewAttestationRequest)
 function codexProjection(
   root: string,
   value: ReturnType<typeof wake>,
-  head = value.request.exactHead,
+  overrides: Partial<Extract<ReviewVerdictProjectionResult, { ok: true }>["receipt"]> = {},
 ) {
   return {
     ok: true as const,
@@ -87,13 +87,14 @@ function codexProjection(
     receipt: {
       memoryId: value.request.memoryId,
       pr: value.request.pr,
-      head,
+      head: value.request.exactHead,
       reviewRevision: value.request.reviewRevision,
       reviewerFamily: "codex" as const,
       kind: "verdict" as const,
       verdict: "PASS" as const,
       blockingFindings: [] as string[],
       at: "2026-09-16T00:01:00.000Z",
+      ...overrides,
     },
   };
 }
@@ -223,6 +224,77 @@ describe("Codex review wake contract", () => {
     expect(readFileSync(backlogPath, "utf8")).toContain(value.requestDigest);
     const terminal = join(project.runtimeBusRoot, "codex-memory-wake", "terminal");
     expect(() => readdirSync(terminal)).toThrow();
+
+    const surface = readCodexReviewWake(root);
+    if (surface.status !== "pending" || !surface.envelopePath)
+      throw new Error("expected a redelivered inbox wake");
+    const claimed = claimCodexReviewWake(
+      root,
+      surface.envelopePath,
+      new Date("2026-09-16T00:02:00.000Z"),
+    );
+
+    // Redelivery must not manufacture a second inbox entry while this wake is
+    // still claimed and has not been reviewed.
+    expect(readCodexReviewWake(root, new Date("2026-09-16T00:03:00.000Z"))).toEqual({
+      schema: "ut-tdd.codex-memory-wake/v1",
+      status: "empty",
+      deliveryConfirmed: false,
+    });
+    expect(readFileSync(backlogPath, "utf8")).toContain(value.requestDigest);
+
+    consumeCodexReviewWake(root, claimed, new Date("2026-09-16T00:03:00.000Z"));
+    expect(readCodexReviewWake(root, new Date("2026-09-16T00:03:00.000Z"))).toEqual({
+      schema: "ut-tdd.codex-memory-wake/v1",
+      status: "empty",
+      deliveryConfirmed: false,
+    });
+    expect(() => readFileSync(backlogPath)).toThrow();
+  });
+
+  it("CANDIDATE-CODEXWAKE-007 preserves FIFO order across backlog redelivery", () => {
+    const { root, memoryPath } = fixture();
+    process.env.CODEX_REVIEW_TARGET_SESSION = "codex-session-1";
+    const first = wake(root, memoryPath, request("wake-backlog-first", "2026-09-16T00:00:00.000Z"));
+    const second = wake(
+      root,
+      memoryPath,
+      request("wake-backlog-second", "2026-09-16T00:01:00.000Z", 320),
+    );
+    const project = resolveProjectMemoryRoot(root);
+    if (!project.ok) throw new Error(project.reason);
+    const backlog = join(project.runtimeBusRoot, "codex-memory-wake", "backlog");
+    mkdirSync(backlog, { recursive: true });
+    for (const value of [first, second]) {
+      writeFileSync(
+        join(backlog, `${value.requestDigest}.json`),
+        `${JSON.stringify({
+          schema: "ut-tdd.codex-memory-wake-backlog/v1",
+          requestDigest: value.requestDigest,
+          requestPath: value.requestPath,
+          memoryPath: value.memoryPath,
+          request: value.request,
+          createdAt: value.request.requestedAt,
+          reason: "review_wake_publish_failed",
+        })}\n`,
+        "utf8",
+      );
+    }
+
+    const firstSurface = readCodexReviewWake(root);
+    expect(firstSurface).toMatchObject({
+      status: "pending",
+      requestDigest: first.requestDigest,
+    });
+    if (firstSurface.status !== "pending" || !firstSurface.envelopePath)
+      throw new Error("expected first FIFO wake");
+    claimCodexReviewWake(root, firstSurface.envelopePath, new Date("2026-09-16T00:02:00.000Z"));
+
+    const secondSurface = readCodexReviewWake(root);
+    expect(secondSurface).toMatchObject({
+      status: "pending",
+      requestDigest: second.requestDigest,
+    });
   });
 
   it("CANDIDATE-CODEXWAKE-010 restores an expired claim for the next session", () => {
@@ -374,7 +446,11 @@ describe("Codex review wake contract", () => {
     expect(() => readdirSync(terminal)).toThrow();
   });
 
-  it("CANDIDATE-CODEXWAKE-004 restores a claimed wake when the receipt identity mismatches", async () => {
+  it.each([
+    ["head", { head: "b".repeat(40) }],
+    ["review revision", { reviewRevision: "different-review-revision" }],
+    ["memory id", { memoryId: "memory:other-project" }],
+  ] as const)("CANDIDATE-CODEXWAKE-004 restores a claimed wake when the %s mismatches", async (_axis, overrides) => {
     const { root, memoryPath } = fixture();
     process.env.CODEX_REVIEW_TARGET_SESSION = "codex-session-1";
     const value = wake(
@@ -385,7 +461,7 @@ describe("Codex review wake contract", () => {
     publishCodexReviewWake(root, value);
     const surface = readCodexReviewWake(root);
     if (surface.status !== "pending") throw new Error("expected pending wake");
-    const mismatched = codexProjection(root, value, "b".repeat(40));
+    const mismatched = codexProjection(root, value, overrides);
     let published = false;
 
     const program = new Command().exitOverride();
@@ -421,6 +497,10 @@ describe("Codex review wake contract", () => {
       requestDigest: value.requestDigest,
       deliveryConfirmed: false,
     });
+    expect(surface.envelopePath).toBeTruthy();
+    expect(readFileSync(surface.envelopePath, "utf8")).toContain(value.requestDigest);
+    expect(surface.envelopePath).toBeTruthy();
+    expect(readFileSync(surface.envelopePath, "utf8")).toContain(value.requestDigest);
     const project = resolveProjectMemoryRoot(root);
     if (!project.ok) throw new Error(project.reason);
     const terminal = join(project.runtimeBusRoot, "codex-memory-wake", "terminal");
@@ -453,7 +533,7 @@ describe("Codex review wake contract", () => {
     });
     expect(readFileSync(path, "utf8")).toContain(String(entry.requestDigest));
     expect(readdirSync(terminalRoot)).toHaveLength(1);
-    expect(() => readFileSync(claimed)).toThrow();
+    expect(readFileSync(claimed, "utf8")).toContain(String(entry.requestDigest));
   });
 
   it("CANDIDATE-CODEXWAKE-010 accepts an idempotent terminal write after a crash window", () => {
