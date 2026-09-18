@@ -139,6 +139,24 @@ indeterminate を deny や success へ丸めず、成功観測を欠いたまま
 admission 成功 fixture でも remote write ledger と approval consume は 0 であり、#626 が副作用を
 発行しないことを対照で確認する。
 
+## 4.1 Slice 1 の bounded coverage
+
+実装 PR #664 は次の6 candidateだけを昇格する。各 candidate は production source の
+`src/setup/pack-publication-admission.ts` と focused test `tests/pack-publication-admission.test.ts`
+へ trace し、PRの exact HEAD と同じ test-design revisionで検証する。
+
+| candidate | production / test trace | expected outcome |
+| --- | --- | --- |
+| `CANDIDATE-PACKPUB-ADM-007` | reviewed head mismatch | `admission_review_head_mismatch` / write 0 |
+| `CANDIDATE-PACKPUB-ADM-036` | missing preparation receipt | `admission_receipt_missing` / observer call 0 / write 0 |
+| `CANDIDATE-PACKPUB-ADM-040` | review observer timeout | typed `indeterminate` / admission 0 / write 0 |
+| `CANDIDATE-PACKPUB-ADM-042` | repository observer schema error | typed `indeterminate` / admission 0 / write 0 |
+| `CANDIDATE-PACKPUB-ADM-048` | admitted happy path | admission ledger append 1 / journal event 1 / remote write 0 |
+| `CANDIDATE-PACKPUB-ADM-057` | approval nonce sensitivity | approval binding digest changes / intent identity unchanged |
+
+The remaining candidates stay explicitly deferred; this table is not a claim that the full 70-candidate
+matrix has been implemented.
+
 ## 5. 実装 PR への昇格規則
 
 実装 PR は 70 candidate を (PLAN-L7-626 §8 の対応表の順で)各 1 件以上の独立 test へ昇格し、実装時に正規の test ID
