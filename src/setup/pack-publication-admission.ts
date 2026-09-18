@@ -442,15 +442,16 @@ function configValid(value: unknown): value is PackPublicationAdmissionConfigura
   );
 }
 
-function callerMatches(
-  caller: PackPublicationAdmissionInput["caller"],
-  config: PackPublicationAdmissionConfiguration,
-  baseOid: string,
-  review: PackPublicationReviewObservation,
-  checks: PackPublicationCheckObservation,
-  receiptDigest: string,
-  intentIdentity: string,
-): string | null {
+function callerMatches(input: {
+  readonly caller: PackPublicationAdmissionInput["caller"];
+  readonly config: PackPublicationAdmissionConfiguration;
+  readonly baseOid: string;
+  readonly review: PackPublicationReviewObservation;
+  readonly checks: PackPublicationCheckObservation;
+  readonly receiptDigest: string;
+  readonly intentIdentity: string;
+}): string | null {
+  const { caller, config, baseOid, review, checks, receiptDigest, intentIdentity } = input;
   if (!caller) return null;
   if (caller.reviewedHead !== undefined && caller.reviewedHead !== review.reviewedHead)
     return "admission_caller_override";
@@ -668,15 +669,15 @@ export async function admitPackPublication(
     reviewedHead: review.reviewedHead,
     preparationReceiptDigest: receiptDigest,
   });
-  const callerFailure = callerMatches(
-    input.caller,
-    input.configuration,
-    pr.baseOid,
+  const callerFailure = callerMatches({
+    caller: input.caller,
+    config: input.configuration,
+    baseOid: pr.baseOid,
     review,
     checks,
     receiptDigest,
     intentIdentity,
-  );
+  });
   if (callerFailure) return deny(callerFailure);
   const approvalIdentityBindings = input.approvals
     .map((approval) => ({
