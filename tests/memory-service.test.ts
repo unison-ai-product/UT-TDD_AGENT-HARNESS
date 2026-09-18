@@ -463,6 +463,10 @@ describe("MemoryService (PLAN-L7-468 PR-A)", () => {
     const ALLOWED_DIR_ACCESS = new Set([
       "memory/index.ts",
       "memory/service.ts",
+      // These two modules verify the tracked archive/curation evidence only; they do not read
+      // canonical memory bodies. The direct-reader assertions below remain the enforcement point.
+      "memory/curation-ledger.ts",
+      "memory/legacy-archive-manifest.ts",
       "lint/secret-scan.ts",
       "graph/loader.ts",
       "runtime/session-log.ts",

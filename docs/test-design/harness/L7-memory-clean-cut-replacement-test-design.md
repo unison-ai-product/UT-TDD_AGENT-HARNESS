@@ -40,7 +40,7 @@ updated: 2026-09-15
   - `source_path` が全件 `.ut-tdd/memory/` 配下にある。
   - archive / local archive / linked legacy に埋めた一意 token が一度も出現しない。
   - archive 側の破損 entry を原因とする finding・例外が 0 件である (破損 entry に反応した時点で、読んだ証拠とみなす)。
-- **許可された走査 (runtime read ではない)**: secret-scan (`docs/` 全体)、readability (`docs/` 全体)、clean Pack の denylist 判定、git 操作。これらが archive を走査しても non-read 違反としない。これらの gate 自体の成否は `CANDIDATE-P-MEMCUT-030` で扱う。
+- **許可された走査 (runtime read ではない)**: secret-scan (`docs/` 全体)、readability (`docs/` 全体)、clean Pack の denylist 判定、git 操作。これらが archive を走査しても non-read 違反としない。これらの gate 自体の成否は `P-MEMCUT-030` で扱う。
 
 ## 3. fixture
 
@@ -63,17 +63,18 @@ updated: 2026-09-15
 
 | Candidate | 所有 PR | Stimulus / mutation | 独立 oracle |
 | --- | --- | --- | --- |
-| `CANDIDATE-U-MEMCUT-001` | PR-2 | §3 の fixture で `loadMemoryEntries(canonicalProjectRoot)` を呼ぶ | canonical-only。archive に破損 entry があっても throw しない。全 root の digest が不変 |
-| `CANDIDATE-U-MEMCUT-002` | PR-2 | 同じ fixture で `loadMemoryCorpus` と `readMemory` (index 無し / fixture DB 有り) を呼ぶ | canonical-only。`findings` に archive / linked legacy の path を含む要素が 0 件 |
-| `CANDIDATE-U-MEMCUT-003` | PR-2 | archive と linked legacy に置いた、同一 `memory_id`・異 digest の entry を観測対象にする | 返る body と `content_hash` は canonical file のもの。conflict / quarantine / dedupe 系の finding が 0 件 (比較した時点で読んだ証拠になる) |
-| `CANDIDATE-U-MEMCUT-004` | PR-2 | archive 内に file symlink と directory link を置いた状態で、001〜002 を再実行する | 返却 entry の realpath が全件 canonical root 配下にある。link 先 token の出現が 0。link を作れない OS は skip 理由を記録し、Green にしない |
-| `CANDIDATE-U-MEMCUT-005` | PR-2 | fixture DB の `memory_entries` に archive 由来の row (canonical に無い `memory_id`) を注入してから `readMemory` を呼ぶ | 本文は canonical file からだけ返る。archive 由来の row は freshness の劣化 (`index-only`) として可視化される。archive body の出現が 0 |
-| `CANDIDATE-P-MEMCUT-006` | PR-2 | `ut-tdd db rebuild` を primary と linked worktree の両方の cwd から実行する | 両方で `memory_entries` が canonical-only。relation graph の memory design node に archive / linked legacy の path が 0。linked cwd からの実行は Red 起点の見込み (静的読解では cwd 直下を投影する)。`CANDIDATE-U-PMEMROOT-009` と同じ stimulus (§5 参照) |
-| `CANDIDATE-P-MEMCUT-007` | PR-2 | `ut-tdd memory list`、`memory list --query <archive 専用 token>`、`memory recall --query <linked legacy token>` を、primary と linked worktree の両方の cwd から subprocess で実行する | stdout が canonical-only。archive / linked token の query 結果は 0 件。両 cwd の出力が一致する |
+| `U-MEMCUT-001` | PR-2 | §3 の fixture で `loadMemoryEntries(canonicalProjectRoot)` を呼ぶ | canonical-only。archive に破損 entry があっても throw しない。全 root の digest が不変 |
+| `U-MEMCUT-002` | PR-2 | 同じ fixture で `loadMemoryCorpus` と `readMemory` (index 無し / fixture DB 有り) を呼ぶ | canonical-only。`findings` に archive / linked legacy の path を含む要素が 0 件 |
+| `U-MEMCUT-003` | PR-2 | archive と linked legacy に置いた、同一 `memory_id`・異 digest の entry を観測対象にする | 返る body と `content_hash` は canonical file のもの。conflict / quarantine / dedupe 系の finding が 0 件 (比較した時点で読んだ証拠になる) |
+| `U-MEMCUT-004` | PR-2 | archive 内に file symlink と directory link を置いた状態で、001〜002 を再実行する | 返却 entry の realpath が全件 canonical root 配下にある。link 先 token の出現が 0。link を作れない OS は skip 理由を記録し、Green にしない |
+| `U-MEMCUT-005` | PR-2 | fixture DB の `memory_entries` に archive 由来の row (canonical に無い `memory_id`) を注入してから `readMemory` を呼ぶ | 本文は canonical file からだけ返る。archive 由来の row は freshness の劣化 (`index-only`) として可視化される。archive body の出現が 0 |
+| `P-MEMCUT-006` | PR-2 | `ut-tdd db rebuild` を primary と linked worktree の両方の cwd から実行する | 両方で `memory_entries` が canonical-only。relation graph の memory design node に archive / linked legacy の path が 0。linked cwd からの実行は Red 起点の見込み (静的読解では cwd 直下を投影する)。`CANDIDATE-U-PMEMROOT-009` と同じ stimulus (§5 参照) |
+| `P-MEMCUT-007` | PR-2 | `ut-tdd memory list`、`memory list --query <archive 専用 token>`、`memory recall --query <linked legacy token>` を、primary と linked worktree の両方の cwd から subprocess で実行する | stdout が canonical-only。archive / linked token の query 結果は 0 件。両 cwd の出力が一致する |
 | `CANDIDATE-P-MEMCUT-008` | PR-2 | Claude と Codex の SessionStart hook が呼ぶ `src/cli.ts session start` を、primary と linked worktree から実行する | digest の memory 段が canonical の title だけを列挙する。Claude 経路と Codex 経路で memory の集合が一致する |
-| `CANDIDATE-P-MEMCUT-009` | PR-2 | (a) linked worktree から `memory add --notify-claude` で archive entry と同じ title の entry を書き、hook の consume まで通す。(b) review-live の memory path 引数に、tracked archive 内の path と `..` を含む path を渡す | (a) envelope が束縛する `memory_id` / digest は、canonical に新規作成された file と一致する。archive entry は claim されない。(b) canonical authored root 外の path は typed deny となり、read が 0。静的読解では path 制限が無いため、(b) は Red 起点の見込み |
-| `CANDIDATE-P-MEMCUT-010` | PR-2 | 同じ fixture で、doctor の memory 関連 check (`memory-sync`、DB projection check) と `ut-tdd status` / `status --json` を実行する | memory-sync の対象 path は `.ut-tdd/memory` だけで、archive path を未同期 memory と数えない。DB projection の memory 行は canonical-only。status は memory を読まないという不変条件を保つ (memory 由来 token の出現が 0) |
-| `CANDIDATE-U-MEMCUT-011` | PR-2 | production reader に mutation を入れる: (i) memory 読み出しを再帰 walk にする、(ii) archive root を読み出し候補に加える、(iii) db rebuild の root を canonical 解決から cwd へ戻す | 各 mutation で、001〜010 のうち少なくとも 1 行が Red になる。Red にならない mutation があれば、検出力不足として Red。mutation commit は出荷しない |
+| `P-MEMCUT-009` | PR-2 | review-live の memory path 引数に、tracked archive 内の path、`..` を含む path、canonical root 配下でも直下でない path、`.md` 以外、linked worktree の絶対 path を渡す | canonical authored root の直下でない path は typed deny (`review_memory_path_outside_canonical_root`) となり、read が 0。実装前 HEAD では path 制限が無く Red (PR-2 で Red→Green を実測)。旧 (a) の hook consume 経路は `CANDIDATE-P-MEMCUT-031` へ分離 |
+| `CANDIDATE-P-MEMCUT-031` | 後続 | linked worktree から `memory add --notify-claude` で archive entry と同じ title の entry を書き、hook の consume まで通す | envelope が束縛する `memory_id` / digest は、canonical に新規作成された file と一致する。archive entry は claim されない。PR-2 では未実測のため昇格しない |
+| `P-MEMCUT-010` | PR-2 | 同じ fixture で、doctor の memory 関連 check (`memory-sync`、DB projection check) と `ut-tdd status` / `status --json` を実行する | memory-sync の対象 path は `.ut-tdd/memory` だけで、archive path を未同期 memory と数えない。DB projection の memory 行は canonical-only。status は memory を読まないという不変条件を保つ (memory 由来 token の出現が 0) |
+| `U-MEMCUT-011` | PR-2 | production reader に mutation を入れる: (i) memory 読み出しを再帰 walk にする、(ii) archive root を読み出し候補に加える、(iii) db rebuild の root を canonical 解決から cwd へ戻す | 各 mutation で、001〜010 のうち少なくとも 1 行が Red になる。Red にならない mutation があれば、検出力不足として Red。mutation commit は出荷しない |
 
 ### 4.2 migration 撤去 (PR-1)
 
@@ -89,32 +90,38 @@ updated: 2026-09-15
 
 | Candidate | 所有 PR | Stimulus / mutation | 独立 oracle |
 | --- | --- | --- | --- |
-| `CANDIDATE-U-MEMCUT-017` | PR-2 | PR-2 base HEAD の `git ls-files .ut-tdd/memory`、machine manifest の source 集合、PR HEAD の `docs/archive/memory-legacy-2026-09/` 集合を照合する | 3 つの集合が basename 単位で全単射になる。件数は実測値とだけ比較し、固定値を持たない。負例 (1 件欠落 / manifest 外に 1 件追加) で Red |
-| `CANDIDATE-U-MEMCUT-018` | PR-2 | manifest の各行について、source blob (base HEAD) と destination blob (PR HEAD) を比較する。mutation として archive file 1 件を 1 byte 改変する | 全行で blob oid と sha256 が一致し、base..HEAD の rename 検出が類似度 100%。mutation で Red |
-| `CANDIDATE-U-MEMCUT-019` | PR-2 | PR-2 の実行時に、local で `git ls-files --others --exclude-standard .ut-tdd/memory` を採取し、その内容 digest の集合を PR 範囲の全 commit の blob digest と照合する | 交差が 0 (path だけでなく内容 digest で判定する)。`git ls-files .ut-tdd/archive` が 0 件。`git check-ignore` が local archive 配下の file を ignore と判定する |
-| `CANDIDATE-U-MEMCUT-020` | PR-2 | commit される manifest と generated summary の内容を検査する | untracked 由来の path・title・本文の出現が 0。untracked については件数と集合 digest だけを記録する |
-| `CANDIDATE-U-MEMCUT-021` | PR-2 | manifest から generated summary を再生成する | commit 済みの summary と byte 単位で一致し、件数が manifest と一致する。手編集による差分があれば Red |
+| `U-MEMCUT-017` | PR-2 | PR-2 base HEAD の `git ls-files .ut-tdd/memory`、machine manifest の source 集合、PR HEAD の `docs/archive/memory-legacy-2026-09/` 集合を照合する | 3 つの集合が basename 単位で全単射になる。件数は実測値とだけ比較し、固定値を持たない。負例 (1 件欠落 / manifest 外に 1 件追加) で Red |
+| `U-MEMCUT-018` | PR-2 | manifest の各行について、source blob (base HEAD) と destination blob (PR HEAD) を比較する。mutation として archive file 1 件を 1 byte 改変する | 全行で blob oid と sha256 が一致し、base..HEAD の rename 検出が類似度 100%。mutation で Red |
+| `U-MEMCUT-019` | PR-2 | PR-2 の実行時に、local で `git ls-files --others --exclude-standard .ut-tdd/memory` を採取し、その内容 digest の集合を PR 範囲の全 commit の blob digest と照合する | 交差が 0 (path だけでなく内容 digest で判定する)。`git ls-files .ut-tdd/archive` が 0 件。`git check-ignore` が local archive 配下の file を ignore と判定する |
+| `U-MEMCUT-020` | PR-2 | commit される manifest と generated summary の内容を検査する | untracked 由来の path・title・本文の出現が 0。untracked については件数と集合 digest だけを記録する |
+| `U-MEMCUT-021` | PR-2 | manifest から generated summary を再生成する | commit 済みの summary と byte 単位で一致し、件数が manifest と一致する。手編集による差分があれば Red |
 | `CANDIDATE-U-MEMCUT-022` | PR-2 | local archive と linked legacy の、移動前後の digest を local で採取する (CI 対象外の local 証跡) | local archive の file digest 集合が、移動前の untracked digest 集合と等しい。linked legacy の digest 集合は不変。legacy corpus の完全保存を主張する文言を証跡に含めない |
-| `CANDIDATE-P-MEMCUT-023` | PR-2 | PR HEAD の tree に対して `buildCleanDistributionPlan` と clean Pack E2E を実行する。mutation として deny prefix から `docs/archive/` を外す | `artifactPaths` に `docs/archive/memory-legacy-2026-09/` と `.ut-tdd/archive/` 配下が 0 件。`CANDIDATE-P-PMEMROOT-002` / `CANDIDATE-P-PMEMROOT-003` の test が Green のまま。mutation で Red |
+| `P-MEMCUT-023` | PR-2 | PR HEAD の tree に対して `buildCleanDistributionPlan` と clean Pack E2E を実行する。mutation として deny prefix から `docs/archive/` を外す | `artifactPaths` に `docs/archive/memory-legacy-2026-09/` と `.ut-tdd/archive/` 配下が 0 件。`CANDIDATE-P-PMEMROOT-002` / `CANDIDATE-P-PMEMROOT-003` の test が Green のまま。mutation で Red |
 
 ### 4.4 curation ledger binding (PR-2)
 
 | Candidate | 所有 PR | Stimulus / mutation | 独立 oracle |
 | --- | --- | --- | --- |
-| `CANDIDATE-U-MEMCUT-024` | PR-2 | ledger の各行を manifest と照合する。負例: digest を 1 文字改変、manifest 外の tracked source path、untracked row への path 混入、registration receipt の欠落、理由の欠落 | 全行が tracked source の archive path、または untracked source の内容 digest と opaque な local-archive custody id (path なし)、source digest、adopt / reject、6 基準の判定と根拠参照、理由、採用行では registration receipt digest を持ち、digest が manifest と一致する。負例はそれぞれ Red |
-| `CANDIDATE-U-MEMCUT-025` | PR-2 | adopt 行を canonical root の entry 集合と照合する。負例: ledger に無い canonical entry、entry の無い adopt 行 | adopt 行の `memory_id` 集合が canonical entry 集合と等しい。同義語の統合は `merged_from` で多対一を明示し、統合元の行も残す。負例は Red |
-| `CANDIDATE-U-MEMCUT-026` | PR-2 | ledger に記録した kind / title / body / tags で、`ut-tdd memory add` を scratch の canonical root に対して実行し、command の registration receipt (operation id、memory id、出力 source path、content digest、exit code) を取得する。負例: receipt の欠落 / 改変、receipt を伴わない同値な手書き file、canonical root 外への出力 | receipt の digest が adopt 行の ledger と一致し、exit code が 0、出力 source path が canonical root 配下で、生成 file の file 名・`memory_id`・`updated_at` 以外の frontmatter 値と本文が canonical root の file と一致する。receipt のない手書き file は内容が同値でも Red。frontmatter の `memory_id` / `kind` / `title` / `tags` / `updated_at` の欠落が 0 |
-| `CANDIDATE-U-MEMCUT-027` | PR-2 | adopt entry の本文を除外 screen にかける。負例 fixture: PR 番号、commit hash、review request / verdict / receipt / handoff への参照、secret に見える値、個人環境の絶対 path | 負例はそれぞれ Red。screen は必要条件であって十分条件ではない (最終判断は 028 の reviewer が行う)。採用件数の固定値 assertion を持たない |
-| `CANDIDATE-U-MEMCUT-028` | PR-2 | ledger の reviewer 記録を検査する | reviewer の model family が author と異なり、frontier tier であり、判定対象の exact head に束縛されている。同一 family / head 欠落は Red |
+| `U-MEMCUT-024` | PR-2 | ledger の各行を manifest と照合する。負例: digest を 1 文字改変、manifest 外の tracked source path、untracked row への path 混入、registration receipt の欠落、理由の欠落 | 全行が tracked source の archive path、または untracked source の内容 digest と opaque な local-archive custody id (path なし)、source digest、adopt / reject、6 基準の判定と根拠参照、理由、採用行では registration receipt digest を持ち、digest が manifest と一致する。負例はそれぞれ Red |
+| `U-MEMCUT-025` | PR-2 | adopt 行を canonical root の entry 集合と照合する。負例: ledger に無い canonical entry、entry の無い adopt 行 | adopt 行の `memory_id` 集合が canonical entry 集合と等しい。同義語の統合は `merged_from` で多対一を明示し、統合元の行も残す。負例は Red |
+| `U-MEMCUT-026` | PR-2 | ledger に記録した kind / title / body / tags で、`ut-tdd memory add` を scratch の canonical root に対して実行し、command の registration receipt (operation id、memory id、出力 source path、content digest、exit code) を取得する。負例: receipt の欠落 / 改変、receipt を伴わない同値な手書き file、canonical root 外への出力 | receipt の digest が adopt 行の ledger と一致し、exit code が 0、出力 source path が canonical root 配下で、生成 file の file 名・`memory_id`・`updated_at` 以外の frontmatter 値と本文が canonical root の file と一致する。receipt のない手書き file は内容が同値でも Red。frontmatter の `memory_id` / `kind` / `title` / `tags` / `updated_at` の欠落が 0 |
+| `U-MEMCUT-027` | PR-2 | adopt entry の本文を除外 screen にかける。負例 fixture: PR 番号、commit hash、review request / verdict / receipt / handoff への参照、secret に見える値、個人環境の絶対 path | 負例はそれぞれ Red。screen は必要条件であって十分条件ではない (最終判断は 028 の reviewer が行う)。採用件数の固定値 assertion を持たない |
+| `U-MEMCUT-028` | PR-2 | ledger の reviewer 記録を検査する | reviewer の model family が author と異なり、frontier tier であり、判定対象の exact head に束縛されている。同一 family / head 欠落は Red |
 
 ### 4.5 curated corpus での DB rebuild (PR-2)
 
 | Candidate | 所有 PR | Stimulus / mutation | 独立 oracle |
 | --- | --- | --- | --- |
-| `CANDIDATE-P-MEMCUT-029` | PR-2 | PR HEAD の隔離 snapshot で `ut-tdd db rebuild` を実行し、続けて fixture DB 付きで `readMemory` を呼ぶ。負例として、canonical root に frontmatter の破損した file を 1 件足す | rebuild が ok。`memory_entries` の (`memory_id`, `content_hash`) 集合が、canonical file の parse 結果と等しい。`source_path` は全件 `.ut-tdd/memory/` 配下で、freshness は fresh。`loadMemoryEntries` は 1 件も throw しない。負例は Red |
-| `CANDIDATE-P-MEMCUT-030` | PR-2 | PR HEAD で doctor の secret-scan と readability を実行する (archive corpus が `docs/` 配下に入る)。負例として、fixture archive に文字化けした file を置く | 両 check が、scanner の scope を変えずに ok。archive を scope から外す変更は本 artifact の oracle ではなく、別契約とする。負例は Red |
+| `P-MEMCUT-029` | PR-2 | PR HEAD の隔離 snapshot で `ut-tdd db rebuild` を実行し、続けて fixture DB 付きで `readMemory` を呼ぶ。負例として、canonical root に frontmatter の破損した file を 1 件足す | rebuild が ok。`memory_entries` の (`memory_id`, `content_hash`) 集合が、canonical file の parse 結果と等しい。`source_path` は全件 `.ut-tdd/memory/` 配下で、freshness は fresh。`loadMemoryEntries` は 1 件も throw しない。負例は Red |
+| `P-MEMCUT-030` | PR-2 | PR HEAD で doctor の secret-scan と readability を実行する (archive corpus が `docs/` 配下に入る)。負例として、fixture archive に文字化けした file を置く | 両 check が、scanner の scope を変えずに ok。archive を scope から外す変更は本 artifact の oracle ではなく、別契約とする。負例は Red |
 
 ## 5. 所有と Red 起点
+
+- PR-2 (Issue #424、PLAN-L7-566) で昇格した行: `U-MEMCUT-001`〜`U-MEMCUT-005`、`U-MEMCUT-011`、`U-MEMCUT-017`〜`U-MEMCUT-021`、`U-MEMCUT-024`〜`U-MEMCUT-028`、`P-MEMCUT-006`、`P-MEMCUT-007`、`P-MEMCUT-009`、`P-MEMCUT-010`、`P-MEMCUT-023`、`P-MEMCUT-029`、`P-MEMCUT-030`。citation は `tests/memory-clean-cut-non-read.test.ts`、`tests/memory-legacy-archive.test.ts`、`tests/memory-curation-ledger.test.ts` の静的 label。
+  - `024`〜`027` は昇格済みで Green (citation は `tests/memory-curation-ledger.test.ts`)。
+  - `028` も昇格済み。ledger の reviewer 記録には、非著者 frontier review (codex `gpt-5.6-sol`) の PASS receipt と、その review が判定した exact head を束縛する。テストは、出荷時の ledger で `verifyCurationReviewer` が `[]` を返すことを必須とする。reviewer 記録が欠落しているか placeholder の場合は Red とする (条件分岐で pass させない)。
+  - 008 (session start digest)、022 (local 証跡)、031 (hook consume) は candidate のまま。
+- `P-MEMCUT-006` / `P-MEMCUT-009` の Red 起点は PR-2 の実装前 HEAD (`db rebuild` の cwd 起点、review-live の path 無制限) で実測した。004 は file symlink を作れない Windows では skip (Green にしない)、Linux CI で Green。
 
 - 012〜016 は PR-1 が所有する。001〜011 と 017〜030 は PR-2 が所有する。
 - 実装前の HEAD で Red が見込まれる行: 006 (linked cwd)、009 (b)、012〜022、024〜028。

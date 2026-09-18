@@ -7,7 +7,7 @@ drive: fullstack
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-08-26
-updated: 2026-09-11
+updated: 2026-09-16
 owner: PO / TL
 parent_design: docs/governance/ut-tdd-agent-harness-requirements_v1.2.md
 pair_artifact: docs/test-design/harness/L7-project-scoped-memory-root-test-design.md
@@ -32,8 +32,6 @@ generates:
   - artifact_path: tests/project-memory-root.test.ts
     artifact_type: test_code
   - artifact_path: tests/project-memory-pack-parity.test.ts
-    artifact_type: test_code
-  - artifact_path: tests/memory-clean-cut-removal.test.ts
     artifact_type: test_code
 dependencies:
   parent: docs/governance/ut-tdd-agent-harness-requirements_v1.2.md
@@ -208,18 +206,18 @@ status: confirmed
 github_issue_id: 544
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:901bf74d6e8d531edfc3701e1180cbd7
-  command_id: plan-revise:issue-424:legacy-512:9
-  admitted_at: 2026-09-16T04:42:11.358Z
-  source_digest: sha256:b98c4e702040756c256c62f69a322a842bb4e74bc0fc27f9e8e2dbf6e89bbd8c
-  decision_digest: sha256:c3a5688e66d1351107dbbed6fbe75b64ad628284158710e424ff59c412785a2e
-  receipt_digest: sha256:86d8a61c95ea08fcb26c3ee96b5cdd665a00d2f601a0493e054d5677838696ab
+  receipt_id: certificate:0887b4b525c84ee49fd37e2873cad714
+  command_id: plan-revise:issue-424:pr2-ownership-move:r10:0d42c71d1a79
+  admitted_at: 2026-09-18T03:54:24.330Z
+  source_digest: sha256:17ec13c32a55c79c2e57444616043603fc442e17d613386d2c35addd19344a06
+  decision_digest: sha256:e6e1a0a9c6b4dd6163731acf75b0bfebd8accc243e9a86676c9470dc0db93d48
+  receipt_digest: sha256:cb8d1e8fac5369d0ee802965934bca856cf3ce80708f76b636362731d52bedfb
   binding:
     path: docs/plans/PLAN-L7-512-project-scoped-memory-root.md
     plan_id: PLAN-L7-512-project-scoped-memory-root
     asset_id: plan:legacy:68706e293ae2c96738a8e3263bac3e01e7cde64cdb7c3ed8e53805922662bc30
-    revision: 9
-    content_digest: sha256:b98c4e702040756c256c62f69a322a842bb4e74bc0fc27f9e8e2dbf6e89bbd8c
+    revision: 10
+    content_digest: sha256:17ec13c32a55c79c2e57444616043603fc442e17d613386d2c35addd19344a06
   route:
     signal: feature_addition
     mode: add-feature
@@ -237,12 +235,10 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-512-project-scoped-memory-root
-    target_revision: 9
+    target_revision: 10
     phase: forward_merge
-  escape_reason: "Issue #424 PR-1: provisionally own
-    tests/memory-clean-cut-removal.test.ts (U-MEMCUT-012..016) until PLAN-L7-566
-    is confirmed in PR-2; draft PLANs cannot own landing deliverables
-    (merged-plan-status)"
+  escape_reason: "Issue #424 PR-2 (PR #644): PLAN-L7-566 confirm に伴い
+    tests/memory-clean-cut-removal.test.ts の暫定所有を 566 へ移管 (rev 9 注記どおり)。契約変更なし。"
 ---
 
 # PLAN-L7-512: project-scoped canonical Memory and notification root
@@ -320,3 +316,7 @@ global領域にMemory本文は置かない。Issue #413のglobal lessons、seman
 Linux/Windows/aggregate CI、非著者closing PASS、canonical receiptが揃うまで禁止する。
 clean Pack parityは、#420のconsumer-local sealed runtimeと#432のtracked identity bootstrapを
 機械的前提とする。両依存をfixtureの事前seedやsetup元Pack参照で代替しない。
+
+rev 10 (Issue #424 PR-2、2026-09-16): `PLAN-L7-566` が confirmed へ遷移したため、rev 9 で暫定所有していた
+`tests/memory-clean-cut-removal.test.ts` (`U-MEMCUT-012`〜`016`) の所有を 566 の `generates` へ移し、本 PLAN の `generates` から外した
+(`duplicate-artifact-ownership` の二重所有を作らない)。本 PLAN の契約・status は変えない。

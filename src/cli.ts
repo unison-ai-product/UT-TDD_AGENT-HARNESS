@@ -174,7 +174,11 @@ import {
 import { detectMode, nextActionForMode, type RuntimeDetection } from "./runtime/detect.ts";
 import { scanDanglingStops } from "./runtime/forced-stop.ts";
 import { createNodeInvocation, verifyNodeGeneration } from "./runtime/node-bootstrap.ts";
-import { requireProjectMemoryRoot } from "./runtime/project-memory-root.ts";
+import {
+  isLinkedWorktreeCheckout,
+  requireProjectMemoryRoot,
+  resolveProjectMemoryRoot,
+} from "./runtime/project-memory-root.ts";
 import {
   nodeProviderHandoverDeps,
   type ProviderRuntime,
@@ -1772,7 +1776,40 @@ db.command("rebuild")
   .description("harness.db schema と deterministic projection を再構築")
   .option("--json", "JSON output")
   .action((opts: { json?: boolean }) => {
-    const r = rebuildHarnessDb({ repoRoot: process.cwd() });
+    // Memory projection must come from the canonical project root: a linked worktree cwd
+    // would otherwise project its own legacy .ut-tdd/memory (PLAN-L7-566 PR-2, P-MEMCUT-006).
+    // The process.cwd() fallback below exists for the nested-snapshot-clone case (a real `git
+    // clone` of a snapshot tree, U-TESTHYGIENE-043) where the clone has git topology (it is a
+    // clone, so `git rev-parse` resolves) but no usable project identity of its own. Measured on
+    // Windows CI (run 35216823766): that case yields reason "project_identity_unavailable", not
+    // "git_topology_unavailable" — a nested clone is a git repo, so git-dir/git-common-dir both
+    // resolve fine, only `loadProjectIdentityFromHead` comes back empty. A linked worktree always
+    // has a git-dir distinct from its git-common-dir (`isLinkedWorktreeCheckout`), so gating the
+    // fallback on "not a linked worktree" keeps the P-MEMCUT-006 negatives fail-closed: a linked
+    // worktree with an unresolvable or drifted identity must never fall back to `process.cwd()`
+    // and silently project its own legacy memory. "project_identity_drift" (a resolvable but
+    // *disagreeing* identity) stays fail-closed unconditionally in both topologies — drift is
+    // never the nested-snapshot case, it always means two distinct, resolvable identities.
+    const projectRoot = resolveProjectMemoryRoot(process.cwd());
+    let dbRebuildRepoRoot: string;
+    if (projectRoot.ok) {
+      dbRebuildRepoRoot = projectRoot.canonicalProjectRoot;
+    } else if (
+      (projectRoot.reason === "git_topology_unavailable" ||
+        projectRoot.reason === "project_identity_unavailable") &&
+      !isLinkedWorktreeCheckout(process.cwd())
+    ) {
+      dbRebuildRepoRoot = process.cwd();
+    } else {
+      process.stderr.write(
+        `ut-tdd db rebuild: refusing to project memory (project_memory_root reason=` +
+          `${projectRoot.reason}); a linked worktree or a repo with drifted/unavailable project ` +
+          "identity must not project legacy memory into harness.db (PLAN-L7-566 P-MEMCUT-006)\n",
+      );
+      process.exitCode = 1;
+      return;
+    }
+    const r = rebuildHarnessDb({ repoRoot: dbRebuildRepoRoot });
     if (opts.json) {
       process.stdout.write(`${JSON.stringify(r, null, 2)}\n`);
       return;

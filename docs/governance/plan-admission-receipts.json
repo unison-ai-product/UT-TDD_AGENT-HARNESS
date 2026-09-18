@@ -4628,17 +4628,33 @@
     {
       "sequence": 290,
       "previous_record_digest": "sha256:a427d5c6e9838e54ce0ee169a7371a02579fbb522ff90bca8bf2b3aa39238749",
-      "record_digest": "sha256:53bf6bf1427cb54dcac50ce156e6507811e02da8b78924ecd5853e33ee0deedb",
-      "command_id": "plan-revise:issue-565:prep006-ownership:r2:3d52a82fe351",
-      "receipt_id": "certificate:1304243374fc781fc312bcc92b190084",
-      "receipt_digest": "sha256:099b42d719e1edf46275f88bba2008f6c28ab4b948fde860611f47e112eb051a",
-      "decision_digest": "sha256:02720706b721f2c4728c7a44708ab15a1e3eb34349d61bbc5675cb6a2d52ed97",
+      "record_digest": "sha256:ee1c26bed45a659df89903a9f88eedcf09d1a4085d3bb69dad00df63813d6288",
+      "command_id": "plan-revise:issue-424:pr2-confirm:r4:0d42c71d1a79",
+      "receipt_id": "certificate:3cbfe4e442fe65c204bc7f8befa0a54d",
+      "receipt_digest": "sha256:b5b958950f4572830ebba8f8c521e4bc1612b7ed2359be9d21ed8753c2c277c7",
+      "decision_digest": "sha256:5c1ae5d99fe72b0e742b6a5ae705046b56b39727b6b09af7f1cb354bc46d9efd",
       "binding": {
-        "path": "docs/plans/PLAN-L7-565-pack-publication-atomic-ref-cas.md",
-        "plan_id": "PLAN-L7-565-pack-publication-atomic-ref-cas",
-        "asset_id": "plan:a030bc07104b52cdc17f76e9beceb0df",
-        "revision": 2,
-        "content_digest": "sha256:eb36d0cbe8e56ee5b96f5087108d052a0e3b848267ed9de948f5895293cfaca5"
+        "path": "docs/plans/PLAN-L7-566-memory-clean-cut-replacement.md",
+        "plan_id": "PLAN-L7-566-memory-clean-cut-replacement",
+        "asset_id": "plan:6f7505a570cabcffc4899bfc7f83cc98",
+        "revision": 4,
+        "content_digest": "sha256:52b88699bd744c8c7f0302d0ec7e457516ff50974a6de9f18154ee49f477aba9"
+      }
+    },
+    {
+      "sequence": 291,
+      "previous_record_digest": "sha256:ee1c26bed45a659df89903a9f88eedcf09d1a4085d3bb69dad00df63813d6288",
+      "record_digest": "sha256:a73989158d315e5f1d84628a7ece7eb6f34ee062dc89effa04b5864c545e1738",
+      "command_id": "plan-revise:issue-424:pr2-ownership-move:r10:0d42c71d1a79",
+      "receipt_id": "certificate:0887b4b525c84ee49fd37e2873cad714",
+      "receipt_digest": "sha256:cb8d1e8fac5369d0ee802965934bca856cf3ce80708f76b636362731d52bedfb",
+      "decision_digest": "sha256:e6e1a0a9c6b4dd6163731acf75b0bfebd8accc243e9a86676c9470dc0db93d48",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-512-project-scoped-memory-root.md",
+        "plan_id": "PLAN-L7-512-project-scoped-memory-root",
+        "asset_id": "plan:legacy:68706e293ae2c96738a8e3263bac3e01e7cde64cdb7c3ed8e53805922662bc30",
+        "revision": 10,
+        "content_digest": "sha256:17ec13c32a55c79c2e57444616043603fc442e17d613386d2c35addd19344a06"
       }
     }
   ]

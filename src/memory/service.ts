@@ -83,6 +83,44 @@ export function isCanonicalMemorySourcePath(sourcePath: string): boolean {
   );
 }
 
+/**
+ * Review requests may bind only a direct child of the canonical authored memory root.
+ * Keeping this path policy in MemoryService prevents CLI callers from becoming a second
+ * memory-storage boundary while retaining the same fail-closed traversal checks.
+ */
+export function canonicalAuthoredMemoryPath(
+  canonicalProjectRoot: string,
+  memoryPath: string,
+): string {
+  const authoredRoot = resolve(canonicalProjectRoot, MEMORY_SOURCE_ROOT);
+  const target = resolve(canonicalProjectRoot, memoryPath);
+  const rel = relative(authoredRoot, target).replaceAll("\\", "/");
+  if (!rel || rel === "." || rel.startsWith("..") || rel.includes("/") || !rel.endsWith(".md")) {
+    throw new Error("review_memory_path_outside_canonical_root");
+  }
+  return join(MEMORY_SOURCE_ROOT, rel).replaceAll("\\", "/");
+}
+
+/** Read one canonical memory entry after path and frontmatter identity are both verified. */
+export function readCanonicalMemoryByIdentity(input: {
+  repoRoot: string;
+  memoryPath: string;
+  memoryId: string;
+}): MemoryEntry | null {
+  const memoryPath = canonicalAuthoredMemoryPath(input.repoRoot, input.memoryPath);
+  const resolved = resolveMemoryTaskFile({
+    repoRoot: input.repoRoot,
+    memoryId: input.memoryId,
+    memoryPath,
+  });
+  if (!resolved) return null;
+  try {
+    return parseMemoryFile(input.repoRoot, memoryPath);
+  } catch {
+    return null;
+  }
+}
+
 /** canonical root内のregular fileだけを解決し、frontmatter identityまで同時に束縛する。 */
 export function resolveMemoryTaskFile(input: {
   repoRoot: string;

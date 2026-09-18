@@ -12,8 +12,12 @@ import {
 import { resolveRepositoryRoot } from "../feedback/repository-root.ts";
 import type { ReviewVerdictProjectionResult } from "../feedback/review-attestation.ts";
 import { issueReviewRequest } from "../feedback/review-attestation.ts";
-import { parseMemoryFile } from "../memory/index.ts";
-import { resolveMemoryTaskFile, writeMemory } from "../memory/service.ts";
+import {
+  canonicalAuthoredMemoryPath,
+  readCanonicalMemoryByIdentity,
+  resolveMemoryTaskFile,
+  writeMemory,
+} from "../memory/service.ts";
 import {
   buildClaudeProviderReviewInboxEntry,
   decodeClaudeInboxEntry,
@@ -153,6 +157,9 @@ function publishLiveReviewReceipt(
   });
 }
 
+// Kept as a public compatibility export for CLI consumers and the path-boundary tests.
+export { canonicalAuthoredMemoryPath } from "../memory/service.ts";
+
 export function registerLiveReviewCommands(
   review: Command,
   overrides: Partial<LiveReviewCommandDeps> = {},
@@ -193,9 +200,16 @@ export function registerLiveReviewCommands(
         try {
           const repoRoot = resolveRepositoryRoot(deps.repoRoot());
           const project = requireProjectMemoryRoot(repoRoot);
-          const memory = parseMemoryFile(project.canonicalProjectRoot, opts.memoryPath);
-          if (memory.memory_id !== opts.memoryId)
-            throw new Error("review_memory_identity_mismatch");
+          const memoryPath = canonicalAuthoredMemoryPath(
+            project.canonicalProjectRoot,
+            opts.memoryPath,
+          );
+          const memory = readCanonicalMemoryByIdentity({
+            repoRoot: project.canonicalProjectRoot,
+            memoryPath,
+            memoryId: opts.memoryId,
+          });
+          if (!memory) throw new Error("review_memory_identity_mismatch");
           const requestedAt = new Date().toISOString();
           const result = dispatchLiveReview({
             repoRoot,
