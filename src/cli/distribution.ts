@@ -77,6 +77,11 @@ function collectFilesystemCandidatePaths(repoRoot: string): string[] {
  * deny/allow fences still apply to that clean tree.
  */
 export function collectDistributionCandidatePaths(repoRoot: string): string[] {
+  const workTree = spawnSync("git", ["rev-parse", "--is-inside-work-tree"], {
+    cwd: repoRoot,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "ignore"],
+  });
   const tracked = spawnSync("git", ["ls-tree", "-r", "--name-only", "-z", "HEAD", "--"], {
     cwd: repoRoot,
     encoding: "utf8",
@@ -84,6 +89,12 @@ export function collectDistributionCandidatePaths(repoRoot: string): string[] {
   });
   if (tracked.status === 0) {
     return tracked.stdout.split("\0").filter(Boolean).sort();
+  }
+  if (workTree.status === 0 && workTree.stdout.trim() === "true") {
+    throw new Error("Git work tree has no readable HEAD tree");
+  }
+  if (existsSync(join(repoRoot, ".git"))) {
+    throw new Error("Git metadata exists but the HEAD tree is unavailable");
   }
   return collectFilesystemCandidatePaths(repoRoot);
 }

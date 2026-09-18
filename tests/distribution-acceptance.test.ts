@@ -152,6 +152,21 @@ describe("clean distribution local acceptance smoke", () => {
     }
   });
 
+  it("Git work trees without a committed HEAD fail closed instead of using workspace files", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-distribution-unborn-head-"));
+    try {
+      mkdirSync(join(root, "scripts"), { recursive: true });
+      writeFileSync(join(root, "scripts", "untracked.ts"), "workspace state\n", "utf8");
+      runGit(root, ["init", "--quiet"]);
+
+      expect(() => collectDistributionCandidatePaths(root)).toThrow(
+        "Git work tree has no readable HEAD tree",
+      );
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it("clean unpacked trees use the filesystem candidate fallback without Git HEAD", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-distribution-clean-tree-"));
     try {
