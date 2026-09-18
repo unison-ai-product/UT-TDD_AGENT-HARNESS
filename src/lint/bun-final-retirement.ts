@@ -250,6 +250,26 @@ function hasRetainedFixtureEvidence(path: string, line: string): boolean {
   return false;
 }
 
+/** True when an ACTIVE_BUN_* match starts outside every quote/backtick span of
+ * the line, i.e. the launch or import is code rather than quoted data (a test
+ * oracle string or markdown inline code). */
+function hasBunCodeOutsideStringLiteral(line: string): boolean {
+  for (const pattern of [ACTIVE_BUN_EXECUTION, ACTIVE_BUN_IMPORT]) {
+    const global = new RegExp(pattern.source, `${pattern.flags}g`);
+    for (const match of line.matchAll(global)) {
+      let open: string | null = null;
+      for (let i = 0; i < match.index; i++) {
+        const ch = line[i];
+        if (ch === "\\") i++;
+        else if (open === null && (ch === '"' || ch === "'" || ch === "`")) open = ch;
+        else if (ch === open) open = null;
+      }
+      if (open === null) return true;
+    }
+  }
+  return false;
+}
+
 export function classifyTrackedSurface(
   path: string,
   line: string,
@@ -275,13 +295,10 @@ export function classifyTrackedSurface(
     path.startsWith(".ut-tdd/") ||
     path.includes("/fixtures/") ||
     path.includes("/fixture/");
-  // Test files are retained fixtures by default, but explicitly named runtime
-  // launcher tests are a production-like surface registry.  Do not let those
-  // executable paths hide behind the broad tests/ fixture branch.
-  const productionLikeTestPath =
-    /^tests\/(?:runner|launcher|hook|setup)[^/]*\.(?:test|spec)\.[cm]?[jt]sx?$/iu.test(path);
-  if (productionLikeTestPath && (ACTIVE_BUN_EXECUTION.test(line) || ACTIVE_BUN_IMPORT.test(line)))
-    return "reachable_production";
+  // A Bun launch or `bun:` import written as code (not inside a string literal)
+  // is reachable wherever it lives (PLAN-L7-530 §3: never classify by path name
+  // alone), so it is judged before any fixture/test path can retain the line.
+  if (hasBunCodeOutsideStringLiteral(line)) return "reachable_production";
   if (fixturePath)
     return hasRetainedFixtureEvidence(path, line) ? "retained_fixture" : "indeterminate";
   if (

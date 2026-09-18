@@ -248,6 +248,26 @@ describe("CAND-NODEBOOT-023/027/028/208 final Bun retirement", () => {
     ).toBe("reachable_production");
   });
 
+  it("U-PACKBUN-006: no test or fixture path name retains a Bun launch written as code", () => {
+    // PLAN-L7-530 §3: the path name alone never retains a line. Support helpers,
+    // arbitrary test files and vendor code launching Bun are reachable.
+    const executable = [
+      ["tests/support/runner.ts", `spawnSync("${BUN_RUNTIME}", ["run", "src/cli.ts"]);`],
+      ["tests/e2e.test.ts", `execFileSync("${BUN_RUNTIME}", ["x", "vitest"]);`],
+      ["vendor/lib/launch.ts", `spawn("${BUN_RUNTIME}x", ["tsx"]);`],
+      ["tests/support/db.ts", `import { Database } from "${BUN_RUNTIME}:sqlite";`],
+    ] as const;
+    for (const [path, line] of executable)
+      expect(classifyTrackedSurface(path, line), path).toBe("reachable_production");
+    // The same launch quoted as oracle data (a string literal) stays a retained fixture.
+    expect(
+      classifyTrackedSurface(
+        "tests/e2e.test.ts",
+        `{ text: 'spawnSync("${BUN_RUNTIME}", [cliPath]);' },`,
+      ),
+    ).toBe("retained_fixture");
+  });
+
   it("U-PACKBUN-006: independent admission oracle rejects a reachable surface", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-bun-surface-oracle-"));
     try {
