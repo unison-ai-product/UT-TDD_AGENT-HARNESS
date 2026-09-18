@@ -1927,7 +1927,11 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
           ? rawPortResult
           : ({ status: "attested", value: { mode: "new" } } as const),
       );
-      const expected = classifyPortFailure({
+      // preparationFailureFromRun re-derives `stage` from run.count() (0
+      // here, so "preflight") rather than forwarding failure()'s own
+      // `stage: approval.transition`; only status/reason are asserted
+      // against the classifier's output.
+      const { status, reason } = classifyPortFailure({
         result: rawPortResult,
         stage: "pack_commit",
         remoteWrites: 0,
@@ -1951,8 +1955,8 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
             pack: { ...prep.pack, commitPublicationBranch: commit },
           },
         ),
-      ).resolves.toMatchObject({ ok: false, ...expected });
-      expect(expected).toMatchObject({ status: "denied", reason: "nonce_mismatch" });
+      ).resolves.toMatchObject({ ok: false, status, reason, remoteWrites: 0 });
+      expect({ status, reason }).toEqual({ status: "denied", reason: "nonce_mismatch" });
       expect(consume).toHaveBeenCalledTimes(1);
       expect(commit).not.toHaveBeenCalled();
     });
