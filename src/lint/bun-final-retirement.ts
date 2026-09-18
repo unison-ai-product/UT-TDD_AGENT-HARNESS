@@ -36,6 +36,7 @@ export type BunRetirementReason =
   | "generation_id_mismatch"
   | "artifact_digest_mismatch"
   | "retirement_subject_mismatch"
+  | "predecessor_equals_retirement"
   | "predecessor_not_ancestor"
   | "q0_binding_invalid"
   | "reachable_bun_surface"
@@ -274,6 +275,13 @@ export function classifyTrackedSurface(
     path.startsWith(".ut-tdd/") ||
     path.includes("/fixtures/") ||
     path.includes("/fixture/");
+  // Test files are retained fixtures by default, but explicitly named runtime
+  // launcher tests are a production-like surface registry.  Do not let those
+  // executable paths hide behind the broad tests/ fixture branch.
+  const productionLikeTestPath =
+    /^tests\/(?:runner|launcher|hook|setup)[^/]*\.(?:test|spec)\.[cm]?[jt]sx?$/iu.test(path);
+  if (productionLikeTestPath && (ACTIVE_BUN_EXECUTION.test(line) || ACTIVE_BUN_IMPORT.test(line)))
+    return "reachable_production";
   if (fixturePath)
     return hasRetainedFixtureEvidence(path, line) ? "retained_fixture" : "indeterminate";
   if (
@@ -609,7 +617,8 @@ export function admitFinalBunRetirement(input: BunRetirementInput): BunRetiremen
   if (!f0bSubject || !f0cSubject || !workflowRevision || !retirementSubject)
     throw new BunRetirementError("receipt_schema_invalid");
   if (f0bSubject !== f0cSubject) throw new BunRetirementError("subject_revision_mismatch");
-  if (f0cSubject !== retirementSubject) throw new BunRetirementError("retirement_subject_mismatch");
+  if (f0cSubject === retirementSubject)
+    throw new BunRetirementError("predecessor_equals_retirement");
   if (input.f0b.artifact_digest !== input.f0c.artifact_digest)
     throw new BunRetirementError("artifact_digest_mismatch");
 

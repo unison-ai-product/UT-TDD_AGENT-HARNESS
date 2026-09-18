@@ -27,6 +27,9 @@ import { gitObjectIdSchema } from "../src/schema/node-slice-admission.ts";
 
 const BUN_RUNTIME = ["b", "un"].join("");
 const subject = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
+const predecessorSubject = execFileSync("git", ["rev-parse", "HEAD^"], {
+  encoding: "utf8",
+}).trim();
 const digest = `sha256:${"a".repeat(64)}`;
 function stableValue(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(stableValue);
@@ -55,15 +58,15 @@ const f0c: NodeBanF0cAggregateBinding = {
   schema_version: "node-generation-aggregate.v1",
   generation_id: "node-ci-retirement-run-1",
   artifact_digest: digest,
-  subject_revision: subject,
-  workflow_revision: subject,
+  subject_revision: predecessorSubject,
+  workflow_revision: predecessorSubject,
   run_id: "retirement-run-1",
   run_attempt: 1,
 };
 const f0b: NodeBanGenerationBinding = {
   lane: "linux",
   generation_id: "node-sealed-retirement-1",
-  subject_revision: subject,
+  subject_revision: predecessorSubject,
   artifact_digest: digest,
   receipt_digest: "b".repeat(64),
   runtime: "node",
@@ -74,8 +77,8 @@ const lanes = ["linux", "windows"].map((lane) => ({
   generation_id: f0c.generation_id,
   sealed_generation_id: lane === "linux" ? f0b.generation_id : "node-windows-sealed-1",
   artifact_digest: digest,
-  subject_revision: subject,
-  workflow_revision: subject,
+  subject_revision: predecessorSubject,
+  workflow_revision: predecessorSubject,
   run_id: f0c.run_id,
   run_attempt: f0c.run_attempt,
   conclusion: "success" as const,
@@ -164,7 +167,7 @@ function q0Receipt() {
   observer.proveNoFallback("download", "none");
   const result = runNodeBanAudit({
     repoRoot: process.cwd(),
-    subjectRevision: subject,
+    subjectRevision: predecessorSubject,
     f0c,
     node: f0b,
     f0cLanes: lanes,
@@ -179,7 +182,7 @@ function cleanInput(overrides: Partial<BunRetirementInput> = {}): BunRetirementI
   const q0 = q0Receipt();
   const unsigned = {
     schema_version: "bun-final-retirement.v1" as const,
-    subject_revision: subject,
+    subject_revision: predecessorSubject,
     generation_id: f0b.generation_id,
     artifact_digest: f0c.artifact_digest,
     retirement_subject: subject,
@@ -236,6 +239,12 @@ describe("CAND-NODEBOOT-023/027/028/208 final Bun retirement", () => {
     expect(classifyTrackedSurface("tests/fixture.bin", "", true)).toBe("indeterminate");
   });
 
+  it("U-PACKBUN-006: runtime launcher tests cannot hide an executable Bun path", () => {
+    expect(
+      classifyTrackedSurface("tests/runner.test.ts", 'spawn("bun", ["run", "src/cli.ts"]);'),
+    ).toBe("reachable_production");
+  });
+
   it("U-PACKBUN-006: independent admission oracle rejects a reachable surface", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-bun-surface-oracle-"));
     try {
@@ -272,12 +281,50 @@ describe("CAND-NODEBOOT-023/027/028/208 final Bun retirement", () => {
     }
   });
 
+  it("U-PACKBUN-006: independently rejects an indeterminate inventory surface", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-bun-indeterminate-oracle-"));
+    try {
+      mkdirSync(join(root, "tests"), { recursive: true });
+      writeFileSync(join(root, "tests", "fixture.txt"), `${BUN_RUNTIME}\n`);
+      execFileSync("git", ["init", "-q", root]);
+      execFileSync("git", ["-C", root, "config", "user.email", "test@example.invalid"]);
+      execFileSync("git", ["-C", root, "config", "user.name", "UT-TDD test"]);
+      execFileSync("git", ["-C", root, "add", "."]);
+      execFileSync("git", ["-C", root, "commit", "-qm", "synthetic indeterminate Bun surface"]);
+      const surfaces = collectFinalRetirementSurfaceInventory(root);
+      expect(surfaces).toEqual([
+        { path: "tests/fixture.txt", symbol: "line:1:bun", classification: "indeterminate" },
+      ]);
+      expect(() => verifyFinalRetirementSurfaces(root, surfaces)).toThrow(
+        new BunRetirementError("indeterminate_bun_surface"),
+      );
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it("accepts the complete existing F0b/F0c/Q0 chain and emits prefixed tuple ids", () => {
     const result = admitFinalBunRetirement(cleanInput());
     expect(result.ok).toBe(true);
     expect(gitObjectIdSchema.safeParse(result.tuple.subject_revision).success).toBe(true);
-    expect(result.tuple.subject_revision).toBe(`git-sha1:${subject}`);
+    expect(result.tuple.subject_revision).toBe(`git-sha1:${predecessorSubject}`);
     expect(result.tuple.retirement_subject).toBe(`git-sha1:${subject}`);
+  });
+
+  it("rejects a predecessor receipt whose subject is the retirement commit", () => {
+    const sameSubject = {
+      ...f0c,
+      subject_revision: subject,
+      workflow_revision: subject,
+    };
+    expect(() =>
+      admitFinalBunRetirement(
+        cleanInput({
+          f0b: { ...f0b, subject_revision: subject },
+          f0c: sameSubject,
+        }),
+      ),
+    ).toThrow(new BunRetirementError("predecessor_equals_retirement"));
   });
 
   it.each([
