@@ -4672,6 +4672,38 @@
         "revision": 2,
         "content_digest": "sha256:a5ee5e26958d4feb7beea212713cc0df089580541e5d8f7c815ef32f501aaa25"
       }
+    },
+    {
+      "sequence": 293,
+      "previous_record_digest": "sha256:56c0b4f5b6975183b47fcc2bea9d27ba8393c3915db0415cfbb0a3bd7a7bad0d",
+      "record_digest": "sha256:655fd70869ce12b4151dbb79ac2bdc2788cb6ea3338ecc3d73ff244c2fdfc90e",
+      "command_id": "plan-draft:issue-418:consumer-runtime-release-install:forward:1",
+      "receipt_id": "certificate:cd11a1885b1c948d89519002a2cec009",
+      "receipt_digest": "sha256:6ff54c22c274330ee17de30fb7e04190d67af142ef8f0ce5ce78aaa57decfcee",
+      "decision_digest": "sha256:99250283c31442ea80527c591f7c0e3be3a9287ced94b872376524b243123773",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-628-pack-consumer-runtime-release-install.md",
+        "plan_id": "PLAN-L7-628-pack-consumer-runtime-release-install",
+        "asset_id": "plan:cd11a1885b1c948d89519002a2cec009",
+        "revision": 1,
+        "content_digest": "sha256:809820cd7134414d31ebdd0decccae02ececc8c32fdd645606f1385c8a83b09c"
+      }
+    },
+    {
+      "sequence": 294,
+      "previous_record_digest": "sha256:655fd70869ce12b4151dbb79ac2bdc2788cb6ea3338ecc3d73ff244c2fdfc90e",
+      "record_digest": "sha256:541d190249f06bb3ff293b4f08b1c09ab66af800f444746fb03ff584856d0fce",
+      "command_id": "plan-draft:issue-418:consumer-runtime-release-install:reverse:1",
+      "receipt_id": "certificate:748ef764bbbea943cee1eb43aee87623",
+      "receipt_digest": "sha256:b0f22fa3d74ee420ae0d6a23120338e830ebf5ba711cd128c84b432b0b0a3ca5",
+      "decision_digest": "sha256:d2b5387da1a8daceab58cdb89f17d1900d6b5e18581d5f3e13573dcee2ebbeae",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-628-pack-consumer-runtime-release-install-backfill.md",
+        "plan_id": "PLAN-REVERSE-628-pack-consumer-runtime-release-install-backfill",
+        "asset_id": "plan:748ef764bbbea943cee1eb43aee87623",
+        "revision": 1,
+        "content_digest": "sha256:e9ac685853cc3ae356827ae52de627b7e296c87ede7f39717eb7c971ba81680c"
+      }
     }
   ]
 }
