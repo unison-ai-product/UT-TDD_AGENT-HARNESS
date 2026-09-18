@@ -626,9 +626,7 @@ export function registerDistributionCommands(program: Command): void {
 
         const unmanagedExistingPaths =
           repoExists && pruneError === null
-            ? collectFilesystemCandidatePaths(repoDir).filter(
-                (path) => !plannedArtifacts.has(path),
-              )
+            ? collectFilesystemCandidatePaths(repoDir).filter((path) => !plannedArtifacts.has(path))
             : existingBefore;
         const manifestDir = join(repoRoot, ".ut-tdd", "pack-sync");
         ensureDir(manifestDir, { recursive: true });

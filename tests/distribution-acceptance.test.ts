@@ -13,13 +13,13 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { collectDistributionCandidatePaths } from "../src/cli/distribution.ts";
 import {
   buildCleanDistributionPlan,
   cleanDistributionSourcePath,
   gitAddPathspecCommands,
   transformCleanDistributionArtifact,
 } from "../src/setup/index.ts";
-import { collectDistributionCandidatePaths } from "../src/cli/distribution.ts";
 import { removeTestTree } from "./support/temp-tree.ts";
 
 const repoRoot = process.cwd();
