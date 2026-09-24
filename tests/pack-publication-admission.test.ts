@@ -46,14 +46,22 @@ function fixture(
     readonly operationId?: string;
     readonly pullRequest?: string;
     readonly idempotencyKey?: string;
+    readonly expectedMainOid?: string;
   } = {},
 ): PackPublicationAdmissionInput {
   const operationId = identity.operationId ?? receipt.binding.operationId;
   const pullRequest = identity.pullRequest ?? receipt.identity.pullRequest;
   const idempotencyKey = identity.idempotencyKey ?? "idem-adm-fixture-0001";
+  const treeDigest = receipt.identity.treeDigest;
+  const expectedMainOid = identity.expectedMainOid ?? receipt.identity.baseOid;
   const inputReceipt: PackPublicationPreparationReceipt = {
     ...receipt,
-    identity: { ...receipt.identity, pullRequest },
+    identity: {
+      ...receipt.identity,
+      pullRequest,
+      treeDigest,
+      baseOid: expectedMainOid,
+    },
     binding: { operationId },
     read_back_observation: {
       ...receipt.read_back_observation,
@@ -76,7 +84,7 @@ function fixture(
         branch: `pack/publication/${operationId}`,
         headOid: inputReceipt.identity.headOid,
         baseOid: inputReceipt.identity.baseOid,
-        treeDigest: inputReceipt.identity.treeDigest,
+        treeDigest,
       }),
     ),
     review: vi.fn(() =>
@@ -95,14 +103,14 @@ function fixture(
         checks: [{ context: "pack-check", conclusion: "success" }],
       }),
     ),
-    mergeBase: vi.fn(() => ok({ mergeBase: inputReceipt.identity.baseOid })),
+    mergeBase: vi.fn(() => ok({ mergeBase: expectedMainOid })),
     staging: vi.fn(() =>
       ok({
         operationId,
         idempotencyKey,
-        treeDigest: inputReceipt.identity.treeDigest,
+        treeDigest,
         manifestDigest: sha("f"),
-        expectedMainOid: inputReceipt.identity.baseOid,
+        expectedMainOid,
         branch: `pack/publication/${operationId}`,
       }),
     ),
@@ -585,5 +593,57 @@ describe("Pack publication admission observation binding", () => {
 
     expect(publicationIntentIdentity).toBe(sha("8"));
     expect(first).not.toBe(second);
+  });
+
+  it("U-PACKPUB-ADM-013 rejects a reused operation ID with a different observation bundle", async () => {
+    const seeded = fixture();
+    expect((await admitPackPublication(seeded)).status).toBe("admitted");
+    vi.mocked(seeded.ledger.append).mockClear();
+    vi.mocked(seeded.ledger.appendObservation).mockClear();
+
+    const input = fixture(
+      { ledger: seeded.ledger },
+      { operationId: "op-adm-fixture-0001", idempotencyKey: "idem-adm-fixture-0002", pullRequest: "4243" },
+    );
+    await expectAdmissionDeny(input, "admission_operation_replay");
+  });
+
+  it("U-PACKPUB-ADM-014 rejects a reused idempotency key with a different observation bundle", async () => {
+    const seeded = fixture();
+    expect((await admitPackPublication(seeded)).status).toBe("admitted");
+    vi.mocked(seeded.ledger.append).mockClear();
+    vi.mocked(seeded.ledger.appendObservation).mockClear();
+
+    const input = fixture(
+      { ledger: seeded.ledger },
+      { operationId: "op-adm-fixture-0002", idempotencyKey: "idem-adm-fixture-0001", pullRequest: "4243" },
+    );
+    await expectAdmissionDeny(input, "admission_idempotency_replay");
+  });
+
+  it("U-PACKPUB-ADM-015 rejects reusing a PR under a different operation", async () => {
+    const seeded = fixture();
+    expect((await admitPackPublication(seeded)).status).toBe("admitted");
+    vi.mocked(seeded.ledger.append).mockClear();
+    vi.mocked(seeded.ledger.appendObservation).mockClear();
+
+    const input = fixture(
+      { ledger: seeded.ledger },
+      { operationId: "op-adm-fixture-0002", idempotencyKey: "idem-adm-fixture-0002" },
+    );
+    await expectAdmissionDeny(input, "admission_pr_replay");
+  });
+
+  it("U-PACKPUB-ADM-020 rejects a reused PR with a different expected main OID", async () => {
+    const seeded = fixture();
+    expect((await admitPackPublication(seeded)).status).toBe("admitted");
+    vi.mocked(seeded.ledger.append).mockClear();
+    vi.mocked(seeded.ledger.appendObservation).mockClear();
+
+    const input = fixture(
+      { ledger: seeded.ledger },
+      { operationId: "op-adm-fixture-0002", idempotencyKey: "idem-adm-fixture-0002", expectedMainOid: oid("9") },
+    );
+    await expectAdmissionDeny(input, "admission_pr_expected_main_conflict");
   });
 });
