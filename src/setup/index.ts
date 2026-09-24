@@ -126,6 +126,28 @@ export {
   runPackAuthoringSmoke,
 } from "./pack-authoring-smoke.ts";
 export {
+  admitPackPublication,
+  derivePackPublicationAdmissionApprovalBinding,
+  derivePackPublicationAdmissionIntentIdentity,
+  derivePackPublicationAdmissionRecordDigest,
+  derivePackPublicationPreparationReceiptDigest,
+  PACK_PUBLICATION_ADMISSION_COVERAGE,
+  type PackPublicationAdmissionApprovalReference,
+  type PackPublicationAdmissionConfiguration,
+  type PackPublicationAdmissionInput,
+  type PackPublicationAdmissionLedger,
+  type PackPublicationAdmissionLedgerRecord,
+  type PackPublicationAdmissionObserver,
+  type PackPublicationAdmissionResult,
+  type PackPublicationAdmissionSealedValues,
+  type PackPublicationCheckObservation,
+  type PackPublicationMergeBaseObservation,
+  type PackPublicationPullRequestAdmissionObservation,
+  type PackPublicationRepositoryObservation,
+  type PackPublicationReviewObservation,
+  type PackPublicationSealedStagingObservation,
+} from "./pack-publication-admission.ts";
+export {
   bootstrapProjectIdentity,
   canonicalProjectIdentityBytes,
   PROJECT_IDENTITY_PATH,
