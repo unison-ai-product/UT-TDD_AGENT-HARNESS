@@ -47,18 +47,18 @@ status: draft
 github_issue_id: 418
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:869421fe7bfaee78ce98fc02a7c67b92
-  command_id: plan-revise:issue-418:pr670-release-commit-binding:forward:r4:484a44d7f59c
-  admitted_at: 2026-09-24T03:15:40.306Z
-  source_digest: sha256:8d30d3ddcf4a63d8a52c28673ba4652adaf098cd424750d896d2040fd096b0b8
-  decision_digest: sha256:22342e362737e5b2c4f604445e88f424a40aceb7a649364fde6e42f092098ae5
-  receipt_digest: sha256:9bf8dbad663f64df0b9b8b1bee60deea91846c30b525ff9d0fd94a2c1436c4df
+  receipt_id: certificate:ae651fd89a86d895d3aad1d0459f2caa
+  command_id: plan-revise:issue-418:pr671-r1-flag:forward:r5:dfe02eb55a2f
+  admitted_at: 2026-09-24T03:37:18.813Z
+  source_digest: sha256:e29ead3ced26cd437a348ae5ba8199bf22712b787af002e52875fb9c9a2fa6ea
+  decision_digest: sha256:e9233c4fc51f513c33a6fc46e3fb3dc73dcc94665511afcb5e53fdc6b1a40520
+  receipt_digest: sha256:ef478f001d48145ec9293e5e75e5c49dba21b3e8a6da1bb5dd4eea2c36a45483
   binding:
     path: docs/plans/PLAN-L7-628-pack-consumer-runtime-release-install.md
     plan_id: PLAN-L7-628-pack-consumer-runtime-release-install
     asset_id: plan:cd11a1885b1c948d89519002a2cec009
-    revision: 4
-    content_digest: sha256:8d30d3ddcf4a63d8a52c28673ba4652adaf098cd424750d896d2040fd096b0b8
+    revision: 5
+    content_digest: sha256:e29ead3ced26cd437a348ae5ba8199bf22712b787af002e52875fb9c9a2fa6ea
   route:
     signal: feature_addition
     mode: add-feature
@@ -76,11 +76,10 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-628-pack-consumer-runtime-release-install
-    target_revision: 4
+    target_revision: 5
     phase: forward_merge
-  escape_reason: "PR #670 (PR-1) の実装で判明した §5.1 の契約の抜け (release/manifest.yaml
-    の自己参照) を、release commit C2 と artifact source C1 の束縛として freeze する改訂 (advisor
-    claude-fable-5 案 A)。"
+  escape_reason: "PR #671 Sol r1 FLAG 2 件 (§6.1 の tag ref と source revision
+    の等置、CANDIDATE-U-PACKRT-011(b) の実現不能な変異) の是正改訂。"
 ---
 
 # PLAN-L7-628: Pack Release から consumer runtime を有効化する producer / installer
@@ -217,7 +216,8 @@ consumer 固有の値 (`consumer_root`、`runtime_root`、`operation_id`、`atte
    `release/manifest.yaml` を読み、`--tag` に対応する channel の release の `artifactSourceCommit` を C1 とする (§2.2)。
    producer は次の全てを満たさなければ出力前に fail-close する。
    - C2 の tree に `release/manifest.yaml` があり、既存の manifest schema を満たす。
-   - C1 が C2 の first-parent 祖先である (C1 = C2 は manifest を含められないので不可)。
+   - C1 が C2 の first-parent 祖先である。祖先の探索は C2 の first parent から始め、C2 自身を含めない
+     (manifest は自分を含む commit の SHA を書けないので、C1 = C2 は通常の Git では起こらない)。
    - `git diff --name-only C1 C2` の全 path が `release/` 配下である。
 2. compiled ESM と receipt は既存の `buildNodeGeneration({ candidateRevision: C1 })` (`src/runtime/node-bootstrap.ts`) で生成する。
    `consumer-runtime.json` の `release.source_revision` と `generation.subject_revision` は C1、`release.tag` は `--tag` の値とする。
@@ -260,7 +260,7 @@ node <release-dir>/<tag>.ut-tdd.mjs setup --solo --consumer-runtime-release <rel
   `generation.subject_revision` (いずれも §5.1 の C1) を検査する。anchor で固定された `consumer-runtime.json` の中で PF-5 の値が
   食い違う経路を残さない。consumer は git を持たないので、tag が C2 を指すことと C1..C2 の差分の検査は producer (§5.1) だけが
   行う。
-- GitHub の `v*` tag ruleset は tag ref (= source revision) だけを保護し、Release asset は tag と独立に upload / delete できる。
+- GitHub の `v*` tag ruleset は tag ref (= release commit C2。artifact source revision C1 とは別の commit) だけを保護し、Release asset は tag と独立に upload / delete できる。
   tag の immutability を asset 完全性の根拠にしない。
 - 署名鍵による検証は高影響境界 (secret / 外部前提) のため本 PLAN の対象外とし、必要になった時点で PO 承認を得て別 PLAN にする。
 
