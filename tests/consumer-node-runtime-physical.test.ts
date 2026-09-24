@@ -7,6 +7,7 @@ import {
   mkdtempSync,
   readdirSync,
   readFileSync,
+  realpathSync,
   rmSync,
   statSync,
   writeFileSync,
@@ -640,7 +641,8 @@ describe("physical consumer Node runtime adapter", () => {
   // the checkout-deletion launch path; it does not claim the full 007 oracle
   // (external syscall counters and all Pack topology variants are separate).
   it("CANDIDATE-U-PACKNODE-001/002/003: setup and configured provider hooks run after producer checkout deletion", async () => {
-    const root = mkdtempSync(join(tmpdir(), "ut-tdd-physical-e2e-"));
+    // PLAN-L7-628 §6.2: consumer_root は 8.3 alias を解決した canonical path で記録する。
+    const root = realpathSync.native(mkdtempSync(join(tmpdir(), "ut-tdd-physical-e2e-")));
     roots.push(root);
     execFileSync("git", ["init", "-q", root], { stdio: "ignore" });
     writeFileSync(join(root, "ut-tdd.project.json"), "{}\n");
