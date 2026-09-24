@@ -267,11 +267,3 @@ fail-closeする。
 ## 訂正注記 (2026-08-06)
 
 `.claude/hooks/run-bun.ts` (hook launcher shim) は PLAN-L7-462 PR-C (Bun 撤退 step 1) で撤去され、hooks は node 直起動になった。generates から当該 artifact を除去 (plan-artifact-existence の phantom 化対応)。launcher の挙動契約は consumer 向け template (src/setup/templates.ts "common/run-bun.ts") 側に存続し、その撤去は PLAN-L7-462 step 2 が所有する。
-
-## 訂正注記 (2026-09-18、PLAN-L7-668 が訂正)
-
-受入条件 2 の「dropped `blockOnFailure` を fail-close」、`U-CXHOOK-004` の `missing_block_on_failure`、および 2026-06-29 follow-up
-discharge の `blockOnFailure: true` 記述は、現行 Codex の hook schema (`HookHandlerConfig`) に存在しない field を前提にしていた。
-同じく `"command": "node"` + `"args": [...]` の形式は現行 Codex で `args` が無視され、全 hook が無音で失敗していた (Issue #668)。
-これらの claim は `PLAN-L7-668-codex-hook-command-schema` が訂正する (command は 1 文字列、schema 外 field は fail-close、
-guard の block は exit 2)。本 PLAN のその他の契約は維持する。
