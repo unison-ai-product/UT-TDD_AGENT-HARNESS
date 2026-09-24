@@ -5024,6 +5024,22 @@
         "revision": 5,
         "content_digest": "sha256:5b50283947b06586cfafae2fe310f5099459829f1c59110481966d7c0517a174"
       }
+    },
+    {
+      "sequence": 315,
+      "previous_record_digest": "sha256:79c50e6696c7697fe400851b9dd2a036667609eb0cca9e561d328392a53a7e44",
+      "record_digest": "sha256:1f7cc173f6bdf0e9e3cffc854fe4fb481135332e72768b104ce7627ab73b4360",
+      "command_id": "plan-revise:issue-676:plan-confirm:reverse:r5:61268ff22939",
+      "receipt_id": "certificate:c12feae16a3cc5e33a1a3f7280199cfa",
+      "receipt_digest": "sha256:82b7d967b2dcfac30ac8beb548ac403410d44c0466eb8b8a43febfbd1a2d4856",
+      "decision_digest": "sha256:ba14200b5df415cfb8a0018eac54183df5b0eff4df086304900f609cf8bceba4",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-676-release-consumer-dev-start-backfill.md",
+        "plan_id": "PLAN-REVERSE-676-release-consumer-dev-start-backfill",
+        "asset_id": "plan:2db3028c656fba04cb6610d7278dfa56",
+        "revision": 5,
+        "content_digest": "sha256:c66f82bf6aa5b49e4cf0ffed2252a7f14ccbf42f9ee727bc1aa63bd835eaa144"
+      }
     }
   ]
 }
