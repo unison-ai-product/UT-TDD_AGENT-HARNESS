@@ -985,6 +985,8 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
       ],
     });
     expect(without.missingRequired).toContain(".node-version");
+    // Apache-2.0 §4(d): NOTICE は allowlist だけでなく必須 path でもある (required から外すと Red)。
+    expect(without.missingRequired).toContain("NOTICE");
   });
 
   it("U-SETUP-011e: clean Pack workflow reuses the package test:pack script", () => {

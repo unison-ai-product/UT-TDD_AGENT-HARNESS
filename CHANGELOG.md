@@ -27,7 +27,7 @@ are marked `signatureCreated=false` in each manifest.
 ### Fixed
 
 - README: quick start now begins from `git clone`, the status badge reflects
-  the public MIT distribution, the wrapper resolution order includes the
+  the public distribution, the wrapper resolution order includes the
   repo-local CLI stage, and two command reference errors are corrected
   (`skill suggest --plan` takes a PLAN id; Codex launches as
   `codex exec -m <model> -`).
