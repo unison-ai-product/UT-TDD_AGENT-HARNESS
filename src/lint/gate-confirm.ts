@@ -1,5 +1,6 @@
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
+import { resolveVModelRoots } from "../vmodel/design-root.ts";
 import { fmValue } from "./shared.ts";
 
 export interface GateStatus {
@@ -79,6 +80,7 @@ export function parseConfirmDoc(
 }
 
 function walkMarkdown(dir: string): string[] {
+  if (!existsSync(dir)) return [];
   const out: string[] = [];
   for (const entry of readdirSync(dir)) {
     const p = join(dir, entry);
@@ -90,9 +92,11 @@ function walkMarkdown(dir: string): string[] {
 }
 
 export function loadGateConfirmDocs(repoRoot: string = process.cwd()): GateConfirmDocs {
-  const gateText = readFileSync(join(repoRoot, "docs", "governance", "gate-design.md"), "utf8");
-  const designRoot = join(repoRoot, "docs", "design", "harness");
-  const testRoot = join(repoRoot, "docs", "test-design", "harness");
+  const gatePath = join(repoRoot, "docs", "governance", "gate-design.md");
+  const gateText = existsSync(gatePath) ? readFileSync(gatePath, "utf8") : "";
+  const roots = resolveVModelRoots(repoRoot);
+  const designRoot = join(repoRoot, roots.designRoot);
+  const testRoot = join(repoRoot, roots.testDesignRoot);
   const docs: ConfirmDoc[] = [];
   for (const p of walkMarkdown(designRoot)) {
     docs.push(parseConfirmDoc(p, readFileSync(p, "utf8"), "design"));
