@@ -299,6 +299,22 @@ describe("clean distribution local acceptance smoke", () => {
         }
       }
 
+      // PR-1 の package は、workspace の現在状態ではなく実在 tag が指す
+      // source revision を入力にする。clean fixture 自体を Git 化し、package
+      // 呼び出し前に tag を作って source revision を明示する。
+      runGit(cleanRoot, ["init", "--quiet"]);
+      runGit(cleanRoot, ["config", "user.email", "test@example.invalid"]);
+      runGit(cleanRoot, ["config", "user.name", "UT test"]);
+      runGit(cleanRoot, ["add", "--", "."]);
+      runGit(cleanRoot, ["commit", "--quiet", "-m", "fixture"]);
+      runGit(cleanRoot, ["tag", "v0.0.0-accept"]);
+      expect(
+        execFileSync("git", ["rev-parse", "--verify", "refs/tags/v0.0.0-accept^{commit}"], {
+          cwd: cleanRoot,
+          encoding: "utf8",
+        }).trim(),
+      ).toMatch(/^[a-f0-9]{40}$/);
+
       const fakeCodex = writeFakeCodex(cleanRoot);
       writeLocalUtTddShim(cleanRoot);
       const env = {
@@ -312,6 +328,16 @@ describe("clean distribution local acceptance smoke", () => {
 
       const install = runNpm(cleanRoot, ["ci", "--no-audit", "--no-fund"], env);
       expect(install.status, install.stderr || install.stdout).toBe(0);
+      const tagAfterInstall = runNode(
+        cleanRoot,
+        [
+          "-e",
+          "const { spawnSync } = require('node:child_process'); const r = spawnSync('git', ['rev-parse', '--verify', 'refs/tags/v0.0.0-accept^{commit}'], { encoding: 'utf8' }); process.stdout.write(JSON.stringify({ status: r.status, stdout: r.stdout, stderr: r.stderr }));",
+        ],
+        env,
+      );
+      expect(tagAfterInstall.status, tagAfterInstall.stderr || tagAfterInstall.stdout).toBe(0);
+      expect(JSON.parse(tagAfterInstall.stdout).stdout.trim()).toMatch(/^[a-f0-9]{40}$/);
       const packPackageJson = JSON.parse(readFileSync(join(cleanRoot, "package.json"), "utf8")) as {
         scripts: Record<string, string>;
       };

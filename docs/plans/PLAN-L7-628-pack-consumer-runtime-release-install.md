@@ -27,6 +27,10 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-628-pack-consumer-runtime-release-install.md
     artifact_type: markdown_doc
+  - artifact_path: src/setup/consumer-runtime-release.ts
+    artifact_type: source_module
+  - artifact_path: tests/pack-consumer-runtime-release.test.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L6-101-pack-independent-multi-consumer-acceptance.md
   requires:
@@ -47,18 +51,18 @@ status: draft
 github_issue_id: 418
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:9405f2904b48a199af7c071086b9ca9f
-  command_id: plan-revise:issue-418:pr665-r2-flag:forward:r3:29fb33f10d40
-  admitted_at: 2026-09-18T10:51:14.153Z
-  source_digest: sha256:69af2e228a14a52948fb1c04a50e4b29eaf7d64850d3a687b227f8277c9bd980
-  decision_digest: sha256:fa861ead84f1c7367cd9d71ead5eaef675c92955bd81df1a112a4014683a0667
-  receipt_digest: sha256:27715cb8a7eb89b0d9a8a0a48087b1b5e716b8629db6fbe4dd4875089e06a94c
+  receipt_id: certificate:809f0939fe22f37d6987b41fa75cbc3c
+  command_id: plan-revise:issue-418:pr670-ci-red:forward:r4:producer
+  admitted_at: 2026-09-24T02:00:00.000Z
+  source_digest: sha256:2c5e8ea87ececba610b0d9b71377131c40fef340948405af4fcad0b417bf985d
+  decision_digest: sha256:20b8934f55a2c8a1f7d4bfaa0ae2090af3fec058a61eadf98895ccc5fe90f050
+  receipt_digest: sha256:265f63e0ac7c1329c1641782e8c3ccb1369d8d5146db8023a3f72908aaeff6df
   binding:
     path: docs/plans/PLAN-L7-628-pack-consumer-runtime-release-install.md
     plan_id: PLAN-L7-628-pack-consumer-runtime-release-install
     asset_id: plan:cd11a1885b1c948d89519002a2cec009
-    revision: 3
-    content_digest: sha256:69af2e228a14a52948fb1c04a50e4b29eaf7d64850d3a687b227f8277c9bd980
+    revision: 4
+    content_digest: sha256:2c5e8ea87ececba610b0d9b71377131c40fef340948405af4fcad0b417bf985d
   route:
     signal: feature_addition
     mode: add-feature
@@ -78,8 +82,7 @@ admission_receipt:
     target_plan_id: PLAN-L7-628-pack-consumer-runtime-release-install
     target_revision: 3
     phase: forward_merge
-  escape_reason: "PR #665 Sol r2 FLAG (previous #2 anchor の外部束縛、#3 runtime_root
-    導出式と独立 oracle) の是正改訂。"
+  escape_reason: "PR #670 の CI 赤を是正し、実装と test-design の trace を rev4 へ束ねる。"
 ---
 
 # PLAN-L7-628: Pack Release から consumer runtime を有効化する producer / installer

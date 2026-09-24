@@ -279,11 +279,14 @@ function hexDigest(bytes: Uint8Array): string {
 function resolveTagRevision(repoRoot: string, tag: string): string {
   if (!/^[A-Za-z0-9._/-]+$/.test(tag) || tag.includes(".."))
     throw new Error("distribution package tag is invalid");
-  const result = spawnSync("git", ["rev-parse", "--verify", `refs/tags/${tag}^{commit}`], {
-    cwd: repoRoot,
-    encoding: "utf8",
-    stdio: ["ignore", "pipe", "pipe"],
-  });
+  const result = spawnSync(
+    "git",
+    ["-C", repoRoot, "rev-parse", "--verify", `refs/tags/${tag}^{commit}`],
+    {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    },
+  );
   const revision = result.status === 0 ? result.stdout.trim() : "";
   if (!/^[a-f0-9]{40}$/.test(revision)) throw new Error(`tag source revision unavailable: ${tag}`);
   return revision;
@@ -319,8 +322,24 @@ function installTaggedDependencies(sourceRoot: string): void {
     throw new Error(`tag source npm ci failed: ${install.stderr ?? install.stdout ?? ""}`);
 }
 
+function canonicalPathForContainment(path: string): string {
+  const resolved = resolve(path);
+  const missingSegments: string[] = [];
+  let existing = resolved;
+  while (!existsSync(existing)) {
+    const parent = dirname(existing);
+    if (parent === existing) break;
+    missingSegments.unshift(relative(parent, existing));
+    existing = parent;
+  }
+  let canonical = existsSync(existing) ? realpathSync.native(existing) : resolved;
+  for (const segment of missingSegments) canonical = join(canonical, segment);
+  const normalized = canonical.replaceAll("\\", "/");
+  return process.platform === "win32" ? normalized.toLowerCase() : normalized;
+}
+
 function pathWithin(parent: string, child: string): boolean {
-  const rel = relative(resolve(parent), resolve(child));
+  const rel = relative(canonicalPathForContainment(parent), canonicalPathForContainment(child));
   return rel === "" || (rel !== ".." && !rel.startsWith(`..${sep}`) && !isAbsolute(rel));
 }
 
@@ -332,15 +351,10 @@ export function assertProducerPathsOutsideHome(input: {
   };
   readonly homeDirectory: string;
 }): void {
-  const home = existsSync(input.homeDirectory)
-    ? realpathSync.native(input.homeDirectory)
-    : resolve(input.homeDirectory);
-  const producerDirectory = realpathSync.native(input.repoRoot);
-  if (pathWithin(home, producerDirectory))
+  if (pathWithin(input.homeDirectory, input.repoRoot))
     throw new Error("consumer runtime producer workdir is user-home scoped");
   for (const toolPath of [input.receipt.node.path, input.receipt.npm.cli_path]) {
-    const canonicalTool = existsSync(toolPath) ? realpathSync.native(toolPath) : resolve(toolPath);
-    if (pathWithin(home, canonicalTool))
+    if (pathWithin(input.homeDirectory, toolPath))
       throw new Error("consumer runtime toolchain is user-home scoped");
   }
 }
@@ -457,16 +471,12 @@ export async function packageConsumerRuntimeRelease(input: {
 }> {
   const sourceRevision = resolveTagRevision(input.repoRoot, input.tag);
   const homeDirectory = input.homeDirectory ?? homedir();
-  const canonicalHome = existsSync(homeDirectory)
-    ? realpathSync.native(homeDirectory)
-    : resolve(homeDirectory);
-  const canonicalRepoRoot = realpathSync.native(input.repoRoot);
-  if (pathWithin(canonicalHome, canonicalRepoRoot))
+  if (pathWithin(homeDirectory, input.repoRoot))
     throw new Error("consumer runtime producer workdir is user-home scoped");
   if (existsSync(input.outDir) && readdirSync(input.outDir).length > 0)
     throw new Error("distribution package output directory is not empty");
   const scratch = mkdtempSync(
-    join(dirname(canonicalRepoRoot), ".ut-tdd-consumer-runtime-package-"),
+    join(dirname(resolve(input.repoRoot)), ".ut-tdd-consumer-runtime-package-"),
   );
   const assetsStage = join(scratch, "assets");
   const cleanStage = join(scratch, "clean");

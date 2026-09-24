@@ -217,6 +217,19 @@ describe("Pack consumer runtime release producer contract", () => {
           homeDirectory: root,
         }),
       ).toThrow("user-home scoped");
+      if (process.platform === "win32") {
+        const mixedCaseRoot = root.toUpperCase().replaceAll("\\", "/");
+        expect(() =>
+          assertProducerPathsOutsideHome({
+            repoRoot: outside,
+            receipt: {
+              node: { path: `${mixedCaseRoot}/node.exe` },
+              npm: { cli_path: join(outside, "npm-cli.js") },
+            },
+            homeDirectory: root,
+          }),
+        ).toThrow("user-home scoped");
+      }
     } finally {
       rmSync(root, { recursive: true, force: true });
       rmSync(outside, { recursive: true, force: true });
