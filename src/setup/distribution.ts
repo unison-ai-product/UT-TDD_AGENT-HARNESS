@@ -108,6 +108,7 @@ export function releaseArtifactFileNames(sourceTag: string): {
 const CLEAN_REQUIRED_PATHS = [
   "README.md",
   "LICENSE",
+  "NOTICE",
   "package.json",
   ".node-version",
   "src/cli.ts",
@@ -160,6 +161,7 @@ const CLEAN_ALLOW_FILES = new Set([
   ".github/workflows/harness-check.yml",
   "CHANGELOG.md",
   "LICENSE",
+  "NOTICE",
   "README.md",
   "biome.json",
   "package-lock.json",
