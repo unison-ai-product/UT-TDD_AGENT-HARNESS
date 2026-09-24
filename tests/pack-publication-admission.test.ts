@@ -146,8 +146,9 @@ function withObservation(
 async function expectAdmissionDeny(
   input: PackPublicationAdmissionInput,
   reason: string,
-): Promise<void> {
-  expect(await admitPackPublication(input)).toMatchObject({
+): Promise<Awaited<ReturnType<typeof admitPackPublication>>> {
+  const result = await admitPackPublication(input);
+  expect(result).toMatchObject({
     ok: false,
     status: "denied",
     reason,
@@ -156,6 +157,7 @@ async function expectAdmissionDeny(
   });
   expect(input.ledger.appendObservation).not.toHaveBeenCalled();
   expect(input.ledger.append).not.toHaveBeenCalled();
+  return result;
 }
 
 describe("Pack publication admission observation binding", () => {
@@ -303,7 +305,9 @@ describe("Pack publication admission observation binding", () => {
         }),
       ),
     });
-    await expectAdmissionDeny(input, "admission_pr_mismatch");
+    expect(await expectAdmissionDeny(input, "admission_pr_mismatch")).toMatchObject({
+      reason: "admission_pr_mismatch",
+    });
   });
 
   it("U-PACKPUB-ADM-002 denies a different observed PR head", async () => {
@@ -318,7 +322,9 @@ describe("Pack publication admission observation binding", () => {
         }),
       ),
     });
-    await expectAdmissionDeny(input, "admission_head_mismatch");
+    expect(await expectAdmissionDeny(input, "admission_head_mismatch")).toMatchObject({
+      reason: "admission_head_mismatch",
+    });
   });
 
   it("U-PACKPUB-ADM-003 denies a different observed PR base", async () => {
@@ -333,12 +339,16 @@ describe("Pack publication admission observation binding", () => {
         }),
       ),
     });
-    await expectAdmissionDeny(input, "admission_base_mismatch");
+    expect(await expectAdmissionDeny(input, "admission_base_mismatch")).toMatchObject({
+      reason: "admission_base_mismatch",
+    });
   });
 
   it("U-PACKPUB-ADM-004 denies a different merge base", async () => {
     const input = withObservation({ mergeBase: vi.fn(() => ok({ mergeBase: oid("9") })) });
-    await expectAdmissionDeny(input, "admission_merge_base_mismatch");
+    expect(await expectAdmissionDeny(input, "admission_merge_base_mismatch")).toMatchObject({
+      reason: "admission_merge_base_mismatch",
+    });
   });
 
   it("U-PACKPUB-ADM-005 denies a review for another PR", async () => {
@@ -354,7 +364,9 @@ describe("Pack publication admission observation binding", () => {
         }),
       ),
     });
-    await expectAdmissionDeny(input, "admission_review_pr_mismatch");
+    expect(await expectAdmissionDeny(input, "admission_review_pr_mismatch")).toMatchObject({
+      reason: "admission_review_pr_mismatch",
+    });
   });
 
   it("U-PACKPUB-ADM-006 denies malformed reviewed-head OIDs before equality", async () => {
@@ -371,7 +383,9 @@ describe("Pack publication admission observation binding", () => {
           }),
         ),
       });
-      await expectAdmissionDeny(input, "admission_review_head_invalid");
+      expect(await expectAdmissionDeny(input, "admission_review_head_invalid")).toMatchObject({
+        reason: "admission_review_head_invalid",
+      });
     }
   });
 
@@ -388,7 +402,9 @@ describe("Pack publication admission observation binding", () => {
         }),
       ),
     });
-    await expectAdmissionDeny(input, "admission_review_not_approved");
+    expect(await expectAdmissionDeny(input, "admission_review_not_approved")).toMatchObject({
+      reason: "admission_review_not_approved",
+    });
   });
 
   it("U-PACKPUB-ADM-009 denies malformed closing receipt digests", async () => {
@@ -409,7 +425,9 @@ describe("Pack publication admission observation binding", () => {
           }),
         ),
       });
-      await expectAdmissionDeny(input, "admission_review_receipt_invalid");
+      expect(await expectAdmissionDeny(input, "admission_review_receipt_invalid")).toMatchObject({
+        reason: "admission_review_receipt_invalid",
+      });
     }
   });
 
@@ -422,14 +440,18 @@ describe("Pack publication admission observation binding", () => {
         }),
       ),
     });
-    await expectAdmissionDeny(input, "admission_checks_head_mismatch");
+    expect(await expectAdmissionDeny(input, "admission_checks_head_mismatch")).toMatchObject({
+      reason: "admission_checks_head_mismatch",
+    });
   });
 
   it("U-PACKPUB-ADM-011 denies an empty observed required-check set", async () => {
     const input = withObservation({
       repository: vi.fn(() => ok({ ...configuration, requiredContexts: [] })),
     });
-    await expectAdmissionDeny(input, "admission_checks_missing");
+    expect(await expectAdmissionDeny(input, "admission_checks_missing")).toMatchObject({
+      reason: "admission_checks_missing",
+    });
   });
 
   it("U-PACKPUB-ADM-012 denies a failed required check", async () => {
@@ -441,7 +463,9 @@ describe("Pack publication admission observation binding", () => {
         }),
       ),
     });
-    await expectAdmissionDeny(input, "admission_check_not_success");
+    expect(await expectAdmissionDeny(input, "admission_check_not_success")).toMatchObject({
+      reason: "admission_check_not_success",
+    });
   });
 
   it("U-PACKPUB-ADM-040 keeps observer failure indeterminate", async () => {
