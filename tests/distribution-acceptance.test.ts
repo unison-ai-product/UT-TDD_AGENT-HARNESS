@@ -306,6 +306,7 @@ describe("clean distribution local acceptance smoke", () => {
       const provenancePath = join(cleanRoot, provenance);
       mkdirSync(dirname(provenancePath), { recursive: true });
       cpSync(join(repoRoot, provenance), provenancePath);
+      cpSync(join(repoRoot, "tsconfig.node.json"), join(cleanRoot, "tsconfig.node.json"));
 
       // PR-1 の package は、workspace の現在状態ではなく実在 tag が指す
       // source revision を入力にする。clean fixture 自体を Git 化し、package
