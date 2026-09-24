@@ -232,12 +232,17 @@ describe("repo-local review verdict custody (U-RVATT-030..035)", () => {
   it("U-RVATT-038: 壊れた監査JSONLはtyped indeterminateで停止する", () => {
     const root = gitRoot();
     try {
+      const digest = reviewIdentityDigest(request());
+      const receiptPath = join(root, ".ut-tdd", "review", "receipts", `${digest}.json`);
+      mkdirSync(dirname(receiptPath), { recursive: true });
+      writeFileSync(receiptPath, '{"verdict":"PASS"}\n', "utf8");
       const auditPath = reviewCustodyAuditPath(root);
       mkdirSync(dirname(auditPath), { recursive: true });
       writeFileSync(auditPath, '{"broken":\n', "utf8");
       const result = issueReviewRequest({ repoRoot: root, request: request(), strict: true });
       expect(result).toEqual({ ok: false, reason: "attempt_outcome_indeterminate" });
       expect(existsSync(join(root, ".ut-tdd", "review", "requests"))).toBe(false);
+      expect(readFileSync(receiptPath, "utf8")).toBe('{"verdict":"PASS"}\n');
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
