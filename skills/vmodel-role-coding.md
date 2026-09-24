@@ -9,7 +9,7 @@ applies_to:
   drive_models:
     - Forward
     - Add-feature
-triggers: コードの書き方の規約: 命名・実装方針・設計原則・用語。コードを書く/レビューする前に読む。
+triggers: "コードの書き方の規約: 命名・実装方針・設計原則・用語。コードを書く/レビューする前に読む。"
 ---
 
 # vmodel-role-coding

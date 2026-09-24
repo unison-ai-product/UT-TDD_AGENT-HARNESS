@@ -14,7 +14,7 @@ applies_to:
     - Forward
     - Add-feature
     - Reverse
-triggers: vmodel-docgen の敵対検証（グッドハート対策の第2層）。「ゲートは緑だが中身は大丈夫か」を確認するとき、build/review/ の敵対検証パケットを渡されたとき、docs/review.yaml の運用、攻撃者/防御者/反例/敵対的レビュー・抜き取りレビューに言及されたときに必ず使用する。依頼側・攻撃者・防御者それぞれの規約を含む。
+triggers: "vmodel-docgen の敵対検証（グッドハート対策の第2層）。「ゲートは緑だが中身は大丈夫か」を確認するとき、build/review/ の敵対検証パケットを渡されたとき、docs/review.yaml の運用、攻撃者/防御者/反例/敵対的レビュー・抜き取りレビューに言及されたときに必ず使用する。依頼側・攻撃者・防御者それぞれの規約を含む。"
 ---
 
 # vmodel-substance-review

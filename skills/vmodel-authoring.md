@@ -17,7 +17,7 @@ applies_to:
     - Forward
     - Add-feature
     - Reverse
-triggers: vmodel-docgen の docs/*.yaml を書く・編集するときの書式規約。設計書YAMLのブロック(sec/sub/para/bullets/kv/table/note/gap)、一覧表、ID命名、spec.defines によるトレース宣言、meta/history/toc の書き方を定める。docs/ 配下のYAMLを1行でも変更する前に必ず参照する。
+triggers: "vmodel-docgen の docs/*.yaml を書く・編集するときの書式規約。設計書YAMLのブロック(sec/sub/para/bullets/kv/table/note/gap)、一覧表、ID命名、spec.defines によるトレース宣言、meta/history/toc の書き方を定める。docs/ 配下のYAMLを1行でも変更する前に必ず参照する。"
 ---
 
 # vmodel-authoring

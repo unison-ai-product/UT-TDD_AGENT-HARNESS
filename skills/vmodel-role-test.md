@@ -11,7 +11,7 @@ applies_to:
   drive_models:
     - Forward
     - Add-feature
-triggers: テスト戦略: 計画・検証方式・技法・カバレッジ基準・各レベルのテスト設計。テストを書く前に読む。
+triggers: "テスト戦略: 計画・検証方式・技法・カバレッジ基準・各レベルのテスト設計。テストを書く前に読む。"
 ---
 
 # vmodel-role-test

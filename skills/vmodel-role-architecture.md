@@ -10,7 +10,7 @@ applies_to:
   drive_models:
     - Forward
     - Add-feature
-triggers: システムの構造: 方式・構成・ドメイン境界・配置。実装前に全体像を掴むために読む。
+triggers: "システムの構造: 方式・構成・ドメイン境界・配置。実装前に全体像を掴むために読む。"
 ---
 
 # vmodel-role-architecture

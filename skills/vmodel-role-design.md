@@ -10,7 +10,7 @@ applies_to:
   drive_models:
     - Forward
     - Add-feature
-triggers: 機能の設計対応: 要件→基本→詳細のダイジェスト。個別機能を実装する前に該当IDの行を読む。
+triggers: "機能の設計対応: 要件→基本→詳細のダイジェスト。個別機能を実装する前に該当IDの行を読む。"
 ---
 
 # vmodel-role-design
