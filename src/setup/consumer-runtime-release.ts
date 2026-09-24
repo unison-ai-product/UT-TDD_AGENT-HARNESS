@@ -95,8 +95,11 @@ function stringValue(value: unknown, name: string): string {
   return value;
 }
 
-function base64Value(value: unknown, name: string): string {
-  const text = stringValue(value, name);
+function base64Value(value: unknown, name: string, allowEmpty = false): string {
+  if (typeof value !== "string" || (!allowEmpty && value.length === 0))
+    throw new ConsumerRuntimeReleaseValidationError(`${name}_required`);
+  const text = value;
+  if (allowEmpty && text.length === 0) return text;
   if (!BASE64.test(text) || Buffer.from(text, "base64").toString("base64") !== text)
     throw new ConsumerRuntimeReleaseValidationError(`${name}_base64_invalid`);
   return text;
@@ -261,7 +264,7 @@ export function validateConsumerRuntimeRelease(input: unknown): ConsumerRuntimeR
       return {
         path: stringValue(entry.path, "attestation.entry.path"),
         mode,
-        content_base64: base64Value(entry.content_base64, "attestation.entry.content_base64"),
+        content_base64: base64Value(entry.content_base64, "attestation.entry.content_base64", true),
       } as const;
     }),
   };

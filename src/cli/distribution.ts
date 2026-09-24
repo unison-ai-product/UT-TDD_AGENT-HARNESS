@@ -292,7 +292,105 @@ function resolveTagRevision(repoRoot: string, tag: string): string {
   return revision;
 }
 
-function createTaggedSourceSnapshot(repoRoot: string, tag: string, root: string): string {
+export type ConsumerRuntimeReleaseProducerErrorCode =
+  | "consumer_runtime_release_manifest_unavailable"
+  | "consumer_runtime_release_manifest_invalid"
+  | "consumer_runtime_release_channel_unavailable"
+  | "consumer_runtime_release_artifact_source_not_first_parent_ancestor"
+  | "consumer_runtime_release_diff_outside_release";
+
+export class ConsumerRuntimeReleaseProducerError extends Error {
+  readonly code: ConsumerRuntimeReleaseProducerErrorCode;
+
+  constructor(code: ConsumerRuntimeReleaseProducerErrorCode, detail?: string) {
+    super(`${code}${detail ? `:${detail}` : ""}`);
+    this.name = "ConsumerRuntimeReleaseProducerError";
+    this.code = code;
+  }
+}
+
+function gitOutput(repoRoot: string, args: readonly string[]): string {
+  const result = spawnSync("git", ["-C", repoRoot, ...args], {
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  if (result.status !== 0) throw new Error(`git command failed: ${args.join(" ")}`);
+  return result.stdout;
+}
+
+export interface ConsumerRuntimeReleaseSourceBinding {
+  readonly releaseRevision: string;
+  readonly artifactSourceRevision: string;
+  readonly channel: "canary" | "stable";
+}
+
+export function resolveConsumerRuntimeReleaseSourceBinding(
+  repoRoot: string,
+  tag: string,
+): ConsumerRuntimeReleaseSourceBinding {
+  const releaseRevision = resolveTagRevision(repoRoot, tag);
+  let rawManifest: unknown;
+  try {
+    rawManifest = parseYaml(
+      readGitBlob(repoRoot, releaseRevision, "release/manifest.yaml").toString("utf8"),
+    );
+  } catch {
+    throw new ConsumerRuntimeReleaseProducerError("consumer_runtime_release_manifest_unavailable");
+  }
+  const parsedManifest = parsePublicationManifest(rawManifest);
+  if (!parsedManifest.ok)
+    throw new ConsumerRuntimeReleaseProducerError(
+      "consumer_runtime_release_manifest_invalid",
+      parsedManifest.error,
+    );
+  const channel = tag.includes("-canary.") ? "canary" : "stable";
+  const selected = resolveReleaseChannel(parsedManifest.value, channel);
+  if (!selected.ok || !("artifacts" in selected.release))
+    throw new ConsumerRuntimeReleaseProducerError(
+      "consumer_runtime_release_channel_unavailable",
+      channel,
+    );
+  const artifactSourceRevision = selected.release.artifactSourceCommit;
+  let firstParent: string;
+  try {
+    const parents = gitOutput(repoRoot, ["rev-list", "--parents", "-n", "1", releaseRevision])
+      .trim()
+      .split(/\s+/);
+    firstParent = parents[1] ?? "";
+    if (!/^[a-f0-9]{40}$/.test(firstParent)) throw new Error("first parent unavailable");
+  } catch {
+    throw new ConsumerRuntimeReleaseProducerError(
+      "consumer_runtime_release_artifact_source_not_first_parent_ancestor",
+    );
+  }
+  const firstParentAncestors = new Set(
+    gitOutput(repoRoot, ["rev-list", "--first-parent", firstParent])
+      .split(/\r?\n/)
+      .map((value) => value.trim())
+      .filter(Boolean),
+  );
+  if (!firstParentAncestors.has(artifactSourceRevision))
+    throw new ConsumerRuntimeReleaseProducerError(
+      "consumer_runtime_release_artifact_source_not_first_parent_ancestor",
+    );
+  const changedPaths = gitOutput(repoRoot, [
+    "diff",
+    "--name-only",
+    "-z",
+    artifactSourceRevision,
+    releaseRevision,
+  ])
+    .split("\0")
+    .filter(Boolean);
+  if (changedPaths.some((path) => !path.startsWith("release/")))
+    throw new ConsumerRuntimeReleaseProducerError(
+      "consumer_runtime_release_diff_outside_release",
+      changedPaths.filter((path) => !path.startsWith("release/")).join(","),
+    );
+  return { releaseRevision, artifactSourceRevision, channel };
+}
+
+function createTaggedSourceSnapshot(repoRoot: string, revision: string, root: string): string {
   const sourceRoot = join(root, "source");
   const clone = spawnSync("git", ["clone", "--shared", "--no-checkout", repoRoot, sourceRoot], {
     cwd: repoRoot,
@@ -300,7 +398,7 @@ function createTaggedSourceSnapshot(repoRoot: string, tag: string, root: string)
     stdio: ["ignore", "pipe", "pipe"],
   });
   if (clone.status !== 0) throw new Error(`tag source clone failed: ${clone.stderr ?? ""}`);
-  const checkout = spawnSync("git", ["checkout", "--detach", `refs/tags/${tag}`], {
+  const checkout = spawnSync("git", ["checkout", "--detach", revision], {
     cwd: sourceRoot,
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
@@ -373,6 +471,7 @@ function readGitBlob(repoRoot: string, revision: string, path: string): Buffer {
 async function buildConsumerRuntimeAdmissionInput(input: {
   readonly repoRoot: string;
   readonly tag: string;
+  readonly releaseRevision: string;
   readonly sourceRevision: string;
 }): Promise<{
   readonly value: ConsumerRuntimeReleaseAdmissionInput;
@@ -381,7 +480,7 @@ async function buildConsumerRuntimeAdmissionInput(input: {
 }> {
   const controlManifestBytes = readGitBlob(
     input.repoRoot,
-    input.sourceRevision,
+    input.releaseRevision,
     "release/manifest.yaml",
   );
   let rawManifest: unknown;
@@ -469,7 +568,8 @@ export async function packageConsumerRuntimeRelease(input: {
   readonly assetDigests: Record<string, string>;
   readonly consumerAnchorDigest: string;
 }> {
-  const sourceRevision = resolveTagRevision(input.repoRoot, input.tag);
+  const sourceBinding = resolveConsumerRuntimeReleaseSourceBinding(input.repoRoot, input.tag);
+  const sourceRevision = sourceBinding.artifactSourceRevision;
   const homeDirectory = input.homeDirectory ?? homedir();
   if (pathWithin(homeDirectory, input.repoRoot))
     throw new Error("consumer runtime producer workdir is user-home scoped");
@@ -484,7 +584,7 @@ export async function packageConsumerRuntimeRelease(input: {
   ensureDir(assetsStage, { recursive: true });
   ensureDir(cleanStage, { recursive: true });
   try {
-    const sourceRoot = createTaggedSourceSnapshot(input.repoRoot, input.tag, scratch);
+    const sourceRoot = createTaggedSourceSnapshot(input.repoRoot, sourceRevision, scratch);
     const sourcePaths = collectDistributionCandidatePaths(sourceRoot);
     const exportPlan = buildCleanDistributionPlan({ paths: sourcePaths, sourceTag: input.tag });
     const secretScan = runDistributionSecretScan({
@@ -546,6 +646,7 @@ export async function packageConsumerRuntimeRelease(input: {
     const admission = await buildConsumerRuntimeAdmissionInput({
       repoRoot: input.repoRoot,
       tag: input.tag,
+      releaseRevision: sourceBinding.releaseRevision,
       sourceRevision,
     });
     const runtime = buildConsumerRuntimeRelease({

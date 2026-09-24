@@ -1,9 +1,16 @@
+import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { assertProducerPathsOutsideHome } from "../src/cli/distribution.ts";
+import { stringify } from "yaml";
+import {
+  assertProducerPathsOutsideHome,
+  type ConsumerRuntimeReleaseProducerError,
+  packageConsumerRuntimeRelease,
+  resolveConsumerRuntimeReleaseSourceBinding,
+} from "../src/cli/distribution.ts";
 import {
   deriveArtifactInventoryDigest,
   deriveReleaseId,
@@ -93,6 +100,119 @@ const receipt = Buffer.from(
   }),
 );
 
+function fixtureGit(root: string, args: readonly string[]): string {
+  return execFileSync("git", args, { cwd: root, encoding: "utf8" }).trim();
+}
+
+function releaseManifestForFixture(artifactSourceCommit: string): Record<string, unknown> {
+  const content = Buffer.from("export const fixture = true;\n", "utf8");
+  const publicationArtifacts = [
+    {
+      sourcePath: "src/artifact.ts",
+      destinationPath: "src/artifact.ts",
+      mode: "100644" as const,
+      size: content.length,
+      contentDigest: digestConsumerRuntimeBytes(content),
+    },
+  ];
+  const artifactSetDigest = digestMaterializedReleaseEntries([
+    { path: "src/artifact.ts", mode: "100644", content },
+  ]);
+  const publicationBase = {
+    materializerVersion: "1",
+    artifactSourceCommit,
+    artifactSetDigest,
+    artifactInventoryDigest: deriveArtifactInventoryDigest(publicationArtifacts),
+    releaseAssetInventoryDigest: `sha256:${"c".repeat(64)}`,
+    artifacts: publicationArtifacts,
+  };
+  const releaseId = deriveReleaseId("1", artifactSourceCommit, artifactSetDigest);
+  return {
+    schema_version: "v2",
+    releases: {
+      [releaseId]: {
+        ...publicationBase,
+        releaseRecordDigest: deriveReleaseRecordDigest(publicationBase),
+      },
+    },
+    channels: { canary: releaseId, stable: releaseId },
+    channelOrder: ["canary", "stable"],
+  };
+}
+
+function createReleaseBindingFixture(
+  variant: "normal" | "tag-at-c1" | "side-branch" | "second-parent" | "src-mutation" | "schema",
+): { root: string; tag: string; c1: string; c2: string | null; side?: string } {
+  const root = mkdtempSync(join(tmpdir(), "ut-tdd-packrt-011-"));
+  mkdirSync(join(root, "src"), { recursive: true });
+  writeFileSync(join(root, "src", "artifact.ts"), "export const fixture = true;\n", "utf8");
+  fixtureGit(root, ["init", "--quiet"]);
+  fixtureGit(root, ["config", "user.email", "test@example.invalid"]);
+  fixtureGit(root, ["config", "user.name", "UT test"]);
+  fixtureGit(root, ["add", "--", "."]);
+  fixtureGit(root, ["commit", "--quiet", "-m", "fixture artifact"]);
+  const c1 = fixtureGit(root, ["rev-parse", "HEAD"]);
+  const tag = "v0.2.0-canary.2";
+  if (variant === "tag-at-c1") {
+    fixtureGit(root, ["tag", tag]);
+    return { root, tag, c1, c2: null };
+  }
+
+  if (variant === "side-branch" || variant === "second-parent") {
+    fixtureGit(root, ["checkout", "-qb", "side"]);
+    writeFileSync(join(root, "side.txt"), "side branch\n", "utf8");
+    fixtureGit(root, ["add", "--", "side.txt"]);
+    fixtureGit(root, ["commit", "--quiet", "-m", "side artifact"]);
+    const sideArtifact = fixtureGit(root, ["rev-parse", "HEAD"]);
+    if (variant === "side-branch") {
+      fixtureGit(root, ["checkout", "-qb", "release", c1]);
+      mkdirSync(join(root, "release"), { recursive: true });
+      writeFileSync(
+        join(root, "release", "manifest.yaml"),
+        stringify(releaseManifestForFixture(sideArtifact)),
+        "utf8",
+      );
+      fixtureGit(root, ["add", "--", "release/manifest.yaml"]);
+      fixtureGit(root, ["commit", "--quiet", "-m", "release manifest"]);
+    } else {
+      fixtureGit(root, ["checkout", "-qb", "release", c1]);
+      fixtureGit(root, ["checkout", "side"]);
+      mkdirSync(join(root, "release"), { recursive: true });
+      writeFileSync(
+        join(root, "release", "manifest.yaml"),
+        stringify(releaseManifestForFixture(sideArtifact)),
+        "utf8",
+      );
+      fixtureGit(root, ["add", "--", "release/manifest.yaml"]);
+      fixtureGit(root, ["commit", "--quiet", "-m", "side manifest"]);
+      fixtureGit(root, ["checkout", "release"]);
+      fixtureGit(root, ["merge", "--no-ff", "--no-edit", "side"]);
+    }
+  } else {
+    fixtureGit(root, ["checkout", "-qb", "release", c1]);
+    mkdirSync(join(root, "release"), { recursive: true });
+    writeFileSync(
+      join(root, "release", "manifest.yaml"),
+      variant === "schema" ? "schema_version: v2\n" : stringify(releaseManifestForFixture(c1)),
+      "utf8",
+    );
+    if (variant === "src-mutation") {
+      writeFileSync(
+        join(root, "src", "release-mutation.ts"),
+        "export const changed = true;\n",
+        "utf8",
+      );
+      fixtureGit(root, ["add", "--", "release/manifest.yaml", "src/release-mutation.ts"]);
+    } else {
+      fixtureGit(root, ["add", "--", "release/manifest.yaml"]);
+    }
+    fixtureGit(root, ["commit", "--quiet", "-m", "release manifest"]);
+  }
+  const c2 = fixtureGit(root, ["rev-parse", "HEAD"]);
+  fixtureGit(root, ["tag", tag]);
+  return { root, tag, c1, c2 };
+}
+
 function validDocument(): ConsumerRuntimeRelease {
   return {
     schema_version: "ut-tdd.consumer-runtime.v1",
@@ -142,6 +262,54 @@ function validDocument(): ConsumerRuntimeRelease {
 }
 
 describe("Pack consumer runtime release producer contract", () => {
+  it("U-PACKRT-011: binds the tagged release commit to a first-parent artifact source", async () => {
+    const normal = createReleaseBindingFixture("normal");
+    try {
+      expect(resolveConsumerRuntimeReleaseSourceBinding(normal.root, normal.tag)).toEqual({
+        releaseRevision: normal.c2,
+        artifactSourceRevision: normal.c1,
+        channel: "canary",
+      });
+    } finally {
+      rmSync(normal.root, { recursive: true, force: true });
+    }
+
+    const cases = [
+      ["tag-at-c1", "consumer_runtime_release_manifest_unavailable"],
+      ["side-branch", "consumer_runtime_release_artifact_source_not_first_parent_ancestor"],
+      ["second-parent", "consumer_runtime_release_artifact_source_not_first_parent_ancestor"],
+      ["src-mutation", "consumer_runtime_release_diff_outside_release"],
+      ["schema", "consumer_runtime_release_manifest_invalid"],
+    ] as const;
+    for (const [variant, code] of cases) {
+      const fixture = createReleaseBindingFixture(variant);
+      const outDir = mkdtempSync(join(tmpdir(), "ut-tdd-packrt-011-assets-"));
+      try {
+        await expect(
+          packageConsumerRuntimeRelease({
+            repoRoot: fixture.root,
+            tag: fixture.tag,
+            outDir,
+            homeDirectory: join(fixture.root, "synthetic-home"),
+            installDependencies: () => {
+              throw new Error("must fail before dependency installation");
+            },
+            buildGeneration: async () => {
+              throw new Error("must fail before generation");
+            },
+          }),
+        ).rejects.toMatchObject({ code } satisfies Pick<
+          ConsumerRuntimeReleaseProducerError,
+          "code"
+        >);
+        expect(readdirSync(outDir)).toEqual([]);
+      } finally {
+        rmSync(fixture.root, { recursive: true, force: true });
+        rmSync(outDir, { recursive: true, force: true });
+      }
+    }
+  });
+
   it("U-PACKRT-001: names the exact five release assets and excludes manifest.json", () => {
     expect(releaseArtifactFileNames("v0.2.0-canary.2")).toEqual({
       tarball: "v0.2.0-canary.2.tar.gz",
