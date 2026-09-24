@@ -139,10 +139,31 @@ indeterminate を deny や success へ丸めず、成功観測を欠いたまま
 admission 成功 fixture でも remote write ledger と approval consume は 0 であり、#626 が副作用を
 発行しないことを対照で確認する。
 
+## 4.1 Slice 1 の bounded coverage
+
+実装 PR #664 は次の6 candidateだけを昇格する。各 candidate は production source の
+`src/setup/pack-publication-admission.ts` と focused test `tests/pack-publication-admission.test.ts`
+へ trace し、PRの exact HEAD と同じ test-design revisionで検証する。
+
+| candidate | production / test trace | expected outcome |
+| --- | --- | --- |
+| `CANDIDATE-PACKPUB-ADM-007` | reviewed head mismatch | `admission_review_head_mismatch` / write 0 |
+| `CANDIDATE-PACKPUB-ADM-036` | missing preparation receipt | `admission_receipt_missing` / observer call 0 / write 0 |
+| `CANDIDATE-PACKPUB-ADM-040` | review observer timeout | typed `indeterminate` / admission 0 / write 0 |
+| `CANDIDATE-PACKPUB-ADM-042` | repository observer schema error | typed `indeterminate` / admission 0 / write 0 |
+| `CANDIDATE-PACKPUB-ADM-048` | admitted happy path | §4 の candidate 048 正本行をそのまま検証（admitted record 1、sequence 連番、previous record digest 連鎖、journal bundle digest 一致、remote write 0、approval consume 0、CAS token mint 0、intent 実行 0） |
+| `CANDIDATE-PACKPUB-ADM-057` | approval nonce sensitivity | approval binding digest changes / intent identity unchanged |
+
+残りの candidate は後続 Slice に明示的に deferred とし、この表を70 candidate 全件の実装・検証完了とは扱わない。
+
 ## 5. 実装 PR への昇格規則
 
-実装 PR は 70 candidate を (PLAN-L7-626 §8 の対応表の順で)各 1 件以上の独立 test へ昇格し、実装時に正規の test ID
-(`U-PACKPUB-ADM-*`) を割り当てる。typed reason、入力 digest、observer call 順、admission
-record digest、approval/remote write count を直接検査する。恒真 assertion、dummy observer、既存
-#625 nonce の流用、publish/CAS port の no-op 偽装では Green にしない。production source 変更、
-CI/review evidence は実装 PR の責務であり、この draft pair-freeze では追加しない。
+実装 PR は Slice 単位で bounded candidate を各 1 件以上の独立 test へ昇格し、実装時に正規の
+test ID (`U-PACKPUB-ADM-*`) を割り当てる。Slice 1 (#664) は §4.1 の6件だけを対象とし、
+残りの candidate は後続 Slice へ明示的に deferred とする。全 Slice の昇格が完了した時点で、
+PLAN-L7-626 §6 の 70 candidate 全件が成立する。
+
+各 Slice は typed reason、入力 digest、observer call 順、admission record digest、
+approval/remote write count を直接検査する。恒真 assertion、dummy observer、既存 #625 nonce
+の流用、publish/CAS port の no-op 偽装では Green にしない。production source 変更、
+CI/review evidence は各実装 PR の責務であり、この pair-freeze では追加しない。
