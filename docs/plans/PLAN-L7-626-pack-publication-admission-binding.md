@@ -29,10 +29,6 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-626-pack-publication-admission-binding.md
     artifact_type: markdown_doc
-  - artifact_path: src/setup/pack-publication-admission.ts
-    artifact_type: source_module
-  - artifact_path: tests/pack-publication-admission.test.ts
-    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L7-565-pack-publication-atomic-ref-cas.md
   requires: []
@@ -44,48 +40,23 @@ dependencies:
     - docs/plans/PLAN-REVERSE-626-pack-publication-admission-binding-backfill.md
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/624
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/626
-review_evidence:
-  - reviewer: claude-opus-5
-    review_kind: cross_agent
-    reviewed_at: 2026-09-24T02:32:56.612Z
-    tests_green_at: 2026-09-24T02:25:19Z
-    verdict: PASS-WEAK
-    worker_model: gpt-6-luna
-    reviewer_model: claude-opus-5
-    subject_head: 79c22a452c01ca5311392e1ab2c6373914cecb2c
-    scope: "PR #664 Slice 1 source/test preflight; candidate
-      007/036/040/042/048/057; blocking 0"
-    green_commands:
-      - kind: unit_test
-        command: node scripts/run-vitest-snapshot.ts
-          tests/pack-publication-admission.test.ts --reporter=dot
-        runner: node
-        scope: targeted
-        exit_code: 0
-        completed_at: 2026-09-24T02:25:19Z
-        evidence_path: tests/pack-publication-admission.test.ts
-        output_digest: sha256:e646b52762428365d9dffb0571b1da878c560110537c30acdd1daa87fcf54f1f
-        anchor_commit: 79c22a452c01ca5311392e1ab2c6373914cecb2c
-    citations:
-      - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/664
-      - canonical receipt
-        49a720fa84051412bb03fd7dc99183133b178a80c3cbe963753b813a2c6d26f2
-status: confirmed
+review_evidence: []
+status: draft
 github_issue_id: 626
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:35958ede3f27a820f6c7d12589bb1db3
-  command_id: plan-revise:issue-626:slice1-confirm:r15:79c22a45
-  admitted_at: 2026-09-24T02:34:30.000Z
-  source_digest: sha256:1243cda6a666398da08789ab2a9a79fe3a875687e93cc2125b1ae5de78364b1b
-  decision_digest: sha256:ea543162fccb7cf85b9f866475b0dea3704a09dcc94dad7c688add35afa760b9
-  receipt_digest: sha256:0324197910bf762887fb0ceb0894b5e6216df18e79be1bdbf14b290ac3d2f15c
+  receipt_id: certificate:c174835c62b03cda190ec7eed9c2e5ff
+  command_id: plan-revise:issue-626:slice1-trace:r14:a3411f65627f
+  admitted_at: 2026-09-24T01:29:41.930Z
+  source_digest: sha256:365a68b57a4360b6e202036ec22e886d77eb9423772917e33332f536549d07dc
+  decision_digest: sha256:7dc46ef3220a3d9177b074b57b1481e40385ecadb09ab7f03213838578b0add7
+  receipt_digest: sha256:a5631776798a57c1a981f5ed17e94b10bd158513a5072805bf12bfae049425f6
   binding:
     path: docs/plans/PLAN-L7-626-pack-publication-admission-binding.md
     plan_id: PLAN-L7-626-pack-publication-admission-binding
     asset_id: plan:529eea3e2017a6d17049746ae353398d
-    revision: 15
-    content_digest: sha256:1243cda6a666398da08789ab2a9a79fe3a875687e93cc2125b1ae5de78364b1b
+    revision: 14
+    content_digest: sha256:365a68b57a4360b6e202036ec22e886d77eb9423772917e33332f536549d07dc
   route:
     signal: feature_addition
     mode: add-feature
@@ -103,10 +74,10 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-626-pack-publication-admission-binding
-    target_revision: 15
+    target_revision: 14
     phase: forward_merge
-  escape_reason: "Issue #626 Slice 1: exact-head Claude preflight PASS-WEAK と
-    targeted Green による source/test ownership confirm"
+  escape_reason: "Issue #626 Slice 1: exact-head FLAG 2件のdocs-only是正（draft
+    generates、#664 coverage）"
 ---
 
 # PLAN-L7-626: Pack公開 admission observation binding
@@ -346,8 +317,9 @@ adapter の大規模再構成は変更しない。
 ## 5.1 Slice 1 の実装・trace 境界
 
 実装 PR #664 は、70 candidate 全体を一度に昇格させず、最初の bounded Slice 1 として次の
-6 candidate だけを実装・検証する。本 PLAN rev15 は非著者preflightとGreen証跡を受けて
-confirmedとなり、#664 Slice 1 の出荷 source/test を `generates` に登録する。test-design の candidate ID、production symbol、focused test の対応は
+6 candidate だけを実装・検証する。draft の本 PLAN は出荷 source/test を `generates` に
+登録しない。#664 が本契約を取り込み、同じ PLAN revision の confirm とともに両ファイルの
+所有を登録する。test-design の candidate ID、production symbol、focused test の対応は
 #664 の更新後 HEAD と CI で照合する。
 
 | Slice 1 candidate | 実装・検証対象 | 境界 |
@@ -373,10 +345,6 @@ Slice 1 は §5.1 の6件だけを対象とする。全 Slice の検証が完了
 全件を共有 registry へ昇格し、non-author closing review を取得する。
 
 ## 7. 改訂記録
-
-- rev 15 (2026-09-24、Codex worker lane): PR #664 exact HEAD `79c22a45` の
-  Claude Opus preflight PASS-WEAK / blocking 0 と targeted snapshot 11/11 Green を受け、
-  Slice 1 source/test の所有を `generates` に登録して confirmed 化。残り candidate は §5.1 に従い後続 Slice とする。
 
 - rev 14 (2026-09-24、Codex contract lane): 非著者 FLAG 2 件を是正。draft PLAN の
   出荷 source/test `generates` を外し、#664 側で confirm と同時に所有する。#664 の
