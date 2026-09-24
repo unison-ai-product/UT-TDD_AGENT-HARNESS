@@ -678,6 +678,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
       paths: [
         "README.md",
         "LICENSE",
+        "NOTICE",
         "package.json",
         ".node-version",
         "src/cli.ts",
@@ -714,6 +715,8 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     expect(plan.ok).toBe(true);
     expect(plan.channel).toBe("clean-repo-plus-tarball");
     expect(plan.artifactPaths).toContain("LICENSE");
+    // Apache-2.0 §4(d): 再配布物は NOTICE を伴う。
+    expect(plan.artifactPaths).toContain("NOTICE");
     expect(plan.artifactPaths).toContain("docs/templates/adapter/AGENTS.md");
     expect(plan.artifactPaths).toContain("docs/templates/adapter/.codex/hooks.json");
     expect(plan.artifactPaths).toContain("docs/templates/adapter/.claude/agents/code-reviewer.md");
@@ -776,6 +779,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     const sourcePaths = [
       "README.md",
       "LICENSE",
+      "NOTICE",
       "package.json",
       ".node-version",
       "src/cli.ts",
@@ -976,6 +980,8 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
       ],
     });
     expect(without.missingRequired).toContain(".node-version");
+    // Apache-2.0 §4(d): NOTICE は allowlist だけでなく必須 path でもある (required から外すと Red)。
+    expect(without.missingRequired).toContain("NOTICE");
   });
 
   it("U-SETUP-011e: clean Pack workflow reuses the package test:pack script", () => {
