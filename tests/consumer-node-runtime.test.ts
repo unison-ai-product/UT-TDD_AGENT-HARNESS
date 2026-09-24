@@ -99,7 +99,7 @@ function wrapperBundleFor(root: string): {
 function shortPathFor(path: string): string | undefined {
   if (process.platform !== "win32") return undefined;
   try {
-    const output = execFileSync("cmd.exe", ["/d", "/c", `for %I in (${path}) do @echo %~sI`], {
+    const output = execFileSync("cmd.exe", ["/d", "/c", `for %I in ("${path}") do @echo %~sI`], {
       encoding: "utf8",
     });
     const candidate = output.trim().split(/\r?\n/).at(-1)?.trim();
@@ -322,12 +322,12 @@ describe("sealed self-contained consumer Node runtime", () => {
     expect(run.stdout).toBe("consumer-local-ok");
   });
 
-  it("ISSUE-678: long and 8.3 consumer roots are equivalent in both launch directions", () => {
+  it("ISSUE-678: long-form consumer root launch remains valid", () => {
     const container = issue678TempRoot(".ut-tdd-issue678-");
     roots.push(container);
     const longRoot = join(
       container,
-      "consumer-root-with-a-deliberately-long-name-for-8-3-alias-testing",
+      "consumer root with a deliberately long name for 8.3 alias testing",
     );
     mkdirSync(longRoot, { recursive: true });
 
@@ -338,36 +338,43 @@ describe("sealed self-contained consumer Node runtime", () => {
     });
     expect(longRun.status, `${longRun.stdout}\n${longRun.stderr}`).toBe(0);
     expect(longRun.stdout).toBe("consumer-local-ok");
-
-    const shortRoot = shortPathFor(longRoot);
-    if (shortRoot) {
-      const aliasRun = spawnSync(
-        process.execPath,
-        [join(shortRoot, ".ut-tdd", "bin", "ut-tdd.mjs")],
-        { cwd: tmpdir(), encoding: "utf8" },
-      );
-      expect(aliasRun.status, `${aliasRun.stdout}\n${aliasRun.stderr}`).toBe(0);
-      expect(aliasRun.stdout).toBe("consumer-local-ok");
-
-      materializeWrapperFixture(shortRoot);
-      const longLaunchOfAliasPointer = spawnSync(process.execPath, [longFixture.wrapper], {
-        cwd: tmpdir(),
-        encoding: "utf8",
-      });
-      expect(
-        longLaunchOfAliasPointer.status,
-        `${longLaunchOfAliasPointer.stdout}\n${longLaunchOfAliasPointer.stderr}`,
-      ).toBe(0);
-      expect(longLaunchOfAliasPointer.stdout).toBe("consumer-local-ok");
-    } else {
-      expect(
-        shortRoot,
-        "8.3 alias unavailable on this volume; long-form launch and escape checks still run",
-      ).toBeUndefined();
-    }
   });
 
-  it("ISSUE-678: launcher path normalization does not rewrite pointer or digest", () => {
+  it("ISSUE-678: 8.3 alias and long-form consumer roots are equivalent in both launch directions (skipped when alias unavailable)", ({
+    skip,
+  }) => {
+    if (process.platform !== "win32") return skip();
+    const container = issue678TempRoot(".ut-tdd-issue678-");
+    roots.push(container);
+    const longRoot = join(
+      container,
+      "consumer root with a deliberately long name for 8.3 alias testing",
+    );
+    mkdirSync(longRoot, { recursive: true });
+    const shortRoot = shortPathFor(longRoot);
+    if (!shortRoot) return skip();
+    const longFixture = materializeWrapperFixture(longRoot);
+    const aliasRun = spawnSync(
+      process.execPath,
+      [join(shortRoot, ".ut-tdd", "bin", "ut-tdd.mjs")],
+      { cwd: tmpdir(), encoding: "utf8" },
+    );
+    expect(aliasRun.status, `${aliasRun.stdout}\n${aliasRun.stderr}`).toBe(0);
+    expect(aliasRun.stdout).toBe("consumer-local-ok");
+
+    materializeWrapperFixture(shortRoot);
+    const longLaunchOfAliasPointer = spawnSync(process.execPath, [longFixture.wrapper], {
+      cwd: tmpdir(),
+      encoding: "utf8",
+    });
+    expect(
+      longLaunchOfAliasPointer.status,
+      `${longLaunchOfAliasPointer.stdout}\n${longLaunchOfAliasPointer.stderr}`,
+    ).toBe(0);
+    expect(longLaunchOfAliasPointer.stdout).toBe("consumer-local-ok");
+  });
+
+  it("ISSUE-678: launcher path normalization does not rewrite pointer or digest (skipped when 8.3 alias unavailable)", ({ skip }) => {
     const container = issue678TempRoot(".ut-tdd-issue678-pointer-");
     roots.push(container);
     const root = join(container, "consumer-root-with-a-long-name-for-pointer-integrity");
@@ -384,8 +391,9 @@ describe("sealed self-contained consumer Node runtime", () => {
     expect(readFileSync(join(fixture.bundle.bundle_path, "bundle-manifest.json"))).toEqual(
       manifestBefore,
     );
-    const shortRoot = shortPathFor(root);
-    if (shortRoot) {
+    if (process.platform === "win32") {
+      const shortRoot = shortPathFor(root);
+      if (!shortRoot) return skip();
       const aliasRun = spawnSync(
         process.execPath,
         [join(shortRoot, ".ut-tdd", "bin", "ut-tdd.mjs")],
@@ -399,11 +407,6 @@ describe("sealed self-contained consumer Node runtime", () => {
       expect(readFileSync(join(fixture.bundle.bundle_path, "bundle-manifest.json"))).toEqual(
         manifestBefore,
       );
-    } else {
-      expect(
-        shortRoot,
-        "8.3 alias unavailable; pointer/digest integrity is still checked with long form",
-      ).toBeUndefined();
     }
   });
 
