@@ -4,17 +4,20 @@ title: "PLAN-L7-139: Codex hook adapter (orchestrator-rule parity)"
 kind: troubleshoot
 layer: L7
 drive: agent
-status: confirmed
 created: 2026-06-24
 updated: 2026-06-24
 owner: Claude
 backprop_decision: not_required
-backprop_decision_reason: "Developer-local runtime guard parity: gives the Codex CLI the same repo-local foreign-edit / session-lifecycle hooks Claude already has, enforcing the existing hybrid Git rule. It does not change product requirements or runtime user behavior (mirrors PLAN-L7-114-work-guard, which is the Claude side of the same guard)."
+backprop_decision_reason: "Developer-local runtime guard parity: gives the Codex
+  CLI the same repo-local foreign-edit / session-lifecycle hooks Claude already
+  has, enforcing the existing hybrid Git rule. It does not change product
+  requirements or runtime user behavior (mirrors PLAN-L7-114-work-guard, which
+  is the Claude side of the same guard)."
 agent_slots:
   - role: tl
-    slot_label: "TL - Codex hook adapter (repo-local .codex/hooks.json, parity gate)"
+    slot_label: TL - Codex hook adapter (repo-local .codex/hooks.json, parity gate)
   - role: aim
-    slot_label: "AIM - troubleshoot classification + cross-runtime guard parity review"
+    slot_label: AIM - troubleshoot classification + cross-runtime guard parity review
 generates:
   - artifact_path: docs/plans/PLAN-L7-139-codex-hook-adapter.md
     artifact_type: markdown_doc
@@ -41,40 +44,94 @@ dependencies:
 review_evidence:
   - reviewer: claude-intra-runtime
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-06-24T12:20:00+09:00"
-    tests_green_at: "2026-06-24T12:17:00+09:00"
+    reviewed_at: 2026-06-24T12:20:00+09:00
+    tests_green_at: 2026-06-24T12:17:00+09:00
     verdict: approve
-    scope: "Cross-runtime (Codex/gpt-5.5) desk review returned REJECT (see body '## Cross-runtime review'); all three substantive findings verified TRUE against the real codex.exe 0.128.0 binary (233.8MB, strings inspection) and addressed in code. (Critical) work-guard now extracts edit targets from the apply_patch freeform patch body (`*** Update/Add/Delete File:` / `*** Move to:`, multi-file) so the foreign-edit block actually fires for apply_patch — runtime-agnostic pure fn `extractEditTargets`, Claude file_path path unchanged. (Important) spawn_agent N/A falsehood corrected: subagent-stop is genuinely N/A (no SubagentStop event) but the spawn_agent surface is recorded as a real, currently-unguarded deferred follow-up (CODEX_DEFERRED_SURFACE), not absent. (Important) analyzer hardened: `type===\"command\"` required + token-exact path matching. status=confirmed because the deliverables are merged (merged-plan-status hard-requires confirmed+evidence for merged artifacts) and the change is unit-green (32 tests); the end-to-end live Codex hook-payload run is a documented hardening follow-up, not a confirmation blocker (the parser is payload-key-agnostic, so the residual is only whether Codex puts the patch in tool_input at all — the freeform single-arg binary evidence makes that low-risk)."
+    scope: "Cross-runtime (Codex/gpt-5.5) desk review returned REJECT (see body '##
+      Cross-runtime review'); all three substantive findings verified TRUE
+      against the real codex.exe 0.128.0 binary (233.8MB, strings inspection)
+      and addressed in code. (Critical) work-guard now extracts edit targets
+      from the apply_patch freeform patch body (`*** Update/Add/Delete File:` /
+      `*** Move to:`, multi-file) so the foreign-edit block actually fires for
+      apply_patch — runtime-agnostic pure fn `extractEditTargets`, Claude
+      file_path path unchanged. (Important) spawn_agent N/A falsehood corrected:
+      subagent-stop is genuinely N/A (no SubagentStop event) but the spawn_agent
+      surface is recorded as a real, currently-unguarded deferred follow-up
+      (CODEX_DEFERRED_SURFACE), not absent. (Important) analyzer hardened:
+      `type===\"command\"` required + token-exact path matching.
+      status=confirmed because the deliverables are merged (merged-plan-status
+      hard-requires confirmed+evidence for merged artifacts) and the change is
+      unit-green (32 tests); the end-to-end live Codex hook-payload run is a
+      documented hardening follow-up, not a confirmation blocker (the parser is
+      payload-key-agnostic, so the residual is only whether Codex puts the patch
+      in tool_input at all — the freeform single-arg binary evidence makes that
+      low-risk)."
     worker_model: claude-opus-4-8
     reviewer_model: claude-opus-4-8
     green_commands:
       - kind: typecheck
-        command: "bun run typecheck"
+        command: bun run typecheck
         runner: bun
         scope: full
         exit_code: 0
-        completed_at: "2026-06-24T12:17:00+09:00"
+        completed_at: 2026-06-24T12:17:00+09:00
         evidence_path: src/runtime/work-guard.ts
-        output_digest: "sha256:ad589a73486d347838c5b913d7746df7b8037a50c2e97baa29790b2c22b8c81b"
+        output_digest: sha256:ad589a73486d347838c5b913d7746df7b8037a50c2e97baa29790b2c22b8c81b
         anchor_commit: 562d9eaffd2aa2f46edc6c24b61570665aa26b65
       - kind: unit_test
-        command: "bun run vitest run tests/work-guard.test.ts"
+        command: bun run vitest run tests/work-guard.test.ts
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-06-24T12:17:00+09:00"
+        completed_at: 2026-06-24T12:17:00+09:00
         evidence_path: tests/work-guard.test.ts
-        output_digest: "sha256:5ff89dd03a0e6ec91733514d7c94ee10a7bf2dbe8b148a24c73d779a0681c35b"
+        output_digest: sha256:5ff89dd03a0e6ec91733514d7c94ee10a7bf2dbe8b148a24c73d779a0681c35b
         anchor_commit: 69b1521e2ae6f78e87deed9491859a4688767b79
       - kind: unit_test
-        command: "bun run vitest run tests/codex-hook-adapter.test.ts"
+        command: bun run vitest run tests/codex-hook-adapter.test.ts
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-06-24T12:17:00+09:00"
+        completed_at: 2026-06-24T12:17:00+09:00
         evidence_path: tests/codex-hook-adapter.test.ts
-        output_digest: "sha256:cac7af4022bdcc150395b3ab2ed6295d167485c3508f99224f817bb5ca3c128d"
+        output_digest: sha256:cac7af4022bdcc150395b3ab2ed6295d167485c3508f99224f817bb5ca3c128d
         anchor_commit: 442e279bbf31626689d57c2f2f5a89f1dad52241
+route_signal: incident
+route_mode: incident
+status: confirmed
+github_issue_id: 668
+admission_receipt:
+  schema_version: v2
+  receipt_id: certificate:7bcb2d7db8aecbeac360b824478b2287
+  command_id: plan-revise:issue-668:pr669-reissue-139:r2:6d869b944ba9
+  admitted_at: 2026-09-24T02:14:43.170Z
+  source_digest: sha256:a373104c726ff04a1e9464bb37ab57c6daf5a484f24b4bdfc2f2e959ca89100f
+  decision_digest: sha256:993c14e50449b9a3cda7fa65e168a1a2518c19f9b9a09355b78d5d96cf31738e
+  receipt_digest: sha256:2a56de1c88b7c0f847bdc851b6beaecc135da27057aaba5ccdf4ccefc6676442
+  binding:
+    path: docs/plans/PLAN-L7-139-codex-hook-adapter.md
+    plan_id: PLAN-L7-139-codex-hook-adapter
+    asset_id: plan:legacy:04c4e6cd561fcf8a0d55e42ca82e6cfe065a9a1e15da98d414d2aa84e2e1215e
+    revision: 2
+    content_digest: sha256:a373104c726ff04a1e9464bb37ab57c6daf5a484f24b4bdfc2f2e959ca89100f
+  route:
+    signal: incident
+    mode: incident
+  issue:
+    provider: github
+    issue_id: 668
+    episode_id: E4-668-codex-hook-command-schema
+    projection_digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+  origin:
+    plan_id: PLAN-L7-139-codex-hook-adapter
+    revision: 1
+    digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+  reentry:
+    target_plan_id: PLAN-L7-139-codex-hook-adapter
+    target_revision: 2
+    phase: forward_merge
+  escape_reason: "Issue #668: PLAN-L7-139 の blockOnFailure / args 形式 claim を
+    PLAN-L7-668 が訂正する旨の訂正注記を legacy PLAN の正規改訂として発行する。"
 ---
 
 # PLAN-L7-139: Codex hook adapter (orchestrator-rule parity)
@@ -267,3 +324,11 @@ fail-closeする。
 ## 訂正注記 (2026-08-06)
 
 `.claude/hooks/run-bun.ts` (hook launcher shim) は PLAN-L7-462 PR-C (Bun 撤退 step 1) で撤去され、hooks は node 直起動になった。generates から当該 artifact を除去 (plan-artifact-existence の phantom 化対応)。launcher の挙動契約は consumer 向け template (src/setup/templates.ts "common/run-bun.ts") 側に存続し、その撤去は PLAN-L7-462 step 2 が所有する。
+
+## 訂正注記 (2026-09-24、PLAN-L7-668 が訂正)
+
+受入条件 2 の「dropped `blockOnFailure` を fail-close」、`U-CXHOOK-004` の `missing_block_on_failure`、および 2026-06-29 follow-up
+discharge の `blockOnFailure: true` 記述は、現行 Codex の hook schema (`HookHandlerConfig`) に存在しない field を前提にしていた。
+同じく `"command": "node"` + `"args": [...]` の形式は現行 Codex で `args` が無視され、全 hook が無音で失敗していた (Issue #668)。
+これらの claim は `PLAN-L7-668-codex-hook-command-schema` が訂正する (command は git root から解決する 1 文字列、schema 外 field は
+fail-close、guard の block は確定 deny の exit 2)。本 PLAN のその他の契約は維持する。
