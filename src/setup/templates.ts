@@ -1,6 +1,7 @@
 import { join } from "node:path";
 // Hook 配線の単一定義源: 生成 settings.json / hooks.json の command は project-hook lint の
 // wrapper 正規形から構築する (gate 要求と setup 生成物の再乖離防止、PLAN-RECOVERY-06)。
+import { codexCommandString } from "../lint/hook-invocation.ts";
 import { wrapperHookArgs } from "../lint/project-hook.ts";
 // model ID は SSoT (src/team/model-policy.ts MODEL_IDS) 参照のみ。生 literal の二重保持は
 // 世代 drift の温床 (A-177 F-5 / PLAN-L7-256: templates が opus-4-7 のまま SSoT と乖離した実績)。
@@ -431,7 +432,7 @@ export const BUILTIN_GITHUB_TEMPLATES: TemplateSet = {
   "adapter/.codex/config.toml": ["[features]", "hooks = true", ""].join("\n"),
   "adapter/.codex/hooks.json": [
     "{",
-    '  "$comment": "UT-TDD Codex adapter hooks. Hosted/API tool surfaces still require explicit `ut-tdd guard preflight` before edits because repo-local Codex hooks do not execute there.",',
+    '  "$comment": "UT-TDD Codex adapter hooks (PLAN-L7-668 command schema). Hosted/API tool surfaces still require explicit `ut-tdd guard preflight` before edits because repo-local Codex hooks do not execute there.",',
     '  "hooks": {',
     '    "PreToolUse": [',
     "      {",
@@ -439,10 +440,8 @@ export const BUILTIN_GITHUB_TEMPLATES: TemplateSet = {
     '        "hooks": [',
     "          {",
     '            "type": "command",',
-    '            "command": "node",',
-    `            "args": ${JSON.stringify([...wrapperHookArgs("agent-guard")])},`,
+    `            "command": ${JSON.stringify(codexCommandString(wrapperHookArgs("agent-guard")))},`,
     '            "timeout": 5,',
-    '            "blockOnFailure": true,',
     '            "statusMessage": "agent-guard: Codex subagent allowlist/model enforcement"',
     "          }",
     "        ]",
@@ -452,10 +451,8 @@ export const BUILTIN_GITHUB_TEMPLATES: TemplateSet = {
     '        "hooks": [',
     "          {",
     '            "type": "command",',
-    '            "command": "node",',
-    `            "args": ${JSON.stringify([...wrapperHookArgs("work-guard")])},`,
+    `            "command": ${JSON.stringify(codexCommandString(wrapperHookArgs("work-guard")))},`,
     '            "timeout": 5,',
-    '            "blockOnFailure": true,',
     '            "statusMessage": "work-guard: foreign edit protection"',
     "          }",
     "        ]",
@@ -466,8 +463,7 @@ export const BUILTIN_GITHUB_TEMPLATES: TemplateSet = {
     '        "hooks": [',
     "          {",
     '            "type": "command",',
-    '            "command": "node",',
-    `            "args": ${JSON.stringify([...wrapperHookArgs("session-start")])},`,
+    `            "command": ${JSON.stringify(codexCommandString(wrapperHookArgs("session-start")))},`,
     '            "timeout": 5,',
     '            "statusMessage": "session-log: session start (fail-open)"',
     "          }",
@@ -476,12 +472,11 @@ export const BUILTIN_GITHUB_TEMPLATES: TemplateSet = {
     "    ],",
     '    "PostToolUse": [',
     "      {",
-    '        "matcher": "apply_patch|write_file|exec_command|local_shell",',
+    '        "matcher": "apply_patch|write_file|exec_command|local_shell|Bash",',
     '        "hooks": [',
     "          {",
     '            "type": "command",',
-    '            "command": "node",',
-    `            "args": ${JSON.stringify([...wrapperHookArgs("post-tool-use")])},`,
+    `            "command": ${JSON.stringify(codexCommandString(wrapperHookArgs("post-tool-use")))},`,
     '            "timeout": 5,',
     '            "statusMessage": "session-log: post tool use (fail-open)"',
     "          }",
@@ -493,8 +488,7 @@ export const BUILTIN_GITHUB_TEMPLATES: TemplateSet = {
     '        "hooks": [',
     "          {",
     '            "type": "command",',
-    '            "command": "node",',
-    `            "args": ${JSON.stringify([...wrapperHookArgs("session-summary")])},`,
+    `            "command": ${JSON.stringify(codexCommandString(wrapperHookArgs("session-summary")))},`,
     '            "timeout": 5,',
     '            "statusMessage": "session-log: PLAN digest summary (fail-open)"',
     "          }",
