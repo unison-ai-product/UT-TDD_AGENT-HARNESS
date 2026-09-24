@@ -15,6 +15,7 @@ import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { stringify } from "yaml";
 import { collectDistributionCandidatePaths } from "../src/cli/distribution.ts";
+import { CODEX_GIT_ROOT_PREFIX } from "../src/lint/hook-invocation.ts";
 import {
   deriveArtifactInventoryDigest,
   deriveReleaseId,
@@ -441,13 +442,7 @@ describe("clean distribution local acceptance smoke", () => {
       const codexHooks = JSON.parse(
         readFileSync(join(cleanRoot, "docs/templates/adapter/.codex/hooks.json"), "utf8"),
       ) as {
-        hooks: Record<
-          string,
-          {
-            matcher?: string;
-            hooks: { command: string; args?: string[]; blockOnFailure?: boolean }[];
-          }[]
-        >;
+        hooks: Record<string, { matcher?: string; hooks: { command: string }[] }[]>;
       };
       expect(codexHooks.hooks.PreToolUse).toEqual(
         expect.arrayContaining([
@@ -455,9 +450,7 @@ describe("clean distribution local acceptance smoke", () => {
             matcher: "spawn_agent|spawn_agents_on_csv",
             hooks: [
               expect.objectContaining({
-                command: "node",
-                args: [".ut-tdd/bin/ut-tdd.mjs", "hook", "agent-guard"],
-                blockOnFailure: true,
+                command: `node "${CODEX_GIT_ROOT_PREFIX}.ut-tdd/bin/ut-tdd.mjs" hook agent-guard`,
               }),
             ],
           }),
@@ -465,9 +458,7 @@ describe("clean distribution local acceptance smoke", () => {
             matcher: "apply_patch|write_file",
             hooks: [
               expect.objectContaining({
-                command: "node",
-                args: [".ut-tdd/bin/ut-tdd.mjs", "hook", "work-guard"],
-                blockOnFailure: true,
+                command: `node "${CODEX_GIT_ROOT_PREFIX}.ut-tdd/bin/ut-tdd.mjs" hook work-guard`,
               }),
             ],
           }),

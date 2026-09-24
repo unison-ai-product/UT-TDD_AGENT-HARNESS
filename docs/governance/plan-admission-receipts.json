@@ -5012,33 +5012,17 @@
     {
       "sequence": 314,
       "previous_record_digest": "sha256:caeafb4d166dfc14dee107f36d2dcabd1b770c0022716ce900520bd3c19e85f1",
-      "record_digest": "sha256:6be909b8c9cd94f79de918086faf365e63200c8017cbca7af0e9d89b31182b8f",
-      "command_id": "plan-revise:issue-418:pr670-origin-main-reissue:forward:r6:20260924",
-      "receipt_id": "certificate:5c4621ea2bb87278c342c221d0959f4b",
-      "receipt_digest": "sha256:3ebaa7a523c1fb3d851281cb8ba8629e45cfd59346a91d9c1623480866e905bd",
-      "decision_digest": "sha256:3884fa21fba32a16acbf478c4f52aa3fb15f170af650636afdf05f350b0eb77d",
+      "record_digest": "sha256:bc10f857007ccc560fb49aaf4d954b3516e77cdf2a65e15568cd3c4fe5a617d9",
+      "command_id": "plan-revise:issue-668:pr672-confirm:forward:r2:639408ae12b2",
+      "receipt_id": "certificate:c3c2f6f6ad9e72596f2d882df1d312c2",
+      "receipt_digest": "sha256:ccdcc4ca8aa334eec93f1645d4badf5798edbf3973216402582627d05f1ab2d8",
+      "decision_digest": "sha256:9e001c1d48423ba3df5e5bde00859fa49ba95a1d27f012429c073de03ec814c8",
       "binding": {
-        "path": "docs/plans/PLAN-L7-628-pack-consumer-runtime-release-install.md",
-        "plan_id": "PLAN-L7-628-pack-consumer-runtime-release-install",
-        "asset_id": "plan:cd11a1885b1c948d89519002a2cec009",
-        "revision": 6,
-        "content_digest": "sha256:5c2d1890d7bf58de5d354d4ebbdc4ff21e9e7cc5d77aea0d7bcf649a2d01415d"
-      }
-    },
-    {
-      "sequence": 315,
-      "previous_record_digest": "sha256:6be909b8c9cd94f79de918086faf365e63200c8017cbca7af0e9d89b31182b8f",
-      "record_digest": "sha256:9f6da5e92bdbb4c2b50e08079a7c693182c7f85ece4837dfd2630d799069aabe",
-      "command_id": "plan-revise:issue-418:pr670-origin-main-reissue:forward:r7:20260924",
-      "receipt_id": "certificate:aec4ce15d6c1387e21ddbc4842eb5ecd",
-      "receipt_digest": "sha256:d5301a5a94fa861c93311aff71df470d585fab83b1c1b25a0aa18d7fa1f681e8",
-      "decision_digest": "sha256:8d842e8510ea28fa411176fbac4dbbbf43144b4b2082aa052957dd4e93ea95eb",
-      "binding": {
-        "path": "docs/plans/PLAN-L7-628-pack-consumer-runtime-release-install.md",
-        "plan_id": "PLAN-L7-628-pack-consumer-runtime-release-install",
-        "asset_id": "plan:cd11a1885b1c948d89519002a2cec009",
-        "revision": 7,
-        "content_digest": "sha256:65fc14a69c1104a050b637755680c4a9278ab2f92809d77fe8311ffe504345d5"
+        "path": "docs/plans/PLAN-L7-668-codex-hook-command-schema.md",
+        "plan_id": "PLAN-L7-668-codex-hook-command-schema",
+        "asset_id": "plan:9d07702006eed0c40987b56ed01cadc7",
+        "revision": 2,
+        "content_digest": "sha256:e9785ff450c7d25e94669a0c7ac8cc7ad207b6fa25ca4a8087f39907775e1f56"
       }
     }
   ]
