@@ -4912,6 +4912,38 @@
         "revision": 1,
         "content_digest": "sha256:687ca3e1bcd81c65654b88d049d9481aecf4bf76202b9c244fcb547abcb37a1c"
       }
+    },
+    {
+      "sequence": 308,
+      "previous_record_digest": "sha256:1e1469317caabd468a0732179a58fa107f9fcae91eec52b366c527dea5120fd6",
+      "record_digest": "sha256:cc7d81d9780aa5e0a451d067099f645187c8947bc0c678531802b7c8ffeccd3a",
+      "command_id": "plan-revise:issue-676:scope-rev2:plan:r2:166bfc37b0c0",
+      "receipt_id": "certificate:71d66d5ef0c892086a2cd1c25bc60bc8",
+      "receipt_digest": "sha256:acf4c2823a1acbd315a5bb57c952e1e0a9f8afb4bd41c7c1b90dbc630a693ce3",
+      "decision_digest": "sha256:85a3d383e0243974d899896b124c88e9c0f6557f7f780f90b62580f63ee3c506",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-676-release-consumer-dev-start.md",
+        "plan_id": "PLAN-L7-676-release-consumer-dev-start",
+        "asset_id": "plan:aae8bf0e313f8688fbad4d4d8cf0a6a9",
+        "revision": 2,
+        "content_digest": "sha256:99c60aee79ef307c5faf7ff335c163cc3211c28547ac0badcb149181adc54d29"
+      }
+    },
+    {
+      "sequence": 309,
+      "previous_record_digest": "sha256:cc7d81d9780aa5e0a451d067099f645187c8947bc0c678531802b7c8ffeccd3a",
+      "record_digest": "sha256:c4bfc3550e42cf6363f1c56633b6cc6e8844e6329aacd7611f2099e027e03ffb",
+      "command_id": "plan-revise:issue-676:scope-rev2:reverse:r2:166bfc37b0c0",
+      "receipt_id": "certificate:4b34f9d1b25aee262cca72a33a7da958",
+      "receipt_digest": "sha256:8cccb2233201242cc1efede5cd22fc664889f11efdd9361a253cbcb095dd5121",
+      "decision_digest": "sha256:54b6e02517b48f4d541efc390b149e539163d643b35fe22bff59881af922a30c",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-676-release-consumer-dev-start-backfill.md",
+        "plan_id": "PLAN-REVERSE-676-release-consumer-dev-start-backfill",
+        "asset_id": "plan:2db3028c656fba04cb6610d7278dfa56",
+        "revision": 2,
+        "content_digest": "sha256:80055c3de9f32078d6738c5bc13079fbe6f18e342678db180fb123500f45332d"
+      }
     }
   ]
 }

@@ -22,8 +22,8 @@ agent_slots:
   - role: tl
     slot_label: Claude Opus / Sol - PLAN-L7-529 の frozen 契約と本 PLAN の表示・解決順の整合を逆向き検証する
   - role: qa
-    slot_label: Terra - CANDIDATE-U-RCDEV-001..018 を独立照合し、同名 skill による path 乗っ取りと部分
-      setup の残留を攻撃する
+    slot_label: Terra - CANDIDATE-U-RCDEV-001..031 を独立照合し、同名 skill による path 乗っ取り・部分
+      setup の残留・gate の未判定の隠蔽を攻撃する
 generates:
   - artifact_path: docs/plans/PLAN-REVERSE-676-release-consumer-dev-start-backfill.md
     artifact_type: markdown_doc
@@ -44,18 +44,18 @@ status: draft
 github_issue_id: 676
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:2db3028c656fba04cb6610d7278dfa56
-  command_id: plan-draft:issue-676:release-consumer-dev-start:reverse:1
-  admitted_at: 2026-09-24T06:00:00.000Z
-  source_digest: sha256:687ca3e1bcd81c65654b88d049d9481aecf4bf76202b9c244fcb547abcb37a1c
-  decision_digest: sha256:ba7c0373a5af5f337340bb0ac9076d3ba9ced2be87aa92386e063c16c57459c4
-  receipt_digest: sha256:895067928e3d95346fb518707a87b036e49eca46b75fe23ab8872bf66d8aa556
+  receipt_id: certificate:4b34f9d1b25aee262cca72a33a7da958
+  command_id: plan-revise:issue-676:scope-rev2:reverse:r2:166bfc37b0c0
+  admitted_at: 2026-09-24T07:54:55.575Z
+  source_digest: sha256:80055c3de9f32078d6738c5bc13079fbe6f18e342678db180fb123500f45332d
+  decision_digest: sha256:54b6e02517b48f4d541efc390b149e539163d643b35fe22bff59881af922a30c
+  receipt_digest: sha256:8cccb2233201242cc1efede5cd22fc664889f11efdd9361a253cbcb095dd5121
   binding:
     path: docs/plans/PLAN-REVERSE-676-release-consumer-dev-start-backfill.md
     plan_id: PLAN-REVERSE-676-release-consumer-dev-start-backfill
     asset_id: plan:2db3028c656fba04cb6610d7278dfa56
-    revision: 1
-    content_digest: sha256:687ca3e1bcd81c65654b88d049d9481aecf4bf76202b9c244fcb547abcb37a1c
+    revision: 2
+    content_digest: sha256:80055c3de9f32078d6738c5bc13079fbe6f18e342678db180fb123500f45332d
   route:
     signal: reverse
     mode: reverse
@@ -73,10 +73,10 @@ admission_receipt:
     implementation_disposition: preserved
   reentry:
     target_plan_id: PLAN-L7-676-release-consumer-dev-start
-    target_revision: 1
+    target_revision: 2
     phase: forward_merge
-  escape_reason: "Issue #676: PLAN-L7-676 (add-impl) の Reverse 対。表示・解決順・design
-    root 規約・生成物の実測を PLAN-L6-101 へ逆向きに戻す。"
+  escape_reason: "Issue #676 rev 2: PLAN-L7-676 rev 2 のスコープ改訂 (テンプレート移植・consumer
+    gate) に合わせて Reverse の照合観点と candidate 対応を更新する。"
 ---
 
 # PLAN-REVERSE-676: Release consumer 開発開始の逆向き確認
@@ -84,7 +84,7 @@ admission_receipt:
 ## R0: 対象境界
 
 対象は `PLAN-L7-676` の identity 失敗表示と復旧手順 (§3.3)、同梱資産の埋め込み・展開・解決順 (§3.1)、
-design root resolver (§3.2)、生成物 (§3.4)。identity の create / read / commit policy (`PLAN-L7-529`)、
+design root resolver (§3.2)、生成物 (§3.4)、rev 2 で加えたテンプレート移植 (§3.5)・consumer 検証 (§3.6)・エージェント確認経路の前提 (§3.7)。identity の create / read / commit policy (`PLAN-L7-529`)、
 Release asset 集合と installer (`PLAN-L7-628`)、live-tree fence (`PLAN-L7-421`)、clean fixture E2E (`PLAN-L7-531`)、
 launcher の 8.3 alias 等価性 (Issue #678) は対象外であり、再所有しない。
 
@@ -97,6 +97,10 @@ launcher の 8.3 alias 等価性 (Issue #678) は対象外であり、再所有�
 | `PLAN-L7-529` §3.3 採択 B 自動 commit なし | commit が必要な旨と手順を表示するだけ (§3.3-3) | setup / session start が暗黙に commit していないか、HEAD-strict read を緩めていないか |
 | `PLAN-L7-529` §2.6 marker 判定 | `isRepoRoot` の fallback 条件を変えない (§3.3-2) | fallback を `.git` 単独受理などに緩めて親 repo を誤認していないか |
 | `PLAN-L7-628` §1.1 / §3 asset 集合 | 埋め込みは `<tag>.ut-tdd.mjs` の内側に留める (§3.1 案 C) | asset 集合・installer 手順を変えていないか、tarball を展開していないか |
+| `vmodel-document-disposition-catalog.md` の採否 | zip テンプレート 57 本を slot source か optional に分類する (§3.5.3) | disposition の target と slot の対応が一意か、zip に無い内容を書き起こしていないか |
+| `vmodel-document-scale-profiles.md` / `vmodel-document-catalog.md` の正本性 | zip の管理 yaml を既存正本へ merge し、別ファイルで出荷しない (§3.5.4) | 第 2 の SSoT が生まれていないか |
+| `gate-design.md` §1 ゲートモデル | G8〜G14 に成果物から決まる static check を持たせ、残りを review tier に明示する (§3.6-4) | static check が判定内容を超えて承認を代行していないか、未判定を pass と見せていないか |
+| ADR-001 (TypeScript/Node) | `tools/*.py` を同梱せず、検査の意味を TS gate で実装する (§3.6-6) | Python 実行経路や `.py` が配布物に入っていないか |
 | `PLAN-L6-93` / `PLAN-L7-458` Node generation | 埋め込み対象を esbuild の実 input として通す (§3.1.2) | 埋め込み bytes が receipt の `source_files` に現れているか、builder policy `compiled-esm-only` を保っているか |
 
 ## R2: candidate / oracle 対応
@@ -115,6 +119,12 @@ launcher の 8.3 alias 等価性 (Issue #678) は対象外であり、再所有�
 | design root resolver と ENOENT 耐性 | CANDIDATE-U-RCDEV-011 / 012 / 013 |
 | テンプレート書き出し | CANDIDATE-U-RCDEV-014 / 015 |
 | 生成物 (db 初期化・harness-check・commitlint) | CANDIDATE-U-RCDEV-016 / 017 / 018 |
+| テンプレートの slot 網羅と provenance | CANDIDATE-U-RCDEV-019 / 020 / 021 |
+| テンプレート形式と skill / ガイドの移植 | CANDIDATE-U-RCDEV-022 / 023 |
+| Python 非同梱と第 2 SSoT の禁止 | CANDIDATE-U-RCDEV-024 / 025 |
+| gate 定義の埋め込みと G1〜G7 の consumer 判定 | CANDIDATE-U-RCDEV-026 / 027 / 028 |
+| G8〜G14 の static 判定と vmodel lint | CANDIDATE-U-RCDEV-029 / 030 |
+| harness 自身の gate 回帰 | CANDIDATE-U-RCDEV-031 |
 
 ## R3: gap 分類と backfill
 
@@ -125,6 +135,8 @@ launcher の 8.3 alias 等価性 (Issue #678) は対象外であり、再所有�
 - compiled ESM が埋め込み以外の repo 内ファイル (vmodel catalog、gate 設計文書など) を実行時に読む場合: 本 PLAN の範囲外の
   runtime 依存であり、`PLAN-L7-531` の E2E で観測したうえで別 slice に起票する。本 PLAN で黙って埋め込み対象を増やさない。
 - origin 以外からの identity create が必要と判明した場合: `PLAN-L7-529` の改訂であり、本 PLAN では扱わない。
+- zip の Python 検査に TS gate で対応しないものが残った場合: 各 PR-G の PR 本文に「未移植」として列挙し、gate-design.md の判定内容の改訂が要るなら別 PLAN に起票する。
+- harness 自身で G8〜G14 の結果が変わった場合: 判定規則 (§3.6-4) に沿った変化なら PR 本文に記録して受け入れ、規則外の変化なら本 PLAN の契約改訂へ戻る。
 
 ## R4: Forward 再合流条件
 
@@ -133,5 +145,5 @@ PR-1〜PR-3 の実測と非著者 review を同一 exact revision に束縛し�
 
 ## Scope boundary
 
-gate G1〜G14 の consumer 対応、設計テンプレートの中身の整備、CI 上での installer 実行、design root の設定による上書き、
+gate の判定内容そのものの変更、テンプレートの新規書き起こし、license 切り替え (control lane の別 PR)、CI 上での installer 実行、catalog / profile / gate 定義と design root の設定による上書き、
 update / rollback (#364) は本 Reverse の対象外。
