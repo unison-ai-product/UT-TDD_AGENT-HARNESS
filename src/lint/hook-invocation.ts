@@ -62,8 +62,18 @@ export function invocationEquals(
  */
 export const CODEX_GIT_ROOT_PREFIX = "$(git rev-parse --show-toplevel)/";
 
-/** 固定前置部分の外側 (script path / 固定引数) に許さない文字: 空白・引用符・shell 展開の `$`。 */
-const CODEX_UNSAFE_TOKEN_RE = /[\s"'$]/;
+/**
+ * 固定前置部分の外側 (script path / 固定引数) に許す文字の allowlist。英数字・`.`・`_`・`-`・`/`
+ * のみを許し、空白・引用符・`$` を含む shell 展開文字 (`` ` ``・`|`・`&`・`;`・`<`・`>`・`(`・`)`・
+ * `*`・`?`・`~`・`!`・`{`・`}`・`\`・`%`・`^`・改行 等) は全て拒否する denylist ではなく
+ * allowlist にする (denylist の列挙漏れによる injection を避けるため、2026-09-24 是正)。
+ */
+const CODEX_SAFE_TOKEN_RE = /^[A-Za-z0-9._/-]+$/;
+
+/** repo 相対 script path に `..` セグメントを許さない (repo root の外への脱出を防ぐ)。 */
+function hasDotDotSegment(path: string): boolean {
+  return path.split("/").some((segment) => segment === "..");
+}
 
 export type CodexCommandStringReason =
   | "bare_interpreter_command"
@@ -100,8 +110,9 @@ export function parseCodexCommandString(rawCommand: unknown): CodexCommandString
   const scriptPath = quoted.slice(CODEX_GIT_ROOT_PREFIX.length);
   if (
     scriptPath.length === 0 ||
-    CODEX_UNSAFE_TOKEN_RE.test(scriptPath) ||
-    trailingArgs.some((arg) => CODEX_UNSAFE_TOKEN_RE.test(arg))
+    !CODEX_SAFE_TOKEN_RE.test(scriptPath) ||
+    hasDotDotSegment(scriptPath) ||
+    trailingArgs.some((arg) => !CODEX_SAFE_TOKEN_RE.test(arg))
   ) {
     return { ok: false, invocation: null, reason: "unsafe_command_token" };
   }

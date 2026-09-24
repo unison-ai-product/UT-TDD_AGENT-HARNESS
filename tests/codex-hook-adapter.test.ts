@@ -387,6 +387,53 @@ describe("codex-hook-adapter — Codex hooks.json parity (PLAN-L7-139, PLAN-L7-6
       expect(r.violations.some((v) => v.reason === "unsafe_command_token")).toBe(true);
     });
 
+    it("(e2) 危険クラス別 shell 展開文字を script path に注入すると全て fail-close (allowlist 化、denylist 列挙漏れの回帰防止)", () => {
+      const dangerousSuffixes = [
+        ";whoami",
+        "`whoami`",
+        "|whoami",
+        "&whoami",
+        ">out",
+        "(whoami)",
+        "%whoami%",
+        "\nwhoami",
+      ];
+      for (const suffix of dangerousSuffixes) {
+        const broken = validCodexHooks() as {
+          hooks: { PreToolUse: { hooks: { command: string }[] }[] };
+        };
+        broken.hooks.PreToolUse[0].hooks[0].command = `node "${CODEX_GIT_ROOT_PREFIX}.claude/hooks/work-guard.ts"${suffix}`;
+        const r = analyzeCodexHookAdapter({ codexHooksJson: json(broken) });
+        expect(r.ok, `suffix=${JSON.stringify(suffix)}`).toBe(false);
+        expect(
+          r.violations.some((v) => v.reason === "unsafe_command_token"),
+          `suffix=${JSON.stringify(suffix)}: ${JSON.stringify(r.violations)}`,
+        ).toBe(true);
+      }
+    });
+
+    it("(e3) 実 .codex/hooks.json と setup テンプレの正当な command は allowlist を満たし ok のまま", () => {
+      const real = JSON.parse(readFileSync(join(process.cwd(), ".codex", "hooks.json"), "utf8"));
+      for (const events of Object.values(real.hooks) as { hooks: { command: string }[] }[][]) {
+        for (const entry of events) {
+          for (const hook of entry.hooks) {
+            const parsed = parseCodexCommandString(hook.command);
+            expect(parsed.ok, `command=${hook.command}`).toBe(true);
+          }
+        }
+      }
+      for (const id of [
+        "agent-guard",
+        "work-guard",
+        "session-start",
+        "post-tool-use",
+        "session-summary",
+      ] as const) {
+        const parsed = parseCodexCommandString(codexCommandString(wrapperHookArgs(id)));
+        expect(parsed.ok, `id=${id}`).toBe(true);
+      }
+    });
+
     it("(f) git root 解決を外した repo 相対 command は fail-close", () => {
       const broken = validCodexHooks() as {
         hooks: { PreToolUse: { hooks: { command: string }[] }[] };
@@ -524,10 +571,14 @@ describe("codex-hook-adapter — Codex hooks.json parity (PLAN-L7-139, PLAN-L7-6
       expect(sessionLogLines(unrootedSessionId).length - unrootedBefore).toBe(0);
     }, 420_000);
 
-    it("U-CXHOOKCMD-004: work-guard/agent-guard は foreign 編集を repo root / subdirectory の両方で block する", () => {
+    it("U-CXHOOKCMD-004: work-guard/agent-guard は foreign 編集を block し、自 session のファイルと allowlist 内 spawn は pass する", () => {
       const subdirectory = join(consumer, "subdir");
       const workGuardCommand = commandFor("PreToolUse", "apply_patch|write_file");
       const agentGuardCommand = commandFor("PreToolUse", "spawn_agent|spawn_agents_on_csv");
+      const postToolUseCommand = commandFor(
+        "PostToolUse",
+        "apply_patch|write_file|exec_command|local_shell|Bash",
+      );
 
       // setup が生成した AGENTS.md は consumer repo でまだ commit されておらず
       // (setupConsumerFromPack が commit するのは ut-tdd.project.json だけ)、この hook
@@ -551,17 +602,55 @@ describe("codex-hook-adapter — Codex hooks.json parity (PLAN-L7-139, PLAN-L7-6
         );
       }
 
-      // README.md は project 作成時に commit 済みで未変更 (uncommitted files に含まれない) なので pass する。
-      const ownSessionEdit = spawnCodexHookCommand(workGuardCommand, {
-        cwd: consumer,
-        input: JSON.stringify({
-          session_id: "cxhookcmd-004-own",
-          tool_name: "apply_patch",
-          tool_input: { file_path: "README.md" },
-        }),
-        env: { CLAUDE_PROJECT_DIR: consumer, UT_TDD_PROJECT_DIR: consumer },
-      });
-      expect(ownSessionEdit.status).toBe(0);
+      // U-CXHOOKCMD-004(b): 自 session のファイルへの apply_patch (uncommitted かつ同一 session が
+      // 既に touch 済み) は repo root / subdirectory の両方の cwd で pass する。README.md のような
+      // clean な既 commit ファイルは work-guard 判定に「foreign 判定を免れているだけ」で own-session
+      // 判定を検証しないため、oracle は uncommitted own file を要求する (frozen: test-design
+      // U-CXHOOKCMD-004)。
+      let ownSeq = 0;
+      for (const [cwd, cwdLabel] of [
+        [consumer, "root"],
+        [subdirectory, "subdir"],
+      ] as const) {
+        const sessionId = `cxhookcmd-004-own-${cwdLabel}-${ownSeq++}`;
+        const ownFile = `own-note-${cwdLabel}.md`;
+        writeFileSync(join(consumer, ownFile), `own note (${cwdLabel})\n`, "utf8");
+
+        const sessionLogBefore = sessionLogLines(sessionId).length;
+        const touch = spawnCodexHookCommand(postToolUseCommand, {
+          cwd,
+          input: JSON.stringify({
+            session_id: sessionId,
+            tool_name: "apply_patch",
+            tool_input: { file_path: ownFile },
+          }),
+          env: { CLAUDE_PROJECT_DIR: consumer, UT_TDD_PROJECT_DIR: consumer },
+        });
+        expect(touch.status, `cwd=${cwd}: ${touch.stdout}\n${touch.stderr}`).toBe(0);
+        const loggedRows = readFileSync(sessionLogPath(sessionId), "utf8")
+          .split("\n")
+          .filter((line) => line.trim().length > 0)
+          .map((line) => JSON.parse(line) as { event_type: string; target?: string });
+        expect(loggedRows.length - sessionLogBefore, `cwd=${cwd} session log increment`).toBe(1);
+        expect(
+          loggedRows.at(-1)?.target,
+          `cwd=${cwd} logged target must name ${ownFile}`,
+        ).toContain(ownFile);
+
+        const ownSessionEdit = spawnCodexHookCommand(workGuardCommand, {
+          cwd,
+          input: JSON.stringify({
+            session_id: sessionId,
+            tool_name: "apply_patch",
+            tool_input: { file_path: ownFile },
+          }),
+          env: { CLAUDE_PROJECT_DIR: consumer, UT_TDD_PROJECT_DIR: consumer },
+        });
+        expect(
+          ownSessionEdit.status,
+          `cwd=${cwd}: ${ownSessionEdit.stdout}\n${ownSessionEdit.stderr}`,
+        ).toBe(0);
+      }
 
       const disallowedSpawn = spawnCodexHookCommand(agentGuardCommand, {
         cwd: consumer,
@@ -573,6 +662,21 @@ describe("codex-hook-adapter — Codex hooks.json parity (PLAN-L7-139, PLAN-L7-6
         env: { CLAUDE_PROJECT_DIR: consumer, UT_TDD_PROJECT_DIR: consumer },
       });
       expect(disallowedSpawn.status).toBe(2);
+
+      // allowlist 内 (pmo-haiku, model floor haiku) の spawn は pass する。
+      const allowlistedSpawn = spawnCodexHookCommand(agentGuardCommand, {
+        cwd: consumer,
+        input: JSON.stringify({
+          session_id: "cxhookcmd-004-agent-ok",
+          tool_name: "spawn_agent",
+          tool_input: { subagent_type: "pmo-haiku", model: "haiku" },
+        }),
+        env: { CLAUDE_PROJECT_DIR: consumer, UT_TDD_PROJECT_DIR: consumer },
+      });
+      expect(
+        allowlistedSpawn.status,
+        `${allowlistedSpawn.stdout}\n${allowlistedSpawn.stderr}`,
+      ).toBe(0);
     }, 420_000);
 
     it("U-CXHOOKCMD-005: consumer launcher は active runtime 不在時 exit 78 (consumer_runtime_absent)", () => {
