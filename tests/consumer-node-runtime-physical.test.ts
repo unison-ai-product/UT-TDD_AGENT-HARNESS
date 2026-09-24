@@ -776,18 +776,32 @@ describe("physical consumer Node runtime adapter", () => {
     });
     expect(hook.status, `${hook.stdout}\n${hook.stderr}`).toBe(0);
     expect(hook.stderr).not.toContain("BLOCK");
+    // PLAN-L7-668 §3: Codex の command は git root 解決の固定前置部分を持つ 1 文字列 (args 無し)。
+    // Codex と同じ shell 起動形 (Windows は pwsh、それ以外は sh) でそのまま実行する。
     const codexSettings = JSON.parse(readFileSync(join(root, ".codex", "hooks.json"), "utf8")) as {
-      hooks: { PreToolUse: Array<{ hooks: Array<{ command: string; args: string[] }> }> };
+      hooks: { PreToolUse: Array<{ hooks: Array<{ command: string }> }> };
     };
-    const codexCommand = codexSettings.hooks.PreToolUse[0].hooks[0];
-    const codexHook = spawnSync(codexCommand.command, codexCommand.args, {
-      cwd: root,
-      input: JSON.stringify({
-        tool_name: "Agent",
-        tool_input: { subagent_type: "pmo-haiku", model: "haiku" },
-      }),
-      encoding: "utf8",
+    const codexCommand = codexSettings.hooks.PreToolUse[0].hooks[0].command;
+    const codexHookInput = JSON.stringify({
+      tool_name: "Agent",
+      tool_input: { subagent_type: "pmo-haiku", model: "haiku" },
     });
+    const codexHook =
+      process.platform === "win32"
+        ? spawnSync(
+            "pwsh",
+            [
+              "-NoProfile",
+              "-Command",
+              `$global:PSNativeCommandUseErrorActionPreference = $false; ${codexCommand}; exit $LASTEXITCODE`,
+            ],
+            { cwd: root, input: codexHookInput, encoding: "utf8", windowsHide: true },
+          )
+        : spawnSync("sh", ["-c", codexCommand], {
+            cwd: root,
+            input: codexHookInput,
+            encoding: "utf8",
+          });
     expect(codexHook.status, `${codexHook.stdout}\n${codexHook.stderr}`).toBe(0);
     expect(codexHook.stderr).not.toContain("BLOCK");
   });
