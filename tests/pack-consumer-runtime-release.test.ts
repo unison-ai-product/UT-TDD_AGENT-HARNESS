@@ -251,6 +251,7 @@ async function createProducerFixture(): Promise<ProducerFixture> {
   const artifactPaths = [
     "README.md",
     "LICENSE",
+    "NOTICE",
     "package.json",
     ".node-version",
     "src/cli.ts",
