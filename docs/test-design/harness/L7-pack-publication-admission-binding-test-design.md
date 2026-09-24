@@ -156,11 +156,52 @@ admission 成功 fixture でも remote write ledger と approval consume は 0 �
 
 残りの candidate は後続 Slice に明示的に deferred とし、この表を70 candidate 全件の実装・検証完了とは扱わない。
 
+Slice 1 の実装 test ID は次へ固定する。`101..105` は既存6 candidate の境界を支える補助回帰であり、後続 candidate を昇格した扱いにはしない。
+
+| test ID | 対応 candidate / 境界 |
+| --- | --- |
+| `U-PACKPUB-ADM-007` | `CANDIDATE-PACKPUB-ADM-007` reviewed head mismatch |
+| `U-PACKPUB-ADM-036` | `CANDIDATE-PACKPUB-ADM-036` preparation receipt missing |
+| `U-PACKPUB-ADM-040` | `CANDIDATE-PACKPUB-ADM-040` review observer unavailable |
+| `U-PACKPUB-ADM-042` | `CANDIDATE-PACKPUB-ADM-042` repository observer schema error |
+| `U-PACKPUB-ADM-048` | `CANDIDATE-PACKPUB-ADM-048` admitted happy path |
+| `U-PACKPUB-ADM-057` | `CANDIDATE-PACKPUB-ADM-057` approval nonce sensitivity |
+| `U-PACKPUB-ADM-101` | 実装済み Slice と deferred 候補の coverage declaration |
+| `U-PACKPUB-ADM-102` | admitted record sequence・previous digest・journal linkage |
+| `U-PACKPUB-ADM-103` | malformed preparation receipt の observer 前拒否 |
+| `U-PACKPUB-ADM-104` | sealed staging expected-main OID のみ採用 |
+| `U-PACKPUB-ADM-105` | observed approval intent binding drift の拒否 |
+
+## 4.2 Slice 2 の PR・review・checks・merge-base guard
+
+Issue #626 の後続 Slice 2 は、§3 の G01–G06 / G08–G12 に対応する11候補だけを
+`tests/pack-publication-admission.test.ts` の独立 test へ昇格する。G07 は Slice 1 済み。
+他候補を本 Slice の Green と数えない。各 test は正常な fixture の観測値1軸だけを変え、
+typed deny と admission ledger append 0、remote write 0、approval consume 0 を検証する。
+
+| test ID | 1軸 mutation と期待 reason |
+| --- | --- |
+| `U-PACKPUB-ADM-001` | PR number のみ変更 → `admission_pr_mismatch` |
+| `U-PACKPUB-ADM-002` | PR head のみ変更 → `admission_head_mismatch` |
+| `U-PACKPUB-ADM-003` | PR base のみ変更 → `admission_base_mismatch` (#624 blocking) |
+| `U-PACKPUB-ADM-004` | merge-base のみ変更 → `admission_merge_base_mismatch` |
+| `U-PACKPUB-ADM-005` | review PR のみ変更 → `admission_review_pr_mismatch` |
+| `U-PACKPUB-ADM-006` | reviewed head を39桁・大文字・64桁へ各単独変異 → `admission_review_head_invalid` |
+| `U-PACKPUB-ADM-008` | conclusion のみ `changes_requested` → `admission_review_not_approved` |
+| `U-PACKPUB-ADM-009` | closing digest を63桁・`sha1:`・大文字へ各単独変異 → `admission_review_receipt_invalid` (#624 blocking) |
+| `U-PACKPUB-ADM-010` | checks head のみ変更 → `admission_checks_head_mismatch` |
+| `U-PACKPUB-ADM-011` | 観測された required context 集合のみ `[]` → `admission_checks_missing` (#624 blocking) |
+| `U-PACKPUB-ADM-012` | required check conclusion のみ `failure` → `admission_check_not_success` |
+
+Slice 2 終了後も `013–035`, `037–039`, `041`, `043–047`, `049–056`, `058–070`
+は deferred のまま残し、#626 全体・#627 の完了を主張しない。
+
 ## 5. 実装 PR への昇格規則
 
 実装 PR は Slice 単位で bounded candidate を各 1 件以上の独立 test へ昇格し、実装時に正規の
-test ID (`U-PACKPUB-ADM-*`) を割り当てる。Slice 1 (#664) は §4.1 の6件だけを対象とし、
-残りの candidate は後続 Slice へ明示的に deferred とする。全 Slice の昇格が完了した時点で、
+test ID (`U-PACKPUB-ADM-*`) を割り当てる。Slice 1 (#664) は §4.1 の6件、
+Slice 2 は §4.2 の11件だけを対象とし、残りの candidate は後続 Slice へ deferred とする。
+全 Slice の昇格が完了した時点で、
 PLAN-L7-626 §6 の 70 candidate 全件が成立する。
 
 各 Slice は typed reason、入力 digest、observer call 順、admission record digest、

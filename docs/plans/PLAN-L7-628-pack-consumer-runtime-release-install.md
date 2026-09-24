@@ -27,14 +27,6 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-628-pack-consumer-runtime-release-install.md
     artifact_type: markdown_doc
-  - artifact_path: src/cli/distribution.ts
-    artifact_type: source_module
-  - artifact_path: src/setup/consumer-runtime-release.ts
-    artifact_type: source_module
-  - artifact_path: tests/pack-consumer-runtime-release.test.ts
-    artifact_type: test_code
-  - artifact_path: tests/distribution-acceptance.test.ts
-    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L6-101-pack-independent-multi-consumer-acceptance.md
   requires:
@@ -55,18 +47,18 @@ status: draft
 github_issue_id: 418
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:3f136f2ee63315f166d4d4a2f02adc46
-  command_id: plan-revise:issue-418:pr670-producer-binding:forward:r6:deeeab005913
-  admitted_at: 2026-09-24T05:09:23.172Z
-  source_digest: sha256:5c2d1890d7bf58de5d354d4ebbdc4ff21e9e7cc5d77aea0d7bcf649a2d01415d
-  decision_digest: sha256:a90584d4df9cf88ad33b12a69fbe51f8d79c9158b564a0edfac5b11bb50be5bb
-  receipt_digest: sha256:45412c3b587f4d56e30684bbd00932e84869ad82ac1f71182fece46f5bcf91e1
+  receipt_id: certificate:ae651fd89a86d895d3aad1d0459f2caa
+  command_id: plan-revise:issue-418:pr671-r1-flag:forward:r5:dfe02eb55a2f
+  admitted_at: 2026-09-24T03:37:18.813Z
+  source_digest: sha256:e29ead3ced26cd437a348ae5ba8199bf22712b787af002e52875fb9c9a2fa6ea
+  decision_digest: sha256:e9233c4fc51f513c33a6fc46e3fb3dc73dcc94665511afcb5e53fdc6b1a40520
+  receipt_digest: sha256:ef478f001d48145ec9293e5e75e5c49dba21b3e8a6da1bb5dd4eea2c36a45483
   binding:
     path: docs/plans/PLAN-L7-628-pack-consumer-runtime-release-install.md
     plan_id: PLAN-L7-628-pack-consumer-runtime-release-install
     asset_id: plan:cd11a1885b1c948d89519002a2cec009
-    revision: 6
-    content_digest: sha256:5c2d1890d7bf58de5d354d4ebbdc4ff21e9e7cc5d77aea0d7bcf649a2d01415d
+    revision: 5
+    content_digest: sha256:e29ead3ced26cd437a348ae5ba8199bf22712b787af002e52875fb9c9a2fa6ea
   route:
     signal: feature_addition
     mode: add-feature
@@ -84,10 +76,10 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-628-pack-consumer-runtime-release-install
-    target_revision: 6
+    target_revision: 5
     phase: forward_merge
-  escape_reason: "PR #670 producer実装の C1/C2 release commit binding と U-PACKRT-011
-    昇格を rev6 に記録する。"
+  escape_reason: "PR #671 Sol r1 FLAG 2 件 (§6.1 の tag ref と source revision
+    の等置、CANDIDATE-U-PACKRT-011(b) の実現不能な変異) の是正改訂。"
 ---
 
 # PLAN-L7-628: Pack Release から consumer runtime を有効化する producer / installer
