@@ -59,18 +59,18 @@ status: draft
 github_issue_id: 676
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:b33f68a917968b6da845eb2316eb9f40
-  command_id: plan-revise:issue-676:sol-r2-flag:plan:r4:7301bfa08670
-  admitted_at: 2026-09-24T08:34:28.663Z
-  source_digest: sha256:d73d103dc8c54ee00a2091c7a99f3cf44758cd25539755ff5eb9fd6e0b6079f6
-  decision_digest: sha256:a0ab8196dfc122f6d9c7c0f66362e79b6725bf255ec527378f0bdacd5fda8cee
-  receipt_digest: sha256:46c73b8826fb46337f920d03a82ed963c059e1c61ab524b4d03b5e0944eef2cc
+  receipt_id: certificate:ad6fd950fb2dfb44872c9ba78af58be2
+  command_id: plan-revise:issue-676:plan-confirm:plan:r5:b7dd10ee051f
+  admitted_at: 2026-09-24T10:29:05.128Z
+  source_digest: sha256:5b50283947b06586cfafae2fe310f5099459829f1c59110481966d7c0517a174
+  decision_digest: sha256:1141782535caa6f05df835fe614e200549d83e465863aaf1a7c3b85d9218c194
+  receipt_digest: sha256:0bddebeaf59f8c94db74457ec112f899d288ae029828bf48d244ba483e3638e8
   binding:
     path: docs/plans/PLAN-L7-676-release-consumer-dev-start.md
     plan_id: PLAN-L7-676-release-consumer-dev-start
     asset_id: plan:aae8bf0e313f8688fbad4d4d8cf0a6a9
-    revision: 4
-    content_digest: sha256:d73d103dc8c54ee00a2091c7a99f3cf44758cd25539755ff5eb9fd6e0b6079f6
+    revision: 5
+    content_digest: sha256:5b50283947b06586cfafae2fe310f5099459829f1c59110481966d7c0517a174
   route:
     signal: feature_addition
     mode: add-feature
@@ -88,10 +88,10 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-676-release-consumer-dev-start
-    target_revision: 4
+    target_revision: 5
     phase: forward_merge
-  escape_reason: "PR #680 Sol r2 の追加指摘 (PR-2c を PR-T2 の後へ移し、--optional の正の oracle
-    CANDIDATE-U-RCDEV-038 を追加) の是正改訂。"
+  escape_reason: 実装 PR の landing 前に本 PLAN の confirm が必要なため、CI green 後の非著者契約 review
+    で confirm する手順を §8-4 に記す (rev 5、draft のまま)。
 ---
 
 # PLAN-L7-676: Release consumer で開発を開始できる状態にする
@@ -546,3 +546,4 @@ injection path の乗っ取り、harness 自身の挙動変化、部分 setup �
 1. 本 PLAN と PLAN-REVERSE-676 の pair-freeze に非著者 PASS receipt と CI Green が揃うこと。
 2. §3.3 の #676 受入条件改訂コメントの URL、setup の deny code と終了コード (§3.3-1)、テンプレート書き出しコマンド (§3.1.3)、G8〜G14 の述語 (§3.6-4) は記録済み (PR-0 rev 3)。
 3. 実装中に方式変更 (解決順、展開先、resolver 規約、setup の失敗条件、テンプレート形式、書き出しコマンド §3.1.3、setup の終了コード §3.3-1、gate の述語 §3.6-4) が必要になったら、PR を close して本 PLAN の契約改訂へ戻る。
+4. confirm の手順 (rev 5): 本 PLAN の実装 PR は src/ tests/ に新規ファイルを landing させるため、`deliverable-plan-trace` により `generates` への宣言が必須であり、`merged-plan-status` により draft PLAN はその宣言を持てない。したがって、実装 PR より先に本 PLAN を confirm する。pair-freeze review (PR #680 の Sol r3 PASS、subject f65031c9) は、その head の CI green (2026-09-24T09:00:46Z) より前 (08:46Z) に取られたため、正直な `tests_green_at` を持てず、confirm の証跡にしない。代わりに、本 rev 5 の exact head の CI green の後に、非著者 (Codex Sol) の契約 review を取り直し、その receipt を `review_evidence` に記録した rev 6 で confirm する。rev 6 の docs 差分は bounded 再検を経て merge する。実装 PR は、confirm の merge 後に main を取り込み、自 PR の新規成果物だけを confirmed の本 PLAN の `generates` に追加する (既存ファイルは載せない)。
