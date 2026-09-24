@@ -374,7 +374,9 @@ describe("sealed self-contained consumer Node runtime", () => {
     expect(longLaunchOfAliasPointer.stdout).toBe("consumer-local-ok");
   });
 
-  it("ISSUE-678: launcher path normalization does not rewrite pointer or digest (skipped when 8.3 alias unavailable)", ({ skip }) => {
+  it("ISSUE-678: launcher path normalization does not rewrite pointer or digest (skipped when 8.3 alias unavailable)", ({
+    skip,
+  }) => {
     const container = issue678TempRoot(".ut-tdd-issue678-pointer-");
     roots.push(container);
     const root = join(container, "consumer-root-with-a-long-name-for-pointer-integrity");
