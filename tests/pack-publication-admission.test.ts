@@ -12,6 +12,7 @@ import {
   type PackPublicationAdmissionConfiguration,
   type PackPublicationAdmissionInput,
   type PackPublicationAdmissionLedgerRecord,
+  type PackPublicationAdmissionObserver,
 } from "../src/setup/pack-publication-admission.ts";
 
 const ok = <T>(value: T): PublicationPortResult<T> => ({ status: "attested", value });
@@ -135,6 +136,28 @@ function fixture(
   };
 }
 
+function withObservation(
+  overrides: Partial<PackPublicationAdmissionObserver>,
+): PackPublicationAdmissionInput {
+  const input = fixture();
+  return { ...input, observer: { ...input.observer, ...overrides } };
+}
+
+async function expectAdmissionDeny(
+  input: PackPublicationAdmissionInput,
+  reason: string,
+): Promise<void> {
+  expect(await admitPackPublication(input)).toMatchObject({
+    ok: false,
+    status: "denied",
+    reason,
+    remoteWrites: 0,
+    approvalConsumes: 0,
+  });
+  expect(input.ledger.appendObservation).not.toHaveBeenCalled();
+  expect(input.ledger.append).not.toHaveBeenCalled();
+}
+
 describe("Pack publication admission observation binding", () => {
   it("U-PACKPUB-ADM-101 declares the bounded candidate coverage explicitly", () => {
     expect(PACK_PUBLICATION_ADMISSION_COVERAGE.implemented).toEqual([
@@ -256,6 +279,120 @@ describe("Pack publication admission observation binding", () => {
       approvalConsumes: 0,
     });
     expect(input.ledger.append).not.toHaveBeenCalled();
+  });
+
+  it("U-PACKPUB-ADM-001 denies a different observed PR number", async () => {
+    const input = withObservation({
+      pullRequest: vi.fn(() => ok({
+        pullRequest: "4243", branch: "pack/publication/op-adm-fixture-0001",
+        headOid: receipt.identity.headOid, baseOid: receipt.identity.baseOid,
+        treeDigest: receipt.identity.treeDigest,
+      })),
+    });
+    await expectAdmissionDeny(input, "admission_pr_mismatch");
+  });
+
+  it("U-PACKPUB-ADM-002 denies a different observed PR head", async () => {
+    const input = withObservation({
+      pullRequest: vi.fn(() => ok({
+        pullRequest: "4242", branch: "pack/publication/op-adm-fixture-0001",
+        headOid: oid("9"), baseOid: receipt.identity.baseOid,
+        treeDigest: receipt.identity.treeDigest,
+      })),
+    });
+    await expectAdmissionDeny(input, "admission_head_mismatch");
+  });
+
+  it("U-PACKPUB-ADM-003 denies a different observed PR base", async () => {
+    const input = withObservation({
+      pullRequest: vi.fn(() => ok({
+        pullRequest: "4242", branch: "pack/publication/op-adm-fixture-0001",
+        headOid: receipt.identity.headOid, baseOid: oid("9"),
+        treeDigest: receipt.identity.treeDigest,
+      })),
+    });
+    await expectAdmissionDeny(input, "admission_base_mismatch");
+  });
+
+  it("U-PACKPUB-ADM-004 denies a different merge base", async () => {
+    const input = withObservation({ mergeBase: vi.fn(() => ok({ mergeBase: oid("9") })) });
+    await expectAdmissionDeny(input, "admission_merge_base_mismatch");
+  });
+
+  it("U-PACKPUB-ADM-005 denies a review for another PR", async () => {
+    const input = withObservation({
+      review: vi.fn(() => ok({
+        pullRequest: "4243", reviewedHead: receipt.identity.headOid,
+        conclusion: "approved" as const, reviewer: "reviewer-b", author: "author-a",
+        closingReceiptDigest: sha("e"),
+      })),
+    });
+    await expectAdmissionDeny(input, "admission_review_pr_mismatch");
+  });
+
+  it("U-PACKPUB-ADM-006 denies malformed reviewed-head OIDs before equality", async () => {
+    for (const reviewedHead of ["a".repeat(39), "A".repeat(40), "a".repeat(64)]) {
+      const input = withObservation({
+        review: vi.fn(() => ok({
+          pullRequest: "4242", reviewedHead,
+          conclusion: "approved" as const, reviewer: "reviewer-b", author: "author-a",
+          closingReceiptDigest: sha("e"),
+        })),
+      });
+      await expectAdmissionDeny(input, "admission_review_head_invalid");
+    }
+  });
+
+  it("U-PACKPUB-ADM-008 denies a non-approved review", async () => {
+    const input = withObservation({
+      review: vi.fn(() => ok({
+        pullRequest: "4242", reviewedHead: receipt.identity.headOid,
+        conclusion: "changes_requested" as const, reviewer: "reviewer-b", author: "author-a",
+        closingReceiptDigest: sha("e"),
+      })),
+    });
+    await expectAdmissionDeny(input, "admission_review_not_approved");
+  });
+
+  it("U-PACKPUB-ADM-009 denies malformed closing receipt digests", async () => {
+    for (const closingReceiptDigest of [
+      `sha256:${"e".repeat(63)}`, `sha1:${"e".repeat(64)}`, `sha256:${"E".repeat(64)}`,
+    ]) {
+      const input = withObservation({
+        review: vi.fn(() => ok({
+          pullRequest: "4242", reviewedHead: receipt.identity.headOid,
+          conclusion: "approved" as const, reviewer: "reviewer-b", author: "author-a",
+          closingReceiptDigest,
+        })),
+      });
+      await expectAdmissionDeny(input, "admission_review_receipt_invalid");
+    }
+  });
+
+  it("U-PACKPUB-ADM-010 denies checks observed for another head", async () => {
+    const input = withObservation({
+      checks: vi.fn(() => ok({
+        headOid: oid("9"), checks: [{ context: "pack-check", conclusion: "success" }],
+      })),
+    });
+    await expectAdmissionDeny(input, "admission_checks_head_mismatch");
+  });
+
+  it("U-PACKPUB-ADM-011 denies an empty observed required-check set", async () => {
+    const input = withObservation({
+      repository: vi.fn(() => ok({ ...configuration, requiredContexts: [] })),
+    });
+    await expectAdmissionDeny(input, "admission_checks_missing");
+  });
+
+  it("U-PACKPUB-ADM-012 denies a failed required check", async () => {
+    const input = withObservation({
+      checks: vi.fn(() => ok({
+        headOid: receipt.identity.headOid,
+        checks: [{ context: "pack-check", conclusion: "failure" }],
+      })),
+    });
+    await expectAdmissionDeny(input, "admission_check_not_success");
   });
 
   it("U-PACKPUB-ADM-040 keeps observer failure indeterminate", async () => {
