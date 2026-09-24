@@ -8,7 +8,7 @@ drive: agent
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-09-18
-updated: 2026-09-18
+updated: 2026-09-24
 owner: Claude / Opus (pair-freeze) · Codex worker (implementation)
 parent_design: docs/plans/PLAN-L6-101-pack-independent-multi-consumer-acceptance.md
 pair_artifact: docs/test-design/harness/L7-pack-consumer-runtime-release-install-test-design.md
@@ -21,7 +21,7 @@ agent_slots:
   - role: se
     slot_label: Luna worker - PR-1 producer と PR-2 installer を別 PR で最小実装する
   - role: qa
-    slot_label: Terra - CANDIDATE-U-PACKRT-001..010 の Red oracle を Linux/Windows で先に作る
+    slot_label: Terra - CANDIDATE-U-PACKRT-001..011 の Red oracle を Linux/Windows で先に作る
   - role: tl
     slot_label: Claude Opus / Sol - asset 集合・identity 導出・自己 digest 照合の非著者検収
 generates:
@@ -47,18 +47,18 @@ status: draft
 github_issue_id: 418
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:9405f2904b48a199af7c071086b9ca9f
-  command_id: plan-revise:issue-418:pr665-r2-flag:forward:r3:29fb33f10d40
-  admitted_at: 2026-09-18T10:51:14.153Z
-  source_digest: sha256:69af2e228a14a52948fb1c04a50e4b29eaf7d64850d3a687b227f8277c9bd980
-  decision_digest: sha256:fa861ead84f1c7367cd9d71ead5eaef675c92955bd81df1a112a4014683a0667
-  receipt_digest: sha256:27715cb8a7eb89b0d9a8a0a48087b1b5e716b8629db6fbe4dd4875089e06a94c
+  receipt_id: certificate:869421fe7bfaee78ce98fc02a7c67b92
+  command_id: plan-revise:issue-418:pr670-release-commit-binding:forward:r4:484a44d7f59c
+  admitted_at: 2026-09-24T03:15:40.306Z
+  source_digest: sha256:8d30d3ddcf4a63d8a52c28673ba4652adaf098cd424750d896d2040fd096b0b8
+  decision_digest: sha256:22342e362737e5b2c4f604445e88f424a40aceb7a649364fde6e42f092098ae5
+  receipt_digest: sha256:9bf8dbad663f64df0b9b8b1bee60deea91846c30b525ff9d0fd94a2c1436c4df
   binding:
     path: docs/plans/PLAN-L7-628-pack-consumer-runtime-release-install.md
     plan_id: PLAN-L7-628-pack-consumer-runtime-release-install
     asset_id: plan:cd11a1885b1c948d89519002a2cec009
-    revision: 3
-    content_digest: sha256:69af2e228a14a52948fb1c04a50e4b29eaf7d64850d3a687b227f8277c9bd980
+    revision: 4
+    content_digest: sha256:8d30d3ddcf4a63d8a52c28673ba4652adaf098cd424750d896d2040fd096b0b8
   route:
     signal: feature_addition
     mode: add-feature
@@ -76,10 +76,11 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-628-pack-consumer-runtime-release-install
-    target_revision: 3
+    target_revision: 4
     phase: forward_merge
-  escape_reason: "PR #665 Sol r2 FLAG (previous #2 anchor の外部束縛、#3 runtime_root
-    導出式と独立 oracle) の是正改訂。"
+  escape_reason: "PR #670 (PR-1) の実装で判明した §5.1 の契約の抜け (release/manifest.yaml
+    の自己参照) を、release commit C2 と artifact source C1 の束縛として freeze する改訂 (advisor
+    claude-fable-5 案 A)。"
 ---
 
 # PLAN-L7-628: Pack Release から consumer runtime を有効化する producer / installer
@@ -145,6 +146,31 @@ advisor (`ut-tdd advisor --decision design --current-model claude-opus-5 --plan 
 | 自己 digest に外部 trust anchor が無い | 自己照合は同一 Release 内 asset の相互整合であり、全 asset を整合的に再計算した偽造を止められない。PF-5 の control manifest も consumer には同じ Release 内の複製として届く | rev 2: 脅威モデルを §6.1 に明記。rev 3 (Sol r2 で previous #2 OPEN): installer に Release 外の anchor `--expected-consumer-digest` を必須化し、authority を source repo 側の publish 記録に置く (§5.7・§6.1・§6.2 手順 0)。PF-5 の値は anchor で固定された `consumer-runtime.json` 内で attestation と相互束縛する。**GitHub の `v*` tag ruleset は tag ref だけを守り、Release asset は tag と独立に差し替え可能**なので、tag を信頼根として主張しない | consumer 側で source から再ビルド照合: 「Release だけから」の目的と矛盾。署名鍵の導入: 高影響境界 (secret / 外部前提) であり PO 承認なしに採らない。installer からの network 照合: 外部 API 前提の追加であり採らない |
 | consumer identity の再構成規則が未定義 | `admitConsumerLocalRuntime` は `productId` / `consumerRoot` / `runtimeRoot` の入力と receipt の一致を要求する (`src/setup/consumer-local-runtime-admission.ts:31-45,300-342`) | `product_id` は Release 側の値として schema に持つ。consumer root 系は installer が導出して初回だけ receipt を組み、bundle の `consumer-receipt.json` として永続化する。再実行は保存済み receipt を読んで照合し、再導出した値で receipt を作り直さない (§6.2 手順 3・5)。rev 3 (Sol r2 で previous #3 OPEN): `consumer_root` / `runtime_root` の exact 導出式を launcher の固定解決源から確定し、初回 receipt を独立に組んだ期待値と照合する oracle を C009 に追加 | 毎回 cwd から receipt を組む: 入力と receipt が同じ出所になり、一致検査が恒真になる |
 
+### 2.2 release commit と artifact source revision の束縛 (rev 4)
+
+PR-1 (#670) の実装中に、rev 3 の §5.1「入力は tag が指す source revision だけ」では PF-5 の control manifest と
+tag の関係が決まらないことが分かった。実測は次のとおり。
+
+- `release/manifest.yaml` は `PLAN-L6-63` §134 と `PLAN-L7-473` AC-6 が source repo の release / channel の唯一の制御正本と
+  定め、`src/setup/release-aggregate-admission.ts` / `release-materializer.ts` / `pack-publication-staging.ts` が
+  この path を固定で読む。
+- このファイルは source repo の全履歴にも Pack repo にも一度も存在しない (`git log --all -- release/manifest.yaml` は空)。
+- PR-1 の実装 (`src/cli/distribution.ts`) は tag commit から manifest を読み、`release.artifactSourceCommit` = tag commit を
+  要求した。commit の SHA はその commit の tree を含むハッシュなので、manifest は自分を含む commit の SHA を書けず、
+  この等式は構造的に満たせない (`tests/distribution-acceptance.test.ts` が止まる)。
+- PF-5 の consumer admission は `release.artifactSourceCommit` = `plan.sourceRevision` を検査する
+  (`src/setup/consumer-local-runtime-admission.ts` の `admitControlManifest`)。
+
+advisor (`ut-tdd advisor --decision design --current-model claude-opus-5 --plan PLAN-L7-628-pack-consumer-runtime-release-install --execute`、
+2026-09-24、provider=claude、model=claude-fable-5) に諮り、次のとおり決定した。
+
+| 案 | 判定 | 理由 |
+| --- | --- | --- |
+| **A (採用)**: tag は `release/manifest.yaml` を追加した release commit C2 を指し、manifest の `artifactSourceCommit` は C1。producer は C1 から build する。C1 が C2 の first-parent 祖先で、C1..C2 の差分が `release/` 配下だけであることを fail-close で検査する | 採用 | build した revision と信頼記録 (attestation / `release.source_revision`) が同じ C1 になり、§6 の installer と PF-5 admission を変えずに整合する。version-bump commit と同じ標準的な release commit の形である |
+| A の弱い形: 検査を「artifact の `sourcePath` が C1..C2 で不変」だけにする | 棄却 | generation は `sourcePath` 以外の全 source を入力にするため、C1..C2 に無関係な code 変更が混ざっても通り、tag の tree と build した tree の乖離を許す |
+| B: C2 から build し、attestation は C1 を名乗る | 棄却 | build した revision と信頼記録が食い違う。compiled ESM は tree 全体を bundle するので、`sourcePath` の blob 一致は generation の同一性を保証しない |
+| C: manifest を source tree 外 (producer 生成) に置く | 棄却 | confirmed の `PLAN-L6-63` / `PLAN-L7-473` の正本位置と、それを固定で読む実装 4 ファイルの supersede が要る |
+
 ## 3. Release asset 契約
 
 canary.2 以降の Pack Release は、次の **宣言された asset 集合と exact に一致** する。欠落・余剰・名前違いは
@@ -187,8 +213,14 @@ consumer 固有の値 (`consumer_root`、`runtime_root`、`operation_id`、`atte
 
 `ut-tdd distribution package --tag <tag>` を拡張し、§3 の 5 asset を出力する。
 
-1. 入力は tag が指す source revision だけ。作業ツリーの未 commit 変更・untracked ファイルを入力にしない。
-2. compiled ESM と receipt は既存の `buildNodeGeneration({ candidateRevision })` (`src/runtime/node-bootstrap.ts`) で生成する。
+1. 入力は git object だけで、作業ツリーの未 commit 変更・untracked ファイルを入力にしない。tag が指す release commit C2 の
+   `release/manifest.yaml` を読み、`--tag` に対応する channel の release の `artifactSourceCommit` を C1 とする (§2.2)。
+   producer は次の全てを満たさなければ出力前に fail-close する。
+   - C2 の tree に `release/manifest.yaml` があり、既存の manifest schema を満たす。
+   - C1 が C2 の first-parent 祖先である (C1 = C2 は manifest を含められないので不可)。
+   - `git diff --name-only C1 C2` の全 path が `release/` 配下である。
+2. compiled ESM と receipt は既存の `buildNodeGeneration({ candidateRevision: C1 })` (`src/runtime/node-bootstrap.ts`) で生成する。
+   `consumer-runtime.json` の `release.source_revision` と `generation.subject_revision` は C1、`release.tag` は `--tag` の値とする。
    Node の版は `scripts/build-node.mjs` と同じ reviewed version を要求し、不一致は fail-close。
 3. `admission_input` は既存の PF5 aggregate と `attestReleaseChannel` (`src/setup/release-channel-adapter.ts`) を再利用して作る。
    新しい aggregate / attestation engine を作らない。
@@ -224,8 +256,10 @@ node <release-dir>/<tag>.ut-tdd.mjs setup --solo --consumer-runtime-release <rel
   食い違い) を見る層であり、anchor 無しで偽造を止めるとは主張しない。CANDIDATE-U-PACKRT-007(c) が「anchor 無しなら通過する /
   anchor 付きなら deny される」の両方を test で固定する。
 - PF-5 との束縛: 手順 4 の `admitReleaseAggregate` が attestation の `expectedDigest` を control manifest の `artifactSetDigest` と
-  照合する既存検査に加え、installer は `release.source_revision` = attestation の `artifactSourceCommit`、`release.tag` と
-  `generation.subject_revision` の対応を検査する。anchor で固定された `consumer-runtime.json` の中で PF-5 の値が食い違う経路を残さない。
+  照合する既存検査に加え、installer は `release.source_revision` = attestation の `artifactSourceCommit` =
+  `generation.subject_revision` (いずれも §5.1 の C1) を検査する。anchor で固定された `consumer-runtime.json` の中で PF-5 の値が
+  食い違う経路を残さない。consumer は git を持たないので、tag が C2 を指すことと C1..C2 の差分の検査は producer (§5.1) だけが
+  行う。
 - GitHub の `v*` tag ruleset は tag ref (= source revision) だけを保護し、Release asset は tag と独立に upload / delete できる。
   tag の immutability を asset 完全性の根拠にしない。
 - 署名鍵による検証は高影響境界 (secret / 外部前提) のため本 PLAN の対象外とし、必要になった時点で PO 承認を得て別 PLAN にする。
@@ -276,7 +310,7 @@ PR-1 と PR-2 を 1 PR に統合しない。scope 構造を指す FLAG は close
 
 ## 8. TDD / trace / Reverse
 
-pair artifact の候補 oracle (`CANDIDATE-U-PACKRT-001..010`) は test-design が所有する。実装 PR で同番号の
+pair artifact の候補 oracle (`CANDIDATE-U-PACKRT-001..011`) は test-design が所有する。実装 PR で同番号の
 `U-PACKRT-*` へ 1:1 昇格する。既存 `CANDIDATE-U-PACKNODE-*`、`CANDIDATE-PACKISO-*`、`U-PACKISO-*`、
 `CANDIDATE-ST-PACKCANARY-*` を再採番・再所有しない。
 
@@ -297,7 +331,8 @@ schema・identity 導出を同一 implementation revision へ束縛する。R3 �
 
 1. PR-1: `distribution package` が §3 の 5 asset を出力し、`consumer-runtime.json` が schema v1 を満たし、どの asset にも
    producer の作業ディレクトリ・user home 配下 path・ユーザー名が無い (receipt の node / npm toolchain path は §4 の例外)
-   (`CANDIDATE-U-PACKRT-001..004` Green)。
+   (`CANDIDATE-U-PACKRT-001..004` Green)。release commit 束縛 (§5.1) の違反を出力前に fail-close する
+   (`CANDIDATE-U-PACKRT-011` Green)。
 2. PR-2: Release の asset だけを置いたディレクトリと空の consumer root から `setup --consumer-runtime-release` が
    `active.json` を生成し、launcher が exit 0 で起動する。破損・取り違えた asset、余剰 / 欠落 asset、保存済み receipt と一致しない再実行を deny し、
    同じ release の再実行は新 write 0。anchor 不一致・未指定と整合的な多 asset 偽造を手順 0 で deny する (`CANDIDATE-U-PACKRT-005..010` Green)。
