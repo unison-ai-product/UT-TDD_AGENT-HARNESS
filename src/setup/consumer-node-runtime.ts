@@ -637,11 +637,16 @@ if (Object.keys(pointer).sort().join("\\0") !== "bundle_digest\\0bundle_path\\0e
 if (pointer.bundle_path !== resolve(pointer.bundle_path) || pointer.entry_path !== resolve(pointer.entry_path)) deny("consumer_runtime_resolution_denied");
 const bundle = resolve(pointer.bundle_path), entry = resolve(pointer.entry_path);
 const runtimeRoot = resolve(consumerRoot, ".ut-tdd", "runtime");
-const runtimeRel = relative(runtimeRoot, bundle);
-const rel = relative(bundle, entry);
+let runtimeRootCanonical, bundleCanonical, entryCanonical;
+try {
+  runtimeRootCanonical = realpathSync.native(runtimeRoot);
+  bundleCanonical = realpathSync.native(bundle);
+  entryCanonical = realpathSync.native(entry);
+} catch { deny("consumer_runtime_absent"); }
+const runtimeRel = relative(runtimeRootCanonical, bundleCanonical);
+const rel = relative(bundleCanonical, entryCanonical);
 if (runtimeRel === "" || runtimeRel === ".." || runtimeRel.startsWith("..") || rel === "" || rel === ".." || rel.startsWith("..")) deny("consumer_runtime_external_path");
-let runtimeReal, bundleReal, entryReal;
-try { runtimeReal = realpathSync.native(runtimeRoot); bundleReal = realpathSync.native(bundle); entryReal = realpathSync.native(entry); } catch { deny("consumer_runtime_absent"); }
+const runtimeReal = runtimeRootCanonical, bundleReal = bundleCanonical, entryReal = entryCanonical;
 const runtimePhysicalRel = relative(runtimeReal, bundleReal);
 if (runtimePhysicalRel === "" || runtimePhysicalRel === ".." || runtimePhysicalRel.startsWith("..")) deny("consumer_runtime_external_path");
 const physicalRel = relative(bundleReal, entryReal);
