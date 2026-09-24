@@ -286,6 +286,7 @@ describe("clean distribution local acceptance smoke", () => {
     expect(plan.denylistViolations).toEqual([]);
 
     const cleanRoot = mkdtempSync(join(tmpdir(), "ut-tdd-clean-acceptance-"));
+    const injectedHome = mkdtempSync(join(tmpdir(), "ut-tdd-acceptance-home-"));
     try {
       const sourcePaths = walkCandidatePaths(repoRoot);
       for (const rel of plan.artifactPaths) {
@@ -323,6 +324,8 @@ describe("clean distribution local acceptance smoke", () => {
         // PLAN-L7-362: staged root には cache が無いため、status の update-check advisory が
         // 実 remote へ問い合わせないよう opt-out する (テスト決定論)。
         UT_TDD_SKIP_UPDATE_CHECK: "1",
+        HOME: injectedHome,
+        USERPROFILE: injectedHome,
         PATH: `${join(cleanRoot, ".fake-bin")}${process.platform === "win32" ? ";" : ":"}${process.env.PATH ?? ""}`,
       };
 
@@ -493,6 +496,7 @@ describe("clean distribution local acceptance smoke", () => {
       expect(typecheck.status, typecheck.stderr || typecheck.stdout).toBe(0);
     } finally {
       removeCleanRoot(cleanRoot);
+      removeCleanRoot(injectedHome);
     }
   }, 420_000);
 });
