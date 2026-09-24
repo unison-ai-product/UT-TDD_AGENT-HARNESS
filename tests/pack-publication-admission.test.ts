@@ -183,6 +183,10 @@ describe("Pack publication admission observation binding", () => {
       "CANDIDATE-PACKPUB-ADM-010",
       "CANDIDATE-PACKPUB-ADM-011",
       "CANDIDATE-PACKPUB-ADM-012",
+      "CANDIDATE-PACKPUB-ADM-013",
+      "CANDIDATE-PACKPUB-ADM-014",
+      "CANDIDATE-PACKPUB-ADM-015",
+      "CANDIDATE-PACKPUB-ADM-020",
       "CANDIDATE-PACKPUB-ADM-036",
       "CANDIDATE-PACKPUB-ADM-040",
       "CANDIDATE-PACKPUB-ADM-042",
@@ -190,7 +194,8 @@ describe("Pack publication admission observation binding", () => {
       "CANDIDATE-PACKPUB-ADM-057",
     ]);
     expect(PACK_PUBLICATION_ADMISSION_COVERAGE.deferred).toEqual([
-      "CANDIDATE-PACKPUB-ADM-013..035",
+      "CANDIDATE-PACKPUB-ADM-016..019",
+      "CANDIDATE-PACKPUB-ADM-021..035",
       "CANDIDATE-PACKPUB-ADM-037..039",
       "CANDIDATE-PACKPUB-ADM-041",
       "CANDIDATE-PACKPUB-ADM-043..047",
@@ -603,7 +608,11 @@ describe("Pack publication admission observation binding", () => {
 
     const input = fixture(
       { ledger: seeded.ledger },
-      { operationId: "op-adm-fixture-0001", idempotencyKey: "idem-adm-fixture-0002", pullRequest: "4243" },
+      {
+        operationId: "op-adm-fixture-0001",
+        idempotencyKey: "idem-adm-fixture-0002",
+        pullRequest: "4243",
+      },
     );
     await expectAdmissionDeny(input, "admission_operation_replay");
   });
@@ -616,7 +625,11 @@ describe("Pack publication admission observation binding", () => {
 
     const input = fixture(
       { ledger: seeded.ledger },
-      { operationId: "op-adm-fixture-0002", idempotencyKey: "idem-adm-fixture-0001", pullRequest: "4243" },
+      {
+        operationId: "op-adm-fixture-0002",
+        idempotencyKey: "idem-adm-fixture-0001",
+        pullRequest: "4243",
+      },
     );
     await expectAdmissionDeny(input, "admission_idempotency_replay");
   });
@@ -642,7 +655,11 @@ describe("Pack publication admission observation binding", () => {
 
     const input = fixture(
       { ledger: seeded.ledger },
-      { operationId: "op-adm-fixture-0002", idempotencyKey: "idem-adm-fixture-0002", expectedMainOid: oid("9") },
+      {
+        operationId: "op-adm-fixture-0002",
+        idempotencyKey: "idem-adm-fixture-0002",
+        expectedMainOid: oid("9"),
+      },
     );
     await expectAdmissionDeny(input, "admission_pr_expected_main_conflict");
   });
