@@ -4912,6 +4912,22 @@
         "revision": 2,
         "content_digest": "sha256:c7bd3a4b124b14b79ebbceacd92e6d344e2e24fd5422a61ad283edd2b06bb086"
       }
+    },
+    {
+      "sequence": 308,
+      "previous_record_digest": "sha256:82de2859beb72ae7919063cb1145ef390cc573fb298e3f8d97c1a5ad663cee2d",
+      "record_digest": "sha256:9a60a2aaa49433fe19add5c6f403f56a15117877abf87f743bfdd1f3bbbdd740",
+      "command_id": "plan-revise:issue-678:pr-681:r3-duplicate-artifact-ownership",
+      "receipt_id": "certificate:4fa122ee713125cd15949e761c67eb07",
+      "receipt_digest": "sha256:9291180b6ef24dbef90b220929103a6213bb3ec708310d99f092c635585ac51a",
+      "decision_digest": "sha256:9b10d056759e06ee9fc29462d948e93593d996810adbb52bdde0acace5032e31",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-678-consumer-launcher-path-alias.md",
+        "plan_id": "PLAN-L7-678-consumer-launcher-path-alias",
+        "asset_id": "plan:b51c429b5aa6f1f7309f11e398a11a54",
+        "revision": 3,
+        "content_digest": "sha256:1c6299324baa7bfbb7c7b72577b7250ab4bb6f0bc8c498519129002e25988ac9"
+      }
     }
   ]
 }

@@ -25,10 +25,8 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-678-consumer-launcher-path-alias.md
     artifact_type: markdown_doc
-  - artifact_path: src/setup/consumer-node-runtime.ts
-    artifact_type: source_module
-  - artifact_path: tests/consumer-node-runtime.test.ts
-    artifact_type: test_code
+  - artifact_path: docs/test-design/harness/L7-678-consumer-launcher-path-alias-test-design.md
+    artifact_type: test_design
 dependencies:
   parent: docs/plans/PLAN-L7-516-pack-self-contained-consumer-runtime.md
   requires:
@@ -55,18 +53,18 @@ status: confirmed
 github_issue_id: 678
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:f7b7403fbd94c5b9bbed62580a777bca
-  command_id: plan-revise:issue-678:pr-681:r1-remediation-1c
-  admitted_at: 2026-09-24T17:30:00+09:00
-  source_digest: sha256:c7bd3a4b124b14b79ebbceacd92e6d344e2e24fd5422a61ad283edd2b06bb086
-  decision_digest: sha256:1e254c795cbf98091baecf223f67533e8b75bc16ff38a85e8accf2041c88c453
-  receipt_digest: sha256:2d74e13a20df6578a4ad88848d79ea885d8f8fc5c2560b6b51e9840f882c21a5
+  receipt_id: certificate:4fa122ee713125cd15949e761c67eb07
+  command_id: plan-revise:issue-678:pr-681:r3-duplicate-artifact-ownership
+  admitted_at: 2026-09-24T09:10:58.174Z
+  source_digest: sha256:1c6299324baa7bfbb7c7b72577b7250ab4bb6f0bc8c498519129002e25988ac9
+  decision_digest: sha256:9b10d056759e06ee9fc29462d948e93593d996810adbb52bdde0acace5032e31
+  receipt_digest: sha256:9291180b6ef24dbef90b220929103a6213bb3ec708310d99f092c635585ac51a
   binding:
     path: docs/plans/PLAN-L7-678-consumer-launcher-path-alias.md
     plan_id: PLAN-L7-678-consumer-launcher-path-alias
     asset_id: plan:b51c429b5aa6f1f7309f11e398a11a54
-    revision: 2
-    content_digest: sha256:c7bd3a4b124b14b79ebbceacd92e6d344e2e24fd5422a61ad283edd2b06bb086
+    revision: 3
+    content_digest: sha256:1c6299324baa7bfbb7c7b72577b7250ab4bb6f0bc8c498519129002e25988ac9
   route:
     signal: incident
     mode: incident
@@ -83,8 +81,8 @@ admission_receipt:
     target_plan_id: PLAN-L7-516-pack-self-contained-consumer-runtime
     target_revision: 4
     phase: forward_merge
-  escape_reason: "Issue #678 の局所的な launcher path 表記誤拒否を canonical path containment
-    へ補正し、PR #681 r1 FLAG 3件を是正する。"
+  escape_reason: "Issue #678 の局所的な launcher path ownership 重複を除去し、既存 owner を維持したまま
+    PR #681 r3 の duplicate-artifact-ownership を是正する。"
 ---
 
 # PLAN-L7-678: consumer launcher path alias 誤拒否の修理
@@ -99,6 +97,12 @@ Issue #678 の Windows consumer launcher が、同じ consumer root を 8.3 alia
 - containment 判定は canonical 化済みの物理 path に対する1段の lexical containment とし、junction / symlink escape を同じ判定で process launch 前に exit 78 で拒否する。canonical 値同士を再比較する dead duplicate は持たない。
 - Windows の大小文字は同一扱い、POSIX の大小文字は別 path として扱う。
 - active pointer の schema、bundle manifest、digest、pointer bytes は変更しない。
+
+## 実装と oracle の対応
+
+- 修理対象は `src/setup/consumer-node-runtime.ts` の `renderConsumerNodeWrapper`。consumer root、bundle、entry の canonical path containment と physical escape deny をここで実装する。
+- 独立 oracle の正本は `docs/test-design/harness/L7-678-consumer-launcher-path-alias-test-design.md`。8.3 alias / 長形式、physical escape、OS 別 case semantics、pointer/digest 不変の4 oracleを定義する。
+- 実行テストは既存 owner を持つ `tests/consumer-node-runtime.test.ts` とし、本 PLAN はその source test code の所有権を宣言しない。test-design の oracle と実装対象の対応は上記 path で固定する。
 
 ## テストと検証
 
