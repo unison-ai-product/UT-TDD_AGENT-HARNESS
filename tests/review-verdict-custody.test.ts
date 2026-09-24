@@ -10,7 +10,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   canonicalizeReviewRequest,
@@ -232,8 +232,9 @@ describe("repo-local review verdict custody (U-RVATT-030..035)", () => {
   it("U-RVATT-038: 壊れた監査JSONLはtyped indeterminateで停止する", () => {
     const root = gitRoot();
     try {
-      mkdirSync(join(root, ".ut-tdd", "review"), { recursive: true });
-      writeFileSync(reviewCustodyAuditPath(root), '{"broken":\n', "utf8");
+      const auditPath = reviewCustodyAuditPath(root);
+      mkdirSync(dirname(auditPath), { recursive: true });
+      writeFileSync(auditPath, '{"broken":\n', "utf8");
       const result = issueReviewRequest({ repoRoot: root, request: request(), strict: true });
       expect(result).toEqual({ ok: false, reason: "attempt_outcome_indeterminate" });
       expect(existsSync(join(root, ".ut-tdd", "review", "requests"))).toBe(false);
