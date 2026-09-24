@@ -387,27 +387,23 @@ describe("codex-hook-adapter — Codex hooks.json parity (PLAN-L7-139, PLAN-L7-6
       expect(r.violations.some((v) => v.reason === "unsafe_command_token")).toBe(true);
     });
 
-    it("(e2) 危険クラス別 shell 展開文字を script path に注入すると全て fail-close (allowlist 化、denylist 列挙漏れの回帰防止)", () => {
-      const dangerousSuffixes = [
-        ";whoami",
-        "`whoami`",
-        "|whoami",
-        "&whoami",
-        ">out",
-        "(whoami)",
-        "%whoami%",
-        "\nwhoami",
-      ];
-      for (const suffix of dangerousSuffixes) {
+    it("(e2) 危険クラス別 shell 展開文字を script path 内に埋め込むと全て fail-close (allowlist 化、denylist 列挙漏れの回帰防止)", () => {
+      // 文字は「固定前置部分の外の script path」内 (= 引用符の中) に埋め込む — (e) の
+      // "work guard.ts" (空白混入) と同じ埋め込み位置にすることで、外側 regex
+      // (`^node\s+"([^"]*)"((?:\s+\S+)*)\s*$`) の quoted-match 自体は成立させたまま、
+      // scriptPath の allowlist 判定だけを踏ませる (regex 全体の不一致による
+      // unrooted_command_path への横滑りを避ける)。
+      const dangerousChars = [";", "`", "|", "&", ">", "(", ")", "%", "\n"];
+      for (const char of dangerousChars) {
         const broken = validCodexHooks() as {
           hooks: { PreToolUse: { hooks: { command: string }[] }[] };
         };
-        broken.hooks.PreToolUse[0].hooks[0].command = `node "${CODEX_GIT_ROOT_PREFIX}.claude/hooks/work-guard.ts"${suffix}`;
+        broken.hooks.PreToolUse[0].hooks[0].command = `node "${CODEX_GIT_ROOT_PREFIX}.claude/hooks/work-guard${char}whoami.ts"`;
         const r = analyzeCodexHookAdapter({ codexHooksJson: json(broken) });
-        expect(r.ok, `suffix=${JSON.stringify(suffix)}`).toBe(false);
+        expect(r.ok, `char=${JSON.stringify(char)}`).toBe(false);
         expect(
           r.violations.some((v) => v.reason === "unsafe_command_token"),
-          `suffix=${JSON.stringify(suffix)}: ${JSON.stringify(r.violations)}`,
+          `char=${JSON.stringify(char)}: ${JSON.stringify(r.violations)}`,
         ).toBe(true);
       }
     });
