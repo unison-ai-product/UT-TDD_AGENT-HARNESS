@@ -485,32 +485,20 @@ describe("codex-hook-adapter — Codex hooks.json parity (PLAN-L7-139, PLAN-L7-6
       const workGuardCommand = commandFor("PreToolUse", "apply_patch|write_file");
       const agentGuardCommand = commandFor("PreToolUse", "spawn_agent|spawn_agents_on_csv");
 
-      console.error(
-        "DEBUG git status:",
-        spawnSync("git", ["-C", consumer, "status", "--porcelain"], { encoding: "utf8" }).stdout,
-      );
-      console.error(
-        "DEBUG marker exists:",
-        spawnSync(
-          "pwsh",
-          ["-NoProfile", "-Command", "Test-Path .ut-tdd/state/foreign-edit-override"],
-          {
-            cwd: consumer,
-            encoding: "utf8",
-          },
-        ).stdout,
-      );
-
-      // setup が生成した .claude/CLAUDE.md は consumer repo でまだ commit されておらず
+      // setup が生成した AGENTS.md は consumer repo でまだ commit されておらず
       // (setupConsumerFromPack が commit するのは ut-tdd.project.json だけ)、この hook
       // 呼び出しの session_id とは無関係の "foreign uncommitted file" として扱われる。
+      // (`.claude/CLAUDE.md` のような「丸ごと新規の untracked ディレクトリ」配下のパスは
+      // `git status --porcelain` が既定でディレクトリ 1 行に畳んでしまい、work-guard の
+      // per-file 照合に乗らない。リポジトリ直下は project 作成時から tracked なので、
+      // 直下の untracked ファイルは個別行になる。)
       for (const cwd of [consumer, subdirectory]) {
         const foreignEdit = spawnCodexHookCommand(workGuardCommand, {
           cwd,
           input: JSON.stringify({
             session_id: "cxhookcmd-004",
             tool_name: "apply_patch",
-            tool_input: { file_path: ".claude/CLAUDE.md" },
+            tool_input: { file_path: "AGENTS.md" },
           }),
           env: { CLAUDE_PROJECT_DIR: consumer, UT_TDD_PROJECT_DIR: consumer },
         });
