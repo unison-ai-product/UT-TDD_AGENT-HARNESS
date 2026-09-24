@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
@@ -458,41 +458,70 @@ describe("codex-hook-adapter — Codex hooks.json parity (PLAN-L7-139, PLAN-L7-6
       return command;
     }
 
-    it("U-CXHOOKCMD-003: SessionStart/PostToolUse/Stop は repo root / subdirectory の両方の cwd で exit 0", () => {
-      const subdirectory = join(consumer, "subdir");
-      for (const cwd of [consumer, subdirectory]) {
-        const sessionStart = spawnCodexHookCommand(commandFor("SessionStart"), {
-          cwd,
-          input: JSON.stringify({ session_id: "cxhookcmd-003", tool_name: "SessionStart" }),
-          env: { CLAUDE_PROJECT_DIR: consumer, UT_TDD_PROJECT_DIR: consumer },
-        });
-        expect(
-          sessionStart.status,
-          `cwd=${cwd}: ${sessionStart.stdout}\n${sessionStart.stderr}`,
-        ).toBe(0);
+    function sessionLogPath(sessionId: string): string {
+      return join(consumer, ".ut-tdd", "logs", "session", `${sessionId}.jsonl`);
+    }
 
-        const stop = spawnCodexHookCommand(commandFor("Stop"), {
-          cwd,
-          input: JSON.stringify({ session_id: "cxhookcmd-003", tool_name: "Stop" }),
-          env: { CLAUDE_PROJECT_DIR: consumer, UT_TDD_PROJECT_DIR: consumer },
-        });
-        expect(stop.status, `cwd=${cwd}: ${stop.stdout}\n${stop.stderr}`).toBe(0);
+    function sessionLogLines(sessionId: string): { event_type: string }[] {
+      const path = sessionLogPath(sessionId);
+      if (!existsSync(path)) return [];
+      return readFileSync(path, "utf8")
+        .split("\n")
+        .filter((line) => line.trim().length > 0)
+        .map((line) => JSON.parse(line) as { event_type: string });
+    }
+
+    it("U-CXHOOKCMD-003: SessionStart/PostToolUse/Stop は repo root / subdirectory の両方の cwd で exit 0、session log に 1 行ずつ増える", () => {
+      const subdirectory = join(consumer, "subdir");
+      const cases: readonly [string, string][] = [
+        ["SessionStart", "session_start"],
+        ["PostToolUse", "tool_use"],
+        ["Stop", "session_end"],
+      ];
+      let seq = 0;
+      for (const cwd of [consumer, subdirectory]) {
+        const cwdLabel = cwd === consumer ? "root" : "subdir";
+        for (const [event, expectedEventType] of cases) {
+          const sessionId = `cxhookcmd-003-${cwdLabel}-${event.toLowerCase()}-${seq++}`;
+          const before = sessionLogLines(sessionId).length;
+          expect(before, `${sessionId} must start with a fresh (unused) session log`).toBe(0);
+
+          const result = spawnCodexHookCommand(commandFor(event), {
+            cwd,
+            input: JSON.stringify({ session_id: sessionId, tool_name: "manual" }),
+            env: { CLAUDE_PROJECT_DIR: consumer, UT_TDD_PROJECT_DIR: consumer },
+          });
+          expect(
+            result.status,
+            `cwd=${cwd} event=${event}: ${result.stdout}\n${result.stderr}`,
+          ).toBe(0);
+
+          const after = sessionLogLines(sessionId);
+          expect(after.length - before, `cwd=${cwd} event=${event} session log increment`).toBe(1);
+          expect(after.at(-1)?.event_type).toBe(expectedEventType);
+        }
       }
 
-      // 変異: 旧形式 (node 単体) に戻すと exit 1 になる。
+      // 変異: 旧形式 (node 単体) に戻すと exit 1・session log 増加 0 になる。
+      const legacySessionId = "cxhookcmd-003-legacy";
+      const legacyBefore = sessionLogLines(legacySessionId).length;
       const legacy = spawnCodexHookCommand("node", {
         cwd: consumer,
-        input: JSON.stringify({ session_id: "cxhookcmd-003-legacy" }),
+        input: JSON.stringify({ session_id: legacySessionId }),
       });
-      expect(legacy.status).not.toBe(0);
+      expect(legacy.status).toBe(1);
+      expect(sessionLogLines(legacySessionId).length - legacyBefore).toBe(0);
 
-      // 変異: git root 解決を外した repo 相対 command は subdirectory cwd で解決できず fail する。
+      // 変異: git root 解決を外した repo 相対 command は subdirectory cwd で解決できず exit 1 になる。
+      const unrootedSessionId = "cxhookcmd-003-unrooted";
+      const unrootedBefore = sessionLogLines(unrootedSessionId).length;
       const unrooted = spawnCodexHookCommand('node "src/cli.ts" session start', {
         cwd: subdirectory,
-        input: JSON.stringify({ session_id: "cxhookcmd-003-unrooted" }),
+        input: JSON.stringify({ session_id: unrootedSessionId }),
         env: { CLAUDE_PROJECT_DIR: consumer, UT_TDD_PROJECT_DIR: consumer },
       });
-      expect(unrooted.status).not.toBe(0);
+      expect(unrooted.status).toBe(1);
+      expect(sessionLogLines(unrootedSessionId).length - unrootedBefore).toBe(0);
     }, 420_000);
 
     it("U-CXHOOKCMD-004: work-guard/agent-guard は foreign 編集を repo root / subdirectory の両方で block する", () => {
