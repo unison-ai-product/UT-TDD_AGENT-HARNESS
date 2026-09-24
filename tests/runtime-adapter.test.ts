@@ -266,7 +266,7 @@ describe("runtime adapter plan", () => {
       const ok = isProviderCommandSpawnable("codex", {
         env: { UT_TDD_CODEX_BIN: explicit },
         platform: process.platform,
-        runProbe: (command, args, _env, options) => {
+        runProbe: ({ command, args, options }) => {
           seen.push(`${command} ${args.join(" ")}`);
           probeOptions = options;
           return { status: 0 };

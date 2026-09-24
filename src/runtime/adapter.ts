@@ -109,12 +109,14 @@ export interface ProviderInvocationInput {
 }
 
 export interface ProviderProbeOptions extends ProviderCommandResolutionOptions {
-  runProbe?: (
-    command: string,
-    args: string[],
-    env: NodeJS.ProcessEnv,
-    options: ProviderProbeSpawnOptions,
-  ) => { status: number | null };
+  runProbe?: (input: ProviderProbeInput) => { status: number | null };
+}
+
+export interface ProviderProbeInput {
+  command: string;
+  args: string[];
+  env: NodeJS.ProcessEnv;
+  options: ProviderProbeSpawnOptions;
 }
 
 export interface ProviderProbeSpawnOptions {
@@ -327,12 +329,7 @@ export function isProviderCommandSpawnable(
   });
   const runProbe =
     opts.runProbe ??
-    ((
-      command: string,
-      args: string[],
-      _probeEnv: NodeJS.ProcessEnv,
-      options: ProviderProbeSpawnOptions,
-    ) => spawnSync(command, args, options));
+    ((input: ProviderProbeInput) => spawnSync(input.command, input.args, input.options));
   const probeOptions: ProviderProbeSpawnOptions = {
     env,
     stdio: "ignore",
@@ -341,7 +338,12 @@ export function isProviderCommandSpawnable(
     windowsHide: true,
   };
   try {
-    return runProbe(invocation.command, invocation.args, env, probeOptions).status === 0;
+    return runProbe({
+      command: invocation.command,
+      args: invocation.args,
+      env,
+      options: probeOptions,
+    }).status === 0;
   } catch {
     return false;
   }

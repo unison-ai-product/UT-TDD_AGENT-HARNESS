@@ -1,7 +1,8 @@
-import { readdirSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Command } from "commander";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   adapterExecutionEnv,
   executeAdapterPlanForCli,
@@ -100,7 +101,8 @@ describe("CLI delegation command registration", () => {
 
   it("U-ADAPTER-010: hides the delegated provider console window", () => {
     const sessionPrefix = `issue683-delegation-${Date.now()}`;
-    const sessionDir = join(process.cwd(), ".ut-tdd", "logs", "session");
+    const fixtureRoot = mkdtempSync(join(tmpdir(), "ut-tdd-cli-delegation-"));
+    const cwd = vi.spyOn(process, "cwd").mockReturnValue(fixtureRoot);
     let spawnOptions: { windowsHide?: boolean } | undefined;
     try {
       const plan = buildAdapterPlan(
@@ -125,9 +127,8 @@ describe("CLI delegation command registration", () => {
       expect(result.exit_code).toBe(0);
       expect(spawnOptions?.windowsHide).toBe(true);
     } finally {
-      for (const name of readdirSync(sessionDir, { encoding: "utf8" })) {
-        if (name.startsWith(`${sessionPrefix}-`)) rmSync(join(sessionDir, name), { force: true });
-      }
+      cwd.mockRestore();
+      rmSync(fixtureRoot, { recursive: true, force: true });
     }
   });
 });
