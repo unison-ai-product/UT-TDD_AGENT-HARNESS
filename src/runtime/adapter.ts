@@ -338,12 +338,14 @@ export function isProviderCommandSpawnable(
     windowsHide: true,
   };
   try {
-    return runProbe({
-      command: invocation.command,
-      args: invocation.args,
-      env,
-      options: probeOptions,
-    }).status === 0;
+    return (
+      runProbe({
+        command: invocation.command,
+        args: invocation.args,
+        env,
+        options: probeOptions,
+      }).status === 0
+    );
   } catch {
     return false;
   }
