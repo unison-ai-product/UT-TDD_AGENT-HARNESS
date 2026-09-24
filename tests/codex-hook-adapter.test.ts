@@ -85,13 +85,26 @@ function spawnCodexHookCommand(
 ) {
   const env = { ...process.env, ...options.env };
   if (process.platform === "win32") {
-    return spawnSync("pwsh", ["-NoProfile", "-Command", command], {
-      cwd: options.cwd,
-      input: options.input,
-      encoding: "utf8",
-      env,
-      windowsHide: true,
-    });
+    // PowerShell 7.3+ の $PSNativeCommandUseErrorActionPreference (既定 $true) は、非 0 exit +
+    // stderr 出力を持つ native command を pwsh 自身の terminating error として扱い、pwsh の
+    // プロセス exit code を (元の値ではなく) 1 に丸めてしまう。Codex が hook の exit code を
+    // そのまま受け取る契約 (PLAN-L7-668 §3.3) を検証するため、ここでは無効化して
+    // 元の $LASTEXITCODE をそのまま pwsh 自身の exit code にする。
+    return spawnSync(
+      "pwsh",
+      [
+        "-NoProfile",
+        "-Command",
+        `$global:PSNativeCommandUseErrorActionPreference = $false; ${command}; exit $LASTEXITCODE`,
+      ],
+      {
+        cwd: options.cwd,
+        input: options.input,
+        encoding: "utf8",
+        env,
+        windowsHide: true,
+      },
+    );
   }
   return spawnSync("sh", ["-c", command], {
     cwd: options.cwd,
@@ -471,6 +484,22 @@ describe("codex-hook-adapter — Codex hooks.json parity (PLAN-L7-139, PLAN-L7-6
       const subdirectory = join(consumer, "subdir");
       const workGuardCommand = commandFor("PreToolUse", "apply_patch|write_file");
       const agentGuardCommand = commandFor("PreToolUse", "spawn_agent|spawn_agents_on_csv");
+
+      console.error(
+        "DEBUG git status:",
+        spawnSync("git", ["-C", consumer, "status", "--porcelain"], { encoding: "utf8" }).stdout,
+      );
+      console.error(
+        "DEBUG marker exists:",
+        spawnSync(
+          "pwsh",
+          ["-NoProfile", "-Command", "Test-Path .ut-tdd/state/foreign-edit-override"],
+          {
+            cwd: consumer,
+            encoding: "utf8",
+          },
+        ).stdout,
+      );
 
       // setup が生成した .claude/CLAUDE.md は consumer repo でまだ commit されておらず
       // (setupConsumerFromPack が commit するのは ut-tdd.project.json だけ)、この hook
