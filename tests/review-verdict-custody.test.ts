@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import {
   existsSync,
   mkdirSync,
@@ -25,6 +26,7 @@ import {
   beginReviewAttempt,
   cleanupReviewAttempt,
   hasTerminalReviewReceipt,
+  type ReviewCustodyAuditEvent,
   readReviewCustodyAudit,
   recordReviewAttemptFailure,
   reviewCustodyAuditPath,
@@ -172,7 +174,7 @@ describe("repo-local review verdict custody (U-RVATT-030..035)", () => {
     }
   });
 
-  it("orphan receipt と identity-drift event は retry を terminal 扱いしない (U-RVATT-037)", () => {
+  it("orphan receipt は retry を terminal 扱いしない (U-RVATT-037)", () => {
     const root = gitRoot();
     try {
       const issued = issue(root);
@@ -194,36 +196,107 @@ describe("repo-local review verdict custody (U-RVATT-030..035)", () => {
       expect(reviewListing(root).filter((entry) => entry.startsWith("verdicts/"))).toEqual(
         verdictTreeBeforeOrphanRetry,
       );
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
 
-      appendReviewCustodyAudit(root, {
+  it.each([
+    ["exactHead", (event: ReviewCustodyAuditEvent) => ({ ...event, exactHead: "b".repeat(40) })],
+    [
+      "verdictPath",
+      (event: ReviewCustodyAuditEvent) => ({
+        ...event,
+        verdictPath: `${event.verdictPath}.foreign`,
+      }),
+    ],
+    [
+      "receiptFileDigest",
+      (event: ReviewCustodyAuditEvent) => ({ ...event, receiptFileDigest: "f".repeat(64) }),
+    ],
+    ["provider", (event: ReviewCustodyAuditEvent) => ({ ...event, provider: "codex" as const })],
+    ["model", (event: ReviewCustodyAuditEvent) => ({ ...event, model: "" })],
+    ["exitCode", (event: ReviewCustodyAuditEvent) => ({ ...event, exitCode: 1 })],
+    ["verdictDigest", (event: ReviewCustodyAuditEvent) => ({ ...event, verdictDigest: "invalid" })],
+  ] as const)("U-RVATT-037 rejects a single %s drift in terminal audit identity", (_axis, mutate) => {
+    const root = gitRoot();
+    try {
+      const issued = issue(root);
+      const receiptPath = join(root, ".ut-tdd", "review", "receipts", `${issued.digest}.json`);
+      const receiptBytes = Buffer.from('{"verdict":"PASS"}\n', "utf8");
+      mkdirSync(dirname(receiptPath), { recursive: true });
+      writeFileSync(receiptPath, receiptBytes);
+      const valid: ReviewCustodyAuditEvent = {
         kind: "attempt_completed",
         requestDigest: issued.digest,
         attempt: 1,
-        exactHead: "b".repeat(40),
+        exactHead: issued.request.exactHead,
         verdictPath: reviewVerdictPath(root, issued.digest, 1),
         recordedAt: "2026-08-19T00:06:00.000Z",
-        reason: "identity drift fixture",
+        reason: "review_completed",
         provider: "claude",
         model: "claude-opus-5",
         exitCode: 0,
-        receiptFileDigest: "0".repeat(64),
+        receiptFileDigest: createHash("sha256").update(receiptBytes).digest("hex"),
         verdictDigest: "1".repeat(64),
-      });
+      };
+      appendReviewCustodyAudit(root, mutate(valid));
+      expect(hasTerminalReviewReceipt(root, issued.request)).toBe(false);
       const auditBytes = readFileSync(reviewCustodyAuditPath(root));
-      const verdictTreeBeforeDriftRetry = reviewListing(root).filter((entry) =>
-        entry.startsWith("verdicts/"),
-      );
-      const driftRetry = issueReviewRequest({
+      const retry = issueReviewRequest({
         repoRoot: root,
         request: { ...issued.request, requestedAt: "2026-08-19T00:07:00.000Z" },
         strict: true,
       });
-      expect(driftRetry).toMatchObject({ ok: true });
+      expect(retry).toMatchObject({ ok: true });
       expect(readFileSync(receiptPath)).toEqual(receiptBytes);
       expect(readFileSync(reviewCustodyAuditPath(root))).toEqual(auditBytes);
-      expect(reviewListing(root).filter((entry) => entry.startsWith("verdicts/"))).toEqual(
-        verdictTreeBeforeDriftRetry,
-      );
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it.each([
+    ["claude", true],
+    ["codex", false],
+  ] as const)("U-RVATT-037 crash-window completion provider %s is retryable=%s", (provider, retryable) => {
+    const root = gitRoot();
+    try {
+      const issued = issue(root);
+      const first = beginReviewAttempt({
+        repoRoot: root,
+        request: issued.request,
+        provider: "claude",
+        model: "claude-opus-5",
+      });
+      if (!first.ok) throw new Error(first.reason);
+      appendReviewCustodyAudit(root, {
+        kind: "attempt_completed",
+        requestDigest: issued.digest,
+        attempt: first.attempt,
+        exactHead: issued.request.exactHead,
+        verdictPath: first.path,
+        recordedAt: "2026-08-19T00:06:00.000Z",
+        reason: "review_completed",
+        provider,
+        model: "claude-opus-5",
+        exitCode: 0,
+        receiptFileDigest: "1".repeat(64),
+        verdictDigest: "2".repeat(64),
+      });
+      const auditBytes = readFileSync(reviewCustodyAuditPath(root));
+      const second = beginReviewAttempt({
+        repoRoot: root,
+        request: issued.request,
+        provider: "claude",
+        model: "claude-opus-5",
+      });
+      if (retryable) {
+        expect(second).toMatchObject({ ok: true, attempt: 2 });
+      } else {
+        expect(second).toEqual({ ok: false, reason: "attempt_outcome_indeterminate" });
+        expect(readFileSync(reviewCustodyAuditPath(root))).toEqual(auditBytes);
+      }
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

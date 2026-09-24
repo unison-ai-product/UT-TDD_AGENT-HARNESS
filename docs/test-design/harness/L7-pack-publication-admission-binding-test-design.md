@@ -54,10 +54,10 @@ PLAN-L7-626 §3 の同じ行と一致させる。
 | `CANDIDATE-PACKPUB-ADM-003` | G03 | 565 §1.1、#624 §4.1 | observed PR base を別 OID | `admission_base_mismatch`、write 0 |
 | `CANDIDATE-PACKPUB-ADM-004` | G04 | 565 §3 | merge-base を別 OID | `admission_merge_base_mismatch`、write 0 |
 | `CANDIDATE-PACKPUB-ADM-005` | G05 | 626 §2.2-3 | review receipt の PR を `4243` | `admission_review_pr_mismatch`、write 0 |
-| `CANDIDATE-PACKPUB-ADM-006` | G06 | 626 §2.2 形状契約 | reviewed head を 39 hex / uppercase / 64 hex | `admission_review_head_invalid`、write 0 |
+| `CANDIDATE-PACKPUB-ADM-006` | G06 | 626 §2.2 形状契約 | reviewed head を 39 hex / uppercase / 64 hex / 40 桁中の非16進文字1字へ変異 | `admission_review_head_invalid`、write 0 |
 | `CANDIDATE-PACKPUB-ADM-007` | G07 | 565 §1.1 | reviewed head を形状正しい別 OID | `admission_review_head_mismatch`、write 0 |
 | `CANDIDATE-PACKPUB-ADM-008` | G08 | 565 §1.1 | conclusion を `changes_requested` | `admission_review_not_approved`、write 0 |
-| `CANDIDATE-PACKPUB-ADM-009` | G09 | 626 §2.2 形状契約、#624 §4.2 | closing receipt digest を 63 hex / `sha1:` prefix / uppercase | `admission_review_receipt_invalid`、write 0 |
+| `CANDIDATE-PACKPUB-ADM-009` | G09 | 626 §2.2 形状契約、#624 §4.2 | closing receipt digest を 63 hex / `sha1:` prefix / uppercase / 64 桁中の非16進文字1字へ変異 | `admission_review_receipt_invalid`、write 0 |
 | `CANDIDATE-PACKPUB-ADM-010` | G10 | 626 §2.2-4 | checks head を別 OID | `admission_checks_head_mismatch`、write 0 |
 | `CANDIDATE-PACKPUB-ADM-011` | G11 | 565 §3、#624 §4.3 | observed required context 集合だけを `[]` | `admission_checks_missing`、write 0 |
 | `CANDIDATE-PACKPUB-ADM-012` | G12 | 565 §3 | `pack-check` の conclusion を `failure` | `admission_check_not_success`、write 0 |
@@ -186,9 +186,9 @@ typed deny と admission ledger append 0、remote write 0、approval consume 0 �
 | `U-PACKPUB-ADM-003` | PR base のみ変更 → `admission_base_mismatch` (#624 blocking) |
 | `U-PACKPUB-ADM-004` | merge-base のみ変更 → `admission_merge_base_mismatch` |
 | `U-PACKPUB-ADM-005` | review PR のみ変更 → `admission_review_pr_mismatch` |
-| `U-PACKPUB-ADM-006` | reviewed head を39桁・大文字・64桁へ各単独変異 → `admission_review_head_invalid` |
+| `U-PACKPUB-ADM-006` | reviewed head を39桁・大文字・64桁・40桁内の非16進文字1字へ各単独変異 → `admission_review_head_invalid` |
 | `U-PACKPUB-ADM-008` | conclusion のみ `changes_requested` → `admission_review_not_approved` |
-| `U-PACKPUB-ADM-009` | closing digest を63桁・`sha1:`・大文字へ各単独変異 → `admission_review_receipt_invalid` (#624 blocking) |
+| `U-PACKPUB-ADM-009` | closing digest を63桁・`sha1:`・大文字・64桁内の非16進文字1字へ各単独変異 → `admission_review_receipt_invalid` (#624 blocking) |
 | `U-PACKPUB-ADM-010` | checks head のみ変更 → `admission_checks_head_mismatch` |
 | `U-PACKPUB-ADM-011` | 観測された required context 集合のみ `[]` → `admission_checks_missing` (#624 blocking) |
 | `U-PACKPUB-ADM-012` | required check conclusion のみ `failure` → `admission_check_not_success` |

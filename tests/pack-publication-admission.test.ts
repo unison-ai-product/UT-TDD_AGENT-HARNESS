@@ -370,7 +370,12 @@ describe("Pack publication admission observation binding", () => {
   });
 
   it("U-PACKPUB-ADM-006 denies malformed reviewed-head OIDs before equality", async () => {
-    for (const reviewedHead of ["a".repeat(39), "A".repeat(40), "a".repeat(64)]) {
+    for (const reviewedHead of [
+      "a".repeat(39),
+      "A".repeat(40),
+      "a".repeat(64),
+      `g${"a".repeat(39)}`,
+    ]) {
       const input = withObservation({
         review: vi.fn(() =>
           ok({
@@ -412,6 +417,7 @@ describe("Pack publication admission observation binding", () => {
       `sha256:${"e".repeat(63)}`,
       `sha1:${"e".repeat(64)}`,
       `sha256:${"E".repeat(64)}`,
+      `sha256:g${"e".repeat(63)}`,
     ]) {
       const input = withObservation({
         review: vi.fn(() =>
