@@ -269,6 +269,7 @@ export function hasTerminalReviewReceipt(repoRoot: string, request: ReviewCustod
     (event) =>
       isAttemptCompletedEvent(event) &&
       event.exactHead === request.exactHead &&
+      event.provider === (request.authorFamily === "codex" ? "claude" : "codex") &&
       event.verdictPath === reviewVerdictPath(repoRoot, requestDigest, event.attempt) &&
       event.receiptFileDigest === receiptFileDigest &&
       !events.some(
@@ -335,6 +336,7 @@ function isRetryableAttemptEvent(input: {
     event.requestDigest !== reviewIdentityDigest(request) ||
     event.attempt !== attempt ||
     event.exactHead !== request.exactHead ||
+    event.provider !== (request.authorFamily === "codex" ? "claude" : "codex") ||
     event.verdictPath !== reviewVerdictPath(repoRoot, event.requestDigest, attempt)
   )
     return false;
@@ -579,10 +581,11 @@ export function beginReviewAttempt(input: {
       return { ok: false, reason: "attempt_outcome_indeterminate" };
     }
     const previousOutcome = outcomes[0];
-    // Exactly one failure outcome is the PLAN-L7-520 retry path. Zero outcomes is
-    // retryable only through PLAN-L7-534 §3.2: a crash window (one valid
-    // attempt_completed, receipt absent) or an orphan receipt without a matching
-    // event. Two or more outcomes stay indeterminate (U-RVATT-040 case D).
+    // Exactly one failure outcome is the PLAN-L7-520 retry path. With zero
+    // outcomes, a nonterminal receipt file is retryable as an orphan even if a
+    // completed event exists but fails identity validation. Without a receipt,
+    // only one valid attempt_completed is a retryable crash window. Two or more
+    // outcomes stay indeterminate (U-RVATT-040 case D).
     const completedForPrevious = requestEvents.filter(
       (event) => event.kind === "attempt_completed" && event.attempt === previousAttempt,
     );
