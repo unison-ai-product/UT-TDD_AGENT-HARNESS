@@ -21,7 +21,7 @@ github_issue_id: 676
 
 | ID | oracle | 違反 / mutation (Red になるべき変異) |
 | --- | --- | --- |
-| CANDIDATE-U-RCDEV-001 | fixture (i) で `setup --solo` が中断せず adapter / テンプレート / state 記録を出力し (`written` に identity path を含まない)、出力に L7-529 の typed identity deny code と復旧手順 (`git remote add origin` → setup 再実行) を含み、終了コードが成功 (0) と区別される | (m1) deny 表示を削る → 文字列 assert 失敗。(m2) 終了コードを成功に戻す → exit assert 失敗。(m3) identity deny で throw / 中断させる (L7-529 §3.2.1 違反) → adapter 不在で失敗 |
+| CANDIDATE-U-RCDEV-001 | fixture (i) で `setup --solo` が中断せず adapter / テンプレート / state 記録を出力し (`written` に identity path を含まない)、出力に L7-529 の typed identity deny code と復旧手順 (`git remote add origin` → setup 再実行) を含み、`identity: denied (identity_repository_unbound): ...` と復旧手順 2 行を stderr に出し、終了コードが 2 である (PLAN §3.3-1) | (m1) deny 表示を削る → 文字列 assert 失敗。(m2) 終了コードを 0 または 1 にする → exit assert 失敗。(m4) 新しい deny code を発明して表示する → code assert 失敗。(m3) identity deny で throw / 中断させる (L7-529 §3.2.1 違反) → adapter 不在で失敗 |
 | CANDIDATE-U-RCDEV-002 | fixture (i) で setup 後に origin を追加して再実行すると `ut-tdd.project.json` が作られ、1 回目に出力した各ファイルの bytes は変わらない (L7-529 §3.2 再実行規則、no-op safe) | (m1) 再実行時にテンプレートを再生成して内容を変える → bytes 差分で失敗。(m2) 再実行で identity create を skip する → marker 不在で失敗 |
 | CANDIDATE-U-RCDEV-003 | fixture (ii) setup 後、`hook work-guard` / `hook agent-guard` / `session start` / `session summary` / `hook subagent-stop` の 5 経路で `requireRuntimeRepoRoot` が fixture root を返す (cwd = fixture 配下の subdir でも同じ。path は long path のみ、8.3 alias は #678 の所有)。fixture (i) (identity deny のまま) では 5 経路が fail-close し、error に復旧手順を含む | (m1) setup の identity 書き込みを skip → 5 経路が throw。(m2) `isRepoRoot` から marker 条件を外す → 失敗。(m3) hook error の復旧手順を削る → (i) 側 assert 失敗。**negative**: fixture の外 (親 dir) では null のまま (fallback を `.git` 単独受理に緩める変異 → 親 repo を誤認して失敗) |
 | CANDIDATE-U-RCDEV-004 | fixture (ii) setup 直後 (未 commit)、setup 出力に `ut-tdd.project.json` の commit が必要である旨と `git add ut-tdd.project.json` / `git commit` を含む | (m) `commitRequired` の表示分岐を削る → 失敗 |
@@ -49,8 +49,8 @@ github_issue_id: 676
 
 | ID | oracle | 違反 / mutation |
 | --- | --- | --- |
-| CANDIDATE-U-RCDEV-014 | 書き出しコマンドが出力するファイル bytes が埋め込み (= `AUTHORING_TEMPLATE_INVENTORY` の対象 source の HEAD blob) と一致し、書いた path を表示する | (m) 埋め込み対象を 1 family 外す → 欠落で失敗 |
-| CANDIDATE-U-RCDEV-015 | consumer に同名ファイルが既にある場合は上書きせず (bytes 不変)、skip を表示する | (m) 上書きする → bytes 変化で失敗 |
+| CANDIDATE-U-RCDEV-014 | `ut-tdd vmodel template --required` (PLAN §3.1.3) が resolver 写像後の catalog path へ書き、出力するファイル bytes が埋め込み (= `AUTHORING_TEMPLATE_INVENTORY` の対象 source の HEAD blob) と一致し、書いた path を表示する | (m) 埋め込み対象を 1 family 外す → 欠落で失敗 |
+| CANDIDATE-U-RCDEV-015 | consumer に同名ファイルが既にある場合は上書きせず (bytes 不変)、`skip (exists) <path>` を表示して exit 0。未知の `doc_type_id` を 1 件含めると何も書かず `unknown template <id>` で exit 1。`--dry-run` は書き込み 0 | (m1) 上書きする → bytes 変化で失敗。(m2) 未知 ID の前に既知分を書く → 書き込み 0 assert で失敗。(m3) `--dry-run` で書く → 失敗 |
 
 ## PR-3 生成物
 
@@ -85,9 +85,24 @@ zip は repo root の `Vモデル設計ドキュメント_checked.zip` (gitignor
 | CANDIDATE-U-RCDEV-026 | fixture (v) で `loadGateConfirmDocs` が ENOENT を出さず、埋め込みの gate 定義を使う。consumer に `docs/governance/gate-design.md` を置くとそれが優先される | (m1) 埋め込みを外す → ENOENT で失敗。(m2) 優先順を逆にする → consumer 側の定義が使われず失敗 |
 | CANDIDATE-U-RCDEV-027 | fixture (v) で G1〜G6 が `applicable:true` かつ pass、(vi) では欠いた slot 名を含む failed。どちらも「could not run」を含まない | (m) resolver を `docs/design/harness` 固定に戻す → (v) が「could not run」または applicable false で失敗 |
 | CANDIDATE-U-RCDEV-028 | fixture (v) で `coverage/coverage-summary.json` 不在の G7 が typed な「coverage evidence missing」で failed (crash しない)。80% 以上の summary を置くと coverage 構成要素が pass | (m1) 存在確認を外す → 例外で失敗。(m2) 不在を pass 扱いにする → failed 期待で失敗 |
-| CANDIDATE-U-RCDEV-029 | fixture (v) + 各 slot の文書 / evidence で G8〜G14 の全てが `applicable:true` の static 判定を返し、「no deterministic check registered」を含まない。各 gate について対応 slot を欠くと slot 名付きで failed。G10 は profile 無効かつ skip 理由ありで n/a passed、理由なしで failed。review tier に残す部分は message に「未判定 (review)」と明示される | (m1) 1 gate の登録を外す → 未登録 message で失敗。(m2) 1 gate を `REVIEW_ONLY_STATIC_GATES` へ入れる → applicable false で失敗。(m3) G10 の skip 理由検査を外す → 理由なし fixture で失敗 |
-| CANDIDATE-U-RCDEV-030 | fixture (v) で `vmodel lint` が文書件数 > 0 と trace 結果を返し、文書の無い fixture (ii) では typed な「未作成」を返す (ENOENT なし) | (m) resolver を外す → (v) で 0 件または ENOENT で失敗 |
-| CANDIDATE-U-RCDEV-031 | harness 自身 (source repo) の G1〜G7 の `evaluateStaticGate` 結果 (passed / applicable / message 集合) が rev 2 実装の前後で一致する (回帰固定) | (m) resolver の優先順を逆にする (`docs/design/` を先に見る) → harness の結果が変わり失敗 |
+
+G8〜G14 の oracle (029〜035) は PLAN §3.6-4 の共通述語 S / I / T / E / F / A と gate 固有述語を gate ごとに固定する。各 oracle の fixture は
+(v) に当該 gate の slot 文書 (テンプレート由来) と、述語を全て満たす evidence manifest (`.ut-tdd/evidence/<dir>/ok.json`) を置いた「正常形」とし、
+正常形で `applicable:true` かつ static 部分 pass、message に `未判定 (review): <approval_role>` を含むことを先に確認する。各 mutation は正常形から
+1 軸だけを変え、指定の violation 文字列を含む failed になること。**「slot 文書が在れば pass」「manifest が在れば pass」だけの実装は、
+(m-T) / (m-E) / (m-F) / (m-A) / gate 固有 mutation のどれかで必ず Red になる**。
+
+| ID | oracle (正常形の gate) | 違反 / mutation (1 軸) |
+| --- | --- | --- |
+| CANDIDATE-U-RCDEV-029 | G8 (`DOC-L8-INTEGRATION-TEST-DESIGN`、`IT-`、pair L5、`g8-integration`) | (m-S) case 表の必須列を 1 つ削る → `missing section`。(m-I) `IT-` 行 ID を重複させる → `duplicate case id`。(m-T) 1 行の L5 cite を未定義 ID に変える → `trace target missing`、cite を外す → `untraced case`。(m-E1) 1 command の `exit_code` を 1 → `exit_code is non-zero`。(m-E2) `output_digest` を `sha256:xyz` → `invalid digest`。(m-E3) `evidence_path` を repo 外 / 不在 → `evidence_path missing`。(m-E4) `schema_version` を `g9-system-evidence-v1` → `invalid schema_version`。(m-F) 設計済み `IT-` ID を 1 件 manifest から外す → `missing row evidence`。(m-A) `artifacts.integration_results` を削る → `missing artifact integration_results`。(m-R) message から review 未判定を消す実装 → message assert で失敗 |
+| CANDIDATE-U-RCDEV-030 | G9 (`DOC-L9-SYSTEM-TEST-DESIGN`、`ST-`、pair L4、`g9-system`) | (m-T) 1 行の L4 cite を L5 の ID に変える (pair 外) → `untraced case`。(m-F) deferred の `plan_id` を実在しない PLAN にする → `stale defer`。(m-A) `artifacts.system_manifest` を削る → `missing artifact`。(m-G9) `security` family の行を全て `ST` に変える → family 欠落で failed。(m-E) `exit_criteria.failed_mandatory_count = 1` → failed |
+| CANDIDATE-U-RCDEV-031 | G10 (`DOC-L10-UX-VALIDATION`、`UXV-`、pair L2、`g10-ux`) | (m-T) 1 行の画面 ID cite を `DOC-L2-SCREEN` に無い ID → `trace target missing`。(m-A) `artifacts.browser_visual_a11y_results` を削る → `missing artifact`。(m-G10a) slot 文書を `status: skipped` + `skip_reason` 非空 + profile で slot 無効 → n/a passed (正常形 2)。(m-G10b) (m-G10a) から `skip_reason` を空にする → failed。(m-G10c) (m-G10a) のまま profile で slot を有効にする → failed |
+| CANDIDATE-U-RCDEV-032 | G11 (`DOC-L11-TRACE-UAT`、`UAT-`、pair L1/L3〜L7、`g11-uat`) | (m-G11a) `end_to_end_trace_review` から `DOC-L3-FUNCTIONAL` の要件 ID を 1 件削る → 要件未列挙で failed。(m-G11b) 1 件を `blocked` にする → failed。(m-G11c) `po_uat_decision.decision` を `maybe` → failed。(m-G11d) `po_uat_decision.revision` を削る → failed。(m-T) `UAT-` 行の cite を pair 外 (L8) の ID だけにする → `untraced case`。(m-A) `artifacts.po_uat_decision` を削る → `missing artifact` |
+| CANDIDATE-U-RCDEV-033 | G12 (`DOC-L12-ACCEPTANCE`、`AT-`、pair L3、`g12-acceptance`) | (m-G12a) `deploy_receipt.revision` を 39 桁にする → failed。(m-G12b) `deploy_receipt.environment` を削る → failed。(m-G12c) `rollback_readiness.rollback_command` を削る → failed。(m-T) `AT-` 行の cite を L3 に無い AC ID → `trace target missing`。(m-F) 設計済み `AT-` ID を 1 件外す → `missing row evidence` |
+| CANDIDATE-U-RCDEV-034 | G13 (`DOC-L13-PRODUCTION-OBSERVATION`、`SMOKE-`、pair L12、`g13-post-deploy`) | (m-G13a) `window_end` を `window_start` 以前にする → failed。(m-G13b) 1 SLO の `observed` を削る → failed。(m-G13c) `rollback_decision.decision` を `unknown` → failed。(m-T) `SMOKE-` 行の `AT-` cite を外す → `untraced case`。(m-A) `artifacts.sli_slo_observation` を削る → `missing artifact` |
+| CANDIDATE-U-RCDEV-035 | G14 (`DOC-L14-OPERATIONAL-TEST`、`OT-`、pair L1 + L0、`g14-operational`) | (m-G14a) `VALUE` family の行から L0 目的 ID の cite を外す → failed。(m-G14b) `improvement_feedback` の 1 項目から `routed_to` を削る → failed。(m-T) `OT-` 行の L1 cite を未定義 ID → `trace target missing`。(m-A) `artifacts.value_results` を削る → `missing artifact`。(m-E) `exit_criteria.doctor_check` を別値 → failed |
+| CANDIDATE-U-RCDEV-036 | fixture (v) で `vmodel lint` が文書件数 > 0 と trace 結果を返し、文書の無い fixture (ii) では typed な「未作成」を返す (ENOENT なし) | (m) resolver を外す → (v) で 0 件または ENOENT で失敗 |
+| CANDIDATE-U-RCDEV-037 | harness 自身 (source repo) の G1〜G10 の `evaluateStaticGate` 結果 (passed / applicable / message 集合) が実装の前後で一致する (回帰固定。G8〜G10 は既存 workflow lint の結果) | (m1) resolver の優先順を逆にする (`docs/design/` を先に見る) → 結果が変わり失敗。(m2) harness の G8 を共通述語へ切り替え、family prefix 要件を落とす → G8 の message 集合が変わり失敗 |
 
 ## E2E (観測は PLAN-L7-531 が所有)
 

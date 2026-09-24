@@ -19,10 +19,11 @@ backprop_decision_reason: consumer 側の identity 失敗表示、同梱資産�
   へ逆向きに戻す。
 agent_slots:
   - role: se
-    slot_label: Luna worker - PR-1 / PR-2a / PR-2b / PR-2c / PR-3 / PR-G0〜PR-G12-14
-      / PR-VL を別 PR で最小実装する (PR-T1〜T3 は Claude Sonnet が docs として移植する)
+    slot_label: Luna worker - PR-1 / PR-2a / PR-2b / PR-2c / PR-3 / PR-G0 / PR-G7 /
+      PR-GR / PR-G9〜PR-G14 / PR-VL を別 PR で最小実装する (PR-T1〜T3 は Claude Sonnet が
+      docs として移植する)
   - role: qa
-    slot_label: Terra - CANDIDATE-U-RCDEV-001..031 の Red oracle を Linux/Windows で先に作る
+    slot_label: Terra - CANDIDATE-U-RCDEV-001..037 の Red oracle を Linux/Windows で先に作る
   - role: tl
     slot_label: Claude Opus / Sol - 同梱資産の provenance、identity 契約との整合の非著者検収
 generates:
@@ -58,18 +59,18 @@ status: draft
 github_issue_id: 676
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:71d66d5ef0c892086a2cd1c25bc60bc8
-  command_id: plan-revise:issue-676:scope-rev2:plan:r2:166bfc37b0c0
-  admitted_at: 2026-09-24T07:54:41.246Z
-  source_digest: sha256:99c60aee79ef307c5faf7ff335c163cc3211c28547ac0badcb149181adc54d29
-  decision_digest: sha256:85a3d383e0243974d899896b124c88e9c0f6557f7f780f90b62580f63ee3c506
-  receipt_digest: sha256:acf4c2823a1acbd315a5bb57c952e1e0a9f8afb4bd41c7c1b90dbc630a693ce3
+  receipt_id: certificate:72476e1f4997f497ff7973773a6a83ff
+  command_id: plan-revise:issue-676:sol-r1-flag:plan:r3:4185164a907a
+  admitted_at: 2026-09-24T08:15:47.350Z
+  source_digest: sha256:4cc05286e2dfee4e0f26f5c86d7cb4751b030a965796d916f8ad8d61ee20c321
+  decision_digest: sha256:de6ccbf4a93dfd92ffc33c19535e510439e25bffa3d5c2461d0f9af6548c2c9d
+  receipt_digest: sha256:b8e7e37def1a984c13281c8de5817cb4037843f14918b585f657fa3f873e5cb2
   binding:
     path: docs/plans/PLAN-L7-676-release-consumer-dev-start.md
     plan_id: PLAN-L7-676-release-consumer-dev-start
     asset_id: plan:aae8bf0e313f8688fbad4d4d8cf0a6a9
-    revision: 2
-    content_digest: sha256:99c60aee79ef307c5faf7ff335c163cc3211c28547ac0badcb149181adc54d29
+    revision: 3
+    content_digest: sha256:4cc05286e2dfee4e0f26f5c86d7cb4751b030a965796d916f8ad8d61ee20c321
   route:
     signal: feature_addition
     mode: add-feature
@@ -87,11 +88,10 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-676-release-consumer-dev-start
-    target_revision: 2
+    target_revision: 3
     phase: forward_merge
-  escape_reason: "Issue #676 rev 2: PO のスコープ改訂 (issuecomment-5809485588) と zip 移植の
-    PO 判断 (issuecomment-5809861404) を反映し、設計テンプレート一式・consumer で使える gate
-    G1〜G14・エージェント確認経路の E2E を scope に加える契約改訂。"
+  escape_reason: "PR #680 Sol r1 FLAG 3 件 (書き出しコマンド・setup 終了コード・G8〜G14 述語の
+    freeze、PR 依存の矛盾と外部前提、G8〜G14 oracle の gate 別分割) の是正改訂。"
 ---
 
 # PLAN-L7-676: Release consumer で開発を開始できる状態にする
@@ -181,7 +181,18 @@ advisor の前提「runtime は bundle から読む」は、skills について�
 設計 / PLAN / state / prompt テンプレートには現状 runtime reader が無い (facts (b))。埋め込みは **on-demand で
 consumer へ雛形を書き出す 1 コマンド** を reader とする場合だけ行う。rev 2 で、書き出し対象は §3.5 で移植する slot テンプレートと optional テンプレートを含む
 (書き出し先は §3.2 の resolver が返す `<designRoot>` / `<testDesignRoot>` 配下の catalog path)。コマンドは consumer に既存ファイルがあれば上書きせず、
-書き出した path を表示する。コマンド名・引数は PR-2c の範囲で決め、PLAN に追記してから実装する (CLI surface = 1 論点)。
+書き出した path を表示する。コマンドは次のとおり freeze する (rev 3、CLI surface は PR-2c の 1 論点):
+
+- 形: `ut-tdd vmodel template (--slot <doc_type_id>... | --required | --optional <ZIP-DOC-NNN>...) [--dry-run] [--json]`。
+  既存の `vmodel` command group の subcommand とする (新しい top-level command は作らない)。`--slot` / `--required` / `--optional` は
+  1 つ以上必須で併用可。`--required` は §3.5.3 の required 21 slot 全て。
+- 出力先: slot テンプレートは catalog の `authoring_source_path` を §3.2 の resolver で写像した path
+  (例: `docs/design/harness/L4-basic-design/data.md` → consumer では `docs/design/L4-basic-design/data.md`)。
+  `docs/process/evidence/` など resolver の写像対象外の path はそのまま使う。optional テンプレートは `<designRoot>/optional/<port index の file 名>`。
+- 上書き規則: 出力先にファイルが在れば **書かない** (bytes 不変)。上書き option は作らない。
+- 表示と終了コード: 書いた path は `+ <path>`、既存で飛ばした path は `skip (exists) <path>` を 1 行ずつ出す。未知の `doc_type_id` /
+  `ZIP-DOC-NNN` が 1 件でもあれば、何も書かずに `unknown template <id>` を出して exit 1。それ以外 (全件 skip を含む) は exit 0。
+  `--dry-run` は書き込み 0 で同じ行を出す。`--json` は `{written:[], skipped:[]}` を出す。
 
 ### 3.2 V-model 文書の置き場所 (B3 / B4)
 
@@ -226,8 +237,14 @@ field を足すと identity schema の migration と既存 identity の backfill
    identity path は `written` に入れない。そのうえで CLI は `SetupResult.projectIdentity` の typed deny を **必ず表示** する
    (現状の `src/cli.ts:4283-4291` はこれを出さない)。表示には deny code と復旧手順を含める:
    `git remote add origin <url>` → `setup` を再実行。再実行は L7-529 §3.2 の再実行規則により既存出力を変えず安全である (no-op safe)。
-   §3.2.1 の「identity denial を握り潰して成功扱いにしない」に従い、この場合の終了コードは成功と区別する (具体値は PR-1 で既存 setup の
-   終了コード規約に合わせて freeze し、本節へ追記する)。
+   §3.2.1 の「identity denial を握り潰して成功扱いにしない」に従い、この場合の終了コードは成功と区別する。rev 3 で次を freeze する:
+   - typed deny code: origin 無しは既存の `identity_repository_unbound` (`src/setup/project-identity-bootstrap.ts:84`、message
+     `origin remote is missing or invalid`) をそのまま使う。新しい code は足さない。そのほかの deny (`identity_stale_worktree` /
+     `identity_write_failed` など L7-529 の code) も同じ経路で表示する。
+   - 表示: stderr に `identity: denied (<code>): <message>` の 1 行と、復旧手順 `git remote add origin <url>` および
+     `ut-tdd setup --solo` (再実行、no-op safe) の 2 行を出す。
+   - 終了コード: identity deny を伴う部分成功は **exit 2**。repo の CLI 規約 (0 = 成功、1 = 入力不正 / 実行失敗、2 = policy による deny / block、
+     3 = 外部障害。`src/cli.ts` の既存 `process.exitCode` 用法の実測) の「deny」に当たるため。identity 以外の出力に失敗した場合は従来どおり 1。
 2. **A3 (repo-root)**: `isRepoRoot` の fallback 条件は変更しない。identity が作成された setup の後は marker が working tree に存在し
    (L7-529 §2.6 は存在だけを見る)、5 hook 全てが root を解決する。これを oracle で固定する。identity deny のままの consumer では hook が
    引き続き fail-close するが、その error に 1 と同じ復旧手順を併記する。fallback を consumer 向けに緩める案 (`.git` + `.ut-tdd/bin/ut-tdd.mjs` 等) は、
@@ -372,36 +389,63 @@ consumer に catalog / profile を上書きさせる手段は作らない (§3.2
 
 決定:
 
-1. **gate-design.md の不在**: gate の定義は harness 所有の資産であり、§3.1 案 C と同じく bundle に埋め込む。consumer に同名ファイルがあればそれを優先する。
+1. **gate 定義の不在**: gate の定義 (`docs/governance/gate-design.md`、`docs/process/gates.md`、`docs/process/vmodel-contract.yaml`) は harness 所有の資産であり、§3.1 案 C と同じく bundle に埋め込む。consumer に同名ファイルがあればそれを優先する。
    gate 判定に使う文書集合は §3.2 の resolver から取る。
 2. **G1〜G6**: resolver を注入し、判定内容は変えない。consumer の文書が §3.5 のテンプレートから作られていれば、harness と同じ規則で判定できる。
 3. **G7 coverage**: 既定 path (`coverage/coverage-summary.json`) を consumer にもそのまま使う (設定は足さない)。不在は crash ではなく
    typed な「coverage evidence missing」の failed とする。coverage 以外の構成要素 (pair-freeze、trace) は resolver 経由で判定する。
-4. **G8〜G14 の判定規則 (freeze)**: 各 gate は、判定内容のうち **repo に tracked された成果物から決定的に判定できる部分** (対応 slot の
-   文書の存在、テンプレート構造、V-pair 相手への trace、記録済み evidence の型) を static check として必ず持つ。人の承認・実行時観測・
-   UX 判断のように成果物から決まらない部分は review tier (review evidence / receipt) で判定し、static check の結果にその未判定を明示する。
-   よって G8〜G14 のどれも「static check 無し = review-only (n/a passed)」へは再分類しない。`REVIEW_ONLY_STATIC_GATES` は G0.5 / R4 のまま変えない。
-   profile_controlled の slot (G10) は、profile が無効で skip 理由が記録されている場合だけ n/a passed、理由が無ければ failed とする
-   (catalog の `skip_reason_required=true`)。
+4. **G8〜G14 の判定規則 (freeze)**: 各 gate は、判定内容のうち **repo に tracked された成果物から決定的に判定できる部分** を static check として必ず持つ。
+   人の承認・実行時観測の妥当性・UX 判断のように成果物から決まらない部分は review tier (canonical review receipt) で判定し、static check の message に
+   `未判定 (review): <approval_role>` を必ず含める (pass に見せない)。G8〜G14 のどれも review-only (n/a passed) へは再分類しない。
+   `REVIEW_ONLY_STATIC_GATES` は G0.5 / R4 のまま変えない。
 
-各 gate の static check の対象 (具体的な検査項目は各実装 PR で上の規則に従って確定し、本表の範囲を超えるなら本 PLAN の改訂へ戻る):
+   **判定の入力 (契約表)**: gate ごとの `pair_layers` / `required_artifacts` / `evidence_families` / `case_id_prefix` / `governance_artifact` /
+   evidence manifest の置き場所は `docs/process/vmodel-contract.yaml` の `layers[]` 行を唯一の入力とする (VMC-003「detector registry は contract から導出」、
+   VMC-005「contract に無いデータは推測せず fail-close」)。consumer では 1 と同じく contract を bundle から読み、consumer に同名ファイルがあればそれを優先する。
+   `governance_artifact` と slot path は §3.2 の resolver で consumer の path へ写像する。evidence manifest の置き場所は contract の
+   `evidence_manifest` の directory 部分 (例: `.ut-tdd/evidence/g8-integration/`) とし、consumer でも同じ相対 path を使う (tracked であること。
+   §3.1.1 の ignore 対象は `.ut-tdd/assets/` だけ)。
 
-| gate | static check の対象 (slot / V-pair) | review tier に残す部分 | PR |
-| --- | --- | --- | --- |
-| G8 | `DOC-L8-INTEGRATION-TEST-DESIGN` の存在・構造、L5↔L8 trace、IT 実施 evidence の型 | IT 結果の妥当性 | PR-G8-9 |
-| G9 | `DOC-L9-SYSTEM-TEST-DESIGN` の存在・構造、L4↔L9 trace、ST 実施 evidence の型 | ST 結果の妥当性 | PR-G8-9 |
-| G10 | `DOC-L10-UX-VALIDATION` の存在・構造または skip 理由、L2↔L10 trace | a11y / visual の判断 | PR-G10 |
-| G11 | `DOC-L11-TRACE-UAT` evidence の存在・構造、上流 trace の閉包 | PO の UAT 承認 | PR-G11 |
-| G12 | `DOC-L12-ACCEPTANCE` の存在・構造、L3↔L12 trace、リリース判定記録の型 | リリース可否の判断 | PR-G12-14 |
-| G13 | `DOC-L13-PRODUCTION-OBSERVATION` evidence の存在・構造 | SLO 達成の判断 | PR-G12-14 |
-| G14 | `DOC-L14-OPERATIONAL-TEST` の存在・構造、L1↔L14 trace | 改善判断 | PR-G12-14 |
+   **共通述語** (全 gate に適用。括弧内は対応する zip `tools/*.py` の検査):
+
+   | 記号 | 述語 | 違反時 |
+   | --- | --- | --- |
+   | S (構造) | `governance_artifact` (resolver 後) が存在し、§3.5 の slot テンプレートが定める必須見出しと case 表の必須列を全て持つ (`schema_check.py`) | `missing slot <doc_type_id>` / `missing section <見出し>` |
+   | I (ID) | case 表の各行 ID が `case_id_prefix` で始まり、文書内で一意。本文・表で参照する ID は全て定義済み (`validate.py`) | `duplicate case id` / `dangling reference <id>` |
+   | T (V-pair trace) | 各 case 行が `pair_layers` の文書で定義された ID を 1 件以上 cite し、cite 先が全て実在する (`spec_trace.py` の閉包) | `untraced case <id>` / `trace target missing <id>` |
+   | E (evidence 型) | `<dir>/*.json` の manifest が 1 件以上あり、全てが次を満たす: `schema_version = "<dir>-evidence-v1"`、`gate = <gate>`、`profile` と `plan_id` が非空、`commands[]` が非空で各要素が `command_id` / `command` / `runner` / `scope` 非空・`exit_code = 0`・`output_digest` が `sha256:<64hex>`・`evidence_path` が repo 内に実在し許可 prefix (`.ut-tdd/evidence/` / `docs/` / `src/` / `tests/`) 配下。`mandatory_<id>s` の各 ID に `coverage[]` があり `status = passed`・`evidence_paths` と `command_ids` が非空で実在・既知。`exit_criteria` が `all_mandatory_passed = true`・`failed_mandatory_count = 0`・`stale_defer_count = 0`・`doctor_check = "<dir>-workflow"` | `<manifest>: <field> ...` (既存 `src/lint/g8-integration-workflow.ts` の message 形式) |
+   | F (全行) | S の case 表で定義された全 ID が、manifest の `mandatory_<id>s` (coverage passed) か `deferred_<id>s` のどちらかにある。deferred の各 ID は `defer[]` に `reason` 非空と、`docs/plans/` に実在する `plan_id` を持つ (実在しない PLAN への defer は stale) | `missing row evidence <id>` / `stale defer <id>` |
+   | A (必須成果物) | manifest の `artifacts` object が contract の `required_artifacts` の全 key を持ち、各値が repo 内に実在する path | `missing artifact <key>` |
+
+   harness 自身 (resolver が `docs/design/harness/` を返す repo) の G8 / G9 / G10 は、既存の workflow lint (`src/lint/g8-integration-workflow.ts` /
+   `g9-system-workflow.ts` / `g10-ux-workflow.ts`) の判定をそのまま使う (family prefix 要件と workflow marker 要件を含め、結果を変えない)。
+   共通述語は consumer の G8〜G14 と、harness の G11〜G14 に適用する。consumer では family prefix (例: `IT-MODULE-`) は harness 固有の分類であるため
+   要求せず、F (全行) で代える。
+
+   **gate 別の述語** (contract 行の値を具体化したもの):
+
+   | gate | S の対象 slot | I の prefix | T (pair) | E の `<dir>` | A (`required_artifacts`) | gate 固有の追加述語 | review tier (`approval_role`) | PR |
+   | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+   | G8 | `DOC-L8-INTEGRATION-TEST-DESIGN` | `IT-` | L5 (`DOC-L5-MODULE` / `DOC-L5-PHYSICAL-DATA` の ID) | `g8-integration` | `integration_manifest`, `integration_results` | なし | QA/TL | PR-GR |
+   | G9 | `DOC-L9-SYSTEM-TEST-DESIGN` | `ST-` | L4 (`DOC-L4-*` の ID) | `g9-system` | `system_manifest`, `system_results` | case 表の各行が `evidence_families` (`ST` / `performance` / `security`) のいずれかを `family` 列に持ち、3 family の全てに 1 行以上ある | QA/TL | PR-G9 |
+   | G10 | `DOC-L10-UX-VALIDATION` | `UXV-` | L2 (`DOC-L2-SCREEN` の画面 ID) | `g10-ux` | `ux_manifest`, `browser_visual_a11y_results` | slot 文書の frontmatter が `status: skipped` の場合は、`skip_reason` 非空かつ scale profile (`vmodel-document-scale-profiles.md`) で当該 slot が有効でないときだけ n/a passed。それ以外の skip は failed | PO/QA | PR-G10 |
+   | G11 | `DOC-L11-TRACE-UAT` (evidence 文書) | `UAT-` | L1 / L3 / L4 / L5 / L6 / L7 (pair reciprocity 例外。contract `pair_reciprocity_exceptions`) | `g11-uat` | `end_to_end_trace_review`, `po_uat_decision` | `end_to_end_trace_review` が `DOC-L3-FUNCTIONAL` で定義された全要件 ID を `traced` / `blocked` で列挙し、`blocked` が 0。`po_uat_decision` は `decision` (`accept` / `reject`)・`decided_by_role`・`revision` を持つ (承認の中身は review tier) | PO/TL | PR-G11 |
+   | G12 | `DOC-L12-ACCEPTANCE` | `AT-` | L3 (`DOC-L3-FUNCTIONAL` の要件 / AC ID) | `g12-acceptance` | `deploy_receipt`, `acceptance_results`, `rollback_readiness` | `deploy_receipt` が `revision` (40 桁 hex) と `environment` を持ち、`rollback_readiness` が `rollback_command` と `verified_at` を持つ | PO/TL | PR-G12 |
+   | G13 | `DOC-L13-PRODUCTION-OBSERVATION` (evidence 文書) | `SMOKE-` | L12 (pair reciprocity 例外。各行が `AT-` ID を cite) | `g13-post-deploy` | `production_smoke`, `sli_slo_observation`, `rollback_decision` | `sli_slo_observation` が `window_start` / `window_end` (ISO 8601、start < end) と SLO ごとの `target` / `observed` を持つ。`rollback_decision` が `decision` (`keep` / `rollback`) を持つ | PO/TL | PR-G13 |
+   | G14 | `DOC-L14-OPERATIONAL-TEST` | `OT-` | L1 (`DOC-L1-REQUIREMENTS` の ID) と L0 (`DOC-L0-CHARTER` の目的 ID) | `g14-operational` | `operational_results`, `value_results`, `improvement_feedback` | `VALUE` family の行が L0 の目的 ID を 1 件以上 cite し、`improvement_feedback` の各項目が `routed_to` (PLAN ID または Issue URL) を持つ | PO | PR-G14 |
+
+   G11 / G13 の slot は test design ではなく process evidence (catalog `category=process-evidence`、authoring path `docs/process/evidence/`) であり、
+   resolver の写像対象外 (catalog path をそのまま使う)。
+
+   zip `tools/*.py` のうち上の述語に対応しないもの (`review.py` の実体サンプリング、`consistency.py` の表記ゆれ、`impact.py` の影響範囲など) は
+   gate には入れず、各 PR-G の PR 本文に「未移植」として列挙する。gate に追加する場合は本 PLAN の改訂へ戻る。
 
 5. **vmodel lint / plan lint**: `vmodel lint` は resolver から文書集合を取り、文書が在れば件数と trace 結果を、無ければ typed な「未作成」を返す。
    `plan lint` は rev 1 の §3.2 (`docs/plans` 不在を 0 件) のとおり。
 6. **tools/*.py の検査意味**: zip の Python 検査のうち、上の static check に対応するものは各 PR-G で TypeScript として実装する。
    対応が無い検査は PR-G の PR 本文に「未移植」として列挙し、黙って落とさない。
-7. **harness 自身の回帰**: harness repo での G1〜G7 の判定結果は本改訂の前後で変わらない (oracle で固定)。G8〜G14 は harness でも static check が
-   動くようになるため結果が変わりうる。その差分は PR-G ごとに PR 本文へ記録する。
+7. **harness 自身の回帰**: harness repo での G1〜G10 の判定結果は本改訂の前後で変わらない (oracle で固定。G8〜G10 は既存 workflow lint を使うため)。
+   G11〜G14 は harness でも共通述語が動くようになるため結果が変わりうる。その差分は PR-G11〜PR-G14 ごとに PR 本文へ記録する。
 
 ### 3.7 エージェント確認経路の E2E (PLAN-L7-531 所有)
 
@@ -420,28 +464,41 @@ E2E 自体と ID は 531 が所有する。
 | PR-1 | identity / repo-root: A2 部分成功 + typed deny 表示 + 復旧手順、A4 の commit 手順表示、hook error の復旧手順、A3 の setup 後 root 解決 oracle | `src/cli.ts` setup 表示、hook / session start の error 文言 | PR-0 PASS |
 | PR-2a | skills の bundle 埋め込み + setup / session start での digest 照合付き展開 + 解決関数 + `.ut-tdd/assets/` の ignore (B1) | `scripts/build-node.mjs`、埋め込み index 1 module、`src/state-db/projection-writer.ts`、`src/assets/catalog.ts` | PR-0 PASS、PLAN-L7-628 PR-1 merge |
 | PR-2b | design root resolver + catalog 写像 + gate / vmodel lint の path 入力 + `plan lint` 不在耐性 (B3 / B4) | resolver 1 module、`src/lint/gate-confirm.ts` ほか、`src/plan/lint.ts` | PR-0 PASS |
-| PR-2c | テンプレートの埋め込み + on-demand 書き出しコマンド (B2) | 埋め込み index への追加、CLI 1 コマンド | PR-2a merge (埋め込み機構を再利用) |
+| PR-2c | テンプレートの埋め込み + on-demand 書き出しコマンド `ut-tdd vmodel template` (B2、§3.1.3) | 埋め込み index への追加、CLI 1 コマンド | PR-2a merge (埋め込み機構を再利用)、PR-T1 merge (書き出し対象) |
 | PR-3 | 生成物: A5 db 初期化、A6 harness-check (activation pointer 条件 + notice)、A7 commitlint | `src/setup/index.ts`、`src/setup/templates.ts` | PR-1 merge |
 | PR-T1 | required 21 slot のテンプレート移植 (Markdown 変換、provenance frontmatter) + port index (§3.5.3) | `docs/templates/vmodel/` (docs、Claude) | PR-0 PASS、Apache-2.0 切り替え PR の merge |
 | PR-T2 | optional テンプレート 27 本の移植 + 管理 yaml の既存正本への merge (§3.5.4) | `docs/templates/vmodel/optional/`、`docs/governance/vmodel-document-*.md` (docs、Claude) | PR-T1 merge |
 | PR-T3 | skill 7 本・役割別ガイド 5 本・レビュー記録例 5 本の移植と SKILL_MAP 登録 (既存 skill との重複照合) | `skills/`、`docs/templates/vmodel/review-examples/` (docs、Claude) | PR-0 PASS |
 | PR-G0 | gate-design.md の埋め込みと consumer 優先、G1〜G6 への resolver 注入、harness 回帰固定 (§3.6-1/2/7) | `src/lint/gate-confirm.ts`、`src/gate/static.ts` (Codex) | PR-2b merge、PR-T1 merge (fixture にテンプレートを使う) |
 | PR-G7 | G7 coverage の既定 path と不在の typed failed (§3.6-3) | `src/gate/static.ts` の G7 (Codex) | PR-G0 merge |
-| PR-G8-9 | G8 / G9 の static check (§3.6-4) | gate 1 family 分の check module (Codex) | PR-G0 merge |
-| PR-G10 | G10 の static check と profile skip (§3.6-4) | 同上 (Codex) | PR-G0 merge |
-| PR-G11 | G11 の static check (§3.6-4) | 同上 (Codex) | PR-G0 merge |
-| PR-G12-14 | G12 / G13 / G14 の static check (§3.6-4) | 同上 (Codex) | PR-G0 merge |
+| PR-GR | 共通述語 S / I / T / E / F / A の evaluator (contract 行から導出) + G8 の登録 (§3.6-4) | right-arm evaluator 1 module (Codex) | PR-G0 merge |
+| PR-G9 | G9 の登録と family 述語 | G9 の登録 (Codex) | PR-GR merge |
+| PR-G10 | G10 の登録と skip 述語 | G10 の登録 (Codex) | PR-GR merge |
+| PR-G11 | G11 の登録と trace review / UAT decision 述語 | G11 の登録 (Codex) | PR-GR merge |
+| PR-G12 | G12 の登録と deploy / rollback 述語 | G12 の登録 (Codex) | PR-GR merge |
+| PR-G13 | G13 の登録と観測窓 / rollback decision 述語 | G13 の登録 (Codex) | PR-GR merge |
+| PR-G14 | G14 の登録と VALUE trace / feedback routing 述語 | G14 の登録 (Codex) | PR-GR merge |
 | PR-VL | `vmodel lint` の resolver 対応と typed 未作成 (§3.6-5) | vmodel lint (Codex) | PR-2b merge |
-| (531) | PLAN-L7-531 の E2E 観測項目に本 PLAN のコマンド群とエージェント確認経路 (§3.7) を追加 (531 の入力契約改訂、別 PR) | docs / tests | PR-1〜PR-3、PR-2c、PR-G 系の全て merge |
+| (531) | PLAN-L7-531 の E2E 観測項目に本 PLAN のコマンド群とエージェント確認経路 (§3.7) を追加 (531 の入力契約改訂、別 PR) | docs / tests | 本 PLAN の全 PR merge + 下表の外部前提 |
 
 PR-1 → PR-3 は setup 本体を共有するため直列。PR-2a / PR-2b / PR-T1 / PR-T3 は独立で並列可。PR-2c は PR-2a と PR-T1 の merge 後
-(書き出し対象にテンプレートを含むため)。PR-G0 は PR-2b と PR-T1 の後に置き、PR-G7 / PR-G8-9 / PR-G10 / PR-G11 / PR-G12-14 は PR-G0 の後で相互に並列可。
-PR-VL は PR-2b の後で PR-G 系と並列可。PR-G 系は 1 PR = 1 gate family (static check module 1 個 + 対のテスト + 最小配線) とし、
+(書き出し対象にテンプレートを含むため)。PR-G0 は PR-2b と PR-T1 の後に置き、PR-G7 と PR-GR は PR-G0 の後で並列可。
+PR-GR は PR-G0 の後、PR-G9〜PR-G14 は PR-GR の後で相互に並列可。PR-VL は PR-2b の後で PR-G 系と並列可。PR-G 系は 1 PR = 1 gate (共通 evaluator は PR-GR の 1 module、各 gate PR は登録と gate 固有述語 + 対のテスト + 最小配線) とし、
 scope 構造 FLAG は close → 分割再出。PR-T 系は docs のみで source_module を追加しない。
+
+外部 PR / Issue との前提関係 (rev 3):
+
+| 本 PLAN の PR | PLAN-L7-628 PR-1 producer (#670) | PLAN-L7-628 PR-2 installer | launcher 8.3 alias (#678) | license Apache-2.0 (#682) |
+| --- | --- | --- | --- | --- |
+| PR-1 / PR-3 | 不要 (source 実行で検証) | 不要 (PR-3 の A6 は 628 §6.2 の `active.json` path を参照するだけ。628 が path を変えたら PR-3 が追従) | 不要 | 不要 |
+| PR-2a / PR-2c | **必須** (bundle 起動の oracle が producer の build に依存) | 不要 (bundle を直接起動する) | 不要 | 不要 |
+| PR-2b / PR-G0 / PR-G7 / PR-GR / PR-G9〜PR-G14 / PR-VL | 不要 | 不要 | 不要 | 不要 |
+| PR-T1〜PR-T3 | 不要 | 不要 | 不要 | **必須** (配布物の license 表記) |
+| PLAN-L7-531 E2E (本 PLAN §3.7 の観測) | **必須** | **必須** (Release から install した consumer で観測する) | **必須** (Windows の E2E で launcher が 8.3 alias を誤拒否しないこと) | **必須** |
 
 ## 5. 完了条件
 
-1. PR-1: origin 無しの空 repo で setup が中断せず identity 以外の出力を完了し、typed identity deny と復旧手順を表示し、成功と区別される終了コードを返す。
+1. PR-1: origin 無しの空 repo で setup が中断せず identity 以外の出力を完了し、`identity_repository_unbound` と復旧手順を表示し、exit 2 を返す。
    origin 追加後の再実行で identity が作られ、既存出力は変わらない。origin ありの setup 後、work-guard / agent-guard / session start / session summary /
    subagent-stop が root を解決する。`commitRequired` 時に commit 手順が表示される
    (CANDIDATE-U-RCDEV-001..005 Green)。
@@ -458,12 +515,12 @@ scope 構造 FLAG は close → 分割再出。PR-T 系は docs のみで source
 7. PR-T1〜T3: required 21 slot の全てに provenance 付きテンプレートがあり、57 本が port index で漏れ・重複なく分類され、テンプレートから作った文書を
    gate parser が読め、zip の管理 yaml と `tools/*.py` が別ファイルとして出荷されない (CANDIDATE-U-RCDEV-019..025 Green)。
 8. PR-G0〜PR-VL: consumer fixture で gate G1〜G14・`vmodel lint`・`plan lint` の全てが、ENOENT の「could not run」も「no deterministic check registered」も
-   返さず、文書の有無・構造・trace に基づく判定を返す。harness 自身の G1〜G7 の判定は不変 (CANDIDATE-U-RCDEV-026..031 Green)。
+   返さず、§3.6-4 の述語に基づく判定を返す。harness 自身の G1〜G10 の判定は不変 (CANDIDATE-U-RCDEV-026..037 Green)。
 9. #676 の受入 (空 repo からの開発開始、エージェントが書いた文書が gate と review を通ること) は PLAN-L7-531 の E2E で観測する。本 PLAN は unit / integration まで。
 
 ## 6. TDD / trace / Reverse
 
-候補 oracle `CANDIDATE-U-RCDEV-001..031` は pair test-design が所有し、実装 PR で同番号の `U-RCDEV-*` へ 1:1 昇格する。
+候補 oracle `CANDIDATE-U-RCDEV-001..037` は pair test-design が所有し、実装 PR で同番号の `U-RCDEV-*` へ 1:1 昇格する。
 既存 `CANDIDATE-U-PACKRT-*` (628)、L7-529 の identity oracle、`CANDIDATE-ST-PACKCANARY-*` を再採番・再所有しない。
 
 R1: PLAN-L6-101 の source 非依存受入と、L7-529 の create / commit policy を照合する。R2: 同梱資産の解決順・design root 規約・
@@ -487,5 +544,5 @@ injection path の乗っ取り、harness 自身の挙動変化、部分 setup �
 ## 8. 実装開始条件
 
 1. 本 PLAN と PLAN-REVERSE-676 の pair-freeze に非著者 PASS receipt と CI Green が揃うこと。
-2. §3.3 の #676 受入条件改訂コメントの URL は記録済み (PR-0)。PR-1 で freeze する setup 終了コードを、PR-1 の実装着手前に本 PLAN §3.3 へ追記すること。
-3. 実装中に方式変更 (解決順、展開先、resolver 規約、setup の失敗条件、テンプレート形式、gate の判定規則 §3.6-4) が必要になったら、PR を close して本 PLAN の契約改訂へ戻る。
+2. §3.3 の #676 受入条件改訂コメントの URL、setup の deny code と終了コード (§3.3-1)、テンプレート書き出しコマンド (§3.1.3)、G8〜G14 の述語 (§3.6-4) は記録済み (PR-0 rev 3)。
+3. 実装中に方式変更 (解決順、展開先、resolver 規約、setup の失敗条件、テンプレート形式、書き出しコマンド §3.1.3、setup の終了コード §3.3-1、gate の述語 §3.6-4) が必要になったら、PR を close して本 PLAN の契約改訂へ戻る。

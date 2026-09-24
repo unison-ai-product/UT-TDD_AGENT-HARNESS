@@ -22,7 +22,7 @@ agent_slots:
   - role: tl
     slot_label: Claude Opus / Sol - PLAN-L7-529 の frozen 契約と本 PLAN の表示・解決順の整合を逆向き検証する
   - role: qa
-    slot_label: Terra - CANDIDATE-U-RCDEV-001..031 を独立照合し、同名 skill による path 乗っ取り・部分
+    slot_label: Terra - CANDIDATE-U-RCDEV-001..037 を独立照合し、同名 skill による path 乗っ取り・部分
       setup の残留・gate の未判定の隠蔽を攻撃する
 generates:
   - artifact_path: docs/plans/PLAN-REVERSE-676-release-consumer-dev-start-backfill.md
@@ -44,18 +44,18 @@ status: draft
 github_issue_id: 676
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:4b34f9d1b25aee262cca72a33a7da958
-  command_id: plan-revise:issue-676:scope-rev2:reverse:r2:166bfc37b0c0
-  admitted_at: 2026-09-24T07:54:55.575Z
-  source_digest: sha256:80055c3de9f32078d6738c5bc13079fbe6f18e342678db180fb123500f45332d
-  decision_digest: sha256:54b6e02517b48f4d541efc390b149e539163d643b35fe22bff59881af922a30c
-  receipt_digest: sha256:8cccb2233201242cc1efede5cd22fc664889f11efdd9361a253cbcb095dd5121
+  receipt_id: certificate:b032ec39d32174225f785dfd651e966d
+  command_id: plan-revise:issue-676:sol-r1-flag:reverse:r3:4185164a907a
+  admitted_at: 2026-09-24T08:15:52.256Z
+  source_digest: sha256:467c2ba447e12840b8b2ede35822378fb91543db88de512fa9b4d2fc75ee9dd2
+  decision_digest: sha256:2d1ebed620711df0fdded8e7a1938b309b53e51525560c4ec2882b4b843d0b1d
+  receipt_digest: sha256:da726b8d3e6b9d7fa4ab5c1a1dcf03701545048bc745fb3d75bb639ce76bb98d
   binding:
     path: docs/plans/PLAN-REVERSE-676-release-consumer-dev-start-backfill.md
     plan_id: PLAN-REVERSE-676-release-consumer-dev-start-backfill
     asset_id: plan:2db3028c656fba04cb6610d7278dfa56
-    revision: 2
-    content_digest: sha256:80055c3de9f32078d6738c5bc13079fbe6f18e342678db180fb123500f45332d
+    revision: 3
+    content_digest: sha256:467c2ba447e12840b8b2ede35822378fb91543db88de512fa9b4d2fc75ee9dd2
   route:
     signal: reverse
     mode: reverse
@@ -73,10 +73,10 @@ admission_receipt:
     implementation_disposition: preserved
   reentry:
     target_plan_id: PLAN-L7-676-release-consumer-dev-start
-    target_revision: 2
+    target_revision: 3
     phase: forward_merge
-  escape_reason: "Issue #676 rev 2: PLAN-L7-676 rev 2 のスコープ改訂 (テンプレート移植・consumer
-    gate) に合わせて Reverse の照合観点と candidate 対応を更新する。"
+  escape_reason: "PR #680 Sol r1 FLAG の是正に合わせ、G8〜G14 の candidate 対応を gate
+    別に分割し照合観点に vmodel-contract.yaml を加える。"
 ---
 
 # PLAN-REVERSE-676: Release consumer 開発開始の逆向き確認
@@ -99,7 +99,7 @@ launcher の 8.3 alias 等価性 (Issue #678) は対象外であり、再所有�
 | `PLAN-L7-628` §1.1 / §3 asset 集合 | 埋め込みは `<tag>.ut-tdd.mjs` の内側に留める (§3.1 案 C) | asset 集合・installer 手順を変えていないか、tarball を展開していないか |
 | `vmodel-document-disposition-catalog.md` の採否 | zip テンプレート 57 本を slot source か optional に分類する (§3.5.3) | disposition の target と slot の対応が一意か、zip に無い内容を書き起こしていないか |
 | `vmodel-document-scale-profiles.md` / `vmodel-document-catalog.md` の正本性 | zip の管理 yaml を既存正本へ merge し、別ファイルで出荷しない (§3.5.4) | 第 2 の SSoT が生まれていないか |
-| `gate-design.md` §1 ゲートモデル | G8〜G14 に成果物から決まる static check を持たせ、残りを review tier に明示する (§3.6-4) | static check が判定内容を超えて承認を代行していないか、未判定を pass と見せていないか |
+| `gate-design.md` §1 ゲートモデル / `vmodel-contract.yaml` の右腕 layer 行 | G8〜G14 の述語を contract 行から導出し、残りを review tier に明示する (§3.6-4) | static check が判定内容を超えて承認を代行していないか、未判定を pass と見せていないか |
 | ADR-001 (TypeScript/Node) | `tools/*.py` を同梱せず、検査の意味を TS gate で実装する (§3.6-6) | Python 実行経路や `.py` が配布物に入っていないか |
 | `PLAN-L6-93` / `PLAN-L7-458` Node generation | 埋め込み対象を esbuild の実 input として通す (§3.1.2) | 埋め込み bytes が receipt の `source_files` に現れているか、builder policy `compiled-esm-only` を保っているか |
 
@@ -123,8 +123,9 @@ launcher の 8.3 alias 等価性 (Issue #678) は対象外であり、再所有�
 | テンプレート形式と skill / ガイドの移植 | CANDIDATE-U-RCDEV-022 / 023 |
 | Python 非同梱と第 2 SSoT の禁止 | CANDIDATE-U-RCDEV-024 / 025 |
 | gate 定義の埋め込みと G1〜G7 の consumer 判定 | CANDIDATE-U-RCDEV-026 / 027 / 028 |
-| G8〜G14 の static 判定と vmodel lint | CANDIDATE-U-RCDEV-029 / 030 |
-| harness 自身の gate 回帰 | CANDIDATE-U-RCDEV-031 |
+| G8〜G14 の gate 別述語 (構造・ID・V-pair trace・evidence 型・全行・必須成果物・gate 固有) | CANDIDATE-U-RCDEV-029 (G8) / 030 (G9) / 031 (G10) / 032 (G11) / 033 (G12) / 034 (G13) / 035 (G14) |
+| vmodel lint | CANDIDATE-U-RCDEV-036 |
+| harness 自身の gate 回帰 (G1〜G10) | CANDIDATE-U-RCDEV-037 |
 
 ## R3: gap 分類と backfill
 

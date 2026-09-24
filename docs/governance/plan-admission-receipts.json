@@ -4944,6 +4944,38 @@
         "revision": 2,
         "content_digest": "sha256:80055c3de9f32078d6738c5bc13079fbe6f18e342678db180fb123500f45332d"
       }
+    },
+    {
+      "sequence": 310,
+      "previous_record_digest": "sha256:c4bfc3550e42cf6363f1c56633b6cc6e8844e6329aacd7611f2099e027e03ffb",
+      "record_digest": "sha256:b45818fdca08d71bbc999568a6df933404f057cdee14ccc0f920bdd242f2d60c",
+      "command_id": "plan-revise:issue-676:sol-r1-flag:plan:r3:4185164a907a",
+      "receipt_id": "certificate:72476e1f4997f497ff7973773a6a83ff",
+      "receipt_digest": "sha256:b8e7e37def1a984c13281c8de5817cb4037843f14918b585f657fa3f873e5cb2",
+      "decision_digest": "sha256:de6ccbf4a93dfd92ffc33c19535e510439e25bffa3d5c2461d0f9af6548c2c9d",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-676-release-consumer-dev-start.md",
+        "plan_id": "PLAN-L7-676-release-consumer-dev-start",
+        "asset_id": "plan:aae8bf0e313f8688fbad4d4d8cf0a6a9",
+        "revision": 3,
+        "content_digest": "sha256:4cc05286e2dfee4e0f26f5c86d7cb4751b030a965796d916f8ad8d61ee20c321"
+      }
+    },
+    {
+      "sequence": 311,
+      "previous_record_digest": "sha256:b45818fdca08d71bbc999568a6df933404f057cdee14ccc0f920bdd242f2d60c",
+      "record_digest": "sha256:310f567f27fe36e5d513fb92dba66e59dfbf9c88bc53f92e483172392d37e82e",
+      "command_id": "plan-revise:issue-676:sol-r1-flag:reverse:r3:4185164a907a",
+      "receipt_id": "certificate:b032ec39d32174225f785dfd651e966d",
+      "receipt_digest": "sha256:da726b8d3e6b9d7fa4ab5c1a1dcf03701545048bc745fb3d75bb639ce76bb98d",
+      "decision_digest": "sha256:2d1ebed620711df0fdded8e7a1938b309b53e51525560c4ec2882b4b843d0b1d",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-676-release-consumer-dev-start-backfill.md",
+        "plan_id": "PLAN-REVERSE-676-release-consumer-dev-start-backfill",
+        "asset_id": "plan:2db3028c656fba04cb6610d7278dfa56",
+        "revision": 3,
+        "content_digest": "sha256:467c2ba447e12840b8b2ede35822378fb91543db88de512fa9b4d2fc75ee9dd2"
+      }
     }
   ]
 }
