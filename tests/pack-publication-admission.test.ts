@@ -110,7 +110,6 @@ function fixture(
   return {
     receipt: inputReceipt,
     configuration,
-    expectedMainOid: inputReceipt.identity.baseOid,
     approvals: [
       {
         nonce: `apv-${operationId}`,
@@ -281,14 +280,12 @@ describe("Pack publication admission observation binding", () => {
     expect(input.ledger.append).not.toHaveBeenCalled();
   });
 
-  it("treats malformed observer scalars as indeterminate", async () => {
+  it("treats a nonnumeric observed ruleset ID as indeterminate", async () => {
     const base = fixture();
     const input = fixture({
       observer: {
         ...base.observer,
-        repository: vi.fn(() =>
-          ok({ ...configuration, requiredContexts: ["pack-check", 42] as unknown as string[] }),
-        ),
+        repository: vi.fn(() => ok({ ...configuration, rulesetId: "77" as unknown as number })),
       },
     });
     const result = await admitPackPublication(input);
@@ -297,7 +294,53 @@ describe("Pack publication admission observation binding", () => {
       status: "indeterminate",
       reason: "repository_observation_schema_invalid",
       remoteWrites: 0,
+      approvalConsumes: 0,
     });
+    expect(input.observer.repository).toHaveBeenCalledTimes(1);
+    expect(input.observer.pullRequest).not.toHaveBeenCalled();
+    expect(input.observer.review).not.toHaveBeenCalled();
+    expect(input.observer.checks).not.toHaveBeenCalled();
+    expect(input.observer.mergeBase).not.toHaveBeenCalled();
+    expect(input.observer.staging).not.toHaveBeenCalled();
+    expect(input.ledger.appendObservation).not.toHaveBeenCalled();
+    expect(input.ledger.append).not.toHaveBeenCalled();
+  });
+
+  it("uses the sealed staging expected-main OID, not a caller-supplied OID", async () => {
+    const baseInput = fixture();
+    const expectedMainOid = receipt.identity.baseOid;
+    const callerSuppliedExpectedMainOid = oid("9");
+    const input = Object.assign(baseInput, {
+      expectedMainOid: callerSuppliedExpectedMainOid,
+    });
+
+    const result = await admitPackPublication(input);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    expect(input.observer.mergeBase).toHaveBeenCalledWith({
+      headOid: receipt.identity.headOid,
+      expectedMainOid,
+    });
+    expect(result.record.sealed.expectedMainOid).toBe(expectedMainOid);
+    expect(result.record.publicationIntentIdentity).toBe(
+      derivePackPublicationAdmissionIntentIdentity({
+        operationId: receipt.binding.operationId,
+        repositoryId: configuration.repositoryId,
+        targetRef: configuration.targetRef,
+        expectedMainOid,
+        reviewedHead: receipt.identity.headOid,
+        preparationReceiptDigest: derivePackPublicationPreparationReceiptDigest(receipt),
+      }),
+    );
+    expect(result.record.sealed.expectedMainOid).not.toBe(callerSuppliedExpectedMainOid);
+
+    const typedCallerInput: PackPublicationAdmissionInput = {
+      ...fixture(),
+      // @ts-expect-error expected main is authority from sealed staging, never caller input
+      expectedMainOid: callerSuppliedExpectedMainOid,
+    };
+    expect(typedCallerInput.receipt).toEqual(receipt);
   });
 
   it("rejects an approval whose observed intent binding was changed", async () => {

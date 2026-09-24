@@ -182,7 +182,6 @@ export interface PackPublicationAdmissionLedger {
 export interface PackPublicationAdmissionInput {
   readonly receipt: unknown;
   readonly configuration: PackPublicationAdmissionConfiguration;
-  readonly expectedMainOid: string;
   readonly approvals: readonly PackPublicationAdmissionApprovalReference[];
   readonly observer: PackPublicationAdmissionObserver;
   readonly ledger: PackPublicationAdmissionLedger;
@@ -615,23 +614,6 @@ export async function admitPackPublication(
     return deny("admission_required_context_uncovered");
   if (!required.every((check) => check.conclusion === "success"))
     return deny("admission_check_not_success");
-  let mergeBaseResult: PublicationPortResult<PackPublicationMergeBaseObservation>;
-  try {
-    mergeBaseResult = await input.observer.mergeBase({
-      headOid: pr.headOid,
-      expectedMainOid: input.expectedMainOid,
-    });
-  } catch {
-    return indeterminate("merge_base_observation_unavailable");
-  }
-  const mergeBaseFailure = resultFailure(mergeBaseResult);
-  if (mergeBaseFailure) return mergeBaseFailure;
-  if (mergeBaseResult.status !== "attested")
-    return indeterminate("merge_base_observation_unavailable");
-  if (!validMergeBaseObservation(mergeBaseResult.value))
-    return indeterminate("merge_base_observation_schema_invalid");
-  if (mergeBaseResult.value.mergeBase !== input.expectedMainOid)
-    return deny("admission_merge_base_mismatch");
   let stagingResult: PublicationPortResult<PackPublicationSealedStagingObservation | null>;
   try {
     stagingResult = await input.observer.staging(receipt.binding.operationId);
@@ -652,6 +634,23 @@ export async function admitPackPublication(
   if (staging.expectedMainOid !== pr.baseOid)
     return deny("admission_staging_expected_main_mismatch");
   if (staging.branch !== pr.branch) return deny("admission_staging_branch_mismatch");
+  let mergeBaseResult: PublicationPortResult<PackPublicationMergeBaseObservation>;
+  try {
+    mergeBaseResult = await input.observer.mergeBase({
+      headOid: pr.headOid,
+      expectedMainOid: staging.expectedMainOid,
+    });
+  } catch {
+    return indeterminate("merge_base_observation_unavailable");
+  }
+  const mergeBaseFailure = resultFailure(mergeBaseResult);
+  if (mergeBaseFailure) return mergeBaseFailure;
+  if (mergeBaseResult.status !== "attested")
+    return indeterminate("merge_base_observation_unavailable");
+  if (!validMergeBaseObservation(mergeBaseResult.value))
+    return indeterminate("merge_base_observation_schema_invalid");
+  if (mergeBaseResult.value.mergeBase !== staging.expectedMainOid)
+    return deny("admission_merge_base_mismatch");
   if (input.approvals.length === 0) return deny("admission_approval_missing");
   if (new Set(input.approvals.map((approval) => approval.nonce)).size !== input.approvals.length)
     return deny("admission_approval_set_conflict");
@@ -669,7 +668,7 @@ export async function admitPackPublication(
     operationId: receipt.binding.operationId,
     repositoryId: repository.repositoryId,
     targetRef: repository.targetRef,
-    expectedMainOid: input.expectedMainOid,
+    expectedMainOid: staging.expectedMainOid,
     reviewedHead: review.reviewedHead,
     preparationReceiptDigest: receiptDigest,
   });
@@ -710,7 +709,7 @@ export async function admitPackPublication(
     rulesetId: repository.rulesetId,
     requiredContexts: [...input.configuration.requiredContexts].sort(),
     casAuthorityInstallationId: repository.casAuthorityInstallationId,
-    expectedMainOid: input.expectedMainOid,
+    expectedMainOid: staging.expectedMainOid,
     preparationReceiptDigest: receiptDigest,
     reviewedPullRequest: pr.pullRequest,
     reviewedHead: review.reviewedHead,
