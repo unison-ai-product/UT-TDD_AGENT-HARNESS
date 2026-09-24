@@ -560,6 +560,7 @@ export async function packageConsumerRuntimeRelease(input: {
   readonly homeDirectory?: string;
   readonly installDependencies?: (sourceRoot: string) => void;
   readonly buildGeneration?: typeof buildNodeGeneration;
+  readonly moveStagedAssets?: (source: string, destination: string) => void;
 }): Promise<{
   readonly ok: true;
   readonly tag: string;
@@ -672,7 +673,7 @@ export async function packageConsumerRuntimeRelease(input: {
     const outputParent = dirname(resolve(input.outDir));
     ensureDir(outputParent, { recursive: true });
     if (existsSync(input.outDir)) rmSync(input.outDir, { recursive: true, force: true });
-    renameSync(assetsStage, input.outDir);
+    (input.moveStagedAssets ?? renameSync)(assetsStage, input.outDir);
     const outputFiles = [
       names.tarball,
       names.checksum,

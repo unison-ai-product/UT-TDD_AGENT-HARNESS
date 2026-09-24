@@ -1,16 +1,33 @@
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { dirname, join, resolve } from "node:path";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { stringify } from "yaml";
 import {
   assertProducerPathsOutsideHome,
   type ConsumerRuntimeReleaseProducerError,
+  collectDistributionCandidatePaths,
   packageConsumerRuntimeRelease,
   resolveConsumerRuntimeReleaseSourceBinding,
 } from "../src/cli/distribution.ts";
+import {
+  type NodeGeneration,
+  type NodeGenerationBuildInput,
+  parseNodeBootstrapReceiptBytes,
+  REVIEWED_NODE_VERSION,
+  REVIEWED_NPM_VERSION,
+} from "../src/runtime/node-bootstrap.ts";
 import {
   deriveArtifactInventoryDigest,
   deriveReleaseId,
@@ -22,10 +39,18 @@ import {
   validateConsumerRuntimeRelease,
 } from "../src/setup/consumer-runtime-release.ts";
 import {
+  AUTHORING_TEMPLATE_ARTIFACT_PATHS,
+  buildCleanDistributionPlan,
+  cleanDistributionSourcePath,
   digestConsumerRuntimeBytes,
   digestMaterializedReleaseEntries,
   releaseArtifactFileNames,
 } from "../src/setup/index.ts";
+import {
+  createLocalGitObjectReader,
+  resolveReleaseArtifacts,
+} from "../src/setup/release-artifact-resolver.ts";
+import { materializeReleaseArtifacts } from "../src/setup/release-materializer.ts";
 
 const revision = "a".repeat(40);
 const digest = digestMaterializedReleaseEntries([
@@ -211,6 +236,205 @@ function createReleaseBindingFixture(
   const c2 = fixtureGit(root, ["rev-parse", "HEAD"]);
   fixtureGit(root, ["tag", tag]);
   return { root, tag, c1, c2 };
+}
+
+interface ProducerFixture {
+  root: string;
+  tag: string;
+  c1: string;
+}
+
+async function createProducerFixture(): Promise<ProducerFixture> {
+  const root = mkdtempSync(join(tmpdir(), "ut-tdd-packrt-producer-"));
+  const repositoryRoot = resolve(process.cwd());
+  const sourcePaths = collectDistributionCandidatePaths(repositoryRoot);
+  const artifactPaths = [
+    "README.md",
+    "LICENSE",
+    "package.json",
+    ".node-version",
+    "src/cli.ts",
+    "src/setup/index.ts",
+    "docs/templates/adapter/AGENTS.md",
+    "docs/templates/adapter/CLAUDE.md",
+    "docs/templates/adapter/.codex/config.toml",
+    "docs/templates/adapter/.codex/hooks.json",
+    "docs/templates/adapter/.claude/CLAUDE.md",
+    "docs/templates/adapter/.claude/settings.json",
+    "docs/templates/adapter/.claude/agents/be-api.md",
+    "docs/templates/adapter/.claude/agents/be-logic.md",
+    "docs/templates/adapter/.claude/agents/blind-reviewer.md",
+    "docs/templates/adapter/.claude/agents/code-reviewer.md",
+    "docs/templates/adapter/.claude/agents/db-schema.md",
+    "docs/templates/adapter/.claude/agents/devops-deploy.md",
+    "docs/templates/adapter/.claude/agents/pdm-innovation-manager.md",
+    "docs/templates/adapter/.claude/agents/pdm-marketing-innovation.md",
+    "docs/templates/adapter/.claude/agents/pdm-tech-innovation.md",
+    "docs/templates/adapter/.claude/agents/pmo-haiku.md",
+    "docs/templates/adapter/.claude/agents/pmo-project-explorer.md",
+    "docs/templates/adapter/.claude/agents/pmo-project-scout.md",
+    "docs/templates/adapter/.claude/agents/pmo-sonnet.md",
+    "docs/templates/adapter/.claude/agents/pmo-tech-docs.md",
+    "docs/templates/adapter/.claude/agents/pmo-tech-fork.md",
+    "docs/templates/adapter/.claude/agents/pmo-tech-news.md",
+    "docs/templates/adapter/.claude/agents/qa-test.md",
+    "docs/templates/adapter/.claude/agents/refactor-scout.md",
+    "docs/templates/adapter/.claude/agents/security-audit.md",
+    "docs/templates/adapter/.claude/agents/ut-tdd-tl.md",
+    "docs/templates/adapter/.claude/commands/build.md",
+    "docs/templates/adapter/.claude/commands/code-simplify.md",
+    "docs/templates/adapter/.claude/commands/sdd-plan.md",
+    "docs/templates/adapter/.claude/commands/sdd-review.md",
+    "docs/templates/adapter/.claude/commands/ship.md",
+    "docs/templates/adapter/.claude/commands/spec.md",
+    "docs/templates/adapter/.claude/commands/test.md",
+    "docs/templates/adapter/.claude/commands/ut-tdd-status.md",
+    "docs/templates/adapter/.claude/commands/ut-tdd-test.md",
+    ...AUTHORING_TEMPLATE_ARTIFACT_PATHS,
+  ];
+  const sourcePathSet = sourcePaths;
+  for (const artifactPath of artifactPaths) {
+    const sourcePath = cleanDistributionSourcePath(artifactPath, sourcePathSet);
+    const from = join(repositoryRoot, ...sourcePath.split("/"));
+    const to = join(root, ...artifactPath.split("/"));
+    mkdirSync(dirname(to), { recursive: true });
+    cpSync(from, to, { recursive: true });
+  }
+  rmSync(join(root, ".github", "workflows", "harness-check.yml"), { force: true });
+  mkdirSync(join(root, "src"), { recursive: true });
+  writeFileSync(join(root, "src", "artifact.ts"), "export const fixture = true;\n", "utf8");
+  fixtureGit(root, ["init", "--quiet"]);
+  fixtureGit(root, ["config", "user.email", "test@example.invalid"]);
+  fixtureGit(root, ["config", "user.name", "UT test"]);
+  fixtureGit(root, ["add", "--", "."]);
+  fixtureGit(root, ["commit", "--quiet", "-m", "fixture artifact"]);
+  const fixturePlan = buildCleanDistributionPlan({
+    paths: collectDistributionCandidatePaths(root),
+    sourceTag: "fixture",
+  });
+  if (!fixturePlan.ok)
+    throw new Error(`producer fixture clean plan failed: ${fixturePlan.missingRequired.join(",")}`);
+  const c1 = fixtureGit(root, ["rev-parse", "HEAD"]);
+  const tag = "v0.2.0-canary.2";
+  const resolved = await resolveReleaseArtifacts(
+    {
+      repository: root,
+      release: {
+        releaseId: "fixture-release",
+        materializerVersion: "1",
+        artifactSourceCommit: c1,
+        artifactSetDigest: `sha256:${"0".repeat(64)}`,
+      },
+    },
+    { git: createLocalGitObjectReader(), materialize: materializeReleaseArtifacts },
+  );
+  if (!resolved.ok)
+    throw new Error(`producer fixture artifact resolution failed: ${resolved.error}`);
+  const artifactEntry = resolved.entries.find((entry) => entry.path === "src/artifact.ts");
+  if (!artifactEntry) throw new Error("producer fixture artifact entry is missing");
+  const publicationArtifacts = [
+    {
+      sourcePath: "src/artifact.ts",
+      destinationPath: artifactEntry.path,
+      mode: "100644" as const,
+      size: artifactEntry.content.length,
+      contentDigest: digestConsumerRuntimeBytes(artifactEntry.content),
+    },
+  ];
+  const publicationBase = {
+    materializerVersion: "1",
+    artifactSourceCommit: c1,
+    artifactSetDigest: resolved.digest,
+    artifactInventoryDigest: deriveArtifactInventoryDigest(publicationArtifacts),
+    releaseAssetInventoryDigest: `sha256:${"c".repeat(64)}`,
+    artifacts: publicationArtifacts,
+  };
+  const releaseId = deriveReleaseId("1", c1, resolved.digest);
+  const manifest = {
+    schema_version: "v2" as const,
+    releases: {
+      [releaseId]: {
+        ...publicationBase,
+        releaseRecordDigest: deriveReleaseRecordDigest(publicationBase),
+      },
+    },
+    channels: { canary: releaseId, stable: releaseId },
+    channelOrder: ["canary", "stable"],
+  };
+  mkdirSync(join(root, "release"), { recursive: true });
+  writeFileSync(join(root, "release", "manifest.yaml"), stringify(manifest), "utf8");
+  fixtureGit(root, ["add", "--", "release/manifest.yaml"]);
+  fixtureGit(root, ["commit", "--quiet", "-m", "release manifest"]);
+  fixtureGit(root, ["tag", tag]);
+  return { root, tag, c1 };
+}
+
+function sealReceipt(unsigned: Record<string, unknown>): Buffer {
+  return Buffer.from(
+    JSON.stringify({
+      ...unsigned,
+      receipt_digest: createHash("sha256").update(canonical(unsigned)).digest("hex"),
+    }),
+    "utf8",
+  );
+}
+
+function fakeGenerationBuilder(
+  options: { nodeVersion?: string; fail?: boolean } = {},
+): (input: string | NodeGenerationBuildInput) => Promise<NodeGeneration> {
+  return async (input) => {
+    if (options.fail) throw new Error("injected Node generation failure");
+    if (typeof input === "string") throw new Error("fixture generation input must be structured");
+    if (!input.outputRoot) throw new Error("fixture generation output root is missing");
+    const compiledBytes = Buffer.from("export default 'fixture runtime';\n", "utf8");
+    const compiledSha256 = createHash("sha256").update(compiledBytes).digest("hex");
+    const toolchainRoot = process.platform === "win32" ? "C:/toolchain" : "/opt/ut-tdd-toolchain";
+    const unsigned = {
+      ...receiptUnsigned,
+      generation_id: "fixture-generation",
+      subject_revision: input.candidateRevision,
+      node: {
+        ...receiptUnsigned.node,
+        path: `${toolchainRoot}/node${process.platform === "win32" ? ".exe" : ""}`,
+        version: options.nodeVersion ?? REVIEWED_NODE_VERSION,
+      },
+      npm: {
+        ...receiptUnsigned.npm,
+        cli_path: `${toolchainRoot}/npm-cli.js`,
+        version: REVIEWED_NPM_VERSION,
+      },
+      compiled_cli: {
+        ...receiptUnsigned.compiled_cli,
+        sha256: compiledSha256,
+      },
+    };
+    const generationPath = join(input.outputRoot, "fixture-generation");
+    const compiledCliPath = join(generationPath, "ut-tdd.mjs");
+    mkdirSync(generationPath, { recursive: true });
+    writeFileSync(compiledCliPath, compiledBytes);
+    const receiptBytes = sealReceipt(unsigned);
+    writeFileSync(join(generationPath, "receipt.json"), receiptBytes);
+    return {
+      nodePath: unsigned.node.path,
+      compiledCliPath,
+      generationPath,
+      receipt: parseNodeBootstrapReceiptBytes(receiptBytes),
+    };
+  };
+}
+
+function assetBuffers(root: string, tag: string): Buffer[] {
+  return Object.values(releaseArtifactFileNames(tag)).map((name) => readFileSync(join(root, name)));
+}
+
+function expectBytesNotToContain(buffers: Iterable<Buffer>, forbidden: Iterable<string>): void {
+  for (const bytes of buffers) {
+    for (const value of forbidden) {
+      if (!value || value.length < 4) continue;
+      if (bytes.includes(Buffer.from(value, "utf8")))
+        throw new Error(`forbidden producer identity bytes: ${JSON.stringify(value)}`);
+    }
+  }
 }
 
 function validDocument(): ConsumerRuntimeRelease {
@@ -406,5 +630,144 @@ describe("Pack consumer runtime release producer contract", () => {
 
   it("U-PACKRT-004: accepts the schema without any producer workspace path field", () => {
     expect(validateConsumerRuntimeRelease(validDocument()).release.product_id).toBe("ut-tdd");
+  });
+});
+
+describe("Pack consumer runtime release producer byte and fail-close oracles", () => {
+  let fixture: ProducerFixture;
+
+  beforeAll(async () => {
+    fixture = await createProducerFixture();
+  });
+
+  afterAll(() => {
+    if (fixture) rmSync(fixture.root, { recursive: true, force: true });
+  });
+
+  const packageFixture = (
+    outDir: string,
+    options: {
+      buildGeneration?: (input: string | NodeGenerationBuildInput) => Promise<NodeGeneration>;
+      moveStagedAssets?: (source: string, destination: string) => void;
+    } = {},
+  ) =>
+    packageConsumerRuntimeRelease({
+      repoRoot: fixture.root,
+      tag: fixture.tag,
+      outDir,
+      homeDirectory: join(fixture.root, "synthetic-home"),
+      installDependencies: () => undefined,
+      buildGeneration: options.buildGeneration ?? fakeGenerationBuilder(),
+      ...(options.moveStagedAssets ? { moveStagedAssets: options.moveStagedAssets } : {}),
+    });
+
+  it("U-PACKRT-001: repeats the same revision with identical consumer runtime and checksum bytes", async () => {
+    const first = mkdtempSync(join(tmpdir(), "ut-tdd-packrt-001-first-"));
+    const second = mkdtempSync(join(tmpdir(), "ut-tdd-packrt-001-second-"));
+    try {
+      await packageFixture(first);
+      await packageFixture(second);
+      const names = releaseArtifactFileNames(fixture.tag);
+      expect(readFileSync(join(first, names.consumerRuntime))).toEqual(
+        readFileSync(join(second, names.consumerRuntime)),
+      );
+      expect(readFileSync(join(first, names.consumerChecksum))).toEqual(
+        readFileSync(join(second, names.consumerChecksum)),
+      );
+    } finally {
+      rmSync(first, { recursive: true, force: true });
+      rmSync(second, { recursive: true, force: true });
+    }
+  });
+
+  it("U-PACKRT-003: scans every asset and the sealed receipt bytes for producer identity leakage", async () => {
+    const outDir = mkdtempSync(join(tmpdir(), "ut-tdd-packrt-003-"));
+    const envSentinel = `packrt-env-sentinel-${fixture.tag}`;
+    process.env.UT_TDD_PACKRT_ENV_SENTINEL = envSentinel;
+    try {
+      await packageFixture(outDir);
+      const names = releaseArtifactFileNames(fixture.tag);
+      const runtime = JSON.parse(
+        readFileSync(join(outDir, names.consumerRuntime), "utf8"),
+      ) as ConsumerRuntimeRelease;
+      const receiptBytes = Buffer.from(runtime.generation.node_bootstrap_receipt_base64, "base64");
+      const reviewedToolchainValues = new Set([
+        REVIEWED_NODE_VERSION,
+        REVIEWED_NODE_VERSION.replace(/^v/, ""),
+        REVIEWED_NPM_VERSION,
+        "ut-tdd",
+        "test",
+      ]);
+      const envValues = Object.values(process.env).filter(
+        (value): value is string =>
+          typeof value === "string" &&
+          value.length >= 4 &&
+          !value.includes("/") &&
+          !value.includes("\\") &&
+          !reviewedToolchainValues.has(value),
+      );
+      const userHome = process.env.USERPROFILE ?? process.env.HOME ?? "";
+      const username = process.env.USERNAME ?? process.env.USER ?? "";
+      const forbidden = [
+        fixture.root,
+        fixture.root.replaceAll("\\", "/"),
+        process.cwd(),
+        process.cwd().replaceAll("\\", "/"),
+        join(fixture.root, "synthetic-home"),
+        join(fixture.root, "synthetic-home").replaceAll("\\", "/"),
+        userHome,
+        userHome.replaceAll("\\", "/"),
+        username,
+        envSentinel,
+        ...envValues,
+      ];
+      expectBytesNotToContain([...assetBuffers(outDir, fixture.tag), receiptBytes], forbidden);
+      expect(existsSync(join(outDir, names.consumerRuntime))).toBe(true);
+    } finally {
+      delete process.env.UT_TDD_PACKRT_ENV_SENTINEL;
+      rmSync(outDir, { recursive: true, force: true });
+    }
+  });
+
+  it("U-PACKRT-004a: rejects a non-reviewed Node/npm generation and leaves zero assets", async () => {
+    const outDir = mkdtempSync(join(tmpdir(), "ut-tdd-packrt-004-node-"));
+    try {
+      await expect(
+        packageFixture(outDir, {
+          buildGeneration: fakeGenerationBuilder({ nodeVersion: "v24.12.0" }),
+        }),
+      ).rejects.toThrow("reviewed Node toolchain mismatch");
+      expect(existsSync(outDir) ? readdirSync(outDir) : []).toEqual([]);
+    } finally {
+      rmSync(outDir, { recursive: true, force: true });
+    }
+  });
+
+  it("U-PACKRT-004b: rejects Node generation failure and leaves zero assets", async () => {
+    const outDir = mkdtempSync(join(tmpdir(), "ut-tdd-packrt-004-generation-"));
+    try {
+      await expect(
+        packageFixture(outDir, { buildGeneration: fakeGenerationBuilder({ fail: true }) }),
+      ).rejects.toThrow("injected Node generation failure");
+      expect(readdirSync(outDir)).toEqual([]);
+    } finally {
+      rmSync(outDir, { recursive: true, force: true });
+    }
+  });
+
+  it("U-PACKRT-004c: rejects staged asset move failure and leaves zero assets", async () => {
+    const outDir = mkdtempSync(join(tmpdir(), "ut-tdd-packrt-004-move-"));
+    try {
+      await expect(
+        packageFixture(outDir, {
+          moveStagedAssets: () => {
+            throw new Error("injected staged asset move failure");
+          },
+        }),
+      ).rejects.toThrow("injected staged asset move failure");
+      expect(existsSync(outDir) ? readdirSync(outDir) : []).toEqual([]);
+    } finally {
+      rmSync(outDir, { recursive: true, force: true });
+    }
   });
 });
