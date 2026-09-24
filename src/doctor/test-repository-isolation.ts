@@ -39,8 +39,9 @@ hook-native-launcher:1 claude-memory-terminal-gc:1 release-version-identity:2 wi
 profile/tracked-loader:2
 plan-asset/ledger-schema:4 plan-asset/legacy-inventory:5 plan-asset/legacy-migration-dry-run:13 plan-asset/project-identity-loader:1
 disposition/git-authoring-provenance:3 disposition/projection:6 disposition/tracked-target-registry:2
-forward-escape-issue-contract:2
-`;
+  forward-escape-issue-contract:2
+  pack-consumer-runtime-release:3
+  `;
 
 const repositoryReadContracts: Record<string, RepositoryReadContract> = Object.fromEntries(
   CONTRACT_ROWS.trim()
@@ -122,6 +123,12 @@ repositoryReadContracts["tests/support/pack-consumer-runtime.ts"] = {
   mode_calls: { head_snapshot: 1, isolated_fixture: 1 },
   reason:
     "clean Pack/provider parity fixture materializes and seals inputs only from the detached execution snapshot before deleting the Pack checkout",
+};
+repositoryReadContracts["tests/pack-consumer-runtime-release.test.ts"] = {
+  mode: "isolated_fixture",
+  calls: 3,
+  reason:
+    "clean Pack producer fixture copies selected tracked assets from the detached snapshot into a writable temporary Git repository",
 };
 
 export const REPOSITORY_READ_CONTRACTS: Readonly<Record<string, RepositoryReadContract>> =

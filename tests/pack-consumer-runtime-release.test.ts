@@ -691,21 +691,31 @@ describe("Pack consumer runtime release producer byte and fail-close oracles", (
         readFileSync(join(outDir, names.consumerRuntime), "utf8"),
       ) as ConsumerRuntimeRelease;
       const receiptBytes = Buffer.from(runtime.generation.node_bootstrap_receipt_base64, "base64");
-      const reviewedToolchainValues = new Set([
-        REVIEWED_NODE_VERSION,
-        REVIEWED_NODE_VERSION.replace(/^v/, ""),
-        REVIEWED_NPM_VERSION,
-        "ut-tdd",
-        "test",
+      const runnerIdentityEnvironmentNames = new Set([
+        "AGENT_TEMPDIRECTORY",
+        "BUILD_SOURCESDIRECTORY",
+        "GITHUB_ACTION_PATH",
+        "GITHUB_WORKSPACE",
+        "HOME",
+        "INIT_CWD",
+        "RUNNER_TEMP",
+        "RUNNER_TOOL_CACHE",
+        "RUNNER_WORKSPACE",
+        "TEMP",
+        "TMP",
+        "USER",
+        "USERNAME",
+        "USERPROFILE",
       ]);
-      const envValues = Object.values(process.env).filter(
-        (value): value is string =>
-          typeof value === "string" &&
-          value.length >= 4 &&
-          !value.includes("/") &&
-          !value.includes("\\") &&
-          !reviewedToolchainValues.has(value),
-      );
+      const envValues = Object.entries(process.env).flatMap(([name, value]) => {
+        if (
+          !runnerIdentityEnvironmentNames.has(name) ||
+          typeof value !== "string" ||
+          value.length < 4
+        )
+          return [];
+        return [value, value.replaceAll("\\", "/")];
+      });
       const userHome = process.env.USERPROFILE ?? process.env.HOME ?? "";
       const username = process.env.USERNAME ?? process.env.USER ?? "";
       const forbidden = [
