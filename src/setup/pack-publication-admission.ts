@@ -15,7 +15,18 @@ const SHA256 = /^sha256:[a-f0-9]{64}$/;
  */
 export const PACK_PUBLICATION_ADMISSION_COVERAGE = Object.freeze({
   implemented: [
+    "CANDIDATE-PACKPUB-ADM-001",
+    "CANDIDATE-PACKPUB-ADM-002",
+    "CANDIDATE-PACKPUB-ADM-003",
+    "CANDIDATE-PACKPUB-ADM-004",
+    "CANDIDATE-PACKPUB-ADM-005",
+    "CANDIDATE-PACKPUB-ADM-006",
     "CANDIDATE-PACKPUB-ADM-007",
+    "CANDIDATE-PACKPUB-ADM-008",
+    "CANDIDATE-PACKPUB-ADM-009",
+    "CANDIDATE-PACKPUB-ADM-010",
+    "CANDIDATE-PACKPUB-ADM-011",
+    "CANDIDATE-PACKPUB-ADM-012",
     "CANDIDATE-PACKPUB-ADM-036",
     "CANDIDATE-PACKPUB-ADM-040",
     "CANDIDATE-PACKPUB-ADM-042",
@@ -23,8 +34,7 @@ export const PACK_PUBLICATION_ADMISSION_COVERAGE = Object.freeze({
     "CANDIDATE-PACKPUB-ADM-057",
   ] as const,
   deferred: [
-    "CANDIDATE-PACKPUB-ADM-001..006",
-    "CANDIDATE-PACKPUB-ADM-008..035",
+    "CANDIDATE-PACKPUB-ADM-013..035",
     "CANDIDATE-PACKPUB-ADM-037..039",
     "CANDIDATE-PACKPUB-ADM-041",
     "CANDIDATE-PACKPUB-ADM-043..047",
@@ -548,7 +558,9 @@ export async function admitPackPublication(
   if (repository.casAuthorityInstallationId !== input.configuration.casAuthorityInstallationId)
     return deny("admission_installation_mismatch");
   if (!sameSet(repository.requiredContexts, input.configuration.requiredContexts))
-    return deny("admission_required_context_set_mismatch");
+    return repository.requiredContexts.length === 0
+      ? deny("admission_checks_missing")
+      : deny("admission_required_context_set_mismatch");
   let prResult: PublicationPortResult<PackPublicationPullRequestAdmissionObservation>;
   try {
     prResult = await input.observer.pullRequest(receipt.identity.pullRequest);
