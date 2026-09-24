@@ -154,8 +154,7 @@ admission 成功 fixture でも remote write ledger と approval consume は 0 �
 | `CANDIDATE-PACKPUB-ADM-048` | admitted happy path | §4 の candidate 048 正本行をそのまま検証（admitted record 1、sequence 連番、previous record digest 連鎖、journal bundle digest 一致、remote write 0、approval consume 0、CAS token mint 0、intent 実行 0） |
 | `CANDIDATE-PACKPUB-ADM-057` | approval nonce sensitivity | approval binding digest changes / intent identity unchanged |
 
-The remaining candidates stay explicitly deferred; this table is not a claim that the full 70-candidate
-matrix has been implemented.
+残りの candidate は後続 Slice に明示的に deferred とし、この表を70 candidate 全件の実装・検証完了とは扱わない。
 
 ## 5. 実装 PR への昇格規則
 
