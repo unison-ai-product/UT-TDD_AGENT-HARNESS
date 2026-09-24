@@ -112,9 +112,7 @@ function shortPathFor(path: string): string | undefined {
 }
 
 function issue678TempRoot(prefix: string): string {
-  const aliasCapableBase =
-    process.platform === "win32" && shortPathFor(process.cwd()) ? process.cwd() : tmpdir();
-  return mkdtempSync(join(aliasCapableBase, prefix));
+  return mkdtempSync(join(tmpdir(), prefix));
 }
 
 function materializeWrapperFixture(identityRoot: string, pointerRoot = identityRoot) {
