@@ -1,0 +1,373 @@
+import { describe, expect, it, vi } from "vitest";
+import type {
+  PackPublicationPreparationReceipt,
+  PublicationPortResult,
+} from "../src/setup/pack-publication-adapter.ts";
+import {
+  admitPackPublication,
+  derivePackPublicationAdmissionApprovalBinding,
+  derivePackPublicationAdmissionIntentIdentity,
+  derivePackPublicationPreparationReceiptDigest,
+  PACK_PUBLICATION_ADMISSION_COVERAGE,
+  type PackPublicationAdmissionConfiguration,
+  type PackPublicationAdmissionInput,
+  type PackPublicationAdmissionLedgerRecord,
+} from "../src/setup/pack-publication-admission.ts";
+
+const ok = <T>(value: T): PublicationPortResult<T> => ({ status: "attested", value });
+const sha = (value: string) => `sha256:${value.repeat(64).slice(0, 64)}`;
+const oid = (value: string) => value.repeat(40).slice(0, 40);
+
+const configuration: PackPublicationAdmissionConfiguration = {
+  repositoryId: 424200,
+  repository: "example-org/example-pack",
+  targetRef: "refs/heads/main",
+  rulesetId: 77,
+  requiredContexts: ["pack-check"],
+  casAuthorityInstallationId: 9001,
+};
+
+const receipt: PackPublicationPreparationReceipt = {
+  kind: "pack-publication-preparation-receipt-v1",
+  identity: {
+    pullRequest: "4242",
+    headOid: oid("a"),
+    baseOid: oid("b"),
+    treeDigest: sha("c"),
+  },
+  binding: { operationId: "op-adm-fixture-0001" },
+  read_back_observation: { journalEventDigest: sha("d"), pullRequest: "4242" },
+};
+
+function fixture(
+  overrides: Partial<PackPublicationAdmissionInput> = {},
+  identity: {
+    readonly operationId?: string;
+    readonly pullRequest?: string;
+    readonly idempotencyKey?: string;
+  } = {},
+): PackPublicationAdmissionInput {
+  const operationId = identity.operationId ?? receipt.binding.operationId;
+  const pullRequest = identity.pullRequest ?? receipt.identity.pullRequest;
+  const idempotencyKey = identity.idempotencyKey ?? "idem-adm-fixture-0001";
+  const inputReceipt: PackPublicationPreparationReceipt = {
+    ...receipt,
+    identity: { ...receipt.identity, pullRequest },
+    binding: { operationId },
+    read_back_observation: {
+      ...receipt.read_back_observation,
+      pullRequest,
+    },
+  };
+  const intentIdentity = derivePackPublicationAdmissionIntentIdentity({
+    operationId,
+    repositoryId: configuration.repositoryId,
+    targetRef: configuration.targetRef,
+    expectedMainOid: inputReceipt.identity.baseOid,
+    reviewedHead: inputReceipt.identity.headOid,
+    preparationReceiptDigest: derivePackPublicationPreparationReceiptDigest(inputReceipt),
+  });
+  const observer = {
+    repository: vi.fn(() => ok({ ...configuration })),
+    pullRequest: vi.fn(() =>
+      ok({
+        pullRequest,
+        branch: `pack/publication/${operationId}`,
+        headOid: inputReceipt.identity.headOid,
+        baseOid: inputReceipt.identity.baseOid,
+        treeDigest: inputReceipt.identity.treeDigest,
+      }),
+    ),
+    review: vi.fn(() =>
+      ok({
+        pullRequest,
+        reviewedHead: inputReceipt.identity.headOid,
+        conclusion: "approved" as const,
+        reviewer: "reviewer-b",
+        author: "author-a",
+        closingReceiptDigest: sha("e"),
+      }),
+    ),
+    checks: vi.fn(() =>
+      ok({
+        headOid: inputReceipt.identity.headOid,
+        checks: [{ context: "pack-check", conclusion: "success" }],
+      }),
+    ),
+    mergeBase: vi.fn(() => ok({ mergeBase: inputReceipt.identity.baseOid })),
+    staging: vi.fn(() =>
+      ok({
+        operationId,
+        idempotencyKey,
+        treeDigest: inputReceipt.identity.treeDigest,
+        manifestDigest: sha("f"),
+        expectedMainOid: inputReceipt.identity.baseOid,
+        branch: `pack/publication/${operationId}`,
+      }),
+    ),
+  };
+  const records: PackPublicationAdmissionLedgerRecord[] = [];
+  return {
+    receipt: inputReceipt,
+    configuration,
+    approvals: [
+      {
+        nonce: `apv-${operationId}`,
+        operationId,
+        idempotencyKey,
+        intentBindingDigest: derivePackPublicationAdmissionApprovalBinding({
+          nonce: `apv-${operationId}`,
+          publicationIntentIdentity: intentIdentity,
+        }),
+        consumed: false,
+        preparation: false,
+      },
+    ],
+    observer,
+    ledger: {
+      read: () => records,
+      appendObservation: vi.fn(),
+      append: vi.fn((record: PackPublicationAdmissionLedgerRecord) => {
+        records.push(record);
+      }),
+    },
+    ...overrides,
+  };
+}
+
+describe("Pack publication admission observation binding", () => {
+  it("U-PACKPUB-ADM-101 declares the bounded candidate coverage explicitly", () => {
+    expect(PACK_PUBLICATION_ADMISSION_COVERAGE.implemented).toEqual([
+      "CANDIDATE-PACKPUB-ADM-007",
+      "CANDIDATE-PACKPUB-ADM-036",
+      "CANDIDATE-PACKPUB-ADM-040",
+      "CANDIDATE-PACKPUB-ADM-042",
+      "CANDIDATE-PACKPUB-ADM-048",
+      "CANDIDATE-PACKPUB-ADM-057",
+    ]);
+    expect(PACK_PUBLICATION_ADMISSION_COVERAGE.deferred).toEqual([
+      "CANDIDATE-PACKPUB-ADM-001..006",
+      "CANDIDATE-PACKPUB-ADM-008..035",
+      "CANDIDATE-PACKPUB-ADM-037..039",
+      "CANDIDATE-PACKPUB-ADM-041",
+      "CANDIDATE-PACKPUB-ADM-043..047",
+      "CANDIDATE-PACKPUB-ADM-049..056",
+      "CANDIDATE-PACKPUB-ADM-058..070",
+    ]);
+  });
+
+  it("U-PACKPUB-ADM-048 admits a complete read-only observation and appends provenance only", async () => {
+    const input = fixture();
+    const result = await admitPackPublication(input);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.record.status).toBe("admitted");
+    expect(result.record.sequence).toBe(1);
+    expect(result.remoteWrites).toBe(0);
+    expect(result.approvalConsumes).toBe(0);
+    expect(input.ledger.appendObservation).toHaveBeenCalledTimes(1);
+    expect(input.ledger.append).toHaveBeenCalledTimes(1);
+  });
+
+  it("U-PACKPUB-ADM-102 links the next admission record to the prior digest and journals the same bundle", async () => {
+    const firstInput = fixture();
+    const first = await admitPackPublication(firstInput);
+    expect(first.ok).toBe(true);
+    if (!first.ok) return;
+
+    const secondInput = fixture(
+      { ledger: firstInput.ledger },
+      {
+        operationId: "op-adm-fixture-0002",
+        pullRequest: "4243",
+        idempotencyKey: "idem-adm-fixture-0002",
+      },
+    );
+    const second = await admitPackPublication(secondInput);
+    expect(second.ok).toBe(true);
+    if (!second.ok) return;
+
+    expect(second.record.sequence).toBe(first.record.sequence + 1);
+    expect(second.record.previousRecordDigest).toBe(first.record.recordDigest);
+    expect(secondInput.ledger.appendObservation).toHaveBeenLastCalledWith({
+      recordDigest: second.record.recordDigest,
+      observationBundleDigest: second.record.observationBundleDigest,
+      operationId: second.record.operationId,
+    });
+    expect(secondInput.ledger.append).toHaveBeenLastCalledWith(second.record);
+    expect(second.remoteWrites).toBe(0);
+    expect(second.approvalConsumes).toBe(0);
+    expect(second.record).not.toHaveProperty("casToken");
+    expect(second.record).not.toHaveProperty("executionReceipt");
+  });
+
+  it("U-PACKPUB-ADM-103 rejects malformed receipts before calling any observer", async () => {
+    const input = fixture({ receipt: { kind: "malformed" } });
+    const result = await admitPackPublication(input);
+    expect(result).toMatchObject({
+      ok: false,
+      status: "denied",
+      reason: "admission_receipt_invalid",
+      remoteWrites: 0,
+    });
+    expect(input.observer.repository).not.toHaveBeenCalled();
+  });
+
+  it("U-PACKPUB-ADM-036 denies a missing preparation receipt before calling any observer", async () => {
+    const input = fixture({ receipt: undefined });
+    const result = await admitPackPublication(input);
+    expect(result).toMatchObject({
+      ok: false,
+      status: "denied",
+      reason: "admission_receipt_missing",
+      remoteWrites: 0,
+      approvalConsumes: 0,
+    });
+    expect(input.observer.repository).not.toHaveBeenCalled();
+    expect(input.observer.pullRequest).not.toHaveBeenCalled();
+    expect(input.observer.review).not.toHaveBeenCalled();
+    expect(input.observer.checks).not.toHaveBeenCalled();
+    expect(input.observer.mergeBase).not.toHaveBeenCalled();
+    expect(input.observer.staging).not.toHaveBeenCalled();
+  });
+
+  it("U-PACKPUB-ADM-007 denies a review-head mutation without consuming approval or writing remotely", async () => {
+    const input = fixture({
+      observer: {
+        ...fixture().observer,
+        review: vi.fn(() =>
+          ok({
+            pullRequest: "4242",
+            reviewedHead: oid("9"),
+            conclusion: "approved" as const,
+            reviewer: "reviewer-b",
+            author: "author-a",
+            closingReceiptDigest: sha("e"),
+          }),
+        ),
+      },
+    });
+    const result = await admitPackPublication(input);
+    expect(result).toMatchObject({
+      ok: false,
+      status: "denied",
+      reason: "admission_review_head_mismatch",
+      remoteWrites: 0,
+      approvalConsumes: 0,
+    });
+    expect(input.ledger.append).not.toHaveBeenCalled();
+  });
+
+  it("U-PACKPUB-ADM-040 keeps observer failure indeterminate", async () => {
+    const base = fixture();
+    const input = fixture({
+      observer: {
+        ...base.observer,
+        review: vi.fn(() => ({ status: "unavailable" as const, reason: "timeout" })),
+      },
+    });
+    const result = await admitPackPublication(input);
+    expect(result).toMatchObject({
+      ok: false,
+      status: "indeterminate",
+      reason: "timeout",
+      remoteWrites: 0,
+      approvalConsumes: 0,
+    });
+    expect(input.observer.review).toHaveBeenCalledTimes(1);
+    expect(input.observer.checks).not.toHaveBeenCalled();
+    expect(input.ledger.appendObservation).not.toHaveBeenCalled();
+    expect(input.ledger.append).not.toHaveBeenCalled();
+  });
+
+  it("U-PACKPUB-ADM-042 treats a nonnumeric observed ruleset ID as indeterminate", async () => {
+    const base = fixture();
+    const input = fixture({
+      observer: {
+        ...base.observer,
+        repository: vi.fn(() => ok({ ...configuration, rulesetId: "77" as unknown as number })),
+      },
+    });
+    const result = await admitPackPublication(input);
+    expect(result).toMatchObject({
+      ok: false,
+      status: "indeterminate",
+      reason: "repository_observation_schema_invalid",
+      remoteWrites: 0,
+      approvalConsumes: 0,
+    });
+    expect(input.observer.repository).toHaveBeenCalledTimes(1);
+    expect(input.observer.pullRequest).not.toHaveBeenCalled();
+    expect(input.observer.review).not.toHaveBeenCalled();
+    expect(input.observer.checks).not.toHaveBeenCalled();
+    expect(input.observer.mergeBase).not.toHaveBeenCalled();
+    expect(input.observer.staging).not.toHaveBeenCalled();
+    expect(input.ledger.appendObservation).not.toHaveBeenCalled();
+    expect(input.ledger.append).not.toHaveBeenCalled();
+  });
+
+  it("U-PACKPUB-ADM-104 uses the sealed staging expected-main OID, not a caller-supplied OID", async () => {
+    const baseInput = fixture();
+    const expectedMainOid = receipt.identity.baseOid;
+    const callerSuppliedExpectedMainOid = oid("9");
+    const input = Object.assign(baseInput, {
+      expectedMainOid: callerSuppliedExpectedMainOid,
+    });
+
+    const result = await admitPackPublication(input);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    expect(input.observer.mergeBase).toHaveBeenCalledWith({
+      headOid: receipt.identity.headOid,
+      expectedMainOid,
+    });
+    expect(result.record.sealed.expectedMainOid).toBe(expectedMainOid);
+    expect(result.record.publicationIntentIdentity).toBe(
+      derivePackPublicationAdmissionIntentIdentity({
+        operationId: receipt.binding.operationId,
+        repositoryId: configuration.repositoryId,
+        targetRef: configuration.targetRef,
+        expectedMainOid,
+        reviewedHead: receipt.identity.headOid,
+        preparationReceiptDigest: derivePackPublicationPreparationReceiptDigest(receipt),
+      }),
+    );
+    expect(result.record.sealed.expectedMainOid).not.toBe(callerSuppliedExpectedMainOid);
+
+    type CallerCanSetExpectedMainOid = "expectedMainOid" extends keyof PackPublicationAdmissionInput
+      ? true
+      : false;
+    const callerCanSetExpectedMainOid: CallerCanSetExpectedMainOid = false;
+    expect(callerCanSetExpectedMainOid).toBe(false);
+  });
+
+  it("U-PACKPUB-ADM-105 rejects an approval whose observed intent binding was changed", async () => {
+    const input = fixture({
+      approvals: [{ ...fixture().approvals[0], intentBindingDigest: sha("9") }],
+    });
+    const result = await admitPackPublication(input);
+    expect(result).toMatchObject({
+      ok: false,
+      status: "denied",
+      reason: "admission_approval_binding_mismatch",
+      remoteWrites: 0,
+      approvalConsumes: 0,
+    });
+  });
+
+  it("U-PACKPUB-ADM-057 changes the approval binding when only the approval nonce changes", () => {
+    const publicationIntentIdentity = sha("8");
+    const first = derivePackPublicationAdmissionApprovalBinding({
+      nonce: "apv-adm-fixture-0001",
+      publicationIntentIdentity,
+    });
+    const second = derivePackPublicationAdmissionApprovalBinding({
+      nonce: "apv-adm-fixture-0002",
+      publicationIntentIdentity,
+    });
+
+    expect(publicationIntentIdentity).toBe(sha("8"));
+    expect(first).not.toBe(second);
+  });
+});
