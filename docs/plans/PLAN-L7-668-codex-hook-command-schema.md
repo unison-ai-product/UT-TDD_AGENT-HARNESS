@@ -37,25 +37,34 @@ dependencies:
     - docs/plans/PLAN-L7-628-pack-consumer-runtime-release-install.md
     - docs/test-design/harness/L7-codex-hook-command-schema-test-design.md
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/668
-review_evidence: []
-status: draft
+review_evidence:
+  - reviewer: "Codex Sol (非著者 pair-freeze review, PR #669 r3)"
+    reviewer_model: gpt-5.6-sol
+    worker_model: claude-opus-5
+    review_kind: cross_agent
+    verdict: pass
+    scope: pair-freeze
+    reviewed_at: 2026-09-24T02:44:56Z
+    plan_revision: PLAN-L7-668 r1
+    subject_head: a395674c6df1b4ce055dcd9ae5d81f85a6bb5f70
+status: confirmed
 github_issue_id: 668
 supersedes:
   - PLAN-L7-139-codex-hook-adapter
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:9d07702006eed0c40987b56ed01cadc7
-  command_id: plan-draft:issue-668:codex-hook-command-schema:2
-  admitted_at: 2026-09-24T02:14:15.240Z
-  source_digest: sha256:57eb8b536effba1ed22c25de7a1ecdedb945ead37ac38c3fb4be4cf89a155eae
-  decision_digest: sha256:da36f139924312397305e644a5c7e3ea42057365bacfcf8880553146faac77e7
-  receipt_digest: sha256:77780f860f2f6870f48bc6fd59d1943902e9bd0b92ccf04cef33e2fcd93a9830
+  receipt_id: certificate:9cbc61dc2b7798adb4b4aeaf51a27d04
+  command_id: plan-revise:issue-668:pr672-confirm:forward:r2:51bd42b56ebc
+  admitted_at: 2026-09-24T08:07:57.703Z
+  source_digest: sha256:e6885a9728493350dff7505e5b2f40588023fbe1aed6b01e7b5917d7bbb011e3
+  decision_digest: sha256:77e458eb38762e615ec1f104fb76eb0da966cb17dc8eccefef243879ff31e6a7
+  receipt_digest: sha256:5fb7d6efcbe2aa195d952b0de03c7c47fd664b6c66d31379c02b283cf034a10f
   binding:
     path: docs/plans/PLAN-L7-668-codex-hook-command-schema.md
     plan_id: PLAN-L7-668-codex-hook-command-schema
     asset_id: plan:9d07702006eed0c40987b56ed01cadc7
-    revision: 1
-    content_digest: sha256:57eb8b536effba1ed22c25de7a1ecdedb945ead37ac38c3fb4be4cf89a155eae
+    revision: 2
+    content_digest: sha256:e6885a9728493350dff7505e5b2f40588023fbe1aed6b01e7b5917d7bbb011e3
   route:
     signal: incident
     mode: incident
@@ -70,11 +79,11 @@ admission_receipt:
     digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
   reentry:
     target_plan_id: PLAN-L7-668-codex-hook-command-schema
-    target_revision: 1
+    target_revision: 2
     phase: forward_merge
-  escape_reason: "Issue #668: 現行 Codex の hook schema に args / blockOnFailure
-    が無く、Codex の project hook が全て無音で失敗している。PLAN-L7-139 の形式 claim を訂正する
-    troubleshoot (PR #669 Sol r1 FLAG 4 件の是正を含めて main の projection tail 上で再発行)"
+  escape_reason: "PR #672 (PR-B) で §3 の形式を実装し CANDIDATE-CXHOOKCMD-001..005 を正式
+    oracle へ昇格したため、pair-freeze review (PR #669 Sol PASS) を review_evidence に記録して
+    confirm する。"
   supersedes:
     - PLAN-L7-139-codex-hook-adapter
 ---
@@ -183,6 +192,10 @@ PR-B (本 PLAN の freeze 後、Claude 著・Codex Sol review) は次を 1 PR �
 2. `src/setup/templates.ts` の `adapter/.codex/hooks.json` を §3 の形式へ直す。
 3. `src/lint/codex-hook-adapter.ts` と関連 test を §3.4 へ直す。
 4. test-design の `CANDIDATE-CXHOOKCMD-001..005` を同じ番号の正式 oracle へ昇格する (Red → Green)。
+
+実装は PR #672 が行う。Windows runner の TEMP が 8.3 alias のとき、fixture の consumer root を canonical path で作らないと
+`consumer_runtime_external_path` になることを CI で実測したため、fixture を PLAN-L7-628 §6.2 の canonical path に合わせた。
+launcher 自身が 8.3 alias と長形式を同一 root と扱う修理は本 PLAN の範囲外で、Issue #678 (PLAN-L7-678) が所有する。
 
 完了条件:
 

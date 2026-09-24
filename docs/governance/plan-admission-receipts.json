@@ -4880,6 +4880,22 @@
         "revision": 15,
         "content_digest": "sha256:1243cda6a666398da08789ab2a9a79fe3a875687e93cc2125b1ae5de78364b1b"
       }
+    },
+    {
+      "sequence": 306,
+      "previous_record_digest": "sha256:0053f5471b86cb13109dda4b72cf157d80a41047282d075819bc27d5e9147df8",
+      "record_digest": "sha256:9a279c27f7e15e32f0b5c60b9141c43317ad6a6a814114793a64865197223ff3",
+      "command_id": "plan-revise:issue-668:pr672-confirm:forward:r2:51bd42b56ebc",
+      "receipt_id": "certificate:9cbc61dc2b7798adb4b4aeaf51a27d04",
+      "receipt_digest": "sha256:5fb7d6efcbe2aa195d952b0de03c7c47fd664b6c66d31379c02b283cf034a10f",
+      "decision_digest": "sha256:77e458eb38762e615ec1f104fb76eb0da966cb17dc8eccefef243879ff31e6a7",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-668-codex-hook-command-schema.md",
+        "plan_id": "PLAN-L7-668-codex-hook-command-schema",
+        "asset_id": "plan:9d07702006eed0c40987b56ed01cadc7",
+        "revision": 2,
+        "content_digest": "sha256:e6885a9728493350dff7505e5b2f40588023fbe1aed6b01e7b5917d7bbb011e3"
+      }
     }
   ]
 }
