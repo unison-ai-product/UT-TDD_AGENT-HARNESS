@@ -425,8 +425,21 @@ describe("codex-hook-adapter — Codex hooks.json parity (PLAN-L7-139, PLAN-L7-6
     }, 420_000);
 
     afterAll(() => {
+      // Windows は直前に spawn した pwsh/node 子プロセスがファイルハンドルを解放しきる前に
+      // rmSync が走ると EPERM になることがある (teardown のみの transient で、assertion の
+      // 失敗ではない)。1 回 retry し、それでも失敗したら best-effort で諦める (残置は OS の
+      // temp 掃除に委ねる。後続テストの正しさには影響しない)。
       for (const root of fixtureRoots.splice(0, fixtureRoots.length)) {
-        if (root === consumer) removeFixtureTree(root);
+        if (root !== consumer) continue;
+        try {
+          removeFixtureTree(root);
+        } catch {
+          try {
+            removeFixtureTree(root);
+          } catch {
+            // best-effort cleanup only.
+          }
+        }
       }
     });
 
