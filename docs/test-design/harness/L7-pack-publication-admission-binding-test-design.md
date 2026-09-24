@@ -156,6 +156,22 @@ admission 成功 fixture でも remote write ledger と approval consume は 0 �
 
 残りの candidate は後続 Slice に明示的に deferred とし、この表を70 candidate 全件の実装・検証完了とは扱わない。
 
+Slice 1 の実装 test ID は次へ固定する。`101..105` は既存6 candidate の境界を支える補助回帰であり、後続 candidate を昇格した扱いにはしない。
+
+| test ID | 対応 candidate / 境界 |
+| --- | --- |
+| `U-PACKPUB-ADM-007` | `CANDIDATE-PACKPUB-ADM-007` reviewed head mismatch |
+| `U-PACKPUB-ADM-036` | `CANDIDATE-PACKPUB-ADM-036` preparation receipt missing |
+| `U-PACKPUB-ADM-040` | `CANDIDATE-PACKPUB-ADM-040` review observer unavailable |
+| `U-PACKPUB-ADM-042` | `CANDIDATE-PACKPUB-ADM-042` repository observer schema error |
+| `U-PACKPUB-ADM-048` | `CANDIDATE-PACKPUB-ADM-048` admitted happy path |
+| `U-PACKPUB-ADM-057` | `CANDIDATE-PACKPUB-ADM-057` approval nonce sensitivity |
+| `U-PACKPUB-ADM-101` | Slice 1 implemented/deferred coverage declaration |
+| `U-PACKPUB-ADM-102` | admitted record sequence・previous digest・journal linkage |
+| `U-PACKPUB-ADM-103` | malformed preparation receipt の observer 前拒否 |
+| `U-PACKPUB-ADM-104` | sealed staging expected-main OID のみ採用 |
+| `U-PACKPUB-ADM-105` | observed approval intent binding drift の拒否 |
+
 ## 5. 実装 PR への昇格規則
 
 実装 PR は Slice 単位で bounded candidate を各 1 件以上の独立 test へ昇格し、実装時に正規の
