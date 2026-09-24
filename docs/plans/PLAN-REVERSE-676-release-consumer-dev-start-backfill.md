@@ -22,7 +22,7 @@ agent_slots:
   - role: tl
     slot_label: Claude Opus / Sol - PLAN-L7-529 の frozen 契約と本 PLAN の表示・解決順の整合を逆向き検証する
   - role: qa
-    slot_label: Terra - CANDIDATE-U-RCDEV-001..037 を独立照合し、同名 skill による path 乗っ取り・部分
+    slot_label: Terra - CANDIDATE-U-RCDEV-001..038 を独立照合し、同名 skill による path 乗っ取り・部分
       setup の残留・gate の未判定の隠蔽を攻撃する
 generates:
   - artifact_path: docs/plans/PLAN-REVERSE-676-release-consumer-dev-start-backfill.md
@@ -44,18 +44,18 @@ status: draft
 github_issue_id: 676
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:b032ec39d32174225f785dfd651e966d
-  command_id: plan-revise:issue-676:sol-r1-flag:reverse:r3:4185164a907a
-  admitted_at: 2026-09-24T08:15:52.256Z
-  source_digest: sha256:467c2ba447e12840b8b2ede35822378fb91543db88de512fa9b4d2fc75ee9dd2
-  decision_digest: sha256:2d1ebed620711df0fdded8e7a1938b309b53e51525560c4ec2882b4b843d0b1d
-  receipt_digest: sha256:da726b8d3e6b9d7fa4ab5c1a1dcf03701545048bc745fb3d75bb639ce76bb98d
+  receipt_id: certificate:024915625f2f462f61b8b25b91dc0c86
+  command_id: plan-revise:issue-676:sol-r2-flag:reverse:r4:7301bfa08670
+  admitted_at: 2026-09-24T08:34:32.337Z
+  source_digest: sha256:5ba94ced5c46efe89cbc8bf81f6afe830e9566da762a2b38f324b5dbd4ade87e
+  decision_digest: sha256:6bc2b592d686192a99db4a4f91d9f9d97f7ea1b2aeebf1cd7465f0f96e704b12
+  receipt_digest: sha256:c3ef845554a2ad2a0d8852138a46457b5b1fd5d54811a5ed5df6edc0319d4be9
   binding:
     path: docs/plans/PLAN-REVERSE-676-release-consumer-dev-start-backfill.md
     plan_id: PLAN-REVERSE-676-release-consumer-dev-start-backfill
     asset_id: plan:2db3028c656fba04cb6610d7278dfa56
-    revision: 3
-    content_digest: sha256:467c2ba447e12840b8b2ede35822378fb91543db88de512fa9b4d2fc75ee9dd2
+    revision: 4
+    content_digest: sha256:5ba94ced5c46efe89cbc8bf81f6afe830e9566da762a2b38f324b5dbd4ade87e
   route:
     signal: reverse
     mode: reverse
@@ -73,10 +73,10 @@ admission_receipt:
     implementation_disposition: preserved
   reentry:
     target_plan_id: PLAN-L7-676-release-consumer-dev-start
-    target_revision: 3
+    target_revision: 4
     phase: forward_merge
-  escape_reason: "PR #680 Sol r1 FLAG の是正に合わせ、G8〜G14 の candidate 対応を gate
-    別に分割し照合観点に vmodel-contract.yaml を加える。"
+  escape_reason: "PR #680 Sol r2 の是正に合わせ、テンプレート書き出しの candidate 対応に
+    CANDIDATE-U-RCDEV-038 を加える。"
 ---
 
 # PLAN-REVERSE-676: Release consumer 開発開始の逆向き確認
@@ -117,7 +117,7 @@ launcher の 8.3 alias 等価性 (Issue #678) は対象外であり、再所有�
 | 解決順 (consumer 同名優先・追加 merge) | CANDIDATE-U-RCDEV-009 |
 | digest 照合による復元と書き込み 0 | CANDIDATE-U-RCDEV-010 |
 | design root resolver と ENOENT 耐性 | CANDIDATE-U-RCDEV-011 / 012 / 013 |
-| テンプレート書き出し | CANDIDATE-U-RCDEV-014 / 015 |
+| テンプレート書き出し (`--required` / `--optional`) | CANDIDATE-U-RCDEV-014 / 015 / 038 |
 | 生成物 (db 初期化・harness-check・commitlint) | CANDIDATE-U-RCDEV-016 / 017 / 018 |
 | テンプレートの slot 網羅と provenance | CANDIDATE-U-RCDEV-019 / 020 / 021 |
 | テンプレート形式と skill / ガイドの移植 | CANDIDATE-U-RCDEV-022 / 023 |

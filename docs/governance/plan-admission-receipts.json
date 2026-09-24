@@ -4976,6 +4976,38 @@
         "revision": 3,
         "content_digest": "sha256:467c2ba447e12840b8b2ede35822378fb91543db88de512fa9b4d2fc75ee9dd2"
       }
+    },
+    {
+      "sequence": 312,
+      "previous_record_digest": "sha256:310f567f27fe36e5d513fb92dba66e59dfbf9c88bc53f92e483172392d37e82e",
+      "record_digest": "sha256:5049d341e04edc66723a9c1104f3b100bcedc2ef80263d9e2509e8e49715c694",
+      "command_id": "plan-revise:issue-676:sol-r2-flag:plan:r4:7301bfa08670",
+      "receipt_id": "certificate:b33f68a917968b6da845eb2316eb9f40",
+      "receipt_digest": "sha256:46c73b8826fb46337f920d03a82ed963c059e1c61ab524b4d03b5e0944eef2cc",
+      "decision_digest": "sha256:a0ab8196dfc122f6d9c7c0f66362e79b6725bf255ec527378f0bdacd5fda8cee",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-676-release-consumer-dev-start.md",
+        "plan_id": "PLAN-L7-676-release-consumer-dev-start",
+        "asset_id": "plan:aae8bf0e313f8688fbad4d4d8cf0a6a9",
+        "revision": 4,
+        "content_digest": "sha256:d73d103dc8c54ee00a2091c7a99f3cf44758cd25539755ff5eb9fd6e0b6079f6"
+      }
+    },
+    {
+      "sequence": 313,
+      "previous_record_digest": "sha256:5049d341e04edc66723a9c1104f3b100bcedc2ef80263d9e2509e8e49715c694",
+      "record_digest": "sha256:caeafb4d166dfc14dee107f36d2dcabd1b770c0022716ce900520bd3c19e85f1",
+      "command_id": "plan-revise:issue-676:sol-r2-flag:reverse:r4:7301bfa08670",
+      "receipt_id": "certificate:024915625f2f462f61b8b25b91dc0c86",
+      "receipt_digest": "sha256:c3ef845554a2ad2a0d8852138a46457b5b1fd5d54811a5ed5df6edc0319d4be9",
+      "decision_digest": "sha256:6bc2b592d686192a99db4a4f91d9f9d97f7ea1b2aeebf1cd7465f0f96e704b12",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-676-release-consumer-dev-start-backfill.md",
+        "plan_id": "PLAN-REVERSE-676-release-consumer-dev-start-backfill",
+        "asset_id": "plan:2db3028c656fba04cb6610d7278dfa56",
+        "revision": 4,
+        "content_digest": "sha256:5ba94ced5c46efe89cbc8bf81f6afe830e9566da762a2b38f324b5dbd4ade87e"
+      }
     }
   ]
 }

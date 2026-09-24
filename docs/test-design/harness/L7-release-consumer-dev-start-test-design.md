@@ -51,6 +51,7 @@ github_issue_id: 676
 | --- | --- | --- |
 | CANDIDATE-U-RCDEV-014 | `ut-tdd vmodel template --required` (PLAN §3.1.3) が resolver 写像後の catalog path へ書き、出力するファイル bytes が埋め込み (= `AUTHORING_TEMPLATE_INVENTORY` の対象 source の HEAD blob) と一致し、書いた path を表示する | (m) 埋め込み対象を 1 family 外す → 欠落で失敗 |
 | CANDIDATE-U-RCDEV-015 | consumer に同名ファイルが既にある場合は上書きせず (bytes 不変)、`skip (exists) <path>` を表示して exit 0。未知の `doc_type_id` を 1 件含めると何も書かず `unknown template <id>` で exit 1。`--dry-run` は書き込み 0 | (m1) 上書きする → bytes 変化で失敗。(m2) 未知 ID の前に既知分を書く → 書き込み 0 assert で失敗。(m3) `--dry-run` で書く → 失敗 |
+| CANDIDATE-U-RCDEV-038 | port index で optional に分類された有効な ID (例: `ZIP-DOC-016`) を `ut-tdd vmodel template --optional ZIP-DOC-016` で書き出すと、`<designRoot>/optional/<port index の file 名>` (consumer では `docs/design/optional/...`) にファイルが 1 本だけ作られ、その bytes が bundle に埋め込まれた同テンプレートの bytes と一致し、stdout に `+ <その path>` の行が出て exit 0。`--slot` / `--required` の出力先には何も書かない。slot source に分類された ID (例: `ZIP-DOC-004`) を `--optional` に渡すと `unknown template ZIP-DOC-004` で exit 1 | (m1) `--optional` を受理するだけで何も書かない → ファイル不在で失敗。(m2) 出力先を `<designRoot>/` 直下や slot path にする → path assert で失敗。(m3) 別の optional テンプレートの bytes を書く → bytes 不一致で失敗。(m4) `+ <path>` 行を出さない → stdout assert で失敗。(m5) slot source の ID を optional として受理する → exit 1 期待で失敗 |
 
 ## PR-3 生成物
 

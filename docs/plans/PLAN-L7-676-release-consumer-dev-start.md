@@ -23,7 +23,7 @@ agent_slots:
       PR-GR / PR-G9〜PR-G14 / PR-VL を別 PR で最小実装する (PR-T1〜T3 は Claude Sonnet が
       docs として移植する)
   - role: qa
-    slot_label: Terra - CANDIDATE-U-RCDEV-001..037 の Red oracle を Linux/Windows で先に作る
+    slot_label: Terra - CANDIDATE-U-RCDEV-001..038 の Red oracle を Linux/Windows で先に作る
   - role: tl
     slot_label: Claude Opus / Sol - 同梱資産の provenance、identity 契約との整合の非著者検収
 generates:
@@ -59,18 +59,18 @@ status: draft
 github_issue_id: 676
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:72476e1f4997f497ff7973773a6a83ff
-  command_id: plan-revise:issue-676:sol-r1-flag:plan:r3:4185164a907a
-  admitted_at: 2026-09-24T08:15:47.350Z
-  source_digest: sha256:4cc05286e2dfee4e0f26f5c86d7cb4751b030a965796d916f8ad8d61ee20c321
-  decision_digest: sha256:de6ccbf4a93dfd92ffc33c19535e510439e25bffa3d5c2461d0f9af6548c2c9d
-  receipt_digest: sha256:b8e7e37def1a984c13281c8de5817cb4037843f14918b585f657fa3f873e5cb2
+  receipt_id: certificate:b33f68a917968b6da845eb2316eb9f40
+  command_id: plan-revise:issue-676:sol-r2-flag:plan:r4:7301bfa08670
+  admitted_at: 2026-09-24T08:34:28.663Z
+  source_digest: sha256:d73d103dc8c54ee00a2091c7a99f3cf44758cd25539755ff5eb9fd6e0b6079f6
+  decision_digest: sha256:a0ab8196dfc122f6d9c7c0f66362e79b6725bf255ec527378f0bdacd5fda8cee
+  receipt_digest: sha256:46c73b8826fb46337f920d03a82ed963c059e1c61ab524b4d03b5e0944eef2cc
   binding:
     path: docs/plans/PLAN-L7-676-release-consumer-dev-start.md
     plan_id: PLAN-L7-676-release-consumer-dev-start
     asset_id: plan:aae8bf0e313f8688fbad4d4d8cf0a6a9
-    revision: 3
-    content_digest: sha256:4cc05286e2dfee4e0f26f5c86d7cb4751b030a965796d916f8ad8d61ee20c321
+    revision: 4
+    content_digest: sha256:d73d103dc8c54ee00a2091c7a99f3cf44758cd25539755ff5eb9fd6e0b6079f6
   route:
     signal: feature_addition
     mode: add-feature
@@ -88,10 +88,10 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-676-release-consumer-dev-start
-    target_revision: 3
+    target_revision: 4
     phase: forward_merge
-  escape_reason: "PR #680 Sol r1 FLAG 3 件 (書き出しコマンド・setup 終了コード・G8〜G14 述語の
-    freeze、PR 依存の矛盾と外部前提、G8〜G14 oracle の gate 別分割) の是正改訂。"
+  escape_reason: "PR #680 Sol r2 の追加指摘 (PR-2c を PR-T2 の後へ移し、--optional の正の oracle
+    CANDIDATE-U-RCDEV-038 を追加) の是正改訂。"
 ---
 
 # PLAN-L7-676: Release consumer で開発を開始できる状態にする
@@ -464,7 +464,7 @@ E2E 自体と ID は 531 が所有する。
 | PR-1 | identity / repo-root: A2 部分成功 + typed deny 表示 + 復旧手順、A4 の commit 手順表示、hook error の復旧手順、A3 の setup 後 root 解決 oracle | `src/cli.ts` setup 表示、hook / session start の error 文言 | PR-0 PASS |
 | PR-2a | skills の bundle 埋め込み + setup / session start での digest 照合付き展開 + 解決関数 + `.ut-tdd/assets/` の ignore (B1) | `scripts/build-node.mjs`、埋め込み index 1 module、`src/state-db/projection-writer.ts`、`src/assets/catalog.ts` | PR-0 PASS、PLAN-L7-628 PR-1 merge |
 | PR-2b | design root resolver + catalog 写像 + gate / vmodel lint の path 入力 + `plan lint` 不在耐性 (B3 / B4) | resolver 1 module、`src/lint/gate-confirm.ts` ほか、`src/plan/lint.ts` | PR-0 PASS |
-| PR-2c | テンプレートの埋め込み + on-demand 書き出しコマンド `ut-tdd vmodel template` (B2、§3.1.3) | 埋め込み index への追加、CLI 1 コマンド | PR-2a merge (埋め込み機構を再利用)、PR-T1 merge (書き出し対象) |
+| PR-2c | テンプレートの埋め込み + on-demand 書き出しコマンド `ut-tdd vmodel template` (B2、§3.1.3) | 埋め込み index への追加、CLI 1 コマンド | PR-2a merge (埋め込み機構を再利用)、PR-T1 merge と PR-T2 merge (`--required` と `--optional` の書き出し対象) |
 | PR-3 | 生成物: A5 db 初期化、A6 harness-check (activation pointer 条件 + notice)、A7 commitlint | `src/setup/index.ts`、`src/setup/templates.ts` | PR-1 merge |
 | PR-T1 | required 21 slot のテンプレート移植 (Markdown 変換、provenance frontmatter) + port index (§3.5.3) | `docs/templates/vmodel/` (docs、Claude) | PR-0 PASS、Apache-2.0 切り替え PR の merge |
 | PR-T2 | optional テンプレート 27 本の移植 + 管理 yaml の既存正本への merge (§3.5.4) | `docs/templates/vmodel/optional/`、`docs/governance/vmodel-document-*.md` (docs、Claude) | PR-T1 merge |
@@ -481,8 +481,8 @@ E2E 自体と ID は 531 が所有する。
 | PR-VL | `vmodel lint` の resolver 対応と typed 未作成 (§3.6-5) | vmodel lint (Codex) | PR-2b merge |
 | (531) | PLAN-L7-531 の E2E 観測項目に本 PLAN のコマンド群とエージェント確認経路 (§3.7) を追加 (531 の入力契約改訂、別 PR) | docs / tests | 本 PLAN の全 PR merge + 下表の外部前提 |
 
-PR-1 → PR-3 は setup 本体を共有するため直列。PR-2a / PR-2b / PR-T1 / PR-T3 は独立で並列可。PR-2c は PR-2a と PR-T1 の merge 後
-(書き出し対象にテンプレートを含むため)。PR-G0 は PR-2b と PR-T1 の後に置き、PR-G7 と PR-GR は PR-G0 の後で並列可。
+PR-1 → PR-3 は setup 本体を共有するため直列。PR-2a / PR-2b / PR-T1 / PR-T3 は独立で並列可。PR-2c は PR-2a と PR-T1 と PR-T2 の merge 後
+(`--required` / `--optional` の書き出し対象が揃ってから CLI を出すため)。PR-G0 は PR-2b と PR-T1 の後に置き、PR-G7 と PR-GR は PR-G0 の後で並列可。
 PR-GR は PR-G0 の後、PR-G9〜PR-G14 は PR-GR の後で相互に並列可。PR-VL は PR-2b の後で PR-G 系と並列可。PR-G 系は 1 PR = 1 gate (共通 evaluator は PR-GR の 1 module、各 gate PR は登録と gate 固有述語 + 対のテスト + 最小配線) とし、
 scope 構造 FLAG は close → 分割再出。PR-T 系は docs のみで source_module を追加しない。
 
@@ -507,7 +507,7 @@ scope 構造 FLAG は close → 分割再出。PR-T 系は docs のみで source
    receipt の `source_files` が埋め込んだ全 skill を含む (CANDIDATE-U-RCDEV-006..010 Green)。
 3. PR-2b: consumer (`docs/design/`) と harness (`docs/design/harness/`) の双方で resolver が正しい root を返し、置き場所不在で gate / vmodel lint /
    plan lint が ENOENT で落ちない (CANDIDATE-U-RCDEV-011..013 Green)。
-4. PR-2c: テンプレート書き出しが既存ファイルを上書きせず、bundle 埋め込み bytes と一致する (CANDIDATE-U-RCDEV-014..015 Green)。
+4. PR-2c: テンプレート書き出し (`--required` と `--optional` の両方) が既存ファイルを上書きせず、bundle 埋め込み bytes と一致する (CANDIDATE-U-RCDEV-014 / 015 / 038 Green)。
 5. PR-3: setup 直後の db が現行 schema で session start digest が DEGRADED にならない。lock / scripts の無い consumer で生成 workflow が npm 前提 step を実行せず、
    activation pointer の無い CI では ut-tdd step が notice を出して skip する。
    ESM consumer で commitlint 設定が読める (CANDIDATE-U-RCDEV-016..018 Green)。
@@ -520,7 +520,7 @@ scope 構造 FLAG は close → 分割再出。PR-T 系は docs のみで source
 
 ## 6. TDD / trace / Reverse
 
-候補 oracle `CANDIDATE-U-RCDEV-001..037` は pair test-design が所有し、実装 PR で同番号の `U-RCDEV-*` へ 1:1 昇格する。
+候補 oracle `CANDIDATE-U-RCDEV-001..038` は pair test-design が所有し、実装 PR で同番号の `U-RCDEV-*` へ 1:1 昇格する。
 既存 `CANDIDATE-U-PACKRT-*` (628)、L7-529 の identity oracle、`CANDIDATE-ST-PACKCANARY-*` を再採番・再所有しない。
 
 R1: PLAN-L6-101 の source 非依存受入と、L7-529 の create / commit policy を照合する。R2: 同梱資産の解決順・design root 規約・
