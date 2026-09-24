@@ -335,12 +335,11 @@ describe("Pack publication admission observation binding", () => {
     );
     expect(result.record.sealed.expectedMainOid).not.toBe(callerSuppliedExpectedMainOid);
 
-    const typedCallerInput: PackPublicationAdmissionInput = {
-      ...fixture(),
-      // @ts-expect-error expected main is authority from sealed staging, never caller input
-      expectedMainOid: callerSuppliedExpectedMainOid,
-    };
-    expect(typedCallerInput.receipt).toEqual(receipt);
+    type CallerCanSetExpectedMainOid = "expectedMainOid" extends keyof PackPublicationAdmissionInput
+      ? true
+      : false;
+    const callerCanSetExpectedMainOid: CallerCanSetExpectedMainOid = false;
+    expect(callerCanSetExpectedMainOid).toBe(false);
   });
 
   it("rejects an approval whose observed intent binding was changed", async () => {
