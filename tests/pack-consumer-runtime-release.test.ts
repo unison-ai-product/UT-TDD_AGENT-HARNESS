@@ -729,7 +729,7 @@ describe("Pack consumer runtime release producer byte and fail-close oracles", (
     }
   });
 
-  it("U-PACKRT-004a: rejects a non-reviewed Node/npm generation and leaves zero assets", async () => {
+  it("U-PACKRT-004: rejects a non-reviewed Node/npm generation and leaves zero assets", async () => {
     const outDir = mkdtempSync(join(tmpdir(), "ut-tdd-packrt-004-node-"));
     try {
       await expect(
@@ -743,7 +743,7 @@ describe("Pack consumer runtime release producer byte and fail-close oracles", (
     }
   });
 
-  it("U-PACKRT-004b: rejects Node generation failure and leaves zero assets", async () => {
+  it("U-PACKRT-004: rejects Node generation failure and leaves zero assets", async () => {
     const outDir = mkdtempSync(join(tmpdir(), "ut-tdd-packrt-004-generation-"));
     try {
       await expect(
@@ -755,7 +755,7 @@ describe("Pack consumer runtime release producer byte and fail-close oracles", (
     }
   });
 
-  it("U-PACKRT-004c: rejects staged asset move failure and leaves zero assets", async () => {
+  it("U-PACKRT-004: rejects staged asset move failure and leaves zero assets", async () => {
     const outDir = mkdtempSync(join(tmpdir(), "ut-tdd-packrt-004-move-"));
     try {
       await expect(
