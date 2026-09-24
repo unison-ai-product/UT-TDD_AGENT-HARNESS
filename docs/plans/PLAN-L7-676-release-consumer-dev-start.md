@@ -29,6 +29,8 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-676-release-consumer-dev-start.md
     artifact_type: markdown_doc
+  - artifact_path: tests/release-consumer-dev-start-identity.test.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L6-101-pack-independent-multi-consumer-acceptance.md
   requires:
@@ -59,18 +61,18 @@ status: draft
 github_issue_id: 676
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:b33f68a917968b6da845eb2316eb9f40
-  command_id: plan-revise:issue-676:sol-r2-flag:plan:r4:7301bfa08670
-  admitted_at: 2026-09-24T08:34:28.663Z
-  source_digest: sha256:d73d103dc8c54ee00a2091c7a99f3cf44758cd25539755ff5eb9fd6e0b6079f6
-  decision_digest: sha256:a0ab8196dfc122f6d9c7c0f66362e79b6725bf255ec527378f0bdacd5fda8cee
-  receipt_digest: sha256:46c73b8826fb46337f920d03a82ed963c059e1c61ab524b4d03b5e0944eef2cc
+  receipt_id: certificate:6c7dd87a62c2d0b9e4701588ae15eabd
+  command_id: plan-revise:issue-676:pr1:codex-identity-root-v2
+  admitted_at: 2026-09-24T20:00:00+09:00
+  source_digest: sha256:3dd415d5e1f1b6162a83bddaab5e5ce07b4bd190e161d820c398942a6c0912e5
+  decision_digest: sha256:1f37c5e957166be41069204d8562ee1bcbadb45ac1f0431b45945a420df075ea
+  receipt_digest: sha256:9f7cbab3cc8bdd21ceae1517abe844b017fa08e9f45382d12efd94bb15b54e7f
   binding:
     path: docs/plans/PLAN-L7-676-release-consumer-dev-start.md
     plan_id: PLAN-L7-676-release-consumer-dev-start
     asset_id: plan:aae8bf0e313f8688fbad4d4d8cf0a6a9
-    revision: 4
-    content_digest: sha256:d73d103dc8c54ee00a2091c7a99f3cf44758cd25539755ff5eb9fd6e0b6079f6
+    revision: 5
+    content_digest: sha256:3dd415d5e1f1b6162a83bddaab5e5ce07b4bd190e161d820c398942a6c0912e5
   route:
     signal: feature_addition
     mode: add-feature
@@ -90,8 +92,7 @@ admission_receipt:
     target_plan_id: PLAN-L7-676-release-consumer-dev-start
     target_revision: 4
     phase: forward_merge
-  escape_reason: "PR #680 Sol r2 の追加指摘 (PR-2c を PR-T2 の後へ移し、--optional の正の oracle
-    CANDIDATE-U-RCDEV-038 を追加) の是正改訂。"
+  escape_reason: "PR #680 Sol r2 の追加指摘 (PR-2c を PR-T2 の後へ移し、--optional の正の oracle を追加)"
 ---
 
 # PLAN-L7-676: Release consumer で開発を開始できる状態にする

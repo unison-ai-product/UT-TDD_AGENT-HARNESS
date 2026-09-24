@@ -5008,6 +5008,22 @@
         "revision": 4,
         "content_digest": "sha256:5ba94ced5c46efe89cbc8bf81f6afe830e9566da762a2b38f324b5dbd4ade87e"
       }
+    },
+    {
+      "sequence": 314,
+      "previous_record_digest": "sha256:caeafb4d166dfc14dee107f36d2dcabd1b770c0022716ce900520bd3c19e85f1",
+      "record_digest": "sha256:dee8512557c759037e816d0b6963a938f7cd11744c1d16ad7276bb3b987bb8c3",
+      "command_id": "plan-revise:issue-676:pr1:codex-identity-root-v2",
+      "receipt_id": "certificate:6c7dd87a62c2d0b9e4701588ae15eabd",
+      "receipt_digest": "sha256:9f7cbab3cc8bdd21ceae1517abe844b017fa08e9f45382d12efd94bb15b54e7f",
+      "decision_digest": "sha256:1f37c5e957166be41069204d8562ee1bcbadb45ac1f0431b45945a420df075ea",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-676-release-consumer-dev-start.md",
+        "plan_id": "PLAN-L7-676-release-consumer-dev-start",
+        "asset_id": "plan:aae8bf0e313f8688fbad4d4d8cf0a6a9",
+        "revision": 5,
+        "content_digest": "sha256:3dd415d5e1f1b6162a83bddaab5e5ce07b4bd190e161d820c398942a6c0912e5"
+      }
     }
   ]
 }
