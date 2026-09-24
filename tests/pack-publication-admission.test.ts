@@ -41,30 +41,47 @@ const receipt: PackPublicationPreparationReceipt = {
 
 function fixture(
   overrides: Partial<PackPublicationAdmissionInput> = {},
+  identity: {
+    readonly operationId?: string;
+    readonly pullRequest?: string;
+    readonly idempotencyKey?: string;
+  } = {},
 ): PackPublicationAdmissionInput {
+  const operationId = identity.operationId ?? receipt.binding.operationId;
+  const pullRequest = identity.pullRequest ?? receipt.identity.pullRequest;
+  const idempotencyKey = identity.idempotencyKey ?? "idem-adm-fixture-0001";
+  const inputReceipt: PackPublicationPreparationReceipt = {
+    ...receipt,
+    identity: { ...receipt.identity, pullRequest },
+    binding: { operationId },
+    read_back_observation: {
+      ...receipt.read_back_observation,
+      pullRequest,
+    },
+  };
   const intentIdentity = derivePackPublicationAdmissionIntentIdentity({
-    operationId: receipt.binding.operationId,
+    operationId,
     repositoryId: configuration.repositoryId,
     targetRef: configuration.targetRef,
-    expectedMainOid: receipt.identity.baseOid,
-    reviewedHead: receipt.identity.headOid,
-    preparationReceiptDigest: derivePackPublicationPreparationReceiptDigest(receipt),
+    expectedMainOid: inputReceipt.identity.baseOid,
+    reviewedHead: inputReceipt.identity.headOid,
+    preparationReceiptDigest: derivePackPublicationPreparationReceiptDigest(inputReceipt),
   });
   const observer = {
     repository: vi.fn(() => ok({ ...configuration })),
     pullRequest: vi.fn(() =>
       ok({
-        pullRequest: "4242",
-        branch: "pack/publication/op-adm-fixture-0001",
-        headOid: receipt.identity.headOid,
-        baseOid: receipt.identity.baseOid,
-        treeDigest: receipt.identity.treeDigest,
+        pullRequest,
+        branch: `pack/publication/${operationId}`,
+        headOid: inputReceipt.identity.headOid,
+        baseOid: inputReceipt.identity.baseOid,
+        treeDigest: inputReceipt.identity.treeDigest,
       }),
     ),
     review: vi.fn(() =>
       ok({
-        pullRequest: "4242",
-        reviewedHead: receipt.identity.headOid,
+        pullRequest,
+        reviewedHead: inputReceipt.identity.headOid,
         conclusion: "approved" as const,
         reviewer: "reviewer-b",
         author: "author-a",
@@ -73,34 +90,34 @@ function fixture(
     ),
     checks: vi.fn(() =>
       ok({
-        headOid: receipt.identity.headOid,
+        headOid: inputReceipt.identity.headOid,
         checks: [{ context: "pack-check", conclusion: "success" }],
       }),
     ),
-    mergeBase: vi.fn(() => ok({ mergeBase: receipt.identity.baseOid })),
+    mergeBase: vi.fn(() => ok({ mergeBase: inputReceipt.identity.baseOid })),
     staging: vi.fn(() =>
       ok({
-        operationId: receipt.binding.operationId,
-        idempotencyKey: "idem-adm-fixture-0001",
-        treeDigest: receipt.identity.treeDigest,
+        operationId,
+        idempotencyKey,
+        treeDigest: inputReceipt.identity.treeDigest,
         manifestDigest: sha("f"),
-        expectedMainOid: receipt.identity.baseOid,
-        branch: "pack/publication/op-adm-fixture-0001",
+        expectedMainOid: inputReceipt.identity.baseOid,
+        branch: `pack/publication/${operationId}`,
       }),
     ),
   };
   const records: PackPublicationAdmissionLedgerRecord[] = [];
   return {
-    receipt,
+    receipt: inputReceipt,
     configuration,
-    expectedMainOid: receipt.identity.baseOid,
+    expectedMainOid: inputReceipt.identity.baseOid,
     approvals: [
       {
-        nonce: "apv-adm-fixture-0001",
-        operationId: receipt.binding.operationId,
-        idempotencyKey: "idem-adm-fixture-0001",
+        nonce: `apv-${operationId}`,
+        operationId,
+        idempotencyKey,
         intentBindingDigest: derivePackPublicationAdmissionApprovalBinding({
-          nonce: "apv-adm-fixture-0001",
+          nonce: `apv-${operationId}`,
           publicationIntentIdentity: intentIdentity,
         }),
         consumed: false,
@@ -153,8 +170,40 @@ describe("Pack publication admission observation binding", () => {
     expect(input.ledger.append).toHaveBeenCalledTimes(1);
   });
 
+  it("links the next admission record to the prior digest and journals the same bundle", async () => {
+    const firstInput = fixture();
+    const first = await admitPackPublication(firstInput);
+    expect(first.ok).toBe(true);
+    if (!first.ok) return;
+
+    const secondInput = fixture(
+      { ledger: firstInput.ledger },
+      {
+        operationId: "op-adm-fixture-0002",
+        pullRequest: "4243",
+        idempotencyKey: "idem-adm-fixture-0002",
+      },
+    );
+    const second = await admitPackPublication(secondInput);
+    expect(second.ok).toBe(true);
+    if (!second.ok) return;
+
+    expect(second.record.sequence).toBe(first.record.sequence + 1);
+    expect(second.record.previousRecordDigest).toBe(first.record.recordDigest);
+    expect(secondInput.ledger.appendObservation).toHaveBeenLastCalledWith({
+      recordDigest: second.record.recordDigest,
+      observationBundleDigest: second.record.observationBundleDigest,
+      operationId: second.record.operationId,
+    });
+    expect(secondInput.ledger.append).toHaveBeenLastCalledWith(second.record);
+    expect(second.remoteWrites).toBe(0);
+    expect(second.approvalConsumes).toBe(0);
+    expect(second.record).not.toHaveProperty("casToken");
+    expect(second.record).not.toHaveProperty("executionReceipt");
+  });
+
   it("rejects malformed receipts before calling any observer", async () => {
-    const input = fixture({ receipt: undefined });
+    const input = fixture({ receipt: { kind: "malformed" } });
     const result = await admitPackPublication(input);
     expect(result).toMatchObject({
       ok: false,
@@ -163,6 +212,24 @@ describe("Pack publication admission observation binding", () => {
       remoteWrites: 0,
     });
     expect(input.observer.repository).not.toHaveBeenCalled();
+  });
+
+  it("denies a missing preparation receipt before calling any observer", async () => {
+    const input = fixture({ receipt: undefined });
+    const result = await admitPackPublication(input);
+    expect(result).toMatchObject({
+      ok: false,
+      status: "denied",
+      reason: "admission_receipt_missing",
+      remoteWrites: 0,
+      approvalConsumes: 0,
+    });
+    expect(input.observer.repository).not.toHaveBeenCalled();
+    expect(input.observer.pullRequest).not.toHaveBeenCalled();
+    expect(input.observer.review).not.toHaveBeenCalled();
+    expect(input.observer.checks).not.toHaveBeenCalled();
+    expect(input.observer.mergeBase).not.toHaveBeenCalled();
+    expect(input.observer.staging).not.toHaveBeenCalled();
   });
 
   it("denies a review-head mutation without consuming approval or writing remotely", async () => {
@@ -197,7 +264,7 @@ describe("Pack publication admission observation binding", () => {
     const input = fixture({
       observer: {
         ...base.observer,
-        checks: vi.fn(() => ({ status: "unavailable" as const, reason: "timeout" })),
+        review: vi.fn(() => ({ status: "unavailable" as const, reason: "timeout" })),
       },
     });
     const result = await admitPackPublication(input);
@@ -208,6 +275,10 @@ describe("Pack publication admission observation binding", () => {
       remoteWrites: 0,
       approvalConsumes: 0,
     });
+    expect(input.observer.review).toHaveBeenCalledTimes(1);
+    expect(input.observer.checks).not.toHaveBeenCalled();
+    expect(input.ledger.appendObservation).not.toHaveBeenCalled();
+    expect(input.ledger.append).not.toHaveBeenCalled();
   });
 
   it("treats malformed observer scalars as indeterminate", async () => {
@@ -241,5 +312,20 @@ describe("Pack publication admission observation binding", () => {
       remoteWrites: 0,
       approvalConsumes: 0,
     });
+  });
+
+  it("changes the approval binding when only the approval nonce changes", () => {
+    const publicationIntentIdentity = sha("8");
+    const first = derivePackPublicationAdmissionApprovalBinding({
+      nonce: "apv-adm-fixture-0001",
+      publicationIntentIdentity,
+    });
+    const second = derivePackPublicationAdmissionApprovalBinding({
+      nonce: "apv-adm-fixture-0002",
+      publicationIntentIdentity,
+    });
+
+    expect(publicationIntentIdentity).toBe(sha("8"));
+    expect(first).not.toBe(second);
   });
 });

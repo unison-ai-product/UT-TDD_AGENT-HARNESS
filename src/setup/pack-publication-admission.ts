@@ -519,6 +519,8 @@ function findReplay(
 export async function admitPackPublication(
   input: PackPublicationAdmissionInput,
 ): Promise<PackPublicationAdmissionResult> {
+  if (input.receipt === undefined || input.receipt === null)
+    return deny("admission_receipt_missing");
   if (!validReceipt(input.receipt)) return deny("admission_receipt_invalid");
   if (!configValid(input.configuration)) return deny("admission_configuration_invalid");
   const receipt = input.receipt;
