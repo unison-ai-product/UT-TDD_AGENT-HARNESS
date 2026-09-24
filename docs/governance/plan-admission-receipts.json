@@ -4672,6 +4672,134 @@
         "revision": 2,
         "content_digest": "sha256:a5ee5e26958d4feb7beea212713cc0df089580541e5d8f7c815ef32f501aaa25"
       }
+    },
+    {
+      "sequence": 293,
+      "previous_record_digest": "sha256:56c0b4f5b6975183b47fcc2bea9d27ba8393c3915db0415cfbb0a3bd7a7bad0d",
+      "record_digest": "sha256:655fd70869ce12b4151dbb79ac2bdc2788cb6ea3338ecc3d73ff244c2fdfc90e",
+      "command_id": "plan-draft:issue-418:consumer-runtime-release-install:forward:1",
+      "receipt_id": "certificate:cd11a1885b1c948d89519002a2cec009",
+      "receipt_digest": "sha256:6ff54c22c274330ee17de30fb7e04190d67af142ef8f0ce5ce78aaa57decfcee",
+      "decision_digest": "sha256:99250283c31442ea80527c591f7c0e3be3a9287ced94b872376524b243123773",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-628-pack-consumer-runtime-release-install.md",
+        "plan_id": "PLAN-L7-628-pack-consumer-runtime-release-install",
+        "asset_id": "plan:cd11a1885b1c948d89519002a2cec009",
+        "revision": 1,
+        "content_digest": "sha256:809820cd7134414d31ebdd0decccae02ececc8c32fdd645606f1385c8a83b09c"
+      }
+    },
+    {
+      "sequence": 294,
+      "previous_record_digest": "sha256:655fd70869ce12b4151dbb79ac2bdc2788cb6ea3338ecc3d73ff244c2fdfc90e",
+      "record_digest": "sha256:541d190249f06bb3ff293b4f08b1c09ab66af800f444746fb03ff584856d0fce",
+      "command_id": "plan-draft:issue-418:consumer-runtime-release-install:reverse:1",
+      "receipt_id": "certificate:748ef764bbbea943cee1eb43aee87623",
+      "receipt_digest": "sha256:b0f22fa3d74ee420ae0d6a23120338e830ebf5ba711cd128c84b432b0b0a3ca5",
+      "decision_digest": "sha256:d2b5387da1a8daceab58cdb89f17d1900d6b5e18581d5f3e13573dcee2ebbeae",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-628-pack-consumer-runtime-release-install-backfill.md",
+        "plan_id": "PLAN-REVERSE-628-pack-consumer-runtime-release-install-backfill",
+        "asset_id": "plan:748ef764bbbea943cee1eb43aee87623",
+        "revision": 1,
+        "content_digest": "sha256:e9ac685853cc3ae356827ae52de627b7e296c87ede7f39717eb7c971ba81680c"
+      }
+    },
+    {
+      "sequence": 295,
+      "previous_record_digest": "sha256:541d190249f06bb3ff293b4f08b1c09ab66af800f444746fb03ff584856d0fce",
+      "record_digest": "sha256:b02e1ec64aabb8cbe96e34f5462ec833b48b0965cb3c44f09ba23ec23823bd43",
+      "command_id": "plan-revise:issue-418:pr665-r1-flag:forward:r2:a99f7cdbcbfd",
+      "receipt_id": "certificate:cf9b8edbe3e224c1f2c6664d035cac19",
+      "receipt_digest": "sha256:df0847833050e1e88939fc8a4f38a1854eccadd842a3bd9f76c8994362d38ccb",
+      "decision_digest": "sha256:f08117b3377fc8e9d46c9bc6c1fff91034fc6502548e39ed1f1d103653351715",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-628-pack-consumer-runtime-release-install.md",
+        "plan_id": "PLAN-L7-628-pack-consumer-runtime-release-install",
+        "asset_id": "plan:cd11a1885b1c948d89519002a2cec009",
+        "revision": 2,
+        "content_digest": "sha256:4b6a1f74fb626adbd6fa126b19cdaa4e738024ee8e3cb5dfd098af7db4764141"
+      }
+    },
+    {
+      "sequence": 296,
+      "previous_record_digest": "sha256:b02e1ec64aabb8cbe96e34f5462ec833b48b0965cb3c44f09ba23ec23823bd43",
+      "record_digest": "sha256:d631d6faea1c1aeb346f7f19520847fbc30512590810e4b56c61855af91ba2ca",
+      "command_id": "plan-revise:issue-418:pr665-r1-flag:reverse:r2:a99f7cdbcbfd",
+      "receipt_id": "certificate:0c534e6b8c3b1d8d107643c068000a0e",
+      "receipt_digest": "sha256:09fb3de5035e4e6a778ed9c05041ae9447800968172d0a0eb7a176f19c448be6",
+      "decision_digest": "sha256:c8cc5a9edce394d3076bc2782f73b772a570824f9e80384f9f2f968bcc1ece4e",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-628-pack-consumer-runtime-release-install-backfill.md",
+        "plan_id": "PLAN-REVERSE-628-pack-consumer-runtime-release-install-backfill",
+        "asset_id": "plan:748ef764bbbea943cee1eb43aee87623",
+        "revision": 2,
+        "content_digest": "sha256:a0b7cb7df5bd169b6e22fbe7821126d93236df2780a84cf60da1c73f0becf876"
+      }
+    },
+    {
+      "sequence": 297,
+      "previous_record_digest": "sha256:d631d6faea1c1aeb346f7f19520847fbc30512590810e4b56c61855af91ba2ca",
+      "record_digest": "sha256:91dd25f6fd72f7c1d12343b1c01e530d72b690241b73a2087881d08ccdfb2a19",
+      "command_id": "plan-revise:issue-418:pr665-r2-flag:forward:r3:29fb33f10d40",
+      "receipt_id": "certificate:9405f2904b48a199af7c071086b9ca9f",
+      "receipt_digest": "sha256:27715cb8a7eb89b0d9a8a0a48087b1b5e716b8629db6fbe4dd4875089e06a94c",
+      "decision_digest": "sha256:fa861ead84f1c7367cd9d71ead5eaef675c92955bd81df1a112a4014683a0667",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-628-pack-consumer-runtime-release-install.md",
+        "plan_id": "PLAN-L7-628-pack-consumer-runtime-release-install",
+        "asset_id": "plan:cd11a1885b1c948d89519002a2cec009",
+        "revision": 3,
+        "content_digest": "sha256:69af2e228a14a52948fb1c04a50e4b29eaf7d64850d3a687b227f8277c9bd980"
+      }
+    },
+    {
+      "sequence": 298,
+      "previous_record_digest": "sha256:91dd25f6fd72f7c1d12343b1c01e530d72b690241b73a2087881d08ccdfb2a19",
+      "record_digest": "sha256:530bc3f0504e3f339596ab9ae4979a2713b6c237fa2b43046182a0678f5929c3",
+      "command_id": "plan-revise:issue-626:slice1-trace:r12:13dd790f6fdd",
+      "receipt_id": "certificate:071721454b4d3525d058268c013002d3",
+      "receipt_digest": "sha256:9bb32d6ce9dbee8a4c3df298998a6a8023b4969d6ba219dd7972fab149a16a43",
+      "decision_digest": "sha256:e5b95ecb067d0787577c3c1747c965fe9bac6027f0846dab65fb6516e24edb2d",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-626-pack-publication-admission-binding.md",
+        "plan_id": "PLAN-L7-626-pack-publication-admission-binding",
+        "asset_id": "plan:529eea3e2017a6d17049746ae353398d",
+        "revision": 12,
+        "content_digest": "sha256:893644c55e6610458ad8efda5bad185e6c22cf9cb684f7c634e35ce8eca089fb"
+      }
+    },
+    {
+      "sequence": 299,
+      "previous_record_digest": "sha256:530bc3f0504e3f339596ab9ae4979a2713b6c237fa2b43046182a0678f5929c3",
+      "record_digest": "sha256:c4c410804d8b545ff51be23ce91dab04a18da098798a40d1128b80faa29c7535",
+      "command_id": "plan-revise:issue-626:slice1-trace:r13:5cc67620cd2e",
+      "receipt_id": "certificate:2392a291f2f6fb85ebe96ad2dde36496",
+      "receipt_digest": "sha256:f808b9a804b00c8364f03877562e30e193cf8a5ae9c57c53091bc2d2db93af98",
+      "decision_digest": "sha256:248fbbdd7d943cbff08ab3dd0996e38cfa27823ad36de2ee72975a8381874eac",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-626-pack-publication-admission-binding.md",
+        "plan_id": "PLAN-L7-626-pack-publication-admission-binding",
+        "asset_id": "plan:529eea3e2017a6d17049746ae353398d",
+        "revision": 13,
+        "content_digest": "sha256:16c04ed8bdf471de61d3e92796f83106322f0179e944f1fcc085018cb4807805"
+      }
+    },
+    {
+      "sequence": 300,
+      "previous_record_digest": "sha256:c4c410804d8b545ff51be23ce91dab04a18da098798a40d1128b80faa29c7535",
+      "record_digest": "sha256:bbb8182239068da73026dc3f961370336ee50b4a13ff144113f5296ecd795d3e",
+      "command_id": "plan-revise:issue-626:slice1-trace:r14:a3411f65627f",
+      "receipt_id": "certificate:c174835c62b03cda190ec7eed9c2e5ff",
+      "receipt_digest": "sha256:a5631776798a57c1a981f5ed17e94b10bd158513a5072805bf12bfae049425f6",
+      "decision_digest": "sha256:7dc46ef3220a3d9177b074b57b1481e40385ecadb09ab7f03213838578b0add7",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-626-pack-publication-admission-binding.md",
+        "plan_id": "PLAN-L7-626-pack-publication-admission-binding",
+        "asset_id": "plan:529eea3e2017a6d17049746ae353398d",
+        "revision": 14,
+        "content_digest": "sha256:365a68b57a4360b6e202036ec22e886d77eb9423772917e33332f536549d07dc"
+      }
     }
   ]
 }
