@@ -7,6 +7,12 @@ are marked `signatureCreated=false` in each manifest.
 
 ## Unreleased
 
+### Changed
+
+- License: the project is now distributed under the Apache License, Version 2.0
+  (previously MIT). A `NOTICE` file ships with the clean Pack. Releases up to
+  `v0.2.0-canary.1` remain available under their original MIT terms.
+
 ### Added
 
 - Update-check advisory: `ut-tdd status` compares the harness checkout version
