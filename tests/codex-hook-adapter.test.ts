@@ -115,7 +115,7 @@ function spawnCodexHookCommand(
 }
 
 describe("codex-hook-adapter — Codex hooks.json parity (PLAN-L7-139, PLAN-L7-668)", () => {
-  it("U-CXHOOKCMD-001: 実 repo の .codex/hooks.json と setup 生成 consumer hooks.json は現行 Codex command schema を満たす", () => {
+  it("U-CXHOOK-001: 実 repo の .codex/hooks.json は Claude ガードと parity (real-repo 回帰ガード)", () => {
     const r = analyzeCodexHookAdapter(loadCodexHookAdapterInput(process.cwd()));
     expect(r.ok).toBe(true);
     expect(r.violations).toEqual([]);
@@ -124,7 +124,9 @@ describe("codex-hook-adapter — Codex hooks.json parity (PLAN-L7-139, PLAN-L7-6
     expect(codexHookAdapterMessages(r).join("\n")).toContain(
       "hosted API/developer apply_patch tools do not execute through the Codex hook engine",
     );
+  });
 
+  it("U-CXHOOKCMD-001: 実 repo の .codex/hooks.json と setup 生成 consumer hooks.json は現行 Codex command schema を満たす", () => {
     const raw = readFileSync(join(process.cwd(), ".codex", "hooks.json"), "utf8");
     const parsedRaw = JSON.parse(raw) as {
       hooks: Record<string, { matcher?: string; hooks: { command: string; args?: unknown }[] }[]>;
