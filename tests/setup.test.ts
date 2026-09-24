@@ -3,6 +3,7 @@ import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSyn
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { CODEX_GIT_ROOT_PREFIX } from "../src/lint/hook-invocation.ts";
 import { buildBranchProtectionPayload } from "../src/setup/branch-protection.ts";
 import {
   applyBranchProtection,
@@ -409,10 +410,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
         >;
       };
       const codex = JSON.parse(templates["adapter/.codex/hooks.json"]) as {
-        hooks: Record<
-          string,
-          { matcher?: string; hooks: { command: string; blockOnFailure?: boolean }[] }[]
-        >;
+        hooks: Record<string, { matcher?: string; hooks: { command: string }[] }[]>;
       };
 
       expect(claude.hooks.PreToolUse).toEqual(
@@ -455,9 +453,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
             matcher: "spawn_agent|spawn_agents_on_csv",
             hooks: [
               expect.objectContaining({
-                command: "node",
-                args: [".ut-tdd/bin/ut-tdd.mjs", "hook", "agent-guard"],
-                blockOnFailure: true,
+                command: `node "${CODEX_GIT_ROOT_PREFIX}.ut-tdd/bin/ut-tdd.mjs" hook agent-guard`,
               }),
             ],
           }),
@@ -465,9 +461,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
             matcher: "apply_patch|write_file",
             hooks: [
               expect.objectContaining({
-                command: "node",
-                args: [".ut-tdd/bin/ut-tdd.mjs", "hook", "work-guard"],
-                blockOnFailure: true,
+                command: `node "${CODEX_GIT_ROOT_PREFIX}.ut-tdd/bin/ut-tdd.mjs" hook work-guard`,
               }),
             ],
           }),
@@ -570,19 +564,20 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     expect(wrapper).not.toContain("node_modules/ut-tdd");
 
     const codexHooks = JSON.parse(deps.files.get(join("/repo", ".codex", "hooks.json")) ?? "") as {
-      hooks: { PreToolUse: { hooks: { command: string; args: string[] }[] }[] };
+      hooks: { PreToolUse: { hooks: { command: string }[] }[] };
     };
     const claudeSettings = JSON.parse(
       deps.files.get(join("/repo", ".claude", "settings.json")) ?? "",
     ) as {
       hooks: { PreToolUse: { hooks: { command: string; args: string[] }[] }[] };
     };
-    const agentGuardInvocation = {
+    expect(claudeSettings.hooks.PreToolUse[0]?.hooks[0]).toMatchObject({
       command: "node",
       args: [".ut-tdd/bin/ut-tdd.mjs", "hook", "agent-guard"],
-    };
-    expect(codexHooks.hooks.PreToolUse[0]?.hooks[0]).toMatchObject(agentGuardInvocation);
-    expect(claudeSettings.hooks.PreToolUse[0]?.hooks[0]).toMatchObject(agentGuardInvocation);
+    });
+    expect(codexHooks.hooks.PreToolUse[0]?.hooks[0]).toMatchObject({
+      command: `node "${CODEX_GIT_ROOT_PREFIX}.ut-tdd/bin/ut-tdd.mjs" hook agent-guard`,
+    });
   });
 
   // The generated wrapper is a sealed Node entrypoint. Launch via Node directly and
