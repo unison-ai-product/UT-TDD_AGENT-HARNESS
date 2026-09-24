@@ -27,14 +27,6 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-628-pack-consumer-runtime-release-install.md
     artifact_type: markdown_doc
-  - artifact_path: src/cli/distribution.ts
-    artifact_type: source_module
-  - artifact_path: src/setup/consumer-runtime-release.ts
-    artifact_type: source_module
-  - artifact_path: tests/pack-consumer-runtime-release.test.ts
-    artifact_type: test_code
-  - artifact_path: tests/distribution-acceptance.test.ts
-    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L6-101-pack-independent-multi-consumer-acceptance.md
   requires:
@@ -50,43 +42,23 @@ dependencies:
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/418
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/420
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/364
-review_evidence:
-  - reviewer: "Claude Opus (非著者 review, PR #665)"
-    reviewer_model: claude-opus-5
-    worker_model: gpt-5.6-luna
-    review_kind: cross_agent
-    verdict: pass
-    reviewed_at: 2026-09-18T11:14:14Z
-    tests_green_at: 2026-09-18T11:13:05Z
-    plan_revision: PLAN-L7-628 r3
-    subject_head: 5b9b078c07f58604559af08c73c58a0f9d5dd0a9
-    green_commands:
-      - kind: doctor
-        command: node src/cli.ts doctor --strict-green-command-digest --result-file
-          "$UT_TDD_DOCTOR_RESULT_FILE"
-        runner: ci
-        scope: full
-        exit_code: 0
-        completed_at: 2026-09-18T11:04:09Z
-        evidence_path: https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/actions/runs/35336799373/job/105573390245
-        output_digest: sha256:5a70501ecbfc05c95c90636cac49e009ad2b418481954288dfdb19654e622c73
-        anchor_commit: 5b9b078c07f58604559af08c73c58a0f9d5dd0a9
-status: confirmed
+review_evidence: []
+status: draft
 github_issue_id: 418
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:f533a4802ac74af5921b5f26faa2ad2d
-  command_id: plan-revise:issue-418:pr670-r1-remediation:forward:r7:996ad930
-  admitted_at: 2026-09-24T07:00:00.000Z
-  source_digest: sha256:65fc14a69c1104a050b637755680c4a9278ab2f92809d77fe8311ffe504345d5
-  decision_digest: sha256:3141ce53ca159e0a9ebd7777f38bb17357d95335d8af8c460826d62cf56b5f80
-  receipt_digest: sha256:2f9a0608344355740ed7924c3bee9344dc48cee78c6cd78ecf0f138fc01ee421
+  receipt_id: certificate:ae651fd89a86d895d3aad1d0459f2caa
+  command_id: plan-revise:issue-418:pr671-r1-flag:forward:r5:dfe02eb55a2f
+  admitted_at: 2026-09-24T03:37:18.813Z
+  source_digest: sha256:e29ead3ced26cd437a348ae5ba8199bf22712b787af002e52875fb9c9a2fa6ea
+  decision_digest: sha256:e9233c4fc51f513c33a6fc46e3fb3dc73dcc94665511afcb5e53fdc6b1a40520
+  receipt_digest: sha256:ef478f001d48145ec9293e5e75e5c49dba21b3e8a6da1bb5dd4eea2c36a45483
   binding:
     path: docs/plans/PLAN-L7-628-pack-consumer-runtime-release-install.md
     plan_id: PLAN-L7-628-pack-consumer-runtime-release-install
     asset_id: plan:cd11a1885b1c948d89519002a2cec009
-    revision: 7
-    content_digest: sha256:65fc14a69c1104a050b637755680c4a9278ab2f92809d77fe8311ffe504345d5
+    revision: 5
+    content_digest: sha256:e29ead3ced26cd437a348ae5ba8199bf22712b787af002e52875fb9c9a2fa6ea
   route:
     signal: feature_addition
     mode: add-feature
@@ -104,10 +76,10 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-628-pack-consumer-runtime-release-install
-    target_revision: 6
+    target_revision: 5
     phase: forward_merge
-  escape_reason: "PR #670 r1 FLAG remediation: preflight review evidence and exact
-    oracle coverage"
+  escape_reason: "PR #671 Sol r1 FLAG 2 件 (§6.1 の tag ref と source revision
+    の等置、CANDIDATE-U-PACKRT-011(b) の実現不能な変異) の是正改訂。"
 ---
 
 # PLAN-L7-628: Pack Release から consumer runtime を有効化する producer / installer
