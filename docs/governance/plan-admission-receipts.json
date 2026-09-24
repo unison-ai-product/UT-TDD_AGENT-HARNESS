@@ -4756,49 +4756,49 @@
     {
       "sequence": 298,
       "previous_record_digest": "sha256:91dd25f6fd72f7c1d12343b1c01e530d72b690241b73a2087881d08ccdfb2a19",
-      "record_digest": "sha256:ad18acedd320640f66d195393f54f90dfac8d9619b0a87ad96a01e79e1c07fb2",
-      "command_id": "plan-draft:issue-668:codex-hook-command-schema:1",
-      "receipt_id": "certificate:650ef9bdf3c29a220f2b2ae89f66f9bf",
-      "receipt_digest": "sha256:e7de173bc0a20c334f34ae6fa0cf59ef9924d615392768b53382b4959f0a14af",
-      "decision_digest": "sha256:4a863f2660eebfdc7cf9a75239461e4e879b707430268261cc4f2ae22c9808d5",
+      "record_digest": "sha256:530bc3f0504e3f339596ab9ae4979a2713b6c237fa2b43046182a0678f5929c3",
+      "command_id": "plan-revise:issue-626:slice1-trace:r12:13dd790f6fdd",
+      "receipt_id": "certificate:071721454b4d3525d058268c013002d3",
+      "receipt_digest": "sha256:9bb32d6ce9dbee8a4c3df298998a6a8023b4969d6ba219dd7972fab149a16a43",
+      "decision_digest": "sha256:e5b95ecb067d0787577c3c1747c965fe9bac6027f0846dab65fb6516e24edb2d",
       "binding": {
-        "path": "docs/plans/PLAN-L7-668-codex-hook-command-schema.md",
-        "plan_id": "PLAN-L7-668-codex-hook-command-schema",
-        "asset_id": "plan:650ef9bdf3c29a220f2b2ae89f66f9bf",
-        "revision": 1,
-        "content_digest": "sha256:9af836db3c818e28736cc2d0f871a222025f8f60b632f9cb290ee736f1f2a4d8"
+        "path": "docs/plans/PLAN-L7-626-pack-publication-admission-binding.md",
+        "plan_id": "PLAN-L7-626-pack-publication-admission-binding",
+        "asset_id": "plan:529eea3e2017a6d17049746ae353398d",
+        "revision": 12,
+        "content_digest": "sha256:893644c55e6610458ad8efda5bad185e6c22cf9cb684f7c634e35ce8eca089fb"
       }
     },
     {
       "sequence": 299,
-      "previous_record_digest": "sha256:ad18acedd320640f66d195393f54f90dfac8d9619b0a87ad96a01e79e1c07fb2",
-      "record_digest": "sha256:49d4595f054ea426ba3ce3c9c3f8d0ff612e3004db09484c36cb44713b3590a0",
-      "command_id": "plan-revise:issue-668:pr669-r1-flag-139:r2:91d90924aaa3",
-      "receipt_id": "certificate:07d97d84a9b9bef91c317f8319ed9858",
-      "receipt_digest": "sha256:32a474d14d04a0529f18c388f966794283d9314e49ead167958e933c0d7ed192",
-      "decision_digest": "sha256:993c14e50449b9a3cda7fa65e168a1a2518c19f9b9a09355b78d5d96cf31738e",
+      "previous_record_digest": "sha256:530bc3f0504e3f339596ab9ae4979a2713b6c237fa2b43046182a0678f5929c3",
+      "record_digest": "sha256:c4c410804d8b545ff51be23ce91dab04a18da098798a40d1128b80faa29c7535",
+      "command_id": "plan-revise:issue-626:slice1-trace:r13:5cc67620cd2e",
+      "receipt_id": "certificate:2392a291f2f6fb85ebe96ad2dde36496",
+      "receipt_digest": "sha256:f808b9a804b00c8364f03877562e30e193cf8a5ae9c57c53091bc2d2db93af98",
+      "decision_digest": "sha256:248fbbdd7d943cbff08ab3dd0996e38cfa27823ad36de2ee72975a8381874eac",
       "binding": {
-        "path": "docs/plans/PLAN-L7-139-codex-hook-adapter.md",
-        "plan_id": "PLAN-L7-139-codex-hook-adapter",
-        "asset_id": "plan:legacy:04c4e6cd561fcf8a0d55e42ca82e6cfe065a9a1e15da98d414d2aa84e2e1215e",
-        "revision": 2,
-        "content_digest": "sha256:a373104c726ff04a1e9464bb37ab57c6daf5a484f24b4bdfc2f2e959ca89100f"
+        "path": "docs/plans/PLAN-L7-626-pack-publication-admission-binding.md",
+        "plan_id": "PLAN-L7-626-pack-publication-admission-binding",
+        "asset_id": "plan:529eea3e2017a6d17049746ae353398d",
+        "revision": 13,
+        "content_digest": "sha256:16c04ed8bdf471de61d3e92796f83106322f0179e944f1fcc085018cb4807805"
       }
     },
     {
       "sequence": 300,
-      "previous_record_digest": "sha256:49d4595f054ea426ba3ce3c9c3f8d0ff612e3004db09484c36cb44713b3590a0",
-      "record_digest": "sha256:820e56b26fc965d504a2229ff01b7437b261a46468b879eef92fd71e442553e7",
-      "command_id": "plan-revise:issue-668:pr669-r1-flag:r2:91d90924aaa3",
-      "receipt_id": "certificate:573b02615136824d117ff3eed4f02705",
-      "receipt_digest": "sha256:baca50f5de94a87015c314f6a70bbd0246f30a6fd8332d1c355af3d86cb8d3b1",
-      "decision_digest": "sha256:dc660e53a62087660ec4bf83d6a8a773f47d5be147118866823a480c75a8579f",
+      "previous_record_digest": "sha256:c4c410804d8b545ff51be23ce91dab04a18da098798a40d1128b80faa29c7535",
+      "record_digest": "sha256:bbb8182239068da73026dc3f961370336ee50b4a13ff144113f5296ecd795d3e",
+      "command_id": "plan-revise:issue-626:slice1-trace:r14:a3411f65627f",
+      "receipt_id": "certificate:c174835c62b03cda190ec7eed9c2e5ff",
+      "receipt_digest": "sha256:a5631776798a57c1a981f5ed17e94b10bd158513a5072805bf12bfae049425f6",
+      "decision_digest": "sha256:7dc46ef3220a3d9177b074b57b1481e40385ecadb09ab7f03213838578b0add7",
       "binding": {
-        "path": "docs/plans/PLAN-L7-668-codex-hook-command-schema.md",
-        "plan_id": "PLAN-L7-668-codex-hook-command-schema",
-        "asset_id": "plan:650ef9bdf3c29a220f2b2ae89f66f9bf",
-        "revision": 2,
-        "content_digest": "sha256:57eb8b536effba1ed22c25de7a1ecdedb945ead37ac38c3fb4be4cf89a155eae"
+        "path": "docs/plans/PLAN-L7-626-pack-publication-admission-binding.md",
+        "plan_id": "PLAN-L7-626-pack-publication-admission-binding",
+        "asset_id": "plan:529eea3e2017a6d17049746ae353398d",
+        "revision": 14,
+        "content_digest": "sha256:365a68b57a4360b6e202036ec22e886d77eb9423772917e33332f536549d07dc"
       }
     }
   ]
