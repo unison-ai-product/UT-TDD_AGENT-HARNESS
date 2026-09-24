@@ -109,7 +109,20 @@ export interface ProviderInvocationInput {
 }
 
 export interface ProviderProbeOptions extends ProviderCommandResolutionOptions {
-  runProbe?: (command: string, args: string[], env: NodeJS.ProcessEnv) => { status: number | null };
+  runProbe?: (
+    command: string,
+    args: string[],
+    env: NodeJS.ProcessEnv,
+    options: ProviderProbeSpawnOptions,
+  ) => { status: number | null };
+}
+
+export interface ProviderProbeSpawnOptions {
+  env: NodeJS.ProcessEnv;
+  stdio: "ignore";
+  shell: boolean;
+  windowsVerbatimArguments: boolean;
+  windowsHide: true;
 }
 
 export function providerAvailable(provider: AdapterProvider, mode: ExecutionMode): boolean {
@@ -314,15 +327,21 @@ export function isProviderCommandSpawnable(
   });
   const runProbe =
     opts.runProbe ??
-    ((command: string, args: string[], probeEnv: NodeJS.ProcessEnv) =>
-      spawnSync(command, args, {
-        env: probeEnv,
-        stdio: "ignore",
-        shell: invocation.shell ?? false,
-        windowsVerbatimArguments: invocation.windowsVerbatimArguments ?? false,
-      }));
+    ((
+      command: string,
+      args: string[],
+      _probeEnv: NodeJS.ProcessEnv,
+      options: ProviderProbeSpawnOptions,
+    ) => spawnSync(command, args, options));
+  const probeOptions: ProviderProbeSpawnOptions = {
+    env,
+    stdio: "ignore",
+    shell: invocation.shell ?? false,
+    windowsVerbatimArguments: invocation.windowsVerbatimArguments ?? false,
+    windowsHide: true,
+  };
   try {
-    return runProbe(invocation.command, invocation.args, env).status === 0;
+    return runProbe(invocation.command, invocation.args, env, probeOptions).status === 0;
   } catch {
     return false;
   }

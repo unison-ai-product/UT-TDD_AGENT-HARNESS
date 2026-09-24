@@ -262,17 +262,20 @@ describe("runtime adapter plan", () => {
       const explicit = join(root, process.platform === "win32" ? "codex.cmd" : "codex");
       writeFileSync(explicit, "");
       const seen: string[] = [];
+      let probeOptions: { windowsHide: boolean } | undefined;
       const ok = isProviderCommandSpawnable("codex", {
         env: { UT_TDD_CODEX_BIN: explicit },
         platform: process.platform,
-        runProbe: (command, args) => {
+        runProbe: (command, args, _env, options) => {
           seen.push(`${command} ${args.join(" ")}`);
+          probeOptions = options;
           return { status: 0 };
         },
       });
 
       expect(ok).toBe(true);
       expect(seen[0]).toContain("--version");
+      expect(probeOptions?.windowsHide).toBe(true);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

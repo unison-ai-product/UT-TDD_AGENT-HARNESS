@@ -1,6 +1,13 @@
+import { readdirSync, rmSync } from "node:fs";
+import { join } from "node:path";
 import { Command } from "commander";
 import { afterEach, describe, expect, it } from "vitest";
-import { adapterExecutionEnv, registerDelegationCommands } from "../src/cli/delegation.ts";
+import {
+  adapterExecutionEnv,
+  executeAdapterPlanForCli,
+  registerDelegationCommands,
+} from "../src/cli/delegation.ts";
+import { buildAdapterPlan } from "../src/runtime/adapter.ts";
 
 const legacyPrefix = ["HE", "LIX"].join("");
 const touchedKeys = [
@@ -88,6 +95,39 @@ describe("CLI delegation command registration", () => {
         "--execute",
         "--json",
       ]);
+    }
+  });
+
+  it("U-ADAPTER-010: hides the delegated provider console window", () => {
+    const sessionPrefix = `issue683-delegation-${Date.now()}`;
+    const sessionDir = join(process.cwd(), ".ut-tdd", "logs", "session");
+    let spawnOptions: { windowsHide?: boolean } | undefined;
+    try {
+      const plan = buildAdapterPlan(
+        { provider: "codex", role: "se", task: "probe delegation", execute: true },
+        "codex-only",
+      );
+      const result = executeAdapterPlanForCli(
+        plan,
+        { sessionPrefix, toolName: "codex" },
+        {
+          gitBranch: () => "test/issue683",
+          gitHead: () => "deadbee",
+          runSessionStartSideEffects: () => {},
+          writeHandoverWarnings: () => {},
+          spawnSync: (_command, _args, options) => {
+            spawnOptions = options;
+            return { status: 0, signal: null };
+          },
+        },
+      );
+
+      expect(result.exit_code).toBe(0);
+      expect(spawnOptions?.windowsHide).toBe(true);
+    } finally {
+      for (const name of readdirSync(sessionDir, { encoding: "utf8" })) {
+        if (name.startsWith(`${sessionPrefix}-`)) rmSync(join(sessionDir, name), { force: true });
+      }
     }
   });
 });
