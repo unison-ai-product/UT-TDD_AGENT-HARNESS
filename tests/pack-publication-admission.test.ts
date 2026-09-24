@@ -121,8 +121,23 @@ function fixture(
 
 describe("Pack publication admission observation binding", () => {
   it("declares the bounded candidate coverage explicitly", () => {
-    expect(PACK_PUBLICATION_ADMISSION_COVERAGE.implemented).toHaveLength(6);
-    expect(PACK_PUBLICATION_ADMISSION_COVERAGE.deferred).toHaveLength(5);
+    expect(PACK_PUBLICATION_ADMISSION_COVERAGE.implemented).toEqual([
+      "CANDIDATE-PACKPUB-ADM-007",
+      "CANDIDATE-PACKPUB-ADM-036",
+      "CANDIDATE-PACKPUB-ADM-040",
+      "CANDIDATE-PACKPUB-ADM-042",
+      "CANDIDATE-PACKPUB-ADM-048",
+      "CANDIDATE-PACKPUB-ADM-057",
+    ]);
+    expect(PACK_PUBLICATION_ADMISSION_COVERAGE.deferred).toEqual([
+      "CANDIDATE-PACKPUB-ADM-001..006",
+      "CANDIDATE-PACKPUB-ADM-008..035",
+      "CANDIDATE-PACKPUB-ADM-037..039",
+      "CANDIDATE-PACKPUB-ADM-041",
+      "CANDIDATE-PACKPUB-ADM-043..047",
+      "CANDIDATE-PACKPUB-ADM-049..056",
+      "CANDIDATE-PACKPUB-ADM-058..070",
+    ]);
   });
 
   it("admits a complete read-only observation and appends provenance only", async () => {
