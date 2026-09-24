@@ -136,7 +136,7 @@ function fixture(
 }
 
 describe("Pack publication admission observation binding", () => {
-  it("declares the bounded candidate coverage explicitly", () => {
+  it("U-PACKPUB-ADM-101 declares the bounded candidate coverage explicitly", () => {
     expect(PACK_PUBLICATION_ADMISSION_COVERAGE.implemented).toEqual([
       "CANDIDATE-PACKPUB-ADM-007",
       "CANDIDATE-PACKPUB-ADM-036",
@@ -156,7 +156,7 @@ describe("Pack publication admission observation binding", () => {
     ]);
   });
 
-  it("admits a complete read-only observation and appends provenance only", async () => {
+  it("U-PACKPUB-ADM-048 admits a complete read-only observation and appends provenance only", async () => {
     const input = fixture();
     const result = await admitPackPublication(input);
     expect(result.ok).toBe(true);
@@ -169,7 +169,7 @@ describe("Pack publication admission observation binding", () => {
     expect(input.ledger.append).toHaveBeenCalledTimes(1);
   });
 
-  it("links the next admission record to the prior digest and journals the same bundle", async () => {
+  it("U-PACKPUB-ADM-102 links the next admission record to the prior digest and journals the same bundle", async () => {
     const firstInput = fixture();
     const first = await admitPackPublication(firstInput);
     expect(first.ok).toBe(true);
@@ -201,7 +201,7 @@ describe("Pack publication admission observation binding", () => {
     expect(second.record).not.toHaveProperty("executionReceipt");
   });
 
-  it("rejects malformed receipts before calling any observer", async () => {
+  it("U-PACKPUB-ADM-103 rejects malformed receipts before calling any observer", async () => {
     const input = fixture({ receipt: { kind: "malformed" } });
     const result = await admitPackPublication(input);
     expect(result).toMatchObject({
@@ -213,7 +213,7 @@ describe("Pack publication admission observation binding", () => {
     expect(input.observer.repository).not.toHaveBeenCalled();
   });
 
-  it("denies a missing preparation receipt before calling any observer", async () => {
+  it("U-PACKPUB-ADM-036 denies a missing preparation receipt before calling any observer", async () => {
     const input = fixture({ receipt: undefined });
     const result = await admitPackPublication(input);
     expect(result).toMatchObject({
@@ -231,7 +231,7 @@ describe("Pack publication admission observation binding", () => {
     expect(input.observer.staging).not.toHaveBeenCalled();
   });
 
-  it("denies a review-head mutation without consuming approval or writing remotely", async () => {
+  it("U-PACKPUB-ADM-007 denies a review-head mutation without consuming approval or writing remotely", async () => {
     const input = fixture({
       observer: {
         ...fixture().observer,
@@ -258,7 +258,7 @@ describe("Pack publication admission observation binding", () => {
     expect(input.ledger.append).not.toHaveBeenCalled();
   });
 
-  it("keeps observer failure indeterminate", async () => {
+  it("U-PACKPUB-ADM-040 keeps observer failure indeterminate", async () => {
     const base = fixture();
     const input = fixture({
       observer: {
@@ -280,7 +280,7 @@ describe("Pack publication admission observation binding", () => {
     expect(input.ledger.append).not.toHaveBeenCalled();
   });
 
-  it("treats a nonnumeric observed ruleset ID as indeterminate", async () => {
+  it("U-PACKPUB-ADM-042 treats a nonnumeric observed ruleset ID as indeterminate", async () => {
     const base = fixture();
     const input = fixture({
       observer: {
@@ -306,7 +306,7 @@ describe("Pack publication admission observation binding", () => {
     expect(input.ledger.append).not.toHaveBeenCalled();
   });
 
-  it("uses the sealed staging expected-main OID, not a caller-supplied OID", async () => {
+  it("U-PACKPUB-ADM-104 uses the sealed staging expected-main OID, not a caller-supplied OID", async () => {
     const baseInput = fixture();
     const expectedMainOid = receipt.identity.baseOid;
     const callerSuppliedExpectedMainOid = oid("9");
@@ -342,7 +342,7 @@ describe("Pack publication admission observation binding", () => {
     expect(callerCanSetExpectedMainOid).toBe(false);
   });
 
-  it("rejects an approval whose observed intent binding was changed", async () => {
+  it("U-PACKPUB-ADM-105 rejects an approval whose observed intent binding was changed", async () => {
     const input = fixture({
       approvals: [{ ...fixture().approvals[0], intentBindingDigest: sha("9") }],
     });
@@ -356,7 +356,7 @@ describe("Pack publication admission observation binding", () => {
     });
   });
 
-  it("changes the approval binding when only the approval nonce changes", () => {
+  it("U-PACKPUB-ADM-057 changes the approval binding when only the approval nonce changes", () => {
     const publicationIntentIdentity = sha("8");
     const first = derivePackPublicationAdmissionApprovalBinding({
       nonce: "apv-adm-fixture-0001",

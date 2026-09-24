@@ -772,9 +772,6 @@ export async function admitPackPublication(
   return { ok: true, status: "admitted", record, remoteWrites: 0, approvalConsumes: 0 };
 }
 
-export const admitPackPublicationAdmission = admitPackPublication;
-export const validatePackPublicationAdmission = admitPackPublication;
-
 function sealedChecks(
   checks: readonly Readonly<{ context: string; conclusion: string }>[],
 ): readonly Readonly<{ context: string; conclusion: "success" }>[] {

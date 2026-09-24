@@ -127,7 +127,6 @@ export {
 } from "./pack-authoring-smoke.ts";
 export {
   admitPackPublication,
-  admitPackPublicationAdmission,
   derivePackPublicationAdmissionApprovalBinding,
   derivePackPublicationAdmissionIntentIdentity,
   derivePackPublicationAdmissionRecordDigest,
@@ -147,7 +146,6 @@ export {
   type PackPublicationRepositoryObservation,
   type PackPublicationReviewObservation,
   type PackPublicationSealedStagingObservation,
-  validatePackPublicationAdmission,
 } from "./pack-publication-admission.ts";
 export {
   bootstrapProjectIdentity,
