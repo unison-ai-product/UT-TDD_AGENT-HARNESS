@@ -8,7 +8,7 @@ drive: agent
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-09-18
-updated: 2026-09-24
+updated: 2026-09-25
 owner: Claude / Opus (pair-freeze) · Codex worker (implementation)
 parent_design: docs/plans/PLAN-L6-101-pack-independent-multi-consumer-acceptance.md
 pair_artifact: docs/test-design/harness/L7-pack-consumer-runtime-release-install-test-design.md
@@ -68,25 +68,25 @@ review_evidence:
         scope: full
         exit_code: 0
         completed_at: 2026-09-18T11:04:09Z
-        evidence_path: https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/actions/runs/35336799373/job/105573390245
-        output_digest: sha256:5a70501ecbfc05c95c90636cac49e009ad2b418481954288dfdb19654e622c73
+        evidence_path: tests/distribution-acceptance.test.ts
+        output_digest: sha256:94966654889b5125cb9e5e10e7c81527e332b41b125ad9ffa8c808e8989c0cda
         anchor_commit: 5b9b078c07f58604559af08c73c58a0f9d5dd0a9
 status: confirmed
 github_issue_id: 418
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:4107a94f401f0feb23e887151b8d44ba
-  command_id: plan-revise:issue-418:pr670-latest-main-reissue:forward:r7:20260924
-  admitted_at: 2026-09-24T11:37:44.980Z
-  source_digest: sha256:65fc14a69c1104a050b637755680c4a9278ab2f92809d77fe8311ffe504345d5
-  decision_digest: sha256:8d842e8510ea28fa411176fbac4dbbbf43144b4b2082aa052957dd4e93ea95eb
-  receipt_digest: sha256:a4b6d94820934faa4eb69335e818c590e4f4eeb59aa7549bb8ba77a70c8d36f3
+  receipt_id: certificate:ddb8930575c2f3953e5e546e37017cae
+  command_id: plan-revise:issue-418:pr670-producer-green-evidence-reissue:forward:r8:20260925
+  admitted_at: 2026-09-25T06:51:41.643Z
+  source_digest: sha256:f48911ddeb2fcd55ec685c2776f1f4403055da749c39f65cbb24feaa7ff703b1
+  decision_digest: sha256:19f41ad42fab3b65530415ff4fa659c723e9b58f8c00399a1ece56160cdf0877
+  receipt_digest: sha256:7474327657782792baf065f6f188ddc076f1e97c9a57b0b7c069ffe6e6d1f5d2
   binding:
     path: docs/plans/PLAN-L7-628-pack-consumer-runtime-release-install.md
     plan_id: PLAN-L7-628-pack-consumer-runtime-release-install
     asset_id: plan:cd11a1885b1c948d89519002a2cec009
-    revision: 7
-    content_digest: sha256:65fc14a69c1104a050b637755680c4a9278ab2f92809d77fe8311ffe504345d5
+    revision: 8
+    content_digest: sha256:f48911ddeb2fcd55ec685c2776f1f4403055da749c39f65cbb24feaa7ff703b1
   route:
     signal: feature_addition
     mode: add-feature
@@ -94,7 +94,7 @@ admission_receipt:
     provider: github
     issue_id: 418
     episode_id: E4-418-pack-consumer-runtime-release-install
-    projection_digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+    projection_state: unprojected
   origin:
     plan_id: PLAN-L7-516-pack-self-contained-consumer-runtime
     revision: 4
@@ -104,10 +104,10 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-628-pack-consumer-runtime-release-install
-    target_revision: 6
+    target_revision: 7
     phase: forward_merge
-  escape_reason: "PR #670 r1 FLAG remediation: preflight review evidence and exact
-    oracle coverage"
+  escape_reason: "PR #670 strict green-command-digest evidence path correction
+    after origin/main merge"
 ---
 
 # PLAN-L7-628: Pack Release から consumer runtime を有効化する producer / installer

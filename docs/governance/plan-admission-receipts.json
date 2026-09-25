@@ -5040,6 +5040,22 @@
         "revision": 1,
         "content_digest": "sha256:d5835df5f4d42433b615d9f6566b4a3dcae1353a31c359ab799cb9f631a8397b"
       }
+    },
+    {
+      "sequence": 316,
+      "previous_record_digest": "sha256:11966ff786218d3d86449babe5941187b77e804714504d78da2330c9a7b9be38",
+      "record_digest": "sha256:47aefb2865487b6912994b78164bf8ed46489e151b89d9cdccc5dcdfbf88fdc0",
+      "command_id": "plan-revise:issue-418:pr670-producer-green-evidence-reissue:forward:r8:20260925",
+      "receipt_id": "certificate:ddb8930575c2f3953e5e546e37017cae",
+      "receipt_digest": "sha256:7474327657782792baf065f6f188ddc076f1e97c9a57b0b7c069ffe6e6d1f5d2",
+      "decision_digest": "sha256:19f41ad42fab3b65530415ff4fa659c723e9b58f8c00399a1ece56160cdf0877",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-628-pack-consumer-runtime-release-install.md",
+        "plan_id": "PLAN-L7-628-pack-consumer-runtime-release-install",
+        "asset_id": "plan:cd11a1885b1c948d89519002a2cec009",
+        "revision": 8,
+        "content_digest": "sha256:f48911ddeb2fcd55ec685c2776f1f4403055da749c39f65cbb24feaa7ff703b1"
+      }
     }
   ]
 }
