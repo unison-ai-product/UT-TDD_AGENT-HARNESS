@@ -41,7 +41,7 @@ dependencies:
   requires:
     - docs/design/harness/L5-detailed-design/module-decomposition.md
     - docs/design/harness/L1-requirements/functional-requirements.md
-    - docs/migration/legacy-fork-completion-plan.md
+    - docs/migration/helix-fork-completion-plan.md
   references:
     - docs/plans/PLAN-L4-12-skill-pack.md
     - docs/plans/PLAN-DISCOVERY-03-skill-design.md

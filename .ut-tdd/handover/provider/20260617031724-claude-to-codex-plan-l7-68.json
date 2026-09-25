@@ -9,13 +9,13 @@
   "context": {
     "summary": "PLAN-L7-68 fully discharged + pushed (8 commits on origin/codex/harden-automation-team-launch: mojibake fix + readabili…",
     "next_actions": [
-      "Read docs/migration/legacy-fork-completion-plan.md — it is the driving gap list, requirements-driven per its §1.5",
+      "Read docs/migration/helix-fork-completion-plan.md — it is the driving gap list, requirements-driven per its §1.5",
       "Trace §2.1 skill candidates to UT-TDD FR-L1-*/drive/mode; keep only requirement-mapped packs, drop the rest (per §1.5; …",
       "Codex authors Phase-1 PLAN-* tickets per §10: requirement-mapped skill curate batch, .claude/commands transplant (ship/…",
       "vendor/helix-source removal ONLY after §8(1)-(2) requirement-backed migration done; then 1 commit + repository-structur…"
     ],
     "files": [
-      "docs/migration/legacy-fork-completion-plan.md",
+      "docs/migration/helix-fork-completion-plan.md",
       "docs/design/harness/L1-requirements/functional-requirements.md",
       "docs/skills/",
       ".claude/agents/",

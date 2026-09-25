@@ -1,8 +1,5 @@
 # A-145-01 - Feature review: Distribution & packaging
 
-訂正注記 (2026-09-25, Issue #689): 本文中の参照パスを旧 slug から中立化した。名称の
-中立化のみで、記録内容の意味は変更していない。
-
 - **index**: [A-145 feature review index](./A-145-feature-review-index.md) · **gaps**: [A-144-01 audit](./A-144-01-distribution-packaging.md)
 
 ## Features
@@ -23,4 +20,4 @@
 - Clean-distribution denylist excludes `.ut-tdd/`, plans, design, test-design, handover, archive, `src/web`, vendor.
 
 ## Maturity verdict
-The setup/packaging *mechanism* is mature and safety-first; the **delivery boundary is partial by design** (apply gated on PO). The real gaps are portability/curation, not mechanism — see audit [A-144-01](./A-144-01-distribution-packaging.md): DIST-1 (adapter ships no enforced guards), DIST-2 (`ut-tdd` not on consumer PATH), DIST-3 (blanket `docs/governance/` ALLOW leaks dogfood docs), DIST-4 (workflow main-fixed + unconditional Bun, GPT-5-verified), DIST-5 (HELIX wording, parked [PLAN-L7-191](../../docs/plans/PLAN-L7-191-distribution-legacy-wording-erasure.md)). Runtime-asset projection completeness tracked in [PLAN-L7-190](../../docs/plans/PLAN-L7-190-distribution-runtime-asset-projection.md).
+The setup/packaging *mechanism* is mature and safety-first; the **delivery boundary is partial by design** (apply gated on PO). The real gaps are portability/curation, not mechanism — see audit [A-144-01](./A-144-01-distribution-packaging.md): DIST-1 (adapter ships no enforced guards), DIST-2 (`ut-tdd` not on consumer PATH), DIST-3 (blanket `docs/governance/` ALLOW leaks dogfood docs), DIST-4 (workflow main-fixed + unconditional Bun, GPT-5-verified), DIST-5 (HELIX wording, parked [PLAN-L7-191](../../docs/plans/PLAN-L7-191-distribution-helix-wording-erasure.md)). Runtime-asset projection completeness tracked in [PLAN-L7-190](../../docs/plans/PLAN-L7-190-distribution-runtime-asset-projection.md).

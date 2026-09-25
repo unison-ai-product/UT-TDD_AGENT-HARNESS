@@ -1,11 +1,8 @@
 # A-144-01 - Distribution & packaging
 
-訂正注記 (2026-09-25, Issue #689): 本文中の参照パスを旧 slug から中立化した。名称の
-中立化のみで、記録内容の意味は変更していない。
-
 - **index**: [A-144 judge audit index](./A-144-judge-audit-index.md)
 - **related units**: [02 runtime-config & security](./A-144-02-runtime-config-security.md) (adapter guard wiring), [04 db registration](./A-144-04-db-registration-projection.md)
-- **related PLANs**: [PLAN-L7-190](../../docs/plans/PLAN-L7-190-distribution-runtime-asset-projection.md) (runtime asset projection), [PLAN-L7-191](../../docs/plans/PLAN-L7-191-distribution-legacy-wording-erasure.md) (HELIX scrub), [PLAN-L7-157](../../docs/plans/PLAN-L7-157-distribution-clean-pull.md) (clean pull)
+- **related PLANs**: [PLAN-L7-190](../../docs/plans/PLAN-L7-190-distribution-runtime-asset-projection.md) (runtime asset projection), [PLAN-L7-191](../../docs/plans/PLAN-L7-191-distribution-helix-wording-erasure.md) (HELIX scrub), [PLAN-L7-157](../../docs/plans/PLAN-L7-157-distribution-clean-pull.md) (clean pull)
 - **memory**: [[project_harness_distribution_public_private_boundary]]
 
 ## DIST-1 [HIGH] consumer adapter ships NO enforced guards
@@ -46,4 +43,4 @@ Adapters wire hooks to bare `ut-tdd session start` etc. `package.json` `bin.ut-t
 
 ## DIST-5 [LOW / parked] HELIX wording in distribution surface
 
-6 distribution-ALLOW docs still mention HELIX (ADR-001/005, governance/README, extraction-plan, runtime-parity audit, workflow-contracts test). Current state is reference-only-correct (not wrong, just present), so v1 ships safely as-is; parked as [PLAN-L7-191](../../docs/plans/PLAN-L7-191-distribution-legacy-wording-erasure.md). Pull forward only if zero-association at v1 is required.
+6 distribution-ALLOW docs still mention HELIX (ADR-001/005, governance/README, extraction-plan, runtime-parity audit, workflow-contracts test). Current state is reference-only-correct (not wrong, just present), so v1 ships safely as-is; parked as [PLAN-L7-191](../../docs/plans/PLAN-L7-191-distribution-helix-wording-erasure.md). Pull forward only if zero-association at v1 is required.

@@ -152,8 +152,8 @@ active-plan は `.ut-tdd/state/current-plan` marker (手動 `ut-tdd plan use` �
 ## 4. 残差 / スコープ外
 
 - 非 handover の tracked doc 7 箇所の `C:\Users\<name>` は **意図的**: lint の禁止残渣パターン
-  例示 (architecture.md / PLAN-L4-13 / PLAN-RECOVERY-01 / legacy-porting-map) と migration
-  provenance (legacy-source-inventory / v2-import-ledger)。doctor-green = ルール上許容で生成器
+  例示 (architecture.md / PLAN-L4-13 / PLAN-RECOVERY-01 / helix-porting-map) と migration
+  provenance (helix-source-inventory / v2-import-ledger)。doctor-green = ルール上許容で生成器
   漏洩と別性質。lint パターン doc の改変は契約 desync リスクゆえ据え置き。
 - `src/runtime/provider-handover.ts` の input.files も同じ非 relativize gap (検証が指摘)。
   provider-handover.v1 JSON 面は本 markdown defect と別経路ゆえスコープ外、follow-up 候補。

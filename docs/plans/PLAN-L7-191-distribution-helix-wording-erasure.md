@@ -1,5 +1,5 @@
 ---
-plan_id: PLAN-L7-191-distribution-legacy-wording-erasure
+plan_id: PLAN-L7-191-distribution-helix-wording-erasure
 title: "PLAN-L7-191 (impl): clean distribution wording and dogfood governance curation"
 kind: impl
 layer: L7
@@ -17,7 +17,7 @@ agent_slots:
   - role: tl
     slot_label: "TL - verify clean artifact has no legacy runtime name residue and dogfood audit docs stay excluded"
 generates:
-  - artifact_path: docs/plans/PLAN-L7-191-distribution-legacy-wording-erasure.md
+  - artifact_path: docs/plans/PLAN-L7-191-distribution-helix-wording-erasure.md
     artifact_type: markdown_doc
   - artifact_path: src/setup/index.ts
     artifact_type: source_module
@@ -118,11 +118,6 @@ review_evidence:
 ---
 
 # PLAN-L7-191: clean distribution wording and dogfood governance curation
-
-## 訂正注記 (2026-09-25, Issue #689)
-
-この plan_id は #689 のファイル名中立化の一環で、旧 slug から改名した。改名は名称の
-中立化のみであり、本 PLAN の意味・スコープ・受入条件は変更していない。
 
 ## Scope
 

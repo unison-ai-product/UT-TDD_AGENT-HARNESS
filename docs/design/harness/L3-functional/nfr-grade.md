@@ -116,7 +116,7 @@ updated: 2026-05-28
 
 | NFR-ID | 要件 | IPA Lv | 受入閾値 | 測定方法 | pass 条件 |
 |--------|------|--------|---------|---------|----------|
-| **(移行)** | legacy source → UT-TDD 移行計画 | Lv2 | `docs/migration/legacy-to-ut-tdd-cutover-strategy.md` 全 wave 完了 | cutover-strategy progress | Phase A G14 = 全 wave 完了 |
+| **(移行)** | legacy source → UT-TDD 移行計画 | Lv2 | `docs/migration/helix-to-ut-tdd-cutover-strategy.md` 全 wave 完了 | cutover-strategy progress | Phase A G14 = 全 wave 完了 |
 | **(Phase A→B)** | Phase A → Phase B 移行 | Lv2 | §6.2 BR-21 着手条件 AND 達成 | business-detail §6.2 | A-44 ledger 整合 |
 
 #### AC-NFR-MIGRATION-01 (正常系)

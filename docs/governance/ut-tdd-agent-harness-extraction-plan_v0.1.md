@@ -1,6 +1,6 @@
 # UT-TDD Agent Harness 切り出し計画 v0.1
 
-> **ADR-001 連動 (2026-05-27、一部 superseded)**: 実装方針は **「HELIX は設計概念のみ取り込み + TypeScript で全面再実装」** に更新された。本書 §初期パッケージ範囲〜§切り出し順の **旧 Python code-port 前提、および `legacy-porting-map.md` / `PLAN-001..004` の code-port 計画は superseded**。HELIX snapshot は **能力インベントリ / 再設計思想の参考**としてのみ用い、コードは port せず TS で再実装する。OS ネイティブ化・`.ut-tdd/` state・mode 検出・docs 主語差し替え等の **方針 (§基本方針 / §合流の考え方 / §受入条件) は引き続き有効**。正本構想/要件は `concept_v3.1` / `requirements_v1.2`、実装言語は ADR-001 を参照。
+> **ADR-001 連動 (2026-05-27、一部 superseded)**: 実装方針は **「HELIX は設計概念のみ取り込み + TypeScript で全面再実装」** に更新された。本書 §初期パッケージ範囲〜§切り出し順の **旧 Python code-port 前提、および `helix-porting-map.md` / `PLAN-001..004` の code-port 計画は superseded**。HELIX snapshot は **能力インベントリ / 再設計思想の参考**としてのみ用い、コードは port せず TS で再実装する。OS ネイティブ化・`.ut-tdd/` state・mode 検出・docs 主語差し替え等の **方針 (§基本方針 / §合流の考え方 / §受入条件) は引き続き有効**。正本構想/要件は `concept_v3.1` / `requirements_v1.2`、実装言語は ADR-001 を参照。
 
 ## 目的
 
@@ -69,7 +69,7 @@ TS/Node 再実装時の機能参照は以下を優先する。
 - Claude hook / agent templates
 - GitHub workflow / hook snippets の再実装
 
-詳細な段階再実装順は `docs/migration/legacy-source-inventory.md` の High-impact Reuse Backlog、実行単位の能力参照は `docs/migration/legacy-porting-map.md` を参照する。同 map は ADR-001 により code-port 計画としては superseded であり、TS 再実装時の機能インベントリとしてのみ使う。
+詳細な段階再実装順は `docs/migration/helix-source-inventory.md` の High-impact Reuse Backlog、実行単位の能力参照は `docs/migration/helix-porting-map.md` を参照する。同 map は ADR-001 により code-port 計画としては superseded であり、TS 再実装時の機能インベントリとしてのみ使う。
 
 ## 切り出し順
 
@@ -110,5 +110,5 @@ TS/Node 再実装時の機能参照は以下を優先する。
 
 ## 関連棚卸し
 
-- `docs/migration/legacy-source-inventory.md`
-- `docs/migration/legacy-porting-map.md`
+- `docs/migration/helix-source-inventory.md`
+- `docs/migration/helix-porting-map.md`

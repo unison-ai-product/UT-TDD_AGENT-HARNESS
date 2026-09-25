@@ -65,7 +65,7 @@ harness implementation language.
 
 `docs/archive/` is not canonical; it is historical material only. The HELIX
 vendor snapshot has been removed now that the fork is complete (see
-`docs/migration/legacy-fork-completion-plan.md` §11).
+`docs/migration/helix-fork-completion-plan.md` §11).
 
 ## Session Start
 

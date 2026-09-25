@@ -32,7 +32,7 @@ dependencies:
     - docs/migration/internal-asset-inventory.md
   references:
     - docs/plans/PLAN-RECOVERY-01-internal-asset-recovery.md
-    - docs/migration/legacy-porting-map.md
+    - docs/migration/helix-porting-map.md
     - docs/adr/ADR-001-ut-tdd-harness-redesign-and-language.md
     - docs/governance/recovery-workflow.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md

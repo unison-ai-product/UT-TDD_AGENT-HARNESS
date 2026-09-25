@@ -1,8 +1,5 @@
 # A-144 - Independent Judge Audit (index / hub)
 
-訂正注記 (2026-09-25, Issue #689): 本文中の参照パスを旧 slug から中立化した。名称の
-中立化のみで、記録内容の意味は変更していない。
-
 - **date**: 2026-06-29
 - **role**: Claude = independent judge (hybrid creation/judgement separation). Codex = creator of the L10-L14 close + distribution work (see [A-143](./A-143-l14-close-system-foundation-audit.md)).
 - **basis**: committed `HEAD` (foreign uncommitted scratch in `src/setup`/`cli.ts` is NOT measured; where Codex is actively editing a finding, it is marked `creator-in-flight`).
@@ -21,7 +18,7 @@
 | DIST-2 | HIGH | distribution | `ut-tdd` hooks wired bare, install never puts it on PATH/global-link → consumer hooks likely unfire | open | [01](./A-144-01-distribution-packaging.md) |
 | DIST-3 | MED-HIGH | distribution | blanket `docs/governance/` ALLOW leaks dogfood audit/migration docs into the package | open | [01](./A-144-01-distribution-packaging.md) |
 | DIST-4 | MED | distribution | generated `harness-check.yml` is main-fixed + unconditional `bun install/typecheck/test` (GPT-5 #3/#4) | creator-in-flight | [01](./A-144-01-distribution-packaging.md) |
-| DIST-5 | LOW(parked) | distribution | HELIX wording remains in 6 distribution-ALLOW docs ([PLAN-L7-191](../../docs/plans/PLAN-L7-191-distribution-legacy-wording-erasure.md)) | parked | [01](./A-144-01-distribution-packaging.md) |
+| DIST-5 | LOW(parked) | distribution | HELIX wording remains in 6 distribution-ALLOW docs ([PLAN-L7-191](../../docs/plans/PLAN-L7-191-distribution-helix-wording-erasure.md)) | parked | [01](./A-144-01-distribution-packaging.md) |
 | SEC-1 | HIGH | setup/security | `setup --team` with 0 team flags passes → CODEOWNERS `{{TL_TEAM}}` placeholders remain (GPT-5 #1) | creator-in-flight | [02](./A-144-02-runtime-config-security.md) |
 | SEC-2 | HIGH/Security | setup/security | `modelOverrideSchema` is prefix-only + `.cmd` launch uses `shell:true` → command-injection surface (GPT-5 #2) | open (not touched) | [02](./A-144-02-runtime-config-security.md) |
 | SEC-3 | MED | setup/security | `max_parallel` has no `.max()` cap → mass provider launch risk (GPT-5 #5) | open (not touched) | [02](./A-144-02-runtime-config-security.md) |

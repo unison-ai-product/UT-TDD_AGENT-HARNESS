@@ -157,7 +157,7 @@ B-1 で NFR-01〜08 を起票済。PO declared 2026-05-28 で NFR-11〜15 (GHA a
 | §1 可用性 | IPA: 継続性 / 耐障害性 | NFR-01 cross-platform / NFR-06 fail-close | B-1 現状確認 + NFR-11〜15 の配置整理後 |
 | §2 性能・拡張性 | IPA: 性能効率性 / 移植性 | NFR-02 更新性 / NFR-15 server-optional / NFR-12 machine×AI | NFR-15 (server-optional) + NFR-12 (2 層) を §2 に追記 |
 | §3 運用・保守性 | IPA: 保守性 / 信頼性 | NFR-07 MVP なし / NFR-08 implementation_status / NFR-13 dev-local+CI / NFR-14 human-as-residue | **carry 宣言**: 排泄系契約 (doc-reviewer 必須 / 4 artifact trace / NFR-08) は L3 以降 doc 規約 forward。NFR-13/14 を §3 に追記 |
-| §4 移行性 | IPA: 移植性 | HELIX → UT-TDD 移行計画 / Phase A→B | 移行戦略 (`docs/migration/legacy-to-ut-tdd-cutover-strategy.md`) 参照 + Phase B 拡張計画 carry |
+| §4 移行性 | IPA: 移植性 | HELIX → UT-TDD 移行計画 / Phase A→B | 移行戦略 (`docs/migration/helix-to-ut-tdd-cutover-strategy.md`) 参照 + Phase B 拡張計画 carry |
 | §5 セキュリティ | IPA: セキュリティ | NFR-06 fail-close (ガード側) / NFR-11 役割分離 / NFR-09 rule parity | NFR-11 (GHA 役割分離) を §5 に追記 |
 | §6 システム環境 | IPA: 移植性 | NFR-01 cross-platform (Windows/macOS/Linux) / NFR-04 言語非依存 / NFR-05 GitHub 正本 | B-1 現状を IPA 観点で整理 |
 | §7 IPA × ISO 25010 二軸タグ表 | — | Step 2/3 結果 | NFR-ID × IPA 大項目 × ISO 25010 特性 の 3 列 table (15 行 + 除外特性説明) |

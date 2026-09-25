@@ -89,7 +89,7 @@ Checked absent after copy:
 
 The snapshot contains enough reusable behavior and design ideas to guide a large part of the UT-TDD harness rebuild. Do not treat these as Python code-port waves; use them as TypeScript/Bun reimplementation waves.
 
-The execution-level mapping is maintained in `docs/migration/legacy-porting-map.md`.
+The execution-level mapping is maintained in `docs/migration/helix-porting-map.md`.
 
 | Wave | Source assets | UT-TDD feature | Reuse class | Notes |
 |---|---|---|---|---|
