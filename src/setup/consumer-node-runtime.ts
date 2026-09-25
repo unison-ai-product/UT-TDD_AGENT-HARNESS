@@ -158,21 +158,25 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 /** Stable JSON bytes are the only bytes used for identity digests. */
-function canonical(value: unknown): string {
+export function canonicalJson(value: unknown): string {
   if (value === null || typeof value !== "object") return JSON.stringify(value);
-  if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`;
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
   return `{${Object.keys(value as Record<string, unknown>)
     .sort()
-    .map((key) => `${JSON.stringify(key)}:${canonical((value as Record<string, unknown>)[key])}`)
+    .map(
+      (key) => `${JSON.stringify(key)}:${canonicalJson((value as Record<string, unknown>)[key])}`,
+    )
     .join(",")}}`;
 }
+
+const canonical = canonicalJson;
 
 export function digestConsumerRuntimeBytes(bytes: Uint8Array): string {
   return `sha256:${createHash("sha256").update(bytes).digest("hex")}`;
 }
 
 export function digestConsumerRuntimeValue(value: unknown): string {
-  return digestConsumerRuntimeBytes(Buffer.from(canonical(value), "utf8"));
+  return digestConsumerRuntimeBytes(Buffer.from(canonicalJson(value), "utf8"));
 }
 
 /**
@@ -187,7 +191,7 @@ function digestConsumerRuntimeGenerationIdentity(identity: ConsumerNodeRuntimeId
 }
 
 function jsonBytes(value: unknown): Uint8Array {
-  return Buffer.from(`${canonical(value)}\n`, "utf8");
+  return Buffer.from(`${canonicalJson(value)}\n`, "utf8");
 }
 
 /**
@@ -348,7 +352,7 @@ function contained(parent: string, child: string): boolean {
   return rel !== "" && rel !== ".." && !rel.startsWith(`..${sep}`) && !isAbsolute(rel);
 }
 
-const SAFE_PRODUCT_ID = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
+export const SAFE_PRODUCT_ID = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
 
 function validIdentity(value: unknown): value is ConsumerNodeRuntimeIdentity {
   if (!isRecord(value)) return false;

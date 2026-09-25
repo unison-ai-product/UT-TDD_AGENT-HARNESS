@@ -1,17 +1,22 @@
-import { type SpawnSyncReturns, spawnSync } from "node:child_process";
+import { execFileSync, type SpawnSyncReturns, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
+  chmodSync,
   cpSync,
   existsSync,
+  lstatSync,
   mkdtempSync,
   readdirSync,
   readFileSync,
+  realpathSync,
+  renameSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { tmpdir } from "node:os";
-import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { homedir } from "node:os";
+import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import type { Command } from "commander";
+import { parse as parseYaml } from "yaml";
 import { buildReleasePublicationPlan } from "../github/ops-guard.ts";
 import {
   analyzeSecretScan,
@@ -20,10 +25,19 @@ import {
 } from "../lint/secret-scan.ts";
 import { detectMode } from "../runtime/detect.ts";
 import {
+  buildNodeGeneration,
+  REVIEWED_NODE_VERSION,
+  REVIEWED_NPM_VERSION,
+} from "../runtime/node-bootstrap.ts";
+import { parsePublicationManifest, resolveReleaseChannel } from "../schema/release-manifest.ts";
+import {
   buildCleanDistributionPlan,
   buildConsumerReadinessPlan,
+  buildConsumerRuntimeRelease,
   buildPackSyncPlan,
   type ConsumerNodeRuntimeReadinessInput,
+  type ConsumerRuntimeReleaseAdmissionInput,
+  canonicalJson,
   cleanDistributionSourcePath,
   DEFAULT_PACK_REPO,
   gitAddPathspecCommands,
@@ -33,7 +47,16 @@ import {
   runPackAuthoringSmoke,
   type TrackedGitBlob,
   transformCleanDistributionArtifact,
+  validateConsumerRuntimeRelease,
 } from "../setup/index.ts";
+import type { ReleaseAggregateFinalTree } from "../setup/release-aggregate-admission.ts";
+import { admitReleaseAggregate } from "../setup/release-aggregate-admission.ts";
+import {
+  createLocalGitObjectReader,
+  resolveReleaseArtifacts,
+} from "../setup/release-artifact-resolver.ts";
+import { attestReleaseChannel } from "../setup/release-channel-adapter.ts";
+import { materializeReleaseArtifacts } from "../setup/release-materializer.ts";
 import { ensureDir } from "../shared/fs.ts";
 
 function gitHead(): string | null {
@@ -66,6 +89,23 @@ function collectFilesystemCandidatePaths(repoRoot: string): string[] {
   };
   walk(repoRoot);
   return out.sort();
+}
+
+function removePackageScratchTree(path: string): void {
+  if (!existsSync(path)) return;
+  // buildNodeGeneration seals published generation directories to 0555. On
+  // POSIX, recursive removal needs write permission on each parent directory;
+  // restore owner permissions inside this disposable, producer-owned scratch
+  // tree before removing it. lstatSync avoids following any symlink entries.
+  const makeDirectoriesRemovable = (directory: string): void => {
+    for (const entry of readdirSync(directory)) {
+      const child = join(directory, entry);
+      if (lstatSync(child).isDirectory()) makeDirectoriesRemovable(child);
+    }
+    chmodSync(directory, 0o700);
+  };
+  makeDirectoriesRemovable(path);
+  rmSync(path, { recursive: true, force: true });
 }
 
 /**
@@ -249,6 +289,445 @@ function runDistributionSecretScan(input: {
     }
   }
   return analyzeSecretScan(artifacts);
+}
+
+function hexDigest(bytes: Uint8Array): string {
+  return createHash("sha256").update(bytes).digest("hex");
+}
+
+function resolveTagRevision(repoRoot: string, tag: string): string {
+  if (!/^[A-Za-z0-9._/-]+$/.test(tag) || tag.includes(".."))
+    throw new Error("distribution package tag is invalid");
+  const result = spawnSync(
+    "git",
+    ["-C", repoRoot, "rev-parse", "--verify", `refs/tags/${tag}^{commit}`],
+    {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    },
+  );
+  const revision = result.status === 0 ? result.stdout.trim() : "";
+  if (!/^[a-f0-9]{40}$/.test(revision)) throw new Error(`tag source revision unavailable: ${tag}`);
+  return revision;
+}
+
+export type ConsumerRuntimeReleaseProducerErrorCode =
+  | "consumer_runtime_release_manifest_unavailable"
+  | "consumer_runtime_release_manifest_invalid"
+  | "consumer_runtime_release_channel_unavailable"
+  | "consumer_runtime_release_artifact_source_not_first_parent_ancestor"
+  | "consumer_runtime_release_diff_outside_release";
+
+export class ConsumerRuntimeReleaseProducerError extends Error {
+  readonly code: ConsumerRuntimeReleaseProducerErrorCode;
+
+  constructor(code: ConsumerRuntimeReleaseProducerErrorCode, detail?: string) {
+    super(`${code}${detail ? `:${detail}` : ""}`);
+    this.name = "ConsumerRuntimeReleaseProducerError";
+    this.code = code;
+  }
+}
+
+function gitOutput(repoRoot: string, args: readonly string[]): string {
+  const result = spawnSync("git", ["-C", repoRoot, ...args], {
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  if (result.status !== 0) throw new Error(`git command failed: ${args.join(" ")}`);
+  return result.stdout;
+}
+
+export interface ConsumerRuntimeReleaseSourceBinding {
+  readonly releaseRevision: string;
+  readonly artifactSourceRevision: string;
+  readonly channel: "canary" | "stable";
+}
+
+export function resolveConsumerRuntimeReleaseSourceBinding(
+  repoRoot: string,
+  tag: string,
+): ConsumerRuntimeReleaseSourceBinding {
+  const releaseRevision = resolveTagRevision(repoRoot, tag);
+  let rawManifest: unknown;
+  try {
+    rawManifest = parseYaml(
+      readGitBlob(repoRoot, releaseRevision, "release/manifest.yaml").toString("utf8"),
+    );
+  } catch {
+    throw new ConsumerRuntimeReleaseProducerError("consumer_runtime_release_manifest_unavailable");
+  }
+  const parsedManifest = parsePublicationManifest(rawManifest);
+  if (!parsedManifest.ok)
+    throw new ConsumerRuntimeReleaseProducerError(
+      "consumer_runtime_release_manifest_invalid",
+      parsedManifest.error,
+    );
+  const channel = tag.includes("-canary.") ? "canary" : "stable";
+  const selected = resolveReleaseChannel(parsedManifest.value, channel);
+  if (!selected.ok || !("artifacts" in selected.release))
+    throw new ConsumerRuntimeReleaseProducerError(
+      "consumer_runtime_release_channel_unavailable",
+      channel,
+    );
+  const artifactSourceRevision = selected.release.artifactSourceCommit;
+  let firstParent: string;
+  try {
+    const parents = gitOutput(repoRoot, ["rev-list", "--parents", "-n", "1", releaseRevision])
+      .trim()
+      .split(/\s+/);
+    firstParent = parents[1] ?? "";
+    if (!/^[a-f0-9]{40}$/.test(firstParent)) throw new Error("first parent unavailable");
+  } catch {
+    throw new ConsumerRuntimeReleaseProducerError(
+      "consumer_runtime_release_artifact_source_not_first_parent_ancestor",
+    );
+  }
+  const firstParentAncestors = new Set(
+    gitOutput(repoRoot, ["rev-list", "--first-parent", firstParent])
+      .split(/\r?\n/)
+      .map((value) => value.trim())
+      .filter(Boolean),
+  );
+  if (!firstParentAncestors.has(artifactSourceRevision))
+    throw new ConsumerRuntimeReleaseProducerError(
+      "consumer_runtime_release_artifact_source_not_first_parent_ancestor",
+    );
+  const changedPaths = gitOutput(repoRoot, [
+    "diff",
+    "--name-only",
+    "-z",
+    artifactSourceRevision,
+    releaseRevision,
+  ])
+    .split("\0")
+    .filter(Boolean);
+  if (changedPaths.some((path) => !path.startsWith("release/")))
+    throw new ConsumerRuntimeReleaseProducerError(
+      "consumer_runtime_release_diff_outside_release",
+      changedPaths.filter((path) => !path.startsWith("release/")).join(","),
+    );
+  return { releaseRevision, artifactSourceRevision, channel };
+}
+
+function createTaggedSourceSnapshot(repoRoot: string, revision: string, root: string): string {
+  const sourceRoot = join(root, "source");
+  const clone = spawnSync("git", ["clone", "--shared", "--no-checkout", repoRoot, sourceRoot], {
+    cwd: repoRoot,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  if (clone.status !== 0) throw new Error(`tag source clone failed: ${clone.stderr ?? ""}`);
+  const checkout = spawnSync("git", ["checkout", "--detach", revision], {
+    cwd: sourceRoot,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  if (checkout.status !== 0)
+    throw new Error(`tag source checkout failed: ${checkout.stderr ?? ""}`);
+  return sourceRoot;
+}
+
+function installTaggedDependencies(sourceRoot: string): void {
+  const npmArgs = ["ci", "--no-audit", "--no-fund"];
+  const install =
+    process.platform === "win32"
+      ? spawnSync(
+          join(process.env.SystemRoot ?? "C:\\Windows", "System32", "cmd.exe"),
+          ["/d", "/c", "npm", ...npmArgs],
+          {
+            cwd: sourceRoot,
+            encoding: "utf8",
+            stdio: ["ignore", "pipe", "pipe"],
+            windowsHide: true,
+          },
+        )
+      : spawnSync("npm", npmArgs, {
+          cwd: sourceRoot,
+          encoding: "utf8",
+          stdio: ["ignore", "pipe", "pipe"],
+        });
+  if (install.status !== 0)
+    throw new Error(`tag source npm ci failed: ${install.stderr ?? install.stdout ?? ""}`);
+}
+
+function canonicalPathForContainment(path: string): string {
+  const resolved = resolve(path);
+  const missingSegments: string[] = [];
+  let existing = resolved;
+  while (!existsSync(existing)) {
+    const parent = dirname(existing);
+    if (parent === existing) break;
+    missingSegments.unshift(relative(parent, existing));
+    existing = parent;
+  }
+  let canonical = existsSync(existing) ? realpathSync.native(existing) : resolved;
+  for (const segment of missingSegments) canonical = join(canonical, segment);
+  const normalized = canonical.replaceAll("\\", "/");
+  return process.platform === "win32" ? normalized.toLowerCase() : normalized;
+}
+
+function pathWithin(parent: string, child: string): boolean {
+  const rel = relative(canonicalPathForContainment(parent), canonicalPathForContainment(child));
+  return rel === "" || (rel !== ".." && !rel.startsWith(`..${sep}`) && !isAbsolute(rel));
+}
+
+export function assertProducerPathsOutsideHome(input: {
+  readonly repoRoot: string;
+  readonly receipt: {
+    readonly node: { readonly path: string };
+    readonly npm: { readonly cli_path: string };
+  };
+  readonly homeDirectory: string;
+}): void {
+  if (pathWithin(input.homeDirectory, input.repoRoot))
+    throw new Error("consumer runtime producer workdir is user-home scoped");
+  for (const toolPath of [input.receipt.node.path, input.receipt.npm.cli_path]) {
+    if (pathWithin(input.homeDirectory, toolPath))
+      throw new Error("consumer runtime toolchain is user-home scoped");
+  }
+}
+
+function readGitBlob(repoRoot: string, revision: string, path: string): Buffer {
+  try {
+    return execFileSync("git", ["-C", repoRoot, "show", `${revision}:${path}`], {
+      encoding: null,
+      stdio: ["ignore", "pipe", "ignore"],
+    });
+  } catch {
+    throw new Error(`consumer runtime source blob unavailable: ${path}`);
+  }
+}
+
+async function buildConsumerRuntimeAdmissionInput(input: {
+  readonly repoRoot: string;
+  readonly tag: string;
+  readonly releaseRevision: string;
+  readonly sourceRevision: string;
+}): Promise<{
+  readonly value: ConsumerRuntimeReleaseAdmissionInput;
+  readonly artifactDigest: string;
+  readonly materializerVersion: string;
+}> {
+  const controlManifestBytes = readGitBlob(
+    input.repoRoot,
+    input.releaseRevision,
+    "release/manifest.yaml",
+  );
+  let rawManifest: unknown;
+  try {
+    rawManifest = parseYaml(controlManifestBytes.toString("utf8"));
+  } catch {
+    throw new Error("consumer runtime release manifest yaml is invalid");
+  }
+  const parsedManifest = parsePublicationManifest(rawManifest);
+  if (!parsedManifest.ok) throw new Error(`consumer runtime manifest ${parsedManifest.error}`);
+  const channel = input.tag.includes("-canary.") ? "canary" : "stable";
+  const selected = resolveReleaseChannel(parsedManifest.value, channel);
+  if (!selected.ok) throw new Error(`consumer runtime release channel unavailable: ${channel}`);
+  const release = parsedManifest.value.releases[parsedManifest.value.channels[channel]];
+  if (!release || !("artifacts" in release))
+    throw new Error(`consumer runtime release channel unavailable: ${channel}`);
+  if (release.artifactSourceCommit !== input.sourceRevision)
+    throw new Error("consumer runtime release source revision mismatch");
+  const finalTree: ReleaseAggregateFinalTree = {
+    manifestEntries: [{ path: "release/manifest.yaml", value: rawManifest }],
+    sourcePaths: release.artifacts.map((artifact) => artifact.sourcePath),
+    cleanPackAllowlist: [
+      "release/manifest.yaml",
+      ...release.artifacts.map((artifact) => artifact.destinationPath),
+    ],
+    channelMappings: release.artifacts.map((artifact) => ({
+      channel,
+      releaseId: release.releaseId,
+      sourceRevision: release.artifactSourceCommit,
+      sourcePath: artifact.sourcePath,
+      destinationPath: artifact.destinationPath,
+    })),
+  };
+  const resolverDependencies = {
+    git: createLocalGitObjectReader(),
+    materialize: materializeReleaseArtifacts,
+  };
+  const attestation = await attestReleaseChannel(
+    { repository: input.repoRoot, manifest: parsedManifest.value, channel },
+    {
+      resolveArtifacts: (request) => resolveReleaseArtifacts(request, resolverDependencies),
+    },
+  );
+  if (attestation.status !== "attested")
+    throw new Error(`consumer runtime attestation ${attestation.status}`);
+  const aggregate = await admitReleaseAggregate(
+    { repository: DEFAULT_PACK_REPO, channel, finalTree },
+    { attestChannel: async () => attestation },
+  );
+  if (!aggregate.ok) throw new Error(`consumer runtime aggregate ${aggregate.error}`);
+  return {
+    artifactDigest: aggregate.plan.actualDigest,
+    materializerVersion: release.materializerVersion,
+    value: {
+      aggregate_input: {
+        repository: DEFAULT_PACK_REPO,
+        channel,
+        final_tree: finalTree,
+        attestation: {
+          ...attestation,
+          entries: attestation.entries.map((item) => ({
+            path: item.path,
+            mode: item.mode,
+            content_base64: Buffer.from(item.content).toString("base64"),
+          })),
+        },
+      },
+      control_manifest_base64: controlManifestBytes.toString("base64"),
+    },
+  };
+}
+
+export async function packageConsumerRuntimeRelease(input: {
+  readonly repoRoot: string;
+  readonly tag: string;
+  readonly outDir: string;
+  readonly homeDirectory?: string;
+  readonly installDependencies?: (sourceRoot: string) => void;
+  readonly buildGeneration?: typeof buildNodeGeneration;
+  readonly moveStagedAssets?: (source: string, destination: string) => void;
+}): Promise<{
+  readonly ok: true;
+  readonly tag: string;
+  readonly sourceRevision: string;
+  readonly artifacts: Record<string, string>;
+  readonly assetDigests: Record<string, string>;
+  readonly consumerAnchorDigest: string;
+}> {
+  const sourceBinding = resolveConsumerRuntimeReleaseSourceBinding(input.repoRoot, input.tag);
+  const sourceRevision = sourceBinding.artifactSourceRevision;
+  const homeDirectory = input.homeDirectory ?? homedir();
+  if (pathWithin(homeDirectory, input.repoRoot))
+    throw new Error("consumer runtime producer workdir is user-home scoped");
+  if (existsSync(input.outDir) && readdirSync(input.outDir).length > 0)
+    throw new Error("distribution package output directory is not empty");
+  const scratch = mkdtempSync(
+    join(dirname(resolve(input.repoRoot)), ".ut-tdd-consumer-runtime-package-"),
+  );
+  const assetsStage = join(scratch, "assets");
+  const cleanStage = join(scratch, "clean");
+  const generationRoot = join(scratch, "generation");
+  ensureDir(assetsStage, { recursive: true });
+  ensureDir(cleanStage, { recursive: true });
+  try {
+    const sourceRoot = createTaggedSourceSnapshot(input.repoRoot, sourceRevision, scratch);
+    const sourcePaths = collectDistributionCandidatePaths(sourceRoot);
+    const exportPlan = buildCleanDistributionPlan({ paths: sourcePaths, sourceTag: input.tag });
+    const secretScan = runDistributionSecretScan({
+      repoRoot: sourceRoot,
+      sourcePaths,
+      artifactPaths: exportPlan.artifactPaths,
+    });
+    if (!exportPlan.ok || !secretScan.ok)
+      throw new Error(
+        `distribution package source preflight failed: ${secretScanMessages(secretScan)[0] ?? "plan"}`,
+      );
+    for (const rel of exportPlan.artifactPaths) {
+      const sourceRel = cleanDistributionSourcePath(rel, sourcePaths);
+      copyCleanDistributionArtifact({
+        sourceRoot,
+        sourcePath: sourceRel,
+        targetRoot: cleanStage,
+        artifactPath: rel,
+      });
+    }
+    const names = releaseArtifactFileNames(input.tag);
+    const tarballPath = join(assetsStage, names.tarball);
+    const tar = spawnSync("tar", ["-czf", names.tarball, "-C", cleanStage, "."], {
+      cwd: assetsStage,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    if (tar.status !== 0) throw new Error(`distribution package tar failed: ${tar.stderr ?? ""}`);
+    const tarballBytes = readFileSync(tarballPath);
+    writeFileSync(
+      join(assetsStage, names.checksum),
+      `${hexDigest(tarballBytes)}  ${names.tarball}\n`,
+      "utf8",
+    );
+
+    const packageJson = JSON.parse(readFileSync(join(sourceRoot, "package.json"), "utf8")) as {
+      name?: unknown;
+    };
+    if (typeof packageJson.name !== "string")
+      throw new Error("consumer runtime product_id is missing");
+    (input.installDependencies ?? installTaggedDependencies)(sourceRoot);
+    const generation = await (input.buildGeneration ?? buildNodeGeneration)({
+      repoRoot: sourceRoot,
+      outputRoot: generationRoot,
+      candidateRevision: sourceRevision,
+    });
+    if (
+      generation.receipt.node.version !== REVIEWED_NODE_VERSION ||
+      generation.receipt.npm.version !== REVIEWED_NPM_VERSION
+    )
+      throw new Error("consumer runtime reviewed Node toolchain mismatch");
+    assertProducerPathsOutsideHome({
+      repoRoot: input.repoRoot,
+      receipt: generation.receipt,
+      homeDirectory,
+    });
+    const compiledEsm = readFileSync(generation.compiledCliPath);
+    const receiptBytes = readFileSync(join(generation.generationPath, "receipt.json"));
+    const admission = await buildConsumerRuntimeAdmissionInput({
+      repoRoot: input.repoRoot,
+      tag: input.tag,
+      releaseRevision: sourceBinding.releaseRevision,
+      sourceRevision,
+    });
+    const runtime = buildConsumerRuntimeRelease({
+      tag: input.tag,
+      sourceRevision,
+      productId: packageJson.name,
+      generation: generation.receipt,
+      receiptBytes,
+      artifactDigest: admission.artifactDigest,
+      compiledEsmBytes: compiledEsm,
+      admissionInput: admission.value,
+      materializerVersion: admission.materializerVersion,
+    });
+    validateConsumerRuntimeRelease(runtime);
+    const runtimeBytes = Buffer.from(`${canonicalJson(runtime)}\n`, "utf8");
+    const consumerChecksumBytes = Buffer.from(
+      `${hexDigest(compiledEsm)}  ${names.compiledEsm}\n${hexDigest(runtimeBytes)}  ${names.consumerRuntime}\n`,
+      "utf8",
+    );
+    writeFileSync(join(assetsStage, names.compiledEsm), compiledEsm);
+    writeFileSync(join(assetsStage, names.consumerRuntime), runtimeBytes);
+    writeFileSync(join(assetsStage, names.consumerChecksum), consumerChecksumBytes);
+    const outputParent = dirname(resolve(input.outDir));
+    ensureDir(outputParent, { recursive: true });
+    if (existsSync(input.outDir)) rmSync(input.outDir, { recursive: true, force: true });
+    (input.moveStagedAssets ?? renameSync)(assetsStage, input.outDir);
+    const outputFiles = [
+      names.tarball,
+      names.checksum,
+      names.compiledEsm,
+      names.consumerRuntime,
+      names.consumerChecksum,
+    ];
+    const assetDigests = Object.fromEntries(
+      outputFiles.map((name) => [
+        name,
+        `sha256:${hexDigest(readFileSync(join(input.outDir, name)))}`,
+      ]),
+    );
+    return {
+      ok: true,
+      tag: input.tag,
+      sourceRevision,
+      artifacts: Object.fromEntries(outputFiles.map((name) => [name, join(input.outDir, name)])),
+      assetDigests,
+      consumerAnchorDigest: `sha256:${hexDigest(consumerChecksumBytes)}`,
+    };
+  } finally {
+    removePackageScratchTree(scratch);
+  }
 }
 
 /**
@@ -738,132 +1217,33 @@ export function registerDistributionCommands(program: Command): void {
 
   distribution
     .command("package")
-    .description("create a local clean tarball and sha256 checksum without publishing")
-    .option("--tag <tag>", "source/release tag", gitHead() ?? "unreleased")
-    .option("--clean-repo <name>", "clean distribution repository", DEFAULT_PACK_REPO)
+    .description("create the exact Pack Release asset set without publishing")
+    .requiredOption("--tag <tag>", "source/release tag")
     .option("--out <dir>", "output directory for local release artifacts", ".ut-tdd/release")
     .option("--json", "JSON output")
-    .action((opts: { tag?: string; cleanRepo?: string; out?: string; json?: boolean }) => {
+    .action(async (opts: { tag: string; out?: string; json?: boolean }) => {
       const repoRoot = process.cwd();
-      const exportPlan = buildCleanDistributionPlan({
-        paths: collectDistributionCandidatePaths(repoRoot),
-        sourceTag: opts.tag,
-        cleanRepo: opts.cleanRepo,
-      });
-      const sourcePaths = collectDistributionCandidatePaths(repoRoot);
-      const secretScan = runDistributionSecretScan({
-        repoRoot,
-        sourcePaths,
-        artifactPaths: exportPlan.artifactPaths,
-      });
       const outDir = opts.out
         ? isAbsolute(opts.out)
           ? opts.out
           : join(repoRoot, opts.out)
         : join(repoRoot, ".ut-tdd", "release");
-      const artifactNames = releaseArtifactFileNames(exportPlan.sourceTag);
-      const tarball = join(outDir, artifactNames.tarball);
-      const checksum = join(outDir, artifactNames.checksum);
-      const manifest = join(outDir, artifactNames.manifest);
-      const stage = mkdtempSync(join(tmpdir(), "ut-tdd-clean-package-"));
-      let tarResult: ReturnType<typeof spawnSync> | null = null;
       try {
-        if (exportPlan.ok && secretScan.ok) {
-          ensureDir(outDir, { recursive: true });
-          for (const rel of exportPlan.artifactPaths) {
-            const sourceRel = cleanDistributionSourcePath(rel, sourcePaths);
-            copyCleanDistributionArtifact({
-              sourceRoot: repoRoot,
-              sourcePath: sourceRel,
-              targetRoot: stage,
-              artifactPath: rel,
-            });
-          }
-          // -f はドライブレター (C:) を含む絶対パスだと GNU tar (Git Bash 同梱) がリモートホスト名と
-          // 解釈して "Cannot connect to C:" で必ず失敗する。cwd を outDir に固定し -f を相対 basename に
-          // することで bsdtar/GNU tar の両実装で動く (PLAN-L7-361)。-C の引数は remote 解釈されない。
-          tarResult = spawnSync("tar", ["-czf", basename(tarball), "-C", stage, "."], {
-            cwd: outDir,
-            encoding: "utf8",
-            stdio: ["ignore", "pipe", "pipe"],
-          });
-          if (tarResult.status === 0) {
-            const digest = createHash("sha256").update(readFileSync(tarball)).digest("hex");
-            writeFileSync(checksum, `${digest}  ${basename(tarball)}\n`, "utf8");
-            writeFileSync(
-              manifest,
-              `${JSON.stringify(
-                {
-                  ok: exportPlan.ok,
-                  sourceTag: exportPlan.sourceTag,
-                  cleanRepo: exportPlan.cleanRepo,
-                  tarball,
-                  checksum,
-                  artifactCount: exportPlan.artifactPaths.length,
-                  missingRequired: exportPlan.missingRequired,
-                  denylistViolations: exportPlan.denylistViolations,
-                },
-                null,
-                2,
-              )}\n`,
-              "utf8",
-            );
-          }
-        } else {
-          rmSync(tarball, { force: true });
-          rmSync(checksum, { force: true });
-          rmSync(manifest, { force: true });
+        const output = await packageConsumerRuntimeRelease({ repoRoot, tag: opts.tag, outDir });
+        if (opts.json) {
+          process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
+          return;
         }
-      } finally {
-        rmSync(stage, { recursive: true, force: true });
+        process.stdout.write(`distribution package: ok tag=${output.tag}\n`);
+        process.stdout.write(`  source-revision: ${output.sourceRevision}\n`);
+        for (const [name, digest] of Object.entries(output.assetDigests))
+          process.stdout.write(`  sha256: ${name} ${digest}\n`);
+        process.stdout.write(`  consumer-anchor: ${output.consumerAnchorDigest}\n`);
+      } catch (error) {
+        const output = { ok: false, error: String(error) };
+        if (opts.json) process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
+        else process.stdout.write(`distribution package: blocked ${output.error}\n`);
+        process.exitCode = 1;
       }
-      const ok =
-        exportPlan.ok &&
-        secretScan.ok &&
-        tarResult?.status === 0 &&
-        existsSync(tarball) &&
-        existsSync(checksum);
-      const output = {
-        ok,
-        export: exportPlan,
-        secretScan: {
-          ok: secretScan.ok,
-          checked: secretScan.checked,
-          violations: secretScan.violations,
-        },
-        artifacts: {
-          tarball,
-          checksum,
-          manifest,
-        },
-        tar: {
-          exitCode: tarResult?.status ?? null,
-          stderr: tarResult?.stderr ?? "",
-        },
-        actualPublishRequiresPoApproval: true,
-      };
-      if (opts.json) {
-        process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
-        process.exitCode = ok ? 0 : 1;
-        return;
-      }
-      process.stdout.write(
-        `distribution package: ${ok ? "ok" : "blocked"} tag=${exportPlan.sourceTag}\n`,
-      );
-      if (!ok && tarResult !== null && tarResult.status !== 0) {
-        const stderrHead = String(tarResult.stderr ?? "")
-          .split(/\r?\n/, 1)[0]
-          .trim();
-        process.stdout.write(
-          `  tar: error exit=${tarResult.status ?? "null"}${stderrHead ? ` (${stderrHead})` : ""} - artifacts not created\n`,
-        );
-      }
-      if (!secretScan.ok) {
-        process.stdout.write(`  ${secretScanMessages(secretScan)[0]}\n`);
-      }
-      process.stdout.write(`  tarball: ${tarball}\n`);
-      process.stdout.write(`  checksum: ${checksum}\n`);
-      process.stdout.write("  publish: requires PO approval\n");
-      process.exitCode = ok ? 0 : 1;
     });
 }

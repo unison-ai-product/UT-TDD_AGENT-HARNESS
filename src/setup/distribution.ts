@@ -94,14 +94,18 @@ export function releaseArtifactStem(sourceTag: string): string {
 export function releaseArtifactFileNames(sourceTag: string): {
   tarball: string;
   checksum: string;
-  manifest: string;
+  compiledEsm: string;
+  consumerRuntime: string;
+  consumerChecksum: string;
 } {
   const stem = releaseArtifactStem(sourceTag);
   const tarball = `${stem}.tar.gz`;
   return {
     tarball,
     checksum: `${tarball}.sha256`,
-    manifest: `${stem}.manifest.json`,
+    compiledEsm: `${stem}.ut-tdd.mjs`,
+    consumerRuntime: `${stem}.consumer-runtime.json`,
+    consumerChecksum: `${stem}.consumer.sha256`,
   };
 }
 
