@@ -15,7 +15,7 @@ plan: docs/plans/PLAN-<id>.md
 
 # DOC-L5-PHYSICAL-DATA: データベース設計書 / イベント・メッセージスキーマ設計書
 
-本テンプレートは `Vモデル設計ドキュメント_checked.zip` (PO 承認、issue #676) の該当 source document を PLAN-L7-676 §3.5.2 の変換規則で Markdown 化したものである。項目名・説明文は zip の日本語をそのまま使い、意味は書き換えていない。空欄・空表は空のまま (無内容の記入を機械生成しない)。
+本テンプレートは `Vモデル設計ドキュメント_checked.zip` (PO 承認、issue #676) の該当 source document を PLAN-L7-676 §3.5.2 の変換規則で Markdown 化したものである。項目名・説明文は zip の日本語をそのまま使い、意味は書き換えていない。zip で空欄・空表の箇所には、記入欄の placeholder (`<記入>`、`<本文を記入>`、`<項目を記入>`) だけを置き、記入例の内容は機械生成しない。
 
 ### 移植元: ZIP-DOC-022 DB設計
 
@@ -67,14 +67,16 @@ plan: docs/plans/PLAN-<id>.md
 
 > trace: 基本設計 第6章
 
-| エンティティ | 主キー/外部キー | その他フィールド |
+> 全テーブルが tenant_id を保持しRLSで分離。PK=主キー/FK=外部キー。
+
+| エンティティ id | 名称 | フィールド |
 |---|---|---|
-| tenants | PK id | name, plan |
-| users | PK id, FK tenant_id | email, role |
-| tasks | PK id, FK tenant_id, FK project_id | status |
-| subs | PK id, FK tenant_id | status |
-| projects | PK id, FK tenant_id | name |
-| audit | PK id, FK tenant_id | action |
+| tenants | tenants テナント | PK id, name, plan |
+| users | users ユーザー | PK id, FK tenant_id, email, role |
+| tasks | tasks タスク | PK id, FK tenant_id, FK project_id, status |
+| subs | subscriptions 契約 | PK id, FK tenant_id, status |
+| projects | projects PJ | PK id, FK tenant_id, name |
+| audit | audit_logs 監査 | PK id, FK tenant_id, action |
 
 | 関連元 | 関連先 | 多重度 |
 |---|---|---|

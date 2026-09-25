@@ -5,14 +5,14 @@ source_id: [ZIP-DOC-046]
 source_entries:
   - zip_entry: "vmodel-docgen-clean/templates/46_SEO・公開ページ設計.yaml"
     sha256: "sha256:33b7789a147fc71718f55dd584221d5683b78ab71236a29fa820d0e2c1b5b3a2"
-disposition: "reference → DOC-L4-UI-STANDARD (Web profile)"
+disposition: "reference → DOC-L4-UI-STANDARD"
 port_index: docs/templates/vmodel/README.md
 plan: docs/plans/PLAN-<id>.md
 ---
 
 # ZIP-DOC-046: SEO設計
 
-本テンプレートは `Vモデル設計ドキュメント_checked.zip` (PO 承認、issue #676) の該当 source document を PLAN-L7-676 §3.5.2 の変換規則で Markdown 化した optional テンプレートである (§3.5.3: required slot には束ねない)。項目名・説明文は zip の日本語をそのまま使い、意味は書き換えていない。空欄・空表は空のまま (無内容の記入を機械生成しない)。
+本テンプレートは `Vモデル設計ドキュメント_checked.zip` (PO 承認、issue #676) の該当 source document を PLAN-L7-676 §3.5.2 の変換規則で Markdown 化した optional テンプレートである (§3.5.3: required slot には束ねない)。項目名・説明文は zip の日本語をそのまま使い、意味は書き換えていない。zip で空欄・空表の箇所には、記入欄の placeholder (`<記入>`、`<本文を記入>`、`<項目を記入>`) だけを置き、記入例の内容は機械生成しない。
 
 ## 本文
 

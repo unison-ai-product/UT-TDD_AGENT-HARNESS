@@ -44,20 +44,20 @@ plan: docs/plans/PLAN-L7-676-release-consumer-dev-start.md
 | 013 | `13_移行設計・計画書.yaml` | `sha256:e8f3b1f7cd8f575635d5b81e804705a0100b8d3dc18c140747263275fa48aa3b` | merge → `docs/process/gates.md` | `optional/013-migration-plan.md` |
 | 014 | `14_課題・リスク・意思決定管理.yaml` | `sha256:99c71a7e398c83b9e6f6a5e7ee9c6e7a25ed7c61dfc3671e92a7bdd06da619f1` | merge → `docs/adr/` | `optional/014-issue-risk-decision-log.md` |
 | 015 | `15_開発標準・規約書.yaml` | `sha256:3633280fbdad6e3b2a3e342bd5ef35e5feb7a0944acb2be05d9cda269ddeb6fa` | merge → `docs/governance/coding-rules.md` | `optional/015-development-standards.md` |
-| 016 | `16_バッチ設計書.yaml` | `sha256:8e7bc864992462a62faa58441af33ac23329db2c71933e5f516b551d2c7847d1` | reference → `DOC-L4-BATCH` (profile_controlled) | `optional/016-batch-design.md` |
+| 016 | `16_バッチ設計書.yaml` | `sha256:8e7bc864992462a62faa58441af33ac23329db2c71933e5f516b551d2c7847d1` | reference → `DOC-L4-BATCH` | `optional/016-batch-design.md` |
 | 017 | `17_設計一覧・定義集.yaml` | `sha256:392f8d8ab23996fbdf82a80654a25528b5d2b5816882b88ab3c478d4b191090c` | merge → `docs/governance/vmodel-document-catalog.md` | `optional/017-design-index-definitions.md` |
 | 019 | `19_ワークフロー定義.yaml` | `sha256:e8fc16c4c839ef019528ae2d0c8615461082ed10bc706203f5fc7496ac6319b2` | merge → `docs/process/forward/overview.md` | `optional/019-workflow-definition.md` |
 | 020 | `20_計測・KPI設計書.yaml` | `sha256:1f9d9548ed85001b387be1c8212462ebc7a68e110c88799c8655cd6840f295b2` | merge → `docs/design/harness/L1-requirements/business-requirements.md` | `optional/020-metrics-kpi-design.md` |
-| 025 | `25_ネットワーク設計書.yaml` | `sha256:cba5f5a01f8b785e245a44d4e6ff9f2c37ce0307bc3da303a14f77cc2f369b0c` | reference → governance (network profile) | `optional/025-network-design.md` |
-| 026 | `26_サーバー・インフラ設計書.yaml` | `sha256:74b48a407693bb09ae41d5c4d005eb69d9f033f82abf57dc2abbc48624603f2d` | reference → governance (infra profile) | `optional/026-server-infrastructure-design.md` |
+| 025 | `25_ネットワーク設計書.yaml` | `sha256:cba5f5a01f8b785e245a44d4e6ff9f2c37ce0307bc3da303a14f77cc2f369b0c` | reference → `docs/governance/vmodel-document-catalog.md` | `optional/025-network-design.md` |
+| 026 | `26_サーバー・インフラ設計書.yaml` | `sha256:74b48a407693bb09ae41d5c4d005eb69d9f033f82abf57dc2abbc48624603f2d` | reference → `docs/governance/vmodel-document-catalog.md` | `optional/026-server-infrastructure-design.md` |
 | 030 | `30_用語集・データディクショナリ.yaml` | `sha256:42327c7fbd5710ef468ed21cc3b48795377da4f30db4612fcf301c9968b98613` | adopt → `docs/governance/document-system-map.md` | `optional/030-glossary-data-dictionary.md` |
 | 033 | `33_トレーサビリティ・ID体系・紐づけ規約.yaml` | `sha256:239ad79c91ac88bf7d72fa778e3f47d260b4c9b921f58a79852a9c17a316e653` | merge → `docs/process/plan-asset-v2.md` | `optional/033-traceability-id-conventions.md` |
-| 035 | `35_信頼性・DR・BCP設計書.yaml` | `sha256:e26b584c423e9c8d172268fb7e89b89b3cb9c4bd680faed5bdf8bc7755dd855f` | reference → governance (resilience profile) | `optional/035-reliability-dr-bcp-design.md` |
-| 036 | `36_プライバシー設計書.yaml` | `sha256:925a90f9ea7db642b19a42c7d760e8c6a8e54d397037af4981c507ea5229c0de` | reference → `docs/design/harness/L4-basic-design/security.md` (PII profile) | `optional/036-privacy-design.md` |
+| 035 | `35_信頼性・DR・BCP設計書.yaml` | `sha256:e26b584c423e9c8d172268fb7e89b89b3cb9c4bd680faed5bdf8bc7755dd855f` | reference → `docs/governance/vmodel-document-catalog.md` | `optional/035-reliability-dr-bcp-design.md` |
+| 036 | `36_プライバシー設計書.yaml` | `sha256:925a90f9ea7db642b19a42c7d760e8c6a8e54d397037af4981c507ea5229c0de` | reference → `docs/design/harness/L4-basic-design/security.md` | `optional/036-privacy-design.md` |
 | 038 | `38_CI・CDパイプライン設計書.yaml` | `sha256:6e129caf87cc0bf5f46e54d9a589e0f7ac8145baf0b1cff0f8ff3c618ab93a85` | merge → `docs/process/gates.md` | `optional/038-ci-cd-pipeline-design.md` |
 | 044 | `44_成果物インデックス・マップ.yaml` | `sha256:704cc381dd241ce111cfa5b8cf2f8de9ed93bd28e757c10908ebae60c7d18679` | merge → `docs/governance/document-system-map.md` | `optional/044-deliverable-index-map.md` |
 | 045 | `45_ディレクトリ構成・プロジェクト構造設計.yaml` | `sha256:dfff2d6e4a7cd321152ef77ec14f8cb96e3ac5ed7e25c8709ad61022376d9127` | merge → `AGENTS.md` | `optional/045-directory-structure-design.md` |
-| 046 | `46_SEO・公開ページ設計.yaml` | `sha256:33b7789a147fc71718f55dd584221d5683b78ab71236a29fa820d0e2c1b5b3a2` | reference → `DOC-L4-UI-STANDARD` (Web profile) | `optional/046-seo-public-page-design.md` |
+| 046 | `46_SEO・公開ページ設計.yaml` | `sha256:33b7789a147fc71718f55dd584221d5683b78ab71236a29fa820d0e2c1b5b3a2` | reference → `DOC-L4-UI-STANDARD` | `optional/046-seo-public-page-design.md` |
 | 047 | `47_サポート・問い合わせ・エスカレーション設計.yaml` | `sha256:4fa78b9e59abb895cc36573d682ca6061f2ea284e54897fd431d7ffb84e7f22e` | merge → `docs/process/gates.md` | `optional/047-support-escalation-design.md` |
 | 048 | `48_ユーザードキュメント設計.yaml` | `sha256:8615ce09ed2cdab899f49c132bc59de74b0c6a8c21da0652dbb4bc4831a387e6` | merge → `docs/governance/document-system-map.md` | `optional/048-user-documentation-design.md` |
 | 049 | `49_AI成果物検証設計.yaml` | `sha256:526706f2fe6185a179ebf289982ee4059491339a0684a5ad7b53cacc6fa11fcf` | merge → `docs/process/vmodel-contract.yaml` | `optional/049-ai-output-verification-design.md` |
