@@ -198,4 +198,50 @@ describe("PLAN admission policy", () => {
       "plan-admission-reverse-preserved-implementation-required",
     );
   });
+
+  it("CANDIDATE-U-ISSUEBIND-002 (policy): projection_state=unprojected はForward外escapeの必須Issueにならない (§2.1)", () => {
+    const decision = evaluatePlanAdmission({
+      ...forward,
+      routeSignal: "feature_addition",
+      routeMode: "add-feature",
+      kind: "add-design",
+      layer: "L6",
+      branch: "work/add-feature-admission",
+      issue: {
+        provider: "github",
+        issueId: 690,
+        episodeId: "E4-690",
+        projectionState: "unprojected",
+      },
+      origin: { planId: "PLAN-L4-24", revision: 1, digest: "sha256:def" },
+      reentry: { targetPlanId: "PLAN-L4-24", targetRevision: 2, phase: "forward_merge" },
+      escapeReason: "issue binding contract",
+    });
+    expect(decision.ok).toBe(false);
+    expect(decision.ok ? [] : decision.violations.map((v) => v.code)).toContain(
+      "plan-admission-issue-required",
+    );
+  });
+
+  it("CANDIDATE-U-ISSUEBIND (policy): projection_state=projected + digest はForward外escapeを許可する (legacy caller互換)", () => {
+    const decision = evaluatePlanAdmission({
+      ...forward,
+      routeSignal: "feature_addition",
+      routeMode: "add-feature",
+      kind: "add-design",
+      layer: "L6",
+      branch: "work/add-feature-admission",
+      issue: {
+        provider: "github",
+        issueId: 690,
+        episodeId: "E4-690",
+        projectionState: "projected",
+        projectionDigest: "sha256:abc",
+      },
+      origin: { planId: "PLAN-L4-24", revision: 1, digest: "sha256:def" },
+      reentry: { targetPlanId: "PLAN-L4-24", targetRevision: 2, phase: "forward_merge" },
+      escapeReason: "issue binding contract",
+    });
+    expect(decision).toMatchObject({ ok: true, issueRequired: true });
+  });
 });

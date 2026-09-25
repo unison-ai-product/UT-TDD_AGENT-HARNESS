@@ -30,7 +30,16 @@ export interface PlanAdmissionRequest extends AdmissionTuple {
   branch: string;
   status?: "draft" | "confirmed" | "completed" | "archived";
   subDoc?: SubDoc;
-  issue?: { provider: "github"; issueId: number; episodeId: string; projectionDigest: string };
+  issue?: {
+    provider: "github";
+    issueId: number;
+    episodeId: string;
+    /** PLAN-L7-690 §2.1: projected/unprojected の閉じた enum。未指定の場合、
+     *  projectionDigest の有無から legacy binding を implicit projected として扱う
+     *  (§2.1 legacy 条項、既存 caller の後方互換)。 */
+    projectionState?: "projected" | "unprojected";
+    projectionDigest?: string;
+  };
   origin?: { planId: string; revision: number; digest: string };
   /** 駆動モデルの判定正本。起点種別や実装資産の有無ではなく遷移方向で決める。 */
   transitionDirection?: "implementation_to_design" | "design_to_implementation";
@@ -193,7 +202,17 @@ export function evaluatePlanAdmission(request: PlanAdmissionRequest): AdmissionD
 
   const issueRequired = request.routeMode !== "forward";
   if (issueRequired) {
-    if (!request.issue?.issueId || !request.issue.episodeId || !request.issue.projectionDigest) {
+    // PLAN-L7-690 §2.1: projection_state 未指定の legacy binding は digest の有無から
+    // implicit projected とみなす (既存 caller 後方互換)。明示 unprojected は
+    // 「未投影」を意味するため、Forward外escapeが要求する既投影Issueにはならない。
+    const impliedProjectionState =
+      request.issue?.projectionState ?? (request.issue?.projectionDigest ? "projected" : undefined);
+    if (
+      !request.issue?.issueId ||
+      !request.issue.episodeId ||
+      impliedProjectionState !== "projected" ||
+      !request.issue.projectionDigest
+    ) {
       violations.push({
         code: "plan-admission-issue-required",
         message: "Forward外起票にはE4投影済みGitHub Issueが必要です",
