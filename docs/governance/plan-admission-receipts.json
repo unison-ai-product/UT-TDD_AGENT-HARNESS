@@ -5024,22 +5024,6 @@
         "revision": 2,
         "content_digest": "sha256:e9785ff450c7d25e94669a0c7ac8cc7ad207b6fa25ca4a8087f39907775e1f56"
       }
-    },
-    {
-      "sequence": 315,
-      "previous_record_digest": "sha256:bc10f857007ccc560fb49aaf4d954b3516e77cdf2a65e15568cd3c4fe5a617d9",
-      "record_digest": "sha256:04728fa5ef5cb044ed0e3efcd963e2115128f3ba619550ba1a88edfc452ce6c1",
-      "command_id": "plan-draft:forward:plan-l6-690-projection-state-contract:v2",
-      "receipt_id": "certificate:e41c50129d4ea80b20781a89b6138578",
-      "receipt_digest": "sha256:a4842d4ed0180056b55e6c24834726276d2acf7936e5e19dfe1431600cd9308a",
-      "decision_digest": "sha256:c0c83163ef6342ec66f088becd8dcf551723f437e2f55e6a37ed06acb4aa2a0a",
-      "binding": {
-        "path": "docs/plans/PLAN-L6-690-issue-binding-projection-state-contract.md",
-        "plan_id": "PLAN-L6-690-issue-binding-projection-state-contract",
-        "asset_id": "plan:e41c50129d4ea80b20781a89b6138578",
-        "revision": 1,
-        "content_digest": "sha256:1c0a732691e2e834164679780e62ad2155981f6c0cbeed93cb4704e1c6dda213"
-      }
     }
   ]
 }
