@@ -10,7 +10,7 @@ github_issue_id: 676
 # Release consumer で開発を開始できる状態にする test design
 
 `PLAN-L7-676` と `PLAN-REVERSE-676` 専用の pair artifact である。
-本表の ID は全て **CANDIDATE**。実装 PR で test が存在した時点で同番号の `U-RCDEV-*` へ 1:1 昇格する。
+本表の未実装行の ID は **CANDIDATE**。実装 PR で test が存在した行は同番号の `U-RCDEV-*` へ 1:1 昇格する。
 既存 `CANDIDATE-U-PACKRT-*` / L7-529 の identity oracle / `CANDIDATE-ST-PACKCANARY-*` は再採番・再所有しない。
 
 共通 fixture: 一時ディレクトリの空 git repo。(i) origin 無し、(ii) origin = `https://github.com/example/probe.git`、
@@ -21,11 +21,11 @@ github_issue_id: 676
 
 | ID | oracle | 違反 / mutation (Red になるべき変異) |
 | --- | --- | --- |
-| CANDIDATE-U-RCDEV-001 | fixture (i) で `setup --solo` が中断せず adapter / テンプレート / state 記録を出力し (`written` に identity path を含まない)、出力に L7-529 の typed identity deny code と復旧手順 (`git remote add origin` → setup 再実行) を含み、`identity: denied (identity_repository_unbound): ...` と復旧手順 2 行を stderr に出し、終了コードが 2 である (PLAN §3.3-1) | (m1) deny 表示を削る → 文字列 assert 失敗。(m2) 終了コードを 0 または 1 にする → exit assert 失敗。(m4) 新しい deny code を発明して表示する → code assert 失敗。(m3) identity deny で throw / 中断させる (L7-529 §3.2.1 違反) → adapter 不在で失敗 |
-| CANDIDATE-U-RCDEV-002 | fixture (i) で setup 後に origin を追加して再実行すると `ut-tdd.project.json` が作られ、1 回目に出力した各ファイルの bytes は変わらない (L7-529 §3.2 再実行規則、no-op safe) | (m1) 再実行時にテンプレートを再生成して内容を変える → bytes 差分で失敗。(m2) 再実行で identity create を skip する → marker 不在で失敗 |
-| CANDIDATE-U-RCDEV-003 | fixture (ii) setup 後、`hook work-guard` / `hook agent-guard` / `session start` / `session summary` / `hook subagent-stop` の 5 経路で `requireRuntimeRepoRoot` が fixture root を返す (cwd = fixture 配下の subdir でも同じ。path は long path のみ、8.3 alias は #678 の所有)。fixture (i) (identity deny のまま) では 5 経路が fail-close し、error に復旧手順を含む | (m1) setup の identity 書き込みを skip → 5 経路が throw。(m2) `isRepoRoot` から marker 条件を外す → 失敗。(m3) hook error の復旧手順を削る → (i) 側 assert 失敗。**negative**: fixture の外 (親 dir) では null のまま (fallback を `.git` 単独受理に緩める変異 → 親 repo を誤認して失敗) |
-| CANDIDATE-U-RCDEV-004 | fixture (ii) setup 直後 (未 commit)、setup 出力に `ut-tdd.project.json` の commit が必要である旨と `git add ut-tdd.project.json` / `git commit` を含む | (m) `commitRequired` の表示分岐を削る → 失敗 |
-| CANDIDATE-U-RCDEV-005 | 未 commit 状態の `session start` の `project_memory_root_project_identity_unavailable` 出力に同じ commit 手順が併記される。commit 後は同コマンドがこの code を出さない | (m) 文言追加を外す → 失敗。L7-529 の HEAD-strict read を緩める変異 (working tree を読む) → 「未 commit で code が出る」側が失敗 |
+| U-RCDEV-001 | fixture (i) で `setup --solo` が中断せず adapter / テンプレート / state 記録を出力し (`written` に identity path を含まない)、出力に L7-529 の typed identity deny code と復旧手順 (`git remote add origin` → setup 再実行) を含み、`identity: denied (identity_repository_unbound): ...` と復旧手順 2 行を stderr に出し、終了コードが 2 である (PLAN §3.3-1) | (m1) deny 表示を削る → 文字列 assert 失敗。(m2) 終了コードを 0 または 1 にする → exit assert 失敗。(m4) 新しい deny code を発明して表示する → code assert 失敗。(m3) identity deny で throw / 中断させる (L7-529 §3.2.1 違反) → adapter 不在で失敗 |
+| U-RCDEV-002 | fixture (i) で setup 後に origin を追加して再実行すると `ut-tdd.project.json` が作られ、1 回目に出力した各ファイルの bytes は変わらない (L7-529 §3.2 再実行規則、no-op safe) | (m1) 再実行時にテンプレートを再生成して内容を変える → bytes 差分で失敗。(m2) 再実行で identity create を skip する → marker 不在で失敗 |
+| U-RCDEV-003 | fixture (ii) setup 後、`hook work-guard` / `hook agent-guard` / `session start` / `session summary` / `hook subagent-stop` の 5 経路で `requireRuntimeRepoRoot` が fixture root を返す (cwd = fixture 配下の subdir でも同じ。path は long path のみ、8.3 alias は #678 の所有)。fixture (i) (identity deny のまま) では 5 経路が fail-close し、error に復旧手順を含む | (m1) setup の identity 書き込みを skip → 5 経路が throw。(m2) `isRepoRoot` から marker 条件を外す → 失敗。(m3) hook error の復旧手順を削る → (i) 側 assert 失敗。**negative**: fixture の外 (親 dir) では null のまま (fallback を `.git` 単独受理に緩める変異 → 親 repo を誤認して失敗) |
+| U-RCDEV-004 | fixture (ii) setup 直後 (未 commit)、setup 出力に `ut-tdd.project.json` の commit が必要である旨と `git add ut-tdd.project.json` / `git commit` を含む | (m) `commitRequired` の表示分岐を削る → 失敗 |
+| U-RCDEV-005 | 未 commit 状態の `session start` の `project_memory_root_project_identity_unavailable` 出力に同じ commit 手順が併記される。commit 後は同コマンドがこの code を出さない | (m) 文言追加を外す → 失敗。L7-529 の HEAD-strict read を緩める変異 (working tree を読む) → 「未 commit で code が出る」側が失敗 |
 
 ## PR-2a skills 埋め込み + 展開
 

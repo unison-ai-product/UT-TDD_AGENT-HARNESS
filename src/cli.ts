@@ -103,6 +103,10 @@ import { parseNodeGenerationCiEvidence } from "./lint/node-generation-ci-policy.
 
 export { collectFinalRetirementFindings };
 
+import {
+  PROJECT_IDENTITY_COMMIT_RECOVERY_COMMANDS,
+  PROJECT_IDENTITY_ORIGIN_RECOVERY_COMMANDS,
+} from "./kernel/project-identity.ts";
 import { computeOutstandingWork, outstandingSummaryLine } from "./lint/outstanding.ts";
 import {
   analyzeRelationImpact,
@@ -4308,6 +4312,22 @@ program
         process.stdout.write(
           "  → scripts/setup-branch-protection.sh を生成。admin 権限の人間が実行してください (本番 merge ゲート変更)\n",
         );
+      }
+      if (r.projectIdentity) {
+        if (!r.projectIdentity.ok) {
+          process.stderr.write(
+            `identity: denied (${r.projectIdentity.error.ruleId}): ${r.projectIdentity.error.message}\n`,
+          );
+          for (const command of PROJECT_IDENTITY_ORIGIN_RECOVERY_COMMANDS) {
+            process.stderr.write(`recovery: ${command}\n`);
+          }
+          process.exitCode = 2;
+        } else if (r.projectIdentity.commitRequired) {
+          process.stdout.write(`identity: commit required (${r.projectIdentity.path})\n`);
+          for (const command of PROJECT_IDENTITY_COMMIT_RECOVERY_COMMANDS) {
+            process.stdout.write(`  ${command}\n`);
+          }
+        }
       }
     },
   );
