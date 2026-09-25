@@ -35,7 +35,7 @@ dependencies:
     - docs/adr/ADR-004-internal-asset-ts-control-boundary.md
     - docs/migration/internal-asset-inventory.md
   references:
-    - docs/migration/helix-porting-map.md
+    - docs/migration/legacy-porting-map.md
 related_l0_extra: docs/design/harness/L1-requirements/functional-requirements.md
 v2_import: docs/migration/v2-import-ledger.md
 ---

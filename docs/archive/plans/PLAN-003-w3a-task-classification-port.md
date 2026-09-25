@@ -46,8 +46,8 @@ dependencies:
 related_adr: []
 related_docs:
   - docs/governance/ut-tdd-agent-harness-requirements_v1.1.md
-  - docs/migration/helix-to-ut-tdd-cutover-strategy.md
-  - docs/migration/helix-porting-map.md
+  - docs/migration/legacy-to-ut-tdd-cutover-strategy.md
+  - docs/migration/legacy-porting-map.md
 ---
 
 ## §0 PLAN
@@ -155,8 +155,8 @@ W3a 範囲外として明示 carry:
 - 関連 ADR: なし
 - 参照 docs:
   - `docs/governance/ut-tdd-agent-harness-requirements_v1.1.md` §7.1 / §7.2
-  - `docs/migration/helix-to-ut-tdd-cutover-strategy.md` Mode 1
-  - `docs/migration/helix-porting-map.md` W3 行
+  - `docs/migration/legacy-to-ut-tdd-cutover-strategy.md` Mode 1
+  - `docs/migration/legacy-porting-map.md` W3 行
 
 ## §6 carry note
 

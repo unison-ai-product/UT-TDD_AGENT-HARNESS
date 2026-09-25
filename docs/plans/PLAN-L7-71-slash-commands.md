@@ -41,7 +41,7 @@ generates:
 dependencies:
   parent: docs/plans/PLAN-L7-70-skill-pack-curation.md
   requires:
-    - docs/migration/helix-fork-completion-plan.md
+    - docs/migration/legacy-fork-completion-plan.md
     - skills/SKILL_MAP.md
   references:
     - .claude/CLAUDE.md

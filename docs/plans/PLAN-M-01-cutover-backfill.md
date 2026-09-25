@@ -37,11 +37,11 @@ dependencies:
   parent: PLAN-M-00-verify-cutover
   requires:
     - docs/adr/ADR-001-ut-tdd-harness-redesign-and-language.md
-    - docs/migration/helix-source-inventory.md
+    - docs/migration/legacy-source-inventory.md
     - docs/plans/PLAN-L7-44-harness-db-master.md
   references:
     - .ut-tdd/audit/A-130-harness-db-segment-accept.md
-    - docs/migration/helix-to-ut-tdd-cutover-strategy.md
+    - docs/migration/legacy-to-ut-tdd-cutover-strategy.md
 review_evidence:
   - reviewer: codex-intra-runtime-review
     review_kind: intra_runtime_subagent
@@ -106,7 +106,7 @@ Record review evidence. The review scope is intentionally limited to backfill re
 ## 3.1 実装計画
 
 - The backfill route is a documentation and roadmap registration change.
-- `docs/migration/helix-to-ut-tdd-cutover-strategy.md` is now backfilled to current UT-TDD-owned execution/state rules.
+- `docs/migration/legacy-to-ut-tdd-cutover-strategy.md` is now backfilled to current UT-TDD-owned execution/state rules.
 - `harness.db` projection now includes roadmap rollups, band coverage, gate progress, and review evidence registry rows.
 - Rollback is non-destructive: revert the document/projection commit and rebuild `.ut-tdd/harness.db` from sources.
 

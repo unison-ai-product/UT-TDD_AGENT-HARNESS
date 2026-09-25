@@ -1,5 +1,8 @@
 # A-162 consumer harness-check template sync
 
+訂正注記 (2026-09-25, Issue #689): 本文中の参照 id を旧 slug から中立化した。名称の
+中立化のみで、記録内容の意味は変更していない。
+
 ## 目的
 
 Pack に含まれる `docs/templates/github/common/harness-check.yml` が、`src/setup/templates.ts` の built-in consumer CI template より弱い状態で配布される gap を閉じる。
@@ -32,6 +35,6 @@ Pack に含まれる `docs/templates/github/common/harness-check.yml` が、`src
   - `PLAN-L7-166-setup-template-catalog-split`
   - `PLAN-L7-170-external-review-remediation`
   - `PLAN-L7-190-distribution-runtime-asset-projection`
-  - `PLAN-L7-191-distribution-helix-wording-erasure`
+  - `PLAN-L7-191-distribution-legacy-wording-erasure`
   - `PLAN-L7-197-github-ops-workflow-hardening`
   - `PLAN-L7-213-project-local-setup-wrapper`

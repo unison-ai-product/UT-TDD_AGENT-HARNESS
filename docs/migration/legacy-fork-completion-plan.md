@@ -10,7 +10,7 @@ work. It is a planning artifact: per-stream `PLAN-*` tickets are authored
 separately (Codex) from this gap list.
 
 Inventory was gathered by three parallel repository surveys reconciled against
-`helix-source-inventory.md`, `helix-porting-map.md`, `v2-import-ledger.md`, and
+`legacy-source-inventory.md`, `legacy-porting-map.md`, `v2-import-ledger.md`, and
 `internal-asset-inventory.md`, then key load-bearing claims were re-verified
 against the working tree (`.claude/commands` absence, roll-up pack absence,
 agent HELIX-reference cleanliness).
@@ -107,7 +107,7 @@ with HELIX as at most loose reference — never ported (per §1.5).
 
 ### 2.4 Doc-drift fix (skills)
 
-`helix-porting-map.md` W10 rows name roll-up pack targets
+`legacy-porting-map.md` W10 rows name roll-up pack targets
 (`test-pack.md` / `design-pack.md` / `implementation-pack.md` /
 `operations-pack.md` / `security-pack.md`) that were **superseded by
 individual-file curation** and do not exist. Update W10 to record the

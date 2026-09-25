@@ -32,7 +32,7 @@ dependencies:
   parent: docs/plans/PLAN-L7-71-slash-commands.md
   requires:
     - docs/design/harness/L6-function-design/function-spec.md
-    - docs/migration/helix-fork-completion-plan.md
+    - docs/migration/legacy-fork-completion-plan.md
   references:
     - src/workflow/contracts.ts
     - src/team/model-policy.ts

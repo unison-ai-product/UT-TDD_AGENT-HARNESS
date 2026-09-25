@@ -69,7 +69,7 @@ TS rebuild の core 実装。優先順:
 - **gate G8-G14 機械検証**: 現 §2 は G7 まで。G8-G14 は将来 PLAN (requirements §2.7 に明記)。
 - **CI**: `.github/workflows/harness-check` 未構築 (要件 §6)。TS なら vitest+tsc+biome+plan/vmodel lint を束ねる。
 - **`.claude/hooks/`**: 旧 HELIX hook 群が残存 (settings.json は `hooks:{}` 安全設定)。UT-TDD hook の package-local 化は後続。
-- **移植系 doc**: `helix-porting-map.md` / `cutover-strategy.md` の code-port 部は ADR-001 で superseded (能力参照としてのみ)。
+- **移植系 doc**: `legacy-porting-map.md` / `cutover-strategy.md` の code-port 部は ADR-001 で superseded (能力参照としてのみ)。
 
 ## §4 環境
 

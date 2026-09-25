@@ -64,7 +64,7 @@
 ## §3 carry / TODO
 
 - **Phase 3 pointer 化は意図的に見送り**: concept §3.1.4 は既に §7.8.7.1 へのポインタを持ち、§2.1.2.1 は 3ティアレビューの核心概念のため現状維持 (PM 判断、冗長ではなく load-bearing)。
-- **migration 系 / templates の旧 PLAN 参照**: `helix-porting-map.md` / `cutover-strategy.md` / `templates/state/vmodel.json` / `templates/prompts/effort-classify.md` に PLAN-001..004 や requirements_v1.1 への**「superseded」明記済みの歴史的言及**が残る。パスリンク切れではないため対象外。気になれば後続で historical 整理。
+- **migration 系 / templates の旧 PLAN 参照**: `legacy-porting-map.md` / `cutover-strategy.md` / `templates/state/vmodel.json` / `templates/prompts/effort-classify.md` に PLAN-001..004 や requirements_v1.1 への**「superseded」明記済みの歴史的言及**が残る。パスリンク切れではないため対象外。気になれば後続で historical 整理。
 - **ADR-001 follow-up**: tl-advisor (別 runtime) の adversarial cross-check は依然未実施 (PO 選択で後回し継続)。
 - **gate G8-G14 機械検証 / CI (`.github/workflows/harness-check`)**: 未着手 (requirements §6/§2.7)。
 - **repository-structure.md §1**: design/test-design/skills が `[予定]` 表記のまま (dir は作成済、content が [予定])。気になれば注記更新。

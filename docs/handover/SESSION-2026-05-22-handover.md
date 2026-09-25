@@ -147,9 +147,9 @@ dff1d78 chore: tighten local runtime ignores
 - **W6**: setup/doctor/runtime detection (CLI binding 統合)
 - **W7**: Claude Code hooks/agents (本 repo の `.claude/hooks/` 13 unused HELIX hook 整理)
 
-詳細 wave map: `docs/migration/helix-porting-map.md`
+詳細 wave map: `docs/migration/legacy-porting-map.md`
 
-## §6 cutover 進捗 (Mode 0-3、`docs/migration/helix-to-ut-tdd-cutover-strategy.md` 参照)
+## §6 cutover 進捗 (Mode 0-3、`docs/migration/legacy-to-ut-tdd-cutover-strategy.md` 参照)
 
 - 現在 **Mode 1**: HELIX drive + UT-TDD asset 部分 cutover
   - W1 (plan-lint) / W2 (vmodel-lint) / W3a (task classification) cutover 済
