@@ -8,7 +8,7 @@ import { loadL6CompletionInputs } from "../src/lint/l6-completion.ts";
 import { loadL7CompletionDocs } from "../src/lint/l7-completion.ts";
 import { loadScreenImplPairFreezeInput } from "../src/lint/screen-impl-pair-freeze.ts";
 import { lintPlanWithGate } from "../src/plan/lint.ts";
-import { resolveAuthoringSourcePath, resolveVModelRoots } from "../src/vmodel/design-root.ts";
+import { resolveAuthoringSourcePath, resolveVModelRoots } from "../src/shared/design-root.ts";
 import { lintVmodel, loadPairDocs } from "../src/vmodel/lint.ts";
 
 function fixtureRoot(): string {

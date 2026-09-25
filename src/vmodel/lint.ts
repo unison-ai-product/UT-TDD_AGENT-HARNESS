@@ -14,7 +14,7 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import { fmValue } from "../lint/shared.ts";
 import type { LintResult } from "../plan/lint.ts";
-import { canonicalizeVModelPath, resolveVModelRoots } from "./design-root.ts";
+import { canonicalizeVModelPath, resolveVModelRoots } from "../shared/design-root.ts";
 
 export interface PairDoc {
   /** repo 相対 path (forward slash 正規化)。 */

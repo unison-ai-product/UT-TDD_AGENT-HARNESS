@@ -19,7 +19,7 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { parse as parseYaml } from "yaml";
-import { resolveVModelRoots } from "../vmodel/design-root.ts";
+import { resolveVModelRoots } from "../shared/design-root.ts";
 
 export interface ScreenImplPairFreezeInput {
   /** screen-list.md が存在したか (不在 = scope 0、OK)。 */

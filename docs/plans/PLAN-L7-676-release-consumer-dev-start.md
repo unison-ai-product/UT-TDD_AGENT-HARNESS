@@ -73,7 +73,7 @@ generates:
     artifact_type: markdown_doc
   - artifact_path: docs/templates/vmodel/README.md
     artifact_type: markdown_doc
-  - artifact_path: src/vmodel/design-root.ts
+  - artifact_path: src/shared/design-root.ts
     artifact_type: source_module
   - artifact_path: tests/design-root.test.ts
     artifact_type: test_code
@@ -135,18 +135,18 @@ status: confirmed
 github_issue_id: 676
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:7a763e8e11f07d345797ca39c8257c2c
-  command_id: plan-revise:issue-676:codex-pr2b:plan:r9
-  admitted_at: 2026-09-25T12:30:00+09:00
-  source_digest: sha256:d5e335a8305387dca628ce4a1f0268077a822eed317b5141e0b15628cd631f86
+  receipt_id: certificate:5abd0fc570841768aa2329628783ecbe
+  command_id: plan-revise:issue-676:codex-pr2b:design-root-common-layer:r10
+  admitted_at: 2026-09-25T12:03:44.950Z
+  source_digest: sha256:9d9df3c35600818891e21c293aa050e28e2fdcb64815963ea885fc091dc3cb5f
   decision_digest: sha256:4884e46337a09f5f6dfec74c2a0f11eb3a71039e8ecca3231c006a88533d8404
-  receipt_digest: sha256:b0ebeb23388dc7ee50a42df0ecf4c97f3ee99c0eea22bd7bd1d396652a5a7311
+  receipt_digest: sha256:e7da9bd6cba644e8741c6cc4f28df538dc8b93627906071f089ec862d123463f
   binding:
     path: docs/plans/PLAN-L7-676-release-consumer-dev-start.md
     plan_id: PLAN-L7-676-release-consumer-dev-start
     asset_id: plan:aae8bf0e313f8688fbad4d4d8cf0a6a9
-    revision: 9
-    content_digest: sha256:d5e335a8305387dca628ce4a1f0268077a822eed317b5141e0b15628cd631f86
+    revision: 10
+    content_digest: sha256:9d9df3c35600818891e21c293aa050e28e2fdcb64815963ea885fc091dc3cb5f
   route:
     signal: feature_addition
     mode: add-feature
@@ -628,3 +628,4 @@ injection path の乗っ取り、harness 自身の挙動変化、部分 setup �
 6. §3.5.3 の source 例外 (rev 7): PR-T1 (#703) の非著者 review (Codex Sol r1) が、L11 / L13 のテンプレートの source (ZIP-DOC-028 / 011 / 021) の disposition target が当該 slot を指さないと FLAG した。原因は、§3.5.3 の規則本文 (process 文書を指す本は optional) と構成元表 (028 を L11、011 と 021 を L13 の source とする) の矛盾である。advisor (claude-fable-5、design) の推奨に従い、構成元表を正として規則本文に閉じた例外句 (3 本) を加え、test-design の CANDIDATE-U-RCDEV-020 を同じ例外に揃えた。disposition catalog は変更しない。
 7. PR-T1 の成果物宣言 (rev 8): PR-T1 (#703) は rev 7 の merge (#704) 後に main を取り込み、自 PR が新規に landing させる `docs/templates/vmodel/` の 22 本 (required 21 slot のテンプレートと port index の README) だけを `generates` に追加した。既存ファイルと他 PR の成果物は載せていない。契約本文と `review_evidence` は rev 7 から変えていない。
 8. rev 9: PR #685 を main の PR-T1 (#703) 後へ re-chain し、PR-2b の新規成果物 2 件だけを confirmed PLAN の `generates` に宣言する。
+9. rev 10: Claude Opus r2 の FLAG #1 に対応し、resolver を lint/vmodel 共通の src/shared/design-root.ts へ移動した。allowed-edge 表は変更しない。

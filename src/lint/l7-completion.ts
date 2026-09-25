@@ -1,6 +1,6 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
-import { resolveVModelRoots } from "../vmodel/design-root.ts";
+import { resolveVModelRoots } from "../shared/design-root.ts";
 import { fmValue, normalizePath } from "./shared.ts";
 
 export interface L7CompletionDoc {

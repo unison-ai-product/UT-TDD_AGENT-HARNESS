@@ -1,6 +1,6 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { resolveAuthoringSourceAbsolutePath } from "../vmodel/design-root.ts";
+import { resolveAuthoringSourceAbsolutePath } from "../shared/design-root.ts";
 
 export interface G1TraceDocs {
   business: string;

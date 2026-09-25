@@ -1,6 +1,6 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { resolveVModelRoots } from "../vmodel/design-root.ts";
+import { resolveVModelRoots } from "../shared/design-root.ts";
 import { fmValue } from "./shared.ts";
 
 export interface GateStatus {
