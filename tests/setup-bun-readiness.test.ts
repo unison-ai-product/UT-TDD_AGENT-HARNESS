@@ -1,4 +1,4 @@
-import { spawnSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { delimiter, dirname, join } from "node:path";
@@ -59,6 +59,10 @@ function createCleanConsumer(): string {
       recursive: true,
     },
   );
+  execFileSync("git", ["init", "--quiet"], { cwd: consumer });
+  execFileSync("git", ["remote", "add", "origin", "https://github.com/example/consumer.git"], {
+    cwd: consumer,
+  });
   return consumer;
 }
 

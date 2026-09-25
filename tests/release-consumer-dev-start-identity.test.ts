@@ -66,7 +66,7 @@ function setup(root: string) {
 }
 
 function writtenPaths(stdout: string): string[] {
-  return [...stdout.matchAll(/^\+ (.+)$/gm)].map((match) => match[1] as string);
+  return [...stdout.matchAll(/^ {2}\+ (.+)$/gm)].map((match) => match[1] as string);
 }
 
 afterEach(() => {
@@ -83,7 +83,7 @@ describe("U-RCDEV PR-1: identity / repo-root", () => {
     expect(run.stdout).toContain("AGENTS.md");
     expect(existsSync(join(root, ".ut-tdd", "state", "setup.json"))).toBe(true);
     expect(existsSync(join(root, "ut-tdd.project.json"))).toBe(false);
-    expect(run.stdout).not.toMatch(/^\+ ut-tdd\.project\.json$/m);
+    expect(writtenPaths(run.stdout)).not.toContain("ut-tdd.project.json");
     expect(run.stderr).toContain(
       "identity: denied (identity_repository_unbound): origin remote is missing or invalid",
     );
@@ -95,6 +95,7 @@ describe("U-RCDEV PR-1: identity / repo-root", () => {
     const root = fixture();
     const first = setup(root);
     const paths = writtenPaths(first.stdout);
+    expect(paths.length).toBeGreaterThan(0);
     const before = new Map(paths.map((path) => [path, readFileSync(join(root, path))]));
 
     execFileSync("git", ["remote", "add", "origin", "https://github.com/example/probe.git"], {
@@ -127,6 +128,11 @@ describe("U-RCDEV PR-1: identity / repo-root", () => {
       const run = runCli(nested, route, "{}\n", testEnv(withOrigin));
       expect(run.stderr, route.join(" ")).not.toContain("repository root could not be resolved");
     }
+
+    const markerlessParent = fixture();
+    const markerlessNested = join(markerlessParent, "nested", "hook-cwd");
+    mkdirSync(markerlessNested, { recursive: true });
+    expect(resolveRuntimeRepoRoot({ cwd: markerlessNested, env: {} })).toBeNull();
 
     const withoutOrigin = fixture();
     expect(setup(withoutOrigin).status).toBe(2);
