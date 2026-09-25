@@ -53,17 +53,17 @@ status: confirmed
 github_issue_id: 678
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:4fa122ee713125cd15949e761c67eb07
-  command_id: plan-revise:issue-678:pr-681:r3-duplicate-artifact-ownership
-  admitted_at: 2026-09-24T09:10:58.174Z
+  receipt_id: certificate:652b675a2857bdfd1012b30a082c401d
+  command_id: plan-revise:issue-678:pr-681:rechain-main-r1
+  admitted_at: 2026-09-25T12:00:00+09:00
   source_digest: sha256:1c6299324baa7bfbb7c7b72577b7250ab4bb6f0bc8c498519129002e25988ac9
-  decision_digest: sha256:9b10d056759e06ee9fc29462d948e93593d996810adbb52bdde0acace5032e31
-  receipt_digest: sha256:9291180b6ef24dbef90b220929103a6213bb3ec708310d99f092c635585ac51a
+  decision_digest: sha256:dd4fdea6d256ab2cd40b94a6fd626840ea63632ff11b6768e7710e8dee8eb290
+  receipt_digest: sha256:d807d32bb55d383a20b067876bb092422ca6e39a0731ba57d829d4beb297612f
   binding:
     path: docs/plans/PLAN-L7-678-consumer-launcher-path-alias.md
     plan_id: PLAN-L7-678-consumer-launcher-path-alias
     asset_id: plan:b51c429b5aa6f1f7309f11e398a11a54
-    revision: 3
+    revision: 4
     content_digest: sha256:1c6299324baa7bfbb7c7b72577b7250ab4bb6f0bc8c498519129002e25988ac9
   route:
     signal: incident
@@ -72,7 +72,7 @@ admission_receipt:
     provider: github
     issue_id: 678
     episode_id: E4-678-consumer-launcher-path-alias
-    projection_digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+    projection_state: unprojected
   origin:
     plan_id: PLAN-L7-516-pack-self-contained-consumer-runtime
     revision: 4
@@ -81,8 +81,8 @@ admission_receipt:
     target_plan_id: PLAN-L7-516-pack-self-contained-consumer-runtime
     target_revision: 4
     phase: forward_merge
-  escape_reason: "Issue #678 の局所的な launcher path ownership 重複を除去し、既存 owner を維持したまま
-    PR #681 r3 の duplicate-artifact-ownership を是正する。"
+  escape_reason: "Issue #678 の binding を projection_state=unprojected で再発行し、PR
+    #681 を current main へ再チェーンする。"
 ---
 
 # PLAN-L7-678: consumer launcher path alias 誤拒否の修理
