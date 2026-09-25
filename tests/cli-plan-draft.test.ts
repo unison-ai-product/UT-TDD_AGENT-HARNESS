@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Command } from "commander";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { ZodError } from "zod";
 import { parsePlanDraftManifest, registerPlanDraftCommand } from "../src/cli/plan-draft.ts";
 import { NodePlanDraftRunner } from "../src/plan-admission/node-plan-draft-runner.ts";
 import { TRACKED_RECEIPT_SCHEMA } from "../src/plan-admission/tracked-receipt-projection.ts";
@@ -101,18 +102,36 @@ describe("plan draft CLI registrar", () => {
     return JSON.stringify(input);
   }
 
+  /** PLAN-L7-690 command境界のfail-closeはZodErrorのspecific issue (code+path) で検査する。
+   *  exit 1 / toThrow()のみだとguardが無関係なexceptionを投げてもGreenになる (#701 Sol r2 FINDING)。 */
+  function expectIssueBindingRejection(
+    fn: () => unknown,
+    match: { code: string; path: (string | number)[] },
+  ): void {
+    let thrown: unknown;
+    try {
+      fn();
+    } catch (error) {
+      thrown = error;
+    }
+    expect(thrown).toBeInstanceOf(ZodError);
+    expect((thrown as ZodError).issues).toContainEqual(expect.objectContaining(match));
+  }
+
   it("U-ISSUEBIND-001 (plan draft): projection_state=projectedの全ゼロdigestをtyped fail-closeする (§2.2)", () => {
-    expect(() =>
-      parsePlanDraftManifest(
-        withIssue({
-          provider: "github",
-          issue_id: 690,
-          episode_id: "E4-690",
-          projection_state: "projected",
-          projection_digest: `sha256:${"0".repeat(64)}`,
-        }),
-      ),
-    ).toThrow();
+    expectIssueBindingRejection(
+      () =>
+        parsePlanDraftManifest(
+          withIssue({
+            provider: "github",
+            issue_id: 690,
+            episode_id: "E4-690",
+            projection_state: "projected",
+            projection_digest: `sha256:${"0".repeat(64)}`,
+          }),
+        ),
+      { code: "custom", path: ["admission", "issue", "projection_digest"] },
+    );
   });
 
   it("U-ISSUEBIND-002 (plan draft): projection_state=unprojectedをdigestなしで受理する (§2.1)", () => {
@@ -132,52 +151,89 @@ describe("plan draft CLI registrar", () => {
     });
   });
 
+  it("U-ISSUEBIND-002 (plan draft): projection_state=unprojected+projection_digestの矛盾入力をfail-closeする (§2.1)", () => {
+    expectIssueBindingRejection(
+      () =>
+        parsePlanDraftManifest(
+          withIssue({
+            provider: "github",
+            issue_id: 690,
+            episode_id: "E4-690",
+            projection_state: "unprojected",
+            projection_digest: `sha256:${"a".repeat(64)}`,
+          }),
+        ),
+      { code: "unrecognized_keys", path: ["admission", "issue"] },
+    );
+    expectIssueBindingRejection(
+      () =>
+        parsePlanDraftManifest(
+          withIssue({
+            provider: "github",
+            issue_id: 690,
+            episode_id: "E4-690",
+            projection_state: "unprojected",
+            projection_digest: `sha256:${"0".repeat(64)}`,
+          }),
+        ),
+      { code: "unrecognized_keys", path: ["admission", "issue"] },
+    );
+  });
+
   it("U-ISSUEBIND-003 (plan draft): projection_state=projectedのdigest欠落/null/空文字をfail-closeする (§2.1)", () => {
-    expect(() =>
-      parsePlanDraftManifest(
-        withIssue({
-          provider: "github",
-          issue_id: 690,
-          episode_id: "E4-690",
-          projection_state: "projected",
-        }),
-      ),
-    ).toThrow();
-    expect(() =>
-      parsePlanDraftManifest(
-        withIssue({
-          provider: "github",
-          issue_id: 690,
-          episode_id: "E4-690",
-          projection_state: "projected",
-          projection_digest: null,
-        }),
-      ),
-    ).toThrow();
-    expect(() =>
-      parsePlanDraftManifest(
-        withIssue({
-          provider: "github",
-          issue_id: 690,
-          episode_id: "E4-690",
-          projection_state: "projected",
-          projection_digest: "",
-        }),
-      ),
-    ).toThrow();
+    expectIssueBindingRejection(
+      () =>
+        parsePlanDraftManifest(
+          withIssue({
+            provider: "github",
+            issue_id: 690,
+            episode_id: "E4-690",
+            projection_state: "projected",
+          }),
+        ),
+      { code: "invalid_type", path: ["admission", "issue", "projection_digest"] },
+    );
+    expectIssueBindingRejection(
+      () =>
+        parsePlanDraftManifest(
+          withIssue({
+            provider: "github",
+            issue_id: 690,
+            episode_id: "E4-690",
+            projection_state: "projected",
+            projection_digest: null,
+          }),
+        ),
+      { code: "invalid_type", path: ["admission", "issue", "projection_digest"] },
+    );
+    expectIssueBindingRejection(
+      () =>
+        parsePlanDraftManifest(
+          withIssue({
+            provider: "github",
+            issue_id: 690,
+            episode_id: "E4-690",
+            projection_state: "projected",
+            projection_digest: "",
+          }),
+        ),
+      { code: "invalid_string", path: ["admission", "issue", "projection_digest"] },
+    );
   });
 
   it("U-ISSUEBIND-005 (plan draft): projection_state欠落は新規revision入力境界でfail-closeする (§2.2)", () => {
-    expect(() =>
-      parsePlanDraftManifest(
-        withIssue({
-          provider: "github",
-          issue_id: 690,
-          episode_id: "E4-690",
-          projection_digest: `sha256:${"a".repeat(64)}`,
-        }),
-      ),
-    ).toThrow();
+    expectIssueBindingRejection(
+      () =>
+        parsePlanDraftManifest(
+          withIssue({
+            provider: "github",
+            issue_id: 690,
+            episode_id: "E4-690",
+            projection_digest: `sha256:${"a".repeat(64)}`,
+          }),
+        ),
+      { code: "invalid_union_discriminator", path: ["admission", "issue", "projection_state"] },
+    );
   });
 });
 
@@ -222,9 +278,21 @@ describe("plan draft CLI: 拒否入力はcommand境界でwrite 0を保つ (#690�
     return output;
   }
 
+  /** command境界でcatchされたZodErrorはerrorText()でissues配列のJSON文字列になる (src/cli/plan-draft.ts)。
+   *  ここをparseし直しspecific issue (code+path) を検査する: exit 1だけだとguard削除がGreenのまま通る。 */
+  function expectRejectedIssue(
+    output: string[],
+    match: { code: string; path: (string | number)[] },
+  ): void {
+    const parsed = JSON.parse(output.join("")) as { ok: boolean; error: string };
+    expect(parsed.ok).toBe(false);
+    const issues = JSON.parse(parsed.error) as Array<Record<string, unknown>>;
+    expect(issues).toContainEqual(expect.objectContaining(match));
+  }
+
   it("U-ISSUEBIND-001 (plan draft, real boundary): 全ゼロdigestは新規writeを0件に保つ", async () => {
     const f = realFixture();
-    await runRejected(f, {
+    const output = await runRejected(f, {
       provider: "github",
       issue_id: 690,
       episode_id: "E4-690",
@@ -232,6 +300,42 @@ describe("plan draft CLI: 拒否入力はcommand境界でwrite 0を保つ (#690�
       projection_digest: `sha256:${"0".repeat(64)}`,
     });
     expect(process.exitCode).toBe(1);
+    expectRejectedIssue(output, {
+      code: "custom",
+      path: ["admission", "issue", "projection_digest"],
+    });
+    expect(existsSync(join(f.root, f.sourcePath))).toBe(false);
+    expect(readFileSync(join(f.root, f.projectionPath), "utf8")).toBe(f.seededProjection);
+    expect(existsSync(f.ledgerPath)).toBe(false);
+  });
+
+  it("U-ISSUEBIND-002 (plan draft, real boundary): unprojected+非全ゼロdigestの矛盾入力は新規writeを0件に保つ", async () => {
+    const f = realFixture();
+    const output = await runRejected(f, {
+      provider: "github",
+      issue_id: 690,
+      episode_id: "E4-690",
+      projection_state: "unprojected",
+      projection_digest: `sha256:${"a".repeat(64)}`,
+    });
+    expect(process.exitCode).toBe(1);
+    expectRejectedIssue(output, { code: "unrecognized_keys", path: ["admission", "issue"] });
+    expect(existsSync(join(f.root, f.sourcePath))).toBe(false);
+    expect(readFileSync(join(f.root, f.projectionPath), "utf8")).toBe(f.seededProjection);
+    expect(existsSync(f.ledgerPath)).toBe(false);
+  });
+
+  it("U-ISSUEBIND-002 (plan draft, real boundary): unprojected+全ゼロdigestの矛盾入力は新規writeを0件に保つ", async () => {
+    const f = realFixture();
+    const output = await runRejected(f, {
+      provider: "github",
+      issue_id: 690,
+      episode_id: "E4-690",
+      projection_state: "unprojected",
+      projection_digest: `sha256:${"0".repeat(64)}`,
+    });
+    expect(process.exitCode).toBe(1);
+    expectRejectedIssue(output, { code: "unrecognized_keys", path: ["admission", "issue"] });
     expect(existsSync(join(f.root, f.sourcePath))).toBe(false);
     expect(readFileSync(join(f.root, f.projectionPath), "utf8")).toBe(f.seededProjection);
     expect(existsSync(f.ledgerPath)).toBe(false);
@@ -239,13 +343,17 @@ describe("plan draft CLI: 拒否入力はcommand境界でwrite 0を保つ (#690�
 
   it("U-ISSUEBIND-003 (plan draft, real boundary): projectedのdigest欠落は新規writeを0件に保つ", async () => {
     const f = realFixture();
-    await runRejected(f, {
+    const output = await runRejected(f, {
       provider: "github",
       issue_id: 690,
       episode_id: "E4-690",
       projection_state: "projected",
     });
     expect(process.exitCode).toBe(1);
+    expectRejectedIssue(output, {
+      code: "invalid_type",
+      path: ["admission", "issue", "projection_digest"],
+    });
     expect(existsSync(join(f.root, f.sourcePath))).toBe(false);
     expect(readFileSync(join(f.root, f.projectionPath), "utf8")).toBe(f.seededProjection);
     expect(existsSync(f.ledgerPath)).toBe(false);
@@ -253,13 +361,17 @@ describe("plan draft CLI: 拒否入力はcommand境界でwrite 0を保つ (#690�
 
   it("U-ISSUEBIND-005 (plan draft, real boundary): projection_state欠落は新規writeを0件に保つ", async () => {
     const f = realFixture();
-    await runRejected(f, {
+    const output = await runRejected(f, {
       provider: "github",
       issue_id: 690,
       episode_id: "E4-690",
       projection_digest: `sha256:${"a".repeat(64)}`,
     });
     expect(process.exitCode).toBe(1);
+    expectRejectedIssue(output, {
+      code: "invalid_union_discriminator",
+      path: ["admission", "issue", "projection_state"],
+    });
     expect(existsSync(join(f.root, f.sourcePath))).toBe(false);
     expect(readFileSync(join(f.root, f.projectionPath), "utf8")).toBe(f.seededProjection);
     expect(existsSync(f.ledgerPath)).toBe(false);
