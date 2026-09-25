@@ -63,6 +63,27 @@ plan: docs/plans/PLAN-<id>.md
 
 - <項目を記入>
 
+### 移植元: diagrams.yaml `ER図` (semantic item catalog `d_er` skeleton)
+
+> trace: 基本設計 第6章
+
+| エンティティ | 主キー/外部キー | その他フィールド |
+|---|---|---|
+| tenants | PK id | name, plan |
+| users | PK id, FK tenant_id | email, role |
+| tasks | PK id, FK tenant_id, FK project_id | status |
+| subs | PK id, FK tenant_id | status |
+| projects | PK id, FK tenant_id | name |
+| audit | PK id, FK tenant_id | action |
+
+| 関連元 | 関連先 | 多重度 |
+|---|---|---|
+| tenants | users | 1..N |
+| tenants | projects | 1..N |
+| projects | tasks | 1..N |
+| tenants | subs | 1..N |
+| tenants | audit | 1..N |
+
 ### 移植元: ZIP-DOC-039 イベントスキーマ
 
 #### 第1章 方針
