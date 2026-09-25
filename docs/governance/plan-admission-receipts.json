@@ -5124,17 +5124,17 @@
     {
       "sequence": 321,
       "previous_record_digest": "sha256:aecead8e34893585c48436943d0d92a6647ccf7fd9a9883e6a1bd07b2ddbba35",
-      "record_digest": "sha256:69c6d531a68bc06f27b3b8dcfec71e19bfe536f070d169d698496660cc73741c",
-      "command_id": "plan-revise:issue-676:codex-pr2b:plan:r8-retry",
-      "receipt_id": "certificate:6123d41aa09856dccc2d28b415b89c76",
-      "receipt_digest": "sha256:81d9ff864a6dad1ed06e80fc483c4514e53e6155df56465db33dd6f4223de14d",
-      "decision_digest": "sha256:66dae8cba3b926cd410b2f065d93e20820beaa35519baf2096e224ebf47976a6",
+      "record_digest": "sha256:cdc9520630a352811a245a11d002cf6e82cb1e71979cef79ebd20e7545445317",
+      "command_id": "plan-revise:issue-676:prt1-generates-r8:plan:r8:ab7e5eae35dc",
+      "receipt_id": "certificate:62dc79895390c9552deeacb8684d3631",
+      "receipt_digest": "sha256:0e0dabf096ae4fe926c9f9187923d7e774a7b377701613c193d7c50f55fc4c44",
+      "decision_digest": "sha256:b5531303e5bf0400e385772a1e018723951dc8dbf86ac2ff089351a3913f5423",
       "binding": {
         "path": "docs/plans/PLAN-L7-676-release-consumer-dev-start.md",
         "plan_id": "PLAN-L7-676-release-consumer-dev-start",
         "asset_id": "plan:aae8bf0e313f8688fbad4d4d8cf0a6a9",
         "revision": 8,
-        "content_digest": "sha256:78ada99a8a489ebe90e62344014a6f566ab3c65812707f2249102e7f3afe33be"
+        "content_digest": "sha256:39b9f741ecdadc15b44f575dff82a4343c491191b0c6a8add75b18f292d31422"
       }
     }
   ]
