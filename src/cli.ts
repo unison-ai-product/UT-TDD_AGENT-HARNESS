@@ -448,12 +448,29 @@ function sessionTouchedFilesForGuard(repoRoot: string, sessionId: string | undef
     if (!line.trim()) continue;
     try {
       const ev = JSON.parse(line) as { target?: string };
-      if (ev.target) touched.push(normalizeRepoRelative(ev.target, repoRoot));
+      if (ev.target) touched.push(...sessionLogTargetCandidates(ev.target, repoRoot));
     } catch {
       // Ignore malformed session-log rows; preflight should keep checking other rows.
     }
   }
   return touched;
+}
+
+/**
+ * session-log の `target` は `summarize()` (src/runtime/session-log.ts) が書く
+ * `${tool_name} ${path}` 形 (path 系ツールのみ、frozen: U-SLOG-007 系)。work-guard が突合する
+ * `targetPath` は path 単体なので、生の target をそのまま touched set に入れるだけでは
+ * 常に不一致になる (2026-09-24 是正: own-session の apply_patch/write_file が誤って
+ * foreign-uncommitted 扱いされていた)。raw 値に加え、先頭の空白区切りトークン (tool_name) を
+ * 剥がした残り (= path 候補) も候補に含める。
+ */
+function sessionLogTargetCandidates(target: string, repoRoot: string): string[] {
+  const candidates = [normalizeRepoRelative(target, repoRoot)];
+  const spaceIdx = target.indexOf(" ");
+  if (spaceIdx > 0) {
+    candidates.push(normalizeRepoRelative(target.slice(spaceIdx + 1), repoRoot));
+  }
+  return candidates;
 }
 
 function guardTargetsFromPatchText(patchText: string, repoRoot: string): string[] {
