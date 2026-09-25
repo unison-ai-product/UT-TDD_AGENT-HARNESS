@@ -193,7 +193,7 @@ describe("frontmatter schema (§1.1 / §1.1.parent_design / §3.3 / §3.4)", () 
     });
   }
 
-  it("CANDIDATE-U-ISSUEBIND-001: projection_state=projected の全ゼロ digest は fail-close (§2.1/§2.2)", () => {
+  it("U-ISSUEBIND-001: projection_state=projected の全ゼロ digest は fail-close (§2.1/§2.2)", () => {
     const zeroDigest = `sha256:${"0".repeat(64)}`;
     const r = frontmatterSchema.safeParse(
       redesignFrontmatter({
@@ -207,7 +207,7 @@ describe("frontmatter schema (§1.1 / §1.1.parent_design / §3.3 / §3.4)", () 
     expect(r.success).toBe(false);
   });
 
-  it("CANDIDATE-U-ISSUEBIND-002: projection_state=unprojected は digest なしで受理し、null/空文字/キー付与は拒否する (§2.1)", () => {
+  it("U-ISSUEBIND-002: projection_state=unprojected は digest なしで受理し、null/空文字/キー付与は拒否する (§2.1)", () => {
     const ok = frontmatterSchema.safeParse(
       redesignFrontmatter({
         provider: "github",
@@ -241,7 +241,7 @@ describe("frontmatter schema (§1.1 / §1.1.parent_design / §3.3 / §3.4)", () 
     expect(withEmptyDigest.success).toBe(false);
   });
 
-  it("CANDIDATE-U-ISSUEBIND-003: projection_state=projected は digest 欠落/null/空文字で fail-close (§2.1)", () => {
+  it("U-ISSUEBIND-003: projection_state=projected は digest 欠落/null/空文字で fail-close (§2.1)", () => {
     const missing = frontmatterSchema.safeParse(
       redesignFrontmatter({
         provider: "github",
@@ -275,7 +275,7 @@ describe("frontmatter schema (§1.1 / §1.1.parent_design / §3.3 / §3.4)", () 
     expect(emptyDigest.success).toBe(false);
   });
 
-  it("CANDIDATE-U-ISSUEBIND-004: projection_state 欠落の legacy binding は引き続き有効 (§2.1 legacy 条項)", () => {
+  it("U-ISSUEBIND-004: projection_state 欠落の legacy binding は引き続き有効 (§2.1 legacy 条項)", () => {
     const legacy = frontmatterSchema.safeParse(
       redesignFrontmatter({
         provider: "github",

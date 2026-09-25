@@ -199,7 +199,7 @@ describe("PLAN admission policy", () => {
     );
   });
 
-  it("CANDIDATE-U-ISSUEBIND-002 (policy): projection_state=unprojected はForward外escapeの必須Issueを満たす (§2.1/§2.4)", () => {
+  it("U-ISSUEBIND-002 (policy): projection_state=unprojected はForward外escapeの必須Issueを満たす (§2.1/§2.4)", () => {
     const decision = evaluatePlanAdmission({
       ...forward,
       routeSignal: "feature_addition",

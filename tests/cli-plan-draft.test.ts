@@ -96,7 +96,7 @@ describe("plan draft CLI registrar", () => {
     return JSON.stringify(input);
   }
 
-  it("CANDIDATE-U-ISSUEBIND-001 (plan draft): projection_state=projectedの全ゼロdigestをtyped fail-closeする (§2.2)", () => {
+  it("U-ISSUEBIND-001 (plan draft): projection_state=projectedの全ゼロdigestをtyped fail-closeする (§2.2)", () => {
     expect(() =>
       parsePlanDraftManifest(
         withIssue({
@@ -110,7 +110,7 @@ describe("plan draft CLI registrar", () => {
     ).toThrow();
   });
 
-  it("CANDIDATE-U-ISSUEBIND-002 (plan draft): projection_state=unprojectedをdigestなしで受理する (§2.1)", () => {
+  it("U-ISSUEBIND-002 (plan draft): projection_state=unprojectedをdigestなしで受理する (§2.1)", () => {
     const parsed = parsePlanDraftManifest(
       withIssue({
         provider: "github",
@@ -127,7 +127,7 @@ describe("plan draft CLI registrar", () => {
     });
   });
 
-  it("CANDIDATE-U-ISSUEBIND-003 (plan draft): projection_state=projectedのdigest欠落/null/空文字をfail-closeする (§2.1)", () => {
+  it("U-ISSUEBIND-003 (plan draft): projection_state=projectedのdigest欠落/null/空文字をfail-closeする (§2.1)", () => {
     expect(() =>
       parsePlanDraftManifest(
         withIssue({
@@ -162,7 +162,7 @@ describe("plan draft CLI registrar", () => {
     ).toThrow();
   });
 
-  it("CANDIDATE-U-ISSUEBIND-005 (plan draft): projection_state欠落は新規revision入力境界でfail-closeする (§2.2)", () => {
+  it("U-ISSUEBIND-005 (plan draft): projection_state欠落は新規revision入力境界でfail-closeする (§2.2)", () => {
     expect(() =>
       parsePlanDraftManifest(
         withIssue({

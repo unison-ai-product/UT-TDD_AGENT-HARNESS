@@ -148,7 +148,7 @@ describe("TrackedReceiptRenderer", () => {
     expect(embedded.escape_reason).toBe("PoC実装を設計へ引き戻す");
   });
 
-  it("CANDIDATE-U-ISSUEBIND-002 (renderer): projection_state=unprojectedはdigestキーを出力しない (§2.1)", () => {
+  it("U-ISSUEBIND-002 (renderer): projection_state=unprojectedはdigestキーを出力しない (§2.1)", () => {
     const reverseUnprojected: PlanAdmissionRequest = {
       routeSignal: "reverse",
       routeMode: "reverse",
