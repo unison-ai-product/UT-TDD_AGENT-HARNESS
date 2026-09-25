@@ -14,7 +14,7 @@ export interface RepositoryReadContract {
 const CONTRACT_ROWS = `
 asset-catalog:3 asset-drift:1 backfill-pairing:2 cited-command-existence:1 cli-surface:2 cli:1
 advisory-strict-gate-aging:4
-codex-hook-adapter:1 coding-rules:1 context-doc-router:2 cycle-p4-verification:5 db-currency:1 db-projection-coverage:1 db-projection-ingestion:3
+codex-hook-adapter:5 coding-rules:1 context-doc-router:2 cycle-p4-verification:5 db-currency:1 db-projection-coverage:1 db-projection-ingestion:3
 dependency-drift:4 descent-obligation:3 distribution-acceptance:1 distribution-scratch-ignore:1 doctor-runtime-surface:2 doctor:25
 drive-model-passage:2 fr-roadmap-coverage:4 frontend-design-coverage:1 g10-ux-workflow:5 g8-integration-workflow:6 g9-system-workflow:7
 erasable-syntax:1 gate-static:9 impl-plan-trace:1 import-specifier:2 l14-close-audit:8 l6-completion:2 l6-fr-coverage:2 mode-catalog:1 model-id-ssot:1 model-id-ssot-drift:1 module-drift:2 oracle-test-trace:5
@@ -39,8 +39,9 @@ hook-native-launcher:1 claude-memory-terminal-gc:1 release-version-identity:2 wi
 profile/tracked-loader:2
 plan-asset/ledger-schema:4 plan-asset/legacy-inventory:5 plan-asset/legacy-migration-dry-run:13 plan-asset/project-identity-loader:1
 disposition/git-authoring-provenance:3 disposition/projection:6 disposition/tracked-target-registry:2
-forward-escape-issue-contract:2
-`;
+  forward-escape-issue-contract:2
+  pack-consumer-runtime-release:3
+  `;
 
 const repositoryReadContracts: Record<string, RepositoryReadContract> = Object.fromEntries(
   CONTRACT_ROWS.trim()
@@ -122,6 +123,12 @@ repositoryReadContracts["tests/support/pack-consumer-runtime.ts"] = {
   mode_calls: { head_snapshot: 1, isolated_fixture: 1 },
   reason:
     "clean Pack/provider parity fixture materializes and seals inputs only from the detached execution snapshot before deleting the Pack checkout",
+};
+repositoryReadContracts["tests/pack-consumer-runtime-release.test.ts"] = {
+  mode: "isolated_fixture",
+  calls: 3,
+  reason:
+    "clean Pack producer fixture copies selected tracked assets from the detached snapshot into a writable temporary Git repository",
 };
 
 export const REPOSITORY_READ_CONTRACTS: Readonly<Record<string, RepositoryReadContract>> =
