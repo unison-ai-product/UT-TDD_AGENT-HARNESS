@@ -1,5 +1,5 @@
 {
-  "description": "Codex CLI project-local hook adapter (PLAN-L7-139). Official Codex discovery reads <repo>/.codex/hooks.json or <repo>/.codex/config.toml when the project is trusted. This mirrors the Claude guard hooks in .claude/settings.json, wired with Codex tool names, and reuses the same TypeScript entrypoints. Do not move this to global ~/.codex/.",
+  "description": "Codex CLI project-local hook adapter (PLAN-L7-139, PLAN-L7-668). Official Codex discovery reads <repo>/.codex/hooks.json or <repo>/.codex/config.toml when the project is trusted. This mirrors the Claude guard hooks in .claude/settings.json, wired with Codex tool names, and reuses the same TypeScript entrypoints. Do not move this to global ~/.codex/.",
   "hooks": {
     "PreToolUse": [
       {
@@ -7,11 +7,9 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node",
-            "args": [".claude/hooks/agent-guard.ts"],
+            "command": "node \"$(git rev-parse --show-toplevel)/.claude/hooks/agent-guard.ts\"",
             "timeout": 5,
-            "statusMessage": "agent guard: block non-allowlisted Codex subagent spawns unless explicitly bypassed (Codex parity)",
-            "blockOnFailure": true
+            "statusMessage": "agent guard: block non-allowlisted Codex subagent spawns unless explicitly bypassed (Codex parity)"
           }
         ]
       },
@@ -20,11 +18,9 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node",
-            "args": [".claude/hooks/work-guard.ts"],
+            "command": "node \"$(git rev-parse --show-toplevel)/.claude/hooks/work-guard.ts\"",
             "timeout": 5,
-            "statusMessage": "work guard: block edits to foreign uncommitted files unless explicitly bypassed (Codex parity, PLAN-L7-139)",
-            "blockOnFailure": true
+            "statusMessage": "work guard: block edits to foreign uncommitted files unless explicitly bypassed (Codex parity, PLAN-L7-139)"
           }
         ]
       }
@@ -34,8 +30,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node",
-            "args": ["src/cli.ts", "session", "start"],
+            "command": "node \"$(git rev-parse --show-toplevel)/src/cli.ts\" session start",
             "timeout": 5,
             "statusMessage": "session-log: session start (fail-open)"
           }
@@ -44,12 +39,11 @@
     ],
     "PostToolUse": [
       {
-        "matcher": "apply_patch|write_file|exec_command|local_shell",
+        "matcher": "apply_patch|write_file|exec_command|local_shell|Bash",
         "hooks": [
           {
             "type": "command",
-            "command": "node",
-            "args": ["src/cli.ts", "hook", "post-tool-use"],
+            "command": "node \"$(git rev-parse --show-toplevel)/src/cli.ts\" hook post-tool-use",
             "timeout": 5,
             "statusMessage": "session-log: post tool use (fail-open)"
           }
@@ -61,8 +55,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node",
-            "args": ["src/cli.ts", "session", "summary"],
+            "command": "node \"$(git rev-parse --show-toplevel)/src/cli.ts\" session summary",
             "timeout": 5,
             "statusMessage": "session-log: PLAN digest summary (fail-open)"
           }
