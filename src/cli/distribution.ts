@@ -409,13 +409,24 @@ function createTaggedSourceSnapshot(repoRoot: string, revision: string, root: st
 }
 
 function installTaggedDependencies(sourceRoot: string): void {
-  const npmCli = join(dirname(process.execPath), "node_modules", "npm", "bin", "npm-cli.js");
-  const install = spawnSync(process.execPath, [npmCli, "ci", "--no-audit", "--no-fund"], {
-    cwd: sourceRoot,
-    encoding: "utf8",
-    stdio: ["ignore", "pipe", "pipe"],
-    windowsHide: true,
-  });
+  const npmArgs = ["ci", "--no-audit", "--no-fund"];
+  const install =
+    process.platform === "win32"
+      ? spawnSync(
+          join(process.env.SystemRoot ?? "C:\\Windows", "System32", "cmd.exe"),
+          ["/d", "/c", "npm", ...npmArgs],
+          {
+            cwd: sourceRoot,
+            encoding: "utf8",
+            stdio: ["ignore", "pipe", "pipe"],
+            windowsHide: true,
+          },
+        )
+      : spawnSync("npm", npmArgs, {
+          cwd: sourceRoot,
+          encoding: "utf8",
+          stdio: ["ignore", "pipe", "pipe"],
+        });
   if (install.status !== 0)
     throw new Error(`tag source npm ci failed: ${install.stderr ?? install.stdout ?? ""}`);
 }
