@@ -202,17 +202,20 @@ export function evaluatePlanAdmission(request: PlanAdmissionRequest): AdmissionD
 
   const issueRequired = request.routeMode !== "forward";
   if (issueRequired) {
-    // PLAN-L7-690 §2.1: projection_state 未指定の legacy binding は digest の有無から
-    // implicit projected とみなす (既存 caller 後方互換)。明示 unprojected は
-    // 「未投影」を意味するため、Forward外escapeが要求する既投影Issueにはならない。
-    const impliedProjectionState =
-      request.issue?.projectionState ?? (request.issue?.projectionDigest ? "projected" : undefined);
-    if (
-      !request.issue?.issueId ||
-      !request.issue.episodeId ||
-      impliedProjectionState !== "projected" ||
-      !request.issue.projectionDigest
-    ) {
+    // PLAN-L7-690 §2.1/§2.4: Issue binding 自体 (issueId/episodeId) は常に必須。
+    // projection_state 未指定の legacy binding は digest の有無から implicit projected と
+    // みなす (既存 caller 後方互換)。#692 の CLI 配線が無い現状では projectForwardEscapeIssue
+    // が実 digest を発行できないため、projection_state=unprojected (digest なし) も
+    // 正当な Issue binding として admit する — 全ゼロ digest を発行させないための代替表現
+    // であり、#692 配線後の cutoff (unprojected 禁止) は本 PR の対象外 (§2.4)。
+    const issue = request.issue;
+    const impliedProjectionState = issue?.projectionState ?? (issue?.projectionDigest ? "projected" : undefined);
+    const validIssueBinding =
+      Boolean(issue?.issueId) &&
+      Boolean(issue?.episodeId) &&
+      (impliedProjectionState === "unprojected" ||
+        (impliedProjectionState === "projected" && Boolean(issue?.projectionDigest)));
+    if (!validIssueBinding) {
       violations.push({
         code: "plan-admission-issue-required",
         message: "Forward外起票にはE4投影済みGitHub Issueが必要です",

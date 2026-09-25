@@ -199,7 +199,7 @@ describe("PLAN admission policy", () => {
     );
   });
 
-  it("CANDIDATE-U-ISSUEBIND-002 (policy): projection_state=unprojected はForward外escapeの必須Issueにならない (§2.1)", () => {
+  it("CANDIDATE-U-ISSUEBIND-002 (policy): projection_state=unprojected はForward外escapeの必須Issueを満たす (§2.1/§2.4)", () => {
     const decision = evaluatePlanAdmission({
       ...forward,
       routeSignal: "feature_addition",
@@ -211,6 +211,27 @@ describe("PLAN admission policy", () => {
         provider: "github",
         issueId: 690,
         episodeId: "E4-690",
+        projectionState: "unprojected",
+      },
+      origin: { planId: "PLAN-L4-24", revision: 1, digest: "sha256:def" },
+      reentry: { targetPlanId: "PLAN-L4-24", targetRevision: 2, phase: "forward_merge" },
+      escapeReason: "issue binding contract",
+    });
+    expect(decision).toMatchObject({ ok: true, issueRequired: true });
+  });
+
+  it("CANDIDATE-U-ISSUEBIND (policy): issueId/episodeId欠落は projection_state に関わらず必須Issueを満たさない", () => {
+    const decision = evaluatePlanAdmission({
+      ...forward,
+      routeSignal: "feature_addition",
+      routeMode: "add-feature",
+      kind: "add-design",
+      layer: "L6",
+      branch: "work/add-feature-admission",
+      issue: {
+        provider: "github",
+        issueId: 690,
+        episodeId: "",
         projectionState: "unprojected",
       },
       origin: { planId: "PLAN-L4-24", revision: 1, digest: "sha256:def" },
