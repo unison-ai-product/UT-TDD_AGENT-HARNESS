@@ -26,15 +26,15 @@ frontmatter / receipt と、新規 revision の admission を同じ schema 必�
 
 | Candidate | Stimulus / mutation | Falsifiable oracle |
 |---|---|---|
-| `CANDIDATE-U-ISSUEBIND-001` | `projection_state: projected` の issue binding に全ゼロの `sha256:` digest を与え、`plan draft` と `plan revise` の新 revision admission を各々実行する。 | 両経路が全ゼロを typed fail-close し、PLAN source、tracked receipt、receipt chain の新規 write が 0 件になる。全ゼロを別 certificateへ変換して成功扱いにしない。 |
-| `CANDIDATE-U-ISSUEBIND-002` | `projection_state: unprojected` と `projection_digest` なしの issue binding を `plan draft` と `plan revise` に与える。 | schema / admission が受理し、正規出力にも `projection_state: unprojected` が残る。`projection_digest` key、`null`、空文字を出力しない。 |
-| `CANDIDATE-U-ISSUEBIND-003` | `projection_state: projected` から `projection_digest` を削除する。または `null` / 空文字へ変異する。 | schema / admission が typed fail-close し、projected を digest なしで成功扱いにしない。新規 source、receipt、ledger append は 0 件になる。 |
-| `CANDIDATE-U-ISSUEBIND-004` | 既存 revision の frontmatter / tracked receipt に `issue` binding はあるが `projection_state` がない legacy fixture を `plan lint` と read-only parse へ与える。 | legacy 欠落を有効として受理し、`invalid_frontmatter` にしない。これは strict な必須化を入れた場合に Red となり、legacy 条項を実装した後に Green になる回帰 oracle である。既存 source、receipt、ledger の write は 0 件。 |
-| `CANDIDATE-U-ISSUEBIND-005` | 新規 `plan draft` / `plan revise` の admission manifest から `projection_state` を削除する（digest の有無にかかわらず）。 | 新規 revision の入力境界で typed fail-close し、既存 legacy fixture の受理と混同しない。legacy 欠落を schema 全体で許容するだけでは Green にならず、revision admission の必須化を実装した時点で Red→Green を観測する。新規 source、receipt、ledger append は 0 件。 |
+| `U-ISSUEBIND-001` | `projection_state: projected` の issue binding に全ゼロの `sha256:` digest を与え、`plan draft` と `plan revise` の新 revision admission を各々実行する。 | 両経路が全ゼロを typed fail-close し、PLAN source、tracked receipt、receipt chain の新規 write が 0 件になる。全ゼロを別 certificateへ変換して成功扱いにしない。 |
+| `U-ISSUEBIND-002` | `projection_state: unprojected` と `projection_digest` なしの issue binding を `plan draft` と `plan revise` に与える。 | schema / admission が受理し、正規出力にも `projection_state: unprojected` が残る。`projection_digest` key、`null`、空文字を出力しない。 |
+| `U-ISSUEBIND-003` | `projection_state: projected` から `projection_digest` を削除する。または `null` / 空文字へ変異する。 | schema / admission が typed fail-close し、projected を digest なしで成功扱いにしない。新規 source、receipt、ledger append は 0 件になる。 |
+| `U-ISSUEBIND-004` | 既存 revision の frontmatter / tracked receipt に `issue` binding はあるが `projection_state` がない legacy fixture を `plan lint` と read-only parse へ与える。 | legacy 欠落を有効として受理し、`invalid_frontmatter` にしない。これは strict な必須化を入れた場合に Red となり、legacy 条項を実装した後に Green になる回帰 oracle である。既存 source、receipt、ledger の write は 0 件。 |
+| `U-ISSUEBIND-005` | 新規 `plan draft` / `plan revise` の admission manifest から `projection_state` を削除する（digest の有無にかかわらず）。 | 新規 revision の入力境界で typed fail-close し、既存 legacy fixture の受理と混同しない。legacy 欠落を schema 全体で許容するだけでは Green にならず、revision admission の必須化を実装した時点で Red→Green を観測する。新規 source、receipt、ledger append は 0 件。 |
 
 ## 3. 実装 PR への昇格規律
 
-- 上記 5 件は候補であり、この契約 PR では `U-*` の正規 IDへ昇格しない。
+- 上記 5 件は契約 PR (#700) では候補 (`CANDIDATE-U-ISSUEBIND-*`) として freeze し、実装 PR (#690) で意味を変えずに正規 ID `U-ISSUEBIND-001`〜`005` へ昇格した。
 - 後続実装 PR は `src/schema/frontmatter.ts`、`src/plan-admission/policy.ts`、
   `src/plan-admission/tracked-receipt-renderer.ts`、`src/cli/plan-draft.ts` / `plan-revise.ts`
   `src/plan-admission/plan-revision-command-assembler.ts`、
