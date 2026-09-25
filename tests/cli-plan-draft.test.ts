@@ -130,7 +130,12 @@ describe("plan draft CLI registrar", () => {
   it("CANDIDATE-U-ISSUEBIND-003 (plan draft): projection_state=projectedのdigest欠落/null/空文字をfail-closeする (§2.1)", () => {
     expect(() =>
       parsePlanDraftManifest(
-        withIssue({ provider: "github", issue_id: 690, episode_id: "E4-690", projection_state: "projected" }),
+        withIssue({
+          provider: "github",
+          issue_id: 690,
+          episode_id: "E4-690",
+          projection_state: "projected",
+        }),
       ),
     ).toThrow();
     expect(() =>

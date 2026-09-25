@@ -169,7 +169,8 @@ function receiptFrontmatter(input: {
             ...(admission.issue.projectionState
               ? { projection_state: admission.issue.projectionState }
               : {}),
-            ...(admission.issue.projectionState !== "unprojected" && admission.issue.projectionDigest
+            ...(admission.issue.projectionState !== "unprojected" &&
+            admission.issue.projectionDigest
               ? { projection_digest: admission.issue.projectionDigest }
               : {}),
           },

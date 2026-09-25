@@ -209,7 +209,8 @@ export function evaluatePlanAdmission(request: PlanAdmissionRequest): AdmissionD
     // 正当な Issue binding として admit する — 全ゼロ digest を発行させないための代替表現
     // であり、#692 配線後の cutoff (unprojected 禁止) は本 PR の対象外 (§2.4)。
     const issue = request.issue;
-    const impliedProjectionState = issue?.projectionState ?? (issue?.projectionDigest ? "projected" : undefined);
+    const impliedProjectionState =
+      issue?.projectionState ?? (issue?.projectionDigest ? "projected" : undefined);
     const validIssueBinding =
       Boolean(issue?.issueId) &&
       Boolean(issue?.episodeId) &&
