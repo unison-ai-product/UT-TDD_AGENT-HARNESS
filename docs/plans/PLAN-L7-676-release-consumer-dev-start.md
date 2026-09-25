@@ -73,6 +73,10 @@ generates:
     artifact_type: markdown_doc
   - artifact_path: docs/templates/vmodel/README.md
     artifact_type: markdown_doc
+  - artifact_path: src/vmodel/design-root.ts
+    artifact_type: source_module
+  - artifact_path: tests/design-root.test.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L6-101-pack-independent-multi-consumer-acceptance.md
   requires:
@@ -131,18 +135,18 @@ status: confirmed
 github_issue_id: 676
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:62dc79895390c9552deeacb8684d3631
-  command_id: plan-revise:issue-676:prt1-generates-r8:plan:r8:ab7e5eae35dc
-  admitted_at: 2026-09-25T11:00:26.578Z
-  source_digest: sha256:39b9f741ecdadc15b44f575dff82a4343c491191b0c6a8add75b18f292d31422
-  decision_digest: sha256:b5531303e5bf0400e385772a1e018723951dc8dbf86ac2ff089351a3913f5423
-  receipt_digest: sha256:0e0dabf096ae4fe926c9f9187923d7e774a7b377701613c193d7c50f55fc4c44
+  receipt_id: certificate:7a763e8e11f07d345797ca39c8257c2c
+  command_id: plan-revise:issue-676:codex-pr2b:plan:r9
+  admitted_at: 2026-09-25T12:30:00+09:00
+  source_digest: sha256:d5e335a8305387dca628ce4a1f0268077a822eed317b5141e0b15628cd631f86
+  decision_digest: sha256:4884e46337a09f5f6dfec74c2a0f11eb3a71039e8ecca3231c006a88533d8404
+  receipt_digest: sha256:b0ebeb23388dc7ee50a42df0ecf4c97f3ee99c0eea22bd7bd1d396652a5a7311
   binding:
     path: docs/plans/PLAN-L7-676-release-consumer-dev-start.md
     plan_id: PLAN-L7-676-release-consumer-dev-start
     asset_id: plan:aae8bf0e313f8688fbad4d4d8cf0a6a9
-    revision: 8
-    content_digest: sha256:39b9f741ecdadc15b44f575dff82a4343c491191b0c6a8add75b18f292d31422
+    revision: 9
+    content_digest: sha256:d5e335a8305387dca628ce4a1f0268077a822eed317b5141e0b15628cd631f86
   route:
     signal: feature_addition
     mode: add-feature
@@ -162,8 +166,8 @@ admission_receipt:
     target_plan_id: PLAN-L7-676-release-consumer-dev-start
     target_revision: 8
     phase: forward_merge
-  escape_reason: PR-T1 が landing させる docs/templates/vmodel/ の 22 本を confirmed の本
-    PLAN の generates に追加する (rev 8、§8-7)。契約本文と review_evidence は rev 7 から変えない。
+  escape_reason: "PR #685 を main の PR-T1 (#703) 後へ re-chain し、PR-2b の新規成果物を
+    confirmed PLAN に宣言するため。"
 ---
 
 # PLAN-L7-676: Release consumer で開発を開始できる状態にする
@@ -623,3 +627,4 @@ injection path の乗っ取り、harness 自身の挙動変化、部分 setup �
 5. confirm の実施 (rev 6): rev 5 の exact head `8be63ed4` の CI green (run 36104559954、2026-09-25T07:06:45Z) の後に、Codex Sol の bounded 再検が PASS (receipt `b4ef3e27…`、2026-09-25T07:08:57Z) を返した。その receipt を `review_evidence` に記録し、`status: confirmed` とした。
 6. §3.5.3 の source 例外 (rev 7): PR-T1 (#703) の非著者 review (Codex Sol r1) が、L11 / L13 のテンプレートの source (ZIP-DOC-028 / 011 / 021) の disposition target が当該 slot を指さないと FLAG した。原因は、§3.5.3 の規則本文 (process 文書を指す本は optional) と構成元表 (028 を L11、011 と 021 を L13 の source とする) の矛盾である。advisor (claude-fable-5、design) の推奨に従い、構成元表を正として規則本文に閉じた例外句 (3 本) を加え、test-design の CANDIDATE-U-RCDEV-020 を同じ例外に揃えた。disposition catalog は変更しない。
 7. PR-T1 の成果物宣言 (rev 8): PR-T1 (#703) は rev 7 の merge (#704) 後に main を取り込み、自 PR が新規に landing させる `docs/templates/vmodel/` の 22 本 (required 21 slot のテンプレートと port index の README) だけを `generates` に追加した。既存ファイルと他 PR の成果物は載せていない。契約本文と `review_evidence` は rev 7 から変えていない。
+8. rev 9: PR #685 を main の PR-T1 (#703) 後へ re-chain し、PR-2b の新規成果物 2 件だけを confirmed PLAN の `generates` に宣言する。
