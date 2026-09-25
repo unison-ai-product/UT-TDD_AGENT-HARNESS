@@ -1,4 +1,4 @@
-import { spawnSync } from "node:child_process";
+import { type SpawnSyncOptions, spawnSync } from "node:child_process";
 import { isAbsolute, relative, resolve, sep } from "node:path";
 import type { Command } from "commander";
 import { resolveRepositoryRoot } from "../feedback/repository-root.ts";
@@ -46,6 +46,19 @@ export interface AdapterExecutionDeps {
   }) => void;
   writeHandoverWarnings: () => void;
   now?: () => string;
+  spawnSync?: AdapterSpawnSync;
+}
+
+export type AdapterSpawnSync = (
+  command: string,
+  args: readonly string[],
+  options: SpawnSyncOptions,
+) => AdapterSpawnResult;
+
+export interface AdapterSpawnResult {
+  status: number | null;
+  signal: NodeJS.Signals | null;
+  error?: Error;
 }
 
 export interface AdapterExecutionInput {
@@ -184,7 +197,9 @@ export function executeAdapterPlanForCli(
     command: plan.command,
     args: plan.args,
   });
-  const child = spawnSync(invocation.command, invocation.args, {
+  const runSpawnSync: AdapterSpawnSync =
+    depsInput.spawnSync ?? ((command, args, options) => spawnSync(command, args, options));
+  const child = runSpawnSync(invocation.command, invocation.args, {
     input: plan.stdin,
     stdio:
       plan.stdin === undefined
@@ -193,6 +208,7 @@ export function executeAdapterPlanForCli(
     env: adapterExecutionEnv(plan.provider, plan.env),
     shell: invocation.shell ?? false,
     windowsVerbatimArguments: invocation.windowsVerbatimArguments ?? false,
+    windowsHide: true,
   });
   let reviewResult: ReturnType<typeof projectReviewVerdict> | undefined;
   if (input.review) {
