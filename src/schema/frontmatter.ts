@@ -75,7 +75,8 @@ export const dependenciesSchema = z.object({
  *   引き続き有効 (§2.1 legacy 条項)。既存 PLAN を一括是正しない。
  */
 const PROJECTION_DIGEST_PATTERN = /^sha256:[a-f0-9]{64}$/i;
-const ALL_ZERO_PROJECTION_DIGEST_PATTERN = /^sha256:0{64}$/i;
+/** #690 補正: plan-admission/policy.ts の API 境界チェックでも同一正規表現を再利用する。 */
+export const ALL_ZERO_PROJECTION_DIGEST_PATTERN = /^sha256:0{64}$/i;
 
 const projectedIssueBindingSchema = z
   .object({

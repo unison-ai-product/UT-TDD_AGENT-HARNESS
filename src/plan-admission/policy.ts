@@ -1,3 +1,4 @@
+import { ALL_ZERO_PROJECTION_DIGEST_PATTERN } from "../schema/frontmatter.ts";
 import type { Drive, Kind, Layer, SubDoc, WorkflowPhase } from "../schema/index.ts";
 import { routeSignalCandidates } from "../schema/route-map.ts";
 
@@ -211,11 +212,17 @@ export function evaluatePlanAdmission(request: PlanAdmissionRequest): AdmissionD
     const issue = request.issue;
     const impliedProjectionState =
       issue?.projectionState ?? (issue?.projectionDigest ? "projected" : undefined);
+    // #690 補正: unprojected は projectionDigest を一切持たない (空文字も含む) ことを
+    // API 境界でも強制する。projected は非全ゼロ digest を必須とする (§2.1/§2.2 defence in depth)。
+    const hasProjectionDigest = issue?.projectionDigest !== undefined;
     const validIssueBinding =
       Boolean(issue?.issueId) &&
       Boolean(issue?.episodeId) &&
-      (impliedProjectionState === "unprojected" ||
-        (impliedProjectionState === "projected" && Boolean(issue?.projectionDigest)));
+      (impliedProjectionState === "unprojected"
+        ? !hasProjectionDigest
+        : impliedProjectionState === "projected" &&
+          Boolean(issue?.projectionDigest) &&
+          !ALL_ZERO_PROJECTION_DIGEST_PATTERN.test(issue?.projectionDigest ?? ""));
     if (!validIssueBinding) {
       violations.push({
         code: "plan-admission-issue-required",
