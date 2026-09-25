@@ -1,8 +1,10 @@
 import { execFileSync, type SpawnSyncReturns, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
+  chmodSync,
   cpSync,
   existsSync,
+  lstatSync,
   mkdtempSync,
   readdirSync,
   readFileSync,
@@ -87,6 +89,23 @@ function collectFilesystemCandidatePaths(repoRoot: string): string[] {
   };
   walk(repoRoot);
   return out.sort();
+}
+
+function removePackageScratchTree(path: string): void {
+  if (!existsSync(path)) return;
+  // buildNodeGeneration seals published generation directories to 0555. On
+  // POSIX, recursive removal needs write permission on each parent directory;
+  // restore owner permissions inside this disposable, producer-owned scratch
+  // tree before removing it. lstatSync avoids following any symlink entries.
+  const makeDirectoriesRemovable = (directory: string): void => {
+    for (const entry of readdirSync(directory)) {
+      const child = join(directory, entry);
+      if (lstatSync(child).isDirectory()) makeDirectoriesRemovable(child);
+    }
+    chmodSync(directory, 0o700);
+  };
+  makeDirectoriesRemovable(path);
+  rmSync(path, { recursive: true, force: true });
 }
 
 /**
@@ -707,7 +726,7 @@ export async function packageConsumerRuntimeRelease(input: {
       consumerAnchorDigest: `sha256:${hexDigest(consumerChecksumBytes)}`,
     };
   } finally {
-    rmSync(scratch, { recursive: true, force: true });
+    removePackageScratchTree(scratch);
   }
 }
 
