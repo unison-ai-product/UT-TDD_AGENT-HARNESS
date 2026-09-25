@@ -38,3 +38,17 @@ consumer-local runtime の原子性・hostile path・history chain は `PLAN-L7-
 Linux / Windows / aggregate CI、非著者 review receipt を束ねる。fixture は一時ディレクトリだけを使い、
 開発 repository・OneDrive・共有 `harness.db`・実ユーザーデータを操作対象にしない。
 PR-1 は 001..004 と 011、PR-2 は 005..010 を所有する。
+
+## 実装PR-1で昇格済みの oracle 宣言
+
+以下は PR-1 の実装テストが実際に引用する、候補から昇格した正規 oracle である。候補表の
+`CANDIDATE-*` は設計段階の識別子として残し、実装テストの citation はこの表の `U-*` と
+1 対 1 で対応させる。PR-2 の 005..010 は、対応する実装が入るまでここへ追加しない。
+
+| Oracle | 所有テスト | 検証境界 |
+| --- | --- | --- |
+| `U-PACKRT-001` | `tests/pack-consumer-runtime-release.test.ts` | exact asset 集合と同一 revision の決定論的 bytes |
+| `U-PACKRT-002` | `tests/pack-consumer-runtime-release.test.ts` | consumer runtime schema の型・欠落・unknown field 拒否 |
+| `U-PACKRT-003` | `tests/pack-consumer-runtime-release.test.ts` | asset / sealed receipt の producer identity 漏洩拒否 |
+| `U-PACKRT-004` | `tests/pack-consumer-runtime-release.test.ts` | reviewed toolchain・generation・staged move の fail-close |
+| `U-PACKRT-011` | `tests/pack-consumer-runtime-release.test.ts`, `tests/distribution-acceptance.test.ts` | release commit / tag / manifest の first-parent 束縛 |

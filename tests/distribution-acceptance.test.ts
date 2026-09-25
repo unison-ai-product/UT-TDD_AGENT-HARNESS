@@ -13,14 +13,26 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { stringify } from "yaml";
 import { collectDistributionCandidatePaths } from "../src/cli/distribution.ts";
 import { CODEX_GIT_ROOT_PREFIX } from "../src/lint/hook-invocation.ts";
 import {
+  deriveArtifactInventoryDigest,
+  deriveReleaseId,
+  deriveReleaseRecordDigest,
+} from "../src/schema/release-manifest.ts";
+import {
   buildCleanDistributionPlan,
   cleanDistributionSourcePath,
+  digestConsumerRuntimeBytes,
   gitAddPathspecCommands,
+  materializeReleaseArtifacts,
   transformCleanDistributionArtifact,
 } from "../src/setup/index.ts";
+import {
+  createLocalGitObjectReader,
+  resolveReleaseArtifacts,
+} from "../src/setup/release-artifact-resolver.ts";
 import { removeTestTree } from "./support/temp-tree.ts";
 
 const repoRoot = process.cwd();
@@ -273,7 +285,7 @@ describe("clean distribution local acceptance smoke", () => {
     }
   }, 120_000);
 
-  it("U-SETUP-013 / U-SETUP-014 / AT-DIST-001: clean artifact installs and exposes the same core CLI surfaces", () => {
+  it("U-PACKRT-011 / U-SETUP-013 / U-SETUP-014 / AT-DIST-001: clean artifact installs and exposes the same core CLI surfaces", async () => {
     const sourcePlan = buildCleanDistributionPlan({
       paths: walkCandidatePaths(repoRoot),
       sourceTag: "v0.1.0",
@@ -287,6 +299,7 @@ describe("clean distribution local acceptance smoke", () => {
     expect(plan.denylistViolations).toEqual([]);
 
     const cleanRoot = mkdtempSync(join(tmpdir(), "ut-tdd-clean-acceptance-"));
+    const injectedHome = mkdtempSync(join(tmpdir(), "ut-tdd-acceptance-home-"));
     try {
       const sourcePaths = walkCandidatePaths(repoRoot);
       for (const rel of plan.artifactPaths) {
@@ -299,6 +312,88 @@ describe("clean distribution local acceptance smoke", () => {
           cpSync(from, to, { recursive: true });
         }
       }
+      // Node generation の sealed receipt は、clean Pack の出荷集合からは除外される
+      // governance provenance を source checkout 側で照合する。tagged source fixture
+      // にはその既存 artifact だけを追加し、tar の clean artifact 集合には入れない。
+      const provenance = "docs/governance/node-toolchain-provenance.json";
+      const provenancePath = join(cleanRoot, provenance);
+      mkdirSync(dirname(provenancePath), { recursive: true });
+      cpSync(join(repoRoot, provenance), provenancePath);
+      cpSync(join(repoRoot, "tsconfig.node.json"), join(cleanRoot, "tsconfig.node.json"));
+
+      // PR-1 の package は、workspace の現在状態ではなく実在 tag が指す
+      // release revision C2 を入力にする。C1 は artifact source、C2 は
+      // release/manifest.yaml だけを追加した release commit として作る。
+      const fixtureArtifact = Buffer.from("export const fixture = true;\n", "utf8");
+      mkdirSync(join(cleanRoot, "releases", "canary"), { recursive: true });
+      writeFileSync(join(cleanRoot, "releases", "canary", "entry.ts"), fixtureArtifact);
+      runGit(cleanRoot, ["init", "--quiet"]);
+      runGit(cleanRoot, ["config", "user.email", "test@example.invalid"]);
+      runGit(cleanRoot, ["config", "user.name", "UT test"]);
+      runGit(cleanRoot, ["add", "--", "."]);
+      runGit(cleanRoot, ["commit", "--quiet", "-m", "fixture artifact"]);
+      const artifactCommit = execFileSync("git", ["rev-parse", "HEAD"], {
+        cwd: cleanRoot,
+        encoding: "utf8",
+      }).trim();
+      const resolved = await resolveReleaseArtifacts(
+        {
+          repository: cleanRoot,
+          release: {
+            releaseId: `rel-sha256:${"0".repeat(64)}`,
+            materializerVersion: "1",
+            artifactSourceCommit: artifactCommit,
+            artifactSetDigest: `sha256:${"0".repeat(64)}`,
+          },
+        },
+        { git: createLocalGitObjectReader(), materialize: materializeReleaseArtifacts },
+      );
+      if (!resolved.ok) throw new Error(`fixture artifact resolution failed: ${resolved.error}`);
+      const artifactSetDigest = resolved.digest;
+      const publicationArtifacts = [
+        {
+          sourcePath: "releases/canary/entry.ts",
+          destinationPath: "src/cli.ts",
+          mode: "100644" as const,
+          size: fixtureArtifact.length,
+          contentDigest: digestConsumerRuntimeBytes(fixtureArtifact),
+        },
+      ];
+      const publicationBase = {
+        materializerVersion: "1",
+        artifactSourceCommit: artifactCommit,
+        artifactSetDigest,
+        artifactInventoryDigest: deriveArtifactInventoryDigest(publicationArtifacts),
+        releaseAssetInventoryDigest: `sha256:${"c".repeat(64)}`,
+        artifacts: publicationArtifacts,
+      };
+      const releaseId = deriveReleaseId("1", artifactCommit, artifactSetDigest);
+      const manifest = {
+        schema_version: "v2" as const,
+        releases: {
+          [releaseId]: {
+            ...publicationBase,
+            releaseRecordDigest: deriveReleaseRecordDigest(publicationBase),
+          },
+        },
+        channels: { canary: releaseId, stable: releaseId },
+        channelOrder: ["canary", "stable"],
+      };
+      mkdirSync(join(cleanRoot, "release"), { recursive: true });
+      writeFileSync(join(cleanRoot, "release", "manifest.yaml"), stringify(manifest), "utf8");
+      runGit(cleanRoot, ["add", "--", "release/manifest.yaml"]);
+      runGit(cleanRoot, ["commit", "--quiet", "-m", "release manifest"]);
+      const releaseCommit = execFileSync("git", ["rev-parse", "HEAD"], {
+        cwd: cleanRoot,
+        encoding: "utf8",
+      }).trim();
+      runGit(cleanRoot, ["tag", "v0.0.0-accept"]);
+      expect(
+        execFileSync("git", ["rev-parse", "--verify", "refs/tags/v0.0.0-accept^{commit}"], {
+          cwd: cleanRoot,
+          encoding: "utf8",
+        }).trim(),
+      ).toMatch(/^[a-f0-9]{40}$/);
 
       const fakeCodex = writeFakeCodex(cleanRoot);
       writeLocalUtTddShim(cleanRoot);
@@ -308,11 +403,23 @@ describe("clean distribution local acceptance smoke", () => {
         // PLAN-L7-362: staged root には cache が無いため、status の update-check advisory が
         // 実 remote へ問い合わせないよう opt-out する (テスト決定論)。
         UT_TDD_SKIP_UPDATE_CHECK: "1",
+        HOME: injectedHome,
+        USERPROFILE: injectedHome,
         PATH: `${join(cleanRoot, ".fake-bin")}${process.platform === "win32" ? ";" : ":"}${process.env.PATH ?? ""}`,
       };
 
       const install = runNpm(cleanRoot, ["ci", "--no-audit", "--no-fund"], env);
       expect(install.status, install.stderr || install.stdout).toBe(0);
+      const tagAfterInstall = runNode(
+        cleanRoot,
+        [
+          "-e",
+          "const { spawnSync } = require('node:child_process'); const r = spawnSync('git', ['rev-parse', '--verify', 'refs/tags/v0.0.0-accept^{commit}'], { encoding: 'utf8' }); process.stdout.write(JSON.stringify({ status: r.status, stdout: r.stdout, stderr: r.stderr }));",
+        ],
+        env,
+      );
+      expect(tagAfterInstall.status, tagAfterInstall.stderr || tagAfterInstall.stdout).toBe(0);
+      expect(JSON.parse(tagAfterInstall.stdout).stdout.trim()).toMatch(/^[a-f0-9]{40}$/);
       const packPackageJson = JSON.parse(readFileSync(join(cleanRoot, "package.json"), "utf8")) as {
         scripts: Record<string, string>;
       };
@@ -439,9 +546,39 @@ describe("clean distribution local acceptance smoke", () => {
       expect(pkg.status, pkg.stderr || pkg.stdout).toBe(0);
       const pkgJson = JSON.parse(pkg.stdout);
       expect(pkgJson.ok).toBe(true);
-      expect(pkgJson.tar.exitCode).toBe(0);
+      expect(pkgJson.sourceRevision).toBe(artifactCommit);
+      expect(pkgJson.sourceRevision).not.toBe(releaseCommit);
+      expect(readdirSync(releaseDir).sort()).toEqual([
+        "v0.0.0-accept.consumer-runtime.json",
+        "v0.0.0-accept.consumer.sha256",
+        "v0.0.0-accept.tar.gz",
+        "v0.0.0-accept.tar.gz.sha256",
+        "v0.0.0-accept.ut-tdd.mjs",
+      ]);
       expect(existsSync(join(releaseDir, "v0.0.0-accept.tar.gz"))).toBe(true);
       expect(existsSync(join(releaseDir, "v0.0.0-accept.tar.gz.sha256"))).toBe(true);
+      const runtime = JSON.parse(
+        readFileSync(join(releaseDir, "v0.0.0-accept.consumer-runtime.json"), "utf8"),
+      ) as {
+        release: {
+          tag: string;
+          source_revision: string;
+          materializer_version: string;
+          product_id: string;
+        };
+        generation: { subject_revision: string };
+        admission_input: { aggregate_input: { attestation: { artifactSourceCommit: string } } };
+      };
+      expect(runtime.release).toEqual({
+        tag: "v0.0.0-accept",
+        source_revision: artifactCommit,
+        materializer_version: "1",
+        product_id: "ut-tdd",
+      });
+      expect(runtime.generation.subject_revision).toBe(artifactCommit);
+      expect(runtime.admission_input.aggregate_input.attestation.artifactSourceCommit).toBe(
+        artifactCommit,
+      );
 
       const setup = runNode(cleanRoot, ["src/cli.ts", "setup", "--solo"], env);
       expect(setup.status, setup.stderr || setup.stdout).toBe(0);
@@ -458,6 +595,7 @@ describe("clean distribution local acceptance smoke", () => {
       expect(typecheck.status, typecheck.stderr || typecheck.stdout).toBe(0);
     } finally {
       removeCleanRoot(cleanRoot);
+      removeCleanRoot(injectedHome);
     }
   }, 420_000);
 });

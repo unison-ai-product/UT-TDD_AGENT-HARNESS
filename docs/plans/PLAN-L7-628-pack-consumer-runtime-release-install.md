@@ -8,7 +8,7 @@ drive: agent
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-09-18
-updated: 2026-09-24
+updated: 2026-09-25
 owner: Claude / Opus (pair-freeze) · Codex worker (implementation)
 parent_design: docs/plans/PLAN-L6-101-pack-independent-multi-consumer-acceptance.md
 pair_artifact: docs/test-design/harness/L7-pack-consumer-runtime-release-install-test-design.md
@@ -27,6 +27,14 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-628-pack-consumer-runtime-release-install.md
     artifact_type: markdown_doc
+  - artifact_path: src/cli/distribution.ts
+    artifact_type: source_module
+  - artifact_path: src/setup/consumer-runtime-release.ts
+    artifact_type: source_module
+  - artifact_path: tests/pack-consumer-runtime-release.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/distribution-acceptance.test.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L6-101-pack-independent-multi-consumer-acceptance.md
   requires:
@@ -42,23 +50,43 @@ dependencies:
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/418
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/420
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/364
-review_evidence: []
-status: draft
+review_evidence:
+  - reviewer: "Claude Opus (非著者 review, PR #665)"
+    reviewer_model: claude-opus-5
+    worker_model: gpt-5.6-luna
+    review_kind: cross_agent
+    verdict: pass
+    reviewed_at: 2026-09-18T11:14:14Z
+    tests_green_at: 2026-09-18T11:13:05Z
+    plan_revision: PLAN-L7-628 r3
+    subject_head: 5b9b078c07f58604559af08c73c58a0f9d5dd0a9
+    green_commands:
+      - kind: doctor
+        command: node src/cli.ts doctor --strict-green-command-digest --result-file
+          "$UT_TDD_DOCTOR_RESULT_FILE"
+        runner: ci
+        scope: full
+        exit_code: 0
+        completed_at: 2026-09-18T11:04:09Z
+        evidence_path: tests/distribution-acceptance.test.ts
+        output_digest: sha256:94966654889b5125cb9e5e10e7c81527e332b41b125ad9ffa8c808e8989c0cda
+        anchor_commit: 5b9b078c07f58604559af08c73c58a0f9d5dd0a9
+status: confirmed
 github_issue_id: 418
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:ae651fd89a86d895d3aad1d0459f2caa
-  command_id: plan-revise:issue-418:pr671-r1-flag:forward:r5:dfe02eb55a2f
-  admitted_at: 2026-09-24T03:37:18.813Z
-  source_digest: sha256:e29ead3ced26cd437a348ae5ba8199bf22712b787af002e52875fb9c9a2fa6ea
-  decision_digest: sha256:e9233c4fc51f513c33a6fc46e3fb3dc73dcc94665511afcb5e53fdc6b1a40520
-  receipt_digest: sha256:ef478f001d48145ec9293e5e75e5c49dba21b3e8a6da1bb5dd4eea2c36a45483
+  receipt_id: certificate:9f2db74de02f825576d1e2add514a9d6
+  command_id: plan-revise:issue-418:pr670-rechain-after-688:forward:r9:20260925
+  admitted_at: 2026-09-25T08:25:47.171Z
+  source_digest: sha256:f48911ddeb2fcd55ec685c2776f1f4403055da749c39f65cbb24feaa7ff703b1
+  decision_digest: sha256:40fe865983a45b97704cc88f7a6b3a44612a2828e073a03566303615c8642d37
+  receipt_digest: sha256:6381894ba021391e7bd75575f5f0cfbbe57e076507e28d73a5b030d137b99cfe
   binding:
     path: docs/plans/PLAN-L7-628-pack-consumer-runtime-release-install.md
     plan_id: PLAN-L7-628-pack-consumer-runtime-release-install
     asset_id: plan:cd11a1885b1c948d89519002a2cec009
-    revision: 5
-    content_digest: sha256:e29ead3ced26cd437a348ae5ba8199bf22712b787af002e52875fb9c9a2fa6ea
+    revision: 9
+    content_digest: sha256:f48911ddeb2fcd55ec685c2776f1f4403055da749c39f65cbb24feaa7ff703b1
   route:
     signal: feature_addition
     mode: add-feature
@@ -66,7 +94,7 @@ admission_receipt:
     provider: github
     issue_id: 418
     episode_id: E4-418-pack-consumer-runtime-release-install
-    projection_digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+    projection_state: unprojected
   origin:
     plan_id: PLAN-L7-516-pack-self-contained-consumer-runtime
     revision: 4
@@ -76,10 +104,9 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-628-pack-consumer-runtime-release-install
-    target_revision: 5
+    target_revision: 7
     phase: forward_merge
-  escape_reason: "PR #671 Sol r1 FLAG 2 件 (§6.1 の tag ref と source revision
-    の等置、CANDIDATE-U-PACKRT-011(b) の実現不能な変異) の是正改訂。"
+  escape_reason: "PR #670 admission receipt re-chain after PR #688 merged into main"
 ---
 
 # PLAN-L7-628: Pack Release から consumer runtime を有効化する producer / installer

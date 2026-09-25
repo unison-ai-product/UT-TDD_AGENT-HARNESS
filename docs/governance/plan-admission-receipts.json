@@ -5092,17 +5092,17 @@
     {
       "sequence": 319,
       "previous_record_digest": "sha256:2f578276c892e6078e70302b796ca59a7bdd1754d6d20c8979c451cc9d5361bc",
-      "record_digest": "sha256:91cf0e0f5682f43cf3785999ca821bc30ca346de6ec93027cfd5793a98e25096",
-      "command_id": "plan-revise:issue-676:prt1-generates:plan:r7:b30222d0afd2",
-      "receipt_id": "certificate:75b5b8991103fc29df787c3bcfee6b4e",
-      "receipt_digest": "sha256:6588b1c349a87507c2c3349dd85a4d8e2723bfa6cbaf256a056b2e6de4a67d42",
-      "decision_digest": "sha256:763e59709ccfb50f41f481e3efd614c80571d5eea219c16b1a7904eedb122c1d",
+      "record_digest": "sha256:520ec0c3566dcd915c1df0a6547c4356754c29090ad116c55a0be653b4f1c346",
+      "command_id": "plan-revise:issue-418:pr670-rechain-after-688:forward:r9:20260925",
+      "receipt_id": "certificate:9f2db74de02f825576d1e2add514a9d6",
+      "receipt_digest": "sha256:6381894ba021391e7bd75575f5f0cfbbe57e076507e28d73a5b030d137b99cfe",
+      "decision_digest": "sha256:40fe865983a45b97704cc88f7a6b3a44612a2828e073a03566303615c8642d37",
       "binding": {
-        "path": "docs/plans/PLAN-L7-676-release-consumer-dev-start.md",
-        "plan_id": "PLAN-L7-676-release-consumer-dev-start",
-        "asset_id": "plan:aae8bf0e313f8688fbad4d4d8cf0a6a9",
-        "revision": 7,
-        "content_digest": "sha256:eb27ff37684c132e9836443dbe1ac648f95242bcd247fe5e0e49f16682dee794"
+        "path": "docs/plans/PLAN-L7-628-pack-consumer-runtime-release-install.md",
+        "plan_id": "PLAN-L7-628-pack-consumer-runtime-release-install",
+        "asset_id": "plan:cd11a1885b1c948d89519002a2cec009",
+        "revision": 9,
+        "content_digest": "sha256:f48911ddeb2fcd55ec685c2776f1f4403055da749c39f65cbb24feaa7ff703b1"
       }
     }
   ]
