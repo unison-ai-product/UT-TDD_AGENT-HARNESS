@@ -281,6 +281,31 @@ describe("runtime adapter plan", () => {
     }
   });
 
+  it("U-ADAPTER-011: hides the Windows PATH lookup child process", () => {
+    const seen: Array<{
+      finder: string;
+      args: string[];
+      windowsHide: true;
+    }> = [];
+    const resolved = resolveCodexNativeCommand({
+      platform: "win32",
+      env: { SystemRoot: "C:\\Windows" },
+      runPathLookup: (finder, args, options) => {
+        seen.push({ finder, args, windowsHide: options.windowsHide });
+        return "C:\\tools\\codex.exe\r\n";
+      },
+    });
+
+    expect(resolved).toBe("C:\\tools\\codex.exe");
+    expect(seen).toEqual([
+      {
+        finder: "C:\\Windows\\System32\\where.exe",
+        args: ["codex"],
+        windowsHide: true,
+      },
+    ]);
+  });
+
   it("U-ADAPTER-007: delivers the codex prompt via stdin so Windows .cmd shell-wrapping cannot truncate it", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-adapter-codex-stdin-"));
     try {

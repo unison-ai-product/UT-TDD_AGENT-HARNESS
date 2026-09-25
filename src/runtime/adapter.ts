@@ -92,6 +92,11 @@ export type InvokeResult =
 export interface ProviderCommandResolutionOptions {
   env?: NodeJS.ProcessEnv;
   platform?: NodeJS.Platform;
+  runPathLookup?: (
+    finder: string,
+    args: string[],
+    options: { encoding: "utf8"; env: NodeJS.ProcessEnv; windowsHide: true },
+  ) => string;
 }
 
 export interface ProviderInvocation {
@@ -190,7 +195,9 @@ function firstOnPath(command: string, opts: ProviderCommandResolutionOptions = {
       ? win32.join(env.SystemRoot ?? "C:\\Windows", "System32", "where.exe")
       : "which";
   try {
-    const found = execFileSync(finder, [command], { encoding: "utf8", env })
+    const runPathLookup =
+      opts.runPathLookup ?? ((path, args, options) => execFileSync(path, args, options));
+    const found = runPathLookup(finder, [command], { encoding: "utf8", env, windowsHide: true })
       .split(/\r?\n/)
       .map((line) => line.trim())
       .filter(Boolean);
