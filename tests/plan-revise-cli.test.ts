@@ -130,10 +130,7 @@ describe("plan revise CLI registrar", () => {
 
   /** PLAN-L7-690 command境界のfail-closeはZodErrorのspecific issue (code+path) で検査する。
    *  exit 1 / toThrow()のみだとguardが無関係なexceptionを投げてもGreenになる (#701 Sol r2 FINDING)。 */
-  function expectIssueBindingRejection(
-    fn: () => unknown,
-    match: { code: string; path: (string | number)[] },
-  ): void {
+  function issueBindingRejectionIssues(fn: () => unknown): ZodError["issues"] {
     let thrown: unknown;
     try {
       fn();
@@ -141,12 +138,12 @@ describe("plan revise CLI registrar", () => {
       thrown = error;
     }
     expect(thrown).toBeInstanceOf(ZodError);
-    expect((thrown as ZodError).issues).toContainEqual(expect.objectContaining(match));
+    return (thrown as ZodError).issues;
   }
 
   it("U-ISSUEBIND-001 (plan revise): projection_state=projectedの全ゼロdigestをtyped fail-closeする (§2.2)", () => {
-    expectIssueBindingRejection(
-      () =>
+    expect(
+      issueBindingRejectionIssues(() =>
         parsePlanRevisionManifest(
           withIssue({
             provider: "github",
@@ -156,7 +153,12 @@ describe("plan revise CLI registrar", () => {
             projection_digest: `sha256:${"0".repeat(64)}`,
           }),
         ),
-      { code: "custom", path: ["admission", "issue", "projection_digest"] },
+      ),
+    ).toContainEqual(
+      expect.objectContaining({
+        code: "custom",
+        path: ["admission", "issue", "projection_digest"],
+      }),
     );
   });
 
@@ -178,8 +180,8 @@ describe("plan revise CLI registrar", () => {
   });
 
   it("U-ISSUEBIND-002 (plan revise): projection_state=unprojected+projection_digestの矛盾入力をfail-closeする (§2.1)", () => {
-    expectIssueBindingRejection(
-      () =>
+    expect(
+      issueBindingRejectionIssues(() =>
         parsePlanRevisionManifest(
           withIssue({
             provider: "github",
@@ -189,10 +191,12 @@ describe("plan revise CLI registrar", () => {
             projection_digest: `sha256:${"a".repeat(64)}`,
           }),
         ),
-      { code: "unrecognized_keys", path: ["admission", "issue"] },
+      ),
+    ).toContainEqual(
+      expect.objectContaining({ code: "unrecognized_keys", path: ["admission", "issue"] }),
     );
-    expectIssueBindingRejection(
-      () =>
+    expect(
+      issueBindingRejectionIssues(() =>
         parsePlanRevisionManifest(
           withIssue({
             provider: "github",
@@ -202,13 +206,15 @@ describe("plan revise CLI registrar", () => {
             projection_digest: `sha256:${"0".repeat(64)}`,
           }),
         ),
-      { code: "unrecognized_keys", path: ["admission", "issue"] },
+      ),
+    ).toContainEqual(
+      expect.objectContaining({ code: "unrecognized_keys", path: ["admission", "issue"] }),
     );
   });
 
   it("U-ISSUEBIND-003 (plan revise): projection_state=projectedのdigest欠落/null/空文字をfail-closeする (§2.1)", () => {
-    expectIssueBindingRejection(
-      () =>
+    expect(
+      issueBindingRejectionIssues(() =>
         parsePlanRevisionManifest(
           withIssue({
             provider: "github",
@@ -217,10 +223,15 @@ describe("plan revise CLI registrar", () => {
             projection_state: "projected",
           }),
         ),
-      { code: "invalid_type", path: ["admission", "issue", "projection_digest"] },
+      ),
+    ).toContainEqual(
+      expect.objectContaining({
+        code: "invalid_type",
+        path: ["admission", "issue", "projection_digest"],
+      }),
     );
-    expectIssueBindingRejection(
-      () =>
+    expect(
+      issueBindingRejectionIssues(() =>
         parsePlanRevisionManifest(
           withIssue({
             provider: "github",
@@ -230,10 +241,15 @@ describe("plan revise CLI registrar", () => {
             projection_digest: null,
           }),
         ),
-      { code: "invalid_type", path: ["admission", "issue", "projection_digest"] },
+      ),
+    ).toContainEqual(
+      expect.objectContaining({
+        code: "invalid_type",
+        path: ["admission", "issue", "projection_digest"],
+      }),
     );
-    expectIssueBindingRejection(
-      () =>
+    expect(
+      issueBindingRejectionIssues(() =>
         parsePlanRevisionManifest(
           withIssue({
             provider: "github",
@@ -243,13 +259,18 @@ describe("plan revise CLI registrar", () => {
             projection_digest: "",
           }),
         ),
-      { code: "invalid_string", path: ["admission", "issue", "projection_digest"] },
+      ),
+    ).toContainEqual(
+      expect.objectContaining({
+        code: "invalid_string",
+        path: ["admission", "issue", "projection_digest"],
+      }),
     );
   });
 
   it("U-ISSUEBIND-005 (plan revise): projection_state欠落は新規revision入力境界でfail-closeする (§2.2)", () => {
-    expectIssueBindingRejection(
-      () =>
+    expect(
+      issueBindingRejectionIssues(() =>
         parsePlanRevisionManifest(
           withIssue({
             provider: "github",
@@ -258,7 +279,12 @@ describe("plan revise CLI registrar", () => {
             projection_digest: `sha256:${"a".repeat(64)}`,
           }),
         ),
-      { code: "invalid_union_discriminator", path: ["admission", "issue", "projection_state"] },
+      ),
+    ).toContainEqual(
+      expect.objectContaining({
+        code: "invalid_union_discriminator",
+        path: ["admission", "issue", "projection_state"],
+      }),
     );
   });
 });
