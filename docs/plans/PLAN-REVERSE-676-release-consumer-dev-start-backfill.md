@@ -44,18 +44,18 @@ status: draft
 github_issue_id: 676
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:c12feae16a3cc5e33a1a3f7280199cfa
-  command_id: plan-revise:issue-676:plan-confirm:reverse:r5:61268ff22939
-  admitted_at: 2026-09-24T11:19:49.961Z
-  source_digest: sha256:c66f82bf6aa5b49e4cf0ffed2252a7f14ccbf42f9ee727bc1aa63bd835eaa144
-  decision_digest: sha256:ba14200b5df415cfb8a0018eac54183df5b0eff4df086304900f609cf8bceba4
-  receipt_digest: sha256:82b7d967b2dcfac30ac8beb548ac403410d44c0466eb8b8a43febfbd1a2d4856
+  receipt_id: certificate:024915625f2f462f61b8b25b91dc0c86
+  command_id: plan-revise:issue-676:sol-r2-flag:reverse:r4:7301bfa08670
+  admitted_at: 2026-09-24T08:34:32.337Z
+  source_digest: sha256:5ba94ced5c46efe89cbc8bf81f6afe830e9566da762a2b38f324b5dbd4ade87e
+  decision_digest: sha256:6bc2b592d686192a99db4a4f91d9f9d97f7ea1b2aeebf1cd7465f0f96e704b12
+  receipt_digest: sha256:c3ef845554a2ad2a0d8852138a46457b5b1fd5d54811a5ed5df6edc0319d4be9
   binding:
     path: docs/plans/PLAN-REVERSE-676-release-consumer-dev-start-backfill.md
     plan_id: PLAN-REVERSE-676-release-consumer-dev-start-backfill
     asset_id: plan:2db3028c656fba04cb6610d7278dfa56
-    revision: 5
-    content_digest: sha256:c66f82bf6aa5b49e4cf0ffed2252a7f14ccbf42f9ee727bc1aa63bd835eaa144
+    revision: 4
+    content_digest: sha256:5ba94ced5c46efe89cbc8bf81f6afe830e9566da762a2b38f324b5dbd4ade87e
   route:
     signal: reverse
     mode: reverse
@@ -75,9 +75,8 @@ admission_receipt:
     target_plan_id: PLAN-L7-676-release-consumer-dev-start
     target_revision: 4
     phase: forward_merge
-  escape_reason: "PR #688 Codex Sol r1 FLAG (Forward 契約との 1:1 不一致) の是正: R4 の再合流条件に
-    PLAN-L7-676 §4 の全 slice (PR-T1〜PR-T3、PR-G0〜PR-VL 等) を明示し、Scope boundary が
-    G8〜G14 の述語新設 (§3.6-4、CANDIDATE-U-RCDEV-029..035) を対象外にしないよう限定した。"
+  escape_reason: "PR #680 Sol r2 の是正に合わせ、テンプレート書き出しの candidate 対応に
+    CANDIDATE-U-RCDEV-038 を加える。"
 ---
 
 # PLAN-REVERSE-676: Release consumer 開発開始の逆向き確認
@@ -142,13 +141,10 @@ launcher の 8.3 alias 等価性 (Issue #678) は対象外であり、再所有�
 
 ## R4: Forward 再合流条件
 
-PR-1、PR-2a、PR-2b、PR-2c、PR-3、PR-T1〜PR-T3、PR-G0、PR-G7、PR-GR、PR-G9〜PR-G14、PR-VL (PLAN-L7-676 §4 のスケジュール全 slice) の実測と
-非著者 review を同一 exact revision に束縛し、`PLAN-L6-101` へ不足差分だけを backfill する。
+PR-1〜PR-3 の実測と非著者 review を同一 exact revision に束縛し、`PLAN-L6-101` へ不足差分だけを backfill する。
 `PLAN-L7-531` は本 PLAN のコマンド群を E2E 観測項目として採用する改訂を別 PR で行う。
 
 ## Scope boundary
 
-既存 gate (G1〜G7) の判定内容そのものの変更、テンプレートの新規書き起こし、license 切り替え (control lane の別 PR)、CI 上での installer 実行、
-catalog / profile / gate 定義と design root の設定による上書き、update / rollback (#364) は本 Reverse の対象外。
-G8〜G14 の gate 別述語の新設 (§3.6-4、CANDIDATE-U-RCDEV-029..035、Forward §3.6 が定める判定規則) は Forward 契約に含まれるため
-本 Reverse の対象外にしない。
+gate の判定内容そのものの変更、テンプレートの新規書き起こし、license 切り替え (control lane の別 PR)、CI 上での installer 実行、catalog / profile / gate 定義と design root の設定による上書き、
+update / rollback (#364) は本 Reverse の対象外。

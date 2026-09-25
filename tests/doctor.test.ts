@@ -89,6 +89,7 @@ import {
 } from "../src/doctor/index.ts";
 import { buildDoctorResult } from "../src/doctor/result.ts";
 import { analyzeGateRunCoverage, gateRunCoverageMessages } from "../src/lint/gate-run-coverage.ts";
+import { CODEX_GIT_ROOT_PREFIX } from "../src/lint/hook-invocation.ts";
 import type { AgentSlotsDeps, Slot } from "../src/runtime/agent-slots.ts";
 import {
   analyzeDesignDetectionStats,
@@ -527,8 +528,7 @@ describe("runDoctor", () => {
   it("U-SETUP-014: supports a fresh-consumer setup smoke without requiring dogfood PLAN/design docs", () => {
     const codexHook = (...args: string[]) => ({
       type: "command",
-      command: "node",
-      args: [".ut-tdd/bin/ut-tdd.mjs", ...args],
+      command: `node "${CODEX_GIT_ROOT_PREFIX}.ut-tdd/bin/ut-tdd.mjs" ${args.join(" ")}`,
     });
     const codexHookJson = JSON.stringify({
       hooks: {
