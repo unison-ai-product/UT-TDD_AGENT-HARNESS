@@ -8,7 +8,7 @@ drive: agent
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-09-24
-updated: 2026-09-24
+updated: 2026-09-25
 owner: Claude / Opus (pair-freeze) · Codex worker (implementation)
 parent_design: docs/plans/PLAN-L6-101-pack-independent-multi-consumer-acceptance.md
 pair_artifact: docs/test-design/harness/L7-release-consumer-dev-start-test-design.md
@@ -54,23 +54,51 @@ dependencies:
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/676
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/418
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/678
-review_evidence: []
-status: draft
+review_evidence:
+  - reviewer: "Codex Sol (非著者の契約 review、PR #688 r2)"
+    review_kind: cross_agent
+    reviewed_at: 2026-09-25T07:08:57.439Z
+    tests_green_at: 2026-09-25T07:06:45Z
+    verdict: pass
+    worker_model: claude-opus-5-5
+    reviewer_model: gpt-5.6-sol
+    plan_revision: PLAN-L7-676 r5
+    subject_head: 8be63ed4280e84f2e39f2900dbdf8dcd9fd798a1
+    scope: "PR #688 の rev 5 (draft) 契約本文を exact head で bounded 再検。前回 FINDING の解消、rev
+      5 本文の同一性、receipt 2 件のみの追記、PLAN-L7-690 §2.1 (projection_state)
+      準拠を確認。反証試行として Forward §4 と R4 の全 slice を集合照合し欠落なし。blocking 0"
+    green_commands:
+      - kind: doctor
+        command: node src/cli.ts doctor --strict-green-command-digest --result-file
+          "$UT_TDD_DOCTOR_RESULT_FILE"
+        runner: ci
+        scope: full
+        exit_code: 0
+        completed_at: 2026-09-25T06:51:21Z
+        evidence_path: docs/plans/PLAN-L7-676-release-consumer-dev-start.md
+        output_digest: sha256:e8499e0a6156aefdb6ea1b414e2c7af7d2612cde420ead2fe114d443e3852ecd
+        anchor_commit: 8be63ed4280e84f2e39f2900dbdf8dcd9fd798a1
+    citations:
+      - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/688
+      - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/actions/runs/36104559954
+      - canonical receipt
+        b4ef3e2702aa8feeed8330265699cc977814f77327d7626485ac25b7a23ade5a
+status: confirmed
 github_issue_id: 676
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:8e2473e3dd9d11fbb553dc79382e5be6
-  command_id: plan-revise:issue-676:plan-confirm:plan:r5:77731b7d7052
-  admitted_at: 2026-09-25T06:47:33.822Z
-  source_digest: sha256:5b50283947b06586cfafae2fe310f5099459829f1c59110481966d7c0517a174
-  decision_digest: sha256:0259eaace02f1c0495b23072d3b6fce52b732b04a6568ab8be3281bcd28f68ea
-  receipt_digest: sha256:5113402de732edb5e63c1618d335356a9dd31f2865784560938b7330aa7b3552
+  receipt_id: certificate:cdfd7591b7102670ff44ff18c78b1caa
+  command_id: plan-revise:issue-676:plan-confirm:plan:r6:8be63ed4280e
+  admitted_at: 2026-09-25T07:31:08.699Z
+  source_digest: sha256:b7d48dc150231284535acd4e8f4d76e3a9782423863419b0147f9e3b7c59435e
+  decision_digest: sha256:cf0c126127be35bda1ec9c04ca69bcde34897a04820861e317adad7870e57120
+  receipt_digest: sha256:a69bf9a15728ae85ff2800bed4dd518818537e31f36b8846fdd580b4c0509751
   binding:
     path: docs/plans/PLAN-L7-676-release-consumer-dev-start.md
     plan_id: PLAN-L7-676-release-consumer-dev-start
     asset_id: plan:aae8bf0e313f8688fbad4d4d8cf0a6a9
-    revision: 5
-    content_digest: sha256:5b50283947b06586cfafae2fe310f5099459829f1c59110481966d7c0517a174
+    revision: 6
+    content_digest: sha256:b7d48dc150231284535acd4e8f4d76e3a9782423863419b0147f9e3b7c59435e
   route:
     signal: feature_addition
     mode: add-feature
@@ -88,12 +116,10 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-676-release-consumer-dev-start
-    target_revision: 5
+    target_revision: 6
     phase: forward_merge
-  escape_reason: "実装 PR の landing 前に本 PLAN の confirm が必要なため、CI green 後の非著者契約
-    review で confirm する手順を §8-4 に記す (rev 5、draft のまま)。#690 (PLAN-L7-690)
-    の実装後に、issue binding を projection_state: unprojected で再発行する (全ゼロ digest
-    を持ち越さない)。"
+  escape_reason: rev 5 の exact head の CI green 後に取った非著者 (Codex Sol) の PASS receipt
+    を review_evidence に記録し、実装 PR の landing 前に本 PLAN を confirm する (rev 6、§8-5)。
 ---
 
 # PLAN-L7-676: Release consumer で開発を開始できる状態にする
@@ -549,3 +575,4 @@ injection path の乗っ取り、harness 自身の挙動変化、部分 setup �
 2. §3.3 の #676 受入条件改訂コメントの URL、setup の deny code と終了コード (§3.3-1)、テンプレート書き出しコマンド (§3.1.3)、G8〜G14 の述語 (§3.6-4) は記録済み (PR-0 rev 3)。
 3. 実装中に方式変更 (解決順、展開先、resolver 規約、setup の失敗条件、テンプレート形式、書き出しコマンド §3.1.3、setup の終了コード §3.3-1、gate の述語 §3.6-4) が必要になったら、PR を close して本 PLAN の契約改訂へ戻る。
 4. confirm の手順 (rev 5): 本 PLAN の実装 PR は src/ tests/ に新規ファイルを landing させるため、`deliverable-plan-trace` により `generates` への宣言が必須であり、`merged-plan-status` により draft PLAN はその宣言を持てない。したがって、実装 PR より先に本 PLAN を confirm する。pair-freeze review (PR #680 の Sol r3 PASS、subject f65031c9) は、その head の CI green (2026-09-24T09:00:46Z) より前 (08:46Z) に取られたため、正直な `tests_green_at` を持てず、confirm の証跡にしない。代わりに、本 rev 5 の exact head の CI green の後に、非著者 (Codex Sol) の契約 review を取り直し、その receipt を `review_evidence` に記録した rev 6 で confirm する。rev 6 の docs 差分は bounded 再検を経て merge する。実装 PR は、confirm の merge 後に main を取り込み、自 PR の新規成果物だけを confirmed の本 PLAN の `generates` に追加する (既存ファイルは載せない)。
+5. confirm の実施 (rev 6): rev 5 の exact head `8be63ed4` の CI green (run 36104559954、2026-09-25T07:06:45Z) の後に、Codex Sol の bounded 再検が PASS (receipt `b4ef3e27…`、2026-09-25T07:08:57Z) を返した。その receipt を `review_evidence` に記録し、`status: confirmed` とした。
