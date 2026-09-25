@@ -3,9 +3,7 @@ plan_id: PLAN-L6-690-issue-binding-projection-state-contract
 title: "PLAN-L6-690 (add-design): issue binding の projection_state 契約"
 kind: add-design
 layer: L6
-sub_doc: function-spec
 drive: agent
-status: draft
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-09-24
@@ -16,14 +14,14 @@ related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 pair_artifact: docs/test-design/harness/L7-issue-binding-projection-state-test-design.md
 next_pair_freeze: L7
 backprop_decision: not_required
-backprop_decision_reason: "L6 issue binding 契約の追加であり、L0/L1 要件の意味は変更しないため"
+backprop_decision_reason: L6 issue binding 契約の追加であり、L0/L1 要件の意味は変更しないため
 agent_slots:
   - role: tl
-    slot_label: "TL - projection_state 契約と cutoff 条項"
+    slot_label: TL - projection_state 契約と cutoff 条項
   - role: se
-    slot_label: "SE - issue binding の admission / receipt 境界"
+    slot_label: SE - issue binding の admission / receipt 境界
   - role: qa
-    slot_label: "QA - 全ゼロ・unprojected・projected 欠落の oracle"
+    slot_label: QA - 全ゼロ・unprojected・projected 欠落の oracle
 generates:
   - artifact_path: docs/plans/PLAN-L6-690-issue-binding-projection-state-contract.md
     artifact_type: markdown_doc
@@ -39,7 +37,40 @@ dependencies:
     - src/schema/route-filing.ts
   blocks: []
 review_evidence: []
+status: draft
+sub_doc: function-spec
 github_issue_id: 690
+admission_receipt:
+  schema_version: v2
+  receipt_id: certificate:52a5162977415352a94d9d4456000288
+  command_id: plan-draft:issue-690:projection-state-contract:1
+  admitted_at: 2026-09-25T00:00:00.000Z
+  source_digest: sha256:eff3ba923849638c38b92fa18a3632c72118836015dc996220ba087a99543ffb
+  decision_digest: sha256:9c9cc03354e9bff26ede85091784aec4c510e7faff899f78f05307d634621d27
+  receipt_digest: sha256:cb6f55a0f941a476311e9aff7264c6b477967934037b2e4b9df2793e9ce46bd0
+  binding:
+    path: docs/plans/PLAN-L6-690-issue-binding-projection-state-contract.md
+    plan_id: PLAN-L6-690-issue-binding-projection-state-contract
+    asset_id: plan:52a5162977415352a94d9d4456000288
+    revision: 1
+    content_digest: sha256:eff3ba923849638c38b92fa18a3632c72118836015dc996220ba087a99543ffb
+  route:
+    signal: feature_addition
+    mode: add-feature
+  issue:
+    provider: github
+    issue_id: 690
+    episode_id: issue-690
+    projection_digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+  origin:
+    plan_id: PLAN-L6-83-forward-escape-issue-contract
+    revision: 1
+    digest: sha256:00ddb0c033085b1d2f49edc57a7c6f44d92c5dc8bb3eeac334fc4df50a4876d1
+  reentry:
+    target_plan_id: PLAN-L6-83-forward-escape-issue-contract
+    target_revision: 1
+    phase: forward_merge
+  escape_reason: issue binding projection_state 契約の設計判断を追加する
 ---
 
 # PLAN-L6-690: issue binding の `projection_state` 契約
