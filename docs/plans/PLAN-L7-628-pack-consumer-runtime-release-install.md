@@ -75,17 +75,17 @@ status: confirmed
 github_issue_id: 418
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:ddb8930575c2f3953e5e546e37017cae
-  command_id: plan-revise:issue-418:pr670-producer-green-evidence-reissue:forward:r8:20260925
-  admitted_at: 2026-09-25T06:51:41.643Z
+  receipt_id: certificate:9f2db74de02f825576d1e2add514a9d6
+  command_id: plan-revise:issue-418:pr670-rechain-after-688:forward:r9:20260925
+  admitted_at: 2026-09-25T08:25:47.171Z
   source_digest: sha256:f48911ddeb2fcd55ec685c2776f1f4403055da749c39f65cbb24feaa7ff703b1
-  decision_digest: sha256:19f41ad42fab3b65530415ff4fa659c723e9b58f8c00399a1ece56160cdf0877
-  receipt_digest: sha256:7474327657782792baf065f6f188ddc076f1e97c9a57b0b7c069ffe6e6d1f5d2
+  decision_digest: sha256:40fe865983a45b97704cc88f7a6b3a44612a2828e073a03566303615c8642d37
+  receipt_digest: sha256:6381894ba021391e7bd75575f5f0cfbbe57e076507e28d73a5b030d137b99cfe
   binding:
     path: docs/plans/PLAN-L7-628-pack-consumer-runtime-release-install.md
     plan_id: PLAN-L7-628-pack-consumer-runtime-release-install
     asset_id: plan:cd11a1885b1c948d89519002a2cec009
-    revision: 8
+    revision: 9
     content_digest: sha256:f48911ddeb2fcd55ec685c2776f1f4403055da749c39f65cbb24feaa7ff703b1
   route:
     signal: feature_addition
@@ -106,8 +106,7 @@ admission_receipt:
     target_plan_id: PLAN-L7-628-pack-consumer-runtime-release-install
     target_revision: 7
     phase: forward_merge
-  escape_reason: "PR #670 strict green-command-digest evidence path correction
-    after origin/main merge"
+  escape_reason: "PR #670 admission receipt re-chain after PR #688 merged into main"
 ---
 
 # PLAN-L7-628: Pack Release から consumer runtime を有効化する producer / installer
