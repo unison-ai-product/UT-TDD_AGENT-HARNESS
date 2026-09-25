@@ -87,18 +87,18 @@ status: confirmed
 github_issue_id: 676
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:cdfd7591b7102670ff44ff18c78b1caa
-  command_id: plan-revise:issue-676:plan-confirm:plan:r6:8be63ed4280e
-  admitted_at: 2026-09-25T07:31:08.699Z
-  source_digest: sha256:b7d48dc150231284535acd4e8f4d76e3a9782423863419b0147f9e3b7c59435e
-  decision_digest: sha256:cf0c126127be35bda1ec9c04ca69bcde34897a04820861e317adad7870e57120
-  receipt_digest: sha256:a69bf9a15728ae85ff2800bed4dd518818537e31f36b8846fdd580b4c0509751
+  receipt_id: certificate:c5d239b6bc283ed001d423db2e0b4b66
+  command_id: plan-revise:issue-676:rcdev020-source-exception:plan:r7:b466700680e6
+  admitted_at: 2026-09-25T10:39:12.394Z
+  source_digest: sha256:19597f9030cfef4ec0308eaef497c9337180251eac91cb5aa091dd45c8321b5f
+  decision_digest: sha256:fd5d7d7bd291b6f009e18f9fdb5fb932b0d6b66161142853428ebd4f8d84bdb8
+  receipt_digest: sha256:b99bf4d22ce13bce1f57e12831638f5daa0479ebfab9476adbf69f5bba4bec2e
   binding:
     path: docs/plans/PLAN-L7-676-release-consumer-dev-start.md
     plan_id: PLAN-L7-676-release-consumer-dev-start
     asset_id: plan:aae8bf0e313f8688fbad4d4d8cf0a6a9
-    revision: 6
-    content_digest: sha256:b7d48dc150231284535acd4e8f4d76e3a9782423863419b0147f9e3b7c59435e
+    revision: 7
+    content_digest: sha256:19597f9030cfef4ec0308eaef497c9337180251eac91cb5aa091dd45c8321b5f
   route:
     signal: feature_addition
     mode: add-feature
@@ -116,10 +116,10 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-676-release-consumer-dev-start
-    target_revision: 6
+    target_revision: 7
     phase: forward_merge
-  escape_reason: rev 5 の exact head の CI green 後に取った非著者 (Codex Sol) の PASS receipt
-    を review_evidence に記録し、実装 PR の landing 前に本 PLAN を confirm する (rev 6、§8-5)。
+  escape_reason: PR-T1 の Sol r1 FLAG が示した §3.5.3 の規則本文と構成元表の矛盾を、構成元表を正とする閉じた例外句 (3
+    本) で解消し、test-design の RCDEV-020 を揃える (rev 7、§8-6)。
 ---
 
 # PLAN-L7-676: Release consumer で開発を開始できる状態にする
@@ -358,6 +358,7 @@ skill の名前は既存 `skills/vmodel-stage-*` / `vmodel-drive-direction` と�
 規則: disposition が `merge` / `adopt` で target が catalog slot の authoring path (またはその directory) を指すものを、その slot の
 テンプレート source とする。target が harness 自身の process / governance 文書 (`docs/process/*`、`AGENTS.md` など) を指すもの、
 および `reference` のものは、**optional テンプレート** (`docs/templates/vmodel/optional/`) として出荷し、slot には束ねない。
+ただし、下の構成元表で slot の source として明記した本は、この規則の例外として当該 slot の source とする。例外は次の 3 本に限る: 28 検証設計書 (ZIP-DOC-028 → `DOC-L11-TRACE-UAT`)、11 運用設計書 (ZIP-DOC-011 → `DOC-L13-PRODUCTION-OBSERVATION`)、21 ログ・トレース設計書 (ZIP-DOC-021 → `DOC-L13-PRODUCTION-OBSERVATION`)。disposition catalog の `target` 列は移行時の統合先を 1 箇所だけ記す列であり、複数の slot への供給先を表さない。このため、これら 3 本と当該 slot の対応の根拠は本表の記載とし、disposition catalog は変更しない (多 slot 写像を catalog 側で正式化する場合は、管理 yaml の merge を所有する PR-T2 の範囲で扱う)。
 
 consumer 向けの required slot は catalog の `default_status=required` から、harness 自身の upgrade 用差分 (`category=upgrade-delta`:
 `DOC-L1-VMODEL-ENGINE-SWAP-DELTA`、`DOC-L14-VMODEL-ENGINE-SWAP-OT`) を除いた 21 slot とする。
@@ -576,3 +577,4 @@ injection path の乗っ取り、harness 自身の挙動変化、部分 setup �
 3. 実装中に方式変更 (解決順、展開先、resolver 規約、setup の失敗条件、テンプレート形式、書き出しコマンド §3.1.3、setup の終了コード §3.3-1、gate の述語 §3.6-4) が必要になったら、PR を close して本 PLAN の契約改訂へ戻る。
 4. confirm の手順 (rev 5): 本 PLAN の実装 PR は src/ tests/ に新規ファイルを landing させるため、`deliverable-plan-trace` により `generates` への宣言が必須であり、`merged-plan-status` により draft PLAN はその宣言を持てない。したがって、実装 PR より先に本 PLAN を confirm する。pair-freeze review (PR #680 の Sol r3 PASS、subject f65031c9) は、その head の CI green (2026-09-24T09:00:46Z) より前 (08:46Z) に取られたため、正直な `tests_green_at` を持てず、confirm の証跡にしない。代わりに、本 rev 5 の exact head の CI green の後に、非著者 (Codex Sol) の契約 review を取り直し、その receipt を `review_evidence` に記録した rev 6 で confirm する。rev 6 の docs 差分は bounded 再検を経て merge する。実装 PR は、confirm の merge 後に main を取り込み、自 PR の新規成果物だけを confirmed の本 PLAN の `generates` に追加する (既存ファイルは載せない)。
 5. confirm の実施 (rev 6): rev 5 の exact head `8be63ed4` の CI green (run 36104559954、2026-09-25T07:06:45Z) の後に、Codex Sol の bounded 再検が PASS (receipt `b4ef3e27…`、2026-09-25T07:08:57Z) を返した。その receipt を `review_evidence` に記録し、`status: confirmed` とした。
+6. §3.5.3 の source 例外 (rev 7): PR-T1 (#703) の非著者 review (Codex Sol r1) が、L11 / L13 のテンプレートの source (ZIP-DOC-028 / 011 / 021) の disposition target が当該 slot を指さないと FLAG した。原因は、§3.5.3 の規則本文 (process 文書を指す本は optional) と構成元表 (028 を L11、011 と 021 を L13 の source とする) の矛盾である。advisor (claude-fable-5、design) の推奨に従い、構成元表を正として規則本文に閉じた例外句 (3 本) を加え、test-design の CANDIDATE-U-RCDEV-020 を同じ例外に揃えた。disposition catalog は変更しない。
