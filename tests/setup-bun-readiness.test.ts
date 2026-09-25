@@ -60,9 +60,13 @@ function createCleanConsumer(): string {
     },
   );
   execFileSync("git", ["init", "--quiet"], { cwd: consumer });
+  execFileSync("git", ["config", "user.email", "test@example.invalid"], { cwd: consumer });
+  execFileSync("git", ["config", "user.name", "UT-TDD test"], { cwd: consumer });
   execFileSync("git", ["remote", "add", "origin", "https://github.com/example/consumer.git"], {
     cwd: consumer,
   });
+  execFileSync("git", ["add", "--", "."], { cwd: consumer });
+  execFileSync("git", ["commit", "--quiet", "-m", "fixture consumer"], { cwd: consumer });
   return consumer;
 }
 
