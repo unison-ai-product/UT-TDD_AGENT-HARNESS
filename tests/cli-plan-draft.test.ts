@@ -89,4 +89,84 @@ describe("plan draft CLI registrar", () => {
     input.source.path = "docs/../outside.md";
     expect(() => parsePlanDraftManifest(JSON.stringify(input))).toThrow();
   });
+
+  function withIssue(issue: Record<string, unknown>): string {
+    const input = JSON.parse(manifest()) as { admission: Record<string, unknown> };
+    input.admission.issue = issue;
+    return JSON.stringify(input);
+  }
+
+  it("CANDIDATE-U-ISSUEBIND-001 (plan draft): projection_state=projectedの全ゼロdigestをtyped fail-closeする (§2.2)", () => {
+    expect(() =>
+      parsePlanDraftManifest(
+        withIssue({
+          provider: "github",
+          issue_id: 690,
+          episode_id: "E4-690",
+          projection_state: "projected",
+          projection_digest: `sha256:${"0".repeat(64)}`,
+        }),
+      ),
+    ).toThrow();
+  });
+
+  it("CANDIDATE-U-ISSUEBIND-002 (plan draft): projection_state=unprojectedをdigestなしで受理する (§2.1)", () => {
+    const parsed = parsePlanDraftManifest(
+      withIssue({
+        provider: "github",
+        issue_id: 690,
+        episode_id: "E4-690",
+        projection_state: "unprojected",
+      }),
+    );
+    expect(parsed.admission.issue).toEqual({
+      provider: "github",
+      issue_id: 690,
+      episode_id: "E4-690",
+      projection_state: "unprojected",
+    });
+  });
+
+  it("CANDIDATE-U-ISSUEBIND-003 (plan draft): projection_state=projectedのdigest欠落/null/空文字をfail-closeする (§2.1)", () => {
+    expect(() =>
+      parsePlanDraftManifest(
+        withIssue({ provider: "github", issue_id: 690, episode_id: "E4-690", projection_state: "projected" }),
+      ),
+    ).toThrow();
+    expect(() =>
+      parsePlanDraftManifest(
+        withIssue({
+          provider: "github",
+          issue_id: 690,
+          episode_id: "E4-690",
+          projection_state: "projected",
+          projection_digest: null,
+        }),
+      ),
+    ).toThrow();
+    expect(() =>
+      parsePlanDraftManifest(
+        withIssue({
+          provider: "github",
+          issue_id: 690,
+          episode_id: "E4-690",
+          projection_state: "projected",
+          projection_digest: "",
+        }),
+      ),
+    ).toThrow();
+  });
+
+  it("CANDIDATE-U-ISSUEBIND-005 (plan draft): projection_state欠落は新規revision入力境界でfail-closeする (§2.2)", () => {
+    expect(() =>
+      parsePlanDraftManifest(
+        withIssue({
+          provider: "github",
+          issue_id: 690,
+          episode_id: "E4-690",
+          projection_digest: `sha256:${"a".repeat(64)}`,
+        }),
+      ),
+    ).toThrow();
+  });
 });
