@@ -854,8 +854,6 @@ SMB/NFS/OneDrive をまたぐ strict lease、heartbeat、clock-skew 耐性は主
 | U-ADAPTER-002 | `resolveCodexNativeCommand` | `UT_TDD_CODEX_BIN` is preferred over PATH lookup and Windows npm `codex.cmd` is accepted as a native provider command override. |
 | U-ADAPTER-003 | `buildProviderInvocation` | Windows `.cmd` / `.bat` provider commands are launched via canonical `cmd.exe` argument-array invocation with Node `shell=false`; non-script binaries also keep `shell=false`. |
 | U-ADAPTER-004 | `isProviderCommandSpawnable` / `detectMode` | Provider availability is true only when the resolved provider command can spawn successfully; PATH name presence alone is not enough. |
-| U-ADAPTER-010 | `isProviderCommandSpawnable` / `executeAdapterPlanForCli` | 非対話の provider probe と委譲起動が、子プロセスの console window を隠す `windowsHide: true` を spawn options に渡す。 |
-| U-ADAPTER-011 | `firstOnPath` / `resolveCodexNativeCommand` | PATH lookup は Windows では `SystemRoot\\System32\\where.exe`、POSIX では `which` を使い、実行 options に `windowsHide: true` を渡す。Windows の Codex lookup は `where.exe` に `['codex']` を渡し、最初の結果を返す。 |
 | U-PHOVER-002 | `buildProviderHandover` | Provider handover packages include `handover_kind: "mechanical"` so machine routing data is not confused with explicit human handover. |
 
 ## PLAN-L7-76 Reliability Remediation Addendum
