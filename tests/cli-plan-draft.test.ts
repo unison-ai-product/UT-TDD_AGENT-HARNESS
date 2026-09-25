@@ -1,6 +1,11 @@
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { Command } from "commander";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { parsePlanDraftManifest, registerPlanDraftCommand } from "../src/cli/plan-draft.ts";
+import { NodePlanDraftRunner } from "../src/plan-admission/node-plan-draft-runner.ts";
+import { TRACKED_RECEIPT_SCHEMA } from "../src/plan-admission/tracked-receipt-projection.ts";
 
 const originalExitCode = process.exitCode;
 afterEach(() => {
@@ -173,5 +178,90 @@ describe("plan draft CLI registrar", () => {
         }),
       ),
     ).toThrow();
+  });
+});
+
+describe("plan draft CLI: 拒否入力はcommand境界でwrite 0を保つ (#690補正)", () => {
+  const roots: string[] = [];
+  afterEach(() => {
+    for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
+  });
+
+  function realFixture() {
+    const root = join(
+      tmpdir(),
+      `ut-tdd-plan-draft-cli-write0-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    );
+    roots.push(root);
+    mkdirSync(join(root, "docs", "plans"), { recursive: true });
+    mkdirSync(join(root, "docs", "governance"), { recursive: true });
+    const sourcePath = "docs/plans/PLAN-L4-999.md";
+    const projectionPath = "docs/governance/plan-admission-receipts.json";
+    const seededProjection = `${JSON.stringify({ schema_version: TRACKED_RECEIPT_SCHEMA, records: [] })}\n`;
+    writeFileSync(join(root, projectionPath), seededProjection, "utf8");
+    const ledgerPath = join(root, ".ut-tdd", "ledger", "harness-ledger.db");
+    const runner = new NodePlanDraftRunner({
+      repoRoot: root,
+      sourceCommit: () => "a".repeat(40),
+      actor: () => "codex",
+      readText: (path) => readFileSync(path, "utf8"),
+    });
+    return { root, sourcePath, projectionPath, seededProjection, ledgerPath, runner };
+  }
+
+  async function runRejected(f: ReturnType<typeof realFixture>, issue: Record<string, unknown>) {
+    const output: string[] = [];
+    const program = new Command().exitOverride();
+    const plan = program.command("plan");
+    registerPlanDraftCommand(plan, {
+      readText: () => manifest({ admission: { ...JSON.parse(manifest()).admission, issue } }),
+      writeOutput: (text) => output.push(text),
+      runner: f.runner,
+    });
+    await program.parseAsync(["node", "ut-tdd", "plan", "draft", "--manifest", "draft.json"]);
+    return output;
+  }
+
+  it("U-ISSUEBIND-001 (plan draft, real boundary): 全ゼロdigestは新規writeを0件に保つ", async () => {
+    const f = realFixture();
+    await runRejected(f, {
+      provider: "github",
+      issue_id: 690,
+      episode_id: "E4-690",
+      projection_state: "projected",
+      projection_digest: `sha256:${"0".repeat(64)}`,
+    });
+    expect(process.exitCode).toBe(1);
+    expect(existsSync(join(f.root, f.sourcePath))).toBe(false);
+    expect(readFileSync(join(f.root, f.projectionPath), "utf8")).toBe(f.seededProjection);
+    expect(existsSync(f.ledgerPath)).toBe(false);
+  });
+
+  it("U-ISSUEBIND-003 (plan draft, real boundary): projectedのdigest欠落は新規writeを0件に保つ", async () => {
+    const f = realFixture();
+    await runRejected(f, {
+      provider: "github",
+      issue_id: 690,
+      episode_id: "E4-690",
+      projection_state: "projected",
+    });
+    expect(process.exitCode).toBe(1);
+    expect(existsSync(join(f.root, f.sourcePath))).toBe(false);
+    expect(readFileSync(join(f.root, f.projectionPath), "utf8")).toBe(f.seededProjection);
+    expect(existsSync(f.ledgerPath)).toBe(false);
+  });
+
+  it("U-ISSUEBIND-005 (plan draft, real boundary): projection_state欠落は新規writeを0件に保つ", async () => {
+    const f = realFixture();
+    await runRejected(f, {
+      provider: "github",
+      issue_id: 690,
+      episode_id: "E4-690",
+      projection_digest: `sha256:${"a".repeat(64)}`,
+    });
+    expect(process.exitCode).toBe(1);
+    expect(existsSync(join(f.root, f.sourcePath))).toBe(false);
+    expect(readFileSync(join(f.root, f.projectionPath), "utf8")).toBe(f.seededProjection);
+    expect(existsSync(f.ledgerPath)).toBe(false);
   });
 });

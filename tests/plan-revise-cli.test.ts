@@ -1,6 +1,11 @@
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { Command } from "commander";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { parsePlanRevisionManifest, registerPlanRevisionCommand } from "../src/cli/plan-revise.ts";
+import { NodePlanRevisionRunner } from "../src/plan-admission/node-plan-revision-runner.ts";
+import { TRACKED_RECEIPT_SCHEMA } from "../src/plan-admission/tracked-receipt-projection.ts";
 
 const originalExitCode = process.exitCode;
 afterEach(() => {
@@ -199,5 +204,95 @@ describe("plan revise CLI registrar", () => {
         }),
       ),
     ).toThrow();
+  });
+});
+
+describe("plan revise CLI: 拒否入力はcommand境界でwrite 0を保つ (#690補正)", () => {
+  const roots: string[] = [];
+  afterEach(() => {
+    for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
+  });
+
+  function realFixture() {
+    const root = join(
+      tmpdir(),
+      `ut-tdd-plan-revise-cli-write0-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    );
+    roots.push(root);
+    mkdirSync(join(root, "docs", "plans"), { recursive: true });
+    mkdirSync(join(root, "docs", "governance"), { recursive: true });
+    const sourcePath = "docs/plans/PLAN-L4-31.md";
+    const projectionPath = "docs/governance/plan-admission-receipts.json";
+    const seededSource = "# base PLAN-L4-31 fixture\n";
+    const seededProjection = `${JSON.stringify({ schema_version: TRACKED_RECEIPT_SCHEMA, records: [] })}\n`;
+    writeFileSync(join(root, sourcePath), seededSource, "utf8");
+    writeFileSync(join(root, projectionPath), seededProjection, "utf8");
+    const ledgerPath = join(root, ".ut-tdd", "ledger", "harness-ledger.db");
+    const runner = new NodePlanRevisionRunner({
+      repoRoot: root,
+      sourceCommit: () => "b".repeat(40),
+      sourceBlobOid: () => "c".repeat(40),
+      readText: (path) => readFileSync(path, "utf8"),
+      headText: () => seededSource,
+      repositoryIdentity: () => "repo:test",
+    });
+    return { root, sourcePath, projectionPath, seededSource, seededProjection, ledgerPath, runner };
+  }
+
+  async function runRejected(f: ReturnType<typeof realFixture>, issue: Record<string, unknown>) {
+    const output: string[] = [];
+    const admission = { ...JSON.parse(manifest()).admission, issue };
+    const program = new Command().exitOverride();
+    const plan = program.command("plan");
+    registerPlanRevisionCommand(plan, {
+      readText: () => manifest({ admission }),
+      writeOutput: (text) => output.push(text),
+      runner: f.runner,
+    });
+    await program.parseAsync(["node", "ut-tdd", "plan", "revise", "--manifest", "revise.json"]);
+    return output;
+  }
+
+  it("U-ISSUEBIND-001 (plan revise, real boundary): 全ゼロdigestは新規writeを0件に保つ", async () => {
+    const f = realFixture();
+    await runRejected(f, {
+      provider: "github",
+      issue_id: 690,
+      episode_id: "E4-690",
+      projection_state: "projected",
+      projection_digest: `sha256:${"0".repeat(64)}`,
+    });
+    expect(process.exitCode).toBe(1);
+    expect(readFileSync(join(f.root, f.sourcePath), "utf8")).toBe(f.seededSource);
+    expect(readFileSync(join(f.root, f.projectionPath), "utf8")).toBe(f.seededProjection);
+    expect(existsSync(f.ledgerPath)).toBe(false);
+  });
+
+  it("U-ISSUEBIND-003 (plan revise, real boundary): projectedのdigest欠落は新規writeを0件に保つ", async () => {
+    const f = realFixture();
+    await runRejected(f, {
+      provider: "github",
+      issue_id: 690,
+      episode_id: "E4-690",
+      projection_state: "projected",
+    });
+    expect(process.exitCode).toBe(1);
+    expect(readFileSync(join(f.root, f.sourcePath), "utf8")).toBe(f.seededSource);
+    expect(readFileSync(join(f.root, f.projectionPath), "utf8")).toBe(f.seededProjection);
+    expect(existsSync(f.ledgerPath)).toBe(false);
+  });
+
+  it("U-ISSUEBIND-005 (plan revise, real boundary): projection_state欠落は新規writeを0件に保つ", async () => {
+    const f = realFixture();
+    await runRejected(f, {
+      provider: "github",
+      issue_id: 690,
+      episode_id: "E4-690",
+      projection_digest: `sha256:${"a".repeat(64)}`,
+    });
+    expect(process.exitCode).toBe(1);
+    expect(readFileSync(join(f.root, f.sourcePath), "utf8")).toBe(f.seededSource);
+    expect(readFileSync(join(f.root, f.projectionPath), "utf8")).toBe(f.seededProjection);
+    expect(existsSync(f.ledgerPath)).toBe(false);
   });
 });
