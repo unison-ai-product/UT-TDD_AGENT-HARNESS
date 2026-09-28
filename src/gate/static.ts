@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import {
   analyzeImplPlanTrace,
@@ -221,6 +221,12 @@ export function evaluateStaticGate(input: StaticGateInput): StaticGateResult {
   const key = gateKey(input.gate);
 
   try {
+    if (
+      ["G1", "G1-TRACE", "G2", "G3", "G3-TRACE", "G4", "G5", "G6", "G7"].includes(key) &&
+      !statSync(repoRoot).isDirectory()
+    ) {
+      throw new Error("repo root is not a directory");
+    }
     if (key === "G1" || key === "G1-TRACE") {
       const result = lintPlanWithGate(undefined, repoRoot, "G1-trace");
       return combineStaticGates(input.gate, [

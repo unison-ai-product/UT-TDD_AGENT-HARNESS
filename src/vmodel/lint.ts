@@ -121,7 +121,7 @@ export function analyzePairFreeze(docs: PairDoc[]): PairFreezeResult {
       .map((doc) => doc.path),
   );
   for (const path of invalidRevisionPaths) {
-    const doc = byPath.get(path);
+    const doc = byPath.get(canonicalizeVModelPath(path));
     if (!doc) continue;
     orphans.push({
       path,
@@ -741,7 +741,7 @@ export function analyzeVerificationGroups(
   planEvidence: VerificationPlanEvidenceMap = new Map<string, VerificationPlanEvidence>(),
 ): GroupReadiness[] {
   const orphanPaths = new Set(orphans.map((o) => o.path));
-  const docsByPath = new Map(docs.map((doc) => [doc.path, doc]));
+  const docsByPath = new Map(docs.map((doc) => [canonicalizeVModelPath(doc.path), doc]));
   return VERIFICATION_GROUPS.map((g) => {
     const layerSet = new Set(g.layers);
     const allGroupDocs = docs.filter((d) => {
