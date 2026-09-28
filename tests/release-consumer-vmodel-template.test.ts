@@ -3,12 +3,16 @@ import { createHash } from "node:crypto";
 import {
   chmodSync,
   existsSync,
+  lstatSync,
   mkdirSync,
   mkdtempSync,
   readdirSync,
   readFileSync,
+  rmdirSync,
   rmSync,
   statSync,
+  symlinkSync,
+  unlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -163,6 +167,30 @@ function restoreWritable(path: string): void {
 function removeTestDirectory(path: string): void {
   restoreWritable(path);
   rmSync(path, { recursive: true, force: true });
+}
+
+function createFixtureLink(target: string, path: string, kind: "file" | "directory"): void {
+  const linkType =
+    kind === "directory" ? (process.platform === "win32" ? "junction" : "dir") : "file";
+  try {
+    symlinkSync(target, path, linkType);
+  } catch (error) {
+    throw new Error(
+      `RCDEV-039 ${kind} link fixture unavailable; provision symlink support instead of skipping: ${String(error)}`,
+    );
+  }
+}
+
+function removeFixtureLink(path: string, kind: "file" | "directory"): void {
+  try {
+    lstatSync(path);
+  } catch {
+    return;
+  }
+  // Remove only the link itself before recursive cleanup; never chmod or walk
+  // its target, which can be outside the consumer fixture.
+  if (kind === "directory" && process.platform === "win32") rmdirSync(path);
+  else unlinkSync(path);
 }
 
 function runBundledCli(
@@ -454,6 +482,125 @@ describe("PR-2c release consumer V-model template writer", () => {
       expect(filesUnder(root)).toEqual([]);
     } finally {
       removeTestDirectory(root);
+    }
+  });
+
+  it("CANDIDATE-U-RCDEV-039: validates every required destination before the first write", () => {
+    const root = fixtureRoot();
+    const outsideRoot = fixtureRoot();
+    const designRootLink = join(root, "docs", "design");
+    const outsideSentinel = join(outsideRoot, "sentinel.txt");
+    const sentinelBytes = Buffer.from("external fixture remains unchanged\n", "utf8");
+    mkdirSync(dirname(designRootLink), { recursive: true });
+    writeFileSync(outsideSentinel, sentinelBytes);
+
+    try {
+      createFixtureLink(outsideRoot, designRootLink, "directory");
+      const result = runBundledCli(bundledGeneration(), root, ["vmodel", "template", "--required"]);
+
+      expect(result.status).toBe(1);
+      expect(`${result.stdout}\n${result.stderr}`).toContain(
+        "template destination outside consumer root",
+      );
+      const firstEscapingTemplate = REQUIRED_TEMPLATES.find(
+        (template) =>
+          template.consumerPath === "docs/design/L1-requirements/functional-requirements.md",
+      );
+      if (!firstEscapingTemplate) throw new Error("required L1 destination oracle is missing");
+      expect(`${result.stdout}\n${result.stderr}`).toContain(firstEscapingTemplate.consumerPath);
+      // L0 is the normal docs/plans destination and precedes this outside
+      // ancestor in the frozen port index; validation interleaved with writes
+      // would leave a partial charter here.
+      expect(filesUnder(root)).toEqual([]);
+      expect(filesUnder(outsideRoot)).toEqual(["sentinel.txt"]);
+      expect(readFileSync(outsideSentinel)).toEqual(sentinelBytes);
+    } finally {
+      removeFixtureLink(designRootLink, "directory");
+      removeTestDirectory(root);
+      removeTestDirectory(outsideRoot);
+    }
+  });
+
+  it("CANDIDATE-U-RCDEV-039: denies a dangling final symlink without creating its target", () => {
+    const root = fixtureRoot();
+    const outsideRoot = fixtureRoot();
+    const template = REQUIRED_TEMPLATES.find((entry) => entry.docTypeId === "DOC-L4-DATA");
+    if (!template) throw new Error("required DOC-L4-DATA oracle is missing");
+    const destination = join(root, template.consumerPath);
+    const outsideTarget = join(outsideRoot, "dangling-target.md");
+    mkdirSync(dirname(destination), { recursive: true });
+
+    try {
+      createFixtureLink(outsideTarget, destination, "file");
+      const result = runBundledCli(bundledGeneration(), root, [
+        "vmodel",
+        "template",
+        "--slot",
+        template.docTypeId,
+      ]);
+
+      expect(result.status).toBe(1);
+      expect(`${result.stdout}\n${result.stderr}`).toContain(
+        "template destination outside consumer root",
+      );
+      expect(`${result.stdout}\n${result.stderr}`).toContain(template.consumerPath);
+      expect(existsSync(outsideTarget)).toBe(false);
+      expect(lstatSync(destination).isSymbolicLink()).toBe(true);
+      expect(filesUnder(outsideRoot)).toEqual([]);
+    } finally {
+      removeFixtureLink(destination, "file");
+      removeTestDirectory(root);
+      removeTestDirectory(outsideRoot);
+    }
+  });
+
+  it.each([
+    { scope: "outside", kind: "file" },
+    { scope: "outside", kind: "directory" },
+    { scope: "inside", kind: "file" },
+    { scope: "inside", kind: "directory" },
+  ] as const)("CANDIDATE-U-RCDEV-039: denies a final $scope $kind link before skip (exists)", ({
+    scope,
+    kind,
+  }) => {
+    const root = fixtureRoot();
+    const outsideRoot = fixtureRoot();
+    const template = REQUIRED_TEMPLATES.find((entry) => entry.docTypeId === "DOC-L4-DATA");
+    if (!template) throw new Error("required DOC-L4-DATA oracle is missing");
+    const destination = join(root, template.consumerPath);
+    const targetRoot = scope === "inside" ? root : outsideRoot;
+    const target = join(targetRoot, kind === "file" ? "target.md" : "target-directory");
+    const targetFile = kind === "file" ? target : join(target, "sentinel.txt");
+    const targetBytes = Buffer.from(`${scope} ${kind} target\n`, "utf8");
+    mkdirSync(dirname(destination), { recursive: true });
+    if (kind === "directory") mkdirSync(target, { recursive: true });
+    writeFileSync(targetFile, targetBytes);
+
+    try {
+      createFixtureLink(target, destination, kind);
+      const rootBefore = filesUnder(root);
+      const outsideBefore = filesUnder(outsideRoot);
+      const result = runBundledCli(bundledGeneration(), root, [
+        "vmodel",
+        "template",
+        "--slot",
+        template.docTypeId,
+      ]);
+
+      expect(result.status).toBe(1);
+      expect(`${result.stdout}\n${result.stderr}`).toContain(
+        "template destination outside consumer root",
+      );
+      expect(`${result.stdout}\n${result.stderr}`).toContain(template.consumerPath);
+      expect(`${result.stdout}\n${result.stderr}`).not.toContain("skip (exists)");
+      expect(lstatSync(destination).isSymbolicLink()).toBe(true);
+      expect(readFileSync(targetFile)).toEqual(targetBytes);
+      expect(filesUnder(root)).toEqual(rootBefore);
+      expect(filesUnder(outsideRoot)).toEqual(outsideBefore);
+    } finally {
+      removeFixtureLink(destination, kind);
+      removeTestDirectory(root);
+      removeTestDirectory(outsideRoot);
     }
   });
 });
