@@ -171,9 +171,9 @@ export function readCoverageSummary(path: string, threshold = 80): CoverageSumma
   }
 
   const pct =
-    typeof parsed.total?.lines?.pct === "number"
+    typeof parsed?.total?.lines?.pct === "number"
       ? parsed.total.lines.pct
-      : typeof parsed.total?.statements?.pct === "number"
+      : typeof parsed?.total?.statements?.pct === "number"
         ? parsed.total.statements.pct
         : null;
   if (pct == null) {

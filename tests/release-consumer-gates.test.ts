@@ -393,6 +393,12 @@ describe("PR-G0 release-consumer gates", () => {
       pct: null,
       reasons: ["coverage_summary_unreadable"],
     });
+    writeFixtureDoc(root, "coverage/null-summary.json", "null");
+    expect(readCoverageSummary(join(root, "coverage", "null-summary.json"))).toMatchObject({
+      ok: false,
+      pct: null,
+      reasons: ["coverage_summary_unreadable"],
+    });
     writeFixtureDoc(
       root,
       "coverage/missing-pct.json",
