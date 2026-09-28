@@ -75,7 +75,11 @@ describe("PR-2a release consumer skills", () => {
     const receipt = new Map(
       generation.receipt.source_files.map((file) => [file.path, file.sha256]),
     );
+    const receiptSkillPaths = [...receipt.keys()]
+      .filter((path) => path.startsWith("skills/") && /\.(md|ya?ml)$/i.test(path))
+      .sort();
     expect(trackedSkills.length).toBeGreaterThan(0);
+    expect(receiptSkillPaths).toEqual([...trackedSkills].sort());
     for (const path of trackedSkills) {
       expect(receipt.get(path)).toBe(
         createHash("sha256")

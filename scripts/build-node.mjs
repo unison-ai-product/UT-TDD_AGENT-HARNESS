@@ -1,4 +1,5 @@
 import { build } from "esbuild";
+import { execFileSync } from "node:child_process";
 import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 
@@ -9,6 +10,19 @@ const metafile = resolve(process.argv[3] ?? `${output}.metafile.json`);
 if (process.version !== "v24.13.0") {
   throw new Error(`reviewed Node required: v24.13.0 (got ${process.version})`);
 }
+const trackedSkillPaths = execFileSync("git", ["ls-files", "--", "skills"], {
+  cwd: root,
+  encoding: "utf8",
+})
+  .split(/\r?\n/)
+  .filter((path) => path.startsWith("skills/") && /\.(md|ya?ml)$/i.test(path));
+if (trackedSkillPaths.length === 0) throw new Error("tracked skill assets are missing");
+const skillAliases = Object.fromEntries(
+  trackedSkillPaths.map((path) => [
+    `ut-tdd-skills/${path.slice("skills/".length)}`,
+    resolve(root, path),
+  ]),
+);
 await mkdir(dirname(output), { recursive: true });
 const temporary = `${output}.staging-${process.pid}`;
 try {
@@ -21,6 +35,7 @@ try {
     format: "esm",
     target: "node24",
     loader: { ".md": "text", ".yaml": "text", ".yml": "text" },
+    alias: skillAliases,
     define: { __UT_TDD_BUNDLED__: "true" },
     // commander is CommonJS and uses a dynamic builtin require. Provide the
     // Node ESM bridge so the sealed output is executable by the Node authority.
