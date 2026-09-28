@@ -116,6 +116,10 @@ function runBundledCli(
       USERPROFILE: root,
       APPDATA: root,
       GH_CONFIG_DIR: join(root, ".gh-config"),
+      CLAUDE_PROJECT_DIR: "",
+      UT_TDD_PROJECT_DIR: "",
+      UT_TDD_CLAUDE_SESSIONS_DIR: join(root, ".claude", "projects"),
+      UT_TDD_CODEX_SESSIONS_DIR: join(root, ".codex", "sessions"),
     },
   });
 }
