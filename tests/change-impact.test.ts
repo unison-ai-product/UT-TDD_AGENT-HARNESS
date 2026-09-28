@@ -1,10 +1,16 @@
+import { execFileSync } from "node:child_process";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   analyzeChangeImpact,
   analyzeChangeSetIntegrity,
   changeImpactMessages,
   changeSetIntegrityMessages,
+  loadUntrackedAddedFiles,
   parseGitPorcelain,
+  parseUntrackedAddedPaths,
 } from "../src/lint/change-impact.ts";
 import { analyzeDependencyDrift } from "../src/lint/dependency-drift.ts";
 
@@ -132,5 +138,77 @@ describe("change-impact lint", () => {
 
     expect(result.ok).toBe(true);
     expect(result.blockers).toEqual([]);
+  });
+});
+
+describe("parseUntrackedAddedPaths (issue #721 Sol r1 FLAG 1 — -z NUL-separated parsing)", () => {
+  it("U-CHGIMPACT-UNTRACKED-001: extracts a non-ASCII untracked path unmangled from raw -z bytes", () => {
+    // mutation check: replacing "\0" split with /\r?\n/ split would fail this (no newline
+    // present in -z output; the whole record would parse as a single unsplit blob and the
+    // leading "??" status-code slice would not isolate the path correctly for multi-record input).
+    const output = ["?? .ut-tdd/memory/日本語.md", "M  src/a.ts"].join("\0") + "\0";
+    expect(parseUntrackedAddedPaths(output)).toEqual([".ut-tdd/memory/日本語.md"]);
+  });
+
+  it("U-CHGIMPACT-UNTRACKED-002: skips the extra NUL-separated source path of a rename/copy entry", () => {
+    // mutation check: removing the `skipNextToken` logic would leak "src/old.ts" as if it were
+    // its own untouched token; it does not start with "??" so it would still be excluded here,
+    // but a following genuine "??" entry would then be misaligned/dropped. Assert full sequence.
+    const output =
+      ["R  src/new.ts", "src/old.ts", "?? .ut-tdd/memory/new.md", "?? tests/foo.test.ts"].join(
+        "\0",
+      ) + "\0";
+    expect(parseUntrackedAddedPaths(output)).toEqual([
+      ".ut-tdd/memory/new.md",
+      "tests/foo.test.ts",
+    ]);
+  });
+
+  it("U-CHGIMPACT-UNTRACKED-003: filters transient harness DB journal files", () => {
+    const output =
+      ["?? .ut-tdd/harness.db-wal", "?? .ut-tdd/memory/keep.md"].join("\0") + "\0";
+    expect(parseUntrackedAddedPaths(output)).toEqual([".ut-tdd/memory/keep.md"]);
+  });
+
+  it("U-CHGIMPACT-UNTRACKED-004: an untracked directory lists each file individually (no collapse)", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-change-impact-untracked-"));
+    try {
+      execFileSync("git", ["init", "--quiet"], { cwd: root, stdio: "ignore" });
+      execFileSync("git", ["config", "user.email", "test@example.invalid"], { cwd: root });
+      execFileSync("git", ["config", "user.name", "UT-TDD test"], { cwd: root });
+      writeFileSync(join(root, "README.md"), "seed\n");
+      execFileSync("git", ["add", "README.md"], { cwd: root });
+      execFileSync("git", ["commit", "-qm", "seed"], { cwd: root });
+
+      mkdirSync(join(root, ".ut-tdd", "memory"), { recursive: true });
+      writeFileSync(join(root, ".ut-tdd", "memory", "a.md"), "a\n");
+      writeFileSync(join(root, ".ut-tdd", "memory", "b.md"), "b\n");
+
+      const paths = loadUntrackedAddedFiles(root);
+      expect(paths.sort()).toEqual([".ut-tdd/memory/a.md", ".ut-tdd/memory/b.md"]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("U-CHGIMPACT-UNTRACKED-005: a renamed tracked file does not appear as untracked-added", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-change-impact-rename-"));
+    try {
+      execFileSync("git", ["init", "--quiet"], { cwd: root, stdio: "ignore" });
+      execFileSync("git", ["config", "user.email", "test@example.invalid"], { cwd: root });
+      execFileSync("git", ["config", "user.name", "UT-TDD test"], { cwd: root });
+      mkdirSync(join(root, ".ut-tdd", "memory"), { recursive: true });
+      writeFileSync(join(root, ".ut-tdd", "memory", "old.md"), "seed content\n");
+      execFileSync("git", ["add", ".ut-tdd/memory/old.md"], { cwd: root });
+      execFileSync("git", ["commit", "-qm", "seed"], { cwd: root });
+
+      execFileSync("git", ["mv", ".ut-tdd/memory/old.md", ".ut-tdd/memory/renamed.md"], {
+        cwd: root,
+      });
+
+      expect(loadUntrackedAddedFiles(root)).toEqual([]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 });

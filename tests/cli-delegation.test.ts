@@ -1,4 +1,5 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Command } from "commander";
@@ -9,6 +10,18 @@ import {
   registerDelegationCommands,
 } from "../src/cli/delegation.ts";
 import { buildAdapterPlan } from "../src/runtime/adapter.ts";
+
+// issue #721 finding 2: the untracked-added loader (used by the review-guard exemption at the
+// delegation call site) must fail-close to "no exemption" when it throws, not silently exempt.
+vi.mock("../src/lint/change-impact.ts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../src/lint/change-impact.ts")>();
+  return {
+    ...actual,
+    loadUntrackedAddedFiles: () => {
+      throw new Error("simulated untracked-added loader failure (issue #721 finding 2)");
+    },
+  };
+});
 
 const legacyPrefix = ["HE", "LIX"].join("");
 const touchedKeys = [
@@ -127,6 +140,63 @@ describe("CLI delegation command registration", () => {
       expect(result.exit_code).toBe(0);
       expect(spawnOptions?.windowsHide).toBe(true);
     } finally {
+      cwd.mockRestore();
+      rmSync(fixtureRoot, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("CLI delegation review-guard untracked-added exemption (issue #721 finding 2)", () => {
+  it("U-ADAPTER-011: a throwing untracked-added loader fails closed (no exemption) so a new .ut-tdd/memory/ file surfaces as a violation", () => {
+    // mutation check: if safeLoadUntrackedAddedFiles instead swallowed the loader failure by
+    // returning a permissive/non-empty set (or if the guard skipped the exemption call
+    // entirely on failure without flagging), this test would see no "review-guard - violation"
+    // message and fail.
+    const fixtureRoot = mkdtempSync(join(tmpdir(), "ut-tdd-cli-delegation-reviewguard-"));
+    execFileSync("git", ["init", "--quiet"], { cwd: fixtureRoot, stdio: "ignore" });
+    execFileSync("git", ["config", "user.email", "test@example.invalid"], { cwd: fixtureRoot });
+    execFileSync("git", ["config", "user.name", "UT-TDD test"], { cwd: fixtureRoot });
+    writeFileSync(join(fixtureRoot, "README.md"), "seed\n");
+    execFileSync("git", ["add", "README.md"], { cwd: fixtureRoot });
+    execFileSync("git", ["commit", "-qm", "seed"], { cwd: fixtureRoot });
+
+    const cwd = vi.spyOn(process, "cwd").mockReturnValue(fixtureRoot);
+    const stderrChunks: string[] = [];
+    const stderrSpy = vi
+      .spyOn(process.stderr, "write")
+      .mockImplementation((chunk: string | Uint8Array) => {
+        stderrChunks.push(typeof chunk === "string" ? chunk : chunk.toString());
+        return true;
+      });
+    try {
+      const plan = buildAdapterPlan(
+        { provider: "codex", role: "blind-reviewer", task: "probe review-guard", execute: true },
+        "codex-only",
+      );
+      const result = executeAdapterPlanForCli(
+        plan,
+        { sessionPrefix: `issue721-reviewguard-${Date.now()}`, toolName: "codex", reviewRole: "blind-reviewer" },
+        {
+          gitBranch: () => "test/issue721",
+          gitHead: () => "deadbee",
+          runSessionStartSideEffects: () => {},
+          writeHandoverWarnings: () => {},
+          spawnSync: (_command, _args, options) => {
+            // simulate another lane running `ut-tdd memory add` mid-session, concurrently with
+            // this read-only review delegation (the exact scenario issue #721 must exempt).
+            mkdirSync(join(fixtureRoot, ".ut-tdd", "memory"), { recursive: true });
+            writeFileSync(join(fixtureRoot, ".ut-tdd", "memory", "concurrent.md"), "note\n");
+            return { status: 0, signal: null };
+          },
+        },
+      );
+
+      expect(result.exit_code).toBe(0);
+      const stderr = stderrChunks.join("");
+      expect(stderr).toContain("review-guard - violation");
+      expect(stderr).toContain(".ut-tdd/memory/concurrent.md");
+    } finally {
+      stderrSpy.mockRestore();
       cwd.mockRestore();
       rmSync(fixtureRoot, { recursive: true, force: true });
     }
