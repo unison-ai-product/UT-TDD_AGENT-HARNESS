@@ -25,8 +25,8 @@ import {
 import {
   type TrackedReceiptDraftPayload,
   type TrackedReceiptDraftReceipt,
-  TrackedReceiptRenderer,
   type TrackedReceiptProjectionReader,
+  TrackedReceiptRenderer,
 } from "../src/plan-admission/tracked-receipt-renderer.ts";
 
 // ---------------------------------------------------------------------------
@@ -212,9 +212,7 @@ interface Baseline {
  * `extraGenerates` は U-RECHAIN-001 が要求する「generates 追加 2 件」を満たすための追加分
  * (default では追加しない。既存 16 oracle の期待値を変えないため)。 */
 function buildBaseline(
-  overrides: {
-    extraGenerates?: readonly { artifact_path: string; artifact_type: string }[];
-  } = {},
+  overrides: { extraGenerates?: readonly { artifact_path: string; artifact_type: string }[] } = {},
 ): Baseline {
   const { blobs, put } = makeBlobStore();
 
@@ -296,9 +294,7 @@ function buildBaseline(
 }
 
 // テストでは tree/blob/admission を局所的に上書きするため、readonly を外した深いコピーを返す。
-type Mutable<T> = T extends PlanAdmissionRequest
-  ? T
-  : { -readonly [K in keyof T]: Mutable<T[K]> };
+type Mutable<T> = T extends PlanAdmissionRequest ? T : { -readonly [K in keyof T]: Mutable<T[K]> };
 function clone(input: RechainInput): Mutable<RechainInput> {
   return JSON.parse(JSON.stringify(input)) as Mutable<RechainInput>;
 }
@@ -839,22 +835,24 @@ describe("verifyRechainDelta", () => {
       ).toBe(true);
   });
 
-  it.each(ADMISSION_FIELD_MUTATIONS)(
-    "U-RECHAIN-012c: PlanAdmissionRequest.$field を改変した候補は、digest を正しく再計算しても H の tracked decision_digest と一致せず fail する ($field)",
-    ({ path, value }) => {
-      const { input, hRecord } = buildBaseline();
-      const admissionH = input.admission[hRecord.recordDigest];
-      const mutated = mutateAdmissionField(admissionH, path, value);
-      const tampered = clone(input);
-      tampered.admission = { [hRecord.recordDigest]: mutated };
-      const verdict = verifyRechainDelta(tampered);
-      expect(verdict.ok).toBe(false);
-      if (!verdict.ok)
-        expect(verdict.reasons.some((r) => r.startsWith("admission-candidate-unverified"))).toBe(
-          true,
-        );
-    },
-  );
+  it.each(
+    ADMISSION_FIELD_MUTATIONS,
+  )("U-RECHAIN-012c: PlanAdmissionRequest.$field を改変した候補は、digest を正しく再計算しても H の tracked decision_digest と一致せず fail する ($field)", ({
+    path,
+    value,
+  }) => {
+    const { input, hRecord } = buildBaseline();
+    const admissionH = input.admission[hRecord.recordDigest];
+    const mutated = mutateAdmissionField(admissionH, path, value);
+    const tampered = clone(input);
+    tampered.admission = { [hRecord.recordDigest]: mutated };
+    const verdict = verifyRechainDelta(tampered);
+    expect(verdict.ok).toBe(false);
+    if (!verdict.ok)
+      expect(verdict.reasons.some((r) => r.startsWith("admission-candidate-unverified"))).toBe(
+        true,
+      );
+  });
 
   // -------------------------------------------------------------------------
   // U-RECHAIN-012 拡張 (Codex Sol r1 FLAG, PR #724): command_id / receipt_id / receipt_digest を
