@@ -3,7 +3,7 @@ plan_id: PLAN-L6-711-merge-time-receipt-rechain-contract
 title: "PLAN-L6-711 (add-design): merge 時の自動 re-chain と簿記差分での再検免除の契約 freeze"
 kind: add-design
 layer: L6
-drive: be
+drive: agent
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-09-28
@@ -44,18 +44,18 @@ sub_doc: function-spec
 github_issue_id: 711
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:b4b4d9a38df162378c2522459b1627bc
-  command_id: plan-draft:issue-711:merge-time-rechain-contract:1
-  admitted_at: 2026-09-28T03:26:15.791Z
-  source_digest: sha256:85cb8f11155682c55709914bbca864afd8e50ce47e76507fe8ae855d2d2101d2
-  decision_digest: sha256:58bcc6f88a9b4a342830468be39e8dec5ce786512a100fc007c51d8f31914bf0
-  receipt_digest: sha256:0cc358720aa3a0a135ad5a1241fbd12fd4e06b9c0e5e0802cdc6df4fc3a41040
+  receipt_id: certificate:bfa0eab69198c783c54a928eba45ce41
+  command_id: plan-revise:issue-711:rechain-contract:plan:r2:6922b25d690a
+  admitted_at: 2026-09-28T03:27:16.928Z
+  source_digest: sha256:1e0fa34d8c59ef19c638dd4b7ca9f756b4ece087306078899810ac552442ea0f
+  decision_digest: sha256:850ea7266d128cde939fcdea3f4acb707444c71545a0030bc9053e1c462d571c
+  receipt_digest: sha256:be9f187b041693d12eac74fb2b0f63425be60977593335ccd57a5155118050db
   binding:
     path: docs/plans/PLAN-L6-711-merge-time-receipt-rechain-contract.md
     plan_id: PLAN-L6-711-merge-time-receipt-rechain-contract
     asset_id: plan:b4b4d9a38df162378c2522459b1627bc
-    revision: 1
-    content_digest: sha256:85cb8f11155682c55709914bbca864afd8e50ce47e76507fe8ae855d2d2101d2
+    revision: 2
+    content_digest: sha256:1e0fa34d8c59ef19c638dd4b7ca9f756b4ece087306078899810ac552442ea0f
   route:
     signal: feature_addition
     mode: add-feature
@@ -70,10 +70,10 @@ admission_receipt:
     digest: sha256:1b6aa397ad9995b717907d3247e02b3bba3d6c4508874b7654f90fd29b388927
   reentry:
     target_plan_id: PLAN-L6-711-merge-time-receipt-rechain-contract
-    target_revision: 1
+    target_revision: 2
     phase: forward_merge
-  escape_reason: "Issue #711: PLAN receipt の直列化を解消する merge 時自動 re-chain
-    と簿記差分での再検免除の契約を freeze する (advisor claude-fable-5 案 A、PO 承認 2026-09-28)"
+  escape_reason: parent_design (PLAN-RECOVERY-16) と drive を揃える (plan-governance
+    parent_drive_mismatch の是正、契約本文は rev 1 から不変)。
 ---
 
 # PLAN-L6-711: merge 時の自動 re-chain と簿記差分での再検免除の契約 freeze
