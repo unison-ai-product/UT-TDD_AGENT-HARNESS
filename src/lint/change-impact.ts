@@ -223,6 +223,34 @@ export function loadChangedFiles(repoRoot: string = process.cwd()): string[] {
   return parseGitPorcelain(output);
 }
 
+/**
+ * `git status --porcelain` の生出力から untracked-added (`??`) パスだけを抽出する
+ * (review-guard の untracked-added exemption、IMP-137 追補、issue #721)。
+ * `?? ` を落とした残りの status-code 付き行は対象外 — 既存 tracked path への
+ * 変更は untracked-added ではないため exemption 対象にしてはならない。
+ */
+export function parseUntrackedAddedPaths(output: string): string[] {
+  return output
+    .split(/\r?\n/)
+    .map((line) => line.trimEnd())
+    .filter((line) => line.startsWith("??"))
+    .map((line) => norm(line.slice(3)))
+    .filter((path) => !isTransientHarnessDbFile(path));
+}
+
+/**
+ * working tree の untracked-added (`??`) パス一覧 (commit 前 review-guard 判定の機械化)。
+ * hybrid 運用で他レーンが review session と並行して `ut-tdd memory add` 等を実行し、
+ * 新規 untracked ファイルを共有 tree へ追加するケースを区別するために使う。
+ */
+export function loadUntrackedAddedFiles(repoRoot: string = process.cwd()): string[] {
+  const output = execFileSync("git", ["-C", repoRoot, "status", "--porcelain"], {
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "ignore"],
+  });
+  return parseUntrackedAddedPaths(output);
+}
+
 /** `git diff --cached --name-only` の出力をパース (1 行 1 path、staged 集合)。 */
 export function parseStagedNames(output: string): string[] {
   return output

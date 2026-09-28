@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   assessReviewSession,
   detectWorkingTreeMutation,
+  isExemptUntrackedMemoryAddition,
   isReadOnlyDelegationRole,
   isReviewCustodyProjection,
   reviewGuardMessages,
@@ -102,6 +103,65 @@ describe("review-guard (IMP-137 / PLAN-L7-85)", () => {
       const a = assessReviewSession({ role: "tl", before: ["a"], after: ["a"] });
       expect(a.violation).toBe(false);
       expect(a.mutatedPaths).toEqual([]);
+    });
+
+    it("U-RGUARD-014: a newly added untracked .ut-tdd/memory/ file (another lane's `ut-tdd memory add`) is NOT a violation (issue #721)", () => {
+      const a = assessReviewSession({
+        role: "blind-reviewer",
+        before: [],
+        after: [".ut-tdd/memory/x.md"],
+        untrackedAdded: [".ut-tdd/memory/x.md"],
+      });
+      expect(a.mutatedPaths).toEqual([]);
+      expect(a.violation).toBe(false);
+    });
+
+    it("U-RGUARD-015: an already-tracked .ut-tdd/memory/ file modified during the session IS a violation (not in untrackedAdded)", () => {
+      const a = assessReviewSession({
+        role: "blind-reviewer",
+        before: [],
+        after: [".ut-tdd/memory/existing.md"],
+        untrackedAdded: [],
+      });
+      expect(a.mutatedPaths).toEqual([".ut-tdd/memory/existing.md"]);
+      expect(a.violation).toBe(true);
+    });
+
+    it("U-RGUARD-016: a newly added untracked file outside .ut-tdd/memory/ IS a violation", () => {
+      const a = assessReviewSession({
+        role: "blind-reviewer",
+        before: [],
+        after: ["src/foo.ts"],
+        untrackedAdded: ["src/foo.ts"],
+      });
+      expect(a.mutatedPaths).toEqual(["src/foo.ts"]);
+      expect(a.violation).toBe(true);
+    });
+
+    it("U-RGUARD-017: review custody projection exemption is unchanged when untrackedAdded is provided", () => {
+      const a = assessReviewSession({
+        role: "blind-reviewer",
+        before: [],
+        after: [
+          ".ut-tdd/review/requests/request.json",
+          ".ut-tdd/memory/new.md",
+          ".ut-tdd/memory/existing.md",
+        ],
+        untrackedAdded: [".ut-tdd/memory/new.md"],
+      });
+      expect(a.mutatedPaths).toEqual([".ut-tdd/memory/existing.md"]);
+      expect(a.violation).toBe(true);
+    });
+  });
+
+  describe("isExemptUntrackedMemoryAddition", () => {
+    it("U-RGUARD-018: exempts only paths under .ut-tdd/memory/ present in untrackedAdded", () => {
+      const untrackedAdded = new Set([".ut-tdd/memory/new.md"]);
+      expect(isExemptUntrackedMemoryAddition(".ut-tdd/memory/new.md", untrackedAdded)).toBe(true);
+      expect(isExemptUntrackedMemoryAddition(".ut-tdd/memory/other.md", untrackedAdded)).toBe(
+        false,
+      );
+      expect(isExemptUntrackedMemoryAddition("src/foo.ts", new Set(["src/foo.ts"]))).toBe(false);
     });
   });
 

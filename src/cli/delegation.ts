@@ -18,7 +18,7 @@ import {
   reviewIdentityDigest,
   reviewVerdictPath,
 } from "../feedback/review-verdict-custody.ts";
-import { loadChangedFiles } from "../lint/change-impact.ts";
+import { loadChangedFiles, loadUntrackedAddedFiles } from "../lint/change-impact.ts";
 import {
   type AdapterContextInjection,
   type AdapterPlan,
@@ -118,6 +118,15 @@ export function adapterExecutionEnv(
 function safeLoadChangedFiles(repoRoot: string): string[] {
   try {
     return loadChangedFiles(repoRoot);
+  } catch {
+    return [];
+  }
+}
+
+/** untracked-added exemption 用 (issue #721)。取得失敗時は exemption なし (fail-close 側)。 */
+function safeLoadUntrackedAddedFiles(repoRoot: string): string[] {
+  try {
+    return loadUntrackedAddedFiles(repoRoot);
   } catch {
     return [];
   }
@@ -254,6 +263,7 @@ export function executeAdapterPlanForCli(
       role: input.reviewRole,
       before: treeBefore,
       after: safeLoadChangedFiles(repoRoot),
+      untrackedAdded: safeLoadUntrackedAddedFiles(repoRoot),
     });
     for (const message of reviewGuardMessages(assessment)) process.stderr.write(`${message}\n`);
   }
