@@ -1,3 +1,15 @@
+---
+title: "PLAN revision digest query の L7 対テスト設計"
+artifact_type: test_design
+layer: L7
+executed_at_layer: L7
+status: draft
+pair_artifact: docs/plans/PLAN-L7-722-plan-revision-digest-query.md
+parent_doc: docs/plans/PLAN-L7-722-plan-revision-digest-query.md
+created: 2026-09-28
+updated: 2026-09-28
+---
+
 # PLAN revision digest query の対テスト設計
 
 対応 PLAN: `docs/plans/PLAN-L7-722-plan-revision-digest-query.md`。Issue #722。現時点は docs-only candidate freeze であり、以下の oracle は未実行。正式 PLAN admission は control lane が接合する。
