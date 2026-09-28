@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { stringify } from "yaml";
 import { canonicalPlanContentDigest } from "../src/plan-admission/diff-fence.ts";
-import { sha, stableJson } from "../src/plan-admission/plan-revision-command-assembler.ts";
+import type { PlanDraftCommand } from "../src/plan-admission/plan-draft-service.ts";
+import {
+  deriveTrackedReceiptId,
+  sha,
+  stableJson,
+} from "../src/plan-admission/plan-revision-command-assembler.ts";
 import type { PlanAdmissionRequest } from "../src/plan-admission/policy.ts";
 import {
   type CommitObj,
@@ -12,13 +17,16 @@ import {
   verifyRechainDelta,
 } from "../src/plan-admission/rechain-verifier.ts";
 import {
+  parseTrackedReceiptProjection,
   TRACKED_RECEIPT_SCHEMA,
   type TrackedReceiptRecord,
   trackedReceiptRecordDigest,
 } from "../src/plan-admission/tracked-receipt-projection.ts";
 import {
-  admissionDecisionDigest,
-  projectAdmissionForFrontmatter,
+  type TrackedReceiptDraftPayload,
+  type TrackedReceiptDraftReceipt,
+  TrackedReceiptRenderer,
+  type TrackedReceiptProjectionReader,
 } from "../src/plan-admission/tracked-receipt-renderer.ts";
 
 // ---------------------------------------------------------------------------
@@ -43,6 +51,10 @@ function baseFrontmatterOther(): Record<string, unknown> {
     route_mode: "add-feature",
     status: "draft",
     sub_doc: "function-spec",
+    // frontmatterSchema (§1.8 / §1.9 / §1.10 E) の必須項目。TrackedReceiptRenderer.render() の
+    // selfVerify() は frontmatterSchema.safeParse を通すため、fixture もこれを満たす必要がある。
+    agent_slots: [{ role: "tl", slot_label: "TL - rechain verifier fixture" }],
+    dependencies: { parent: "docs/plans/PLAN-RECOVERY-16-plan-revision-authoring.md" },
   };
 }
 
@@ -89,52 +101,49 @@ interface RevisionInput {
   binding: { path: string; planId: string; assetId: string; revision: number };
   commandId: string;
   admittedAt: string;
-  previousRecordDigest: string | null;
-  sequence: number;
+  /** この PLAN 資産の直前までの確定 record 列 (このチェーンで初めての場合は省略 = []). */
+  priorRecords?: readonly TrackedReceiptRecord[];
 }
 
+/**
+ * PLAN-L6-711 §2.3-6 condition 6 / Codex Sol r1 FLAG (PR #724 finding 2): admission_receipt の
+ * frontmatter/projection 構造を fixture 側で手組みせず、production の
+ * `TrackedReceiptRenderer.render()` (tracked-receipt-renderer.ts) をそのまま呼んで生成する。
+ * renderer/verifier の shape drift が green のまま埋もれることを防ぐ。
+ */
 function makeRevision(params: RevisionInput): { content: string; record: TrackedReceiptRecord } {
   const fm = { ...params.frontmatterOther, generates: params.generates };
   const body = bodyFor(params.items);
-  const preContent = `---\n${stringify(fm)}---\n${body}`;
-  const contentDigest = canonicalPlanContentDigest(preContent);
-  if (!contentDigest) throw new Error("fixture-content-digest-failed");
-  const decisionDigest = admissionDecisionDigest(params.admission);
-  const receiptId = `certificate:${sha(params.commandId).slice(0, 32)}`;
-  const receiptDigest = `sha256:${sha(`${params.commandId}-cert`)}`;
-  const admissionReceiptBlock = {
-    schema_version: "v2",
-    receipt_id: receiptId,
-    command_id: params.commandId,
-    admitted_at: params.admittedAt,
-    source_digest: contentDigest,
-    decision_digest: decisionDigest,
-    receipt_digest: receiptDigest,
-    binding: {
-      path: params.binding.path,
-      plan_id: params.binding.planId,
-      asset_id: params.binding.assetId,
-      revision: params.binding.revision,
-      content_digest: contentDigest,
-    },
-    ...projectAdmissionForFrontmatter(params.admission),
+  const preSource = `---\n${stringify(fm)}---\n${body}`;
+  const priorRecords = params.priorRecords ?? [];
+  const reader: TrackedReceiptProjectionReader = { read: () => receiptFile(priorRecords) };
+  const renderer = new TrackedReceiptRenderer(reader);
+  const receipt: TrackedReceiptDraftReceipt = {
+    assetId: params.binding.assetId,
+    revision: params.binding.revision,
+    certificateId: deriveTrackedReceiptId(params.commandId),
+    commandPayloadDigest: `sha256:${sha(`${params.commandId}-command-payload`)}`,
+    // certificateDigest (receipt_digest) は production では ledger の actor / sourceCommit に
+    // 依存する opaque 値であり、renderer 自身も計算しない (呼出し側が既に計算済みの値を渡す)。
+    // fixture では commandId から決定的に導き、H/R で必ず異なる値になることだけを保証する。
+    certificateDigest: sha(`${params.commandId}-cert`),
   };
-  const finalFm = { ...fm, admission_receipt: admissionReceiptBlock };
-  const content = `---\n${stringify(finalFm)}---\n${body}`;
-  const recordWithoutDigest = {
-    sequence: params.sequence,
-    previousRecordDigest: params.previousRecordDigest,
+  const command: PlanDraftCommand<TrackedReceiptDraftPayload> = {
     commandId: params.commandId,
-    receiptId,
-    receiptDigest,
-    decisionDigest,
-    binding: { ...params.binding, contentDigest },
+    commandPayloadDigest: receipt.commandPayloadDigest,
+    planId: params.binding.planId,
+    recordedAt: params.admittedAt,
+    payload: { admission: params.admission },
+    source: { path: params.binding.path, content: preSource },
+    projectionPath: RECEIPT_PATH,
   };
-  const record: TrackedReceiptRecord = {
-    ...recordWithoutDigest,
-    recordDigest: trackedReceiptRecordDigest(recordWithoutDigest),
-  };
-  return { content, record };
+  const [source, projection] = renderer.render(command, receipt);
+  const parsedProjection = parseTrackedReceiptProjection(projection.content);
+  if (!parsedProjection.ok)
+    throw new Error(`fixture-projection-invalid:${parsedProjection.errors.join(",")}`);
+  const record = parsedProjection.value.records.at(-1);
+  if (!record) throw new Error("fixture-projection-empty");
+  return { content: source.content, record };
 }
 
 function toJsonRecord(record: TrackedReceiptRecord): Record<string, unknown> {
@@ -227,8 +236,6 @@ function buildBaseline(): Baseline {
     binding: { path: PLAN_PATH, planId: PLAN_ID, assetId: ASSET_ID, revision: 1 },
     commandId: "plan-revise:issue-999:s2:plan:r1:h1",
     admittedAt: "2026-09-28T00:00:00.000Z",
-    previousRecordDigest: null,
-    sequence: 1,
   });
 
   const admissionR = admissionH; // revision 変化なし (M 側に同一 PLAN の競合なし)
@@ -240,8 +247,6 @@ function buildBaseline(): Baseline {
     binding: { path: PLAN_PATH, planId: PLAN_ID, assetId: ASSET_ID, revision: 1 },
     commandId: "plan-revise:issue-999:s2:plan:r1:h1:rechain-1",
     admittedAt: "2026-09-28T01:00:00.000Z",
-    previousRecordDigest: null,
-    sequence: 1,
   });
   const rReceiptContent = receiptFile([rRecord]);
   const hReceiptContent = receiptFile([hRecord]);
@@ -343,8 +348,6 @@ describe("verifyRechainDelta", () => {
       binding: { path: PLAN_PATH, planId: PLAN_ID, assetId: ASSET_ID, revision: 1 },
       commandId: "plan-revise:issue-999:s2:plan:r1:h1:rechain-1",
       admittedAt: "2026-09-28T01:00:00.000Z",
-      previousRecordDigest: null,
-      sequence: 1,
     });
 
     const tampered = clone(input);
@@ -398,8 +401,6 @@ describe("verifyRechainDelta", () => {
       },
       commandId: "plan-revise:issue-999:s2:plan:r1:h1:rechain-1",
       admittedAt: "2026-09-28T01:00:00.000Z",
-      previousRecordDigest: null,
-      sequence: 1,
     });
     const tampered = clone(input);
     const oid = sha(receiptFile([wrongPlanRecord])).slice(0, 40);
@@ -507,8 +508,6 @@ describe("verifyRechainDelta", () => {
       binding: { path: PLAN_PATH, planId: PLAN_ID, assetId: ASSET_ID, revision: 1 },
       commandId: "plan-revise:issue-777:concurrent:plan:r1:c1",
       admittedAt: "2026-09-28T00:30:00.000Z",
-      previousRecordDigest: null,
-      sequence: 1,
     });
 
     // PR 側 (H) は base から自分の追加だけを append する
@@ -526,8 +525,6 @@ describe("verifyRechainDelta", () => {
       binding: { path: PLAN_PATH, planId: PLAN_ID, assetId: ASSET_ID, revision: 1 },
       commandId: "plan-revise:issue-999:s2:plan:r1:h1",
       admittedAt: "2026-09-28T00:00:00.000Z",
-      previousRecordDigest: null,
-      sequence: 1,
     });
 
     // R は M (= concurrent 済み) の後ろへ PR の追加分だけを revision 2 として連結する
@@ -543,8 +540,7 @@ describe("verifyRechainDelta", () => {
       binding: { path: PLAN_PATH, planId: PLAN_ID, assetId: ASSET_ID, revision: 2 },
       commandId: "plan-revise:issue-999:s2:plan:r1:h1:rechain-1",
       admittedAt: "2026-09-28T01:00:00.000Z",
-      previousRecordDigest: mRecord.recordDigest,
-      sequence: 2,
+      priorRecords: [mRecord],
     });
 
     const baseTree: TreeMap = {
@@ -586,8 +582,7 @@ describe("verifyRechainDelta", () => {
       binding: { path: PLAN_PATH, planId: PLAN_ID, assetId: ASSET_ID, revision: 2 },
       commandId: "plan-revise:issue-999:s2:plan:r1:h1:rechain-1",
       admittedAt: "2026-09-28T01:00:00.000Z",
-      previousRecordDigest: mRecord.recordDigest,
-      sequence: 2,
+      priorRecords: [mRecord],
     });
     const badInput = clone(input);
     const oid = sha(reversedContent).slice(0, 40);
@@ -680,8 +675,6 @@ describe("verifyRechainDelta", () => {
       binding: { path: PLAN_PATH, planId: PLAN_ID, assetId: ASSET_ID, revision: 1 },
       commandId: "plan-revise:issue-999:s2:plan:r1:h1:rechain-1",
       admittedAt: "2026-09-28T01:00:00.000Z",
-      previousRecordDigest: null,
-      sequence: 1,
     });
     const tampered = clone(input);
     const oid = sha(forgedContent).slice(0, 40);
@@ -760,8 +753,6 @@ describe("verifyRechainDelta", () => {
       binding: { path: PLAN_PATH, planId: PLAN_ID, assetId: ASSET_ID, revision: 1 },
       commandId: "plan-revise:issue-700:stacked-a:plan:r1:c1",
       admittedAt: "2026-09-27T00:00:00.000Z",
-      previousRecordDigest: null,
-      sequence: 1,
     });
     const realBaseTree: TreeMap = {
       [PLAN_PATH]: put(cContent),
@@ -787,8 +778,7 @@ describe("verifyRechainDelta", () => {
       binding: { path: PLAN_PATH, planId: PLAN_ID, assetId: ASSET_ID, revision: 2 },
       commandId: "plan-revise:issue-999:s2:plan:r1:h1",
       admittedAt: "2026-09-28T00:00:00.000Z",
-      previousRecordDigest: cRecord.recordDigest,
-      sequence: 2,
+      priorRecords: [cRecord],
     });
     const hTree: TreeMap = {
       [PLAN_PATH]: put(hContent),
@@ -808,8 +798,7 @@ describe("verifyRechainDelta", () => {
       binding: { path: PLAN_PATH, planId: PLAN_ID, assetId: ASSET_ID, revision: 2 },
       commandId: "plan-revise:issue-999:s2:plan:r1:h1:rechain-1",
       admittedAt: "2026-09-28T01:00:00.000Z",
-      previousRecordDigest: cRecord.recordDigest,
-      sequence: 2,
+      priorRecords: [cRecord],
     });
     const rTree: TreeMap = {
       [PLAN_PATH]: put(rContent),
