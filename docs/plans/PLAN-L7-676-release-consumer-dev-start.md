@@ -127,6 +127,10 @@ generates:
     artifact_type: markdown_doc
   - artifact_path: docs/templates/vmodel/optional/109-qa-quality-checklist.md
     artifact_type: markdown_doc
+  - artifact_path: src/shared/design-root.ts
+    artifact_type: source_module
+  - artifact_path: tests/design-root.test.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L6-101-pack-independent-multi-consumer-acceptance.md
   requires:
@@ -185,18 +189,18 @@ status: confirmed
 github_issue_id: 676
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:a8b53b5b57f14f17df1de00ad164e613
-  command_id: plan-revise:issue-676:prt2-generates:plan:r9:af6e9a20f6a1
-  admitted_at: 2026-09-25T11:29:29.007Z
-  source_digest: sha256:a06505ae365cec9f35906eaf8f1381d9d9968aef0350d0882ba061be11661894
-  decision_digest: sha256:20c77a616c50cdcd730ef00d2c49b113f7e595031453dd4604f700d738da3164
-  receipt_digest: sha256:fa887ab15cf6998078f2288de7d226b976fd2e13a945c7aab9c1e73e152cada9
+  receipt_id: certificate:1ae6e36440f9e9ecde293866b12d3d1b
+  command_id: plan-revise:issue-676:codex-pr2b:rechain-after-706:plan:r10
+  admitted_at: 2026-09-28T01:14:16.672Z
+  source_digest: sha256:5bb9b8eb93d461d97fae17c8f23f353e43329086410932fdb4b29abb6d60bd08
+  decision_digest: sha256:6b8d87d886fdfee2a07d2665e9aacdbc6b23363b8be9d7da4dc9537b1c515efb
+  receipt_digest: sha256:574bee0c822486f4bbf55f665c5162298c320e7550b71f3f1d4c09bb2dd2563b
   binding:
     path: docs/plans/PLAN-L7-676-release-consumer-dev-start.md
     plan_id: PLAN-L7-676-release-consumer-dev-start
     asset_id: plan:aae8bf0e313f8688fbad4d4d8cf0a6a9
-    revision: 9
-    content_digest: sha256:a06505ae365cec9f35906eaf8f1381d9d9968aef0350d0882ba061be11661894
+    revision: 10
+    content_digest: sha256:5bb9b8eb93d461d97fae17c8f23f353e43329086410932fdb4b29abb6d60bd08
   route:
     signal: feature_addition
     mode: add-feature
@@ -216,9 +220,8 @@ admission_receipt:
     target_plan_id: PLAN-L7-676-release-consumer-dev-start
     target_revision: 9
     phase: forward_merge
-  escape_reason: PR-T2 が landing させる docs/templates/vmodel/optional/ の 27 本を
-    confirmed の本 PLAN の generates に追加する (rev 9、§8-8)。契約本文と review_evidence は rev
-    8 から変えない。
+  escape_reason: "PR #685 を origin/main seq 322 の後へ re-chain し、PR-2b の新規成果物 2 件を
+    confirmed PLAN の generates に宣言するため。"
 ---
 
 # PLAN-L7-676: Release consumer で開発を開始できる状態にする
@@ -679,3 +682,4 @@ injection path の乗っ取り、harness 自身の挙動変化、部分 setup �
 6. §3.5.3 の source 例外 (rev 7): PR-T1 (#703) の非著者 review (Codex Sol r1) が、L11 / L13 のテンプレートの source (ZIP-DOC-028 / 011 / 021) の disposition target が当該 slot を指さないと FLAG した。原因は、§3.5.3 の規則本文 (process 文書を指す本は optional) と構成元表 (028 を L11、011 と 021 を L13 の source とする) の矛盾である。advisor (claude-fable-5、design) の推奨に従い、構成元表を正として規則本文に閉じた例外句 (3 本) を加え、test-design の CANDIDATE-U-RCDEV-020 を同じ例外に揃えた。disposition catalog は変更しない。
 7. PR-T1 の成果物宣言 (rev 8): PR-T1 (#703) は rev 7 の merge (#704) 後に main を取り込み、自 PR が新規に landing させる `docs/templates/vmodel/` の 22 本 (required 21 slot のテンプレートと port index の README) だけを `generates` に追加した。既存ファイルと他 PR の成果物は載せていない。契約本文と `review_evidence` は rev 7 から変えていない。
 8. PR-T2 の成果物宣言 (rev 9): PR-T2 は PR-T1 の merge (#703) 後に main を取り込み、自 PR が新規に landing させる `docs/templates/vmodel/optional/` の 27 本だけを `generates` に追加した。既存ファイル (port index の README と L5 テンプレート) の更新は PR-T1 の宣言に含まれる。管理 yaml の図・trace 俯瞰・粒度情報のうち、§3.5.4 で対応が明示されていないものは #705 に分離した。契約本文と `review_evidence` は rev 8 から変えていない。
+9. PR-2b の成果物宣言: main 前進後の re-chain で、移動後の resolver とその unit test の2件を `generates` に追加する。既存ファイルの変更は宣言しない。
