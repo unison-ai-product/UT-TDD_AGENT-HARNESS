@@ -1,7 +1,53 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { resolveVModelRoots } from "../shared/design-root.ts";
 import { fmValue } from "./shared.ts";
+
+declare const __UT_TDD_BUNDLED__: boolean;
+
+const bundled = typeof __UT_TDD_BUNDLED__ !== "undefined" && __UT_TDD_BUNDLED__ === true;
+
+interface EmbeddedGateAsset {
+  readonly path: string;
+  readonly content: string;
+}
+
+// Literal require paths are esbuild text-loader inputs and are included in the
+// authoritative bundle receipt. Source execution keeps this index empty.
+const EMBEDDED_GATE_ASSETS: readonly EmbeddedGateAsset[] = bundled
+  ? [
+      {
+        path: "docs/governance/gate-design.md",
+        content: require("ut-tdd-gate-assets/docs/governance/gate-design.md") as string,
+      },
+      {
+        path: "docs/process/gates.md",
+        content: require("ut-tdd-gate-assets/docs/process/gates.md") as string,
+      },
+      {
+        path: "docs/process/vmodel-contract.yaml",
+        content: require("ut-tdd-gate-assets/docs/process/vmodel-contract.yaml") as string,
+      },
+    ]
+  : [];
+
+function sourceGateDesignText(): string {
+  const sourceRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
+  return readFileSync(resolve(sourceRoot, "docs/governance/gate-design.md"), "utf8");
+}
+
+function bundledGateDesignText(): string {
+  const asset = EMBEDDED_GATE_ASSETS.find(
+    (candidate) => candidate.path === "docs/governance/gate-design.md",
+  );
+  if (!asset) throw new Error("embedded gate definition is missing from the Node bundle");
+  return asset.content;
+}
+
+function fallbackGateDesignText(): string {
+  return bundled ? bundledGateDesignText() : sourceGateDesignText();
+}
 
 export interface GateStatus {
   gate: string;
@@ -93,7 +139,7 @@ function walkMarkdown(dir: string): string[] {
 
 export function loadGateConfirmDocs(repoRoot: string = process.cwd()): GateConfirmDocs {
   const gatePath = join(repoRoot, "docs", "governance", "gate-design.md");
-  const gateText = existsSync(gatePath) ? readFileSync(gatePath, "utf8") : "";
+  const gateText = existsSync(gatePath) ? readFileSync(gatePath, "utf8") : fallbackGateDesignText();
   const roots = resolveVModelRoots(repoRoot);
   const designRoot = join(repoRoot, roots.designRoot);
   const testRoot = join(repoRoot, roots.testDesignRoot);

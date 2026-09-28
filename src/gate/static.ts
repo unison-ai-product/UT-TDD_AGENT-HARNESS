@@ -11,6 +11,7 @@ import {
   oracleTestTraceMessages,
 } from "../lint/oracle-test-trace.ts";
 import { lintPlanWithGate } from "../plan/lint.ts";
+import { resolveVModelRoots } from "../shared/design-root.ts";
 import {
   analyzePairFreeze,
   analyzeVerificationGroups,
@@ -73,8 +74,13 @@ function gateKey(gate: string): string {
 export function analyzeLayerPairGate(
   docs: PairDoc[],
   gate: string,
-  layer: string,
+  layerInput: string | { layer: string; l10PairPath: string },
 ): LayerPairGateResult {
+  const layer = typeof layerInput === "string" ? layerInput : layerInput.layer;
+  const l10PairPath =
+    typeof layerInput === "string"
+      ? "docs/test-design/harness/L10-ux-validation-test-design.md"
+      : layerInput.l10PairPath;
   const pair = analyzePairFreeze(docs);
   const layerDocs = docs.filter(
     (doc) => isDesignSubDoc(doc) && designLayerFromPath(doc.path) === layer,
@@ -90,9 +96,7 @@ export function analyzeLayerPairGate(
   const mockMissing =
     layer === "L2" &&
     !layerDocs.some(
-      (doc) =>
-        doc.path.endsWith("/wireframe.md") &&
-        doc.pairArtifact === "docs/test-design/harness/L10-ux-validation-test-design.md",
+      (doc) => doc.path.endsWith("/wireframe.md") && doc.pairArtifact === l10PairPath,
     );
   const ok = layerDocs.length > 0 && draft === 0 && orphanPaths.length === 0 && !mockMissing;
   const head = `${gate.toLowerCase()}-pair`;
@@ -118,7 +122,11 @@ export function analyzeLayerPairGate(
 }
 
 function evaluateLayerPairGate(gate: string, layer: string, repoRoot: string): StaticGateResult {
-  const result = analyzeLayerPairGate(loadPairDocs(repoRoot), gate, layer);
+  const testDesignRoot = resolveVModelRoots(repoRoot).testDesignRoot;
+  const result = analyzeLayerPairGate(loadPairDocs(repoRoot), gate, {
+    layer,
+    l10PairPath: `${testDesignRoot}/L10-ux-validation-test-design.md`,
+  });
   return { gate, applicable: true, passed: result.ok, messages: result.messages };
 }
 
