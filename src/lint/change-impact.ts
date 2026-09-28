@@ -224,18 +224,37 @@ export function loadChangedFiles(repoRoot: string = process.cwd()): string[] {
 }
 
 /**
- * `git status --porcelain` の生出力から untracked-added (`??`) パスだけを抽出する
- * (review-guard の untracked-added exemption、IMP-137 追補、issue #721)。
- * `?? ` を落とした残りの status-code 付き行は対象外 — 既存 tracked path への
- * 変更は untracked-added ではないため exemption 対象にしてはならない。
+ * `git status --porcelain=v1 -z --untracked-files=all` の NUL 区切り生出力から
+ * untracked-added (`??`) パスだけを抽出する (review-guard の untracked-added exemption、
+ * IMP-137 追補、issue #721)。`-z` は git 公式が機械可読向けに推奨する形式で、非 ASCII や
+ * 記号を含むパスを C-quote (二重引用符 + 8進エスケープ) せず生バイトのまま NUL 終端で返す
+ * ため、`norm()` の素朴な `\` → `/` 置換で壊れる問題がそもそも発生しない (Sol r1 FLAG 1、
+ * issue #721)。`--untracked-files=all` は untracked ディレクトリを `?? dir/` へ畳まず配下の
+ * 各ファイルを個別に列挙させる。
+ *
+ * rename/copy entry (`R`/`C` を含む status code) は `-z` では「dest パス」に続けてもう1つ
+ * NUL 区切りの「src パス」を伴う。untracked (`??`) entry にこの追加 field は無いが、同じ
+ * porcelain stream に他の tracked entry が混在してもズレないよう、rename/copy entry の直後
+ * 1 token は無条件に skip する。containment (`.ut-tdd/memory/` 配下判定・セパレータ健全性)
+ * は呼び出し側 (review-guard) が担う — ここではパス文字列を一切加工せず分割するだけ。
  */
 export function parseUntrackedAddedPaths(output: string): string[] {
-  return output
-    .split(/\r?\n/)
-    .map((line) => line.trimEnd())
-    .filter((line) => line.startsWith("??"))
-    .map((line) => norm(line.slice(3)))
-    .filter((path) => !isTransientHarnessDbFile(path));
+  const tokens = output.split("\0");
+  const paths: string[] = [];
+  let skipNextToken = false;
+  for (const token of tokens) {
+    if (skipNextToken) {
+      skipNextToken = false;
+      continue;
+    }
+    if (token.length === 0) continue;
+    const status = token.slice(0, 2);
+    if (status.includes("R") || status.includes("C")) skipNextToken = true;
+    if (status !== "??") continue;
+    const path = token.slice(3);
+    if (!isTransientHarnessDbFile(path)) paths.push(path);
+  }
+  return paths;
 }
 
 /**
@@ -244,10 +263,11 @@ export function parseUntrackedAddedPaths(output: string): string[] {
  * 新規 untracked ファイルを共有 tree へ追加するケースを区別するために使う。
  */
 export function loadUntrackedAddedFiles(repoRoot: string = process.cwd()): string[] {
-  const output = execFileSync("git", ["-C", repoRoot, "status", "--porcelain"], {
-    encoding: "utf8",
-    stdio: ["ignore", "pipe", "ignore"],
-  });
+  const output = execFileSync(
+    "git",
+    ["-C", repoRoot, "status", "--porcelain=v1", "-z", "--untracked-files=all"],
+    { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] },
+  );
   return parseUntrackedAddedPaths(output);
 }
 

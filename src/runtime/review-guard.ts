@@ -67,21 +67,42 @@ export function isReviewCustodyProjection(path: string): boolean {
   return /^\.ut-tdd\/review\/(?:requests|receipts|verdicts)\//.test(normalized);
 }
 
+/** `.ut-tdd/memory/` containment の先頭 segment 列 (case-sensitive、順序固定)。 */
+const MEMORY_DIR_SEGMENTS = [".ut-tdd", "memory"] as const;
+
+/**
+ * `path` が `.ut-tdd/memory/` 配下に厳密に containment されているかを判定する。
+ * git は常に `/` 区切りで path を返す (プラットフォームに依らず POSIX-style) ため、ここでは
+ * セパレータ変換を一切行わない — `\` を含む path はセパレータではなく疑わしい入力として
+ * 拒否する (Sol r1 FLAG 1、issue #721)。判定は case-sensitive (git path は case-sensitive) で
+ * あり、`.` / `..` segment (`./` トリック、`../` 脱出) や空 segment (連続 `/`) を含む path も
+ * containment 対象から除外する。
+ */
+function isUnderMemoryDirectory(path: string): boolean {
+  if (path.length === 0 || path.includes("\\")) return false;
+  const segments = path.split("/");
+  if (segments.length <= MEMORY_DIR_SEGMENTS.length) return false;
+  if (segments.some((segment) => segment === "" || segment === "." || segment === "..")) {
+    return false;
+  }
+  return MEMORY_DIR_SEGMENTS.every((expected, index) => segments[index] === expected);
+}
+
 /**
  * hybrid 運用では他レーンが review session と並行して `ut-tdd memory add` を実行し、
  * `.ut-tdd/memory/` 配下へ新規 untracked ファイルを追加することがある (reviewer 本人の
  * 編集ではない、issue #721 / PR #719 2026-09-28)。「新規 untracked 追加」に限って exempt する
  * — session 開始前から tracked だった memory ファイルへの上書き編集は対象外 (untrackedAdded に
- * 含まれない限り exemption しない)。untracked/tracked の判定は呼び出し側の porcelain 走査が担う
- * (本 module は git/fs を持たない純関数のまま)。
+ * 含まれない限り exemption しない)。containment は `isUnderMemoryDirectory` が厳密判定する
+ * (セパレータ変換なし、`..`/`.`/case 違いは非対象)。untracked/tracked の判定は呼び出し側の
+ * porcelain 走査が担う (本 module は git/fs を持たない純関数のまま)。
  */
 export function isExemptUntrackedMemoryAddition(
   path: string,
   untrackedAdded: ReadonlySet<string>,
 ): boolean {
-  const normalized = path.replaceAll("\\", "/");
-  if (!/^\.ut-tdd\/memory\//.test(normalized)) return false;
-  return untrackedAdded.has(path) || untrackedAdded.has(normalized);
+  if (!isUnderMemoryDirectory(path)) return false;
+  return untrackedAdded.has(path);
 }
 
 export interface ReviewSessionInput {
