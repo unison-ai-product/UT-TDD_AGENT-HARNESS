@@ -4207,7 +4207,7 @@ program
         (opts.consumerRuntimeRelease && opts.consumerRuntimeInput)
       ) {
         process.stderr.write(
-          "--consumer-runtime-release requires --expected-consumer-digest and cannot be combined with --consumer-runtime-input.\n",
+          "consumer_runtime_anchor_mismatch: --consumer-runtime-release requires --expected-consumer-digest and cannot be combined with --consumer-runtime-input.\n",
         );
         process.exitCode = 1;
         return;

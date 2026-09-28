@@ -472,9 +472,6 @@ function assertSameCommittedConsumerRuntime(input: {
       pointer.entry_path !== resolve(pointer.entry_path)
     )
       throw new Error("consumer_runtime_identity_mismatch");
-    const expectedEntry = join(input.consumerRoot, ".ut-tdd", "bin", "ut-tdd.mjs");
-    if (!sameCanonicalSetupPath(pointer.entry_path, expectedEntry))
-      throw new Error("consumer_runtime_receipt_mismatch");
     const bundlePath = pointer.bundle_path;
     if (!existsSync(join(bundlePath, "bundle-manifest.json")))
       throw new Error("consumer_runtime_identity_mismatch");
@@ -486,19 +483,10 @@ function assertSameCommittedConsumerRuntime(input: {
     if (
       pointer.bundle_digest !== bundle.bundle_digest ||
       pointer.bundle_path !== bundle.bundle_path ||
-      !containedReal(realpathSync.native(input.runtimeRoot), realpathSync.native(bundlePath))
+      !sameCanonicalSetupPath(pointer.entry_path, join(bundle.bundle_path, "ut-tdd.mjs"))
     )
       throw new Error("consumer_runtime_identity_mismatch");
     const storedIdentity = bundle.identity;
-    if (
-      storedIdentity.release_id !== input.releaseId ||
-      storedIdentity.subject_revision !== input.sourceRevision ||
-      storedIdentity.artifact_set_digest !== input.artifactSetDigest ||
-      storedIdentity.generation_id !== input.generationId ||
-      storedIdentity.compiled_esm_digest !== input.compiledEsmDigest
-    )
-      throw new Error("consumer_runtime_update_unsupported");
-
     const receiptBytes = readFileSync(join(bundlePath, "consumer-receipt.json"));
     const storedReceipt = JSON.parse(receiptBytes.toString("utf8")) as Record<string, unknown>;
     const rawConsumer = storedReceipt.consumer;
@@ -508,11 +496,6 @@ function assertSameCommittedConsumerRuntime(input: {
         : undefined;
     if (
       !storedConsumer ||
-      storedConsumer.productId !== input.productId ||
-      storedConsumer.materializerVersion !== input.materializerVersion ||
-      storedConsumer.releaseId !== input.releaseId ||
-      storedConsumer.sourceRevision !== input.sourceRevision ||
-      storedConsumer.artifactSetDigest !== input.artifactSetDigest ||
       !sameCanonicalSetupPath(String(storedConsumer.consumerRoot ?? ""), input.consumerRoot) ||
       !sameCanonicalSetupPath(String(storedConsumer.runtimeRoot ?? ""), input.runtimeRoot)
     )
@@ -522,18 +505,28 @@ function assertSameCommittedConsumerRuntime(input: {
       storedReceipt.operation_id !== storedIdentity.operation_id ||
       storedIdentity.product_id !== input.productId ||
       !sameCanonicalSetupPath(storedIdentity.consumer_root, input.consumerRoot) ||
-      !sameCanonicalSetupPath(storedIdentity.runtime_root, input.runtimeRoot)
+      !sameCanonicalSetupPath(storedIdentity.runtime_root, input.runtimeRoot) ||
+      storedConsumer.productId !== storedIdentity.product_id ||
+      storedConsumer.materializerVersion !== storedIdentity.materializer_version ||
+      storedConsumer.releaseId !== storedIdentity.release_id ||
+      storedConsumer.sourceRevision !== storedIdentity.subject_revision ||
+      storedConsumer.artifactSetDigest !== storedIdentity.artifact_set_digest
     )
       throw new Error("consumer_runtime_receipt_mismatch");
+    if (!containedReal(realpathSync.native(input.runtimeRoot), realpathSync.native(bundlePath)))
+      throw new Error("consumer_runtime_identity_mismatch");
     if (storedIdentity.operation_id !== input.operationId)
       throw new Error("consumer_runtime_update_unsupported");
     if (
+      storedIdentity.product_id !== input.productId ||
       storedIdentity.materializer_version !== input.materializerVersion ||
-      storedIdentity.subject_revision !== input.subjectRevision ||
+      storedIdentity.release_id !== input.releaseId ||
+      storedIdentity.subject_revision !== input.sourceRevision ||
+      storedIdentity.artifact_set_digest !== input.artifactSetDigest ||
       storedIdentity.generation_id !== input.generationId ||
       storedIdentity.compiled_esm_digest !== input.compiledEsmDigest
     )
-      throw new Error("consumer_runtime_identity_mismatch");
+      throw new Error("consumer_runtime_update_unsupported");
 
     for (const [name, expectedDigest] of Object.entries(bundle.files)) {
       const path = join(bundlePath, name);
