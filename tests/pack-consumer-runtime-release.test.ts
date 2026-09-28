@@ -4,6 +4,7 @@ import {
   chmodSync,
   cpSync,
   existsSync,
+  lstatSync,
   mkdirSync,
   mkdtempSync,
   readdirSync,
@@ -16,7 +17,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { stringify } from "yaml";
 import * as setupApi from "../src/setup/index.ts";
@@ -716,6 +717,41 @@ function runInstallerIn(
   });
 }
 
+function makeInstallerFixtureWritable(path: string): void {
+  let stat: ReturnType<typeof lstatSync>;
+  try {
+    stat = lstatSync(path);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return;
+    throw error;
+  }
+  if (stat.isSymbolicLink()) {
+    unlinkSync(path);
+    return;
+  }
+  if (stat.isDirectory()) {
+    chmodSync(path, (stat.mode & 0o777) | 0o700);
+    for (const name of readdirSync(path)) makeInstallerFixtureWritable(join(path, name));
+  } else if (stat.isFile()) {
+    chmodSync(path, (stat.mode & 0o777) | 0o200);
+  }
+}
+
+function removeInstallerFixtureTree(root: string): void {
+  const resolvedRoot = resolve(root);
+  const relativeRoot = relative(resolve(tmpdir()), resolvedRoot);
+  if (
+    !relativeRoot ||
+    relativeRoot === ".." ||
+    relativeRoot.startsWith(`..${sep}`) ||
+    dirname(relativeRoot) !== "." ||
+    !basename(relativeRoot).startsWith("ut-tdd-packrt-installer-case-")
+  )
+    throw new Error("installer fixture cleanup target is outside its owned temp root");
+  makeInstallerFixtureWritable(resolvedRoot);
+  rmSync(resolvedRoot, { recursive: true, force: true });
+}
+
 describe("Pack consumer runtime release producer contract", () => {
   it("U-PACKRT-011: binds the tagged release commit to a first-parent artifact source", async () => {
     const normal = createReleaseBindingFixture("normal");
@@ -1065,7 +1101,7 @@ describe("Pack consumer runtime release installer", () => {
       ).toBe(0);
       expect(offlineHelp.stdout).toContain("Usage: ut-tdd");
     } finally {
-      rmSync(testCase.root, { recursive: true, force: true });
+      removeInstallerFixtureTree(testCase.root);
     }
   });
 
@@ -1103,7 +1139,7 @@ describe("Pack consumer runtime release installer", () => {
         expect(`${run.stdout}\n${run.stderr}`).toContain("consumer_runtime_checksum_invalid");
         expect(consumerTreeSnapshot(testCase.consumerRoot)).toEqual(before);
       } finally {
-        rmSync(testCase.root, { recursive: true, force: true });
+        removeInstallerFixtureTree(testCase.root);
       }
     }
 
@@ -1124,7 +1160,7 @@ describe("Pack consumer runtime release installer", () => {
         expect(`${run.stdout}\n${run.stderr}`).toContain("consumer_runtime_digest_mismatch");
         expect(consumerTreeSnapshot(testCase.consumerRoot)).toEqual(before);
       } finally {
-        rmSync(testCase.root, { recursive: true, force: true });
+        removeInstallerFixtureTree(testCase.root);
       }
     }
   });
@@ -1156,7 +1192,7 @@ describe("Pack consumer runtime release installer", () => {
       expect(`${run.stdout}\n${run.stderr}`).toContain("consumer_runtime_self_digest_mismatch");
       expect(consumerTreeSnapshot(selfMismatch.consumerRoot)).toEqual(before);
     } finally {
-      rmSync(selfMismatch.root, { recursive: true, force: true });
+      removeInstallerFixtureTree(selfMismatch.root);
     }
 
     const pf5Mismatch = copyInstallerCase(fixture);
@@ -1188,7 +1224,7 @@ describe("Pack consumer runtime release installer", () => {
       );
       expect(consumerTreeSnapshot(pf5Mismatch.consumerRoot)).toEqual(before);
     } finally {
-      rmSync(pf5Mismatch.root, { recursive: true, force: true });
+      removeInstallerFixtureTree(pf5Mismatch.root);
     }
 
     const receiptMismatch = copyInstallerCase(fixture);
@@ -1217,7 +1253,7 @@ describe("Pack consumer runtime release installer", () => {
       expect(`${run.stdout}\n${run.stderr}`).toContain("generation_receipt_mismatch");
       expect(consumerTreeSnapshot(receiptMismatch.consumerRoot)).toEqual(before);
     } finally {
-      rmSync(receiptMismatch.root, { recursive: true, force: true });
+      removeInstallerFixtureTree(receiptMismatch.root);
     }
 
     const coherentForgery = copyInstallerCase(fixture);
@@ -1278,7 +1314,7 @@ describe("Pack consumer runtime release installer", () => {
       ).toBe(2);
       expect(forgedAnchorRun.stderr).toContain("identity: denied (identity_repository_unbound)");
     } finally {
-      rmSync(coherentForgery.root, { recursive: true, force: true });
+      removeInstallerFixtureTree(coherentForgery.root);
     }
 
     const anchorMutant = copyInstallerCase(fixture);
@@ -1330,7 +1366,7 @@ describe("Pack consumer runtime release installer", () => {
         ),
       ).toBe(originalDigest);
     } finally {
-      rmSync(anchorMutant.root, { recursive: true, force: true });
+      removeInstallerFixtureTree(anchorMutant.root);
     }
 
     for (const anchor of [undefined, "sha256:ABCDEF", `sha256:${"0".repeat(64)}`]) {
@@ -1342,7 +1378,7 @@ describe("Pack consumer runtime release installer", () => {
         expect(`${run.stdout}\n${run.stderr}`).toContain("consumer_runtime_anchor_mismatch");
         expect(consumerTreeSnapshot(testCase.consumerRoot)).toEqual(before);
       } finally {
-        rmSync(testCase.root, { recursive: true, force: true });
+        removeInstallerFixtureTree(testCase.root);
       }
     }
   });
@@ -1369,7 +1405,7 @@ describe("Pack consumer runtime release installer", () => {
         expect(`${run.stdout}\n${run.stderr}`).toContain("consumer_runtime_asset_set_mismatch");
         expect(consumerTreeSnapshot(testCase.consumerRoot)).toEqual(before);
       } finally {
-        rmSync(testCase.root, { recursive: true, force: true });
+        removeInstallerFixtureTree(testCase.root);
       }
     }
   });
@@ -1417,7 +1453,7 @@ describe("Pack consumer runtime release installer", () => {
     } finally {
       const aliasRoot = join(testCase.root, "consumer-alias");
       if (existsSync(aliasRoot)) unlinkSync(aliasRoot);
-      rmSync(testCase.root, { recursive: true, force: true });
+      removeInstallerFixtureTree(testCase.root);
     }
   });
 
@@ -1451,7 +1487,7 @@ describe("Pack consumer runtime release installer", () => {
       expect(`${run.stdout}\n${run.stderr}`).toContain("consumer_runtime_identity_mismatch");
       expect(consumerTreeSnapshot(pointerCase.consumerRoot)).toEqual(before);
     } finally {
-      rmSync(pointerCase.root, { recursive: true, force: true });
+      removeInstallerFixtureTree(pointerCase.root);
     }
 
     const missingBundle = copyInstallerCase(fixture);
@@ -1481,7 +1517,7 @@ describe("Pack consumer runtime release installer", () => {
       expect(`${run.stdout}\n${run.stderr}`).toContain("consumer_runtime_identity_mismatch");
       expect(consumerTreeSnapshot(missingBundle.consumerRoot)).toEqual(before);
     } finally {
-      rmSync(missingBundle.root, { recursive: true, force: true });
+      removeInstallerFixtureTree(missingBundle.root);
     }
   });
 
@@ -1526,7 +1562,7 @@ describe("Pack consumer runtime release installer", () => {
       expect(`${update.stdout}\n${update.stderr}`).toContain("consumer_runtime_update_unsupported");
       expect(consumerTreeSnapshot(testCase.consumerRoot)).toEqual(before);
     } finally {
-      rmSync(testCase.root, { recursive: true, force: true });
+      removeInstallerFixtureTree(testCase.root);
     }
   });
 });
