@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import { parse as parseYaml, stringify } from "yaml";
-import { canonicalPlanContentDigest } from "../src/plan-admission/diff-fence.ts";
 import type { PlanDraftCommand } from "../src/plan-admission/plan-draft-service.ts";
 import {
   deriveTrackedReceiptId,
