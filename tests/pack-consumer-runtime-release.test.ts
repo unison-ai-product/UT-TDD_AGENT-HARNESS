@@ -1,13 +1,18 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
+  chmodSync,
   cpSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
   readdirSync,
   readFileSync,
+  realpathSync,
   rmSync,
+  statSync,
+  symlinkSync,
+  unlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -15,6 +20,9 @@ import { dirname, join, resolve } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { stringify } from "yaml";
 import * as setupApi from "../src/setup/index.ts";
+
+const installerExecutionRoot = resolve(process.cwd());
+
 import {
   assertProducerPathsOutsideHome,
   type ConsumerRuntimeReleaseProducerError,
@@ -487,6 +495,221 @@ function validDocument(): ConsumerRuntimeRelease {
   };
 }
 
+interface RuntimeInstallerFixture {
+  readonly root: string;
+  readonly releaseDir: string;
+  readonly consumerRoot: string;
+  readonly tag: string;
+  readonly anchor: string;
+  readonly compiledBytes: Buffer;
+  readonly runtime: ConsumerRuntimeRelease;
+}
+
+function hashHex(value: Uint8Array): string {
+  return createHash("sha256").update(value).digest("hex");
+}
+
+function checksumLine(bytes: Uint8Array, name: string): string {
+  return `${hashHex(bytes)}  ${name}\n`;
+}
+
+function writeRuntimeInstallerAssets(input: {
+  readonly releaseDir: string;
+  readonly tag: string;
+  readonly compiledBytes: Uint8Array;
+  readonly runtime: ConsumerRuntimeRelease;
+  readonly tarballBytes?: Uint8Array;
+}): string {
+  const names = releaseArtifactFileNames(input.tag);
+  const tarball = Buffer.from(input.tarballBytes ?? Buffer.from("fixture source archive\n"));
+  const compiled = Buffer.from(input.compiledBytes);
+  const runtimeBytes = Buffer.from(`${canonical(input.runtime)}\n`, "utf8");
+  const consumerChecksum = Buffer.from(
+    `${checksumLine(compiled, names.compiledEsm)}${checksumLine(runtimeBytes, names.consumerRuntime)}`,
+    "utf8",
+  );
+  writeFileSync(join(input.releaseDir, names.tarball), tarball);
+  writeFileSync(join(input.releaseDir, names.checksum), checksumLine(tarball, names.tarball));
+  writeFileSync(join(input.releaseDir, names.compiledEsm), compiled);
+  writeFileSync(join(input.releaseDir, names.consumerRuntime), runtimeBytes);
+  writeFileSync(join(input.releaseDir, names.consumerChecksum), consumerChecksum);
+  return `sha256:${hashHex(consumerChecksum)}`;
+}
+
+async function createRuntimeInstallerFixture(): Promise<RuntimeInstallerFixture> {
+  const root = mkdtempSync(join(tmpdir(), "ut-tdd-packrt-installer-"));
+  const releaseDir = join(root, "release");
+  const consumerRoot = join(root, "consumer");
+  mkdirSync(releaseDir, { recursive: true });
+  mkdirSync(consumerRoot, { recursive: true });
+  fixtureGit(consumerRoot, ["init", "--quiet"]);
+
+  const names = releaseArtifactFileNames("v0.2.0-canary.2");
+  const compiledPath = join(releaseDir, names.compiledEsm);
+  const metafilePath = `${compiledPath}.metafile.json`;
+  execFileSync(
+    process.execPath,
+    [join(installerExecutionRoot, "scripts", "build-node.mjs"), compiledPath, metafilePath],
+    { cwd: installerExecutionRoot, encoding: "utf8", windowsHide: true },
+  );
+  const compiledBytes = readFileSync(compiledPath);
+  const executableDigest = hashHex(compiledBytes);
+  const receiptBytes = sealReceipt({
+    ...receiptUnsigned,
+    compiled_cli: { ...receiptUnsigned.compiled_cli, sha256: executableDigest },
+  });
+  const base = validDocument();
+  const runtime: ConsumerRuntimeRelease = {
+    ...base,
+    generation: {
+      ...base.generation,
+      compiled_esm_digest: `sha256:${executableDigest}`,
+      node_bootstrap_receipt_base64: receiptBytes.toString("base64"),
+    },
+  };
+  validateConsumerRuntimeRelease(runtime);
+  const anchor = writeRuntimeInstallerAssets({
+    releaseDir,
+    tag: runtime.release.tag,
+    compiledBytes,
+    runtime,
+  });
+  rmSync(metafilePath, { force: true });
+  return {
+    root,
+    releaseDir,
+    consumerRoot,
+    tag: runtime.release.tag,
+    anchor,
+    compiledBytes,
+    runtime,
+  };
+}
+
+function runRuntimeInstaller(
+  fixture: RuntimeInstallerFixture,
+  options: {
+    readonly releaseDir?: string;
+    readonly consumerRoot?: string;
+    readonly anchor?: string;
+  } = {},
+) {
+  const releaseDir = options.releaseDir ?? fixture.releaseDir;
+  const consumerRoot = options.consumerRoot ?? fixture.consumerRoot;
+  const testRoot = dirname(consumerRoot);
+  const installer = join(releaseDir, releaseArtifactFileNames(fixture.tag).compiledEsm);
+  const args = [installer, "setup", "--solo", "--consumer-runtime-release", releaseDir];
+  if (options.anchor !== "") {
+    args.push("--expected-consumer-digest", options.anchor ?? fixture.anchor);
+  }
+  return spawnSync(process.execPath, args, {
+    cwd: consumerRoot,
+    encoding: "utf8",
+    env: isolatedConsumerEnv(testRoot),
+    windowsHide: true,
+    maxBuffer: 64 * 1024 * 1024,
+  });
+}
+
+function fileTreeSnapshot(root: string): string[] {
+  const entries: string[] = [];
+  const visit = (directory: string) => {
+    for (const name of readdirSync(directory).sort()) {
+      const path = join(directory, name);
+      const rel = path.slice(root.length + 1).replaceAll("\\", "/");
+      const info = statSync(path, { bigint: true });
+      if (info.isDirectory()) {
+        entries.push(`dir:${rel}:${info.mode}:${info.mtimeNs}:${info.ctimeNs}`);
+        visit(path);
+      } else {
+        const bytes = readFileSync(path);
+        entries.push(
+          `file:${rel}:${info.mode}:${info.size}:${info.mtimeNs}:${info.ctimeNs}:${hashHex(bytes)}`,
+        );
+      }
+    }
+  };
+  visit(root);
+  return entries;
+}
+
+const ISOLATED_USER_STATE_PATHS = [
+  "home",
+  "appdata",
+  "localappdata",
+  "gh-config",
+  "claude-sessions",
+  "codex-sessions",
+  "codex-home",
+] as const;
+
+function isolatedConsumerEnv(testRoot: string): NodeJS.ProcessEnv {
+  const home = join(testRoot, "home");
+  return {
+    ...process.env,
+    HOME: home,
+    USERPROFILE: home,
+    APPDATA: join(testRoot, "appdata"),
+    LOCALAPPDATA: join(testRoot, "localappdata"),
+    GH_CONFIG_DIR: join(testRoot, "gh-config"),
+    CLAUDE_PROJECT_DIR: "",
+    UT_TDD_PROJECT_DIR: "",
+    UT_TDD_CLAUDE_SESSIONS_DIR: join(testRoot, "claude-sessions"),
+    UT_TDD_CODEX_SESSIONS_DIR: join(testRoot, "codex-sessions"),
+    CODEX_HOME: join(testRoot, "codex-home"),
+  };
+}
+
+function consumerTreeSnapshot(root: string): string[] {
+  const environmentState = ISOLATED_USER_STATE_PATHS.flatMap((name) => {
+    const path = join(dirname(root), name);
+    return existsSync(path)
+      ? fileTreeSnapshot(path).map((entry) => `isolated:${name}:${entry}`)
+      : [];
+  });
+  return [...fileTreeSnapshot(root), ...environmentState];
+}
+
+function consumerActivePointer(root: string): {
+  readonly path: string;
+  readonly bundlePath: string;
+  readonly bytes: Buffer;
+} {
+  const path = join(root, ".ut-tdd", "runtime", "activation", "active.json");
+  const bytes = readFileSync(path);
+  const pointer = JSON.parse(bytes.toString("utf8")) as { bundle_path: string };
+  return { path, bundlePath: pointer.bundle_path, bytes };
+}
+
+function copyInstallerCase(fixture: RuntimeInstallerFixture): {
+  readonly root: string;
+  readonly releaseDir: string;
+  readonly consumerRoot: string;
+} {
+  const root = mkdtempSync(join(tmpdir(), "ut-tdd-packrt-installer-case-"));
+  const releaseDir = join(root, "release");
+  const consumerRoot = join(root, "consumer");
+  mkdirSync(releaseDir, { recursive: true });
+  mkdirSync(consumerRoot, { recursive: true });
+  for (const name of readdirSync(fixture.releaseDir))
+    cpSync(join(fixture.releaseDir, name), join(releaseDir, name));
+  fixtureGit(consumerRoot, ["init", "--quiet"]);
+  return { root, releaseDir, consumerRoot };
+}
+
+function runInstallerIn(
+  fixture: RuntimeInstallerFixture,
+  releaseDir: string,
+  consumerRoot: string,
+  anchor: string | undefined,
+) {
+  return runRuntimeInstaller(fixture, {
+    releaseDir,
+    consumerRoot,
+    ...(anchor === undefined ? { anchor: "" } : { anchor }),
+  });
+}
+
 describe("Pack consumer runtime release producer contract", () => {
   it("U-PACKRT-011: binds the tagged release commit to a first-parent artifact source", async () => {
     const normal = createReleaseBindingFixture("normal");
@@ -784,23 +1007,465 @@ describe("Pack consumer runtime release producer byte and fail-close oracles", (
   });
 });
 
-describe("Pack consumer runtime release installer surface", () => {
-  it("CANDIDATE-U-PACKRT-005: exports the installer entry point from the shared setup module", () => {
-    expect(typeof Reflect.get(setupApi, "installConsumerRuntimeRelease")).toBe("function");
+describe("Pack consumer runtime release installer", () => {
+  let fixture: RuntimeInstallerFixture;
+
+  beforeAll(async () => {
+    fixture = await createRuntimeInstallerFixture();
+  }, 120_000);
+
+  afterAll(() => {
+    if (fixture) rmSync(fixture.root, { recursive: true, force: true });
   });
 
-  it("CANDIDATE-U-PACKRT-005: exposes both required trust-boundary options on setup", () => {
-    const root = process.cwd();
-    const cliPath = join(root, "src", "cli.ts");
-    const run = spawnSync(process.execPath, [cliPath, "setup", "--help"], {
-      cwd: root,
-      encoding: "utf8",
-      windowsHide: true,
-    });
+  it("CANDIDATE-U-PACKRT-005: installs from Release assets in a git-init-only consumer and runs offline", () => {
+    expect(typeof Reflect.get(setupApi, "installConsumerRuntimeRelease")).toBe("function");
+    expect(readdirSync(fixture.releaseDir).sort()).toEqual(
+      Object.values(releaseArtifactFileNames(fixture.tag)).sort(),
+    );
+    const testCase = copyInstallerCase(fixture);
+    try {
+      expect(readdirSync(testCase.consumerRoot)).toEqual([".git"]);
+      const run = runInstallerIn(
+        fixture,
+        testCase.releaseDir,
+        testCase.consumerRoot,
+        fixture.anchor,
+      );
+      expect(run.error?.message ?? "", "installer spawn").toBe("");
+      expect(run.status, `stdout:\n${run.stdout}\nstderr:\n${run.stderr}`).toBe(0);
+      expect(
+        existsSync(join(testCase.consumerRoot, ".ut-tdd", "runtime", "activation", "active.json")),
+      ).toBe(true);
 
-    expect(run.error?.message ?? "", "setup CLI spawn").toBe("");
-    expect(run.status, `stderr:\n${run.stderr}`).toBe(0);
-    expect(run.stdout).toContain("--consumer-runtime-release <path>");
-    expect(run.stdout).toContain("--expected-consumer-digest <digest>");
+      const launcher = join(testCase.consumerRoot, ".ut-tdd", "bin", "ut-tdd.mjs");
+      const launchHelp = () =>
+        spawnSync(process.execPath, [launcher, "--help"], {
+          cwd: testCase.consumerRoot,
+          encoding: "utf8",
+          env: isolatedConsumerEnv(testCase.root),
+          windowsHide: true,
+          maxBuffer: 64 * 1024 * 1024,
+        });
+      const help = launchHelp();
+      expect(help.status, `stdout:\n${help.stdout}\nstderr:\n${help.stderr}`).toBe(0);
+      expect(help.stdout).toContain("Usage: ut-tdd");
+
+      rmSync(testCase.releaseDir, { recursive: true, force: true });
+      const offlineHelp = launchHelp();
+      expect(
+        offlineHelp.status,
+        `stdout:\n${offlineHelp.stdout}\nstderr:\n${offlineHelp.stderr}`,
+      ).toBe(0);
+      expect(offlineHelp.stdout).toContain("Usage: ut-tdd");
+    } finally {
+      rmSync(testCase.root, { recursive: true, force: true });
+    }
+  });
+
+  it("CANDIDATE-U-PACKRT-006: denies corrupted assets and non-exact two-line checksum records", () => {
+    const names = releaseArtifactFileNames(fixture.tag);
+    const checksumMutations = [
+      "missing runtime line",
+      "extra line",
+      "reordered rows",
+      "different filename",
+    ] as const;
+    for (const mutation of checksumMutations) {
+      const testCase = copyInstallerCase(fixture);
+      try {
+        const checksumPath = join(testCase.releaseDir, names.consumerChecksum);
+        const rows = readFileSync(checksumPath, "utf8").trimEnd().split("\n");
+        const malformed =
+          mutation === "missing runtime line"
+            ? `${rows[0]}\n`
+            : mutation === "extra line"
+              ? `${rows.join("\n")}\n${"0".repeat(64)}  extra\n`
+              : mutation === "reordered rows"
+                ? `${rows.reverse().join("\n")}\n`
+                : `${rows[0]}\n${rows[1]?.replace(names.consumerRuntime, "other.consumer-runtime.json")}\n`;
+        writeFileSync(checksumPath, malformed, "utf8");
+        const expectedAnchor = `sha256:${hashHex(Buffer.from(malformed, "utf8"))}`;
+        const before = consumerTreeSnapshot(testCase.consumerRoot);
+        const run = runInstallerIn(
+          fixture,
+          testCase.releaseDir,
+          testCase.consumerRoot,
+          expectedAnchor,
+        );
+        expect(run.status, `${mutation}: ${run.stderr}`).not.toBe(0);
+        expect(`${run.stdout}\n${run.stderr}`).toContain("consumer_runtime_checksum_invalid");
+        expect(consumerTreeSnapshot(testCase.consumerRoot)).toEqual(before);
+      } finally {
+        rmSync(testCase.root, { recursive: true, force: true });
+      }
+    }
+
+    for (const asset of [names.compiledEsm, names.consumerRuntime]) {
+      const testCase = copyInstallerCase(fixture);
+      try {
+        const path = join(testCase.releaseDir, asset);
+        const changed = Buffer.concat([readFileSync(path), Buffer.from("\n")]);
+        writeFileSync(path, changed);
+        const before = consumerTreeSnapshot(testCase.consumerRoot);
+        const run = runInstallerIn(
+          fixture,
+          testCase.releaseDir,
+          testCase.consumerRoot,
+          fixture.anchor,
+        );
+        expect(run.status, `${asset}: ${run.stderr}`).not.toBe(0);
+        expect(`${run.stdout}\n${run.stderr}`).toContain("consumer_runtime_digest_mismatch");
+        expect(consumerTreeSnapshot(testCase.consumerRoot)).toEqual(before);
+      } finally {
+        rmSync(testCase.root, { recursive: true, force: true });
+      }
+    }
+  });
+
+  it("CANDIDATE-U-PACKRT-007: verifies executed-module digest, PF-5 binding, and external anchor", () => {
+    const selfMismatch = copyInstallerCase(fixture);
+    try {
+      const names = releaseArtifactFileNames(fixture.tag);
+      const modulePath = join(selfMismatch.releaseDir, names.compiledEsm);
+      const changedModule = Buffer.concat([
+        readFileSync(modulePath),
+        Buffer.from("\n// byte changed\n"),
+      ]);
+      writeFileSync(modulePath, changedModule);
+      const runtimeBytes = readFileSync(join(selfMismatch.releaseDir, names.consumerRuntime));
+      const checksum = Buffer.from(
+        `${checksumLine(changedModule, names.compiledEsm)}${checksumLine(runtimeBytes, names.consumerRuntime)}`,
+        "utf8",
+      );
+      writeFileSync(join(selfMismatch.releaseDir, names.consumerChecksum), checksum);
+      const before = consumerTreeSnapshot(selfMismatch.consumerRoot);
+      const run = runInstallerIn(
+        fixture,
+        selfMismatch.releaseDir,
+        selfMismatch.consumerRoot,
+        `sha256:${hashHex(checksum)}`,
+      );
+      expect(run.status, run.stderr).not.toBe(0);
+      expect(`${run.stdout}\n${run.stderr}`).toContain("consumer_runtime_self_digest_mismatch");
+      expect(consumerTreeSnapshot(selfMismatch.consumerRoot)).toEqual(before);
+    } finally {
+      rmSync(selfMismatch.root, { recursive: true, force: true });
+    }
+
+    const pf5Mismatch = copyInstallerCase(fixture);
+    try {
+      const changedRuntime: ConsumerRuntimeRelease = {
+        ...fixture.runtime,
+        admission_input: {
+          ...fixture.runtime.admission_input,
+          aggregate_input: {
+            ...fixture.runtime.admission_input.aggregate_input,
+            attestation: {
+              ...fixture.runtime.admission_input.aggregate_input.attestation,
+              artifactSourceCommit: "f".repeat(40),
+            },
+          },
+        },
+      };
+      const anchor = writeRuntimeInstallerAssets({
+        releaseDir: pf5Mismatch.releaseDir,
+        tag: fixture.tag,
+        compiledBytes: fixture.compiledBytes,
+        runtime: changedRuntime,
+      });
+      const before = consumerTreeSnapshot(pf5Mismatch.consumerRoot);
+      const run = runInstallerIn(fixture, pf5Mismatch.releaseDir, pf5Mismatch.consumerRoot, anchor);
+      expect(run.status, run.stderr).not.toBe(0);
+      expect(`${run.stdout}\n${run.stderr}`).toContain("consumer_runtime_release_binding_mismatch");
+      expect(consumerTreeSnapshot(pf5Mismatch.consumerRoot)).toEqual(before);
+    } finally {
+      rmSync(pf5Mismatch.root, { recursive: true, force: true });
+    }
+
+    const receiptMismatch = copyInstallerCase(fixture);
+    try {
+      const changedRuntime: ConsumerRuntimeRelease = {
+        ...fixture.runtime,
+        generation: {
+          ...fixture.runtime.generation,
+          compiled_esm_digest: `sha256:${"0".repeat(64)}`,
+        },
+      };
+      const anchor = writeRuntimeInstallerAssets({
+        releaseDir: receiptMismatch.releaseDir,
+        tag: fixture.tag,
+        compiledBytes: fixture.compiledBytes,
+        runtime: changedRuntime,
+      });
+      const before = consumerTreeSnapshot(receiptMismatch.consumerRoot);
+      const run = runInstallerIn(
+        fixture,
+        receiptMismatch.releaseDir,
+        receiptMismatch.consumerRoot,
+        anchor,
+      );
+      expect(run.status, run.stderr).not.toBe(0);
+      expect(`${run.stdout}\n${run.stderr}`).toContain("generation_receipt_mismatch");
+      expect(consumerTreeSnapshot(receiptMismatch.consumerRoot)).toEqual(before);
+    } finally {
+      rmSync(receiptMismatch.root, { recursive: true, force: true });
+    }
+
+    const coherentForgery = copyInstallerCase(fixture);
+    try {
+      const names = releaseArtifactFileNames(fixture.tag);
+      const forgedModule = Buffer.concat([
+        readFileSync(join(coherentForgery.releaseDir, names.compiledEsm)),
+        Buffer.from("\n// coherent multi-asset forgery\n"),
+      ]);
+      const parsedReceipt = JSON.parse(
+        Buffer.from(fixture.runtime.generation.node_bootstrap_receipt_base64, "base64").toString(
+          "utf8",
+        ),
+      ) as Record<string, unknown>;
+      const unsignedReceipt = { ...parsedReceipt };
+      delete unsignedReceipt.receipt_digest;
+      const priorCompiled = unsignedReceipt.compiled_cli as Record<string, unknown>;
+      const forgedReceipt = sealReceipt({
+        ...unsignedReceipt,
+        compiled_cli: { ...priorCompiled, sha256: hashHex(forgedModule) },
+      });
+      const forgedRuntime: ConsumerRuntimeRelease = {
+        ...fixture.runtime,
+        generation: {
+          ...fixture.runtime.generation,
+          compiled_esm_digest: `sha256:${hashHex(forgedModule)}`,
+          node_bootstrap_receipt_base64: forgedReceipt.toString("base64"),
+        },
+      };
+      const forgedAnchor = writeRuntimeInstallerAssets({
+        releaseDir: coherentForgery.releaseDir,
+        tag: fixture.tag,
+        compiledBytes: forgedModule,
+        runtime: forgedRuntime,
+      });
+      const before = consumerTreeSnapshot(coherentForgery.consumerRoot);
+      const trustedAnchor = runInstallerIn(
+        fixture,
+        coherentForgery.releaseDir,
+        coherentForgery.consumerRoot,
+        fixture.anchor,
+      );
+      expect(trustedAnchor.status, trustedAnchor.stderr).not.toBe(0);
+      expect(`${trustedAnchor.stdout}\n${trustedAnchor.stderr}`).toContain(
+        "consumer_runtime_anchor_mismatch",
+      );
+      expect(consumerTreeSnapshot(coherentForgery.consumerRoot)).toEqual(before);
+
+      const forgedAnchorRun = runInstallerIn(
+        fixture,
+        coherentForgery.releaseDir,
+        coherentForgery.consumerRoot,
+        forgedAnchor,
+      );
+      expect(
+        forgedAnchorRun.status,
+        `stdout:\n${forgedAnchorRun.stdout}\nstderr:\n${forgedAnchorRun.stderr}`,
+      ).toBe(0);
+    } finally {
+      rmSync(coherentForgery.root, { recursive: true, force: true });
+    }
+
+    for (const anchor of [undefined, "sha256:ABCDEF", `sha256:${"0".repeat(64)}`]) {
+      const testCase = copyInstallerCase(fixture);
+      try {
+        const before = consumerTreeSnapshot(testCase.consumerRoot);
+        const run = runInstallerIn(fixture, testCase.releaseDir, testCase.consumerRoot, anchor);
+        expect(run.status, run.stderr).not.toBe(0);
+        expect(`${run.stdout}\n${run.stderr}`).toContain("consumer_runtime_anchor_mismatch");
+        expect(consumerTreeSnapshot(testCase.consumerRoot)).toEqual(before);
+      } finally {
+        rmSync(testCase.root, { recursive: true, force: true });
+      }
+    }
+  });
+
+  it("CANDIDATE-U-PACKRT-008: rejects missing, extra, or differently tagged Release assets before writes", () => {
+    const names = releaseArtifactFileNames(fixture.tag);
+    const mutations: readonly ((releaseDir: string) => void)[] = [
+      (releaseDir) => rmSync(join(releaseDir, names.tarball)),
+      (releaseDir) => writeFileSync(join(releaseDir, "unexpected.txt"), "extra"),
+      (releaseDir) => writeFileSync(join(releaseDir, "v0.2.0-canary.3.ut-tdd.mjs"), "other tag"),
+    ];
+    for (const mutate of mutations) {
+      const testCase = copyInstallerCase(fixture);
+      try {
+        mutate(testCase.releaseDir);
+        const before = consumerTreeSnapshot(testCase.consumerRoot);
+        const run = runInstallerIn(
+          fixture,
+          testCase.releaseDir,
+          testCase.consumerRoot,
+          fixture.anchor,
+        );
+        expect(run.status, run.stderr).not.toBe(0);
+        expect(`${run.stdout}\n${run.stderr}`).toContain("consumer_runtime_asset_set_mismatch");
+        expect(consumerTreeSnapshot(testCase.consumerRoot)).toEqual(before);
+      } finally {
+        rmSync(testCase.root, { recursive: true, force: true });
+      }
+    }
+  });
+
+  it("CANDIDATE-U-PACKRT-009: canonicalizes receipt identity and makes committed reinstallation write-zero", () => {
+    const testCase = copyInstallerCase(fixture);
+    try {
+      const aliasRoot = join(testCase.root, "consumer-alias");
+      symlinkSync(
+        testCase.consumerRoot,
+        aliasRoot,
+        process.platform === "win32" ? "junction" : "dir",
+      );
+      const first = runInstallerIn(fixture, testCase.releaseDir, aliasRoot, fixture.anchor);
+      expect(first.status, `stdout:\n${first.stdout}\nstderr:\n${first.stderr}`).toBe(0);
+
+      const pointer = consumerActivePointer(testCase.consumerRoot);
+      const savedReceipt = JSON.parse(
+        readFileSync(join(pointer.bundlePath, "consumer-receipt.json"), "utf8"),
+      ) as { consumer: Record<string, unknown> };
+      const canonicalRoot = realpathSync.native(testCase.consumerRoot);
+      expect(savedReceipt.consumer).toMatchObject({
+        consumerRoot: canonicalRoot,
+        runtimeRoot: join(canonicalRoot, ".ut-tdd", "runtime"),
+        productId: fixture.runtime.release.product_id,
+      });
+
+      const beforeRerun = consumerTreeSnapshot(testCase.consumerRoot);
+      const rerun = runInstallerIn(
+        fixture,
+        testCase.releaseDir,
+        testCase.consumerRoot,
+        fixture.anchor,
+      );
+      expect(rerun.status, `stdout:\n${rerun.stdout}\nstderr:\n${rerun.stderr}`).toBe(0);
+      expect(consumerTreeSnapshot(testCase.consumerRoot)).toEqual(beforeRerun);
+
+      const copiedConsumer = join(testCase.root, "copied-consumer");
+      cpSync(testCase.consumerRoot, copiedConsumer, { recursive: true });
+      const beforeCopyRun = consumerTreeSnapshot(copiedConsumer);
+      const copied = runInstallerIn(fixture, testCase.releaseDir, copiedConsumer, fixture.anchor);
+      expect(copied.status, copied.stderr).not.toBe(0);
+      expect(`${copied.stdout}\n${copied.stderr}`).toContain("consumer_runtime_receipt_mismatch");
+      expect(consumerTreeSnapshot(copiedConsumer)).toEqual(beforeCopyRun);
+    } finally {
+      const aliasRoot = join(testCase.root, "consumer-alias");
+      if (existsSync(aliasRoot)) unlinkSync(aliasRoot);
+      rmSync(testCase.root, { recursive: true, force: true });
+    }
+  });
+
+  it("CANDIDATE-U-PACKRT-009: refuses to repair a changed active pointer or missing committed bundle payload", () => {
+    const pointerCase = copyInstallerCase(fixture);
+    try {
+      const installed = runInstallerIn(
+        fixture,
+        pointerCase.releaseDir,
+        pointerCase.consumerRoot,
+        fixture.anchor,
+      );
+      expect(installed.status, installed.stderr).toBe(0);
+      const pointer = consumerActivePointer(pointerCase.consumerRoot);
+      const pointerMode = Number(statSync(pointer.path, { bigint: true }).mode & 0o777n);
+      const value = JSON.parse(pointer.bytes.toString("utf8")) as { bundle_digest: string };
+      const digestStart = "sha256:".length;
+      const digestChar = value.bundle_digest[digestStart];
+      value.bundle_digest = `${value.bundle_digest.slice(0, digestStart)}${digestChar === "0" ? "1" : "0"}${value.bundle_digest.slice(digestStart + 1)}`;
+      chmodSync(pointer.path, pointerMode | 0o200);
+      writeFileSync(pointer.path, `${JSON.stringify(value)}\n`);
+      chmodSync(pointer.path, pointerMode);
+      const before = consumerTreeSnapshot(pointerCase.consumerRoot);
+      const run = runInstallerIn(
+        fixture,
+        pointerCase.releaseDir,
+        pointerCase.consumerRoot,
+        fixture.anchor,
+      );
+      expect(run.status, run.stderr).not.toBe(0);
+      expect(`${run.stdout}\n${run.stderr}`).toContain("consumer_runtime_identity_mismatch");
+      expect(consumerTreeSnapshot(pointerCase.consumerRoot)).toEqual(before);
+    } finally {
+      rmSync(pointerCase.root, { recursive: true, force: true });
+    }
+
+    const missingBundle = copyInstallerCase(fixture);
+    try {
+      const installed = runInstallerIn(
+        fixture,
+        missingBundle.releaseDir,
+        missingBundle.consumerRoot,
+        fixture.anchor,
+      );
+      expect(installed.status, installed.stderr).toBe(0);
+      const pointer = consumerActivePointer(missingBundle.consumerRoot);
+      const bundleMode = Number(statSync(pointer.bundlePath, { bigint: true }).mode & 0o777n);
+      const payload = join(pointer.bundlePath, "ut-tdd.mjs");
+      chmodSync(pointer.bundlePath, bundleMode | 0o200);
+      chmodSync(payload, Number(statSync(payload, { bigint: true }).mode & 0o777n) | 0o200);
+      rmSync(payload);
+      chmodSync(pointer.bundlePath, bundleMode);
+      const before = consumerTreeSnapshot(missingBundle.consumerRoot);
+      const run = runInstallerIn(
+        fixture,
+        missingBundle.releaseDir,
+        missingBundle.consumerRoot,
+        fixture.anchor,
+      );
+      expect(run.status, run.stderr).not.toBe(0);
+      expect(`${run.stdout}\n${run.stderr}`).toContain("consumer_runtime_identity_mismatch");
+      expect(consumerTreeSnapshot(missingBundle.consumerRoot)).toEqual(before);
+    } finally {
+      rmSync(missingBundle.root, { recursive: true, force: true });
+    }
+  });
+
+  it("CANDIDATE-U-PACKRT-010: denies a different Release tag without changing the active runtime", () => {
+    const testCase = copyInstallerCase(fixture);
+    try {
+      const installed = runInstallerIn(
+        fixture,
+        testCase.releaseDir,
+        testCase.consumerRoot,
+        fixture.anchor,
+      );
+      expect(installed.status, installed.stderr).toBe(0);
+      const before = consumerTreeSnapshot(testCase.consumerRoot);
+
+      const nextTag = "v0.2.0-canary.3";
+      const nextRelease = join(testCase.root, "next-release");
+      mkdirSync(nextRelease);
+      const nextRuntime: ConsumerRuntimeRelease = {
+        ...fixture.runtime,
+        release: { ...fixture.runtime.release, tag: nextTag },
+      };
+      const nextAnchor = writeRuntimeInstallerAssets({
+        releaseDir: nextRelease,
+        tag: nextTag,
+        compiledBytes: fixture.compiledBytes,
+        runtime: nextRuntime,
+      });
+      const nextFixture: RuntimeInstallerFixture = {
+        ...fixture,
+        releaseDir: nextRelease,
+        tag: nextTag,
+        anchor: nextAnchor,
+        runtime: nextRuntime,
+      };
+      const update = runRuntimeInstaller(nextFixture, {
+        releaseDir: nextRelease,
+        consumerRoot: testCase.consumerRoot,
+        anchor: nextAnchor,
+      });
+      expect(update.status, update.stderr).not.toBe(0);
+      expect(`${update.stdout}\n${update.stderr}`).toContain("consumer_runtime_update_unsupported");
+      expect(consumerTreeSnapshot(testCase.consumerRoot)).toEqual(before);
+    } finally {
+      rmSync(testCase.root, { recursive: true, force: true });
+    }
   });
 });
