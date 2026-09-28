@@ -745,7 +745,7 @@ function removeInstallerFixtureTree(root: string): void {
     relativeRoot === ".." ||
     relativeRoot.startsWith(`..${sep}`) ||
     dirname(relativeRoot) !== "." ||
-    !basename(relativeRoot).startsWith("ut-tdd-packrt-installer-case-")
+    !basename(relativeRoot).startsWith("ut-tdd-packrt-installer-")
   )
     throw new Error("installer fixture cleanup target is outside its owned temp root");
   makeInstallerFixtureWritable(resolvedRoot);
@@ -1057,7 +1057,7 @@ describe("Pack consumer runtime release installer", () => {
   }, 120_000);
 
   afterAll(() => {
-    if (fixture) rmSync(fixture.root, { recursive: true, force: true });
+    if (fixture) removeInstallerFixtureTree(fixture.root);
   });
 
   it("U-PACKRT-005: installs from Release assets in a git-init-only consumer and runs offline", () => {
