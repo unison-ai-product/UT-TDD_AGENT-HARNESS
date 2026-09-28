@@ -812,8 +812,8 @@ describe("db-currency lint", () => {
       "utf8",
     );
     const child = spawn(process.execPath, [worker], { cwd: root, stdio: "ignore" });
-    const childExit = new Promise<void>((resolvePromise) =>
-      child.once("exit", () => resolvePromise()),
+    const childClose = new Promise<void>((resolvePromise) =>
+      child.once("close", () => resolvePromise()),
     );
     try {
       await new Promise<void>((resolvePromise, reject) => {
@@ -850,7 +850,7 @@ describe("db-currency lint", () => {
       ) as { process_birth: string };
       expect(acknowledged.process_birth.startsWith("unverified-")).toBe(false);
       writeFileSync(release, "release\n", "utf8");
-      await childExit;
+      await childClose;
 
       const replacement = acquireStopRefreshLease(root, {
         pid: process.pid + 200_000,
@@ -861,8 +861,16 @@ describe("db-currency lint", () => {
       expect(replacement.acquired).toBe(true);
     } finally {
       if (!existsSync(release)) writeFileSync(release, "release\n", "utf8");
-      child.kill();
-      removeTestTree(root);
+      if (child.exitCode === null && child.signalCode === null) child.kill();
+      let cleanupTimeout: ReturnType<typeof setTimeout> | undefined;
+      const childClosed = await Promise.race([
+        childClose.then(() => true),
+        new Promise<false>((resolvePromise) => {
+          cleanupTimeout = setTimeout(() => resolvePromise(false), 5_000);
+        }),
+      ]);
+      if (cleanupTimeout) clearTimeout(cleanupTimeout);
+      if (childClosed) removeTestTree(root);
     }
   });
 

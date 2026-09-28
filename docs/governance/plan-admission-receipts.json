@@ -5172,65 +5172,49 @@
     {
       "sequence": 324,
       "previous_record_digest": "sha256:64886d1e80a6da6e7934bde3ef17335b84dede9f7c8d0ffb139ebbc7aa5117ee",
-      "record_digest": "sha256:165039ac7671e3eb9c9808f155438bcb30e7cd2da84bae5f1419bc4968a19f0c",
-      "command_id": "plan-draft:issue-711:merge-time-rechain-contract:1",
-      "receipt_id": "certificate:b4b4d9a38df162378c2522459b1627bc",
-      "receipt_digest": "sha256:0cc358720aa3a0a135ad5a1241fbd12fd4e06b9c0e5e0802cdc6df4fc3a41040",
-      "decision_digest": "sha256:58bcc6f88a9b4a342830468be39e8dec5ce786512a100fc007c51d8f31914bf0",
+      "record_digest": "sha256:b96ff415dfdbd9a6b191da2a32be311520a3efe3a2299e1a8d85ba79f0a08b30",
+      "command_id": "plan-revise:issue-676:codex-pr1:rechain-after-685:plan:r11",
+      "receipt_id": "certificate:8ca2fe49cfb26769b4ac35581f82ebc5",
+      "receipt_digest": "sha256:fe223818d424935b6e3776efb11c4b18abbffef0c728c71e9fa5336d8a84a0da",
+      "decision_digest": "sha256:a33428ea4b28b82ed08d8f446640ec41c8ab36e8ccab7be14d69e7c79dd3af06",
       "binding": {
-        "path": "docs/plans/PLAN-L6-711-merge-time-receipt-rechain-contract.md",
-        "plan_id": "PLAN-L6-711-merge-time-receipt-rechain-contract",
-        "asset_id": "plan:b4b4d9a38df162378c2522459b1627bc",
-        "revision": 1,
-        "content_digest": "sha256:85cb8f11155682c55709914bbca864afd8e50ce47e76507fe8ae855d2d2101d2"
+        "path": "docs/plans/PLAN-L7-676-release-consumer-dev-start.md",
+        "plan_id": "PLAN-L7-676-release-consumer-dev-start",
+        "asset_id": "plan:aae8bf0e313f8688fbad4d4d8cf0a6a9",
+        "revision": 11,
+        "content_digest": "sha256:d0889499bf9f368dbdeed24e0a4c177a2d753af3ef9a44c826e320aafa4d1dc6"
       }
     },
     {
       "sequence": 325,
-      "previous_record_digest": "sha256:165039ac7671e3eb9c9808f155438bcb30e7cd2da84bae5f1419bc4968a19f0c",
-      "record_digest": "sha256:d7e7a0ee4d7948ff2b508eecae7bbb3d19ecaa25023fdf6f35732eeae602424c",
-      "command_id": "plan-revise:issue-711:rechain-contract:plan:r2:6922b25d690a",
-      "receipt_id": "certificate:bfa0eab69198c783c54a928eba45ce41",
-      "receipt_digest": "sha256:be9f187b041693d12eac74fb2b0f63425be60977593335ccd57a5155118050db",
-      "decision_digest": "sha256:850ea7266d128cde939fcdea3f4acb707444c71545a0030bc9053e1c462d571c",
+      "previous_record_digest": "sha256:b96ff415dfdbd9a6b191da2a32be311520a3efe3a2299e1a8d85ba79f0a08b30",
+      "record_digest": "sha256:069c29e8252da2882718c7eff0c3a5cd77f647e823f9b5e5af8ea2ccf43a73ed",
+      "command_id": "plan-revise:issue-676:codex-prvl:after-pr1:plan:r12",
+      "receipt_id": "certificate:e85eee4d74e29f242e07ae5ddae8ed39",
+      "receipt_digest": "sha256:5175c83eed0d408d2ac03e4b7a918aab0f19f4bf0e2b105e2d72fffe16024462",
+      "decision_digest": "sha256:4098b95fa3fe81ec437130e912c96197b3c91136c8f6f5cdc2d97b4aedcc9bb1",
       "binding": {
-        "path": "docs/plans/PLAN-L6-711-merge-time-receipt-rechain-contract.md",
-        "plan_id": "PLAN-L6-711-merge-time-receipt-rechain-contract",
-        "asset_id": "plan:b4b4d9a38df162378c2522459b1627bc",
-        "revision": 2,
-        "content_digest": "sha256:1e0fa34d8c59ef19c638dd4b7ca9f756b4ece087306078899810ac552442ea0f"
+        "path": "docs/plans/PLAN-L7-676-release-consumer-dev-start.md",
+        "plan_id": "PLAN-L7-676-release-consumer-dev-start",
+        "asset_id": "plan:aae8bf0e313f8688fbad4d4d8cf0a6a9",
+        "revision": 12,
+        "content_digest": "sha256:4f7aa97308dff093aa1a2a3524061aee54cb3d68ccb1997ba354cae02aa07293"
       }
     },
     {
       "sequence": 326,
-      "previous_record_digest": "sha256:d7e7a0ee4d7948ff2b508eecae7bbb3d19ecaa25023fdf6f35732eeae602424c",
-      "record_digest": "sha256:a58e788b51d125bd5f617ecd359bfdfa4fc7bdbbea3dc26faae2042f238c3084",
-      "command_id": "plan-revise:issue-711:rechain-contract:plan:r3:850306f2c7d7",
-      "receipt_id": "certificate:667c772ba421e12ac6ca6909b1b1e83a",
-      "receipt_digest": "sha256:c2226bd621dd6cb43cb67d71195d489df2f83c49f80ec8e594da79fcdc8c9075",
-      "decision_digest": "sha256:874a3b4016c85cd3cb4e019273ca1d806f85e17e70ac9b0839ddad80444f174f",
+      "previous_record_digest": "sha256:069c29e8252da2882718c7eff0c3a5cd77f647e823f9b5e5af8ea2ccf43a73ed",
+      "record_digest": "sha256:bac9187674b9d1a2898d02ba3362d8dcbe06bcb3b95735d02cc7b8a13c8cc560",
+      "command_id": "plan-revise:issue-676:g2-consumer-contract:plan:r13:1e9108644d0e",
+      "receipt_id": "certificate:5e3944036e3725868e49d480ac913a3a",
+      "receipt_digest": "sha256:af179ffc1641bea7ce08abe6ebbfd58b955e321b20eec89deabcd6160d106e35",
+      "decision_digest": "sha256:cf5463e509eddc48324f26bb1a65ca7ad34d2b9bb0ebdc28ccd181c03b62db87",
       "binding": {
-        "path": "docs/plans/PLAN-L6-711-merge-time-receipt-rechain-contract.md",
-        "plan_id": "PLAN-L6-711-merge-time-receipt-rechain-contract",
-        "asset_id": "plan:b4b4d9a38df162378c2522459b1627bc",
-        "revision": 3,
-        "content_digest": "sha256:48f502729f4d0f2656d369e1938421c1223934f86e8b3e0df2e5a401f6c61f4c"
-      }
-    },
-    {
-      "sequence": 327,
-      "previous_record_digest": "sha256:a58e788b51d125bd5f617ecd359bfdfa4fc7bdbbea3dc26faae2042f238c3084",
-      "record_digest": "sha256:93d60d6205acc4cc5ce5fa8b477285c87d617e826f0645e11493749f1aa1fbb9",
-      "command_id": "plan-revise:issue-711:rechain-contract:plan:r4:0b9430f3f4a1",
-      "receipt_id": "certificate:90d9c044b8ad3e31d17cea674ad528ac",
-      "receipt_digest": "sha256:2c2bb446a4ddf96a45cfb3ed3a1eb89cdbfc60b47985e127f5c725d9a05c4091",
-      "decision_digest": "sha256:e995684e0d44bdb8096d5790e9154b890633d507fce47430925def58e6c51888",
-      "binding": {
-        "path": "docs/plans/PLAN-L6-711-merge-time-receipt-rechain-contract.md",
-        "plan_id": "PLAN-L6-711-merge-time-receipt-rechain-contract",
-        "asset_id": "plan:b4b4d9a38df162378c2522459b1627bc",
-        "revision": 4,
-        "content_digest": "sha256:1e91c50bd640850a57c47522a8eba464391095fbed867bb86fcfa270a6c68442"
+        "path": "docs/plans/PLAN-L7-676-release-consumer-dev-start.md",
+        "plan_id": "PLAN-L7-676-release-consumer-dev-start",
+        "asset_id": "plan:aae8bf0e313f8688fbad4d4d8cf0a6a9",
+        "revision": 13,
+        "content_digest": "sha256:821f1ce204109bc9bc63de9fc117030cd887be86119ebf363803bf1a8a41fcc5"
       }
     }
   ]
