@@ -42,6 +42,7 @@ plan-asset/ledger-schema:4 plan-asset/legacy-inventory:5 plan-asset/legacy-migra
 disposition/git-authoring-provenance:3 disposition/projection:6 disposition/tracked-target-registry:2
   forward-escape-issue-contract:2
   pack-consumer-runtime-release:3
+  release-consumer-setup-artifacts:1
   `;
 
 const repositoryReadContracts: Record<string, RepositoryReadContract> = Object.fromEntries(
