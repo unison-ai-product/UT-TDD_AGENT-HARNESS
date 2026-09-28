@@ -44,18 +44,18 @@ sub_doc: function-spec
 github_issue_id: 711
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:a3c66266cedd299bddf17b634ddf22c5
-  command_id: plan-draft:issue-711:merge-time-rechain-contract:rechain-1
-  admitted_at: 2026-09-28T03:52:39.763Z
-  source_digest: sha256:1e91c50bd640850a57c47522a8eba464391095fbed867bb86fcfa270a6c68442
-  decision_digest: sha256:c00f0e019e907de5b9b4946831f02178f433164f9aeefeb7a52a0fa473b9c0b5
-  receipt_digest: sha256:a0cce8f749e3a9c83ce59725162ba2464660027539a24f887eb262f80013ad48
+  receipt_id: certificate:72755a814a650e97acab49ec706ad879
+  command_id: plan-revise:issue-711:rechain-contract:plan:r2:60ba2e38b0ae
+  admitted_at: 2026-09-28T03:56:18.633Z
+  source_digest: sha256:bc0ab1c06fe56845bfca0d7ef631acc128380edad709e34582d73792a66a67ad
+  decision_digest: sha256:bfd1146cf7e852ab63d498f11f531cdef18b0c14e3fcf43c80e1d3178b5d7b45
+  receipt_digest: sha256:f7ea33a4ca349a5541aedf1e45253264ab30e38285124bfd9b74cf5b5560b725
   binding:
     path: docs/plans/PLAN-L6-711-merge-time-receipt-rechain-contract.md
     plan_id: PLAN-L6-711-merge-time-receipt-rechain-contract
     asset_id: plan:a3c66266cedd299bddf17b634ddf22c5
-    revision: 1
-    content_digest: sha256:1e91c50bd640850a57c47522a8eba464391095fbed867bb86fcfa270a6c68442
+    revision: 2
+    content_digest: sha256:bc0ab1c06fe56845bfca0d7ef631acc128380edad709e34582d73792a66a67ad
   route:
     signal: feature_addition
     mode: add-feature
@@ -70,11 +70,10 @@ admission_receipt:
     digest: sha256:1b6aa397ad9995b717907d3247e02b3bba3d6c4508874b7654f90fd29b388927
   reentry:
     target_plan_id: PLAN-L6-711-merge-time-receipt-rechain-contract
-    target_revision: 1
+    target_revision: 2
     phase: forward_merge
-  escape_reason: "Issue #711: PLAN receipt の直列化を解消する merge 時自動 re-chain
-    と簿記差分での再検免除の契約を freeze する (advisor claude-fable-5 案 A、PO 承認 2026-09-28)。rev
-    1-4 の非著者 review 是正を含む内容を、#709 merge 後の main tail へ re-chain する"
+  escape_reason: "Codex root の追加実測 (PR #713) により、§2.3-4 の commit
+    構造判定を件数から親の直接束縛へ訂正し、oracle U-RECHAIN-006 を正系と負系に分ける。"
 ---
 
 # PLAN-L6-711: merge 時の自動 re-chain と簿記差分での再検免除の契約 freeze
@@ -160,7 +159,11 @@ PLAN ファイルの本文と frontmatter から `admission_receipt` ブロッ�
    - `binding.content_digest` は `R` の PLAN の正規 digest と一致する。
    - `previous_record_digest` は chain として連続する。
    - PLAN frontmatter の `admission_receipt` は、その record と一致する。
-4. **その他**: `R` は `H` の子孫である (`H` を祖先に含む)。`H..R` の commit は、merge commit 1 本と re-chain commit 1 本だけである。
+4. **commit 構造 (rev 5 で訂正)**: `H..R` の rev-list は `M` 側の commit も数えるため、件数では判定しない。親を直接束縛する。
+   - `R` は親を 1 つだけ持つ re-chain commit で、その親 `X` は親を 2 つ持つ merge commit である。
+   - `X` の first parent は `H`、second parent は `M` である (`git rev-parse X^1 X^2`)。
+   - したがって `git rev-list --first-parent --count H..R` は 2 である。`M` 側に何本 commit があっても、この判定は変わらない。
+   - `X` の tree は 1 の 3-way merge 結果と一致し、PR 側の変更は `R` だけにある (PR 側に余分な commit を挟めない)。
 5. **成果物所有 (rev 3)**: PR が append-only 領域 `generates` に追加した各 `artifact_path` は、`M` の tree に存在せず、`M` のどの PLAN の `generates` にも
    宣言されていない。つまり、待機中に main 側で新規作成・他 PLAN 所有化された path を、PR が再所有していない。違反すれば `fail`
    (`duplicate-artifact-ownership` / `merged-plan-status` と同じ判定を `M` に対して行う)。
@@ -222,7 +225,7 @@ pair は `docs/test-design/harness/L7-unit-test-design.md` に、実装 PR で `
 | CANDIDATE-U-RECHAIN-003 | PLAN 本文の append-only 領域外に手で変更 → `fail` | (m) strip 比較を append 領域だけにする → pass して失敗 |
 | CANDIDATE-U-RECHAIN-004 | 追加 record の数が `H` と異なる、または別 PLAN を bind → `fail` | (m) 件数と対象の照合を省く |
 | CANDIDATE-U-RECHAIN-005 | `content_digest` が `R` の PLAN と不一致、chain が不連続 → `fail` | (m) digest の再計算を省く |
-| CANDIDATE-U-RECHAIN-006 | `H..R` に 3 本目の commit がある、または `R` が `H` の子孫でない → `fail` | (m) 祖先の検査を省く |
+| CANDIDATE-U-RECHAIN-006 | (正系) `M` が `H` の分岐後に 2 本以上の commit (merge commit を含む) を持つ状態で、merge 1 本と re-chain 1 本の `R` → `pass`。(負系) PR 側に余分な commit を 1 本挟む (`X` と `R` の間、または `H` と `X` の間)、`X` の親の順序が逆、`R` が `H` の子孫でない → いずれも `fail` | (m1) `H..R` の件数 (`--first-parent` なし) で判定する → 正系が `fail` して失敗。(m2) 親の束縛を省き件数だけ見る → 親順序を逆にした負系が `pass` して失敗 |
 | CANDIDATE-U-RECHAIN-007 | main と PR の双方が `generates` 末尾と §8 末尾に追記 (#685 / #686 型) → 決定的に連結されて `pass`。§8 は採番し直される | (m) 連結順を逆にする → byte 不一致で失敗 |
 | CANDIDATE-U-RECHAIN-008 | append 領域外で 3-way 衝突 → wrapper が `rechain_conflict` で中止し、merge しない | (m) 衝突を main 側優先で黙って解消 → 中止されず失敗 |
 | CANDIDATE-U-RECHAIN-009 | `pass` でも `R` の CI が red または未完了 → merge しない。`pass` かつ green → merge し、intent receipt に `rechain` 欄を残す | (m) CI の待機を省く |
@@ -258,3 +261,4 @@ git show --stat b8bdf6d8
 2. rev 2: `drive` を parent (PLAN-RECOVERY-16) と揃えた (plan-governance の parent_drive_mismatch の是正、契約本文は不変)。
 3. rev 3: 非著者 review (Codex Sol r1、PR #713) の FLAG 2 件を反映した。(1) 待機中に main が作成・所有した path を PR が再所有する経路を §2.3-5 で閉じた。(2) admission の意味を改変して hash を再計算する経路を、正規 assembler による完全な再導出と許容項目の列挙 (§2.3-6) で閉じた。oracle U-RECHAIN-011 / 012 を追加した。
 4. rev 4: 非著者 review (Codex Sol r2、PR #713) の FLAG 1 件を反映した。tracked record / frontmatter に投影されない admission 入力 (`workflowPhase` / `branch` / `reentry.targetPlanId` など) を改変し digest を再計算する経路を閉じるため、§2.3-6 で H 側の `PlanAdmissionRequest` 全体を H の tracked `decision_digest` に束縛し、`reentry.targetRevision` 以外の完全一致を要求した。U-RECHAIN-012 をフィールドごとの mutation に拡張し、m3 を追加した。
+5. rev 5 (re-chain 後の receipt revision 2): Codex root の追加実測 (PR #713 コメント、実 Git object `5854787b` で `9ba54b41..5854787b` が 3 本) を反映した。§2.3-4 を件数判定から親の直接束縛 (`R^1 = X`、`X^1 = H`、`X^2 = M`、`--first-parent` 2 本) に訂正し、U-RECHAIN-006 を `M` 側複数 commit の正系と PR 側余分 commit の負系に分けた。

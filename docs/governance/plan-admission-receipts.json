@@ -5232,6 +5232,22 @@
         "revision": 1,
         "content_digest": "sha256:1e91c50bd640850a57c47522a8eba464391095fbed867bb86fcfa270a6c68442"
       }
+    },
+    {
+      "sequence": 328,
+      "previous_record_digest": "sha256:9900a08eed7535e326fed9c074c0b62e75d20b042fd95b4d8bd44ca1d0f6c8c6",
+      "record_digest": "sha256:c1dbcede6ce8184b96dc8cdfa26b2e549fe4b2d72135d5c301ecf322d9982efa",
+      "command_id": "plan-revise:issue-711:rechain-contract:plan:r2:60ba2e38b0ae",
+      "receipt_id": "certificate:72755a814a650e97acab49ec706ad879",
+      "receipt_digest": "sha256:f7ea33a4ca349a5541aedf1e45253264ab30e38285124bfd9b74cf5b5560b725",
+      "decision_digest": "sha256:bfd1146cf7e852ab63d498f11f531cdef18b0c14e3fcf43c80e1d3178b5d7b45",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-711-merge-time-receipt-rechain-contract.md",
+        "plan_id": "PLAN-L6-711-merge-time-receipt-rechain-contract",
+        "asset_id": "plan:a3c66266cedd299bddf17b634ddf22c5",
+        "revision": 2,
+        "content_digest": "sha256:bc0ab1c06fe56845bfca0d7ef631acc128380edad709e34582d73792a66a67ad"
+      }
     }
   ]
 }
