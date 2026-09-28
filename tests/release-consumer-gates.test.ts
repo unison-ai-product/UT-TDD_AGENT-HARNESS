@@ -596,7 +596,7 @@ describe("PR-G0 release-consumer gates", () => {
 });
 
 describe("PR-GR consumer G8 predicates", () => {
-  it("CANDIDATE-U-RCDEV-029: evaluates consumer G8 from the embedded contract without a local copy", () => {
+  it("U-RCDEV-029: evaluates consumer G8 from the embedded contract without a local copy", () => {
     const root = fixtureRoot();
     writeConsumerG8Fixture(root);
 
@@ -608,7 +608,7 @@ describe("PR-GR consumer G8 predicates", () => {
     expect(messages).toContain("未判定 (review): QA/TL");
   });
 
-  it("CANDIDATE-U-RCDEV-029: prefers a consumer contract override for G8 manifest location", () => {
+  it("U-RCDEV-029: prefers a consumer contract override for G8 manifest location", () => {
     const root = fixtureRoot();
     writeConsumerG8Fixture(root, {
       evidenceDirectory: "g8-consumer-override",
@@ -625,7 +625,7 @@ describe("PR-GR consumer G8 predicates", () => {
     expect(result.messages.join("\n")).toContain("未判定 (review): QA/TL");
   });
 
-  it("CANDIDATE-U-RCDEV-029: rejects a missing required case-table column (S)", () => {
+  it("U-RCDEV-029: rejects a missing required case-table column (S)", () => {
     const root = fixtureRoot();
     writeConsumerG8Fixture(root);
     const path = join(root, "docs/test-design/L8-integration-test-design.md");
@@ -639,7 +639,7 @@ describe("PR-GR consumer G8 predicates", () => {
     expect(messages).toContain("missing section");
   });
 
-  it("CANDIDATE-U-RCDEV-029: rejects duplicate IT case IDs (I)", () => {
+  it("U-RCDEV-029: rejects duplicate IT case IDs (I)", () => {
     const root = fixtureRoot();
     writeConsumerG8Fixture(root);
     const path = join(root, "docs/test-design/L8-integration-test-design.md");
@@ -655,7 +655,7 @@ describe("PR-GR consumer G8 predicates", () => {
     expect(result.messages.join("\n")).toContain("duplicate case id");
   });
 
-  it("CANDIDATE-U-RCDEV-029: rejects a citation to an undefined L5 target (T)", () => {
+  it("U-RCDEV-029: rejects a citation to an undefined L5 target (T)", () => {
     const root = fixtureRoot();
     writeConsumerG8Fixture(root);
     const path = join(root, "docs/test-design/L8-integration-test-design.md");
@@ -674,7 +674,7 @@ describe("PR-GR consumer G8 predicates", () => {
     expect(result.messages.join("\n")).toContain("trace target missing");
   });
 
-  it("CANDIDATE-U-RCDEV-029: rejects a case without an L5 citation (T)", () => {
+  it("U-RCDEV-029: rejects a case without an L5 citation (T)", () => {
     const root = fixtureRoot();
     writeConsumerG8Fixture(root);
     const path = join(root, "docs/test-design/L8-integration-test-design.md");
@@ -690,7 +690,7 @@ describe("PR-GR consumer G8 predicates", () => {
     expect(result.messages.join("\n")).toContain("untraced case IT-CONSUMER-01");
   });
 
-  it("CANDIDATE-U-RCDEV-029: rejects a nonzero command result (E)", () => {
+  it("U-RCDEV-029: rejects a nonzero command result (E)", () => {
     const root = fixtureRoot();
     writeConsumerG8Fixture(root);
     updateConsumerG8Manifest(root, (manifest) => {
@@ -703,7 +703,7 @@ describe("PR-GR consumer G8 predicates", () => {
     expect(result.messages.join("\n")).toContain("exit_code is non-zero");
   });
 
-  it("CANDIDATE-U-RCDEV-029: rejects a malformed output digest (E)", () => {
+  it("U-RCDEV-029: rejects a malformed output digest (E)", () => {
     const root = fixtureRoot();
     writeConsumerG8Fixture(root);
     updateConsumerG8Manifest(root, (manifest) => {
@@ -716,7 +716,7 @@ describe("PR-GR consumer G8 predicates", () => {
     expect(result.messages.join("\n")).toContain("invalid digest");
   });
 
-  it("CANDIDATE-U-RCDEV-029: rejects a missing or disallowed command evidence path (E)", () => {
+  it("U-RCDEV-029: rejects a missing or disallowed command evidence path (E)", () => {
     const root = fixtureRoot();
     writeConsumerG8Fixture(root);
     updateConsumerG8Manifest(root, (manifest) => {
@@ -729,7 +729,7 @@ describe("PR-GR consumer G8 predicates", () => {
     expect(result.messages.join("\n")).toContain("evidence_path missing");
   });
 
-  it("CANDIDATE-U-RCDEV-029: rejects a G9 manifest schema in consumer G8 (E)", () => {
+  it("U-RCDEV-029: rejects a G9 manifest schema in consumer G8 (E)", () => {
     const root = fixtureRoot();
     writeConsumerG8Fixture(root);
     updateConsumerG8Manifest(root, (manifest) => {
@@ -742,7 +742,7 @@ describe("PR-GR consumer G8 predicates", () => {
     expect(result.messages.join("\n")).toContain("invalid schema_version");
   });
 
-  it("CANDIDATE-U-RCDEV-029: rejects a designed case omitted from all evidence (F)", () => {
+  it("U-RCDEV-029: rejects a designed case omitted from all evidence (F)", () => {
     const root = fixtureRoot();
     writeConsumerG8Fixture(root);
     updateConsumerG8Manifest(root, (manifest) => {
@@ -761,7 +761,7 @@ describe("PR-GR consumer G8 predicates", () => {
     expect(result.messages.join("\n")).toContain("missing row evidence IT-CONSUMER-06");
   });
 
-  it("CANDIDATE-U-RCDEV-029: rejects a missing contract-required result artifact (A)", () => {
+  it("U-RCDEV-029: rejects a missing contract-required result artifact (A)", () => {
     const root = fixtureRoot();
     writeConsumerG8Fixture(root);
     updateConsumerG8Manifest(root, (manifest) => {
@@ -774,7 +774,7 @@ describe("PR-GR consumer G8 predicates", () => {
     expect(result.messages.join("\n")).toContain("missing artifact integration_results");
   });
 
-  it("CANDIDATE-U-RCDEV-029: routes each E-only mutation to consumer G8 validation", () => {
+  it("U-RCDEV-029: routes each E-only mutation to consumer G8 validation", () => {
     const mutations: {
       name: string;
       expected: string;
@@ -829,7 +829,7 @@ describe("PR-GR consumer G8 predicates", () => {
     }
   });
 
-  it("CANDIDATE-U-RCDEV-029: keeps harness G8 family checks on the public gate path", () => {
+  it("U-RCDEV-029: keeps harness G8 family checks on the public gate path", () => {
     const root = fixtureRoot();
     const repositoryRoot = process.cwd();
     writeFixtureDoc(
