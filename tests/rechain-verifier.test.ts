@@ -283,10 +283,12 @@ function buildBaseline(): Baseline {
   return { input, hRecord, rRecord, admissionH, blobs };
 }
 
-// テストでは tree/blob/admission を局所的に上書きするため、意図的に mutable な深いコピーを返す。
-// biome-ignore lint/suspicious/noExplicitAny: 検証対象は読み取り専用型だが、fixture の改変には可変コピーが要る
-function clone(input: RechainInput): any {
-  return JSON.parse(JSON.stringify(input));
+// テストでは tree/blob/admission を局所的に上書きするため、readonly を外した深いコピーを返す。
+type Mutable<T> = T extends PlanAdmissionRequest
+  ? T
+  : { -readonly [K in keyof T]: Mutable<T[K]> };
+function clone(input: RechainInput): Mutable<RechainInput> {
+  return JSON.parse(JSON.stringify(input)) as Mutable<RechainInput>;
 }
 
 // ---------------------------------------------------------------------------

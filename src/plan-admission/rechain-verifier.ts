@@ -298,7 +298,12 @@ function verifyPlanReapplication(args: {
   const expectedItems = [...mSection8.items, ...addedItems];
 
   // --- それ以外の領域: 3-way merge (衝突なしの場合だけ適用, §2.2-2) ---
-  const otherMerge = threeWayMerge(baseSection8.other, hSection8.other, mSection8.other, (v) => v);
+  const otherMerge = threeWayMerge({
+    base: baseSection8.other,
+    h: hSection8.other,
+    m: mSection8.other,
+    keyOf: (v) => v,
+  });
   if (!otherMerge.ok) {
     reasons.push(`plan-other-body-conflict:${path}`);
   }
@@ -449,19 +454,20 @@ function threeWayFrontmatter(
   const keys = new Set<string>([...Object.keys(base), ...Object.keys(h), ...Object.keys(m)]);
   const result: Record<string, unknown> = {};
   for (const key of keys) {
-    const merged = threeWayMerge(base[key], h[key], m[key], stableJson);
+    const merged = threeWayMerge({ base: base[key], h: h[key], m: m[key], keyOf: stableJson });
     if (!merged.ok) return { ok: false };
     if (merged.value !== undefined) result[key] = merged.value;
   }
   return { ok: true, value: result };
 }
 
-function threeWayMerge<T>(
-  base: T,
-  h: T,
-  m: T,
-  keyOf: (v: T) => unknown,
-): { ok: true; value: T } | { ok: false } {
+function threeWayMerge<T>(input: {
+  base: T;
+  h: T;
+  m: T;
+  keyOf: (v: T) => unknown;
+}): { ok: true; value: T } | { ok: false } {
+  const { base, h, m, keyOf } = input;
   const bk = keyOf(base);
   const hk = keyOf(h);
   const mk = keyOf(m);
@@ -481,13 +487,7 @@ function splitSection8(body: string): { other: string; items: readonly string[] 
   const headingEnd = match.index + match[0].length;
   const other = body.slice(0, headingEnd);
   const itemsText = body.slice(headingEnd);
-  const items: string[] = [];
-  SECTION8_ITEM_RE.lastIndex = 0;
-  let m: RegExpExecArray | null;
-  // biome-ignore lint/suspicious/noAssignInExpressions: 標準的な exec ループ
-  while ((m = SECTION8_ITEM_RE.exec(itemsText)) !== null) {
-    items.push(m[2]);
-  }
+  const items = [...itemsText.matchAll(SECTION8_ITEM_RE)].map((item) => item[2]);
   return { other, items };
 }
 
