@@ -5216,6 +5216,38 @@
         "revision": 13,
         "content_digest": "sha256:821f1ce204109bc9bc63de9fc117030cd887be86119ebf363803bf1a8a41fcc5"
       }
+    },
+    {
+      "sequence": 327,
+      "previous_record_digest": "sha256:bac9187674b9d1a2898d02ba3362d8dcbe06bcb3b95735d02cc7b8a13c8cc560",
+      "record_digest": "sha256:e10ef55f43e8603fafdd80238e864def7fb92972ed7f601a8df28acb967d60be",
+      "command_id": "plan-draft:issue-711:merge-time-rechain-contract:v2",
+      "receipt_id": "certificate:ac2c23d3c72fc6e2886491ac1df09452",
+      "receipt_digest": "sha256:0d69a27ac6c840b148dbb827c04300cc2dfc26dd87935b2a8dc5874fcfce195f",
+      "decision_digest": "sha256:369ca378b2d9d6099c08407ec6189e5da017a648c036c6bb064baa9123ff52f0",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-711-merge-time-receipt-rechain-contract.md",
+        "plan_id": "PLAN-L6-711-merge-time-receipt-rechain-contract",
+        "asset_id": "plan:ac2c23d3c72fc6e2886491ac1df09452",
+        "revision": 1,
+        "content_digest": "sha256:f90c30012bfc83f87a4592de648023e597ee79c1d04a5fae8a2cd8cc39a9a9ca"
+      }
+    },
+    {
+      "sequence": 328,
+      "previous_record_digest": "sha256:e10ef55f43e8603fafdd80238e864def7fb92972ed7f601a8df28acb967d60be",
+      "record_digest": "sha256:bfe39d35001f5d138b7b68b091a9f51aca8f90d6ae650e9494414b343827317d",
+      "command_id": "plan-revise:issue-676:pr2a-skills-bundle:plan:r14:90169a353901",
+      "receipt_id": "certificate:822b69e05cb2df931fbfb9a0eda3d184",
+      "receipt_digest": "sha256:70d7d88b92847854ffc7f2230a2c5f060ec20b3f91e734a56bdb2c76fd741481",
+      "decision_digest": "sha256:6303b0d03844ba17b93216b314d3265227c5616ff542d3dbd541c7d8dae9c3de",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-676-release-consumer-dev-start.md",
+        "plan_id": "PLAN-L7-676-release-consumer-dev-start",
+        "asset_id": "plan:aae8bf0e313f8688fbad4d4d8cf0a6a9",
+        "revision": 14,
+        "content_digest": "sha256:ea88773fa41bac2f0f1d84a205f9bf20bb511e121a3039b5ce781fe3f229ffa1"
+      }
     }
   ]
 }
