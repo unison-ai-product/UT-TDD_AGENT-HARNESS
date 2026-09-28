@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { stringify } from "yaml";
+import { parse as parseYaml, stringify } from "yaml";
 import { canonicalPlanContentDigest } from "../src/plan-admission/diff-fence.ts";
 import type { PlanDraftCommand } from "../src/plan-admission/plan-draft-service.ts";
 import {
@@ -208,8 +208,14 @@ interface Baseline {
   blobs: Record<string, string>;
 }
 
-/** Set A: 同一 PLAN に対する main 側の同時改訂は無い、単純な正系 fixture。 */
-function buildBaseline(): Baseline {
+/** Set A: 同一 PLAN に対する main 側の同時改訂は無い、単純な正系 fixture。
+ * `extraGenerates` は U-RECHAIN-001 が要求する「generates 追加 2 件」を満たすための追加分
+ * (default では追加しない。既存 16 oracle の期待値を変えないため)。 */
+function buildBaseline(
+  overrides: {
+    extraGenerates?: readonly { artifact_path: string; artifact_type: string }[];
+  } = {},
+): Baseline {
   const { blobs, put } = makeBlobStore();
 
   const baseGenerates = [{ artifact_path: PLAN_PATH, artifact_type: "markdown_doc" }];
@@ -226,6 +232,7 @@ function buildBaseline(): Baseline {
   const hGenerates = [
     ...baseGenerates,
     { artifact_path: "src/plan-admission/rechain-verifier.ts", artifact_type: "source_module" },
+    ...(overrides.extraGenerates ?? []),
   ];
   const hItems = [...baseItems, "rev 2 (S2): 検証器を実装した。"];
   const { content: hContent, record: hRecord } = makeRevision({
@@ -297,12 +304,135 @@ function clone(input: RechainInput): Mutable<RechainInput> {
 }
 
 // ---------------------------------------------------------------------------
+// U-RECHAIN-012c: PlanAdmissionRequest の各 field を個別に改変する table-driven oracle
+// (§2.3-6 condition 6 / CANDIDATE-U-RECHAIN-012 の全 field 展開)。
+// ---------------------------------------------------------------------------
+
+/** JSON round-trip での深い draft コピーに dot-path で値を書き込む (union literal 型を迂回する)。 */
+function setDraftPath(draft: Record<string, unknown>, path: string, value: unknown): void {
+  const segments = path.split(".");
+  let cursor: Record<string, unknown> = draft;
+  for (let i = 0; i < segments.length - 1; i++) {
+    const key = segments[i];
+    const next = cursor[key];
+    const nextObject: Record<string, unknown> =
+      next && typeof next === "object" ? { ...(next as Record<string, unknown>) } : {};
+    cursor[key] = nextObject;
+    cursor = nextObject;
+  }
+  cursor[segments[segments.length - 1]] = value;
+}
+
+function mutateAdmissionField(
+  admission: PlanAdmissionRequest,
+  path: string,
+  value: unknown,
+): PlanAdmissionRequest {
+  const draft = JSON.parse(JSON.stringify(admission)) as Record<string, unknown>;
+  setDraftPath(draft, path, value);
+  return draft as unknown as PlanAdmissionRequest;
+}
+
+/** PLAN-L6-711 §2.3-6 condition 6 / U-RECHAIN-012 が列挙する全 field。reentry.targetRevision は
+ * 唯一の許容差分なので対象外。 */
+const ADMISSION_FIELD_MUTATIONS: readonly { field: string; path: string; value: unknown }[] = [
+  { field: "routeMode", path: "routeMode", value: "reverse" },
+  { field: "kind", path: "kind", value: "reverse" },
+  { field: "layer", path: "layer", value: "cross" },
+  { field: "workflowPhase", path: "workflowPhase", value: "R1" },
+  { field: "routeSignal", path: "routeSignal", value: "regression" },
+  { field: "drive", path: "drive", value: "human" },
+  { field: "branch", path: "branch", value: "work/mutated-branch-for-test" },
+  { field: "status", path: "status", value: "confirmed" },
+  { field: "subDoc", path: "subDoc", value: "test-design" },
+  {
+    field: "issue",
+    path: "issue",
+    value: {
+      provider: "github",
+      issueId: 12345,
+      episodeId: "E4-999-mutated",
+      projectionState: "unprojected",
+    },
+  },
+  {
+    field: "origin",
+    path: "origin",
+    value: {
+      planId: "PLAN-L6-777-mutated",
+      revision: 99,
+      digest: `sha256:${"f".repeat(64)}`,
+    },
+  },
+  { field: "transitionDirection", path: "transitionDirection", value: "implementation_to_design" },
+  { field: "implementationDisposition", path: "implementationDisposition", value: "preserved" },
+  { field: "reentry.targetPlanId", path: "reentry.targetPlanId", value: OTHER_PLAN_ID },
+  { field: "reentry.phase", path: "reentry.phase", value: "not-forward-merge" },
+  {
+    field: "implementationTarget",
+    path: "implementationTarget",
+    value: { targetPlanId: OTHER_PLAN_ID, targetRevision: 1 },
+  },
+  { field: "escapeReason", path: "escapeReason", value: "改変された理由 (table-driven)" },
+  { field: "supersedes", path: "supersedes", value: ["PLAN-L6-777-old"] },
+];
+
+/**
+ * H の tracked receipt を保ったまま、R の receipt record の一部 field だけを書き換え、
+ * `record_digest` と frontmatter `admission_receipt` (command_id/receipt_id/receipt_digest) を
+ * 自己整合に揃え直す。攻撃者が record 内部の digest chain だけを再計算して verifier を
+ * 通そうとするケースを再現する (U-RECHAIN-012d〜f)。
+ */
+function forgeRReceiptRecord(
+  input: RechainInput,
+  mutate: (record: Record<string, unknown>) => void,
+): Mutable<RechainInput> {
+  const tampered = clone(input);
+  const rPlanOid = tampered.trees.R[PLAN_PATH];
+  const rReceiptOid = tampered.trees.R[RECEIPT_PATH];
+  const planContent = tampered.blobs[rPlanOid];
+  const receiptParsed = JSON.parse(tampered.blobs[rReceiptOid]) as {
+    schema_version: string;
+    records: Record<string, unknown>[];
+  };
+  const recordJson = receiptParsed.records[receiptParsed.records.length - 1];
+  mutate(recordJson);
+  recordJson.record_digest = trackedReceiptRecordDigestFromJson(recordJson);
+  const newReceiptContent = `${JSON.stringify(receiptParsed, null, 2)}\n`;
+  const newReceiptOid = sha(newReceiptContent).slice(0, 40);
+  tampered.blobs[newReceiptOid] = newReceiptContent;
+  tampered.trees.R[RECEIPT_PATH] = newReceiptOid;
+
+  // frontmatter の admission_receipt も同じ値へ揃え、自己整合な偽造にする (record 内 digest を
+  // 信用しない検証だけを単独で確かめるため。plan-admission-receipt-binding-mismatch を道連れに
+  // しない)。
+  const match = /^---\n([\s\S]*?)\n---\n([\s\S]*)$/.exec(planContent);
+  if (!match) throw new Error("fixture-plan-content-unparseable");
+  const frontmatter = parseYaml(match[1]) as Record<string, unknown>;
+  frontmatter.admission_receipt = {
+    ...(frontmatter.admission_receipt as Record<string, unknown>),
+    command_id: recordJson.command_id,
+    receipt_id: recordJson.receipt_id,
+    receipt_digest: recordJson.receipt_digest,
+  };
+  const newPlanContent = `---\n${stringify(frontmatter)}---\n${match[2]}`;
+  const newPlanOid = sha(newPlanContent).slice(0, 40);
+  tampered.blobs[newPlanOid] = newPlanContent;
+  tampered.trees.R[PLAN_PATH] = newPlanOid;
+  return tampered;
+}
+
+// ---------------------------------------------------------------------------
 // U-RECHAIN-001: 簿記のみの re-chain は pass する
 // ---------------------------------------------------------------------------
 
 describe("verifyRechainDelta", () => {
-  it("U-RECHAIN-001: 簿記のみの re-chain (receipt 1件・generates追加・§8注記1行) は pass する", () => {
-    const { input } = buildBaseline();
+  it("U-RECHAIN-001: 簿記のみの re-chain (receipt 1件・generates追加2件・§8注記1行) は pass する", () => {
+    const { input } = buildBaseline({
+      extraGenerates: [
+        { artifact_path: "tests/rechain-verifier.test.ts", artifact_type: "test_code" },
+      ],
+    });
     const verdict = verifyRechainDelta(input);
     expect(verdict.ok).toBe(true);
     if (verdict.ok) expect(verdict.verifierDigest.startsWith("sha256:")).toBe(true);
@@ -481,6 +611,19 @@ describe("verifyRechainDelta", () => {
     const verdict = verifyRechainDelta(tampered);
     expect(verdict.ok).toBe(false);
     if (!verdict.ok) expect(verdict.reasons).toContain("commit-structure-x-parents");
+  });
+
+  it("U-RECHAIN-006c: (正系) commits.M が H 分岐後の 2+ commit (merge commit を含む履歴) を指していても、oid/親構造の束縛だけで pass する (件数ベースではない)", () => {
+    // RechainInput は commits.M を不透明な oid としてしか運ばない (§2.6-1)。M が実際に
+    // 何本の commit (merge commit を含む) を経て origin/main へ積まれていても、検証器の
+    // §2.3-4 (rev 5) 判定は X.parents[1] === M / R.parents === [X] という親 oid の束縛だけで
+    // 決まり、`H..R` の commit 数 (--first-parent なし) では判定しない (m1 の反証: 件数判定
+    // だったら M の内部 commit 数で結果が変わってしまう)。buildBaseline() の commits.M は
+    // その「不透明な多 commit 履歴を指す 1 個の oid」の代表例であり、これがそのまま pass
+    // することが本 oracle の正系である。
+    const { input } = buildBaseline();
+    const verdict = verifyRechainDelta(input);
+    expect(verdict.ok).toBe(true);
   });
 
   // -------------------------------------------------------------------------
@@ -696,6 +839,63 @@ describe("verifyRechainDelta", () => {
       ).toBe(true);
   });
 
+  it.each(ADMISSION_FIELD_MUTATIONS)(
+    "U-RECHAIN-012c: PlanAdmissionRequest.$field を改変した候補は、digest を正しく再計算しても H の tracked decision_digest と一致せず fail する ($field)",
+    ({ path, value }) => {
+      const { input, hRecord } = buildBaseline();
+      const admissionH = input.admission[hRecord.recordDigest];
+      const mutated = mutateAdmissionField(admissionH, path, value);
+      const tampered = clone(input);
+      tampered.admission = { [hRecord.recordDigest]: mutated };
+      const verdict = verifyRechainDelta(tampered);
+      expect(verdict.ok).toBe(false);
+      if (!verdict.ok)
+        expect(verdict.reasons.some((r) => r.startsWith("admission-candidate-unverified"))).toBe(
+          true,
+        );
+    },
+  );
+
+  // -------------------------------------------------------------------------
+  // U-RECHAIN-012 拡張 (Codex Sol r1 FLAG, PR #724): command_id / receipt_id / receipt_digest を
+  // record 内の値だけで信用せず、H から独立に再導出して束縛する (§2.3-6 condition 6)。
+  // -------------------------------------------------------------------------
+  it("U-RECHAIN-012d: R の command_id が H の command_id + :rechain-<n> 以外なら、record と frontmatter を自己整合に揃え直しても fail する", () => {
+    const { input } = buildBaseline();
+    const tampered = forgeRReceiptRecord(input, (record) => {
+      record.command_id = "plan-revise:attacker:arbitrary-command-id";
+    });
+    const verdict = verifyRechainDelta(tampered);
+    expect(verdict.ok).toBe(false);
+    if (!verdict.ok)
+      expect(verdict.reasons.some((r) => r.startsWith("rechain-command-id-mismatch"))).toBe(true);
+  });
+
+  it("U-RECHAIN-012e: command_id の suffix 形式が正しくても、receipt_id が正規式 (certificate:sha(command_id)) と一致しなければ fail する", () => {
+    const { input, hRecord } = buildBaseline();
+    const tampered = forgeRReceiptRecord(input, (record) => {
+      record.command_id = `${hRecord.commandId}:rechain-1`;
+      record.receipt_id = "certificate:0000000000000000000000000000000000000000";
+    });
+    const verdict = verifyRechainDelta(tampered);
+    expect(verdict.ok).toBe(false);
+    if (!verdict.ok)
+      expect(verdict.reasons.some((r) => r.startsWith("rechain-receipt-id-mismatch"))).toBe(true);
+  });
+
+  it("U-RECHAIN-012f: R の receipt_digest が H 自身の receipt_digest をそのまま使い回していれば fail する", () => {
+    const { input, hRecord } = buildBaseline();
+    const tampered = forgeRReceiptRecord(input, (record) => {
+      record.receipt_digest = hRecord.receiptDigest;
+    });
+    const verdict = verifyRechainDelta(tampered);
+    expect(verdict.ok).toBe(false);
+    if (!verdict.ok)
+      expect(verdict.reasons.some((r) => r.startsWith("rechain-receipt-digest-unchanged"))).toBe(
+        true,
+      );
+  });
+
   // -------------------------------------------------------------------------
   // U-RECHAIN-014: 非簿記 path の両側変更は git merge が成立しても fail する
   // -------------------------------------------------------------------------
@@ -853,6 +1053,11 @@ describe("verifyRechainDelta", () => {
     const jsonDigestA = sha(`ut-tdd.rechain-verifier.v1\n${JSON.stringify(inputA)}`);
     const jsonDigestB = sha(`ut-tdd.rechain-verifier.v1\n${JSON.stringify(inputB)}`);
     expect(jsonDigestA).not.toBe(jsonDigestB);
+
+    // mutation: domain separator (schema version 行) を変えると、同じ stableJson(input) でも
+    // 異なる digest になる (§2.6-5 の "先頭行は domain separator 兼 schema version" の固定)。
+    const differentVersionDigest = `sha256:${sha(`ut-tdd.rechain-verifier.v2\n${stableJson(inputA)}`)}`;
+    expect(verdictA.verifierDigest).not.toBe(differentVersionDigest);
   });
 });
 
