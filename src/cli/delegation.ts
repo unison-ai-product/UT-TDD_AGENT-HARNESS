@@ -259,12 +259,16 @@ export function executeAdapterPlanForCli(
     process.stderr.write(`${plan.provider}: failed to launch (${String(child.error)})\n`);
   }
   if (guardActive && input.reviewRole) {
+    const afterDebug = safeLoadChangedFiles(repoRoot);
+    const untrackedDebug = safeLoadUntrackedAddedFiles(repoRoot);
+    console.error("DEBUG-ASSESS", JSON.stringify({ treeBefore, afterDebug, untrackedDebug }));
     const assessment = assessReviewSession({
       role: input.reviewRole,
       before: treeBefore,
-      after: safeLoadChangedFiles(repoRoot),
-      untrackedAdded: safeLoadUntrackedAddedFiles(repoRoot),
+      after: afterDebug,
+      untrackedAdded: untrackedDebug,
     });
+    console.error("DEBUG-VIOLATION", JSON.stringify(assessment));
     for (const message of reviewGuardMessages(assessment)) process.stderr.write(`${message}\n`);
   }
   dispatch(
