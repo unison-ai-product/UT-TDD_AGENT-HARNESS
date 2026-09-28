@@ -850,8 +850,8 @@ describe("PR-GR consumer G8 predicates", () => {
     const manifest = JSON.parse(readFileSync(sourceManifestPath, "utf8")) as {
       selected_it_ids: string[];
       mandatory_it_ids: string[];
-      commands: { it_ids: string[] }[];
-      coverage: { it_id: string }[];
+      commands: { it_ids: string[]; evidence_path: string }[];
+      coverage: { it_id: string; evidence_paths: string[] }[];
     };
     const unrelatedFamilyIds = ["IT-ASSET-01", "IT-ASSET-02"];
     manifest.selected_it_ids = [...unrelatedFamilyIds];
@@ -864,6 +864,13 @@ describe("PR-GR consumer G8 predicates", () => {
       ...entry,
       it_id: unrelatedFamilyIds[index % unrelatedFamilyIds.length] as string,
     }));
+    const evidencePaths = new Set([
+      ...manifest.commands.map((command) => command.evidence_path),
+      ...manifest.coverage.flatMap((entry) => entry.evidence_paths),
+    ]);
+    for (const path of evidencePaths) {
+      writeFixtureDoc(root, path, readFileSync(join(repositoryRoot, path), "utf8"));
+    }
     writeFixtureDoc(
       root,
       ".ut-tdd/evidence/g8-integration/consumer-family-negative.json",
