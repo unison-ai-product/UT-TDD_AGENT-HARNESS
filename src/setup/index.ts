@@ -215,6 +215,7 @@ import {
   ensureSkillAssetsIgnored,
   materializeSkillAssets,
 } from "../shared/embedded-skills.ts";
+import { rebuildHarnessDb } from "../state-db/projection-writer.ts";
 import { BUILTIN_GITHUB_TEMPLATES, COMMON_FILES, type TemplateSet } from "./templates.ts";
 
 export type { Confirm, GhRunner };
@@ -280,6 +281,7 @@ export interface SetupResult {
   phase: SetupPhase;
   written: string[];
   branchProtection: { applied: boolean; reason: string };
+  notices?: string[];
   projectIdentity?: ProjectIdentityBootstrapResult;
   consumerRuntime?: SetupConsumerRuntimeInstall;
 }
@@ -370,6 +372,7 @@ export interface SetupDeps {
   isInteractive: boolean;
   templates: TemplateSet;
   bootstrapProjectIdentity?: () => ProjectIdentityBootstrapResult;
+  initializeHarnessDb?: () => void;
 }
 
 const CODEOWNERS_TARGET = join(".github", "CODEOWNERS");
@@ -654,7 +657,30 @@ export function runSetup(args: SetupArgs, deps: SetupDeps): SetupResult {
   const branchProtection = args.dryRun
     ? { applied: false, reason: "dry-run" }
     : applyBranchProtection(plan, deps, { apply: args.applyBranchProtection });
-  return { phase, written, branchProtection, ...(projectIdentity ? { projectIdentity } : {}) };
+  const notices = [
+    "commitlint の依存は consumer 側で選択して導入してください: npm install --save-dev @commitlint/cli @commitlint/config-conventional",
+  ];
+  if (deps.readText(join(deps.repoRoot, "commitlint.config.js")) !== null) {
+    notices.unshift(
+      "warning: 既存の commitlint.config.js は変更・削除せず保持しました。必要なら commitlint.config.cjs への移行を確認してください。",
+    );
+  }
+  if (!args.dryRun && deps.initializeHarnessDb) {
+    try {
+      deps.initializeHarnessDb();
+    } catch {
+      notices.unshift(
+        "warning: harness.db の初期化に失敗しました。session start digest は DEGRADED になる可能性があります。復旧時は `ut-tdd db rebuild` を実行してください。",
+      );
+    }
+  }
+  return {
+    phase,
+    written,
+    branchProtection,
+    notices,
+    ...(projectIdentity ? { projectIdentity } : {}),
+  };
 }
 
 /** Async composition root used when setup is supplied a sealed runtime input. */
@@ -940,5 +966,8 @@ export function nodeSetupDeps(repoRoot: string): SetupDeps {
     isInteractive: Boolean(process.stdin.isTTY) && Boolean(process.stderr.isTTY) && !process.env.CI,
     templates: loadTemplates(repoRoot),
     bootstrapProjectIdentity: () => bootstrapProjectIdentity(repoRoot),
+    initializeHarnessDb: () => {
+      rebuildHarnessDb({ repoRoot, skipTokenTelemetry: true });
+    },
   };
 }
