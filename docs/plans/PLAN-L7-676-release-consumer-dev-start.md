@@ -73,10 +73,60 @@ generates:
     artifact_type: markdown_doc
   - artifact_path: docs/templates/vmodel/README.md
     artifact_type: markdown_doc
-  - artifact_path: src/shared/design-root.ts
-    artifact_type: source_module
-  - artifact_path: tests/design-root.test.ts
-    artifact_type: test_code
+  - artifact_path: docs/templates/vmodel/optional/012-test-plan.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/013-migration-plan.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/014-issue-risk-decision-log.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/015-development-standards.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/016-batch-design.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/017-design-index-definitions.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/019-workflow-definition.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/020-metrics-kpi-design.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/025-network-design.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/026-server-infrastructure-design.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/030-glossary-data-dictionary.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/033-traceability-id-conventions.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/035-reliability-dr-bcp-design.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/036-privacy-design.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/038-ci-cd-pipeline-design.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/044-deliverable-index-map.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/045-directory-structure-design.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/046-seo-public-page-design.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/047-support-escalation-design.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/048-user-documentation-design.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/049-ai-output-verification-design.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/050-stop-resume-execution-log-design.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/052-documentation-policy-tailoring.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/053-poc-verification-design.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/096-design-principles-seven-pillars.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/108-refactoring-design.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/109-qa-quality-checklist.md
+    artifact_type: markdown_doc
 dependencies:
   parent: docs/plans/PLAN-L6-101-pack-independent-multi-consumer-acceptance.md
   requires:
@@ -135,18 +185,18 @@ status: confirmed
 github_issue_id: 676
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:5abd0fc570841768aa2329628783ecbe
-  command_id: plan-revise:issue-676:codex-pr2b:design-root-common-layer:r10
-  admitted_at: 2026-09-25T12:03:44.950Z
-  source_digest: sha256:9d9df3c35600818891e21c293aa050e28e2fdcb64815963ea885fc091dc3cb5f
-  decision_digest: sha256:4884e46337a09f5f6dfec74c2a0f11eb3a71039e8ecca3231c006a88533d8404
-  receipt_digest: sha256:e7da9bd6cba644e8741c6cc4f28df538dc8b93627906071f089ec862d123463f
+  receipt_id: certificate:a8b53b5b57f14f17df1de00ad164e613
+  command_id: plan-revise:issue-676:prt2-generates:plan:r9:af6e9a20f6a1
+  admitted_at: 2026-09-25T11:29:29.007Z
+  source_digest: sha256:a06505ae365cec9f35906eaf8f1381d9d9968aef0350d0882ba061be11661894
+  decision_digest: sha256:20c77a616c50cdcd730ef00d2c49b113f7e595031453dd4604f700d738da3164
+  receipt_digest: sha256:fa887ab15cf6998078f2288de7d226b976fd2e13a945c7aab9c1e73e152cada9
   binding:
     path: docs/plans/PLAN-L7-676-release-consumer-dev-start.md
     plan_id: PLAN-L7-676-release-consumer-dev-start
     asset_id: plan:aae8bf0e313f8688fbad4d4d8cf0a6a9
-    revision: 10
-    content_digest: sha256:9d9df3c35600818891e21c293aa050e28e2fdcb64815963ea885fc091dc3cb5f
+    revision: 9
+    content_digest: sha256:a06505ae365cec9f35906eaf8f1381d9d9968aef0350d0882ba061be11661894
   route:
     signal: feature_addition
     mode: add-feature
@@ -164,10 +214,11 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-676-release-consumer-dev-start
-    target_revision: 8
+    target_revision: 9
     phase: forward_merge
-  escape_reason: "PR #685 を main の PR-T1 (#703) 後へ re-chain し、PR-2b の新規成果物を
-    confirmed PLAN に宣言するため。"
+  escape_reason: PR-T2 が landing させる docs/templates/vmodel/optional/ の 27 本を
+    confirmed の本 PLAN の generates に追加する (rev 9、§8-8)。契約本文と review_evidence は rev
+    8 から変えない。
 ---
 
 # PLAN-L7-676: Release consumer で開発を開始できる状態にする
@@ -627,5 +678,4 @@ injection path の乗っ取り、harness 自身の挙動変化、部分 setup �
 5. confirm の実施 (rev 6): rev 5 の exact head `8be63ed4` の CI green (run 36104559954、2026-09-25T07:06:45Z) の後に、Codex Sol の bounded 再検が PASS (receipt `b4ef3e27…`、2026-09-25T07:08:57Z) を返した。その receipt を `review_evidence` に記録し、`status: confirmed` とした。
 6. §3.5.3 の source 例外 (rev 7): PR-T1 (#703) の非著者 review (Codex Sol r1) が、L11 / L13 のテンプレートの source (ZIP-DOC-028 / 011 / 021) の disposition target が当該 slot を指さないと FLAG した。原因は、§3.5.3 の規則本文 (process 文書を指す本は optional) と構成元表 (028 を L11、011 と 021 を L13 の source とする) の矛盾である。advisor (claude-fable-5、design) の推奨に従い、構成元表を正として規則本文に閉じた例外句 (3 本) を加え、test-design の CANDIDATE-U-RCDEV-020 を同じ例外に揃えた。disposition catalog は変更しない。
 7. PR-T1 の成果物宣言 (rev 8): PR-T1 (#703) は rev 7 の merge (#704) 後に main を取り込み、自 PR が新規に landing させる `docs/templates/vmodel/` の 22 本 (required 21 slot のテンプレートと port index の README) だけを `generates` に追加した。既存ファイルと他 PR の成果物は載せていない。契約本文と `review_evidence` は rev 7 から変えていない。
-8. rev 9: PR #685 を main の PR-T1 (#703) 後へ re-chain し、PR-2b の新規成果物 2 件だけを confirmed PLAN の `generates` に宣言する。
-9. rev 10: Claude Opus r2 の FLAG #1 に対応し、resolver を lint/vmodel 共通の src/shared/design-root.ts へ移動した。allowed-edge 表は変更しない。
+8. PR-T2 の成果物宣言 (rev 9): PR-T2 は PR-T1 の merge (#703) 後に main を取り込み、自 PR が新規に landing させる `docs/templates/vmodel/optional/` の 27 本だけを `generates` に追加した。既存ファイル (port index の README と L5 テンプレート) の更新は PR-T1 の宣言に含まれる。管理 yaml の図・trace 俯瞰・粒度情報のうち、§3.5.4 で対応が明示されていないものは #705 に分離した。契約本文と `review_evidence` は rev 8 から変えていない。
