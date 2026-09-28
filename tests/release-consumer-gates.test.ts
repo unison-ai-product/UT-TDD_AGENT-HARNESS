@@ -367,7 +367,7 @@ describe("PR-G0 release-consumer gates", () => {
     expect(messages).not.toContain("could not run");
   });
 
-  it("CANDIDATE-U-RCDEV-028: returns a typed missing-coverage reason and accepts an 80% consumer summary", () => {
+  it("U-RCDEV-028: returns a typed missing-coverage reason and accepts an 80% consumer summary", () => {
     const root = fixtureRoot();
     writeConsumerGateFixture(root);
     const coveragePath = join(root, "coverage", "coverage-summary.json");
