@@ -57,18 +57,18 @@ status: draft
 github_issue_id: 418
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:bba997d52a58847dceea04a31e40ee34
-  command_id: plan-revise:issue-418:531-canary2-contract:plan:r3:0a8cd4f55764
-  admitted_at: 2026-09-28T10:54:42.201Z
-  source_digest: sha256:a04428ce7a3ee21fcbaebf6cfce78094795a18d67da5a0f29ddaafc137be9b74
-  decision_digest: sha256:f4ab3cddd0cffc8567cc7d25f8c2bcf0eab264528ad7b7d2c2b7578c3a005187
-  receipt_digest: sha256:9abbbb26fe5c4017bd5438056e9fa99f3c0b65f3b5f97a65a2e3ac2e30861e39
+  receipt_id: certificate:2f1134a5759d724605aa1e13fee7eac6
+  command_id: plan-revise:issue-418:531-canary2-contract:plan:r4:b13da940a4b0
+  admitted_at: 2026-09-28T11:19:07.555Z
+  source_digest: sha256:57e053d9e9ee51cb39690100a05baa1b36103dbfb6db6ff4a8a9830f28dadf0d
+  decision_digest: sha256:33bfd28e2c32efbc3f9c6372d8165e11fac36c670103020b4f3caf49938c0127
+  receipt_digest: sha256:4d3506ec462ff24a83e083024a003ea51568178a9816a15344e33ef16b75ad79
   binding:
     path: docs/plans/PLAN-L7-531-pack-internal-canary-smoke.md
     plan_id: PLAN-L7-531-pack-internal-canary-smoke
     asset_id: plan:44f79788376b81c225ce5913fddbc48f
-    revision: 3
-    content_digest: sha256:a04428ce7a3ee21fcbaebf6cfce78094795a18d67da5a0f29ddaafc137be9b74
+    revision: 4
+    content_digest: sha256:57e053d9e9ee51cb39690100a05baa1b36103dbfb6db6ff4a8a9830f28dadf0d
   route:
     signal: feature_addition
     mode: add-feature
@@ -86,11 +86,11 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-531-pack-internal-canary-smoke
-    target_revision: 3
+    target_revision: 4
     phase: forward_merge
-  escape_reason: "Issue #418: PLAN-L7-628 (confirmed rev 9) による release
-    定義変更に合わせ、canary 入力契約を v0.2.0-canary.1 / exact 2 asset から v0.2.0-canary.2 /
-    exact 5 asset + 外部 anchor へ接合する契約改訂 (PLAN-L7-628 §7 の後続行 (531) の履行)。"
+  escape_reason: "Issue #418 PR #731 Sol r1 FLAG の是正: publish 記録の per-asset 2 値
+    (producer / 独立再計算) 必須化、§7 表の列整合、Candidate 009(b) の判別可能な対照入力を明記する
+    (PLAN-L7-628 §5.7 準拠)。"
 ---
 
 # PLAN-L7-531: Pack-only internal canary smoke (Windows/Linux)
@@ -266,7 +266,8 @@ anchor を **publish 記録からだけ** 取り、ダウンロードした `<re
 producer / publish 担当が行い、記録の様式は §3.4 で本 PLAN が定める。
 
 installer 実行前に、第 2 層 runner は取得した asset 集合が `PLAN-L7-628` §3 の exact 5 件であり、
-各 asset の sha256 が §3.4 の publish 記録の値と一致することを独立に照合する。installer の照合は
+各 asset の sha256 が §3.4 の publish 記録の値 (producer 値と独立再計算値が一致した値) と一致することを
+独立に照合する。installer の照合は
 `.ut-tdd.mjs` / `.consumer-runtime.json` / `.consumer.sha256` だけを固定するため
 (`PLAN-L7-628` §6.2 手順 0〜1)、`<tag>.tar.gz` / `<tag>.tar.gz.sha256` の完全性はこの照合だけが
 見る (`CANDIDATE-ST-PACKCANARY-005`)。
@@ -305,10 +306,16 @@ clean fixture で、consumer root へ 1 byte も書かれずに deny される�
 `PLAN-L7-531` が所有する」と定める。本 PLAN は保管場所・生成方式を変えず、様式だけを次に固定する。
 
 - 置き場所: source repo の publish 追跡 Issue (canary.2 では #418) のコメント 1 件。
-- 必須 field: `tag` (exact)、Pack Release の URL、C1 / C2 の 40 桁 commit、5 asset それぞれの
-  `name` と `sha256` (producer stdout 値)、`consumer_anchor_digest` の producer stdout 値と独立再計算値
-  (`sha256:<64 桁 lowercase hex>`、2 値は一致しなければならない)、記録者と記録日時。
-- 2 値の不一致、field 欠落、同一 tag への複数の矛盾する記録は、第 2 層を開始しない (deny)。
+- 必須 field: `tag` (exact)、Pack Release の URL、C1 / C2 の 40 桁 commit、記録者と記録日時、
+  および次の 6 値それぞれについて **producer stdout 値と独立再計算値の 2 値** (いずれも
+  `sha256:<64 桁 lowercase hex>`):
+  - `PLAN-L7-628` §3 の exact 5 asset それぞれ (`name` を添える) の sha256
+  - `consumer_anchor_digest`
+- 独立再計算値は、publish 担当が公開後の Release から asset をダウンロードし直し、その bytes から
+  計算した値とする (producer stdout や producer の出力ディレクトリから転記しない)。
+- 6 値のいずれかで 2 値の一方が欠落する、2 値が一致しない、その他の必須 field が欠落する、または
+  同一 tag への複数の矛盾する記録がある場合、第 2 層を開始しない (runner が installer 起動前に deny、
+  `CANDIDATE-ST-PACKCANARY-005(d)`)。§3.2 の照合と第 2 層の anchor に使うのは 2 値が一致した値だけである。
 - 記録の改ざん耐性は source repo の write 権限と review 経路に依存する (`PLAN-L7-628` §6.1)。
   署名・外部 API 照合は導入しない (高影響境界、`PLAN-L7-628` §6.1 と同じ)。
 
@@ -387,12 +394,12 @@ pair artifact の候補 oracle は次の通り。001..004 は Codex 先行 test-
 | `CANDIDATE-ST-PACKCANARY-002` | authoring template と skills の exact-one inventory | 第 1 層 |
 | `CANDIDATE-ST-PACKCANARY-003` | setup 元撤去後・別 cwd からの sealed runtime 起動、外部参照は typed deny | 第 1 層 |
 | `CANDIDATE-ST-PACKCANARY-004` | generated wrapper/config/runtime state に setup 元 absolute path 0 | 第 1 層 |
-| `CANDIDATE-ST-PACKCANARY-005` | 公開 asset の完全性 (Red: 取得した 5 asset のいずれか 1 件を 1 byte 変異 / size 変更)。(a) `<tag>.tar.gz` / `<tag>.tar.gz.sha256` の変異は installer が見ないため、§3.2 の runner 照合 (publish 記録の sha256 との不一致) が installer 起動前に deny する。(b) `<tag>.ut-tdd.mjs` / `<tag>.consumer-runtime.json` の変異は runner 照合に加え、runner 照合を外した対照で `PLAN-L7-628` §6.2 手順 1 が deny する。(c) `<tag>.consumer.sha256` の変異は手順 0 (anchor 不一致) で deny。殺す mutation: runner が asset 集合・sha256 を publish 記録と照合せず installer に丸投げする実装 ((a) が通る) | 第 2 層 (runner の照合ロジック自体は PR-2 の CI test でも offline 固定) |
+| `CANDIDATE-ST-PACKCANARY-005` | 公開 asset の完全性 (Red: 取得した 5 asset のいずれか 1 件を 1 byte 変異 / size 変更)。(a) `<tag>.tar.gz` / `<tag>.tar.gz.sha256` の変異は installer が見ないため、§3.2 の runner 照合 (publish 記録の sha256 との不一致) が installer 起動前に deny する。(b) `<tag>.ut-tdd.mjs` / `<tag>.consumer-runtime.json` の変異は runner 照合に加え、runner 照合を外した対照で `PLAN-L7-628` §6.2 手順 1 が deny する。(c) `<tag>.consumer.sha256` の変異は手順 0 (anchor 不一致) で deny。(d) release-dir は真正のまま、§3.4 の publish 記録の 6 値 (5 asset の sha256 と anchor) のいずれか 1 値について producer 値か独立再計算値を欠落させる、または 2 値を不一致にする。runner が installer 起動前に deny し、consumer root write 0。殺す mutation: runner が asset 集合・sha256 を publish 記録と照合せず installer に丸投げする実装 ((a) が通る)、runner が producer 値だけを読み独立再計算値の有無・一致を検査しない実装 ((d) が通る) | 第 2 層 (runner の照合ロジック自体は PR-2 の CI test でも offline 固定) |
 | `CANDIDATE-ST-PACKCANARY-006` | exact 5 asset + tag exact match (Red: legacy 3 asset 形式 `v0.1.4`、`v0.2.0-canary.1` の 3 asset (`.manifest.json` 付き)、`latest`/prefix/semver range 解決、5 asset のいずれかの欠落・余剰・別名)。runner が `PLAN-L7-628` §3 の exact 5 件と tag exact 以外を installer 起動前に deny する。殺す mutation: runner の tag 解決を prefix / latest にする、asset 集合検査を部分集合一致にする | 第 1 層 (runner の選択ロジックを offline 固定。installer 側の集合検査は `CANDIDATE-U-PACKRT-008` 所有) / 第 2 層 (実 Release で再観測) |
 | `CANDIDATE-ST-PACKCANARY-007` | 再起動相当 (別 process/cwd/env clear、`bun` を PATH 上に配置) 後の `doctor --setup-smoke`・PLAN/DB/doctor/review smoke 再現と Bun trace 0。殺す mutation: compiled ESM が `--help` 以外の subcommand で source path・未 bundle module・Pack checkout を実行時解決する退行 (§3.1) | 第 1 層 |
-| `CANDIDATE-ST-PACKCANARY-008` | 第 2 層: 実際にダウンロードした Release asset に対し `--expected-consumer-digest` を未指定・形式違反・publish 記録と異なる値にする | `PLAN-L7-628` §6.2 手順 0 の `consumer_runtime_anchor_mismatch` deny を公開 bundle で観測し、consumer root へ 1 byte も書かれないことを確認する (§3.3)。殺す mutation: 公開 bundle が anchor 照合を欠く / 未指定で install を通す |
-| `CANDIDATE-ST-PACKCANARY-009` | 受入証跡の出所 (Red: (a) runner の installer 呼び出しを `--consumer-runtime-input` (source-CLI helper `tests/support/pack-consumer-runtime.ts` と同じ経路) に差し替える、(b) runner が anchor を publish 記録ではなく `<release-dir>` の `.consumer.sha256` から再計算する、(c) 受入記録の tag が fixture tag / `v0.2.0-canary.2` 以外) | PR-2 の CI test が runner を offline で呼ぶ: 真正 fixture の anchor を「記録値」として与え、`.ut-tdd.mjs` を改変し `.consumer.sha256` を整合的に書き換えた release-dir を渡すと `consumer_runtime_anchor_mismatch` で deny される ((b) を殺す)。runner が起動する argv に `--consumer-runtime-release` があり `--consumer-runtime-input` が無いことを spawn 引数で assert する ((a) を殺す)。受入記録の tag が exact `v0.2.0-canary.2` でなければ受入記録を生成しない ((c) を殺す) |
-| `CANDIDATE-ST-PACKCANARY-010` | guard hook E2E (§3.5)。Red: (a) 生成 `.codex/hooks.json` / `.claude/settings.json` の work-guard が正常系も block する (canary.1 実測の全編集 block と同型)、(b) hook command が撤去済み path・存在しない launcher を指し、hook 失敗が非 block として素通りする、(c) 禁止系 payload を通す | 撤去・別 shell 後の clean fixture で、登録された command 文字列をそのまま実行し、正常系 payload は通過、禁止系 payload は各 runtime の block 規約どおり block。(a)(b)(c) はいずれも Red | 第 1 層 / 第 2 層 (実 Release で再観測) |
+| `CANDIDATE-ST-PACKCANARY-008` | 第 2 層: 実際にダウンロードした Release asset に対し `--expected-consumer-digest` を未指定・形式違反・publish 記録と異なる値にする。Green: `PLAN-L7-628` §6.2 手順 0 の `consumer_runtime_anchor_mismatch` deny を公開 bundle で観測し、consumer root へ 1 byte も書かれないことを確認する (§3.3)。殺す mutation: 公開 bundle が anchor 照合を欠く / 未指定で install を通す | 第 2 層 |
+| `CANDIDATE-ST-PACKCANARY-009` | 受入証跡の出所 (Red: (a) runner の installer 呼び出しを `--consumer-runtime-input` (source-CLI helper `tests/support/pack-consumer-runtime.ts` と同じ経路) に差し替える、(b) runner が anchor を publish 記録ではなく `<release-dir>` の `.consumer.sha256` から再計算する、(c) 受入記録の tag が fixture tag / `v0.2.0-canary.2` 以外)。Green: PR-2 の CI test が runner を offline で呼ぶ。(b) の対照入力は、`.ut-tdd.mjs` を実行意味を変えない形 (末尾へのコメント 1 行追記等。改変後も手順 0〜2 の照合ロジックはそのまま動く) で改変し `.consumer.sha256` を整合的に書き換えた偽造 release-dir と、**5 asset の sha256 entry (producer 値・独立再計算値とも) を偽造 release-dir の値に合わせ、`consumer_anchor_digest` (2 値とも) だけを真正 fixture の anchor に固定した**記録である。この対照では §3.2 の asset 照合・exact 5 件・tag exact・§3.4 の 2 値一致の各 guard がすべて通るため、結果を分けるのは anchor の出所だけになる。正しい runner は spawn 引数の `--expected-consumer-digest` に記録の anchor (真正値) をそのまま渡し、installer 手順 0 が `consumer_runtime_anchor_mismatch` で deny して consumer root write 0。(b) の mutant は偽造 release-dir から再計算した anchor を渡すため手順 0〜2 を通過し deny されない — 観測点 (spawn 引数の anchor 値と deny 有無) の結果が反転し (b) が Red になる。§3.4 は runner に anchor と `.consumer.sha256` entry の相互照合を要求しない。PR-2 がこの相互照合を追加する場合は、005(b) と同じく相互照合を外した対照で本入力を実行する (相互照合が上流で deny すると (b) が識別されないため)。runner が起動する argv に `--consumer-runtime-release` があり `--consumer-runtime-input` が無いことを spawn 引数で assert する ((a) を殺す)。受入記録の tag が exact `v0.2.0-canary.2` でなければ受入記録を生成しない ((c) を殺す) | PR-2 CI (offline) |
+| `CANDIDATE-ST-PACKCANARY-010` | guard hook E2E (§3.5)。Red: (a) 生成 `.codex/hooks.json` / `.claude/settings.json` の work-guard が正常系も block する (canary.1 実測の全編集 block と同型)、(b) hook command が撤去済み path・存在しない launcher を指し、hook 失敗が非 block として素通りする、(c) 禁止系 payload を通す。Green: 撤去・別 shell 後の clean fixture で、登録された command 文字列をそのまま実行し、正常系 payload は通過、禁止系 payload は各 runtime の block 規約どおり block。(a)(b)(c) はいずれも Red | 第 1 層 / 第 2 層 (実 Release で再観測) |
 
 Candidate は pair-freeze 時点の設計候補であり、実装と同じ revision の Red→Green 実測が揃うまで
 `U-*` へ昇格しない。001..004・006 (第 1 層)・007・010 (第 1 層) は `PLAN-L7-531` §6 の PR-1、
