@@ -21,7 +21,8 @@ agent_slots:
     slot_label: SE (Codex worker) — harness-check.yml の preflight job 新設 +
       github-ci-policy.ts の manifest / aggregate 契約改訂
   - role: qa
-    slot_label: QA — U-CIPOL-028〜039 の負例 / mutation と Actions 実測 (成功 run / 軽量失敗 run)
+    slot_label: QA — CANDIDATE-U-CIPOL-028〜039 の負例 / mutation と Actions 実測 (成功 run /
+      軽量失敗 run)
   - role: tl
     slot_label: TL (非著者 frontier) — aggregate 意味不変と lane skip allowlist 不変のレビュー
 generates:
@@ -40,18 +41,18 @@ status: draft
 github_issue_id: 729
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:ba943fc6b674252419f47d8e9271f8aa
-  command_id: plan-revise:issue-729:ci-fail-fast:plan:r3:ca50ba2e8224
-  admitted_at: 2026-09-28T11:39:20.078Z
-  source_digest: sha256:674855a81758bffe20908f6d8e415eac9bbe25cbdc84a811cc8b3203e405def1
-  decision_digest: sha256:9302169474f53eb5f708e23b4934a99a39015fbcb6ab2f2a18445d53f9934931
-  receipt_digest: sha256:6c8b7af675c6edaaee46bfd9ed9fbbf561849535c8717e342cde8ec3b96ab219
+  receipt_id: certificate:84e81e91335abfc6a6828b91428cada8
+  command_id: plan-revise:issue-729:ci-fail-fast:plan:r4:c6542c82a8c4
+  admitted_at: 2026-09-28T11:50:57.241Z
+  source_digest: sha256:d390683b83026c70b8b47039cd079f883adbbefcc6f93960ab7c6d400c391bd1
+  decision_digest: sha256:dcf6d1660d781859a6bd1c43f750790c3f822036cc22025bef0825cf8524c656
+  receipt_digest: sha256:ab4ddd80b434960385530d3fce99ed12716758b13909ad420f68fe8a5858e349
   binding:
     path: docs/plans/PLAN-L7-729-ci-fail-fast.md
     plan_id: PLAN-L7-729-ci-fail-fast
     asset_id: plan:52b3f1f4e75ee41059efba897141a715
-    revision: 3
-    content_digest: sha256:674855a81758bffe20908f6d8e415eac9bbe25cbdc84a811cc8b3203e405def1
+    revision: 4
+    content_digest: sha256:d390683b83026c70b8b47039cd079f883adbbefcc6f93960ab7c6d400c391bd1
   route:
     signal: structural
     mode: refactor
@@ -69,10 +70,10 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-729-ci-fail-fast
-    target_revision: 3
+    target_revision: 4
     phase: forward_merge
-  escape_reason: "Issue #729 PR #732: CI の plan-reference-freshness 赤の是正 (本文の file
-    参照をファイル名単独から repo 相対 path へ正規化、契約内容は不変)。"
+  escape_reason: "Issue #729 PR #732: CI の oracle-test-trace 赤の是正 (未実装 oracle
+    U-CIPOL-028〜039 を CANDIDATE-U-CIPOL-* として宣言し直す、契約内容は不変)。"
 ---
 
 # PLAN-L7-729 (refactor): harness-check の fail-fast 化
@@ -99,7 +100,7 @@ admission_receipt:
    lane 条件参照を拒否、aggregate needs / result guard の正準集合へ `preflight` を追加、result guard の
    download 前置を検査、`SOURCE_REQUIRED_STEPS` の評価対象を preflight + Linux 脚の和へ変更、
    violation reason `invalid_preflight_gate` を追加 (§policy 改訂)。
-3. `tests/github-ci-policy.test.ts`: U-CIPOL-028〜039 を追加し、既存 fixture のうち Linux 脚の
+3. `tests/github-ci-policy.test.ts`: CANDIDATE-U-CIPOL-028〜039 を追加し、既存 fixture のうち Linux 脚の
    軽量 step を前提にしたもの (U-CIPOL-019a の lint mutation、019aa の guard separator、
    022 / 022b / 024 の lane 条件負例) を preflight 対象へ付け替える。
 4. `docs/test-design/harness/L7-unit-test-design.md`: 新節「PLAN-L7-729 preflight fail-fast oracle」。
@@ -220,9 +221,9 @@ route: issue の `bottleneck` は `src/schema/route-map.ts` の token に存在�
 で L7 実装に合わない。check 集合を変えず構造 (job 配置と順序) を組み替える性質から
 `route_signal: structural` → `route_mode: refactor` (`src/schema/route-map.ts` refactor tokens、
 `src/schema/route-filing.ts` refactor: `allowed_kinds: [refactor]`、layer band L7) を採択し、pairing obligation
-「behavior invariant + regression fence + linked test id」を §不変条件 と U-CIPOL-028〜039
+「behavior invariant + regression fence + linked test id」を §不変条件 と CANDIDATE-U-CIPOL-028〜039
 (test-design に freeze する oracle。実装 PR で追加し、本 head では未実装) で満たす。
-behavior invariant の中核は lane 別実行集合の同一性 (D3) であり、その regression fence は U-CIPOL-039。
+behavior invariant の中核は lane 別実行集合の同一性 (D3) であり、その regression fence は CANDIDATE-U-CIPOL-039。
 
 ## 正準 step manifest (改訂後)
 
@@ -299,7 +300,7 @@ lane 別の実行 check 集合 (改訂前 = 改訂後、setup 系 step / classif
 1. preflight が success した run では、上表の lane 別 check 集合が改訂前と同一に実行され、1 つでも失敗
    すれば required aggregate `harness-check` は failure になる。preflight が failure した run では 4 脚は
    起動せず (AC-4)、aggregate は failure になる (preflight の check は改訂前も aggregate を赤にする check
-   なので、green / red の判定は改訂前と一致する)。regression fence = U-CIPOL-039。
+   なので、green / red の判定は改訂前と一致する)。regression fence = CANDIDATE-U-CIPOL-039。
 2. doc lane で skip してよい step の allowlist は不変 (U-CIPOL-021〜026 の既存 regression を実装 PR で
    green に保つ。本 head では未計測)。
 3. aggregate は `if: always()` のまま全 needs の success AND で判定する (PLAN-RECOVERY-15 の意味不変)。
@@ -315,10 +316,10 @@ lane 別の実行 check 集合 (改訂前 = 改訂後、setup 系 step / classif
 
 ## 受入条件
 
-- AC-1: `analyzeGithubCiPolicy` が実 repo の改訂 workflow で `ok=true` (U-CIPOL-028)。
-- AC-2: U-CIPOL-029〜038 の全 mutation が指定 reason で fail-close する (037 = required step の評価対象、
+- AC-1: `analyzeGithubCiPolicy` が実 repo の改訂 workflow で `ok=true` (CANDIDATE-U-CIPOL-028)。
+- AC-2: CANDIDATE-U-CIPOL-029〜038 の全 mutation が指定 reason で fail-close する (037 = required step の評価対象、
   038 = preflight の lane producer)。
-- AC-2b: U-CIPOL-039 (lane 別実行集合が §不変条件 の表と一致) が green。
+- AC-2b: CANDIDATE-U-CIPOL-039 (lane 別実行集合が §不変条件 の表と一致) が green。
 - AC-3: 既存 U-CIPOL-012 / 013〜027 (付け替え分を含む) と `tests/change-lane.test.ts`、
   `tests/windows-ci-single-snapshot.test.ts` が green。
 - AC-4 (Actions 負例): 軽量 check を意図的に赤にした PR run で、`preflight` = failure、4 脚 = skipped
