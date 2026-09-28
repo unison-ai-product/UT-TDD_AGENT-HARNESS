@@ -5328,6 +5328,22 @@
         "revision": 3,
         "content_digest": "sha256:a04428ce7a3ee21fcbaebf6cfce78094795a18d67da5a0f29ddaafc137be9b74"
       }
+    },
+    {
+      "sequence": 334,
+      "previous_record_digest": "sha256:3817728de621ec37cdc2048ecf3afb6c94d5ad40987e64c20631e04eba839553",
+      "record_digest": "sha256:c40806f9adc9ef59c9b3260343d54ae7d7982bb5fc60ac1d1870b9dc21c4fd7a",
+      "command_id": "plan-revise:issue-418:531-canary2-contract:reverse:r3:1e79d9a1dc10",
+      "receipt_id": "certificate:f52133e82a6ecb908662d00be7d472af",
+      "receipt_digest": "sha256:efe030fca5fcaa6699e8c2020a09bdd11c628d445072d7ddf776bff901f4ad9a",
+      "decision_digest": "sha256:3aead190f5cf0b55bd4b864f6ee6eff65f75443e8c6a98fc00bcbc7457be5c8c",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-531-pack-internal-canary-smoke-backfill.md",
+        "plan_id": "PLAN-REVERSE-531-pack-internal-canary-smoke-backfill",
+        "asset_id": "plan:c789d97c71c9a9c07942983de88b71ab",
+        "revision": 3,
+        "content_digest": "sha256:7f79076d1c2a9f09cbacebbce7311555ce112ac54a8fd5c5be76cf90c6128109"
+      }
     }
   ]
 }
