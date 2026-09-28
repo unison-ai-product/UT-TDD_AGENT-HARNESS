@@ -246,7 +246,7 @@ function consumerG8Manifest(evidenceDirectory = "g8-integration"): ConsumerG8Man
       all_mandatory_passed: true,
       failed_mandatory_count: 0,
       stale_defer_count: 0,
-      doctor_check: "g8-integration-workflow",
+      doctor_check: `${evidenceDirectory}-workflow`,
     },
     artifacts: {
       integration_manifest: `.ut-tdd/evidence/${evidenceDirectory}/ok.json`,
@@ -285,10 +285,7 @@ function writeConsumerG8Fixture(
     .replace(/^status: .*$/m, "status: confirmed")
     .replace(/^pair_artifact: .*$/m, "pair_artifact: docs/design/L5-detailed-design/")
     .replace(/^plan: .*$/m, "plan: docs/plans/PLAN-CONSUMER-01.md")
-    .replace(
-      /^\| <記入> \| <記入> \| <記入> \| <記入> \| <記入> \| <記入> \|$/m,
-      rows,
-    );
+    .replace(/^\| <記入> \| <記入> \| <記入> \| <記入> \| <記入> \| <記入> \|$/m, rows);
   writeFixtureDoc(root, "docs/test-design/L8-integration-test-design.md", l8);
 
   writeFixtureDoc(
@@ -308,6 +305,14 @@ function writeConsumerG8Fixture(
     `.ut-tdd/evidence/${evidenceDirectory}/ok.json`,
     `${JSON.stringify(consumerG8Manifest(evidenceDirectory), null, 2)}\n`,
   );
+}
+
+function firstConsumerCommand(
+  manifest: ConsumerG8Manifest,
+): ConsumerG8Manifest["commands"][number] {
+  const command = manifest.commands[0];
+  if (!command) throw new Error("consumer G8 fixture command is missing");
+  return command;
 }
 
 function updateConsumerG8Manifest(
@@ -533,9 +538,9 @@ describe("PR-GR consumer G8 predicates", () => {
       evidenceDirectory: "g8-consumer-override",
       contractOverride: true,
     });
-    expect(
-      readFileSync(join(root, "docs/process/vmodel-contract.yaml"), "utf8"),
-    ).toContain("evidence_manifest: .ut-tdd/evidence/g8-consumer-override/engine-swap.json");
+    expect(readFileSync(join(root, "docs/process/vmodel-contract.yaml"), "utf8")).toContain(
+      "evidence_manifest: .ut-tdd/evidence/g8-consumer-override/engine-swap.json",
+    );
 
     const result = evaluateStaticGate({ gate: "G8", repoRoot: root });
 
@@ -599,10 +604,7 @@ describe("PR-GR consumer G8 predicates", () => {
     const path = join(root, "docs/test-design/L8-integration-test-design.md");
     writeFileSync(
       path,
-      readFileSync(path, "utf8").replace(
-        " | DOC-L5-MODULE / DOC-L5-PHYSICAL-DATA |",
-        " | |",
-      ),
+      readFileSync(path, "utf8").replace(" | DOC-L5-MODULE / DOC-L5-PHYSICAL-DATA |", " | |"),
       "utf8",
     );
 
@@ -616,7 +618,7 @@ describe("PR-GR consumer G8 predicates", () => {
     const root = fixtureRoot();
     writeConsumerG8Fixture(root);
     updateConsumerG8Manifest(root, (manifest) => {
-      manifest.commands[0]!.exit_code = 1;
+      firstConsumerCommand(manifest).exit_code = 1;
     });
 
     const result = evaluateStaticGate({ gate: "G8", repoRoot: root });
@@ -629,7 +631,7 @@ describe("PR-GR consumer G8 predicates", () => {
     const root = fixtureRoot();
     writeConsumerG8Fixture(root);
     updateConsumerG8Manifest(root, (manifest) => {
-      manifest.commands[0]!.output_digest = "sha256:xyz";
+      firstConsumerCommand(manifest).output_digest = "sha256:xyz";
     });
 
     const result = evaluateStaticGate({ gate: "G8", repoRoot: root });
@@ -642,7 +644,7 @@ describe("PR-GR consumer G8 predicates", () => {
     const root = fixtureRoot();
     writeConsumerG8Fixture(root);
     updateConsumerG8Manifest(root, (manifest) => {
-      manifest.commands[0]!.evidence_path = ".external/command-output.txt";
+      firstConsumerCommand(manifest).evidence_path = ".external/command-output.txt";
     });
 
     const result = evaluateStaticGate({ gate: "G8", repoRoot: root });
@@ -671,7 +673,7 @@ describe("PR-GR consumer G8 predicates", () => {
       const missingId = "IT-CONSUMER-06";
       manifest.selected_it_ids = manifest.selected_it_ids.filter((id) => id !== missingId);
       manifest.mandatory_it_ids = manifest.mandatory_it_ids.filter((id) => id !== missingId);
-      manifest.commands[0]!.it_ids = manifest.commands[0]!.it_ids.filter(
+      firstConsumerCommand(manifest).it_ids = firstConsumerCommand(manifest).it_ids.filter(
         (id) => id !== missingId,
       );
       manifest.coverage = manifest.coverage.filter((entry) => entry.it_id !== missingId);
@@ -720,14 +722,14 @@ describe("PR-GR consumer G8 predicates", () => {
         name: "exit code",
         expected: "exit_code is non-zero",
         mutate: (manifest) => {
-          manifest.commands[0]!.exit_code = 1;
+          firstConsumerCommand(manifest).exit_code = 1;
         },
       },
       {
         name: "digest",
         expected: "invalid digest",
         mutate: (manifest) => {
-          manifest.commands[0]!.output_digest = `sha256:${"a".repeat(63)}`;
+          firstConsumerCommand(manifest).output_digest = `sha256:${"a".repeat(63)}`;
         },
       },
       {
