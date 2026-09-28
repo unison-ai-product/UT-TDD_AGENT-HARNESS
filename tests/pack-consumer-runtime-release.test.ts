@@ -1118,7 +1118,7 @@ describe("Pack consumer runtime release installer", () => {
       const shortRoot = execFileSync(
         process.env.ComSpec ?? "cmd.exe",
         ["/d", "/c", `for %I in ("${testCase.consumerRoot}") do @echo %~sI`],
-        { encoding: "utf8" },
+        { encoding: "utf8", windowsVerbatimArguments: true, windowsHide: true },
       ).trim();
       const physicalRoot = realpathSync.native(testCase.consumerRoot);
       if (
