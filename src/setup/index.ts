@@ -45,8 +45,8 @@ import {
   type ConsumerNodeRuntimeBundle,
   type ConsumerNodeRuntimeIdentity,
   type ConsumerNodeRuntimeInstallResult,
-  canonicalJson,
   digestConsumerRuntimeBytes,
+  digestConsumerRuntimeValue,
   installConsumerNodeRuntimeOnFilesystem,
   renderConsumerNodeWrapper,
   validateConsumerNodeRuntimeBundle,
@@ -345,6 +345,32 @@ export async function installConsumerRuntimeRelease(input: {
   });
   if (!aggregate.ok) throw new Error(`consumer_runtime_release_aggregate_${aggregate.error}`);
 
+  let nodeReceipt: ReturnType<typeof parseNodeBootstrapReceiptBytes>;
+  try {
+    nodeReceipt = parseNodeBootstrapReceiptBytes(assets.receiptBytes);
+  } catch {
+    throw new Error("consumer_runtime_node_receipt_invalid");
+  }
+  const operationId = `packrt-${digestConsumerRuntimeBytes(
+    Buffer.from(`${release.tag}\0${generation.generation_id}`, "utf8"),
+  ).slice(7, 31)}`;
+  if (hasActiveConsumerRuntime(runtimeRoot)) {
+    assertSameCommittedConsumerRuntime({
+      consumerRoot,
+      runtimeRoot,
+      productId: release.product_id,
+      materializerVersion: release.materializer_version,
+      releaseId: aggregate.plan.releaseId,
+      sourceRevision: release.source_revision,
+      artifactSetDigest: generation.artifact_digest,
+      generationId: generation.generation_id,
+      subjectRevision: generation.subject_revision,
+      compiledEsmDigest: generation.compiled_esm_digest,
+      operationId,
+    });
+    return { status: "already-installed" };
+  }
+
   const controlManifestBytes = Buffer.from(
     document.admission_input.control_manifest_base64,
     "base64",
@@ -373,15 +399,6 @@ export async function installConsumerRuntimeRelease(input: {
   if (!admissionResult.ok)
     throw new Error(`consumer_runtime_release_admission_${admissionResult.error}`);
 
-  let nodeReceipt: ReturnType<typeof parseNodeBootstrapReceiptBytes>;
-  try {
-    nodeReceipt = parseNodeBootstrapReceiptBytes(assets.receiptBytes);
-  } catch {
-    throw new Error("consumer_runtime_node_receipt_invalid");
-  }
-  const operationId = `packrt-${digestConsumerRuntimeBytes(
-    Buffer.from(`${release.tag}\0${generation.generation_id}`, "utf8"),
-  ).slice(7, 31)}`;
   const identity: ConsumerNodeRuntimeIdentity = {
     product_id: release.product_id,
     consumer_root: consumerRoot,
@@ -390,7 +407,7 @@ export async function installConsumerRuntimeRelease(input: {
     attempt: 1,
     generation_id: generation.generation_id,
     subject_revision: generation.subject_revision,
-    artifact_digest: nodeReceipt.compiled_cli.sha256,
+    artifact_digest: `sha256:${nodeReceipt.compiled_cli.sha256}`,
     node_executable_identity: `node-${nodeReceipt.node.version}|sha256:${nodeReceipt.node.sha256}`,
     package_lock_digest: `sha256:${nodeReceipt.package_lock_sha256}`,
     source_graph_digest: `sha256:${nodeReceipt.source_graph_sha256}`,
@@ -401,19 +418,6 @@ export async function installConsumerRuntimeRelease(input: {
     control_manifest_digest: admissionResult.admission.controlManifestSnapshotDigest,
     sealed_policy: "compiled-esm-only",
   };
-
-  if (hasActiveConsumerRuntime(runtimeRoot)) {
-    assertSameCommittedConsumerRuntime({
-      consumerRoot,
-      runtimeRoot,
-      identity,
-      productId: release.product_id,
-      releaseId: aggregate.plan.releaseId,
-      sourceRevision: release.source_revision,
-      artifactSetDigest: generation.artifact_digest,
-    });
-    return { status: "already-installed" };
-  }
 
   const setup = await runSetupAsync(
     {
@@ -446,11 +450,15 @@ function hasActiveConsumerRuntime(runtimeRoot: string): boolean {
 function assertSameCommittedConsumerRuntime(input: {
   readonly consumerRoot: string;
   readonly runtimeRoot: string;
-  readonly identity: ConsumerNodeRuntimeIdentity;
   readonly productId: string;
+  readonly materializerVersion: string;
   readonly releaseId: string;
   readonly sourceRevision: string;
   readonly artifactSetDigest: string;
+  readonly generationId: string;
+  readonly subjectRevision: string;
+  readonly compiledEsmDigest: string;
+  readonly operationId: string;
 }): void {
   try {
     const pointerPath = join(input.runtimeRoot, "activation", "active.json");
@@ -485,25 +493,46 @@ function assertSameCommittedConsumerRuntime(input: {
     if (
       storedIdentity.release_id !== input.releaseId ||
       storedIdentity.subject_revision !== input.sourceRevision ||
-      storedIdentity.artifact_set_digest !== input.artifactSetDigest
+      storedIdentity.artifact_set_digest !== input.artifactSetDigest ||
+      storedIdentity.generation_id !== input.generationId ||
+      storedIdentity.compiled_esm_digest !== input.compiledEsmDigest
     )
       throw new Error("consumer_runtime_update_unsupported");
 
     const receiptBytes = readFileSync(join(bundlePath, "consumer-receipt.json"));
-    const storedReceipt = JSON.parse(receiptBytes.toString("utf8")) as {
-      consumer?: Record<string, unknown>;
-    };
-    const storedConsumer = storedReceipt.consumer;
+    const storedReceipt = JSON.parse(receiptBytes.toString("utf8")) as Record<string, unknown>;
+    const rawConsumer = storedReceipt.consumer;
+    const storedConsumer =
+      rawConsumer && typeof rawConsumer === "object" && !Array.isArray(rawConsumer)
+        ? (rawConsumer as Record<string, unknown>)
+        : undefined;
     if (
       !storedConsumer ||
       storedConsumer.productId !== input.productId ||
+      storedConsumer.materializerVersion !== input.materializerVersion ||
+      storedConsumer.releaseId !== input.releaseId ||
+      storedConsumer.sourceRevision !== input.sourceRevision ||
+      storedConsumer.artifactSetDigest !== input.artifactSetDigest ||
       !sameCanonicalSetupPath(String(storedConsumer.consumerRoot ?? ""), input.consumerRoot) ||
       !sameCanonicalSetupPath(String(storedConsumer.runtimeRoot ?? ""), input.runtimeRoot)
     )
       throw new Error("consumer_runtime_receipt_mismatch");
-    if (storedIdentity.operation_id !== input.identity.operation_id)
+    if (
+      storedReceipt.identity_digest !== digestConsumerRuntimeValue(storedIdentity) ||
+      storedReceipt.operation_id !== storedIdentity.operation_id ||
+      storedIdentity.product_id !== input.productId ||
+      !sameCanonicalSetupPath(storedIdentity.consumer_root, input.consumerRoot) ||
+      !sameCanonicalSetupPath(storedIdentity.runtime_root, input.runtimeRoot)
+    )
+      throw new Error("consumer_runtime_receipt_mismatch");
+    if (storedIdentity.operation_id !== input.operationId)
       throw new Error("consumer_runtime_update_unsupported");
-    if (canonicalJson(storedIdentity) !== canonicalJson(input.identity))
+    if (
+      storedIdentity.materializer_version !== input.materializerVersion ||
+      storedIdentity.subject_revision !== input.subjectRevision ||
+      storedIdentity.generation_id !== input.generationId ||
+      storedIdentity.compiled_esm_digest !== input.compiledEsmDigest
+    )
       throw new Error("consumer_runtime_identity_mismatch");
 
     for (const [name, expectedDigest] of Object.entries(bundle.files)) {

@@ -611,6 +611,12 @@ function runRuntimeInstaller(
   });
 }
 
+function expectUnboundRepositorySetup(run: ReturnType<typeof runRuntimeInstaller>): void {
+  expect(run.status, `stdout:\n${run.stdout}\nstderr:\n${run.stderr}`).toBe(2);
+  expect(run.stderr).toContain("identity: denied (identity_repository_unbound)");
+  expect(run.stderr).toContain("recovery:");
+}
+
 function fileTreeSnapshot(root: string): string[] {
   const entries: string[] = [];
   const visit = (directory: string) => {
@@ -1033,7 +1039,7 @@ describe("Pack consumer runtime release installer", () => {
         fixture.anchor,
       );
       expect(run.error?.message ?? "", "installer spawn").toBe("");
-      expect(run.status, `stdout:\n${run.stdout}\nstderr:\n${run.stderr}`).toBe(0);
+      expectUnboundRepositorySetup(run);
       expect(
         existsSync(join(testCase.consumerRoot, ".ut-tdd", "runtime", "activation", "active.json")),
       ).toBe(true);
@@ -1177,7 +1183,9 @@ describe("Pack consumer runtime release installer", () => {
       const before = consumerTreeSnapshot(pf5Mismatch.consumerRoot);
       const run = runInstallerIn(fixture, pf5Mismatch.releaseDir, pf5Mismatch.consumerRoot, anchor);
       expect(run.status, run.stderr).not.toBe(0);
-      expect(`${run.stdout}\n${run.stderr}`).toContain("consumer_runtime_release_binding_mismatch");
+      expect(`${run.stdout}\n${run.stderr}`).toContain(
+        "consumer_runtime_schema_invalid:aggregate_digest_mismatch",
+      );
       expect(consumerTreeSnapshot(pf5Mismatch.consumerRoot)).toEqual(before);
     } finally {
       rmSync(pf5Mismatch.root, { recursive: true, force: true });
@@ -1267,7 +1275,8 @@ describe("Pack consumer runtime release installer", () => {
       expect(
         forgedAnchorRun.status,
         `stdout:\n${forgedAnchorRun.stdout}\nstderr:\n${forgedAnchorRun.stderr}`,
-      ).toBe(0);
+      ).toBe(2);
+      expect(forgedAnchorRun.stderr).toContain("identity: denied (identity_repository_unbound)");
     } finally {
       rmSync(coherentForgery.root, { recursive: true, force: true });
     }
@@ -1323,7 +1332,7 @@ describe("Pack consumer runtime release installer", () => {
         process.platform === "win32" ? "junction" : "dir",
       );
       const first = runInstallerIn(fixture, testCase.releaseDir, aliasRoot, fixture.anchor);
-      expect(first.status, `stdout:\n${first.stdout}\nstderr:\n${first.stderr}`).toBe(0);
+      expectUnboundRepositorySetup(first);
 
       const pointer = consumerActivePointer(testCase.consumerRoot);
       const savedReceipt = JSON.parse(
@@ -1369,7 +1378,7 @@ describe("Pack consumer runtime release installer", () => {
         pointerCase.consumerRoot,
         fixture.anchor,
       );
-      expect(installed.status, installed.stderr).toBe(0);
+      expectUnboundRepositorySetup(installed);
       const pointer = consumerActivePointer(pointerCase.consumerRoot);
       const pointerMode = Number(statSync(pointer.path, { bigint: true }).mode & 0o777n);
       const value = JSON.parse(pointer.bytes.toString("utf8")) as { bundle_digest: string };
@@ -1401,7 +1410,7 @@ describe("Pack consumer runtime release installer", () => {
         missingBundle.consumerRoot,
         fixture.anchor,
       );
-      expect(installed.status, installed.stderr).toBe(0);
+      expectUnboundRepositorySetup(installed);
       const pointer = consumerActivePointer(missingBundle.consumerRoot);
       const bundleMode = Number(statSync(pointer.bundlePath, { bigint: true }).mode & 0o777n);
       const payload = join(pointer.bundlePath, "ut-tdd.mjs");
@@ -1433,7 +1442,7 @@ describe("Pack consumer runtime release installer", () => {
         testCase.consumerRoot,
         fixture.anchor,
       );
-      expect(installed.status, installed.stderr).toBe(0);
+      expectUnboundRepositorySetup(installed);
       const before = consumerTreeSnapshot(testCase.consumerRoot);
 
       const nextTag = "v0.2.0-canary.3";
