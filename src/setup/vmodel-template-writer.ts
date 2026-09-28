@@ -1,4 +1,11 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  readFileSync,
+  realpathSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { parseStrictMarkdownTable } from "../disposition/adapters/strict-markdown-table.ts";
 import { resolveAuthoringSourcePath, resolveDesignRoot } from "../shared/design-root.ts";
@@ -58,16 +65,16 @@ export interface VModelTemplateWriteResult {
   readonly skipped: readonly string[];
 }
 
-function strictRows(
-  content: string,
-  subjectId: string,
-  expectedHeaders: readonly string[],
-  expectedRows?: number,
-): readonly Readonly<Record<string, string>>[] {
-  const result = parseStrictMarkdownTable(Buffer.from(content, "utf8"), {
-    subjectId,
-    expectedHeaders,
-    expectedRows,
+function strictRows(input: {
+  readonly content: string;
+  readonly subjectId: string;
+  readonly expectedHeaders: readonly string[];
+  readonly expectedRows?: number;
+}): readonly Readonly<Record<string, string>>[] {
+  const result = parseStrictMarkdownTable(Buffer.from(input.content, "utf8"), {
+    subjectId: input.subjectId,
+    expectedHeaders: input.expectedHeaders,
+    expectedRows: input.expectedRows,
   });
   if (!result.ok)
     throw new Error(`vmodel-template-index-invalid: ${JSON.stringify(result.findings)}`);
@@ -113,13 +120,23 @@ function loadTemplateSources(repoRoot: string): {
   readonly slots: ReadonlyMap<string, TemplateSource>;
   readonly optional: ReadonlyMap<string, TemplateSource>;
 } {
-  const slotRows = strictRows(readPortIndex(repoRoot), PORT_INDEX_PATH, SLOT_HEADERS, 21);
-  const optionalRows = strictRows(readPortIndex(repoRoot), PORT_INDEX_PATH, OPTIONAL_HEADERS, 27);
-  const documentRows = strictRows(
-    readDocumentCatalog(repoRoot),
-    DOCUMENT_CATALOG_PATH,
-    DOCUMENT_CATALOG_HEADERS,
-  );
+  const slotRows = strictRows({
+    content: readPortIndex(repoRoot),
+    subjectId: PORT_INDEX_PATH,
+    expectedHeaders: SLOT_HEADERS,
+    expectedRows: 21,
+  });
+  const optionalRows = strictRows({
+    content: readPortIndex(repoRoot),
+    subjectId: PORT_INDEX_PATH,
+    expectedHeaders: OPTIONAL_HEADERS,
+    expectedRows: 27,
+  });
+  const documentRows = strictRows({
+    content: readDocumentCatalog(repoRoot),
+    subjectId: DOCUMENT_CATALOG_PATH,
+    expectedHeaders: DOCUMENT_CATALOG_HEADERS,
+  });
   const documentPaths = new Map<string, string>();
   for (const row of documentRows) {
     const id = row.doc_type_id;
@@ -183,10 +200,48 @@ function insideRoot(repoRoot: string, relativePath: string): string {
   return target;
 }
 
+function assertPhysicalDestination(realRoot: string, target: string, relativePath: string): void {
+  let current = target;
+  while (true) {
+    let entry: ReturnType<typeof lstatSync>;
+    try {
+      entry = lstatSync(current);
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      if (code !== "ENOENT" && code !== "ENOTDIR") throw error;
+      const parent = dirname(current);
+      if (parent === current) throw error;
+      current = parent;
+      continue;
+    }
+
+    if (current === target && entry.isSymbolicLink()) {
+      throw new Error(`template destination outside consumer root ${relativePath}`);
+    }
+
+    let physicalAncestor: string;
+    try {
+      physicalAncestor = realpathSync.native(current);
+    } catch {
+      throw new Error(`template destination outside consumer root ${relativePath}`);
+    }
+    const physicalRelative = relative(realRoot, physicalAncestor);
+    if (
+      physicalRelative === ".." ||
+      physicalRelative.startsWith(`..${sep}`) ||
+      isAbsolute(physicalRelative)
+    ) {
+      throw new Error(`template destination outside consumer root ${relativePath}`);
+    }
+    return;
+  }
+}
+
 export function writeVModelTemplates(
   options: VModelTemplateWriteOptions,
 ): VModelTemplateWriteResult {
   const repoRoot = resolve(options.repoRoot ?? process.cwd());
+  const realRoot = realpathSync.native(repoRoot);
   const slots = options.slot ?? [];
   const optionalIds = options.optional ?? [];
   if (!options.required && slots.length === 0 && optionalIds.length === 0) {
@@ -218,10 +273,15 @@ export function writeVModelTemplates(
     }
   }
 
+  const destinations = [...unique.values()].map((item) => {
+    const target = insideRoot(repoRoot, item.path);
+    assertPhysicalDestination(realRoot, target, item.path);
+    return { item, target };
+  });
+
   const written: string[] = [];
   const skipped: string[] = [];
-  for (const item of unique.values()) {
-    const target = insideRoot(repoRoot, item.path);
+  for (const { item, target } of destinations) {
     if (existsSync(target)) {
       skipped.push(item.path);
       continue;
