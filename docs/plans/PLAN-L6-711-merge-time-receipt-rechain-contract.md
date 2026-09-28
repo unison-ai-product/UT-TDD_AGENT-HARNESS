@@ -44,18 +44,18 @@ sub_doc: function-spec
 github_issue_id: 711
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:8ed36d90b04fb94daefff23bb08f1699
-  command_id: plan-revise:issue-711:s1-input-shape:plan:r2:3b7492e78179
-  admitted_at: 2026-09-28T06:53:21.234Z
-  source_digest: sha256:cdf87ef97ce05404f8da007dbf460066f4713afaad311d6138b46ad922185f7c
-  decision_digest: sha256:8d5f069ebb000de6049914d403686c54b2e360792686765a7e11b26036dd0e19
-  receipt_digest: sha256:739a3b2b483ccf55788bf9bb3b02c28d368f8f6b3f003dd79f7b10bbf9b0a074
+  receipt_id: certificate:e64cbb4fce9218db1ba253f7853e1f50
+  command_id: plan-revise:issue-711:s1-input-shape:plan:r2:299d2f8bcfd2
+  admitted_at: 2026-09-28T07:13:01.026Z
+  source_digest: sha256:6ec8bac1ec6a35fe064177df53e27b585f893cc079fcaeb6d524d3f6976d659d
+  decision_digest: sha256:213bd419852b2bf14d057521b8fcb58cf156aaf260078fd0fb5edfa4c716a77b
+  receipt_digest: sha256:c90e34c0fa77c82785d047b1dcb73c9f5242d9f92ba91744dc7e1cda6ac7e3e1
   binding:
     path: docs/plans/PLAN-L6-711-merge-time-receipt-rechain-contract.md
     plan_id: PLAN-L6-711-merge-time-receipt-rechain-contract
     asset_id: plan:ac2c23d3c72fc6e2886491ac1df09452
     revision: 2
-    content_digest: sha256:cdf87ef97ce05404f8da007dbf460066f4713afaad311d6138b46ad922185f7c
+    content_digest: sha256:6ec8bac1ec6a35fe064177df53e27b585f893cc079fcaeb6d524d3f6976d659d
   route:
     signal: feature_addition
     mode: add-feature
@@ -72,7 +72,9 @@ admission_receipt:
     target_plan_id: PLAN-L6-711-merge-time-receipt-rechain-contract
     target_revision: 2
     phase: forward_merge
-  escape_reason: "S2 の実装者からの実装前確認 (issue #711) に応え、検証器の入力形と Git 取得の境界を §2.6 に freeze する (S1)。"
+  escape_reason: "S2 の実装前確認 (issue #711) に応え、検証器の入力形と Git 取得の境界を §2.6 に freeze する
+    (S1)。非著者 review (Sol r1、PR #720) の FLAG 2 件 (base の定義、verifierDigest の
+    preimage) を反映し、#719 merge 後の main tail に chain する。"
 ---
 
 # PLAN-L6-711: merge 時の自動 re-chain と簿記差分での再検免除の契約 freeze
@@ -135,7 +137,7 @@ advisor の反論のうち、次は契約へ取り込んだ。
 ### 2.2 PLAN 差分の再適用規則
 
 PLAN ファイルの本文と frontmatter から `admission_receipt` ブロックを除いたものを `strip(·)` と書く。
-`mb` = merge-base(`H`, origin/main の旧 tip)、`M` = 現在の origin/main とする。
+`M` = 現在の origin/main、`mb` = `merge-base(H, M)` とする (rev 3 で訂正。git の merge 自体が使う base と同じであり、§2.6 の `base` と一致する)。
 
 1. **append-only 領域**は 2 つだけとする。
    - frontmatter `generates` の要素列。
@@ -224,8 +226,9 @@ type RechainVerdict = { ok: true; verifierDigest: string } | { ok: false; reason
 ```
 
 1. **commit**: `H` は PR の review 済み exact head、`X` は merge commit、`R` は re-chain commit、`M` は取り込んだ origin/main の tip、
-   `base` は `merge-base(H, M)`。§2.2 の `mb` (`H` と旧 main tip の merge-base) は、旧 tip が `M` の祖先である限り `base` と一致する。
-   一致しない (main が force 更新された) 場合、adapter は取得を中止する。
+   `base` は `merge-base(H, M)` (§2.2 の `mb` と同じ)。旧 main tip は使わない (rev 3)。stack した PR で、`H` が含む別 PR の commit `C` が
+   待機中に `M` へ入った場合、`base` は `C` へ前進する。この `base` を使えば、`C` の変更は main 由来として扱われ、PR 自身の追加には数えない。
+   git の 3-way merge (`X` の生成) も同じ `base` を使うので、検証器の期待値と `X` の生成規則が一致する。
 2. **tree**: 5 つの commit それぞれの全 blob を path → oid で渡す。§2.3-1 の 3-way は **path 単位**で決める。
    `H[p] = base[p]` なら `M[p]`、`M[p] = base[p]` なら `H[p]`、`H[p] = M[p]` ならその値。それ以外 (両側が別々に変えた path) は、
    簿記 path (receipt と PR が改訂した PLAN) を除き、検証器の対象外として `fail` を返す (通常の再検へ戻す)。
@@ -234,8 +237,12 @@ type RechainVerdict = { ok: true; verifierDigest: string } | { ok: false; reason
    `M` の全 `docs/plans/*.md` の内容。それ以外の blob は oid だけで比較し、内容は渡さない。
 4. **admission**: `A_H` は adapter が `H` の PLAN frontmatter と PR の head branch などから組む候補であり、検証器は §2.3-6 のとおり
    `digest(A_H)` と `H` の tracked `decision_digest` を照合してから使う。照合できない候補は `fail`。
-5. **出力**: `ok: true` のとき、`verifierDigest` は入力全体の canonical digest とする。§2.4 の merge intent receipt の
-   `rechain.verifier_digest` はこの値を記録する。
+5. **出力**: `ok: true` のとき、`verifierDigest` は次の値とする (rev 3 で固定)。
+   `"sha256:" + sha("ut-tdd.rechain-verifier.v1
+" + stableJson(input))`
+   `sha` と `stableJson` は `src/plan-admission/plan-revision-command-assembler.ts` の既存関数である。`stableJson` は object の key を
+   UTF-8 bytes 順に整列し、`undefined` を落とす。`sha` は UTF-8 文字列の SHA-256 を小文字 hex で返す。先頭行 `ut-tdd.rechain-verifier.v1` は
+   domain separator 兼 schema version であり、入力形を変えるときは版を上げる。§2.4 の merge intent receipt の `rechain.verifier_digest` はこの値を記録する。
 6. **信頼境界**: adapter は harness 自身のコードであり、Git の plumbing (`rev-parse` / `ls-tree -r` / `cat-file`) だけを使う。
    検証器は adapter の出力を信用するが、adapter の出力が実 Git object と一致することを別の oracle (U-RECHAIN-013) で固定する。
 7. **008 の境界**: git の 3-way merge 自体が衝突した場合は、wrapper が検証器を呼ぶ前に `rechain_conflict` で止める (U-RECHAIN-008、S3)。
@@ -269,8 +276,10 @@ pair は `docs/test-design/harness/L7-unit-test-design.md` に、実装 PR で `
 | CANDIDATE-U-RECHAIN-010 | `H` の PASS が same-family / blocking>0 / 別 head のもの → 引き継がない | (m) 引き継ぎ条件から族検査を外す |
 | CANDIDATE-U-RECHAIN-011 | 待機中に `M` が、PR の追加 `artifact_path` を新規作成、または別 PLAN の `generates` に宣言 → `fail` (理由: 再所有) | (m) §2.3-5 を省く → 再所有したまま pass して失敗 |
 | CANDIDATE-U-RECHAIN-012 | `R` の admission で `PlanAdmissionRequest` のフィールド (`routeMode`・`kind`・`layer`・`workflowPhase`・`routeSignal`・`drive`・`branch`・`status`・`subDoc`・`issue`・`origin`・`transitionDirection`・`implementationDisposition`・`reentry.targetPlanId`・`reentry.phase`・`implementationTarget`・`escapeReason`・`supersedes`) を 1 つずつ改変し、各場合で全 digest (decision_digest を含む) を正しく再計算 → フィールドごとに全て `fail`。`digest(A_H)` が H の tracked `decision_digest` と一致しない候補 `A_H` → `fail`。許容項目だけの変化 (base 束縛、command_id suffix、時刻、`reentry.targetRevision`、再導出 digest) → `pass` | (m1) record 内 digest を信用して再計算しない → 改変が pass して失敗。(m2) 許容項目の列挙に任意の 1 フィールド (例: `branch`) を足す → そのフィールドの改変が pass して失敗。(m3) `A_H` と H の `decision_digest` の照合を省く → 改変した候補が pass して失敗 |
-| CANDIDATE-U-RECHAIN-013 | adapter `readRechainSnapshot` の出力 (commit の parents / tree、5 つの TreeMap、blob の範囲、`base`) が、実 Git object に対する `rev-parse` / `ls-tree -r` / `cat-file` の結果と完全一致する。`base` が旧 main tip 由来の merge-base と一致しない fixture では取得を中止する | (m) blob の範囲に非簿記 path を混ぜる、または TreeMap から 1 path を落とす → 一致検査で失敗 |
+| CANDIDATE-U-RECHAIN-013 | adapter `readRechainSnapshot` の出力 (commit の parents / tree、5 つの TreeMap、blob の範囲、`base`) が、実 Git object に対する `rev-parse` / `ls-tree -r` / `cat-file` の結果と完全一致する。`base` は実 Git の `merge-base(H, M)` と一致する | (m) blob の範囲に非簿記 path を混ぜる、または TreeMap から 1 path を落とす → 一致検査で失敗 |
 | CANDIDATE-U-RECHAIN-014 | 非簿記 path を `H` と `M` の両側が別々に変え、git の内容 merge は成立する fixture → 検証器は `fail` (理由: 両側変更)。簿記 path の両側変更は §2.2 の規則で判定する | (m) path 単位 3-way の「両側変更は対象外」を外し、`X[p]` をそのまま期待値にする → `pass` して失敗 |
+| CANDIDATE-U-RECHAIN-015 | stack した PR: `H` が含む別 PR の commit `C` が待機中に `M` へ入った fixture (`base` = `C`)。PR 自身の append-only 追加だけが再適用され、`C` の変更は main 由来として扱われて `pass` | (m) `C` より前の旧 base を使う → `C` の変更が PR の追加に数えられて失敗 |
+| CANDIDATE-U-RECHAIN-016 | 同じ `RechainInput` を key の挿入順だけ変えて 2 通り組むと、`verifierDigest` が完全一致する。domain separator の版を変えると値が変わる | (m) `stableJson` の代わりに `JSON.stringify` を使う → 挿入順で値が変わって失敗 |
 
 ## 5. 実測の根拠コマンド
 
@@ -287,7 +296,7 @@ git show --stat b8bdf6d8
 | --- | --- | --- | --- |
 | S0 | control lane の checkout から、他 PR の branch に対して headless に `plan revise` を実行する PoC (ledger custody) | serial | 成否と手順を本 PLAN の §8 に記録する。失敗なら §2.1 を改訂する |
 | S1 | 本 PLAN の pair-freeze (docs のみ、非著者 Codex Sol の review) | serial (S0 の後) | PASS receipt と CI green の後に confirm する |
-| S2 | `verifyRechainDelta` (pure function 1 module、§2.6 の入力形) と U-RECHAIN-001..007、011、012、014 | serial (S1 の後) | oracle が green、非著者 review が PASS |
+| S2 | `verifyRechainDelta` (pure function 1 module、§2.6 の入力形) と U-RECHAIN-001..007、011、012、014..016 | serial (S1 の後) | oracle が green、非著者 review が PASS |
 | S3 | adapter `readRechainSnapshot` と `ut-tdd pr merge` への配線、U-RECHAIN-008..010、013、CLAUDE.md の例外文言 | serial (S2 の後) | 実 PR 1 本で自動 re-chain による merge を実証する |
 
 ## 7. 非 Scope
@@ -303,3 +312,4 @@ git show --stat b8bdf6d8
 5. rev 5 (re-chain 後の receipt revision 2): Codex root の追加実測 (PR #713 コメント、実 Git object `5854787b` で `9ba54b41..5854787b` が 3 本) を反映した。§2.3-4 を件数判定から親の直接束縛 (`R^1 = X`、`X^1 = H`、`X^2 = M`、`--first-parent` 2 本) に訂正し、U-RECHAIN-006 を `M` 側複数 commit の正系と PR 側余分 commit の負系に分けた。
 6. rev 6: PR #713 の非著者 review (Codex Sol r3) の FLAG 1 件を反映した。`workflow_phase` は `receiptFrontmatter` に投影されないため、§2.3-6 の投影照合の例から外した。投影フィールドは renderer の出力に合わせて全て列挙し、非投影入力は `decision_digest` 束縛だけで検証することを明記した。PR #713 は是正上限 (3 回) に達したので close し、本 revision を新しい PR で再提出した (CLAUDE.md §FLAG 後の限定是正と merge 2(c))。
 7. rev 2 (S1): 検証器の入力形と Git 取得の境界を §2.6 に freeze した (S2 の実装者 Codex root からの、実装前の確認依頼による。issue #711)。path 単位の 3-way、blob の範囲、`A_H` の照合、`verifierDigest`、adapter の信頼境界、oracle 008 と検証器の分担を定め、U-RECHAIN-013 (adapter の忠実性) と 014 (両側変更の非簿記 path) を追加した。
+8. rev 3 (S1 の是正): PR #720 の非著者 review (Codex Sol r1) の FLAG 2 件を反映した。(1) 旧 main tip 由来の base は stack した PR で `merge-base(H, M)` と一致しない反例があるため、§2.2 と §2.6 の base を `merge-base(H, M)` (git merge 自体の base) に統一し、旧 tip を使わないことにした。U-RECHAIN-015 を追加した。(2) `verifierDigest` の preimage、hash、domain separator (版付き) を既存の `stableJson` / `sha` を名指しして固定し、U-RECHAIN-016 を追加した。

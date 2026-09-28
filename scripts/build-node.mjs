@@ -23,6 +23,14 @@ const skillAliases = Object.fromEntries(
     resolve(root, path),
   ]),
 );
+const gateAssetPaths = [
+  "docs/governance/gate-design.md",
+  "docs/process/gates.md",
+  "docs/process/vmodel-contract.yaml",
+];
+const gateAliases = Object.fromEntries(
+  gateAssetPaths.map((path) => [`ut-tdd-gate-assets/${path}`, resolve(root, path)]),
+);
 await mkdir(dirname(output), { recursive: true });
 const temporary = `${output}.staging-${process.pid}`;
 try {
@@ -35,7 +43,7 @@ try {
     format: "esm",
     target: "node24",
     loader: { ".md": "text", ".yaml": "text", ".yml": "text" },
-    alias: skillAliases,
+    alias: { ...skillAliases, ...gateAliases },
     define: { __UT_TDD_BUNDLED__: "true" },
     // commander is CommonJS and uses a dynamic builtin require. Provide the
     // Node ESM bridge so the sealed output is executable by the Node authority.
