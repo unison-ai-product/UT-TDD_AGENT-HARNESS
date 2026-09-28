@@ -41,9 +41,9 @@ github_issue_id: 676
 
 | ID | oracle | 違反 / mutation |
 | --- | --- | --- |
-| CANDIDATE-U-RCDEV-011 | resolver: `docs/design/harness/` が在る root では `docs/design/harness`、無い root では `docs/design` (test-design も同規則)。catalog の `authoring_source_path` `docs/design/harness/L6/x.md` が consumer では `docs/design/L6/x.md` へ写像される | (m1) resolver を固定値に戻す → consumer 側 assert 失敗。(m2) 優先順を逆にする → harness 側 assert 失敗 |
-| CANDIDATE-U-RCDEV-012 | 置き場所不在の fixture で `gate G1..G7` と `vmodel lint` が ENOENT 例外を出さず、typed な「未作成」を返す (判定の pass/fail 自体は assert しない = gate 対応は非 scope) | (m) 存在確認を外す → ENOENT で失敗 |
-| CANDIDATE-U-RCDEV-013 | `docs/plans` 不在の fixture で `plan lint` が crash せず 0 件を報告する。`docs/plans` 在りでは現行と同じ結果 | (m) `readdirSync` 前の存在確認を外す → ENOENT |
+| U-RCDEV-011 | resolver: `docs/design/harness/` が在る root では `docs/design/harness`、無い root では `docs/design` (test-design も同規則)。catalog の `authoring_source_path` `docs/design/harness/L6/x.md` が consumer では `docs/design/L6/x.md` へ写像される | (m1) resolver を固定値に戻す → consumer 側 assert 失敗。(m2) 優先順を逆にする → harness 側 assert 失敗 |
+| U-RCDEV-012 | 置き場所不在の fixture で `gate G1..G7` と `vmodel lint` が ENOENT 例外を出さず、typed な「未作成」を返す (判定の pass/fail 自体は assert しない = gate 対応は非 scope) | (m) 存在確認を外す → ENOENT で失敗 |
+| U-RCDEV-013 | `docs/plans` 不在の fixture で `plan lint` が crash せず 0 件を報告する。`docs/plans` 在りでは現行と同じ結果 | (m) `readdirSync` 前の存在確認を外す → ENOENT |
 
 ## PR-2c テンプレート書き出し
 

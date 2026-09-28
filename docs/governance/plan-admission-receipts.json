@@ -5140,17 +5140,33 @@
     {
       "sequence": 322,
       "previous_record_digest": "sha256:cdc9520630a352811a245a11d002cf6e82cb1e71979cef79ebd20e7545445317",
-      "record_digest": "sha256:c11732d804043da86456a8b46a8618636b1e36ef6ee71b4595a4c25bb1606186",
-      "command_id": "plan-revise:issue-676:pr1:identity-root:rechain-after-703:v4:b66ba020",
-      "receipt_id": "certificate:c36ad364d82767c00a3bf5b5843dbdb8",
-      "receipt_digest": "sha256:f2fee2ca02b497d5426e185a2a7dfe41c81944b0e0fdc806a1e0c48c5033517a",
-      "decision_digest": "sha256:e4a13552e39b06bba55be3a2d28bb180ee9477a28a2c1d4295c94d71d8a44fb1",
+      "record_digest": "sha256:1e814135137942149631f83df65f1838e322686549ec2f254133bd9fe7fd3441",
+      "command_id": "plan-revise:issue-676:prt2-generates:plan:r9:af6e9a20f6a1",
+      "receipt_id": "certificate:a8b53b5b57f14f17df1de00ad164e613",
+      "receipt_digest": "sha256:fa887ab15cf6998078f2288de7d226b976fd2e13a945c7aab9c1e73e152cada9",
+      "decision_digest": "sha256:20c77a616c50cdcd730ef00d2c49b113f7e595031453dd4604f700d738da3164",
       "binding": {
         "path": "docs/plans/PLAN-L7-676-release-consumer-dev-start.md",
         "plan_id": "PLAN-L7-676-release-consumer-dev-start",
         "asset_id": "plan:aae8bf0e313f8688fbad4d4d8cf0a6a9",
         "revision": 9,
-        "content_digest": "sha256:73dc1f645e164b5d018e9ae2725c82c780ffded57238a3bf9324da5a53a58f2b"
+        "content_digest": "sha256:a06505ae365cec9f35906eaf8f1381d9d9968aef0350d0882ba061be11661894"
+      }
+    },
+    {
+      "sequence": 323,
+      "previous_record_digest": "sha256:1e814135137942149631f83df65f1838e322686549ec2f254133bd9fe7fd3441",
+      "record_digest": "sha256:64886d1e80a6da6e7934bde3ef17335b84dede9f7c8d0ffb139ebbc7aa5117ee",
+      "command_id": "plan-revise:issue-676:codex-pr2b:rechain-after-706:plan:r10",
+      "receipt_id": "certificate:1ae6e36440f9e9ecde293866b12d3d1b",
+      "receipt_digest": "sha256:574bee0c822486f4bbf55f665c5162298c320e7550b71f3f1d4c09bb2dd2563b",
+      "decision_digest": "sha256:6b8d87d886fdfee2a07d2665e9aacdbc6b23363b8be9d7da4dc9537b1c515efb",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-676-release-consumer-dev-start.md",
+        "plan_id": "PLAN-L7-676-release-consumer-dev-start",
+        "asset_id": "plan:aae8bf0e313f8688fbad4d4d8cf0a6a9",
+        "revision": 10,
+        "content_digest": "sha256:5bb9b8eb93d461d97fae17c8f23f353e43329086410932fdb4b29abb6d60bd08"
       }
     }
   ]

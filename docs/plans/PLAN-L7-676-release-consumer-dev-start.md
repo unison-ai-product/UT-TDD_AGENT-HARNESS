@@ -29,10 +29,6 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-676-release-consumer-dev-start.md
     artifact_type: markdown_doc
-  - artifact_path: src/cli.ts
-    artifact_type: source_module
-  - artifact_path: tests/release-consumer-dev-start-identity.test.ts
-    artifact_type: test_code
   - artifact_path: docs/templates/vmodel/L0-charter.md
     artifact_type: markdown_doc
   - artifact_path: docs/templates/vmodel/L1-requirements.md
@@ -77,6 +73,64 @@ generates:
     artifact_type: markdown_doc
   - artifact_path: docs/templates/vmodel/README.md
     artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/012-test-plan.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/013-migration-plan.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/014-issue-risk-decision-log.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/015-development-standards.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/016-batch-design.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/017-design-index-definitions.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/019-workflow-definition.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/020-metrics-kpi-design.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/025-network-design.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/026-server-infrastructure-design.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/030-glossary-data-dictionary.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/033-traceability-id-conventions.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/035-reliability-dr-bcp-design.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/036-privacy-design.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/038-ci-cd-pipeline-design.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/044-deliverable-index-map.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/045-directory-structure-design.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/046-seo-public-page-design.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/047-support-escalation-design.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/048-user-documentation-design.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/049-ai-output-verification-design.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/050-stop-resume-execution-log-design.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/052-documentation-policy-tailoring.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/053-poc-verification-design.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/096-design-principles-seven-pillars.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/108-refactoring-design.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/109-qa-quality-checklist.md
+    artifact_type: markdown_doc
+  - artifact_path: src/shared/design-root.ts
+    artifact_type: source_module
+  - artifact_path: tests/design-root.test.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L6-101-pack-independent-multi-consumer-acceptance.md
   requires:
@@ -135,18 +189,18 @@ status: confirmed
 github_issue_id: 676
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:c36ad364d82767c00a3bf5b5843dbdb8
-  command_id: plan-revise:issue-676:pr1:identity-root:rechain-after-703:v4:b66ba020
-  admitted_at: 2026-09-25T12:30:00+09:00
-  source_digest: sha256:73dc1f645e164b5d018e9ae2725c82c780ffded57238a3bf9324da5a53a58f2b
-  decision_digest: sha256:e4a13552e39b06bba55be3a2d28bb180ee9477a28a2c1d4295c94d71d8a44fb1
-  receipt_digest: sha256:f2fee2ca02b497d5426e185a2a7dfe41c81944b0e0fdc806a1e0c48c5033517a
+  receipt_id: certificate:1ae6e36440f9e9ecde293866b12d3d1b
+  command_id: plan-revise:issue-676:codex-pr2b:rechain-after-706:plan:r10
+  admitted_at: 2026-09-28T01:14:16.672Z
+  source_digest: sha256:5bb9b8eb93d461d97fae17c8f23f353e43329086410932fdb4b29abb6d60bd08
+  decision_digest: sha256:6b8d87d886fdfee2a07d2665e9aacdbc6b23363b8be9d7da4dc9537b1c515efb
+  receipt_digest: sha256:574bee0c822486f4bbf55f665c5162298c320e7550b71f3f1d4c09bb2dd2563b
   binding:
     path: docs/plans/PLAN-L7-676-release-consumer-dev-start.md
     plan_id: PLAN-L7-676-release-consumer-dev-start
     asset_id: plan:aae8bf0e313f8688fbad4d4d8cf0a6a9
-    revision: 9
-    content_digest: sha256:73dc1f645e164b5d018e9ae2725c82c780ffded57238a3bf9324da5a53a58f2b
+    revision: 10
+    content_digest: sha256:5bb9b8eb93d461d97fae17c8f23f353e43329086410932fdb4b29abb6d60bd08
   route:
     signal: feature_addition
     mode: add-feature
@@ -164,11 +218,10 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-676-release-consumer-dev-start
-    target_revision: 8
+    target_revision: 9
     phase: forward_merge
-  escape_reason: "PR #686 の新規成果物 src/cli.ts と
-    tests/release-consumer-dev-start-identity.test.ts を confirmed PLAN の
-    generates に宣言し、PR-T1 後の origin/main receipt tail へ re-chain する。"
+  escape_reason: "PR #685 を origin/main seq 322 の後へ re-chain し、PR-2b の新規成果物 2 件を
+    confirmed PLAN の generates に宣言するため。"
 ---
 
 # PLAN-L7-676: Release consumer で開発を開始できる状態にする
@@ -628,4 +681,5 @@ injection path の乗っ取り、harness 自身の挙動変化、部分 setup �
 5. confirm の実施 (rev 6): rev 5 の exact head `8be63ed4` の CI green (run 36104559954、2026-09-25T07:06:45Z) の後に、Codex Sol の bounded 再検が PASS (receipt `b4ef3e27…`、2026-09-25T07:08:57Z) を返した。その receipt を `review_evidence` に記録し、`status: confirmed` とした。
 6. §3.5.3 の source 例外 (rev 7): PR-T1 (#703) の非著者 review (Codex Sol r1) が、L11 / L13 のテンプレートの source (ZIP-DOC-028 / 011 / 021) の disposition target が当該 slot を指さないと FLAG した。原因は、§3.5.3 の規則本文 (process 文書を指す本は optional) と構成元表 (028 を L11、011 と 021 を L13 の source とする) の矛盾である。advisor (claude-fable-5、design) の推奨に従い、構成元表を正として規則本文に閉じた例外句 (3 本) を加え、test-design の CANDIDATE-U-RCDEV-020 を同じ例外に揃えた。disposition catalog は変更しない。
 7. PR-T1 の成果物宣言 (rev 8): PR-T1 (#703) は rev 7 の merge (#704) 後に main を取り込み、自 PR が新規に landing させる `docs/templates/vmodel/` の 22 本 (required 21 slot のテンプレートと port index の README) だけを `generates` に追加した。既存ファイルと他 PR の成果物は載せていない。契約本文と `review_evidence` は rev 7 から変えていない。
-8. PR-1 (identity / repo-root): PR #686 の新規成果物 `src/cli.ts` と `tests/release-consumer-dev-start-identity.test.ts` を confirmed PLAN の generates に追加し、PR-T1 後の origin/main receipt tail へ re-chain する。
+8. PR-T2 の成果物宣言 (rev 9): PR-T2 は PR-T1 の merge (#703) 後に main を取り込み、自 PR が新規に landing させる `docs/templates/vmodel/optional/` の 27 本だけを `generates` に追加した。既存ファイル (port index の README と L5 テンプレート) の更新は PR-T1 の宣言に含まれる。管理 yaml の図・trace 俯瞰・粒度情報のうち、§3.5.4 で対応が明示されていないものは #705 に分離した。契約本文と `review_evidence` は rev 8 から変えていない。
+9. PR-2b の成果物宣言: main 前進後の re-chain で、移動後の resolver とその unit test の2件を `generates` に追加する。既存ファイルの変更は宣言しない。
