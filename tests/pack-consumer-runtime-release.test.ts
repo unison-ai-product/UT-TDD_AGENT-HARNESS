@@ -1024,7 +1024,7 @@ describe("Pack consumer runtime release installer", () => {
     if (fixture) rmSync(fixture.root, { recursive: true, force: true });
   });
 
-  it("CANDIDATE-U-PACKRT-005: installs from Release assets in a git-init-only consumer and runs offline", () => {
+  it("U-PACKRT-005: installs from Release assets in a git-init-only consumer and runs offline", () => {
     expect(typeof Reflect.get(setupApi, "installConsumerRuntimeRelease")).toBe("function");
     expect(readdirSync(fixture.releaseDir).sort()).toEqual(
       Object.values(releaseArtifactFileNames(fixture.tag)).sort(),
@@ -1069,7 +1069,7 @@ describe("Pack consumer runtime release installer", () => {
     }
   });
 
-  it("CANDIDATE-U-PACKRT-006: denies corrupted assets and non-exact two-line checksum records", () => {
+  it("U-PACKRT-006: denies corrupted assets and non-exact two-line checksum records", () => {
     const names = releaseArtifactFileNames(fixture.tag);
     const checksumMutations = [
       "missing runtime line",
@@ -1129,7 +1129,7 @@ describe("Pack consumer runtime release installer", () => {
     }
   });
 
-  it("CANDIDATE-U-PACKRT-007: verifies executed-module digest, PF-5 binding, and external anchor", () => {
+  it("U-PACKRT-007: verifies executed-module digest, PF-5 binding, and external anchor", () => {
     const selfMismatch = copyInstallerCase(fixture);
     try {
       const names = releaseArtifactFileNames(fixture.tag);
@@ -1281,6 +1281,58 @@ describe("Pack consumer runtime release installer", () => {
       rmSync(coherentForgery.root, { recursive: true, force: true });
     }
 
+    const anchorMutant = copyInstallerCase(fixture);
+    try {
+      const originalDigest = hashHex(fixture.compiledBytes);
+      const compiledText = fixture.compiledBytes.toString("utf8");
+      const anchorGuard =
+        /if\s*\(\s*`sha256:\$\{digestHex\w*\(checksumBytes\)\}`\s*!==\s*input\.expectedConsumerDigest\s*\)/g;
+      expect([...compiledText.matchAll(anchorGuard)]).toHaveLength(1);
+      const mutantModule = Buffer.from(compiledText.replace(anchorGuard, "if (false)"));
+      const unsignedReceipt = JSON.parse(
+        Buffer.from(fixture.runtime.generation.node_bootstrap_receipt_base64, "base64").toString(
+          "utf8",
+        ),
+      ) as Record<string, unknown>;
+      delete unsignedReceipt.receipt_digest;
+      const priorCompiled = unsignedReceipt.compiled_cli as Record<string, unknown>;
+      const mutantReceipt = sealReceipt({
+        ...unsignedReceipt,
+        compiled_cli: { ...priorCompiled, sha256: hashHex(mutantModule) },
+      });
+      writeRuntimeInstallerAssets({
+        releaseDir: anchorMutant.releaseDir,
+        tag: fixture.tag,
+        compiledBytes: mutantModule,
+        runtime: {
+          ...fixture.runtime,
+          generation: {
+            ...fixture.runtime.generation,
+            compiled_esm_digest: `sha256:${hashHex(mutantModule)}`,
+            node_bootstrap_receipt_base64: mutantReceipt.toString("base64"),
+          },
+        },
+      });
+      const bypass = runInstallerIn(
+        fixture,
+        anchorMutant.releaseDir,
+        anchorMutant.consumerRoot,
+        fixture.anchor,
+      );
+      expectUnboundRepositorySetup(bypass);
+      expect(
+        existsSync(join(anchorMutant.consumerRoot, ".ut-tdd/runtime/activation/active.json")),
+      ).toBe(true);
+      expect(hashHex(fixture.compiledBytes)).toBe(originalDigest);
+      expect(
+        hashHex(
+          readFileSync(join(fixture.releaseDir, releaseArtifactFileNames(fixture.tag).compiledEsm)),
+        ),
+      ).toBe(originalDigest);
+    } finally {
+      rmSync(anchorMutant.root, { recursive: true, force: true });
+    }
+
     for (const anchor of [undefined, "sha256:ABCDEF", `sha256:${"0".repeat(64)}`]) {
       const testCase = copyInstallerCase(fixture);
       try {
@@ -1295,7 +1347,7 @@ describe("Pack consumer runtime release installer", () => {
     }
   });
 
-  it("CANDIDATE-U-PACKRT-008: rejects missing, extra, or differently tagged Release assets before writes", () => {
+  it("U-PACKRT-008: rejects missing, extra, or differently tagged Release assets before writes", () => {
     const names = releaseArtifactFileNames(fixture.tag);
     const mutations: readonly ((releaseDir: string) => void)[] = [
       (releaseDir) => rmSync(join(releaseDir, names.tarball)),
@@ -1322,7 +1374,7 @@ describe("Pack consumer runtime release installer", () => {
     }
   });
 
-  it("CANDIDATE-U-PACKRT-009: canonicalizes receipt identity and makes committed reinstallation write-zero", () => {
+  it("U-PACKRT-009: canonicalizes receipt identity and makes committed reinstallation write-zero", () => {
     const testCase = copyInstallerCase(fixture);
     try {
       const aliasRoot = join(testCase.root, "consumer-alias");
@@ -1369,7 +1421,7 @@ describe("Pack consumer runtime release installer", () => {
     }
   });
 
-  it("CANDIDATE-U-PACKRT-009: refuses to repair a changed active pointer or missing committed bundle payload", () => {
+  it("U-PACKRT-009: refuses to repair a changed active pointer or missing committed bundle payload", () => {
     const pointerCase = copyInstallerCase(fixture);
     try {
       const installed = runInstallerIn(
@@ -1433,7 +1485,7 @@ describe("Pack consumer runtime release installer", () => {
     }
   });
 
-  it("CANDIDATE-U-PACKRT-010: denies a different Release tag without changing the active runtime", () => {
+  it("U-PACKRT-010: denies a different Release tag without changing the active runtime", () => {
     const testCase = copyInstallerCase(fixture);
     try {
       const installed = runInstallerIn(
