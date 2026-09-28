@@ -15,7 +15,6 @@ import { dirname, join, resolve } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { stringify } from "yaml";
 import * as setupApi from "../src/setup/index.ts";
-import { headSnapshotRoot } from "./support/workspace-roots.ts";
 import {
   assertProducerPathsOutsideHome,
   type ConsumerRuntimeReleaseProducerError,
@@ -791,7 +790,7 @@ describe("Pack consumer runtime release installer surface", () => {
   });
 
   it("CANDIDATE-U-PACKRT-005: exposes both required trust-boundary options on setup", () => {
-    const root = headSnapshotRoot();
+    const root = process.cwd();
     const cliPath = join(root, "src", "cli.ts");
     const run = spawnSync(process.execPath, [cliPath, "setup", "--help"], {
       cwd: root,
