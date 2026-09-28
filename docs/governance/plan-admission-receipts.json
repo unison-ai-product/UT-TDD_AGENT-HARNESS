@@ -5248,6 +5248,22 @@
         "revision": 14,
         "content_digest": "sha256:ea88773fa41bac2f0f1d84a205f9bf20bb511e121a3039b5ce781fe3f229ffa1"
       }
+    },
+    {
+      "sequence": 329,
+      "previous_record_digest": "sha256:bfe39d35001f5d138b7b68b091a9f51aca8f90d6ae650e9494414b343827317d",
+      "record_digest": "sha256:836451abb6fe6a94a6355ec1cce8a1829329b47e4baf5350bad14846a7527500",
+      "command_id": "plan-revise:issue-676:pr3-setup-artifacts:plan:r15:7db5b824fe80",
+      "receipt_id": "certificate:e39a6a0a942304095414d9d4a2751079",
+      "receipt_digest": "sha256:e3809f107375cf746556ef6f37e1a64d982ea9acf2f9af53056bf15a9e2d6d05",
+      "decision_digest": "sha256:d0c25a8008c86cb50859ab3088410854e52fbacc93b2096e09ebdb1a998c6546",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-676-release-consumer-dev-start.md",
+        "plan_id": "PLAN-L7-676-release-consumer-dev-start",
+        "asset_id": "plan:aae8bf0e313f8688fbad4d4d8cf0a6a9",
+        "revision": 15,
+        "content_digest": "sha256:5cc778ae04cb9ad854a12237287ccdfc39f93f3b3603c510ab8c6a5651986f9e"
+      }
     }
   ]
 }

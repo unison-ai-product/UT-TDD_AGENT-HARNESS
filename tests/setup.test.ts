@@ -142,7 +142,7 @@ const baseTemplates: TemplateSet = {
   "adapter/.claude/commands/ut-tdd-test.md": "---\ndescription: Test\n---\n",
   "adapter/.claude/settings.json": '{"hooks":{"SessionStart":[]}}\n',
   "common/harness-check.yml": "name: harness-check\n",
-  "common/commitlint.config.js":
+  "common/commitlint.config.cjs":
     "module.exports = { extends: ['@commitlint/config-conventional'] };\n",
   "common/escalation-stale.yml": "name: escalation-stale\n",
   "common/recovery.md": "# Recovery\n",
@@ -1342,15 +1342,20 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
 
   it("U-SETUP-008: dryRun=true は副作用ゼロ (state 非書込 / gh 非呼出 / branch protection 非適用)", () => {
     // dry-run は preview のみ。--apply-branch-protection を併用しても remote へ進まない。
+    let databaseInitializations = 0;
     const d = mockDeps({
       templates: baseTemplates,
       isInteractive: true,
       gh: ghTeam,
       confirm: () => true,
+      initializeHarnessDb: () => {
+        databaseInitializations += 1;
+      },
     });
     const r = runSetup({ phase: "0-B", dryRun: true, applyBranchProtection: true }, d);
     // state SSoT を書かない
     expect(d.files.get(statePath)).toBeUndefined();
+    expect(databaseInitializations).toBe(0);
     // 生成物 (CODEOWNERS 等) も書かない (path 一覧は返るが file store は空)
     expect(d.files.get(codeownersPath)).toBeUndefined();
     expect(r.written.length).toBeGreaterThan(0); // preview は path を列挙する
