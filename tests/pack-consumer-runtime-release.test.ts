@@ -10,6 +10,7 @@ import {
   readdirSync,
   readFileSync,
   realpathSync,
+  renameSync,
   rmSync,
   statSync,
   symlinkSync,
@@ -17,7 +18,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { basename, dirname, join, relative, resolve, sep } from "node:path";
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { stringify } from "yaml";
 import * as setupApi from "../src/setup/index.ts";
@@ -1100,6 +1101,85 @@ describe("Pack consumer runtime release installer", () => {
         `stdout:\n${offlineHelp.stdout}\nstderr:\n${offlineHelp.stderr}`,
       ).toBe(0);
       expect(offlineHelp.stdout).toContain("Usage: ut-tdd");
+    } finally {
+      removeInstallerFixtureTree(testCase.root);
+    }
+  });
+
+  it("U-PACKRT-005 supplement: generated launcher accepts a real Windows 8.3 consumer path", ({
+    skip,
+  }) => {
+    if (process.platform !== "win32") {
+      console.info("SKIP U-PACKRT-005 Windows 8.3 alias: Windows-only runtime coverage");
+      skip();
+    }
+    const testCase = copyInstallerCase(fixture);
+    try {
+      const shortRoot = execFileSync(
+        process.env.ComSpec ?? "cmd.exe",
+        ["/d", "/c", `for %I in ("${testCase.consumerRoot}") do @echo %~sI`],
+        { encoding: "utf8" },
+      ).trim();
+      const physicalRoot = realpathSync.native(testCase.consumerRoot);
+      if (
+        !shortRoot ||
+        !isAbsolute(shortRoot) ||
+        shortRoot.toLowerCase() === physicalRoot.toLowerCase()
+      ) {
+        console.info("SKIP U-PACKRT-005 Windows 8.3 alias: short names unavailable for fixture");
+        skip();
+      }
+      expect(realpathSync.native(shortRoot).toLowerCase()).toBe(physicalRoot.toLowerCase());
+
+      const install = runInstallerIn(
+        fixture,
+        testCase.releaseDir,
+        testCase.consumerRoot,
+        fixture.anchor,
+      );
+      expectUnboundRepositorySetup(install);
+      const launcher = join(shortRoot, ".ut-tdd", "bin", "ut-tdd.mjs");
+      const launch = spawnSync(process.execPath, [launcher, "--help"], {
+        cwd: shortRoot,
+        encoding: "utf8",
+        env: isolatedConsumerEnv(testCase.root),
+        windowsHide: true,
+        maxBuffer: 64 * 1024 * 1024,
+      });
+      expect(launch.status, `stdout:\n${launch.stdout}\nstderr:\n${launch.stderr}`).toBe(0);
+      expect(launch.stdout).toContain("Usage: ut-tdd");
+    } finally {
+      removeInstallerFixtureTree(testCase.root);
+    }
+  });
+
+  it("U-PACKRT-005 supplement: generated launcher rejects a runtime-root junction outside the consumer", () => {
+    const testCase = copyInstallerCase(fixture);
+    try {
+      const install = runInstallerIn(
+        fixture,
+        testCase.releaseDir,
+        testCase.consumerRoot,
+        fixture.anchor,
+      );
+      expectUnboundRepositorySetup(install);
+
+      const runtimeRoot = join(testCase.consumerRoot, ".ut-tdd", "runtime");
+      const outsideRuntime = join(testCase.root, "outside-runtime");
+      makeInstallerFixtureWritable(dirname(runtimeRoot));
+      renameSync(runtimeRoot, outsideRuntime);
+      symlinkSync(outsideRuntime, runtimeRoot, process.platform === "win32" ? "junction" : "dir");
+
+      const launcher = join(testCase.consumerRoot, ".ut-tdd", "bin", "ut-tdd.mjs");
+      const launch = spawnSync(process.execPath, [launcher, "--help"], {
+        cwd: testCase.consumerRoot,
+        encoding: "utf8",
+        env: isolatedConsumerEnv(testCase.root),
+        windowsHide: true,
+        maxBuffer: 64 * 1024 * 1024,
+      });
+      expect(launch.status, `stdout:\n${launch.stdout}\nstderr:\n${launch.stderr}`).toBe(78);
+      expect(`${launch.stdout}\n${launch.stderr}`).toContain("consumer_runtime_external_path");
     } finally {
       removeInstallerFixtureTree(testCase.root);
     }

@@ -631,9 +631,10 @@ import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import { dirname, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-const consumerRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
-const pointerPath = resolve(consumerRoot, ".ut-tdd", "runtime", "activation", "active.json");
 const deny = (reason) => { console.error(reason); process.exit(78); };
+let consumerRoot;
+try { consumerRoot = realpathSync.native(resolve(dirname(fileURLToPath(import.meta.url)), "..", "..")); } catch { deny("consumer_runtime_absent"); }
+const pointerPath = resolve(consumerRoot, ".ut-tdd", "runtime", "activation", "active.json");
 let pointer;
 try { pointer = JSON.parse(readFileSync(pointerPath, "utf8")); } catch { deny("consumer_runtime_absent"); }
 if (!pointer || typeof pointer.bundle_path !== "string" || typeof pointer.entry_path !== "string" || typeof pointer.bundle_digest !== "string") deny("consumer_runtime_resolution_denied");
@@ -641,11 +642,13 @@ if (Object.keys(pointer).sort().join("\\0") !== "bundle_digest\\0bundle_path\\0e
 if (pointer.bundle_path !== resolve(pointer.bundle_path) || pointer.entry_path !== resolve(pointer.entry_path)) deny("consumer_runtime_resolution_denied");
 const bundle = resolve(pointer.bundle_path), entry = resolve(pointer.entry_path);
 const runtimeRoot = resolve(consumerRoot, ".ut-tdd", "runtime");
-const runtimeRel = relative(runtimeRoot, bundle);
-const rel = relative(bundle, entry);
-if (runtimeRel === "" || runtimeRel === ".." || runtimeRel.startsWith("..") || rel === "" || rel === ".." || rel.startsWith("..")) deny("consumer_runtime_external_path");
 let runtimeReal, bundleReal, entryReal;
 try { runtimeReal = realpathSync.native(runtimeRoot); bundleReal = realpathSync.native(bundle); entryReal = realpathSync.native(entry); } catch { deny("consumer_runtime_absent"); }
+const runtimeRel = relative(runtimeReal, bundle);
+const rel = relative(bundle, entry);
+if (runtimeRel === "" || runtimeRel === ".." || runtimeRel.startsWith("..") || rel === "" || rel === ".." || rel.startsWith("..")) deny("consumer_runtime_external_path");
+const runtimeConsumerRel = relative(consumerRoot, runtimeReal);
+if (runtimeConsumerRel === "" || runtimeConsumerRel === ".." || runtimeConsumerRel.startsWith("..")) deny("consumer_runtime_external_path");
 const runtimePhysicalRel = relative(runtimeReal, bundleReal);
 if (runtimePhysicalRel === "" || runtimePhysicalRel === ".." || runtimePhysicalRel.startsWith("..")) deny("consumer_runtime_external_path");
 const physicalRel = relative(bundleReal, entryReal);
