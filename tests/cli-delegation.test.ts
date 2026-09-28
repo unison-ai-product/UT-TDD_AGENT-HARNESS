@@ -13,13 +13,16 @@ import { buildAdapterPlan } from "../src/runtime/adapter.ts";
 
 // issue #721 finding 2: the untracked-added loader (used by the review-guard exemption at the
 // delegation call site) must fail-close to "no exemption" when it throws, not silently exempt.
+const untrackedLoader = vi.hoisted(() => ({ fail: false }));
 vi.mock("../src/lint/change-impact.ts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../src/lint/change-impact.ts")>();
   return {
     ...actual,
-    loadUntrackedAddedFiles: () => {
-      console.error("DEBUG: mocked loadUntrackedAddedFiles invoked, throwing");
-      throw new Error("simulated untracked-added loader failure (issue #721 finding 2)");
+    loadUntrackedAddedFiles: (repoRoot: string) => {
+      if (untrackedLoader.fail) {
+        throw new Error("simulated untracked-added loader failure (issue #721 finding 2)");
+      }
+      return actual.loadUntrackedAddedFiles(repoRoot);
     },
   };
 });
@@ -148,7 +151,14 @@ describe("CLI delegation command registration", () => {
 });
 
 describe("CLI delegation review-guard untracked-added exemption (issue #721 finding 2)", () => {
-  it("U-ADAPTER-011: a throwing untracked-added loader fails closed (no exemption) so a new .ut-tdd/memory/ file surfaces as a violation", () => {
+  it.each([
+    { loaderFails: false, violation: false },
+    { loaderFails: true, violation: true },
+  ])("U-ADAPTER-012: loader fails=$loaderFails → concurrent .ut-tdd/memory/ addition violation=$violation (fail-close on loader error)", ({
+    loaderFails,
+    violation,
+  }) => {
+    untrackedLoader.fail = loaderFails;
     // mutation check: if safeLoadUntrackedAddedFiles instead swallowed the loader failure by
     // returning a permissive/non-empty set (or if the guard skipped the exemption call
     // entirely on failure without flagging), this test would see no "review-guard - violation"
@@ -158,7 +168,12 @@ describe("CLI delegation review-guard untracked-added exemption (issue #721 find
     execFileSync("git", ["config", "user.email", "test@example.invalid"], { cwd: fixtureRoot });
     execFileSync("git", ["config", "user.name", "UT-TDD test"], { cwd: fixtureRoot });
     writeFileSync(join(fixtureRoot, "README.md"), "seed\n");
-    execFileSync("git", ["add", "README.md"], { cwd: fixtureRoot });
+    // seed `.ut-tdd/` as a *tracked* directory (like the real repo) so plain `git status
+    // --porcelain` reports the new file individually instead of collapsing the whole
+    // still-untracked `.ut-tdd/` directory into a single `?? .ut-tdd/` entry.
+    mkdirSync(join(fixtureRoot, ".ut-tdd"), { recursive: true });
+    writeFileSync(join(fixtureRoot, ".ut-tdd", ".gitkeep"), "");
+    execFileSync("git", ["add", "README.md", ".ut-tdd/.gitkeep"], { cwd: fixtureRoot });
     execFileSync("git", ["commit", "-qm", "seed"], { cwd: fixtureRoot });
 
     const cwd = vi.spyOn(process, "cwd").mockReturnValue(fixtureRoot);
@@ -176,7 +191,11 @@ describe("CLI delegation review-guard untracked-added exemption (issue #721 find
       );
       const result = executeAdapterPlanForCli(
         plan,
-        { sessionPrefix: `issue721-reviewguard-${Date.now()}`, toolName: "codex", reviewRole: "blind-reviewer" },
+        {
+          sessionPrefix: `issue721-reviewguard-${Date.now()}`,
+          toolName: "codex",
+          reviewRole: "blind-reviewer",
+        },
         {
           gitBranch: () => "test/issue721",
           gitHead: () => "deadbee",
@@ -194,9 +213,16 @@ describe("CLI delegation review-guard untracked-added exemption (issue #721 find
 
       expect(result.exit_code).toBe(0);
       const stderr = stderrChunks.join("");
-      expect(stderr).toContain("review-guard - violation");
-      expect(stderr).toContain(".ut-tdd/memory/concurrent.md");
+      if (violation) {
+        expect(stderr).toContain("review-guard - violation");
+        expect(stderr).toContain(".ut-tdd/memory/concurrent.md");
+      } else {
+        // control: with a working loader the same concurrent memory addition is exempt, so the
+        // violation above is caused by the loader failure and not by unrelated fixture writes.
+        expect(stderr).not.toContain("review-guard - violation");
+      }
     } finally {
+      untrackedLoader.fail = false;
       stderrSpy.mockRestore();
       cwd.mockRestore();
       rmSync(fixtureRoot, { recursive: true, force: true });

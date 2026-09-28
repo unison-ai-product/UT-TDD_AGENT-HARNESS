@@ -306,6 +306,11 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 | U-CHGIMPACT-002 | `analyzeChangeImpact` (covered) | `src/**` + design 更新 + tests または test-design 更新 → `ok=true` |
 | U-CHGIMPACT-003 | `analyzeChangeImpact` (docs-only) | docs/test のみで `src/**` 変更なし → `sourceFiles=[]` / `ok=true` |
 | U-CHGIMPACT-004 | `parseGitPorcelain` | modified / rename / untracked の porcelain path を正規化し、rename は新 path を採用 |
+| U-CHGIMPACT-UNTRACKED-001 | `parseUntrackedAddedPaths` | `-z --untracked-files=all` の NUL区切り生出力から非ASCII pathを含む untracked-added (`??`) entryを quoting破損なしで抽出する (Sol r1 FLAG 1、issue #721)。 |
+| U-CHGIMPACT-UNTRACKED-002 | `parseUntrackedAddedPaths` | rename/copy entry (`R`/`C`) が伴う追加 NUL区切り src path を skip し、後続の `??` entry を正しく抽出する。 |
+| U-CHGIMPACT-UNTRACKED-003 | `parseUntrackedAddedPaths` | transient harness DB journal file (`harness.db-{journal,shm,wal}`) を untracked-added 結果から除外する。 |
+| U-CHGIMPACT-UNTRACKED-004 | `loadUntrackedAddedFiles` | 実 git repo で `.ut-tdd/memory/` 配下に untracked ディレクトリを追加すると `--untracked-files=all` により配下の各ファイルが個別に列挙され、ディレクトリへ畳み込まれない。 |
+| U-CHGIMPACT-UNTRACKED-005 | `loadUntrackedAddedFiles` | 実 git repo で tracked `.ut-tdd/memory/` ファイルを `git mv` で rename すると、rename 先 path は untracked-added (`??`) として現れない。 |
 
 ### §1.16.1a U-RELGRAPH (cross-artifact relation graph = docs/code/DB/evidence impact)
 
@@ -856,6 +861,7 @@ SMB/NFS/OneDrive をまたぐ strict lease、heartbeat、clock-skew 耐性は主
 | U-ADAPTER-004 | `isProviderCommandSpawnable` / `detectMode` | Provider availability is true only when the resolved provider command can spawn successfully; PATH name presence alone is not enough. |
 | U-ADAPTER-010 | `isProviderCommandSpawnable` / `executeAdapterPlanForCli` | 非対話の provider probe と委譲起動が、子プロセスの console window を隠す `windowsHide: true` を spawn options に渡す。 |
 | U-ADAPTER-011 | `firstOnPath` / `resolveCodexNativeCommand` | PATH lookup は Windows では `SystemRoot\\System32\\where.exe`、POSIX では `which` を使い、実行 options に `windowsHide: true` を渡す。Windows の Codex lookup は `where.exe` に `['codex']` を渡し、最初の結果を返す。 |
+| U-ADAPTER-012 | `executeAdapterPlanForCli` | untracked-added loader (`loadUntrackedAddedFiles`) が throw した場合、review-guard の exemption は fail-close (空集合扱い) となり、read-only role 委譲 session 中に追加された `.ut-tdd/memory/` ファイルが violation として surface する。対照として loader 正常時は同じ追加が exempt され violation を出さない (違反の原因が loader 失敗であることを固定、issue #721 finding 2)。 |
 | U-PHOVER-002 | `buildProviderHandover` | Provider handover packages include `handover_kind: "mechanical"` so machine routing data is not confused with explicit human handover. |
 
 ## PLAN-L7-76 Reliability Remediation Addendum
@@ -933,6 +939,19 @@ SMB/NFS/OneDrive をまたぐ strict lease、heartbeat、clock-skew 耐性は主
 | U-RGUARD-010 | `reviewGuardMessages` | 非 violation → 空 (worker / clean は無音)。 |
 | U-RGUARD-011 | `summarizeStagedReview` | staged 集合は sorted/unique、suspect = staged ∩ review-mutated (混入疑い)、suspect 非空で ok=false (commit 前 staged-diff の機械化)。 |
 | U-RGUARD-012 | `summarizeStagedReview` | review-mutated 未提供 → suspect 空 + ok=true (純列挙)。 |
+| U-RGUARD-013 | `assessReviewSession` / `isReviewCustodyProjection` | `.ut-tdd/review/{requests,receipts,verdicts}/` 配下は委譲機構が管理する review custody 投影であり reviewer 本人の編集ではないため mutatedPaths / violation の対象外 (`other/` は対象内のまま)。 |
+| U-RGUARD-014 | `assessReviewSession` | 他レーンが `ut-tdd memory add` で追加した新規 untracked `.ut-tdd/memory/` ファイル (`untrackedAdded` に含まれる) は reviewer の改変とみなさず violation=false (issue #721)。 |
+| U-RGUARD-015 | `assessReviewSession` | session 開始前から tracked だった `.ut-tdd/memory/` ファイルへの上書き編集 (`untrackedAdded` に含まれない) は exemption 対象外で violation=true。 |
+| U-RGUARD-016 | `assessReviewSession` | `.ut-tdd/memory/` 配下以外の新規 untracked ファイル (`untrackedAdded` に含まれていても) は exemption 対象外で violation=true。 |
+| U-RGUARD-017 | `assessReviewSession` | `untrackedAdded` 提供時も review custody 投影の exemption は変わらず、tracked memory 上書きのみ violation として残る。 |
+| U-RGUARD-018 | `isExemptUntrackedMemoryAddition` | `.ut-tdd/memory/` 配下かつ `untrackedAdded` に含まれる path のみ exempt (配下でも未含有、配下外は非 exempt)。 |
+| U-RGUARD-019 | `isExemptUntrackedMemoryAddition` | `-z` (NUL 区切り、unquoted) git 出力由来の非 ASCII path は containment 判定が壊れず exempt (Sol r1 FLAG 1、issue #721)。 |
+| U-RGUARD-020 | `isExemptUntrackedMemoryAddition` | `./` (current-dir) segment を含む path は containment 対象外で非 exempt。 |
+| U-RGUARD-021 | `isExemptUntrackedMemoryAddition` | `..` (親ディレクトリ脱出) segment を含む path は containment 対象外で非 exempt。 |
+| U-RGUARD-022 | `isExemptUntrackedMemoryAddition` | `\` を含む path は非 exempt (git は path を常に `/` 区切りで返すため、`\` はセパレータ変換せず疑わしい入力として拒否)。 |
+| U-RGUARD-023 | `isExemptUntrackedMemoryAddition` | `.ut-tdd` ディレクトリ名の大小文字が異なる path (`.UT-TDD/...`) は非 exempt (case-sensitive containment)。 |
+| U-RGUARD-024 | `isExemptUntrackedMemoryAddition` | untracked ディレクトリ追加は配下ファイルを個別に exempt 判定でき、`untrackedAdded` に無い兄弟ファイルへは伝播しない (畳み込みなし)。 |
+| U-RGUARD-025 | `assessReviewSession` | tracked `.ut-tdd/memory/` ファイルの rename (`git mv`) による置換先 path は `untrackedAdded` に現れない (rename は `??` ではなく `R` として現れるため) ので violation=true。 |
 ## PLAN-L6-36 Screen Spec Addendum
 
 This addendum pairs `screen-spec.md` with L7 unit-test oracles. It covers the L6 FE per-screen function specification for the 15 central dashboard screens and keeps the UI read-only/copy-only boundary testable at function level.
