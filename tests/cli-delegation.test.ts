@@ -22,10 +22,11 @@ vi.mock("../src/lint/change-impact.ts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../src/lint/change-impact.ts")>();
   return {
     ...actual,
-    loadChangedFiles: (repoRoot: string) => {
+    loadWorkingTreeStatus: (repoRoot: string) => {
       const queue = untrackedLoader.changed;
-      if (!queue) return actual.loadChangedFiles(repoRoot);
-      return queue.length > 1 ? (queue.shift() ?? []) : (queue[0] ?? []);
+      if (!queue) return actual.loadWorkingTreeStatus(repoRoot);
+      const changed = queue.length > 1 ? (queue.shift() ?? []) : (queue[0] ?? []);
+      return { changed, untrackedAdded: [] };
     },
     loadUntrackedAddedFiles: (repoRoot: string) => {
       if (untrackedLoader.fail) {

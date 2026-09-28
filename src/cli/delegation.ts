@@ -18,7 +18,7 @@ import {
   reviewIdentityDigest,
   reviewVerdictPath,
 } from "../feedback/review-verdict-custody.ts";
-import { loadChangedFiles, loadUntrackedAddedFiles } from "../lint/change-impact.ts";
+import { loadUntrackedAddedFiles, loadWorkingTreeStatus } from "../lint/change-impact.ts";
 import {
   type AdapterContextInjection,
   type AdapterPlan,
@@ -115,9 +115,10 @@ export function adapterExecutionEnv(
   };
 }
 
+/** review-guard の before/after。untracked-added と同じ `-z` 生 path 表現で取る (issue #721 Sol r2)。 */
 function safeLoadChangedFiles(repoRoot: string): string[] {
   try {
-    return loadChangedFiles(repoRoot);
+    return loadWorkingTreeStatus(repoRoot).changed;
   } catch {
     return [];
   }

@@ -239,10 +239,20 @@ export function loadChangedFiles(repoRoot: string = process.cwd()): string[] {
  * は呼び出し側 (review-guard) が担う — ここではパス文字列を一切加工せず分割するだけ。
  */
 export function parseUntrackedAddedPaths(output: string): string[] {
-  const tokens = output.split("\0");
-  const paths: string[] = [];
+  return parseWorkingTreeStatusZ(output).untrackedAdded;
+}
+
+/** `-z` 出力 1 本から、変更 path 全体と untracked-added path を同じ生 path 表現で返す。 */
+export interface WorkingTreeStatus {
+  readonly changed: string[];
+  readonly untrackedAdded: string[];
+}
+
+export function parseWorkingTreeStatusZ(output: string): WorkingTreeStatus {
+  const changed: string[] = [];
+  const untrackedAdded: string[] = [];
   let skipNextToken = false;
-  for (const token of tokens) {
+  for (const token of output.split("\0")) {
     if (skipNextToken) {
       skipNextToken = false;
       continue;
@@ -250,11 +260,12 @@ export function parseUntrackedAddedPaths(output: string): string[] {
     if (token.length === 0) continue;
     const status = token.slice(0, 2);
     if (status.includes("R") || status.includes("C")) skipNextToken = true;
-    if (status !== "??") continue;
     const path = token.slice(3);
-    if (!isTransientHarnessDbFile(path)) paths.push(path);
+    if (isTransientHarnessDbFile(path)) continue;
+    changed.push(path);
+    if (status === "??") untrackedAdded.push(path);
   }
-  return paths;
+  return { changed, untrackedAdded };
 }
 
 /**
@@ -263,12 +274,21 @@ export function parseUntrackedAddedPaths(output: string): string[] {
  * 新規 untracked ファイルを共有 tree へ追加するケースを区別するために使う。
  */
 export function loadUntrackedAddedFiles(repoRoot: string = process.cwd()): string[] {
+  return loadWorkingTreeStatus(repoRoot).untrackedAdded;
+}
+
+/**
+ * review-guard 用の working tree 状態 (issue #721 Sol r2)。before / after / untracked-added を
+ * 同じ `-z --untracked-files=all` の生 path 表現で取り、quoted path や畳まれた directory と
+ * exemption 集合の表現がずれないようにする。
+ */
+export function loadWorkingTreeStatus(repoRoot: string = process.cwd()): WorkingTreeStatus {
   const output = execFileSync(
     "git",
     ["-C", repoRoot, "status", "--porcelain=v1", "-z", "--untracked-files=all"],
     { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] },
   );
-  return parseUntrackedAddedPaths(output);
+  return parseWorkingTreeStatusZ(output);
 }
 
 /** `git diff --cached --name-only` の出力をパース (1 行 1 path、staged 集合)。 */

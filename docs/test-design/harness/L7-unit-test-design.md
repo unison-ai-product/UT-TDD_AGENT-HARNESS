@@ -311,6 +311,7 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 | U-CHGIMPACT-UNTRACKED-003 | `parseUntrackedAddedPaths` | transient harness DB journal file (`harness.db-{journal,shm,wal}`) を untracked-added 結果から除外する。 |
 | U-CHGIMPACT-UNTRACKED-004 | `loadUntrackedAddedFiles` | 実 git repo で `.ut-tdd/memory/` 配下に untracked ディレクトリを追加すると `--untracked-files=all` により配下の各ファイルが個別に列挙され、ディレクトリへ畳み込まれない。 |
 | U-CHGIMPACT-UNTRACKED-005 | `loadUntrackedAddedFiles` | 実 git repo で tracked `.ut-tdd/memory/` ファイルを `git mv` で rename すると、rename 先 path は untracked-added (`??`) として現れない。 |
+| U-CHGIMPACT-UNTRACKED-006 | `loadWorkingTreeStatus` / `loadUntrackedAddedFiles` + `assessReviewSession` | 実 git で before / after / untracked-added を production loader のまま合成し、日本語名の memory 追加と新規 subdirectory 配下の memory 追加は非違反 (quoted path / 畳まれた directory で表現がずれない)、tracked memory の変更と memory 外の追加は違反になる (issue #721 Sol r2)。 |
 
 ### §1.16.1a U-RELGRAPH (cross-artifact relation graph = docs/code/DB/evidence impact)
 

@@ -9,10 +9,12 @@ import {
   changeImpactMessages,
   changeSetIntegrityMessages,
   loadUntrackedAddedFiles,
+  loadWorkingTreeStatus,
   parseGitPorcelain,
   parseUntrackedAddedPaths,
 } from "../src/lint/change-impact.ts";
 import { analyzeDependencyDrift } from "../src/lint/dependency-drift.ts";
+import { assessReviewSession } from "../src/runtime/review-guard.ts";
 
 describe("change-impact lint", () => {
   it("src changes require both design and test/test-design updates", () => {
@@ -204,6 +206,51 @@ describe("parseUntrackedAddedPaths (issue #721 Sol r1 FLAG 1 — -z NUL-separate
       });
 
       expect(loadUntrackedAddedFiles(root)).toEqual([]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("review-guard と production loader の合成 (issue #721 Sol r2)", () => {
+  it("U-CHGIMPACT-UNTRACKED-006: 実 git の日本語 memory と新規 subdirectory の追加は非違反、tracked memory 変更と memory 外追加は違反", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-guard-composition-"));
+    try {
+      const git = (...args: string[]) => execFileSync("git", args, { cwd: root, stdio: "ignore" });
+      git("init", "--quiet");
+      git("config", "user.email", "test@example.invalid");
+      git("config", "user.name", "UT-TDD test");
+      mkdirSync(join(root, ".ut-tdd", "memory"), { recursive: true });
+      writeFileSync(join(root, ".ut-tdd", "memory", "tracked.md"), "seed");
+      git("add", ".ut-tdd/memory/tracked.md");
+      git("commit", "-qm", "seed");
+
+      const before = loadWorkingTreeStatus(root).changed;
+      writeFileSync(join(root, ".ut-tdd", "memory", "日本語.md"), "note");
+      mkdirSync(join(root, ".ut-tdd", "memory", "dir"), { recursive: true });
+      writeFileSync(join(root, ".ut-tdd", "memory", "dir", "a.md"), "note");
+      const concurrentOnly = assessReviewSession({
+        role: "blind-reviewer",
+        before,
+        after: loadWorkingTreeStatus(root).changed,
+        untrackedAdded: loadUntrackedAddedFiles(root),
+      });
+      expect(concurrentOnly.violation).toBe(false);
+
+      writeFileSync(join(root, ".ut-tdd", "memory", "tracked.md"), "edited");
+      writeFileSync(join(root, "outside.md"), "x");
+      const withEdits = assessReviewSession({
+        role: "blind-reviewer",
+        before,
+        after: loadWorkingTreeStatus(root).changed,
+        untrackedAdded: loadUntrackedAddedFiles(root),
+      });
+      expect(withEdits.violation).toBe(true);
+      expect(withEdits.mutatedPaths).toEqual(
+        expect.arrayContaining([".ut-tdd/memory/tracked.md", "outside.md"]),
+      );
+      expect(withEdits.mutatedPaths).not.toContain(".ut-tdd/memory/日本語.md");
+      expect(withEdits.mutatedPaths).not.toContain(".ut-tdd/memory/dir/a.md");
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
