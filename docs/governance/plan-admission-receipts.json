@@ -5312,6 +5312,22 @@
         "revision": 17,
         "content_digest": "sha256:8f8970053cf643425c53d01b0bca6a5d6ca932030ab409cbe4ae744b5553a57b"
       }
+    },
+    {
+      "sequence": 333,
+      "previous_record_digest": "sha256:af0631259d95cdab81dcbbed78516a850876a8aee9834efb2553e63d41ee34e0",
+      "record_digest": "sha256:75fe4cd970a7282b96510f139dea873f996beb2b5e705dc29c8f397ffb044bb3",
+      "command_id": "plan-draft:issue-729:ci-fail-fast:1",
+      "receipt_id": "certificate:52b3f1f4e75ee41059efba897141a715",
+      "receipt_digest": "sha256:e83bd942f10e808bd4d9e8aa8f1ca2311fbf7bba6e4b7d26153cadafc55cae59",
+      "decision_digest": "sha256:255336ba9ebb384ab06465f470038611cf8038abb53f758ca0a02cf9457c01cf",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-729-ci-fail-fast.md",
+        "plan_id": "PLAN-L7-729-ci-fail-fast",
+        "asset_id": "plan:52b3f1f4e75ee41059efba897141a715",
+        "revision": 1,
+        "content_digest": "sha256:d1f10f2d4b7ba85e3fe24c01a8c25546ffdfb7c79dedc927c2d48a158db1d6c6"
+      }
     }
   ]
 }
