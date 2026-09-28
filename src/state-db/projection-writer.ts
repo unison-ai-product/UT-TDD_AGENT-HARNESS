@@ -4,7 +4,6 @@ import { homedir } from "node:os";
 import { join, relative } from "node:path";
 import { performance } from "node:perf_hooks";
 import { parse as parseYaml } from "yaml";
-import { materializeSkillAssets, resolveSkillFiles } from "../assets/embedded-skills.ts";
 import type { DocumentExportProjectionRows } from "../export/document-export.ts";
 import {
   buildDocumentExportDataset,
@@ -67,6 +66,7 @@ import type { ProjectionEvent } from "../projection/contracts/projection-store.t
 import { type ProjectedPlan, projectPlanSources } from "../projection/domain/plan-projection.ts";
 import { HARNESS_DB_TABLES } from "../schema/harness-db.ts";
 import { workflowModeForPlan as catalogWorkflowModeForPlan } from "../schema/mode-catalog.ts";
+import { materializeSkillAssets, resolveSkillFiles } from "../shared/embedded-skills.ts";
 import { normalizePath } from "../shared/source-text.ts";
 import { stableId } from "../stable-id.ts";
 import { analyzePairFreeze, loadPairDocs, type PairOrphanReason } from "../vmodel/lint.ts";

@@ -22,7 +22,6 @@ import {
   checkRosterConsistency,
   listRosterRegistry,
 } from "./assets/catalog.ts";
-import { materializeSkillAssets } from "./assets/embedded-skills.ts";
 import { loadBranchAudit, renderBranchAudit } from "./audit/branches.ts";
 import { renderQualityAudit, runQualityAudit } from "./audit/quality.ts";
 import {
@@ -101,6 +100,7 @@ import {
   planDigestMigration,
 } from "./lint/green-command-digest.ts";
 import { parseNodeGenerationCiEvidence } from "./lint/node-generation-ci-policy.ts";
+import { materializeSkillAssets } from "./shared/embedded-skills.ts";
 
 export { collectFinalRetirementFindings };
 

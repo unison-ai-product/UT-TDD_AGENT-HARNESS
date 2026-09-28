@@ -13,13 +13,13 @@ import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 import { catalogAutomationAssets } from "../src/assets/catalog.ts";
+import { buildNodeGeneration } from "../src/runtime/node-bootstrap.ts";
 import {
   type EmbeddedSkillAsset,
   ensureSkillAssetsIgnored,
   materializeSkillAssets,
   resolveSkillFiles,
-} from "../src/assets/embedded-skills.ts";
-import { buildNodeGeneration } from "../src/runtime/node-bootstrap.ts";
+} from "../src/shared/embedded-skills.ts";
 import { buildSkillInjectionSet, recommendSkillsForText } from "../src/skill-engine/recommend.ts";
 import { openHarnessDb } from "../src/state-db/index.ts";
 import { migrate } from "../src/state-db/migration.ts";

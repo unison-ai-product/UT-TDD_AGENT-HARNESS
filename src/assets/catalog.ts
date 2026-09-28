@@ -2,9 +2,9 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { parse as parseYaml } from "yaml";
 import { upsertSearchReference } from "../search/index.ts";
+import { resolveSkillFiles } from "../shared/embedded-skills.ts";
 import type { HarnessDb } from "../state-db/index.ts";
 import { upsertRow } from "../state-db/index.ts";
-import { resolveSkillFiles } from "./embedded-skills.ts";
 
 export interface CatalogAutomationAssetsInput {
   repoRoot?: string;

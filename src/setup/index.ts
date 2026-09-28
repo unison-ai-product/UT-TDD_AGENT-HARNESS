@@ -214,7 +214,7 @@ import {
   embeddedSkillAssets,
   ensureSkillAssetsIgnored,
   materializeSkillAssets,
-} from "../assets/embedded-skills.ts";
+} from "../shared/embedded-skills.ts";
 import { BUILTIN_GITHUB_TEMPLATES, COMMON_FILES, type TemplateSet } from "./templates.ts";
 
 export type { Confirm, GhRunner };
