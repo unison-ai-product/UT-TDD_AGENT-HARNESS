@@ -78,13 +78,16 @@ zip は repo root の `Vモデル設計ドキュメント_checked.zip` (gitignor
 
 ## PR-G0〜PR-VL consumer 検証 (rev 2、PLAN §3.6)
 
-共通 fixture (v): fixture (ii) に PR-T1 のテンプレートから作った L1〜L7 の文書一式を `docs/design/` / `docs/test-design/` へ置いたもの。
-(vi): (v) から必須 slot を 1 つ欠いたもの。どちらも `gate-design.md` を置かない。
+共通 fixture (v): fixture (ii) に PR-T1 のテンプレートから作った L1〜L7 の文書一式を `docs/design/` / `docs/test-design/` へ置き、
+G2 の wireframe mock として consumer 自作の `docs/design/L2-screen/wireframe.md` 1 本 (`pair_artifact: docs/test-design/L10-ux-validation-test-design.md`) と、
+その pair として PR-T1 の `L10-ux-validation.md` から作った `docs/test-design/L10-ux-validation-test-design.md` 1 本を加えたもの (PLAN §3.6-2 rev 13)。
+テンプレート由来の文書の frontmatter `pair_artifact` / `plan` は consumer の path へ書き換える。
+(vi): (v) から必須 slot を 1 つ欠いたもの。(vii): (v) から wireframe mock だけを除いたもの。いずれも `gate-design.md` を置かない。
 
 | ID | oracle | 違反 / mutation |
 | --- | --- | --- |
 | CANDIDATE-U-RCDEV-026 | fixture (v) で `loadGateConfirmDocs` が ENOENT を出さず、埋め込みの gate 定義を使う。consumer に `docs/governance/gate-design.md` を置くとそれが優先される | (m1) 埋め込みを外す → ENOENT で失敗。(m2) 優先順を逆にする → consumer 側の定義が使われず失敗 |
-| CANDIDATE-U-RCDEV-027 | fixture (v) で G1〜G6 が `applicable:true` かつ pass、(vi) では欠いた slot 名を含む failed。どちらも「could not run」を含まない | (m) resolver を `docs/design/harness` 固定に戻す → (v) が「could not run」または applicable false で失敗 |
+| CANDIDATE-U-RCDEV-027 | fixture (v) で G1〜G6 が `applicable:true` かつ pass、(vi) では欠いた slot 名を含む failed、(vii) では G2 が `mock=missing` を含む failed。いずれも「could not run」を含まない | (m1) resolver を `docs/design/harness` 固定に戻す → (v) が「could not run」または applicable false で失敗。(m2) G2 の L10 pair path を harness 固定の literal に戻す → (v) の G2 が `mock=missing` で失敗 |
 | CANDIDATE-U-RCDEV-028 | fixture (v) で `coverage/coverage-summary.json` 不在の G7 が typed な「coverage evidence missing」で failed (crash しない)。80% 以上の summary を置くと coverage 構成要素が pass | (m1) 存在確認を外す → 例外で失敗。(m2) 不在を pass 扱いにする → failed 期待で失敗 |
 
 G8〜G14 の oracle (029〜035) は PLAN §3.6-4 の共通述語 S / I / T / E / F / A と gate 固有述語を gate ごとに固定する。各 oracle の fixture は

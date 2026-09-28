@@ -8,7 +8,7 @@ drive: agent
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-09-24
-updated: 2026-09-25
+updated: 2026-09-28
 owner: Claude / Opus (pair-freeze) · Codex worker (implementation)
 parent_design: docs/plans/PLAN-L6-101-pack-independent-multi-consumer-acceptance.md
 pair_artifact: docs/test-design/harness/L7-release-consumer-dev-start-test-design.md
@@ -523,6 +523,15 @@ consumer に catalog / profile を上書きさせる手段は作らない (§3.2
 1. **gate 定義の不在**: gate の定義 (`docs/governance/gate-design.md`、`docs/process/gates.md`、`docs/process/vmodel-contract.yaml`) は harness 所有の資産であり、§3.1 案 C と同じく bundle に埋め込む。consumer に同名ファイルがあればそれを優先する。
    gate 判定に使う文書集合は §3.2 の resolver から取る。
 2. **G1〜G6**: resolver を注入し、判定内容は変えない。consumer の文書が §3.5 のテンプレートから作られていれば、harness と同じ規則で判定できる。
+   **G2 の wireframe mock (rev 13)**: G2 は、L2 に `L2-screen/wireframe.md` があり、その `pair_artifact` が L10 の UX 検証 test-design
+   であることを要求する (`src/gate/static.ts` の `mockMissing`)。consumer では、この pair path を harness 固定の literal
+   (`docs/test-design/harness/L10-ux-validation-test-design.md`) ではなく、§3.2 の resolver が返す `<testDesignRoot>/L10-ux-validation-test-design.md` と比べる。
+   harness では resolver が同じ literal を返すので、判定内容は変わらない (§3.6-7 の回帰で固定)。
+   wireframe mock は ZIP に source の無い consumer 自作の文書であり、テンプレート (§3.5) は用意しない (§3.5.3 の「新規の書き起こしはしない」を守る)。
+   したがって「テンプレートから作れば G1〜G6 が pass する」の対象は、§3.5 のテンプレート由来の文書に、consumer が書く L2 wireframe mock 1 本と、
+   L10 の UX 検証テンプレート (`L10-ux-validation.md`) から作った test-design 1 本を加えた集合とする。wireframe mock を欠けば G2 は
+   `mock=missing` で failed になる (保証は緩めない)。テンプレートの frontmatter にある `pair_artifact` / `plan` は harness 内の trace 用の値であり、
+   consumer は文書作成時に自分の resolver path へ書き換える (書き出しコマンド §3.1.3 は bytes 一致を保ち、書き換えない)。
 3. **G7 coverage**: 既定 path (`coverage/coverage-summary.json`) を consumer にもそのまま使う (設定は足さない)。不在は crash ではなく
    typed な「coverage evidence missing」の failed とする。coverage 以外の構成要素 (pair-freeze、trace) は resolver 経由で判定する。
 4. **G8〜G14 の判定規則 (freeze)**: 各 gate は、判定内容のうち **repo に tracked された成果物から決定的に判定できる部分** を static check として必ず持つ。
@@ -670,6 +679,7 @@ injection path の乗っ取り、harness 自身の挙動変化、部分 setup �
 - CI 上での installer 実行 / runtime 有効化 (別 PLAN。§3.4-2)。
 - launcher の 8.3 短縮名 alias と long path の等価判定 (Issue #678、別 troubleshoot slice)。
 - design root の設定による上書き (§3.2 案 B)。
+- L2 画面仮説から L10 実検証までの UX-FE 連続性 (PLAN-L1-08 の範囲、PO 判断 2026-09-28 でコンセプト v4 時に対応。§3.6-2 の G2 wireframe 判定は既存規則の consumer 写像に限る)。
 - Release asset 集合・installer (PLAN-L7-628)、update / rollback (#364)。
 
 ## 8. 実装開始条件
@@ -683,3 +693,4 @@ injection path の乗っ取り、harness 自身の挙動変化、部分 setup �
 7. PR-T1 の成果物宣言 (rev 8): PR-T1 (#703) は rev 7 の merge (#704) 後に main を取り込み、自 PR が新規に landing させる `docs/templates/vmodel/` の 22 本 (required 21 slot のテンプレートと port index の README) だけを `generates` に追加した。既存ファイルと他 PR の成果物は載せていない。契約本文と `review_evidence` は rev 7 から変えていない。
 8. PR-T2 の成果物宣言 (rev 9): PR-T2 は PR-T1 の merge (#703) 後に main を取り込み、自 PR が新規に landing させる `docs/templates/vmodel/optional/` の 27 本だけを `generates` に追加した。既存ファイル (port index の README と L5 テンプレート) の更新は PR-T1 の宣言に含まれる。管理 yaml の図・trace 俯瞰・粒度情報のうち、§3.5.4 で対応が明示されていないものは #705 に分離した。契約本文と `review_evidence` は rev 8 から変えていない。
 9. PR-2b の成果物宣言: main 前進後の re-chain で、移動後の resolver とその unit test の2件を `generates` に追加する。既存ファイルの変更は宣言しない。
+10. G2 wireframe の consumer 写像 (rev 13): PR-G0 の実装前接合確認 (#676) で、凍結 fixture (v) (L1〜L7 のテンプレート由来一式) では G2 の wireframe mock 条件 (`/wireframe.md` かつ harness 固定の L10 pair path) を満たせず、RCDEV-027 を resolver の注入だけで green にする解が無いことが分かった。§3.6-2 の「テンプレートから作れば harness と同じ規則で判定できる」が事実に反していたため、advisor (claude-fable-5、design) の推奨に従い、実装 PR 内の読み替えではなく契約改訂とした。§3.6-2 に G2 の consumer 写像と対象文書集合を追記し、test-design の fixture (v) と CANDIDATE-U-RCDEV-027 を揃えた。gate の判定述語、テンプレート、書き出しコマンドは変更しない。
