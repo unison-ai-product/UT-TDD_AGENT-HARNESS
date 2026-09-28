@@ -389,7 +389,7 @@ describe("verifyRechainDelta", () => {
     ];
     const items = ["起票 (rev 1)。", "rev 2 (S2): 検証器を実装した。"];
     const { record: wrongPlanRecord } = makeRevision({
-      frontmatterOther: baseFrontmatterOther(),
+      frontmatterOther: { ...baseFrontmatterOther(), plan_id: OTHER_PLAN_ID },
       generates,
       items,
       admission: admissionR,
