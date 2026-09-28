@@ -13,7 +13,7 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
-import { evaluateStaticGate } from "../src/gate/static.ts";
+import { analyzeLayerPairGate, evaluateStaticGate } from "../src/gate/static.ts";
 import {
   analyzeG1Trace,
   g1TraceMessages,
@@ -23,6 +23,7 @@ import {
 import { analyzeG3Trace, g3TraceMessages, g3TraceOk, loadDocs } from "../src/lint/g3-trace.ts";
 import { loadGateConfirmDocs, parseGateStatuses } from "../src/lint/gate-confirm.ts";
 import { buildNodeGeneration } from "../src/runtime/node-bootstrap.ts";
+import type { PairDoc } from "../src/vmodel/lint.ts";
 
 const GATE_ASSETS = [
   "docs/governance/gate-design.md",
@@ -190,6 +191,28 @@ afterAll(() => {
 });
 
 describe("PR-G0 release-consumer gates", () => {
+  it("keeps the public layer-pair API default bound to the harness L10 artifact", () => {
+    const docs: PairDoc[] = [
+      {
+        path: "docs/design/harness/L2-screen/wireframe.md",
+        layer: "L2",
+        status: "confirmed",
+        pairArtifact: "docs/test-design/harness/L10-ux-validation-test-design.md",
+      },
+      {
+        path: "docs/test-design/harness/L10-ux-validation-test-design.md",
+        layer: "L10",
+        status: "confirmed",
+        pairArtifact: "docs/design/harness/L2-screen/",
+      },
+    ];
+
+    const result = analyzeLayerPairGate(docs, "G2", "L2");
+
+    expect(result.ok).toBe(true);
+    expect(result.mockMissing).toBe(false);
+  });
+
   it("CANDIDATE-U-RCDEV-026: uses the embedded gate definition when the consumer has no copy", () => {
     const docs = loadGateConfirmDocs(fixtureRoot());
     const statuses = parseGateStatuses(docs.gateText);
