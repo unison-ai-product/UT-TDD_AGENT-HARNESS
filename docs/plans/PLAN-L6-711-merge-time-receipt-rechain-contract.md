@@ -44,17 +44,17 @@ sub_doc: function-spec
 github_issue_id: 711
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:90d9c044b8ad3e31d17cea674ad528ac
-  command_id: plan-revise:issue-711:rechain-contract:plan:r4:0b9430f3f4a1
-  admitted_at: 2026-09-28T03:49:01.511Z
+  receipt_id: certificate:a3c66266cedd299bddf17b634ddf22c5
+  command_id: plan-draft:issue-711:merge-time-rechain-contract:rechain-1
+  admitted_at: 2026-09-28T03:52:39.763Z
   source_digest: sha256:1e91c50bd640850a57c47522a8eba464391095fbed867bb86fcfa270a6c68442
-  decision_digest: sha256:e995684e0d44bdb8096d5790e9154b890633d507fce47430925def58e6c51888
-  receipt_digest: sha256:2c2bb446a4ddf96a45cfb3ed3a1eb89cdbfc60b47985e127f5c725d9a05c4091
+  decision_digest: sha256:c00f0e019e907de5b9b4946831f02178f433164f9aeefeb7a52a0fa473b9c0b5
+  receipt_digest: sha256:a0cce8f749e3a9c83ce59725162ba2464660027539a24f887eb262f80013ad48
   binding:
     path: docs/plans/PLAN-L6-711-merge-time-receipt-rechain-contract.md
     plan_id: PLAN-L6-711-merge-time-receipt-rechain-contract
-    asset_id: plan:b4b4d9a38df162378c2522459b1627bc
-    revision: 4
+    asset_id: plan:a3c66266cedd299bddf17b634ddf22c5
+    revision: 1
     content_digest: sha256:1e91c50bd640850a57c47522a8eba464391095fbed867bb86fcfa270a6c68442
   route:
     signal: feature_addition
@@ -70,11 +70,11 @@ admission_receipt:
     digest: sha256:1b6aa397ad9995b717907d3247e02b3bba3d6c4508874b7654f90fd29b388927
   reentry:
     target_plan_id: PLAN-L6-711-merge-time-receipt-rechain-contract
-    target_revision: 4
+    target_revision: 1
     phase: forward_merge
-  escape_reason: "非著者 review (Codex Sol r2、PR #713) の FLAG 1 件 (投影されない admission
-    入力の改変) を、H 側 PlanAdmissionRequest 全体の decision_digest 束縛 (§2.3-6) と oracle
-    U-RECHAIN-012 のフィールド別 mutation で閉じる。"
+  escape_reason: "Issue #711: PLAN receipt の直列化を解消する merge 時自動 re-chain
+    と簿記差分での再検免除の契約を freeze する (advisor claude-fable-5 案 A、PO 承認 2026-09-28)。rev
+    1-4 の非著者 review 是正を含む内容を、#709 merge 後の main tail へ re-chain する"
 ---
 
 # PLAN-L6-711: merge 時の自動 re-chain と簿記差分での再検免除の契約 freeze
