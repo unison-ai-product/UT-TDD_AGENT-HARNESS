@@ -532,6 +532,8 @@ consumer に catalog / profile を上書きさせる手段は作らない (§3.2
    L10 の UX 検証テンプレート (`L10-ux-validation.md`) から作った test-design 1 本を加えた集合とする。wireframe mock を欠けば G2 は
    `mock=missing` で failed になる (保証は緩めない)。テンプレートの frontmatter にある `pair_artifact` / `plan` は harness 内の trace 用の値であり、
    consumer は文書作成時に自分の resolver path へ書き換える (書き出しコマンド §3.1.3 は bytes 一致を保ち、書き換えない)。
+   テンプレートは `status: draft` で出荷される。G1〜G6 は draft を 0 件とすることを要求する (判定は変えない) ので、consumer は記入を終えた文書の
+   `status` を `confirmed` (または `placeholder`) へ上げる。これは consumer の作成手順であり、gate の draft 拒否を緩めない。
 3. **G7 coverage**: 既定 path (`coverage/coverage-summary.json`) を consumer にもそのまま使う (設定は足さない)。不在は crash ではなく
    typed な「coverage evidence missing」の failed とする。coverage 以外の構成要素 (pair-freeze、trace) は resolver 経由で判定する。
 4. **G8〜G14 の判定規則 (freeze)**: 各 gate は、判定内容のうち **repo に tracked された成果物から決定的に判定できる部分** を static check として必ず持つ。

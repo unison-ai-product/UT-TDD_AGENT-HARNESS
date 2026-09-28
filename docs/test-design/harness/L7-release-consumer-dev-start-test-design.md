@@ -81,7 +81,7 @@ zip は repo root の `Vモデル設計ドキュメント_checked.zip` (gitignor
 共通 fixture (v): fixture (ii) に PR-T1 のテンプレートから作った L1〜L7 の文書一式を `docs/design/` / `docs/test-design/` へ置き、
 G2 の wireframe mock として consumer 自作の `docs/design/L2-screen/wireframe.md` 1 本 (`pair_artifact: docs/test-design/L10-ux-validation-test-design.md`) と、
 その pair として PR-T1 の `L10-ux-validation.md` から作った `docs/test-design/L10-ux-validation-test-design.md` 1 本を加えたもの (PLAN §3.6-2 rev 13)。
-テンプレート由来の文書の frontmatter `pair_artifact` / `plan` は consumer の path へ書き換える。
+テンプレート由来の文書の frontmatter `pair_artifact` / `plan` は consumer の path へ書き換え、`status` は `confirmed` とする (テンプレートの `draft` のままでは G1〜G6 の draft=0 条件を満たさない。gate の判定は変えない)。
 (vi): (v) から必須 slot を 1 つ欠いたもの。(vii): (v) から wireframe mock だけを除いたもの。いずれも `gate-design.md` を置かない。
 
 | ID | oracle | 違反 / mutation |
