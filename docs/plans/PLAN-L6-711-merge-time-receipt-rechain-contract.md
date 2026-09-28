@@ -25,6 +25,10 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L6-711-merge-time-receipt-rechain-contract.md
     artifact_type: markdown_doc
+  - artifact_path: src/plan-admission/rechain-verifier.ts
+    artifact_type: source_module
+  - artifact_path: tests/rechain-verifier.test.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-RECOVERY-16-plan-revision-authoring.md
   requires:
@@ -44,18 +48,18 @@ sub_doc: function-spec
 github_issue_id: 711
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:e64cbb4fce9218db1ba253f7853e1f50
-  command_id: plan-revise:issue-711:s1-input-shape:plan:r2:299d2f8bcfd2
-  admitted_at: 2026-09-28T07:13:01.026Z
-  source_digest: sha256:6ec8bac1ec6a35fe064177df53e27b585f893cc079fcaeb6d524d3f6976d659d
-  decision_digest: sha256:213bd419852b2bf14d057521b8fcb58cf156aaf260078fd0fb5edfa4c716a77b
-  receipt_digest: sha256:c90e34c0fa77c82785d047b1dcb73c9f5242d9f92ba91744dc7e1cda6ac7e3e1
+  receipt_id: certificate:412f0b3a57509e28bb12abb5fe9a45f0
+  command_id: plan-revise:issue-711:s2-rechain-verifier:plan:r3:37d8bc8a3eb0
+  admitted_at: 2026-09-28T08:02:23.857Z
+  source_digest: sha256:2c20364873c1e74cc23d920f41df91f34db336fb9dc8a6abe46a3ef6c0018ff9
+  decision_digest: sha256:5b6a4b116b33447b3f6a0662172ce3a496cc7edb05a35b92e77a8b636b3180ac
+  receipt_digest: sha256:40e7d3b1e0d2084c4894e2fe68dfec4bb03b0477dd7da1fc84961c264550bd2d
   binding:
     path: docs/plans/PLAN-L6-711-merge-time-receipt-rechain-contract.md
     plan_id: PLAN-L6-711-merge-time-receipt-rechain-contract
     asset_id: plan:ac2c23d3c72fc6e2886491ac1df09452
-    revision: 2
-    content_digest: sha256:6ec8bac1ec6a35fe064177df53e27b585f893cc079fcaeb6d524d3f6976d659d
+    revision: 3
+    content_digest: sha256:2c20364873c1e74cc23d920f41df91f34db336fb9dc8a6abe46a3ef6c0018ff9
   route:
     signal: feature_addition
     mode: add-feature
@@ -70,11 +74,10 @@ admission_receipt:
     digest: sha256:1b6aa397ad9995b717907d3247e02b3bba3d6c4508874b7654f90fd29b388927
   reentry:
     target_plan_id: PLAN-L6-711-merge-time-receipt-rechain-contract
-    target_revision: 2
+    target_revision: 3
     phase: forward_merge
-  escape_reason: "S2 の実装前確認 (issue #711) に応え、検証器の入力形と Git 取得の境界を §2.6 に freeze する
-    (S1)。非著者 review (Sol r1、PR #720) の FLAG 2 件 (base の定義、verifierDigest の
-    preimage) を反映し、#719 merge 後の main tail に chain する。"
+  escape_reason: S2 (verifyRechainDelta の実装) が新規に landing させる検証器とその unit test を
+    generates に宣言する (契約本文は rev 2 から不変)。
 ---
 
 # PLAN-L6-711: merge 時の自動 re-chain と簿記差分での再検免除の契約 freeze
@@ -313,3 +316,4 @@ git show --stat b8bdf6d8
 6. rev 6: PR #713 の非著者 review (Codex Sol r3) の FLAG 1 件を反映した。`workflow_phase` は `receiptFrontmatter` に投影されないため、§2.3-6 の投影照合の例から外した。投影フィールドは renderer の出力に合わせて全て列挙し、非投影入力は `decision_digest` 束縛だけで検証することを明記した。PR #713 は是正上限 (3 回) に達したので close し、本 revision を新しい PR で再提出した (CLAUDE.md §FLAG 後の限定是正と merge 2(c))。
 7. rev 2 (S1): 検証器の入力形と Git 取得の境界を §2.6 に freeze した (S2 の実装者 Codex root からの、実装前の確認依頼による。issue #711)。path 単位の 3-way、blob の範囲、`A_H` の照合、`verifierDigest`、adapter の信頼境界、oracle 008 と検証器の分担を定め、U-RECHAIN-013 (adapter の忠実性) と 014 (両側変更の非簿記 path) を追加した。
 8. rev 3 (S1 の是正): PR #720 の非著者 review (Codex Sol r1) の FLAG 2 件を反映した。(1) 旧 main tip 由来の base は stack した PR で `merge-base(H, M)` と一致しない反例があるため、§2.2 と §2.6 の base を `merge-base(H, M)` (git merge 自体の base) に統一し、旧 tip を使わないことにした。U-RECHAIN-015 を追加した。(2) `verifierDigest` の preimage、hash、domain separator (版付き) を既存の `stableJson` / `sha` を名指しして固定し、U-RECHAIN-016 を追加した。
+9. rev 3 (S2 の成果物宣言): S2 が新規に landing させる検証器 `src/plan-admission/rechain-verifier.ts` とその unit test `tests/rechain-verifier.test.ts` の 2 件を `generates` に追加した。pair は `docs/test-design/harness/L7-unit-test-design.md` の U-RECHAIN-001..007、011、012、014..016 の節である。契約本文は rev 2 から変えていない。
