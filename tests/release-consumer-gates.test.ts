@@ -213,7 +213,7 @@ describe("PR-G0 release-consumer gates", () => {
     expect(result.mockMissing).toBe(false);
   });
 
-  it("CANDIDATE-U-RCDEV-026: uses the embedded gate definition when the consumer has no copy", () => {
+  it("U-RCDEV-026: uses the embedded gate definition when the consumer has no copy", () => {
     const docs = loadGateConfirmDocs(fixtureRoot());
     const statuses = parseGateStatuses(docs.gateText);
 
@@ -222,7 +222,7 @@ describe("PR-G0 release-consumer gates", () => {
     expect(statuses.map((status) => status.gate)).toContain("G1");
   });
 
-  it("CANDIDATE-U-RCDEV-026: lets the consumer gate definition override the embedded default", () => {
+  it("U-RCDEV-026: lets the consumer gate definition override the embedded default", () => {
     const root = fixtureRoot();
     const consumerDefinition = [
       "## §2 Consumer gate ledger",
@@ -241,7 +241,7 @@ describe("PR-G0 release-consumer gates", () => {
     ]);
   });
 
-  it("CANDIDATE-U-RCDEV-026: seals all three tracked gate assets in the generated receipt", async () => {
+  it("U-RCDEV-026: seals all three tracked gate assets in the generated receipt", async () => {
     buildOutputRoot = mkdtempSync(join(tmpdir(), "ut-tdd-release-consumer-gates-build-"));
     const candidateRevision = execFileSync("git", ["rev-parse", "HEAD"], {
       encoding: "utf8",
@@ -310,7 +310,7 @@ describe("PR-G0 release-consumer gates", () => {
     expect(bundledGateMessage()).toContain("G1=consumer override");
   });
 
-  it("CANDIDATE-U-RCDEV-027: evaluates consumer G1-G6 fixture with non-empty bidirectional traces", () => {
+  it("U-RCDEV-027: evaluates consumer G1-G6 fixture with non-empty bidirectional traces", () => {
     const root = fixtureRoot();
     writeConsumerGateFixture(root);
 
@@ -335,7 +335,7 @@ describe("PR-G0 release-consumer gates", () => {
     expect(g3TraceMessages(g3Trace).join("\n")).toContain("frL1=1, l3Fr=1, ac=1, at=1");
   });
 
-  it("CANDIDATE-U-RCDEV-027: reports the missing required consumer slot, not could-not-run", () => {
+  it("U-RCDEV-027: reports the missing required consumer slot, not could-not-run", () => {
     const root = fixtureRoot();
     writeConsumerGateFixture(root, { omitRequiredSlot: true });
 
@@ -350,7 +350,7 @@ describe("PR-G0 release-consumer gates", () => {
     expect(messages).not.toContain("could not run");
   });
 
-  it("CANDIDATE-U-RCDEV-027: rejects a consumer fixture without its L2-to-L10 wireframe pair", () => {
+  it("U-RCDEV-027: rejects a consumer fixture without its L2-to-L10 wireframe pair", () => {
     const root = fixtureRoot();
     writeConsumerGateFixture(root, { omitWireframe: true });
 

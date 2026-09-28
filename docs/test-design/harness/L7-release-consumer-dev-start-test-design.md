@@ -86,8 +86,8 @@ G2 の wireframe mock として consumer 自作の `docs/design/L2-screen/wirefr
 
 | ID | oracle | 違反 / mutation |
 | --- | --- | --- |
-| CANDIDATE-U-RCDEV-026 | fixture (v) で `loadGateConfirmDocs` が ENOENT を出さず、埋め込みの gate 定義を使う。consumer に `docs/governance/gate-design.md` を置くとそれが優先される | (m1) 埋め込みを外す → ENOENT で失敗。(m2) 優先順を逆にする → consumer 側の定義が使われず失敗 |
-| CANDIDATE-U-RCDEV-027 | fixture (v) で G1〜G6 が `applicable:true` かつ pass、(vi) では欠いた slot 名を含む failed、(vii) では G2 が `mock=missing` を含む failed。いずれも「could not run」を含まない | (m1) resolver を `docs/design/harness` 固定に戻す → (v) が「could not run」または applicable false で失敗。(m2) G2 の L10 pair path を harness 固定の literal に戻す → (v) の G2 が `mock=missing` で失敗 |
+| U-RCDEV-026 | fixture (v) で `loadGateConfirmDocs` が ENOENT を出さず、埋め込みの gate 定義を使う。consumer に `docs/governance/gate-design.md` を置くとそれが優先される。実装: `tests/release-consumer-gates.test.ts` | (m1) 埋め込みを外す → ENOENT で失敗。(m2) 優先順を逆にする → consumer 側の定義が使われず失敗 |
+| U-RCDEV-027 | fixture (v) で G1〜G6 が `applicable:true` かつ pass、(vi) では欠いた slot 名を含む failed、(vii) では G2 が `mock=missing` を含む failed。いずれも「could not run」を含まない。実装: `tests/release-consumer-gates.test.ts` | (m1) resolver を `docs/design/harness` 固定に戻す → (v) が「could not run」または applicable false で失敗。(m2) G2 の L10 pair path を harness 固定の literal に戻す → (v) の G2 が `mock=missing` で失敗 |
 | CANDIDATE-U-RCDEV-028 | fixture (v) で `coverage/coverage-summary.json` 不在の G7 が typed な「coverage evidence missing」で failed (crash しない)。80% 以上の summary を置くと coverage 構成要素が pass | (m1) 存在確認を外す → 例外で失敗。(m2) 不在を pass 扱いにする → failed 期待で失敗 |
 
 G8〜G14 の oracle (029〜035) は PLAN §3.6-4 の共通述語 S / I / T / E / F / A と gate 固有述語を gate ごとに固定する。各 oracle の fixture は
