@@ -137,8 +137,6 @@ generates:
     artifact_type: test_code
   - artifact_path: src/shared/embedded-skills.ts
     artifact_type: source_module
-  - artifact_path: src/gate/right-arm-static.ts
-    artifact_type: source_module
   - artifact_path: tests/release-consumer-skills.test.ts
     artifact_type: test_code
   - artifact_path: docs/templates/github/common/commitlint.config.cjs
@@ -205,18 +203,18 @@ status: confirmed
 github_issue_id: 676
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:6ade8fd51b7a75161c250c01dcb85993
-  command_id: plan-revise:issue-676:prgr-right-arm-rechain:plan:r18:424472eaf83c
-  admitted_at: 2026-09-28T10:47:09.714Z
-  source_digest: sha256:2c56ad42439f2e62322a6a46f0debf6a02528532fb6cc6f41a0425c072bba333
-  decision_digest: sha256:5ec3cf06e04c9da5142a5a7910d9ee2dc6c4af7d1f3d3254976404657cec6531
-  receipt_digest: sha256:df7674e7ad9f705a1ff62e0f593449b6bbc0adcb1850aa0a4b0be082681e48d7
+  receipt_id: certificate:cbbed9778f8efb4bff717d5804f13f5f
+  command_id: plan-revise:issue-676:pr2c-template-boundary:plan:r17:48efd4e1057a
+  admitted_at: 2026-09-28T10:10:18.113Z
+  source_digest: sha256:8f8970053cf643425c53d01b0bca6a5d6ca932030ab409cbe4ae744b5553a57b
+  decision_digest: sha256:42d6feb2c862a93bba6cccef86aeb763ec052ae5deffb5aa627154a40a80b171
+  receipt_digest: sha256:6274d35d29057cbd66db9cbeeafa3348ab1e89c8460be3ec1ed878138049f83b
   binding:
     path: docs/plans/PLAN-L7-676-release-consumer-dev-start.md
     plan_id: PLAN-L7-676-release-consumer-dev-start
     asset_id: plan:aae8bf0e313f8688fbad4d4d8cf0a6a9
-    revision: 18
-    content_digest: sha256:2c56ad42439f2e62322a6a46f0debf6a02528532fb6cc6f41a0425c072bba333
+    revision: 17
+    content_digest: sha256:8f8970053cf643425c53d01b0bca6a5d6ca932030ab409cbe4ae744b5553a57b
   route:
     signal: feature_addition
     mode: add-feature
@@ -234,11 +232,11 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-676-release-consumer-dev-start
-    target_revision: 18
+    target_revision: 17
     phase: forward_merge
-  escape_reason: "Issue #676 PR-GR: 右腕共通 evaluator と G8 登録が新規に landing させる
-    src/gate/right-arm-static.ts を generates に宣言する成果物接合 (#728 の rev 17 の後に再接合する
-    revision 18、契約本文は不変)。"
+  escape_reason: "Issue #676 PR-2c root 検収: junction ancestor 経由の consumer
+    外書き込み実測を受け、§3.1.3 に書き込み前の物理 path preflight と deny 時 write 0 を freeze
+    し、CANDIDATE-U-RCDEV-039 を追加する契約改訂 (revision 17、docs-only)。"
 ---
 
 # PLAN-L7-676: Release consumer で開発を開始できる状態にする
@@ -726,4 +724,3 @@ injection path の乗っ取り、harness 自身の挙動変化、部分 setup �
 14. PR-3 の成果物宣言 (rev 15): setup 生成物の修理 (A5 DB 初期化、A6 生成 CI の条件分岐、A7 commitlint の CJS 化) が新規に landing させる `docs/templates/github/common/commitlint.config.cjs` とその回帰 test `tests/release-consumer-setup-artifacts.test.ts` の 2 件を `generates` に追加する。削除される旧 `commitlint.config.js` はどの PLAN の `generates` にも宣言されていない。PR-3 は PR-2a (#714) の rev 14 の上に積んだ stacked PR で、receipt は rev 14 の直後に chain する。
 15. PR-G0 の成果物宣言 (rev 16): consumer の G1〜G7 gate 入力 (G2 wireframe の L10 pair 写像、gate-design の bundle 埋め込みと consumer 優先) を実装する PR-G0 が新規に landing させる `tests/release-consumer-gates.test.ts` の 1 件だけを `generates` に追加する。RCDEV-037 の実測 golden は既存の `tests/gate-static.test.ts` に置かれ、新規ファイルではない。既存ファイルは宣言しない。
 17. PR-2c の書き込み境界 (rev 17): PR-2c の root 検収 (#676) で、consumer 内の `docs/plans` を外部 directory へ junction 接続した fixture に対し、lexical な insideRoot 判定だけの `vmodel template` が consumer 外へ書き込むことが実測された。§3.1.3 は consumer 内の catalog path へ書くことを前提にしていたが、その失敗条件 (consumer 外 write 0) を明記していなかったため、実装 PR 内の読み替えではなく契約改訂とした。§3.1.3 に書き込み前の物理 path preflight と deny 時の write 0 を追記し、test-design に CANDIDATE-U-RCDEV-039 を追加した。コマンド形・上書き規則・既存 oracle 014 / 015 / 038 の判定は変更しない。
-18. PR-GR の成果物宣言 (rev 18): §3.6-4 の共通述語 S / I / T / E / F / A / R を評価する右腕共通 evaluator と G8 の登録を実装する PR-GR が新規に landing させる `src/gate/right-arm-static.ts` の 1 件だけを `generates` に追加する。回帰 test は既存の `tests/release-consumer-gates.test.ts` (rev 16 で宣言済み) に追記され、新規ファイルではない。G9〜G14 の登録は後続 PR であり、本 revision では宣言しない。既存ファイルは宣言しない。 PR-GR は当初 main 48efd4e1 の rev 16 から rev 17 として発行したが、同じ rev 16 から発行した PR-2c 境界契約 (#728、rev 17) が先に merge されたため、最新 main の rev 17 から正規の plan revise で rev 18 として再接合した (receipt の手編集・conflict の手解決はしない)。
