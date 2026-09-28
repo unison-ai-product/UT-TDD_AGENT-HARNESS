@@ -1,5 +1,6 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import YAML from "yaml";
-import { readGateAssetText } from "../../lint/gate-confirm.ts";
 import {
   type CompiledRightArmRegistry,
   compileRightArmContract,
@@ -7,7 +8,10 @@ import {
 
 export const VMODEL_CONTRACT_PATH = "docs/process/vmodel-contract.yaml";
 
-export function loadCompiledRightArmRegistry(repoRoot = process.cwd()): CompiledRightArmRegistry {
-  const source = readGateAssetText(repoRoot, VMODEL_CONTRACT_PATH);
+export function loadCompiledRightArmRegistry(
+  repoRoot = process.cwd(),
+  sourceText?: string,
+): CompiledRightArmRegistry {
+  const source = sourceText ?? readFileSync(resolve(repoRoot, VMODEL_CONTRACT_PATH), "utf8");
   return compileRightArmContract(YAML.parse(source));
 }

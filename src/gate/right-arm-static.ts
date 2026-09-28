@@ -4,15 +4,35 @@ import {
   parseG8IntegrationEvidenceManifest,
   validateG8IntegrationEvidenceManifest,
 } from "../lint/g8-integration-workflow.ts";
+import { readGateAssetText } from "../lint/gate-confirm.ts";
 import { fmValue } from "../lint/shared.ts";
 import { resolveAuthoringSourceAbsolutePath } from "../shared/design-root.ts";
 import { designLayerFromPath, loadPairDocs } from "../vmodel/lint.ts";
-import { loadCompiledRightArmRegistry } from "../vmodel-contract/adapters/yaml-contract-loader.ts";
+import {
+  loadCompiledRightArmRegistry,
+  VMODEL_CONTRACT_PATH,
+} from "../vmodel-contract/adapters/yaml-contract-loader.ts";
 import type { CompiledVerificationObligation } from "../vmodel-contract/application/contract-compiler.ts";
 
 interface CaseRow {
   id: string;
   citations: string;
+}
+
+interface CheckCaseIdsInput {
+  rows: readonly CaseRow[];
+  prefix: string;
+  content: string;
+  violations: string[];
+}
+
+interface CheckManifestInput {
+  repoRoot: string;
+  absolutePath: string;
+  evidenceDirectory: string;
+  obligation: CompiledVerificationObligation;
+  caseIds: ReadonlySet<string>;
+  violations: string[];
 }
 
 type JsonRecord = Record<string, unknown>;
@@ -101,12 +121,7 @@ function pairLayerIds(repoRoot: string, pairLayers: readonly string[]): Set<stri
   return ids;
 }
 
-function checkCaseIds(
-  rows: readonly CaseRow[],
-  prefix: string,
-  content: string,
-  violations: string[],
-): void {
+function checkCaseIds({ rows, prefix, content, violations }: CheckCaseIdsInput): void {
   const defined = new Set<string>();
   for (const { id } of rows) {
     if (!id.startsWith(prefix)) violations.push(`case id must start with ${prefix}: ${id}`);
@@ -161,14 +176,14 @@ function resolveRepoFile(repoRoot: string, path: unknown): string | null {
   return absolutePath;
 }
 
-function checkManifest(
-  repoRoot: string,
-  absolutePath: string,
-  evidenceDirectory: string,
-  obligation: CompiledVerificationObligation,
-  caseIds: ReadonlySet<string>,
-  violations: string[],
-): { mandatoryIds: Set<string>; deferredIds: Set<string> } {
+function checkManifest({
+  repoRoot,
+  absolutePath,
+  evidenceDirectory,
+  obligation,
+  caseIds,
+  violations,
+}: CheckManifestInput): { mandatoryIds: Set<string>; deferredIds: Set<string> } {
   const path = manifestPath(repoRoot, absolutePath);
   let parsed: unknown;
   try {
@@ -231,7 +246,10 @@ export function evaluateRightArmStaticGate(
   messages: string[];
 } {
   const key = gate.trim().toUpperCase();
-  const registry = loadCompiledRightArmRegistry(repoRoot);
+  const registry = loadCompiledRightArmRegistry(
+    repoRoot,
+    readGateAssetText(repoRoot, VMODEL_CONTRACT_PATH),
+  );
   const obligation = registry.obligations.find((entry) => entry.gate === key);
   if (!obligation) {
     return {
@@ -245,21 +263,26 @@ export function evaluateRightArmStaticGate(
   const content = slot ?? "";
   const rows = parseG8CaseRows(content, violations);
   const caseIds = new Set(rows.map((row) => row.id));
-  checkCaseIds(rows, obligation.caseIdPrefix, content, violations);
+  checkCaseIds({
+    rows,
+    prefix: obligation.caseIdPrefix,
+    content,
+    violations,
+  });
   checkCaseTraces(rows, pairLayerIds(repoRoot, obligation.pairLayers), violations);
   const evidenceDirectory = dirname(obligation.evidenceManifest).replaceAll("\\", "/");
   const files = manifestFiles(repoRoot, evidenceDirectory);
   if (files.length === 0) violations.push(`evidence manifest missing under ${evidenceDirectory}`);
   const evidenced = new Set<string>();
   for (const file of files) {
-    const manifestResult = checkManifest(
+    const manifestResult = checkManifest({
       repoRoot,
-      file,
+      absolutePath: file,
       evidenceDirectory,
       obligation,
       caseIds,
       violations,
-    );
+    });
     for (const id of [...manifestResult.mandatoryIds, ...manifestResult.deferredIds])
       evidenced.add(id);
   }
