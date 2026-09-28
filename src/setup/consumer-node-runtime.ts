@@ -644,9 +644,8 @@ const bundle = resolve(pointer.bundle_path), entry = resolve(pointer.entry_path)
 const runtimeRoot = resolve(consumerRoot, ".ut-tdd", "runtime");
 let runtimeReal, bundleReal, entryReal;
 try { runtimeReal = realpathSync.native(runtimeRoot); bundleReal = realpathSync.native(bundle); entryReal = realpathSync.native(entry); } catch { deny("consumer_runtime_absent"); }
-const runtimeRel = relative(runtimeReal, bundle);
 const rel = relative(bundle, entry);
-if (runtimeRel === "" || runtimeRel === ".." || runtimeRel.startsWith("..") || rel === "" || rel === ".." || rel.startsWith("..")) deny("consumer_runtime_external_path");
+if (rel === "" || rel === ".." || rel.startsWith("..")) deny("consumer_runtime_external_path");
 const runtimeConsumerRel = relative(consumerRoot, runtimeReal);
 if (runtimeConsumerRel === "" || runtimeConsumerRel === ".." || runtimeConsumerRel.startsWith("..")) deny("consumer_runtime_external_path");
 const runtimePhysicalRel = relative(runtimeReal, bundleReal);
