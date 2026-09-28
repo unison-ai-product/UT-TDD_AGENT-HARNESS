@@ -1,4 +1,4 @@
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
   cpSync,
@@ -14,6 +14,8 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { stringify } from "yaml";
+import * as setupApi from "../src/setup/index.ts";
+import { headSnapshotRoot } from "./support/workspace-roots.ts";
 import {
   assertProducerPathsOutsideHome,
   type ConsumerRuntimeReleaseProducerError,
@@ -780,5 +782,26 @@ describe("Pack consumer runtime release producer byte and fail-close oracles", (
     } finally {
       rmSync(outDir, { recursive: true, force: true });
     }
+  });
+});
+
+describe("Pack consumer runtime release installer surface", () => {
+  it("CANDIDATE-U-PACKRT-005: exports the installer entry point from the shared setup module", () => {
+    expect(typeof Reflect.get(setupApi, "installConsumerRuntimeRelease")).toBe("function");
+  });
+
+  it("CANDIDATE-U-PACKRT-005: exposes both required trust-boundary options on setup", () => {
+    const root = headSnapshotRoot();
+    const cliPath = join(root, "src", "cli.ts");
+    const run = spawnSync(process.execPath, [cliPath, "setup", "--help"], {
+      cwd: root,
+      encoding: "utf8",
+      windowsHide: true,
+    });
+
+    expect(run.error?.message ?? "", "setup CLI spawn").toBe("");
+    expect(run.status, `stderr:\n${run.stderr}`).toBe(0);
+    expect(run.stdout).toContain("--consumer-runtime-release <path>");
+    expect(run.stdout).toContain("--expected-consumer-digest <digest>");
   });
 });
