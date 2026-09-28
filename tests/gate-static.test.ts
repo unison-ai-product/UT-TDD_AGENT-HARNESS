@@ -37,6 +37,7 @@ const cliPath = join(process.cwd(), "src", "cli.ts");
  *   results.push({gate, ok: result.ok, messages: normalize(result.messages)});
  * }
  * process.stdout.write(JSON.stringify(results, null, 2));
+ * 保存時の明示正規化: message の path separator を / に統一 (それ以外の値は実測のまま)。
  * G8-G10 は doctor API の raw ok/messages。m2 は PR-GR の所有。
  */
 const HARNESS_GATE_BASELINE = [
