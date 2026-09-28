@@ -79,6 +79,7 @@ describe("release-consumer vmodel lint (PLAN-L7-676 PR-VL)", () => {
 
       expect(result).toMatchObject({ status: "checked", documentCount: expectedDocumentCount });
       expect(result.ok).toBe(true);
+      expect(result.messages).toContain(`vmodel — 文書 ${expectedDocumentCount} 件`);
       expect(result.messages.join("\n")).toContain(`双方向 ${expectedDocumentCount - 1} pair`);
       expect(result.messages.join("\n")).toContain("孤児 0");
     } finally {

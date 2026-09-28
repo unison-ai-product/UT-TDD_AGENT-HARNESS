@@ -610,7 +610,9 @@ export function lintVmodel(_path?: string, repoRoot: string = process.cwd()): VM
   return {
     ok: result.ok,
     messages:
-      status === "not-created" ? ["vmodel — 未作成 (文書 0 件)"] : pairFreezeMessages(result),
+      status === "not-created"
+        ? ["vmodel — 未作成 (文書 0 件)"]
+        : [`vmodel — 文書 ${documentCount} 件`, ...pairFreezeMessages(result)],
     documentCount,
     status,
   };
