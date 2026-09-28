@@ -264,7 +264,7 @@ describe("U-RCDEV PR-3: generated setup artifacts", () => {
     expect(result.status, result.stderr).toBe(0);
     expect(readFileSync(join(root, "commitlint.config.js"), "utf8")).toBe(existing);
     expect(`${result.stdout}\n${result.stderr}`).toMatch(
-      /commitlint\.config\.js.*(既存|preserv|skip|警告)/i,
+      /(?:warning|警告).*commitlint\.config\.js|commitlint\.config\.js.*(?:warning|警告)/i,
     );
     expect(`${result.stdout}\n${result.stderr}`).toContain(COMMITLINT_INSTALL);
   }, 90_000);
