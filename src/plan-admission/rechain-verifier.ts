@@ -1,6 +1,6 @@
 import { parseLegacyPlanSource } from "../plan-asset/adapters/legacy-plan-inventory.ts";
 import { canonicalPlanContentDigest } from "./diff-fence.ts";
-import { sha, stableJson } from "./plan-revision-command-assembler.ts";
+import { deriveTrackedReceiptId, sha, stableJson } from "./plan-revision-command-assembler.ts";
 import type { PlanAdmissionRequest } from "./policy.ts";
 import {
   parseTrackedReceiptProjection,
@@ -51,6 +51,8 @@ export type RechainVerdict =
 
 export const RECEIPT_PATH = "docs/governance/plan-admission-receipts.json";
 const PLAN_PATH_RE = /^docs\/plans\/PLAN-[A-Za-z0-9-]+\.md$/;
+/** PLAN-L6-711 §2.3-6 condition 6: command_id は H の command_id に `:rechain-<n>` (n>=1) を付けたものに限る。 */
+const RECHAIN_COMMAND_SUFFIX_RE = /^:rechain-([1-9]\d*)$/;
 const SECTION8_HEADING_RE = /^## 8\..*$/m;
 const SECTION8_ITEM_RE = /^(\d+)\.\s(.*)$/gm;
 
@@ -345,6 +347,25 @@ function verifyPlanReapplication(args: {
     reasons.push(`plan-revision-mismatch:${path}`);
   }
 
+  // --- command_id / receipt_id 束縛 (§2.3-6 condition 6) ---
+  // command_id は H の command_id + `:rechain-<n>` suffix (n>=1) に限る。record 内の値を
+  // 信用せず、format を fail-close で検査したうえで、receipt_id を正規式
+  // (plan-revision-command-assembler.deriveTrackedReceiptId、node-plan-revision-runner.ts の
+  // certificateId 計算と同一) から独立に再導出して照合する。
+  // receipt_digest (certificateDigest) は ledger 側の actor / sourceCommit を必要とし、
+  // `RechainInput` (§2.6 で凍結、S2 は形を追加しない) には actor が含まれないため、この pure
+  // function からは bit-exact に再導出できない。最低限、H の receipt_digest をそのまま R へ
+  // 使い回していないことだけを fail-close で検査する (record 内容が変わった以上、真正な再発行
+  // なら receipt_digest も変わるはずである)。
+  if (!isRechainCommandId(hRecord.commandId, rRecord.commandId)) {
+    reasons.push(`rechain-command-id-mismatch:${path}`);
+  } else if (rRecord.receiptId !== deriveTrackedReceiptId(rRecord.commandId)) {
+    reasons.push(`rechain-receipt-id-mismatch:${path}`);
+  }
+  if (rRecord.receiptDigest === hRecord.receiptDigest) {
+    reasons.push(`rechain-receipt-digest-unchanged:${path}`);
+  }
+
   // --- admission 意味の不変 (§2.3-6, U-RECHAIN-012) ---
   const expectedAR: PlanAdmissionRequest =
     candidate.reentry && candidate.reentry.targetPlanId === hRecord.binding.planId
@@ -406,6 +427,11 @@ function verifyPlanReapplication(args: {
 
   if (reasons.length > 0) return { ok: false, reasons };
   return { ok: true, addedArtifactPaths: artifactPaths.slice(mGenerates.length) };
+}
+
+function isRechainCommandId(hCommandId: string, rCommandId: string): boolean {
+  if (!rCommandId.startsWith(hCommandId)) return false;
+  return RECHAIN_COMMAND_SUFFIX_RE.test(rCommandId.slice(hCommandId.length));
 }
 
 function normalizeAdmissionExceptTargetRevision(
