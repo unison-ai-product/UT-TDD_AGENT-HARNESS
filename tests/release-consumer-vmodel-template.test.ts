@@ -186,6 +186,8 @@ function runBundledCli(
       XDG_CONFIG_HOME: join(root, ".config"),
       GH_CONFIG_DIR: join(root, ".gh-config"),
       CLAUDE_PROJECT_DIR: "",
+      CLAUDE_CODE_ENTRYPOINT: "",
+      UT_TDD_DISABLE_CLAUDE_MEMORY_WAKE: "1",
       UT_TDD_PROJECT_DIR: "",
       UT_TDD_CLAUDE_SESSIONS_DIR: join(root, ".claude", "projects"),
       UT_TDD_CODEX_SESSIONS_DIR: join(root, ".codex", "sessions"),
