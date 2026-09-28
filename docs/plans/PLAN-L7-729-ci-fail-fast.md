@@ -40,18 +40,18 @@ status: draft
 github_issue_id: 729
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:deaac7ef5f1ad0292b8530d61481c4bc
-  command_id: plan-revise:issue-729:ci-fail-fast:plan:r2:0c2808de42b5
-  admitted_at: 2026-09-28T11:33:01.516Z
-  source_digest: sha256:befa38ad69ffbdbb9fd77f0c230891bb7e5dc9917e42272c74433deef4cf4ced
-  decision_digest: sha256:5f3bdb9cead16eb08646905eb5d6c32b3972e9520c48b0b35c8f9c4e9fc52dcd
-  receipt_digest: sha256:07cf582fb1363f6cb30ffc1fafdce934844fa52306b622deb7fed86b7c6f6be5
+  receipt_id: certificate:ba943fc6b674252419f47d8e9271f8aa
+  command_id: plan-revise:issue-729:ci-fail-fast:plan:r3:ca50ba2e8224
+  admitted_at: 2026-09-28T11:39:20.078Z
+  source_digest: sha256:674855a81758bffe20908f6d8e415eac9bbe25cbdc84a811cc8b3203e405def1
+  decision_digest: sha256:9302169474f53eb5f708e23b4934a99a39015fbcb6ab2f2a18445d53f9934931
+  receipt_digest: sha256:6c8b7af675c6edaaee46bfd9ed9fbbf561849535c8717e342cde8ec3b96ab219
   binding:
     path: docs/plans/PLAN-L7-729-ci-fail-fast.md
     plan_id: PLAN-L7-729-ci-fail-fast
     asset_id: plan:52b3f1f4e75ee41059efba897141a715
-    revision: 2
-    content_digest: sha256:befa38ad69ffbdbb9fd77f0c230891bb7e5dc9917e42272c74433deef4cf4ced
+    revision: 3
+    content_digest: sha256:674855a81758bffe20908f6d8e415eac9bbe25cbdc84a811cc8b3203e405def1
   route:
     signal: structural
     mode: refactor
@@ -69,11 +69,10 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-729-ci-fail-fast
-    target_revision: 2
+    target_revision: 3
     phase: forward_merge
-  escape_reason: "Issue #729 PR #732 Sol r1 FLAG の是正: lane 別実行集合を改訂前と同一に保つ
-    (preflight に正準 classify、typecheck は full lane 限定) ことで refactor の behavior
-    invariant を満たし、重複 oracle ID を U-CIPOL-037 へ振り直す。"
+  escape_reason: "Issue #729 PR #732: CI の plan-reference-freshness 赤の是正 (本文の file
+    参照をファイル名単独から repo 相対 path へ正規化、契約内容は不変)。"
 ---
 
 # PLAN-L7-729 (refactor): harness-check の fail-fast 化
@@ -107,7 +106,7 @@ admission_receipt:
 
 非スコープ: Windows 脚の vitest 短縮 (#726 型の Windows 固有赤は短縮されない)、local preflight
 (#581 の別成果)、plan lint の preflight 化 (§将来候補)、source template / setup builtin / Pack template
-の job 構成 (これらは `harness-check` 単一 job 契約のまま。`github-ci-policy.ts:1133` で required step
+の job 構成 (これらは `harness-check` 単一 job 契約のまま。`src/lint/github-ci-policy.ts:1133` で required step
 検査前に `continue` するため影響なし)。
 
 ## 設計判断
@@ -126,16 +125,16 @@ advisor (gpt-5.6-sol, implementation, 2026-09-28) の推奨と一致。根拠: p
 ### D2. Windows 脚の typecheck を残すか
 
 **残す (advisor 推奨を採択)**。Windows 脚は別 OS 面 (path separator / `tsc` の Windows 実行) を
-被覆する脚であり (`harness-check.yml:168-172` の PLAN-L7-448 方針)、Linux の typecheck の重複ではない。
-Windows 脚の step manifest は `needs` 追加以外不変 (`github-ci-policy.ts:457-479`)。
+被覆する脚であり (`.github/workflows/harness-check.yml:168-172` の PLAN-L7-448 方針)、Linux の typecheck の重複ではない。
+Windows 脚の step manifest は `needs` 追加以外不変 (`src/lint/github-ci-policy.ts:457-479`)。
 
 ### D3. preflight の lane 分類 (typecheck は現状 full lane 限定)
 
-改訂前の lane 別実行集合 (Linux 脚、`harness-check.yml` / `github-ci-policy.ts` の manifest):
+改訂前の lane 別実行集合 (Linux 脚、`.github/workflows/harness-check.yml` / `src/lint/github-ci-policy.ts` の manifest):
 
-- typecheck は **full 限定** (`harness-check.yml:106-107`、`github-ci-policy.ts:412` の `LANE_FULL_ONLY_IF`)。
-- branch-type guard / plan admission-check / lint (biome) は **lane 無条件** (`harness-check.yml:78`,`:101`,`:155`、
-  `github-ci-policy.ts:391-411`,`:444`)。
+- typecheck は **full 限定** (`.github/workflows/harness-check.yml:106-107`、`src/lint/github-ci-policy.ts:412` の `LANE_FULL_ONLY_IF`)。
+- branch-type guard / plan admission-check / lint (biome) は **lane 無条件** (`.github/workflows/harness-check.yml:78`,`:101`,`:155`、
+  `src/lint/github-ci-policy.ts:391-411`,`:444`)。
 
 route は `refactor` を維持する (control 決定、Sol r1 FLAG 是正 2026-09-28)。`refactor` の pairing
 obligation は「behavior invariant」(`src/schema/route-filing.ts:85`) であり、doc lane に typecheck を
@@ -144,7 +143,7 @@ obligation は「behavior invariant」(`src/schema/route-filing.ts:85`) であ�
 
 | 案 | 内容 | trade-off |
 |---|---|---|
-| A (採択) | preflight が **自前の正準 classify** (`classifyFields` = 脚と同一 producer、`github-ci-policy.ts:304-311`,`:369`) を持ち、typecheck を `LANE_FULL_ONLY_IF` (`:285`) で条件付けする。guard / admission / lint は今日の Linux 脚どおり lane 無条件。harness 2 脚は従来どおり各自の classify を保持 | lane 別実行集合が改訂前と一致する (§不変条件 1)。lane 検査 (producer 検査 + lane 条件 loop、`:544-629`) の対象に `preflight` を加える policy 改訂が必要 (§policy 改訂)。classify が 1 回増える (実測 1〜2s) |
+| A (採択) | preflight が **自前の正準 classify** (`classifyFields` = 脚と同一 producer、`src/lint/github-ci-policy.ts:304-311`,`:369`) を持ち、typecheck を `LANE_FULL_ONLY_IF` (`:285`) で条件付けする。guard / admission / lint は今日の Linux 脚どおり lane 無条件。harness 2 脚は従来どおり各自の classify を保持 | lane 別実行集合が改訂前と一致する (§不変条件 1)。lane 検査 (producer 検査 + lane 条件 loop、`:544-629`) の対象に `preflight` を加える policy 改訂が必要 (§policy 改訂)。classify が 1 回増える (実測 1〜2s) |
 | B | preflight が classify し `jobs.preflight.outputs.lane` を export、脚は `needs.preflight.outputs.lane` を参照 | classify 1 回分を節約するだけで、`LANE_FULL_ONLY_IF` / `LANE_DOC_ONLY_IF` の正準式 (`:285-286`)、producer 検査、全 lane 条件 step の manifest を書き換える。job 間 output を信頼根に加える新契約になる |
 | C (旧採択、撤回) | preflight は classify を持たず 4 step を lane 無条件で実行 | doc lane に typecheck が加わる = fail-close 条件の追加 (振る舞い変更)。refactor の behavior invariant に反するため不採用 |
 
@@ -153,7 +152,7 @@ A の成立条件:
 1. **classify の決定性**: preflight と各脚の classify は同一の正準コマンド (`CLASSIFY_COMMAND`、`:304-311`) を
    同一 exact head (`actions/checkout@v5` + `fetch-depth: 0`) と同一 github context (event_name / sha /
    base sha / before) で実行するため、同じ lane を出す。job 間で output は共有しない
-   (`harness-check.yml:190` の既存方針を preflight にも適用)。
+   (`.github/workflows/harness-check.yml:190` の既存方針を preflight にも適用)。
 2. **各 job は自前の classify なしに lane 条件を持たない**: classify の無い job で
    `steps.classify.outputs.lane` を参照すると output が空 = 常に skip になり、検証が黙って消える。
    この不変条件を preflight に拡張し、さらに lane 検査対象外の job (node-generation 2 脚・aggregate) が
@@ -173,7 +172,7 @@ A の成立条件:
 
 `!cancelled()` は lane 条件ではない (`steps.classify.outputs.lane` を含まない) ため lane 条件 loop の
 対象外であり、preflight manifest の完全一致でのみ固定する。classify には `if` を付けない
-(producer 検査は `producer.if !== undefined` を拒否する、`github-ci-policy.ts:553`)。
+(producer 検査は `producer.if !== undefined` を拒否する、`src/lint/github-ci-policy.ts:553`)。
 
 ### D5. node-generation 2 脚にも `needs: preflight` を付けるか
 
@@ -192,14 +191,14 @@ A の成立条件:
 
 B が現状の検査下で安全であることは認めた上で、aggregate 契約を自己完結にするため A を採択
 (advisor 推奨と同結論、理由は「preflight が check の唯一の保持者になる」点を主根拠とする)。
-これに伴い `github-ci-policy.ts:711-722` の needs 完全一致検査と `REQUIRED_AGGREGATE_COMMAND`
+これに伴い `src/lint/github-ci-policy.ts:711-722` の needs 完全一致検査と `REQUIRED_AGGREGATE_COMMAND`
 (`:635-637`) を `AGGREGATE_NEEDS = ["preflight", ...RUNTIME_LEGS]` 基準へ改訂する。
 `PLAN-RECOVERY-15` の aggregate 契約 (always() で必ず起動し、全 needs success の AND で判定) の
 **意味は不変**、needs 集合だけが 1 件増える。
 
 ### D7. aggregate の result guard と artifact download の順序
 
-**result guard を download より前に置く (採択)**。現状は download (`harness-check.yml:309-313`) が先。
+**result guard を download より前に置く (採択)**。現状は download (`.github/workflows/harness-check.yml:309-313`) が先。
 preflight 失敗時は node-generation 脚が起動せず artifact が 0 件になる。`actions/download-artifact@v4`
 が pattern 0 件一致で成功扱いか失敗扱いかは **未検証** だが、どちらでも verdict は red であり、問題は
 失敗理由の可読性 (download の失敗に見える) である。guard を先に置けば verdict は artifact 非依存に
@@ -219,8 +218,8 @@ RECOVERY-15 は cross-OS aggregate の回復が目的で fail-fast は別論点�
 route: issue の `bottleneck` は `src/schema/route-map.ts` の token に存在しない (grep 0 件)。
 `redesign` mode は `allowed_kinds: [design, add-design]`、layer band L1-L6 (`src/schema/route-filing.ts:62-68`)
 で L7 実装に合わない。check 集合を変えず構造 (job 配置と順序) を組み替える性質から
-`route_signal: structural` → `route_mode: refactor` (`route-map.ts` refactor tokens、
-`route-filing.ts` refactor: `allowed_kinds: [refactor]`、layer band L7) を採択し、pairing obligation
+`route_signal: structural` → `route_mode: refactor` (`src/schema/route-map.ts` refactor tokens、
+`src/schema/route-filing.ts` refactor: `allowed_kinds: [refactor]`、layer band L7) を採択し、pairing obligation
 「behavior invariant + regression fence + linked test id」を §不変条件 と U-CIPOL-028〜039
 (test-design に freeze する oracle。実装 PR で追加し、本 head では未実装) で満たす。
 behavior invariant の中核は lane 別実行集合の同一性 (D3) であり、その regression fence は U-CIPOL-039。
@@ -234,7 +233,7 @@ behavior invariant の中核は lane 別実行集合の同一性 (D3) であり�
 | 1 | `checkout` | `actions/checkout@v5`、`fetch-depth: 0` (guard の `git log` と admission の base 解決に必要) |
 | 2 | `setup node (harness 実行系の正式 runtime、PLAN-L7-462 step 2)` | `commonRuntimeSteps` と同一 |
 | 3 | `install deps (frozen)` | `npm ci --no-audit --no-fund` |
-| 4 | `classify changed files (doc lane vs full, fail-close)` | `classifyFields` (`id: classify` + `CLASSIFY_COMMAND`) と同一、`shell` / `if` / `env` なし (Linux 脚の producer と同形、`github-ci-policy.ts:390`) |
+| 4 | `classify changed files (doc lane vs full, fail-close)` | `classifyFields` (`id: classify` + `CLASSIFY_COMMAND`) と同一、`shell` / `if` / `env` なし (Linux 脚の producer と同形、`src/lint/github-ci-policy.ts:390`) |
 | 5 | `typecheck (tsc --noEmit)` | `npm run typecheck` + `if: LANE_FULL_ONLY_IF` (現 Linux 脚と同一、`:412`)。`!cancelled()` は付けない (D3 成立条件 3) |
 | 6 | `branch-type guard (commitlint / poc / hotfix)` | 現 Linux 脚の step と env / run 同一 (`:391-403`) + `if: ${{ !cancelled() }}` |
 | 7 | `plan admission-check (PLAN 編集の receipt 照合、fail-close)` | 現 Linux 脚の step と env / run 同一 (`:406-411`) + `if: ${{ !cancelled() }}` |
@@ -253,7 +252,7 @@ checkout → setup node → install → classify → db rebuild (full) → docto
 
 ### `harness-check-windows` / `node-generation-linux` / `node-generation-windows` (`needs: preflight`)
 
-steps は現行 manifest (`github-ci-policy.ts:457-489`) から不変。
+steps は現行 manifest (`src/lint/github-ci-policy.ts:457-489`) から不変。
 
 YAML 上の配置: 既存 fixture が `"  <leg>:\n    runs-on: ..."` を置換 anchor に使うため
 (`tests/github-ci-policy.test.ts:1194,1218,1493`)、`needs: preflight` は **`runs-on` の直後** に書く。
@@ -294,7 +293,7 @@ lane 別の実行 check 集合 (改訂前 = 改訂後、setup 系 step / classif
 
 | lane | Linux 面 (改訂前 = Linux 脚 / 改訂後 = preflight ∪ Linux 脚) | Windows 脚 (不変) |
 |---|---|---|
-| full | guard / admission / typecheck / db rebuild / doctor / vitest 全回帰 / lint / audit quality (`harness-check.yml:78`,`:101`,`:106`,`:110`,`:114`,`:134`,`:155`,`:158`) | typecheck / db rebuild / test:windows / doctor toolchain (`:203`,`:207`,`:211`,`:219`) |
+| full | guard / admission / typecheck / db rebuild / doctor / vitest 全回帰 / lint / audit quality (`.github/workflows/harness-check.yml:78`,`:101`,`:106`,`:110`,`:114`,`:134`,`:155`,`:158`) | typecheck / db rebuild / test:windows / doctor toolchain (`:203`,`:207`,`:211`,`:219`) |
 | doc | guard / admission / doc lane checks / doc lane source doctor / lint (`:78`,`:101`,`:145`,`:151`,`:155`) | doc lane source checks (`:215`) |
 
 1. preflight が success した run では、上表の lane 別 check 集合が改訂前と同一に実行され、1 つでも失敗
