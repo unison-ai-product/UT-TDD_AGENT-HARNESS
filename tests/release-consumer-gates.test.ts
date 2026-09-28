@@ -13,7 +13,11 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
-import { analyzeLayerPairGate, evaluateStaticGate } from "../src/gate/static.ts";
+import {
+  analyzeLayerPairGate,
+  evaluateStaticGate,
+  readCoverageSummary,
+} from "../src/gate/static.ts";
 import {
   analyzeG1Trace,
   g1TraceMessages,
@@ -361,5 +365,75 @@ describe("PR-G0 release-consumer gates", () => {
     expect(result.passed).toBe(false);
     expect(messages).toContain("mock=missing");
     expect(messages).not.toContain("could not run");
+  });
+
+  it("U-RCDEV-028: returns a typed missing-coverage reason and accepts an 80% consumer summary", () => {
+    const root = fixtureRoot();
+    writeConsumerGateFixture(root);
+    const coveragePath = join(root, "coverage", "coverage-summary.json");
+
+    const missing = evaluateStaticGate({ gate: "G7", repoRoot: root });
+    const missingCoverage = readCoverageSummary(coveragePath);
+
+    expect(missing.applicable).toBe(true);
+    expect(missing.passed).toBe(false);
+    expect(missing.reasons).toEqual(["coverage_evidence_missing"]);
+    expect(missing.messages.join("\n")).toContain(
+      `g7-coverage - violation: coverage summary not found (${coveragePath}); run test coverage before G7`,
+    );
+    expect(missing.messages.join("\n")).not.toContain("could not run");
+    expect(missingCoverage).toMatchObject({
+      ok: false,
+      pct: null,
+      reasons: ["coverage_evidence_missing"],
+    });
+    writeFixtureDoc(root, "coverage/unreadable.json", "{");
+    expect(readCoverageSummary(join(root, "coverage", "unreadable.json"))).toMatchObject({
+      ok: false,
+      pct: null,
+      reasons: ["coverage_summary_unreadable"],
+    });
+    writeFixtureDoc(root, "coverage/null-summary.json", "null");
+    expect(readCoverageSummary(join(root, "coverage", "null-summary.json"))).toMatchObject({
+      ok: false,
+      pct: null,
+      reasons: ["coverage_summary_unreadable"],
+    });
+    writeFixtureDoc(
+      root,
+      "coverage/missing-pct.json",
+      JSON.stringify({ total: { branches: { pct: 100 } } }),
+    );
+    expect(readCoverageSummary(join(root, "coverage", "missing-pct.json"))).toMatchObject({
+      ok: false,
+      pct: null,
+      reasons: ["coverage_summary_unreadable"],
+    });
+    writeFixtureDoc(
+      root,
+      "coverage/below-threshold.json",
+      JSON.stringify({ total: { lines: { pct: 79 } } }),
+    );
+    expect(readCoverageSummary(join(root, "coverage", "below-threshold.json"))).toMatchObject({
+      ok: false,
+      pct: 79,
+      reasons: ["coverage_below_threshold"],
+    });
+
+    writeFixtureDoc(
+      root,
+      "coverage/coverage-summary.json",
+      JSON.stringify({ total: { lines: { pct: 80 } } }),
+    );
+
+    const passingCoverage = readCoverageSummary(coveragePath);
+    const withCoverage = evaluateStaticGate({ gate: "G7", repoRoot: root });
+
+    expect(passingCoverage).toMatchObject({ ok: true, pct: 80 });
+    expect(passingCoverage.reasons).toBeUndefined();
+    expect(passingCoverage.message).toBe("g7-coverage - OK (80% >= 80%)");
+    expect(withCoverage.passed).toBe(false);
+    expect(withCoverage.reasons).toBeUndefined();
+    expect(withCoverage.messages).toContain("g7-coverage - OK (80% >= 80%)");
   });
 });
