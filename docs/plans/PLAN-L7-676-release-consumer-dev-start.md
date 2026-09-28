@@ -139,6 +139,10 @@ generates:
     artifact_type: source_module
   - artifact_path: tests/release-consumer-skills.test.ts
     artifact_type: test_code
+  - artifact_path: docs/templates/github/common/commitlint.config.cjs
+    artifact_type: template
+  - artifact_path: tests/release-consumer-setup-artifacts.test.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L6-101-pack-independent-multi-consumer-acceptance.md
   requires:
@@ -197,18 +201,18 @@ status: confirmed
 github_issue_id: 676
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:822b69e05cb2df931fbfb9a0eda3d184
-  command_id: plan-revise:issue-676:pr2a-skills-bundle:plan:r14:90169a353901
-  admitted_at: 2026-09-28T04:27:32.431Z
-  source_digest: sha256:ea88773fa41bac2f0f1d84a205f9bf20bb511e121a3039b5ce781fe3f229ffa1
-  decision_digest: sha256:6303b0d03844ba17b93216b314d3265227c5616ff542d3dbd541c7d8dae9c3de
-  receipt_digest: sha256:70d7d88b92847854ffc7f2230a2c5f060ec20b3f91e734a56bdb2c76fd741481
+  receipt_id: certificate:e39a6a0a942304095414d9d4a2751079
+  command_id: plan-revise:issue-676:pr3-setup-artifacts:plan:r15:7db5b824fe80
+  admitted_at: 2026-09-28T05:20:06.821Z
+  source_digest: sha256:5cc778ae04cb9ad854a12237287ccdfc39f93f3b3603c510ab8c6a5651986f9e
+  decision_digest: sha256:d0c25a8008c86cb50859ab3088410854e52fbacc93b2096e09ebdb1a998c6546
+  receipt_digest: sha256:e3809f107375cf746556ef6f37e1a64d982ea9acf2f9af53056bf15a9e2d6d05
   binding:
     path: docs/plans/PLAN-L7-676-release-consumer-dev-start.md
     plan_id: PLAN-L7-676-release-consumer-dev-start
     asset_id: plan:aae8bf0e313f8688fbad4d4d8cf0a6a9
-    revision: 14
-    content_digest: sha256:ea88773fa41bac2f0f1d84a205f9bf20bb511e121a3039b5ce781fe3f229ffa1
+    revision: 15
+    content_digest: sha256:5cc778ae04cb9ad854a12237287ccdfc39f93f3b3603c510ab8c6a5651986f9e
   route:
     signal: feature_addition
     mode: add-feature
@@ -226,10 +230,10 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-676-release-consumer-dev-start
-    target_revision: 14
+    target_revision: 15
     phase: forward_merge
-  escape_reason: PR-2a (#714) が新規に landing させる embedded-skills.ts とその unit test を
-    generates に宣言する (impl-plan-trace orphan の是正、契約本文は不変)。
+  escape_reason: PR-3 (setup 生成物の修理) が新規に landing させる commitlint.config.cjs
+    テンプレートとその回帰 test を generates に宣言する (契約本文は不変)。
 ---
 
 # PLAN-L7-676: Release consumer で開発を開始できる状態にする
@@ -707,3 +711,4 @@ injection path の乗っ取り、harness 自身の挙動変化、部分 setup �
 11. PR-VL の成果物宣言: PR-1 の rev 11 / seq 324 を保持した子 PR で、新規 tests/vmodel-consumer-lint.test.ts のみを generates に追加する。既存 lint module は再所有せず、凍結 U-RCDEV-036 の件数・trace・typed 未作成を実装する。
 12. G2 wireframe の consumer 写像 (rev 13): PR-G0 の実装前接合確認 (#676) で、凍結 fixture (v) (L1〜L7 のテンプレート由来一式) では G2 の wireframe mock 条件 (`/wireframe.md` かつ harness 固定の L10 pair path) を満たせず、RCDEV-027 を resolver の注入だけで green にする解が無いことが分かった。§3.6-2 の「テンプレートから作れば harness と同じ規則で判定できる」が事実に反していたため、advisor (claude-fable-5、design) の推奨に従い、実装 PR 内の読み替えではなく契約改訂とした。§3.6-2 に G2 の consumer 写像、対象文書集合、テンプレート由来文書の status 確定手順を追記し、test-design の fixture (v)/(vii) と CANDIDATE-U-RCDEV-027 を揃えた。gate の判定述語、テンプレート、書き出しコマンドは変更しない。
 13. PR-2a の成果物宣言 (rev 14): skills の bundle 埋め込みと consumer 展開 (#714) が新規に landing させる `src/shared/embedded-skills.ts` とその unit test `tests/release-consumer-skills.test.ts` の 2 件を `generates` に追加する。既存ファイルは宣言しない。PLAN の revise は Claude control lane が #714 branch 上で実施した (PLAN-L6-711 §6 S0 の headless revise PoC を兼ねる)。
+14. PR-3 の成果物宣言 (rev 15): setup 生成物の修理 (A5 DB 初期化、A6 生成 CI の条件分岐、A7 commitlint の CJS 化) が新規に landing させる `docs/templates/github/common/commitlint.config.cjs` とその回帰 test `tests/release-consumer-setup-artifacts.test.ts` の 2 件を `generates` に追加する。削除される旧 `commitlint.config.js` はどの PLAN の `generates` にも宣言されていない。PR-3 は PR-2a (#714) の rev 14 の上に積んだ stacked PR で、receipt は rev 14 の直後に chain する。
