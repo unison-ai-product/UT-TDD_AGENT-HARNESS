@@ -18,6 +18,7 @@ vi.mock("../src/lint/change-impact.ts", async (importOriginal) => {
   return {
     ...actual,
     loadUntrackedAddedFiles: () => {
+      console.error("DEBUG: mocked loadUntrackedAddedFiles invoked, throwing");
       throw new Error("simulated untracked-added loader failure (issue #721 finding 2)");
     },
   };
