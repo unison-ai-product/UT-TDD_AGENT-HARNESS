@@ -100,6 +100,7 @@ import {
   planDigestMigration,
 } from "./lint/green-command-digest.ts";
 import { parseNodeGenerationCiEvidence } from "./lint/node-generation-ci-policy.ts";
+import { materializeSkillAssets } from "./shared/embedded-skills.ts";
 
 export { collectFinalRetirementFindings };
 
@@ -523,6 +524,7 @@ function runSessionStartSideEffects({
   deps,
   json = false,
 }: SessionStartSideEffectInput): void {
+  materializeSkillAssets(repoRoot);
   try {
     scanDanglingStops(deps, input.session_id);
     sweepStaleGuardSlots(nodeAgentSlotsDeps(repoRoot));
