@@ -74,9 +74,13 @@ function gateKey(gate: string): string {
 export function analyzeLayerPairGate(
   docs: PairDoc[],
   gate: string,
-  layer: string,
-  l10PairPath = "docs/test-design/harness/L10-ux-validation-test-design.md",
+  layerInput: string | { layer: string; l10PairPath: string },
 ): LayerPairGateResult {
+  const layer = typeof layerInput === "string" ? layerInput : layerInput.layer;
+  const l10PairPath =
+    typeof layerInput === "string"
+      ? "docs/test-design/harness/L10-ux-validation-test-design.md"
+      : layerInput.l10PairPath;
   const pair = analyzePairFreeze(docs);
   const layerDocs = docs.filter(
     (doc) => isDesignSubDoc(doc) && designLayerFromPath(doc.path) === layer,
@@ -119,12 +123,10 @@ export function analyzeLayerPairGate(
 
 function evaluateLayerPairGate(gate: string, layer: string, repoRoot: string): StaticGateResult {
   const testDesignRoot = resolveVModelRoots(repoRoot).testDesignRoot;
-  const result = analyzeLayerPairGate(
-    loadPairDocs(repoRoot),
-    gate,
+  const result = analyzeLayerPairGate(loadPairDocs(repoRoot), gate, {
     layer,
-    `${testDesignRoot}/L10-ux-validation-test-design.md`,
-  );
+    l10PairPath: `${testDesignRoot}/L10-ux-validation-test-design.md`,
+  });
   return { gate, applicable: true, passed: result.ok, messages: result.messages };
 }
 
