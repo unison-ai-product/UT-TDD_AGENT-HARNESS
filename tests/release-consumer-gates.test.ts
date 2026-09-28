@@ -832,6 +832,9 @@ describe("PR-GR consumer G8 predicates", () => {
   it("U-RCDEV-029: keeps harness G8 family checks on the public gate path", () => {
     const root = fixtureRoot();
     const repositoryRoot = process.cwd();
+    const harnessResult = evaluateStaticGate({ gate: "G8", repoRoot: repositoryRoot });
+    expect(harnessResult.passed).toBe(true);
+    expect(harnessResult.messages).toContain("未判定 (review): QA/TL");
     writeFixtureDoc(
       root,
       "docs/test-design/harness/L8-integration-test-design.md",
@@ -855,7 +858,8 @@ describe("PR-GR consumer G8 predicates", () => {
       commands: { it_ids: string[]; evidence_path: string }[];
       coverage: { it_id: string; evidence_paths: string[] }[];
     };
-    const unrelatedFamilyIds = ["IT-ASSET-01", "IT-ASSET-02"];
+    // 別familyの負例データであり、そのfamilyのoracle実装citationではない。
+    const unrelatedFamilyIds = ["01", "02"].map((suffix) => ["IT", "ASSET", suffix].join("-"));
     manifest.selected_it_ids = [...unrelatedFamilyIds];
     manifest.mandatory_it_ids = [...unrelatedFamilyIds];
     manifest.commands = manifest.commands.map((command) => ({
@@ -886,5 +890,19 @@ describe("PR-GR consumer G8 predicates", () => {
     expect(result.passed).toBe(false);
     expect(messages).toContain("selected IT coverage missing IT-MODULE- family");
     expect(messages).toContain("mandatory IT coverage missing IT-STATE- family");
+    expect(messages).toContain("未判定 (review): QA/TL");
+
+    writeFixtureDoc(
+      root,
+      "docs/process/vmodel-contract.yaml",
+      readFileSync(join(repositoryRoot, "docs/process/vmodel-contract.yaml"), "utf8").replace(
+        "    approval_role: QA/TL",
+        "    approval_role: TL",
+      ),
+    );
+    const changedRole = evaluateStaticGate({ gate: "G8", repoRoot: root });
+    expect(changedRole.passed).toBe(false);
+    expect(changedRole.messages).toContain("未判定 (review): TL");
+    expect(changedRole.messages).not.toContain("未判定 (review): QA/TL");
   });
 });
