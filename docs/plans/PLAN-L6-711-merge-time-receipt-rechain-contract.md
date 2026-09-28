@@ -44,18 +44,18 @@ sub_doc: function-spec
 github_issue_id: 711
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:667c772ba421e12ac6ca6909b1b1e83a
-  command_id: plan-revise:issue-711:rechain-contract:plan:r3:850306f2c7d7
-  admitted_at: 2026-09-28T03:32:46.391Z
-  source_digest: sha256:48f502729f4d0f2656d369e1938421c1223934f86e8b3e0df2e5a401f6c61f4c
-  decision_digest: sha256:874a3b4016c85cd3cb4e019273ca1d806f85e17e70ac9b0839ddad80444f174f
-  receipt_digest: sha256:c2226bd621dd6cb43cb67d71195d489df2f83c49f80ec8e594da79fcdc8c9075
+  receipt_id: certificate:90d9c044b8ad3e31d17cea674ad528ac
+  command_id: plan-revise:issue-711:rechain-contract:plan:r4:0b9430f3f4a1
+  admitted_at: 2026-09-28T03:49:01.511Z
+  source_digest: sha256:1e91c50bd640850a57c47522a8eba464391095fbed867bb86fcfa270a6c68442
+  decision_digest: sha256:e995684e0d44bdb8096d5790e9154b890633d507fce47430925def58e6c51888
+  receipt_digest: sha256:2c2bb446a4ddf96a45cfb3ed3a1eb89cdbfc60b47985e127f5c725d9a05c4091
   binding:
     path: docs/plans/PLAN-L6-711-merge-time-receipt-rechain-contract.md
     plan_id: PLAN-L6-711-merge-time-receipt-rechain-contract
     asset_id: plan:b4b4d9a38df162378c2522459b1627bc
-    revision: 3
-    content_digest: sha256:48f502729f4d0f2656d369e1938421c1223934f86e8b3e0df2e5a401f6c61f4c
+    revision: 4
+    content_digest: sha256:1e91c50bd640850a57c47522a8eba464391095fbed867bb86fcfa270a6c68442
   route:
     signal: feature_addition
     mode: add-feature
@@ -70,10 +70,11 @@ admission_receipt:
     digest: sha256:1b6aa397ad9995b717907d3247e02b3bba3d6c4508874b7654f90fd29b388927
   reentry:
     target_plan_id: PLAN-L6-711-merge-time-receipt-rechain-contract
-    target_revision: 3
+    target_revision: 4
     phase: forward_merge
-  escape_reason: "非著者 review (Codex Sol r1、PR #713) の FLAG 2 件 (成果物の再所有、admission
-    の意味の改変) を whitelist 検証器の条件 §2.3-5/6 と oracle U-RECHAIN-011/012 で閉じる。"
+  escape_reason: "非著者 review (Codex Sol r2、PR #713) の FLAG 1 件 (投影されない admission
+    入力の改変) を、H 側 PlanAdmissionRequest 全体の decision_digest 束縛 (§2.3-6) と oracle
+    U-RECHAIN-012 のフィールド別 mutation で閉じる。"
 ---
 
 # PLAN-L6-711: merge 時の自動 re-chain と簿記差分での再検免除の契約 freeze
@@ -163,16 +164,25 @@ PLAN ファイルの本文と frontmatter から `admission_receipt` ブロッ�
 5. **成果物所有 (rev 3)**: PR が append-only 領域 `generates` に追加した各 `artifact_path` は、`M` の tree に存在せず、`M` のどの PLAN の `generates` にも
    宣言されていない。つまり、待機中に main 側で新規作成・他 PLAN 所有化された path を、PR が再所有していない。違反すれば `fail`
    (`duplicate-artifact-ownership` / `merged-plan-status` と同じ判定を `M` に対して行う)。
-6. **admission の意味の不変 (rev 3)**: 再発行した各 record と、PLAN frontmatter の `admission_receipt` は、正規の assembler
-   (`plan-revision-command-assembler` / `tracked-receipt-renderer` と同じ関数) で再導出した結果と完全一致する。再導出の入力は、`H` 側の同じ record の
-   admission 入力 (`route` / `issue` / `origin` / `reentry.phase` / `transition` / `escape_reason` / `supersedes` と、kind・layer・drive・status・sub_doc) を
-   そのまま使い、変えてよいのは次の項目だけとする:
-   - base 束縛 (`asset_id` 以外の revision、revision_digest、source_commit、source_blob_oid、source_content_digest、projection_tail_digest) を `M` に合わせる。
-   - `command_id` に `:rechain-<n>` suffix を付ける。`admitted_at` / `recorded_at` を更新する。
-   - `reentry.target_revision` を新しい revision にする (自己再合流の場合)。
-   - 上の入力から決定的に導かれる digest (source_digest、content_digest、decision_digest、receipt_digest、record_digest、receipt_id)。
-   verifier はこれらの digest を自分で計算し直して照合する。record 内の値を信用しない。上に挙げていない admission の意味 (route、issue binding、
-   origin、escape_reason など) が 1 つでも `H` と異なれば `fail`。
+6. **admission の意味の不変 (rev 3、rev 4 で入力束縛を補強)**: 再発行した各 record と、PLAN frontmatter の `admission_receipt` は、正規の assembler
+   (`plan-revision-command-assembler` / `tracked-receipt-renderer` と同じ関数) で再導出した結果と完全一致する。
+   - **H 側入力の束縛 (rev 4)**: tracked record と frontmatter は admission 入力の一部 (`branch` など) を投影しないので、verifier は H 側入力を
+     それらから読み取らない。wrapper は H 側の `PlanAdmissionRequest` 全体 (`routeMode` / `kind` / `layer` / `workflowPhase` / `routeSignal` /
+     `drive` / `branch` / `status` / `subDoc` / `issue` / `origin` / `transitionDirection` / `implementationDisposition` / `reentry`
+     (`targetPlanId` / `targetRevision` / `phase`) / `implementationTarget` / `escapeReason` / `supersedes`) を候補 `A_H` として verifier へ渡す。
+     verifier は `digest(A_H)` が `H` 側の同じ record の tracked `decision_digest` と一致する場合だけ `A_H` を採用する。一致しなければ `fail`
+     とする (候補を復元できない場合も同じで、通常の再検へ戻る)。decision_digest は admission 全体の hash (`tracked-receipt-renderer`) なので、
+     この照合で全フィールドが H に束縛される。
+   - **R 側の期待値**: 期待する admission `A_R` は、`A_H` の `reentry.targetRevision` だけを新しい revision に置き換えたもの (自己再合流の場合) とする。
+     それ以外のフィールドは `A_H` と完全一致しなければならない。verifier は `digest(A_R)` が R の record と frontmatter の `decision_digest` と
+     一致することを照合し、frontmatter に投影されるフィールド (route / issue / origin / reentry / escape_reason / workflow_phase など) も
+     `A_R` からの投影と一致させる。
+   - admission 以外で変えてよいのは次の項目だけとする:
+     - base 束縛 (`asset_id` 以外の revision、revision_digest、source_commit、source_blob_oid、source_content_digest、projection_tail_digest) を `M` に合わせる。
+     - `command_id` に `:rechain-<n>` suffix を付ける。`admitted_at` / `recorded_at` を更新する。
+     - 上の入力から決定的に導かれる digest (source_digest、content_digest、decision_digest、receipt_digest、record_digest、receipt_id)。
+   verifier はこれらの digest を自分で計算し直して照合する。record 内の値を信用しない。`reentry.targetRevision` 以外の admission フィールドが
+   1 つでも `A_H` と異なれば `fail`。
 
 ### 2.4 review 引き継ぎと CI
 
@@ -218,7 +228,7 @@ pair は `docs/test-design/harness/L7-unit-test-design.md` に、実装 PR で `
 | CANDIDATE-U-RECHAIN-009 | `pass` でも `R` の CI が red または未完了 → merge しない。`pass` かつ green → merge し、intent receipt に `rechain` 欄を残す | (m) CI の待機を省く |
 | CANDIDATE-U-RECHAIN-010 | `H` の PASS が same-family / blocking>0 / 別 head のもの → 引き継がない | (m) 引き継ぎ条件から族検査を外す |
 | CANDIDATE-U-RECHAIN-011 | 待機中に `M` が、PR の追加 `artifact_path` を新規作成、または別 PLAN の `generates` に宣言 → `fail` (理由: 再所有) | (m) §2.3-5 を省く → 再所有したまま pass して失敗 |
-| CANDIDATE-U-RECHAIN-012 | `R` の frontmatter / record で `route`・`issue`・`origin`・`reentry.phase`・`escape_reason` のいずれか 1 つを改変し、hash を正しく再計算 → いずれも `fail`。許容項目だけの変化 (base 束縛、command_id suffix、時刻、新 revision、再導出 digest) → `pass` | (m1) record 内 digest を信用して再計算しない → 改変が pass して失敗。(m2) 許容項目の列挙に `escape_reason` を足す → その改変が pass して失敗 |
+| CANDIDATE-U-RECHAIN-012 | `R` の admission で `PlanAdmissionRequest` のフィールド (`routeMode`・`kind`・`layer`・`workflowPhase`・`routeSignal`・`drive`・`branch`・`status`・`subDoc`・`issue`・`origin`・`transitionDirection`・`implementationDisposition`・`reentry.targetPlanId`・`reentry.phase`・`implementationTarget`・`escapeReason`・`supersedes`) を 1 つずつ改変し、各場合で全 digest (decision_digest を含む) を正しく再計算 → フィールドごとに全て `fail`。`digest(A_H)` が H の tracked `decision_digest` と一致しない候補 `A_H` → `fail`。許容項目だけの変化 (base 束縛、command_id suffix、時刻、`reentry.targetRevision`、再導出 digest) → `pass` | (m1) record 内 digest を信用して再計算しない → 改変が pass して失敗。(m2) 許容項目の列挙に任意の 1 フィールド (例: `branch`) を足す → そのフィールドの改変が pass して失敗。(m3) `A_H` と H の `decision_digest` の照合を省く → 改変した候補が pass して失敗 |
 
 ## 5. 実測の根拠コマンド
 
@@ -247,3 +257,4 @@ git show --stat b8bdf6d8
 1. 起票 (rev 1): Issue #711。設計判断は §1 (advisor claude-fable-5、PO 承認 2026-09-28)。
 2. rev 2: `drive` を parent (PLAN-RECOVERY-16) と揃えた (plan-governance の parent_drive_mismatch の是正、契約本文は不変)。
 3. rev 3: 非著者 review (Codex Sol r1、PR #713) の FLAG 2 件を反映した。(1) 待機中に main が作成・所有した path を PR が再所有する経路を §2.3-5 で閉じた。(2) admission の意味を改変して hash を再計算する経路を、正規 assembler による完全な再導出と許容項目の列挙 (§2.3-6) で閉じた。oracle U-RECHAIN-011 / 012 を追加した。
+4. rev 4: 非著者 review (Codex Sol r2、PR #713) の FLAG 1 件を反映した。tracked record / frontmatter に投影されない admission 入力 (`workflowPhase` / `branch` / `reentry.targetPlanId` など) を改変し digest を再計算する経路を閉じるため、§2.3-6 で H 側の `PlanAdmissionRequest` 全体を H の tracked `decision_digest` に束縛し、`reentry.targetRevision` 以外の完全一致を要求した。U-RECHAIN-012 をフィールドごとの mutation に拡張し、m3 を追加した。
