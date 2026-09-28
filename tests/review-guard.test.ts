@@ -204,12 +204,8 @@ describe("review-guard (IMP-137 / PLAN-L7-85)", () => {
 
     it("U-RGUARD-024: an untracked directory addition exempts each listed file individually (no collapse)", () => {
       const untrackedAdded = new Set([".ut-tdd/memory/dir/a.md", ".ut-tdd/memory/dir/b.md"]);
-      expect(isExemptUntrackedMemoryAddition(".ut-tdd/memory/dir/a.md", untrackedAdded)).toBe(
-        true,
-      );
-      expect(isExemptUntrackedMemoryAddition(".ut-tdd/memory/dir/b.md", untrackedAdded)).toBe(
-        true,
-      );
+      expect(isExemptUntrackedMemoryAddition(".ut-tdd/memory/dir/a.md", untrackedAdded)).toBe(true);
+      expect(isExemptUntrackedMemoryAddition(".ut-tdd/memory/dir/b.md", untrackedAdded)).toBe(true);
       // a third file not present in untrackedAdded (e.g. a collapsed/omitted sibling) must not
       // be exempted by association with its directory.
       expect(isExemptUntrackedMemoryAddition(".ut-tdd/memory/dir/c.md", untrackedAdded)).toBe(

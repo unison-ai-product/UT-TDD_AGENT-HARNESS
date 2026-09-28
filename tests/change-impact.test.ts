@@ -146,7 +146,7 @@ describe("parseUntrackedAddedPaths (issue #721 Sol r1 FLAG 1 — -z NUL-separate
     // mutation check: replacing "\0" split with /\r?\n/ split would fail this (no newline
     // present in -z output; the whole record would parse as a single unsplit blob and the
     // leading "??" status-code slice would not isolate the path correctly for multi-record input).
-    const output = ["?? .ut-tdd/memory/日本語.md", "M  src/a.ts"].join("\0") + "\0";
+    const output = `${["?? .ut-tdd/memory/日本語.md", "M  src/a.ts"].join("\0")}\0`;
     expect(parseUntrackedAddedPaths(output)).toEqual([".ut-tdd/memory/日本語.md"]);
   });
 
@@ -154,10 +154,12 @@ describe("parseUntrackedAddedPaths (issue #721 Sol r1 FLAG 1 — -z NUL-separate
     // mutation check: removing the `skipNextToken` logic would leak "src/old.ts" as if it were
     // its own untouched token; it does not start with "??" so it would still be excluded here,
     // but a following genuine "??" entry would then be misaligned/dropped. Assert full sequence.
-    const output =
-      ["R  src/new.ts", "src/old.ts", "?? .ut-tdd/memory/new.md", "?? tests/foo.test.ts"].join(
-        "\0",
-      ) + "\0";
+    const output = `${[
+      "R  src/new.ts",
+      "src/old.ts",
+      "?? .ut-tdd/memory/new.md",
+      "?? tests/foo.test.ts",
+    ].join("\0")}\0`;
     expect(parseUntrackedAddedPaths(output)).toEqual([
       ".ut-tdd/memory/new.md",
       "tests/foo.test.ts",
@@ -165,8 +167,7 @@ describe("parseUntrackedAddedPaths (issue #721 Sol r1 FLAG 1 — -z NUL-separate
   });
 
   it("U-CHGIMPACT-UNTRACKED-003: filters transient harness DB journal files", () => {
-    const output =
-      ["?? .ut-tdd/harness.db-wal", "?? .ut-tdd/memory/keep.md"].join("\0") + "\0";
+    const output = `${["?? .ut-tdd/harness.db-wal", "?? .ut-tdd/memory/keep.md"].join("\0")}\0`;
     expect(parseUntrackedAddedPaths(output)).toEqual([".ut-tdd/memory/keep.md"]);
   });
 

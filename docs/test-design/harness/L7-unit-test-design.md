@@ -939,7 +939,6 @@ SMB/NFS/OneDrive をまたぐ strict lease、heartbeat、clock-skew 耐性は主
 | U-RGUARD-010 | `reviewGuardMessages` | 非 violation → 空 (worker / clean は無音)。 |
 | U-RGUARD-011 | `summarizeStagedReview` | staged 集合は sorted/unique、suspect = staged ∩ review-mutated (混入疑い)、suspect 非空で ok=false (commit 前 staged-diff の機械化)。 |
 | U-RGUARD-012 | `summarizeStagedReview` | review-mutated 未提供 → suspect 空 + ok=true (純列挙)。 |
-| U-RGUARD-013 | `assessReviewSession` / `isReviewCustodyProjection` | `.ut-tdd/review/{requests,receipts,verdicts}/` 配下は委譲機構が管理する review custody 投影であり reviewer 本人の編集ではないため mutatedPaths / violation の対象外 (`other/` は対象内のまま)。 |
 | U-RGUARD-014 | `assessReviewSession` | 他レーンが `ut-tdd memory add` で追加した新規 untracked `.ut-tdd/memory/` ファイル (`untrackedAdded` に含まれる) は reviewer の改変とみなさず violation=false (issue #721)。 |
 | U-RGUARD-015 | `assessReviewSession` | session 開始前から tracked だった `.ut-tdd/memory/` ファイルへの上書き編集 (`untrackedAdded` に含まれない) は exemption 対象外で violation=true。 |
 | U-RGUARD-016 | `assessReviewSession` | `.ut-tdd/memory/` 配下以外の新規 untracked ファイル (`untrackedAdded` に含まれていても) は exemption 対象外で violation=true。 |

@@ -124,7 +124,7 @@ function safeLoadChangedFiles(repoRoot: string): string[] {
 }
 
 /** untracked-added exemption 用 (issue #721)。取得失敗時は exemption なし (fail-close 側)。 */
-function safeLoadUntrackedAddedFiles(repoRoot: string): string[] {
+export function safeLoadUntrackedAddedFiles(repoRoot: string): string[] {
   try {
     return loadUntrackedAddedFiles(repoRoot);
   } catch {
