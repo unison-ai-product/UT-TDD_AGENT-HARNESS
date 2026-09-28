@@ -42,7 +42,7 @@ profile/tracked-loader:2
 plan-asset/ledger-schema:4 plan-asset/legacy-inventory:5 plan-asset/legacy-migration-dry-run:13 plan-asset/project-identity-loader:1
 disposition/git-authoring-provenance:3 disposition/projection:6 disposition/tracked-target-registry:2
   forward-escape-issue-contract:2
-  pack-consumer-runtime-release:3
+  pack-consumer-runtime-release:4
   release-consumer-setup-artifacts:1
   `;
 
@@ -135,9 +135,9 @@ repositoryReadContracts["tests/support/pack-consumer-runtime.ts"] = {
 };
 repositoryReadContracts["tests/pack-consumer-runtime-release.test.ts"] = {
   mode: "isolated_fixture",
-  calls: 3,
+  calls: 4,
   reason:
-    "clean Pack producer fixture copies selected tracked assets from the detached snapshot into a writable temporary Git repository",
+    "clean Pack producer fixture copies tracked assets into a temporary Git repository and installer CLI runs only from the detached execution snapshot",
 };
 
 export const REPOSITORY_READ_CONTRACTS: Readonly<Record<string, RepositoryReadContract>> =
