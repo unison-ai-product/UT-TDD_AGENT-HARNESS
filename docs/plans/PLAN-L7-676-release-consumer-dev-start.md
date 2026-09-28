@@ -131,6 +131,8 @@ generates:
     artifact_type: source_module
   - artifact_path: tests/design-root.test.ts
     artifact_type: test_code
+  - artifact_path: tests/vmodel-consumer-lint.test.ts
+    artifact_type: test_code
   - artifact_path: tests/release-consumer-dev-start-identity.test.ts
     artifact_type: test_code
 dependencies:
@@ -191,18 +193,18 @@ status: confirmed
 github_issue_id: 676
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:8ca2fe49cfb26769b4ac35581f82ebc5
-  command_id: plan-revise:issue-676:codex-pr1:rechain-after-685:plan:r11
-  admitted_at: 2026-09-28T02:23:57.618Z
-  source_digest: sha256:d0889499bf9f368dbdeed24e0a4c177a2d753af3ef9a44c826e320aafa4d1dc6
-  decision_digest: sha256:a33428ea4b28b82ed08d8f446640ec41c8ab36e8ccab7be14d69e7c79dd3af06
-  receipt_digest: sha256:fe223818d424935b6e3776efb11c4b18abbffef0c728c71e9fa5336d8a84a0da
+  receipt_id: certificate:e85eee4d74e29f242e07ae5ddae8ed39
+  command_id: plan-revise:issue-676:codex-prvl:after-pr1:plan:r12
+  admitted_at: 2026-09-28T02:48:09.697Z
+  source_digest: sha256:4f7aa97308dff093aa1a2a3524061aee54cb3d68ccb1997ba354cae02aa07293
+  decision_digest: sha256:4098b95fa3fe81ec437130e912c96197b3c91136c8f6f5cdc2d97b4aedcc9bb1
+  receipt_digest: sha256:5175c83eed0d408d2ac03e4b7a918aab0f19f4bf0e2b105e2d72fffe16024462
   binding:
     path: docs/plans/PLAN-L7-676-release-consumer-dev-start.md
     plan_id: PLAN-L7-676-release-consumer-dev-start
     asset_id: plan:aae8bf0e313f8688fbad4d4d8cf0a6a9
-    revision: 11
-    content_digest: sha256:d0889499bf9f368dbdeed24e0a4c177a2d753af3ef9a44c826e320aafa4d1dc6
+    revision: 12
+    content_digest: sha256:4f7aa97308dff093aa1a2a3524061aee54cb3d68ccb1997ba354cae02aa07293
   route:
     signal: feature_addition
     mode: add-feature
@@ -220,10 +222,9 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-676-release-consumer-dev-start
-    target_revision: 10
+    target_revision: 11
     phase: forward_merge
-  escape_reason: PR-1 の新規成果物を confirmed PLAN の generates に追加するため、origin/main seq
-    323 の後へ re-chain する。
+  escape_reason: PR-1の確定済み追記seq324を保持したstacked PRとしてPR-VLの新規対テストだけを成果物宣言する。
 ---
 
 # PLAN-L7-676: Release consumer で開発を開始できる状態にする
@@ -686,3 +687,4 @@ injection path の乗っ取り、harness 自身の挙動変化、部分 setup �
 8. PR-T2 の成果物宣言 (rev 9): PR-T2 は PR-T1 の merge (#703) 後に main を取り込み、自 PR が新規に landing させる `docs/templates/vmodel/optional/` の 27 本だけを `generates` に追加した。既存ファイル (port index の README と L5 テンプレート) の更新は PR-T1 の宣言に含まれる。管理 yaml の図・trace 俯瞰・粒度情報のうち、§3.5.4 で対応が明示されていないものは #705 に分離した。契約本文と `review_evidence` は rev 8 から変えていない。
 9. PR-2b の成果物宣言: main 前進後の re-chain で、移動後の resolver とその unit test の2件を `generates` に追加する。既存ファイルの変更は宣言しない。
 10. PR-1 の成果物宣言: main 前進後の re-chain で、自 PR の新規 identity test 1件を `generates` に追加する。既存ファイルの変更は宣言しない。
+11. PR-VL の成果物宣言: PR-1 の rev 11 / seq 324 を保持した子 PR で、新規 tests/vmodel-consumer-lint.test.ts のみを generates に追加する。既存 lint module は再所有せず、凍結 U-RCDEV-036 の件数・trace・typed 未作成を実装する。
