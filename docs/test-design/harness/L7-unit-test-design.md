@@ -1843,6 +1843,50 @@ content-addressed path を citation してから `U-*` へ昇格する。
 | `U-CIPOL-027` | source doc profile実行面の束縛 | `source-doc-lane` の `outputIds` と registry definitions の順序・集合を各1点変異 | 選択対象はprofile宣言の4件、実行はregistry定義順、envelopeの `checkIds`/`checks` はprofile宣言順と完全一致し、scope=`full` の全102件へ拡張しない |
 | `U-SETUP-004b2` | setup builtin同期 | built-in `common/harness-check.yml` | `pull_request`あり、直下の`branches` / `branches-ignore`なし。既存guard強度も維持 |
 
+## PLAN-L7-729 preflight fail-fast oracle (2026-09-28)
+
+対象 = `.github/workflows/harness-check.yml` / `src/lint/github-ci-policy.ts`。実テスト =
+`tests/github-ci-policy.test.ts`。fixture は実 repo の workflow 本文 (`SOURCE_WORKFLOW`) を 1 点変異させる。
+
+| ID | 観点 | fixture / mutation | expected |
+| --- | --- | --- | --- |
+| `U-CIPOL-028` | 正常系 | 実 repo workflow そのまま | `analyzeGithubCiPolicy().ok=true`。`jobs.preflight` が存在し、4 runtime 脚の `needs` が `preflight`、aggregate `needs` が `preflight` + 4 脚 |
+| `U-CIPOL-029` | preflight 欠落 / 形 | (a) `jobs.preflight` 削除 (b) `runs-on: windows-latest` (c) job-level `if: false` (d) `continue-on-error: true` (e) `timeout-minutes` 追加 | 全件 `invalid_preflight_gate`、`ok=false` |
+| `U-CIPOL-030` | preflight manifest 完全一致 | (a) typecheck step 削除 (b) lint step 削除 (c) guard step 削除 (d) admission step 削除 (e) typecheck を lint の後へ移動 (f) guard / admission / lint いずれかの `if: ${{ !cancelled() }}` 削除 (g) typecheck の `if` (lane=='full') を削除 = lane 無条件化 (h) typecheck の `if` を `${{ !cancelled() && steps.classify.outputs.lane == 'full' }}` へ変更 | 全件 `invalid_preflight_gate` (detail = manifest 不一致)。(g) は doc lane へ typecheck を足す振る舞い変更 (D3 案 C) の負例。(h) は加えて `forbidden_lane_skip_step` (non-canonical lane condition、`jobs.preflight`) |
+| `U-CIPOL-031` | 脚の needs 束縛 | 4 脚それぞれについて (a) `needs` 削除 (b) `needs: [preflight, node-generation-linux]` (c) `needs: other` | (a)(b)(c) とも該当脚の `invalid_preflight_gate` (`jobs.<leg>.needs must equal preflight`)。(a) は加えて exact keys で `missing_runtime_leg` |
+| `U-CIPOL-032` | Linux 脚から軽量 step の再流入禁止 | Linux 脚へ `lint (biome)` / `typecheck (tsc --noEmit)` を再追加 | `missing_runtime_leg` (Linux manifest 不一致)。二重化を manifest で拒否 |
+| `U-CIPOL-033` | Windows typecheck 維持 | Windows 脚から `typecheck (tsc --noEmit)` step を削除 | `missing_runtime_leg` (Windows manifest 不一致)。D2 の mutation |
+| `U-CIPOL-034` | aggregate needs に preflight | aggregate `needs` から `preflight` を削除 (4 脚のみ = 改訂前の形) | `invalid_aggregate_needs`、detail の `missing=preflight` |
+| `U-CIPOL-035` | aggregate result guard に preflight | (a) guard の `${{ needs.preflight.result }}` を `success` へ置換 (b) `test "..preflight.." = "success" && ` 節を削除 | 両方 `missing_aggregate_result_guard` (`needs.preflight.result == success`) |
+| `U-CIPOL-036` | guard の download 前置 | aggregate の result guard step と download step の順序を入替 (改訂前の順) | `missing_aggregate_result_guard`、detail `aggregate result guard must precede artifact download` |
+| `U-CIPOL-018` (改訂) | 結果行列 | `aggregateHarnessResultsPass` に `preflight` ∈ {failure, cancelled, skipped} × 脚 success | preflight が success 以外なら false。全 success のみ true |
+| `U-CIPOL-037` | required step の評価対象 | preflight から `npm run lint` を消し Linux 脚にも無い状態 | `missing_step` (`lint`) が依然出る。評価対象が preflight + Linux の和であること (既存 `U-CIPOL-012` = runtime profile 独立性とは別 oracle) |
+| `U-CIPOL-038` | preflight の lane producer | (a) preflight の classify step 削除 (typecheck の lane 条件は残す) (b) classify に `shell: bash` 付与 (c) classify に `if: ${{ !cancelled() }}` 付与 (d) classify を 2 個に複製 (e) preflight に job-level `env.GITHUB_OUTPUT` 付与 (f) `node-generation-linux` の任意 step に `if: ${{ steps.classify.outputs.lane == 'full' }}` 付与 (g) aggregate の任意 step に同条件付与 | (a)〜(e) は `missing_lane_producer` (detail `jobs.preflight requires the canonical classify producer with no explicit shell` / GITHUB_OUTPUT 上書き)、(a)〜(d) は加えて `invalid_preflight_gate`。(f)(g) は `missing_lane_producer` (detail `jobs.<name> references steps.classify.outputs.lane without owning the canonical classify producer`)。classify を持たない job での lane skip を 1 経路も残さない |
+| `U-CIPOL-039` | lane 別実行集合の不変 (refactor の behavior invariant fence) | 実 repo workflow を解析し、各 step を `if` で分類 (`LANE_FULL_ONLY_IF` = full のみ、`LANE_DOC_ONLY_IF` = doc のみ、それ以外 = 両 lane)、setup 系 / classify / job summary を除いた check 名集合を Linux 面 (preflight ∪ `harness-check-linux`) と Windows 脚で lane 別に算出 | PLAN-L7-729 §不変条件 の表 (= 改訂前 `harness-check.yml` の lane 別集合) と完全一致。特に doc lane の Linux 面 = {guard, admission, doc lane checks, doc lane source doctor, lint} で typecheck を含まない。負例: preflight typecheck の lane 条件削除で doc 集合に typecheck が現れ不一致 |
+
+既存 fixture の付け替え (期待 reason の変更。新規 ID は振らない):
+
+- `U-CIPOL-019a` の "post-producer run mutation" (`run: npm run lint` の最初の出現を変異): 最初の出現が
+  preflight へ移るため、期待を `invalid_preflight_gate` に変更するか、変異対象を Linux 脚に残る step
+  (例: `audit quality`) へ付け替えて `missing_runtime_leg` を維持する。後者を推奨 (019a の意図 =
+  runtime 脚 manifest の保護を保つ)。
+- `U-CIPOL-019aa` の "branch guard separator": guard が preflight へ移るため期待 reason を
+  `invalid_preflight_gate` に変更。
+- `U-CIPOL-022` (guard に `lane=='full'` を付与、`tests/github-ci-policy.test.ts:1420`): guard が preflight へ
+  移り preflight も lane 条件 loop の対象になるため、reason `forbidden_lane_skip_step` は維持し、期待 detail の
+  job 名を `jobs.preflight` へ変更する (manifest 不一致の `invalid_preflight_gate` も併発する)。
+- `U-CIPOL-022b` (lint に `lane=='full'`、`:1439`) / `U-CIPOL-024` (typecheck の non-canonical lane 式、`:1454`):
+  置換対象の最初の出現が preflight になる。reason 検査のみのため期待は不変、対象 job が `jobs.preflight` に
+  なることを test 名 / コメントに反映する。
+
+Actions 実 run の証跡 (unit oracle ではなく PLAN AC-4 / AC-5 の受入証跡。run URL で記録):
+
+| 証跡 | 条件 | 期待 |
+| --- | --- | --- |
+| E-729-neg | 軽量 check (例: biome format 違反) を意図的に含む PR head | `preflight`=failure、4 脚=skipped、`harness-check`=failure、aggregate の失敗 step = result guard |
+| E-729-pos | 通常 PR head (full lane) | 全 job success、preflight 所要と run 壁時計を記録 |
+| E-729-doc | doc lane の PR head | preflight の classify = doc、typecheck は skipped、guard / admission / lint は実行され success。Linux/Windows 脚は doc lane step のみ (改訂前と同じ実行集合) |
+
 `pull_request`を単に含む文字列検査だけではGreenにしない。YAML構造でbase filter不在を検査し、
 source workflow / source template / Pack template / setup builtinのどれか1 artifactだけの更新を完了扱いにしない。
 検査対象本文をprofile選択に再利用せず、構造異常は例外でdoctor wrapperへ逃がさずanalyzer自身がviolation化する。
