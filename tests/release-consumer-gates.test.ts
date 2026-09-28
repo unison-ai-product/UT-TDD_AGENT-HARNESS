@@ -13,7 +13,11 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
-import { analyzeLayerPairGate, evaluateStaticGate } from "../src/gate/static.ts";
+import {
+  analyzeLayerPairGate,
+  evaluateStaticGate,
+  readCoverageSummary,
+} from "../src/gate/static.ts";
 import {
   analyzeG1Trace,
   g1TraceMessages,
@@ -362,4 +366,42 @@ describe("PR-G0 release-consumer gates", () => {
     expect(messages).toContain("mock=missing");
     expect(messages).not.toContain("could not run");
   });
+
+  it(
+    "CANDIDATE-U-RCDEV-028: returns a typed missing-coverage reason and accepts an 80% consumer summary",
+    () => {
+      const root = fixtureRoot();
+      writeConsumerGateFixture(root);
+      const coveragePath = join(root, "coverage", "coverage-summary.json");
+
+      const missing = evaluateStaticGate({ gate: "G7", repoRoot: root });
+      const missingCoverage = readCoverageSummary(coveragePath);
+
+      expect(missing.applicable).toBe(true);
+      expect(missing.passed).toBe(false);
+      expect(missing.reasons).toEqual(["coverage_evidence_missing"]);
+      expect(missing.messages.join("\n")).toContain(
+        `g7-coverage - violation: coverage summary not found (${coveragePath}); run test coverage before G7`,
+      );
+      expect(missing.messages.join("\n")).not.toContain("could not run");
+      expect(missingCoverage).toMatchObject({
+        ok: false,
+        pct: null,
+        reasons: ["coverage_evidence_missing"],
+      });
+
+      writeFixtureDoc(
+        root,
+        "coverage/coverage-summary.json",
+        JSON.stringify({ total: { lines: { pct: 80 } } }),
+      );
+
+      const passingCoverage = readCoverageSummary(coveragePath);
+      const withCoverage = evaluateStaticGate({ gate: "G7", repoRoot: root });
+
+      expect(passingCoverage).toMatchObject({ ok: true, pct: 80 });
+      expect(passingCoverage.message).toBe("g7-coverage - OK (80% >= 80%)");
+      expect(withCoverage.messages).toContain("g7-coverage - OK (80% >= 80%)");
+    },
+  );
 });
