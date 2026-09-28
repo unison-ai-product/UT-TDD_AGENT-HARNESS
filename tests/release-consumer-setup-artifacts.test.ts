@@ -6,7 +6,6 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
-  rmSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -18,6 +17,7 @@ import { defaultHarnessDbPath, openHarnessDb } from "../src/state-db/index.ts";
 import { harnessDbStatus } from "../src/state-db/maintenance.ts";
 import * as projectionWriter from "../src/state-db/projection-writer.ts";
 import * as tokenTracker from "../src/state-db/token-tracker.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 
 const cliPath = resolve("src/cli.ts");
 const fixtures: string[] = [];
@@ -166,7 +166,7 @@ function assertWorkflowConsumerConditions(source: string): void {
 
 afterEach(() => {
   vi.restoreAllMocks();
-  for (const root of fixtures.splice(0)) rmSync(root, { recursive: true, force: true });
+  for (const root of fixtures.splice(0)) removeTestTree(root);
 });
 
 describe("U-RCDEV PR-3: generated setup artifacts", () => {
