@@ -26,6 +26,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { basename, dirname, join, relative, resolve, sep } from "node:path";
+import { parseNodeBootstrapReceiptBytes } from "../runtime/node-bootstrap.ts";
 import { ensureDir } from "../shared/fs.ts";
 import {
   applyBranchProtection as applyBranchProtectionImpl,
@@ -33,7 +34,9 @@ import {
   type GhRunner,
 } from "./branch-protection.ts";
 import {
+  admitConsumerLocalRuntime,
   type ConsumerLocalRuntimeAdmission,
+  type ConsumerLocalRuntimeAdmissionInput,
   isConsumerLocalRuntimeAdmission,
 } from "./consumer-local-runtime-admission.ts";
 import {
@@ -42,14 +45,23 @@ import {
   type ConsumerNodeRuntimeBundle,
   type ConsumerNodeRuntimeIdentity,
   type ConsumerNodeRuntimeInstallResult,
+  canonicalJson,
+  digestConsumerRuntimeBytes,
   installConsumerNodeRuntimeOnFilesystem,
   renderConsumerNodeWrapper,
+  validateConsumerNodeRuntimeBundle,
 } from "./consumer-node-runtime.ts";
+import { verifyConsumerRuntimeReleaseAssets } from "./consumer-runtime-release.ts";
 import {
   bootstrapProjectIdentity,
   PROJECT_IDENTITY_PATH,
   type ProjectIdentityBootstrapResult,
 } from "./project-identity-bootstrap.ts";
+import {
+  admitReleaseAggregate,
+  type ReleaseAggregateAdmissionInput,
+} from "./release-aggregate-admission.ts";
+import type { ReleaseChannelAttestation } from "./release-channel-adapter.ts";
 
 export {
   AUTHORING_TEMPLATE_ARTIFACT_PATHS,
@@ -284,6 +296,235 @@ export interface SetupResult {
   notices?: string[];
   projectIdentity?: ProjectIdentityBootstrapResult;
   consumerRuntime?: SetupConsumerRuntimeInstall;
+}
+
+export type ConsumerRuntimeReleaseInstallResult =
+  | { readonly status: "installed"; readonly setup: SetupResult }
+  | { readonly status: "already-installed" };
+
+/** Consumer-side composition for a verified, offline Pack Release runtime. */
+export async function installConsumerRuntimeRelease(input: {
+  readonly releaseDirectory: string;
+  readonly expectedConsumerDigest: string;
+  readonly consumerRoot: string;
+  readonly tag: string;
+  readonly executingModulePath: string;
+  readonly setupDeps: () => SetupDeps;
+}): Promise<ConsumerRuntimeReleaseInstallResult> {
+  const assets = verifyConsumerRuntimeReleaseAssets({
+    releaseDirectory: input.releaseDirectory,
+    tag: input.tag,
+    expectedConsumerDigest: input.expectedConsumerDigest,
+    executingModulePath: input.executingModulePath,
+  });
+  const document = assets.document;
+  const consumerRoot = realpathSync.native(input.consumerRoot);
+  const runtimeRoot = join(consumerRoot, ".ut-tdd", "runtime");
+  const release = document.release;
+  const generation = document.generation;
+  const rawAttestation = document.admission_input.aggregate_input.attestation;
+  const attestation = {
+    status: "attested" as const,
+    releaseId: rawAttestation.releaseId,
+    artifactSourceCommit: rawAttestation.artifactSourceCommit,
+    expectedDigest: rawAttestation.expectedDigest,
+    actualDigest: rawAttestation.actualDigest,
+    entries: rawAttestation.entries.map((entry) => ({
+      path: entry.path,
+      mode: entry.mode,
+      content: Buffer.from(entry.content_base64, "base64"),
+    })),
+  } satisfies Extract<ReleaseChannelAttestation, { status: "attested" }>;
+  const aggregateInput: ReleaseAggregateAdmissionInput = {
+    repository: document.admission_input.aggregate_input.repository,
+    channel: document.admission_input.aggregate_input.channel,
+    finalTree: document.admission_input.aggregate_input.final_tree,
+  };
+  const aggregate = await admitReleaseAggregate(aggregateInput, {
+    attestChannel: async () => attestation,
+  });
+  if (!aggregate.ok) throw new Error(`consumer_runtime_release_aggregate_${aggregate.error}`);
+
+  const controlManifestBytes = Buffer.from(
+    document.admission_input.control_manifest_base64,
+    "base64",
+  );
+  const artifactIdentity = {
+    materializerVersion: release.materializer_version,
+    releaseId: aggregate.plan.releaseId,
+    sourceRevision: release.source_revision,
+    artifactSetDigest: generation.artifact_digest,
+  };
+  const consumerReceipt = {
+    ...artifactIdentity,
+    productId: release.product_id,
+    consumerRoot,
+    runtimeRoot,
+  };
+  const admissionResult = admitConsumerLocalRuntime({
+    productId: release.product_id,
+    consumerRoot,
+    runtimeRoot,
+    plan: aggregate.plan,
+    manifest: artifactIdentity,
+    receipt: consumerReceipt,
+    controlManifestBytes,
+  } satisfies ConsumerLocalRuntimeAdmissionInput);
+  if (!admissionResult.ok)
+    throw new Error(`consumer_runtime_release_admission_${admissionResult.error}`);
+
+  let nodeReceipt: ReturnType<typeof parseNodeBootstrapReceiptBytes>;
+  try {
+    nodeReceipt = parseNodeBootstrapReceiptBytes(assets.receiptBytes);
+  } catch {
+    throw new Error("consumer_runtime_node_receipt_invalid");
+  }
+  const operationId = `packrt-${digestConsumerRuntimeBytes(
+    Buffer.from(`${release.tag}\0${generation.generation_id}`, "utf8"),
+  ).slice(7, 31)}`;
+  const identity: ConsumerNodeRuntimeIdentity = {
+    product_id: release.product_id,
+    consumer_root: consumerRoot,
+    runtime_root: runtimeRoot,
+    operation_id: operationId,
+    attempt: 1,
+    generation_id: generation.generation_id,
+    subject_revision: generation.subject_revision,
+    artifact_digest: nodeReceipt.compiled_cli.sha256,
+    node_executable_identity: `node-${nodeReceipt.node.version}|sha256:${nodeReceipt.node.sha256}`,
+    package_lock_digest: `sha256:${nodeReceipt.package_lock_sha256}`,
+    source_graph_digest: `sha256:${nodeReceipt.source_graph_sha256}`,
+    compiled_esm_digest: generation.compiled_esm_digest,
+    release_id: aggregate.plan.releaseId,
+    materializer_version: release.materializer_version,
+    artifact_set_digest: generation.artifact_digest,
+    control_manifest_digest: admissionResult.admission.controlManifestSnapshotDigest,
+    sealed_policy: "compiled-esm-only",
+  };
+
+  if (hasActiveConsumerRuntime(runtimeRoot)) {
+    assertSameCommittedConsumerRuntime({
+      consumerRoot,
+      runtimeRoot,
+      identity,
+      productId: release.product_id,
+      releaseId: aggregate.plan.releaseId,
+      sourceRevision: release.source_revision,
+      artifactSetDigest: generation.artifact_digest,
+    });
+    return { status: "already-installed" };
+  }
+
+  const setup = await runSetupAsync(
+    {
+      phase: "0-A",
+      dryRun: false,
+      applyBranchProtection: false,
+      consumerRuntime: {
+        identity,
+        admission: admissionResult.admission,
+        compiled_esm: assets.compiledEsmBytes,
+        node_bootstrap_receipt: assets.receiptBytes,
+      },
+    },
+    input.setupDeps(),
+  );
+  const runtimeInstall = setup.consumerRuntime?.result;
+  if (!runtimeInstall?.ok)
+    throw new Error(
+      runtimeInstall && !runtimeInstall.ok
+        ? runtimeInstall.reason
+        : "consumer_runtime_install_failed",
+    );
+  return { status: "installed", setup };
+}
+
+function hasActiveConsumerRuntime(runtimeRoot: string): boolean {
+  return existsSync(join(runtimeRoot, "activation", "active.json"));
+}
+
+function assertSameCommittedConsumerRuntime(input: {
+  readonly consumerRoot: string;
+  readonly runtimeRoot: string;
+  readonly identity: ConsumerNodeRuntimeIdentity;
+  readonly productId: string;
+  readonly releaseId: string;
+  readonly sourceRevision: string;
+  readonly artifactSetDigest: string;
+}): void {
+  try {
+    const pointerPath = join(input.runtimeRoot, "activation", "active.json");
+    const pointer = JSON.parse(readFileSync(pointerPath, "utf8")) as Record<string, unknown>;
+    if (
+      Object.keys(pointer).sort().join("\0") !== "bundle_digest\0bundle_path\0entry_path" ||
+      typeof pointer.bundle_digest !== "string" ||
+      typeof pointer.bundle_path !== "string" ||
+      typeof pointer.entry_path !== "string" ||
+      pointer.bundle_path !== resolve(pointer.bundle_path) ||
+      pointer.entry_path !== resolve(pointer.entry_path)
+    )
+      throw new Error("consumer_runtime_identity_mismatch");
+    const expectedEntry = join(input.consumerRoot, ".ut-tdd", "bin", "ut-tdd.mjs");
+    if (!sameCanonicalSetupPath(pointer.entry_path, expectedEntry))
+      throw new Error("consumer_runtime_receipt_mismatch");
+    const bundlePath = pointer.bundle_path;
+    if (!existsSync(join(bundlePath, "bundle-manifest.json")))
+      throw new Error("consumer_runtime_identity_mismatch");
+    const bundle = JSON.parse(
+      readFileSync(join(bundlePath, "bundle-manifest.json"), "utf8"),
+    ) as ConsumerNodeRuntimeBundle;
+    const bundleError = validateConsumerNodeRuntimeBundle(bundle);
+    if (bundleError) throw new Error("consumer_runtime_identity_mismatch");
+    if (
+      pointer.bundle_digest !== bundle.bundle_digest ||
+      pointer.bundle_path !== bundle.bundle_path ||
+      !containedReal(realpathSync.native(input.runtimeRoot), realpathSync.native(bundlePath))
+    )
+      throw new Error("consumer_runtime_identity_mismatch");
+    const storedIdentity = bundle.identity;
+    if (
+      storedIdentity.release_id !== input.releaseId ||
+      storedIdentity.subject_revision !== input.sourceRevision ||
+      storedIdentity.artifact_set_digest !== input.artifactSetDigest
+    )
+      throw new Error("consumer_runtime_update_unsupported");
+
+    const receiptBytes = readFileSync(join(bundlePath, "consumer-receipt.json"));
+    const storedReceipt = JSON.parse(receiptBytes.toString("utf8")) as {
+      consumer?: Record<string, unknown>;
+    };
+    const storedConsumer = storedReceipt.consumer;
+    if (
+      !storedConsumer ||
+      storedConsumer.productId !== input.productId ||
+      !sameCanonicalSetupPath(String(storedConsumer.consumerRoot ?? ""), input.consumerRoot) ||
+      !sameCanonicalSetupPath(String(storedConsumer.runtimeRoot ?? ""), input.runtimeRoot)
+    )
+      throw new Error("consumer_runtime_receipt_mismatch");
+    if (storedIdentity.operation_id !== input.identity.operation_id)
+      throw new Error("consumer_runtime_update_unsupported");
+    if (canonicalJson(storedIdentity) !== canonicalJson(input.identity))
+      throw new Error("consumer_runtime_identity_mismatch");
+
+    for (const [name, expectedDigest] of Object.entries(bundle.files)) {
+      const path = join(bundlePath, name);
+      if (!containedReal(realpathSync.native(bundlePath), realpathSync.native(path)))
+        throw new Error("consumer_runtime_identity_mismatch");
+      if (digestConsumerRuntimeBytes(readFileSync(path)) !== expectedDigest)
+        throw new Error("consumer_runtime_identity_mismatch");
+    }
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      [
+        "consumer_runtime_receipt_mismatch",
+        "consumer_runtime_update_unsupported",
+        "consumer_runtime_identity_mismatch",
+      ].some((reason) => error.message.includes(reason))
+    )
+      throw error;
+    throw new Error("consumer_runtime_identity_mismatch");
+  }
 }
 
 /** Sealed runtime input handed from the release materializer to setup. */
