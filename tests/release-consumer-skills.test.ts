@@ -124,7 +124,7 @@ describe("PR-2a release consumer skills", () => {
         );
         expect([...injection.required_paths, ...injection.optional_paths]).not.toHaveLength(0);
         for (const path of [...injection.required_paths, ...injection.optional_paths])
-          expect(existsSync(path)).toBe(true);
+          expect(existsSync(path) || existsSync(join(root, path))).toBe(true);
       } finally {
         db.close();
       }
