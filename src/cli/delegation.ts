@@ -18,7 +18,7 @@ import {
   reviewIdentityDigest,
   reviewVerdictPath,
 } from "../feedback/review-verdict-custody.ts";
-import { loadChangedFiles } from "../lint/change-impact.ts";
+import { loadUntrackedAddedFiles, loadWorkingTreeStatus } from "../lint/change-impact.ts";
 import {
   type AdapterContextInjection,
   type AdapterPlan,
@@ -115,9 +115,19 @@ export function adapterExecutionEnv(
   };
 }
 
+/** review-guard の before/after。untracked-added と同じ `-z` 生 path 表現で取る (issue #721 Sol r2)。 */
 function safeLoadChangedFiles(repoRoot: string): string[] {
   try {
-    return loadChangedFiles(repoRoot);
+    return loadWorkingTreeStatus(repoRoot).changed;
+  } catch {
+    return [];
+  }
+}
+
+/** untracked-added exemption 用 (issue #721)。取得失敗時は exemption なし (fail-close 側)。 */
+export function safeLoadUntrackedAddedFiles(repoRoot: string): string[] {
+  try {
+    return loadUntrackedAddedFiles(repoRoot);
   } catch {
     return [];
   }
@@ -254,6 +264,7 @@ export function executeAdapterPlanForCli(
       role: input.reviewRole,
       before: treeBefore,
       after: safeLoadChangedFiles(repoRoot),
+      untrackedAdded: safeLoadUntrackedAddedFiles(repoRoot),
     });
     for (const message of reviewGuardMessages(assessment)) process.stderr.write(`${message}\n`);
   }

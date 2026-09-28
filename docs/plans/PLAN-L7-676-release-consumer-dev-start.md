@@ -203,18 +203,18 @@ status: confirmed
 github_issue_id: 676
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:b8434ef73de706633cf7114aedffbc3f
-  command_id: plan-revise:issue-676:prg0-consumer-gates:plan:r16:34ece6c4ca91
-  admitted_at: 2026-09-28T06:12:23.179Z
-  source_digest: sha256:aa3f96d5f5467a10038cd615d2897ecbfc1cd1605f4e8e24e07cdc5746d763da
-  decision_digest: sha256:920d133dcc3376b38e18f6a2c7d7343a2539b4c2323f43d9c9c3d22eaee6c344
-  receipt_digest: sha256:e2121c7ec03b725283fbb310077312bcf3821f52963f43ccb853a418159fc85b
+  receipt_id: certificate:cbbed9778f8efb4bff717d5804f13f5f
+  command_id: plan-revise:issue-676:pr2c-template-boundary:plan:r17:48efd4e1057a
+  admitted_at: 2026-09-28T10:10:18.113Z
+  source_digest: sha256:8f8970053cf643425c53d01b0bca6a5d6ca932030ab409cbe4ae744b5553a57b
+  decision_digest: sha256:42d6feb2c862a93bba6cccef86aeb763ec052ae5deffb5aa627154a40a80b171
+  receipt_digest: sha256:6274d35d29057cbd66db9cbeeafa3348ab1e89c8460be3ec1ed878138049f83b
   binding:
     path: docs/plans/PLAN-L7-676-release-consumer-dev-start.md
     plan_id: PLAN-L7-676-release-consumer-dev-start
     asset_id: plan:aae8bf0e313f8688fbad4d4d8cf0a6a9
-    revision: 16
-    content_digest: sha256:aa3f96d5f5467a10038cd615d2897ecbfc1cd1605f4e8e24e07cdc5746d763da
+    revision: 17
+    content_digest: sha256:8f8970053cf643425c53d01b0bca6a5d6ca932030ab409cbe4ae744b5553a57b
   route:
     signal: feature_addition
     mode: add-feature
@@ -232,10 +232,11 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-676-release-consumer-dev-start
-    target_revision: 16
+    target_revision: 17
     phase: forward_merge
-  escape_reason: PR-G0 (consumer の G1〜G7 gate 入力) が新規に landing させる
-    release-consumer-gates test を generates に宣言する (契約本文は不変)。
+  escape_reason: "Issue #676 PR-2c root 検収: junction ancestor 経由の consumer
+    外書き込み実測を受け、§3.1.3 に書き込み前の物理 path preflight と deny 時 write 0 を freeze
+    し、CANDIDATE-U-RCDEV-039 を追加する契約改訂 (revision 17、docs-only)。"
 ---
 
 # PLAN-L7-676: Release consumer で開発を開始できる状態にする
@@ -337,6 +338,13 @@ consumer へ雛形を書き出す 1 コマンド** を reader とする場合だ
 - 表示と終了コード: 書いた path は `+ <path>`、既存で飛ばした path は `skip (exists) <path>` を 1 行ずつ出す。未知の `doc_type_id` /
   `ZIP-DOC-NNN` が 1 件でもあれば、何も書かずに `unknown template <id>` を出して exit 1。それ以外 (全件 skip を含む) は exit 0。
   `--dry-run` は書き込み 0 で同じ行を出す。`--json` は `{written:[], skipped:[]}` を出す。
+- 書き込み境界 (rev 17): 全 destination を書き込み前に検査し、1 件でも consumer root の外へ解決されるものがあれば、何も書かずに
+  `template destination outside consumer root <path>` を出して exit 1 とする (未知 ID と同じく全件検査の後に書く。部分書き込み 0)。
+  判定は物理 path で行う: consumer root を `realpathSync.native` で正規化し、各 destination について実在する最も深い ancestor を
+  `realpathSync.native` で解決して consumer root 配下であることを確認する。destination 自体が symlink / junction (dangling を含む) の場合も
+  外と扱う。lexical な path 比較だけでは、consumer 内の directory が junction / symlink / 8.3 alias 経由で外を指す場合を拒否できない
+  (PR-2c の root 検収で、`docs/plans` を外部 directory へ junction 接続した fixture に対し、lexical 判定だけの実装が consumer 外へ
+  書き込んだ実測がある)。既存の physical canonicalization (`realpathSync.native`) の用法を再利用し、新しい selector / API / authority は追加しない。
 
 ### 3.2 V-model 文書の置き場所 (B3 / B4)
 
@@ -715,3 +723,4 @@ injection path の乗っ取り、harness 自身の挙動変化、部分 setup �
 13. PR-2a の成果物宣言 (rev 14): skills の bundle 埋め込みと consumer 展開 (#714) が新規に landing させる `src/shared/embedded-skills.ts` とその unit test `tests/release-consumer-skills.test.ts` の 2 件を `generates` に追加する。既存ファイルは宣言しない。PLAN の revise は Claude control lane が #714 branch 上で実施した (PLAN-L6-711 §6 S0 の headless revise PoC を兼ねる)。
 14. PR-3 の成果物宣言 (rev 15): setup 生成物の修理 (A5 DB 初期化、A6 生成 CI の条件分岐、A7 commitlint の CJS 化) が新規に landing させる `docs/templates/github/common/commitlint.config.cjs` とその回帰 test `tests/release-consumer-setup-artifacts.test.ts` の 2 件を `generates` に追加する。削除される旧 `commitlint.config.js` はどの PLAN の `generates` にも宣言されていない。PR-3 は PR-2a (#714) の rev 14 の上に積んだ stacked PR で、receipt は rev 14 の直後に chain する。
 15. PR-G0 の成果物宣言 (rev 16): consumer の G1〜G7 gate 入力 (G2 wireframe の L10 pair 写像、gate-design の bundle 埋め込みと consumer 優先) を実装する PR-G0 が新規に landing させる `tests/release-consumer-gates.test.ts` の 1 件だけを `generates` に追加する。RCDEV-037 の実測 golden は既存の `tests/gate-static.test.ts` に置かれ、新規ファイルではない。既存ファイルは宣言しない。
+17. PR-2c の書き込み境界 (rev 17): PR-2c の root 検収 (#676) で、consumer 内の `docs/plans` を外部 directory へ junction 接続した fixture に対し、lexical な insideRoot 判定だけの `vmodel template` が consumer 外へ書き込むことが実測された。§3.1.3 は consumer 内の catalog path へ書くことを前提にしていたが、その失敗条件 (consumer 外 write 0) を明記していなかったため、実装 PR 内の読み替えではなく契約改訂とした。§3.1.3 に書き込み前の物理 path preflight と deny 時の write 0 を追記し、test-design に CANDIDATE-U-RCDEV-039 を追加した。コマンド形・上書き規則・既存 oracle 014 / 015 / 038 の判定は変更しない。
