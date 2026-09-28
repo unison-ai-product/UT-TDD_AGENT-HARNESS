@@ -330,6 +330,7 @@ describe("clean distribution local acceptance smoke", () => {
       runGit(cleanRoot, ["init", "--quiet"]);
       runGit(cleanRoot, ["config", "user.email", "test@example.invalid"]);
       runGit(cleanRoot, ["config", "user.name", "UT test"]);
+      runGit(cleanRoot, ["remote", "add", "origin", "https://github.com/example/consumer.git"]);
       runGit(cleanRoot, ["add", "--", "."]);
       runGit(cleanRoot, ["commit", "--quiet", "-m", "fixture artifact"]);
       const artifactCommit = execFileSync("git", ["rev-parse", "HEAD"], {
