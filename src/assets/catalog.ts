@@ -338,7 +338,10 @@ export function catalogAutomationAssets(input: CatalogAutomationAssetsInput): As
         : assetFiles(join(repoRoot, source.root));
     for (const path of files) {
       const rel = normalizeRel(relative(repoRoot, path));
-      if (!sources.some((allowed) => rel === allowed.root || rel.startsWith(`${allowed.root}/`))) {
+      if (
+        source.type !== "skill" &&
+        !sources.some((allowed) => rel === allowed.root || rel.startsWith(`${allowed.root}/`))
+      ) {
         const finding: AssetCatalogFinding = {
           kind: "invalid-root",
           severity: "error",

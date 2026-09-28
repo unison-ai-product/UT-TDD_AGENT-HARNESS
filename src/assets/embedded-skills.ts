@@ -359,20 +359,25 @@ export function resolveSkillFiles(
     consumer.set(relative(consumerRoot as string, path).replaceAll("\\", "/"), path);
 
   const resolved = new Map<string, ResolvedSkillFile>();
-  for (const asset of assets) {
-    const consumerPath = consumer.get(asset.path);
+  const embeddedRoot = join(root, ".ut-tdd", "assets", "skills");
+  const embeddedPaths =
+    assets.length > 0
+      ? assets.map((asset) => asset.path)
+      : skillFiles(embeddedRoot).map((path) => relative(embeddedRoot, path).replaceAll("\\", "/"));
+  for (const path of embeddedPaths) {
+    const consumerPath = consumer.get(path);
     if (consumerPath) {
-      resolved.set(asset.path, {
-        path: asset.path,
+      resolved.set(path, {
+        path,
         absolutePath: consumerPath,
         source: "consumer",
       });
       continue;
     }
-    const embeddedPath = join(root, ".ut-tdd", "assets", "skills", asset.path);
+    const embeddedPath = join(embeddedRoot, path);
     if (existsSync(embeddedPath))
-      resolved.set(asset.path, {
-        path: asset.path,
+      resolved.set(path, {
+        path,
         absolutePath: embeddedPath,
         source: "embedded",
       });

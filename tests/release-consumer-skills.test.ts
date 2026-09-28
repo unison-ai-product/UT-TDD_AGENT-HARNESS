@@ -192,9 +192,9 @@ describe("PR-2a release consumer skills", () => {
 
       rmSync(target);
       expect(materializeSkillAssets(root, assets)).toEqual(["testing.md"]);
-      expect(relative(root, resolveSkillFiles(root, assets)[0].absolutePath)).toBe(
-        ".ut-tdd/assets/skills/testing.md",
-      );
+      expect(
+        relative(root, resolveSkillFiles(root, assets)[0].absolutePath).replaceAll("\\", "/"),
+      ).toBe(".ut-tdd/assets/skills/testing.md");
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
