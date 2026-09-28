@@ -4308,6 +4308,7 @@ program
           r.branchProtection.applied ? "applied" : `skipped (${r.branchProtection.reason})`
         }\n`,
       );
+      for (const notice of r.notices ?? []) process.stdout.write(`${notice}\n`);
       if (r.phase === "0-B" && r.branchProtection.reason === "emit-only") {
         process.stdout.write(
           "  → scripts/setup-branch-protection.sh を生成。admin 権限の人間が実行してください (本番 merge ゲート変更)\n",

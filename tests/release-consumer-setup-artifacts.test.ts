@@ -16,6 +16,7 @@ import { parse as parseYaml } from "yaml";
 import { loadTemplates, nodeSetupDeps, runSetup } from "../src/setup/index.ts";
 import { defaultHarnessDbPath, openHarnessDb } from "../src/state-db/index.ts";
 import { harnessDbStatus } from "../src/state-db/maintenance.ts";
+import * as projectionWriter from "../src/state-db/projection-writer.ts";
 import * as tokenTracker from "../src/state-db/token-tracker.ts";
 
 const cliPath = resolve("src/cli.ts");
@@ -199,6 +200,7 @@ describe("U-RCDEV PR-3: generated setup artifacts", () => {
     const root = fixture();
     const deps = nodeSetupDeps(root);
     const scan = vi.spyOn(tokenTracker, "loadRepoScopedRuntimeSessionUsage");
+    const rebuild = vi.spyOn(projectionWriter, "rebuildHarnessDb");
     runSetup(
       { phase: "0-A", dryRun: false, applyBranchProtection: false },
       {
@@ -208,6 +210,10 @@ describe("U-RCDEV PR-3: generated setup artifacts", () => {
       },
     );
     expect(scan).not.toHaveBeenCalled();
+    expect(rebuild).toHaveBeenCalledTimes(1);
+    expect(rebuild).toHaveBeenCalledWith(
+      expect.objectContaining({ repoRoot: root, skipTokenTelemetry: true }),
+    );
     const db = harnessDbStatus(root);
     expect(db.initialized).toBe(true);
     expect(db.schemaVersion).toBe(db.expectedVersion);
