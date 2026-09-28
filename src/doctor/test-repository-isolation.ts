@@ -62,6 +62,12 @@ const repositoryReadContracts: Record<string, RepositoryReadContract> = Object.f
     }),
 );
 
+repositoryReadContracts["tests/design-root.test.ts"] = {
+  mode: "head_snapshot",
+  calls: 1,
+  reason: "missing consumer roots preserve the immutable HEAD gate definition fallback bytes",
+};
+
 for (const [path, calls] of Object.entries({
   "tests/github-pr-trace.test.ts": 1,
   "tests/model-id-ssot-drift.test.ts": 1,

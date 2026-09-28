@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -10,6 +10,7 @@ import { loadScreenImplPairFreezeInput } from "../src/lint/screen-impl-pair-free
 import { lintPlanWithGate } from "../src/plan/lint.ts";
 import { resolveAuthoringSourcePath, resolveVModelRoots } from "../src/shared/design-root.ts";
 import { lintVmodel, loadPairDocs } from "../src/vmodel/lint.ts";
+import { headSnapshotRoot } from "./support/workspace-roots.ts";
 
 function fixtureRoot(): string {
   return mkdtempSync(join(tmpdir(), "ut-tdd-design-root-"));
@@ -57,7 +58,10 @@ describe("release consumer design root (PLAN-L7-676 PR-2b)", () => {
       }
       expect(loadPairDocs(root)).toEqual([]);
       expect(lintVmodel(undefined, root).messages.join("\n")).not.toContain("ENOENT");
-      expect(loadGateConfirmDocs(root)).toEqual({ gateText: "", docs: [] });
+      expect(loadGateConfirmDocs(root)).toEqual({
+        gateText: readFileSync(join(headSnapshotRoot(), "docs/governance/gate-design.md"), "utf8"),
+        docs: [],
+      });
       expect(loadL6CompletionInputs(root).l6Docs).toEqual([]);
       expect(loadL7CompletionDocs(root)).toEqual([]);
       expect(loadScreenImplPairFreezeInput(root).screenDesignPresent).toBe(false);
