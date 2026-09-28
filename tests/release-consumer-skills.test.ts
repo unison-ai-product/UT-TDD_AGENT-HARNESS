@@ -1,28 +1,31 @@
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
+  chmodSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   rmSync,
   statSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, relative } from "node:path";
+import { join } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 import { catalogAutomationAssets } from "../src/assets/catalog.ts";
+import { buildAdapterPlan } from "../src/runtime/adapter.ts";
 import { buildNodeGeneration } from "../src/runtime/node-bootstrap.ts";
 import {
   type EmbeddedSkillAsset,
-  ensureSkillAssetsIgnored,
   materializeSkillAssets,
   resolveSkillFiles,
 } from "../src/shared/embedded-skills.ts";
 import { buildSkillInjectionSet, recommendSkillsForText } from "../src/skill-engine/recommend.ts";
 import { openHarnessDb } from "../src/state-db/index.ts";
 import { migrate } from "../src/state-db/migration.ts";
+import { rebuildHarnessDb } from "../src/state-db/projection-writer.ts";
 
 const skill = (path: string, name = path.replace(/\.(md|ya?ml)$/i, "")): EmbeddedSkillAsset => ({
   path,
@@ -49,10 +52,79 @@ function materialize(root: string, assets: readonly EmbeddedSkillAsset[]): void 
   mkdirSync(join(root, ".git"), { recursive: true });
 }
 
+function rmTestDist(path: string): void {
+  const restoreWritable = (target: string): void => {
+    let stat: ReturnType<typeof statSync>;
+    try {
+      stat = statSync(target);
+    } catch {
+      return;
+    }
+    if (stat.isDirectory()) {
+      chmodSync(target, 0o755);
+      for (const entry of readdirSync(target)) restoreWritable(join(target, entry));
+    } else {
+      chmodSync(target, 0o644);
+    }
+  };
+  restoreWritable(path);
+  rmSync(path, { recursive: true, force: true });
+}
+
+function trackedSkillDigests(repoRoot: string): Array<{ path: string; sha256: string }> {
+  const paths = execFileSync("git", ["-C", repoRoot, "ls-files", "skills"], {
+    encoding: "utf8",
+  })
+    .split(/\r?\n/)
+    .filter((path) => /\.(md|ya?ml)$/i.test(path) && !path.endsWith(".gitkeep"));
+  return paths.map((path) => ({
+    path: path.replace(/^skills\//, ""),
+    sha256: createHash("sha256")
+      .update(readFileSync(join(repoRoot, path)))
+      .digest("hex"),
+  }));
+}
+
+function expectBundledSkillDigests(
+  root: string,
+  assets: readonly { path: string; sha256: string }[],
+): void {
+  for (const asset of assets) {
+    const materialized = join(root, ".ut-tdd", "assets", "skills", asset.path);
+    expect(
+      createHash("sha256").update(readFileSync(materialized)).digest("hex"),
+      `${asset.path} digest`,
+    ).toBe(asset.sha256);
+  }
+}
+
+function runBundledCli(
+  generation: NonNullable<Awaited<ReturnType<typeof buildNodeGeneration>>>,
+  root: string,
+  args: string[],
+): string {
+  return execFileSync(generation.nodePath, [generation.compiledCliPath, ...args], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["pipe", "pipe", "pipe"],
+    input: "{}\n",
+    timeout: 60_000,
+    windowsHide: true,
+    env: {
+      ...process.env,
+      HOME: root,
+      USERPROFILE: root,
+      APPDATA: root,
+      GH_CONFIG_DIR: join(root, ".gh-config"),
+    },
+  });
+}
+
 describe("PR-2a release consumer skills", () => {
   let buildRoot: string | undefined;
+  let generation: Awaited<ReturnType<typeof buildNodeGeneration>> | undefined;
   afterAll(() => {
-    if (buildRoot) rmSync(buildRoot, { recursive: true, force: true });
+    if (buildRoot) rmTestDist(buildRoot);
   });
 
   it("CANDIDATE-U-RCDEV-006: bundle receipt seals every tracked skill input", async () => {
@@ -62,7 +134,7 @@ describe("PR-2a release consumer skills", () => {
       encoding: "utf8",
     }).trim();
     buildRoot = mkdtempSync(join(tmpdir(), "ut-tdd-release-consumer-build-"));
-    const generation = await buildNodeGeneration({
+    generation = await buildNodeGeneration({
       repoRoot,
       outputRoot: buildRoot,
       candidateRevision,
@@ -89,25 +161,49 @@ describe("PR-2a release consumer skills", () => {
     }
   });
 
-  it("CANDIDATE-U-RCDEV-007: setup/session materialization is digest checked and ignored", () => {
+  it("CANDIDATE-U-RCDEV-007: bundled setup/session materialization is digest checked and ignored", () => {
     const root = fixtureRoot();
     try {
-      const assets = [skill("testing.md")];
-      materialize(root, assets);
-      const first = resolveSkillFiles(root, assets);
-      expect(first).toHaveLength(1);
-      expect(readFileSync(first[0].absolutePath, "utf8")).toBe(assets[0].content);
-      expect(ensureSkillAssetsIgnored(null)).toContain(".ut-tdd/assets/");
+      if (!generation) throw new Error("release-consumer bundle was not built");
+      const repoRoot = process.cwd();
+      const assets = trackedSkillDigests(repoRoot);
+      expect(assets.length).toBeGreaterThan(0);
+      execFileSync("git", ["init", "-q", "-b", "main"], { cwd: root });
+      execFileSync("git", ["config", "user.name", "Release Consumer Test"], { cwd: root });
+      execFileSync("git", ["config", "user.email", "release-consumer@example.invalid"], {
+        cwd: root,
+      });
+      execFileSync("git", ["remote", "add", "origin", "https://github.com/acme/widget.git"], {
+        cwd: root,
+      });
 
-      const db = openHarnessDb(":memory:");
-      try {
-        migrate(db);
-        const catalog = catalogAutomationAssets({ repoRoot: root, db });
-        expect(catalog.ok).toBe(true);
-        expect(recommendSkillsForText(db, "test bundle implementation")).not.toHaveLength(0);
-      } finally {
-        db.close();
-      }
+      runBundledCli(generation, root, ["setup", "--solo"]);
+      expectBundledSkillDigests(root, assets);
+      execFileSync("git", ["check-ignore", ".ut-tdd/assets/skills/SKILL_MAP.md"], {
+        cwd: root,
+        encoding: "utf8",
+      });
+      const suggestions = JSON.parse(
+        runBundledCli(generation, root, [
+          "skill",
+          "suggest",
+          "--text",
+          "TDD implementation Red-first test strategy and fixtures",
+          "--json",
+        ]),
+      ) as unknown[];
+      expect(suggestions.length).toBeGreaterThan(0);
+
+      execFileSync("git", ["add", "-f", "--", "ut-tdd.project.json"], { cwd: root });
+      execFileSync("git", ["commit", "-qm", "setup fixture identity"], {
+        cwd: root,
+        env: { ...process.env, HUSKY: "0" },
+      });
+
+      const skillMap = join(root, ".ut-tdd", "assets", "skills", "SKILL_MAP.md");
+      rmSync(skillMap);
+      runBundledCli(generation, root, ["session", "start", "--session", "release-consumer-test"]);
+      expectBundledSkillDigests(root, assets);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
@@ -129,6 +225,17 @@ describe("PR-2a release consumer skills", () => {
         expect([...injection.required_paths, ...injection.optional_paths]).not.toHaveLength(0);
         for (const path of [...injection.required_paths, ...injection.optional_paths])
           expect(existsSync(path) || existsSync(join(root, path))).toBe(true);
+        const plan = buildAdapterPlan(
+          {
+            provider: "codex",
+            role: "worker",
+            task: "test bundle implementation",
+            contextInjection: injection,
+          },
+          "hybrid",
+        );
+        for (const path of [...injection.required_paths, ...injection.optional_paths])
+          expect(plan.stdin).toContain(path);
       } finally {
         db.close();
       }
@@ -181,26 +288,42 @@ describe("PR-2a release consumer skills", () => {
     }
   });
 
-  it("CANDIDATE-U-RCDEV-010: tamper/delete rebuilds bytes and equal bytes are not rewritten", () => {
+  it("CANDIDATE-U-RCDEV-010: bundled db rebuild restores bytes without rewriting matches", () => {
+    if (!generation) throw new Error("release-consumer bundle was not built");
     const root = fixtureRoot();
-    const assets = [skill("testing.md")];
+    const assets = trackedSkillDigests(process.cwd());
+    const targetAsset = assets.find((asset) => asset.path === "SKILL_MAP.md");
+    if (!targetAsset) throw new Error("tracked bundle is missing SKILL_MAP.md");
+    const target = join(root, ".ut-tdd", "assets", "skills", targetAsset.path);
     try {
-      materialize(root, assets);
-      const target = join(root, ".ut-tdd", "assets", "skills", "testing.md");
+      runBundledCli(generation, root, ["db", "rebuild"]);
       writeFileSync(target, "tampered\n");
-      expect(materializeSkillAssets(root, assets)).toEqual(["testing.md"]);
-      expect(readFileSync(target, "utf8")).toBe(assets[0].content);
+      runBundledCli(generation, root, ["db", "rebuild"]);
+      expectBundledSkillDigests(root, assets);
       const before = statSync(target).mtimeMs;
-      expect(materializeSkillAssets(root, assets)).toEqual([]);
+      runBundledCli(generation, root, ["db", "rebuild"]);
       expect(statSync(target).mtimeMs).toBe(before);
 
       rmSync(target);
-      expect(materializeSkillAssets(root, assets)).toEqual(["testing.md"]);
-      expect(
-        relative(root, resolveSkillFiles(root, assets)[0].absolutePath).replaceAll("\\", "/"),
-      ).toBe(".ut-tdd/assets/skills/testing.md");
+      runBundledCli(generation, root, ["db", "rebuild"]);
+      expectBundledSkillDigests(root, assets);
     } finally {
       rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("CANDIDATE-U-RCDEV-010 regression: source projection paths stay under skills/", () => {
+    const db = openHarnessDb(":memory:");
+    try {
+      const rebuilt = rebuildHarnessDb({ repoRoot: process.cwd(), db, skipTokenTelemetry: true });
+      expect(rebuilt.ok).toBe(true);
+      const paths = db
+        .prepare("SELECT path FROM automation_assets WHERE asset_type = ?")
+        .all("skill") as Array<{ path: string }>;
+      expect(paths.length).toBeGreaterThan(0);
+      expect(paths.every(({ path }) => path.startsWith("skills/"))).toBe(true);
+    } finally {
+      db.close();
     }
   });
 });
