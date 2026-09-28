@@ -70,7 +70,7 @@ function requireTemplate(path: string): string {
 }
 
 describe("release-consumer vmodel lint (PLAN-L7-676 PR-VL)", () => {
-  it("CANDIDATE-U-RCDEV-036: lints the complete consumer L1-L7 template fixture and reports its trace", () => {
+  it("U-RCDEV-036: lints the complete consumer L1-L7 template fixture and reports its trace", () => {
     const root = fixtureRoot();
     try {
       const expectedDocumentCount = writeConsumerTemplateFixture(root);
@@ -87,7 +87,7 @@ describe("release-consumer vmodel lint (PLAN-L7-676 PR-VL)", () => {
     }
   });
 
-  it("CANDIDATE-U-RCDEV-036: reports missing consumer documents as typed not-created without ENOENT", () => {
+  it("U-RCDEV-036: reports missing consumer documents as typed not-created without ENOENT", () => {
     const root = fixtureRoot();
     try {
       const result = lintVmodel(undefined, root);
