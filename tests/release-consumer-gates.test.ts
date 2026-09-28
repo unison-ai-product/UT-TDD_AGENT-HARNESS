@@ -441,6 +441,8 @@ describe("PR-G0 release-consumer gates", () => {
             USERPROFILE: consumer,
             APPDATA: consumer,
             CLAUDE_PROJECT_DIR: "",
+            CLAUDE_CODE_ENTRYPOINT: "",
+            UT_TDD_DISABLE_CLAUDE_MEMORY_WAKE: "1",
             UT_TDD_PROJECT_DIR: "",
             UT_TDD_CLAUDE_SESSIONS_DIR: join(consumer, ".claude", "projects"),
             UT_TDD_CODEX_SESSIONS_DIR: join(consumer, ".codex", "sessions"),
