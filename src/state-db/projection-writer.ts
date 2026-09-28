@@ -4,6 +4,7 @@ import { homedir } from "node:os";
 import { join, relative } from "node:path";
 import { performance } from "node:perf_hooks";
 import { parse as parseYaml } from "yaml";
+import { materializeSkillAssets, resolveSkillFiles } from "../assets/embedded-skills.ts";
 import type { DocumentExportProjectionRows } from "../export/document-export.ts";
 import {
   buildDocumentExportDataset,
@@ -2266,17 +2267,18 @@ function assetFiles(dir: string, extensions: RegExp): string[] {
 
 function projectAutomationAssets(repoRoot: string, db: HarnessDb): void {
   const indexedAt = nowIso();
-  const skillRoot = existsSync(join(repoRoot, "skills"))
-    ? join(repoRoot, "skills")
-    : join(repoRoot, "docs", "skills");
   const sources = [
-    { type: "skill", root: skillRoot, exts: /\.(md|ya?ml)$/i },
+    { type: "skill", root: "", exts: /\.(md|ya?ml)$/i },
     { type: "roster", root: join(repoRoot, ".claude", "agents"), exts: /\.md$/i },
     { type: "command", root: join(repoRoot, "docs", "commands"), exts: /\.md$/i },
   ] as const;
   let assetCount = 0;
   for (const source of sources) {
-    for (const path of assetFiles(source.root, source.exts)) {
+    const files =
+      source.type === "skill"
+        ? resolveSkillFiles(repoRoot).map((entry) => entry.absolutePath)
+        : assetFiles(source.root, source.exts);
+    for (const path of files) {
       const rel = normalizePath(relative(repoRoot, path));
       const content = readFileSync(path, "utf8");
       const metadata = metadataFromContent(path, content);
@@ -2621,6 +2623,7 @@ function projectScreens(repoRoot: string, db: HarnessDb): void {
 
 export function rebuildHarnessDb(input: RebuildHarnessDbInput = {}): RebuildHarnessDbResult {
   const repoRoot = input.repoRoot ?? process.cwd();
+  materializeSkillAssets(repoRoot);
   const ownsDb = input.db === undefined;
   const db = input.db ?? openHarnessDb(defaultHarnessDbPath(repoRoot), { repoRoot });
   const timings: ProjectionTiming[] = [];

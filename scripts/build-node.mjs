@@ -20,6 +20,8 @@ try {
     platform: "node",
     format: "esm",
     target: "node24",
+    loader: { ".md": "text", ".yaml": "text", ".yml": "text" },
+    define: { __UT_TDD_BUNDLED__: "true" },
     // commander is CommonJS and uses a dynamic builtin require. Provide the
     // Node ESM bridge so the sealed output is executable by the Node authority.
     banner: {

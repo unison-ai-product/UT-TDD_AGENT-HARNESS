@@ -12,15 +12,15 @@ import {
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
+import { catalogAutomationAssets } from "../src/assets/catalog.ts";
 import {
+  type EmbeddedSkillAsset,
   ensureSkillAssetsIgnored,
   materializeSkillAssets,
   resolveSkillFiles,
-  type EmbeddedSkillAsset,
 } from "../src/assets/embedded-skills.ts";
-import { catalogAutomationAssets } from "../src/assets/catalog.ts";
-import { buildSkillInjectionSet, recommendSkillsForText } from "../src/skill-engine/recommend.ts";
 import { buildNodeGeneration } from "../src/runtime/node-bootstrap.ts";
+import { buildSkillInjectionSet, recommendSkillsForText } from "../src/skill-engine/recommend.ts";
 import { openHarnessDb } from "../src/state-db/index.ts";
 import { migrate } from "../src/state-db/migration.ts";
 
@@ -67,18 +67,20 @@ describe("PR-2a release consumer skills", () => {
       outputRoot: buildRoot,
       candidateRevision,
     });
-    const trackedSkills = execFileSync(
-      "git",
-      ["-C", repoRoot, "ls-files", "skills"],
-      { encoding: "utf8" },
-    )
+    const trackedSkills = execFileSync("git", ["-C", repoRoot, "ls-files", "skills"], {
+      encoding: "utf8",
+    })
       .split(/\r?\n/)
       .filter((path) => /\.(md|ya?ml)$/i.test(path) && !path.endsWith(".gitkeep"));
-    const receipt = new Map(generation.receipt.source_files.map((file) => [file.path, file.sha256]));
+    const receipt = new Map(
+      generation.receipt.source_files.map((file) => [file.path, file.sha256]),
+    );
     expect(trackedSkills.length).toBeGreaterThan(0);
     for (const path of trackedSkills) {
       expect(receipt.get(path)).toBe(
-        createHash("sha256").update(readFileSync(join(repoRoot, path))).digest("hex"),
+        createHash("sha256")
+          .update(readFileSync(join(repoRoot, path)))
+          .digest("hex"),
       );
     }
   });
@@ -142,7 +144,10 @@ describe("PR-2a release consumer skills", () => {
         join(root, "skills", "same.md"),
         consumerSame.content.replace("test bundle skill", "consumer override skill"),
       );
-      writeFileSync(join(root, "skills", "consumer-only.md"), skill("consumer-only.md", "consumer-only").content);
+      writeFileSync(
+        join(root, "skills", "consumer-only.md"),
+        skill("consumer-only.md", "consumer-only").content,
+      );
 
       const resolved = resolveSkillFiles(root, assets);
       expect(resolved.find((entry) => entry.path === "same.md")?.source).toBe("consumer");
@@ -160,7 +165,9 @@ describe("PR-2a release consumer skills", () => {
           db.prepare("SELECT path FROM automation_assets WHERE asset_id = ?").get("skill:same"),
         ).toMatchObject({ path: "skills/same.md" });
         expect(
-          db.prepare("SELECT COUNT(*) AS count FROM automation_assets WHERE asset_type = ?").get("skill"),
+          db
+            .prepare("SELECT COUNT(*) AS count FROM automation_assets WHERE asset_type = ?")
+            .get("skill"),
         ).toMatchObject({ count: 3 });
       } finally {
         db.close();

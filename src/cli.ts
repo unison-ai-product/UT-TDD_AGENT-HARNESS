@@ -22,6 +22,7 @@ import {
   checkRosterConsistency,
   listRosterRegistry,
 } from "./assets/catalog.ts";
+import { materializeSkillAssets } from "./assets/embedded-skills.ts";
 import { loadBranchAudit, renderBranchAudit } from "./audit/branches.ts";
 import { renderQualityAudit, runQualityAudit } from "./audit/quality.ts";
 import {
@@ -519,6 +520,7 @@ function runSessionStartSideEffects({
   deps,
   json = false,
 }: SessionStartSideEffectInput): void {
+  materializeSkillAssets(repoRoot);
   try {
     scanDanglingStops(deps, input.session_id);
     sweepStaleGuardSlots(nodeAgentSlotsDeps(repoRoot));

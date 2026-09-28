@@ -210,6 +210,11 @@ export {
   selectRollbackCandidate,
 } from "./release-promotion-rollback-gate.ts";
 
+import {
+  embeddedSkillAssets,
+  ensureSkillAssetsIgnored,
+  materializeSkillAssets,
+} from "../assets/embedded-skills.ts";
 import { BUILTIN_GITHUB_TEMPLATES, COMMON_FILES, type TemplateSet } from "./templates.ts";
 
 export type { Confirm, GhRunner };
@@ -369,6 +374,7 @@ export interface SetupDeps {
 
 const CODEOWNERS_TARGET = join(".github", "CODEOWNERS");
 const STATE_PATH = join(".ut-tdd", "state", "setup.json");
+const GITIGNORE_PATH = ".gitignore";
 const BP_SCRIPT = join("scripts", "setup-branch-protection.sh");
 const MANAGED_START = "<!-- UT-TDD:managed:start -->";
 const MANAGED_END = "<!-- UT-TDD:managed:end -->";
@@ -631,8 +637,20 @@ export function runSetup(args: SetupArgs, deps: SetupDeps): SetupResult {
   }
   const plan = planSetup(phase, { teams: args.teams, dryRun: args.dryRun });
   const emitted = emitSetup(plan, deps.templates, deps);
+  const ignoreWritten = !args.dryRun
+    ? (() => {
+        materializeSkillAssets(deps.repoRoot, embeddedSkillAssets());
+        const path = join(deps.repoRoot, GITIGNORE_PATH);
+        const existing = deps.readText(path);
+        const next = ensureSkillAssetsIgnored(existing);
+        if (next === existing) return false;
+        deps.writeText(path, next);
+        return true;
+      })()
+    : false;
   const written =
     projectIdentity?.ok && projectIdentity.created ? [projectIdentity.path, ...emitted] : emitted;
+  if (ignoreWritten) written.push(GITIGNORE_PATH);
   const branchProtection = args.dryRun
     ? { applied: false, reason: "dry-run" }
     : applyBranchProtection(plan, deps, { apply: args.applyBranchProtection });
@@ -735,7 +753,7 @@ type RuntimeTreeEntry =
 type RuntimeTreeSnapshot = { readonly entries: ReadonlyMap<string, RuntimeTreeEntry> } | null;
 
 function setupTargetPaths(): readonly string[] {
-  const paths = new Set<string>([PROJECT_IDENTITY_PATH, STATE_PATH]);
+  const paths = new Set<string>([PROJECT_IDENTITY_PATH, STATE_PATH, GITIGNORE_PATH]);
   for (const phase of ["0-A", "0-B"] as const)
     for (const file of planSetup(phase, { dryRun: false }).files) paths.add(file.path);
   return [...paths];
