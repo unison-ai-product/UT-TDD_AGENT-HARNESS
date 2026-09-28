@@ -49,18 +49,18 @@ status: draft
 github_issue_id: 418
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:f52133e82a6ecb908662d00be7d472af
-  command_id: plan-revise:issue-418:531-canary2-contract:reverse:r3:1e79d9a1dc10
-  admitted_at: 2026-09-28T10:55:15.571Z
-  source_digest: sha256:7f79076d1c2a9f09cbacebbce7311555ce112ac54a8fd5c5be76cf90c6128109
-  decision_digest: sha256:3aead190f5cf0b55bd4b864f6ee6eff65f75443e8c6a98fc00bcbc7457be5c8c
-  receipt_digest: sha256:efe030fca5fcaa6699e8c2020a09bdd11c628d445072d7ddf776bff901f4ad9a
+  receipt_id: certificate:e5c76417cdee85d0977ab185a93b0d10
+  command_id: plan-revise:issue-418:531-canary2-contract:reverse:r4:70a4e908479e
+  admitted_at: 2026-09-28T11:19:30.305Z
+  source_digest: sha256:c5e9a8f7a430039cac5ea39de794bcea933aad3c3f9fad03a57b8a4d6bcf754d
+  decision_digest: sha256:04cc308554c855140b6c22a023ea783bd4cd3be76af1aba8c0c34f502f5e73f1
+  receipt_digest: sha256:2f116763c19c5684f043493cb9222ddbd64fc6cb973b739643321f2297d33ddf
   binding:
     path: docs/plans/PLAN-REVERSE-531-pack-internal-canary-smoke-backfill.md
     plan_id: PLAN-REVERSE-531-pack-internal-canary-smoke-backfill
     asset_id: plan:c789d97c71c9a9c07942983de88b71ab
-    revision: 3
-    content_digest: sha256:7f79076d1c2a9f09cbacebbce7311555ce112ac54a8fd5c5be76cf90c6128109
+    revision: 4
+    content_digest: sha256:c5e9a8f7a430039cac5ea39de794bcea933aad3c3f9fad03a57b8a4d6bcf754d
   route:
     signal: reverse
     mode: reverse
@@ -78,10 +78,10 @@ admission_receipt:
     implementation_disposition: preserved
   reentry:
     target_plan_id: PLAN-L7-531-pack-internal-canary-smoke
-    target_revision: 3
+    target_revision: 4
     phase: forward_merge
-  escape_reason: "Issue #418: PLAN-L7-531 rev 3 の canary.2 / exact 5 asset +
-    anchor 接合に合わせ、Reverse の R0〜R4 検証対象を追随させる改訂。"
+  escape_reason: "Issue #418 PR #731 Sol r1 FLAG の是正に合わせ、Reverse R2 の Candidate
+    005(d) / 009(b) 記述を追随させる。"
 ---
 
 # PLAN-REVERSE-531: Pack-only internal canary smoke の逆向き確認
@@ -148,11 +148,11 @@ L7-531 はこれらを受入契約 (§3)、fixture 契約 (§4)、smoke 手順 (
 | 002 | PR-1 | authoring/skills entry の欠落・重複 | exact-one inventory の fail-close |
 | 003 | PR-1 | setup 元撤去後の起動で外部 path へ解決 | sealed runtime のみで起動、外部参照は typed deny |
 | 004 | PR-1 | generated wrapper/config/state に setup 元 absolute path | 参照 0 |
-| 005 | PR-2 | 取得 5 asset のいずれかを 1 byte 変異 (tar.gz 系 / mjs・json / `.consumer.sha256`) | tar.gz 系は runner の publish 記録照合、mjs・json は runner 照合 (対照で 628 手順 1)、`.consumer.sha256` は 628 手順 0 で deny |
+| 005 | PR-2 | 取得 5 asset のいずれかを 1 byte 変異 (tar.gz 系 / mjs・json / `.consumer.sha256`)、または publish 記録の 6 値のいずれかで producer 値・独立再計算値の欠落 / 不一致 | tar.gz 系は runner の publish 記録照合、mjs・json は runner 照合 (対照で 628 手順 1)、`.consumer.sha256` は 628 手順 0、記録側の欠落 / 不一致は runner が installer 起動前に deny |
 | 006 | PR-1 (第 1 層) / PR-2 (受入) | legacy 3 asset release、3 asset (`.manifest.json` 付き) の `v0.2.0-canary.1`、`latest`/prefix 解決、asset 欠落/余剰 | exact 5 asset + tag exact match 以外を deny |
 | 007 | PR-1 | 実 producer/installer で install 後に撤去、別 process/cwd/env clear で再起動、`bun` を PATH に置く | `doctor --setup-smoke` と PLAN/DB/doctor/review smoke 再現、Bun trace 0 |
 | 008 | PR-2 | 実 Release asset に対し `--expected-consumer-digest` を未指定・形式違反・値不一致にする | `PLAN-L7-628` §6.2 手順 0 の `consumer_runtime_anchor_mismatch` deny、consumer root へ 1 byte も書かれない |
-| 009 | PR-2 (CI offline) | runner を `--consumer-runtime-input` 経路へ差し替え / anchor を `<release-dir>` から再計算 / 受入記録 tag を exact 以外に | 整合的偽造 release-dir + 記録 anchor で anchor_mismatch deny、spawn 引数 assert、tag 非 exact で受入記録を生成しない |
+| 009 | PR-2 (CI offline) | runner を `--consumer-runtime-input` 経路へ差し替え / anchor を `<release-dir>` から再計算 / 受入記録 tag を exact 以外に | 整合的偽造 release-dir + 5 asset entry を偽造側に合わせ anchor だけ真正値に固定した記録 (他 guard が全て通る対照) で anchor_mismatch deny、spawn 引数 assert、tag 非 exact で受入記録を生成しない |
 | 010 | PR-1 (第 1 層) / PR-2 (第 2 層) | 生成 hook の work-guard が正常系も block / 撤去済み path を指して素通り / 禁止系を通す | 登録 command 文字列のまま正常系通過・禁止系 block |
 
 ## R3: gap 分類と backfill
