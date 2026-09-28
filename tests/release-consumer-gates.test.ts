@@ -1,4 +1,4 @@
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
   chmodSync,
@@ -260,6 +260,54 @@ describe("PR-G0 release-consumer gates", () => {
       const expectedDigest = createHash("sha256").update(trackedBytes).digest("hex");
       expect(receipt.get(path), path).toBe(expectedDigest);
     }
+
+    const consumer = fixtureRoot();
+    writeFixtureDoc(
+      consumer,
+      "docs/design/L1-requirements/consumer.md",
+      "---\nlayer: L1\nstatus: confirmed\n---\n# Consumer requirement\n",
+    );
+    const bundledGateMessage = (): string => {
+      const result = spawnSync(
+        generation.nodePath,
+        [generation.compiledCliPath, "doctor", "--json"],
+        {
+          cwd: consumer,
+          encoding: "utf8",
+          timeout: 60_000,
+          windowsHide: true,
+          env: {
+            ...process.env,
+            HOME: consumer,
+            USERPROFILE: consumer,
+            APPDATA: consumer,
+            CLAUDE_PROJECT_DIR: "",
+            UT_TDD_PROJECT_DIR: "",
+            UT_TDD_CLAUDE_SESSIONS_DIR: join(consumer, ".claude", "projects"),
+            UT_TDD_CODEX_SESSIONS_DIR: join(consumer, ".codex", "sessions"),
+          },
+        },
+      );
+      expect(result.error, result.stderr).toBeUndefined();
+      expect([0, 1], result.stderr).toContain(result.status);
+      const report = JSON.parse(result.stdout) as { messages: string[] };
+      const messages = report.messages.filter((message) =>
+        message.startsWith("doctor: gate-confirm"),
+      );
+      expect(messages, result.stdout).toHaveLength(1);
+      return messages[0] as string;
+    };
+
+    // No checkout gate assets exist in this consumer; the compiled CLI must
+    // parse its embedded ledger rather than catch a missing source-file error.
+    expect(bundledGateMessage()).toContain("gate-confirm — OK");
+    writeGateDefinition(
+      consumer,
+      "## §2 Consumer gate ledger\n| Gate | Layer | Status | Evidence |\n| --- | --- | --- | --- |\n| G1 | L1 | consumer override | fixture |\n",
+    );
+    // Doctor's aggregate can fail for this deliberately minimal fixture.
+    // Only the named production check proves consumer precedence here.
+    expect(bundledGateMessage()).toContain("G1=consumer override");
   });
 
   it("CANDIDATE-U-RCDEV-027: evaluates consumer G1-G6 fixture with non-empty bidirectional traces", () => {
