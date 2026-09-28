@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -5,9 +6,15 @@ import { describe, expect, it } from "vitest";
 import { lintVmodel } from "../src/vmodel/lint.ts";
 
 const consumerTemplateSlots = [
-  ["docs/templates/vmodel/L1-requirements.md", "docs/design/L1-requirements/functional-requirements.md"],
+  [
+    "docs/templates/vmodel/L1-requirements.md",
+    "docs/design/L1-requirements/functional-requirements.md",
+  ],
   ["docs/templates/vmodel/L2-screen-list.md", "docs/design/L2-screen/screen-list.md"],
-  ["docs/templates/vmodel/L3-functional-requirements.md", "docs/design/L3-functional/functional-requirements.md"],
+  [
+    "docs/templates/vmodel/L3-functional-requirements.md",
+    "docs/design/L3-functional/functional-requirements.md",
+  ],
   ["docs/templates/vmodel/L4-data.md", "docs/design/L4-basic-design/data.md"],
   ["docs/templates/vmodel/L4-architecture.md", "docs/design/L4-basic-design/architecture.md"],
   ["docs/templates/vmodel/L4-external-if.md", "docs/design/L4-basic-design/external-if.md"],
@@ -15,13 +22,26 @@ const consumerTemplateSlots = [
   ["docs/templates/vmodel/L4-ui-standard.md", "docs/design/L4-basic-design/ui-standard.md"],
   ["docs/templates/vmodel/L4-security.md", "docs/design/L4-basic-design/security.md"],
   ["docs/templates/vmodel/L5-physical-data.md", "docs/design/L5-detailed-design/physical-data.md"],
-  ["docs/templates/vmodel/L5-module-decomposition.md", "docs/design/L5-detailed-design/module-decomposition.md"],
+  [
+    "docs/templates/vmodel/L5-module-decomposition.md",
+    "docs/design/L5-detailed-design/module-decomposition.md",
+  ],
   ["docs/templates/vmodel/L6-function-spec.md", "docs/design/L6-function-design/function-spec.md"],
   ["docs/templates/vmodel/L7-unit-test-design.md", "docs/test-design/L7-unit-test-design.md"],
 ] as const;
 
 function fixtureRoot(): string {
-  return mkdtempSync(join(tmpdir(), "ut-tdd-vmodel-consumer-lint-"));
+  const root = mkdtempSync(join(tmpdir(), "ut-tdd-vmodel-consumer-lint-"));
+  try {
+    execFileSync("git", ["init", "-q"], { cwd: root });
+    execFileSync("git", ["remote", "add", "origin", "https://github.com/example/probe.git"], {
+      cwd: root,
+    });
+    return root;
+  } catch (error) {
+    rmSync(root, { recursive: true, force: true });
+    throw error;
+  }
 }
 
 function writeFixtureDoc(root: string, path: string, content: string): void {
@@ -72,6 +92,7 @@ describe("release-consumer vmodel lint (PLAN-L7-676 PR-VL)", () => {
       const result = lintVmodel(undefined, root);
 
       expect(result).toMatchObject({ status: "not-created", documentCount: 0 });
+      expect(result.messages.join("\n")).toContain("未作成");
       expect(result.messages.join("\n")).not.toContain("ENOENT");
     } finally {
       rmSync(root, { recursive: true, force: true });

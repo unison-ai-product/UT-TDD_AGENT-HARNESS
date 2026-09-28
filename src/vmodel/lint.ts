@@ -50,6 +50,11 @@ export interface PairFreezeResult {
   ok: boolean;
 }
 
+export interface VModelLintResult extends LintResult {
+  documentCount: number;
+  status: "checked" | "not-created";
+}
+
 /** 検査対象外の index/living doc (basename 固定リスト、vmodel-pair-freeze.md §3)。 */
 const EXCLUDED_BASENAMES = new Set(["README.md", "roadmap.md"]);
 
@@ -597,9 +602,18 @@ export function refactorQaReleaseContractMessages(
   ];
 }
 
-export function lintVmodel(_path?: string, repoRoot: string = process.cwd()): LintResult {
-  const result = analyzePairFreeze(loadPairDocs(repoRoot));
-  return { ok: result.ok, messages: pairFreezeMessages(result) };
+export function lintVmodel(_path?: string, repoRoot: string = process.cwd()): VModelLintResult {
+  const docs = loadPairDocs(repoRoot);
+  const result = analyzePairFreeze(docs);
+  const documentCount = docs.length;
+  const status = documentCount === 0 ? "not-created" : "checked";
+  return {
+    ok: result.ok,
+    messages:
+      status === "not-created" ? ["vmodel — 未作成 (文書 0 件)"] : pairFreezeMessages(result),
+    documentCount,
+    status,
+  };
 }
 
 // ── 検証タイミングの機械発火 (IMP-068、PLAN-L6-11/L7-12) ──
