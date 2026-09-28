@@ -1115,11 +1115,14 @@ describe("Pack consumer runtime release installer", () => {
     }
     const testCase = copyInstallerCase(fixture);
     try {
-      const shortRoot = execFileSync(
+      const shortPathResult = spawnSync(
         process.env.ComSpec ?? "cmd.exe",
         ["/d", "/c", `for %I in ("${testCase.consumerRoot}") do @echo %~sI`],
         { encoding: "utf8", windowsVerbatimArguments: true, windowsHide: true },
-      ).trim();
+      );
+      if (shortPathResult.error) throw shortPathResult.error;
+      expect(shortPathResult.status, shortPathResult.stderr).toBe(0);
+      const shortRoot = shortPathResult.stdout.trim();
       const physicalRoot = realpathSync.native(testCase.consumerRoot);
       if (
         !shortRoot ||
