@@ -150,20 +150,16 @@ describe("parseUntrackedAddedPaths (issue #721 Sol r1 FLAG 1 — -z NUL-separate
     expect(parseUntrackedAddedPaths(output)).toEqual([".ut-tdd/memory/日本語.md"]);
   });
 
-  it("U-CHGIMPACT-UNTRACKED-002: skips the extra NUL-separated source path of a rename/copy entry", () => {
-    // mutation check: removing the `skipNextToken` logic would leak "src/old.ts" as if it were
-    // its own untouched token; it does not start with "??" so it would still be excluded here,
-    // but a following genuine "??" entry would then be misaligned/dropped. Assert full sequence.
-    const output = `${[
-      "R  src/new.ts",
-      "src/old.ts",
-      "?? .ut-tdd/memory/new.md",
-      "?? tests/foo.test.ts",
-    ].join("\0")}\0`;
-    expect(parseUntrackedAddedPaths(output)).toEqual([
-      ".ut-tdd/memory/new.md",
-      "tests/foo.test.ts",
-    ]);
+  it.each([
+    "R",
+    "C",
+  ])("U-CHGIMPACT-UNTRACKED-002: skips the extra NUL-separated source path of a %s entry", (code) => {
+    // source path 自体を "?? " で始まる正当な tracked path にする。skipNextToken を外す mutant は
+    // この token を untracked 追加として漏らすため、期待値と必ず食い違う。
+    const output = `${[`${code}  src/new.ts`, "?? src/old.ts", "?? .ut-tdd/memory/new.md"].join(
+      "\0",
+    )}\0`;
+    expect(parseUntrackedAddedPaths(output)).toEqual([".ut-tdd/memory/new.md"]);
   });
 
   it("U-CHGIMPACT-UNTRACKED-003: filters transient harness DB journal files", () => {

@@ -307,7 +307,7 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 | U-CHGIMPACT-003 | `analyzeChangeImpact` (docs-only) | docs/test のみで `src/**` 変更なし → `sourceFiles=[]` / `ok=true` |
 | U-CHGIMPACT-004 | `parseGitPorcelain` | modified / rename / untracked の porcelain path を正規化し、rename は新 path を採用 |
 | U-CHGIMPACT-UNTRACKED-001 | `parseUntrackedAddedPaths` | `-z --untracked-files=all` の NUL区切り生出力から非ASCII pathを含む untracked-added (`??`) entryを quoting破損なしで抽出する (Sol r1 FLAG 1、issue #721)。 |
-| U-CHGIMPACT-UNTRACKED-002 | `parseUntrackedAddedPaths` | rename/copy entry (`R`/`C`) が伴う追加 NUL区切り src path を skip し、後続の `??` entry を正しく抽出する。 |
+| U-CHGIMPACT-UNTRACKED-002 | `parseUntrackedAddedPaths` | rename (`R`) と copy (`C`) の各 entry で、追加 NUL 区切りの source path (`?? ` で始まる正当な tracked path を含む) を skip し、後続の `??` entry だけを抽出する (skip を外す mutant は source path を untracked 追加として漏らす)。 |
 | U-CHGIMPACT-UNTRACKED-003 | `parseUntrackedAddedPaths` | transient harness DB journal file (`harness.db-{journal,shm,wal}`) を untracked-added 結果から除外する。 |
 | U-CHGIMPACT-UNTRACKED-004 | `loadUntrackedAddedFiles` | 実 git repo で `.ut-tdd/memory/` 配下に untracked ディレクトリを追加すると `--untracked-files=all` により配下の各ファイルが個別に列挙され、ディレクトリへ畳み込まれない。 |
 | U-CHGIMPACT-UNTRACKED-005 | `loadUntrackedAddedFiles` | 実 git repo で tracked `.ut-tdd/memory/` ファイルを `git mv` で rename すると、rename 先 path は untracked-added (`??`) として現れない。 |
@@ -861,7 +861,8 @@ SMB/NFS/OneDrive をまたぐ strict lease、heartbeat、clock-skew 耐性は主
 | U-ADAPTER-004 | `isProviderCommandSpawnable` / `detectMode` | Provider availability is true only when the resolved provider command can spawn successfully; PATH name presence alone is not enough. |
 | U-ADAPTER-010 | `isProviderCommandSpawnable` / `executeAdapterPlanForCli` | 非対話の provider probe と委譲起動が、子プロセスの console window を隠す `windowsHide: true` を spawn options に渡す。 |
 | U-ADAPTER-011 | `firstOnPath` / `resolveCodexNativeCommand` | PATH lookup は Windows では `SystemRoot\\System32\\where.exe`、POSIX では `which` を使い、実行 options に `windowsHide: true` を渡す。Windows の Codex lookup は `where.exe` に `['codex']` を渡し、最初の結果を返す。 |
-| U-ADAPTER-012 | `executeAdapterPlanForCli` | untracked-added loader (`loadUntrackedAddedFiles`) が throw した場合、review-guard の exemption は fail-close (空集合扱い) となり、read-only role 委譲 session 中に追加された `.ut-tdd/memory/` ファイルが violation として surface する。対照として loader 正常時は同じ追加が exempt され violation を出さない (違反の原因が loader 失敗であることを固定、issue #721 finding 2)。 |
+| U-ADAPTER-012 | `safeLoadUntrackedAddedFiles` | untracked-added loader (`loadUntrackedAddedFiles`) が throw した場合は空集合 (exemption なし) を返し、正常時は loader の結果をそのまま返す (対照)。 |
+| U-ADAPTER-013 | `executeAdapterPlanForCli` | read-only role 委譲の call site で、before=[] / after=[`.ut-tdd/memory/` 追加] の同じ差分に対し、loader 正常時は exemption により review-guard violation を出さず、loader throw 時は exemption が外れて violation が stderr に surface する (issue #721 finding 2)。 |
 | U-PHOVER-002 | `buildProviderHandover` | Provider handover packages include `handover_kind: "mechanical"` so machine routing data is not confused with explicit human handover. |
 
 ## PLAN-L7-76 Reliability Remediation Addendum
@@ -951,6 +952,7 @@ SMB/NFS/OneDrive をまたぐ strict lease、heartbeat、clock-skew 耐性は主
 | U-RGUARD-023 | `isExemptUntrackedMemoryAddition` | `.ut-tdd` ディレクトリ名の大小文字が異なる path (`.UT-TDD/...`) は非 exempt (case-sensitive containment)。 |
 | U-RGUARD-024 | `isExemptUntrackedMemoryAddition` | untracked ディレクトリ追加は配下ファイルを個別に exempt 判定でき、`untrackedAdded` に無い兄弟ファイルへは伝播しない (畳み込みなし)。 |
 | U-RGUARD-025 | `assessReviewSession` | tracked `.ut-tdd/memory/` ファイルの rename (`git mv`) による置換先 path は `untrackedAdded` に現れない (rename は `??` ではなく `R` として現れるため) ので violation=true。 |
+| U-RGUARD-026 | `isExemptUntrackedMemoryAddition` / `assessReviewSession` | 空 segment を含む path (`.ut-tdd/memory//x.md`) は `untrackedAdded` に含まれても非 exempt で、read-only role の violation になる。 |
 ## PLAN-L6-36 Screen Spec Addendum
 
 This addendum pairs `screen-spec.md` with L7 unit-test oracles. It covers the L6 FE per-screen function specification for the 15 central dashboard screens and keeps the UI read-only/copy-only boundary testable at function level.

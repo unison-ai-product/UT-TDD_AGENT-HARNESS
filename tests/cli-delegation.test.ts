@@ -13,11 +13,20 @@ import { buildAdapterPlan } from "../src/runtime/adapter.ts";
 
 // issue #721 finding 2: the untracked-added loader (used by the review-guard exemption at the
 // delegation call site) must fail-close to "no exemption" when it throws, not silently exempt.
-const untrackedLoader = vi.hoisted(() => ({ fail: false, paths: [] as string[] }));
+const untrackedLoader = vi.hoisted(() => ({
+  fail: false,
+  paths: [] as string[],
+  changed: null as string[][] | null,
+}));
 vi.mock("../src/lint/change-impact.ts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../src/lint/change-impact.ts")>();
   return {
     ...actual,
+    loadChangedFiles: (repoRoot: string) => {
+      const queue = untrackedLoader.changed;
+      if (!queue) return actual.loadChangedFiles(repoRoot);
+      return queue.length > 1 ? (queue.shift() ?? []) : (queue[0] ?? []);
+    },
     loadUntrackedAddedFiles: (repoRoot: string) => {
       if (untrackedLoader.fail) {
         throw new Error("simulated untracked-added loader failure (issue #721 finding 2)");
@@ -170,6 +179,70 @@ describe("CLI delegation review-guard untracked-added exemption (issue #721 find
     } finally {
       untrackedLoader.fail = false;
       untrackedLoader.paths = [];
+    }
+  });
+
+  it.each([
+    { loaderFails: false, violation: false },
+    { loaderFails: true, violation: true },
+  ])("U-ADAPTER-013: call site with loader fails=$loaderFails → concurrent memory addition violation=$violation", ({
+    loaderFails,
+    violation,
+  }) => {
+    // executeAdapterPlanForCli の read-only role 経路で、before=[] / after=[memory 追加] の同じ
+    // 差分に対し、loader 正常時は exemption で警告なし、loader throw 時は exemption が外れて
+    // assessReviewSession の violation が stderr に出ることを call site ごと固定する。
+    const memoryPath = ".ut-tdd/memory/concurrent.md";
+    untrackedLoader.fail = loaderFails;
+    untrackedLoader.paths = [memoryPath];
+    untrackedLoader.changed = [[], [memoryPath]];
+    const fixtureRoot = mkdtempSync(join(tmpdir(), "ut-tdd-cli-delegation-guard-"));
+    const cwd = vi.spyOn(process, "cwd").mockReturnValue(fixtureRoot);
+    const stderrChunks: string[] = [];
+    const stderrSpy = vi
+      .spyOn(process.stderr, "write")
+      .mockImplementation((chunk: string | Uint8Array) => {
+        stderrChunks.push(typeof chunk === "string" ? chunk : chunk.toString());
+        return true;
+      });
+    try {
+      const plan = buildAdapterPlan(
+        { provider: "codex", role: "blind-reviewer", task: "probe review-guard", execute: true },
+        "codex-only",
+      );
+      const result = executeAdapterPlanForCli(
+        plan,
+        {
+          sessionPrefix: `issue721-guard-${loaderFails ? "fail" : "ok"}`,
+          toolName: "codex",
+          reviewRole: "blind-reviewer",
+        },
+        {
+          gitBranch: () => "test/issue721",
+          gitHead: () => "deadbee",
+          runSessionStartSideEffects: () => {},
+          writeHandoverWarnings: () => {},
+          spawnSync: () => ({ status: 0, signal: null }),
+        },
+      );
+      expect(result.exit_code).toBe(0);
+      const guardLines = stderrChunks
+        .join("")
+        .split("\n")
+        .filter((line) => line.startsWith("review-guard"));
+      if (violation) {
+        expect(guardLines.join("\n")).toContain("review-guard - violation");
+        expect(guardLines.join("\n")).toContain(memoryPath);
+      } else {
+        expect(guardLines.filter((line) => line.includes("violation"))).toEqual([]);
+      }
+    } finally {
+      untrackedLoader.fail = false;
+      untrackedLoader.paths = [];
+      untrackedLoader.changed = null;
+      stderrSpy.mockRestore();
+      cwd.mockRestore();
+      rmSync(fixtureRoot, { recursive: true, force: true });
     }
   });
 });

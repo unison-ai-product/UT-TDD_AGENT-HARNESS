@@ -202,6 +202,19 @@ describe("review-guard (IMP-137 / PLAN-L7-85)", () => {
       expect(isExemptUntrackedMemoryAddition(path, new Set([path]))).toBe(false);
     });
 
+    it("U-RGUARD-026: an empty path segment is not exempt and still surfaces as a read-only violation", () => {
+      // mutation check: dropping the empty-segment rejection would exempt `.ut-tdd/memory//x.md`.
+      const path = ".ut-tdd/memory//x.md";
+      expect(isExemptUntrackedMemoryAddition(path, new Set([path]))).toBe(false);
+      const assessment = assessReviewSession({
+        role: "blind-reviewer",
+        before: [],
+        after: [path],
+        untrackedAdded: [path],
+      });
+      expect(assessment.violation).toBe(true);
+    });
+
     it("U-RGUARD-024: an untracked directory addition exempts each listed file individually (no collapse)", () => {
       const untrackedAdded = new Set([".ut-tdd/memory/dir/a.md", ".ut-tdd/memory/dir/b.md"]);
       expect(isExemptUntrackedMemoryAddition(".ut-tdd/memory/dir/a.md", untrackedAdded)).toBe(true);
