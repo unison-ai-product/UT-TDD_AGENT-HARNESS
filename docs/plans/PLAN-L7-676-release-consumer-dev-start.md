@@ -135,6 +135,10 @@ generates:
     artifact_type: test_code
   - artifact_path: tests/release-consumer-dev-start-identity.test.ts
     artifact_type: test_code
+  - artifact_path: src/shared/embedded-skills.ts
+    artifact_type: source_module
+  - artifact_path: tests/release-consumer-skills.test.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L6-101-pack-independent-multi-consumer-acceptance.md
   requires:
@@ -193,18 +197,18 @@ status: confirmed
 github_issue_id: 676
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:5e3944036e3725868e49d480ac913a3a
-  command_id: plan-revise:issue-676:g2-consumer-contract:plan:r13:1e9108644d0e
-  admitted_at: 2026-09-28T03:22:57.256Z
-  source_digest: sha256:821f1ce204109bc9bc63de9fc117030cd887be86119ebf363803bf1a8a41fcc5
-  decision_digest: sha256:cf5463e509eddc48324f26bb1a65ca7ad34d2b9bb0ebdc28ccd181c03b62db87
-  receipt_digest: sha256:af179ffc1641bea7ce08abe6ebbfd58b955e321b20eec89deabcd6160d106e35
+  receipt_id: certificate:822b69e05cb2df931fbfb9a0eda3d184
+  command_id: plan-revise:issue-676:pr2a-skills-bundle:plan:r14:90169a353901
+  admitted_at: 2026-09-28T04:27:32.431Z
+  source_digest: sha256:ea88773fa41bac2f0f1d84a205f9bf20bb511e121a3039b5ce781fe3f229ffa1
+  decision_digest: sha256:6303b0d03844ba17b93216b314d3265227c5616ff542d3dbd541c7d8dae9c3de
+  receipt_digest: sha256:70d7d88b92847854ffc7f2230a2c5f060ec20b3f91e734a56bdb2c76fd741481
   binding:
     path: docs/plans/PLAN-L7-676-release-consumer-dev-start.md
     plan_id: PLAN-L7-676-release-consumer-dev-start
     asset_id: plan:aae8bf0e313f8688fbad4d4d8cf0a6a9
-    revision: 13
-    content_digest: sha256:821f1ce204109bc9bc63de9fc117030cd887be86119ebf363803bf1a8a41fcc5
+    revision: 14
+    content_digest: sha256:ea88773fa41bac2f0f1d84a205f9bf20bb511e121a3039b5ce781fe3f229ffa1
   route:
     signal: feature_addition
     mode: add-feature
@@ -222,11 +226,10 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-676-release-consumer-dev-start
-    target_revision: 13
+    target_revision: 14
     phase: forward_merge
-  escape_reason: PLAN-L7-676 §3.6-2 の G2 wireframe mock 条件が fixture (v)
-    で満たせない契約齟齬を是正し、consumer 写像・対象文書集合・status 確定手順と RCDEV-027 を freeze する (rev
-    13、§8-12)。
+  escape_reason: PR-2a (#714) が新規に landing させる embedded-skills.ts とその unit test を
+    generates に宣言する (impl-plan-trace orphan の是正、契約本文は不変)。
 ---
 
 # PLAN-L7-676: Release consumer で開発を開始できる状態にする
@@ -703,3 +706,4 @@ injection path の乗っ取り、harness 自身の挙動変化、部分 setup �
 10. PR-1 の成果物宣言: main 前進後の re-chain で、自 PR の新規 identity test 1件を `generates` に追加する。既存ファイルの変更は宣言しない。
 11. PR-VL の成果物宣言: PR-1 の rev 11 / seq 324 を保持した子 PR で、新規 tests/vmodel-consumer-lint.test.ts のみを generates に追加する。既存 lint module は再所有せず、凍結 U-RCDEV-036 の件数・trace・typed 未作成を実装する。
 12. G2 wireframe の consumer 写像 (rev 13): PR-G0 の実装前接合確認 (#676) で、凍結 fixture (v) (L1〜L7 のテンプレート由来一式) では G2 の wireframe mock 条件 (`/wireframe.md` かつ harness 固定の L10 pair path) を満たせず、RCDEV-027 を resolver の注入だけで green にする解が無いことが分かった。§3.6-2 の「テンプレートから作れば harness と同じ規則で判定できる」が事実に反していたため、advisor (claude-fable-5、design) の推奨に従い、実装 PR 内の読み替えではなく契約改訂とした。§3.6-2 に G2 の consumer 写像、対象文書集合、テンプレート由来文書の status 確定手順を追記し、test-design の fixture (v)/(vii) と CANDIDATE-U-RCDEV-027 を揃えた。gate の判定述語、テンプレート、書き出しコマンドは変更しない。
+13. PR-2a の成果物宣言 (rev 14): skills の bundle 埋め込みと consumer 展開 (#714) が新規に landing させる `src/shared/embedded-skills.ts` とその unit test `tests/release-consumer-skills.test.ts` の 2 件を `generates` に追加する。既存ファイルは宣言しない。PLAN の revise は Claude control lane が #714 branch 上で実施した (PLAN-L6-711 §6 S0 の headless revise PoC を兼ねる)。
