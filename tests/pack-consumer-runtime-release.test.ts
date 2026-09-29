@@ -258,6 +258,7 @@ interface ProducerFixture {
 async function createProducerFixture(
   fullInventory = true,
   tag = "v0.2.0-canary.2",
+  includeReleaseManifest = true,
 ): Promise<ProducerFixture> {
   const root = mkdtempSync(join(tmpdir(), "ut-tdd-packrt-producer-"));
   const repositoryRoot = resolve(process.cwd());
@@ -330,6 +331,7 @@ async function createProducerFixture(
   if (!fixturePlan.ok)
     throw new Error(`producer fixture clean plan failed: ${fixturePlan.missingRequired.join(",")}`);
   const c1 = fixtureGit(root, ["rev-parse", "HEAD"]);
+  if (!includeReleaseManifest) return { root, tag, c1 };
   const resolved = await resolveReleaseArtifacts(
     {
       repository: root,
@@ -405,11 +407,9 @@ async function createPackrt012Fixture(schemaVersion: "v1" | "v2" = "v2"): Promis
   stableReleaseId: string;
   artifactCount: number;
 }> {
-  const base = await createProducerFixture();
+  const base = await createProducerFixture(true, "v0.2.0-canary.2", false);
   const root = base.root;
   try {
-    fixtureGit(root, ["tag", "-d", base.tag]);
-    fixtureGit(root, ["checkout", "-qb", "packrt-012-channel-fixture", base.c1]);
     mkdirSync(join(root, "release"), { recursive: true });
     writeFileSync(join(root, "release", "fixture-notes.txt"), "C1-only release metadata\n", "utf8");
     fixtureGit(root, ["add", "--", "release/fixture-notes.txt"]);
