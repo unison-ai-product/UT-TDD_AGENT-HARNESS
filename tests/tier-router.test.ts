@@ -38,7 +38,9 @@ describe("U-TIER: cost-tiered provider router", () => {
     expect(TIER_TABLE.T0.claude).toBe("opus");
     expect(TIER_TABLE.T1.claude).toBe("sonnet");
     expect(TIER_TABLE.T2.claude).toBe("haiku");
-    expect(new Set([TIER_TABLE.T0.claude, TIER_TABLE.T1.claude, TIER_TABLE.T2.claude]).size).toBe(3);
+    expect(new Set([TIER_TABLE.T0.claude, TIER_TABLE.T1.claude, TIER_TABLE.T2.claude]).size).toBe(
+      3,
+    );
     expect(FRONTIER_MODELS).toEqual(new Set([MODEL_IDS.claude.opus, MODEL_IDS.codex.frontier]));
     expect(FRONTIER_MODELS.has(TIER_TABLE.T1.claude)).toBe(false);
     expect(FRONTIER_MODELS.has(TIER_TABLE.T2.claude)).toBe(false);
