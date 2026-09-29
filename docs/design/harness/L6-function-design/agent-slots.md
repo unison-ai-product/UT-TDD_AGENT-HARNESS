@@ -24,7 +24,7 @@ ADR-001 準拠: 旧 Python コードを port せず TypeScript (Node) で全面�
 
 本設計は vendor source snapshot の agent slot / team runner 挙動を参考に、UT-TDD の TypeScript (Node) 実装として再定義した設計記録である。実装は完了済 (`src/runtime/agent-slots.ts` / `src/schema/team.ts`)、本書はその V-pair 整合のための設計文書化 (Add-feature back-fill でなく V-pair 整合目的)。
 
-**SQLite を持ち込まない理由**: Windows ネイティブ環境では SQLite の native module がビルドツール依存を生み、bun 単独実行要件 (ADR-001) と衝突する。代替として `.ut-tdd/state/agent-slots.json` (`Slot[]`) を単一 state ファイルとし、`readText`/`writeText` 注入で決定論的テストを確保する。この選択は session-log.ts・setup/index.ts のストレージ方針 (SSoT + deps 注入 + never-throws) と一致する。
+**SQLite を持ち込まない理由**: Windows ネイティブ環境では SQLite の native module がビルドツール依存を生み、Node 単独実行 (Node authority sealed、Bun 永久禁止 #134) の要件と衝突する。代替として `.ut-tdd/state/agent-slots.json` (`Slot[]`) を単一 state ファイルとし、`readText`/`writeText` 注入で決定論的テストを確保する。この選択は session-log.ts・setup/index.ts のストレージ方針 (SSoT + deps 注入 + never-throws) と一致する。
 
 **用途**:
 - subagent / team member の `fire → release` を機械記録
