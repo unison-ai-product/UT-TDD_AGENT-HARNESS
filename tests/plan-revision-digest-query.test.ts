@@ -1,5 +1,6 @@
-import { spawnSync } from "node:child_process";
+import { type ChildProcess, spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
+import { once } from "node:events";
 import {
   existsSync,
   mkdirSync,
@@ -13,7 +14,10 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { readPlanRevisionCanonicalPayloadDigest } from "../src/plan-asset/ledger/plan-revision-digest-query.ts";
+import {
+  readPlanRevisionCanonicalPayloadDigest,
+  setPlanRevisionDigestQueryTestHook,
+} from "../src/plan-asset/ledger/plan-revision-digest-query.ts";
 import {
   type AppendPlanRevisionInput,
   PlanRevisionLedgerTransaction,
@@ -29,6 +33,48 @@ import { removeTestTree } from "./support/temp-tree.ts";
 const activeDatabases: HarnessDb[] = [];
 const fixtureRoots: string[] = [];
 const cwdRestorers: Array<() => void> = [];
+
+const snapshotWriterScript = `
+import { DatabaseSync } from "node:sqlite";
+import { closeSync, openSync, writeSync } from "node:fs";
+const [databasePath, signalPath] = process.argv.slice(1);
+const db = new DatabaseSync(databasePath);
+db.exec("PRAGMA busy_timeout = 30000");
+db.exec("BEGIN IMMEDIATE");
+const trigger = db.prepare("SELECT sql FROM sqlite_master WHERE type = 'trigger' AND name = ?").get("trg_plan_revisions_no_update");
+if (!trigger?.sql) throw new Error("revision immutability trigger missing");
+db.exec("DROP TRIGGER trg_plan_revisions_no_update");
+db.prepare("UPDATE plan_revisions SET canonical_payload_json = ? WHERE asset_id = ? AND revision = 1").run('{"title":"query A writer version"}', "plan:query-a");
+db.exec(String(trigger.sql));
+const signal = openSync(signalPath, "w");
+try {
+  writeSync(signal, Buffer.from("before-commit"));
+} finally {
+  closeSync(signal);
+}
+db.exec("COMMIT");
+db.close();
+`;
+
+const pendingLockProbeScript = `
+import { DatabaseSync } from "node:sqlite";
+const databasePath = process.argv[1];
+const db = new DatabaseSync(databasePath, { readOnly: true });
+const wait = new Int32Array(new SharedArrayBuffer(4));
+const deadline = Date.now() + 4500;
+let code = "timeout";
+while (Date.now() < deadline) {
+  try {
+    db.prepare("SELECT count(*) FROM sqlite_master").get();
+  } catch (error) {
+    code = String(error.errcode ?? "missing-errcode");
+    break;
+  }
+  Atomics.wait(wait, 0, 0, 10);
+}
+db.close();
+process.stdout.write(code);
+`;
 
 afterEach(() => {
   for (const db of activeDatabases.splice(0)) db.close();
@@ -405,6 +451,101 @@ describe("PLAN revision canonical payload digest read-only query", () => {
     expect(performance.now() - startedAt).toBeLessThan(500);
   });
 
+  it("CANDIDATE-U-PRDQ-006/O6: verifies the query connection rejects a write probe", () => {
+    const fixture = createFixture();
+    closeTracked(fixture.db);
+    useFixtureCwd(fixture.root);
+    let probeErrcode: number | undefined;
+    setPlanRevisionDigestQueryTestHook(({ tryWrite }) => {
+      probeErrcode = tryWrite();
+    });
+
+    try {
+      const result = readPlanRevisionCanonicalPayloadDigest({
+        alias: fixture.aliasA,
+        assetId: fixture.assetA,
+        revision: 1,
+      });
+
+      expect(result).toEqual({
+        ok: true,
+        alias: fixture.aliasA,
+        assetId: fixture.assetA,
+        revision: 1,
+        canonicalPayloadDigest: `sha256:${sha256(fixture.payloadA1)}`,
+      });
+      expect(probeErrcode).toBe(8);
+    } finally {
+      setPlanRevisionDigestQueryTestHook(undefined);
+    }
+  });
+
+  it("CANDIDATE-U-PRDQ-006/O8: selector uses the validated snapshot while a writer is pending", async () => {
+    const fixture = createFixture();
+    closeTracked(fixture.db);
+    useFixtureCwd(fixture.root);
+    const databasePath = join(fixture.root, ".ut-tdd", "ledger", "harness-ledger.db");
+    const signalPath = join(fixture.root, "writer-before-commit.signal");
+    let writer: ChildProcess | undefined;
+    let barrierBusyCode: string | undefined;
+    setPlanRevisionDigestQueryTestHook(() => {
+      writer = spawn(
+        process.execPath,
+        ["--input-type=module", "-e", snapshotWriterScript, databasePath, signalPath],
+        { stdio: "ignore", windowsHide: true },
+      );
+      if (!waitForFile(signalPath, 5_000)) {
+        throw new Error("snapshot writer did not reach the pre-commit barrier");
+      }
+      const probe = spawnSync(
+        process.execPath,
+        ["--input-type=module", "-e", pendingLockProbeScript, databasePath],
+        { encoding: "utf8", timeout: 6_000, windowsHide: true },
+      );
+      barrierBusyCode = probe.status === 0 ? probe.stdout.trim() : "probe-failed";
+    });
+
+    try {
+      const result = readPlanRevisionCanonicalPayloadDigest({
+        alias: fixture.aliasA,
+        assetId: fixture.assetA,
+        revision: 1,
+      });
+
+      expect(result).toEqual({
+        ok: true,
+        alias: fixture.aliasA,
+        assetId: fixture.assetA,
+        revision: 1,
+        canonicalPayloadDigest: `sha256:${sha256(fixture.payloadA1)}`,
+      });
+      expect(barrierBusyCode).toBe("5");
+      if (!writer) throw new Error("snapshot writer process was not started");
+      const writerExit =
+        writer.exitCode === null
+          ? await once(writer, "exit")
+          : [writer.exitCode, writer.signalCode];
+      expect(writerExit).toEqual([0, null]);
+
+      const verifyDb = openPlanLedger({ repoRoot: fixture.root });
+      activeDatabases.push(verifyDb);
+      expect(
+        verifyDb
+          .prepare(
+            "SELECT canonical_payload_json FROM plan_revisions WHERE asset_id = ? AND revision = 1",
+          )
+          .get(fixture.assetA)?.canonical_payload_json,
+      ).toBe('{"title":"query A writer version"}');
+    } finally {
+      setPlanRevisionDigestQueryTestHook(undefined);
+      if (writer && writer.exitCode === null) {
+        const writerExit = once(writer, "exit");
+        writer.kill();
+        await writerExit;
+      }
+    }
+  });
+
   it("CANDIDATE-U-PRDQ-006/O9: validates a 20,000-revision ledger within time and RSS bounds", () => {
     const fixture = createFixture();
     seedScaleRevisions(fixture.db, fixture.assetA, fixture.aliasA);
@@ -478,6 +619,16 @@ function closeTracked(db: HarnessDb): void {
 function useFixtureCwd(root: string): void {
   const spy = vi.spyOn(process, "cwd").mockReturnValue(root);
   cwdRestorers.push(() => spy.mockRestore());
+}
+
+function waitForFile(path: string, timeoutMs: number): boolean {
+  const wait = new Int32Array(new SharedArrayBuffer(4));
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (existsSync(path)) return true;
+    Atomics.wait(wait, 0, 0, 10);
+  }
+  return existsSync(path);
 }
 
 function seedScaleRevisions(db: HarnessDb, assetId: string, alias: string): void {
