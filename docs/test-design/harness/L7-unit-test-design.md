@@ -2837,3 +2837,24 @@ auditor、late CAS、receipt、cleanupを一軸ずつ変異し、typed resultと
 | `U-PA-REV-057` | U-PA-REV-049の実Git object fixtureを、Commanderの正規 `plan revise --manifest` command surfaceへ接続する | CLI経由でもasset不変でrev27→28を発行し、legacy bootstrap / seal lineage write 0 |
 
 実行対応: `tests/node-plan-revision-runner.test.ts` (`U-PA-REV-039〜057`)。
+
+### PF-5 v2 inventory 基数候補 (Issue #742)
+
+正本: `PLAN-L7-742-release-aggregate-v2-inventory-cardinality` revision 6、§5–6。
+以下は契約からの転記であり、実行済み・Green・正式oracle昇格を主張しない。
+v2正常fixtureはN=3、stable/canary両channelを対象とする。実producer→installerは完全inventory（2件以上）を保持する。
+
+| ID | 入力 / 独立変異 | 期待 / 実行対応 |
+| --- | --- | --- |
+| `CANDIDATE-U-RELAGGV2-001` | v2 artifactとmappingのN=3順序付き一致 | aggregate成功、schemaVersion v2、余剰scalarなし、entries path一致。`tests/release-aggregate-admission.test.ts` |
+| `CANDIDATE-U-RELAGGV2-002` | 完全inventoryを実producer→実installerへ渡す | 両aggregateを通過しruntime install成立。`tests/pack-consumer-runtime-release.test.ts` |
+| `CANDIDATE-U-RELAGGV2-003` | mapping 0/N-1/N+1/重複/順序/allowlist/channel/releaseId/sourceRevision/sourcePathsを各独立変異 | missing_channel_mapping、attestation/apply/write 0。`tests/release-aggregate-admission.test.ts` |
+| `CANDIDATE-U-RELAGGV2-004` | attestation entries欠落/順序/pathの各変異 | invalid_artifact、attestation 1、plan不発行、apply/write 0。`tests/release-aggregate-admission.test.ts` |
+| `CANDIDATE-U-RELAGGV2-005` | v1 mapping 1件正常/2件異常 | v1 scalar保持/既存missing_channel_mapping。`tests/release-aggregate-admission.test.ts` |
+| `CANDIDATE-U-RELAGGV2-006` | v2正常/余剰scalarだけ追加/v1 | consumer-local受理/既存artifact_unavailable。`tests/consumer-local-runtime-admission.test.ts` |
+| `CANDIDATE-U-RELAGGV2-007` | v2 N=3 promotion正常、既存evidence正常 | allow、sideEffects none。`tests/release-promotion-rollback-gate.test.ts` |
+| `CANDIDATE-U-RELAGGV2-008` | mapping順序/件数、entries順序/件数、destination、v1 mapping2件、v2余剰scalar | 前6軸identity_mismatch、余剰scalarだけinvalid_input、全port 0。`tests/release-promotion-rollback-gate.test.ts` |
+| `CANDIDATE-U-RELAGGV2-009` | v2 rollback正常/同じ候補へ余剰scalarだけ追加 | 既存選択規則維持/invalid_input、全port 0。`tests/release-promotion-rollback-gate.test.ts` |
+
+mutation M1–M7は正本§5と同一: exactly-oneへの退行、集合一致への弱体化、先頭mappingだけの比較、v1基数guard削除、attestation path束縛削除、promotion余剰scalar受理、rollback余剰scalar受理。
+対応するRed証跡は実装後に各単独mutationを実行して記録する。finding enum、reason precedence、producer/installer/validatorの既存意味は変更しない。

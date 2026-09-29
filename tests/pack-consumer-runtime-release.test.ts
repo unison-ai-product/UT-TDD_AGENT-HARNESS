@@ -255,7 +255,10 @@ interface ProducerFixture {
   c1: string;
 }
 
-async function createProducerFixture(): Promise<ProducerFixture> {
+async function createProducerFixture(
+  fullInventory = false,
+  tag = "v0.2.0-canary.2",
+): Promise<ProducerFixture> {
   const root = mkdtempSync(join(tmpdir(), "ut-tdd-packrt-producer-"));
   const repositoryRoot = resolve(process.cwd());
   const sourcePaths = collectDistributionCandidatePaths(repositoryRoot);
@@ -327,7 +330,6 @@ async function createProducerFixture(): Promise<ProducerFixture> {
   if (!fixturePlan.ok)
     throw new Error(`producer fixture clean plan failed: ${fixturePlan.missingRequired.join(",")}`);
   const c1 = fixtureGit(root, ["rev-parse", "HEAD"]);
-  const tag = "v0.2.0-canary.2";
   const resolved = await resolveReleaseArtifacts(
     {
       repository: root,
@@ -344,15 +346,27 @@ async function createProducerFixture(): Promise<ProducerFixture> {
     throw new Error(`producer fixture artifact resolution failed: ${resolved.error}`);
   const artifactEntry = resolved.entries.find((entry) => entry.path === "src/artifact.ts");
   if (!artifactEntry) throw new Error("producer fixture artifact entry is missing");
-  const publicationArtifacts = [
-    {
-      sourcePath: "src/artifact.ts",
-      destinationPath: artifactEntry.path,
-      mode: "100644" as const,
-      size: artifactEntry.content.length,
-      contentDigest: digestConsumerRuntimeBytes(artifactEntry.content),
-    },
-  ];
+  const publicationArtifacts = fullInventory
+    ? resolved.entries.map((item) => {
+        if (item.mode !== "100644" && item.mode !== "100755")
+          throw new Error("publication fixture mode is not supported");
+        return {
+          sourcePath: cleanDistributionSourcePath(item.path, sourcePathSet),
+          destinationPath: item.path,
+          mode: item.mode,
+          size: item.content.length,
+          contentDigest: digestConsumerRuntimeBytes(item.content),
+        };
+      })
+    : [
+        {
+          sourcePath: "src/artifact.ts",
+          destinationPath: artifactEntry.path,
+          mode: "100644" as const,
+          size: artifactEntry.content.length,
+          contentDigest: digestConsumerRuntimeBytes(artifactEntry.content),
+        },
+      ];
   const publicationBase = {
     materializerVersion: "1",
     artifactSourceCommit: c1,
@@ -392,13 +406,14 @@ function sealReceipt(unsigned: Record<string, unknown>): Buffer {
 }
 
 function fakeGenerationBuilder(
-  options: { nodeVersion?: string; fail?: boolean } = {},
+  options: { nodeVersion?: string; fail?: boolean; compiledBytes?: Buffer } = {},
 ): (input: string | NodeGenerationBuildInput) => Promise<NodeGeneration> {
   return async (input) => {
     if (options.fail) throw new Error("injected Node generation failure");
     if (typeof input === "string") throw new Error("fixture generation input must be structured");
     if (!input.outputRoot) throw new Error("fixture generation output root is missing");
-    const compiledBytes = Buffer.from("export default 'fixture runtime';\n", "utf8");
+    const compiledBytes =
+      options.compiledBytes ?? Buffer.from("export default 'fixture runtime';\n", "utf8");
     const compiledSha256 = createHash("sha256").update(compiledBytes).digest("hex");
     const toolchainRoot = process.platform === "win32" ? "C:/toolchain" : "/opt/ut-tdd-toolchain";
     const unsigned = {
@@ -1060,6 +1075,58 @@ describe("Pack consumer runtime release installer", () => {
   afterAll(() => {
     if (fixture) removeInstallerFixtureTree(fixture.root);
   });
+
+  it.each([
+    ["canary", "v0.2.0-canary.2"],
+    ["stable", "v0.2.0"],
+  ])(
+    "CANDIDATE-U-RELAGGV2-002: %s 完全inventoryを実producerから実installerへ渡す",
+    async (channel, tag) => {
+      const producer = await createProducerFixture(true, tag);
+      const testCase = copyInstallerCase(fixture);
+      try {
+        // 既存の手作りinstaller documentを使わず、producerの全assetで置き換える。
+        for (const name of readdirSync(testCase.releaseDir))
+          unlinkSync(join(testCase.releaseDir, name));
+        await packageConsumerRuntimeRelease({
+          repoRoot: producer.root,
+          tag: producer.tag,
+          outDir: testCase.releaseDir,
+          homeDirectory: join(producer.root, "synthetic-home"),
+          installDependencies: () => undefined,
+          buildGeneration: fakeGenerationBuilder({ compiledBytes: fixture.compiledBytes }),
+        });
+        const names = releaseArtifactFileNames(producer.tag);
+        const document = validateConsumerRuntimeRelease(
+          JSON.parse(readFileSync(join(testCase.releaseDir, names.consumerRuntime), "utf8")),
+        );
+        expect(
+          document.admission_input.aggregate_input.final_tree.channelMappings.length,
+        ).toBeGreaterThan(2);
+        expect(document.admission_input.aggregate_input.channel).toBe(channel);
+        const anchor = `sha256:${hashHex(readFileSync(join(testCase.releaseDir, names.consumerChecksum)))}`;
+        const run = runInstallerIn(
+          { ...fixture, tag },
+          testCase.releaseDir,
+          testCase.consumerRoot,
+          anchor,
+        );
+        // runtime installは成功、その後の未束縛product identityは既存の正規deny。
+        expectUnboundRepositorySetup(run);
+        expect(
+          existsSync(
+            join(testCase.consumerRoot, ".ut-tdd", "runtime", "activation", "active.json"),
+          ),
+        ).toBe(true);
+        const installed = consumerActivePointer(testCase.consumerRoot);
+        expect(installed.bytes.length).toBeGreaterThan(0);
+      } finally {
+        removeInstallerFixtureTree(testCase.root);
+        removeInstallerFixtureTree(producer.root);
+      }
+    },
+    120_000,
+  );
 
   it("U-PACKRT-005: installs from Release assets in a git-init-only consumer and runs offline", () => {
     expect(typeof Reflect.get(setupApi, "installConsumerRuntimeRelease")).toBe("function");
