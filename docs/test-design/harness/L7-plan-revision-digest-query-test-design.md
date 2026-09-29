@@ -18,6 +18,8 @@ updated: 2026-09-28
 
 既存 ledger の正規 writer を test setup だけで使って独立した一時 DB を作る。alias A に asset X、revision 1/2 の異なる canonical payload を記録し、別 alias B/asset Y を用意する。期待 digest は fixture payload から独立に SHA-256 を計算する。production query 自身に writer を呼ばせない。破損を作る SQL は test setup に限定し、main harness.db を使わない。
 
+書込みゼロの fixture は通常 journal と WAL journal の両方を用意し、WAL/SHM が存在しない開始状態も観測する。Node `DatabaseSync(..., { readOnly: true })` だけでも WAL DB の読取り時に WAL/SHM が生成され得るため、接続フラグだけを write-0 の証拠にしない。query 前後だけでなく接続・SELECT の間も file 存在と書込み境界を計測し、query 自身による WAL/SHM 作成・変更を拒否する。fixture 準備の writer 操作は観測窓の開始前に閉じる。
+
 ## 2. 候補 oracle
 
 | ID | 入力・単独変異 | 期待・判別軸 |
