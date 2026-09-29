@@ -205,7 +205,7 @@ UT-TDD は PLAN 起票前後に、タスクの難易度・エフォート・適�
 
 - `ut-tdd task classify`: 入力文または PLAN から kind / drive / size / complexity / split_required を判定する。
 - `ut-tdd task estimate`: 三点見積もりとリスク係数で effort_hours / story_points / buffer を出す。
-- `ut-tdd skill suggest`: PLAN の kind / layer / drive / touched files から `docs/skills/*.md` の候補を推挙する。
+- `ut-tdd skill suggest`: PLAN の kind / layer / drive / touched files から `skills/*.md` の候補を推挙する。
 
 基本は rule-based で動作し、AI runtime が無い `standalone` でも利用できる。複数 AI がある場合は軽量分類を `fast-checker`、曖昧な L/XL 判定や本番影響を含む見積もりレビューを `frontier-reviewer` に回す。
 
@@ -955,7 +955,7 @@ v2.1 では「branch type 別 workflow を OR 条件で扱う」「該当 workfl
 ## 8.2 3 層の役割
 
 ```
-[層 1] スキル層 (docs/skills/*.md)
+[層 1] スキル層 (skills/*.md)
   ← 「何をすべきか」の知識 (個別技術 / 観点リスト)
          ↓ 組み合わせ定義 (設計参照のみ)
 [層 2] ワークフロー層 (workflows/*.yaml)
@@ -967,7 +967,7 @@ v2.1 では「branch type 別 workflow を OR 条件で扱う」「該当 workfl
 
 AI (Claude Code / Codex) は PLAN 起票時に層 2/3 YAML を **自然言語指示として** 読み、step 順序と on_failure 規約を適用する。専用 interpreter は無い。
 
-source-derived のスキル群は、個人プロジェクト用の原文をそのまま使わず、UT-TDD 向けの **skill pack** として `docs/skills/*.md` に正本化する。curate 対象は「追加機能設計」「ドキュメント」「実装」「テスト」「Reverse」「運用」の単位に分け、各 skill pack は必ず workflow / harness / gate のどれに接続するかを明記する。
+source-derived のスキル群は、個人プロジェクト用の原文をそのまま使わず、UT-TDD 向けの **skill pack** として `skills/*.md` に正本化する。curate 対象は「追加機能設計」「ドキュメント」「実装」「テスト」「Reverse」「運用」の単位に分け、各 skill pack は必ず workflow / harness / gate のどれに接続するかを明記する。
 
 特に、追加機能設計では既存設計を破壊しない `add-design` / `add-impl` 原則、ドキュメント・実装・テストの成果物一致では 4 artifact trace / L6 QA doc-first / review 後の追加 regression を skill pack 側から参照できるようにする。skill は知識と観点の層に閉じ、実行条件や fail-close は harness-check 側で機械強制する。
 

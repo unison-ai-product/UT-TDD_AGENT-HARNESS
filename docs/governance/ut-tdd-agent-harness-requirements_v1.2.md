@@ -275,7 +275,7 @@ validator は本表で組み合わせ違反を fail-close。**機械強制の実
 |---------------|------|---------|
 | `design_doc` | 設計ドキュメント | ① |
 | `adr_snapshot` | ADR 凍結スナップショット | ① |
-| `skill_doc` | UT-TDD 正本化済み skill doc (`docs/skills/*.md`) | — |
+| `skill_doc` | UT-TDD 正本化済み skill doc (`skills/*.md`) | — |
 | `markdown_doc` | 一般 markdown ドキュメント | — |
 | `doc_update` | 既存 doc の更新 | — |
 | `source_module` | ソースモジュール (harness core は TypeScript、対象リポジトリは言語非依存。旧 `python_module` を改名、ADR-001) | ② |
@@ -1093,7 +1093,7 @@ add-* 完了時、既存 PLAN との双方向 reference を更新:
 | `docs/*` | (PLAN 不要、例外) | ドキュメントのみ修正 (§7.4 例外 branch) |
 | `chore/*` | (PLAN 不要、例外) | 雑務 (依存更新、CI 設定変更等) |
 
-`docs/*` と `chore/*` は PLAN 起票不要の例外 branch (§7.4 で `branch-kind-check` の対象外として扱う)。ただし `docs/skills/*.md` の追加・更新は harness behavior に影響するため例外扱いしない。`skill_doc` 成果物を持つ PLAN 付き branch (`design/*` または `add/*`) で扱う。
+`docs/*` と `chore/*` は PLAN 起票不要の例外 branch (§7.4 で `branch-kind-check` の対象外として扱う)。ただし `skills/*.md` の追加・更新は harness behavior に影響するため例外扱いしない。`skill_doc` 成果物を持つ PLAN 付き branch (`design/*` または `add/*`) で扱う。
 
 ## 6.2 Required Status Checks の集約方針
 
@@ -1630,7 +1630,7 @@ policy:
   prefer_cross_provider_review: true
   same_model_approval: forbidden
   single_runtime_review: mandatory_subagent_checklist   # 単一エージェント時は ② 専門サブエージェント review を hard 必須 (§7.8.7.1)
-  single_runtime_review_checklist: docs/skills/review-checklist.yaml  # DOC/TST/COD/XR/DEP/DUP/MOD 明文化 checklist の正本
+  single_runtime_review_checklist: skills/review-checklist.yaml  # DOC/TST/COD/XR/DEP/DUP/MOD 明文化 checklist の正本
 members:
   - role: tl
     capability_class: frontier-reviewer
@@ -1719,7 +1719,7 @@ adapter は「存在する」と「harness から連携できる」を分けて�
 | `ut-tdd plan lint` | frontmatter schema 検証 |
 | `ut-tdd vmodel lint` | 4 artifact + trace 検証 |
 | `ut-tdd doctor` | 統合検証 |
-| `ut-tdd self-test` | harness 内蔵の小テスト (CLI routing / schema smoke / fixture smoke) |
+| `ut-tdd self-test` (**未実装**: CLI 未登録。代替は CI `harness-check`) | harness 内蔵の小テスト (CLI routing / schema smoke / fixture smoke) |
 | `ut-tdd setup` | 初期ディレクトリ / hook / local config の bootstrap |
 | `ut-tdd task classify` | 入力文 / PLAN / diff から kind / drive / size / complexity を仮判定 |
 | `ut-tdd task estimate` | 三点見積もり + リスク係数で effort_hours / story_points を算出 |
@@ -1781,7 +1781,7 @@ JSON 出力:
 
 | 判定 | 目安 | 動作 |
 |------|------|------|
-| `XS` | 1 file / docs typo / small config | PLAN 不要候補。ただし `docs/skills/*.md` は例外なく PLAN 必須 |
+| `XS` | 1 file / docs typo / small config | PLAN 不要候補。ただし `skills/*.md` は例外なく PLAN 必須 |
 | `S` | 1-3 files / 100 行以下 / API・DB 変更なし | 軽量 Forward |
 | `M` | 4-10 files / 101-500 行 / API または DB 片方 | 通常 Forward + L7 TDD Red |
 | `L` | 11+ files / 501+ 行 / API+DB / 複数 role | 分割推奨、frontier-reviewer review |
@@ -1824,7 +1824,7 @@ buffered_hours = expected_hours * risk_factor
 
 ### `ut-tdd skill suggest`
 
-PLAN / diff / text から、適用する `docs/skills/*.md` の候補を返す。未正本化 skill は `vendor_candidate=true` として表示し、正本化なしに gate input にしない。
+PLAN / diff / text から、適用する `skills/*.md` の候補を返す。未正本化 skill は `vendor_candidate=true` として表示し、正本化なしに gate input にしない。
 
 ```bash
 ut-tdd skill suggest --plan docs/plans/PLAN-123-audit.md
@@ -1861,7 +1861,7 @@ JSON 出力:
 > manifest は skill paths/reasons のみを含む。`ut-tdd codex --plan ...`、`ut-tdd claude --plan ...`、
 > `ut-tdd team run --plan ...`、`ut-tdd task route --plan ... --execute` などのコマンドは、
 > その manifest を argv ではなく provider stdin に実体化しなければならない。
-> これにより Claude と Codex は `docs/skills/*` 本文全量を読まず、同一の scoped context を受け取る。
+> これにより Claude と Codex は `skills/*` 本文全量を読まず、同一の scoped context を受け取る。
 
 ## 7.3 vmodel_validator I/O 仕様 (R-I7 fix で exit code 3 段階明記)
 
@@ -1920,7 +1920,7 @@ output:
 
 判定:
   prefix = branch_name.split('/')[0]
-  if prefix in {docs, chore} and not touches("docs/skills/*.md"): exit 0  # 例外 branch
+  if prefix in {docs, chore} and not touches("skills/*.md"): exit 0  # 例外 branch
   if prefix not in §6.1 表: exit 1   # unknown prefix
   expected_kinds = §6.1 表で prefix から決まる
   touched_plans = PR diff から PLAN ファイル抽出
@@ -1936,7 +1936,7 @@ output:
 
 | Hook | 検証内容 | 想定時間 |
 |------|----------|----------|
-| **pre-commit** | gitleaks / commitlint format / 軽量 lint (markdown / yaml) + `ut-tdd self-test --smoke` | < 5s |
+| **pre-commit** | gitleaks / commitlint format / 軽量 lint (markdown / yaml) + `ut-tdd self-test --smoke` (**未実装**、現状は CI `harness-check` が代替) | < 5s |
 | **pre-push** | §5.3 session 終了前 4 項目 + 軽量 plan lint + 差分対象 self-test | < 15s |
 | **harness-check (CI on every PR base)** | §6.3 の 8 subjob (重い検証 + 全テスト + 回帰確認)。`pull_request`に`branches` / `branches-ignore`を置かない | 数分 |
 
@@ -1946,12 +1946,12 @@ output:
 
 | tier | 内容 | 実行場所 | 目的 |
 |------|------|----------|------|
-| `smoke` | CLI 起動、subcommand routing、schema fixture、adapter probe dry-run | local hook / `ut-tdd self-test --smoke` | 即時フィードバック |
+| `smoke` | CLI 起動、subcommand routing、schema fixture、adapter probe dry-run | local hook / `ut-tdd self-test --smoke` (**未実装**) | 即時フィードバック |
 | `changed` | 差分 PLAN / 差分 script / 差分 docs の lint と軽量 validator | pre-push / PR | push 前の手戻り削減 |
 | `full` | 全 PLAN lint、完全 vmodel lint、全テスト、回帰確認、branch matrix | GitHub Actions `harness-check` | PR 通過要件 |
 | `nightly` | 長い adapter probe、cross-platform matrix、optional integration | GitHub Actions schedule | flake / 環境差分検出 |
 
-原則として、`full` と `nightly` をローカル hook の必須経路に入れない。ローカルで実行したい場合は明示コマンド (`ut-tdd self-test --full`) とする。
+原則として、`full` と `nightly` をローカル hook の必須経路に入れない。ローカルで実行したい場合は明示コマンド (`ut-tdd self-test --full`、**未実装**) とする。
 
 ## 7.6 受入条件 (機械検証)
 
@@ -1963,7 +1963,7 @@ output:
 - [ ] `branch-kind-check` が `docs/*` / `chore/*` を例外として skip (exit 0)
 - [ ] `branch-kind-check` が `feature/*` / `hotfix/*` の PLAN `github_issue_id` 未設定を warning として surface
 - [ ] pre-commit / pre-push / CI の責任分離 (§7.5) を守る
-- [ ] `ut-tdd self-test --smoke` はネットワーク不要・外部 AI runtime 不要で通る
+- [ ] `ut-tdd self-test --smoke` (**未実装 / 未充足**、コマンド登録後に判定) はネットワーク不要・外部 AI runtime 不要で通る
 - [ ] PR merge gate は GitHub Actions `harness-check` のみを正本とし、ローカル hook 成否だけを merge 条件にしない
 - [x] `harness-check` は全PR base/pathで発火し、`pull_request`の不正な型・base/path filter・不完全/未知activity types・trigger欠落、`push: branches: [main]`の欠落/paths filter、workflow構造異常、権限誤指定、検査対象本文によるprofile偽装を`github-ci-policy`がfail-closeする (PLAN-L6-82 / U-CIPOL-001..012、2026-07-15)
 - [x] **ルール同一性 (MUST、構想書 §2.1.0)**: gate / V-model / checklist / enum / route の正本は `ut-tdd` core + governance docs に単一定義され、`.claude/CLAUDE.md` / `AGENTS.md` がルールを再定義・分岐していない (doctor が両 adapter のルール重複・drift を検出し、検出時 fail)。`src/lint/rule-drift.ts` + doctor `checkRuleDrift` が AGENTS / CLAUDE adapter docs の必須 mode / command marker drift を fail-close 検出 (2026-06-08)。
@@ -2002,7 +2002,7 @@ DDD/TDD strictness は `docs/governance/ddd-tdd-rules.md` を SSoT とし、doma
 
 # §7.7 source-derived skill pack の curate / 正本化要件
 
-source-derived skill は `vendor source snapshot` から直接実行しない。UT-TDD で使うものだけを `docs/skills/*.md` に **skill pack** として curate / 正本化し、`artifact_type=skill_doc` の PLAN 成果物として管理する。skill 本文は TypeScript literal 化しないが、catalog / recommender / injector / lint は TypeScript/Node core で実装する。
+source-derived skill は `vendor source snapshot` から直接実行しない。UT-TDD で使うものだけを `skills/*.md` に **skill pack** として curate / 正本化し、`artifact_type=skill_doc` の PLAN 成果物として管理する。skill 本文は TypeScript literal 化しないが、catalog / recommender / injector / lint は TypeScript/Node core で実装する。
 
 ## 7.7.1 curate 候補 skill pack
 
@@ -2036,7 +2036,7 @@ skill pack は単独の助言文書ではなく、以下の gate に接続する
 
 ## 7.7.4 受入条件
 
-- [ ] 正本化済み skill は `docs/skills/*.md` に配置され、PLAN の `generates` に `artifact_type=skill_doc` として記録される
+- [ ] 正本化済み skill は `skills/*.md` に配置され、PLAN の `generates` に `artifact_type=skill_doc` として記録される
 - [ ] skill doc は対応する workflow / harness / gate を明記する
 - [ ] legacy source 固有名、個人絶対パス、WSL2 固定表現が残らない
 - [ ] `skill_doc` 更新 PR は `docs/*` 例外ではなく、PLAN 付き branch (`design/*` または `add/*`) で扱う
@@ -2134,7 +2134,7 @@ route 結果は **人間向け表示 (`suggest_command`、文字列)** と **機
 |----------|------|
 | `owner_role` | §1.8 の 7 role から (drive 別: 例 L4-L6 は be→tl / fe→fe / db→dba 相当) |
 | `mandatory_agents` | 工程必須 subagent (`.claude/agents/` エントリ) |
-| `recommended_skills` | `docs/skills/*.md` 候補 |
+| `recommended_skills` | `skills/*.md` 候補 |
 | `recommended_commands` | `ut-tdd *` 候補 |
 | `orchestration_mode` | 下記 enum |
 
