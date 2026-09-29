@@ -687,7 +687,7 @@ describe("L7 CLI surface closure", () => {
       const payload = parseCliJson(
         runCliIn(
           repoRoot,
-          ["claude", "--role", "reviewer", "--task", "inspect the implementation", "--dry-run"],
+          ["claude", "--role", "reviewer", "--task", "inspect the implementation", "--json"],
           fake.env,
         ),
       );
