@@ -229,6 +229,18 @@ describe("#418 Pack-only internal canary boundary (PR-1 / first layer)", () => {
 
       const commands = selectExactCanaryAssets(CANARY_FIXTURE_TAG, readdirSync(fixture.releaseDir));
       expect(commands).toEqual(CANARY_ASSET_NAMES);
+      const runtimeManifest = JSON.parse(
+        readFileSync(
+          join(fixture.releaseDir, `${CANARY_FIXTURE_TAG}.consumer-runtime.json`),
+          "utf8",
+        ),
+      ) as unknown;
+      expect(runtimeManifest).toMatchObject({
+        release: { tag: CANARY_FIXTURE_TAG },
+        admission_input: {
+          aggregate_input: { channel: "canary", attestation: { channel: "canary" } },
+        },
+      });
       const installed = installCanaryFixture(fixture, setupEnv);
       expect(
         installed.status,
