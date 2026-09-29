@@ -48,13 +48,13 @@ dependencies:
     - docs/test-design/harness/L7-pack-consumer-runtime-release-install-test-design.md
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/418
 review_evidence:
-  - reviewer: "Claude Opus (blind-reviewer, 非著者 closing review r2 bounded, PR #751
-      実装 exact head)"
+  - reviewer: "Claude Opus (blind-reviewer, 非著者 evidence review, PR #751 merged
+      head、CI green 後)"
     reviewer_model: claude-opus-5
     worker_model: gpt-6-luna
     review_kind: cross_agent
     verdict: pass
-    reviewed_at: 2026-09-29T09:13:46.725Z
+    reviewed_at: 2026-09-29T10:55:46Z
     tests_green_at: 2026-09-29T09:28:38Z
     plan_revision: PLAN-L7-742 r6
     subject_head: 4d2709028a18bf0d65fc3ec9fadaa9676a78f23a
@@ -69,12 +69,12 @@ review_evidence:
         evidence_path: docs/test-design/harness/L7-unit-test-design.md
         output_digest: sha256:7fe559c4da940f4f17c2f7ece1738f4decafdea64658bfe085caddfaf81e0da3
         anchor_commit: 4d2709028a18bf0d65fc3ec9fadaa9676a78f23a
-  - reviewer: "Codex Sol (非著者 契約 review r2, PR #748 契約 exact head)"
+  - reviewer: "Codex Sol (非著者 evidence review, PR #748 契約 exact head、CI green 後)"
     reviewer_model: gpt-5.6-sol
     worker_model: claude-opus-5
     review_kind: cross_agent
     verdict: pass
-    reviewed_at: 2026-09-29T06:28:17.217Z
+    reviewed_at: 2026-09-29T10:31:36Z
     tests_green_at: 2026-09-29T06:46:59Z
     plan_revision: PLAN-L7-742 r6
     subject_head: bbe0ed4d9696265e662cbea6604062c91584275e
@@ -96,18 +96,18 @@ supersedes:
   - PLAN-L7-494-release-promotion-rollback-gate
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:3ecc8343f8f3e791c038af9410a333b2
-  command_id: plan-revise:issue-742:s3-generates-owner-fix:forward:r8:a253b031f01e
-  admitted_at: 2026-09-29T09:48:03.077Z
-  source_digest: sha256:6ebf836719e8336a9c25729c4da3a60a5cbf15286671edef4cae19d3d6be3a82
-  decision_digest: sha256:a85c969ce29633761dac05ab85f7091a5675d721b302a15a8f91e5199a4c625e
-  receipt_digest: sha256:9c0432d148143c0f01a73c46ce2cfbfaa91704e44db892b4e2ec84a9da0bfb51
+  receipt_id: certificate:45db821768f44cd9a05a0871647b6e6a
+  command_id: plan-revise:issue-742:s3-evidence-post-green:forward:r9:82a76c8d38a2
+  admitted_at: 2026-09-29T11:01:17.825Z
+  source_digest: sha256:b60131ae7f470fa03da7eefd23fc35796278614ada2b6222b9d71840df17521c
+  decision_digest: sha256:aa1909d2883f08ca1443d77c81d5d94fd60b7a5d679c2349fda36f94bf63eebb
+  receipt_digest: sha256:a64823c3eb6e098f0b1cdc861a00cc54bff2916de491dab6f83fe3149536af51
   binding:
     path: docs/plans/PLAN-L7-742-release-aggregate-v2-inventory-cardinality.md
     plan_id: PLAN-L7-742-release-aggregate-v2-inventory-cardinality
     asset_id: plan:f787a6e0b076a4db67323a906329bde3
-    revision: 8
-    content_digest: sha256:6ebf836719e8336a9c25729c4da3a60a5cbf15286671edef4cae19d3d6be3a82
+    revision: 9
+    content_digest: sha256:b60131ae7f470fa03da7eefd23fc35796278614ada2b6222b9d71840df17521c
   route:
     signal: feature_addition
     mode: add-feature
@@ -125,11 +125,12 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-742-release-aggregate-v2-inventory-cardinality
-    target_revision: 8
+    target_revision: 9
     phase: forward_merge
-  escape_reason: "PR #757 CI の duplicate-artifact-ownership 是正: S2 が変更した src /
-    tests は既存 PLAN (492 / 494 / 496 / 628) が所有しているため、本 PLAN の generates
-    から外し所有権を移さない。confirmed と review_evidence は不変。"
+  escape_reason: "PR #757 CI の review-evidence 順序違反の是正: review_evidence の 2 件を、各
+    subject head の CI green 後に取り直した非著者 evidence review (Opus 10:55:46Z / Sol
+    10:31:36Z、いずれも PASS) へ差し替える。subject_head・anchor・output_digest・confirmed
+    は不変。"
   supersedes:
     - PLAN-L7-492-pf5-release-aggregate-admission-pair-freeze
     - PLAN-L7-494-release-promotion-rollback-gate
