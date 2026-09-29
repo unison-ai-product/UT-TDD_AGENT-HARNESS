@@ -370,6 +370,7 @@ describe("clean distribution local acceptance smoke", () => {
         cwd: cleanRoot,
         encoding: "utf8",
       }).trim();
+      const fixtureSourcePaths = collectDistributionCandidatePaths(cleanRoot);
       const resolved = await resolveReleaseArtifacts(
         {
           repository: cleanRoot,
@@ -384,15 +385,17 @@ describe("clean distribution local acceptance smoke", () => {
       );
       if (!resolved.ok) throw new Error(`fixture artifact resolution failed: ${resolved.error}`);
       const artifactSetDigest = resolved.digest;
-      const publicationArtifacts = [
-        {
-          sourcePath: "releases/canary/entry.ts",
-          destinationPath: "src/cli.ts",
-          mode: "100644" as const,
-          size: fixtureArtifact.length,
-          contentDigest: digestConsumerRuntimeBytes(fixtureArtifact),
-        },
-      ];
+      const publicationArtifacts = resolved.entries.map((item) => {
+        if (item.mode !== "100644" && item.mode !== "100755")
+          throw new Error("publication fixture mode is not supported");
+        return {
+          sourcePath: cleanDistributionSourcePath(item.path, fixtureSourcePaths),
+          destinationPath: item.path,
+          mode: item.mode,
+          size: item.content.length,
+          contentDigest: digestConsumerRuntimeBytes(item.content),
+        };
+      });
       const publicationBase = {
         materializerVersion: "1",
         artifactSourceCommit: artifactCommit,
