@@ -122,6 +122,6 @@ Link this doc from the PLAN `review_evidence` field before pair-freeze.
 - Writing threat model output directly into handover files — use
   `docs/design/L3/` so the artifact is versioned and `ut-tdd doctor` can find
   it.
-- Treating `ut-tdd guardrail` green as a complete threat model — guardrail
+- Treating the secret scan (`pre-push` hook, `src/lint/secret-scan.ts`) green as a complete threat model — it
   checks secrets and known patterns; novel attack surfaces must be enumerated
   manually.

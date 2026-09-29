@@ -1719,7 +1719,7 @@ adapter は「存在する」と「harness から連携できる」を分けて�
 | `ut-tdd plan lint` | frontmatter schema 検証 |
 | `ut-tdd vmodel lint` | 4 artifact + trace 検証 |
 | `ut-tdd doctor` | 統合検証 |
-| `ut-tdd self-test` (**未実装**: CLI 未登録。代替は CI `harness-check`) | harness 内蔵の小テスト (CLI routing / schema smoke / fixture smoke) |
+| (削除 2026-09-29) `ut-tdd self-test` | CLI として未登録のまま。実体は CI `harness-check` (typecheck + `npm run test` + biome lint + doctor、`.github/workflows/harness-check.yml`) とローカルの `npm run test` / `node src/cli.ts doctor` |
 | `ut-tdd setup` | 初期ディレクトリ / hook / local config の bootstrap |
 | `ut-tdd task classify` | 入力文 / PLAN / diff から kind / drive / size / complexity を仮判定 |
 | `ut-tdd task estimate` | 三点見積もり + リスク係数で effort_hours / story_points を算出 |
@@ -1936,8 +1936,8 @@ output:
 
 | Hook | 検証内容 | 想定時間 |
 |------|----------|----------|
-| **pre-commit** | gitleaks / commitlint format / 軽量 lint (markdown / yaml) + `ut-tdd self-test --smoke` (**未実装**、現状は CI `harness-check` が代替) | < 5s |
-| **pre-push** | §5.3 session 終了前 4 項目 + 軽量 plan lint + 差分対象 self-test | < 15s |
+| **pre-commit** | gitleaks / commitlint format / 軽量 lint (markdown / yaml) (`self-test --smoke` は未登録のため削除、smoke 相当は CI `harness-check`) | < 5s |
+| **pre-push** | §5.3 session 終了前 4 項目 + 軽量 plan lint + 差分対象 `npm run test` | < 15s |
 | **harness-check (CI on every PR base)** | §6.3 の 8 subjob (重い検証 + 全テスト + 回帰確認)。`pull_request`に`branches` / `branches-ignore`を置かない | 数分 |
 
 `vmodel_lint` の完全検証は **pre-push と CI のみ** で実行。pre-commit には乗せない。
@@ -1946,12 +1946,12 @@ output:
 
 | tier | 内容 | 実行場所 | 目的 |
 |------|------|----------|------|
-| `smoke` | CLI 起動、subcommand routing、schema fixture、adapter probe dry-run | local hook / `ut-tdd self-test --smoke` (**未実装**) | 即時フィードバック |
+| `smoke` | CLI 起動、subcommand routing、schema fixture、adapter probe dry-run | local hook / `npm run test` / CI `harness-check` | 即時フィードバック |
 | `changed` | 差分 PLAN / 差分 script / 差分 docs の lint と軽量 validator | pre-push / PR | push 前の手戻り削減 |
 | `full` | 全 PLAN lint、完全 vmodel lint、全テスト、回帰確認、branch matrix | GitHub Actions `harness-check` | PR 通過要件 |
 | `nightly` | 長い adapter probe、cross-platform matrix、optional integration | GitHub Actions schedule | flake / 環境差分検出 |
 
-原則として、`full` と `nightly` をローカル hook の必須経路に入れない。ローカルで実行したい場合は明示コマンド (`ut-tdd self-test --full`、**未実装**) とする。
+原則として、`full` と `nightly` をローカル hook の必須経路に入れない。ローカルで実行したい場合は明示コマンド (`npm run test` / `node src/cli.ts doctor`) とする。なお `ut-tdd self-test` は 2026-09-29 に現行仕様から削除した (CLI 未登録)。
 
 ## 7.6 受入条件 (機械検証)
 
@@ -1963,7 +1963,7 @@ output:
 - [ ] `branch-kind-check` が `docs/*` / `chore/*` を例外として skip (exit 0)
 - [ ] `branch-kind-check` が `feature/*` / `hotfix/*` の PLAN `github_issue_id` 未設定を warning として surface
 - [ ] pre-commit / pre-push / CI の責任分離 (§7.5) を守る
-- [ ] `ut-tdd self-test --smoke` (**未実装 / 未充足**、コマンド登録後に判定) はネットワーク不要・外部 AI runtime 不要で通る
+- [ ] `npm run test` (CI `harness-check` の test 工程) はネットワーク不要・外部 AI runtime 不要で通る
 - [ ] PR merge gate は GitHub Actions `harness-check` のみを正本とし、ローカル hook 成否だけを merge 条件にしない
 - [x] `harness-check` は全PR base/pathで発火し、`pull_request`の不正な型・base/path filter・不完全/未知activity types・trigger欠落、`push: branches: [main]`の欠落/paths filter、workflow構造異常、権限誤指定、検査対象本文によるprofile偽装を`github-ci-policy`がfail-closeする (PLAN-L6-82 / U-CIPOL-001..012、2026-07-15)
 - [x] **ルール同一性 (MUST、構想書 §2.1.0)**: gate / V-model / checklist / enum / route の正本は `ut-tdd` core + governance docs に単一定義され、`.claude/CLAUDE.md` / `AGENTS.md` がルールを再定義・分岐していない (doctor が両 adapter のルール重複・drift を検出し、検出時 fail)。`src/lint/rule-drift.ts` + doctor `checkRuleDrift` が AGENTS / CLAUDE adapter docs の必須 mode / command marker drift を fail-close 検出 (2026-06-08)。
