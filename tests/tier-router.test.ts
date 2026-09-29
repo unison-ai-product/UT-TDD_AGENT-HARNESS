@@ -90,7 +90,8 @@ describe("U-TIER: cost-tiered provider router", () => {
     const r = roster();
     expect(r).toHaveLength(5);
     for (const binding of r) {
-      expect(binding.claude).toMatch(/^claude-/);
+      const expectedClaude = ROLE_ARCHETYPE[binding.role] === "worker" ? "haiku" : "opus";
+      expect(binding.claude).toBe(expectedClaude);
       expect(binding.codex).toMatch(/^gpt-/);
       expect(binding.archetype).toBe(ROLE_ARCHETYPE[binding.role]);
     }
