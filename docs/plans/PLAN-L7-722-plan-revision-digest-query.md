@@ -4,7 +4,7 @@ title: "PLAN-L7-722 (add-impl): PLAN revision の canonical_payload_digest を p
   ledger から書込みゼロで読み出す query 契約"
 kind: add-impl
 layer: L7
-drive: agent
+drive: db
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-09-29
@@ -49,18 +49,18 @@ status: draft
 github_issue_id: 722
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:d354f79aaae8e1cb50d0b1a77c3ccc76
-  command_id: plan-draft:issue-722:digest-query:forward:1
-  admitted_at: 2026-09-29T08:35:16.221Z
-  source_digest: sha256:80405b9041277bbb2f7cbfc70b52dace84612939d80fc1862cfd1e37ef6a52f4
-  decision_digest: sha256:9d4d70f007cf8590d09ca19c5e17405017689f52c9239f55af0ec7327937a680
-  receipt_digest: sha256:b88950b7483fd1a2fbf1ac1a50c571aa29a1164e03bfe697f96dbe432ced8e56
+  receipt_id: certificate:3c8daa655285065cfedd93797f3a8daf
+  command_id: plan-revise:issue-722:drive-parent-align:forward:r2:559cd9a1defb
+  admitted_at: 2026-09-29T08:46:34.338Z
+  source_digest: sha256:6755466ce43449a535371b07e927afa2bf3f050129188e48c739bb3db86077f2
+  decision_digest: sha256:54f3848fc6d72536ed639f11f201ff95cc1b6276b53ab54a31a883f7a454a407
+  receipt_digest: sha256:d1f982cc463af963fdc6a3731908d1c045a82aa148310412842228df017fa394
   binding:
     path: docs/plans/PLAN-L7-722-plan-revision-digest-query.md
     plan_id: PLAN-L7-722-plan-revision-digest-query
     asset_id: plan:d354f79aaae8e1cb50d0b1a77c3ccc76
-    revision: 1
-    content_digest: sha256:80405b9041277bbb2f7cbfc70b52dace84612939d80fc1862cfd1e37ef6a52f4
+    revision: 2
+    content_digest: sha256:6755466ce43449a535371b07e927afa2bf3f050129188e48c739bb3db86077f2
   route:
     signal: feature_addition
     mode: add-feature
@@ -78,12 +78,10 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-722-plan-revision-digest-query
-    target_revision: 1
+    target_revision: 2
     phase: forward_merge
-  escape_reason: "Issue #722: #692 の先行 slice として、#681 後継が必要とする保存済み PLAN revision の
-    canonical_payload_digest を plan ledger から書込みゼロで読み出す公開 query 契約が PLAN-L6-71
-    に無い (read 経路の記述 0 件)。read-only opener・既存検証の最小抽出・exact selector を定める add-impl
-    の新規起票。"
+  escape_reason: "Issue #722: 親 PLAN-L6-71 の drive (db) と一致させる (plan-governance
+    parent_drive_mismatch の是正)。本文・契約は不変。"
 ---
 
 # PLAN-L7-722: PLAN revision digest query (書込みゼロ)
