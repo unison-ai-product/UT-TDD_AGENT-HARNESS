@@ -238,7 +238,7 @@ describe("#418 Pack-only internal canary boundary (PR-1 / first layer)", () => {
       expect(runtimeManifest).toMatchObject({
         release: { tag: CANARY_FIXTURE_TAG },
         admission_input: {
-          aggregate_input: { channel: "canary", attestation: { channel: "canary" } },
+          aggregate_input: { channel: "canary" },
         },
       });
       const installed = installCanaryFixture(fixture, setupEnv);
