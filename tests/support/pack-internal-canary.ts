@@ -139,13 +139,17 @@ async function createReleaseManifest(root: string, artifactCommit: string): Prom
   const sourcePaths = git(root, ["ls-tree", "-r", "--name-only", "-z", artifactCommit])
     .split("\0")
     .filter(Boolean);
-  const artifacts = resolved.entries.map((entry) => ({
-    sourcePath: cleanDistributionSourcePath(entry.path, sourcePaths),
-    destinationPath: entry.path,
-    mode: entry.mode,
-    size: entry.content.length,
-    contentDigest: digestConsumerRuntimeBytes(entry.content),
-  }));
+  const artifacts = resolved.entries.map((entry) => {
+    if (entry.mode === "120000")
+      throw new Error(`fixture inventory forbids symlink: ${entry.path}`);
+    return {
+      sourcePath: cleanDistributionSourcePath(entry.path, sourcePaths),
+      destinationPath: entry.path,
+      mode: entry.mode,
+      size: entry.content.length,
+      contentDigest: digestConsumerRuntimeBytes(entry.content),
+    };
+  });
   const base = {
     materializerVersion: "1",
     artifactSourceCommit: artifactCommit,
