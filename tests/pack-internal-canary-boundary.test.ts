@@ -1,6 +1,6 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   AUTHORING_TEMPLATE_ARTIFACT_PATHS,
@@ -13,6 +13,7 @@ import {
   canarySkillsBaselineErrors,
   countAbsolutePathReferences,
   createCanaryFixture,
+  createCanaryReviewStubs,
   installCanaryFixture,
   isolatedCanaryEnv,
   observedForbiddenPaths,
@@ -23,6 +24,7 @@ import {
   setupSourcePaths,
   writeAccessTrace,
   writeCanaryPlanManifest,
+  writeCanaryReviewEnvelope,
 } from "./support/pack-internal-canary.ts";
 
 const repoRoot = process.cwd();
@@ -257,12 +259,20 @@ describe("#418 Pack-only internal canary boundary (PR-1 / first layer)", () => {
       const bunTrace = createBunStub(fixture.root);
       const accessTrace = writeAccessTrace(fixture.root, observedForbiddenPaths(fixture));
       const baseEnv = isolatedCanaryEnv(fixture.root);
+      const consumerHead = execFileSync("git", ["rev-parse", "HEAD"], {
+        cwd: fixture.consumerRoot,
+        encoding: "utf8",
+        windowsHide: true,
+      }).trim();
+      const reviewStubs = createCanaryReviewStubs(fixture.root, consumerHead);
       const binDir = join(fixture.root, "bin");
       const separator = process.platform === "win32" ? ";" : ":";
       const env: NodeJS.ProcessEnv = {
         ...baseEnv,
-        PATH: `${binDir}${separator}${baseEnv.PATH ?? ""}`,
-        NODE_OPTIONS: accessTrace.nodeOptions,
+        PATH: `${binDir}${separator}${reviewStubs.ghBin}${separator}${baseEnv.PATH ?? ""}`,
+        NODE_OPTIONS: `${accessTrace.nodeOptions} ${reviewStubs.ghNodeOptions}`,
+        UT_TDD_CLAUDE_BIN: reviewStubs.claudeCommand,
+        CANARY_CLAUDE_MARKER: reviewStubs.claudeMarkerPath,
       };
       const wrapperRun = (args: string[]) =>
         runNode(fixture?.alternateCwd ?? "", [wrapper, ...args], env);
@@ -289,11 +299,179 @@ describe("#418 Pack-only internal canary boundary (PR-1 / first layer)", () => {
       expect(dbRebuild.status, dbRebuild.stderr || dbRebuild.stdout).toBe(0);
       expect(existsSync(join(fixture.consumerRoot, ".ut-tdd", "harness.db"))).toBe(true);
 
-      const review = wrapperRun(["review", "--uncommitted", "--json"]);
-      expect(review.status, review.stderr || review.stdout).toBe(0);
-      const reviewJson = JSON.parse(review.stdout) as { scope: string; ok: boolean };
-      expect(reviewJson).toMatchObject({ scope: "uncommitted", ok: true });
-      expect(existsSync(join(fixture.consumerRoot, ".ut-tdd", "review"))).toBe(false);
+      const memoryAdd = wrapperRun([
+        "memory",
+        "add",
+        "--title",
+        "Canary 418 review task",
+        "--kind",
+        "feedback",
+        "--body",
+        "Review the isolated canary consumer fixture.",
+        "--tags",
+        "canary,review",
+        "--operation-id",
+        "canary-418-memory",
+        "--receipt-json",
+      ]);
+      expect(memoryAdd.status, memoryAdd.stderr || memoryAdd.stdout).toBe(0);
+      const memoryRegistration = JSON.parse(
+        memoryAdd.stdout.trim().split(/\r?\n/).at(-1) ?? "{}",
+      ) as {
+        operation_id: string;
+        memory_id: string;
+        source_path: string;
+        content_digest: string;
+        exit_code: number;
+      };
+      expect(memoryRegistration).toMatchObject({
+        operation_id: "canary-418-memory",
+        exit_code: 0,
+      });
+      expect(memoryRegistration.memory_id).toMatch(/^memory:feedback:/);
+      expect(memoryRegistration.source_path).toMatch(/^\.ut-tdd\/memory\//);
+      expect(memoryRegistration.content_digest).toMatch(/^sha256:[a-f0-9]{64}$/);
+      expect(existsSync(join(fixture.consumerRoot, memoryRegistration.source_path))).toBe(true);
+
+      const reviewDispatch = wrapperRun([
+        "review",
+        "live-dispatch",
+        "--memory-id",
+        memoryRegistration.memory_id,
+        "--memory-path",
+        memoryRegistration.source_path,
+        "--pr",
+        "418",
+        "--head",
+        consumerHead,
+        "--revision",
+        "canary-418-review",
+        "--author-family",
+        "codex",
+        "--json",
+      ]);
+      expect(reviewDispatch.status, reviewDispatch.stderr || reviewDispatch.stdout).toBe(1);
+      const dispatchJson = JSON.parse(reviewDispatch.stdout) as {
+        ok: boolean;
+        reason: string;
+        backlog?: { requestDigest: string; requestPath: string };
+      };
+      expect(dispatchJson).toMatchObject({ ok: false, reason: "no_live_claude_workspace" });
+      expect(dispatchJson.backlog?.requestDigest).toMatch(/^[a-f0-9]{64}$/);
+      expect(dispatchJson.backlog?.requestPath).toBeDefined();
+      const requestPath = join(
+        fixture.consumerRoot,
+        ".ut-tdd",
+        "review",
+        "requests",
+        `${dispatchJson.backlog?.requestDigest}.json`,
+      );
+      expect(resolve(dispatchJson.backlog?.requestPath ?? "")).toBe(resolve(requestPath));
+      expect(existsSync(requestPath)).toBe(true);
+      const request = JSON.parse(readFileSync(requestPath, "utf8")) as {
+        memoryId: string;
+        pr: number;
+        exactHead: string;
+        reviewRevision: string;
+        authorFamily: "codex" | "claude";
+        requestedAt: string;
+      };
+      expect(request).toMatchObject({
+        memoryId: memoryRegistration.memory_id,
+        pr: 418,
+        exactHead: consumerHead,
+        authorFamily: "codex",
+      });
+      expect(request.reviewRevision).toMatch(/^rv1-[a-f0-9]{64}$/);
+      const reviewEnvelope = writeCanaryReviewEnvelope({
+        consumerRoot: fixture.consumerRoot,
+        requestDigest: dispatchJson.backlog?.requestDigest ?? "",
+        request,
+        memoryPath: memoryRegistration.source_path,
+      });
+
+      const pendingMerge = wrapperRun(["pr", "merge", "--pr", "418", "--json"]);
+      expect(pendingMerge.status, pendingMerge.stderr || pendingMerge.stdout).toBe(1);
+      const pendingMergeJson = JSON.parse(pendingMerge.stdout) as {
+        ok: boolean;
+        decision: string;
+        headSha: string | null;
+        reason: string;
+      };
+      expect(pendingMergeJson).toMatchObject({
+        ok: false,
+        decision: "deny",
+        headSha: consumerHead,
+      });
+      expect(pendingMergeJson.reason).toMatch(/pending_request_for_head|verdict_missing/);
+      expect(
+        existsSync(join(fixture.consumerRoot, ".ut-tdd", "logs", "review-merge-gate.jsonl")),
+      ).toBe(true);
+
+      const liveConsume = wrapperRun([
+        "review",
+        "live-consume",
+        "--envelope",
+        reviewEnvelope,
+        "--json",
+      ]);
+      expect(liveConsume.status, liveConsume.stderr || liveConsume.stdout).toBe(0);
+      expect(existsSync(reviewStubs.claudeMarkerPath)).toBe(true);
+      const receiptPath = join(
+        fixture.consumerRoot,
+        ".ut-tdd",
+        "review",
+        "receipts",
+        `${dispatchJson.backlog?.requestDigest}.json`,
+      );
+      expect(existsSync(receiptPath)).toBe(true);
+      expect(JSON.parse(readFileSync(receiptPath, "utf8"))).toMatchObject({
+        memoryId: memoryRegistration.memory_id,
+        pr: 418,
+        head: consumerHead,
+        reviewRevision: request.reviewRevision,
+        reviewerFamily: "claude",
+        kind: "verdict",
+        verdict: "PASS",
+        blockingFindings: [],
+      });
+
+      const merge = wrapperRun(["pr", "merge", "--pr", "418", "--json"]);
+      expect(merge.status, merge.stderr || merge.stdout).toBe(0);
+      expect(JSON.parse(merge.stdout)).toMatchObject({
+        ok: true,
+        decision: "merge",
+        headSha: consumerHead,
+        verdict: "PASS",
+        reason: "merge_ready",
+      });
+      const ghCalls = existsSync(reviewStubs.ghTracePath)
+        ? readFileSync(reviewStubs.ghTracePath, "utf8")
+            .trim()
+            .split("\n")
+            .filter(Boolean)
+            .map((line) => JSON.parse(line) as string[])
+        : [];
+      expect(ghCalls).toContainEqual([
+        "pr",
+        "view",
+        "418",
+        "--json",
+        "headRefOid",
+        "--jq",
+        ".headRefOid",
+      ]);
+      expect(ghCalls).toContainEqual([
+        "pr",
+        "view",
+        "418",
+        "--json",
+        "headRefOid,state,statusCheckRollup",
+      ]);
+      expect(ghCalls.filter((args) => args[1] === "merge")).toEqual([
+        ["pr", "merge", "418", "--merge", "--match-head-commit", consumerHead],
+      ]);
+      expect(ghCalls.some((args) => args[1] === "comment" && args[2] === "418")).toBe(true);
 
       const hookCommands = registeredWorkGuardCommands(fixture.consumerRoot);
       const normalPayload = {

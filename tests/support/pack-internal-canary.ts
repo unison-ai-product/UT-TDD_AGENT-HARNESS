@@ -1,6 +1,8 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
+  chmodSync,
+  copyFileSync,
   cpSync,
   existsSync,
   lstatSync,
@@ -53,6 +55,14 @@ export interface CanaryFixture {
   readonly anchor: string;
   readonly wrapper: string;
   readonly planTemplate: string;
+}
+
+export interface CanaryReviewStubPaths {
+  readonly ghBin: string;
+  readonly ghTracePath: string;
+  readonly ghNodeOptions: string;
+  readonly claudeCommand: string;
+  readonly claudeMarkerPath: string;
 }
 
 function git(cwd: string, args: readonly string[]): string {
@@ -291,9 +301,129 @@ export function isolatedCanaryEnv(root: string): NodeJS.ProcessEnv {
     CLAUDE_PROJECT_DIR: undefined,
     UT_TDD_PROJECT_DIR: undefined,
     CODEX_HOME: join(root, "codex-home"),
+    PATHEXT: process.env.PATHEXT ?? ".COM;.EXE;.BAT;.CMD",
     SystemRoot: process.env.SystemRoot,
     ComSpec: process.env.ComSpec,
   };
+}
+
+/** Closed GH executable: copied Node starts a loader which handles only exact local argv. */
+export function createCanaryReviewStubs(root: string, head: string): CanaryReviewStubPaths {
+  if (!/^[a-f0-9]{40}$/.test(head)) throw new Error("canary_review_head_invalid");
+  const bin = join(root, "review-bin");
+  mkdirSync(bin, { recursive: true });
+  const ghExecutable = join(bin, process.platform === "win32" ? "gh.exe" : "gh");
+  copyFileSync(process.execPath, ghExecutable);
+  if (process.platform !== "win32") chmodSync(ghExecutable, 0o755);
+
+  const ghTracePath = join(root, "closed-gh-argv.jsonl");
+  const ghLoader = join(root, "closed-gh.mjs");
+  writeFileSync(
+    ghLoader,
+    `import fs from "node:fs";
+import path from "node:path";
+const executable = path.basename(process.execPath).toLowerCase();
+if (executable === "gh" || executable === "gh.exe") {
+  const argv = process.argv.slice(1);
+  const tracePath = ${JSON.stringify(ghTracePath)};
+  const expectedHead = ${JSON.stringify(head)};
+  if (argv[0] === path.resolve(process.cwd(), "pr")) argv[0] = "pr";
+  const record = (response = "", code = 0) => {
+    fs.appendFileSync(tracePath, JSON.stringify(argv) + "\\n");
+    if (response) fs.writeSync(1, response);
+    process.exit(code);
+  };
+  const exact = (...expected) => argv.length === expected.length && expected.every((value, index) => argv[index] === value);
+  if (exact("pr", "view", "418", "--json", "headRefOid", "--jq", ".headRefOid")) record(expectedHead + "\\n");
+  if (exact("pr", "view", "418", "--json", "headRefOid,state,statusCheckRollup")) record(JSON.stringify({ headRefOid: expectedHead, state: "OPEN", statusCheckRollup: [{ conclusion: "SUCCESS" }] }) + "\\n");
+  if (argv.length === 5 && argv[0] === "pr" && argv[1] === "comment" && argv[2] === "418" && argv[3] === "--body" && new RegExp("^PR #418 exact HEAD " + expectedHead + " のcanonical review receipt。\\\\nverdict=PASS blocking=0\\\\nreviewRevision=rv1-[a-f0-9]{64}\\\\nreviewerFamily=claude\\\\nreceiptDigest=[a-f0-9]{64}$").test(argv[4])) record();
+  if (exact("pr", "merge", "418", "--merge", "--match-head-commit", expectedHead)) record();
+  record(JSON.stringify({ denied: true, argv }) + "\\n", 2);
+}
+`,
+    "utf8",
+  );
+
+  const claudeHelper = join(root, "closed-claude-provider.cjs");
+  const claudeMarkerPath = join(root, "closed-claude-provider-invoked.log");
+  writeFileSync(
+    claudeHelper,
+    `const fs = require("node:fs");
+let prompt = "";
+process.stdin.setEncoding("utf8");
+process.stdin.on("data", (chunk) => { prompt += chunk; });
+process.stdin.on("end", () => {
+  fs.appendFileSync(process.env.CANARY_CLAUDE_MARKER, "invoked\\n");
+  const fields = ["schema_version", "request_digest", "attempt", "pr", "exact_head", "review_revision", "reviewer_provider", "reviewer_model", "invocation_nonce"].map((key) => {
+    const match = prompt.match(new RegExp("^" + key + ":\\\\s*(.*)$", "m"));
+    if (!match || !match[1].trim()) process.exit(2);
+    return key + ": " + match[1].trim();
+  }).join("\\n");
+  const verdictFile = process.env.UT_TDD_REVIEW_VERDICT_FILE;
+  if (!verdictFile) process.exit(2);
+  fs.writeFileSync(verdictFile, fields + "\\nVERDICT: PASS\\n", "utf8");
+  process.stdout.write("VERDICT: PASS\\n");
+});
+`,
+    "utf8",
+  );
+  const claudeCommand = join(bin, process.platform === "win32" ? "claude.cmd" : "claude");
+  writeFileSync(
+    claudeCommand,
+    process.platform === "win32"
+      ? `@echo off\r\nif "%~1"=="--version" (echo claude 0.0.0-canary& exit /b 0)\r\nnode "${claudeHelper}"\r\nexit /b %ERRORLEVEL%\r\n`
+      : `#!/bin/sh\nif [ "$1" = "--version" ]; then echo "claude 0.0.0-canary"; exit 0; fi\nexec node "${claudeHelper}"\n`,
+    process.platform === "win32" ? "utf8" : { encoding: "utf8", mode: 0o755 },
+  );
+  return {
+    ghBin: bin,
+    ghTracePath,
+    ghNodeOptions: `--import=${pathToFileURL(ghLoader).href}`,
+    claudeCommand,
+    claudeMarkerPath,
+  };
+}
+
+export interface CanaryReviewRequest {
+  readonly memoryId: string;
+  readonly pr: number;
+  readonly exactHead: string;
+  readonly reviewRevision: string;
+  readonly authorFamily: "codex" | "claude";
+  readonly requestedAt: string;
+}
+
+/** A typed wake input for the no-live-workspace backlog lane; request remains CLI-produced. */
+export function writeCanaryReviewEnvelope(input: {
+  readonly consumerRoot: string;
+  readonly requestDigest: string;
+  readonly request: CanaryReviewRequest;
+  readonly memoryPath: string;
+}): string {
+  if (!/^[a-f0-9]{64}$/.test(input.requestDigest))
+    throw new Error("canary_review_request_digest_invalid");
+  const envelopePath = join(input.consumerRoot, ".ut-tdd", "review", "canary-review-envelope.json");
+  mkdirSync(dirname(envelopePath), { recursive: true });
+  const envelope = {
+    schemaVersion: "ut-tdd.claude-inbox/v3",
+    purpose: "review",
+    id: `${input.request.memoryId}:canary-review`,
+    memoryId: input.request.memoryId,
+    body: "Consume the canonical canary review request.",
+    originRuntime: "codex",
+    operationId: `canary-review-${input.requestDigest.slice(0, 16)}`,
+    targetWorkspaceId: "f".repeat(64),
+    createdAt: input.request.requestedAt,
+    requestDigest: input.requestDigest,
+    requestPath: `.ut-tdd/review/requests/${input.requestDigest}.json`,
+    memoryPath: input.memoryPath,
+    pr: input.request.pr,
+    exactHead: input.request.exactHead,
+    reviewRevision: input.request.reviewRevision,
+    authorFamily: input.request.authorFamily,
+  };
+  writeFileSync(envelopePath, `${JSON.stringify(envelope, null, 2)}\n`, "utf8");
+  return envelopePath;
 }
 
 export async function createCanaryFixture(): Promise<CanaryFixture> {
