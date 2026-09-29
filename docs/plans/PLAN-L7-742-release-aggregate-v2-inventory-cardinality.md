@@ -28,20 +28,6 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-742-release-aggregate-v2-inventory-cardinality.md
     artifact_type: markdown_doc
-  - artifact_path: src/setup/release-aggregate-admission.ts
-    artifact_type: source_module
-  - artifact_path: src/setup/consumer-local-runtime-admission.ts
-    artifact_type: source_module
-  - artifact_path: src/setup/release-promotion-rollback-gate.ts
-    artifact_type: source_module
-  - artifact_path: tests/release-aggregate-admission.test.ts
-    artifact_type: test_code
-  - artifact_path: tests/consumer-local-runtime-admission.test.ts
-    artifact_type: test_code
-  - artifact_path: tests/release-promotion-rollback-gate.test.ts
-    artifact_type: test_code
-  - artifact_path: tests/pack-consumer-runtime-release.test.ts
-    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L6-63-pack-staged-release-rollback.md
   requires:
@@ -110,18 +96,18 @@ supersedes:
   - PLAN-L7-494-release-promotion-rollback-gate
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:8d4d1ec871ebf0dea75b9cc092fb7e58
-  command_id: plan-revise:issue-742:s3-confirm:forward:r7:44636a2b9e5b
-  admitted_at: 2026-09-29T09:40:43.091Z
-  source_digest: sha256:b6f9a38f3bfbc428e8ccb1a4535d29c14e7f9e2299b4c236d33496e4baa9a6eb
-  decision_digest: sha256:293cd9887bd2faeba9ea17c1b39c84dfdc339f7d21228adb814924b4ba3a4e0d
-  receipt_digest: sha256:6ae419a09a5f59eda2e83129a293c62ff96ef88ffcf86c90a7527c62de0e9122
+  receipt_id: certificate:3ecc8343f8f3e791c038af9410a333b2
+  command_id: plan-revise:issue-742:s3-generates-owner-fix:forward:r8:a253b031f01e
+  admitted_at: 2026-09-29T09:48:03.077Z
+  source_digest: sha256:6ebf836719e8336a9c25729c4da3a60a5cbf15286671edef4cae19d3d6be3a82
+  decision_digest: sha256:a85c969ce29633761dac05ab85f7091a5675d721b302a15a8f91e5199a4c625e
+  receipt_digest: sha256:9c0432d148143c0f01a73c46ce2cfbfaa91704e44db892b4e2ec84a9da0bfb51
   binding:
     path: docs/plans/PLAN-L7-742-release-aggregate-v2-inventory-cardinality.md
     plan_id: PLAN-L7-742-release-aggregate-v2-inventory-cardinality
     asset_id: plan:f787a6e0b076a4db67323a906329bde3
-    revision: 7
-    content_digest: sha256:b6f9a38f3bfbc428e8ccb1a4535d29c14e7f9e2299b4c236d33496e4baa9a6eb
+    revision: 8
+    content_digest: sha256:6ebf836719e8336a9c25729c4da3a60a5cbf15286671edef4cae19d3d6be3a82
   route:
     signal: feature_addition
     mode: add-feature
@@ -139,11 +125,11 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-742-release-aggregate-v2-inventory-cardinality
-    target_revision: 7
+    target_revision: 8
     phase: forward_merge
-  escape_reason: "Issue #742 S3: 実装 PR #751 (Opus r2 PASS、exact head 4d270902、CI
-    green) の merge を受けて confirmed 化し、generates (src 3 本 + tests 4 本) と
-    review_evidence (#751 Opus r2、#748 Sol r2) を記録する。契約本文は不変。"
+  escape_reason: "PR #757 CI の duplicate-artifact-ownership 是正: S2 が変更した src /
+    tests は既存 PLAN (492 / 494 / 496 / 628) が所有しているため、本 PLAN の generates
+    から外し所有権を移さない。confirmed と review_evidence は不変。"
   supersedes:
     - PLAN-L7-492-pf5-release-aggregate-admission-pair-freeze
     - PLAN-L7-494-release-promotion-rollback-gate
@@ -377,6 +363,9 @@ mutation probe (実装 PR の review packet に、どの出現を除去したか
    finding enum 追加・canary channel 規則は含めない。
 3. **S3 confirm**: S2 の CI Green と closing PASS を受けて本 PLAN を confirmed 化し、`generates` へ
    実装成果物を追加する。`PLAN-REVERSE-742` を R1〜R4 へ進める。
+   (rev 8 訂正: S2 が変更した src 3 本と tests 4 本は既に `PLAN-L7-492` / `PLAN-L7-494` / `PLAN-L7-496` /
+   `PLAN-L7-628` が `generates` で所有しており、二重所有は `duplicate-artifact-ownership` が fail-close する。
+   本 PLAN は所有権を移さず、改修の根拠を `supersedes` の部分節と `review_evidence` で示す。`generates` は本 PLAN 文書のみ。)
 4. S3 の後に `PLAN-L7-531` PR-1 (canary 第 1 層) が multi-artifact release で進める状態になる。
 
 ### 7.1 PLAN-L7-492 へ追記する訂正注記 (AC は上書きしない)
