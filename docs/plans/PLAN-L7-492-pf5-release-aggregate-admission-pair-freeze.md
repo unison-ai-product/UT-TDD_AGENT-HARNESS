@@ -127,3 +127,14 @@ candidate昇格を含めない。candidate `CANDIDATE-RELMAN-014`〜`017`は実�
 
 Pack repoへのtag/release、promotion/rollback、S3、multi-consumer generalization、Git commit/push
 自動化は本PLANへ混ぜない。Issue #251は実装・全fault検証・cross-review・mergeが完了するまでcloseしない。
+
+## 訂正注記 (2026-09-29、PLAN-L7-742)
+
+§1 (C) の channel-selected artifact → Pack destination 写像は v1 (channel あたり destination 1 件) を
+前提に凍結されており、`PLAN-L7-499` の v2 multi-artifact inventory について再定義されていなかった。
+このため `src/setup/release-aggregate-admission.ts` の `selectedMapping` は mapping がちょうど 1 件でない
+v2 release を全て `missing_channel_mapping` で拒否する (実測: #418 / `PLAN-L7-531` PR-1)。
+v2 の基数契約 (mapping 列 = selected release の `artifacts` 列の順序付き完全一致) と、sealed plan の
+destination 正本を `entries[].path` に限る変更は後継 `PLAN-L7-742-release-aggregate-v2-inventory-cardinality`
+が所有する。v1 の exactly-one、§1 (A)(B)、§1 の apply / rollback 契約、および本 PLAN の AC・status は
+変更しない。

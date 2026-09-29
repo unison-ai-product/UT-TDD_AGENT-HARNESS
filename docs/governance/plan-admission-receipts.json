@@ -5440,6 +5440,38 @@
         "revision": 20,
         "content_digest": "sha256:0ea5fb36b1a79cf3821d2ac636d3191ef0573d0bc13e96b6d8b5eca8dbf90332"
       }
+    },
+    {
+      "sequence": 341,
+      "previous_record_digest": "sha256:309282861d4aaae38c5e6de462c07d43a18a44c22e59dc67368a4f06b2736000",
+      "record_digest": "sha256:14c3aa00b697525f1da0db90b4f6a32cffabd722e0bedf2dcf7e1223d8fb5ef0",
+      "command_id": "plan-draft:issue-742:aggregate-v2-cardinality:forward:1",
+      "receipt_id": "certificate:f787a6e0b076a4db67323a906329bde3",
+      "receipt_digest": "sha256:b6cf4fd7ec2347cfd65f66eab9ea77fd4fefd6b858b5347e82d61f9f3556bb90",
+      "decision_digest": "sha256:74ebaa7447376597ab5a6149476bdd27e4b2e7b7cf240514091d24d5932e70e5",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-742-release-aggregate-v2-inventory-cardinality.md",
+        "plan_id": "PLAN-L7-742-release-aggregate-v2-inventory-cardinality",
+        "asset_id": "plan:f787a6e0b076a4db67323a906329bde3",
+        "revision": 1,
+        "content_digest": "sha256:cca41bdb390c619efaa0127d40e88ad37dabeca1f756a37d3ec7125817b403ce"
+      }
+    },
+    {
+      "sequence": 342,
+      "previous_record_digest": "sha256:14c3aa00b697525f1da0db90b4f6a32cffabd722e0bedf2dcf7e1223d8fb5ef0",
+      "record_digest": "sha256:206e53dce873e44756436434c0c78cb1782a6db686cde605df17331cb9790556",
+      "command_id": "plan-draft:issue-742:aggregate-v2-cardinality:reverse:1",
+      "receipt_id": "certificate:61a67f9437e1fff919b21b9c9c3aa7ce",
+      "receipt_digest": "sha256:dca61a9bce9faeeb0616d520859ff9526b2de7e331ce9a7c637f71c656aa4fb8",
+      "decision_digest": "sha256:dec934fe7f0a473e821cc06f86267076fcbcec7c4e90b166873fee1b4cf318d8",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-742-release-aggregate-v2-inventory-cardinality-backfill.md",
+        "plan_id": "PLAN-REVERSE-742-release-aggregate-v2-inventory-cardinality-backfill",
+        "asset_id": "plan:61a67f9437e1fff919b21b9c9c3aa7ce",
+        "revision": 1,
+        "content_digest": "sha256:967b4b9d14495b311b4d8b14741def2f41ad743ce80f11f65929fd7edf7ea70a"
+      }
     }
   ]
 }

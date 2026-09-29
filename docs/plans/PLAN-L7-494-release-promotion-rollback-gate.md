@@ -242,3 +242,13 @@ pointer/publish 0とprior state不変を観測する。`U-RELMAN-022`はrollback
 
 L7実装とR2 preflightはexact implementation revisionへ固定済みである。Claude Opus 5のclosing PASS、
 canonical snapshot、Linux / Windows / aggregate CIはmerge前の残存gateとして保持する。
+
+## 訂正注記 (2026-09-29、PLAN-L7-742)
+
+§2 の「PF5 sealed plan の kind/destination/entries/entry の strict shape 検証」と単一 `mapping` 入力は、
+sealed plan のスカラー `destinationPath` と channel mapping 1 件を前提にしており、v2 multi-artifact
+release では任意の 1 mapping しか照合しない (`src/setup/release-promotion-rollback-gate.ts:596`)。
+v2 では `mappings` 列と manifest の `artifacts` 列の順序付き完全一致、および sealed plan の
+`entries[].path` との一致で aggregate 全体を照合するよう、後継
+`PLAN-L7-742-release-aggregate-v2-inventory-cardinality` が §2 の該当部分だけを置き換える。
+reason 列挙・precedence・evidence 束縛・rollback の選択規則、および本 PLAN の AC・status は変更しない。
