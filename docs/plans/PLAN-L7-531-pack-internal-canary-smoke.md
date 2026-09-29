@@ -8,7 +8,7 @@ drive: agent
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-09-10
-updated: 2026-09-28
+updated: 2026-09-29
 owner: Claude / Fable (pair-freeze) · Codex worker (implementation)
 parent_design: docs/plans/PLAN-L6-101-pack-independent-multi-consumer-acceptance.md
 pair_artifact: docs/test-design/harness/L12-pack-internal-canary-test-design.md
@@ -77,18 +77,18 @@ status: confirmed
 github_issue_id: 418
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:8be10911dc9bc391e9328f965824da71
-  command_id: plan-revise:issue-418:531-canary2-confirm:plan:r5:cf904ac87fff
-  admitted_at: 2026-09-29T03:13:46.436Z
-  source_digest: sha256:5a2c6ba4537af901be2965550ba5d6fdd6e87b36dac88140b065f3b4bacb98c7
-  decision_digest: sha256:afc697aba68e38014f5ccfc551cc4ccbdcd75fc4b55cdceb8be3360073eb5e0a
-  receipt_digest: sha256:25c2ef7ea4bde1226a418d89d7331115b29309e2e3db1fe45d23b152119ea6e0
+  receipt_id: certificate:e25ed6b78369e081edfeb32b14b3973a
+  command_id: plan-revise:issue-743:tag-channel-rule:p531:r6:84831f749dc4
+  admitted_at: 2026-09-29T07:53:55.304Z
+  source_digest: sha256:bcf72880ba49d4c019fbad108f88fa0f8c72c3332dba8d36010f8971a1ffb54e
+  decision_digest: sha256:a7bf6ba4c9b805bd263b9e4638f599e85105108f5bbc8978e6ee2df506726505
+  receipt_digest: sha256:4319035c7c2b794c54dcd79add15ccddbcc788002371b756ff63a6acb0ac55b2
   binding:
     path: docs/plans/PLAN-L7-531-pack-internal-canary-smoke.md
     plan_id: PLAN-L7-531-pack-internal-canary-smoke
     asset_id: plan:44f79788376b81c225ce5913fddbc48f
-    revision: 5
-    content_digest: sha256:5a2c6ba4537af901be2965550ba5d6fdd6e87b36dac88140b065f3b4bacb98c7
+    revision: 6
+    content_digest: sha256:bcf72880ba49d4c019fbad108f88fa0f8c72c3332dba8d36010f8971a1ffb54e
   route:
     signal: feature_addition
     mode: add-feature
@@ -106,12 +106,14 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-531-pack-internal-canary-smoke
-    target_revision: 5
+    target_revision: 6
     phase: forward_merge
-  escape_reason: "Issue #418: PLAN-L7-531 rev 4 の非著者 evidence review (Codex Sol、PR
-    #731 merged head be1b16d9、CI green 後) PASS を受けて confirmed 化し、review_evidence
-    と #726 (installer) の main 着地 c029d4ed の事実を記述へ反映する。canary PR-1 着手の前提。PR #736
-    着地後の main tail から再接合。"
+  escape_reason: "Issue #743: §3.1 の fixture tag の例 v0.0.0-canary-fixture は
+    -canary. を含まず、PLAN-L7-628 の channel 規則では stable で admission されていた。第 1 層を第 2
+    層の実物 v0.2.0-canary.2 と同じ canary 経路に揃えるため、fixture tag を v0.0.0-canary.0 に固定し
+    canary channel での admission を明記する。既存制約 (Pack 公開 tag と非衝突、v0.2.0-canary.*
+    を名乗らない) は不変で、Pack repo に v0.0.0* の tag が無いことを実測した。PLAN-L7-628 rev 10 (§2.3)
+    と同じ PR で出す。"
 ---
 
 # PLAN-L7-531: Pack-only internal canary smoke (Windows/Linux)
@@ -240,8 +242,15 @@ fixture 生成時に source worktree、directory walk、glob、local Pack checko
 環境変数から entry を補完しない。asset の byte 内容・digest 生成規則は `PLAN-L7-628` §3/§4/§5 が
 正本であり、本層は producer / installer を呼ぶだけで再実装しない。
 
-- **fixture tag**: Pack repo の公開 tag 名前空間と衝突しない固定 tag (例: `v0.0.0-canary-fixture`)
-  とする。`v0.2.0-canary.*` を名乗らない。
+- **fixture tag**: Pack repo の公開 tag 名前空間と衝突しない固定 tag `v0.0.0-canary.0` とする。`v0.2.0-canary.*` を名乗らない。
+  `PLAN-L7-628` §5 手順 1 の channel 規則 (tag 中の任意の位置に `-canary.` があれば canary、無ければ stable、`PLAN-L7-628` §2.3)
+  により、fixture は第 2 層の実物 `v0.2.0-canary.2` と同じ **canary channel** で admission される。stable channel で admission
+  される tag (`-canary.` を含まない値) は使わない。Pack repo に `v0.0.0*` の tag は無い
+  (`gh release list -R unison-ai-product/UT-TDD_AGENT-HARNESS-Pack` / `git ls-remote --tags` の実測、2026-09-29)。
+  rev 6 (#743) で例示だった `v0.0.0-canary-fixture` を差し替えた。旧例は `-canary.` を含まず、fixture が stable channel で
+  admission されていたためである (fixture manifest が両 channel を同一 release に向けていたので通っていた)。既存制約
+  (Pack 公開 tag と非衝突、`v0.2.0-canary.*` を名乗らない) は不変。tag から channel を決める規則そのものの固定は
+  `PLAN-L7-628` 所有の `CANDIDATE-U-PACKRT-012` が担い、本 PLAN は新しい oracle を持たない。
 - **anchor**: 第 1 層の `--expected-consumer-digest` は fixture 自身の `<tag>.consumer.sha256` から
   test 内で計算した値であり、`PLAN-L7-628` §6.1 の信頼根 (Release 外の publish 記録) ではない。
   したがって第 1 層 Green は偽造検出を含む受入を一切証明せず、受入証跡へ読み替えない (§3.2、

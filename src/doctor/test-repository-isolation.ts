@@ -27,7 +27,7 @@ runtime-portability:2 screen-impl-pair-freeze:1 setup-bun-removal:2 ban-lint-det
 sub-doc-catalog-drift:5 sub-doc-section-structure:1 telemetry-closure:1 test-design-naming:1 toolchain-pin:1 tracked-canonical:1
 vmodel-contract-compiler:1 vmodel-source-assets:1 work-guard:1 workspace-roots:3 write-encoding-guard:1
 vmodel-consumer-lint:1
-release-consumer-gates:7
+release-consumer-gates:10
 doctor-test-repository-isolation:1 persistent-db-cleanup-contract:1 memory-clean-cut-removal:1 memory-legacy-archive:1 memory-clean-cut-non-read:1 memory-curation-ledger:1
 secret-scan-diff:1
 feedback-log:2

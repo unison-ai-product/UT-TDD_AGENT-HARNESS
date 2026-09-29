@@ -33,7 +33,7 @@ interface CheckManifestInput {
   evidenceDirectory: string;
   obligation: CompiledVerificationObligation;
   caseIds: ReadonlySet<string>;
-  deferCaseIdField: "it_id" | "st_id";
+  deferCaseIdField: "it_id" | "st_id" | "uxv_id";
   violations: string[];
 }
 
@@ -78,6 +78,19 @@ const REQUIRED_G9_HEADINGS = [
   "#### 第6章 実施計画・記録",
 ] as const;
 const REQUIRED_G9_CASE_COLUMNS = [...REQUIRED_G8_CASE_COLUMNS.slice(0, -1), "family", "トレース元"];
+const REQUIRED_G10_HEADINGS = [
+  "# DOC-L10-UX-VALIDATION: 画面検証(UIテスト)設計",
+  "#### 第1章 方針",
+  "#### 第2章 検証レベル・種別",
+  "#### 第3章 E2Eシナリオ",
+  "#### 第4章 ビジュアルリグレッション",
+  "#### 第5章 クロスブラウザ・レスポンシブ",
+  "#### 第6章 アクセシビリティ検証",
+  "#### 第7章 テストデータ・環境",
+  "#### 第8章 CI連携・合否",
+] as const;
+const REQUIRED_G10_CASE_COLUMNS = ["No", "シナリオ", "対象画面", "期待"] as const;
+const REQUIRED_L2_SCREEN_COLUMNS = ["画面ID", "画面名称", "概要", "関連機能", "ロール"] as const;
 function isRecord(value: unknown): value is JsonRecord {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -154,6 +167,45 @@ function parseG9CaseRows(content: string, violations: string[]): CaseRow[] {
   return rows;
 }
 
+function parseG10CaseRows(content: string, violations: string[]): CaseRow[] {
+  for (const heading of REQUIRED_G10_HEADINGS) {
+    if (!content.includes(heading)) violations.push(`missing section ${heading}`);
+  }
+  const lines = content.split(/\r?\n/);
+  const chapterIndex = lines.findIndex((line) => line.trim() === "#### 第3章 E2Eシナリオ");
+  const nextChapterIndex =
+    chapterIndex < 0
+      ? -1
+      : lines.findIndex(
+          (line, index) => index > chapterIndex && /^#### 第[1-8]章 /.test(line.trim()),
+        );
+  const chapterLines =
+    chapterIndex < 0
+      ? []
+      : lines.slice(chapterIndex + 1, nextChapterIndex < 0 ? undefined : nextChapterIndex);
+  const headerIndex = chapterLines.findIndex((line) => {
+    const cells = tableCells(line);
+    return REQUIRED_G10_CASE_COLUMNS.every((column) => cells.includes(column));
+  });
+  if (headerIndex < 0) {
+    violations.push("missing section 第3章 E2Eシナリオ: required case table columns");
+    return [];
+  }
+  const header = tableCells(chapterLines[headerIndex] ?? "");
+  const idIndex = header.indexOf("No");
+  const screenIndex = header.indexOf("対象画面");
+  const rows: CaseRow[] = [];
+  for (const line of chapterLines.slice(headerIndex + 2)) {
+    if (!line.trimStart().startsWith("|")) break;
+    const cells = tableCells(line);
+    const id = cells[idIndex] ?? "";
+    if (!id || id.startsWith("<")) continue;
+    rows.push({ id, citations: cells[screenIndex] ?? "" });
+  }
+  if (rows.length === 0) violations.push("missing section 第3章 E2Eシナリオ: case rows");
+  return rows;
+}
+
 function g8SlotContent(
   repoRoot: string,
   obligation: CompiledVerificationObligation,
@@ -172,6 +224,16 @@ function g9SlotContent(
   if (!existsSync(slot)) return null;
   const content = readFileSync(slot, "utf8");
   return fmValue(content, "doc_type_id") === "DOC-L9-SYSTEM-TEST-DESIGN" ? content : null;
+}
+
+function g10SlotContent(
+  repoRoot: string,
+  obligation: CompiledVerificationObligation,
+): string | null {
+  const slot = resolveAuthoringSourceAbsolutePath(repoRoot, obligation.governanceArtifact);
+  if (!existsSync(slot)) return null;
+  const content = readFileSync(slot, "utf8");
+  return fmValue(content, "doc_type_id") === "DOC-L10-UX-VALIDATION" ? content : null;
 }
 
 function pairLayerIds(repoRoot: string, pairLayers: readonly string[]): Set<string> {
@@ -196,6 +258,30 @@ function allDesignIds(repoRoot: string): Set<string> {
     if (docTypeId) ids.add(docTypeId);
     for (const match of doc.content.matchAll(/\*\*([A-Z][A-Z0-9]*(?:-[A-Z0-9]+)+)\*\*/g)) {
       ids.add(match[1] as string);
+    }
+  }
+  return ids;
+}
+
+function l2ScreenIds(repoRoot: string): Set<string> {
+  const ids = new Set<string>();
+  for (const doc of loadPairDocs(repoRoot)) {
+    if (!doc.content || designLayerFromPath(doc.path) !== "L2") continue;
+    if (fmValue(doc.content, "doc_type_id") !== "DOC-L2-SCREEN") continue;
+    const lines = doc.content.split(/\r?\n/);
+    const sectionIndex = lines.findIndex((line) => line.trim() === "#### 第4章 画面一覧");
+    if (sectionIndex < 0) continue;
+    const sectionLines = lines.slice(sectionIndex + 1);
+    const headerOffset = sectionLines.findIndex((line) => {
+      const cells = tableCells(line);
+      return REQUIRED_L2_SCREEN_COLUMNS.every((column) => cells.includes(column));
+    });
+    if (headerOffset < 0) continue;
+    const idIndex = tableCells(sectionLines[headerOffset] ?? "").indexOf("画面ID");
+    for (const line of sectionLines.slice(headerOffset + 2)) {
+      if (!line.trimStart().startsWith("|")) break;
+      const id = stringValue(tableCells(line)[idIndex]);
+      if (id && !id.startsWith("<")) ids.add(id);
     }
   }
   return ids;
@@ -319,6 +405,26 @@ function parseG9EvidenceManifest(path: string, raw: unknown) {
   });
 }
 
+function parseG10EvidenceManifest(path: string, raw: unknown) {
+  if (!isRecord(raw)) return parseG8IntegrationEvidenceManifest(path, raw);
+  const commands = Array.isArray(raw.commands)
+    ? raw.commands.map((command) =>
+        isRecord(command) ? { ...command, it_ids: command.uxv_ids } : command,
+      )
+    : raw.commands;
+  const coverage = Array.isArray(raw.coverage)
+    ? raw.coverage.map((entry) => (isRecord(entry) ? { ...entry, it_id: entry.uxv_id } : entry))
+    : raw.coverage;
+  return parseG8IntegrationEvidenceManifest(path, {
+    ...raw,
+    selected_it_ids: raw.selected_uxv_ids,
+    mandatory_it_ids: raw.mandatory_uxv_ids,
+    deferred_it_ids: raw.deferred_uxv_ids,
+    commands,
+    coverage,
+  });
+}
+
 function checkManifest({
   repoRoot,
   absolutePath,
@@ -341,9 +447,11 @@ function checkManifest({
     return { mandatoryIds: new Set(), deferredIds: new Set() };
   }
   const evidence =
-    obligation.gate === "G9"
-      ? parseG9EvidenceManifest(path, parsed)
-      : parseG8IntegrationEvidenceManifest(path, parsed);
+    obligation.gate === "G10"
+      ? parseG10EvidenceManifest(path, parsed)
+      : obligation.gate === "G9"
+        ? parseG9EvidenceManifest(path, parsed)
+        : parseG8IntegrationEvidenceManifest(path, parsed);
   violations.push(
     ...validateG8IntegrationEvidenceManifest(evidence, repoRoot, {
       gate: obligation.gate,
@@ -393,7 +501,7 @@ export function evaluateRightArmStaticGate(
   messages: string[];
 } {
   const key = gate.trim().toUpperCase();
-  if (key !== "G8" && key !== "G9") {
+  if (key !== "G8" && key !== "G9" && key !== "G10") {
     return {
       passed: false,
       messages: [`right-arm-static - violation: no evaluator for ${key}`],
@@ -412,13 +520,25 @@ export function evaluateRightArmStaticGate(
   }
   const violations: string[] = [];
   const slot =
-    key === "G9" ? g9SlotContent(repoRoot, obligation) : g8SlotContent(repoRoot, obligation);
+    key === "G10"
+      ? g10SlotContent(repoRoot, obligation)
+      : key === "G9"
+        ? g9SlotContent(repoRoot, obligation)
+        : g8SlotContent(repoRoot, obligation);
   const slotDocTypeId =
-    key === "G9" ? "DOC-L9-SYSTEM-TEST-DESIGN" : "DOC-L8-INTEGRATION-TEST-DESIGN";
+    key === "G10"
+      ? "DOC-L10-UX-VALIDATION"
+      : key === "G9"
+        ? "DOC-L9-SYSTEM-TEST-DESIGN"
+        : "DOC-L8-INTEGRATION-TEST-DESIGN";
   if (!slot) violations.push(`missing slot ${slotDocTypeId}`);
   const content = slot ?? "";
   const rows =
-    key === "G9" ? parseG9CaseRows(content, violations) : parseG8CaseRows(content, violations);
+    key === "G10"
+      ? parseG10CaseRows(content, violations)
+      : key === "G9"
+        ? parseG9CaseRows(content, violations)
+        : parseG8CaseRows(content, violations);
   const caseIds = new Set(rows.map((row) => row.id));
   checkCaseIds({
     rows,
@@ -427,7 +547,14 @@ export function evaluateRightArmStaticGate(
     violations,
   });
   const pairIds = pairLayerIds(repoRoot, obligation.pairLayers);
-  if (key === "G9") {
+  if (key === "G10") {
+    if (fmValue(content, "status") === "skipped") {
+      violations.push(
+        "skipped slot DOC-L10-UX-VALIDATION: no consumer profile-selection authority (VMC-005)",
+      );
+    }
+    checkCaseTraces(rows, l2ScreenIds(repoRoot), violations);
+  } else if (key === "G9") {
     checkG9CaseTraces({ rows, pairIds, definedIds: allDesignIds(repoRoot), violations });
     checkG9Families(rows, obligation.evidenceFamilies, violations);
   } else {
@@ -444,7 +571,7 @@ export function evaluateRightArmStaticGate(
       evidenceDirectory,
       obligation,
       caseIds,
-      deferCaseIdField: key === "G9" ? "st_id" : "it_id",
+      deferCaseIdField: key === "G10" ? "uxv_id" : key === "G9" ? "st_id" : "it_id",
       violations,
     });
     for (const id of [...manifestResult.mandatoryIds, ...manifestResult.deferredIds])
