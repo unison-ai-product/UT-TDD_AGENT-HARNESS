@@ -59,11 +59,23 @@ const REQUIRED_G8_CASE_COLUMNS = [
 const REQUIRED_G9_HEADINGS = [
   "# DOC-L9-SYSTEM-TEST-DESIGN: 総合テスト設計書 / セキュリティテスト計画・脆弱性診断書",
   "#### 第1章 テスト方針",
+  "##### 1-1 目的・範囲",
+  "##### 1-2 トレース元",
+  "##### 1-3 合否基準",
+  "##### 1-4 テスト環境",
   "#### 第2章 テスト観点",
   "#### 第3章 テストケース一覧",
   "#### 第4章 不具合・判定基準",
   "##### 4-1 重要度定義",
   "##### 4-2 不具合記録",
+  "#### 第1章 方針・診断フェーズ",
+  "##### 1-2 診断の独立性",
+  "#### 第2章 診断チェックリスト(OWASP Top 10 2021)",
+  "#### 第3章 API・マルチテナント診断",
+  "#### 第4章 LLM・AIエージェント診断(OWASP LLM Top 10 抜粋)",
+  "#### 第5章 判定基準・対応SLA",
+  "##### 5-1 エグジット基準",
+  "#### 第6章 実施計画・記録",
 ] as const;
 const REQUIRED_G9_CASE_COLUMNS = [...REQUIRED_G8_CASE_COLUMNS.slice(0, -1), "family", "トレース元"];
 function isRecord(value: unknown): value is JsonRecord {
