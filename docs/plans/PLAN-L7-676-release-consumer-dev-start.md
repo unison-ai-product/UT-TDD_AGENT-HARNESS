@@ -211,18 +211,18 @@ status: confirmed
 github_issue_id: 676
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:b95dce5e1d9a5fbb8f06e2cf85343be6
-  command_id: plan-revise:issue-676:g10-skip-contract:plan:r20:83a49bde856e
-  admitted_at: 2026-09-29T04:08:46.108Z
-  source_digest: sha256:0ea5fb36b1a79cf3821d2ac636d3191ef0573d0bc13e96b6d8b5eca8dbf90332
-  decision_digest: sha256:d902f9800527aefa81d9ca4016b6de9cfcc3d1c571444d2f7880a028052e3bed
-  receipt_digest: sha256:35eb7c442be054e2c0f8a5d2ce36727aa1e7fd92560fdc9202d1741ecf5a3bf2
+  receipt_id: certificate:98843224704d3f679e79bdfa65f236f2
+  command_id: plan-revise:issue-676:g11-g12-shape-contract:plan:r21:60099e554b5b
+  admitted_at: 2026-09-29T07:21:18.209Z
+  source_digest: sha256:47312c51096c73bbf3aefa250695f72811a9cf9a2bcd5e3e7f5ad6e4bf6fbb69
+  decision_digest: sha256:3674e699e9892c06a82f96e50d3cf21b1d1b3b472191995320ca51ec0beb3faa
+  receipt_digest: sha256:f5c7b6a1490d3ef8712f18f16d99bb9473d933bda718430b8b350cf374f180d5
   binding:
     path: docs/plans/PLAN-L7-676-release-consumer-dev-start.md
     plan_id: PLAN-L7-676-release-consumer-dev-start
     asset_id: plan:aae8bf0e313f8688fbad4d4d8cf0a6a9
-    revision: 20
-    content_digest: sha256:0ea5fb36b1a79cf3821d2ac636d3191ef0573d0bc13e96b6d8b5eca8dbf90332
+    revision: 21
+    content_digest: sha256:47312c51096c73bbf3aefa250695f72811a9cf9a2bcd5e3e7f5ad6e4bf6fbb69
   route:
     signal: feature_addition
     mode: add-feature
@@ -240,12 +240,12 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-676-release-consumer-dev-start
-    target_revision: 20
+    target_revision: 21
     phase: forward_merge
-  escape_reason: "Issue #676: PR-G10 着手前監査で §3.6-4 G10 行の n/a 分岐が到達不能 (consumer の
-    profile selection authority が契約に無い) と判明したため、advisor
-    (claude-fable-5-1、design、SURVIVES) の推奨に従い、G10 の status: skipped を常に failed
-    とする契約改訂 (profile ベース L10 skip は後続 PLAN)。"
+  escape_reason: "Issue #676: PR-G11 着手前に G11 / G12 の consumer 証跡 shape (manifest
+    field の符号化、JSON artifact、G11 case 表、T で cite できる L3 見出し定義 ID) が §3.6-4
+    に未凍結で、実装 PR が S / I / T で停止すると判明したため、advisor (claude-fable-5、design、論点 1〜4
+    survive + 決定 3 条件付き survive) の推奨に従い契約改訂とする。"
 ---
 
 # PLAN-L7-676: Release consumer で開発を開始できる状態にする
@@ -585,9 +585,9 @@ consumer に catalog / profile を上書きさせる手段は作らない (§3.2
    | --- | --- | --- |
    | S (構造) | `governance_artifact` (resolver 後) が存在し、§3.5 の slot テンプレートが定める必須見出しと case 表の必須列を全て持つ (`schema_check.py`) | `missing slot <doc_type_id>` / `missing section <見出し>` |
    | I (ID) | case 表の各行 ID が `case_id_prefix` で始まり、文書内で一意。本文・表で参照する ID は全て定義済み (`validate.py`) | `duplicate case id` / `dangling reference <id>` |
-   | T (V-pair trace) | 各 case 行が `pair_layers` の文書で定義された ID を 1 件以上 cite し、cite 先が全て実在する (`spec_trace.py` の閉包) | `untraced case <id>` / `trace target missing <id>` |
-   | E (evidence 型) | `<dir>/*.json` の manifest が 1 件以上あり、全てが次を満たす: `schema_version = "<dir>-evidence-v1"`、`gate = <gate>`、`profile` と `plan_id` が非空、`commands[]` が非空で各要素が `command_id` / `command` / `runner` / `scope` 非空・`exit_code = 0`・`output_digest` が `sha256:<64hex>`・`evidence_path` が repo 内に実在し許可 prefix (`.ut-tdd/evidence/` / `docs/` / `src/` / `tests/`) 配下。`mandatory_<id>s` の各 ID に `coverage[]` があり `status = passed`・`evidence_paths` と `command_ids` が非空で実在・既知。`exit_criteria` が `all_mandatory_passed = true`・`failed_mandatory_count = 0`・`stale_defer_count = 0`・`doctor_check = "<dir>-workflow"` | `<manifest>: <field> ...` (既存 `src/lint/g8-integration-workflow.ts` の message 形式) |
-   | F (全行) | S の case 表で定義された全 ID が、manifest の `mandatory_<id>s` (coverage passed) か `deferred_<id>s` のどちらかにある。deferred の各 ID は `defer[]` に `reason` 非空と、`docs/plans/` に実在する `plan_id` を持つ (実在しない PLAN への defer は stale) | `missing row evidence <id>` / `stale defer <id>` |
+   | T (V-pair trace) | 各 case 行が `pair_layers` の文書で定義された ID を 1 件以上 cite し、cite 先が全て実在する (`spec_trace.py` の閉包。G11 / G12 の cite 可能 ID 集合は下記「G11 / G12 の証跡 shape」の 3) | `untraced case <id>` / `trace target missing <id>` |
+   | E (evidence 型) | `<dir>/*.json` の manifest が 1 件以上あり、全てが次を満たす: `schema_version = "<dir>-evidence-v1"`、`gate = <gate>`、`profile` と `plan_id` が非空、`commands[]` が非空で各要素が `command_id` / `command` / `runner` / `scope` 非空・`exit_code = 0`・`output_digest` が `sha256:<64hex>`・`evidence_path` が repo 内に実在し許可 prefix (`.ut-tdd/evidence/` / `docs/` / `src/` / `tests/`) 配下。`mandatory_<p>_ids` の各 ID に `coverage[]` があり `status = passed`・`evidence_paths` と `command_ids` が非空で実在・既知。`exit_criteria` が `all_mandatory_passed = true`・`failed_mandatory_count = 0`・`stale_defer_count = 0`・`doctor_check = "<dir>-workflow"` | `<manifest>: <field> ...` (既存 `src/lint/g8-integration-workflow.ts` の message 形式) |
+   | F (全行) | S の case 表で定義された全 ID が、manifest の `mandatory_<p>_ids` (coverage passed) か `deferred_<p>_ids` のどちらかにある (`<p>` は下記「G11 / G12 の証跡 shape」の 1)。deferred の各 ID は `defer[]` に `reason` 非空と、`docs/plans/` に実在する `plan_id` を持つ (実在しない PLAN への defer は stale) | `missing row evidence <id>` / `stale defer <id>` |
    | A (必須成果物) | manifest の `artifacts` object が contract の `required_artifacts` の全 key を持ち、各値が repo 内に実在する path | `missing artifact <key>` |
 
    harness 自身 (resolver が `docs/design/harness/` を返す repo) の G8 / G9 / G10 は、既存の workflow lint (`src/lint/g8-integration-workflow.ts` /
@@ -602,8 +602,8 @@ consumer に catalog / profile を上書きさせる手段は作らない (§3.2
    | G8 | `DOC-L8-INTEGRATION-TEST-DESIGN` | `IT-` | L5 (`DOC-L5-MODULE` / `DOC-L5-PHYSICAL-DATA` の ID) | `g8-integration` | `integration_manifest`, `integration_results` | なし | QA/TL | PR-GR |
    | G9 | `DOC-L9-SYSTEM-TEST-DESIGN` | `ST-` | L4 (`DOC-L4-*` の ID) | `g9-system` | `system_manifest`, `system_results` | case 表の各行が `evidence_families` (`ST` / `performance` / `security`) のいずれかを `family` 列に持ち、3 family の全てに 1 行以上ある | QA/TL | PR-G9 |
    | G10 | `DOC-L10-UX-VALIDATION` | `UXV-` | L2 (`DOC-L2-SCREEN` の画面 ID) | `g10-ux` | `ux_manifest`, `browser_visual_a11y_results` | slot 文書の frontmatter が `status: skipped` の場合は、`skip_reason` の有無にかかわらず常に failed (理由 `skipped slot <doc_type_id>: no consumer profile-selection authority (VMC-005)`)。n/a passed の分岐は持たない (rev 20、下記「G10 の skip 判定」) | PO/QA | PR-G10 |
-   | G11 | `DOC-L11-TRACE-UAT` (evidence 文書) | `UAT-` | L1 / L3 / L4 / L5 / L6 / L7 (pair reciprocity 例外。contract `pair_reciprocity_exceptions`) | `g11-uat` | `end_to_end_trace_review`, `po_uat_decision` | `end_to_end_trace_review` が `DOC-L3-FUNCTIONAL` で定義された全要件 ID を `traced` / `blocked` で列挙し、`blocked` が 0。`po_uat_decision` は `decision` (`accept` / `reject`)・`decided_by_role`・`revision` を持つ (承認の中身は review tier) | PO/TL | PR-G11 |
-   | G12 | `DOC-L12-ACCEPTANCE` | `AT-` | L3 (`DOC-L3-FUNCTIONAL` の要件 / AC ID) | `g12-acceptance` | `deploy_receipt`, `acceptance_results`, `rollback_readiness` | `deploy_receipt` が `revision` (40 桁 hex) と `environment` を持ち、`rollback_readiness` が `rollback_command` と `verified_at` を持つ | PO/TL | PR-G12 |
+   | G11 | `DOC-L11-TRACE-UAT` (evidence 文書。case 表は第2章 検証マトリクス、ID 列 `ケースID`、cite 列 `要件`) | `UAT-` | L1 / L3 / L4 / L5 / L6 / L7 (pair reciprocity 例外。contract `pair_reciprocity_exceptions`。cite 可能な ID 集合は下記「G11 / G12 の証跡 shape」の 3) | `g11-uat` | `end_to_end_trace_review`, `po_uat_decision` | `artifacts.end_to_end_trace_review` が指す JSON の `requirements[]` が、`DOC-L3-FUNCTIONAL` の全要件 ID (G3-trace と同じ抽出規則) を各 1 回、`status` (`traced` / `blocked`) 付きで列挙し、`blocked` が 0。`artifacts.po_uat_decision` が指す JSON が `decision` (`accept` / `reject`。`reject` は failed)・`decided_by_role` (非空)・`revision` (40 桁 hex) を持つ (承認の中身は review tier)。shape は下記「G11 / G12 の証跡 shape」(rev 21) | PO/TL | PR-G11 |
+   | G12 | `DOC-L12-ACCEPTANCE` | `AT-` | L3 (`DOC-L3-FUNCTIONAL` の要件 / AC ID。cite 可能な ID 集合は下記「G11 / G12 の証跡 shape」の 3) | `g12-acceptance` | `deploy_receipt`, `acceptance_results`, `rollback_readiness` | `artifacts.deploy_receipt` が指す JSON が `revision` (40 桁 hex) と `environment` (非空) を持ち、`artifacts.rollback_readiness` が指す JSON が `rollback_command` (非空) と `verified_at` (ISO 8601、timezone 付き) を持つ。shape は下記「G11 / G12 の証跡 shape」(rev 21) | PO/TL | PR-G12 |
    | G13 | `DOC-L13-PRODUCTION-OBSERVATION` (evidence 文書) | `SMOKE-` | L12 (pair reciprocity 例外。各行が `AT-` ID を cite) | `g13-post-deploy` | `production_smoke`, `sli_slo_observation`, `rollback_decision` | `sli_slo_observation` が `window_start` / `window_end` (ISO 8601、start < end) と SLO ごとの `target` / `observed` を持つ。`rollback_decision` が `decision` (`keep` / `rollback`) を持つ | PO/TL | PR-G13 |
    | G14 | `DOC-L14-OPERATIONAL-TEST` | `OT-` | L1 (`DOC-L1-REQUIREMENTS` の ID) と L0 (`DOC-L0-CHARTER` の目的 ID) | `g14-operational` | `operational_results`, `value_results`, `improvement_feedback` | `VALUE` family の行が L0 の目的 ID を 1 件以上 cite し、`improvement_feedback` の各項目が `routed_to` (PLAN ID または Issue URL) を持つ | PO | PR-G14 |
 
@@ -643,6 +643,172 @@ consumer に catalog / profile を上書きさせる手段は作らない (§3.2
 
    範囲外 (記録のみ): `docs/governance/document-system-map.md:56` は L2 画面を「必須 (UI 有時)」とする一方、catalog :27 は `DOC-L2-SCREEN` を
    `core` / `required` とする不一致がある。本改訂では扱わない。
+
+   **G11 / G12 の証跡 shape (rev 21)**: rev 20 までの §3.6-4 は、G11 / G12 の判定を意味としては定めていたが、機械が読む形
+   (manifest の case ID field 名、trace 記録の配列名・field 名・status の閉集合、artifact の中身の形式、T で cite できる ID の集合) を定めていなかった。
+   PR-G11 の実装者 (Codex) は新しい正本 shape を実装 PR の中で発明することを拒否し、契約側での freeze を求めた (§PR スコープ規律 2)。
+   本改訂は、既存の G3 / G8 / G9 / G10 の形をそのまま一般化し、新しい記法を足さずに G11 / G12 の shape を定める。
+
+   実測 (origin/main `60099e55`):
+
+   - manifest の case ID field は gate ごとに prefix 由来の名前を使っている。G8 は `selected_it_ids` / `mandatory_it_ids` / `deferred_it_ids` /
+     `commands[].it_ids` / `coverage[].it_id` (`src/lint/g8-integration-workflow.ts:19-38`)、G9 は同じ位置に `st` (`src/lint/g9-system-workflow.ts:19-38`、
+     consumer 側は `src/gate/right-arm-static.ts` の `parseG9EvidenceManifest` の alias と `defer[].st_id`)、G10 は `uxv`
+     (`src/lint/g10-ux-workflow.ts:19-38`、consumer 側は `parseG10EvidenceManifest` と `defer[].uxv_id`)。
+     いずれも contract の `case_id_prefix` (`IT-` / `ST-` / `UXV-`、`docs/process/vmodel-contract.yaml`) の末尾 `-` を除いて小文字にした値に一致する。
+   - A (必須成果物) は `artifacts.<key>` の値を repo 内の実在 path として検査するだけで、中身は読まない (`src/gate/right-arm-static.ts:486-492`)。
+     G11 / G12 / G13 の gate 固有述語は artifact の中身 (field) を参照するが、その形式は未定義だった。
+   - manifest は evidence directory 直下の `*.json` を全て読む (非再帰、`src/gate/right-arm-static.ts:365-372` の `manifestFiles`)。
+   - 右腕 T の cite 可能 ID 集合は、pair 層 (`designLayerFromPath` が返す L1〜L6) の文書の `doc_type_id` と太字 `**ID**` だけである
+     (`pairLayerIds`、`src/gate/right-arm-static.ts:239-251`)。G9 型の定義済み集合 `allDesignIds` (:253-264) は design root と test-design root の
+     全文書を読むので L7 以降の test-design の `doc_type_id` / 太字 ID を含むが、`designLayerFromPath` (`src/vmodel/lint.ts:75-79`) は
+     `docs/design/L[1-6]-*` だけを層として返すため、L7 は pair 集合に入らない。
+     共通 fixture (v) (`tests/release-consumer-gates.test.ts:89-182`) を実行して測ると、L3 の `### FR-01:` 見出しと `#### AC-FR-01-01` 見出しで
+     定義された `FR-01` / `AC-FR-01-01` は、G11 の pair 集合 (29 件)・G12 の pair 集合 (16 件)・`allDesignIds` (34 件) のいずれにも無い。
+     `DOC-L7-UNIT-TEST-DESIGN` は `allDesignIds` に在り pair 集合に無い。したがって既存の集合のままでは、G11 の case 表は要件 `FR-01` を、
+     G12 の case 表は AC `AC-FR-01-01` を cite できない (cite すると `trace target missing`)。
+   - consumer の L3 要件 ID は、G3-trace が既に consumer でも抽出している (`src/lint/g3-trace.ts:26-39` の `loadDocs` が resolver 経由で読む)。
+     FR は `functional-requirements.md` の `^### FR-NN:` 見出し (`extractL3FrIds`、:52)、AC は `#### AC-FR-NN-NN` などの見出し
+     (`extractAcIds`、:62)、NFR は `nfr-grade.md` の `| **NFR-NN** |` 表行 (`extractL3NfrIds`、:107)。fixture (v) での実測値は
+     FR 1 件 (`FR-01`)・NFR 15 件・AC 1 件で、FR ∪ NFR は 16 件。harness 自身の L3 では FR 26 件・NFR 17 件・AC 117 件で、
+     `functional-requirements.md` の太字 `**FR-NN**` は 0 件である。
+   - consumer の L11 テンプレート (`docs/templates/vmodel/L11-trace-uat.md`) の第2章 検証マトリクスには、`ケースID` 列と `要件` 列が既にある
+     (`要件 | 検証方式 | テストレベル | 技法 | ケースID`、:33)。欠けているのは列そのものではなく、ID の形 (`UAT-*`) と機械可読な表構造が
+     凍結されていないことである。テンプレート本文に `UAT-` の token は 0 件で、I の dangling 検査を起こさない。L12 テンプレートの case 表は
+     G8 と同じ列 (`docs/templates/vmodel/L12-acceptance-test-design.md` 第3章)。
+
+   決定:
+
+   1. **case ID field の一般規則 (G8〜G14 共通)**: `<p>` は contract 行の `case_id_prefix` から末尾の `-` を除いて小文字にした文字列とする
+      (`IT-`→`it`、`ST-`→`st`、`UXV-`→`uxv`、`UAT-`→`uat`、`AT-`→`at`、`SMOKE-`→`smoke`、`OT-`→`ot`)。manifest は次の field を持つ。
+
+      | field | 型 | 必須 | 意味 |
+      | --- | --- | --- | --- |
+      | `selected_<p>_ids` | string[] | 必須 | 実施対象の case ID |
+      | `mandatory_<p>_ids` | string[] | 必須 | passed の coverage を要する case ID (E / F) |
+      | `deferred_<p>_ids` | string[] | 必須 (空可) | defer する case ID (F) |
+      | `commands[].<p>_ids` | string[] | 必須 | command が扱う case ID |
+      | `coverage[].<p>_id` | string | 必須 | coverage 対象の case ID |
+      | `defer[].<p>_id` | string | deferred があれば必須 | defer 対象の case ID (`reason` / `plan_id` と組) |
+
+      G8 / G9 / G10 の既存 field 名はこの規則の具体例であり、変わらない。G11 は `uat`、G12 は `at` となる
+      (`selected_uat_ids` / `mandatory_uat_ids` / `deferred_uat_ids` / `commands[].uat_ids` / `coverage[].uat_id` / `defer[].uat_id`、
+      `selected_at_ids` / `mandatory_at_ids` / `deferred_at_ids` / `commands[].at_ids` / `coverage[].at_id` / `defer[].at_id`)。
+      他 gate の field 名 (例: G11 manifest の `mandatory_it_ids`) は読まない。読まれなかった case は F で `missing row evidence <id>` になる。
+      その他の manifest field (`schema_version` / `gate` / `profile` / `plan_id` / `commands[]` の残り / `exit_criteria` / `artifacts`) は E / A のとおりで、変えない。
+
+   2. **artifact の中身の形式 (G11〜G13 の gate 固有述語が参照するもの)**: gate 固有述語が field を参照する artifact
+      (G11 の `end_to_end_trace_review` / `po_uat_decision`、G12 の `deploy_receipt` / `rollback_readiness`) は、`artifacts.<key>` の path が指す
+      UTF-8 の JSON object とする。parse できない、または object でなければ `<manifest>: invalid artifact <key>: JSON object required` で failed。
+      field を参照しない artifact (G12 の `acceptance_results` など) は A の実在検査だけとし、形式を問わない。
+      JSON artifact は evidence directory の直下に置かない (直下の `*.json` は manifest として読まれ、E で failed になる)。置き場所の例は
+      `.ut-tdd/evidence/g11-uat/artifacts/trace-review.json` とし、A の許可範囲 (repo 内の実在 path) は変えない。
+      artifact に `schema_version` や digest は持たせない (最小実装。exact revision への束縛は `revision` field と review tier で行う)。
+
+   3. **G11 / G12 の T で cite できる ID 集合**: L3 を pair 層に含む gate (G11 / G12) の T は、右腕の既存集合に、G3-trace と同じ抽出規則で
+      consumer の L3 から得る見出し定義 ID `H` を和集合で足す。`H` = `extractL3FrIds(functional-requirements.md)` ∪
+      `extractAcIds(functional-requirements.md, business-detail.md, nfr-grade.md)` とする (NFR は太字表行なので既存集合に既に含まれる)。実装は `src/lint/g3-trace.ts` が export する
+      extractor を **import して使い、正規表現を複製しない**。3 文書の本文は右腕が既に読んだ pair 文書 (`loadPairDocs` 由来の L3 文書) から
+      doc_type_id / path で仕分けて extractor に直接渡し、G3-trace の `loadDocs` は経由しない (`loadDocs` は文書が 1 件でも無いと throw するため、
+      gate が violation ではなく例外で落ちる)。文書が無ければ空文字列を渡し、`H` は空集合に縮退する (欠落そのものは既存の S / I の検査が failed にする)。
+      extractor は harness ZIP テンプレートの見出し書式 (`### FR-NN:` の 2 桁 + コロン、`#### AC-…`) に厳密であり、consumer の L3 が
+      テンプレート由来であることを前提にする (書式が揺れた consumer では `H` が空になり T が failed になる。これは fail-close 側の縮退として許容する)。
+      - G11 (G9 型): 各行の cite のうち 1 件以上が `pairLayerIds(L1, L3〜L6) ∪ H` に在り (無ければ `untraced case <id>`)、cite した ID が全て
+        `allDesignIds ∪ H` に在る (無ければ `trace target missing <id>`)。L7 は contract の pair 層に在るが `designLayerFromPath` が層を返さないため、
+        L7 の ID (例: `DOC-L7-UNIT-TEST-DESIGN`) は定義済みとして cite できるが、それだけでは pair を満たさない。G8 型にすると L7 の cite が常に
+        `trace target missing` になるため G9 型とする。
+      - G12 (G8 型): 各行が 1 件以上の ID を cite し (無ければ `untraced case <id>`)、cite した ID が全て `pairLayerIds(L3) ∪ H` に在る
+        (無ければ `trace target missing <id>`)。
+      右腕 T の既存集合 (`pairLayerIds` / `allDesignIds`) と G8 / G9 / G10 の T は変えない。fixture (v) での試算 (本改訂の検証 script、
+      右腕の集合を複製して `H` を足したもの): G11 行 `FR-01` / `NFR-01` と G12 行 `AC-FR-01-01` / `NFR-01` は違反 0 件、太字だけの集合では
+      G11 が `untraced case` + `trace target missing FR-01`、G12 が `trace target missing AC-FR-01-01` になる。
+
+   4. **G11 の case 表 (S / I / T の入力)**: slot 文書 `docs/process/evidence/g11-uat-review-design.md` (catalog path、resolver 対象外) の
+      必須見出しは L11 テンプレートの `# DOC-L11-TRACE-UAT: 検証設計書 (+ traceability.yaml のトレース俯瞰)` と `#### 第1章 検証方針・方式` 〜
+      `#### 第8章 契約テスト(CDC)` の 8 見出しとする (`### 移植元:` 行は含めない。G8 / G9 と同じ扱い)。case 表は第2章 検証マトリクスとし、
+      必須列は `要件` / `検証方式` / `テストレベル` / `技法` / `ケースID`、行 ID 列は `ケースID`、cite 列は `要件` とする。I は `ケースID` に適用する
+      (全行が `UAT-` で始まる。IT / ST など他レベルの case は G11 の表に書かない)。T は上記 3 の G11 規則とする。
+      **ZIP 忠実性からの逸脱 (明示の設計判断)**: L11 テンプレートは自身で「項目名・説明文は zip の日本語をそのまま使い、意味は書き換えていない」
+      (`L11-trace-uat.md:16`) と宣言している。本改訂は、`ケースID` 列に限って値の形 (`UAT-` prefix、機械可読な表構造) を固定する。
+      gate の parse 可能性を ZIP 忠実性より優先する決定であり、テンプレート文書の列名・他列・説明文は変えない (テンプレート file の編集は無い)。
+      副作用として、G11 の検証マトリクスには IT / ST など他レベルの case を書けなくなる (それらは G8 / G9 の表に書く)。
+
+   5. **G11 の `end_to_end_trace_review`**: JSON object で、`requirements` (array、必須) を持つ。各要素は次の 2 field だけを持つ。
+
+      | field | 型 | 値 |
+      | --- | --- | --- |
+      | `requirement_id` | string | L3 要件 ID |
+      | `status` | string | 閉集合 `traced` / `blocked` (小文字の完全一致) |
+
+      L3 要件 ID の集合 `R` は、G3-trace と同じ抽出規則で consumer の L3 から得る: `functional-requirements.md` の `^### FR-NN:` 見出し
+      (`extractL3FrIds`) と `nfr-grade.md` の `| **NFR-NN** |` / `| **NFR-DNN** |` 表行 (`extractL3NfrIds`) の和集合 (AC は含めない)。
+      右腕 T の太字 ID 集合は使わない (見出しで定義された FR を落とすため)。extractor は上記 3 と同じく import して使う。
+      consumer の L3 文書形式の要件を契約として明示する: `functional-requirements.md` は `### FR-NN:` 見出しで FR を定義し、`nfr-grade.md` は
+      `| **NFR-NN** |` 表行で NFR を定義する。形式が異なる consumer は `R` が空になり、下表 1 行目で failed になる
+      (空集合で `blocked=0` が空虚に pass する false negative を作らない)。判定 (各違反は `<manifest>: ` 付き):
+
+      | 条件 | 違反 |
+      | --- | --- |
+      | `R` が空 (L3 文書が無い、または ID が 0 件) | `no requirement ids defined in DOC-L3-FUNCTIONAL` (manifest prefix なし、VMC-005) |
+      | `R` の ID が `requirements[]` に無い | `untraced requirement <id>` |
+      | `requirement_id` が `R` に無い | `trace review references undefined requirement <id>` |
+      | 同じ `requirement_id` が 2 回以上 | `duplicate trace requirement <id>` |
+      | `status` が閉集合外 (型違い・大文字・空を含む) | `invalid trace status <id>: <status>` |
+      | `status = blocked` | `blocked requirement <id>` |
+
+      `blocked` を記録すること自体は許すが、1 件でもあれば failed とする (§3.6-4 の「`blocked` が 0」)。requirement と UAT case の対応
+      (どの `UAT-` がどの要件を検収したか) はここでは持たない。対応は case 表の `要件` 列 (T) で表す。
+
+   6. **G11 の `po_uat_decision`**: JSON object で、次の 3 field を持つ (他の field は無視する)。
+
+      | field | 型 | 値 | 違反 |
+      | --- | --- | --- | --- |
+      | `decision` | string | 閉集合 `accept` / `reject` | 閉集合外は `invalid po_uat_decision.decision <value>`。`reject` は `po_uat_decision.decision is reject` |
+      | `decided_by_role` | string | 非空 | `po_uat_decision.decided_by_role is required` |
+      | `revision` | string | 40 桁 hex (G12 の `deploy_receipt.revision` と同じ符号化。大文字小文字は問わない) | `invalid po_uat_decision.revision` |
+
+      `revision` が HEAD や merge 対象と一致するか、`decided_by_role` が approval_role (`PO/TL`) の本人かは static では判定しない
+      (review tier の `未判定 (review): PO/TL`)。
+
+   7. **G12 の artifact field**: `deploy_receipt` は `revision` (40 桁 hex、大文字小文字は問わない) と `environment` (非空 string)、
+      `rollback_readiness` は `rollback_command` (非空 string) と `verified_at` (ISO 8601 の日時。timezone 付き
+      `YYYY-MM-DDTHH:MM[:SS[.fff]](Z|±HH:MM)`) を持つ JSON object とする。違反は `<manifest>: invalid deploy_receipt.revision` /
+      `deploy_receipt.environment is required` / `rollback_readiness.rollback_command is required` / `invalid rollback_readiness.verified_at`。
+      G12 の case 表は L12 テンプレートの第3章 テストケース一覧 (G8 と同じ必須列、行 ID 列 `テストID`、cite 列 `トレース元`)。必須見出しは
+      L12 テンプレートの title と `####` / `#####` 見出し 10 本 (`### 移植元:` 行を除く)。G12 の slot は G3-trace が AT ID を抽出する文書と同じであり、
+      G3 用の `| **AT-...** |` 行の ID も I の dangling 検査の対象になるため、case 表に同じ ID の行を置く。
+
+   | 論点 | 案 | 内容 | 判定 |
+   | --- | --- | --- | --- |
+   | artifact の置き場 | **X (採用)** | artifact は `artifacts.<key>` が指す別 JSON file。gate 固有述語はその中身を読む | A の「値は実在 path」をそのまま使え、G11〜G13 に同じ規則が効く |
+   | | Y | manifest に `end_to_end_trace_review` などの object を inline で持つ | 棄却 (A の path 検査と中身が 2 箇所に分かれ、どちらが正本かが曖昧になる。gate ごとに manifest field が増える。manifest は直下の全 `.json` を parse する共有層であり、別 file なら gate 固有 field を共有 parse 層へ入れずに済む) |
+   | `decision = reject` | **i (採用)** | static で failed (`po_uat_decision.decision is reject`) | tracked artifact から決定的に判定でき、contract の `exit_criteria: no_unresolved_trace_or_uat_blocker` に合う。「pass に見せない」(§3.6-4 冒頭)。G8 の static も意味的結果で failed にする既存慣行 (`src/lint/g8-integration-workflow.ts` の mandatory `coverage.status !== "passed"` と `all_mandatory_passed` / `failed_mandatory_count`) と整合し、意味の強化ではない |
+   | | ii | static は shape だけ見て pass、reject の扱いは review tier | 棄却 (PO が却下した UAT で static pass が出る) |
+   | L3 要件 ID の抽出 (`R`) | **R1 (採用)** | G3-trace の `extractL3FrIds` ∪ `extractL3NfrIds` (import) | consumer で G3 が既に強制している ID 集合と一致し、新しい記法を足さない |
+   | | R2 | 右腕 T の太字 ID 集合 (`**ID**`) を DOC-L3-FUNCTIONAL に限って使う | 棄却 (fixture (v) で見出し定義の `FR-01` を落とし `NFR-*` だけになる。harness 自身の L3 では太字 FR 0 件で FR が全て落ち、FR だけの L3 では集合が空になって `blocked=0` が空虚に pass する) |
+   | T の cite 可能 ID 集合 | **T1 (採用)** | G11 / G12 だけ、右腕の既存集合 ∪ `H` (G3 extractor の import) | 見出し定義の FR / AC を cite でき、G8〜G10 の判定を変えない |
+   | | T2 | 右腕共通の `pairLayerIds` / `allDesignIds` に L3 見出し抽出を足す | 棄却 (G8〜G10 の T の判定集合が変わり、§3.6-7 の「G1〜G10 の結果は変わらない」を崩す) |
+   | | T3 | 既存集合のまま (consumer は `DOC-L3-FUNCTIONAL` や太字 NFR だけを cite する) | 棄却 (受入 / UAT case が要件 ID / AC ID を cite できず、V-pair trace が文書 ID 粒度に落ちる。test-design の (m-T) も判別力を失う) |
+
+   **G13 `rollback_decision` (keep / rollback) との非対称**: G13 の `rollback` は正当な運用上の結果であり、shape のみを検査して failed にしない。
+   線引きは「decision が gate 判定基準そのものか、運用選択か」である。G11 の `po_uat_decision.decision` は UAT の合否という gate 判定基準そのものなので
+   `reject` は failed とし、G13 の `rollback_decision` は運用選択なので shape-only とする。
+
+   advisor: `ut-tdd advisor --decision design --execute` (2026-09-29、model=`claude-fable-5`、control lane が諮問)。判定は論点 1〜4 とも survive (4/4)。
+   論点 1 (reject=failed) は G8 の既存慣行と整合するため survive、G13 との非対称を上記のとおり明記する条件付き。論点 2 (artifacts/ 配下の別 JSON file) は
+   survive。論点 3 (G3-trace extractor による L3 要件 ID) は、太字抽出では harness 自身の FR が全て落ちるというより強い理由で survive。
+   extractor の import と consumer 文書形式の明示を条件とする。論点 4 (G11 case 表の freeze) は survive、ただし事実訂正あり (L11 テンプレート :33 に
+   `ケースID` / `要件` 列は既存。未凍結なのは ID 形と機械可読構造)。テンプレート自身の ZIP 忠実性宣言 (:16) からの逸脱を明示の設計判断として
+   記録する条件付き。決定 3 (T の ID 集合) は advisor 諮問後に fixture (v) の実行で見つかった欠落への対処であり、論点 3 と同じ extractor を
+   同じ import 方針で使う (新しい抽出規則は足さない)。決定 3 は追加で諮問した (`ut-tdd advisor --decision design --execute`、2026-09-29、
+   model=`claude-fable-5`、control lane が諮問)。判定は条件付き survive: G11 / G12 限定の和集合は G10 の `l2ScreenIds` と同じ「gate ごとに定義集合を
+   選ぶ」既存パターンの延長で G8〜G10 との一貫性を壊さない。右腕共通集合を G3 抽出へ揃える案 (T2) は G8〜G10 の判定を動かす回帰リスクがあり必要性の
+   実測が無いため棄却、consumer に太字 ID を書かせる案 (T3) は ZIP 忠実性の逸脱で棄却。条件は `loadDocs` を経由せず pair 文書の本文を直接渡し、
+   欠落時は空集合へ縮退させることと、テンプレート書式への依存を明記することで、決定 3 の本文に反映した。
+
+   範囲外 (記録のみ): G10 の consumer case 表は、L10 テンプレート第3章 E2Eシナリオの `No` 列を行 ID 列、`対象画面` 列を cite 列として実装されている
+   (`src/gate/right-arm-static.ts` の `parseG10CaseRows`、PR-G10)。§3.6-4 の G10 行はこの列の選定を明記していない。判定は変わらないため
+   本改訂では扱わず、G10 行の明記は後続の文書整合で行う。
 
    zip `tools/*.py` のうち上の述語に対応しないもの (`review.py` の実体サンプリング、`consistency.py` の表記ゆれ、`impact.py` の影響範囲など) は
    gate には入れず、各 PR-G の PR 本文に「未移植」として列挙する。gate に追加する場合は本 PLAN の改訂へ戻る。
@@ -772,3 +938,4 @@ injection path の乗っ取り、harness 自身の挙動変化、部分 setup �
 18. PR-GR の成果物宣言 (rev 18): §3.6-4 の共通述語 S / I / T / E / F / A / R を評価する右腕共通 evaluator と G8 の登録を実装する PR-GR が新規に landing させる `src/gate/right-arm-static.ts` の 1 件だけを `generates` に追加する。回帰 test は既存の `tests/release-consumer-gates.test.ts` (rev 16 で宣言済み) に追記され、新規ファイルではない。G9〜G14 の登録は後続 PR であり、本 revision では宣言しない。既存ファイルは宣言しない。 PR-GR は当初 main 48efd4e1 の rev 16 から rev 17 として発行したが、同じ rev 16 から発行した PR-2c 境界契約 (#728、rev 17) が先に merge されたため、最新 main の rev 17 から正規の plan revise で rev 18 として再接合した (receipt の手編集・conflict の手解決はしない)。
 19. PR-2c の成果物宣言 (rev 19): §3.1.3 の `vmodel template` (consumer への V-model テンプレート書き込み、書き込み前の物理 path preflight と deny 時の write 0 を含む) を実装する PR-2c が新規に landing させる `src/setup/vmodel-template-assets.ts` / `src/setup/vmodel-template-writer.ts` / `tests/release-consumer-vmodel-template.test.ts` の 3 件を `generates` に追加する。`src/cli.ts` と `src/doctor/test-repository-isolation.ts` と `scripts/build-node.mjs` への配線変更は既存ファイルの編集であり宣言しない。コマンド形・上書き規則・§3.1.3 の oracle (014 / 015 / 038 / CANDIDATE-U-RCDEV-039) の判定は変更しない。PR-2c branch が #730 着地後の main (rev 18) を取り込んだ後に、正規の plan revise で rev 19 として接合した (receipt の手編集・conflict の手解決はしない)。
 20. G10 の skip 判定 (rev 20): PR-G10 の着手前に Codex root lane が行った read-only 監査 (#676、2026-09-29) で、§3.6-4 の G10 行の n/a 分岐 (「`skip_reason` 非空かつ scale profile で当該 slot が有効でないときだけ n/a passed」) が到達不能であることが分かった。scale profile に L10 の decision 行が無く、consumer の profile 選択にも入力源が無いためである。advisor (claude-fable-5-1、design、SURVIVES) の推奨に従い、実装 PR 内の読み替えではなく契約改訂とした。§3.6-4 の G10 行を「`status: skipped` は常に failed (VMC-005)」へ改め、同節に設計判断「G10 の skip 判定」(案 A〜D と advisor の付帯条件) を追記し、§7 に profile に基づく L10 skip の後続 PLAN への繰り延べを加え、test-design の CANDIDATE-U-RCDEV-031 の skip mutation を揃えた。`generates`、他 gate の述語、G2 の L10 pair 規則は変更しない。
+21. G11 / G12 の証跡 shape (rev 21): PR-G11 の着手前に Codex root lane が、§3.6-4 の G11 行と CANDIDATE-U-RCDEV-032 が trace 記録の配列名・field 名・status の閉集合と、manifest の UAT ID field 名を定めていないことを指摘し、実装 PR 内で新しい正本 shape を発明せず契約側で freeze するよう求めた (#676、2026-09-29)。G12 行と CANDIDATE-U-RCDEV-033 にも同じ欠落 (AT ID field 名、artifact の中身の形式) があった。あわせて、右腕 T の cite 可能 ID 集合 (太字 `**ID**` と `doc_type_id`) が L3 の見出しで定義された `FR-NN` / `AC-*` を含まず、G11 / G12 の case 表が正しい要件 ID / AC ID を cite できないことを実測した。実装 PR 内の読み替えではなく契約改訂とし、§3.6-4 に設計判断「G11 / G12 の証跡 shape」を追記した。内容は、case ID field 名を contract の `case_id_prefix` から導く一般規則 (G8 / G9 / G10 の既存名はその具体例で不変)、gate 固有述語が参照する artifact を別 JSON file とする規則、G11 / G12 の T の cite 可能 ID 集合 (右腕の既存集合に G3-trace の L3 見出し抽出を和集合で足す)、G11 の case 表 (第2章 検証マトリクス)、`end_to_end_trace_review.requirements[]` (`requirement_id` / `status` ∈ `traced` / `blocked`、L3 要件 ID は G3-trace と同じ抽出規則)、`po_uat_decision` (`decision` ∈ `accept` / `reject`、reject は failed、`decided_by_role` 非空、`revision` 40 桁 hex)、G12 の artifact field の符号化である。§3.6-4 の E / F 行の `mandatory_<id>s` 表記と G11 / G12 行を揃え、test-design の CANDIDATE-U-RCDEV-032 / 033 に正常形 fixture と 1 軸 mutation を加えた。`generates`、テンプレート文書、G8 / G9 / G10 の判定、他 gate の述語は変更しない。
