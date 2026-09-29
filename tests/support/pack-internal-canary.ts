@@ -119,8 +119,8 @@ function materializeProducerRoot(root: string): void {
   writeFileSync(join(root, "releases", "canary", "entry.ts"), "export const fixture = true;\n");
 }
 
-function createReleaseManifest(root: string, artifactCommit: string): void {
-  const resolved = resolveReleaseArtifacts(
+async function createReleaseManifest(root: string, artifactCommit: string): Promise<void> {
+  const resolved = await resolveReleaseArtifacts(
     {
       repository: root,
       release: {
@@ -275,7 +275,7 @@ export function isolatedCanaryEnv(root: string): NodeJS.ProcessEnv {
   };
 }
 
-export function createCanaryFixture(): CanaryFixture {
+export async function createCanaryFixture(): Promise<CanaryFixture> {
   const root = mkdtempSync(join(tmpdir(), "ut-tdd-packcanary-pr1-"));
   try {
     const producerRoot = join(root, "producer");
@@ -295,7 +295,7 @@ export function createCanaryFixture(): CanaryFixture {
     git(producerRoot, ["add", "--", "."]);
     git(producerRoot, ["commit", "--quiet", "-m", "fixture artifact"]);
     const artifactCommit = git(producerRoot, ["rev-parse", "HEAD"]);
-    createReleaseManifest(producerRoot, artifactCommit);
+    await createReleaseManifest(producerRoot, artifactCommit);
     git(producerRoot, ["add", "--", "release/manifest.yaml"]);
     git(producerRoot, ["commit", "--quiet", "-m", "release manifest"]);
     git(producerRoot, ["tag", CANARY_FIXTURE_TAG]);
@@ -365,6 +365,7 @@ export function writeCanaryPlanManifest(fixture: CanaryFixture): {
     owner: "Canary consumer",
     route_signal: "forward",
     route_mode: "forward",
+    sub_doc: "screen-list",
     generates: [],
     related_docs: [],
   };
@@ -396,6 +397,7 @@ export function writeCanaryPlanManifest(fixture: CanaryFixture): {
         drive: "agent",
         branch: "work/forward-canary",
         status: "draft",
+        sub_doc: "screen-list",
       },
       source: { path: planPath, content: `---\n${stringify(frontmatter)}---\n${body}` },
       projection: { path: projection },
