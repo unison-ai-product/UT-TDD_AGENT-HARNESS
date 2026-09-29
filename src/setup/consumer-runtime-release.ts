@@ -1,3 +1,6 @@
+import { createHash } from "node:crypto";
+import { type Dirent, readdirSync, readFileSync, statSync } from "node:fs";
+import { basename, join, resolve } from "node:path";
 import { parse as parseYaml } from "yaml";
 import {
   type NodeBootstrapReceipt,
@@ -9,6 +12,7 @@ import {
   digestConsumerRuntimeBytes,
   SAFE_PRODUCT_ID,
 } from "./consumer-node-runtime.ts";
+import { releaseArtifactFileNames } from "./distribution.ts";
 import { digestMaterializedReleaseEntries } from "./release-materializer.ts";
 
 const REVISION = /^[a-f0-9]{40}$/;
@@ -66,6 +70,13 @@ export interface ConsumerRuntimeRelease {
 export type ConsumerRuntimeReleaseDocument = ConsumerRuntimeRelease;
 export type ConsumerRuntimeReleaseAdmissionInput = ConsumerRuntimeRelease["admission_input"];
 
+export interface VerifiedConsumerRuntimeReleaseAssets {
+  readonly document: ConsumerRuntimeRelease;
+  readonly compiledEsmBytes: Buffer;
+  readonly receiptBytes: Buffer;
+  readonly checksumBytes: Buffer;
+}
+
 export class ConsumerRuntimeReleaseValidationError extends Error {
   readonly code: "consumer_runtime_schema_invalid";
 
@@ -74,6 +85,105 @@ export class ConsumerRuntimeReleaseValidationError extends Error {
     this.code = "consumer_runtime_schema_invalid";
     this.name = "ConsumerRuntimeReleaseValidationError";
   }
+}
+
+function digestHex(bytes: Uint8Array): string {
+  return createHash("sha256").update(bytes).digest("hex");
+}
+
+/** Verify the external anchor and the exact immutable Release asset set before any consumer write. */
+export function verifyConsumerRuntimeReleaseAssets(input: {
+  readonly releaseDirectory: string;
+  readonly tag: string;
+  readonly expectedConsumerDigest: string;
+  readonly executingModulePath: string;
+}): VerifiedConsumerRuntimeReleaseAssets {
+  if (
+    !/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(input.tag) ||
+    basename(input.tag) !== input.tag ||
+    !/^sha256:[a-f0-9]{64}$/.test(input.expectedConsumerDigest)
+  )
+    throw new Error("consumer_runtime_anchor_mismatch");
+
+  const releaseDirectory = resolve(input.releaseDirectory);
+  const names = releaseArtifactFileNames(input.tag);
+  let checksumBytes: Buffer;
+  try {
+    checksumBytes = readFileSync(join(releaseDirectory, names.consumerChecksum));
+  } catch {
+    throw new Error("consumer_runtime_anchor_mismatch");
+  }
+  if (`sha256:${digestHex(checksumBytes)}` !== input.expectedConsumerDigest)
+    throw new Error("consumer_runtime_anchor_mismatch");
+
+  const expectedNames = Object.values(names).sort();
+  let actualEntries: Dirent<string>[];
+  try {
+    actualEntries = readdirSync(releaseDirectory, { withFileTypes: true, encoding: "utf8" });
+  } catch {
+    throw new Error("consumer_runtime_asset_set_mismatch");
+  }
+  const actualNames = actualEntries.map((entry) => entry.name).sort();
+  if (
+    actualNames.length !== expectedNames.length ||
+    actualNames.some((name, index) => name !== expectedNames[index]) ||
+    actualEntries.some((entry) => !entry.isFile())
+  )
+    throw new Error("consumer_runtime_asset_set_mismatch");
+  for (const name of expectedNames) {
+    try {
+      if (!statSync(join(releaseDirectory, name)).isFile())
+        throw new Error("consumer_runtime_asset_set_mismatch");
+    } catch {
+      throw new Error("consumer_runtime_asset_set_mismatch");
+    }
+  }
+
+  const checksumText = checksumBytes.toString("utf8");
+  const checksumLines = checksumText.split("\n");
+  const compiledLine = /^([a-f0-9]{64}) {2}(.+)$/.exec(checksumLines[0] ?? "");
+  const documentLine = /^([a-f0-9]{64}) {2}(.+)$/.exec(checksumLines[1] ?? "");
+  if (
+    checksumLines.length !== 3 ||
+    checksumLines[2] !== "" ||
+    compiledLine?.[2] !== names.compiledEsm ||
+    documentLine?.[2] !== names.consumerRuntime
+  )
+    throw new Error("consumer_runtime_checksum_invalid");
+
+  const expectedCompiledDigest = compiledLine[1];
+  const expectedDocumentDigest = documentLine[1];
+  const compiledEsmBytes = readFileSync(join(releaseDirectory, names.compiledEsm));
+  const documentBytes = readFileSync(join(releaseDirectory, names.consumerRuntime));
+  if (
+    digestHex(compiledEsmBytes) !== expectedCompiledDigest ||
+    digestHex(documentBytes) !== expectedDocumentDigest
+  )
+    throw new Error("consumer_runtime_digest_mismatch");
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(documentBytes.toString("utf8")) as unknown;
+  } catch {
+    throw new Error("consumer_runtime_schema_invalid");
+  }
+  const document = validateConsumerRuntimeRelease(parsed);
+  if (document.release.tag !== input.tag)
+    throw new Error("consumer_runtime_release_binding_mismatch");
+  if (digestConsumerRuntimeBytes(compiledEsmBytes) !== document.generation.compiled_esm_digest)
+    throw new Error("consumer_runtime_self_digest_mismatch");
+
+  const receiptBytes = Buffer.from(document.generation.node_bootstrap_receipt_base64, "base64");
+  let executingBytes: Buffer;
+  try {
+    executingBytes = readFileSync(input.executingModulePath);
+  } catch {
+    throw new Error("consumer_runtime_self_digest_mismatch");
+  }
+  if (digestConsumerRuntimeBytes(executingBytes) !== document.generation.compiled_esm_digest)
+    throw new Error("consumer_runtime_self_digest_mismatch");
+
+  return { document, compiledEsmBytes, receiptBytes, checksumBytes };
 }
 
 function exactKeys(value: Record<string, unknown>, keys: readonly string[]): boolean {

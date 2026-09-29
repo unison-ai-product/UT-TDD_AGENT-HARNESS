@@ -43,7 +43,7 @@ PR-1 は 001..004 と 011、PR-2 は 005..010 を所有する。
 
 以下は PR-1 の実装テストが実際に引用する、候補から昇格した正規 oracle である。候補表の
 `CANDIDATE-*` は設計段階の識別子として残し、実装テストの citation はこの表の `U-*` と
-1 対 1 で対応させる。PR-2 の 005..010 は、対応する実装が入るまでここへ追加しない。
+1 対 1 で対応させる。PR-2 の 005..010 は、Red実測とinstaller実装に対応して下表へ追加する。
 
 | Oracle | 所有テスト | 検証境界 |
 | --- | --- | --- |
@@ -52,3 +52,9 @@ PR-1 は 001..004 と 011、PR-2 は 005..010 を所有する。
 | `U-PACKRT-003` | `tests/pack-consumer-runtime-release.test.ts` | asset / sealed receipt の producer identity 漏洩拒否 |
 | `U-PACKRT-004` | `tests/pack-consumer-runtime-release.test.ts` | reviewed toolchain・generation・staged move の fail-close |
 | `U-PACKRT-011` | `tests/pack-consumer-runtime-release.test.ts`, `tests/distribution-acceptance.test.ts` | release commit / tag / manifest の first-parent 束縛 |
+| `U-PACKRT-005` | `tests/pack-consumer-runtime-release.test.ts` | Releaseのみから導入し、Releaseディレクトリ削除後もlauncher起動 |
+| `U-PACKRT-006` | `tests/pack-consumer-runtime-release.test.ts` | ESM・runtime bytes改変とexact checksum行の拒否 |
+| `U-PACKRT-007` | `tests/pack-consumer-runtime-release.test.ts` | 実行module自己digest・PF5束縛・外部anchor・coherent forgery拒否 |
+| `U-PACKRT-008` | `tests/pack-consumer-runtime-release.test.ts` | exact 5 asset集合とtag混在の拒否 |
+| `U-PACKRT-009` | `tests/pack-consumer-runtime-release.test.ts` | canonical保存receipt照合、再導入write 0、pointer改変・payload欠落・複製先拒否 |
+| `U-PACKRT-010` | `tests/pack-consumer-runtime-release.test.ts` | 別releaseをupdate_unsupportedで拒否し既存runtime不変 |
