@@ -5744,6 +5744,22 @@
         "revision": 3,
         "content_digest": "sha256:828abf894a3c2198e1c46ce23e329e72f428fc7f1e37404fd2e61323c2ae9b87"
       }
+    },
+    {
+      "sequence": 360,
+      "previous_record_digest": "sha256:13f650678aa786ebacf663c82166323883c179f52d35472c109bce0b946eee3d",
+      "record_digest": "sha256:c95446d365efb0d480d9ad15e1ac722f792a13e100fc2cd2126344d830e6825a",
+      "command_id": "plan-revise:issue-742:s3-confirm:forward:r7:44636a2b9e5b",
+      "receipt_id": "certificate:8d4d1ec871ebf0dea75b9cc092fb7e58",
+      "receipt_digest": "sha256:6ae419a09a5f59eda2e83129a293c62ff96ef88ffcf86c90a7527c62de0e9122",
+      "decision_digest": "sha256:293cd9887bd2faeba9ea17c1b39c84dfdc339f7d21228adb814924b4ba3a4e0d",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-742-release-aggregate-v2-inventory-cardinality.md",
+        "plan_id": "PLAN-L7-742-release-aggregate-v2-inventory-cardinality",
+        "asset_id": "plan:f787a6e0b076a4db67323a906329bde3",
+        "revision": 7,
+        "content_digest": "sha256:b6f9a38f3bfbc428e8ccb1a4535d29c14e7f9e2299b4c236d33496e4baa9a6eb"
+      }
     }
   ]
 }

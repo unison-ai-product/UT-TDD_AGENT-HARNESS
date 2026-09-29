@@ -28,6 +28,20 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-742-release-aggregate-v2-inventory-cardinality.md
     artifact_type: markdown_doc
+  - artifact_path: src/setup/release-aggregate-admission.ts
+    artifact_type: source_module
+  - artifact_path: src/setup/consumer-local-runtime-admission.ts
+    artifact_type: source_module
+  - artifact_path: src/setup/release-promotion-rollback-gate.ts
+    artifact_type: source_module
+  - artifact_path: tests/release-aggregate-admission.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/consumer-local-runtime-admission.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/release-promotion-rollback-gate.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/pack-consumer-runtime-release.test.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L6-63-pack-staged-release-rollback.md
   requires:
@@ -47,26 +61,67 @@ dependencies:
     - docs/test-design/harness/L7-unit-test-design.md
     - docs/test-design/harness/L7-pack-consumer-runtime-release-install-test-design.md
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/418
-review_evidence: []
-status: draft
+review_evidence:
+  - reviewer: "Claude Opus (blind-reviewer, 非著者 closing review r2 bounded, PR #751
+      実装 exact head)"
+    reviewer_model: claude-opus-5
+    worker_model: gpt-6-luna
+    review_kind: cross_agent
+    verdict: pass
+    reviewed_at: 2026-09-29T09:13:46.725Z
+    tests_green_at: 2026-09-29T09:28:38Z
+    plan_revision: PLAN-L7-742 r6
+    subject_head: 4d2709028a18bf0d65fc3ec9fadaa9676a78f23a
+    green_commands:
+      - kind: doctor
+        command: node src/cli.ts doctor --strict-green-command-digest --result-file
+          "$UT_TDD_DOCTOR_RESULT_FILE"
+        runner: ci
+        scope: full
+        exit_code: 0
+        completed_at: 2026-09-29T09:28:38Z
+        evidence_path: docs/test-design/harness/L7-unit-test-design.md
+        output_digest: sha256:7fe559c4da940f4f17c2f7ece1738f4decafdea64658bfe085caddfaf81e0da3
+        anchor_commit: 4d2709028a18bf0d65fc3ec9fadaa9676a78f23a
+  - reviewer: "Codex Sol (非著者 契約 review r2, PR #748 契約 exact head)"
+    reviewer_model: gpt-5.6-sol
+    worker_model: claude-opus-5
+    review_kind: cross_agent
+    verdict: pass
+    reviewed_at: 2026-09-29T06:28:17.217Z
+    tests_green_at: 2026-09-29T06:46:59Z
+    plan_revision: PLAN-L7-742 r6
+    subject_head: bbe0ed4d9696265e662cbea6604062c91584275e
+    green_commands:
+      - kind: doctor
+        command: node src/cli.ts doctor --strict-green-command-digest --result-file
+          "$UT_TDD_DOCTOR_RESULT_FILE"
+        runner: ci
+        scope: full
+        exit_code: 0
+        completed_at: 2026-09-29T06:46:59Z
+        evidence_path: docs/test-design/harness/L7-unit-test-design.md
+        output_digest: sha256:4f8ac349d51117bd9d85dc90607862e7e06b82b38c9b914c0d48d40296c6222a
+        anchor_commit: bbe0ed4d9696265e662cbea6604062c91584275e
+status: confirmed
 github_issue_id: 742
 supersedes:
   - PLAN-L7-492-pf5-release-aggregate-admission-pair-freeze
   - PLAN-L7-494-release-promotion-rollback-gate
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:62d05c113e752582fd161ccbc12bd05d
-  command_id: plan-revise:issue-742:ac2-m6-m7:forward:r6:816e306d3779
-  admitted_at: 2026-09-29T06:20:58.243Z
-  source_digest: sha256:ae4344338dfdfe07e69b0950b4aaef17f32378e8c32ca602a0549de60de257d5
-  decision_digest: sha256:2de40ac6f4c5650e2cfd8458dedd8df17bbd0dd072b5d5510a9bd515381fbeaf
-  receipt_digest: sha256:e976697395160ceba051fec2ca9a2440abebed51d2ba67940bafdb7214063987
+  receipt_id: certificate:8d4d1ec871ebf0dea75b9cc092fb7e58
+  command_id: plan-revise:issue-742:s3-confirm:forward:r7:44636a2b9e5b
+  admitted_at: 2026-09-29T09:40:43.091Z
+  source_digest: sha256:b6f9a38f3bfbc428e8ccb1a4535d29c14e7f9e2299b4c236d33496e4baa9a6eb
+  decision_digest: sha256:293cd9887bd2faeba9ea17c1b39c84dfdc339f7d21228adb814924b4ba3a4e0d
+  receipt_digest: sha256:6ae419a09a5f59eda2e83129a293c62ff96ef88ffcf86c90a7527c62de0e9122
   binding:
     path: docs/plans/PLAN-L7-742-release-aggregate-v2-inventory-cardinality.md
     plan_id: PLAN-L7-742-release-aggregate-v2-inventory-cardinality
     asset_id: plan:f787a6e0b076a4db67323a906329bde3
-    revision: 6
-    content_digest: sha256:ae4344338dfdfe07e69b0950b4aaef17f32378e8c32ca602a0549de60de257d5
+    revision: 7
+    content_digest: sha256:b6f9a38f3bfbc428e8ccb1a4535d29c14e7f9e2299b4c236d33496e4baa9a6eb
   route:
     signal: feature_addition
     mode: add-feature
@@ -84,11 +139,11 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-742-release-aggregate-v2-inventory-cardinality
-    target_revision: 6
+    target_revision: 7
     phase: forward_merge
-  escape_reason: "PR #748 Sol r1 FLAG: AC 2 が M1〜M5 の証拠しか要求せず、rev 5 で追加した M6 / M7
-    (promotion / rollback の余剰 destinationPath 負系) を通す shape validator
-    でも完了条件を満たせるため、AC 2 を M1〜M7 に更新する。"
+  escape_reason: "Issue #742 S3: 実装 PR #751 (Opus r2 PASS、exact head 4d270902、CI
+    green) の merge を受けて confirmed 化し、generates (src 3 本 + tests 4 本) と
+    review_evidence (#751 Opus r2、#748 Sol r2) を記録する。契約本文は不変。"
   supersedes:
     - PLAN-L7-492-pf5-release-aggregate-admission-pair-freeze
     - PLAN-L7-494-release-promotion-rollback-gate
