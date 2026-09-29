@@ -55,18 +55,18 @@ supersedes:
   - PLAN-L7-494-release-promotion-rollback-gate
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:7dd1fd819d15e7edfcdc04afdca90736
-  command_id: plan-revise:issue-742:extra-destination-negatives:forward:r5:205e26251cb5
-  admitted_at: 2026-09-29T06:12:16.484Z
-  source_digest: sha256:54ab9624cfbf1857891a7443808cc482490839b137b35cfc86d3dd6c7b169c9e
-  decision_digest: sha256:2e6b09d7cc808b5ce4cb09c242b54159678ebdf4099a8f298ec7ab0b17f3481b
-  receipt_digest: sha256:9a7fc764634eca7b1f8f0d50f92fc2b14e4bf6a98f961f0a5ec90386789edf7e
+  receipt_id: certificate:62d05c113e752582fd161ccbc12bd05d
+  command_id: plan-revise:issue-742:ac2-m6-m7:forward:r6:816e306d3779
+  admitted_at: 2026-09-29T06:20:58.243Z
+  source_digest: sha256:ae4344338dfdfe07e69b0950b4aaef17f32378e8c32ca602a0549de60de257d5
+  decision_digest: sha256:2de40ac6f4c5650e2cfd8458dedd8df17bbd0dd072b5d5510a9bd515381fbeaf
+  receipt_digest: sha256:e976697395160ceba051fec2ca9a2440abebed51d2ba67940bafdb7214063987
   binding:
     path: docs/plans/PLAN-L7-742-release-aggregate-v2-inventory-cardinality.md
     plan_id: PLAN-L7-742-release-aggregate-v2-inventory-cardinality
     asset_id: plan:f787a6e0b076a4db67323a906329bde3
-    revision: 5
-    content_digest: sha256:54ab9624cfbf1857891a7443808cc482490839b137b35cfc86d3dd6c7b169c9e
+    revision: 6
+    content_digest: sha256:ae4344338dfdfe07e69b0950b4aaef17f32378e8c32ca602a0549de60de257d5
   route:
     signal: feature_addition
     mode: add-feature
@@ -84,12 +84,11 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-742-release-aggregate-v2-inventory-cardinality
-    target_revision: 5
+    target_revision: 6
     phase: forward_merge
-  escape_reason: "PR #744 r4 root 側 Sol 指摘: promotion 008 / rollback 009 に v2
-    variant の余剰 destinationPath を直接渡す負系 oracle が無く、各 shape 検証が余剰スカラーを受理しても候補全件
-    Green になる。008(g) / 009(b) と M6 / M7 を追補する (#744 は是正上限到達のため close し本 branch
-    で再提出)。"
+  escape_reason: "PR #748 Sol r1 FLAG: AC 2 が M1〜M5 の証拠しか要求せず、rev 5 で追加した M6 / M7
+    (promotion / rollback の余剰 destinationPath 負系) を通す shape validator
+    でも完了条件を満たせるため、AC 2 を M1〜M7 に更新する。"
   supersedes:
     - PLAN-L7-492-pf5-release-aggregate-admission-pair-freeze
     - PLAN-L7-494-release-promotion-rollback-gate
@@ -303,7 +302,8 @@ mutation probe (実装 PR の review packet に、どの出現を除去したか
 
 1. `CANDIDATE-U-RELAGGV2-001..009` が実装前に Red (001 / 002 / 007 は現行 main で Red、negative は
    positive fixture 成立後に Green 化) で書かれ、実装後に Linux / Windows CI で Green。
-2. M1〜M5 の各 mutation で対応 oracle が Red になることを review packet に記録する。
+2. M1〜M7 の各 mutation で対応 oracle が Red になることを review packet に記録する (M6 / M7 は rev 5 で追加した
+   promotion / rollback の余剰 destinationPath 負系 008(g) / 009(b) の Red 証拠を必須とする。rev 6)。
 3. 既存 `U-RELMAN-003..023` (`tests/release-aggregate-admission.test.ts`、
    `tests/release-promotion-rollback-gate.test.ts`)、`U-PACKRT-*` (`tests/pack-consumer-runtime-release.test.ts`)、
    `tests/consumer-local-runtime-admission.test.ts` が無変更の意味で Green。
