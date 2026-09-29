@@ -211,18 +211,18 @@ status: confirmed
 github_issue_id: 676
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:cc0f5617cb7f133aa2eec026cfc7a5c6
-  command_id: plan-revise:issue-676:pr2c-template-generates:plan:r19:71e5056806bb
-  admitted_at: 2026-09-29T01:53:52.035Z
-  source_digest: sha256:befafb427da7d616b4c0bb84ff58342662fa0fd75fc428138d6d362a3849ad68
-  decision_digest: sha256:7e0936db064bba29dfafbc3db5cb0b3ff58cf478327c62f1f09712266f3af629
-  receipt_digest: sha256:1cee4a2ae8e56c1ba84b0be15b00d79de2cd7f85aefdd96092a24b6f8485d973
+  receipt_id: certificate:b95dce5e1d9a5fbb8f06e2cf85343be6
+  command_id: plan-revise:issue-676:g10-skip-contract:plan:r20:83a49bde856e
+  admitted_at: 2026-09-29T04:08:46.108Z
+  source_digest: sha256:0ea5fb36b1a79cf3821d2ac636d3191ef0573d0bc13e96b6d8b5eca8dbf90332
+  decision_digest: sha256:d902f9800527aefa81d9ca4016b6de9cfcc3d1c571444d2f7880a028052e3bed
+  receipt_digest: sha256:35eb7c442be054e2c0f8a5d2ce36727aa1e7fd92560fdc9202d1741ecf5a3bf2
   binding:
     path: docs/plans/PLAN-L7-676-release-consumer-dev-start.md
     plan_id: PLAN-L7-676-release-consumer-dev-start
     asset_id: plan:aae8bf0e313f8688fbad4d4d8cf0a6a9
-    revision: 19
-    content_digest: sha256:befafb427da7d616b4c0bb84ff58342662fa0fd75fc428138d6d362a3849ad68
+    revision: 20
+    content_digest: sha256:0ea5fb36b1a79cf3821d2ac636d3191ef0573d0bc13e96b6d8b5eca8dbf90332
   route:
     signal: feature_addition
     mode: add-feature
@@ -240,12 +240,12 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-676-release-consumer-dev-start
-    target_revision: 19
+    target_revision: 20
     phase: forward_merge
-  escape_reason: "Issue #676 PR-2c: §3.1.3 の vmodel template を実装する PR-2c が新規に
-    landing させる 3 件 (vmodel-template-assets / vmodel-template-writer /
-    release-consumer-vmodel-template.test) を generates に宣言する成果物接合 (#730 着地後の rev
-    18 から接合)。"
+  escape_reason: "Issue #676: PR-G10 着手前監査で §3.6-4 G10 行の n/a 分岐が到達不能 (consumer の
+    profile selection authority が契約に無い) と判明したため、advisor
+    (claude-fable-5-1、design、SURVIVES) の推奨に従い、G10 の status: skipped を常に failed
+    とする契約改訂 (profile ベース L10 skip は後続 PLAN)。"
 ---
 
 # PLAN-L7-676: Release consumer で開発を開始できる状態にする
@@ -601,7 +601,7 @@ consumer に catalog / profile を上書きさせる手段は作らない (§3.2
    | --- | --- | --- | --- | --- | --- | --- | --- | --- |
    | G8 | `DOC-L8-INTEGRATION-TEST-DESIGN` | `IT-` | L5 (`DOC-L5-MODULE` / `DOC-L5-PHYSICAL-DATA` の ID) | `g8-integration` | `integration_manifest`, `integration_results` | なし | QA/TL | PR-GR |
    | G9 | `DOC-L9-SYSTEM-TEST-DESIGN` | `ST-` | L4 (`DOC-L4-*` の ID) | `g9-system` | `system_manifest`, `system_results` | case 表の各行が `evidence_families` (`ST` / `performance` / `security`) のいずれかを `family` 列に持ち、3 family の全てに 1 行以上ある | QA/TL | PR-G9 |
-   | G10 | `DOC-L10-UX-VALIDATION` | `UXV-` | L2 (`DOC-L2-SCREEN` の画面 ID) | `g10-ux` | `ux_manifest`, `browser_visual_a11y_results` | slot 文書の frontmatter が `status: skipped` の場合は、`skip_reason` 非空かつ scale profile (`vmodel-document-scale-profiles.md`) で当該 slot が有効でないときだけ n/a passed。それ以外の skip は failed | PO/QA | PR-G10 |
+   | G10 | `DOC-L10-UX-VALIDATION` | `UXV-` | L2 (`DOC-L2-SCREEN` の画面 ID) | `g10-ux` | `ux_manifest`, `browser_visual_a11y_results` | slot 文書の frontmatter が `status: skipped` の場合は、`skip_reason` の有無にかかわらず常に failed (理由 `skipped slot <doc_type_id>: no consumer profile-selection authority (VMC-005)`)。n/a passed の分岐は持たない (rev 20、下記「G10 の skip 判定」) | PO/QA | PR-G10 |
    | G11 | `DOC-L11-TRACE-UAT` (evidence 文書) | `UAT-` | L1 / L3 / L4 / L5 / L6 / L7 (pair reciprocity 例外。contract `pair_reciprocity_exceptions`) | `g11-uat` | `end_to_end_trace_review`, `po_uat_decision` | `end_to_end_trace_review` が `DOC-L3-FUNCTIONAL` で定義された全要件 ID を `traced` / `blocked` で列挙し、`blocked` が 0。`po_uat_decision` は `decision` (`accept` / `reject`)・`decided_by_role`・`revision` を持つ (承認の中身は review tier) | PO/TL | PR-G11 |
    | G12 | `DOC-L12-ACCEPTANCE` | `AT-` | L3 (`DOC-L3-FUNCTIONAL` の要件 / AC ID) | `g12-acceptance` | `deploy_receipt`, `acceptance_results`, `rollback_readiness` | `deploy_receipt` が `revision` (40 桁 hex) と `environment` を持ち、`rollback_readiness` が `rollback_command` と `verified_at` を持つ | PO/TL | PR-G12 |
    | G13 | `DOC-L13-PRODUCTION-OBSERVATION` (evidence 文書) | `SMOKE-` | L12 (pair reciprocity 例外。各行が `AT-` ID を cite) | `g13-post-deploy` | `production_smoke`, `sli_slo_observation`, `rollback_decision` | `sli_slo_observation` が `window_start` / `window_end` (ISO 8601、start < end) と SLO ごとの `target` / `observed` を持つ。`rollback_decision` が `decision` (`keep` / `rollback`) を持つ | PO/TL | PR-G13 |
@@ -609,6 +609,40 @@ consumer に catalog / profile を上書きさせる手段は作らない (§3.2
 
    G11 / G13 の slot は test design ではなく process evidence (catalog `category=process-evidence`、authoring path `docs/process/evidence/`) であり、
    resolver の写像対象外 (catalog path をそのまま使う)。
+
+   **G10 の skip 判定 (rev 20)**: rev 19 までの G10 行は「`skip_reason` 非空かつ scale profile で当該 slot が有効でないときだけ n/a passed」と
+   定めていたが、この n/a 分岐は到達不能であった。consumer の profile が L10 を無効にするかを決める正本が存在しないためである (実測、origin/main):
+
+   - `docs/governance/vmodel-document-scale-profiles.md` の decision 行は 26 行で、全て `DOC-L4-*` であり、L10 (`DOC-L10-UX-VALIDATION`) の行は 0 件。
+     同文書の解釈規則は未定義 overlay の自動 `adopt` を禁じ (:88)、検出系が採用判定・skip reason を創作することを禁じる (:95)。
+     したがって L4 `DOC-L4-UI-STANDARD` の行から L10 の有効 / 無効を推論できない。
+   - consumer の profile 選択には入力源が無い。`src/profile/domain/resolver.ts` の `resolveDocumentProfile` は src から呼ばれておらず、
+     consumer manifest の `profile` は非空文字列であることしか検査されない (信頼根が無い)。
+   - catalog (`docs/governance/vmodel-document-catalog.md:45`) の `DOC-L10-UX-VALIDATION` は `default_status` が `required` である
+     (scope 列は `profile_controlled` だが、それを解決する decision 行が無い)。
+   - VMC-005 (`docs/process/vmodel-contract.yaml:209-210`、`missing_contract_data_fails_closed_without_detector_inference`) は contract に無いデータを
+     推測せず fail-close することを要求する。
+   - G2 の `mockMissing` (`src/gate/static.ts`) は、L2 wireframe の `pair_artifact` として L10 の UX 検証 test-design を無条件に要求している
+     (§3.6-2、rev 13 で freeze)。
+
+   | 案 | 内容 | 判定 |
+   | --- | --- | --- |
+   | A | scale profile の L4 `DOC-L4-UI-STANDARD` 行 (skip / 不採用) から L10 の無効を推論する | 棄却 (:88 / :95 が検出系による採用判定の推論を禁じ、L4 行は L10 の decision 行ではない) |
+   | B | 本 PLAN で L10 の decision 行と consumer の profile 選択入力 (manifest `profile` → `resolveDocumentProfile`) を新設する | 棄却 (信頼根を持つ新しい選択機構を実装契約 PLAN の中で発明することになり、§PR スコープ規律 2 に反する。後続 PLAN の範囲) |
+   | C | profile 条件を外し、`skip_reason` 非空だけで n/a passed とする | 棄却 (consumer が自己申告だけで required slot の UX 検証を n/a にでき、catalog :45 の `required` と VMC-005 を緩める) |
+   | **D (採用)** | canary.2 では frontmatter `status: skipped` を常に failed とする (理由: VMC-005、consumer の profile 選択の正本が無い)。profile に基づく L10 skip は後続 PLAN へ送る | 採用 |
+
+   advisor: `ut-tdd advisor --decision design --execute` (2026-09-29、provider=claude、model=`claude-fable-5-1`、control lane が諮問)。
+   判定は SURVIVES (案 D を支持)。付帯条件として次を記録する。scale profile には、profile 条件付きの意図の既存痕跡が
+   `vmodel-document-scale-profiles.md:55` (「UI 標準は L10 UX validation の上流正本になる」) と `:68` (「web profile … L10 browser/visual/a11y 検証を有効化する」)
+   の note 列に在る。後続 PLAN は新しい機構を発明せず、これらの note を機械可読な L10 の decision 行へ正規化し、あわせて信頼根を持つ profile 選択の
+   入力源を定めること。
+
+   受容した副作用: canary.2 では CLI だけの consumer も L10 の UX 検証 test-design を書く必要がある。これは G2 の L10 pair が無条件である
+   (§3.6-2) ことから既に含意されており、本改訂で新たに生じる要求ではない。
+
+   範囲外 (記録のみ): `docs/governance/document-system-map.md:56` は L2 画面を「必須 (UI 有時)」とする一方、catalog :27 は `DOC-L2-SCREEN` を
+   `core` / `required` とする不一致がある。本改訂では扱わない。
 
    zip `tools/*.py` のうち上の述語に対応しないもの (`review.py` の実体サンプリング、`consistency.py` の表記ゆれ、`impact.py` の影響範囲など) は
    gate には入れず、各 PR-G の PR 本文に「未移植」として列挙する。gate に追加する場合は本 PLAN の改訂へ戻る。
@@ -714,6 +748,8 @@ injection path の乗っ取り、harness 自身の挙動変化、部分 setup �
 - design root の設定による上書き (§3.2 案 B)。
 - L2 画面仮説から L10 実検証までの UX-FE 連続性 (PLAN-L1-08 の範囲、PO 判断 2026-09-28 でコンセプト v4 時に対応。§3.6-2 の G2 wireframe 判定は既存規則の consumer 写像に限る)。
 - Release asset 集合・installer (PLAN-L7-628)、update / rollback (#364)。
+- scale profile に基づく L10 (`DOC-L10-UX-VALIDATION`) の skip (§3.6-4「G10 の skip 判定」、rev 20)。後続 PLAN で、scale profile :55 / :68 の note を
+  機械可読な L10 decision 行へ正規化し、信頼根を持つ consumer の profile 選択入力を定めてから扱う。それまで G10 は `status: skipped` を常に failed とする。
 
 ## 8. 実装開始条件
 
@@ -735,3 +771,4 @@ injection path の乗っ取り、harness 自身の挙動変化、部分 setup �
 17. PR-2c の書き込み境界 (rev 17): PR-2c の root 検収 (#676) で、consumer 内の `docs/plans` を外部 directory へ junction 接続した fixture に対し、lexical な insideRoot 判定だけの `vmodel template` が consumer 外へ書き込むことが実測された。§3.1.3 は consumer 内の catalog path へ書くことを前提にしていたが、その失敗条件 (consumer 外 write 0) を明記していなかったため、実装 PR 内の読み替えではなく契約改訂とした。§3.1.3 に書き込み前の物理 path preflight と deny 時の write 0 を追記し、test-design に CANDIDATE-U-RCDEV-039 を追加した。コマンド形・上書き規則・既存 oracle 014 / 015 / 038 の判定は変更しない。
 18. PR-GR の成果物宣言 (rev 18): §3.6-4 の共通述語 S / I / T / E / F / A / R を評価する右腕共通 evaluator と G8 の登録を実装する PR-GR が新規に landing させる `src/gate/right-arm-static.ts` の 1 件だけを `generates` に追加する。回帰 test は既存の `tests/release-consumer-gates.test.ts` (rev 16 で宣言済み) に追記され、新規ファイルではない。G9〜G14 の登録は後続 PR であり、本 revision では宣言しない。既存ファイルは宣言しない。 PR-GR は当初 main 48efd4e1 の rev 16 から rev 17 として発行したが、同じ rev 16 から発行した PR-2c 境界契約 (#728、rev 17) が先に merge されたため、最新 main の rev 17 から正規の plan revise で rev 18 として再接合した (receipt の手編集・conflict の手解決はしない)。
 19. PR-2c の成果物宣言 (rev 19): §3.1.3 の `vmodel template` (consumer への V-model テンプレート書き込み、書き込み前の物理 path preflight と deny 時の write 0 を含む) を実装する PR-2c が新規に landing させる `src/setup/vmodel-template-assets.ts` / `src/setup/vmodel-template-writer.ts` / `tests/release-consumer-vmodel-template.test.ts` の 3 件を `generates` に追加する。`src/cli.ts` と `src/doctor/test-repository-isolation.ts` と `scripts/build-node.mjs` への配線変更は既存ファイルの編集であり宣言しない。コマンド形・上書き規則・§3.1.3 の oracle (014 / 015 / 038 / CANDIDATE-U-RCDEV-039) の判定は変更しない。PR-2c branch が #730 着地後の main (rev 18) を取り込んだ後に、正規の plan revise で rev 19 として接合した (receipt の手編集・conflict の手解決はしない)。
+20. G10 の skip 判定 (rev 20): PR-G10 の着手前に Codex root lane が行った read-only 監査 (#676、2026-09-29) で、§3.6-4 の G10 行の n/a 分岐 (「`skip_reason` 非空かつ scale profile で当該 slot が有効でないときだけ n/a passed」) が到達不能であることが分かった。scale profile に L10 の decision 行が無く、consumer の profile 選択にも入力源が無いためである。advisor (claude-fable-5-1、design、SURVIVES) の推奨に従い、実装 PR 内の読み替えではなく契約改訂とした。§3.6-4 の G10 行を「`status: skipped` は常に failed (VMC-005)」へ改め、同節に設計判断「G10 の skip 判定」(案 A〜D と advisor の付帯条件) を追記し、§7 に profile に基づく L10 skip の後続 PLAN への繰り延べを加え、test-design の CANDIDATE-U-RCDEV-031 の skip mutation を揃えた。`generates`、他 gate の述語、G2 の L10 pair 規則は変更しない。
