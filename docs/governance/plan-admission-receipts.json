@@ -5712,6 +5712,22 @@
         "revision": 2,
         "content_digest": "sha256:6755466ce43449a535371b07e927afa2bf3f050129188e48c739bb3db86077f2"
       }
+    },
+    {
+      "sequence": 358,
+      "previous_record_digest": "sha256:467693b1b507fe9eb366333e00044552639d44f8023c2138e856525cfaf0695e",
+      "record_digest": "sha256:4e64fb12a22bebdcdf6c63365a78589002647c2a92ca797ff5b729c88d9fa697",
+      "command_id": "plan-revise:issue-722:drive-parent-align:reverse:r2:c43caf233a1c",
+      "receipt_id": "certificate:33607416b53a67051b1d75d8635b3c0e",
+      "receipt_digest": "sha256:076afcaa9bc57ea11d38202328626eb201d4f221869b9da88c9afc36e0ee9258",
+      "decision_digest": "sha256:4ec360bb4837e820fc0e78dde25e1958dd81875d55734571fda0e5d00815c986",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-722-plan-revision-digest-query-backfill.md",
+        "plan_id": "PLAN-REVERSE-722-plan-revision-digest-query-backfill",
+        "asset_id": "plan:b235c569fdf230ce852a5f1914689142",
+        "revision": 2,
+        "content_digest": "sha256:f14b6956a8da5f5d490d77e2f3c7ab0c31d8875c06aea51d4d31271a297cacd8"
+      }
     }
   ]
 }

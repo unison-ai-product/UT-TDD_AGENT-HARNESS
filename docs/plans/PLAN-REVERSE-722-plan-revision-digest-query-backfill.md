@@ -3,7 +3,7 @@ plan_id: PLAN-REVERSE-722-plan-revision-digest-query-backfill
 title: "PLAN-REVERSE-722: PLAN revision digest query 契約の逆向き確認"
 kind: reverse
 layer: cross
-drive: agent
+drive: db
 confirmed_reverse_type: design
 route_signal: reverse
 route_mode: reverse
@@ -45,18 +45,18 @@ status: draft
 github_issue_id: 722
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:b235c569fdf230ce852a5f1914689142
-  command_id: plan-draft:issue-722:digest-query:reverse:1
-  admitted_at: 2026-09-29T08:36:10.449Z
-  source_digest: sha256:acfc4b38059f3905e1ac5f5efc575a648eeff90f60b1c0648597a7dd77c958c0
-  decision_digest: sha256:f81214f0c4c4b6563d356a7a55662d4f10a43ac27994a9a57a616d1df4087464
-  receipt_digest: sha256:d8e65e2f7defcdc75f6734d9f63ea8a6503b793188e19aae976426842a6199f7
+  receipt_id: certificate:33607416b53a67051b1d75d8635b3c0e
+  command_id: plan-revise:issue-722:drive-parent-align:reverse:r2:c43caf233a1c
+  admitted_at: 2026-09-29T08:46:52.728Z
+  source_digest: sha256:f14b6956a8da5f5d490d77e2f3c7ab0c31d8875c06aea51d4d31271a297cacd8
+  decision_digest: sha256:4ec360bb4837e820fc0e78dde25e1958dd81875d55734571fda0e5d00815c986
+  receipt_digest: sha256:076afcaa9bc57ea11d38202328626eb201d4f221869b9da88c9afc36e0ee9258
   binding:
     path: docs/plans/PLAN-REVERSE-722-plan-revision-digest-query-backfill.md
     plan_id: PLAN-REVERSE-722-plan-revision-digest-query-backfill
     asset_id: plan:b235c569fdf230ce852a5f1914689142
-    revision: 1
-    content_digest: sha256:acfc4b38059f3905e1ac5f5efc575a648eeff90f60b1c0648597a7dd77c958c0
+    revision: 2
+    content_digest: sha256:f14b6956a8da5f5d490d77e2f3c7ab0c31d8875c06aea51d4d31271a297cacd8
   route:
     signal: reverse
     mode: reverse
@@ -74,10 +74,9 @@ admission_receipt:
     implementation_disposition: preserved
   reentry:
     target_plan_id: PLAN-L7-722-plan-revision-digest-query
-    target_revision: 1
+    target_revision: 2
     phase: forward_merge
-  escape_reason: "Issue #722: PLAN-L7-722 の read-only query 契約を PLAN-L6-71 /
-    state-db の不変条件へ逆向き照合する Reverse 対の R0 起票。"
+  escape_reason: "Issue #722: 親 PLAN-L7-722 rev 2 の drive (db) と一致させる。本文・R0 の内容は不変。"
 ---
 
 # PLAN-REVERSE-722: PLAN revision digest query の逆向き確認
