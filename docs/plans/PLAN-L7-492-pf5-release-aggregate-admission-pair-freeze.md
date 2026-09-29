@@ -6,7 +6,6 @@ layer: L7
 drive: agent
 route_signal: forward
 route_mode: forward
-status: confirmed
 created: 2026-08-18
 updated: 2026-08-18
 owner: PM / Codex
@@ -14,13 +13,13 @@ parent_design: docs/plans/PLAN-L7-473-staged-release-channel-manifest.md
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 agent_slots:
   - role: aim
-    slot_label: "AIM - PF-5 final-tree admission と外部publish境界を固定する"
+    slot_label: AIM - PF-5 final-tree admission と外部publish境界を固定する
   - role: tl
-    slot_label: "TL - 三predicate AND、sealed plan、fault時rollbackの独立レビュー"
+    slot_label: TL - 三predicate AND、sealed plan、fault時rollbackの独立レビュー
   - role: se
-    slot_label: "SE - PF-1〜PF-4 portを再利用するaggregate application seamを設計する"
+    slot_label: SE - PF-1〜PF-4 portを再利用するaggregate application seamを設計する
   - role: qa
-    slot_label: "QA - CANDIDATE-RELMAN-014〜017のmutation/fault oracleを固定する"
+    slot_label: QA - CANDIDATE-RELMAN-014〜017のmutation/fault oracleを固定する
 generates:
   - artifact_path: docs/plans/PLAN-L7-492-pf5-release-aggregate-admission-pair-freeze.md
     artifact_type: markdown_doc
@@ -41,33 +40,52 @@ dependencies:
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/250
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/330
 backprop_decision: required
-github_issue_id: 251
 review_evidence:
   - reviewer: claude-opus-5
     review_kind: cross_agent
-    reviewed_at: "2026-08-18T05:24:18Z"
-    tests_green_at: "2026-08-18T05:24:18Z"
+    reviewed_at: 2026-08-18T05:24:18Z
+    tests_green_at: 2026-08-18T05:24:18Z
     verdict: pass
-    scope: "PR #333 PF-5 pair-freezeのclaim-blind/spec-blind再レビュー。predicate Cの静的化、PF-4 requires、docs-only境界を確認。"
+    scope: "PR #333 PF-5 pair-freezeのclaim-blind/spec-blind再レビュー。predicate
+      Cの静的化、PF-4 requires、docs-only境界を確認。"
     worker_model: codex
     reviewer_model: claude-opus-5
     plan_revision: 15e76078ec216655e4c1896717771966a864d227
     subject_head: 15e76078ec216655e4c1896717771966a864d227
-    evidence_path: "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/333"
+    evidence_path: https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/333
     anchor_commit: 15e76078ec216655e4c1896717771966a864d227
     citations:
-      - "PR #333 exact HEAD 15e76078 non-author closing review (PASS, 2026-08-18T05:24:18Z)"
-      - "GitHub Actions run 32099499128 (Linux/Windows/aggregate success)"
+      - "PR #333 exact HEAD 15e76078 non-author closing review (PASS,
+        2026-08-18T05:24:18Z)"
+      - GitHub Actions run 32099499128 (Linux/Windows/aggregate success)
     green_commands:
       - kind: lint
         command: "GitHub Actions run 32099499128: harness-check Linux/Windows/aggregate"
         runner: ci
         scope: targeted
         exit_code: 0
-        completed_at: "2026-08-18T05:24:18Z"
+        completed_at: 2026-08-18T05:24:18Z
         evidence_path: docs/plans/PLAN-L7-492-pf5-release-aggregate-admission-pair-freeze.md
-        output_digest: "sha256:52ba651e439bd066d94c50256be8df2c4ff7f5cb0e8380127c1d54dc36072d4e"
+        output_digest: sha256:52ba651e439bd066d94c50256be8df2c4ff7f5cb0e8380127c1d54dc36072d4e
         anchor_commit: 15e76078ec216655e4c1896717771966a864d227
+status: confirmed
+admission_receipt:
+  schema_version: v2
+  receipt_id: certificate:25697dcb7665caea59d6b901965c3245
+  command_id: plan-revise:issue-742:legacy-492-correction-note:r2b:d5b9c793e32e
+  admitted_at: 2026-09-29T05:08:39.156Z
+  source_digest: sha256:04c338a34f868796485169f6a92959892f54061aa838004dc5aee0d96323a469
+  decision_digest: sha256:8c79b95a7b202e5374bcd8f8923a6fea60cde61da1a755f21412c0e63f734b06
+  receipt_digest: sha256:e4017415eba2ac8a5e44d9c26a4bd18458bb5e5b643e6b4dabea5e594bb023b5
+  binding:
+    path: docs/plans/PLAN-L7-492-pf5-release-aggregate-admission-pair-freeze.md
+    plan_id: PLAN-L7-492-pf5-release-aggregate-admission-pair-freeze
+    asset_id: plan:legacy:6a3ec85114af63a676d8d5cbff989764fdb96e127b8ca7f1f54798fc77a89275
+    revision: 2
+    content_digest: sha256:04c338a34f868796485169f6a92959892f54061aa838004dc5aee0d96323a469
+  route:
+    signal: forward
+    mode: forward
 ---
 
 # PLAN-L7-492: PF-5 release aggregate admission pair-freeze
@@ -127,3 +145,14 @@ candidate昇格を含めない。candidate `CANDIDATE-RELMAN-014`〜`017`は実�
 
 Pack repoへのtag/release、promotion/rollback、S3、multi-consumer generalization、Git commit/push
 自動化は本PLANへ混ぜない。Issue #251は実装・全fault検証・cross-review・mergeが完了するまでcloseしない。
+
+## 訂正注記 (2026-09-29、PLAN-L7-742)
+
+§1 (C) の channel-selected artifact → Pack destination 写像は v1 (channel あたり destination 1 件) を
+前提に凍結されており、`PLAN-L7-499` の v2 multi-artifact inventory について再定義されていなかった。
+このため `src/setup/release-aggregate-admission.ts` の `selectedMapping` は mapping がちょうど 1 件でない
+v2 release を全て `missing_channel_mapping` で拒否する (実測: #418 / `PLAN-L7-531` PR-1)。
+v2 の基数契約 (mapping 列 = selected release の `artifacts` 列の順序付き完全一致) と、sealed plan の
+destination 正本を `entries[].path` に限る変更は後継 `PLAN-L7-742-release-aggregate-v2-inventory-cardinality`
+が所有する。v1 の exactly-one、§1 (A)(B)、§1 の apply / rollback 契約、および本 PLAN の AC・status は
+変更しない。
