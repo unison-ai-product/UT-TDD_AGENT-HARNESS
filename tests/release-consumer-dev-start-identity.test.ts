@@ -145,7 +145,9 @@ describe("U-RCDEV PR-1: identity / repo-root", () => {
     ];
     for (const route of routes) {
       const run = runCli(nested, route, "{}\n", testEnv(withOrigin));
-      expect(run.stderr, route.join(" ")).not.toContain("repository root could not be resolved");
+      expect(run.stderr, `${route.join(" ")}\n${run.diagnostic}`).not.toContain(
+        "repository root could not be resolved",
+      );
     }
 
     const markerlessParent = fixture();
@@ -160,8 +162,12 @@ describe("U-RCDEV PR-1: identity / repo-root", () => {
     mkdirSync(deniedNested, { recursive: true });
     for (const route of routes) {
       const run = runCli(deniedNested, route, "{}\n", testEnv(withoutOrigin));
-      expect(run.stderr, route.join(" ")).toContain("recovery: git remote add origin <url>");
-      expect(run.stderr, route.join(" ")).toContain("recovery: ut-tdd setup --solo");
+      expect(run.stderr, `${route.join(" ")}\n${run.diagnostic}`).toContain(
+        "recovery: git remote add origin <url>",
+      );
+      expect(run.stderr, `${route.join(" ")}\n${run.diagnostic}`).toContain(
+        "recovery: ut-tdd setup --solo",
+      );
     }
   }, 60_000);
 
@@ -189,6 +195,8 @@ describe("U-RCDEV PR-1: identity / repo-root", () => {
     execFileSync("git", ["add", "ut-tdd.project.json"], { cwd: root });
     execFileSync("git", ["commit", "-qm", "test: commit project identity"], { cwd: root });
     const afterCommit = runCli(root, ["session", "start"], "{}\n", testEnv(root));
-    expect(afterCommit.stderr).not.toContain("project_memory_root_project_identity_unavailable");
+    expect(afterCommit.stderr, afterCommit.diagnostic).not.toContain(
+      "project_memory_root_project_identity_unavailable",
+    );
   }, 60_000);
 });
