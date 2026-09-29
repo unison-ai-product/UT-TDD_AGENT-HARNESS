@@ -811,14 +811,7 @@ function updateConsumerG11TraceReview(
   root: string,
   mutate: (traceReview: ConsumerG11TraceReview) => void,
 ): void {
-  const path = join(
-    root,
-    ".ut-tdd",
-    "evidence",
-    "g11-uat",
-    "artifacts",
-    "trace-review.json",
-  );
+  const path = join(root, ".ut-tdd", "evidence", "g11-uat", "artifacts", "trace-review.json");
   const traceReview = JSON.parse(readFileSync(path, "utf8")) as ConsumerG11TraceReview;
   mutate(traceReview);
   writeFileSync(path, `${JSON.stringify(traceReview, null, 2)}\n`, "utf8");
@@ -828,14 +821,7 @@ function updateConsumerG11Decision(
   root: string,
   mutate: (decision: ConsumerG11Decision) => void,
 ): void {
-  const path = join(
-    root,
-    ".ut-tdd",
-    "evidence",
-    "g11-uat",
-    "artifacts",
-    "po-uat-decision.json",
-  );
+  const path = join(root, ".ut-tdd", "evidence", "g11-uat", "artifacts", "po-uat-decision.json");
   const decision = JSON.parse(readFileSync(path, "utf8")) as ConsumerG11Decision;
   mutate(decision);
   writeFileSync(path, `${JSON.stringify(decision, null, 2)}\n`, "utf8");
@@ -2039,14 +2025,18 @@ describe("PR-G11 consumer G11 predicates", () => {
         name: "missing last requirement",
         expected: "untraced requirement NFR-17",
         mutate: (review) => {
-          review.requirements = review.requirements.filter((item) => item.requirement_id !== "NFR-17");
+          review.requirements = review.requirements.filter(
+            (item) => item.requirement_id !== "NFR-17",
+          );
         },
       },
       {
         name: "missing FR heading requirement",
         expected: "untraced requirement FR-01",
         mutate: (review) => {
-          review.requirements = review.requirements.filter((item) => item.requirement_id !== "FR-01");
+          review.requirements = review.requirements.filter(
+            (item) => item.requirement_id !== "FR-01",
+          );
         },
       },
       {
@@ -2097,11 +2087,7 @@ describe("PR-G11 consumer G11 predicates", () => {
   it("U-RCDEV-032: rejects a non-object trace review artifact", () => {
     const root = fixtureRoot();
     writeConsumerG11Fixture(root);
-    writeFixtureDoc(
-      root,
-      ".ut-tdd/evidence/g11-uat/artifacts/trace-review.json",
-      "traced\n",
-    );
+    writeFixtureDoc(root, ".ut-tdd/evidence/g11-uat/artifacts/trace-review.json", "traced\n");
 
     expectG11Failure(root, "invalid artifact end_to_end_trace_review: JSON object required");
   });
