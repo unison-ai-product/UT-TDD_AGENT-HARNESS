@@ -21,6 +21,7 @@ ADR-001 本文は L5 降下に合わせて SQLite projection DB 採用へ更新�
 
 - **projection であり authoring source ではない**: docs/YAML/JSON state/log を正規化した投影。governance doc・PLAN 本文の正本は markdown/YAML 側に残す。projection は再構築可能 (rebuildable)。
 - **runtime**: Bun では `bun:sqlite` を第一候補、Node 互換が要る adapter のみ `better-sqlite3`。legacy `legacy DB` schema は流用しない (ADR-001 維持)。
+> **決定の更新 (2026-09-29)**: 上記 runtime 行の `bun:sqlite` 第一候補は現行では無効。主ドライバは `node:sqlite` (PLAN-L7-462、機械検査は `src/lint/runtime-portability.ts` の SQLite adapter check が `node:sqlite` の存在を要求)。`bun:sqlite` は残存 debt であり Bun 永久禁止 (#134) に従い段階撤去する。
 - **役割**: V-model 製本 state / 別駆動 model run / session・hook・gate log / skill 発火率 metrics / workflow automation readiness / guardrail decision ledger / asset catalog・search index / quality・feedback signal。物理 schema は physical-data §2.7 + §9 (17 projection table + index + invariant)。
 - **安全境界 (MUST)**: raw provider transcript / secret / credential / PII を DB に保存しない。ID・理由・score・redacted summary のみ。automation readiness は証跡なしに ready にしない。guardrail human-required を projection で降格しない。
 
