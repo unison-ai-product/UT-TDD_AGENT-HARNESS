@@ -38,7 +38,7 @@ import {
 import { materializeReleaseArtifacts } from "../../src/setup/release-materializer.ts";
 import { removeTestTree } from "./temp-tree.ts";
 
-export const CANARY_FIXTURE_TAG = "v0.0.0-canary-fixture";
+export const CANARY_FIXTURE_TAG = "v0.0.0-canary.0";
 export const CANARY_ASSET_NAMES = Object.values(
   releaseArtifactFileNames(CANARY_FIXTURE_TAG),
 ).sort();
