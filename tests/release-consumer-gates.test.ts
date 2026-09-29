@@ -758,6 +758,7 @@ function consumerG11Decision(): ConsumerG11Decision {
 
 function writeConsumerG11Fixture(root: string): void {
   const repositoryRoot = process.cwd();
+  writeConsumerGateFixture(root);
   const l11Template = readFileSync(
     join(repositoryRoot, "docs/templates/vmodel/L11-trace-uat.md"),
     "utf8",
