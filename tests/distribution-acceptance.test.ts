@@ -298,6 +298,29 @@ describe("clean distribution local acceptance smoke", () => {
     expect(plan.missingRequired).toEqual([]);
     expect(plan.denylistViolations).toEqual([]);
 
+    // PLAN-L7-628: the producer builds from tagged source, independently of
+    // the unchanged clean tarball. PR-2c adds tracked text-loader build inputs.
+    const vmodelBuildInputs = execFileSync(
+      "git",
+      [
+        "ls-files",
+        "-z",
+        "--",
+        "docs/templates/vmodel",
+        "docs/governance/vmodel-document-catalog.md",
+      ],
+      { cwd: repoRoot, encoding: "utf8" },
+    )
+      .split("\0")
+      .filter(
+        (path) =>
+          path === "docs/governance/vmodel-document-catalog.md" ||
+          (path.startsWith("docs/templates/vmodel/") &&
+            path.endsWith(".md") &&
+            !path.startsWith("docs/templates/vmodel/review-examples/")),
+      );
+    expect(vmodelBuildInputs.length).toBeGreaterThan(0);
+
     const cleanRoot = mkdtempSync(join(tmpdir(), "ut-tdd-clean-acceptance-"));
     const injectedHome = mkdtempSync(join(tmpdir(), "ut-tdd-acceptance-home-"));
     try {
@@ -320,6 +343,11 @@ describe("clean distribution local acceptance smoke", () => {
       mkdirSync(dirname(provenancePath), { recursive: true });
       cpSync(join(repoRoot, provenance), provenancePath);
       cpSync(join(repoRoot, "tsconfig.node.json"), join(cleanRoot, "tsconfig.node.json"));
+      for (const path of vmodelBuildInputs) {
+        const destination = join(cleanRoot, path);
+        mkdirSync(dirname(destination), { recursive: true });
+        cpSync(join(repoRoot, path), destination);
+      }
 
       // PR-1 の package は、workspace の現在状態ではなく実在 tag が指す
       // release revision C2 を入力にする。C1 は artifact source、C2 は
@@ -333,6 +361,11 @@ describe("clean distribution local acceptance smoke", () => {
       runGit(cleanRoot, ["remote", "add", "origin", "https://github.com/example/consumer.git"]);
       runGit(cleanRoot, ["add", "--", "."]);
       runGit(cleanRoot, ["commit", "--quiet", "-m", "fixture artifact"]);
+      const trackedBuildInputs = execFileSync("git", ["ls-files", "-z"], {
+        cwd: cleanRoot,
+        encoding: "utf8",
+      }).split("\0");
+      for (const path of vmodelBuildInputs) expect(trackedBuildInputs).toContain(path);
       const artifactCommit = execFileSync("git", ["rev-parse", "HEAD"], {
         cwd: cleanRoot,
         encoding: "utf8",

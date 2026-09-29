@@ -27,7 +27,7 @@ runtime-portability:2 screen-impl-pair-freeze:1 setup-bun-removal:2 ban-lint-det
 sub-doc-catalog-drift:5 sub-doc-section-structure:1 telemetry-closure:1 test-design-naming:1 toolchain-pin:1 tracked-canonical:1
 vmodel-contract-compiler:1 vmodel-source-assets:1 work-guard:1 workspace-roots:3 write-encoding-guard:1
 vmodel-consumer-lint:1
-release-consumer-gates:3
+release-consumer-gates:7
 doctor-test-repository-isolation:1 persistent-db-cleanup-contract:1 memory-clean-cut-removal:1 memory-legacy-archive:1 memory-clean-cut-non-read:1 memory-curation-ledger:1
 secret-scan-diff:1
 feedback-log:2
@@ -42,7 +42,7 @@ profile/tracked-loader:2
 plan-asset/ledger-schema:4 plan-asset/legacy-inventory:5 plan-asset/legacy-migration-dry-run:13 plan-asset/project-identity-loader:1
 disposition/git-authoring-provenance:3 disposition/projection:6 disposition/tracked-target-registry:2
   forward-escape-issue-contract:2
-  pack-consumer-runtime-release:4
+  pack-consumer-runtime-release:4 release-consumer-vmodel-template:1
   release-consumer-setup-artifacts:1
   `;
 
@@ -138,6 +138,12 @@ repositoryReadContracts["tests/pack-consumer-runtime-release.test.ts"] = {
   calls: 4,
   reason:
     "clean Pack producer fixture copies tracked assets into a temporary Git repository and installer CLI runs only from the detached execution snapshot",
+};
+repositoryReadContracts["tests/release-consumer-vmodel-template.test.ts"] = {
+  mode: "isolated_fixture",
+  calls: 1,
+  reason:
+    "consumer template bundle oracle compares emitted bytes to the source template assets while the CLI writes only into a temporary consumer root",
 };
 
 export const REPOSITORY_READ_CONTRACTS: Readonly<Record<string, RepositoryReadContract>> =

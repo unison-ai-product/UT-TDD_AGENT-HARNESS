@@ -17,6 +17,7 @@ import type { CompiledVerificationObligation } from "../vmodel-contract/applicat
 interface CaseRow {
   id: string;
   citations: string;
+  family?: string;
 }
 
 interface CheckCaseIdsInput {
@@ -32,6 +33,7 @@ interface CheckManifestInput {
   evidenceDirectory: string;
   obligation: CompiledVerificationObligation;
   caseIds: ReadonlySet<string>;
+  deferCaseIdField: "it_id" | "st_id";
   violations: string[];
 }
 
@@ -54,6 +56,28 @@ const REQUIRED_G8_CASE_COLUMNS = [
   "期待結果",
   "トレース元",
 ] as const;
+const REQUIRED_G9_HEADINGS = [
+  "# DOC-L9-SYSTEM-TEST-DESIGN: 総合テスト設計書 / セキュリティテスト計画・脆弱性診断書",
+  "#### 第1章 テスト方針",
+  "##### 1-1 目的・範囲",
+  "##### 1-2 トレース元",
+  "##### 1-3 合否基準",
+  "##### 1-4 テスト環境",
+  "#### 第2章 テスト観点",
+  "#### 第3章 テストケース一覧",
+  "#### 第4章 不具合・判定基準",
+  "##### 4-1 重要度定義",
+  "##### 4-2 不具合記録",
+  "#### 第1章 方針・診断フェーズ",
+  "##### 1-2 診断の独立性",
+  "#### 第2章 診断チェックリスト(OWASP Top 10 2021)",
+  "#### 第3章 API・マルチテナント診断",
+  "#### 第4章 LLM・AIエージェント診断(OWASP LLM Top 10 抜粋)",
+  "#### 第5章 判定基準・対応SLA",
+  "##### 5-1 エグジット基準",
+  "#### 第6章 実施計画・記録",
+] as const;
+const REQUIRED_G9_CASE_COLUMNS = [...REQUIRED_G8_CASE_COLUMNS.slice(0, -1), "family", "トレース元"];
 function isRecord(value: unknown): value is JsonRecord {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -97,6 +121,39 @@ function parseG8CaseRows(content: string, violations: string[]): CaseRow[] {
   return rows;
 }
 
+function parseG9CaseRows(content: string, violations: string[]): CaseRow[] {
+  for (const heading of REQUIRED_G9_HEADINGS) {
+    if (!content.includes(heading)) violations.push(`missing section ${heading}`);
+  }
+  const lines = content.split(/\r?\n/);
+  const headerIndex = lines.findIndex((line) => {
+    const cells = tableCells(line);
+    return REQUIRED_G9_CASE_COLUMNS.every((column) => cells.includes(column));
+  });
+  if (headerIndex < 0) {
+    violations.push("missing section 第3章 テストケース一覧: required case table columns");
+    return [];
+  }
+  const header = tableCells(lines[headerIndex] ?? "");
+  const idIndex = header.indexOf("テストID");
+  const citationIndex = header.indexOf("トレース元");
+  const familyIndex = header.indexOf("family");
+  const rows: CaseRow[] = [];
+  for (const line of lines.slice(headerIndex + 2)) {
+    if (!line.trimStart().startsWith("|")) break;
+    const cells = tableCells(line);
+    const id = cells[idIndex] ?? "";
+    if (!id || id.startsWith("<")) continue;
+    rows.push({
+      id,
+      citations: cells[citationIndex] ?? "",
+      family: cells[familyIndex] ?? "",
+    });
+  }
+  if (rows.length === 0) violations.push("missing section 第3章 テストケース一覧: case rows");
+  return rows;
+}
+
 function g8SlotContent(
   repoRoot: string,
   obligation: CompiledVerificationObligation,
@@ -107,11 +164,34 @@ function g8SlotContent(
   return fmValue(content, "doc_type_id") === "DOC-L8-INTEGRATION-TEST-DESIGN" ? content : null;
 }
 
+function g9SlotContent(
+  repoRoot: string,
+  obligation: CompiledVerificationObligation,
+): string | null {
+  const slot = resolveAuthoringSourceAbsolutePath(repoRoot, obligation.governanceArtifact);
+  if (!existsSync(slot)) return null;
+  const content = readFileSync(slot, "utf8");
+  return fmValue(content, "doc_type_id") === "DOC-L9-SYSTEM-TEST-DESIGN" ? content : null;
+}
+
 function pairLayerIds(repoRoot: string, pairLayers: readonly string[]): Set<string> {
   const ids = new Set<string>();
   for (const doc of loadPairDocs(repoRoot)) {
     const layer = designLayerFromPath(doc.path);
     if (!doc.content || !layer || !pairLayers.includes(layer)) continue;
+    const docTypeId = fmValue(doc.content, "doc_type_id");
+    if (docTypeId) ids.add(docTypeId);
+    for (const match of doc.content.matchAll(/\*\*([A-Z][A-Z0-9]*(?:-[A-Z0-9]+)+)\*\*/g)) {
+      ids.add(match[1] as string);
+    }
+  }
+  return ids;
+}
+
+function allDesignIds(repoRoot: string): Set<string> {
+  const ids = new Set<string>();
+  for (const doc of loadPairDocs(repoRoot)) {
+    if (!doc.content) continue;
     const docTypeId = fmValue(doc.content, "doc_type_id");
     if (docTypeId) ids.add(docTypeId);
     for (const match of doc.content.matchAll(/\*\*([A-Z][A-Z0-9]*(?:-[A-Z0-9]+)+)\*\*/g)) {
@@ -153,6 +233,49 @@ function checkCaseTraces(
   }
 }
 
+function checkG9CaseTraces({
+  rows,
+  pairIds,
+  definedIds,
+  violations,
+}: {
+  rows: readonly CaseRow[];
+  pairIds: ReadonlySet<string>;
+  definedIds: ReadonlySet<string>;
+  violations: string[];
+}): void {
+  for (const row of rows) {
+    const citedIds = [...row.citations.matchAll(/\b[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)+\b/g)].map(
+      (match) => match[0],
+    );
+    if (!citedIds.some((id) => pairIds.has(id))) {
+      violations.push(`untraced case ${row.id}`);
+    }
+    for (const id of citedIds) {
+      if (!definedIds.has(id)) violations.push(`trace target missing ${id}`);
+    }
+  }
+}
+
+function checkG9Families(
+  rows: readonly CaseRow[],
+  evidenceFamilies: readonly string[],
+  violations: string[],
+): void {
+  const found = new Set<string>();
+  for (const row of rows) {
+    const family = stringValue(row.family);
+    if (!evidenceFamilies.includes(family)) {
+      violations.push(`invalid evidence family ${family || "<empty>"} for ${row.id}`);
+    } else {
+      found.add(family);
+    }
+  }
+  for (const family of evidenceFamilies) {
+    if (!found.has(family)) violations.push(`missing evidence family ${family}`);
+  }
+}
+
 function manifestFiles(repoRoot: string, evidenceDirectory: string): string[] {
   const absoluteDirectory = resolve(repoRoot, evidenceDirectory);
   if (!existsSync(absoluteDirectory)) return [];
@@ -176,12 +299,33 @@ function resolveRepoFile(repoRoot: string, path: unknown): string | null {
   return absolutePath;
 }
 
+function parseG9EvidenceManifest(path: string, raw: unknown) {
+  if (!isRecord(raw)) return parseG8IntegrationEvidenceManifest(path, raw);
+  const commands = Array.isArray(raw.commands)
+    ? raw.commands.map((command) =>
+        isRecord(command) ? { ...command, it_ids: command.st_ids } : command,
+      )
+    : raw.commands;
+  const coverage = Array.isArray(raw.coverage)
+    ? raw.coverage.map((entry) => (isRecord(entry) ? { ...entry, it_id: entry.st_id } : entry))
+    : raw.coverage;
+  return parseG8IntegrationEvidenceManifest(path, {
+    ...raw,
+    selected_it_ids: raw.selected_st_ids,
+    mandatory_it_ids: raw.mandatory_st_ids,
+    deferred_it_ids: raw.deferred_st_ids,
+    commands,
+    coverage,
+  });
+}
+
 function checkManifest({
   repoRoot,
   absolutePath,
   evidenceDirectory,
   obligation,
   caseIds,
+  deferCaseIdField,
   violations,
 }: CheckManifestInput): { mandatoryIds: Set<string>; deferredIds: Set<string> } {
   const path = manifestPath(repoRoot, absolutePath);
@@ -196,7 +340,10 @@ function checkManifest({
     violations.push(`${path}: manifest must be an object`);
     return { mandatoryIds: new Set(), deferredIds: new Set() };
   }
-  const evidence = parseG8IntegrationEvidenceManifest(path, parsed);
+  const evidence =
+    obligation.gate === "G9"
+      ? parseG9EvidenceManifest(path, parsed)
+      : parseG8IntegrationEvidenceManifest(path, parsed);
   violations.push(
     ...validateG8IntegrationEvidenceManifest(evidence, repoRoot, {
       gate: obligation.gate,
@@ -215,7 +362,7 @@ function checkManifest({
   }
   for (const id of deferredIds) {
     const deferEntries = Array.isArray(evidence.defer) ? evidence.defer : [];
-    const defer = deferEntries.find((entry) => isRecord(entry) && entry.it_id === id);
+    const defer = deferEntries.find((entry) => isRecord(entry) && entry[deferCaseIdField] === id);
     if (!isRecord(defer) || !stringValue(defer.reason) || !stringValue(defer.plan_id)) {
       violations.push(`${path}: stale defer ${id}`);
       continue;
@@ -246,6 +393,12 @@ export function evaluateRightArmStaticGate(
   messages: string[];
 } {
   const key = gate.trim().toUpperCase();
+  if (key !== "G8" && key !== "G9") {
+    return {
+      passed: false,
+      messages: [`right-arm-static - violation: no evaluator for ${key}`],
+    };
+  }
   const registry = loadCompiledRightArmRegistry(
     repoRoot,
     readGateAssetText(repoRoot, VMODEL_CONTRACT_PATH),
@@ -258,10 +411,14 @@ export function evaluateRightArmStaticGate(
     };
   }
   const violations: string[] = [];
-  const slot = g8SlotContent(repoRoot, obligation);
-  if (!slot) violations.push("missing slot DOC-L8-INTEGRATION-TEST-DESIGN");
+  const slot =
+    key === "G9" ? g9SlotContent(repoRoot, obligation) : g8SlotContent(repoRoot, obligation);
+  const slotDocTypeId =
+    key === "G9" ? "DOC-L9-SYSTEM-TEST-DESIGN" : "DOC-L8-INTEGRATION-TEST-DESIGN";
+  if (!slot) violations.push(`missing slot ${slotDocTypeId}`);
   const content = slot ?? "";
-  const rows = parseG8CaseRows(content, violations);
+  const rows =
+    key === "G9" ? parseG9CaseRows(content, violations) : parseG8CaseRows(content, violations);
   const caseIds = new Set(rows.map((row) => row.id));
   checkCaseIds({
     rows,
@@ -269,7 +426,13 @@ export function evaluateRightArmStaticGate(
     content,
     violations,
   });
-  checkCaseTraces(rows, pairLayerIds(repoRoot, obligation.pairLayers), violations);
+  const pairIds = pairLayerIds(repoRoot, obligation.pairLayers);
+  if (key === "G9") {
+    checkG9CaseTraces({ rows, pairIds, definedIds: allDesignIds(repoRoot), violations });
+    checkG9Families(rows, obligation.evidenceFamilies, violations);
+  } else {
+    checkCaseTraces(rows, pairIds, violations);
+  }
   const evidenceDirectory = dirname(obligation.evidenceManifest).replaceAll("\\", "/");
   const files = manifestFiles(repoRoot, evidenceDirectory);
   if (files.length === 0) violations.push(`evidence manifest missing under ${evidenceDirectory}`);
@@ -281,6 +444,7 @@ export function evaluateRightArmStaticGate(
       evidenceDirectory,
       obligation,
       caseIds,
+      deferCaseIdField: key === "G9" ? "st_id" : "it_id",
       violations,
     });
     for (const id of [...manifestResult.mandatoryIds, ...manifestResult.deferredIds])
