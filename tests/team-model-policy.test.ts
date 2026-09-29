@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { OPENAI_PRICING } from "../src/state-db/token-tracker.ts";
 import { TIER_TABLE } from "../src/task/tier-router-policy.ts";
 import { buildAdvisorDecision, resolveAdvisorRoutes } from "../src/team/advisor-policy.ts";
+import { resolveDelegationRouting } from "../src/team/delegation-routing.ts";
 import {
   advisorHeavyUseRecommended,
   escalateShallowResponse,
@@ -14,7 +15,6 @@ import {
   REVIEW_LANES,
   selectTeamModel,
 } from "../src/team/model-policy.ts";
-import { resolveDelegationRouting } from "../src/team/delegation-routing.ts";
 
 describe("team model policy", () => {
   it("CANDIDATE-U-SONALIAS-003: Claude effort ladder keeps the approved family shapes", () => {

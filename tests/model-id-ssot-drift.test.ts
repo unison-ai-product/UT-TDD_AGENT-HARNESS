@@ -88,7 +88,9 @@ describe("U-MODELID-SSOT: model ID single source of truth", () => {
     ]);
     const haikuEfforts = new Set(["pmo-haiku.md", "pmo-project-scout.md", "refactor-scout.md"]);
     const dir = join(repoRoot, ".claude", "agents");
-    const agentNames = readdirSync(dir).filter((name) => name.endsWith(".md")).sort();
+    const agentNames = readdirSync(dir)
+      .filter((name) => name.endsWith(".md"))
+      .sort();
     expect(agentNames).toEqual(expectedNames.sort());
 
     for (const name of expectedNames) {
@@ -100,8 +102,9 @@ describe("U-MODELID-SSOT: model ID single source of truth", () => {
         expect(text.match(/^effort:\s*(\S+)\s*$/m)?.[1], `${name} Sonnet effort`).toBe("high");
       }
       if (opusEfforts.has(name)) {
-        expect(text.match(/^effort:\s*(\S+)\s*$/m)?.[1], `${name} Opus effort`)
-          .toBe(opusEfforts.get(name));
+        expect(text.match(/^effort:\s*(\S+)\s*$/m)?.[1], `${name} Opus effort`).toBe(
+          opusEfforts.get(name),
+        );
       }
       if (haikuEfforts.has(name)) {
         expect(text.match(/^effort:\s*(\S+)\s*$/m)?.[1], `${name} Haiku effort`).toBe("low");
