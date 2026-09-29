@@ -50,20 +50,23 @@ dependencies:
 review_evidence: []
 status: draft
 github_issue_id: 742
+supersedes:
+  - PLAN-L7-492-pf5-release-aggregate-admission-pair-freeze
+  - PLAN-L7-494-release-promotion-rollback-gate
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:f787a6e0b076a4db67323a906329bde3
-  command_id: plan-draft:issue-742:aggregate-v2-cardinality:forward:1
-  admitted_at: 2026-09-29T05:04:00.106Z
-  source_digest: sha256:cca41bdb390c619efaa0127d40e88ad37dabeca1f756a37d3ec7125817b403ce
-  decision_digest: sha256:74ebaa7447376597ab5a6149476bdd27e4b2e7b7cf240514091d24d5932e70e5
-  receipt_digest: sha256:b6cf4fd7ec2347cfd65f66eab9ea77fd4fefd6b858b5347e82d61f9f3556bb90
+  receipt_id: certificate:d8716ba95cdfc9e5721c0ff632307c75
+  command_id: plan-revise:issue-742:supersedes-restore:forward:r2:16de02fee8ac
+  admitted_at: 2026-09-29T05:16:38.050Z
+  source_digest: sha256:df927cf20e8d590bbd2c26e1ee82e6bc8d755343b78afdc58f020686d1b517af
+  decision_digest: sha256:ee4e96a591437c5b82cbf351bcd2a0d6c48a74ad44707d74027420f5d7ace8a4
+  receipt_digest: sha256:cf0e57a7d8b7b67ab9850631c307090306061c9a66abd20f0312adf384182497
   binding:
     path: docs/plans/PLAN-L7-742-release-aggregate-v2-inventory-cardinality.md
     plan_id: PLAN-L7-742-release-aggregate-v2-inventory-cardinality
     asset_id: plan:f787a6e0b076a4db67323a906329bde3
-    revision: 1
-    content_digest: sha256:cca41bdb390c619efaa0127d40e88ad37dabeca1f756a37d3ec7125817b403ce
+    revision: 2
+    content_digest: sha256:df927cf20e8d590bbd2c26e1ee82e6bc8d755343b78afdc58f020686d1b517af
   route:
     signal: feature_addition
     mode: add-feature
@@ -81,12 +84,14 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-742-release-aggregate-v2-inventory-cardinality
-    target_revision: 1
+    target_revision: 2
     phase: forward_merge
-  escape_reason: "Issue #742: PF-5 aggregate admission (PLAN-L7-492 §1 (C)) が v1 の
-    channel mapping 1 件前提のまま v2 multi-artifact inventory (PLAN-L7-499) を
-    missing_channel_mapping で拒否し、#418 canary PR-1 が進めない。v2 の基数契約 (mapping 列 =
-    selected artifacts 列の順序付き完全一致) を定める add-impl の新規起票。"
+  escape_reason: "PR #744 Sol r1 FLAG: plan draft で frontmatter の supersedes
+    (PLAN-L7-492 / PLAN-L7-494 の節限定部分 supersede) が落ちたため、admission.supersedes
+    経由で復元する。"
+  supersedes:
+    - PLAN-L7-492-pf5-release-aggregate-admission-pair-freeze
+    - PLAN-L7-494-release-promotion-rollback-gate
 ---
 
 
