@@ -5,6 +5,8 @@
 - Decision owners: PO / TL
 - Related: `PLAN-L0-01`, `PLAN-L4-22`, `PLAN-L4-23`, `PLAN-L4-24`
 
+> **決定の更新 (2026-09-29)**: 本 ADR 本文の「TS/Bun」は現行では「TS/Node」と読み替える (Node authority sealed、Bun は永久禁止 #134)。決定の骨子 (Forward FSM・PLAN Asset v2) は不変で、実行系のみ Node authority へ移行済み。
+
 ## Context
 
 現行 HARNESS は TypeScript/Bun core、SQLite projection、豊富な lint/doctor、Git履歴を持つ一方、Forward の
