@@ -55,18 +55,18 @@ supersedes:
   - PLAN-L7-494-release-promotion-rollback-gate
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:39a415d5115954aea97aa3a24b70a2ef
-  command_id: plan-revise:issue-742:attestation-composition:forward:r4:03455264e175
-  admitted_at: 2026-09-29T05:51:26.114Z
-  source_digest: sha256:45b12d3144ae5cd6202d74302622af48b829c3e2192dc02d3bbe28aee89a49bf
-  decision_digest: sha256:e3fadb54d0e22eeb6111b68e737f23bbc94a686ded5072bfe79388b3793e719f
-  receipt_digest: sha256:c1f247d7023355a8460f3e4e88eab05ed0e9ee556b81f534b68e2ee660f8da3d
+  receipt_id: certificate:7dd1fd819d15e7edfcdc04afdca90736
+  command_id: plan-revise:issue-742:extra-destination-negatives:forward:r5:205e26251cb5
+  admitted_at: 2026-09-29T06:12:16.484Z
+  source_digest: sha256:54ab9624cfbf1857891a7443808cc482490839b137b35cfc86d3dd6c7b169c9e
+  decision_digest: sha256:2e6b09d7cc808b5ce4cb09c242b54159678ebdf4099a8f298ec7ab0b17f3481b
+  receipt_digest: sha256:9a7fc764634eca7b1f8f0d50f92fc2b14e4bf6a98f961f0a5ec90386789edf7e
   binding:
     path: docs/plans/PLAN-L7-742-release-aggregate-v2-inventory-cardinality.md
     plan_id: PLAN-L7-742-release-aggregate-v2-inventory-cardinality
     asset_id: plan:f787a6e0b076a4db67323a906329bde3
-    revision: 4
-    content_digest: sha256:45b12d3144ae5cd6202d74302622af48b829c3e2192dc02d3bbe28aee89a49bf
+    revision: 5
+    content_digest: sha256:54ab9624cfbf1857891a7443808cc482490839b137b35cfc86d3dd6c7b169c9e
   route:
     signal: feature_addition
     mode: add-feature
@@ -84,11 +84,12 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-742-release-aggregate-v2-inventory-cardinality
-    target_revision: 4
+    target_revision: 5
     phase: forward_merge
-  escape_reason: "PR #744 r3 Sol 指摘: 正規 producer では attestation が resolver /
-    materializer を内包するため、条件 4 の negative (004) に materializer count 0
-    を要求できない。003 / 004 の count 対象を apply / write に訂正する。"
+  escape_reason: "PR #744 r4 root 側 Sol 指摘: promotion 008 / rollback 009 に v2
+    variant の余剰 destinationPath を直接渡す負系 oracle が無く、各 shape 検証が余剰スカラーを受理しても候補全件
+    Green になる。008(g) / 009(b) と M6 / M7 を追補する (#744 は是正上限到達のため close し本 branch
+    で再提出)。"
   supersedes:
     - PLAN-L7-492-pf5-release-aggregate-admission-pair-freeze
     - PLAN-L7-494-release-promotion-rollback-gate
@@ -211,6 +212,9 @@ aggregate を照合しており、v2 multi-artifact では「任意の 1 mapping
   precedence も変えない (`PLAN-L7-494` §2)。
 - rollback (`selectRollbackCandidate`) は sealed plan の shape 検証 (F11) を判別共用体に追随させるだけで、
   候補選択の意味は変えない。
+- §2.2 の「v2 variant に余剰のスカラー `destinationPath` がある sealed plan は shape 不正」は、consumer-local
+  admission だけでなく promotion gate と rollback の shape 検証 (それぞれの `validSealedPlanShape` 相当) にも
+  同じく適用する。reason は既存の `invalid_input` で、precedence は変えない (rev 5)。
 
 ### 2.4 canary channel 判定 (別 finding、本 PLAN では直さない)
 
@@ -282,8 +286,8 @@ write の呼出し count 0」、post-attestation 条件 4 の negative (004) は
 | `CANDIDATE-U-RELAGGV2-005` | v1 回帰 | (a) v1 channel に mapping 1 件 / (b) v1 channel に mapping 2 件 | (a) `ok: true`、v1 variant が `destinationPath` を保持 / (b) `missing_channel_mapping` |
 | `CANDIDATE-U-RELAGGV2-006` | consumer-local admission | (a) N=3 の v2 sealed plan / (b) v2 variant に余剰 `destinationPath` / (c) v1 variant | (a) 受入 / (b)(c) fail-close |
 | `CANDIDATE-U-RELAGGV2-007` | promotion positive | v2 N=3、`mappings` と sealed entries が artifacts と順序一致、他 evidence は既存 allow fixture | `decision: "allow"`、`sideEffects: "none"` |
-| `CANDIDATE-U-RELAGGV2-008` | promotion negative | (a) `mappings` 順序入替 / (b) `mappings` N-1 件 / (c) sealed entries 順序入替 / (d) sealed entries N-1 件 / (e) 1 mapping の destination が entries と不一致 / (f) v1 で `mappings` 2 件 | 全て `deny` / `identity_mismatch`、promotion 先 write 0 |
-| `CANDIDATE-U-RELAGGV2-009` | rollback shape | v2 variant の sealed plan を持つ rollback 候補 | shape 検証を通過し、候補選択結果は v1 fixture と同じ規則 (意味不変) |
+| `CANDIDATE-U-RELAGGV2-008` | promotion negative | (a) `mappings` 順序入替 / (b) `mappings` N-1 件 / (c) sealed entries 順序入替 / (d) sealed entries N-1 件 / (e) 1 mapping の destination が entries と不一致 / (f) v1 で `mappings` 2 件 / (g) 他は正常な v2 variant の sealed plan に余剰のスカラー `destinationPath` | (a)〜(f) は `deny` / `identity_mismatch`、(g) は `deny` / 既存 `invalid_input` (shape 不正、precedence 不変)。全て promotion 先 write 0 |
+| `CANDIDATE-U-RELAGGV2-009` | rollback shape | (a) v2 variant の sealed plan を持つ rollback 候補 / (b) 他は正常な v2 variant の sealed plan に余剰のスカラー `destinationPath` を持つ rollback 候補 | (a) shape 検証を通過し、候補選択結果は v1 fixture と同じ規則 (意味不変) / (b) 既存 `invalid_input` で fail-close し、候補として選ばれない |
 
 mutation probe (実装 PR の review packet に、どの出現を除去したかを file:line で明記する):
 
@@ -292,6 +296,8 @@ mutation probe (実装 PR の review packet に、どの出現を除去したか
 - M3: promotion gate が `mappings[0]` だけを照合する → 008(a)(b)(e) が Red。
 - M4: v1 分岐を削除して v1 でも N 件を許す → 005(b) / 008(f) が Red。
 - M5: attestation entries の path 束縛を削除する → 004 が Red。
+- M6: promotion gate の sealed plan shape 検証が v2 variant の余剰 `destinationPath` を受理する → 008(g) が Red。
+- M7: rollback の sealed plan shape 検証が v2 variant の余剰 `destinationPath` を受理する → 009(b) が Red。
 
 ## 6. 受入基準 (AC)
 
