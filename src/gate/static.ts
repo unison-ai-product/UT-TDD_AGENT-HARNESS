@@ -11,6 +11,11 @@ import {
   g9SystemWorkflowMessages,
   loadG9SystemWorkflowInput,
 } from "../lint/g9-system-workflow.ts";
+import {
+  analyzeG10UxWorkflow,
+  g10UxWorkflowMessages,
+  loadG10UxWorkflowInput,
+} from "../lint/g10-ux-workflow.ts";
 import { readGateAssetText } from "../lint/gate-confirm.ts";
 import {
   analyzeImplPlanTrace,
@@ -322,6 +327,28 @@ export function evaluateStaticGate(input: StaticGateInput): StaticGateResult {
           passed: workflow.ok,
           messages: [
             ...g9SystemWorkflowMessages(workflow),
+            `未判定 (review): ${obligation.approvalRole}`,
+          ],
+        };
+      }
+      const result = evaluateRightArmStaticGate(key, repoRoot);
+      return { gate: input.gate, applicable: true, ...result };
+    }
+    if (key === "G10") {
+      if (resolveDesignRoot(repoRoot) === "docs/design/harness") {
+        const workflow = analyzeG10UxWorkflow(loadG10UxWorkflowInput(repoRoot));
+        const registry = loadCompiledRightArmRegistry(
+          repoRoot,
+          readGateAssetText(repoRoot, VMODEL_CONTRACT_PATH),
+        );
+        const obligation = registry.obligations.find((entry) => entry.gate === key);
+        if (!obligation) throw new Error(`contract has no obligation for ${key}`);
+        return {
+          gate: input.gate,
+          applicable: true,
+          passed: workflow.ok,
+          messages: [
+            ...g10UxWorkflowMessages(workflow),
             `未判定 (review): ${obligation.approvalRole}`,
           ],
         };
