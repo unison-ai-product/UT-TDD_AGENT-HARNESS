@@ -47,18 +47,18 @@ status: draft
 github_issue_id: 742
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:61a67f9437e1fff919b21b9c9c3aa7ce
-  command_id: plan-draft:issue-742:aggregate-v2-cardinality:reverse:1
-  admitted_at: 2026-09-29T05:04:30.925Z
-  source_digest: sha256:967b4b9d14495b311b4d8b14741def2f41ad743ce80f11f65929fd7edf7ea70a
-  decision_digest: sha256:dec934fe7f0a473e821cc06f86267076fcbcec7c4e90b166873fee1b4cf318d8
-  receipt_digest: sha256:dca61a9bce9faeeb0616d520859ff9526b2de7e331ce9a7c637f71c656aa4fb8
+  receipt_id: certificate:d8fe0f9d5b294b85b4c4a158b141170d
+  command_id: plan-revise:issue-742:r2-m6-m7:reverse:r2:27d3c89b23c5
+  admitted_at: 2026-09-29T06:21:56.502Z
+  source_digest: sha256:c8cf7a080ae861b732362b3dfb4c9210699c8c50e85301e5176580c6acb9e5cd
+  decision_digest: sha256:309de4e27a843036c157a9bbd3192fd9cf09bcf3b42e09b1e9c0e2f2ac9c154b
+  receipt_digest: sha256:e011ad76d63671f96b3aa871de71ba82d9ea1fc609bd7aa7af9cea6b1a0c20bb
   binding:
     path: docs/plans/PLAN-REVERSE-742-release-aggregate-v2-inventory-cardinality-backfill.md
     plan_id: PLAN-REVERSE-742-release-aggregate-v2-inventory-cardinality-backfill
     asset_id: plan:61a67f9437e1fff919b21b9c9c3aa7ce
-    revision: 1
-    content_digest: sha256:967b4b9d14495b311b4d8b14741def2f41ad743ce80f11f65929fd7edf7ea70a
+    revision: 2
+    content_digest: sha256:c8cf7a080ae861b732362b3dfb4c9210699c8c50e85301e5176580c6acb9e5cd
   route:
     signal: reverse
     mode: reverse
@@ -76,10 +76,11 @@ admission_receipt:
     implementation_disposition: preserved
   reentry:
     target_plan_id: PLAN-L7-742-release-aggregate-v2-inventory-cardinality
-    target_revision: 1
+    target_revision: 6
     phase: forward_merge
-  escape_reason: "Issue #742: PLAN-L7-742 の v2 基数契約を PLAN-L6-63 / PLAN-L6-102
-    へ逆向き照合する Reverse 対の R0 起票。"
+  escape_reason: "PR #748 Sol r1 FLAG: Reverse R2 が M1〜M5
+    の実測照合しか要求していないため、PLAN-L7-742 rev 6 に合わせて M1〜M7 と 3 経路の第 2 destination
+    再混入観点に更新する。"
 ---
 
 
@@ -109,10 +110,10 @@ identity) と draft `PLAN-L6-102` (promotion 条件 1 / 5) の意味へ逆向き
 
 ## R2: 実測照合 (実装 PR 着地後に記入)
 
-- `CANDIDATE-U-RELAGGV2-001..009` を独立に再実行し、`PLAN-L7-742` §5 の mutation M1〜M5 がそれぞれ
-  対応 oracle を Red にすることを確認する。
+- `CANDIDATE-U-RELAGGV2-001..009` を独立に再実行し、`PLAN-L7-742` §5 の mutation M1〜M7 がそれぞれ
+  対応 oracle を Red にすることを確認する (M6 / M7 = promotion / rollback の余剰 destinationPath 負系 008(g) / 009(b))。
 - 攻撃観点: (a) 先頭 1 件だけの照合、(b) 集合一致への弱化 (順序入替・重複の見逃し)、(c) v1 へ N 件が
-  流入する分岐欠落、(d) sealed plan への第 2 destination 記録の再混入、(e) channel 名 (`stable` /
+  流入する分岐欠落、(d) sealed plan への第 2 destination 記録の再混入 (consumer-local / promotion / rollback の 3 経路全て)、(e) channel 名 (`stable` /
   `canary`) による結果差。
 
 ## R3: gap 判定 (記入予定)

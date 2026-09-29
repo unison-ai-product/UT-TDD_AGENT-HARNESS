@@ -5584,6 +5584,22 @@
         "revision": 6,
         "content_digest": "sha256:ae4344338dfdfe07e69b0950b4aaef17f32378e8c32ca602a0549de60de257d5"
       }
+    },
+    {
+      "sequence": 350,
+      "previous_record_digest": "sha256:ed787cccd14dac64e34107aa2958bc9350f26fd4255f35ec19aced4f4a4296d1",
+      "record_digest": "sha256:d46ff1e5dd160d7159626c7cb7e9250babbe6b0cf5539b2235738e1903c59756",
+      "command_id": "plan-revise:issue-742:r2-m6-m7:reverse:r2:27d3c89b23c5",
+      "receipt_id": "certificate:d8fe0f9d5b294b85b4c4a158b141170d",
+      "receipt_digest": "sha256:e011ad76d63671f96b3aa871de71ba82d9ea1fc609bd7aa7af9cea6b1a0c20bb",
+      "decision_digest": "sha256:309de4e27a843036c157a9bbd3192fd9cf09bcf3b42e09b1e9c0e2f2ac9c154b",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-742-release-aggregate-v2-inventory-cardinality-backfill.md",
+        "plan_id": "PLAN-REVERSE-742-release-aggregate-v2-inventory-cardinality-backfill",
+        "asset_id": "plan:61a67f9437e1fff919b21b9c9c3aa7ce",
+        "revision": 2,
+        "content_digest": "sha256:c8cf7a080ae861b732362b3dfb4c9210699c8c50e85301e5176580c6acb9e5cd"
+      }
     }
   ]
 }
