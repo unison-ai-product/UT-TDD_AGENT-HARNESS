@@ -5408,6 +5408,22 @@
         "revision": 2,
         "content_digest": "sha256:24240d3fae9e2dc2c0c6afe12aec5d2877538780962cc56931b036ec4d8c4615"
       }
+    },
+    {
+      "sequence": 339,
+      "previous_record_digest": "sha256:f484abe3b98d7598f6d5591aefb23643a4bd828349d66cf1d265e253fb4a48ae",
+      "record_digest": "sha256:a73c1c6343ac6c1dda1fa350ff4b01f5c841ae8e6723d2a32763f385bc2ca019",
+      "command_id": "plan-revise:issue-733:sonnet-alias:plan:r3:9214e2983b40",
+      "receipt_id": "certificate:8104a7bcf5801eec9b0f71ec28e610bc",
+      "receipt_digest": "sha256:ca6323ad45bcf34529eb26e401e398b5cef7935e35aa010be15f71d974e6c2bd",
+      "decision_digest": "sha256:ed47b4b86649a314e35bab3a24e24ce9afa8139f39bce5625710f33bde3417a2",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-733-sonnet-alias-effort-high.md",
+        "plan_id": "PLAN-L7-733-sonnet-alias-effort-high",
+        "asset_id": "plan:f0bcd70afbb592bba5d40bc3382cf326",
+        "revision": 3,
+        "content_digest": "sha256:867e8b6beb743e9c90cdc0f3d6b2d83a0d68ce627a81d87dfa8851e18a0ef880"
+      }
     }
   ]
 }
