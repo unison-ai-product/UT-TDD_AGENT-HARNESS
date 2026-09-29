@@ -835,6 +835,178 @@ function firstConsumerG11Command(
   return command;
 }
 
+const G12_CONSUMER_CASE_IDS = ["AT-FR-01-01", "AT-CONSUMER-02"] as const;
+const G12_EVIDENCE_DIRECTORY = "g12-acceptance";
+const G12_DEPLOY_RECEIPT_PATH = ".ut-tdd/evidence/g12-acceptance/artifacts/deploy-receipt.json";
+const G12_ROLLBACK_READINESS_PATH =
+  ".ut-tdd/evidence/g12-acceptance/artifacts/rollback-readiness.json";
+
+type ConsumerG12Manifest = {
+  schema_version: string;
+  gate: string;
+  profile: string;
+  plan_id: string;
+  selected_at_ids: string[];
+  mandatory_at_ids: string[];
+  deferred_at_ids: string[];
+  commands: {
+    command_id: string;
+    command: string;
+    runner: string;
+    scope: string;
+    exit_code: number;
+    evidence_path: string;
+    output_digest: string;
+    at_ids: string[];
+  }[];
+  coverage: {
+    at_id: string;
+    status: string;
+    evidence_paths: string[];
+    command_ids: string[];
+  }[];
+  defer: { at_id: string; reason: string; plan_id: string }[];
+  exit_criteria: {
+    all_mandatory_passed: boolean;
+    failed_mandatory_count: number;
+    stale_defer_count: number;
+    doctor_check: string;
+  };
+  artifacts: Record<string, string>;
+};
+
+function consumerG12Manifest(): ConsumerG12Manifest {
+  const commandId = "cmd-consumer-acceptance";
+  const acceptancePath = "tests/fixtures/g12-consumer/acceptance-results.txt";
+  return {
+    schema_version: "g12-acceptance-evidence-v1",
+    gate: "G12",
+    profile: "consumer-acceptance-minimum",
+    plan_id: "PLAN-CONSUMER-01",
+    selected_at_ids: [...G12_CONSUMER_CASE_IDS],
+    mandatory_at_ids: [...G12_CONSUMER_CASE_IDS],
+    deferred_at_ids: [],
+    commands: [
+      {
+        command_id: commandId,
+        command: "node tests/consumer-acceptance-check.mjs",
+        runner: "node",
+        scope: "consumer fixture",
+        exit_code: 0,
+        evidence_path: "tests/fixtures/g12-consumer/command-output.txt",
+        output_digest: "sha256:" + "0".repeat(64),
+        at_ids: [...G12_CONSUMER_CASE_IDS],
+      },
+    ],
+    coverage: G12_CONSUMER_CASE_IDS.map((atId) => ({
+      at_id: atId,
+      status: "passed",
+      evidence_paths: [acceptancePath],
+      command_ids: [commandId],
+    })),
+    defer: [],
+    exit_criteria: {
+      all_mandatory_passed: true,
+      failed_mandatory_count: 0,
+      stale_defer_count: 0,
+      doctor_check: "g12-acceptance-workflow",
+    },
+    artifacts: {
+      deploy_receipt: G12_DEPLOY_RECEIPT_PATH,
+      acceptance_results: acceptancePath,
+      rollback_readiness: G12_ROLLBACK_READINESS_PATH,
+    },
+  };
+}
+
+function writeConsumerG12Fixture(root: string): void {
+  writeConsumerGateFixture(root);
+  const caseTablePath = join(root, "docs/test-design/L12-acceptance-test-design.md");
+  const caseRows = [
+    "| AT-FR-01-01 | 受入 | Consumer function の受入 | 手順どおり実行する | 合格 | AC-FR-01-01 |",
+    "| AT-CONSUMER-02 | 受入 | 非機能の受入 | 計測する | 閾値内 | NFR-01 |",
+  ].join("\n");
+  const caseDesign = readFileSync(caseTablePath, "utf8").replace(
+    "| <記入> | <記入> | <記入> | <記入> | <記入> | <記入> |",
+    caseRows,
+  );
+  writeFileSync(caseTablePath, caseDesign, "utf8");
+  writeFixtureDoc(root, "tests/fixtures/g12-consumer/acceptance-results.txt", "passed\n");
+  writeFixtureDoc(root, "tests/fixtures/g12-consumer/command-output.txt", "passed\n");
+  writeFixtureDoc(
+    root,
+    G12_DEPLOY_RECEIPT_PATH,
+    JSON.stringify(
+      {
+        revision: "0123456789abcdef0123456789abcdef01234567",
+        environment: "staging",
+      },
+      null,
+      2,
+    ) + "\n",
+  );
+  writeFixtureDoc(
+    root,
+    G12_ROLLBACK_READINESS_PATH,
+    JSON.stringify(
+      {
+        rollback_command: "git revert --no-edit 0123456789abcdef0123456789abcdef01234567",
+        verified_at: "2026-09-29T00:00:00Z",
+      },
+      null,
+      2,
+    ) + "\n",
+  );
+  writeFixtureDoc(
+    root,
+    ".ut-tdd/evidence/g12-acceptance/ok.json",
+    JSON.stringify(consumerG12Manifest(), null, 2) + "\n",
+  );
+}
+
+function updateConsumerG12Manifest(
+  root: string,
+  mutate: (manifest: ConsumerG12Manifest) => void,
+): void {
+  const path = join(root, ".ut-tdd", "evidence", G12_EVIDENCE_DIRECTORY, "ok.json");
+  const manifest = JSON.parse(readFileSync(path, "utf8")) as ConsumerG12Manifest;
+  mutate(manifest);
+  writeFileSync(path, JSON.stringify(manifest, null, 2) + "\n", "utf8");
+}
+
+function updateConsumerG12Design(root: string, mutate: (content: string) => string): void {
+  const path = join(root, "docs/test-design/L12-acceptance-test-design.md");
+  writeFileSync(path, mutate(readFileSync(path, "utf8")), "utf8");
+}
+
+function firstConsumerG12Command(
+  manifest: ConsumerG12Manifest,
+): ConsumerG12Manifest["commands"][number] {
+  const command = manifest.commands[0];
+  if (!command) throw new Error("consumer G12 fixture command is missing");
+  return command;
+}
+
+function updateConsumerG12DeployReceipt(
+  root: string,
+  mutate: (receipt: Record<string, unknown>) => void,
+): void {
+  const path = join(root, G12_DEPLOY_RECEIPT_PATH);
+  const receipt = JSON.parse(readFileSync(path, "utf8")) as Record<string, unknown>;
+  mutate(receipt);
+  writeFileSync(path, JSON.stringify(receipt, null, 2) + "\n", "utf8");
+}
+
+function updateConsumerG12RollbackReadiness(
+  root: string,
+  mutate: (readiness: Record<string, unknown>) => void,
+): void {
+  const path = join(root, G12_ROLLBACK_READINESS_PATH);
+  const readiness = JSON.parse(readFileSync(path, "utf8")) as Record<string, unknown>;
+  mutate(readiness);
+  writeFileSync(path, JSON.stringify(readiness, null, 2) + "\n", "utf8");
+}
+
 function makeWritableTree(path: string): void {
   const stat = statSync(path);
   chmodSync(path, stat.isDirectory() ? 0o700 : 0o600);
@@ -1925,6 +2097,281 @@ describe("PR-G10 consumer G10 predicates", () => {
   });
 });
 
+describe("PR-G12 consumer G12 predicates", () => {
+  it("U-RCDEV-033: evaluates the normal consumer G12 acceptance contract", () => {
+    const root = fixtureRoot();
+    writeConsumerG12Fixture(root);
+
+    const result = evaluateStaticGate({ gate: "G12", repoRoot: root });
+    const messages = result.messages.join("\n");
+
+    expect(result.applicable).toBe(true);
+    expect(result.passed).toBe(true);
+    expect(messages).toContain("未判定 (review): PO/TL");
+  });
+
+  it("U-RCDEV-033: requires the L12 template title, all chapters, and G8 case-table columns (S)", () => {
+    const template = readFileSync(
+      join(process.cwd(), "docs/templates/vmodel/L12-acceptance-test-design.md"),
+      "utf8",
+    );
+    const title = template.split(/\r?\n/).find((line) => /^# DOC-L12-ACCEPTANCE:/.test(line));
+    const headings = template.split(/\r?\n/).filter((line) => /^#{4,5} /.test(line));
+    expect(title).toBeDefined();
+    expect(headings).toHaveLength(10);
+
+    const titleRoot = fixtureRoot();
+    writeConsumerG12Fixture(titleRoot);
+    updateConsumerG12Design(titleRoot, (content) => content.replace(title ?? "", ""));
+    const titleResult = evaluateStaticGate({ gate: "G12", repoRoot: titleRoot });
+    expect(titleResult.passed).toBe(false);
+    expect(titleResult.messages.join("\n")).toContain("missing section " + title);
+
+    for (const heading of headings) {
+      const root = fixtureRoot();
+      writeConsumerG12Fixture(root);
+      updateConsumerG12Design(root, (content) =>
+        content
+          .split(/\r?\n/)
+          .filter((line) => line !== heading)
+          .join("\n"),
+      );
+      const result = evaluateStaticGate({ gate: "G12", repoRoot: root });
+      expect(result.applicable, heading).toBe(true);
+      expect(result.passed, heading).toBe(false);
+      expect(result.messages.join("\n"), heading).toContain("missing section " + heading);
+    }
+
+    const requiredColumns = [
+      "テストID",
+      "分類",
+      "テスト項目",
+      "検証内容/手順",
+      "期待結果",
+      "トレース元",
+    ];
+    const header = "| " + requiredColumns.join(" | ") + " |";
+    for (const missingColumn of requiredColumns) {
+      const root = fixtureRoot();
+      writeConsumerG12Fixture(root);
+      updateConsumerG12Design(root, (content) =>
+        content.replace(header, header.replace(missingColumn, "")),
+      );
+      const result = evaluateStaticGate({ gate: "G12", repoRoot: root });
+      const messages = result.messages.join("\n");
+      expect(result.applicable, missingColumn).toBe(true);
+      expect(result.passed, missingColumn).toBe(false);
+      expect(messages, missingColumn).toContain("required case table columns");
+      if (missingColumn === "トレース元") expect(messages).toContain("missing section");
+    }
+  });
+
+  it("U-RCDEV-033: rejects duplicate AT case IDs (I)", () => {
+    const root = fixtureRoot();
+    writeConsumerG12Fixture(root);
+    updateConsumerG12Design(root, (content) =>
+      content.replace("| AT-CONSUMER-02 |", "| AT-FR-01-01 |"),
+    );
+
+    const result = evaluateStaticGate({ gate: "G12", repoRoot: root });
+    const messages = result.messages.join("\n");
+
+    expect(result.applicable).toBe(true);
+    expect(result.passed).toBe(false);
+    expect(messages).toContain("duplicate case id AT-FR-01-01");
+  });
+
+  it("U-RCDEV-033: requires nonempty citations and rejects an undefined L3 AC (T)", () => {
+    const mutations = [
+      {
+        name: "undefined AC",
+        mutate: (root: string) =>
+          updateConsumerG12Design(root, (content) => content.replace("AC-FR-01-01", "AC-FR-99-01")),
+        expected: "trace target missing AC-FR-99-01",
+      },
+      {
+        name: "empty citation",
+        mutate: (root: string) =>
+          updateConsumerG12Design(root, (content) => content.replace("| AC-FR-01-01 |", "| |")),
+        expected: "untraced case AT-FR-01-01",
+      },
+    ];
+    for (const mutation of mutations) {
+      const root = fixtureRoot();
+      writeConsumerG12Fixture(root);
+      mutation.mutate(root);
+
+      const result = evaluateStaticGate({ gate: "G12", repoRoot: root });
+      expect(result.applicable, mutation.name).toBe(true);
+      expect(result.passed, mutation.name).toBe(false);
+      expect(result.messages.join("\n"), mutation.name).toContain(mutation.expected);
+    }
+  });
+
+  it("U-RCDEV-033: rejects a designed AT row omitted from all evidence (F)", () => {
+    const root = fixtureRoot();
+    writeConsumerG12Fixture(root);
+    updateConsumerG12Manifest(root, (manifest) => {
+      const missingId = "AT-CONSUMER-02";
+      manifest.selected_at_ids = manifest.selected_at_ids.filter((id) => id !== missingId);
+      manifest.mandatory_at_ids = manifest.mandatory_at_ids.filter((id) => id !== missingId);
+      firstConsumerG12Command(manifest).at_ids = firstConsumerG12Command(manifest).at_ids.filter(
+        (id) => id !== missingId,
+      );
+      manifest.coverage = manifest.coverage.filter((entry) => entry.at_id !== missingId);
+    });
+
+    const result = evaluateStaticGate({ gate: "G12", repoRoot: root });
+
+    expect(result.applicable).toBe(true);
+    expect(result.passed).toBe(false);
+    expect(result.messages.join("\n")).toContain("missing row evidence AT-CONSUMER-02");
+  });
+
+  it("U-RCDEV-033: rejects a missing contract-required acceptance_results artifact (A)", () => {
+    const root = fixtureRoot();
+    writeConsumerG12Fixture(root);
+    updateConsumerG12Manifest(root, (manifest) => {
+      delete manifest.artifacts.acceptance_results;
+    });
+
+    const result = evaluateStaticGate({ gate: "G12", repoRoot: root });
+
+    expect(result.applicable).toBe(true);
+    expect(result.passed).toBe(false);
+    expect(result.messages.join("\n")).toContain("missing artifact acceptance_results");
+  });
+
+  it("U-RCDEV-033: validates both G12 JSON artifacts and leaves acceptance_results as text", () => {
+    const mutations: {
+      name: string;
+      expected: string;
+      mutate: (root: string) => void;
+    }[] = [
+      {
+        name: "39-character deploy revision",
+        expected: "invalid deploy_receipt.revision",
+        mutate: (root) =>
+          updateConsumerG12DeployReceipt(root, (receipt) => {
+            receipt.revision = "0".repeat(39);
+          }),
+      },
+      {
+        name: "non-hex deploy revision",
+        expected: "invalid deploy_receipt.revision",
+        mutate: (root) =>
+          updateConsumerG12DeployReceipt(root, (receipt) => {
+            receipt.revision = "g" + "0".repeat(39);
+          }),
+      },
+      {
+        name: "missing deploy environment",
+        expected: "deploy_receipt.environment is required",
+        mutate: (root) =>
+          updateConsumerG12DeployReceipt(root, (receipt) => {
+            delete receipt.environment;
+          }),
+      },
+      {
+        name: "missing rollback command",
+        expected: "rollback_readiness.rollback_command is required",
+        mutate: (root) =>
+          updateConsumerG12RollbackReadiness(root, (readiness) => {
+            delete readiness.rollback_command;
+          }),
+      },
+      {
+        name: "timezone-less rollback date",
+        expected: "invalid rollback_readiness.verified_at",
+        mutate: (root) =>
+          updateConsumerG12RollbackReadiness(root, (readiness) => {
+            readiness.verified_at = "2026-09-29";
+          }),
+      },
+      {
+        name: "non-JSON deploy receipt",
+        expected: "invalid artifact deploy_receipt: JSON object required",
+        mutate: (root) => writeFixtureDoc(root, G12_DEPLOY_RECEIPT_PATH, "not JSON\n"),
+      },
+    ];
+
+    for (const mutation of mutations) {
+      const root = fixtureRoot();
+      writeConsumerG12Fixture(root);
+      mutation.mutate(root);
+
+      const result = evaluateStaticGate({ gate: "G12", repoRoot: root });
+      expect(result.applicable, mutation.name).toBe(true);
+      expect(result.passed, mutation.name).toBe(false);
+      expect(result.messages.join("\n"), mutation.name).toContain(mutation.expected);
+    }
+  });
+
+  it("U-RCDEV-033: routes each E-only mutation through consumer G12 validation", () => {
+    const mutations: {
+      name: string;
+      expected: string[];
+      mutate: (manifest: ConsumerG12Manifest) => void;
+    }[] = [
+      {
+        name: "schema",
+        expected: ["invalid schema_version"],
+        mutate: (manifest) => {
+          manifest.schema_version = "g11-uat-evidence-v1";
+        },
+      },
+      {
+        name: "gate",
+        expected: ["gate must be G12"],
+        mutate: (manifest) => {
+          manifest.gate = "G11";
+        },
+      },
+      {
+        name: "exit code",
+        expected: ["exit_code is non-zero"],
+        mutate: (manifest) => {
+          firstConsumerG12Command(manifest).exit_code = 1;
+        },
+      },
+      {
+        name: "digest",
+        expected: ["invalid digest"],
+        mutate: (manifest) => {
+          firstConsumerG12Command(manifest).output_digest = "sha256:" + "a".repeat(63);
+        },
+      },
+      {
+        name: "stale defer count type",
+        expected: ["stale_defer_count must be 0"],
+        mutate: (manifest) => {
+          (manifest.exit_criteria as unknown as Record<string, unknown>).stale_defer_count = "0";
+        },
+      },
+      {
+        name: "wrong prefix-derived mandatory field",
+        expected: ["missing row evidence AT-FR-01-01", "missing row evidence AT-CONSUMER-02"],
+        mutate: (manifest) => {
+          const fields = manifest as unknown as Record<string, unknown>;
+          fields.mandatory_it_ids = fields.mandatory_at_ids;
+          delete fields.mandatory_at_ids;
+        },
+      },
+    ];
+
+    for (const mutation of mutations) {
+      const root = fixtureRoot();
+      writeConsumerG12Fixture(root);
+      updateConsumerG12Manifest(root, mutation.mutate);
+
+      const result = evaluateStaticGate({ gate: "G12", repoRoot: root });
+      const messages = result.messages.join("\n");
+      expect(result.applicable, mutation.name).toBe(true);
+      expect(result.passed, mutation.name).toBe(false);
+      for (const expected of mutation.expected) expect(messages, mutation.name).toContain(expected);
+    }
+  });
+});
 describe("PR-G11 consumer G11 predicates", () => {
   function evaluateG11(root: string) {
     return evaluateStaticGate({ gate: "G11", repoRoot: root });
