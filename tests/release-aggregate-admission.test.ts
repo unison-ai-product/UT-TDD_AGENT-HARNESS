@@ -104,10 +104,11 @@ function attested(
   };
 }
 
-function admittedPlan(): Promise<SealedReleaseAggregatePlan> {
+function admittedPlan(): Promise<Extract<SealedReleaseAggregatePlan, { schemaVersion: "v1" }>> {
   return admitReleaseAggregate(input(), { attestChannel: vi.fn(async () => attested()) }).then(
     (result) => {
       if (!result.ok) throw new Error(result.error);
+      if (result.plan.schemaVersion !== "v1") throw new Error("expected v1 fixture plan");
       return result.plan;
     },
   );
@@ -358,6 +359,7 @@ describe("PF-5 release aggregate admission", () => {
     expect(normal.ok).toBe(true);
     if (normal.ok) {
       expect(Reflect.get(normal.plan, "schemaVersion")).toBe("v1");
+      if (normal.plan.schemaVersion !== "v1") throw new Error("expected v1 fixture plan");
       expect(normal.plan.destinationPath).toBe(destinationPath);
     }
 
@@ -608,6 +610,7 @@ describe("PF-5 release aggregate admission", () => {
       { attestChannel: vi.fn(async () => attested()) },
     );
     if (!alternate.ok) throw new Error(alternate.error);
+    if (alternate.plan.schemaVersion !== "v1") throw new Error("expected v1 fixture plan");
     expect(alternate.plan.destinationPath).toBe(alternateDestination);
   });
 

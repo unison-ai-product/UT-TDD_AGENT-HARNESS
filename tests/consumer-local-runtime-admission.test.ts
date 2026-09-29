@@ -70,11 +70,11 @@ async function fixture(
   const sourceRevision = version === "v2" ? "b".repeat(40) : "a".repeat(40);
   const releaseId = deriveReleaseId("1", sourceRevision, artifactDigest);
   const plan = {
+    schemaVersion: "v2" as const,
     kind: "release-aggregate" as const,
     channel: "stable",
     releaseId,
     sourceRevision,
-    destinationPath: "bin",
     expectedDigest: artifactDigest,
     actualDigest: artifactDigest,
     entries,
@@ -224,7 +224,7 @@ async function v2Fixture(
     expectedDigest: artifactDigest,
     actualDigest: artifactDigest,
     entries,
-  } as unknown as ConsumerLocalRuntimeAdmissionInput["plan"];
+  } satisfies ConsumerLocalRuntimeAdmissionInput["plan"];
   return {
     productId,
     consumerRoot: root,

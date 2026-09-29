@@ -76,6 +76,7 @@ const mapping = {
   destinationPath: "pack/current",
 };
 const plan: SealedReleaseAggregatePlan = {
+  schemaVersion: "v1",
   kind: "release-aggregate" as const,
   channel: "stable",
   releaseId: current.releaseId,
@@ -407,7 +408,7 @@ function promotionInput(): PromotionGateInput {
     currentRelease: previous,
     targetChannel: "stable",
     release: current,
-    mapping,
+    mappings: [mapping],
     sealedPlan: plan,
     exactHeadSha: current.artifactSourceCommit,
     planRevision,
@@ -720,11 +721,11 @@ describe("S3 promotion / rollback pure gate", () => {
       { ...promotionInput(), release: { ...current, releaseId: previous.releaseId } },
       {
         ...promotionInput(),
-        mapping: { ...mapping, sourceRevision: previous.artifactSourceCommit },
+        mappings: [{ ...mapping, sourceRevision: previous.artifactSourceCommit }],
       },
       { ...promotionInput(), qa: { ...qa, artifactDigest: previous.artifactSetDigest } },
       { ...promotionInput(), release: { ...current, materializerVersion: "v2" } },
-      { ...promotionInput(), mapping: { ...mapping, channel: "canary" } },
+      { ...promotionInput(), mappings: [{ ...mapping, channel: "canary" }] },
     ];
     for (const input of inputs) {
       const run = await deniedComposition(input);
@@ -951,7 +952,7 @@ describe("S3 promotion / rollback pure gate", () => {
         {
           ...promotionInput(),
           ci: undefined,
-          mapping: { ...mapping, releaseId: previous.releaseId },
+          mappings: [{ ...mapping, releaseId: previous.releaseId }],
         },
         "identity_mismatch",
       ],

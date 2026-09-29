@@ -1122,7 +1122,7 @@ describe("Pack consumer runtime release installer", () => {
         expect(installed.bytes.length).toBeGreaterThan(0);
       } finally {
         removeInstallerFixtureTree(testCase.root);
-        removeInstallerFixtureTree(producer.root);
+        rmSync(producer.root, { recursive: true, force: true });
       }
     },
     120_000,
