@@ -233,12 +233,17 @@ function checkCaseTraces(
   }
 }
 
-function checkG9CaseTraces(
-  rows: readonly CaseRow[],
-  pairIds: ReadonlySet<string>,
-  definedIds: ReadonlySet<string>,
-  violations: string[],
-): void {
+function checkG9CaseTraces({
+  rows,
+  pairIds,
+  definedIds,
+  violations,
+}: {
+  rows: readonly CaseRow[];
+  pairIds: ReadonlySet<string>;
+  definedIds: ReadonlySet<string>;
+  violations: string[];
+}): void {
   for (const row of rows) {
     const citedIds = [...row.citations.matchAll(/\b[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)+\b/g)].map(
       (match) => match[0],
@@ -423,7 +428,7 @@ export function evaluateRightArmStaticGate(
   });
   const pairIds = pairLayerIds(repoRoot, obligation.pairLayers);
   if (key === "G9") {
-    checkG9CaseTraces(rows, pairIds, allDesignIds(repoRoot), violations);
+    checkG9CaseTraces({ rows, pairIds, definedIds: allDesignIds(repoRoot), violations });
     checkG9Families(rows, obligation.evidenceFamilies, violations);
   } else {
     checkCaseTraces(rows, pairIds, violations);
