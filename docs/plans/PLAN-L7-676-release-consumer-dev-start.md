@@ -139,6 +139,12 @@ generates:
     artifact_type: source_module
   - artifact_path: src/gate/right-arm-static.ts
     artifact_type: source_module
+  - artifact_path: src/setup/vmodel-template-assets.ts
+    artifact_type: source_module
+  - artifact_path: src/setup/vmodel-template-writer.ts
+    artifact_type: source_module
+  - artifact_path: tests/release-consumer-vmodel-template.test.ts
+    artifact_type: test_code
   - artifact_path: tests/release-consumer-skills.test.ts
     artifact_type: test_code
   - artifact_path: docs/templates/github/common/commitlint.config.cjs
@@ -205,18 +211,18 @@ status: confirmed
 github_issue_id: 676
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:e329871b5f0280bdde5258edd752f5f6
-  command_id: plan-revise:issue-676:prgr-right-arm-rechain2:plan:r18:553859f4cac5
-  admitted_at: 2026-09-28T11:59:32.278Z
-  source_digest: sha256:2c56ad42439f2e62322a6a46f0debf6a02528532fb6cc6f41a0425c072bba333
-  decision_digest: sha256:11a2d6c9b19516eaa6d6439f91059fd7c07cbfcee7b2168a2d81dec2782c9751
-  receipt_digest: sha256:266a7549fcaa6cbe55186df6a652971a67fc107c88adea723518e35c8ddc7cf2
+  receipt_id: certificate:cc0f5617cb7f133aa2eec026cfc7a5c6
+  command_id: plan-revise:issue-676:pr2c-template-generates:plan:r19:71e5056806bb
+  admitted_at: 2026-09-29T01:53:52.035Z
+  source_digest: sha256:befafb427da7d616b4c0bb84ff58342662fa0fd75fc428138d6d362a3849ad68
+  decision_digest: sha256:7e0936db064bba29dfafbc3db5cb0b3ff58cf478327c62f1f09712266f3af629
+  receipt_digest: sha256:1cee4a2ae8e56c1ba84b0be15b00d79de2cd7f85aefdd96092a24b6f8485d973
   binding:
     path: docs/plans/PLAN-L7-676-release-consumer-dev-start.md
     plan_id: PLAN-L7-676-release-consumer-dev-start
     asset_id: plan:aae8bf0e313f8688fbad4d4d8cf0a6a9
-    revision: 18
-    content_digest: sha256:2c56ad42439f2e62322a6a46f0debf6a02528532fb6cc6f41a0425c072bba333
+    revision: 19
+    content_digest: sha256:befafb427da7d616b4c0bb84ff58342662fa0fd75fc428138d6d362a3849ad68
   route:
     signal: feature_addition
     mode: add-feature
@@ -234,11 +240,12 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-676-release-consumer-dev-start
-    target_revision: 18
+    target_revision: 19
     phase: forward_merge
-  escape_reason: "Issue #676 PR-GR: 右腕共通 evaluator と G8 登録が新規に landing させる
-    src/gate/right-arm-static.ts を generates に宣言する成果物接合 (#728 の rev 17 の後に再接合する
-    revision 18、#731 の receipt 追記後の main tail へ再 chain、契約本文は不変)。"
+  escape_reason: "Issue #676 PR-2c: §3.1.3 の vmodel template を実装する PR-2c が新規に
+    landing させる 3 件 (vmodel-template-assets / vmodel-template-writer /
+    release-consumer-vmodel-template.test) を generates に宣言する成果物接合 (#730 着地後の rev
+    18 から接合)。"
 ---
 
 # PLAN-L7-676: Release consumer で開発を開始できる状態にする
@@ -727,3 +734,4 @@ injection path の乗っ取り、harness 自身の挙動変化、部分 setup �
 15. PR-G0 の成果物宣言 (rev 16): consumer の G1〜G7 gate 入力 (G2 wireframe の L10 pair 写像、gate-design の bundle 埋め込みと consumer 優先) を実装する PR-G0 が新規に landing させる `tests/release-consumer-gates.test.ts` の 1 件だけを `generates` に追加する。RCDEV-037 の実測 golden は既存の `tests/gate-static.test.ts` に置かれ、新規ファイルではない。既存ファイルは宣言しない。
 17. PR-2c の書き込み境界 (rev 17): PR-2c の root 検収 (#676) で、consumer 内の `docs/plans` を外部 directory へ junction 接続した fixture に対し、lexical な insideRoot 判定だけの `vmodel template` が consumer 外へ書き込むことが実測された。§3.1.3 は consumer 内の catalog path へ書くことを前提にしていたが、その失敗条件 (consumer 外 write 0) を明記していなかったため、実装 PR 内の読み替えではなく契約改訂とした。§3.1.3 に書き込み前の物理 path preflight と deny 時の write 0 を追記し、test-design に CANDIDATE-U-RCDEV-039 を追加した。コマンド形・上書き規則・既存 oracle 014 / 015 / 038 の判定は変更しない。
 18. PR-GR の成果物宣言 (rev 18): §3.6-4 の共通述語 S / I / T / E / F / A / R を評価する右腕共通 evaluator と G8 の登録を実装する PR-GR が新規に landing させる `src/gate/right-arm-static.ts` の 1 件だけを `generates` に追加する。回帰 test は既存の `tests/release-consumer-gates.test.ts` (rev 16 で宣言済み) に追記され、新規ファイルではない。G9〜G14 の登録は後続 PR であり、本 revision では宣言しない。既存ファイルは宣言しない。 PR-GR は当初 main 48efd4e1 の rev 16 から rev 17 として発行したが、同じ rev 16 から発行した PR-2c 境界契約 (#728、rev 17) が先に merge されたため、最新 main の rev 17 から正規の plan revise で rev 18 として再接合した (receipt の手編集・conflict の手解決はしない)。
+19. PR-2c の成果物宣言 (rev 19): §3.1.3 の `vmodel template` (consumer への V-model テンプレート書き込み、書き込み前の物理 path preflight と deny 時の write 0 を含む) を実装する PR-2c が新規に landing させる `src/setup/vmodel-template-assets.ts` / `src/setup/vmodel-template-writer.ts` / `tests/release-consumer-vmodel-template.test.ts` の 3 件を `generates` に追加する。`src/cli.ts` と `src/doctor/test-repository-isolation.ts` と `scripts/build-node.mjs` への配線変更は既存ファイルの編集であり宣言しない。コマンド形・上書き規則・§3.1.3 の oracle (014 / 015 / 038 / CANDIDATE-U-RCDEV-039) の判定は変更しない。PR-2c branch が #730 着地後の main (rev 18) を取り込んだ後に、正規の plan revise で rev 19 として接合した (receipt の手編集・conflict の手解決はしない)。

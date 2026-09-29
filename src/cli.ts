@@ -102,6 +102,7 @@ import {
   planDigestMigration,
 } from "./lint/green-command-digest.ts";
 import { parseNodeGenerationCiEvidence } from "./lint/node-generation-ci-policy.ts";
+import { writeVModelTemplates } from "./setup/vmodel-template-writer.ts";
 import { materializeSkillAssets } from "./shared/embedded-skills.ts";
 
 export { collectFinalRetirementFindings };
@@ -2597,6 +2598,43 @@ builder
   });
 
 const vmodel = program.command("vmodel").description("V-model trace");
+vmodel
+  .command("template")
+  .description("write bundled V-model authoring templates")
+  .option("--slot <doc_type_id...>", "write one or more catalog slot templates")
+  .option("--required", "write all required catalog slot templates")
+  .option("--optional <ZIP-DOC-NNN...>", "write one or more optional port-index templates")
+  .option("--dry-run", "report selected paths without writing")
+  .option("--json", "write the result as JSON")
+  .action(
+    (options: {
+      slot?: string[];
+      required?: boolean;
+      optional?: string[];
+      dryRun?: boolean;
+      json?: boolean;
+    }) => {
+      try {
+        const result = writeVModelTemplates({
+          repoRoot: process.cwd(),
+          slot: options.slot,
+          required: options.required,
+          optional: options.optional,
+          dryRun: options.dryRun,
+        });
+        if (options.json) {
+          process.stdout.write(`${JSON.stringify(result)}\n`);
+        } else {
+          for (const path of result.written) process.stdout.write(`+ ${path}\n`);
+          for (const path of result.skipped) process.stdout.write(`skip (exists) ${path}\n`);
+        }
+        process.exitCode = 0;
+      } catch (error) {
+        process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+        process.exitCode = 1;
+      }
+    },
+  );
 vmodel
   .command("lint [path]")
   .description("V-model 4 artifact trace lint")
