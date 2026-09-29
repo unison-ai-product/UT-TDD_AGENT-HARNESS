@@ -1096,6 +1096,31 @@ describe("PR-G9 consumer G9 predicates", () => {
     expect(messages).toContain(`未判定 (review): ${obligation.approvalRole}`);
   });
 
+  it("U-RCDEV-030: rejects each missing G9 template chapter and subsection (S)", () => {
+    const template = readFileSync(
+      join(process.cwd(), "docs/templates/vmodel/L9-system-test-design.md"),
+      "utf8",
+    );
+    const headings = template.split(/\r?\n/).filter((line) => /^#{4,5} /.test(line));
+    expect(headings.length).toBeGreaterThan(7);
+    const acceptedMissingHeadings: string[] = [];
+    for (const heading of headings) {
+      const root = fixtureRoot();
+      writeConsumerG9Fixture(root);
+      updateConsumerG9Design(root, (content) =>
+        content
+          .split(/\r?\n/)
+          .filter((line) => line !== heading)
+          .join("\n"),
+      );
+      const result = evaluateStaticGate({ gate: "G9", repoRoot: root });
+      if (result.passed || !result.messages.join("\n").includes(`missing section ${heading}`)) {
+        acceptedMissingHeadings.push(heading);
+      }
+    }
+    expect(acceptedMissingHeadings).toEqual([]);
+  });
+
   it("U-RCDEV-030: rejects a missing required G9 case-table column (S)", () => {
     const root = fixtureRoot();
     writeConsumerG9Fixture(root);
