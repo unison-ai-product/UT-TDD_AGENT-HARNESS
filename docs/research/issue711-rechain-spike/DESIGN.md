@@ -357,3 +357,87 @@ U-RECHAIN-028 (a) は、「assembler が生成する正確な key 順から外�
   (a) S0 は receipt schema の変更である。frontmatter の schema と、`admission_receipt` の consumer (doctor の各 gate) の v2 / v3 両対応が要る。
   (b) 実行時間は約 5 分で、Git 読み出しが律速している。
   (c) `records.json` の `source_commit_git` は、clone の ref 集合によって変わる (J-2 のとおり、本番の合否には使わない)。
+
+---
+
+## K. advisor r4 (gpt-5.6-sol、2026-09-29、REFUTED) への対応
+
+r4 では、r3 の blocker 1 (再現資材) と blocker 3 (非適用の状態空間) は閉じたと判定された。v3-FM の改竄耐性も survive した。残った blocker は次の 2 件である。
+(1) 027(6) は draft の m を非適用にしている。一方で 031 は draft→revise を含めて revise を 100% と要求しており、両者が矛盾する。
+(2) draft の preimage (特に `base_payload_digest`) が定義されていない。
+
+### K-1. 実測: draft receipt は tracked data と小さな preimage から再導出できるか
+
+測定には `draft-rederive.mts` を使った。出力は `draft-rederive-out.json`、未信頼の draft manifest の snapshot は `draft-hints.json` (ローカルの draft manifest 35 件) である。
+対象は target `895ac2e9` の rev 1 の 33 件。
+
+| 区分 | 件数 |
+| --- | --- |
+| receipt_digest を bit 一致で再導出 (`source.content` = tracked blob から組み直した bound 形) | 2 (PLAN-L7-690、PLAN-L6-711) |
+| 同上 (`source.content` = draft manifest の原文 hint) | 6 (PLAN-L6-91、PLAN-L6-104、PLAN-L7-566 と REVERSE-566、PLAN-L7-627 と REVERSE-627) |
+| asset_id は一致したが digest は不一致 (manifest が無く、原文が bound 形と異なると推定。未証明) | 3 (PLAN-RECOVERY-16、PLAN-L6-89、PLAN-L6-90) |
+| sourceCommit を復元できない (候補 40 件に無い) | 12 |
+| admission を復元できない / introduction commit なし | 3 / 7 |
+
+分かったことは次の 4 点である。
+- **`environment` は決定的に導出できる**。`node-plan-draft-runner.ts:102-138` の `buildEnvironment` は、`{commandId, planId, sourceCommit, actor, admission, recordedAt, body}` だけから全フィールドを作る。
+  `assetId`・`reservationId`・`certificateId` は `seed = sha(stableJson({commandId, planId, sourceCommit}))` から作る。`leaseTokenHash` は command_id と seed から、`expiresAt` は recorded_at + 24h、`routeTupleDigest` は admission と `evaluatePlanAdmission` から作る。
+  tracked data に無い値は、`actor` (`git config user.name`。実測では全件 `unison-ai-product`)、`sourceCommit`、admission の `branch` の 3 つだけである。
+  `asset_id` は seed を通じて sourceCommit に束縛されている。したがって、sourceCommit の候補が誤っていれば asset_id の時点で弾ける。
+- **ただし canonical payload は manifest の `source.content` の原文 bytes を含む** (`plan-draft-command-assembler.ts:86-99`)。tracked blob から組み直した bound 形と原文が一致したのは、8 件中 2 件だけだった。
+  この原文をそのまま frontmatter に投影すると PLAN 全文の複製になるので、採れない。
+- **draft→revise の base 連鎖は成立する**。PLAN-L7-566 r2 (seq 253) について、revise の hint `revision_digest` は、再導出した draft の `canonicalPayloadDigest` と一致した (`draft-rederive-out.json` の `base_check`、`reviseBaseEqDraftCanonical: true`)。
+  「その他」の base 8 件の正体は、draft command JSON の digest である。これを実例で確かめた。ほかの 7 件は、draft 側の再導出が未了なので判定できない。
+- **頻度**: revise 経路 303 件のうち、base が draft (非 legacy の rev 2) のものは 28 件 (9.2%) ある。draft 33 件のほとんどが、この最初の revise を経ている。
+
+### K-2. 選択 (a) と (b) の評価と採択
+
+| 案 | 内容 | trade-off | 判定 |
+| --- | --- | --- | --- |
+| **(a) v3 draft の certificate 規則 (採択)** | S0 で `plan draft` を 2 点変える。(i) manifest の `source.content` を、assemble の前に `bindPlanSourceToAdmission(raw).source` (bound 形) へ正規化する。(ii) draft の v3 preimage に `{actor, source_commit, branch}` を投影する。そのうえで、C-3 の m が v3 の rev 1 draft の場合に限り、K-3 の規則で再導出する | ○ 最初の revise (28/303、draft のほぼ全件が経る経路) が fast-path の対象に入る。○ 実測で、bound 形の 2 件と manifest 原文の 6 件が bit 一致した。`environment` の決定性と base 連鎖 (seq 253) も実証した。△ draft の ledger の canonical payload が、新しい record から bound 形になる (旧 record は v2 のままで、027(6)(ii) で非適用)。△ `buildEnvironment` を pure 関数として export する (S0)。△ 正規化の冪等性 `bind(bind(x)) = bind(x)` を S0 の AC にする (未証明) | 採択 |
+| (b) 031 の分母を限定 | 031 の 100% の分母を「m が非 draft・非 legacy の revise」に限り、draft→revise を正系から外す | ○ S0 は preimage の投影だけで済む。× 最初の revise (9.2%) が恒常的に非適用になる。「revise 経路 100%」という主張は、その分だけ弱まる | 不採択 |
+
+**h が rev 1 (PR 内で新規 draft した PLAN) は、(a) を採っても非適用のままとする**。
+draft の asset_id は seed に command_id を含む。そのため、`:rechain-<n>` の command_id で再発行すると、asset の identity が変わってしまう。
+再発行は同じ PLAN の revision 連鎖にならない。これは 027(6)(i) の理由として明記する。
+
+### K-3. draft の certificate 導出 (C-3 の拡張。m が v3 の rev 1 の場合)
+
+| 入力 | 出所 |
+| --- | --- |
+| `manifest.version` / `projection` | 定数 `2` / `{path: "docs/governance/plan-admission-receipts.json"}` |
+| `manifest.command_id` / `plan_id` / `source.path` | T: `m.command_id` / `binding.plan_id` / `binding.path` |
+| `manifest.recorded_at` | T: blob_M の `admitted_at` |
+| `manifest.source.content` | D: `---\n${stringify(fm(blob_M) − admission_receipt)}---\n${body(blob_M)}`。S0 の正規化によって、これが producer の入力と bytes で一致する |
+| `admission` / `decision` | P: `A_M` (`decision_digest` による M への commitment) / `evaluatePlanAdmission(A_M)` |
+| `environment` | D+P: export した `buildPlanDraftEnvironment(manifest, A_M, preimage.source_commit, preimage.actor)`。`assetId === m.binding.asset_id` と `certificateId === m.receipt_id` を要求する |
+| 照合 | `"sha256:" + calculatePlanDraftCommandDigests(assemblePlanDraftCommand(...).canonical).certificateDigest === m.receipt_digest` |
+| R の base | `basePayloadDigest = canonicalPayloadDigest` (draft command JSON の digest)。stripped 形ではない |
+
+draft の digest は `stableJson` (Buffer.compare) を使うので、key の順には依存しない。ただし kernel 版 (`src/kernel/plan-draft-command-digest.ts`) は `undefined` を除外しない。
+そのため、preimage に `undefined` や空値があれば、事前に `rechain-ledger-hint-missing` とする。
+
+### K-4. 経路別の preimage (030 の是正)
+
+| 経路 | v3 `admission_receipt.preimage` | 使う verifier の経路 |
+| --- | --- | --- |
+| `plan draft` (rev 1) | `{actor, source_commit, branch}`。**base が無いので `base_payload_digest` は持たない** | K-3 (m として) |
+| `plan revise` | `{actor, source_commit, base_payload_digest, branch}` (`AppendPlanRevisionInput` の値そのもの) | C-2 (h として)、C-3 (m として) |
+| wrapper re-chain | revise と同じ (R は revise record である) | 次回の re-chain の h / m として |
+
+### K-5. 未決だった実装方式の確定
+
+- **renderer の `digest` / `stableJson` は export して共有する (byte 比較経路は採らない)**。
+  S2 で、`tracked-receipt-renderer.ts:285-298` の private な `digest` を `trackedReceiptDecisionDigest` として export する。renderer 自身もこの関数を呼び、実装を 1 つにする。
+  理由: H / M の `decision_digest` を照合するためだけに renderer 経由の byte 比較をすると、H / M 用の command を組み立てる必要がある。しかも R の byte 比較 (U-RECHAIN-022 / 025) と経路が重複する。
+  R については、従来どおり renderer の出力を bytes で比較する。
+- 同じ理由で、`node-plan-draft-runner.ts` の `buildEnvironment` を pure 関数 `buildPlanDraftEnvironment` として export する (S0)。runner 自身もそれを呼ぶ。
+
+### K-6. 証拠の現状 (正直な区分)
+
+- **既にある証拠**: 既存の v2 record についての spike 実測だけである。revise の再導出 103/340、全連鎖の byte 照合 4/4、draft の再導出 8 件、draft→revise の base 連鎖 1 件。
+- **まだ無い証拠**: U-RECHAIN-030 / 031 / 032 は **candidate oracle であり、S0 の production 経路で生成した fixture による結果はまだ無い**。「revise / rechain / draft→revise 100%」は将来の AC であって、現時点の証拠ではない。
+  v3-FM の producer、parser、doctor の consumer、改竄試験の実行証拠も無い。draft の正規化の冪等性も未証明である。
+- **S0 の AC (追加)**: v2 / v3 の互換試験を行う。対象は `frontmatterSchema` の `admission_receipt`、`TrackedReceiptRenderer` (selfVerify を含む)、`plan-ledger-rehydrator` (receipt の読み取り)、`admission_receipt` を読む doctor の各 gate である。
+  各対象について、v2 と v3 の record がどちらも読め、`content_digest` / `source_digest` が不変であることを確かめる。
+  あわせて次の 2 点を確かめる。draft の正規化の冪等性。`buildPlanDraftEnvironment` を export した後も、既存の draft 経路が同じ digest を出すこと (既存の golden と一致すること)。

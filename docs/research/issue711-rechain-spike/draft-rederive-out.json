@@ -1,0 +1,400 @@
+{
+ "summary": {
+  "target": "895ac2e93c1a820e8a5c736bf8787e4f15823e06",
+  "drafts": 33,
+  "by_class": {
+   "asset-pinned-digest-mismatch": 3,
+   "admission-unresolved": 3,
+   "rederived/draft-manifest-hint": 6,
+   "spike-no-introduction-commit": 7,
+   "source-commit-unrecovered": 12,
+   "rederived/bound-reconstruction": 2
+  },
+  "base_check": [
+   {
+    "seq": 143,
+    "plan_id": "PLAN-L7-471-github-forward-foundation",
+    "draftRederived": false,
+    "reviseBaseEqDraftCanonical": null
+   },
+   {
+    "seq": 190,
+    "plan_id": "PLAN-L7-531-pack-internal-canary-smoke",
+    "draftRederived": false,
+    "reviseBaseEqDraftCanonical": null
+   },
+   {
+    "seq": 191,
+    "plan_id": "PLAN-REVERSE-531-pack-internal-canary-smoke-backfill",
+    "draftRederived": false,
+    "reviseBaseEqDraftCanonical": null
+   },
+   {
+    "seq": 194,
+    "plan_id": "PLAN-L7-532-pack-publication-driver",
+    "draftRederived": false,
+    "reviseBaseEqDraftCanonical": null
+   },
+   {
+    "seq": 195,
+    "plan_id": "PLAN-REVERSE-532-pack-publication-driver-backfill",
+    "draftRederived": false,
+    "reviseBaseEqDraftCanonical": null
+   },
+   {
+    "seq": 216,
+    "plan_id": "PLAN-L7-534-d3b-provider-evidence-composition",
+    "draftRederived": false,
+    "reviseBaseEqDraftCanonical": null
+   },
+   {
+    "seq": 219,
+    "plan_id": "PLAN-REVERSE-534-d3b-provider-evidence-composition-backfill",
+    "draftRederived": false,
+    "reviseBaseEqDraftCanonical": null
+   },
+   {
+    "seq": 253,
+    "plan_id": "PLAN-L7-566-memory-clean-cut-replacement",
+    "draftRederived": true,
+    "reviseBaseEqDraftCanonical": true
+   }
+  ]
+ },
+ "rows": [
+  {
+   "seq": 1,
+   "plan_id": "PLAN-RECOVERY-16-plan-revision-authoring",
+   "command_id": "plan-recovery-16-20260717-03",
+   "intro": "c85bf600531ec0db2d14725f883e30d91e6ef2bc",
+   "assetPinned": {
+    "sc": "1a0210040bc57060d5e38f406ddd3978484f75a6",
+    "ck": "bound-reconstruction"
+   },
+   "hintCount": 0,
+   "cls": "asset-pinned-digest-mismatch"
+  },
+  {
+   "seq": 72,
+   "plan_id": "PLAN-RECOVERY-17-redesign-bundle-reentry",
+   "command_id": "plan-recovery-17-20260727-01",
+   "intro": "8bf944bf767ff7951d0e7ab5e909430c41c6a3be",
+   "cls": "admission-unresolved"
+  },
+  {
+   "seq": 74,
+   "plan_id": "PLAN-L6-89-layer-verification-contract",
+   "command_id": "plan-l6-89-20260721-01",
+   "intro": "2834e24f5f792a6657e4808a145a5f231ae7cca6",
+   "assetPinned": {
+    "sc": "2c34ac34f343e54eb6a0e90f2348cc5420883604",
+    "ck": "bound-reconstruction"
+   },
+   "hintCount": 0,
+   "cls": "asset-pinned-digest-mismatch"
+  },
+  {
+   "seq": 77,
+   "plan_id": "PLAN-L6-90-ci-responsibility-contract",
+   "command_id": "plan-l6-90-20260721-01",
+   "intro": "e25fdf8543bc742f841fef9dbe9ef7ba8d8b56ce",
+   "assetPinned": {
+    "sc": "2c34ac34f343e54eb6a0e90f2348cc5420883604",
+    "ck": "bound-reconstruction"
+   },
+   "hintCount": 0,
+   "cls": "asset-pinned-digest-mismatch"
+  },
+  {
+   "seq": 79,
+   "plan_id": "PLAN-L6-91-disposition-claim-integrity-gate",
+   "command_id": "plan-l6-91-20260722-01",
+   "intro": "8ab2b43f5af042b7d4a534400360d8b8fdba73e6",
+   "assetPinned": {
+    "sc": "2c34ac34f343e54eb6a0e90f2348cc5420883604",
+    "ck": "bound-reconstruction"
+   },
+   "hintCount": 1,
+   "cls": "rederived/draft-manifest-hint",
+   "ck": "draft-manifest-hint",
+   "sc": "2c34ac34f343e54eb6a0e90f2348cc5420883604",
+   "actor": "unison-ai-product",
+   "canonicalPayloadDigest": "9c76a702949b9f30a036c4585d55a798cf4205bb0e63a1d3b8a1b79058835021"
+  },
+  {
+   "seq": 138,
+   "plan_id": "PLAN-L7-471-github-forward-foundation",
+   "command_id": "command:plan-l7-471-github-forward-foundation:2",
+   "intro": "4bde7404a11e7d7a842f997325b7816c8737349f",
+   "cls": "admission-unresolved"
+  },
+  {
+   "seq": 149,
+   "plan_id": "PLAN-L7-530-bun-final-retirement",
+   "command_id": "plan-draft:issue-487:forward:1",
+   "intro": null,
+   "cls": "spike-no-introduction-commit"
+  },
+  {
+   "seq": 150,
+   "plan_id": "PLAN-REVERSE-530-bun-final-retirement-backfill",
+   "command_id": "plan-draft:issue-487:reverse:1",
+   "intro": null,
+   "cls": "spike-no-introduction-commit"
+  },
+  {
+   "seq": 188,
+   "plan_id": "PLAN-L7-531-pack-internal-canary-smoke",
+   "command_id": "plan-draft:issue-418:forward:1",
+   "intro": "b8d5c83c53bfac16ac51a0f6b17cfbb983319f77",
+   "asmError": "Error: plan-draft-admission-decision-mismatch",
+   "hintCount": 1,
+   "cls": "source-commit-unrecovered"
+  },
+  {
+   "seq": 189,
+   "plan_id": "PLAN-REVERSE-531-pack-internal-canary-smoke-backfill",
+   "command_id": "plan-draft:issue-418:reverse:1",
+   "intro": "b8d5c83c53bfac16ac51a0f6b17cfbb983319f77",
+   "asmError": "Error: plan-draft-admission-decision-mismatch",
+   "hintCount": 1,
+   "cls": "source-commit-unrecovered"
+  },
+  {
+   "seq": 192,
+   "plan_id": "PLAN-L7-532-pack-publication-driver",
+   "command_id": "plan-draft:issue-565:forward:1",
+   "intro": "c71df745d5dc46265a5575e291e93defa22cac63",
+   "asmError": "Error: plan-draft-admission-decision-mismatch",
+   "hintCount": 1,
+   "cls": "source-commit-unrecovered"
+  },
+  {
+   "seq": 193,
+   "plan_id": "PLAN-REVERSE-532-pack-publication-driver-backfill",
+   "command_id": "plan-draft:issue-565:reverse:1",
+   "intro": "c71df745d5dc46265a5575e291e93defa22cac63",
+   "asmError": "Error: plan-draft-admission-decision-mismatch",
+   "hintCount": 1,
+   "cls": "source-commit-unrecovered"
+  },
+  {
+   "seq": 200,
+   "plan_id": "PLAN-L7-533-memory-completion-fence",
+   "command_id": "plan-draft:issue-550:forward:1",
+   "intro": null,
+   "cls": "spike-no-introduction-commit"
+  },
+  {
+   "seq": 201,
+   "plan_id": "PLAN-REVERSE-533-memory-completion-fence-backfill",
+   "command_id": "plan-draft:issue-550:reverse:1",
+   "intro": null,
+   "cls": "spike-no-introduction-commit"
+  },
+  {
+   "seq": 214,
+   "plan_id": "PLAN-L7-534-d3b-provider-evidence-composition",
+   "command_id": "plan-draft:issue-570:forward:1",
+   "intro": "e4789fbc3782f34a0db62ab8417fc06fcf6e3746",
+   "asmError": "Error: plan-draft-admission-decision-mismatch",
+   "hintCount": 1,
+   "cls": "source-commit-unrecovered"
+  },
+  {
+   "seq": 215,
+   "plan_id": "PLAN-REVERSE-534-d3b-provider-evidence-composition-backfill",
+   "command_id": "plan-draft:issue-570:reverse:1",
+   "intro": "e4789fbc3782f34a0db62ab8417fc06fcf6e3746",
+   "asmError": "Error: plan-draft-admission-decision-mismatch",
+   "hintCount": 1,
+   "cls": "source-commit-unrecovered"
+  },
+  {
+   "seq": 234,
+   "plan_id": "PLAN-L7-565-pack-publication-atomic-ref-cas",
+   "command_id": "plan-draft:issue-565:atomic-ref-cas:1",
+   "intro": null,
+   "cls": "spike-no-introduction-commit"
+  },
+  {
+   "seq": 235,
+   "plan_id": "PLAN-REVERSE-565-pack-publication-atomic-ref-cas",
+   "command_id": "plan-draft:issue-565:atomic-ref-cas:reverse:1",
+   "intro": "6140d2feea6f5eacc35384ea06deb2a2603a13c3",
+   "asmError": "Error: plan-draft-admission-decision-mismatch",
+   "hintCount": 2,
+   "cls": "source-commit-unrecovered"
+  },
+  {
+   "seq": 242,
+   "plan_id": "PLAN-L6-104-memory-clean-cut-replacement",
+   "command_id": "plan-draft:issue-424:memory-clean-cut:2",
+   "intro": "27a9e3afade8c377e9dd5ec48ed177dd54bea0e8",
+   "assetPinned": {
+    "sc": "13c5bb2d0b0268af9bbe887c94190174c0e9f5db",
+    "ck": "bound-reconstruction"
+   },
+   "hintCount": 2,
+   "cls": "rederived/draft-manifest-hint",
+   "ck": "draft-manifest-hint",
+   "sc": "13c5bb2d0b0268af9bbe887c94190174c0e9f5db",
+   "actor": "unison-ai-product",
+   "canonicalPayloadDigest": "1e675f71b3df387ce5f2fca5c17345d1b3697db30a03fefcd6a694ee0ff99f3d"
+  },
+  {
+   "seq": 251,
+   "plan_id": "PLAN-L7-566-memory-clean-cut-replacement",
+   "command_id": "plan-draft:issue-424:memory-clean-cut-impl:1",
+   "intro": "db880cebe1f9f59e41f0d6ac1601f61768afcb43",
+   "assetPinned": {
+    "sc": "1f38886226a5f555c006d1dffe62dcc850f130cd",
+    "ck": "bound-reconstruction"
+   },
+   "hintCount": 1,
+   "cls": "rederived/draft-manifest-hint",
+   "ck": "draft-manifest-hint",
+   "sc": "1f38886226a5f555c006d1dffe62dcc850f130cd",
+   "actor": "unison-ai-product",
+   "canonicalPayloadDigest": "57c21d02a0cfd55d705653fa853e25bb24b12a6a2c6df41eb68a150493401af3"
+  },
+  {
+   "seq": 252,
+   "plan_id": "PLAN-REVERSE-566-memory-clean-cut-replacement",
+   "command_id": "plan-draft:issue-424:memory-clean-cut-impl:reverse:1",
+   "intro": "db880cebe1f9f59e41f0d6ac1601f61768afcb43",
+   "assetPinned": {
+    "sc": "1f38886226a5f555c006d1dffe62dcc850f130cd",
+    "ck": "bound-reconstruction"
+   },
+   "hintCount": 1,
+   "cls": "rederived/draft-manifest-hint",
+   "ck": "draft-manifest-hint",
+   "sc": "1f38886226a5f555c006d1dffe62dcc850f130cd",
+   "actor": "unison-ai-product",
+   "canonicalPayloadDigest": "e280376e89adfbfa31894b865095faf1237b6c0d2e12b53387d705463c04d576"
+  },
+  {
+   "seq": 262,
+   "plan_id": "PLAN-L6-600-codex-review-wake-contract",
+   "command_id": "plan-draft:issue-600:codex-review-wake-contract:rechain",
+   "intro": "b96fca45ada16d10f676a697707f7489a6f5cbd5",
+   "cls": "admission-unresolved"
+  },
+  {
+   "seq": 266,
+   "plan_id": "PLAN-L7-625-pack-publication-preparation",
+   "command_id": "plan-draft:issue-625:preparation:1",
+   "intro": null,
+   "cls": "spike-no-introduction-commit"
+  },
+  {
+   "seq": 268,
+   "plan_id": "PLAN-REVERSE-625-pack-publication-preparation",
+   "command_id": "plan-draft:issue-625:preparation:reverse:1",
+   "intro": null,
+   "cls": "spike-no-introduction-commit"
+  },
+  {
+   "seq": 277,
+   "plan_id": "PLAN-L7-627-pack-publication-admitted-publish",
+   "command_id": "plan-draft:issue-627:admitted-publish-l7:1",
+   "intro": "c3dbe2bd31edba15005cad870108052487f98153",
+   "assetPinned": {
+    "sc": "0adabb21964365aaa701cf5139b75b35523b4d33",
+    "ck": "bound-reconstruction"
+   },
+   "hintCount": 2,
+   "cls": "rederived/draft-manifest-hint",
+   "ck": "draft-manifest-hint",
+   "sc": "0adabb21964365aaa701cf5139b75b35523b4d33",
+   "actor": "unison-ai-product",
+   "canonicalPayloadDigest": "690f822a0486d2274f2a26c607087dd71e78a31a3581817016d6d77ada36334b"
+  },
+  {
+   "seq": 278,
+   "plan_id": "PLAN-REVERSE-627-pack-publication-admitted-publish-backfill",
+   "command_id": "plan-draft:issue-627:admitted-publish-reverse:1",
+   "intro": "c3dbe2bd31edba15005cad870108052487f98153",
+   "assetPinned": {
+    "sc": "0adabb21964365aaa701cf5139b75b35523b4d33",
+    "ck": "bound-reconstruction"
+   },
+   "hintCount": 2,
+   "cls": "rederived/draft-manifest-hint",
+   "ck": "draft-manifest-hint",
+   "sc": "0adabb21964365aaa701cf5139b75b35523b4d33",
+   "actor": "unison-ai-product",
+   "canonicalPayloadDigest": "daa23a79a17473198c5ac1cb06cc2ec476b7b34e7589bb773d82a5c6f394887d"
+  },
+  {
+   "seq": 293,
+   "plan_id": "PLAN-L7-628-pack-consumer-runtime-release-install",
+   "command_id": "plan-draft:issue-418:consumer-runtime-release-install:forward:1",
+   "intro": "a99f7cdbcbfd2bcf112171230b204a3718399362",
+   "asmError": "Error: plan-draft-admission-decision-mismatch",
+   "hintCount": 1,
+   "cls": "source-commit-unrecovered"
+  },
+  {
+   "seq": 294,
+   "plan_id": "PLAN-REVERSE-628-pack-consumer-runtime-release-install-backfill",
+   "command_id": "plan-draft:issue-418:consumer-runtime-release-install:reverse:1",
+   "intro": "a99f7cdbcbfd2bcf112171230b204a3718399362",
+   "asmError": "Error: plan-draft-admission-decision-mismatch",
+   "hintCount": 1,
+   "cls": "source-commit-unrecovered"
+  },
+  {
+   "seq": 301,
+   "plan_id": "PLAN-L7-668-codex-hook-command-schema",
+   "command_id": "plan-draft:issue-668:codex-hook-command-schema:2",
+   "intro": "0c4de5ea7fbd8ce18e0eb18c45746faf4c634d5b",
+   "asmError": "Error: plan-draft-admission-decision-mismatch",
+   "hintCount": 1,
+   "cls": "source-commit-unrecovered"
+  },
+  {
+   "seq": 306,
+   "plan_id": "PLAN-L7-676-release-consumer-dev-start",
+   "command_id": "plan-draft:issue-676:release-consumer-dev-start:forward:1",
+   "intro": "166bfc37b0c03c2c48c8c79f007864e25a71f9f0",
+   "asmError": "Error: plan-draft-admission-decision-mismatch",
+   "hintCount": 1,
+   "cls": "source-commit-unrecovered"
+  },
+  {
+   "seq": 307,
+   "plan_id": "PLAN-REVERSE-676-release-consumer-dev-start-backfill",
+   "command_id": "plan-draft:issue-676:release-consumer-dev-start:reverse:1",
+   "intro": "166bfc37b0c03c2c48c8c79f007864e25a71f9f0",
+   "asmError": "Error: plan-draft-admission-decision-mismatch",
+   "hintCount": 1,
+   "cls": "source-commit-unrecovered"
+  },
+  {
+   "seq": 315,
+   "plan_id": "PLAN-L7-690-issue-binding-projection-state-contract",
+   "command_id": "plan-draft:forward:plan-l7-690-projection-state-contract:v4",
+   "intro": "e5e621d9e72b3e5888127a4da2cb3a404773fee4",
+   "hintCount": 0,
+   "cls": "rederived/bound-reconstruction",
+   "ck": "bound-reconstruction",
+   "sc": "9dc459cb184f431f3e8de580f3c71632d313a3d5",
+   "actor": "unison-ai-product",
+   "canonicalPayloadDigest": "634ed2b67dc7b7b09c51c0c797d1b1e587b17901d4c3781f5329780cfd0b4248"
+  },
+  {
+   "seq": 327,
+   "plan_id": "PLAN-L6-711-merge-time-receipt-rechain-contract",
+   "command_id": "plan-draft:issue-711:merge-time-rechain-contract:v2",
+   "intro": "240f80915ef3677e8ba32197c783c2960c9121f6",
+   "hintCount": 1,
+   "cls": "rederived/bound-reconstruction",
+   "ck": "bound-reconstruction",
+   "sc": "db71fc99935166a2222cd54c312e05c5a50759dd",
+   "actor": "unison-ai-product",
+   "canonicalPayloadDigest": "de10f55d68240d0d0a5e4a10ee1c4abaf3ea0d104cada09c8584d1686100aea1"
+  }
+ ]
+}

@@ -15,6 +15,7 @@ production code は変更していない。本ディレクトリは Research の
 | `aggregate.json` | 期待する集計 |
 | `spike-output.md` / `exit-code.txt` | 期待する標準出力と exit code |
 | `composition-out.jsonl` | 全連鎖の byte 照合結果 (seq 330 / 338 / 340 / 172) |
+| `draft-rederive.mts` / `draft-rederive-out.json` / `draft-hints.json` | draft (rev 1) receipt の再導出の測定 (DESIGN §K-1)。`draft-hints.json` は、ローカルの draft manifest 35 件から取った未信頼の hint (原文の source.content を含む) |
 | `SPIKE-TABLE.md` / `DESIGN.md` / `ORACLES.md` | 表の読み取り、PLAN 改訂案、candidate oracle |
 
 ## 実行 (Git Bash、Node 24、依存は導入済み)
@@ -31,3 +32,9 @@ node --experimental-strip-types composition-check.mts "$(git rev-parse --show-to
 
 `--repo` の `src/` の primitive は、`895ac2e9` から本 branch の base (`60099e55`) までの間、`src/plan-admission`・`src/plan-asset`・`src/kernel` に差分が無い (`git diff --stat 895ac2e9 60099e55 -- src/plan-admission src/plan-asset src/kernel` の出力が空)。
 所要時間は約 5〜10 分である。
+
+draft の測定:
+
+```bash
+node --experimental-strip-types draft-rederive.mts "$(git rev-parse --show-toplevel)" 895ac2e93c1a820e8a5c736bf8787e4f15823e06 records.json draft-hints.json draft-rederive-out.json; echo "exit=$?"   # 期待: exit=0、所要時間は約 1 分
+```
