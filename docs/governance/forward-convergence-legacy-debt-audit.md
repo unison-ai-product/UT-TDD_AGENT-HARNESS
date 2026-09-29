@@ -25,8 +25,8 @@ forward-convergence 不変条件 ([[project_forward_convergence_invariant]]) を
 > 解消済を現存債務と誤認しないため。`parseLegacyAuditPlanIds` は表行頭の PLAN id のみ抽出する)。
 
 - PLAN-L7-62-runtime-portability-guard — **trace correction で spine-internal 化** (IMP-146、2026-06-26、Codex cross-review AGREE)。
-  guard は L1 `docs/design/harness/L1-requirements/nfr.md` の NFR-04 (harness=TS/Bun、ADR-001) + NFR-01/§6
-  (cross-platform native / Bun runtime) の機械強制で、制約自体は既に Forward に存在。欠落していた descent link
+  guard は L1 `docs/design/harness/L1-requirements/nfr.md` の NFR-04 (harness=TS/Node、ADR-001) + NFR-01/§6
+  (cross-platform native / Node runtime) の機械強制で、制約自体は既に Forward に存在。欠落していた descent link
   (`requires: docs/design/harness/L1-requirements/nfr.md`) を補い spine-internal とした (新規仕様 back-fill なし)。
 - PLAN-L7-147-refactor-candidate-detector — **Reverse back-fill で converged 化** (IMP-146、2026-06-26、Codex cross-review AGREE)。
   detector (`analyzeRefactorCandidates` + 4 candidate kind + `quality_signals`/`feedback_events` projection contract) を

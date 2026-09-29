@@ -54,7 +54,7 @@ v2_import: docs/migration/v2-import-ledger.md
 
 | NFR-ID | 非機能要求 | 詳細 |
 |--------|-----------|------|
-| **NFR-04** | 統制対象 repo は **言語非依存 (全種類)**。harness 自体は TypeScript (ADR-001) | harness の言語制約 (TS/Bun) は内部実装のみ。統制対象プロジェクトの言語は Python / Go / Java / Ruby 等 何でも可 |
+| **NFR-04** | 統制対象 repo は **言語非依存 (全種類)**。harness 自体は TypeScript (ADR-001) | harness の言語制約 (TS/Node) は内部実装のみ。統制対象プロジェクトの言語は Python / Go / Java / Ruby 等 何でも可 |
 | **NFR-03** | **AI mode 非依存** — standalone / claude-only / codex-only / hybrid で動作。**Claude Code + Codex hybrid を主軸** | mode は `.ut-tdd/mode.yaml` で管理。hybrid 不在時は claude-only として動作、Codex 委譲 / team run は要求しない |
 
 ## §5 セキュリティ
@@ -83,7 +83,7 @@ v2_import: docs/migration/v2-import-ledger.md
 | **運用・保守性** | 更新性 / GitHub 正本 / 実装宣言真実性 / dev-local+CI 二重実行 / human-as-residue / 排泄系契約 | NFR-02 / NFR-05 / NFR-08 / NFR-13 / NFR-14 |
 | **移行性** | 言語非依存 / AI mode 非依存 | NFR-04 / NFR-03 |
 | **セキュリティ** | GHA audit framework 役割分離 / 統合セキュリティグレード (5 段階 / OWASP Agentic / EU AI Act Art.14) | NFR-11 / **NFR-17** |
-| **システム環境** | Windows / macOS / Linux ネイティブ / Bun runtime | NFR-01 / ADR-001 |
+| **システム環境** | Windows / macOS / Linux ネイティブ / Node runtime | NFR-01 / ADR-001 |
 
 グレード値は L3 NFR グレード sub-doc (`docs/design/harness/L3-functional/nfr-grade.md`) で確定する。
 
