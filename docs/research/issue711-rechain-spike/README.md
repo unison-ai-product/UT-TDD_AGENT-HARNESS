@@ -38,3 +38,9 @@ draft の測定:
 ```bash
 node --experimental-strip-types draft-rederive.mts "$(git rev-parse --show-toplevel)" 895ac2e93c1a820e8a5c736bf8787e4f15823e06 records.json draft-hints.json draft-rederive-out.json; echo "exit=$?"   # 期待: exit=0、所要時間は約 1 分
 ```
+
+bind の冪等性の property check (DESIGN §L-2):
+
+```bash
+node --experimental-strip-types bind-idempotence.mts "$(git rev-parse --show-toplevel)" 44636a2b9e5b018be52989c4f7715a8eb5aea7c0 bind-idempotence-out.json; echo "exit=$?"   # 期待: 987/987 が idempotent、receipt を持つ 65/65 で組み直しが bound 形と一致。所要時間は約 4 分
+```

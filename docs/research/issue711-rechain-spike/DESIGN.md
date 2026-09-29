@@ -441,3 +441,44 @@ draft の digest は `stableJson` (Buffer.compare) を使うので、key の順�
 - **S0 の AC (追加)**: v2 / v3 の互換試験を行う。対象は `frontmatterSchema` の `admission_receipt`、`TrackedReceiptRenderer` (selfVerify を含む)、`plan-ledger-rehydrator` (receipt の読み取り)、`admission_receipt` を読む doctor の各 gate である。
   各対象について、v2 と v3 の record がどちらも読め、`content_digest` / `source_digest` が不変であることを確かめる。
   あわせて次の 2 点を確かめる。draft の正規化の冪等性。`buildPlanDraftEnvironment` を export した後も、既存の draft 経路が同じ digest を出すこと (既存の golden と一致すること)。
+
+---
+
+## L. advisor r5 (gpt-5.6-sol、2026-09-29、REFUTED、対象を絞った指摘) への対応
+
+r5 では、r4 の「draft preimage 未定義」が閉じたと判定された。また次の 5 点が survive した。
+- draft の base を canonicalPayloadDigest とすること
+- asset_id を seed で sourceCommit に束縛すること
+- h が rev 1 の record を除外すること
+- v3-FM の改竄検出
+- `rechain-unclassified`
+
+残った blocker は次の 2 件である。
+(1) 版が混在する境界: S0 前に発行した v2 の draft に対し、S0 後に最初の revise を行う場合が扱えていない。
+(2) 版ごとの ledger 互換を確かめる oracle が無い。
+
+### L-1. 「100%」の起点と、v2 draft → v3 revise の遷移を除外すること
+
+- **031 の 100% の分母は、base の lineage が v3 のものに限る**。具体的には、m が次のどちらかである revise / rechain の record である。
+  (i) v3 の rev 1 draft (K-3 で再導出できる)。
+  (ii) revise の record のうち、C-3 で再導出できるもの。v3 なら preimage で再導出する。v2 なら、wrapper が local ledger の hint を渡せた場合に限る。
+- **v2 draft → v3 revise は明示的な遷移除外とし、理由コードを `rechain-v2-draft-base` とする**。027(6)(ii) を、この専用コードへ分離する。
+  S0 前の v2 draft は、manifest の原文 `source.content` bytes が tracked data に残っておらず、一般には失われている (K-1: 原文が bound 形と一致したのは 8 件中 2 件)。
+  そのため、m として再導出できないことが確定している。この遷移は分母から除き、件数だけを報告する。
+- **v2 → v3 の migration (過去の draft の再発行や、原文の復元) は行わない**。原文 bytes が一般に失われているので、復元は正当化できないからである。
+- この遷移の件数は有限で、時間とともに減る。v2 draft の lineage は、最初の v3 revise (fast-path 非適用で通常再検) を 1 回経れば、m が v3 revise の record になり、(ii) の側に入る。
+
+### L-2. bind の冪等性の実測 (S0 の AC を前倒しで測ったもの)
+
+- 使ったもの: `bind-idempotence.mts`。出力は `bind-idempotence-out.json`。target は origin/main `44636a2b`。
+- 結果: **`docs/plans/*.md` の 987 件すべてで `bind(bind(x)) === bind(x)` が成り立ち、contentDigest も一致した。冪等でないものは 0 件** である。
+  admission は各 PLAN 自身の frontmatter から組んだ。したがって bind は再正規化だけを行い、意味は変えない。
+- あわせて測った値: `admission_receipt` を持つ 65 件のすべてで、「tracked blob から receipt を除いて re-stringify した形」が `bind(blob).source` と bytes で一致した (**65/65**)。
+  これは K-3 の組み直し式 (`---\n${stringify(fm − admission_receipt)}---\n${body}`) が、bound 形の producer 入力を再現するという前提の実測である。
+- S0 の AC: 同じ property test を CI の対象とする。対象は target commit で tracked な全 PLAN である。冪等でないものは 0 件、receipt を持つ PLAN で組み直しが bound 形と一致しないものも 0 件、を要求する。
+
+### L-3. 版ごとの ledger 互換 oracle
+
+表の内容は U-RECHAIN-034 (a)〜(d) のとおりである。4 つの場合を分けた理由は次のとおり。
+- 「export だけの refactor が既存の digest を bytes で保つこと」と「v3 producer が新しい draft の digest を意図して変えること」は、同じ S0 の中にある。しかし別の golden で固定しないと、どちらの退行も検出できない。
+- 版が混在する record と projection については、renderer・rehydrator・doctor gate・frontmatter parser のそれぞれで期待結果を決めておく。そうしないと、consumer ごとに暗黙の挙動が生まれる。

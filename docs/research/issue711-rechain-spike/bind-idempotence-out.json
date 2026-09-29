@@ -1,0 +1,12 @@
+{
+ "summary": {
+  "target": "44636a2b9e5b018be52989c4f7715a8eb5aea7c0",
+  "files": 987,
+  "by_class": {
+   "idempotent": 987
+  },
+  "with_receipt": 65,
+  "reconstruction_eq_bound_among_receipted": "65/65"
+ },
+ "rows": []
+}
