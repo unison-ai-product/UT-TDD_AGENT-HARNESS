@@ -5616,6 +5616,22 @@
         "revision": 21,
         "content_digest": "sha256:47312c51096c73bbf3aefa250695f72811a9cf9a2bcd5e3e7f5ad6e4bf6fbb69"
       }
+    },
+    {
+      "sequence": 352,
+      "previous_record_digest": "sha256:f8d2aaa0c94cb593735eaf9fb35e5c3023a8d9721b9f42078831e33eb2ae8279",
+      "record_digest": "sha256:166f84790486727f5929a884364e41a8f9da83afd684955f650b6e9685fbda7d",
+      "command_id": "plan-revise:issue-743:tag-channel-rule:p628:r10:ea9cb3e8a101",
+      "receipt_id": "certificate:3e00eeab1182e41331575d33e1f1a072",
+      "receipt_digest": "sha256:066abaca8af6a2d6a2fe39fb3921f8797596f2a2cade336b309dbb34d8398872",
+      "decision_digest": "sha256:abc771d8d30d9f7808f6225000b755ad20654d4b32ec0d51545b97185ca5023a",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-628-pack-consumer-runtime-release-install.md",
+        "plan_id": "PLAN-L7-628-pack-consumer-runtime-release-install",
+        "asset_id": "plan:cd11a1885b1c948d89519002a2cec009",
+        "revision": 10,
+        "content_digest": "sha256:29e08fda89fed1d1041bd4586cdddc82d5a13d0ca447b2997a43aed0e5e716a1"
+      }
     }
   ]
 }

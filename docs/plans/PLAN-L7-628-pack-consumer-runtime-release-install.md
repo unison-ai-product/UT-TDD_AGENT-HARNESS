@@ -8,7 +8,7 @@ drive: agent
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-09-18
-updated: 2026-09-25
+updated: 2026-09-29
 owner: Claude / Opus (pair-freeze) · Codex worker (implementation)
 parent_design: docs/plans/PLAN-L6-101-pack-independent-multi-consumer-acceptance.md
 pair_artifact: docs/test-design/harness/L7-pack-consumer-runtime-release-install-test-design.md
@@ -21,7 +21,7 @@ agent_slots:
   - role: se
     slot_label: Luna worker - PR-1 producer と PR-2 installer を別 PR で最小実装する
   - role: qa
-    slot_label: Terra - CANDIDATE-U-PACKRT-001..011 の Red oracle を Linux/Windows で先に作る
+    slot_label: Terra - CANDIDATE-U-PACKRT-001..012 の Red oracle を Linux/Windows で先に作る
   - role: tl
     slot_label: Claude Opus / Sol - asset 集合・identity 導出・自己 digest 照合の非著者検収
 generates:
@@ -75,18 +75,18 @@ status: confirmed
 github_issue_id: 418
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:9f2db74de02f825576d1e2add514a9d6
-  command_id: plan-revise:issue-418:pr670-rechain-after-688:forward:r9:20260925
-  admitted_at: 2026-09-25T08:25:47.171Z
-  source_digest: sha256:f48911ddeb2fcd55ec685c2776f1f4403055da749c39f65cbb24feaa7ff703b1
-  decision_digest: sha256:40fe865983a45b97704cc88f7a6b3a44612a2828e073a03566303615c8642d37
-  receipt_digest: sha256:6381894ba021391e7bd75575f5f0cfbbe57e076507e28d73a5b030d137b99cfe
+  receipt_id: certificate:3e00eeab1182e41331575d33e1f1a072
+  command_id: plan-revise:issue-743:tag-channel-rule:p628:r10:ea9cb3e8a101
+  admitted_at: 2026-09-29T07:53:25.684Z
+  source_digest: sha256:29e08fda89fed1d1041bd4586cdddc82d5a13d0ca447b2997a43aed0e5e716a1
+  decision_digest: sha256:abc771d8d30d9f7808f6225000b755ad20654d4b32ec0d51545b97185ca5023a
+  receipt_digest: sha256:066abaca8af6a2d6a2fe39fb3921f8797596f2a2cade336b309dbb34d8398872
   binding:
     path: docs/plans/PLAN-L7-628-pack-consumer-runtime-release-install.md
     plan_id: PLAN-L7-628-pack-consumer-runtime-release-install
     asset_id: plan:cd11a1885b1c948d89519002a2cec009
-    revision: 9
-    content_digest: sha256:f48911ddeb2fcd55ec685c2776f1f4403055da749c39f65cbb24feaa7ff703b1
+    revision: 10
+    content_digest: sha256:29e08fda89fed1d1041bd4586cdddc82d5a13d0ca447b2997a43aed0e5e716a1
   route:
     signal: feature_addition
     mode: add-feature
@@ -104,9 +104,14 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-628-pack-consumer-runtime-release-install
-    target_revision: 7
+    target_revision: 10
     phase: forward_merge
-  escape_reason: "PR #670 admission receipt re-chain after PR #688 merged into main"
+  escape_reason: "Issue #743: tag から channel
+    を決める規則が契約に無く、src/cli/distribution.ts:365 / :524 の実装 (tag 中の -canary. で
+    canary、それ以外は stable) がどの test にも固定されていなかった。advisor
+    (claude-fable-5、2026-09-29) で案 A を採択し、production code を変えずに §5 手順 1
+    へ現行規則を凍結し、canary と stable が別 release を指す oracle CANDIDATE-U-PACKRT-012
+    を追加する。test 本体の昇格は後続の実装 PR で行う。"
 ---
 
 # PLAN-L7-628: Pack Release から consumer runtime を有効化する producer / installer
@@ -197,6 +202,32 @@ advisor (`ut-tdd advisor --decision design --current-model claude-opus-5 --plan 
 | B: C2 から build し、attestation は C1 を名乗る | 棄却 | build した revision と信頼記録が食い違う。compiled ESM は tree 全体を bundle するので、`sourcePath` の blob 一致は generation の同一性を保証しない |
 | C: manifest を source tree 外 (producer 生成) に置く | 棄却 | confirmed の `PLAN-L6-63` / `PLAN-L7-473` の正本位置と、それを固定で読む実装 4 ファイルの supersede が要る |
 
+### 2.3 tag から channel を決める規則 (rev 10、#743)
+
+#742 の調査で、§5 手順 1 の「`--tag` に対応する channel」を決める規則がどの契約にも無いことが分かった。実測は次のとおり
+(origin/main `60099e55`)。
+
+- `src/cli/distribution.ts:365` (`resolveConsumerRuntimeReleaseSourceBinding`) と `:524` (`buildConsumerRuntimeAdmissionInput`) は、
+  どちらも `tag.includes("-canary.") ? "canary" : "stable"` で channel を決める。src 内で tag から channel を導出するのはこの 2 箇所だけで、
+  明示的な channel 入力は無い。
+- producer 系 test の manifest は全て `canary` と `stable` を同じ release id に向けている (`tests/pack-consumer-runtime-release.test.ts`、
+  `tests/distribution-acceptance.test.ts`)。このため channel を定数に置き換える mutant が生き残り、規則はどの test にも固定されていない。
+- `PLAN-L7-531` §3.1 の fixture tag の例 `v0.0.0-canary-fixture` は `-canary.` を含まず、stable で admission されていた。
+
+advisor (`ut-tdd advisor --decision design --current-model claude-opus-5-5 --plan PLAN-L7-628-pack-consumer-runtime-release-install --execute`、
+2026-09-29、provider=claude、model=claude-fable-5、判定 SURVIVE) に諮り、次のとおり決定した。
+
+| 案 | 判定 | 理由 |
+| --- | --- | --- |
+| **A (採用)**: 現行の規則を §5 手順 1 に凍結し、`CANDIDATE-U-PACKRT-012` で固定する。fixture tag は `PLAN-L7-531` 側で canary 規則に合う値へ差し替える | 採用 | production code を変えずに規則を契約へ上げられる。第 1 層 smoke が第 2 層の実物 `v0.2.0-canary.2` と同じ canary 経路を通るようになる |
+| A2: SemVer として厳密化する (prerelease が `canary.<n>` なら canary、prerelease 無しなら stable、それ以外は fail-close) | 非 scope (後続 slice) | producer の code 変更と、既存 fixture `v0.0.0-accept` の改名が要る。誤った channel の選択は `CANDIDATE-U-PACKRT-012` の別 release 構成で検出できるので、1 issue の是正としては過大 |
+| B: `distribution package` に明示的な `--channel` 入力を追加する | 棄却 | tag と矛盾しうる 2 つ目の正本と、両者の照合規則が新たに要る。「`--tag` に対応する channel」という §5 の既存契約と衝突する |
+| C: fixture を stable のまま凍結する | 棄却 | 第 1 層が canary channel の経路を一度も通らないことを契約として認めることになり、定数 channel の mutant も残る |
+
+本改訂は規則の凍結と oracle の追加だけであり、production code (`src/cli/distribution.ts`) を変更しない。`CANDIDATE-U-PACKRT-012` の
+test 本体は本 PLAN 所有の `tests/pack-consumer-runtime-release.test.ts` に置き、`PLAN-L7-531` の canary PR とは別の PR で昇格する
+(1 PR = 1 論点)。
+
 ## 3. Release asset 契約
 
 canary.2 以降の Pack Release は、次の **宣言された asset 集合と exact に一致** する。欠落・余剰・名前違いは
@@ -241,6 +272,11 @@ consumer 固有の値 (`consumer_root`、`runtime_root`、`operation_id`、`atte
 
 1. 入力は git object だけで、作業ツリーの未 commit 変更・untracked ファイルを入力にしない。tag が指す release commit C2 の
    `release/manifest.yaml` を読み、`--tag` に対応する channel の release の `artifactSourceCommit` を C1 とする (§2.2)。
+   **`--tag` に対応する channel** は、tag 文字列の任意の位置 (prefix に限らない) に部分文字列 `-canary.` があれば `canary`、
+   無ければ `stable` とする (§2.3)。channel を別の入力 (CLI option・環境変数・manifest の field) から受け取らない。
+   source binding と admission input (`attestReleaseChannel` / `channelMappings`) は同じ tag から同じ channel を導出し、
+   片方だけ別の channel を使わない。選んだ channel が manifest に無い、または artifact を持たない release を指す場合は
+   `consumer_runtime_release_channel_unavailable` で fail-close する。
    producer は次の全てを満たさなければ出力前に fail-close する。
    - C2 の tree に `release/manifest.yaml` があり、既存の manifest schema を満たす。
    - C1 が C2 の first-parent 祖先である。祖先の探索は C2 の first parent から始め、C2 自身を含めない
@@ -337,7 +373,7 @@ PR-1 と PR-2 を 1 PR に統合しない。scope 構造を指す FLAG は close
 
 ## 8. TDD / trace / Reverse
 
-pair artifact の候補 oracle (`CANDIDATE-U-PACKRT-001..011`) は test-design が所有する。実装 PR で同番号の
+pair artifact の候補 oracle (`CANDIDATE-U-PACKRT-001..012`) は test-design が所有する。実装 PR で同番号の
 `U-PACKRT-*` へ 1:1 昇格する。既存 `CANDIDATE-U-PACKNODE-*`、`CANDIDATE-PACKISO-*`、`U-PACKISO-*`、
 `CANDIDATE-ST-PACKCANARY-*` を再採番・再所有しない。
 
@@ -359,7 +395,8 @@ schema・identity 導出を同一 implementation revision へ束縛する。R3 �
 1. PR-1: `distribution package` が §3 の 5 asset を出力し、`consumer-runtime.json` が schema v1 を満たし、どの asset にも
    producer の作業ディレクトリ・user home 配下 path・ユーザー名が無い (receipt の node / npm toolchain path は §4 の例外)
    (`CANDIDATE-U-PACKRT-001..004` Green)。release commit 束縛 (§5.1) の違反を出力前に fail-close する
-   (`CANDIDATE-U-PACKRT-011` Green)。
+   (`CANDIDATE-U-PACKRT-011` Green)。tag から channel を決める規則 (§5.1、§2.3) を canary と stable が別 release を指す構成で固定する
+   (`CANDIDATE-U-PACKRT-012` Green。rev 10 で追加、#743。PR-1 の後続 PR で昇格する)。
 2. PR-2: Release の asset だけを置いたディレクトリと空の consumer root から `setup --consumer-runtime-release` が
    `active.json` を生成し、launcher が exit 0 で起動する。破損・取り違えた asset、余剰 / 欠落 asset、保存済み receipt と一致しない再実行を deny し、
    同じ release の再実行は新 write 0。anchor 不一致・未指定と整合的な多 asset 偽造を手順 0 で deny する (`CANDIDATE-U-PACKRT-005..010` Green)。
