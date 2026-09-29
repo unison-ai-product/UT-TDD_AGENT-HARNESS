@@ -1719,7 +1719,6 @@ adapter は「存在する」と「harness から連携できる」を分けて�
 | `ut-tdd plan lint` | frontmatter schema 検証 |
 | `ut-tdd vmodel lint` | 4 artifact + trace 検証 |
 | `ut-tdd doctor` | 統合検証 |
-| (削除 2026-09-29) `ut-tdd self-test` | CLI として未登録のまま。実体は CI `harness-check` (typecheck + `npm run test` + biome lint + doctor、`.github/workflows/harness-check.yml`) とローカルの `npm run test` / `node src/cli.ts doctor` |
 | `ut-tdd setup` | 初期ディレクトリ / hook / local config の bootstrap |
 | `ut-tdd task classify` | 入力文 / PLAN / diff から kind / drive / size / complexity を仮判定 |
 | `ut-tdd task estimate` | 三点見積もり + リスク係数で effort_hours / story_points を算出 |
@@ -1732,6 +1731,8 @@ adapter は「存在する」と「harness から連携できる」を分けて�
 | `ut-tdd adapter list` | optional AI IDE adapter の検出状態を表示 |
 | `ut-tdd adapter probe <name>` | adapter の integration_level と capability を再判定 |
 | `ut-tdd adapter run <name> ...` | safe_commands に含まれる adapter command のみ実行 |
+
+> 改定 (2026-09-29): `ut-tdd self-test` は CLI に登録されないまま本表に載っていたため削除した。同等の検証は CI `harness-check` (typecheck + `npm run test` + biome lint + doctor、`.github/workflows/harness-check.yml`) と、ローカルの `npm run test` / `node src/cli.ts doctor` で行う。
 
 詳細実装は将来の個別 PLAN-XXX で詰める。
 
