@@ -39,18 +39,18 @@ status: draft
 github_issue_id: 733
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:f0bcd70afbb592bba5d40bc3382cf326
-  command_id: plan-draft:issue-733:sonnet-alias:1
-  admitted_at: 2026-09-29T01:14:10.498Z
-  source_digest: sha256:81568f634eea18fd132ceb935a90cb706661125c143a9bdddca09a7d060f71e8
-  decision_digest: sha256:0093bae84b2497a1e2f9f395a221bcb5f44f3145f71c54c3376c059a17c2a604
-  receipt_digest: sha256:a41e23c428f6bb3fa4b582905ac87d850bd73f8250790ca7dda9b5174474d0f6
+  receipt_id: certificate:01997f957b6bd4b4da0dcd48cf5fcc6f
+  command_id: plan-revise:issue-733:sonnet-alias:plan:r2:653764d57a0c
+  admitted_at: 2026-09-29T01:27:07.834Z
+  source_digest: sha256:24240d3fae9e2dc2c0c6afe12aec5d2877538780962cc56931b036ec4d8c4615
+  decision_digest: sha256:f141ec3a04ab17c05a12cef3ae477890d9bd564c510ed36b6c1f1ba921a69e2e
+  receipt_digest: sha256:ab3875cbae65de769fc325ed2d183174ef721f8d5d2fd1d83e05832aceab4db1
   binding:
     path: docs/plans/PLAN-L7-733-sonnet-alias-effort-high.md
     plan_id: PLAN-L7-733-sonnet-alias-effort-high
     asset_id: plan:f0bcd70afbb592bba5d40bc3382cf326
-    revision: 1
-    content_digest: sha256:81568f634eea18fd132ceb935a90cb706661125c143a9bdddca09a7d060f71e8
+    revision: 2
+    content_digest: sha256:24240d3fae9e2dc2c0c6afe12aec5d2877538780962cc56931b036ec4d8c4615
   route:
     signal: upgrade
     mode: retrofit
@@ -68,11 +68,11 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-733-sonnet-alias-effort-high
-    target_revision: 1
+    target_revision: 2
     phase: forward_merge
-  escape_reason: "Issue #733: PO 指示 (2026-09-29) で Sonnet のモデル指定を世代固定
-    claude-sonnet-5 からエイリアス sonnet へ変え、既定 effort を high にする。PLAN-L7-430 の model
-    routing を弱めず世代追随させる retrofit の新規起票。"
+  escape_reason: "Issue #733 PR #734 非著者レビュー r1 FLAG の是正: D3 の「ラダー外も high」が
+    policyEffort の実装と矛盾していたため、Sonnet family id の正規化に改め AC-2 と
+    CANDIDATE-U-SONALIAS-007 に反映する。"
 ---
 
 # PLAN-L7-733 (retrofit): Sonnet エイリアス化と既定 effort high
@@ -95,7 +95,10 @@ PO 指示 (2026-09-29、issue #733、確定事項): Sonnet 5.5 のリリース�
 
 1. `src/team/model-policy.ts`: `MODEL_IDS.claude.sonnet = "sonnet"`、JSDoc 更新。`MODEL_EFFORT_LADDER[sonnet]` を
    `{ base: "high", escalate: { model: MODEL_IDS.claude.opus, effort: "middle" } }` (shallow なし) へ。ラダー JSDoc の
-   base 列挙と escalateShallowResponse の「base=high 帯」列挙に sonnet を追加。
+   base 列挙と escalateShallowResponse の「base=high 帯」列挙に sonnet を追加。ラダー / capability rank の参照キーを
+   Sonnet family で正規化する (D3): `\bsonnet\b` に一致する Claude の model id (`sonnet` / `claude-sonnet-5` /
+   `claude-sonnet-5-5` 等) は `MODEL_IDS.claude.sonnet` のエントリを引く。`policyEffort` / `escalateShallowResponse` /
+   `MODEL_CAPABILITY_RANK` 参照の 3 箇所がこの正規化を共有する。Opus / Haiku / Fable / Codex 系の exact-key 参照は変えない。
 2. `src/runtime/agent-guard-policy.ts`: `CLAUDE_MODEL_FAMILY_CATALOG.sonnet = "sonnet"`。
 3. `src/setup/templates.ts`: adapter CLAUDE.md の Sonnet 行 effort を `high (xhigh for UI/UX)`、adapter
    `.claude/CLAUDE.md` の「Opus / Sonnet reasoning effort defaults to middle」を Opus=middle / Sonnet=high に分離。
@@ -130,13 +133,25 @@ escalateShallowResponse の既存規律、PO 2026-07-28)。Sonnet を base=high 
 - model-id-doc-drift の形状正規表現 (`src/lint/model-id-doc-drift.ts`) は `claude-<name>-<n>` 形のみを拾うため alias は
   offender にならない (function-spec は symbol 参照のみで影響なし)。
 
-### D3. 既知の副作用 (受容)
+### D3. Sonnet family id の正規化 (rev 2 で訂正)
 
-- MODEL_EFFORT_LADDER / MODEL_CAPABILITY_RANK は exact id キー。明示 `--model claude-sonnet-5` や解決後 id
-  (例 `claude-sonnet-5-5`) はラダー外となり従来既定 (Claude = high) に落ちる。値は high で一致するため実害なし。
-- token telemetry は transcript の `message.model` (解決後 id) を記録する。`claude-sonnet-5-5` は
-  `pricingKeyFor` の prefix 規則で `claude-sonnet-5` 単価に一致する (残差 `-5` が数字始まり)。Sonnet 5.5 の単価が
-  異なる場合は黙って旧単価で計上される — 価格表は本 PLAN 非スコープのため別 issue で扱う。
+rev 1 は「ラダー外の id は従来既定 Claude=high に落ちるので実害なし」と書いたが誤り。`policyEffort`
+(`src/team/model-policy.ts`) はラダー外かつ intent が implementation / test / lightweight のとき provider 判定より先に
+`middle` を返す。明示 `--model claude-sonnet-5` や解決後 id (`claude-sonnet-5-5`) で走る Sonnet が `middle` になり、
+AC-2「Sonnet 既定 high」が id の綴りで破れる (非著者レビュー r1 の実測: implementation / simple / explicit model で
+`sonnet=high`、`claude-sonnet-5=middle`、`claude-sonnet-5-5=middle`)。
+
+採択: ラダーと capability rank の参照キーを Sonnet family で正規化する (scope 1)。PO 指示は「Sonnet の推奨 effort を high」
+であり、id の綴り (alias / 世代付き / 解決後) で結果が変わるのは指示に反する。正規化は Sonnet family に限る —
+alias 化するのは Sonnet だけで、Opus / Haiku / Fable の id は本 PLAN で変えないため、他 family を正規化する理由がない。
+family 判定は agent-guard の `normalizeModelFamily` と同じ `\bsonnet\b` 規則を使い、runtime → team の import 禁止
+(module-boundary) に触れないよう team 層内に閉じた 1 関数とする。
+
+却下: AC-2 を alias 経路だけに限定し、世代付き / 解決後 id の `middle` を受容する案。PO 指示の範囲を実装都合で狭めるため。
+
+残る副作用 (受容): token telemetry は transcript の `message.model` (解決後 id) を記録し、`claude-sonnet-5-5` は
+`pricingKeyFor` の prefix 規則で `claude-sonnet-5` 単価に一致する。Sonnet 5.5 の単価が異なる場合は旧単価で計上される —
+価格表は本 PLAN 非スコープのため別 issue で扱う。
 
 ## テスト設計
 
@@ -157,6 +172,7 @@ escalateShallowResponse の既存規律、PO 2026-07-28)。Sonnet を base=high 
 | CANDIDATE-U-SONALIAS-003 | `MODEL_EFFORT_LADDER[sonnet]` が base=high・shallow 未定義・escalate=opus/middle、escalateShallowResponse(sonnet, high) → opus/middle、(sonnet, middle) → null |
 | CANDIDATE-U-SONALIAS-004 | `normalizeModelFamily("sonnet")` と agent-guard が `model: sonnet` frontmatter を sonnet family と解決し、haiku 要求を downgrade で拒否 |
 | CANDIDATE-U-SONALIAS-005 | `checkCrossAgentModelPair("sonnet", MODEL_IDS.codex.frontier)` が ok・workerProvider=claude、`("sonnet", MODEL_IDS.claude.opus)` が same_provider |
+| CANDIDATE-U-SONALIAS-007 | intent=implementation・difficulty=simple・明示 model で `selectTeamModel` の reasoning_effort が `sonnet` / `claude-sonnet-5` / `claude-sonnet-5-5` のいずれも `high`、`escalateShallowResponse` がいずれも high → opus/middle、`claude-opus-5` / `claude-haiku-4-5` の結果は正規化前と不変 (正規化を外す mutation で `claude-sonnet-5=middle` に戻り Red) |
 | CANDIDATE-U-SONALIAS-006 | 生成 adapter テンプレートの Sonnet effort 記述が high、Opus は middle のまま |
 
 ## 実装順序 (serial)
@@ -167,6 +183,11 @@ escalateShallowResponse の既存規律、PO 2026-07-28)。Sonnet を base=high 
 ## 受入条件
 
 - AC-1: Sonnet 指定箇所が `sonnet` で、世代固定が残らない (CANDIDATE-U-SONALIAS-001/002)。
-- AC-2: Sonnet 既定 effort が high (frontmatter / ラダー / 共通ルール文 / adapter テンプレート) (CANDIDATE-U-SONALIAS-001/003/006)。
+- AC-2: Sonnet 既定 effort が high (frontmatter / ラダー / 共通ルール文 / adapter テンプレート)。alias / 世代付き / 解決後のどの Sonnet id でも同じ (CANDIDATE-U-SONALIAS-001/003/006/007)。
 - AC-3: model-id-ssot-drift / model-id-doc-drift / rule-drift / agent-guard / setup 系テストが green。
 - AC-4: token-tracker 価格表は無変更。
+
+## 改訂履歴
+
+- rev 1: 初回起票。
+- rev 2: 非著者レビュー r1 の FLAG (D3 の「ラダー外も high」が `policyEffort` の実装と矛盾) を是正。D3 を Sonnet family id の正規化に改め、scope 1・AC-2 に反映、CANDIDATE-U-SONALIAS-007 を追加。
