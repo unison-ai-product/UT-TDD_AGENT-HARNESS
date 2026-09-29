@@ -42,6 +42,105 @@ const CLAUDE_CATALOG = new Set<string>(Object.values(MODEL_IDS.claude));
 const KNOWN_STALE_LITERALS = ["gpt-5.5", "claude-sonnet-4-6", "gpt-5.4"];
 
 describe("U-MODELID-SSOT: model ID single source of truth", () => {
+  it("CANDIDATE-U-SONALIAS-001: all active Claude agents use family aliases and Sonnet agents default high", () => {
+    const expectedNames = [
+      "be-api.md",
+      "be-logic.md",
+      "blind-reviewer.md",
+      "code-reviewer.md",
+      "db-schema.md",
+      "devops-deploy.md",
+      "pdm-innovation-manager.md",
+      "pdm-marketing-innovation.md",
+      "pdm-tech-innovation.md",
+      "pmo-haiku.md",
+      "pmo-project-explorer.md",
+      "pmo-project-scout.md",
+      "pmo-sonnet.md",
+      "pmo-tech-docs.md",
+      "pmo-tech-fork.md",
+      "pmo-tech-news.md",
+      "qa-test.md",
+      "refactor-scout.md",
+      "security-audit.md",
+      "ut-tdd-tl.md",
+    ];
+    const sonnetNames = new Set([
+      "be-api.md",
+      "be-logic.md",
+      "db-schema.md",
+      "devops-deploy.md",
+      "pmo-project-explorer.md",
+      "pmo-sonnet.md",
+      "pmo-tech-docs.md",
+      "pmo-tech-fork.md",
+      "pmo-tech-news.md",
+    ]);
+    const opusEfforts = new Map<string, string | undefined>([
+      ["blind-reviewer.md", "medium"],
+      ["code-reviewer.md", "medium"],
+      ["pdm-innovation-manager.md", "medium"],
+      ["pdm-marketing-innovation.md", "medium"],
+      ["pdm-tech-innovation.md", "medium"],
+      ["qa-test.md", "medium"],
+      ["security-audit.md", "medium"],
+      ["ut-tdd-tl.md", undefined],
+    ]);
+    const haikuEfforts = new Set(["pmo-haiku.md", "pmo-project-scout.md", "refactor-scout.md"]);
+    const dir = join(repoRoot, ".claude", "agents");
+    const agentNames = readdirSync(dir).filter((name) => name.endsWith(".md")).sort();
+    expect(agentNames).toEqual(expectedNames.sort());
+
+    for (const name of expectedNames) {
+      const text = readFileSync(join(dir, name), "utf8");
+      const model = text.match(/^model:\s*(\S+)\s*$/m)?.[1];
+      expect(["opus", "sonnet", "haiku"], `${name} model alias`).toContain(model);
+      expect(model, `${name} must not pin a model generation`).not.toMatch(/-\d/);
+      if (sonnetNames.has(name)) {
+        expect(text.match(/^effort:\s*(\S+)\s*$/m)?.[1], `${name} Sonnet effort`).toBe("high");
+      }
+      if (opusEfforts.has(name)) {
+        expect(text.match(/^effort:\s*(\S+)\s*$/m)?.[1], `${name} Opus effort`)
+          .toBe(opusEfforts.get(name));
+      }
+      if (haikuEfforts.has(name)) {
+        expect(text.match(/^effort:\s*(\S+)\s*$/m)?.[1], `${name} Haiku effort`).toBe("low");
+      }
+    }
+  });
+
+  it("CANDIDATE-U-SONALIAS-002: Claude SSoT values are family aliases mirrored by runtime guard catalog", () => {
+    expect(MODEL_IDS.claude).toEqual({
+      fable: "fable",
+      opus: "opus",
+      sonnet: "sonnet",
+      haiku: "haiku",
+    });
+    expect({ ...CLAUDE_MODEL_FAMILY_CATALOG }).toEqual({ ...MODEL_IDS.claude });
+    for (const value of Object.values(MODEL_IDS.claude)) {
+      expect(value).not.toMatch(/-\d/);
+    }
+  });
+
+  it("CANDIDATE-U-SONALIAS-006: adapter policy templates document Sonnet high and Opus middle", () => {
+    const claude = BUILTIN_GITHUB_TEMPLATES["adapter/CLAUDE.md"];
+    const runtime = BUILTIN_GITHUB_TEMPLATES["adapter/.claude/CLAUDE.md"];
+    expect(claude).toContain("Claude Sonnet");
+    expect(claude).toMatch(/Claude Sonnet[^\n]*high \(xhigh for UI\/UX\)/);
+    expect(claude).toMatch(/Claude Opus[^\n]*middle/);
+    expect(runtime).toMatch(/Opus[^\n]*middle/);
+    expect(runtime).toMatch(/Sonnet[^\n]*high/);
+    const agentTemplates = Object.entries(BUILTIN_GITHUB_TEMPLATES).filter(([path]) =>
+      path.startsWith("adapter/.claude/agents/"),
+    );
+    expect(agentTemplates).toHaveLength(20);
+    for (const [path, body] of agentTemplates) {
+      const model = body.match(/^model:\s*(\S+)\s*$/m)?.[1];
+      expect(["opus", "sonnet", "haiku"], `${path} generated model alias`).toContain(model);
+      expect(model, `${path} must not generate a pinned model ID`).not.toMatch(/-\d/);
+    }
+  });
+
   it("(a) .claude/agents frontmatter models are all in the MODEL_IDS catalog", () => {
     const dir = join(repoRoot, ".claude", "agents");
     if (!existsSync(dir)) {

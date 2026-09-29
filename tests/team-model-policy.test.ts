@@ -14,8 +14,215 @@ import {
   REVIEW_LANES,
   selectTeamModel,
 } from "../src/team/model-policy.ts";
+import { resolveDelegationRouting } from "../src/team/delegation-routing.ts";
 
 describe("team model policy", () => {
+  it("CANDIDATE-U-SONALIAS-003: Claude effort ladder keeps the approved family shapes", () => {
+    expect(MODEL_EFFORT_LADDER[MODEL_IDS.claude.sonnet]).toEqual({
+      base: "high",
+      escalate: { model: MODEL_IDS.claude.opus, effort: "middle" },
+    });
+    expect(MODEL_EFFORT_LADDER[MODEL_IDS.claude.fable]).toEqual({
+      base: "low",
+      shallow: "middle",
+      escalate: { model: MODEL_IDS.codex.frontier, effort: "low" },
+    });
+    expect(MODEL_EFFORT_LADDER[MODEL_IDS.claude.opus]).toEqual({
+      base: "middle",
+      shallow: "high",
+      escalate: { model: MODEL_IDS.codex.frontier, effort: "low" },
+    });
+    expect(
+      escalateShallowResponse({ model: MODEL_IDS.claude.sonnet, currentEffort: "high" }),
+    ).toEqual({ model: MODEL_IDS.claude.opus, effort: "middle" });
+    expect(
+      escalateShallowResponse({ model: MODEL_IDS.claude.sonnet, currentEffort: "middle" }),
+    ).toBeNull();
+  });
+
+  it("CANDIDATE-U-SONALIAS-007: family aliases and pinned Claude IDs share routing semantics", () => {
+    const cases = [
+      {
+        alias: "fable",
+        ids: ["claude-fable-5", "claude-fable-5-1"],
+        base: "low",
+        rankBelowDesign: false,
+      },
+      {
+        alias: "opus",
+        ids: ["claude-opus-5", "claude-opus-5-5"],
+        base: "middle",
+        rankBelowDesign: false,
+      },
+      {
+        alias: "sonnet",
+        ids: ["claude-sonnet-5", "claude-sonnet-5-5"],
+        base: "high",
+        rankBelowDesign: true,
+      },
+      {
+        alias: "haiku",
+        ids: ["claude-haiku-4-5", "claude-haiku-4-5-20251001"],
+        base: "middle",
+        rankBelowDesign: true,
+      },
+    ] as const;
+
+    for (const { alias, ids, base, rankBelowDesign } of cases) {
+      const aliasSelection = selectTeamModel({
+        provider: "claude",
+        role: "se",
+        engine: "pmo-sonnet",
+        task: "implement a small change",
+        difficulty: "simple",
+        model: alias,
+      });
+      expect(aliasSelection.reasoning_effort, `${alias} implementation effort`).toBe(base);
+      expect(aliasSelection.model).toBe(alias);
+      expect(
+        advisorHeavyUseRecommended({
+          provider: "claude",
+          phase: "design",
+          currentModel: alias,
+        }),
+      ).toBe(rankBelowDesign);
+      const aliasRoute = resolveDelegationRouting({
+        provider: "claude",
+        role: "reviewer",
+        task: "review",
+        model: alias,
+      });
+      expect(aliasRoute, `${alias} explicit review route`).toMatchObject({
+        ok: true,
+        model: alias,
+        effort: alias === "haiku" ? "high" : base,
+        model_source: "explicit",
+      });
+
+      for (const model of ids) {
+        const selection = selectTeamModel({
+          provider: "claude",
+          role: "se",
+          engine: "pmo-sonnet",
+          task: "implement a small change",
+          difficulty: "simple",
+          model,
+        });
+        expect(selection.reasoning_effort, `${model} implementation effort`).toBe(base);
+        expect(selection.model).toBe(model);
+        expect(
+          advisorHeavyUseRecommended({ provider: "claude", phase: "design", currentModel: model }),
+          `${model} capability comparison`,
+        ).toBe(rankBelowDesign);
+
+        const route = resolveDelegationRouting({
+          provider: "claude",
+          role: "reviewer",
+          task: "review",
+          model,
+        });
+        expect(route, `${model} explicit review route`).toMatchObject({
+          ok: true,
+          model,
+          effort: alias === "haiku" ? "high" : base,
+          model_source: "explicit",
+        });
+      }
+    }
+
+    const escalationCases = [
+      {
+        family: "fable",
+        models: ["fable", "claude-fable-5", "claude-fable-5-1"],
+        probes: [
+          { currentEffort: "low", expected: { model: "$input", effort: "middle" } },
+          { currentEffort: "middle", expected: { model: "gpt-5.6-sol", effort: "low" } },
+          { currentEffort: "high", expected: null },
+        ],
+      },
+      {
+        family: "opus",
+        models: ["opus", "claude-opus-5", "claude-opus-5-5"],
+        probes: [
+          { currentEffort: "low", expected: null },
+          { currentEffort: "middle", expected: { model: "$input", effort: "high" } },
+          { currentEffort: "high", expected: { model: "gpt-5.6-sol", effort: "low" } },
+        ],
+      },
+      {
+        family: "sonnet",
+        models: ["sonnet", "claude-sonnet-5", "claude-sonnet-5-5"],
+        probes: [
+          { currentEffort: "low", expected: null },
+          { currentEffort: "middle", expected: null },
+          { currentEffort: "high", expected: { model: "opus", effort: "middle" } },
+        ],
+      },
+      {
+        family: "haiku",
+        models: ["haiku", "claude-haiku-4-5", "claude-haiku-4-5-20251001"],
+        probes: [
+          { currentEffort: "low", expected: null },
+          { currentEffort: "middle", expected: null },
+          { currentEffort: "high", expected: null },
+        ],
+      },
+    ] as const;
+    for (const { family, models, probes } of escalationCases) {
+      for (const model of models) {
+        for (const { currentEffort, expected } of probes) {
+          const actual = escalateShallowResponse({ model, currentEffort });
+          const resolvedExpected = expected?.model === "$input" ? { ...expected, model } : expected;
+          expect(actual, `${family}/${model} at ${currentEffort}`).toEqual(resolvedExpected);
+        }
+      }
+    }
+    expect(escalateShallowResponse({ model: "gpt-5.6-sol", currentEffort: "low" })).toEqual({
+      model: "gpt-5.6-sol",
+      effort: "middle",
+    });
+    expect(escalateShallowResponse({ model: "gpt-5.6-terra", currentEffort: "middle" })).toEqual({
+      model: "gpt-5.6-terra",
+      effort: "high",
+    });
+    expect(escalateShallowResponse({ model: "gpt-5.6-terra", currentEffort: "high" })).toEqual({
+      model: "gpt-5.6-sol",
+      effort: "low",
+    });
+    expect(escalateShallowResponse({ model: "gpt-5.6-luna", currentEffort: "high" })).toEqual({
+      model: "gpt-5.6-sol",
+      effort: "low",
+    });
+    expect(escalateShallowResponse({ model: "gpt-5.3-codex-spark", currentEffort: "high" })).toEqual({
+      model: "gpt-5.6-terra",
+      effort: "middle",
+    });
+    expect(escalateShallowResponse({ model: "gpt-5.4-mini", currentEffort: "high" })).toEqual({
+      model: "gpt-5.6-terra",
+      effort: "middle",
+    });
+    const codexCases = [
+      ["gpt-5.6-sol", "low"],
+      ["gpt-5.6-terra", "middle"],
+      ["gpt-5.6-luna", "high"],
+      ["gpt-5.3-codex-spark", "high"],
+      ["gpt-5.4-mini", "high"],
+    ] as const;
+    for (const [model, effort] of codexCases) {
+      const selection = selectTeamModel({
+        provider: "codex",
+        role: "se",
+        engine: "codex-se",
+        task: "implement a small change",
+        difficulty: "simple",
+        model,
+      });
+      expect(selection.model).toBe(model);
+      expect(selection.reasoning_effort, `${model} Codex policy remains unchanged`).toBe(effort);
+    }
+    expect(escalateShallowResponse({ model: "sonnet-opus", currentEffort: "high" })).toBeNull();
+  });
+
   it("infers critical difficulty from high-risk task terms", () => {
     expect(inferTaskDifficulty({ task: "DB schema migration for production auth" })).toEqual({
       difficulty: "critical",

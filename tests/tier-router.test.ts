@@ -17,7 +17,7 @@ import {
   TIER_TABLE,
   tierFor,
 } from "../src/task/tier-router-policy.ts";
-import { MODEL_IDS } from "../src/team/model-policy.ts";
+import { MODEL_EFFORT_LADDER, MODEL_IDS } from "../src/team/model-policy.ts";
 
 function det(
   mode: RuntimeDetection["mode"],
@@ -34,6 +34,36 @@ function det(
 }
 
 describe("U-TIER: cost-tiered provider router", () => {
+  it("CANDIDATE-U-SONALIAS-008: Claude aliases preserve tier separation and frontier safety", () => {
+    expect(TIER_TABLE.T0.claude).toBe("opus");
+    expect(TIER_TABLE.T1.claude).toBe("sonnet");
+    expect(TIER_TABLE.T2.claude).toBe("haiku");
+    expect(new Set([TIER_TABLE.T0.claude, TIER_TABLE.T1.claude, TIER_TABLE.T2.claude]).size).toBe(3);
+    expect(FRONTIER_MODELS).toEqual(new Set([MODEL_IDS.claude.opus, MODEL_IDS.codex.frontier]));
+    expect(FRONTIER_MODELS.has(TIER_TABLE.T1.claude)).toBe(false);
+    expect(FRONTIER_MODELS.has(TIER_TABLE.T2.claude)).toBe(false);
+
+    for (const role of ["se", "docs"] as const) {
+      for (const difficulty of ["trivial", "simple", "standard", "complex", "critical"] as const) {
+        const model = resolveModel(role, tierFor(role, difficulty, []), "claude");
+        expect(FRONTIER_MODELS.has(model), `${role}/${difficulty} worker frontier`).toBe(false);
+      }
+    }
+
+    expect(MODEL_EFFORT_LADDER[MODEL_IDS.claude.sonnet]?.escalate).toEqual({
+      model: TIER_TABLE.T0.claude,
+      effort: "middle",
+    });
+    expect(MODEL_EFFORT_LADDER[MODEL_IDS.claude.opus]?.escalate).toEqual({
+      model: TIER_TABLE.T0.codex,
+      effort: "low",
+    });
+    expect(MODEL_EFFORT_LADDER[MODEL_IDS.claude.fable]?.escalate).toEqual({
+      model: TIER_TABLE.T0.codex,
+      effort: "low",
+    });
+  });
+
   it("U-TIER-001: archetype が tier 帯を決める (相談/検証=T0, ワーカー=T1/T2)", () => {
     expect(tierFor("tl", "trivial", [])).toBe("T0");
     expect(tierFor("uiux", "critical", [])).toBe("T0");

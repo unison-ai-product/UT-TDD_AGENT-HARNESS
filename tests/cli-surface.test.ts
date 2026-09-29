@@ -681,6 +681,24 @@ describe("L7 CLI surface closure", () => {
     }
   }, 20_000);
 
+  it("CANDIDATE-U-SONALIAS-009: reviewer delegation emits the Claude Opus family alias in argv", () => {
+    const fake = withFakeProviderEnv("claude");
+    try {
+      const payload = parseCliJson(
+        runCliIn(
+          repoRoot,
+          ["claude", "--role", "reviewer", "--task", "inspect the implementation", "--dry-run"],
+          fake.env,
+        ),
+      );
+      expect(payload.model).toBe("opus");
+      expect(payload.args).toContain("--model");
+      expect(payload.args[payload.args.indexOf("--model") + 1]).toBe("opus");
+    } finally {
+      removeTestTree(fake.binDir);
+    }
+  }, 20_000);
+
   it("passes plan skill injection through task route adapter plans", () => {
     const sourcePlan = join(
       repoRoot,
@@ -797,6 +815,8 @@ describe("L7 CLI surface closure", () => {
       },
     });
     expect(payload.adapterPlan.stdin).toContain("upper-model advisor");
+    expect(payload.adapterPlan.args).toContain("--model");
+    expect(payload.adapterPlan.args[payload.adapterPlan.args.indexOf("--model") + 1]).toBe("fable");
   }, 20_000);
 
   it("executes advisor through the selected upper Codex adapter", () => {

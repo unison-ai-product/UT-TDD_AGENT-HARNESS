@@ -36,6 +36,20 @@ function agent(tool_input: AgentGuardInput["tool_input"]): AgentGuardInput {
 }
 
 describe("normalizeModelFamily", () => {
+  it("CANDIDATE-U-SONALIAS-004: all Claude aliases resolve to one family and preserve agent floors", () => {
+    expect(normalizeModelFamily("fable")).toBe("fable");
+    expect(normalizeModelFamily("opus")).toBe("opus");
+    expect(normalizeModelFamily("sonnet")).toBe("sonnet");
+    expect(normalizeModelFamily("haiku")).toBe("haiku");
+
+    expect(
+      evaluateAgentGuard(agent({ subagent_type: "blind-reviewer", model: "sonnet" }), ctx()).code,
+    ).toBe(2);
+    expect(
+      evaluateAgentGuard(agent({ subagent_type: "pmo-sonnet", model: "haiku" }), ctx()).code,
+    ).toBe(2);
+  });
+
   it("normalizes family names and Anthropic model ids", () => {
     expect(normalizeModelFamily("sonnet")).toBe("sonnet");
     expect(normalizeModelFamily("claude-sonnet-4-6")).toBe("sonnet");

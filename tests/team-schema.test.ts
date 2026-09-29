@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { checkCrossAgentModelPair, modelProviderFromId } from "../src/schema/index.ts";
 import {
   MAX_TEAM_PARALLEL,
   modelOverrideSchema,
@@ -12,6 +13,21 @@ describe("U-TEAM-001 teamDefinitionSchema", () => {
     name: "t",
     members: [{ role: "se", engine: "codex-se", task: "実装" }],
   };
+
+  it("CANDIDATE-U-SONALIAS-005: Claude family aliases, including fable, are accepted at provider boundaries", () => {
+    for (const model of ["sonnet", "opus", "haiku", "fable"]) {
+      expect(modelProviderFromId(model), model).toBe("claude");
+      expect(
+        checkCrossAgentModelPair(model, "gpt-5.6-sol"),
+        `${model} paired with Codex frontier`,
+      ).toMatchObject({ ok: true, workerProvider: "claude", reviewerProvider: "codex" });
+    }
+    expect(checkCrossAgentModelPair("sonnet", "opus")).toMatchObject({
+      ok: false,
+      issue: "same_provider",
+    });
+    expect(modelOverrideSchema.parse("fable")).toBe("fable");
+  });
 
   it("strategy/max_parallel の default 適用", () => {
     const parsed = teamDefinitionSchema.parse(valid);
