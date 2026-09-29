@@ -536,13 +536,19 @@ function parseG11EvidenceManifest(path: string, raw: unknown) {
   });
 }
 
-function readG11JsonArtifact(
-  repoRoot: string,
-  manifestPathValue: string,
-  artifactKey: string,
-  artifacts: JsonRecord,
-  violations: string[],
-): JsonRecord | null {
+function readG11JsonArtifact({
+  repoRoot,
+  manifestPath,
+  artifactKey,
+  artifacts,
+  violations,
+}: {
+  repoRoot: string;
+  manifestPath: string;
+  artifactKey: string;
+  artifacts: JsonRecord;
+  violations: string[];
+}): JsonRecord | null {
   const artifactPath = resolveRepoFile(repoRoot, artifacts[artifactKey]);
   if (!artifactPath || !existsSync(artifactPath)) return null;
   try {
@@ -550,25 +556,31 @@ function readG11JsonArtifact(
     if (!isRecord(parsed)) throw new Error("not an object");
     return parsed;
   } catch {
-    violations.push(`${manifestPathValue}: invalid artifact ${artifactKey}: JSON object required`);
+    violations.push(`${manifestPath}: invalid artifact ${artifactKey}: JSON object required`);
     return null;
   }
 }
 
-function validateG11Artifacts(
-  repoRoot: string,
-  path: string,
-  artifacts: JsonRecord,
-  requirementIds: ReadonlySet<string>,
-  violations: string[],
-): void {
-  const traceReview = readG11JsonArtifact(
+function validateG11Artifacts({
+  repoRoot,
+  manifestPath,
+  artifacts,
+  requirementIds,
+  violations,
+}: {
+  repoRoot: string;
+  manifestPath: string;
+  artifacts: JsonRecord;
+  requirementIds: ReadonlySet<string>;
+  violations: string[];
+}): void {
+  const traceReview = readG11JsonArtifact({
     repoRoot,
-    path,
-    "end_to_end_trace_review",
+    manifestPath,
+    artifactKey: "end_to_end_trace_review",
     artifacts,
     violations,
-  );
+  });
   if (requirementIds.size === 0) {
     violations.push("no requirement ids defined in DOC-L3-FUNCTIONAL");
   }
@@ -577,12 +589,12 @@ function validateG11Artifacts(
     const seen = new Set<string>();
     for (const entry of entries) {
       if (!isRecord(entry)) {
-        violations.push(`${path}: invalid trace review requirement entry`);
+        violations.push(`${manifestPath}: invalid trace review requirement entry`);
         continue;
       }
       const requirementId = entry.requirement_id;
       if (typeof requirementId !== "string" || !requirementId) {
-        violations.push(`${path}: invalid trace review requirement_id`);
+        violations.push(`${manifestPath}: invalid trace review requirement_id`);
         continue;
       }
       const keys = Object.keys(entry);
@@ -591,41 +603,53 @@ function validateG11Artifacts(
         !Object.hasOwn(entry, "requirement_id") ||
         !Object.hasOwn(entry, "status")
       ) {
-        violations.push(`${path}: invalid trace review requirement ${requirementId}`);
+        violations.push(`${manifestPath}: invalid trace review requirement ${requirementId}`);
       }
       if (!requirementIds.has(requirementId)) {
-        violations.push(`${path}: trace review references undefined requirement ${requirementId}`);
+        violations.push(
+          `${manifestPath}: trace review references undefined requirement ${requirementId}`,
+        );
       }
       if (seen.has(requirementId)) {
-        violations.push(`${path}: duplicate trace requirement ${requirementId}`);
+        violations.push(`${manifestPath}: duplicate trace requirement ${requirementId}`);
       }
       seen.add(requirementId);
       const status = entry.status;
       if (status !== "traced" && status !== "blocked") {
-        violations.push(`${path}: invalid trace status ${requirementId}: ${String(status)}`);
+        violations.push(
+          `${manifestPath}: invalid trace status ${requirementId}: ${String(status)}`,
+        );
       } else if (status === "blocked") {
-        violations.push(`${path}: blocked requirement ${requirementId}`);
+        violations.push(`${manifestPath}: blocked requirement ${requirementId}`);
       }
     }
     for (const requirementId of requirementIds) {
       if (!seen.has(requirementId)) {
-        violations.push(`${path}: untraced requirement ${requirementId}`);
+        violations.push(`${manifestPath}: untraced requirement ${requirementId}`);
       }
     }
   }
 
-  const decision = readG11JsonArtifact(repoRoot, path, "po_uat_decision", artifacts, violations);
+  const decision = readG11JsonArtifact({
+    repoRoot,
+    manifestPath,
+    artifactKey: "po_uat_decision",
+    artifacts,
+    violations,
+  });
   if (!decision) return;
   if (decision.decision !== "accept" && decision.decision !== "reject") {
-    violations.push(`${path}: invalid po_uat_decision.decision ${String(decision.decision)}`);
+    violations.push(
+      `${manifestPath}: invalid po_uat_decision.decision ${String(decision.decision)}`,
+    );
   } else if (decision.decision === "reject") {
-    violations.push(`${path}: po_uat_decision.decision is reject`);
+    violations.push(`${manifestPath}: po_uat_decision.decision is reject`);
   }
   if (typeof decision.decided_by_role !== "string" || !decision.decided_by_role.trim()) {
-    violations.push(`${path}: po_uat_decision.decided_by_role is required`);
+    violations.push(`${manifestPath}: po_uat_decision.decided_by_role is required`);
   }
   if (typeof decision.revision !== "string" || !/^[0-9a-f]{40}$/i.test(decision.revision)) {
-    violations.push(`${path}: invalid po_uat_decision.revision`);
+    violations.push(`${manifestPath}: invalid po_uat_decision.revision`);
   }
 }
 
@@ -698,7 +722,13 @@ function checkManifest({
     }
   }
   if (obligation.gate === "G11") {
-    validateG11Artifacts(repoRoot, path, artifacts, g11RequirementIds ?? new Set(), violations);
+    validateG11Artifacts({
+      repoRoot,
+      manifestPath: path,
+      artifacts,
+      requirementIds: g11RequirementIds ?? new Set(),
+      violations,
+    });
   }
   return { mandatoryIds, deferredIds };
 }
