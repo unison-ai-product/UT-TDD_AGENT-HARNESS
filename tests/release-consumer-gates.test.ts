@@ -1926,11 +1926,8 @@ describe("PR-G10 consumer G10 predicates", () => {
 });
 
 describe("PR-G11 consumer G11 predicates", () => {
-  function expectG11Failure(root: string, diagnostic: string): void {
-    const result = evaluateStaticGate({ gate: "G11", repoRoot: root });
-    expect(result.applicable).toBe(true);
-    expect(result.passed).toBe(false);
-    expect(result.messages.join("\n")).toContain(diagnostic);
+  function evaluateG11(root: string) {
+    return evaluateStaticGate({ gate: "G11", repoRoot: root });
   }
 
   it("U-RCDEV-032: accepts the complete consumer UAT contract and exposes the PO/TL review decision", () => {
@@ -1965,7 +1962,10 @@ describe("PR-G11 consumer G11 predicates", () => {
       content.replace("UAT-CONSUMER-02", "UAT-CONSUMER-01"),
     );
 
-    expectG11Failure(root, "duplicate case id UAT-CONSUMER-01");
+    const actualResult = evaluateG11(root);
+
+    expect(actualResult).toMatchObject({ applicable: true, passed: false });
+    expect(actualResult.messages.join("\n")).toContain("duplicate case id UAT-CONSUMER-01");
   });
 
   it("U-RCDEV-032: traces cases only through the G11 L1/L3-L6/L7 pair set plus L3 requirement IDs (T)", () => {
@@ -1986,7 +1986,10 @@ describe("PR-G11 consumer G11 predicates", () => {
     updateConsumerG11Design(undefinedTarget, (content) =>
       content.replace("| FR-01 | PO シナリオ", "| FR-99 | PO シナリオ"),
     );
-    expectG11Failure(undefinedTarget, "trace target missing FR-99");
+    const actualResult = evaluateG11(undefinedTarget);
+
+    expect(actualResult).toMatchObject({ applicable: true, passed: false });
+    expect(actualResult.messages.join("\n")).toContain("trace target missing FR-99");
   });
 
   it("U-RCDEV-032: requires every designed UAT case in manifest, command, and coverage evidence (F)", () => {
@@ -2002,7 +2005,10 @@ describe("PR-G11 consumer G11 predicates", () => {
       manifest.coverage = manifest.coverage.filter((entry) => entry.uat_id !== missingId);
     });
 
-    expectG11Failure(root, "missing row evidence UAT-CONSUMER-02");
+    const actualResult = evaluateG11(root);
+
+    expect(actualResult).toMatchObject({ applicable: true, passed: false });
+    expect(actualResult.messages.join("\n")).toContain("missing row evidence UAT-CONSUMER-02");
   });
 
   it("U-RCDEV-032: requires the PO UAT decision artifact (A)", () => {
@@ -2012,7 +2018,10 @@ describe("PR-G11 consumer G11 predicates", () => {
       delete manifest.artifacts.po_uat_decision;
     });
 
-    expectG11Failure(root, "missing artifact po_uat_decision");
+    const actualResult = evaluateG11(root);
+
+    expect(actualResult).toMatchObject({ applicable: true, passed: false });
+    expect(actualResult.messages.join("\n")).toContain("missing artifact po_uat_decision");
   });
 
   it("U-RCDEV-032: validates the complete L3 requirement trace set and its closed status vocabulary", () => {
@@ -2080,7 +2089,10 @@ describe("PR-G11 consumer G11 predicates", () => {
       writeConsumerG11Fixture(root);
       updateConsumerG11TraceReview(root, mutation.mutate);
 
-      expectG11Failure(root, mutation.expected);
+      const actualResult = evaluateG11(root);
+
+      expect(actualResult).toMatchObject({ applicable: true, passed: false });
+      expect(actualResult.messages.join("\n")).toContain(mutation.expected);
     }
   });
 
@@ -2089,7 +2101,12 @@ describe("PR-G11 consumer G11 predicates", () => {
     writeConsumerG11Fixture(root);
     writeFixtureDoc(root, ".ut-tdd/evidence/g11-uat/artifacts/trace-review.json", "traced\n");
 
-    expectG11Failure(root, "invalid artifact end_to_end_trace_review: JSON object required");
+    const actualResult = evaluateG11(root);
+
+    expect(actualResult).toMatchObject({ applicable: true, passed: false });
+    expect(actualResult.messages.join("\n")).toContain(
+      "invalid artifact end_to_end_trace_review: JSON object required",
+    );
   });
 
   it("U-RCDEV-032: rejects trace review requirement entries with fields beyond requirement_id and status", () => {
@@ -2101,7 +2118,10 @@ describe("PR-G11 consumer G11 predicates", () => {
       (entry as unknown as Record<string, unknown>).extra = "not part of the frozen shape";
     });
 
-    expectG11Failure(root, "invalid trace review requirement FR-01");
+    const actualResult = evaluateG11(root);
+
+    expect(actualResult).toMatchObject({ applicable: true, passed: false });
+    expect(actualResult.messages.join("\n")).toContain("invalid trace review requirement FR-01");
   });
 
   it("U-RCDEV-032: fails closed when the L3 document defines no requirement IDs (R)", () => {
@@ -2123,7 +2143,12 @@ describe("PR-G11 consumer G11 predicates", () => {
         .replace("| NFR-01 | PO シナリオ", "| DOC-L3-FUNCTIONAL | PO シナリオ"),
     );
 
-    expectG11Failure(root, "no requirement ids defined in DOC-L3-FUNCTIONAL");
+    const actualResult = evaluateG11(root);
+
+    expect(actualResult).toMatchObject({ applicable: true, passed: false });
+    expect(actualResult.messages.join("\n")).toContain(
+      "no requirement ids defined in DOC-L3-FUNCTIONAL",
+    );
   });
 
   it("U-RCDEV-032: enforces UAT decision accept/reject semantics and required identity fields", () => {
@@ -2168,7 +2193,10 @@ describe("PR-G11 consumer G11 predicates", () => {
       writeConsumerG11Fixture(root);
       updateConsumerG11Decision(root, mutation.mutate);
 
-      expectG11Failure(root, mutation.expected);
+      const actualResult = evaluateG11(root);
+
+      expect(actualResult).toMatchObject({ applicable: true, passed: false });
+      expect(actualResult.messages.join("\n")).toContain(mutation.expected);
     }
   });
 
