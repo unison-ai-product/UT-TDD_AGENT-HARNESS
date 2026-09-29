@@ -134,16 +134,18 @@ async function createReleaseManifest(root: string, artifactCommit: string): Prom
   );
   if (!resolved.ok) throw new Error(`fixture artifact resolution failed: ${resolved.error}`);
 
-  const artifactBytes = Buffer.from("export const fixture = true;\n", "utf8");
-  const artifacts = [
-    {
-      sourcePath: "releases/canary/entry.ts",
-      destinationPath: "src/cli.ts",
-      mode: "100644" as const,
-      size: artifactBytes.length,
-      contentDigest: digestConsumerRuntimeBytes(artifactBytes),
-    },
-  ];
+  // Inventory every materialized entry from the selected Git commit. A one-entry
+  // manifest can package successfully but cannot admit the complete Pack at setup.
+  const sourcePaths = git(root, ["ls-tree", "-r", "--name-only", "-z", artifactCommit])
+    .split("\0")
+    .filter(Boolean);
+  const artifacts = resolved.entries.map((entry) => ({
+    sourcePath: cleanDistributionSourcePath(entry.path, sourcePaths),
+    destinationPath: entry.path,
+    mode: entry.mode,
+    size: entry.content.length,
+    contentDigest: digestConsumerRuntimeBytes(entry.content),
+  }));
   const base = {
     materializerVersion: "1",
     artifactSourceCommit: artifactCommit,
