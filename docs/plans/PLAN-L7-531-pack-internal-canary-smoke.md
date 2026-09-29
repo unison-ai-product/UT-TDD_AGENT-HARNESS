@@ -52,23 +52,43 @@ dependencies:
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/420
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/424
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/487
-review_evidence: []
-status: draft
+review_evidence:
+  - reviewer: "Codex Sol (非著者 evidence review, PR #731 merged head)"
+    reviewer_model: gpt-5.6-sol
+    worker_model: claude-opus-5
+    review_kind: cross_agent
+    verdict: pass
+    reviewed_at: 2026-09-28T12:00:36Z
+    tests_green_at: 2026-09-28T11:42:24Z
+    plan_revision: PLAN-L7-531 r4
+    subject_head: be1b16d9476feca9cf89b540f25185f935a8748d
+    green_commands:
+      - kind: doctor
+        command: node src/cli.ts doctor --strict-green-command-digest --result-file
+          "$UT_TDD_DOCTOR_RESULT_FILE"
+        runner: ci
+        scope: full
+        exit_code: 0
+        completed_at: 2026-09-28T11:42:24Z
+        evidence_path: docs/test-design/harness/L12-pack-internal-canary-test-design.md
+        output_digest: sha256:855449d6f72a7a879838eaec669a811815d29cf84ffbc15939927a66ff1b90bf
+        anchor_commit: be1b16d9476feca9cf89b540f25185f935a8748d
+status: confirmed
 github_issue_id: 418
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:2f1134a5759d724605aa1e13fee7eac6
-  command_id: plan-revise:issue-418:531-canary2-contract:plan:r4:b13da940a4b0
-  admitted_at: 2026-09-28T11:19:07.555Z
-  source_digest: sha256:57e053d9e9ee51cb39690100a05baa1b36103dbfb6db6ff4a8a9830f28dadf0d
-  decision_digest: sha256:33bfd28e2c32efbc3f9c6372d8165e11fac36c670103020b4f3caf49938c0127
-  receipt_digest: sha256:4d3506ec462ff24a83e083024a003ea51568178a9816a15344e33ef16b75ad79
+  receipt_id: certificate:bd30ae007da49f63cbf394daed87d908
+  command_id: plan-revise:issue-418:531-canary2-confirm:plan:r5:8bb82150294a
+  admitted_at: 2026-09-29T02:22:08.102Z
+  source_digest: sha256:5a2c6ba4537af901be2965550ba5d6fdd6e87b36dac88140b065f3b4bacb98c7
+  decision_digest: sha256:2aeca7906822daf64e7169fbe257a2bc0d52c96eb423765f86b0bf8b3a97d038
+  receipt_digest: sha256:2b607f3fa2299e7c20516dc74240fdfe14b035e9befeebb23f62eca1a9883de8
   binding:
     path: docs/plans/PLAN-L7-531-pack-internal-canary-smoke.md
     plan_id: PLAN-L7-531-pack-internal-canary-smoke
     asset_id: plan:44f79788376b81c225ce5913fddbc48f
-    revision: 4
-    content_digest: sha256:57e053d9e9ee51cb39690100a05baa1b36103dbfb6db6ff4a8a9830f28dadf0d
+    revision: 5
+    content_digest: sha256:5a2c6ba4537af901be2965550ba5d6fdd6e87b36dac88140b065f3b4bacb98c7
   route:
     signal: feature_addition
     mode: add-feature
@@ -86,11 +106,11 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-531-pack-internal-canary-smoke
-    target_revision: 4
+    target_revision: 5
     phase: forward_merge
-  escape_reason: "Issue #418 PR #731 Sol r1 FLAG の是正: publish 記録の per-asset 2 値
-    (producer / 独立再計算) 必須化、§7 表の列整合、Candidate 009(b) の判別可能な対照入力を明記する
-    (PLAN-L7-628 §5.7 準拠)。"
+  escape_reason: "Issue #418: PLAN-L7-531 rev 4 の非著者 evidence review (Codex Sol、PR
+    #731 merged head be1b16d9、CI green 後) PASS を受けて confirmed 化し、review_evidence
+    と #726 (installer) の main 着地 c029d4ed の事実を記述へ反映する。canary PR-1 着手の前提。"
 ---
 
 # PLAN-L7-531: Pack-only internal canary smoke (Windows/Linux)
@@ -135,17 +155,13 @@ canary smoke gate (clean fixture での E2E 起動確認) だけを所有する 
   (高影響境界)。本 PLAN は公開そのものを代替せず、公開後の clean fixture 受入だけを所有する
   (§3.2)。
 - `v0.2.0-canary.2` の asset 集合・schema・installer 契約は **confirmed `PLAN-L7-628` §3/§4/§6**
-  が正本であり、本 PLAN では再記述しない。**producer (`src/cli/distribution.ts`, PR-1) のみ**
-  2026-09-28 時点で main へ着地済み (git 実測: `git log origin/main -- src/cli/distribution.ts`
-  は `f27911fb`/`deeeab00` ほかを含む)。**installer (PR-2) は main 未到達**であり、open PR #726
-  「Releaseの外部anchorからconsumer runtimeを安全に導入する（#418 PR-2）」として review 中である
-  (`gh pr view 726` 実測: state=OPEN、mergedAt=null)。`src/setup/consumer-runtime-release.ts` は
-  producer の自己検証関数共有 (`PLAN-L7-628` §5.4) により main に部分的に存在するが、installer の
-  CLI surface (`setup --consumer-runtime-release`) と anchor 照合 (`--expected-consumer-digest`、
-  `PLAN-L7-628` §6.2 手順 0) は main に未着地 (`git grep -n "expected-consumer-digest" origin/main
-  -- src` は 0 件、PR #726 が追加)。`PLAN-L7-628` §7 の PR 表は本 PLAN の入力契約改訂と E2E 実装を
-  PR-2 merge 後の後続行 `(531)` とする。本改訂 (docs のみ、PR-0) はその行のうち入力契約の docs
-  接合だけを先行させるものであり、PR-2 (#726) の main 到達も installer の挙動も主張しない。
+  が正本であり、本 PLAN では再記述しない。producer (`src/cli/distribution.ts`, PR-1) は main へ
+  着地済み (`f27911fb`/`deeeab00` ほか)。installer (PR-2) も PR #726 として 2026-09-28 に main へ
+  merge された (merge commit `c029d4ed`。CLI surface `setup --consumer-runtime-release` と anchor
+  照合 `--expected-consumer-digest` (`PLAN-L7-628` §6.2 手順 0) を追加)。`PLAN-L7-628` §7 の PR 表は
+  本 PLAN の入力契約改訂と E2E 実装を PR-2 merge 後の後続行 `(531)` とし、その前提は充足した。
+  rev 3〜4 (PR #731) は #726 の review 中に入力契約の docs 接合だけを先行させたものであり、rev 5 で
+  本段落の事実だけを現行化した (契約内容は不変)。
   #726 の review で installer の CLI 形・anchor 形式が変わる場合、それは `PLAN-L7-628` の契約改訂を
   経由し、本 PLAN は §3 の参照先を追随改訂する (本 PLAN が installer 形を独自に固定しない)。
   PR-2 の main 到達は本 PLAN の PR-1/PR-2 (§6・§10) の前提として扱う。
@@ -183,12 +199,10 @@ setup 元撤去後の起動、絶対 path 残存 0) を検証するものであ�
   release の定義を変更し、§3 で exact 5 asset (`<tag>.tar.gz` / `<tag>.tar.gz.sha256` /
   `<tag>.ut-tdd.mjs` / `<tag>.consumer-runtime.json` / `<tag>.consumer.sha256`) を、§6 で
   installer 契約 (`--expected-consumer-digest` の Release 外 anchor による信頼根) を確定した。
-  producer (PR-1) は 2026-09-28 時点で main に着地済みだが、**installer (PR-2) は main 未到達で
-  open PR #726 として review 中**である (§1.2)。`PLAN-L7-628` §7 の PR 表は「(531): E2E:
+  producer (PR-1) と installer (PR-2、#726、`c029d4ed`) はいずれも main に着地済みである (§1.2)。`PLAN-L7-628` §7 の PR 表は「(531): E2E:
   `PLAN-L7-531` の入力契約を本 PLAN の asset 集合へ改訂し、clean fixture の Windows / Linux E2E
-  を実装。前提: PR-2 merge」と明記する。本改訂 (PR-0、docs のみ) は入力契約の docs 接合であり、
-  PR-2 (#726) の main 到達を前提にしない。PR-2 の main 到達は本 PLAN の実装 PR (§6 PR-1/PR-2) の
-  前提として扱う。
+  を実装。前提: PR-2 merge」と明記する。PR-0 (docs のみ) は入力契約の docs 接合であり、PR-2 (#726)
+  の main 到達は本 PLAN の実装 PR (§6 PR-1/PR-2) の前提として扱う (rev 5 時点で充足、§1.2)。
 - **決定**: 本 PLAN の canary 入力を、旧 2-asset (`v0.2.0-canary.1`) 契約から **`PLAN-L7-628` の
   5-asset + anchor 契約 (`v0.2.0-canary.2` 以降)** へ全面置換する。旧 2-asset 記述は代替案として
   並存させず削除する (選択肢の追加ではなく置換)。asset schema・installer 内部 semantics の
@@ -374,7 +388,7 @@ request custody を代替しない。
 
 | PR | 論点 | 前提 |
 | --- | --- | --- |
-| PR-0 (本 PR) | 本 PLAN + `PLAN-REVERSE-531` + pair test-design の pair-freeze (docs のみ)、入力契約の `PLAN-L7-628` 接合 | `PLAN-L7-628` PR-1 (producer) の main 到達 (充足済み、§1.2)。PR-2 (installer、#726) の main 到達は本 PR-0 の前提にしない — docs 接合のみで実装を主張しない |
+| PR-0 (本 PR) | 本 PLAN + `PLAN-REVERSE-531` + pair test-design の pair-freeze (docs のみ)、入力契約の `PLAN-L7-628` 接合 | `PLAN-L7-628` PR-1 (producer) の main 到達 (充足済み、§1.2)。PR-2 (installer、#726) の main 到達は本 PR-0 の前提にしない — docs 接合のみで実装を主張しない (#726 は `c029d4ed` で merge 済み) |
 | PR-1 | 第 1 層 CI smoke: `tests/pack-internal-canary-boundary.test.ts` の Red→Green と最小配線。CANDIDATE 001..004、006 (unit)、007、010 (第 1 層) を `U-ST-PACKCANARY-*` へ昇格 | `PLAN-L7-516` §6 の破壊的 checkout 削除 E2E (#420 production adapter) の main 所在確認、`PLAN-L7-628` PR-2 (installer、#726) の main 到達 (§5 手順 2 が installer コマンドを呼ぶため)、本 PR-0 の非著者 PASS |
 | PR-2 | 第 2 層 受入 runner 配線 (実行形態は PR-2 の設計判断節で確定) と §3.4 publish 記録の照合。CANDIDATE 005、006 (受入)、008、009、010 (第 2 層) の昇格と L12 `AT-DIST-002` 行の追記 | PR-1 merge、`PLAN-L7-628` PR-2 (#726) の main 到達。受入 run の実行 (昇格の Green 実測) は `v0.2.0-canary.2` 公開の PO 承認後 |
 
@@ -455,9 +469,8 @@ fallback、legacy/旧 2-asset release の誤取得、anchor 未指定経路の�
 1. 本 PLAN と `PLAN-REVERSE-531` の pair-freeze に非著者 PASS receipt と CI Green が揃うこと。
 2. `PLAN-L7-516` §6 の破壊的 checkout 削除 E2E が main へ到達していること (PR-1 の前提。#420 は
    2026-09-11 CLOSED だが、E2E テストの main 所在は PR-1 着手時に確認する)。
-3. `PLAN-L7-628` PR-1 (producer) が main へ到達していること (2026-09-28 時点で充足済み、§1.2)。
-   PR-2 (installer) は 2026-09-28 時点で main 未到達・open PR #726 として review 中であり、
-   本 PLAN の PR-1/PR-2 (§6) の前提として main 到達を要する (§1.2)。
+3. `PLAN-L7-628` PR-1 (producer) と PR-2 (installer、#726) が main へ到達していること
+   (2026-09-28 時点でいずれも充足済み、installer は `c029d4ed`、§1.2)。
 4. `v0.2.0-canary.2` が `PLAN-L7-515` adapter 経由で human-approved 公開されていること
    (PR-2 の受入 run 実行と 005・006 (受入)・008・010 (第 2 層) の Green 実測の前提。PR-2 の runner 実装と
    offline CI は公開前に進めてよい。公開の実施は PO 承認を要する高影響境界であり、本 PLAN は承認を代替しない)。
