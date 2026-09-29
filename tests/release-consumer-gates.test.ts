@@ -13,7 +13,7 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
-import { checkG9SystemWorkflow } from "../src/doctor/workflow-quality.ts";
+import { checkG9SystemWorkflow, checkG10UxWorkflow } from "../src/doctor/workflow-quality.ts";
 import {
   analyzeLayerPairGate,
   evaluateStaticGate,
@@ -499,6 +499,149 @@ function firstConsumerG9Command(
 ): ConsumerG9Manifest["commands"][number] {
   const command = manifest.commands[0];
   if (!command) throw new Error("consumer G9 fixture command is missing");
+  return command;
+}
+
+const G10_CONSUMER_CASE_IDS = [
+  "UXV-VISUAL-01",
+  "UXV-TOKEN-01",
+  "UXV-A11Y-01",
+  "UXV-VRT-01",
+  "UXV-REVIEW-01",
+] as const;
+
+const G10_CONSUMER_SCREEN_IDS = ["SC-001", "SC-002", "SC-003", "SC-004", "SC-005"] as const;
+
+type ConsumerG10Manifest = {
+  schema_version: string;
+  gate: string;
+  profile: string;
+  plan_id: string;
+  selected_uxv_ids: string[];
+  mandatory_uxv_ids: string[];
+  deferred_uxv_ids: string[];
+  commands: {
+    command_id: string;
+    command: string;
+    runner: string;
+    scope: string;
+    exit_code: number;
+    evidence_path: string;
+    output_digest: string;
+    uxv_ids: string[];
+  }[];
+  coverage: {
+    uxv_id: string;
+    status: string;
+    evidence_paths: string[];
+    command_ids: string[];
+  }[];
+  exit_criteria: {
+    all_mandatory_passed: boolean;
+    failed_mandatory_count: number;
+    stale_defer_count: number;
+    doctor_check: string;
+  };
+  artifacts: Record<string, string>;
+};
+
+function consumerG10Manifest(): ConsumerG10Manifest {
+  const commandId = "cmd-consumer-ux";
+  const evidencePath = "tests/fixtures/g10-consumer/ux-results.txt";
+  return {
+    schema_version: "g10-ux-evidence-v1",
+    gate: "G10",
+    profile: "consumer-ux-minimum",
+    plan_id: "PLAN-CONSUMER-01",
+    selected_uxv_ids: [...G10_CONSUMER_CASE_IDS],
+    mandatory_uxv_ids: [...G10_CONSUMER_CASE_IDS],
+    deferred_uxv_ids: [],
+    commands: [
+      {
+        command_id: commandId,
+        command: "node tests/consumer-ux-check.mjs",
+        runner: "playwright",
+        scope: "consumer fixture",
+        exit_code: 0,
+        evidence_path: "tests/fixtures/g10-consumer/command-output.txt",
+        output_digest: `sha256:${"0".repeat(64)}`,
+        uxv_ids: [...G10_CONSUMER_CASE_IDS],
+      },
+    ],
+    coverage: G10_CONSUMER_CASE_IDS.map((uxvId) => ({
+      uxv_id: uxvId,
+      status: "passed",
+      evidence_paths: [evidencePath],
+      command_ids: [commandId],
+    })),
+    exit_criteria: {
+      all_mandatory_passed: true,
+      failed_mandatory_count: 0,
+      stale_defer_count: 0,
+      doctor_check: "g10-ux-workflow",
+    },
+    artifacts: {
+      ux_manifest: ".ut-tdd/evidence/g10-ux/ok.json",
+      browser_visual_a11y_results: evidencePath,
+    },
+  };
+}
+
+function writeConsumerG10Fixture(root: string): void {
+  const repositoryRoot = process.cwd();
+  const l10Template = readFileSync(
+    join(repositoryRoot, "docs/templates/vmodel/L10-ux-validation.md"),
+    "utf8",
+  );
+  const rows = G10_CONSUMER_CASE_IDS.map(
+    (caseId, index) =>
+      `| ${caseId} | Consumer UX journey ${index + 1} | ${G10_CONSUMER_SCREEN_IDS[index]} | Expected screen behavior |`,
+  ).join("\n");
+  const l10 = l10Template
+    .replace(/^status: .*$/m, "status: confirmed")
+    .replace(/^pair_artifact: .*$/m, "pair_artifact: docs/design/L2-screen/screen-list.md")
+    .replace(/^plan: .*$/m, "plan: docs/plans/PLAN-CONSUMER-01.md")
+    .replace("| <記入> | <記入> | <記入> | <記入> |", rows);
+  writeFixtureDoc(root, "docs/test-design/L10-ux-validation-test-design.md", l10);
+
+  const screenRows = G10_CONSUMER_SCREEN_IDS.map(
+    (screenId, index) =>
+      `| ${screenId} | Consumer screen ${index + 1} | Summary | Feature | user |`,
+  ).join("\n");
+  writeFixtureDoc(
+    root,
+    "docs/design/L2-screen/screen-list.md",
+    `---\ndoc_type_id: DOC-L2-SCREEN\nlayer: L2\nstatus: confirmed\npair_artifact: docs/test-design/L10-ux-validation-test-design.md\nplan: docs/plans/PLAN-CONSUMER-01.md\n---\n# DOC-L2-SCREEN\n\n#### 第4章 画面一覧\n\n| 画面ID | 画面名称 | 概要 | 関連機能 | ロール |\n|---|---|---|---|---|\n${screenRows}\n`,
+  );
+  writeFixtureDoc(root, "tests/fixtures/g10-consumer/ux-results.txt", "passed\n");
+  writeFixtureDoc(root, "tests/fixtures/g10-consumer/command-output.txt", "passed\n");
+  writeFixtureDoc(
+    root,
+    ".ut-tdd/evidence/g10-ux/ok.json",
+    `${JSON.stringify(consumerG10Manifest(), null, 2)}\n`,
+  );
+}
+
+function updateConsumerG10Manifest(
+  root: string,
+  mutate: (manifest: ConsumerG10Manifest) => void,
+): void {
+  const path = join(root, ".ut-tdd", "evidence", "g10-ux", "ok.json");
+  const manifest = JSON.parse(readFileSync(path, "utf8")) as ConsumerG10Manifest;
+  mutate(manifest);
+  writeFileSync(path, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
+}
+
+function updateConsumerG10Design(root: string, mutate: (content: string) => string): void {
+  const path = join(root, "docs", "test-design", "L10-ux-validation-test-design.md");
+  writeFileSync(path, mutate(readFileSync(path, "utf8")), "utf8");
+}
+
+function firstConsumerG10Command(
+  manifest: ConsumerG10Manifest,
+): ConsumerG10Manifest["commands"][number] {
+  const command = manifest.commands[0];
+  if (!command) throw new Error("consumer G10 fixture command is missing");
   return command;
 }
 
@@ -1344,5 +1487,235 @@ describe("PR-G9 consumer G9 predicates", () => {
     expect(result.passed).toBe(workflow.ok);
     expect(workflowMessages).toEqual(workflow.messages);
     expect(result.messages).toContain(`未判定 (review): ${g9ContractObligation().approvalRole}`);
+  });
+});
+
+describe("PR-G10 consumer G10 predicates", () => {
+  it("U-RCDEV-031: evaluates consumer G10 from its L10 contract and L2 screen IDs", () => {
+    const root = fixtureRoot();
+    writeConsumerG10Fixture(root);
+
+    const result = evaluateStaticGate({ gate: "G10", repoRoot: root });
+
+    expect(result.applicable).toBe(true);
+    expect(result.passed).toBe(true);
+    expect(result.messages.join("\n")).toContain("未判定 (review): PO/QA");
+  });
+
+  it("U-RCDEV-031: requires all eight L10 template chapters and the No/対象画面 case columns (S)", () => {
+    const template = readFileSync(
+      join(process.cwd(), "docs/templates/vmodel/L10-ux-validation.md"),
+      "utf8",
+    );
+    const headings = template.split(/\r?\n/).filter((line) => /^#### 第[1-8]章 /.test(line));
+    expect(headings).toHaveLength(8);
+    const acceptedMissingHeadings: string[] = [];
+    for (const heading of headings) {
+      const root = fixtureRoot();
+      writeConsumerG10Fixture(root);
+      updateConsumerG10Design(root, (content) =>
+        content
+          .split(/\r?\n/)
+          .filter((line) => line !== heading)
+          .join("\n"),
+      );
+      const result = evaluateStaticGate({ gate: "G10", repoRoot: root });
+      if (result.passed || !result.messages.join("\n").includes(`missing section ${heading}`)) {
+        acceptedMissingHeadings.push(heading);
+      }
+    }
+    expect(acceptedMissingHeadings).toEqual([]);
+
+    const root = fixtureRoot();
+    writeConsumerG10Fixture(root);
+    updateConsumerG10Design(root, (content) => content.replace("対象画面", "画面"));
+    const result = evaluateStaticGate({ gate: "G10", repoRoot: root });
+    expect(result.applicable).toBe(true);
+    expect(result.passed).toBe(false);
+    expect(result.messages.join("\n")).toContain("missing section");
+  });
+
+  it("U-RCDEV-031: rejects duplicate UXV case IDs (I)", () => {
+    const root = fixtureRoot();
+    writeConsumerG10Fixture(root);
+    updateConsumerG10Design(root, (content) => content.replace("UXV-TOKEN-01", "UXV-VISUAL-01"));
+
+    const result = evaluateStaticGate({ gate: "G10", repoRoot: root });
+
+    expect(result.applicable).toBe(true);
+    expect(result.passed).toBe(false);
+    expect(result.messages.join("\n")).toContain("duplicate case id");
+  });
+
+  it("U-RCDEV-031: requires each 対象画面 value to be a defined DOC-L2-SCREEN screen ID (T)", () => {
+    const root = fixtureRoot();
+    writeConsumerG10Fixture(root);
+    updateConsumerG10Design(root, (content) => content.replace("| SC-001 |", "| DOC-L2-OTHER |"));
+
+    const result = evaluateStaticGate({ gate: "G10", repoRoot: root });
+
+    expect(result.applicable).toBe(true);
+    expect(result.passed).toBe(false);
+    expect(result.messages.join("\n")).toContain("trace target missing");
+  });
+
+  it("U-RCDEV-031: does not infer screen IDs from a L2 document with an empty formal screen table (T)", () => {
+    const root = fixtureRoot();
+    writeConsumerG10Fixture(root);
+    writeFixtureDoc(
+      root,
+      "docs/design/L2-screen/screen-list.md",
+      "---\ndoc_type_id: DOC-L2-SCREEN\nlayer: L2\nstatus: confirmed\npair_artifact: docs/test-design/L10-ux-validation-test-design.md\nplan: docs/plans/PLAN-CONSUMER-01.md\n---\n# DOC-L2-SCREEN\n\n#### 第4章 画面一覧\n\n| 画面ID | 画面名称 | 概要 | 関連機能 | ロール |\n|---|---|---|---|---|\n",
+    );
+
+    const result = evaluateStaticGate({ gate: "G10", repoRoot: root });
+
+    expect(result.applicable).toBe(true);
+    expect(result.passed).toBe(false);
+    expect(result.messages.join("\n")).toContain("trace target missing");
+  });
+
+  it("U-RCDEV-031: rejects a designed UXV case omitted from all evidence (F)", () => {
+    const root = fixtureRoot();
+    writeConsumerG10Fixture(root);
+    updateConsumerG10Manifest(root, (manifest) => {
+      const missingId = "UXV-REVIEW-01";
+      manifest.selected_uxv_ids = manifest.selected_uxv_ids.filter((id) => id !== missingId);
+      manifest.mandatory_uxv_ids = manifest.mandatory_uxv_ids.filter((id) => id !== missingId);
+      firstConsumerG10Command(manifest).uxv_ids = firstConsumerG10Command(manifest).uxv_ids.filter(
+        (id) => id !== missingId,
+      );
+      manifest.coverage = manifest.coverage.filter((entry) => entry.uxv_id !== missingId);
+    });
+
+    const result = evaluateStaticGate({ gate: "G10", repoRoot: root });
+
+    expect(result.applicable).toBe(true);
+    expect(result.passed).toBe(false);
+    expect(result.messages.join("\n")).toContain("missing row evidence UXV-REVIEW-01");
+  });
+
+  it("U-RCDEV-031: rejects a missing contract-required browser visual/a11y artifact (A)", () => {
+    const root = fixtureRoot();
+    writeConsumerG10Fixture(root);
+    updateConsumerG10Manifest(root, (manifest) => {
+      delete manifest.artifacts.browser_visual_a11y_results;
+    });
+
+    const result = evaluateStaticGate({ gate: "G10", repoRoot: root });
+
+    expect(result.applicable).toBe(true);
+    expect(result.passed).toBe(false);
+    expect(result.messages.join("\n")).toContain("missing artifact browser_visual_a11y_results");
+  });
+
+  it("U-RCDEV-031: keeps skipped G10 applicable and failed for every reason/profile variation", () => {
+    const variations = [
+      {
+        name: "non-empty reason",
+        skipReason: "L10 has no consumer profile authority",
+        profile: undefined,
+      },
+      { name: "empty reason", skipReason: "", profile: undefined },
+      { name: "cli profile", skipReason: "L10 has no consumer profile authority", profile: "cli" },
+    ] as const;
+    for (const variation of variations) {
+      const root = fixtureRoot();
+      writeConsumerG10Fixture(root);
+      updateConsumerG10Design(root, (content) => {
+        const status = content.match(/^status: .*$/m)?.[0];
+        if (!status) throw new Error("consumer G10 fixture has no status frontmatter");
+        return content.replace(
+          status,
+          `status: skipped\nskip_reason: ${JSON.stringify(variation.skipReason)}`,
+        );
+      });
+      if (variation.profile) {
+        updateConsumerG10Manifest(root, (manifest) => {
+          manifest.profile = variation.profile;
+        });
+      }
+
+      const result = evaluateStaticGate({ gate: "G10", repoRoot: root });
+      const messages = result.messages.join("\n");
+
+      expect(result.applicable, variation.name).toBe(true);
+      expect(result.passed, variation.name).toBe(false);
+      expect(messages, variation.name).toContain(
+        "skipped slot DOC-L10-UX-VALIDATION: no consumer profile-selection authority (VMC-005)",
+      );
+      expect(messages, variation.name).not.toContain("n/a");
+      expect(messages, variation.name).not.toContain("invalid schema_version");
+      expect(messages, variation.name).not.toContain("missing artifact");
+    }
+  });
+
+  it("U-RCDEV-031: routes each E-only mutation through consumer G10 validation", () => {
+    const mutations: {
+      name: string;
+      expected: string;
+      mutate: (manifest: ConsumerG10Manifest) => void;
+    }[] = [
+      {
+        name: "schema",
+        expected: "invalid schema_version",
+        mutate: (manifest) => {
+          manifest.schema_version = "g9-system-evidence-v1";
+        },
+      },
+      {
+        name: "gate",
+        expected: "gate must be G10",
+        mutate: (manifest) => {
+          manifest.gate = "G9";
+        },
+      },
+      {
+        name: "exit code",
+        expected: "exit_code is non-zero",
+        mutate: (manifest) => {
+          firstConsumerG10Command(manifest).exit_code = 1;
+        },
+      },
+      {
+        name: "digest",
+        expected: "invalid digest",
+        mutate: (manifest) => {
+          firstConsumerG10Command(manifest).output_digest = `sha256:${"a".repeat(63)}`;
+        },
+      },
+      {
+        name: "stale defer count type",
+        expected: "stale_defer_count must be 0",
+        mutate: (manifest) => {
+          (manifest.exit_criteria as unknown as Record<string, unknown>).stale_defer_count = "0";
+        },
+      },
+    ];
+
+    for (const mutation of mutations) {
+      const root = fixtureRoot();
+      writeConsumerG10Fixture(root);
+      updateConsumerG10Manifest(root, mutation.mutate);
+
+      const result = evaluateStaticGate({ gate: "G10", repoRoot: root });
+
+      expect(result.applicable, mutation.name).toBe(true);
+      expect(result.passed, mutation.name).toBe(false);
+      expect(result.messages.join("\n"), mutation.name).toContain(mutation.expected);
+    }
+  });
+
+  it("U-RCDEV-031: preserves the existing harness G10 workflow result on the public gate path", () => {
+    const repositoryRoot = process.cwd();
+    const workflow = checkG10UxWorkflow(repositoryRoot);
+    const result = evaluateStaticGate({ gate: "G10", repoRoot: repositoryRoot });
+    const workflowMessages = result.messages.filter((message) =>
+      message.startsWith("g10-ux-workflow"),
+    );
+
+    expect(result.applicable).toBe(true);
+    expect(result.passed).toBe(workflow.ok);
+    expect(workflowMessages).toEqual(workflow.messages);
   });
 });
