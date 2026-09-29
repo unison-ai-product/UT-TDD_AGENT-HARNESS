@@ -2106,6 +2106,18 @@ describe("PR-G11 consumer G11 predicates", () => {
     expectG11Failure(root, "invalid artifact end_to_end_trace_review: JSON object required");
   });
 
+  it("U-RCDEV-032: rejects trace review requirement entries with fields beyond requirement_id and status", () => {
+    const root = fixtureRoot();
+    writeConsumerG11Fixture(root);
+    updateConsumerG11TraceReview(root, (review) => {
+      const entry = review.requirements.find((item) => item.requirement_id === "FR-01");
+      if (!entry) throw new Error("consumer G11 trace fixture has no FR-01");
+      (entry as unknown as Record<string, unknown>).extra = "not part of the frozen shape";
+    });
+
+    expectG11Failure(root, "invalid trace review requirement FR-01");
+  });
+
   it("U-RCDEV-032: fails closed when the L3 document defines no requirement IDs (R)", () => {
     const root = fixtureRoot();
     writeConsumerG11Fixture(root);
