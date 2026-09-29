@@ -20,6 +20,7 @@ import {
   deriveArtifactInventoryDigest,
   deriveReleaseId,
   deriveReleaseRecordDigest,
+  parsePublicationManifest,
 } from "../../src/schema/release-manifest.ts";
 import {
   buildCleanDistributionPlan,
@@ -139,11 +140,16 @@ async function createReleaseManifest(root: string, artifactCommit: string): Prom
   const sourcePaths = git(root, ["ls-tree", "-r", "--name-only", "-z", artifactCommit])
     .split("\0")
     .filter(Boolean);
+  const trackedSources = new Set(sourcePaths);
   const artifacts = resolved.entries.map((entry) => {
     if (entry.mode === "120000")
       throw new Error(`fixture inventory forbids symlink: ${entry.path}`);
+    if (!trackedSources.has(entry.path))
+      throw new Error(`fixture artifact source missing: ${entry.path}`);
     return {
-      sourcePath: cleanDistributionSourcePath(entry.path, sourcePaths),
+      // C1 is already a clean Pack: use its exact tracked path, not a source
+      // adapter mapping that aliases two destinations to the same template.
+      sourcePath: entry.path,
       destinationPath: entry.path,
       mode: entry.mode,
       size: entry.content.length,
@@ -168,6 +174,8 @@ async function createReleaseManifest(root: string, artifactCommit: string): Prom
     channelOrder: ["canary", "stable"],
   };
   mkdirSync(join(root, "release"), { recursive: true });
+  if (!parsePublicationManifest(manifest).ok)
+    throw new Error("fixture publication manifest invalid");
   writeFileSync(join(root, "release", "manifest.yaml"), stringify(manifest), "utf8");
 }
 
