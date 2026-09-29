@@ -1491,6 +1491,25 @@ describe("PR-G9 consumer G9 predicates", () => {
 });
 
 describe("PR-G10 consumer G10 predicates", () => {
+  it("U-RCDEV-031: accepts multiple defined screen citations and rejects an empty trace", () => {
+    const root = fixtureRoot();
+    writeConsumerG10Fixture(root);
+    updateConsumerG10Design(root, (content) =>
+      content.replace("| SC-001 |", "| SC-001, SC-002 |"),
+    );
+    const valid = evaluateStaticGate({ gate: "G10", repoRoot: root });
+    expect(valid.applicable).toBe(true);
+    expect(valid.passed).toBe(true);
+
+    updateConsumerG10Design(root, (content) =>
+      content.replace("| SC-001, SC-002 |", "| |"),
+    );
+    const invalid = evaluateStaticGate({ gate: "G10", repoRoot: root });
+    expect(invalid.applicable).toBe(true);
+    expect(invalid.passed).toBe(false);
+    expect(invalid.messages.join("\n")).toContain("untraced case UXV-VISUAL-01");
+  });
+
   it("U-RCDEV-031: evaluates consumer G10 from its L10 contract and L2 screen IDs", () => {
     const root = fixtureRoot();
     writeConsumerG10Fixture(root);
