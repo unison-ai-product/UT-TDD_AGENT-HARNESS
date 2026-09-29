@@ -5396,17 +5396,17 @@
     {
       "sequence": 338,
       "previous_record_digest": "sha256:4c2bb6799aafa3db94e99182c69f03ed38058a284f5a6a37e628944882b7b312",
-      "record_digest": "sha256:8ada05c38b04417a713646d5ddbfeb6c4d7702220804309f9b1362d2816cca4b",
-      "command_id": "plan-revise:issue-418:531-canary2-confirm:plan:r5:8bb82150294a",
-      "receipt_id": "certificate:bd30ae007da49f63cbf394daed87d908",
-      "receipt_digest": "sha256:2b607f3fa2299e7c20516dc74240fdfe14b035e9befeebb23f62eca1a9883de8",
-      "decision_digest": "sha256:2aeca7906822daf64e7169fbe257a2bc0d52c96eb423765f86b0bf8b3a97d038",
+      "record_digest": "sha256:feb7057cd9afad2bc55010e25f996d347c59e1eed646a83d06774892dba5ee3f",
+      "command_id": "plan-revise:issue-676:pr2c-template-generates:plan:r19:71e5056806bb",
+      "receipt_id": "certificate:cc0f5617cb7f133aa2eec026cfc7a5c6",
+      "receipt_digest": "sha256:1cee4a2ae8e56c1ba84b0be15b00d79de2cd7f85aefdd96092a24b6f8485d973",
+      "decision_digest": "sha256:7e0936db064bba29dfafbc3db5cb0b3ff58cf478327c62f1f09712266f3af629",
       "binding": {
-        "path": "docs/plans/PLAN-L7-531-pack-internal-canary-smoke.md",
-        "plan_id": "PLAN-L7-531-pack-internal-canary-smoke",
-        "asset_id": "plan:44f79788376b81c225ce5913fddbc48f",
-        "revision": 5,
-        "content_digest": "sha256:5a2c6ba4537af901be2965550ba5d6fdd6e87b36dac88140b065f3b4bacb98c7"
+        "path": "docs/plans/PLAN-L7-676-release-consumer-dev-start.md",
+        "plan_id": "PLAN-L7-676-release-consumer-dev-start",
+        "asset_id": "plan:aae8bf0e313f8688fbad4d4d8cf0a6a9",
+        "revision": 19,
+        "content_digest": "sha256:befafb427da7d616b4c0bb84ff58342662fa0fd75fc428138d6d362a3849ad68"
       }
     }
   ]
