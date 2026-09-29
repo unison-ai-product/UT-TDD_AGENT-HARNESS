@@ -1,0 +1,1050 @@
+[
+ {
+  "command_id": "command:issue420-runtime-adapter-contract-r2",
+  "actor": "codex-root",
+  "source_commit": "84cd7f896f7dfbd67b38b250b5a943eaee3f6640",
+  "revision_digest": "sha256:f44ab2cbc80f57f1bc5fb5df49d7b1343d68ee5eb08195f8eaeb97d823c46f30",
+  "recorded_at": "2026-09-08T09:02:33.126Z",
+  "branch": "work/add-feature-issue420-runtime-adapter-contract"
+ },
+ {
+  "command_id": "command:issue420-runtime-adapter-contract-r3",
+  "actor": "codex-root",
+  "source_commit": "421dc88beeeed29a4b5dd2c9a8bc02821beb365b",
+  "revision_digest": "sha256:f44ab2cbc80f57f1bc5fb5df49d7b1343d68ee5eb08195f8eaeb97d823c46f30",
+  "recorded_at": "2026-09-08T09:13:30.330Z",
+  "branch": "work/add-feature-issue420-runtime-adapter-contract"
+ },
+ {
+  "command_id": "command:issue420-runtime-adapter-contract-r3",
+  "actor": "codex-root",
+  "source_commit": "421dc88beeeed29a4b5dd2c9a8bc02821beb365b",
+  "revision_digest": "sha256:6f77661c578022c6b29936cc74bb2a1b56305898a7d650739c41189de3af8620",
+  "recorded_at": "2026-09-08T09:12:44.771Z",
+  "branch": "work/add-feature-issue420-runtime-adapter-contract"
+ },
+ {
+  "command_id": "command:issue420-runtime-adapter-contract-r4-review-followup",
+  "actor": "codex-root",
+  "source_commit": "0cb2512971edf18aed253db1d0ab91db1c87cf97",
+  "revision_digest": "sha256:34fc4001f93ec08180b5167d7b49b7e975c6e101509d0c0b73fa4ddc86bf0163",
+  "recorded_at": "2026-09-08T09:59:32.558Z",
+  "branch": "work/add-feature-issue420-runtime-adapter-contract"
+ },
+ {
+  "command_id": "command:issue420-runtime-adapter-reverse-r2",
+  "actor": "codex-root",
+  "source_commit": "84cd7f896f7dfbd67b38b250b5a943eaee3f6640",
+  "revision_digest": "sha256:08dd9e0a104cdc3e4f0d78d03fdde164730f04e51eba1f8a0c72d8015f1c9f6e",
+  "recorded_at": "2026-09-08T09:04:42.252Z",
+  "branch": "work/reverse-issue420-runtime-adapter-contract"
+ },
+ {
+  "command_id": "command:issue420-runtime-adapter-reverse-r3-review-followup",
+  "actor": "codex-root",
+  "source_commit": "0cb2512971edf18aed253db1d0ab91db1c87cf97",
+  "revision_digest": "sha256:f40dc393cda5535c0b1ef90b1da3bdf38fb209ecf67725df4d81c93eff2dcf0e",
+  "recorded_at": "2026-09-08T09:59:44.151Z",
+  "branch": "work/reverse-issue420-runtime-adapter-contract"
+ },
+ {
+  "command_id": "command:issue439-retraction-consistency-revision3",
+  "actor": "codex-primary",
+  "source_commit": "5bc6f5b029d609477161127fa00b16756f4d12fa",
+  "revision_digest": "sha256:dbe2492787dcf44b488995443d4454b84fd81e2901c5864fd0169321c3d7ce67",
+  "recorded_at": "2026-09-08T02:02:49.285Z",
+  "branch": "work/add-feature-issue439-terminal-repair"
+ },
+ {
+  "command_id": "command:issue439-retraction-current-protocol-revision2",
+  "actor": "codex-primary",
+  "source_commit": "6e9aeb99048d46d599d5fe477fdca5592aa2ff44",
+  "revision_digest": "sha256:d3792608d4e5949ad6d252f9e7cb2627ee59a9659a9da88cd6f0119d4524bb82",
+  "recorded_at": "2026-09-08T01:52:45.282Z",
+  "branch": "work/add-feature-issue439-terminal-repair"
+ },
+ {
+  "command_id": "command:issue439-retraction-reverse-revision2",
+  "actor": "codex-primary",
+  "source_commit": "6e9aeb99048d46d599d5fe477fdca5592aa2ff44",
+  "revision_digest": "sha256:587d8b0599911172d071f62d8c2906d354d48d7c399f21d10d9ab6b277de37d8",
+  "recorded_at": "2026-09-08T01:54:25.929Z",
+  "branch": "work/reverse-issue439-terminal-repair"
+ },
+ {
+  "command_id": "command:issue528-plan-revise:PLAN-L7-512-project-scoped-memory-root",
+  "actor": "gpt-5.6-luna",
+  "source_commit": "84cd7f896f7dfbd67b38b250b5a943eaee3f6640",
+  "revision_digest": "860e09e0646f3f29007833297cfdab14f781a5c862605434746a5fec535844ea",
+  "recorded_at": "2026-09-08T05:20:00.000Z",
+  "branch": "work/add-feature-issue528-project-memory-envelope"
+ },
+ {
+  "command_id": "command:issue528-plan-revise:PLAN-REVERSE-512-project-scoped-memory-root-backfill",
+  "actor": "gpt-5.6-luna",
+  "source_commit": "84cd7f896f7dfbd67b38b250b5a943eaee3f6640",
+  "revision_digest": "707df39f1e19460bd7205e8a41847ffd6f550b20bf23edc93f2859dfe90fe58f",
+  "recorded_at": "2026-09-08T05:20:00.000Z",
+  "branch": "work/reverse-issue528-project-memory-envelope"
+ },
+ {
+  "command_id": "command:issue540-cutover-prefix-freeze-r28",
+  "actor": "codex-root",
+  "source_commit": "4afd7bad7c731ab263515b2f199a055da435cb31",
+  "revision_digest": "sha256:650ad38db3f8a482789282b9ddbb823dafcc026cd3b39cc113056f43d0e2f196",
+  "recorded_at": "2026-09-08T10:27:36.987Z",
+  "branch": "work/add-feature-issue540-cutover-prefix-contract"
+ },
+ {
+  "command_id": "command:issue540-cutover-prefix-freeze-r28",
+  "actor": "codex-root",
+  "source_commit": "5aa950ff2d35ab6821e0256b2c15238c3d56c438",
+  "revision_digest": "sha256:650ad38db3f8a482789282b9ddbb823dafcc026cd3b39cc113056f43d0e2f196",
+  "recorded_at": "2026-09-15T00:00:00.000Z",
+  "branch": "work/add-feature-issue540-cutover-prefix-freeze"
+ },
+ {
+  "command_id": "command:issue544-PLAN-L7-512-memory-inventory-r5",
+  "actor": "codex-primary",
+  "source_commit": "efbdff94bddac6f058b58a5c61fec2e0750ac283",
+  "revision_digest": "sha256:82d29e1cc8bb4d2152401e14ff74d5b7d618be96671b967e756209afe8c4831b",
+  "recorded_at": "2026-09-09T01:51:18.718Z",
+  "branch": "work/add-feature-issue544-memory-inventory"
+ },
+ {
+  "command_id": "command:issue544-PLAN-L7-512-memory-inventory-r6",
+  "actor": "codex-primary",
+  "source_commit": "69896336069c4fc41184876c16f01230d96dad9e",
+  "revision_digest": "sha256:fffbb99286a1e2e26d50758ad70d27a3314465eeb531ecd39e46464ab71a2c7c",
+  "recorded_at": "2026-09-09T02:41:26.549Z",
+  "branch": "work/add-feature-issue544-memory-inventory"
+ },
+ {
+  "command_id": "command:issue544-PLAN-REVERSE-512-memory-inventory-r5",
+  "actor": "codex-primary",
+  "source_commit": "efbdff94bddac6f058b58a5c61fec2e0750ac283",
+  "revision_digest": "sha256:32cea242920cdddc73df233207202fdb13320acf8c17f47733ce71e0838a115f",
+  "recorded_at": "2026-09-09T01:57:46.189Z",
+  "branch": "work/reverse-issue544-memory-inventory"
+ },
+ {
+  "command_id": "command:issue544-PLAN-REVERSE-512-memory-inventory-r6",
+  "actor": "codex-primary",
+  "source_commit": "69896336069c4fc41184876c16f01230d96dad9e",
+  "revision_digest": "sha256:92ab069d06108fd2a5451b9e24ce9c3f23af8826b8eff2169c1e849dabf48409",
+  "recorded_at": "2026-09-09T02:44:05.820Z",
+  "branch": "work/reverse-issue544-memory-inventory"
+ },
+ {
+  "command_id": "command:pr210-custody-close:1785723730226",
+  "actor": "codex",
+  "source_commit": "9b55efaecfad9dbc9e83a7eb0250e0ff28e0f355",
+  "revision_digest": "sha256:f8c6cfbc155fcdf7413c81d2780e9e3ce28fba3c17d8c2346864b2ddad09bc54",
+  "recorded_at": "2026-08-03T02:22:10.225Z",
+  "branch": "work/add-feature-pr210-schema-reconcile"
+ },
+ {
+  "command_id": "command:pr210-foundation-close:1785726101971",
+  "actor": "codex",
+  "source_commit": "9b3e5e48be461d6a995f5206831142bea663ca68",
+  "revision_digest": "sha256:8f8fa09659486dcc91710d422c9789bc644e0120a607bc9c2cff11c7e0d63a67",
+  "recorded_at": "2026-08-03T03:01:41.971Z",
+  "branch": "work/forward-github-foundation-close"
+ },
+ {
+  "command_id": "command:pr210-reverse-backfill:1:1785497595795",
+  "actor": "codex",
+  "source_commit": "4cd1d142d4afb174bf83159374c6db0809665d24",
+  "revision_digest": "sha256:c3580d6156df400edc0d8a9ddf7ddbae3dda3b3c3f9899af006e4ecd3028fdcb",
+  "recorded_at": "2026-07-31T11:33:15.796Z",
+  "branch": "work/add-feature-pr210-backfill"
+ },
+ {
+  "command_id": "command:pr210-reverse-backfill:2:1785497598366",
+  "actor": "codex",
+  "source_commit": "4cd1d142d4afb174bf83159374c6db0809665d24",
+  "revision_digest": "sha256:5b1935f5314f207166b138bd0798e44c25a09e765efbacef951d6254db94cf26",
+  "recorded_at": "2026-07-31T11:33:18.366Z",
+  "branch": "work/add-feature-pr210-backfill"
+ },
+ {
+  "command_id": "command:pr210-review-kind-close:1785726599513",
+  "actor": "codex",
+  "source_commit": "d9293911f95f2f5858bb707573b8362dbfd26b89",
+  "revision_digest": "sha256:559fd337d7c9f68d9bfeefeb0323f0d00a984fe7d2e5f8ba3bfdad1eb8fa996a",
+  "recorded_at": "2026-08-03T03:09:59.513Z",
+  "branch": "work/forward-github-foundation-close"
+ },
+ {
+  "command_id": "command:pr210-schema-reconcile:1785500248403",
+  "actor": "codex",
+  "source_commit": "5a21e4e0c689ebcd6083a71fc95bf41eb8255a1d",
+  "revision_digest": "sha256:f8c6cfbc155fcdf7413c81d2780e9e3ce28fba3c17d8c2346864b2ddad09bc54",
+  "recorded_at": "2026-07-31T12:17:28.403Z",
+  "branch": "work/add-feature-pr210-schema-reconcile"
+ },
+ {
+  "command_id": "command:pr519-corrected-confirm-forward-20260904",
+  "actor": "codex",
+  "source_commit": "7449e560022b835b4b36e97e54caaf7dc14cb27d",
+  "revision_digest": "sha256:ce5bd7f428a999b37f5a28a48280763569fea493322f31091bbd6a6d41602840",
+  "recorded_at": "2026-09-04T12:31:13.526Z",
+  "branch": "work/add-feature-432-project-identity-bootstrap"
+ },
+ {
+  "command_id": "command:pr519-corrected-confirm-reverse-20260904",
+  "actor": "codex",
+  "source_commit": "7449e560022b835b4b36e97e54caaf7dc14cb27d",
+  "revision_digest": "sha256:e43a9d8d91c8ded06a83c39d5402ff2ae6cb1b9edf3babc57517a3ed4441c819",
+  "recorded_at": "2026-09-04T12:31:21.473Z",
+  "branch": "work/reverse-432-project-identity-bootstrap"
+ },
+ {
+  "command_id": "plan-revise:issue-418:forward:2",
+  "actor": "claude-opus-5",
+  "source_commit": "b8d5c83c53bfac16ac51a0f6b17cfbb983319f77",
+  "revision_digest": "sha256:e46828ca9d23e0cc9666e27e44658124e2a87a61e513f74bbc06feb753eac442",
+  "recorded_at": "2026-09-10T10:27:51.659Z",
+  "branch": "work/add-feature-issue418-pack-canary-smoke"
+ },
+ {
+  "command_id": "plan-revise:issue-418:forward:3:contract-reslice",
+  "actor": "codex-luna-contract-reslice",
+  "source_commit": "3a516df69cff073ebddbf90f4ee2b939c451ba82",
+  "revision_digest": "sha256:9bfc3eb2cb41b0b012a45e1744ae1456381bae4322f1361cfad38297de06e147",
+  "recorded_at": "2026-09-16T10:24:41.080Z",
+  "branch": "work/add-feature-issue418-canary-contract-reslice"
+ },
+ {
+  "command_id": "plan-revise:issue-418:forward:4:contract-reslice-final",
+  "actor": "codex-luna-contract-reslice",
+  "source_commit": "3a516df69cff073ebddbf90f4ee2b939c451ba82",
+  "revision_digest": "sha256:aa45083ac3ba9c36e7d39d44c0e0e91becad342bbfcf0386728e2e2712937861",
+  "recorded_at": "2026-09-16T10:25:59.239Z",
+  "branch": "work/add-feature-issue418-canary-contract-reslice"
+ },
+ {
+  "command_id": "plan-revise:issue-418:forward:7",
+  "actor": "codex",
+  "source_commit": "26473795e3120b3fe4119861a6faf42a05e21c07",
+  "revision_digest": "sha256:5a5c649010608cf83a9fd550f508173d138f1055b85e1a543664b5baac40db3b",
+  "recorded_at": "2026-09-17T01:02:19.680Z",
+  "branch": "work/add-feature-issue418-canary-contract-reslice-final"
+ },
+ {
+  "command_id": "plan-revise:issue-418:pr642-plan:r7:01af96e1d9d9",
+  "actor": "claude-opus-5-control-lane",
+  "source_commit": "01af96e1d9d94bbcafd26bbff7d3133c3334de32",
+  "revision_digest": "a17cd2201e1bdf345f2f3b9597e003185828956265bacac83f8328c3508b2c8d",
+  "recorded_at": "2026-09-17T06:51:55.617Z",
+  "branch": "work/add-feature-issue418-canary-contract-reslice-final"
+ },
+ {
+  "command_id": "plan-revise:issue-418:pr642-reverse:r6:01af96e1d9d9",
+  "actor": "claude-opus-5-control-lane",
+  "source_commit": "01af96e1d9d94bbcafd26bbff7d3133c3334de32",
+  "revision_digest": "97c755bd52bb8d2cf1dcc94a36fd2ef8a8855e00abef51e585bd8f8195d04b86",
+  "recorded_at": "2026-09-17T06:52:21.257Z",
+  "branch": "work/reverse-issue418-pack-internal-canary-smoke-backfill"
+ },
+ {
+  "command_id": "plan-revise:issue-418:reverse:2",
+  "actor": "claude-opus-5",
+  "source_commit": "b8d5c83c53bfac16ac51a0f6b17cfbb983319f77",
+  "revision_digest": "sha256:70d6be049d43859f8f7aade07eaad4cde4857578b41f01d702f06593f03ecd53",
+  "recorded_at": "2026-09-10T10:27:51.659Z",
+  "branch": "work/reverse-issue418-pack-canary-smoke"
+ },
+ {
+  "command_id": "plan-revise:issue-418:reverse:5",
+  "actor": "codex",
+  "source_commit": "26473795e3120b3fe4119861a6faf42a05e21c07",
+  "revision_digest": "sha256:0bfbf8b8cc853485cae32e4b667c8b649aedc463560cc8ebff5503a21c73a2be",
+  "recorded_at": "2026-09-17T01:02:45.944Z",
+  "branch": "work/reverse-issue418-pack-canary-contract-reslice-final"
+ },
+ {
+  "command_id": "plan-revise:issue-424:l7-512-correction:7",
+  "actor": "unison-ai-product",
+  "source_commit": "13c5bb2d0b0268af9bbe887c94190174c0e9f5db",
+  "revision_digest": "sha256:f026056a4118a062e35a9976e20aaec4593464804b86f6054241e9900706a5f2",
+  "recorded_at": "2026-09-15T11:37:54.590Z",
+  "branch": "work/add-feature-issue424-memory-clean-cut-claude"
+ },
+ {
+  "command_id": "plan-revise:issue-424:l7-512-correction:7",
+  "actor": "unison-ai-product",
+  "source_commit": "13c5bb2d0b0268af9bbe887c94190174c0e9f5db",
+  "revision_digest": "sha256:f026056a4118a062e35a9976e20aaec4593464804b86f6054241e9900706a5f2",
+  "recorded_at": "<<RECORDED_AT>>",
+  "branch": "work/add-feature-issue424-memory-clean-cut-claude"
+ },
+ {
+  "command_id": "plan-revise:issue-424:l7-533-withdrawal:10",
+  "actor": "unison-ai-product",
+  "source_commit": "13c5bb2d0b0268af9bbe887c94190174c0e9f5db",
+  "revision_digest": "sha256:bcf2d86ed0e4ed664a319d1c10b65474bd8a9bc96aa074e4a0f1a0dd7c6e9449",
+  "recorded_at": "2026-09-15T11:38:20.567Z",
+  "branch": "work/add-feature-issue424-memory-clean-cut-claude"
+ },
+ {
+  "command_id": "plan-revise:issue-424:l7-533-withdrawal:10",
+  "actor": "unison-ai-product",
+  "source_commit": "13c5bb2d0b0268af9bbe887c94190174c0e9f5db",
+  "revision_digest": "sha256:bcf2d86ed0e4ed664a319d1c10b65474bd8a9bc96aa074e4a0f1a0dd7c6e9449",
+  "recorded_at": "<<RECORDED_AT>>",
+  "branch": "work/add-feature-issue424-memory-clean-cut-claude"
+ },
+ {
+  "command_id": "plan-revise:issue-424:legacy-512:7",
+  "actor": "claude-opus-5-control-lane",
+  "source_commit": "27a9e3afade8c377e9dd5ec48ed177dd54bea0e8",
+  "revision_digest": "sha256:faf0d000fa798d40e6a5ac3ea5d7b945bb90af22874e1ed88090955a4220c59c",
+  "recorded_at": "FILLED_AT_RUN_TIME",
+  "branch": "work/add-feature-issue424-memory-clean-cut"
+ },
+ {
+  "command_id": "plan-revise:issue-424:legacy-512:7",
+  "actor": "claude-opus-5-control-lane",
+  "source_commit": "27a9e3afade8c377e9dd5ec48ed177dd54bea0e8",
+  "revision_digest": "sha256:faf0d000fa798d40e6a5ac3ea5d7b945bb90af22874e1ed88090955a4220c59c",
+  "recorded_at": "2026-09-16T01:33:20.050Z",
+  "branch": "work/add-feature-issue424-memory-clean-cut"
+ },
+ {
+  "command_id": "plan-revise:issue-424:legacy-512:8",
+  "actor": "claude-opus-5-control-lane",
+  "source_commit": "e21ebbe6e1afb3bd58f7b8a4c522da73c3a0b78f",
+  "revision_digest": "sha256:f026056a4118a062e35a9976e20aaec4593464804b86f6054241e9900706a5f2",
+  "recorded_at": "2026-09-16T03:38:30.858Z",
+  "branch": "work/add-feature-issue424-pr1-migration-removal"
+ },
+ {
+  "command_id": "plan-revise:issue-424:legacy-512:9",
+  "actor": "claude-opus-5-control-lane",
+  "source_commit": "7174a2ee1fb133a2b1de1766ecf436a24444ed62",
+  "revision_digest": "sha256:d10fd7e643bc4cd4b97f15a1a56faa951dc04c5ada8915f81f0b8e4fa9cf9365",
+  "recorded_at": "2026-09-16T04:42:11.358Z",
+  "branch": "work/add-feature-issue424-pr1-migration-removal"
+ },
+ {
+  "command_id": "plan-revise:issue-424:memory-clean-cut-impl:2",
+  "actor": "claude-control-lane",
+  "source_commit": "db880cebe1f9f59e41f0d6ac1601f61768afcb43",
+  "revision_digest": "sha256:57c21d02a0cfd55d705653fa853e25bb24b12a6a2c6df41eb68a150493401af3",
+  "recorded_at": "2026-09-16T04:23:38.598Z",
+  "branch": "work/add-feature-issue424-pr1-migration-removal"
+ },
+ {
+  "command_id": "plan-revise:issue-424:memory-clean-cut-impl:3",
+  "actor": "claude-control-lane",
+  "source_commit": "a22de21a74622731e5a704be54d8330c0537f5f5",
+  "revision_digest": "sha256:c69fbd70956fc1a65e9affa94ee41a3aa1a4a36c33ceed39b73e12e458f5b3b9",
+  "recorded_at": "2026-09-16T04:42:05.981Z",
+  "branch": "work/add-feature-issue424-pr1-migration-removal"
+ },
+ {
+  "command_id": "plan-revise:issue-424:memory-clean-cut-impl:4",
+  "actor": "codex",
+  "source_commit": "7174a2ee1fb133a2b1de1766ecf436a24444ed62",
+  "revision_digest": "sha256:93856debb04d1ea86fc7db8a5dafa1e87ac773273acc9ba7965f6f872b6f230e",
+  "recorded_at": "2026-09-17T05:10:11.742Z",
+  "branch": "work/add-feature-issue424-pr2-corpus-replacement"
+ },
+ {
+  "command_id": "plan-revise:issue-424:memory-clean-cut-impl:4",
+  "actor": "codex",
+  "source_commit": "7174a2ee1fb133a2b1de1766ecf436a24444ed62",
+  "revision_digest": "sha256:93856debb04d1ea86fc7db8a5dafa1e87ac773273acc9ba7965f6f872b6f230e",
+  "recorded_at": "2026-09-17T05:11:24.408Z",
+  "branch": "work/add-feature-issue424-pr2-corpus-replacement"
+ },
+ {
+  "command_id": "plan-revise:issue-424:memory-clean-cut:2",
+  "actor": "claude-opus-5-control-lane",
+  "source_commit": "27a9e3afade8c377e9dd5ec48ed177dd54bea0e8",
+  "revision_digest": "sha256:d6e2846b9ad6323c9a3ec0573892986b2fa2ce3156e50eb44e451e63dd55f285",
+  "recorded_at": "2026-09-16T01:38:45.587Z",
+  "branch": "work/redesign-issue424-memory-clean-cut-claude"
+ },
+ {
+  "command_id": "plan-revise:issue-424:memory-clean-cut:3",
+  "actor": "claude-opus-5-control-lane",
+  "source_commit": "18c8df6d29726a3d1887512d92719661759bcf62",
+  "revision_digest": "sha256:d6e2846b9ad6323c9a3ec0573892986b2fa2ce3156e50eb44e451e63dd55f285",
+  "recorded_at": "2026-09-16T02:26:17.355Z",
+  "branch": "work/redesign-issue424-memory-clean-cut-claude"
+ },
+ {
+  "command_id": "plan-revise:issue-424:memory-clean-cut:4",
+  "actor": "claude-opus-5-control-lane",
+  "source_commit": "86511e8913f568aedb972161d9cbed5681c41b3b",
+  "revision_digest": "sha256:d6e2846b9ad6323c9a3ec0573892986b2fa2ce3156e50eb44e451e63dd55f285",
+  "recorded_at": "2026-09-16T02:39:41.530Z",
+  "branch": "work/redesign-issue424-memory-clean-cut-claude"
+ },
+ {
+  "command_id": "plan-revise:issue-424:pr2-confirm:r4:0d42c71d1a79",
+  "actor": "claude-fable-5-1-control-lane",
+  "source_commit": "0d42c71d1a79719ee91da13d556c78e7e498d223",
+  "revision_digest": "sha256:93856debb04d1ea86fc7db8a5dafa1e87ac773273acc9ba7965f6f872b6f230e",
+  "recorded_at": "2026-09-18T03:54:06.986Z",
+  "branch": "work/add-feature-issue424-pr2b-corpus-replacement-r2"
+ },
+ {
+  "command_id": "plan-revise:issue-424:pr2-ownership-move:r10:0d42c71d1a79",
+  "actor": "claude-fable-5-1-control-lane",
+  "source_commit": "0d42c71d1a79719ee91da13d556c78e7e498d223",
+  "revision_digest": "sha256:cffd8ecd039c96c30a195c19e67107b9cf29cce7cf1cc9063cb838e8c9e8b502",
+  "recorded_at": "2026-09-18T03:54:24.330Z",
+  "branch": "work/add-feature-issue424-pr2b-corpus-replacement-r2"
+ },
+ {
+  "command_id": "plan-revise:issue-424:reverse-512-non-applicability:7",
+  "actor": "unison-ai-product",
+  "source_commit": "13c5bb2d0b0268af9bbe887c94190174c0e9f5db",
+  "revision_digest": "sha256:92ab069d06108fd2a5451b9e24ce9c3f23af8826b8eff2169c1e849dabf48409",
+  "recorded_at": "2026-09-15T11:38:52.541Z",
+  "branch": "work/reverse-issue424-memory-clean-cut-claude"
+ },
+ {
+  "command_id": "plan-revise:issue-424:reverse-512-non-applicability:7",
+  "actor": "unison-ai-product",
+  "source_commit": "13c5bb2d0b0268af9bbe887c94190174c0e9f5db",
+  "revision_digest": "sha256:92ab069d06108fd2a5451b9e24ce9c3f23af8826b8eff2169c1e849dabf48409",
+  "recorded_at": "<<RECORDED_AT>>",
+  "branch": "work/reverse-issue424-memory-clean-cut-claude"
+ },
+ {
+  "command_id": "plan-revise:issue-424:reverse-533-withdrawal:10",
+  "actor": "unison-ai-product",
+  "source_commit": "13c5bb2d0b0268af9bbe887c94190174c0e9f5db",
+  "revision_digest": "sha256:7f80d8ecb1e658ccef4a059bb2cee0f7aa16864fa3076be972802ea79deb556a",
+  "recorded_at": "2026-09-15T11:38:27.615Z",
+  "branch": "work/reverse-issue424-memory-clean-cut-claude"
+ },
+ {
+  "command_id": "plan-revise:issue-424:reverse-533-withdrawal:10",
+  "actor": "unison-ai-product",
+  "source_commit": "13c5bb2d0b0268af9bbe887c94190174c0e9f5db",
+  "revision_digest": "sha256:7f80d8ecb1e658ccef4a059bb2cee0f7aa16864fa3076be972802ea79deb556a",
+  "recorded_at": "<<RECORDED_AT>>",
+  "branch": "work/reverse-issue424-memory-clean-cut-claude"
+ },
+ {
+  "command_id": "plan-revise:issue-424:withdraw-533-forward:10",
+  "actor": "claude-opus-5-control-lane",
+  "source_commit": "27a9e3afade8c377e9dd5ec48ed177dd54bea0e8",
+  "revision_digest": "sha256:bcf2d86ed0e4ed664a319d1c10b65474bd8a9bc96aa074e4a0f1a0dd7c6e9449",
+  "recorded_at": "2026-09-16T01:35:13.211Z",
+  "branch": "work/add-feature-issue424-memory-clean-cut"
+ },
+ {
+  "command_id": "plan-revise:issue-424:withdraw-533-reverse:10",
+  "actor": "claude-opus-5-control-lane",
+  "source_commit": "27a9e3afade8c377e9dd5ec48ed177dd54bea0e8",
+  "revision_digest": "sha256:7f80d8ecb1e658ccef4a059bb2cee0f7aa16864fa3076be972802ea79deb556a",
+  "recorded_at": "2026-09-16T01:35:31.477Z",
+  "branch": "work/reverse-issue424-memory-clean-cut"
+ },
+ {
+  "command_id": "plan-revise:issue-540:cutover-prefix-contract:29",
+  "actor": "codex",
+  "source_commit": "433ed6df4adbc2549c83264a39788d5e3d8eb8d9",
+  "revision_digest": "sha256:650ad38db3f8a482789282b9ddbb823dafcc026cd3b39cc113056f43d0e2f196",
+  "recorded_at": "2026-09-15T06:12:33.048Z",
+  "branch": "work/add-feature-issue540-cutover-prefix-freeze"
+ },
+ {
+  "command_id": "plan-revise:issue-540:cutover-prefix-implementation:r32:894b7e14ae00",
+  "actor": "claude-fable-5-1-control-lane",
+  "source_commit": "894b7e14ae007a4800ad5e9d1a2de52212430f59",
+  "revision_digest": "sha256:7671f3a4e647cfe876f8e150e851b5392016fa70d78d91cfd8d2ed653f6d3d66",
+  "recorded_at": "2026-09-16T06:01:36.131Z",
+  "branch": "work/add-feature-issue540-cutover-transition"
+ },
+ {
+  "command_id": "plan-revise:issue-540:cutover-prefix-implementation:r33:18349dc882da",
+  "actor": "claude-fable-5-1-control-lane",
+  "source_commit": "2356db18dc59dd4362de8a22f9d42d1c25ad9137",
+  "revision_digest": "sha256:ed8dd81fb9eef486c69fe489fc9357af74b5af6f0a4d1dbbefce67dcb2a55967",
+  "recorded_at": "2026-09-16T06:03:38.693Z",
+  "branch": "work/add-feature-issue540-cutover-transition"
+ },
+ {
+  "command_id": "plan-revise:issue-540:cutover-prefix-implementation:r34:18349dc882da",
+  "actor": "claude-fable-5-1-control-lane",
+  "source_commit": "35d0b78b27e0f186037aa7939f159448214614d3",
+  "revision_digest": "sha256:0fc98f08265d723a951b572ca5ac13054848461d402df3215c01b5e3ba951881",
+  "recorded_at": "2026-09-16T06:12:50.426Z",
+  "branch": "work/add-feature-issue540-cutover-transition"
+ },
+ {
+  "command_id": "plan-revise:issue-540:cutover-prefix-implementation:r35:18349dc882da",
+  "actor": "claude-fable-5-1-control-lane",
+  "source_commit": "bd1f3be6b52b48b941b2fd10ca0c0d223e3de07e",
+  "revision_digest": "sha256:c23339aba05afe975730d1641eb99e3ca06da78cf7ace1175d53e6552d082005",
+  "recorded_at": "2026-09-16T06:14:38.432Z",
+  "branch": "work/add-feature-issue540-cutover-transition"
+ },
+ {
+  "command_id": "plan-revise:issue-540:drift-adoption:28",
+  "actor": "codex",
+  "source_commit": "bbb67c7ef10e8795557eb962561c7047a0e8f8a3",
+  "revision_digest": "sha256:55461b37a0c97d000e9a05d5376ebcd80e31fffca464aac9bee747f7835a0458",
+  "recorded_at": "2026-09-15T06:10:28.318Z",
+  "branch": "work/add-feature-issue540-cutover-prefix-freeze"
+ },
+ {
+  "command_id": "plan-revise:issue-541:recovery-16:11",
+  "actor": "codex",
+  "source_commit": "347c177c908f3b9367a374d7d6623c10a0a41b26",
+  "revision_digest": "sha256:8e72301e7b2891ee544e27c9a42012063968bbad61aab3c3569f8d4f82aabee6",
+  "recorded_at": "2026-09-17T12:00:00+09:00",
+  "branch": "work/recovery-issue541-plan-recovery-16-rev7"
+ },
+ {
+  "command_id": "plan-revise:issue-541:recovery-16:11",
+  "actor": "codex",
+  "source_commit": "347c177c908f3b9367a374d7d6623c10a0a41b26",
+  "revision_digest": "sha256:8e72301e7b2891ee544e27c9a42012063968bbad61aab3c3569f8d4f82aabee6",
+  "recorded_at": "2026-09-17T01:01:06.503Z",
+  "branch": "work/recovery-issue541-plan-recovery-16-rev7"
+ },
+ {
+  "command_id": "plan-revise:issue-541:recovery-16:12",
+  "actor": "codex",
+  "source_commit": "614cd2923df4f7cdb537d9e0e8ec3c664caeceba",
+  "revision_digest": "sha256:4c5f89a31dbefe87a0f25ece0c7e9092b3f91fdb3a1dfcad3cc2f560a3f6e5f1",
+  "recorded_at": "2026-09-17T01:36:56.365Z",
+  "branch": "work/recovery-issue541-plan-recovery-16-rev6"
+ },
+ {
+  "command_id": "plan-revise:issue-541:recovery-16:13",
+  "actor": "codex",
+  "source_commit": "fab1cd759c51cc2ad9019dbf407455694db6d634",
+  "revision_digest": "sha256:02dc207d898b3bae852f633e9f2cce691a2c6f6aa260ad2565bec3ccf515eed9",
+  "recorded_at": "2026-09-17T01:37:41.202Z",
+  "branch": "work/recovery-issue541-plan-recovery-16-rev7"
+ },
+ {
+  "command_id": "plan-revise:issue-550:forward:2",
+  "actor": "claude-fable-5",
+  "source_commit": "34cfc614c1939df442a52e9a8f35c8a32e8f25f3",
+  "revision_digest": "sha256:96129b894e80eb8a5e5e5568a5b4528f1a936b1ae19d9b8909391cf5678a8c61",
+  "recorded_at": "2026-09-11T05:44:23.600Z",
+  "branch": "work/add-feature-issue550-memory-completion-fence"
+ },
+ {
+  "command_id": "plan-revise:issue-550:forward:3",
+  "actor": "claude-fable-5",
+  "source_commit": "30dd7d14e6d69cdbbd18318fa518dec212f1b543",
+  "revision_digest": "sha256:01f65999f961da0d56acd422a58bf820a32b1a459f90123a01123507979a5a8d",
+  "recorded_at": "2026-09-11T05:58:00.125Z",
+  "branch": "work/add-feature-issue550-memory-completion-fence"
+ },
+ {
+  "command_id": "plan-revise:issue-550:forward:5",
+  "actor": "claude-fable-5",
+  "source_commit": "8646f194818b626869a002b4ad7e73f74cfbdfc6",
+  "revision_digest": "sha256:01f65999f961da0d56acd422a58bf820a32b1a459f90123a01123507979a5a8d",
+  "recorded_at": "2026-09-11T06:00:31.994Z",
+  "branch": "work/add-feature-issue550-memory-completion-fence"
+ },
+ {
+  "command_id": "plan-revise:issue-550:forward:6",
+  "actor": "claude-fable-5",
+  "source_commit": "4a2efa0c2f98f426aa43d4c52666303a3c3969bc",
+  "revision_digest": "sha256:01f65999f961da0d56acd422a58bf820a32b1a459f90123a01123507979a5a8d",
+  "recorded_at": "2026-09-11T06:01:48.960Z",
+  "branch": "work/add-feature-issue550-memory-completion-fence"
+ },
+ {
+  "command_id": "plan-revise:issue-550:forward:7",
+  "actor": "claude-fable-5",
+  "source_commit": "40452e26343daf513dbe8cb1af64c5553761a18f",
+  "revision_digest": "sha256:01f65999f961da0d56acd422a58bf820a32b1a459f90123a01123507979a5a8d",
+  "recorded_at": "2026-09-11T06:05:39.830Z",
+  "branch": "work/add-feature-issue550-memory-completion-fence"
+ },
+ {
+  "command_id": "plan-revise:issue-550:forward:8",
+  "actor": "claude-fable-5-1",
+  "source_commit": "bfbc8d668d2b785db39ab214d803a94535a679de",
+  "revision_digest": "sha256:01f65999f961da0d56acd422a58bf820a32b1a459f90123a01123507979a5a8d",
+  "recorded_at": "2026-09-14T09:54:36.259Z",
+  "branch": "work/add-feature-issue550-memory-completion-fence"
+ },
+ {
+  "command_id": "plan-revise:issue-550:forward:9",
+  "actor": "claude-fable-5-1",
+  "source_commit": "4fce999a82b5ece0579ac77f50f7f385859a1af8",
+  "revision_digest": "sha256:bcf2d86ed0e4ed664a319d1c10b65474bd8a9bc96aa074e4a0f1a0dd7c6e9449",
+  "recorded_at": "2026-09-14T10:38:46.121Z",
+  "branch": "work/add-feature-issue550-memory-completion-fence"
+ },
+ {
+  "command_id": "plan-revise:issue-550:reverse:2",
+  "actor": "claude-fable-5",
+  "source_commit": "34cfc614c1939df442a52e9a8f35c8a32e8f25f3",
+  "revision_digest": "sha256:1e8e14b839f58fec3df58bae25501475347e5ac375de29e1fe61d3aaeb9ed980",
+  "recorded_at": "2026-09-11T05:44:25.492Z",
+  "branch": "work/reverse-issue550-memory-completion-fence"
+ },
+ {
+  "command_id": "plan-revise:issue-550:reverse:3",
+  "actor": "claude-fable-5",
+  "source_commit": "30dd7d14e6d69cdbbd18318fa518dec212f1b543",
+  "revision_digest": "sha256:d49722f5dd664bbbcc3ae3e2c54b2a62ecf53049ed75dd3b504416ee3e05b533",
+  "recorded_at": "2026-09-11T05:58:03.475Z",
+  "branch": "work/reverse-issue550-memory-completion-fence"
+ },
+ {
+  "command_id": "plan-revise:issue-550:reverse:5",
+  "actor": "claude-fable-5",
+  "source_commit": "8646f194818b626869a002b4ad7e73f74cfbdfc6",
+  "revision_digest": "sha256:d49722f5dd664bbbcc3ae3e2c54b2a62ecf53049ed75dd3b504416ee3e05b533",
+  "recorded_at": "2026-09-11T06:00:34.506Z",
+  "branch": "work/reverse-issue550-memory-completion-fence"
+ },
+ {
+  "command_id": "plan-revise:issue-550:reverse:6",
+  "actor": "claude-fable-5",
+  "source_commit": "4a2efa0c2f98f426aa43d4c52666303a3c3969bc",
+  "revision_digest": "sha256:738fdf0f453a418f90790a603969ffe70a3f39ae40acdb25fbf8fe21dc339fed",
+  "recorded_at": "2026-09-11T06:01:52.812Z",
+  "branch": "work/reverse-issue550-memory-completion-fence"
+ },
+ {
+  "command_id": "plan-revise:issue-550:reverse:7",
+  "actor": "claude-fable-5",
+  "source_commit": "40452e26343daf513dbe8cb1af64c5553761a18f",
+  "revision_digest": "sha256:738fdf0f453a418f90790a603969ffe70a3f39ae40acdb25fbf8fe21dc339fed",
+  "recorded_at": "2026-09-11T06:05:42.007Z",
+  "branch": "work/reverse-issue550-memory-completion-fence"
+ },
+ {
+  "command_id": "plan-revise:issue-550:reverse:8",
+  "actor": "claude-fable-5-1",
+  "source_commit": "04925b996135b66407b12f9ec4b4ff760879e8bf",
+  "revision_digest": "sha256:738fdf0f453a418f90790a603969ffe70a3f39ae40acdb25fbf8fe21dc339fed",
+  "recorded_at": "2026-09-14T09:55:04.633Z",
+  "branch": "work/reverse-issue550-memory-completion-fence"
+ },
+ {
+  "command_id": "plan-revise:issue-550:reverse:9",
+  "actor": "claude-fable-5-1",
+  "source_commit": "8af8c83de79f00900cbb32d281c28059c64a30f2",
+  "revision_digest": "sha256:1d6a758de92420cf8e4cb0d0b6572f8bc0759e0cc3ab51004accc2e3620d8aef",
+  "recorded_at": "2026-09-14T10:38:52.177Z",
+  "branch": "work/reverse-issue550-memory-completion-fence"
+ },
+ {
+  "command_id": "plan-revise:issue-565:forward:2",
+  "actor": "claude-fable-5",
+  "source_commit": "f694a38100e1b58abd249adb78eb1f7bc55a2411",
+  "revision_digest": "sha256:37f912079f8dbcad4e272e0c74a6d23308dd1f119bf5ae365573f7d5e3609574",
+  "recorded_at": "2026-09-11T04:09:23.590Z",
+  "branch": "work/add-feature-issue565-publication-driver"
+ },
+ {
+  "command_id": "plan-revise:issue-565:forward:3",
+  "actor": "claude-fable-5",
+  "source_commit": "a5e1da1463163d22efad2bded9c2c4fbc8d9fb25",
+  "revision_digest": "sha256:dfe6e83b7abd5b29e3f3bf5a4e3cd70067223684727640ca2d5cc59e14f3be7a",
+  "recorded_at": "2026-09-11T04:46:04.152Z",
+  "branch": "work/add-feature-issue565-publication-driver"
+ },
+ {
+  "command_id": "plan-revise:issue-565:forward:4",
+  "actor": "claude-fable-5",
+  "source_commit": "6c998fb6605282894adda0865152c29693cedcbd",
+  "revision_digest": "sha256:dfe6e83b7abd5b29e3f3bf5a4e3cd70067223684727640ca2d5cc59e14f3be7a",
+  "recorded_at": "2026-09-11T05:17:45.260Z",
+  "branch": "work/add-feature-issue565-publication-driver"
+ },
+ {
+  "command_id": "plan-revise:issue-565:forward:5",
+  "actor": "claude-fable-5-1",
+  "source_commit": "3b151098e15fb7fd70f4b94a2aae73518a2dde74",
+  "revision_digest": "sha256:dfe6e83b7abd5b29e3f3bf5a4e3cd70067223684727640ca2d5cc59e14f3be7a",
+  "recorded_at": "2026-09-14T10:05:01.276Z",
+  "branch": "work/add-feature-issue565-atomic-ref-cas"
+ },
+ {
+  "command_id": "plan-revise:issue-565:forward:5",
+  "actor": "claude-fable-5-1",
+  "source_commit": "6140d2feea6f5eacc35384ea06deb2a2603a13c3",
+  "revision_digest": "sha256:dfe6e83b7abd5b29e3f3bf5a4e3cd70067223684727640ca2d5cc59e14f3be7a",
+  "recorded_at": "2026-09-14T11:07:52.006Z",
+  "branch": "work/add-feature-issue565-atomic-ref-cas"
+ },
+ {
+  "command_id": "plan-revise:issue-565:legacy-515:2",
+  "actor": "claude-fable-5-1",
+  "source_commit": "6786e02e2890a24f41cff33e8ef1ed16c54b35e8",
+  "revision_digest": "sha256:f99b76dd6b8bd750acb20239c4c4a17d6095a42ae71c1aa774e8b9ad4cd1887c",
+  "recorded_at": "2026-09-14T10:05:07.859Z",
+  "branch": "work/add-feature-issue565-atomic-ref-cas"
+ },
+ {
+  "command_id": "plan-revise:issue-565:legacy-515:2",
+  "actor": "claude-fable-5-1",
+  "source_commit": "3c462541290c11c37d4b298ff3f2abaa3a1786a9",
+  "revision_digest": "sha256:f99b76dd6b8bd750acb20239c4c4a17d6095a42ae71c1aa774e8b9ad4cd1887c",
+  "recorded_at": "2026-09-14T11:07:56.407Z",
+  "branch": "work/add-feature-issue565-atomic-ref-cas"
+ },
+ {
+  "command_id": "plan-revise:issue-565:prep006-filesystem-ownership:20260917",
+  "actor": "codex",
+  "source_commit": "1df77492625a788327f58fdcf6bbcf0cd79306ec",
+  "revision_digest": "sha256:ec4a13e0141edcacebb67b68e0209d36723345c3c55df598aa9bd1a7b0a8e202",
+  "recorded_at": "2026-09-17T11:56:59.753Z",
+  "branch": "work/add-feature-565-prep006"
+ },
+ {
+  "command_id": "plan-revise:issue-565:prep006-ownership:r2:26610252894d",
+  "actor": "claude-fable-5-1-control-lane",
+  "source_commit": "26610252894d9bbc71b24b05dbc13ddc87f4a0ac",
+  "revision_digest": "sha256:ec4a13e0141edcacebb67b68e0209d36723345c3c55df598aa9bd1a7b0a8e202",
+  "recorded_at": "2026-09-18T05:29:27.532Z",
+  "branch": "work/add-feature-issue565-prep006-ownership"
+ },
+ {
+  "command_id": "plan-revise:issue-565:reverse:2",
+  "actor": "claude-fable-5",
+  "source_commit": "f694a38100e1b58abd249adb78eb1f7bc55a2411",
+  "revision_digest": "sha256:9e0e51cc66dfff82910953cb77ffbaae5cb2f19324d9931f55f54e3a85432a4f",
+  "recorded_at": "2026-09-11T04:09:40.329Z",
+  "branch": "work/reverse-issue565-publication-driver"
+ },
+ {
+  "command_id": "plan-revise:issue-565:reverse:3",
+  "actor": "claude-fable-5",
+  "source_commit": "a5e1da1463163d22efad2bded9c2c4fbc8d9fb25",
+  "revision_digest": "sha256:a43147411c70c3c405eb45563f7920f5aa803b5f6e40b456592eb183125a8cee",
+  "recorded_at": "2026-09-11T04:46:05.849Z",
+  "branch": "work/reverse-issue565-publication-driver"
+ },
+ {
+  "command_id": "plan-revise:issue-565:reverse:4",
+  "actor": "claude-fable-5",
+  "source_commit": "6c998fb6605282894adda0865152c29693cedcbd",
+  "revision_digest": "sha256:a43147411c70c3c405eb45563f7920f5aa803b5f6e40b456592eb183125a8cee",
+  "recorded_at": "2026-09-11T05:17:47.985Z",
+  "branch": "work/reverse-issue565-publication-driver"
+ },
+ {
+  "command_id": "plan-revise:issue-570:forward:2",
+  "actor": "claude-fable-5",
+  "source_commit": "a30110364132806b46c74f7facaac8048710000a",
+  "revision_digest": "sha256:c661ab2c312a7bfeb34a5fc335ba8ed25049f3c30b35981a7830f32fc0efe819",
+  "recorded_at": "2026-09-11T06:52:27.907Z",
+  "branch": "work/add-feature-issue570-d3b-composition"
+ },
+ {
+  "command_id": "plan-revise:issue-570:forward:3",
+  "actor": "claude-fable-5",
+  "source_commit": "9f66d247e38f231ce9d39fbe2392583927389679",
+  "revision_digest": "sha256:ca2b95602ea537fdff0e8cd380088804baa989789f81dca3dd845b3336a7a7fd",
+  "recorded_at": "2026-09-11T06:53:33.504Z",
+  "branch": "work/add-feature-issue570-d3b-composition"
+ },
+ {
+  "command_id": "plan-revise:issue-570:forward:4",
+  "actor": "claude-fable-5",
+  "source_commit": "d4d0c34e5fa55123f1cb03f52959946e0ff697f8",
+  "revision_digest": "sha256:926ed7937c2052049e27fdbb9c80572949b33ddd4b879525d44762611fbfc6de",
+  "recorded_at": "2026-09-11T07:35:13.604Z",
+  "branch": "work/add-feature-issue570-d3b-composition"
+ },
+ {
+  "command_id": "plan-revise:issue-570:forward:5",
+  "actor": "claude-fable-5",
+  "source_commit": "035708b6d87450d979a381d3e284b1b4f0a3f97a",
+  "revision_digest": "sha256:926ed7937c2052049e27fdbb9c80572949b33ddd4b879525d44762611fbfc6de",
+  "recorded_at": "2026-09-11T07:37:55.764Z",
+  "branch": "work/add-feature-issue570-d3b-composition"
+ },
+ {
+  "command_id": "plan-revise:issue-570:forward:6",
+  "actor": "claude-fable-5",
+  "source_commit": "e3023aa52223088cdaf9f882bbdec7efb92ff88d",
+  "revision_digest": "sha256:926ed7937c2052049e27fdbb9c80572949b33ddd4b879525d44762611fbfc6de",
+  "recorded_at": "2026-09-11T08:01:20.641Z",
+  "branch": "work/add-feature-issue570-d3b-composition"
+ },
+ {
+  "command_id": "plan-revise:issue-570:forward:7",
+  "actor": "claude-fable-5",
+  "source_commit": "dc8cb3033866c312ab23b3c6f88a7a3014eea8a7",
+  "revision_digest": "sha256:926ed7937c2052049e27fdbb9c80572949b33ddd4b879525d44762611fbfc6de",
+  "recorded_at": "2026-09-11T08:38:27.216Z",
+  "branch": "work/add-feature-issue570-d3b-composition"
+ },
+ {
+  "command_id": "plan-revise:issue-570:forward:8",
+  "actor": "claude-fable-5",
+  "source_commit": "609aebb5a0f5cc688835f5bc3c0e576325abcc79",
+  "revision_digest": "sha256:926ed7937c2052049e27fdbb9c80572949b33ddd4b879525d44762611fbfc6de",
+  "recorded_at": "2026-09-14T01:39:16.658Z",
+  "branch": "work/add-feature-issue570-d3b-composition"
+ },
+ {
+  "command_id": "plan-revise:issue-570:pr1-confirm:r11:7f95263cbbea",
+  "actor": "claude-fable-5-1-control-lane",
+  "source_commit": "7f95263cbbea88c763a9a62a9a82e3c3880ff023",
+  "revision_digest": "sha256:611b2936c4a3678ef8c2d630729abed5ca1c5f69429fce09e0de36ac2073f7d9",
+  "recorded_at": "2026-09-16T08:36:05.531Z",
+  "branch": "work/add-feature-issue570-d3b-composition-v2"
+ },
+ {
+  "command_id": "plan-revise:issue-570:pr1-preflight-remediation:r10:9ef7bfb8767a",
+  "actor": "claude-fable-5-1-control-lane",
+  "source_commit": "9ef7bfb8767ace6422eb8838cd78e479920c38ff",
+  "revision_digest": "sha256:611b2936c4a3678ef8c2d630729abed5ca1c5f69429fce09e0de36ac2073f7d9",
+  "recorded_at": "2026-09-16T07:35:17.000Z",
+  "branch": "work/add-feature-issue570-d3b-composition-v2"
+ },
+ {
+  "command_id": "plan-revise:issue-570:reverse:2",
+  "actor": "claude-fable-5",
+  "source_commit": "d4d0c34e5fa55123f1cb03f52959946e0ff697f8",
+  "revision_digest": "sha256:8c507729fc9e0e78fa46f15ce08d7b90b1a65de9ff83c001399420feba5cf57b",
+  "recorded_at": "2026-09-11T07:35:15.359Z",
+  "branch": "work/reverse-issue570-d3b-composition"
+ },
+ {
+  "command_id": "plan-revise:issue-570:reverse:3",
+  "actor": "claude-fable-5",
+  "source_commit": "035708b6d87450d979a381d3e284b1b4f0a3f97a",
+  "revision_digest": "sha256:86444a34052ee5993e0c99e0cee00cc7dc767a1af7a2b68705895146c3506037",
+  "recorded_at": "2026-09-11T07:37:57.855Z",
+  "branch": "work/reverse-issue570-d3b-composition"
+ },
+ {
+  "command_id": "plan-revise:issue-570:reverse:4",
+  "actor": "claude-fable-5",
+  "source_commit": "e3023aa52223088cdaf9f882bbdec7efb92ff88d",
+  "revision_digest": "sha256:8b6a50f92c59ba4e3fba1b46dfe6bc91e5193c56156b38880b92d5e3bb708c84",
+  "recorded_at": "2026-09-11T08:01:22.325Z",
+  "branch": "work/reverse-issue570-d3b-composition"
+ },
+ {
+  "command_id": "plan-revise:issue-570:reverse:5",
+  "actor": "claude-fable-5",
+  "source_commit": "dc8cb3033866c312ab23b3c6f88a7a3014eea8a7",
+  "revision_digest": "sha256:d51e5ce88b99db1650db09051f1e4912c74ffe17ad37ff0a36fbac65fa77e1a3",
+  "recorded_at": "2026-09-11T08:38:28.993Z",
+  "branch": "work/reverse-issue570-d3b-composition"
+ },
+ {
+  "command_id": "plan-revise:issue-570:reverse:6",
+  "actor": "claude-fable-5",
+  "source_commit": "95abc07d26674b7f9e54c3baa470587c45750a91",
+  "revision_digest": "sha256:150420742331d74eed473649de7b20f80d9b6a6ffd22fd2551719e8bbab93a95",
+  "recorded_at": "2026-09-11T11:06:35.453Z",
+  "branch": "work/reverse-issue570-d3b-composition"
+ },
+ {
+  "command_id": "plan-revise:issue-570:reverse:7",
+  "actor": "claude-fable-5",
+  "source_commit": "609aebb5a0f5cc688835f5bc3c0e576325abcc79",
+  "revision_digest": "sha256:150420742331d74eed473649de7b20f80d9b6a6ffd22fd2551719e8bbab93a95",
+  "recorded_at": "2026-09-14T01:39:18.689Z",
+  "branch": "work/reverse-issue570-d3b-composition"
+ },
+ {
+  "command_id": "plan-revise:issue-596:recovery-16:3",
+  "actor": "claude-fable-5-1",
+  "source_commit": "9522eaba17f9bcfd20c9488fbd7f14c78f92b61e",
+  "revision_digest": "sha256:2c3390f46c05804023243911206dbec7e66424a3789580225c407e52d4848c47",
+  "recorded_at": "2026-09-14T08:52:04.930Z",
+  "branch": "work/recovery-issue596-ledger-rehydration"
+ },
+ {
+  "command_id": "plan-revise:issue-626:pr645-plan:r10:3eed4f9b6e53",
+  "actor": "claude-fable-5-1-control-lane",
+  "source_commit": "3eed4f9b6e531e96bdb55c289f7b13a4363ba03b",
+  "revision_digest": "586f757be7bfddc7f375efc17e9f3bf680de44636f9e4eb835ad025f0bd3ca47",
+  "recorded_at": "2026-09-17T03:33:26.086Z",
+  "branch": "work/add-feature-issue626-admission-binding"
+ },
+ {
+  "command_id": "plan-revise:issue-626:pr645-reverse:r10:3eed4f9b6e53",
+  "actor": "claude-fable-5-1-control-lane",
+  "source_commit": "3eed4f9b6e531e96bdb55c289f7b13a4363ba03b",
+  "revision_digest": "346af89865baef0bc1c6442c2108404cb15c93c2f7d9339ea35e18e25ed53bc2",
+  "recorded_at": "2026-09-17T03:33:30.749Z",
+  "branch": "work/reverse-issue626-admission-binding-backfill"
+ },
+ {
+  "command_id": "plan-revise:issue-626:slice1-trace:r12:13dd790f6fdd",
+  "actor": "codex",
+  "source_commit": "13dd790f6fdd2d98c16e88a17206f46ae8f409ba",
+  "revision_digest": "sha256:586f757be7bfddc7f375efc17e9f3bf680de44636f9e4eb835ad025f0bd3ca47",
+  "recorded_at": "2026-09-18T11:20:18.459Z",
+  "branch": "work/add-feature-issue626-slice1-trace"
+ },
+ {
+  "command_id": "plan-revise:issue-626:slice1-trace:r12:8fb286c6192e",
+  "actor": "codex",
+  "source_commit": "8fb286c6192eddb80ae3d0a0b89119c7faa278f8",
+  "revision_digest": "sha256:586f757be7bfddc7f375efc17e9f3bf680de44636f9e4eb835ad025f0bd3ca47",
+  "recorded_at": "2026-09-18T11:13:04.848Z",
+  "branch": "work/add-feature-issue626-slice1-trace"
+ },
+ {
+  "command_id": "plan-revise:issue-627:pr650-p626:r11:c3dbe2bd31ed",
+  "actor": "claude-fable-5-1-control-lane",
+  "source_commit": "c3dbe2bd31edba15005cad870108052487f98153",
+  "revision_digest": "586f757be7bfddc7f375efc17e9f3bf680de44636f9e4eb835ad025f0bd3ca47",
+  "recorded_at": "2026-09-17T05:15:52.574Z",
+  "branch": "work/add-feature-issue627-admitted-publish"
+ },
+ {
+  "command_id": "plan-revise:issue-627:pr650-plan:r3:5270a2006cb5",
+  "actor": "claude-fable-5-1-control-lane",
+  "source_commit": "5270a2006cb50710ccd1d40b733b4e1ac26003fc",
+  "revision_digest": "sha256:67fe2c5ae4fbe2ff5983c933934d375366f4784cc3e20a5e42a38f4a665d819d",
+  "recorded_at": "2026-09-17T05:47:25.811Z",
+  "branch": "work/add-feature-issue627-admitted-publish"
+ },
+ {
+  "command_id": "plan-revise:issue-627:pr650-reverse:r3:5270a2006cb5",
+  "actor": "claude-fable-5-1-control-lane",
+  "source_commit": "5270a2006cb50710ccd1d40b733b4e1ac26003fc",
+  "revision_digest": "sha256:ce3b1eb3b682e61345ebe142d67f608f8ddf4c42e30b3d1048661760c90715bc",
+  "recorded_at": "2026-09-17T05:47:40.754Z",
+  "branch": "work/reverse-issue627-admitted-publish-backfill"
+ },
+ {
+  "command_id": "plan-revise:issue-676:codex-prvl:after-pr1:plan:r12",
+  "actor": "codex-prvl",
+  "source_commit": "8345c13365f9ad03d4624534d030e92936effb4d",
+  "revision_digest": "sha256:1d7e6c149e722f021043265c9f85b4a947465416bfa757c24498c52ced16c359",
+  "recorded_at": "2026-09-28T02:48:09.697Z",
+  "branch": "work/add-feature-issue676-prvl"
+ },
+ {
+  "command_id": "plan-revise:issue-711:rechain-contract:plan:r2:60ba2e38b0ae",
+  "actor": "claude-opus-5-5-control-lane",
+  "source_commit": "60ba2e38b0ae7c938bf675efb04e755674fc311e",
+  "revision_digest": "1ccd35a8767051982ea867f3deec71b8d39edd210bea27e80714593aecef95e6",
+  "recorded_at": "2026-09-28T03:56:18.633Z",
+  "branch": "work/add-feature-issue711-merge-time-rechain-contract"
+ },
+ {
+  "command_id": "plan-revise:issue-711:s1-input-shape:plan:r2:299d2f8bcfd2",
+  "actor": "claude-opus-5-5-control-lane",
+  "source_commit": "299d2f8bcfd286c8fb11bc95329a2d0624e2b265",
+  "revision_digest": "1ccd35a8767051982ea867f3deec71b8d39edd210bea27e80714593aecef95e6",
+  "recorded_at": "2026-09-28T07:13:01.026Z",
+  "branch": "work/add-feature-issue711-s1-input-shape"
+ },
+ {
+  "command_id": "plan-revise:issue-711:s2-rechain-verifier:plan:r3:37d8bc8a3eb0",
+  "actor": "claude-opus-5-5-control-lane",
+  "source_commit": "37d8bc8a3eb0dee48bfa9807d89d6ed888a22c71",
+  "revision_digest": "1ccd35a8767051982ea867f3deec71b8d39edd210bea27e80714593aecef95e6",
+  "recorded_at": "2026-09-28T08:02:23.857Z",
+  "branch": "work/add-feature-issue711-s2-rechain-verifier"
+ },
+ {
+  "command_id": "plan-revise:issue-742:ac2-m6-m7:forward:r6:816e306d3779",
+  "actor": "claude-opus-5-5-control-lane",
+  "source_commit": "816e306d37795011ce4bf7c30986a7c7051f436e",
+  "revision_digest": "65de08551e9c7562e849ea2de857acc5c8e84f56014ced787ab59a10e3bb6a82",
+  "recorded_at": "2026-09-29T06:20:58.243Z",
+  "branch": "work/add-feature-issue742-aggregate-v2-cardinality-v2"
+ },
+ {
+  "command_id": "plan-revise:issue-742:attestation-composition:forward:r4:03455264e175",
+  "actor": "claude-opus-5-5-control-lane",
+  "source_commit": "03455264e175df09dd2f5491e02dbf6a3bb3ec4a",
+  "revision_digest": "65de08551e9c7562e849ea2de857acc5c8e84f56014ced787ab59a10e3bb6a82",
+  "recorded_at": "2026-09-29T05:51:26.114Z",
+  "branch": "work/add-feature-issue742-aggregate-v2-cardinality"
+ },
+ {
+  "command_id": "plan-revise:issue-742:attestation-stage-boundary:forward:r3:94074807130a",
+  "actor": "claude-opus-5-5-control-lane",
+  "source_commit": "94074807130ac4f5a6957cc04d244101e059e1ca",
+  "revision_digest": "65de08551e9c7562e849ea2de857acc5c8e84f56014ced787ab59a10e3bb6a82",
+  "recorded_at": "2026-09-29T05:33:16.715Z",
+  "branch": "work/add-feature-issue742-aggregate-v2-cardinality"
+ },
+ {
+  "command_id": "plan-revise:issue-742:extra-destination-negatives:forward:r5:205e26251cb5",
+  "actor": "claude-opus-5-5-control-lane",
+  "source_commit": "205e26251cb589e1f5e0da95c27b80d049109989",
+  "revision_digest": "65de08551e9c7562e849ea2de857acc5c8e84f56014ced787ab59a10e3bb6a82",
+  "recorded_at": "2026-09-29T06:12:16.484Z",
+  "branch": "work/add-feature-issue742-aggregate-v2-cardinality-v2"
+ },
+ {
+  "command_id": "plan-revise:issue-742:legacy-492-correction-note:r2b:d5b9c793e32e",
+  "actor": "claude-opus-5-5-control-lane",
+  "source_commit": "d5b9c793e32e65a3bb7678df6e6dc5ae84e751c6",
+  "revision_digest": "459b26b7e0abc3dd65a3eab3e5d2c033d2f221abf36cf8b52078cf0c4a0be037",
+  "recorded_at": "2026-09-29T05:08:39.156Z",
+  "branch": "work/forward-issue742-aggregate-v2-cardinality"
+ },
+ {
+  "command_id": "plan-revise:issue-742:legacy-494-correction-note:r2:d5b9c793e32e",
+  "actor": "claude-opus-5-5-control-lane",
+  "source_commit": "d5b9c793e32e65a3bb7678df6e6dc5ae84e751c6",
+  "revision_digest": "30b9f4cbe6548917c1a8d61c57e48de6a17d4f6b5041fdae42c8e34375a3e194",
+  "recorded_at": "2026-09-29T05:08:19.740Z",
+  "branch": "work/forward-issue742-aggregate-v2-cardinality"
+ },
+ {
+  "command_id": "plan-revise:issue-742:r2-m6-m7:reverse:r2:27d3c89b23c5",
+  "actor": "claude-opus-5-5-control-lane",
+  "source_commit": "27d3c89b23c53468888e60280e7eb49e7eb7338e",
+  "revision_digest": "737374ff11f5b5b24d2d32c0c181ca4567d82033897236861ace881075921be1",
+  "recorded_at": "2026-09-29T06:21:56.502Z",
+  "branch": "work/reverse-issue742-aggregate-v2-cardinality"
+ },
+ {
+  "command_id": "plan-revise:issue-742:supersedes-restore:forward:r2:16de02fee8ac",
+  "actor": "claude-opus-5-5-control-lane",
+  "source_commit": "16de02fee8acd71194bd411d390f60fca516094d",
+  "revision_digest": "f4cc8cd8b2e5fd8ade4719f1ff115270cc30f52004b0e7b498d628ba77c751e5",
+  "recorded_at": "2026-09-29T05:16:38.050Z",
+  "branch": "work/add-feature-issue742-aggregate-v2-cardinality"
+ },
+ {
+  "command_id": "plan-revise:issue487:final-retirement:confirmed-preflight:e446:1789630124372",
+  "actor": "codex",
+  "source_commit": "5b1ace92b7bb18cd78230fb35ba76b4996bb2cdb",
+  "revision_digest": "sha256:cf12402d2505ddfbc210206ff7bf50c10bb670e5e1d0f32da48d496d1558fcfe",
+  "recorded_at": "2026-09-17T07:28:44.372Z",
+  "branch": "work/add-feature-issue487-bun-final-retirement"
+ },
+ {
+  "command_id": "plan-revise:issue487:final-retirement:digest-correction:e446:1789632686717",
+  "actor": "codex",
+  "source_commit": "2efa360b9897b034e69077a54b04fd441ba588da",
+  "revision_digest": "sha256:a74a5c174350450f1cae12f1b124498daa253a34e2561fb85f4692325746fbd9",
+  "recorded_at": "2026-09-17T08:11:26.717Z",
+  "branch": "work/add-feature-issue487-bun-final-retirement"
+ },
+ {
+  "command_id": "plan-revise:issue487:plan354-bun-lock-supersession:e446:1789630200129",
+  "actor": "codex",
+  "source_commit": "5b1ace92b7bb18cd78230fb35ba76b4996bb2cdb",
+  "revision_digest": "sha256:9f72b124a0476c6c15ab2c7d54de8d8c7372928e61afabfd30f71d649f108b3b",
+  "recorded_at": "2026-09-17T07:30:00.130Z",
+  "branch": "work/refactor-issue487-bun-lock-supersession"
+ },
+ {
+  "command_id": "pr641-l7-354-bun-lock-supersession-n3-1789617786553",
+  "actor": "codex-plan-repair",
+  "source_commit": "269c32976fe8d3eb7db760fb336df4992a528864",
+  "revision_digest": "sha256:ccb7c0b4a28134ffd0dba6b77c585a08f923d59a67bb50d559e160a7df0534e8",
+  "recorded_at": "2026-09-17T04:03:06.553Z",
+  "branch": "work/refactor-issue487-bun-final-retirement"
+ }
+]

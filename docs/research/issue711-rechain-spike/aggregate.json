@@ -1,0 +1,61 @@
+{
+ "target": "895ac2e93c1a820e8a5c736bf8787e4f15823e06",
+ "primitives_commit": "60099e554b5b66d973bd94e28955c9e81bcf1af5",
+ "hints_entries": 131,
+ "extra_refs": [
+  {
+   "ref": "origin/archive/pr529-c5dce6c1-before-subject-repair",
+   "oid": "c5dce6c13ed6f9d697bba4aced87e13e746f7fb1"
+  }
+ ],
+ "records": 340,
+ "by_class": {
+  "T0-ambiguous-introduction": 3,
+  "T0-no-intro-commit": 23,
+  "T1-admission-unrecovered": 138,
+  "T1-base-record-not-in-projection": 7,
+  "T1-legacy-bootstrap": 27,
+  "T1-rev1-draft": 26,
+  "T2-rederived-first-parent": 84,
+  "T2-rederived-rewritten-history": 19,
+  "T2-undecided-hint-unobtainable": 13
+ },
+ "by_reason": {
+  "admission-unresolved": 138,
+  "base-record-missing": 7,
+  "hint-unobtainable/actor-or-commit": 6,
+  "hint-unobtainable/draft-base": 7,
+  "nonapplicable-draft-rev1": 26,
+  "nonapplicable-legacy-bootstrap": 27,
+  "rederived": 103,
+  "spike-ambiguous-introduction": 3,
+  "spike-no-introduction-commit": 23
+ },
+ "by_source_commit_git": {
+  "absent-from-odb": 15,
+  "null": 237,
+  "present-unreachable": 4,
+  "reachable-from-target": 84
+ },
+ "by_base_kind": {
+  "null": 237,
+  "other": 8,
+  "stripped": 95
+ },
+ "per_path": {
+  "draft": {
+   "total": 33,
+   "rederived": 0
+  },
+  "revise": {
+   "total": 303,
+   "rederived": 101
+  },
+  "rechain": {
+   "total": 4,
+   "rederived": 2
+  }
+ },
+ "rederived_over_population": "103/340",
+ "literal_eq_stripped": "0/314"
+}

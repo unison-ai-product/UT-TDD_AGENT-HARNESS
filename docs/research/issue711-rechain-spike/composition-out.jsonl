@@ -1,0 +1,4 @@
+{"seq":330,"plan":"PLAN-L7-676-release-consumer-dev-start","rev":16,"assemblerEqDerive":true,"receiptDigestEq":true,"planBytesEq":true,"projectionRecordsEq":true,"projectionBytesEqWhenNoSibling":true}
+{"seq":338,"plan":"PLAN-L7-676-release-consumer-dev-start","rev":19,"assemblerEqDerive":true,"receiptDigestEq":true,"planBytesEq":true,"projectionRecordsEq":true,"projectionBytesEqWhenNoSibling":true}
+{"seq":340,"plan":"PLAN-L7-676-release-consumer-dev-start","rev":20,"assemblerEqDerive":true,"receiptDigestEq":true,"planBytesEq":true,"projectionRecordsEq":true,"projectionBytesEqWhenNoSibling":true}
+{"seq":172,"plan":"PLAN-L7-512-project-scoped-memory-root","rev":3,"assemblerEqDerive":true,"receiptDigestEq":true,"planBytesEq":true,"projectionRecordsEq":true,"projectionBytesEqWhenNoSibling":true}
