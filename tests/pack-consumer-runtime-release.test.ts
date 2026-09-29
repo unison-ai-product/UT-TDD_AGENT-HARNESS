@@ -924,116 +924,114 @@ describe("Pack consumer runtime release producer contract", () => {
     }
   });
 
-  it("CANDIDATE-U-PACKRT-012: binds producer channel selection to the tag and rejects v1", async () => {
-    const fixture = await createPackrt012Fixture();
-    try {
-      expect(fixture.canaryReleaseId).not.toBe(fixture.stableReleaseId);
-      const cases = [
-        {
-          tag: fixture.tags[0],
-          channel: "canary",
-          revision: fixture.c1,
-          releaseId: fixture.canaryReleaseId,
-        },
-        {
-          tag: fixture.tags[1],
-          channel: "stable",
-          revision: fixture.c0,
-          releaseId: fixture.stableReleaseId,
-        },
-        {
-          tag: fixture.tags[2],
-          channel: "stable",
-          revision: fixture.c0,
-          releaseId: fixture.stableReleaseId,
-        },
-        {
-          tag: fixture.tags[3],
-          channel: "stable",
-          revision: fixture.c0,
-          releaseId: fixture.stableReleaseId,
-        },
-      ] as const;
-      for (const expected of cases) {
-        expect(resolveConsumerRuntimeReleaseSourceBinding(fixture.root, expected.tag)).toEqual({
-          releaseRevision: fixture.c2,
-          artifactSourceRevision: expected.revision,
-          channel: expected.channel,
-        });
-        const outDir = mkdtempSync(join(tmpdir(), "ut-tdd-packrt-012-assets-"));
-        try {
-          const result = await packageConsumerRuntimeRelease({
-            repoRoot: fixture.root,
-            tag: expected.tag,
-            outDir,
-            homeDirectory: join(fixture.root, "synthetic-home"),
-            installDependencies: () => undefined,
-            buildGeneration: fakeGenerationBuilder(),
-          });
-          expect(result.sourceRevision).toBe(expected.revision);
-          const names = releaseArtifactFileNames(expected.tag);
-          const runtime = JSON.parse(
-            readFileSync(join(outDir, names.consumerRuntime), "utf8"),
-          ) as ConsumerRuntimeRelease;
-          expect(runtime.release).toMatchObject({
-            tag: expected.tag,
-            source_revision: expected.revision,
-          });
-          expect(runtime.generation.subject_revision).toBe(expected.revision);
-          const aggregate = runtime.admission_input.aggregate_input;
-          expect(aggregate.channel).toBe(expected.channel);
-          expect(aggregate.attestation).toMatchObject({
-            status: "attested",
-            releaseId: expected.releaseId,
-            artifactSourceCommit: expected.revision,
-          });
-          expect(aggregate.final_tree.channelMappings).toHaveLength(fixture.artifactCount);
-          expect(aggregate.attestation.entries).toHaveLength(fixture.artifactCount);
-          expect(
-            aggregate.final_tree.channelMappings.every(
-              (mapping) =>
-                mapping.channel === expected.channel &&
-                mapping.releaseId === expected.releaseId &&
-                mapping.sourceRevision === expected.revision,
-            ),
-          ).toBe(true);
-        } finally {
-          rmSync(outDir, { recursive: true, force: true });
-        }
-      }
-    } finally {
-      rmSync(fixture.root, { recursive: true, force: true });
-    }
-    const v1Fixture = await createPackrt012Fixture("v1");
-    const outDir = mkdtempSync(join(tmpdir(), "ut-tdd-packrt-012-v1-assets-"));
-    let dependencyInstallCalls = 0;
-    let generationCalls = 0;
-    try {
-      await expect(
-        packageConsumerRuntimeRelease({
-          repoRoot: v1Fixture.root,
-          tag: v1Fixture.tags[0],
-          outDir,
-          homeDirectory: join(v1Fixture.root, "synthetic-home"),
-          installDependencies: () => {
-            dependencyInstallCalls += 1;
-          },
-          buildGeneration: async () => {
-            generationCalls += 1;
-            throw new Error("v1 rejection must precede generation");
-          },
-        }),
-      ).rejects.toMatchObject({
-        code: "consumer_runtime_release_manifest_invalid",
-        message: expect.stringContaining(":v1_read_only"),
+  describe("CANDIDATE-U-PACKRT-012: binds producer channel selection to the tag and rejects v1", () => {
+    let fixture: Awaited<ReturnType<typeof createPackrt012Fixture>> | undefined;
+
+    beforeAll(async () => {
+      fixture = await createPackrt012Fixture();
+    });
+
+    afterAll(() => {
+      if (fixture) rmSync(fixture.root, { recursive: true, force: true });
+    });
+
+    it.each([
+      { tagIndex: 0, channel: "canary", source: "canary" },
+      { tagIndex: 1, channel: "stable", source: "stable" },
+      { tagIndex: 2, channel: "stable", source: "stable" },
+      { tagIndex: 3, channel: "stable", source: "stable" },
+    ] as const)("binds tag case $tagIndex to its channel and release", async (testCase) => {
+      const sharedFixture = fixture;
+      if (!sharedFixture) throw new Error("shared v2 fixture was not initialized");
+      expect(sharedFixture.canaryReleaseId).not.toBe(sharedFixture.stableReleaseId);
+      const expected = {
+        tag: sharedFixture.tags[testCase.tagIndex],
+        channel: testCase.channel,
+        revision: testCase.source === "canary" ? sharedFixture.c1 : sharedFixture.c0,
+        releaseId:
+          testCase.source === "canary"
+            ? sharedFixture.canaryReleaseId
+            : sharedFixture.stableReleaseId,
+      };
+      expect(resolveConsumerRuntimeReleaseSourceBinding(sharedFixture.root, expected.tag)).toEqual({
+        releaseRevision: sharedFixture.c2,
+        artifactSourceRevision: expected.revision,
+        channel: expected.channel,
       });
-      expect(dependencyInstallCalls).toBe(0);
-      expect(generationCalls).toBe(0);
-      expect(readdirSync(outDir)).toEqual([]);
-    } finally {
-      rmSync(v1Fixture.root, { recursive: true, force: true });
-      rmSync(outDir, { recursive: true, force: true });
-    }
+      const outDir = mkdtempSync(join(tmpdir(), "ut-tdd-packrt-012-assets-"));
+      try {
+        const result = await packageConsumerRuntimeRelease({
+          repoRoot: sharedFixture.root,
+          tag: expected.tag,
+          outDir,
+          homeDirectory: join(sharedFixture.root, "synthetic-home"),
+          installDependencies: () => undefined,
+          buildGeneration: fakeGenerationBuilder(),
+        });
+        expect(result.sourceRevision).toBe(expected.revision);
+        const names = releaseArtifactFileNames(expected.tag);
+        const runtime = JSON.parse(
+          readFileSync(join(outDir, names.consumerRuntime), "utf8"),
+        ) as ConsumerRuntimeRelease;
+        expect(runtime.release).toMatchObject({
+          tag: expected.tag,
+          source_revision: expected.revision,
+        });
+        expect(runtime.generation.subject_revision).toBe(expected.revision);
+        const aggregate = runtime.admission_input.aggregate_input;
+        expect(aggregate.channel).toBe(expected.channel);
+        expect(aggregate.attestation).toMatchObject({
+          status: "attested",
+          releaseId: expected.releaseId,
+          artifactSourceCommit: expected.revision,
+        });
+        expect(aggregate.final_tree.channelMappings).toHaveLength(sharedFixture.artifactCount);
+        expect(aggregate.attestation.entries).toHaveLength(sharedFixture.artifactCount);
+        expect(
+          aggregate.final_tree.channelMappings.every(
+            (mapping) =>
+              mapping.channel === expected.channel &&
+              mapping.releaseId === expected.releaseId &&
+              mapping.sourceRevision === expected.revision,
+          ),
+        ).toBe(true);
+      } finally {
+        rmSync(outDir, { recursive: true, force: true });
+      }
+    });
+
+    it("rejects a v1 manifest before dependency install or generation", async () => {
+      const v1Fixture = await createPackrt012Fixture("v1");
+      const outDir = mkdtempSync(join(tmpdir(), "ut-tdd-packrt-012-v1-assets-"));
+      let dependencyInstallCalls = 0;
+      let generationCalls = 0;
+      try {
+        await expect(
+          packageConsumerRuntimeRelease({
+            repoRoot: v1Fixture.root,
+            tag: v1Fixture.tags[0],
+            outDir,
+            homeDirectory: join(v1Fixture.root, "synthetic-home"),
+            installDependencies: () => {
+              dependencyInstallCalls += 1;
+            },
+            buildGeneration: async () => {
+              generationCalls += 1;
+              throw new Error("v1 rejection must precede generation");
+            },
+          }),
+        ).rejects.toMatchObject({
+          code: "consumer_runtime_release_manifest_invalid",
+          message: expect.stringContaining(":v1_read_only"),
+        });
+        expect(dependencyInstallCalls).toBe(0);
+        expect(generationCalls).toBe(0);
+        expect(readdirSync(outDir)).toEqual([]);
+      } finally {
+        rmSync(v1Fixture.root, { recursive: true, force: true });
+        rmSync(outDir, { recursive: true, force: true });
+      }
+    });
   });
 
   it("U-PACKRT-001: names the exact five release assets and excludes manifest.json", () => {
