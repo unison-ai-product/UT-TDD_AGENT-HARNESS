@@ -55,18 +55,18 @@ supersedes:
   - PLAN-L7-494-release-promotion-rollback-gate
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:8775cd1c62f6481a6b0b2e5b7091c62a
-  command_id: plan-revise:issue-742:attestation-stage-boundary:forward:r3:94074807130a
-  admitted_at: 2026-09-29T05:33:16.715Z
-  source_digest: sha256:f1782cd845ee57be4166387a794ed3c2f09100c11dc6c9f88cb3bb5ba7d1aff5
-  decision_digest: sha256:4493295f1d4a5cd5bd423e2dfec07ce086b731c010b591a3647d51cb0e00d9bf
-  receipt_digest: sha256:faeb77f6e405d3fcbb324706587acb4e79946e79ead6e90c4b9ffe81de971d03
+  receipt_id: certificate:39a415d5115954aea97aa3a24b70a2ef
+  command_id: plan-revise:issue-742:attestation-composition:forward:r4:03455264e175
+  admitted_at: 2026-09-29T05:51:26.114Z
+  source_digest: sha256:45b12d3144ae5cd6202d74302622af48b829c3e2192dc02d3bbe28aee89a49bf
+  decision_digest: sha256:e3fadb54d0e22eeb6111b68e737f23bbc94a686ded5072bfe79388b3793e719f
+  receipt_digest: sha256:c1f247d7023355a8460f3e4e88eab05ed0e9ee556b81f534b68e2ee660f8da3d
   binding:
     path: docs/plans/PLAN-L7-742-release-aggregate-v2-inventory-cardinality.md
     plan_id: PLAN-L7-742-release-aggregate-v2-inventory-cardinality
     asset_id: plan:f787a6e0b076a4db67323a906329bde3
-    revision: 3
-    content_digest: sha256:f1782cd845ee57be4166387a794ed3c2f09100c11dc6c9f88cb3bb5ba7d1aff5
+    revision: 4
+    content_digest: sha256:45b12d3144ae5cd6202d74302622af48b829c3e2192dc02d3bbe28aee89a49bf
   route:
     signal: feature_addition
     mode: add-feature
@@ -84,11 +84,11 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-742-release-aggregate-v2-inventory-cardinality
-    target_revision: 3
+    target_revision: 4
     phase: forward_merge
-  escape_reason: "PR #744 限定再検要求: CANDIDATE-U-RELAGGV2-004 は attestation 出力の変異であり
-    attestation 呼出し前に観測できないため、§2.1 の段階境界 (条件 1〜3 = preflight、条件 4 =
-    post-attestation) と §5 の呼出し count 要求を段階別に明記する。"
+  escape_reason: "PR #744 r3 Sol 指摘: 正規 producer では attestation が resolver /
+    materializer を内包するため、条件 4 の negative (004) に materializer count 0
+    を要求できない。003 / 004 の count 対象を apply / write に訂正する。"
   supersedes:
     - PLAN-L7-492-pf5-release-aggregate-admission-pair-freeze
     - PLAN-L7-494-release-promotion-rollback-gate
@@ -152,7 +152,11 @@ advisor: `ut-tdd advisor --decision implementation --current-model claude-opus-5
 v2 の admission 条件 (全て AND、既存 PF-5 条件の上に追加)。段階境界は現行 `admitReleaseAggregate`
 (`src/setup/release-aggregate-admission.ts:176-229`) の順序に従う: 条件 1〜3 は preflight
 (`attestChannel` 呼出し前)、条件 4 は attestation 出力の検査なので `attestChannel` 呼出し後・
-`sealPlan` 前に判定する。いずれも sealed plan 発行・materializer・write より前である:
+`sealPlan` 前に判定する。いずれも sealed plan 発行・apply・write より前である。正規 producer の組み立てでは
+attestation が resolver と materializer を内包する (`src/cli/distribution.ts:547-562` が
+`attestReleaseChannel` に `materializeReleaseArtifacts` を注入した resolver を渡し、
+`src/setup/release-channel-adapter.ts:60-90` がその結果の `entries` を返す) ため、条件 4 の判定時点で
+resolver / materializer は実行済みである:
 
 1. 対象 channel で filter した mapping 列の件数 = selected release の `artifacts` 件数 (N ≥ 1)。
 2. 各 index `i` で `mapping[i].sourcePath === artifacts[i].sourcePath` かつ
@@ -262,17 +266,19 @@ prefix `CANDIDATE-U-RELAGGV2-` は `docs/test-design/` / `tests/` / `docs/plans/
 
 fixture: v2 manifest の release に N = 3 artifact (destinationPath は UTF-8 byte 順)、channel は
 `stable` と `canary` の両方で同じ結果を要求する。negative は段階境界に応じて呼出し count を併せて観測する
-(PF-5 の side effect 前判定の保存): preflight 条件 1〜3 の negative (003) は「attestation / materializer /
+(PF-5 の side effect 前判定の保存): preflight 条件 1〜3 の negative (003) は「attestation (resolver / materializer を内包) / apply /
 write の呼出し count 0」、post-attestation 条件 4 の negative (004) は「attestation 呼出し count 1、sealed plan
-不発行、materializer / write の呼出し count 0」。004 に attestation count 0 を要求しない (attestation 出力の
-変異は呼出し前に観測できないため。rev 3 で段階境界を明記)。
+不発行、apply / write の呼出し count 0」。004 に attestation (resolver / materializer を含む) の count 0 を
+要求しない (attestation 出力の
+変異は呼出し前に観測できないため。rev 3 で段階境界を明記し、rev 4 で attestation が resolver / materializer を
+内包する production composition に合わせて 003 / 004 の count 対象を apply / write に訂正)。
 
 | ID | 種別 | 入力 | 期待 |
 | --- | --- | --- | --- |
 | `CANDIDATE-U-RELAGGV2-001` | positive | v2 release (N=3)、mapping 3 件が artifacts と同順・同値 | `ok: true`。sealed plan は v2 variant で `destinationPath` を持たず、`entries[i].path === artifacts[i].destinationPath` (i=0..2) |
 | `CANDIDATE-U-RELAGGV2-002` | positive (round trip) | `tests/pack-consumer-runtime-release.test.ts` で artifact 2 件以上の release を実 producer (`distribution package`) → 実 installer (`installConsumerRuntimeRelease`) に通す | producer / installer とも aggregate admission を通過し install 成功。現行 main では `missing_channel_mapping` で Red |
 | `CANDIDATE-U-RELAGGV2-003` | negative | (a) mapping 0 件 / (b) N-1 件 / (c) N+1 件 (余剰 1 件は他条件を満たす) / (d) N 件だが 1 件が別 index の重複 / (e) 2 件の順序入替 / (f) 1 件の destination が allowlist 外 / (g) 1 件が別 channel (対象 channel 上は N-1) / (h) 1 件の `releaseId` 不一致 / (i) 1 件の `sourceRevision` 不一致 / (j) 1 件の sourcePath が `sourcePaths` 外 | 全て `missing_channel_mapping`、side effect count 0 |
-| `CANDIDATE-U-RELAGGV2-004` | negative | attestation の `entries` が (a) 1 件欠落 / (b) path 順入替 / (c) 1 件の path が artifacts の destination と不一致 | 既存 `invalid_artifact`、attestation 呼出し count 1、sealed plan 不発行、materializer / write count 0 |
+| `CANDIDATE-U-RELAGGV2-004` | negative | attestation の `entries` が (a) 1 件欠落 / (b) path 順入替 / (c) 1 件の path が artifacts の destination と不一致 | 既存 `invalid_artifact`、attestation 呼出し count 1 (resolver / materializer 実行済み)、sealed plan 不発行、apply / write count 0 |
 | `CANDIDATE-U-RELAGGV2-005` | v1 回帰 | (a) v1 channel に mapping 1 件 / (b) v1 channel に mapping 2 件 | (a) `ok: true`、v1 variant が `destinationPath` を保持 / (b) `missing_channel_mapping` |
 | `CANDIDATE-U-RELAGGV2-006` | consumer-local admission | (a) N=3 の v2 sealed plan / (b) v2 variant に余剰 `destinationPath` / (c) v1 variant | (a) 受入 / (b)(c) fail-close |
 | `CANDIDATE-U-RELAGGV2-007` | promotion positive | v2 N=3、`mappings` と sealed entries が artifacts と順序一致、他 evidence は既存 allow fixture | `decision: "allow"`、`sideEffects: "none"` |
