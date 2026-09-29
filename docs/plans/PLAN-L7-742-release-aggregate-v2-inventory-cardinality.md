@@ -55,18 +55,18 @@ supersedes:
   - PLAN-L7-494-release-promotion-rollback-gate
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:d8716ba95cdfc9e5721c0ff632307c75
-  command_id: plan-revise:issue-742:supersedes-restore:forward:r2:16de02fee8ac
-  admitted_at: 2026-09-29T05:16:38.050Z
-  source_digest: sha256:df927cf20e8d590bbd2c26e1ee82e6bc8d755343b78afdc58f020686d1b517af
-  decision_digest: sha256:ee4e96a591437c5b82cbf351bcd2a0d6c48a74ad44707d74027420f5d7ace8a4
-  receipt_digest: sha256:cf0e57a7d8b7b67ab9850631c307090306061c9a66abd20f0312adf384182497
+  receipt_id: certificate:8775cd1c62f6481a6b0b2e5b7091c62a
+  command_id: plan-revise:issue-742:attestation-stage-boundary:forward:r3:94074807130a
+  admitted_at: 2026-09-29T05:33:16.715Z
+  source_digest: sha256:f1782cd845ee57be4166387a794ed3c2f09100c11dc6c9f88cb3bb5ba7d1aff5
+  decision_digest: sha256:4493295f1d4a5cd5bd423e2dfec07ce086b731c010b591a3647d51cb0e00d9bf
+  receipt_digest: sha256:faeb77f6e405d3fcbb324706587acb4e79946e79ead6e90c4b9ffe81de971d03
   binding:
     path: docs/plans/PLAN-L7-742-release-aggregate-v2-inventory-cardinality.md
     plan_id: PLAN-L7-742-release-aggregate-v2-inventory-cardinality
     asset_id: plan:f787a6e0b076a4db67323a906329bde3
-    revision: 2
-    content_digest: sha256:df927cf20e8d590bbd2c26e1ee82e6bc8d755343b78afdc58f020686d1b517af
+    revision: 3
+    content_digest: sha256:f1782cd845ee57be4166387a794ed3c2f09100c11dc6c9f88cb3bb5ba7d1aff5
   route:
     signal: feature_addition
     mode: add-feature
@@ -84,11 +84,11 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-742-release-aggregate-v2-inventory-cardinality
-    target_revision: 2
+    target_revision: 3
     phase: forward_merge
-  escape_reason: "PR #744 Sol r1 FLAG: plan draft で frontmatter の supersedes
-    (PLAN-L7-492 / PLAN-L7-494 の節限定部分 supersede) が落ちたため、admission.supersedes
-    経由で復元する。"
+  escape_reason: "PR #744 限定再検要求: CANDIDATE-U-RELAGGV2-004 は attestation 出力の変異であり
+    attestation 呼出し前に観測できないため、§2.1 の段階境界 (条件 1〜3 = preflight、条件 4 =
+    post-attestation) と §5 の呼出し count 要求を段階別に明記する。"
   supersedes:
     - PLAN-L7-492-pf5-release-aggregate-admission-pair-freeze
     - PLAN-L7-494-release-promotion-rollback-gate
@@ -149,7 +149,10 @@ advisor: `ut-tdd advisor --decision implementation --current-model claude-opus-5
 | A' | スカラー `destinationPath` を残し、先頭 artifact の値を入れる | 棄却 | 先頭 1 件の値には意味がなく、artifact 順が変わると別 artifact を指す。`entries[].path` と並ぶ第 2 の destination 記録になり、どちらが正本か曖昧になる |
 | B | producer / `PLAN-L7-628` validator を「release あたり mapping 1 件」へ畳む | 棄却 | artifact ごとの destination allowlist / sourcePath 検査 (PF-5 (C) の本体) が消える。confirmed `PLAN-L7-628` の validator 契約 (F4) の supersede も要る |
 
-v2 の admission 条件 (全て AND、side effect 前、既存 PF-5 条件の上に追加):
+v2 の admission 条件 (全て AND、既存 PF-5 条件の上に追加)。段階境界は現行 `admitReleaseAggregate`
+(`src/setup/release-aggregate-admission.ts:176-229`) の順序に従う: 条件 1〜3 は preflight
+(`attestChannel` 呼出し前)、条件 4 は attestation 出力の検査なので `attestChannel` 呼出し後・
+`sealPlan` 前に判定する。いずれも sealed plan 発行・materializer・write より前である:
 
 1. 対象 channel で filter した mapping 列の件数 = selected release の `artifacts` 件数 (N ≥ 1)。
 2. 各 index `i` で `mapping[i].sourcePath === artifacts[i].sourcePath` かつ
@@ -258,15 +261,18 @@ prefix `CANDIDATE-U-RELAGGV2-` は `docs/test-design/` / `tests/` / `docs/plans/
 (`U-RELMAN-014..017`、`U-RELMAN-003..023`) は意味を変えず回帰として残す。
 
 fixture: v2 manifest の release に N = 3 artifact (destinationPath は UTF-8 byte 順)、channel は
-`stable` と `canary` の両方で同じ結果を要求する。negative は全て「resolver / attestation / materializer /
-write の呼出し count 0」を併せて観測する (PF-5 の side effect 前判定の保存)。
+`stable` と `canary` の両方で同じ結果を要求する。negative は段階境界に応じて呼出し count を併せて観測する
+(PF-5 の side effect 前判定の保存): preflight 条件 1〜3 の negative (003) は「attestation / materializer /
+write の呼出し count 0」、post-attestation 条件 4 の negative (004) は「attestation 呼出し count 1、sealed plan
+不発行、materializer / write の呼出し count 0」。004 に attestation count 0 を要求しない (attestation 出力の
+変異は呼出し前に観測できないため。rev 3 で段階境界を明記)。
 
 | ID | 種別 | 入力 | 期待 |
 | --- | --- | --- | --- |
 | `CANDIDATE-U-RELAGGV2-001` | positive | v2 release (N=3)、mapping 3 件が artifacts と同順・同値 | `ok: true`。sealed plan は v2 variant で `destinationPath` を持たず、`entries[i].path === artifacts[i].destinationPath` (i=0..2) |
 | `CANDIDATE-U-RELAGGV2-002` | positive (round trip) | `tests/pack-consumer-runtime-release.test.ts` で artifact 2 件以上の release を実 producer (`distribution package`) → 実 installer (`installConsumerRuntimeRelease`) に通す | producer / installer とも aggregate admission を通過し install 成功。現行 main では `missing_channel_mapping` で Red |
 | `CANDIDATE-U-RELAGGV2-003` | negative | (a) mapping 0 件 / (b) N-1 件 / (c) N+1 件 (余剰 1 件は他条件を満たす) / (d) N 件だが 1 件が別 index の重複 / (e) 2 件の順序入替 / (f) 1 件の destination が allowlist 外 / (g) 1 件が別 channel (対象 channel 上は N-1) / (h) 1 件の `releaseId` 不一致 / (i) 1 件の `sourceRevision` 不一致 / (j) 1 件の sourcePath が `sourcePaths` 外 | 全て `missing_channel_mapping`、side effect count 0 |
-| `CANDIDATE-U-RELAGGV2-004` | negative | attestation の `entries` が (a) 1 件欠落 / (b) path 順入替 / (c) 1 件の path が artifacts の destination と不一致 | 既存 `invalid_artifact`、sealed plan 不発行 |
+| `CANDIDATE-U-RELAGGV2-004` | negative | attestation の `entries` が (a) 1 件欠落 / (b) path 順入替 / (c) 1 件の path が artifacts の destination と不一致 | 既存 `invalid_artifact`、attestation 呼出し count 1、sealed plan 不発行、materializer / write count 0 |
 | `CANDIDATE-U-RELAGGV2-005` | v1 回帰 | (a) v1 channel に mapping 1 件 / (b) v1 channel に mapping 2 件 | (a) `ok: true`、v1 variant が `destinationPath` を保持 / (b) `missing_channel_mapping` |
 | `CANDIDATE-U-RELAGGV2-006` | consumer-local admission | (a) N=3 の v2 sealed plan / (b) v2 variant に余剰 `destinationPath` / (c) v1 variant | (a) 受入 / (b)(c) fail-close |
 | `CANDIDATE-U-RELAGGV2-007` | promotion positive | v2 N=3、`mappings` と sealed entries が artifacts と順序一致、他 evidence は既存 allow fixture | `decision: "allow"`、`sideEffects: "none"` |
