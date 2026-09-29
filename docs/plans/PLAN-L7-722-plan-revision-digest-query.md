@@ -49,18 +49,18 @@ status: draft
 github_issue_id: 722
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:3c8daa655285065cfedd93797f3a8daf
-  command_id: plan-revise:issue-722:drive-parent-align:forward:r2:559cd9a1defb
-  admitted_at: 2026-09-29T08:46:34.338Z
-  source_digest: sha256:6755466ce43449a535371b07e927afa2bf3f050129188e48c739bb3db86077f2
-  decision_digest: sha256:54f3848fc6d72536ed639f11f201ff95cc1b6276b53ab54a31a883f7a454a407
-  receipt_digest: sha256:d1f982cc463af963fdc6a3731908d1c045a82aa148310412842228df017fa394
+  receipt_id: certificate:4e3accfe0fb99769f691ab5350b59f9d
+  command_id: plan-revise:issue-722:sol-r1-oracle-fix:forward:r3:d5838e68da1b
+  admitted_at: 2026-09-29T08:58:50.947Z
+  source_digest: sha256:828abf894a3c2198e1c46ce23e329e72f428fc7f1e37404fd2e61323c2ae9b87
+  decision_digest: sha256:2473c81f9089451f338548ecf8136972e87f22902e8478af6e668ecaec6e06ef
+  receipt_digest: sha256:5440674b2275b515a1f895d4541b9f3b7d33939f11c3a8193e211a47dec6264e
   binding:
     path: docs/plans/PLAN-L7-722-plan-revision-digest-query.md
     plan_id: PLAN-L7-722-plan-revision-digest-query
     asset_id: plan:d354f79aaae8e1cb50d0b1a77c3ccc76
-    revision: 2
-    content_digest: sha256:6755466ce43449a535371b07e927afa2bf3f050129188e48c739bb3db86077f2
+    revision: 3
+    content_digest: sha256:828abf894a3c2198e1c46ce23e329e72f428fc7f1e37404fd2e61323c2ae9b87
   route:
     signal: feature_addition
     mode: add-feature
@@ -80,8 +80,9 @@ admission_receipt:
     target_plan_id: PLAN-L7-722-plan-revision-digest-query
     target_revision: 2
     phase: forward_merge
-  escape_reason: "Issue #722: 親 PLAN-L6-71 の drive (db) と一致させる (plan-governance
-    parent_drive_mismatch の是正)。本文・契約は不変。"
+  escape_reason: "PR #754 Sol r1 FLAG の軽作業是正: O6 を query 自身の connection での write
+    probe (CREATE TABLE → errcode 8) に、O8 の barrier を writer の PENDING
+    到達を別同期で確認してから selector を解放する順序に改める。契約の方式は不変。"
 ---
 
 # PLAN-L7-722: PLAN revision digest query (書込みゼロ)
@@ -178,6 +179,9 @@ errcode 776 で拒否されること、そのとき write 0 であることを�
 
 `readOnly: true` と `mode=ro` は実測でどちらも単独で INSERT を errcode 8 で拒否した (DESIGN-NOTES §2) ため、片方だけを除去する
 mutation は原理的に kill できない。**個別除去 mutation は要求せず、両方を除去した書込み可能 open への変異を kill 対象とする** (O6)。
+この変異は filesystem 差分を生まない場合がある (読むだけの query は書込み可能な connection でも何も書かない) ので、O6 は観測差分ではなく、
+検証完了直後の test 専用 hook から query 自身の connection で `CREATE TABLE ut_tdd_ro_probe(x INTEGER)` を試みる write probe で判定し、
+errcode 8 (SQLITE_READONLY) を要求する (実測: 両方 / 片方 = 8、どちらも無し = 0。DESIGN-NOTES fix1)。
 
 ### 4.2 残余リスク: TOCTOU (解消したと主張しない)
 
@@ -195,7 +199,7 @@ mutation は原理的に kill できない。**個別除去 mutation は要求�
 
 外部 writer の変更と query 自身の変更は、次の条件で区別する。
 
-- O1〜O4 / O6 は観測窓に外部 writer がいない fixture で行う。このとき差分は query 自身に帰責できる。
+- O1〜O4 は観測窓に外部 writer がいない fixture で行う。このとき差分は query 自身に帰責できる。
 - O5 と O8 は外部 writer が lock を保持する fixture であり、filesystem の差分は判定に使わない。writer 側のファイル (`-journal`) は
   writer が作ったものとして扱い、判定は query の戻り値 (deny / 値) と、writer 終了後の DB bytes が writer の commit だけで説明できることで行う。
 
@@ -206,7 +210,7 @@ mutation は原理的に kill できない。**個別除去 mutation は要求�
 | O3 | WAL、live sidecar | `ledger_unavailable`、`-shm` の SHA-256 不変 | gate 除去 (`-shm` の hash が変わる)、`immutable=1` への置換 (deny でなく値を返す) |
 | O4 | rollback、hot journal | `ledger_unavailable`、DB と `-journal` の bytes 不変 | rollback 再生・修復の追加 |
 | O5 | rollback、別 connection が EXCLUSIVE lock を保持 | `ledger_unavailable` (即時) | `busy_timeout` / retry の追加 (即時に返らない) |
-| O6 | rollback、sidecar 無し | O1 と同じ | `readOnly: true` と `mode=ro` の両方を除去した書込み可能 open |
+| O6 | rollback、sidecar 無し。検証完了直後の hook で write probe (`CREATE TABLE`) を query の connection 上で試みる | probe が errcode 8 (SQLITE_READONLY) | `readOnly: true` と `mode=ro` の両方を除去した書込み可能 open (probe が成功する) |
 | O7 | CLI subprocess (PR-2) | O1 / O2 を subprocess で再実行 | CLI 経路の別 open |
 | O8 | snapshot barrier (§4.4) | selector が検証済み snapshot の値を返す | 検証の txn 外移動、selector の別 connection 化 |
 
@@ -214,16 +218,14 @@ mutation は原理的に kill できない。**個別除去 mutation は要求�
 
 query に test 専用の hook (検証完了直後に 1 回呼ばれる callback。production 経路では未設定) を置く。
 
-1. query が `BEGIN` し、既存検証を終える (reader は SHARED を保持)。
-2. hook の中で別 process の writer を起動し、writer が `BEGIN IMMEDIATE` (RESERVED) に到達したことを同期で待つ。
-3. hook から戻り、query が selector を実行する。
-4. query が `COMMIT` / close する。
-5. **reader close 後にだけ** writer の完了 (対象 row の更新 commit) を待つ。selector 前に writer の commit を待つと、rollback journal では
-   reader の SHARED と writer の EXCLUSIVE 待ちが deadlock し得る。
-6. selector の戻り値が検証済み snapshot の値 (writer 更新前) と一致し、writer 終了後の DB では当該 row が変わっていることを確認する。
-
-変異「検証を txn 外へ移す」「selector を別 connection で実行する」では、selector が writer 更新後の値を返すか、
-PENDING lock に阻まれて busy になり、どちらも 6 と一致しない。scratch で seam の成立を実測済み (DESIGN-NOTES §2、`measure-cost-barrier.mjs barrier`)。
+1. query が `BEGIN` して既存検証を終える (reader は SHARED を保持し、snapshot が確定している)。
+2. hook の中で別 process の writer を起動する。writer は fixture 初期化を持たない専用 entry とし、`busy_timeout` を barrier と selector の所要時間より十分長く (例: 30 秒) 取る。writer は `BEGIN IMMEDIATE` → 対象 revision row の UPDATE → 同期通知 A (`fs.writeSync` で「commit 直前」を出力) → `COMMIT` の順に進む。
+3. 同期 A の受信後、独立の probe connection (read-only open) で `SELECT count(*) FROM sqlite_master` を短い間隔で繰り返し、errcode 5 (SQLITE_BUSY) を観測するまで待つ (同期 B、上限 5 秒)。rollback journal では、writer が `COMMIT` で PENDING lock を取ると新規の SHARED が拒否されるので、同期 B は「reader が snapshot を保持したまま writer が commit を試み PENDING で待っている」ことの観測になる。上限内に観測できなければ barrier timeout として Red にする。
+4. hook から戻り、query が同じ connection で selector を実行し、`COMMIT` / close する。
+5. **reader の close 後にだけ** writer の終了を待つ。reader は読むだけで追加の lock を要求せず、writer は PENDING のまま busy handler で待つので、reader close で writer の EXCLUSIVE 取得と commit が進む (deadlock しない)。
+6. 期待: 同期 B を観測し、selector の値が検証済み snapshot の値 (更新前) と一致し、writer が exit 0 で終了し、終了後の DB では当該 row が更新されている。
+7. 変異「selector を別 connection で実行する」: PENDING 中の新規 SHARED は拒否されるので、selector は必ず errcode 5 になり 6 と一致しない。変異「検証を transaction 外へ移す」: reader が SHARED を保持しないので writer は待たずに commit し、同期 B が timeout するか、selector が更新後の値または busy を返し、いずれも 6 と一致しない。
+8. 決定性の実測: scratch fixture で各 40 回を実行し、正実装は 40/40 Green、上記 2 変異は各 40/40 Red だった (`issue722/fix1/measure-fix1.mjs`、Node v24.13.0、Windows)。
 
 ### 4.5 検証コストの上限
 

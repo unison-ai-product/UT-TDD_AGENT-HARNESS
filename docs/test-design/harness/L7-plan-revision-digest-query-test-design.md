@@ -33,19 +33,25 @@ updated: 2026-09-28
 | CANDIDATE-U-PRDQ-003 | revision 0/負数/非整数、X に無い番号、Y にだけある番号を別々に与える | invalid_input または revision_not_found。latest/他 asset への fallback を検出 |
 | CANDIDATE-U-PRDQ-004 | canonical payload bytes/保存 digest、plan_alias_events の event_digest、plan_draft_journal_events の sequence/previous_event_digest を各々単独変異 | ledger_integrity_mismatch。selector は正常に維持し、検証呼出し除去を検出。row digest 以外の chain 軸では row digest を再計算し、chain 検査自身を観測する |
 | CANDIDATE-U-PRDQ-005 | DB 不在・schema 非対応・open 不可・破損 DB | ledger_unavailable または ledger_integrity_mismatch。DB 作成/migration/rehydration/repair に逃げない |
-| CANDIDATE-U-PRDQ-006 | Node API で次を各々実行: (O1) rollback・sidecar 無しの成功 query、(O2) WAL・sidecar 無し、(O3) WAL・live sidecar、(O4) hot journal、(O5) 別 connection が EXCLUSIVE lock を保持、(O6) O1 と同 fixture で書込み可能 open 変異、(O8) snapshot barrier (§2.1)、(O9) 20,000 revision fixture の性能。CLI subprocess では (O7) O1 / O2 を再実行する | O1: 成功、観測値が前後で完全一致し `-journal` / `-wal` / `-shm` が生じない。O2 / O3: `ledger_unavailable`、観測値不変 (O3 は `-shm` の SHA-256 不変)。O4: `ledger_unavailable`、DB と `-journal` の bytes 不変。O5: 待たずに `ledger_unavailable`。O6: `readOnly: true` と `mode=ro` の両方を除去した変異を観測差分で kill する (片方だけの除去 mutation は要求しない)。O8: §2.1。O9: 1 回 5 秒以内かつ RSS 増分 256MB 以内。gate 除去は O2 / O3、`immutable=1` 置換は O3 (値を返す)、`busy_timeout` / retry 追加は O5 (即時に返らない) で検出する。DML / DDL / migration / receipt / PLAN write は 0 |
+| CANDIDATE-U-PRDQ-006 | Node API で次を各々実行: (O1) rollback・sidecar 無しの成功 query、(O2) WAL・sidecar 無し、(O3) WAL・live sidecar、(O4) hot journal、(O5) 別 connection が EXCLUSIVE lock を保持、(O6) O1 と同 fixture で write probe (§2.2)、(O8) snapshot barrier (§2.1)、(O9) 20,000 revision fixture の性能。CLI subprocess では (O7) O1 / O2 を再実行する | O1: 成功、観測値が前後で完全一致し `-journal` / `-wal` / `-shm` が生じない。O2 / O3: `ledger_unavailable`、観測値不変 (O3 は `-shm` の SHA-256 不変)。O4: `ledger_unavailable`、DB と `-journal` の bytes 不変。O5: 待たずに `ledger_unavailable`。O6: 書込み可能 open 変異は filesystem 差分を生まない場合がある (SELECT / PRAGMA / BEGIN / COMMIT だけの query は書込み可能な connection でも何も書かない) ので、観測差分では判定しない。代わりに、検証完了直後の test 専用 hook に write probe (`tryWrite()`: query の connection 上で `CREATE TABLE ut_tdd_ro_probe(x INTEGER)` を試み、errcode を返す) を渡し、errcode 8 (SQLITE_READONLY) を要求する。`readOnly: true` と `mode=ro` の両方を除去した変異では probe が成功 (errcode 0) し、決定的に Red になる。片方だけの除去では errcode 8 のままなので kill を要求しない (実測: 両方 / readOnly のみ / mode=ro のみ = 8、どちらも無し = 0。`issue722/fix1/measure-fix1.mjs`)。probe は production 経路では未設定の hook からだけ呼ばれ、公開 API に connection を出さない。O8: §2.1。O9: 1 回 5 秒以内かつ RSS 増分 256MB 以内。gate 除去は O2 / O3、`immutable=1` 置換は O3 (値を返す)、`busy_timeout` / retry 追加は O5 (即時に返らない) で検出する。DML / DDL / migration / receipt / PLAN write は 0 |
 | CANDIDATE-U-PRDQ-007 | API/CLI の成功・失敗値を検査し、不正値では exit 1 を期待 | DTO の exact key set。DB/statement/row/capability/SQL 詳細を返さない。成功だけ exit 0、失敗では digest を返さない |
 
 ### 2.1 snapshot barrier (CANDIDATE-U-PRDQ-006 O8)
 
 query の test 専用 hook (検証完了直後に 1 回呼ばれる callback。production 経路では未設定) を使う。
 
-1. query が `BEGIN` して既存検証を終える。
-2. hook 内で別 process の writer を起動し、writer が `BEGIN IMMEDIATE` (RESERVED) に達したことを同期で待つ。writer は対象 revision row を更新して commit する。
-3. hook から戻り、query が selector を実行し、`COMMIT` / close する。
-4. reader の close 後にだけ writer の終了を待つ (selector 前に writer の commit を待つと rollback journal で deadlock し得る)。
-5. 期待: selector の値が検証済み snapshot の値 (更新前) と一致し、writer 終了後の DB では当該 row が更新されている。
-6. 変異: 検証を transaction 外へ移す / selector を別 connection で実行する。どちらも更新後の値か busy になり 5 と一致しない。
+1. query が `BEGIN` して既存検証を終える (reader は SHARED を保持し、snapshot が確定している)。
+2. hook の中で別 process の writer を起動する。writer は fixture 初期化を持たない専用 entry とし、`busy_timeout` を barrier と selector の所要時間より十分長く (例: 30 秒) 取る。writer は `BEGIN IMMEDIATE` → 対象 revision row の UPDATE → 同期通知 A (`fs.writeSync` で「commit 直前」を出力) → `COMMIT` の順に進む。
+3. 同期 A の受信後、独立の probe connection (read-only open) で `SELECT count(*) FROM sqlite_master` を短い間隔で繰り返し、errcode 5 (SQLITE_BUSY) を観測するまで待つ (同期 B、上限 5 秒)。rollback journal では、writer が `COMMIT` で PENDING lock を取ると新規の SHARED が拒否されるので、同期 B は「reader が snapshot を保持したまま writer が commit を試み PENDING で待っている」ことの観測になる。上限内に観測できなければ barrier timeout として Red にする。
+4. hook から戻り、query が同じ connection で selector を実行し、`COMMIT` / close する。
+5. **reader の close 後にだけ** writer の終了を待つ。reader は読むだけで追加の lock を要求せず、writer は PENDING のまま busy handler で待つので、reader close で writer の EXCLUSIVE 取得と commit が進む (deadlock しない)。
+6. 期待: 同期 B を観測し、selector の値が検証済み snapshot の値 (更新前) と一致し、writer が exit 0 で終了し、終了後の DB では当該 row が更新されている。
+7. 変異「selector を別 connection で実行する」: PENDING 中の新規 SHARED は拒否されるので、selector は必ず errcode 5 になり 6 と一致しない。変異「検証を transaction 外へ移す」: reader が SHARED を保持しないので writer は待たずに commit し、同期 B が timeout するか、selector が更新後の値または busy を返し、いずれも 6 と一致しない。
+8. 決定性の実測: scratch fixture で各 40 回を実行し、正実装は 40/40 Green、上記 2 変異は各 40/40 Red だった (`issue722/fix1/measure-fix1.mjs`、Node v24.13.0、Windows)。
+
+### 2.2 write probe (CANDIDATE-U-PRDQ-006 O6)
+
+§2.1 と同じ検証完了直後の hook に `tryWrite()` を渡す。`tryWrite()` は query 自身の connection で `CREATE TABLE ut_tdd_ro_probe(x INTEGER)` を実行し、成功なら 0、失敗なら SQLite errcode を返す。temp table (`CREATE TEMP TABLE`) は read-only connection でも成功するので使わない。期待は errcode 8。hook 未設定時 (production) は probe を実行しない。書込み可能 open 変異では probe が成功して fixture に table が増えるが、fixture は test ごとに作り直すので他の oracle に影響しない。
 
 ## 3. 実行規律
 
