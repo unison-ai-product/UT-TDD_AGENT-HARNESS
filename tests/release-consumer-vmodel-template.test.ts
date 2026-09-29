@@ -521,6 +521,81 @@ describe("PR-2c release consumer V-model template writer", () => {
     }
   });
 
+  it("CANDIDATE-U-RCDEV-039: allows an ancestor junction that resolves inside the consumer root", () => {
+    const root = fixtureRoot();
+    const outsideRoot = fixtureRoot();
+    const designRootLink = join(root, "docs", "design");
+    const internalDesignRoot = join(root, "internal-design");
+    const externalSentinel = join(outsideRoot, "sentinel.txt");
+    const sentinelBytes = Buffer.from("external fixture remains unchanged\n", "utf8");
+    const template = REQUIRED_TEMPLATES.find((entry) => entry.docTypeId === "DOC-L4-DATA");
+    if (!template) throw new Error("required DOC-L4-DATA oracle is missing");
+    mkdirSync(dirname(designRootLink), { recursive: true });
+    mkdirSync(internalDesignRoot, { recursive: true });
+    writeFileSync(externalSentinel, sentinelBytes);
+
+    try {
+      createFixtureLink(internalDesignRoot, designRootLink, "directory");
+      const result = runBundledCli(bundledGeneration(), root, [
+        "vmodel",
+        "template",
+        "--slot",
+        template.docTypeId,
+      ]);
+
+      expect(result.status).toBe(0);
+      expect(result.stdout.trim()).toBe(`+ ${template.consumerPath}`);
+      const physicalDestination = join(internalDesignRoot, "L4-basic-design", "data.md");
+      expect(existsSync(physicalDestination)).toBe(true);
+      expect(digest(physicalDestination)).toBe(digest(join(repoRoot, template.sourcePath)));
+      expect(filesUnder(root)).toEqual(["internal-design/L4-basic-design/data.md"]);
+      expect(filesUnder(outsideRoot)).toEqual(["sentinel.txt"]);
+      expect(readFileSync(externalSentinel)).toEqual(sentinelBytes);
+    } finally {
+      removeFixtureLink(designRootLink, "directory");
+      removeTestDirectory(root);
+      removeTestDirectory(outsideRoot);
+    }
+  });
+
+  it("CANDIDATE-U-RCDEV-039: denies an outside ancestor during required dry-run without writes", () => {
+    const root = fixtureRoot();
+    const outsideRoot = fixtureRoot();
+    const designRootLink = join(root, "docs", "design");
+    const outsideSentinel = join(outsideRoot, "sentinel.txt");
+    const sentinelBytes = Buffer.from("external fixture remains unchanged\n", "utf8");
+    mkdirSync(dirname(designRootLink), { recursive: true });
+    writeFileSync(outsideSentinel, sentinelBytes);
+
+    try {
+      createFixtureLink(outsideRoot, designRootLink, "directory");
+      const result = runBundledCli(bundledGeneration(), root, [
+        "vmodel",
+        "template",
+        "--required",
+        "--dry-run",
+      ]);
+
+      expect(result.status).toBe(1);
+      expect(`${result.stdout}\n${result.stderr}`).toContain(
+        "template destination outside consumer root",
+      );
+      const firstEscapingTemplate = REQUIRED_TEMPLATES.find(
+        (template) =>
+          template.consumerPath === "docs/design/L1-requirements/functional-requirements.md",
+      );
+      if (!firstEscapingTemplate) throw new Error("required L1 destination oracle is missing");
+      expect(`${result.stdout}\n${result.stderr}`).toContain(firstEscapingTemplate.consumerPath);
+      expect(filesUnder(root)).toEqual([]);
+      expect(filesUnder(outsideRoot)).toEqual(["sentinel.txt"]);
+      expect(readFileSync(outsideSentinel)).toEqual(sentinelBytes);
+    } finally {
+      removeFixtureLink(designRootLink, "directory");
+      removeTestDirectory(root);
+      removeTestDirectory(outsideRoot);
+    }
+  });
+
   it("CANDIDATE-U-RCDEV-039: denies a dangling final symlink without creating its target", () => {
     const root = fixtureRoot();
     const outsideRoot = fixtureRoot();
