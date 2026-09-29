@@ -205,11 +205,11 @@ async function producerInput(root: string, checkout: string) {
     consumerRoot: identity.consumer_root,
     runtimeRoot: identity.runtime_root,
     plan: {
+      schemaVersion: "v2",
       kind: "release-aggregate",
       channel: "stable",
       releaseId,
       sourceRevision: receipt.subject_revision,
-      destinationPath: sealedEntry.path,
       expectedDigest: artifactSetDigest,
       actualDigest: artifactSetDigest,
       entries: [sealedEntry],

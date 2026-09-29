@@ -256,7 +256,7 @@ interface ProducerFixture {
 }
 
 async function createProducerFixture(
-  fullInventory = false,
+  fullInventory = true,
   tag = "v0.2.0-canary.2",
 ): Promise<ProducerFixture> {
   const root = mkdtempSync(join(tmpdir(), "ut-tdd-packrt-producer-"));
