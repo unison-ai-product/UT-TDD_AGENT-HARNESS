@@ -175,6 +175,161 @@ function writeConsumerGateFixture(
   }
 }
 
+const G8_CONSUMER_CASE_IDS = [
+  "IT-CONSUMER-01",
+  "IT-CONSUMER-02",
+  "IT-CONSUMER-03",
+  "IT-CONSUMER-04",
+  "IT-CONSUMER-05",
+  "IT-CONSUMER-06",
+] as const;
+
+type ConsumerG8Manifest = {
+  schema_version: string;
+  gate: string;
+  profile: string;
+  plan_id: string;
+  selected_it_ids: string[];
+  mandatory_it_ids: string[];
+  deferred_it_ids: string[];
+  commands: {
+    command_id: string;
+    command: string;
+    runner: string;
+    scope: string;
+    exit_code: number;
+    evidence_path: string;
+    output_digest: string;
+    it_ids: string[];
+  }[];
+  coverage: {
+    it_id: string;
+    status: string;
+    evidence_paths: string[];
+    command_ids: string[];
+  }[];
+  exit_criteria: {
+    all_mandatory_passed: boolean;
+    failed_mandatory_count: number;
+    stale_defer_count: number;
+    doctor_check: string;
+  };
+  artifacts: Record<string, string>;
+};
+
+function consumerG8Manifest(evidenceDirectory = "g8-integration"): ConsumerG8Manifest {
+  const commandId = "cmd-consumer-integration";
+  const evidencePath = "tests/fixtures/g8-consumer/integration-results.txt";
+  return {
+    schema_version: `${evidenceDirectory}-evidence-v1`,
+    gate: "G8",
+    profile: "consumer-integration-minimum",
+    plan_id: "PLAN-CONSUMER-01",
+    selected_it_ids: [...G8_CONSUMER_CASE_IDS],
+    mandatory_it_ids: [...G8_CONSUMER_CASE_IDS],
+    deferred_it_ids: [],
+    commands: [
+      {
+        command_id: commandId,
+        command: "node tests/consumer-integration-check.mjs",
+        runner: "node",
+        scope: "consumer fixture",
+        exit_code: 0,
+        evidence_path: "tests/fixtures/g8-consumer/command-output.txt",
+        output_digest: `sha256:${"0".repeat(64)}`,
+        it_ids: [...G8_CONSUMER_CASE_IDS],
+      },
+    ],
+    coverage: G8_CONSUMER_CASE_IDS.map((itId) => ({
+      it_id: itId,
+      status: "passed",
+      evidence_paths: [evidencePath],
+      command_ids: [commandId],
+    })),
+    exit_criteria: {
+      all_mandatory_passed: true,
+      failed_mandatory_count: 0,
+      stale_defer_count: 0,
+      doctor_check: `${evidenceDirectory}-workflow`,
+    },
+    artifacts: {
+      integration_manifest: `.ut-tdd/evidence/${evidenceDirectory}/ok.json`,
+      integration_results: evidencePath,
+    },
+  };
+}
+
+function writeConsumerG8Fixture(
+  root: string,
+  options: { evidenceDirectory?: string; contractOverride?: boolean } = {},
+): void {
+  const repositoryRoot = process.cwd();
+  const evidenceDirectory = options.evidenceDirectory ?? "g8-integration";
+  if (options.contractOverride) {
+    const contractSource = readFileSync(
+      join(repositoryRoot, "docs/process/vmodel-contract.yaml"),
+      "utf8",
+    );
+    const contract = contractSource.replace(
+      "evidence_manifest: .ut-tdd/evidence/g8-integration/engine-swap.json",
+      `evidence_manifest: .ut-tdd/evidence/${evidenceDirectory}/engine-swap.json`,
+    );
+    writeFixtureDoc(root, "docs/process/vmodel-contract.yaml", contract);
+  }
+
+  const l8Template = readFileSync(
+    join(repositoryRoot, "docs/templates/vmodel/L8-integration-test-design.md"),
+    "utf8",
+  );
+  const rows = G8_CONSUMER_CASE_IDS.map(
+    (caseId, index) =>
+      `| ${caseId} | integration | Consumer boundary ${index + 1} | Exercise the consumer contract | Pass | DOC-L5-MODULE / DOC-L5-PHYSICAL-DATA |`,
+  ).join("\n");
+  const l8 = l8Template
+    .replace(/^status: .*$/m, "status: confirmed")
+    .replace(/^pair_artifact: .*$/m, "pair_artifact: docs/design/L5-detailed-design/")
+    .replace(/^plan: .*$/m, "plan: docs/plans/PLAN-CONSUMER-01.md")
+    .replace(/^\| <記入> \| <記入> \| <記入> \| <記入> \| <記入> \| <記入> \|$/m, rows);
+  writeFixtureDoc(root, "docs/test-design/L8-integration-test-design.md", l8);
+
+  writeFixtureDoc(
+    root,
+    "docs/design/L5-detailed-design/module-decomposition.md",
+    "---\ndoc_type_id: DOC-L5-MODULE\nlayer: L5\nstatus: confirmed\npair_artifact: docs/test-design/L8-integration-test-design.md\nplan: docs/plans/PLAN-CONSUMER-01.md\n---\n# DOC-L5-MODULE\n\n**DOC-L5-MODULE**\n",
+  );
+  writeFixtureDoc(
+    root,
+    "docs/design/L5-detailed-design/physical-data.md",
+    "---\ndoc_type_id: DOC-L5-PHYSICAL-DATA\nlayer: L5\nstatus: confirmed\npair_artifact: docs/test-design/L8-integration-test-design.md\nplan: docs/plans/PLAN-CONSUMER-01.md\n---\n# DOC-L5-PHYSICAL-DATA\n\n**DOC-L5-PHYSICAL-DATA**\n",
+  );
+  writeFixtureDoc(root, "tests/fixtures/g8-consumer/integration-results.txt", "passed\n");
+  writeFixtureDoc(root, "tests/fixtures/g8-consumer/command-output.txt", "passed\n");
+  writeFixtureDoc(
+    root,
+    `.ut-tdd/evidence/${evidenceDirectory}/ok.json`,
+    `${JSON.stringify(consumerG8Manifest(evidenceDirectory), null, 2)}\n`,
+  );
+}
+
+function firstConsumerCommand(
+  manifest: ConsumerG8Manifest,
+): ConsumerG8Manifest["commands"][number] {
+  const command = manifest.commands[0];
+  if (!command) throw new Error("consumer G8 fixture command is missing");
+  return command;
+}
+
+function updateConsumerG8Manifest(
+  root: string,
+  mutate: (manifest: ConsumerG8Manifest) => void,
+  evidenceDirectory = "g8-integration",
+): void {
+  const path = join(root, ".ut-tdd", "evidence", evidenceDirectory, "ok.json");
+  const manifest = JSON.parse(readFileSync(path, "utf8")) as ConsumerG8Manifest;
+  mutate(manifest);
+  writeFileSync(path, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
+}
+
 function makeWritableTree(path: string): void {
   const stat = statSync(path);
   chmodSync(path, stat.isDirectory() ? 0o700 : 0o600);
@@ -286,6 +441,8 @@ describe("PR-G0 release-consumer gates", () => {
             USERPROFILE: consumer,
             APPDATA: consumer,
             CLAUDE_PROJECT_DIR: "",
+            CLAUDE_CODE_ENTRYPOINT: "",
+            UT_TDD_DISABLE_CLAUDE_MEMORY_WAKE: "1",
             UT_TDD_PROJECT_DIR: "",
             UT_TDD_CLAUDE_SESSIONS_DIR: join(consumer, ".claude", "projects"),
             UT_TDD_CODEX_SESSIONS_DIR: join(consumer, ".codex", "sessions"),
@@ -435,5 +592,317 @@ describe("PR-G0 release-consumer gates", () => {
     expect(withCoverage.passed).toBe(false);
     expect(withCoverage.reasons).toBeUndefined();
     expect(withCoverage.messages).toContain("g7-coverage - OK (80% >= 80%)");
+  });
+});
+
+describe("PR-GR consumer G8 predicates", () => {
+  it("U-RCDEV-029: evaluates consumer G8 from the embedded contract without a local copy", () => {
+    const root = fixtureRoot();
+    writeConsumerG8Fixture(root);
+
+    const result = evaluateStaticGate({ gate: "G8", repoRoot: root });
+    const messages = result.messages.join("\n");
+
+    expect(result.applicable).toBe(true);
+    expect(result.passed).toBe(true);
+    expect(messages).toContain("未判定 (review): QA/TL");
+  });
+
+  it("U-RCDEV-029: prefers a consumer contract override for G8 manifest location", () => {
+    const root = fixtureRoot();
+    writeConsumerG8Fixture(root, {
+      evidenceDirectory: "g8-consumer-override",
+      contractOverride: true,
+    });
+    expect(readFileSync(join(root, "docs/process/vmodel-contract.yaml"), "utf8")).toContain(
+      "evidence_manifest: .ut-tdd/evidence/g8-consumer-override/engine-swap.json",
+    );
+
+    const result = evaluateStaticGate({ gate: "G8", repoRoot: root });
+
+    expect(result.applicable).toBe(true);
+    expect(result.passed).toBe(true);
+    expect(result.messages.join("\n")).toContain("未判定 (review): QA/TL");
+  });
+
+  it("U-RCDEV-029: rejects a missing required case-table column (S)", () => {
+    const root = fixtureRoot();
+    writeConsumerG8Fixture(root);
+    const path = join(root, "docs/test-design/L8-integration-test-design.md");
+    writeFileSync(path, readFileSync(path, "utf8").replace("期待結果", "結果"), "utf8");
+
+    const result = evaluateStaticGate({ gate: "G8", repoRoot: root });
+    const messages = result.messages.join("\n");
+
+    expect(result.applicable).toBe(true);
+    expect(result.passed).toBe(false);
+    expect(messages).toContain("missing section");
+  });
+
+  it("U-RCDEV-029: rejects duplicate IT case IDs (I)", () => {
+    const root = fixtureRoot();
+    writeConsumerG8Fixture(root);
+    const path = join(root, "docs/test-design/L8-integration-test-design.md");
+    writeFileSync(
+      path,
+      readFileSync(path, "utf8").replace("IT-CONSUMER-02", "IT-CONSUMER-01"),
+      "utf8",
+    );
+
+    const result = evaluateStaticGate({ gate: "G8", repoRoot: root });
+
+    expect(result.passed).toBe(false);
+    expect(result.messages.join("\n")).toContain("duplicate case id");
+  });
+
+  it("U-RCDEV-029: rejects a citation to an undefined L5 target (T)", () => {
+    const root = fixtureRoot();
+    writeConsumerG8Fixture(root);
+    const path = join(root, "docs/test-design/L8-integration-test-design.md");
+    writeFileSync(
+      path,
+      readFileSync(path, "utf8").replace(
+        "DOC-L5-MODULE / DOC-L5-PHYSICAL-DATA",
+        "DOC-L5-UNKNOWN / DOC-L5-PHYSICAL-DATA",
+      ),
+      "utf8",
+    );
+
+    const result = evaluateStaticGate({ gate: "G8", repoRoot: root });
+
+    expect(result.passed).toBe(false);
+    expect(result.messages.join("\n")).toContain("trace target missing");
+  });
+
+  it("U-RCDEV-029: rejects a case without an L5 citation (T)", () => {
+    const root = fixtureRoot();
+    writeConsumerG8Fixture(root);
+    const path = join(root, "docs/test-design/L8-integration-test-design.md");
+    writeFileSync(
+      path,
+      readFileSync(path, "utf8").replace(" | DOC-L5-MODULE / DOC-L5-PHYSICAL-DATA |", " | |"),
+      "utf8",
+    );
+
+    const result = evaluateStaticGate({ gate: "G8", repoRoot: root });
+
+    expect(result.passed).toBe(false);
+    expect(result.messages.join("\n")).toContain("untraced case IT-CONSUMER-01");
+  });
+
+  it("U-RCDEV-029: rejects a nonzero command result (E)", () => {
+    const root = fixtureRoot();
+    writeConsumerG8Fixture(root);
+    updateConsumerG8Manifest(root, (manifest) => {
+      firstConsumerCommand(manifest).exit_code = 1;
+    });
+
+    const result = evaluateStaticGate({ gate: "G8", repoRoot: root });
+
+    expect(result.passed).toBe(false);
+    expect(result.messages.join("\n")).toContain("exit_code is non-zero");
+  });
+
+  it("U-RCDEV-029: rejects a malformed output digest (E)", () => {
+    const root = fixtureRoot();
+    writeConsumerG8Fixture(root);
+    updateConsumerG8Manifest(root, (manifest) => {
+      firstConsumerCommand(manifest).output_digest = "sha256:xyz";
+    });
+
+    const result = evaluateStaticGate({ gate: "G8", repoRoot: root });
+
+    expect(result.passed).toBe(false);
+    expect(result.messages.join("\n")).toContain("invalid digest");
+  });
+
+  it("U-RCDEV-029: rejects a missing or disallowed command evidence path (E)", () => {
+    const root = fixtureRoot();
+    writeConsumerG8Fixture(root);
+    updateConsumerG8Manifest(root, (manifest) => {
+      firstConsumerCommand(manifest).evidence_path = ".external/command-output.txt";
+    });
+
+    const result = evaluateStaticGate({ gate: "G8", repoRoot: root });
+
+    expect(result.passed).toBe(false);
+    expect(result.messages.join("\n")).toContain("evidence_path missing");
+  });
+
+  it("U-RCDEV-029: rejects a G9 manifest schema in consumer G8 (E)", () => {
+    const root = fixtureRoot();
+    writeConsumerG8Fixture(root);
+    updateConsumerG8Manifest(root, (manifest) => {
+      manifest.schema_version = "g9-system-evidence-v1";
+    });
+
+    const result = evaluateStaticGate({ gate: "G8", repoRoot: root });
+
+    expect(result.passed).toBe(false);
+    expect(result.messages.join("\n")).toContain("invalid schema_version");
+  });
+
+  it("U-RCDEV-029: rejects a designed case omitted from all evidence (F)", () => {
+    const root = fixtureRoot();
+    writeConsumerG8Fixture(root);
+    updateConsumerG8Manifest(root, (manifest) => {
+      const missingId = "IT-CONSUMER-06";
+      manifest.selected_it_ids = manifest.selected_it_ids.filter((id) => id !== missingId);
+      manifest.mandatory_it_ids = manifest.mandatory_it_ids.filter((id) => id !== missingId);
+      firstConsumerCommand(manifest).it_ids = firstConsumerCommand(manifest).it_ids.filter(
+        (id) => id !== missingId,
+      );
+      manifest.coverage = manifest.coverage.filter((entry) => entry.it_id !== missingId);
+    });
+
+    const result = evaluateStaticGate({ gate: "G8", repoRoot: root });
+
+    expect(result.passed).toBe(false);
+    expect(result.messages.join("\n")).toContain("missing row evidence IT-CONSUMER-06");
+  });
+
+  it("U-RCDEV-029: rejects a missing contract-required result artifact (A)", () => {
+    const root = fixtureRoot();
+    writeConsumerG8Fixture(root);
+    updateConsumerG8Manifest(root, (manifest) => {
+      delete manifest.artifacts.integration_results;
+    });
+
+    const result = evaluateStaticGate({ gate: "G8", repoRoot: root });
+
+    expect(result.passed).toBe(false);
+    expect(result.messages.join("\n")).toContain("missing artifact integration_results");
+  });
+
+  it("U-RCDEV-029: routes each E-only mutation to consumer G8 validation", () => {
+    const mutations: {
+      name: string;
+      expected: string;
+      mutate: (manifest: ConsumerG8Manifest) => void;
+    }[] = [
+      {
+        name: "schema",
+        expected: "invalid schema_version",
+        mutate: (manifest) => {
+          manifest.schema_version = "g9-system-evidence-v1";
+        },
+      },
+      {
+        name: "gate",
+        expected: "gate must be G8",
+        mutate: (manifest) => {
+          manifest.gate = "G9";
+        },
+      },
+      {
+        name: "exit code",
+        expected: "exit_code is non-zero",
+        mutate: (manifest) => {
+          firstConsumerCommand(manifest).exit_code = 1;
+        },
+      },
+      {
+        name: "digest",
+        expected: "invalid digest",
+        mutate: (manifest) => {
+          firstConsumerCommand(manifest).output_digest = `sha256:${"a".repeat(63)}`;
+        },
+      },
+      {
+        name: "stale defer count type",
+        expected: "stale_defer_count must be 0",
+        mutate: (manifest) => {
+          (manifest.exit_criteria as unknown as Record<string, unknown>).stale_defer_count = "0";
+        },
+      },
+    ];
+
+    for (const mutation of mutations) {
+      const root = fixtureRoot();
+      writeConsumerG8Fixture(root);
+      updateConsumerG8Manifest(root, mutation.mutate);
+
+      const result = evaluateStaticGate({ gate: "G8", repoRoot: root });
+
+      expect(result.passed, mutation.name).toBe(false);
+      expect(result.messages.join("\n"), mutation.name).toContain(mutation.expected);
+    }
+  });
+
+  it("U-RCDEV-029: keeps harness G8 family checks on the public gate path", () => {
+    const root = fixtureRoot();
+    const repositoryRoot = process.cwd();
+    const harnessResult = evaluateStaticGate({ gate: "G8", repoRoot: repositoryRoot });
+    expect(harnessResult.passed).toBe(true);
+    expect(harnessResult.messages).toContain("未判定 (review): QA/TL");
+    writeFixtureDoc(
+      root,
+      "docs/test-design/harness/L8-integration-test-design.md",
+      readFileSync(
+        join(repositoryRoot, "docs/test-design/harness/L8-integration-test-design.md"),
+        "utf8",
+      ),
+    );
+    writeFixtureDoc(
+      root,
+      "docs/process/gates.md",
+      readFileSync(join(repositoryRoot, "docs/process/gates.md"), "utf8"),
+    );
+    const sourceManifestPath = join(
+      repositoryRoot,
+      ".ut-tdd/evidence/g8-integration/20260626-it-module-state-minimum.json",
+    );
+    const manifest = JSON.parse(readFileSync(sourceManifestPath, "utf8")) as {
+      selected_it_ids: string[];
+      mandatory_it_ids: string[];
+      commands: { it_ids: string[]; evidence_path: string }[];
+      coverage: { it_id: string; evidence_paths: string[] }[];
+    };
+    // 別familyの負例データであり、そのfamilyのoracle実装citationではない。
+    const unrelatedFamilyIds = ["01", "02"].map((suffix) => ["IT", "ASSET", suffix].join("-"));
+    manifest.selected_it_ids = [...unrelatedFamilyIds];
+    manifest.mandatory_it_ids = [...unrelatedFamilyIds];
+    manifest.commands = manifest.commands.map((command) => ({
+      ...command,
+      it_ids: [...unrelatedFamilyIds],
+    }));
+    manifest.coverage = manifest.coverage.map((entry, index) => ({
+      ...entry,
+      it_id: unrelatedFamilyIds[index % unrelatedFamilyIds.length] as string,
+    }));
+    const evidencePaths = new Set([
+      ...manifest.commands.map((command) => command.evidence_path),
+      ...manifest.coverage.flatMap((entry) => entry.evidence_paths),
+    ]);
+    for (const path of evidencePaths) {
+      writeFixtureDoc(root, path, readFileSync(join(repositoryRoot, path), "utf8"));
+    }
+    writeFixtureDoc(
+      root,
+      ".ut-tdd/evidence/g8-integration/consumer-family-negative.json",
+      `${JSON.stringify(manifest, null, 2)}\n`,
+    );
+
+    const result = evaluateStaticGate({ gate: "G8", repoRoot: root });
+    const messages = result.messages.join("\n");
+
+    expect(result.applicable).toBe(true);
+    expect(result.passed).toBe(false);
+    expect(messages).toContain("selected IT coverage missing IT-MODULE- family");
+    expect(messages).toContain("mandatory IT coverage missing IT-STATE- family");
+    expect(messages).toContain("未判定 (review): QA/TL");
+
+    writeFixtureDoc(
+      root,
+      "docs/process/vmodel-contract.yaml",
+      readFileSync(join(repositoryRoot, "docs/process/vmodel-contract.yaml"), "utf8").replace(
+        "    approval_role: QA/TL",
+        "    approval_role: TL",
+      ),
+    );
+    const changedRole = evaluateStaticGate({ gate: "G8", repoRoot: root });
+    expect(changedRole.passed).toBe(false);
+    expect(changedRole.messages).toContain("未判定 (review): TL");
+    expect(changedRole.messages).not.toContain("未判定 (review): QA/TL");
   });
 });

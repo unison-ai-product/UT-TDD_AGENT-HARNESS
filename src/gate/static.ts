@@ -1,6 +1,13 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import {
+  analyzeG8IntegrationWorkflow,
+  canLoadG8IntegrationWorkflowInput,
+  g8IntegrationWorkflowMessages,
+  loadG8IntegrationWorkflowInput,
+} from "../lint/g8-integration-workflow.ts";
+import { readGateAssetText } from "../lint/gate-confirm.ts";
+import {
   analyzeImplPlanTrace,
   implPlanTraceMessages,
   loadImplPlanTraceInput,
@@ -23,6 +30,11 @@ import {
   pairFreezeMessages,
   verificationGroupMessages,
 } from "../vmodel/lint.ts";
+import {
+  loadCompiledRightArmRegistry,
+  VMODEL_CONTRACT_PATH,
+} from "../vmodel-contract/adapters/yaml-contract-loader.ts";
+import { evaluateRightArmStaticGate } from "./right-arm-static.ts";
 
 const REVIEW_ONLY_STATIC_GATES = new Set(["G0.5", "R4"]);
 
@@ -268,6 +280,28 @@ export function evaluateStaticGate(input: StaticGateInput): StaticGateResult {
     if (key === "G5") return evaluateLayerPairGate(input.gate, "L5", repoRoot);
     if (key === "G6") return evaluateLayerPairGate(input.gate, "L6", repoRoot);
     if (key === "G7") return evaluateG7(input, repoRoot);
+    if (key === "G8") {
+      if (canLoadG8IntegrationWorkflowInput(repoRoot)) {
+        const workflow = analyzeG8IntegrationWorkflow(loadG8IntegrationWorkflowInput(repoRoot));
+        const registry = loadCompiledRightArmRegistry(
+          repoRoot,
+          readGateAssetText(repoRoot, VMODEL_CONTRACT_PATH),
+        );
+        const obligation = registry.obligations.find((entry) => entry.gate === key);
+        if (!obligation) throw new Error(`contract has no obligation for ${key}`);
+        return {
+          gate: input.gate,
+          applicable: true,
+          passed: workflow.ok,
+          messages: [
+            ...g8IntegrationWorkflowMessages(workflow),
+            `未判定 (review): ${obligation.approvalRole}`,
+          ],
+        };
+      }
+      const result = evaluateRightArmStaticGate(key, repoRoot);
+      return { gate: input.gate, applicable: true, ...result };
+    }
   } catch (e) {
     return {
       gate: input.gate,
