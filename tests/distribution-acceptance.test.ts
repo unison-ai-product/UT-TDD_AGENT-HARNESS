@@ -298,6 +298,30 @@ describe("clean distribution local acceptance smoke", () => {
     expect(plan.missingRequired).toEqual([]);
     expect(plan.denylistViolations).toEqual([]);
 
+    // PR-2c: the clean checkout must retain every tracked input consumed by
+    // its authoritative Node builder, not just the new TypeScript imports.
+    const vmodelBuildInputs = execFileSync(
+      "git",
+      [
+        "ls-files",
+        "-z",
+        "--",
+        "docs/templates/vmodel",
+        "docs/governance/vmodel-document-catalog.md",
+      ],
+      { cwd: repoRoot, encoding: "utf8" },
+    )
+      .split("\0")
+      .filter(
+        (path) =>
+          path === "docs/governance/vmodel-document-catalog.md" ||
+          (path.startsWith("docs/templates/vmodel/") &&
+            path.endsWith(".md") &&
+            !path.startsWith("docs/templates/vmodel/review-examples/")),
+      );
+    expect(vmodelBuildInputs.length).toBeGreaterThan(0);
+    for (const path of vmodelBuildInputs) expect(plan.artifactPaths).toContain(path);
+
     const cleanRoot = mkdtempSync(join(tmpdir(), "ut-tdd-clean-acceptance-"));
     const injectedHome = mkdtempSync(join(tmpdir(), "ut-tdd-acceptance-home-"));
     try {
