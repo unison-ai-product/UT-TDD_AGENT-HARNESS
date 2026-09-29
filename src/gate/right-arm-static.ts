@@ -1,5 +1,6 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
+import { extractAcIds, extractL3FrIds, extractL3NfrIds } from "../lint/g3-trace.ts";
 import {
   parseG8IntegrationEvidenceManifest,
   validateG8IntegrationEvidenceManifest,
@@ -33,7 +34,8 @@ interface CheckManifestInput {
   evidenceDirectory: string;
   obligation: CompiledVerificationObligation;
   caseIds: ReadonlySet<string>;
-  deferCaseIdField: "it_id" | "st_id" | "uxv_id";
+  g11RequirementIds?: ReadonlySet<string>;
+  deferCaseIdField: "it_id" | "st_id" | "uxv_id" | "uat_id";
   violations: string[];
 }
 
@@ -90,6 +92,18 @@ const REQUIRED_G10_HEADINGS = [
   "#### 第8章 CI連携・合否",
 ] as const;
 const REQUIRED_G10_CASE_COLUMNS = ["No", "シナリオ", "対象画面", "期待"] as const;
+const REQUIRED_G11_HEADINGS = [
+  "# DOC-L11-TRACE-UAT: 検証設計書 (+ traceability.yaml のトレース俯瞰)",
+  "#### 第1章 検証方針・方式",
+  "#### 第2章 検証マトリクス",
+  "#### 第3章 テスト設計技法カタログ",
+  "#### 第4章 テストデータ設計",
+  "#### 第5章 カバレッジ基準",
+  "#### 第6章 リスクベーステスト",
+  "#### 第7章 エントリ/エグジット基準",
+  "#### 第8章 契約テスト(CDC)",
+] as const;
+const REQUIRED_G11_CASE_COLUMNS = ["要件", "検証方式", "テストレベル", "技法", "ケースID"] as const;
 const REQUIRED_L2_SCREEN_COLUMNS = ["画面ID", "画面名称", "概要", "関連機能", "ロール"] as const;
 function isRecord(value: unknown): value is JsonRecord {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -206,6 +220,45 @@ function parseG10CaseRows(content: string, violations: string[]): CaseRow[] {
   return rows;
 }
 
+function parseG11CaseRows(content: string, violations: string[]): CaseRow[] {
+  for (const heading of REQUIRED_G11_HEADINGS) {
+    if (!content.includes(heading)) violations.push(`missing section ${heading}`);
+  }
+  const lines = content.split(/\r?\n/);
+  const chapterIndex = lines.findIndex((line) => line.trim() === "#### 第2章 検証マトリクス");
+  const nextChapterIndex =
+    chapterIndex < 0
+      ? -1
+      : lines.findIndex(
+          (line, index) => index > chapterIndex && /^#### 第[1-8]章 /.test(line.trim()),
+        );
+  const chapterLines =
+    chapterIndex < 0
+      ? []
+      : lines.slice(chapterIndex + 1, nextChapterIndex < 0 ? undefined : nextChapterIndex);
+  const headerIndex = chapterLines.findIndex((line) => {
+    const cells = tableCells(line);
+    return REQUIRED_G11_CASE_COLUMNS.every((column) => cells.includes(column));
+  });
+  if (headerIndex < 0) {
+    violations.push("missing section 第2章 検証マトリクス: required case table columns");
+    return [];
+  }
+  const header = tableCells(chapterLines[headerIndex] ?? "");
+  const idIndex = header.indexOf("ケースID");
+  const citationIndex = header.indexOf("要件");
+  const rows: CaseRow[] = [];
+  for (const line of chapterLines.slice(headerIndex + 2)) {
+    if (!line.trimStart().startsWith("|")) break;
+    const cells = tableCells(line);
+    const id = cells[idIndex] ?? "";
+    if (!id || id.startsWith("<")) continue;
+    rows.push({ id, citations: cells[citationIndex] ?? "" });
+  }
+  if (rows.length === 0) violations.push("missing section 第2章 検証マトリクス: case rows");
+  return rows;
+}
+
 function g8SlotContent(
   repoRoot: string,
   obligation: CompiledVerificationObligation,
@@ -234,6 +287,44 @@ function g10SlotContent(
   if (!existsSync(slot)) return null;
   const content = readFileSync(slot, "utf8");
   return fmValue(content, "doc_type_id") === "DOC-L10-UX-VALIDATION" ? content : null;
+}
+
+function g11SlotContent(
+  repoRoot: string,
+  obligation: CompiledVerificationObligation,
+): string | null {
+  const slot = resolveAuthoringSourceAbsolutePath(repoRoot, obligation.governanceArtifact);
+  if (!existsSync(slot)) return null;
+  const content = readFileSync(slot, "utf8");
+  return fmValue(content, "doc_type_id") === "DOC-L11-TRACE-UAT" ? content : null;
+}
+
+function g11L3Texts(repoRoot: string): {
+  functional: string;
+  businessDetail: string;
+  nfrGrade: string;
+} {
+  const texts = { functional: "", businessDetail: "", nfrGrade: "" };
+  for (const doc of loadPairDocs(repoRoot)) {
+    if (!doc.content || designLayerFromPath(doc.path) !== "L3") continue;
+    if (basename(doc.path) === "functional-requirements.md") texts.functional = doc.content;
+    else if (basename(doc.path) === "business-detail.md") texts.businessDetail = doc.content;
+    else if (basename(doc.path) === "nfr-grade.md") texts.nfrGrade = doc.content;
+  }
+  return texts;
+}
+
+function g11RequirementIds(texts: ReturnType<typeof g11L3Texts>): Set<string> {
+  const { functional, nfrGrade } = texts;
+  return new Set([...extractL3FrIds(functional), ...extractL3NfrIds(nfrGrade)]);
+}
+
+function g11CitationIds(texts: ReturnType<typeof g11L3Texts>): Set<string> {
+  const { functional, businessDetail, nfrGrade } = texts;
+  return new Set([
+    ...extractL3FrIds(functional),
+    ...extractAcIds(functional, businessDetail, nfrGrade),
+  ]);
 }
 
 function pairLayerIds(repoRoot: string, pairLayers: readonly string[]): Set<string> {
@@ -425,12 +516,126 @@ function parseG10EvidenceManifest(path: string, raw: unknown) {
   });
 }
 
+function parseG11EvidenceManifest(path: string, raw: unknown) {
+  if (!isRecord(raw)) return parseG8IntegrationEvidenceManifest(path, raw);
+  const commands = Array.isArray(raw.commands)
+    ? raw.commands.map((command) =>
+        isRecord(command) ? { ...command, it_ids: command.uat_ids } : command,
+      )
+    : raw.commands;
+  const coverage = Array.isArray(raw.coverage)
+    ? raw.coverage.map((entry) => (isRecord(entry) ? { ...entry, it_id: entry.uat_id } : entry))
+    : raw.coverage;
+  return parseG8IntegrationEvidenceManifest(path, {
+    ...raw,
+    selected_it_ids: raw.selected_uat_ids,
+    mandatory_it_ids: raw.mandatory_uat_ids,
+    deferred_it_ids: raw.deferred_uat_ids,
+    commands,
+    coverage,
+  });
+}
+
+function readG11JsonArtifact(
+  repoRoot: string,
+  manifestPathValue: string,
+  artifactKey: string,
+  artifacts: JsonRecord,
+  violations: string[],
+): JsonRecord | null {
+  const artifactPath = resolveRepoFile(repoRoot, artifacts[artifactKey]);
+  if (!artifactPath || !existsSync(artifactPath)) return null;
+  try {
+    const parsed: unknown = JSON.parse(readFileSync(artifactPath, "utf8"));
+    if (!isRecord(parsed)) throw new Error("not an object");
+    return parsed;
+  } catch {
+    violations.push(`${manifestPathValue}: invalid artifact ${artifactKey}: JSON object required`);
+    return null;
+  }
+}
+
+function validateG11Artifacts(
+  repoRoot: string,
+  path: string,
+  artifacts: JsonRecord,
+  requirementIds: ReadonlySet<string>,
+  violations: string[],
+): void {
+  const traceReview = readG11JsonArtifact(
+    repoRoot,
+    path,
+    "end_to_end_trace_review",
+    artifacts,
+    violations,
+  );
+  if (requirementIds.size === 0) {
+    violations.push("no requirement ids defined in DOC-L3-FUNCTIONAL");
+  }
+  if (traceReview) {
+    const entries = Array.isArray(traceReview.requirements) ? traceReview.requirements : [];
+    const seen = new Set<string>();
+    for (const entry of entries) {
+      if (!isRecord(entry)) {
+        violations.push(`${path}: invalid trace review requirement entry`);
+        continue;
+      }
+      const requirementId = entry.requirement_id;
+      if (typeof requirementId !== "string" || !requirementId) {
+        violations.push(`${path}: invalid trace review requirement_id`);
+        continue;
+      }
+      const keys = Object.keys(entry);
+      if (
+        keys.length !== 2 ||
+        !Object.hasOwn(entry, "requirement_id") ||
+        !Object.hasOwn(entry, "status")
+      ) {
+        violations.push(`${path}: invalid trace review requirement ${requirementId}`);
+      }
+      if (!requirementIds.has(requirementId)) {
+        violations.push(`${path}: trace review references undefined requirement ${requirementId}`);
+      }
+      if (seen.has(requirementId)) {
+        violations.push(`${path}: duplicate trace requirement ${requirementId}`);
+      }
+      seen.add(requirementId);
+      const status = entry.status;
+      if (status !== "traced" && status !== "blocked") {
+        violations.push(`${path}: invalid trace status ${requirementId}: ${String(status)}`);
+      } else if (status === "blocked") {
+        violations.push(`${path}: blocked requirement ${requirementId}`);
+      }
+    }
+    for (const requirementId of requirementIds) {
+      if (!seen.has(requirementId)) {
+        violations.push(`${path}: untraced requirement ${requirementId}`);
+      }
+    }
+  }
+
+  const decision = readG11JsonArtifact(repoRoot, path, "po_uat_decision", artifacts, violations);
+  if (!decision) return;
+  if (decision.decision !== "accept" && decision.decision !== "reject") {
+    violations.push(`${path}: invalid po_uat_decision.decision ${String(decision.decision)}`);
+  } else if (decision.decision === "reject") {
+    violations.push(`${path}: po_uat_decision.decision is reject`);
+  }
+  if (typeof decision.decided_by_role !== "string" || !decision.decided_by_role.trim()) {
+    violations.push(`${path}: po_uat_decision.decided_by_role is required`);
+  }
+  if (typeof decision.revision !== "string" || !/^[0-9a-f]{40}$/i.test(decision.revision)) {
+    violations.push(`${path}: invalid po_uat_decision.revision`);
+  }
+}
+
 function checkManifest({
   repoRoot,
   absolutePath,
   evidenceDirectory,
   obligation,
   caseIds,
+  g11RequirementIds,
   deferCaseIdField,
   violations,
 }: CheckManifestInput): { mandatoryIds: Set<string>; deferredIds: Set<string> } {
@@ -447,11 +652,13 @@ function checkManifest({
     return { mandatoryIds: new Set(), deferredIds: new Set() };
   }
   const evidence =
-    obligation.gate === "G10"
-      ? parseG10EvidenceManifest(path, parsed)
-      : obligation.gate === "G9"
-        ? parseG9EvidenceManifest(path, parsed)
-        : parseG8IntegrationEvidenceManifest(path, parsed);
+    obligation.gate === "G11"
+      ? parseG11EvidenceManifest(path, parsed)
+      : obligation.gate === "G10"
+        ? parseG10EvidenceManifest(path, parsed)
+        : obligation.gate === "G9"
+          ? parseG9EvidenceManifest(path, parsed)
+          : parseG8IntegrationEvidenceManifest(path, parsed);
   violations.push(
     ...validateG8IntegrationEvidenceManifest(evidence, repoRoot, {
       gate: obligation.gate,
@@ -490,6 +697,9 @@ function checkManifest({
       violations.push(`${path}: missing artifact ${key}`);
     }
   }
+  if (obligation.gate === "G11") {
+    validateG11Artifacts(repoRoot, path, artifacts, g11RequirementIds ?? new Set(), violations);
+  }
   return { mandatoryIds, deferredIds };
 }
 
@@ -501,7 +711,7 @@ export function evaluateRightArmStaticGate(
   messages: string[];
 } {
   const key = gate.trim().toUpperCase();
-  if (key !== "G8" && key !== "G9" && key !== "G10") {
+  if (key !== "G8" && key !== "G9" && key !== "G10" && key !== "G11") {
     return {
       passed: false,
       messages: [`right-arm-static - violation: no evaluator for ${key}`],
@@ -519,26 +729,33 @@ export function evaluateRightArmStaticGate(
     };
   }
   const violations: string[] = [];
+  let g11Ids: Set<string> | undefined;
   const slot =
-    key === "G10"
-      ? g10SlotContent(repoRoot, obligation)
-      : key === "G9"
-        ? g9SlotContent(repoRoot, obligation)
-        : g8SlotContent(repoRoot, obligation);
+    key === "G11"
+      ? g11SlotContent(repoRoot, obligation)
+      : key === "G10"
+        ? g10SlotContent(repoRoot, obligation)
+        : key === "G9"
+          ? g9SlotContent(repoRoot, obligation)
+          : g8SlotContent(repoRoot, obligation);
   const slotDocTypeId =
-    key === "G10"
-      ? "DOC-L10-UX-VALIDATION"
-      : key === "G9"
-        ? "DOC-L9-SYSTEM-TEST-DESIGN"
-        : "DOC-L8-INTEGRATION-TEST-DESIGN";
+    key === "G11"
+      ? "DOC-L11-TRACE-UAT"
+      : key === "G10"
+        ? "DOC-L10-UX-VALIDATION"
+        : key === "G9"
+          ? "DOC-L9-SYSTEM-TEST-DESIGN"
+          : "DOC-L8-INTEGRATION-TEST-DESIGN";
   if (!slot) violations.push(`missing slot ${slotDocTypeId}`);
   const content = slot ?? "";
   const rows =
-    key === "G10"
-      ? parseG10CaseRows(content, violations)
-      : key === "G9"
-        ? parseG9CaseRows(content, violations)
-        : parseG8CaseRows(content, violations);
+    key === "G11"
+      ? parseG11CaseRows(content, violations)
+      : key === "G10"
+        ? parseG10CaseRows(content, violations)
+        : key === "G9"
+          ? parseG9CaseRows(content, violations)
+          : parseG8CaseRows(content, violations);
   const caseIds = new Set(rows.map((row) => row.id));
   checkCaseIds({
     rows,
@@ -547,7 +764,15 @@ export function evaluateRightArmStaticGate(
     violations,
   });
   const pairIds = pairLayerIds(repoRoot, obligation.pairLayers);
-  if (key === "G10") {
+  if (key === "G11") {
+    const texts = g11L3Texts(repoRoot);
+    g11Ids = g11RequirementIds(texts);
+    const citationIds = g11CitationIds(texts);
+    for (const id of citationIds) pairIds.add(id);
+    const definedIds = allDesignIds(repoRoot);
+    for (const id of citationIds) definedIds.add(id);
+    checkG9CaseTraces({ rows, pairIds, definedIds, violations });
+  } else if (key === "G10") {
     if (fmValue(content, "status") === "skipped") {
       violations.push(
         "skipped slot DOC-L10-UX-VALIDATION: no consumer profile-selection authority (VMC-005)",
@@ -571,7 +796,9 @@ export function evaluateRightArmStaticGate(
       evidenceDirectory,
       obligation,
       caseIds,
-      deferCaseIdField: key === "G10" ? "uxv_id" : key === "G9" ? "st_id" : "it_id",
+      g11RequirementIds: g11Ids,
+      deferCaseIdField:
+        key === "G11" ? "uat_id" : key === "G10" ? "uxv_id" : key === "G9" ? "st_id" : "it_id",
       violations,
     });
     for (const id of [...manifestResult.mandatoryIds, ...manifestResult.deferredIds])
