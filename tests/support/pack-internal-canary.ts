@@ -467,7 +467,21 @@ export async function createCanaryFixture(): Promise<CanaryFixture> {
       isolatedCanaryEnv(root),
     );
     if (producer.status !== 0)
-      throw new Error(`distribution package failed: ${producer.stderr || producer.stdout}`);
+      throw new Error(
+        `distribution package failed: ${JSON.stringify({
+          status: producer.status,
+          signal: producer.signal,
+          error: producer.error
+            ? {
+                name: producer.error.name,
+                message: producer.error.message,
+                code: (producer.error as NodeJS.ErrnoException).code,
+              }
+            : null,
+          stdout: producer.stdout.slice(-4000),
+          stderr: producer.stderr.slice(-4000),
+        })}`,
+      );
     const result = JSON.parse(producer.stdout) as { ok?: boolean; sourceRevision?: string };
     if (!result.ok || result.sourceRevision !== artifactCommit)
       throw new Error(`unexpected producer result: ${producer.stdout}`);
