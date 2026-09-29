@@ -13,6 +13,7 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
+import { checkG9SystemWorkflow } from "../src/doctor/workflow-quality.ts";
 import {
   analyzeLayerPairGate,
   evaluateStaticGate,
@@ -28,6 +29,10 @@ import { analyzeG3Trace, g3TraceMessages, g3TraceOk, loadDocs } from "../src/lin
 import { loadGateConfirmDocs, parseGateStatuses } from "../src/lint/gate-confirm.ts";
 import { buildNodeGeneration } from "../src/runtime/node-bootstrap.ts";
 import type { PairDoc } from "../src/vmodel/lint.ts";
+import {
+  loadCompiledRightArmRegistry,
+  VMODEL_CONTRACT_PATH,
+} from "../src/vmodel-contract/adapters/yaml-contract-loader.ts";
 
 const GATE_ASSETS = [
   "docs/governance/gate-design.md",
@@ -328,6 +333,173 @@ function updateConsumerG8Manifest(
   const manifest = JSON.parse(readFileSync(path, "utf8")) as ConsumerG8Manifest;
   mutate(manifest);
   writeFileSync(path, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
+}
+
+const G9_CONSUMER_CASE_IDS = [
+  "ST-CONSUMER-01",
+  "ST-CONSUMER-02",
+  "ST-CONSUMER-03",
+  "ST-CONSUMER-04",
+  "ST-CONSUMER-05",
+  "ST-CONSUMER-06",
+] as const;
+
+type ConsumerG9Manifest = {
+  schema_version: string;
+  gate: string;
+  profile: string;
+  plan_id: string;
+  selected_st_ids: string[];
+  mandatory_st_ids: string[];
+  deferred_st_ids: string[];
+  commands: {
+    command_id: string;
+    command: string;
+    runner: string;
+    scope: string;
+    exit_code: number;
+    evidence_path: string;
+    output_digest: string;
+    st_ids: string[];
+  }[];
+  coverage: {
+    st_id: string;
+    status: string;
+    evidence_paths: string[];
+    command_ids: string[];
+  }[];
+  defer: { st_id: string; reason: string; plan_id: string }[];
+  exit_criteria: {
+    all_mandatory_passed: boolean;
+    failed_mandatory_count: number;
+    stale_defer_count: number;
+    doctor_check: string;
+  };
+  artifacts: Record<string, string>;
+};
+
+function g9ContractObligation() {
+  const repositoryRoot = process.cwd();
+  const contract = readFileSync(join(repositoryRoot, VMODEL_CONTRACT_PATH), "utf8");
+  const obligation = loadCompiledRightArmRegistry(repositoryRoot, contract).obligations.find(
+    (entry) => entry.gate === "G9",
+  );
+  if (!obligation) throw new Error("consumer G9 fixture requires the contract G9 obligation");
+  return obligation;
+}
+
+function consumerG9Manifest(evidenceDirectory: string): ConsumerG9Manifest {
+  const commandId = "cmd-consumer-system";
+  const evidencePath = "tests/fixtures/g9-consumer/system-results.txt";
+  return {
+    schema_version: `${evidenceDirectory}-evidence-v1`,
+    gate: "G9",
+    profile: "consumer-system-minimum",
+    plan_id: "PLAN-CONSUMER-01",
+    selected_st_ids: [...G9_CONSUMER_CASE_IDS],
+    mandatory_st_ids: [...G9_CONSUMER_CASE_IDS],
+    deferred_st_ids: [],
+    commands: [
+      {
+        command_id: commandId,
+        command: "node tests/consumer-system-check.mjs",
+        runner: "node",
+        scope: "consumer fixture",
+        exit_code: 0,
+        evidence_path: "tests/fixtures/g9-consumer/command-output.txt",
+        output_digest: `sha256:${"0".repeat(64)}`,
+        st_ids: [...G9_CONSUMER_CASE_IDS],
+      },
+    ],
+    coverage: G9_CONSUMER_CASE_IDS.map((stId) => ({
+      st_id: stId,
+      status: "passed",
+      evidence_paths: [evidencePath],
+      command_ids: [commandId],
+    })),
+    defer: [],
+    exit_criteria: {
+      all_mandatory_passed: true,
+      failed_mandatory_count: 0,
+      stale_defer_count: 0,
+      doctor_check: `${evidenceDirectory}-workflow`,
+    },
+    artifacts: {
+      system_manifest: `.ut-tdd/evidence/${evidenceDirectory}/ok.json`,
+      system_results: evidencePath,
+    },
+  };
+}
+
+function writeConsumerG9Fixture(root: string): void {
+  const repositoryRoot = process.cwd();
+  const obligation = g9ContractObligation();
+  const evidenceDirectory = obligation.evidenceManifest.replaceAll("\\", "/").split("/").at(-2);
+  if (!evidenceDirectory) throw new Error("consumer G9 contract has no evidence directory");
+  const families = obligation.evidenceFamilies;
+  const caseRows = G9_CONSUMER_CASE_IDS.map((caseId, index) => {
+    const family = families[index % families.length];
+    if (!family) throw new Error("consumer G9 contract has no evidence families");
+    return `| ${caseId} | system | Consumer system boundary ${index + 1} | Exercise the consumer contract | Pass | ${family} | DOC-L4-ARCHITECTURE |`;
+  }).join("\n");
+  const l9Template = readFileSync(
+    join(repositoryRoot, "docs/templates/vmodel/L9-system-test-design.md"),
+    "utf8",
+  );
+  const l9 = l9Template
+    .replace(/^status: .*$/m, "status: confirmed")
+    .replace(/^pair_artifact: .*$/m, "pair_artifact: docs/design/L4-basic-design/")
+    .replace(/^plan: .*$/m, "plan: docs/plans/PLAN-CONSUMER-01.md")
+    .replace(
+      "| テストID | 分類 | テスト項目 | 検証内容/手順 | 期待結果 | トレース元 |",
+      "| テストID | 分類 | テスト項目 | 検証内容/手順 | 期待結果 | family | トレース元 |",
+    )
+    .replace("|---|---|---|---|---|---|", "|---|---|---|---|---|---|---|")
+    .replace("| <記入> | <記入> | <記入> | <記入> | <記入> | <記入> |", caseRows);
+  writeFixtureDoc(root, "docs/test-design/L9-system-test-design.md", l9);
+  writeFixtureDoc(
+    root,
+    "docs/design/L4-basic-design/architecture.md",
+    "---\ndoc_type_id: DOC-L4-ARCHITECTURE\nlayer: L4\nstatus: confirmed\npair_artifact: docs/test-design/L9-system-test-design.md\nplan: docs/plans/PLAN-CONSUMER-01.md\n---\n# DOC-L4-ARCHITECTURE\n\n**DOC-L4-ARCHITECTURE**\n",
+  );
+  writeFixtureDoc(
+    root,
+    "docs/design/L5-detailed-design/module-decomposition.md",
+    "---\ndoc_type_id: DOC-L5-MODULE\nlayer: L5\nstatus: confirmed\npair_artifact: docs/test-design/L9-system-test-design.md\nplan: docs/plans/PLAN-CONSUMER-01.md\n---\n# DOC-L5-MODULE\n\n**DOC-L5-MODULE**\n",
+  );
+  writeFixtureDoc(root, "tests/fixtures/g9-consumer/system-results.txt", "passed\n");
+  writeFixtureDoc(root, "tests/fixtures/g9-consumer/command-output.txt", "passed\n");
+  writeFixtureDoc(
+    root,
+    `.ut-tdd/evidence/${evidenceDirectory}/ok.json`,
+    `${JSON.stringify(consumerG9Manifest(evidenceDirectory), null, 2)}\n`,
+  );
+}
+
+function updateConsumerG9Manifest(
+  root: string,
+  mutate: (manifest: ConsumerG9Manifest) => void,
+): void {
+  const obligation = g9ContractObligation();
+  const evidenceDirectory = obligation.evidenceManifest.replaceAll("\\", "/").split("/").at(-2);
+  if (!evidenceDirectory) throw new Error("consumer G9 contract has no evidence directory");
+  const path = join(root, ".ut-tdd", "evidence", evidenceDirectory, "ok.json");
+  const manifest = JSON.parse(readFileSync(path, "utf8")) as ConsumerG9Manifest;
+  mutate(manifest);
+  writeFileSync(path, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
+}
+
+function updateConsumerG9Design(root: string, mutate: (content: string) => string): void {
+  const path = join(root, "docs", "test-design", "L9-system-test-design.md");
+  writeFileSync(path, mutate(readFileSync(path, "utf8")), "utf8");
+}
+
+function firstConsumerG9Command(
+  manifest: ConsumerG9Manifest,
+): ConsumerG9Manifest["commands"][number] {
+  const command = manifest.commands[0];
+  if (!command) throw new Error("consumer G9 fixture command is missing");
+  return command;
 }
 
 function makeWritableTree(path: string): void {
@@ -904,5 +1076,247 @@ describe("PR-GR consumer G8 predicates", () => {
     expect(changedRole.passed).toBe(false);
     expect(changedRole.messages).toContain("未判定 (review): TL");
     expect(changedRole.messages).not.toContain("未判定 (review): QA/TL");
+  });
+});
+
+describe("PR-G9 consumer G9 predicates", () => {
+  it("U-RCDEV-030: evaluates consumer G9 from the contract and emits its review tier", () => {
+    const root = fixtureRoot();
+    const obligation = g9ContractObligation();
+    writeConsumerG9Fixture(root);
+
+    const result = evaluateStaticGate({ gate: "G9", repoRoot: root });
+    const messages = result.messages.join("\n");
+
+    expect(obligation.evidenceFamilies).toEqual(
+      expect.arrayContaining(["ST", "performance", "security"]),
+    );
+    expect(result.applicable).toBe(true);
+    expect(result.passed).toBe(true);
+    expect(messages).toContain(`未判定 (review): ${obligation.approvalRole}`);
+  });
+
+  it("U-RCDEV-030: rejects a missing required G9 case-table column (S)", () => {
+    const root = fixtureRoot();
+    writeConsumerG9Fixture(root);
+    updateConsumerG9Design(root, (content) => content.replace("期待結果", "結果"));
+
+    const result = evaluateStaticGate({ gate: "G9", repoRoot: root });
+
+    expect(result.applicable).toBe(true);
+    expect(result.passed).toBe(false);
+    expect(result.messages.join("\n")).toContain("missing section");
+  });
+
+  it("U-RCDEV-030: rejects duplicate ST case IDs (I)", () => {
+    const root = fixtureRoot();
+    writeConsumerG9Fixture(root);
+    updateConsumerG9Design(root, (content) => content.replace("ST-CONSUMER-02", "ST-CONSUMER-01"));
+
+    const result = evaluateStaticGate({ gate: "G9", repoRoot: root });
+
+    expect(result.applicable).toBe(true);
+    expect(result.passed).toBe(false);
+    expect(result.messages.join("\n")).toContain("duplicate case id");
+  });
+
+  it("U-RCDEV-030: rejects a case whose only citation is outside the L4 pair (T)", () => {
+    const root = fixtureRoot();
+    writeConsumerG9Fixture(root);
+    updateConsumerG9Design(root, (content) =>
+      content.replace("DOC-L4-ARCHITECTURE", "DOC-L5-MODULE"),
+    );
+
+    const result = evaluateStaticGate({ gate: "G9", repoRoot: root });
+
+    expect(result.applicable).toBe(true);
+    expect(result.passed).toBe(false);
+    expect(result.messages.join("\n")).toContain("untraced case ST-CONSUMER-01");
+  });
+
+  it("U-RCDEV-030: rejects a defer to a missing PLAN (F)", () => {
+    const root = fixtureRoot();
+    writeConsumerG9Fixture(root);
+    updateConsumerG9Manifest(root, (manifest) => {
+      const deferredId = "ST-CONSUMER-06";
+      manifest.mandatory_st_ids = manifest.mandatory_st_ids.filter((id) => id !== deferredId);
+      manifest.deferred_st_ids = [deferredId];
+      manifest.coverage = manifest.coverage.filter((entry) => entry.st_id !== deferredId);
+      manifest.defer = [
+        {
+          st_id: deferredId,
+          reason: "Consumer fixture defer mutation",
+          plan_id: "PLAN-CONSUMER-MISSING-01",
+        },
+      ];
+    });
+
+    const result = evaluateStaticGate({ gate: "G9", repoRoot: root });
+
+    expect(result.applicable).toBe(true);
+    expect(result.passed).toBe(false);
+    expect(result.messages.join("\n")).toContain("stale defer ST-CONSUMER-06");
+  });
+
+  it("U-RCDEV-030: accepts a deferred ST row routed to an existing PLAN (F)", () => {
+    const root = fixtureRoot();
+    writeConsumerG9Fixture(root);
+    writeFixtureDoc(root, "docs/plans/PLAN-CONSUMER-DEFER-01.md", "# Consumer defer plan\n");
+    updateConsumerG9Manifest(root, (manifest) => {
+      const deferredId = "ST-CONSUMER-06";
+      manifest.mandatory_st_ids = manifest.mandatory_st_ids.filter((id) => id !== deferredId);
+      manifest.deferred_st_ids = [deferredId];
+      manifest.coverage = manifest.coverage.filter((entry) => entry.st_id !== deferredId);
+      manifest.defer = [
+        {
+          st_id: deferredId,
+          reason: "Consumer fixture defers this row to its tracked plan",
+          plan_id: "PLAN-CONSUMER-DEFER-01",
+        },
+      ];
+    });
+
+    const result = evaluateStaticGate({ gate: "G9", repoRoot: root });
+
+    expect(result.applicable).toBe(true);
+    expect(result.passed).toBe(true);
+    expect(result.messages.join("\n")).toContain("未判定 (review): QA/TL");
+  });
+
+  it("U-RCDEV-030: rejects a missing contract-required system manifest artifact (A)", () => {
+    const root = fixtureRoot();
+    writeConsumerG9Fixture(root);
+    updateConsumerG9Manifest(root, (manifest) => {
+      delete manifest.artifacts.system_manifest;
+    });
+
+    const result = evaluateStaticGate({ gate: "G9", repoRoot: root });
+
+    expect(result.applicable).toBe(true);
+    expect(result.passed).toBe(false);
+    expect(result.messages.join("\n")).toContain("missing artifact system_manifest");
+  });
+
+  it("U-RCDEV-030: requires every contract evidence family in consumer case rows", () => {
+    const root = fixtureRoot();
+    const securityFamily = g9ContractObligation().evidenceFamilies.find(
+      (family) => family === "security",
+    );
+    if (!securityFamily) throw new Error("consumer G9 contract has no security evidence family");
+    writeConsumerG9Fixture(root);
+    updateConsumerG9Design(root, (content) =>
+      content.replaceAll(`| ${securityFamily} |`, "| ST |"),
+    );
+
+    const result = evaluateStaticGate({ gate: "G9", repoRoot: root });
+    const messages = result.messages.join("\n");
+
+    expect(result.applicable).toBe(true);
+    expect(result.passed).toBe(false);
+    expect(messages).toContain(securityFamily);
+  });
+
+  it("U-RCDEV-030: rejects an unknown per-row G9 evidence family", () => {
+    const root = fixtureRoot();
+    const securityFamily = g9ContractObligation().evidenceFamilies.find(
+      (family) => family === "security",
+    );
+    if (!securityFamily) throw new Error("consumer G9 contract has no security evidence family");
+    writeConsumerG9Fixture(root);
+    updateConsumerG9Design(root, (content) =>
+      content.replace(
+        `| ${securityFamily} | DOC-L4-ARCHITECTURE |`,
+        "| UNKNOWN-FAMILY | DOC-L4-ARCHITECTURE |",
+      ),
+    );
+
+    const result = evaluateStaticGate({ gate: "G9", repoRoot: root });
+    const messages = result.messages.join("\n");
+
+    expect(result.applicable).toBe(true);
+    expect(result.passed).toBe(false);
+    expect(messages).toContain("UNKNOWN-FAMILY");
+  });
+
+  it("U-RCDEV-030: rejects failed mandatory G9 exit criteria (E)", () => {
+    const root = fixtureRoot();
+    writeConsumerG9Fixture(root);
+    updateConsumerG9Manifest(root, (manifest) => {
+      manifest.exit_criteria.failed_mandatory_count = 1;
+    });
+
+    const result = evaluateStaticGate({ gate: "G9", repoRoot: root });
+
+    expect(result.applicable).toBe(true);
+    expect(result.passed).toBe(false);
+  });
+
+  it("U-RCDEV-030: routes each E-only mutation through consumer G9 validation", () => {
+    const mutations: {
+      name: string;
+      expected: string;
+      mutate: (manifest: ConsumerG9Manifest) => void;
+    }[] = [
+      {
+        name: "schema",
+        expected: "invalid schema_version",
+        mutate: (manifest) => {
+          manifest.schema_version = "g8-integration-evidence-v1";
+        },
+      },
+      {
+        name: "gate",
+        expected: "gate must be G9",
+        mutate: (manifest) => {
+          manifest.gate = "G8";
+        },
+      },
+      {
+        name: "exit code",
+        expected: "exit_code is non-zero",
+        mutate: (manifest) => {
+          firstConsumerG9Command(manifest).exit_code = 1;
+        },
+      },
+      {
+        name: "digest",
+        expected: "invalid digest",
+        mutate: (manifest) => {
+          firstConsumerG9Command(manifest).output_digest = `sha256:${"a".repeat(63)}`;
+        },
+      },
+      {
+        name: "stale defer count type",
+        expected: "stale_defer_count must be 0",
+        mutate: (manifest) => {
+          (manifest.exit_criteria as unknown as Record<string, unknown>).stale_defer_count = "0";
+        },
+      },
+    ];
+
+    for (const mutation of mutations) {
+      const root = fixtureRoot();
+      writeConsumerG9Fixture(root);
+      updateConsumerG9Manifest(root, mutation.mutate);
+
+      const result = evaluateStaticGate({ gate: "G9", repoRoot: root });
+
+      expect(result.applicable, mutation.name).toBe(true);
+      expect(result.passed, mutation.name).toBe(false);
+      expect(result.messages.join("\n"), mutation.name).toContain(mutation.expected);
+    }
+  });
+
+  it("U-RCDEV-030: preserves the existing harness G9 workflow result on the public gate path", () => {
+    const repositoryRoot = process.cwd();
+    const workflow = checkG9SystemWorkflow(repositoryRoot);
+    const result = evaluateStaticGate({ gate: "G9", repoRoot: repositoryRoot });
+    const workflowMessages = result.messages.filter((message) =>
+      message.startsWith("g9-system-workflow"),
+    );
+
+    expect(result.applicable).toBe(true);
+    expect(result.passed).toBe(workflow.ok);
+    expect(workflowMessages).toEqual(workflow.messages);
   });
 });
