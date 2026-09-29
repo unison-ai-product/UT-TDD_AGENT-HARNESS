@@ -272,7 +272,7 @@ describe("PR-2c release consumer V-model template writer", () => {
     if (buildRoot) removeTestDirectory(buildRoot);
   });
 
-  it("CANDIDATE-U-RCDEV-014: writes all required slot templates to catalog paths from port-index bytes", () => {
+  it("U-RCDEV-014: writes all required slot templates to catalog paths from port-index bytes", () => {
     const root = fixtureRoot();
     try {
       expect(REQUIRED_TEMPLATES).toHaveLength(21);
@@ -295,7 +295,7 @@ describe("PR-2c release consumer V-model template writer", () => {
     }
   });
 
-  it("CANDIDATE-U-RCDEV-015: preserves existing bytes and reports skip (exists)", () => {
+  it("U-RCDEV-015: preserves existing bytes and reports skip (exists)", () => {
     const root = fixtureRoot();
     const existing = REQUIRED_TEMPLATES.find((template) => template.docTypeId === "DOC-L4-DATA");
     if (!existing) throw new Error("required DOC-L4-DATA oracle is missing");
@@ -320,7 +320,7 @@ describe("PR-2c release consumer V-model template writer", () => {
     }
   });
 
-  it("CANDIDATE-U-RCDEV-015: rejects a mixed known and unknown slot request before writing", () => {
+  it("U-RCDEV-015: rejects a mixed known and unknown slot request before writing", () => {
     const root = fixtureRoot();
     const existing = REQUIRED_TEMPLATES.find((template) => template.docTypeId === "DOC-L4-DATA");
     if (!existing) throw new Error("required DOC-L4-DATA oracle is missing");
@@ -347,7 +347,7 @@ describe("PR-2c release consumer V-model template writer", () => {
     }
   });
 
-  it("CANDIDATE-U-RCDEV-015: dry-run reports the write without creating a file", () => {
+  it("U-RCDEV-015: dry-run reports the write without creating a file", () => {
     const root = fixtureRoot();
     const template = REQUIRED_TEMPLATES.find((entry) => entry.docTypeId === "DOC-L4-DATA");
     if (!template) throw new Error("required DOC-L4-DATA oracle is missing");
@@ -368,7 +368,7 @@ describe("PR-2c release consumer V-model template writer", () => {
     }
   });
 
-  it("CANDIDATE-U-RCDEV-015: requires at least one template selector without writing", () => {
+  it("U-RCDEV-015: requires at least one template selector without writing", () => {
     const root = fixtureRoot();
     try {
       const result = runBundledCli(bundledGeneration(), root, ["vmodel", "template"]);
@@ -379,7 +379,7 @@ describe("PR-2c release consumer V-model template writer", () => {
     }
   });
 
-  it("CANDIDATE-U-RCDEV-015: --json returns written and skipped path arrays", () => {
+  it("U-RCDEV-015: --json returns written and skipped path arrays", () => {
     const root = fixtureRoot();
     try {
       const result = runBundledCli(bundledGeneration(), root, [
@@ -403,7 +403,7 @@ describe("PR-2c release consumer V-model template writer", () => {
     }
   });
 
-  it("CANDIDATE-U-RCDEV-038: writes only the requested optional template to the optional root", () => {
+  it("U-RCDEV-038: writes only the requested optional template to the optional root", () => {
     const root = fixtureRoot();
     try {
       const result = runBundledCli(bundledGeneration(), root, [
@@ -424,7 +424,7 @@ describe("PR-2c release consumer V-model template writer", () => {
     }
   });
 
-  it("CANDIDATE-U-RCDEV-014/038: accepts multiple slots and required-plus-optional selection", () => {
+  it("U-RCDEV-014/038: accepts multiple slots and required-plus-optional selection", () => {
     const slotsAndOptionalRoot = fixtureRoot();
     const requiredAndOptionalRoot = fixtureRoot();
     const data = REQUIRED_TEMPLATES.find((template) => template.docTypeId === "DOC-L4-DATA");
@@ -467,7 +467,7 @@ describe("PR-2c release consumer V-model template writer", () => {
     }
   });
 
-  it("CANDIDATE-U-RCDEV-038: rejects a slot source ID in the optional namespace", () => {
+  it("U-RCDEV-038: rejects a slot source ID in the optional namespace", () => {
     const root = fixtureRoot();
     try {
       const result = runBundledCli(bundledGeneration(), root, [
@@ -485,7 +485,7 @@ describe("PR-2c release consumer V-model template writer", () => {
     }
   });
 
-  it("CANDIDATE-U-RCDEV-039: validates every required destination before the first write", () => {
+  it("U-RCDEV-039: validates every required destination before the first write", () => {
     const root = fixtureRoot();
     const outsideRoot = fixtureRoot();
     const designRootLink = join(root, "docs", "design");
@@ -521,7 +521,7 @@ describe("PR-2c release consumer V-model template writer", () => {
     }
   });
 
-  it("CANDIDATE-U-RCDEV-039: allows an ancestor junction that resolves inside the consumer root", () => {
+  it("U-RCDEV-039: allows an ancestor junction that resolves inside the consumer root", () => {
     const root = fixtureRoot();
     const outsideRoot = fixtureRoot();
     const designRootLink = join(root, "docs", "design");
@@ -558,7 +558,7 @@ describe("PR-2c release consumer V-model template writer", () => {
     }
   });
 
-  it("CANDIDATE-U-RCDEV-039: denies an outside ancestor during required dry-run without writes", () => {
+  it("U-RCDEV-039: denies an outside ancestor during required dry-run without writes", () => {
     const root = fixtureRoot();
     const outsideRoot = fixtureRoot();
     const designRootLink = join(root, "docs", "design");
@@ -596,7 +596,7 @@ describe("PR-2c release consumer V-model template writer", () => {
     }
   });
 
-  it("CANDIDATE-U-RCDEV-039: denies a dangling final symlink without creating its target", () => {
+  it("U-RCDEV-039: denies a dangling final symlink without creating its target", () => {
     const root = fixtureRoot();
     const outsideRoot = fixtureRoot();
     const template = REQUIRED_TEMPLATES.find((entry) => entry.docTypeId === "DOC-L4-DATA");
@@ -634,7 +634,7 @@ describe("PR-2c release consumer V-model template writer", () => {
     { scope: "outside", kind: "directory" },
     { scope: "inside", kind: "file" },
     { scope: "inside", kind: "directory" },
-  ] as const)("CANDIDATE-U-RCDEV-039: denies a final $scope $kind link before skip (exists)", ({
+  ] as const)("U-RCDEV-039: denies a final $scope $kind link before skip (exists)", ({
     scope,
     kind,
   }) => {
