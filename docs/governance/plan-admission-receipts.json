@@ -5472,6 +5472,38 @@
         "revision": 1,
         "content_digest": "sha256:967b4b9d14495b311b4d8b14741def2f41ad743ce80f11f65929fd7edf7ea70a"
       }
+    },
+    {
+      "sequence": 343,
+      "previous_record_digest": "sha256:206e53dce873e44756436434c0c78cb1782a6db686cde605df17331cb9790556",
+      "record_digest": "sha256:fc8ed1ae0d90018b79de2a641c637374c94becb749b701ff14dd86da7f546874",
+      "command_id": "plan-revise:issue-742:legacy-494-correction-note:r2:d5b9c793e32e",
+      "receipt_id": "certificate:4318582771b1ddbe7377c4f9e3fdebc9",
+      "receipt_digest": "sha256:62ea89ef0ba10f7defcdbe48dd4ad1b8b8d566b7b8b301af943c26188f7c1435",
+      "decision_digest": "sha256:8c79b95a7b202e5374bcd8f8923a6fea60cde61da1a755f21412c0e63f734b06",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-494-release-promotion-rollback-gate.md",
+        "plan_id": "PLAN-L7-494-release-promotion-rollback-gate",
+        "asset_id": "plan:legacy:dbb95001a01ad1267126777f477d8d8114002f4458d7a60be83a36a76bb734ba",
+        "revision": 2,
+        "content_digest": "sha256:444d740e7c20fdcabdcfc7560fba4e36ec29ebc8ea25a099dcbe9a90b0d964ca"
+      }
+    },
+    {
+      "sequence": 344,
+      "previous_record_digest": "sha256:fc8ed1ae0d90018b79de2a641c637374c94becb749b701ff14dd86da7f546874",
+      "record_digest": "sha256:adf6cb1c27f8df87408f83c213db2e1fc1a457c0f5d30049cadf2989ed339b7c",
+      "command_id": "plan-revise:issue-742:legacy-492-correction-note:r2b:d5b9c793e32e",
+      "receipt_id": "certificate:25697dcb7665caea59d6b901965c3245",
+      "receipt_digest": "sha256:e4017415eba2ac8a5e44d9c26a4bd18458bb5e5b643e6b4dabea5e594bb023b5",
+      "decision_digest": "sha256:8c79b95a7b202e5374bcd8f8923a6fea60cde61da1a755f21412c0e63f734b06",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-492-pf5-release-aggregate-admission-pair-freeze.md",
+        "plan_id": "PLAN-L7-492-pf5-release-aggregate-admission-pair-freeze",
+        "asset_id": "plan:legacy:6a3ec85114af63a676d8d5cbff989764fdb96e127b8ca7f1f54798fc77a89275",
+        "revision": 2,
+        "content_digest": "sha256:04c338a34f868796485169f6a92959892f54061aa838004dc5aee0d96323a469"
+      }
     }
   ]
 }
