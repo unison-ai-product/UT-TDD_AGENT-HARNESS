@@ -647,8 +647,7 @@ function firstConsumerG10Command(
 
 const G12_CONSUMER_CASE_IDS = ["AT-FR-01-01", "AT-CONSUMER-02"] as const;
 const G12_EVIDENCE_DIRECTORY = "g12-acceptance";
-const G12_DEPLOY_RECEIPT_PATH =
-  ".ut-tdd/evidence/g12-acceptance/artifacts/deploy-receipt.json";
+const G12_DEPLOY_RECEIPT_PATH = ".ut-tdd/evidence/g12-acceptance/artifacts/deploy-receipt.json";
 const G12_ROLLBACK_READINESS_PATH =
   ".ut-tdd/evidence/g12-acceptance/artifacts/rollback-readiness.json";
 
@@ -761,8 +760,7 @@ function writeConsumerG12Fixture(root: string): void {
     G12_ROLLBACK_READINESS_PATH,
     JSON.stringify(
       {
-        rollback_command:
-          "git revert --no-edit 0123456789abcdef0123456789abcdef01234567",
+        rollback_command: "git revert --no-edit 0123456789abcdef0123456789abcdef01234567",
         verified_at: "2026-09-29T00:00:00Z",
       },
       null,
@@ -1928,17 +1926,13 @@ describe("PR-G12 consumer G12 predicates", () => {
       "utf8",
     );
     const title = template.split(/\r?\n/).find((line) => /^# DOC-L12-ACCEPTANCE:/.test(line));
-    const headings = template
-      .split(/\r?\n/)
-      .filter((line) => /^#{4,5} /.test(line));
+    const headings = template.split(/\r?\n/).filter((line) => /^#{4,5} /.test(line));
     expect(title).toBeDefined();
     expect(headings).toHaveLength(10);
 
     const titleRoot = fixtureRoot();
     writeConsumerG12Fixture(titleRoot);
-    updateConsumerG12Design(titleRoot, (content) =>
-      content.replace(title ?? "", ""),
-    );
+    updateConsumerG12Design(titleRoot, (content) => content.replace(title ?? "", ""));
     const titleResult = evaluateStaticGate({ gate: "G12", repoRoot: titleRoot });
     expect(titleResult.passed).toBe(false);
     expect(titleResult.messages.join("\n")).toContain("missing section " + title);
@@ -2002,17 +1996,13 @@ describe("PR-G12 consumer G12 predicates", () => {
       {
         name: "undefined AC",
         mutate: (root: string) =>
-          updateConsumerG12Design(root, (content) =>
-            content.replace("AC-FR-01-01", "AC-FR-99-01"),
-          ),
+          updateConsumerG12Design(root, (content) => content.replace("AC-FR-01-01", "AC-FR-99-01")),
         expected: "trace target missing AC-FR-99-01",
       },
       {
         name: "empty citation",
         mutate: (root: string) =>
-          updateConsumerG12Design(root, (content) =>
-            content.replace("| AC-FR-01-01 |", "| |"),
-          ),
+          updateConsumerG12Design(root, (content) => content.replace("| AC-FR-01-01 |", "| |")),
         expected: "untraced case AT-FR-01-01",
       },
     ];
@@ -2111,8 +2101,7 @@ describe("PR-G12 consumer G12 predicates", () => {
       {
         name: "non-JSON deploy receipt",
         expected: "invalid artifact deploy_receipt: JSON object required",
-        mutate: (root) =>
-          writeFixtureDoc(root, G12_DEPLOY_RECEIPT_PATH, "not JSON\n"),
+        mutate: (root) => writeFixtureDoc(root, G12_DEPLOY_RECEIPT_PATH, "not JSON\n"),
       },
     ];
 
@@ -2171,10 +2160,7 @@ describe("PR-G12 consumer G12 predicates", () => {
       },
       {
         name: "wrong prefix-derived mandatory field",
-        expected: [
-          "missing row evidence AT-FR-01-01",
-          "missing row evidence AT-CONSUMER-02",
-        ],
+        expected: ["missing row evidence AT-FR-01-01", "missing row evidence AT-CONSUMER-02"],
         mutate: (manifest) => {
           const fields = manifest as unknown as Record<string, unknown>;
           fields.mandatory_it_ids = fields.mandatory_at_ids;
