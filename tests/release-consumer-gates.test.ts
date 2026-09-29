@@ -1318,5 +1318,6 @@ describe("PR-G9 consumer G9 predicates", () => {
     expect(result.applicable).toBe(true);
     expect(result.passed).toBe(workflow.ok);
     expect(workflowMessages).toEqual(workflow.messages);
+    expect(result.messages).toContain(`未判定 (review): ${g9ContractObligation().approvalRole}`);
   });
 });
