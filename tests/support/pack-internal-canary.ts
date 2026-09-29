@@ -258,6 +258,13 @@ export function runNode(
 
 export function isolatedCanaryEnv(root: string): NodeJS.ProcessEnv {
   const home = join(root, "home");
+  for (const directory of [
+    home,
+    join(root, "appdata"),
+    join(root, "localappdata"),
+    join(root, "codex-home"),
+  ])
+    mkdirSync(directory, { recursive: true });
   const pathSeparator = process.platform === "win32" ? ";" : ":";
   const basePath = process.env.PATH?.split(pathSeparator).filter((item) => item.length > 0) ?? [];
   return {
@@ -313,7 +320,7 @@ export async function createCanaryFixture(): Promise<CanaryFixture> {
         releaseDir,
         "--json",
       ],
-      { ...process.env, UT_TDD_SKIP_UPDATE_CHECK: "1" },
+      isolatedCanaryEnv(root),
     );
     if (producer.status !== 0)
       throw new Error(`distribution package failed: ${producer.stderr || producer.stdout}`);
