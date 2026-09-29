@@ -75,18 +75,18 @@ status: confirmed
 github_issue_id: 418
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:3e00eeab1182e41331575d33e1f1a072
-  command_id: plan-revise:issue-743:tag-channel-rule:p628:r10:ea9cb3e8a101
-  admitted_at: 2026-09-29T07:53:25.684Z
-  source_digest: sha256:29e08fda89fed1d1041bd4586cdddc82d5a13d0ca447b2997a43aed0e5e716a1
-  decision_digest: sha256:abc771d8d30d9f7808f6225000b755ad20654d4b32ec0d51545b97185ca5023a
-  receipt_digest: sha256:066abaca8af6a2d6a2fe39fb3921f8797596f2a2cade336b309dbb34d8398872
+  receipt_id: certificate:7e69efdffec0d4298bbe37840cb98658
+  command_id: plan-revise:issue-743:tag-channel-rule:p628:r11:074bb686568c
+  admitted_at: 2026-09-29T08:03:29.887Z
+  source_digest: sha256:604fcda0ef7e101ecd8df79e682704d0475dc9be62f6afb077916114f192df52
+  decision_digest: sha256:28b8aff7eee004ab8a68cf5f29932d8ee852e33220d0a0d296f5878707c8121b
+  receipt_digest: sha256:0325f6382bb628f13f89db11a8e18597fada80a6eaf9b38faef270a7717cae35
   binding:
     path: docs/plans/PLAN-L7-628-pack-consumer-runtime-release-install.md
     plan_id: PLAN-L7-628-pack-consumer-runtime-release-install
     asset_id: plan:cd11a1885b1c948d89519002a2cec009
-    revision: 10
-    content_digest: sha256:29e08fda89fed1d1041bd4586cdddc82d5a13d0ca447b2997a43aed0e5e716a1
+    revision: 11
+    content_digest: sha256:604fcda0ef7e101ecd8df79e682704d0475dc9be62f6afb077916114f192df52
   route:
     signal: feature_addition
     mode: add-feature
@@ -104,14 +104,14 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-628-pack-consumer-runtime-release-install
-    target_revision: 10
+    target_revision: 11
     phase: forward_merge
-  escape_reason: "Issue #743: tag から channel
-    を決める規則が契約に無く、src/cli/distribution.ts:365 / :524 の実装 (tag 中の -canary. で
-    canary、それ以外は stable) がどの test にも固定されていなかった。advisor
-    (claude-fable-5、2026-09-29) で案 A を採択し、production code を変えずに §5 手順 1
-    へ現行規則を凍結し、canary と stable が別 release を指す oracle CANDIDATE-U-PACKRT-012
-    を追加する。test 本体の昇格は後続の実装 PR で行う。"
+  escape_reason: "PR #752 Sol r1 FLAG の軽作業是正: §5 手順 1 の
+    consumer_runtime_release_channel_unavailable fail-close は
+    parsePublicationManifest 経由で到達する入力が無い防御 guard
+    であることを明記し、CANDIDATE-U-PACKRT-012 の負系を到達可能な v1 manifest →
+    consumer_runtime_release_manifest_invalid (v1_read_only) に差し替える。tag→channel
+    規則の凍結内容は変えない。"
 ---
 
 # PLAN-L7-628: Pack Release から consumer runtime を有効化する producer / installer
@@ -228,6 +228,8 @@ advisor (`ut-tdd advisor --decision design --current-model claude-opus-5-5 --pla
 test 本体は本 PLAN 所有の `tests/pack-consumer-runtime-release.test.ts` に置き、`PLAN-L7-531` の canary PR とは別の PR で昇格する
 (1 PR = 1 論点)。
 
+rev 11: PR #752 の Sol r1 review を受け、§5 手順 1 の `consumer_runtime_release_channel_unavailable` を到達可能な fail-close として書いていた記述を訂正した (v1 manifest は `v1_read_only`、不在 release への channel は manifest parse が拒否する)。tag→channel 規則の凍結内容は変更しない。
+
 ## 3. Release asset 契約
 
 canary.2 以降の Pack Release は、次の **宣言された asset 集合と exact に一致** する。欠落・余剰・名前違いは
@@ -275,8 +277,9 @@ consumer 固有の値 (`consumer_root`、`runtime_root`、`operation_id`、`atte
    **`--tag` に対応する channel** は、tag 文字列の任意の位置 (prefix に限らない) に部分文字列 `-canary.` があれば `canary`、
    無ければ `stable` とする (§2.3)。channel を別の入力 (CLI option・環境変数・manifest の field) から受け取らない。
    source binding と admission input (`attestReleaseChannel` / `channelMappings`) は同じ tag から同じ channel を導出し、
-   片方だけ別の channel を使わない。選んだ channel が manifest に無い、または artifact を持たない release を指す場合は
-   `consumer_runtime_release_channel_unavailable` で fail-close する。
+   片方だけ別の channel を使わない。channel は parse 済みの v2 manifest から解決する。v1 manifest は先に
+   `consumer_runtime_release_manifest_invalid` (`v1_read_only`) で fail-close し、存在しない release を指す channel は manifest parse が拒否するため、
+   `consumer_runtime_release_channel_unavailable` は `parsePublicationManifest` 経由では到達する入力が無い防御 guard である (残すが、どの oracle も依拠しない)。
    producer は次の全てを満たさなければ出力前に fail-close する。
    - C2 の tree に `release/manifest.yaml` があり、既存の manifest schema を満たす。
    - C1 が C2 の first-parent 祖先である。祖先の探索は C2 の first parent から始め、C2 自身を含めない
