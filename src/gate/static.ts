@@ -1,6 +1,13 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import {
+  analyzeG8IntegrationWorkflow,
+  canLoadG8IntegrationWorkflowInput,
+  g8IntegrationWorkflowMessages,
+  loadG8IntegrationWorkflowInput,
+} from "../lint/g8-integration-workflow.ts";
+import { readGateAssetText } from "../lint/gate-confirm.ts";
+import {
   analyzeImplPlanTrace,
   implPlanTraceMessages,
   loadImplPlanTraceInput,
@@ -23,6 +30,11 @@ import {
   pairFreezeMessages,
   verificationGroupMessages,
 } from "../vmodel/lint.ts";
+import {
+  loadCompiledRightArmRegistry,
+  VMODEL_CONTRACT_PATH,
+} from "../vmodel-contract/adapters/yaml-contract-loader.ts";
+import { evaluateRightArmStaticGate } from "./right-arm-static.ts";
 
 const REVIEW_ONLY_STATIC_GATES = new Set(["G0.5", "R4"]);
 
@@ -38,13 +50,20 @@ export interface StaticGateResult {
   passed: boolean;
   applicable: boolean;
   messages: string[];
+  reasons?: CoverageFailureReason[];
 }
+
+export type CoverageFailureReason =
+  | "coverage_evidence_missing"
+  | "coverage_summary_unreadable"
+  | "coverage_below_threshold";
 
 export interface CoverageSummaryResult {
   ok: boolean;
   pct: number | null;
   threshold: number;
   message: string;
+  reasons?: CoverageFailureReason[];
 }
 
 export interface LayerPairGateResult {
@@ -146,6 +165,7 @@ export function readCoverageSummary(path: string, threshold = 80): CoverageSumma
       pct: null,
       threshold,
       message: `g7-coverage - violation: coverage summary not found (${path}); run test coverage before G7`,
+      reasons: ["coverage_evidence_missing"],
     };
   }
 
@@ -158,13 +178,14 @@ export function readCoverageSummary(path: string, threshold = 80): CoverageSumma
       pct: null,
       threshold,
       message: `g7-coverage - violation: coverage summary is not valid JSON (${path})`,
+      reasons: ["coverage_summary_unreadable"],
     };
   }
 
   const pct =
-    typeof parsed.total?.lines?.pct === "number"
+    typeof parsed?.total?.lines?.pct === "number"
       ? parsed.total.lines.pct
-      : typeof parsed.total?.statements?.pct === "number"
+      : typeof parsed?.total?.statements?.pct === "number"
         ? parsed.total.statements.pct
         : null;
   if (pct == null) {
@@ -173,16 +194,18 @@ export function readCoverageSummary(path: string, threshold = 80): CoverageSumma
       pct: null,
       threshold,
       message: `g7-coverage - violation: coverage summary missing total.lines.pct (${path})`,
+      reasons: ["coverage_summary_unreadable"],
     };
   }
+  const ok = pct >= threshold;
   return {
-    ok: pct >= threshold,
+    ok,
     pct,
     threshold,
-    message:
-      pct >= threshold
-        ? `g7-coverage - OK (${pct}% >= ${threshold}%)`
-        : `g7-coverage - violation: ${pct}% < ${threshold}%`,
+    message: ok
+      ? `g7-coverage - OK (${pct}% >= ${threshold}%)`
+      : `g7-coverage - violation: ${pct}% < ${threshold}%`,
+    ...(!ok ? { reasons: ["coverage_below_threshold"] as CoverageFailureReason[] } : {}),
   };
 }
 
@@ -215,6 +238,7 @@ function evaluateG7(input: StaticGateInput, repoRoot: string): StaticGateResult 
     gate: input.gate,
     applicable: true,
     passed,
+    ...(coverage.reasons ? { reasons: coverage.reasons } : {}),
     messages: passed
       ? [
           `g7-static - OK (4 artifact trace proxies + implementation evidence + coverage)`,
@@ -256,6 +280,28 @@ export function evaluateStaticGate(input: StaticGateInput): StaticGateResult {
     if (key === "G5") return evaluateLayerPairGate(input.gate, "L5", repoRoot);
     if (key === "G6") return evaluateLayerPairGate(input.gate, "L6", repoRoot);
     if (key === "G7") return evaluateG7(input, repoRoot);
+    if (key === "G8") {
+      if (canLoadG8IntegrationWorkflowInput(repoRoot)) {
+        const workflow = analyzeG8IntegrationWorkflow(loadG8IntegrationWorkflowInput(repoRoot));
+        const registry = loadCompiledRightArmRegistry(
+          repoRoot,
+          readGateAssetText(repoRoot, VMODEL_CONTRACT_PATH),
+        );
+        const obligation = registry.obligations.find((entry) => entry.gate === key);
+        if (!obligation) throw new Error(`contract has no obligation for ${key}`);
+        return {
+          gate: input.gate,
+          applicable: true,
+          passed: workflow.ok,
+          messages: [
+            ...g8IntegrationWorkflowMessages(workflow),
+            `未判定 (review): ${obligation.approvalRole}`,
+          ],
+        };
+      }
+      const result = evaluateRightArmStaticGate(key, repoRoot);
+      return { gate: input.gate, applicable: true, ...result };
+    }
   } catch (e) {
     return {
       gate: input.gate,

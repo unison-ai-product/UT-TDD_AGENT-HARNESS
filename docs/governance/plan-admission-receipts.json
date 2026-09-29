@@ -5280,6 +5280,118 @@
         "revision": 16,
         "content_digest": "sha256:aa3f96d5f5467a10038cd615d2897ecbfc1cd1605f4e8e24e07cdc5746d763da"
       }
+    },
+    {
+      "sequence": 331,
+      "previous_record_digest": "sha256:ee345566d5b270220869b9bdb0ab78c5393b62f7db9bc09ee02d62784f4c247a",
+      "record_digest": "sha256:05205beffbe7fb377b0f54950ae386524d75b7b405bc90812c39b96508515b5e",
+      "command_id": "plan-revise:issue-711:s1-input-shape:plan:r2:299d2f8bcfd2",
+      "receipt_id": "certificate:e64cbb4fce9218db1ba253f7853e1f50",
+      "receipt_digest": "sha256:c90e34c0fa77c82785d047b1dcb73c9f5242d9f92ba91744dc7e1cda6ac7e3e1",
+      "decision_digest": "sha256:213bd419852b2bf14d057521b8fcb58cf156aaf260078fd0fb5edfa4c716a77b",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-711-merge-time-receipt-rechain-contract.md",
+        "plan_id": "PLAN-L6-711-merge-time-receipt-rechain-contract",
+        "asset_id": "plan:ac2c23d3c72fc6e2886491ac1df09452",
+        "revision": 2,
+        "content_digest": "sha256:6ec8bac1ec6a35fe064177df53e27b585f893cc079fcaeb6d524d3f6976d659d"
+      }
+    },
+    {
+      "sequence": 332,
+      "previous_record_digest": "sha256:05205beffbe7fb377b0f54950ae386524d75b7b405bc90812c39b96508515b5e",
+      "record_digest": "sha256:af0631259d95cdab81dcbbed78516a850876a8aee9834efb2553e63d41ee34e0",
+      "command_id": "plan-revise:issue-676:pr2c-template-boundary:plan:r17:48efd4e1057a",
+      "receipt_id": "certificate:cbbed9778f8efb4bff717d5804f13f5f",
+      "receipt_digest": "sha256:6274d35d29057cbd66db9cbeeafa3348ab1e89c8460be3ec1ed878138049f83b",
+      "decision_digest": "sha256:42d6feb2c862a93bba6cccef86aeb763ec052ae5deffb5aa627154a40a80b171",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-676-release-consumer-dev-start.md",
+        "plan_id": "PLAN-L7-676-release-consumer-dev-start",
+        "asset_id": "plan:aae8bf0e313f8688fbad4d4d8cf0a6a9",
+        "revision": 17,
+        "content_digest": "sha256:8f8970053cf643425c53d01b0bca6a5d6ca932030ab409cbe4ae744b5553a57b"
+      }
+    },
+    {
+      "sequence": 333,
+      "previous_record_digest": "sha256:af0631259d95cdab81dcbbed78516a850876a8aee9834efb2553e63d41ee34e0",
+      "record_digest": "sha256:3817728de621ec37cdc2048ecf3afb6c94d5ad40987e64c20631e04eba839553",
+      "command_id": "plan-revise:issue-418:531-canary2-contract:plan:r3:0a8cd4f55764",
+      "receipt_id": "certificate:bba997d52a58847dceea04a31e40ee34",
+      "receipt_digest": "sha256:9abbbb26fe5c4017bd5438056e9fa99f3c0b65f3b5f97a65a2e3ac2e30861e39",
+      "decision_digest": "sha256:f4ab3cddd0cffc8567cc7d25f8c2bcf0eab264528ad7b7d2c2b7578c3a005187",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-531-pack-internal-canary-smoke.md",
+        "plan_id": "PLAN-L7-531-pack-internal-canary-smoke",
+        "asset_id": "plan:44f79788376b81c225ce5913fddbc48f",
+        "revision": 3,
+        "content_digest": "sha256:a04428ce7a3ee21fcbaebf6cfce78094795a18d67da5a0f29ddaafc137be9b74"
+      }
+    },
+    {
+      "sequence": 334,
+      "previous_record_digest": "sha256:3817728de621ec37cdc2048ecf3afb6c94d5ad40987e64c20631e04eba839553",
+      "record_digest": "sha256:c40806f9adc9ef59c9b3260343d54ae7d7982bb5fc60ac1d1870b9dc21c4fd7a",
+      "command_id": "plan-revise:issue-418:531-canary2-contract:reverse:r3:1e79d9a1dc10",
+      "receipt_id": "certificate:f52133e82a6ecb908662d00be7d472af",
+      "receipt_digest": "sha256:efe030fca5fcaa6699e8c2020a09bdd11c628d445072d7ddf776bff901f4ad9a",
+      "decision_digest": "sha256:3aead190f5cf0b55bd4b864f6ee6eff65f75443e8c6a98fc00bcbc7457be5c8c",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-531-pack-internal-canary-smoke-backfill.md",
+        "plan_id": "PLAN-REVERSE-531-pack-internal-canary-smoke-backfill",
+        "asset_id": "plan:c789d97c71c9a9c07942983de88b71ab",
+        "revision": 3,
+        "content_digest": "sha256:7f79076d1c2a9f09cbacebbce7311555ce112ac54a8fd5c5be76cf90c6128109"
+      }
+    },
+    {
+      "sequence": 335,
+      "previous_record_digest": "sha256:c40806f9adc9ef59c9b3260343d54ae7d7982bb5fc60ac1d1870b9dc21c4fd7a",
+      "record_digest": "sha256:3d7b5b09a5d6e45133aec74217da1e802213ce111a154496de655465b77d8336",
+      "command_id": "plan-revise:issue-418:531-canary2-contract:plan:r4:b13da940a4b0",
+      "receipt_id": "certificate:2f1134a5759d724605aa1e13fee7eac6",
+      "receipt_digest": "sha256:4d3506ec462ff24a83e083024a003ea51568178a9816a15344e33ef16b75ad79",
+      "decision_digest": "sha256:33bfd28e2c32efbc3f9c6372d8165e11fac36c670103020b4f3caf49938c0127",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-531-pack-internal-canary-smoke.md",
+        "plan_id": "PLAN-L7-531-pack-internal-canary-smoke",
+        "asset_id": "plan:44f79788376b81c225ce5913fddbc48f",
+        "revision": 4,
+        "content_digest": "sha256:57e053d9e9ee51cb39690100a05baa1b36103dbfb6db6ff4a8a9830f28dadf0d"
+      }
+    },
+    {
+      "sequence": 336,
+      "previous_record_digest": "sha256:3d7b5b09a5d6e45133aec74217da1e802213ce111a154496de655465b77d8336",
+      "record_digest": "sha256:d70d46f77b8a48e9d2170443271239f7da2d1f86f96aff03134d1892f4fb2d1a",
+      "command_id": "plan-revise:issue-418:531-canary2-contract:reverse:r4:70a4e908479e",
+      "receipt_id": "certificate:e5c76417cdee85d0977ab185a93b0d10",
+      "receipt_digest": "sha256:2f116763c19c5684f043493cb9222ddbd64fc6cb973b739643321f2297d33ddf",
+      "decision_digest": "sha256:04cc308554c855140b6c22a023ea783bd4cd3be76af1aba8c0c34f502f5e73f1",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-531-pack-internal-canary-smoke-backfill.md",
+        "plan_id": "PLAN-REVERSE-531-pack-internal-canary-smoke-backfill",
+        "asset_id": "plan:c789d97c71c9a9c07942983de88b71ab",
+        "revision": 4,
+        "content_digest": "sha256:c5e9a8f7a430039cac5ea39de794bcea933aad3c3f9fad03a57b8a4d6bcf754d"
+      }
+    },
+    {
+      "sequence": 337,
+      "previous_record_digest": "sha256:d70d46f77b8a48e9d2170443271239f7da2d1f86f96aff03134d1892f4fb2d1a",
+      "record_digest": "sha256:4c2bb6799aafa3db94e99182c69f03ed38058a284f5a6a37e628944882b7b312",
+      "command_id": "plan-revise:issue-676:prgr-right-arm-rechain2:plan:r18:553859f4cac5",
+      "receipt_id": "certificate:e329871b5f0280bdde5258edd752f5f6",
+      "receipt_digest": "sha256:266a7549fcaa6cbe55186df6a652971a67fc107c88adea723518e35c8ddc7cf2",
+      "decision_digest": "sha256:11a2d6c9b19516eaa6d6439f91059fd7c07cbfcee7b2168a2d81dec2782c9751",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-676-release-consumer-dev-start.md",
+        "plan_id": "PLAN-L7-676-release-consumer-dev-start",
+        "asset_id": "plan:aae8bf0e313f8688fbad4d4d8cf0a6a9",
+        "revision": 18,
+        "content_digest": "sha256:2c56ad42439f2e62322a6a46f0debf6a02528532fb6cc6f41a0425c072bba333"
+      }
     }
   ]
 }

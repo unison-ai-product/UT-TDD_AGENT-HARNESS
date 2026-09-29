@@ -10,11 +10,13 @@ import {
   existsSync,
   readdirSync,
   readFileSync,
+  realpathSync,
   statSync,
   writeFileSync,
 } from "node:fs";
 import { homedir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { Command } from "commander";
 import { parse as parseYaml } from "yaml";
 import {
@@ -216,6 +218,7 @@ import {
   admitConsumerLocalRuntime,
   admitReleaseAggregate,
   type ConsumerLocalRuntimeAdmissionInput,
+  installConsumerRuntimeRelease,
   nodeSetupDeps,
   type ReleaseAggregateAdmissionInput,
   runSetupAsync,
@@ -4161,6 +4164,11 @@ program
     "--consumer-runtime-input <path>",
     "sealed consumer runtime input JSON emitted by the release materializer",
   )
+  .option("--consumer-runtime-release <path>", "offline Pack consumer runtime Release directory")
+  .option(
+    "--expected-consumer-digest <digest>",
+    "external sha256 anchor for the Release checksum asset",
+  )
   .action(
     async (opts: {
       solo?: boolean;
@@ -4171,6 +4179,8 @@ program
       qaTeam?: string;
       poTeam?: string;
       consumerRuntimeInput?: string;
+      consumerRuntimeRelease?: string;
+      expectedConsumerDigest?: string;
     }) => {
       if (opts.solo && opts.team) {
         process.stderr.write("--solo と --team は同時指定できません (どちらか一方)\n");
@@ -4192,12 +4202,68 @@ program
         process.exitCode = 1;
         return;
       }
-      const deps = nodeSetupDeps(process.cwd());
+      if (
+        Boolean(opts.consumerRuntimeRelease) !== Boolean(opts.expectedConsumerDigest) ||
+        (opts.consumerRuntimeRelease && opts.consumerRuntimeInput)
+      ) {
+        process.stderr.write(
+          "consumer_runtime_anchor_mismatch: --consumer-runtime-release requires --expected-consumer-digest and cannot be combined with --consumer-runtime-input.\n",
+        );
+        process.exitCode = 1;
+        return;
+      }
       const phase = opts.solo ? "0-A" : opts.team ? "0-B" : undefined;
       const teams =
         teamCount === 3
           ? { tl: opts.tlTeam as string, qa: opts.qaTeam as string, po: opts.poTeam as string }
           : undefined;
+      if (opts.consumerRuntimeRelease && opts.expectedConsumerDigest) {
+        if (opts.dryRun || opts.team) {
+          process.stderr.write("--consumer-runtime-release requires a non-dry-run solo setup.\n");
+          process.exitCode = 1;
+          return;
+        }
+        try {
+          const moduleName = basename(fileURLToPath(import.meta.url));
+          const suffix = ".ut-tdd.mjs";
+          if (!moduleName.endsWith(suffix))
+            throw new Error("consumer_runtime_self_digest_mismatch");
+          const tag = moduleName.slice(0, -suffix.length);
+          const result = await installConsumerRuntimeRelease({
+            releaseDirectory: opts.consumerRuntimeRelease,
+            expectedConsumerDigest: opts.expectedConsumerDigest,
+            consumerRoot: realpathSync.native(process.cwd()),
+            tag,
+            executingModulePath: fileURLToPath(import.meta.url),
+            setupDeps: () => nodeSetupDeps(realpathSync.native(process.cwd())),
+          });
+          if (result.status === "already-installed") {
+            process.stdout.write("consumer runtime: already installed (no writes)\n");
+            return;
+          }
+          const r = result.setup;
+          process.stdout.write(`phase: ${r.phase}\n`);
+          for (const w of r.written) process.stdout.write(`  + ${w}\n`);
+          process.stdout.write(
+            `branch-protection: ${r.branchProtection.applied ? "applied" : `skipped (${r.branchProtection.reason})`}\n`,
+          );
+          for (const notice of r.notices ?? []) process.stdout.write(`${notice}\n`);
+          if (r.projectIdentity && !r.projectIdentity.ok) {
+            process.stderr.write(
+              `identity: denied (${r.projectIdentity.error.ruleId}): ${r.projectIdentity.error.message}\n`,
+            );
+            for (const command of PROJECT_IDENTITY_ORIGIN_RECOVERY_COMMANDS)
+              process.stderr.write(`recovery: ${command}\n`);
+            process.exitCode = 2;
+          }
+          return;
+        } catch (error) {
+          process.stderr.write(`--consumer-runtime-release invalid: ${String(error)}\n`);
+          process.exitCode = 1;
+          return;
+        }
+      }
+      const deps = nodeSetupDeps(process.cwd());
       let consumerRuntime: SetupArgs["consumerRuntime"];
       if (opts.consumerRuntimeInput) {
         try {
