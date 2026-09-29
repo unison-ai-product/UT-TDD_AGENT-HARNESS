@@ -89,7 +89,7 @@ PLAN の設計判断節 / ADR に記録する (skill: `skills/design-decision-el
 「PO 判断必須」「PO 承認待ち」「PO が決める」と記載して作業を止める前に、必ず
 `ut-tdd advisor --decision <kind> --current-model <current-model> --execute --task "<判断内容>"`
 で第三者判断を得る。設計・進行・優先順位・UI/UX は
-`claude-fable-5`、実装方式・技術的トラブルシュートは `gpt-5.6-sol` へrouteする
+`fable`、実装方式・技術的トラブルシュートは `gpt-5.6-sol` へrouteする
 (正規の `--decision design|progress|uiux|implementation|troubleshooting` を使う)。
 advisor結果は前提をrepo実測で検証し、下記の高影響境界に該当せず、既存の層・責務・契約から
 一意に決まるなら、AIランタイムが技術判断として決定・記録して作業を継続する。advisor相談を
@@ -358,7 +358,7 @@ fallback.
 正規委譲経路 (`ut-tdd codex/claude --role <role>`) は role 検証 + routing を機械強制する
 (PLAN-L7-255、`src/team/delegation-routing.ts`): 未登録 role は fail-close。判断ゲート role
 (reviewer / blind-reviewer / qa / tl / security 等) は族内 frontier reviewer tier
-(codex=`gpt-5.6-sol` / claude=`claude-opus-5`) へ固定し、worker role は intent 推定
+(codex=`gpt-5.6-sol` / claude=`opus`) へ固定し、worker role は intent 推定
 (`selectTeamModel`) で創出=ROI 寄せの既定へ流す。明示 `--model`/`--effort` は常に優先。
 effort は codex にも argv (`-c model_reasoning_effort=...`) で実注入される。
 判断側の族分離 (`same_model_approval: forbidden`) は routing で破らない。
@@ -368,15 +368,15 @@ Task-kind ベースの割当 (PO rule 2026-07-14、旧 tier 記述を supersede)
 - Codex: テスト実装 = `gpt-5.6-terra` (effort `middle`); 実装/ドキュメント修正 =
   `gpt-5.6-luna` (effort `high`); 検証/設計 = `gpt-5.6-sol` (effort `low`);
   軽量実装/内部探索/web 検索/doc パッチ = `gpt-5.3-codex-spark` / `gpt-5.4-mini`。
-- Claude: フロントデザイン/設計ドキュメント作成 = Opus (`claude-opus-5`);
-  UI デザイン実装/ドキュメント修正 = Sonnet (`claude-sonnet-5`);
-  web 検索/doc パッチ = Haiku (`claude-haiku-4-5`)。
+- Claude: フロントデザイン/設計ドキュメント作成 = Opus (`opus`);
+  UI デザイン実装/ドキュメント修正 = Sonnet (`sonnet`);
+  web 検索/doc パッチ = Haiku (`haiku`)。
 - Lightweight parallel lanes use spark/mini-class GPT/Codex models with no
   closing authority.
 - Effort はモデル別基準ラダー (PO rule 2026-07-28) が既定: Sol/Fable = `low`、
-  Opus/Terra/Sonnet = `middle`、Luna/spark/mini = `high`。回答が浅い時は
+  Opus/Terra = `middle`、Sonnet/Luna/spark/mini = `high`。回答が浅い時は
   **まず effort を 1 段、その先はモデルを上げる** (`escalateShallowResponse`):
-  Sol/Fable → `middle`、Opus/Terra/Sonnet → `high`、そこでも浅ければ
+  Sol/Fable → `middle`、Opus/Terra → `high`、そこでも浅ければ
   Sonnet→Opus `middle` / Opus・Terra・Luna・Fable→Sol `low` / spark・mini→Terra
   `middle`。**`xhigh` は既定として配らない** (PO rule 2026-07-28:
   「xhigh 以上はモデルを上げたほうがいい」)。ラダー外 (haiku 等) は従来既定
@@ -388,12 +388,12 @@ Task-kind ベースの割当 (PO rule 2026-07-14、旧 tier 記述を supersede)
   軽作業の是正は同 PR 内で author family が行い、同じ非著者 reviewer が exact head を
   再検する (PO rule 2026-09-14、§FLAG 後の限定是正と merge)。
 - Design/implementation review uses a top reviewer model: GPT frontier
-  (`gpt-5.6-sol`) or Claude Opus (`claude-opus-5`) or above, behind the
+  (`gpt-5.6-sol`) or Claude Opus (`opus`) or above, behind the
   explicit frontier gate.
 - advisor (PO rule 2026-07-29、2026-07-14 の行列を supersede): **技術判断**
   (実装方式 / トラブルシューティング) は `gpt-5.6-sol` 一次 (fallback Fable)、
   **設計・進行判断** (設計方式 / レーン選択 / 優先順位 / 段取り) と
-  **デザイン/UI 判断** は `claude-fable-5` 一次 (次点 `gpt-5.6-sol`)。
+  **デザイン/UI 判断** は `fable` 一次 (次点 `gpt-5.6-sol`)。
   判断種別は `--decision design|progress|implementation|troubleshooting|uiux`
   で明示でき、省略時は task 文から推論する (進行語は technical 語より優先)。
   迷う場合は `ut-tdd advisor --task "..." --current-model <model>` を使い、

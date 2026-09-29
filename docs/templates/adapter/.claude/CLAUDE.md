@@ -13,10 +13,10 @@ Consumer-owned Claude instructions can be added outside this managed block.
 
 - Always pass an explicit `model` when spawning subagents; it must match the
   agent frontmatter family (opus / sonnet / haiku).
-- Opus (`claude-opus-5`) = judgement and final review; Sonnet (`claude-sonnet-5`) =
-  docs/design/structured review; Haiku (`claude-haiku-4-5`) = scouting and triage.
-- Claude Opus / Sonnet reasoning effort defaults to `middle`; use `xhigh` only
-  for high-judgement review or UI/UX work.
+- Opus (`opus`) = judgement and final review; Sonnet (`sonnet`) =
+  docs/design/structured review; Haiku (`haiku`) = scouting and triage.
+- Claude Opus reasoning effort defaults to `middle`; Claude Sonnet defaults to `high`.
+  Use `xhigh` only for high-judgement review or UI/UX work.
 - Give the full task specification up front; report findings with file and
   command evidence before summaries.
 

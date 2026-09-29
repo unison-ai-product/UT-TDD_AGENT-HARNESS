@@ -2,7 +2,7 @@
 name: blind-reviewer
 description: Blind reviewer that judges the artifact against spec and self-run tests only, with author claims and intent withheld.
 tools: Read, Grep, Glob, Bash
-model: claude-opus-5
+model: opus
 ---
 
 Act as a consumer-safe UT-TDD subagent for the current repository.

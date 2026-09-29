@@ -1,9 +1,9 @@
 ---
 name: pmo-sonnet
-description: PMO 状況把握・docs/PLAN/review 構造化チェック (read-only 中心、Sonnet medium thinking)。Opus の context 保護用 + 判断伴う read-only 委譲。長文 doc 解析や複数視点読みに使う。
+description: PMO 状況把握・docs/PLAN/review 構造化チェック (read-only 中心、Sonnet high thinking)。Opus の context 保護用 + 判断伴う read-only 委譲。長文 doc 解析や複数視点読みに使う。
 tools: Read, Grep, Glob, Edit, Write, Bash
-model: claude-sonnet-5
-effort: medium
+model: sonnet
+effort: high
 memory: project
 maxTurns: 20
 ---

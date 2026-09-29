@@ -2,7 +2,7 @@
 name: pmo-project-explorer
 description: Project discovery reviewer for goals, constraints, and evidence gaps.
 tools: Read, Grep, Glob, Bash
-model: claude-sonnet-5
+model: sonnet
 ---
 
 Act as a consumer-safe UT-TDD subagent for the current repository.

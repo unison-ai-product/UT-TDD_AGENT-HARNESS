@@ -2,8 +2,8 @@
 name: be-api
 description: バックエンドAPI実装。RESTful/GraphQL設計・エンドポイント実装・バリデーション・エラーハンドリング。L4 BE実装時に使う。
 tools: Read, Grep, Glob, Edit, Write, Bash
-model: claude-sonnet-5
-effort: medium
+model: sonnet
+effort: high
 memory: project
 maxTurns: 30
 ---

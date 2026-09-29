@@ -29,10 +29,10 @@ export const SUBAGENT_ALLOWLIST: ReadonlySet<string> = new Set([
  * src/team/model-policy.ts) is enforced by tests/model-id-ssot-drift.test.ts.
  */
 export const CLAUDE_MODEL_FAMILY_CATALOG = {
-  haiku: "claude-haiku-4-5",
-  sonnet: "claude-sonnet-5",
-  opus: "claude-opus-5",
-  fable: "claude-fable-5",
+  haiku: "haiku",
+  sonnet: "sonnet",
+  opus: "opus",
+  fable: "fable",
 } as const;
 
 export const AGENT_GUARD_BYPASS_HINT =

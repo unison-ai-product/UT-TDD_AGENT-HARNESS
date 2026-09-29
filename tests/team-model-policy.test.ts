@@ -193,7 +193,9 @@ describe("team model policy", () => {
       model: "gpt-5.6-sol",
       effort: "low",
     });
-    expect(escalateShallowResponse({ model: "gpt-5.3-codex-spark", currentEffort: "high" })).toEqual({
+    expect(
+      escalateShallowResponse({ model: "gpt-5.3-codex-spark", currentEffort: "high" }),
+    ).toEqual({
       model: "gpt-5.6-terra",
       effort: "middle",
     });
@@ -201,6 +203,8 @@ describe("team model policy", () => {
       model: "gpt-5.6-terra",
       effort: "middle",
     });
+    expect(escalateShallowResponse({ model: "gpt-sonnet-5", currentEffort: "high" })).toBeNull();
+    expect(escalateShallowResponse({ model: "codex-opus-5", currentEffort: "middle" })).toBeNull();
     const codexCases = [
       ["gpt-5.6-sol", "low"],
       ["gpt-5.6-terra", "middle"],
@@ -278,8 +282,8 @@ describe("team model policy", () => {
     expect(selection.model_family).toBe("frontier");
     expect(selection.model).toBe(MODEL_IDS.claude.sonnet);
     expect(selection.model_source).toBe("engine");
-    // Sonnet は基準 middle (effort ladder、PO rule 2026-07-14)。浅い時は high へ引き上げ。
-    expect(selection.reasoning_effort).toBe("middle");
+    // Sonnet は基準 high (effort ladder、PO rule 2026-09-29)。浅ければ Opus middle へ上げる。
+    expect(selection.reasoning_effort).toBe("high");
   });
 
   it("maps docs, research, UI/UX, and implementation intent to the requested effort defaults", () => {
@@ -901,12 +905,12 @@ describe("task-kind routing v2 (PLAN-L7-430, PO rule 2026-07-14)", () => {
     ).toBe(true);
   });
 
-  it("U-ROUTE2-012: effort ladder 基準 — sol/fable=low, opus/terra/sonnet=middle, luna/spark/mini=high", () => {
+  it("U-ROUTE2-012: effort ladder 基準 — sol/fable=low, opus/terra=middle, sonnet/luna/spark/mini=high", () => {
     const base = (model: string) => MODEL_EFFORT_LADDER[model]?.base;
     expect(base(MODEL_IDS.codex.frontier)).toBe("low");
     expect(base(MODEL_IDS.codex.worker)).toBe("middle");
     expect(base(MODEL_IDS.claude.fable)).toBe("low");
-    expect(base(MODEL_IDS.claude.sonnet)).toBe("middle");
+    expect(base(MODEL_IDS.claude.sonnet)).toBe("high");
     expect(base(MODEL_IDS.claude.opus)).toBe("middle");
     expect(base(MODEL_IDS.codex.luna)).toBe("high");
     expect(base(MODEL_IDS.codex.spark)).toBe("high");
@@ -949,11 +953,11 @@ describe("task-kind routing v2 (PLAN-L7-430, PO rule 2026-07-14)", () => {
     expect(
       escalateShallowResponse({ model: MODEL_IDS.claude.opus, currentEffort: "high" }),
     ).toEqual({ model: MODEL_IDS.codex.frontier, effort: "low" });
-    // sonnet: middle → high → opus middle (族内でモデル上げ)
+    // sonnet: high → opus middle (base=high なので同モデル effort shallow は無し)
     expect(
       escalateShallowResponse({ model: MODEL_IDS.claude.sonnet, currentEffort: "high" }),
     ).toEqual({ model: MODEL_IDS.claude.opus, effort: "middle" });
-    // base=high 帯 (luna / spark / mini) は shallow を持たず、base から直接モデル上げ。
+    // base=high 帯 (sonnet / luna / spark / mini) は shallow を持たず、base から直接モデル上げ。
     // 改定前は luna / spark が行き止まり、mini が base=xhigh だった。
     expect(escalateShallowResponse({ model: MODEL_IDS.codex.luna, currentEffort: "high" })).toEqual(
       { model: MODEL_IDS.codex.frontier, effort: "low" },

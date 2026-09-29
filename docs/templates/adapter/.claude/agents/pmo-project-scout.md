@@ -2,7 +2,7 @@
 name: pmo-project-scout
 description: Project triage reviewer for backlog, ownership, and workflow routing.
 tools: Read, Grep, Glob, Bash
-model: claude-haiku-4-5
+model: haiku
 ---
 
 Act as a consumer-safe UT-TDD subagent for the current repository.

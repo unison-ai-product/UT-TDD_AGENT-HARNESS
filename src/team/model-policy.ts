@@ -12,12 +12,11 @@ import type { TeamProvider } from "./run.ts";
  */
 export const MODEL_IDS = {
   claude: {
-    /** Claude 5 世代フロンティア (advisor 一次相談先、2026-07 更新)。 */
-    fable: "claude-fable-5",
-    opus: "claude-opus-5",
-    /** Sonnet 5 世代 (2026-06 更新)。coding/agentic で旧 Opus 級、価格帯は 4-6 と同一。 */
-    sonnet: "claude-sonnet-5",
-    haiku: "claude-haiku-4-5",
+    /** Claude Code family aliases; each resolves to the latest model in that family. */
+    fable: "fable",
+    opus: "opus",
+    sonnet: "sonnet",
+    haiku: "haiku",
   },
   codex: {
     /** T0 フロンティア (検証/設計/相談の最上位帯)。 */
@@ -55,6 +54,22 @@ export const STANDARD_ORCHESTRATION_EXPECTATION = {
   },
 } as const;
 
+/**
+ * Canonicalize one Claude family name embedded in an alias or model ID for exact-key policy lookups.
+ * Unknown, non-Claude, and ambiguous family strings remain untouched (fail closed).
+ */
+export function claudeFamilyKey(model: string): string {
+  const normalizedModel = model.trim().toLowerCase();
+  if (normalizedModel.startsWith("gpt-") || normalizedModel.startsWith("codex")) return model;
+  const matches = [...model.matchAll(/\b(fable|opus|sonnet|haiku)\b/gi)].map((match) =>
+    match[1].toLowerCase(),
+  );
+  const families = [...new Set(matches)];
+  if (families.length !== 1) return model;
+  const family = families[0] as keyof typeof MODEL_IDS.claude;
+  return MODEL_IDS.claude[family];
+}
+
 /** モデル capability rank (family 比較用。数値が大きいほど上位帯)。 */
 const MODEL_CAPABILITY_RANK: Record<string, number> = {
   [MODEL_IDS.claude.fable]: 4,
@@ -85,8 +100,8 @@ export function advisorHeavyUseRecommended(input: {
   >;
   const expected = expectation[input.phase];
   if (!expected) return false;
-  const currentRank = MODEL_CAPABILITY_RANK[input.currentModel];
-  const expectedRank = MODEL_CAPABILITY_RANK[expected];
+  const currentRank = MODEL_CAPABILITY_RANK[claudeFamilyKey(input.currentModel)];
+  const expectedRank = MODEL_CAPABILITY_RANK[claudeFamilyKey(expected)];
   if (currentRank === undefined || expectedRank === undefined) return true;
   return currentRank < expectedRank;
 }
@@ -121,7 +136,7 @@ export const PLAN_AGENT_MODELS = {
  * モデル乗り換え先。上位モデルほど低 effort で足り、下位帯 (spark/mini) は effort で
  * 能力を補う逆傾斜。
  *
- * base: Sol / Fable = low、Opus / Terra / Sonnet = middle、Luna / spark / mini = high。
+ * base: Sol / Fable = low、Opus / Terra = middle、Sonnet / Luna / spark / mini = high。
  * haiku は未指定のため Claude 既定 (high)。
  *
  * **`xhigh` はラダーの基準値・shallow 値として使わない** (PO 2026-07-28:
@@ -167,8 +182,7 @@ export const MODEL_EFFORT_LADDER: Record<
     escalate: { model: MODEL_IDS.codex.frontier, effort: "low" },
   },
   [MODEL_IDS.claude.sonnet]: {
-    base: "middle",
-    shallow: "high",
+    base: "high",
     escalate: { model: MODEL_IDS.claude.opus, effort: "middle" },
   },
 };
@@ -177,14 +191,14 @@ export const MODEL_EFFORT_LADDER: Record<
  * 「回答が浅い」時の次段。まず同モデルで shallow effort へ、それでも浅ければ escalate
  * (モデル乗り換え) へ。次段が無ければ null (それ以上は advisor / 人間判断)。
  *
- * base=high 帯 (luna / spark / mini) は shallow を持たない — そこから深さを買うなら
+ * base=high 帯 (sonnet / luna / spark / mini) は shallow を持たない — そこから深さを買うなら
  * `xhigh` ではなくモデル上げが PO 方針 (2026-07-28) なので、base から直接 escalate する。
  */
 export function escalateShallowResponse(input: {
   model: string;
   currentEffort: ReasoningEffort;
 }): { model: string; effort: ReasoningEffort } | null {
-  const ladder = MODEL_EFFORT_LADDER[input.model];
+  const ladder = MODEL_EFFORT_LADDER[claudeFamilyKey(input.model)];
   if (!ladder) return null;
   if (ladder.shallow && input.currentEffort === ladder.base) {
     return { model: input.model, effort: ladder.shallow };
@@ -509,7 +523,7 @@ function policyEffort(input: {
   // UI/UX は xhigh (PO 指示 2026-07-08、ラダー未改定の task-kind 例外)。
   if (input.intent === "uiux") return "xhigh";
   // モデル別 effort 基準ラダー (PO 指示 2026-07-14) が最優先の既定。
-  const ladder = MODEL_EFFORT_LADDER[input.model];
+  const ladder = MODEL_EFFORT_LADDER[claudeFamilyKey(input.model)];
   if (ladder) return ladder.base;
   // ラダー外 (haiku / local / custom) は従来既定。
   if (input.intent === "review") return "high";

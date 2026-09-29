@@ -18,9 +18,9 @@ models for judgement.
 
 | Model class | Default use | Effort |
 |---|---|---|
-| Claude Opus (`claude-opus-5`) | final review, judgement gates, hardest design decisions | middle / xhigh |
-| Claude Sonnet (`claude-sonnet-5`) | docs, design, UI/UX, structured review | middle (xhigh for UI/UX) |
-| Claude Haiku (`claude-haiku-4-5`) | scouting, triage, lightweight parallel checks | high, small scoped tasks |
+| Claude Opus (`opus`) | final review, judgement gates, hardest design decisions | middle / xhigh |
+| Claude Sonnet (`sonnet`) | docs, design, UI/UX, structured review | high (xhigh for UI/UX) |
+| Claude Haiku (`haiku`) | scouting, triage, lightweight parallel checks | high, small scoped tasks |
 | GPT/Codex worker (`gpt-5.6-terra`) | test implementation lanes | middle |
 | GPT/Codex spark (`gpt-5.3-codex-spark`) | lightweight implementation lanes | high |
 | GPT frontier (`gpt-5.6-sol`) | gated top-tier review/consultation | low |

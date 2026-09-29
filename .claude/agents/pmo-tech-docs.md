@@ -2,8 +2,8 @@
 name: pmo-tech-docs
 description: Tech Document Manager — 設計手法・アーキテクチャ・コーディング作法をテックブログ・公式 doc から精読、概念抽出、UT-TDD への適用案レポート。L1/L2/L3 設計判断の参考にする。
 tools: Read, Grep, Glob, Edit, Write, Bash, WebSearch, WebFetch
-model: claude-sonnet-5
-effort: medium
+model: sonnet
+effort: high
 memory: project
 maxTurns: 20
 ---

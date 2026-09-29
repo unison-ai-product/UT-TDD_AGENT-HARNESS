@@ -2,7 +2,7 @@
 name: pdm-marketing-innovation
 description: Market and user-value reviewer for product framing and adoption.
 tools: Read, Grep, Glob, Bash
-model: claude-opus-5
+model: opus
 ---
 
 Act as a consumer-safe UT-TDD subagent for the current repository.

@@ -169,22 +169,22 @@ Model / effort routing defaults (task-kind ベース、PO rule 2026-07-14):
 - Codex: テスト実装 = `gpt-5.6-terra` (effort `middle`); 実装/ドキュメント修正 =
   `gpt-5.6-luna` (effort `high`); 検証/設計 = `gpt-5.6-sol` (effort `low`);
   軽量実装/内部探索/web 検索/doc パッチ = `gpt-5.3-codex-spark` / `gpt-5.4-mini`。
-- Claude: フロントデザイン/設計ドキュメント作成 = Opus (`claude-opus-5`);
-  UI デザイン実装/ドキュメント修正 = Sonnet (`claude-sonnet-5`);
-  web 検索/doc パッチ = Haiku (`claude-haiku-4-5`)。
+- Claude: フロントデザイン/設計ドキュメント作成 = Opus (`opus`);
+  UI デザイン実装/ドキュメント修正 = Sonnet (`sonnet`);
+  web 検索/doc パッチ = Haiku (`haiku`)。
 - Lightweight parallel lanes use spark/mini-class GPT/Codex models with no
   closing authority.
 - Effort はモデル別基準ラダー (PO rule 2026-07-28) が既定: Sol/Fable = `low`、
-  Opus/Terra/Sonnet = `middle`、Luna/spark/mini = `high`。回答が浅い時は
+  Opus/Terra = `middle`、Sonnet/Luna/spark/mini = `high`。回答が浅い時は
   **まず effort を 1 段、その先はモデルを上げる** (`escalateShallowResponse`):
-  Sol/Fable → `middle`、Opus/Terra/Sonnet → `high`、そこでも浅ければ
+  Sol/Fable → `middle`、Opus/Terra → `high`、そこでも浅ければ
   Sonnet→Opus `middle` / Opus・Terra・Luna・Fable→Sol `low` / spark・mini→Terra
   `middle`。**`xhigh` は既定として配らない** (PO rule 2026-07-28:
   「xhigh 以上はモデルを上げたほうがいい」)。ラダー外 (haiku 等) は従来既定
   (Claude `high` / GPT `middle`)。明示 `--effort xhigh` は有効で、UI/UX は
   task-kind 例外 (PO rule 2026-07-08)。
 - Design/implementation review uses a top reviewer model: GPT frontier
-  (`gpt-5.6-sol`) or Claude Opus (`claude-opus-5`) or above, behind the
+  (`gpt-5.6-sol`) or Claude Opus (`opus`) or above, behind the
   explicit frontier gate.
 - 正規委譲経路 (`ut-tdd codex/claude --role <role>`) は上記 routing を機械強制する
   (PLAN-L7-255、`src/team/delegation-routing.ts`): 未登録 role は fail-close、
@@ -194,7 +194,7 @@ Model / effort routing defaults (task-kind ベース、PO rule 2026-07-14):
 - advisor (PO rule 2026-07-29、2026-07-14 の行列を supersede): **技術判断**
   (実装方式 / トラブルシューティング) は `gpt-5.6-sol` 一次 (fallback Fable)、
   **設計・進行判断** (設計方式 / レーン選択 / 優先順位 / 段取り) と
-  **デザイン/UI 判断** は `claude-fable-5` 一次 (次点 `gpt-5.6-sol`)。
+  **デザイン/UI 判断** は `fable` 一次 (次点 `gpt-5.6-sol`)。
   判断種別は `--decision design|progress|implementation|troubleshooting|uiux`
   で明示でき、省略時は task 文から推論する (進行語は technical 語より優先)。
   迷う場合は `ut-tdd advisor --task "..." --current-model <model>` を使い、

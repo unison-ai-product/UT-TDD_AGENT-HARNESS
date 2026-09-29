@@ -281,6 +281,7 @@ export function modelProviderFromId(modelId: string | undefined): ModelProvider 
   if (
     normalized.startsWith("claude") ||
     normalized.startsWith("anthropic") ||
+    normalized.includes("fable") ||
     normalized.includes("sonnet") ||
     normalized.includes("opus") ||
     normalized.includes("haiku")

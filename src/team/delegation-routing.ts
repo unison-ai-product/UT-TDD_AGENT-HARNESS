@@ -1,6 +1,7 @@
 import { SUBAGENT_ALLOWLIST } from "../runtime/agent-guard-policy.ts";
 import { READ_ONLY_DELEGATION_ROLES } from "../runtime/review-guard.ts";
 import {
+  claudeFamilyKey,
   MODEL_EFFORT_LADDER,
   MODEL_IDS,
   REVIEW_LANE_MODELS,
@@ -79,7 +80,7 @@ function reviewLaneForRole(role: string): ReviewLane {
 }
 
 function ladderBaseEffort(model: string, fallback: string): string {
-  return MODEL_EFFORT_LADDER[model]?.base ?? fallback;
+  return MODEL_EFFORT_LADDER[claudeFamilyKey(model)]?.base ?? fallback;
 }
 
 export function resolveDelegationRouting(input: DelegationRoutingInput): DelegationRouting {
