@@ -1057,7 +1057,7 @@ function consumerG13Manifest(): ConsumerG13Manifest {
 
 function writeConsumerG13Fixture(root: string): void {
   writeConsumerGateFixture(root);
-  const source = join(root, "docs/templates/vmodel/L13-production-observation.md");
+  const source = join(process.cwd(), "docs/templates/vmodel/L13-production-observation.md");
   const template = readFileSync(source, "utf8");
   writeFixtureDoc(
     root,
