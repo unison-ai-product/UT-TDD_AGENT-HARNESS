@@ -14,10 +14,7 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { describe, expect, it, vi } from "vitest";
 import { checkDbProjectionIngestion, checkDesignDetection } from "../src/doctor/db-projection.ts";
-import {
-  checkDriveDbRegistration,
-  checkGateRunCoverage,
-} from "../src/doctor/process-quality.ts";
+import { checkDriveDbRegistration, checkGateRunCoverage } from "../src/doctor/process-quality.ts";
 import { analyzeDbCurrency, dbCurrencyMessages } from "../src/lint/db-currency.ts";
 import type { DriveDbRegistrationStats } from "../src/lint/drive-db-registration.ts";
 import { loadDriveDbRegistrationStats } from "../src/state-db/drive-registration.ts";
