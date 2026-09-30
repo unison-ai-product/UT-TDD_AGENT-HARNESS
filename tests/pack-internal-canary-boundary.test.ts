@@ -317,7 +317,9 @@ describe("#418 Pack-only internal canary boundary (PR-1 / first layer)", () => {
       };
       // Mutation probe for U-ST-PACKCANARY-004: preserve the read-only
       // activation state, but test its real JSON shape with a leaked path.
-      const activationProbeRoot = mkdtempSync(join(tmpdir(), "ut-tdd-packcanary-pr1-active-probe-"));
+      const activationProbeRoot = mkdtempSync(
+        join(tmpdir(), "ut-tdd-packcanary-pr1-active-probe-"),
+      );
       try {
         const probeActivation = join(activationProbeRoot, ".ut-tdd", "runtime", "activation");
         mkdirSync(probeActivation, { recursive: true });
