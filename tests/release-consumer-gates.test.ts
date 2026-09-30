@@ -1060,7 +1060,7 @@ function writeConsumerG13Fixture(root: string): void {
   writeFixtureDoc(
     root,
     "docs/test-design/L12-acceptance-test-design.md",
-    `${readFileSync(join(root, "docs/test-design/L12-acceptance-test-design.md"), "utf8")}\n| **AT-CONSUMER-03** | Additional acceptance case |\n`,
+    `${readFileSync(join(root, "docs/test-design/L12-acceptance-test-design.md"), "utf8")}\n| **AT-FR-01-02** | 未観測 |\n`,
   );
   const source = join(process.cwd(), "docs/templates/vmodel/L13-production-observation.md");
   const template = readFileSync(source, "utf8");
@@ -1071,7 +1071,7 @@ function writeConsumerG13Fixture(root: string): void {
       .replace("status: draft", "status: confirmed")
       .replace(/^plan: .*$/m, "plan: docs/plans/PLAN-CONSUMER-01.md")
       .replace(
-        "| <SMOKE-ID> | <シナリオ> | <期待結果> | <AT-ID> |",
+        "| <SMOKE-ID> | <観測内容> | <合否基準> | <AT-ID> |",
         "| SMOKE-CONSUMER-01 | status / doctor の実行 | exit 0 | AT-FR-01-01 |\n| SMOKE-CONSUMER-02 | projection の rebuild | 失敗 0 | AT-FR-01-01 |",
       ),
   );
@@ -2868,6 +2868,14 @@ describe("PR-G11 consumer G11 predicates", () => {
 
 describe("PR-G13 consumer G13 predicates", () => {
   it("U-RCDEV-034: evaluates the normal consumer G13 post-deploy contract", () => {
+    const template = readFileSync(
+      join(process.cwd(), "docs/templates/vmodel/L13-production-observation.md"),
+      "utf8",
+    );
+    expect(template).toContain(
+      "「### harness 追補:」で始まる節は ZIP 由来ではなく、harness の gate 判定のために足した節である。",
+    );
+    expect(template).toContain("| ケースID | 観測内容 | 合否基準 | トレース元 |");
     const root = fixtureRoot();
     writeConsumerG13Fixture(root);
     const result = evaluateStaticGate({ gate: "G13", repoRoot: root });
@@ -2876,6 +2884,18 @@ describe("PR-G13 consumer G13 predicates", () => {
       "right-arm-static - OK (G13, cases=2, manifests=1)",
     );
     expect(result.messages.join("\n")).toContain("未判定 (review): PO/TL");
+  });
+
+  it("U-RCDEV-034: does not require reverse closure for unreferenced L12 acceptance IDs", () => {
+    const root = fixtureRoot();
+    writeConsumerG13Fixture(root);
+    writeFixtureDoc(
+      root,
+      "docs/test-design/L12-acceptance-test-design.md",
+      `${readFileSync(join(root, "docs/test-design/L12-acceptance-test-design.md"), "utf8")}\n| **AT-FR-01-03** | 未観測 |\n`,
+    );
+    const result = evaluateStaticGate({ gate: "G13", repoRoot: root });
+    expect(result).toMatchObject({ applicable: true, passed: true });
   });
 
   it("U-RCDEV-034: rejects missing, malformed, duplicate, and non-AT traces", () => {
@@ -2895,7 +2915,7 @@ describe("PR-G13 consumer G13 predicates", () => {
         name: "defined non-AT trace",
         mutate: (root) =>
           updateConsumerG13Design(root, (text) => text.replace("AT-FR-01-01", "NFR-01")),
-        expected: "untraced case SMOKE-CONSUMER-01",
+        expected: "trace target missing NFR-01",
       },
       {
         name: "duplicate case id",
@@ -2906,12 +2926,26 @@ describe("PR-G13 consumer G13 predicates", () => {
         expected: "duplicate case id SMOKE-CONSUMER-01",
       },
       {
+        name: "wrong case id prefix",
+        mutate: (root) =>
+          updateConsumerG13Design(root, (text) =>
+            text.replace("SMOKE-CONSUMER-02", "ST-CONSUMER-02"),
+          ),
+        expected: "case id must start with SMOKE-: ST-CONSUMER-02",
+      },
+      {
+        name: "missing L13 source heading",
+        mutate: (root) =>
+          updateConsumerG13Design(root, (text) => text.replace("##### 5-2 ランブック(抜粋)", "")),
+        expected: "missing section ##### 5-2 ランブック(抜粋)",
+      },
+      {
         name: "missing case columns",
         mutate: (root) =>
           updateConsumerG13Design(root, (text) =>
             text.replace(
-              "| ケースID | シナリオ | 期待結果 | トレース元 |",
-              "| シナリオ | 期待結果 | トレース元 |",
+              "| ケースID | 観測内容 | 合否基準 | トレース元 |",
+              "| 観測内容 | 合否基準 | トレース元 |",
             ),
           ),
         expected: "required case table columns",
@@ -2924,7 +2958,7 @@ describe("PR-G13 consumer G13 predicates", () => {
       const result = evaluateStaticGate({ gate: "G13", repoRoot: root });
       expect(result, mutation.name).toMatchObject({ applicable: true, passed: false });
       expect(result.messages.join("\n"), mutation.name).toContain(mutation.expected);
-      if (mutation.name === "unknown trace")
+      if (mutation.name === "unknown trace" || mutation.name === "defined non-AT trace")
         expect(result.messages.join("\n")).toContain("untraced case SMOKE-CONSUMER-01");
     }
   });
@@ -2980,12 +3014,20 @@ describe("PR-G13 consumer G13 predicates", () => {
         expected: "invalid sli_slo_observation.window_start",
       },
       {
+        name: "window end timezone required",
+        mutate: (root) =>
+          updateConsumerG13Artifact(root, G13_SLI_SLO_PATH, (artifact) => {
+            artifact.window_end = "2026-09-29T06:00:00";
+          }),
+        expected: "invalid sli_slo_observation.window_end",
+      },
+      {
         name: "window not increasing",
         mutate: (root) =>
           updateConsumerG13Artifact(root, G13_SLI_SLO_PATH, (artifact) => {
             artifact.window_end = artifact.window_start;
           }),
-        expected: "invalid sli_slo_observation.window_end",
+        expected: "sli_slo_observation window is not closed",
       },
       {
         name: "empty slos",
@@ -3012,6 +3054,34 @@ describe("PR-G13 consumer G13 predicates", () => {
             if (firstSlo) firstSlo.target = "";
           }),
         expected: "sli_slo_observation.slos[SLO-AVAIL].target is required",
+      },
+      {
+        name: "non-numeric target is rejected",
+        mutate: (root) =>
+          updateConsumerG13Artifact(root, G13_SLI_SLO_PATH, (artifact) => {
+            const firstSlo = (artifact.slos as Record<string, unknown>[])[0];
+            if (firstSlo) firstSlo.target = null;
+          }),
+        expected: "sli_slo_observation.slos[SLO-AVAIL].target is required",
+      },
+      {
+        name: "missing slo id is indexed",
+        mutate: (root) =>
+          updateConsumerG13Artifact(root, G13_SLI_SLO_PATH, (artifact) => {
+            const firstSlo = (artifact.slos as Record<string, unknown>[])[0];
+            if (firstSlo) delete firstSlo.slo_id;
+          }),
+        expected: "sli_slo_observation.slos[0].slo_id is required",
+      },
+      {
+        name: "numeric target is valid",
+        mutate: (root) =>
+          updateConsumerG13Artifact(root, G13_SLI_SLO_PATH, (artifact) => {
+            const firstSlo = (artifact.slos as Record<string, unknown>[])[0];
+            if (firstSlo) firstSlo.target = 99.9;
+          }),
+        expected: "right-arm-static - OK (G13, cases=2, manifests=1)",
+        passed: true,
       },
       {
         name: "duplicate slo",

@@ -117,8 +117,9 @@ const REQUIRED_G12_HEADINGS = [
   "##### 4-1 重要度定義",
   "##### 4-2 不具合記録",
 ] as const;
-const REQUIRED_G13_CASE_COLUMNS = ["ケースID", "シナリオ", "期待結果", "トレース元"] as const;
+const REQUIRED_G13_CASE_COLUMNS = ["ケースID", "観測内容", "合否基準", "トレース元"] as const;
 const G13_CASE_HEADING = "### harness 追補: G13 検証ケース";
+const REQUIRED_G13_HEADINGS = ["##### 5-2 ランブック(抜粋)"] as const;
 const REQUIRED_L2_SCREEN_COLUMNS = ["画面ID", "画面名称", "概要", "関連機能", "ロール"] as const;
 function isRecord(value: unknown): value is JsonRecord {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -314,6 +315,9 @@ function parseG12CaseRows(content: string, violations: string[]): CaseRow[] {
 }
 
 function parseG13CaseRows(content: string, violations: string[]): CaseRow[] {
+  for (const heading of REQUIRED_G13_HEADINGS) {
+    if (!content.includes(heading)) violations.push(`missing section ${heading}`);
+  }
   const lines = content.split(/\r?\n/);
   const headingIndex = lines.findIndex((line) => line.trim() === G13_CASE_HEADING);
   if (headingIndex < 0) {
@@ -550,7 +554,6 @@ function checkCaseTraces(
 function checkG13CaseTraces(
   rows: readonly CaseRow[],
   atIds: ReadonlySet<string>,
-  definedIds: ReadonlySet<string>,
   violations: string[],
 ): void {
   for (const row of rows) {
@@ -560,11 +563,7 @@ function checkG13CaseTraces(
     const untraced = !citedIds.some((id) => atIds.has(id));
     for (const id of citedIds) {
       if (atIds.has(id)) continue;
-      if (definedIds.has(id)) {
-        if (!untraced) violations.push(`untraced case ${row.id}`);
-      } else {
-        violations.push(`trace target missing ${id}`);
-      }
+      violations.push(`trace target missing ${id}`);
     }
     if (untraced) violations.push(`untraced case ${row.id}`);
   }
@@ -939,26 +938,31 @@ function checkG13Artifacts({
     if (windowStart === null) {
       violations.push(`${manifestPath}: invalid sli_slo_observation.window_start`);
     }
-    if (windowEnd === null || (windowStart !== null && windowEnd <= windowStart)) {
+    if (windowEnd === null) {
       violations.push(`${manifestPath}: invalid sli_slo_observation.window_end`);
+    } else if (windowStart !== null && windowEnd <= windowStart) {
+      violations.push(`${manifestPath}: sli_slo_observation window is not closed`);
     }
     if (!Array.isArray(observation.slos) || observation.slos.length === 0) {
       violations.push(`${manifestPath}: sli_slo_observation.slos is required`);
     } else {
       const seenSloIds = new Set<string>();
-      for (const entry of observation.slos) {
+      for (const [index, entry] of observation.slos.entries()) {
         if (!isRecord(entry)) {
           violations.push(`${manifestPath}: invalid sli_slo_observation.slo`);
           continue;
         }
         const sloId = stringValue(entry.slo_id);
         if (!sloId) {
-          violations.push(`${manifestPath}: sli_slo_observation.slo_id is required`);
+          violations.push(`${manifestPath}: sli_slo_observation.slos[${index}].slo_id is required`);
         } else if (seenSloIds.has(sloId)) {
           violations.push(`${manifestPath}: duplicate slo ${sloId}`);
         }
         seenSloIds.add(sloId);
-        if (!stringValue(entry.target)) {
+        if (
+          !(typeof entry.target === "string" && entry.target.trim()) &&
+          !(typeof entry.target === "number" && Number.isFinite(entry.target))
+        ) {
           violations.push(
             `${manifestPath}: sli_slo_observation.slos[${sloId || "<empty>"}].target is required`,
           );
@@ -1180,7 +1184,7 @@ export function evaluateRightArmStaticGate(
     const atIds = existsSync(l12Path)
       ? extractAtIds(readFileSync(l12Path, "utf8"))
       : new Set<string>();
-    checkG13CaseTraces(rows, atIds, allDesignIds(repoRoot), violations);
+    checkG13CaseTraces(rows, atIds, violations);
   } else if (key === "G10") {
     if (fmValue(content, "status") === "skipped") {
       violations.push(
