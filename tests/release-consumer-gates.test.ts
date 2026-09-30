@@ -2935,7 +2935,7 @@ describe("PR-G13 consumer G13 predicates", () => {
     updateConsumerG13Manifest(root, (manifest) => {
       manifest.mandatory_smoke_ids = ["SMOKE-CONSUMER-01"];
       manifest.selected_smoke_ids = ["SMOKE-CONSUMER-01"];
-      manifest.commands[0]!.smoke_ids = ["SMOKE-CONSUMER-01"];
+      firstConsumerG13Command(manifest).smoke_ids = ["SMOKE-CONSUMER-01"];
       manifest.coverage = manifest.coverage.filter((row) => row.smoke_id === "SMOKE-CONSUMER-01");
     });
     const result = evaluateStaticGate({ gate: "G13", repoRoot: root });
@@ -2999,7 +2999,8 @@ describe("PR-G13 consumer G13 predicates", () => {
         name: "missing observed",
         mutate: (root) =>
           updateConsumerG13Artifact(root, G13_SLI_SLO_PATH, (artifact) => {
-            delete (artifact.slos as Record<string, unknown>[])[0]!.observed;
+            const firstSlo = (artifact.slos as Record<string, unknown>[])[0];
+            if (firstSlo) delete firstSlo.observed;
           }),
         expected: "sli_slo_observation.slos[SLO-AVAIL].observed is required",
       },
@@ -3007,7 +3008,8 @@ describe("PR-G13 consumer G13 predicates", () => {
         name: "missing target",
         mutate: (root) =>
           updateConsumerG13Artifact(root, G13_SLI_SLO_PATH, (artifact) => {
-            (artifact.slos as Record<string, unknown>[])[0]!.target = "";
+            const firstSlo = (artifact.slos as Record<string, unknown>[])[0];
+            if (firstSlo) firstSlo.target = "";
           }),
         expected: "sli_slo_observation.slos[SLO-AVAIL].target is required",
       },
