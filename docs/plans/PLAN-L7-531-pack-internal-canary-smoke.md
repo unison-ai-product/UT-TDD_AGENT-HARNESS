@@ -27,6 +27,10 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-531-pack-internal-canary-smoke.md
     artifact_type: markdown_doc
+  - artifact_path: tests/pack-internal-canary-boundary.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/support/pack-internal-canary.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L6-101-pack-independent-multi-consumer-acceptance.md
   requires:
@@ -77,18 +81,18 @@ status: confirmed
 github_issue_id: 418
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:e25ed6b78369e081edfeb32b14b3973a
-  command_id: plan-revise:issue-743:tag-channel-rule:p531:r6:84831f749dc4
-  admitted_at: 2026-09-29T07:53:55.304Z
-  source_digest: sha256:bcf72880ba49d4c019fbad108f88fa0f8c72c3332dba8d36010f8971a1ffb54e
-  decision_digest: sha256:a7bf6ba4c9b805bd263b9e4638f599e85105108f5bbc8978e6ee2df506726505
-  receipt_digest: sha256:4319035c7c2b794c54dcd79add15ccddbcc788002371b756ff63a6acb0ac55b2
+  receipt_id: certificate:4e9beda8ba704f58f69e76a2ab5ab449
+  command_id: plan-revise:issue-418:pr1-generates:r7:20260930
+  admitted_at: 2026-09-30T06:04:20.188Z
+  source_digest: sha256:937efc16cf539d1bd0fda903448849184c0fe6b4be346cefc797bcce3e9482fd
+  decision_digest: sha256:d4d218d9e095dd2f5727eb238811e08f805c218675d498e6f5875c620f3e63fe
+  receipt_digest: sha256:b362eae492db9b6fc4277ed51b8f20fcb328b98248dffa4d210d0e08c8dfcad5
   binding:
     path: docs/plans/PLAN-L7-531-pack-internal-canary-smoke.md
     plan_id: PLAN-L7-531-pack-internal-canary-smoke
     asset_id: plan:44f79788376b81c225ce5913fddbc48f
-    revision: 6
-    content_digest: sha256:bcf72880ba49d4c019fbad108f88fa0f8c72c3332dba8d36010f8971a1ffb54e
+    revision: 7
+    content_digest: sha256:937efc16cf539d1bd0fda903448849184c0fe6b4be346cefc797bcce3e9482fd
   route:
     signal: feature_addition
     mode: add-feature
@@ -106,14 +110,10 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-531-pack-internal-canary-smoke
-    target_revision: 6
+    target_revision: 7
     phase: forward_merge
-  escape_reason: "Issue #743: §3.1 の fixture tag の例 v0.0.0-canary-fixture は
-    -canary. を含まず、PLAN-L7-628 の channel 規則では stable で admission されていた。第 1 層を第 2
-    層の実物 v0.2.0-canary.2 と同じ canary 経路に揃えるため、fixture tag を v0.0.0-canary.0 に固定し
-    canary channel での admission を明記する。既存制約 (Pack 公開 tag と非衝突、v0.2.0-canary.*
-    を名乗らない) は不変で、Pack repo に v0.0.0* の tag が無いことを実測した。PLAN-L7-628 rev 10 (§2.3)
-    と同じ PR で出す。"
+  escape_reason: "Issue #418 PR-1: confirmed PLAN-L7-531 generates に新規Canary
+    testとsupportの2 pathを正規revisionで追加し、実装成果物の所有を束縛する。"
 ---
 
 # PLAN-L7-531: Pack-only internal canary smoke (Windows/Linux)

@@ -44,6 +44,7 @@ disposition/git-authoring-provenance:3 disposition/projection:6 disposition/trac
   forward-escape-issue-contract:2
   pack-consumer-runtime-release:4 release-consumer-vmodel-template:1
   release-consumer-setup-artifacts:1
+  pack-internal-canary-boundary:1 support/pack-internal-canary.ts:1
   `;
 
 const repositoryReadContracts: Record<string, RepositoryReadContract> = Object.fromEntries(
