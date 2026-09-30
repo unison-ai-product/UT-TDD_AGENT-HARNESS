@@ -12,7 +12,9 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { checkDbProjectionIngestion, checkDesignDetection } from "../src/doctor/db-projection.ts";
+import { checkGateRunCoverage } from "../src/doctor/process-quality.ts";
 import { analyzeDbCurrency, dbCurrencyMessages } from "../src/lint/db-currency.ts";
 import type { DriveDbRegistrationStats } from "../src/lint/drive-db-registration.ts";
 import { loadDriveDbRegistrationStats } from "../src/state-db/drive-registration.ts";
@@ -35,6 +37,17 @@ import {
   transferStopRefreshLease,
 } from "../src/state-db/stop-refresh-coordinator.ts";
 import { removeTestTree } from "./support/temp-tree.ts";
+
+const tokenScans = vi.hoisted(() => ({
+  all: vi.fn(() => []),
+  repoScoped: vi.fn(() => {
+    throw new Error("unexpected repo-scoped token scan");
+  }),
+}));
+vi.mock("../src/state-db/token-tracker.ts", () => ({
+  loadRuntimeSessionUsage: tokenScans.all,
+  loadRepoScopedRuntimeSessionUsage: tokenScans.repoScoped,
+}));
 
 const currentStats: DriveDbRegistrationStats = {
   planCount: 10,
@@ -941,6 +954,35 @@ describe("db-currency lint", () => {
       expect(refresh.vacuum).toBeUndefined();
     } finally {
       removeTestTree(root);
+    }
+  });
+
+  it("U-TOKSTOP-001: Stop refresh does not scan runtime token sessions", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-stop-no-token-scan-"));
+    tokenScans.all.mockClear();
+    tokenScans.repoScoped.mockClear();
+    try {
+      const result = refreshHarnessDbOnStop({ repoRoot: root, vacuum: () => ({ ran: false }) });
+      expect(result.rebuilt).toBe(true);
+      expect(tokenScans.all).not.toHaveBeenCalled();
+      expect(tokenScans.repoScoped).not.toHaveBeenCalled();
+    } finally {
+      removeTestTree(root);
+    }
+  });
+
+  it("U-TOKSTOP-002: doctor rebuild paths do not scan runtime token sessions", () => {
+    tokenScans.all.mockClear();
+    tokenScans.repoScoped.mockClear();
+    for (const check of [checkDbProjectionIngestion, checkDesignDetection, checkGateRunCoverage]) {
+      const root = mkdtempSync(join(tmpdir(), "ut-tdd-doctor-no-token-scan-"));
+      try {
+        check(root);
+        expect(tokenScans.all).not.toHaveBeenCalled();
+        expect(tokenScans.repoScoped).not.toHaveBeenCalled();
+      } finally {
+        removeTestTree(root);
+      }
     }
   });
 });
