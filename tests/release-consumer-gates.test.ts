@@ -1057,6 +1057,11 @@ function consumerG13Manifest(): ConsumerG13Manifest {
 
 function writeConsumerG13Fixture(root: string): void {
   writeConsumerGateFixture(root);
+  writeFixtureDoc(
+    root,
+    "docs/test-design/L12-acceptance-test-design.md",
+    `${readFileSync(join(root, "docs/test-design/L12-acceptance-test-design.md"), "utf8")}\n| **AT-CONSUMER-03** | Additional acceptance case |\n`,
+  );
   const source = join(process.cwd(), "docs/templates/vmodel/L13-production-observation.md");
   const template = readFileSync(source, "utf8");
   writeFixtureDoc(
@@ -1064,8 +1069,11 @@ function writeConsumerG13Fixture(root: string): void {
     "docs/process/evidence/g13-post-deploy-verification-design.md",
     template
       .replace("status: draft", "status: confirmed")
-      .replace(/^plan: .*$/m, "plan: docs/plans/PLAN-CONSUMER-01.md") +
-      "\n### harness 追補: G13 検証ケース\n\n| ケースID | シナリオ | 期待結果 | トレース元 |\n| --- | --- | --- | --- |\n| SMOKE-CONSUMER-01 | status / doctor の実行 | exit 0 | AT-FR-01-01 |\n| SMOKE-CONSUMER-02 | projection の rebuild | 失敗 0 | AT-FR-01-01 |\n",
+      .replace(/^plan: .*$/m, "plan: docs/plans/PLAN-CONSUMER-01.md")
+      .replace(
+        "| <SMOKE-ID> | <シナリオ> | <期待結果> | <AT-ID> |",
+        "| SMOKE-CONSUMER-01 | status / doctor の実行 | exit 0 | AT-FR-01-01 |\n| SMOKE-CONSUMER-02 | projection の rebuild | 失敗 0 | AT-FR-01-01 |",
+      ),
   );
   writeFixtureDoc(
     root,
@@ -2960,6 +2968,14 @@ describe("PR-G13 consumer G13 predicates", () => {
         mutate: (root) =>
           updateConsumerG13Artifact(root, G13_SLI_SLO_PATH, (artifact) => {
             artifact.window_start = "not-a-date";
+          }),
+        expected: "invalid sli_slo_observation.window_start",
+      },
+      {
+        name: "timezone required",
+        mutate: (root) =>
+          updateConsumerG13Artifact(root, G13_SLI_SLO_PATH, (artifact) => {
+            artifact.window_start = "2026-09-29T00:00:00";
           }),
         expected: "invalid sli_slo_observation.window_start",
       },
