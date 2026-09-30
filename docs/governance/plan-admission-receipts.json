@@ -5888,6 +5888,22 @@
         "revision": 3,
         "content_digest": "sha256:386c50bd88d2f0dfa74433b402fcf8f5422fb9f175891aa9d13534872cfeded9"
       }
+    },
+    {
+      "sequence": 369,
+      "previous_record_digest": "sha256:a5a0b99c9cc7f17e6724c7f426a31d184b8fcc7e50a16a21d4426874f3b0ae15",
+      "record_digest": "sha256:bc0a4fc51a78aa22e5842fbb13dff8266aebc2d791aff890f036498080bda146",
+      "command_id": "plan-draft:issue-678:launcher-alias-oracle:rechain-20260930-r3",
+      "receipt_id": "certificate:ed17668cb64f29738109eb175b91506e",
+      "receipt_digest": "sha256:32e1349334e4cb5412e813b62cc81b74f27fdf9e928b5f353a1abf53fa41ae3f",
+      "decision_digest": "sha256:911ccab0ad10fe6d7301eef71c63ec279e7b118293abbaae3fbf730895561f95",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-678-consumer-launcher-path-alias.md",
+        "plan_id": "PLAN-L7-678-consumer-launcher-path-alias",
+        "asset_id": "plan:ed17668cb64f29738109eb175b91506e",
+        "revision": 1,
+        "content_digest": "sha256:b5f294bf87cafe5caa6b56223aecb27ded0ac528fc41ad9428657be593a457b0"
+      }
     }
   ]
 }
