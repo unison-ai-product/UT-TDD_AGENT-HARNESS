@@ -132,7 +132,6 @@ describe("db-currency lint", () => {
 
   it("U-DBCURRENCY-005: Stop-hook refresh converges a stale persisted registry without manual rebuild (PLAN-L7-365 Step 2, issue #78)", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-stop-refresh-"));
-    const emptySessions = mkdtempSync(join(tmpdir(), "ut-tdd-stop-refresh-sessions-"));
     try {
       const planDir = join(root, "docs", "plans");
       mkdirSync(planDir, { recursive: true });
@@ -169,8 +168,6 @@ describe("db-currency lint", () => {
 
       const refresh = refreshHarnessDbOnStop({
         repoRoot: root,
-        claudeSessionsDir: emptySessions,
-        codexSessionsDir: emptySessions,
       });
       expect(refresh.ok).toBe(true);
       expect(refresh.rebuilt).toBe(true);
@@ -179,7 +176,6 @@ describe("db-currency lint", () => {
       expect(result.ok).toBe(true);
     } finally {
       removeTestTree(root);
-      removeTestTree(emptySessions);
     }
   });
 
@@ -190,7 +186,7 @@ describe("db-currency lint", () => {
     try {
       writeFileSync(join(root, ".ut-tdd"), "not a directory", "utf8");
 
-      const refresh = refreshHarnessDbOnStop({ repoRoot: root, skipTokenIngest: true });
+      const refresh = refreshHarnessDbOnStop({ repoRoot: root });
 
       expect(refresh.ok).toBe(false);
       expect(refresh.skippedReason).toBeTruthy();
@@ -446,7 +442,6 @@ describe("db-currency lint", () => {
       const result = runCoalescedStopRefresh({
         repoRoot: root,
         generation: "generation-rerun",
-        skipTokenIngest: true,
         refresh: () => {
           calls += 1;
           // Stop arrives during both runs. First causes exactly one rerun; second remains durable.
@@ -907,13 +902,10 @@ describe("db-currency lint", () => {
 
   it("U-DBCURRENCY-026: Stop-hook refresh calls maybeVacuumHarnessDb once, after a successful rebuild (PLAN-L7-457, issue #118)", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-stop-vacuum-"));
-    const emptySessions = mkdtempSync(join(tmpdir(), "ut-tdd-stop-vacuum-sessions-"));
     try {
       const calls: Array<{ dbPath: string; repoRoot?: string }> = [];
       const refresh = refreshHarnessDbOnStop({
         repoRoot: root,
-        claudeSessionsDir: emptySessions,
-        codexSessionsDir: emptySessions,
         vacuum: (dbPath, options) => {
           calls.push({ dbPath, repoRoot: options?.repoRoot });
           return { ran: false };
@@ -928,7 +920,6 @@ describe("db-currency lint", () => {
       expect(refresh.vacuum).toEqual({ ran: false });
     } finally {
       removeTestTree(root);
-      removeTestTree(emptySessions);
     }
   });
 
@@ -939,7 +930,6 @@ describe("db-currency lint", () => {
       let calls = 0;
       const refresh = refreshHarnessDbOnStop({
         repoRoot: root,
-        skipTokenIngest: true,
         vacuum: () => {
           calls += 1;
           return { ran: false };
