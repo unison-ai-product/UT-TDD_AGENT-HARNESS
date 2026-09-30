@@ -281,6 +281,29 @@ describe("#418 Pack-only internal canary boundary (PR-1 / first layer)", () => {
       expect(existsSync(activePointer.entry_path), "sealed entry must exist before deletion").toBe(
         true,
       );
+      for (const name of [
+        "bundle-manifest.json",
+        "consumer-receipt.json",
+        "history.jsonl",
+        "marker.json",
+        "node-bootstrap-receipt.json",
+        "operation-state.json",
+        "ut-tdd.mjs",
+      ]) {
+        expect(
+          existsSync(join(activePointer.bundle_path, name)),
+          `sealed bundle missing ${name}`,
+        ).toBe(true);
+      }
+      const beforeRemovalSmoke = runNode(
+        fixture.alternateCwd,
+        [wrapper, "doctor", "--setup-smoke"],
+        setupEnv,
+      );
+      expect(
+        beforeRemovalSmoke.status,
+        `before source removal: ${beforeRemovalSmoke.stderr || beforeRemovalSmoke.stdout}`,
+      ).toBe(0);
       expect(
         countAbsolutePathReferences(fixture.consumerRoot, observedForbiddenPaths(fixture)),
       ).toEqual([]);
@@ -299,6 +322,15 @@ describe("#418 Pack-only internal canary boundary (PR-1 / first layer)", () => {
         existsSync(activePointer.entry_path),
         "sealed entry must survive source deletion",
       ).toBe(true);
+      const afterRemovalSmoke = runNode(
+        fixture.alternateCwd,
+        [wrapper, "doctor", "--setup-smoke"],
+        setupEnv,
+      );
+      expect(
+        afterRemovalSmoke.status,
+        `after source removal, before tracing: ${afterRemovalSmoke.stderr || afterRemovalSmoke.stdout}`,
+      ).toBe(0);
 
       const bunTrace = createBunStub(fixture.root);
       const accessTrace = writeAccessTrace(fixture.root, observedForbiddenPaths(fixture));
