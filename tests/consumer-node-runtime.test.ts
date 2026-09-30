@@ -1,4 +1,4 @@
-import { execFileSync, spawnSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import {
   existsSync,
   mkdirSync,
@@ -99,12 +99,13 @@ function wrapperBundleFor(root: string): {
 function shortPathFor(path: string): string | undefined {
   if (process.platform !== "win32") return undefined;
   try {
-    const output = execFileSync("cmd.exe", ["/d", "/c", `for %I in ("${path}") do @echo %~sI`], {
+    const result = spawnSync("cmd.exe", ["/d", "/c", `for %I in ("${path}") do @echo %~sI`], {
       encoding: "utf8",
       windowsVerbatimArguments: true,
       windowsHide: true,
     });
-    const candidate = output.trim().split(/\r?\n/).at(-1)?.trim();
+    if (result.error || result.status !== 0) return undefined;
+    const candidate = result.stdout.trim().split(/\r?\n/).at(-1)?.trim();
     if (!candidate || !existsSync(candidate) || candidate.toLowerCase() === path.toLowerCase())
       return undefined;
     return candidate;
