@@ -356,7 +356,7 @@ export function evaluateStaticGate(input: StaticGateInput): StaticGateResult {
       const result = evaluateRightArmStaticGate(key, repoRoot);
       return { gate: input.gate, applicable: true, ...result };
     }
-    if (key === "G12") {
+    if (key === "G11" || key === "G12") {
       const result = evaluateRightArmStaticGate(key, repoRoot);
       return { gate: input.gate, applicable: true, ...result };
     }
