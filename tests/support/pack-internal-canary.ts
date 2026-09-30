@@ -633,7 +633,9 @@ export function countAbsolutePathReferences(
       else if (entry.isFile()) {
         const bytes = readFileSync(path);
         if (bytes.includes(0)) continue;
-        const content = bytes.toString("utf8").replaceAll("\\", "/").toLowerCase();
+        // JSON escapes Windows separators twice; collapse each run to one
+        // separator before comparing it with the canonical needle.
+        const content = bytes.toString("utf8").replaceAll(/\\+/g, "/").toLowerCase();
         for (const needle of needles)
           if (content.includes(needle)) findings.push(`${path}:${needle}`);
       }

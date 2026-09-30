@@ -98,10 +98,10 @@ review receipt / merge gate / 登録済み hook まで通す一つの破壊的 E
 | `U-ST-PACKCANARY-001` | source-only / absolute path の混入でも出荷inventoryに到達しない | `tests/pack-internal-canary-boundary.test.ts` |
 | `U-ST-PACKCANARY-002` | skills / authoring template の欠落と重複を別々に拒否する | `tests/pack-internal-canary-boundary.test.ts` |
 | `U-ST-PACKCANARY-003` | sourceとsetup元撤去後、別cwdからsealed wrapperで起動する | `tests/pack-internal-canary-boundary.test.ts` |
-| `U-ST-PACKCANARY-004` | wrapper / config / runtime stateにsetup元絶対path参照が0 | `tests/pack-internal-canary-boundary.test.ts` |
+| `U-ST-PACKCANARY-004` | wrapper / config / runtime stateにsetup元絶対path参照が0。`active.json` にJSONエスケープされたWindows絶対pathを混入する単独変異も検出 | `tests/pack-internal-canary-boundary.test.ts` |
 | `U-ST-PACKCANARY-006` | unit境界でexact tagとexact 5 asset以外を拒否する | `tests/pack-internal-canary-boundary.test.ts` |
 | `U-ST-PACKCANARY-007` | 別process/cwd/envでPLAN・DB・doctor・reviewを再現しBun trace 0 | `tests/pack-internal-canary-boundary.test.ts` |
-| `U-ST-PACKCANARY-010` | 登録済みhookの正常系・禁止系・launcher欠落を区別する | `tests/pack-internal-canary-boundary.test.ts` |
+| `U-ST-PACKCANARY-010` | 登録済みhookの正常系 exit 0・禁止系 block exit 2・launcher欠落の非block失敗 exit 1 を区別する。生成登録を欠落pathへ変える変異は正常系の exact exit 0 でRed | `tests/pack-internal-canary-boundary.test.ts` |
 
 ## 4. 実行手順
 

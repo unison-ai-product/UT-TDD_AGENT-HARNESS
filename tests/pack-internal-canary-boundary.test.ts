@@ -1,5 +1,13 @@
 import { execFileSync, spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
@@ -195,6 +203,24 @@ describe("#418 Pack-only internal canary boundary (PR-1 / first layer)", () => {
     });
   });
 
+  it("U-ST-PACKCANARY-004: JSON-escaped Windows source path is detected in activation state", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-packcanary-pr1-"));
+    const forbidden = "C:\\dev\\pack-source\\release";
+    try {
+      const activation = join(root, ".ut-tdd", "runtime", "activation");
+      mkdirSync(activation, { recursive: true });
+      expect(countAbsolutePathReferences(root, [forbidden])).toEqual([]);
+      writeFileSync(
+        join(activation, "active.json"),
+        JSON.stringify({ bundle_path: forbidden }),
+        "utf8",
+      );
+      expect(countAbsolutePathReferences(root, [forbidden])).toHaveLength(1);
+    } finally {
+      removeCanaryFixtureTree(root);
+    }
+  });
+
   it("U-ST-PACKCANARY-006 (unit): exact tag and exact five producer assets are required", () => {
     expect(selectExactCanaryAssets(CANARY_FIXTURE_TAG, CANARY_ASSET_NAMES)).toEqual(
       CANARY_ASSET_NAMES,
@@ -284,10 +310,25 @@ describe("#418 Pack-only internal canary boundary (PR-1 / first layer)", () => {
       expect(existsSync(activePointerPath), "setup must publish an active runtime pointer").toBe(
         true,
       );
-      const activePointer = JSON.parse(readFileSync(activePointerPath, "utf8")) as {
+      const activePointerBytes = readFileSync(activePointerPath, "utf8");
+      const activePointer = JSON.parse(activePointerBytes) as {
         bundle_path: string;
         entry_path: string;
       };
+      // Mutation probe for U-ST-PACKCANARY-004: a leaked releaseDir in the
+      // real JSON activation state must be visible to the final path scan.
+      try {
+        writeFileSync(
+          activePointerPath,
+          JSON.stringify({ ...activePointer, bundle_path: fixture.releaseDir }),
+          "utf8",
+        );
+        expect(countAbsolutePathReferences(fixture.consumerRoot, [fixture.releaseDir])).not.toEqual(
+          [],
+        );
+      } finally {
+        writeFileSync(activePointerPath, activePointerBytes, "utf8");
+      }
       expect(
         existsSync(activePointer.bundle_path),
         "sealed bundle must exist before deletion",
@@ -607,7 +648,13 @@ describe("#418 Pack-only internal canary boundary (PR-1 / first layer)", () => {
         env,
         normalPayload,
       );
-      expect(missingClaudeLauncher.status).not.toBe(0);
+      // A missing launcher exits 1, which is not a hook block (exit 2).
+      // The generated registration above must instead pass the normal 0/2
+      // assertions; replacing that registration with this mutant makes it Red.
+      expect(missingClaudeLauncher.status, processDiagnostic(missingClaudeLauncher)).toBe(1);
+      expect(`${missingClaudeLauncher.stderr}\n${missingClaudeLauncher.stdout}`).not.toContain(
+        "[ut-tdd-work-guard] BLOCK:",
+      );
 
       const codexHooksPath = join(fixture.consumerRoot, ".codex", "hooks.json");
       const codexSettings = JSON.parse(readFileSync(codexHooksPath, "utf8")) as {
@@ -630,7 +677,10 @@ describe("#418 Pack-only internal canary boundary (PR-1 / first layer)", () => {
         env,
         normalPayload,
       );
-      expect(missingCodexLauncher.status).not.toBe(0);
+      expect(missingCodexLauncher.status, processDiagnostic(missingCodexLauncher)).toBe(1);
+      expect(`${missingCodexLauncher.stderr}\n${missingCodexLauncher.stdout}`).not.toContain(
+        "[ut-tdd-work-guard] BLOCK:",
+      );
 
       expect(existsSync(bunTrace)).toBe(false);
       const deniedAccesses = existsSync(accessTrace.logPath)
