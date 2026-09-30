@@ -1209,7 +1209,10 @@ export function evaluateRightArmStaticGate(
     for (const id of g12L3HeadingIds(pairDocs ?? [])) pairIds.add(id);
     checkCaseTraces(rows, pairIds, violations);
   } else if (key === "G13") {
-    const l12Path = join(repoRoot, "docs/test-design/L12-acceptance-test-design.md");
+    const l12Path = resolveAuthoringSourceAbsolutePath(
+      repoRoot,
+      "docs/test-design/harness/L12-acceptance-test-design.md",
+    );
     const atIds = existsSync(l12Path)
       ? extractAtIds(readFileSync(l12Path, "utf8"))
       : new Set<string>();
