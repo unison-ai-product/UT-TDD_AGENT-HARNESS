@@ -91,6 +91,18 @@ review receipt / merge gate / 登録済み hook まで通す一つの破壊的 E
 005・006 (実 Release 受入)・008・009・010 (第 2 層) は PR-2 まで Candidate のまま保持し、
 第 1 層 Green を公開 asset の受入証拠へ読み替えない。
 
+### PR-1 第 1 層へ昇格した oracle
+
+| Oracle ID | Red 入力と独立観測点 | 所有テスト |
+| --- | --- | --- |
+| `U-ST-PACKCANARY-001` | source-only / absolute path の混入でも出荷inventoryに到達しない | `tests/pack-internal-canary-boundary.test.ts` |
+| `U-ST-PACKCANARY-002` | skills / authoring template の欠落と重複を別々に拒否する | `tests/pack-internal-canary-boundary.test.ts` |
+| `U-ST-PACKCANARY-003` | sourceとsetup元撤去後、別cwdからsealed wrapperで起動する | `tests/pack-internal-canary-boundary.test.ts` |
+| `U-ST-PACKCANARY-004` | wrapper / config / runtime stateにsetup元絶対path参照が0 | `tests/pack-internal-canary-boundary.test.ts` |
+| `U-ST-PACKCANARY-006` | unit境界でexact tagとexact 5 asset以外を拒否する | `tests/pack-internal-canary-boundary.test.ts` |
+| `U-ST-PACKCANARY-007` | 別process/cwd/envでPLAN・DB・doctor・reviewを再現しBun trace 0 | `tests/pack-internal-canary-boundary.test.ts` |
+| `U-ST-PACKCANARY-010` | 登録済みhookの正常系・禁止系・launcher欠落を区別する | `tests/pack-internal-canary-boundary.test.ts` |
+
 ## 4. 実行手順
 
 1. 第 1 層では一時 clean root に tagged release commit を作り、実 producer
