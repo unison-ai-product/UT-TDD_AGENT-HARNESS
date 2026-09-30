@@ -475,6 +475,33 @@ ${digestRun.stderr}`,
     expect(digestRun.stderr).toContain("consumer_runtime_identity_mismatch");
     expect(digestRun.stdout).not.toContain("consumer-local-ok");
 
+    // (b3) pointer and manifest agree on a fake bundle_digest (so the pointer/manifest equality
+    // check passes) while every payload file is untouched (so the per-file digests pass): only the
+    // manifest aggregate digest check can reject this.
+    const badAggregate = freshFixture(".ut-tdd-issue678-aggregate-");
+    const fakeDigest = `sha256:${"c".repeat(64)}`;
+    const aggregateManifestPath = join(badAggregate.bundle.bundle_path, "bundle-manifest.json");
+    const aggregateManifest = JSON.parse(readFileSync(aggregateManifestPath, "utf8")) as Record<
+      string,
+      unknown
+    >;
+    writeFileSync(
+      aggregateManifestPath,
+      JSON.stringify({ ...aggregateManifest, bundle_digest: fakeDigest }),
+    );
+    const aggregatePointer = JSON.parse(readFileSync(badAggregate.pointerPath, "utf8")) as Record<
+      string,
+      string
+    >;
+    writeFileSync(
+      badAggregate.pointerPath,
+      JSON.stringify({ ...aggregatePointer, bundle_digest: fakeDigest }),
+    );
+    const aggregateRun = launch(badAggregate.wrapper);
+    expect(aggregateRun.status, `${aggregateRun.stdout}\n${aggregateRun.stderr}`).toBe(78);
+    expect(aggregateRun.stderr).toContain("consumer_runtime_digest_mismatch");
+    expect(aggregateRun.stdout).not.toContain("consumer-local-ok");
+
     // (b2) tampered payload bytes (manifest file digest no longer matches).
     const badPayload = freshFixture(".ut-tdd-issue678-payload-");
     writeFileSync(
