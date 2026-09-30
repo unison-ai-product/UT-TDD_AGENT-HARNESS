@@ -14,7 +14,10 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { describe, expect, it, vi } from "vitest";
 import { checkDbProjectionIngestion, checkDesignDetection } from "../src/doctor/db-projection.ts";
-import { checkGateRunCoverage } from "../src/doctor/process-quality.ts";
+import {
+  checkDriveDbRegistration,
+  checkGateRunCoverage,
+} from "../src/doctor/process-quality.ts";
 import { analyzeDbCurrency, dbCurrencyMessages } from "../src/lint/db-currency.ts";
 import type { DriveDbRegistrationStats } from "../src/lint/drive-db-registration.ts";
 import { loadDriveDbRegistrationStats } from "../src/state-db/drive-registration.ts";
@@ -974,7 +977,12 @@ describe("db-currency lint", () => {
   it("U-TOKSTOP-002: doctor rebuild paths do not scan runtime token sessions", () => {
     tokenScans.all.mockClear();
     tokenScans.repoScoped.mockClear();
-    for (const check of [checkDbProjectionIngestion, checkDesignDetection, checkGateRunCoverage]) {
+    for (const check of [
+      checkDbProjectionIngestion,
+      checkDesignDetection,
+      checkGateRunCoverage,
+      checkDriveDbRegistration,
+    ]) {
       const root = mkdtempSync(join(tmpdir(), "ut-tdd-doctor-no-token-scan-"));
       try {
         check(root);
