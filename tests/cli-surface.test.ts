@@ -1052,6 +1052,13 @@ describe("L7 CLI surface closure", () => {
       });
       expect(parseCliJson(omitted).export.sourceTag).toBe(head.stdout.trim());
       expect(readFileSync(omittedTrace, "utf8")).toMatch(/rev-parse --short HEAD/);
+
+      const omittedPlan = parseCliJson(runCliIn(repoRoot, ["distribution", "plan", "--json"]));
+      expect(omittedPlan.export.sourceTag).toBe(head.stdout.trim());
+      expect(omittedPlan.readiness.contracts.tagPin).toBe(
+        `github:unison-ai-product/UT-TDD_AGENT-HARNESS-Pack#${head.stdout.trim()}`,
+      );
+      expect(omittedPlan.readiness.rollback.commands[0]).toBe(`git switch ${head.stdout.trim()}`);
     } finally {
       removeTestTree(traceRoot);
     }

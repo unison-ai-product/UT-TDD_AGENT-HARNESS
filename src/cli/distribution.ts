@@ -833,7 +833,7 @@ export function registerDistributionCommands(program: Command): void {
         hasCodex: detection.codex,
         repoRoot,
         packageRoot,
-        tag: opts.tag,
+        tag,
         cleanRepo: opts.cleanRepo,
         consumerRuntime: readConsumerRuntimeReadiness(repoRoot),
       });
