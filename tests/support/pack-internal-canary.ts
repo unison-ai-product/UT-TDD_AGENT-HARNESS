@@ -635,11 +635,17 @@ const pathText = (value) => typeof value === "string" ? value.replaceAll("\\\\",
 for (const name of ["access", "accessSync", "existsSync", "open", "openSync", "readFile", "readFileSync", "stat", "statSync", "lstat", "lstatSync", "realpath", "realpathSync", "createReadStream"]) {
   const original = fs[name];
   if (typeof original !== "function") continue;
-  fs[name] = function(path, ...args) {
+  const wrapped = function(path, ...args) {
     const candidate = pathText(path);
     if (watched.some((value) => candidate === value || candidate.startsWith(value + "/"))) fs.appendFileSync(log, JSON.stringify({ api: name, path: candidate }) + "\\n");
     return original.call(this, path, ...args);
   };
+  if (typeof original.native === "function") wrapped.native = function(path, ...args) {
+    const candidate = pathText(path);
+    if (watched.some((value) => candidate === value || candidate.startsWith(value + "/"))) fs.appendFileSync(log, JSON.stringify({ api: name + ".native", path: candidate }) + "\\n");
+    return original.native.call(original, path, ...args);
+  };
+  fs[name] = wrapped;
 }
 syncBuiltinESMExports();
 for (const name of ["access", "open", "readFile", "stat", "lstat", "realpath"]) {
