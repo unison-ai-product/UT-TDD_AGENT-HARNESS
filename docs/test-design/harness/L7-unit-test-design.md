@@ -2858,3 +2858,12 @@ v2正常fixtureはN=3、stable/canary両channelを対象とする。実producer�
 
 mutation M1–M7は正本§5と同一: exactly-oneへの退行、集合一致への弱体化、先頭mappingだけの比較、v1基数guard削除、attestation path束縛削除、promotion余剰scalar受理、rollback余剰scalar受理。
 対応するRed証跡は実装後に各単独mutationを実行して記録する。finding enum、reason precedence、producer/installer/validatorの既存意味は変更しない。
+
+## Issue #789 PR-1: 常時 token scan 退役 oracle
+
+対象は Stop hook と doctor の常時経路だけとする。手動の `telemetry scan` と token projection 自体は PR-2 の所有であり、この PR では変更しない。
+
+| ID | 観点 | 失敗させる mutation | 実装テスト |
+| --- | --- | --- | --- |
+| `U-TOKSTOP-001` | Stop refresh は DB rebuild 後も全 session log を走査しない | `loadRuntimeSessionUsage` の呼出しを復活させると scan spy が呼ばれて Red | `tests/token-ingest-runtime-boundary.test.ts` |
+| `U-TOKSTOP-002` | doctor projection は全 session log を走査しない | `projectRuntimeModelTelemetryForDoctor` 相当の呼出しを復活させると scan spy が呼ばれて Red | `tests/token-ingest-runtime-boundary.test.ts` |
