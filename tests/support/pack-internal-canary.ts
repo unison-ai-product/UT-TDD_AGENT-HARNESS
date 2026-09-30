@@ -268,6 +268,7 @@ export function runNode(
   args: readonly string[],
   env: NodeJS.ProcessEnv,
   input?: string,
+  timeoutMs = 120_000,
 ) {
   return spawnSync(process.execPath, [...args], {
     cwd,
@@ -275,7 +276,7 @@ export function runNode(
     env,
     input,
     windowsHide: true,
-    timeout: 120_000,
+    timeout: timeoutMs,
     maxBuffer: 64 * 1024 * 1024,
   });
 }
@@ -465,6 +466,10 @@ export async function createCanaryFixture(): Promise<CanaryFixture> {
         "--json",
       ],
       isolatedCanaryEnv(root),
+      undefined,
+      // The real producer performs a second isolated npm ci from the tagged Git tree.
+      // Keep a finite bound, but do not apply the short CLI bound to that nested build.
+      300_000,
     );
     if (producer.status !== 0)
       throw new Error(
