@@ -260,6 +260,27 @@ describe("#418 Pack-only internal canary boundary (PR-1 / first layer)", () => {
 
       const wrapper = join(fixture.consumerRoot, ".ut-tdd", "bin", "ut-tdd.mjs");
       expect(existsSync(wrapper)).toBe(true);
+      const activePointerPath = join(
+        fixture.consumerRoot,
+        ".ut-tdd",
+        "runtime",
+        "activation",
+        "active.json",
+      );
+      expect(existsSync(activePointerPath), "setup must publish an active runtime pointer").toBe(
+        true,
+      );
+      const activePointer = JSON.parse(readFileSync(activePointerPath, "utf8")) as {
+        bundle_path: string;
+        entry_path: string;
+      };
+      expect(
+        existsSync(activePointer.bundle_path),
+        "sealed bundle must exist before deletion",
+      ).toBe(true);
+      expect(existsSync(activePointer.entry_path), "sealed entry must exist before deletion").toBe(
+        true,
+      );
       expect(
         countAbsolutePathReferences(fixture.consumerRoot, observedForbiddenPaths(fixture)),
       ).toEqual([]);
@@ -267,6 +288,17 @@ describe("#418 Pack-only internal canary boundary (PR-1 / first layer)", () => {
       removeCanaryFixtureChild(fixture.root, fixture.producerRoot);
       removeCanaryFixtureChild(fixture.root, fixture.releaseDir);
       expect(deletedPaths.every((path) => !existsSync(path))).toBe(true);
+      expect(existsSync(activePointerPath), "active pointer must survive source deletion").toBe(
+        true,
+      );
+      expect(
+        existsSync(activePointer.bundle_path),
+        "sealed bundle must survive source deletion",
+      ).toBe(true);
+      expect(
+        existsSync(activePointer.entry_path),
+        "sealed entry must survive source deletion",
+      ).toBe(true);
 
       const bunTrace = createBunStub(fixture.root);
       const accessTrace = writeAccessTrace(fixture.root, observedForbiddenPaths(fixture));
