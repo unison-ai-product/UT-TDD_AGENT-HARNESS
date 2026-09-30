@@ -178,7 +178,12 @@ export function checkDbProjectionIngestion(
     };
     const db = timed("open-db", () => openHarnessDb(":memory:", { repoRoot }));
     try {
-      const rebuilt = rebuildHarnessDb({ repoRoot, db, timing: options.timing === true });
+      const rebuilt = rebuildHarnessDb({
+        repoRoot,
+        db,
+        timing: options.timing === true,
+        skipTokenTelemetry: true,
+      });
       let telemetryStats: DbTelemetryProvenanceStats[] = [];
       timed("telemetry-stats", () => {
         telemetryStats = loadDbTelemetryProvenanceStats(db);
@@ -219,7 +224,7 @@ export function checkDesignDetection(repoRoot: string): { messages: string[]; ok
   }
   const db = openHarnessDb(":memory:", { repoRoot });
   try {
-    rebuildHarnessDb({ repoRoot, db });
+    rebuildHarnessDb({ repoRoot, db, skipTokenTelemetry: true });
     const result = analyzeDesignDetectionStats(collectDesignDetectionStats(db));
     return { messages: designDetectionMessages(result), ok: result.ok };
   } catch {

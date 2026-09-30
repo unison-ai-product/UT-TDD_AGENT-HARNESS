@@ -14,7 +14,8 @@ vi.mock("../src/state-db/token-tracker.ts", () => ({
   loadRepoScopedRuntimeSessionUsage: scans.repoScoped,
 }));
 
-import { checkDbProjectionIngestion } from "../src/doctor/db-projection.ts";
+import { checkDbProjectionIngestion, checkDesignDetection } from "../src/doctor/db-projection.ts";
+import { checkGateRunCoverage } from "../src/doctor/process-quality.ts";
 import { refreshHarnessDbOnStop } from "../src/state-db/stop-refresh.ts";
 
 const roots: string[] = [];
@@ -45,6 +46,8 @@ describe("#789 常時 token scan の退役", () => {
 
   it("U-TOKSTOP-002: doctor projection は session log を走査しない", () => {
     checkDbProjectionIngestion(fixtureRoot());
+    checkDesignDetection(fixtureRoot());
+    checkGateRunCoverage(fixtureRoot());
 
     expect(scans.all).not.toHaveBeenCalled();
     expect(scans.repoScoped).not.toHaveBeenCalled();

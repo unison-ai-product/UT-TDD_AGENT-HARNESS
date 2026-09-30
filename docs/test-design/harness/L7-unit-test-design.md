@@ -2866,4 +2866,4 @@ mutation M1–M7は正本§5と同一: exactly-oneへの退行、集合一致へ
 | ID | 観点 | 失敗させる mutation | 実装テスト |
 | --- | --- | --- | --- |
 | `U-TOKSTOP-001` | Stop refresh は DB rebuild 後も全 session log を走査しない | 直接 `loadRuntimeSessionUsage` または rebuild 経由の `loadRepoScopedRuntimeSessionUsage` を復活させると独立 spy が呼ばれて Red | `tests/token-ingest-runtime-boundary.test.ts` |
-| `U-TOKSTOP-002` | doctor projection は全 session log を走査しない | 直接 `projectRuntimeModelTelemetryForDoctor` または rebuild 経由の repo-scoped scan を復活させると独立 spy が呼ばれて Red | `tests/token-ingest-runtime-boundary.test.ts` |
+| `U-TOKSTOP-002` | doctor の DB projection / design detection / gate-run coverage は全 session log を走査しない | 直接 `projectRuntimeModelTelemetryForDoctor` または各 rebuild 経由の repo-scoped scan を復活させると独立 spy が呼ばれて Red | `tests/token-ingest-runtime-boundary.test.ts` |

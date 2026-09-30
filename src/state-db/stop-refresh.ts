@@ -52,7 +52,7 @@ export function refreshHarnessDbOnStop(options: StopRefreshOptions): StopRefresh
   const tokenRunsIngested = 0;
   let vacuum: MaybeVacuumResult | undefined;
   try {
-    const rebuild = rebuildHarnessDb({ repoRoot });
+    const rebuild = rebuildHarnessDb({ repoRoot, skipTokenTelemetry: true });
     rebuilt = rebuild.ok;
     if (!rebuild.ok) {
       return { ok: false, rebuilt, tokenRunsIngested, skippedReason: "rebuild-failed" };
