@@ -29,6 +29,18 @@ import {
 
 const repoRoot = process.cwd();
 
+function processDiagnostic(result: {
+  status: number | null;
+  stdout: string;
+  stderr: string;
+}): string {
+  return JSON.stringify({
+    status: result.status,
+    stdout: result.stdout.slice(-4000),
+    stderr: result.stderr.slice(-4000),
+  });
+}
+
 function trackedPaths(): string[] {
   return execFileSync("git", ["ls-tree", "-r", "--name-only", "-z", "HEAD"], {
     cwd: repoRoot,
@@ -354,30 +366,27 @@ describe("#418 Pack-only internal canary boundary (PR-1 / first layer)", () => {
         runNode(fixture?.alternateCwd ?? "", [wrapper, ...args], env);
 
       const setupSmoke = wrapperRun(["doctor", "--setup-smoke"]);
-      expect(setupSmoke.status, setupSmoke.stderr || setupSmoke.stdout).toBe(0);
+      expect(setupSmoke.status, processDiagnostic(setupSmoke)).toBe(0);
       expect(setupSmoke.stdout).toContain("doctor: setup-smoke - OK");
 
       // The clean consumer has no product package/lock yet. Verify the named
       // consumer health profile independently of the --setup-smoke alias.
       const doctor = wrapperRun(["doctor", "--profile", "consumer-setup-smoke"]);
-      expect(
-        doctor.status,
-        JSON.stringify({ status: doctor.status, stdout: doctor.stdout, stderr: doctor.stderr }),
-      ).toBe(0);
+      expect(doctor.status, processDiagnostic(doctor)).toBe(0);
 
       const authored = writeCanaryPlanManifest(fixture);
       const planAuthoring = wrapperRun(["plan", "draft", "--manifest", authored.manifest]);
-      expect(planAuthoring.status, planAuthoring.stderr || planAuthoring.stdout).toBe(0);
+      expect(planAuthoring.status, processDiagnostic(planAuthoring)).toBe(0);
       expect(existsSync(join(fixture.consumerRoot, authored.planPath))).toBe(true);
       const authoredPlan = readFileSync(join(fixture.consumerRoot, authored.planPath), "utf8");
       expect(authoredPlan).toContain("admission_receipt:");
       expect(authoredPlan).toContain("Canary consumer の設計起票");
 
       const planLint = wrapperRun(["plan", "lint"]);
-      expect(planLint.status, planLint.stderr || planLint.stdout).toBe(0);
+      expect(planLint.status, processDiagnostic(planLint)).toBe(0);
 
       const dbRebuild = wrapperRun(["db", "rebuild", "--json"]);
-      expect(dbRebuild.status, dbRebuild.stderr || dbRebuild.stdout).toBe(0);
+      expect(dbRebuild.status, processDiagnostic(dbRebuild)).toBe(0);
       expect(existsSync(join(fixture.consumerRoot, ".ut-tdd", "harness.db"))).toBe(true);
 
       const memoryAdd = wrapperRun([
@@ -395,7 +404,7 @@ describe("#418 Pack-only internal canary boundary (PR-1 / first layer)", () => {
         "canary-418-memory",
         "--receipt-json",
       ]);
-      expect(memoryAdd.status, memoryAdd.stderr || memoryAdd.stdout).toBe(0);
+      expect(memoryAdd.status, processDiagnostic(memoryAdd)).toBe(0);
       const memoryRegistration = JSON.parse(
         memoryAdd.stdout.trim().split(/\r?\n/).at(-1) ?? "{}",
       ) as {
@@ -431,7 +440,7 @@ describe("#418 Pack-only internal canary boundary (PR-1 / first layer)", () => {
         "codex",
         "--json",
       ]);
-      expect(reviewDispatch.status, reviewDispatch.stderr || reviewDispatch.stdout).toBe(1);
+      expect(reviewDispatch.status, processDiagnostic(reviewDispatch)).toBe(1);
       const dispatchJson = JSON.parse(reviewDispatch.stdout) as {
         ok: boolean;
         reason: string;
@@ -472,7 +481,7 @@ describe("#418 Pack-only internal canary boundary (PR-1 / first layer)", () => {
       });
 
       const pendingMerge = wrapperRun(["pr", "merge", "--pr", "418", "--json"]);
-      expect(pendingMerge.status, pendingMerge.stderr || pendingMerge.stdout).toBe(1);
+      expect(pendingMerge.status, processDiagnostic(pendingMerge)).toBe(1);
       const pendingMergeJson = JSON.parse(pendingMerge.stdout) as {
         ok: boolean;
         decision: string;
@@ -496,7 +505,7 @@ describe("#418 Pack-only internal canary boundary (PR-1 / first layer)", () => {
         reviewEnvelope,
         "--json",
       ]);
-      expect(liveConsume.status, liveConsume.stderr || liveConsume.stdout).toBe(0);
+      expect(liveConsume.status, processDiagnostic(liveConsume)).toBe(0);
       expect(existsSync(reviewStubs.claudeMarkerPath)).toBe(true);
       const receiptPath = join(
         fixture.consumerRoot,
@@ -518,7 +527,7 @@ describe("#418 Pack-only internal canary boundary (PR-1 / first layer)", () => {
       });
 
       const merge = wrapperRun(["pr", "merge", "--pr", "418", "--json"]);
-      expect(merge.status, merge.stderr || merge.stdout).toBe(0);
+      expect(merge.status, processDiagnostic(merge)).toBe(0);
       expect(JSON.parse(merge.stdout)).toMatchObject({
         ok: true,
         decision: "merge",
