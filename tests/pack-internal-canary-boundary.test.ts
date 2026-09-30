@@ -315,19 +315,22 @@ describe("#418 Pack-only internal canary boundary (PR-1 / first layer)", () => {
         bundle_path: string;
         entry_path: string;
       };
-      // Mutation probe for U-ST-PACKCANARY-004: a leaked releaseDir in the
-      // real JSON activation state must be visible to the final path scan.
+      // Mutation probe for U-ST-PACKCANARY-004: preserve the read-only
+      // activation state, but test its real JSON shape with a leaked path.
+      const activationProbeRoot = mkdtempSync(join(tmpdir(), "ut-tdd-packcanary-active-probe-"));
       try {
+        const probeActivation = join(activationProbeRoot, ".ut-tdd", "runtime", "activation");
+        mkdirSync(probeActivation, { recursive: true });
         writeFileSync(
-          activePointerPath,
+          join(probeActivation, "active.json"),
           JSON.stringify({ ...activePointer, bundle_path: fixture.releaseDir }),
           "utf8",
         );
-        expect(countAbsolutePathReferences(fixture.consumerRoot, [fixture.releaseDir])).not.toEqual(
+        expect(countAbsolutePathReferences(activationProbeRoot, [fixture.releaseDir])).not.toEqual(
           [],
         );
       } finally {
-        writeFileSync(activePointerPath, activePointerBytes, "utf8");
+        removeCanaryFixtureTree(activationProbeRoot);
       }
       expect(
         existsSync(activePointer.bundle_path),
