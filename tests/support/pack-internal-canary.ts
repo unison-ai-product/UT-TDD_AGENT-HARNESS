@@ -220,6 +220,19 @@ function assertFixtureTree(root: string): void {
   visit(root);
 }
 
+function makeFixtureDirectoriesWritable(root: string): void {
+  if (process.platform === "win32") return;
+  const visit = (path: string): void => {
+    const info = lstatSync(path);
+    if (info.isSymbolicLink()) return;
+    if (!info.isDirectory()) return;
+    chmodSync(path, info.mode | 0o700);
+    for (const entry of readdirSync(path, { withFileTypes: true }))
+      if (entry.isDirectory()) visit(join(path, entry.name));
+  };
+  visit(root);
+}
+
 export function removeCanaryFixtureTree(root: string): void {
   const target = resolve(root);
   const relativeRoot = relative(resolve(tmpdir()), target);
@@ -232,6 +245,7 @@ export function removeCanaryFixtureTree(root: string): void {
   )
     throw new Error("canary fixture cleanup target is outside its owned temporary root");
   assertFixtureTree(target);
+  makeFixtureDirectoriesWritable(target);
   removeTestTree(target);
 }
 
@@ -241,6 +255,7 @@ export function removeCanaryFixtureChild(root: string, child: string): void {
   if (dirname(target) !== base) throw new Error("canary cleanup child escapes its test root");
   if (existsSync(target)) {
     assertFixtureTree(target);
+    makeFixtureDirectoriesWritable(target);
     removeTestTree(target);
   }
 }

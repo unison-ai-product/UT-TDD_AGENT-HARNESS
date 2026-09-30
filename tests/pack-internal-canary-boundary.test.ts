@@ -214,6 +214,8 @@ describe("#418 Pack-only internal canary boundary (PR-1 / first layer)", () => {
 
   it("U-ST-PACKCANARY-003 U-ST-PACKCANARY-004 U-ST-PACKCANARY-007 U-ST-PACKCANARY-010: installed Release bundle survives setup-source removal in a new process", async () => {
     let fixture: Awaited<ReturnType<typeof createCanaryFixture>> | undefined;
+    let testFailure: unknown;
+    let cleanupFailure: unknown;
     try {
       fixture = await createCanaryFixture();
       const setupEnv = isolatedCanaryEnv(fixture.root);
@@ -638,8 +640,18 @@ describe("#418 Pack-only internal canary boundary (PR-1 / first layer)", () => {
       expect(
         countAbsolutePathReferences(fixture.consumerRoot, observedForbiddenPaths(fixture)),
       ).toEqual([]);
+    } catch (error) {
+      testFailure = error;
     } finally {
-      if (fixture) removeCanaryFixtureTree(fixture.root);
+      if (fixture) {
+        try {
+          removeCanaryFixtureTree(fixture.root);
+        } catch (cleanupError) {
+          cleanupFailure = cleanupError;
+        }
+      }
     }
+    if (testFailure !== undefined) throw testFailure;
+    if (cleanupFailure !== undefined) throw cleanupFailure;
   }, 600_000);
 });
