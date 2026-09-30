@@ -3,8 +3,16 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const scan = vi.hoisted(() => vi.fn(() => []));
-vi.mock("../src/state-db/token-tracker.ts", () => ({ loadRuntimeSessionUsage: scan }));
+const scans = vi.hoisted(() => ({
+  all: vi.fn(() => []),
+  repoScoped: vi.fn(() => {
+    throw new Error("unexpected repo-scoped token scan");
+  }),
+}));
+vi.mock("../src/state-db/token-tracker.ts", () => ({
+  loadRuntimeSessionUsage: scans.all,
+  loadRepoScopedRuntimeSessionUsage: scans.repoScoped,
+}));
 
 import { checkDbProjectionIngestion } from "../src/doctor/db-projection.ts";
 import { refreshHarnessDbOnStop } from "../src/state-db/stop-refresh.ts";
@@ -18,7 +26,8 @@ function fixtureRoot(): string {
 }
 
 afterEach(() => {
-  scan.mockClear();
+  scans.all.mockClear();
+  scans.repoScoped.mockClear();
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
 });
 
@@ -30,12 +39,14 @@ describe("#789 常時 token scan の退役", () => {
     });
 
     expect(result.rebuilt).toBe(true);
-    expect(scan).not.toHaveBeenCalled();
+    expect(scans.all).not.toHaveBeenCalled();
+    expect(scans.repoScoped).not.toHaveBeenCalled();
   });
 
   it("U-TOKSTOP-002: doctor projection は session log を走査しない", () => {
     checkDbProjectionIngestion(fixtureRoot());
 
-    expect(scan).not.toHaveBeenCalled();
+    expect(scans.all).not.toHaveBeenCalled();
+    expect(scans.repoScoped).not.toHaveBeenCalled();
   });
 });
