@@ -987,6 +987,148 @@ function firstConsumerG12Command(
   return command;
 }
 
+const G13_CONSUMER_CASE_IDS = ["SMOKE-CONSUMER-01", "SMOKE-CONSUMER-02"] as const;
+const G13_EVIDENCE_DIRECTORY = "g13-post-deploy";
+const G13_SLI_SLO_PATH = ".ut-tdd/evidence/g13-post-deploy/artifacts/sli-slo.json";
+const G13_ROLLBACK_PATH = ".ut-tdd/evidence/g13-post-deploy/artifacts/rollback.json";
+
+type ConsumerG13Manifest = Omit<
+  ConsumerG12Manifest,
+  | "selected_at_ids"
+  | "mandatory_at_ids"
+  | "deferred_at_ids"
+  | "commands"
+  | "coverage"
+  | "defer"
+  | "artifacts"
+> & {
+  selected_smoke_ids: string[];
+  mandatory_smoke_ids: string[];
+  deferred_smoke_ids: string[];
+  commands: (Omit<ConsumerG12Manifest["commands"][number], "at_ids"> & { smoke_ids: string[] })[];
+  coverage: (Omit<ConsumerG12Manifest["coverage"][number], "at_id"> & { smoke_id: string })[];
+  defer: { smoke_id: string; reason: string; plan_id: string }[];
+  artifacts: Record<string, string>;
+};
+
+function consumerG13Manifest(): ConsumerG13Manifest {
+  const commandId = "cmd-consumer-smoke";
+  const smokePath = "tests/fixtures/g13-consumer/smoke-results.txt";
+  return {
+    schema_version: "g13-post-deploy-evidence-v1",
+    gate: "G13",
+    profile: "consumer-post-deploy-minimum",
+    plan_id: "PLAN-CONSUMER-01",
+    selected_smoke_ids: [...G13_CONSUMER_CASE_IDS],
+    mandatory_smoke_ids: [...G13_CONSUMER_CASE_IDS],
+    deferred_smoke_ids: [],
+    commands: [
+      {
+        command_id: commandId,
+        command: "node tests/consumer-smoke-check.mjs",
+        runner: "node",
+        scope: "consumer fixture",
+        exit_code: 0,
+        evidence_path: "tests/fixtures/g13-consumer/command-output.txt",
+        output_digest: "sha256:" + "0".repeat(64),
+        smoke_ids: [...G13_CONSUMER_CASE_IDS],
+      },
+    ],
+    coverage: G13_CONSUMER_CASE_IDS.map((smokeId) => ({
+      smoke_id: smokeId,
+      status: "passed",
+      evidence_paths: [smokePath],
+      command_ids: [commandId],
+    })),
+    defer: [],
+    exit_criteria: {
+      all_mandatory_passed: true,
+      failed_mandatory_count: 0,
+      stale_defer_count: 0,
+      doctor_check: "g13-post-deploy-workflow",
+    },
+    artifacts: {
+      production_smoke: smokePath,
+      sli_slo_observation: G13_SLI_SLO_PATH,
+      rollback_decision: G13_ROLLBACK_PATH,
+    },
+  };
+}
+
+function writeConsumerG13Fixture(root: string): void {
+  writeConsumerGateFixture(root);
+  const source = join(root, "docs/templates/vmodel/L13-production-observation.md");
+  const template = readFileSync(source, "utf8");
+  writeFixtureDoc(
+    root,
+    "docs/process/evidence/g13-post-deploy-verification-design.md",
+    template
+      .replace("status: draft", "status: confirmed")
+      .replace(/^plan: .*$/m, "plan: docs/plans/PLAN-CONSUMER-01.md") +
+      "\n### harness 追補: G13 検証ケース\n\n| ケースID | シナリオ | 期待結果 | トレース元 |\n| --- | --- | --- | --- |\n| SMOKE-CONSUMER-01 | status / doctor の実行 | exit 0 | AT-FR-01-01 |\n| SMOKE-CONSUMER-02 | projection の rebuild | 失敗 0 | AT-FR-01-01 |\n",
+  );
+  writeFixtureDoc(
+    root,
+    "docs/plans/PLAN-CONSUMER-01.md",
+    "---\nplan_id: PLAN-CONSUMER-01\nkind: add-impl\nstatus: confirmed\n---\n",
+  );
+  writeFixtureDoc(root, "tests/fixtures/g13-consumer/smoke-results.txt", "passed\n");
+  writeFixtureDoc(root, "tests/fixtures/g13-consumer/command-output.txt", "passed\n");
+  writeFixtureDoc(
+    root,
+    G13_SLI_SLO_PATH,
+    JSON.stringify(
+      {
+        window_start: "2026-09-29T00:00:00Z",
+        window_end: "2026-09-29T06:00:00Z",
+        slos: [{ slo_id: "SLO-AVAIL", target: "99.9%", observed: 99.95 }],
+      },
+      null,
+      2,
+    ) + "\n",
+  );
+  writeFixtureDoc(root, G13_ROLLBACK_PATH, JSON.stringify({ decision: "keep" }, null, 2) + "\n");
+  writeFixtureDoc(
+    root,
+    ".ut-tdd/evidence/g13-post-deploy/ok.json",
+    JSON.stringify(consumerG13Manifest(), null, 2) + "\n",
+  );
+}
+
+function updateConsumerG13Manifest(
+  root: string,
+  mutate: (manifest: ConsumerG13Manifest) => void,
+): void {
+  const path = join(root, ".ut-tdd", "evidence", G13_EVIDENCE_DIRECTORY, "ok.json");
+  const manifest = JSON.parse(readFileSync(path, "utf8")) as ConsumerG13Manifest;
+  mutate(manifest);
+  writeFileSync(path, JSON.stringify(manifest, null, 2) + "\n", "utf8");
+}
+
+function updateConsumerG13Design(root: string, mutate: (content: string) => string): void {
+  const path = join(root, "docs/process/evidence/g13-post-deploy-verification-design.md");
+  writeFileSync(path, mutate(readFileSync(path, "utf8")), "utf8");
+}
+
+function firstConsumerG13Command(
+  manifest: ConsumerG13Manifest,
+): ConsumerG13Manifest["commands"][number] {
+  const command = manifest.commands[0];
+  if (!command) throw new Error("consumer G13 fixture command is missing");
+  return command;
+}
+
+function updateConsumerG13Artifact(
+  root: string,
+  path: string,
+  mutate: (artifact: Record<string, unknown>) => void,
+): void {
+  const absolutePath = join(root, path);
+  const artifact = JSON.parse(readFileSync(absolutePath, "utf8")) as Record<string, unknown>;
+  mutate(artifact);
+  writeFileSync(absolutePath, JSON.stringify(artifact, null, 2) + "\n", "utf8");
+}
+
 function updateConsumerG12DeployReceipt(
   root: string,
   mutate: (receipt: Record<string, unknown>) => void,
@@ -2712,6 +2854,264 @@ describe("PR-G11 consumer G11 predicates", () => {
       if (mutation.name === "G11 mandatory field name") {
         expect(messages).toContain("missing row evidence UAT-CONSUMER-02");
       }
+    }
+  });
+});
+
+describe("PR-G13 consumer G13 predicates", () => {
+  it("U-RCDEV-034: evaluates the normal consumer G13 post-deploy contract", () => {
+    const root = fixtureRoot();
+    writeConsumerG13Fixture(root);
+    const result = evaluateStaticGate({ gate: "G13", repoRoot: root });
+    expect(result).toMatchObject({ gate: "G13", applicable: true, passed: true });
+    expect(result.messages.join("\n")).toContain(
+      "right-arm-static - OK (G13, cases=2, manifests=1)",
+    );
+    expect(result.messages.join("\n")).toContain("未判定 (review): PO/TL");
+  });
+
+  it("U-RCDEV-034: rejects missing, malformed, duplicate, and non-AT traces", () => {
+    const mutations: { name: string; mutate: (root: string) => void; expected: string }[] = [
+      {
+        name: "missing trace",
+        mutate: (root) => updateConsumerG13Design(root, (text) => text.replace("AT-FR-01-01", "")),
+        expected: "untraced case SMOKE-CONSUMER-01",
+      },
+      {
+        name: "unknown trace",
+        mutate: (root) =>
+          updateConsumerG13Design(root, (text) => text.replace("AT-FR-01-01", "AT-FR-99-99")),
+        expected: "trace target missing AT-FR-99-99",
+      },
+      {
+        name: "defined non-AT trace",
+        mutate: (root) =>
+          updateConsumerG13Design(root, (text) => text.replace("AT-FR-01-01", "NFR-01")),
+        expected: "untraced case SMOKE-CONSUMER-01",
+      },
+      {
+        name: "duplicate case id",
+        mutate: (root) =>
+          updateConsumerG13Design(root, (text) =>
+            text.replace("SMOKE-CONSUMER-02", "SMOKE-CONSUMER-01"),
+          ),
+        expected: "duplicate case id SMOKE-CONSUMER-01",
+      },
+      {
+        name: "missing case columns",
+        mutate: (root) =>
+          updateConsumerG13Design(root, (text) =>
+            text.replace(
+              "| ケースID | シナリオ | 期待結果 | トレース元 |",
+              "| シナリオ | 期待結果 | トレース元 |",
+            ),
+          ),
+        expected: "required case table columns",
+      },
+    ];
+    for (const mutation of mutations) {
+      const root = fixtureRoot();
+      writeConsumerG13Fixture(root);
+      mutation.mutate(root);
+      const result = evaluateStaticGate({ gate: "G13", repoRoot: root });
+      expect(result, mutation.name).toMatchObject({ applicable: true, passed: false });
+      expect(result.messages.join("\n"), mutation.name).toContain(mutation.expected);
+      if (mutation.name === "unknown trace")
+        expect(result.messages.join("\n")).toContain("untraced case SMOKE-CONSUMER-01");
+    }
+  });
+
+  it("U-RCDEV-034: requires evidence for each mandatory smoke row", () => {
+    const root = fixtureRoot();
+    writeConsumerG13Fixture(root);
+    updateConsumerG13Manifest(root, (manifest) => {
+      manifest.mandatory_smoke_ids = ["SMOKE-CONSUMER-01"];
+      manifest.selected_smoke_ids = ["SMOKE-CONSUMER-01"];
+      manifest.commands[0]!.smoke_ids = ["SMOKE-CONSUMER-01"];
+      manifest.coverage = manifest.coverage.filter((row) => row.smoke_id === "SMOKE-CONSUMER-01");
+    });
+    const result = evaluateStaticGate({ gate: "G13", repoRoot: root });
+    expect(result.passed).toBe(false);
+    expect(result.messages.join("\n")).toContain("missing row evidence SMOKE-CONSUMER-02");
+  });
+
+  it("U-RCDEV-034: validates G13-only evidence artifacts and keeps rollback as an operational outcome", () => {
+    const mutations: {
+      name: string;
+      mutate: (root: string) => void;
+      expected: string;
+      passed?: boolean;
+    }[] = [
+      {
+        name: "missing artifact",
+        mutate: (root) =>
+          updateConsumerG13Manifest(root, (manifest) => {
+            delete manifest.artifacts.rollback_decision;
+          }),
+        expected: "missing artifact rollback_decision",
+      },
+      {
+        name: "invalid JSON",
+        mutate: (root) => writeFixtureDoc(root, G13_SLI_SLO_PATH, "not JSON\n"),
+        expected: "invalid artifact sli_slo_observation: JSON object required",
+      },
+      {
+        name: "invalid window start",
+        mutate: (root) =>
+          updateConsumerG13Artifact(root, G13_SLI_SLO_PATH, (artifact) => {
+            artifact.window_start = "not-a-date";
+          }),
+        expected: "invalid sli_slo_observation.window_start",
+      },
+      {
+        name: "window not increasing",
+        mutate: (root) =>
+          updateConsumerG13Artifact(root, G13_SLI_SLO_PATH, (artifact) => {
+            artifact.window_end = artifact.window_start;
+          }),
+        expected: "invalid sli_slo_observation.window_end",
+      },
+      {
+        name: "empty slos",
+        mutate: (root) =>
+          updateConsumerG13Artifact(root, G13_SLI_SLO_PATH, (artifact) => {
+            artifact.slos = [];
+          }),
+        expected: "sli_slo_observation.slos is required",
+      },
+      {
+        name: "missing observed",
+        mutate: (root) =>
+          updateConsumerG13Artifact(root, G13_SLI_SLO_PATH, (artifact) => {
+            delete (artifact.slos as Record<string, unknown>[])[0]!.observed;
+          }),
+        expected: "sli_slo_observation.slos[SLO-AVAIL].observed is required",
+      },
+      {
+        name: "missing target",
+        mutate: (root) =>
+          updateConsumerG13Artifact(root, G13_SLI_SLO_PATH, (artifact) => {
+            (artifact.slos as Record<string, unknown>[])[0]!.target = "";
+          }),
+        expected: "sli_slo_observation.slos[SLO-AVAIL].target is required",
+      },
+      {
+        name: "duplicate slo",
+        mutate: (root) => {
+          updateConsumerG13Artifact(root, G13_SLI_SLO_PATH, (artifact) => {
+            (artifact.slos as unknown[]).push({
+              ...(artifact.slos as Record<string, unknown>[])[0],
+            });
+          });
+        },
+        expected: "duplicate slo SLO-AVAIL",
+      },
+      {
+        name: "invalid decision",
+        mutate: (root) =>
+          updateConsumerG13Artifact(root, G13_ROLLBACK_PATH, (artifact) => {
+            artifact.decision = "unknown";
+          }),
+        expected: "invalid rollback_decision.decision unknown",
+      },
+      {
+        name: "rollback is valid",
+        mutate: (root) =>
+          updateConsumerG13Artifact(root, G13_ROLLBACK_PATH, (artifact) => {
+            artifact.decision = "rollback";
+          }),
+        expected: "right-arm-static - OK (G13, cases=2, manifests=1)",
+        passed: true,
+      },
+      {
+        name: "case-sensitive decision",
+        mutate: (root) =>
+          updateConsumerG13Artifact(root, G13_ROLLBACK_PATH, (artifact) => {
+            artifact.decision = "Keep";
+          }),
+        expected: "invalid rollback_decision.decision Keep",
+      },
+      {
+        name: "future observation window",
+        mutate: (root) =>
+          updateConsumerG13Artifact(root, G13_SLI_SLO_PATH, (artifact) => {
+            artifact.window_start = "2099-01-01T00:00:00Z";
+            artifact.window_end = "2099-01-01T06:00:00Z";
+          }),
+        expected: "right-arm-static - OK (G13, cases=2, manifests=1)",
+        passed: true,
+      },
+    ];
+    for (const mutation of mutations) {
+      const root = fixtureRoot();
+      writeConsumerG13Fixture(root);
+      mutation.mutate(root);
+      const result = evaluateStaticGate({ gate: "G13", repoRoot: root });
+      expect(result.passed, mutation.name).toBe(mutation.passed ?? false);
+      expect(result.messages.join("\n"), mutation.name).toContain(mutation.expected);
+    }
+  });
+
+  it("U-RCDEV-034: validates each G13 E-only manifest predicate", () => {
+    const mutations: {
+      name: string;
+      expected: string;
+      mutate: (manifest: ConsumerG13Manifest) => void;
+    }[] = [
+      {
+        name: "schema",
+        expected: "invalid schema_version",
+        mutate: (manifest) => {
+          manifest.schema_version = "g12-acceptance-evidence-v1";
+        },
+      },
+      {
+        name: "gate",
+        expected: "gate must be G13",
+        mutate: (manifest) => {
+          manifest.gate = "G12";
+        },
+      },
+      {
+        name: "exit code",
+        expected: "exit_code is non-zero",
+        mutate: (manifest) => {
+          firstConsumerG13Command(manifest).exit_code = 1;
+        },
+      },
+      {
+        name: "digest",
+        expected: "invalid digest",
+        mutate: (manifest) => {
+          firstConsumerG13Command(manifest).output_digest = `sha256:${"a".repeat(63)}`;
+        },
+      },
+      {
+        name: "stale defer count type",
+        expected: "stale_defer_count must be 0",
+        mutate: (manifest) => {
+          (manifest.exit_criteria as unknown as Record<string, unknown>).stale_defer_count = "0";
+        },
+      },
+      {
+        name: "G13 mandatory field name",
+        expected: "missing row evidence SMOKE-CONSUMER-01",
+        mutate: (manifest) => {
+          const record = manifest as unknown as Record<string, unknown>;
+          record.mandatory_at_ids = manifest.mandatory_smoke_ids;
+          delete record.mandatory_smoke_ids;
+        },
+      },
+    ];
+    for (const mutation of mutations) {
+      const root = fixtureRoot();
+      writeConsumerG13Fixture(root);
+      updateConsumerG13Manifest(root, mutation.mutate);
+      const result = evaluateStaticGate({ gate: "G13", repoRoot: root });
+      expect(result.passed, mutation.name).toBe(false);
+      expect(result.messages.join("\n"), mutation.name).toContain(mutation.expected);
+      if (mutation.name === "G13 mandatory field name")
+        expect(result.messages.join("\n")).toContain("missing row evidence SMOKE-CONSUMER-02");
     }
   });
 });
