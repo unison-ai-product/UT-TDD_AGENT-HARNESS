@@ -1007,6 +1007,23 @@ describe("L7 CLI surface closure", () => {
     }
   }, 30_000);
 
+  it("does not start Git when a non-distribution command only needs the CLI version", () => {
+    const traceRoot = mkdtempSync(join(tmpdir(), "ut-tdd-cli-git-trace-"));
+    const tracePath = join(traceRoot, "git-trace.log");
+    try {
+      const run = runCliIn(repoRoot, ["--version"], {
+        ...process.env,
+        GIT_TRACE: tracePath,
+      });
+
+      expect(run.status, run.stderr || run.stdout).toBe(0);
+      expect(run.stdout.trim()).not.toBe("");
+      expect(existsSync(tracePath)).toBe(false);
+    } finally {
+      removeTestTree(traceRoot);
+    }
+  });
+
   it("exposes a non-destructive Pack repository sync plan", () => {
     const run = runCliIn(repoRoot, [
       "distribution",
