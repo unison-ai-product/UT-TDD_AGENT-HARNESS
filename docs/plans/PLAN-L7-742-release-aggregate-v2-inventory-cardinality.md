@@ -47,26 +47,67 @@ dependencies:
     - docs/test-design/harness/L7-unit-test-design.md
     - docs/test-design/harness/L7-pack-consumer-runtime-release-install-test-design.md
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/418
-review_evidence: []
-status: draft
+review_evidence:
+  - reviewer: "Claude Opus (blind-reviewer, 非著者 evidence review, PR #751 merged
+      head、CI green 後)"
+    reviewer_model: claude-opus-5
+    worker_model: gpt-6-luna
+    review_kind: cross_agent
+    verdict: pass
+    reviewed_at: 2026-09-29T10:55:46Z
+    tests_green_at: 2026-09-29T09:28:38Z
+    plan_revision: PLAN-L7-742 r6
+    subject_head: 4d2709028a18bf0d65fc3ec9fadaa9676a78f23a
+    green_commands:
+      - kind: doctor
+        command: node src/cli.ts doctor --strict-green-command-digest --result-file
+          "$UT_TDD_DOCTOR_RESULT_FILE"
+        runner: ci
+        scope: full
+        exit_code: 0
+        completed_at: 2026-09-29T09:28:38Z
+        evidence_path: docs/test-design/harness/L7-unit-test-design.md
+        output_digest: sha256:7fe559c4da940f4f17c2f7ece1738f4decafdea64658bfe085caddfaf81e0da3
+        anchor_commit: 4d2709028a18bf0d65fc3ec9fadaa9676a78f23a
+  - reviewer: "Codex Sol (非著者 evidence review, PR #748 契約 exact head、CI green 後)"
+    reviewer_model: gpt-5.6-sol
+    worker_model: claude-opus-5
+    review_kind: cross_agent
+    verdict: pass
+    reviewed_at: 2026-09-29T10:31:36Z
+    tests_green_at: 2026-09-29T06:46:59Z
+    plan_revision: PLAN-L7-742 r6
+    subject_head: bbe0ed4d9696265e662cbea6604062c91584275e
+    green_commands:
+      - kind: doctor
+        command: node src/cli.ts doctor --strict-green-command-digest --result-file
+          "$UT_TDD_DOCTOR_RESULT_FILE"
+        runner: ci
+        scope: full
+        exit_code: 0
+        completed_at: 2026-09-29T06:46:59Z
+        evidence_path: docs/test-design/harness/L7-unit-test-design.md
+        output_digest: sha256:4f8ac349d51117bd9d85dc90607862e7e06b82b38c9b914c0d48d40296c6222a
+        anchor_commit: bbe0ed4d9696265e662cbea6604062c91584275e
+status: confirmed
 github_issue_id: 742
 supersedes:
   - PLAN-L7-492-pf5-release-aggregate-admission-pair-freeze
   - PLAN-L7-494-release-promotion-rollback-gate
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:62d05c113e752582fd161ccbc12bd05d
-  command_id: plan-revise:issue-742:ac2-m6-m7:forward:r6:816e306d3779
-  admitted_at: 2026-09-29T06:20:58.243Z
-  source_digest: sha256:ae4344338dfdfe07e69b0950b4aaef17f32378e8c32ca602a0549de60de257d5
-  decision_digest: sha256:2de40ac6f4c5650e2cfd8458dedd8df17bbd0dd072b5d5510a9bd515381fbeaf
-  receipt_digest: sha256:e976697395160ceba051fec2ca9a2440abebed51d2ba67940bafdb7214063987
+  receipt_id: certificate:45db821768f44cd9a05a0871647b6e6a
+  command_id: plan-revise:issue-742:s3-evidence-post-green:forward:r9:82a76c8d38a2
+  admitted_at: 2026-09-29T11:01:17.825Z
+  source_digest: sha256:b60131ae7f470fa03da7eefd23fc35796278614ada2b6222b9d71840df17521c
+  decision_digest: sha256:aa1909d2883f08ca1443d77c81d5d94fd60b7a5d679c2349fda36f94bf63eebb
+  receipt_digest: sha256:a64823c3eb6e098f0b1cdc861a00cc54bff2916de491dab6f83fe3149536af51
   binding:
     path: docs/plans/PLAN-L7-742-release-aggregate-v2-inventory-cardinality.md
     plan_id: PLAN-L7-742-release-aggregate-v2-inventory-cardinality
     asset_id: plan:f787a6e0b076a4db67323a906329bde3
-    revision: 6
-    content_digest: sha256:ae4344338dfdfe07e69b0950b4aaef17f32378e8c32ca602a0549de60de257d5
+    revision: 9
+    content_digest: sha256:b60131ae7f470fa03da7eefd23fc35796278614ada2b6222b9d71840df17521c
   route:
     signal: feature_addition
     mode: add-feature
@@ -84,11 +125,12 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-742-release-aggregate-v2-inventory-cardinality
-    target_revision: 6
+    target_revision: 9
     phase: forward_merge
-  escape_reason: "PR #748 Sol r1 FLAG: AC 2 が M1〜M5 の証拠しか要求せず、rev 5 で追加した M6 / M7
-    (promotion / rollback の余剰 destinationPath 負系) を通す shape validator
-    でも完了条件を満たせるため、AC 2 を M1〜M7 に更新する。"
+  escape_reason: "PR #757 CI の review-evidence 順序違反の是正: review_evidence の 2 件を、各
+    subject head の CI green 後に取り直した非著者 evidence review (Opus 10:55:46Z / Sol
+    10:31:36Z、いずれも PASS) へ差し替える。subject_head・anchor・output_digest・confirmed
+    は不変。"
   supersedes:
     - PLAN-L7-492-pf5-release-aggregate-admission-pair-freeze
     - PLAN-L7-494-release-promotion-rollback-gate
@@ -322,6 +364,9 @@ mutation probe (実装 PR の review packet に、どの出現を除去したか
    finding enum 追加・canary channel 規則は含めない。
 3. **S3 confirm**: S2 の CI Green と closing PASS を受けて本 PLAN を confirmed 化し、`generates` へ
    実装成果物を追加する。`PLAN-REVERSE-742` を R1〜R4 へ進める。
+   (rev 8 訂正: S2 が変更した src 3 本と tests 4 本は既に `PLAN-L7-492` / `PLAN-L7-494` / `PLAN-L7-496` /
+   `PLAN-L7-628` が `generates` で所有しており、二重所有は `duplicate-artifact-ownership` が fail-close する。
+   本 PLAN は所有権を移さず、改修の根拠を `supersedes` の部分節と `review_evidence` で示す。`generates` は本 PLAN 文書のみ。)
 4. S3 の後に `PLAN-L7-531` PR-1 (canary 第 1 層) が multi-artifact release で進める状態になる。
 
 ### 7.1 PLAN-L7-492 へ追記する訂正注記 (AC は上書きしない)

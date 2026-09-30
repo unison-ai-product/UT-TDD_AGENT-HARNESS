@@ -5744,6 +5744,70 @@
         "revision": 3,
         "content_digest": "sha256:828abf894a3c2198e1c46ce23e329e72f428fc7f1e37404fd2e61323c2ae9b87"
       }
+    },
+    {
+      "sequence": 360,
+      "previous_record_digest": "sha256:13f650678aa786ebacf663c82166323883c179f52d35472c109bce0b946eee3d",
+      "record_digest": "sha256:c95446d365efb0d480d9ad15e1ac722f792a13e100fc2cd2126344d830e6825a",
+      "command_id": "plan-revise:issue-742:s3-confirm:forward:r7:44636a2b9e5b",
+      "receipt_id": "certificate:8d4d1ec871ebf0dea75b9cc092fb7e58",
+      "receipt_digest": "sha256:6ae419a09a5f59eda2e83129a293c62ff96ef88ffcf86c90a7527c62de0e9122",
+      "decision_digest": "sha256:293cd9887bd2faeba9ea17c1b39c84dfdc339f7d21228adb814924b4ba3a4e0d",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-742-release-aggregate-v2-inventory-cardinality.md",
+        "plan_id": "PLAN-L7-742-release-aggregate-v2-inventory-cardinality",
+        "asset_id": "plan:f787a6e0b076a4db67323a906329bde3",
+        "revision": 7,
+        "content_digest": "sha256:b6f9a38f3bfbc428e8ccb1a4535d29c14e7f9e2299b4c236d33496e4baa9a6eb"
+      }
+    },
+    {
+      "sequence": 361,
+      "previous_record_digest": "sha256:c95446d365efb0d480d9ad15e1ac722f792a13e100fc2cd2126344d830e6825a",
+      "record_digest": "sha256:d75804a6a63d7c79f3e151b235a24a0dceccc864f48b7cf01bcea284b3d9f3ab",
+      "command_id": "plan-revise:issue-742:s3-confirm:reverse:r3:e3818eab1725",
+      "receipt_id": "certificate:bc51003fd1e25ecdb2a494ca1bc25c1b",
+      "receipt_digest": "sha256:7cc9eec20f2c9fe02431e1b22bbea2523bac15e2cf9f4e1f94b5761c181e6657",
+      "decision_digest": "sha256:48d07faaa0165b98b4f4a1c274bed6280fd2b5226b585d81a46648db8d507d16",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-742-release-aggregate-v2-inventory-cardinality-backfill.md",
+        "plan_id": "PLAN-REVERSE-742-release-aggregate-v2-inventory-cardinality-backfill",
+        "asset_id": "plan:61a67f9437e1fff919b21b9c9c3aa7ce",
+        "revision": 3,
+        "content_digest": "sha256:92ead765f5804c7bb7a89194609a4f2fbf1bc7e9976085bd197991d30e659e1d"
+      }
+    },
+    {
+      "sequence": 362,
+      "previous_record_digest": "sha256:d75804a6a63d7c79f3e151b235a24a0dceccc864f48b7cf01bcea284b3d9f3ab",
+      "record_digest": "sha256:b43d72501f0ac66f23b7096fd9c18c1b072a6bf8fd536143e601e7456b18aca4",
+      "command_id": "plan-revise:issue-742:s3-generates-owner-fix:forward:r8:a253b031f01e",
+      "receipt_id": "certificate:3ecc8343f8f3e791c038af9410a333b2",
+      "receipt_digest": "sha256:9c0432d148143c0f01a73c46ce2cfbfaa91704e44db892b4e2ec84a9da0bfb51",
+      "decision_digest": "sha256:a85c969ce29633761dac05ab85f7091a5675d721b302a15a8f91e5199a4c625e",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-742-release-aggregate-v2-inventory-cardinality.md",
+        "plan_id": "PLAN-L7-742-release-aggregate-v2-inventory-cardinality",
+        "asset_id": "plan:f787a6e0b076a4db67323a906329bde3",
+        "revision": 8,
+        "content_digest": "sha256:6ebf836719e8336a9c25729c4da3a60a5cbf15286671edef4cae19d3d6be3a82"
+      }
+    },
+    {
+      "sequence": 363,
+      "previous_record_digest": "sha256:b43d72501f0ac66f23b7096fd9c18c1b072a6bf8fd536143e601e7456b18aca4",
+      "record_digest": "sha256:46bde0df5a10589946540d4a7d538e9091c8b20eda7466f6ea077f0b15532b75",
+      "command_id": "plan-revise:issue-742:s3-evidence-post-green:forward:r9:82a76c8d38a2",
+      "receipt_id": "certificate:45db821768f44cd9a05a0871647b6e6a",
+      "receipt_digest": "sha256:a64823c3eb6e098f0b1cdc861a00cc54bff2916de491dab6f83fe3149536af51",
+      "decision_digest": "sha256:aa1909d2883f08ca1443d77c81d5d94fd60b7a5d679c2349fda36f94bf63eebb",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-742-release-aggregate-v2-inventory-cardinality.md",
+        "plan_id": "PLAN-L7-742-release-aggregate-v2-inventory-cardinality",
+        "asset_id": "plan:f787a6e0b076a4db67323a906329bde3",
+        "revision": 9,
+        "content_digest": "sha256:b60131ae7f470fa03da7eefd23fc35796278614ada2b6222b9d71840df17521c"
+      }
     }
   ]
 }
