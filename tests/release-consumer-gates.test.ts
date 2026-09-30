@@ -2886,6 +2886,24 @@ describe("PR-G13 consumer G13 predicates", () => {
     expect(result.messages.join("\n")).toContain("未判定 (review): PO/TL");
   });
 
+  it("U-RCDEV-034: resolves L12 acceptance IDs from the harness catalog layout", () => {
+    const root = fixtureRoot();
+    writeConsumerG13Fixture(root);
+    const flatPath = join(root, "docs/test-design/L12-acceptance-test-design.md");
+    writeFixtureDoc(
+      root,
+      "docs/test-design/harness/L12-acceptance-test-design.md",
+      readFileSync(flatPath, "utf8"),
+    );
+    rmSync(flatPath);
+
+    const result = evaluateStaticGate({ gate: "G13", repoRoot: root });
+    expect(result).toMatchObject({ gate: "G13", applicable: true, passed: true });
+    expect(result.messages.join("\n")).toContain(
+      "right-arm-static - OK (G13, cases=2, manifests=1)",
+    );
+  });
+
   it("U-RCDEV-034: does not require reverse closure for unreferenced L12 acceptance IDs", () => {
     const root = fixtureRoot();
     writeConsumerG13Fixture(root);
