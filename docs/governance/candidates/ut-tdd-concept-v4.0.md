@@ -141,7 +141,7 @@ v3.1 の doctor / plan lint / review custody / exact-HEAD receipt をそのま�
 | 対象 | 役割 | 正本形式 |
 |---|---|---|
 | Requirement / 設計 / Policy | 意味 authority | markdown + typed spec block |
-| PLAN | 工程間の簡易契約 (§工程間の契約と工程内のチケット) | markdown 本文 4 項目 + record 化 frontmatter (段階移行) |
+| PLAN | 工程間の簡易契約 (§工程間の契約と工程内のチケット) | markdown 本文 4 項目 + record 化 frontmatter (段階移行、専用 Reverse 対で扱う、UTV4-FR-007) |
 | チケット / schedule / verdict / receipt / evidence | 境界付き record | 1 record = 1 JSON/YAML file |
 | Git commit / tree | 成果物の事実 | Git |
 | GitHub / event journal | 協調・実行の事実 | projection |

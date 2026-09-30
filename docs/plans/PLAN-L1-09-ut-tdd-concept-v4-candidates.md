@@ -55,18 +55,18 @@ status: draft
 github_issue_id: 530
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:fb1c12d813d6984baa45f2e5927bb363
-  command_id: plan-revise:issue-530:v4-plan-ticket-split:2
-  admitted_at: 2026-09-30T08:51:49.648Z
-  source_digest: sha256:df419a3efe6de4eeee21d1c9702887faa4dce5c5d61a069146f55eb4a443ff37
-  decision_digest: sha256:c9ae5c61579e0d5b67aee7a97b27e1a67c396dcec4ab1115532f76830aa17f1c
-  receipt_digest: sha256:904a915c5b4846295f4e45ed09ec5ff0c45628d6debdf75a3db5449ea862cec7
+  receipt_id: certificate:b6d8ff124185f75533a90ed6b778f17f
+  command_id: plan-revise:issue-530:v4-plan-ticket-split:3
+  admitted_at: 2026-09-30T09:00:17.294Z
+  source_digest: sha256:386c50bd88d2f0dfa74433b402fcf8f5422fb9f175891aa9d13534872cfeded9
+  decision_digest: sha256:a2e3bb42b0ef76dccc99b71c220d7c5cf994898eff1c3031aac5dd6965187eb9
+  receipt_digest: sha256:a8d76d41f386c8d20ba6ce452252c92576b2e6440a65a1bb77746062fceca468
   binding:
     path: docs/plans/PLAN-L1-09-ut-tdd-concept-v4-candidates.md
     plan_id: PLAN-L1-09-ut-tdd-concept-v4-candidates
     asset_id: plan:legacy:76d0499fe33cdc7245374b80f6337d4d3ce1321a3af7679dee282aa56b1db8f8
-    revision: 2
-    content_digest: sha256:df419a3efe6de4eeee21d1c9702887faa4dce5c5d61a069146f55eb4a443ff37
+    revision: 3
+    content_digest: sha256:386c50bd88d2f0dfa74433b402fcf8f5422fb9f175891aa9d13534872cfeded9
   route:
     signal: research
     mode: research
@@ -81,11 +81,11 @@ admission_receipt:
     digest: sha256:199284dc61a73c4ed4222a61ad18b06a7f13bada549a436106844e7cf84a03de
   reentry:
     target_plan_id: PLAN-L1-09-ut-tdd-concept-v4-candidates
-    target_revision: 2
+    target_revision: 3
     phase: forward_merge
-  escape_reason: "Issue #575 / #588: PO 2026-09-30 採択の v4 設計判断 (工程間は
-    PLAN・工程内はチケットの 4 層、移行 Reverse を V 字右腕として回す、右腕の 4 働き、成熟度 #784 への接続) を
-    §3.25〜§3.28 に記録する research PLAN の改訂。"
+  escape_reason: "PR #799 Sol r1 FLAG の是正: §3.25 末尾で §3.1 残リスク (frontmatter record
+    化の専用移行 Reverse 対、UTV4-FR-007) まで「強制しない」と読み替えていた誤りを直し、撤廃するのは全 kind への一律
+    Reverse 対の強制だけで、専用移行 Reverse 対は維持すると書き分ける。"
 ---
 
 # PLAN-L1-09: 構想書 v4.0 候補 (チーム開発版 Verified Change Harness) の L1/L3/L10 分解
@@ -670,9 +670,10 @@ WBS エンジン (#769) の入力が無くなる。工程境目の契約だけ�
 (2026-09-30 の #734 再起票、#781 との直列 merge 待ち) も減る。巨大コードの責務分割 (#759) は、工程間の契約 1 本の下に
 分割をチケットとして並べられる。
 
-§3.1 残リスクの「PLAN frontmatter の record 化は専用 Reverse 対で段階移行」は、本節の ③ (工程間の簡易契約、Reverse 対は
-強制しない) へ読み替える。概念本文 §Evidence and State Ledger の PLAN 行 (旧: atomic change contract、Reverse 対で扱う) は
-本節に合わせて改めた。
+§3.1 残リスクの「PLAN frontmatter の record 化は専用 Reverse 対で段階移行」(UTV4-FR-007) は、そのまま維持する。本節が
+撤廃するのは「全 kind に Reverse 対を必須とする」一律規則だけであり (③ 工程間の簡易契約そのものは、契約ごとの Reverse 対を
+強制しない)、frontmatter record 化の専用移行 Reverse 対は別物として残る。概念本文 §Evidence and State Ledger の PLAN 行
+(旧: atomic change contract、Reverse 対で扱う) は本節に合わせて改めたが、専用 Reverse 対による段階移行は維持している。
 
 ### 3.26 移行の方法: Reverse → ずれの判定 → リファクタリングと再編 → 再実装 (PO 指示 2026-09-30)
 
