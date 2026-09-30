@@ -31,6 +31,25 @@ const gateAssetPaths = [
 const gateAliases = Object.fromEntries(
   gateAssetPaths.map((path) => [`ut-tdd-gate-assets/${path}`, resolve(root, path)]),
 );
+const vmodelTemplatePaths = execFileSync(
+  "git",
+  ["ls-files", "-z", "--", "docs/templates/vmodel", "docs/governance/vmodel-document-catalog.md"],
+  { cwd: root, encoding: "utf8" },
+)
+  .split("\0")
+  .filter((path) =>
+    path === "docs/governance/vmodel-document-catalog.md" ||
+    (path.startsWith("docs/templates/vmodel/") &&
+      path.endsWith(".md") &&
+      !path.startsWith("docs/templates/vmodel/review-examples/")),
+  );
+const vmodelTemplateAliases = Object.fromEntries(
+  vmodelTemplatePaths.map((path) =>
+    path === "docs/governance/vmodel-document-catalog.md"
+      ? ["ut-tdd-vmodel-document-catalog", resolve(root, path)]
+      : [`ut-tdd-vmodel-templates/${path.slice("docs/templates/vmodel/".length)}`, resolve(root, path)],
+  ),
+);
 await mkdir(dirname(output), { recursive: true });
 const temporary = `${output}.staging-${process.pid}`;
 try {
@@ -43,7 +62,7 @@ try {
     format: "esm",
     target: "node24",
     loader: { ".md": "text", ".yaml": "text", ".yml": "text" },
-    alias: { ...skillAliases, ...gateAliases },
+    alias: { ...skillAliases, ...gateAliases, ...vmodelTemplateAliases },
     define: { __UT_TDD_BUNDLED__: "true" },
     // commander is CommonJS and uses a dynamic builtin require. Provide the
     // Node ESM bridge so the sealed output is executable by the Node authority.

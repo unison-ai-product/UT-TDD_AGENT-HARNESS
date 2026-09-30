@@ -68,7 +68,7 @@ gate は「判定（機械 + judge）→ 修正案生成（機械）→ 導入 /
 - `analyzePlanSupersession`（`src/lint/plan-supersession.ts`）= supersede 双方向強制の型。
 - `scaffoldSkill`（`src/skill-engine/scaffold.ts`）= repair 後の frontmatter 生成。
 
-**PLAN / ADR**: 本 add-design = PLAN-L6-67。add-impl は後続 L7 PLAN で実装する。back-fill は実装着地時に concept §10.3 用語 back-merge を含む Reverse pairing で扱う。関連 ADR: ADR-001（TS/Bun 実装境界）。
+**PLAN / ADR**: 本 add-design = PLAN-L6-67。add-impl は後続 L7 PLAN で実装する。back-fill は実装着地時に concept §10.3 用語 back-merge を含む Reverse pairing で扱う。関連 ADR: ADR-001（TS/Node 実装境界）。
 
 ## §4 admission パイプライン（関数粒度 = 単体テスト設計粒度）
 
