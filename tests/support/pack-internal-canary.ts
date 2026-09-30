@@ -541,6 +541,9 @@ export function writeCanaryPlanManifest(fixture: CanaryFixture): {
   const planPath = `docs/plans/${planId}.md`;
   const manifest = join(fixture.consumerRoot, "canary-plan-draft.json");
   const projection = "docs/governance/plan-admission-receipts.json";
+  // The product repository owns its PLAN directory; the Pack does not ship
+  // source-side PLAN files into a fresh consumer.
+  mkdirSync(join(fixture.consumerRoot, "docs", "plans"), { recursive: true });
   mkdirSync(join(fixture.consumerRoot, "docs", "governance"), { recursive: true });
   // Empty fixture ledger projection, never an authored PASS/admission receipt.
   writeFileSync(
