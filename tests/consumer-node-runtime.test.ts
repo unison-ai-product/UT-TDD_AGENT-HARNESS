@@ -101,6 +101,8 @@ function shortPathFor(path: string): string | undefined {
   try {
     const output = execFileSync("cmd.exe", ["/d", "/c", `for %I in ("${path}") do @echo %~sI`], {
       encoding: "utf8",
+      windowsVerbatimArguments: true,
+      windowsHide: true,
     });
     const candidate = output.trim().split(/\r?\n/).at(-1)?.trim();
     if (!candidate || !existsSync(candidate) || candidate.toLowerCase() === path.toLowerCase())
