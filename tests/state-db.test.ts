@@ -252,6 +252,29 @@ describe("IT-DB-01: harness.db state-db foundation", () => {
     db.close();
   });
 
+  it("migrate permits a second worker to inspect an already-current schema while a writer holds the DB", () => {
+    const repoRoot = mkdtempSync(join(tmpdir(), "ut-tdd-migration-current-lock-"));
+    const dbPath = join(repoRoot, ".ut-tdd", "harness.db");
+    const writer = openHarnessDb(dbPath, { repoRoot });
+    let reader: ReturnType<typeof openHarnessDb> | undefined;
+    try {
+      migrate(writer);
+      reader = openHarnessDb(dbPath, { repoRoot });
+      writer.exec("BEGIN IMMEDIATE");
+      expect(migrate(reader)).toMatchObject({
+        fromVersion: SCHEMA_VERSION,
+        toVersion: SCHEMA_VERSION,
+        applied: false,
+      });
+      expect(missingTables(reader)).toEqual([]);
+    } finally {
+      writer.exec("ROLLBACK");
+      reader?.close();
+      writer.close();
+      cleanupRepo(repoRoot);
+    }
+  });
+
   it("migrate は v26 DB の既存rowを保持してv27 Forward escape custody表を追加する", () => {
     const db = openHarnessDb(":memory:");
     db.exec("CREATE TABLE retained_fixture (id TEXT PRIMARY KEY, value TEXT NOT NULL)");
