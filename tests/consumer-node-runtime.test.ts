@@ -10,7 +10,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, relative, resolve } from "node:path";
+import { isAbsolute, join, relative, resolve } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   buildConsumerNodeRuntimeBundle,
@@ -96,22 +96,26 @@ function wrapperBundleFor(root: string): {
   return { bundle: buildConsumerNodeRuntimeBundle({ identity: id, ...payloads }), payloads };
 }
 
+/**
+ * Returns the 8.3 alias of an existing path on win32, or undefined only when cmd succeeded and the
+ * volume genuinely generates no alias (short == long). Every other failure throws so a broken helper
+ * fails the test instead of hiding behind skip().
+ */
 function shortPathFor(path: string): string | undefined {
   if (process.platform !== "win32") return undefined;
-  try {
-    const result = spawnSync("cmd.exe", ["/d", "/c", `for %I in ("${path}") do @echo %~sI`], {
-      encoding: "utf8",
-      windowsVerbatimArguments: true,
-      windowsHide: true,
-    });
-    if (result.error || result.status !== 0) return undefined;
-    const candidate = result.stdout.trim().split(/\r?\n/).at(-1)?.trim();
-    if (!candidate || !existsSync(candidate) || candidate.toLowerCase() === path.toLowerCase())
-      return undefined;
-    return candidate;
-  } catch {
-    return undefined;
-  }
+  const result = spawnSync("cmd.exe", ["/d", "/c", `for %I in ("${path}") do @echo %~sI`], {
+    encoding: "utf8",
+    windowsVerbatimArguments: true,
+    windowsHide: true,
+  });
+  if (result.error) throw new Error(`8.3 helper spawn failed: ${result.error.message}`);
+  if (result.status !== 0)
+    throw new Error(`8.3 helper exit ${result.status}: ${result.stderr}${result.stdout}`);
+  const candidate = result.stdout.trim().split(/\r?\n/).at(-1)?.trim();
+  if (!candidate || !isAbsolute(candidate))
+    throw new Error(`8.3 helper returned non-absolute output: ${JSON.stringify(result.stdout)}`);
+  if (!existsSync(candidate)) throw new Error(`8.3 helper candidate does not exist: ${candidate}`);
+  return candidate.toLowerCase() === path.toLowerCase() ? undefined : candidate;
 }
 
 function issue678TempRoot(prefix: string): string {
@@ -355,7 +359,10 @@ describe("sealed self-contained consumer Node runtime", () => {
     );
     mkdirSync(longRoot, { recursive: true });
     const shortRoot = shortPathFor(longRoot);
-    if (!shortRoot) return skip();
+    if (!shortRoot) {
+      console.info(`SKIP ISSUE-678 8.3 alias unavailable: ${longRoot}`);
+      return skip();
+    }
     const longFixture = materializeWrapperFixture(longRoot);
     const aliasRun = spawnSync(
       process.execPath,
@@ -377,42 +384,111 @@ describe("sealed self-contained consumer Node runtime", () => {
     expect(longLaunchOfAliasPointer.stdout).toBe("consumer-local-ok");
   });
 
-  it("ISSUE-678: launcher path normalization does not rewrite pointer or digest (skipped when 8.3 alias unavailable)", ({
+  it("ISSUE-678: launcher path normalization does not rewrite pointer or digest (alias launch, skipped when 8.3 alias unavailable)", ({
     skip,
   }) => {
+    if (process.platform !== "win32") return skip();
     const container = issue678TempRoot(".ut-tdd-issue678-pointer-");
     roots.push(container);
     const root = join(container, "consumer-root-with-a-long-name-for-pointer-integrity");
     mkdirSync(root, { recursive: true });
-    const fixture = materializeWrapperFixture(root);
-    const pointerBefore = readFileSync(fixture.pointerPath);
-    const manifestBefore = readFileSync(join(fixture.bundle.bundle_path, "bundle-manifest.json"));
-    const longRun = spawnSync(process.execPath, [fixture.wrapper], {
-      cwd: tmpdir(),
-      encoding: "utf8",
-    });
-    expect(longRun.status, `${longRun.stdout}\n${longRun.stderr}`).toBe(0);
-    expect(readFileSync(fixture.pointerPath)).toEqual(pointerBefore);
-    expect(readFileSync(join(fixture.bundle.bundle_path, "bundle-manifest.json"))).toEqual(
-      manifestBefore,
-    );
-    if (process.platform === "win32") {
-      const shortRoot = shortPathFor(root);
-      if (!shortRoot) return skip();
-      const aliasRun = spawnSync(
-        process.execPath,
-        [join(shortRoot, ".ut-tdd", "bin", "ut-tdd.mjs")],
-        {
-          cwd: tmpdir(),
-          encoding: "utf8",
-        },
-      );
-      expect(aliasRun.status, `${aliasRun.stdout}\n${aliasRun.stderr}`).toBe(0);
-      expect(readFileSync(fixture.pointerPath)).toEqual(pointerBefore);
-      expect(readFileSync(join(fixture.bundle.bundle_path, "bundle-manifest.json"))).toEqual(
-        manifestBefore,
-      );
+    const shortRoot = shortPathFor(root);
+    if (!shortRoot) {
+      console.info(`SKIP ISSUE-678 8.3 alias unavailable: ${root}`);
+      return skip();
     }
+    const fixture = materializeWrapperFixture(root);
+    const manifestPath = join(fixture.bundle.bundle_path, "bundle-manifest.json");
+    const pointerBefore = readFileSync(fixture.pointerPath);
+    const manifestBefore = readFileSync(manifestPath);
+    const aliasRun = spawnSync(
+      process.execPath,
+      [join(shortRoot, ".ut-tdd", "bin", "ut-tdd.mjs")],
+      { cwd: tmpdir(), encoding: "utf8" },
+    );
+    expect(
+      aliasRun.status,
+      `${aliasRun.stdout}
+${aliasRun.stderr}`,
+    ).toBe(0);
+    expect(readFileSync(fixture.pointerPath)).toEqual(pointerBefore);
+    expect(readFileSync(manifestPath)).toEqual(manifestBefore);
+  });
+
+  it("ISSUE-678: pointer schema and digest validation still reject (always runs, no 8.3 dependency)", () => {
+    const launch = (wrapper: string) =>
+      spawnSync(process.execPath, [wrapper], { cwd: tmpdir(), encoding: "utf8" });
+    const freshFixture = (prefix: string) => {
+      const container = issue678TempRoot(prefix);
+      roots.push(container);
+      const root = join(container, "consumer-root-with-a-long-name-for-pointer-integrity");
+      mkdirSync(root, { recursive: true });
+      return materializeWrapperFixture(root);
+    };
+
+    // Baseline: a normal launch leaves pointer and manifest bytes untouched.
+    const base = freshFixture(".ut-tdd-issue678-pointer-");
+    const manifestPath = join(base.bundle.bundle_path, "bundle-manifest.json");
+    const pointerBefore = readFileSync(base.pointerPath);
+    const manifestBefore = readFileSync(manifestPath);
+    const okRun = launch(base.wrapper);
+    expect(
+      okRun.status,
+      `${okRun.stdout}
+${okRun.stderr}`,
+    ).toBe(0);
+    expect(readFileSync(base.pointerPath)).toEqual(pointerBefore);
+    expect(readFileSync(manifestPath)).toEqual(manifestBefore);
+
+    // (a) pointer with an extra schema key.
+    const extraKey = freshFixture(".ut-tdd-issue678-extra-");
+    const pointer = JSON.parse(readFileSync(extraKey.pointerPath, "utf8")) as Record<
+      string,
+      string
+    >;
+    writeFileSync(extraKey.pointerPath, JSON.stringify({ ...pointer, extra: "x" }));
+    const extraRun = launch(extraKey.wrapper);
+    expect(
+      extraRun.status,
+      `${extraRun.stdout}
+${extraRun.stderr}`,
+    ).toBe(78);
+    expect(extraRun.stderr).toContain("consumer_runtime_resolution_denied");
+    expect(extraRun.stdout).not.toContain("consumer-local-ok");
+
+    // (b1) tampered pointer bundle_digest (differs from the manifest's).
+    const badDigest = freshFixture(".ut-tdd-issue678-digest-");
+    const pointer2 = JSON.parse(readFileSync(badDigest.pointerPath, "utf8")) as Record<
+      string,
+      string
+    >;
+    writeFileSync(
+      badDigest.pointerPath,
+      JSON.stringify({ ...pointer2, bundle_digest: `sha256:${"b".repeat(64)}` }),
+    );
+    const digestRun = launch(badDigest.wrapper);
+    expect(
+      digestRun.status,
+      `${digestRun.stdout}
+${digestRun.stderr}`,
+    ).toBe(78);
+    expect(digestRun.stderr).toContain("consumer_runtime_identity_mismatch");
+    expect(digestRun.stdout).not.toContain("consumer-local-ok");
+
+    // (b2) tampered payload bytes (manifest file digest no longer matches).
+    const badPayload = freshFixture(".ut-tdd-issue678-payload-");
+    writeFileSync(
+      join(badPayload.bundle.bundle_path, "ut-tdd.mjs"),
+      'process.stdout.write("tampered")\n',
+    );
+    const payloadRun = launch(badPayload.wrapper);
+    expect(
+      payloadRun.status,
+      `${payloadRun.stdout}
+${payloadRun.stderr}`,
+    ).toBe(78);
+    expect(payloadRun.stderr).toContain("consumer_runtime_digest_mismatch");
+    expect(payloadRun.stdout).not.toContain("tampered");
   });
 
   it("ISSUE-678: Windows compares case-insensitively while POSIX keeps case distinct", () => {
