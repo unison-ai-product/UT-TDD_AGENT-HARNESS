@@ -547,6 +547,29 @@ function checkCaseTraces(
   }
 }
 
+function checkG13CaseTraces(
+  rows: readonly CaseRow[],
+  atIds: ReadonlySet<string>,
+  definedIds: ReadonlySet<string>,
+  violations: string[],
+): void {
+  for (const row of rows) {
+    const citedIds = [...row.citations.matchAll(/\b[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)+\b/g)].map(
+      (match) => match[0],
+    );
+    const untraced = !citedIds.some((id) => atIds.has(id));
+    for (const id of citedIds) {
+      if (atIds.has(id)) continue;
+      if (definedIds.has(id)) {
+        if (!untraced) violations.push(`untraced case ${row.id}`);
+      } else {
+        violations.push(`trace target missing ${id}`);
+      }
+    }
+    if (untraced) violations.push(`untraced case ${row.id}`);
+  }
+}
+
 function checkG9CaseTraces({
   rows,
   pairIds,
@@ -1157,7 +1180,7 @@ export function evaluateRightArmStaticGate(
     const atIds = existsSync(l12Path)
       ? extractAtIds(readFileSync(l12Path, "utf8"))
       : new Set<string>();
-    checkCaseTraces(rows, atIds, violations);
+    checkG13CaseTraces(rows, atIds, allDesignIds(repoRoot), violations);
   } else if (key === "G10") {
     if (fmValue(content, "status") === "skipped") {
       violations.push(
