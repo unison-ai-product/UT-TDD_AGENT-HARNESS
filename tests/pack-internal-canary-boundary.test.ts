@@ -1,6 +1,6 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   AUTHORING_TEMPLATE_ARTIFACT_PATHS,
@@ -438,25 +438,18 @@ describe("#418 Pack-only internal canary boundary (PR-1 / first layer)", () => {
         "canary-418-review",
         "--author-family",
         "codex",
-        "--json",
       ]);
       expect(reviewDispatch.status, processDiagnostic(reviewDispatch)).toBe(1);
-      const dispatchJson = JSON.parse(reviewDispatch.stdout) as {
-        ok: boolean;
-        reason: string;
-        backlog?: { requestDigest: string; requestPath: string };
-      };
-      expect(dispatchJson).toMatchObject({ ok: false, reason: "no_live_claude_workspace" });
-      expect(dispatchJson.backlog?.requestDigest).toMatch(/^[a-f0-9]{64}$/);
-      expect(dispatchJson.backlog?.requestPath).toBeDefined();
-      const requestPath = join(
-        fixture.consumerRoot,
-        ".ut-tdd",
-        "review",
-        "requests",
-        `${dispatchJson.backlog?.requestDigest}.json`,
+      expect(reviewDispatch.stdout.trim(), processDiagnostic(reviewDispatch)).toBe(
+        "review live-dispatch: no_live_claude_workspace",
       );
-      expect(resolve(dispatchJson.backlog?.requestPath ?? "")).toBe(resolve(requestPath));
+      const requestDir = join(fixture.consumerRoot, ".ut-tdd", "review", "requests");
+      const requestFiles = readdirSync(requestDir).filter((name) =>
+        /^[a-f0-9]{64}\.json$/.test(name),
+      );
+      expect(requestFiles).toHaveLength(1);
+      const requestDigest = requestFiles[0].slice(0, -".json".length);
+      const requestPath = join(requestDir, requestFiles[0]);
       expect(existsSync(requestPath)).toBe(true);
       const request = JSON.parse(readFileSync(requestPath, "utf8")) as {
         memoryId: string;
@@ -475,7 +468,7 @@ describe("#418 Pack-only internal canary boundary (PR-1 / first layer)", () => {
       expect(request.reviewRevision).toMatch(/^rv1-[a-f0-9]{64}$/);
       const reviewEnvelope = writeCanaryReviewEnvelope({
         consumerRoot: fixture.consumerRoot,
-        requestDigest: dispatchJson.backlog?.requestDigest ?? "",
+        requestDigest,
         request,
         memoryPath: memoryRegistration.source_path,
       });
@@ -512,7 +505,7 @@ describe("#418 Pack-only internal canary boundary (PR-1 / first layer)", () => {
         ".ut-tdd",
         "review",
         "receipts",
-        `${dispatchJson.backlog?.requestDigest}.json`,
+        `${requestDigest}.json`,
       );
       expect(existsSync(receiptPath)).toBe(true);
       expect(JSON.parse(readFileSync(receiptPath, "utf8"))).toMatchObject({
