@@ -82,9 +82,14 @@ install、setup、doctor、typecheck を検証している。本書の専用テ�
 | `CANDIDATE-ST-PACKCANARY-009` | PR-2 CI (offline) | (a) runner の installer 呼び出しを `--consumer-runtime-input` (source-CLI helper `tests/support/pack-consumer-runtime.ts` と同じ経路) に差し替える、(b) runner が anchor を publish 記録ではなく `<release-dir>` の `.consumer.sha256` から再計算する、(c) 受入記録の tag が fixture tag など exact `v0.2.0-canary.2` 以外 | runner を offline で呼ぶ。(b) の対照入力は、`.ut-tdd.mjs` を実行意味を変えない形 (末尾へのコメント 1 行追記等) で改変し `.consumer.sha256` を整合的に書き換えた偽造 release-dir と、5 asset の sha256 entry (producer 値・独立再計算値とも) を偽造 release-dir に合わせ `consumer_anchor_digest` (2 値とも) だけを真正 fixture の anchor に固定した記録である。asset 照合・exact 5 件・tag exact・2 値一致の guard はすべて通り、結果を分けるのは anchor の出所だけになる。正しい runner は spawn 引数の `--expected-consumer-digest` に記録の anchor を渡し、手順 0 の `consumer_runtime_anchor_mismatch` で deny・consumer root write 0。anchor を偽造 release-dir から再計算する mutant は手順 0〜2 を通過して deny されず、観測点 (spawn 引数の anchor 値と deny 有無) の結果が反転する ((b) が Red)。runner が anchor と `.consumer.sha256` entry の相互照合を持つ場合は、005(b) と同じく相互照合を外した対照で実行する。spawn 引数に `--consumer-runtime-release` があり `--consumer-runtime-input` が無いことを assert ((a) が Red)。tag が exact でなければ受入記録を生成しない ((c) が Red) |
 | `CANDIDATE-ST-PACKCANARY-010` | 第 1 層 / 第 2 層 | 撤去・別 shell 後の fixture で、生成 `.claude/settings.json` / `.codex/hooks.json` の PreToolUse work-guard command を登録文字列のまま合成 payload で実行する。変異: (a) 正常系も block する (canary.1 実測の全編集 block と同型)、(b) command が撤去済み path・存在しない launcher を指し hook 失敗が非 block で素通りする、(c) 禁止系を通す | 正常系 payload は通過、禁止系 payload は各 runtime の block 規約どおり block。(a)(b)(c) はいずれも Red。hook の schema・内容 (`PLAN-L7-668` 等) は再所有しない |
 
-Candidate は pair-freeze 時点の設計候補であり、実装と同じ revision の Red→Green 実測が
-揃うまで `U-*` へ昇格しない。001..004・006 (第 1 層)・007・010 (第 1 層) は `PLAN-L7-531` §6 の
-PR-1、005・006 (受入)・008・009・010 (第 2 層) は PR-2 が昇格する。
+Candidate は pair-freeze 時点の設計候補である。PR-1 の第 1 層では、同番号の
+`U-ST-PACKCANARY-001..004`、`U-ST-PACKCANARY-006` (unit)、
+`U-ST-PACKCANARY-007`、`U-ST-PACKCANARY-010` へ 1:1 に昇格する。
+所有テストは `tests/pack-internal-canary-boundary.test.ts` であり、001 / 002 / 006 は
+独立した負系、003 / 004 / 007 / 010 は source と setup 元の削除後に実 Pack 導入から
+review receipt / merge gate / 登録済み hook まで通す一つの破壊的 E2E で観測する。
+005・006 (実 Release 受入)・008・009・010 (第 2 層) は PR-2 まで Candidate のまま保持し、
+第 1 層 Green を公開 asset の受入証拠へ読み替えない。
 
 ## 4. 実行手順
 

@@ -135,7 +135,7 @@ function registeredWorkGuardCommands(root: string): RegisteredCommands {
 }
 
 describe("#418 Pack-only internal canary boundary (PR-1 / first layer)", () => {
-  it("CANDIDATE-ST-PACKCANARY-001: denied/source-only/absolute inputs never reach clean inventory", () => {
+  it("U-ST-PACKCANARY-001: denied/source-only/absolute inputs never reach clean inventory", () => {
     const plan = buildCleanDistributionPlan({
       paths: [
         ...trackedPaths(),
@@ -157,7 +157,7 @@ describe("#418 Pack-only internal canary boundary (PR-1 / first layer)", () => {
     expect(plan.artifactPaths).not.toContain(".ut-tdd/local-pack-checkout/README.md");
   });
 
-  it("CANDIDATE-ST-PACKCANARY-002: missing and duplicate skills/authoring inputs are distinguished", () => {
+  it("U-ST-PACKCANARY-002: missing and duplicate skills/authoring inputs are distinguished", () => {
     const inventory = buildCleanDistributionPlan({
       paths: trackedPaths(),
       sourceTag: CANARY_FIXTURE_TAG,
@@ -195,7 +195,7 @@ describe("#418 Pack-only internal canary boundary (PR-1 / first layer)", () => {
     });
   });
 
-  it("CANDIDATE-ST-PACKCANARY-006 (unit): exact tag and exact five producer assets are required", () => {
+  it("U-ST-PACKCANARY-006 (unit): exact tag and exact five producer assets are required", () => {
     expect(selectExactCanaryAssets(CANARY_FIXTURE_TAG, CANARY_ASSET_NAMES)).toEqual(
       CANARY_ASSET_NAMES,
     );
@@ -212,7 +212,7 @@ describe("#418 Pack-only internal canary boundary (PR-1 / first layer)", () => {
     }
   });
 
-  it("CANDIDATE-ST-PACKCANARY-003/004/007/010: installed Release bundle survives setup-source removal in a new process", async () => {
+  it("U-ST-PACKCANARY-003 U-ST-PACKCANARY-004 U-ST-PACKCANARY-007 U-ST-PACKCANARY-010: installed Release bundle survives setup-source removal in a new process", async () => {
     let fixture: Awaited<ReturnType<typeof createCanaryFixture>> | undefined;
     try {
       fixture = await createCanaryFixture();
