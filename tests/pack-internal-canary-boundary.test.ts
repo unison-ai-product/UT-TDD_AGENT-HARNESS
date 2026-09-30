@@ -358,7 +358,10 @@ describe("#418 Pack-only internal canary boundary (PR-1 / first layer)", () => {
       expect(setupSmoke.stdout).toContain("doctor: setup-smoke - OK");
 
       const doctor = wrapperRun(["doctor"]);
-      expect(doctor.status, doctor.stderr || doctor.stdout).toBe(0);
+      expect(
+        doctor.status,
+        JSON.stringify({ status: doctor.status, stdout: doctor.stdout, stderr: doctor.stderr }),
+      ).toBe(0);
 
       const authored = writeCanaryPlanManifest(fixture);
       const planAuthoring = wrapperRun(["plan", "draft", "--manifest", authored.manifest]);
