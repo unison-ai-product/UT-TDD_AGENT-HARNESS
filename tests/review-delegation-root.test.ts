@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -44,7 +44,7 @@ describe("#779 Pack-only review delegation entrypoint", () => {
         join(runtime, "activation", "active.json"),
         JSON.stringify({ entry_path: entry }),
       );
-      expect(resolveLiveReviewDelegationEntrypoint(root, entry)).toBe(wrapper);
+      expect(resolveLiveReviewDelegationEntrypoint(root, entry)).toBe(realpathSync.native(wrapper));
       const foreign = join(root, "foreign-cli.mjs");
       writeFileSync(foreign, "// wrong entry\n");
       expect(resolveLiveReviewDelegationEntrypoint(root, foreign)).toBeNull();
