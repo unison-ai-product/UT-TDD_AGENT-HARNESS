@@ -357,7 +357,9 @@ describe("#418 Pack-only internal canary boundary (PR-1 / first layer)", () => {
       expect(setupSmoke.status, setupSmoke.stderr || setupSmoke.stdout).toBe(0);
       expect(setupSmoke.stdout).toContain("doctor: setup-smoke - OK");
 
-      const doctor = wrapperRun(["doctor", "--profile", "consumer-toolchain"]);
+      // The clean consumer has no product package/lock yet. Verify the named
+      // consumer health profile independently of the --setup-smoke alias.
+      const doctor = wrapperRun(["doctor", "--profile", "consumer-setup-smoke"]);
       expect(
         doctor.status,
         JSON.stringify({ status: doctor.status, stdout: doctor.stdout, stderr: doctor.stderr }),
