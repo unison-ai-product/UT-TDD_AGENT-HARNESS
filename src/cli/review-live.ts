@@ -1,5 +1,5 @@
 import { execFileSync, spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { join } from "node:path";
 import type { Command } from "commander";
 import type { LiveReviewWakeRoutingFailure } from "../feedback/live-review-projection.ts";
@@ -115,17 +115,46 @@ export function executeLiveReviewDelegation(input: {
   args: readonly string[];
   cliPath?: string;
 }): ReviewVerdictProjectionResult {
-  const child = spawnSync(
-    process.execPath,
-    [input.cliPath ?? join(input.repoRoot, "src", "cli.ts"), input.provider, ...input.args],
-    { cwd: input.repoRoot, encoding: "utf8", stdio: ["ignore", "pipe", "inherit"] },
-  );
+  const cliPath =
+    input.cliPath ?? resolveLiveReviewDelegationEntrypoint(input.repoRoot, process.argv[1]);
+  if (!cliPath) return { ok: false, reason: "reviewer_execution_failed" };
+  const child = spawnSync(process.execPath, [cliPath, input.provider, ...input.args], {
+    cwd: input.repoRoot,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "inherit"],
+  });
   if (child.status !== 0) return { ok: false, reason: "reviewer_execution_failed" };
   try {
     const execution = JSON.parse(child.stdout) as { review?: ReviewVerdictProjectionResult };
     return execution.review ?? { ok: false, reason: "review_receipt_missing" };
   } catch {
     return { ok: false, reason: "review_receipt_invalid" };
+  }
+}
+
+/** Re-enter only the invoked source CLI or the active sealed consumer wrapper. */
+export function resolveLiveReviewDelegationEntrypoint(
+  repoRoot: string,
+  invokedCliPath: string | undefined,
+): string | null {
+  if (!invokedCliPath) return null;
+  const sourceCli = join(repoRoot, "src", "cli.ts");
+  const wrapper = join(repoRoot, ".ut-tdd", "bin", "ut-tdd.mjs");
+  const pointerPath = join(repoRoot, ".ut-tdd", "runtime", "activation", "active.json");
+  try {
+    const invoked = realpathSync.native(invokedCliPath);
+    const samePath = (left: string, right: string) =>
+      process.platform === "win32" ? left.toLowerCase() === right.toLowerCase() : left === right;
+    if (existsSync(sourceCli) && samePath(invoked, realpathSync.native(sourceCli))) {
+      return sourceCli;
+    }
+    if (!existsSync(wrapper)) return null;
+    const pointer = JSON.parse(readFileSync(pointerPath, "utf8")) as { entry_path?: unknown };
+    if (typeof pointer.entry_path !== "string") return null;
+    if (!samePath(invoked, realpathSync.native(pointer.entry_path))) return null;
+    return realpathSync.native(wrapper);
+  } catch {
+    return null;
   }
 }
 
