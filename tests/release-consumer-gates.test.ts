@@ -2898,6 +2898,25 @@ describe("PR-G13 consumer G13 predicates", () => {
     expect(result).toMatchObject({ applicable: true, passed: true });
   });
 
+  it("U-RCDEV-034: requires the L13 title and every source #### / ##### heading", () => {
+    const template = readFileSync(
+      join(process.cwd(), "docs/templates/vmodel/L13-production-observation.md"),
+      "utf8",
+    );
+    const sourceHeadings = template
+      .split(/\r?\n/)
+      .filter((line) => /^# |^#### |^##### /.test(line));
+    expect(sourceHeadings.length).toBeGreaterThan(10);
+    for (const heading of sourceHeadings) {
+      const root = fixtureRoot();
+      writeConsumerG13Fixture(root);
+      updateConsumerG13Design(root, (text) => text.replace(`${heading}\n`, ""));
+      const result = evaluateStaticGate({ gate: "G13", repoRoot: root });
+      expect(result, heading).toMatchObject({ applicable: true, passed: false });
+      expect(result.messages.join("\n"), heading).toContain(`missing section ${heading}`);
+    }
+  });
+
   it("U-RCDEV-034: rejects missing, malformed, duplicate, and non-AT traces", () => {
     const mutations: { name: string; mutate: (root: string) => void; expected: string }[] = [
       {
@@ -2932,12 +2951,6 @@ describe("PR-G13 consumer G13 predicates", () => {
             text.replace("SMOKE-CONSUMER-02", "ST-CONSUMER-02"),
           ),
         expected: "case id must start with SMOKE-: ST-CONSUMER-02",
-      },
-      {
-        name: "missing L13 source heading",
-        mutate: (root) =>
-          updateConsumerG13Design(root, (text) => text.replace("##### 5-2 ランブック(抜粋)", "")),
-        expected: "missing section ##### 5-2 ランブック(抜粋)",
       },
       {
         name: "missing case columns",

@@ -119,7 +119,35 @@ const REQUIRED_G12_HEADINGS = [
 ] as const;
 const REQUIRED_G13_CASE_COLUMNS = ["ケースID", "観測内容", "合否基準", "トレース元"] as const;
 const G13_CASE_HEADING = "### harness 追補: G13 検証ケース";
-const REQUIRED_G13_HEADINGS = ["##### 5-2 ランブック(抜粋)"] as const;
+const REQUIRED_G13_HEADINGS = [
+  "# DOC-L13-PRODUCTION-OBSERVATION: 運用設計書 (監視・後検証節) / ログ・トレース設計書",
+  "#### 第1章 運用方針",
+  "#### 第2章 監視設計",
+  "##### 2-1 監視指標(SLI)とアラート",
+  "#### 第3章 SLO/SLA・エラーバジェット",
+  "##### 3-1 SLI/SLO",
+  "##### 3-2 エラーバジェット",
+  "##### 3-3 エラーバジェットポリシー",
+  "##### 3-4 SLA(対顧客)",
+  "#### 第4章 バックアップ/リストア",
+  "##### 4-1 方式",
+  "##### 4-2 リストア運用",
+  "#### 第5章 障害対応・ランブック",
+  "##### 5-1 重大度とエスカレーション",
+  "##### 5-2 ランブック(抜粋)",
+  "#### 第6章 リリース/ロールバック",
+  "##### 6-1 リリース方式",
+  "##### 6-2 ロールバック",
+  "#### 第7章 キャパシティ/コスト",
+  "#### 第1章 ログ方針",
+  "#### 第2章 ログ種別一覧",
+  "#### 第3章 共通ログ項目",
+  "#### 第4章 ログレベル方針",
+  "#### 第5章 構造化フォーマット",
+  "#### 第6章 分散トレース設計",
+  "#### 第7章 保管・マスキング",
+  "#### 第8章 監視連携",
+] as const;
 const REQUIRED_L2_SCREEN_COLUMNS = ["画面ID", "画面名称", "概要", "関連機能", "ロール"] as const;
 function isRecord(value: unknown): value is JsonRecord {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -1167,7 +1195,8 @@ export function evaluateRightArmStaticGate(
     violations,
   });
   const pairDocs = key === "G11" || key === "G12" ? loadPairDocs(repoRoot) : undefined;
-  const pairIds = pairLayerIds(repoRoot, obligation.pairLayers, pairDocs);
+  const pairIds =
+    key === "G13" ? new Set<string>() : pairLayerIds(repoRoot, obligation.pairLayers, pairDocs);
   if (key === "G11") {
     const texts = g11L3Texts(repoRoot, pairDocs);
     g11Ids = g11RequirementIds(texts);
