@@ -141,7 +141,7 @@ function releaseDir(assetBytes: Record<string, string>) {
 }
 
 describe("manual canary acceptance publish-record boundary", () => {
-  it("U-ST-PACKCANARY-010: generated hook registrations must allow and block on both providers", () => {
+  it("U-ST-PACKCANARY-011: generated hook registrations must allow and block on both providers", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-canary-hook-smoke-"));
     tempRoots.push(root);
     mkdirSync(join(root, ".claude"));
@@ -209,7 +209,7 @@ describe("manual canary acceptance publish-record boundary", () => {
     ).toThrow("wrong-anchor-wrote-consumer-root");
   });
 
-  it("U-ST-PACKCANARY-010: consumer state cannot retain removed source paths", () => {
+  it("U-ST-PACKCANARY-012: consumer state cannot retain removed source paths", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-canary-path-reference-"));
     tempRoots.push(root);
     const removed = join(root, "removed-release");
@@ -219,7 +219,7 @@ describe("manual canary acceptance publish-record boundary", () => {
     expect(findForbiddenReferences(root, [removed])).toEqual([]);
   });
 
-  it("U-ST-PACKCANARY-010: closed review providers cannot reach GitHub", () => {
+  it("U-ST-PACKCANARY-013: closed review providers cannot reach GitHub", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-canary-review-stub-"));
     tempRoots.push(root);
     const head = "a".repeat(40);
@@ -256,7 +256,7 @@ describe("manual canary acceptance publish-record boundary", () => {
     expect(denied.stdout).toContain('"denied":true');
   });
 
-  it("U-ST-PACKCANARY-010: restart evidence binds consumer and removed Release root", () => {
+  it("U-ST-PACKCANARY-014: restart evidence binds consumer and removed Release root", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-canary-evidence-"));
     tempRoots.push(root);
     const consumer = join(root, "consumer");

@@ -74,6 +74,10 @@ install、setup、doctor、typecheck を検証している。本書の専用テ�
 | `CANDIDATE-ST-PACKCANARY-009` | PR-2 CI (offline) | (a) runner の installer 呼び出しを `--consumer-runtime-input` (source-CLI helper `tests/support/pack-consumer-runtime.ts` と同じ経路) に差し替える、(b) runner が anchor を publish 記録ではなく `<release-dir>` の `.consumer.sha256` から再計算する、(c) 受入記録の tag が fixture tag など exact `v0.2.0-canary.2` 以外 | runner を offline で呼ぶ。(b) の対照入力は、`.ut-tdd.mjs` を実行意味を変えない形 (末尾へのコメント 1 行追記等) で改変し `.consumer.sha256` を整合的に書き換えた偽造 release-dir と、5 asset の sha256 entry (producer 値・独立再計算値とも) を偽造 release-dir に合わせ `consumer_anchor_digest` (2 値とも) だけを真正 fixture の anchor に固定した記録である。asset 照合・exact 5 件・tag exact・2 値一致の guard はすべて通り、結果を分けるのは anchor の出所だけになる。正しい runner は spawn 引数の `--expected-consumer-digest` に記録の anchor を渡し、手順 0 の `consumer_runtime_anchor_mismatch` で deny・consumer root write 0。anchor を偽造 release-dir から再計算する mutant は手順 0〜2 を通過して deny されず、観測点 (spawn 引数の anchor 値と deny 有無) の結果が反転する ((b) が Red)。runner が anchor と `.consumer.sha256` entry の相互照合を持つ場合は、005(b) と同じく相互照合を外した対照で実行する。spawn 引数に `--consumer-runtime-release` があり `--consumer-runtime-input` が無いことを assert ((a) が Red)。tag が exact でなければ受入記録を生成しない ((c) が Red) |
 | `CANDIDATE-ST-PACKCANARY-010` | 第 1 層 / 第 2 層 | 撤去・別 shell 後の fixture で、生成 `.claude/settings.json` / `.codex/hooks.json` の PreToolUse work-guard command を登録文字列のまま合成 payload で実行する。変異: (a) 正常系も block する (canary.1 実測の全編集 block と同型)、(b) command が撤去済み path・存在しない launcher を指し hook 失敗が非 block で素通りする、(c) 禁止系を通す | 正常系 payload は通過、禁止系 payload は各 runtime の block 規約どおり block。(a)(b)(c) はいずれも Red。hook の schema・内容 (`PLAN-L7-668` 等) は再所有しない |
 
+| 受入行 | 入力 | 判定・証跡 |
+| --- | --- | --- |
+| `AT-DIST-002` | 公開済み exact `v0.2.0-canary.2` の5 asset、#418 publish記録、外部anchor、sourceを含まないWindows/Linuxのclean consumer | runnerがasset bytesとanchorを照合し、別process/cwd/envでPLAN・DB・doctor・review・hookを再現。Bun invocationとsource path参照は0。Linux/Windows実runとpublish記録への束縛が揃うまで未達とする |
+
 Candidate は pair-freeze 時点の設計候補である。PR-1 の第 1 層では、同番号の
 `U-ST-PACKCANARY-001..004`、`U-ST-PACKCANARY-006` (unit)、
 `U-ST-PACKCANARY-007`、`U-ST-PACKCANARY-010` へ 1:1 に昇格する。
@@ -110,6 +114,10 @@ digest 再計算を独立に確認する。
 | `U-ST-PACKCANARY-005` | 実 producer fixture の 5 asset を1 byte変異、またはpublish記録のproducer値・独立値を欠落/不一致にして `setup` spawn 0とconsumer root write 0を観測 | runnerが全assetのsha256と記録の2値一致をinstallerより先に検証する |
 | `U-ST-PACKCANARY-008` | 改変bundle側の5 asset digestを整合させ、publish記録のanchorだけ真正値に固定してinstallerのtyped denyとwrite 0を観測 | `--expected-consumer-digest`に記録のanchorを渡し、`consumer_runtime_anchor_mismatch`で拒否する |
 | `U-ST-PACKCANARY-009` | source helper経路への差替え、release-dirからのanchor再計算、fixture tagの受入記録混入をそれぞれ観測する | `--consumer-runtime-release`のみ、記録anchorのみ、公開受入tagはcanary.2のみを許す |
+| `U-ST-PACKCANARY-011` | PR-2 runnerの登録済みhookを正常系・禁止系payloadで単独実行 | Codex/Claudeのallowとblockを区別する。PR-1の`U-ST-PACKCANARY-010`のE2E所有は変更しない |
+| `U-ST-PACKCANARY-012` | consumer stateへ撤去済みsource pathを混入 | runnerのpath監査が拒否する |
+| `U-ST-PACKCANARY-013` | closed review stubから外向きGitHub操作を試みる | 実review/mergeと混同せず外向き操作0を観測する |
+| `U-ST-PACKCANARY-014` | 再起動証跡のconsumer rootまたは撤去済みrelease rootを変異 | 証跡のroot束縛不一致を拒否する |
 
 `U-ST-PACKCANARY-010` を含む full closure (別process/cwd/env、PLAN/DB/doctor/review、hook、Bun/source path trace) は
 既存 `tests/pack-internal-canary-boundary.test.ts` の real-producer offline fixture が所有し、公開 asset 接合の

@@ -8,7 +8,7 @@ drive: agent
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-09-10
-updated: 2026-09-30
+updated: 2026-10-01
 owner: Claude / Fable (pair-freeze) · Codex worker (implementation)
 parent_design: docs/plans/PLAN-L6-101-pack-independent-multi-consumer-acceptance.md
 pair_artifact: docs/test-design/harness/L12-pack-internal-canary-test-design.md
@@ -85,18 +85,18 @@ status: confirmed
 github_issue_id: 418
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:f0979e15d8a8abf99a9f78572a89a97e
-  command_id: plan-revise:issue-418:pr2-manual-runner:r8:20261001-rechain
-  admitted_at: 2026-10-01T02:12:31.010Z
-  source_digest: sha256:b6d381000b023f0611ed5d37daa2233ac9911938c70168113977202c6ec0beb0
-  decision_digest: sha256:639f7bf7b5c469ffb70c9e3fd1b0292edf16406849bc0b20c6a8ed1382633400
-  receipt_digest: sha256:6a7cab840072e0ed88fb8ecd001b607719060925b42b54f5db49c30c5385922e
+  receipt_id: certificate:b5457378fa313ed9261fbf129a7fb3f1
+  command_id: plan-revise:issue-418:pr2-r1-correction:r9:20261001
+  admitted_at: 2026-10-01T03:16:20.857Z
+  source_digest: sha256:1f3d8255ac3bcea19eb80e4a694933110fcea70bb4dbc2de6a7e28a25fecc4a0
+  decision_digest: sha256:0597af1571c405c29a5546fb0e2d16ae98eafe7e0d6c2b4d5205121d8de3b08e
+  receipt_digest: sha256:ff8cb4af665328eca5f9c2eedc7cec2a7fc09f65e5b05a988483a459904005ab
   binding:
     path: docs/plans/PLAN-L7-531-pack-internal-canary-smoke.md
     plan_id: PLAN-L7-531-pack-internal-canary-smoke
     asset_id: plan:44f79788376b81c225ce5913fddbc48f
-    revision: 8
-    content_digest: sha256:b6d381000b023f0611ed5d37daa2233ac9911938c70168113977202c6ec0beb0
+    revision: 9
+    content_digest: sha256:1f3d8255ac3bcea19eb80e4a694933110fcea70bb4dbc2de6a7e28a25fecc4a0
   route:
     signal: feature_addition
     mode: add-feature
@@ -114,10 +114,10 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-531-pack-internal-canary-smoke
-    target_revision: 7
+    target_revision: 8
     phase: forward_merge
-  escape_reason: "Issue #418 PR-2: manual canary.2 acceptance
-    runnerとpublish-record照合の設計判断・実装成果物を追加する。"
+  escape_reason: "Issue #418 PR-2 closing review r1: AT-DIST-002 and PR-2 oracle
+    ownership correction with PLAN section reference fix"
 ---
 
 # PLAN-L7-531: Pack-only internal canary smoke (Windows/Linux)
@@ -323,7 +323,7 @@ clean fixture で、consumer root へ 1 byte も書かれずに deny される�
 と異なる (anchor 照合を持たない revision から build された・build 過程で照合が落ちた) まま publish
 された」ことである。第 1 層 Green を、この anchor 照合や第 2 層の受入証跡へ読み替えない。
 
-第 2 層は §3.6 の設計判断どおり checked-in manual Node runner で実行する。実 Release の受入 run は
+第 2 層は §6.1 の設計判断どおり checked-in manual Node runner で実行する。実 Release の受入 run は
 公開の PO 承認後にのみ行う。
 
 ### 3.4 publish 記録の様式 (`PLAN-L7-628` §5.7 が本 PLAN に割り当てた所有)
@@ -416,7 +416,7 @@ PR-1 と PR-2 を 1 PR に統合しない。scope 構造を指す FLAG は close
 
 §3.4 の正本は publish を追跡する source repo の #418 コメント 1 件であり、ローカル JSON はその写しである。runner は写しの SHA-256 と元コメント URL、5 asset 全 digest、anchor、コマンド transcript / exit code を evidence に保存するが、GitHub API を使わず JSON とコメントの一致を自己証明しない。Codex 著 PR-2 の Claude 族 non-author reviewer は、コメント本文との一致と公開 Release bytes からの独立再計算 digest を別途照合する。runner 自身の確認だけで受入完了を宣言しない。
 
-`#761` は control 判断により canary.2 後へ保留され、本 PR-2 の HARD predecessor ではない。公開および実受入は PO 承認なしに実行しない.
+`#761` は control 判断により canary.2 後へ保留され、本 PR-2 の HARD predecessor ではない。公開および実受入は PO 承認なしに実行しない。
 
 ## 7. TDD / trace / Reverse
 
