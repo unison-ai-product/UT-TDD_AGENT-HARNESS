@@ -196,6 +196,7 @@ export function main(argv = process.argv.slice(2), deps = {}) {
     runProductGit(run, consumerRoot, ["add", "--", "ut-tdd.project.json"]);
     runProductGit(run, consumerRoot, ["commit", "--quiet", "-m", "canary consumer identity"]);
     // Keep only the consumer-owned authoring input, derived from verified release bytes.
+    verifyReleaseDirectory(directory, record);
     const template = run("tar", ["-xOf", join(directory, `${tag}.tar.gz`),
       "./docs/templates/plan/design/template.md"], {
       cwd: consumerRoot, encoding: "utf8", windowsHide: true, timeout: 30_000,
