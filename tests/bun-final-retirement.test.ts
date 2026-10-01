@@ -248,6 +248,28 @@ describe("CAND-NODEBOOT-023/027/028/208 final Bun retirement", () => {
     ).toBe("reachable_production");
   });
 
+  it("U-PACKBUN-006: canary's exact failing sentinel stays a guard, not a runtime exception", () => {
+    const path = "scripts/pack-canary-acceptance.mjs";
+    for (const line of [
+      'const bunTrace = join(auditRoot, "bun-invocations.log");',
+      'const bunStub = join(binDir, process.platform === "win32" ? "bun.cmd" : "bun");',
+      'if (existsSync(bunTrace)) throw new Error("bun-invocation-observed");',
+    ])
+      expect(classifyTrackedSurface(path, line)).toBe("ban_enforcement_guard");
+    expect(
+      classifyTrackedSurface(path, `spawnSync("${BUN_RUNTIME}", ["run", "src/cli.ts"]);`),
+    ).toBe("reachable_production");
+    expect(classifyTrackedSurface(path, `const bunStub = spawnSync("${BUN_RUNTIME}", []);`)).toBe(
+      "reachable_production",
+    );
+    expect(
+      classifyTrackedSurface(
+        "scripts/other.mjs",
+        'const bunTrace = join(auditRoot, "bun-invocations.log");',
+      ),
+    ).toBe("reachable_production");
+  });
+
   it("U-PACKBUN-006: no test or fixture path name retains a Bun launch written as code", () => {
     // PLAN-L7-530 §3: the path name alone never retains a line. Support helpers,
     // arbitrary test files and vendor code launching Bun are reachable.

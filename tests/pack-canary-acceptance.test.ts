@@ -14,7 +14,11 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import { parse as parseYaml } from "yaml";
-import { createCanaryFixture, isolatedCanaryEnv } from "./support/pack-internal-canary.ts";
+import {
+  createCanaryFixture,
+  isolatedCanaryEnv,
+  removeCanaryFixtureTree,
+} from "./support/pack-internal-canary.ts";
 
 interface AcceptanceModule {
   CANARY_ASSETS: readonly string[];
@@ -104,7 +108,10 @@ const commentUrl =
 const sha = (value: string) => `sha256:${createHash("sha256").update(value).digest("hex")}`;
 
 afterEach(() => {
-  for (const root of tempRoots.splice(0)) rmSync(root, { recursive: true, force: true });
+  for (const root of tempRoots.splice(0)) {
+    if (root.startsWith(join(tmpdir(), "ut-tdd-packcanary-pr1-"))) removeCanaryFixtureTree(root);
+    else rmSync(root, { recursive: true, force: true });
+  }
 });
 
 function record() {

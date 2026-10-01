@@ -326,6 +326,18 @@ export function classifyTrackedSurface(
   // is reachable wherever it lives (PLAN-L7-530 §3: never classify by path name
   // alone), so it is judged before any fixture/test path can retain the line.
   if (hasBunCodeOutsideStringLiteral(line)) return "reachable_production";
+  // The standalone canary acceptance runner plants a failing Bun sentinel in
+  // its isolated PATH. These exact three observation statements are ban guards,
+  // not a runtime fallback; any actual Bun invocation above still fails closed.
+  if (
+    path === "scripts/pack-canary-acceptance.mjs" &&
+    [
+      /^\s*const bunTrace = join\(auditRoot, "bun-invocations\.log"\);\s*$/u,
+      /^\s*const bunStub = join\(binDir, process\.platform === "win32" \? "bun\.cmd" : "bun"\);\s*$/u,
+      /^\s*if \(existsSync\(bunTrace\)\) throw new Error\("bun-invocation-observed"\);\s*$/u,
+    ].some((pattern) => pattern.test(line))
+  )
+    return "ban_enforcement_guard";
   if (fixturePath)
     return hasRetainedFixtureEvidence(path, line) ? "retained_fixture" : "indeterminate";
   if (
