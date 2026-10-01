@@ -84,6 +84,7 @@ interface AcceptanceModule {
 }
 
 const acceptance = (await import(
+  /* @vite-ignore -- load the standalone runner through native Node, including Windows 8.3 paths */
   pathToFileURL(join(process.cwd(), "scripts", "pack-canary-acceptance.mjs")).href
 )) as AcceptanceModule;
 const {
