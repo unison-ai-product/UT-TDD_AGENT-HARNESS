@@ -172,7 +172,7 @@ describe("PLAN-L7-145 handover #1: relativizeTouchedFile (absolute-path leak fix
     relativizeDeliverableFiles(doc, WINROOT);
     const serialized = JSON.stringify(doc);
     // NO username-bearing personal path (drive-letter home or /Users|/home) survives anywhere
-    expect(/[A-Za-z]:[\\/]Users[\\/]micro/.test(serialized)).toBe(false);
+    expect(/[A-Za-z]:[\\/]Users[\\/]example/.test(serialized)).toBe(false);
     expect(serialized.includes("Users/example")).toBe(false);
     const files = doc.deliverables[0]?.files ?? [];
     // both casings of src/a.ts collapse to one relativized entry (dedup)
