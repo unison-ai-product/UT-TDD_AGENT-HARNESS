@@ -40,32 +40,45 @@ review_evidence:
     review_kind: cross_agent
     reviewed_at: 2026-10-01
     verdict: PASS
-    worker_model: claude-opus-5
+    worker_model: claude-sonnet-5
     reviewer_model: gpt-6.1-sol
     subject_head: 5d56de51bb04b62b68563f1947515277cef05bce
-    scope: "PR 802 非著者 closing review。r1 FLAG 3件 (alias helper の silent
-      skip、pointer/digest 拒否 oracle 不足、test-design のテスト名不一致) と r2 FLAG 1件
-      (manifest 集約 digest の独立 oracle) を同 PR 内で是正し、r3 で blocking 0。RED 証跡:
-      consumerRoot 正規化 1 行の除去で alias oracle 2 件、pointer key 検証の除去と集約 digest
+    scope: "PR 802 非著者 closing review。初稿 (テスト移植・PLAN 起票) は Claude Opus、r1/r2 FLAG
+      の是正 commit (f32b3add、5d56de51) は Claude Sonnet が作成。r1 FLAG 3件 (alias
+      helper の silent skip、pointer/digest 拒否 oracle 不足、test-design のテスト名不一致) と
+      r2 FLAG 1件 (manifest 集約 digest の独立 oracle) を同 PR 内で是正し、r3 で blocking 0。RED
+      証跡: consumerRoot 正規化 1 行の除去で alias oracle 2 件、pointer key 検証の除去と集約 digest
       検証の除去で拒否 oracle がそれぞれ RED。Windows CI は 23 tests / 0 skipped。"
+    green_commands:
+      - kind: unit_test
+        command: node scripts/run-vitest-snapshot.ts (harness-check-linux /
+          harness-check-windows full 回帰、CI run 36710979790)
+        runner: ci
+        scope: full
+        exit_code: 0
+        completed_at: 2026-09-30T12:13:18Z
+        evidence_path: docs/test-design/harness/L7-678-consumer-launcher-path-alias-test-design.md
+        output_digest: sha256:334a984e030cccd106b66c00a9fb467c5c8fffe1eecd64df41532b18e018f19c
+        anchor_commit: 5d56de51bb04b62b68563f1947515277cef05bce
     citations:
       - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/802
+      - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/actions/runs/36710979790
 status: confirmed
 github_issue_id: 678
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:950960baf77673952736e4bf9884cb20
-  command_id: plan-revise:issue-678:launcher-alias-oracle:confirm-2
-  admitted_at: 2026-10-01T01:15:46.929Z
-  source_digest: sha256:d408d3819a2bfb893b8869516a86721f3241b67c7e9d8149319a607045b213d8
-  decision_digest: sha256:8e620a5b477c54eb022954505b5e37adb8575f07b61a326e8cd150454e816f7e
-  receipt_digest: sha256:7e0d6d9faf23f7db5521a93d295e0be1934e5a9f62baa2bef5f4a67fdd93714e
+  receipt_id: certificate:feb9aa4c8746ae0eb891c4935f16f62c
+  command_id: plan-revise:issue-678:launcher-alias-oracle:confirm-3
+  admitted_at: 2026-10-01T01:28:22.940Z
+  source_digest: sha256:7584020e9a47f976f5efdaa20fc992f37a18eb743fe59215a838cef417c94c3f
+  decision_digest: sha256:79bf4e3279994300d093eda24ed48cca1bf550ed951d6026e6ee0f9112500ecb
+  receipt_digest: sha256:f1b38abbabbe4776522f4a3e36e0cdda0636be530c5e0c4f6a15d3f09153bf32
   binding:
     path: docs/plans/PLAN-L7-678-consumer-launcher-path-alias.md
     plan_id: PLAN-L7-678-consumer-launcher-path-alias
     asset_id: plan:ed17668cb64f29738109eb175b91506e
-    revision: 2
-    content_digest: sha256:d408d3819a2bfb893b8869516a86721f3241b67c7e9d8149319a607045b213d8
+    revision: 3
+    content_digest: sha256:7584020e9a47f976f5efdaa20fc992f37a18eb743fe59215a838cef417c94c3f
   route:
     signal: incident
     mode: incident
@@ -82,9 +95,9 @@ admission_receipt:
     target_plan_id: PLAN-L7-516-pack-self-contained-consumer-runtime
     target_revision: 5
     phase: forward_merge
-  escape_reason: PR 802 の非著者 closing review (Sol r3) が blocking 0 で PASS したため、回帰
-    oracle を所有する test-design を generates に宣言し、review_evidence を記録して confirmed
-    にする。
+  escape_reason: "PR 802 Sol r4 FLAG と CI review-evidence gate の是正:
+    review_evidence の worker_model を是正担当の Claude Sonnet に正し、confirmed 必須の
+    green_commands (CI run 36710979790、anchor 5d56de51) を記録する。"
 ---
 
 # PLAN-L7-678: consumer launcher path alias 誤拒否の回帰 oracle 固定
