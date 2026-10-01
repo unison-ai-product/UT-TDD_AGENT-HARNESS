@@ -189,6 +189,7 @@ export function main(argv = process.argv.slice(2), deps = {}) {
     rmSync(setupHome, { recursive: true, force: true });
   }
   const transcript = `${child.stdout ?? ""}${child.stderr ?? ""}`;
+  let authoringTemplate = null;
   if (!child.error && child.status === 0) {
     const identityPath = join(consumerRoot, "ut-tdd.project.json");
     if (!existsSync(identityPath)) throw new Error("consumer-project-identity-not-generated");
@@ -202,6 +203,11 @@ export function main(argv = process.argv.slice(2), deps = {}) {
     if (template.error || template.status !== 0)
       throw new Error(`shipped-plan-template-unavailable:${template.error?.message ?? template.stderr}`);
     createConsumerPlan(consumerRoot, template.stdout);
+    authoringTemplate = {
+      asset_name: `${tag}.tar.gz`,
+      path: "docs/templates/plan/design/template.md",
+      sha256: `sha256:${createHash("sha256").update(template.stdout, "utf8").digest("hex")}`,
+    };
   }
   const evidence = {
     phase: "installed-awaiting-clean-restart",
@@ -227,6 +233,7 @@ export function main(argv = process.argv.slice(2), deps = {}) {
     authoring_input_sha256: child.status === 0
       ? `sha256:${createHash("sha256").update(readFileSync(join(consumerRoot, "canary-plan-draft.json"))).digest("hex")}`
       : null,
+    authoring_template: authoringTemplate,
     reviewer_independent_digest_verification: "pending",
   };
   writeFileSync(resolve(args["--evidence"]), `${JSON.stringify(evidence, null, 2)}\n`, { flag: "wx" });
