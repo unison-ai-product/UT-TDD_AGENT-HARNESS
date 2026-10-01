@@ -645,6 +645,518 @@ function firstConsumerG10Command(
   return command;
 }
 
+const G11_CONSUMER_CASE_IDS = ["UAT-CONSUMER-01", "UAT-CONSUMER-02"] as const;
+const G11_CONSUMER_REQUIREMENT_IDS = [
+  "FR-01",
+  ...Array.from({ length: 8 }, (_, index) => `NFR-${String(index + 1).padStart(2, "0")}`),
+  ...Array.from({ length: 7 }, (_, index) => `NFR-${String(index + 11).padStart(2, "0")}`),
+] as const;
+
+type ConsumerG11Manifest = {
+  schema_version: string;
+  gate: string;
+  profile: string;
+  plan_id: string;
+  selected_uat_ids: string[];
+  mandatory_uat_ids: string[];
+  deferred_uat_ids: string[];
+  commands: {
+    command_id: string;
+    command: string;
+    runner: string;
+    scope: string;
+    exit_code: number;
+    evidence_path: string;
+    output_digest: string;
+    uat_ids: string[];
+  }[];
+  coverage: {
+    uat_id: string;
+    status: string;
+    evidence_paths: string[];
+    command_ids: string[];
+  }[];
+  defer: { uat_id: string; reason: string; plan_id: string }[];
+  exit_criteria: {
+    all_mandatory_passed: boolean;
+    failed_mandatory_count: number;
+    stale_defer_count: number;
+    doctor_check: string;
+  };
+  artifacts: Record<string, string>;
+};
+
+type ConsumerG11TraceReview = {
+  requirements: { requirement_id: string; status: string }[];
+};
+
+type ConsumerG11Decision = {
+  decision: string;
+  decided_by_role: string;
+  revision?: string;
+};
+
+function consumerG11Manifest(): ConsumerG11Manifest {
+  const commandId = "cmd-consumer-uat";
+  const uatResultsPath = "tests/fixtures/g11-consumer/uat-results.txt";
+  return {
+    schema_version: "g11-uat-evidence-v1",
+    gate: "G11",
+    profile: "consumer-uat-minimum",
+    plan_id: "PLAN-CONSUMER-01",
+    selected_uat_ids: [...G11_CONSUMER_CASE_IDS],
+    mandatory_uat_ids: [...G11_CONSUMER_CASE_IDS],
+    deferred_uat_ids: [],
+    commands: [
+      {
+        command_id: commandId,
+        command: "node tests/consumer-uat-check.mjs",
+        runner: "node",
+        scope: "consumer fixture",
+        exit_code: 0,
+        evidence_path: "tests/fixtures/g11-consumer/command-output.txt",
+        output_digest: `sha256:${"0".repeat(64)}`,
+        uat_ids: [...G11_CONSUMER_CASE_IDS],
+      },
+    ],
+    coverage: G11_CONSUMER_CASE_IDS.map((uatId) => ({
+      uat_id: uatId,
+      status: "passed",
+      evidence_paths: [uatResultsPath],
+      command_ids: [commandId],
+    })),
+    defer: [],
+    exit_criteria: {
+      all_mandatory_passed: true,
+      failed_mandatory_count: 0,
+      stale_defer_count: 0,
+      doctor_check: "g11-uat-workflow",
+    },
+    artifacts: {
+      end_to_end_trace_review: ".ut-tdd/evidence/g11-uat/artifacts/trace-review.json",
+      po_uat_decision: ".ut-tdd/evidence/g11-uat/artifacts/po-uat-decision.json",
+    },
+  };
+}
+
+function consumerG11TraceReview(): ConsumerG11TraceReview {
+  return {
+    requirements: G11_CONSUMER_REQUIREMENT_IDS.map((requirementId) => ({
+      requirement_id: requirementId,
+      status: "traced",
+    })),
+  };
+}
+
+function consumerG11Decision(): ConsumerG11Decision {
+  return {
+    decision: "accept",
+    decided_by_role: "PO",
+    revision: "0123456789abcdef0123456789abcdef01234567",
+  };
+}
+
+function writeConsumerG11Fixture(root: string): void {
+  const repositoryRoot = process.cwd();
+  writeConsumerGateFixture(root);
+  const l11Template = readFileSync(
+    join(repositoryRoot, "docs/templates/vmodel/L11-trace-uat.md"),
+    "utf8",
+  );
+  const caseRows = [
+    "| FR-01 | PO シナリオ検収 | UAT | ユースケース | UAT-CONSUMER-01 |",
+    "| NFR-01 | PO シナリオ検収 | UAT | 境界値 | UAT-CONSUMER-02 |",
+  ].join("\n");
+  const l11 = l11Template
+    .replace(/^status: .*$/m, "status: confirmed")
+    .replace(/^plan: .*$/m, "plan: docs/plans/PLAN-CONSUMER-01.md")
+    .replace("| <記入> | <記入> | <記入> | <記入> | <記入> |", caseRows);
+  writeFixtureDoc(root, "docs/process/evidence/g11-uat-review-design.md", l11);
+
+  writeFixtureDoc(root, "tests/fixtures/g11-consumer/uat-results.txt", "passed\n");
+  writeFixtureDoc(root, "tests/fixtures/g11-consumer/command-output.txt", "passed\n");
+  writeFixtureDoc(
+    root,
+    ".ut-tdd/evidence/g11-uat/artifacts/trace-review.json",
+    `${JSON.stringify(consumerG11TraceReview(), null, 2)}\n`,
+  );
+  writeFixtureDoc(
+    root,
+    ".ut-tdd/evidence/g11-uat/artifacts/po-uat-decision.json",
+    `${JSON.stringify(consumerG11Decision(), null, 2)}\n`,
+  );
+  writeFixtureDoc(
+    root,
+    ".ut-tdd/evidence/g11-uat/ok.json",
+    `${JSON.stringify(consumerG11Manifest(), null, 2)}\n`,
+  );
+}
+
+function updateConsumerG11Manifest(
+  root: string,
+  mutate: (manifest: ConsumerG11Manifest) => void,
+): void {
+  const path = join(root, ".ut-tdd", "evidence", "g11-uat", "ok.json");
+  const manifest = JSON.parse(readFileSync(path, "utf8")) as ConsumerG11Manifest;
+  mutate(manifest);
+  writeFileSync(path, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
+}
+
+function updateConsumerG11Design(root: string, mutate: (content: string) => string): void {
+  const path = join(root, "docs", "process", "evidence", "g11-uat-review-design.md");
+  writeFileSync(path, mutate(readFileSync(path, "utf8")), "utf8");
+}
+
+function updateConsumerG11TraceReview(
+  root: string,
+  mutate: (traceReview: ConsumerG11TraceReview) => void,
+): void {
+  const path = join(root, ".ut-tdd", "evidence", "g11-uat", "artifacts", "trace-review.json");
+  const traceReview = JSON.parse(readFileSync(path, "utf8")) as ConsumerG11TraceReview;
+  mutate(traceReview);
+  writeFileSync(path, `${JSON.stringify(traceReview, null, 2)}\n`, "utf8");
+}
+
+function updateConsumerG11Decision(
+  root: string,
+  mutate: (decision: ConsumerG11Decision) => void,
+): void {
+  const path = join(root, ".ut-tdd", "evidence", "g11-uat", "artifacts", "po-uat-decision.json");
+  const decision = JSON.parse(readFileSync(path, "utf8")) as ConsumerG11Decision;
+  mutate(decision);
+  writeFileSync(path, `${JSON.stringify(decision, null, 2)}\n`, "utf8");
+}
+
+function firstConsumerG11Command(
+  manifest: ConsumerG11Manifest,
+): ConsumerG11Manifest["commands"][number] {
+  const command = manifest.commands[0];
+  if (!command) throw new Error("consumer G11 fixture command is missing");
+  return command;
+}
+
+const G12_CONSUMER_CASE_IDS = ["AT-FR-01-01", "AT-CONSUMER-02"] as const;
+const G12_EVIDENCE_DIRECTORY = "g12-acceptance";
+const G12_DEPLOY_RECEIPT_PATH = ".ut-tdd/evidence/g12-acceptance/artifacts/deploy-receipt.json";
+const G12_ROLLBACK_READINESS_PATH =
+  ".ut-tdd/evidence/g12-acceptance/artifacts/rollback-readiness.json";
+
+type ConsumerG12Manifest = {
+  schema_version: string;
+  gate: string;
+  profile: string;
+  plan_id: string;
+  selected_at_ids: string[];
+  mandatory_at_ids: string[];
+  deferred_at_ids: string[];
+  commands: {
+    command_id: string;
+    command: string;
+    runner: string;
+    scope: string;
+    exit_code: number;
+    evidence_path: string;
+    output_digest: string;
+    at_ids: string[];
+  }[];
+  coverage: {
+    at_id: string;
+    status: string;
+    evidence_paths: string[];
+    command_ids: string[];
+  }[];
+  defer: { at_id: string; reason: string; plan_id: string }[];
+  exit_criteria: {
+    all_mandatory_passed: boolean;
+    failed_mandatory_count: number;
+    stale_defer_count: number;
+    doctor_check: string;
+  };
+  artifacts: Record<string, string>;
+};
+
+function consumerG12Manifest(): ConsumerG12Manifest {
+  const commandId = "cmd-consumer-acceptance";
+  const acceptancePath = "tests/fixtures/g12-consumer/acceptance-results.txt";
+  return {
+    schema_version: "g12-acceptance-evidence-v1",
+    gate: "G12",
+    profile: "consumer-acceptance-minimum",
+    plan_id: "PLAN-CONSUMER-01",
+    selected_at_ids: [...G12_CONSUMER_CASE_IDS],
+    mandatory_at_ids: [...G12_CONSUMER_CASE_IDS],
+    deferred_at_ids: [],
+    commands: [
+      {
+        command_id: commandId,
+        command: "node tests/consumer-acceptance-check.mjs",
+        runner: "node",
+        scope: "consumer fixture",
+        exit_code: 0,
+        evidence_path: "tests/fixtures/g12-consumer/command-output.txt",
+        output_digest: "sha256:" + "0".repeat(64),
+        at_ids: [...G12_CONSUMER_CASE_IDS],
+      },
+    ],
+    coverage: G12_CONSUMER_CASE_IDS.map((atId) => ({
+      at_id: atId,
+      status: "passed",
+      evidence_paths: [acceptancePath],
+      command_ids: [commandId],
+    })),
+    defer: [],
+    exit_criteria: {
+      all_mandatory_passed: true,
+      failed_mandatory_count: 0,
+      stale_defer_count: 0,
+      doctor_check: "g12-acceptance-workflow",
+    },
+    artifacts: {
+      deploy_receipt: G12_DEPLOY_RECEIPT_PATH,
+      acceptance_results: acceptancePath,
+      rollback_readiness: G12_ROLLBACK_READINESS_PATH,
+    },
+  };
+}
+
+function writeConsumerG12Fixture(root: string): void {
+  writeConsumerGateFixture(root);
+  const caseTablePath = join(root, "docs/test-design/L12-acceptance-test-design.md");
+  const caseRows = [
+    "| AT-FR-01-01 | 受入 | Consumer function の受入 | 手順どおり実行する | 合格 | AC-FR-01-01 |",
+    "| AT-CONSUMER-02 | 受入 | 非機能の受入 | 計測する | 閾値内 | NFR-01 |",
+  ].join("\n");
+  const caseDesign = readFileSync(caseTablePath, "utf8").replace(
+    "| <記入> | <記入> | <記入> | <記入> | <記入> | <記入> |",
+    caseRows,
+  );
+  writeFileSync(caseTablePath, caseDesign, "utf8");
+  writeFixtureDoc(root, "tests/fixtures/g12-consumer/acceptance-results.txt", "passed\n");
+  writeFixtureDoc(root, "tests/fixtures/g12-consumer/command-output.txt", "passed\n");
+  writeFixtureDoc(
+    root,
+    G12_DEPLOY_RECEIPT_PATH,
+    JSON.stringify(
+      {
+        revision: "0123456789abcdef0123456789abcdef01234567",
+        environment: "staging",
+      },
+      null,
+      2,
+    ) + "\n",
+  );
+  writeFixtureDoc(
+    root,
+    G12_ROLLBACK_READINESS_PATH,
+    JSON.stringify(
+      {
+        rollback_command: "git revert --no-edit 0123456789abcdef0123456789abcdef01234567",
+        verified_at: "2026-09-29T00:00:00Z",
+      },
+      null,
+      2,
+    ) + "\n",
+  );
+  writeFixtureDoc(
+    root,
+    ".ut-tdd/evidence/g12-acceptance/ok.json",
+    JSON.stringify(consumerG12Manifest(), null, 2) + "\n",
+  );
+}
+
+function updateConsumerG12Manifest(
+  root: string,
+  mutate: (manifest: ConsumerG12Manifest) => void,
+): void {
+  const path = join(root, ".ut-tdd", "evidence", G12_EVIDENCE_DIRECTORY, "ok.json");
+  const manifest = JSON.parse(readFileSync(path, "utf8")) as ConsumerG12Manifest;
+  mutate(manifest);
+  writeFileSync(path, JSON.stringify(manifest, null, 2) + "\n", "utf8");
+}
+
+function updateConsumerG12Design(root: string, mutate: (content: string) => string): void {
+  const path = join(root, "docs/test-design/L12-acceptance-test-design.md");
+  writeFileSync(path, mutate(readFileSync(path, "utf8")), "utf8");
+}
+
+function firstConsumerG12Command(
+  manifest: ConsumerG12Manifest,
+): ConsumerG12Manifest["commands"][number] {
+  const command = manifest.commands[0];
+  if (!command) throw new Error("consumer G12 fixture command is missing");
+  return command;
+}
+
+const G13_CONSUMER_CASE_IDS = ["SMOKE-CONSUMER-01", "SMOKE-CONSUMER-02"] as const;
+const G13_EVIDENCE_DIRECTORY = "g13-post-deploy";
+const G13_SLI_SLO_PATH = ".ut-tdd/evidence/g13-post-deploy/artifacts/sli-slo.json";
+const G13_ROLLBACK_PATH = ".ut-tdd/evidence/g13-post-deploy/artifacts/rollback.json";
+
+type ConsumerG13Manifest = Omit<
+  ConsumerG12Manifest,
+  | "selected_at_ids"
+  | "mandatory_at_ids"
+  | "deferred_at_ids"
+  | "commands"
+  | "coverage"
+  | "defer"
+  | "artifacts"
+> & {
+  selected_smoke_ids: string[];
+  mandatory_smoke_ids: string[];
+  deferred_smoke_ids: string[];
+  commands: (Omit<ConsumerG12Manifest["commands"][number], "at_ids"> & { smoke_ids: string[] })[];
+  coverage: (Omit<ConsumerG12Manifest["coverage"][number], "at_id"> & { smoke_id: string })[];
+  defer: { smoke_id: string; reason: string; plan_id: string }[];
+  artifacts: Record<string, string>;
+};
+
+function consumerG13Manifest(): ConsumerG13Manifest {
+  const commandId = "cmd-consumer-smoke";
+  const smokePath = "tests/fixtures/g13-consumer/smoke-results.txt";
+  return {
+    schema_version: "g13-post-deploy-evidence-v1",
+    gate: "G13",
+    profile: "consumer-post-deploy-minimum",
+    plan_id: "PLAN-CONSUMER-01",
+    selected_smoke_ids: [...G13_CONSUMER_CASE_IDS],
+    mandatory_smoke_ids: [...G13_CONSUMER_CASE_IDS],
+    deferred_smoke_ids: [],
+    commands: [
+      {
+        command_id: commandId,
+        command: "node tests/consumer-smoke-check.mjs",
+        runner: "node",
+        scope: "consumer fixture",
+        exit_code: 0,
+        evidence_path: "tests/fixtures/g13-consumer/command-output.txt",
+        output_digest: "sha256:" + "0".repeat(64),
+        smoke_ids: [...G13_CONSUMER_CASE_IDS],
+      },
+    ],
+    coverage: G13_CONSUMER_CASE_IDS.map((smokeId) => ({
+      smoke_id: smokeId,
+      status: "passed",
+      evidence_paths: [smokePath],
+      command_ids: [commandId],
+    })),
+    defer: [],
+    exit_criteria: {
+      all_mandatory_passed: true,
+      failed_mandatory_count: 0,
+      stale_defer_count: 0,
+      doctor_check: "g13-post-deploy-workflow",
+    },
+    artifacts: {
+      production_smoke: smokePath,
+      sli_slo_observation: G13_SLI_SLO_PATH,
+      rollback_decision: G13_ROLLBACK_PATH,
+    },
+  };
+}
+
+function writeConsumerG13Fixture(root: string): void {
+  writeConsumerGateFixture(root);
+  writeFixtureDoc(
+    root,
+    "docs/test-design/L12-acceptance-test-design.md",
+    `${readFileSync(join(root, "docs/test-design/L12-acceptance-test-design.md"), "utf8")}\n| **AT-FR-01-02** | 未観測 |\n`,
+  );
+  const source = join(process.cwd(), "docs/templates/vmodel/L13-production-observation.md");
+  const template = readFileSync(source, "utf8");
+  writeFixtureDoc(
+    root,
+    "docs/process/evidence/g13-post-deploy-verification-design.md",
+    template
+      .replace("status: draft", "status: confirmed")
+      .replace(/^plan: .*$/m, "plan: docs/plans/PLAN-CONSUMER-01.md")
+      .replace(
+        "| <SMOKE-ID> | <観測内容> | <合否基準> | <AT-ID> |",
+        "| SMOKE-CONSUMER-01 | status / doctor の実行 | exit 0 | AT-FR-01-01 |\n| SMOKE-CONSUMER-02 | projection の rebuild | 失敗 0 | AT-FR-01-01 |",
+      ),
+  );
+  writeFixtureDoc(
+    root,
+    "docs/plans/PLAN-CONSUMER-01.md",
+    "---\nplan_id: PLAN-CONSUMER-01\nkind: add-impl\nstatus: confirmed\n---\n",
+  );
+  writeFixtureDoc(root, "tests/fixtures/g13-consumer/smoke-results.txt", "passed\n");
+  writeFixtureDoc(root, "tests/fixtures/g13-consumer/command-output.txt", "passed\n");
+  writeFixtureDoc(
+    root,
+    G13_SLI_SLO_PATH,
+    JSON.stringify(
+      {
+        window_start: "2026-09-29T00:00:00Z",
+        window_end: "2026-09-29T06:00:00Z",
+        slos: [{ slo_id: "SLO-AVAIL", target: "99.9%", observed: 99.95 }],
+      },
+      null,
+      2,
+    ) + "\n",
+  );
+  writeFixtureDoc(root, G13_ROLLBACK_PATH, JSON.stringify({ decision: "keep" }, null, 2) + "\n");
+  writeFixtureDoc(
+    root,
+    ".ut-tdd/evidence/g13-post-deploy/ok.json",
+    JSON.stringify(consumerG13Manifest(), null, 2) + "\n",
+  );
+}
+
+function updateConsumerG13Manifest(
+  root: string,
+  mutate: (manifest: ConsumerG13Manifest) => void,
+): void {
+  const path = join(root, ".ut-tdd", "evidence", G13_EVIDENCE_DIRECTORY, "ok.json");
+  const manifest = JSON.parse(readFileSync(path, "utf8")) as ConsumerG13Manifest;
+  mutate(manifest);
+  writeFileSync(path, JSON.stringify(manifest, null, 2) + "\n", "utf8");
+}
+
+function updateConsumerG13Design(root: string, mutate: (content: string) => string): void {
+  const path = join(root, "docs/process/evidence/g13-post-deploy-verification-design.md");
+  writeFileSync(path, mutate(readFileSync(path, "utf8")), "utf8");
+}
+
+function firstConsumerG13Command(
+  manifest: ConsumerG13Manifest,
+): ConsumerG13Manifest["commands"][number] {
+  const command = manifest.commands[0];
+  if (!command) throw new Error("consumer G13 fixture command is missing");
+  return command;
+}
+
+function updateConsumerG13Artifact(
+  root: string,
+  path: string,
+  mutate: (artifact: Record<string, unknown>) => void,
+): void {
+  const absolutePath = join(root, path);
+  const artifact = JSON.parse(readFileSync(absolutePath, "utf8")) as Record<string, unknown>;
+  mutate(artifact);
+  writeFileSync(absolutePath, JSON.stringify(artifact, null, 2) + "\n", "utf8");
+}
+
+function updateConsumerG12DeployReceipt(
+  root: string,
+  mutate: (receipt: Record<string, unknown>) => void,
+): void {
+  const path = join(root, G12_DEPLOY_RECEIPT_PATH);
+  const receipt = JSON.parse(readFileSync(path, "utf8")) as Record<string, unknown>;
+  mutate(receipt);
+  writeFileSync(path, JSON.stringify(receipt, null, 2) + "\n", "utf8");
+}
+
+function updateConsumerG12RollbackReadiness(
+  root: string,
+  mutate: (readiness: Record<string, unknown>) => void,
+): void {
+  const path = join(root, G12_ROLLBACK_READINESS_PATH);
+  const readiness = JSON.parse(readFileSync(path, "utf8")) as Record<string, unknown>;
+  mutate(readiness);
+  writeFileSync(path, JSON.stringify(readiness, null, 2) + "\n", "utf8");
+}
+
 function makeWritableTree(path: string): void {
   const stat = statSync(path);
   chmodSync(path, stat.isDirectory() ? 0o700 : 0o600);
@@ -1732,5 +2244,993 @@ describe("PR-G10 consumer G10 predicates", () => {
     expect(result.applicable).toBe(true);
     expect(result.passed).toBe(workflow.ok);
     expect(workflowMessages).toEqual(workflow.messages);
+  });
+});
+
+describe("PR-G12 consumer G12 predicates", () => {
+  it("U-RCDEV-033: evaluates the normal consumer G12 acceptance contract", () => {
+    const root = fixtureRoot();
+    writeConsumerG12Fixture(root);
+
+    const result = evaluateStaticGate({ gate: "G12", repoRoot: root });
+    const messages = result.messages.join("\n");
+
+    expect(result.applicable).toBe(true);
+    expect(result.passed).toBe(true);
+    expect(messages).toContain("未判定 (review): PO/TL");
+  });
+
+  it("U-RCDEV-033: requires the L12 template title, all chapters, and G8 case-table columns (S)", () => {
+    const template = readFileSync(
+      join(process.cwd(), "docs/templates/vmodel/L12-acceptance-test-design.md"),
+      "utf8",
+    );
+    const title = template.split(/\r?\n/).find((line) => /^# DOC-L12-ACCEPTANCE:/.test(line));
+    const headings = template.split(/\r?\n/).filter((line) => /^#{4,5} /.test(line));
+    expect(title).toBeDefined();
+    expect(headings).toHaveLength(10);
+
+    const titleRoot = fixtureRoot();
+    writeConsumerG12Fixture(titleRoot);
+    updateConsumerG12Design(titleRoot, (content) => content.replace(title ?? "", ""));
+    const titleResult = evaluateStaticGate({ gate: "G12", repoRoot: titleRoot });
+    expect(titleResult.passed).toBe(false);
+    expect(titleResult.messages.join("\n")).toContain("missing section " + title);
+
+    for (const heading of headings) {
+      const root = fixtureRoot();
+      writeConsumerG12Fixture(root);
+      updateConsumerG12Design(root, (content) =>
+        content
+          .split(/\r?\n/)
+          .filter((line) => line !== heading)
+          .join("\n"),
+      );
+      const result = evaluateStaticGate({ gate: "G12", repoRoot: root });
+      expect(result.applicable, heading).toBe(true);
+      expect(result.passed, heading).toBe(false);
+      expect(result.messages.join("\n"), heading).toContain("missing section " + heading);
+    }
+
+    const requiredColumns = [
+      "テストID",
+      "分類",
+      "テスト項目",
+      "検証内容/手順",
+      "期待結果",
+      "トレース元",
+    ];
+    const header = "| " + requiredColumns.join(" | ") + " |";
+    for (const missingColumn of requiredColumns) {
+      const root = fixtureRoot();
+      writeConsumerG12Fixture(root);
+      updateConsumerG12Design(root, (content) =>
+        content.replace(header, header.replace(missingColumn, "")),
+      );
+      const result = evaluateStaticGate({ gate: "G12", repoRoot: root });
+      const messages = result.messages.join("\n");
+      expect(result.applicable, missingColumn).toBe(true);
+      expect(result.passed, missingColumn).toBe(false);
+      expect(messages, missingColumn).toContain("required case table columns");
+      if (missingColumn === "トレース元") expect(messages).toContain("missing section");
+    }
+  });
+
+  it("U-RCDEV-033: rejects duplicate AT case IDs (I)", () => {
+    const root = fixtureRoot();
+    writeConsumerG12Fixture(root);
+    updateConsumerG12Design(root, (content) =>
+      content.replace("| AT-CONSUMER-02 |", "| AT-FR-01-01 |"),
+    );
+
+    const result = evaluateStaticGate({ gate: "G12", repoRoot: root });
+    const messages = result.messages.join("\n");
+
+    expect(result.applicable).toBe(true);
+    expect(result.passed).toBe(false);
+    expect(messages).toContain("duplicate case id AT-FR-01-01");
+  });
+
+  it("U-RCDEV-033: requires nonempty citations and rejects an undefined L3 AC (T)", () => {
+    const mutations = [
+      {
+        name: "undefined AC",
+        mutate: (root: string) =>
+          updateConsumerG12Design(root, (content) => content.replace("AC-FR-01-01", "AC-FR-99-01")),
+        expected: "trace target missing AC-FR-99-01",
+      },
+      {
+        name: "empty citation",
+        mutate: (root: string) =>
+          updateConsumerG12Design(root, (content) => content.replace("| AC-FR-01-01 |", "| |")),
+        expected: "untraced case AT-FR-01-01",
+      },
+    ];
+    for (const mutation of mutations) {
+      const root = fixtureRoot();
+      writeConsumerG12Fixture(root);
+      mutation.mutate(root);
+
+      const result = evaluateStaticGate({ gate: "G12", repoRoot: root });
+      expect(result.applicable, mutation.name).toBe(true);
+      expect(result.passed, mutation.name).toBe(false);
+      expect(result.messages.join("\n"), mutation.name).toContain(mutation.expected);
+    }
+  });
+
+  it("U-RCDEV-033: rejects a designed AT row omitted from all evidence (F)", () => {
+    const root = fixtureRoot();
+    writeConsumerG12Fixture(root);
+    updateConsumerG12Manifest(root, (manifest) => {
+      const missingId = "AT-CONSUMER-02";
+      manifest.selected_at_ids = manifest.selected_at_ids.filter((id) => id !== missingId);
+      manifest.mandatory_at_ids = manifest.mandatory_at_ids.filter((id) => id !== missingId);
+      firstConsumerG12Command(manifest).at_ids = firstConsumerG12Command(manifest).at_ids.filter(
+        (id) => id !== missingId,
+      );
+      manifest.coverage = manifest.coverage.filter((entry) => entry.at_id !== missingId);
+    });
+
+    const result = evaluateStaticGate({ gate: "G12", repoRoot: root });
+
+    expect(result.applicable).toBe(true);
+    expect(result.passed).toBe(false);
+    expect(result.messages.join("\n")).toContain("missing row evidence AT-CONSUMER-02");
+  });
+
+  it("U-RCDEV-033: rejects a missing contract-required acceptance_results artifact (A)", () => {
+    const root = fixtureRoot();
+    writeConsumerG12Fixture(root);
+    updateConsumerG12Manifest(root, (manifest) => {
+      delete manifest.artifacts.acceptance_results;
+    });
+
+    const result = evaluateStaticGate({ gate: "G12", repoRoot: root });
+
+    expect(result.applicable).toBe(true);
+    expect(result.passed).toBe(false);
+    expect(result.messages.join("\n")).toContain("missing artifact acceptance_results");
+  });
+
+  it("U-RCDEV-033: validates both G12 JSON artifacts and leaves acceptance_results as text", () => {
+    const mutations: {
+      name: string;
+      expected: string;
+      mutate: (root: string) => void;
+    }[] = [
+      {
+        name: "39-character deploy revision",
+        expected: "invalid deploy_receipt.revision",
+        mutate: (root) =>
+          updateConsumerG12DeployReceipt(root, (receipt) => {
+            receipt.revision = "0".repeat(39);
+          }),
+      },
+      {
+        name: "non-hex deploy revision",
+        expected: "invalid deploy_receipt.revision",
+        mutate: (root) =>
+          updateConsumerG12DeployReceipt(root, (receipt) => {
+            receipt.revision = "g" + "0".repeat(39);
+          }),
+      },
+      {
+        name: "missing deploy environment",
+        expected: "deploy_receipt.environment is required",
+        mutate: (root) =>
+          updateConsumerG12DeployReceipt(root, (receipt) => {
+            delete receipt.environment;
+          }),
+      },
+      {
+        name: "missing rollback command",
+        expected: "rollback_readiness.rollback_command is required",
+        mutate: (root) =>
+          updateConsumerG12RollbackReadiness(root, (readiness) => {
+            delete readiness.rollback_command;
+          }),
+      },
+      {
+        name: "timezone-less rollback date",
+        expected: "invalid rollback_readiness.verified_at",
+        mutate: (root) =>
+          updateConsumerG12RollbackReadiness(root, (readiness) => {
+            readiness.verified_at = "2026-09-29";
+          }),
+      },
+      {
+        name: "non-JSON deploy receipt",
+        expected: "invalid artifact deploy_receipt: JSON object required",
+        mutate: (root) => writeFixtureDoc(root, G12_DEPLOY_RECEIPT_PATH, "not JSON\n"),
+      },
+    ];
+
+    for (const mutation of mutations) {
+      const root = fixtureRoot();
+      writeConsumerG12Fixture(root);
+      mutation.mutate(root);
+
+      const result = evaluateStaticGate({ gate: "G12", repoRoot: root });
+      expect(result.applicable, mutation.name).toBe(true);
+      expect(result.passed, mutation.name).toBe(false);
+      expect(result.messages.join("\n"), mutation.name).toContain(mutation.expected);
+    }
+  });
+
+  it("U-RCDEV-033: routes each E-only mutation through consumer G12 validation", () => {
+    const mutations: {
+      name: string;
+      expected: string[];
+      mutate: (manifest: ConsumerG12Manifest) => void;
+    }[] = [
+      {
+        name: "schema",
+        expected: ["invalid schema_version"],
+        mutate: (manifest) => {
+          manifest.schema_version = "g11-uat-evidence-v1";
+        },
+      },
+      {
+        name: "gate",
+        expected: ["gate must be G12"],
+        mutate: (manifest) => {
+          manifest.gate = "G11";
+        },
+      },
+      {
+        name: "exit code",
+        expected: ["exit_code is non-zero"],
+        mutate: (manifest) => {
+          firstConsumerG12Command(manifest).exit_code = 1;
+        },
+      },
+      {
+        name: "digest",
+        expected: ["invalid digest"],
+        mutate: (manifest) => {
+          firstConsumerG12Command(manifest).output_digest = "sha256:" + "a".repeat(63);
+        },
+      },
+      {
+        name: "stale defer count type",
+        expected: ["stale_defer_count must be 0"],
+        mutate: (manifest) => {
+          (manifest.exit_criteria as unknown as Record<string, unknown>).stale_defer_count = "0";
+        },
+      },
+      {
+        name: "wrong prefix-derived mandatory field",
+        expected: ["missing row evidence AT-FR-01-01", "missing row evidence AT-CONSUMER-02"],
+        mutate: (manifest) => {
+          const fields = manifest as unknown as Record<string, unknown>;
+          fields.mandatory_it_ids = fields.mandatory_at_ids;
+          delete fields.mandatory_at_ids;
+        },
+      },
+    ];
+
+    for (const mutation of mutations) {
+      const root = fixtureRoot();
+      writeConsumerG12Fixture(root);
+      updateConsumerG12Manifest(root, mutation.mutate);
+
+      const result = evaluateStaticGate({ gate: "G12", repoRoot: root });
+      const messages = result.messages.join("\n");
+      expect(result.applicable, mutation.name).toBe(true);
+      expect(result.passed, mutation.name).toBe(false);
+      for (const expected of mutation.expected) expect(messages, mutation.name).toContain(expected);
+    }
+  });
+});
+describe("PR-G11 consumer G11 predicates", () => {
+  function evaluateG11(root: string) {
+    return evaluateStaticGate({ gate: "G11", repoRoot: root });
+  }
+
+  it("U-RCDEV-032: accepts the complete consumer UAT contract and exposes the PO/TL review decision", () => {
+    const root = fixtureRoot();
+    writeConsumerG11Fixture(root);
+
+    const result = evaluateStaticGate({ gate: "G11", repoRoot: root });
+
+    expect(result.applicable).toBe(true);
+    expect(result.passed).toBe(true);
+    expect(result.messages).toContain("未判定 (review): PO/TL");
+  });
+
+  it("U-RCDEV-032: enforces the L11 chapter shape and required case columns (S)", () => {
+    const root = fixtureRoot();
+    writeConsumerG11Fixture(root);
+    updateConsumerG11Design(root, (content) => content.replace("| ケースID |", "| ケース |"));
+
+    const result = evaluateStaticGate({ gate: "G11", repoRoot: root });
+    const messages = result.messages.join("\n");
+
+    expect(result.applicable).toBe(true);
+    expect(result.passed).toBe(false);
+    expect(messages).toContain("missing section");
+    expect(messages).toContain("required case table columns");
+  });
+
+  it("U-RCDEV-032: rejects duplicate UAT case IDs (I)", () => {
+    const root = fixtureRoot();
+    writeConsumerG11Fixture(root);
+    updateConsumerG11Design(root, (content) =>
+      content.replace("UAT-CONSUMER-02", "UAT-CONSUMER-01"),
+    );
+
+    const actualResult = evaluateG11(root);
+
+    expect(actualResult).toMatchObject({ applicable: true, passed: false });
+    expect(actualResult.messages.join("\n")).toContain("duplicate case id UAT-CONSUMER-01");
+  });
+
+  it("U-RCDEV-032: traces cases only through the G11 L1/L3-L6/L7 pair set plus L3 requirement IDs (T)", () => {
+    const pairMiss = fixtureRoot();
+    writeConsumerG11Fixture(pairMiss);
+    updateConsumerG11Design(pairMiss, (content) =>
+      content.replace("| FR-01 | PO シナリオ", "| DOC-L7-UNIT-TEST-DESIGN | PO シナリオ"),
+    );
+    const pairMissResult = evaluateStaticGate({ gate: "G11", repoRoot: pairMiss });
+    const pairMissMessages = pairMissResult.messages.join("\n");
+    expect(pairMissResult.applicable).toBe(true);
+    expect(pairMissResult.passed).toBe(false);
+    expect(pairMissMessages).toContain("untraced case UAT-CONSUMER-01");
+    expect(pairMissMessages).not.toContain("trace target missing DOC-L7-UNIT-TEST-DESIGN");
+
+    const undefinedTarget = fixtureRoot();
+    writeConsumerG11Fixture(undefinedTarget);
+    updateConsumerG11Design(undefinedTarget, (content) =>
+      content.replace("| FR-01 | PO シナリオ", "| FR-99 | PO シナリオ"),
+    );
+    const actualResult = evaluateG11(undefinedTarget);
+
+    expect(actualResult).toMatchObject({ applicable: true, passed: false });
+    expect(actualResult.messages.join("\n")).toContain("trace target missing FR-99");
+  });
+
+  it("U-RCDEV-032: requires every designed UAT case in manifest, command, and coverage evidence (F)", () => {
+    const root = fixtureRoot();
+    writeConsumerG11Fixture(root);
+    updateConsumerG11Manifest(root, (manifest) => {
+      const missingId = "UAT-CONSUMER-02";
+      manifest.selected_uat_ids = manifest.selected_uat_ids.filter((id) => id !== missingId);
+      manifest.mandatory_uat_ids = manifest.mandatory_uat_ids.filter((id) => id !== missingId);
+      firstConsumerG11Command(manifest).uat_ids = firstConsumerG11Command(manifest).uat_ids.filter(
+        (id) => id !== missingId,
+      );
+      manifest.coverage = manifest.coverage.filter((entry) => entry.uat_id !== missingId);
+    });
+
+    const actualResult = evaluateG11(root);
+
+    expect(actualResult).toMatchObject({ applicable: true, passed: false });
+    expect(actualResult.messages.join("\n")).toContain("missing row evidence UAT-CONSUMER-02");
+  });
+
+  it("U-RCDEV-032: requires the PO UAT decision artifact (A)", () => {
+    const root = fixtureRoot();
+    writeConsumerG11Fixture(root);
+    updateConsumerG11Manifest(root, (manifest) => {
+      delete manifest.artifacts.po_uat_decision;
+    });
+
+    const actualResult = evaluateG11(root);
+
+    expect(actualResult).toMatchObject({ applicable: true, passed: false });
+    expect(actualResult.messages.join("\n")).toContain("missing artifact po_uat_decision");
+  });
+
+  it("U-RCDEV-032: validates the complete L3 requirement trace set and its closed status vocabulary", () => {
+    const mutations: {
+      name: string;
+      expected: string;
+      mutate: (traceReview: ConsumerG11TraceReview) => void;
+    }[] = [
+      {
+        name: "missing last requirement",
+        expected: "untraced requirement NFR-17",
+        mutate: (review) => {
+          review.requirements = review.requirements.filter(
+            (item) => item.requirement_id !== "NFR-17",
+          );
+        },
+      },
+      {
+        name: "missing FR heading requirement",
+        expected: "untraced requirement FR-01",
+        mutate: (review) => {
+          review.requirements = review.requirements.filter(
+            (item) => item.requirement_id !== "FR-01",
+          );
+        },
+      },
+      {
+        name: "blocked requirement",
+        expected: "blocked requirement FR-01",
+        mutate: (review) => {
+          const item = review.requirements.find((entry) => entry.requirement_id === "FR-01");
+          if (!item) throw new Error("consumer G11 trace fixture has no FR-01");
+          item.status = "blocked";
+        },
+      },
+      {
+        name: "unrecognized status",
+        expected: "invalid trace status FR-01: pending",
+        mutate: (review) => {
+          const item = review.requirements.find((entry) => entry.requirement_id === "FR-01");
+          if (!item) throw new Error("consumer G11 trace fixture has no FR-01");
+          item.status = "pending";
+        },
+      },
+      {
+        name: "undefined requirement",
+        expected: "trace review references undefined requirement FR-99",
+        mutate: (review) => {
+          review.requirements.push({ requirement_id: "FR-99", status: "traced" });
+        },
+      },
+      {
+        name: "duplicate requirement",
+        expected: "duplicate trace requirement FR-01",
+        mutate: (review) => {
+          const item = review.requirements.find((entry) => entry.requirement_id === "FR-01");
+          if (!item) throw new Error("consumer G11 trace fixture has no FR-01");
+          review.requirements.push({ ...item });
+        },
+      },
+    ];
+
+    for (const mutation of mutations) {
+      const root = fixtureRoot();
+      writeConsumerG11Fixture(root);
+      updateConsumerG11TraceReview(root, mutation.mutate);
+
+      const actualResult = evaluateG11(root);
+
+      expect(actualResult).toMatchObject({ applicable: true, passed: false });
+      expect(actualResult.messages.join("\n")).toContain(mutation.expected);
+    }
+  });
+
+  it("U-RCDEV-032: rejects a non-object trace review artifact", () => {
+    const root = fixtureRoot();
+    writeConsumerG11Fixture(root);
+    writeFixtureDoc(root, ".ut-tdd/evidence/g11-uat/artifacts/trace-review.json", "traced\n");
+
+    const actualResult = evaluateG11(root);
+
+    expect(actualResult).toMatchObject({ applicable: true, passed: false });
+    expect(actualResult.messages.join("\n")).toContain(
+      "invalid artifact end_to_end_trace_review: JSON object required",
+    );
+  });
+
+  it("U-RCDEV-032: rejects trace review requirement entries with fields beyond requirement_id and status", () => {
+    const root = fixtureRoot();
+    writeConsumerG11Fixture(root);
+    updateConsumerG11TraceReview(root, (review) => {
+      const entry = review.requirements.find((item) => item.requirement_id === "FR-01");
+      if (!entry) throw new Error("consumer G11 trace fixture has no FR-01");
+      (entry as unknown as Record<string, unknown>).extra = "not part of the frozen shape";
+    });
+
+    const actualResult = evaluateG11(root);
+
+    expect(actualResult).toMatchObject({ applicable: true, passed: false });
+    expect(actualResult.messages.join("\n")).toContain("invalid trace review requirement FR-01");
+  });
+
+  it("U-RCDEV-032: fails closed when the L3 document defines no requirement IDs (R)", () => {
+    const root = fixtureRoot();
+    writeConsumerG11Fixture(root);
+    writeFixtureDoc(
+      root,
+      "docs/design/L3-functional/functional-requirements.md",
+      "---\ndoc_type_id: DOC-L3-FUNCTIONAL\nlayer: L3\nstatus: confirmed\npair_artifact: docs/test-design/harness/L3-functional-test-design.md\nplan: docs/plans/PLAN-CONSUMER-01.md\n---\n# DOC-L3-FUNCTIONAL\n\n本文書に要件 ID はありません。\n",
+    );
+    writeFixtureDoc(
+      root,
+      "docs/design/L3-functional/nfr-grade.md",
+      "---\ndoc_type_id: DOC-L3-NFR-GRADE\nlayer: L3\nstatus: confirmed\npair_artifact: docs/test-design/harness/L3-functional-test-design.md\nplan: docs/plans/PLAN-CONSUMER-01.md\n---\n# DOC-L3-NFR-GRADE\n",
+    );
+    updateConsumerG11Design(root, (content) =>
+      content
+        .replace("| FR-01 | PO シナリオ", "| DOC-L3-FUNCTIONAL | PO シナリオ")
+        .replace("| NFR-01 | PO シナリオ", "| DOC-L3-FUNCTIONAL | PO シナリオ"),
+    );
+
+    const actualResult = evaluateG11(root);
+
+    expect(actualResult).toMatchObject({ applicable: true, passed: false });
+    expect(actualResult.messages.join("\n")).toContain(
+      "no requirement ids defined in DOC-L3-FUNCTIONAL",
+    );
+  });
+
+  it("U-RCDEV-032: enforces UAT decision accept/reject semantics and required identity fields", () => {
+    const mutations: {
+      expected: string;
+      mutate: (decision: ConsumerG11Decision) => void;
+    }[] = [
+      {
+        expected: "invalid po_uat_decision.decision maybe",
+        mutate: (decision) => {
+          decision.decision = "maybe";
+        },
+      },
+      {
+        expected: "po_uat_decision.decision is reject",
+        mutate: (decision) => {
+          decision.decision = "reject";
+        },
+      },
+      {
+        expected: "po_uat_decision.decided_by_role is required",
+        mutate: (decision) => {
+          decision.decided_by_role = "";
+        },
+      },
+      {
+        expected: "invalid po_uat_decision.revision",
+        mutate: (decision) => {
+          delete decision.revision;
+        },
+      },
+      {
+        expected: "invalid po_uat_decision.revision",
+        mutate: (decision) => {
+          decision.revision = "0123456789abcdef0123456789abcdef0123456";
+        },
+      },
+    ];
+
+    for (const mutation of mutations) {
+      const root = fixtureRoot();
+      writeConsumerG11Fixture(root);
+      updateConsumerG11Decision(root, mutation.mutate);
+
+      const actualResult = evaluateG11(root);
+
+      expect(actualResult).toMatchObject({ applicable: true, passed: false });
+      expect(actualResult.messages.join("\n")).toContain(mutation.expected);
+    }
+  });
+
+  it("U-RCDEV-032: validates each G11 E-only manifest predicate without weakening S/I/T/F/A", () => {
+    const mutations: {
+      name: string;
+      expected: string;
+      mutate: (manifest: ConsumerG11Manifest) => void;
+    }[] = [
+      {
+        name: "schema",
+        expected: "invalid schema_version",
+        mutate: (manifest) => {
+          manifest.schema_version = "g12-acceptance-evidence-v1";
+        },
+      },
+      {
+        name: "gate",
+        expected: "gate must be G11",
+        mutate: (manifest) => {
+          manifest.gate = "G12";
+        },
+      },
+      {
+        name: "exit code",
+        expected: "exit_code is non-zero",
+        mutate: (manifest) => {
+          firstConsumerG11Command(manifest).exit_code = 1;
+        },
+      },
+      {
+        name: "digest",
+        expected: "invalid digest",
+        mutate: (manifest) => {
+          firstConsumerG11Command(manifest).output_digest = `sha256:${"a".repeat(63)}`;
+        },
+      },
+      {
+        name: "stale defer count type",
+        expected: "stale_defer_count must be 0",
+        mutate: (manifest) => {
+          (manifest.exit_criteria as unknown as Record<string, unknown>).stale_defer_count = "0";
+        },
+      },
+      {
+        name: "G11 mandatory field name",
+        expected: "missing row evidence UAT-CONSUMER-01",
+        mutate: (manifest) => {
+          const record = manifest as unknown as Record<string, unknown>;
+          record.mandatory_it_ids = manifest.mandatory_uat_ids;
+          delete record.mandatory_uat_ids;
+        },
+      },
+    ];
+
+    for (const mutation of mutations) {
+      const root = fixtureRoot();
+      writeConsumerG11Fixture(root);
+      updateConsumerG11Manifest(root, mutation.mutate);
+
+      const result = evaluateStaticGate({ gate: "G11", repoRoot: root });
+      const messages = result.messages.join("\n");
+      expect(result.applicable, mutation.name).toBe(true);
+      expect(result.passed, mutation.name).toBe(false);
+      expect(messages, mutation.name).toContain(mutation.expected);
+      if (mutation.name === "G11 mandatory field name") {
+        expect(messages).toContain("missing row evidence UAT-CONSUMER-02");
+      }
+    }
+  });
+});
+
+describe("PR-G13 consumer G13 predicates", () => {
+  it("U-RCDEV-034: evaluates the normal consumer G13 post-deploy contract", () => {
+    const template = readFileSync(
+      join(process.cwd(), "docs/templates/vmodel/L13-production-observation.md"),
+      "utf8",
+    );
+    expect(template).toContain(
+      "「### harness 追補:」で始まる節は ZIP 由来ではなく、harness の gate 判定のために足した節である。",
+    );
+    expect(template).toContain("| ケースID | 観測内容 | 合否基準 | トレース元 |");
+    const root = fixtureRoot();
+    writeConsumerG13Fixture(root);
+    const result = evaluateStaticGate({ gate: "G13", repoRoot: root });
+    expect(result).toMatchObject({ gate: "G13", applicable: true, passed: true });
+    expect(result.messages.join("\n")).toContain(
+      "right-arm-static - OK (G13, cases=2, manifests=1)",
+    );
+    expect(result.messages.join("\n")).toContain("未判定 (review): PO/TL");
+  });
+
+  it("U-RCDEV-034: resolves L12 acceptance IDs from the harness catalog layout", () => {
+    const root = fixtureRoot();
+    writeConsumerG13Fixture(root);
+    const flatPath = join(root, "docs/test-design/L12-acceptance-test-design.md");
+    writeFixtureDoc(
+      root,
+      "docs/test-design/harness/L12-acceptance-test-design.md",
+      readFileSync(flatPath, "utf8"),
+    );
+    rmSync(flatPath);
+
+    const result = evaluateStaticGate({ gate: "G13", repoRoot: root });
+    expect(result).toMatchObject({ gate: "G13", applicable: true, passed: true });
+    expect(result.messages.join("\n")).toContain(
+      "right-arm-static - OK (G13, cases=2, manifests=1)",
+    );
+  });
+
+  it("U-RCDEV-034: does not require reverse closure for unreferenced L12 acceptance IDs", () => {
+    const root = fixtureRoot();
+    writeConsumerG13Fixture(root);
+    writeFixtureDoc(
+      root,
+      "docs/test-design/L12-acceptance-test-design.md",
+      `${readFileSync(join(root, "docs/test-design/L12-acceptance-test-design.md"), "utf8")}\n| **AT-FR-01-03** | 未観測 |\n`,
+    );
+    const result = evaluateStaticGate({ gate: "G13", repoRoot: root });
+    expect(result).toMatchObject({ applicable: true, passed: true });
+  });
+
+  it("U-RCDEV-034: requires the L13 title and every source #### / ##### heading", () => {
+    const template = readFileSync(
+      join(process.cwd(), "docs/templates/vmodel/L13-production-observation.md"),
+      "utf8",
+    );
+    const sourceHeadings = template
+      .split(/\r?\n/)
+      .filter((line) => /^# |^#### |^##### /.test(line));
+    expect(sourceHeadings.length).toBeGreaterThan(10);
+    for (const heading of sourceHeadings) {
+      const root = fixtureRoot();
+      writeConsumerG13Fixture(root);
+      updateConsumerG13Design(root, (text) => text.replace(`${heading}\n`, ""));
+      const result = evaluateStaticGate({ gate: "G13", repoRoot: root });
+      expect(result, heading).toMatchObject({ applicable: true, passed: false });
+      expect(result.messages.join("\n"), heading).toContain(`missing section ${heading}`);
+    }
+  });
+
+  it("U-RCDEV-034: rejects missing, malformed, duplicate, and non-AT traces", () => {
+    const mutations: { name: string; mutate: (root: string) => void; expected: string }[] = [
+      {
+        name: "missing trace",
+        mutate: (root) => updateConsumerG13Design(root, (text) => text.replace("AT-FR-01-01", "")),
+        expected: "untraced case SMOKE-CONSUMER-01",
+      },
+      {
+        name: "unknown trace",
+        mutate: (root) =>
+          updateConsumerG13Design(root, (text) => text.replace("AT-FR-01-01", "AT-FR-99-99")),
+        expected: "trace target missing AT-FR-99-99",
+      },
+      {
+        name: "defined non-AT trace",
+        mutate: (root) =>
+          updateConsumerG13Design(root, (text) => text.replace("AT-FR-01-01", "NFR-01")),
+        expected: "trace target missing NFR-01",
+      },
+      {
+        name: "duplicate case id",
+        mutate: (root) =>
+          updateConsumerG13Design(root, (text) =>
+            text.replace("SMOKE-CONSUMER-02", "SMOKE-CONSUMER-01"),
+          ),
+        expected: "duplicate case id SMOKE-CONSUMER-01",
+      },
+      {
+        name: "wrong case id prefix",
+        mutate: (root) =>
+          updateConsumerG13Design(root, (text) =>
+            text.replace("SMOKE-CONSUMER-02", "ST-CONSUMER-02"),
+          ),
+        expected: "case id must start with SMOKE-: ST-CONSUMER-02",
+      },
+      {
+        name: "missing case columns",
+        mutate: (root) =>
+          updateConsumerG13Design(root, (text) =>
+            text.replace(
+              "| ケースID | 観測内容 | 合否基準 | トレース元 |",
+              "| 観測内容 | 合否基準 | トレース元 |",
+            ),
+          ),
+        expected: "required case table columns",
+      },
+    ];
+    for (const mutation of mutations) {
+      const root = fixtureRoot();
+      writeConsumerG13Fixture(root);
+      mutation.mutate(root);
+      const result = evaluateStaticGate({ gate: "G13", repoRoot: root });
+      expect(result, mutation.name).toMatchObject({ applicable: true, passed: false });
+      expect(result.messages.join("\n"), mutation.name).toContain(mutation.expected);
+      if (mutation.name === "unknown trace" || mutation.name === "defined non-AT trace")
+        expect(result.messages.join("\n")).toContain("untraced case SMOKE-CONSUMER-01");
+    }
+  });
+
+  it("U-RCDEV-034: requires evidence for each mandatory smoke row", () => {
+    const root = fixtureRoot();
+    writeConsumerG13Fixture(root);
+    updateConsumerG13Manifest(root, (manifest) => {
+      manifest.mandatory_smoke_ids = ["SMOKE-CONSUMER-01"];
+      manifest.selected_smoke_ids = ["SMOKE-CONSUMER-01"];
+      firstConsumerG13Command(manifest).smoke_ids = ["SMOKE-CONSUMER-01"];
+      manifest.coverage = manifest.coverage.filter((row) => row.smoke_id === "SMOKE-CONSUMER-01");
+    });
+    const result = evaluateStaticGate({ gate: "G13", repoRoot: root });
+    expect(result.passed).toBe(false);
+    expect(result.messages.join("\n")).toContain("missing row evidence SMOKE-CONSUMER-02");
+  });
+
+  it("U-RCDEV-034: validates G13-only evidence artifacts and keeps rollback as an operational outcome", () => {
+    const mutations: {
+      name: string;
+      mutate: (root: string) => void;
+      expected: string;
+      passed?: boolean;
+    }[] = [
+      {
+        name: "missing artifact",
+        mutate: (root) =>
+          updateConsumerG13Manifest(root, (manifest) => {
+            delete manifest.artifacts.rollback_decision;
+          }),
+        expected: "missing artifact rollback_decision",
+      },
+      {
+        name: "invalid JSON",
+        mutate: (root) => writeFixtureDoc(root, G13_SLI_SLO_PATH, "not JSON\n"),
+        expected: "invalid artifact sli_slo_observation: JSON object required",
+      },
+      {
+        name: "invalid window start",
+        mutate: (root) =>
+          updateConsumerG13Artifact(root, G13_SLI_SLO_PATH, (artifact) => {
+            artifact.window_start = "not-a-date";
+          }),
+        expected: "invalid sli_slo_observation.window_start",
+      },
+      {
+        name: "timezone required",
+        mutate: (root) =>
+          updateConsumerG13Artifact(root, G13_SLI_SLO_PATH, (artifact) => {
+            artifact.window_start = "2026-09-29T00:00:00";
+          }),
+        expected: "invalid sli_slo_observation.window_start",
+      },
+      {
+        name: "window end timezone required",
+        mutate: (root) =>
+          updateConsumerG13Artifact(root, G13_SLI_SLO_PATH, (artifact) => {
+            artifact.window_end = "2026-09-29T06:00:00";
+          }),
+        expected: "invalid sli_slo_observation.window_end",
+      },
+      {
+        name: "window not increasing",
+        mutate: (root) =>
+          updateConsumerG13Artifact(root, G13_SLI_SLO_PATH, (artifact) => {
+            artifact.window_end = artifact.window_start;
+          }),
+        expected: "sli_slo_observation window is not closed",
+      },
+      {
+        name: "empty slos",
+        mutate: (root) =>
+          updateConsumerG13Artifact(root, G13_SLI_SLO_PATH, (artifact) => {
+            artifact.slos = [];
+          }),
+        expected: "sli_slo_observation.slos is required",
+      },
+      {
+        name: "missing observed",
+        mutate: (root) =>
+          updateConsumerG13Artifact(root, G13_SLI_SLO_PATH, (artifact) => {
+            const firstSlo = (artifact.slos as Record<string, unknown>[])[0];
+            if (firstSlo) delete firstSlo.observed;
+          }),
+        expected: "sli_slo_observation.slos[SLO-AVAIL].observed is required",
+      },
+      {
+        name: "missing target",
+        mutate: (root) =>
+          updateConsumerG13Artifact(root, G13_SLI_SLO_PATH, (artifact) => {
+            const firstSlo = (artifact.slos as Record<string, unknown>[])[0];
+            if (firstSlo) firstSlo.target = "";
+          }),
+        expected: "sli_slo_observation.slos[SLO-AVAIL].target is required",
+      },
+      {
+        name: "non-numeric target is rejected",
+        mutate: (root) =>
+          updateConsumerG13Artifact(root, G13_SLI_SLO_PATH, (artifact) => {
+            const firstSlo = (artifact.slos as Record<string, unknown>[])[0];
+            if (firstSlo) firstSlo.target = null;
+          }),
+        expected: "sli_slo_observation.slos[SLO-AVAIL].target is required",
+      },
+      {
+        name: "missing slo id is indexed",
+        mutate: (root) =>
+          updateConsumerG13Artifact(root, G13_SLI_SLO_PATH, (artifact) => {
+            const firstSlo = (artifact.slos as Record<string, unknown>[])[0];
+            if (firstSlo) delete firstSlo.slo_id;
+          }),
+        expected: "sli_slo_observation.slos[0].slo_id is required",
+      },
+      {
+        name: "numeric target is valid",
+        mutate: (root) =>
+          updateConsumerG13Artifact(root, G13_SLI_SLO_PATH, (artifact) => {
+            const firstSlo = (artifact.slos as Record<string, unknown>[])[0];
+            if (firstSlo) firstSlo.target = 99.9;
+          }),
+        expected: "right-arm-static - OK (G13, cases=2, manifests=1)",
+        passed: true,
+      },
+      {
+        name: "duplicate slo",
+        mutate: (root) => {
+          updateConsumerG13Artifact(root, G13_SLI_SLO_PATH, (artifact) => {
+            (artifact.slos as unknown[]).push({
+              ...(artifact.slos as Record<string, unknown>[])[0],
+            });
+          });
+        },
+        expected: "duplicate slo SLO-AVAIL",
+      },
+      {
+        name: "invalid decision",
+        mutate: (root) =>
+          updateConsumerG13Artifact(root, G13_ROLLBACK_PATH, (artifact) => {
+            artifact.decision = "unknown";
+          }),
+        expected: "invalid rollback_decision.decision unknown",
+      },
+      {
+        name: "rollback is valid",
+        mutate: (root) =>
+          updateConsumerG13Artifact(root, G13_ROLLBACK_PATH, (artifact) => {
+            artifact.decision = "rollback";
+          }),
+        expected: "right-arm-static - OK (G13, cases=2, manifests=1)",
+        passed: true,
+      },
+      {
+        name: "case-sensitive decision",
+        mutate: (root) =>
+          updateConsumerG13Artifact(root, G13_ROLLBACK_PATH, (artifact) => {
+            artifact.decision = "Keep";
+          }),
+        expected: "invalid rollback_decision.decision Keep",
+      },
+      {
+        name: "future observation window",
+        mutate: (root) =>
+          updateConsumerG13Artifact(root, G13_SLI_SLO_PATH, (artifact) => {
+            artifact.window_start = "2099-01-01T00:00:00Z";
+            artifact.window_end = "2099-01-01T06:00:00Z";
+          }),
+        expected: "right-arm-static - OK (G13, cases=2, manifests=1)",
+        passed: true,
+      },
+    ];
+    for (const mutation of mutations) {
+      const root = fixtureRoot();
+      writeConsumerG13Fixture(root);
+      mutation.mutate(root);
+      const result = evaluateStaticGate({ gate: "G13", repoRoot: root });
+      expect(result.passed, mutation.name).toBe(mutation.passed ?? false);
+      expect(result.messages.join("\n"), mutation.name).toContain(mutation.expected);
+    }
+  });
+
+  it("U-RCDEV-034: validates each G13 E-only manifest predicate", () => {
+    const mutations: {
+      name: string;
+      expected: string;
+      mutate: (manifest: ConsumerG13Manifest) => void;
+    }[] = [
+      {
+        name: "schema",
+        expected: "invalid schema_version",
+        mutate: (manifest) => {
+          manifest.schema_version = "g12-acceptance-evidence-v1";
+        },
+      },
+      {
+        name: "gate",
+        expected: "gate must be G13",
+        mutate: (manifest) => {
+          manifest.gate = "G12";
+        },
+      },
+      {
+        name: "exit code",
+        expected: "exit_code is non-zero",
+        mutate: (manifest) => {
+          firstConsumerG13Command(manifest).exit_code = 1;
+        },
+      },
+      {
+        name: "digest",
+        expected: "invalid digest",
+        mutate: (manifest) => {
+          firstConsumerG13Command(manifest).output_digest = `sha256:${"a".repeat(63)}`;
+        },
+      },
+      {
+        name: "stale defer count type",
+        expected: "stale_defer_count must be 0",
+        mutate: (manifest) => {
+          (manifest.exit_criteria as unknown as Record<string, unknown>).stale_defer_count = "0";
+        },
+      },
+      {
+        name: "G13 mandatory field name",
+        expected: "missing row evidence SMOKE-CONSUMER-01",
+        mutate: (manifest) => {
+          const record = manifest as unknown as Record<string, unknown>;
+          record.mandatory_at_ids = manifest.mandatory_smoke_ids;
+          delete record.mandatory_smoke_ids;
+        },
+      },
+    ];
+    for (const mutation of mutations) {
+      const root = fixtureRoot();
+      writeConsumerG13Fixture(root);
+      updateConsumerG13Manifest(root, mutation.mutate);
+      const result = evaluateStaticGate({ gate: "G13", repoRoot: root });
+      expect(result.passed, mutation.name).toBe(false);
+      expect(result.messages.join("\n"), mutation.name).toContain(mutation.expected);
+      if (mutation.name === "G13 mandatory field name")
+        expect(result.messages.join("\n")).toContain("missing row evidence SMOKE-CONSUMER-02");
+    }
   });
 });

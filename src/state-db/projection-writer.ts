@@ -726,8 +726,8 @@ export function projectTokenUsage(db: HarnessDb, usages: RunUsage[]): void {
 }
 
 /**
- * repo スコープの session ディレクトリを解決する (env override > OS default)。doctor 経路
- * (`projectRuntimeModelTelemetryForDoctor`、src/doctor/db-projection.ts) と同じ解決順を踏襲する。
+ * repo スコープの session ディレクトリを解決する (env override > OS default)。
+ * Stop / doctor の常時 scan は Issue #789 PR-1 で退役し、手動側の整理は PR-2 が所有する。
  */
 function repoScopedSessionDirs(): SessionScanDirs {
   return {

@@ -1,16 +1,15 @@
 ---
 plan_id: PLAN-L1-09-ut-tdd-concept-v4-candidates
-title: "PLAN-L1-09 (research): 構想書 v4.0 候補 (チーム開発版 Verified Change Harness) の L1/L3/L10 分解"
+title: "PLAN-L1-09 (research): 構想書 v4.0 候補 (チーム開発版 Verified Change Harness) の
+  L1/L3/L10 分解"
 kind: research
 layer: L1
 drive: fullstack
-status: draft
 route_signal: research
 route_mode: research
 created: 2026-09-04
-updated: 2026-09-08
+updated: 2026-09-30
 owner: PO / Claude
-github_issue_id: 530
 pair_artifact: docs/governance/candidates/ut-tdd-concept-v4-acceptance.md
 related_l0: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
 related_br: docs/design/harness/L1-requirements/business-requirements.md
@@ -18,13 +17,13 @@ next_pair_freeze: L3
 review_evidence: []
 agent_slots:
   - role: po
-    slot_label: "PO - 2 大要求の提示と concept v4.0 候補の承認"
+    slot_label: PO - 2 大要求の提示と concept v4.0 候補の承認
   - role: tl
-    slot_label: "TL - 既存 authority (v3.1 / VUP-REQ / BR / U23) との重複・矛盾検査"
+    slot_label: TL - 既存 authority (v3.1 / VUP-REQ / BR / U23) との重複・矛盾検査
   - role: qa
-    slot_label: "QA - L10 受入候補の falsifiability 検査"
+    slot_label: QA - L10 受入候補の falsifiability 検査
   - role: se
-    slot_label: "SE - 承認後の L1 delta / charter 追記 / 参照更新"
+    slot_label: SE - 承認後の L1 delta / charter 追記 / 参照更新
 generates:
   - artifact_path: docs/plans/PLAN-L1-09-ut-tdd-concept-v4-candidates.md
     artifact_type: markdown_doc
@@ -52,6 +51,40 @@ dependencies:
     - docs/plans/PLAN-L4-30-execution-ledger-github-architecture.md
     - docs/governance/github-issue-hierarchy.md
     - docs/governance/candidates/v4-roadmap/README.md
+status: draft
+github_issue_id: 530
+admission_receipt:
+  schema_version: v2
+  receipt_id: certificate:d857090e8fe1c6afb57276d478ff1f96
+  command_id: plan-revise:issue-788:license-apache:4:b
+  admitted_at: 2026-10-01T03:45:30.549Z
+  source_digest: sha256:3f0a226ee060663d9177e989240d57aaca7544d6ee8d614d40a95cbcdfcc862d
+  decision_digest: sha256:a1af8eeaeea04db1015e682b8e7f3f680e811d4fcf501493c827e17e2e38a625
+  receipt_digest: sha256:5d47f942722955e4a72f1c29ef76fb81ec426d7a498435df136b4c98b2b2b5aa
+  binding:
+    path: docs/plans/PLAN-L1-09-ut-tdd-concept-v4-candidates.md
+    plan_id: PLAN-L1-09-ut-tdd-concept-v4-candidates
+    asset_id: plan:legacy:76d0499fe33cdc7245374b80f6337d4d3ce1321a3af7679dee282aa56b1db8f8
+    revision: 4
+    content_digest: sha256:3f0a226ee060663d9177e989240d57aaca7544d6ee8d614d40a95cbcdfcc862d
+  route:
+    signal: research
+    mode: research
+  issue:
+    provider: github
+    issue_id: 530
+    episode_id: E4-530-v4-plan-ticket-split
+    projection_state: unprojected
+  origin:
+    plan_id: PLAN-L1-09-ut-tdd-concept-v4-candidates
+    revision: 1
+    digest: sha256:199284dc61a73c4ed4222a61ad18b06a7f13bada549a436106844e7cf84a03de
+  reentry:
+    target_plan_id: PLAN-L1-09-ut-tdd-concept-v4-candidates
+    target_revision: 4
+    phase: forward_merge
+  escape_reason: "Issue #788 (外部監査 F-11): v4 候補の MIG-01 / R01 を、PO 決定 (2026-09-24)
+    の Apache-2.0 統一と #682 の切替完了に合わせる。ライセンス決定は変えず記述だけを揃える。"
 ---
 
 # PLAN-L1-09: 構想書 v4.0 候補 (チーム開発版 Verified Change Harness) の L1/L3/L10 分解
@@ -504,7 +537,7 @@ R00〜R10 の 11 行 (`01_RELEASE_MATRIX.md`、行数は `grep -c '^| \[R' docs/
 | 版 | 使えるもの (要約) | 開発前提 | 公開前提 | 元 M |
 |---|---|---|---|---|
 | R00 0.2.0-canary.1 | 現行プレリリース閉包 (clean Pack のみで基本運用再現) | 現行 M0 入力 | 現行 GO 条件 | M0 |
-| R01 0.2.0-canary.2 | UT 本体 MPL-2.0 切替と管理責任確定 | R00 | R00 | M1 |
+| R01 0.2.0-canary.2 | Apache-2.0 での最初の配布と管理責任確定 (ライセンス切替は #682 で完了) | R00 | R00 | M1 |
 | R02 0.2.0 | 運用基盤 stable・安全な更新/切戻し | R01 | R01 | M1＋並行運用系列 |
 | R03 0.3.0 | 共通 JSON 正本・契約 API | R01 | R02 | M2a |
 | R04 0.4.0 | 低コスト CI・共有 view・順序予測 (read-only) | R03 | R03 | M2b |
@@ -557,7 +590,7 @@ R03 JSON→R04 CI/view/予測→R05 配布/安全が並行できる。R05 から
 
 | MIG | 旧→新 (要約) | 版 (準備/既定/旧 writer 停止/退役審査) | 既存受け皿 |
 |---|---|---|---|
-| MIG-01 license | 本体 MIT/Pack 対応表示 → 権利処理済み UT コードを MPL-2.0 | R01/R01/R01/R01 | `LICENSE` / `package.json` |
+| MIG-01 license | 本体 MIT/Pack 対応表示 → Apache-2.0 へ統一 (PO 決定 2026-09-24、#682 で LICENSE・NOTICE・package.json 切替済み) | R01/R01/R01/R01 | `LICENSE` / `package.json` |
 | MIG-02 authority | v3.1 正本参照 + v4 候補 → v4 target + 有効 capability/実装状態 | R01/R03/R10/R10 | `docs/governance/ut-tdd-agent-harness-concept_v3.1.md`、#517 |
 | MIG-03 record | file/Markdown/実行 ledger 分散正本 → record class 別 JSON 正本 + 共通 writer、DB は projection | R03/R03/R07/R10 | harness.db projection 層 |
 | MIG-04 PLAN | frontmatter が状態/依存/review を保持 → active PLAN の record 化 frontmatter + 本文参照 | R03/R05/R07/R10 | `docs/plans/**` の status/dependencies/review_evidence |
@@ -578,9 +611,10 @@ R03 JSON→R04 CI/view/予測→R05 配布/安全が並行できる。R05 から
 | MIG-19 適応/モデル | 上方向 tier 選択と手動見直し → calibration・下方向 routing・対策寿命 | R03/R09/R09/R10 | CLAUDE.md §Model / Effort Routing、`escalateShallowResponse` (上方向のみ) |
 | MIG-20 schema/互換面 | 旧 field/token/schema/archive が active surface へ残存 → inventory + 移行 receipt で原子的退役 | R03/R09/R10/R10 | `#487` Bun 撤去、旧 9-mode 残骸 |
 
-MIG-01 (UT 本体の MPL-2.0 切替、RM-ADD-01) は licensing の高影響境界であり、advisor 相談の有無に関わらず
-**実施前に PO 承認を要する**。本 PLAN と S2〜S5 は「R01 で切り替える要求/受入/ロードマップ」を候補として記述するのみで、
-LICENSE / package.json / notice の実変更は R01 の専用 PR で行い、過去の MIT 配布は変更しない (`migration/04_LICENSE_BOUNDARY.md`)。
+MIG-01 (UT 本体のライセンス切替、RM-ADD-01) は licensing の高影響境界であり、PO が 2026-09-24 に **Apache-2.0 への統一** を承認し、
+#682 (commit `c3324740`) で LICENSE / NOTICE / package.json を切り替え済みである。過去の MIT 配布は変更しない。
+収容資料 `docs/governance/candidates/v4-roadmap/` は原文のまま保管しており、そこに残る旧案のライセンス表記はこの決定で置き換わる
+(`INTAKE_MANIFEST.md` §ライセンス記述の扱い)。
 
 置換しないもの (`migration/00_REPLACEMENT_MATRIX.md`「置換しないもの」): TypeScript/Node、L0-L14、正規
 V-pair、Forward/Reverse/Recovery、routeFiling の責務、独立検証、Git 成果物の事実、consumer の主権は継承する。
@@ -603,6 +637,87 @@ schedule/資源) → #480 拡張。全 39 件の一対一表は S2〜S5 の各�
 み示す (資料が全件進捗監査ではないと明記するため、`02_CURRENT_BASELINE.md` 冒頭)。
 
 順序契約: S0 (#531) → S1 (本 PLAN、#532) → S2〜S5 (#533〜#536、並行可)。S1 merge 前に S2〜S5 を着工しない。
+
+### 3.25 工程間は PLAN、工程内はチケット (PO 採択 2026-09-30)
+
+PO: 「工程間をつなぐ plan と工程内の作業のチケットって概念」「WBS エンジンで工程間を決める、工程表からチケットでタスクを
+発行する」。#575 当初案の「PLAN の新規発行停止」は採らず、**PLAN を工程間の簡易契約へ絞る** (#575 コメント 2026-09-30、
+PO 採択「いまのアイディア採択で」)。
+
+| 層 | 中身 | 書き手 |
+|---|---|---|
+| ① 決定台帳 (#768) | 決めなければならないこと (何を、どの層で、どの深さまで、確定 / 仮値 / 未決) | 人と AI |
+| ② WBS エンジン → 工程表 (#769) | 台帳と設計文書から、工程 × 成果物・順序・並列可否を生成する | 機械 |
+| ③ 工程間の簡易契約 (現行 PLAN の後継) | 工程表の境目ごとの、やらなければならないこと | 機械の生成物を人が確認する |
+| ④ チケット (#588) | 工程表から発行する、工程内の作業許可 | 機械 |
+
+テスト戦略 (#777) と検証戦略 (#778) は ③ の「検証の対」に入る。
+
+advisor (claude-fable-5、design、survive 条件付き) の条件を含めて採択した:
+
+- ③ の本文は 4 項目に限る: (1) 上流の設計文書 revision digest、(2) 引き渡し物、(3) 検証の対 (gate / テストレベル /
+  検証手法)、(4) 完了条件。リスク評価とチケット集合は導出物への参照に降格する (静的に書くと digest の陳腐化を再生産する)。
+- 証跡の shape は契約ではなく **gate 定義側の schema** に置く (PLAN-L7-676 が G8〜G14 の証跡 shape を 1 gate ずつ freeze して
+  rev 22 まで膨らんだ教訓)。
+- 残す: supersedes 双方向 (errata 追跡)。捨てる: receipt hash chain の PLAN 束縛、gate 単位の revise 儀式、全 kind への
+  Reverse 対の強制 (純修理の not_required を既定に反転する)。
+- 4 項目の freeze は #588 の AC「gate が消費する項目の実測」の後に行う。**4 項目の確定は未了** (実測待ち)。
+- 最大の移行リスク: 既存 PLAN と新契約が同じ名前空間・lint を共有するか (移行期に plan lint / merged-plan-status が
+  どちらの schema で fail-close するか)。未決。
+
+全件チケットを採らない理由 (PO: 「全件チケットだと支えがなくなって崩れそう」): 工程間の依存・所有権の正本が消え、
+WBS エンジン (#769) の入力が無くなる。工程境目の契約だけにすれば契約数が減り、plan-admission receipt chain の競合
+(2026-09-30 の #734 再起票、#781 との直列 merge 待ち) も減る。巨大コードの責務分割 (#759) は、工程間の契約 1 本の下に
+分割をチケットとして並べられる。
+
+§3.1 残リスクの「PLAN frontmatter の record 化は専用 Reverse 対で段階移行」(UTV4-FR-007) は、そのまま維持する。本節が
+撤廃するのは「全 kind に Reverse 対を必須とする」一律規則だけであり (③ 工程間の簡易契約そのものは、契約ごとの Reverse 対を
+強制しない)、frontmatter record 化の専用移行 Reverse 対は別物として残る。概念本文 §Evidence and State Ledger の PLAN 行
+(旧: atomic change contract、Reverse 対で扱う) は本節に合わせて改めたが、専用 Reverse 対による段階移行は維持している。
+
+### 3.26 移行の方法: Reverse → ずれの判定 → リファクタリングと再編 → 再実装 (PO 指示 2026-09-30)
+
+PO: 「リバースで検証していくのがベスト。依存抜けるとかもとの設計とずれている。ズレているのが正解なのか不正解なのか。
+リバースしてリファクタリングして再編して再実装」(#588 コメント 2026-09-30)。
+
+| 段 | やること | 既存の足場 |
+|---|---|---|
+| 1. Reverse | as-built を抽出し、設計文書と突き合わせてずれの一覧を作る | Reverse R0〜R4、PLAN-REVERSE-*、#211 |
+| 2. ずれの判定 | 正解 (設計が古い) → 設計へ backprop / 不正解 (実装が誤り) → 実装を直す / 不要 → 依存ごと削除 | backprop_decision、非著者 review |
+| 3. リファクタリングと再編 | 回帰 fence 下で振る舞いを変えずに責務を分割し、工程間契約 + チケットの形へ組み直す | code-simplify skill、refactor-scout、#759 |
+| 4. 再実装 | 「不正解」の箇所と、新しい契約で要る箇所だけを作り直す | Forward (TDD、exact-head review) |
+
+段 2 の判定は作者と別の family が行い、根拠のテスト / コマンドを引用する。PO へ上げるのは product scope に関わるずれだけ。
+移行の前後で §3.28 の成熟度を段付けし、再編で段が下がっていないことを機械で確かめる。
+
+PO 追記 (「それを V の右腕にする感じ」): ずれ判定を右腕と同じ道筋で上へ登らせ、各段で対の左腕と照合する
+(L8 ↔ L6 関数の責務・シグネチャ、L9 ↔ L5 module 境界と依存、L10〜L11 ↔ L4 アーキテクチャ、L12 ↔ L3 FR の充足、
+L13〜L14 ↔ L1 / L0 目的・価値)。判定機構は新設せず、右腕共通 evaluator (`src/gate/right-arm-static.ts`、述語
+S / I / T / E / F / A) を流用する: T は `pairLayerIds` で対の左腕 ID の cite を検査し、ずれ判定の記録を as-built 証跡として流し、
+「正解 / 不正解 / 不要」を E の閉集合として符号化する。
+
+### 3.27 右腕の 4 つの働き (PO 採択 2026-09-30)
+
+PO: 「右腕は設計還流と証拠集め、リファクタリングによる最適化と、検証による仕様書作成」。右腕を合否判定の腕から成果物を
+生む腕にし、その出力を次周回の左腕の入力にする (V 字を周回として回す)。
+
+| 働き | 出力 | 次周回での使い道 |
+|---|---|---|
+| 証拠集め | as-built の証跡 (テスト結果、依存関係、実測値) | ずれ判定の入力 |
+| 設計還流 | 判定が「正解」のずれを設計文書へ backprop した改訂 | 次の左腕の土台 |
+| リファクタリングによる最適化 | 振る舞い不変の責務分割、依存の整理 | 次の実装の足場 |
+| 検証による仕様書作成 | 検証済みの振る舞いを書き起こした as-built spec | 次周回の L3〜L6 の正本 |
+
+採択条件: (1) 順序は 証拠集め → ずれの判定 → 設計還流とリファクタリング → 検証 → 仕様書。仕様書には判定が「正解」だった
+振る舞いだけを書く (判定前に書くとバグを仕様として固める)。(2) 右腕で変えるのは不変のものだけ。右腕内のリファクタリングは
+回帰 fence 下の振る舞い不変に限り、機能変更は次周回の Forward へ回す。リファクタリングする family と検証する family を
+分ける (現行の非著者 review 機構で担保)。
+
+### 3.28 成熟度モデルへの接続 (PO 指示 2026-09-30、#784)
+
+成熟度は「AI の段階 ⓪〜⑧ (V 字の工程に対応) × 提供モード (引ける / 支援する / 制御する)」で、領域ごとに記録する
+(harness 全体を 1 つの数字にしない)。§3.25 の ③「検証の対」「完了条件」と §3.26 の移行前後比較の物差しに使う。
+残り領域の段付け、tracked 正本化、目標段の設定は #784 の後続作業であり、本 PLAN では定めない。
 
 ## 4. 工程
 
