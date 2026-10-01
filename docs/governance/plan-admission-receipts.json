@@ -6048,6 +6048,22 @@
         "revision": 10,
         "content_digest": "sha256:64882dd8b638f55b7f13e2373fff91214f0fb37dbfc71791e054f8d8663ded9d"
       }
+    },
+    {
+      "sequence": 379,
+      "previous_record_digest": "sha256:a298e74a7c0bd2f1172a2cc0cc4f4262d65d21c1bd752ee25066bc50e5c706ac",
+      "record_digest": "sha256:8d7cc7a0d868a19c4db347a100362396e5f25779cdd0e5ad91d570db3f9d2a24",
+      "command_id": "plan-draft:issue-815:report-write-security:5",
+      "receipt_id": "certificate:fab8627bb3f8bdca94a954318bff8355",
+      "receipt_digest": "sha256:bd0e776f6e7f76b2dfa2f7e9857c7b038958c96ad08fd1adad85227ba2f77f06",
+      "decision_digest": "sha256:d608a20c7acbea9656aa8d79ed9615c479613d5dddf51d4d3f99caed7a14ef4d",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-816-report-security-class-contract.md",
+        "plan_id": "PLAN-L6-816-report-security-class-contract",
+        "asset_id": "plan:fab8627bb3f8bdca94a954318bff8355",
+        "revision": 1,
+        "content_digest": "sha256:5f711577f71d0bfb3e34033c3538b31961476d1950cac267541eb6215a2e8d4b"
+      }
     }
   ]
 }
