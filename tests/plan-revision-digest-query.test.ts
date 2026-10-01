@@ -27,7 +27,8 @@ import {
   migratePlanLedger,
   openPlanLedger,
 } from "../src/plan-asset/ledger/schema.ts";
-import type { HarnessDb } from "../src/state-db/index.ts";
+import type { HarnessDb, HarnessStatement, ReadOnlyHarnessDb } from "../src/state-db/index.ts";
+import * as stateDb from "../src/state-db/index.ts";
 import { removeTestTree } from "./support/temp-tree.ts";
 
 const activeDatabases: HarnessDb[] = [];
@@ -83,7 +84,7 @@ afterEach(() => {
 });
 
 describe("PLAN revision canonical payload digest read-only query", () => {
-  it("CANDIDATE-U-PRDQ-001/007: returns an exact immutable historical-revision DTO, not latest", () => {
+  it("CANDIDATE-U-PRDQ-001A/007A: returns an exact immutable historical-revision DTO, not latest", () => {
     const fixture = createFixture();
     appendRevision(fixture.db, {
       assetId: fixture.assetA,
@@ -315,23 +316,34 @@ describe("PLAN revision canonical payload digest read-only query", () => {
     if (bytesBeforeQuery) expect(readFileSync(databasePath)).toEqual(bytesBeforeQuery);
   });
 
-  it("CANDIDATE-U-PRDQ-006/O1: success has no observable filesystem side effects", () => {
+  it("CANDIDATE-U-PRDQ-006/O1/O10: success has no side effects and keeps busy_timeout disabled", () => {
     const fixture = createFixture();
     closeTracked(fixture.db);
     useFixtureCwd(fixture.root);
     const directory = join(fixture.root, ".ut-tdd", "ledger");
+    const databasePath = join(directory, "harness-ledger.db");
     const before = snapshotDirectory(directory);
+    const observer = observeReadOnlyOpenCalls(databasePath);
 
-    const result = readPlanRevisionCanonicalPayloadDigest({
-      alias: fixture.aliasA,
-      assetId: fixture.assetA,
-      revision: 1,
-    });
+    let result: ReturnType<typeof readPlanRevisionCanonicalPayloadDigest>;
+    try {
+      result = readPlanRevisionCanonicalPayloadDigest({
+        alias: fixture.aliasA,
+        assetId: fixture.assetA,
+        revision: 1,
+      });
+    } finally {
+      observer.restore();
+    }
 
     expect(result).toMatchObject({
       ok: true,
       canonicalPayloadDigest: `sha256:${sha256(fixture.payloadA1)}`,
     });
+    expect(observer.attempts).toHaveLength(1);
+    expect(observer.attempts[0]?.databasePath).toBe(databasePath);
+    expect(observer.attempts[0]?.busyTimeout).toBe(0);
+    expect(observer.attempts[0]?.closeCalls).toBe(1);
     expect(snapshotDirectory(directory)).toEqual(before);
     expect(readdirSync(directory).some((entry) => /-(journal|wal|shm)$/.test(entry))).toBe(false);
   });
@@ -422,11 +434,18 @@ describe("PLAN revision canonical payload digest read-only query", () => {
     expect(snapshotDirectory(directory)).toEqual(before);
   });
 
-  it("CANDIDATE-U-PRDQ-006/O5: denies an exclusive writer lock immediately", () => {
+  it("CANDIDATE-U-PRDQ-006/O5/O10/O11: denies a held exclusive lock three times without waiting or retrying", () => {
     const fixture = createFixture();
-    fixture.db.exec("BEGIN EXCLUSIVE");
     useFixtureCwd(fixture.root);
     const databasePath = join(fixture.root, ".ut-tdd", "ledger", "harness-ledger.db");
+    const warmup = readPlanRevisionCanonicalPayloadDigest({
+      alias: fixture.aliasA,
+      assetId: fixture.assetA,
+      revision: 1,
+    });
+    expect(warmup).toMatchObject({ ok: true });
+
+    fixture.db.exec("BEGIN EXCLUSIVE");
     const busyProbe = spawnSync(
       process.execPath,
       [
@@ -439,16 +458,51 @@ describe("PLAN revision canonical payload digest read-only query", () => {
     );
     expect(busyProbe.status).toBe(0);
     expect(busyProbe.stdout.trim()).toBe("5");
-    const startedAt = performance.now();
+    const observer = observeReadOnlyOpenCalls(databasePath);
+    const measurements: Array<{
+      elapsedMs: number;
+      result: ReturnType<typeof readPlanRevisionCanonicalPayloadDigest>;
+    }> = [];
+    const wait = new Int32Array(new SharedArrayBuffer(4));
 
-    const result = readPlanRevisionCanonicalPayloadDigest({
-      alias: fixture.aliasA,
-      assetId: fixture.assetA,
-      revision: 1,
-    });
+    try {
+      for (let index = 0; index < 3; index += 1) {
+        const startedAt = performance.now();
+        const result = readPlanRevisionCanonicalPayloadDigest({
+          alias: fixture.aliasA,
+          assetId: fixture.assetA,
+          revision: 1,
+        });
+        measurements.push({ elapsedMs: performance.now() - startedAt, result });
+      }
+    } finally {
+      // The frozen O5 window requires the EXCLUSIVE lock to outlive the last measurement by >=5s.
+      Atomics.wait(wait, 0, 0, 5_050);
+      observer.restore();
+    }
 
-    expect(result).toEqual({ ok: false, reason: "ledger_unavailable" });
-    expect(performance.now() - startedAt).toBeLessThan(500);
+    expect(measurements).toHaveLength(3);
+    for (const measurement of measurements) {
+      expect(measurement.result).toEqual({ ok: false, reason: "ledger_unavailable" });
+      expect(measurement.elapsedMs).toBeLessThan(500);
+    }
+    expect(observer.attempts).toHaveLength(3);
+    for (const attempt of observer.attempts) {
+      expect(attempt.databasePath).toBe(databasePath);
+      expect(attempt.busyTimeout).toBe(0);
+      expect(attempt.closeCalls).toBe(1);
+
+      const failedIndex = attempt.operations.findIndex((event) => event.errcode === 5);
+      expect(failedIndex).toBeGreaterThanOrEqual(0);
+      const failedOperation = attempt.operations[failedIndex]?.operation;
+      expect(failedOperation).toMatch(
+        /^(beginReadTransaction|userVersion|prepare|statement\.(get|all|run))$/,
+      );
+      expect(attempt.operations.slice(failedIndex + 1)).toEqual([]);
+
+      const retryableOperations = attempt.operations.map((event) => event.operation);
+      expect(new Set(retryableOperations).size).toBe(retryableOperations.length);
+    }
   });
 
   it("CANDIDATE-U-PRDQ-006/O6: verifies the query connection rejects a write probe", () => {
@@ -573,6 +627,89 @@ describe("PLAN revision canonical payload digest read-only query", () => {
     expect(rssIncrease).toBeLessThanOrEqual(256 * 1024 * 1024);
   });
 });
+
+type ReadOnlyOperation =
+  | "beginReadTransaction"
+  | "commitReadTransaction"
+  | "userVersion"
+  | "prepare"
+  | "statement.get"
+  | "statement.all"
+  | "statement.run";
+
+interface ReadOnlyOperationEvent {
+  operation: ReadOnlyOperation;
+  errcode?: number;
+}
+
+interface ReadOnlyOpenAttempt {
+  databasePath: string;
+  operations: ReadOnlyOperationEvent[];
+  closeCalls: number;
+  busyTimeout?: number;
+}
+
+function observeReadOnlyOpenCalls(databasePath: string): {
+  attempts: ReadOnlyOpenAttempt[];
+  restore: () => void;
+} {
+  const attempts: ReadOnlyOpenAttempt[] = [];
+  const callThrough = stateDb.openReadOnlyHarnessDb;
+  const openSpy = vi.spyOn(stateDb, "openReadOnlyHarnessDb").mockImplementation((path, options) => {
+    expect(path).toBe(databasePath);
+    const database = callThrough(path, options);
+    const attempt: ReadOnlyOpenAttempt = {
+      databasePath: path,
+      operations: [],
+      closeCalls: 0,
+    };
+    attempts.push(attempt);
+
+    const observe = <T>(operation: ReadOnlyOperation, callback: () => T): T => {
+      const event: ReadOnlyOperationEvent = { operation };
+      attempt.operations.push(event);
+      try {
+        return callback();
+      } catch (error) {
+        if (typeof error === "object" && error !== null && "errcode" in error) {
+          const errcode = error.errcode;
+          if (typeof errcode === "number") event.errcode = errcode;
+        }
+        throw error;
+      }
+    };
+
+    const wrapStatement = (statement: HarnessStatement): HarnessStatement => ({
+      get: (...params) => observe("statement.get", () => statement.get(...params)),
+      all: (...params) => observe("statement.all", () => statement.all(...params)),
+      run: (...params) => observe("statement.run", () => statement.run(...params)),
+    });
+
+    const observedDatabase: ReadOnlyHarnessDb = {
+      path: database.path,
+      driver: database.driver,
+      beginReadTransaction: () =>
+        observe("beginReadTransaction", () => database.beginReadTransaction()),
+      commitReadTransaction: () =>
+        observe("commitReadTransaction", () => database.commitReadTransaction()),
+      userVersion: () => observe("userVersion", () => database.userVersion()),
+      prepare: (sql) => wrapStatement(observe("prepare", () => database.prepare(sql))),
+      close: () => {
+        attempt.closeCalls += 1;
+        try {
+          // This direct call-through probe is intentionally outside the observed operation counts.
+          const row = database.prepare("PRAGMA busy_timeout").get();
+          attempt.busyTimeout = Number(row?.timeout);
+        } finally {
+          database.close();
+        }
+      },
+    };
+    return observedDatabase;
+  });
+
+  return { attempts, restore: () => openSpy.mockRestore() };
+}
 
 function createFixture() {
   const root = mkdtempSync(join(tmpdir(), "ut-tdd-prdq-"));
