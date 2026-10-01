@@ -55,18 +55,18 @@ status: draft
 github_issue_id: 530
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:b6d8ff124185f75533a90ed6b778f17f
-  command_id: plan-revise:issue-530:v4-plan-ticket-split:3
-  admitted_at: 2026-09-30T09:00:17.294Z
-  source_digest: sha256:386c50bd88d2f0dfa74433b402fcf8f5422fb9f175891aa9d13534872cfeded9
-  decision_digest: sha256:a2e3bb42b0ef76dccc99b71c220d7c5cf994898eff1c3031aac5dd6965187eb9
-  receipt_digest: sha256:a8d76d41f386c8d20ba6ce452252c92576b2e6440a65a1bb77746062fceca468
+  receipt_id: certificate:d857090e8fe1c6afb57276d478ff1f96
+  command_id: plan-revise:issue-788:license-apache:4:b
+  admitted_at: 2026-10-01T03:45:30.549Z
+  source_digest: sha256:3f0a226ee060663d9177e989240d57aaca7544d6ee8d614d40a95cbcdfcc862d
+  decision_digest: sha256:a1af8eeaeea04db1015e682b8e7f3f680e811d4fcf501493c827e17e2e38a625
+  receipt_digest: sha256:5d47f942722955e4a72f1c29ef76fb81ec426d7a498435df136b4c98b2b2b5aa
   binding:
     path: docs/plans/PLAN-L1-09-ut-tdd-concept-v4-candidates.md
     plan_id: PLAN-L1-09-ut-tdd-concept-v4-candidates
     asset_id: plan:legacy:76d0499fe33cdc7245374b80f6337d4d3ce1321a3af7679dee282aa56b1db8f8
-    revision: 3
-    content_digest: sha256:386c50bd88d2f0dfa74433b402fcf8f5422fb9f175891aa9d13534872cfeded9
+    revision: 4
+    content_digest: sha256:3f0a226ee060663d9177e989240d57aaca7544d6ee8d614d40a95cbcdfcc862d
   route:
     signal: research
     mode: research
@@ -81,11 +81,10 @@ admission_receipt:
     digest: sha256:199284dc61a73c4ed4222a61ad18b06a7f13bada549a436106844e7cf84a03de
   reentry:
     target_plan_id: PLAN-L1-09-ut-tdd-concept-v4-candidates
-    target_revision: 3
+    target_revision: 4
     phase: forward_merge
-  escape_reason: "PR #799 Sol r1 FLAG の是正: §3.25 末尾で §3.1 残リスク (frontmatter record
-    化の専用移行 Reverse 対、UTV4-FR-007) まで「強制しない」と読み替えていた誤りを直し、撤廃するのは全 kind への一律
-    Reverse 対の強制だけで、専用移行 Reverse 対は維持すると書き分ける。"
+  escape_reason: "Issue #788 (外部監査 F-11): v4 候補の MIG-01 / R01 を、PO 決定 (2026-09-24)
+    の Apache-2.0 統一と #682 の切替完了に合わせる。ライセンス決定は変えず記述だけを揃える。"
 ---
 
 # PLAN-L1-09: 構想書 v4.0 候補 (チーム開発版 Verified Change Harness) の L1/L3/L10 分解
@@ -538,7 +537,7 @@ R00〜R10 の 11 行 (`01_RELEASE_MATRIX.md`、行数は `grep -c '^| \[R' docs/
 | 版 | 使えるもの (要約) | 開発前提 | 公開前提 | 元 M |
 |---|---|---|---|---|
 | R00 0.2.0-canary.1 | 現行プレリリース閉包 (clean Pack のみで基本運用再現) | 現行 M0 入力 | 現行 GO 条件 | M0 |
-| R01 0.2.0-canary.2 | UT 本体 MPL-2.0 切替と管理責任確定 | R00 | R00 | M1 |
+| R01 0.2.0-canary.2 | Apache-2.0 での最初の配布と管理責任確定 (ライセンス切替は #682 で完了) | R00 | R00 | M1 |
 | R02 0.2.0 | 運用基盤 stable・安全な更新/切戻し | R01 | R01 | M1＋並行運用系列 |
 | R03 0.3.0 | 共通 JSON 正本・契約 API | R01 | R02 | M2a |
 | R04 0.4.0 | 低コスト CI・共有 view・順序予測 (read-only) | R03 | R03 | M2b |
@@ -591,7 +590,7 @@ R03 JSON→R04 CI/view/予測→R05 配布/安全が並行できる。R05 から
 
 | MIG | 旧→新 (要約) | 版 (準備/既定/旧 writer 停止/退役審査) | 既存受け皿 |
 |---|---|---|---|
-| MIG-01 license | 本体 MIT/Pack 対応表示 → 権利処理済み UT コードを MPL-2.0 | R01/R01/R01/R01 | `LICENSE` / `package.json` |
+| MIG-01 license | 本体 MIT/Pack 対応表示 → Apache-2.0 へ統一 (PO 決定 2026-09-24、#682 で LICENSE・NOTICE・package.json 切替済み) | R01/R01/R01/R01 | `LICENSE` / `package.json` |
 | MIG-02 authority | v3.1 正本参照 + v4 候補 → v4 target + 有効 capability/実装状態 | R01/R03/R10/R10 | `docs/governance/ut-tdd-agent-harness-concept_v3.1.md`、#517 |
 | MIG-03 record | file/Markdown/実行 ledger 分散正本 → record class 別 JSON 正本 + 共通 writer、DB は projection | R03/R03/R07/R10 | harness.db projection 層 |
 | MIG-04 PLAN | frontmatter が状態/依存/review を保持 → active PLAN の record 化 frontmatter + 本文参照 | R03/R05/R07/R10 | `docs/plans/**` の status/dependencies/review_evidence |
@@ -612,9 +611,10 @@ R03 JSON→R04 CI/view/予測→R05 配布/安全が並行できる。R05 から
 | MIG-19 適応/モデル | 上方向 tier 選択と手動見直し → calibration・下方向 routing・対策寿命 | R03/R09/R09/R10 | CLAUDE.md §Model / Effort Routing、`escalateShallowResponse` (上方向のみ) |
 | MIG-20 schema/互換面 | 旧 field/token/schema/archive が active surface へ残存 → inventory + 移行 receipt で原子的退役 | R03/R09/R10/R10 | `#487` Bun 撤去、旧 9-mode 残骸 |
 
-MIG-01 (UT 本体の MPL-2.0 切替、RM-ADD-01) は licensing の高影響境界であり、advisor 相談の有無に関わらず
-**実施前に PO 承認を要する**。本 PLAN と S2〜S5 は「R01 で切り替える要求/受入/ロードマップ」を候補として記述するのみで、
-LICENSE / package.json / notice の実変更は R01 の専用 PR で行い、過去の MIT 配布は変更しない (`migration/04_LICENSE_BOUNDARY.md`)。
+MIG-01 (UT 本体のライセンス切替、RM-ADD-01) は licensing の高影響境界であり、PO が 2026-09-24 に **Apache-2.0 への統一** を承認し、
+#682 (commit `c3324740`) で LICENSE / NOTICE / package.json を切り替え済みである。過去の MIT 配布は変更しない。
+収容資料 `docs/governance/candidates/v4-roadmap/` は原文のまま保管しており、そこに残る旧案のライセンス表記はこの決定で置き換わる
+(`INTAKE_MANIFEST.md` §ライセンス記述の扱い)。
 
 置換しないもの (`migration/00_REPLACEMENT_MATRIX.md`「置換しないもの」): TypeScript/Node、L0-L14、正規
 V-pair、Forward/Reverse/Recovery、routeFiling の責務、独立検証、Git 成果物の事実、consumer の主権は継承する。
