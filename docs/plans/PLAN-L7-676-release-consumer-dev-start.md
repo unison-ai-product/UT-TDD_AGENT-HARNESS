@@ -8,7 +8,7 @@ drive: agent
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-09-24
-updated: 2026-09-28
+updated: 2026-10-01
 owner: Claude / Opus (pair-freeze) · Codex worker (implementation)
 parent_design: docs/plans/PLAN-L6-101-pack-independent-multi-consumer-acceptance.md
 pair_artifact: docs/test-design/harness/L7-release-consumer-dev-start-test-design.md
@@ -153,6 +153,8 @@ generates:
     artifact_type: test_code
   - artifact_path: tests/release-consumer-gates.test.ts
     artifact_type: test_code
+  - artifact_path: tests/consumer-g14-static.test.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L6-101-pack-independent-multi-consumer-acceptance.md
   requires:
@@ -211,18 +213,18 @@ status: confirmed
 github_issue_id: 676
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:251c9602cfe1971c3cb1025893f7e440
-  command_id: plan-revise:issue-676:g13-g14-shape-contract:plan:r22:7d0597a53233
-  admitted_at: 2026-09-30T04:05:37.539Z
-  source_digest: sha256:2cafbed424735840e4353fde97b01ff066f3653c173ba48f4c1538855303d4df
-  decision_digest: sha256:f6206f770bb2946a70acb3bf5eda6b8710ee5107b3c807bf54421999b5ff3ff8
-  receipt_digest: sha256:a3bbaeeedce67ac0d35bb7b889d0dea14fbb15404bb2b807c9ac596da5dba1e2
+  receipt_id: certificate:57a8c4410d8cf3d5e54d4457eea5724c
+  command_id: plan-revise:issue-676:g14-test-generates:codex-rehydration:r23:b57ba45663b1
+  admitted_at: 2026-10-01T08:08:10.431Z
+  source_digest: sha256:13f8eaaf1b65b473aa9f90eed8ef6ddf2ed649d49f1f3c8d1950e9207303dc08
+  decision_digest: sha256:10e6e1c4c56060393a8558ab83e3b900edf056dad15f708feef754a8d6588fd3
+  receipt_digest: sha256:e2ebab7a9f7d73cdc20125fb17c8a6aed19361e2e60ea79a559a14fadd651df8
   binding:
     path: docs/plans/PLAN-L7-676-release-consumer-dev-start.md
     plan_id: PLAN-L7-676-release-consumer-dev-start
     asset_id: plan:aae8bf0e313f8688fbad4d4d8cf0a6a9
-    revision: 22
-    content_digest: sha256:2cafbed424735840e4353fde97b01ff066f3653c173ba48f4c1538855303d4df
+    revision: 23
+    content_digest: sha256:13f8eaaf1b65b473aa9f90eed8ef6ddf2ed649d49f1f3c8d1950e9207303dc08
   route:
     signal: feature_addition
     mode: add-feature
@@ -240,12 +242,11 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-676-release-consumer-dev-start
-    target_revision: 22
+    target_revision: 23
     phase: forward_merge
-  escape_reason: "Issue #676: PR-G13 / PR-G14 の着手前に、§3.6-4 の G13 / G14 行と
-    CANDIDATE-U-RCDEV-034 / 035 が、観測窓・SLO・rollback decision・VALUE
-    trace・improvement feedback の artifact の field 名と符号化を定めていないため、実装 PR 内で正本
-    shape を発明しないよう契約側で freeze する (rev 21 の G11 / G12 と同じ扱い)。"
+  escape_reason: "Issue #676 PR-G14 (#808): 新規 test
+    tests/consumer-g14-static.test.ts (CANDIDATE-U-RCDEV-035 の昇格先) を generates
+    に宣言する bounded 改訂。契約本文・判定規則の変更なし (deliverable-plan-trace の orphan 解消のみ)。"
 ---
 
 # PLAN-L7-676: Release consumer で開発を開始できる状態にする
