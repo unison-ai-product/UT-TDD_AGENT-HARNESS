@@ -5952,6 +5952,22 @@
         "revision": 4,
         "content_digest": "sha256:0652b9d2ad116983406bccf93f53f8a5897b85a1ab8aff9dd132e08765b9b35b"
       }
+    },
+    {
+      "sequence": 373,
+      "previous_record_digest": "sha256:39ac50e0f35786123438b1b509a4a53d3eeef79899ac491a4927fa3a5d73f481",
+      "record_digest": "sha256:d46772039c7da381ebe2cbb47a9b1d2cf08472c9dc29bfccdcfdba9aa62d8f69",
+      "command_id": "plan-revise:issue-788:license-apache:4:b",
+      "receipt_id": "certificate:d857090e8fe1c6afb57276d478ff1f96",
+      "receipt_digest": "sha256:5d47f942722955e4a72f1c29ef76fb81ec426d7a498435df136b4c98b2b2b5aa",
+      "decision_digest": "sha256:a1af8eeaeea04db1015e682b8e7f3f680e811d4fcf501493c827e17e2e38a625",
+      "binding": {
+        "path": "docs/plans/PLAN-L1-09-ut-tdd-concept-v4-candidates.md",
+        "plan_id": "PLAN-L1-09-ut-tdd-concept-v4-candidates",
+        "asset_id": "plan:legacy:76d0499fe33cdc7245374b80f6337d4d3ce1321a3af7679dee282aa56b1db8f8",
+        "revision": 4,
+        "content_digest": "sha256:3f0a226ee060663d9177e989240d57aaca7544d6ee8d614d40a95cbcdfcc862d"
+      }
     }
   ]
 }
