@@ -194,6 +194,14 @@ export function main(argv = process.argv.slice(2), deps = {}) {
     if (!existsSync(identityPath)) throw new Error("consumer-project-identity-not-generated");
     runProductGit(run, consumerRoot, ["add", "--", "ut-tdd.project.json"]);
     runProductGit(run, consumerRoot, ["commit", "--quiet", "-m", "canary consumer identity"]);
+    // Keep only the consumer-owned authoring input, derived from verified release bytes.
+    const template = run("tar", ["-xOf", join(directory, `${tag}.tar.gz`),
+      "./docs/templates/plan/design/template.md"], {
+      cwd: consumerRoot, encoding: "utf8", windowsHide: true, timeout: 30_000,
+    });
+    if (template.error || template.status !== 0)
+      throw new Error(`shipped-plan-template-unavailable:${template.error?.message ?? template.stderr}`);
+    createConsumerPlan(consumerRoot, template.stdout);
   }
   const evidence = {
     phase: "installed-awaiting-clean-restart",
@@ -216,6 +224,9 @@ export function main(argv = process.argv.slice(2), deps = {}) {
     consumer_root: consumerRoot,
     release_directory: directory,
     consumer_head: child.status === 0 ? productHead(run, consumerRoot) : null,
+    authoring_input_sha256: child.status === 0
+      ? `sha256:${createHash("sha256").update(readFileSync(join(consumerRoot, "canary-plan-draft.json"))).digest("hex")}`
+      : null,
     reviewer_independent_digest_verification: "pending",
   };
   writeFileSync(resolve(args["--evidence"]), `${JSON.stringify(evidence, null, 2)}\n`, { flag: "wx" });
@@ -332,7 +343,9 @@ function verifySmoke(parsed, { now, run }) {
   try {
     runCli("doctor-setup-smoke", ["doctor", "--setup-smoke"]);
     runCli("doctor-consumer-profile", ["doctor", "--profile", "consumer-setup-smoke"]);
-    createConsumerPlan(consumerRoot);
+    const authoringInput = readFileSync(join(consumerRoot, "canary-plan-draft.json"));
+    if (`sha256:${createHash("sha256").update(authoringInput).digest("hex")}` !== evidence.authoring_input_sha256)
+      throw new Error("consumer-authoring-input-drift");
     runCli("plan-authoring", ["plan", "draft", "--manifest", join(consumerRoot, "canary-plan-draft.json")]);
     runCli("plan-lint", ["plan", "lint"]);
     runCli("db-rebuild", ["db", "rebuild", "--json"]);
@@ -464,8 +477,8 @@ export function verifyInstallEvidence(evidence, consumerRoot, removedPaths) {
     throw new Error("verify-removed-paths-not-bound-to-install");
 }
 
-export function createConsumerPlan(consumerRoot) {
-  const source = readFileSync(join(consumerRoot, "docs", "templates", "plan", "design", "template.md"), "utf8");
+export function createConsumerPlan(consumerRoot, source) {
+  if (typeof source !== "string") throw new Error("consumer-plan-template-invalid");
   const match = /^---\r?\n([\s\S]*?)\r?\n---\r?\n([\s\S]*)$/.exec(source);
   if (!match) throw new Error("consumer-plan-template-invalid");
   let frontmatter = match[1];

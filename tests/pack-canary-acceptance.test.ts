@@ -27,7 +27,7 @@ interface AcceptanceModule {
   makeAccessAuditModule(forbiddenPaths: string[], accessLog: string, processLog: string): string;
   buildInstallerInvocation(releaseDirectory: string, anchorDigest: string, tag?: string): string[];
   canaryAssetsForTag(tag: string): readonly string[];
-  createConsumerPlan(consumerRoot: string): void;
+  createConsumerPlan(consumerRoot: string, source: string): void;
   main(argv: string[], deps?: { fixtureTag?: string }): void;
   findForbiddenReferences(root: string, forbiddenPaths: string[]): string[];
   createClosedReviewProviders(
@@ -342,7 +342,9 @@ describe("manual canary acceptance publish-record boundary", () => {
       join(process.cwd(), "docs", "templates", "plan", "design", "template.md"),
       template,
     );
-    createConsumerPlan(root);
+    const shippedTemplate = readFileSync(template, "utf8");
+    rmSync(template);
+    createConsumerPlan(root, shippedTemplate);
     const manifest = JSON.parse(readFileSync(join(root, "canary-plan-draft.json"), "utf8"));
     const match = /^---\n([\s\S]*?)\n---\n/.exec(manifest.source.content);
     expect(match).not.toBeNull();
