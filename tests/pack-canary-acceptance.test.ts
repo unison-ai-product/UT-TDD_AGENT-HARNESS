@@ -306,8 +306,18 @@ describe("manual canary acceptance publish-record boundary", () => {
     const forbidden = join(root, "removed-source");
     const audit = join(root, "audit.mjs");
     const accessLog = join(root, "access.jsonl");
-    writeFileSync(audit, makeAccessAuditModule([forbidden], accessLog, join(root, "process.jsonl")));
-    const child = spawnSync(process.execPath, ["--import", pathToFileURL(audit).href, "--input-type=module", "-e", `
+    writeFileSync(
+      audit,
+      makeAccessAuditModule([forbidden], accessLog, join(root, "process.jsonl")),
+    );
+    const child = spawnSync(
+      process.execPath,
+      [
+        "--import",
+        pathToFileURL(audit).href,
+        "--input-type=module",
+        "-e",
+        `
       import { realpathSync } from "node:fs";
       const root = ${JSON.stringify(root)};
       if (realpathSync.native(root) !== realpathSync(root)) throw new Error("native realpath drift");
@@ -315,7 +325,10 @@ describe("manual canary acceptance publish-record boundary", () => {
         try { resolvePath(${JSON.stringify(forbidden)}); throw new Error("deny missing"); }
         catch (error) { if (error.message !== "forbidden removed path access") throw error; }
       }
-    `], { cwd: root, encoding: "utf8", windowsHide: true });
+    `,
+      ],
+      { cwd: root, encoding: "utf8", windowsHide: true },
+    );
     expect({ status: child.status, stderr: child.stderr }).toEqual({ status: 0, stderr: "" });
     expect(readFileSync(accessLog, "utf8").trim().split("\n")).toHaveLength(2);
   });
