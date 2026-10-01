@@ -83,10 +83,8 @@ interface AcceptanceModule {
   ): void;
 }
 
-const acceptance = (await import(
-  /* @vite-ignore -- load the standalone runner through native Node, including Windows 8.3 paths */
-  pathToFileURL(join(process.cwd(), "scripts", "pack-canary-acceptance.mjs")).href
-)) as AcceptanceModule;
+// @ts-expect-error: standalone .mjs intentionally has no TypeScript declaration; the boundary is typed below.
+const acceptance = (await import("../scripts/pack-canary-acceptance.mjs")) as AcceptanceModule;
 const {
   buildInstallerInvocation,
   CANARY_ASSETS,
