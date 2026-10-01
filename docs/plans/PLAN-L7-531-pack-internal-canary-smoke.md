@@ -85,39 +85,35 @@ status: confirmed
 github_issue_id: 418
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:b5457378fa313ed9261fbf129a7fb3f1
-  command_id: plan-revise:issue-418:pr2-r1-correction:r9:20261001
-  admitted_at: 2026-10-01T03:16:20.857Z
-  source_digest: sha256:1f3d8255ac3bcea19eb80e4a694933110fcea70bb4dbc2de6a7e28a25fecc4a0
-  decision_digest: sha256:0597af1571c405c29a5546fb0e2d16ae98eafe7e0d6c2b4d5205121d8de3b08e
-  receipt_digest: sha256:ff8cb4af665328eca5f9c2eedc7cec2a7fc09f65e5b05a988483a459904005ab
+  receipt_id: certificate:eeab58c3731f2045a641c27b07831bbe
+  command_id: plan-revise:issue-418:pr2-linux-container:r10:20261001
+  admitted_at: 2026-10-01T04:21:58.883Z
+  source_digest: sha256:737c50a7257282795272a88a71324d0d5c2f01528fdd7ebd05cb76f6955f6b5c
+  decision_digest: sha256:2041747459d841325feb20ec1ad1a1914bbe8f41bcfcdcb3859b6d1e9c20cab1
+  receipt_digest: sha256:dd5447705da4917afa80a019efdf5866e7dd014924e30e39eb501a66fbdd9145
   binding:
     path: docs/plans/PLAN-L7-531-pack-internal-canary-smoke.md
     plan_id: PLAN-L7-531-pack-internal-canary-smoke
     asset_id: plan:44f79788376b81c225ce5913fddbc48f
-    revision: 9
-    content_digest: sha256:1f3d8255ac3bcea19eb80e4a694933110fcea70bb4dbc2de6a7e28a25fecc4a0
+    revision: 10
+    content_digest: sha256:737c50a7257282795272a88a71324d0d5c2f01528fdd7ebd05cb76f6955f6b5c
   route:
     signal: feature_addition
     mode: add-feature
   issue:
     provider: github
     issue_id: 418
-    episode_id: E4-418-pack-internal-canary-smoke
+    episode_id: E4-418
     projection_state: unprojected
   origin:
-    plan_id: PLAN-L7-516-pack-self-contained-consumer-runtime
-    revision: 4
-    digest: sha256:6e4e0d5516e78e7465d260c65482e3302c9304518eb264d39735d049c166a316
-  transition:
-    direction: design_to_implementation
-    implementation_disposition: none
+    plan_id: PLAN-L7-531-pack-internal-canary-smoke
+    revision: 9
+    digest: sha256:74df978aa9339ef49fed437642ed87da4823cf95c457d6afb37eaacd3d68d0f9
   reentry:
     target_plan_id: PLAN-L7-531-pack-internal-canary-smoke
-    target_revision: 8
+    target_revision: 9
     phase: forward_merge
-  escape_reason: "Issue #418 PR-2 closing review r1: AT-DIST-002 and PR-2 oracle
-    ownership correction with PLAN section reference fix"
+  escape_reason: "PR-2 Linux clean acceptance environment and evidence closure for Issue #418"
 ---
 
 # PLAN-L7-531: Pack-only internal canary smoke (Windows/Linux)
@@ -415,6 +411,8 @@ PR-1 と PR-2 を 1 PR に統合しない。scope 構造を指す FLAG は close
 | B | `workflow_dispatch` で同じ受入を起動する | 棄却: workflow に credential を持ち込むこと、新たな attack surface、`GITHUB_TOKEN` が環境変数に常在して env-clear 条件を曖昧にすること。人手起動であっても A より境界が複雑になる |
 
 §3.4 の正本は publish を追跡する source repo の #418 コメント 1 件であり、ローカル JSON はその写しである。runner は写しの SHA-256 と元コメント URL、5 asset 全 digest、anchor、コマンド transcript / exit code を evidence に保存するが、GitHub API を使わず JSON とコメントの一致を自己証明しない。Codex 著 PR-2 の Claude 族 non-author reviewer は、コメント本文との一致と公開 Release bytes からの独立再計算 digest を別途照合する。runner 自身の確認だけで受入完了を宣言しない。
+
+Linux 実受入は Docker Desktop の使い捨て `node:24.13.0-bookworm` container で実行する。`-slim` は git 不在のため使わない。host で GitHub Release の exact 5 asset と #418 publish record 写しを取得し、その 5 asset、写し、checked-in standalone runner だけを `docker cp` で container に渡す。container は `--network none`、bind/volume mount なし、credential/env 注入なしで起動し、source checkout と Pack checkout を持ち込まない。WSL2 backend の kernel を共有しても WSL2 distro を clean 受入環境とは扱わず、独立 filesystem の disposable container として扱う。証跡には `docker image inspect` の RepoDigests、`docker inspect` の NetworkMode/Mounts、`node --version`、`git --version`、Bun 不在、host の `/c` 非到達、copy 対象一覧、runner の transcript と公開 asset の独立 SHA-256/size を保存する。受入後 container は破棄し、公開取得に使った host credential は container へ渡さない。
 
 `#761` は control 判断により canary.2 後へ保留され、本 PR-2 の HARD predecessor ではない。公開および実受入は PO 承認なしに実行しない。
 
