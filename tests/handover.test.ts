@@ -143,7 +143,7 @@ describe("PLAN-L7-145 handover #1: relativizeTouchedFile (absolute-path leak fix
     expect(
       relativizeTouchedFile("Write c:\\Users\\micro\\AppData\\Local\\Temp\\dbq.ts", WINROOT),
     ).toBe("Write ~/AppData/Local/Temp/dbq.ts");
-    expect(relativizeTouchedFile("Edit /Users/micro/scratch/y.ts", "/repo")).toBe(
+    expect(relativizeTouchedFile("Edit /Users/example/scratch/y.ts", "/repo")).toBe(
       "Edit ~/scratch/y.ts",
     );
     expect(relativizeTouchedFile("/home/micro/scratch/z.ts", "/repo")).toBe("~/scratch/z.ts");
@@ -173,7 +173,7 @@ describe("PLAN-L7-145 handover #1: relativizeTouchedFile (absolute-path leak fix
     const serialized = JSON.stringify(doc);
     // NO username-bearing personal path (drive-letter home or /Users|/home) survives anywhere
     expect(/[A-Za-z]:[\\/]Users[\\/]micro/.test(serialized)).toBe(false);
-    expect(serialized.includes("Users/micro")).toBe(false);
+    expect(serialized.includes("Users/example")).toBe(false);
     const files = doc.deliverables[0]?.files ?? [];
     // both casings of src/a.ts collapse to one relativized entry (dedup)
     expect(files.filter((f) => f === "Write src/a.ts").length).toBe(1);

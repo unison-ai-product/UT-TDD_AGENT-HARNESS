@@ -420,10 +420,10 @@ describe("loadRuntimeSessionUsage (file scan, no CLI invocation)", () => {
 
 describe("claudeProjectSlug (repo -> Claude Code project-slug directory name)", () => {
   it("replaces path separators and the drive colon with '-' (verified against real ~/.claude/projects naming)", () => {
-    // 実ディレクトリ観測 (2026-07-21): "C:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness"
-    // -> "C--Users-micro-OneDrive-Desktop-UT-TDD-agent-harness" (ドライブ文字の大小は別途 resolve 側で吸収)。
+    // synthetic fixture (実個人 path ではない): "C:\Users\example\OneDrive\Desktop\UT-TDD-agent-harness"
+    // -> "C--Users-example-OneDrive-Desktop-UT-TDD-agent-harness" (ドライブ文字の大小は別途 resolve 側で吸収)。
     expect(claudeProjectSlug("C:\\Users\\micro\\OneDrive\\Desktop\\UT-TDD-agent-harness")).toBe(
-      "C--Users-micro-OneDrive-Desktop-UT-TDD-agent-harness",
+      "C--Users-example-OneDrive-Desktop-UT-TDD-agent-harness",
     );
     expect(claudeProjectSlug("c:\\dev\\seo-agent")).toBe("c--dev-seo-agent");
   });
@@ -434,14 +434,14 @@ describe("resolveClaudeProjectDir (repo -> matching ~/.claude/projects/<slug> di
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-claude-projects-"));
     try {
       // 実観測どおり、同じ repo でも起動経路により大文字 C / 小文字 c の両方が実在しうる。
-      mkdirSync(join(root, "c--Users-micro-OneDrive-Desktop-UT-TDD-agent-harness"), {
+      mkdirSync(join(root, "c--Users-example-OneDrive-Desktop-UT-TDD-agent-harness"), {
         recursive: true,
       });
       const resolved = resolveClaudeProjectDir(
         root,
         "C:\\Users\\micro\\OneDrive\\Desktop\\UT-TDD-agent-harness",
       );
-      expect(resolved).toBe(join(root, "c--Users-micro-OneDrive-Desktop-UT-TDD-agent-harness"));
+      expect(resolved).toBe(join(root, "c--Users-example-OneDrive-Desktop-UT-TDD-agent-harness"));
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
@@ -450,7 +450,7 @@ describe("resolveClaudeProjectDir (repo -> matching ~/.claude/projects/<slug> di
   it("returns null when no matching directory / the projects root is absent (cold-start safe)", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-claude-projects-"));
     try {
-      mkdirSync(join(root, "c--Users-micro-OneDrive-Desktop-some-other-repo"), { recursive: true });
+      mkdirSync(join(root, "c--Users-example-OneDrive-Desktop-some-other-repo"), { recursive: true });
       expect(
         resolveClaudeProjectDir(root, "C:\\Users\\micro\\OneDrive\\Desktop\\UT-TDD-agent-harness"),
       ).toBeNull();
@@ -484,7 +484,7 @@ describe("parseCodexSessionMetaCwd + codexSessionBelongsToRepo (Codex cwd filter
     const repoRoot = "C:\\Users\\micro\\OneDrive\\Desktop\\UT-TDD-agent-harness";
     expect(codexSessionBelongsToRepo(repoRoot, repoRoot)).toBe(true);
     expect(
-      codexSessionBelongsToRepo("c:/users/micro/onedrive/desktop/ut-tdd-agent-harness", repoRoot, {
+      codexSessionBelongsToRepo("c:/users/example/onedrive/desktop/ut-tdd-agent-harness", repoRoot, {
         platform: "win32",
       }),
     ).toBe(true);
@@ -510,7 +510,7 @@ describe("parseCodexSessionMetaCwd + codexSessionBelongsToRepo (Codex cwd filter
 
 describe("loadRepoScopedRuntimeSessionUsage (repo-scope ingest, issue #82 / PLAN-L7-454)", () => {
   const REPO_ROOT = "C:\\Users\\micro\\OneDrive\\Desktop\\UT-TDD-agent-harness";
-  const REPO_SLUG = "C--Users-micro-OneDrive-Desktop-UT-TDD-agent-harness";
+  const REPO_SLUG = "C--Users-example-OneDrive-Desktop-UT-TDD-agent-harness";
 
   function claudeAssistantLine(
     model: string,
@@ -552,7 +552,7 @@ describe("loadRepoScopedRuntimeSessionUsage (repo-scope ingest, issue #82 / PLAN
       const claudeRoot = join(root, "claude-projects");
       const codexRoot = join(root, "codex-sessions");
       const ownProjectDir = join(claudeRoot, REPO_SLUG);
-      const otherProjectDir = join(claudeRoot, "c--Users-micro-OneDrive-Desktop-SNS-agent");
+      const otherProjectDir = join(claudeRoot, "c--Users-example-OneDrive-Desktop-SNS-agent");
       mkdirSync(ownProjectDir, { recursive: true });
       mkdirSync(otherProjectDir, { recursive: true });
       mkdirSync(codexRoot, { recursive: true });
