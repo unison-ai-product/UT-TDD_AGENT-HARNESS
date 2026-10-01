@@ -24,6 +24,7 @@ import {
 interface AcceptanceModule {
   CANARY_ASSETS: readonly string[];
   CANARY_TAG: string;
+  AGENT_E2E_TAG: string;
   makeAccessAuditModule(
     forbiddenPaths: string[],
     accessLog: string,
@@ -35,6 +36,7 @@ interface AcceptanceModule {
         },
   ): string;
   buildInstallerInvocation(releaseDirectory: string, anchorDigest: string, tag?: string): string[];
+  buildAgentE2EInstallerInvocation(releaseDirectory: string, anchorDigest: string): string[];
   canaryAssetsForTag(tag: string): readonly string[];
   createConsumerPlan(consumerRoot: string, source: string): void;
   main(argv: string[], deps?: { fixtureTag?: string }): void;
@@ -59,6 +61,11 @@ interface AcceptanceModule {
     commentUrl: string;
     value: Record<string, unknown>;
   };
+  parseAgentE2ERecord(value: unknown, commentUrl: string): ReturnType<AcceptanceModule["parsePublishRecord"]>;
+  verifyAgentAuthoringEvidence(value: unknown): void;
+  verifyAgentG1Positive(value: unknown): void;
+  verifyAgentG1Negative(value: unknown, positiveRevision: string): void;
+  verifyAgentReviewJoin(value: unknown): void;
   verifyReleaseDirectory(
     releaseDir: string,
     record: ReturnType<AcceptanceModule["parsePublishRecord"]>,
@@ -99,14 +106,21 @@ const runnerSpecifier = "../scripts/pack-canary-acceptance.mjs";
 const acceptance = (await import(runnerSpecifier)) as AcceptanceModule;
 const {
   buildInstallerInvocation,
+  buildAgentE2EInstallerInvocation,
   CANARY_ASSETS,
   CANARY_TAG,
+  AGENT_E2E_TAG,
   canaryAssetsForTag,
   createConsumerPlan,
   main,
   createClosedReviewProviders,
   findForbiddenReferences,
   parsePublishRecord,
+  parseAgentE2ERecord,
+  verifyAgentAuthoringEvidence,
+  verifyAgentG1Positive,
+  verifyAgentG1Negative,
+  verifyAgentReviewJoin,
   verifyReleaseDirectory,
   verifyInstallEvidence,
   verifyWrongAnchorDenial,
@@ -148,6 +162,32 @@ function releaseDir(assetBytes: Record<string, string>) {
   const root = mkdtempSync(join(tmpdir(), "ut-canary-release-"));
   tempRoots.push(root);
   for (const name of CANARY_ASSETS) writeFileSync(join(root, name), assetBytes[name]);
+  return root;
+}
+
+function agentRecord() {
+  const names = canaryAssetsForTag(AGENT_E2E_TAG);
+  const assetBytes = Object.fromEntries(names.map((name: string) => [name, `bytes:${name}`]));
+  const pair = (value: string) => ({ producer_sha256: sha(value), independent_sha256: sha(value) });
+  return {
+    value: {
+      tag: AGENT_E2E_TAG,
+      release_url: `https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS-Pack/releases/tag/${AGENT_E2E_TAG}`,
+      c1_commit: "c".repeat(40),
+      c2_commit: "d".repeat(40),
+      recorded_by: "offline runner contract fixture",
+      recorded_at: "2026-10-01T10:00:00.000Z",
+      assets: Object.fromEntries(names.map((name: string) => [name, pair(assetBytes[name])])),
+      consumer_anchor_digest: pair("canary3-anchor"),
+    },
+    assetBytes,
+  };
+}
+
+function agentReleaseDir(assetBytes: Record<string, string>) {
+  const root = mkdtempSync(join(tmpdir(), "ut-canary-agent-release-"));
+  tempRoots.push(root);
+  for (const name of canaryAssetsForTag(AGENT_E2E_TAG)) writeFileSync(join(root, name), assetBytes[name]);
   return root;
 }
 
@@ -603,5 +643,99 @@ describe("manual canary acceptance publish-record boundary", () => {
     expect(() =>
       buildInstallerInvocation("C:/release-dir", parsed.consumerAnchorDigest, "latest"),
     ).toThrow("acceptance-tag-not-canary-2");
+  });
+
+  it("U-ST-PACKCANARY-015: the AT-DIST-003 lane accepts only exact canary.3 bytes and its record anchor", () => {
+    const input = agentRecord();
+    const parsed = parseAgentE2ERecord(input.value, commentUrl);
+    const dir = agentReleaseDir(input.assetBytes);
+    expect(parsed.value.tag).toBe("v0.2.0-canary.3");
+    expect(Object.keys(verifyReleaseDirectory(dir, parsed).actualDigests).sort()).toEqual(
+      [...canaryAssetsForTag("v0.2.0-canary.3")].sort(),
+    );
+    expect(buildAgentE2EInstallerInvocation("C:/c3-release", parsed.consumerAnchorDigest)).toEqual([
+      "C:/c3-release/v0.2.0-canary.3.ut-tdd.mjs",
+      "setup", "--solo", "--consumer-runtime-release", "C:/c3-release",
+      "--expected-consumer-digest", parsed.consumerAnchorDigest,
+    ]);
+    expect(() => parseAgentE2ERecord(record().value, commentUrl)).toThrow(
+      "publish-record-tag-not-exact",
+    );
+
+    const c2Bytes = structuredClone(input.value);
+    c2Bytes.tag = CANARY_TAG;
+    expect(() => parseAgentE2ERecord(c2Bytes, commentUrl)).toThrow("publish-record-tag-not-exact");
+    const tampered = agentReleaseDir(input.assetBytes);
+    writeFileSync(join(tampered, canaryAssetsForTag(AGENT_E2E_TAG)[2]), "tampered");
+    expect(() => verifyReleaseDirectory(tampered, parsed)).toThrow("release-asset-digest-mismatch");
+  });
+
+  it("U-ST-PACKCANARY-016: rejects missing or non-agent authoring provenance", () => {
+    expect(() => verifyAgentAuthoringEvidence({
+      provider: "codex", model: "gpt-6-luna", invocation: [], template_source: "pack-template",
+    })).toThrow();
+    expect(() => verifyAgentAuthoringEvidence({
+      provider: "codex", model: "gpt-6-luna", invocation: ["ut-tdd", "codex", "--execute"],
+      template_source: "pack-template", provenance: "closed-stub",
+    })).toThrow();
+    expect(() => verifyAgentAuthoringEvidence({
+      provider: "manual", model: "not-a-provider", invocation: ["source-helper"],
+      template_source: "handwritten", provenance: "handwritten",
+    })).toThrow();
+  });
+
+  it("U-ST-PACKCANARY-017: rejects a non-applicable, failed, or could-not-run G1 positive", () => {
+    expect(() => verifyAgentG1Positive({ applicable: false, passed: true, messages: [] })).toThrow();
+    expect(() => verifyAgentG1Positive({ applicable: true, passed: false, messages: [] })).toThrow();
+    expect(() => verifyAgentG1Positive({
+      applicable: true, passed: true, messages: ["could not run: gate unavailable"],
+    })).toThrow();
+  });
+
+  it("U-ST-PACKCANARY-018: rejects same-revision or unnamed-slot G1 negative evidence", () => {
+    const positiveRevision = "a".repeat(40);
+    expect(() => verifyAgentG1Negative({
+      revision: positiveRevision, parent: positiveRevision,
+      applicable: true, passed: false, messages: ["required doc not created: business-requirements.md"],
+    }, positiveRevision)).toThrow();
+    expect(() => verifyAgentG1Negative({
+      revision: "b".repeat(40), parent: positiveRevision,
+      applicable: true, passed: false, messages: ["required doc not created: another-slot.md"],
+    }, positiveRevision)).toThrow();
+  });
+
+  it("U-ST-PACKCANARY-019: rejects same-family, wrong-head, or noncanonical review receipts", () => {
+    const subject = "a".repeat(40);
+    const wrongHead = "b".repeat(40);
+    const base = {
+      repository: "unison-ai-product/ut-tdd-consumer-canary",
+      pr: 12,
+      prHead: subject,
+      subject: {
+        path: "docs/design/L1-requirements/business-requirements.md",
+        revision: subject,
+        blobOid: "c".repeat(40),
+        contentSha256: sha("subject bytes"),
+      },
+      recomputed: { blobOid: "c".repeat(40), contentSha256: sha("subject bytes") },
+      request: {
+        pr: 12, exactHead: subject, authorFamily: "codex", reviewRevision: "rv1-test",
+        path: ".ut-tdd/review/requests/request.json",
+      },
+      receipt: {
+        pr: 12, head: subject, provider: "claude", model: "claude-opus-5", exitCode: 0,
+        reviewRevision: "rv1-test", path: ".ut-tdd/review/receipts/revision.json",
+      },
+      verdictPath: ".ut-tdd/review/verdicts/revision/attempts/attempt-1/verdict.txt",
+    };
+    expect(() => verifyAgentReviewJoin({
+      ...base, receipt: { ...base.receipt, provider: "codex" },
+    })).toThrow();
+    expect(() => verifyAgentReviewJoin({
+      ...base, prHead: wrongHead,
+    })).toThrow();
+    expect(() => verifyAgentReviewJoin({
+      ...base, receipt: { ...base.receipt, path: "source/.ut-tdd/review/receipts/revision.json" },
+    })).toThrow();
   });
 });
