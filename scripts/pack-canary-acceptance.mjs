@@ -289,16 +289,11 @@ function verifySmoke(parsed, { now, run }) {
   const binDir = join(auditRoot, "bin");
   mkdirSync(isolatedHome, { recursive: true });
   mkdirSync(binDir, { recursive: true });
-  const bunTrace = join(auditRoot, "bun-invocations.log");
-  const bunStub = join(binDir, process.platform === "win32" ? "bun.cmd" : "bun");
-  writeFileSync(bunStub, process.platform === "win32"
-    ? `@echo invoked>>"${bunTrace}"\r\n@exit /b 97\r\n`
-    : `#!/bin/sh\nprintf '%s\\n' invoked >> '${bunTrace.replaceAll("'", "'\\''")}'\nexit 97\n`,
-  process.platform === "win32" ? "utf8" : { encoding: "utf8", mode: 0o755 });
   const forbidden = parsed.removedPaths.map((path) => resolve(path));
   const accessLog = join(auditRoot, "forbidden-access.jsonl");
+  const processLog = join(auditRoot, "child-processes.jsonl");
   const auditModule = join(auditRoot, "audit-forbidden.mjs");
-  writeFileSync(auditModule, makeAccessAuditModule(forbidden, accessLog), "utf8");
+  writeFileSync(auditModule, makeAccessAuditModule(forbidden, accessLog, processLog), "utf8");
   const pathSeparator = process.platform === "win32" ? ";" : ":";
   const pathEntries = [binDir, dirname(process.execPath),
     ...(process.env.PATH ?? "").split(pathSeparator).filter((path) =>
@@ -399,7 +394,11 @@ function verifySmoke(parsed, { now, run }) {
     verifyRegisteredHooks(consumerRoot, env, run, transcript);
     const leakedReferences = findForbiddenReferences(consumerRoot, forbidden);
     if (leakedReferences.length) throw new Error(`forbidden-path-reference-observed:${leakedReferences[0]}`);
-    if (existsSync(bunTrace)) throw new Error("bun-invocation-observed");
+    const childProcesses = existsSync(processLog)
+      ? readFileSync(processLog, "utf8").trim().split(/\r?\n/u).filter(Boolean).map(JSON.parse)
+      : [];
+    if (childProcesses.some((entry) => entry.allowed !== true))
+      throw new Error("unapproved-child-process-observed");
     if (existsSync(accessLog) && readFileSync(accessLog, "utf8").trim())
       throw new Error(`forbidden-path-access-observed:${readFileSync(accessLog, "utf8").trim()}`);
     const after = {
@@ -409,6 +408,7 @@ function verifySmoke(parsed, { now, run }) {
       removed_paths: forbidden,
       alternate_cwd: alternateCwd,
       smoke_transcript: transcript,
+      child_process_trace: childProcesses,
       bun_invocation_trace_count: 0,
       forbidden_path_access_count: 0,
       forbidden_path_reference_count: 0,
@@ -505,8 +505,8 @@ export function createConsumerPlan(consumerRoot) {
   }), "utf8");
 }
 
-function makeAccessAuditModule(forbiddenPaths, accessLog) {
-  return `import fs from "node:fs";\nimport { syncBuiltinESMExports } from "node:module";\nimport path from "node:path";\nconst blocked=${JSON.stringify(forbiddenPaths.map((item) => item.toLowerCase()))};\nconst log=${JSON.stringify(accessLog)};\nconst hit=(value)=>{if(typeof value!=="string" && !Buffer.isBuffer(value)) return false; const p=path.resolve(String(value)).toLowerCase(); return blocked.some((b)=>p===b || p.startsWith(b+path.sep));};\nconst deny=(api)=>function(value,...args){if(hit(value)){fs.appendFileSync(log,JSON.stringify({api,path:String(value)})+"\\n"); const e=new Error("forbidden removed path access"); e.code="ENOENT"; throw e;} return api.call(this,value,...args);};\nfor(const key of ["access","accessSync","existsSync","lstatSync","open","openSync","readFile","readFileSync","realpath","realpathSync","stat","statSync"]) if(typeof fs[key]==="function") fs[key]=deny(fs[key]);\nsyncBuiltinESMExports();\n`;
+function makeAccessAuditModule(forbiddenPaths, accessLog, processLog) {
+  return `import fs from "node:fs";\nimport cp from "node:child_process";\nimport { syncBuiltinESMExports } from "node:module";\nimport path from "node:path";\nconst blocked=${JSON.stringify(forbiddenPaths.map((item) => item.toLowerCase()))};\nconst log=${JSON.stringify(accessLog)};\nconst processLog=${JSON.stringify(processLog)};\nconst allowed=new Set(["node","node.exe","git","git.exe","gh","gh.exe","claude","claude.exe"]);\nconst hit=(value)=>{if(typeof value!=="string" && !Buffer.isBuffer(value)) return false; const p=path.resolve(String(value)).toLowerCase(); return blocked.some((b)=>p===b || p.startsWith(b+path.sep));};\nconst deny=(api)=>function(value,...args){if(hit(value)){fs.appendFileSync(log,JSON.stringify({api,path:String(value)})+"\\n"); const e=new Error("forbidden removed path access"); e.code="ENOENT"; throw e;} return api.call(this,value,...args);};\nfor(const key of ["access","accessSync","existsSync","lstatSync","open","openSync","readFile","readFileSync","realpath","realpathSync","stat","statSync"]) if(typeof fs[key]==="function") fs[key]=deny(fs[key]);\nfor(const key of ["spawn","spawnSync","execFile","execFileSync","exec","execSync","fork"]){const original=cp[key];cp[key]=function(command,...args){const name=path.basename(String(command)).toLowerCase();const ok=key!=="exec" && key!=="execSync" && allowed.has(name);fs.appendFileSync(processLog,JSON.stringify({api:key,command:String(command),args:Array.isArray(args[0])?args[0]:[],allowed:ok})+"\\n");if(!ok)throw new Error("unapproved child process");return original.call(this,command,...args);};}\nsyncBuiltinESMExports();\n`;
 }
 
 export function createClosedReviewProviders(auditRoot, head) {
