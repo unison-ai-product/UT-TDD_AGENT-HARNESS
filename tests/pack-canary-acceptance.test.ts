@@ -22,6 +22,16 @@ interface AcceptanceModule {
   buildInstallerInvocation(releaseDirectory: string, anchorDigest: string, tag?: string): string[];
   canaryAssetsForTag(tag: string): readonly string[];
   createConsumerPlan(consumerRoot: string): void;
+  findForbiddenReferences(root: string, forbiddenPaths: string[]): string[];
+  createClosedReviewProviders(
+    auditRoot: string,
+    head: string,
+  ): {
+    ghBin: string;
+    ghLoader: string;
+    claudeCommand: string;
+    claudeMarker: string;
+  };
   parsePublishRecord(
     value: unknown,
     commentUrl: string,
@@ -50,6 +60,8 @@ const {
   CANARY_TAG,
   canaryAssetsForTag,
   createConsumerPlan,
+  createClosedReviewProviders,
+  findForbiddenReferences,
   parsePublishRecord,
   verifyReleaseDirectory,
   verifyInstallEvidence,
@@ -90,6 +102,53 @@ function releaseDir(assetBytes: Record<string, string>) {
 }
 
 describe("manual canary acceptance publish-record boundary", () => {
+  it("U-ST-PACKCANARY-010: consumer state cannot retain removed source paths", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-canary-path-reference-"));
+    tempRoots.push(root);
+    const removed = join(root, "removed-release");
+    writeFileSync(join(root, "state.json"), JSON.stringify({ old: removed }));
+    expect(findForbiddenReferences(root, [removed])).toHaveLength(1);
+    writeFileSync(join(root, "state.json"), '{"clean":true}');
+    expect(findForbiddenReferences(root, [removed])).toEqual([]);
+  });
+
+  it("U-ST-PACKCANARY-010: closed review providers cannot reach GitHub", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-canary-review-stub-"));
+    tempRoots.push(root);
+    const head = "a".repeat(40);
+    const stubs = createClosedReviewProviders(root, head);
+    const gh = join(stubs.ghBin, process.platform === "win32" ? "gh.exe" : "gh");
+    const env = { ...process.env, NODE_OPTIONS: `--import=${pathToFileURL(stubs.ghLoader).href}` };
+    const view = spawnSync(
+      gh,
+      ["pr", "view", "418", "--json", "headRefOid", "--jq", ".headRefOid"],
+      {
+        cwd: root,
+        env,
+        encoding: "utf8",
+        windowsHide: true,
+      },
+    );
+    expect(view.status, view.stderr).toBe(0);
+    expect(view.stdout.trim()).toBe(head);
+    const body = `PR #418 exact HEAD ${head} のcanonical review receipt。\nverdict=PASS blocking=0\nreviewRevision=rv1-${"b".repeat(64)}\nreviewerFamily=claude\nreceiptDigest=${"c".repeat(64)}`;
+    const comment = spawnSync(gh, ["pr", "comment", "418", "--body", body], {
+      cwd: root,
+      env,
+      encoding: "utf8",
+      windowsHide: true,
+    });
+    expect(comment.status, comment.stderr || comment.stdout).toBe(0);
+    const denied = spawnSync(gh, ["api", "user"], {
+      cwd: root,
+      env,
+      encoding: "utf8",
+      windowsHide: true,
+    });
+    expect(denied.status).toBe(2);
+    expect(denied.stdout).toContain('"denied":true');
+  });
+
   it("U-ST-PACKCANARY-010: restart evidence binds consumer and removed Release root", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-canary-evidence-"));
     tempRoots.push(root);
@@ -103,6 +162,7 @@ describe("manual canary acceptance publish-record boundary", () => {
       tag: CANARY_TAG,
       consumer_root: consumer,
       release_directory: release,
+      consumer_head: "a".repeat(40),
     };
     expect(() => verifyInstallEvidence(evidence, consumer, [source, release])).not.toThrow();
     expect(() => verifyInstallEvidence(evidence, join(root, "other"), [source, release])).toThrow(

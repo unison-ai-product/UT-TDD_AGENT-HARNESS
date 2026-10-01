@@ -1,8 +1,11 @@
 import { createHash } from "node:crypto";
 import {
+  chmodSync,
+  copyFileSync,
   existsSync,
   mkdirSync,
   lstatSync,
+  mkdtempSync,
   readFileSync,
   readdirSync,
   realpathSync,
@@ -150,6 +153,12 @@ export function main(argv = process.argv.slice(2), deps = {}) {
   const { directory, actualDigests } = verifyReleaseDirectory(args["--release-dir"], record);
   const consumerRoot = realpathSync.native(resolve(args["--consumer-root"]));
   if (readdirSync(consumerRoot).length !== 0) throw new Error("consumer-root-not-empty");
+  runProductGit(run, consumerRoot, ["init", "--quiet"]);
+  runProductGit(run, consumerRoot, ["config", "user.email", "canary@example.invalid"]);
+  runProductGit(run, consumerRoot, ["config", "user.name", "Canary acceptance"]);
+  writeFileSync(join(consumerRoot, "README.md"), "# Isolated canary consumer\n", { flag: "wx" });
+  runProductGit(run, consumerRoot, ["add", "--", "README.md"]);
+  runProductGit(run, consumerRoot, ["commit", "--quiet", "-m", "canary consumer baseline"]);
   const setupArgs = buildInstallerInvocation(directory, record.consumerAnchorDigest);
   const startedAt = now();
   const child = run(process.execPath, setupArgs, {
@@ -160,6 +169,12 @@ export function main(argv = process.argv.slice(2), deps = {}) {
     timeout: 300_000,
   });
   const transcript = `${child.stdout ?? ""}${child.stderr ?? ""}`;
+  if (!child.error && child.status === 0) {
+    const identityPath = join(consumerRoot, "ut-tdd.project.json");
+    if (!existsSync(identityPath)) throw new Error("consumer-project-identity-not-generated");
+    runProductGit(run, consumerRoot, ["add", "--", "ut-tdd.project.json"]);
+    runProductGit(run, consumerRoot, ["commit", "--quiet", "-m", "canary consumer identity"]);
+  }
   const evidence = {
     phase: "installed-awaiting-clean-restart",
     schema_version: "ut-tdd.pack-canary-acceptance/v1",
@@ -179,12 +194,26 @@ export function main(argv = process.argv.slice(2), deps = {}) {
     consumer_anchor_digest: record.consumerAnchorDigest,
     consumer_root: consumerRoot,
     release_directory: directory,
+    consumer_head: child.status === 0 ? productHead(run, consumerRoot) : null,
     reviewer_independent_digest_verification: "pending",
   };
   writeFileSync(resolve(args["--evidence"]), `${JSON.stringify(evidence, null, 2)}\n`, { flag: "wx" });
   if (child.error) throw child.error;
   if (child.status !== 0) throw new Error(`consumer-setup-failed:${child.status ?? child.signal ?? "unknown"}`);
   process.stdout.write(`${JSON.stringify({ ok: true, evidence: resolve(args["--evidence"]), setup_exit_code: child.status })}\n`);
+}
+
+function runProductGit(run, consumerRoot, args) {
+  const child = run("git", args, { cwd: consumerRoot, encoding: "utf8", windowsHide: true });
+  if (child.error || child.status !== 0)
+    throw new Error(`consumer-git-failed:${args[0]}:${child.error?.message ?? child.stderr ?? child.status}`);
+  return (child.stdout ?? "").trim();
+}
+
+function productHead(run, consumerRoot) {
+  const head = runProductGit(run, consumerRoot, ["rev-parse", "HEAD"]);
+  if (!commitPattern.test(head)) throw new Error("consumer-head-invalid");
+  return head;
 }
 
 function verifySmoke(parsed, { now, run }) {
@@ -197,10 +226,17 @@ function verifySmoke(parsed, { now, run }) {
   const evidencePath = resolve(args["--evidence"]);
   const evidence = JSON.parse(readFileSync(evidencePath, "utf8"));
   verifyInstallEvidence(evidence, consumerRoot, parsed.removedPaths);
+  if (productHead(run, consumerRoot) !== evidence.consumer_head)
+    throw new Error("consumer-head-drift-since-install");
   for (const path of parsed.removedPaths)
     if (existsSync(resolve(path))) throw new Error(`removed-path-still-exists:${path}`);
   const wrapper = join(consumerRoot, ".ut-tdd", "bin", "ut-tdd.mjs");
   if (!existsSync(wrapper)) throw new Error("consumer-local-wrapper-missing");
+  const active = JSON.parse(readFileSync(join(consumerRoot, ".ut-tdd", "runtime", "activation", "active.json"), "utf8"));
+  if (typeof active.bundle_path !== "string" || typeof active.entry_path !== "string" ||
+      !isInside(consumerRoot, active.bundle_path) || !isInside(consumerRoot, active.entry_path) ||
+      !existsSync(active.bundle_path) || !existsSync(active.entry_path))
+    throw new Error("consumer-runtime-activation-not-local");
   const auditRoot = mkdtempSync(join(tmpdir(), "ut-canary-audit-"));
   const isolatedHome = join(auditRoot, "home");
   const binDir = join(auditRoot, "bin");
@@ -217,8 +253,10 @@ function verifySmoke(parsed, { now, run }) {
   const auditModule = join(auditRoot, "audit-forbidden.mjs");
   writeFileSync(auditModule, makeAccessAuditModule(forbidden, accessLog), "utf8");
   const pathSeparator = process.platform === "win32" ? ";" : ":";
-  const pathEntries = [binDir, dirname(process.execPath), process.env.SystemRoot ? join(process.env.SystemRoot, "System32") : null]
-    .filter(Boolean);
+  const pathEntries = [binDir, dirname(process.execPath),
+    ...(process.env.PATH ?? "").split(pathSeparator).filter((path) =>
+      path && !forbidden.some((removed) => isInside(removed, resolve(path)))),
+  ];
   const env = {
     PATH: pathEntries.join(pathSeparator),
     HOME: isolatedHome,
@@ -229,6 +267,8 @@ function verifySmoke(parsed, { now, run }) {
     UT_TDD_SKIP_UPDATE_CHECK: "1",
     NODE_OPTIONS: `--import=${pathToFileURL(auditModule).href}`,
     UT_TDD_CANARY_ACCESS_LOG: accessLog,
+    PATHEXT: process.env.PATHEXT ?? ".COM;.EXE;.BAT;.CMD",
+    ComSpec: process.env.ComSpec,
     ...(process.env.SystemRoot ? { SystemRoot: process.env.SystemRoot } : {}),
   };
   const transcript = [];
@@ -254,7 +294,64 @@ function verifySmoke(parsed, { now, run }) {
     runCli("plan-authoring", ["plan", "draft", "--manifest", join(consumerRoot, "canary-plan-draft.json")]);
     runCli("plan-lint", ["plan", "lint"]);
     runCli("db-rebuild", ["db", "rebuild", "--json"]);
-    runCli("pr-merge-gate-pending", ["pr", "merge", "--pr", "418", "--json"], { status: 1 });
+    if (!existsSync(join(consumerRoot, ".ut-tdd", "harness.db")))
+      throw new Error("consumer-local-db-missing");
+    const reviewProviders = createClosedReviewProviders(auditRoot, evidence.consumer_head);
+    env.PATH = `${reviewProviders.ghBin}${pathSeparator}${env.PATH}`;
+    env.NODE_OPTIONS = `${env.NODE_OPTIONS} --import=${pathToFileURL(reviewProviders.ghLoader).href}`;
+    env.UT_TDD_CLAUDE_BIN = reviewProviders.claudeCommand;
+    env.CANARY_CLAUDE_MARKER = reviewProviders.claudeMarker;
+    const memory = runCli("memory-add", ["memory", "add", "--title", "Canary 418 review task",
+      "--kind", "feedback", "--body", "Review the isolated canary consumer fixture.",
+      "--tags", "canary,review", "--operation-id", "canary-418-memory", "--receipt-json"]);
+    const memoryReceipt = JSON.parse(memory.child.stdout.trim().split(/\r?\n/).at(-1));
+    if (memoryReceipt.exit_code !== 0 || !memoryReceipt.memory_id?.startsWith("memory:feedback:") ||
+        !memoryReceipt.source_path?.startsWith(".ut-tdd/memory/"))
+      throw new Error("canary-memory-registration-invalid");
+    const dispatch = runCli("review-request", ["review", "live-dispatch",
+      "--memory-id", memoryReceipt.memory_id, "--memory-path", memoryReceipt.source_path,
+      "--pr", "418", "--head", evidence.consumer_head,
+      "--revision", "canary-418-review", "--author-family", "codex"], { status: 1 });
+    if (dispatch.child.stdout.trim() !== "review live-dispatch: no_live_claude_workspace")
+      throw new Error("canary-review-dispatch-not-canonical-pending");
+    const requestDir = join(consumerRoot, ".ut-tdd", "review", "requests");
+    const requestFiles = readdirSync(requestDir).filter((name) => /^[a-f0-9]{64}\.json$/.test(name));
+    if (requestFiles.length !== 1) throw new Error("canary-review-request-not-unique");
+    const requestDigest = requestFiles[0].slice(0, -5);
+    const request = JSON.parse(readFileSync(join(requestDir, requestFiles[0]), "utf8"));
+    if (request.pr !== 418 || request.exactHead !== evidence.consumer_head ||
+        request.memoryId !== memoryReceipt.memory_id || request.authorFamily !== "codex" ||
+        !/^rv1-[a-f0-9]{64}$/.test(request.reviewRevision))
+      throw new Error("canary-review-request-identity-invalid");
+    const pending = runCli("pr-merge-gate-pending", ["pr", "merge", "--pr", "418", "--json"], { status: 1 });
+    const pendingDecision = JSON.parse(pending.child.stdout);
+    if (pendingDecision.ok !== false || pendingDecision.decision !== "deny" ||
+        pendingDecision.headSha !== evidence.consumer_head ||
+        !/pending_request_for_head|verdict_missing/.test(pendingDecision.reason))
+      throw new Error("canary-review-pending-gate-not-denied");
+    const envelope = writeReviewEnvelope(consumerRoot, requestDigest, request, memoryReceipt.source_path);
+    runCli("review-receipt", ["review", "live-consume", "--envelope", envelope, "--json"]);
+    const receiptPath = join(consumerRoot, ".ut-tdd", "review", "receipts", `${requestDigest}.json`);
+    const receipt = JSON.parse(readFileSync(receiptPath, "utf8"));
+    if (receipt.memoryId !== memoryReceipt.memory_id || receipt.pr !== 418 ||
+        receipt.head !== evidence.consumer_head || receipt.reviewRevision !== request.reviewRevision ||
+        receipt.reviewerFamily !== "claude" || receipt.kind !== "verdict" ||
+        receipt.verdict !== "PASS" || !Array.isArray(receipt.blockingFindings) ||
+        receipt.blockingFindings.length !== 0 || !existsSync(reviewProviders.claudeMarker))
+      throw new Error("canary-review-receipt-invalid");
+    const merge = runCli("pr-merge-gate-closed-stub", ["pr", "merge", "--pr", "418", "--json"]);
+    const mergeDecision = JSON.parse(merge.child.stdout);
+    if (mergeDecision.ok !== true || mergeDecision.decision !== "merge" ||
+        mergeDecision.headSha !== evidence.consumer_head || mergeDecision.verdict !== "PASS" ||
+        mergeDecision.reason !== "merge_ready")
+      throw new Error("canary-review-merge-gate-not-ready");
+    const ghCalls = readFileSync(reviewProviders.ghTrace, "utf8").trim().split(/\r?\n/).map(JSON.parse);
+    if (!ghCalls.some((call) => call.join("\0") === ["pr", "merge", "418", "--merge",
+      "--match-head-commit", evidence.consumer_head].join("\0")))
+      throw new Error("canary-closed-gh-merge-not-observed");
+    verifyRegisteredHooks(consumerRoot, env, run, transcript);
+    const leakedReferences = findForbiddenReferences(consumerRoot, forbidden);
+    if (leakedReferences.length) throw new Error(`forbidden-path-reference-observed:${leakedReferences[0]}`);
     if (existsSync(bunTrace)) throw new Error("bun-invocation-observed");
     if (existsSync(accessLog) && readFileSync(accessLog, "utf8").trim())
       throw new Error(`forbidden-path-access-observed:${readFileSync(accessLog, "utf8").trim()}`);
@@ -267,13 +364,38 @@ function verifySmoke(parsed, { now, run }) {
       smoke_transcript: transcript,
       bun_invocation_trace_count: 0,
       forbidden_path_access_count: 0,
-      status: "partial-review-smoke-pending",
+      forbidden_path_reference_count: 0,
+      closed_review_stub: true,
+      review_request_digest: requestDigest,
+      review_receipt_path: relative(consumerRoot, receiptPath),
+      status: "pack-only-smoke-complete-awaiting-independent-review",
     };
     writeFileSync(evidencePath, `${JSON.stringify(after, null, 2)}\n`);
     process.stdout.write(`${JSON.stringify({ ok: true, evidence: evidencePath, smoke_commands: transcript.length })}\n`);
   } finally {
     rmSync(auditRoot, { recursive: true, force: true });
   }
+}
+
+export function findForbiddenReferences(root, forbiddenPaths) {
+  const needles = forbiddenPaths.map((path) => path.replaceAll("\\", "/").toLowerCase());
+  const findings = [];
+  const visit = (directory) => {
+    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+      const path = join(directory, entry.name);
+      if (entry.isSymbolicLink()) throw new Error(`consumer-symlink-unverified:${path}`);
+      if (entry.isDirectory()) visit(path);
+      else if (entry.isFile()) {
+        const bytes = readFileSync(path);
+        if (bytes.includes(0)) continue;
+        const content = bytes.toString("utf8").replaceAll(/\\+/g, "/").toLowerCase();
+        for (const needle of needles)
+          if (content.includes(needle)) findings.push(`${path}:${needle}`);
+      }
+    }
+  };
+  visit(root);
+  return findings;
 }
 
 function isInside(root, path) {
@@ -286,7 +408,8 @@ export function verifyInstallEvidence(evidence, consumerRoot, removedPaths) {
   if (evidence?.schema_version !== "ut-tdd.pack-canary-acceptance/v1" ||
       evidence.phase !== "installed-awaiting-clean-restart" || evidence.setup_exit_code !== 0 ||
       evidence.tag !== CANARY_TAG || evidence.consumer_root !== consumerRoot ||
-      typeof evidence.release_directory !== "string" || !isAbsolute(evidence.release_directory))
+      typeof evidence.release_directory !== "string" || !isAbsolute(evidence.release_directory) ||
+      typeof evidence.consumer_head !== "string" || !commitPattern.test(evidence.consumer_head))
     throw new Error("install-evidence-not-verifiable");
   const removed = removedPaths.map((path) => resolve(path));
   if (!removed.includes(evidence.release_directory) || new Set(removed).size !== removed.length ||
@@ -337,6 +460,110 @@ export function createConsumerPlan(consumerRoot) {
 
 function makeAccessAuditModule(forbiddenPaths, accessLog) {
   return `import fs from "node:fs";\nimport { syncBuiltinESMExports } from "node:module";\nimport path from "node:path";\nconst blocked=${JSON.stringify(forbiddenPaths.map((item) => item.toLowerCase()))};\nconst log=${JSON.stringify(accessLog)};\nconst hit=(value)=>{if(typeof value!=="string" && !Buffer.isBuffer(value)) return false; const p=path.resolve(String(value)).toLowerCase(); return blocked.some((b)=>p===b || p.startsWith(b+path.sep));};\nconst deny=(api)=>function(value,...args){if(hit(value)){fs.appendFileSync(log,JSON.stringify({api,path:String(value)})+"\\n"); const e=new Error("forbidden removed path access"); e.code="ENOENT"; throw e;} return api.call(this,value,...args);};\nfor(const key of ["access","accessSync","existsSync","lstatSync","open","openSync","readFile","readFileSync","realpath","realpathSync","stat","statSync"]) if(typeof fs[key]==="function") fs[key]=deny(fs[key]);\nsyncBuiltinESMExports();\n`;
+}
+
+export function createClosedReviewProviders(auditRoot, head) {
+  if (!commitPattern.test(head)) throw new Error("consumer-review-head-invalid");
+  const ghBin = join(auditRoot, "review-bin");
+  mkdirSync(ghBin, { recursive: true });
+  const ghExecutable = join(ghBin, process.platform === "win32" ? "gh.exe" : "gh");
+  copyFileSync(process.execPath, ghExecutable);
+  if (process.platform !== "win32") chmodSync(ghExecutable, 0o755);
+  const ghTrace = join(auditRoot, "closed-gh-argv.jsonl");
+  const ghLoader = join(auditRoot, "closed-gh.mjs");
+  writeFileSync(ghLoader, `import fs from "node:fs";
+import path from "node:path";
+const executable=path.basename(process.execPath).toLowerCase();
+if(executable==="gh" || executable==="gh.exe"){
+  const argv=process.argv.slice(1);
+  const trace=${JSON.stringify(ghTrace)};
+  const head=${JSON.stringify(head)};
+  if(argv[0]===path.resolve(process.cwd(),"pr"))argv[0]="pr";
+  const record=(response="",code=0)=>{fs.appendFileSync(trace,JSON.stringify(argv)+"\\n");if(response)fs.writeSync(1,response);process.exit(code);};
+  const exact=(...expected)=>argv.length===expected.length && expected.every((v,i)=>argv[i]===v);
+  if(exact("pr","view","418","--json","headRefOid","--jq",".headRefOid"))record(head+"\\n");
+  if(exact("pr","view","418","--json","headRefOid,state,statusCheckRollup"))record(JSON.stringify({headRefOid:head,state:"OPEN",statusCheckRollup:[{conclusion:"SUCCESS"}]})+"\\n");
+  if(argv.length===5 && argv[0]==="pr" && argv[1]==="comment" && argv[2]==="418" && argv[3]==="--body" && new RegExp("^PR #418 exact HEAD "+head+" のcanonical review receipt。\\\\nverdict=PASS blocking=0\\\\nreviewRevision=rv1-[a-f0-9]{64}\\\\nreviewerFamily=claude\\\\nreceiptDigest=[a-f0-9]{64}$").test(argv[4]))record();
+  if(exact("pr","merge","418","--merge","--match-head-commit",head))record();
+  record(JSON.stringify({denied:true,argv})+"\\n",2);
+}
+`, "utf8");
+  const claudeHelper = join(auditRoot, "closed-claude-provider.cjs");
+  const claudeMarker = join(auditRoot, "closed-claude-invoked.log");
+  writeFileSync(claudeHelper, `const fs=require("node:fs");
+let prompt="";process.stdin.setEncoding("utf8");
+process.stdin.on("data",chunk=>{prompt+=chunk;});
+process.stdin.on("end",()=>{
+  fs.appendFileSync(process.env.CANARY_CLAUDE_MARKER,"invoked\\n");
+  const fields=["schema_version","request_digest","attempt","pr","exact_head","review_revision","reviewer_provider","reviewer_model","invocation_nonce"].map(key=>{
+    const match=prompt.match(new RegExp("^"+key+":\\\\s*(.*)$","m"));
+    if(!match || !match[1].trim())process.exit(2);
+    return key+": "+match[1].trim();
+  }).join("\\n");
+  const verdictFile=process.env.UT_TDD_REVIEW_VERDICT_FILE;
+  if(!verdictFile)process.exit(2);
+  fs.writeFileSync(verdictFile,fields+"\\nVERDICT: PASS\\n","utf8");
+  process.stdout.write("VERDICT: PASS\\n");
+});
+`, "utf8");
+  const claudeCommand = join(ghBin, process.platform === "win32" ? "claude.cmd" : "claude");
+  writeFileSync(claudeCommand, process.platform === "win32"
+    ? `@echo off\r\nif "%~1"=="--version" (echo claude 0.0.0-canary& exit /b 0)\r\nnode "${claudeHelper}"\r\nexit /b %ERRORLEVEL%\r\n`
+    : `#!/bin/sh\nif [ "$1" = "--version" ]; then echo "claude 0.0.0-canary"; exit 0; fi\nexec node "${claudeHelper}"\n`,
+  process.platform === "win32" ? "utf8" : { encoding: "utf8", mode: 0o755 });
+  return { ghBin, ghTrace, ghLoader, claudeCommand, claudeMarker };
+}
+
+function writeReviewEnvelope(consumerRoot, requestDigest, request, memoryPath) {
+  if (!/^[a-f0-9]{64}$/.test(requestDigest)) throw new Error("canary-review-digest-invalid");
+  const envelopePath = join(consumerRoot, ".ut-tdd", "review", "canary-review-envelope.json");
+  const envelope = {
+    schemaVersion: "ut-tdd.claude-inbox/v3", purpose: "review",
+    id: `${request.memoryId}:canary-review`, memoryId: request.memoryId,
+    body: "Consume the canonical canary review request.", originRuntime: "codex",
+    operationId: `canary-review-${requestDigest.slice(0, 16)}`,
+    targetWorkspaceId: "f".repeat(64), createdAt: request.requestedAt,
+    requestDigest, requestPath: `.ut-tdd/review/requests/${requestDigest}.json`,
+    memoryPath, pr: request.pr, exactHead: request.exactHead,
+    reviewRevision: request.reviewRevision, authorFamily: request.authorFamily,
+  };
+  writeFileSync(envelopePath, `${JSON.stringify(envelope, null, 2)}\n`, { flag: "wx" });
+  return envelopePath;
+}
+
+function verifyRegisteredHooks(consumerRoot, env, run, transcript) {
+  const claudeSettings = JSON.parse(readFileSync(join(consumerRoot, ".claude", "settings.json"), "utf8"));
+  const codexSettings = JSON.parse(readFileSync(join(consumerRoot, ".codex", "hooks.json"), "utf8"));
+  const claude = claudeSettings.hooks?.PreToolUse?.flatMap((item) => item.hooks ?? [])
+    .find((hook) => `${hook.command} ${(hook.args ?? []).join(" ")}`.includes("work-guard"));
+  const codex = codexSettings.hooks?.PreToolUse?.flatMap((item) => item.hooks ?? [])
+    .find((hook) => hook.command?.includes("work-guard"));
+  if (!claude || !codex) throw new Error("canary-registered-work-guard-missing");
+  const runHook = (provider, registration, payload, expected) => {
+    const options = { cwd: consumerRoot, encoding: "utf8", env: { ...env, CLAUDE_PROJECT_DIR: consumerRoot },
+      input: JSON.stringify(payload), windowsHide: true, timeout: 30_000 };
+    const child = provider === "claude"
+      ? run(registration.command, registration.args ?? [], options)
+      : process.platform === "win32"
+        ? run("pwsh", ["-NoProfile", "-Command",
+          `$global:PSNativeCommandUseErrorActionPreference = $false; ${registration.command}; exit $LASTEXITCODE`], options)
+        : run("sh", ["-c", registration.command], options);
+    transcript.push({ label: `hook-${provider}-${expected === 0 ? "allow" : "deny"}`,
+      exit_code: child.status, output: `${child.stdout ?? ""}${child.stderr ?? ""}` });
+    if (child.error || child.status !== expected ||
+        (expected === 2 && !`${child.stdout ?? ""}${child.stderr ?? ""}`.includes("[ut-tdd-work-guard] BLOCK:")))
+      throw new Error(`canary-registered-hook-failed:${provider}:${child.error?.message ?? child.status}`);
+  };
+  const normal = { session_id: "canary-normal", tool_name: "Edit",
+    tool_input: { file_path: "README.md" } };
+  const forbiddenPath = join(consumerRoot, "foreign-uncommitted.ts");
+  writeFileSync(forbiddenPath, "export const foreign = true;\n", { flag: "wx" });
+  const forbidden = { session_id: "canary-forbidden", tool_name: "Edit",
+    tool_input: { file_path: "foreign-uncommitted.ts" } };
+  for (const [provider, registration] of [["claude", claude], ["codex", codex]]) {
+    runHook(provider, registration, normal, 0);
+    runHook(provider, registration, forbidden, 2);
+  }
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === resolve(fileURLToPath(import.meta.url))) {
