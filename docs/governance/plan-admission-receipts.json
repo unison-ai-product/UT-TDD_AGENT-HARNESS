@@ -6048,6 +6048,22 @@
         "revision": 10,
         "content_digest": "sha256:64882dd8b638f55b7f13e2373fff91214f0fb37dbfc71791e054f8d8663ded9d"
       }
+    },
+    {
+      "sequence": 379,
+      "previous_record_digest": "sha256:a298e74a7c0bd2f1172a2cc0cc4f4262d65d21c1bd752ee25066bc50e5c706ac",
+      "record_digest": "sha256:9c0b70c284946189d82fa75c3805d4519f6b86472c2c96d739551f6688fb56d1",
+      "command_id": "plan-draft:issue-814:consumer-safe-upgrade-contract:1",
+      "receipt_id": "certificate:d19459038adff829fcb3c25921395d6c",
+      "receipt_digest": "sha256:3ea5c0d254a00e0be24b836ce2db7849ebf870f337eea3858af48c35e963d624",
+      "decision_digest": "sha256:f4053860fd1cab60b09540cf5f1f5e8592ad433d823a3cfc18580984ed8002f2",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-105-consumer-safe-upgrade-contract.md",
+        "plan_id": "PLAN-L6-105-consumer-safe-upgrade-contract",
+        "asset_id": "plan:d19459038adff829fcb3c25921395d6c",
+        "revision": 1,
+        "content_digest": "sha256:3f107208199bfa56f3df90f1128bd9240fad175acd12e2edd5668f61a1b7f7ba"
+      }
     }
   ]
 }
