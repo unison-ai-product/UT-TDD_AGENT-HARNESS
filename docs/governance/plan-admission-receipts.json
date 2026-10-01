@@ -6000,6 +6000,22 @@
         "revision": 23,
         "content_digest": "sha256:13f8eaaf1b65b473aa9f90eed8ef6ddf2ed649d49f1f3c8d1950e9207303dc08"
       }
+    },
+    {
+      "sequence": 376,
+      "previous_record_digest": "sha256:1cda2571be741640b41370a7840179c8d612b5e7c950aca31b27079dce8f04fc",
+      "record_digest": "sha256:c24700ad66d5b435194f1dfbfbcc7f401087a982947861e89bd91cf1997dcc09",
+      "command_id": "plan-revise:issue-676:canary3-rebind:plan:r24:e4431cc77cfe",
+      "receipt_id": "certificate:4416afdcf7beb0002ced45d0aad17055",
+      "receipt_digest": "sha256:fc231446c789ca885a5a1e989efcffd08c57e5b66b3e7fdc47c9290030cbf599",
+      "decision_digest": "sha256:4bdfd5cba10ab9b1732eed63b3a79595213d452ef99b9537f9c9b04777a22164",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-676-release-consumer-dev-start.md",
+        "plan_id": "PLAN-L7-676-release-consumer-dev-start",
+        "asset_id": "plan:aae8bf0e313f8688fbad4d4d8cf0a6a9",
+        "revision": 24,
+        "content_digest": "sha256:aad8875239a4b5ea94d844a89553421ca77be2b5fe04bf6d0d933f299fbf1734"
+      }
     }
   ]
 }
