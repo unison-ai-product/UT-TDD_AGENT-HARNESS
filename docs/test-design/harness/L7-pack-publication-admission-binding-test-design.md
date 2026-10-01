@@ -196,11 +196,31 @@ typed deny と admission ledger append 0、remote write 0、approval consume 0 �
 Slice 2 終了後も `013–035`, `037–039`, `041`, `043–047`, `049–056`, `058–070`
 は deferred のまま残し、#626 全体・#627 の完了を主張しない。
 
+## 4.3 Slice 3 の replay identity guard
+
+bounded Slice 3 は G13/G14/G15/G20 の4候補だけを実装・検証し、各々を独立した seeded-ledger
+mutation とする。各テストは先に合成正常系 record を admission ledger へ追加し、続いて1軸だけ
+identity を変えた別入力を同じ ledger へ提示する。期待値は typed deny、admission record / journal
+append 0、approval consume 0、remote write 0 である。
+
+| test ID | candidate | 既存 admission record からの1軸差分 | 期待 reason |
+| --- | --- | --- | --- |
+| `U-PACKPUB-ADM-013` | `CANDIDATE-PACKPUB-ADM-013` | operation ID のみ再利用し、idempotency key と PR を変更 | `admission_operation_replay` |
+| `U-PACKPUB-ADM-014` | `CANDIDATE-PACKPUB-ADM-014` | idempotency key のみ再利用し、operation ID と PR を変更 | `admission_idempotency_replay` |
+| `U-PACKPUB-ADM-015` | `CANDIDATE-PACKPUB-ADM-015` | PR のみ再利用し、operation ID と idempotency key を変更 | `admission_pr_replay` |
+| `U-PACKPUB-ADM-020` | `CANDIDATE-PACKPUB-ADM-020` | 同じ PR / 新 operation / 新 key で expected main OID のみ変更し、receipt base・PR base・merge-base・staging expected main を同値に保つ | `admission_pr_expected_main_conflict` |
+
+G19 (`CANDIDATE-PACKPUB-ADM-019`) は本 Slice では昇格しない。契約上の staging digest は tree +
+manifest の複合値だが、現行 admitted record は tree digest を seal する一方、manifest identity を
+独立 field として保持せず observation bundle digest にのみ含める。そのため G19 を正確に分類する
+Red oracle を追加するには、manifest identity の record sealing 契約と実装を先に整える必要がある。
+tree のみを変える test は manifest-only drift を見落とすため、G19 の代替 Green としない。
+
 ## 5. 実装 PR への昇格規則
 
 実装 PR は Slice 単位で bounded candidate を各 1 件以上の独立 test へ昇格し、実装時に正規の
 test ID (`U-PACKPUB-ADM-*`) を割り当てる。Slice 1 (#664) は §4.1 の6件、
-Slice 2 は §4.2 の11件だけを対象とし、残りの candidate は後続 Slice へ deferred とする。
+Slice 2 は §4.2 の11件、Slice 3 は §4.3 の4件だけを対象とし、残りの candidate は後続 Slice へ deferred とする。
 全 Slice の昇格が完了した時点で、
 PLAN-L7-626 §6 の 70 candidate 全件が成立する。
 
