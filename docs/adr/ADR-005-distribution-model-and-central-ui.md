@@ -19,6 +19,7 @@
 
 - ハーネス engine + ルール = **GitHub repo** (本 repo)。各 project は **git dependency** で消費 (`bun add github:<org>/ut-tdd-agent-harness#<tag>` 等)、`devDependencies` に **tag pin してコミット** = チーム共有 + 再現性。
 - **更新享受** = tag を bump (`bun update`)。社内安全側は **tag pin + 定期 bump** を既定とし、即時全社反映が要る場合のみ branch track を例外採用。
+> **決定の更新 (2026-09-29)**: 上記 `bun add` / `bun update` の記述は現行運用では無効 (Bun は永久禁止 #134、#487 で撤去)。実際の配布は clean Pack repo `unison-ai-product/UT-TDD_AGENT-HARNESS-Pack` への `ut-tdd distribution sync-pack` (実装: `src/setup/distribution.ts`、正本: `CLAUDE.md` §Distribution Repository)。tag pin + 定期 bump の方針自体は維持する。Phase B の `bun:sqlite` / Bun HTTP server 記述も同様に Node (`node:sqlite`) へ読み替える。
 - **public npm publish しない** (社内コード)。internal GitHub から直接 pull。
 - **engine は tool 非依存 package** (Claude plugin に閉じ込めない)。CLI / CI (Layer B-remote) / Codex / 将来ツールが同一 engine を呼ぶ (ルール同一性 §2.1.0)。
 - `ut-tdd setup` が各 project に adapter (`CLAUDE.md` / `.claude/` / `AGENTS.md`) を投影。単一真実 = package 内、project は投影を受ける。

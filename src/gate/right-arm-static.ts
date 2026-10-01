@@ -1,6 +1,6 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
-import { extractAcIds, extractL3FrIds } from "../lint/g3-trace.ts";
+import { extractAcIds, extractAtIds, extractL3FrIds, extractL3NfrIds } from "../lint/g3-trace.ts";
 import {
   parseG8IntegrationEvidenceManifest,
   validateG8IntegrationEvidenceManifest,
@@ -34,7 +34,8 @@ interface CheckManifestInput {
   evidenceDirectory: string;
   obligation: CompiledVerificationObligation;
   caseIds: ReadonlySet<string>;
-  deferCaseIdField: "it_id" | "st_id" | "uxv_id" | "at_id";
+  g11RequirementIds?: ReadonlySet<string>;
+  deferCaseIdField: "it_id" | "st_id" | "uxv_id" | "uat_id" | "at_id" | "smoke_id" | "ot_id";
   violations: string[];
 }
 
@@ -91,6 +92,18 @@ const REQUIRED_G10_HEADINGS = [
   "#### 第8章 CI連携・合否",
 ] as const;
 const REQUIRED_G10_CASE_COLUMNS = ["No", "シナリオ", "対象画面", "期待"] as const;
+const REQUIRED_G11_HEADINGS = [
+  "# DOC-L11-TRACE-UAT: 検証設計書 (+ traceability.yaml のトレース俯瞰)",
+  "#### 第1章 検証方針・方式",
+  "#### 第2章 検証マトリクス",
+  "#### 第3章 テスト設計技法カタログ",
+  "#### 第4章 テストデータ設計",
+  "#### 第5章 カバレッジ基準",
+  "#### 第6章 リスクベーステスト",
+  "#### 第7章 エントリ/エグジット基準",
+  "#### 第8章 契約テスト(CDC)",
+] as const;
+const REQUIRED_G11_CASE_COLUMNS = ["要件", "検証方式", "テストレベル", "技法", "ケースID"] as const;
 const REQUIRED_G12_HEADINGS = [
   "# DOC-L12-ACCEPTANCE: 受入テスト設計書",
   "#### 第1章 テスト方針",
@@ -103,6 +116,78 @@ const REQUIRED_G12_HEADINGS = [
   "#### 第4章 不具合・判定基準",
   "##### 4-1 重要度定義",
   "##### 4-2 不具合記録",
+] as const;
+const REQUIRED_G13_CASE_COLUMNS = ["ケースID", "観測内容", "合否基準", "トレース元"] as const;
+const G13_CASE_HEADING = "### harness 追補: G13 検証ケース";
+export const G14_STATIC_SLOT = {
+  docTypeId: "DOC-L14-OPERATIONAL-TEST",
+  harnessPath: "docs/test-design/harness/L14-operational-test-design.md",
+} as const;
+const G14_CASE_HEADING = "### harness 追補: G14 検証ケース";
+const REQUIRED_G14_CASE_COLUMNS = [
+  "ケースID",
+  "family",
+  "検証内容",
+  "合否基準",
+  "トレース元",
+] as const;
+const REQUIRED_G13_HEADINGS = [
+  "# DOC-L13-PRODUCTION-OBSERVATION: 運用設計書 (監視・後検証節) / ログ・トレース設計書",
+  "#### 第1章 運用方針",
+  "#### 第2章 監視設計",
+  "##### 2-1 監視指標(SLI)とアラート",
+  "#### 第3章 SLO/SLA・エラーバジェット",
+  "##### 3-1 SLI/SLO",
+  "##### 3-2 エラーバジェット",
+  "##### 3-3 エラーバジェットポリシー",
+  "##### 3-4 SLA(対顧客)",
+  "#### 第4章 バックアップ/リストア",
+  "##### 4-1 方式",
+  "##### 4-2 リストア運用",
+  "#### 第5章 障害対応・ランブック",
+  "##### 5-1 重大度とエスカレーション",
+  "##### 5-2 ランブック(抜粋)",
+  "#### 第6章 リリース/ロールバック",
+  "##### 6-1 リリース方式",
+  "##### 6-2 ロールバック",
+  "#### 第7章 キャパシティ/コスト",
+  "#### 第1章 ログ方針",
+  "#### 第2章 ログ種別一覧",
+  "#### 第3章 共通ログ項目",
+  "#### 第4章 ログレベル方針",
+  "#### 第5章 構造化フォーマット",
+  "#### 第6章 分散トレース設計",
+  "#### 第7章 保管・マスキング",
+  "#### 第8章 監視連携",
+] as const;
+const REQUIRED_G14_HEADINGS = [
+  "# DOC-L14-OPERATIONAL-TEST: 運用設計書 / 保守・メンテナンス設計書",
+  "#### 第1章 運用方針",
+  "#### 第2章 監視設計",
+  "##### 2-1 監視指標(SLI)とアラート",
+  "#### 第3章 SLO/SLA・エラーバジェット",
+  "##### 3-1 SLI/SLO",
+  "##### 3-2 エラーバジェット",
+  "##### 3-3 エラーバジェットポリシー",
+  "##### 3-4 SLA(対顧客)",
+  "#### 第4章 バックアップ/リストア",
+  "##### 4-1 方式",
+  "##### 4-2 リストア運用",
+  "#### 第5章 障害対応・ランブック",
+  "##### 5-1 重大度とエスカレーション",
+  "##### 5-2 ランブック(抜粋)",
+  "#### 第6章 リリース/ロールバック",
+  "##### 6-1 リリース方式",
+  "##### 6-2 ロールバック",
+  "#### 第7章 キャパシティ/コスト",
+  "#### 第1章 保守方針・区分",
+  "#### 第2章 パッチ・脆弱性/依存管理",
+  "#### 第3章 定期メンテナンス",
+  "#### 第4章 データライフサイクル",
+  "#### 第5章 バージョン/EOL・サンセット",
+  "#### 第6章 技術的負債管理",
+  "#### 第7章 サポート・SLA保守",
+  "#### 第8章 運用引継ぎ(ハンドオーバー)",
 ] as const;
 const REQUIRED_L2_SCREEN_COLUMNS = ["画面ID", "画面名称", "概要", "関連機能", "ロール"] as const;
 function isRecord(value: unknown): value is JsonRecord {
@@ -220,6 +305,45 @@ function parseG10CaseRows(content: string, violations: string[]): CaseRow[] {
   return rows;
 }
 
+function parseG11CaseRows(content: string, violations: string[]): CaseRow[] {
+  for (const heading of REQUIRED_G11_HEADINGS) {
+    if (!content.includes(heading)) violations.push(`missing section ${heading}`);
+  }
+  const lines = content.split(/\r?\n/);
+  const chapterIndex = lines.findIndex((line) => line.trim() === "#### 第2章 検証マトリクス");
+  const nextChapterIndex =
+    chapterIndex < 0
+      ? -1
+      : lines.findIndex(
+          (line, index) => index > chapterIndex && /^#### 第[1-8]章 /.test(line.trim()),
+        );
+  const chapterLines =
+    chapterIndex < 0
+      ? []
+      : lines.slice(chapterIndex + 1, nextChapterIndex < 0 ? undefined : nextChapterIndex);
+  const headerIndex = chapterLines.findIndex((line) => {
+    const cells = tableCells(line);
+    return REQUIRED_G11_CASE_COLUMNS.every((column) => cells.includes(column));
+  });
+  if (headerIndex < 0) {
+    violations.push("missing section 第2章 検証マトリクス: required case table columns");
+    return [];
+  }
+  const header = tableCells(chapterLines[headerIndex] ?? "");
+  const idIndex = header.indexOf("ケースID");
+  const citationIndex = header.indexOf("要件");
+  const rows: CaseRow[] = [];
+  for (const line of chapterLines.slice(headerIndex + 2)) {
+    if (!line.trimStart().startsWith("|")) break;
+    const cells = tableCells(line);
+    const id = cells[idIndex] ?? "";
+    if (!id || id.startsWith("<")) continue;
+    rows.push({ id, citations: cells[citationIndex] ?? "" });
+  }
+  if (rows.length === 0) violations.push("missing section 第2章 検証マトリクス: case rows");
+  return rows;
+}
+
 function parseG12CaseRows(content: string, violations: string[]): CaseRow[] {
   for (const heading of REQUIRED_G12_HEADINGS) {
     if (!content.includes(heading)) violations.push(`missing section ${heading}`);
@@ -259,6 +383,87 @@ function parseG12CaseRows(content: string, violations: string[]): CaseRow[] {
   return rows;
 }
 
+function parseG13CaseRows(content: string, violations: string[]): CaseRow[] {
+  for (const heading of REQUIRED_G13_HEADINGS) {
+    if (!content.includes(heading)) violations.push(`missing section ${heading}`);
+  }
+  const lines = content.split(/\r?\n/);
+  const headingIndex = lines.findIndex((line) => line.trim() === G13_CASE_HEADING);
+  if (headingIndex < 0) {
+    violations.push(`missing section ${G13_CASE_HEADING}`);
+    return [];
+  }
+  const nextHeadingIndex = lines.findIndex(
+    (line, index) => index > headingIndex && /^#{1,6} /.test(line.trim()),
+  );
+  const section = lines.slice(
+    headingIndex + 1,
+    nextHeadingIndex < 0 ? undefined : nextHeadingIndex,
+  );
+  const headerIndex = section.findIndex((line) => {
+    const cells = tableCells(line);
+    return REQUIRED_G13_CASE_COLUMNS.every((column) => cells.includes(column));
+  });
+  if (headerIndex < 0) {
+    violations.push(`missing section ${G13_CASE_HEADING}: required case table columns`);
+    return [];
+  }
+  const header = tableCells(section[headerIndex] ?? "");
+  const idIndex = header.indexOf("ケースID");
+  const citationIndex = header.indexOf("トレース元");
+  const rows: CaseRow[] = [];
+  for (const line of section.slice(headerIndex + 2)) {
+    if (!line.trimStart().startsWith("|")) break;
+    const cells = tableCells(line);
+    const id = cells[idIndex] ?? "";
+    if (!id || id.startsWith("<")) continue;
+    rows.push({ id, citations: cells[citationIndex] ?? "" });
+  }
+  if (rows.length === 0) violations.push(`missing section ${G13_CASE_HEADING}: case rows`);
+  return rows;
+}
+
+function parseG14CaseRows(content: string, violations: string[]): CaseRow[] {
+  for (const heading of REQUIRED_G14_HEADINGS) {
+    if (!content.includes(heading)) violations.push(`missing section ${heading}`);
+  }
+  const lines = content.split(/\r?\n/);
+  const headingIndex = lines.findIndex((line) => line.trim() === G14_CASE_HEADING);
+  if (headingIndex < 0) {
+    violations.push(`missing section ${G14_CASE_HEADING}`);
+    return [];
+  }
+  const nextHeadingIndex = lines.findIndex(
+    (line, index) => index > headingIndex && /^#{1,6} /.test(line.trim()),
+  );
+  const section = lines.slice(
+    headingIndex + 1,
+    nextHeadingIndex < 0 ? undefined : nextHeadingIndex,
+  );
+  const headerIndex = section.findIndex((line) => {
+    const cells = tableCells(line);
+    return REQUIRED_G14_CASE_COLUMNS.every((column) => cells.includes(column));
+  });
+  if (headerIndex < 0) {
+    violations.push(`missing section ${G14_CASE_HEADING}: required case table columns`);
+    return [];
+  }
+  const header = tableCells(section[headerIndex] ?? "");
+  const idIndex = header.indexOf("ケースID");
+  const familyIndex = header.indexOf("family");
+  const citationIndex = header.indexOf("トレース元");
+  const rows: CaseRow[] = [];
+  for (const line of section.slice(headerIndex + 2)) {
+    if (!line.trimStart().startsWith("|")) break;
+    const cells = tableCells(line);
+    const id = cells[idIndex] ?? "";
+    if (!id || id.startsWith("<")) continue;
+    rows.push({ id, citations: cells[citationIndex] ?? "", family: cells[familyIndex] ?? "" });
+  }
+  if (rows.length === 0) violations.push(`missing section ${G14_CASE_HEADING}: case rows`);
+  return rows;
+}
+
 function g8SlotContent(
   repoRoot: string,
   obligation: CompiledVerificationObligation,
@@ -289,6 +494,16 @@ function g10SlotContent(
   return fmValue(content, "doc_type_id") === "DOC-L10-UX-VALIDATION" ? content : null;
 }
 
+function g11SlotContent(
+  repoRoot: string,
+  obligation: CompiledVerificationObligation,
+): string | null {
+  const slot = resolveAuthoringSourceAbsolutePath(repoRoot, obligation.governanceArtifact);
+  if (!existsSync(slot)) return null;
+  const content = readFileSync(slot, "utf8");
+  return fmValue(content, "doc_type_id") === "DOC-L11-TRACE-UAT" ? content : null;
+}
+
 function g12SlotContent(
   repoRoot: string,
   obligation: CompiledVerificationObligation,
@@ -297,6 +512,54 @@ function g12SlotContent(
   if (!existsSync(slot)) return null;
   const content = readFileSync(slot, "utf8");
   return fmValue(content, "doc_type_id") === "DOC-L12-ACCEPTANCE" ? content : null;
+}
+
+function g13SlotContent(
+  repoRoot: string,
+  obligation: CompiledVerificationObligation,
+): string | null {
+  const slot = resolveAuthoringSourceAbsolutePath(repoRoot, obligation.governanceArtifact);
+  if (!existsSync(slot)) return null;
+  const content = readFileSync(slot, "utf8");
+  return fmValue(content, "doc_type_id") === "DOC-L13-PRODUCTION-OBSERVATION" ? content : null;
+}
+
+function g14SlotContent(repoRoot: string): string | null {
+  const slot = resolveAuthoringSourceAbsolutePath(repoRoot, G14_STATIC_SLOT.harnessPath);
+  if (!existsSync(slot)) return null;
+  const content = readFileSync(slot, "utf8");
+  return fmValue(content, "doc_type_id") === G14_STATIC_SLOT.docTypeId ? content : null;
+}
+
+function g11L3Texts(
+  repoRoot: string,
+  docs = loadPairDocs(repoRoot),
+): {
+  functional: string;
+  businessDetail: string;
+  nfrGrade: string;
+} {
+  const texts = { functional: "", businessDetail: "", nfrGrade: "" };
+  for (const doc of docs) {
+    if (!doc.content || designLayerFromPath(doc.path) !== "L3") continue;
+    if (basename(doc.path) === "functional-requirements.md") texts.functional = doc.content;
+    else if (basename(doc.path) === "business-detail.md") texts.businessDetail = doc.content;
+    else if (basename(doc.path) === "nfr-grade.md") texts.nfrGrade = doc.content;
+  }
+  return texts;
+}
+
+function g11RequirementIds(texts: ReturnType<typeof g11L3Texts>): Set<string> {
+  const { functional, nfrGrade } = texts;
+  return new Set([...extractL3FrIds(functional), ...extractL3NfrIds(nfrGrade)]);
+}
+
+function g11CitationIds(texts: ReturnType<typeof g11L3Texts>): Set<string> {
+  const { functional, businessDetail, nfrGrade } = texts;
+  return new Set([
+    ...extractL3FrIds(functional),
+    ...extractAcIds(functional, businessDetail, nfrGrade),
+  ]);
 }
 
 function pairLayerIds(
@@ -401,6 +664,70 @@ function checkCaseTraces(
     }
     for (const id of citedIds) {
       if (!pairIds.has(id)) violations.push(`trace target missing ${id}`);
+    }
+  }
+}
+
+function checkG13CaseTraces(
+  rows: readonly CaseRow[],
+  atIds: ReadonlySet<string>,
+  violations: string[],
+): void {
+  for (const row of rows) {
+    const citedIds = [...row.citations.matchAll(/\b[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)+\b/g)].map(
+      (match) => match[0],
+    );
+    const untraced = !citedIds.some((id) => atIds.has(id));
+    for (const id of citedIds) {
+      if (atIds.has(id)) continue;
+      violations.push(`trace target missing ${id}`);
+    }
+    if (untraced) violations.push(`untraced case ${row.id}`);
+  }
+}
+
+function l0PlanIds(repoRoot: string): Set<string> {
+  const planDirectory = join(repoRoot, "docs", "plans");
+  if (!existsSync(planDirectory)) return new Set();
+  return new Set(
+    readdirSync(planDirectory, { withFileTypes: true })
+      .filter((entry) => entry.isFile() && /^PLAN-L0-.*\.md$/.test(entry.name))
+      .flatMap((entry) => {
+        const planId = fmValue(readFileSync(join(planDirectory, entry.name), "utf8"), "plan_id");
+        return planId ? [planId] : [];
+      }),
+  );
+}
+
+function checkG14CaseTraces({
+  rows,
+  pairIds,
+  definedIds,
+  l0Ids,
+  violations,
+}: {
+  rows: readonly CaseRow[];
+  pairIds: ReadonlySet<string>;
+  definedIds: ReadonlySet<string>;
+  l0Ids: ReadonlySet<string>;
+  violations: string[];
+}): void {
+  for (const row of rows) {
+    const citedIds = [
+      ...row.citations.matchAll(
+        /\b(?:PLAN-L0-[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*|[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)+)\b/g,
+      ),
+    ].map((match) => match[0]);
+    if (!citedIds.some((id) => pairIds.has(id) || l0Ids.has(id))) {
+      violations.push(`untraced case ${row.id}`);
+    }
+    for (const id of citedIds) {
+      if (!definedIds.has(id) && !l0Ids.has(id)) violations.push(`trace target missing ${id}`);
+    }
+    if (row.family === "VALUE" && !citedIds.some((id) => l0Ids.has(id))) {
+      violations.push(
+        `value case ${row.id} does not cite L0 (file the L0 charter as docs/plans/PLAN-L0-*.md and cite its plan_id)`,
+      );
     }
   }
 }
@@ -511,6 +838,26 @@ function parseG10EvidenceManifest(path: string, raw: unknown) {
   });
 }
 
+function parseG11EvidenceManifest(path: string, raw: unknown) {
+  if (!isRecord(raw)) return parseG8IntegrationEvidenceManifest(path, raw);
+  const commands = Array.isArray(raw.commands)
+    ? raw.commands.map((command) =>
+        isRecord(command) ? { ...command, it_ids: command.uat_ids } : command,
+      )
+    : raw.commands;
+  const coverage = Array.isArray(raw.coverage)
+    ? raw.coverage.map((entry) => (isRecord(entry) ? { ...entry, it_id: entry.uat_id } : entry))
+    : raw.coverage;
+  return parseG8IntegrationEvidenceManifest(path, {
+    ...raw,
+    selected_it_ids: raw.selected_uat_ids,
+    mandatory_it_ids: raw.mandatory_uat_ids,
+    deferred_it_ids: raw.deferred_uat_ids,
+    commands,
+    coverage,
+  });
+}
+
 function parseG12EvidenceManifest(path: string, raw: unknown) {
   if (!isRecord(raw)) return parseG8IntegrationEvidenceManifest(path, raw);
   const commands = Array.isArray(raw.commands)
@@ -526,6 +873,46 @@ function parseG12EvidenceManifest(path: string, raw: unknown) {
     selected_it_ids: raw.selected_at_ids,
     mandatory_it_ids: raw.mandatory_at_ids,
     deferred_it_ids: raw.deferred_at_ids,
+    commands,
+    coverage,
+  });
+}
+
+function parseG13EvidenceManifest(path: string, raw: unknown) {
+  if (!isRecord(raw)) return parseG8IntegrationEvidenceManifest(path, raw);
+  const commands = Array.isArray(raw.commands)
+    ? raw.commands.map((command) =>
+        isRecord(command) ? { ...command, it_ids: command.smoke_ids } : command,
+      )
+    : raw.commands;
+  const coverage = Array.isArray(raw.coverage)
+    ? raw.coverage.map((entry) => (isRecord(entry) ? { ...entry, it_id: entry.smoke_id } : entry))
+    : raw.coverage;
+  return parseG8IntegrationEvidenceManifest(path, {
+    ...raw,
+    selected_it_ids: raw.selected_smoke_ids,
+    mandatory_it_ids: raw.mandatory_smoke_ids,
+    deferred_it_ids: raw.deferred_smoke_ids,
+    commands,
+    coverage,
+  });
+}
+
+function parseG14EvidenceManifest(path: string, raw: unknown) {
+  if (!isRecord(raw)) return parseG8IntegrationEvidenceManifest(path, raw);
+  const commands = Array.isArray(raw.commands)
+    ? raw.commands.map((command) =>
+        isRecord(command) ? { ...command, it_ids: command.ot_ids } : command,
+      )
+    : raw.commands;
+  const coverage = Array.isArray(raw.coverage)
+    ? raw.coverage.map((entry) => (isRecord(entry) ? { ...entry, it_id: entry.ot_id } : entry))
+    : raw.coverage;
+  return parseG8IntegrationEvidenceManifest(path, {
+    ...raw,
+    selected_it_ids: raw.selected_ot_ids,
+    mandatory_it_ids: raw.mandatory_ot_ids,
+    deferred_it_ids: raw.deferred_ot_ids,
     commands,
     coverage,
   });
@@ -556,6 +943,98 @@ function readArtifactObject({
   }
   violations.push(`${manifestPath}: invalid artifact ${key}: JSON object required`);
   return null;
+}
+
+function validateG11Artifacts({
+  repoRoot,
+  manifestPath,
+  artifacts,
+  requirementIds,
+  violations,
+}: {
+  repoRoot: string;
+  manifestPath: string;
+  artifacts: JsonRecord;
+  requirementIds: ReadonlySet<string>;
+  violations: string[];
+}): void {
+  const traceReview = readArtifactObject({
+    repoRoot,
+    manifestPath,
+    key: "end_to_end_trace_review",
+    artifacts,
+    violations,
+  });
+  if (requirementIds.size === 0) {
+    violations.push("no requirement ids defined in DOC-L3-FUNCTIONAL");
+  }
+  if (traceReview) {
+    const entries = Array.isArray(traceReview.requirements) ? traceReview.requirements : [];
+    const seen = new Set<string>();
+    for (const entry of entries) {
+      if (!isRecord(entry)) {
+        violations.push(`${manifestPath}: invalid trace review requirement entry`);
+        continue;
+      }
+      const requirementId = entry.requirement_id;
+      if (typeof requirementId !== "string" || !requirementId) {
+        violations.push(`${manifestPath}: invalid trace review requirement_id`);
+        continue;
+      }
+      const keys = Object.keys(entry);
+      if (
+        keys.length !== 2 ||
+        !Object.hasOwn(entry, "requirement_id") ||
+        !Object.hasOwn(entry, "status")
+      ) {
+        violations.push(`${manifestPath}: invalid trace review requirement ${requirementId}`);
+      }
+      if (!requirementIds.has(requirementId)) {
+        violations.push(
+          `${manifestPath}: trace review references undefined requirement ${requirementId}`,
+        );
+      }
+      if (seen.has(requirementId)) {
+        violations.push(`${manifestPath}: duplicate trace requirement ${requirementId}`);
+      }
+      seen.add(requirementId);
+      const status = entry.status;
+      if (status !== "traced" && status !== "blocked") {
+        violations.push(
+          `${manifestPath}: invalid trace status ${requirementId}: ${String(status)}`,
+        );
+      } else if (status === "blocked") {
+        violations.push(`${manifestPath}: blocked requirement ${requirementId}`);
+      }
+    }
+    for (const requirementId of requirementIds) {
+      if (!seen.has(requirementId)) {
+        violations.push(`${manifestPath}: untraced requirement ${requirementId}`);
+      }
+    }
+  }
+
+  const decision = readArtifactObject({
+    repoRoot,
+    manifestPath,
+    key: "po_uat_decision",
+    artifacts,
+    violations,
+  });
+  if (!decision) return;
+  if (decision.decision !== "accept" && decision.decision !== "reject") {
+    violations.push(
+      `${manifestPath}: invalid po_uat_decision.decision ${String(decision.decision)}`,
+    );
+  } else if (decision.decision === "reject") {
+    violations.push(`${manifestPath}: po_uat_decision.decision is reject`);
+  }
+  if (typeof decision.decided_by_role !== "string" || !decision.decided_by_role.trim()) {
+    violations.push(`${manifestPath}: po_uat_decision.decided_by_role is required`);
+  }
+  if (typeof decision.revision !== "string" || !/^[0-9a-f]{40}$/i.test(decision.revision)) {
+    violations.push(`${manifestPath}: invalid po_uat_decision.revision`);
+  }
 }
 
 interface CheckG12ArtifactsInput {
@@ -611,12 +1090,165 @@ function checkG12Artifacts({
   }
 }
 
+function checkG13Artifacts({
+  repoRoot,
+  manifestPath,
+  artifacts,
+  violations,
+}: CheckG12ArtifactsInput): void {
+  const observation = readArtifactObject({
+    repoRoot,
+    manifestPath,
+    artifacts,
+    key: "sli_slo_observation",
+    violations,
+  });
+  if (observation) {
+    const parseTimestamp = (value: unknown): number | null => {
+      const timestamp = stringValue(value);
+      if (
+        !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?(?:Z|[+-]\d{2}:\d{2})$/.test(
+          timestamp,
+        )
+      ) {
+        return null;
+      }
+      const parsed = Date.parse(timestamp);
+      return Number.isFinite(parsed) ? parsed : null;
+    };
+    const windowStart = parseTimestamp(observation.window_start);
+    const windowEnd = parseTimestamp(observation.window_end);
+    if (windowStart === null) {
+      violations.push(`${manifestPath}: invalid sli_slo_observation.window_start`);
+    }
+    if (windowEnd === null) {
+      violations.push(`${manifestPath}: invalid sli_slo_observation.window_end`);
+    } else if (windowStart !== null && windowEnd <= windowStart) {
+      violations.push(`${manifestPath}: sli_slo_observation window is not closed`);
+    }
+    if (!Array.isArray(observation.slos) || observation.slos.length === 0) {
+      violations.push(`${manifestPath}: sli_slo_observation.slos is required`);
+    } else {
+      const seenSloIds = new Set<string>();
+      for (const [index, entry] of observation.slos.entries()) {
+        if (!isRecord(entry)) {
+          violations.push(`${manifestPath}: invalid sli_slo_observation.slo`);
+          continue;
+        }
+        const sloId = stringValue(entry.slo_id);
+        if (!sloId) {
+          violations.push(`${manifestPath}: sli_slo_observation.slos[${index}].slo_id is required`);
+        } else if (seenSloIds.has(sloId)) {
+          violations.push(`${manifestPath}: duplicate slo ${sloId}`);
+        }
+        seenSloIds.add(sloId);
+        if (
+          !(typeof entry.target === "string" && entry.target.trim()) &&
+          !(typeof entry.target === "number" && Number.isFinite(entry.target))
+        ) {
+          violations.push(
+            `${manifestPath}: sli_slo_observation.slos[${sloId || "<empty>"}].target is required`,
+          );
+        }
+        const observed = entry.observed;
+        if (
+          (typeof observed !== "string" && typeof observed !== "number") ||
+          (typeof observed === "string" && !observed.trim()) ||
+          (typeof observed === "number" && !Number.isFinite(observed))
+        ) {
+          violations.push(
+            `${manifestPath}: sli_slo_observation.slos[${sloId || "<empty>"}].observed is required`,
+          );
+        }
+      }
+    }
+  }
+
+  const rollbackDecision = readArtifactObject({
+    repoRoot,
+    manifestPath,
+    artifacts,
+    key: "rollback_decision",
+    violations,
+  });
+  if (
+    rollbackDecision &&
+    rollbackDecision.decision !== "keep" &&
+    rollbackDecision.decision !== "rollback"
+  ) {
+    violations.push(
+      `${manifestPath}: invalid rollback_decision.decision ${String(rollbackDecision.decision)}`,
+    );
+  }
+}
+
+function checkG14Artifacts({
+  repoRoot,
+  manifestPath,
+  artifacts,
+  violations,
+}: CheckG12ArtifactsInput): void {
+  const feedback = readArtifactObject({
+    repoRoot,
+    manifestPath,
+    artifacts,
+    key: "improvement_feedback",
+    violations,
+  });
+  if (!feedback) return;
+  const noImprovement = feedback.no_improvement;
+  if (noImprovement !== undefined && typeof noImprovement !== "boolean") {
+    violations.push(`${manifestPath}: improvement_feedback.no_improvement must be boolean`);
+  }
+  if (!Array.isArray(feedback.items)) {
+    violations.push(`${manifestPath}: improvement_feedback.items is required`);
+    return;
+  }
+  if (feedback.items.length === 0) {
+    if (noImprovement !== true)
+      violations.push(`${manifestPath}: improvement_feedback.items is required`);
+    return;
+  }
+  if (noImprovement === true) {
+    violations.push(`${manifestPath}: improvement_feedback declares no_improvement with items`);
+  }
+  for (const [index, item] of feedback.items.entries()) {
+    if (!isRecord(item)) {
+      violations.push(`${manifestPath}: improvement_feedback.items[${index}].summary is required`);
+      continue;
+    }
+    if (!stringValue(item.summary)) {
+      violations.push(`${manifestPath}: improvement_feedback.items[${index}].summary is required`);
+    }
+    const routedTo = stringValue(item.routed_to);
+    if (!routedTo) {
+      violations.push(
+        `${manifestPath}: improvement_feedback.items[${index}].routed_to is required`,
+      );
+      continue;
+    }
+    if (/^https:\/\/github\.com\/[^/]+\/[^/]+\/issues\/[1-9][0-9]*$/.test(routedTo)) continue;
+    if (!/^PLAN-[A-Z0-9]+(?:-[A-Za-z0-9]+)*$/.test(routedTo)) {
+      violations.push(
+        `${manifestPath}: improvement_feedback.items[${index}] routed_to ${routedTo} is not a PLAN or Issue URL`,
+      );
+      continue;
+    }
+    if (!existsSync(join(repoRoot, "docs", "plans", `${routedTo}.md`))) {
+      violations.push(
+        `${manifestPath}: improvement_feedback.items[${index}] routed_to ${routedTo} does not exist`,
+      );
+    }
+  }
+}
+
 function checkManifest({
   repoRoot,
   absolutePath,
   evidenceDirectory,
   obligation,
   caseIds,
+  g11RequirementIds,
   deferCaseIdField,
   violations,
 }: CheckManifestInput): { mandatoryIds: Set<string>; deferredIds: Set<string> } {
@@ -633,13 +1265,19 @@ function checkManifest({
     return { mandatoryIds: new Set(), deferredIds: new Set() };
   }
   const evidence =
-    obligation.gate === "G12"
-      ? parseG12EvidenceManifest(path, parsed)
-      : obligation.gate === "G10"
-        ? parseG10EvidenceManifest(path, parsed)
-        : obligation.gate === "G9"
-          ? parseG9EvidenceManifest(path, parsed)
-          : parseG8IntegrationEvidenceManifest(path, parsed);
+    obligation.gate === "G11"
+      ? parseG11EvidenceManifest(path, parsed)
+      : obligation.gate === "G12"
+        ? parseG12EvidenceManifest(path, parsed)
+        : obligation.gate === "G13"
+          ? parseG13EvidenceManifest(path, parsed)
+          : obligation.gate === "G14"
+            ? parseG14EvidenceManifest(path, parsed)
+            : obligation.gate === "G10"
+              ? parseG10EvidenceManifest(path, parsed)
+              : obligation.gate === "G9"
+                ? parseG9EvidenceManifest(path, parsed)
+                : parseG8IntegrationEvidenceManifest(path, parsed);
   violations.push(
     ...validateG8IntegrationEvidenceManifest(evidence, repoRoot, {
       gate: obligation.gate,
@@ -678,8 +1316,20 @@ function checkManifest({
       violations.push(`${path}: missing artifact ${key}`);
     }
   }
-  if (obligation.gate === "G12") {
+  if (obligation.gate === "G11") {
+    validateG11Artifacts({
+      repoRoot,
+      manifestPath: path,
+      artifacts,
+      requirementIds: g11RequirementIds ?? new Set(),
+      violations,
+    });
+  } else if (obligation.gate === "G12") {
     checkG12Artifacts({ repoRoot, manifestPath: path, artifacts, violations });
+  } else if (obligation.gate === "G13") {
+    checkG13Artifacts({ repoRoot, manifestPath: path, artifacts, violations });
+  } else if (obligation.gate === "G14") {
+    checkG14Artifacts({ repoRoot, manifestPath: path, artifacts, violations });
   }
   return { mandatoryIds, deferredIds };
 }
@@ -692,7 +1342,15 @@ export function evaluateRightArmStaticGate(
   messages: string[];
 } {
   const key = gate.trim().toUpperCase();
-  if (key !== "G8" && key !== "G9" && key !== "G10" && key !== "G12") {
+  if (
+    key !== "G8" &&
+    key !== "G9" &&
+    key !== "G10" &&
+    key !== "G11" &&
+    key !== "G12" &&
+    key !== "G13" &&
+    key !== "G14"
+  ) {
     return {
       passed: false,
       messages: [`right-arm-static - violation: no evaluator for ${key}`],
@@ -710,32 +1368,51 @@ export function evaluateRightArmStaticGate(
     };
   }
   const violations: string[] = [];
+  let g11Ids: Set<string> | undefined;
   const slot =
-    key === "G12"
-      ? g12SlotContent(repoRoot, obligation)
-      : key === "G10"
-        ? g10SlotContent(repoRoot, obligation)
-        : key === "G9"
-          ? g9SlotContent(repoRoot, obligation)
-          : g8SlotContent(repoRoot, obligation);
+    key === "G11"
+      ? g11SlotContent(repoRoot, obligation)
+      : key === "G12"
+        ? g12SlotContent(repoRoot, obligation)
+        : key === "G13"
+          ? g13SlotContent(repoRoot, obligation)
+          : key === "G14"
+            ? g14SlotContent(repoRoot)
+            : key === "G10"
+              ? g10SlotContent(repoRoot, obligation)
+              : key === "G9"
+                ? g9SlotContent(repoRoot, obligation)
+                : g8SlotContent(repoRoot, obligation);
   const slotDocTypeId =
-    key === "G12"
-      ? "DOC-L12-ACCEPTANCE"
-      : key === "G10"
-        ? "DOC-L10-UX-VALIDATION"
-        : key === "G9"
-          ? "DOC-L9-SYSTEM-TEST-DESIGN"
-          : "DOC-L8-INTEGRATION-TEST-DESIGN";
+    key === "G11"
+      ? "DOC-L11-TRACE-UAT"
+      : key === "G12"
+        ? "DOC-L12-ACCEPTANCE"
+        : key === "G13"
+          ? "DOC-L13-PRODUCTION-OBSERVATION"
+          : key === "G14"
+            ? G14_STATIC_SLOT.docTypeId
+            : key === "G10"
+              ? "DOC-L10-UX-VALIDATION"
+              : key === "G9"
+                ? "DOC-L9-SYSTEM-TEST-DESIGN"
+                : "DOC-L8-INTEGRATION-TEST-DESIGN";
   if (!slot) violations.push(`missing slot ${slotDocTypeId}`);
   const content = slot ?? "";
   const rows =
-    key === "G12"
-      ? parseG12CaseRows(content, violations)
-      : key === "G10"
-        ? parseG10CaseRows(content, violations)
-        : key === "G9"
-          ? parseG9CaseRows(content, violations)
-          : parseG8CaseRows(content, violations);
+    key === "G11"
+      ? parseG11CaseRows(content, violations)
+      : key === "G12"
+        ? parseG12CaseRows(content, violations)
+        : key === "G13"
+          ? parseG13CaseRows(content, violations)
+          : key === "G14"
+            ? parseG14CaseRows(content, violations)
+            : key === "G10"
+              ? parseG10CaseRows(content, violations)
+              : key === "G9"
+                ? parseG9CaseRows(content, violations)
+                : parseG8CaseRows(content, violations);
   const caseIds = new Set(rows.map((row) => row.id));
   checkCaseIds({
     rows,
@@ -743,11 +1420,35 @@ export function evaluateRightArmStaticGate(
     content,
     violations,
   });
-  const pairDocs = key === "G12" ? loadPairDocs(repoRoot) : undefined;
-  const pairIds = pairLayerIds(repoRoot, obligation.pairLayers, pairDocs);
-  if (key === "G12") {
+  const pairDocs = key === "G11" || key === "G12" ? loadPairDocs(repoRoot) : undefined;
+  const pairIds =
+    key === "G13" ? new Set<string>() : pairLayerIds(repoRoot, obligation.pairLayers, pairDocs);
+  if (key === "G11") {
+    const texts = g11L3Texts(repoRoot, pairDocs);
+    g11Ids = g11RequirementIds(texts);
+    const citationIds = g11CitationIds(texts);
+    for (const id of citationIds) pairIds.add(id);
+    const definedIds = allDesignIds(repoRoot);
+    for (const id of citationIds) definedIds.add(id);
+    checkG9CaseTraces({ rows, pairIds, definedIds, violations });
+  } else if (key === "G12") {
     for (const id of g12L3HeadingIds(pairDocs ?? [])) pairIds.add(id);
     checkCaseTraces(rows, pairIds, violations);
+  } else if (key === "G13") {
+    const l12Path = resolveAuthoringSourceAbsolutePath(
+      repoRoot,
+      "docs/test-design/harness/L12-acceptance-test-design.md",
+    );
+    const atIds = existsSync(l12Path)
+      ? extractAtIds(readFileSync(l12Path, "utf8"))
+      : new Set<string>();
+    checkG13CaseTraces(rows, atIds, violations);
+  } else if (key === "G14") {
+    const l0Ids = l0PlanIds(repoRoot);
+    const definedIds = allDesignIds(repoRoot);
+    for (const id of l0Ids) definedIds.add(id);
+    checkG14CaseTraces({ rows, pairIds, definedIds, l0Ids, violations });
+    checkG9Families(rows, obligation.evidenceFamilies, violations);
   } else if (key === "G10") {
     if (fmValue(content, "status") === "skipped") {
       violations.push(
@@ -772,8 +1473,21 @@ export function evaluateRightArmStaticGate(
       evidenceDirectory,
       obligation,
       caseIds,
+      g11RequirementIds: g11Ids,
       deferCaseIdField:
-        key === "G12" ? "at_id" : key === "G10" ? "uxv_id" : key === "G9" ? "st_id" : "it_id",
+        key === "G11"
+          ? "uat_id"
+          : key === "G12"
+            ? "at_id"
+            : key === "G13"
+              ? "smoke_id"
+              : key === "G14"
+                ? "ot_id"
+                : key === "G10"
+                  ? "uxv_id"
+                  : key === "G9"
+                    ? "st_id"
+                    : "it_id",
       violations,
     });
     for (const id of [...manifestResult.mandatoryIds, ...manifestResult.deferredIds])
