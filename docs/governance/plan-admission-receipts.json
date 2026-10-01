@@ -6016,6 +6016,22 @@
         "revision": 24,
         "content_digest": "sha256:aad8875239a4b5ea94d844a89553421ca77be2b5fe04bf6d0d933f299fbf1734"
       }
+    },
+    {
+      "sequence": 377,
+      "previous_record_digest": "sha256:c24700ad66d5b435194f1dfbfbcc7f401087a982947861e89bd91cf1997dcc09",
+      "record_digest": "sha256:eff0d548be2d6d0afbdb26cb486a86d16176add040c5a1c6b8a7031146df1d2e",
+      "command_id": "plan-revise:issue-807:git-object-tar-byte-freeze:p628:r12:c286c720",
+      "receipt_id": "certificate:e30e4607b0a2930bef61b83ef317c757",
+      "receipt_digest": "sha256:825edd65efc4c6971964c3156da7347b6228a66d4014248a34bb0166862342ff",
+      "decision_digest": "sha256:3e11b86a8e7e8bee40b75e4a7488f901cbe4cdabf54c0b8da9b86b7f02b6ab55",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-628-pack-consumer-runtime-release-install.md",
+        "plan_id": "PLAN-L7-628-pack-consumer-runtime-release-install",
+        "asset_id": "plan:cd11a1885b1c948d89519002a2cec009",
+        "revision": 12,
+        "content_digest": "sha256:ad2cdef7859a8a92fc16f1dd3eb2639a230703414b6120bfdccbb4ee55afd781"
+      }
     }
   ]
 }
