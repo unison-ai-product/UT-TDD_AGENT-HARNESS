@@ -85,18 +85,18 @@ status: confirmed
 github_issue_id: 418
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:7003c7fcbd9aff8ba553389f7b7b739c
-  command_id: plan-revise:issue-418:pr804-main-rechain:r8:20261001
-  admitted_at: 2026-10-01T05:49:25.877Z
-  source_digest: sha256:737c50a7257282795272a88a71324d0d5c2f01528fdd7ebd05cb76f6955f6b5c
-  decision_digest: sha256:fd586c44356703e8c2fae9b322acb98a7b779380115d9260e8e79fb0955aaee0
-  receipt_digest: sha256:a887c568b13ffa283e8b238555bdad8d594ad8fd05ab99bb4d3972cb87c610f0
+  receipt_id: certificate:ef2f4ef408492896f8e90a6329d832cf
+  command_id: plan-revise:issue-418:agent-e2e-review-custody:plan:r10:fd70e80d4cb1
+  admitted_at: 2026-10-01T10:35:00.781Z
+  source_digest: sha256:64882dd8b638f55b7f13e2373fff91214f0fb37dbfc71791e054f8d8663ded9d
+  decision_digest: sha256:aeb8ecc8e3b937b704aebbf625099b7a3f01cbd2943c43b75aeab0948f76b8f3
+  receipt_digest: sha256:abd4c8a453650952e54a4905852b38faefc38cceebbb39d2789e63859bc84ad8
   binding:
     path: docs/plans/PLAN-L7-531-pack-internal-canary-smoke.md
     plan_id: PLAN-L7-531-pack-internal-canary-smoke
     asset_id: plan:44f79788376b81c225ce5913fddbc48f
-    revision: 8
-    content_digest: sha256:737c50a7257282795272a88a71324d0d5c2f01528fdd7ebd05cb76f6955f6b5c
+    revision: 10
+    content_digest: sha256:64882dd8b638f55b7f13e2373fff91214f0fb37dbfc71791e054f8d8663ded9d
   route:
     signal: feature_addition
     mode: add-feature
@@ -114,9 +114,15 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-531-pack-internal-canary-smoke
-    target_revision: 7
+    target_revision: 10
     phase: forward_merge
-  escape_reason: PR804 current main receipt chainからreview済みPR2本文を正規再発行する
+  escape_reason: "PR #812 closing review r1 (Codex Sol) の FLAG (receipt d0f95e4b)
+    の是正。実 provider review の custody・authority・隔離条件 (専用 consumer repository
+    ut-tdd-consumer-canary の既存 PR、consumer canonical project root、live-dispatch
+    / live-consume / claude --role blind-reviewer 経路、subject の blob oid・SHA-256
+    再計算 join、AT-DIST-003 実 provider 段階に限る network/auth 例外 (PO 承認 PR #812 comment
+    5929420300、AT-DIST-002 へ非適用)) を §3.6.9 / §6.1 に凍結し §3.6.8-1 の未確定扱いを解消する
+    bounded 契約改訂。AT-DIST-002 の内容、gate の判定規則、generates は変更しない (docs のみ)。"
 ---
 
 # PLAN-L7-531: Pack-only internal canary smoke (Windows/Linux)
@@ -355,6 +361,149 @@ work-guard の command 文字列をそのまま、撤去後の clean fixture で
 実行し、正常系 (consumer root 内の許可された編集) は通過、禁止系 (work-guard が block する編集) は
 各 runtime の block 規約どおり block されることを観測する (§7 `CANDIDATE-ST-PACKCANARY-010`)。
 
+### 3.6 エージェント確認経路 E2E の入力契約 (`PLAN-L7-676` §3.7、本 PLAN 所有、2026-10-01)
+
+`PLAN-L7-676` §3.7 は、clean consumer で実エージェントが書いた L1〜L7 文書が、該当 gate の判定と
+非著者 canonical review を通り、receipt が exact revision に束縛されることの E2E と ID を本 PLAN が
+所有すると定める。本節はその**入力契約の freeze だけ**を行う (実装・実行・Green は主張しない)。
+これは AT-DIST-002 (§3.2) の置換でも拡張でもなく、別の受入行 `AT-DIST-003` として並置する。
+
+#### 3.6.1 immutable artifact
+
+- 公開済み `v0.2.0-canary.3` の exact 5 asset (`PLAN-L7-628` §3)。tag は exact match で解決し、
+  `latest` / prefix / `v0.2.0-canary.2` を受け付けない。canary.2 の bytes は上書き・再利用しない
+  (canary.2 は G14 を含まず、本 E2E の観測対象外であり、AT-DIST-002 の PASS は有効のまま維持する)。
+- 5 asset の sha256 と consumer anchor は、AT-DIST-002 と同じく §3.4 の様式の publish 記録
+  (canary.3 の publish 追跡 Issue #418 のコメント 1 件、producer 値と独立再計算値の 2 値一致) から
+  だけ取る。取得した asset の再計算値を anchor にしない (§3.2)。記録が揃うまで本 E2E を開始しない。
+- canary.3 の公開は PO 承認を要する外向き操作であり、本節は公開を代替しない。
+
+#### 3.6.2 consumer fixture
+
+§3 / §4 と同じ clean・Pack-only fixture とする。installer は §3.2 のコマンドをそのまま使い、
+`--consumer-runtime-input` (source-CLI helper) 経路を使わない (`CANDIDATE-ST-PACKCANARY-009` と同じ禁止)。
+source repository・source worktree・開発用 DB/PLAN/evidence・ローカル Pack checkout・`<release-dir>` を
+撤去した後の consumer-local launcher だけを実行系とし、source 側の fixture helper
+(`tests/release-consumer-gates.test.ts` の `writeConsumerGateFixture` 等) を consumer 実行の入力に
+しない。新しい profile は導入しない。
+
+#### 3.6.3 subject と baseline の区別
+
+- **subject (観測対象)**: L1 business-requirements 文書 1 本
+  (consumer 側 path `docs/design/L1-requirements/business-requirements.md`、template slot
+  `DOC-L1-REQUIREMENTS`)。実エージェント (Claude または Codex) が、consumer 内で
+  `ut-tdd vmodel template` が書き出したテンプレートを元に書く。gate は **G1** を使う。
+- **baseline (観測対象外)**: G1 の判定入力として必要な、subject 以外の文書
+  (`functional-requirements.md`、`screen-requirements.md`、および pair / trace に必要な最小の入力)。
+  これらも `ut-tdd vmodel template` が配送したテンプレートだけから作り、**subject より前の別 commit**
+  として凍結する。baseline はエージェント成果として扱わず、provenance (`kind: baseline`) を記録する。
+  subject commit は baseline commit の子で、subject の path 以外を変更しない。
+- エージェントの実際の起動 (provider・model・invocation) を記録し、closed stub や手書き文書を
+  「実エージェント執筆」として扱わない。
+
+#### 3.6.4 positive / negative
+
+- **positive**: 正しく書いた subject の commit に対し、`G1` が `applicable:true` かつ `passed:true`。
+  `could not run` を含まない。
+- **negative**: positive とは**別 revision** (positive の子 commit で、必須の business-requirements
+  文書を除いた specimen)。`G1` が `applicable:true` かつ `passed:false` を返し、メッセージが欠落した
+  必須 slot を名指す (既存 oracle `U-RCDEV-027` の `required doc not created: <path>` と同形)。
+  review 中の subject を変異させない (positive と negative は revision が別であり、同一 subject の
+  差し替えをしない)。
+
+#### 3.6.5 review join
+
+非著者 canonical review は、**positive の実 subject** (doc path + content digest + revision =
+commit / git blob oid) を、consumer 自身の review request / consume 経路 (§5 の
+`.ut-tdd/review/requests|receipts`) で束縛する。receipt は request が指す exact revision と一致し、
+author provider と reviewer provider は異なる (族分離、canonical merge dispatch の
+`same_family_reviewer` 拒否を回避しない)。AT-DIST-002 の closed-stub review smoke (§5) は本 join の
+代替にならず、手書きの confirmed 証跡・捏造 receipt も認めない。実 provider による review の custody・
+authority・隔離条件は §3.6.9 で凍結する (本 join はその条件の下でだけ実行する)。
+
+#### 3.6.6 evidence fields (§6.1 と同形式)
+
+保存する項目: canary.3 の tag、5 asset の sha256 と size、publish 記録のコメント URL と写しの SHA-256、
+anchor、`docker image inspect` の RepoDigests と `docker inspect` の NetworkMode / Mounts (Linux 実行時)、
+`node --version`、Bun 不在、author provider / model / 実 invocation の記録と transcript、
+baseline commit と subject commit と negative commit の SHA、subject の path・content digest・blob oid、
+`G1` の positive / negative の出力 (applicable / passed / messages 全文)、review の request id・
+reviewer provider / model・verdict・receipt の subject revision。evidence は Windows と、source を
+bind mount しない disposable Linux container/VM (§6.1) の双方で取る。
+
+#### 3.6.7 oracle ID (本 PLAN 所有、pair test-design `L12-pack-internal-canary-test-design.md` が 1:1 で保持)
+
+| ID | 契約軸 |
+| --- | --- |
+| `CANDIDATE-ST-PACKCANARY-015` | 入力 artifact: exact `v0.2.0-canary.3` の 5 asset を §3.4 の publish 記録 (2 値一致) と照合する。canary.2 の bytes・tag を受け付けない |
+| `CANDIDATE-ST-PACKCANARY-016` | subject の出所: テンプレート配送からの実エージェント執筆、baseline と subject の commit 分離、closed stub・手書き文書の拒否 |
+| `CANDIDATE-ST-PACKCANARY-017` | positive: 正しい subject で G1 が `applicable:true` かつ `passed:true` |
+| `CANDIDATE-ST-PACKCANARY-018` | negative: 別 revision の欠落 specimen で G1 が `applicable:true` / `passed:false` かつ欠落 slot 名を含む |
+| `CANDIDATE-ST-PACKCANARY-019` | review join: 実 subject (path + digest + revision) への非著者 canonical review、receipt が exact revision に束縛、同族 verdict と closed-stub receipt を拒否 |
+| `AT-DIST-003` | 受入行: 015〜019 を canary.3 の実 Release で通す。AT-DIST-002 と別行で、互いに代替しない |
+
+#### 3.6.8 未確定の入力 (実装開始前に別途 freeze、本節では決めない)
+
+1. (凍結済み、§3.6.9) 隔離した consumer から実 provider の非著者 review を起動する際の canonical
+   request / receipt の custody 経路と authority は §3.6.9 が確定した。未確定ではない。
+2. negative の slot 名の表記 (gate が出す path ラベルは現状 harness 形式を含みうる)。fixture は
+   `business-requirements.md` を含むことだけを必須とし、ラベル形式は実測して記録する。
+3. 「必須 slot を欠く」を文書全体の欠落とするか、文書内の必須節の欠落までを含めるか。本節は既存
+   oracle に合わせて文書欠落だけを対象とし、節欠落は別 ID で扱う。
+
+#### 3.6.9 実 provider review の custody・authority・隔離条件 (凍結、PR #812 closing review r1 FLAG の是正、2026-10-01)
+
+実 provider による非著者 review (§3.6.5、`CANDIDATE-ST-PACKCANARY-019`) は、次の条件で**だけ**行う。
+実装側が方式を発明してはならない。
+
+1. **author と reviewer**: subject の author は codex、reviewer は claude とする (族分離、
+   `same_family_reviewer` を回避しない)。
+2. **専用 consumer repository と PR**: review の対象は、PO が作成済みの専用 consumer repository
+   `https://github.com/unison-ai-product/ut-tdd-consumer-canary` (private) の、**既存の PR** とする。
+   - その PR の head commit は、positive の **subject commit と一致**していなければならない。
+   - 実行中に repository を新規作成しない。stub・擬似 PR・mock を使わない。
+   - source repository (本 repository、`UT-TDD_AGENT-HARNESS`) の PR を代用しない。Pack 配布 repository
+     (`UT-TDD_AGENT-HARNESS-Pack`) の PR も使わない (検証の痕跡を公開 repo に残さない)。
+   - 具体的な PR 番号は**実行前に記録**する (契約には固定しない)。
+3. **custody authority**: request / receipt / verdict の正本は **consumer の canonical project root** の
+   `.ut-tdd/review/{requests,receipts,verdicts}` とする。source repository の `.ut-tdd/` は authority に
+   ならない。
+4. **経路**: `ut-tdd review live-dispatch` (実 PR / head の検証つき) → `ut-tdd review live-consume`
+   (実 provider への委譲と PR コメント投稿) の経路を使い、reviewer は
+   `ut-tdd claude --role blind-reviewer` の正規委譲経路で起動する。raw `claude` / raw `codex exec` を使わない。
+5. **verdict と receipt の保存**: verdict は consumer の
+   `.ut-tdd/review/verdicts/<review-revision>/attempts/attempt-<n>/verdict.txt`、receipt は
+   `.ut-tdd/review/receipts/<review-revision>.json` に残す。
+6. **subject の再計算 join**: receipt が指す subject を、consumer 側で subject path の git blob oid と
+   content SHA-256 を**再計算**して request の revision / digest と突き合わせる。receipt に文書 digest の
+   欄があることを**仮定しない** (join は再計算値と request / receipt の revision 一致で行う)。
+7. **PR コメントと merge**: PR コメントは**上記の専用 consumer repository にだけ**投稿する。この PR は
+   **merge しない** (検証専用)。
+8. **network / auth の例外 (PO 承認済み)**: §6.1 の `--network none` / credential・env 注入なしの条件は、
+   **AT-DIST-003 の実 provider review の段階に限り**、provider と上記の専用 consumer repository への
+   通信と認証だけを許す形で緩める。この例外は **AT-DIST-002 には適用しない** (AT-DIST-002 の隔離条件は
+   変えない)。source の filesystem の持ち込みと bind mount は引き続き禁止する。PO 承認:
+   PR #812 comment 5929420300 (2026-10-01)。canary.2 の bytes と `latest` は変えない。
+9. **evidence**: Windows と Linux (§6.1 の disposable container/VM、ただし本段階は上記 8 の例外下) の双方で、
+   §3.6.6 の項目に加えて、専用 repository の PR 番号と head SHA、live-dispatch / live-consume の
+   transcript、verdict / receipt のパス、subject の blob oid と SHA-256 の再計算値を取る。
+
+### 3.7 設計判断 (2026-10-01)
+
+- **なぜ L1 + G1 が最小の subject か**: G1 は L1 の pair gate と G1 trace を合わせた gate で、
+  `src/gate/static.ts` と `src/lint/g1-trace.ts` が実在し、既存 oracle `U-RCDEV-027` の positive /
+  negative が実測済みである。subject を 1 文書に絞れば、エージェント執筆・gate 判定・review join の
+  3 軸を、新しい gate や profile を足さずに 1 本の経路で観測できる。
+- **なぜ closed stub では足りないか**: AT-DIST-002 の closed-stub review は consumer 内の
+  request / receipt が閉じること (配線) だけを観測し、実エージェントの執筆能力・template の使い勝手・
+  実 provider の非著者 verdict は観測しない。stub が通ることを agent 確認経路の証跡へ読み替えない。
+- **なぜ canary.3 か**: 公開済み canary.2 は G14 を含まず、`PLAN-L7-676` が配送する gate・テンプレート・
+  resolver を持たない。PO 判断 (#676 comment 5928029266) と `PLAN-L7-676` rev 24 (PR #810) に従い、
+  G14 を含む main から公開する `v0.2.0-canary.3` に束縛する。canary.2 は上書きしない。
+- **非 Scope**: stable 昇格、新規 profile、A/B upgrade・rollback の自動化、tar 表現の修復 (#807)、
+  #809、G1 以外の gate や L2〜L7 文書の E2E、gate 判定規則の変更、AT-DIST-002 の内容変更。
+- 本節は入力契約の凍結だけであり、準備資料 (Codex の input packet) は実行証跡ではない。
+
 ## 4. fixture 契約
 
 - consumer root は一時ディレクトリだけを対象とする。開発用 repository、実利用 worktree、
@@ -417,6 +566,12 @@ PR-1 と PR-2 を 1 PR に統合しない。scope 構造を指す FLAG は close
 
 Linux 実受入は Docker Desktop の使い捨て `node:24.13.0-bookworm` container で実行する。`-slim` は git 不在のため使わない。host で GitHub Release の exact 5 asset と #418 publish record 写しを取得し、その 5 asset、写し、checked-in standalone runner だけを `docker cp` で container に渡す。container は `--network none`、bind/volume mount なし、credential/env 注入なしで起動し、source checkout と Pack checkout を持ち込まない。WSL2 backend の kernel を共有しても WSL2 distro を clean 受入環境とは扱わず、独立 filesystem の disposable container として扱う。証跡には `docker image inspect` の RepoDigests、`docker inspect` の NetworkMode/Mounts、`node --version`、`git --version`、Bun 不在、host の `/c` 非到達、copy 対象一覧、runner の transcript と公開 asset の独立 SHA-256/size を保存する。受入後 container は破棄し、公開取得に使った host credential は container へ渡さない。
 
+**AT-DIST-003 の実 provider review 段階の例外 (PO 承認済み)**: 上記の `--network none`・credential/env 注入なし・
+bind/volume mount なしの条件は AT-DIST-002 の受入にそのまま適用する。AT-DIST-003 の実 provider review の段階
+(§3.6.9) に限り、provider と専用 consumer repository `unison-ai-product/ut-tdd-consumer-canary` への通信と
+認証だけを許す (PO 承認: PR #812 comment 5929420300)。source filesystem の持ち込みと bind mount は禁止のままで、
+この例外は AT-DIST-002 へ波及しない。
+
 `#761` は control 判断により canary.2 後へ保留され、本 PR-2 の HARD predecessor ではない。公開および実受入は PO 承認なしに実行しない。
 
 ## 7. TDD / trace / Reverse
@@ -439,6 +594,8 @@ pair artifact の候補 oracle は次の通り。001..004 は Codex 先行 test-
 | `CANDIDATE-ST-PACKCANARY-008` | 第 2 層: 実際にダウンロードした Release asset に対し `--expected-consumer-digest` を未指定・形式違反・publish 記録と異なる値にする。Green: `PLAN-L7-628` §6.2 手順 0 の `consumer_runtime_anchor_mismatch` deny を公開 bundle で観測し、consumer root へ 1 byte も書かれないことを確認する (§3.3)。殺す mutation: 公開 bundle が anchor 照合を欠く / 未指定で install を通す | 第 2 層 |
 | `CANDIDATE-ST-PACKCANARY-009` | 受入証跡の出所 (Red: (a) runner の installer 呼び出しを `--consumer-runtime-input` (source-CLI helper `tests/support/pack-consumer-runtime.ts` と同じ経路) に差し替える、(b) runner が anchor を publish 記録ではなく `<release-dir>` の `.consumer.sha256` から再計算する、(c) 受入記録の tag が fixture tag / `v0.2.0-canary.2` 以外)。Green: PR-2 の CI test が runner を offline で呼ぶ。(b) の対照入力は、`.ut-tdd.mjs` を実行意味を変えない形 (末尾へのコメント 1 行追記等。改変後も手順 0〜2 の照合ロジックはそのまま動く) で改変し `.consumer.sha256` を整合的に書き換えた偽造 release-dir と、**5 asset の sha256 entry (producer 値・独立再計算値とも) を偽造 release-dir の値に合わせ、`consumer_anchor_digest` (2 値とも) だけを真正 fixture の anchor に固定した**記録である。この対照では §3.2 の asset 照合・exact 5 件・tag exact・§3.4 の 2 値一致の各 guard がすべて通るため、結果を分けるのは anchor の出所だけになる。正しい runner は spawn 引数の `--expected-consumer-digest` に記録の anchor (真正値) をそのまま渡し、installer 手順 0 が `consumer_runtime_anchor_mismatch` で deny して consumer root write 0。(b) の mutant は偽造 release-dir から再計算した anchor を渡すため手順 0〜2 を通過し deny されない — 観測点 (spawn 引数の anchor 値と deny 有無) の結果が反転し (b) が Red になる。§3.4 は runner に anchor と `.consumer.sha256` entry の相互照合を要求しない。PR-2 がこの相互照合を追加する場合は、005(b) と同じく相互照合を外した対照で本入力を実行する (相互照合が上流で deny すると (b) が識別されないため)。runner が起動する argv に `--consumer-runtime-release` があり `--consumer-runtime-input` が無いことを spawn 引数で assert する ((a) を殺す)。受入記録の tag が exact `v0.2.0-canary.2` でなければ受入記録を生成しない ((c) を殺す) | PR-2 CI (offline) |
 | `CANDIDATE-ST-PACKCANARY-010` | guard hook E2E (§3.5)。Red: (a) 生成 `.codex/hooks.json` / `.claude/settings.json` の work-guard が正常系も block する (canary.1 実測の全編集 block と同型)、(b) hook command が撤去済み path・存在しない launcher を指し、hook 失敗が非 block として素通りする、(c) 禁止系 payload を通す。Green: 撤去・別 shell 後の clean fixture で、登録された command 文字列をそのまま実行し、正常系 payload は通過、禁止系 payload は各 runtime の block 規約どおり block。(a)(b)(c) はいずれも Red | 第 1 層 / 第 2 層 (実 Release で再観測) |
+
+`CANDIDATE-ST-PACKCANARY-015..019` と受入行 `AT-DIST-003` は §3.6.7 が定義する agent 確認経路 E2E (`PLAN-L7-676` §3.7、`v0.2.0-canary.3` 束縛) の oracle であり、PR-1 / PR-2 の昇格対象ではない。実装 PR は §3.6.8 の残る未確定入力 (項目 2・3) が別途 freeze された後に (項目 1 の custody・authority・隔離条件は §3.6.9 で凍結済み)、本 PLAN の別の実装順序として起票する。
 
 PR-2 offline oracle は `tests/pack-canary-acceptance.test.ts` が所有し、実 producer fixture の exact 5 bytes、asset 1-byte mutation / 欠落 / 余剰 / producer・独立 digest 欠落または不一致、wrong publish-record anchor、コメントURL束縛、installer argv (`--consumer-runtime-release` のみ) を検証する。正の anchor install と wrong-anchor deny は installer 本体を spawn し、consumer root write 0 も assert する。第1層の clean closure・review・hooks・Bun / source path trace は既存 `U-ST-PACKCANARY-003/007/010` を使い、PR-2 はこれを再実装しない。
 
