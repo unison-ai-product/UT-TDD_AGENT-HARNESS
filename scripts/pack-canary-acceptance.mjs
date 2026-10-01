@@ -163,6 +163,7 @@ export function main(argv = process.argv.slice(2), deps = {}) {
   runProductGit(run, consumerRoot, ["init", "--quiet"]);
   runProductGit(run, consumerRoot, ["config", "user.email", "canary@example.invalid"]);
   runProductGit(run, consumerRoot, ["config", "user.name", "Canary acceptance"]);
+  runProductGit(run, consumerRoot, ["remote", "add", "origin", "https://github.com/example/canary-consumer.git"]);
   writeFileSync(join(consumerRoot, "README.md"), "# Isolated canary consumer\n", { flag: "wx" });
   runProductGit(run, consumerRoot, ["add", "--", "README.md"]);
   runProductGit(run, consumerRoot, ["commit", "--quiet", "-m", "canary consumer baseline"]);
@@ -219,7 +220,8 @@ export function main(argv = process.argv.slice(2), deps = {}) {
   };
   writeFileSync(resolve(args["--evidence"]), `${JSON.stringify(evidence, null, 2)}\n`, { flag: "wx" });
   if (child.error) throw child.error;
-  if (child.status !== 0) throw new Error(`consumer-setup-failed:${child.status ?? child.signal ?? "unknown"}`);
+  if (child.status !== 0)
+    throw new Error(`consumer-setup-failed:${child.status ?? child.signal ?? "unknown"}:${transcript.slice(-2000)}`);
   process.stdout.write(`${JSON.stringify({ ok: true, evidence: resolve(args["--evidence"]), setup_exit_code: child.status })}\n`);
 }
 
