@@ -9,7 +9,7 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { dirname, join, relative, resolve } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { tmpdir } from "node:os";
@@ -177,6 +177,8 @@ export function main(argv = process.argv.slice(2), deps = {}) {
     transcript,
     asset_sha256: actualDigests,
     consumer_anchor_digest: record.consumerAnchorDigest,
+    consumer_root: consumerRoot,
+    release_directory: directory,
     reviewer_independent_digest_verification: "pending",
   };
   writeFileSync(resolve(args["--evidence"]), `${JSON.stringify(evidence, null, 2)}\n`, { flag: "wx" });
@@ -190,16 +192,13 @@ function verifySmoke(parsed, { now, run }) {
   const args = parsed.values;
   const consumerRoot = realpathSync.native(resolve(args["--consumer-root"]));
   const alternateCwd = realpathSync.native(resolve(args["--alternate-cwd"]));
-  if (alternateCwd === consumerRoot || relative(consumerRoot, alternateCwd) === "")
+  if (isInside(consumerRoot, alternateCwd))
     throw new Error("verify-cwd-must-be-distinct-from-consumer-root");
-  for (const path of parsed.removedPaths)
-    if (existsSync(resolve(path))) throw new Error(`removed-path-still-exists:${path}`);
   const evidencePath = resolve(args["--evidence"]);
   const evidence = JSON.parse(readFileSync(evidencePath, "utf8"));
-  if (evidence.schema_version !== "ut-tdd.pack-canary-acceptance/v1" ||
-      evidence.phase !== "installed-awaiting-clean-restart" || evidence.setup_exit_code !== 0 ||
-      evidence.tag !== CANARY_TAG)
-    throw new Error("install-evidence-not-verifiable");
+  verifyInstallEvidence(evidence, consumerRoot, parsed.removedPaths);
+  for (const path of parsed.removedPaths)
+    if (existsSync(resolve(path))) throw new Error(`removed-path-still-exists:${path}`);
   const wrapper = join(consumerRoot, ".ut-tdd", "bin", "ut-tdd.mjs");
   if (!existsSync(wrapper)) throw new Error("consumer-local-wrapper-missing");
   const auditRoot = mkdtempSync(join(tmpdir(), "ut-canary-audit-"));
@@ -275,6 +274,24 @@ function verifySmoke(parsed, { now, run }) {
   } finally {
     rmSync(auditRoot, { recursive: true, force: true });
   }
+}
+
+function isInside(root, path) {
+  const offset = relative(root, path);
+  return offset === "" || (offset !== ".." && !offset.startsWith(`..${process.platform === "win32" ? "\\" : "/"}`) && !isAbsolute(offset));
+}
+
+/** Bind the restart proof to the exact installed consumer and removed Release directory. */
+export function verifyInstallEvidence(evidence, consumerRoot, removedPaths) {
+  if (evidence?.schema_version !== "ut-tdd.pack-canary-acceptance/v1" ||
+      evidence.phase !== "installed-awaiting-clean-restart" || evidence.setup_exit_code !== 0 ||
+      evidence.tag !== CANARY_TAG || evidence.consumer_root !== consumerRoot ||
+      typeof evidence.release_directory !== "string" || !isAbsolute(evidence.release_directory))
+    throw new Error("install-evidence-not-verifiable");
+  const removed = removedPaths.map((path) => resolve(path));
+  if (!removed.includes(evidence.release_directory) || new Set(removed).size !== removed.length ||
+      removed.some((path) => isInside(consumerRoot, path)))
+    throw new Error("verify-removed-paths-not-bound-to-install");
 }
 
 export function createConsumerPlan(consumerRoot) {

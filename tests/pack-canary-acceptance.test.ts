@@ -38,6 +38,7 @@ interface AcceptanceModule {
   ): {
     actualDigests: Record<string, string>;
   };
+  verifyInstallEvidence(evidence: unknown, consumerRoot: string, removedPaths: string[]): void;
 }
 
 const acceptance = (await import(
@@ -51,6 +52,7 @@ const {
   createConsumerPlan,
   parsePublishRecord,
   verifyReleaseDirectory,
+  verifyInstallEvidence,
 } = acceptance;
 
 const tempRoots: string[] = [];
@@ -88,6 +90,32 @@ function releaseDir(assetBytes: Record<string, string>) {
 }
 
 describe("manual canary acceptance publish-record boundary", () => {
+  it("U-ST-PACKCANARY-010: restart evidence binds consumer and removed Release root", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-canary-evidence-"));
+    tempRoots.push(root);
+    const consumer = join(root, "consumer");
+    const release = join(root, "release");
+    const source = join(root, "source");
+    const evidence = {
+      schema_version: "ut-tdd.pack-canary-acceptance/v1",
+      phase: "installed-awaiting-clean-restart",
+      setup_exit_code: 0,
+      tag: CANARY_TAG,
+      consumer_root: consumer,
+      release_directory: release,
+    };
+    expect(() => verifyInstallEvidence(evidence, consumer, [source, release])).not.toThrow();
+    expect(() => verifyInstallEvidence(evidence, join(root, "other"), [source, release])).toThrow(
+      "install-evidence-not-verifiable",
+    );
+    expect(() => verifyInstallEvidence(evidence, consumer, [source, join(root, "other")])).toThrow(
+      "verify-removed-paths-not-bound-to-install",
+    );
+    expect(() => verifyInstallEvidence(evidence, consumer, [source, release, consumer])).toThrow(
+      "verify-removed-paths-not-bound-to-install",
+    );
+  });
+
   it("U-ST-PACKCANARY-009: runner loads without source node_modules", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-canary-standalone-"));
     tempRoots.push(root);
