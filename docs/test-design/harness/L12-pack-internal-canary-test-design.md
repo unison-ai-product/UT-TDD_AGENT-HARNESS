@@ -91,7 +91,7 @@ review receipt / merge gate / 登録済み hook まで通す一つの破壊的 E
 | `U-ST-PACKCANARY-002` | skills / authoring template の欠落と重複を別々に拒否する | `tests/pack-internal-canary-boundary.test.ts` |
 | `U-ST-PACKCANARY-003` | sourceとsetup元撤去後、別cwdからsealed wrapperで起動する | `tests/pack-internal-canary-boundary.test.ts` |
 | `U-ST-PACKCANARY-004` | wrapper / config / runtime stateにsetup元絶対path参照が0。`active.json` にJSONエスケープされたWindows絶対pathを混入する単独変異も検出 | `tests/pack-internal-canary-boundary.test.ts` |
-| `U-ST-PACKCANARY-006` | unit境界でexact tagとexact 5 asset以外を拒否する | `tests/pack-internal-canary-boundary.test.ts` |
+| `U-ST-PACKCANARY-006` | unit境界とPR-2 runnerの双方でexact tag以外、5 assetの欠落・余剰・別名を拒否し、runner側は`setup` spawn 0を観測する | `tests/pack-internal-canary-boundary.test.ts`、`tests/pack-canary-acceptance.test.ts` |
 | `U-ST-PACKCANARY-007` | 別process/cwd/envでPLAN・DB・doctor・reviewを再現しBun trace 0 | `tests/pack-internal-canary-boundary.test.ts` |
 | `U-ST-PACKCANARY-010` | 登録済みhookの正常系 exit 0・禁止系 block exit 2・launcher欠落の非block失敗 exit 1 を区別する。生成登録を欠落pathへ変える変異は正常系の exact exit 0 でRed | `tests/pack-internal-canary-boundary.test.ts` |
 
@@ -107,8 +107,9 @@ digest 再計算を独立に確認する。
 
 | Oracle | Red / 独立観測点 | Green |
 | --- | --- | --- |
-| `U-ST-PACKCANARY-005/006 (PR-2)` | 実 producer fixture の exact 5 filesの byte を 1 byte 変える、欠落/余剰 asset、producer値/独立値の欠落・不一致を与える。`setup` の spawn が起きないことと consumer root write 0 を観測 | runner は installer 起動前に exact tag・exact 5 name・record 2 digest一致・全 asset sha256一致を要求する |
-| `U-ST-PACKCANARY-008/009 (PR-2)` | 5 assetのdigestsを改変bundleへ揃え、anchorだけ正本の値に固定したrecordを与える。spawn argvと installer typed deny / write 0を観測。source helper経路へ差し替える mutationもspawn argvで判定 | `--consumer-runtime-release` とコメント写しの `consumer_anchor_digest` のみを installer に渡す。wrong anchorは `consumer_runtime_anchor_mismatch` で拒否し、受入記録へ第1層/fixture値を入れない |
+| `U-ST-PACKCANARY-005` | 実 producer fixture の 5 asset を1 byte変異、またはpublish記録のproducer値・独立値を欠落/不一致にして `setup` spawn 0とconsumer root write 0を観測 | runnerが全assetのsha256と記録の2値一致をinstallerより先に検証する |
+| `U-ST-PACKCANARY-008` | 改変bundle側の5 asset digestを整合させ、publish記録のanchorだけ真正値に固定してinstallerのtyped denyとwrite 0を観測 | `--expected-consumer-digest`に記録のanchorを渡し、`consumer_runtime_anchor_mismatch`で拒否する |
+| `U-ST-PACKCANARY-009` | source helper経路への差替え、release-dirからのanchor再計算、fixture tagの受入記録混入をそれぞれ観測する | `--consumer-runtime-release`のみ、記録anchorのみ、公開受入tagはcanary.2のみを許す |
 
 `U-ST-PACKCANARY-010` を含む full closure (別process/cwd/env、PLAN/DB/doctor/review、hook、Bun/source path trace) は
 既存 `tests/pack-internal-canary-boundary.test.ts` の real-producer offline fixture が所有し、公開 asset 接合の
