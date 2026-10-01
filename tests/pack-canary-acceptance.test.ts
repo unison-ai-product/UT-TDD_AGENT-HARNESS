@@ -1,10 +1,19 @@
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  copyFileSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
+import { parse as parseYaml } from "yaml";
 import { createCanaryFixture, isolatedCanaryEnv } from "./support/pack-internal-canary.ts";
 
 interface AcceptanceModule {
@@ -12,6 +21,7 @@ interface AcceptanceModule {
   CANARY_TAG: string;
   buildInstallerInvocation(releaseDirectory: string, anchorDigest: string, tag?: string): string[];
   canaryAssetsForTag(tag: string): readonly string[];
+  createConsumerPlan(consumerRoot: string): void;
   parsePublishRecord(
     value: unknown,
     commentUrl: string,
@@ -38,6 +48,7 @@ const {
   CANARY_ASSETS,
   CANARY_TAG,
   canaryAssetsForTag,
+  createConsumerPlan,
   parsePublishRecord,
   verifyReleaseDirectory,
 } = acceptance;
@@ -77,6 +88,47 @@ function releaseDir(assetBytes: Record<string, string>) {
 }
 
 describe("manual canary acceptance publish-record boundary", () => {
+  it("U-ST-PACKCANARY-009: runner loads without source node_modules", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-canary-standalone-"));
+    tempRoots.push(root);
+    const script = join(root, "runner.mjs");
+    copyFileSync(join(process.cwd(), "scripts", "pack-canary-acceptance.mjs"), script);
+    const child = spawnSync(process.execPath, [script, "--phase", "invalid"], {
+      cwd: root,
+      encoding: "utf8",
+      windowsHide: true,
+      env: { PATH: "", ...(process.env.SystemRoot ? { SystemRoot: process.env.SystemRoot } : {}) },
+    });
+    expect(child.status).toBe(1);
+    expect(child.stderr).toContain("usage: install");
+    expect(child.stderr).not.toContain("ERR_MODULE_NOT_FOUND");
+  });
+
+  it("U-ST-PACKCANARY-009: authoring input is derived from the shipped template", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-canary-template-"));
+    tempRoots.push(root);
+    const template = join(root, "docs", "templates", "plan", "design", "template.md");
+    mkdirSync(join(root, "docs", "templates", "plan", "design"), { recursive: true });
+    copyFileSync(
+      join(process.cwd(), "docs", "templates", "plan", "design", "template.md"),
+      template,
+    );
+    createConsumerPlan(root);
+    const manifest = JSON.parse(readFileSync(join(root, "canary-plan-draft.json"), "utf8"));
+    const match = /^---\n([\s\S]*?)\n---\n/.exec(manifest.source.content);
+    expect(match).not.toBeNull();
+    expect(parseYaml(match?.[1] ?? "")).toMatchObject({
+      plan_id: "PLAN-L2-999-canary-authoring",
+      drive: "agent",
+      route_signal: "forward",
+      route_mode: "forward",
+      sub_doc: "screen-list",
+      generates: [],
+      related_docs: [],
+    });
+    expect(manifest.source.content).toContain("配布された PLAN テンプレート");
+  });
+
   it("U-ST-PACKCANARY-005/006/009: accepts only exact canary.2 record, comment and 5 digests", () => {
     const input = record();
     const parsed = parsePublishRecord(input.value, commentUrl);

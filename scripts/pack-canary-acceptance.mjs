@@ -13,7 +13,6 @@ import { dirname, join, relative, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { tmpdir } from "node:os";
-import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 
 export const CANARY_TAG = "v0.2.0-canary.2";
 export const PACK_RELEASE_PREFIX =
@@ -278,23 +277,27 @@ function verifySmoke(parsed, { now, run }) {
   }
 }
 
-function createConsumerPlan(consumerRoot) {
+export function createConsumerPlan(consumerRoot) {
   const source = readFileSync(join(consumerRoot, "docs", "templates", "plan", "design", "template.md"), "utf8");
   const match = /^---\r?\n([\s\S]*?)\r?\n---\r?\n([\s\S]*)$/.exec(source);
   if (!match) throw new Error("consumer-plan-template-invalid");
-  const frontmatter = parseYaml(match[1]);
-  Object.assign(frontmatter, {
-    plan_id: "PLAN-L2-999-canary-authoring",
-    title: "Canary consumer の設計起票",
-    drive: "agent",
-    created: "2026-09-30",
-    owner: "Canary consumer",
-    route_signal: "forward",
-    route_mode: "forward",
-    sub_doc: "screen-list",
-    generates: [],
-    related_docs: [],
-  });
+  let frontmatter = match[1];
+  const replaceScalar = (key, value) => {
+    const pattern = new RegExp(`^${key}:.*$`, "m");
+    if (!pattern.test(frontmatter)) throw new Error(`consumer-plan-template-missing:${key}`);
+    frontmatter = frontmatter.replace(pattern, `${key}: ${value}`);
+  };
+  replaceScalar("plan_id", "PLAN-L2-999-canary-authoring");
+  replaceScalar("title", '"Canary consumer の設計起票"');
+  replaceScalar("drive", "agent");
+  replaceScalar("created", "2026-09-30");
+  replaceScalar("owner", '"Canary consumer"');
+  const generatesStart = frontmatter.indexOf("\ngenerates:\n");
+  const dependenciesStart = frontmatter.indexOf("\ndependencies:\n", generatesStart);
+  const relatedDocsStart = frontmatter.indexOf("\nrelated_docs:\n", dependenciesStart);
+  if (generatesStart < 0 || dependenciesStart < 0 || relatedDocsStart < 0)
+    throw new Error("consumer-plan-template-structure-invalid");
+  frontmatter = `${frontmatter.slice(0, generatesStart)}\ngenerates: []${frontmatter.slice(dependenciesStart, relatedDocsStart)}\nrelated_docs: []\nroute_signal: forward\nroute_mode: forward\nsub_doc: screen-list`;
   const body = match[2].replaceAll(
     "(本 PLAN でどの範囲の設計を凍結するかを 1-2 段落で記述)",
     "配布された PLAN テンプレートから consumer 固有の draft を正規 CLI で起票する。",
@@ -310,13 +313,13 @@ function createConsumerPlan(consumerRoot) {
     plan_id: "PLAN-L2-999-canary-authoring",
     recorded_at: "2026-09-30T00:00:00.000Z",
     admission: { route_signal: "forward", route_mode: "forward", kind: "design", layer: "L2", drive: "agent", branch: "work/forward-canary", status: "draft", sub_doc: "screen-list" },
-    source: { path: planPath, content: `---\n${stringifyYaml(frontmatter)}---\n${body}` },
+    source: { path: planPath, content: `---\n${frontmatter}\n---\n${body}` },
     projection: { path: "docs/governance/plan-admission-receipts.json" },
   }), "utf8");
 }
 
 function makeAccessAuditModule(forbiddenPaths, accessLog) {
-  return `import fs from "node:fs";\nimport path from "node:path";\nconst blocked=${JSON.stringify(forbiddenPaths.map((item) => item.toLowerCase()))};\nconst log=${JSON.stringify(accessLog)};\nconst hit=(value)=>{if(typeof value!=="string" && !Buffer.isBuffer(value)) return false; const p=path.resolve(String(value)).toLowerCase(); return blocked.some((b)=>p===b || p.startsWith(b+path.sep));};\nconst deny=(api)=>function(value,...args){if(hit(value)){fs.appendFileSync(log,JSON.stringify({api,path:String(value)})+"\\n"); const e=new Error("forbidden removed path access"); e.code="ENOENT"; throw e;} return api.call(this,value,...args);};\nfor(const key of ["access","accessSync","existsSync","lstatSync","open","openSync","readFile","readFileSync","realpath","realpathSync","stat","statSync"]) if(typeof fs[key]==="function") fs[key]=deny(fs[key]);\n`;
+  return `import fs from "node:fs";\nimport { syncBuiltinESMExports } from "node:module";\nimport path from "node:path";\nconst blocked=${JSON.stringify(forbiddenPaths.map((item) => item.toLowerCase()))};\nconst log=${JSON.stringify(accessLog)};\nconst hit=(value)=>{if(typeof value!=="string" && !Buffer.isBuffer(value)) return false; const p=path.resolve(String(value)).toLowerCase(); return blocked.some((b)=>p===b || p.startsWith(b+path.sep));};\nconst deny=(api)=>function(value,...args){if(hit(value)){fs.appendFileSync(log,JSON.stringify({api,path:String(value)})+"\\n"); const e=new Error("forbidden removed path access"); e.code="ENOENT"; throw e;} return api.call(this,value,...args);};\nfor(const key of ["access","accessSync","existsSync","lstatSync","open","openSync","readFile","readFileSync","realpath","realpathSync","stat","statSync"]) if(typeof fs[key]==="function") fs[key]=deny(fs[key]);\nsyncBuiltinESMExports();\n`;
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === resolve(fileURLToPath(import.meta.url))) {
