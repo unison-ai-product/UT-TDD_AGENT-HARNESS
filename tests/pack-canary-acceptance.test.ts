@@ -24,6 +24,7 @@ import {
 interface AcceptanceModule {
   CANARY_ASSETS: readonly string[];
   CANARY_TAG: string;
+  makeAccessAuditModule(forbiddenPaths: string[], accessLog: string, processLog: string): string;
   buildInstallerInvocation(releaseDirectory: string, anchorDigest: string, tag?: string): string[];
   canaryAssetsForTag(tag: string): readonly string[];
   createConsumerPlan(consumerRoot: string): void;
@@ -100,6 +101,7 @@ const {
   verifyInstallEvidence,
   verifyWrongAnchorDenial,
   verifyRegisteredHooks,
+  makeAccessAuditModule,
 } = acceptance;
 
 const tempRoots: string[] = [];
@@ -296,6 +298,26 @@ describe("manual canary acceptance publish-record boundary", () => {
     expect(child.status).toBe(1);
     expect(child.stderr).toContain("usage: install");
     expect(child.stderr).not.toContain("ERR_MODULE_NOT_FOUND");
+  });
+
+  it("U-ST-PACKCANARY-014: access audit preserves and guards native realpath", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-canary-audit-native-"));
+    tempRoots.push(root);
+    const forbidden = join(root, "removed-source");
+    const audit = join(root, "audit.mjs");
+    const accessLog = join(root, "access.jsonl");
+    writeFileSync(audit, makeAccessAuditModule([forbidden], accessLog, join(root, "process.jsonl")));
+    const child = spawnSync(process.execPath, ["--import", pathToFileURL(audit).href, "--input-type=module", "-e", `
+      import { realpathSync } from "node:fs";
+      const root = ${JSON.stringify(root)};
+      if (realpathSync.native(root) !== realpathSync(root)) throw new Error("native realpath drift");
+      for (const resolvePath of [realpathSync, realpathSync.native]) {
+        try { resolvePath(${JSON.stringify(forbidden)}); throw new Error("deny missing"); }
+        catch (error) { if (error.message !== "forbidden removed path access") throw error; }
+      }
+    `], { cwd: root, encoding: "utf8", windowsHide: true });
+    expect({ status: child.status, stderr: child.stderr }).toEqual({ status: 0, stderr: "" });
+    expect(readFileSync(accessLog, "utf8").trim().split("\n")).toHaveLength(2);
   });
 
   it("U-ST-PACKCANARY-009: authoring input is derived from the shipped template", () => {
