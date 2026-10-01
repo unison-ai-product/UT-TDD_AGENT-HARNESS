@@ -6,6 +6,7 @@ import {
   mkdtempSync,
   readdirSync,
   readFileSync,
+  realpathSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
@@ -413,7 +414,7 @@ describe("manual canary acceptance publish-record boundary", () => {
       tag: "v0.0.0-canary.0",
       setup_exit_code: 0,
       consumer_anchor_digest: anchor,
-      consumer_root: fixture.consumerRoot,
+      consumer_root: realpathSync.native(fixture.consumerRoot),
       wrong_anchor_denial: {
         typed_reason: "consumer_runtime_anchor_mismatch",
         consumer_write_count: 0,

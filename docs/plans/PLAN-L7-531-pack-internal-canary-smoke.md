@@ -85,17 +85,17 @@ status: confirmed
 github_issue_id: 418
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:eeab58c3731f2045a641c27b07831bbe
-  command_id: plan-revise:issue-418:pr2-linux-container:r10:20261001
-  admitted_at: 2026-10-01T04:21:58.883Z
+  receipt_id: certificate:52ad31c31e034f2b04b2f22e19481fa9
+  command_id: plan-revise:issue-418:pr2-restore-origin:r11:20261001
+  admitted_at: 2026-10-01T04:23:39.004Z
   source_digest: sha256:737c50a7257282795272a88a71324d0d5c2f01528fdd7ebd05cb76f6955f6b5c
-  decision_digest: sha256:2041747459d841325feb20ec1ad1a1914bbe8f41bcfcdcb3859b6d1e9c20cab1
-  receipt_digest: sha256:dd5447705da4917afa80a019efdf5866e7dd014924e30e39eb501a66fbdd9145
+  decision_digest: sha256:e5097628c89836fce21f421fd5649aa762f12e502100ac4188050d1f8a2a65a2
+  receipt_digest: sha256:43375a8532d5e0c2e14fcc3142bf5b7b621c1105d71a85d397a265e688325c80
   binding:
     path: docs/plans/PLAN-L7-531-pack-internal-canary-smoke.md
     plan_id: PLAN-L7-531-pack-internal-canary-smoke
     asset_id: plan:44f79788376b81c225ce5913fddbc48f
-    revision: 10
+    revision: 11
     content_digest: sha256:737c50a7257282795272a88a71324d0d5c2f01528fdd7ebd05cb76f6955f6b5c
   route:
     signal: feature_addition
@@ -103,17 +103,21 @@ admission_receipt:
   issue:
     provider: github
     issue_id: 418
-    episode_id: E4-418
+    episode_id: E4-418-pack-internal-canary-smoke
     projection_state: unprojected
   origin:
-    plan_id: PLAN-L7-531-pack-internal-canary-smoke
-    revision: 9
-    digest: sha256:74df978aa9339ef49fed437642ed87da4823cf95c457d6afb37eaacd3d68d0f9
+    plan_id: PLAN-L7-516-pack-self-contained-consumer-runtime
+    revision: 4
+    digest: sha256:6e4e0d5516e78e7465d260c65482e3302c9304518eb264d39735d049c166a316
+  transition:
+    direction: design_to_implementation
+    implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-531-pack-internal-canary-smoke
-    target_revision: 9
+    target_revision: 10
     phase: forward_merge
-  escape_reason: "PR-2 Linux clean acceptance environment and evidence closure for Issue #418"
+  escape_reason: "Restore existing Issue #418 origin and transition binding after
+    Linux acceptance environment note"
 ---
 
 # PLAN-L7-531: Pack-only internal canary smoke (Windows/Linux)

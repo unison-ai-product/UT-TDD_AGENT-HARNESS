@@ -6000,6 +6000,22 @@
         "revision": 10,
         "content_digest": "sha256:737c50a7257282795272a88a71324d0d5c2f01528fdd7ebd05cb76f6955f6b5c"
       }
+    },
+    {
+      "sequence": 376,
+      "previous_record_digest": "sha256:c1918ca15fb6e85c16745f8716726af6553a4812ee3f02c459d880b2a3a40c4b",
+      "record_digest": "sha256:73f526302183f837a52d6120426730c4e7efa6995d642196ef19ac33bc2fa184",
+      "command_id": "plan-revise:issue-418:pr2-restore-origin:r11:20261001",
+      "receipt_id": "certificate:52ad31c31e034f2b04b2f22e19481fa9",
+      "receipt_digest": "sha256:43375a8532d5e0c2e14fcc3142bf5b7b621c1105d71a85d397a265e688325c80",
+      "decision_digest": "sha256:e5097628c89836fce21f421fd5649aa762f12e502100ac4188050d1f8a2a65a2",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-531-pack-internal-canary-smoke.md",
+        "plan_id": "PLAN-L7-531-pack-internal-canary-smoke",
+        "asset_id": "plan:44f79788376b81c225ce5913fddbc48f",
+        "revision": 11,
+        "content_digest": "sha256:737c50a7257282795272a88a71324d0d5c2f01528fdd7ebd05cb76f6955f6b5c"
+      }
     }
   ]
 }
