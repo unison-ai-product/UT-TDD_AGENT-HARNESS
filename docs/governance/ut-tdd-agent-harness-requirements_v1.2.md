@@ -1732,7 +1732,7 @@ adapter は「存在する」と「harness から連携できる」を分けて�
 | `ut-tdd adapter probe <name>` | adapter の integration_level と capability を再判定 |
 | `ut-tdd adapter run <name> ...` | safe_commands に含まれる adapter command のみ実行 |
 
-> 改定 (2026-09-29): `ut-tdd self-test` は CLI に登録されないまま本表に載っていたため削除した。同等の検証は CI `harness-check` (typecheck + `npm run test` + biome lint + doctor、`.github/workflows/harness-check.yml`) と、ローカルの `npm run test` / `node src/cli.ts doctor` で行う。
+> 改定 (2026-09-29): `ut-tdd self-test` は CLI に登録されないまま本表に載っていたため削除した。同等の検証は CI `harness-check` (`.github/workflows/harness-check.yml`) と、ローカルの明示コマンドで行う。`npm run test` は `scripts/run-vitest-snapshot.ts` 経由で引数なしなら全 Vitest を流す (smoke / 差分対象の限定実行ではない)。限定実行は `package.json` の `test:fast` / `test:pack` / `test:doc-lane` 等を使う。
 
 詳細実装は将来の個別 PLAN-XXX で詰める。
 
@@ -1937,8 +1937,8 @@ output:
 
 | Hook | 検証内容 | 想定時間 |
 |------|----------|----------|
-| **pre-commit** | gitleaks / commitlint format / 軽量 lint (markdown / yaml) (`self-test --smoke` は未登録のため削除、smoke 相当は CI `harness-check`) | < 5s |
-| **pre-push** | §5.3 session 終了前 4 項目 + 軽量 plan lint + 差分対象 `npm run test` | < 15s |
+| **pre-commit** | gitleaks / commitlint format / 軽量 lint (markdown / yaml) (`self-test --smoke` は未登録のため削除。tracked の `scripts/git-hooks/` に pre-commit は無い) | < 5s |
+| **pre-push** | §5.3 session 終了前 4 項目 + 軽量 plan lint + 差分対象テスト (設計目標。現実装の tracked hook `scripts/git-hooks/pre-push` は secret scan のみ、`core.hooksPath` 有効化が前提、既定 warn-only、対象は `docs/` `.ut-tdd/audit|logs|memory/`) | < 15s |
 | **harness-check (CI on every PR base)** | §6.3 の 8 subjob (重い検証 + 全テスト + 回帰確認)。`pull_request`に`branches` / `branches-ignore`を置かない | 数分 |
 
 `vmodel_lint` の完全検証は **pre-push と CI のみ** で実行。pre-commit には乗せない。
@@ -1947,12 +1947,12 @@ output:
 
 | tier | 内容 | 実行場所 | 目的 |
 |------|------|----------|------|
-| `smoke` | CLI 起動、subcommand routing、schema fixture、adapter probe dry-run | local hook / `npm run test` / CI `harness-check` | 即時フィードバック |
+| `smoke` | CLI 起動、subcommand routing、schema fixture、adapter probe dry-run | `npm run test:fast` / CI `harness-check` | 即時フィードバック |
 | `changed` | 差分 PLAN / 差分 script / 差分 docs の lint と軽量 validator | pre-push / PR | push 前の手戻り削減 |
 | `full` | 全 PLAN lint、完全 vmodel lint、全テスト、回帰確認、branch matrix | GitHub Actions `harness-check` | PR 通過要件 |
 | `nightly` | 長い adapter probe、cross-platform matrix、optional integration | GitHub Actions schedule | flake / 環境差分検出 |
 
-原則として、`full` と `nightly` をローカル hook の必須経路に入れない。ローカルで実行したい場合は明示コマンド (`npm run test` / `node src/cli.ts doctor`) とする。なお `ut-tdd self-test` は 2026-09-29 に現行仕様から削除した (CLI 未登録)。
+原則として、`full` と `nightly` をローカル hook の必須経路に入れない。ローカルで実行したい場合は明示コマンド (`npm run test:fast` / `npm run test` / `node src/cli.ts doctor`) とする。なお `ut-tdd self-test` は 2026-09-29 に現行仕様から削除した (CLI 未登録)。
 
 ## 7.6 受入条件 (機械検証)
 

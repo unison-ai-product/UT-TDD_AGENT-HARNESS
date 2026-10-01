@@ -36,7 +36,7 @@ decision_points:
     over: "using a realistic-looking key format that a scanner might miss or a human might mistake for real"
     because: "the secret scan (`src/lint/secret-scan.ts`) is tuned around sentinel strings; real-shaped fixture strings risk false secret leaks or false negatives depending on scanner behavior."
   - when: "secret-scan timing must be decided for a working session."
-    choose: "rely on the `pre-push` hook (`scripts/git-hooks/pre-push`, enabled via `git config core.hooksPath scripts/git-hooks`), which scans every pushed commit"
+    choose: "rely on the `pre-push` hook (`scripts/git-hooks/pre-push`; requires `git config core.hooksPath scripts/git-hooks`, warn-only unless `UT_TDD_PRE_PUSH_SECRET_SCAN_MODE=fail-close`), which scans each pushed commit's changed files under `docs/`, `.ut-tdd/audit/`, `.ut-tdd/logs/`, `.ut-tdd/memory/` only"
     over: "running it only once at the end of a sprint"
     because: "the anti-patterns section identifies end-of-sprint-only scanning as a named failure mode that lets secrets accumulate undetected across many commits."
 ---
@@ -62,7 +62,7 @@ a PLAN crosses the accept gate.
 Run in order before accept gate:
 
 ```
-git push --dry-run        # pre-push hook runs src/lint/secret-scan.ts over pushed blobs (guardrail is a decision ledger, not a scanner)
+git push --dry-run        # pre-push hook scans pushed blobs under docs/ and .ut-tdd/{audit,logs,memory}/ only; src/ and skills/ are NOT covered (guardrail is a decision ledger, not a scanner)
 npm run lint              # Biome check: includes security-adjacent lint rules
 npm run test              # Vitest: confirm no fixture file leaks credentials
 ut-tdd doctor             # structural governance: no orphaned hook or agent path
@@ -136,8 +136,8 @@ Link this file from the PLAN `review_evidence` field.
 
 ## Anti-patterns
 
-- Checking for secrets only at the end of a sprint — the `pre-push` hook scans every pushed commit, so
-  do not defer pushes to the end of a sprint.
+- Checking for secrets only at the end of a sprint — the `pre-push` hook scans each pushed commit (within its
+  scan scope: `docs/` and `.ut-tdd/{audit,logs,memory}/`), so do not defer pushes to the end of a sprint.
 - Treating a floating dependency range as "safe for now" without a PLAN to pin
   it — floating ranges are a supply-chain risk even in development.
 - Conflating this skill with `security.md` — this skill is the *hardening sweep*
