@@ -8,7 +8,7 @@ drive: agent
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-09-18
-updated: 2026-10-01
+updated: 2026-09-29
 owner: Claude / Opus (pair-freeze) · Codex worker (implementation)
 parent_design: docs/plans/PLAN-L6-101-pack-independent-multi-consumer-acceptance.md
 pair_artifact: docs/test-design/harness/L7-pack-consumer-runtime-release-install-test-design.md
@@ -21,7 +21,7 @@ agent_slots:
   - role: se
     slot_label: Luna worker - PR-1 producer と PR-2 installer を別 PR で最小実装する
   - role: qa
-    slot_label: Terra - CANDIDATE-U-PACKRT-001..013 の Red oracle を Linux/Windows で先に作る
+    slot_label: Terra - CANDIDATE-U-PACKRT-001..012 の Red oracle を Linux/Windows で先に作る
   - role: tl
     slot_label: Claude Opus / Sol - asset 集合・identity 導出・自己 digest 照合の非著者検収
 generates:
@@ -50,7 +50,6 @@ dependencies:
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/418
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/420
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/364
-    - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/807#issuecomment-5929262567
 review_evidence:
   - reviewer: "Claude Opus (非著者 review, PR #665)"
     reviewer_model: claude-opus-5
@@ -76,18 +75,18 @@ status: confirmed
 github_issue_id: 418
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:9c9d72b5aeb6ebc5e245ee4e127dd4f4
-  command_id: plan-revise:issue-807:tar-readback-oracle-correction:p628:r13:cc99ca45
-  admitted_at: 2026-10-01T10:39:28.000Z
-  source_digest: sha256:7e2f172df6eccc43a8abeacd556d46245e4018e67d78d6f841444b007dd5cb50
-  decision_digest: sha256:27eca2f562e8cb4cfcd816ba300152394830d4699ad8ead9e02673eef1b1f007
-  receipt_digest: sha256:1a4e97bc031fed917aeb86667c789acb11ad1faafde6b1a92d32185d10dcf5b2
+  receipt_id: certificate:7e69efdffec0d4298bbe37840cb98658
+  command_id: plan-revise:issue-743:tag-channel-rule:p628:r11:074bb686568c
+  admitted_at: 2026-09-29T08:03:29.887Z
+  source_digest: sha256:604fcda0ef7e101ecd8df79e682704d0475dc9be62f6afb077916114f192df52
+  decision_digest: sha256:28b8aff7eee004ab8a68cf5f29932d8ee852e33220d0a0d296f5878707c8121b
+  receipt_digest: sha256:0325f6382bb628f13f89db11a8e18597fada80a6eaf9b38faef270a7717cae35
   binding:
     path: docs/plans/PLAN-L7-628-pack-consumer-runtime-release-install.md
     plan_id: PLAN-L7-628-pack-consumer-runtime-release-install
     asset_id: plan:cd11a1885b1c948d89519002a2cec009
-    revision: 13
-    content_digest: sha256:7e2f172df6eccc43a8abeacd556d46245e4018e67d78d6f841444b007dd5cb50
+    revision: 11
+    content_digest: sha256:604fcda0ef7e101ecd8df79e682704d0475dc9be62f6afb077916114f192df52
   route:
     signal: feature_addition
     mode: add-feature
@@ -105,16 +104,14 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-628-pack-consumer-runtime-release-install
-    target_revision: 13
+    target_revision: 11
     phase: forward_merge
-  escape_reason: "Issue #807 / control comment 5929262567: corrective docs-only
-    pair-freeze for the tar readback oracle and PR ownership row. Preserve the
-    established #418/E4-418 unprojected admission binding, C1 Git object tar
-    boundary, runtime snapshot, five assets, identity/schema, and canary.2.
-    Contract PR may proceed in parallel; implementation PR merge is gated on
-    v0.2.0-canary.3 publication. Reference:
-    https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/807#issuec\
-    omment-5929262567."
+  escape_reason: "PR #752 Sol r1 FLAG の軽作業是正: §5 手順 1 の
+    consumer_runtime_release_channel_unavailable fail-close は
+    parsePublicationManifest 経由で到達する入力が無い防御 guard
+    であることを明記し、CANDIDATE-U-PACKRT-012 の負系を到達可能な v1 manifest →
+    consumer_runtime_release_manifest_invalid (v1_read_only) に差し替える。tag→channel
+    規則の凍結内容は変えない。"
 ---
 
 # PLAN-L7-628: Pack Release から consumer runtime を有効化する producer / installer
@@ -233,10 +230,6 @@ test 本体は本 PLAN 所有の `tests/pack-consumer-runtime-release.test.ts` �
 
 rev 11: PR #752 の Sol r1 review を受け、§5 手順 1 の `consumer_runtime_release_channel_unavailable` を到達可能な fail-close として書いていた記述を訂正した (v1 manifest は `v1_read_only`、不在 release への channel は manifest parse が拒否する)。tag→channel 規則の凍結内容は変更しない。
 
-rev 12: Issue #807 / control comment 5929262567 に基づく docs-only pair-freeze。tar stage のみ C1 Git object reader →既存 resolver/materializer の bytes に切り替える契約を追加する。clean source snapshot は Node/npm install と runtime generation に維持し、5 asset 集合、consumer identity/schema、runtime bytes、canary.2 を変更しない。実装PRは作成・並行可能だが、merge は v0.2.0-canary.3 公開後。候補 oracle 013 は production tar readback を固定する。一般的な全 entry producer self-validation guard は新しい failure boundary のため別 slice とする。
-
-rev 13: root検収で CANDIDATE-U-PACKRT-013 の期待 tuple を materializer単独に依存させないよう訂正し、C1 Git treeから独立導出した path/mode/blob bytes を主oracle、resolver/materializerをcross-checkとした。tar modeは展開先filesystemではなくarchive headerから読む。PR-1既存行のcanary.3条件は変更せず、Issue #807の実装境界を専用PR行へ分離した。
-
 ## 3. Release asset 契約
 
 canary.2 以降の Pack Release は、次の **宣言された asset 集合と exact に一致** する。欠落・余剰・名前違いは
@@ -292,11 +285,6 @@ consumer 固有の値 (`consumer_root`、`runtime_root`、`operation_id`、`atte
    - C1 が C2 の first-parent 祖先である。祖先の探索は C2 の first parent から始め、C2 自身を含めない
      (manifest は自分を含む commit の SHA を書けないので、C1 = C2 は通常の Git では起こらない)。
    - `git diff --name-only C1 C2` の全 path が `release/` 配下である。
-   **Issue #807 tar boundary (scheme A)**: `<tag>.tar.gz` の artifact entries は C1 の Git tree を `createLocalGitObjectReader()` で読み、既存 `resolveReleaseArtifacts` → `materializeReleaseArtifacts` の projection と output bytes/modes を tar stage に使う。`package.json` の既存 transform と `.ut-tdd/teams/example-review-team.yaml` の既存 `projectTrackedTeamBlob` projection はそのまま適用し、team projection output bytes は現行 tar と同一に保つ。通常の distribution allowlist に `release/manifest.yaml` は入らず、materializer の `CONTROL_MANIFEST` 除外は artifact 集合を変えない。新しい artifact、path、identity、schema、consumer形式を足さない。
-   公開 v2 manifest の正系 mode は `100644` / `100755` のみ (`PUBLICATION_MODES`); tar readback は path/content とこの mode 境界 (executable bit を含む) を照合する。汎用 resolver/materializer が `120000` を扱えることを public tar の正系保証へ昇格させない。`release/manifest.yaml` の symlink artifact は既存 v2 parse/publication admission で拒否する負系を維持する。
-   `createTaggedSourceSnapshot` は引き続き Node generation の `npm ci` / build 入力として使う。tar stage だけを Git object output に切り替え、runtime build snapshot、source revision、toolchain、5 asset 集合と同一 producer 内 identity を変えない。`CANDIDATE-U-PACKRT-013` は production package の tar header / payload を readback し、C1 Git tree とclean-planから独立導出した全 entry `(path, mode, bytes)` tuple set と照合する。path/modeは `git ls-tree`、未変換bytesは `git cat-file blob` から得て、team raw-byte projection / `package.json` の既存transform契約も別 assertion で固定する。`resolveReleaseArtifacts` → `materializeReleaseArtifacts` はcross-checkとし、唯一のexpected oracleにしない。Windows fixture は `.gitattributes: *.ps1 text eol=crlf` と `core.autocrlf=true` を明示し、tar modeはarchive headerから読む。旧 checkout-copy mutation はcheckout CRLF bytesでRedになる。
-   一般的な producer 全 entry self-validation guard は今回追加しない。#807 は tar bytes source boundary の狭い修理であり、全 producer path に新 guard / failure behavior を増やすのは追加 authority と別の契約範囲になる。
-
 2. compiled ESM と receipt は既存の `buildNodeGeneration({ candidateRevision: C1 })` (`src/runtime/node-bootstrap.ts`) で生成する。
    `consumer-runtime.json` の `release.source_revision` と `generation.subject_revision` は C1、`release.tag` は `--tag` の値とする。
    Node の版は `scripts/build-node.mjs` と同じ reviewed version を要求し、不一致は fail-close。
@@ -380,7 +368,6 @@ node <release-dir>/<tag>.ut-tdd.mjs setup --solo --consumer-runtime-release <rel
 | PR | 論点 | 前提 |
 | --- | --- | --- |
 | PR-0 (本 PR) | 本 PLAN + `PLAN-REVERSE-628` + pair test-design の pair-freeze (docs のみ) | なし |
-| PR-807 | Issue #807 の tar stage を C1 Git object reader →既存 resolver/materializer bytesへ限定して切り替える。CANDIDATE-U-PACKRT-013 の実tar readbackが担当 | 契約PR-0の非著者 PASS。開発は並行可能、実装PRのmergeは v0.2.0-canary.3 公開後 |
 | PR-1 | producer: `distribution package` の 5 asset 出力、schema v1、user home 配下 path の fail-close、自己検証、digest 出力 | PR-0 の非著者 PASS |
 | PR-2 | installer: `setup --consumer-runtime-release`、sha256 検証、自己 digest 照合、identity 導出、冪等性 | PR-1 merge (asset 形式が確定していること) |
 | (531) | E2E: `PLAN-L7-531` の入力契約を本 PLAN の asset 集合へ改訂し、clean fixture の Windows / Linux E2E を実装 | PR-2 merge |
@@ -389,7 +376,7 @@ PR-1 と PR-2 を 1 PR に統合しない。scope 構造を指す FLAG は close
 
 ## 8. TDD / trace / Reverse
 
-pair artifact の候補 oracle (`CANDIDATE-U-PACKRT-001..013`) は test-design が所有する。実装 PR で同番号の
+pair artifact の候補 oracle (`CANDIDATE-U-PACKRT-001..012`) は test-design が所有する。実装 PR で同番号の
 `U-PACKRT-*` へ 1:1 昇格する。既存 `CANDIDATE-U-PACKNODE-*`、`CANDIDATE-PACKISO-*`、`U-PACKISO-*`、
 `CANDIDATE-ST-PACKCANARY-*` を再採番・再所有しない。
 

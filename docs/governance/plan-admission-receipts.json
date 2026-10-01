@@ -6020,33 +6020,33 @@
     {
       "sequence": 377,
       "previous_record_digest": "sha256:c24700ad66d5b435194f1dfbfbcc7f401087a982947861e89bd91cf1997dcc09",
-      "record_digest": "sha256:eff0d548be2d6d0afbdb26cb486a86d16176add040c5a1c6b8a7031146df1d2e",
-      "command_id": "plan-revise:issue-807:git-object-tar-byte-freeze:p628:r12:c286c720",
-      "receipt_id": "certificate:e30e4607b0a2930bef61b83ef317c757",
-      "receipt_digest": "sha256:825edd65efc4c6971964c3156da7347b6228a66d4014248a34bb0166862342ff",
-      "decision_digest": "sha256:3e11b86a8e7e8bee40b75e4a7488f901cbe4cdabf54c0b8da9b86b7f02b6ab55",
+      "record_digest": "sha256:bc3997f939d3b36a6ac64f8ec2a5fc072303073324f820fa9fcdc792fea7eaee",
+      "command_id": "plan-revise:issue-418:agent-authoring-e2e:plan:r9:c286c720a545",
+      "receipt_id": "certificate:6d1518f5163a2c92ac1ea80db5ab0421",
+      "receipt_digest": "sha256:befd9ee97a9b03825c210de01dcd83f0fb6a8aeb646a1354966a5f6260f1483c",
+      "decision_digest": "sha256:470fc3e55dd04b3e2eccc5396f2f4ef020e14bd17b210144fa9e74b376a9d6f0",
       "binding": {
-        "path": "docs/plans/PLAN-L7-628-pack-consumer-runtime-release-install.md",
-        "plan_id": "PLAN-L7-628-pack-consumer-runtime-release-install",
-        "asset_id": "plan:cd11a1885b1c948d89519002a2cec009",
-        "revision": 12,
-        "content_digest": "sha256:ad2cdef7859a8a92fc16f1dd3eb2639a230703414b6120bfdccbb4ee55afd781"
+        "path": "docs/plans/PLAN-L7-531-pack-internal-canary-smoke.md",
+        "plan_id": "PLAN-L7-531-pack-internal-canary-smoke",
+        "asset_id": "plan:44f79788376b81c225ce5913fddbc48f",
+        "revision": 9,
+        "content_digest": "sha256:24289e7ac7c396b0d2e568623ae0049c461b9831a2e95ee57ffdd8f47002f241"
       }
     },
     {
       "sequence": 378,
-      "previous_record_digest": "sha256:eff0d548be2d6d0afbdb26cb486a86d16176add040c5a1c6b8a7031146df1d2e",
-      "record_digest": "sha256:e29c000a3c6ccd141f9b338e16bd4d4d4448fc3b8ecb69e76f56c07bbf1c1ac6",
-      "command_id": "plan-revise:issue-807:tar-readback-oracle-correction:p628:r13:cc99ca45",
-      "receipt_id": "certificate:9c9d72b5aeb6ebc5e245ee4e127dd4f4",
-      "receipt_digest": "sha256:1a4e97bc031fed917aeb86667c789acb11ad1faafde6b1a92d32185d10dcf5b2",
-      "decision_digest": "sha256:27eca2f562e8cb4cfcd816ba300152394830d4699ad8ead9e02673eef1b1f007",
+      "previous_record_digest": "sha256:bc3997f939d3b36a6ac64f8ec2a5fc072303073324f820fa9fcdc792fea7eaee",
+      "record_digest": "sha256:a298e74a7c0bd2f1172a2cc0cc4f4262d65d21c1bd752ee25066bc50e5c706ac",
+      "command_id": "plan-revise:issue-418:agent-e2e-review-custody:plan:r10:fd70e80d4cb1",
+      "receipt_id": "certificate:ef2f4ef408492896f8e90a6329d832cf",
+      "receipt_digest": "sha256:abd4c8a453650952e54a4905852b38faefc38cceebbb39d2789e63859bc84ad8",
+      "decision_digest": "sha256:aeb8ecc8e3b937b704aebbf625099b7a3f01cbd2943c43b75aeab0948f76b8f3",
       "binding": {
-        "path": "docs/plans/PLAN-L7-628-pack-consumer-runtime-release-install.md",
-        "plan_id": "PLAN-L7-628-pack-consumer-runtime-release-install",
-        "asset_id": "plan:cd11a1885b1c948d89519002a2cec009",
-        "revision": 13,
-        "content_digest": "sha256:7e2f172df6eccc43a8abeacd556d46245e4018e67d78d6f841444b007dd5cb50"
+        "path": "docs/plans/PLAN-L7-531-pack-internal-canary-smoke.md",
+        "plan_id": "PLAN-L7-531-pack-internal-canary-smoke",
+        "asset_id": "plan:44f79788376b81c225ce5913fddbc48f",
+        "revision": 10,
+        "content_digest": "sha256:64882dd8b638f55b7f13e2373fff91214f0fb37dbfc71791e054f8d8663ded9d"
       }
     }
   ]
