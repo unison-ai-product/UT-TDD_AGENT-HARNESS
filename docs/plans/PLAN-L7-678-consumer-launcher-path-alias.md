@@ -8,7 +8,7 @@ drive: agent
 route_signal: incident
 route_mode: incident
 created: 2026-09-30
-updated: 2026-09-30
+updated: 2026-10-01
 owner: Claude control lane
 parent_design: docs/plans/PLAN-L7-516-pack-self-contained-consumer-runtime.md
 pair_artifact: docs/test-design/harness/L7-678-consumer-launcher-path-alias-test-design.md
@@ -22,6 +22,8 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-678-consumer-launcher-path-alias.md
     artifact_type: markdown_doc
+  - artifact_path: docs/test-design/harness/L7-678-consumer-launcher-path-alias-test-design.md
+    artifact_type: test_design
 dependencies:
   parent: docs/plans/PLAN-L7-516-pack-self-contained-consumer-runtime.md
   requires:
@@ -33,22 +35,37 @@ backprop_decision: not_required
 backprop_decision_reason: launcher の欠陥修理は PR 726 (09cb375d / d0bf9731) で main
   に入っており、本 PLAN は既存契約に対する回帰 oracle を固定するだけで、pointer schema・digest・physical
   escape 契約や上位要件を変更しない。
-review_evidence: []
+review_evidence:
+  - reviewer: gpt-6.1-sol
+    review_kind: cross_agent
+    reviewed_at: 2026-10-01
+    verdict: PASS
+    worker_model: claude-opus-5
+    reviewer_model: gpt-6.1-sol
+    subject_head: 5d56de51bb04b62b68563f1947515277cef05bce
+    scope: "PR 802 非著者 closing review。r1 FLAG 3件 (alias helper の silent
+      skip、pointer/digest 拒否 oracle 不足、test-design のテスト名不一致) と r2 FLAG 1件
+      (manifest 集約 digest の独立 oracle) を同 PR 内で是正し、r3 で blocking 0。RED 証跡:
+      consumerRoot 正規化 1 行の除去で alias oracle 2 件、pointer key 検証の除去と集約 digest
+      検証の除去で拒否 oracle がそれぞれ RED。Windows CI は 23 tests / 0 skipped。"
+    citations:
+      - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/802
+status: confirmed
 github_issue_id: 678
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:ed17668cb64f29738109eb175b91506e
-  command_id: plan-draft:issue-678:launcher-alias-oracle:rechain-20260930-r3
-  admitted_at: 2026-09-30T10:33:31.420Z
-  source_digest: sha256:b5f294bf87cafe5caa6b56223aecb27ded0ac528fc41ad9428657be593a457b0
-  decision_digest: sha256:911ccab0ad10fe6d7301eef71c63ec279e7b118293abbaae3fbf730895561f95
-  receipt_digest: sha256:32e1349334e4cb5412e813b62cc81b74f27fdf9e928b5f353a1abf53fa41ae3f
+  receipt_id: certificate:950960baf77673952736e4bf9884cb20
+  command_id: plan-revise:issue-678:launcher-alias-oracle:confirm-2
+  admitted_at: 2026-10-01T01:15:46.929Z
+  source_digest: sha256:d408d3819a2bfb893b8869516a86721f3241b67c7e9d8149319a607045b213d8
+  decision_digest: sha256:8e620a5b477c54eb022954505b5e37adb8575f07b61a326e8cd150454e816f7e
+  receipt_digest: sha256:7e0d6d9faf23f7db5521a93d295e0be1934e5a9f62baa2bef5f4a67fdd93714e
   binding:
     path: docs/plans/PLAN-L7-678-consumer-launcher-path-alias.md
     plan_id: PLAN-L7-678-consumer-launcher-path-alias
     asset_id: plan:ed17668cb64f29738109eb175b91506e
-    revision: 1
-    content_digest: sha256:b5f294bf87cafe5caa6b56223aecb27ded0ac528fc41ad9428657be593a457b0
+    revision: 2
+    content_digest: sha256:d408d3819a2bfb893b8869516a86721f3241b67c7e9d8149319a607045b213d8
   route:
     signal: incident
     mode: incident
@@ -65,9 +82,9 @@ admission_receipt:
     target_plan_id: PLAN-L7-516-pack-self-contained-consumer-runtime
     target_revision: 5
     phase: forward_merge
-  escape_reason: "Issue #678 の Windows consumer launcher 8.3 alias 誤拒否は #726 で
-    main に修理済みだが、独立 oracle が無い (PR #681 の alias oracle は helper の引数 quoting
-    欠陥で常に skip していた)。回帰 oracle を固定するための incident 起票。"
+  escape_reason: PR 802 の非著者 closing review (Sol r3) が blocking 0 で PASS したため、回帰
+    oracle を所有する test-design を generates に宣言し、review_evidence を記録して confirmed
+    にする。
 ---
 
 # PLAN-L7-678: consumer launcher path alias 誤拒否の回帰 oracle 固定
