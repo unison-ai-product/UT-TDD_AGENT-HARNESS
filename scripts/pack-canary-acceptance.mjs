@@ -152,7 +152,11 @@ export function main(argv = process.argv.slice(2), deps = {}) {
   const record = parsePublishRecord(JSON.parse(recordBytes.toString("utf8")), args["--comment-url"]);
   const { directory, actualDigests } = verifyReleaseDirectory(args["--release-dir"], record);
   const consumerRoot = realpathSync.native(resolve(args["--consumer-root"]));
+  if (!isInside(realpathSync.native(tmpdir()), consumerRoot))
+    throw new Error("consumer-root-not-disposable-temp");
   if (readdirSync(consumerRoot).length !== 0) throw new Error("consumer-root-not-empty");
+  const anchorDenial = verifyWrongAnchorDenial(directory, record.consumerAnchorDigest, run);
+  verifyReleaseDirectory(directory, record);
   runProductGit(run, consumerRoot, ["init", "--quiet"]);
   runProductGit(run, consumerRoot, ["config", "user.email", "canary@example.invalid"]);
   runProductGit(run, consumerRoot, ["config", "user.name", "Canary acceptance"]);
@@ -192,6 +196,7 @@ export function main(argv = process.argv.slice(2), deps = {}) {
     transcript,
     asset_sha256: actualDigests,
     consumer_anchor_digest: record.consumerAnchorDigest,
+    wrong_anchor_denial: anchorDenial,
     consumer_root: consumerRoot,
     release_directory: directory,
     consumer_head: child.status === 0 ? productHead(run, consumerRoot) : null,
@@ -201,6 +206,29 @@ export function main(argv = process.argv.slice(2), deps = {}) {
   if (child.error) throw child.error;
   if (child.status !== 0) throw new Error(`consumer-setup-failed:${child.status ?? child.signal ?? "unknown"}`);
   process.stdout.write(`${JSON.stringify({ ok: true, evidence: resolve(args["--evidence"]), setup_exit_code: child.status })}\n`);
+}
+
+/** Observe the released installer fail before any consumer write on a wrong anchor. */
+export function verifyWrongAnchorDenial(releaseDirectory, expectedAnchor, run = spawnSync) {
+  if (!digestPattern.test(expectedAnchor)) throw new Error("wrong-anchor-input-invalid");
+  const wrongAnchor = `sha256:${expectedAnchor[7] === "0" ? "1" : "0"}${expectedAnchor.slice(8)}`;
+  const denyRoot = mkdtempSync(join(tmpdir(), "ut-canary-anchor-deny-"));
+  try {
+    const args = buildInstallerInvocation(releaseDirectory, wrongAnchor);
+    const child = run(process.execPath, args, {
+      cwd: denyRoot, encoding: "utf8", windowsHide: true,
+      env: { PATH: process.env.PATH ?? "", ...(process.env.SystemRoot ? { SystemRoot: process.env.SystemRoot } : {}),
+        UT_TDD_SKIP_UPDATE_CHECK: "1" }, timeout: 120_000,
+    });
+    const output = `${child.stdout ?? ""}${child.stderr ?? ""}`;
+    if (child.error || child.status === 0 || !output.includes("consumer_runtime_anchor_mismatch"))
+      throw new Error(`wrong-anchor-not-typed-denied:${child.error?.message ?? child.status}`);
+    if (readdirSync(denyRoot).length !== 0) throw new Error("wrong-anchor-wrote-consumer-root");
+    return { exit_code: child.status, typed_reason: "consumer_runtime_anchor_mismatch",
+      consumer_write_count: 0, argv: [process.execPath, ...args] };
+  } finally {
+    rmSync(denyRoot, { recursive: true, force: true });
+  }
 }
 
 function runProductGit(run, consumerRoot, args) {
@@ -220,6 +248,8 @@ function verifySmoke(parsed, { now, run }) {
   if (parsed.removedPaths.length < 2) throw new Error("verify-requires-removed-source-and-release-paths");
   const args = parsed.values;
   const consumerRoot = realpathSync.native(resolve(args["--consumer-root"]));
+  if (!isInside(realpathSync.native(tmpdir()), consumerRoot))
+    throw new Error("consumer-root-not-disposable-temp");
   const alternateCwd = realpathSync.native(resolve(args["--alternate-cwd"]));
   if (isInside(consumerRoot, alternateCwd))
     throw new Error("verify-cwd-must-be-distinct-from-consumer-root");
@@ -531,7 +561,7 @@ function writeReviewEnvelope(consumerRoot, requestDigest, request, memoryPath) {
   return envelopePath;
 }
 
-function verifyRegisteredHooks(consumerRoot, env, run, transcript) {
+export function verifyRegisteredHooks(consumerRoot, env, run, transcript) {
   const claudeSettings = JSON.parse(readFileSync(join(consumerRoot, ".claude", "settings.json"), "utf8"));
   const codexSettings = JSON.parse(readFileSync(join(consumerRoot, ".codex", "hooks.json"), "utf8"));
   const claude = claudeSettings.hooks?.PreToolUse?.flatMap((item) => item.hooks ?? [])

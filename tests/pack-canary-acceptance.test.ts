@@ -49,6 +49,33 @@ interface AcceptanceModule {
     actualDigests: Record<string, string>;
   };
   verifyInstallEvidence(evidence: unknown, consumerRoot: string, removedPaths: string[]): void;
+  verifyWrongAnchorDenial(
+    releaseDirectory: string,
+    expectedAnchor: string,
+    run?: (
+      binary: string,
+      args: string[],
+      options: { cwd: string },
+    ) => {
+      status: number;
+      stdout: string;
+      stderr: string;
+    },
+  ): { exit_code: number; typed_reason: string; consumer_write_count: number; argv: string[] };
+  verifyRegisteredHooks(
+    consumerRoot: string,
+    env: Record<string, string>,
+    run: (
+      binary: string,
+      args: string[],
+      options: { input: string },
+    ) => {
+      status: number;
+      stdout: string;
+      stderr: string;
+    },
+    transcript: unknown[],
+  ): void;
 }
 
 const acceptance = (await import(
@@ -65,6 +92,8 @@ const {
   parsePublishRecord,
   verifyReleaseDirectory,
   verifyInstallEvidence,
+  verifyWrongAnchorDenial,
+  verifyRegisteredHooks,
 } = acceptance;
 
 const tempRoots: string[] = [];
@@ -102,6 +131,74 @@ function releaseDir(assetBytes: Record<string, string>) {
 }
 
 describe("manual canary acceptance publish-record boundary", () => {
+  it("U-ST-PACKCANARY-010: generated hook registrations must allow and block on both providers", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-canary-hook-smoke-"));
+    tempRoots.push(root);
+    mkdirSync(join(root, ".claude"));
+    mkdirSync(join(root, ".codex"));
+    writeFileSync(
+      join(root, ".claude", "settings.json"),
+      JSON.stringify({
+        hooks: {
+          PreToolUse: [{ hooks: [{ command: "node", args: ["work-guard"] }] }],
+        },
+      }),
+    );
+    writeFileSync(
+      join(root, ".codex", "hooks.json"),
+      JSON.stringify({
+        hooks: {
+          PreToolUse: [{ hooks: [{ command: "node work-guard" }] }],
+        },
+      }),
+    );
+    const transcript: unknown[] = [];
+    const calls: string[] = [];
+    verifyRegisteredHooks(
+      root,
+      {},
+      (_binary, _args, options) => {
+        calls.push(options.input);
+        const denied = options.input.includes("foreign-uncommitted.ts");
+        return {
+          status: denied ? 2 : 0,
+          stdout: denied ? "[ut-tdd-work-guard] BLOCK: foreign edit" : "",
+          stderr: "",
+        };
+      },
+      transcript,
+    );
+    expect(calls).toHaveLength(4);
+    expect(transcript).toHaveLength(4);
+  });
+
+  it("U-ST-PACKCANARY-008: wrong anchor must typed-deny with consumer write zero", () => {
+    const anchor = `sha256:${"a".repeat(64)}`;
+    const seen: string[][] = [];
+    const denied = verifyWrongAnchorDenial("release", anchor, (_node, args) => {
+      seen.push(args as string[]);
+      return { status: 1, stdout: "consumer_runtime_anchor_mismatch", stderr: "" };
+    });
+    expect(denied).toMatchObject({
+      exit_code: 1,
+      typed_reason: "consumer_runtime_anchor_mismatch",
+      consumer_write_count: 0,
+    });
+    expect(seen).toHaveLength(1);
+    expect(seen[0]).toContain("--consumer-runtime-release");
+    expect(seen[0]).not.toContain("--consumer-runtime-input");
+    expect(seen[0][seen[0].indexOf("--expected-consumer-digest") + 1]).not.toBe(anchor);
+    expect(() =>
+      verifyWrongAnchorDenial("release", anchor, () => ({ status: 0, stdout: "", stderr: "" })),
+    ).toThrow("wrong-anchor-not-typed-denied");
+    expect(() =>
+      verifyWrongAnchorDenial("release", anchor, (_node, _args, options) => {
+        writeFileSync(join((options as { cwd: string }).cwd, "leak"), "1");
+        return { status: 1, stdout: "consumer_runtime_anchor_mismatch", stderr: "" };
+      }),
+    ).toThrow("wrong-anchor-wrote-consumer-root");
+  });
+
   it("U-ST-PACKCANARY-010: consumer state cannot retain removed source paths", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-canary-path-reference-"));
     tempRoots.push(root);
