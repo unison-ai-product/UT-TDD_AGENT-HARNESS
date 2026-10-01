@@ -213,18 +213,18 @@ status: confirmed
 github_issue_id: 676
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:57a8c4410d8cf3d5e54d4457eea5724c
-  command_id: plan-revise:issue-676:g14-test-generates:codex-rehydration:r23:b57ba45663b1
-  admitted_at: 2026-10-01T08:08:10.431Z
-  source_digest: sha256:13f8eaaf1b65b473aa9f90eed8ef6ddf2ed649d49f1f3c8d1950e9207303dc08
-  decision_digest: sha256:10e6e1c4c56060393a8558ab83e3b900edf056dad15f708feef754a8d6588fd3
-  receipt_digest: sha256:e2ebab7a9f7d73cdc20125fb17c8a6aed19361e2e60ea79a559a14fadd651df8
+  receipt_id: certificate:4416afdcf7beb0002ced45d0aad17055
+  command_id: plan-revise:issue-676:canary3-rebind:plan:r24:e4431cc77cfe
+  admitted_at: 2026-10-01T09:33:56.513Z
+  source_digest: sha256:aad8875239a4b5ea94d844a89553421ca77be2b5fe04bf6d0d933f299fbf1734
+  decision_digest: sha256:4bdfd5cba10ab9b1732eed63b3a79595213d452ef99b9537f9c9b04777a22164
+  receipt_digest: sha256:fc231446c789ca885a5a1e989efcffd08c57e5b66b3e7fdc47c9290030cbf599
   binding:
     path: docs/plans/PLAN-L7-676-release-consumer-dev-start.md
     plan_id: PLAN-L7-676-release-consumer-dev-start
     asset_id: plan:aae8bf0e313f8688fbad4d4d8cf0a6a9
-    revision: 23
-    content_digest: sha256:13f8eaaf1b65b473aa9f90eed8ef6ddf2ed649d49f1f3c8d1950e9207303dc08
+    revision: 24
+    content_digest: sha256:aad8875239a4b5ea94d844a89553421ca77be2b5fe04bf6d0d933f299fbf1734
   route:
     signal: feature_addition
     mode: add-feature
@@ -242,11 +242,12 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-676-release-consumer-dev-start
-    target_revision: 23
+    target_revision: 24
     phase: forward_merge
-  escape_reason: "Issue #676 PR-G14 (#808): 新規 test
-    tests/consumer-g14-static.test.ts (CANDIDATE-U-RCDEV-035 の昇格先) を generates
-    に宣言する bounded 改訂。契約本文・判定規則の変更なし (deliverable-plan-trace の orphan 解消のみ)。"
+  escape_reason: "Issue #676 PO 判断 (2026-10-01、comment 5928029266、案 A): 公開済み
+    canary.2 が G14 を含まないため、G14 の consumer 配送と §3.7 の E2E の閉じ先を v0.2.0-canary.3
+    へ再束縛する bounded 契約改訂。canary.2 と AT-DIST-002 PASS は有効のまま。gate
+    の判定規則・oracle・generates・test-design は変更しない (docs のみ)。"
 ---
 
 # PLAN-L7-676: Release consumer で開発を開始できる状態にする
@@ -257,7 +258,7 @@ admission_receipt:
 2026-09-24 の consumer sweep (空 git repo 2 つ、`setup --solo` 後に初週の主要コマンドを実行) で、PLAN-L7-628 の producer /
 installer が揃っても開発開始を止める穴が残ることを確認した (Issue #676 表 A2〜A7 / B1〜B4)。
 
-本 PLAN はその穴のうち、canary.2 で閉じるものを所有する。rev 2 で、PO のスコープ改訂 (§3.5) により設計テンプレート一式・consumer で使える gate G1〜G14・エージェント確認経路の E2E を scope に加えた。PLAN-L7-628 (Release asset と runtime 有効化) とは責務が別であり、
+本 PLAN はその穴のうち、canary.2 で閉じるものを所有する。rev 2 で、PO のスコープ改訂 (§3.5) により設計テンプレート一式・consumer で使える gate G1〜G14・エージェント確認経路の E2E を scope に加えた。rev 24 で、canary.2 (公開済み、immutable) に入らなかった G14 の consumer 配送と §3.7 の E2E の閉じ先を `v0.2.0-canary.3` へ改めた (§8-23)。PLAN-L7-628 (Release asset と runtime 有効化) とは責務が別であり、
 628 の asset 集合・schema・installer 手順を変更しない。本 PLAN は pair-freeze であり、実装・Green・#676 の closure を主張しない。
 
 実測の出典: Issue #676 本文 (consumer sweep の結果表) と、本 PLAN 起票前の read-only 実測 (harness HEAD `67b3c16d`。skills の本数・reader の有無・bundle サイズ・module の所有 PLAN。以下「facts」と呼び、要点は §2 と §3 に転記した)。
@@ -445,6 +446,9 @@ origin 以外 (明示 `owner/repo` 入力など) からの create は L7-529 の
 - PO のスコープ改訂 (2026-09-24): https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/676#issuecomment-5809485588 。
   (a) catalog が required とする全 doc slot の設計テンプレート、(b) consumer で意味のある判定を返す gate G1〜G14 / `vmodel lint` / `plan lint`、
   (c) エージェントが書いた consumer 文書が gate と review を通ることの E2E 観測、を canary.2 のスコープへ移す。受入条件に同じ 3 点を加える。
+- PO 判断 (2026-10-01、rev 24): https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/676#issuecomment-5928029266 。
+  canary.2 は (b) の G14 を含まずに公開されたため、(b) のうち G14 の consumer 配送と (c) の閉じ先を `v0.2.0-canary.3` とする。
+  (a) と G1〜G13 の閉じ先は変えない (§8-23)。
 - PO 判断 (2026-09-24): https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/676#issuecomment-5809861404 。
   テンプレートは新規に書き起こさず、`Vモデル設計ドキュメント_checked.zip` (repo root、gitignore 対象) から移植する。PUBLIC の Pack repo と
   canary.2 Release への同梱 (一般公開) は PO 承認済み。`tools/*.py` は ADR-001 により同梱せず、その検査の意味は TypeScript の gate で実装する。
@@ -991,7 +995,7 @@ consumer に catalog / profile を上書きさせる手段は作らない (§3.2
 ### 3.7 エージェント確認経路の E2E (PLAN-L7-531 所有)
 
 PLAN-L7-531 の入力契約改訂 (別 PR) で、次を E2E 観測項目に加える。本 PLAN は観測の前提 (テンプレート配送、resolver、consumer gate) を所有し、
-E2E 自体と ID は 531 が所有する。
+E2E 自体と ID は 531 が所有する。観測に使う immutable artifact は `v0.2.0-canary.3` (G14 を含む main から公開) とする (rev 24、§8-23)。
 
 - clean consumer fixture で、エージェント (Claude または Codex) が §3.5 のテンプレートから L1〜L7 のいずれかの文書を書く。
 - その文書に対し該当 gate が applicable:true の判定を返し、文書を正しく書いた場合は pass、必須 slot を欠いた場合は該当 slot 名付きで fail する。
@@ -1057,7 +1061,7 @@ scope 構造 FLAG は close → 分割再出。PR-T 系は docs のみで source
    gate parser が読め、zip の管理 yaml と `tools/*.py` が別ファイルとして出荷されない (CANDIDATE-U-RCDEV-019..025 Green)。
 8. PR-G0〜PR-VL: consumer fixture で gate G1〜G14・`vmodel lint`・`plan lint` の全てが、ENOENT の「could not run」も「no deterministic check registered」も
    返さず、§3.6-4 の述語に基づく判定を返す。harness 自身の G1〜G10 の判定は不変 (CANDIDATE-U-RCDEV-026..037 Green)。
-9. #676 の受入 (空 repo からの開発開始、エージェントが書いた文書が gate と review を通ること) は PLAN-L7-531 の E2E で観測する。本 PLAN は unit / integration まで。
+9. #676 の受入 (空 repo からの開発開始、エージェントが書いた文書が gate と review を通ること) は PLAN-L7-531 の E2E で、`v0.2.0-canary.3` から install した consumer を対象に観測する (rev 24、§8-23)。本 PLAN は unit / integration まで。
 
 ## 6. TDD / trace / Reverse
 
@@ -1108,3 +1112,4 @@ injection path の乗っ取り、harness 自身の挙動変化、部分 setup �
 20. G10 の skip 判定 (rev 20): PR-G10 の着手前に Codex root lane が行った read-only 監査 (#676、2026-09-29) で、§3.6-4 の G10 行の n/a 分岐 (「`skip_reason` 非空かつ scale profile で当該 slot が有効でないときだけ n/a passed」) が到達不能であることが分かった。scale profile に L10 の decision 行が無く、consumer の profile 選択にも入力源が無いためである。advisor (claude-fable-5-1、design、SURVIVES) の推奨に従い、実装 PR 内の読み替えではなく契約改訂とした。§3.6-4 の G10 行を「`status: skipped` は常に failed (VMC-005)」へ改め、同節に設計判断「G10 の skip 判定」(案 A〜D と advisor の付帯条件) を追記し、§7 に profile に基づく L10 skip の後続 PLAN への繰り延べを加え、test-design の CANDIDATE-U-RCDEV-031 の skip mutation を揃えた。`generates`、他 gate の述語、G2 の L10 pair 規則は変更しない。
 21. G11 / G12 の証跡 shape (rev 21): PR-G11 の着手前に Codex root lane が、§3.6-4 の G11 行と CANDIDATE-U-RCDEV-032 が trace 記録の配列名・field 名・status の閉集合と、manifest の UAT ID field 名を定めていないことを指摘し、実装 PR 内で新しい正本 shape を発明せず契約側で freeze するよう求めた (#676、2026-09-29)。G12 行と CANDIDATE-U-RCDEV-033 にも同じ欠落 (AT ID field 名、artifact の中身の形式) があった。あわせて、右腕 T の cite 可能 ID 集合 (太字 `**ID**` と `doc_type_id`) が L3 の見出しで定義された `FR-NN` / `AC-*` を含まず、G11 / G12 の case 表が正しい要件 ID / AC ID を cite できないことを実測した。実装 PR 内の読み替えではなく契約改訂とし、§3.6-4 に設計判断「G11 / G12 の証跡 shape」を追記した。内容は、case ID field 名を contract の `case_id_prefix` から導く一般規則 (G8 / G9 / G10 の既存名はその具体例で不変)、gate 固有述語が参照する artifact を別 JSON file とする規則、G11 / G12 の T の cite 可能 ID 集合 (右腕の既存集合に G3-trace の L3 見出し抽出を和集合で足す)、G11 の case 表 (第2章 検証マトリクス)、`end_to_end_trace_review.requirements[]` (`requirement_id` / `status` ∈ `traced` / `blocked`、L3 要件 ID は G3-trace と同じ抽出規則)、`po_uat_decision` (`decision` ∈ `accept` / `reject`、reject は failed、`decided_by_role` 非空、`revision` 40 桁 hex)、G12 の artifact field の符号化である。§3.6-4 の E / F 行の `mandatory_<id>s` 表記と G11 / G12 行を揃え、test-design の CANDIDATE-U-RCDEV-032 / 033 に正常形 fixture と 1 軸 mutation を加えた。`generates`、テンプレート文書、G8 / G9 / G10 の判定、他 gate の述語は変更しない。
 22. G13 / G14 の証跡 shape (rev 22): rev 21 で G11 / G12 の shape を freeze した際、同じ欠落 (manifest の case ID field 名、artifact の中身の形式、T で cite できる ID の集合) が §3.6-4 の G13 / G14 行と CANDIDATE-U-RCDEV-034 / 035 に残っていた。加えて実測で、L13 / L14 テンプレートに `SMOKE-` / `OT-` の case 表も `family` 列も無いこと、G14 の contract `governance_artifact` が consumer テンプレートの無い harness 固有の upgrade-delta 文書を指すこと、L12 と L0 が右腕の pair 集合に入らないこと、L0 テンプレートに「目的 ID」が無いことを確認した。実装 PR 内の読み替えではなく契約改訂とし、§3.6-4 に設計判断「G13 / G14 の証跡 shape」を追記した。内容は、G14 の slot を detector 内の定数 `DOC-L14-OPERATIONAL-TEST` (catalog 行が出典) に固定すること (contract の `governance_artifact` は変えない VMC-003 の明示的例外 1 件。contract の `governance_artifact` を読む 3 consumer (right-arm-static / right-arm-gate-planning / right-lung-doc-governance) で、catalog 実行時参照・contract への slot field 追加 (O1')・contract 改訂・bundle 用 contract variant と比較して選び、O1' / O2 は起票条件 3 つを付けて後続 PLAN へ送った)、L13 / L14 テンプレート末尾の `### harness 追補:` case 表と ZIP 忠実性宣言への 1 文の追記 (PR-G13 / PR-G14 の実装範囲)、G13 の片方向 T (`extractAtIds` の import)、`sli_slo_observation` / `rollback_decision` (rollback は shape-only) の field、G14 の family 検査と L0 = `PLAN-L0-*` の plan_id、`improvement_feedback` の 2 形 (route された非空 `items[]`、または `items: []` + `no_improvement: true`) と `routed_to` の符号化である。advisor (`claude-fable-5`、design) の判定は 2 回とも部分生存で、G14 の slot (形と VMC-003 の扱い)、`improvement_feedback`、harness G14 failed の受容根拠の指摘を反映した。harness 自身の G14 static は採用案でも failed になるが、CI (`harness-check` / doctor) は G8〜G14 の static を評価せず、`doc_type_id` の 1 行追記でも passed にならないことを実測し、§3.6-7 の範囲として PR-G14 の PR 本文に記録する。test-design の CANDIDATE-U-RCDEV-034 / 035 に正常形 fixture と 1 軸 mutation を加えた。`generates`、contract、G8〜G12 の判定、他 gate の述語は変更しない。
+23. canary.3 への再束縛 (rev 24、2026-10-01): 実測 (#676 comment 5927961063) で、公開済みの `v0.2.0-canary.2` は source main `39d75206` から作られ、G14 の登録 (PR #808、main `d55f965c`) を含まないことを確認した。canary.2 から install した Windows consumer で `gate G14 --json` を実行すると、exit 1、`no deterministic check registered for this gate` で失敗する。§3.5 (rev 2) は G1〜G14 と §3.7 の E2E を canary.2 のスコープに置いていたため、immutable な canary.2 ではこの契約を満たせない。PO 判断 (2026-10-01、https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/676#issuecomment-5928029266) は案 A で、G14 を含む main から `v0.2.0-canary.3` を公開し、本 PLAN の未完の成果物 (G14 の consumer 配送と §3.7 の E2E) の閉じ先を canary.3 とする。close の順は #676 → #418 である。advisor (`claude-fable-5`、progress) は案 A を推奨した。案 B (#418 を canary.2 で閉じ、#676 を別の親へ移す) は、必須子が未完の親を閉じない階層規律 (`docs/governance/github-issue-hierarchy.md`) に反するため棄却した。canary.2 の公開物と、それに対する AT-DIST-002 の Windows / Linux PASS (非著者の独立再検、#418 comment 5927336139) はそのまま有効であり、上書きも撤回もしない。#807 (tarball 内 `scripts/ut-tdd.ps1` の CRLF と manifest `contentDigest` の不一致) は canary.3 の前提にしない。理由は、tar の各 entry を `contentDigest` と照合する consumer の経路がまだ存在せず (#807 本文「影響」)、canary の受入は公開記録の asset sha256 の一致で判定するためである。#807 は、その照合を入れうる #364 / #627 より前に landing させる。§3.6-4 と §7 にある「canary.2 では G10 の `status: skipped` を常に failed とする」規則は canary.3 でもそのまま適用する。本改訂は束縛先の Release だけを変え、gate の判定規則・oracle・`generates`・test-design・その他の契約本文は変更しない。§3.7 の E2E 項目は PLAN-L7-531 の入力契約追補 (別 PR) で canary.3 に束縛する。
