@@ -8,7 +8,7 @@ drive: agent
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-09-10
-updated: 2026-09-29
+updated: 2026-10-01
 owner: Claude / Fable (pair-freeze) · Codex worker (implementation)
 parent_design: docs/plans/PLAN-L6-101-pack-independent-multi-consumer-acceptance.md
 pair_artifact: docs/test-design/harness/L12-pack-internal-canary-test-design.md
@@ -27,6 +27,14 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-531-pack-internal-canary-smoke.md
     artifact_type: markdown_doc
+  - artifact_path: tests/pack-internal-canary-boundary.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/support/pack-internal-canary.ts
+    artifact_type: test_code
+  - artifact_path: scripts/pack-canary-acceptance.mjs
+    artifact_type: script
+  - artifact_path: tests/pack-canary-acceptance.test.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L6-101-pack-independent-multi-consumer-acceptance.md
   requires:
@@ -77,18 +85,18 @@ status: confirmed
 github_issue_id: 418
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:e25ed6b78369e081edfeb32b14b3973a
-  command_id: plan-revise:issue-743:tag-channel-rule:p531:r6:84831f749dc4
-  admitted_at: 2026-09-29T07:53:55.304Z
-  source_digest: sha256:bcf72880ba49d4c019fbad108f88fa0f8c72c3332dba8d36010f8971a1ffb54e
-  decision_digest: sha256:a7bf6ba4c9b805bd263b9e4638f599e85105108f5bbc8978e6ee2df506726505
-  receipt_digest: sha256:4319035c7c2b794c54dcd79add15ccddbcc788002371b756ff63a6acb0ac55b2
+  receipt_id: certificate:7003c7fcbd9aff8ba553389f7b7b739c
+  command_id: plan-revise:issue-418:pr804-main-rechain:r8:20261001
+  admitted_at: 2026-10-01T05:49:25.877Z
+  source_digest: sha256:737c50a7257282795272a88a71324d0d5c2f01528fdd7ebd05cb76f6955f6b5c
+  decision_digest: sha256:fd586c44356703e8c2fae9b322acb98a7b779380115d9260e8e79fb0955aaee0
+  receipt_digest: sha256:a887c568b13ffa283e8b238555bdad8d594ad8fd05ab99bb4d3972cb87c610f0
   binding:
     path: docs/plans/PLAN-L7-531-pack-internal-canary-smoke.md
     plan_id: PLAN-L7-531-pack-internal-canary-smoke
     asset_id: plan:44f79788376b81c225ce5913fddbc48f
-    revision: 6
-    content_digest: sha256:bcf72880ba49d4c019fbad108f88fa0f8c72c3332dba8d36010f8971a1ffb54e
+    revision: 8
+    content_digest: sha256:737c50a7257282795272a88a71324d0d5c2f01528fdd7ebd05cb76f6955f6b5c
   route:
     signal: feature_addition
     mode: add-feature
@@ -106,14 +114,9 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-531-pack-internal-canary-smoke
-    target_revision: 6
+    target_revision: 7
     phase: forward_merge
-  escape_reason: "Issue #743: §3.1 の fixture tag の例 v0.0.0-canary-fixture は
-    -canary. を含まず、PLAN-L7-628 の channel 規則では stable で admission されていた。第 1 層を第 2
-    層の実物 v0.2.0-canary.2 と同じ canary 経路に揃えるため、fixture tag を v0.0.0-canary.0 に固定し
-    canary channel での admission を明記する。既存制約 (Pack 公開 tag と非衝突、v0.2.0-canary.*
-    を名乗らない) は不変で、Pack repo に v0.0.0* の tag が無いことを実測した。PLAN-L7-628 rev 10 (§2.3)
-    と同じ PR で出す。"
+  escape_reason: PR804 current main receipt chainからreview済みPR2本文を正規再発行する
 ---
 
 # PLAN-L7-531: Pack-only internal canary smoke (Windows/Linux)
@@ -319,9 +322,8 @@ clean fixture で、consumer root へ 1 byte も書かれずに deny される�
 と異なる (anchor 照合を持たない revision から build された・build 過程で照合が落ちた) まま publish
 された」ことである。第 1 層 Green を、この anchor 照合や第 2 層の受入証跡へ読み替えない。
 
-第 2 層の実行形態 (手動 script か `workflow_dispatch` か) は本 PLAN で決めない。§6 PR-2 の設計
-判断節で advisor 相談のうえ確定し、本 PLAN の revision へ記録する。実行そのものは公開の PO 承認後に
-のみ行う。
+第 2 層は §6.1 の設計判断どおり checked-in manual Node runner で実行する。実 Release の受入 run は
+公開の PO 承認後にのみ行う。
 
 ### 3.4 publish 記録の様式 (`PLAN-L7-628` §5.7 が本 PLAN に割り当てた所有)
 
@@ -400,9 +402,22 @@ request custody を代替しない。
 | --- | --- | --- |
 | PR-0 (本 PR) | 本 PLAN + `PLAN-REVERSE-531` + pair test-design の pair-freeze (docs のみ)、入力契約の `PLAN-L7-628` 接合 | `PLAN-L7-628` PR-1 (producer) の main 到達 (充足済み、§1.2)。PR-2 (installer、#726) の main 到達は本 PR-0 の前提にしない — docs 接合のみで実装を主張しない (#726 は `c029d4ed` で merge 済み) |
 | PR-1 | 第 1 層 CI smoke: `tests/pack-internal-canary-boundary.test.ts` の Red→Green と最小配線。CANDIDATE 001..004、006 (unit)、007、010 (第 1 層) を `U-ST-PACKCANARY-*` へ昇格 | `PLAN-L7-516` §6 の破壊的 checkout 削除 E2E (#420 production adapter) の main 所在確認、`PLAN-L7-628` PR-2 (installer、#726) の main 到達 (§5 手順 2 が installer コマンドを呼ぶため)、本 PR-0 の非著者 PASS |
-| PR-2 | 第 2 層 受入 runner 配線 (実行形態は PR-2 の設計判断節で確定) と §3.4 publish 記録の照合。CANDIDATE 005、006 (受入)、008、009、010 (第 2 層) の昇格と L12 `AT-DIST-002` 行の追記 | PR-1 merge、`PLAN-L7-628` PR-2 (#726) の main 到達。受入 run の実行 (昇格の Green 実測) は `v0.2.0-canary.2` 公開の PO 承認後 |
+| PR-2 | checked-in manual Node runner (`scripts/pack-canary-acceptance.mjs`)、§3.4 publish 記録照合、CANDIDATE 005/006/008/009/010 の第2層昇格と L12 `AT-DIST-002` 行の追記 | PR-1 merge、`PLAN-L7-628` PR-2 (#726) の main 到達。受入 run の実行 (昇格の Green 実測) は `v0.2.0-canary.2` 公開の PO 承認後 |
 
 PR-1 と PR-2 を 1 PR に統合しない。scope 構造を指す FLAG は close→分割再出で応じる。
+
+### 6.1 PR-2 設計判断 (2026-09-30、Issue #418 control comment #5907911175)
+
+| 案 | 内容 | 判定 |
+| --- | --- | --- |
+| **A (採択)** | `scripts/pack-canary-acceptance.mjs` を checked-in manual Node runner とし、exact `v0.2.0-canary.2` の Release 5 asset、Issue #418 の publish record 写し、外部 anchor を検証してから Release-assets-only installer を起動する。受入は Windows と、source checkout を bind mount しない disposable Linux container/VM (Node 24.13.0、WSL2 不可) の双方で行い、別 process/cwd/env で §5 の smoke と hook を実行する。 | 採択 |
+| B | `workflow_dispatch` で同じ受入を起動する | 棄却: workflow に credential を持ち込むこと、新たな attack surface、`GITHUB_TOKEN` が環境変数に常在して env-clear 条件を曖昧にすること。人手起動であっても A より境界が複雑になる |
+
+§3.4 の正本は publish を追跡する source repo の #418 コメント 1 件であり、ローカル JSON はその写しである。runner は写しの SHA-256 と元コメント URL、5 asset 全 digest、anchor、コマンド transcript / exit code を evidence に保存するが、GitHub API を使わず JSON とコメントの一致を自己証明しない。Codex 著 PR-2 の Claude 族 non-author reviewer は、コメント本文との一致と公開 Release bytes からの独立再計算 digest を別途照合する。runner 自身の確認だけで受入完了を宣言しない。
+
+Linux 実受入は Docker Desktop の使い捨て `node:24.13.0-bookworm` container で実行する。`-slim` は git 不在のため使わない。host で GitHub Release の exact 5 asset と #418 publish record 写しを取得し、その 5 asset、写し、checked-in standalone runner だけを `docker cp` で container に渡す。container は `--network none`、bind/volume mount なし、credential/env 注入なしで起動し、source checkout と Pack checkout を持ち込まない。WSL2 backend の kernel を共有しても WSL2 distro を clean 受入環境とは扱わず、独立 filesystem の disposable container として扱う。証跡には `docker image inspect` の RepoDigests、`docker inspect` の NetworkMode/Mounts、`node --version`、`git --version`、Bun 不在、host の `/c` 非到達、copy 対象一覧、runner の transcript と公開 asset の独立 SHA-256/size を保存する。受入後 container は破棄し、公開取得に使った host credential は container へ渡さない。
+
+`#761` は control 判断により canary.2 後へ保留され、本 PR-2 の HARD predecessor ではない。公開および実受入は PO 承認なしに実行しない。
 
 ## 7. TDD / trace / Reverse
 
@@ -424,6 +439,8 @@ pair artifact の候補 oracle は次の通り。001..004 は Codex 先行 test-
 | `CANDIDATE-ST-PACKCANARY-008` | 第 2 層: 実際にダウンロードした Release asset に対し `--expected-consumer-digest` を未指定・形式違反・publish 記録と異なる値にする。Green: `PLAN-L7-628` §6.2 手順 0 の `consumer_runtime_anchor_mismatch` deny を公開 bundle で観測し、consumer root へ 1 byte も書かれないことを確認する (§3.3)。殺す mutation: 公開 bundle が anchor 照合を欠く / 未指定で install を通す | 第 2 層 |
 | `CANDIDATE-ST-PACKCANARY-009` | 受入証跡の出所 (Red: (a) runner の installer 呼び出しを `--consumer-runtime-input` (source-CLI helper `tests/support/pack-consumer-runtime.ts` と同じ経路) に差し替える、(b) runner が anchor を publish 記録ではなく `<release-dir>` の `.consumer.sha256` から再計算する、(c) 受入記録の tag が fixture tag / `v0.2.0-canary.2` 以外)。Green: PR-2 の CI test が runner を offline で呼ぶ。(b) の対照入力は、`.ut-tdd.mjs` を実行意味を変えない形 (末尾へのコメント 1 行追記等。改変後も手順 0〜2 の照合ロジックはそのまま動く) で改変し `.consumer.sha256` を整合的に書き換えた偽造 release-dir と、**5 asset の sha256 entry (producer 値・独立再計算値とも) を偽造 release-dir の値に合わせ、`consumer_anchor_digest` (2 値とも) だけを真正 fixture の anchor に固定した**記録である。この対照では §3.2 の asset 照合・exact 5 件・tag exact・§3.4 の 2 値一致の各 guard がすべて通るため、結果を分けるのは anchor の出所だけになる。正しい runner は spawn 引数の `--expected-consumer-digest` に記録の anchor (真正値) をそのまま渡し、installer 手順 0 が `consumer_runtime_anchor_mismatch` で deny して consumer root write 0。(b) の mutant は偽造 release-dir から再計算した anchor を渡すため手順 0〜2 を通過し deny されない — 観測点 (spawn 引数の anchor 値と deny 有無) の結果が反転し (b) が Red になる。§3.4 は runner に anchor と `.consumer.sha256` entry の相互照合を要求しない。PR-2 がこの相互照合を追加する場合は、005(b) と同じく相互照合を外した対照で本入力を実行する (相互照合が上流で deny すると (b) が識別されないため)。runner が起動する argv に `--consumer-runtime-release` があり `--consumer-runtime-input` が無いことを spawn 引数で assert する ((a) を殺す)。受入記録の tag が exact `v0.2.0-canary.2` でなければ受入記録を生成しない ((c) を殺す) | PR-2 CI (offline) |
 | `CANDIDATE-ST-PACKCANARY-010` | guard hook E2E (§3.5)。Red: (a) 生成 `.codex/hooks.json` / `.claude/settings.json` の work-guard が正常系も block する (canary.1 実測の全編集 block と同型)、(b) hook command が撤去済み path・存在しない launcher を指し、hook 失敗が非 block として素通りする、(c) 禁止系 payload を通す。Green: 撤去・別 shell 後の clean fixture で、登録された command 文字列をそのまま実行し、正常系 payload は通過、禁止系 payload は各 runtime の block 規約どおり block。(a)(b)(c) はいずれも Red | 第 1 層 / 第 2 層 (実 Release で再観測) |
+
+PR-2 offline oracle は `tests/pack-canary-acceptance.test.ts` が所有し、実 producer fixture の exact 5 bytes、asset 1-byte mutation / 欠落 / 余剰 / producer・独立 digest 欠落または不一致、wrong publish-record anchor、コメントURL束縛、installer argv (`--consumer-runtime-release` のみ) を検証する。正の anchor install と wrong-anchor deny は installer 本体を spawn し、consumer root write 0 も assert する。第1層の clean closure・review・hooks・Bun / source path trace は既存 `U-ST-PACKCANARY-003/007/010` を使い、PR-2 はこれを再実装しない。
 
 Candidate は pair-freeze 時点の設計候補であり、実装と同じ revision の Red→Green 実測が揃うまで
 `U-*` へ昇格しない。001..004・006 (第 1 層)・007・010 (第 1 層) は `PLAN-L7-531` §6 の PR-1、

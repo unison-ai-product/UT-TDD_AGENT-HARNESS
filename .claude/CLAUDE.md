@@ -121,7 +121,7 @@ Opus / Sonnet が orchestration を担当するとき、**設計・実装・修�
 
 - 実行: `ut-tdd advisor --decision <kind> --current-model <model> --execute --task "..."`
   (`--plan <id>` を付けると発火ログが PLAN に紐づく)。技術判断 (implementation /
-  troubleshooting) は `gpt-5.6-sol` 一次、設計・進行判断 (design / progress) と
+  troubleshooting) は `gpt-6.1-sol` 一次、設計・進行判断 (design / progress) と
   デザイン/UI は `claude-fable-5` 一次 (Model / Effort Routing 節、PO 2026-07-29)。
   レーン選択・着手順・優先順位は **progress** であって技術判断ではない。
 - **advisor の回答を鵜呑みにしない**。前提が事実か実測で確かめ、食い違ったら実測を突き返す
