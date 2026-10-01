@@ -699,13 +699,19 @@ function l0PlanIds(repoRoot: string): Set<string> {
   );
 }
 
-function checkG14CaseTraces(
-  rows: readonly CaseRow[],
-  pairIds: ReadonlySet<string>,
-  definedIds: ReadonlySet<string>,
-  l0Ids: ReadonlySet<string>,
-  violations: string[],
-): void {
+function checkG14CaseTraces({
+  rows,
+  pairIds,
+  definedIds,
+  l0Ids,
+  violations,
+}: {
+  rows: readonly CaseRow[];
+  pairIds: ReadonlySet<string>;
+  definedIds: ReadonlySet<string>;
+  l0Ids: ReadonlySet<string>;
+  violations: string[];
+}): void {
   for (const row of rows) {
     const citedIds = [
       ...row.citations.matchAll(
@@ -1441,7 +1447,7 @@ export function evaluateRightArmStaticGate(
     const l0Ids = l0PlanIds(repoRoot);
     const definedIds = allDesignIds(repoRoot);
     for (const id of l0Ids) definedIds.add(id);
-    checkG14CaseTraces(rows, pairIds, definedIds, l0Ids, violations);
+    checkG14CaseTraces({ rows, pairIds, definedIds, l0Ids, violations });
     checkG9Families(rows, obligation.evidenceFamilies, violations);
   } else if (key === "G10") {
     if (fmValue(content, "status") === "skipped") {
