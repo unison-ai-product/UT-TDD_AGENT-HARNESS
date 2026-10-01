@@ -330,7 +330,8 @@ describe("manual canary acceptance publish-record boundary", () => {
         `
       import { realpathSync } from "node:fs";
       const root = ${JSON.stringify(root)};
-      if (realpathSync.native(root) !== realpathSync(root)) throw new Error("native realpath drift");
+      if (realpathSync(root) !== ${JSON.stringify(realpathSync(root))}) throw new Error("realpath behavior drift");
+      if (realpathSync.native(root) !== ${JSON.stringify(realpathSync.native(root))}) throw new Error("native realpath behavior drift");
       for (const resolvePath of [realpathSync, realpathSync.native]) {
         try { resolvePath(${JSON.stringify(forbidden)}); throw new Error("deny missing"); }
         catch (error) { if (error.message !== "forbidden removed path access") throw error; }
