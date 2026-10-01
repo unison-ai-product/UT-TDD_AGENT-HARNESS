@@ -34,7 +34,7 @@ updated: 2026-09-28
 | CANDIDATE-U-PRDQ-003 | revision 0/負数/非整数、X に無い番号、Y にだけある番号を別々に与える | invalid_input または revision_not_found。latest/他 asset への fallback を検出 |
 | CANDIDATE-U-PRDQ-004 | canonical payload bytes/保存 digest、plan_alias_events の event_digest、plan_draft_journal_events の sequence/previous_event_digest を各々単独変異 | ledger_integrity_mismatch。selector は正常に維持し、検証呼出し除去を検出。row digest 以外の chain 軸では row digest を再計算し、chain 検査自身を観測する |
 | CANDIDATE-U-PRDQ-005 | DB 不在・schema 非対応・open 不可・破損 DB | ledger_unavailable または ledger_integrity_mismatch。DB 作成/migration/rehydration/repair に逃げない |
-| CANDIDATE-U-PRDQ-006 | Node API で次を各々実行: (O1) rollback・sidecar 無しの成功 query、(O2) WAL・sidecar 無し、(O3) WAL・live sidecar、(O4) hot journal、(O5) 別 connection が EXCLUSIVE lock を保持、(O6) O1 と同 fixture で write probe (§2.3)、(O8) snapshot barrier (§2.1)、(O9) 20,000 revision fixture の性能、(O10) busy_timeout 値 (§2.4)、(O11) 試行回数 (§2.5)。CLI subprocess では (O7) O1 / O2 を再実行する | O1: 成功、観測値が前後で完全一致し `-journal` / `-wal` / `-shm` が生じない。O2 / O3: `ledger_unavailable`、観測値不変 (O3 は `-shm` の SHA-256 不変)。O4: `ledger_unavailable`、DB と `-journal` の bytes 不変。O5: 上限 500 ms 以内に `ledger_unavailable` を返す (§2.2)。O6: 書込み可能 open 変異は filesystem 差分を生まない場合がある (SELECT / PRAGMA / BEGIN / COMMIT だけの query は書込み可能な connection でも何も書かない) ので、観測差分では判定しない。代わりに、検証完了直後の test 専用 hook に write probe (`tryWrite()`: query の connection 上で `CREATE TABLE ut_tdd_ro_probe(x INTEGER)` を試み、errcode を返す) を渡し、errcode 8 (SQLITE_READONLY) を要求する。`readOnly: true` と `mode=ro` の両方を除去した変異では probe が成功 (errcode 0) し、決定的に Red になる。片方だけの除去では errcode 8 のままなので kill を要求しない (実測: 両方 / readOnly のみ / mode=ro のみ = 8、どちらも無し = 0。`issue722/fix1/measure-fix1.mjs`)。probe は production 経路では未設定の hook からだけ呼ばれ、公開 API に connection を出さない。O8: §2.1。O9: 1 回 5 秒以内かつ RSS 増分 256MB 以内。O10: query の connection の実効 `busy_timeout` が 0 (§2.4)。O11: busy 中の open / `BEGIN` 試行が各ちょうど 1 回 (§2.5)。gate 除去は O2 / O3、`immutable=1` 置換は O3 (値を返す)、`busy_timeout` / retry 追加のうち 500 ms 以上待つものは O5 で、500 ms 未満の短い待機・retry は O10 / O11 で独立に検出する。DML / DDL / migration / receipt / PLAN write は 0 |
+| CANDIDATE-U-PRDQ-006 | Node API で次を各々実行: (O1) rollback・sidecar 無しの成功 query、(O2) WAL・sidecar 無し、(O3) WAL・live sidecar、(O4) hot journal、(O5) 別 connection が EXCLUSIVE lock を保持、(O6) O1 と同 fixture で write probe (§2.3)、(O8) snapshot barrier (§2.1)、(O9) 20,000 revision fixture の性能、(O10) busy_timeout 値 (§2.4)、(O11) 試行回数 (§2.5)。CLI subprocess では (O7) O1 / O2 を再実行する | O1: 成功、観測値が前後で完全一致し `-journal` / `-wal` / `-shm` が生じない。O2 / O3: `ledger_unavailable`、観測値不変 (O3 は `-shm` の SHA-256 不変)。O4: `ledger_unavailable`、DB と `-journal` の bytes 不変。O5: 上限 500 ms 以内に `ledger_unavailable` を返す (§2.2)。O6: 書込み可能 open 変異は filesystem 差分を生まない場合がある (SELECT / PRAGMA / BEGIN / COMMIT だけの query は書込み可能な connection でも何も書かない) ので、観測差分では判定しない。代わりに、検証完了直後の test 専用 hook に write probe (`tryWrite()`: query の connection 上で `CREATE TABLE ut_tdd_ro_probe(x INTEGER)` を試み、errcode を返す) を渡し、errcode 8 (SQLITE_READONLY) を要求する。`readOnly: true` と `mode=ro` の両方を除去した変異では probe が成功 (errcode 0) し、決定的に Red になる。片方だけの除去では errcode 8 のままなので kill を要求しない (実測: 両方 / readOnly のみ / mode=ro のみ = 8、どちらも無し = 0。`issue722/fix1/measure-fix1.mjs`)。probe は production 経路では未設定の hook からだけ呼ばれ、公開 API に connection を出さない。O8: §2.1。O9: 1 回 5 秒以内かつ RSS 増分 256MB 以内。O10: query の connection の実効 `busy_timeout` が 0 (§2.4)。O11: busy 中の open がちょうど 1 回で、最初の失敗操作後に再実行が無い (§2.5)。gate 除去は O2 / O3、`immutable=1` 置換は O3 (値を返す)、`busy_timeout` / retry 追加のうち 500 ms 以上待つものは O5 で、500 ms 未満の短い待機・retry は O10 / O11 で独立に検出する。DML / DDL / migration / receipt / PLAN write は 0 |
 | CANDIDATE-U-PRDQ-007A (PR-1 受入) | API の成功・失敗値を検査 | DTO の exact key set。DB/statement/row/capability/SQL 詳細を返さない。失敗値では digest を返さない |
 | CANDIDATE-U-PRDQ-007C (PR-2 受入) | CLI の成功・失敗値を検査し、不正値では exit 1 を期待 | 成功だけ exit 0、失敗は exit 1 で digest を出力しない。CLI 出力も 007A と同じ key set に限り内部詳細を出さない。PR-1 では対象外 |
 
@@ -68,21 +68,24 @@ query の test 専用 hook (検証完了直後に 1 回呼ばれる callback。p
 
 PLAN-L7-722 の「`busy_timeout` を設定しない」を、wall-clock に依らず値で falsify する。
 
-- **seam (新規 production seam 不要)**: Vitest の module mock で `src/state-db/index.ts` の `openReadOnlyHarnessDb` を、実関数を呼ぶ spy wrapper に差し替える。wrapper は返された `ReadOnlyHarnessDb` の `close()` を包み、**実 `close()` を呼ぶ直前**に同じ connection で `prepare("PRAGMA busy_timeout").get()` を実行して `timeout` 列を記録する (open 直後ではなく close 直前に読むので、open 後に `PRAGMA busy_timeout = N` を発行する変異も観測できる)。`ReadOnlyHarnessDb.prepare` と `get` は既存 API であり、公開 API に connection を出さない。
+- **seam (新規 production module / seam 不要)**: Vitest で `src/state-db/index.ts` の export `openReadOnlyHarnessDb` に call-through spy を置く (先例: `tests/release-consumer-setup-artifacts.test.ts:202` 以降)。spy は実関数を呼び、返った実 connection を透過的に包む。包む対象は `beginReadTransaction` / `commitReadTransaction` / `userVersion` / `prepare` / `close` の全てである。`userVersion` は `src/state-db/index.ts:157-161` で `native.prepare('PRAGMA user_version').get()` を直接呼び、返却 wrapper の `prepare` を通らない。`prepare` だけの spy は最初の busy 操作を見逃すので、`userVersion` の透過 wrap は必須とする。
+- **fixture path の確認**: spy は open の第 1 引数が test fixture の ledger DB パスであることを assert する (別 DB を開く経路を測らない)。
+- **観測**: 実 `close()` の直前に、実 connection で `PRAGMA busy_timeout` を読み `timeout` 列を記録する。open 直後ではなく close 直前に読むので、open 後に `PRAGMA busy_timeout = N` を発行する変異も観測できる。この probe の `PRAGMA` は spy の下位 (実 connection への直接呼出し) で行い、O11 の試行回数には**数えない**。
 - **fixture**: O1 と同じ成功 fixture と、O5 と同じ lock 競合 fixture の両方で実行する。
 - **期待**: 両方で記録値が `0`。
 - **検出する変異**: `new DatabaseSync(path, { readOnly: true, timeout: N })` (N > 0、100 ms を含む)、`PRAGMA busy_timeout = N` の発行。いずれも記録値が N となり Red。
-- **補足**: `openNativeReadOnly` の既定が 0 であることは上記の実測 (§2.2 の未確定事項 (2)) に依存する。
+- **補足**: 既定が 0 であることは別 in-memory `DatabaseSync` の診断 (Node v24.13.0、`{timeout:0}`) であり、既定値の根拠にとどまる。実 query connection の値は本 oracle が実測する。
 
 ### 2.5 試行回数 (CANDIDATE-U-PRDQ-006 O11、PR-1)
 
-PLAN-L7-722 の「retry しない」を、待機時間に依らず試行回数で falsify する。
+PLAN-L7-722 の「retry しない」を、待機時間に依らず試行回数で falsify する。O5 のテスト (`tests/plan-revision-digest-query.test.ts:425-451`) は EXCLUSIVE lock 下の 1 回呼出しの 500 ms 判定であり、query の既存 `testHook` は schema 読取り後に呼ばれて lock 下では到達しないため、retry oracle には使えない。
 
-- **seam (新規 production seam 不要)**: §2.4 と同じ spy wrapper で、`openReadOnlyHarnessDb` の呼出し回数と、返された connection の `beginReadTransaction()` の呼出し回数を数える。
+- **seam**: §2.4 と同じ spy。
+- **1 attempt の定義 (凍結)**: query 層の 1 attempt = `openReadOnlyHarnessDb` への 1 回の呼出し。同一 connection 上の個々の操作 (`beginReadTransaction` / `userVersion` / `prepare` / statement 実行) は、その attempt の内訳として別個にも数える。spy 自身の `PRAGMA busy_timeout` probe は production の attempt に含めない。
 - **fixture**: O5 と同じ lock 競合 (別 connection が EXCLUSIVE を保持)。
-- **期待**: API は `{ ok: false, reason: "ledger_unavailable" }` を返し、`openReadOnlyHarnessDb` が**ちょうど 1 回**、`beginReadTransaction` が**ちょうど 1 回** (open 失敗時は後者 0 回を許す。ただし合計の試行が 2 回以上になることは Red)。
-- **検出する変異**: 100 ms 待っての 1 回 retry、open / `BEGIN` の失敗を捕捉しての loop。O5 の 500 ms 上限内に収まっても呼出し回数が 2 以上となり Red。
-- **限界**: wrapper より下 (`node:sqlite` 内部) の再試行は数えられない。その経路は O10 の `timeout` 値 0 が担う。
+- **期待**: API は `{ ok: false, reason: "ledger_unavailable" }` を返し、`openReadOnlyHarnessDb` がちょうど 1 回。さらに最初に busy となる操作 (lock 競合下では `beginReadTransaction` または `userVersion`) の失敗後に、同じ種別の操作が再実行されない (種別ごとの呼出し回数が各 1 以下で、`beginReadTransaction` + `userVersion` + `prepare` の合計が、最初の失敗操作より後に増えない)。
+- **検出する変異**: 100 ms 待っての open 全体の retry (open 回数 2)、`BEGIN` / `userVersion` / statement の失敗を捕捉しての loop (種別ごとの回数が 2 以上)。O5 の 500 ms 上限内に収まっても Red。
+- **限界**: `node:sqlite` adapter 内部の再試行は外側の呼出し回数からは見えない。query 層で検出できる retry とは区別し、adapter 内部の待機は O10 の `timeout` 値 0 だけが担う。
 
 ## 3. 実行規律
 
