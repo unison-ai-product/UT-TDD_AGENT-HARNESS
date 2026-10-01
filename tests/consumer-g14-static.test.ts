@@ -162,7 +162,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe("consumer G14 right-arm static gate (CANDIDATE-U-RCDEV-035)", () => {
+describe("consumer G14 right-arm static gate (U-RCDEV-035)", () => {
   it("accepts the frozen normal shape and keeps PO review explicitly pending", () => {
     const root = consumerFixture();
     const result = evaluate(root);
