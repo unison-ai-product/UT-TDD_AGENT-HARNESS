@@ -22,6 +22,7 @@ interface AcceptanceModule {
   buildInstallerInvocation(releaseDirectory: string, anchorDigest: string, tag?: string): string[];
   canaryAssetsForTag(tag: string): readonly string[];
   createConsumerPlan(consumerRoot: string): void;
+  main(argv: string[], deps?: { fixtureTag?: string }): void;
   findForbiddenReferences(root: string, forbiddenPaths: string[]): string[];
   createClosedReviewProviders(
     auditRoot: string,
@@ -87,6 +88,7 @@ const {
   CANARY_TAG,
   canaryAssetsForTag,
   createConsumerPlan,
+  main,
   createClosedReviewProviders,
   findForbiddenReferences,
   parsePublishRecord,
@@ -379,6 +381,40 @@ describe("manual canary acceptance publish-record boundary", () => {
     );
     expect(`${denied.stdout}\n${denied.stderr}`).toContain("consumer_runtime_anchor_mismatch");
     expect(readdirSync(fixture.consumerRoot)).toEqual(before);
+
+    const recordPath = join(fixture.root, "fixture-publish-record.json");
+    const evidencePath = join(fixture.root, "fixture-acceptance-evidence.json");
+    writeFileSync(recordPath, JSON.stringify(publish.value));
+    main(
+      [
+        "--phase",
+        "install",
+        "--record",
+        recordPath,
+        "--comment-url",
+        commentUrl,
+        "--release-dir",
+        fixture.releaseDir,
+        "--consumer-root",
+        fixture.consumerRoot,
+        "--evidence",
+        evidencePath,
+      ],
+      { fixtureTag: "v0.0.0-canary.0" },
+    );
+    const evidence = JSON.parse(readFileSync(evidencePath, "utf8"));
+    expect(evidence).toMatchObject({
+      tag: "v0.0.0-canary.0",
+      setup_exit_code: 0,
+      consumer_anchor_digest: anchor,
+      consumer_root: fixture.consumerRoot,
+      wrong_anchor_denial: {
+        typed_reason: "consumer_runtime_anchor_mismatch",
+        consumer_write_count: 0,
+      },
+    });
+    expect(evidence.consumer_head).toMatch(/^[a-f0-9]{40}$/);
+    expect(readdirSync(join(fixture.consumerRoot, ".ut-tdd", "bin"))).toContain("ut-tdd.mjs");
   }, 600_000);
 
   it.each([

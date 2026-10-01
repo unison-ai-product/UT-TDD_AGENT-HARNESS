@@ -107,7 +107,8 @@ export function verifyReleaseDirectory(releaseDir, publishRecord) {
 }
 
 export function buildInstallerInvocation(releaseDirectory, anchorDigest, tag = CANARY_TAG) {
-  if (tag !== CANARY_TAG) throw new Error("acceptance-tag-not-canary-2");
+  if (tag !== CANARY_TAG && tag !== "v0.0.0-canary.0")
+    throw new Error("acceptance-tag-not-canary-2-or-offline-fixture");
   const args = [
     join(releaseDirectory, `${tag}.ut-tdd.mjs`),
     "setup", "--solo", "--consumer-runtime-release", releaseDirectory,
@@ -145,17 +146,19 @@ function parseArgs(argv) {
 export function main(argv = process.argv.slice(2), deps = {}) {
   const now = deps.now ?? (() => new Date().toISOString());
   const run = deps.spawnSync ?? spawnSync;
+  const tag = deps.fixtureTag === "v0.0.0-canary.0" ? deps.fixtureTag : CANARY_TAG;
+  if (deps.fixtureTag && tag !== deps.fixtureTag) throw new Error("fixture-tag-not-allowed");
   const parsed = parseArgs(argv);
   if (parsed.phase === "verify") return verifySmoke(parsed, { now, run });
   const args = parsed.values;
   const recordBytes = readFileSync(args["--record"]);
-  const record = parsePublishRecord(JSON.parse(recordBytes.toString("utf8")), args["--comment-url"]);
+  const record = parsePublishRecord(JSON.parse(recordBytes.toString("utf8")), args["--comment-url"], { expectedTag: tag });
   const { directory, actualDigests } = verifyReleaseDirectory(args["--release-dir"], record);
   const consumerRoot = realpathSync.native(resolve(args["--consumer-root"]));
   if (!isInside(realpathSync.native(tmpdir()), consumerRoot))
     throw new Error("consumer-root-not-disposable-temp");
   if (readdirSync(consumerRoot).length !== 0) throw new Error("consumer-root-not-empty");
-  const anchorDenial = verifyWrongAnchorDenial(directory, record.consumerAnchorDigest, run);
+  const anchorDenial = verifyWrongAnchorDenial(directory, record.consumerAnchorDigest, run, tag);
   verifyReleaseDirectory(directory, record);
   runProductGit(run, consumerRoot, ["init", "--quiet"]);
   runProductGit(run, consumerRoot, ["config", "user.email", "canary@example.invalid"]);
@@ -163,15 +166,27 @@ export function main(argv = process.argv.slice(2), deps = {}) {
   writeFileSync(join(consumerRoot, "README.md"), "# Isolated canary consumer\n", { flag: "wx" });
   runProductGit(run, consumerRoot, ["add", "--", "README.md"]);
   runProductGit(run, consumerRoot, ["commit", "--quiet", "-m", "canary consumer baseline"]);
-  const setupArgs = buildInstallerInvocation(directory, record.consumerAnchorDigest);
+  const setupArgs = buildInstallerInvocation(directory, record.consumerAnchorDigest, tag);
   const startedAt = now();
-  const child = run(process.execPath, setupArgs, {
-    cwd: consumerRoot,
-    encoding: "utf8",
-    windowsHide: true,
-    env: { PATH: process.env.PATH ?? "", ...(process.env.SystemRoot ? { SystemRoot: process.env.SystemRoot } : {}), UT_TDD_SKIP_UPDATE_CHECK: "1" },
-    timeout: 300_000,
-  });
+  const setupHome = mkdtempSync(join(tmpdir(), "ut-canary-setup-home-"));
+  for (const path of ["home", "appdata", "localappdata", "codex-home"])
+    mkdirSync(join(setupHome, path));
+  let child;
+  try {
+    child = run(process.execPath, setupArgs, {
+      cwd: consumerRoot, encoding: "utf8", windowsHide: true,
+      env: {
+        PATH: process.env.PATH ?? "", HOME: join(setupHome, "home"),
+        USERPROFILE: join(setupHome, "home"), APPDATA: join(setupHome, "appdata"),
+        LOCALAPPDATA: join(setupHome, "localappdata"), CODEX_HOME: join(setupHome, "codex-home"),
+        UT_TDD_SKIP_UPDATE_CHECK: "1",
+        PATHEXT: process.env.PATHEXT ?? ".COM;.EXE;.BAT;.CMD", ComSpec: process.env.ComSpec,
+        ...(process.env.SystemRoot ? { SystemRoot: process.env.SystemRoot } : {}),
+      }, timeout: 300_000,
+    });
+  } finally {
+    rmSync(setupHome, { recursive: true, force: true });
+  }
   const transcript = `${child.stdout ?? ""}${child.stderr ?? ""}`;
   if (!child.error && child.status === 0) {
     const identityPath = join(consumerRoot, "ut-tdd.project.json");
@@ -182,7 +197,7 @@ export function main(argv = process.argv.slice(2), deps = {}) {
   const evidence = {
     phase: "installed-awaiting-clean-restart",
     schema_version: "ut-tdd.pack-canary-acceptance/v1",
-    tag: CANARY_TAG,
+    tag,
     release_url: record.value.release_url,
     source_publish_comment_url: record.commentUrl,
     publish_record_sha256: `sha256:${createHash("sha256").update(recordBytes).digest("hex")}`,
@@ -209,12 +224,12 @@ export function main(argv = process.argv.slice(2), deps = {}) {
 }
 
 /** Observe the released installer fail before any consumer write on a wrong anchor. */
-export function verifyWrongAnchorDenial(releaseDirectory, expectedAnchor, run = spawnSync) {
+export function verifyWrongAnchorDenial(releaseDirectory, expectedAnchor, run = spawnSync, tag = CANARY_TAG) {
   if (!digestPattern.test(expectedAnchor)) throw new Error("wrong-anchor-input-invalid");
   const wrongAnchor = `sha256:${expectedAnchor[7] === "0" ? "1" : "0"}${expectedAnchor.slice(8)}`;
   const denyRoot = mkdtempSync(join(tmpdir(), "ut-canary-anchor-deny-"));
   try {
-    const args = buildInstallerInvocation(releaseDirectory, wrongAnchor);
+    const args = buildInstallerInvocation(releaseDirectory, wrongAnchor, tag);
     const child = run(process.execPath, args, {
       cwd: denyRoot, encoding: "utf8", windowsHide: true,
       env: { PATH: process.env.PATH ?? "", ...(process.env.SystemRoot ? { SystemRoot: process.env.SystemRoot } : {}),
