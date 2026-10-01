@@ -101,3 +101,14 @@ CI の doctor `design-language` (設計系 doc は日本語 prose を正本と�
 資料の `README.md` は `python tools/render_roadmap.py --check` / `python tools/validate_roadmap.py` の再実行を案内するが、
 両 tool は本 repo に収容していない (上表 archived)。`VIEWER_CHECK.md` が言及する閲覧 HTML も同様。それ以外の相対リンク
 (Markdown 相互、`data/*.json`) は収容範囲内で解決する。
+
+## ライセンス記述の扱い (2026-10-01、issue #788)
+
+収容資料は、R01 (0.2.0-canary.2) の目的を「UT 本体を MPL-2.0 へ切り替える」として記述している。これは収容時点の旧案であり、
+PO は 2026-09-24 に **Apache-2.0 への統一** を決め、#682 (commit `c3324740`) で LICENSE・NOTICE・`package.json` を切り替え済みである。
+
+本ディレクトリは原文のまま保管する方針 (上記「位置づけ」) のため、資料本文の MPL 表記は書き換えない。正本の扱いは次のとおり。
+
+- 現行のライセンスは Apache-2.0。資料中の MPL-2.0 の記述 (`data/releases.json`・`data/capabilities.json`・`releases/R01_0.2.0-canary.2.md`・`migration/04_LICENSE_BOUNDARY.md` ほか) は、すべてこの決定で置き換わったものとして読む。
+- R01 の目的は「Apache-2.0 での最初の配布と、移行後の開発・公開責任の確定」と読み替える。
+- 正本側の記述は `docs/plans/PLAN-L1-09-ut-tdd-concept-v4-candidates.md` の MIG-01 / R01 行で揃えた (同 PLAN rev 4)。

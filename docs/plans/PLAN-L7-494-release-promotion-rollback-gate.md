@@ -6,7 +6,6 @@ layer: L7
 drive: agent
 route_signal: forward
 route_mode: forward
-status: confirmed
 created: 2026-08-20
 updated: 2026-08-21
 owner: PM / Codex
@@ -14,11 +13,11 @@ parent_design: docs/plans/PLAN-L6-102-release-promotion-rollback-gate.md
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 agent_slots:
   - role: se
-    slot_label: "SE - 既存PF4/PF5/review sourceを束縛するpure gate実装"
+    slot_label: SE - 既存PF4/PF5/review sourceを束縛するpure gate実装
   - role: qa
-    slot_label: "QA - U-RELMAN-003/004/005/008/010/019..023の独立mutationとside-effect oracle"
+    slot_label: QA - U-RELMAN-003/004/005/008/010/019..023の独立mutationとside-effect oracle
   - role: tl
-    slot_label: "TL - identity、reason precedence、rollback fail-closeの非著者検収"
+    slot_label: TL - identity、reason precedence、rollback fail-closeの非著者検収
 generates:
   - artifact_path: docs/plans/PLAN-L7-494-release-promotion-rollback-gate.md
     artifact_type: markdown_doc
@@ -44,15 +43,15 @@ dependencies:
     - src/setup/release-channel-adapter.ts
     - src/setup/release-aggregate-admission.ts
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/363
-github_issue_id: 363
 backprop_decision: required
 review_evidence:
   - reviewer: codex-primary-preflight
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-08-20T11:38:59Z"
-    tests_green_at: "2026-08-20T11:37:24Z"
-    verdict: "preflight green; Claude Opus 5 non-author closing review pending"
-    scope: "Issue #363 pure promotion/rollback gate、10件の1:1 oracle、PF5 fault compositionのpreflight。"
+    reviewed_at: 2026-08-20T11:38:59Z
+    tests_green_at: 2026-08-20T11:37:24Z
+    verdict: preflight green; Claude Opus 5 non-author closing review pending
+    scope: "Issue #363 pure promotion/rollback gate、10件の1:1 oracle、PF5 fault
+      compositionのpreflight。"
     worker_model: gpt-5.6-luna
     reviewer_model: gpt-5.6-sol
     plan_revision: c1a3a67a2614b3bc755c8dfe4b30d20a6a613159
@@ -60,33 +59,39 @@ review_evidence:
     evidence_path: tests/release-promotion-rollback-gate.test.ts
     anchor_commit: c1a3a67a2614b3bc755c8dfe4b30d20a6a613159
     citations:
-      - "tests/release-promotion-rollback-gate.test.ts: U-RELMAN-003/004/005/008/010/019..023"
-      - "src/setup/release-promotion-rollback-gate.ts: evaluatePromotionGate/selectRollbackCandidate/classifyRollbackApply"
+      - "tests/release-promotion-rollback-gate.test.ts:
+        U-RELMAN-003/004/005/008/010/019..023"
+      - "src/setup/release-promotion-rollback-gate.ts:
+        evaluatePromotionGate/selectRollbackCandidate/classifyRollbackApply"
     green_commands:
       - kind: unit_test
-        command: "node node_modules/vitest/vitest.mjs run tests/release-promotion-rollback-gate.test.ts --reporter=verbose --maxWorkers=1 --minWorkers=1 (workspace-fence diagnostic)"
+        command: node node_modules/vitest/vitest.mjs run
+          tests/release-promotion-rollback-gate.test.ts --reporter=verbose
+          --maxWorkers=1 --minWorkers=1 (workspace-fence diagnostic)
         runner: node
         scope: targeted
         exit_code: 0
-        completed_at: "2026-08-20T11:37:24Z"
+        completed_at: 2026-08-20T11:37:24Z
         evidence_path: tests/release-promotion-rollback-gate.test.ts
-        output_digest: "sha256:b93cd4290ebe0880b7e91626f160faf740a247dbdeab8efa1637f6c76bfd508e"
+        output_digest: sha256:b93cd4290ebe0880b7e91626f160faf740a247dbdeab8efa1637f6c76bfd508e
         anchor_commit: c1a3a67a2614b3bc755c8dfe4b30d20a6a613159
       - kind: typecheck
-        command: "node node_modules/typescript/bin/tsc --noEmit --pretty false"
+        command: node node_modules/typescript/bin/tsc --noEmit --pretty false
         runner: node
         scope: changed-files
         exit_code: 0
-        completed_at: "2026-08-20T11:35:01Z"
+        completed_at: 2026-08-20T11:35:01Z
         evidence_path: src/setup/release-promotion-rollback-gate.ts
-        output_digest: "sha256:f3fe31c90401e08fce4a5f4f3a6dab35b9ba7ea087c30a0af8a572d0d4038022"
+        output_digest: sha256:f3fe31c90401e08fce4a5f4f3a6dab35b9ba7ea087c30a0af8a572d0d4038022
         anchor_commit: c1a3a67a2614b3bc755c8dfe4b30d20a6a613159
   - reviewer: codex-primary-flag-closure
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-08-20T12:03:14Z"
-    tests_green_at: "2026-08-20T12:02:40Z"
-    verdict: "Claude FLAG B1-B5 local closure green; non-author exact-head rereview pending"
-    scope: "rollback review gate、source splicing、PF5 real composition、non-attested identity、runtime invalid shapeの是正。"
+    reviewed_at: 2026-08-20T12:03:14Z
+    tests_green_at: 2026-08-20T12:02:40Z
+    verdict: Claude FLAG B1-B5 local closure green; non-author exact-head rereview
+      pending
+    scope: rollback review gate、source splicing、PF5 real composition、non-attested
+      identity、runtime invalid shapeの是正。
     worker_model: gpt-5.6-luna
     reviewer_model: gpt-5.6-sol
     plan_revision: 24567f43a854f61dc73368d58c6821fda5ad7a07
@@ -96,32 +101,37 @@ review_evidence:
     citations:
       - "U-RELMAN-010: rollback D2 absent deny、PF5 ports 0"
       - "U-RELMAN-020: PR/auth/PLAN/family splicingとreason precedence"
-      - "U-RELMAN-021/022: runtime invalid/non-attested identity/PF5 indeterminate composition"
+      - "U-RELMAN-021/022: runtime invalid/non-attested identity/PF5
+        indeterminate composition"
     green_commands:
       - kind: unit_test
-        command: "node node_modules/vitest/vitest.mjs run tests/release-promotion-rollback-gate.test.ts --reporter=dot --maxWorkers=1 --minWorkers=1 (workspace-fence diagnostic)"
+        command: node node_modules/vitest/vitest.mjs run
+          tests/release-promotion-rollback-gate.test.ts --reporter=dot
+          --maxWorkers=1 --minWorkers=1 (workspace-fence diagnostic)
         runner: node
         scope: targeted
         exit_code: 0
-        completed_at: "2026-08-20T12:01:20Z"
+        completed_at: 2026-08-20T12:01:20Z
         evidence_path: tests/release-promotion-rollback-gate.test.ts
-        output_digest: "sha256:69b42358ebb879990012fa868a9f83b9e86b080e1ac78256a365c357e63b6324"
+        output_digest: sha256:69b42358ebb879990012fa868a9f83b9e86b080e1ac78256a365c357e63b6324
         anchor_commit: 24567f43a854f61dc73368d58c6821fda5ad7a07
       - kind: typecheck
-        command: "node node_modules/typescript/bin/tsc --noEmit --pretty false"
+        command: node node_modules/typescript/bin/tsc --noEmit --pretty false
         runner: node
         scope: changed-files
         exit_code: 0
-        completed_at: "2026-08-20T12:02:40Z"
+        completed_at: 2026-08-20T12:02:40Z
         evidence_path: src/setup/release-promotion-rollback-gate.ts
-        output_digest: "sha256:225419423d10b4b4f1098a260e7125508c510b397d196caa3ff29617fe6b215d"
+        output_digest: sha256:225419423d10b4b4f1098a260e7125508c510b397d196caa3ff29617fe6b215d
         anchor_commit: 24567f43a854f61dc73368d58c6821fda5ad7a07
   - reviewer: codex-primary-flag-closure-2
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-08-21T01:58:47Z"
-    tests_green_at: "2026-08-21T01:58:09Z"
-    verdict: "Claude FLAG B1 revision binding corrected; exact CI 3/3 green; non-author rereview pending"
-    scope: "request.reviewRevisionとsubject.planRevisionの束縛、coherent splice回帰、Linux/Windows/aggregate exact-head CI。"
+    reviewed_at: 2026-08-21T01:58:47Z
+    tests_green_at: 2026-08-21T01:58:09Z
+    verdict: Claude FLAG B1 revision binding corrected; exact CI 3/3 green;
+      non-author rereview pending
+    scope: request.reviewRevisionとsubject.planRevisionの束縛、coherent
+      splice回帰、Linux/Windows/aggregate exact-head CI。
     worker_model: gpt-5.6-luna
     reviewer_model: gpt-5.6-sol
     plan_revision: 1620f24d7b1b91cec2057f1c2224cf66db86e0c8
@@ -129,33 +139,37 @@ review_evidence:
     evidence_path: tests/release-promotion-rollback-gate.test.ts
     anchor_commit: 1620f24d7b1b91cec2057f1c2224cf66db86e0c8
     citations:
-      - "src/setup/release-promotion-rollback-gate.ts:482-519 reviewIdentityMatchesのPLAN revision束縛"
-      - "tests/release-promotion-rollback-gate.test.ts:597-629 coherent splice回帰"
+      - src/setup/release-promotion-rollback-gate.ts:482-519
+        reviewIdentityMatchesのPLAN revision束縛
+      - tests/release-promotion-rollback-gate.test.ts:597-629 coherent splice回帰
     green_commands:
       - kind: unit_test
-        command: "GitHub Actions run 32437438186: harness-check-linux全回帰 / harness-check-windows scoped回帰・CLI hook実発火 / aggregate"
+        command: "GitHub Actions run 32437438186: harness-check-linux全回帰 /
+          harness-check-windows scoped回帰・CLI hook実発火 / aggregate"
         runner: ci
         scope: full
         exit_code: 0
-        completed_at: "2026-08-21T01:58:09Z"
+        completed_at: 2026-08-21T01:58:09Z
         evidence_path: tests/release-promotion-rollback-gate.test.ts
-        output_digest: "sha256:1ef02ee8aedf7d58315a0f3112b7fa9e9001b1d38b03e3241a2673feaa889406"
+        output_digest: sha256:1ef02ee8aedf7d58315a0f3112b7fa9e9001b1d38b03e3241a2673feaa889406
         anchor_commit: 1620f24d7b1b91cec2057f1c2224cf66db86e0c8
       - kind: typecheck
         command: "GitHub Actions run 32437438186: harness-check-linux typecheck"
         runner: ci
         scope: changed-files
         exit_code: 0
-        completed_at: "2026-08-21T01:46:20Z"
+        completed_at: 2026-08-21T01:46:20Z
         evidence_path: src/setup/release-promotion-rollback-gate.ts
-        output_digest: "sha256:85eb07f4ebb35da1694a7946a112e9814692d095860558ec9be10491907f3d2a"
+        output_digest: sha256:85eb07f4ebb35da1694a7946a112e9814692d095860558ec9be10491907f3d2a
         anchor_commit: 1620f24d7b1b91cec2057f1c2224cf66db86e0c8
   - reviewer: codex-primary-flag-closure-3
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-08-21T03:26:01Z"
-    tests_green_at: "2026-08-21T03:26:00Z"
-    verdict: "Claude FLAG B1 revision-only oracle isolated; source mutant killed; non-author rereview pending"
-    scope: "request.reviewRevisionとsubject.planRevision以外を完全整合した独立revision-only splice、source 1行削除mutation、side-effect 0、targeted test/typecheck。"
+    reviewed_at: 2026-08-21T03:26:01Z
+    tests_green_at: 2026-08-21T03:26:00Z
+    verdict: Claude FLAG B1 revision-only oracle isolated; source mutant killed;
+      non-author rereview pending
+    scope: request.reviewRevisionとsubject.planRevision以外を完全整合した独立revision-only
+      splice、source 1行削除mutation、side-effect 0、targeted test/typecheck。
     worker_model: gpt-5.6-luna
     reviewer_model: gpt-5.6-sol
     plan_revision: 551a64bbcb9569d4e0206eacf5b6a7d856c5f070
@@ -163,28 +177,51 @@ review_evidence:
     evidence_path: tests/release-promotion-rollback-gate.test.ts
     anchor_commit: 551a64bbcb9569d4e0206eacf5b6a7d856c5f070
     citations:
-      - "src/setup/release-promotion-rollback-gate.ts:488 request.reviewRevision === subject.planRevision"
-      - "tests/release-promotion-rollback-gate.test.ts:631-661 U-RELMAN-020 revision-only spliceとside-effect 0"
+      - src/setup/release-promotion-rollback-gate.ts:488 request.reviewRevision
+        === subject.planRevision
+      - tests/release-promotion-rollback-gate.test.ts:631-661 U-RELMAN-020
+        revision-only spliceとside-effect 0
       - "mutation probe: 対象1行削除でrevision-onlyケースがallowへ反転し9/10 Red"
     green_commands:
       - kind: unit_test
-        command: "node node_modules/vitest/vitest.mjs run tests/release-promotion-rollback-gate.test.ts --reporter=dot --maxWorkers=1 --minWorkers=1 (direct targeted; snapshot runnerはsingleton/cleanup cutoff)"
+        command: node node_modules/vitest/vitest.mjs run
+          tests/release-promotion-rollback-gate.test.ts --reporter=dot
+          --maxWorkers=1 --minWorkers=1 (direct targeted; snapshot
+          runnerはsingleton/cleanup cutoff)
         runner: node
         scope: targeted
         exit_code: 0
-        completed_at: "2026-08-21T03:25:43Z"
+        completed_at: 2026-08-21T03:25:43Z
         evidence_path: tests/release-promotion-rollback-gate.test.ts
-        output_digest: "sha256:b1dd063e15d5394d297a6f1d50dd109eb0ceaf13358ef9ca6d79e2f41898dea7"
+        output_digest: sha256:b1dd063e15d5394d297a6f1d50dd109eb0ceaf13358ef9ca6d79e2f41898dea7
         anchor_commit: 551a64bbcb9569d4e0206eacf5b6a7d856c5f070
       - kind: typecheck
-        command: "node node_modules/typescript/bin/tsc --noEmit --pretty false"
+        command: node node_modules/typescript/bin/tsc --noEmit --pretty false
         runner: node
         scope: changed-files
         exit_code: 0
-        completed_at: "2026-08-21T03:26:00Z"
+        completed_at: 2026-08-21T03:26:00Z
         evidence_path: src/setup/release-promotion-rollback-gate.ts
-        output_digest: "sha256:85eb07f4ebb35da1694a7946a112e9814692d095860558ec9be10491907f3d2a"
+        output_digest: sha256:85eb07f4ebb35da1694a7946a112e9814692d095860558ec9be10491907f3d2a
         anchor_commit: 551a64bbcb9569d4e0206eacf5b6a7d856c5f070
+status: confirmed
+admission_receipt:
+  schema_version: v2
+  receipt_id: certificate:4318582771b1ddbe7377c4f9e3fdebc9
+  command_id: plan-revise:issue-742:legacy-494-correction-note:r2:d5b9c793e32e
+  admitted_at: 2026-09-29T05:08:19.740Z
+  source_digest: sha256:444d740e7c20fdcabdcfc7560fba4e36ec29ebc8ea25a099dcbe9a90b0d964ca
+  decision_digest: sha256:8c79b95a7b202e5374bcd8f8923a6fea60cde61da1a755f21412c0e63f734b06
+  receipt_digest: sha256:62ea89ef0ba10f7defcdbe48dd4ad1b8b8d566b7b8b301af943c26188f7c1435
+  binding:
+    path: docs/plans/PLAN-L7-494-release-promotion-rollback-gate.md
+    plan_id: PLAN-L7-494-release-promotion-rollback-gate
+    asset_id: plan:legacy:dbb95001a01ad1267126777f477d8d8114002f4458d7a60be83a36a76bb734ba
+    revision: 2
+    content_digest: sha256:444d740e7c20fdcabdcfc7560fba4e36ec29ebc8ea25a099dcbe9a90b0d964ca
+  route:
+    signal: forward
+    mode: forward
 ---
 
 # PLAN-L7-494: S3 release promotion / rollback pure gate
@@ -242,3 +279,13 @@ pointer/publish 0とprior state不変を観測する。`U-RELMAN-022`はrollback
 
 L7実装とR2 preflightはexact implementation revisionへ固定済みである。Claude Opus 5のclosing PASS、
 canonical snapshot、Linux / Windows / aggregate CIはmerge前の残存gateとして保持する。
+
+## 訂正注記 (2026-09-29、PLAN-L7-742)
+
+§2 の「PF5 sealed plan の kind/destination/entries/entry の strict shape 検証」と単一 `mapping` 入力は、
+sealed plan のスカラー `destinationPath` と channel mapping 1 件を前提にしており、v2 multi-artifact
+release では任意の 1 mapping しか照合しない (`src/setup/release-promotion-rollback-gate.ts:596`)。
+v2 では `mappings` 列と manifest の `artifacts` 列の順序付き完全一致、および sealed plan の
+`entries[].path` との一致で aggregate 全体を照合するよう、後継
+`PLAN-L7-742-release-aggregate-v2-inventory-cardinality` が §2 の該当部分だけを置き換える。
+reason 列挙・precedence・evidence 束縛・rollback の選択規則、および本 PLAN の AC・status は変更しない。

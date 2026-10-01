@@ -10,13 +10,13 @@
     "summary": "A-137 provider-dispatch countermeasures verified: codex/team dispatch path restored, spawnability-based detection enabled, handover split recorded",
     "next_actions": [
       "Review docs/handover/session-handover-2026-06-16.md for explicit human-readable judgement",
-      "Review .ut-tdd/audit/A-137-unusable-provider-dispatch-audit.md and .ut-tdd/audit/A-138-helix-separation-check.md",
+      "Review .ut-tdd/audit/A-137-unusable-provider-dispatch-audit.md and .ut-tdd/audit/A-138-legacy-separation-check.md",
       "Verify PLAN-L7-68 and PLAN-L7-69 frontmatter/governance if continuing from ClaudeCode",
       "Carry forward PLAN-L7-69 / IMP-135 for expanded encoding-corruption detection"
     ],
     "files": [
       ".ut-tdd/audit/A-137-unusable-provider-dispatch-audit.md",
-      ".ut-tdd/audit/A-138-helix-separation-check.md",
+      ".ut-tdd/audit/A-138-legacy-separation-check.md",
       "docs/handover/session-handover-2026-06-16.md",
       "docs/handover/handover-mechanical-explicit.md",
       "docs/plans/PLAN-L7-68-provider-dispatch-portability.md",

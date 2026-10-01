@@ -1,5 +1,8 @@
 # A-138 HELIX Separation Check
 
+訂正注記 (2026-09-25, Issue #689): このファイル名は旧 slug から中立化した。名称の
+中立化のみで、記録内容の意味は変更していない。
+
 Date: 2026-06-16
 
 Goal: verify that PLAN-L7-68 does not pull HELIX runtime state or legacy `helix` command dispatch back into UT-TDD-owned execution surfaces.

@@ -18,6 +18,8 @@ PO 指示 (2026-06-01):「内部資産は作り替える、TS に」。だが「
 
 ## 決定
 
+> **決定の更新 (2026-09-29)**: 本 ADR 本文の「TS/Bun」は現行では「TS/Node」と読み替える (Node authority sealed、Bun は永久禁止 #134)。決定の骨子 (層1=markdown 正本 / 層2=TS 管理機構) は不変で、実行系のみ Node authority へ移行済み。
+
 1. **層1 (資産の中身) = markdown 正本**。subagent prompt (`.claude/agents/*.md`) と skill 本文 (`skills/**/*.md`) は **single source = markdown** とする。TS literal 化 (prompt を TS module 化) はしない。Claude Code native 規約 (`.claude/agents/*.md`) をそのまま正本に使う。
 2. **層2 (管理機構) = TS/Bun** (ADR-001 射程)。roster registry / skill catalog / recommender / injector / capability-class resolver / drift lint / guard を `src/runtime/*` + `src/skill-engine/*` に TS 実装する。
 3. **TS は生成でなく検証/注入/統制**。TS は markdown 正本に対し registry metadata 抽出 / schema validation / drift lint / capability resolve / runtime guard を担う。`.md` を TS が生成する方式 (single source = TS) は採らない。

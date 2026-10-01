@@ -1,0 +1,1109 @@
+---
+plan_id: PLAN-L7-676-release-consumer-dev-start
+title: "PLAN-L7-676 (add-impl): Release consumer で開発を開始できる状態にする (identity / 同梱資産
+  / 生成物 / テンプレート / consumer gate)"
+kind: add-impl
+layer: L7
+drive: agent
+route_signal: feature_addition
+route_mode: add-feature
+created: 2026-09-24
+updated: 2026-09-28
+owner: Claude / Opus (pair-freeze) · Codex worker (implementation)
+parent_design: docs/plans/PLAN-L6-101-pack-independent-multi-consumer-acceptance.md
+pair_artifact: docs/test-design/harness/L7-release-consumer-dev-start-test-design.md
+next_pair_freeze: L7
+backprop_decision: required
+backprop_decision_reason: consumer 側の identity 失敗表示、同梱資産の解決順、design root 規約は
+  PLAN-L6-101 の「Release だけから開発開始」の受入に新しい観測可能な契約を足すため、 PLAN-REVERSE-676 で L6-101
+  へ逆向きに戻す。
+agent_slots:
+  - role: se
+    slot_label: Luna worker - PR-1 / PR-2a / PR-2b / PR-2c / PR-3 / PR-G0 / PR-G7 /
+      PR-GR / PR-G9〜PR-G14 / PR-VL を別 PR で最小実装する (PR-T1〜T3 は Claude Sonnet が
+      docs として移植する)
+  - role: qa
+    slot_label: Terra - CANDIDATE-U-RCDEV-001..038 の Red oracle を Linux/Windows で先に作る
+  - role: tl
+    slot_label: Claude Opus / Sol - 同梱資産の provenance、identity 契約との整合の非著者検収
+generates:
+  - artifact_path: docs/plans/PLAN-L7-676-release-consumer-dev-start.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/L0-charter.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/L1-requirements.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/L10-ux-validation.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/L11-trace-uat.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/L12-acceptance-test-design.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/L13-production-observation.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/L14-operational-test-design.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/L2-screen-list.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/L3-functional-requirements.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/L4-architecture.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/L4-data.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/L4-external-if.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/L4-function.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/L4-security.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/L4-ui-standard.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/L5-module-decomposition.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/L5-physical-data.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/L6-function-spec.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/L7-unit-test-design.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/L8-integration-test-design.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/L9-system-test-design.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/README.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/012-test-plan.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/013-migration-plan.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/014-issue-risk-decision-log.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/015-development-standards.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/016-batch-design.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/017-design-index-definitions.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/019-workflow-definition.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/020-metrics-kpi-design.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/025-network-design.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/026-server-infrastructure-design.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/030-glossary-data-dictionary.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/033-traceability-id-conventions.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/035-reliability-dr-bcp-design.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/036-privacy-design.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/038-ci-cd-pipeline-design.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/044-deliverable-index-map.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/045-directory-structure-design.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/046-seo-public-page-design.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/047-support-escalation-design.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/048-user-documentation-design.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/049-ai-output-verification-design.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/050-stop-resume-execution-log-design.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/052-documentation-policy-tailoring.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/053-poc-verification-design.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/096-design-principles-seven-pillars.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/108-refactoring-design.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/vmodel/optional/109-qa-quality-checklist.md
+    artifact_type: markdown_doc
+  - artifact_path: src/shared/design-root.ts
+    artifact_type: source_module
+  - artifact_path: tests/design-root.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/vmodel-consumer-lint.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/release-consumer-dev-start-identity.test.ts
+    artifact_type: test_code
+  - artifact_path: src/shared/embedded-skills.ts
+    artifact_type: source_module
+  - artifact_path: src/gate/right-arm-static.ts
+    artifact_type: source_module
+  - artifact_path: src/setup/vmodel-template-assets.ts
+    artifact_type: source_module
+  - artifact_path: src/setup/vmodel-template-writer.ts
+    artifact_type: source_module
+  - artifact_path: tests/release-consumer-vmodel-template.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/release-consumer-skills.test.ts
+    artifact_type: test_code
+  - artifact_path: docs/templates/github/common/commitlint.config.cjs
+    artifact_type: template
+  - artifact_path: tests/release-consumer-setup-artifacts.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/release-consumer-gates.test.ts
+    artifact_type: test_code
+dependencies:
+  parent: docs/plans/PLAN-L6-101-pack-independent-multi-consumer-acceptance.md
+  requires:
+    - docs/plans/PLAN-L7-529-project-identity-bootstrap.md
+    - docs/plans/PLAN-L7-516-pack-self-contained-consumer-runtime.md
+    - docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md
+  blocks: []
+  references:
+    - docs/plans/PLAN-REVERSE-676-release-consumer-dev-start-backfill.md
+    - docs/plans/PLAN-L7-628-pack-consumer-runtime-release-install.md
+    - docs/test-design/harness/L7-release-consumer-dev-start-test-design.md
+    - docs/governance/vmodel-document-catalog.md
+    - docs/governance/vmodel-document-disposition-catalog.md
+    - docs/governance/vmodel-document-scale-profiles.md
+    - docs/governance/vmodel-semantic-item-catalog.md
+    - docs/governance/gate-design.md
+    - docs/plans/PLAN-L7-531-pack-internal-canary-smoke.md
+    - docs/plans/PLAN-L7-421-test-hygiene-live-tree-fence.md
+    - docs/plans/PLAN-L7-166-setup-template-catalog-split.md
+    - docs/plans/PLAN-L7-135-dynamic-skill-injection-materialization.md
+    - docs/plans/PLAN-L7-18-gate-confirm.md
+    - docs/plans/PLAN-L7-417-source-disposition-profile-projection.md
+    - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/676
+    - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/418
+    - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/678
+review_evidence:
+  - reviewer: "Codex Sol (非著者の契約 review、PR #688 r2)"
+    review_kind: cross_agent
+    reviewed_at: 2026-09-25T07:08:57.439Z
+    tests_green_at: 2026-09-25T07:06:45Z
+    verdict: pass
+    worker_model: claude-opus-5-5
+    reviewer_model: gpt-5.6-sol
+    plan_revision: PLAN-L7-676 r5
+    subject_head: 8be63ed4280e84f2e39f2900dbdf8dcd9fd798a1
+    scope: "PR #688 の rev 5 (draft) 契約本文を exact head で bounded 再検。前回 FINDING の解消、rev
+      5 本文の同一性、receipt 2 件のみの追記、PLAN-L7-690 §2.1 (projection_state)
+      準拠を確認。反証試行として Forward §4 と R4 の全 slice を集合照合し欠落なし。blocking 0"
+    green_commands:
+      - kind: doctor
+        command: node src/cli.ts doctor --strict-green-command-digest --result-file
+          "$UT_TDD_DOCTOR_RESULT_FILE"
+        runner: ci
+        scope: full
+        exit_code: 0
+        completed_at: 2026-09-25T06:51:21Z
+        evidence_path: docs/plans/PLAN-L7-676-release-consumer-dev-start.md
+        output_digest: sha256:e8499e0a6156aefdb6ea1b414e2c7af7d2612cde420ead2fe114d443e3852ecd
+        anchor_commit: 8be63ed4280e84f2e39f2900dbdf8dcd9fd798a1
+    citations:
+      - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/688
+      - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/actions/runs/36104559954
+      - canonical receipt
+        b4ef3e2702aa8feeed8330265699cc977814f77327d7626485ac25b7a23ade5a
+status: confirmed
+github_issue_id: 676
+admission_receipt:
+  schema_version: v2
+  receipt_id: certificate:251c9602cfe1971c3cb1025893f7e440
+  command_id: plan-revise:issue-676:g13-g14-shape-contract:plan:r22:7d0597a53233
+  admitted_at: 2026-09-30T04:05:37.539Z
+  source_digest: sha256:2cafbed424735840e4353fde97b01ff066f3653c173ba48f4c1538855303d4df
+  decision_digest: sha256:f6206f770bb2946a70acb3bf5eda6b8710ee5107b3c807bf54421999b5ff3ff8
+  receipt_digest: sha256:a3bbaeeedce67ac0d35bb7b889d0dea14fbb15404bb2b807c9ac596da5dba1e2
+  binding:
+    path: docs/plans/PLAN-L7-676-release-consumer-dev-start.md
+    plan_id: PLAN-L7-676-release-consumer-dev-start
+    asset_id: plan:aae8bf0e313f8688fbad4d4d8cf0a6a9
+    revision: 22
+    content_digest: sha256:2cafbed424735840e4353fde97b01ff066f3653c173ba48f4c1538855303d4df
+  route:
+    signal: feature_addition
+    mode: add-feature
+  issue:
+    provider: github
+    issue_id: 676
+    episode_id: E4-676-release-consumer-dev-start
+    projection_state: unprojected
+  origin:
+    plan_id: PLAN-L7-628-pack-consumer-runtime-release-install
+    revision: 5
+    digest: sha256:e29ead3ced26cd437a348ae5ba8199bf22712b787af002e52875fb9c9a2fa6ea
+  transition:
+    direction: design_to_implementation
+    implementation_disposition: none
+  reentry:
+    target_plan_id: PLAN-L7-676-release-consumer-dev-start
+    target_revision: 22
+    phase: forward_merge
+  escape_reason: "Issue #676: PR-G13 / PR-G14 の着手前に、§3.6-4 の G13 / G14 行と
+    CANDIDATE-U-RCDEV-034 / 035 が、観測窓・SLO・rollback decision・VALUE
+    trace・improvement feedback の artifact の field 名と符号化を定めていないため、実装 PR 内で正本
+    shape を発明しないよう契約側で freeze する (rev 21 の G11 / G12 と同じ扱い)。"
+---
+
+# PLAN-L7-676: Release consumer で開発を開始できる状態にする
+
+## 1. 目的と位置付け
+
+#418 の release 定義は「clean な第三者プロジェクトが、その Release だけから setup して Claude / Codex で開発を開始できる」である。
+2026-09-24 の consumer sweep (空 git repo 2 つ、`setup --solo` 後に初週の主要コマンドを実行) で、PLAN-L7-628 の producer /
+installer が揃っても開発開始を止める穴が残ることを確認した (Issue #676 表 A2〜A7 / B1〜B4)。
+
+本 PLAN はその穴のうち、canary.2 で閉じるものを所有する。rev 2 で、PO のスコープ改訂 (§3.5) により設計テンプレート一式・consumer で使える gate G1〜G14・エージェント確認経路の E2E を scope に加えた。PLAN-L7-628 (Release asset と runtime 有効化) とは責務が別であり、
+628 の asset 集合・schema・installer 手順を変更しない。本 PLAN は pair-freeze であり、実装・Green・#676 の closure を主張しない。
+
+実測の出典: Issue #676 本文 (consumer sweep の結果表) と、本 PLAN 起票前の read-only 実測 (harness HEAD `67b3c16d`。skills の本数・reader の有無・bundle サイズ・module の所有 PLAN。以下「facts」と呼び、要点は §2 と §3 に転記した)。
+
+facts の主要値: `skills/` は md 79 + `review-checklist.yaml` 1 + `.gitkeep` 1 (subdir 0、計 720,677 bytes)。現行 bundle は 13,137,488 bytes で、skills・テンプレート・vmodel catalog の埋め込みは上限見積り約 +0.75 MB (+5.7%)。
+
+## 2. 現状 (実測)
+
+| # | 事象 | 原因箇所 | 実測 |
+| --- | --- | --- | --- |
+| A2 | origin 無しで `setup --solo` が identity を作らず exit 0 | `src/cli.ts:4283-4291` が `r.projectIdentity` を出力しない | sweep A2 |
+| A3 | A2 の状態で guard / session hook が `repository root could not be resolved` で exit 1 | `src/runtime/repo-root.ts:38-44` | sweep A3。**A2 の状態でのみ発生** (marker が working tree に在れば解決する、L7-529 §2.6) |
+| A4 | identity 未 commit で session start が `project_memory_root_project_identity_unavailable` | HEAD-strict read (PLAN-L7-529 §3.1) | sweep A4。setup は `commitRequired:true` を返すが表示しない |
+| A5 | setup 後の harness.db が schema v0 | setup が db を初期化しない | sweep A5。`db rebuild` 後 v29 で解消 |
+| A6 | 生成 `harness-check.yml` が lock / npm scripts / 有効化済み launcher を前提 | `src/setup/templates.ts:550-551` ほか | sweep A6 |
+| A7 | 生成 `commitlint.config.js` が CJS 構文、依存未導入 | `src/setup/templates.ts:573` | sweep A7 |
+| B1 | `skill suggest` が空で exit 0 | `src/state-db/projection-writer.ts:2267-2275` / `src/assets/catalog.ts:83-86` が `<repoRoot>/skills` のみ走査 | facts (b) |
+| B2 | 設計テンプレートが consumer に届かない | runtime reader が無い (facts (b)) | facts (b) |
+| B3 | V-model 文書の置き場所が `docs/design/harness/` 固定 | `src/lint/gate-confirm.ts:93-95` ほか | sweep B2/B4 |
+| B4 | `plan lint` が `docs/plans` 不在で ENOENT | `src/plan/lint.ts:124-125` | sweep B1 |
+| B5 | 設計テンプレートが L6 機能仕様 1 本だけ (catalog の consumer 向け required slot は 21) | `docs/templates/design/` | rev 2 実測 (§3.5.3) |
+| B6 | consumer に `gate-design.md` が無く gate が ENOENT、G8〜G14 は static check 未登録で failed | `src/lint/gate-confirm.ts:93-95`、`src/gate/static.ts:262-268` | rev 2 実測 (§3.6) |
+
+## 3. 設計判断
+
+### 3.1 中身の配送方式 (B1 / B2)
+
+advisor: `ut-tdd advisor --decision design --execute` (2026-09-24、provider=claude、model=`claude-fable-5`、orchestrator が諮問)。
+推奨は hybrid (下表 C)。
+
+| 案 | 内容 | trade-off | 判定 |
+| --- | --- | --- | --- |
+| A | setup が adapter と同様に skills / テンプレート / catalog を全て consumer の tracked tree へ書く | host runtime が読める。反面、consumer の repo に harness 所有の 80 ファイルが混入し、harness 更新時に consumer 側の差分と区別できない (drift 源) | 棄却 |
+| B | installer が Release の clean source tarball を展開して中身を得る | PLAN-L7-628 §1.1 (tarball に依存を詰めない) と §3 (installer は compiled ESM と runtime JSON だけを使う) の frozen 契約に反する | 棄却 |
+| **C (採用)** | skills / V-model catalog / 設計・PLAN テンプレートを build 時に compiled ESM へ埋め込む。runtime は bundle を正本とし、consumer 側の同名ファイルがあればそれを優先 (存在確認 1 回)、consumer が追加したファイルは catalog へ merge する。adapter (CLAUDE.md / AGENTS.md / .claude / .codex) は従来どおり setup が書く | Release asset 集合 (628 §3) を変えずに届く。bundle は約 +0.75 MB (+5.7%、facts (c))。provenance は後述の条件で維持できる | 採用 |
+
+#### 3.1.1 実測による採用案の補正 (advisor 回答との差分)
+
+advisor の前提「runtime は bundle から読む」は、skills については **最終 reader が host runtime の filesystem** であるため
+そのままでは成立しない。injection は skill の path だけを prompt に書き (`src/runtime/adapter.ts:436-446`)、Claude / Codex が
+その path を開く (facts (b))。bundle 内 bytes に対応する実ファイルが無ければ、path は存在しない。
+
+補正 (最小): **skills は bundle を正本とし、`.ut-tdd/assets/skills/` へ展開 (materialize) して path を実在させる**。
+
+補正の再諮問: `ut-tdd advisor --decision design --execute` (2026-09-24、provider=claude、model=`claude-fable-5`、orchestrator が諮問)。
+下記の形で採択された。
+
+- 正本は bundle。展開元も bundle であり tarball ではない (628 §1.1 / §3 と衝突しない)。
+- 展開は **setup と session start** の 2 か所で行う。展開先の各ファイルを埋め込み bytes の digest と照合し、欠落・不一致の
+  ファイルだけを書き直す (一致していれば書き込み 0)。
+- 解決順は固定: consumer `skills/<name>` があればそれが勝つ → 無ければ `.ut-tdd/assets/skills/<name>`。consumer `skills/`
+  にだけある名前は追加として merge する。投影 (`projectAutomationAssets`) と `src/assets/catalog.ts` はこの単一の解決関数を使う。
+- **adapter prompt に書く path は解決後の実在 path** とする (`formatAdapterPrompt` に渡る `required_paths` / `optional_paths` は
+  解決関数の出力であり、bundle 内の名前や仮想 path を書かない)。
+- 展開ディレクトリは **gitignore 対象の生成 state** である。setup は `.ut-tdd/assets/` を consumer の ignore 対象に入れる
+  (`.gitignore` 全般の生成 = sweep B11 は非 scope。本 PLAN は自分が作る展開ディレクトリの ignore だけを所有する)。
+- harness 自身 (source 実行 / `skills/` を持つ repo) は consumer 側優先規則により現行と同じ path を返す (挙動不変)。
+
+棄却した補正: skill 本文を prompt へ inline する (PLAN-L7-135 の injection 契約 = path 受け渡しの変更になり、prompt 長が 80 件分膨らむ)。
+棄却した補正: 展開先を consumer の tracked tree (例: `skills/`) にする (§3.1 案 A と同じ drift 源になり、consumer 同名優先の区別も消える)。
+
+#### 3.1.2 埋め込みの provenance 条件 (必須)
+
+`buildNodeGeneration` は esbuild metafile の全 input を `git ls-files --error-unmatch` で検査し、その sha256 を receipt の
+`source_files` / `source_graph_sha256` へ封印する (`src/runtime/node-bootstrap.ts`、facts (c))。したがって:
+
+- 埋め込み対象の各ファイルは **esbuild の実 input (text loader)** として bundle に入れる。virtual module や、plugin が文字列を
+  生成して注入する方式は採らない (skill bytes が receipt に現れず、PLAN-L7-628 の信頼根から外れる)。
+- builder の変更は `scripts/build-node.mjs` の loader 設定と、埋め込み index を解決する最小の配線に限る。builder policy
+  `compiled-esm-only` と reviewed Node / external import の制約 (PLAN-L7-458) は変えない。builder sha の変化は receipt に正しく記録される。
+- source 実行 (`node src/cli.ts`) は `.md` を import できないため、埋め込み index が空のとき reader は repoRoot の filesystem へ
+  fallback する (harness 自身の現行挙動)。
+
+#### 3.1.3 テンプレート (B2) の reader
+
+設計 / PLAN / state / prompt テンプレートには現状 runtime reader が無い (facts (b))。埋め込みは **on-demand で
+consumer へ雛形を書き出す 1 コマンド** を reader とする場合だけ行う。rev 2 で、書き出し対象は §3.5 で移植する slot テンプレートと optional テンプレートを含む
+(書き出し先は §3.2 の resolver が返す `<designRoot>` / `<testDesignRoot>` 配下の catalog path)。コマンドは consumer に既存ファイルがあれば上書きせず、
+書き出した path を表示する。コマンドは次のとおり freeze する (rev 3、CLI surface は PR-2c の 1 論点):
+
+- 形: `ut-tdd vmodel template (--slot <doc_type_id>... | --required | --optional <ZIP-DOC-NNN>...) [--dry-run] [--json]`。
+  既存の `vmodel` command group の subcommand とする (新しい top-level command は作らない)。`--slot` / `--required` / `--optional` は
+  1 つ以上必須で併用可。`--required` は §3.5.3 の required 21 slot 全て。
+- 出力先: slot テンプレートは catalog の `authoring_source_path` を §3.2 の resolver で写像した path
+  (例: `docs/design/harness/L4-basic-design/data.md` → consumer では `docs/design/L4-basic-design/data.md`)。
+  `docs/process/evidence/` など resolver の写像対象外の path はそのまま使う。optional テンプレートは `<designRoot>/optional/<port index の file 名>`。
+- 上書き規則: 出力先にファイルが在れば **書かない** (bytes 不変)。上書き option は作らない。
+- 表示と終了コード: 書いた path は `+ <path>`、既存で飛ばした path は `skip (exists) <path>` を 1 行ずつ出す。未知の `doc_type_id` /
+  `ZIP-DOC-NNN` が 1 件でもあれば、何も書かずに `unknown template <id>` を出して exit 1。それ以外 (全件 skip を含む) は exit 0。
+  `--dry-run` は書き込み 0 で同じ行を出す。`--json` は `{written:[], skipped:[]}` を出す。
+- 書き込み境界 (rev 17): 全 destination を書き込み前に検査し、1 件でも consumer root の外へ解決されるものがあれば、何も書かずに
+  `template destination outside consumer root <path>` を出して exit 1 とする (未知 ID と同じく全件検査の後に書く。部分書き込み 0)。
+  判定は物理 path で行う: consumer root を `realpathSync.native` で正規化し、各 destination について実在する最も深い ancestor を
+  `realpathSync.native` で解決して consumer root 配下であることを確認する。destination 自体が symlink / junction (dangling を含む) の場合も
+  外と扱う。lexical な path 比較だけでは、consumer 内の directory が junction / symlink / 8.3 alias 経由で外を指す場合を拒否できない
+  (PR-2c の root 検収で、`docs/plans` を外部 directory へ junction 接続した fixture に対し、lexical 判定だけの実装が consumer 外へ
+  書き込んだ実測がある)。既存の physical canonicalization (`realpathSync.native`) の用法を再利用し、新しい selector / API / authority は追加しない。
+
+### 3.2 V-model 文書の置き場所 (B3 / B4)
+
+advisor の例示は「`ut-tdd.project.json` の field (既定 `docs/design`)」だったが、既存の痕跡を実測した。
+
+- `design_root` という field / 設定は repo に存在しない (ローカル変数 2 件のみ、facts (b))。
+- `ut-tdd.project.json` は PLAN-L7-529 §3.1 で canonical bytes を厳密に read する identity の正本であり、設定 field を足すと
+  identity bytes と digest の意味が変わる。
+
+| 案 | 内容 | trade-off | 判定 |
+| --- | --- | --- | --- |
+| A | `ut-tdd.project.json` に `design_root` を追加 | L7-529 の identity 契約改訂が要る。identity と project 設定の責務が混ざる | 棄却 |
+| B | 新しい設定ファイル (例: `ut-tdd.config.json`) を作る | 設定正本が 1 つ増える。上書きしたい consumer はまだいない (投機的) | 棄却 (必要になった時点で別 PLAN) |
+| **C (採用)** | 規約で解決する単一 resolver: repo root に `docs/design/harness/` があればそれ (harness 自身)、無ければ `docs/design/`。test-design も同様に `docs/test-design/harness/` → `docs/test-design/`。優先順は固定で、`src/assets/catalog.ts:83-86` の `DEFAULT_SKILL_ROOTS` (候補を定数配列で持ち、最初に存在するものを採る) と同じ idiom で書く | 設定を増やさない。harness 自身は挙動不変。上書き手段は無い (必要時に B を別 PLAN で) | 採用 |
+
+案 A の棄却理由 (advisor 判定): PLAN-L7-529 §3.1.3 の canonical bytes 比較と §3.2 の「入力は origin のみ」の create 決定性があるため、
+field を足すと identity schema の migration と既存 identity の backfill が必要になる。
+
+- catalog の `authoring_source_path` は `docs/design/harness/<rest>` → `<designRoot>/<rest>`、`docs/test-design/harness/<rest>` →
+  `<testDesignRoot>/<rest>` へ写像する。gate / vmodel lint の path 入力は同じ resolver から取る (`gate-confirm.ts:93-95`、
+  `screen-impl-pair-freeze.ts:104`、`g1-trace.ts`、`g3-trace.ts`、`l6-completion.ts`、`l7-completion.ts`)。
+- 置き場所が存在しない場合は ENOENT で落ちず、typed な「未作成 (0 件)」を返す。`plan lint` も `docs/plans` 不在を 0 件として扱う (B4)。
+- gate の判定内容 (G1〜G14 が consumer で意味を持つか) は変えない (非 scope)。本 PLAN は path 解決とクラッシュ除去だけ。
+- 諮問: `ut-tdd advisor --decision design --execute` (2026-09-24、provider=claude、model=`claude-fable-5`、orchestrator が諮問)。
+  案 C を採択、案 A を上記理由で棄却。
+
+### 3.3 identity / repo-root (A2〜A4)
+
+所有: create / read / commit policy は PLAN-L7-529 (confirmed) が frozen。本 PLAN はその契約を変えない。
+
+- L7-529 §1: create は `origin` 由来の `owner/repo` だけから行い、origin 無しは typed deny。
+- L7-529 §3.3 採択 B: setup は暗黙に commit しない。identity は HEAD 到達で authoritative。
+- L7-529 §2.6: `isRepoRoot` は marker の存在だけを見る。
+
+諮問: `ut-tdd advisor --decision design --execute` (2026-09-24、provider=claude、model=`claude-fable-5`、orchestrator が諮問)。
+下記 1 の方式 (setup を中断しない部分成功) を採択した。草案 r0 の「identity 不可なら何も書かずに exit」は L7-529 §3.2.1
+(identity の deny を理由に setup 全体を throw / 中断してはならない) に反するため撤回した。
+
+決定:
+
+1. **A2 (部分成功 + visible typed deny)**: setup は L7-529 §3.2.1 どおり中断しない。adapter / テンプレート / state 記録は通常どおり出力し、
+   identity path は `written` に入れない。そのうえで CLI は `SetupResult.projectIdentity` の typed deny を **必ず表示** する
+   (現状の `src/cli.ts:4283-4291` はこれを出さない)。表示には deny code と復旧手順を含める:
+   `git remote add origin <url>` → `setup` を再実行。再実行は L7-529 §3.2 の再実行規則により既存出力を変えず安全である (no-op safe)。
+   §3.2.1 の「identity denial を握り潰して成功扱いにしない」に従い、この場合の終了コードは成功と区別する。rev 3 で次を freeze する:
+   - typed deny code: origin 無しは既存の `identity_repository_unbound` (`src/setup/project-identity-bootstrap.ts:84`、message
+     `origin remote is missing or invalid`) をそのまま使う。新しい code は足さない。そのほかの deny (`identity_stale_worktree` /
+     `identity_write_failed` など L7-529 の code) も同じ経路で表示する。
+   - 表示: stderr に `identity: denied (<code>): <message>` の 1 行と、復旧手順 `git remote add origin <url>` および
+     `ut-tdd setup --solo` (再実行、no-op safe) の 2 行を出す。
+   - 終了コード: identity deny を伴う部分成功は **exit 2**。repo の CLI 規約 (0 = 成功、1 = 入力不正 / 実行失敗、2 = policy による deny / block、
+     3 = 外部障害。`src/cli.ts` の既存 `process.exitCode` 用法の実測) の「deny」に当たるため。identity 以外の出力に失敗した場合は従来どおり 1。
+2. **A3 (repo-root)**: `isRepoRoot` の fallback 条件は変更しない。identity が作成された setup の後は marker が working tree に存在し
+   (L7-529 §2.6 は存在だけを見る)、5 hook 全てが root を解決する。これを oracle で固定する。identity deny のままの consumer では hook が
+   引き続き fail-close するが、その error に 1 と同じ復旧手順を併記する。fallback を consumer 向けに緩める案 (`.git` + `.ut-tdd/bin/ut-tdd.mjs` 等) は、
+   PLAN-L7-421 の live-tree fence (runtime state の書き込み先を誤認しない) を弱めるため採らない。
+3. **A4 (commit 要件)**: 除去しない (L7-529 §3.3 採択 B の改訂になる)。setup は `commitRequired` のとき「commit が必要」と対象 path と
+   コマンドを表示する。session start の `project_memory_root_project_identity_unavailable` にも同じ手順を併記する。
+
+**受入条件との関係**: Issue #676 の受入条件「空の git repository (origin なし / あり …) で … guard が正常系を通す」は、origin なしについて
+L7-529 §3.2 (create の入力は origin のみ) と両立しない。control lane が #676 の受入条件を Issue 上で改訂し、その旨をコメントする
+(改訂コメント: https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/676#issuecomment-5809206858 、2026-09-24、advisor `claude-fable-5` の design 判定による)。改訂後の受入条件は「origin の無い repository では setup を中断せず、残りの導入設定を生成し、identity の deny を typed かつ可視に表示し、復旧手順 (`git remote add origin <url>` → setup の再実行) を出す。origin がある repository では guard が正常系を通し禁止系を block する」である。本 PLAN は受入条件を独自に読み替えず、改訂後の Issue 記載を正とする。
+origin 以外 (明示 `owner/repo` 入力など) からの create は L7-529 の改訂が要るため本 PLAN の非 scope とする (§7)。
+
+**別 slice**: Issue #678 (launcher の 8.3 短縮名 alias と long path の同一視) は root / path の等価判定に関する troubleshoot であり、
+本 PLAN に吸収しない。A3 の oracle は long path の fixture で組み、8.3 alias の等価性は #678 側が所有する。
+
+### 3.4 生成物 (A5〜A7)
+
+1. **A5**: setup の最後に既存の `rebuildHarnessDb` を `skipTokenTelemetry: true` で 1 回呼ぶ (provider 起動時 injection と同じ呼び方、
+   `src/cli.ts:368-370`)。token telemetry の home 全走査 (sweep C2) を setup に持ち込まない。identity 未 commit の状態でも rebuild が
+   落ちないことを oracle で確認する (落ちるなら A4 と同じ手順表示で degrade を明示する)。
+2. **A6**: 諮問: `ut-tdd advisor --decision design --execute` (2026-09-24、provider=claude、model=`claude-fable-5`、orchestrator が諮問)。
+   - launcher (`.ut-tdd/bin/ut-tdd.mjs`) 経由の ut-tdd step は、**activation pointer (`.ut-tdd/runtime/activation/active.json`) が存在する場合だけ
+     実行** する。存在しない場合は、runtime が未有効化であるため skip したことを job log に **目に見える notice** として出し、step を skip する
+     (黙って成功扱いにしない)。CI 上で runtime が有効化されないのは active.json が machine-local だからである (628 §6.2 手順 3、現状は常に exit 78)。
+   - npm 部分も同じく consumer の実体に依存させる: `cache: npm` と `npm ci` は `package-lock.json` が在る場合だけ、`npm run <script>` は該当 script が
+     在る場合だけ実行する。
+   - **CI 上での installer 実行 (Release 取得 → runtime 有効化) は本 PLAN の非 scope** とし、別 PLAN で扱う (Release 取得は外部 API 前提を伴う)。
+3. **A7**: `commitlint.config.cjs` を出力する (拡張子で CJS を明示し、`"type":"module"` の consumer でも読める)。既存の
+   `commitlint.config.js` がある consumer では上書き・削除せず警告だけを出す。依存 (`@commitlint/cli`、`@commitlint/config-conventional`) は
+   setup が install しない (consumer の依存決定であり、network を伴う)。setup の出力と生成文書に導入コマンドを明記する。
+
+### 3.5 スコープ改訂 (rev 2): 設計テンプレート一式・consumer 検証・エージェント確認の E2E
+
+出典:
+
+- PO のスコープ改訂 (2026-09-24): https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/676#issuecomment-5809485588 。
+  (a) catalog が required とする全 doc slot の設計テンプレート、(b) consumer で意味のある判定を返す gate G1〜G14 / `vmodel lint` / `plan lint`、
+  (c) エージェントが書いた consumer 文書が gate と review を通ることの E2E 観測、を canary.2 のスコープへ移す。受入条件に同じ 3 点を加える。
+- PO 判断 (2026-09-24): https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/676#issuecomment-5809861404 。
+  テンプレートは新規に書き起こさず、`Vモデル設計ドキュメント_checked.zip` (repo root、gitignore 対象) から移植する。PUBLIC の Pack repo と
+  canary.2 Release への同梱 (一般公開) は PO 承認済み。`tools/*.py` は ADR-001 により同梱せず、その検査の意味は TypeScript の gate で実装する。
+- license: repo の license は Apache-2.0 へ切り替える (control lane の別 PR)。zip 由来のテンプレート・skill・ガイド・レビュー記録例は Apache-2.0 で配布する。
+  本 PLAN は license 切り替え自体を所有せず、PR-T1〜T3 はその切り替えが main に入った後に merge する (配布物の license 表記を切り替え前の条件で出さない)。
+
+rev 1 の §7 にあった「gate G1〜G14 の consumer 対応」と「設計テンプレートの中身の整備」は、本改訂で非 scope から外す。
+
+#### 3.5.1 移植対象 (zip の実測)
+
+zip の中身は read-only で列挙した (entry 名は cp932。`n.encode('cp437').decode('cp932')` で復号)。
+
+| 区分 | zip entry | 件数 / bytes | 移植先 |
+| --- | --- | --- | --- |
+| 設計テンプレート | `templates/NN_*.yaml` (01〜53、96、102、108、109) | 57 本 / 161,317 B | `docs/templates/vmodel/` (§3.5.2〜3.5.3) |
+| 管理 yaml | `templates/{catalog,profiles,traceability,diagrams,wbs}.yaml` | 5 本 / 37,337 B | 既存正本へ統合 (§3.5.4)。別ファイルとしては出荷しない |
+| skill | `.claude/skills/vmodel-{authoring,code-minimalism,design-judgement,substance-review,test-thinking,visual-review,workflow}/SKILL.md` | 7 本 / 54,644 B | `skills/vmodel-<name>.md` (フラット、既存 skills root) |
+| 役割別ガイド | `build/agent/{architecture,coding,design,marketing,test}.md` | 5 本 / 134,998 B | `skills/vmodel-role-<role>.md` |
+| レビュー記録例 | `build/review/RV-00{1..5}_*.md` | 5 本 / 14,002 B | `docs/templates/vmodel/review-examples/` |
+| 検査ツール | `tools/*.py` | 27 entry | **同梱しない** (ADR-001)。検査の意味は §3.6 の TS gate で再実装する |
+
+移植合計は約 402 KB。rev 1 の見積り (skills・テンプレート・catalog で約 +0.75 MB) と合わせ、bundle 増分の上限見積りは約 +1.15 MB
+(現行 13,137,488 B に対し約 +8.8%)。埋め込みは §3.1.2 の provenance 条件 (esbuild の実 input、git tracked) に従う。
+
+skill の名前は既存 `skills/vmodel-stage-*` / `vmodel-drive-direction` と衝突しない。ただし意味が重なる skill は、PR-T3 で既存 skill と
+照合し、同じ内容を 2 本持たない (重複は既存 skill への統合を優先し、PR 本文に対応表を残す)。
+
+#### 3.5.2 テンプレートの形式: Markdown へ変換する
+
+| 案 | 内容 | trade-off | 判定 |
+| --- | --- | --- | --- |
+| A | zip の YAML をそのまま出荷する | 移植は bytes の複製で済み、provenance が単純。反面、gate の文書 parser は Markdown だけを読む (`src/lint/gate-confirm.ts` の `walkMarkdown` は `.md` のみ)。consumer が YAML で書いた文書は gate から見えず、YAML reader を gate 側へ追加すると parser が 2 系統になる | 棄却 |
+| **B (採用)** | 各テンプレートを `docs/templates/` 既存形式 (frontmatter + Markdown 見出し / 表) へ変換する。frontmatter に移植元 (`source_id: ZIP-DOC-NNN`、zip entry 名、zip entry の sha256) を記録する | gate と review が同じ Markdown を読み、harness 自身の設計書と同じ形式になる。変換作業が要り、zip との差分は bytes では比較できない (項目単位の対応で担保する) | 採用 |
+
+変換規則 (PR-T で機械的に適用する):
+
+- YAML の section / field 構造を見出しと表に写し、項目名・説明文は zip の日本語をそのまま使う (意味を書き換えない)。
+- zip 固有の記法 (tools/*.py 向けの ID 規約、検査用 marker) は、対応する gate の入力形式 (§3.6) に合わせる。対応が無い記法は削らずに
+  「未検査」と注記する。
+- 変換後の各テンプレートは、テンプレートから作った文書を gate parser (`parseConfirmDoc`) が構造エラー無しで読めることを oracle で確認する。
+
+#### 3.5.3 catalog slot への対応付け
+
+対応の根拠は `docs/governance/vmodel-document-disposition-catalog.md` (109 件: merge 75 / reference 32 / adopt 2) の `target` 列である。
+規則: disposition が `merge` / `adopt` で target が catalog slot の authoring path (またはその directory) を指すものを、その slot の
+テンプレート source とする。target が harness 自身の process / governance 文書 (`docs/process/*`、`AGENTS.md` など) を指すもの、
+および `reference` のものは、**optional テンプレート** (`docs/templates/vmodel/optional/`) として出荷し、slot には束ねない。
+ただし、下の構成元表で slot の source として明記した本は、この規則の例外として当該 slot の source とする。例外は次の 3 本に限る: 28 検証設計書 (ZIP-DOC-028 → `DOC-L11-TRACE-UAT`)、11 運用設計書 (ZIP-DOC-011 → `DOC-L13-PRODUCTION-OBSERVATION`)、21 ログ・トレース設計書 (ZIP-DOC-021 → `DOC-L13-PRODUCTION-OBSERVATION`)。disposition catalog の `target` 列は移行時の統合先を 1 箇所だけ記す列であり、複数の slot への供給先を表さない。このため、これら 3 本と当該 slot の対応の根拠は本表の記載とし、disposition catalog は変更しない (多 slot 写像を catalog 側で正式化する場合は、管理 yaml の merge を所有する PR-T2 の範囲で扱う)。
+
+consumer 向けの required slot は catalog の `default_status=required` から、harness 自身の upgrade 用差分 (`category=upgrade-delta`:
+`DOC-L1-VMODEL-ENGINE-SWAP-DELTA`、`DOC-L14-VMODEL-ENGINE-SWAP-OT`) を除いた 21 slot とする。
+
+| slot | zip source (disposition 根拠) |
+| --- | --- |
+| `DOC-L0-CHARTER` | 01 企画書 (ZIP-DOC-001 merge → PLAN-L0-01) |
+| `DOC-L1-REQUIREMENTS` | 02 要求定義書 (ZIP-DOC-002) |
+| `DOC-L2-SCREEN` | 直接の source が無い。04 基本設計書の画面節と `diagrams.yaml` の画面遷移図 (`d_screen`、semantic item catalog) から構成する |
+| `DOC-L3-FUNCTIONAL` | 03 要件定義書 (ZIP-DOC-003)、29 受入基準・BDD (ZIP-DOC-029)、43 要求・要件一覧 (ZIP-DOC-043) |
+| `DOC-L4-DATA` | 27 ドメインモデル (ZIP-DOC-027) |
+| `DOC-L4-ARCHITECTURE` | 18 方式仕様 (ZIP-DOC-018)、32 外部化・差し替え (ZIP-DOC-032)、40 AIエージェント (ZIP-DOC-040) |
+| `DOC-L4-EXTERNAL-IF` | 23 入出力 (ZIP-DOC-023)、42 外部連携 (ZIP-DOC-042) |
+| `DOC-L4-FUNCTION` | 04 基本設計書 (ZIP-DOC-004) |
+| `DOC-L4-UI-STANDARD` | 37 国際化・a11y (ZIP-DOC-037)、41 表示名・翻訳 (ZIP-DOC-041) |
+| `DOC-L4-SECURITY` | 10 セキュリティ設計書 (ZIP-DOC-010) |
+| `DOC-L5-PHYSICAL-DATA` | 22 データベース (ZIP-DOC-022)、39 イベント・メッセージ (ZIP-DOC-039) |
+| `DOC-L5-MODULE` | 05 詳細設計書 (ZIP-DOC-005)、31 共通部品・クラス (ZIP-DOC-031) |
+| `DOC-L6-FUNCTION-SPEC` | 既存 `docs/templates/design/L6-function-spec-template.md` を正とし、24 ロジック設計書 (ZIP-DOC-024) の項目で不足分だけ補う |
+| `DOC-L7-UNIT-TEST-DESIGN` | 06 単体テスト設計書 (ZIP-DOC-006) |
+| `DOC-L8-INTEGRATION-TEST-DESIGN` | 07 結合テスト設計書 (ZIP-DOC-007) |
+| `DOC-L9-SYSTEM-TEST-DESIGN` | 08 総合テスト設計書 (ZIP-DOC-008)、102 セキュリティテスト計画 (ZIP-DOC-102) |
+| `DOC-L10-UX-VALIDATION` | 51 画面検証 (ZIP-DOC-051)。profile_controlled のため skip 理由欄を持つ |
+| `DOC-L11-TRACE-UAT` | 28 検証設計書 (ZIP-DOC-028) と `traceability.yaml` のトレース俯瞰 |
+| `DOC-L12-ACCEPTANCE` | 09 受入テスト設計書 (ZIP-DOC-009) |
+| `DOC-L13-PRODUCTION-OBSERVATION` | 11 運用設計書 (ZIP-DOC-011) の監視・後検証の節、21 ログ・トレース (ZIP-DOC-021) |
+| `DOC-L14-OPERATIONAL-TEST` | 11 運用設計書 (ZIP-DOC-011)、34 保守 (ZIP-DOC-034) |
+
+残りの zip テンプレート (12、13、14、15、16、17、19、20、25、26、30、33、35、36、38、44〜50、52、53、96、108、109) は optional とする。
+57 本の全てが「1 つ以上の slot の source」か「optional」のどちらか一方だけに分類され、どちらにも現れない本・両方に現れる本が無いことを port index (PR-T1 が作る `docs/templates/vmodel/README.md` の表) で固定する (11 運用設計書は L13 / L14 の 2 slot の source)。
+L2 のように zip に直接の source が無い slot は、PR-T で構成元を PLAN に追記してから書く (新規の書き起こしは既存 source の組み合わせに限る)。
+
+#### 3.5.4 管理 yaml と既存正本 (第 2 の SSoT を作らない)
+
+| zip | 既存正本 | 扱い |
+| --- | --- | --- |
+| `profiles.yaml` | `docs/governance/vmodel-document-scale-profiles.md` (§0 で「`profiles.yaml` 相当を追跡する authoring source」と宣言済み) | 正本は md のまま。zip との差分は md へ merge する。consumer へは md を bundle 埋め込みで配送し、yaml は出荷しない |
+| `catalog.yaml` | `docs/governance/vmodel-document-catalog.md` (ZIP-DOC-017 merge) | 同上 |
+| `diagrams.yaml` / `traceability.yaml` / `wbs.yaml` | `docs/governance/vmodel-semantic-item-catalog.md` の item 行 (`d_*` / `trace` / `wbs`) | item 一覧の正本は semantic item catalog。図の雛形 (skeleton) は対応する slot テンプレートの節として取り込む (例: ER 図 → `DOC-L5-PHYSICAL-DATA`) |
+
+consumer に catalog / profile を上書きさせる手段は作らない (§3.2 案 B と同じく、必要になった時点で別 PLAN)。
+
+### 3.6 consumer で使える検証 (gate G1〜G14 / vmodel lint / plan lint)
+
+目標: consumer の文書 (`<designRoot>` / `<testDesignRoot>`、§3.2) に対し、どの gate も ENOENT による「could not run」も
+「no deterministic check registered」による failed も返さず、文書の有無・構造・trace に基づく判定を返す。
+
+実測 (rev 2 起票時、HEAD `166bfc37`):
+
+- `src/lint/gate-confirm.ts:93-95` は `docs/governance/gate-design.md` と `docs/design/harness` / `docs/test-design/harness` を固定 path で読む。
+  consumer には `gate-design.md` が無く、`readFileSync` が ENOENT で落ちる。
+- `src/gate/static.ts` で deterministic check を持つのは G1 / G3 (layer pair と G1/G3-trace lint)、G2 / G4 / G5 / G6 (`evaluateLayerPairGate`)、
+  G7 (pair-freeze・L0-L7 group・impl/oracle trace・coverage 80%) である。例外は L245-250 で「deterministic check could not run」の failed になる。
+- G8〜G14 は check が未登録で、L262-268 で `applicable:false, passed:false` (「no deterministic check registered」) になる。
+  `REVIEW_ONLY_STATIC_GATES` は G0.5 と R4 だけである (L26)。
+- G7 の coverage は `coverage/coverage-summary.json` (istanbul json-summary) を既定 path として読む (L193-195)。
+
+決定:
+
+1. **gate 定義の不在**: gate の定義 (`docs/governance/gate-design.md`、`docs/process/gates.md`、`docs/process/vmodel-contract.yaml`) は harness 所有の資産であり、§3.1 案 C と同じく bundle に埋め込む。consumer に同名ファイルがあればそれを優先する。
+   gate 判定に使う文書集合は §3.2 の resolver から取る。
+2. **G1〜G6**: resolver を注入し、判定内容は変えない。consumer の文書が §3.5 のテンプレートから作られていれば、harness と同じ規則で判定できる。
+   **G2 の wireframe mock (rev 13)**: G2 は、L2 に `L2-screen/wireframe.md` があり、その `pair_artifact` が L10 の UX 検証 test-design
+   であることを要求する (`src/gate/static.ts` の `mockMissing`)。consumer では、この pair path を harness 固定の literal
+   (`docs/test-design/harness/L10-ux-validation-test-design.md`) ではなく、§3.2 の resolver が返す `<testDesignRoot>/L10-ux-validation-test-design.md` と比べる。
+   harness では resolver が同じ literal を返すので、判定内容は変わらない (§3.6-7 の回帰で固定)。
+   wireframe mock は ZIP に source の無い consumer 自作の文書であり、テンプレート (§3.5) は用意しない (§3.5.3 の「新規の書き起こしはしない」を守る)。
+   したがって「テンプレートから作れば G1〜G6 が pass する」の対象は、§3.5 のテンプレート由来の文書に、consumer が書く L2 wireframe mock 1 本と、
+   L10 の UX 検証テンプレート (`L10-ux-validation.md`) から作った test-design 1 本を加えた集合とする。wireframe mock を欠けば G2 は
+   `mock=missing` で failed になる (保証は緩めない)。テンプレートの frontmatter にある `pair_artifact` / `plan` は harness 内の trace 用の値であり、
+   consumer は文書作成時に自分の resolver path へ書き換える (書き出しコマンド §3.1.3 は bytes 一致を保ち、書き換えない)。
+   テンプレートは `status: draft` で出荷される。G1〜G6 は draft を 0 件とすることを要求する (判定は変えない) ので、consumer は記入を終えた文書の
+   `status` を `confirmed` (または `placeholder`) へ上げる。これは consumer の作成手順であり、gate の draft 拒否を緩めない。
+3. **G7 coverage**: 既定 path (`coverage/coverage-summary.json`) を consumer にもそのまま使う (設定は足さない)。不在は crash ではなく
+   typed な「coverage evidence missing」の failed とする。coverage 以外の構成要素 (pair-freeze、trace) は resolver 経由で判定する。
+4. **G8〜G14 の判定規則 (freeze)**: 各 gate は、判定内容のうち **repo に tracked された成果物から決定的に判定できる部分** を static check として必ず持つ。
+   人の承認・実行時観測の妥当性・UX 判断のように成果物から決まらない部分は review tier (canonical review receipt) で判定し、static check の message に
+   `未判定 (review): <approval_role>` を必ず含める (pass に見せない)。G8〜G14 のどれも review-only (n/a passed) へは再分類しない。
+   `REVIEW_ONLY_STATIC_GATES` は G0.5 / R4 のまま変えない。
+
+   **判定の入力 (契約表)**: gate ごとの `pair_layers` / `required_artifacts` / `evidence_families` / `case_id_prefix` / `governance_artifact` /
+   evidence manifest の置き場所は `docs/process/vmodel-contract.yaml` の `layers[]` 行を唯一の入力とする (VMC-003「detector registry は contract から導出」、
+   VMC-005「contract に無いデータは推測せず fail-close」)。consumer では 1 と同じく contract を bundle から読み、consumer に同名ファイルがあればそれを優先する。
+   `governance_artifact` と slot path は §3.2 の resolver で consumer の path へ写像する。evidence manifest の置き場所は contract の
+   `evidence_manifest` の directory 部分 (例: `.ut-tdd/evidence/g8-integration/`) とし、consumer でも同じ相対 path を使う (tracked であること。
+   §3.1.1 の ignore 対象は `.ut-tdd/assets/` だけ)。
+
+   **共通述語** (全 gate に適用。括弧内は対応する zip `tools/*.py` の検査):
+
+   | 記号 | 述語 | 違反時 |
+   | --- | --- | --- |
+   | S (構造) | `governance_artifact` (resolver 後) が存在し、§3.5 の slot テンプレートが定める必須見出しと case 表の必須列を全て持つ (`schema_check.py`) | `missing slot <doc_type_id>` / `missing section <見出し>` |
+   | I (ID) | case 表の各行 ID が `case_id_prefix` で始まり、文書内で一意。本文・表で参照する ID は全て定義済み (`validate.py`) | `duplicate case id` / `dangling reference <id>` |
+   | T (V-pair trace) | 各 case 行が `pair_layers` の文書で定義された ID を 1 件以上 cite し、cite 先が全て実在する (`spec_trace.py` の閉包。G11 / G12 の cite 可能 ID 集合は下記「G11 / G12 の証跡 shape」の 3) | `untraced case <id>` / `trace target missing <id>` |
+   | E (evidence 型) | `<dir>/*.json` の manifest が 1 件以上あり、全てが次を満たす: `schema_version = "<dir>-evidence-v1"`、`gate = <gate>`、`profile` と `plan_id` が非空、`commands[]` が非空で各要素が `command_id` / `command` / `runner` / `scope` 非空・`exit_code = 0`・`output_digest` が `sha256:<64hex>`・`evidence_path` が repo 内に実在し許可 prefix (`.ut-tdd/evidence/` / `docs/` / `src/` / `tests/`) 配下。`mandatory_<p>_ids` の各 ID に `coverage[]` があり `status = passed`・`evidence_paths` と `command_ids` が非空で実在・既知。`exit_criteria` が `all_mandatory_passed = true`・`failed_mandatory_count = 0`・`stale_defer_count = 0`・`doctor_check = "<dir>-workflow"` | `<manifest>: <field> ...` (既存 `src/lint/g8-integration-workflow.ts` の message 形式) |
+   | F (全行) | S の case 表で定義された全 ID が、manifest の `mandatory_<p>_ids` (coverage passed) か `deferred_<p>_ids` のどちらかにある (`<p>` は下記「G11 / G12 の証跡 shape」の 1)。deferred の各 ID は `defer[]` に `reason` 非空と、`docs/plans/` に実在する `plan_id` を持つ (実在しない PLAN への defer は stale) | `missing row evidence <id>` / `stale defer <id>` |
+   | A (必須成果物) | manifest の `artifacts` object が contract の `required_artifacts` の全 key を持ち、各値が repo 内に実在する path | `missing artifact <key>` |
+
+   harness 自身 (resolver が `docs/design/harness/` を返す repo) の G8 / G9 / G10 は、既存の workflow lint (`src/lint/g8-integration-workflow.ts` /
+   `g9-system-workflow.ts` / `g10-ux-workflow.ts`) の判定をそのまま使う (family prefix 要件と workflow marker 要件を含め、結果を変えない)。
+   共通述語は consumer の G8〜G14 と、harness の G11〜G14 に適用する。consumer では family prefix (例: `IT-MODULE-`) は harness 固有の分類であるため
+   要求せず、F (全行) で代える。
+
+   **gate 別の述語** (contract 行の値を具体化したもの):
+
+   | gate | S の対象 slot | I の prefix | T (pair) | E の `<dir>` | A (`required_artifacts`) | gate 固有の追加述語 | review tier (`approval_role`) | PR |
+   | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+   | G8 | `DOC-L8-INTEGRATION-TEST-DESIGN` | `IT-` | L5 (`DOC-L5-MODULE` / `DOC-L5-PHYSICAL-DATA` の ID) | `g8-integration` | `integration_manifest`, `integration_results` | なし | QA/TL | PR-GR |
+   | G9 | `DOC-L9-SYSTEM-TEST-DESIGN` | `ST-` | L4 (`DOC-L4-*` の ID) | `g9-system` | `system_manifest`, `system_results` | case 表の各行が `evidence_families` (`ST` / `performance` / `security`) のいずれかを `family` 列に持ち、3 family の全てに 1 行以上ある | QA/TL | PR-G9 |
+   | G10 | `DOC-L10-UX-VALIDATION` | `UXV-` | L2 (`DOC-L2-SCREEN` の画面 ID) | `g10-ux` | `ux_manifest`, `browser_visual_a11y_results` | slot 文書の frontmatter が `status: skipped` の場合は、`skip_reason` の有無にかかわらず常に failed (理由 `skipped slot <doc_type_id>: no consumer profile-selection authority (VMC-005)`)。n/a passed の分岐は持たない (rev 20、下記「G10 の skip 判定」) | PO/QA | PR-G10 |
+   | G11 | `DOC-L11-TRACE-UAT` (evidence 文書。case 表は第2章 検証マトリクス、ID 列 `ケースID`、cite 列 `要件`) | `UAT-` | L1 / L3 / L4 / L5 / L6 / L7 (pair reciprocity 例外。contract `pair_reciprocity_exceptions`。cite 可能な ID 集合は下記「G11 / G12 の証跡 shape」の 3) | `g11-uat` | `end_to_end_trace_review`, `po_uat_decision` | `artifacts.end_to_end_trace_review` が指す JSON の `requirements[]` が、`DOC-L3-FUNCTIONAL` の全要件 ID (G3-trace と同じ抽出規則) を各 1 回、`status` (`traced` / `blocked`) 付きで列挙し、`blocked` が 0。`artifacts.po_uat_decision` が指す JSON が `decision` (`accept` / `reject`。`reject` は failed)・`decided_by_role` (非空)・`revision` (40 桁 hex) を持つ (承認の中身は review tier)。shape は下記「G11 / G12 の証跡 shape」(rev 21) | PO/TL | PR-G11 |
+   | G12 | `DOC-L12-ACCEPTANCE` | `AT-` | L3 (`DOC-L3-FUNCTIONAL` の要件 / AC ID。cite 可能な ID 集合は下記「G11 / G12 の証跡 shape」の 3) | `g12-acceptance` | `deploy_receipt`, `acceptance_results`, `rollback_readiness` | `artifacts.deploy_receipt` が指す JSON が `revision` (40 桁 hex) と `environment` (非空) を持ち、`artifacts.rollback_readiness` が指す JSON が `rollback_command` (非空) と `verified_at` (ISO 8601、timezone 付き) を持つ。shape は下記「G11 / G12 の証跡 shape」(rev 21) | PO/TL | PR-G12 |
+   | G13 | `DOC-L13-PRODUCTION-OBSERVATION` (evidence 文書。case 表は `### harness 追補: G13 検証ケース`、ID 列 `ケースID`、cite 列 `トレース元`) | `SMOKE-` | L12 (pair reciprocity 例外。片方向: 各行が `extractAtIds` の AT ID を 1 件以上 cite し、cite が全て AT ID。逆向き閉包は要求しない) | `g13-post-deploy` | `production_smoke`, `sli_slo_observation`, `rollback_decision` | `artifacts.sli_slo_observation` が指す JSON が `window_start` / `window_end` (ISO 8601、timezone 付き、start < end) と非空の `slos[]` (`slo_id` 一意、`target` / `observed` 非空) を持つ。`artifacts.rollback_decision` が指す JSON が `decision` (`keep` / `rollback`。`rollback` は failed にしない) を持つ。shape は下記「G13 / G14 の証跡 shape」(rev 22) | PO/TL | PR-G13 |
+   | G14 | `DOC-L14-OPERATIONAL-TEST` (detector 内の定数 (catalog の L14 `category=test-design` 行が出典) を resolver に通した path。contract の `governance_artifact` を slot に使わない唯一の gate であり VMC-003 の明示的例外、下記「G13 / G14 の証跡 shape」の 1。case 表は `### harness 追補: G14 検証ケース`) | `OT-` | L1 (右腕の L1 ID) と L0 (`docs/plans/` に実在する `PLAN-L0-*` の plan_id) | `g14-operational` | `operational_results`, `value_results`, `improvement_feedback` | 各行の `family` が `OT` / `VALUE` のいずれかで両方に 1 行以上。`VALUE` 行が L0 の plan_id を 1 件以上 cite する。`artifacts.improvement_feedback` が指す JSON が、非空 `items[]` (各項目が `summary` と `routed_to` (実在 PLAN ID または Issue URL 形式) を持つ) か、`items: []` + `no_improvement: true` のどちらか一方を持つ。shape は下記「G13 / G14 の証跡 shape」(rev 22) | PO | PR-G14 |
+
+   G11 / G13 の slot は test design ではなく process evidence (catalog `category=process-evidence`、authoring path `docs/process/evidence/`) であり、
+   resolver の写像対象外 (catalog path をそのまま使う)。
+
+   **G10 の skip 判定 (rev 20)**: rev 19 までの G10 行は「`skip_reason` 非空かつ scale profile で当該 slot が有効でないときだけ n/a passed」と
+   定めていたが、この n/a 分岐は到達不能であった。consumer の profile が L10 を無効にするかを決める正本が存在しないためである (実測、origin/main):
+
+   - `docs/governance/vmodel-document-scale-profiles.md` の decision 行は 26 行で、全て `DOC-L4-*` であり、L10 (`DOC-L10-UX-VALIDATION`) の行は 0 件。
+     同文書の解釈規則は未定義 overlay の自動 `adopt` を禁じ (:88)、検出系が採用判定・skip reason を創作することを禁じる (:95)。
+     したがって L4 `DOC-L4-UI-STANDARD` の行から L10 の有効 / 無効を推論できない。
+   - consumer の profile 選択には入力源が無い。`src/profile/domain/resolver.ts` の `resolveDocumentProfile` は src から呼ばれておらず、
+     consumer manifest の `profile` は非空文字列であることしか検査されない (信頼根が無い)。
+   - catalog (`docs/governance/vmodel-document-catalog.md:45`) の `DOC-L10-UX-VALIDATION` は `default_status` が `required` である
+     (scope 列は `profile_controlled` だが、それを解決する decision 行が無い)。
+   - VMC-005 (`docs/process/vmodel-contract.yaml:209-210`、`missing_contract_data_fails_closed_without_detector_inference`) は contract に無いデータを
+     推測せず fail-close することを要求する。
+   - G2 の `mockMissing` (`src/gate/static.ts`) は、L2 wireframe の `pair_artifact` として L10 の UX 検証 test-design を無条件に要求している
+     (§3.6-2、rev 13 で freeze)。
+
+   | 案 | 内容 | 判定 |
+   | --- | --- | --- |
+   | A | scale profile の L4 `DOC-L4-UI-STANDARD` 行 (skip / 不採用) から L10 の無効を推論する | 棄却 (:88 / :95 が検出系による採用判定の推論を禁じ、L4 行は L10 の decision 行ではない) |
+   | B | 本 PLAN で L10 の decision 行と consumer の profile 選択入力 (manifest `profile` → `resolveDocumentProfile`) を新設する | 棄却 (信頼根を持つ新しい選択機構を実装契約 PLAN の中で発明することになり、§PR スコープ規律 2 に反する。後続 PLAN の範囲) |
+   | C | profile 条件を外し、`skip_reason` 非空だけで n/a passed とする | 棄却 (consumer が自己申告だけで required slot の UX 検証を n/a にでき、catalog :45 の `required` と VMC-005 を緩める) |
+   | **D (採用)** | canary.2 では frontmatter `status: skipped` を常に failed とする (理由: VMC-005、consumer の profile 選択の正本が無い)。profile に基づく L10 skip は後続 PLAN へ送る | 採用 |
+
+   advisor: `ut-tdd advisor --decision design --execute` (2026-09-29、provider=claude、model=`claude-fable-5-1`、control lane が諮問)。
+   判定は SURVIVES (案 D を支持)。付帯条件として次を記録する。scale profile には、profile 条件付きの意図の既存痕跡が
+   `vmodel-document-scale-profiles.md:55` (「UI 標準は L10 UX validation の上流正本になる」) と `:68` (「web profile … L10 browser/visual/a11y 検証を有効化する」)
+   の note 列に在る。後続 PLAN は新しい機構を発明せず、これらの note を機械可読な L10 の decision 行へ正規化し、あわせて信頼根を持つ profile 選択の
+   入力源を定めること。
+
+   受容した副作用: canary.2 では CLI だけの consumer も L10 の UX 検証 test-design を書く必要がある。これは G2 の L10 pair が無条件である
+   (§3.6-2) ことから既に含意されており、本改訂で新たに生じる要求ではない。
+
+   範囲外 (記録のみ): `docs/governance/document-system-map.md:56` は L2 画面を「必須 (UI 有時)」とする一方、catalog :27 は `DOC-L2-SCREEN` を
+   `core` / `required` とする不一致がある。本改訂では扱わない。
+
+   **G11 / G12 の証跡 shape (rev 21)**: rev 20 までの §3.6-4 は、G11 / G12 の判定を意味としては定めていたが、機械が読む形
+   (manifest の case ID field 名、trace 記録の配列名・field 名・status の閉集合、artifact の中身の形式、T で cite できる ID の集合) を定めていなかった。
+   PR-G11 の実装者 (Codex) は新しい正本 shape を実装 PR の中で発明することを拒否し、契約側での freeze を求めた (§PR スコープ規律 2)。
+   本改訂は、既存の G3 / G8 / G9 / G10 の形をそのまま一般化し、新しい記法を足さずに G11 / G12 の shape を定める。
+
+   実測 (origin/main `60099e55`):
+
+   - manifest の case ID field は gate ごとに prefix 由来の名前を使っている。G8 は `selected_it_ids` / `mandatory_it_ids` / `deferred_it_ids` /
+     `commands[].it_ids` / `coverage[].it_id` (`src/lint/g8-integration-workflow.ts:19-38`)、G9 は同じ位置に `st` (`src/lint/g9-system-workflow.ts:19-38`、
+     consumer 側は `src/gate/right-arm-static.ts` の `parseG9EvidenceManifest` の alias と `defer[].st_id`)、G10 は `uxv`
+     (`src/lint/g10-ux-workflow.ts:19-38`、consumer 側は `parseG10EvidenceManifest` と `defer[].uxv_id`)。
+     いずれも contract の `case_id_prefix` (`IT-` / `ST-` / `UXV-`、`docs/process/vmodel-contract.yaml`) の末尾 `-` を除いて小文字にした値に一致する。
+   - A (必須成果物) は `artifacts.<key>` の値を repo 内の実在 path として検査するだけで、中身は読まない (`src/gate/right-arm-static.ts:486-492`)。
+     G11 / G12 / G13 の gate 固有述語は artifact の中身 (field) を参照するが、その形式は未定義だった。
+   - manifest は evidence directory 直下の `*.json` を全て読む (非再帰、`src/gate/right-arm-static.ts:365-372` の `manifestFiles`)。
+   - 右腕 T の cite 可能 ID 集合は、pair 層 (`designLayerFromPath` が返す L1〜L6) の文書の `doc_type_id` と太字 `**ID**` だけである
+     (`pairLayerIds`、`src/gate/right-arm-static.ts:239-251`)。G9 型の定義済み集合 `allDesignIds` (:253-264) は design root と test-design root の
+     全文書を読むので L7 以降の test-design の `doc_type_id` / 太字 ID を含むが、`designLayerFromPath` (`src/vmodel/lint.ts:75-79`) は
+     `docs/design/L[1-6]-*` だけを層として返すため、L7 は pair 集合に入らない。
+     共通 fixture (v) (`tests/release-consumer-gates.test.ts:89-182`) を実行して測ると、L3 の `### FR-01:` 見出しと `#### AC-FR-01-01` 見出しで
+     定義された `FR-01` / `AC-FR-01-01` は、G11 の pair 集合 (29 件)・G12 の pair 集合 (16 件)・`allDesignIds` (34 件) のいずれにも無い。
+     `DOC-L7-UNIT-TEST-DESIGN` は `allDesignIds` に在り pair 集合に無い。したがって既存の集合のままでは、G11 の case 表は要件 `FR-01` を、
+     G12 の case 表は AC `AC-FR-01-01` を cite できない (cite すると `trace target missing`)。
+   - consumer の L3 要件 ID は、G3-trace が既に consumer でも抽出している (`src/lint/g3-trace.ts:26-39` の `loadDocs` が resolver 経由で読む)。
+     FR は `functional-requirements.md` の `^### FR-NN:` 見出し (`extractL3FrIds`、:52)、AC は `#### AC-FR-NN-NN` などの見出し
+     (`extractAcIds`、:62)、NFR は `nfr-grade.md` の `| **NFR-NN** |` 表行 (`extractL3NfrIds`、:107)。fixture (v) での実測値は
+     FR 1 件 (`FR-01`)・NFR 15 件・AC 1 件で、FR ∪ NFR は 16 件。harness 自身の L3 では FR 26 件・NFR 17 件・AC 117 件で、
+     `functional-requirements.md` の太字 `**FR-NN**` は 0 件である。
+   - consumer の L11 テンプレート (`docs/templates/vmodel/L11-trace-uat.md`) の第2章 検証マトリクスには、`ケースID` 列と `要件` 列が既にある
+     (`要件 | 検証方式 | テストレベル | 技法 | ケースID`、:33)。欠けているのは列そのものではなく、ID の形 (`UAT-*`) と機械可読な表構造が
+     凍結されていないことである。テンプレート本文に `UAT-` の token は 0 件で、I の dangling 検査を起こさない。L12 テンプレートの case 表は
+     G8 と同じ列 (`docs/templates/vmodel/L12-acceptance-test-design.md` 第3章)。
+
+   決定:
+
+   1. **case ID field の一般規則 (G8〜G14 共通)**: `<p>` は contract 行の `case_id_prefix` から末尾の `-` を除いて小文字にした文字列とする
+      (`IT-`→`it`、`ST-`→`st`、`UXV-`→`uxv`、`UAT-`→`uat`、`AT-`→`at`、`SMOKE-`→`smoke`、`OT-`→`ot`)。manifest は次の field を持つ。
+
+      | field | 型 | 必須 | 意味 |
+      | --- | --- | --- | --- |
+      | `selected_<p>_ids` | string[] | 必須 | 実施対象の case ID |
+      | `mandatory_<p>_ids` | string[] | 必須 | passed の coverage を要する case ID (E / F) |
+      | `deferred_<p>_ids` | string[] | 必須 (空可) | defer する case ID (F) |
+      | `commands[].<p>_ids` | string[] | 必須 | command が扱う case ID |
+      | `coverage[].<p>_id` | string | 必須 | coverage 対象の case ID |
+      | `defer[].<p>_id` | string | deferred があれば必須 | defer 対象の case ID (`reason` / `plan_id` と組) |
+
+      G8 / G9 / G10 の既存 field 名はこの規則の具体例であり、変わらない。G11 は `uat`、G12 は `at` となる
+      (`selected_uat_ids` / `mandatory_uat_ids` / `deferred_uat_ids` / `commands[].uat_ids` / `coverage[].uat_id` / `defer[].uat_id`、
+      `selected_at_ids` / `mandatory_at_ids` / `deferred_at_ids` / `commands[].at_ids` / `coverage[].at_id` / `defer[].at_id`)。
+      他 gate の field 名 (例: G11 manifest の `mandatory_it_ids`) は読まない。読まれなかった case は F で `missing row evidence <id>` になる。
+      その他の manifest field (`schema_version` / `gate` / `profile` / `plan_id` / `commands[]` の残り / `exit_criteria` / `artifacts`) は E / A のとおりで、変えない。
+
+   2. **artifact の中身の形式 (G11〜G13 の gate 固有述語が参照するもの)**: gate 固有述語が field を参照する artifact
+      (G11 の `end_to_end_trace_review` / `po_uat_decision`、G12 の `deploy_receipt` / `rollback_readiness`) は、`artifacts.<key>` の path が指す
+      UTF-8 の JSON object とする。parse できない、または object でなければ `<manifest>: invalid artifact <key>: JSON object required` で failed。
+      field を参照しない artifact (G12 の `acceptance_results` など) は A の実在検査だけとし、形式を問わない。
+      JSON artifact は evidence directory の直下に置かない (直下の `*.json` は manifest として読まれ、E で failed になる)。置き場所の例は
+      `.ut-tdd/evidence/g11-uat/artifacts/trace-review.json` とし、A の許可範囲 (repo 内の実在 path) は変えない。
+      artifact に `schema_version` や digest は持たせない (最小実装。exact revision への束縛は `revision` field と review tier で行う)。
+
+   3. **G11 / G12 の T で cite できる ID 集合**: L3 を pair 層に含む gate (G11 / G12) の T は、右腕の既存集合に、G3-trace と同じ抽出規則で
+      consumer の L3 から得る見出し定義 ID `H` を和集合で足す。`H` = `extractL3FrIds(functional-requirements.md)` ∪
+      `extractAcIds(functional-requirements.md, business-detail.md, nfr-grade.md)` とする (NFR は太字表行なので既存集合に既に含まれる)。実装は `src/lint/g3-trace.ts` が export する
+      extractor を **import して使い、正規表現を複製しない**。3 文書の本文は右腕が既に読んだ pair 文書 (`loadPairDocs` 由来の L3 文書) から
+      doc_type_id / path で仕分けて extractor に直接渡し、G3-trace の `loadDocs` は経由しない (`loadDocs` は文書が 1 件でも無いと throw するため、
+      gate が violation ではなく例外で落ちる)。文書が無ければ空文字列を渡し、`H` は空集合に縮退する (欠落そのものは既存の S / I の検査が failed にする)。
+      extractor は harness ZIP テンプレートの見出し書式 (`### FR-NN:` の 2 桁 + コロン、`#### AC-…`) に厳密であり、consumer の L3 が
+      テンプレート由来であることを前提にする (書式が揺れた consumer では `H` が空になり T が failed になる。これは fail-close 側の縮退として許容する)。
+      - G11 (G9 型): 各行の cite のうち 1 件以上が `pairLayerIds(L1, L3〜L6) ∪ H` に在り (無ければ `untraced case <id>`)、cite した ID が全て
+        `allDesignIds ∪ H` に在る (無ければ `trace target missing <id>`)。L7 は contract の pair 層に在るが `designLayerFromPath` が層を返さないため、
+        L7 の ID (例: `DOC-L7-UNIT-TEST-DESIGN`) は定義済みとして cite できるが、それだけでは pair を満たさない。G8 型にすると L7 の cite が常に
+        `trace target missing` になるため G9 型とする。
+      - G12 (G8 型): 各行が 1 件以上の ID を cite し (無ければ `untraced case <id>`)、cite した ID が全て `pairLayerIds(L3) ∪ H` に在る
+        (無ければ `trace target missing <id>`)。
+      右腕 T の既存集合 (`pairLayerIds` / `allDesignIds`) と G8 / G9 / G10 の T は変えない。fixture (v) での試算 (本改訂の検証 script、
+      右腕の集合を複製して `H` を足したもの): G11 行 `FR-01` / `NFR-01` と G12 行 `AC-FR-01-01` / `NFR-01` は違反 0 件、太字だけの集合では
+      G11 が `untraced case` + `trace target missing FR-01`、G12 が `trace target missing AC-FR-01-01` になる。
+
+   4. **G11 の case 表 (S / I / T の入力)**: slot 文書 `docs/process/evidence/g11-uat-review-design.md` (catalog path、resolver 対象外) の
+      必須見出しは L11 テンプレートの `# DOC-L11-TRACE-UAT: 検証設計書 (+ traceability.yaml のトレース俯瞰)` と `#### 第1章 検証方針・方式` 〜
+      `#### 第8章 契約テスト(CDC)` の 8 見出しとする (`### 移植元:` 行は含めない。G8 / G9 と同じ扱い)。case 表は第2章 検証マトリクスとし、
+      必須列は `要件` / `検証方式` / `テストレベル` / `技法` / `ケースID`、行 ID 列は `ケースID`、cite 列は `要件` とする。I は `ケースID` に適用する
+      (全行が `UAT-` で始まる。IT / ST など他レベルの case は G11 の表に書かない)。T は上記 3 の G11 規則とする。
+      **ZIP 忠実性からの逸脱 (明示の設計判断)**: L11 テンプレートは自身で「項目名・説明文は zip の日本語をそのまま使い、意味は書き換えていない」
+      (`L11-trace-uat.md:16`) と宣言している。本改訂は、`ケースID` 列に限って値の形 (`UAT-` prefix、機械可読な表構造) を固定する。
+      gate の parse 可能性を ZIP 忠実性より優先する決定であり、テンプレート文書の列名・他列・説明文は変えない (テンプレート file の編集は無い)。
+      副作用として、G11 の検証マトリクスには IT / ST など他レベルの case を書けなくなる (それらは G8 / G9 の表に書く)。
+
+   5. **G11 の `end_to_end_trace_review`**: JSON object で、`requirements` (array、必須) を持つ。各要素は次の 2 field だけを持つ。
+
+      | field | 型 | 値 |
+      | --- | --- | --- |
+      | `requirement_id` | string | L3 要件 ID |
+      | `status` | string | 閉集合 `traced` / `blocked` (小文字の完全一致) |
+
+      L3 要件 ID の集合 `R` は、G3-trace と同じ抽出規則で consumer の L3 から得る: `functional-requirements.md` の `^### FR-NN:` 見出し
+      (`extractL3FrIds`) と `nfr-grade.md` の `| **NFR-NN** |` / `| **NFR-DNN** |` 表行 (`extractL3NfrIds`) の和集合 (AC は含めない)。
+      右腕 T の太字 ID 集合は使わない (見出しで定義された FR を落とすため)。extractor は上記 3 と同じく import して使う。
+      consumer の L3 文書形式の要件を契約として明示する: `functional-requirements.md` は `### FR-NN:` 見出しで FR を定義し、`nfr-grade.md` は
+      `| **NFR-NN** |` 表行で NFR を定義する。形式が異なる consumer は `R` が空になり、下表 1 行目で failed になる
+      (空集合で `blocked=0` が空虚に pass する false negative を作らない)。判定 (各違反は `<manifest>: ` 付き):
+
+      | 条件 | 違反 |
+      | --- | --- |
+      | `R` が空 (L3 文書が無い、または ID が 0 件) | `no requirement ids defined in DOC-L3-FUNCTIONAL` (manifest prefix なし、VMC-005) |
+      | `R` の ID が `requirements[]` に無い | `untraced requirement <id>` |
+      | `requirement_id` が `R` に無い | `trace review references undefined requirement <id>` |
+      | 同じ `requirement_id` が 2 回以上 | `duplicate trace requirement <id>` |
+      | `status` が閉集合外 (型違い・大文字・空を含む) | `invalid trace status <id>: <status>` |
+      | `status = blocked` | `blocked requirement <id>` |
+
+      `blocked` を記録すること自体は許すが、1 件でもあれば failed とする (§3.6-4 の「`blocked` が 0」)。requirement と UAT case の対応
+      (どの `UAT-` がどの要件を検収したか) はここでは持たない。対応は case 表の `要件` 列 (T) で表す。
+
+   6. **G11 の `po_uat_decision`**: JSON object で、次の 3 field を持つ (他の field は無視する)。
+
+      | field | 型 | 値 | 違反 |
+      | --- | --- | --- | --- |
+      | `decision` | string | 閉集合 `accept` / `reject` | 閉集合外は `invalid po_uat_decision.decision <value>`。`reject` は `po_uat_decision.decision is reject` |
+      | `decided_by_role` | string | 非空 | `po_uat_decision.decided_by_role is required` |
+      | `revision` | string | 40 桁 hex (G12 の `deploy_receipt.revision` と同じ符号化。大文字小文字は問わない) | `invalid po_uat_decision.revision` |
+
+      `revision` が HEAD や merge 対象と一致するか、`decided_by_role` が approval_role (`PO/TL`) の本人かは static では判定しない
+      (review tier の `未判定 (review): PO/TL`)。
+
+   7. **G12 の artifact field**: `deploy_receipt` は `revision` (40 桁 hex、大文字小文字は問わない) と `environment` (非空 string)、
+      `rollback_readiness` は `rollback_command` (非空 string) と `verified_at` (ISO 8601 の日時。timezone 付き
+      `YYYY-MM-DDTHH:MM[:SS[.fff]](Z|±HH:MM)`) を持つ JSON object とする。違反は `<manifest>: invalid deploy_receipt.revision` /
+      `deploy_receipt.environment is required` / `rollback_readiness.rollback_command is required` / `invalid rollback_readiness.verified_at`。
+      G12 の case 表は L12 テンプレートの第3章 テストケース一覧 (G8 と同じ必須列、行 ID 列 `テストID`、cite 列 `トレース元`)。必須見出しは
+      L12 テンプレートの title と `####` / `#####` 見出し 10 本 (`### 移植元:` 行を除く)。G12 の slot は G3-trace が AT ID を抽出する文書と同じであり、
+      G3 用の `| **AT-...** |` 行の ID も I の dangling 検査の対象になるため、case 表に同じ ID の行を置く。
+
+   | 論点 | 案 | 内容 | 判定 |
+   | --- | --- | --- | --- |
+   | artifact の置き場 | **X (採用)** | artifact は `artifacts.<key>` が指す別 JSON file。gate 固有述語はその中身を読む | A の「値は実在 path」をそのまま使え、G11〜G13 に同じ規則が効く |
+   | | Y | manifest に `end_to_end_trace_review` などの object を inline で持つ | 棄却 (A の path 検査と中身が 2 箇所に分かれ、どちらが正本かが曖昧になる。gate ごとに manifest field が増える。manifest は直下の全 `.json` を parse する共有層であり、別 file なら gate 固有 field を共有 parse 層へ入れずに済む) |
+   | `decision = reject` | **i (採用)** | static で failed (`po_uat_decision.decision is reject`) | tracked artifact から決定的に判定でき、contract の `exit_criteria: no_unresolved_trace_or_uat_blocker` に合う。「pass に見せない」(§3.6-4 冒頭)。G8 の static も意味的結果で failed にする既存慣行 (`src/lint/g8-integration-workflow.ts` の mandatory `coverage.status !== "passed"` と `all_mandatory_passed` / `failed_mandatory_count`) と整合し、意味の強化ではない |
+   | | ii | static は shape だけ見て pass、reject の扱いは review tier | 棄却 (PO が却下した UAT で static pass が出る) |
+   | L3 要件 ID の抽出 (`R`) | **R1 (採用)** | G3-trace の `extractL3FrIds` ∪ `extractL3NfrIds` (import) | consumer で G3 が既に強制している ID 集合と一致し、新しい記法を足さない |
+   | | R2 | 右腕 T の太字 ID 集合 (`**ID**`) を DOC-L3-FUNCTIONAL に限って使う | 棄却 (fixture (v) で見出し定義の `FR-01` を落とし `NFR-*` だけになる。harness 自身の L3 では太字 FR 0 件で FR が全て落ち、FR だけの L3 では集合が空になって `blocked=0` が空虚に pass する) |
+   | T の cite 可能 ID 集合 | **T1 (採用)** | G11 / G12 だけ、右腕の既存集合 ∪ `H` (G3 extractor の import) | 見出し定義の FR / AC を cite でき、G8〜G10 の判定を変えない |
+   | | T2 | 右腕共通の `pairLayerIds` / `allDesignIds` に L3 見出し抽出を足す | 棄却 (G8〜G10 の T の判定集合が変わり、§3.6-7 の「G1〜G10 の結果は変わらない」を崩す) |
+   | | T3 | 既存集合のまま (consumer は `DOC-L3-FUNCTIONAL` や太字 NFR だけを cite する) | 棄却 (受入 / UAT case が要件 ID / AC ID を cite できず、V-pair trace が文書 ID 粒度に落ちる。test-design の (m-T) も判別力を失う) |
+
+   **G13 `rollback_decision` (keep / rollback) との非対称**: G13 の `rollback` は正当な運用上の結果であり、shape のみを検査して failed にしない。
+   線引きは「decision が gate 判定基準そのものか、運用選択か」である。G11 の `po_uat_decision.decision` は UAT の合否という gate 判定基準そのものなので
+   `reject` は failed とし、G13 の `rollback_decision` は運用選択なので shape-only とする。
+
+   advisor: `ut-tdd advisor --decision design --execute` (2026-09-29、model=`claude-fable-5`、control lane が諮問)。判定は論点 1〜4 とも survive (4/4)。
+   論点 1 (reject=failed) は G8 の既存慣行と整合するため survive、G13 との非対称を上記のとおり明記する条件付き。論点 2 (artifacts/ 配下の別 JSON file) は
+   survive。論点 3 (G3-trace extractor による L3 要件 ID) は、太字抽出では harness 自身の FR が全て落ちるというより強い理由で survive。
+   extractor の import と consumer 文書形式の明示を条件とする。論点 4 (G11 case 表の freeze) は survive、ただし事実訂正あり (L11 テンプレート :33 に
+   `ケースID` / `要件` 列は既存。未凍結なのは ID 形と機械可読構造)。テンプレート自身の ZIP 忠実性宣言 (:16) からの逸脱を明示の設計判断として
+   記録する条件付き。決定 3 (T の ID 集合) は advisor 諮問後に fixture (v) の実行で見つかった欠落への対処であり、論点 3 と同じ extractor を
+   同じ import 方針で使う (新しい抽出規則は足さない)。決定 3 は追加で諮問した (`ut-tdd advisor --decision design --execute`、2026-09-29、
+   model=`claude-fable-5`、control lane が諮問)。判定は条件付き survive: G11 / G12 限定の和集合は G10 の `l2ScreenIds` と同じ「gate ごとに定義集合を
+   選ぶ」既存パターンの延長で G8〜G10 との一貫性を壊さない。右腕共通集合を G3 抽出へ揃える案 (T2) は G8〜G10 の判定を動かす回帰リスクがあり必要性の
+   実測が無いため棄却、consumer に太字 ID を書かせる案 (T3) は ZIP 忠実性の逸脱で棄却。条件は `loadDocs` を経由せず pair 文書の本文を直接渡し、
+   欠落時は空集合へ縮退させることと、テンプレート書式への依存を明記することで、決定 3 の本文に反映した。
+
+   範囲外 (記録のみ): G10 の consumer case 表は、L10 テンプレート第3章 E2Eシナリオの `No` 列を行 ID 列、`対象画面` 列を cite 列として実装されている
+   (`src/gate/right-arm-static.ts` の `parseG10CaseRows`、PR-G10)。§3.6-4 の G10 行はこの列の選定を明記していない。判定は変わらないため
+   本改訂では扱わず、G10 行の明記は後続の文書整合で行う。
+
+   **G13 / G14 の証跡 shape (rev 22)**: rev 21 で G11 / G12 の shape を freeze した時点で、G13 / G14 行にも同じ欠落 (manifest の case ID field 名、
+   artifact の中身の形式、T で cite できる ID の集合) が残っていた。加えて実測で、L13 / L14 テンプレートに `SMOKE-` / `OT-` の case 表が無いこと、
+   G14 の contract `governance_artifact` が consumer テンプレートの無い harness 固有の slot を指すこと、L12 と L0 が右腕の pair 集合に入らないこと、
+   L0 テンプレートに「目的 ID」が無いことが分かった。本改訂は rev 21 の決定 1 (case ID field 名の一般規則) と決定 2 (artifact は別 JSON file) を
+   そのまま使い、PR-G13 / PR-G14 が実装 PR の中で正本 shape を発明しないよう、G13 / G14 の shape を定める (§PR スコープ規律 2)。
+
+   実測 (origin/main `60099e55` / `ea9cb3e8`。本改訂の基準 `b02f862d` までに、下記の対象 file に差分は無い):
+
+   - contract の G13 行は `pair_layers: [L12]`、`required_artifacts: [production_smoke, sli_slo_observation, rollback_decision]`、`case_id_prefix: SMOKE-`、
+     `governance_artifact: docs/process/evidence/g13-post-deploy-verification-design.md`。G14 行は `pair_layers: [L1, L0]`、
+     `required_artifacts: [operational_results, value_results, improvement_feedback]`、`evidence_families: [OT, VALUE]`、`case_id_prefix: OT-`、
+     `governance_artifact: docs/test-design/harness/L14-vmodel-engine-swap-operational-test-design.md` (`docs/process/vmodel-contract.yaml:174-199`)。
+     L13 は pair reciprocity 例外 (`pair_reciprocity_exceptions: [L11, L13]`、`allowed_pair_layers: [L12]`) で、L14 は例外ではない (同 :26-49)。
+   - catalog の L14 は 2 行ある。`DOC-L14-OPERATIONAL-TEST` (`test-design`、`docs/test-design/harness/L14-operational-test-design.md`) と
+     `DOC-L14-VMODEL-ENGINE-SWAP-OT` (`upgrade-delta`、contract の `governance_artifact` と同じ path) である (`docs/governance/vmodel-document-catalog.md:48-50`)。
+     consumer テンプレートは `DOC-L14-OPERATIONAL-TEST` の 1 本だけで、contract の gate 行のうち G14 だけが type slot でなく harness 固有の instance 文書を指す。
+     harness の L14 文書 2 本は、どちらも frontmatter に `doc_type_id` を持たない。
+   - `governanceArtifact` の consumer は 3 つある。`src/gate/right-arm-static.ts` (slot 解決。`doc_type_id` が gate 固有値と一致するときだけ採用、:209-237)、
+     `src/lint/right-arm-gate-planning.ts` (verify PLAN の `parent_design` / `generates` との一致、:116、:204-208)、`src/lint/right-lung-doc-governance.ts:52`
+     (slot 文書の `<gate>-WORKFLOW` 見出し・marker・case ID 行) である。後の 2 つは repo の contract を直接読み、bundle は読まない
+     (`src/vmodel/yaml-contract-loader.ts:11-16`)。`PLAN-L14-01` (draft) は engine-swap 文書を `parent_design` と `generates` の先頭に持つ。
+   - L13 / L14 テンプレートには、ID 列と cite 列を両方持つ表が無い (3-1 SLI/SLO は `トレース元` 列を持つが ID 列が無く、5-2 ランブックは `ID` 列を持つが
+     cite 列が無い)。`family` 列も無い。L14 の前半 (ZIP-DOC-011) は L13 の前半と見出し単位で同一である
+     (`docs/templates/vmodel/L13-production-observation.md:20-102`、`L14-operational-test-design.md:20-161`)。両テンプレートとも :18 で
+     「項目名・説明文は zip の日本語をそのまま使い、意味は書き換えていない」と宣言している。
+   - 右腕 T の `pairLayerIds` は `designLayerFromPath` が返す層 (`docs/design/L[1-6]-*`) で絞るため、L12 (test-design) と L0 (charter) は常に空集合になる
+     (`src/vmodel/lint.ts:75-79`)。`DOC-L0-CHARTER` の catalog path は `docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md` (`trace_ref_kind: plan_registry`) で、
+     pair 文書の walk 対象外である。L0 テンプレートに「目的 ID」は無い (1.2 は箇条書き、表の ID 列は `No` だけ、`docs/templates/vmodel/L0-charter.md:20-82`)。
+   - L12 の AT ID は、G3 の `extractAtIds` (`src/lint/g3-trace.ts:88`、表行 `| **AT-…** |` の太字) が pure な export として既にある。
+   - G13 / G14 の evaluator は未登録である (`no evaluator for <gate>`、`src/gate/right-arm-static.ts:496-509`)。
+
+   決定:
+
+   1. **G14 の slot (detector 内固定、VMC-003 の明示的例外 1 件)**: right-arm-static の G14 だけ、slot を contract の `governance_artifact` から取らず、
+      detector 内の定数 (doc_type_id `DOC-L14-OPERATIONAL-TEST`、harness path `docs/test-design/harness/L14-operational-test-design.md`) を resolver に通して取る。
+      G8〜G10 が slot の期待 `doc_type_id` を detector 内に固定している既存の形 (`src/gate/right-arm-static.ts:216/226/236`) を path にも広げたものであり、
+      catalog を実行時の入力にはしない (catalog の `DOC-L14-OPERATIONAL-TEST` 行 (`docs/governance/vmodel-document-catalog.md:49`) は定数の出典として引用し、
+      定数と catalog 行の一致は unit test で固定する)。contract の G14 行 (`governance_artifact` を含む) は変えない。
+      これは contract に存在するデータ (`governance_artifact`) を detector 側の値で置き換えるものであり、VMC-003 (`detector_registry_is_derived_from_this_contract`、
+      本項冒頭の「contract の `layers[]` 行を唯一の入力とする」) に対する明示的な例外である。VMC-005 の非該当で正当化するものではない。
+      例外は G14 の slot 1 件に限り、G14 行と本決定に明記する。形は次の 5 案を実測して選んだ。
+
+      | 案 | right-arm-static (harness の G14) | right-arm-static (consumer の G14) | right-arm-gate-planning (harness) | right-lung-doc-governance (harness) | 他の変更 |
+      | --- | --- | --- | --- | --- | --- |
+      | **O1-fixed (採用)** detector 内の定数で G14 slot を固定 | failed (下記) | 動く (テンプレートは `doc_type_id: DOC-L14-OPERATIONAL-TEST`) | 影響なし (contract 不変) | 影響なし | なし (定数と catalog 行の一致 test を 1 件足す) |
+      | O1-catalog (前回案) catalog を実行時に読んで slot を決める | failed | 動く | 影響なし | 影響なし | 棄却: slot の正本が contract と catalog の 2 つになる (advisor 指摘) |
+      | O1' contract の G14 行に slot 指定 field を 1 個足す (`governance_artifact` は不変) | failed | 動く | 影響なし | 影響なし | 棄却 (本 PLAN では): 下記の所有コスト |
+      | O2 contract の G14 `governance_artifact` を generic path へ改訂 | failed | 動く | **赤** (PLAN-L14-01 の `parent_design` / `generates` と新 path が不一致。是正に他 PLAN の改訂が要り、既存 file を draft の `generates` に書くと `duplicate-artifact-ownership` / `merged-plan-status` が fail-close する) | pass | contract 所有 PLAN と PLAN-L14-01 の改訂 |
+      | O3 bundle 用の consumer contract variant | failed | 動く | 影響なし | 影響なし | 棄却: contract の二重化 (drift 源)、`scripts/build-node.mjs` の埋め込み対象の変更 (§3.1.2) |
+
+      O1' の実測: contract の parser は `src/vmodel-contract/application/contract-compiler.ts` の `compileLayer` (:96-135) 1 箇所で、未知の key は無視する
+      (strict ではない) ため field を足しても既存の loader と test (`tests/vmodel-contract-compiler.test.ts` の U-VMC-001 / 002 / 009 は
+      digest を定数で固定していない) は壊れない。field を読むには `CompiledVerificationObligation` への 1 field の追加と compiler の検査が要り、コードの
+      コストは小さい。しかし `docs/process/vmodel-contract.yaml` は PLAN-L4-24 (blocked) / PLAN-L4-28 / PLAN-L7-420 の `generates` が所有する正本であり、
+      schema に field を足すことはそれらの契約改訂 (pair-freeze) を要する。本 PLAN の PR-G14 の中で他 PLAN の正本 schema を変えることは
+      §PR スコープ規律 2 に反するため、本 PLAN では採らない。
+      **O1' / O2 の後続 PLAN の起票条件** (いずれか 1 つで起票する): (a) PLAN-L4-24 が blocked を解いて contract schema を改訂するとき、
+      (b) G14 以外の gate で `governance_artifact` と異なる slot が要ることが判明したとき (例外が 2 件目になる前に schema へ上げる)、
+      (c) PLAN-L14-01 (engine-swap の G14 検証) が confirm に進み、harness の G14 static を passed にする必要が生じたとき。
+      後続 PLAN は、contract の slot 指定 (O1' または O2)、PLAN-L14-01 の `parent_design` / `generates`、harness L14 文書の shape を同時に扱い、
+      本決定の detector 内定数を撤去する。
+
+      **harness 自身の G14 は failed のまま受容する**。実測の根拠は次の 3 点である。
+      - CI を止めない: `evaluateStaticGate` の呼び出し元は `src/cli.ts:3031` (`gate confirm`) だけで、doctor と `harness-check` の各 step
+        (`.github/workflows/harness-check.yml`: plan admission-check / typecheck / db rebuild / test / doctor --profile source-doc-lane / lint / audit quality) は
+        G8〜G14 の static を評価しない。harness の回帰固定 (U-RCDEV-037) も G1〜G10 だけが対象である。影響は、harness で `gate confirm G14` を
+        実行したときに failed が出ることに限られる (harness の G14 は既に failed として記録されている)。
+      - `doc_type_id` の 1 行追記では passed にならない: harness の `L14-operational-test-design.md` に `doc_type_id: DOC-L14-OPERATIONAL-TEST` を足すと
+        `missing slot` は消えるが、この文書は L14 テンプレートの見出し (S) も `### harness 追補: G14 検証ケース` の表も持たないため、failed の理由が
+        `missing section` 等へ移るだけである。
+      - 追記は他 PLAN の成果物を変える: この文書は PLAN-L7-397 / PLAN-REVERSE-397 の `generates` が所有する confirmed 文書 (`layer: L1` /
+        `executed_at_layer: L14` の旧形式) である。harness の design / test-design 文書で `doc_type_id` を持つものは 0 件で
+        (`git grep -l "doc_type_id:" -- docs/test-design/harness docs/design/harness`)、frontmatter の `doc_type_id` を読む実装は right-arm-static だけなので、
+        追記しても他の検査は変わらないが、passed にならない変更で他 PLAN の文書に触る理由が無い。harness の L14 文書の shape は、起票条件 (c) の後続 PLAN で扱う。
+
+      受容は §3.6-7 の「G11〜G14 は harness でも結果が変わりうる」の範囲とし、harness の G14 slot が contract の engine-swap 文書から detector 内定数の
+      generic 文書へ移ること、`gate confirm G14` の結果、上の 3 点を PR-G14 の PR 本文に記録する。
+   2. **case 表はテンプレートの harness 追補節**: L13 / L14 テンプレートの末尾に、ZIP 由来でない節を 1 本ずつ足す。
+      L13 は見出し `### harness 追補: G13 検証ケース` と表 `ケースID | 観測内容 | 合否基準 | トレース元`、
+      L14 は見出し `### harness 追補: G14 検証ケース` と表 `ケースID | family | 検証内容 | 合否基準 | トレース元` とする。
+      ZIP 由来の見出し・表・説明文は変えない。各テンプレートの ZIP 忠実性宣言 (:18) には「`### harness 追補:` で始まる節は ZIP 由来ではなく、
+      harness の gate 判定のために足した節である」の 1 文を足す (`docs/templates/vmodel/README.md` には同種の宣言が無いため変えない)。
+      追補節と宣言文の追加は PR-G13 / PR-G14 の実装範囲とし、本改訂ではテンプレートを変えない。2 file は本 PLAN の `generates` が既に所有しているため、
+      PR-G13 / PR-G14 で `generates` の更新は要らない。テンプレート本文の digest を固定する検査は無い (frontmatter の `source_entries[].sha256` は zip entry の
+      digest であり、§3.1.2 の封印は build ごとに tracked input の sha256 を receipt へ記録するものである)。
+   3. **G13**: slot は `docs/process/evidence/g13-post-deploy-verification-design.md` (catalog path、resolver 対象外、`doc_type_id: DOC-L13-PRODUCTION-OBSERVATION`)。
+      S は L13 テンプレートの title と `####` / `#####` 見出しの全て (`### 移植元:` 行を除く) と `### harness 追補: G13 検証ケース`、必須列は 2 の 4 列
+      (行 ID 列 `ケースID`、cite 列 `トレース元`)。I は全行が `SMOKE-` で始まり一意 (SLI / SLO は case 行にせず、`sli_slo_observation` が担う)。
+      T は、L13 が pair reciprocity 例外であることに合わせて **片方向** とする。各行が AT 集合の ID を 1 件以上 cite し (`untraced case <id>`)、
+      cite が全て AT 集合に在る (`trace target missing <id>`、G8 型)。全 AT が SMOKE に cite されること (逆向きの閉包) と、L12 側の backlink は要求しない。
+      AT 集合は `DOC-L12-ACCEPTANCE` の slot 本文 (catalog path を resolver に通したもの) を `extractAtIds` に渡して得る (import。正規表現を複製しない)。
+      slot が無ければ空集合に縮退し、全行が failed になる。右腕の `pairLayerIds(L12)` と `allDesignIds` は使わない。
+      F / E の `<p>` は `smoke`。A の `production_smoke` は実在検査だけとする (形式は自由)。`sli_slo_observation` は次の JSON object とする。
+
+      | field | 型 | 値 | 違反 (`<manifest>: ` 付き) |
+      | --- | --- | --- | --- |
+      | `window_start` | string | ISO 8601、timezone 付き (G12 の `verified_at` と同じ符号化) | `invalid sli_slo_observation.window_start` |
+      | `window_end` | string | 同上、かつ `window_start` より厳密に後 | `invalid sli_slo_observation.window_end` / `sli_slo_observation window is not closed` (end ≤ start) |
+      | `slos` | 非空の array | 各要素は object | `sli_slo_observation.slos is required` |
+      | `slos[].slo_id` | string | 非空、配列内で一意 | `sli_slo_observation.slos[<i>].slo_id is required` / `duplicate slo <id>` |
+      | `slos[].target` | 非空 string または有限 number | 目標値 | `sli_slo_observation.slos[<id>].target is required` |
+      | `slos[].observed` | 非空 string または有限 number | 観測値 | `sli_slo_observation.slos[<id>].observed is required` |
+
+      観測窓が閉じたことの static 判定は `window_start < window_end` だけとし、現在時刻とは比較しない (判定を実行時刻に依存させない)。
+      `observed` が `target` を満たすか (単位と方向が SLO ごとに違い、表記の規約が無い) と、exit_criteria の「unrouted blocker が無い」は static では
+      判定しない (`未判定 (review): PO/TL`)。`rollback_decision` は `decision` ∈ `keep` / `rollback` (小文字の完全一致。閉集合外は
+      `invalid rollback_decision.decision <value>`) だけを見る JSON object とする。`rollback` は failed にしない (上記「G13 `rollback_decision` との非対称」)。
+      他の field は無視し、`decided_by_role` / `revision` は要求しない (rollback の実施者と対象 revision の束縛は、G12 の `deploy_receipt` と review tier が持つ)。
+   4. **G14**: slot は 1 の `DOC-L14-OPERATIONAL-TEST`。S は L14 テンプレートの title と `####` / `#####` 見出しの全て (`### 移植元:` 行を除く) と
+      `### harness 追補: G14 検証ケース`、必須列は 2 の 5 列。L14 の前半の見出しは L13 と同一だが、`doc_type_id` と追補節の見出しで区別される。
+      I は全行が `OT-` で始まり一意 (`VALUE` 行も `OT-` を使う)。family は G9 型とし、各行の `family` が `OT` / `VALUE` のいずれかで、両方に 1 行以上あること
+      (違反は G9 と同じ `invalid evidence family <family> for <id>` / `missing evidence family <family>`)。
+      T は G9 型に VALUE の条件を足す。pair 集合 `P = pairLayerIds(L1) ∪ L0IDs`、定義集合 `D = allDesignIds ∪ L0IDs` として、各行の cite の 1 件以上が `P` に在り
+      (`untraced case <id>`)、cite が全て `D` に在る (`trace target missing <id>`)。`family = VALUE` の各行は `L0IDs` の ID を 1 件以上 cite する
+      (無ければ `value case <id> does not cite L0 (file the L0 charter as docs/plans/PLAN-L0-*.md and cite its plan_id)`)。L0 / L1 側の backlink は
+      G0.5 / G1 の責務であり、G14 では見ない。
+      **L0IDs** は `docs/plans/` に実在する `PLAN-L0-*.md` の plan_id (ファイル名の stem) とする。L0 テンプレートに目的 ID が無いため、G14 行の
+      「L0 の目的 ID」を「L0 charter PLAN の plan_id」に読み替える (catalog の `trace_ref_kind: plan_registry`、および F の defer `plan_id` の実在検査と同じ規則)。
+      粒度は charter 単位になり、charter 内のどの目的に対応するかは review tier が見る。
+      F / E の `<p>` は `ot`。A の `operational_results` / `value_results` は実在検査だけとする。`improvement_feedback` は、次の 2 形のどちらか一方だけを許す
+      JSON object とする。
+      - 改善あり: `items` が非空の array で、各要素が `summary` (非空 string) と `routed_to` を持つ。`no_improvement` は無いか `false`。
+      - 改善なし: `items: []` と `no_improvement: true` (boolean) を同時に持つ。route 先は要求しない。
+
+      `routed_to` は、(a) `^PLAN-[A-Z0-9]+(?:-[A-Za-z0-9]+)*$` に一致し `docs/plans/<routed_to>.md` が実在するか、
+      (b) `^https://github.com/[^/]+/[^/]+/issues/[1-9][0-9]*$` に一致するかのどちらかとする。Issue URL は形式だけを見る (GitHub API は呼ばない。
+      外部 API 前提は本 PLAN で作らない)。違反は `improvement_feedback.items is required` (items が空で `no_improvement: true` も無い) /
+      `improvement_feedback.no_improvement must be boolean` / `improvement_feedback declares no_improvement with items` /
+      `improvement_feedback.items[<i>].summary is required` / `improvement_feedback.items[<i>].routed_to is required` /
+      `improvement_feedback.items[<i>] routed_to <value> is not a PLAN or Issue URL` / `improvement_feedback.items[<i>] routed_to <PLAN> does not exist`。
+      `no_improvement: true` の妥当性 (本当に改善が無いか) は static では判定しない (`未判定 (review): PO`)。
+
+   | 論点 | 案 | 内容 | 判定 |
+   | --- | --- | --- | --- |
+   | case 表 | **D2-a (採用)** | L13 / L14 テンプレート末尾の `### harness 追補:` 節 (決定 2) | S / I / T / F に決定的な入力ができ、G8 / G9 型の parser をそのまま使える。代償はテンプレートの編集と忠実性宣言への 1 文の追記 (明示の設計判断として記録する) |
+   | | D2-b | 既存の 3-1 SLI/SLO 表を流用する (`SLI` 列を行 ID 列、`トレース元` を cite 列にする) | 棄却 (SLI 行に `SMOKE-` / `OT-` の ID を入れると列の意味が変わる。G10 の `No` 列は番号列なので意味を変えなかった。L13 と L14 の 3-1 は同一の表で、G14 の `family` を持てない) |
+   | | D2-c | case 表を slot 文書に持たず、manifest の `selected_<p>_ids` を case の定義とする | 棄却 (S / I / T / F の入力が manifest の自己申告になり、F (全行) が空虚になる) |
+   | G13 の AT 集合 | **T13-a (採用)** | `extractAtIds` (太字の表行の AT だけ) の import | 既存 extractor の import だけで済み、PR-G13 は PR-G12 に依存しない (§4 の並列性を保つ) |
+   | | T13-b | PR-G12 の case 表 parser の行 ID 集合 | 棄却 (PR-G13 → PR-G12 の直列依存が増える) |
+   | L0IDs | **L0-a (採用)** | `docs/plans/` に実在する `PLAN-L0-*` の plan_id | 新しい記法が無く、テンプレートを変えず、決定的に判定できる。代償は粒度が charter 単位になること |
+   | | L0-b | L0 テンプレートの 1.2 に ID 付きの表 (`**OBJ-NN**`) を足す | 棄却 (新記法の発明と L0 テンプレートの ZIP 逸脱。本 PLAN の範囲が広がる) |
+   | | L0-c | `L0IDs = {DOC-L0-CHARTER}` | 棄却 (consumer の charter は `docs/plans/` にあり pair 文書として読まれないため、定数を定義済み扱いすると空虚に pass する) |
+   | 改善なしの表し方 | **F1 (採用)** | `items: []` + `no_improvement: true` | 捏造 PLAN やダミー Issue なしで「改善なし」を表せる。宣言が必須なので `items: []` 単独の空虚な pass は起きない。配列の要素は「route された改善」の 1 種類のままで、判別 field を足さない |
+   | | F2 | 「改善なし」項目 (`kind: none` 等) だけ `routed_to` を免除する | 棄却 (配列に 2 種類の要素が混ざり、判別 field の閉集合と、改善項目との併存の禁止が別に要る) |
+   | | F3 | `items` 非空と全項目の `routed_to` を必須にする (当初案) | 棄却 (改善が無い回に route 先が無く、捏造した PLAN ID を書く誘因になる) |
+
+   advisor: `ut-tdd advisor --decision design --execute` (2026-09-29、provider=claude、model=`claude-fable-5`、control lane が諮問)。判定は部分生存。
+   case 表の追補節 (決定 2)、AT 集合の import (決定 3 の T)、L0IDs の plan_id への読み替え (決定 4) は survive した。L0IDs は、consumer が charter を PLAN 化する
+   前に G14 を実行すると VALUE 行が必ず failed になるため、違反 message に起票の誘導を付ける条件付きであり、決定 4 の message に反映した。その他の推奨
+   (SMOKE から AT への片方向 T、窓の start < end、`slos` の非空と一意、達成判定を static でしないこと、keep / rollback の shape-only、family の G9 型、
+   `routed_to` の形式検査) には反証材料が無かった。G14 の slot は、当初の 2 案 (detector を catalog path へ向ける案と contract を改訂する案) の二択のままでは
+   refuted とされた。どちらも harness 自身の G14 の slot 入力を変え、harness の L14 文書に `doc_type_id` が無いため slot 照合が壊れる帰結を織り込んでいなかった
+   ためである。指摘に従って bundle 用 contract variant を加えた 3 案を `governanceArtifact` の 3 consumer で実測し、catalog 行を実行時に読む O1 を選んだ。
+   `improvement_feedback` は、「非空必須」と「全項目の `routed_to` 必須」を同時に課すと「改善なし」の回に捏造した route 先を要求するという内部矛盾を
+   指摘され、決定 4 の 2 形に改めた。O1 は再諮問した (`ut-tdd advisor --decision design --execute`、2026-09-29、model=`claude-fable-5`、control lane が諮問)。判定は部分生存で、
+   G14 の slot を generic 文書 (`DOC-L14-OPERATIONAL-TEST`) へ向ける方向と、O2 を今やらず O3 を採らないことは survive した。論拠と形は refuted とされた。
+   (1) O1 は contract に存在するデータを別の値で置き換えるので、「VMC-005 に当たらない」ではなく VMC-003 の明示的例外として扱う。(2) catalog を実行時に
+   読む形は slot の正本を 2 つにするので、G8〜G10 と同型の detector 内固定か、contract への slot 指定 field の追加 (O1') の方が良い。(3) harness の G14 を
+   failed のまま受容するなら、`doc_type_id` 1 行追記案を採らない理由と、failed が CI を止めるかの実測を添える。3 点とも決定 1 に反映した:
+   O1' は contract の所有コストで本 PLAN では採らず起票条件付きで後続へ送り、detector 内固定 + VMC-003 の例外を採用し、受容の根拠 3 点を実測で記録した。
+
+   範囲外 (記録のみ): (a) G13 の AT 集合は太字の表行だけを拾うため、G12 case 表の太字でない行 (例 `AT-CONSUMER-02`) を SMOKE 行が cite すると
+   `trace target missing` になる。rev 21 決定 7 は「G3 用の太字 AT 行の ID を case 表にも置く」ので、太字 ⊆ case 表は保証されるが逆は保証されない。
+   (b) G14 の L1 の pair 集合は右腕の太字抽出であり、L1 テンプレートの `要求ID` / `US-ID` 列は太字を要求しないため、consumer が確実に cite できる L1 ID は
+   G3 が強制する `| **FR-L1-NN** |` などに限られる。(c) SLO 未達 (breach) の route (例 `slos[].status` と `routed_to`) は G13 行に無い field なので足さない。
+   いずれも判定を fail-close 側に倒すものであり、本改訂では扱わない。
+
+   zip `tools/*.py` のうち上の述語に対応しないもの (`review.py` の実体サンプリング、`consistency.py` の表記ゆれ、`impact.py` の影響範囲など) は
+   gate には入れず、各 PR-G の PR 本文に「未移植」として列挙する。gate に追加する場合は本 PLAN の改訂へ戻る。
+
+5. **vmodel lint / plan lint**: `vmodel lint` は resolver から文書集合を取り、文書が在れば件数と trace 結果を、無ければ typed な「未作成」を返す。
+   `plan lint` は rev 1 の §3.2 (`docs/plans` 不在を 0 件) のとおり。
+6. **tools/*.py の検査意味**: zip の Python 検査のうち、上の static check に対応するものは各 PR-G で TypeScript として実装する。
+   対応が無い検査は PR-G の PR 本文に「未移植」として列挙し、黙って落とさない。
+7. **harness 自身の回帰**: harness repo での G1〜G10 の判定結果は本改訂の前後で変わらない (oracle で固定。G8〜G10 は既存 workflow lint を使うため)。
+   G11〜G14 は harness でも共通述語が動くようになるため結果が変わりうる。その差分は PR-G11〜PR-G14 ごとに PR 本文へ記録する。
+
+### 3.7 エージェント確認経路の E2E (PLAN-L7-531 所有)
+
+PLAN-L7-531 の入力契約改訂 (別 PR) で、次を E2E 観測項目に加える。本 PLAN は観測の前提 (テンプレート配送、resolver、consumer gate) を所有し、
+E2E 自体と ID は 531 が所有する。
+
+- clean consumer fixture で、エージェント (Claude または Codex) が §3.5 のテンプレートから L1〜L7 のいずれかの文書を書く。
+- その文書に対し該当 gate が applicable:true の判定を返し、文書を正しく書いた場合は pass、必須 slot を欠いた場合は該当 slot 名付きで fail する。
+- 同じ文書が非著者 review (canonical な review 経路) を通り、receipt が exact revision に束縛される。
+
+## 4. PR 分割と順序
+
+| PR | 論点 | 触る主な module | 前提 |
+| --- | --- | --- | --- |
+| PR-0 | 本 PLAN + PLAN-REVERSE-676 + pair test-design の pair-freeze (docs のみ) | docs | #676 受入条件の改訂コメント (§3.3、記録済み) |
+| PR-1 | identity / repo-root: A2 部分成功 + typed deny 表示 + 復旧手順、A4 の commit 手順表示、hook error の復旧手順、A3 の setup 後 root 解決 oracle | `src/cli.ts` setup 表示、hook / session start の error 文言 | PR-0 PASS |
+| PR-2a | skills の bundle 埋め込み + setup / session start での digest 照合付き展開 + 解決関数 + `.ut-tdd/assets/` の ignore (B1) | `scripts/build-node.mjs`、埋め込み index 1 module、`src/state-db/projection-writer.ts`、`src/assets/catalog.ts` | PR-0 PASS、PLAN-L7-628 PR-1 merge |
+| PR-2b | design root resolver + catalog 写像 + gate / vmodel lint の path 入力 + `plan lint` 不在耐性 (B3 / B4) | resolver 1 module、`src/lint/gate-confirm.ts` ほか、`src/plan/lint.ts` | PR-0 PASS |
+| PR-2c | テンプレートの埋め込み + on-demand 書き出しコマンド `ut-tdd vmodel template` (B2、§3.1.3) | 埋め込み index への追加、CLI 1 コマンド | PR-2a merge (埋め込み機構を再利用)、PR-T1 merge と PR-T2 merge (`--required` と `--optional` の書き出し対象) |
+| PR-3 | 生成物: A5 db 初期化、A6 harness-check (activation pointer 条件 + notice)、A7 commitlint | `src/setup/index.ts`、`src/setup/templates.ts` | PR-1 merge |
+| PR-T1 | required 21 slot のテンプレート移植 (Markdown 変換、provenance frontmatter) + port index (§3.5.3) | `docs/templates/vmodel/` (docs、Claude) | PR-0 PASS、Apache-2.0 切り替え PR の merge |
+| PR-T2 | optional テンプレート 27 本の移植 + 管理 yaml の既存正本への merge (§3.5.4) | `docs/templates/vmodel/optional/`、`docs/governance/vmodel-document-*.md` (docs、Claude) | PR-T1 merge |
+| PR-T3 | skill 7 本・役割別ガイド 5 本・レビュー記録例 5 本の移植と SKILL_MAP 登録 (既存 skill との重複照合) | `skills/`、`docs/templates/vmodel/review-examples/` (docs、Claude) | PR-0 PASS |
+| PR-G0 | gate-design.md の埋め込みと consumer 優先、G1〜G6 への resolver 注入、harness 回帰固定 (§3.6-1/2/7) | `src/lint/gate-confirm.ts`、`src/gate/static.ts` (Codex) | PR-2b merge、PR-T1 merge (fixture にテンプレートを使う) |
+| PR-G7 | G7 coverage の既定 path と不在の typed failed (§3.6-3) | `src/gate/static.ts` の G7 (Codex) | PR-G0 merge |
+| PR-GR | 共通述語 S / I / T / E / F / A の evaluator (contract 行から導出) + G8 の登録 (§3.6-4) | right-arm evaluator 1 module (Codex) | PR-G0 merge |
+| PR-G9 | G9 の登録と family 述語 | G9 の登録 (Codex) | PR-GR merge |
+| PR-G10 | G10 の登録と skip 述語 | G10 の登録 (Codex) | PR-GR merge |
+| PR-G11 | G11 の登録と trace review / UAT decision 述語 | G11 の登録 (Codex) | PR-GR merge |
+| PR-G12 | G12 の登録と deploy / rollback 述語 | G12 の登録 (Codex) | PR-GR merge |
+| PR-G13 | G13 の登録と観測窓 / rollback decision 述語、L13 テンプレートの harness 追補節 (§3.6-4「G13 / G14 の証跡 shape」の 2) | G13 の登録 (Codex) | PR-GR merge |
+| PR-G14 | G14 の登録と VALUE trace / feedback routing 述語、L14 テンプレートの harness 追補節 (§3.6-4「G13 / G14 の証跡 shape」の 2) | G14 の登録 (Codex) | PR-GR merge |
+| PR-VL | `vmodel lint` の resolver 対応と typed 未作成 (§3.6-5) | vmodel lint (Codex) | PR-2b merge |
+| (531) | PLAN-L7-531 の E2E 観測項目に本 PLAN のコマンド群とエージェント確認経路 (§3.7) を追加 (531 の入力契約改訂、別 PR) | docs / tests | 本 PLAN の全 PR merge + 下表の外部前提 |
+
+PR-1 → PR-3 は setup 本体を共有するため直列。PR-2a / PR-2b / PR-T1 / PR-T3 は独立で並列可。PR-2c は PR-2a と PR-T1 と PR-T2 の merge 後
+(`--required` / `--optional` の書き出し対象が揃ってから CLI を出すため)。PR-G0 は PR-2b と PR-T1 の後に置き、PR-G7 と PR-GR は PR-G0 の後で並列可。
+PR-GR は PR-G0 の後、PR-G9〜PR-G14 は PR-GR の後で相互に並列可。PR-VL は PR-2b の後で PR-G 系と並列可。PR-G 系は 1 PR = 1 gate (共通 evaluator は PR-GR の 1 module、各 gate PR は登録と gate 固有述語 + 対のテスト + 最小配線) とし、
+scope 構造 FLAG は close → 分割再出。PR-T 系は docs のみで source_module を追加しない。
+
+外部 PR / Issue との前提関係 (rev 3):
+
+| 本 PLAN の PR | PLAN-L7-628 PR-1 producer (#670) | PLAN-L7-628 PR-2 installer | launcher 8.3 alias (#678) | license Apache-2.0 (#682) |
+| --- | --- | --- | --- | --- |
+| PR-1 / PR-3 | 不要 (source 実行で検証) | 不要 (PR-3 の A6 は 628 §6.2 の `active.json` path を参照するだけ。628 が path を変えたら PR-3 が追従) | 不要 | 不要 |
+| PR-2a / PR-2c | **必須** (bundle 起動の oracle が producer の build に依存) | 不要 (bundle を直接起動する) | 不要 | 不要 |
+| PR-2b / PR-G0 / PR-G7 / PR-GR / PR-G9〜PR-G14 / PR-VL | 不要 | 不要 | 不要 | 不要 |
+| PR-T1〜PR-T3 | 不要 | 不要 | 不要 | **必須** (配布物の license 表記) |
+| PLAN-L7-531 E2E (本 PLAN §3.7 の観測) | **必須** | **必須** (Release から install した consumer で観測する) | **必須** (Windows の E2E で launcher が 8.3 alias を誤拒否しないこと) | **必須** |
+
+## 5. 完了条件
+
+1. PR-1: origin 無しの空 repo で setup が中断せず identity 以外の出力を完了し、`identity_repository_unbound` と復旧手順を表示し、exit 2 を返す。
+   origin 追加後の再実行で identity が作られ、既存出力は変わらない。origin ありの setup 後、work-guard / agent-guard / session start / session summary /
+   subagent-stop が root を解決する。`commitRequired` 時に commit 手順が表示される
+   (CANDIDATE-U-RCDEV-001..005 Green)。
+2. PR-2a: bundle 起動の consumer で `skill suggest` が非空を返し、adapter prompt に書かれる path が全て解決後の実在 path であり、consumer の同名 skill が優先され、
+   追加 skill が merge され、展開物が digest 照合され、`.ut-tdd/assets/` が git の ignore 対象になる。
+   receipt の `source_files` が埋め込んだ全 skill を含む (CANDIDATE-U-RCDEV-006..010 Green)。
+3. PR-2b: consumer (`docs/design/`) と harness (`docs/design/harness/`) の双方で resolver が正しい root を返し、置き場所不在で gate / vmodel lint /
+   plan lint が ENOENT で落ちない (CANDIDATE-U-RCDEV-011..013 Green)。
+4. PR-2c: テンプレート書き出し (`--required` と `--optional` の両方) が既存ファイルを上書きせず、bundle 埋め込み bytes と一致する (CANDIDATE-U-RCDEV-014 / 015 / 038 Green)。
+5. PR-3: setup 直後の db が現行 schema で session start digest が DEGRADED にならない。lock / scripts の無い consumer で生成 workflow が npm 前提 step を実行せず、
+   activation pointer の無い CI では ut-tdd step が notice を出して skip する。
+   ESM consumer で commitlint 設定が読める (CANDIDATE-U-RCDEV-016..018 Green)。
+6. 各 PR で Linux / Windows / aggregate CI Green、成果物を書いていない族の canonical non-author closing receipt を exact revision に束縛。
+7. PR-T1〜T3: required 21 slot の全てに provenance 付きテンプレートがあり、57 本が port index で漏れ・重複なく分類され、テンプレートから作った文書を
+   gate parser が読め、zip の管理 yaml と `tools/*.py` が別ファイルとして出荷されない (CANDIDATE-U-RCDEV-019..025 Green)。
+8. PR-G0〜PR-VL: consumer fixture で gate G1〜G14・`vmodel lint`・`plan lint` の全てが、ENOENT の「could not run」も「no deterministic check registered」も
+   返さず、§3.6-4 の述語に基づく判定を返す。harness 自身の G1〜G10 の判定は不変 (CANDIDATE-U-RCDEV-026..037 Green)。
+9. #676 の受入 (空 repo からの開発開始、エージェントが書いた文書が gate と review を通ること) は PLAN-L7-531 の E2E で観測する。本 PLAN は unit / integration まで。
+
+## 6. TDD / trace / Reverse
+
+候補 oracle `CANDIDATE-U-RCDEV-001..038` は pair test-design が所有し、実装 PR で同番号の `U-RCDEV-*` へ 1:1 昇格する。
+既存 `CANDIDATE-U-PACKRT-*` (628)、L7-529 の identity oracle、`CANDIDATE-ST-PACKCANARY-*` を再採番・再所有しない。
+
+R1: PLAN-L6-101 の source 非依存受入と、L7-529 の create / commit policy を照合する。R2: 同梱資産の解決順・design root 規約・
+setup 失敗表示を同一 implementation revision に束縛する。R3: 非著者 review で、埋め込み bytes の provenance 欠落、consumer 同名 skill による
+injection path の乗っ取り、harness 自身の挙動変化、部分 setup の残留を攻撃する。R4: 不足差分だけを L6-101 へ backfill する。
+
+## 7. 非 Scope (別 issue)
+
+- gate の判定内容そのものの変更 (G1〜G7 の規則、FR-13 のサインオフ定義)。本 PLAN は consumer で判定を動かすこと (§3.6) だけを所有する。
+- テンプレートの新規書き起こし (zip に source の無い内容を足すこと。§3.5.3 の L2 のような構成は既存 source の組み合わせに限る)。
+- `tools/*.py` の同梱と Python runtime (ADR-001)。
+- catalog / profile / gate 定義を consumer が設定で上書きする手段 (§3.5.4、§3.2 案 B)。
+- `review --uncommitted` の `node src/cli.ts doctor` 推奨、route-map 不在 (sweep B9)、`.ut-tdd/teams/*.yaml` / `npm run lint` / `.gitignore` 不在 (sweep B6 / B8 / B10 / B11)、
+  生成文書の `ut-tdd` PATH 表記 (B12)。
+- origin 以外からの identity create (L7-529 の改訂が要る。§3.3)。
+- CI 上での installer 実行 / runtime 有効化 (別 PLAN。§3.4-2)。
+- launcher の 8.3 短縮名 alias と long path の等価判定 (Issue #678、別 troubleshoot slice)。
+- design root の設定による上書き (§3.2 案 B)。
+- L2 画面仮説から L10 実検証までの UX-FE 連続性 (PLAN-L1-08 の範囲、PO 判断 2026-09-28 でコンセプト v4 時に対応。§3.6-2 の G2 wireframe 判定は既存規則の consumer 写像に限る)。
+- Release asset 集合・installer (PLAN-L7-628)、update / rollback (#364)。
+- scale profile に基づく L10 (`DOC-L10-UX-VALIDATION`) の skip (§3.6-4「G10 の skip 判定」、rev 20)。後続 PLAN で、scale profile :55 / :68 の note を
+  機械可読な L10 decision 行へ正規化し、信頼根を持つ consumer の profile 選択入力を定めてから扱う。それまで G10 は `status: skipped` を常に failed とする。
+
+## 8. 実装開始条件
+
+1. 本 PLAN と PLAN-REVERSE-676 の pair-freeze に非著者 PASS receipt と CI Green が揃うこと。
+2. §3.3 の #676 受入条件改訂コメントの URL、setup の deny code と終了コード (§3.3-1)、テンプレート書き出しコマンド (§3.1.3)、G8〜G14 の述語 (§3.6-4) は記録済み (PR-0 rev 3)。
+3. 実装中に方式変更 (解決順、展開先、resolver 規約、setup の失敗条件、テンプレート形式、書き出しコマンド §3.1.3、setup の終了コード §3.3-1、gate の述語 §3.6-4) が必要になったら、PR を close して本 PLAN の契約改訂へ戻る。
+4. confirm の手順 (rev 5): 本 PLAN の実装 PR は src/ tests/ に新規ファイルを landing させるため、`deliverable-plan-trace` により `generates` への宣言が必須であり、`merged-plan-status` により draft PLAN はその宣言を持てない。したがって、実装 PR より先に本 PLAN を confirm する。pair-freeze review (PR #680 の Sol r3 PASS、subject f65031c9) は、その head の CI green (2026-09-24T09:00:46Z) より前 (08:46Z) に取られたため、正直な `tests_green_at` を持てず、confirm の証跡にしない。代わりに、本 rev 5 の exact head の CI green の後に、非著者 (Codex Sol) の契約 review を取り直し、その receipt を `review_evidence` に記録した rev 6 で confirm する。rev 6 の docs 差分は bounded 再検を経て merge する。実装 PR は、confirm の merge 後に main を取り込み、自 PR の新規成果物だけを confirmed の本 PLAN の `generates` に追加する (既存ファイルは載せない)。
+5. confirm の実施 (rev 6): rev 5 の exact head `8be63ed4` の CI green (run 36104559954、2026-09-25T07:06:45Z) の後に、Codex Sol の bounded 再検が PASS (receipt `b4ef3e27…`、2026-09-25T07:08:57Z) を返した。その receipt を `review_evidence` に記録し、`status: confirmed` とした。
+6. §3.5.3 の source 例外 (rev 7): PR-T1 (#703) の非著者 review (Codex Sol r1) が、L11 / L13 のテンプレートの source (ZIP-DOC-028 / 011 / 021) の disposition target が当該 slot を指さないと FLAG した。原因は、§3.5.3 の規則本文 (process 文書を指す本は optional) と構成元表 (028 を L11、011 と 021 を L13 の source とする) の矛盾である。advisor (claude-fable-5、design) の推奨に従い、構成元表を正として規則本文に閉じた例外句 (3 本) を加え、test-design の CANDIDATE-U-RCDEV-020 を同じ例外に揃えた。disposition catalog は変更しない。
+7. PR-T1 の成果物宣言 (rev 8): PR-T1 (#703) は rev 7 の merge (#704) 後に main を取り込み、自 PR が新規に landing させる `docs/templates/vmodel/` の 22 本 (required 21 slot のテンプレートと port index の README) だけを `generates` に追加した。既存ファイルと他 PR の成果物は載せていない。契約本文と `review_evidence` は rev 7 から変えていない。
+8. PR-T2 の成果物宣言 (rev 9): PR-T2 は PR-T1 の merge (#703) 後に main を取り込み、自 PR が新規に landing させる `docs/templates/vmodel/optional/` の 27 本だけを `generates` に追加した。既存ファイル (port index の README と L5 テンプレート) の更新は PR-T1 の宣言に含まれる。管理 yaml の図・trace 俯瞰・粒度情報のうち、§3.5.4 で対応が明示されていないものは #705 に分離した。契約本文と `review_evidence` は rev 8 から変えていない。
+9. PR-2b の成果物宣言: main 前進後の re-chain で、移動後の resolver とその unit test の2件を `generates` に追加する。既存ファイルの変更は宣言しない。
+10. PR-1 の成果物宣言: main 前進後の re-chain で、自 PR の新規 identity test 1件を `generates` に追加する。既存ファイルの変更は宣言しない。
+11. PR-VL の成果物宣言: PR-1 の rev 11 / seq 324 を保持した子 PR で、新規 tests/vmodel-consumer-lint.test.ts のみを generates に追加する。既存 lint module は再所有せず、凍結 U-RCDEV-036 の件数・trace・typed 未作成を実装する。
+12. G2 wireframe の consumer 写像 (rev 13): PR-G0 の実装前接合確認 (#676) で、凍結 fixture (v) (L1〜L7 のテンプレート由来一式) では G2 の wireframe mock 条件 (`/wireframe.md` かつ harness 固定の L10 pair path) を満たせず、RCDEV-027 を resolver の注入だけで green にする解が無いことが分かった。§3.6-2 の「テンプレートから作れば harness と同じ規則で判定できる」が事実に反していたため、advisor (claude-fable-5、design) の推奨に従い、実装 PR 内の読み替えではなく契約改訂とした。§3.6-2 に G2 の consumer 写像、対象文書集合、テンプレート由来文書の status 確定手順を追記し、test-design の fixture (v)/(vii) と CANDIDATE-U-RCDEV-027 を揃えた。gate の判定述語、テンプレート、書き出しコマンドは変更しない。
+13. PR-2a の成果物宣言 (rev 14): skills の bundle 埋め込みと consumer 展開 (#714) が新規に landing させる `src/shared/embedded-skills.ts` とその unit test `tests/release-consumer-skills.test.ts` の 2 件を `generates` に追加する。既存ファイルは宣言しない。PLAN の revise は Claude control lane が #714 branch 上で実施した (PLAN-L6-711 §6 S0 の headless revise PoC を兼ねる)。
+14. PR-3 の成果物宣言 (rev 15): setup 生成物の修理 (A5 DB 初期化、A6 生成 CI の条件分岐、A7 commitlint の CJS 化) が新規に landing させる `docs/templates/github/common/commitlint.config.cjs` とその回帰 test `tests/release-consumer-setup-artifacts.test.ts` の 2 件を `generates` に追加する。削除される旧 `commitlint.config.js` はどの PLAN の `generates` にも宣言されていない。PR-3 は PR-2a (#714) の rev 14 の上に積んだ stacked PR で、receipt は rev 14 の直後に chain する。
+15. PR-G0 の成果物宣言 (rev 16): consumer の G1〜G7 gate 入力 (G2 wireframe の L10 pair 写像、gate-design の bundle 埋め込みと consumer 優先) を実装する PR-G0 が新規に landing させる `tests/release-consumer-gates.test.ts` の 1 件だけを `generates` に追加する。RCDEV-037 の実測 golden は既存の `tests/gate-static.test.ts` に置かれ、新規ファイルではない。既存ファイルは宣言しない。
+17. PR-2c の書き込み境界 (rev 17): PR-2c の root 検収 (#676) で、consumer 内の `docs/plans` を外部 directory へ junction 接続した fixture に対し、lexical な insideRoot 判定だけの `vmodel template` が consumer 外へ書き込むことが実測された。§3.1.3 は consumer 内の catalog path へ書くことを前提にしていたが、その失敗条件 (consumer 外 write 0) を明記していなかったため、実装 PR 内の読み替えではなく契約改訂とした。§3.1.3 に書き込み前の物理 path preflight と deny 時の write 0 を追記し、test-design に CANDIDATE-U-RCDEV-039 を追加した。コマンド形・上書き規則・既存 oracle 014 / 015 / 038 の判定は変更しない。
+18. PR-GR の成果物宣言 (rev 18): §3.6-4 の共通述語 S / I / T / E / F / A / R を評価する右腕共通 evaluator と G8 の登録を実装する PR-GR が新規に landing させる `src/gate/right-arm-static.ts` の 1 件だけを `generates` に追加する。回帰 test は既存の `tests/release-consumer-gates.test.ts` (rev 16 で宣言済み) に追記され、新規ファイルではない。G9〜G14 の登録は後続 PR であり、本 revision では宣言しない。既存ファイルは宣言しない。 PR-GR は当初 main 48efd4e1 の rev 16 から rev 17 として発行したが、同じ rev 16 から発行した PR-2c 境界契約 (#728、rev 17) が先に merge されたため、最新 main の rev 17 から正規の plan revise で rev 18 として再接合した (receipt の手編集・conflict の手解決はしない)。
+19. PR-2c の成果物宣言 (rev 19): §3.1.3 の `vmodel template` (consumer への V-model テンプレート書き込み、書き込み前の物理 path preflight と deny 時の write 0 を含む) を実装する PR-2c が新規に landing させる `src/setup/vmodel-template-assets.ts` / `src/setup/vmodel-template-writer.ts` / `tests/release-consumer-vmodel-template.test.ts` の 3 件を `generates` に追加する。`src/cli.ts` と `src/doctor/test-repository-isolation.ts` と `scripts/build-node.mjs` への配線変更は既存ファイルの編集であり宣言しない。コマンド形・上書き規則・§3.1.3 の oracle (014 / 015 / 038 / CANDIDATE-U-RCDEV-039) の判定は変更しない。PR-2c branch が #730 着地後の main (rev 18) を取り込んだ後に、正規の plan revise で rev 19 として接合した (receipt の手編集・conflict の手解決はしない)。
+20. G10 の skip 判定 (rev 20): PR-G10 の着手前に Codex root lane が行った read-only 監査 (#676、2026-09-29) で、§3.6-4 の G10 行の n/a 分岐 (「`skip_reason` 非空かつ scale profile で当該 slot が有効でないときだけ n/a passed」) が到達不能であることが分かった。scale profile に L10 の decision 行が無く、consumer の profile 選択にも入力源が無いためである。advisor (claude-fable-5-1、design、SURVIVES) の推奨に従い、実装 PR 内の読み替えではなく契約改訂とした。§3.6-4 の G10 行を「`status: skipped` は常に failed (VMC-005)」へ改め、同節に設計判断「G10 の skip 判定」(案 A〜D と advisor の付帯条件) を追記し、§7 に profile に基づく L10 skip の後続 PLAN への繰り延べを加え、test-design の CANDIDATE-U-RCDEV-031 の skip mutation を揃えた。`generates`、他 gate の述語、G2 の L10 pair 規則は変更しない。
+21. G11 / G12 の証跡 shape (rev 21): PR-G11 の着手前に Codex root lane が、§3.6-4 の G11 行と CANDIDATE-U-RCDEV-032 が trace 記録の配列名・field 名・status の閉集合と、manifest の UAT ID field 名を定めていないことを指摘し、実装 PR 内で新しい正本 shape を発明せず契約側で freeze するよう求めた (#676、2026-09-29)。G12 行と CANDIDATE-U-RCDEV-033 にも同じ欠落 (AT ID field 名、artifact の中身の形式) があった。あわせて、右腕 T の cite 可能 ID 集合 (太字 `**ID**` と `doc_type_id`) が L3 の見出しで定義された `FR-NN` / `AC-*` を含まず、G11 / G12 の case 表が正しい要件 ID / AC ID を cite できないことを実測した。実装 PR 内の読み替えではなく契約改訂とし、§3.6-4 に設計判断「G11 / G12 の証跡 shape」を追記した。内容は、case ID field 名を contract の `case_id_prefix` から導く一般規則 (G8 / G9 / G10 の既存名はその具体例で不変)、gate 固有述語が参照する artifact を別 JSON file とする規則、G11 / G12 の T の cite 可能 ID 集合 (右腕の既存集合に G3-trace の L3 見出し抽出を和集合で足す)、G11 の case 表 (第2章 検証マトリクス)、`end_to_end_trace_review.requirements[]` (`requirement_id` / `status` ∈ `traced` / `blocked`、L3 要件 ID は G3-trace と同じ抽出規則)、`po_uat_decision` (`decision` ∈ `accept` / `reject`、reject は failed、`decided_by_role` 非空、`revision` 40 桁 hex)、G12 の artifact field の符号化である。§3.6-4 の E / F 行の `mandatory_<id>s` 表記と G11 / G12 行を揃え、test-design の CANDIDATE-U-RCDEV-032 / 033 に正常形 fixture と 1 軸 mutation を加えた。`generates`、テンプレート文書、G8 / G9 / G10 の判定、他 gate の述語は変更しない。
+22. G13 / G14 の証跡 shape (rev 22): rev 21 で G11 / G12 の shape を freeze した際、同じ欠落 (manifest の case ID field 名、artifact の中身の形式、T で cite できる ID の集合) が §3.6-4 の G13 / G14 行と CANDIDATE-U-RCDEV-034 / 035 に残っていた。加えて実測で、L13 / L14 テンプレートに `SMOKE-` / `OT-` の case 表も `family` 列も無いこと、G14 の contract `governance_artifact` が consumer テンプレートの無い harness 固有の upgrade-delta 文書を指すこと、L12 と L0 が右腕の pair 集合に入らないこと、L0 テンプレートに「目的 ID」が無いことを確認した。実装 PR 内の読み替えではなく契約改訂とし、§3.6-4 に設計判断「G13 / G14 の証跡 shape」を追記した。内容は、G14 の slot を detector 内の定数 `DOC-L14-OPERATIONAL-TEST` (catalog 行が出典) に固定すること (contract の `governance_artifact` は変えない VMC-003 の明示的例外 1 件。contract の `governance_artifact` を読む 3 consumer (right-arm-static / right-arm-gate-planning / right-lung-doc-governance) で、catalog 実行時参照・contract への slot field 追加 (O1')・contract 改訂・bundle 用 contract variant と比較して選び、O1' / O2 は起票条件 3 つを付けて後続 PLAN へ送った)、L13 / L14 テンプレート末尾の `### harness 追補:` case 表と ZIP 忠実性宣言への 1 文の追記 (PR-G13 / PR-G14 の実装範囲)、G13 の片方向 T (`extractAtIds` の import)、`sli_slo_observation` / `rollback_decision` (rollback は shape-only) の field、G14 の family 検査と L0 = `PLAN-L0-*` の plan_id、`improvement_feedback` の 2 形 (route された非空 `items[]`、または `items: []` + `no_improvement: true`) と `routed_to` の符号化である。advisor (`claude-fable-5`、design) の判定は 2 回とも部分生存で、G14 の slot (形と VMC-003 の扱い)、`improvement_feedback`、harness G14 failed の受容根拠の指摘を反映した。harness 自身の G14 static は採用案でも failed になるが、CI (`harness-check` / doctor) は G8〜G14 の static を評価せず、`doc_type_id` の 1 行追記でも passed にならないことを実測し、§3.6-7 の範囲として PR-G14 の PR 本文に記録する。test-design の CANDIDATE-U-RCDEV-034 / 035 に正常形 fixture と 1 軸 mutation を加えた。`generates`、contract、G8〜G12 の判定、他 gate の述語は変更しない。

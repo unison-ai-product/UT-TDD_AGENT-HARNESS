@@ -4880,6 +4880,1110 @@
         "revision": 15,
         "content_digest": "sha256:1243cda6a666398da08789ab2a9a79fe3a875687e93cc2125b1ae5de78364b1b"
       }
+    },
+    {
+      "sequence": 306,
+      "previous_record_digest": "sha256:0053f5471b86cb13109dda4b72cf157d80a41047282d075819bc27d5e9147df8",
+      "record_digest": "sha256:0a0d53d664a754f0569155006bda0da6cd76ab5dfaf3c468997d3bbe394993bf",
+      "command_id": "plan-draft:issue-676:release-consumer-dev-start:forward:1",
+      "receipt_id": "certificate:aae8bf0e313f8688fbad4d4d8cf0a6a9",
+      "receipt_digest": "sha256:98ff9312a07425b48bb40893cb1e2fe20439b8c68446c1fc6971365ecc1a3ef1",
+      "decision_digest": "sha256:c810b3efd4468b6e8f90c0064082402f2b0df4b1daacd6d1e000610cd15b64e4",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-676-release-consumer-dev-start.md",
+        "plan_id": "PLAN-L7-676-release-consumer-dev-start",
+        "asset_id": "plan:aae8bf0e313f8688fbad4d4d8cf0a6a9",
+        "revision": 1,
+        "content_digest": "sha256:6159474b4832bde4e93e23407b22472f3548409e4a5580dec8d9ea4e369d5030"
+      }
+    },
+    {
+      "sequence": 307,
+      "previous_record_digest": "sha256:0a0d53d664a754f0569155006bda0da6cd76ab5dfaf3c468997d3bbe394993bf",
+      "record_digest": "sha256:1e1469317caabd468a0732179a58fa107f9fcae91eec52b366c527dea5120fd6",
+      "command_id": "plan-draft:issue-676:release-consumer-dev-start:reverse:1",
+      "receipt_id": "certificate:2db3028c656fba04cb6610d7278dfa56",
+      "receipt_digest": "sha256:895067928e3d95346fb518707a87b036e49eca46b75fe23ab8872bf66d8aa556",
+      "decision_digest": "sha256:ba7c0373a5af5f337340bb0ac9076d3ba9ced2be87aa92386e063c16c57459c4",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-676-release-consumer-dev-start-backfill.md",
+        "plan_id": "PLAN-REVERSE-676-release-consumer-dev-start-backfill",
+        "asset_id": "plan:2db3028c656fba04cb6610d7278dfa56",
+        "revision": 1,
+        "content_digest": "sha256:687ca3e1bcd81c65654b88d049d9481aecf4bf76202b9c244fcb547abcb37a1c"
+      }
+    },
+    {
+      "sequence": 308,
+      "previous_record_digest": "sha256:1e1469317caabd468a0732179a58fa107f9fcae91eec52b366c527dea5120fd6",
+      "record_digest": "sha256:cc7d81d9780aa5e0a451d067099f645187c8947bc0c678531802b7c8ffeccd3a",
+      "command_id": "plan-revise:issue-676:scope-rev2:plan:r2:166bfc37b0c0",
+      "receipt_id": "certificate:71d66d5ef0c892086a2cd1c25bc60bc8",
+      "receipt_digest": "sha256:acf4c2823a1acbd315a5bb57c952e1e0a9f8afb4bd41c7c1b90dbc630a693ce3",
+      "decision_digest": "sha256:85a3d383e0243974d899896b124c88e9c0f6557f7f780f90b62580f63ee3c506",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-676-release-consumer-dev-start.md",
+        "plan_id": "PLAN-L7-676-release-consumer-dev-start",
+        "asset_id": "plan:aae8bf0e313f8688fbad4d4d8cf0a6a9",
+        "revision": 2,
+        "content_digest": "sha256:99c60aee79ef307c5faf7ff335c163cc3211c28547ac0badcb149181adc54d29"
+      }
+    },
+    {
+      "sequence": 309,
+      "previous_record_digest": "sha256:cc7d81d9780aa5e0a451d067099f645187c8947bc0c678531802b7c8ffeccd3a",
+      "record_digest": "sha256:c4bfc3550e42cf6363f1c56633b6cc6e8844e6329aacd7611f2099e027e03ffb",
+      "command_id": "plan-revise:issue-676:scope-rev2:reverse:r2:166bfc37b0c0",
+      "receipt_id": "certificate:4b34f9d1b25aee262cca72a33a7da958",
+      "receipt_digest": "sha256:8cccb2233201242cc1efede5cd22fc664889f11efdd9361a253cbcb095dd5121",
+      "decision_digest": "sha256:54b6e02517b48f4d541efc390b149e539163d643b35fe22bff59881af922a30c",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-676-release-consumer-dev-start-backfill.md",
+        "plan_id": "PLAN-REVERSE-676-release-consumer-dev-start-backfill",
+        "asset_id": "plan:2db3028c656fba04cb6610d7278dfa56",
+        "revision": 2,
+        "content_digest": "sha256:80055c3de9f32078d6738c5bc13079fbe6f18e342678db180fb123500f45332d"
+      }
+    },
+    {
+      "sequence": 310,
+      "previous_record_digest": "sha256:c4bfc3550e42cf6363f1c56633b6cc6e8844e6329aacd7611f2099e027e03ffb",
+      "record_digest": "sha256:b45818fdca08d71bbc999568a6df933404f057cdee14ccc0f920bdd242f2d60c",
+      "command_id": "plan-revise:issue-676:sol-r1-flag:plan:r3:4185164a907a",
+      "receipt_id": "certificate:72476e1f4997f497ff7973773a6a83ff",
+      "receipt_digest": "sha256:b8e7e37def1a984c13281c8de5817cb4037843f14918b585f657fa3f873e5cb2",
+      "decision_digest": "sha256:de6ccbf4a93dfd92ffc33c19535e510439e25bffa3d5c2461d0f9af6548c2c9d",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-676-release-consumer-dev-start.md",
+        "plan_id": "PLAN-L7-676-release-consumer-dev-start",
+        "asset_id": "plan:aae8bf0e313f8688fbad4d4d8cf0a6a9",
+        "revision": 3,
+        "content_digest": "sha256:4cc05286e2dfee4e0f26f5c86d7cb4751b030a965796d916f8ad8d61ee20c321"
+      }
+    },
+    {
+      "sequence": 311,
+      "previous_record_digest": "sha256:b45818fdca08d71bbc999568a6df933404f057cdee14ccc0f920bdd242f2d60c",
+      "record_digest": "sha256:310f567f27fe36e5d513fb92dba66e59dfbf9c88bc53f92e483172392d37e82e",
+      "command_id": "plan-revise:issue-676:sol-r1-flag:reverse:r3:4185164a907a",
+      "receipt_id": "certificate:b032ec39d32174225f785dfd651e966d",
+      "receipt_digest": "sha256:da726b8d3e6b9d7fa4ab5c1a1dcf03701545048bc745fb3d75bb639ce76bb98d",
+      "decision_digest": "sha256:2d1ebed620711df0fdded8e7a1938b309b53e51525560c4ec2882b4b843d0b1d",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-676-release-consumer-dev-start-backfill.md",
+        "plan_id": "PLAN-REVERSE-676-release-consumer-dev-start-backfill",
+        "asset_id": "plan:2db3028c656fba04cb6610d7278dfa56",
+        "revision": 3,
+        "content_digest": "sha256:467c2ba447e12840b8b2ede35822378fb91543db88de512fa9b4d2fc75ee9dd2"
+      }
+    },
+    {
+      "sequence": 312,
+      "previous_record_digest": "sha256:310f567f27fe36e5d513fb92dba66e59dfbf9c88bc53f92e483172392d37e82e",
+      "record_digest": "sha256:5049d341e04edc66723a9c1104f3b100bcedc2ef80263d9e2509e8e49715c694",
+      "command_id": "plan-revise:issue-676:sol-r2-flag:plan:r4:7301bfa08670",
+      "receipt_id": "certificate:b33f68a917968b6da845eb2316eb9f40",
+      "receipt_digest": "sha256:46c73b8826fb46337f920d03a82ed963c059e1c61ab524b4d03b5e0944eef2cc",
+      "decision_digest": "sha256:a0ab8196dfc122f6d9c7c0f66362e79b6725bf255ec527378f0bdacd5fda8cee",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-676-release-consumer-dev-start.md",
+        "plan_id": "PLAN-L7-676-release-consumer-dev-start",
+        "asset_id": "plan:aae8bf0e313f8688fbad4d4d8cf0a6a9",
+        "revision": 4,
+        "content_digest": "sha256:d73d103dc8c54ee00a2091c7a99f3cf44758cd25539755ff5eb9fd6e0b6079f6"
+      }
+    },
+    {
+      "sequence": 313,
+      "previous_record_digest": "sha256:5049d341e04edc66723a9c1104f3b100bcedc2ef80263d9e2509e8e49715c694",
+      "record_digest": "sha256:caeafb4d166dfc14dee107f36d2dcabd1b770c0022716ce900520bd3c19e85f1",
+      "command_id": "plan-revise:issue-676:sol-r2-flag:reverse:r4:7301bfa08670",
+      "receipt_id": "certificate:024915625f2f462f61b8b25b91dc0c86",
+      "receipt_digest": "sha256:c3ef845554a2ad2a0d8852138a46457b5b1fd5d54811a5ed5df6edc0319d4be9",
+      "decision_digest": "sha256:6bc2b592d686192a99db4a4f91d9f9d97f7ea1b2aeebf1cd7465f0f96e704b12",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-676-release-consumer-dev-start-backfill.md",
+        "plan_id": "PLAN-REVERSE-676-release-consumer-dev-start-backfill",
+        "asset_id": "plan:2db3028c656fba04cb6610d7278dfa56",
+        "revision": 4,
+        "content_digest": "sha256:5ba94ced5c46efe89cbc8bf81f6afe830e9566da762a2b38f324b5dbd4ade87e"
+      }
+    },
+    {
+      "sequence": 314,
+      "previous_record_digest": "sha256:caeafb4d166dfc14dee107f36d2dcabd1b770c0022716ce900520bd3c19e85f1",
+      "record_digest": "sha256:bc10f857007ccc560fb49aaf4d954b3516e77cdf2a65e15568cd3c4fe5a617d9",
+      "command_id": "plan-revise:issue-668:pr672-confirm:forward:r2:639408ae12b2",
+      "receipt_id": "certificate:c3c2f6f6ad9e72596f2d882df1d312c2",
+      "receipt_digest": "sha256:ccdcc4ca8aa334eec93f1645d4badf5798edbf3973216402582627d05f1ab2d8",
+      "decision_digest": "sha256:9e001c1d48423ba3df5e5bde00859fa49ba95a1d27f012429c073de03ec814c8",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-668-codex-hook-command-schema.md",
+        "plan_id": "PLAN-L7-668-codex-hook-command-schema",
+        "asset_id": "plan:9d07702006eed0c40987b56ed01cadc7",
+        "revision": 2,
+        "content_digest": "sha256:e9785ff450c7d25e94669a0c7ac8cc7ad207b6fa25ca4a8087f39907775e1f56"
+      }
+    },
+    {
+      "sequence": 315,
+      "previous_record_digest": "sha256:bc10f857007ccc560fb49aaf4d954b3516e77cdf2a65e15568cd3c4fe5a617d9",
+      "record_digest": "sha256:11966ff786218d3d86449babe5941187b77e804714504d78da2330c9a7b9be38",
+      "command_id": "plan-draft:forward:plan-l7-690-projection-state-contract:v4",
+      "receipt_id": "certificate:e3fab375ac6f056e27af7ade83a4b395",
+      "receipt_digest": "sha256:f0d7864944e535184592b4c68b9c9eab6b7ba390303bcb9d6d7d5bb46ef553ad",
+      "decision_digest": "sha256:ad76ec9f633eacc3d885a76b056813d0f7546f16f32859b8d7ea1c7eb3047e54",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-690-issue-binding-projection-state-contract.md",
+        "plan_id": "PLAN-L7-690-issue-binding-projection-state-contract",
+        "asset_id": "plan:e3fab375ac6f056e27af7ade83a4b395",
+        "revision": 1,
+        "content_digest": "sha256:d5835df5f4d42433b615d9f6566b4a3dcae1353a31c359ab799cb9f631a8397b"
+      }
+    },
+    {
+      "sequence": 316,
+      "previous_record_digest": "sha256:11966ff786218d3d86449babe5941187b77e804714504d78da2330c9a7b9be38",
+      "record_digest": "sha256:6338fc70b3af57e2ee0bec75461edae93901b06d6b9659d3d13a3c669c399624",
+      "command_id": "plan-revise:issue-676:plan-confirm:plan:r5:77731b7d7052",
+      "receipt_id": "certificate:8e2473e3dd9d11fbb553dc79382e5be6",
+      "receipt_digest": "sha256:5113402de732edb5e63c1618d335356a9dd31f2865784560938b7330aa7b3552",
+      "decision_digest": "sha256:0259eaace02f1c0495b23072d3b6fce52b732b04a6568ab8be3281bcd28f68ea",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-676-release-consumer-dev-start.md",
+        "plan_id": "PLAN-L7-676-release-consumer-dev-start",
+        "asset_id": "plan:aae8bf0e313f8688fbad4d4d8cf0a6a9",
+        "revision": 5,
+        "content_digest": "sha256:5b50283947b06586cfafae2fe310f5099459829f1c59110481966d7c0517a174"
+      }
+    },
+    {
+      "sequence": 317,
+      "previous_record_digest": "sha256:6338fc70b3af57e2ee0bec75461edae93901b06d6b9659d3d13a3c669c399624",
+      "record_digest": "sha256:434694edbecb83f4e75526c4a107b9e3601a3d14eb3871eca2712b0515155ca3",
+      "command_id": "plan-revise:issue-676:plan-confirm:reverse:r5:77731b7d7052",
+      "receipt_id": "certificate:b7b0f3a8cb739680b768affff5f9d9cf",
+      "receipt_digest": "sha256:ddec99fdd9bd8f4d1319fa8b4dab2d8b848fcf548a124c42c890f44925a601a8",
+      "decision_digest": "sha256:84c35e00dacfb9aba2d10e2e7bfd65928e93383f61153bb4ff52697eff53c7ed",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-676-release-consumer-dev-start-backfill.md",
+        "plan_id": "PLAN-REVERSE-676-release-consumer-dev-start-backfill",
+        "asset_id": "plan:2db3028c656fba04cb6610d7278dfa56",
+        "revision": 5,
+        "content_digest": "sha256:c66f82bf6aa5b49e4cf0ffed2252a7f14ccbf42f9ee727bc1aa63bd835eaa144"
+      }
+    },
+    {
+      "sequence": 318,
+      "previous_record_digest": "sha256:434694edbecb83f4e75526c4a107b9e3601a3d14eb3871eca2712b0515155ca3",
+      "record_digest": "sha256:2f578276c892e6078e70302b796ca59a7bdd1754d6d20c8979c451cc9d5361bc",
+      "command_id": "plan-revise:issue-676:plan-confirm:plan:r6:8be63ed4280e",
+      "receipt_id": "certificate:cdfd7591b7102670ff44ff18c78b1caa",
+      "receipt_digest": "sha256:a69bf9a15728ae85ff2800bed4dd518818537e31f36b8846fdd580b4c0509751",
+      "decision_digest": "sha256:cf0c126127be35bda1ec9c04ca69bcde34897a04820861e317adad7870e57120",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-676-release-consumer-dev-start.md",
+        "plan_id": "PLAN-L7-676-release-consumer-dev-start",
+        "asset_id": "plan:aae8bf0e313f8688fbad4d4d8cf0a6a9",
+        "revision": 6,
+        "content_digest": "sha256:b7d48dc150231284535acd4e8f4d76e3a9782423863419b0147f9e3b7c59435e"
+      }
+    },
+    {
+      "sequence": 319,
+      "previous_record_digest": "sha256:2f578276c892e6078e70302b796ca59a7bdd1754d6d20c8979c451cc9d5361bc",
+      "record_digest": "sha256:520ec0c3566dcd915c1df0a6547c4356754c29090ad116c55a0be653b4f1c346",
+      "command_id": "plan-revise:issue-418:pr670-rechain-after-688:forward:r9:20260925",
+      "receipt_id": "certificate:9f2db74de02f825576d1e2add514a9d6",
+      "receipt_digest": "sha256:6381894ba021391e7bd75575f5f0cfbbe57e076507e28d73a5b030d137b99cfe",
+      "decision_digest": "sha256:40fe865983a45b97704cc88f7a6b3a44612a2828e073a03566303615c8642d37",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-628-pack-consumer-runtime-release-install.md",
+        "plan_id": "PLAN-L7-628-pack-consumer-runtime-release-install",
+        "asset_id": "plan:cd11a1885b1c948d89519002a2cec009",
+        "revision": 9,
+        "content_digest": "sha256:f48911ddeb2fcd55ec685c2776f1f4403055da749c39f65cbb24feaa7ff703b1"
+      }
+    },
+    {
+      "sequence": 320,
+      "previous_record_digest": "sha256:520ec0c3566dcd915c1df0a6547c4356754c29090ad116c55a0be653b4f1c346",
+      "record_digest": "sha256:aecead8e34893585c48436943d0d92a6647ccf7fd9a9883e6a1bd07b2ddbba35",
+      "command_id": "plan-revise:issue-676:rcdev020-source-exception:plan:r7:b466700680e6",
+      "receipt_id": "certificate:c5d239b6bc283ed001d423db2e0b4b66",
+      "receipt_digest": "sha256:b99bf4d22ce13bce1f57e12831638f5daa0479ebfab9476adbf69f5bba4bec2e",
+      "decision_digest": "sha256:fd5d7d7bd291b6f009e18f9fdb5fb932b0d6b66161142853428ebd4f8d84bdb8",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-676-release-consumer-dev-start.md",
+        "plan_id": "PLAN-L7-676-release-consumer-dev-start",
+        "asset_id": "plan:aae8bf0e313f8688fbad4d4d8cf0a6a9",
+        "revision": 7,
+        "content_digest": "sha256:19597f9030cfef4ec0308eaef497c9337180251eac91cb5aa091dd45c8321b5f"
+      }
+    },
+    {
+      "sequence": 321,
+      "previous_record_digest": "sha256:aecead8e34893585c48436943d0d92a6647ccf7fd9a9883e6a1bd07b2ddbba35",
+      "record_digest": "sha256:cdc9520630a352811a245a11d002cf6e82cb1e71979cef79ebd20e7545445317",
+      "command_id": "plan-revise:issue-676:prt1-generates-r8:plan:r8:ab7e5eae35dc",
+      "receipt_id": "certificate:62dc79895390c9552deeacb8684d3631",
+      "receipt_digest": "sha256:0e0dabf096ae4fe926c9f9187923d7e774a7b377701613c193d7c50f55fc4c44",
+      "decision_digest": "sha256:b5531303e5bf0400e385772a1e018723951dc8dbf86ac2ff089351a3913f5423",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-676-release-consumer-dev-start.md",
+        "plan_id": "PLAN-L7-676-release-consumer-dev-start",
+        "asset_id": "plan:aae8bf0e313f8688fbad4d4d8cf0a6a9",
+        "revision": 8,
+        "content_digest": "sha256:39b9f741ecdadc15b44f575dff82a4343c491191b0c6a8add75b18f292d31422"
+      }
+    },
+    {
+      "sequence": 322,
+      "previous_record_digest": "sha256:cdc9520630a352811a245a11d002cf6e82cb1e71979cef79ebd20e7545445317",
+      "record_digest": "sha256:1e814135137942149631f83df65f1838e322686549ec2f254133bd9fe7fd3441",
+      "command_id": "plan-revise:issue-676:prt2-generates:plan:r9:af6e9a20f6a1",
+      "receipt_id": "certificate:a8b53b5b57f14f17df1de00ad164e613",
+      "receipt_digest": "sha256:fa887ab15cf6998078f2288de7d226b976fd2e13a945c7aab9c1e73e152cada9",
+      "decision_digest": "sha256:20c77a616c50cdcd730ef00d2c49b113f7e595031453dd4604f700d738da3164",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-676-release-consumer-dev-start.md",
+        "plan_id": "PLAN-L7-676-release-consumer-dev-start",
+        "asset_id": "plan:aae8bf0e313f8688fbad4d4d8cf0a6a9",
+        "revision": 9,
+        "content_digest": "sha256:a06505ae365cec9f35906eaf8f1381d9d9968aef0350d0882ba061be11661894"
+      }
+    },
+    {
+      "sequence": 323,
+      "previous_record_digest": "sha256:1e814135137942149631f83df65f1838e322686549ec2f254133bd9fe7fd3441",
+      "record_digest": "sha256:64886d1e80a6da6e7934bde3ef17335b84dede9f7c8d0ffb139ebbc7aa5117ee",
+      "command_id": "plan-revise:issue-676:codex-pr2b:rechain-after-706:plan:r10",
+      "receipt_id": "certificate:1ae6e36440f9e9ecde293866b12d3d1b",
+      "receipt_digest": "sha256:574bee0c822486f4bbf55f665c5162298c320e7550b71f3f1d4c09bb2dd2563b",
+      "decision_digest": "sha256:6b8d87d886fdfee2a07d2665e9aacdbc6b23363b8be9d7da4dc9537b1c515efb",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-676-release-consumer-dev-start.md",
+        "plan_id": "PLAN-L7-676-release-consumer-dev-start",
+        "asset_id": "plan:aae8bf0e313f8688fbad4d4d8cf0a6a9",
+        "revision": 10,
+        "content_digest": "sha256:5bb9b8eb93d461d97fae17c8f23f353e43329086410932fdb4b29abb6d60bd08"
+      }
+    },
+    {
+      "sequence": 324,
+      "previous_record_digest": "sha256:64886d1e80a6da6e7934bde3ef17335b84dede9f7c8d0ffb139ebbc7aa5117ee",
+      "record_digest": "sha256:b96ff415dfdbd9a6b191da2a32be311520a3efe3a2299e1a8d85ba79f0a08b30",
+      "command_id": "plan-revise:issue-676:codex-pr1:rechain-after-685:plan:r11",
+      "receipt_id": "certificate:8ca2fe49cfb26769b4ac35581f82ebc5",
+      "receipt_digest": "sha256:fe223818d424935b6e3776efb11c4b18abbffef0c728c71e9fa5336d8a84a0da",
+      "decision_digest": "sha256:a33428ea4b28b82ed08d8f446640ec41c8ab36e8ccab7be14d69e7c79dd3af06",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-676-release-consumer-dev-start.md",
+        "plan_id": "PLAN-L7-676-release-consumer-dev-start",
+        "asset_id": "plan:aae8bf0e313f8688fbad4d4d8cf0a6a9",
+        "revision": 11,
+        "content_digest": "sha256:d0889499bf9f368dbdeed24e0a4c177a2d753af3ef9a44c826e320aafa4d1dc6"
+      }
+    },
+    {
+      "sequence": 325,
+      "previous_record_digest": "sha256:b96ff415dfdbd9a6b191da2a32be311520a3efe3a2299e1a8d85ba79f0a08b30",
+      "record_digest": "sha256:069c29e8252da2882718c7eff0c3a5cd77f647e823f9b5e5af8ea2ccf43a73ed",
+      "command_id": "plan-revise:issue-676:codex-prvl:after-pr1:plan:r12",
+      "receipt_id": "certificate:e85eee4d74e29f242e07ae5ddae8ed39",
+      "receipt_digest": "sha256:5175c83eed0d408d2ac03e4b7a918aab0f19f4bf0e2b105e2d72fffe16024462",
+      "decision_digest": "sha256:4098b95fa3fe81ec437130e912c96197b3c91136c8f6f5cdc2d97b4aedcc9bb1",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-676-release-consumer-dev-start.md",
+        "plan_id": "PLAN-L7-676-release-consumer-dev-start",
+        "asset_id": "plan:aae8bf0e313f8688fbad4d4d8cf0a6a9",
+        "revision": 12,
+        "content_digest": "sha256:4f7aa97308dff093aa1a2a3524061aee54cb3d68ccb1997ba354cae02aa07293"
+      }
+    },
+    {
+      "sequence": 326,
+      "previous_record_digest": "sha256:069c29e8252da2882718c7eff0c3a5cd77f647e823f9b5e5af8ea2ccf43a73ed",
+      "record_digest": "sha256:bac9187674b9d1a2898d02ba3362d8dcbe06bcb3b95735d02cc7b8a13c8cc560",
+      "command_id": "plan-revise:issue-676:g2-consumer-contract:plan:r13:1e9108644d0e",
+      "receipt_id": "certificate:5e3944036e3725868e49d480ac913a3a",
+      "receipt_digest": "sha256:af179ffc1641bea7ce08abe6ebbfd58b955e321b20eec89deabcd6160d106e35",
+      "decision_digest": "sha256:cf5463e509eddc48324f26bb1a65ca7ad34d2b9bb0ebdc28ccd181c03b62db87",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-676-release-consumer-dev-start.md",
+        "plan_id": "PLAN-L7-676-release-consumer-dev-start",
+        "asset_id": "plan:aae8bf0e313f8688fbad4d4d8cf0a6a9",
+        "revision": 13,
+        "content_digest": "sha256:821f1ce204109bc9bc63de9fc117030cd887be86119ebf363803bf1a8a41fcc5"
+      }
+    },
+    {
+      "sequence": 327,
+      "previous_record_digest": "sha256:bac9187674b9d1a2898d02ba3362d8dcbe06bcb3b95735d02cc7b8a13c8cc560",
+      "record_digest": "sha256:e10ef55f43e8603fafdd80238e864def7fb92972ed7f601a8df28acb967d60be",
+      "command_id": "plan-draft:issue-711:merge-time-rechain-contract:v2",
+      "receipt_id": "certificate:ac2c23d3c72fc6e2886491ac1df09452",
+      "receipt_digest": "sha256:0d69a27ac6c840b148dbb827c04300cc2dfc26dd87935b2a8dc5874fcfce195f",
+      "decision_digest": "sha256:369ca378b2d9d6099c08407ec6189e5da017a648c036c6bb064baa9123ff52f0",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-711-merge-time-receipt-rechain-contract.md",
+        "plan_id": "PLAN-L6-711-merge-time-receipt-rechain-contract",
+        "asset_id": "plan:ac2c23d3c72fc6e2886491ac1df09452",
+        "revision": 1,
+        "content_digest": "sha256:f90c30012bfc83f87a4592de648023e597ee79c1d04a5fae8a2cd8cc39a9a9ca"
+      }
+    },
+    {
+      "sequence": 328,
+      "previous_record_digest": "sha256:e10ef55f43e8603fafdd80238e864def7fb92972ed7f601a8df28acb967d60be",
+      "record_digest": "sha256:bfe39d35001f5d138b7b68b091a9f51aca8f90d6ae650e9494414b343827317d",
+      "command_id": "plan-revise:issue-676:pr2a-skills-bundle:plan:r14:90169a353901",
+      "receipt_id": "certificate:822b69e05cb2df931fbfb9a0eda3d184",
+      "receipt_digest": "sha256:70d7d88b92847854ffc7f2230a2c5f060ec20b3f91e734a56bdb2c76fd741481",
+      "decision_digest": "sha256:6303b0d03844ba17b93216b314d3265227c5616ff542d3dbd541c7d8dae9c3de",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-676-release-consumer-dev-start.md",
+        "plan_id": "PLAN-L7-676-release-consumer-dev-start",
+        "asset_id": "plan:aae8bf0e313f8688fbad4d4d8cf0a6a9",
+        "revision": 14,
+        "content_digest": "sha256:ea88773fa41bac2f0f1d84a205f9bf20bb511e121a3039b5ce781fe3f229ffa1"
+      }
+    },
+    {
+      "sequence": 329,
+      "previous_record_digest": "sha256:bfe39d35001f5d138b7b68b091a9f51aca8f90d6ae650e9494414b343827317d",
+      "record_digest": "sha256:836451abb6fe6a94a6355ec1cce8a1829329b47e4baf5350bad14846a7527500",
+      "command_id": "plan-revise:issue-676:pr3-setup-artifacts:plan:r15:7db5b824fe80",
+      "receipt_id": "certificate:e39a6a0a942304095414d9d4a2751079",
+      "receipt_digest": "sha256:e3809f107375cf746556ef6f37e1a64d982ea9acf2f9af53056bf15a9e2d6d05",
+      "decision_digest": "sha256:d0c25a8008c86cb50859ab3088410854e52fbacc93b2096e09ebdb1a998c6546",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-676-release-consumer-dev-start.md",
+        "plan_id": "PLAN-L7-676-release-consumer-dev-start",
+        "asset_id": "plan:aae8bf0e313f8688fbad4d4d8cf0a6a9",
+        "revision": 15,
+        "content_digest": "sha256:5cc778ae04cb9ad854a12237287ccdfc39f93f3b3603c510ab8c6a5651986f9e"
+      }
+    },
+    {
+      "sequence": 330,
+      "previous_record_digest": "sha256:836451abb6fe6a94a6355ec1cce8a1829329b47e4baf5350bad14846a7527500",
+      "record_digest": "sha256:ee345566d5b270220869b9bdb0ab78c5393b62f7db9bc09ee02d62784f4c247a",
+      "command_id": "plan-revise:issue-676:prg0-consumer-gates:plan:r16:34ece6c4ca91",
+      "receipt_id": "certificate:b8434ef73de706633cf7114aedffbc3f",
+      "receipt_digest": "sha256:e2121c7ec03b725283fbb310077312bcf3821f52963f43ccb853a418159fc85b",
+      "decision_digest": "sha256:920d133dcc3376b38e18f6a2c7d7343a2539b4c2323f43d9c9c3d22eaee6c344",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-676-release-consumer-dev-start.md",
+        "plan_id": "PLAN-L7-676-release-consumer-dev-start",
+        "asset_id": "plan:aae8bf0e313f8688fbad4d4d8cf0a6a9",
+        "revision": 16,
+        "content_digest": "sha256:aa3f96d5f5467a10038cd615d2897ecbfc1cd1605f4e8e24e07cdc5746d763da"
+      }
+    },
+    {
+      "sequence": 331,
+      "previous_record_digest": "sha256:ee345566d5b270220869b9bdb0ab78c5393b62f7db9bc09ee02d62784f4c247a",
+      "record_digest": "sha256:05205beffbe7fb377b0f54950ae386524d75b7b405bc90812c39b96508515b5e",
+      "command_id": "plan-revise:issue-711:s1-input-shape:plan:r2:299d2f8bcfd2",
+      "receipt_id": "certificate:e64cbb4fce9218db1ba253f7853e1f50",
+      "receipt_digest": "sha256:c90e34c0fa77c82785d047b1dcb73c9f5242d9f92ba91744dc7e1cda6ac7e3e1",
+      "decision_digest": "sha256:213bd419852b2bf14d057521b8fcb58cf156aaf260078fd0fb5edfa4c716a77b",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-711-merge-time-receipt-rechain-contract.md",
+        "plan_id": "PLAN-L6-711-merge-time-receipt-rechain-contract",
+        "asset_id": "plan:ac2c23d3c72fc6e2886491ac1df09452",
+        "revision": 2,
+        "content_digest": "sha256:6ec8bac1ec6a35fe064177df53e27b585f893cc079fcaeb6d524d3f6976d659d"
+      }
+    },
+    {
+      "sequence": 332,
+      "previous_record_digest": "sha256:05205beffbe7fb377b0f54950ae386524d75b7b405bc90812c39b96508515b5e",
+      "record_digest": "sha256:af0631259d95cdab81dcbbed78516a850876a8aee9834efb2553e63d41ee34e0",
+      "command_id": "plan-revise:issue-676:pr2c-template-boundary:plan:r17:48efd4e1057a",
+      "receipt_id": "certificate:cbbed9778f8efb4bff717d5804f13f5f",
+      "receipt_digest": "sha256:6274d35d29057cbd66db9cbeeafa3348ab1e89c8460be3ec1ed878138049f83b",
+      "decision_digest": "sha256:42d6feb2c862a93bba6cccef86aeb763ec052ae5deffb5aa627154a40a80b171",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-676-release-consumer-dev-start.md",
+        "plan_id": "PLAN-L7-676-release-consumer-dev-start",
+        "asset_id": "plan:aae8bf0e313f8688fbad4d4d8cf0a6a9",
+        "revision": 17,
+        "content_digest": "sha256:8f8970053cf643425c53d01b0bca6a5d6ca932030ab409cbe4ae744b5553a57b"
+      }
+    },
+    {
+      "sequence": 333,
+      "previous_record_digest": "sha256:af0631259d95cdab81dcbbed78516a850876a8aee9834efb2553e63d41ee34e0",
+      "record_digest": "sha256:3817728de621ec37cdc2048ecf3afb6c94d5ad40987e64c20631e04eba839553",
+      "command_id": "plan-revise:issue-418:531-canary2-contract:plan:r3:0a8cd4f55764",
+      "receipt_id": "certificate:bba997d52a58847dceea04a31e40ee34",
+      "receipt_digest": "sha256:9abbbb26fe5c4017bd5438056e9fa99f3c0b65f3b5f97a65a2e3ac2e30861e39",
+      "decision_digest": "sha256:f4ab3cddd0cffc8567cc7d25f8c2bcf0eab264528ad7b7d2c2b7578c3a005187",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-531-pack-internal-canary-smoke.md",
+        "plan_id": "PLAN-L7-531-pack-internal-canary-smoke",
+        "asset_id": "plan:44f79788376b81c225ce5913fddbc48f",
+        "revision": 3,
+        "content_digest": "sha256:a04428ce7a3ee21fcbaebf6cfce78094795a18d67da5a0f29ddaafc137be9b74"
+      }
+    },
+    {
+      "sequence": 334,
+      "previous_record_digest": "sha256:3817728de621ec37cdc2048ecf3afb6c94d5ad40987e64c20631e04eba839553",
+      "record_digest": "sha256:c40806f9adc9ef59c9b3260343d54ae7d7982bb5fc60ac1d1870b9dc21c4fd7a",
+      "command_id": "plan-revise:issue-418:531-canary2-contract:reverse:r3:1e79d9a1dc10",
+      "receipt_id": "certificate:f52133e82a6ecb908662d00be7d472af",
+      "receipt_digest": "sha256:efe030fca5fcaa6699e8c2020a09bdd11c628d445072d7ddf776bff901f4ad9a",
+      "decision_digest": "sha256:3aead190f5cf0b55bd4b864f6ee6eff65f75443e8c6a98fc00bcbc7457be5c8c",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-531-pack-internal-canary-smoke-backfill.md",
+        "plan_id": "PLAN-REVERSE-531-pack-internal-canary-smoke-backfill",
+        "asset_id": "plan:c789d97c71c9a9c07942983de88b71ab",
+        "revision": 3,
+        "content_digest": "sha256:7f79076d1c2a9f09cbacebbce7311555ce112ac54a8fd5c5be76cf90c6128109"
+      }
+    },
+    {
+      "sequence": 335,
+      "previous_record_digest": "sha256:c40806f9adc9ef59c9b3260343d54ae7d7982bb5fc60ac1d1870b9dc21c4fd7a",
+      "record_digest": "sha256:3d7b5b09a5d6e45133aec74217da1e802213ce111a154496de655465b77d8336",
+      "command_id": "plan-revise:issue-418:531-canary2-contract:plan:r4:b13da940a4b0",
+      "receipt_id": "certificate:2f1134a5759d724605aa1e13fee7eac6",
+      "receipt_digest": "sha256:4d3506ec462ff24a83e083024a003ea51568178a9816a15344e33ef16b75ad79",
+      "decision_digest": "sha256:33bfd28e2c32efbc3f9c6372d8165e11fac36c670103020b4f3caf49938c0127",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-531-pack-internal-canary-smoke.md",
+        "plan_id": "PLAN-L7-531-pack-internal-canary-smoke",
+        "asset_id": "plan:44f79788376b81c225ce5913fddbc48f",
+        "revision": 4,
+        "content_digest": "sha256:57e053d9e9ee51cb39690100a05baa1b36103dbfb6db6ff4a8a9830f28dadf0d"
+      }
+    },
+    {
+      "sequence": 336,
+      "previous_record_digest": "sha256:3d7b5b09a5d6e45133aec74217da1e802213ce111a154496de655465b77d8336",
+      "record_digest": "sha256:d70d46f77b8a48e9d2170443271239f7da2d1f86f96aff03134d1892f4fb2d1a",
+      "command_id": "plan-revise:issue-418:531-canary2-contract:reverse:r4:70a4e908479e",
+      "receipt_id": "certificate:e5c76417cdee85d0977ab185a93b0d10",
+      "receipt_digest": "sha256:2f116763c19c5684f043493cb9222ddbd64fc6cb973b739643321f2297d33ddf",
+      "decision_digest": "sha256:04cc308554c855140b6c22a023ea783bd4cd3be76af1aba8c0c34f502f5e73f1",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-531-pack-internal-canary-smoke-backfill.md",
+        "plan_id": "PLAN-REVERSE-531-pack-internal-canary-smoke-backfill",
+        "asset_id": "plan:c789d97c71c9a9c07942983de88b71ab",
+        "revision": 4,
+        "content_digest": "sha256:c5e9a8f7a430039cac5ea39de794bcea933aad3c3f9fad03a57b8a4d6bcf754d"
+      }
+    },
+    {
+      "sequence": 337,
+      "previous_record_digest": "sha256:d70d46f77b8a48e9d2170443271239f7da2d1f86f96aff03134d1892f4fb2d1a",
+      "record_digest": "sha256:4c2bb6799aafa3db94e99182c69f03ed38058a284f5a6a37e628944882b7b312",
+      "command_id": "plan-revise:issue-676:prgr-right-arm-rechain2:plan:r18:553859f4cac5",
+      "receipt_id": "certificate:e329871b5f0280bdde5258edd752f5f6",
+      "receipt_digest": "sha256:266a7549fcaa6cbe55186df6a652971a67fc107c88adea723518e35c8ddc7cf2",
+      "decision_digest": "sha256:11a2d6c9b19516eaa6d6439f91059fd7c07cbfcee7b2168a2d81dec2782c9751",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-676-release-consumer-dev-start.md",
+        "plan_id": "PLAN-L7-676-release-consumer-dev-start",
+        "asset_id": "plan:aae8bf0e313f8688fbad4d4d8cf0a6a9",
+        "revision": 18,
+        "content_digest": "sha256:2c56ad42439f2e62322a6a46f0debf6a02528532fb6cc6f41a0425c072bba333"
+      }
+    },
+    {
+      "sequence": 338,
+      "previous_record_digest": "sha256:4c2bb6799aafa3db94e99182c69f03ed38058a284f5a6a37e628944882b7b312",
+      "record_digest": "sha256:feb7057cd9afad2bc55010e25f996d347c59e1eed646a83d06774892dba5ee3f",
+      "command_id": "plan-revise:issue-676:pr2c-template-generates:plan:r19:71e5056806bb",
+      "receipt_id": "certificate:cc0f5617cb7f133aa2eec026cfc7a5c6",
+      "receipt_digest": "sha256:1cee4a2ae8e56c1ba84b0be15b00d79de2cd7f85aefdd96092a24b6f8485d973",
+      "decision_digest": "sha256:7e0936db064bba29dfafbc3db5cb0b3ff58cf478327c62f1f09712266f3af629",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-676-release-consumer-dev-start.md",
+        "plan_id": "PLAN-L7-676-release-consumer-dev-start",
+        "asset_id": "plan:aae8bf0e313f8688fbad4d4d8cf0a6a9",
+        "revision": 19,
+        "content_digest": "sha256:befafb427da7d616b4c0bb84ff58342662fa0fd75fc428138d6d362a3849ad68"
+      }
+    },
+    {
+      "sequence": 339,
+      "previous_record_digest": "sha256:feb7057cd9afad2bc55010e25f996d347c59e1eed646a83d06774892dba5ee3f",
+      "record_digest": "sha256:62fc284c811303cc395a8ce27fa09b9dcfad343e157347ecfb366a6e57fd7a0d",
+      "command_id": "plan-revise:issue-418:531-canary2-confirm:plan:r5:cf904ac87fff",
+      "receipt_id": "certificate:8be10911dc9bc391e9328f965824da71",
+      "receipt_digest": "sha256:25c2ef7ea4bde1226a418d89d7331115b29309e2e3db1fe45d23b152119ea6e0",
+      "decision_digest": "sha256:afc697aba68e38014f5ccfc551cc4ccbdcd75fc4b55cdceb8be3360073eb5e0a",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-531-pack-internal-canary-smoke.md",
+        "plan_id": "PLAN-L7-531-pack-internal-canary-smoke",
+        "asset_id": "plan:44f79788376b81c225ce5913fddbc48f",
+        "revision": 5,
+        "content_digest": "sha256:5a2c6ba4537af901be2965550ba5d6fdd6e87b36dac88140b065f3b4bacb98c7"
+      }
+    },
+    {
+      "sequence": 340,
+      "previous_record_digest": "sha256:62fc284c811303cc395a8ce27fa09b9dcfad343e157347ecfb366a6e57fd7a0d",
+      "record_digest": "sha256:309282861d4aaae38c5e6de462c07d43a18a44c22e59dc67368a4f06b2736000",
+      "command_id": "plan-revise:issue-676:g10-skip-contract:plan:r20:83a49bde856e",
+      "receipt_id": "certificate:b95dce5e1d9a5fbb8f06e2cf85343be6",
+      "receipt_digest": "sha256:35eb7c442be054e2c0f8a5d2ce36727aa1e7fd92560fdc9202d1741ecf5a3bf2",
+      "decision_digest": "sha256:d902f9800527aefa81d9ca4016b6de9cfcc3d1c571444d2f7880a028052e3bed",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-676-release-consumer-dev-start.md",
+        "plan_id": "PLAN-L7-676-release-consumer-dev-start",
+        "asset_id": "plan:aae8bf0e313f8688fbad4d4d8cf0a6a9",
+        "revision": 20,
+        "content_digest": "sha256:0ea5fb36b1a79cf3821d2ac636d3191ef0573d0bc13e96b6d8b5eca8dbf90332"
+      }
+    },
+    {
+      "sequence": 341,
+      "previous_record_digest": "sha256:309282861d4aaae38c5e6de462c07d43a18a44c22e59dc67368a4f06b2736000",
+      "record_digest": "sha256:14c3aa00b697525f1da0db90b4f6a32cffabd722e0bedf2dcf7e1223d8fb5ef0",
+      "command_id": "plan-draft:issue-742:aggregate-v2-cardinality:forward:1",
+      "receipt_id": "certificate:f787a6e0b076a4db67323a906329bde3",
+      "receipt_digest": "sha256:b6cf4fd7ec2347cfd65f66eab9ea77fd4fefd6b858b5347e82d61f9f3556bb90",
+      "decision_digest": "sha256:74ebaa7447376597ab5a6149476bdd27e4b2e7b7cf240514091d24d5932e70e5",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-742-release-aggregate-v2-inventory-cardinality.md",
+        "plan_id": "PLAN-L7-742-release-aggregate-v2-inventory-cardinality",
+        "asset_id": "plan:f787a6e0b076a4db67323a906329bde3",
+        "revision": 1,
+        "content_digest": "sha256:cca41bdb390c619efaa0127d40e88ad37dabeca1f756a37d3ec7125817b403ce"
+      }
+    },
+    {
+      "sequence": 342,
+      "previous_record_digest": "sha256:14c3aa00b697525f1da0db90b4f6a32cffabd722e0bedf2dcf7e1223d8fb5ef0",
+      "record_digest": "sha256:206e53dce873e44756436434c0c78cb1782a6db686cde605df17331cb9790556",
+      "command_id": "plan-draft:issue-742:aggregate-v2-cardinality:reverse:1",
+      "receipt_id": "certificate:61a67f9437e1fff919b21b9c9c3aa7ce",
+      "receipt_digest": "sha256:dca61a9bce9faeeb0616d520859ff9526b2de7e331ce9a7c637f71c656aa4fb8",
+      "decision_digest": "sha256:dec934fe7f0a473e821cc06f86267076fcbcec7c4e90b166873fee1b4cf318d8",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-742-release-aggregate-v2-inventory-cardinality-backfill.md",
+        "plan_id": "PLAN-REVERSE-742-release-aggregate-v2-inventory-cardinality-backfill",
+        "asset_id": "plan:61a67f9437e1fff919b21b9c9c3aa7ce",
+        "revision": 1,
+        "content_digest": "sha256:967b4b9d14495b311b4d8b14741def2f41ad743ce80f11f65929fd7edf7ea70a"
+      }
+    },
+    {
+      "sequence": 343,
+      "previous_record_digest": "sha256:206e53dce873e44756436434c0c78cb1782a6db686cde605df17331cb9790556",
+      "record_digest": "sha256:fc8ed1ae0d90018b79de2a641c637374c94becb749b701ff14dd86da7f546874",
+      "command_id": "plan-revise:issue-742:legacy-494-correction-note:r2:d5b9c793e32e",
+      "receipt_id": "certificate:4318582771b1ddbe7377c4f9e3fdebc9",
+      "receipt_digest": "sha256:62ea89ef0ba10f7defcdbe48dd4ad1b8b8d566b7b8b301af943c26188f7c1435",
+      "decision_digest": "sha256:8c79b95a7b202e5374bcd8f8923a6fea60cde61da1a755f21412c0e63f734b06",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-494-release-promotion-rollback-gate.md",
+        "plan_id": "PLAN-L7-494-release-promotion-rollback-gate",
+        "asset_id": "plan:legacy:dbb95001a01ad1267126777f477d8d8114002f4458d7a60be83a36a76bb734ba",
+        "revision": 2,
+        "content_digest": "sha256:444d740e7c20fdcabdcfc7560fba4e36ec29ebc8ea25a099dcbe9a90b0d964ca"
+      }
+    },
+    {
+      "sequence": 344,
+      "previous_record_digest": "sha256:fc8ed1ae0d90018b79de2a641c637374c94becb749b701ff14dd86da7f546874",
+      "record_digest": "sha256:adf6cb1c27f8df87408f83c213db2e1fc1a457c0f5d30049cadf2989ed339b7c",
+      "command_id": "plan-revise:issue-742:legacy-492-correction-note:r2b:d5b9c793e32e",
+      "receipt_id": "certificate:25697dcb7665caea59d6b901965c3245",
+      "receipt_digest": "sha256:e4017415eba2ac8a5e44d9c26a4bd18458bb5e5b643e6b4dabea5e594bb023b5",
+      "decision_digest": "sha256:8c79b95a7b202e5374bcd8f8923a6fea60cde61da1a755f21412c0e63f734b06",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-492-pf5-release-aggregate-admission-pair-freeze.md",
+        "plan_id": "PLAN-L7-492-pf5-release-aggregate-admission-pair-freeze",
+        "asset_id": "plan:legacy:6a3ec85114af63a676d8d5cbff989764fdb96e127b8ca7f1f54798fc77a89275",
+        "revision": 2,
+        "content_digest": "sha256:04c338a34f868796485169f6a92959892f54061aa838004dc5aee0d96323a469"
+      }
+    },
+    {
+      "sequence": 345,
+      "previous_record_digest": "sha256:adf6cb1c27f8df87408f83c213db2e1fc1a457c0f5d30049cadf2989ed339b7c",
+      "record_digest": "sha256:fe0345cdfbb60635084fb953e5db3ea5aa74b9b40c4634c8492d2d7927df7cf1",
+      "command_id": "plan-revise:issue-742:supersedes-restore:forward:r2:16de02fee8ac",
+      "receipt_id": "certificate:d8716ba95cdfc9e5721c0ff632307c75",
+      "receipt_digest": "sha256:cf0e57a7d8b7b67ab9850631c307090306061c9a66abd20f0312adf384182497",
+      "decision_digest": "sha256:ee4e96a591437c5b82cbf351bcd2a0d6c48a74ad44707d74027420f5d7ace8a4",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-742-release-aggregate-v2-inventory-cardinality.md",
+        "plan_id": "PLAN-L7-742-release-aggregate-v2-inventory-cardinality",
+        "asset_id": "plan:f787a6e0b076a4db67323a906329bde3",
+        "revision": 2,
+        "content_digest": "sha256:df927cf20e8d590bbd2c26e1ee82e6bc8d755343b78afdc58f020686d1b517af"
+      }
+    },
+    {
+      "sequence": 346,
+      "previous_record_digest": "sha256:fe0345cdfbb60635084fb953e5db3ea5aa74b9b40c4634c8492d2d7927df7cf1",
+      "record_digest": "sha256:fa6c467af7c888957f3ab30a7c74e60a2e7fed017b2816418361a7e806c7d599",
+      "command_id": "plan-revise:issue-742:attestation-stage-boundary:forward:r3:94074807130a",
+      "receipt_id": "certificate:8775cd1c62f6481a6b0b2e5b7091c62a",
+      "receipt_digest": "sha256:faeb77f6e405d3fcbb324706587acb4e79946e79ead6e90c4b9ffe81de971d03",
+      "decision_digest": "sha256:4493295f1d4a5cd5bd423e2dfec07ce086b731c010b591a3647d51cb0e00d9bf",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-742-release-aggregate-v2-inventory-cardinality.md",
+        "plan_id": "PLAN-L7-742-release-aggregate-v2-inventory-cardinality",
+        "asset_id": "plan:f787a6e0b076a4db67323a906329bde3",
+        "revision": 3,
+        "content_digest": "sha256:f1782cd845ee57be4166387a794ed3c2f09100c11dc6c9f88cb3bb5ba7d1aff5"
+      }
+    },
+    {
+      "sequence": 347,
+      "previous_record_digest": "sha256:fa6c467af7c888957f3ab30a7c74e60a2e7fed017b2816418361a7e806c7d599",
+      "record_digest": "sha256:bec809102f8e1bed7385418af828d941e317e21e35a4a141da6c18605f30510d",
+      "command_id": "plan-revise:issue-742:attestation-composition:forward:r4:03455264e175",
+      "receipt_id": "certificate:39a415d5115954aea97aa3a24b70a2ef",
+      "receipt_digest": "sha256:c1f247d7023355a8460f3e4e88eab05ed0e9ee556b81f534b68e2ee660f8da3d",
+      "decision_digest": "sha256:e3fadb54d0e22eeb6111b68e737f23bbc94a686ded5072bfe79388b3793e719f",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-742-release-aggregate-v2-inventory-cardinality.md",
+        "plan_id": "PLAN-L7-742-release-aggregate-v2-inventory-cardinality",
+        "asset_id": "plan:f787a6e0b076a4db67323a906329bde3",
+        "revision": 4,
+        "content_digest": "sha256:45b12d3144ae5cd6202d74302622af48b829c3e2192dc02d3bbe28aee89a49bf"
+      }
+    },
+    {
+      "sequence": 348,
+      "previous_record_digest": "sha256:bec809102f8e1bed7385418af828d941e317e21e35a4a141da6c18605f30510d",
+      "record_digest": "sha256:69e933fc7998a61003d070fde7d5fbcfd4ad7f820dad751b6c7e832abb24c218",
+      "command_id": "plan-revise:issue-742:extra-destination-negatives:forward:r5:205e26251cb5",
+      "receipt_id": "certificate:7dd1fd819d15e7edfcdc04afdca90736",
+      "receipt_digest": "sha256:9a7fc764634eca7b1f8f0d50f92fc2b14e4bf6a98f961f0a5ec90386789edf7e",
+      "decision_digest": "sha256:2e6b09d7cc808b5ce4cb09c242b54159678ebdf4099a8f298ec7ab0b17f3481b",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-742-release-aggregate-v2-inventory-cardinality.md",
+        "plan_id": "PLAN-L7-742-release-aggregate-v2-inventory-cardinality",
+        "asset_id": "plan:f787a6e0b076a4db67323a906329bde3",
+        "revision": 5,
+        "content_digest": "sha256:54ab9624cfbf1857891a7443808cc482490839b137b35cfc86d3dd6c7b169c9e"
+      }
+    },
+    {
+      "sequence": 349,
+      "previous_record_digest": "sha256:69e933fc7998a61003d070fde7d5fbcfd4ad7f820dad751b6c7e832abb24c218",
+      "record_digest": "sha256:ed787cccd14dac64e34107aa2958bc9350f26fd4255f35ec19aced4f4a4296d1",
+      "command_id": "plan-revise:issue-742:ac2-m6-m7:forward:r6:816e306d3779",
+      "receipt_id": "certificate:62d05c113e752582fd161ccbc12bd05d",
+      "receipt_digest": "sha256:e976697395160ceba051fec2ca9a2440abebed51d2ba67940bafdb7214063987",
+      "decision_digest": "sha256:2de40ac6f4c5650e2cfd8458dedd8df17bbd0dd072b5d5510a9bd515381fbeaf",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-742-release-aggregate-v2-inventory-cardinality.md",
+        "plan_id": "PLAN-L7-742-release-aggregate-v2-inventory-cardinality",
+        "asset_id": "plan:f787a6e0b076a4db67323a906329bde3",
+        "revision": 6,
+        "content_digest": "sha256:ae4344338dfdfe07e69b0950b4aaef17f32378e8c32ca602a0549de60de257d5"
+      }
+    },
+    {
+      "sequence": 350,
+      "previous_record_digest": "sha256:ed787cccd14dac64e34107aa2958bc9350f26fd4255f35ec19aced4f4a4296d1",
+      "record_digest": "sha256:d46ff1e5dd160d7159626c7cb7e9250babbe6b0cf5539b2235738e1903c59756",
+      "command_id": "plan-revise:issue-742:r2-m6-m7:reverse:r2:27d3c89b23c5",
+      "receipt_id": "certificate:d8fe0f9d5b294b85b4c4a158b141170d",
+      "receipt_digest": "sha256:e011ad76d63671f96b3aa871de71ba82d9ea1fc609bd7aa7af9cea6b1a0c20bb",
+      "decision_digest": "sha256:309de4e27a843036c157a9bbd3192fd9cf09bcf3b42e09b1e9c0e2f2ac9c154b",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-742-release-aggregate-v2-inventory-cardinality-backfill.md",
+        "plan_id": "PLAN-REVERSE-742-release-aggregate-v2-inventory-cardinality-backfill",
+        "asset_id": "plan:61a67f9437e1fff919b21b9c9c3aa7ce",
+        "revision": 2,
+        "content_digest": "sha256:c8cf7a080ae861b732362b3dfb4c9210699c8c50e85301e5176580c6acb9e5cd"
+      }
+    },
+    {
+      "sequence": 351,
+      "previous_record_digest": "sha256:d46ff1e5dd160d7159626c7cb7e9250babbe6b0cf5539b2235738e1903c59756",
+      "record_digest": "sha256:f8d2aaa0c94cb593735eaf9fb35e5c3023a8d9721b9f42078831e33eb2ae8279",
+      "command_id": "plan-revise:issue-676:g11-g12-shape-contract:plan:r21:60099e554b5b",
+      "receipt_id": "certificate:98843224704d3f679e79bdfa65f236f2",
+      "receipt_digest": "sha256:f5c7b6a1490d3ef8712f18f16d99bb9473d933bda718430b8b350cf374f180d5",
+      "decision_digest": "sha256:3674e699e9892c06a82f96e50d3cf21b1d1b3b472191995320ca51ec0beb3faa",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-676-release-consumer-dev-start.md",
+        "plan_id": "PLAN-L7-676-release-consumer-dev-start",
+        "asset_id": "plan:aae8bf0e313f8688fbad4d4d8cf0a6a9",
+        "revision": 21,
+        "content_digest": "sha256:47312c51096c73bbf3aefa250695f72811a9cf9a2bcd5e3e7f5ad6e4bf6fbb69"
+      }
+    },
+    {
+      "sequence": 352,
+      "previous_record_digest": "sha256:f8d2aaa0c94cb593735eaf9fb35e5c3023a8d9721b9f42078831e33eb2ae8279",
+      "record_digest": "sha256:166f84790486727f5929a884364e41a8f9da83afd684955f650b6e9685fbda7d",
+      "command_id": "plan-revise:issue-743:tag-channel-rule:p628:r10:ea9cb3e8a101",
+      "receipt_id": "certificate:3e00eeab1182e41331575d33e1f1a072",
+      "receipt_digest": "sha256:066abaca8af6a2d6a2fe39fb3921f8797596f2a2cade336b309dbb34d8398872",
+      "decision_digest": "sha256:abc771d8d30d9f7808f6225000b755ad20654d4b32ec0d51545b97185ca5023a",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-628-pack-consumer-runtime-release-install.md",
+        "plan_id": "PLAN-L7-628-pack-consumer-runtime-release-install",
+        "asset_id": "plan:cd11a1885b1c948d89519002a2cec009",
+        "revision": 10,
+        "content_digest": "sha256:29e08fda89fed1d1041bd4586cdddc82d5a13d0ca447b2997a43aed0e5e716a1"
+      }
+    },
+    {
+      "sequence": 353,
+      "previous_record_digest": "sha256:166f84790486727f5929a884364e41a8f9da83afd684955f650b6e9685fbda7d",
+      "record_digest": "sha256:61b6aede3639ed94db9b01ea3eefc97f0d4648c7364d26eab79bb211d56f580b",
+      "command_id": "plan-revise:issue-743:tag-channel-rule:p531:r6:84831f749dc4",
+      "receipt_id": "certificate:e25ed6b78369e081edfeb32b14b3973a",
+      "receipt_digest": "sha256:4319035c7c2b794c54dcd79add15ccddbcc788002371b756ff63a6acb0ac55b2",
+      "decision_digest": "sha256:a7bf6ba4c9b805bd263b9e4638f599e85105108f5bbc8978e6ee2df506726505",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-531-pack-internal-canary-smoke.md",
+        "plan_id": "PLAN-L7-531-pack-internal-canary-smoke",
+        "asset_id": "plan:44f79788376b81c225ce5913fddbc48f",
+        "revision": 6,
+        "content_digest": "sha256:bcf72880ba49d4c019fbad108f88fa0f8c72c3332dba8d36010f8971a1ffb54e"
+      }
+    },
+    {
+      "sequence": 354,
+      "previous_record_digest": "sha256:61b6aede3639ed94db9b01ea3eefc97f0d4648c7364d26eab79bb211d56f580b",
+      "record_digest": "sha256:d6d57e69562f917ed7f5898ac05df1c91e2a8a3979d0c67e80e977adc268eb20",
+      "command_id": "plan-revise:issue-743:tag-channel-rule:p628:r11:074bb686568c",
+      "receipt_id": "certificate:7e69efdffec0d4298bbe37840cb98658",
+      "receipt_digest": "sha256:0325f6382bb628f13f89db11a8e18597fada80a6eaf9b38faef270a7717cae35",
+      "decision_digest": "sha256:28b8aff7eee004ab8a68cf5f29932d8ee852e33220d0a0d296f5878707c8121b",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-628-pack-consumer-runtime-release-install.md",
+        "plan_id": "PLAN-L7-628-pack-consumer-runtime-release-install",
+        "asset_id": "plan:cd11a1885b1c948d89519002a2cec009",
+        "revision": 11,
+        "content_digest": "sha256:604fcda0ef7e101ecd8df79e682704d0475dc9be62f6afb077916114f192df52"
+      }
+    },
+    {
+      "sequence": 355,
+      "previous_record_digest": "sha256:d6d57e69562f917ed7f5898ac05df1c91e2a8a3979d0c67e80e977adc268eb20",
+      "record_digest": "sha256:f71fbeeac280b561accc30f1e75cc901b51b16c45b04a123af3fec68242365f9",
+      "command_id": "plan-draft:issue-722:digest-query:forward:1",
+      "receipt_id": "certificate:d354f79aaae8e1cb50d0b1a77c3ccc76",
+      "receipt_digest": "sha256:b88950b7483fd1a2fbf1ac1a50c571aa29a1164e03bfe697f96dbe432ced8e56",
+      "decision_digest": "sha256:9d4d70f007cf8590d09ca19c5e17405017689f52c9239f55af0ec7327937a680",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-722-plan-revision-digest-query.md",
+        "plan_id": "PLAN-L7-722-plan-revision-digest-query",
+        "asset_id": "plan:d354f79aaae8e1cb50d0b1a77c3ccc76",
+        "revision": 1,
+        "content_digest": "sha256:80405b9041277bbb2f7cbfc70b52dace84612939d80fc1862cfd1e37ef6a52f4"
+      }
+    },
+    {
+      "sequence": 356,
+      "previous_record_digest": "sha256:f71fbeeac280b561accc30f1e75cc901b51b16c45b04a123af3fec68242365f9",
+      "record_digest": "sha256:baa2ad838a5eeb93fcfab81dd24caa48055f52e95fedf41c1f4c3d97f7591944",
+      "command_id": "plan-draft:issue-722:digest-query:reverse:1",
+      "receipt_id": "certificate:b235c569fdf230ce852a5f1914689142",
+      "receipt_digest": "sha256:d8e65e2f7defcdc75f6734d9f63ea8a6503b793188e19aae976426842a6199f7",
+      "decision_digest": "sha256:f81214f0c4c4b6563d356a7a55662d4f10a43ac27994a9a57a616d1df4087464",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-722-plan-revision-digest-query-backfill.md",
+        "plan_id": "PLAN-REVERSE-722-plan-revision-digest-query-backfill",
+        "asset_id": "plan:b235c569fdf230ce852a5f1914689142",
+        "revision": 1,
+        "content_digest": "sha256:acfc4b38059f3905e1ac5f5efc575a648eeff90f60b1c0648597a7dd77c958c0"
+      }
+    },
+    {
+      "sequence": 357,
+      "previous_record_digest": "sha256:baa2ad838a5eeb93fcfab81dd24caa48055f52e95fedf41c1f4c3d97f7591944",
+      "record_digest": "sha256:467693b1b507fe9eb366333e00044552639d44f8023c2138e856525cfaf0695e",
+      "command_id": "plan-revise:issue-722:drive-parent-align:forward:r2:559cd9a1defb",
+      "receipt_id": "certificate:3c8daa655285065cfedd93797f3a8daf",
+      "receipt_digest": "sha256:d1f982cc463af963fdc6a3731908d1c045a82aa148310412842228df017fa394",
+      "decision_digest": "sha256:54f3848fc6d72536ed639f11f201ff95cc1b6276b53ab54a31a883f7a454a407",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-722-plan-revision-digest-query.md",
+        "plan_id": "PLAN-L7-722-plan-revision-digest-query",
+        "asset_id": "plan:d354f79aaae8e1cb50d0b1a77c3ccc76",
+        "revision": 2,
+        "content_digest": "sha256:6755466ce43449a535371b07e927afa2bf3f050129188e48c739bb3db86077f2"
+      }
+    },
+    {
+      "sequence": 358,
+      "previous_record_digest": "sha256:467693b1b507fe9eb366333e00044552639d44f8023c2138e856525cfaf0695e",
+      "record_digest": "sha256:4e64fb12a22bebdcdf6c63365a78589002647c2a92ca797ff5b729c88d9fa697",
+      "command_id": "plan-revise:issue-722:drive-parent-align:reverse:r2:c43caf233a1c",
+      "receipt_id": "certificate:33607416b53a67051b1d75d8635b3c0e",
+      "receipt_digest": "sha256:076afcaa9bc57ea11d38202328626eb201d4f221869b9da88c9afc36e0ee9258",
+      "decision_digest": "sha256:4ec360bb4837e820fc0e78dde25e1958dd81875d55734571fda0e5d00815c986",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-722-plan-revision-digest-query-backfill.md",
+        "plan_id": "PLAN-REVERSE-722-plan-revision-digest-query-backfill",
+        "asset_id": "plan:b235c569fdf230ce852a5f1914689142",
+        "revision": 2,
+        "content_digest": "sha256:f14b6956a8da5f5d490d77e2f3c7ab0c31d8875c06aea51d4d31271a297cacd8"
+      }
+    },
+    {
+      "sequence": 359,
+      "previous_record_digest": "sha256:4e64fb12a22bebdcdf6c63365a78589002647c2a92ca797ff5b729c88d9fa697",
+      "record_digest": "sha256:13f650678aa786ebacf663c82166323883c179f52d35472c109bce0b946eee3d",
+      "command_id": "plan-revise:issue-722:sol-r1-oracle-fix:forward:r3:d5838e68da1b",
+      "receipt_id": "certificate:4e3accfe0fb99769f691ab5350b59f9d",
+      "receipt_digest": "sha256:5440674b2275b515a1f895d4541b9f3b7d33939f11c3a8193e211a47dec6264e",
+      "decision_digest": "sha256:2473c81f9089451f338548ecf8136972e87f22902e8478af6e668ecaec6e06ef",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-722-plan-revision-digest-query.md",
+        "plan_id": "PLAN-L7-722-plan-revision-digest-query",
+        "asset_id": "plan:d354f79aaae8e1cb50d0b1a77c3ccc76",
+        "revision": 3,
+        "content_digest": "sha256:828abf894a3c2198e1c46ce23e329e72f428fc7f1e37404fd2e61323c2ae9b87"
+      }
+    },
+    {
+      "sequence": 360,
+      "previous_record_digest": "sha256:13f650678aa786ebacf663c82166323883c179f52d35472c109bce0b946eee3d",
+      "record_digest": "sha256:c95446d365efb0d480d9ad15e1ac722f792a13e100fc2cd2126344d830e6825a",
+      "command_id": "plan-revise:issue-742:s3-confirm:forward:r7:44636a2b9e5b",
+      "receipt_id": "certificate:8d4d1ec871ebf0dea75b9cc092fb7e58",
+      "receipt_digest": "sha256:6ae419a09a5f59eda2e83129a293c62ff96ef88ffcf86c90a7527c62de0e9122",
+      "decision_digest": "sha256:293cd9887bd2faeba9ea17c1b39c84dfdc339f7d21228adb814924b4ba3a4e0d",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-742-release-aggregate-v2-inventory-cardinality.md",
+        "plan_id": "PLAN-L7-742-release-aggregate-v2-inventory-cardinality",
+        "asset_id": "plan:f787a6e0b076a4db67323a906329bde3",
+        "revision": 7,
+        "content_digest": "sha256:b6f9a38f3bfbc428e8ccb1a4535d29c14e7f9e2299b4c236d33496e4baa9a6eb"
+      }
+    },
+    {
+      "sequence": 361,
+      "previous_record_digest": "sha256:c95446d365efb0d480d9ad15e1ac722f792a13e100fc2cd2126344d830e6825a",
+      "record_digest": "sha256:d75804a6a63d7c79f3e151b235a24a0dceccc864f48b7cf01bcea284b3d9f3ab",
+      "command_id": "plan-revise:issue-742:s3-confirm:reverse:r3:e3818eab1725",
+      "receipt_id": "certificate:bc51003fd1e25ecdb2a494ca1bc25c1b",
+      "receipt_digest": "sha256:7cc9eec20f2c9fe02431e1b22bbea2523bac15e2cf9f4e1f94b5761c181e6657",
+      "decision_digest": "sha256:48d07faaa0165b98b4f4a1c274bed6280fd2b5226b585d81a46648db8d507d16",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-742-release-aggregate-v2-inventory-cardinality-backfill.md",
+        "plan_id": "PLAN-REVERSE-742-release-aggregate-v2-inventory-cardinality-backfill",
+        "asset_id": "plan:61a67f9437e1fff919b21b9c9c3aa7ce",
+        "revision": 3,
+        "content_digest": "sha256:92ead765f5804c7bb7a89194609a4f2fbf1bc7e9976085bd197991d30e659e1d"
+      }
+    },
+    {
+      "sequence": 362,
+      "previous_record_digest": "sha256:d75804a6a63d7c79f3e151b235a24a0dceccc864f48b7cf01bcea284b3d9f3ab",
+      "record_digest": "sha256:b43d72501f0ac66f23b7096fd9c18c1b072a6bf8fd536143e601e7456b18aca4",
+      "command_id": "plan-revise:issue-742:s3-generates-owner-fix:forward:r8:a253b031f01e",
+      "receipt_id": "certificate:3ecc8343f8f3e791c038af9410a333b2",
+      "receipt_digest": "sha256:9c0432d148143c0f01a73c46ce2cfbfaa91704e44db892b4e2ec84a9da0bfb51",
+      "decision_digest": "sha256:a85c969ce29633761dac05ab85f7091a5675d721b302a15a8f91e5199a4c625e",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-742-release-aggregate-v2-inventory-cardinality.md",
+        "plan_id": "PLAN-L7-742-release-aggregate-v2-inventory-cardinality",
+        "asset_id": "plan:f787a6e0b076a4db67323a906329bde3",
+        "revision": 8,
+        "content_digest": "sha256:6ebf836719e8336a9c25729c4da3a60a5cbf15286671edef4cae19d3d6be3a82"
+      }
+    },
+    {
+      "sequence": 363,
+      "previous_record_digest": "sha256:b43d72501f0ac66f23b7096fd9c18c1b072a6bf8fd536143e601e7456b18aca4",
+      "record_digest": "sha256:46bde0df5a10589946540d4a7d538e9091c8b20eda7466f6ea077f0b15532b75",
+      "command_id": "plan-revise:issue-742:s3-evidence-post-green:forward:r9:82a76c8d38a2",
+      "receipt_id": "certificate:45db821768f44cd9a05a0871647b6e6a",
+      "receipt_digest": "sha256:a64823c3eb6e098f0b1cdc861a00cc54bff2916de491dab6f83fe3149536af51",
+      "decision_digest": "sha256:aa1909d2883f08ca1443d77c81d5d94fd60b7a5d679c2349fda36f94bf63eebb",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-742-release-aggregate-v2-inventory-cardinality.md",
+        "plan_id": "PLAN-L7-742-release-aggregate-v2-inventory-cardinality",
+        "asset_id": "plan:f787a6e0b076a4db67323a906329bde3",
+        "revision": 9,
+        "content_digest": "sha256:b60131ae7f470fa03da7eefd23fc35796278614ada2b6222b9d71840df17521c"
+      }
+    },
+    {
+      "sequence": 364,
+      "previous_record_digest": "sha256:46bde0df5a10589946540d4a7d538e9091c8b20eda7466f6ea077f0b15532b75",
+      "record_digest": "sha256:0f722a19be66d3d3f76ec2c87682e90498d4f4c43cb03d3f43c3e072631f4546",
+      "command_id": "plan-draft:issue-733:sonnet-alias:rechain-20260930",
+      "receipt_id": "certificate:15c02279f2bd98aa69be961b7df61b53",
+      "receipt_digest": "sha256:c2b0c8dca67d04e93eb8d8a3d2587e7ff7e0fa8e0c0579f146ddf8b464333df3",
+      "decision_digest": "sha256:be49dbd91260d0a5e6eccfae5555063ba36754f3a27a048ca0e36deef75956c6",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-733-sonnet-alias-effort-high.md",
+        "plan_id": "PLAN-L7-733-sonnet-alias-effort-high",
+        "asset_id": "plan:15c02279f2bd98aa69be961b7df61b53",
+        "revision": 1,
+        "content_digest": "sha256:8d96a0df0111c972757bda376f945014fdca7ee306afd611ff77903b7c6daf47"
+      }
+    },
+    {
+      "sequence": 365,
+      "previous_record_digest": "sha256:0f722a19be66d3d3f76ec2c87682e90498d4f4c43cb03d3f43c3e072631f4546",
+      "record_digest": "sha256:adc89227e54afa5e68bfb5194c8d97dc8305589f5545a7ddd2f8143f1d376eb2",
+      "command_id": "plan-revise:issue-676:g13-g14-shape-contract:plan:r22:7d0597a53233",
+      "receipt_id": "certificate:251c9602cfe1971c3cb1025893f7e440",
+      "receipt_digest": "sha256:a3bbaeeedce67ac0d35bb7b889d0dea14fbb15404bb2b807c9ac596da5dba1e2",
+      "decision_digest": "sha256:f6206f770bb2946a70acb3bf5eda6b8710ee5107b3c807bf54421999b5ff3ff8",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-676-release-consumer-dev-start.md",
+        "plan_id": "PLAN-L7-676-release-consumer-dev-start",
+        "asset_id": "plan:aae8bf0e313f8688fbad4d4d8cf0a6a9",
+        "revision": 22,
+        "content_digest": "sha256:2cafbed424735840e4353fde97b01ff066f3653c173ba48f4c1538855303d4df"
+      }
+    },
+    {
+      "sequence": 366,
+      "previous_record_digest": "sha256:adc89227e54afa5e68bfb5194c8d97dc8305589f5545a7ddd2f8143f1d376eb2",
+      "record_digest": "sha256:5bb5de8842cd4e4a6c14dba9374bdedae97abf2edabb0ae7ddbb54790d340617",
+      "command_id": "plan-revise:issue-418:pr1-generates:r7:20260930",
+      "receipt_id": "certificate:4e9beda8ba704f58f69e76a2ab5ab449",
+      "receipt_digest": "sha256:b362eae492db9b6fc4277ed51b8f20fcb328b98248dffa4d210d0e08c8dfcad5",
+      "decision_digest": "sha256:d4d218d9e095dd2f5727eb238811e08f805c218675d498e6f5875c620f3e63fe",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-531-pack-internal-canary-smoke.md",
+        "plan_id": "PLAN-L7-531-pack-internal-canary-smoke",
+        "asset_id": "plan:44f79788376b81c225ce5913fddbc48f",
+        "revision": 7,
+        "content_digest": "sha256:937efc16cf539d1bd0fda903448849184c0fe6b4be346cefc797bcce3e9482fd"
+      }
+    },
+    {
+      "sequence": 367,
+      "previous_record_digest": "sha256:5bb5de8842cd4e4a6c14dba9374bdedae97abf2edabb0ae7ddbb54790d340617",
+      "record_digest": "sha256:4e025f1c4fef2d9ba27ab02be2976e7fbfe7bc987fe903880c757c4608ececd9",
+      "command_id": "plan-revise:issue-530:v4-plan-ticket-split:2",
+      "receipt_id": "certificate:fb1c12d813d6984baa45f2e5927bb363",
+      "receipt_digest": "sha256:904a915c5b4846295f4e45ed09ec5ff0c45628d6debdf75a3db5449ea862cec7",
+      "decision_digest": "sha256:c9ae5c61579e0d5b67aee7a97b27e1a67c396dcec4ab1115532f76830aa17f1c",
+      "binding": {
+        "path": "docs/plans/PLAN-L1-09-ut-tdd-concept-v4-candidates.md",
+        "plan_id": "PLAN-L1-09-ut-tdd-concept-v4-candidates",
+        "asset_id": "plan:legacy:76d0499fe33cdc7245374b80f6337d4d3ce1321a3af7679dee282aa56b1db8f8",
+        "revision": 2,
+        "content_digest": "sha256:df419a3efe6de4eeee21d1c9702887faa4dce5c5d61a069146f55eb4a443ff37"
+      }
+    },
+    {
+      "sequence": 368,
+      "previous_record_digest": "sha256:4e025f1c4fef2d9ba27ab02be2976e7fbfe7bc987fe903880c757c4608ececd9",
+      "record_digest": "sha256:a5a0b99c9cc7f17e6724c7f426a31d184b8fcc7e50a16a21d4426874f3b0ae15",
+      "command_id": "plan-revise:issue-530:v4-plan-ticket-split:3",
+      "receipt_id": "certificate:b6d8ff124185f75533a90ed6b778f17f",
+      "receipt_digest": "sha256:a8d76d41f386c8d20ba6ce452252c92576b2e6440a65a1bb77746062fceca468",
+      "decision_digest": "sha256:a2e3bb42b0ef76dccc99b71c220d7c5cf994898eff1c3031aac5dd6965187eb9",
+      "binding": {
+        "path": "docs/plans/PLAN-L1-09-ut-tdd-concept-v4-candidates.md",
+        "plan_id": "PLAN-L1-09-ut-tdd-concept-v4-candidates",
+        "asset_id": "plan:legacy:76d0499fe33cdc7245374b80f6337d4d3ce1321a3af7679dee282aa56b1db8f8",
+        "revision": 3,
+        "content_digest": "sha256:386c50bd88d2f0dfa74433b402fcf8f5422fb9f175891aa9d13534872cfeded9"
+      }
+    },
+    {
+      "sequence": 369,
+      "previous_record_digest": "sha256:a5a0b99c9cc7f17e6724c7f426a31d184b8fcc7e50a16a21d4426874f3b0ae15",
+      "record_digest": "sha256:bc0a4fc51a78aa22e5842fbb13dff8266aebc2d791aff890f036498080bda146",
+      "command_id": "plan-draft:issue-678:launcher-alias-oracle:rechain-20260930-r3",
+      "receipt_id": "certificate:ed17668cb64f29738109eb175b91506e",
+      "receipt_digest": "sha256:32e1349334e4cb5412e813b62cc81b74f27fdf9e928b5f353a1abf53fa41ae3f",
+      "decision_digest": "sha256:911ccab0ad10fe6d7301eef71c63ec279e7b118293abbaae3fbf730895561f95",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-678-consumer-launcher-path-alias.md",
+        "plan_id": "PLAN-L7-678-consumer-launcher-path-alias",
+        "asset_id": "plan:ed17668cb64f29738109eb175b91506e",
+        "revision": 1,
+        "content_digest": "sha256:b5f294bf87cafe5caa6b56223aecb27ded0ac528fc41ad9428657be593a457b0"
+      }
+    },
+    {
+      "sequence": 370,
+      "previous_record_digest": "sha256:bc0a4fc51a78aa22e5842fbb13dff8266aebc2d791aff890f036498080bda146",
+      "record_digest": "sha256:ece5518aad040205700d85b188cb1d5a3e5b817962e370b3d29955318663ef39",
+      "command_id": "plan-revise:issue-678:launcher-alias-oracle:confirm-2",
+      "receipt_id": "certificate:950960baf77673952736e4bf9884cb20",
+      "receipt_digest": "sha256:7e0d6d9faf23f7db5521a93d295e0be1934e5a9f62baa2bef5f4a67fdd93714e",
+      "decision_digest": "sha256:8e620a5b477c54eb022954505b5e37adb8575f07b61a326e8cd150454e816f7e",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-678-consumer-launcher-path-alias.md",
+        "plan_id": "PLAN-L7-678-consumer-launcher-path-alias",
+        "asset_id": "plan:ed17668cb64f29738109eb175b91506e",
+        "revision": 2,
+        "content_digest": "sha256:d408d3819a2bfb893b8869516a86721f3241b67c7e9d8149319a607045b213d8"
+      }
+    },
+    {
+      "sequence": 371,
+      "previous_record_digest": "sha256:ece5518aad040205700d85b188cb1d5a3e5b817962e370b3d29955318663ef39",
+      "record_digest": "sha256:61164b630ae69d400bc5ca619d76b3ee6320feccbf7a99e3d302831d40bb3a85",
+      "command_id": "plan-revise:issue-678:launcher-alias-oracle:confirm-3",
+      "receipt_id": "certificate:feb9aa4c8746ae0eb891c4935f16f62c",
+      "receipt_digest": "sha256:f1b38abbabbe4776522f4a3e36e0cdda0636be530c5e0c4f6a15d3f09153bf32",
+      "decision_digest": "sha256:79bf4e3279994300d093eda24ed48cca1bf550ed951d6026e6ee0f9112500ecb",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-678-consumer-launcher-path-alias.md",
+        "plan_id": "PLAN-L7-678-consumer-launcher-path-alias",
+        "asset_id": "plan:ed17668cb64f29738109eb175b91506e",
+        "revision": 3,
+        "content_digest": "sha256:7584020e9a47f976f5efdaa20fc992f37a18eb743fe59215a838cef417c94c3f"
+      }
+    },
+    {
+      "sequence": 372,
+      "previous_record_digest": "sha256:61164b630ae69d400bc5ca619d76b3ee6320feccbf7a99e3d302831d40bb3a85",
+      "record_digest": "sha256:39ac50e0f35786123438b1b509a4a53d3eeef79899ac491a4927fa3a5d73f481",
+      "command_id": "plan-revise:issue-678:launcher-alias-oracle:confirm-4",
+      "receipt_id": "certificate:f46d2e6a1f79b97eaec70885c055ccf9",
+      "receipt_digest": "sha256:1b5802da8bb3c8dc78776abac084f38b9af4d03d8aac3661d70d509b6fe15559",
+      "decision_digest": "sha256:faecbff975401c33e8c041845d3ebad2829f7604576a5118b96f0f2e5335d420",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-678-consumer-launcher-path-alias.md",
+        "plan_id": "PLAN-L7-678-consumer-launcher-path-alias",
+        "asset_id": "plan:ed17668cb64f29738109eb175b91506e",
+        "revision": 4,
+        "content_digest": "sha256:0652b9d2ad116983406bccf93f53f8a5897b85a1ab8aff9dd132e08765b9b35b"
+      }
+    },
+    {
+      "sequence": 373,
+      "previous_record_digest": "sha256:39ac50e0f35786123438b1b509a4a53d3eeef79899ac491a4927fa3a5d73f481",
+      "record_digest": "sha256:d46772039c7da381ebe2cbb47a9b1d2cf08472c9dc29bfccdcfdba9aa62d8f69",
+      "command_id": "plan-revise:issue-788:license-apache:4:b",
+      "receipt_id": "certificate:d857090e8fe1c6afb57276d478ff1f96",
+      "receipt_digest": "sha256:5d47f942722955e4a72f1c29ef76fb81ec426d7a498435df136b4c98b2b2b5aa",
+      "decision_digest": "sha256:a1af8eeaeea04db1015e682b8e7f3f680e811d4fcf501493c827e17e2e38a625",
+      "binding": {
+        "path": "docs/plans/PLAN-L1-09-ut-tdd-concept-v4-candidates.md",
+        "plan_id": "PLAN-L1-09-ut-tdd-concept-v4-candidates",
+        "asset_id": "plan:legacy:76d0499fe33cdc7245374b80f6337d4d3ce1321a3af7679dee282aa56b1db8f8",
+        "revision": 4,
+        "content_digest": "sha256:3f0a226ee060663d9177e989240d57aaca7544d6ee8d614d40a95cbcdfcc862d"
+      }
+    },
+    {
+      "sequence": 374,
+      "previous_record_digest": "sha256:d46772039c7da381ebe2cbb47a9b1d2cf08472c9dc29bfccdcfdba9aa62d8f69",
+      "record_digest": "sha256:214fe02d5ba2d1fc8b84d4fe40631818102f38dcd16faeca6f92b7ef2e70e7d9",
+      "command_id": "plan-revise:issue-418:pr804-main-rechain:r8:20261001",
+      "receipt_id": "certificate:7003c7fcbd9aff8ba553389f7b7b739c",
+      "receipt_digest": "sha256:a887c568b13ffa283e8b238555bdad8d594ad8fd05ab99bb4d3972cb87c610f0",
+      "decision_digest": "sha256:fd586c44356703e8c2fae9b322acb98a7b779380115d9260e8e79fb0955aaee0",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-531-pack-internal-canary-smoke.md",
+        "plan_id": "PLAN-L7-531-pack-internal-canary-smoke",
+        "asset_id": "plan:44f79788376b81c225ce5913fddbc48f",
+        "revision": 8,
+        "content_digest": "sha256:737c50a7257282795272a88a71324d0d5c2f01528fdd7ebd05cb76f6955f6b5c"
+      }
     }
   ]
 }
