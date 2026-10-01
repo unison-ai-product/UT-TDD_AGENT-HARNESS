@@ -311,8 +311,14 @@ function verifySmoke(parsed, { now, run }) {
   const forbidden = parsed.removedPaths.map((path) => resolve(path));
   const accessLog = join(auditRoot, "forbidden-access.jsonl");
   const processLog = join(auditRoot, "child-processes.jsonl");
+  const reviewProviders = createClosedReviewProviders(auditRoot, evidence.consumer_head);
   const auditModule = join(auditRoot, "audit-forbidden.mjs");
-  writeFileSync(auditModule, makeAccessAuditModule(forbidden, accessLog, processLog), "utf8");
+  writeFileSync(auditModule, makeAccessAuditModule(forbidden, accessLog, {
+    path: processLog, providerCommands: {
+      claude: reviewProviders.claudeCommand, codexProbe: reviewProviders.codexProbeCommand,
+      commandProcessor: process.env.ComSpec,
+    },
+  }), "utf8");
   const pathSeparator = process.platform === "win32" ? ";" : ":";
   const pathEntries = [binDir, dirname(process.execPath),
     ...(process.env.PATH ?? "").split(pathSeparator).filter((path) =>
@@ -328,6 +334,8 @@ function verifySmoke(parsed, { now, run }) {
     UT_TDD_SKIP_UPDATE_CHECK: "1",
     NODE_OPTIONS: `--import=${pathToFileURL(auditModule).href}`,
     UT_TDD_CANARY_ACCESS_LOG: accessLog,
+    UT_TDD_CLAUDE_BIN: reviewProviders.claudeCommand,
+    UT_TDD_CODEX_BIN: reviewProviders.codexProbeCommand,
     PATHEXT: process.env.PATHEXT ?? ".COM;.EXE;.BAT;.CMD",
     ComSpec: process.env.ComSpec,
     ...(process.env.SystemRoot ? { SystemRoot: process.env.SystemRoot } : {}),
@@ -359,7 +367,6 @@ function verifySmoke(parsed, { now, run }) {
     runCli("db-rebuild", ["db", "rebuild", "--json"]);
     if (!existsSync(join(consumerRoot, ".ut-tdd", "harness.db")))
       throw new Error("consumer-local-db-missing");
-    const reviewProviders = createClosedReviewProviders(auditRoot, evidence.consumer_head);
     env.PATH = `${reviewProviders.ghBin}${pathSeparator}${env.PATH}`;
     env.NODE_OPTIONS = `${env.NODE_OPTIONS} --import=${pathToFileURL(reviewProviders.ghLoader).href}`;
     env.UT_TDD_CLAUDE_BIN = reviewProviders.claudeCommand;
@@ -376,7 +383,7 @@ function verifySmoke(parsed, { now, run }) {
       "--pr", "418", "--head", evidence.consumer_head,
       "--revision", "canary-418-review", "--author-family", "codex"], { status: 1 });
     if (dispatch.child.stdout.trim() !== "review live-dispatch: no_live_claude_workspace")
-      throw new Error("canary-review-dispatch-not-canonical-pending");
+      throw new Error(`canary-review-dispatch-not-canonical-pending:${dispatch.output.slice(-2000)}`);
     const requestDir = join(consumerRoot, ".ut-tdd", "review", "requests");
     const requestFiles = readdirSync(requestDir).filter((name) => /^[a-f0-9]{64}\.json$/.test(name));
     if (requestFiles.length !== 1) throw new Error("canary-review-request-not-unique");
@@ -527,7 +534,8 @@ export function createConsumerPlan(consumerRoot, source) {
 }
 
 export function makeAccessAuditModule(forbiddenPaths, accessLog, processLog) {
-return `import fs from "node:fs";\nimport cp from "node:child_process";\nimport { syncBuiltinESMExports } from "node:module";\nimport path from "node:path";\nconst blocked=${JSON.stringify(forbiddenPaths.map((item) => item.toLowerCase()))};\nconst log=${JSON.stringify(accessLog)};\nconst processLog=${JSON.stringify(processLog)};\nconst allowed=new Set(["node","node.exe","git","git.exe","gh","gh.exe","claude","claude.exe"]);\nconst hit=(value)=>{if(typeof value!=="string" && !Buffer.isBuffer(value)) return false; const p=path.resolve(String(value)).toLowerCase(); return blocked.some((b)=>p===b || p.startsWith(b+path.sep));};\nconst deny=(api)=>function(value,...args){if(hit(value)){fs.appendFileSync(log,JSON.stringify({api,path:String(value)})+"\\n"); const e=new Error("forbidden removed path access"); e.code="ENOENT"; throw e;} return api.call(this,value,...args);};\nfor(const key of ["access","accessSync","existsSync","lstatSync","open","openSync","readFile","readFileSync","realpath","realpathSync","stat","statSync"]) if(typeof fs[key]==="function"){const original=fs[key];const guarded=deny(original);if(typeof original.native==="function")guarded.native=deny(original.native);fs[key]=guarded;}\nfor(const key of ["spawn","spawnSync","execFile","execFileSync","exec","execSync","fork"]){const original=cp[key];cp[key]=function(command,...args){const name=path.basename(String(command)).toLowerCase();const ok=key!=="exec" && key!=="execSync" && allowed.has(name);fs.appendFileSync(processLog,JSON.stringify({api:key,command:String(command),args:Array.isArray(args[0])?args[0]:[],allowed:ok})+"\\n");if(!ok)throw new Error("unapproved child process");return original.call(this,command,...args);};}\nsyncBuiltinESMExports();\n`;
+  const settings = typeof processLog === "string" ? { path: processLog } : processLog;
+  return `import fs from "node:fs";\nimport cp from "node:child_process";\nimport { syncBuiltinESMExports } from "node:module";\nimport path from "node:path";\nconst blocked=${JSON.stringify(forbiddenPaths.map((item) => item.toLowerCase()))};\nconst log=${JSON.stringify(accessLog)};\nconst processLog=${JSON.stringify(settings.path)};\nconst allowed=new Set(["node","node.exe","git","git.exe","gh","gh.exe","claude","claude.exe"]);\nconst providers=${JSON.stringify(settings.providerCommands ?? {})};\nconst closedShim=(api,command,argv,options)=>{if(api!=="spawnSync" || options?.shell!==false || !Array.isArray(argv))return false;if(command===providers.codexProbe)return argv.length===1 && argv[0]==="--version";if(typeof providers.commandProcessor!=="string" || String(command).toLowerCase()!==providers.commandProcessor.toLowerCase() || argv.length!==4 || argv.slice(0,3).join("|")!=="/d|/s|/c" || typeof argv[3]!=="string")return false;const inner=argv[3].slice(1,-1);const tokens=[...inner.matchAll(/"([^"]*)"/g)].map(match=>match[1]);return argv[3]=== '"'+inner+'"' && tokens.length>=2 && tokens[0]===providers.claude && tokens.map(token=>'"'+token+'"').join(" ")===inner && tokens.every(token=>!/[<>!%&|^\\r\\n]/.test(token));};\nconst hit=(value)=>{if(typeof value!=="string" && !Buffer.isBuffer(value)) return false; const p=path.resolve(String(value)).toLowerCase(); return blocked.some((b)=>p===b || p.startsWith(b+path.sep));};\nconst deny=(api)=>function(value,...args){if(hit(value)){fs.appendFileSync(log,JSON.stringify({api,path:String(value)})+"\\n"); const e=new Error("forbidden removed path access"); e.code="ENOENT"; throw e;} return api.call(this,value,...args);};\nfor(const key of ["access","accessSync","existsSync","lstatSync","open","openSync","readFile","readFileSync","realpath","realpathSync","stat","statSync"]) if(typeof fs[key]==="function"){const original=fs[key];const guarded=deny(original);if(typeof original.native==="function")guarded.native=deny(original.native);fs[key]=guarded;}\nfor(const key of ["spawn","spawnSync","execFile","execFileSync","exec","execSync","fork"]){const original=cp[key];cp[key]=function(command,...args){const name=path.basename(String(command)).toLowerCase();const ok=key!=="exec" && key!=="execSync" && (allowed.has(name) || closedShim(key,command,args[0],args[1]));fs.appendFileSync(processLog,JSON.stringify({api:key,command:String(command),args:Array.isArray(args[0])?args[0]:[],allowed:ok})+"\\n");if(!ok)throw new Error("unapproved child process");return original.call(this,command,...args);};}\nsyncBuiltinESMExports();\n`;
 }
 
 export function createClosedReviewProviders(auditRoot, head) {
@@ -537,6 +545,9 @@ export function createClosedReviewProviders(auditRoot, head) {
   const ghExecutable = join(ghBin, process.platform === "win32" ? "gh.exe" : "gh");
   copyFileSync(process.execPath, ghExecutable);
   if (process.platform !== "win32") chmodSync(ghExecutable, 0o755);
+  const codexProbeCommand = join(ghBin, process.platform === "win32" ? "codex.exe" : "codex");
+  copyFileSync(process.execPath, codexProbeCommand);
+  if (process.platform !== "win32") chmodSync(codexProbeCommand, 0o755);
   const ghTrace = join(auditRoot, "closed-gh-argv.jsonl");
   const ghLoader = join(auditRoot, "closed-gh.mjs");
   writeFileSync(ghLoader, `import fs from "node:fs";
@@ -579,7 +590,7 @@ process.stdin.on("end",()=>{
     ? `@echo off\r\nif "%~1"=="--version" (echo claude 0.0.0-canary& exit /b 0)\r\nnode "${claudeHelper}"\r\nexit /b %ERRORLEVEL%\r\n`
     : `#!/bin/sh\nif [ "$1" = "--version" ]; then echo "claude 0.0.0-canary"; exit 0; fi\nexec node "${claudeHelper}"\n`,
   process.platform === "win32" ? "utf8" : { encoding: "utf8", mode: 0o755 });
-  return { ghBin, ghTrace, ghLoader, claudeCommand, claudeMarker };
+  return { ghBin, ghTrace, ghLoader, claudeCommand, claudeMarker, codexProbeCommand };
 }
 
 function writeReviewEnvelope(consumerRoot, requestDigest, request, memoryPath) {

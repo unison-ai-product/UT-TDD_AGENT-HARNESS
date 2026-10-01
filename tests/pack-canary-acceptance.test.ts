@@ -24,7 +24,16 @@ import {
 interface AcceptanceModule {
   CANARY_ASSETS: readonly string[];
   CANARY_TAG: string;
-  makeAccessAuditModule(forbiddenPaths: string[], accessLog: string, processLog: string): string;
+  makeAccessAuditModule(
+    forbiddenPaths: string[],
+    accessLog: string,
+    processLog:
+      | string
+      | {
+          path: string;
+          providerCommands: { claude: string; codexProbe: string; commandProcessor?: string };
+        },
+  ): string;
   buildInstallerInvocation(releaseDirectory: string, anchorDigest: string, tag?: string): string[];
   canaryAssetsForTag(tag: string): readonly string[];
   createConsumerPlan(consumerRoot: string, source: string): void;
@@ -38,6 +47,7 @@ interface AcceptanceModule {
     ghLoader: string;
     claudeCommand: string;
     claudeMarker: string;
+    codexProbeCommand: string;
   };
   parsePublishRecord(
     value: unknown,
@@ -331,6 +341,65 @@ describe("manual canary acceptance publish-record boundary", () => {
     );
     expect({ status: child.status, stderr: child.stderr }).toEqual({ status: 0, stderr: "" });
     expect(readFileSync(accessLog, "utf8").trim().split("\n")).toHaveLength(2);
+  });
+
+  it("U-ST-PACKCANARY-014: only the closed provider shim and exact Codex probe are allowed", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-canary-audit-shim-"));
+    tempRoots.push(root);
+    const providers = createClosedReviewProviders(root, "a".repeat(40));
+    const audit = join(root, "audit.mjs");
+    const trace = join(root, "process.jsonl");
+    writeFileSync(
+      audit,
+      makeAccessAuditModule([], join(root, "access.jsonl"), {
+        path: trace,
+        providerCommands: {
+          claude: providers.claudeCommand,
+          codexProbe: providers.codexProbeCommand,
+          commandProcessor: process.env.ComSpec,
+        },
+      }),
+    );
+    const child = spawnSync(
+      process.execPath,
+      [
+        "--import",
+        pathToFileURL(audit).href,
+        "--input-type=module",
+        "-e",
+        `
+      import { spawnSync } from "node:child_process";
+      const codex = ${JSON.stringify(providers.codexProbeCommand)};
+      if (spawnSync(codex, ["--version"], {shell:false}).status !== 0) throw new Error("closed probe failed");
+      const deny = (command, argv) => {
+        try { spawnSync(command, argv, {shell:false}); throw new Error("deny missing"); }
+        catch (error) { if (error.message !== "unapproved child process") throw error; }
+      };
+      deny(codex, ["--help"]);
+      if (process.platform === "win32") {
+        const command = ${JSON.stringify(process.env.ComSpec)};
+        const shim = ${JSON.stringify(providers.claudeCommand)};
+        const payload = '""' + shim + '" "--version""';
+        if (spawnSync(command, ["/d", "/s", "/c", payload], {shell:false,windowsVerbatimArguments:true}).status !== 0)
+          throw new Error("closed shim failed");
+        deny(command, ["/d", "/s", "/c", payload + " & echo unapproved"]);
+        deny(command, ["/d", "/s", "/c", '""foreign.cmd" "--version""']);
+      }
+    `,
+      ],
+      { cwd: root, encoding: "utf8", windowsHide: true },
+    );
+    expect({ status: child.status, stderr: child.stderr }).toEqual({ status: 0, stderr: "" });
+    const calls = readFileSync(trace, "utf8")
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line));
+    expect(calls.filter((call) => call.allowed === true)).toHaveLength(
+      process.platform === "win32" ? 2 : 1,
+    );
+    expect(calls.filter((call) => call.allowed === false)).toHaveLength(
+      process.platform === "win32" ? 3 : 1,
+    );
   });
 
   it("U-ST-PACKCANARY-009: authoring input is derived from the shipped template", () => {
