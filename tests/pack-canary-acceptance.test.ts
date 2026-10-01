@@ -452,6 +452,14 @@ describe("manual canary acceptance publish-record boundary", () => {
       setup_exit_code: 0,
       consumer_anchor_digest: anchor,
       consumer_root: realpathSync.native(fixture.consumerRoot),
+      authoring_template: {
+        asset_name: "v0.0.0-canary.0.tar.gz",
+        path: "docs/templates/plan/design/template.md",
+        sha256: sha(fixture.planTemplate),
+      },
+      authoring_input_sha256: sha(
+        readFileSync(join(fixture.consumerRoot, "canary-plan-draft.json"), "utf8"),
+      ),
       wrong_anchor_denial: {
         typed_reason: "consumer_runtime_anchor_mismatch",
         consumer_write_count: 0,
