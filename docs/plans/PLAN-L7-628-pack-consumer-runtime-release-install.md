@@ -76,18 +76,18 @@ status: confirmed
 github_issue_id: 418
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:794c57b3a5d655168b4b81816d101e02
-  command_id: plan-revise:issue-807:projection-tail-rechain:p628:r12:3dbb4bbee2a3
-  admitted_at: 2026-10-01T11:25:34.687Z
-  source_digest: sha256:6db6881e6d3a8f53a611c091426aa81eee4ba614065b3facf76d47af57c4bbf6
-  decision_digest: sha256:3b174ed5d02eb4077e63abfca33d1fe380e150721e9fb61dd2d4936cfbb9c158
-  receipt_digest: sha256:b7c3ebef064e77d81be97dde58c2f8aac41c7e0480470fa0d5ffa6cf1027dad7
+  receipt_id: certificate:2c16cb9810066f9f12e51a65e3d58e3f
+  command_id: plan-revise:issue-807:projection-tail-rechain:p628:r13:dcdccd30df8a
+  admitted_at: 2026-10-01T11:28:56.372Z
+  source_digest: sha256:3150182ce447bbeb69eba5bb792f45897d80b54eae3f4c66c4df1e87eaf2e142
+  decision_digest: sha256:03e923732f1c827416e2cc6ed5332e50ee8a3142304f9534f8b4e1587625ad0b
+  receipt_digest: sha256:8f917ebf4847f0cacfe55ec6866d48bed5a655ac8dc812a7ca630110d652744e
   binding:
     path: docs/plans/PLAN-L7-628-pack-consumer-runtime-release-install.md
     plan_id: PLAN-L7-628-pack-consumer-runtime-release-install
     asset_id: plan:cd11a1885b1c948d89519002a2cec009
-    revision: 12
-    content_digest: sha256:6db6881e6d3a8f53a611c091426aa81eee4ba614065b3facf76d47af57c4bbf6
+    revision: 13
+    content_digest: sha256:3150182ce447bbeb69eba5bb792f45897d80b54eae3f4c66c4df1e87eaf2e142
   route:
     signal: feature_addition
     mode: add-feature
@@ -105,12 +105,12 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-628-pack-consumer-runtime-release-install
-    target_revision: 12
+    target_revision: 13
     phase: forward_merge
   escape_reason: "Issue #813 projection-tail correction: reissue the bounded Issue
-    #807 PLAN-L7-628 contract from the actual main r11 base onto the post-#812
-    tracked receipt tail; preserve the already reviewed pair scope and defer
-    implementation merge until canary.3."
+    #807 PLAN-L7-628 revision 13 after revision 12 on the post-#812 tracked
+    receipt tail; preserve the independent production-tar readback oracle and
+    defer implementation merge until canary.3."
 ---
 
 # PLAN-L7-628: Pack Release から consumer runtime を有効化する producer / installer
@@ -231,6 +231,8 @@ rev 11: PR #752 の Sol r1 review を受け、§5 手順 1 の `consumer_runtime
 
 rev 12: Issue #807 / control comment 5929262567 に基づく docs-only pair-freeze。tar stage のみ C1 Git object reader →既存 resolver/materializer の bytes に切り替える契約を追加する。clean source snapshot は Node/npm install と runtime generation に維持し、5 asset 集合、consumer identity/schema、runtime bytes、canary.2 を変更しない。実装PRは作成・並行可能だが、merge は v0.2.0-canary.3 公開後。候補 oracle 013 は production tar readback を固定する。一般的な全 entry producer self-validation guard は新しい failure boundary のため別 slice とする。
 
+rev 13: root検収で CANDIDATE-U-PACKRT-013 の期待 tuple を materializer単独に依存させないよう訂正し、C1 Git treeから独立導出した path/mode/blob bytes を主oracle、resolver/materializerをcross-checkとした。tar modeは展開先filesystemではなくarchive headerから読む。PR-1既存行のcanary.3条件は変更せず、Issue #807の実装境界を専用PR行へ分離した。
+
 ## 3. Release asset 契約
 
 canary.2 以降の Pack Release は、次の **宣言された asset 集合と exact に一致** する。欠落・余剰・名前違いは
@@ -288,7 +290,7 @@ consumer 固有の値 (`consumer_root`、`runtime_root`、`operation_id`、`atte
    - `git diff --name-only C1 C2` の全 path が `release/` 配下である。
    **Issue #807 tar boundary (scheme A)**: `<tag>.tar.gz` の artifact entries は C1 の Git tree を `createLocalGitObjectReader()` で読み、既存 `resolveReleaseArtifacts` → `materializeReleaseArtifacts` の projection と output bytes/modes を tar stage に使う。`package.json` の既存 transform と `.ut-tdd/teams/example-review-team.yaml` の既存 `projectTrackedTeamBlob` projection はそのまま適用し、team projection output bytes は現行 tar と同一に保つ。通常の distribution allowlist に `release/manifest.yaml` は入らず、materializer の `CONTROL_MANIFEST` 除外は artifact 集合を変えない。新しい artifact、path、identity、schema、consumer形式を足さない。
    公開 v2 manifest の正系 mode は `100644` / `100755` のみ (`PUBLICATION_MODES`); tar readback は path/content とこの mode 境界 (executable bit を含む) を照合する。汎用 resolver/materializer が `120000` を扱えることを public tar の正系保証へ昇格させない。`release/manifest.yaml` の symlink artifact は既存 v2 parse/publication admission で拒否する負系を維持する。
-   `createTaggedSourceSnapshot` は引き続き Node generation の `npm ci` / build 入力として使う。tar stage だけを Git object output に切り替え、runtime build snapshot、source revision、toolchain、5 asset 集合と同一 producer 内 identity を変えない。`CANDIDATE-U-PACKRT-013` は production package の tar を実展開し、materializer expected tuple set と全 entry の path/mode/content を照合する。Windows fixture は `.gitattributes: *.ps1 text eol=crlf` と `core.autocrlf=true` を明示し、旧 checkout-copy mutation が CRLF checkout bytes で oracle を Red にする。
+   `createTaggedSourceSnapshot` は引き続き Node generation の `npm ci` / build 入力として使う。tar stage だけを Git object output に切り替え、runtime build snapshot、source revision、toolchain、5 asset 集合と同一 producer 内 identity を変えない。`CANDIDATE-U-PACKRT-013` は production package の tar header / payload を readback し、C1 Git tree とclean-planから独立導出した全 entry `(path, mode, bytes)` tuple set と照合する。path/modeは `git ls-tree`、未変換bytesは `git cat-file blob` から得て、team raw-byte projection / `package.json` の既存transform契約も別 assertion で固定する。`resolveReleaseArtifacts` → `materializeReleaseArtifacts` はcross-checkとし、唯一のexpected oracleにしない。Windows fixture は `.gitattributes: *.ps1 text eol=crlf` と `core.autocrlf=true` を明示し、tar modeはarchive headerから読む。旧 checkout-copy mutation はcheckout CRLF bytesでRedになる。
    一般的な producer 全 entry self-validation guard は今回追加しない。#807 は tar bytes source boundary の狭い修理であり、全 producer path に新 guard / failure behavior を増やすのは追加 authority と別の契約範囲になる。
 
 2. compiled ESM と receipt は既存の `buildNodeGeneration({ candidateRevision: C1 })` (`src/runtime/node-bootstrap.ts`) で生成する。
@@ -374,7 +376,8 @@ node <release-dir>/<tag>.ut-tdd.mjs setup --solo --consumer-runtime-release <rel
 | PR | 論点 | 前提 |
 | --- | --- | --- |
 | PR-0 (本 PR) | 本 PLAN + `PLAN-REVERSE-628` + pair test-design の pair-freeze (docs のみ) | なし |
-| PR-1 | producer: 5 asset 出力、schema v1、user home 配下 path の fail-close、自己検証、digest 出力。Issue #807 の tar stage は C1 Git object materializer bytes を使う | PR-0 の非著者 PASS。実装PRの merge は v0.2.0-canary.3 公開後 |
+| PR-807 | Issue #807 の tar stage を C1 Git object reader →既存 resolver/materializer bytesへ限定して切り替える。CANDIDATE-U-PACKRT-013 の実tar readbackが担当 | 契約PR-0の非著者 PASS。開発は並行可能、実装PRのmergeは v0.2.0-canary.3 公開後 |
+| PR-1 | producer: `distribution package` の 5 asset 出力、schema v1、user home 配下 path の fail-close、自己検証、digest 出力 | PR-0 の非著者 PASS |
 | PR-2 | installer: `setup --consumer-runtime-release`、sha256 検証、自己 digest 照合、identity 導出、冪等性 | PR-1 merge (asset 形式が確定していること) |
 | (531) | E2E: `PLAN-L7-531` の入力契約を本 PLAN の asset 集合へ改訂し、clean fixture の Windows / Linux E2E を実装 | PR-2 merge |
 
