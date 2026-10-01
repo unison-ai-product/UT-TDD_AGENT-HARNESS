@@ -83,8 +83,8 @@ interface AcceptanceModule {
   ): void;
 }
 
-// @ts-expect-error: standalone .mjs intentionally has no TypeScript declaration; the boundary is typed below.
-const acceptance = (await import("../scripts/pack-canary-acceptance.mjs")) as AcceptanceModule;
+const runnerSpecifier = "../scripts/pack-canary-acceptance.mjs";
+const acceptance = (await import(runnerSpecifier)) as AcceptanceModule;
 const {
   buildInstallerInvocation,
   CANARY_ASSETS,
