@@ -1,10 +1,10 @@
 ---
 plan_id: PLAN-L7-454-runtime-token-telemetry-ingestion
-title: "PLAN-L7-454 (troubleshoot): model_runs へ実測 token/cost telemetry を自動投入 — rebuild 経路の projectTokenUsage 欠落是正 + repo スコープ ingest (issue #82)"
+title: "PLAN-L7-454 (troubleshoot): model_runs へ実測 token/cost telemetry を自動投入 —
+  rebuild 経路の projectTokenUsage 欠落是正 + repo スコープ ingest (issue #82)"
 kind: troubleshoot
 layer: L7
-drive: agent
-status: confirmed
+drive: db
 route_signal: incident
 route_mode: incident
 created: 2026-07-21
@@ -12,16 +12,18 @@ updated: 2026-07-21
 owner: PM / PO
 parent_design: docs/design/harness/L5-detailed-design/physical-data.md
 backprop_decision: not_required
-backprop_decision_reason: "PLAN-L7-57 (token-tracker) / FR-L1-38 で設計済みの実測 telemetry 取得層が、on-disk harness.db の正規再構築経路 (rebuildHarnessDb) に接続されていない運用欠落の是正。新規 L0/L1 要件ではない。"
+backprop_decision_reason: PLAN-L7-57 (token-tracker) / FR-L1-38 で設計済みの実測
+  telemetry 取得層が、on-disk harness.db の正規再構築経路 (rebuildHarnessDb)
+  に接続されていない運用欠落の是正。新規 L0/L1 要件ではない。
 agent_slots:
   - role: aim
-    slot_label: "AIM — incident route と telemetry ownership 境界の承認"
+    slot_label: AIM — incident route と telemetry ownership 境界の承認
   - role: se
-    slot_label: "SE — rebuildHarnessDb への repo スコープ token ingest 接続"
+    slot_label: SE — rebuildHarnessDb への repo スコープ token ingest 接続
   - role: qa
-    slot_label: "QA — 実測行 provenance / repo スコープ filter の regression"
+    slot_label: QA — 実測行 provenance / repo スコープ filter の regression
   - role: tl
-    slot_label: "TL — 全量 ingest 非採択 (repo スコープ) の設計判断レビュー"
+    slot_label: TL — 全量 ingest 非採択 (repo スコープ) の設計判断レビュー
 generates:
   - artifact_path: docs/plans/PLAN-L7-454-runtime-token-telemetry-ingestion.md
     artifact_type: markdown_doc
@@ -42,22 +44,67 @@ dependencies:
 review_evidence:
   - reviewer: blind-reviewer
     review_kind: cross_agent
-    reviewed_at: "2026-07-21T16:15:00+09:00"
-    tests_green_at: "2026-07-21T16:05:00+09:00"
+    reviewed_at: 2026-07-21T16:15:00+09:00
+    tests_green_at: 2026-07-21T16:05:00+09:00
     verdict: approve
     worker_model: claude-sonnet-5
     reviewer_model: gpt-5.6-sol
-    scope: "worktree wt-issue-82 変更一式 (token-tracker repo スコープ loader、rebuildHarnessDb token-telemetry 接続、CLI 統計出力、regression)。初回 blind review FLAG 2 点 (slug 非単射衝突 / POSIX case 誤同一視、reviewer が実反例を構築) → per-file cwd 帰属検証 + win32 限定 case-fold へ是正、負例 3 件追加 → focused 再レビューで PASS (reviewer が実装と負例 oracle を直接確認)。"
+    scope: worktree wt-issue-82 変更一式 (token-tracker repo スコープ
+      loader、rebuildHarnessDb token-telemetry 接続、CLI 統計出力、regression)。初回 blind
+      review FLAG 2 点 (slug 非単射衝突 / POSIX case 誤同一視、reviewer が実反例を構築) → per-file
+      cwd 帰属検証 + win32 限定 case-fold へ是正、負例 3 件追加 → focused 再レビューで PASS (reviewer
+      が実装と負例 oracle を直接確認)。
     green_commands:
       - kind: unit_test
-        command: "UT_TDD_TEST_EXECUTION_ROOT=$PWD UT_TDD_TEST_FENCE_ROOT=$PWD UT_TDD_HEAD_SNAPSHOT_ROOT=<mktemp -d detached copy> bunx vitest run tests/token-tracker.test.ts → 35/35 green (orchestrator 再実測含む)。tests/projection-writer.test.ts -t 'PLAN-L7-454' → 2/2 green。typecheck 0 / biome clean / plan lint OK (FLAG 是正記録参照)"
+        command: UT_TDD_TEST_EXECUTION_ROOT=$PWD UT_TDD_TEST_FENCE_ROOT=$PWD
+          UT_TDD_HEAD_SNAPSHOT_ROOT=<mktemp -d detached copy> bunx vitest run
+          tests/token-tracker.test.ts → 35/35 green (orchestrator
+          再実測含む)。tests/projection-writer.test.ts -t 'PLAN-L7-454' → 2/2
+          green。typecheck 0 / biome clean / plan lint OK (FLAG 是正記録参照)
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-07-21T16:05:00+09:00"
+        completed_at: 2026-07-21T16:05:00+09:00
         evidence_path: tests/token-tracker.test.ts
-        output_digest: "sha256:759e37ece871eed4937b47bc284fd4a5a9f826803b3e53c5d3197bdd8ef8a935"
+        output_digest: sha256:759e37ece871eed4937b47bc284fd4a5a9f826803b3e53c5d3197bdd8ef8a935
         anchor_commit: 69f1088f9a96c2f07549e814de6fe968e5a23627
+status: confirmed
+github_issue_id: 789
+admission_receipt:
+  schema_version: v2
+  receipt_id: certificate:9b6066d9a0f334c3004a14ca3d8707a6
+  command_id: plan-revise:issue-789:legacy-454:2
+  admitted_at: 2026-10-05T10:29:58.700Z
+  source_digest: sha256:850f003cd0bba3ebe99f9b46efc2657d8a5fd36fc3797d97815212ad073236ab
+  decision_digest: sha256:b50c5a211fd974c9de366b8dbdb300caf35ebe6e5806dbf57371508bf41ec9ae
+  receipt_digest: sha256:a481860c8ca1a40622896551cabfc5a82bce2e246add7891fc17671e12cebaea
+  binding:
+    path: docs/plans/PLAN-L7-454-runtime-token-telemetry-ingestion.md
+    plan_id: PLAN-L7-454-runtime-token-telemetry-ingestion
+    asset_id: plan:legacy:7e00bf799a5f194ec7e323bbfbd3e7a21859e251c0e73a9f46fda12cb870c54b
+    revision: 2
+    content_digest: sha256:850f003cd0bba3ebe99f9b46efc2657d8a5fd36fc3797d97815212ad073236ab
+  route:
+    signal: incident
+    mode: incident
+  issue:
+    provider: github
+    issue_id: 789
+    episode_id: E4-789-token-ingest-retirement
+    projection_state: unprojected
+  origin:
+    plan_id: PLAN-L6-789-token-ingest-retirement
+    revision: 1
+    digest: sha256:8ef8158192aceb2c1fe603f2006bf4adbdb32f0ad715e68d85053a6e7666e9cc
+  transition:
+    direction: design_to_implementation
+    implementation_disposition: none
+  reentry:
+    target_plan_id: PLAN-L7-454-runtime-token-telemetry-ingestion
+    target_revision: 2
+    phase: forward_merge
+  escape_reason: "Issue #789: PLAN-L6-789 による rebuild 経路 token ingest
+    の非適用注記を入れる。内容変更は注記の追記だけ。"
 ---
 
 # PLAN-L7-454 (troubleshoot): model_runs へ実測 token/cost telemetry を自動投入
@@ -265,3 +312,12 @@ Step 3 regression の blind review (gpt-5.6-sol) が実反例 2 件で FLAG を�
   復帰したため本変更のロジック自体の遅さではないと判断)。hybrid 環境
   (複数ランタイム同時実行が常態) では I/O 競合時に rebuild が一時的に遅く
   なりうる点は運用上の留意点として残す。
+
+## 非適用注記 (2026-10-05、PLAN-L6-789)
+
+`PLAN-L6-789-token-ingest-retirement` (Issue #789、PO 承認 2026-09-30) により、本 PLAN の次の部分は非適用になる。formal supersede は token ingest の起点契約である `PLAN-L7-57` の 1 件だけで、本 PLAN は supersede 対象にしない (PLAN-L6-789 §3.1-3.3)。
+
+- Step 2 の rebuild 経路への repo スコープ ingest 接続 (`projectRepoScopedTokenUsage`)。
+- Step 3 (c) の「rebuild 後の model_runs に実測行が存在する」regression。
+
+Step 1 の `loadRepoScopedRuntimeSessionUsage` は、`ut-tdd telemetry scan` の表示専用経路 (DB 書き込みなし) として継承する。status は変えない。
