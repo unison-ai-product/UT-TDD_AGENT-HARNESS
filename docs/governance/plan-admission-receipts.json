@@ -6240,6 +6240,54 @@
         "revision": 11,
         "content_digest": "sha256:691775ce8aa44fc963f8546e9acaba04d40984c50ab0d6d001ff7e508366fb6a"
       }
+    },
+    {
+      "sequence": 391,
+      "previous_record_digest": "sha256:e3860f4ae2b5894cc691226e87da87702d42b643b61d9685376e19ab93167e03",
+      "record_digest": "sha256:a7a9b166437983694223385f4e553a0e631abe3fecc0d804859ade8d9a344f34",
+      "command_id": "plan-draft:issue-815:consumer-report-command-and-intake:rechain-1",
+      "receipt_id": "certificate:3668ea3147d11f25cd3e1f6fe7581325",
+      "receipt_digest": "sha256:c1d89c79652fcbd04f446cfd48629706f4583bf713fe7dbf7ff50d179a068b48",
+      "decision_digest": "sha256:0cc07de1792cf023482e34ccf12b0aca4256f1f80d78e1af9a206a761ce49d97",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-107-consumer-report-command-and-intake.md",
+        "plan_id": "PLAN-L6-107-consumer-report-command-and-intake",
+        "asset_id": "plan:3668ea3147d11f25cd3e1f6fe7581325",
+        "revision": 1,
+        "content_digest": "sha256:825929ad6b36a6b5e6bf9b7c1020ba1f296381d792fbca6a068107f3ce9b869c"
+      }
+    },
+    {
+      "sequence": 392,
+      "previous_record_digest": "sha256:a7a9b166437983694223385f4e553a0e631abe3fecc0d804859ade8d9a344f34",
+      "record_digest": "sha256:c1790d28f8b75ee8a9e5639598cc312d2d559998ba92b7119e5e977774f40ac9",
+      "command_id": "plan-revise:issue-815:report-command:rechain-1:sol-r1-fix:r2:ab3156798eb4",
+      "receipt_id": "certificate:5027af2cff3ed0b3a0cbb40a207a7c41",
+      "receipt_digest": "sha256:1ec4146567be5e1b332629582fa6f8c7b8dd8bfc03fea9f466253d52771d208a",
+      "decision_digest": "sha256:db7574230bd5a003fd3221c5186c9cd215746c3812d41a31a8fc8f0e233a1cbe",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-107-consumer-report-command-and-intake.md",
+        "plan_id": "PLAN-L6-107-consumer-report-command-and-intake",
+        "asset_id": "plan:3668ea3147d11f25cd3e1f6fe7581325",
+        "revision": 2,
+        "content_digest": "sha256:09370048e695b988f60357b931a3e05185faa41490433a6a1882c78df5c2b989"
+      }
+    },
+    {
+      "sequence": 393,
+      "previous_record_digest": "sha256:c1790d28f8b75ee8a9e5639598cc312d2d559998ba92b7119e5e977774f40ac9",
+      "record_digest": "sha256:66ad0f769682b0af85425391a8ea9ec29c0fe523e32c53111e7e7dead5786b30",
+      "command_id": "plan-revise:issue-815:report-command:rechain-1:sol-r2-fix:r3:9d762556a138",
+      "receipt_id": "certificate:bec78c3552539be4f794137d4ca8715f",
+      "receipt_digest": "sha256:8b616265a67ed42820ff7f9c3c38ae80c5335caed5cdb49a2b4ca81446e2e44d",
+      "decision_digest": "sha256:2f58615a0098789324583f037c6d4b1e361890bb0c19f8845ebe5735c0df56ec",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-107-consumer-report-command-and-intake.md",
+        "plan_id": "PLAN-L6-107-consumer-report-command-and-intake",
+        "asset_id": "plan:3668ea3147d11f25cd3e1f6fe7581325",
+        "revision": 3,
+        "content_digest": "sha256:f1f0fb15447f6fc34c6b8fd9b9a1f8b023770fe25d4bd249762e504b4fab3cce"
+      }
     }
   ]
 }
