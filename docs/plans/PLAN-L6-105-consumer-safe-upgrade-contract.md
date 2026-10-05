@@ -46,21 +46,22 @@ dependencies:
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/364
 review_evidence: []
 status: draft
+sub_doc: function-spec
 github_issue_id: 814
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:f872153b207a89032edc1a33f8ac7bf7
-  command_id: plan-revise:issue-814:safe-upgrade:rechain:sol-r2-fix:r3:a77c02da6f65
-  admitted_at: 2026-10-05T01:55:59.566Z
-  source_digest: sha256:cbf4a130044faa7201151435796b6047b9a3aed26c2b01d5c4ef59c03fc6dc47
-  decision_digest: sha256:319a93f5f1de1944a54b873206e089a35f2366ab0666ec8253aa9a97f2ca1a54
-  receipt_digest: sha256:a2d007e6e19545ceea1689221fe63b0c51b25cd6d44ada4a8a9a2e9f34122aad
+  receipt_id: certificate:2323942ab92cf0823dc6b24aa61da3e1
+  command_id: plan-revise:issue-832:restore-sub-doc:PLAN-L6-1:r4:fd602b4a19cf
+  admitted_at: 2026-10-05T05:19:16.840Z
+  source_digest: sha256:d0a63b288bb8376831e7bcab45160f5afb162fe5af752175f2c4df89e5b66cb3
+  decision_digest: sha256:3ea6f32db019d44852caa543805dca81252fb409504a7c4bbddb7b45341aba7a
+  receipt_digest: sha256:2d32f022a3f61268ccfe94961fd5c3ccf2c4db281325fa60f884fe79ba936598
   binding:
     path: docs/plans/PLAN-L6-105-consumer-safe-upgrade-contract.md
     plan_id: PLAN-L6-105-consumer-safe-upgrade-contract
     asset_id: plan:d3f0150857538128d3a0a791ff04b1be
-    revision: 3
-    content_digest: sha256:cbf4a130044faa7201151435796b6047b9a3aed26c2b01d5c4ef59c03fc6dc47
+    revision: 4
+    content_digest: sha256:d0a63b288bb8376831e7bcab45160f5afb162fe5af752175f2c4df89e5b66cb3
   route:
     signal: feature_addition
     mode: add-feature
@@ -75,11 +76,10 @@ admission_receipt:
     digest: sha256:604fcda0ef7e101ecd8df79e682704d0475dc9be62f6afb077916114f192df52
   reentry:
     target_plan_id: PLAN-L6-105-consumer-safe-upgrade-contract
-    target_revision: 3
+    target_revision: 4
     phase: forward_merge
-  escape_reason: "Issue 814 (親 364): PR #818 Sol r2 FLAG 2 件の是正 (backup の
-    committed は全 consumer 書込の成功後にだけ公開する順序の統一と crash fixture、006 の skill assets
-    conflict fixture)。契約の方式 D1-D5 は変えない"
+  escape_reason: "Issue 832: revise 時に manifest へ sub_doc を渡さなかったため frontmatter
+    から落ちた sub_doc: function-spec を復旧する (本文・方式は不変)"
 ---
 
 # PLAN-L6-105: consumer の安全な upgrade 契約
