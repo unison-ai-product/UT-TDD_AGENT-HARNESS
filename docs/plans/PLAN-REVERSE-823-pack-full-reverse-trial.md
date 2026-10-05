@@ -39,18 +39,18 @@ status: draft
 github_issue_id: 823
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:6828b4cdd8c85cf9bdee337fe0dee88d
-  command_id: plan-revise:issue-823:pack-full-reverse-trial:rechain-1:sol-r1-fix:r2:c18dca7889f6
-  admitted_at: 2026-10-05T05:58:39.893Z
-  source_digest: sha256:bf3e878b8e19115c45b01bd200b7a01e5c2347d4991d9f97f02b47814b270c49
-  decision_digest: sha256:09faa37a2bf308eda0d5ad4c955be1963c30db06da7373bd7a9e4e1198ea35cb
-  receipt_digest: sha256:f63680d6829e70d55082a27e3e3d9a1d5ab2934117373646c0225d6ca112ff78
+  receipt_id: certificate:617dfe3fe142aeddf4a87a6ec3010827
+  command_id: plan-revise:issue-823:pack-full-reverse-trial:rechain-1:sol-r2-fix:r3:40178d31bfdd
+  admitted_at: 2026-10-05T05:58:49.282Z
+  source_digest: sha256:e88b373fcae0dca96b045b6c3abd7285ed67f00ccc778066f563909aac1de3e8
+  decision_digest: sha256:e9b37a4a0eef943830be450a9aab36fc005a8ec2ac2cbf690340c7f1b2dd152c
+  receipt_digest: sha256:d0b3bb50de2a1cb49021a212317a9f02ba12156484e0713a1d5d2af3f0caef71
   binding:
     path: docs/plans/PLAN-REVERSE-823-pack-full-reverse-trial.md
     plan_id: PLAN-REVERSE-823-pack-full-reverse-trial
     asset_id: plan:17005d81c24cbdca71cced133ed6d123
-    revision: 2
-    content_digest: sha256:bf3e878b8e19115c45b01bd200b7a01e5c2347d4991d9f97f02b47814b270c49
+    revision: 3
+    content_digest: sha256:e88b373fcae0dca96b045b6c3abd7285ed67f00ccc778066f563909aac1de3e8
   route:
     signal: reverse
     mode: reverse
@@ -68,11 +68,11 @@ admission_receipt:
     implementation_disposition: preserved
   reentry:
     target_plan_id: PLAN-REVERSE-823-pack-full-reverse-trial
-    target_revision: 2
+    target_revision: 3
     phase: forward_merge
-  escape_reason: "Issue 823: PR #826 Sol r1 FLAG の是正 (統合役の入力を凍結 read-only 入力
-    frozen/ として定義、採点の判定順・recall 式・oracle_only・ゼロ分母を定義、token 上限を実行中に集計・停止する
-    supervisor と計測不能時の fail-close を追加)。盲検・全量・族分離の方式は変えない"
+  escape_reason: "Issue 823: PR #826 Sol r2 FLAG の是正 (監査規則を役別の読取 allowlist
+    に一致させ、採点結果を frozen/scoring/ に凍結して R4 の起動入力にする。Codex 採点は実行中の usage
+    計測を起動条件とし、停止 margin と境界試験を追加)。方式は変えない"
 ---
 
 # PLAN-REVERSE-823: Pack 全量の blind Reverse 試行
@@ -133,10 +133,18 @@ PLAN ID の引用は 319 ファイル・2148 箇所、`docs/design/` への言�
 - **executor に許す tool**: `Read` / `Grep` / `Glob` と、`out/<shard_id>/` への `Write` だけ。
   `Bash` / `WebFetch` / `WebSearch` / MCP / `Agent` の使用は、その shard の run を無効とする。
   GitHub 上の source repo は web 経由で読めてしまうため、web 系 tool も漏れの経路として扱う。
-- **監査規則**: Read / Grep / Glob の対象 path を正規化する。`pack/` の外を指す path、
-  `docs/design`・`docs/plans`・`docs/test-design` を含む path、`C:/dev/UT-TDD-agent-harness` 配下の path が
-  1 件でもあれば、その shard の run は無効。コメントや文字列に path が現れるのは違反ではない
-  (判定対象は tool の入力 path だけ)。
+- **監査規則**: Read / Grep / Glob の対象 path を実体 path に正規化し、そのセッションの役の**読取 allowlist** と照合する。
+  allowlist の外を指す path が 1 件でもあれば、そのセッションの run は無効。役ごとの読取 allowlist は次の閉じた集合で、
+  起動時に path guard へ渡すものと同一とする (§D1 の profile 2)。
+  | 役 | 読取 allowlist |
+  |---|---|
+  | executor (R0〜R2) | `pack/` |
+  | 統合役 (R2 統合) | `pack/`、`frozen/shards/`、`frozen/import-graph.json` |
+  | R3a | 統合役の allowlist + `frozen/system/` |
+  | R4 | R3a の allowlist + `frozen/scoring/` |
+  どの役でも、`docs/design`・`docs/plans`・`docs/test-design` を含む path と `C:/dev/UT-TDD-agent-harness` 配下の path は
+  allowlist に入らない。コメントや文字列に path が現れるのは違反ではない (判定対象は tool の入力 path だけ)。
+  照合役 (R3b、Codex Sol) は正解を読む側なので、この blind 監査の対象外とする (§D4)。
 - **起動経路と前提 PR**: 正規 wrapper (`ut-tdd claude`) は呼出元の cwd を子プロセスへ継承するので、`pack/` を cwd にした起動自体は
   今のままでできる (`src/cli/delegation.ts:184` / `:212`、`src/feedback/repository-root.ts:32`)。ただし wrapper には tool を閉じる
   汎用オプションが無く (`src/cli/delegation.ts:307`。既存の `--allowedTools` は review verdict 用の `Edit(path)` 追加に限る、`:491`)、
@@ -193,14 +201,16 @@ R0 網羅率の定義: ファイル f が「読まれた」とは、f に対す�
 | R3a | Opus (tl) | R2 の出力 | `intent-hypotheses.jsonl`: なぜその構造なのかの仮説。blind のまま作る |
 | R3b | Codex Sol (qa) | 照合先 docs/design、Pack、R1〜R3a の出力 | `findings.jsonl` (§D6)、`metrics.json` |
 | R3 検証 | PO | `intent-hypotheses` と採点サマリ | 採否の記録 (本 PLAN の R3 節) |
-| R4 | Opus (tl) | `findings.jsonl` | drift ごとの routing 先 (設計改訂 / 修正チケット / gap-only)。`missing_pair_artifacts` |
+| R4 | Opus (tl) | `frozen/scoring/` の `findings.jsonl` と `metrics.json` | drift ごとの routing 先 (設計改訂 / 修正チケット / gap-only)。`missing_pair_artifacts` |
 
 **統合役の凍結入力**: 全 shard の R2 が終わり、各 shard の監査が valid になった時点で、作業場所のスクリプトが
 `out/<shard_id>/` の `r0-evidence.json` / `claims.jsonl` / `as-is.md` / `as-is-test.md` を `frozen/shards/<shard_id>/` へ複写する。
 同じスクリプトが Pack だけから import graph を抽出して `frozen/import-graph.json` に書く。`frozen/` の全ファイルの sha256 を
 `frozen_inputs_digest` (inventory_digest と同じ形) として `run-manifest.json` に記録し、以後は書き換えない。統合役の読取 allowlist は
 凍結 Pack と `frozen/` だけで、監査は `frozen/` 外の生成物 (`out/`・`.ut-tdd/`) の読取を違反とする。R3a と R4 は、統合役自身の出力
-(`out/_system/`) を同じ手順で `frozen/system/` に凍結してから読む。
+(`out/_system/`) を同じ手順で `frozen/system/` に凍結してから読む。R4 は、R3b の出力 (`findings.jsonl`・`metrics.json`) を
+同じ手順で `frozen/scoring/` に凍結し、その digest を `scoring_digest` として `run-manifest.json` に記録してから起動する。
+R4 の起動入力は `frozen_inputs_digest` と `scoring_digest` で特定し、凍結後に採点結果を書き換えない。
 
 統合パスを工程の中心に置く。shard 単体では見えないサブシステム間の契約と全体方針の復元率を、system 階層の指標として別に出す (§D5)。
 executor はテストを実行しない (静的な読み取りだけ)。Pack 内には docs/design を読むテストがあり、Pack では前提が欠けるため。
@@ -313,12 +323,19 @@ routing したずれは、チケット (Issue) の本文に該当 record の JSO
 - **実行中の集計と停止 (supervisor)**: 各 provider process は作業場所の supervisor スクリプトが子プロセスとして起動する。
   Claude 側は隔離実行 profile の stream-json 出力 (#825) から message ごとの usage を読み、shard と run の累計を更新する。
   累計が上限に達したら、supervisor が provider の process tree を停止し (Windows は `taskkill /T /F`、Linux は process group への
-  SIGKILL)、その shard を `aborted_budget` と記録する。Codex の採点は usage を逐次取得できる保証が無いため、照合先 claim を
-  一定数ずつの batch に分けて batch ごとに実行し、batch 終了時の usage で累計を更新して、次の batch を始める前に上限を判定する。
+  SIGKILL)、その shard を `aborted_budget` と記録する。
+- **停止の余裕 (margin)**: 1 message 分の usage は停止の判定より先に積まれるため、supervisor は累計が「上限 − margin」に
+  達した時点で停止する。margin は 1 message の最大 usage (入力 context の上限 + 出力の上限) 以上とし、run 前に値を
+  `run-manifest.json` に記録する。これにより、上限の直前で始まった message があっても累計は上限を超えない。
+- **Codex の採点**: Codex 側も実行中に usage を読めることを起動の条件とする。run 前の試験で、Codex の実行出力 (JSON の
+  event stream) に turn ごとの usage が現れ、supervisor がそれを読めることを確かめる。確かめられなければ採点を起動しない
+  (fail-close。batch 終了後の事後計測で代用しない)。起動した場合は、Claude 側と同じ supervisor・margin・停止方法を使う。
 - **計測不能時の fail-close**: usage が読めない (stream が途切れる・形式が未知・batch の usage が得られない) ときは、
   その時点で停止して `aborted_unmetered` と記録する。usage を推定で埋めない。
-- **上限到達試験**: 本番の前に、上限を超える usage を流す合成 stream と、usage を欠く合成 stream で supervisor を動かし、
-  それぞれ停止と記録が起きることを確かめる (AC1b の合成 transcript 試験と同じ場で行う)。
+- **上限到達試験**: 本番の前に、次の合成 stream で supervisor を動かし、それぞれ停止と記録が起きることを確かめる
+  (AC1b の合成 transcript 試験と同じ場で行う)。(1) 上限を超える usage、(2) usage を欠く stream、(3) 境界: 累計が
+  「上限 − margin」の直前にあるところへ margin 以下の message が来る場合に、停止後の累計が上限を超えないこと。
+  (1)〜(3) を Claude 側と Codex 側の両方の stream 形式で行う。
 - **blind 違反**: 違反した shard を無効にし、新しいセッションで 1 回だけやり直す。同じ shard で 2 回違反するか、
   統合役が違反したら、run 全体を中止する。
 - **網羅不足**: R0 網羅率が 100% に届かなければ、未読ファイルだけを 1 回追加で読ませる。それでも届かなければ
