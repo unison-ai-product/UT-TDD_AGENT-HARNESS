@@ -587,6 +587,40 @@ async function buildConsumerRuntimeAdmissionInput(input: {
   };
 }
 
+function resolveDistributionTarReleaseIdentity(input: {
+  readonly repoRoot: string;
+  readonly releaseRevision: string;
+  readonly channel: "canary" | "stable";
+  readonly sourceRevision: string;
+}) {
+  let rawManifest: unknown;
+  try {
+    rawManifest = parseYaml(
+      readGitBlob(input.repoRoot, input.releaseRevision, "release/manifest.yaml").toString("utf8"),
+    );
+  } catch {
+    throw new ConsumerRuntimeReleaseProducerError("consumer_runtime_release_manifest_unavailable");
+  }
+  const parsedManifest = parsePublicationManifest(rawManifest);
+  if (!parsedManifest.ok)
+    throw new ConsumerRuntimeReleaseProducerError(
+      "consumer_runtime_release_manifest_invalid",
+      parsedManifest.error,
+    );
+  const selected = resolveReleaseChannel(parsedManifest.value, input.channel);
+  if (!selected.ok || !("artifacts" in selected.release))
+    throw new ConsumerRuntimeReleaseProducerError(
+      "consumer_runtime_release_manifest_invalid",
+      "distribution tar release unavailable",
+    );
+  if (selected.release.artifactSourceCommit !== input.sourceRevision)
+    throw new ConsumerRuntimeReleaseProducerError(
+      "consumer_runtime_release_manifest_invalid",
+      "distribution tar source revision mismatch",
+    );
+  return selected.release;
+}
+
 export async function packageConsumerRuntimeRelease(input: {
   readonly repoRoot: string;
   readonly tag: string;
@@ -631,14 +665,27 @@ export async function packageConsumerRuntimeRelease(input: {
       throw new Error(
         `distribution package source preflight failed: ${secretScanMessages(secretScan)[0] ?? "plan"}`,
       );
-    for (const rel of exportPlan.artifactPaths) {
-      const sourceRel = cleanDistributionSourcePath(rel, sourcePaths);
-      copyCleanDistributionArtifact({
-        sourceRoot,
-        sourcePath: sourceRel,
-        targetRoot: cleanStage,
-        artifactPath: rel,
-      });
+    const tarRelease = resolveDistributionTarReleaseIdentity({
+      repoRoot: input.repoRoot,
+      releaseRevision: sourceBinding.releaseRevision,
+      channel: sourceBinding.channel,
+      sourceRevision,
+    });
+    const tarResolution = await resolveReleaseArtifacts(
+      { repository: input.repoRoot, release: tarRelease },
+      {
+        git: createLocalGitObjectReader(),
+        materialize: materializeReleaseArtifacts,
+      },
+    );
+    if (!tarResolution.ok)
+      throw new Error(`distribution package tar materialization failed: ${tarResolution.error}`);
+    for (const entry of tarResolution.entries) {
+      if (entry.mode !== "100644" && entry.mode !== "100755")
+        throw new Error(`distribution package tar mode is unsupported: ${entry.path}`);
+      const destination = join(cleanStage, ...entry.path.split("/"));
+      ensureDir(dirname(destination), { recursive: true });
+      writeFileSync(destination, entry.content, { mode: entry.mode === "100755" ? 0o755 : 0o644 });
     }
     const names = releaseArtifactFileNames(input.tag);
     const tarballPath = join(assetsStage, names.tarball);
