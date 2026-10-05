@@ -1055,7 +1055,7 @@ describe("manual canary acceptance publish-record boundary", () => {
       assetDigests: Object.fromEntries(
         Object.entries(input.assetBytes).map(([name, bytes]) => [name, sha(bytes)]),
       ),
-      consumerAnchorDigest: sha("anchor"),
+      consumerAnchorDigest: sha("canary3-anchor"),
       subjectRevision,
     });
   });
