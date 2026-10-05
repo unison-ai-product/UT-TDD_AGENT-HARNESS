@@ -196,6 +196,36 @@ describe("PLAN revision canonical payload digest read-only query", () => {
     expect(snapshotDirectory(directory)).toEqual(before);
   });
 
+  it("U-PRDQ-010: CLI invalid revision returns the API invalid_input DTO and exits 1", () => {
+    const fixture = createFixture();
+    closeTracked(fixture.db);
+    useFixtureCwd(fixture.root);
+    const directory = join(fixture.root, ".ut-tdd", "ledger");
+    const before = snapshotDirectory(directory);
+    const apiResult = readPlanRevisionCanonicalPayloadDigest({
+      alias: fixture.aliasA,
+      assetId: fixture.assetA,
+      revision: 0,
+    });
+    expect(apiResult).toEqual({ ok: false, reason: "invalid_input" });
+    expect(snapshotDirectory(directory)).toEqual(before);
+
+    const cliResult = runRevisionDigestCli({
+      cwd: fixture.root,
+      alias: fixture.aliasA,
+      assetId: fixture.assetA,
+      revision: 0,
+    });
+
+    expect(cliResult.error).toBeUndefined();
+    expect(cliResult.status).toBe(1);
+    const cliValue = JSON.parse(cliResult.stdout);
+    expect(cliValue).toEqual(apiResult);
+    expect(Object.keys(cliValue).sort()).toEqual(["ok", "reason"]);
+    expect(cliValue).not.toHaveProperty("canonicalPayloadDigest");
+    expect(snapshotDirectory(directory)).toEqual(before);
+  });
+
   it.each([
     ["empty alias", { alias: "", assetId: "plan:query-a", revision: 1 }],
     ["empty asset id", { alias: "PLAN-L7-query-a", assetId: "", revision: 1 }],
