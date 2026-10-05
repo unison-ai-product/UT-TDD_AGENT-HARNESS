@@ -11,7 +11,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import { parse as parseYaml } from "yaml";
@@ -791,7 +791,7 @@ describe("manual canary acceptance publish-record boundary", () => {
     );
     expect(buildAgentE2EInstallerInvocation("C:/c3-release", parsed.consumerAnchorDigest)).toEqual([
       join("C:/c3-release", "v0.2.0-canary.3.ut-tdd.mjs"),
-      "setup", "--solo", "--consumer-runtime-release", join("C:/c3-release"),
+      "setup", "--solo", "--consumer-runtime-release", "C:/c3-release",
       "--expected-consumer-digest", parsed.consumerAnchorDigest,
     ]);
     expect(buildInstallerInvocation("C:/c3-release", parsed.consumerAnchorDigest, AGENT_E2E_TAG)).toEqual(
@@ -944,7 +944,7 @@ describe("manual canary acceptance publish-record boundary", () => {
         };
       }
       if (cliArgs[0] === "gate" && cliArgs[1] === "G1") {
-        const negative = execFileSync("git", ["-C", root, "rev-parse", "--show-current"], { encoding: "utf8" }).trim().startsWith("ut-tdd-agent-e2e-negative-");
+        const negative = execFileSync("git", ["-C", root, "branch", "--show-current"], { encoding: "utf8" }).trim().startsWith("ut-tdd-agent-e2e-negative-");
         const static_gate = negative
           ? { gate: "G1", applicable: true, passed: false, messages: ["required doc not created: business-requirements.md"] }
           : { gate: "G1", applicable: true, passed: true, messages: ["G1 pair - OK", "g1-trace - OK (business=1, screens=1, p0Fr=1, l3Plans=0)"] };
