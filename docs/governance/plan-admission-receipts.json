@@ -6592,6 +6592,22 @@
         "revision": 2,
         "content_digest": "sha256:4e5485819b2df9785db0c5448eea90cd0f247bd1f0d2f7a8cbdc90ca2907186f"
       }
+    },
+    {
+      "sequence": 413,
+      "previous_record_digest": "sha256:c51745b5dcc29cf41454b90df5978491421712310ff6c48da0dce074eff236e3",
+      "record_digest": "sha256:b05216b2f257ee71ac7bcabb83227478e3233576d5134e7bd9d9121418378114",
+      "command_id": "plan-revise:issue-789:legacy-454:2:rechain-1",
+      "receipt_id": "certificate:e776ce9ad3a89c998fa8d02c95ff4fe5",
+      "receipt_digest": "sha256:d5a3f1e17d9c57d7e840823a73c7f7a99d2b334bcd68643f365804bfc2301bf6",
+      "decision_digest": "sha256:b50c5a211fd974c9de366b8dbdb300caf35ebe6e5806dbf57371508bf41ec9ae",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-454-runtime-token-telemetry-ingestion.md",
+        "plan_id": "PLAN-L7-454-runtime-token-telemetry-ingestion",
+        "asset_id": "plan:legacy:7e00bf799a5f194ec7e323bbfbd3e7a21859e251c0e73a9f46fda12cb870c54b",
+        "revision": 2,
+        "content_digest": "sha256:850f003cd0bba3ebe99f9b46efc2657d8a5fd36fc3797d97815212ad073236ab"
+      }
     }
   ]
 }
