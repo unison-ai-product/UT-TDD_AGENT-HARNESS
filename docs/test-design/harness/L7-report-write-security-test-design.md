@@ -25,6 +25,11 @@ PLAN-L6-816 (クローズした PR #817) の候補 oracle 001-015 から、次�
 - 段別感度を成立させるため、段を隔離する seam・段専用 fixture (016-019)・mutation 行列 (013)・
   呼出し順序とデータ連鎖 (012) を加え、010 を確定 byte 列との比較にした (§4)。
 
+PR #820 の Sol r1 FLAG 3 件に対し、PLAN rev 2 と合わせて次を改訂した。
+
+- 失敗をプレビュー前 (F1) とプレビュー後 (F2) に分け、F2 の期待値と、sink が一部を書いてから throw する fixture を加えた (§3.2、015)。
+- 非 special scheme の URL host (N2b) と URL 外の bare IPv6 (R-U5)、`home.arpa` 自体の陽性・陰性を加えた (§3.3、009)。
+
 ## 2. fixture 規約
 
 - token は runtime 連結で生成し、リポジトリに素書きしない。形式ごとに「免除語なし行」と「免除語あり行」を用意する。
@@ -46,7 +51,7 @@ PLAN-L6-816 (クローズした PR #817) の候補 oracle 001-015 から、次�
 | C-log | `console.*` と logger の spy |
 | C-exc | 呼出し元へ伝わった例外の message / stack の捕捉 (期待は「throw されない」) |
 | C-preview | 注入した `previewSink` の受け取った bytes (全 chunk の連結) |
-| C-release | 注入した `releaseSink` の受け取った bytes |
+| C-release | 注入した `releaseSink` で **commit 済み** の bytes。staging (write 済み・commit 前) は別に記録し、T3 で残っていないことを観測する |
 
 観測時点: **T1** = stage 4 の判定が出た直後 (確認プレビュー前)。**T2** = 確認の入力を読み終えた直後。
 **T3** = `buildReport` が戻った後。共有のイベントログ (`stage1..stage4 / preview / readLine / release`) へ全イベントを
@@ -57,13 +62,16 @@ PLAN-L6-816 (クローズした PR #817) の候補 oracle 001-015 から、次�
 | シナリオ | T1 | T2 | T3 の C-preview | T3 の C-release | C-file / stdout / stderr / log / exc |
 |---|---|---|---|---|---|
 | V: 検査 (stage 1-4) で違反 | 全 channel 0 | 全 channel 0 | 0 | 0 | 0 |
-| X: stage 1-4・scanner の例外 | 全 channel 0 | 全 channel 0 | 0 | 0 | 0、throw されない |
+| X: stage 1-4・scanner・assemble の例外 (位相 F1) | 全 channel 0 | 全 channel 0 | 0 | 0 | 0、throw されない |
+| XF2: previewSink / readLine / releaseSink の例外 (位相 F2、一部書き込み後の throw を含む) | 全 channel 0 | — | 検査済み全文の先頭部分 (0 byte から全文まで) | commit 済み 0、staging 残存 0 | 0、throw されない |
 | D: 通過、確認が `yes` 以外 | 全 channel 0 | C-preview に確定全文のみ | 確定全文 (確認プレビューは許可) | 0 | 0 |
 | NI: 通過、非対話 | 全 channel 0 | 全 channel 0 | 0 | 0 | 0 |
 | OK: 通過、`yes` | 全 channel 0 | C-preview に確定全文 | 確定全文 | 確定全文と同一 bytes | 0 |
 
-- X のうち readLine / releaseSink が例外を出すケースは、検査通過後なのでプレビューが表示済みでよい。期待は
-  C-release が 0 で、throw されず、失敗の戻り値になること。
+- XF2 の fixture: (a) previewSink が全文の半分を書いて throw、(b) readLine が throw、(c) releaseSink.write が全文の半分を
+  staging に書いて throw、(d) releaseSink.commit が throw、(e) (c) に加えて releaseSink.discard も throw。期待は全て、
+  C-preview が検査済み全文の先頭部分に限られる、commit 済み C-release が 0、(c)-(d) で `discard` が 1 回呼ばれ staging が
+  残らない、(a) では readLine / release が呼ばれない、throw されず失敗の戻り値になること。
 - D の「`yes` 以外」: 空入力、EOF、`no`、`y`、`YES`、`yes ` (後置空白)、` yes` (前置空白)、`yes` に続く文字を
   含む入力。OK は `yes\n` と `yes\r\n` の両方。
 - イベント順序の期待: V では `stage1..` の途中で止まり `preview` / `readLine` / `release` が 1 件も無い。
@@ -80,7 +88,7 @@ PLAN-L6-816 (クローズした PR #817) の候補 oracle 001-015 から、次�
 | ID | 内容 | 判定規則 |
 |---|---|---|
 | P1 | `http://` / `https://` + label + R-U1 suffix 集合の各要素 (internal / corp / local / localdomain / lan / intranet / private) | R-U1 |
-| P2 | `.home.arpa` で終わる host、最終でない label が `corp` の host | R-U1 |
+| P2 | `home.arpa` そのものの host、`.home.arpa` で終わる host、最終でない label が `corp` の host | R-U1 |
 | P3 | IPv4 の境界内側: 10.0.0.1、10.255.255.254、172.16.0.1、172.31.255.254、192.168.0.1、192.168.255.254、127.0.0.1、127.255.255.254、169.254.0.1、100.64.0.1、100.127.255.254、0.1.2.3 | R-U1 |
 | P4 | loopback の別表記を URL で: 10 進整数、16 進 (`0x7f.0.0.1`)、短縮形 (`127.1`)。加えて URL host の先頭 0 付き octet で、WHATWG の 8 進読みは公開 (`010.0.0.1` → `8.0.0.1`) だが 10 進読みが内部になるもの | N2 + N4 + R-U1 |
 | P5 | IPv6: `[::1]`、`[::]`、fc00::/7 内、fe80::/10 内、`[::ffff:` + 内部 IPv4 + `]` | R-U1 |
@@ -94,6 +102,8 @@ PLAN-L6-816 (クローズした PR #817) の候補 oracle 001-015 から、次�
 | P13 | value が二重 percent-encoding の token | R-U3 + 復号 2 回 |
 | P14 | URL に入っていない dotted-quad の内部 IPv4 (`:port` 付きを含む)、先頭 0 付き octet で 10 進読みが内部になるもの | R-U4 + N4 |
 | P15 | 解析できない URL token (閉じていない IPv6 括弧など) | N3 |
+| P16 | 非 special scheme (`custom://`、`ssh://`、`git://` 等) の host に、10 進整数・16 進 (`0x7f.1`)・短縮形の loopback、先頭 0 付き octet、percent-encoding した内部 host、`.internal` suffix | N2b + N4 + R-U1 |
+| P17 | URL に入っていない bare IPv6: `::1`、`::`、fc00::/7 内、fe80::/10 内 (`%zone` 付きを含む)、`[::1]:8080` 形、内部 IPv4 を埋め込んだ IPv4-mapped | R-U5 |
 
 **陰性 (N)**
 
@@ -106,6 +116,8 @@ PLAN-L6-816 (クローズした PR #817) の候補 oracle 001-015 から、次�
 | N5 | query が K に無い key で無害 (`page` / `sort` / `ref` / `q`)。K の key でも value が空 | 通過 |
 | N6 | URL に入っていない file 名 (`settings.local.json` や `CLAUDE.local.md` 形) | 通過 (suffix 集合を URL の外へ適用しない) |
 | N7 | 版番号 (`2026.10.01.7` 形、3 部の `1.2.3`、公開 IP 形の `1.2.3.4`) | 通過 |
+| N9 | IPv6 に見えるが `net.isIPv6()` が false の token (`12:30:45` の時刻、`std::vector` 形、`a:b` 形)、URL に入っていない公開 IPv6、host の無い非 special scheme URL (`custom:///x`) | 通過 |
+| N10 | `home.arpa` を含むが host ではないもの (`notes-home.arpa.md` 形の file 名、URL に入っていない語) | 通過 (suffix 集合を URL の外へ適用しない) |
 | N8 | 既知の偽陽性: 版番号が内部 IPv4 範囲に入る形 (`10.1.2.3`) | **違反** (受容した偽陽性として固定、PLAN §3.5.2) |
 
 oracle 009 は、共有モジュールの `inspectInternalEndpoints` を表の全行で直接呼ぶ検査と、同じ入力を
@@ -187,7 +199,7 @@ test は、入力の既知値・path 変種・許可 env から**独立に**期�
 | CANDIDATE-U-RPTSEC-012 | 7 | §4.2。各段ちょうど 1 回、順序、通過データの byte 同一、stage 4 が stage 1 の結果を使わない | 回数・順序・データのいずれかが外れる |
 | CANDIDATE-U-RPTSEC-013 | 7 | §4.3 の mutation 行列。各段を seam で隔離したとき、専用 fixture だけが Red になり、記録した seam key と一致する | 外しても専用 fixture が Green、または他段の fixture が Red |
 | CANDIDATE-U-RPTSEC-014 | 8 | PII 規則を共有モジュールへ移した後も `tests/secret-scan-diff.test.ts` (bare remote 経由 e2e) が Green。endpoint 拡張規則が pre-push の判定を変えない | pre-push の挙動が変わる |
-| CANDIDATE-U-RPTSEC-015 | 1 | stage 1-4 の各 scanner、readLine、previewSink、releaseSink のそれぞれで例外を注入しても、§3.2 の X の行 (throw されず、報告出力 0、marker・件数も外部 0) | 例外時に出力される、または throw が漏れる |
+| CANDIDATE-U-RPTSEC-015 | 1 | stage 1-4 の各 scanner と assemble で例外を注入すると §3.2 の X の行になる。previewSink・readLine・releaseSink (write / commit / discard、一部書き込み後の throw を含む) で例外を注入すると §3.2 の XF2 の行になる。どちらも throw されず、commit 済みの報告出力 0、staging 残存 0、marker・件数も外部 0 | 例外時に報告出力が commit される、staging が残る、検査済み全文以外の bytes がプレビューに出る、または throw が漏れる |
 | CANDIDATE-U-RPTSEC-016 | 7 | stage 1 専用 fixture (§4.1) | stage 1 を隔離して Green のまま |
 | CANDIDATE-U-RPTSEC-017 | 7 | stage 2 専用 fixture (§4.1) | stage 2 を隔離して Green のまま |
 | CANDIDATE-U-RPTSEC-018 | 7 | stage 3 専用 fixture (§4.1) | stage 3 を隔離して Green のまま |

@@ -44,22 +44,21 @@ dependencies:
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/809
 review_evidence: []
 status: draft
-sub_doc: function-spec
 github_issue_id: 815
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:5f220827032c0bb4525e9080af8c695f
-  command_id: plan-draft:issue-815:report-write-security-contract:1
-  admitted_at: 2026-10-05T01:09:14.776Z
-  source_digest: sha256:c0846f0264b6974e37141a8ca9f1f81429d497143de84974853b8be62cab1382
-  decision_digest: sha256:06e83aa4fbe546dad62ca13ab97577b8b6f7b02c0a3e08e50c0ab76e841fe35b
-  receipt_digest: sha256:1c2d5b6cf6ea5d308fa7773de8393d7df47959fdeac2af61c7deb63121615ad8
+  receipt_id: certificate:9b6afb8ec4faac1add2a3fcc590960eb
+  command_id: plan-revise:issue-815:report-security:sol-r1-fix:r2:6a490cbc67b1
+  admitted_at: 2026-10-05T01:30:37.689Z
+  source_digest: sha256:77cf40c2e212ef89380ef1ebf7f6fd46d9293b3120546bcff0dd3ff2ec97c6d9
+  decision_digest: sha256:8b89892075eb4e989ebf256442b80a24d620e22779398ae563be0b15e07837d7
+  receipt_digest: sha256:933b9372b9f70e94587508e69404b461a27a9c7d4bdd78470c6ef23783a704d3
   binding:
     path: docs/plans/PLAN-L6-106-report-write-security-contract.md
     plan_id: PLAN-L6-106-report-write-security-contract
     asset_id: plan:5f220827032c0bb4525e9080af8c695f
-    revision: 1
-    content_digest: sha256:c0846f0264b6974e37141a8ca9f1f81429d497143de84974853b8be62cab1382
+    revision: 2
+    content_digest: sha256:77cf40c2e212ef89380ef1ebf7f6fd46d9293b3120546bcff0dd3ff2ec97c6d9
   route:
     signal: feature_addition
     mode: add-feature
@@ -74,11 +73,11 @@ admission_receipt:
     digest: sha256:610d332e78fa0b1893fd1299881eeef3237bd8801f5ba9364f5d70aec59c2c41
   reentry:
     target_plan_id: PLAN-L6-106-report-write-security-contract
-    target_revision: 1
+    target_revision: 2
     phase: forward_merge
-  escape_reason: "Issue 815: 実行時に利用者の入力から作るトラブル報告の束を公開面へ出す前の書き込みセキュリティ契約が既存 PLAN
-    に無いため、docs 内 artifact の secret-scan 契約 (PLAN-L6-62) の延長として、免除なし scan・内部
-    endpoint 判定・path 伏せ字・確認の fail-close を L6 に freeze する"
+  escape_reason: "Issue 815: PR #820 Sol r1 FLAG 3 件の是正 (失敗のプレビュー前後の位相分離と
+    releaseSink の staging/commit/discard、非 special scheme の host 再解析 N2b、URL 外の
+    bare IPv6 と home.arpa)。段構成・SSoT・allowlist の方式は変えない"
 ---
 
 # PLAN-L6-106 (add-design): トラブル報告の書き込みセキュリティ契約 (S1)
@@ -167,11 +166,24 @@ scanner 本体は既存 (PLAN-L6-62 / L7-260) の成果を再利用する (複�
 
 契約 (観測時点は pair test-design §3 の T0-T3 で定義する):
 
-1. **違反・検査失敗・例外**: 外部出力 channel の全てで 0 byte。確認プレビューも出さない。
+失敗は、確認プレビューを書き始める前か後かで 2 つの位相に分ける。
+
+- **位相 F1 (プレビュー前)**: stage 1-4 の違反・検査失敗・例外と、組み立て (`assemble`) の例外。
+- **位相 F2 (プレビュー後)**: `previewSink` / `readLine` / `releaseSink` の例外 (sink が一部を書いてから throw する場合を含む)。
+
+1. **位相 F1**: 外部出力 channel の全てで 0 byte。確認プレビューも出さない。
    **marker と件数を含む診断も外部へ出さない**。marker (検出の種別) と件数 (検出 pattern 数) は関数の
    戻り値 (プロセス内のみ) に保持し、検出値と周辺文字列は戻り値にも含めない。診断を利用者へ表示する経路
    (件数だけ見せる等) は S3 の設計判断であり、S1 では外部へ出さない。例外は境界で捕捉して戻り値の失敗へ変換し、
    呼出し元へ throw しない (例外文言に値が混ざる経路を作らない)。
+1b. **位相 F2**: 確認プレビューは表示済み (途中まででもよい) として扱う。表示された bytes は検査済み全文の先頭部分に
+   限られ、検査を通っていない bytes は含まない。**報告出力は確定 0 byte** とし、失敗の戻り値を返して throw しない。
+   報告出力の確定 0 を保証するため、`releaseSink` は **staging と commit の 2 段** を持つ: `releaseSink.write(bytes)` は
+   保存先から見えない staging にだけ書き、`releaseSink.commit()` が成功して初めて報告出力として確定する
+   (file の場合は同じ directory の一時名へ書き、commit で rename する)。`write` / `commit` のどちらかが例外を出したとき、
+   または `write` が一部だけ書いて throw したときは、`buildReport` が `releaseSink.discard()` を必ず呼び、
+   staging を消す。`discard` 自身の例外も捕捉して失敗の戻り値に含める (throw しない)。commit 前の staging は報告出力ではない。
+   `previewSink` の例外では `readLine` と `releaseSink` を呼ばない。
 2. **検査通過後、確認が成立しない場合** (`yes` 以外の入力・空入力・EOF): 確認プレビューは表示済みでよいが、
    報告出力は 0 byte。表示済みの全文は検査済みの全文に限る。
 3. **非対話実行** (TTY なし、確認入力なし): 確認の相手がいないため、確認プレビューも報告出力も 0。
@@ -218,7 +230,10 @@ redaction 対象ではなく違反とする (実測した remote を黙って伏
 #### 3.5.2 内部 endpoint の判定基準 (内部 host / IP / userinfo / query)
 
 判定単位は 2 つ。(U) URL token = `<scheme>://` で始まり空白・引用符・括弧で終わる文字列。
-(B) URL に入っていない dotted-quad の IPv4 (任意で `:port`)。それ以外の bare な host 名は、現行の
+(B) URL に入っていない dotted-quad の IPv4 (任意で `:port`)。(B6) URL に入っていない IPv6 literal: `[` `]` で囲まれた文字列、
+または空白・引用符・括弧・`,` `;` で区切られた token のうち `:` を 2 個以上含み、Node `net.isIPv6()` が true を返すもの
+(末尾の `%zone` は除いて判定する。`[...]:port` 形を含む)。`net.isIPv6()` が false の token (`12:30:45` の時刻、
+`std::vector` のような名前空間区切り、`a:b` の key-value) は IPv6 として扱わない。それ以外の bare な host 名は、現行の
 PII 規則 (`internal` / `corp` を含む 2 規則、移設後も挙動不変) だけで判定する。広い suffix 集合を URL の外へ
 適用すると `settings.local.json` のような通常の file 名を誤検知するためである。
 
@@ -232,6 +247,11 @@ PII 規則 (`internal` / `corp` を含む 2 規則、移設後も挙動不変) �
   host (`%25` を含む) は WHATWG が解析に失敗するので N3 で違反になる。
   (実測: Node `new URL(u).hostname`、2026-10-05。`http://Foo.Internal./` → `foo.internal.`、
   `http://0x7f.1/` → `127.0.0.1`、`http://exa%6dple.corp/` → `example.corp`、`http://ex%2561mple.com/` → 例外)
+- N2b: WHATWG が host を正規化するのは special scheme (`http` / `https` / `ws` / `wss` / `ftp` / `file`) だけで、
+  それ以外の scheme では host を opaque のまま返す (実測: `custom://0x7f.1/` の hostname は `0x7f.1`)。そのため
+  **special scheme 以外の URL token は、authority から host を取り出し (userinfo と port を除く)、`http://` + host + `/` として
+  WHATWG で再解析した host で判定する**。再解析に失敗した場合は N3 で違反。host が空の URL token (`custom:///x`) は
+  判定対象の host を持たないので R-U1 / R-U4 の対象外とし、R-U2 / R-U3 は通常どおり適用する。
 - N3: **解析できない URL token は違反** (判定不能は拒否)。
 - N4: 先頭 0 付き octet を持つ IPv4 は、10 進読みと 8 進読みの**両方**を判定し、どちらかが内部なら違反。
   bare IPv4 と URL token の host 文字列 (WHATWG 解析前の生の authority) の両方に適用する。WHATWG は先頭 0 を
@@ -246,7 +266,7 @@ PII 規則 (`internal` / `corp` を含む 2 規則、移設後も挙動不変) �
 - host 名が `localhost` または `.localhost` で終わる。
 - host 名に dot が無い (単一 label)。IP literal は除く。
 - 最終 label が `internal` / `corp` / `local` / `localdomain` / `lan` / `intranet` / `private` のいずれか、
-  host 名が `.home.arpa` で終わる、または最終でない label に `corp` がある (現行規則の意味を保つ)。
+  host 名が `home.arpa` に一致するか `.home.arpa` で終わる、または最終でない label に `corp` がある (現行規則の意味を保つ)。
 
 **R-U2 userinfo (違反)**: URL token の authority (`://` から最初の `/` `?` `#` まで) に `@` がある場合は、
 host が公開であっても違反。path や query 内の `@` は userinfo ではない。
@@ -261,6 +281,9 @@ percent-decode (最大 2 回、`+` は空白) して次のいずれかなら違�
   置く迂回を防ぐ)。
 
 **R-U4 bare IPv4 (違反)**: (B) の IPv4 が R-U1 の範囲に該当する。
+
+**R-U5 bare IPv6 (違反)**: (B6) の IPv6 が R-U1 の IPv6 範囲 (`::`、`::1`、fc00::/7、fe80::/10、内部 IPv4 を埋め込んだ
+IPv4-mapped) に該当する。公開 IPv6 の bare literal は通過する。
 
 **通過 (違反としない)**: 公開 host 名・公開 IP (前記範囲の外、境界の直外 172.15.255.255 / 172.32.0.1 /
 192.167.255.255 / 192.169.0.1 / 100.63.255.255 / 100.128.0.1 等を含む)・公開 IPv6、userinfo も
@@ -295,6 +318,12 @@ advisor の再相談は本起草では行っていない (control lane が必要
 (a) WHATWG は末尾 dot を除去しないため、解析後の除去を N2 に明記した。(b) WHATWG は URL host の先頭 0 付き octet を
 8 進と読むため、10 進・8 進の両読み (N4) を URL host にも適用した。
 
+rev 2 (PR #820 Sol r1 FLAG 3 件の是正、2026-10-05、Claude Opus):
+(1) 失敗をプレビュー前 (F1) とプレビュー後 (F2) に分け、`releaseSink` に staging / commit / discard を持たせて、一部書き込み後の throw でも報告出力を確定 0 にした (§3.3、§3.8、AC1 / AC6)。
+(2) WHATWG が host を正規化しない非 special scheme は、host を `http://` で再解析して判定する N2b を加えた (実測: `custom://0x7f.1/` の hostname は `0x7f.1`、再解析で `127.0.0.1`)。
+(3) URL 外の bare IPv6 (B6 / R-U5、`net.isIPv6()` で判定。実測: `12:30:45` / `std::vector` / `a:b` は false) と、`home.arpa` そのものを内部 host に加えた。
+方式 (§3.1 の段構成、§3.2 の SSoT、§3.4 の allowlist) は変えていない。
+
 ### 3.8 関数仕様 (function-spec)
 
 関数名は契約上の名前で、`src/lint/` と `src/report/` に置く。実装 PR は名前と挙動を本節から変えない。
@@ -302,12 +331,12 @@ advisor の再相談は本起草では行っていない (control lane が必要
 | 関数 | 入力 → 出力 | 副作用 | 不変条件 |
 |---|---|---|---|
 | `analyzeSecretScan(artifacts, options?)` (既存、`src/lint/secret-scan.ts`) | artifact 配列 + `{ honorAllowMarkers?: boolean }` (既定 true) → `SecretScanResult` | なし | option 省略時は現挙動と完全に同じ。報告経路は `false` を渡す。`ALLOW_LINE_MARKERS` の免除は `false` で一切効かない |
-| `analyzePiiScan` / `inspectInternalEndpoints(text)` (共有モジュール) | text → `{ ok, markers }` | なし | PII 4 規則は移設前後で挙動不変。endpoint 検査は §3.5.2 の R-U1..R-U4 + N1..N4 だけを実装する |
+| `analyzePiiScan` / `inspectInternalEndpoints(text)` (共有モジュール) | text → `{ ok, markers }` | なし | PII 4 規則は移設前後で挙動不変。endpoint 検査は §3.5.2 の R-U1..R-U5 + N1..N4 (N2b を含む) だけを実装する |
 | `inspectReportInput(text)` (stage 1) | 生の text → 判定 (`ok` / marker / 件数) | なし | 入力は伏せ字化前の bytes。変換しない。credential は免除なし |
 | `redactPaths(text, ctx)` (stage 2) | text + 既知値 (home / cwd / project root / project 名 / remote) → 置換後 text | なし | §3.5.1 の置換だけを行う。置換後の text に既知値と home 形式 path が残らない |
 | `filterEnv(env, allowlist, ctx)` (stage 3) | env + allowlist → 許可 key の `KEY=VALUE` 行 (key の ASCII 昇順) | なし | allowlist 外は値を読まず捨てる。許可 key の値は scan と `redactPaths` を通す |
 | `finalLeakCheck(assembled, ctx)` (stage 4) | 組み立て後の全文 → 判定 | なし | stage 1 の関数を再利用してよいが、**stage 1 の結果を参照しない**独立の呼出しである。入力は確認・出力へ渡す bytes と同一 |
-| `confirmAndRelease(bytes, io)` (stage 5) | 検査済み bytes + `{ interactive, previewSink, readLine, releaseSink }` → 結果 | previewSink / releaseSink への書き込みだけ | 非対話なら何も書かない。`yes` 完全一致のときだけ releaseSink へ**同じ bytes** を渡す。迂回用の引数・env を読まない |
+| `confirmAndRelease(bytes, io)` (stage 5) | 検査済み bytes + `{ interactive, previewSink, readLine, releaseSink: { write, commit, discard } }` → 結果 | previewSink への書き込みと releaseSink の staging / commit / discard だけ | 非対話なら何も書かない。`yes` 完全一致のときだけ releaseSink へ**同じ bytes** を write して commit する。write / commit の例外 (一部書き込み後の throw を含む) では discard を呼び、報告出力を確定 0 にする (§3.3 位相 F2)。迂回用の引数・env を読まない |
 | `buildReport(input, io, stages?)` (orchestrator) | `{ text, env }` + io → `{ ok: true, bytes } \| { ok: false, code, markers, count }` | io の 2 sink のみ | 各 stage を**ちょうど 1 回**、§3.1 の順に呼ぶ。違反・例外で throw せず、失敗の戻り値を返す。`stages` は検査を個別に隔離する test seam で、CLI / env / 設定から設定できない |
 
 組み立て (`assemble`): 暫定の全文 layout は `text2 = redactedText` に、env が空でなければ改行 1 つと
@@ -321,13 +350,15 @@ byte 同一。報告出力 = stage 5 が受けた bytes。
 
 各項目の oracle は pair test-design の `CANDIDATE-*` で定義する。正規 ID 昇格と実装は後続 PR。
 
-1. 違反・検査失敗・例外が 1 件でもあれば、外部出力 channel (file / stdout / stderr / log / temp / 例外文言 /
-   確認プレビュー sink / 報告出力 sink) への書き込みが 0。marker と件数も外部へ出ず、検出値が現れない。
+1. 位相 F1 (プレビュー前) の違反・検査失敗・例外が 1 件でもあれば、外部出力 channel (file / stdout / stderr / log / temp /
+   例外文言 / 確認プレビュー sink / 報告出力 sink) への書き込みが 0。marker と件数も外部へ出ず、検出値が現れない。
+   位相 F2 (プレビュー後) の例外では、確認プレビュー sink は検査済み全文の先頭部分だけを持ち、報告出力 (commit 済み) は 0、
+   staging は残らず、他の channel は 0 で、throw されない。sink が一部を書いてから throw する場合も同じ。
 2. 免除語 (dummy / example / fake 等) を含む行でも、報告経路では credential が検出される。既存の repo scan の挙動は不変。
 3. 許可外 env key (`GH_*` / `GITHUB_*` と、値が無害な未知 key を含む) の値が出力に現れない。許可 key でも値に secret があれば fail-close。
 4. Windows 形式と Linux 形式の path の全変種が出力に現れず、報告は成立する (placeholder へ置換されている)。
 5. §3.5.2 の陽性 (違反) fixture は全て違反となり、陰性 (通過) fixture は全て通過する。project 名・remote URL は出力に現れない。
-6. 確認プレビューの全文と報告出力が、独立に確定した期待 byte 列と一致する。違反・例外ではプレビューも出力も 0。
+6. 確認プレビューの全文と報告出力が、独立に確定した期待 byte 列と一致する。位相 F1 ではプレビューも出力も 0、位相 F2 では出力 0。
    確認が成立しない (`yes` 以外・EOF) 場合は報告出力 0、非対話ではプレビューも出力も 0。確認迂回 option が存在しない。
 7. **段別感度**: 各段 (入力検査 / path / env / 最終検査) を seam で個別に no-op 化すると、その段専用の fixture
    だけが Red になり、他の段専用の fixture は Green のまま。各段は 1 run につきちょうど 1 回、定義された順序と
