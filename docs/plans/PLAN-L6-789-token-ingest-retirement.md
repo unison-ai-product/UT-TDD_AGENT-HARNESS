@@ -16,7 +16,7 @@ backprop_decision: not_required
 backprop_decision_reason: 本 PLAN 自身が token 取り込み契約を退役させる差替え正本であり、新契約を作らない純退役であるため、Reverse backfill を作らない。
 agent_slots:
   - role: se
-    slot_label: Codex worker -
+    slot_label: "Codex worker - #840 を再構成し token projection と model_evaluations 生成を撤去する"
   - role: qa
     slot_label: QA - 旧実装を戻すと RED になる退役 oracle と plan-artifact-existence を検証する
   - role: tl
@@ -48,18 +48,18 @@ supersedes:
   - PLAN-L7-57-token-telemetry-tracker
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:5731a4a62d9b61ec4d8389c6da62446c
-  command_id: plan-revise:issue-789:token-ingest-retirement:rechain-1:sol-r1-fix:r2:829b884df883
-  admitted_at: 2026-10-05T11:24:27.890Z
-  source_digest: sha256:817e326d1c9ce9de95f84b7b0a6e0065feb5ffdd2379e51888be89f11da13351
-  decision_digest: sha256:30fc94734306d056b56fed997d806f4723ef2a832e71d17b48cb03bb7fa9c3ee
-  receipt_digest: sha256:5d19cc7b3d5902538279415184595080063250847338888f7125285b6f0c1b45
+  receipt_id: certificate:5e7a14a8be6ccbcce42ce806babeaa51
+  command_id: plan-revise:issue-789:token-ingest-retirement:rechain-1:slot-label-quote:r3:73eb26976de7
+  admitted_at: 2026-10-05T11:28:58.224Z
+  source_digest: sha256:6e321c50a2d970b43e360753ff86de89b2e43e21d6832c5565a5e4ec8b34b142
+  decision_digest: sha256:956e69ce645429f6f6ce443246f34ca9606a1420983a147643cf15fa4141678d
+  receipt_digest: sha256:70acb97a0be1b9a574497c513cabff622b50aa194d3c1c566f843184d85bf0c4
   binding:
     path: docs/plans/PLAN-L6-789-token-ingest-retirement.md
     plan_id: PLAN-L6-789-token-ingest-retirement
     asset_id: plan:8cd99bada32554ad2d55498b025ed55a
-    revision: 2
-    content_digest: sha256:817e326d1c9ce9de95f84b7b0a6e0065feb5ffdd2379e51888be89f11da13351
+    revision: 3
+    content_digest: sha256:6e321c50a2d970b43e360753ff86de89b2e43e21d6832c5565a5e4ec8b34b142
   route:
     signal: redesign
     mode: redesign
@@ -80,12 +80,11 @@ admission_receipt:
       target_revision: 1
   reentry:
     target_plan_id: PLAN-L6-789-token-ingest-retirement
-    target_revision: 2
+    target_revision: 3
     phase: forward_merge
-  escape_reason: "Issue 789: PR #842 Sol r1 FLAG 2 件の是正 (correction
-    1/3)。部分退役の境界と作業表に PLAN-L7-58 (telemetry scan の DB ingest と再集計)
-    を加え、取得と料金計算の継承を明記する。telemetry scan の退役 oracle を行数一致から DB 未作成・既存 DB 不変の file
-    観測へ改め、未投入の非空 session fixture による反証条件を加える。方式と scope は変えない"
+  escape_reason: "Issue 789: PR #842 correction 1/3
+    の追加是正。agent_slots[0].slot_label の値を引用符で囲み、YAML コメントとして欠落した本文 (#840 以降)
+    を復元する。方式と scope は変えない"
   supersedes:
     - PLAN-L7-57-token-telemetry-tracker
 ---
