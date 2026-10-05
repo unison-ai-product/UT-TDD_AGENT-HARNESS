@@ -1,4 +1,4 @@
-import { spawnSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
   copyFileSync,
@@ -63,16 +63,43 @@ interface AcceptanceModule {
   };
   parseAgentE2ERecord(value: unknown, commentUrl: string): ReturnType<AcceptanceModule["parsePublishRecord"]>;
   verifyAgentAuthoringEvidence(value: unknown): void;
-  verifyAgentG1Positive(value: unknown): void;
   verifyAgentG1Negative(value: unknown, positiveRevision: string): void;
-  verifyAgentReviewJoin(value: unknown): void;
+  verifyAgentReviewJoin(value: unknown): Record<string, unknown>;
+  verifyAgentG1Positive(value: unknown, subjectRevision?: string): void;
+  runAgentAuthoringAndGates(input: {
+    consumerRoot: string;
+    run?: (binary: string, args: string[], options: Record<string, unknown>) => {
+      status: number;
+      stdout: string;
+      stderr: string;
+      error?: Error;
+    };
+  }): {
+    authoring: Record<string, unknown>;
+    baseline: {
+      kind: string;
+      revision: string;
+      parent_revision: string;
+      source_templates: Record<string, { slot: string; path: string; sha256: string }>;
+      derivation: Record<string, unknown>;
+    };
+    subject: { path: string; revision: string; blobOid: string; contentSha256: string };
+    positive: { applicable: boolean; passed: boolean; messages: string[] };
+    negative: { applicable: boolean; passed: boolean; messages: string[]; branch: string; revision: string; parent: string };
+  };
+  verifyAgentE2EEvidence(value: unknown): {
+    tag: string;
+    assetDigests: Record<string, string>;
+    consumerAnchorDigest: string;
+    subjectRevision: string;
+  };
   verifyReleaseDirectory(
     releaseDir: string,
     record: ReturnType<AcceptanceModule["parsePublishRecord"]>,
   ): {
     actualDigests: Record<string, string>;
   };
-  verifyInstallEvidence(evidence: unknown, consumerRoot: string, removedPaths: string[]): void;
+  verifyInstallEvidence(evidence: unknown, consumerRoot: string, removedPaths: string[], expectedTag?: string): void;
   verifyWrongAnchorDenial(
     releaseDirectory: string,
     expectedAnchor: string,
@@ -120,6 +147,7 @@ const {
   verifyAgentAuthoringEvidence,
   verifyAgentG1Positive,
   verifyAgentG1Negative,
+  runAgentAuthoringAndGates,
   verifyAgentReviewJoin,
   verifyReleaseDirectory,
   verifyInstallEvidence,
@@ -181,6 +209,87 @@ function agentRecord() {
       consumer_anchor_digest: pair("canary3-anchor"),
     },
     assetBytes,
+  };
+}
+
+function agentReviewEvidence() {
+  const root = mkdtempSync(join(tmpdir(), "ut-canary-agent-review-"));
+  tempRoots.push(root);
+  const runGit = (...args: string[]) => execFileSync("git", ["-C", root, ...args], { encoding: "utf8" }).trim();
+  runGit("init", "--quiet");
+  runGit("config", "user.email", "canary@example.invalid");
+  runGit("config", "user.name", "Canary consumer fixture");
+  runGit("remote", "add", "origin", "https://github.com/unison-ai-product/ut-tdd-consumer-canary.git");
+  const subjectPath = "docs/design/L1-requirements/business-requirements.md";
+  mkdirSync(join(root, "docs", "design", "L1-requirements"), { recursive: true });
+  writeFileSync(join(root, subjectPath), "# Business requirements\n\nFixture authored from shipped template.\n");
+  runGit("add", "--", subjectPath);
+  runGit("commit", "--quiet", "-m", "author canary subject");
+  const head = runGit("rev-parse", "HEAD");
+  const requestIdentity = {
+    authorFamily: "codex", exactHead: head, memoryId: "canary-memory-001", pr: 12,
+    schemaVersion: "review-request/v1",
+  };
+  const digest = createHash("sha256").update(JSON.stringify(requestIdentity)).digest("hex");
+  const reviewRevision = `rv1-${digest}`;
+  const request = {
+    memoryId: requestIdentity.memoryId, pr: requestIdentity.pr, exactHead: head,
+    reviewRevision, authorFamily: "codex", requestedAt: "2026-10-01T10:00:00.000Z",
+    invocationNonce: "nonce-canary-fixture",
+  };
+  const requestPath = join(root, ".ut-tdd", "review", "requests", `${digest}.json`);
+  const receiptPath = join(root, ".ut-tdd", "review", "receipts", `${digest}.json`);
+  const verdictPath = join(root, ".ut-tdd", "review", "verdicts", digest, "attempts", "attempt-1", "verdict.txt");
+  mkdirSync(dirname(requestPath), { recursive: true });
+  mkdirSync(dirname(receiptPath), { recursive: true });
+  mkdirSync(dirname(verdictPath), { recursive: true });
+  writeFileSync(requestPath, `${JSON.stringify(request, null, 2)}\n`);
+  const receipt = {
+    memoryId: request.memoryId, pr: request.pr, head, reviewRevision,
+    reviewerFamily: "claude", kind: "verdict", verdict: "PASS", blockingFindings: [],
+    at: "2026-10-01T10:02:00.000Z",
+  };
+  const receiptBytes = `${JSON.stringify(receipt, null, 2)}\n`;
+  writeFileSync(receiptPath, receiptBytes);
+  const verdictBytes = [
+    "schema_version: ut-tdd.review-verdict/v1", `request_digest: ${digest}`,
+    "attempt: 1", `pr: ${request.pr}`, `exact_head: ${head}`,
+    `review_revision: ${reviewRevision}`, "reviewer_provider: claude",
+    "reviewer_model: claude-opus-5", `invocation_nonce: ${request.invocationNonce}`,
+    "VERDICT: PASS", "",
+  ].join("\n");
+  writeFileSync(verdictPath, verdictBytes);
+  const commonDir = runGit("rev-parse", "--git-common-dir");
+  const auditPath = join(root, commonDir, "ut-tdd-runtime", "review-custody", "review-custody.jsonl");
+  mkdirSync(dirname(auditPath), { recursive: true });
+  writeFileSync(auditPath, `${JSON.stringify({
+    kind: "attempt_completed", requestDigest: digest, attempt: 1, exactHead: head,
+    verdictPath: resolve(verdictPath), recordedAt: "2026-10-01T10:02:00.000Z",
+    reason: "review_completed", provider: "claude", model: "claude-opus-5", exitCode: 0,
+    receiptFileDigest: createHash("sha256").update(receiptBytes).digest("hex"),
+    verdictDigest: createHash("sha256").update(verdictBytes).digest("hex"),
+  })}\n`);
+  const dispatchResult = {
+    ok: true, reviewer: "claude",
+    request: { ok: true, request, path: requestPath, digest },
+  };
+  const consumeResult = {
+    ok: true,
+    projection: { ok: true, receipt, path: receiptPath, digest },
+  };
+  return {
+    consumerRoot: root,
+    repository: "unison-ai-product/ut-tdd-consumer-canary",
+    pr: request.pr,
+    head,
+    dispatchResult,
+    consumeResult,
+    subjectRevision: head,
+    dispatchInvocation: ["ut-tdd", "review", "live-dispatch"],
+    consumeInvocation: ["ut-tdd", "review", "live-consume"],
+    dispatchTranscript: "fixture CLI JSON result",
+    consumeTranscript: "fixture CLI JSON result",
+    receiptPath,
   };
 }
 
@@ -332,6 +441,7 @@ describe("manual canary acceptance publish-record boundary", () => {
     expect(() => verifyInstallEvidence(evidence, consumer, [source, release, consumer])).toThrow(
       "verify-removed-paths-not-bound-to-install",
     );
+
     const canary3 = { ...evidence, tag: AGENT_E2E_TAG };
     expect(() => verifyInstallEvidence(canary3, consumer, [source, release], AGENT_E2E_TAG)).not.toThrow();
     expect(() => verifyInstallEvidence(canary3, consumer, [source, release]))
@@ -354,6 +464,10 @@ describe("manual canary acceptance publish-record boundary", () => {
     ]);
     expect(() => buildInstallerInvocation("C:/other-release", anchor, "latest"))
       .toThrow("acceptance-tag-not-canary-2-or-offline-fixture");
+    expect(() => main([
+      "--tag", "v0.0.0-canary.0", "--record", "missing", "--comment-url", commentUrl,
+      "--release-dir", "missing", "--consumer-root", "missing", "--evidence", "missing",
+    ])).toThrow("acceptance-tag-not-exact");
   });
 
   it("U-ST-PACKCANARY-009: runner loads without source node_modules", () => {
@@ -680,6 +794,9 @@ describe("manual canary acceptance publish-record boundary", () => {
       "setup", "--solo", "--consumer-runtime-release", "C:/c3-release",
       "--expected-consumer-digest", parsed.consumerAnchorDigest,
     ]);
+    expect(buildInstallerInvocation("C:/c3-release", parsed.consumerAnchorDigest, AGENT_E2E_TAG)).toEqual(
+      buildAgentE2EInstallerInvocation("C:/c3-release", parsed.consumerAnchorDigest),
+    );
     expect(() => parseAgentE2ERecord(record().value, commentUrl)).toThrow(
       "publish-record-tag-not-exact",
     );
@@ -690,74 +807,254 @@ describe("manual canary acceptance publish-record boundary", () => {
     const tampered = agentReleaseDir(input.assetBytes);
     writeFileSync(join(tampered, canaryAssetsForTag(AGENT_E2E_TAG)[2]), "tampered");
     expect(() => verifyReleaseDirectory(tampered, parsed)).toThrow("release-asset-digest-mismatch");
+
+    const missing = agentReleaseDir(input.assetBytes);
+    rmSync(join(missing, canaryAssetsForTag(AGENT_E2E_TAG)[0]));
+    expect(() => verifyReleaseDirectory(missing, parsed)).toThrow("release-asset-set-not-exact");
+
+    const extra = agentReleaseDir(input.assetBytes);
+    writeFileSync(join(extra, "unexpected.bin"), "extra");
+    expect(() => verifyReleaseDirectory(extra, parsed)).toThrow("release-asset-set-not-exact");
+
+    const wrongAnchor = structuredClone(input.value);
+    wrongAnchor.consumer_anchor_digest.independent_sha256 = sha("different anchor");
+    expect(() => parseAgentE2ERecord(wrongAnchor, commentUrl)).toThrow(
+      "publish-record-digest-disagreement:consumer_anchor_digest",
+    );
+
+    const wrongAnchorBytes = { ...input.assetBytes };
+    const anchorName = canaryAssetsForTag(AGENT_E2E_TAG)[4];
+    wrongAnchorBytes[anchorName] = "wrong anchor bytes";
+    expect(() => verifyReleaseDirectory(agentReleaseDir(wrongAnchorBytes), parsed)).toThrow(
+      `release-asset-digest-mismatch:${anchorName}`,
+    );
   });
 
   it("U-ST-PACKCANARY-016: rejects missing or non-agent authoring provenance", () => {
+    const valid = {
+      provider: "codex", model: "gpt-6-luna", invocation: ["ut-tdd", "codex", "--role", "worker", "--model", "gpt-6-luna", "--effort", "high", "--task", "write L1 business requirements", "--execute", "--json"],
+      role: "worker", template_source: "pack-template", provenance: "live-provider",
+      template_slot: "DOC-L1-REQUIREMENTS",
+      transcript: "provider started; completed subject authoring", baseline_revision: "1".repeat(40),
+      subject_revision: "2".repeat(40), subject_parent: "1".repeat(40),
+    };
+    expect(() => verifyAgentAuthoringEvidence(valid)).not.toThrow();
     expect(() => verifyAgentAuthoringEvidence({
       provider: "codex", model: "gpt-6-luna", invocation: [], template_source: "pack-template",
-    })).toThrow();
+    })).toThrow("agent-authoring-provenance-invalid");
     expect(() => verifyAgentAuthoringEvidence({
       provider: "codex", model: "gpt-6-luna", invocation: ["ut-tdd", "codex", "--execute"],
-      template_source: "pack-template", provenance: "closed-stub",
-    })).toThrow();
+      role: "worker", template_source: "pack-template", provenance: "closed-stub",
+      transcript: "closed provider stub",
+      baseline_revision: "1".repeat(40), subject_revision: "2".repeat(40), subject_parent: "1".repeat(40),
+    })).toThrow("agent-authoring-provenance-invalid");
     expect(() => verifyAgentAuthoringEvidence({
-      provider: "manual", model: "not-a-provider", invocation: ["source-helper"],
+      ...valid, provider: "manual", model: "not-a-provider", invocation: ["source-helper"],
       template_source: "handwritten", provenance: "handwritten",
-    })).toThrow();
+    })).toThrow("agent-authoring-provenance-invalid");
   });
 
   it("U-ST-PACKCANARY-017: rejects a non-applicable, failed, or could-not-run G1 positive", () => {
-    expect(() => verifyAgentG1Positive({ applicable: false, passed: true, messages: [] })).toThrow();
-    expect(() => verifyAgentG1Positive({ applicable: true, passed: false, messages: [] })).toThrow();
+    const revision = "a".repeat(40);
+    expect(() => verifyAgentG1Positive({
+      revision, applicable: true, passed: true, messages: ["G1 passed"],
+    }, revision)).not.toThrow();
+    expect(() => verifyAgentG1Positive({ applicable: false, passed: true, messages: [] }))
+      .toThrow("agent-g1-positive-invalid");
+    expect(() => verifyAgentG1Positive({ applicable: true, passed: false, messages: [] }))
+      .toThrow("agent-g1-positive-invalid");
     expect(() => verifyAgentG1Positive({
       applicable: true, passed: true, messages: ["could not run: gate unavailable"],
-    })).toThrow();
+    })).toThrow("agent-g1-positive-invalid");
   });
 
   it("U-ST-PACKCANARY-018: rejects same-revision or unnamed-slot G1 negative evidence", () => {
     const positiveRevision = "a".repeat(40);
     expect(() => verifyAgentG1Negative({
+      revision: "b".repeat(40), parent: positiveRevision,
+      applicable: true, passed: false,
+      messages: ["required doc not created: business-requirements.md"],
+    }, positiveRevision)).not.toThrow();
+    expect(() => verifyAgentG1Negative({
       revision: positiveRevision, parent: positiveRevision,
       applicable: true, passed: false, messages: ["required doc not created: business-requirements.md"],
-    }, positiveRevision)).toThrow();
+    }, positiveRevision)).toThrow("agent-g1-negative-invalid");
     expect(() => verifyAgentG1Negative({
       revision: "b".repeat(40), parent: positiveRevision,
       applicable: true, passed: false, messages: ["required doc not created: another-slot.md"],
-    }, positiveRevision)).toThrow();
+    }, positiveRevision)).toThrow("agent-g1-negative-invalid");
+  });
+
+  it("U-ST-PACKCANARY-016..018: mock adapter exercises consumer CLI wiring (not provider evidence)", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-canary-agent-authoring-"));
+    tempRoots.push(root);
+    const runGit = (...args: string[]) => execFileSync("git", ["-C", root, ...args], { encoding: "utf8" }).trim();
+    runGit("init", "--quiet");
+    runGit("config", "user.email", "canary@example.invalid");
+    runGit("config", "user.name", "Canary consumer fixture");
+    runGit("remote", "add", "origin", "https://github.com/unison-ai-product/ut-tdd-consumer-canary.git");
+    mkdirSync(join(root, ".ut-tdd", "bin"), { recursive: true });
+    writeFileSync(join(root, ".ut-tdd", "bin", "ut-tdd.mjs"), "// consumer-local CLI fixture\n");
+    writeFileSync(join(root, "ut-tdd.project.json"), JSON.stringify({
+      schema_version: "ut-tdd.project/v1", repository_identity: "github.com/unison-ai-product/ut-tdd-consumer-canary",
+    }));
+    writeFileSync(join(root, "README.md"), "# baseline\n");
+    runGit("add", "--", ".ut-tdd/bin/ut-tdd.mjs", "ut-tdd.project.json", "README.md");
+    runGit("commit", "--quiet", "-m", "consumer baseline");
+    const cliPath = realpathSync.native(join(root, ".ut-tdd", "bin", "ut-tdd.mjs"));
+    const invocations: string[][] = [];
+    const mockRun = (binary: string, args: string[], options: Record<string, unknown>) => {
+      if (binary === "git") {
+        const result = spawnSync(binary, args, { ...options, encoding: "utf8" });
+        return { status: result.status ?? 1, stdout: result.stdout ?? "", stderr: result.stderr ?? "", error: result.error };
+      }
+      expect(binary).toBe(process.execPath);
+      expect(realpathSync.native(String(args[0]))).toBe(cliPath);
+      const cliArgs = args.slice(1);
+      invocations.push(cliArgs);
+      if (cliArgs[0] === "vmodel" && cliArgs[1] === "template") {
+        const written = [
+          "docs/design/L1-requirements/functional-requirements.md",
+          "docs/design/L2-screen/screen-list.md",
+          "docs/test-design/L12-acceptance-test-design.md",
+        ];
+        for (const path of written) {
+          mkdirSync(join(root, path, ".."), { recursive: true });
+          const layer = path.includes("screen-list") ? "L2" : path.includes("acceptance") ? "L12" : "L1";
+          const fields = layer === "L12" ? "layer: L12\nstatus: draft\npair_artifact: docs/test-design/harness/L7-release-consumer-dev-start-test-design.md\n" :
+            `layer: ${layer}\nstatus: draft\npair_artifact: docs/test-design/harness/L7-release-consumer-dev-start-test-design.md\n`;
+          writeFileSync(join(root, path), `---\n${fields}---\n# Shipped ${layer} template\n`);
+        }
+        return { status: 0, stdout: JSON.stringify({ written, skipped: [] }), stderr: "" };
+      }
+      if (cliArgs[0] === "codex") {
+        expect(cliArgs).toContain("--execute");
+        expect(cliArgs).toContain("--role");
+        expect(cliArgs).toContain("worker");
+        expect(cliArgs).toContain("--model");
+        expect(cliArgs).toContain("gpt-6-luna");
+        const path = "docs/design/L1-requirements/business-requirements.md";
+        mkdirSync(join(root, "docs", "design", "L1-requirements"), { recursive: true });
+        writeFileSync(join(root, path), "---\nlayer: L1\nsub_doc: business\nstatus: confirmed\npair_artifact: docs/test-design/L12-acceptance-test-design.md\n---\n| **BR-01** | Consumer need |\n");
+        return {
+          status: 0,
+          stdout: JSON.stringify({ provider: "codex", model: "gpt-6-luna", available: true, exit_code: 0 }),
+          stderr: "provider execution captured by test double",
+        };
+      }
+      if (cliArgs[0] === "gate" && cliArgs[1] === "G1") {
+        const negative = execFileSync("git", ["-C", root, "rev-parse", "--show-current"], { encoding: "utf8" }).trim().startsWith("ut-tdd-agent-e2e-negative-");
+        const static_gate = negative
+          ? { gate: "G1", applicable: true, passed: false, messages: ["required doc not created: business-requirements.md"] }
+          : { gate: "G1", applicable: true, passed: true, messages: ["G1 pair - OK", "g1-trace - OK (business=1, screens=1, p0Fr=1, l3Plans=0)"] };
+        return { status: negative ? 1 : 0, stdout: JSON.stringify({ static_gate }), stderr: "" };
+      }
+      throw new Error(`unexpected consumer CLI invocation: ${cliArgs.join(" ")}`);
+    };
+    const evidence = runAgentAuthoringAndGates({ consumerRoot: root, run: mockRun });
+    expect(evidence).toMatchObject({
+      authoring: { provider: "codex", provenance: "live-provider", baseline_revision: expect.stringMatching(/^[a-f0-9]{40}$/) },
+      subject: { path: "docs/design/L1-requirements/business-requirements.md", revision: expect.stringMatching(/^[a-f0-9]{40}$/) },
+      positive: { applicable: true, passed: true },
+      negative: { applicable: true, passed: false },
+    });
+    expect(invocations[0]).toEqual(["vmodel", "template", "--slot", "DOC-L1-REQUIREMENTS", "DOC-L2-SCREEN", "DOC-L12-ACCEPTANCE", "--json"]);
+    expect(invocations[1][0]).toBe("codex");
+    expect(invocations[1]).toContain("--execute");
+    expect(invocations[1]).toContain("--effort");
+    expect(invocations[1]).toContain("high");
+    expect(invocations.filter((args) => args[0] === "gate")).toHaveLength(2);
+    expect(runGit("rev-parse", "HEAD")).toBe(evidence.subject.revision);
+    expect(runGit("rev-parse", `${evidence.baseline.revision}^1`)).toBe(evidence.baseline.parent_revision);
+    expect(runGit("diff", "--name-only", evidence.baseline.revision, evidence.subject.revision)).toBe(
+      "docs/design/L1-requirements/business-requirements.md",
+    );
+    expect(runGit("rev-parse", `${evidence.negative.branch}^1`)).toBe(evidence.subject.revision);
+    expect(runGit("branch", "--show-current")).toBe("main");
+    expect(evidence.authoring.subject_parent).toBe(evidence.baseline.revision);
+    expect(evidence.baseline).toMatchObject({
+      kind: "baseline",
+      derivation: {
+        functional: { id: "FR-L1-01", priority: "P0" },
+        screen: { source_id: "SC-001", derived_id: "PM-01" },
+        trace: { business_id: "BR-01", functional_id: "FR-L1-01", screen_id: "PM-01" },
+      },
+    });
+    expect(evidence.baseline.source_templates.screenSource.sha256).toMatch(/^sha256:[a-f0-9]{64}$/);
+    expect(runGit("status", "--porcelain", "--untracked-files=all")).toBe("");
   });
 
   it("U-ST-PACKCANARY-019: rejects same-family, wrong-head, or noncanonical review receipts", () => {
-    const subject = "a".repeat(40);
-    const wrongHead = "b".repeat(40);
-    const base = {
-      repository: "unison-ai-product/ut-tdd-consumer-canary",
-      pr: 12,
-      prHead: subject,
-      subject: {
-        path: "docs/design/L1-requirements/business-requirements.md",
-        revision: subject,
-        blobOid: "c".repeat(40),
-        contentSha256: sha("subject bytes"),
-      },
-      recomputed: { blobOid: "c".repeat(40), contentSha256: sha("subject bytes") },
-      request: {
-        pr: 12, exactHead: subject, authorFamily: "codex", reviewRevision: "rv1-test",
-        path: ".ut-tdd/review/requests/request.json",
-      },
-      receipt: {
-        pr: 12, head: subject, provider: "claude", model: "claude-opus-5", exitCode: 0,
-        reviewRevision: "rv1-test", path: ".ut-tdd/review/receipts/revision.json",
-      },
-      verdictPath: ".ut-tdd/review/verdicts/revision/attempts/attempt-1/verdict.txt",
+    const base = agentReviewEvidence();
+    const joined = verifyAgentReviewJoin(base);
+    expect(joined.subject).toMatchObject({
+      revision: base.subjectRevision,
+      path: "docs/design/L1-requirements/business-requirements.md",
+      blobOid: expect.stringMatching(/^[a-f0-9]{40}$/),
+      contentSha256: expect.stringMatching(/^sha256:[a-f0-9]{64}$/),
+    });
+
+    const sameFamily = agentReviewEvidence();
+    const parsedSameFamily = JSON.parse(readFileSync(sameFamily.receiptPath, "utf8"));
+    parsedSameFamily.reviewerFamily = "codex";
+    writeFileSync(sameFamily.receiptPath, JSON.stringify(parsedSameFamily));
+    expect(() => verifyAgentReviewJoin(sameFamily)).toThrow("same_family_reviewer");
+
+    const wrongHead = agentReviewEvidence();
+    const dispatch = structuredClone(wrongHead.dispatchResult);
+    dispatch.request.request.exactHead = "b".repeat(40);
+    expect(() => verifyAgentReviewJoin({ ...wrongHead, dispatchResult: dispatch }))
+      .toThrow("agent-review-request-identity-invalid");
+
+    const noncanonical = agentReviewEvidence();
+    const consume = structuredClone(noncanonical.consumeResult);
+    consume.projection.path = "source/.ut-tdd/review/receipts/foreign.json";
+    expect(() => verifyAgentReviewJoin({ ...noncanonical, consumeResult: consume }))
+      .toThrow("agent-review-receipt-schema-invalid");
+
+    expect(() => verifyAgentReviewJoin({
+      ...base, dispatchInvocation: ["source-helper", "review", "live-dispatch"],
+    })).toThrow("agent-review-run-boundary-invalid");
+  });
+
+  it("U-ST-PACKCANARY-015..019: offline structural join accepts a complete fixture (not an AT-DIST-003 run)", () => {
+    const input = agentRecord();
+    const releaseDirectory = agentReleaseDir(input.assetBytes);
+    const review = agentReviewEvidence();
+    const subjectRevision = review.subjectRevision;
+    const authoring = {
+      provider: "codex", model: "gpt-6-luna",
+      invocation: ["ut-tdd", "codex", "--role", "worker", "--model", "gpt-6-luna", "--effort", "high", "--task", "write L1 business requirements", "--execute", "--json"],
+      role: "worker", template_source: "pack-template", provenance: "live-provider",
+      template_slot: "DOC-L1-REQUIREMENTS",
+      transcript: "provider started; wrote subject from shipped template",
+      baseline_revision: "f".repeat(40), subject_revision: subjectRevision,
+      subject_parent: "f".repeat(40),
     };
-    expect(() => verifyAgentReviewJoin({
-      ...base, receipt: { ...base.receipt, provider: "codex" },
-    })).toThrow();
-    expect(() => verifyAgentReviewJoin({
-      ...base, prHead: wrongHead,
-    })).toThrow();
-    expect(() => verifyAgentReviewJoin({
-      ...base, receipt: { ...base.receipt, path: "source/.ut-tdd/review/receipts/revision.json" },
-    })).toThrow();
+    const verified = verifyAgentE2EEvidence({
+      tag: AGENT_E2E_TAG,
+      commentUrl,
+      publishRecord: input.value,
+      releaseDirectory,
+      subjectRevision,
+      authoring,
+      positive: {
+        revision: subjectRevision, applicable: true, passed: true, messages: ["G1 passed"],
+      },
+      negative: {
+        revision: "b".repeat(40), parent: subjectRevision,
+        applicable: true, passed: false,
+        messages: ["required doc not created: business-requirements.md"],
+      },
+      review,
+    });
+    expect(verified).toMatchObject({
+      tag: AGENT_E2E_TAG,
+      assetDigests: Object.fromEntries(
+        Object.entries(input.assetBytes).map(([name, bytes]) => [name, sha(bytes)]),
+      ),
+      consumerAnchorDigest: sha("anchor"),
+      subjectRevision,
+    });
   });
 });
