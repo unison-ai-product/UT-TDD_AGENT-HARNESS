@@ -49,14 +49,14 @@ dependencies:
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/722
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/692
 review_evidence:
-  - reviewer: Codex Sol (非著者、PR
+  - reviewer: "Codex Sol (非著者、PR #754 pair-freeze r2)"
     review_kind: cross_agent
     worker_model: claude-opus-5
     reviewer_model: gpt-5.6-sol
     verdict: pass
     reviewed_at: 2026-09-29T09:04:29.565Z
     tests_green_at: 2026-09-29T09:02:04Z
-    scope: PR
+    scope: "PR #754 pair-freezeのみ。PR #761実装closing PASSは未取得。"
     plan_revision: PLAN-L7-722 r3
     subject_head: c547feac71632130c5f38926735995aecb1b761c
     citations:
@@ -76,18 +76,18 @@ status: confirmed
 github_issue_id: 722
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:f0c4a45f979fd4e08b4f6c094dd26c19
-  command_id: plan-revise:issue-722:canonical-rechain:r4:da8e786b08d6
-  admitted_at: 2026-10-05T03:04:55.581Z
-  source_digest: sha256:59afaa43cf71d943f135a7f7a0a98a05dfc82026672d1f1e35d3dab77d50075f
-  decision_digest: sha256:0cb7ad2fdfe8c81e1e13f0d892397fce94449888ea2195a0285e3547be041e6c
-  receipt_digest: sha256:b8c98489fcd7a1e1b0d5816d02037e55ee4250c1edc5233d9a588262cc1cb1da
+  receipt_id: certificate:6cbd931f27ed14ebf2de2854de11afec
+  command_id: plan-revise:issue-722:canonical-rechain:r5:8ea90104a395
+  admitted_at: 2026-10-05T03:05:42.712Z
+  source_digest: sha256:7c39f3a5273ffe05e5b03ffc8630d90eefe83a51105a659b8bb716288bdf8645
+  decision_digest: sha256:4acd72314e5a594c4a1f3b574a57cb353b22dd2e25cca6649c438025f81deacc
+  receipt_digest: sha256:864fb7da71733ac38aca933794dba4510557a9f6f9d66cd7682c0d043ded043b
   binding:
     path: docs/plans/PLAN-L7-722-plan-revision-digest-query.md
     plan_id: PLAN-L7-722-plan-revision-digest-query
     asset_id: plan:d354f79aaae8e1cb50d0b1a77c3ccc76
-    revision: 4
-    content_digest: sha256:59afaa43cf71d943f135a7f7a0a98a05dfc82026672d1f1e35d3dab77d50075f
+    revision: 5
+    content_digest: sha256:7c39f3a5273ffe05e5b03ffc8630d90eefe83a51105a659b8bb716288bdf8645
   route:
     signal: feature_addition
     mode: add-feature
@@ -105,10 +105,10 @@ admission_receipt:
     implementation_disposition: preserved
   reentry:
     target_plan_id: PLAN-L7-722-plan-revision-digest-query
-    target_revision: 4
+    target_revision: 5
     phase: forward_merge
   escape_reason: "PR #761: control指定の#820 landing後tail387へ、元revision
-    4の所有宣言・引用符是正を正規再発行する。API/testとforeign PLANを保持し、実装closing PASSや旧HEAD
+    5の所有宣言・引用符是正を正規再発行する。API/testとforeign PLANを保持し、実装closing PASSや旧HEAD
     CIは流用しない。"
 ---
 
