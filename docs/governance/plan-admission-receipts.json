@@ -6352,6 +6352,22 @@
         "revision": 1,
         "content_digest": "sha256:6b369e292782023de8726a178ae304b229a9d97757603630fe2eb8d16246bfc7"
       }
+    },
+    {
+      "sequence": 398,
+      "previous_record_digest": "sha256:9b8cc6f946a4aa47618b2f3d2055a7232c6bd2d62dc384ac056adad7d56f434d",
+      "record_digest": "sha256:aa4972abd2aca02dc6e814ead6c23588acecb987974cf2cd75e3a6a81b34fee3",
+      "command_id": "plan-revise:issue-823:pack-full-reverse-trial:rechain-1:sol-r1-fix:r2:c18dca7889f6",
+      "receipt_id": "certificate:6828b4cdd8c85cf9bdee337fe0dee88d",
+      "receipt_digest": "sha256:f63680d6829e70d55082a27e3e3d9a1d5ab2934117373646c0225d6ca112ff78",
+      "decision_digest": "sha256:09faa37a2bf308eda0d5ad4c955be1963c30db06da7373bd7a9e4e1198ea35cb",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-823-pack-full-reverse-trial.md",
+        "plan_id": "PLAN-REVERSE-823-pack-full-reverse-trial",
+        "asset_id": "plan:17005d81c24cbdca71cced133ed6d123",
+        "revision": 2,
+        "content_digest": "sha256:bf3e878b8e19115c45b01bd200b7a01e5c2347d4991d9f97f02b47814b270c49"
+      }
     }
   ]
 }
