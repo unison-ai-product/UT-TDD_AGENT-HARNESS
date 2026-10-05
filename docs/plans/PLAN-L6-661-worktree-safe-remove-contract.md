@@ -36,6 +36,7 @@ dependencies:
     - docs/plans/PLAN-L7-501-worktree-lifecycle-domain.md
     - docs/plans/PLAN-L7-476-worktree-topology-pf2-os-collector.md
     - docs/plans/PLAN-L7-474-worktree-topology-detector.md
+    - docs/plans/PLAN-L7-668-codex-hook-command-schema.md
     - docs/test-design/harness/L7-worktree-lifecycle-application-test-design.md
     - docs/test-design/harness/L7-unit-test-design.md
     - src/runtime/worktree-lifecycle/application/service.ts
@@ -52,18 +53,18 @@ sub_doc: function-spec
 github_issue_id: 661
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:04e1bab46c4ea60bbdbe6ce4773c8a18
-  command_id: plan-draft:issue-661:worktree-safe-remove:1
-  admitted_at: 2026-10-05T08:51:24.284Z
-  source_digest: sha256:8ff767f00743165ca3e1b0ded720b5911cc94ce23791b001866e109b5280de97
-  decision_digest: sha256:017a71bb7d66a905f5ac38b4f710ee6d397d0d76e8df77914c5f5335134dddfa
-  receipt_digest: sha256:5fcea4a846e98a5a5af7f9592f3ff0b593a5219e8227182b169d0c37c32d3871
+  receipt_id: certificate:f83910ef370d07216adc0137814da065
+  command_id: plan-revise:issue-661:advisor-adoption:r2:af7859b9202a
+  admitted_at: 2026-10-05T09:27:14.958Z
+  source_digest: sha256:f58f002dd0c45641aec1a4690ec88f581ef42257e6ee2d57f202505e440d1407
+  decision_digest: sha256:d61ca8543f654727a21a9c76184a52ea5b2ddb57c4a82601c29df12bdc0a4c90
+  receipt_digest: sha256:1c93294d943bde6d230fdc41cb8b1f697f510840350f0fe581db0cbf75eb0bb8
   binding:
     path: docs/plans/PLAN-L6-661-worktree-safe-remove-contract.md
     plan_id: PLAN-L6-661-worktree-safe-remove-contract
     asset_id: plan:04e1bab46c4ea60bbdbe6ce4773c8a18
-    revision: 1
-    content_digest: sha256:8ff767f00743165ca3e1b0ded720b5911cc94ce23791b001866e109b5280de97
+    revision: 2
+    content_digest: sha256:f58f002dd0c45641aec1a4690ec88f581ef42257e6ee2d57f202505e440d1407
   route:
     signal: feature_addition
     mode: add-feature
@@ -78,12 +79,12 @@ admission_receipt:
     digest: sha256:09eda2251a316d5af39cb0ebbaebb8df50f51699dcb2033a75b2128b5cd27ffd
   reentry:
     target_plan_id: PLAN-L6-661-worktree-safe-remove-contract
-    target_revision: 1
+    target_revision: 2
     phase: forward_merge
-  escape_reason: "Issue 661: worktree 削除が node_modules junction を辿り primary の
-    node_modules を消す事故が通算 5 回起きた。手順ルールでは止まらないため、ut-tdd worktree remove
-    の正規経路と両ランタイムの PreToolUse guard、junction 運用の廃止を契約として freeze する。実装は S1 以降の別
-    PR"
+  escape_reason: "Issue 661: advisor (claude-fable-5, design, 2026-10-05) の
+    SURVIVE 条件付き判定を反映し、D1 両方、D2 junction 禁止、D3 判定前 fetch と offline 監査、D4 segment
+    先頭 token 判定、C5 直下のみを採択する。npm ci の cold/warm 実測、Codex への guard
+    到達経路、D2→guard→D3 の着工順を記録する"
 ---
 
 # PLAN-L6-661: worktree 物理削除の正規経路と node_modules junction guard の契約 freeze
@@ -110,62 +111,91 @@ PreToolUse(Bash|PowerShell) hook が入っている (issue #661 の 2026-10-05 �
 
 ## 1. 設計判断
 
-advisor 相談は未実施 (本 draft 時点)。下表の推奨は起草側の判断であり、非著者 cross-review と
-`ut-tdd advisor --decision design` の結果で確定する。確定後に本節を改訂する。
+### 1.0 advisor 相談の記録
 
-### D1: 防御の置き場所
+- 相談: `ut-tdd advisor --decision design --plan PLAN-L6-661-worktree-safe-remove-contract --execute`
+  (advisor model `claude-fable-5`、2026-10-05、起票 rev 1 の D1-D4 と §7 未決 1-4 を入力)。
+- verdict: **SURVIVE (条件付き)**。D1 = 両方、D2 = junction 禁止 + `npm ci`、D3 = 判定前 fetch + fetch 失敗で fail-close
+  (`--offline` は理由記録 + 監査ログ付きの明示 flag のみ)、D4 = 語の包含では deny しない (segment 先頭 token の判定)、
+  C5 = worktree 直下の `node_modules` のみ。
+- 条件と対応:
+
+| 条件 | 対応 |
+| --- | --- |
+| (1) `npm ci` の cold cache / warm の所要を 1 回実測して記録する | §1 D2 の実測欄に記録した (計測コマンドは §8) |
+| (2) guard が Codex に届く経路を明示する (pre-shell hook が無ければ Codex 側は command のみと記録する) | Codex は shell 実行を PreToolUse の `tool_name=Bash` として渡すことが PLAN-L7-668 §1.1 で実測済み。§3 G1 に経路と未計測範囲を記録した |
+| (3) 依存順 D2 → D1 guard → D3 を §5 で freeze し、junction 前提で guard を作り込まない | §5 の順序契約に記録した |
+
+以下 D1-D4 と C5 の範囲はすべて **採択** である。override は無い。
+
+### D1: 防御の置き場所 (採択: C 両方)
 
 | 案 | 内容 | trade-off |
 | --- | --- | --- |
-| A guard のみ | PreToolUse で raw `git worktree remove` を検査して deny | 安い。ただし正しい畳み方を提供しないので、deny された agent が別形式 (PowerShell の `Remove-Item -Recurse`、`rm -rf`) で迂回する。command 文字列 parse の誤検知・見逃しが残る |
+| A guard のみ | PreToolUse で raw `git worktree remove` を検査して deny | 安い。ただし正しい畳み方を提供しないので、deny された agent が別形式 (PowerShell の `Remove-Item -Recurse`、`rm -rf`) で迂回する |
 | B command のみ | `ut-tdd worktree remove` を正規経路にし、prose で直叩きを禁じる | 手順は機械化される。ただし直叩きを止める仕組みが prose だけに戻る (5 回失敗した形と同じ) |
-| **C 両方 (推奨)** | command を正規経路にし、guard は「node_modules が残る raw remove」と「node_modules junction 作成」を deny して command へ誘導する | 実装量は最大。guard の deny 理由に正規 command を書けるので迂回の動機が減る。`ut-tdd pr merge` と `gh pr merge` の関係と同じ形 |
+| **C 両方 (採択)** | command を正規経路にし、guard は「node_modules が残る raw remove」と「node_modules junction 作成」を deny して command へ誘導する | 実装量は最大。guard の deny 理由に正規 command を書けるので迂回の動機が減る。`ut-tdd pr merge` と `gh pr merge` の関係と同じ形 |
 
-推奨理由: A は迂回先を残し、B は 5 回失敗した prose 依存に戻る。
-
-### D2: junction 運用そのものを続けるか
+### D2: junction 運用そのものを続けるか (採択: A 禁止 + `npm ci`)
 
 | 案 | 内容 | trade-off |
 | --- | --- | --- |
-| **A junction 禁止 + `npm ci` (推奨)** | worktree でテストが要るなら `npm ci` で実体を入れる (121 packages、約 10 秒)。guard は junction / symlink 作成を deny する | 根本原因 (共有実体への reparse point) が消える。worktree ごとに数百 MB の disk を使う。オフライン時は npm cache 依存 |
+| **A junction 禁止 + `npm ci` (採択)** | worktree でテストが要るなら `npm ci` で実体を入れる。guard は node_modules を対象とする reparse point の作成を deny する | 根本原因 (共有実体への reparse point) が消える。worktree ごとに disk を使う。cold cache では時間がかかる |
 | B junction 継続 + command で守る | 作成は許し、削除だけ command で守る | disk と時間を節約できる。ただし command 以外の削除経路 (エディタ、エクスプローラー、他ツール) で同じ事故が起きる余地が残る |
 
-推奨理由: 失うものが 10 秒と disk だけであり、事故の再発経路を構造的に閉じる。A を採っても、既存 worktree に残った junction を
-安全に外す必要があるので、D1 の command は不要にならない。
+実測 (advisor 条件 1、2026-10-05、`C:/dev/ut-661-plan-20261005`、Windows 11、node v24.13.0、npm 11.6.2):
 
-### D3: 未 merge の判定
+- cold cache (`npm ci --cache <空の一時 dir>`): 122.7 秒 (exit 0)
+- warm (既定 cache): 75.3 秒 (exit 0)
+- top-level entry 数 92、`node_modules` 容量 141 MB
+
+issue #661 本文の「約 10〜11 秒」は primary での復旧時の値であり、新規 worktree では warm でも 75 秒、cold で 2 分かかった。
+この待ち時間は worktree 1 本ごとに 1 回であり、事故 1 回の復旧 (primary を使う全 worktree・全ランタイムの停止) より小さいと判断して
+A を維持する。テストを走らせない worktree (docs-only の PLAN 起票等) では `npm ci` 自体を省いてよい。
+
+A を採っても、既存 worktree に残った junction を安全に外す必要があるので、D1 の command は不要にならない。
+
+### D3: 未 merge の判定 (採択: A 祖先判定 + 判定前 fetch)
 
 | 案 | 内容 | trade-off |
 | --- | --- | --- |
-| **A tip が `origin/main` の祖先 (推奨)** | `git merge-base --is-ancestor <tip> origin/main` が真なら削除可。偽なら `--allow-unmerged --reason "<text>"` が無い限り拒否 | 単純で決定的。squash merge された branch は「未 merge」と判定される (この repo の merge は merge commit なので実害は小さい) |
+| **A tip が `origin/main` の祖先 (採択)** | `git merge-base --is-ancestor <tip> origin/main` が真なら削除可。偽なら `--allow-unmerged --reason "<text>"` が無い限り拒否 | 単純で決定的。squash merge された branch は「未 merge」と判定される (この repo の merge は merge commit なので実害は小さい) |
 | B tip が任意の remote branch に含まれる | `git branch -r --contains` | push 済みなら消してよい、という緩い基準。PR が close されて remote branch だけ残る場合に誤って削除可とする |
 
-detached HEAD の review worktree も A で判定する。fetch 前の古い `origin/main` で誤判定しないよう、判定前に `git fetch origin main`
-を行うか、fetch できなければ fail-close とする (S1 で決める論点。§7 未決 1)。
+鮮度: 判定の直前に `git fetch origin main` を行い、fetch が失敗したら **fail-close** (remove 0) とする。オフラインで畳む必要が
+あるときだけ `--offline --reason "<非空>"` を明示的に渡す。このとき判定にはローカルの `origin/main` を使い、理由・tip sha・
+使った `origin/main` sha を `.ut-tdd/logs/worktree-remove-offline.jsonl` へ監査記録する (foreign-edit-override と同じ
+「理由なき silent bypass を作らない」形)。`--allow-unmerged` も同じ jsonl へ記録する。detached HEAD の review worktree も
+同じ判定に従う。
 
-### D4: guard の判定方式
+### D4: guard の判定方式 (採択: segment 先頭 token 判定)
 
-guard は command 文字列を parse する。完全な shell parser は持たない。判定不能な入力 (path に変数・command substitution・glob を含む)
-は **deny** する (暫定 guard と同じ。ループで一括削除する使い方を封じる)。既知の誤検知 (コマンドの引数文字列に判定語が含まれる、
-例: `gh issue comment --body "...git worktree remove..."`) は許容し、deny 理由で `--body-file` を案内する。誤検知の削減より
-見逃しゼロを優先する。
+command 文字列を `;` / `&&` / `||` / `|` / 改行で segment に分け、**各 segment の先頭 token 列だけ** を判定する。
+判定対象は `git worktree remove`、`mklink /J` (`cmd /c` / `cmd //c` 経由を含む)、`New-Item -ItemType Junction|SymbolicLink`、
+`ln -s` の 4 形である。引用符内の引数 (`gh ... --body "..."` の本文など) は判定しない。語の包含では deny しない。
+完全な shell parser は持たない (最小実装原則。これ以上の解析は作り込みにあたる)。判定対象 segment の path 引数に
+変数・command substitution・glob が含まれ、検査できない場合は deny する (ループで一括削除する使い方を封じる)。
+
+### C5 の走査範囲 (採択: worktree 直下の `node_modules` のみ)
+
+C5 は `<wt>/node_modules` だけを対象にする。配下全体の reparse point 走査は行わない。D2 で junction 作成を禁じるので、
+直下以外の reparse point を前提にした作り込みは不要である。
 
 ## 2. `ut-tdd worktree remove <wt>` の契約
 
-入力: `<wt>` (worktree の path)、任意の `--allow-unmerged --reason "<非空>"`、任意の `--dry-run`。
+入力: `<wt>` (worktree の path)、任意の `--allow-unmerged --reason "<非空>"`、任意の `--offline --reason "<非空>"`、任意の `--dry-run`。
 
 手順 (各段で失敗したら以降を実行せず非 0 で終了し、どこで止まったかを JSON で出す):
 
 - C1 対象の確定: `<wt>` を realpath 化し、`git worktree list --porcelain` の登録 path と一致すること。primary checkout
   (main working tree) と一致したら拒否する。cwd が対象内なら拒否する。
-- C2 未 merge 判定: D3 に従う。拒否時は tip sha と判定に使った `origin/main` の sha を出す。
+- C2 未 merge 判定: D3 に従う (直前に `git fetch origin main`、失敗なら fail-close、`--offline --reason` は監査記録付き)。拒否時は tip sha と判定に使った `origin/main` の sha を出す。
 - C3 dirty 判定: `git -C <wt> status --porcelain` が空でなければ拒否する (`--force` は提供しない。dirty の破棄は本 command の責務外)。
 - C4 primary の健全性 snapshot (前): primary の `node_modules` について、存在・実体ディレクトリであること・
   `package-lock.json` の top-level package のうち存在する件数 N を記録する。
 - C5 reparse point の解除: `<wt>/node_modules` が junction / symlink なら、**辿らずに** link だけを外す
   (Node の `fs.lstatSync` で link を判定し、Windows junction は `fs.rmdirSync`、symlink は `fs.unlinkSync`。再帰削除 API は使わない)。
-  `<wt>` 直下以外の reparse point も `fs.lstat` で走査し、primary 配下を指すものがあれば同様に外す。
-  走査できない entry (権限・dangling) があれば fail-close。
+  対象は `<wt>` 直下の `node_modules` だけとする (§1 C5)。`lstat` できなければ fail-close。
 - C6 不在確認: C5 の後に `<wt>/node_modules` を `lstat` し、**存在しない** ことを確認する。実体ディレクトリとして残っていても
   拒否する (実体は消してよいが、本 command は辿る危険を避けるため実体の再帰削除も行わない。利用者が先に消す)。
 - C7 物理削除: `git worktree remove <wt>` (`--force` なし) を実行する。
@@ -177,15 +207,21 @@ guard は command 文字列を parse する。完全な shell parser は持た�
 
 ## 3. guard の契約 (両ランタイム)
 
-- G1 置き場: repo 管理の TypeScript entrypoint 1 本 (例: `.claude/hooks/worktree-guard.ts`) とし、`.claude/settings.json` の
-  `PreToolUse(Bash|PowerShell)` と `.codex/hooks.json` の `PreToolUse(exec_command|local_shell|Bash)` の両方から呼ぶ
-  (agent-guard / work-guard と同じ配線)。`.claude/CLAUDE.md` §Hooks の一覧と `rule-drift` の照合 (U-RDRIFT-007) を同時に更新する。
+- G1 置き場と到達経路: repo 管理の TypeScript entrypoint 1 本 (例: `.claude/hooks/worktree-guard.ts`) を両ランタイムから呼ぶ。
+  - Claude: `.claude/settings.json` の `PreToolUse` に matcher `Bash|PowerShell` で追加する (agent-guard / work-guard と同じ配線)。
+  - Codex: `.codex/hooks.json` の `PreToolUse` に matcher `Bash` で追加する。Codex は shell 実行を PreToolUse の `tool_name=Bash` として
+    渡すことが PLAN-L7-668 §1.1 で実測済みである (VS Code 拡張の Codex、hook 実行 shell は `pwsh -NoProfile -Command`)。command は
+    PLAN-L7-668 §2 の形 (`node "$(git rev-parse --show-toplevel)/<script>"`、`args` / `blockOnFailure` なし、block は exit 2) に従う。
+  - 未計測範囲: `pwsh` の無い Windows での fallback shell と、`codex exec` (headless) で project hook が発火するか
+    (PLAN-L7-668 §1.1 の未計測と同じ)。そこでは guard が届かない可能性があり、Codex 側の防御は command (D1) が担う。
+    S2 で実機の deny を 1 回観測し、届かない経路があれば「Codex のその経路は command のみ」と本 PLAN に追記する。
+  - `.claude/CLAUDE.md` §Hooks の一覧と `rule-drift` の照合 (U-RDRIFT-007) を同時に更新する。
 - G2 deny 1: `git worktree remove <path>` で、`<path>/node_modules` が (junction / symlink / 実体のいずれでも) 存在する。
-- G3 deny 2: `<path>` が変数・command substitution・glob を含み、検査できない。
+- G3 deny 2: 判定対象 segment の `<path>` が変数・command substitution・glob を含み、検査できない。
 - G4 deny 3: `node_modules` を link 先または link 名とする junction / symlink の作成 (`mklink /J`、`New-Item -ItemType Junction|SymbolicLink`、
-  `ln -s`、`cmd //c mklink`)。D2 で B を採った場合は G4 を外す。
+  `ln -s`、`cmd //c mklink`)。判定は §1 D4 の segment 先頭 token 方式に限る。
 - G5 deny 理由には `ut-tdd worktree remove <path>` と `npm ci` を案内として書く。
-- G6 `ut-tdd worktree remove` 自身の呼び出しは通す。guard は fail-close (stdin JSON 不正は deny)。
+- G6 `ut-tdd worktree remove` 自身の呼び出しと、引用符内の引数だけに判定語を含む segment (例: `gh issue comment --body "..."`) は通す。guard は fail-close (stdin JSON 不正は deny)。
 
 ## 4. oracle 候補 (L7 test-design へ freeze する対象)
 
@@ -205,22 +241,30 @@ fixture 内の偽 `node_modules` 実体) だけで行う。primary の `node_mod
 | O9 | guard: `for w in ...; do git worktree remove "$w"; done` | deny | G3 を削除 → RED |
 | O10 | guard: `cmd //c mklink /J C:/x/node_modules C:/y/node_modules` と `New-Item -ItemType Junction` | 両方 deny | G4 の pattern から 1 形式を削除 → その形式で RED |
 | O11 | guard: `ut-tdd worktree remove C:/x` | allow | G6 の除外を削除 → RED |
+| O13 | `git fetch` を失敗させる (port で注入)、`--offline` なし | C2 で拒否、remove 0 | fetch 失敗時にローカル `origin/main` で続行させる → RED |
+| O14 | `--offline --reason "x"` | 判定続行 + `worktree-remove-offline.jsonl` に 1 行 (reason・tip・origin/main sha) | 監査記録を削除 → RED |
+| O15 | guard: `gh issue comment 1 --body "git worktree remove C:/x"` | allow | segment 先頭判定を語の包含判定に置換 → RED |
 | O12 | rule-drift: `.codex/hooks.json` だけから guard 配線を外す | doctor rule-drift fail | 両ランタイム照合を片側だけにする → RED |
 
 ## 5. 実装分割 (1 PR = 1 論点)
 
-順序契約: S0 → S1 → S2 → S3 → S4。S2 は S1 の command が main に入るまで着工しない (guard の deny 理由が指す先が先に要る)。
+順序契約 (advisor 条件 3): **D2 → D1 guard → D3** の依存順で着工する。
 
-- S0 (本 PLAN): 契約 freeze と非著者 cross-review。D1-D4 の確定。
-- S1: L7 test-design へ O1-O7 を freeze (pair-freeze) し、`src/runtime/worktree-lifecycle/` 配下に物理削除 adapter
-  (source_module 1 個) と対テスト。CLI 配線は最小 (`ut-tdd worktree remove`)。
-- S2: guard entrypoint 1 本と O8-O11、`.claude/settings.json` + `.codex/hooks.json` + `.claude/CLAUDE.md` §Hooks の配線、
-  rule-drift の照合追加 (O12)。
-- S3: D2 で A を採った場合の運用切替。`CLAUDE.md` / メモリの junction 手順を正規 command と `npm ci` への pointer に置換し、
-  暫定 guard (`.claude/settings.local.json`) の撤去を案内する。
+1. D2 (junction 禁止 + `npm ci`) を先に運用へ入れる (S1)。guard は junction が新しく作られない前提で書き、junction 前提の作り込みをしない。
+2. D1 の guard (S2) は D2 の後。deny 理由が指す正規 command の存在を前提にしないよう、S2 の deny 理由は `npm ci` と
+   「`ut-tdd worktree remove` は S3 で提供」を案内し、S3 merge 時に command 案内へ差し替える。
+3. D3 を含む command (S3) は最後。既存 worktree に残った junction の安全な撤去はここで担う。
+
+- S0 (本 PLAN): 契約 freeze と非著者 cross-review。D1-D4 / C5 は §1 で採択済み。
+- S1 (D2): 運用切替。`CLAUDE.md` / メモリの junction 手順を `npm ci` への pointer に置換し、暫定 guard (`.claude/settings.local.json`) の
+  撤去手順を案内する。docs のみ。
+- S2 (D1 guard): L7 test-design へ O8-O12 と O15 を freeze (pair-freeze) し、guard entrypoint 1 本と対テスト、`.claude/settings.json` +
+  `.codex/hooks.json` + `.claude/CLAUDE.md` §Hooks の配線、rule-drift の照合追加。Codex 側の実機 deny を 1 回観測する。
+- S3 (command + D3): L7 test-design へ O1-O7、O13、O14 を freeze し、`src/runtime/worktree-lifecycle/` 配下に物理削除 adapter (source_module 1 個)
+  と対テスト、最小の CLI 配線 (`ut-tdd worktree remove`)。S2 の deny 理由を command 案内へ差し替える。
 - S4 (任意): issue #426 / #794 の apply 段が本 command を呼ぶ配線。#426 / #794 側の PLAN で扱い、本 PLAN では行わない。
 
-Reverse 対: S1 の実装 PR (kind=add-impl) が Reverse backfill PLAN を伴う。
+Reverse 対: S2 / S3 の実装 PR (kind=add-impl) が Reverse backfill PLAN を伴う。
 
 ## 6. 非スコープ
 
@@ -229,12 +273,9 @@ Reverse 対: S1 の実装 PR (kind=add-impl) が Reverse backfill PLAN を伴う
 - primary の `node_modules` の自動復旧 (`npm ci` の自動実行)。検知と案内に留める。
 - `.ut-tdd/harness.db` を含む canonical state の操作。
 
-## 7. 未決事項 (cross-review / advisor で確定する)
+## 7. 未決事項
 
-1. D3 の `origin/main` 鮮度: 判定前に fetch するか、fetch 失敗時に fail-close するか、`--offline` を設けるか。
-2. C5 の走査範囲: `<wt>` 直下の `node_modules` だけか、配下全体の reparse point か (全体走査は大きな worktree で遅い)。
-3. D2 の採否 (junction 禁止)。PO の運用判断に近いが、高影響境界には当たらないので advisor 相談で決める。
-4. guard の誤検知 (§1 D4) を許容する範囲。`gh` の `--body` 引数を判定対象から外すか。
+なし。rev 1 の未決 1-4 は §1.0 の advisor 相談で、D3 の鮮度、C5 の範囲、D2 の採否、D4 の判定方式として採択した。
 
 ## 8. 根拠
 
@@ -242,3 +283,7 @@ Reverse 対: S1 の実装 PR (kind=add-impl) が Reverse backfill PLAN を伴う
 - 物理削除 adapter の不在: `src/runtime/worktree-lifecycle/application/service.ts` (create / handoff / lease のみ)。
 - Codex hook の現状: `.codex/hooks.json` に Bash 系 PreToolUse が無い (agent-guard / work-guard の 2 本のみ)。
 - 復旧の所要: issue #661 本文 (`npm ci`、121 packages、約 11 秒)。
+- `npm ci` の cold / warm 実測 (§1 D2): `C:/dev/ut-661-plan-20261005` で、空の一時 cache dir を `--cache` に渡した `npm ci` と、
+  続けて既定 cache での `npm ci` を `date +%s%3N` で挟んで計測した。
+- Codex PreToolUse の shell `tool_name=Bash`: `docs/plans/PLAN-L7-668-codex-hook-command-schema.md` §1.1。
+- advisor 相談: `ut-tdd advisor --decision design --plan PLAN-L6-661-worktree-safe-remove-contract --execute` (2026-10-05、`claude-fable-5`)。

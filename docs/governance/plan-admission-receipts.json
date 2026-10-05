@@ -6512,6 +6512,22 @@
         "revision": 1,
         "content_digest": "sha256:8ff767f00743165ca3e1b0ded720b5911cc94ce23791b001866e109b5280de97"
       }
+    },
+    {
+      "sequence": 408,
+      "previous_record_digest": "sha256:ad4434ab264a966c8efd64c5e7b8132ac7a00136400ee657a9f872a33c9b50d4",
+      "record_digest": "sha256:e3061a4a16bd71b00d94f6d3912b7c7d9f418f9703128f15244a0c18042c06f1",
+      "command_id": "plan-revise:issue-661:advisor-adoption:r2:af7859b9202a",
+      "receipt_id": "certificate:f83910ef370d07216adc0137814da065",
+      "receipt_digest": "sha256:1c93294d943bde6d230fdc41cb8b1f697f510840350f0fe581db0cbf75eb0bb8",
+      "decision_digest": "sha256:d61ca8543f654727a21a9c76184a52ea5b2ddb57c4a82601c29df12bdc0a4c90",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-661-worktree-safe-remove-contract.md",
+        "plan_id": "PLAN-L6-661-worktree-safe-remove-contract",
+        "asset_id": "plan:04e1bab46c4ea60bbdbe6ce4773c8a18",
+        "revision": 2,
+        "content_digest": "sha256:f58f002dd0c45641aec1a4690ec88f581ef42257e6ee2d57f202505e440d1407"
+      }
     }
   ]
 }
