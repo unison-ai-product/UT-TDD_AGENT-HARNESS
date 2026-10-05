@@ -50,22 +50,21 @@ dependencies:
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/815
 review_evidence: []
 status: draft
-sub_doc: function-spec
 github_issue_id: 815
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:3668ea3147d11f25cd3e1f6fe7581325
-  command_id: plan-draft:issue-815:consumer-report-command-and-intake:rechain-1
-  admitted_at: 2026-10-05T04:30:03.833Z
-  source_digest: sha256:825929ad6b36a6b5e6bf9b7c1020ba1f296381d792fbca6a068107f3ce9b869c
-  decision_digest: sha256:0cc07de1792cf023482e34ccf12b0aca4256f1f80d78e1af9a206a761ce49d97
-  receipt_digest: sha256:c1d89c79652fcbd04f446cfd48629706f4583bf713fe7dbf7ff50d179a068b48
+  receipt_id: certificate:5027af2cff3ed0b3a0cbb40a207a7c41
+  command_id: plan-revise:issue-815:report-command:rechain-1:sol-r1-fix:r2:ab3156798eb4
+  admitted_at: 2026-10-05T04:30:31.471Z
+  source_digest: sha256:09370048e695b988f60357b931a3e05185faa41490433a6a1882c78df5c2b989
+  decision_digest: sha256:db7574230bd5a003fd3221c5186c9cd215746c3812d41a31a8fc8f0e233a1cbe
+  receipt_digest: sha256:1ec4146567be5e1b332629582fa6f8c7b8dd8bfc03fea9f466253d52771d208a
   binding:
     path: docs/plans/PLAN-L6-107-consumer-report-command-and-intake.md
     plan_id: PLAN-L6-107-consumer-report-command-and-intake
     asset_id: plan:3668ea3147d11f25cd3e1f6fe7581325
-    revision: 1
-    content_digest: sha256:825929ad6b36a6b5e6bf9b7c1020ba1f296381d792fbca6a068107f3ce9b869c
+    revision: 2
+    content_digest: sha256:09370048e695b988f60357b931a3e05185faa41490433a6a1882c78df5c2b989
   route:
     signal: feature_addition
     mode: add-feature
@@ -80,12 +79,11 @@ admission_receipt:
     digest: sha256:610d332e78fa0b1893fd1299881eeef3237bd8801f5ba9364f5d70aec59c2c41
   reentry:
     target_plan_id: PLAN-L6-107-consumer-report-command-and-intake
-    target_revision: 1
+    target_revision: 2
     phase: forward_merge
-  escape_reason: "Issue 815 S2/S3: PO 判断 (2026-10-05) で受付先を本 source repo の issue
-    に確定したため、S1 (PLAN-L6-106) の buildReport を 1 回呼ぶ `ut-tdd report` の束
-    allowlist・layout・出力経路と、consumer-report issue form の契約を freeze する。network
-    送信はしない"
+  escape_reason: "Issue 815 S2/S3: PR #824 Sol r1 FLAG の是正 (error_code
+    を定型表の閉じた列挙に限定し --error-param を廃止して初期定型表を確定、プレビュー後の失敗では S1 F2 (i)
+    に合わせて固定文言を出さず exit code で通知)。束の allowlist・受付先・buildReport 1 回の方式は変えない"
 ---
 
 # PLAN-L6-107 (add-design): `ut-tdd report` コマンドと受付先 issue フォーム (S2 + S3)
@@ -154,11 +152,11 @@ Pack repo (B) は採らない。前提は「報告はハーネス自身の問題
 | `node` | `process.version` | `^v\d+\.\d+\.\d+$` |
 | `command` | 利用者が `--command` で渡した、失敗した ut-tdd コマンド行 | 先頭が `ut-tdd ` で 1 行、512 byte 以下。満たさなければ `unknown` ではなく**入力エラー** (束を作らない、§5.3) |
 | `exit_code` | `--exit-code` | `^-?\d{1,5}$`。省略時 `unknown` |
-| `error_code` | `--error-code` (型付きエラーコード、例: `consumer_runtime_anchor_mismatch`) | `^[a-z0-9][a-z0-9_.:-]{0,63}$`。省略時 `none`。形に合わなければ入力エラー |
+| `error_code` | `--error-code` (型付きエラーコード、例: `consumer_runtime_anchor_mismatch`) | §4.1.1 定型表の `code` 列と `none` からなる閉じた列挙。省略時 `none`。列挙外は、形だけ正しい業務文字列 (例: `acme-internal-billing`) を含めて入力エラー |
 | `doctor_scope` | 固定値 `toolchain` | — |
 | `doctor_ok` | `ut-tdd doctor --scope toolchain` 相当の in-process 実行の `ok` | `true` / `false` / `unavailable` (singleton 取得失敗・例外) |
 | `doctor_failed_checks` | 同 `timings` のうち `ok: false` の `id` を ASCII 昇順で `,` 連結 | 各 id が `^[a-z0-9][a-z0-9._-]{0,63}$`。合わない id は `<invalid-id>` に置換。0 件なら `none` |
-| `error_detail` | `error_code` が §4.1.1 のエラー定型表に載っているとき、その定型文に `--error-param key=value` (表が許可した key と値の形だけ) を差し込んで再構成した 1 行 | 表に無い code、表に無い key、形に合わない値は入力エラー。表に載らない code では `(none)`。利用者の自由文や生の例外テキスト・stack は受け付けない |
+| `error_detail` | `error_code` に対応する §4.1.1 定型表の定型文 (固定の 1 行) | `error_code` が `none` なら `(none)`。差込み位置を持たず、CLI から値を受け取らない (`--error-param` は持たない)。利用者の自由文や生の例外テキスト・stack は入らない |
 | env 節 | S1 `filterEnv` の出力 (allowlist は S1 実装 PR で確定) | S1 の契約のまま |
 
 **明示的に入れないもの**: project のファイル内容、PLAN 本文・PLAN ID の一覧、doctor の `messages` (自由文)、
@@ -175,7 +173,30 @@ Pack repo (B) は採らない。前提は「報告はハーネス自身の問題
 
 #### 4.1.1 エラー定型表
 
-`error_detail` を作る定型表は `src/report/` に閉じた表として置く。各行は `code` / 定型文 (差込み位置付き) / 許可 key と値の形 (数値・閉じた列挙・`^[A-Za-z0-9._-]{1,64}$` の id) を持つ。初期の行は、consumer の install / verify / doctor で利用者が実際に目にする型付きエラーとし、確定は PR-1 で行う。表に無い失敗は `error_code` を `none`、`error_detail` を `(none)` として送り、開発側が triage で再現する。**PO の報告項目「エラーメッセージ」は、この PLAN では「定型表から再構成したエラーの説明」と解釈する** (生の本文は載せない)。この解釈変更は PO 判断として §3 に記録する。
+`error_detail` を作る定型表は `src/report/` に閉じた表として置く。各行は `code` と定型文 (固定の 1 行、差込み位置なし) だけを持つ。
+CLI から定型文へ値を差し込む経路は設けない。任意の ASCII 文字列を受ける id 型の差込みを許すと、PLAN ID・ホスト名・利用者名を
+形の検査だけでは締め出せないためである (r1 review の反証: `^[A-Za-z0-9._-]{1,64}$` に業務文字列が通る)。差込みが必要になったら、
+値をハーネス由来の閉じた列挙 (整数・ハーネスが定義する列挙) に限る形で契約改訂を先に行う。
+
+初期の行は、consumer の install / verify で利用者が実際に目にする型付きエラーのうち、次の 10 個とする
+(各 code は main の `src/` に文字列として存在する。PR-1 の oracle は `src/` に存在しない code が表に入ったら Red にする)。
+
+| code | 定型文 |
+|---|---|
+| `consumer_runtime_absent` | consumer runtime の記録が見つかりません。 |
+| `consumer_runtime_schema_invalid` | consumer runtime の記録が schema に合いません。 |
+| `consumer_runtime_identity_mismatch` | consumer runtime の識別情報が配布物と一致しません。 |
+| `consumer_runtime_digest_mismatch` | consumer runtime の digest が記録と一致しません。 |
+| `consumer_runtime_anchor_mismatch` | consumer runtime の anchor が記録と一致しません。 |
+| `consumer_runtime_external_path` | consumer runtime がプロジェクト外の path を指しています。 |
+| `consumer_runtime_resolution_denied` | consumer runtime の解決が拒否されました。 |
+| `consumer_runtime_indeterminate` | consumer runtime の状態を判定できません。 |
+| `consumer_runtime_permission` | consumer runtime の読み書き権限が不足しています。 |
+| `consumer_runtime_install_failed` | consumer runtime の install に失敗しました。 |
+
+表に無い失敗は `error_code` を `none`、`error_detail` を `(none)` として送り、開発側が triage で再現する。
+表の行の追加・変更は、code が `src/` に存在すること (PR-1 の oracle) と、定型文が固定の 1 行であることだけを条件とし、
+差込みを伴う変更は上記の契約改訂を要する。**PO の報告項目「エラーメッセージ」は、この PLAN では「定型表から再構成したエラーの説明」と解釈する** (生の本文は載せない)。この解釈変更は PO 判断として §3 に記録する。
 
 doctor を `full` でなく `toolchain` にする理由: `full` は consumer の PLAN・docs を検査対象にし、check ID の集合自体が
 project の構成を映す。`toolchain` はハーネスの実行環境だけを見る。doctor は singleton であり、二重起動 (exit 2 相当) を
@@ -228,11 +249,20 @@ error_detail: <値、無ければ (none)>
   `report: saved <報告ファイルの cwd 相対 path>` と
   `report: open https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/new?template=consumer-report.yml`。
   URL は定数で、束の内容を query に載せない (prefill しない)。利用者は保存した束をフォームの束欄へ貼る。
-- 失敗時 (`ok: false` / 確認不成立 / 非対話) は、`buildReport` が戻った後に stderr へ `report: blocked <code>` を 1 行だけ出す。
-  `<code>` は閉じた列挙 `input_invalid` / `violation:credential` / `violation:pii` / `violation:internal_endpoint` / `violation:path_residue` /
-  `violation:known_value` / `check_failed` / `not_confirmed` / `non_interactive` / `release_failed` のどれかで、どの検査で止まったかまでを示す。
-  検査が複数の種別で違反した場合は、この列挙順で最初の 1 つだけを出す。件数・位置・検出値・周辺文字列は出さない (S1 §3.3 で S3 へ委ねた「違反の診断を利用者へ表示する要否」の決定)。
-- exit code: 確認成立で 0、それ以外は 1。
+- 失敗時の出力は、S1 §3.3 の位相に合わせて 2 つに分ける。
+  - **プレビュー前に止まった失敗** (入力エラーと S1 の位相 F1、および非対話): `buildReport` が戻った後に stderr へ
+    `report: blocked <code>` を 1 行だけ出す。`<code>` は閉じた列挙 `input_invalid` / `violation:credential` / `violation:pii` /
+    `violation:internal_endpoint` / `violation:path_residue` / `violation:known_value` / `check_failed` / `non_interactive` のどれかで、
+    どの検査で止まったかまでを示す。検査が複数の種別で違反した場合は、この列挙順で最初の 1 つだけを出す。件数・位置・検出値・
+    周辺文字列は出さない。これは S1 §3.3-1 が S3 へ委ねた「違反の診断を利用者へ表示する要否」の決定であり、S1 の F1 では
+    プレビューを含め外部出力が 0 なので、この 1 行が利用者の見る唯一の出力になる。非対話は S1 §3.3-3 によりプレビューも出さない。
+  - **プレビューを書き始めた後の結果** (確認不成立と S1 の位相 F2): S3 は stdout / stderr / file のどれにも bytes を追加しない。
+    S1 §3.3 1b (i) は F2 で「どの channel にも検査済み全文の部分列以外を書かない」と定めており、S3 の固定文言も例外にしない
+    (S3 への診断表示の委任は F1 の診断についてであり、F2 の制約を免除しない)。利用者への通知は exit code だけで行う。
+    確認不成立は、利用者自身が `yes` 以外を入力した結果なので、追加の表示が無くても状態は分かる。
+- exit code: 確認成立で 0、プレビュー前に止まった失敗で 1、確認不成立で 2、F2 (sink の例外。戻り値の `release` /
+  `staging` が何であっても) で 3。exit code は bytes を書かないため、S1 の channel 制約に触れない。
+  `--help` は exit code の意味を固定文言で載せる (実行結果の出力ではないので位相の制約外)。
 - `--yes` / `--force` / env による確認の迂回は持たない (S1 §3.3-5)。
 
 | 案 | 採否 | 理由 |
@@ -241,12 +271,12 @@ error_detail: <値、無ければ (none)>
 | B: `gh issue create` で起票まで自動化 | 却下 (後送り) | 起票がフォームを経由せず、§6 の項目固定と label 付与が効かない (§2 の #815 が実例)。gh の認証状態と network 失敗を S1 の F2 位相へ持ち込む。需要が出たら security-audit 付きの別 PLAN で判断する |
 | C: URL query に束を prefill | 却下 | 束がブラウザ履歴・proxy log に残る。URL 長の上限もある |
 | D: 失敗時に marker と件数を表示 | 却下 | 件数は利用者の次の行動を増やさず、出力の表面積だけを増やす。検査の種別 (閉じた列挙) だけで、どの入力を見直すべきかは分かる |
-| E: 何も出さず exit code だけ | 却下 | 詰まった利用者がツールを迂回して手で貼る経路を誘発し、検査を素通りさせる (advisor 指摘) |
+| E: 何も出さず exit code だけ | プレビュー前は却下、プレビュー後は採択 | プレビュー前では、詰まった利用者がツールを迂回して手で貼る経路を誘発し、検査を素通りさせる (advisor 指摘)。プレビュー後 (確認不成立・F2) は S1 §3.3 1b (i) により固定文言も追加できないため、exit code だけで通知する (r1 review 指摘) |
 | F: 位置・検出種別の詳細を手元の log file に出す | 却下 | S1 §3.3 の位相 F1 は file を含む全 channel を 0 とする契約で、log file はその C-file に当たる。採るなら S1 の改訂が先になる |
 
 ### 5.3 入力エラー
 
-`--command` が無い・`ut-tdd ` で始まらない・複数行・512 byte 超、`--error-code` の形違反、`--error-param` の違反 (定型表に無い code・表が許可しない key・形に合わない値)、定義外 option (旧案の `--message` を含む) は、
+`--command` が無い・`ut-tdd ` で始まらない・複数行・512 byte 超、`--error-code` が定型表の code でも `none` でもない (形だけ正しい業務文字列を含む)、定義外 option (旧案の `--message` / `--error-param` を含む) は、
 `buildReport` を呼ばずに `report: blocked input_invalid` で終える (束を作らない)。`ut-tdd ` 以外のコマンドを拒否するのは
 「ハーネスの問題だけ」を CLI 面で縛るためである。
 
