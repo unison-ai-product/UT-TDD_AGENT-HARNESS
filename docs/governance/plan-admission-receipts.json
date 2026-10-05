@@ -6192,6 +6192,22 @@
         "revision": 4,
         "content_digest": "sha256:68d8b3039dcfdee4d05283c25b6a6c400147e2e8150222827d42c1e995744507"
       }
+    },
+    {
+      "sequence": 388,
+      "previous_record_digest": "sha256:6a53a2b1588a3f334cefecbfa6b987932ed602b9c8bcd831310892d4d70a7f69",
+      "record_digest": "sha256:12fd5441edb83387a464f99abc9f7ab5afe7f02eee2674c9d5c3e972129f572f",
+      "command_id": "plan-draft:issue-815:consumer-report-command-and-intake:1",
+      "receipt_id": "certificate:ff8ec90a74ab5c281d4806a91966f1d5",
+      "receipt_digest": "sha256:02f0bcc47f8d1f2f8b286f0fc923bd605ec3cacab13956c40a6f577a9731e531",
+      "decision_digest": "sha256:0cc07de1792cf023482e34ccf12b0aca4256f1f80d78e1af9a206a761ce49d97",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-107-consumer-report-command-and-intake.md",
+        "plan_id": "PLAN-L6-107-consumer-report-command-and-intake",
+        "asset_id": "plan:ff8ec90a74ab5c281d4806a91966f1d5",
+        "revision": 1,
+        "content_digest": "sha256:825929ad6b36a6b5e6bf9b7c1020ba1f296381d792fbca6a068107f3ce9b869c"
+      }
     }
   ]
 }
