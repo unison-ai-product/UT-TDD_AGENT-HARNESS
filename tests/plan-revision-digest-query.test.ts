@@ -34,6 +34,7 @@ import { removeTestTree } from "./support/temp-tree.ts";
 const activeDatabases: HarnessDb[] = [];
 const fixtureRoots: string[] = [];
 const cwdRestorers: Array<() => void> = [];
+const cliEntryPath = join(process.cwd(), "src", "cli.ts");
 
 const snapshotWriterScript = `
 import { DatabaseSync } from "node:sqlite";
@@ -111,6 +112,118 @@ describe("PLAN revision canonical payload digest read-only query", () => {
     expect(Object.keys(result).sort()).toEqual(
       ["alias", "assetId", "canonicalPayloadDigest", "ok", "revision"].sort(),
     );
+  });
+
+  it("U-PRDQ-008: CLI O7 rollback query returns the exact API DTO without side effects", () => {
+    const fixture = createFixture();
+    appendRevision(fixture.db, {
+      assetId: fixture.assetA,
+      alias: fixture.aliasA,
+      basePayload: fixture.payloadA1,
+      nextPayload: fixture.payloadA2,
+    });
+    closeTracked(fixture.db);
+    useFixtureCwd(fixture.root);
+    const directory = join(fixture.root, ".ut-tdd", "ledger");
+    const before = snapshotDirectory(directory);
+    const apiResult = readPlanRevisionCanonicalPayloadDigest({
+      alias: fixture.aliasA,
+      assetId: fixture.assetA,
+      revision: 1,
+    });
+    expect(snapshotDirectory(directory)).toEqual(before);
+    expect(apiResult).toEqual({
+      ok: true,
+      alias: fixture.aliasA,
+      assetId: fixture.assetA,
+      revision: 1,
+      canonicalPayloadDigest: `sha256:${sha256(fixture.payloadA1)}`,
+    });
+
+    const cliResult = runRevisionDigestCli({
+      cwd: fixture.root,
+      alias: fixture.aliasA,
+      assetId: fixture.assetA,
+      revision: 1,
+    });
+
+    expect(cliResult.error).toBeUndefined();
+    expect(cliResult.status).toBe(0);
+    const cliValue = JSON.parse(cliResult.stdout);
+    expect(cliValue).toEqual(apiResult);
+    expect(Object.keys(cliValue).sort()).toEqual(
+      ["alias", "assetId", "canonicalPayloadDigest", "ok", "revision"].sort(),
+    );
+    expect(snapshotDirectory(directory)).toEqual(before);
+    expect(readdirSync(directory).some((entry) => /-(journal|wal|shm)$/.test(entry))).toBe(false);
+  });
+
+  it("U-PRDQ-009: CLI O7 WAL rejection exits 1 without digest or side effects", () => {
+    const fixture = createFixture();
+    appendRevision(fixture.db, {
+      assetId: fixture.assetA,
+      alias: fixture.aliasA,
+      basePayload: fixture.payloadA1,
+      nextPayload: fixture.payloadA2,
+    });
+    fixture.db.exec("PRAGMA journal_mode = WAL");
+    closeTracked(fixture.db);
+    useFixtureCwd(fixture.root);
+    const directory = join(fixture.root, ".ut-tdd", "ledger");
+    const before = snapshotDirectory(directory);
+    expect(before.entries.some((entry) => /-(wal|shm)$/.test(entry.name))).toBe(false);
+    const apiResult = readPlanRevisionCanonicalPayloadDigest({
+      alias: fixture.aliasA,
+      assetId: fixture.assetA,
+      revision: 1,
+    });
+    expect(snapshotDirectory(directory)).toEqual(before);
+    expect(apiResult).toEqual({ ok: false, reason: "ledger_unavailable" });
+
+    const cliResult = runRevisionDigestCli({
+      cwd: fixture.root,
+      alias: fixture.aliasA,
+      assetId: fixture.assetA,
+      revision: 1,
+    });
+
+    expect(cliResult.error).toBeUndefined();
+    expect(cliResult.status).toBe(1);
+    const cliValue = JSON.parse(cliResult.stdout);
+    expect(cliValue).toEqual(apiResult);
+    expect(Object.keys(cliValue).sort()).toEqual(["ok", "reason"]);
+    expect(cliValue).not.toHaveProperty("canonicalPayloadDigest");
+    expect(snapshotDirectory(directory)).toEqual(before);
+  });
+
+  it("U-PRDQ-010: CLI invalid revision returns the API invalid_input DTO and exits 1", () => {
+    const fixture = createFixture();
+    closeTracked(fixture.db);
+    useFixtureCwd(fixture.root);
+    const directory = join(fixture.root, ".ut-tdd", "ledger");
+    const before = snapshotDirectory(directory);
+    const apiResult = readPlanRevisionCanonicalPayloadDigest({
+      alias: fixture.aliasA,
+      assetId: fixture.assetA,
+      revision: 0,
+    });
+    expect(apiResult).toEqual({ ok: false, reason: "invalid_input" });
+    expect(snapshotDirectory(directory)).toEqual(before);
+
+    const cliResult = runRevisionDigestCli({
+      cwd: fixture.root,
+      alias: fixture.aliasA,
+      assetId: fixture.assetA,
+      revision: 0,
+    });
+
+    expect(cliResult.error).toBeUndefined();
+    expect(cliResult.status).toBe(1);
+    const cliValue = JSON.parse(cliResult.stdout);
+    expect(cliValue).toEqual(apiResult);
+    expect(Object.keys(cliValue).sort()).toEqual(["ok", "reason"]);
+    expect(cliValue).not.toHaveProperty("canonicalPayloadDigest");
+    expect(snapshotDirectory(directory)).toEqual(before);
   });
 
   it.each([
@@ -745,6 +858,30 @@ function createFixture() {
   });
   expect(migratePlanLedger(db)).toEqual({ ok: true, version: 7 });
   return fixture;
+}
+
+function runRevisionDigestCli(input: {
+  cwd: string;
+  alias: string;
+  assetId: string;
+  revision: number;
+}) {
+  return spawnSync(
+    process.execPath,
+    [
+      cliEntryPath,
+      "plan",
+      "revision-digest",
+      "--alias",
+      input.alias,
+      "--asset-id",
+      input.assetId,
+      "--revision",
+      String(input.revision),
+      "--json",
+    ],
+    { cwd: input.cwd, encoding: "utf8", timeout: 30_000 },
+  );
 }
 
 function closeTracked(db: HarnessDb): void {
