@@ -154,7 +154,6 @@ describe("db projection ingestion detector", () => {
     );
     expect(EVIDENCE_GATED_DB_PROJECTION_TABLES).toEqual(
       expect.arrayContaining([
-        "model_evaluations",
         "retry_events",
         "detector_route_candidates",
         "github_review_lane_receipts",
@@ -201,10 +200,8 @@ describe("db projection ingestion detector", () => {
     );
 
     expect(result.ok).toBe(true);
-    expect(result.telemetryProvenance.map((row) => row.table)).toEqual([
-      "skill_invocations",
-      "model_runs",
-    ]);
+    // model_runs は token 行を持たなくなった (Issue #789 PR-2) ため provenance 要求から外れている。
+    expect(result.telemetryProvenance.map((row) => row.table)).toEqual(["skill_invocations"]);
     expect(dbProjectionIngestionMessages(result).join("\n")).toContain(
       "db-telemetry-provenance - partial",
     );

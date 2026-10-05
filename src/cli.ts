@@ -260,18 +260,14 @@ import {
 import { defaultHarnessDbPath, openHarnessDb } from "./state-db/index.ts";
 import { harnessDbStatus } from "./state-db/maintenance.ts";
 import { migrate } from "./state-db/migration.ts";
-import {
-  projectModelEvaluations,
-  projectTokenUsage,
-  rebuildHarnessDb,
-} from "./state-db/projection-writer.ts";
+import { rebuildHarnessDb } from "./state-db/projection-writer.ts";
 import { buildScopeDryRunPreview } from "./state-db/scope-preview.ts";
 import {
   refuseBunStopRefresh,
   runCoalescedStopRefresh,
   spawnDetachedStopRefresh,
 } from "./state-db/stop-refresh.ts";
-import { loadRuntimeSessionUsage, summarizeRunUsage } from "./state-db/token-tracker.ts";
+import { loadRepoScopedRuntimeSessionUsage, summarizeRunUsage } from "./state-db/token-tracker.ts";
 import { classifyProposalDocumentCoverage, classifyTask } from "./task/classify.ts";
 import {
   type Provider,
@@ -374,7 +370,7 @@ function resolveSkillContextInjection(
     try {
       // 文脈注入は skill/PLAN 投影だけが必要で、グローバル token telemetry の再走査は不要。
       // 毎回の provider 起動で home 配下を走査すると実行境界を不必要に遅延させる。
-      rebuildHarnessDb({ repoRoot, db, skipTokenTelemetry: true });
+      rebuildHarnessDb({ repoRoot, db });
     } catch {
       recordSkillInjectionAttempt(
         { plan_id: planId, status: "skipped", reason: "rebuild-failed", required: 0, optional: 0 },
@@ -1848,15 +1844,6 @@ db.command("rebuild")
     process.stdout.write(
       "  note: plans / roadmap rollups / review evidence / optional Phase3 outputs を projection\n",
     );
-    if (r.tokenIngest) {
-      const t = r.tokenIngest;
-      process.stdout.write(
-        `  token telemetry (repo-scoped, issue #82): claude files matched ${t.claudeFilesScanned}/${t.claudeFilesChecked} ` +
-          `(project dir resolved=${t.claudeProjectDirResolved}, foreign repo ${t.claudeFilesForeignRepo}, unknown cwd ${t.claudeFilesSkippedUnknownCwd}), ` +
-          `codex files matched ${t.codexFilesMatched}/${t.codexFilesChecked} ` +
-          `(foreign repo ${t.codexFilesForeignRepo}, unknown cwd ${t.codexFilesSkippedUnknownCwd})\n`,
-      );
-    }
   });
 db.command("scope-preview")
   .description("preview document/activation detection scope from harness.db profiles")
@@ -1997,7 +1984,7 @@ const telemetry = program
 telemetry
   .command("scan")
   .description(
-    "両 runtime の session JSONL を走査し token/cost を harness.db (model_runs) へ ingest (CLI 非起動)",
+    "この repo に帰属する両 runtime の session JSONL を走査し token/cost の集計を表示する (CLI 非起動、DB 書込なし)",
   )
   .option(
     "--claude-dir <dir>",
@@ -2020,24 +2007,18 @@ telemetry
       opts.codexDir ??
       process.env.UT_TDD_CODEX_SESSIONS_DIR ??
       join(homedir(), ".codex", "sessions");
-    const usages = loadRuntimeSessionUsage({ claudeDirs: [claudeDir], codexDirs: [codexDir] });
+    // repo 絞り (Issue #789 PR-2): この repo に帰属する session のみ集計し、harness.db へは書かない。
+    const { usages } = loadRepoScopedRuntimeSessionUsage(repoRoot, {
+      claudeDirs: [claudeDir],
+      codexDirs: [codexDir],
+    });
     const summary = summarizeRunUsage(usages);
-    const db = openHarnessDb(defaultHarnessDbPath(repoRoot), { repoRoot });
-    try {
-      // 既存 on-disk db が古い schema (token 列なし) でも壊れないよう migrate (冪等 ADD COLUMN)。
-      migrate(db);
-      projectTokenUsage(db, usages);
-      // model_evaluations を再集計 (opt-in gate 無効なら no-op、cold-start 安全)。
-      projectModelEvaluations(db, repoRoot);
-    } finally {
-      db.close();
-    }
     if (opts.json) {
       process.stdout.write(`${JSON.stringify({ claudeDir, codexDir, ...summary }, null, 2)}\n`);
       return;
     }
     process.stdout.write(
-      `telemetry scan: ${summary.totalRuns} runs ingested (claude=${summary.claudeRuns}, codex=${summary.codexRuns})\n` +
+      `telemetry scan: ${summary.totalRuns} runs counted (claude=${summary.claudeRuns}, codex=${summary.codexRuns})\n` +
         `  tokens: input ${summary.inputTokens}, output ${summary.outputTokens}\n` +
         `  cost: $${summary.knownCostUsd} known, ${summary.runsWithoutCost} runs without published pricing (cost=null)\n` +
         `  sources: claude=${claudeDir}, codex=${codexDir}\n`,

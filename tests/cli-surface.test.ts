@@ -29,6 +29,7 @@ import { buildPackPublicationStagingPlan } from "../src/setup/pack-publication-s
 import { digestMaterializedReleaseEntries } from "../src/setup/release-materializer.ts";
 import { defaultHarnessDbPath, openHarnessDb, upsertRow } from "../src/state-db/index.ts";
 import { migrate } from "../src/state-db/migration.ts";
+import { claudeProjectSlug } from "../src/state-db/token-tracker.ts";
 import { MODEL_IDS } from "../src/team/model-policy.ts";
 import { headPlanDocCount } from "./plan-asset/head-plan-doc-count.ts";
 import { removeTestTree } from "./support/temp-tree.ts";
@@ -1509,6 +1510,43 @@ describe("L7 CLI surface closure", () => {
       expect(payload.codexDir).toBe(join(root, "missing-codex"));
       expect(run.stderr).not.toContain("claude");
       expect(run.stderr).not.toContain("codex");
+    } finally {
+      removeTestTree(root);
+    }
+  });
+
+  it("telemetry scan counts only this repo's sessions and writes no harness.db (Issue #789 PR-2)", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-cli-telemetry-scope-"));
+    try {
+      const claudeDir = join(root, "claude");
+      const slug = claudeProjectSlug(root);
+      mkdirSync(join(claudeDir, slug), { recursive: true });
+      mkdirSync(join(claudeDir, `${slug}-other`), { recursive: true });
+      const line = (cwd: string | undefined, input: number) =>
+        JSON.stringify({
+          type: "assistant",
+          sessionId: "s",
+          ...(cwd ? { cwd } : {}),
+          message: { model: "claude-opus-4-8", usage: { input_tokens: input, output_tokens: 1 } },
+        });
+      writeFileSync(join(claudeDir, slug, "own.jsonl"), line(root, 111), "utf8");
+      writeFileSync(
+        join(claudeDir, `${slug}-other`, "foreign.jsonl"),
+        line(undefined, 99999),
+        "utf8",
+      );
+      const run = runCliIn(root, [
+        "telemetry",
+        "scan",
+        "--claude-dir",
+        claudeDir,
+        "--codex-dir",
+        join(root, "missing-codex"),
+        "--json",
+      ]);
+      expect(run.status, run.stderr).toBe(0);
+      expect(JSON.parse(run.stdout)).toMatchObject({ claudeRuns: 1, inputTokens: 111 });
+      expect(existsSync(defaultHarnessDbPath(root))).toBe(false);
     } finally {
       removeTestTree(root);
     }
