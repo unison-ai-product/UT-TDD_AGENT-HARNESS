@@ -6160,6 +6160,22 @@
         "revision": 2,
         "content_digest": "sha256:77cf40c2e212ef89380ef1ebf7f6fd46d9293b3120546bcff0dd3ff2ec97c6d9"
       }
+    },
+    {
+      "sequence": 386,
+      "previous_record_digest": "sha256:8b0cde9a90ceeb5fe40ba76bff21a0290caebcec9888703d3dc0b2240fb694fe",
+      "record_digest": "sha256:b622a514fc65cae81c0b30cf73de9f8ee72400102088ef48358efebd009fab30",
+      "command_id": "plan-revise:issue-815:report-security:rechain:sol-r2-fix:r3:9eb1939b3574",
+      "receipt_id": "certificate:45e50395160adc6057c5c16c76887064",
+      "receipt_digest": "sha256:5cfcfa21e4b0b56531b58af295edbf8a1e23f983568ce2ac5669d7097847b649",
+      "decision_digest": "sha256:69115f61930b9d8e679dff7b6a4ac0f7e3e27022ef0e4a8f852a3db64e11c8a4",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-106-report-write-security-contract.md",
+        "plan_id": "PLAN-L6-106-report-write-security-contract",
+        "asset_id": "plan:d10f80206656cb46a302ef2114d842e1",
+        "revision": 3,
+        "content_digest": "sha256:35bc9ab354d44ad2cc81ac3d6faeafebae2ecad79bdc3708fe05684da37fc6b2"
+      }
     }
   ]
 }
