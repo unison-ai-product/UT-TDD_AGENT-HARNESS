@@ -5,6 +5,7 @@ kind: impl
 layer: L7
 drive: db
 parent_design: docs/design/harness/L4-basic-design/architecture.md
+status: confirmed
 created: 2026-06-15
 updated: 2026-06-15
 review_evidence:
@@ -12,19 +13,13 @@ review_evidence:
     review_kind: intra_runtime_subagent
     worker_model: claude-opus-4-8
     reviewer_model: claude-sonnet-4-6
-    tests_green_at: 2026-06-15
-    reviewed_at: 2026-06-15
+    tests_green_at: "2026-06-15"
+    reviewed_at: "2026-06-15"
     verdict: pass
-    scope: cross-runtime token telemetry tracker (parseClaudeSessionUsage /
-      parseCodexSessionUsage 純パーサ + computeClaudeCostUsd +
-      loadRuntimeSessionUsage file-scan loader + projectTokenUsage ingest +
-      projectModelEvaluations token 集計拡張 + model_runs/model_evaluations schema
-      列追加 + SCHEMA_VERSION 12→13 + 10 unit/integration テスト)。両 runtime の session
-      JSONL を CLI 非起動で読む設計(8009001d 回避=ADR-001 整合)、Codex 累積→差分復元、core=token
-      効率/$=enrichment(Claude 計算/Codex null=非捏造)、cold-start 安全を検証。
+    scope: "cross-runtime token telemetry tracker (parseClaudeSessionUsage / parseCodexSessionUsage 純パーサ + computeClaudeCostUsd + loadRuntimeSessionUsage file-scan loader + projectTokenUsage ingest + projectModelEvaluations token 集計拡張 + model_runs/model_evaluations schema 列追加 + SCHEMA_VERSION 12→13 + 10 unit/integration テスト)。両 runtime の session JSONL を CLI 非起動で読む設計(8009001d 回避=ADR-001 整合)、Codex 累積→差分復元、core=token 効率/$=enrichment(Claude 計算/Codex null=非捏造)、cold-start 安全を検証。"
 agent_slots:
   - role: tl
-    slot_label: TL - token telemetry tracker (FR-38 cross-runtime) 設計 + 配線
+    slot_label: "TL - token telemetry tracker (FR-38 cross-runtime) 設計 + 配線"
 generates:
   - artifact_path: src/state-db/token-tracker.ts
     artifact_type: source_module
@@ -35,26 +30,6 @@ dependencies:
   requires:
     - docs/design/harness/L4-basic-design/architecture.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
-route_signal: forward
-route_mode: forward
-status: confirmed
-admission_receipt:
-  schema_version: v2
-  receipt_id: certificate:1c8c75f90e37d3c3d9727d8b0e488766
-  command_id: plan-revise:issue-789:legacy-57:2
-  admitted_at: 2026-10-05T10:29:07.091Z
-  source_digest: sha256:4e5485819b2df9785db0c5448eea90cd0f247bd1f0d2f7a8cbdc90ca2907186f
-  decision_digest: sha256:d5bba9e81269dbfdce734743d5382157a8153d40b911f12db6f2f0ff454e70fd
-  receipt_digest: sha256:4be03e94a65b189dc09a8b8e379b609c19ef17a88e5ee9e63321d22b79bdb0d6
-  binding:
-    path: docs/plans/PLAN-L7-57-token-telemetry-tracker.md
-    plan_id: PLAN-L7-57-token-telemetry-tracker
-    asset_id: plan:legacy:c989324b0cd11472a30274933e6db786ea6bc2bfdc82fdd2880d03e1c174039a
-    revision: 2
-    content_digest: sha256:4e5485819b2df9785db0c5448eea90cd0f247bd1f0d2f7a8cbdc90ca2907186f
-  route:
-    signal: forward
-    mode: forward
 ---
 
 # PLAN-L7-57: cross-runtime token telemetry tracker
@@ -122,13 +97,3 @@ tracker は **`codex exec` / `claude` を再実行しない**。それをやる�
   取得) + `computeCodexCostUsd` を追加。未掲載モデルは null 維持 (捏造禁止)。
 - ~~**scan の CLI 配線**~~ → **discharged (PLAN-L7-58)**: `ut-tdd telemetry scan` を追加 (session-dir を
   option>env>OS default で解決、CLI 非起動 file-scan)。
-
-## 訂正注記 (2026-10-05、PLAN-L6-789 による supersede)
-
-本 PLAN の token ingest 契約は `PLAN-L6-789-token-ingest-retirement` が supersede する (Issue #789、PO 承認 2026-09-30)。範囲は次に限る (PLAN-L6-789 §2)。
-
-- WBS-L7-57-03 の `projectTokenUsage` による `model_runs` への token 行投入。
-- `projectModelEvaluations` の token 集計拡張 (tokens_per_success / cost_per_success)。
-- 上記に対応する AC (token-tracker 投入行の token/cost 列が非 NULL、`projectModelEvaluations` の token 集計)。
-
-取得層 (`parseClaudeSessionUsage` / `parseCodexSessionUsage` / `computeClaudeCostUsd` / `loadRuntimeSessionUsage`)、`model_runs` / `model_evaluations` の table schema、generates 2 件は継承する。status は変えない。
