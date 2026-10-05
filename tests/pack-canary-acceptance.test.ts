@@ -233,7 +233,7 @@ function agentRecord() {
 }
 
 function agentReviewEvidence() {
-  const root = mkdtempSync(join(tmpdir(), "ut-canary-agent-review-"));
+  const root = realpathSync.native(mkdtempSync(join(tmpdir(), "ut-canary-agent-review-")));
   tempRoots.push(root);
   const runGit = (...args: string[]) =>
     execFileSync("git", ["-C", root, ...args], { encoding: "utf8" }).trim();
@@ -996,6 +996,33 @@ describe("manual canary acceptance publish-record boundary", () => {
     ).toThrow("agent-authoring-provenance-invalid");
   });
 
+  it("U-ST-PACKCANARY-016: rejects prefixed github.com repository identity", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-canary-agent-identity-"));
+    tempRoots.push(root);
+    execFileSync("git", ["-C", root, "init", "--quiet", "--initial-branch=main"]);
+    execFileSync("git", [
+      "-C",
+      root,
+      "remote",
+      "add",
+      "origin",
+      "https://github.com/unison-ai-product/ut-tdd-consumer-canary.git",
+    ]);
+    mkdirSync(join(root, ".ut-tdd", "bin"), { recursive: true });
+    writeFileSync(join(root, ".ut-tdd", "bin", "ut-tdd.mjs"), "// sealed CLI fixture\n");
+    writeFileSync(
+      join(root, "ut-tdd.project.json"),
+      JSON.stringify({
+        schema_version: "ut-tdd.project/v1",
+        repository_identity: "github.com/unison-ai-product/ut-tdd-consumer-canary",
+      }),
+    );
+
+    expect(() => runAgentAuthoringAndGates({ consumerRoot: root })).toThrow(
+      "agent-authoring-consumer-identity-invalid",
+    );
+  });
+
   it("U-ST-PACKCANARY-017: rejects a non-applicable, failed, or could-not-run G1 positive", () => {
     const revision = "a".repeat(40);
     expect(() =>
@@ -1084,7 +1111,7 @@ describe("manual canary acceptance publish-record boundary", () => {
       join(root, "ut-tdd.project.json"),
       JSON.stringify({
         schema_version: "ut-tdd.project/v1",
-        repository_identity: "github.com/unison-ai-product/ut-tdd-consumer-canary",
+        repository_identity: "unison-ai-product/ut-tdd-consumer-canary",
       }),
     );
     writeFileSync(join(root, "README.md"), "# baseline\n");
@@ -1259,6 +1286,19 @@ describe("manual canary acceptance publish-record boundary", () => {
     expect(() => verifyAgentReviewJoin({ ...noncanonical, consumeResult: consume })).toThrow(
       "agent-review-receipt-schema-invalid",
     );
+
+    const wrongRequestPath = agentReviewEvidence();
+    const dispatchWithForeignPath = structuredClone(wrongRequestPath.dispatchResult);
+    dispatchWithForeignPath.request.path = join(
+      wrongRequestPath.consumerRoot,
+      "foreign-request.json",
+    );
+    expect(() =>
+      verifyAgentReviewJoin({
+        ...wrongRequestPath,
+        dispatchResult: dispatchWithForeignPath,
+      }),
+    ).toThrow("agent-review-request-custody-invalid");
 
     expect(() =>
       verifyAgentReviewJoin({

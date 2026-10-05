@@ -240,7 +240,7 @@ export function runAgentAuthoringAndGates(input) {
     throw new Error("agent-authoring-wrong-consumer-repository");
   const identity = JSON.parse(readFileSync(join(root, "ut-tdd.project.json"), "utf8"));
   if (identity?.schema_version !== "ut-tdd.project/v1" ||
-      identity.repository_identity !== "github.com/unison-ai-product/ut-tdd-consumer-canary")
+      identity.repository_identity !== "unison-ai-product/ut-tdd-consumer-canary")
     throw new Error("agent-authoring-consumer-identity-invalid");
   if (git("status", "--porcelain").length !== 0)
     throw new Error("agent-authoring-consumer-not-clean");
@@ -630,7 +630,7 @@ export function runAgentReviewJoin(input) {
   if (!isInside(root, cliPath)) throw new Error("agent-review-runtime-outside-consumer");
   const identity = JSON.parse(readFileSync(join(root, "ut-tdd.project.json"), "utf8"));
   if (identity?.schema_version !== "ut-tdd.project/v1" ||
-      identity.repository_identity !== "github.com/unison-ai-product/ut-tdd-consumer-canary")
+      identity.repository_identity !== "unison-ai-product/ut-tdd-consumer-canary")
     throw new Error("agent-review-consumer-identity-invalid");
   const requestIdentity = {
     schemaVersion: "review-request/v1", memoryId: input.memoryId,
