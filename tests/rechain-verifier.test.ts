@@ -1144,3 +1144,230 @@ function trackedReceiptRecordDigestFromJson(record: Record<string, unknown>): st
     },
   });
 }
+
+// ---------------------------------------------------------------------------
+// U-RECHAIN-017 / 018: receipt_digest の再導出と、同一 asset 複数 record の base chain
+// ---------------------------------------------------------------------------
+
+describe("verifyRechainDelta receipt_digest 再導出 (receipt revision 5)", () => {
+  it("U-RECHAIN-017a: receipt_digest だけを任意値に置き換え (frontmatter・record digest は整合) ても fail する [m: 再導出を省くと pass]", () => {
+    const { input } = buildBaseline();
+    const tampered = forgeRReceiptRecord(input, (record) => {
+      record.receipt_digest = `sha256:${"f".repeat(64)}`;
+    });
+    const verdict = verifyRechainDelta(tampered);
+    expect(verdict.ok).toBe(false);
+    if (!verdict.ok) {
+      expect(verdict.reasons).toEqual([`receipt_digest_mismatch:${PLAN_PATH}`]);
+    }
+  });
+
+  it("U-RECHAIN-017b: actor を契約定数以外にして導いた receipt_digest は fail する", () => {
+    const b = buildBaseline();
+    const { content, record } = makeRevision(rParams(b, { actor: "someone-else" }));
+    const tampered = clone(b.input);
+    installR(tampered, content, [b.priorRecord, record]);
+    const verdict = verifyRechainDelta(tampered);
+    expect(verdict.ok).toBe(false);
+    if (!verdict.ok) expect(verdict.reasons).toEqual([`receipt_digest_mismatch:${PLAN_PATH}`]);
+  });
+
+  it("U-RECHAIN-017c: sourceCommit が M でない receipt_digest は fail する", () => {
+    const b = buildBaseline();
+    const { content, record } = makeRevision(rParams(b, { sourceCommit: COMMITS.H }));
+    const tampered = clone(b.input);
+    installR(tampered, content, [b.priorRecord, record]);
+    const verdict = verifyRechainDelta(tampered);
+    expect(verdict.ok).toBe(false);
+    if (!verdict.ok) expect(verdict.reasons).toEqual([`receipt_digest_mismatch:${PLAN_PATH}`]);
+  });
+
+  it("U-RECHAIN-017d: legacy bootstrap 経路の asset を再発行対象に含む入力は fail する", () => {
+    const { input } = buildBaseline({ assetId: `plan:legacy:${"a".repeat(64)}` });
+    const verdict = verifyRechainDelta(input);
+    expect(verdict.ok).toBe(false);
+    if (!verdict.ok)
+      expect(verdict.reasons.some((r) => r.startsWith("legacy_bootstrap_unsupported"))).toBe(true);
+  });
+});
+
+interface TwoRecordScenario {
+  input: RechainInput;
+  r1: { content: string; record: TrackedReceiptRecord };
+  r2: { content: string; record: TrackedReceiptRecord };
+  prior: { content: string; record: TrackedReceiptRecord };
+  rebuild: (over: Partial<RevisionInput>) => Mutable<RechainInput>;
+}
+
+/** 同一 asset に対し H が 2 件 append していた re-chain (M 側の最新 revision n = 1)。 */
+function buildTwoRecordScenario(): TwoRecordScenario {
+  const { blobs, put } = makeBlobStore();
+  const baseFm = baseFrontmatterOther();
+  const prior = makePrior(ASSET_ID);
+  const g1 = [
+    ...BASE_GENERATES,
+    { artifact_path: "src/plan-admission/rechain-verifier.ts", artifact_type: "source_module" },
+  ];
+  const g2 = [
+    ...g1,
+    { artifact_path: "tests/rechain-verifier.test.ts", artifact_type: "test_code" },
+  ];
+  const i1 = [...BASE_ITEMS, "rev 2: 検証器。"];
+  const i2 = [...i1, "rev 3: テスト。"];
+  const a1 = admissionFor(2);
+  const a2 = admissionFor(3);
+  const bind = (revision: number) => ({
+    path: PLAN_PATH,
+    planId: PLAN_ID,
+    assetId: ASSET_ID,
+    revision,
+  });
+
+  const h1 = makeRevision({
+    frontmatterOther: baseFm,
+    generates: g1,
+    items: i1,
+    admission: a1,
+    binding: bind(2),
+    commandId: "plan-revise:issue-999:s2:plan:r1:h1",
+    admittedAt: H_ADMITTED_AT,
+    priorRecords: [prior.record],
+    basePayloadDigest: payloadDigestOf(prior.content),
+    actor: AUTHOR_ACTOR,
+    sourceCommit: COMMITS.base,
+  });
+  const h2 = makeRevision({
+    frontmatterOther: baseFm,
+    generates: g2,
+    items: i2,
+    admission: a2,
+    binding: bind(3),
+    commandId: "plan-revise:issue-999:s2:plan:r1:h2",
+    admittedAt: H_ADMITTED_AT,
+    priorRecords: [prior.record, h1.record],
+    basePayloadDigest: payloadDigestOf(h1.content),
+    actor: AUTHOR_ACTOR,
+    sourceCommit: COMMITS.base,
+  });
+  const r1 = makeRevision({
+    frontmatterOther: baseFm,
+    generates: g1,
+    items: i1,
+    admission: a1,
+    binding: bind(2),
+    commandId: `${h1.record.commandId}:rechain-1`,
+    admittedAt: R_ADMITTED_AT,
+    priorRecords: [prior.record],
+    basePayloadDigest: payloadDigestOf(prior.content),
+  });
+  const r2Params: RevisionInput = {
+    frontmatterOther: baseFm,
+    generates: g2,
+    items: i2,
+    admission: a2,
+    binding: bind(3),
+    commandId: `${h2.record.commandId}:rechain-1`,
+    admittedAt: R_ADMITTED_AT,
+    priorRecords: [prior.record, r1.record],
+    basePayloadDigest: payloadDigestOf(r1.content),
+  };
+  const r2 = makeRevision(r2Params);
+
+  const baseTree: TreeMap = {
+    [PLAN_PATH]: put(prior.content),
+    [RECEIPT_PATH]: put(receiptFile([prior.record])),
+  };
+  const hTree: TreeMap = {
+    [PLAN_PATH]: put(h2.content),
+    [RECEIPT_PATH]: put(receiptFile([prior.record, h1.record, h2.record])),
+  };
+  const rTree: TreeMap = {
+    [PLAN_PATH]: put(r2.content),
+    [RECEIPT_PATH]: put(receiptFile([prior.record, r1.record, r2.record])),
+  };
+  const input: RechainInput = {
+    commits: { ...commitObjs(), M: COMMITS.M, base: COMMITS.base },
+    trees: { base: baseTree, H: hTree, M: { ...baseTree }, X: { ...baseTree }, R: rTree },
+    blobs,
+    admission: { [h1.record.recordDigest]: a1, [h2.record.recordDigest]: a2 },
+    intermediatePlans: { [r1.record.binding.contentDigest]: r1.content },
+  };
+  const rebuild: TwoRecordScenario["rebuild"] = (over) => {
+    const forged = makeRevision({ ...r2Params, ...over });
+    const tampered = clone(input);
+    installR(tampered, forged.content, [prior.record, r1.record, forged.record]);
+    return tampered;
+  };
+  return { input, r1, r2, prior, rebuild };
+}
+
+describe("verifyRechainDelta 同一 asset 複数 record の base chain (U-RECHAIN-018)", () => {
+  it("U-RECHAIN-018a: 正系 (1 件目 base=(n, M の digest)、2 件目 base=(n+1, 中間 blob の digest)) は pass する", () => {
+    const { input } = buildTwoRecordScenario();
+    const verdict = verifyRechainDelta(input);
+    expect(verdict.ok, JSON.stringify(verdict)).toBe(true);
+  });
+
+  it("U-RECHAIN-018b [m1]: 2 件目の base を M (n, M の digest) に固定した receipt_digest は fail する", () => {
+    const s = buildTwoRecordScenario();
+    const input = s.rebuild({
+      baseRevision: 1,
+      basePayloadDigest: payloadDigestOf(s.prior.content),
+    });
+    const verdict = verifyRechainDelta(input);
+    expect(verdict.ok).toBe(false);
+    if (!verdict.ok) expect(verdict.reasons).toEqual([`receipt_digest_mismatch:${PLAN_PATH}`]);
+  });
+
+  it("U-RECHAIN-018c [m2]: 中間 blob を 1 byte 変えると intermediate_plan_digest_mismatch で fail する", () => {
+    const s = buildTwoRecordScenario();
+    const tampered = clone(s.input);
+    tampered.intermediatePlans[s.r1.record.binding.contentDigest] = `${s.r1.content}x`;
+    const verdict = verifyRechainDelta(tampered);
+    expect(verdict.ok).toBe(false);
+    if (!verdict.ok)
+      expect(verdict.reasons.some((r) => r.startsWith("intermediate_plan_digest_mismatch"))).toBe(
+        true,
+      );
+  });
+
+  it("U-RECHAIN-018d [m3]: 中間 blob を渡さないと intermediate_plan_missing で fail する (R の blob で代用しない)", () => {
+    const s = buildTwoRecordScenario();
+    const tampered = clone(s.input);
+    tampered.intermediatePlans = {};
+    const verdict = verifyRechainDelta(tampered);
+    expect(verdict.ok).toBe(false);
+    if (!verdict.ok)
+      expect(verdict.reasons.some((r) => r.startsWith("intermediate_plan_missing"))).toBe(true);
+  });
+
+  it("U-RECHAIN-018e [m4]: どの record からも参照されない余分な key と blob は intermediate_plan_unexpected で fail する", () => {
+    const s = buildTwoRecordScenario();
+    const tampered = clone(s.input);
+    tampered.intermediatePlans[`sha256:${"e".repeat(64)}`] = "余分な blob";
+    const verdict = verifyRechainDelta(tampered);
+    expect(verdict.ok).toBe(false);
+    if (!verdict.ok)
+      expect(verdict.reasons.some((r) => r.startsWith("intermediate_plan_unexpected"))).toBe(true);
+  });
+
+  it("U-RECHAIN-018f [m4]: 最後の record の content_digest を key に R の PLAN blob を足すと intermediate_plan_unexpected で fail する", () => {
+    const s = buildTwoRecordScenario();
+    const tampered = clone(s.input);
+    tampered.intermediatePlans[s.r2.record.binding.contentDigest] = s.r2.content;
+    const verdict = verifyRechainDelta(tampered);
+    expect(verdict.ok).toBe(false);
+    if (!verdict.ok)
+      expect(verdict.reasons.some((r) => r.startsWith("intermediate_plan_unexpected"))).toBe(true);
+  });
+
+  it("U-RECHAIN-018g: 2 件以上の asset が無いとき intermediatePlans は空でなければならない", () => {
+    const { input } = buildBaseline();
+    const tampered = clone(input);
+    tampered.intermediatePlans = { [`sha256:${"d".repeat(64)}`]: "余分" };
+    const verdict = verifyRechainDelta(tampered);
+    expect(verdict.ok).toBe(false);
+    if (!verdict.ok)
+      expect(verdict.reasons.some((r) => r.startsWith("intermediate_plan_unexpected"))).toBe(true);
+  });
+});
