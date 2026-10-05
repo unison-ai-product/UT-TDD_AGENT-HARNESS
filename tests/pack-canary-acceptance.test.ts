@@ -145,6 +145,7 @@ const {
   parsePublishRecord,
   parseAgentE2ERecord,
   verifyAgentAuthoringEvidence,
+  verifyAgentE2EEvidence,
   verifyAgentG1Positive,
   verifyAgentG1Negative,
   runAgentAuthoringAndGates,
@@ -889,7 +890,7 @@ describe("manual canary acceptance publish-record boundary", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-canary-agent-authoring-"));
     tempRoots.push(root);
     const runGit = (...args: string[]) => execFileSync("git", ["-C", root, ...args], { encoding: "utf8" }).trim();
-    runGit("init", "--quiet");
+    runGit("init", "--quiet", "--initial-branch=main");
     runGit("config", "user.email", "canary@example.invalid");
     runGit("config", "user.name", "Canary consumer fixture");
     runGit("remote", "add", "origin", "https://github.com/unison-ai-product/ut-tdd-consumer-canary.git");
