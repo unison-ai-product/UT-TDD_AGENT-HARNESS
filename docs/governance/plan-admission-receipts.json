@@ -6384,6 +6384,70 @@
         "revision": 3,
         "content_digest": "sha256:e88b373fcae0dca96b045b6c3abd7285ed67f00ccc778066f563909aac1de3e8"
       }
+    },
+    {
+      "sequence": 400,
+      "previous_record_digest": "sha256:c8f413dc4e4820e007c614f48beb6088ee95ecb954eadd2ea5e7476b8d37e768",
+      "record_digest": "sha256:5f4c38c2787806322f5e061230fabbdcc77201370fc7867c4e89bd6cec61ee16",
+      "command_id": "plan-draft:issue-729:ci-fail-fast:1:rechain-1",
+      "receipt_id": "certificate:81cd2a30d72359f5d571b90ab5f6585b",
+      "receipt_digest": "sha256:d1e25b15e3d7c936cc7d0e71837b89edc81d9400fd5203ffc2778e90f0b14d52",
+      "decision_digest": "sha256:255336ba9ebb384ab06465f470038611cf8038abb53f758ca0a02cf9457c01cf",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-729-ci-fail-fast.md",
+        "plan_id": "PLAN-L7-729-ci-fail-fast",
+        "asset_id": "plan:81cd2a30d72359f5d571b90ab5f6585b",
+        "revision": 1,
+        "content_digest": "sha256:d1f10f2d4b7ba85e3fe24c01a8c25546ffdfb7c79dedc927c2d48a158db1d6c6"
+      }
+    },
+    {
+      "sequence": 401,
+      "previous_record_digest": "sha256:5f4c38c2787806322f5e061230fabbdcc77201370fc7867c4e89bd6cec61ee16",
+      "record_digest": "sha256:890e8128cdf9c47c8e8e22238cd846bcaffc4ebac01f09d25d7566a462a83e39",
+      "command_id": "plan-revise:issue-729:ci-fail-fast:rechain-1:sol-r1-fix:r2:28903bb1316b",
+      "receipt_id": "certificate:9418b588160ac6c9f7b429ca6aeba724",
+      "receipt_digest": "sha256:4d4eb129a435c6f767424d46429d3ecb6f894cd34e09a914f572f9ad4460b138",
+      "decision_digest": "sha256:5f3bdb9cead16eb08646905eb5d6c32b3972e9520c48b0b35c8f9c4e9fc52dcd",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-729-ci-fail-fast.md",
+        "plan_id": "PLAN-L7-729-ci-fail-fast",
+        "asset_id": "plan:81cd2a30d72359f5d571b90ab5f6585b",
+        "revision": 2,
+        "content_digest": "sha256:befa38ad69ffbdbb9fd77f0c230891bb7e5dc9917e42272c74433deef4cf4ced"
+      }
+    },
+    {
+      "sequence": 402,
+      "previous_record_digest": "sha256:890e8128cdf9c47c8e8e22238cd846bcaffc4ebac01f09d25d7566a462a83e39",
+      "record_digest": "sha256:efe87a2717a00d4c9ab531632289b0100fdf6559e6e5ac8ade0787ab217f0395",
+      "command_id": "plan-revise:issue-729:ci-fail-fast:rechain-1:path-normalize:r3:17c663ee5aee",
+      "receipt_id": "certificate:99d6e653290245cb169affe8c821a211",
+      "receipt_digest": "sha256:b1d6e9272fbc3e97c131e595de06deb08d67ad77e03495de4bce3e4585576b8c",
+      "decision_digest": "sha256:9302169474f53eb5f708e23b4934a99a39015fbcb6ab2f2a18445d53f9934931",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-729-ci-fail-fast.md",
+        "plan_id": "PLAN-L7-729-ci-fail-fast",
+        "asset_id": "plan:81cd2a30d72359f5d571b90ab5f6585b",
+        "revision": 3,
+        "content_digest": "sha256:674855a81758bffe20908f6d8e415eac9bbe25cbdc84a811cc8b3203e405def1"
+      }
+    },
+    {
+      "sequence": 403,
+      "previous_record_digest": "sha256:efe87a2717a00d4c9ab531632289b0100fdf6559e6e5ac8ade0787ab217f0395",
+      "record_digest": "sha256:047a023b7ae198571df0ef57b005cd476e66affd24cd754259af6d9ee9d8b5ae",
+      "command_id": "plan-revise:issue-729:ci-fail-fast:rechain-1:candidate-oracle:r4:8ddb50506a78",
+      "receipt_id": "certificate:acf21bd9f2d697a210adf23ffe32a3a0",
+      "receipt_digest": "sha256:049fb09e815b9c1dae6928883fb5b8255c8250a7698c9ae16e04832c6282d232",
+      "decision_digest": "sha256:dcf6d1660d781859a6bd1c43f750790c3f822036cc22025bef0825cf8524c656",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-729-ci-fail-fast.md",
+        "plan_id": "PLAN-L7-729-ci-fail-fast",
+        "asset_id": "plan:81cd2a30d72359f5d571b90ab5f6585b",
+        "revision": 4,
+        "content_digest": "sha256:d390683b83026c70b8b47039cd079f883adbbefcc6f93960ab7c6d400c391bd1"
+      }
     }
   ]
 }
