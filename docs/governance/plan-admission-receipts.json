@@ -6500,49 +6500,65 @@
     {
       "sequence": 407,
       "previous_record_digest": "sha256:547a3a6b1be9a0a767ae3bd2f9d89e44cff373d9f924dcc5bcdebaacb3579c60",
-      "record_digest": "sha256:7659269fffcd1333d7b525ce22fd5fdb55e6b8ed54871047fbf730778b41caf8",
-      "command_id": "plan-draft:issue-789:token-ingest-retirement:1",
-      "receipt_id": "certificate:372ee84f86e4af937a60431cf7c70ef1",
-      "receipt_digest": "sha256:4911c1a926fd644b361479aefb61fdb98c708e8c823e613ab4cd5d494404f590",
-      "decision_digest": "sha256:b4a466616ec7f69ee5334aaaf797873279afa79d17efae921ca5068d5e8add36",
+      "record_digest": "sha256:ad4434ab264a966c8efd64c5e7b8132ac7a00136400ee657a9f872a33c9b50d4",
+      "command_id": "plan-draft:issue-661:worktree-safe-remove:1",
+      "receipt_id": "certificate:04e1bab46c4ea60bbdbe6ce4773c8a18",
+      "receipt_digest": "sha256:5fcea4a846e98a5a5af7f9592f3ff0b593a5219e8227182b169d0c37c32d3871",
+      "decision_digest": "sha256:017a71bb7d66a905f5ac38b4f710ee6d397d0d76e8df77914c5f5335134dddfa",
       "binding": {
-        "path": "docs/plans/PLAN-L6-789-token-ingest-retirement.md",
-        "plan_id": "PLAN-L6-789-token-ingest-retirement",
-        "asset_id": "plan:372ee84f86e4af937a60431cf7c70ef1",
+        "path": "docs/plans/PLAN-L6-661-worktree-safe-remove-contract.md",
+        "plan_id": "PLAN-L6-661-worktree-safe-remove-contract",
+        "asset_id": "plan:04e1bab46c4ea60bbdbe6ce4773c8a18",
         "revision": 1,
-        "content_digest": "sha256:8ef8158192aceb2c1fe603f2006bf4adbdb32f0ad715e68d85053a6e7666e9cc"
+        "content_digest": "sha256:8ff767f00743165ca3e1b0ded720b5911cc94ce23791b001866e109b5280de97"
       }
     },
     {
       "sequence": 408,
-      "previous_record_digest": "sha256:7659269fffcd1333d7b525ce22fd5fdb55e6b8ed54871047fbf730778b41caf8",
-      "record_digest": "sha256:377a1301add993be8e0dbc1d7dbc8d08c641e7e172295f24724bb8990faff1e0",
-      "command_id": "plan-revise:issue-789:legacy-57:2",
-      "receipt_id": "certificate:1c8c75f90e37d3c3d9727d8b0e488766",
-      "receipt_digest": "sha256:4be03e94a65b189dc09a8b8e379b609c19ef17a88e5ee9e63321d22b79bdb0d6",
-      "decision_digest": "sha256:d5bba9e81269dbfdce734743d5382157a8153d40b911f12db6f2f0ff454e70fd",
+      "previous_record_digest": "sha256:ad4434ab264a966c8efd64c5e7b8132ac7a00136400ee657a9f872a33c9b50d4",
+      "record_digest": "sha256:e3061a4a16bd71b00d94f6d3912b7c7d9f418f9703128f15244a0c18042c06f1",
+      "command_id": "plan-revise:issue-661:advisor-adoption:r2:af7859b9202a",
+      "receipt_id": "certificate:f83910ef370d07216adc0137814da065",
+      "receipt_digest": "sha256:1c93294d943bde6d230fdc41cb8b1f697f510840350f0fe581db0cbf75eb0bb8",
+      "decision_digest": "sha256:d61ca8543f654727a21a9c76184a52ea5b2ddb57c4a82601c29df12bdc0a4c90",
       "binding": {
-        "path": "docs/plans/PLAN-L7-57-token-telemetry-tracker.md",
-        "plan_id": "PLAN-L7-57-token-telemetry-tracker",
-        "asset_id": "plan:legacy:c989324b0cd11472a30274933e6db786ea6bc2bfdc82fdd2880d03e1c174039a",
+        "path": "docs/plans/PLAN-L6-661-worktree-safe-remove-contract.md",
+        "plan_id": "PLAN-L6-661-worktree-safe-remove-contract",
+        "asset_id": "plan:04e1bab46c4ea60bbdbe6ce4773c8a18",
         "revision": 2,
-        "content_digest": "sha256:4e5485819b2df9785db0c5448eea90cd0f247bd1f0d2f7a8cbdc90ca2907186f"
+        "content_digest": "sha256:f58f002dd0c45641aec1a4690ec88f581ef42257e6ee2d57f202505e440d1407"
       }
     },
     {
       "sequence": 409,
-      "previous_record_digest": "sha256:377a1301add993be8e0dbc1d7dbc8d08c641e7e172295f24724bb8990faff1e0",
-      "record_digest": "sha256:099432b23776ca2cad276daf3c064663f21e85958dfc9359259a39809babb8fe",
-      "command_id": "plan-revise:issue-789:legacy-454:2",
-      "receipt_id": "certificate:9b6066d9a0f334c3004a14ca3d8707a6",
-      "receipt_digest": "sha256:a481860c8ca1a40622896551cabfc5a82bce2e246add7891fc17671e12cebaea",
-      "decision_digest": "sha256:b50c5a211fd974c9de366b8dbdb300caf35ebe6e5806dbf57371508bf41ec9ae",
+      "previous_record_digest": "sha256:e3061a4a16bd71b00d94f6d3912b7c7d9f418f9703128f15244a0c18042c06f1",
+      "record_digest": "sha256:8f42eaa7a6bcc9045b290263aa60d1b4552e8143451b761c7cc1596916b42c6d",
+      "command_id": "plan-revise:issue-661:sol-r1-fix:r3:58c7be407e99",
+      "receipt_id": "certificate:39a9a55709513fa20c5411a2c28ab2be",
+      "receipt_digest": "sha256:e62ae9b67c0a2e3a90571bee43349facc841c58bed4adba7b69278a30966046e",
+      "decision_digest": "sha256:d6f8c912660d32ad827e1bb8f83b93dd17b505faba3a8dd0950da9869dd288f1",
       "binding": {
-        "path": "docs/plans/PLAN-L7-454-runtime-token-telemetry-ingestion.md",
-        "plan_id": "PLAN-L7-454-runtime-token-telemetry-ingestion",
-        "asset_id": "plan:legacy:7e00bf799a5f194ec7e323bbfbd3e7a21859e251c0e73a9f46fda12cb870c54b",
-        "revision": 2,
-        "content_digest": "sha256:850f003cd0bba3ebe99f9b46efc2657d8a5fd36fc3797d97815212ad073236ab"
+        "path": "docs/plans/PLAN-L6-661-worktree-safe-remove-contract.md",
+        "plan_id": "PLAN-L6-661-worktree-safe-remove-contract",
+        "asset_id": "plan:04e1bab46c4ea60bbdbe6ce4773c8a18",
+        "revision": 3,
+        "content_digest": "sha256:acb3f93c21bcb0c64aec627e52e70491412375703166370d5801eac16526d1ae"
+      }
+    },
+    {
+      "sequence": 410,
+      "previous_record_digest": "sha256:8f42eaa7a6bcc9045b290263aa60d1b4552e8143451b761c7cc1596916b42c6d",
+      "record_digest": "sha256:1144fbd162f695dd67915ee119211080c3b42df5c6a59b085113aa8ac9214d9b",
+      "command_id": "plan-revise:issue-661:sol-r2-fix:r4:1917ece51224",
+      "receipt_id": "certificate:1898edc3fcff044b18b8f1be6bd4631d",
+      "receipt_digest": "sha256:99acad72278143ef1fb9e66cbd0d9684d600872bc06603f682b6343302da89eb",
+      "decision_digest": "sha256:58fe2575e7f4c90152cc47d8b692944950a4dc289057c0991b3c422dacd9dfb9",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-661-worktree-safe-remove-contract.md",
+        "plan_id": "PLAN-L6-661-worktree-safe-remove-contract",
+        "asset_id": "plan:04e1bab46c4ea60bbdbe6ce4773c8a18",
+        "revision": 4,
+        "content_digest": "sha256:2e6ae8e092854db86d9cd9224474a3a29c5103e0956ec32f752a3da3eae03e23"
       }
     }
   ]
