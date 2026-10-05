@@ -125,6 +125,20 @@ digest 再計算を独立に確認する。
 | `U-ST-PACKCANARY-013` | closed review stubから外向きGitHub操作を試みる | 実review/mergeと混同せず外向き操作0を観測する |
 | `U-ST-PACKCANARY-014` | 再起動証跡のconsumer rootまたは撤去済みrelease rootを変異 | 証跡のroot束縛不一致を拒否する |
 
+### AT-DIST-003 collector の offline implementation oracles (Candidate 未昇格)
+
+次の `U-ST-PACKCANARY-015..019` は、第 2 層 collector の validator / wiring を offline fixture で検査する実装 oracle である。
+同番号の `CANDIDATE-ST-PACKCANARY-015..019` が要求する実 provider、公開 Release からの実 bytes、canonical custody、
+専用 consumer PR に対する受入を昇格・代替しない。mock adapter と structural join は AT-DIST-003 実 run の証跡ではない。
+
+| Oracle ID | 所有 test (`tests/pack-canary-acceptance.test.ts`) | この oracle が保証する範囲 (実 provider / AT-DIST-003 acceptance は対象外) |
+| --- | --- | --- |
+| `U-ST-PACKCANARY-015` | `U-ST-PACKCANARY-015: accepts only the exact canary.3 installer tag in the standard runner`; `U-ST-PACKCANARY-015: the AT-DIST-003 lane accepts only exact canary.3 bytes and its record anchor` | exact canary.3 tag、5 asset digest 集合、record anchor、および installer invocation の offline binding。公開 Release の独立再取得や install 実行は証明しない |
+| `U-ST-PACKCANARY-016` | `U-ST-PACKCANARY-016: rejects missing or non-agent authoring provenance`; `U-ST-PACKCANARY-016: rejects prefixed github.com repository identity`; `U-ST-PACKCANARY-016: routes authoring through registered se role and rejects worker`; `U-ST-PACKCANARY-016..018: mock adapter exercises consumer CLI wiring (not provider evidence)` | provenance / canonical repository identity validator の fail-close、production delegation routing の se 正系・worker 否定系、mock での normal consumer CLI 呼出し順。Codex provider 実 invocation は証明しない |
+| `U-ST-PACKCANARY-017` | `U-ST-PACKCANARY-017: rejects a non-applicable, failed, or could-not-run G1 positive`; `U-ST-PACKCANARY-016..018: mock adapter exercises consumer CLI wiring (not provider evidence)` | positive G1 evidence shape の拒否条件と mock の CLI wiring。実 subject の G1 pass は証明しない |
+| `U-ST-PACKCANARY-018` | `U-ST-PACKCANARY-018: rejects same-revision or unnamed-slot G1 negative`; `U-ST-PACKCANARY-016..018: mock adapter exercises consumer CLI wiring (not provider evidence)` | negative G1 evidence shape の拒否条件と mock の CLI wiring。実 subject の別 child revision に対する G1 fail は証明しない |
+| `U-ST-PACKCANARY-019` | `U-ST-PACKCANARY-019: rejects same-family, wrong-head, or noncanonical review receipts`; `U-ST-PACKCANARY-015..019: offline structural join accepts a complete fixture (not an AT-DIST-003 run)` | canonical join validator の offline positive / negative shape。live review、実 provider、既存専用 consumer PR、canonical custody の受入を証明しない |
+
 `U-ST-PACKCANARY-010` を含む full closure (別process/cwd/env、PLAN/DB/doctor/review、hook、Bun/source path trace) は
 既存 `tests/pack-internal-canary-boundary.test.ts` の real-producer offline fixture が所有し、公開 asset 接合の
 ために重複実装しない。実際の canary.2 run は public Releaseから取得したbytesでこの閉包を1回実行し、結果を
