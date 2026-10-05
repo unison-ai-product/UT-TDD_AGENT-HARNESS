@@ -211,9 +211,7 @@ describe("U-RCDEV PR-3: generated setup artifacts", () => {
     );
     expect(scan).not.toHaveBeenCalled();
     expect(rebuild).toHaveBeenCalledTimes(1);
-    expect(rebuild).toHaveBeenCalledWith(
-      expect.objectContaining({ repoRoot: root, skipTokenTelemetry: true }),
-    );
+    expect(rebuild).toHaveBeenCalledWith(expect.objectContaining({ repoRoot: root }));
     const db = harnessDbStatus(root);
     expect(db.initialized).toBe(true);
     expect(db.schemaVersion).toBe(db.expectedVersion);

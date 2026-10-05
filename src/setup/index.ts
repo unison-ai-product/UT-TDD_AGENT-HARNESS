@@ -1230,7 +1230,7 @@ export function nodeSetupDeps(repoRoot: string): SetupDeps {
     templates: loadTemplates(repoRoot),
     bootstrapProjectIdentity: () => bootstrapProjectIdentity(repoRoot),
     initializeHarnessDb: () => {
-      rebuildHarnessDb({ repoRoot, skipTokenTelemetry: true });
+      rebuildHarnessDb({ repoRoot });
     },
   };
 }

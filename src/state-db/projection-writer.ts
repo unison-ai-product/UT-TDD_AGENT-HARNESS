@@ -1,6 +1,5 @@
 import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { homedir } from "node:os";
 import { join, relative } from "node:path";
 import { performance } from "node:perf_hooks";
 import { parse as parseYaml } from "yaml";
@@ -57,9 +56,7 @@ import {
   recommendVerificationProfiles,
 } from "../lint/verification-profile.ts";
 import { loadMemoryEntries } from "../memory/index.ts";
-import { RepositoryModelEvaluationConfig } from "../projection/adapters/model-evaluation-config.ts";
 import { loadRepositoryPlanSources } from "../projection/adapters/repository-plan-sources.ts";
-import { projectModelEvaluations as projectModelEvaluationsApplication } from "../projection/application/project-model-evaluations.ts";
 import { projectOperationalMetrics as projectOperationalMetricsApplication } from "../projection/application/project-operational-metrics.ts";
 import { projectPocEvaluations as projectPocEvaluationsApplication } from "../projection/application/project-poc-evaluations.ts";
 import type { ProjectionEvent } from "../projection/contracts/projection-store.ts";
@@ -104,12 +101,6 @@ import { projectSpecIr } from "./spec-ir-projections.ts";
 import { clearRebuildableProjectionTables } from "./sqlite-projection-rebuild.ts";
 import { type ProjectionFindingInput, SqliteProjectionStore } from "./sqlite-projection-store.ts";
 import { runSqliteTransaction } from "./sqlite-transaction.ts";
-import {
-  loadRepoScopedRuntimeSessionUsage,
-  type RepoScopeIngestStats,
-  type RunUsage,
-  type SessionScanDirs,
-} from "./token-tracker.ts";
 import { hasVmodelAuthoring, projectVmodelAuthoring } from "./vmodel-projections.ts";
 
 export type { ProjectionEvent } from "../projection/contracts/projection-store.ts";
@@ -121,8 +112,6 @@ export interface RebuildHarnessDbInput {
   documentExports?: DocumentExportProjectionRows;
   verificationEvidence?: VerificationEvidenceProjection;
   timing?: boolean;
-  /** token telemetry は外部セッション走査を伴うため、軽量な in-memory 投影では省略できる。 */
-  skipTokenTelemetry?: boolean;
 }
 
 export interface ProjectionTiming {
@@ -141,8 +130,6 @@ export interface RebuildHarnessDbResult {
     verificationEvidence?: VerificationEvidenceProjection;
   };
   timings?: ProjectionTiming[];
-  /** repo スコープ token telemetry ingest の走査統計 (issue #82、可視化用)。 */
-  tokenIngest?: RepoScopeIngestStats;
 }
 
 export {
@@ -688,65 +675,6 @@ function projectReviewModelRuns(
       }
     });
   }
-}
-
-/**
- * token-tracker が走査した session ログの RunUsage[] を model_runs へ投入する (FR-L1-38、PLAN-L7-57)。
- * review-evidence 由来行 (token NULL) とは別ソースで、token/cost 列が非 NULL の行を足す。
- * cold-start (usages 空) は no-op。run_id は runtime:session:turn から安定生成 (再投入で重複しない)。
- */
-export function projectTokenUsage(db: HarnessDb, usages: RunUsage[]): void {
-  if (usages.length === 0) return;
-  runSqliteTransaction(db, () => {
-    for (const u of usages) {
-      if (!u.model) continue; // model 不明の行は集計不能なので捨てる
-      const id = stableId("token-run", `${u.runtime}:${u.sessionId}:${u.turnIndex}`);
-      recordProjectionEvent(db, {
-        table: "model_runs",
-        id,
-        row: {
-          run_id: id,
-          runtime: u.runtime,
-          model: u.model,
-          role: "session",
-          drive: "",
-          plan_id: "",
-          started_at: "",
-          completed_at: "",
-          evidence_path: u.sessionId,
-          input_tokens: u.inputTokens,
-          output_tokens: u.outputTokens,
-          cached_input_tokens: u.cachedInputTokens,
-          reasoning_tokens: u.reasoningTokens,
-          cost_usd: u.costUsd,
-        },
-      });
-    }
-  });
-}
-
-/**
- * repo スコープの session ディレクトリを解決する (env override > OS default)。
- * Stop / doctor の常時 scan は Issue #789 PR-1 で退役し、手動側の整理は PR-2 が所有する。
- */
-function repoScopedSessionDirs(): SessionScanDirs {
-  return {
-    claudeDirs: [process.env.UT_TDD_CLAUDE_SESSIONS_DIR ?? join(homedir(), ".claude", "projects")],
-    codexDirs: [process.env.UT_TDD_CODEX_SESSIONS_DIR ?? join(homedir(), ".codex", "sessions")],
-  };
-}
-
-/**
- * repo スコープの実測 token/cost telemetry を model_runs へ投入する (issue #82、PLAN-L7-454)。
- * `loadRepoScopedRuntimeSessionUsage` で **この repo に帰属する session usage のみ** (Claude
- * project-slug ディレクトリ / Codex session cwd フィルタ) を取得し `projectTokenUsage` へ渡す。
- * cold-start (該当ログ不在) は no-op。個別ファイルの読取失敗は loadRepoScopedRuntimeSessionUsage 内で
- * fail-open 済み (rebuild 全体を落とさない)。
- */
-export function projectRepoScopedTokenUsage(repoRoot: string, db: HarnessDb): RepoScopeIngestStats {
-  const { usages, stats } = loadRepoScopedRuntimeSessionUsage(repoRoot, repoScopedSessionDirs());
-  projectTokenUsage(db, usages);
-  return stats;
 }
 
 function planStatusMap(repoRoot: string): Map<string, string> {
@@ -2438,45 +2366,6 @@ export function projectPocEvaluations(db: HarnessDb, opts?: { asOf?: string }): 
   });
 }
 
-/**
- * FR-L1-38: model evaluation projection (opt-in).
- *
- * Opt-in gate: reads .ut-tdd/config/model-opt-in.yaml under repoRoot.
- * If the file exists AND parses to { enabled: true }, evaluation runs.
- * Otherwise (file absent or enabled != true), writes 0 rows and returns.
- * Default (no file) = disabled. This is deterministic and does not throw.
- *
- * Success inferred by joining model_runs.plan_id -> plan_registry.status
- * IN PLAN_SUCCESS_STATUSES (single-source from this module).
- *
- * PLAN-L7-57: token/cost telemetry を model_runs に追加 (projectTokenUsage が session ログ走査で投入)。
- * 本関数は token 効率も集計する:
- *   - total_input/output_tokens, total_cost_usd = SUM over model_runs WHERE model (NULL は無視)。
- *   - tokens_per_success / cost_per_success の **分子と分母は別ソースで意図的に非対称** (review I-2、
- *     Option B = 定義を明示):
- *       分子 = その model の **全 model_runs** の token/cost (session ログ由来行 plan_id='' を含む)。
- *       分母 = success_count = plan_registry に join して success な行数 (review-evidence 由来)。
- *     session ログは PLAN に紐づかない (plan_id 不明) ため、両者は構造的に別母集団。よって指標の意味は
- *     「この model が全 session で費やした output token / その model が delivered した success PLAN 数」=
- *     **粗い「success PLAN あたり token コスト」proxy** であり、「success run あたり token」ではない。
- *     この非対称を解消するには session→PLAN 帰属が要るが現状ログに無い (carry)。
- *   - Output: per-model row (model PK, success_rate, run_count, success_count, evaluated_at,
- *     total_input_tokens, total_output_tokens, total_cost_usd, tokens_per_success, cost_per_success)。
- *
- * AC-38-01: model-A (2 runs, both success) => rate 1.0; model-B (2 runs, 1 success) => rate 0.5.
- * AC-38-02: disabled (no opt-in file) => 0 model_evaluations rows.
- * Cold-start (enabled but 0 model_runs): 0 rows, no throw.
- */
-export function projectModelEvaluations(db: HarnessDb, repoRoot: string): void {
-  const store = new SqliteProjectionStore(db);
-  projectModelEvaluationsApplication({
-    config: new RepositoryModelEvaluationConfig(repoRoot),
-    read: store,
-    store,
-    evaluatedAt: nowIso(),
-  });
-}
-
 function projectOperationalMetrics(db: HarnessDb): void {
   const store = new SqliteProjectionStore(db);
   projectOperationalMetricsApplication({ read: store, store, computedAt: nowIso() });
@@ -2627,7 +2516,6 @@ export function rebuildHarnessDb(input: RebuildHarnessDbInput = {}): RebuildHarn
   const ownsDb = input.db === undefined;
   const db = input.db ?? openHarnessDb(defaultHarnessDbPath(repoRoot), { repoRoot });
   const timings: ProjectionTiming[] = [];
-  let tokenIngestStats: RepoScopeIngestStats | undefined;
   const time = <T>(id: string, run: () => T): T => {
     if (input.timing !== true) return run();
     const started = performance.now();
@@ -2681,22 +2569,7 @@ export function rebuildHarnessDb(input: RebuildHarnessDbInput = {}): RebuildHarn
         projectSkillEvaluations(db);
         projectPocEvaluations(db);
       });
-      if (!input.skipTokenTelemetry) {
-        // repo スコープ token telemetry ingest (issue #82、PLAN-L7-454): 従来 model_runs には
-        // review-evidence 由来行しか無かった実測欠落を是正する。model-operational (token 効率集計) より
-        // 前に走らせ、同一 rebuild 内の projectModelEvaluations が新規 token 行を反映できるようにする。
-        // 専用の timing id で計測し、他の projection と切り分けて可視化する。session ログ読取の想定外失敗は
-        // fail-open とし、rebuild 全体を落とさない (cold-start / 権限エラー等でも継続)。
-        time("token-telemetry", () => {
-          try {
-            tokenIngestStats = projectRepoScopedTokenUsage(repoRoot, db);
-          } catch {
-            tokenIngestStats = undefined;
-          }
-        });
-      }
       time("model-operational", () => {
-        projectModelEvaluations(db, repoRoot);
         projectOperationalMetrics(db);
       });
       const projectionDeps = { nowIso, stableId, recordProjectionEvent };
@@ -2749,7 +2622,6 @@ export function rebuildHarnessDb(input: RebuildHarnessDbInput = {}): RebuildHarn
       },
     };
     if (input.timing === true) result.timings = timings;
-    if (tokenIngestStats !== undefined) result.tokenIngest = tokenIngestStats;
     return result;
   } finally {
     if (ownsDb) db.close();

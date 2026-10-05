@@ -13,7 +13,7 @@
  *     掲載のあるモデルのみ** cost を出し、未掲載 (例 gpt-5.4-codex) は null を維持する (捏造しない)。token 効率は常に成立。
  *
  * 純関数 (parse / cost) と I/O loader (loadRuntimeSessionUsage) を分離。ingest/projection は
- * projection-writer.ts 側 (projectTokenUsage) が本モジュールの純関数を消費する。
+ * projection-writer.ts 側 が本モジュールの純関数を消費する。
  *
  * repo スコープ ingest (issue #82、PLAN-L7-454): `loadRuntimeSessionUsage` は全 project 全量走査
  * (`ut-tdd telemetry scan` の明示実行専用、温存)。一方 `rebuildHarnessDb` の正規経路には **この repo に

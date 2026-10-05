@@ -115,9 +115,9 @@ export function collectDriveDbRegistrationStats(
        WHERE d.drive_run_id IS NULL`,
     ),
     modelRuns: count(db, "SELECT COUNT(*) AS value FROM model_runs"),
-    // session-scoped token telemetry rows (role='session', plan_id='', written by projectTokenUsage
-    // from `ut-tdd telemetry scan`) are inherently NOT PLAN-linked, so they must be excluded from the
-    // orphan check — otherwise running a scan would trip drive-db-registration (PLAN-L7-58). genuine
+    // legacy session-scoped token rows (role='session', plan_id='') in a not-yet-rebuilt harness.db
+    // are inherently NOT PLAN-linked (token projection retired in Issue #789 PR-2; a rebuild drops
+    // them), so they are excluded from the orphan check. genuine
     // orphans = non-session runs that SHOULD trace to a PLAN but do not. NULL role is not a
     // telemetry session marker and must still be counted as an orphan.
     modelOrphans: count(
@@ -200,7 +200,7 @@ export function loadOrBuildDriveDbRegistrationStats(
 
   const db = openHarnessDb(":memory:", { repoRoot });
   try {
-    rebuildHarnessDb({ repoRoot, db, skipTokenTelemetry: true });
+    rebuildHarnessDb({ repoRoot, db });
     return {
       ...collectDriveDbRegistrationStats(db, repoRoot),
       expectedPlanCount: loadReviewPlans(repoRoot).length,
