@@ -48,18 +48,18 @@ supersedes:
   - PLAN-L7-57-token-telemetry-tracker
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:8cd99bada32554ad2d55498b025ed55a
-  command_id: plan-draft:issue-789:token-ingest-retirement:1:rechain-1
-  admitted_at: 2026-10-05T11:15:32.985Z
-  source_digest: sha256:8ef8158192aceb2c1fe603f2006bf4adbdb32f0ad715e68d85053a6e7666e9cc
-  decision_digest: sha256:b4a466616ec7f69ee5334aaaf797873279afa79d17efae921ca5068d5e8add36
-  receipt_digest: sha256:b527da0f52b46181f69ce9923f7a8d4b08518265c1db42079de444b35d6f726d
+  receipt_id: certificate:5731a4a62d9b61ec4d8389c6da62446c
+  command_id: plan-revise:issue-789:token-ingest-retirement:rechain-1:sol-r1-fix:r2:829b884df883
+  admitted_at: 2026-10-05T11:24:27.890Z
+  source_digest: sha256:817e326d1c9ce9de95f84b7b0a6e0065feb5ffdd2379e51888be89f11da13351
+  decision_digest: sha256:30fc94734306d056b56fed997d806f4723ef2a832e71d17b48cb03bb7fa9c3ee
+  receipt_digest: sha256:5d19cc7b3d5902538279415184595080063250847338888f7125285b6f0c1b45
   binding:
     path: docs/plans/PLAN-L6-789-token-ingest-retirement.md
     plan_id: PLAN-L6-789-token-ingest-retirement
     asset_id: plan:8cd99bada32554ad2d55498b025ed55a
-    revision: 1
-    content_digest: sha256:8ef8158192aceb2c1fe603f2006bf4adbdb32f0ad715e68d85053a6e7666e9cc
+    revision: 2
+    content_digest: sha256:817e326d1c9ce9de95f84b7b0a6e0065feb5ffdd2379e51888be89f11da13351
   route:
     signal: redesign
     mode: redesign
@@ -80,11 +80,12 @@ admission_receipt:
       target_revision: 1
   reentry:
     target_plan_id: PLAN-L6-789-token-ingest-retirement
-    target_revision: 1
+    target_revision: 2
     phase: forward_merge
-  escape_reason: "Issue #789 (PO 承認 2026-09-30): 常時 token 取り込みと model_evaluations
-    生成を退役させる。PLAN-L7-57 の token ingest 契約を supersede し、#840 の削除 artifact を所有する
-    confirmed PLAN の部分退役を前例 #424 (PLAN-L6-104) と同形で記録する。"
+  escape_reason: "Issue 789: PR #842 Sol r1 FLAG 2 件の是正 (correction
+    1/3)。部分退役の境界と作業表に PLAN-L7-58 (telemetry scan の DB ingest と再集計)
+    を加え、取得と料金計算の継承を明記する。telemetry scan の退役 oracle を行数一致から DB 未作成・既存 DB 不変の file
+    観測へ改め、未投入の非空 session fixture による反証条件を加える。方式と scope は変えない"
   supersedes:
     - PLAN-L7-57-token-telemetry-tracker
 ---
@@ -158,6 +159,7 @@ advisor 相談: `ut-tdd advisor --decision design` (claude-fable-5、2026-10-05)
 | --- | --- | --- | --- |
 | `PLAN-L7-57-token-telemetry-tracker` | confirmed | supersede back-reference (本 PLAN を指す訂正注記)。`plan revise` で発行 | 本 PR (plan-supersession が双方向を要求するため) |
 | `PLAN-L7-454-runtime-token-telemetry-ingestion` | confirmed | rebuild 経路の repo スコープ ingest の非適用注記。`plan revise` で発行 | 本 PR (前例 #424 の PR-0 が REVERSE-512 への非適用注記を同梱した) |
+| `PLAN-L7-58-telemetry-cost-enrichment` | confirmed | `telemetry scan` の DB ingest と再集計の非適用注記。`plan revise` で発行。非適用は L7-58-02 の migrate + `projectTokenUsage` + `projectModelEvaluations` 呼び出しと、Acceptance「token を model_runs へ ingest、model_evaluations を再集計」の部分。session-dir 解決 (option > env > OS default) と CLI 非起動の file-scan による取得、L7-58-01 の料金計算 (`OPENAI_PRICING` / `computeCodexCostUsd` / `pricingKeyFor` / `summarizeRunUsage`) は継承する | 本 PR (L7-454 と同じく generates を変えない非適用注記) |
 | `PLAN-L7-423-engine-swap-domain-objects-ports` | confirmed | model-evaluations 4 件の `generates` 撤回 + 部分退役注記 | 実装 PR |
 | `PLAN-L7-53-learning-engine` | confirmed | `tests/model-evaluation.test.ts` の `generates` 撤回 + FR-L1-38 部分退役注記 | 実装 PR |
 
@@ -183,7 +185,7 @@ open PR の変更 file にも無い (2026-10-05、`gh pr list --state open --jso
 ### PR-0 (本 PR): 契約 freeze
 
 - 本 PLAN を canonical `plan draft --manifest` で起票する。
-- `PLAN-L7-57` に supersede back-reference、`PLAN-L7-454` に非適用注記を canonical `plan revise --manifest` で入れる。
+- `PLAN-L7-57` に supersede back-reference、`PLAN-L7-454` と `PLAN-L7-58` に非適用注記を canonical `plan revise --manifest` で入れる。
 - src / tests / 設計 doc / test-design は変更しない。
 
 ### PR-1: 退役の実行 (#840 を forward branch で再構成)
@@ -195,7 +197,9 @@ open PR の変更 file にも無い (2026-10-05、`gh pr list --state open --jso
 - `projectModelEvaluations` と `src/projection` の model-evaluations domain / application / adapter / port、
   store の `readModelEvaluationFacts` を撤去する。
 - `src/lint/db-projection-ingestion.ts` の evidence-gated 一覧と provenance 要求から該当 table を外す。
-- `telemetry scan` を `loadRepoScopedRuntimeSessionUsage` による表示専用にする (DB 書き込みなし)。
+- `telemetry scan` を `loadRepoScopedRuntimeSessionUsage` による表示専用にする (DB 書き込みなし)。取得と
+  料金計算は `PLAN-L7-58` の契約をそのまま使う。同 PLAN の非適用注記は PR-0 で入れ済みなので、PR-1 では
+  `PLAN-L7-58` を revise しない。
 - `PLAN-L7-423` / `PLAN-L7-53` の `generates` から削除 artifact 5 件を `plan revise --manifest` で外し、
   部分退役注記を入れる。外さないと `plan-artifact-existence` が phantom を出す。#840 の CI
   (run 37292214302) で失敗した check はこの 2 PLAN についての同 check だけである。
@@ -215,7 +219,22 @@ Issue #789 の受入条件「PR-1 / PR-2 の oracle が、旧実装を戻すと 
 
 - rebuild 後に、session ログ由来の `model_runs` 行 (token 列が非 NULL) が 0 件である。
 - rebuild が `model_evaluations` を 1 行も書かない (opt-in 有効でも 0 行)。
-- `telemetry scan` が harness.db に書き込まない (実行前後の行数が一致する)。
+- `telemetry scan` が harness.db を開かず、書き込まない。行数一致では判定しない。既存 session 行へ旧
+  `projectTokenUsage` が安定 ID (`stableId("token-run", runtime:session:turn)`、
+  `src/state-db/projection-writer.ts`) で再投入すると行数が変わらず、旧実装でも GREEN になるためである。
+  判定は `runCliIn` (`tests/cli-surface.test.ts`、cwd を指定した node 直 spawn) で実行した後の file 観測で行う。
+  - (a) DB 未作成: `.ut-tdd/` を持たない一時 root を cwd として `telemetry scan --json` を実行し、実行後に
+    `<root>/.ut-tdd/harness.db` が存在しないこと。旧実装は scan action の
+    `openHarnessDb(defaultHarnessDbPath(repoRoot))` (`src/cli.ts`) が `.ut-tdd/` を作って DB file を生成するので RED になる。
+  - (b) 既存 DB 不変: migrate 済みの harness.db を事前に置き、file の sha256 と `-wal` / `-journal` sibling の
+    不在を記録してから実行する。実行後に sha256 が一致し、sibling が無く、`role = 'session'` の
+    `model_runs` 行が 0 件であること。
+  - 反証条件: (a)(b) とも、session-dir に未投入の非空 session fixture を置く。fixture は root に一致する cwd を
+    持つ Claude / Codex の usage 行で、`tests/token-tracker.test.ts` の `claudeAssistantLine` /
+    `codexSessionContent` と同形にする。同じ test で出力の `totalRuns` が 1 以上であることを assert し、
+    空 fixture で oracle が素通りしないようにする。scan action を旧実装 (`openHarnessDb` → `migrate` →
+    `projectTokenUsage` → `projectModelEvaluations`) に戻すと (a)(b) が RED になることを、PR-1 の review
+    証跡に残す。
 - review-evidence 由来の `model_runs` 行は従来どおり生成され、orphan 検査が通る。
 
 ## 6. Schedule (serial)
