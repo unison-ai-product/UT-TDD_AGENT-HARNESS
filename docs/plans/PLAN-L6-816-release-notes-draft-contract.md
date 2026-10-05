@@ -50,18 +50,18 @@ sub_doc: function-spec
 github_issue_id: 816
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:d0c95dafd276d2225a3917e11512ea13
-  command_id: plan-draft:issue-816:release-notes-draft-contract:1:rechain-1
-  admitted_at: 2026-10-05T12:01:30.055Z
-  source_digest: sha256:42d97d166cd7ce33a9eefef3a85d1d52eadefd3bc8fc42577e38cefe89ab2926
-  decision_digest: sha256:9c341eef56a0b6dc1bf4d1de17cd2f9efd12a675789abddb089d8d26c7fa124a
-  receipt_digest: sha256:c3f168078376693ff76fcb27a010063ebc9bbec75e88682ef777b6fc5592794d
+  receipt_id: certificate:0616e68f14ceac35dae94d62e2f231f9
+  command_id: plan-revise:issue-816:release-notes:sol-r1-fix:r2:d7cb9fc3c23e
+  admitted_at: 2026-10-05T12:05:39.484Z
+  source_digest: sha256:e7885e3f72021b0f1d39c921d834cbad7cfedf8b08fb6c85ac047d2f758345eb
+  decision_digest: sha256:b7b8ed19383bd5265e2cb6e98e0592c42e9132241a30c89de87121589d77e6df
+  receipt_digest: sha256:62703380e180db10bcb95f53ee667d799ee98afbded31000dba4276b46b07138
   binding:
     path: docs/plans/PLAN-L6-816-release-notes-draft-contract.md
     plan_id: PLAN-L6-816-release-notes-draft-contract
     asset_id: plan:d0c95dafd276d2225a3917e11512ea13
-    revision: 1
-    content_digest: sha256:42d97d166cd7ce33a9eefef3a85d1d52eadefd3bc8fc42577e38cefe89ab2926
+    revision: 2
+    content_digest: sha256:e7885e3f72021b0f1d39c921d834cbad7cfedf8b08fb6c85ac047d2f758345eb
   route:
     signal: feature_addition
     mode: add-feature
@@ -76,11 +76,11 @@ admission_receipt:
     digest: sha256:d61f55125e5d53fd7247758abc29d128e1584fd4ea743a4593b40f1c86f566f2
   reentry:
     target_plan_id: PLAN-L6-816-release-notes-draft-contract
-    target_revision: 1
+    target_revision: 2
     phase: forward_merge
-  escape_reason: "Issue #816 段階 1 (PO 判断 2026-10-01): Pack リリースノートの下書きを producer
-    出力と local git から機械生成する。PLAN-L7-628 の producer 出力を読むだけの operator 補助であり、L6
-    で契約を凍結してから L7 add-impl で scripts/ に実装する (前例 PLAN-L6-711)。"
+  escape_reason: "Issue #816: PR #843 Sol r1 FLAG 2 件の是正 (F1 素材 commit の信頼根を Pack
+    C1 trailer と bootstrap 表へ切替え、前回 Release の束縛と sidecar 照合を追加。F2 非 PR merge
+    の未分類化)。置き場・PR 一覧の入力源・出力形式・非公開の方式は変えない。"
 ---
 
 # PLAN-L6-816: Pack リリースノート下書きの機械生成 (段階 1) の契約 freeze
@@ -135,24 +135,46 @@ advisor 相談: `ut-tdd advisor --decision design --current-model claude-opus-5 
 merge でない first-parent commit の可視化) は §3.1 と §3.3 に入れた。advisor の前提 (producer 出力の欄、
 素材 commit が未記録であること、sync-pack が working tree を写すこと) は §2 の実測で確認した。
 
-### 3.1 判断 A: 素材 commit の取得
+### 3.1 判断 A: 素材 commit の信頼根 (rev 2)
 
-| 案 | 内容 | trade-off | 判定 |
+rev 1 は素材 commit を operator の申告値とし、前回の素材を前回の sidecar から継承していた。closing review (PR #843 Sol r1 F1) の
+指摘どおり、この方式では申告値や sidecar の素材を別の `origin/main` first-parent 祖先へ置き換えても祖先検査は通り、
+`--check` も同じ改変入力から再生成するので成功してしまう。別の Release の sidecar が混ざっても拒否できない。
+rev 2 では、素材 commit を引数や sidecar から受け取る経路を廃止し、push 後に改変できない記録から導く。
+
+既存の記録の実測 (2026-10-05):
+
+| 記録 | 素材 commit を持つか | 改変への耐性 | 判定 |
 | --- | --- | --- | --- |
-| **A1 (採用)** | operator が今回と前回の素材 commit を引数で渡す。生成器が source repo で検査し、検査に通らなければ fail-close する。下書きには「申告値 (祖先検査のみ)」と明記し、control が照合する | 素材 commit だけは機械導出ではなく申告値になる。ただし検査と表示で、申告値であることが隠れない | 採用 |
-| A2 | C1 の manifest `contentDigest` と source blob の全件照合で素材 commit を導く | 改行コード (#807) と `package.json` 変換で偽陰性が出る | 棄却 |
-| A3 | Pack の C1 commit に `Source-Commit:` trailer を入れ、機械で読む | Pack の C1 作成手順は別 owner の契約であり、段階 1 の範囲外。既に公開した Release には遡れない | 段階 2 の後続 issue へ回す |
+| sync-pack の JSON (`.ut-tdd/pack-sync/<tag>.sync-pack.json`) | 持たない。持つのは `export.sourceTag` だけで、`--tag` を省くと HEAD の短縮 SHA になる (`src/cli/distribution.ts:76-78`) | git 管理外の local file で、書き換えられる | 不採用 |
+| Pack の C1 / C2 の commit message | いまは持たない (§2) | push した後は git object として不変。C1 は manifest の `artifactSourceCommit` を介して C2 と releaseId に結び付く | 次の Release から trailer を載せて採用 |
+| GitHub Release の本文 | 手書きで持つ (canary.2 / canary.3) | 後から編集できる | 不採用 (bootstrap 値の出典としてだけ記録する) |
+| operator 票 / 公開記録 | 機械可読な保存先が repo に定義されていない (`git grep -n "operator 票" -- docs src` は 0 件) | - | 不採用 |
 
-A1 の検査 (全て fail-close、下書きを書かない):
+採用 (新しい保存先は作らない):
 
-1. `--material` と `--previous-material` は 40 桁の小文字 hex で、source repo に commit として存在する。
-2. 両方とも `origin/main` の first-parent 祖先である。
-3. `--previous-material` は `--material` の真の祖先である (同一 commit も不可)。
+1. **C1 の trailer を段階 1 の operator 手順の必須要件にする。** sync-pack は commit しない (`src/cli/distribution.ts:1216-1221` の
+   `nextCommands` は表示だけ)。operator は、sync-pack を実行した source の HEAD を、Pack の C1 の commit message に
+   trailer `Source-Commit: <40 桁 hex>` として 1 行だけ書く。operator 票には sync-pack 実行時の
+   `git -C <source> rev-parse HEAD` の出力を貼り、control は Pack の C1 を push する前に trailer と照合する。
+   rev 1 で段階 2 へ回した A3 を、この理由で段階 1 に繰り上げる。
+2. **今回の素材**は、`--tag` の C1 の trailer から読む。
+3. **前回の素材**は、`--previous-tag` の C1' の trailer から読む。C1' は、前回の tag が指す C2' の `release/manifest.yaml` の
+   `releases[channels.<channel>].artifactSourceCommit` である。前回の identity (tag'、C2'、releaseId'、C1'、素材') は
+   毎回 Pack repo から導き直し、sidecar からは読まない。
+4. **bootstrap 表**: trailer を持たない既存 Release のために、生成器に固定の表を 1 件だけ置く。
+   `v0.2.0-canary.3 → 6b5effbc055af2dbd083a256b6cb76edec97014f`。出典は canary.3 の公開本文で、§2 の 6 PR 一致で裏付けた。
+   表は引数で上書きできず、変えるには PR の review を通す。trailer が無く、表にも無い tag は拒否する。
 
-素材 commit 対の永続化: 生成器は下書きと並べて sidecar JSON を出す (§3.4)。次回は `--previous-material` の
-代わりに `--previous-sidecar <前回の sidecar>` を渡せる。この場合、前回の素材 commit は sidecar から読み、
-sidecar の `notes_digest` と前回の下書き file の照合は行わない (前回の下書きは手元に無いことがある)。
-初回 (段階 1 の最初の Release) だけは `--previous-material` を申告値で渡す。
+検査 (全て fail-close、file を書かない):
+
+1. C1 の `Source-Commit:` trailer がちょうど 1 行で、40 桁の小文字 hex である。0 行や 2 行以上は拒否する。
+2. 今回と前回の素材が、どちらも source repo に commit として存在し、`origin/main` の first-parent 祖先である。
+3. 前回の素材は今回の素材の真の祖先である (同一 commit も不可)。
+4. `--previous-tag` は `--tag` と異なり、C2' ≠ C2 かつ releaseId' ≠ releaseId である。
+
+素材 commit、前回の素材、sidecar を受け取る引数 (`--material` / `--previous-material` / `--previous-sidecar`) は存在しない。
+渡されたら未知の引数として拒否する。
 
 ### 3.2 判断 B: 置き場と PLAN の分け方
 
@@ -178,8 +200,10 @@ L7 実装 PLAN は `PLAN-L7-816-release-notes-draft` (add-impl、route `add-feat
 - 範囲は `<previous_material>..<material>` の first-parent 列で、古い順に並べる。
 - merge commit の subject が `Merge pull request #<N> from <ref>` なら PR として扱う。PR タイトルは merge commit の
   本文で最初の空でない行とする。本文が空なら subject の残りを使わず、「タイトル不明」と表示する。
-- merge でない first-parent commit (squash merge や main への直接 push) は捨てない。「未分類の commit」節に
-  短縮 SHA と subject を列挙する (advisor 条件 2、fail-visible)。
+- PR merge の subject (`^Merge pull request #(\d+) from \S+$`) に一致しない first-parent commit は、merge かどうかを問わず
+  全て「未分類の commit」節に、短縮 SHA と subject を列挙する (rev 2、PR #843 Sol r1 F2)。通常の branch merge
+  (`Merge branch 'x'`)、squash merge、main への直接 push を含む。捨てる分岐と拒否する分岐は持たない
+  (advisor 条件 2、fail-visible)。
 - 型の判定は PR タイトルに対し `^(feat|fix|docs|test|refactor|perf|build|ci|chore|revert|style)(\([^)]*\))?!?: ` を
   使う。一致しなければ「その他」に入れる (例: #679 のタイトルは型が無いので「その他」)。
 - 節の順と見出しは固定する: 新機能 (feat) / 不具合修正 (fix) / 性能 (perf) / リファクタリング (refactor) /
@@ -202,8 +226,8 @@ identity の値は全て、次の 3 つの信頼根から機械で読む。opera
 | consumer anchor | producer JSON の `consumerAnchorDigest` | `--assets-dir` の `<tag>.consumer.sha256` の file bytes の SHA-256 と一致する |
 
 入力: `--producer-json <file>` (operator が `distribution package --json` の stdout を保存した file)、
-`--assets-dir <dir>`、`--pack-repo <dir>`、`--tag <tag>`、`--source-repo <dir>` (既定は cwd)、§3.1 の素材 commit 引数、
-`--out-dir <dir>`。
+`--assets-dir <dir>`、`--pack-repo <dir>`、`--tag <tag>`、`--previous-tag <tag>`、`--source-repo <dir>` (既定は cwd)、
+`--out-dir <dir>`。素材 commit は §3.1 のとおり Pack の C1 trailer から読み、引数では受け取らない。
 
 producer JSON の扱い: `ok === true` でなければ拒否する。`tag` / `sourceRevision` / `assetDigests` /
 `consumerAnchorDigest` のどれかが無い、型が違う、形式 (40 桁 hex / `sha256:` + 64 桁 hex) に合わない場合は拒否する。
@@ -223,8 +247,10 @@ producer JSON の扱い: `ok === true` でなければ拒否する。`tag` / `so
    4. 固定の注記: canary は prerelease であり、stable への昇格と `latest` の変更をしないこと。追跡 issue の参照
       (`--tracking-issue <N>` で指定。省略時は注記を出さない)。
 2. `<tag>.release-notes.json` (sidecar、canonical JSON、key は辞書順): `schema_version: 1`、`tag`、`channel`、
-   `material`、`previous_material`、`c1`、`c2`、`release_id`、`asset_digests`、`consumer_anchor`、`pr_numbers`
-   (表示順)、`unclassified_commits`、`notes_digest` (md file の bytes の `sha256:`)。
+   `material`、`previous_tag`、`previous_c2`、`previous_release_id`、`previous_material`、`previous_material_source`
+   (`c1-trailer` か `bootstrap-table`)、`c1`、`c2`、`release_id`、`asset_digests`、`consumer_anchor`、`pr_numbers`
+   (表示順)、`unclassified_commits`、`notes_digest` (md file の bytes の `sha256:`)。sidecar は出力であり `--check` の照合対象だが、
+   次回の入力にはしない (§3.1)。
 
 決定性: 同じ入力からは byte 単位で同じ 2 file を出す。時刻・実行環境・絶対 path は本文と sidecar に入れない。
 
@@ -248,8 +274,11 @@ PR タイトル、コマンド、SHA、asset 名、PR / issue 番号は原文の
 ### 3.8 判断 H: control の照合手順 (`--check`)
 
 control は `--check` を付けて、operator と同じ引数で生成器を再実行する。`--check` は file を書かず、再生成した
-2 file が `--out-dir` の既存 2 file と byte 単位で一致するかだけを判定する。不一致なら exit 1 で、違う欄を表示する。
-これで、下書きを後から手で書き換えた場合と、identity の値を書き写した場合を検出する。
+2 file が `--out-dir` の既存 2 file と byte 単位で一致するかを判定する。加えて、既存 sidecar の `tag` / `c2` / `release_id` / `c1` /
+`material` / `previous_tag` / `previous_c2` / `previous_release_id` / `previous_material` が再生成値と一致し、`notes_digest` が既存 md の
+bytes の SHA-256 と一致することを欄ごとに検査する (rev 2)。不一致なら exit 1 で、違う欄の名前を表示する。
+これで、下書きを後から手で書き換えた場合、identity の値を書き写した場合、素材を別の祖先へ置き換えた場合、
+別の Release の sidecar が混ざった場合を検出する。
 operator 票への添付物は、この 2 file と producer JSON とする。
 
 ## 4. 反証可能な oracle (L7 実装 PLAN の test-design で宣言する)
@@ -264,14 +293,18 @@ fixture は一時 directory の git repo (source 側と Pack 側) で作り、�
 | U-RNOTES-003 | `consumerAnchorDigest` を書き換えると、`<tag>.consumer.sha256` の bytes の SHA-256 と不一致で exit 1 | anchor を producer JSON から素通しする |
 | U-RNOTES-004 | Pack C2 manifest の `artifactSourceCommit` と producer JSON の `sourceRevision` が違うと exit 1 | C1 を片方からだけ読む |
 | U-RNOTES-005 | releaseId と C2 は Pack repo から読み、引数で上書きできない (上書き用の引数が存在しない) | releaseId を引数で受け付ける |
-| U-RNOTES-006 | `--previous-material` が `--material` の祖先でない、同一、または `origin/main` の first-parent 祖先でない場合に exit 1 | 祖先検査を省く |
+| U-RNOTES-006 | C1 の `Source-Commit:` trailer が 0 行・2 行・40 桁 hex でない場合、素材が `origin/main` の first-parent 祖先でない場合、前回の素材が今回の真の祖先でない場合に exit 1 | trailer 検査か祖先検査を省く |
 | U-RNOTES-007 | first-parent 上の merge でない commit が「未分類の commit」節に出る | 非 merge commit を捨てる |
 | U-RNOTES-008 | 型の無い PR タイトルが「その他」節に出る。`feat!:` の PR は新機能節に「破壊的変更」付きで出る | 型の判定を緩める / `!` を無視する |
 | U-RNOTES-009 | 同じ入力で 2 回生成すると md と sidecar が byte 単位で一致し、本文に一時 directory の絶対 path が含まれない | 時刻や path を本文に入れる |
 | U-RNOTES-010 | `--check` は、生成後に md の identity 行を 1 文字変えると exit 1 になる。無変更なら exit 0 で file を書かない | `--check` が file を書く / 比較を省く |
 | U-RNOTES-011 | 生成器が起動する子プロセスは `git` だけである (注入した spawn の記録で判定し、`gh` が 0 回) | `gh release create` を実行する |
 | U-RNOTES-012 | 見出し・節名・注記が日本語の固定文で、U+FFFD を含まない | 見出しを英語に戻す |
-| U-RNOTES-013 | `--previous-sidecar` を渡すと前回の素材 commit を sidecar から読み、`--previous-material` との同時指定は exit 1 | sidecar と申告値を混ぜる |
+| U-RNOTES-013 | `--material` / `--previous-material` / `--previous-sidecar` を渡すと未知の引数として exit 1 | 素材を引数や sidecar から受け取る |
+| U-RNOTES-014 | first-parent 上の `Merge branch 'topic'` (PR でない通常の merge) が「未分類の commit」節に出て、PR 節には出ない | PR subject に一致しない merge を捨てる |
+| U-RNOTES-015 | 生成後に md と sidecar の素材を別の `origin/main` first-parent 祖先へ書き換える (sidecar の `notes_digest` も合わせて再計算する) と、`--check` は `material` の不一致で exit 1 | `--check` が素材を out-dir の file から読む |
+| U-RNOTES-016 | 別の Release で生成した md と sidecar の組 (組の内部では `notes_digest` が整合) を out-dir に置くと、`--check` は `tag` / `c2` / `release_id` の不一致で exit 1。sidecar の `notes_digest` だけを変えても exit 1 | sidecar の Release 束縛か `notes_digest` の照合を省く |
+| U-RNOTES-017 | 前回の tag の C1 に trailer が無いとき、bootstrap 表にある `v0.2.0-canary.3` は `6b5effbc…` を使い、表に無い tag は exit 1。`--previous-tag` が `--tag` と同じ場合、または C2 / releaseId が同じ場合も exit 1 | 表に無い tag を推測で補う / 前回 Release の同一性検査を省く |
 
 ## 5. Schedule (serial)
 
@@ -280,14 +313,25 @@ fixture は一時 directory の git repo (source 側と Pack 側) で作り、�
 3. [直列] PR-1: `PLAN-L7-816-release-notes-draft` と `PLAN-REVERSE-816-release-notes-draft-backfill` を起票し、
    §4 の oracle を test-design に宣言する。Red の test を先に作り、`scripts/release-notes-draft.mjs` を実装する
    (直列理由 = verification_gate)。
-4. [直列] 次の Pack Release で、operator が下書きを作り、control が `--check` で照合した後に公開する。
+4. [直列] 次の Pack Release で、operator が C1 に `Source-Commit:` trailer を書き (§3.1)、下書きを作り、control が `--check` で照合した後に公開する。
    結果を Issue #816 に記録する。
 
 ## 6. 非対象と残余リスク
 
-- 素材 commit は申告値のままである (§3.1)。祖先検査で、存在しない commit・main の外の commit・順序の逆転は防げる。
-  ただし、main 上の別の commit を素材と申告する取り違えは検出できない。control は sync-pack を実行した時の
-  source HEAD と照合する。根本対策は A3 (C1 の trailer) であり、段階 2 の後続 issue で扱う。
+- 素材 commit の信頼根は、operator が C1 に書く trailer である (§3.1、rev 2)。push した後の改変は git object の不変性で防げる。
+  ただし、C1 を作る時点で operator が別の commit を書く取り違えは、機械では検出できない。これは operator 票に貼った
+  sync-pack 実行時の `rev-parse HEAD` と、C1 push 前の control の照合で防ぐ。sync-pack 自身が素材 commit を記録する仕組みは
+  段階 2 で扱う。
+- bootstrap 表の 1 件 (`v0.2.0-canary.3`) は、公開本文という編集可能な出典に依る。§2 の 6 PR 一致で裏付けたうえで、
+  tracked code として review を通して固定する。
 - PR タイトルは merge 時点のものである。後からの PR タイトル編集は反映されない。
 - secret / 個人 path の検査 gate (#806 / #815) は段階 2 で再利用する。段階 1 は、絶対 path を本文に入れないこと
   (U-RNOTES-009) だけを保証する。
+
+## 7. 改訂履歴
+
+- rev 2 (2026-10-05、PR #843 Sol r1 FLAG の是正 1/3)
+  - F1: 素材 commit の取得を、申告値と sidecar の継承から、Pack C1 の `Source-Commit:` trailer と bootstrap 表 1 件へ切り替えた。
+    前回 Release の identity は毎回 Pack repo から導き直す (§3.1)。`--check` に sidecar の Release 束縛と `notes_digest` の照合を加えた (§3.8)。
+    oracle U-RNOTES-006 / 013 を差し替え、015 / 016 / 017 を追加した。
+  - F2: PR merge でない first-parent commit を全て「未分類の commit」に出す規則にし (§3.3)、U-RNOTES-014 を追加した。
