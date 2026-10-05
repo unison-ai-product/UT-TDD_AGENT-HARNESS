@@ -53,18 +53,18 @@ status: draft
 github_issue_id: 815
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:5027af2cff3ed0b3a0cbb40a207a7c41
-  command_id: plan-revise:issue-815:report-command:rechain-1:sol-r1-fix:r2:ab3156798eb4
-  admitted_at: 2026-10-05T04:30:31.471Z
-  source_digest: sha256:09370048e695b988f60357b931a3e05185faa41490433a6a1882c78df5c2b989
-  decision_digest: sha256:db7574230bd5a003fd3221c5186c9cd215746c3812d41a31a8fc8f0e233a1cbe
-  receipt_digest: sha256:1ec4146567be5e1b332629582fa6f8c7b8dd8bfc03fea9f466253d52771d208a
+  receipt_id: certificate:bec78c3552539be4f794137d4ca8715f
+  command_id: plan-revise:issue-815:report-command:rechain-1:sol-r2-fix:r3:9d762556a138
+  admitted_at: 2026-10-05T04:30:42.571Z
+  source_digest: sha256:f1f0fb15447f6fc34c6b8fd9b9a1f8b023770fe25d4bd249762e504b4fab3cce
+  decision_digest: sha256:2f58615a0098789324583f037c6d4b1e361890bb0c19f8845ebe5735c0df56ec
+  receipt_digest: sha256:8b616265a67ed42820ff7f9c3c38ae80c5335caed5cdb49a2b4ca81446e2e44d
   binding:
     path: docs/plans/PLAN-L6-107-consumer-report-command-and-intake.md
     plan_id: PLAN-L6-107-consumer-report-command-and-intake
     asset_id: plan:3668ea3147d11f25cd3e1f6fe7581325
-    revision: 2
-    content_digest: sha256:09370048e695b988f60357b931a3e05185faa41490433a6a1882c78df5c2b989
+    revision: 3
+    content_digest: sha256:f1f0fb15447f6fc34c6b8fd9b9a1f8b023770fe25d4bd249762e504b4fab3cce
   route:
     signal: feature_addition
     mode: add-feature
@@ -79,11 +79,10 @@ admission_receipt:
     digest: sha256:610d332e78fa0b1893fd1299881eeef3237bd8801f5ba9364f5d70aec59c2c41
   reentry:
     target_plan_id: PLAN-L6-107-consumer-report-command-and-intake
-    target_revision: 2
+    target_revision: 3
     phase: forward_merge
-  escape_reason: "Issue 815 S2/S3: PR #824 Sol r1 FLAG の是正 (error_code
-    を定型表の閉じた列挙に限定し --error-param を廃止して初期定型表を確定、プレビュー後の失敗では S1 F2 (i)
-    に合わせて固定文言を出さず exit code で通知)。束の allowlist・受付先・buildReport 1 回の方式は変えない"
+  escape_reason: "Issue 815 S2/S3: PR #824 Sol r2 FLAG の是正 (§9 受入条件 5/6 を §5.2
+    の位相別出力契約と oracle 013 の全体比較にそろえる)。方式は変えない"
 ---
 
 # PLAN-L6-107 (add-design): `ut-tdd report` コマンドと受付先 issue フォーム (S2 + S3)
@@ -341,9 +340,9 @@ API / `gh issue create` がフォームを経由しないことは PO 判断 §3
    remote URL) を fixture に仕込んでも束に現れない。
 3. `runReportCommand` は 1 run で `buildReport` をちょうど 1 回呼び、入力エラー時は 0 回。
 4. `ut-tdd report` の実行中に network 呼出し (http / https / net / dns / child_process による gh 起動) が 0。
-5. 失敗時の stderr は `report: blocked <閉じた列挙>` の 1 行だけで、検査の種別までを示し、件数・位置・検出値が出ない。確認成立時だけ保存 path と定数 URL が出る。
-6. `consumer-report.yml` が YAML として解析でき、§6.1 の required 項目・dropdown・`labels: [consumer-report]`・注意書きを持ち、
-   dropdown が package.json の現在版を含む。`config.yml` の `blank_issues_enabled` は false のまま。
+5. 出力は §5.2 の位相どおりである。プレビュー前に止まった失敗 (入力エラー・F1・非対話) では stderr が `report: blocked <閉じた列挙>` の 1 行だけで、検査の種別までを示し、件数・位置・検出値が出ず、exit code は 1。プレビュー後の結果 (確認不成立・F2) では S3 の固定文言を 1 byte も出さず、どの channel にも検査済み全文の部分列以外が現れない (PLAN-L6-106 §3.3 1b (i))。exit code は確認不成立で 2、F2 で 3。確認成立時だけ保存 path と定数 URL が出て、exit code は 0。`error_code` に定型表外の値 (形だけ正しい業務文字列を含む) を渡すと入力エラーになる。
+6. `consumer-report.yml` が YAML として解析でき、§6.1 から組み立てた期待構造 (title・labels・body 全要素の順序・type・id・required・
+   dropdown の options 全件・render・注意書き) と一致し、許可外の要素を持たない。`harness_version` の options は package.json の現在版を含む。`config.yml` の `blank_issues_enabled` は false のまま。
 7. 非対話・確認不成立・`--yes` 等の迂回 option が S1 の契約どおりに効かない (S1 の oracle 011 を CLI 経由で再確認)。
 
 ## 10. advisor 記録
