@@ -11,7 +11,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import { parse as parseYaml } from "yaml";
@@ -790,8 +790,8 @@ describe("manual canary acceptance publish-record boundary", () => {
       [...canaryAssetsForTag("v0.2.0-canary.3")].sort(),
     );
     expect(buildAgentE2EInstallerInvocation("C:/c3-release", parsed.consumerAnchorDigest)).toEqual([
-      "C:/c3-release/v0.2.0-canary.3.ut-tdd.mjs",
-      "setup", "--solo", "--consumer-runtime-release", "C:/c3-release",
+      join("C:/c3-release", "v0.2.0-canary.3.ut-tdd.mjs"),
+      "setup", "--solo", "--consumer-runtime-release", join("C:/c3-release"),
       "--expected-consumer-digest", parsed.consumerAnchorDigest,
     ]);
     expect(buildInstallerInvocation("C:/c3-release", parsed.consumerAnchorDigest, AGENT_E2E_TAG)).toEqual(
@@ -923,7 +923,8 @@ describe("manual canary acceptance publish-record boundary", () => {
           const layer = path.includes("screen-list") ? "L2" : path.includes("acceptance") ? "L12" : "L1";
           const fields = layer === "L12" ? "layer: L12\nstatus: draft\npair_artifact: docs/test-design/harness/L7-release-consumer-dev-start-test-design.md\n" :
             `layer: ${layer}\nstatus: draft\npair_artifact: docs/test-design/harness/L7-release-consumer-dev-start-test-design.md\n`;
-          writeFileSync(join(root, path), `---\n${fields}---\n# Shipped ${layer} template\n`);
+          const screenSeed = path.includes("screen-list") ? "\nSC-001 signup\n" : "";
+          writeFileSync(join(root, path), `---\n${fields}---\n# Shipped ${layer} template${screenSeed}\n`);
         }
         return { status: 0, stdout: JSON.stringify({ written, skipped: [] }), stderr: "" };
       }
