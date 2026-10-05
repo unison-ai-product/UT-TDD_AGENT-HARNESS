@@ -6416,6 +6416,22 @@
         "revision": 2,
         "content_digest": "sha256:befa38ad69ffbdbb9fd77f0c230891bb7e5dc9917e42272c74433deef4cf4ced"
       }
+    },
+    {
+      "sequence": 402,
+      "previous_record_digest": "sha256:890e8128cdf9c47c8e8e22238cd846bcaffc4ebac01f09d25d7566a462a83e39",
+      "record_digest": "sha256:efe87a2717a00d4c9ab531632289b0100fdf6559e6e5ac8ade0787ab217f0395",
+      "command_id": "plan-revise:issue-729:ci-fail-fast:rechain-1:path-normalize:r3:17c663ee5aee",
+      "receipt_id": "certificate:99d6e653290245cb169affe8c821a211",
+      "receipt_digest": "sha256:b1d6e9272fbc3e97c131e595de06deb08d67ad77e03495de4bce3e4585576b8c",
+      "decision_digest": "sha256:9302169474f53eb5f708e23b4934a99a39015fbcb6ab2f2a18445d53f9934931",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-729-ci-fail-fast.md",
+        "plan_id": "PLAN-L7-729-ci-fail-fast",
+        "asset_id": "plan:81cd2a30d72359f5d571b90ab5f6585b",
+        "revision": 3,
+        "content_digest": "sha256:674855a81758bffe20908f6d8e415eac9bbe25cbdc84a811cc8b3203e405def1"
+      }
     }
   ]
 }
