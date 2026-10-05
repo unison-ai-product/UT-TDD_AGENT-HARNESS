@@ -6624,6 +6624,22 @@
         "revision": 2,
         "content_digest": "sha256:817e326d1c9ce9de95f84b7b0a6e0065feb5ffdd2379e51888be89f11da13351"
       }
+    },
+    {
+      "sequence": 415,
+      "previous_record_digest": "sha256:3bd04fb27ce462f0a2333a0d97e78857a5e2f59b14690e1777d6caa1fd361e11",
+      "record_digest": "sha256:5293059ce2d7fb35aa710e5285abf649f36205f928cf9886ceb24f27e52b386f",
+      "command_id": "plan-revise:issue-789:legacy-58:2:rechain-1",
+      "receipt_id": "certificate:0ae7ba5e1fc2c1976edac5271d363f9e",
+      "receipt_digest": "sha256:6161f36e19af935c961931e23a179660d3ec2b87e93fd7ee94fece44eb736198",
+      "decision_digest": "sha256:d5bba9e81269dbfdce734743d5382157a8153d40b911f12db6f2f0ff454e70fd",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-58-telemetry-cost-enrichment.md",
+        "plan_id": "PLAN-L7-58-telemetry-cost-enrichment",
+        "asset_id": "plan:legacy:fc88971bc08a98ebfd67018a9d9bbe8e5df69d45b9c1204bfc2e0b922b242a96",
+        "revision": 2,
+        "content_digest": "sha256:ce1559f29bb4001d16ce65567647eee91be9bb665dd97a0617727acfc8efc90a"
+      }
     }
   ]
 }
