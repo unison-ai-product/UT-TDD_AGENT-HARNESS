@@ -15,6 +15,7 @@ import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import { parse as parseYaml } from "yaml";
+import { resolveDelegationRouting } from "../src/team/delegation-routing.ts";
 import {
   createCanaryFixture,
   isolatedCanaryEnv,
@@ -942,7 +943,7 @@ describe("manual canary acceptance publish-record boundary", () => {
         "ut-tdd",
         "codex",
         "--role",
-        "worker",
+        "se",
         "--model",
         "gpt-6-luna",
         "--effort",
@@ -952,7 +953,7 @@ describe("manual canary acceptance publish-record boundary", () => {
         "--execute",
         "--json",
       ],
-      role: "worker",
+      role: "se",
       template_source: "pack-template",
       provenance: "live-provider",
       template_slot: "DOC-L1-REQUIREMENTS",
@@ -975,7 +976,7 @@ describe("manual canary acceptance publish-record boundary", () => {
         provider: "codex",
         model: "gpt-6-luna",
         invocation: ["ut-tdd", "codex", "--execute"],
-        role: "worker",
+        role: "se",
         template_source: "pack-template",
         provenance: "closed-stub",
         transcript: "closed provider stub",
@@ -1021,6 +1022,34 @@ describe("manual canary acceptance publish-record boundary", () => {
     expect(() => runAgentAuthoringAndGates({ consumerRoot: root })).toThrow(
       "agent-authoring-consumer-identity-invalid",
     );
+  });
+
+  it("U-ST-PACKCANARY-016: routes authoring through registered se role and rejects worker", () => {
+    const accepted = resolveDelegationRouting({
+      provider: "codex",
+      role: "se",
+      task: "write L1 business requirements",
+      model: "gpt-6-luna",
+      effort: "high",
+    });
+    expect(accepted).toMatchObject({
+      ok: true,
+      model: "gpt-6-luna",
+      effort: "high",
+      model_source: "explicit",
+      effort_source: "explicit",
+    });
+
+    const rejected = resolveDelegationRouting({
+      provider: "codex",
+      role: "worker",
+      task: "write L1 business requirements",
+      model: "gpt-6-luna",
+      effort: "high",
+    });
+    expect(rejected).toMatchObject({ ok: false });
+    if (!rejected.ok)
+      expect(rejected.message).toContain("role=worker is not a registered delegation role");
   });
 
   it("U-ST-PACKCANARY-017: rejects a non-applicable, failed, or could-not-run G1 positive", () => {
@@ -1161,7 +1190,7 @@ describe("manual canary acceptance publish-record boundary", () => {
       if (cliArgs[0] === "codex") {
         expect(cliArgs).toContain("--execute");
         expect(cliArgs).toContain("--role");
-        expect(cliArgs).toContain("worker");
+        expect(cliArgs).toContain("se");
         expect(cliArgs).toContain("--model");
         expect(cliArgs).toContain("gpt-6-luna");
         const path = "docs/design/L1-requirements/business-requirements.md";
@@ -1320,7 +1349,7 @@ describe("manual canary acceptance publish-record boundary", () => {
         "ut-tdd",
         "codex",
         "--role",
-        "worker",
+        "se",
         "--model",
         "gpt-6-luna",
         "--effort",
@@ -1330,7 +1359,7 @@ describe("manual canary acceptance publish-record boundary", () => {
         "--execute",
         "--json",
       ],
-      role: "worker",
+      role: "se",
       template_source: "pack-template",
       provenance: "live-provider",
       template_slot: "DOC-L1-REQUIREMENTS",

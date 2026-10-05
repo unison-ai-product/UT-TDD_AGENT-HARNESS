@@ -329,7 +329,7 @@ export function runAgentAuthoringAndGates(input) {
     "Write one user requirement for the signup screen; include business ID BR-01 traced to baseline PM-01 (the signup screen, not a different feature).",
     "Set frontmatter layer: L1, sub_doc: business, status: confirmed, and pair_artifact: docs/test-design/L12-acceptance-test-design.md.",
   ].join("\n");
-  const authorInvocation = ["ut-tdd", "codex", "--role", "worker", "--model", "gpt-6-luna",
+  const authorInvocation = ["ut-tdd", "codex", "--role", "se", "--model", "gpt-6-luna",
     "--effort", "high", "--task", task, "--execute", "--json"];
   const authorResult = runAgentCli(root, cliPath, authorInvocation.slice(1), run, 1_800_000);
   const authorTranscript = requireCommandSuccess(authorResult, "agent-authoring-codex");
@@ -395,7 +395,7 @@ export function runAgentAuthoringAndGates(input) {
       provider: authorOutput.provider,
       model: authorOutput.model,
       invocation: authorInvocation,
-      role: "worker",
+      role: "se",
       template_source: "pack-template",
       template_slot: "DOC-L1-REQUIREMENTS",
       provenance: "live-provider",
