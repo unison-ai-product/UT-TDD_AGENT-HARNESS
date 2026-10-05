@@ -38,9 +38,9 @@ decision_points:
     over: "pushing with the normal GCM OAuth token, or leaving the workflow-scoped token persisted in config/env"
     because: "GitHub rejects workflow-file pushes from the normal OAuth token, and persisting a workflow-scoped credential is an unnecessary standing security exposure"
   - when: "Choosing between committing directly to `main` or opening a feature branch"
-    choose: "commit directly to `main` for solo single-session work, and use a `<type>/<slug>` feature branch when work spans multiple sessions or needs a PR review gate"
-    over: "always branching, or always committing directly to `main` regardless of scope"
-    because: "the branch decision is scoped to session/review needs, not a blanket policy — hybrid-mode review gates specifically require the branch+PR path"
+    choose: "always use a `<type>/<slug>` feature branch and merge via `ut-tdd pr merge --pr <N>`"
+    over: "committing directly to `main` or calling `gh pr merge` directly"
+    because: "PR merge only through the wrapper is a binding rule (CLAUDE.md §Git Rules); hybrid-mode review gates require the branch+PR path"
 ---
 
 # git
@@ -115,10 +115,10 @@ formatting — run `npm run lint` (which invokes `biome check`) to catch both.
 
 ## Branch strategy
 
-- `main` is the integration branch. Direct commits to `main` are permitted for
-  solo maintainer flow.
-- Feature branches are used when work spans multiple sessions or requires a PR
-  review gate (hybrid mode judgement).
+- `main` is the integration branch. Work goes through a feature branch and PR;
+  merge only via `ut-tdd pr merge --pr <N>`. PR scope (1 PR = 1 論点) and
+  post-FLAG corrections in the same PR follow `CLAUDE.md` §Git Rules and
+  §PR スコープ規律 / §FLAG 後の限定是正と merge (not restated here).
 - Branch names follow `<type>/<slug>` (e.g., `feat/plan-l7-44-projection`).
 
 ## Pushing with workflow changes
