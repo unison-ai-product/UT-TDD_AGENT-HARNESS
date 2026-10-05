@@ -364,7 +364,9 @@ function agentReviewEvidence() {
     consumeInvocation: ["ut-tdd", "review", "live-consume"],
     dispatchTranscript: "fixture CLI JSON result",
     consumeTranscript: "fixture CLI JSON result",
+    auditPath,
     receiptPath,
+    verdictPath,
   };
 }
 
@@ -550,9 +552,27 @@ describe("manual canary acceptance publish-record boundary", () => {
       "--expected-consumer-digest",
       anchor,
     ]);
-    expect(() => buildInstallerInvocation("C:/other-release", anchor, "latest")).toThrow(
-      "acceptance-tag-not-canary-2-or-offline-fixture",
-    );
+    for (const tag of ["v0.2.0-canary.4", "v0.1.4", "latest"]) {
+      expect(() => buildInstallerInvocation("C:/other-release", anchor, tag)).toThrow(
+        "acceptance-tag-not-canary-2-or-offline-fixture",
+      );
+      expect(() =>
+        main([
+          "--tag",
+          tag,
+          "--record",
+          "missing",
+          "--comment-url",
+          commentUrl,
+          "--release-dir",
+          "missing",
+          "--consumer-root",
+          "missing",
+          "--evidence",
+          "missing",
+        ]),
+      ).toThrow("acceptance-tag-not-exact");
+    }
     expect(() =>
       main([
         "--tag",
@@ -971,20 +991,9 @@ describe("manual canary acceptance publish-record boundary", () => {
         template_source: "pack-template",
       }),
     ).toThrow("agent-authoring-provenance-invalid");
-    expect(() =>
-      verifyAgentAuthoringEvidence({
-        provider: "codex",
-        model: "gpt-6-luna",
-        invocation: ["ut-tdd", "codex", "--execute"],
-        role: "se",
-        template_source: "pack-template",
-        provenance: "closed-stub",
-        transcript: "closed provider stub",
-        baseline_revision: "1".repeat(40),
-        subject_revision: "2".repeat(40),
-        subject_parent: "1".repeat(40),
-      }),
-    ).toThrow("agent-authoring-provenance-invalid");
+    expect(() => verifyAgentAuthoringEvidence({ ...valid, provenance: "closed-stub" })).toThrow(
+      "agent-authoring-provenance-invalid",
+    );
     expect(() =>
       verifyAgentAuthoringEvidence({
         ...valid,
@@ -1072,11 +1081,15 @@ describe("manual canary acceptance publish-record boundary", () => {
       "agent-g1-positive-invalid",
     );
     expect(() =>
-      verifyAgentG1Positive({
-        applicable: true,
-        passed: true,
-        messages: ["could not run: gate unavailable"],
-      }),
+      verifyAgentG1Positive(
+        {
+          revision,
+          applicable: true,
+          passed: true,
+          messages: ["could not run: gate unavailable"],
+        },
+        revision,
+      ),
     ).toThrow("agent-g1-positive-invalid");
   });
 
@@ -1335,6 +1348,56 @@ describe("manual canary acceptance publish-record boundary", () => {
         dispatchInvocation: ["source-helper", "review", "live-dispatch"],
       }),
     ).toThrow("agent-review-run-boundary-invalid");
+
+    const rejectAttemptMutation = (mutate: (attempt: Record<string, unknown>) => void) => {
+      const evidence = agentReviewEvidence();
+      const audit = readFileSync(evidence.auditPath, "utf8")
+        .trim()
+        .split(/\r?\n/)
+        .map((line) => JSON.parse(line));
+      mutate(audit[0]);
+      writeFileSync(evidence.auditPath, `${JSON.stringify(audit[0])}\n`);
+      expect(() => verifyAgentReviewJoin(evidence)).toThrow(
+        "agent-review-attempt-identity-invalid",
+      );
+    };
+
+    rejectAttemptMutation((attempt) => {
+      attempt.provider = "codex";
+    });
+    rejectAttemptMutation((attempt) => {
+      attempt.exitCode = 1;
+    });
+    rejectAttemptMutation((attempt) => {
+      attempt.receiptFileDigest = "0".repeat(64);
+    });
+    rejectAttemptMutation((attempt) => {
+      attempt.verdictDigest = "0".repeat(64);
+    });
+
+    const rejectVerdictFieldMutation = (field: "pr" | "exact_head", value: string) => {
+      const evidence = agentReviewEvidence();
+      const originalVerdict = readFileSync(evidence.verdictPath, "utf8");
+      const mutatedVerdict = originalVerdict.replace(
+        new RegExp(`^${field}: .*?$`, "m"),
+        `${field}: ${value}`,
+      );
+      expect(mutatedVerdict).not.toBe(originalVerdict);
+      writeFileSync(evidence.verdictPath, mutatedVerdict);
+
+      const audit = readFileSync(evidence.auditPath, "utf8")
+        .trim()
+        .split(/\r?\n/)
+        .map((line) => JSON.parse(line));
+      audit[0].verdictDigest = createHash("sha256").update(mutatedVerdict).digest("hex");
+      writeFileSync(evidence.auditPath, `${JSON.stringify(audit[0])}\n`);
+      expect(() => verifyAgentReviewJoin(evidence)).toThrow(
+        "agent-review-attempt-identity-invalid",
+      );
+    };
+
+    rejectVerdictFieldMutation("pr", "13");
+    rejectVerdictFieldMutation("exact_head", "b".repeat(40));
   });
 
   it("U-ST-PACKCANARY-015..019: offline structural join accepts a complete fixture (not an AT-DIST-003 run)", () => {
