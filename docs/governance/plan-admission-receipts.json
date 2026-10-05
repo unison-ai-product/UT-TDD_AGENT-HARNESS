@@ -6048,6 +6048,22 @@
         "revision": 10,
         "content_digest": "sha256:64882dd8b638f55b7f13e2373fff91214f0fb37dbfc71791e054f8d8663ded9d"
       }
+    },
+    {
+      "sequence": 379,
+      "previous_record_digest": "sha256:a298e74a7c0bd2f1172a2cc0cc4f4262d65d21c1bd752ee25066bc50e5c706ac",
+      "record_digest": "sha256:d4402950096794e624b39f9dbe79cb549bcfe8485ceebfee494c0c56ec4d78ff",
+      "command_id": "plan-draft:issue-815:report-write-security-contract:1",
+      "receipt_id": "certificate:5f220827032c0bb4525e9080af8c695f",
+      "receipt_digest": "sha256:1c2d5b6cf6ea5d308fa7773de8393d7df47959fdeac2af61c7deb63121615ad8",
+      "decision_digest": "sha256:06e83aa4fbe546dad62ca13ab97577b8b6f7b02c0a3e08e50c0ab76e841fe35b",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-106-report-write-security-contract.md",
+        "plan_id": "PLAN-L6-106-report-write-security-contract",
+        "asset_id": "plan:5f220827032c0bb4525e9080af8c695f",
+        "revision": 1,
+        "content_digest": "sha256:c0846f0264b6974e37141a8ca9f1f81429d497143de84974853b8be62cab1382"
+      }
     }
   ]
 }
