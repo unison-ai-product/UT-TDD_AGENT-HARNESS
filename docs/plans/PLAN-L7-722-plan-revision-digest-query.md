@@ -8,7 +8,7 @@ drive: db
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-09-29
-updated: 2026-09-29
+updated: 2026-10-05
 owner: Claude control lane (契約 draft) · Codex worker (implementation)
 parent_design: docs/plans/PLAN-L6-71-plan-asset-canonical-migration-contracts.md
 backprop_decision: required
@@ -31,6 +31,10 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-722-plan-revision-digest-query.md
     artifact_type: markdown_doc
+  - artifact_path: src/plan-asset/ledger/plan-revision-digest-query.ts
+    artifact_type: source_module
+  - artifact_path: tests/plan-revision-digest-query.test.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L6-71-plan-asset-canonical-migration-contracts.md
   requires: []
@@ -44,23 +48,46 @@ dependencies:
     - src/plan-admission/node-plan-revision-runner.ts
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/722
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/692
-review_evidence: []
-status: draft
+review_evidence:
+  - reviewer: "Codex Sol (非著者、PR #754 pair-freeze r2)"
+    review_kind: cross_agent
+    worker_model: claude-opus-5
+    reviewer_model: gpt-5.6-sol
+    verdict: pass
+    reviewed_at: 2026-09-29T09:04:29.565Z
+    tests_green_at: 2026-09-29T09:02:04Z
+    scope: "PR #754 pair-freezeのみ。PR #761実装closing PASSは未取得。"
+    plan_revision: PLAN-L7-722 r3
+    subject_head: c547feac71632130c5f38926735995aecb1b761c
+    citations:
+      - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/722#issuecomment-5887432380
+      - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/actions/runs/36546291932
+    green_commands:
+      - kind: typecheck
+        command: npm run typecheck
+        runner: ci
+        scope: full
+        exit_code: 0
+        completed_at: 2026-09-29T09:02:04Z
+        evidence_path: tsconfig.json
+        output_digest: sha256:da3803fb5e8090f8bf4e48607a8b033c35a574705d52e558245935d2f164cd0c
+        anchor_commit: c547feac71632130c5f38926735995aecb1b761c
+status: confirmed
 github_issue_id: 722
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:4e3accfe0fb99769f691ab5350b59f9d
-  command_id: plan-revise:issue-722:sol-r1-oracle-fix:forward:r3:d5838e68da1b
-  admitted_at: 2026-09-29T08:58:50.947Z
-  source_digest: sha256:828abf894a3c2198e1c46ce23e329e72f428fc7f1e37404fd2e61323c2ae9b87
-  decision_digest: sha256:2473c81f9089451f338548ecf8136972e87f22902e8478af6e668ecaec6e06ef
-  receipt_digest: sha256:5440674b2275b515a1f895d4541b9f3b7d33939f11c3a8193e211a47dec6264e
+  receipt_id: certificate:6cbd931f27ed14ebf2de2854de11afec
+  command_id: plan-revise:issue-722:canonical-rechain:r5:8ea90104a395
+  admitted_at: 2026-10-05T03:05:42.712Z
+  source_digest: sha256:7c39f3a5273ffe05e5b03ffc8630d90eefe83a51105a659b8bb716288bdf8645
+  decision_digest: sha256:4acd72314e5a594c4a1f3b574a57cb353b22dd2e25cca6649c438025f81deacc
+  receipt_digest: sha256:864fb7da71733ac38aca933794dba4510557a9f6f9d66cd7682c0d043ded043b
   binding:
     path: docs/plans/PLAN-L7-722-plan-revision-digest-query.md
     plan_id: PLAN-L7-722-plan-revision-digest-query
     asset_id: plan:d354f79aaae8e1cb50d0b1a77c3ccc76
-    revision: 3
-    content_digest: sha256:828abf894a3c2198e1c46ce23e329e72f428fc7f1e37404fd2e61323c2ae9b87
+    revision: 5
+    content_digest: sha256:7c39f3a5273ffe05e5b03ffc8630d90eefe83a51105a659b8bb716288bdf8645
   route:
     signal: feature_addition
     mode: add-feature
@@ -75,14 +102,14 @@ admission_receipt:
     digest: sha256:00273e7d75e01b678fc97b0602542b6163c68be48026cfa5480a7a736016f3e0
   transition:
     direction: design_to_implementation
-    implementation_disposition: none
+    implementation_disposition: preserved
   reentry:
     target_plan_id: PLAN-L7-722-plan-revision-digest-query
-    target_revision: 2
+    target_revision: 5
     phase: forward_merge
-  escape_reason: "PR #754 Sol r1 FLAG の軽作業是正: O6 を query 自身の connection での write
-    probe (CREATE TABLE → errcode 8) に、O8 の barrier を writer の PENDING
-    到達を別同期で確認してから selector を解放する順序に改める。契約の方式は不変。"
+  escape_reason: "PR #761: control指定の#820 landing後tail387へ、元revision
+    5の所有宣言・引用符是正を正規再発行する。API/testとforeign PLANを保持し、実装closing PASSや旧HEAD
+    CIは流用しない。"
 ---
 
 # PLAN-L7-722: PLAN revision digest query (書込みゼロ)
@@ -279,3 +306,7 @@ main harness.db / ledger を開かない。
 
 GitHub / network 操作、IssueProjected query、manual bind、FSM / cutoff、ledger migration / repair、
 WAL ledger の読取対応、履歴 receipt 書換え、全 PLAN 一括修復、新しい ledger / authority engine。
+
+## PR-1の成果物所有宣言（revision 4）
+
+PR #754のpair-freeze PASSとIssue #722 comment 5887432380の着手指示を根拠に、新規query APIと対testだけを所有宣言する。既存schema/state-dbファイルは元PLAN所有を維持する。PR #761の実装closing PASSは未取得であり、この改訂で完了を主張しない。

@@ -6128,6 +6128,214 @@
         "revision": 3,
         "content_digest": "sha256:cbf4a130044faa7201151435796b6047b9a3aed26c2b01d5c4ef59c03fc6dc47"
       }
+    },
+    {
+      "sequence": 384,
+      "previous_record_digest": "sha256:1574afd4766e841fc7f26501fb698dfcdbcaebbc8db25d72b7a072171ca912fb",
+      "record_digest": "sha256:ebcc21ed233515991350dbfae106c3f44d68c69f6d36f7bd2f6436a6ecef22de",
+      "command_id": "plan-draft:issue-815:report-write-security-contract:rechain-1",
+      "receipt_id": "certificate:d10f80206656cb46a302ef2114d842e1",
+      "receipt_digest": "sha256:ae8a4f19fab42f9d857d00d10123f9b5630f735de2b0cb3fde36c7d4462fb7b0",
+      "decision_digest": "sha256:06e83aa4fbe546dad62ca13ab97577b8b6f7b02c0a3e08e50c0ab76e841fe35b",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-106-report-write-security-contract.md",
+        "plan_id": "PLAN-L6-106-report-write-security-contract",
+        "asset_id": "plan:d10f80206656cb46a302ef2114d842e1",
+        "revision": 1,
+        "content_digest": "sha256:c0846f0264b6974e37141a8ca9f1f81429d497143de84974853b8be62cab1382"
+      }
+    },
+    {
+      "sequence": 385,
+      "previous_record_digest": "sha256:ebcc21ed233515991350dbfae106c3f44d68c69f6d36f7bd2f6436a6ecef22de",
+      "record_digest": "sha256:8b0cde9a90ceeb5fe40ba76bff21a0290caebcec9888703d3dc0b2240fb694fe",
+      "command_id": "plan-revise:issue-815:report-security:rechain:sol-r1-fix:r2:50e3044e41e4",
+      "receipt_id": "certificate:66afc225521bad66149e9a349e414962",
+      "receipt_digest": "sha256:6895f15e36b192f01337c5b82b53287e10ccd393ecd1718d95a2cce6d3aa7f34",
+      "decision_digest": "sha256:8b89892075eb4e989ebf256442b80a24d620e22779398ae563be0b15e07837d7",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-106-report-write-security-contract.md",
+        "plan_id": "PLAN-L6-106-report-write-security-contract",
+        "asset_id": "plan:d10f80206656cb46a302ef2114d842e1",
+        "revision": 2,
+        "content_digest": "sha256:77cf40c2e212ef89380ef1ebf7f6fd46d9293b3120546bcff0dd3ff2ec97c6d9"
+      }
+    },
+    {
+      "sequence": 386,
+      "previous_record_digest": "sha256:8b0cde9a90ceeb5fe40ba76bff21a0290caebcec9888703d3dc0b2240fb694fe",
+      "record_digest": "sha256:b622a514fc65cae81c0b30cf73de9f8ee72400102088ef48358efebd009fab30",
+      "command_id": "plan-revise:issue-815:report-security:rechain:sol-r2-fix:r3:9eb1939b3574",
+      "receipt_id": "certificate:45e50395160adc6057c5c16c76887064",
+      "receipt_digest": "sha256:5cfcfa21e4b0b56531b58af295edbf8a1e23f983568ce2ac5669d7097847b649",
+      "decision_digest": "sha256:69115f61930b9d8e679dff7b6a4ac0f7e3e27022ef0e4a8f852a3db64e11c8a4",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-106-report-write-security-contract.md",
+        "plan_id": "PLAN-L6-106-report-write-security-contract",
+        "asset_id": "plan:d10f80206656cb46a302ef2114d842e1",
+        "revision": 3,
+        "content_digest": "sha256:35bc9ab354d44ad2cc81ac3d6faeafebae2ecad79bdc3708fe05684da37fc6b2"
+      }
+    },
+    {
+      "sequence": 387,
+      "previous_record_digest": "sha256:b622a514fc65cae81c0b30cf73de9f8ee72400102088ef48358efebd009fab30",
+      "record_digest": "sha256:6a53a2b1588a3f334cefecbfa6b987932ed602b9c8bcd831310892d4d70a7f69",
+      "command_id": "plan-revise:issue-815:report-security:rechain:sol-r3-fix:r4:da021b7ba55c",
+      "receipt_id": "certificate:e95ffbff498962a9f51d5282acf64c66",
+      "receipt_digest": "sha256:384e23ed2304c67ce92afc6c15f599fabfa49459de5e41a126b6810f625bc644",
+      "decision_digest": "sha256:602a9fb59ebed2f1560baa795467f84f25724c60772171c2d006cd7f14e26b10",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-106-report-write-security-contract.md",
+        "plan_id": "PLAN-L6-106-report-write-security-contract",
+        "asset_id": "plan:d10f80206656cb46a302ef2114d842e1",
+        "revision": 4,
+        "content_digest": "sha256:68d8b3039dcfdee4d05283c25b6a6c400147e2e8150222827d42c1e995744507"
+      }
+    },
+    {
+      "sequence": 388,
+      "previous_record_digest": "sha256:6a53a2b1588a3f334cefecbfa6b987932ed602b9c8bcd831310892d4d70a7f69",
+      "record_digest": "sha256:c80bf73c6af79e22f4c4445dcb5cf8c44feb092c075689f5d82eecf4f202a7fa",
+      "command_id": "plan-revise:issue-722:canonical-rechain:r4:da8e786b08d6",
+      "receipt_id": "certificate:f0c4a45f979fd4e08b4f6c094dd26c19",
+      "receipt_digest": "sha256:b8c98489fcd7a1e1b0d5816d02037e55ee4250c1edc5233d9a588262cc1cb1da",
+      "decision_digest": "sha256:0cb7ad2fdfe8c81e1e13f0d892397fce94449888ea2195a0285e3547be041e6c",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-722-plan-revision-digest-query.md",
+        "plan_id": "PLAN-L7-722-plan-revision-digest-query",
+        "asset_id": "plan:d354f79aaae8e1cb50d0b1a77c3ccc76",
+        "revision": 4,
+        "content_digest": "sha256:59afaa43cf71d943f135a7f7a0a98a05dfc82026672d1f1e35d3dab77d50075f"
+      }
+    },
+    {
+      "sequence": 389,
+      "previous_record_digest": "sha256:c80bf73c6af79e22f4c4445dcb5cf8c44feb092c075689f5d82eecf4f202a7fa",
+      "record_digest": "sha256:bf09e2e0655d02a1decbe69d8809587fd37f50b619c9f278e722c7e2bb446cce",
+      "command_id": "plan-revise:issue-722:canonical-rechain:r5:8ea90104a395",
+      "receipt_id": "certificate:6cbd931f27ed14ebf2de2854de11afec",
+      "receipt_digest": "sha256:864fb7da71733ac38aca933794dba4510557a9f6f9d66cd7682c0d043ded043b",
+      "decision_digest": "sha256:4acd72314e5a594c4a1f3b574a57cb353b22dd2e25cca6649c438025f81deacc",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-722-plan-revision-digest-query.md",
+        "plan_id": "PLAN-L7-722-plan-revision-digest-query",
+        "asset_id": "plan:d354f79aaae8e1cb50d0b1a77c3ccc76",
+        "revision": 5,
+        "content_digest": "sha256:7c39f3a5273ffe05e5b03ffc8630d90eefe83a51105a659b8bb716288bdf8645"
+      }
+    },
+    {
+      "sequence": 390,
+      "previous_record_digest": "sha256:bf09e2e0655d02a1decbe69d8809587fd37f50b619c9f278e722c7e2bb446cce",
+      "record_digest": "sha256:e3860f4ae2b5894cc691226e87da87702d42b643b61d9685376e19ab93167e03",
+      "command_id": "plan-revise:issue-418:custody-path-requestdigest:rechain-1:r11:145c93e5c351",
+      "receipt_id": "certificate:03da9b9ebd7d88e33763afa6376d8dc0",
+      "receipt_digest": "sha256:bdb52fbfcff39d8fd8c255eb5894271e176fa88b838e897183645ea06a99aa24",
+      "decision_digest": "sha256:a937e3fc6501f0da535f7f950df853e97dbb4a597604b647998d049e1a241266",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-531-pack-internal-canary-smoke.md",
+        "plan_id": "PLAN-L7-531-pack-internal-canary-smoke",
+        "asset_id": "plan:44f79788376b81c225ce5913fddbc48f",
+        "revision": 11,
+        "content_digest": "sha256:691775ce8aa44fc963f8546e9acaba04d40984c50ab0d6d001ff7e508366fb6a"
+      }
+    },
+    {
+      "sequence": 391,
+      "previous_record_digest": "sha256:e3860f4ae2b5894cc691226e87da87702d42b643b61d9685376e19ab93167e03",
+      "record_digest": "sha256:a7a9b166437983694223385f4e553a0e631abe3fecc0d804859ade8d9a344f34",
+      "command_id": "plan-draft:issue-815:consumer-report-command-and-intake:rechain-1",
+      "receipt_id": "certificate:3668ea3147d11f25cd3e1f6fe7581325",
+      "receipt_digest": "sha256:c1d89c79652fcbd04f446cfd48629706f4583bf713fe7dbf7ff50d179a068b48",
+      "decision_digest": "sha256:0cc07de1792cf023482e34ccf12b0aca4256f1f80d78e1af9a206a761ce49d97",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-107-consumer-report-command-and-intake.md",
+        "plan_id": "PLAN-L6-107-consumer-report-command-and-intake",
+        "asset_id": "plan:3668ea3147d11f25cd3e1f6fe7581325",
+        "revision": 1,
+        "content_digest": "sha256:825929ad6b36a6b5e6bf9b7c1020ba1f296381d792fbca6a068107f3ce9b869c"
+      }
+    },
+    {
+      "sequence": 392,
+      "previous_record_digest": "sha256:a7a9b166437983694223385f4e553a0e631abe3fecc0d804859ade8d9a344f34",
+      "record_digest": "sha256:c1790d28f8b75ee8a9e5639598cc312d2d559998ba92b7119e5e977774f40ac9",
+      "command_id": "plan-revise:issue-815:report-command:rechain-1:sol-r1-fix:r2:ab3156798eb4",
+      "receipt_id": "certificate:5027af2cff3ed0b3a0cbb40a207a7c41",
+      "receipt_digest": "sha256:1ec4146567be5e1b332629582fa6f8c7b8dd8bfc03fea9f466253d52771d208a",
+      "decision_digest": "sha256:db7574230bd5a003fd3221c5186c9cd215746c3812d41a31a8fc8f0e233a1cbe",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-107-consumer-report-command-and-intake.md",
+        "plan_id": "PLAN-L6-107-consumer-report-command-and-intake",
+        "asset_id": "plan:3668ea3147d11f25cd3e1f6fe7581325",
+        "revision": 2,
+        "content_digest": "sha256:09370048e695b988f60357b931a3e05185faa41490433a6a1882c78df5c2b989"
+      }
+    },
+    {
+      "sequence": 393,
+      "previous_record_digest": "sha256:c1790d28f8b75ee8a9e5639598cc312d2d559998ba92b7119e5e977774f40ac9",
+      "record_digest": "sha256:66ad0f769682b0af85425391a8ea9ec29c0fe523e32c53111e7e7dead5786b30",
+      "command_id": "plan-revise:issue-815:report-command:rechain-1:sol-r2-fix:r3:9d762556a138",
+      "receipt_id": "certificate:bec78c3552539be4f794137d4ca8715f",
+      "receipt_digest": "sha256:8b616265a67ed42820ff7f9c3c38ae80c5335caed5cdb49a2b4ca81446e2e44d",
+      "decision_digest": "sha256:2f58615a0098789324583f037c6d4b1e361890bb0c19f8845ebe5735c0df56ec",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-107-consumer-report-command-and-intake.md",
+        "plan_id": "PLAN-L6-107-consumer-report-command-and-intake",
+        "asset_id": "plan:3668ea3147d11f25cd3e1f6fe7581325",
+        "revision": 3,
+        "content_digest": "sha256:f1f0fb15447f6fc34c6b8fd9b9a1f8b023770fe25d4bd249762e504b4fab3cce"
+      }
+    },
+    {
+      "sequence": 394,
+      "previous_record_digest": "sha256:66ad0f769682b0af85425391a8ea9ec29c0fe523e32c53111e7e7dead5786b30",
+      "record_digest": "sha256:91f0f3b7db9293072dfe5094ac55576725ceb186d7b13b8fb8322e389f46c0d9",
+      "command_id": "plan-revise:issue-832:restore-sub-doc:PLAN-L6-1:r4:fd602b4a19cf",
+      "receipt_id": "certificate:2323942ab92cf0823dc6b24aa61da3e1",
+      "receipt_digest": "sha256:2d32f022a3f61268ccfe94961fd5c3ccf2c4db281325fa60f884fe79ba936598",
+      "decision_digest": "sha256:3ea6f32db019d44852caa543805dca81252fb409504a7c4bbddb7b45341aba7a",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-105-consumer-safe-upgrade-contract.md",
+        "plan_id": "PLAN-L6-105-consumer-safe-upgrade-contract",
+        "asset_id": "plan:d3f0150857538128d3a0a791ff04b1be",
+        "revision": 4,
+        "content_digest": "sha256:d0a63b288bb8376831e7bcab45160f5afb162fe5af752175f2c4df89e5b66cb3"
+      }
+    },
+    {
+      "sequence": 395,
+      "previous_record_digest": "sha256:91f0f3b7db9293072dfe5094ac55576725ceb186d7b13b8fb8322e389f46c0d9",
+      "record_digest": "sha256:f04a77228bdd8d2fbe6de97e775bd4d51105ee9e8f9857ac7859e2dd177b68b7",
+      "command_id": "plan-revise:issue-832:restore-sub-doc:PLAN-L6-1:r5:677ab9c41955",
+      "receipt_id": "certificate:ca8a6517bb320f745d2c2a0e759a0650",
+      "receipt_digest": "sha256:ddbec338e5282c1926def4d300eff89ef2da9b865e12a9877968f18958033e0f",
+      "decision_digest": "sha256:3ac5738cc8212ff04f788492e73a8ee5e1c925f2974600c75e907a8351d0712b",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-106-report-write-security-contract.md",
+        "plan_id": "PLAN-L6-106-report-write-security-contract",
+        "asset_id": "plan:d10f80206656cb46a302ef2114d842e1",
+        "revision": 5,
+        "content_digest": "sha256:dd174f2cc1895a0a7784fdac58b629b189f1adcaedb14fdfe62af56132dbbf98"
+      }
+    },
+    {
+      "sequence": 396,
+      "previous_record_digest": "sha256:f04a77228bdd8d2fbe6de97e775bd4d51105ee9e8f9857ac7859e2dd177b68b7",
+      "record_digest": "sha256:e2f03fec5427232cb141d7c298b8717e4fed87163a8ce487d8b9a7f2bc33fe42",
+      "command_id": "plan-revise:issue-832:restore-sub-doc:PLAN-L6-1:r4:4ca623c5ac35",
+      "receipt_id": "certificate:c5cf2c382bd097617d631917b28e895d",
+      "receipt_digest": "sha256:02ebde70606526212dc8cee698fca07aa0a24923974a87698271f00ba10a4d20",
+      "decision_digest": "sha256:5d607eb8223c182cc20778fa671e35e76687c09c7e6e6617848d836050d83007",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-107-consumer-report-command-and-intake.md",
+        "plan_id": "PLAN-L6-107-consumer-report-command-and-intake",
+        "asset_id": "plan:3668ea3147d11f25cd3e1f6fe7581325",
+        "revision": 4,
+        "content_digest": "sha256:ce73b9d1bd2bb267d474736ef63a2c58d1ee58dea4187174c4755e1f34de3495"
+      }
     }
   ]
 }
