@@ -1,6 +1,16 @@
 import { parseLegacyPlanSource } from "../plan-asset/adapters/legacy-plan-inventory.ts";
+import {
+  type AppendPlanRevisionInput,
+  derivePlanRevisionDigests,
+} from "../plan-asset/ledger/plan-revision-ledger.ts";
 import { canonicalPlanContentDigest } from "./diff-fence.ts";
-import { deriveTrackedReceiptId, sha, stableJson } from "./plan-revision-command-assembler.ts";
+import { bindPlanSourceToAdmission } from "./plan-content-binding.ts";
+import {
+  canonicalPlanPayload,
+  deriveTrackedReceiptId,
+  sha,
+  stableJson,
+} from "./plan-revision-command-assembler.ts";
 import type { PlanAdmissionRequest } from "./policy.ts";
 import {
   parseTrackedReceiptProjection,
@@ -43,6 +53,11 @@ export interface RechainInput {
   readonly blobs: Readonly<Record<Oid, string>>;
   /** key = H 側の再発行対象 record の record_digest、値 = 候補 A_H (PLAN-L6-711 §2.3-6) */
   readonly admission: Readonly<Record<string, PlanAdmissionRequest>>;
+  /**
+   * key = 最後でない再発行 record の content_digest、値 = その record 時点の PLAN 全文
+   * (PLAN-L6-711 §2.6、receipt revision 4/5)。key 集合は必要な集合と完全一致させる。
+   */
+  readonly intermediatePlans: Readonly<Record<string, string>>;
 }
 
 export type RechainVerdict =
@@ -50,6 +65,10 @@ export type RechainVerdict =
   | { readonly ok: false; readonly reasons: readonly string[] };
 
 export const RECEIPT_PATH = "docs/governance/plan-admission-receipts.json";
+/** PLAN-L6-711 §2.3-6 の契約定数。re-chain の再発行は `ut-tdd pr merge` wrapper が行う。 */
+export const RECHAIN_ACTOR = "ut-tdd-pr-merge-rechain";
+/** `plan:legacy:` は legacy bootstrap で採番される asset id の prefix (legacyAssetId)。 */
+const LEGACY_ASSET_PREFIX = "plan:legacy:";
 const PLAN_PATH_RE = /^docs\/plans\/PLAN-[A-Za-z0-9-]+\.md$/;
 /** PLAN-L6-711 §2.3-6 condition 6: command_id は H の command_id に `:rechain-<n>` (n>=1) を付けたものに限る。 */
 const RECHAIN_COMMAND_SUFFIX_RE = /^:rechain-([1-9]\d*)$/;
@@ -125,15 +144,35 @@ export function verifyRechainDelta(input: RechainInput): RechainVerdict {
   }
   if (reasons.length > 0) return { ok: false, reasons };
 
+  // --- 3b. 中間 blob の key 集合 (§2.3-6, receipt revision 5, U-RECHAIN-018) ---
+  // 再発行 record が 2 件以上ある asset の「最後以外」の content_digest 集合と完全一致させる。
+  const assetCount = new Map<string, number>();
+  for (const h of hAppended) {
+    assetCount.set(h.binding.assetId, (assetCount.get(h.binding.assetId) ?? 0) + 1);
+  }
+  const seenInAsset = new Map<string, number>();
+  const requiredIntermediate = new Set<string>();
+  for (let i = 0; i < hAppended.length; i++) {
+    const assetId = hAppended[i].binding.assetId;
+    const pos = seenInAsset.get(assetId) ?? 0;
+    seenInAsset.set(assetId, pos + 1);
+    if (pos < (assetCount.get(assetId) ?? 1) - 1) {
+      requiredIntermediate.add(rAppended[i].binding.contentDigest);
+    }
+  }
+  for (const key of requiredIntermediate) {
+    if (input.intermediatePlans[key] === undefined) fail(`intermediate_plan_missing:${key}`);
+  }
+  for (const key of Object.keys(input.intermediatePlans)) {
+    if (!requiredIntermediate.has(key)) fail(`intermediate_plan_unexpected:${key}`);
+  }
+  if (reasons.length > 0) return { ok: false, reasons };
+
   // --- 4. PLAN 単位に束ねる ---
   const planPaths = [...new Set(hAppended.map((r) => r.binding.path))];
-  const revisionOffset = new Map<string, number>();
-  for (const path of planPaths) {
-    const latest = mAll
-      .filter((r) => r.binding.path === path)
-      .reduce((max, r) => Math.max(max, r.binding.revision), 0);
-    revisionOffset.set(path, latest);
-  }
+  // asset ごとの chain 状態: 直前に再発行した record の revision と canonical payload digest。
+  const chain = new Map<string, { revision: number; payloadDigest: string }>();
+  const position = new Map<string, number>();
   const addedArtifactPaths = new Set<string>();
 
   for (let i = 0; i < hAppended.length; i++) {
@@ -142,8 +181,42 @@ export function verifyRechainDelta(input: RechainInput): RechainVerdict {
     const match = matched.find((m) => m.record.recordDigest === hRecord.recordDigest);
     if (!match) continue; // すでに fail 済み
     const path = hRecord.binding.path;
-    const expectedRevision = (revisionOffset.get(path) ?? 0) + 1;
-    revisionOffset.set(path, expectedRevision);
+    const assetId = hRecord.binding.assetId;
+    const pos = position.get(assetId) ?? 0;
+    position.set(assetId, pos + 1);
+    const isLast = pos === (assetCount.get(assetId) ?? 1) - 1;
+
+    // legacy bootstrap 経路は preimage が別なので再導出せず fail (§2.3-6)。
+    const mLatest = mAll
+      .filter((r) => r.binding.assetId === assetId)
+      .reduce<number | undefined>(
+        (max, r) => (max === undefined ? r.binding.revision : Math.max(max, r.binding.revision)),
+        undefined,
+      );
+    if (
+      assetId.startsWith(LEGACY_ASSET_PREFIX) &&
+      (mLatest === undefined || rRecord.binding.revision === 2)
+    ) {
+      fail(`legacy_bootstrap_unsupported:${path}`);
+      continue;
+    }
+    if (mLatest === undefined) {
+      fail(`receipt_digest_source_unavailable:${path}`);
+      continue;
+    }
+
+    let previous = chain.get(assetId);
+    if (!previous) {
+      const mContent = readBlob(input, input.trees.M[path]);
+      const mParsed = mContent === undefined ? undefined : parseLegacyPlanSource(mContent);
+      if (!mParsed) {
+        fail(`receipt_digest_source_unavailable:${path}`);
+        continue;
+      }
+      const { admission_receipt: _receipt, ...receiptFree } = mParsed.frontmatter;
+      previous = { revision: mLatest, payloadDigest: sha(stableJson(receiptFree)) };
+    }
+    const expectedRevision = previous.revision + 1;
 
     const planResult = verifyPlanReapplication({
       input,
@@ -152,12 +225,15 @@ export function verifyRechainDelta(input: RechainInput): RechainVerdict {
       expectedRevision,
       hRecord,
       rRecord,
+      isLast,
+      basePayloadDigest: previous.payloadDigest,
     });
     if (!planResult.ok) {
       for (const reason of planResult.reasons) fail(reason);
-    } else {
-      for (const p of planResult.addedArtifactPaths) addedArtifactPaths.add(p);
+      continue;
     }
+    chain.set(assetId, { revision: expectedRevision, payloadDigest: planResult.payloadDigest });
+    for (const p of planResult.addedArtifactPaths) addedArtifactPaths.add(p);
   }
   if (reasons.length > 0) return { ok: false, reasons };
 
@@ -198,7 +274,7 @@ export function verifyRechainDelta(input: RechainInput): RechainVerdict {
  * undefined を落とす。挿入順に依存させないために JSON.stringify を使わない。
  */
 export function verifierDigestOf(input: RechainInput): string {
-  return `sha256:${sha(`ut-tdd.rechain-verifier.v1\n${stableJson(input)}`)}`;
+  return `sha256:${sha(`ut-tdd.rechain-verifier.v2\n${stableJson(input)}`)}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -236,6 +312,8 @@ function isRecordPrefix(
 interface PlanVerifyResult {
   ok: true;
   addedArtifactPaths: readonly string[];
+  /** この record 自身の PLAN blob から導いた canonical payload digest (次の record の base)。 */
+  payloadDigest: string;
 }
 interface PlanVerifyFailure {
   ok: false;
@@ -249,8 +327,12 @@ function verifyPlanReapplication(args: {
   expectedRevision: number;
   hRecord: TrackedReceiptRecord;
   rRecord: TrackedReceiptRecord;
+  /** 同一 asset の最後の再発行 record か。最後だけが R の PLAN blob と frontmatter に束縛される。 */
+  isLast: boolean;
+  basePayloadDigest: string;
 }): PlanVerifyResult | PlanVerifyFailure {
-  const { input, path, candidate, expectedRevision, hRecord, rRecord } = args;
+  const { input, path, candidate, expectedRevision, hRecord, rRecord, isLast, basePayloadDigest } =
+    args;
   const reasons: string[] = [];
 
   const baseContent = readBlob(input, input.trees.base[path]);
@@ -269,101 +351,97 @@ function verifyPlanReapplication(args: {
     return { ok: false, reasons: [`plan-parse-invalid:${path}`] };
   }
 
-  // --- append-only 領域 1: frontmatter.generates ---
-  const baseGenerates = asArray(baseParsed.frontmatter.generates);
-  const hGenerates = asArray(hParsed.frontmatter.generates);
-  const mGenerates = asArray(mParsed.frontmatter.generates);
-  if (!isArrayPrefix(baseGenerates, hGenerates, stableJson)) {
-    reasons.push(`plan-generates-not-append-only:${path}`);
-  }
-  const addedGenerates = hGenerates.slice(baseGenerates.length);
-  const expectedGenerates = [...mGenerates, ...addedGenerates];
-  const artifactPaths = expectedGenerates
-    .map((entry) =>
-      entry && typeof entry === "object"
-        ? (entry as Record<string, unknown>).artifact_path
-        : undefined,
-    )
-    .filter((p): p is string => typeof p === "string");
-  if (new Set(artifactPaths).size !== artifactPaths.length) {
-    reasons.push(`plan-generates-duplicate-artifact-path:${path}`);
-  }
+  // PLAN の本文再適用 (§2.2) は同一 asset の最後の record = R の PLAN blob に対してだけ行う。
+  let addedArtifactPaths: readonly string[] = [];
+  if (isLast) {
+    // --- append-only 領域 1: frontmatter.generates ---
+    const baseGenerates = asArray(baseParsed.frontmatter.generates);
+    const hGenerates = asArray(hParsed.frontmatter.generates);
+    const mGenerates = asArray(mParsed.frontmatter.generates);
+    if (!isArrayPrefix(baseGenerates, hGenerates, stableJson)) {
+      reasons.push(`plan-generates-not-append-only:${path}`);
+    }
+    const addedGenerates = hGenerates.slice(baseGenerates.length);
+    const expectedGenerates = [...mGenerates, ...addedGenerates];
+    const artifactPaths = expectedGenerates
+      .map((entry) =>
+        entry && typeof entry === "object"
+          ? (entry as Record<string, unknown>).artifact_path
+          : undefined,
+      )
+      .filter((p): p is string => typeof p === "string");
+    if (new Set(artifactPaths).size !== artifactPaths.length) {
+      reasons.push(`plan-generates-duplicate-artifact-path:${path}`);
+    }
 
-  // --- append-only 領域 2: ## 8. 節の番号付き注記 ---
-  const baseSection8 = splitSection8(baseParsed.body);
-  const hSection8 = splitSection8(hParsed.body);
-  const mSection8 = splitSection8(mParsed.body);
-  if (!isArrayPrefix(baseSection8.items, hSection8.items, (v) => v)) {
-    reasons.push(`plan-section8-not-append-only:${path}`);
-  }
-  const addedItems = hSection8.items.slice(baseSection8.items.length);
-  const expectedItems = [...mSection8.items, ...addedItems];
+    // --- append-only 領域 2: ## 8. 節の番号付き注記 ---
+    const baseSection8 = splitSection8(baseParsed.body);
+    const hSection8 = splitSection8(hParsed.body);
+    const mSection8 = splitSection8(mParsed.body);
+    if (!isArrayPrefix(baseSection8.items, hSection8.items, (v) => v)) {
+      reasons.push(`plan-section8-not-append-only:${path}`);
+    }
+    const addedItems = hSection8.items.slice(baseSection8.items.length);
+    const expectedItems = [...mSection8.items, ...addedItems];
 
-  // --- それ以外の領域: 3-way merge (衝突なしの場合だけ適用, §2.2-2) ---
-  const otherMerge = threeWayMerge({
-    base: baseSection8.other,
-    h: hSection8.other,
-    m: mSection8.other,
-    keyOf: (v) => v,
-  });
-  if (!otherMerge.ok) {
-    reasons.push(`plan-other-body-conflict:${path}`);
-  }
+    // --- それ以外の領域: 3-way merge (衝突なしの場合だけ適用, §2.2-2) ---
+    const otherMerge = threeWayMerge({
+      base: baseSection8.other,
+      h: hSection8.other,
+      m: mSection8.other,
+      keyOf: (v) => v,
+    });
+    if (!otherMerge.ok) {
+      reasons.push(`plan-other-body-conflict:${path}`);
+    }
 
-  const frontmatterOtherResult = threeWayFrontmatter(
-    stripKnownKeys(baseParsed.frontmatter),
-    stripKnownKeys(hParsed.frontmatter),
-    stripKnownKeys(mParsed.frontmatter),
-  );
-  if (!frontmatterOtherResult.ok) {
-    reasons.push(`plan-frontmatter-conflict:${path}`);
-  }
+    const frontmatterOtherResult = threeWayFrontmatter(
+      stripKnownKeys(baseParsed.frontmatter),
+      stripKnownKeys(hParsed.frontmatter),
+      stripKnownKeys(mParsed.frontmatter),
+    );
+    if (!frontmatterOtherResult.ok) {
+      reasons.push(`plan-frontmatter-conflict:${path}`);
+    }
 
-  if (reasons.length > 0) return { ok: false, reasons };
+    if (reasons.length > 0) return { ok: false, reasons };
 
-  const expectedFrontmatter: Record<string, unknown> = {
-    ...(frontmatterOtherResult as { ok: true; value: Record<string, unknown> }).value,
-    generates: expectedGenerates,
-  };
-  const expectedBody = buildSection8Body(
-    (otherMerge as { ok: true; value: string }).value,
-    expectedItems,
-  );
+    const expectedFrontmatter: Record<string, unknown> = {
+      ...(frontmatterOtherResult as { ok: true; value: Record<string, unknown> }).value,
+      generates: expectedGenerates,
+    };
+    const expectedBody = buildSection8Body(
+      (otherMerge as { ok: true; value: string }).value,
+      expectedItems,
+    );
 
-  const actualFrontmatter = stripAdmissionReceipt(rParsed.frontmatter);
-  if (stableJson(actualFrontmatter) !== stableJson(expectedFrontmatter)) {
-    reasons.push(`plan-strip-mismatch:frontmatter:${path}`);
-  }
-  if (rParsed.body !== expectedBody) {
-    reasons.push(`plan-strip-mismatch:body:${path}`);
-  }
+    const actualFrontmatter = stripAdmissionReceipt(rParsed.frontmatter);
+    if (stableJson(actualFrontmatter) !== stableJson(expectedFrontmatter)) {
+      reasons.push(`plan-strip-mismatch:frontmatter:${path}`);
+    }
+    if (rParsed.body !== expectedBody) {
+      reasons.push(`plan-strip-mismatch:body:${path}`);
+    }
 
-  // --- content_digest (§2.3-3) ---
-  const rContentDigest = canonicalPlanContentDigest(rContent);
-  if (!rContentDigest || rContentDigest !== rRecord.binding.contentDigest) {
-    reasons.push(`plan-content-digest-mismatch:${path}`);
+    // --- content_digest (§2.3-3) ---
+    const rContentDigest = canonicalPlanContentDigest(rContent);
+    if (!rContentDigest || rContentDigest !== rRecord.binding.contentDigest) {
+      reasons.push(`plan-content-digest-mismatch:${path}`);
+    }
+    addedArtifactPaths = artifactPaths.slice(mGenerates.length);
   }
   if (rRecord.binding.revision !== expectedRevision) {
     reasons.push(`plan-revision-mismatch:${path}`);
   }
 
-  // --- command_id / receipt_id 束縛 (§2.3-6 condition 6) ---
+  // --- command_id / receipt_id 束縛 (§2.3-6) ---
   // command_id は H の command_id + `:rechain-<n>` suffix (n>=1) に限る。record 内の値を
   // 信用せず、format を fail-close で検査したうえで、receipt_id を正規式
-  // (plan-revision-command-assembler.deriveTrackedReceiptId、node-plan-revision-runner.ts の
-  // certificateId 計算と同一) から独立に再導出して照合する。
-  // receipt_digest (certificateDigest) は ledger 側の actor / sourceCommit を必要とし、
-  // `RechainInput` (§2.6 で凍結、S2 は形を追加しない) には actor が含まれないため、この pure
-  // function からは bit-exact に再導出できない。最低限、H の receipt_digest をそのまま R へ
-  // 使い回していないことだけを fail-close で検査する (record 内容が変わった以上、真正な再発行
-  // なら receipt_digest も変わるはずである)。
+  // (plan-revision-command-assembler.deriveTrackedReceiptId) から独立に再導出して照合する。
   if (!isRechainCommandId(hRecord.commandId, rRecord.commandId)) {
     reasons.push(`rechain-command-id-mismatch:${path}`);
   } else if (rRecord.receiptId !== deriveTrackedReceiptId(rRecord.commandId)) {
     reasons.push(`rechain-receipt-id-mismatch:${path}`);
-  }
-  if (rRecord.receiptDigest === hRecord.receiptDigest) {
-    reasons.push(`rechain-receipt-digest-unchanged:${path}`);
   }
 
   // --- admission 意味の不変 (§2.3-6, U-RECHAIN-012) ---
@@ -388,45 +466,98 @@ function verifyPlanReapplication(args: {
     reasons.push(`plan-admission-receipt-missing:${path}`);
     return { ok: false, reasons };
   }
-  const expectedProjection = projectAdmissionForFrontmatter(expectedAR);
-  const projectedActual: Record<string, unknown> = {};
-  for (const key of [
-    "route",
-    "issue",
-    "origin",
-    "transition",
-    "reentry",
-    "escape_reason",
-    "supersedes",
-  ]) {
-    if (key in actualReceiptBlock) projectedActual[key] = actualReceiptBlock[key];
+  if (isLast) {
+    const expectedProjection = projectAdmissionForFrontmatter(expectedAR);
+    const projectedActual: Record<string, unknown> = {};
+    for (const key of [
+      "route",
+      "issue",
+      "origin",
+      "transition",
+      "reentry",
+      "escape_reason",
+      "supersedes",
+    ]) {
+      if (key in actualReceiptBlock) projectedActual[key] = actualReceiptBlock[key];
+    }
+    if (stableJson(projectedActual) !== stableJson(expectedProjection)) {
+      reasons.push(`plan-admission-receipt-projection-mismatch:${path}`);
+    }
+    if (
+      actualReceiptBlock.decision_digest !== decisionDigest ||
+      actualReceiptBlock.receipt_id !== rRecord.receiptId ||
+      actualReceiptBlock.command_id !== rRecord.commandId ||
+      actualReceiptBlock.receipt_digest !== rRecord.receiptDigest ||
+      actualReceiptBlock.source_digest !== rRecord.binding.contentDigest
+    ) {
+      reasons.push(`plan-admission-receipt-binding-mismatch:${path}`);
+    }
+    const binding = actualReceiptBlock.binding as Record<string, unknown> | undefined;
+    if (
+      !binding ||
+      binding.path !== rRecord.binding.path ||
+      binding.plan_id !== rRecord.binding.planId ||
+      binding.asset_id !== rRecord.binding.assetId ||
+      binding.revision !== rRecord.binding.revision ||
+      binding.content_digest !== rRecord.binding.contentDigest
+    ) {
+      reasons.push(`plan-admission-receipt-binding-shape-mismatch:${path}`);
+    }
   }
-  if (stableJson(projectedActual) !== stableJson(expectedProjection)) {
-    reasons.push(`plan-admission-receipt-projection-mismatch:${path}`);
+
+  // --- receipt_digest の再導出 (§2.3-6 の源の表, U-RECHAIN-017/018) ---
+  // この record 自身の PLAN blob: 最後の record は R の PLAN、それ以外は intermediatePlans。
+  const recordBlob = isLast ? rContent : input.intermediatePlans[rRecord.binding.contentDigest];
+  if (recordBlob === undefined) {
+    reasons.push(`intermediate_plan_missing:${rRecord.binding.contentDigest}`);
+    return { ok: false, reasons };
   }
-  if (
-    actualReceiptBlock.decision_digest !== decisionDigest ||
-    actualReceiptBlock.receipt_id !== rRecord.receiptId ||
-    actualReceiptBlock.command_id !== rRecord.commandId ||
-    actualReceiptBlock.receipt_digest !== rRecord.receiptDigest ||
-    actualReceiptBlock.source_digest !== rRecord.binding.contentDigest
-  ) {
-    reasons.push(`plan-admission-receipt-binding-mismatch:${path}`);
+  let bound: { source: string; contentDigest: string };
+  let current: { payload: string; body: string };
+  try {
+    bound = bindPlanSourceToAdmission({
+      source: recordBlob,
+      planId: rRecord.binding.planId,
+      admission: expectedAR,
+    });
+    current = canonicalPlanPayload(bound.source);
+  } catch {
+    reasons.push(`plan-bind-failed:${path}`);
+    return { ok: false, reasons };
   }
-  const binding = actualReceiptBlock.binding as Record<string, unknown> | undefined;
-  if (
-    !binding ||
-    binding.path !== rRecord.binding.path ||
-    binding.plan_id !== rRecord.binding.planId ||
-    binding.asset_id !== rRecord.binding.assetId ||
-    binding.revision !== rRecord.binding.revision ||
-    binding.content_digest !== rRecord.binding.contentDigest
-  ) {
-    reasons.push(`plan-admission-receipt-binding-shape-mismatch:${path}`);
+  if (!isLast && bound.contentDigest !== rRecord.binding.contentDigest) {
+    reasons.push(`intermediate_plan_digest_mismatch:${rRecord.binding.contentDigest}`);
+  }
+  // occurredAt は契約どおり R の frontmatter admission_receipt.admitted_at (全 record 共通)。
+  const occurredAt = actualReceiptBlock.admitted_at;
+  if (typeof occurredAt !== "string") {
+    reasons.push(`plan-admission-receipt-admitted-at-missing:${path}`);
+    return { ok: false, reasons };
+  }
+  const ledgerInput: AppendPlanRevisionInput = {
+    commandId: rRecord.commandId,
+    assetId: rRecord.binding.assetId,
+    planId: rRecord.binding.planId,
+    baseRevision: expectedRevision - 1,
+    basePayloadDigest,
+    canonicalPayloadJson: current.payload,
+    contentDigest: bound.contentDigest.replace(/^sha256:/, ""),
+    bodyDigest: sha(current.body),
+    sourcePath: rRecord.binding.path,
+    sourceCommit: input.commits.M,
+    actor: RECHAIN_ACTOR,
+    reason: expectedAR.escapeReason ?? `route:${expectedAR.routeSignal}`,
+    routeTupleDigest: sha(stableJson(expectedAR)),
+    certificateId: deriveTrackedReceiptId(rRecord.commandId),
+    occurredAt,
+  };
+  const derived = derivePlanRevisionDigests(ledgerInput);
+  if (rRecord.receiptDigest !== `sha256:${derived.certificateDigest}`) {
+    reasons.push(`receipt_digest_mismatch:${path}`);
   }
 
   if (reasons.length > 0) return { ok: false, reasons };
-  return { ok: true, addedArtifactPaths: artifactPaths.slice(mGenerates.length) };
+  return { ok: true, addedArtifactPaths, payloadDigest: derived.canonicalPayloadDigest };
 }
 
 function isRechainCommandId(hCommandId: string, rCommandId: string): boolean {

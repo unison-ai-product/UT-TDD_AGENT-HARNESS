@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { parse as parseYaml, stringify } from "yaml";
+import { bindPlanSourceToAdmission } from "../src/plan-admission/plan-content-binding.ts";
 import type { PlanDraftCommand } from "../src/plan-admission/plan-draft-service.ts";
 import {
+  canonicalPlanPayload,
   deriveTrackedReceiptId,
   sha,
   stableJson,
@@ -10,6 +12,7 @@ import type { PlanAdmissionRequest } from "../src/plan-admission/policy.ts";
 import {
   type CommitObj,
   RECEIPT_PATH,
+  RECHAIN_ACTOR,
   type RechainInput,
   type TreeMap,
   verifierDigestOf,
@@ -27,6 +30,8 @@ import {
   type TrackedReceiptProjectionReader,
   TrackedReceiptRenderer,
 } from "../src/plan-admission/tracked-receipt-renderer.ts";
+import { parseLegacyPlanSource } from "../src/plan-asset/adapters/legacy-plan-inventory.ts";
+import { derivePlanRevisionDigests } from "../src/plan-asset/ledger/plan-revision-ledger.ts";
 
 // ---------------------------------------------------------------------------
 // fixture helpers (すべて in-memory。実 repository / process.cwd() は読まない)
@@ -102,6 +107,54 @@ interface RevisionInput {
   admittedAt: string;
   /** この PLAN 資産の直前までの確定 record 列 (このチェーンで初めての場合は省略 = []). */
   priorRecords?: readonly TrackedReceiptRecord[];
+  /** ledger の basePayloadDigest (直前 revision の canonical payload digest)。 */
+  basePayloadDigest: string;
+  /** ledger input の baseRevision。省略時は binding.revision - 1 (正規の append)。 */
+  baseRevision?: number;
+  /** 省略時は re-chain の契約定数 (R 側 record)。H / prior record は別値を渡す。 */
+  actor?: string;
+  /** 省略時は M (R 側 record の契約値)。 */
+  sourceCommit?: string;
+}
+
+const GENESIS_PAYLOAD_DIGEST = sha("genesis");
+const AUTHOR_ACTOR = "ut-tdd-author";
+const R_ADMITTED_AT = "2026-09-28T01:00:00.000Z";
+const H_ADMITTED_AT = "2026-09-28T00:00:00.000Z";
+
+/** plan-ledger-rehydrator と同じ規則: receipt を除いた frontmatter の canonical payload digest。 */
+function payloadDigestOf(content: string): string {
+  const parsed = parseLegacyPlanSource(content);
+  if (!parsed) throw new Error("fixture-plan-unparseable");
+  const { admission_receipt: _receipt, ...receiptFree } = parsed.frontmatter;
+  return sha(stableJson(receiptFree));
+}
+
+/** production の derivePlanRevisionDigests で certificateDigest を組む (fixture は値を捏造しない)。 */
+function certificateDigestFor(params: RevisionInput, preSource: string): string {
+  const bound = bindPlanSourceToAdmission({
+    source: preSource,
+    planId: params.binding.planId,
+    admission: params.admission,
+  });
+  const current = canonicalPlanPayload(bound.source);
+  return derivePlanRevisionDigests({
+    commandId: params.commandId,
+    assetId: params.binding.assetId,
+    planId: params.binding.planId,
+    baseRevision: params.baseRevision ?? params.binding.revision - 1,
+    basePayloadDigest: params.basePayloadDigest,
+    canonicalPayloadJson: current.payload,
+    contentDigest: bound.contentDigest.replace(/^sha256:/, ""),
+    bodyDigest: sha(current.body),
+    sourcePath: params.binding.path,
+    sourceCommit: params.sourceCommit ?? COMMITS.M,
+    actor: params.actor ?? RECHAIN_ACTOR,
+    reason: params.admission.escapeReason ?? `route:${params.admission.routeSignal}`,
+    routeTupleDigest: sha(stableJson(params.admission)),
+    certificateId: deriveTrackedReceiptId(params.commandId),
+    occurredAt: params.admittedAt,
+  }).certificateDigest;
 }
 
 /**
@@ -122,10 +175,8 @@ function makeRevision(params: RevisionInput): { content: string; record: Tracked
     revision: params.binding.revision,
     certificateId: deriveTrackedReceiptId(params.commandId),
     commandPayloadDigest: `sha256:${sha(`${params.commandId}-command-payload`)}`,
-    // certificateDigest (receipt_digest) は production では ledger の actor / sourceCommit に
-    // 依存する opaque 値であり、renderer 自身も計算しない (呼出し側が既に計算済みの値を渡す)。
-    // fixture では commandId から決定的に導き、H/R で必ず異なる値になることだけを保証する。
-    certificateDigest: sha(`${params.commandId}-cert`),
+    // renderer は certificateDigest を計算しない。ledger の derivePlanRevisionDigests で導く。
+    certificateDigest: certificateDigestFor(params, preSource),
   };
   const command: PlanDraftCommand<TrackedReceiptDraftPayload> = {
     commandId: params.commandId,
@@ -201,84 +252,140 @@ function commitObjs(): { H: CommitObj; X: CommitObj; R: CommitObj } {
 
 interface Baseline {
   input: RechainInput;
+  assetId: string;
   hRecord: TrackedReceiptRecord;
   rRecord: TrackedReceiptRecord;
+  /** base / M が既に持つ、同 asset の直前 record (revision 1)。 */
+  priorRecord: TrackedReceiptRecord;
+  baseContent: string;
   admissionH: PlanAdmissionRequest;
   blobs: Record<string, string>;
 }
 
-/** Set A: 同一 PLAN に対する main 側の同時改訂は無い、単純な正系 fixture。
- * `extraGenerates` は U-RECHAIN-001 が要求する「generates 追加 2 件」を満たすための追加分
- * (default では追加しない。既存 16 oracle の期待値を変えないため)。 */
+const BASE_GENERATES = [{ artifact_path: PLAN_PATH, artifact_type: "markdown_doc" }];
+const BASE_ITEMS = ["起票 (rev 1)。"];
+
+/** base / M の PLAN と、その revision 1 record (receipt revision 5 以降、M に同 asset の record が必要)。 */
+function makePrior(assetId: string): { content: string; record: TrackedReceiptRecord } {
+  return makeRevision({
+    frontmatterOther: baseFrontmatterOther(),
+    generates: BASE_GENERATES,
+    items: BASE_ITEMS,
+    admission: admissionFor(1),
+    binding: { path: PLAN_PATH, planId: PLAN_ID, assetId, revision: 1 },
+    commandId: "plan-revise:issue-998:prior:plan:r1",
+    admittedAt: "2026-09-27T00:00:00.000Z",
+    basePayloadDigest: GENESIS_PAYLOAD_DIGEST,
+    actor: AUTHOR_ACTOR,
+    sourceCommit: COMMITS.base,
+  });
+}
+
+/** R 側 record の既定引数 (binding revision 2、command_id は H の ":rechain-1"、prior = [P])。 */
+function rParams(b: Baseline, over: Partial<RevisionInput> = {}): RevisionInput {
+  const generates = [
+    ...BASE_GENERATES,
+    { artifact_path: "src/plan-admission/rechain-verifier.ts", artifact_type: "source_module" },
+  ];
+  return {
+    frontmatterOther: baseFrontmatterOther(),
+    generates,
+    items: [...BASE_ITEMS, "rev 2 (S2): 検証器を実装した。"],
+    admission: b.admissionH,
+    binding: { path: PLAN_PATH, planId: PLAN_ID, assetId: b.assetId, revision: 2 },
+    commandId: `${b.hRecord.commandId}:rechain-1`,
+    admittedAt: R_ADMITTED_AT,
+    priorRecords: [b.priorRecord],
+    basePayloadDigest: payloadDigestOf(b.baseContent),
+    ...over,
+  };
+}
+
+/** R の PLAN と receipt (prior の後ろに records を連結) を差し替える。 */
+function installR(
+  tampered: Mutable<RechainInput>,
+  content: string,
+  records: readonly TrackedReceiptRecord[],
+): void {
+  const oid = sha(content).slice(0, 40);
+  tampered.blobs[oid] = content;
+  tampered.trees.R[PLAN_PATH] = oid;
+  const receipt = receiptFile(records);
+  const receiptOid = sha(receipt).slice(0, 40);
+  tampered.blobs[receiptOid] = receipt;
+  tampered.trees.R[RECEIPT_PATH] = receiptOid;
+}
+
+/** Set A: 同一 PLAN に対する main 側の同時改訂は無い、単純な正系 fixture。M は同 asset の
+ * revision 1 record P を持ち、H / R はその上の revision 2 を append する。
+ * `extraGenerates` は U-RECHAIN-001 が要求する「generates 追加 2 件」を満たすための追加分。 */
 function buildBaseline(
-  overrides: { extraGenerates?: readonly { artifact_path: string; artifact_type: string }[] } = {},
+  overrides: {
+    extraGenerates?: readonly { artifact_path: string; artifact_type: string }[];
+    assetId?: string;
+  } = {},
 ): Baseline {
   const { blobs, put } = makeBlobStore();
-
-  const baseGenerates = [{ artifact_path: PLAN_PATH, artifact_type: "markdown_doc" }];
-  const baseItems = ["起票 (rev 1)。"];
-  const baseFm = baseFrontmatterOther();
-  const baseBody = bodyFor(baseItems);
-  const baseContent = `---\n${stringify({ ...baseFm, generates: baseGenerates })}---\n${baseBody}`;
-  const baseReceiptContent = receiptFile([]);
+  const assetId = overrides.assetId ?? ASSET_ID;
+  const prior = makePrior(assetId);
 
   const untouchedV1 = "export const value = 1;\n";
   const untouchedV2 = "export const value = 2; // main が更新\n";
 
-  const admissionH = admissionFor(1);
+  const admissionH = admissionFor(2);
   const hGenerates = [
-    ...baseGenerates,
+    ...BASE_GENERATES,
     { artifact_path: "src/plan-admission/rechain-verifier.ts", artifact_type: "source_module" },
     ...(overrides.extraGenerates ?? []),
   ];
-  const hItems = [...baseItems, "rev 2 (S2): 検証器を実装した。"];
+  const hItems = [...BASE_ITEMS, "rev 2 (S2): 検証器を実装した。"];
   const { content: hContent, record: hRecord } = makeRevision({
-    frontmatterOther: baseFm,
+    frontmatterOther: baseFrontmatterOther(),
     generates: hGenerates,
     items: hItems,
     admission: admissionH,
-    binding: { path: PLAN_PATH, planId: PLAN_ID, assetId: ASSET_ID, revision: 1 },
+    binding: { path: PLAN_PATH, planId: PLAN_ID, assetId, revision: 2 },
     commandId: "plan-revise:issue-999:s2:plan:r1:h1",
-    admittedAt: "2026-09-28T00:00:00.000Z",
+    admittedAt: H_ADMITTED_AT,
+    priorRecords: [prior.record],
+    basePayloadDigest: payloadDigestOf(prior.content),
+    actor: AUTHOR_ACTOR,
+    sourceCommit: COMMITS.base,
   });
 
-  const admissionR = admissionH; // revision 変化なし (M 側に同一 PLAN の競合なし)
-  const { content: rContent, record: rRecord } = makeRevision({
-    frontmatterOther: baseFm,
-    generates: hGenerates,
-    items: hItems,
-    admission: admissionR,
-    binding: { path: PLAN_PATH, planId: PLAN_ID, assetId: ASSET_ID, revision: 1 },
-    commandId: "plan-revise:issue-999:s2:plan:r1:h1:rechain-1",
-    admittedAt: "2026-09-28T01:00:00.000Z",
-  });
-  const rReceiptContent = receiptFile([rRecord]);
-  const hReceiptContent = receiptFile([hRecord]);
-  const mReceiptContent = receiptFile([]);
+  const stub: Baseline = {
+    input: undefined as unknown as RechainInput,
+    assetId,
+    hRecord,
+    rRecord: undefined as unknown as TrackedReceiptRecord,
+    priorRecord: prior.record,
+    baseContent: prior.content,
+    admissionH,
+    blobs,
+  };
+  const { content: rContent, record: rRecord } = makeRevision(
+    rParams(stub, { generates: hGenerates, items: hItems }),
+  );
 
   const baseTree: TreeMap = {
-    [PLAN_PATH]: put(baseContent),
-    [RECEIPT_PATH]: put(baseReceiptContent),
+    [PLAN_PATH]: put(prior.content),
+    [RECEIPT_PATH]: put(receiptFile([prior.record])),
     [UNTOUCHED_PATH]: put(untouchedV1),
   };
   const hTree: TreeMap = {
     [PLAN_PATH]: put(hContent),
-    [RECEIPT_PATH]: put(hReceiptContent),
+    [RECEIPT_PATH]: put(receiptFile([prior.record, hRecord])),
     [UNTOUCHED_PATH]: baseTree[UNTOUCHED_PATH],
   };
   const mTree: TreeMap = {
     [PLAN_PATH]: baseTree[PLAN_PATH],
-    [RECEIPT_PATH]: put(mReceiptContent),
+    [RECEIPT_PATH]: baseTree[RECEIPT_PATH],
     [UNTOUCHED_PATH]: put(untouchedV2),
   };
-  const xTree: TreeMap = {
-    [PLAN_PATH]: mTree[PLAN_PATH],
-    [RECEIPT_PATH]: mTree[RECEIPT_PATH],
-    [UNTOUCHED_PATH]: mTree[UNTOUCHED_PATH],
-  };
+  const xTree: TreeMap = { ...mTree };
   const rTree: TreeMap = {
     [PLAN_PATH]: put(rContent),
-    [RECEIPT_PATH]: put(rReceiptContent),
+    [RECEIPT_PATH]: put(receiptFile([prior.record, rRecord])),
     [UNTOUCHED_PATH]: xTree[UNTOUCHED_PATH],
   };
 
@@ -287,9 +394,10 @@ function buildBaseline(
     trees: { base: baseTree, H: hTree, M: mTree, X: xTree, R: rTree },
     blobs,
     admission: { [hRecord.recordDigest]: admissionH },
+    intermediatePlans: {},
   };
 
-  return { input, hRecord, rRecord, admissionH, blobs };
+  return { ...stub, input, rRecord };
 }
 
 // テストでは tree/blob/admission を局所的に上書きするため、readonly を外した深いコピーを返す。
@@ -456,32 +564,14 @@ describe("verifyRechainDelta", () => {
   // U-RECHAIN-003: PLAN 本文の append-only 領域外に手で変更 → fail
   // -------------------------------------------------------------------------
   it("U-RECHAIN-003: append-only 領域外を手で書き換えた R は fail する", () => {
-    const { input, hRecord } = buildBaseline();
-    const admissionR = input.admission[hRecord.recordDigest];
-
-    const tamperedFm = { ...baseFrontmatterOther(), title: "rechain test (手で改変)" };
-    const generates = [
-      { artifact_path: PLAN_PATH, artifact_type: "markdown_doc" },
-      { artifact_path: "src/plan-admission/rechain-verifier.ts", artifact_type: "source_module" },
-    ];
-    const items = ["起票 (rev 1)。", "rev 2 (S2): 検証器を実装した。"];
-    const { content: tamperedContent, record: tamperedRecord } = makeRevision({
-      frontmatterOther: tamperedFm,
-      generates,
-      items,
-      admission: admissionR,
-      binding: { path: PLAN_PATH, planId: PLAN_ID, assetId: ASSET_ID, revision: 1 },
-      commandId: "plan-revise:issue-999:s2:plan:r1:h1:rechain-1",
-      admittedAt: "2026-09-28T01:00:00.000Z",
-    });
-
-    const tampered = clone(input);
-    const oid = sha(tamperedContent).slice(0, 40);
-    tampered.blobs[oid] = tamperedContent;
-    tampered.trees.R[PLAN_PATH] = oid;
-    const receiptOid = sha(receiptFile([tamperedRecord])).slice(0, 40);
-    tampered.blobs[receiptOid] = receiptFile([tamperedRecord]);
-    tampered.trees.R[RECEIPT_PATH] = receiptOid;
+    const b = buildBaseline();
+    const { content: tamperedContent, record: tamperedRecord } = makeRevision(
+      rParams(b, {
+        frontmatterOther: { ...baseFrontmatterOther(), title: "rechain test (手で改変)" },
+      }),
+    );
+    const tampered = clone(b.input);
+    installR(tampered, tamperedContent, [b.priorRecord, tamperedRecord]);
 
     const verdict = verifyRechainDelta(tampered);
     expect(verdict.ok).toBe(false);
@@ -506,30 +596,23 @@ describe("verifyRechainDelta", () => {
   });
 
   it("U-RECHAIN-004b: R の追加 record が別 PLAN を bind すると fail する", () => {
-    const { input, hRecord } = buildBaseline();
-    const admissionR = input.admission[hRecord.recordDigest];
-    const generates = [
-      { artifact_path: PLAN_PATH, artifact_type: "markdown_doc" },
-      { artifact_path: "src/plan-admission/rechain-verifier.ts", artifact_type: "source_module" },
-    ];
-    const items = ["起票 (rev 1)。", "rev 2 (S2): 検証器を実装した。"];
-    const { record: wrongPlanRecord } = makeRevision({
-      frontmatterOther: { ...baseFrontmatterOther(), plan_id: OTHER_PLAN_ID },
-      generates,
-      items,
-      admission: admissionR,
-      binding: {
-        path: OTHER_PLAN_PATH,
-        planId: OTHER_PLAN_ID,
-        assetId: "plan:test:other888",
-        revision: 1,
-      },
-      commandId: "plan-revise:issue-999:s2:plan:r1:h1:rechain-1",
-      admittedAt: "2026-09-28T01:00:00.000Z",
-    });
-    const tampered = clone(input);
-    const oid = sha(receiptFile([wrongPlanRecord])).slice(0, 40);
-    tampered.blobs[oid] = receiptFile([wrongPlanRecord]);
+    const b = buildBaseline();
+    const { record: wrongPlanRecord } = makeRevision(
+      rParams(b, {
+        frontmatterOther: { ...baseFrontmatterOther(), plan_id: OTHER_PLAN_ID },
+        binding: {
+          path: OTHER_PLAN_PATH,
+          planId: OTHER_PLAN_ID,
+          assetId: "plan:test:other888",
+          revision: 1,
+        },
+        basePayloadDigest: GENESIS_PAYLOAD_DIGEST,
+      }),
+    );
+    const tampered = clone(b.input);
+    const receipt = receiptFile([b.priorRecord, wrongPlanRecord]);
+    const oid = sha(receipt).slice(0, 40);
+    tampered.blobs[oid] = receipt;
     tampered.trees.R[RECEIPT_PATH] = oid;
 
     const verdict = verifyRechainDelta(tampered);
@@ -548,12 +631,12 @@ describe("verifyRechainDelta", () => {
     const tampered = clone(input);
     const rReceiptOid = tampered.trees.R[RECEIPT_PATH];
     const parsed = JSON.parse(tampered.blobs[rReceiptOid]);
-    parsed.records[0].binding.content_digest = `sha256:${"0".repeat(64)}`;
+    parsed.records.at(-1).binding.content_digest = `sha256:${"0".repeat(64)}`;
     // record_digest はもう再計算できない (private) ので、record_digest も無効値へ揃えて
     // "parse失敗" ではなく "digestが一致しない" 経路を通す代わりに、record自体を破棄せず
     // digest再計算関数を使って作り直す。
-    const rebuilt = trackedReceiptRecordDigestFromJson(parsed.records[0]);
-    parsed.records[0].record_digest = rebuilt;
+    const rebuilt = trackedReceiptRecordDigestFromJson(parsed.records.at(-1));
+    parsed.records.at(-1).record_digest = rebuilt;
     const newContent = `${JSON.stringify(parsed, null, 2)}\n`;
     const newOid = sha(newContent).slice(0, 40);
     tampered.blobs[newOid] = newContent;
@@ -576,7 +659,7 @@ describe("verifyRechainDelta", () => {
     const tampered = clone(input);
     const rReceiptOid = tampered.trees.R[RECEIPT_PATH];
     const parsed = JSON.parse(tampered.blobs[rReceiptOid]);
-    parsed.records[0].previous_record_digest = `sha256:${"9".repeat(64)}`;
+    parsed.records.at(-1).previous_record_digest = `sha256:${"9".repeat(64)}`;
     const newContent = `${JSON.stringify(parsed, null, 2)}\n`;
     const newOid = sha(newContent).slice(0, 40);
     tampered.blobs[newOid] = newContent;
@@ -627,76 +710,85 @@ describe("verifyRechainDelta", () => {
   it("U-RECHAIN-007: main と PR の双方が generates/§8 に追記した場合、連結されて pass する", () => {
     const { blobs, put } = makeBlobStore();
     const baseFm = baseFrontmatterOther();
-    const baseGenerates = [{ artifact_path: PLAN_PATH, artifact_type: "markdown_doc" }];
-    const baseItems = ["起票 (rev 1)。"];
-    const baseContent = `---\n${stringify({ ...baseFm, generates: baseGenerates })}---\n${bodyFor(baseItems)}`;
+    const prior = makePrior(ASSET_ID);
 
-    // main 側で既に別 PR が revision 1 として同じ PLAN を改訂済み
+    // main 側で既に別 PR が revision 2 として同じ PLAN を改訂済み
     const concurrentGenerates = [
-      ...baseGenerates,
+      ...BASE_GENERATES,
       { artifact_path: "docs/plans/PLAN-L6-999-concurrent-note.md", artifact_type: "markdown_doc" },
     ];
-    const concurrentItems = [...baseItems, "rev 2 (concurrent): 別 PR が先に merge した。"];
-    const admissionConcurrent = admissionFor(1);
+    const concurrentItems = [...BASE_ITEMS, "rev 2 (concurrent): 別 PR が先に merge した。"];
     const { content: mContent, record: mRecord } = makeRevision({
       frontmatterOther: baseFm,
       generates: concurrentGenerates,
       items: concurrentItems,
-      admission: admissionConcurrent,
-      binding: { path: PLAN_PATH, planId: PLAN_ID, assetId: ASSET_ID, revision: 1 },
+      admission: admissionFor(2),
+      binding: { path: PLAN_PATH, planId: PLAN_ID, assetId: ASSET_ID, revision: 2 },
       commandId: "plan-revise:issue-777:concurrent:plan:r1:c1",
       admittedAt: "2026-09-28T00:30:00.000Z",
+      priorRecords: [prior.record],
+      basePayloadDigest: payloadDigestOf(prior.content),
+      actor: AUTHOR_ACTOR,
+      sourceCommit: COMMITS.base,
     });
 
     // PR 側 (H) は base から自分の追加だけを append する
-    const admissionH = admissionFor(1);
+    const admissionH = admissionFor(2);
     const hGenerates = [
-      ...baseGenerates,
+      ...BASE_GENERATES,
       { artifact_path: "src/plan-admission/rechain-verifier.ts", artifact_type: "source_module" },
     ];
-    const hItems = [...baseItems, "rev 2 (S2): 検証器を実装した。"];
+    const hItems = [...BASE_ITEMS, "rev 2 (S2): 検証器を実装した。"];
     const { content: hContent, record: hRecord } = makeRevision({
       frontmatterOther: baseFm,
       generates: hGenerates,
       items: hItems,
       admission: admissionH,
-      binding: { path: PLAN_PATH, planId: PLAN_ID, assetId: ASSET_ID, revision: 1 },
+      binding: { path: PLAN_PATH, planId: PLAN_ID, assetId: ASSET_ID, revision: 2 },
       commandId: "plan-revise:issue-999:s2:plan:r1:h1",
-      admittedAt: "2026-09-28T00:00:00.000Z",
+      admittedAt: H_ADMITTED_AT,
+      priorRecords: [prior.record],
+      basePayloadDigest: payloadDigestOf(prior.content),
+      actor: AUTHOR_ACTOR,
+      sourceCommit: COMMITS.base,
     });
 
-    // R は M (= concurrent 済み) の後ろへ PR の追加分だけを revision 2 として連結する
+    // R は M (= concurrent 済み) の後ろへ PR の追加分だけを revision 3 として連結する
     const expectedGenerates = [...concurrentGenerates, hGenerates[hGenerates.length - 1]];
     const expectedItems = [...concurrentItems, hItems[hItems.length - 1]];
     if (!admissionH.reentry) throw new Error("fixture-admission-missing-reentry");
-    const admissionR = { ...admissionH, reentry: { ...admissionH.reentry, targetRevision: 2 } };
-    const { content: rContent, record: rRecord } = makeRevision({
+    const admissionR = { ...admissionH, reentry: { ...admissionH.reentry, targetRevision: 3 } };
+    const rBase = {
       frontmatterOther: baseFm,
+      admission: admissionR,
+      binding: { path: PLAN_PATH, planId: PLAN_ID, assetId: ASSET_ID, revision: 3 },
+      commandId: "plan-revise:issue-999:s2:plan:r1:h1:rechain-1",
+      admittedAt: R_ADMITTED_AT,
+      priorRecords: [prior.record, mRecord],
+      basePayloadDigest: payloadDigestOf(mContent),
+    };
+    const { content: rContent, record: rRecord } = makeRevision({
+      ...rBase,
       generates: expectedGenerates,
       items: expectedItems,
-      admission: admissionR,
-      binding: { path: PLAN_PATH, planId: PLAN_ID, assetId: ASSET_ID, revision: 2 },
-      commandId: "plan-revise:issue-999:s2:plan:r1:h1:rechain-1",
-      admittedAt: "2026-09-28T01:00:00.000Z",
-      priorRecords: [mRecord],
     });
 
     const baseTree: TreeMap = {
-      [PLAN_PATH]: put(baseContent),
-      [RECEIPT_PATH]: put(receiptFile([])),
+      [PLAN_PATH]: put(prior.content),
+      [RECEIPT_PATH]: put(receiptFile([prior.record])),
     };
     const hTree: TreeMap = {
       [PLAN_PATH]: put(hContent),
-      [RECEIPT_PATH]: put(receiptFile([hRecord])),
+      [RECEIPT_PATH]: put(receiptFile([prior.record, hRecord])),
     };
     const mTree: TreeMap = {
       [PLAN_PATH]: put(mContent),
-      [RECEIPT_PATH]: put(receiptFile([mRecord])),
+      [RECEIPT_PATH]: put(receiptFile([prior.record, mRecord])),
     };
     const xTree: TreeMap = { [PLAN_PATH]: mTree[PLAN_PATH], [RECEIPT_PATH]: mTree[RECEIPT_PATH] };
     const rTree: TreeMap = {
       [PLAN_PATH]: put(rContent),
-      [RECEIPT_PATH]: put(receiptFile([mRecord, rRecord])),
+      [RECEIPT_PATH]: put(receiptFile([prior.record, mRecord, rRecord])),
     };
 
     const input: RechainInput = {
@@ -704,34 +796,25 @@ describe("verifyRechainDelta", () => {
       trees: { base: baseTree, H: hTree, M: mTree, X: xTree, R: rTree },
       blobs,
       admission: { [hRecord.recordDigest]: admissionH },
+      intermediatePlans: {},
     };
 
     const verdict = verifyRechainDelta(input);
     expect(verdict.ok).toBe(true);
 
     // mutation: 連結順を逆にする (PR の追加を先頭へ) → byte 不一致で fail する
-    const reversedGenerates = [hGenerates[hGenerates.length - 1], ...concurrentGenerates];
-    const reversedItems = [hItems[hItems.length - 1], ...concurrentItems];
     const { content: reversedContent, record: reversedRecord } = makeRevision({
-      frontmatterOther: baseFm,
-      generates: reversedGenerates,
-      items: reversedItems,
-      admission: admissionR,
-      binding: { path: PLAN_PATH, planId: PLAN_ID, assetId: ASSET_ID, revision: 2 },
-      commandId: "plan-revise:issue-999:s2:plan:r1:h1:rechain-1",
-      admittedAt: "2026-09-28T01:00:00.000Z",
-      priorRecords: [mRecord],
+      ...rBase,
+      generates: [hGenerates[hGenerates.length - 1], ...concurrentGenerates],
+      items: [hItems[hItems.length - 1], ...concurrentItems],
     });
     const badInput = clone(input);
-    const oid = sha(reversedContent).slice(0, 40);
-    badInput.blobs[oid] = reversedContent;
-    badInput.trees.R[PLAN_PATH] = oid;
-    const receiptOid = sha(receiptFile([mRecord, reversedRecord])).slice(0, 40);
-    badInput.blobs[receiptOid] = receiptFile([mRecord, reversedRecord]);
-    badInput.trees.R[RECEIPT_PATH] = receiptOid;
+    installR(badInput, reversedContent, [prior.record, mRecord, reversedRecord]);
 
     const badVerdict = verifyRechainDelta(badInput);
     expect(badVerdict.ok).toBe(false);
+    if (!badVerdict.ok)
+      expect(badVerdict.reasons.some((r) => r.startsWith("plan-strip-mismatch"))).toBe(true);
   });
 
   // -------------------------------------------------------------------------
@@ -797,30 +880,13 @@ describe("verifyRechainDelta", () => {
   });
 
   it("U-RECHAIN-012b: R の admission が A_H から reentry.targetRevision 以外で改変されていれば fail する (record 内 digest を信用しない)", () => {
-    const { input, hRecord } = buildBaseline();
-    const admissionH = input.admission[hRecord.recordDigest];
-    const forgedAdmission = { ...admissionH, escapeReason: "偽装された理由" };
-    const generates = [
-      { artifact_path: PLAN_PATH, artifact_type: "markdown_doc" },
-      { artifact_path: "src/plan-admission/rechain-verifier.ts", artifact_type: "source_module" },
-    ];
-    const items = ["起票 (rev 1)。", "rev 2 (S2): 検証器を実装した。"];
-    const { content: forgedContent, record: forgedRecord } = makeRevision({
-      frontmatterOther: baseFrontmatterOther(),
-      generates,
-      items,
-      admission: forgedAdmission,
-      binding: { path: PLAN_PATH, planId: PLAN_ID, assetId: ASSET_ID, revision: 1 },
-      commandId: "plan-revise:issue-999:s2:plan:r1:h1:rechain-1",
-      admittedAt: "2026-09-28T01:00:00.000Z",
-    });
-    const tampered = clone(input);
-    const oid = sha(forgedContent).slice(0, 40);
-    tampered.blobs[oid] = forgedContent;
-    tampered.trees.R[PLAN_PATH] = oid;
-    const receiptOid = sha(receiptFile([forgedRecord])).slice(0, 40);
-    tampered.blobs[receiptOid] = receiptFile([forgedRecord]);
-    tampered.trees.R[RECEIPT_PATH] = receiptOid;
+    const b = buildBaseline();
+    const forgedAdmission = { ...b.admissionH, escapeReason: "偽装された理由" };
+    const { content: forgedContent, record: forgedRecord } = makeRevision(
+      rParams(b, { admission: forgedAdmission }),
+    );
+    const tampered = clone(b.input);
+    installR(tampered, forgedContent, [b.priorRecord, forgedRecord]);
 
     const verdict = verifyRechainDelta(tampered);
     expect(verdict.ok).toBe(false);
@@ -880,7 +946,7 @@ describe("verifyRechainDelta", () => {
       expect(verdict.reasons.some((r) => r.startsWith("rechain-receipt-id-mismatch"))).toBe(true);
   });
 
-  it("U-RECHAIN-012f: R の receipt_digest が H 自身の receipt_digest をそのまま使い回していれば fail する", () => {
+  it("U-RECHAIN-012f: R の receipt_digest が H 自身の receipt_digest をそのまま使い回していれば、再導出値と一致せず fail する", () => {
     const { input, hRecord } = buildBaseline();
     const tampered = forgeRReceiptRecord(input, (record) => {
       record.receipt_digest = hRecord.receiptDigest;
@@ -888,9 +954,7 @@ describe("verifyRechainDelta", () => {
     const verdict = verifyRechainDelta(tampered);
     expect(verdict.ok).toBe(false);
     if (!verdict.ok)
-      expect(verdict.reasons.some((r) => r.startsWith("rechain-receipt-digest-unchanged"))).toBe(
-        true,
-      );
+      expect(verdict.reasons.some((r) => r.startsWith("receipt_digest_mismatch"))).toBe(true);
   });
 
   // -------------------------------------------------------------------------
@@ -930,38 +994,38 @@ describe("verifyRechainDelta", () => {
   it("U-RECHAIN-015: base に先行 merge 済みの stacked PR (C) を含めれば、PR 自身の追加だけが再適用されて pass する", () => {
     const { blobs, put } = makeBlobStore();
     const baseFm = baseFrontmatterOther();
-    const ancientGenerates = [{ artifact_path: PLAN_PATH, artifact_type: "markdown_doc" }];
-    const ancientItems = ["起票 (rev 1)。"];
-    const ancientContent = `---\n${stringify({ ...baseFm, generates: ancientGenerates })}---\n${bodyFor(ancientItems)}`;
-    const ancientReceiptContent = receiptFile([]);
+    const prior = makePrior(ASSET_ID);
+    const ancientBaseTree: TreeMap = {
+      [PLAN_PATH]: put(prior.content),
+      [RECEIPT_PATH]: put(receiptFile([prior.record])),
+    };
 
     // C: 先に stacked PR A が merge 済みの状態 (merge-base はここになる)
     const cGenerates = [
-      ...ancientGenerates,
+      ...BASE_GENERATES,
       { artifact_path: "src/plan-admission/stacked-a-module.ts", artifact_type: "source_module" },
     ];
-    const cItems = [...ancientItems, "rev 2 (stacked PR A): 先行実装。"];
-    const admissionC = admissionFor(1);
+    const cItems = [...BASE_ITEMS, "rev 2 (stacked PR A): 先行実装。"];
     const { content: cContent, record: cRecord } = makeRevision({
       frontmatterOther: baseFm,
       generates: cGenerates,
       items: cItems,
-      admission: admissionC,
-      binding: { path: PLAN_PATH, planId: PLAN_ID, assetId: ASSET_ID, revision: 1 },
+      admission: admissionFor(2),
+      binding: { path: PLAN_PATH, planId: PLAN_ID, assetId: ASSET_ID, revision: 2 },
       commandId: "plan-revise:issue-700:stacked-a:plan:r1:c1",
-      admittedAt: "2026-09-27T00:00:00.000Z",
+      admittedAt: "2026-09-27T12:00:00.000Z",
+      priorRecords: [prior.record],
+      basePayloadDigest: payloadDigestOf(prior.content),
+      actor: AUTHOR_ACTOR,
+      sourceCommit: COMMITS.base,
     });
     const realBaseTree: TreeMap = {
       [PLAN_PATH]: put(cContent),
-      [RECEIPT_PATH]: put(receiptFile([cRecord])),
-    };
-    const ancientBaseTree: TreeMap = {
-      [PLAN_PATH]: put(ancientContent),
-      [RECEIPT_PATH]: put(ancientReceiptContent),
+      [RECEIPT_PATH]: put(receiptFile([prior.record, cRecord])),
     };
 
     // H: PR B は C の上に自分の追加だけを積む
-    const admissionH = admissionFor(2);
+    const admissionH = admissionFor(3);
     const hGenerates = [
       ...cGenerates,
       { artifact_path: "src/plan-admission/rechain-verifier.ts", artifact_type: "source_module" },
@@ -972,34 +1036,37 @@ describe("verifyRechainDelta", () => {
       generates: hGenerates,
       items: hItems,
       admission: admissionH,
-      binding: { path: PLAN_PATH, planId: PLAN_ID, assetId: ASSET_ID, revision: 2 },
+      binding: { path: PLAN_PATH, planId: PLAN_ID, assetId: ASSET_ID, revision: 3 },
       commandId: "plan-revise:issue-999:s2:plan:r1:h1",
-      admittedAt: "2026-09-28T00:00:00.000Z",
-      priorRecords: [cRecord],
+      admittedAt: H_ADMITTED_AT,
+      priorRecords: [prior.record, cRecord],
+      basePayloadDigest: payloadDigestOf(cContent),
+      actor: AUTHOR_ACTOR,
+      sourceCommit: COMMITS.base,
     });
     const hTree: TreeMap = {
       [PLAN_PATH]: put(hContent),
-      [RECEIPT_PATH]: put(receiptFile([cRecord, hRecord])),
+      [RECEIPT_PATH]: put(receiptFile([prior.record, cRecord, hRecord])),
     };
 
     // M: C の merge 後、他に誰もこの PLAN を触っていない
     const mTree: TreeMap = realBaseTree;
     const xTree: TreeMap = { [PLAN_PATH]: mTree[PLAN_PATH], [RECEIPT_PATH]: mTree[RECEIPT_PATH] };
 
-    const admissionR = admissionH; // revision 変化なし (M 側の latest は base と同じ 1)
     const { content: rContent, record: rRecord } = makeRevision({
       frontmatterOther: baseFm,
       generates: hGenerates,
       items: hItems,
-      admission: admissionR,
-      binding: { path: PLAN_PATH, planId: PLAN_ID, assetId: ASSET_ID, revision: 2 },
+      admission: admissionH, // revision 変化なし (M 側の latest は base と同じ 2)
+      binding: { path: PLAN_PATH, planId: PLAN_ID, assetId: ASSET_ID, revision: 3 },
       commandId: "plan-revise:issue-999:s2:plan:r1:h1:rechain-1",
-      admittedAt: "2026-09-28T01:00:00.000Z",
-      priorRecords: [cRecord],
+      admittedAt: R_ADMITTED_AT,
+      priorRecords: [prior.record, cRecord],
+      basePayloadDigest: payloadDigestOf(cContent),
     });
     const rTree: TreeMap = {
       [PLAN_PATH]: put(rContent),
-      [RECEIPT_PATH]: put(receiptFile([cRecord, rRecord])),
+      [RECEIPT_PATH]: put(receiptFile([prior.record, cRecord, rRecord])),
     };
 
     const goodInput: RechainInput = {
@@ -1007,6 +1074,7 @@ describe("verifyRechainDelta", () => {
       trees: { base: realBaseTree, H: hTree, M: mTree, X: xTree, R: rTree },
       blobs,
       admission: { [hRecord.recordDigest]: admissionH },
+      intermediatePlans: {},
     };
     const verdict = verifyRechainDelta(goodInput);
     expect(verdict.ok).toBe(true);
@@ -1032,6 +1100,7 @@ describe("verifyRechainDelta", () => {
       ...inputA,
       blobs: Object.fromEntries(Object.entries(inputA.blobs).reverse()),
       admission: Object.fromEntries(Object.entries(inputA.admission).reverse()),
+      intermediatePlans: Object.fromEntries(Object.entries(inputA.intermediatePlans).reverse()),
     };
 
     const verdictA = verifyRechainDelta(inputA);
@@ -1042,18 +1111,18 @@ describe("verifyRechainDelta", () => {
     expect(verdictA.verifierDigest).toBe(verdictB.verifierDigest);
     expect(verdictA.verifierDigest).toBe(verifierDigestOf(inputA));
     expect(verdictA.verifierDigest).toBe(
-      `sha256:${sha(`ut-tdd.rechain-verifier.v1\n${stableJson(inputA)}`)}`,
+      `sha256:${sha(`ut-tdd.rechain-verifier.v2\n${stableJson(inputA)}`)}`,
     );
 
     // mutation: JSON.stringify は key の挿入順に依存するため、挿入順を変えた入力からは
     // 異なる digest になってしまう (stableJson を使わなければ決定的にならないことの確認)。
-    const jsonDigestA = sha(`ut-tdd.rechain-verifier.v1\n${JSON.stringify(inputA)}`);
-    const jsonDigestB = sha(`ut-tdd.rechain-verifier.v1\n${JSON.stringify(inputB)}`);
+    const jsonDigestA = sha(`ut-tdd.rechain-verifier.v2\n${JSON.stringify(inputA)}`);
+    const jsonDigestB = sha(`ut-tdd.rechain-verifier.v2\n${JSON.stringify(inputB)}`);
     expect(jsonDigestA).not.toBe(jsonDigestB);
 
     // mutation: domain separator (schema version 行) を変えると、同じ stableJson(input) でも
     // 異なる digest になる (§2.6-5 の "先頭行は domain separator 兼 schema version" の固定)。
-    const differentVersionDigest = `sha256:${sha(`ut-tdd.rechain-verifier.v2\n${stableJson(inputA)}`)}`;
+    const differentVersionDigest = `sha256:${sha(`ut-tdd.rechain-verifier.v1\n${stableJson(inputA)}`)}`;
     expect(verdictA.verifierDigest).not.toBe(differentVersionDigest);
   });
 });
