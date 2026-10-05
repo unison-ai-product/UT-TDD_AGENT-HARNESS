@@ -50,21 +50,22 @@ dependencies:
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/815
 review_evidence: []
 status: draft
+sub_doc: function-spec
 github_issue_id: 815
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:bec78c3552539be4f794137d4ca8715f
-  command_id: plan-revise:issue-815:report-command:rechain-1:sol-r2-fix:r3:9d762556a138
-  admitted_at: 2026-10-05T04:30:42.571Z
-  source_digest: sha256:f1f0fb15447f6fc34c6b8fd9b9a1f8b023770fe25d4bd249762e504b4fab3cce
-  decision_digest: sha256:2f58615a0098789324583f037c6d4b1e361890bb0c19f8845ebe5735c0df56ec
-  receipt_digest: sha256:8b616265a67ed42820ff7f9c3c38ae80c5335caed5cdb49a2b4ca81446e2e44d
+  receipt_id: certificate:c5cf2c382bd097617d631917b28e895d
+  command_id: plan-revise:issue-832:restore-sub-doc:PLAN-L6-1:r4:4ca623c5ac35
+  admitted_at: 2026-10-05T05:19:42.948Z
+  source_digest: sha256:ce73b9d1bd2bb267d474736ef63a2c58d1ee58dea4187174c4755e1f34de3495
+  decision_digest: sha256:5d607eb8223c182cc20778fa671e35e76687c09c7e6e6617848d836050d83007
+  receipt_digest: sha256:02ebde70606526212dc8cee698fca07aa0a24923974a87698271f00ba10a4d20
   binding:
     path: docs/plans/PLAN-L6-107-consumer-report-command-and-intake.md
     plan_id: PLAN-L6-107-consumer-report-command-and-intake
     asset_id: plan:3668ea3147d11f25cd3e1f6fe7581325
-    revision: 3
-    content_digest: sha256:f1f0fb15447f6fc34c6b8fd9b9a1f8b023770fe25d4bd249762e504b4fab3cce
+    revision: 4
+    content_digest: sha256:ce73b9d1bd2bb267d474736ef63a2c58d1ee58dea4187174c4755e1f34de3495
   route:
     signal: feature_addition
     mode: add-feature
@@ -79,10 +80,10 @@ admission_receipt:
     digest: sha256:610d332e78fa0b1893fd1299881eeef3237bd8801f5ba9364f5d70aec59c2c41
   reentry:
     target_plan_id: PLAN-L6-107-consumer-report-command-and-intake
-    target_revision: 3
+    target_revision: 4
     phase: forward_merge
-  escape_reason: "Issue 815 S2/S3: PR #824 Sol r2 FLAG の是正 (§9 受入条件 5/6 を §5.2
-    の位相別出力契約と oracle 013 の全体比較にそろえる)。方式は変えない"
+  escape_reason: "Issue 832: revise 時に manifest へ sub_doc を渡さなかったため frontmatter
+    から落ちた sub_doc: function-spec を復旧する (本文・方式は不変)"
 ---
 
 # PLAN-L6-107 (add-design): `ut-tdd report` コマンドと受付先 issue フォーム (S2 + S3)
