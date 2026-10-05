@@ -1397,9 +1397,7 @@ describe("Pack consumer runtime release producer byte and fail-close oracles", (
         .map((entry) => ({ ...entry, mode: entry.mode as "100644" | "100755" }))
         .sort((left, right) => left.path.localeCompare(right.path));
       expect(readback).toEqual(expectedSorted);
-      expect(readback.find((entry) => entry.path === "scripts/executable.sh")?.mode).toBe(
-        "100755",
-      );
+      expect(readback.find((entry) => entry.path === "scripts/executable.sh")?.mode).toBe("100755");
       const ps1Blob = rawTree.get("scripts/ut-tdd.ps1");
       const ps1TarEntry = readback.find((entry) => entry.path === "scripts/ut-tdd.ps1");
       expect(ps1Blob?.bytes).toEqual(Buffer.from("Write-Output 'packrt-013 LF blob'\n", "utf8"));
