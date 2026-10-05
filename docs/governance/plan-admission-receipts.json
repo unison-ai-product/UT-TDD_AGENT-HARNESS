@@ -6564,97 +6564,49 @@
     {
       "sequence": 411,
       "previous_record_digest": "sha256:1144fbd162f695dd67915ee119211080c3b42df5c6a59b085113aa8ac9214d9b",
-      "record_digest": "sha256:f679b4967f633d133224a0652e44a5dc4e2142168f32e3f94d8f8307640941cb",
-      "command_id": "plan-draft:issue-789:token-ingest-retirement:1:rechain-1",
-      "receipt_id": "certificate:8cd99bada32554ad2d55498b025ed55a",
-      "receipt_digest": "sha256:b527da0f52b46181f69ce9923f7a8d4b08518265c1db42079de444b35d6f726d",
-      "decision_digest": "sha256:b4a466616ec7f69ee5334aaaf797873279afa79d17efae921ca5068d5e8add36",
+      "record_digest": "sha256:cbe57b29d64766bfec270af9a127c6658380c415adaf437f4a79f4349f1b80b1",
+      "command_id": "plan-draft:issue-711:rechain-verifier:forward:1:rechain-1",
+      "receipt_id": "certificate:f2a61a3ad7d3b7301f0fc4238d529547",
+      "receipt_digest": "sha256:849cf8fd640f11ce0c1a22f1d99320adfd3863daa48ac3e0e43dfa3abe5f9420",
+      "decision_digest": "sha256:86287e9dd2acb23044114be083c6c17b98bffa2102b2c9fbacca06e78f6b1fc1",
       "binding": {
-        "path": "docs/plans/PLAN-L6-789-token-ingest-retirement.md",
-        "plan_id": "PLAN-L6-789-token-ingest-retirement",
-        "asset_id": "plan:8cd99bada32554ad2d55498b025ed55a",
+        "path": "docs/plans/PLAN-L7-711-rechain-verifier.md",
+        "plan_id": "PLAN-L7-711-rechain-verifier",
+        "asset_id": "plan:f2a61a3ad7d3b7301f0fc4238d529547",
         "revision": 1,
-        "content_digest": "sha256:8ef8158192aceb2c1fe603f2006bf4adbdb32f0ad715e68d85053a6e7666e9cc"
+        "content_digest": "sha256:0c88bd5899da820c83811e1f480e0b60944e5d77268c6af67340241b6ece038b"
       }
     },
     {
       "sequence": 412,
-      "previous_record_digest": "sha256:f679b4967f633d133224a0652e44a5dc4e2142168f32e3f94d8f8307640941cb",
-      "record_digest": "sha256:c51745b5dcc29cf41454b90df5978491421712310ff6c48da0dce074eff236e3",
-      "command_id": "plan-revise:issue-789:legacy-57:2:rechain-1",
-      "receipt_id": "certificate:b7d4002674baf640a0d6a19a4c8dba6f",
-      "receipt_digest": "sha256:e8549b3c531a65a7e76b0f1e1e136374b76377658b7291660ec4583aa5a78f02",
-      "decision_digest": "sha256:d5bba9e81269dbfdce734743d5382157a8153d40b911f12db6f2f0ff454e70fd",
+      "previous_record_digest": "sha256:cbe57b29d64766bfec270af9a127c6658380c415adaf437f4a79f4349f1b80b1",
+      "record_digest": "sha256:16df64d7f3c24d7d9a1ca54fa76f6e7e128600b38debb43997a7fd14c6b29cd6",
+      "command_id": "plan-draft:issue-711:rechain-verifier:reverse:1:rechain-1",
+      "receipt_id": "certificate:6ce0bbbc10d17905c1d60ed1903c4677",
+      "receipt_digest": "sha256:d763ca539d83a83cc2fcab64c908d22a9559d695939dbf842c0f6284e61b3985",
+      "decision_digest": "sha256:b85321f68626c44d62612c1381e6ddbda01e63f2c21a2d0c697b13539675ad79",
       "binding": {
-        "path": "docs/plans/PLAN-L7-57-token-telemetry-tracker.md",
-        "plan_id": "PLAN-L7-57-token-telemetry-tracker",
-        "asset_id": "plan:legacy:c989324b0cd11472a30274933e6db786ea6bc2bfdc82fdd2880d03e1c174039a",
-        "revision": 2,
-        "content_digest": "sha256:4e5485819b2df9785db0c5448eea90cd0f247bd1f0d2f7a8cbdc90ca2907186f"
+        "path": "docs/plans/PLAN-REVERSE-711-rechain-verifier-backfill.md",
+        "plan_id": "PLAN-REVERSE-711-rechain-verifier-backfill",
+        "asset_id": "plan:6ce0bbbc10d17905c1d60ed1903c4677",
+        "revision": 1,
+        "content_digest": "sha256:770579f31d7a1bf9575c1b1c1744d9726a897f47479a071ed87b30cfd7df1b15"
       }
     },
     {
       "sequence": 413,
-      "previous_record_digest": "sha256:c51745b5dcc29cf41454b90df5978491421712310ff6c48da0dce074eff236e3",
-      "record_digest": "sha256:b05216b2f257ee71ac7bcabb83227478e3233576d5134e7bd9d9121418378114",
-      "command_id": "plan-revise:issue-789:legacy-454:2:rechain-1",
-      "receipt_id": "certificate:e776ce9ad3a89c998fa8d02c95ff4fe5",
-      "receipt_digest": "sha256:d5a3f1e17d9c57d7e840823a73c7f7a99d2b334bcd68643f365804bfc2301bf6",
-      "decision_digest": "sha256:b50c5a211fd974c9de366b8dbdb300caf35ebe6e5806dbf57371508bf41ec9ae",
+      "previous_record_digest": "sha256:16df64d7f3c24d7d9a1ca54fa76f6e7e128600b38debb43997a7fd14c6b29cd6",
+      "record_digest": "sha256:63c4a10e3e49e035b1b6eee355db13fe7fc154ab55941d06c715fb145b01109b",
+      "command_id": "plan-revise:issue-711:rechain-verifier:reverse:rechain-1:sol-r1-fix:r2:c7156c36040e",
+      "receipt_id": "certificate:5f4c1452a71d553e15686727bec64f5b",
+      "receipt_digest": "sha256:f9a88b5172fe657e16f61c50460833dad0ba5ec328889a5a4fc61fb895bab24d",
+      "decision_digest": "sha256:f9447e0d376614c79261665609b4cc29fcc518011b961d722cd1f40ec088506d",
       "binding": {
-        "path": "docs/plans/PLAN-L7-454-runtime-token-telemetry-ingestion.md",
-        "plan_id": "PLAN-L7-454-runtime-token-telemetry-ingestion",
-        "asset_id": "plan:legacy:7e00bf799a5f194ec7e323bbfbd3e7a21859e251c0e73a9f46fda12cb870c54b",
+        "path": "docs/plans/PLAN-REVERSE-711-rechain-verifier-backfill.md",
+        "plan_id": "PLAN-REVERSE-711-rechain-verifier-backfill",
+        "asset_id": "plan:6ce0bbbc10d17905c1d60ed1903c4677",
         "revision": 2,
-        "content_digest": "sha256:850f003cd0bba3ebe99f9b46efc2657d8a5fd36fc3797d97815212ad073236ab"
-      }
-    },
-    {
-      "sequence": 414,
-      "previous_record_digest": "sha256:b05216b2f257ee71ac7bcabb83227478e3233576d5134e7bd9d9121418378114",
-      "record_digest": "sha256:3bd04fb27ce462f0a2333a0d97e78857a5e2f59b14690e1777d6caa1fd361e11",
-      "command_id": "plan-revise:issue-789:token-ingest-retirement:rechain-1:sol-r1-fix:r2:829b884df883",
-      "receipt_id": "certificate:5731a4a62d9b61ec4d8389c6da62446c",
-      "receipt_digest": "sha256:5d19cc7b3d5902538279415184595080063250847338888f7125285b6f0c1b45",
-      "decision_digest": "sha256:30fc94734306d056b56fed997d806f4723ef2a832e71d17b48cb03bb7fa9c3ee",
-      "binding": {
-        "path": "docs/plans/PLAN-L6-789-token-ingest-retirement.md",
-        "plan_id": "PLAN-L6-789-token-ingest-retirement",
-        "asset_id": "plan:8cd99bada32554ad2d55498b025ed55a",
-        "revision": 2,
-        "content_digest": "sha256:817e326d1c9ce9de95f84b7b0a6e0065feb5ffdd2379e51888be89f11da13351"
-      }
-    },
-    {
-      "sequence": 415,
-      "previous_record_digest": "sha256:3bd04fb27ce462f0a2333a0d97e78857a5e2f59b14690e1777d6caa1fd361e11",
-      "record_digest": "sha256:5293059ce2d7fb35aa710e5285abf649f36205f928cf9886ceb24f27e52b386f",
-      "command_id": "plan-revise:issue-789:legacy-58:2:rechain-1",
-      "receipt_id": "certificate:0ae7ba5e1fc2c1976edac5271d363f9e",
-      "receipt_digest": "sha256:6161f36e19af935c961931e23a179660d3ec2b87e93fd7ee94fece44eb736198",
-      "decision_digest": "sha256:d5bba9e81269dbfdce734743d5382157a8153d40b911f12db6f2f0ff454e70fd",
-      "binding": {
-        "path": "docs/plans/PLAN-L7-58-telemetry-cost-enrichment.md",
-        "plan_id": "PLAN-L7-58-telemetry-cost-enrichment",
-        "asset_id": "plan:legacy:fc88971bc08a98ebfd67018a9d9bbe8e5df69d45b9c1204bfc2e0b922b242a96",
-        "revision": 2,
-        "content_digest": "sha256:ce1559f29bb4001d16ce65567647eee91be9bb665dd97a0617727acfc8efc90a"
-      }
-    },
-    {
-      "sequence": 416,
-      "previous_record_digest": "sha256:5293059ce2d7fb35aa710e5285abf649f36205f928cf9886ceb24f27e52b386f",
-      "record_digest": "sha256:1aac16eed63c3d8af9931de6335cdc804d89320b51b34255679a4096b8dea7b8",
-      "command_id": "plan-revise:issue-789:token-ingest-retirement:rechain-1:slot-label-quote:r3:73eb26976de7",
-      "receipt_id": "certificate:5e7a14a8be6ccbcce42ce806babeaa51",
-      "receipt_digest": "sha256:70acb97a0be1b9a574497c513cabff622b50aa194d3c1c566f843184d85bf0c4",
-      "decision_digest": "sha256:956e69ce645429f6f6ce443246f34ca9606a1420983a147643cf15fa4141678d",
-      "binding": {
-        "path": "docs/plans/PLAN-L6-789-token-ingest-retirement.md",
-        "plan_id": "PLAN-L6-789-token-ingest-retirement",
-        "asset_id": "plan:8cd99bada32554ad2d55498b025ed55a",
-        "revision": 3,
-        "content_digest": "sha256:6e321c50a2d970b43e360753ff86de89b2e43e21d6832c5565a5e4ec8b34b142"
+        "content_digest": "sha256:213ed9e06386f40dc2d0abdc3648e2f6548fd8290e822a380c02c64338b8cab7"
       }
     }
   ]
