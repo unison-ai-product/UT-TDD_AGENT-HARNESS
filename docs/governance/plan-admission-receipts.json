@@ -6608,6 +6608,22 @@
         "revision": 2,
         "content_digest": "sha256:213ed9e06386f40dc2d0abdc3648e2f6548fd8290e822a380c02c64338b8cab7"
       }
+    },
+    {
+      "sequence": 414,
+      "previous_record_digest": "sha256:63c4a10e3e49e035b1b6eee355db13fe7fc154ab55941d06c715fb145b01109b",
+      "record_digest": "sha256:4fcccf57c8f21bafe9897e62f0e72d0d7e6ab95635afc220432452c75de25c2f",
+      "command_id": "plan-draft:issue-816:release-notes-draft-contract:1:rechain-1",
+      "receipt_id": "certificate:d0c95dafd276d2225a3917e11512ea13",
+      "receipt_digest": "sha256:c3f168078376693ff76fcb27a010063ebc9bbec75e88682ef777b6fc5592794d",
+      "decision_digest": "sha256:9c341eef56a0b6dc1bf4d1de17cd2f9efd12a675789abddb089d8d26c7fa124a",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-816-release-notes-draft-contract.md",
+        "plan_id": "PLAN-L6-816-release-notes-draft-contract",
+        "asset_id": "plan:d0c95dafd276d2225a3917e11512ea13",
+        "revision": 1,
+        "content_digest": "sha256:42d97d166cd7ce33a9eefef3a85d1d52eadefd3bc8fc42577e38cefe89ab2926"
+      }
     }
   ]
 }
