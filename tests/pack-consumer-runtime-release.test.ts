@@ -1484,7 +1484,14 @@ describe("Pack consumer runtime release producer byte and fail-close oracles", (
   it("U-PACKRT-003: scans every asset and the sealed receipt bytes for producer identity leakage", async () => {
     const outDir = mkdtempSync(join(tmpdir(), "ut-tdd-packrt-003-"));
     const envSentinel = `packrt-env-sentinel-${fixture.tag}`;
+    const producerUsername = `packrt-producer-user-${fixture.tag}`;
+    const priorUser = process.env.USER;
+    const priorUsername = process.env.USERNAME;
     process.env.UT_TDD_PACKRT_ENV_SENTINEL = envSentinel;
+    // Exercise the actual producer environment with a unique identity, not a
+    // generic host username that also occurs in committed source prose.
+    process.env.USER = producerUsername;
+    process.env.USERNAME = producerUsername;
     try {
       await packageFixture(outDir);
       const names = releaseArtifactFileNames(fixture.tag);
@@ -1532,10 +1539,23 @@ describe("Pack consumer runtime release producer byte and fail-close oracles", (
         envSentinel,
         ...envValues,
       ];
-      expectBytesNotToContain([...assetBuffers(outDir, fixture.tag), receiptBytes], forbidden);
+      const producedBuffers = [...assetBuffers(outDir, fixture.tag), receiptBytes];
+      expectBytesNotToContain(producedBuffers, forbidden);
+      for (const bytes of producedBuffers) {
+        expect(() =>
+          expectBytesNotToContain(
+            [Buffer.concat([bytes, Buffer.from(producerUsername, "utf8")])],
+            forbidden,
+          ),
+        ).toThrow(`forbidden producer identity bytes: ${JSON.stringify(producerUsername)}`);
+      }
       expect(existsSync(join(outDir, names.consumerRuntime))).toBe(true);
     } finally {
       delete process.env.UT_TDD_PACKRT_ENV_SENTINEL;
+      if (priorUser === undefined) delete process.env.USER;
+      else process.env.USER = priorUser;
+      if (priorUsername === undefined) delete process.env.USERNAME;
+      else process.env.USERNAME = priorUsername;
       rmSync(outDir, { recursive: true, force: true });
     }
   });
