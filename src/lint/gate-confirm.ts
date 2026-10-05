@@ -13,6 +13,11 @@ interface EmbeddedGateAsset {
   readonly content: string;
 }
 
+export type GateAssetPath =
+  | "docs/governance/gate-design.md"
+  | "docs/process/gates.md"
+  | "docs/process/vmodel-contract.yaml";
+
 // Literal require paths are esbuild text-loader inputs and are included in the
 // authoritative bundle receipt. Source execution keeps this index empty.
 const EMBEDDED_GATE_ASSETS: readonly EmbeddedGateAsset[] = bundled
@@ -32,21 +37,16 @@ const EMBEDDED_GATE_ASSETS: readonly EmbeddedGateAsset[] = bundled
     ]
   : [];
 
-function sourceGateDesignText(): string {
+export function readGateAssetText(repoRoot: string, path: GateAssetPath): string {
+  const consumerPath = join(repoRoot, path);
+  if (existsSync(consumerPath)) return readFileSync(consumerPath, "utf8");
+  if (bundled) {
+    const asset = EMBEDDED_GATE_ASSETS.find((candidate) => candidate.path === path);
+    if (!asset) throw new Error(`embedded gate asset is missing from the Node bundle: ${path}`);
+    return asset.content;
+  }
   const sourceRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
-  return readFileSync(resolve(sourceRoot, "docs/governance/gate-design.md"), "utf8");
-}
-
-function bundledGateDesignText(): string {
-  const asset = EMBEDDED_GATE_ASSETS.find(
-    (candidate) => candidate.path === "docs/governance/gate-design.md",
-  );
-  if (!asset) throw new Error("embedded gate definition is missing from the Node bundle");
-  return asset.content;
-}
-
-function fallbackGateDesignText(): string {
-  return bundled ? bundledGateDesignText() : sourceGateDesignText();
+  return readFileSync(resolve(sourceRoot, path), "utf8");
 }
 
 export interface GateStatus {
@@ -138,8 +138,7 @@ function walkMarkdown(dir: string): string[] {
 }
 
 export function loadGateConfirmDocs(repoRoot: string = process.cwd()): GateConfirmDocs {
-  const gatePath = join(repoRoot, "docs", "governance", "gate-design.md");
-  const gateText = existsSync(gatePath) ? readFileSync(gatePath, "utf8") : fallbackGateDesignText();
+  const gateText = readGateAssetText(repoRoot, "docs/governance/gate-design.md");
   const roots = resolveVModelRoots(repoRoot);
   const designRoot = join(repoRoot, roots.designRoot);
   const testRoot = join(repoRoot, roots.testDesignRoot);

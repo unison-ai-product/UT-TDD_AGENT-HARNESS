@@ -72,6 +72,10 @@ function gitHead(): string | null {
   return result.status === 0 ? result.stdout.trim() : null;
 }
 
+function resolveDistributionTag(explicitTag: string | undefined): string {
+  return explicitTag ?? gitHead() ?? "unreleased";
+}
+
 function collectFilesystemCandidatePaths(repoRoot: string): string[] {
   const ignored = new Set([".git", "node_modules", "dist"]);
   const out: string[] = [];
@@ -787,12 +791,13 @@ export function registerDistributionCommands(program: Command): void {
   distribution
     .command("plan")
     .description("emit the clean export, preflight, rollback, and contract plan")
-    .option("--tag <tag>", "source/release tag", gitHead() ?? "unreleased")
+    .option("--tag <tag>", "source/release tag (default: current Git HEAD or unreleased)")
     .option("--clean-repo <name>", "clean distribution repository", DEFAULT_PACK_REPO)
     .option("--package-root <path>", "consumer package root; defaults to repo root")
     .option("--json", "JSON output")
     .action((opts: { tag?: string; cleanRepo?: string; packageRoot?: string; json?: boolean }) => {
       const repoRoot = process.cwd();
+      const tag = resolveDistributionTag(opts.tag);
       const detection = detectMode();
       // PLAN-L7-522 §2.2 (S1-a): readiness の runtime 検査は Bun ではなく Node を見る。
       // 実行中の node 自身が観測値であり、外部 probe を spawn しない。
@@ -816,7 +821,7 @@ export function registerDistributionCommands(program: Command): void {
       })();
       const exportPlan = buildCleanDistributionPlan({
         paths: collectDistributionCandidatePaths(repoRoot),
-        sourceTag: opts.tag,
+        sourceTag: tag,
         cleanRepo: opts.cleanRepo,
       });
       const readiness = buildConsumerReadinessPlan({
@@ -828,7 +833,7 @@ export function registerDistributionCommands(program: Command): void {
         hasCodex: detection.codex,
         repoRoot,
         packageRoot,
-        tag: opts.tag,
+        tag,
         cleanRepo: opts.cleanRepo,
         consumerRuntime: readConsumerRuntimeReadiness(repoRoot),
       });
@@ -858,7 +863,7 @@ export function registerDistributionCommands(program: Command): void {
   distribution
     .command("sync-plan")
     .description("emit a non-destructive clean Pack repository sync plan")
-    .option("--tag <tag>", "source/release tag", gitHead() ?? "unreleased")
+    .option("--tag <tag>", "source/release tag (default: current Git HEAD or unreleased)")
     .option("--clean-repo <name>", "clean distribution repository", DEFAULT_PACK_REPO)
     .option("--branch <name>", "Pack repository target branch", "main")
     .option("--staging-dir <path>", "local Pack staging clone path")
@@ -872,10 +877,11 @@ export function registerDistributionCommands(program: Command): void {
         json?: boolean;
       }) => {
         const repoRoot = process.cwd();
+        const tag = resolveDistributionTag(opts.tag);
         const sourcePaths = collectDistributionCandidatePaths(repoRoot);
         const exportPlan = buildCleanDistributionPlan({
           paths: sourcePaths,
-          sourceTag: opts.tag,
+          sourceTag: tag,
           cleanRepo: opts.cleanRepo,
         });
         const stagingDir = opts.stagingDir
@@ -918,7 +924,7 @@ export function registerDistributionCommands(program: Command): void {
     .description(
       "materialize clean Pack artifacts into a local staging directory without publishing",
     )
-    .option("--tag <tag>", "source/release tag", gitHead() ?? "unreleased")
+    .option("--tag <tag>", "source/release tag (default: current Git HEAD or unreleased)")
     .option("--clean-repo <name>", "clean distribution repository", DEFAULT_PACK_REPO)
     .option("--branch <name>", "Pack repository target branch", "main")
     .option("--out <dir>", "local staging directory", ".ut-tdd/pack-stage")
@@ -932,10 +938,11 @@ export function registerDistributionCommands(program: Command): void {
         json?: boolean;
       }) => {
         const repoRoot = process.cwd();
+        const tag = resolveDistributionTag(opts.tag);
         const sourcePaths = collectDistributionCandidatePaths(repoRoot);
         const exportPlan = buildCleanDistributionPlan({
           paths: sourcePaths,
-          sourceTag: opts.tag,
+          sourceTag: tag,
           cleanRepo: opts.cleanRepo,
         });
         const secretScan = runDistributionSecretScan({
@@ -1038,7 +1045,7 @@ export function registerDistributionCommands(program: Command): void {
     .description(
       "update a local Pack repository checkout with clean artifacts; never commits or pushes",
     )
-    .option("--tag <tag>", "source/release tag", gitHead() ?? "unreleased")
+    .option("--tag <tag>", "source/release tag (default: current Git HEAD or unreleased)")
     .option("--clean-repo <name>", "clean distribution repository", DEFAULT_PACK_REPO)
     .option("--branch <name>", "Pack repository target branch", "main")
     .requiredOption("--repo-dir <dir>", "local Pack repository checkout to update")
@@ -1054,12 +1061,13 @@ export function registerDistributionCommands(program: Command): void {
         json?: boolean;
       }) => {
         const repoRoot = process.cwd();
+        const tag = resolveDistributionTag(opts.tag);
         const repoDir = isAbsolute(opts.repoDir) ? opts.repoDir : join(repoRoot, opts.repoDir);
         const repoExists = existsSync(repoDir);
         const sourcePaths = collectDistributionCandidatePaths(repoRoot);
         const exportPlan = buildCleanDistributionPlan({
           paths: sourcePaths,
-          sourceTag: opts.tag,
+          sourceTag: tag,
           cleanRepo: opts.cleanRepo,
         });
         const secretScan = runDistributionSecretScan({

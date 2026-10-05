@@ -1007,6 +1007,63 @@ describe("L7 CLI surface closure", () => {
     }
   }, 30_000);
 
+  it("does not start Git when a non-distribution command only needs the CLI version", () => {
+    const traceRoot = mkdtempSync(join(tmpdir(), "ut-tdd-cli-git-trace-"));
+    const tracePath = join(traceRoot, "git-trace.log");
+    try {
+      const run = runCliIn(repoRoot, ["--version"], {
+        ...process.env,
+        GIT_TRACE: tracePath,
+      });
+
+      expect(run.status, run.stderr || run.stdout).toBe(0);
+      expect(run.stdout.trim()).not.toBe("");
+      expect(existsSync(tracePath)).toBe(false);
+    } finally {
+      removeTestTree(traceRoot);
+    }
+  });
+
+  it("resolves the distribution tag only when omitted, without probing Git for an explicit tag", () => {
+    const traceRoot = mkdtempSync(join(tmpdir(), "ut-tdd-distribution-tag-trace-"));
+    try {
+      const explicitTrace = join(traceRoot, "explicit.log");
+      const explicit = runCliIn(
+        repoRoot,
+        ["distribution", "sync-plan", "--tag", "v0.1.0", "--json"],
+        {
+          ...process.env,
+          GIT_TRACE: explicitTrace,
+        },
+      );
+      expect(parseCliJson(explicit).export.sourceTag).toBe("v0.1.0");
+      expect(readFileSync(explicitTrace, "utf8")).not.toMatch(/rev-parse --short HEAD/);
+
+      const head = spawnSync("git", ["rev-parse", "--short", "HEAD"], {
+        cwd: repoRoot,
+        encoding: "utf8",
+        windowsHide: true,
+      });
+      expect(head.status).toBe(0);
+      const omittedTrace = join(traceRoot, "omitted.log");
+      const omitted = runCliIn(repoRoot, ["distribution", "sync-plan", "--json"], {
+        ...process.env,
+        GIT_TRACE: omittedTrace,
+      });
+      expect(parseCliJson(omitted).export.sourceTag).toBe(head.stdout.trim());
+      expect(readFileSync(omittedTrace, "utf8")).toMatch(/rev-parse --short HEAD/);
+
+      const omittedPlan = parseCliJson(runCliIn(repoRoot, ["distribution", "plan", "--json"]));
+      expect(omittedPlan.export.sourceTag).toBe(head.stdout.trim());
+      expect(omittedPlan.readiness.contracts.tagPin).toBe(
+        `github:unison-ai-product/UT-TDD_AGENT-HARNESS-Pack#${head.stdout.trim()}`,
+      );
+      expect(omittedPlan.readiness.rollback.commands[0]).toBe(`git switch ${head.stdout.trim()}`);
+    } finally {
+      removeTestTree(traceRoot);
+    }
+  });
+
   it("exposes a non-destructive Pack repository sync plan", () => {
     const run = runCliIn(repoRoot, [
       "distribution",
