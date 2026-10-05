@@ -85,18 +85,18 @@ status: confirmed
 github_issue_id: 418
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:ef2f4ef408492896f8e90a6329d832cf
-  command_id: plan-revise:issue-418:agent-e2e-review-custody:plan:r10:fd70e80d4cb1
-  admitted_at: 2026-10-01T10:35:00.781Z
-  source_digest: sha256:64882dd8b638f55b7f13e2373fff91214f0fb37dbfc71791e054f8d8663ded9d
-  decision_digest: sha256:aeb8ecc8e3b937b704aebbf625099b7a3f01cbd2943c43b75aeab0948f76b8f3
-  receipt_digest: sha256:abd4c8a453650952e54a4905852b38faefc38cceebbb39d2789e63859bc84ad8
+  receipt_id: certificate:03da9b9ebd7d88e33763afa6376d8dc0
+  command_id: plan-revise:issue-418:custody-path-requestdigest:rechain-1:r11:145c93e5c351
+  admitted_at: 2026-10-05T03:53:12.902Z
+  source_digest: sha256:691775ce8aa44fc963f8546e9acaba04d40984c50ab0d6d001ff7e508366fb6a
+  decision_digest: sha256:a937e3fc6501f0da535f7f950df853e97dbb4a597604b647998d049e1a241266
+  receipt_digest: sha256:bdb52fbfcff39d8fd8c255eb5894271e176fa88b838e897183645ea06a99aa24
   binding:
     path: docs/plans/PLAN-L7-531-pack-internal-canary-smoke.md
     plan_id: PLAN-L7-531-pack-internal-canary-smoke
     asset_id: plan:44f79788376b81c225ce5913fddbc48f
-    revision: 10
-    content_digest: sha256:64882dd8b638f55b7f13e2373fff91214f0fb37dbfc71791e054f8d8663ded9d
+    revision: 11
+    content_digest: sha256:691775ce8aa44fc963f8546e9acaba04d40984c50ab0d6d001ff7e508366fb6a
   route:
     signal: feature_addition
     mode: add-feature
@@ -114,15 +114,14 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-531-pack-internal-canary-smoke
-    target_revision: 10
+    target_revision: 11
     phase: forward_merge
-  escape_reason: "PR #812 closing review r1 (Codex Sol) の FLAG (receipt d0f95e4b)
-    の是正。実 provider review の custody・authority・隔離条件 (専用 consumer repository
-    ut-tdd-consumer-canary の既存 PR、consumer canonical project root、live-dispatch
-    / live-consume / claude --role blind-reviewer 経路、subject の blob oid・SHA-256
-    再計算 join、AT-DIST-003 実 provider 段階に限る network/auth 例外 (PO 承認 PR #812 comment
-    5929420300、AT-DIST-002 へ非適用)) を §3.6.9 / §6.1 に凍結し §3.6.8-1 の未確定扱いを解消する
-    bounded 契約改訂。AT-DIST-002 の内容、gate の判定規則、generates は変更しない (docs のみ)。"
+  escape_reason: "Issue 418 / 676: §3.6.9 item 5 の request / verdict / receipt の
+    path key を、実 producer の reviewRequestDigest 導出
+    (requests|receipts/<requestDigest>.json、verdicts/<requestDigest>/attempts/a\
+    ttempt-<n>/verdict.txt) へ局所訂正する。reviewRevision は request 内の別
+    identity。custody・authority・経路・隔離条件の方式は変えない (docs のみ、#676 comment
+    5986566818)"
 ---
 
 # PLAN-L7-531: Pack-only internal canary smoke (Windows/Linux)
@@ -471,9 +470,13 @@ bind mount しない disposable Linux container/VM (§6.1) の双方で取る。
 4. **経路**: `ut-tdd review live-dispatch` (実 PR / head の検証つき) → `ut-tdd review live-consume`
    (実 provider への委譲と PR コメント投稿) の経路を使い、reviewer は
    `ut-tdd claude --role blind-reviewer` の正規委譲経路で起動する。raw `claude` / raw `codex exec` を使わない。
-5. **verdict と receipt の保存**: verdict は consumer の
-   `.ut-tdd/review/verdicts/<review-revision>/attempts/attempt-<n>/verdict.txt`、receipt は
-   `.ut-tdd/review/receipts/<review-revision>.json` に残す。
+5. **verdict と receipt の保存**: request は consumer の `.ut-tdd/review/requests/<requestDigest>.json`、verdict は
+   `.ut-tdd/review/verdicts/<requestDigest>/attempts/attempt-<n>/verdict.txt`、receipt は
+   `.ut-tdd/review/receipts/<requestDigest>.json` に残す。`<requestDigest>` は正規 producer の `reviewRequestDigest(request)`
+   (`src/feedback/review-attestation.ts:113` / `:553`、verdict path の検査は `src/cli/delegation.ts:169`) が導出する 64 桁 hex である。
+   `reviewRevision` (`rv1-...`) は request の中に記録される別の識別子で、path の key には使わない。
+   (rev 11 の局所訂正: rev 10 は path の key を `<review-revision>` と書いていたが、実 producer の導出と食い違っていた。
+   #676 comment 5986566818 の指摘による。方式は変えない。)
 6. **subject の再計算 join**: receipt が指す subject を、consumer 側で subject path の git blob oid と
    content SHA-256 を**再計算**して request の revision / digest と突き合わせる。receipt に文書 digest の
    欄があることを**仮定しない** (join は再計算値と request / receipt の revision 一致で行う)。
