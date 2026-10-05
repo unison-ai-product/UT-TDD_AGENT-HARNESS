@@ -6052,65 +6052,81 @@
     {
       "sequence": 379,
       "previous_record_digest": "sha256:a298e74a7c0bd2f1172a2cc0cc4f4262d65d21c1bd752ee25066bc50e5c706ac",
-      "record_digest": "sha256:d4402950096794e624b39f9dbe79cb549bcfe8485ceebfee494c0c56ec4d78ff",
-      "command_id": "plan-draft:issue-815:report-write-security-contract:1",
-      "receipt_id": "certificate:5f220827032c0bb4525e9080af8c695f",
-      "receipt_digest": "sha256:1c2d5b6cf6ea5d308fa7773de8393d7df47959fdeac2af61c7deb63121615ad8",
-      "decision_digest": "sha256:06e83aa4fbe546dad62ca13ab97577b8b6f7b02c0a3e08e50c0ab76e841fe35b",
+      "record_digest": "sha256:735b57870e3193dc32bb4fa3ca373f39daad658d75197938d1b4dd870f94aeb4",
+      "command_id": "plan-revise:issue-807:projection-tail-rechain:p628:r12:3dbb4bbee2a3",
+      "receipt_id": "certificate:794c57b3a5d655168b4b81816d101e02",
+      "receipt_digest": "sha256:b7c3ebef064e77d81be97dde58c2f8aac41c7e0480470fa0d5ffa6cf1027dad7",
+      "decision_digest": "sha256:3b174ed5d02eb4077e63abfca33d1fe380e150721e9fb61dd2d4936cfbb9c158",
       "binding": {
-        "path": "docs/plans/PLAN-L6-106-report-write-security-contract.md",
-        "plan_id": "PLAN-L6-106-report-write-security-contract",
-        "asset_id": "plan:5f220827032c0bb4525e9080af8c695f",
-        "revision": 1,
-        "content_digest": "sha256:c0846f0264b6974e37141a8ca9f1f81429d497143de84974853b8be62cab1382"
+        "path": "docs/plans/PLAN-L7-628-pack-consumer-runtime-release-install.md",
+        "plan_id": "PLAN-L7-628-pack-consumer-runtime-release-install",
+        "asset_id": "plan:cd11a1885b1c948d89519002a2cec009",
+        "revision": 12,
+        "content_digest": "sha256:6db6881e6d3a8f53a611c091426aa81eee4ba614065b3facf76d47af57c4bbf6"
       }
     },
     {
       "sequence": 380,
-      "previous_record_digest": "sha256:d4402950096794e624b39f9dbe79cb549bcfe8485ceebfee494c0c56ec4d78ff",
-      "record_digest": "sha256:41f1c074c83330911611a94231dc0b847559753aa44383ce092fb106b69d2b24",
-      "command_id": "plan-revise:issue-815:report-security:sol-r1-fix:r2:6a490cbc67b1",
-      "receipt_id": "certificate:9b6afb8ec4faac1add2a3fcc590960eb",
-      "receipt_digest": "sha256:933b9372b9f70e94587508e69404b461a27a9c7d4bdd78470c6ef23783a704d3",
-      "decision_digest": "sha256:8b89892075eb4e989ebf256442b80a24d620e22779398ae563be0b15e07837d7",
+      "previous_record_digest": "sha256:735b57870e3193dc32bb4fa3ca373f39daad658d75197938d1b4dd870f94aeb4",
+      "record_digest": "sha256:fe97d5bc3e652c892fc0281780a41f6b33a9114a25aa8c8d0ce05dda91fd08a1",
+      "command_id": "plan-revise:issue-807:projection-tail-rechain:p628:r13:dcdccd30df8a",
+      "receipt_id": "certificate:2c16cb9810066f9f12e51a65e3d58e3f",
+      "receipt_digest": "sha256:8f917ebf4847f0cacfe55ec6866d48bed5a655ac8dc812a7ca630110d652744e",
+      "decision_digest": "sha256:03e923732f1c827416e2cc6ed5332e50ee8a3142304f9534f8b4e1587625ad0b",
       "binding": {
-        "path": "docs/plans/PLAN-L6-106-report-write-security-contract.md",
-        "plan_id": "PLAN-L6-106-report-write-security-contract",
-        "asset_id": "plan:5f220827032c0bb4525e9080af8c695f",
-        "revision": 2,
-        "content_digest": "sha256:77cf40c2e212ef89380ef1ebf7f6fd46d9293b3120546bcff0dd3ff2ec97c6d9"
+        "path": "docs/plans/PLAN-L7-628-pack-consumer-runtime-release-install.md",
+        "plan_id": "PLAN-L7-628-pack-consumer-runtime-release-install",
+        "asset_id": "plan:cd11a1885b1c948d89519002a2cec009",
+        "revision": 13,
+        "content_digest": "sha256:3150182ce447bbeb69eba5bb792f45897d80b54eae3f4c66c4df1e87eaf2e142"
       }
     },
     {
       "sequence": 381,
-      "previous_record_digest": "sha256:41f1c074c83330911611a94231dc0b847559753aa44383ce092fb106b69d2b24",
-      "record_digest": "sha256:5d90615e6579d6cf7663057c1ff757f8587d1f3bd0cd34c12a05e0373d469c6e",
-      "command_id": "plan-revise:issue-815:report-security:sol-r2-fix:r3:61422423e460",
-      "receipt_id": "certificate:0db2f808ec6428ac3733eee1842e0518",
-      "receipt_digest": "sha256:62db91dab4b79232c6094db28701d473f148aaedde025ad96c7b05d907d699f8",
-      "decision_digest": "sha256:69115f61930b9d8e679dff7b6a4ac0f7e3e27022ef0e4a8f852a3db64e11c8a4",
+      "previous_record_digest": "sha256:fe97d5bc3e652c892fc0281780a41f6b33a9114a25aa8c8d0ce05dda91fd08a1",
+      "record_digest": "sha256:7717d741059cc29090f9209b0eb1aa79f162b1660ae44c952055293ca1d83e36",
+      "command_id": "plan-draft:issue-814:consumer-safe-upgrade-contract:rechain-1",
+      "receipt_id": "certificate:d3f0150857538128d3a0a791ff04b1be",
+      "receipt_digest": "sha256:b1ab758475600b77ca82cf7ddf088344a26a02ac70df6c051cb8b50e0159ba3b",
+      "decision_digest": "sha256:f4053860fd1cab60b09540cf5f1f5e8592ad433d823a3cfc18580984ed8002f2",
       "binding": {
-        "path": "docs/plans/PLAN-L6-106-report-write-security-contract.md",
-        "plan_id": "PLAN-L6-106-report-write-security-contract",
-        "asset_id": "plan:5f220827032c0bb4525e9080af8c695f",
-        "revision": 3,
-        "content_digest": "sha256:35bc9ab354d44ad2cc81ac3d6faeafebae2ecad79bdc3708fe05684da37fc6b2"
+        "path": "docs/plans/PLAN-L6-105-consumer-safe-upgrade-contract.md",
+        "plan_id": "PLAN-L6-105-consumer-safe-upgrade-contract",
+        "asset_id": "plan:d3f0150857538128d3a0a791ff04b1be",
+        "revision": 1,
+        "content_digest": "sha256:3f107208199bfa56f3df90f1128bd9240fad175acd12e2edd5668f61a1b7f7ba"
       }
     },
     {
       "sequence": 382,
-      "previous_record_digest": "sha256:5d90615e6579d6cf7663057c1ff757f8587d1f3bd0cd34c12a05e0373d469c6e",
-      "record_digest": "sha256:fae9be4cfb0ad611fa031cab0b03f17c53fcaaf49c28e043b6b288f416d66d96",
-      "command_id": "plan-revise:issue-815:report-security:sol-r3-fix:r4:66aceaa9ca00",
-      "receipt_id": "certificate:d4dfd879ea613e33d4a8a03421fde759",
-      "receipt_digest": "sha256:c947f87c2c0d61b2f7dd0605a0dcb42b02d23e4381df0ae6a7b3a6301a7c779d",
-      "decision_digest": "sha256:602a9fb59ebed2f1560baa795467f84f25724c60772171c2d006cd7f14e26b10",
+      "previous_record_digest": "sha256:7717d741059cc29090f9209b0eb1aa79f162b1660ae44c952055293ca1d83e36",
+      "record_digest": "sha256:d1b6b9042236c826e4fbd0009814ed87fd543b280734fadcb6c19ab6d36e8528",
+      "command_id": "plan-revise:issue-814:safe-upgrade:rechain:sol-r1-fix:r2:6125f56a8c7d",
+      "receipt_id": "certificate:eb9c5a82dbebcb1372b7c9407d50b5e4",
+      "receipt_digest": "sha256:e82b1e69b6fc2327ebdfe4596bc634ca32d4eaff37cb097cb4753dc5f59c83f8",
+      "decision_digest": "sha256:a26e7d40660000b52b4bbae5e95e6ff08d32cb435ff8f402a20597e1341166ec",
       "binding": {
-        "path": "docs/plans/PLAN-L6-106-report-write-security-contract.md",
-        "plan_id": "PLAN-L6-106-report-write-security-contract",
-        "asset_id": "plan:5f220827032c0bb4525e9080af8c695f",
-        "revision": 4,
-        "content_digest": "sha256:68d8b3039dcfdee4d05283c25b6a6c400147e2e8150222827d42c1e995744507"
+        "path": "docs/plans/PLAN-L6-105-consumer-safe-upgrade-contract.md",
+        "plan_id": "PLAN-L6-105-consumer-safe-upgrade-contract",
+        "asset_id": "plan:d3f0150857538128d3a0a791ff04b1be",
+        "revision": 2,
+        "content_digest": "sha256:e9947dcf58727a7dd54d338069d52cd5447254f82df30a4ef39d56a09b1c8fa7"
+      }
+    },
+    {
+      "sequence": 383,
+      "previous_record_digest": "sha256:d1b6b9042236c826e4fbd0009814ed87fd543b280734fadcb6c19ab6d36e8528",
+      "record_digest": "sha256:1574afd4766e841fc7f26501fb698dfcdbcaebbc8db25d72b7a072171ca912fb",
+      "command_id": "plan-revise:issue-814:safe-upgrade:rechain:sol-r2-fix:r3:a77c02da6f65",
+      "receipt_id": "certificate:f872153b207a89032edc1a33f8ac7bf7",
+      "receipt_digest": "sha256:a2d007e6e19545ceea1689221fe63b0c51b25cd6d44ada4a8a9a2e9f34122aad",
+      "decision_digest": "sha256:319a93f5f1de1944a54b873206e089a35f2366ab0666ec8253aa9a97f2ca1a54",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-105-consumer-safe-upgrade-contract.md",
+        "plan_id": "PLAN-L6-105-consumer-safe-upgrade-contract",
+        "asset_id": "plan:d3f0150857538128d3a0a791ff04b1be",
+        "revision": 3,
+        "content_digest": "sha256:cbf4a130044faa7201151435796b6047b9a3aed26c2b01d5c4ef59c03fc6dc47"
       }
     }
   ]
