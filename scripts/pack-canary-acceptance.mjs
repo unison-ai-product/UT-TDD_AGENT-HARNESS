@@ -18,6 +18,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { tmpdir } from "node:os";
 
 export const CANARY_TAG = "v0.2.0-canary.2";
+export const AGENT_E2E_TAG = "v0.2.0-canary.3";
 export const PACK_RELEASE_PREFIX =
   "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS-Pack/releases/tag/";
 export const SOURCE_ISSUE_PREFIX =
@@ -107,7 +108,7 @@ export function verifyReleaseDirectory(releaseDir, publishRecord) {
 }
 
 export function buildInstallerInvocation(releaseDirectory, anchorDigest, tag = CANARY_TAG) {
-  if (tag !== CANARY_TAG && tag !== "v0.0.0-canary.0")
+  if (tag !== CANARY_TAG && tag !== AGENT_E2E_TAG && tag !== "v0.0.0-canary.0")
     throw new Error("acceptance-tag-not-canary-2-or-offline-fixture");
   const args = [
     join(releaseDirectory, `${tag}.ut-tdd.mjs`),
@@ -146,9 +147,15 @@ function parseArgs(argv) {
 export function main(argv = process.argv.slice(2), deps = {}) {
   const now = deps.now ?? (() => new Date().toISOString());
   const run = deps.spawnSync ?? spawnSync;
-  const tag = deps.fixtureTag === "v0.0.0-canary.0" ? deps.fixtureTag : CANARY_TAG;
-  if (deps.fixtureTag && tag !== deps.fixtureTag) throw new Error("fixture-tag-not-allowed");
   const parsed = parseArgs(argv);
+  const requestedTag = args["--tag"] ?? CANARY_TAG;
+  if (args["--tag"] && requestedTag !== CANARY_TAG && requestedTag !== AGENT_E2E_TAG)
+    throw new Error("acceptance-tag-not-exact");
+  if (deps.fixtureTag && deps.fixtureTag !== "v0.0.0-canary.0")
+    throw new Error("fixture-tag-not-allowed");
+  const tag = deps.fixtureTag ?? requestedTag;
+  if (deps.fixtureTag && args["--tag"] && deps.fixtureTag !== args["--tag"])
+    throw new Error("fixture-tag-not-allowed");
   if (parsed.phase === "verify") return verifySmoke(parsed, { now, run });
   const args = parsed.values;
   const recordBytes = readFileSync(args["--record"]);
@@ -276,6 +283,9 @@ function runProductGit(run, consumerRoot, args) {
 
 function productHead(run, consumerRoot) {
   const head = runProductGit(run, consumerRoot, ["rev-parse", "HEAD"]);
+  const expectedTag = args["--tag"] ?? CANARY_TAG;
+  if (expectedTag !== CANARY_TAG && expectedTag !== AGENT_E2E_TAG)
+    throw new Error("acceptance-tag-not-exact");
   if (!commitPattern.test(head)) throw new Error("consumer-head-invalid");
   return head;
 }
@@ -291,7 +301,7 @@ function verifySmoke(parsed, { now, run }) {
     throw new Error("verify-cwd-must-be-distinct-from-consumer-root");
   const evidencePath = resolve(args["--evidence"]);
   const evidence = JSON.parse(readFileSync(evidencePath, "utf8"));
-  verifyInstallEvidence(evidence, consumerRoot, parsed.removedPaths);
+  verifyInstallEvidence(evidence, consumerRoot, parsed.removedPaths, expectedTag);
   if (productHead(run, consumerRoot) !== evidence.consumer_head)
     throw new Error("consumer-head-drift-since-install");
   for (const path of parsed.removedPaths)
@@ -479,10 +489,12 @@ function isInside(root, path) {
 }
 
 /** Bind the restart proof to the exact installed consumer and removed Release directory. */
-export function verifyInstallEvidence(evidence, consumerRoot, removedPaths) {
+export function verifyInstallEvidence(evidence, consumerRoot, removedPaths, expectedTag = CANARY_TAG) {
+  if (expectedTag !== CANARY_TAG && expectedTag !== AGENT_E2E_TAG)
+    throw new Error("install-evidence-not-verifiable");
   if (evidence?.schema_version !== "ut-tdd.pack-canary-acceptance/v1" ||
       evidence.phase !== "installed-awaiting-clean-restart" || evidence.setup_exit_code !== 0 ||
-      evidence.tag !== CANARY_TAG || evidence.consumer_root !== consumerRoot ||
+      evidence.tag !== expectedTag || evidence.consumer_root !== consumerRoot ||
       typeof evidence.release_directory !== "string" || !isAbsolute(evidence.release_directory) ||
       typeof evidence.consumer_head !== "string" || !commitPattern.test(evidence.consumer_head))
     throw new Error("install-evidence-not-verifiable");

@@ -332,6 +332,28 @@ describe("manual canary acceptance publish-record boundary", () => {
     expect(() => verifyInstallEvidence(evidence, consumer, [source, release, consumer])).toThrow(
       "verify-removed-paths-not-bound-to-install",
     );
+    const canary3 = { ...evidence, tag: AGENT_E2E_TAG };
+    expect(() => verifyInstallEvidence(canary3, consumer, [source, release], AGENT_E2E_TAG)).not.toThrow();
+    expect(() => verifyInstallEvidence(canary3, consumer, [source, release]))
+      .toThrow("install-evidence-not-verifiable");
+    expect(() => verifyInstallEvidence({ ...evidence, tag: "v0.2.0-canary.4" }, consumer, [source, release]))
+      .toThrow("install-evidence-not-verifiable");
+  });
+
+  it("U-ST-PACKCANARY-015: accepts only the exact canary.3 installer tag in the standard runner", () => {
+    const anchor = sha("canary.3 anchor");
+    expect(buildInstallerInvocation("C:/c3-release", anchor, AGENT_E2E_TAG)).toEqual([
+      `C:/c3-release/${AGENT_E2E_TAG}.ut-tdd.mjs`,
+      "setup", "--solo", "--consumer-runtime-release", "C:/c3-release",
+      "--expected-consumer-digest", anchor,
+    ]);
+    expect(buildInstallerInvocation("C:/c2-release", anchor)).toEqual([
+      `C:/c2-release/${CANARY_TAG}.ut-tdd.mjs`,
+      "setup", "--solo", "--consumer-runtime-release", "C:/c2-release",
+      "--expected-consumer-digest", anchor,
+    ]);
+    expect(() => buildInstallerInvocation("C:/other-release", anchor, "latest"))
+      .toThrow("acceptance-tag-not-canary-2-or-offline-fixture");
   });
 
   it("U-ST-PACKCANARY-009: runner loads without source node_modules", () => {
