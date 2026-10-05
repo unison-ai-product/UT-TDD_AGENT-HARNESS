@@ -6512,6 +6512,22 @@
         "revision": 1,
         "content_digest": "sha256:8ef8158192aceb2c1fe603f2006bf4adbdb32f0ad715e68d85053a6e7666e9cc"
       }
+    },
+    {
+      "sequence": 408,
+      "previous_record_digest": "sha256:7659269fffcd1333d7b525ce22fd5fdb55e6b8ed54871047fbf730778b41caf8",
+      "record_digest": "sha256:377a1301add993be8e0dbc1d7dbc8d08c641e7e172295f24724bb8990faff1e0",
+      "command_id": "plan-revise:issue-789:legacy-57:2",
+      "receipt_id": "certificate:1c8c75f90e37d3c3d9727d8b0e488766",
+      "receipt_digest": "sha256:4be03e94a65b189dc09a8b8e379b609c19ef17a88e5ee9e63321d22b79bdb0d6",
+      "decision_digest": "sha256:d5bba9e81269dbfdce734743d5382157a8153d40b911f12db6f2f0ff454e70fd",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-57-token-telemetry-tracker.md",
+        "plan_id": "PLAN-L7-57-token-telemetry-tracker",
+        "asset_id": "plan:legacy:c989324b0cd11472a30274933e6db786ea6bc2bfdc82fdd2880d03e1c174039a",
+        "revision": 2,
+        "content_digest": "sha256:4e5485819b2df9785db0c5448eea90cd0f247bd1f0d2f7a8cbdc90ca2907186f"
+      }
     }
   ]
 }
