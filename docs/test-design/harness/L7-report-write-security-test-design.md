@@ -29,6 +29,7 @@ PR #820 の Sol r1 FLAG 3 件に対し、PLAN rev 2 と合わせて次を改訂�
 
 - 失敗をプレビュー前 (F1) とプレビュー後 (F2) に分け、F2 の期待値と、sink が一部を書いてから throw する fixture を加えた (§3.2、015)。
 - r2 の指摘で、F2 の期待を「報告出力 0」から PLAN rev 3 §3.3 1b の (i)-(iii) に改め、commit 後の throw と discard 途中の throw の fixture (e)-(g) を加えた。staging は C-release に帰属させた (§3.1)。
+- r3 の指摘で、戻り値の release / staging を例外の有無から推定せず観測した実状態で報告し、観測失敗時に限り unknown とする PLAN rev 4 に合わせ、fixture (g) の期待の根拠を観測に改め、readBack / inspectStaging の失敗 (h) (i) を加えた。
 - 非 special scheme の URL host (N2b) と URL 外の bare IPv6 (R-U5)、`home.arpa` 自体の陽性・陰性を加えた (§3.3、009)。
 
 ## 2. fixture 規約
@@ -52,7 +53,7 @@ PR #820 の Sol r1 FLAG 3 件に対し、PLAN rev 2 と合わせて次を改訂�
 | C-log | `console.*` と logger の spy |
 | C-exc | 呼出し元へ伝わった例外の message / stack の捕捉 (期待は「throw されない」) |
 | C-preview | 注入した `previewSink` の受け取った bytes (全 chunk の連結) |
-| C-release | 注入した `releaseSink` の **報告先** の実状態 (不在 / bytes) と **staging** の実状態 (不在 / bytes) を別々に記録する。T3 で、報告先が不在か全文と byte 同一のどちらかであること、staging と報告先の bytes が検査済み全文の部分列であること、戻り値の `release` / `staging` の報告が実状態と一致することを観測する |
+| C-release | 注入した `releaseSink` の **報告先** の実状態 (不在 / bytes) と **staging** の実状態 (不在 / bytes) を別々に記録する。T3 で、報告先が不在か全文と byte 同一のどちらかであること、staging と報告先の bytes が検査済み全文の部分列であること、戻り値の `release` / `staging` が、観測成功時は実状態と一致し、`unknown` は double の `readBack` / `inspectStaging` が例外を出した場合に限られることを観測する |
 
 観測時点: **T1** = stage 4 の判定が出た直後 (確認プレビュー前)。**T2** = 確認の入力を読み終えた直後。
 **T3** = `buildReport` が戻った後。共有のイベントログ (`stage1..stage4 / preview / readLine / release`) へ全イベントを
@@ -64,20 +65,24 @@ PR #820 の Sol r1 FLAG 3 件に対し、PLAN rev 2 と合わせて次を改訂�
 |---|---|---|---|---|---|
 | V: 検査 (stage 1-4) で違反 | 全 channel 0 | 全 channel 0 | 0 | 0 | 0 |
 | X: stage 1-4・scanner・assemble の例外 (位相 F1) | 全 channel 0 | 全 channel 0 | 0 | 0 | 0、throw されない |
-| XF2: previewSink / readLine / releaseSink の例外 (位相 F2、一部書き込み後・commit 後・discard 途中の throw を含む) | 全 channel 0 | — | 検査済み全文の先頭部分 (0 byte から全文まで) | 報告先は不在か全文と byte 同一、staging は不在か全文の部分列、どちらも戻り値の報告と一致 | 0、throw されない |
+| XF2: previewSink / readLine / releaseSink の例外 (位相 F2、一部書き込み後・commit 後・discard 途中の throw を含む) | 全 channel 0 | — | 検査済み全文の先頭部分 (0 byte から全文まで) | 報告先は不在か全文と byte 同一、staging は不在か全文の部分列、どちらも、観測成功時は戻り値の報告と一致し、観測失敗時に限り `unknown` | 0、throw されない |
 | D: 通過、確認が `yes` 以外 | 全 channel 0 | C-preview に確定全文のみ | 確定全文 (確認プレビューは許可) | 0 | 0 |
 | NI: 通過、非対話 | 全 channel 0 | 全 channel 0 | 0 | 0 | 0 |
 | OK: 通過、`yes` | 全 channel 0 | C-preview に確定全文 | 確定全文 | 確定全文と同一 bytes | 0 |
 
-- XF2 の fixture と期待 (全て throw されず失敗の戻り値。C-preview は検査済み全文の先頭部分だけ):
-  - (a) previewSink が全文の半分を書いて throw: readLine / releaseSink は呼ばれない。報告先 `absent`、staging `none`。
-  - (b) readLine が throw: releaseSink は呼ばれない。報告先 `absent`、staging `none`。
-  - (c) releaseSink.write が全文の半分を staging に書いて throw: commit は呼ばれず discard が 1 回呼ばれる。報告先 `absent`、staging `none`。
-  - (d) releaseSink.commit が rename の前に throw: 報告先 `absent`、discard 後 staging `none`。
-  - (e) releaseSink.commit が rename の後に throw (double で再現): readBack により報告先 `complete` と報告され、報告先の bytes が全文と同一。
-  - (f) (c) に加えて discard が staging を消す前に throw: staging `residual` と報告され、実 staging の bytes が全文の部分列。
-  - (g) (c) に加えて discard が staging を消した後に throw: staging `none` と報告され、実 staging が不在。
-  - 共通: 戻り値の `release` / `staging` が double の実状態と一致しない実装は Red。報告先に途中までの bytes が見える実装 (commit を原子的にしない) は Red。
+- XF2 の fixture と期待 (全て throw されず失敗の戻り値。C-preview は検査済み全文の先頭部分だけ。`readBack` / `discard` / `inspectStaging` は
+  この順で各 1 回呼ばれ、途中の例外で打ち切られない。ただし (a) (b) では `write` 前なので discard は no-op の double でよい):
+  - (a) previewSink が全文の半分を書いて throw: readLine / write は呼ばれない。`release: absent`、`staging: none`。
+  - (b) readLine が throw: write は呼ばれない。`release: absent`、`staging: none`。
+  - (c) releaseSink.write が全文の半分を staging に書いて throw: commit は呼ばれない。`release: absent`、discard 後 `staging: none`。
+  - (d) releaseSink.commit が rename の前に throw: `release: absent`、discard 後 `staging: none`。
+  - (e) releaseSink.commit が rename の後に throw (double で再現): `release: complete`、報告先の bytes が全文と同一。
+  - (f) (c) に加えて discard が staging を消す前に throw: inspectStaging が実 staging を観測して `staging: residual`。実 staging の bytes は全文の部分列。
+  - (g) (c) に加えて discard が staging を消した後に throw: inspectStaging が観測して `staging: none` (例外の有無から残存を推定しない)。
+  - (h) (e) に加えて readBack が throw: `release: unknown`。discard と inspectStaging は呼ばれる。
+  - (i) (c) に加えて inspectStaging が throw: `staging: unknown`。
+  - 共通の Red 条件: 観測が成功したのに戻り値が double の実状態と食い違う。観測が成功したのに `unknown` を返す。readBack の例外で discard / inspectStaging
+    が呼ばれない。報告先に途中までの bytes が見える (commit が原子的でない)。throw が漏れる。
 - D の「`yes` 以外」: 空入力、EOF、`no`、`y`、`YES`、`yes ` (後置空白)、` yes` (前置空白)、`yes` に続く文字を
   含む入力。OK は `yes\n` と `yes\r\n` の両方。
 - イベント順序の期待: V では `stage1..` の途中で止まり `preview` / `readLine` / `release` が 1 件も無い。
@@ -205,7 +210,7 @@ test は、入力の既知値・path 変種・許可 env から**独立に**期�
 | CANDIDATE-U-RPTSEC-012 | 7 | §4.2。各段ちょうど 1 回、順序、通過データの byte 同一、stage 4 が stage 1 の結果を使わない | 回数・順序・データのいずれかが外れる |
 | CANDIDATE-U-RPTSEC-013 | 7 | §4.3 の mutation 行列。各段を seam で隔離したとき、専用 fixture だけが Red になり、記録した seam key と一致する | 外しても専用 fixture が Green、または他段の fixture が Red |
 | CANDIDATE-U-RPTSEC-014 | 8 | PII 規則を共有モジュールへ移した後も `tests/secret-scan-diff.test.ts` (bare remote 経由 e2e) が Green。endpoint 拡張規則が pre-push の判定を変えない | pre-push の挙動が変わる |
-| CANDIDATE-U-RPTSEC-015 | 1 | stage 1-4 の各 scanner と assemble で例外を注入すると §3.2 の X の行になる。previewSink・readLine・releaseSink (write / commit / discard の各時点の throw、§3.2 の XF2 fixture (a)-(g)) で例外を注入すると §3.2 の XF2 の行になる。どちらも throw されず、検査済み全文の部分列でない bytes がどの channel にも出ず、marker・件数も外部 0。XF2 では報告先が不在か全文と同一のどちらかで、戻り値の release / staging の報告が実状態と一致する | 例外時に throw が漏れる、検査済みでない bytes が出る、報告先に途中までの bytes が見える、または戻り値の release / staging が実状態と食い違う |
+| CANDIDATE-U-RPTSEC-015 | 1 | stage 1-4 の各 scanner と assemble で例外を注入すると §3.2 の X の行になる。previewSink・readLine・releaseSink (write / commit / discard / readBack / inspectStaging の各時点の throw、§3.2 の XF2 fixture (a)-(i)) で例外を注入すると §3.2 の XF2 の行になる。どちらも throw されず、検査済み全文の部分列でない bytes がどの channel にも出ず、marker・件数も外部 0。XF2 では報告先が不在か全文と同一のどちらかで、戻り値の release / staging は観測成功時に実状態と一致し、観測失敗時に限り unknown | throw が漏れる、検査済みでない bytes が出る、報告先に途中までの bytes が見える、観測成功時に戻り値が実状態と食い違う、観測成功時に unknown を返す、または readBack の例外で discard / inspectStaging が呼ばれない |
 | CANDIDATE-U-RPTSEC-016 | 7 | stage 1 専用 fixture (§4.1) | stage 1 を隔離して Green のまま |
 | CANDIDATE-U-RPTSEC-017 | 7 | stage 2 専用 fixture (§4.1) | stage 2 を隔離して Green のまま |
 | CANDIDATE-U-RPTSEC-018 | 7 | stage 3 専用 fixture (§4.1) | stage 3 を隔離して Green のまま |

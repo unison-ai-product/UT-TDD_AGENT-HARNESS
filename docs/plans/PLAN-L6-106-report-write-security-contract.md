@@ -47,18 +47,18 @@ status: draft
 github_issue_id: 815
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:0db2f808ec6428ac3733eee1842e0518
-  command_id: plan-revise:issue-815:report-security:sol-r2-fix:r3:61422423e460
-  admitted_at: 2026-10-05T01:38:42.841Z
-  source_digest: sha256:35bc9ab354d44ad2cc81ac3d6faeafebae2ecad79bdc3708fe05684da37fc6b2
-  decision_digest: sha256:69115f61930b9d8e679dff7b6a4ac0f7e3e27022ef0e4a8f852a3db64e11c8a4
-  receipt_digest: sha256:62db91dab4b79232c6094db28701d473f148aaedde025ad96c7b05d907d699f8
+  receipt_id: certificate:d4dfd879ea613e33d4a8a03421fde759
+  command_id: plan-revise:issue-815:report-security:sol-r3-fix:r4:66aceaa9ca00
+  admitted_at: 2026-10-05T01:47:44.045Z
+  source_digest: sha256:68d8b3039dcfdee4d05283c25b6a6c400147e2e8150222827d42c1e995744507
+  decision_digest: sha256:602a9fb59ebed2f1560baa795467f84f25724c60772171c2d006cd7f14e26b10
+  receipt_digest: sha256:c947f87c2c0d61b2f7dd0605a0dcb42b02d23e4381df0ae6a7b3a6301a7c779d
   binding:
     path: docs/plans/PLAN-L6-106-report-write-security-contract.md
     plan_id: PLAN-L6-106-report-write-security-contract
     asset_id: plan:5f220827032c0bb4525e9080af8c695f
-    revision: 3
-    content_digest: sha256:35bc9ab354d44ad2cc81ac3d6faeafebae2ecad79bdc3708fe05684da37fc6b2
+    revision: 4
+    content_digest: sha256:68d8b3039dcfdee4d05283c25b6a6c400147e2e8150222827d42c1e995744507
   route:
     signal: feature_addition
     mode: add-feature
@@ -73,10 +73,11 @@ admission_receipt:
     digest: sha256:610d332e78fa0b1893fd1299881eeef3237bd8801f5ba9364f5d70aec59c2c41
   reentry:
     target_plan_id: PLAN-L6-106-report-write-security-contract
-    target_revision: 3
+    target_revision: 4
     phase: forward_merge
-  escape_reason: "Issue 815: PR #820 Sol r2 の残り 1 件の是正 (位相 F2 の失敗契約を、検査済みでない bytes
-    を出さない・報告先は不在か全文と同一・戻り値が実状態と一致、の 3 点に言い直す)。段構成・SSoT・allowlist の方式は変えない"
+  escape_reason: "Issue 815: PR #820 Sol r3 の 2 件の是正 (戻り値の release / staging
+    を例外の有無から推定せず観測した実状態で報告し、観測失敗時に限り unknown とする。readBack → finally で discard →
+    inspectStaging)。段構成・SSoT・allowlist の方式は変えない"
 ---
 
 # PLAN-L6-106 (add-design): トラブル報告の書き込みセキュリティ契約 (S1)
@@ -184,15 +185,20 @@ scanner 本体は既存 (PLAN-L6-62 / L7-260) の成果を再利用する (複�
      だけ書く。`commit()` は staging を報告先へ移す **単一の原子的操作** (file なら同じ directory 内の rename。既存の報告先は
      上書きしない) とし、その操作の後に例外を出しうる処理を `commit` の中に置かない。`previewSink` / `readLine` が例外を
      出した場合と、確認が成立せず `commit` を呼ばない場合、報告先は「不在」である。`previewSink` が例外を出したら
-     `readLine` と `releaseSink` を呼ばない。
-   - (iii) **戻り値が実状態と一致する**: `write` / `commit` が例外を出したとき、`buildReport` は `commit` の成否を推定しない。
-     報告先を読み戻して状態を判定し、戻り値の `release` に `absent` / `complete` を報告する (`complete` の場合も戻り値は
-     失敗のまま。検査と確認を通った bytes なので漏えいではない)。続けて `discard()` を呼んで staging を消す。`discard` が
-     例外を出した場合や、消す前に throw した場合は、staging の消去を保証できない。その場合は戻り値の `staging` に
-     `residual` を報告する。staging に残り得るのは (i) により検査済み全文の部分列だけである。staging を消せた場合は
-     `staging: none` を報告する。
-   F2 の期待は「報告出力 0」ではなく、上記 (i)-(iii) である。報告先の不在と staging の消去は、それぞれ戻り値の報告と
-   実状態が一致することで観測する。
+     `readLine` と `releaseSink.write` / `commit` を呼ばない (観測用の `readBack` / `discard` / `inspectStaging` は (iii) のとおり呼ぶ)。
+   - (iii) **戻り値は観測した実状態を報告する**: `write` / `commit` / `previewSink` / `readLine` のどれかが例外を出したとき、
+     `buildReport` は成否を例外の有無から推定しない。次の手順を、途中の例外で打ち切らずに必ず最後まで行う。
+     1. `releaseSink.readBack()` で報告先を観測し、`release` に `absent` (不在) / `complete` (全文と byte 同一) を報告する。
+        `readBack` が例外を出した場合は `release: unknown` を報告する (公開済みか未公開か断定しない)。
+     2. `readBack` の成否にかかわらず (finally)、`releaseSink.discard()` を 1 回呼んで staging の消去を試みる。`discard` の例外は捕捉する。
+     3. `discard` の成否にかかわらず、`releaseSink.inspectStaging()` で staging を観測し、`staging` に `none` (不在) / `residual` (残存) を
+        報告する。`inspectStaging` が例外を出した場合は `staging: unknown` を報告する。
+     `unknown` は観測そのものが失敗したときだけ使い、観測できた場合は実状態と一致しなければならない。`complete` / `unknown` の場合も
+     戻り値は失敗のままとする。報告先・staging に残り得るのは (i)・(ii) により検査済み全文 (またはその部分列) だけである。
+     `previewSink` / `readLine` の例外では `write` を呼んでいないので、報告先 `absent`・staging `none` が観測されるはずで、
+     その場合も同じ手順で観測して報告する。
+   F2 の期待は「報告出力 0」ではなく、上記 (i)-(iii) である。戻り値の `release` / `staging` は、観測が成功した場合は実状態と一致し、
+   観測が失敗した場合に限り `unknown` になる。
 2. **検査通過後、確認が成立しない場合** (`yes` 以外の入力・空入力・EOF): 確認プレビューは表示済みでよいが、
    報告出力は 0 byte。表示済みの全文は検査済みの全文に限る。
 3. **非対話実行** (TTY なし、確認入力なし): 確認の相手がいないため、確認プレビューも報告出力も 0。
@@ -339,6 +345,10 @@ commit の後の throw や discard の失敗を考えると保証できない約
 (iii) 戻り値の release / staging の報告が実状態と一致する (readBack で判定)。§3.1 の「全 channel 0」は F1 に限定し、
 staging を報告出力 sink の channel に帰属させた。
 
+rev 4 (PR #820 Sol r3 の 2 件の是正、2026-10-05、Claude Opus): staging の報告を例外の有無から推定していた点と、readBack 自体の失敗が
+未定義だった点を直した。(iii) を「観測した実状態を報告する」に改め、readBack → finally で discard → inspectStaging の順を打ち切らずに
+行い、観測が失敗した場合に限り `unknown` を返す契約にした (§3.3、§3.8、AC1)。
+
 ### 3.8 関数仕様 (function-spec)
 
 関数名は契約上の名前で、`src/lint/` と `src/report/` に置く。実装 PR は名前と挙動を本節から変えない。
@@ -351,7 +361,7 @@ staging を報告出力 sink の channel に帰属させた。
 | `redactPaths(text, ctx)` (stage 2) | text + 既知値 (home / cwd / project root / project 名 / remote) → 置換後 text | なし | §3.5.1 の置換だけを行う。置換後の text に既知値と home 形式 path が残らない |
 | `filterEnv(env, allowlist, ctx)` (stage 3) | env + allowlist → 許可 key の `KEY=VALUE` 行 (key の ASCII 昇順) | なし | allowlist 外は値を読まず捨てる。許可 key の値は scan と `redactPaths` を通す |
 | `finalLeakCheck(assembled, ctx)` (stage 4) | 組み立て後の全文 → 判定 | なし | stage 1 の関数を再利用してよいが、**stage 1 の結果を参照しない**独立の呼出しである。入力は確認・出力へ渡す bytes と同一 |
-| `confirmAndRelease(bytes, io)` (stage 5) | 検査済み bytes + `{ interactive, previewSink, readLine, releaseSink: { write, commit, discard, readBack } }` → 結果 (`release: absent | complete`、`staging: none | residual` を含む) | previewSink への書き込みと releaseSink の staging / commit / discard / readBack だけ | 非対話なら何も書かない。`yes` 完全一致のときだけ releaseSink へ**同じ bytes** を write して commit する。commit は単一の原子的操作で、その後に例外を出しうる処理を持たない。write / commit の例外では readBack で報告先の状態を判定してから discard を呼び、戻り値の release / staging を実状態と一致させる (§3.3 1b)。迂回用の引数・env を読まない |
+| `confirmAndRelease(bytes, io)` (stage 5) | 検査済み bytes + `{ interactive, previewSink, readLine, releaseSink: { write, commit, discard, readBack, inspectStaging } }` → 結果 (`release: absent | complete | unknown`、`staging: none | residual | unknown` を含む) | previewSink への書き込みと releaseSink の staging / commit / discard / readBack / inspectStaging だけ | 非対話なら何も書かない。`yes` 完全一致のときだけ releaseSink へ**同じ bytes** を write して commit する。commit は単一の原子的操作で、その後に例外を出しうる処理を持たない。F2 の例外では §3.3 1b (iii) の手順 (readBack → finally で discard → inspectStaging) を途中で打ち切らずに行い、観測した状態 (観測失敗時は unknown) を返す。迂回用の引数・env を読まない |
 | `buildReport(input, io, stages?)` (orchestrator) | `{ text, env }` + io → `{ ok: true, bytes } \| { ok: false, code, markers, count }` | io の 2 sink のみ | 各 stage を**ちょうど 1 回**、§3.1 の順に呼ぶ。違反・例外で throw せず、失敗の戻り値を返す。`stages` は検査を個別に隔離する test seam で、CLI / env / 設定から設定できない |
 
 組み立て (`assemble`): 暫定の全文 layout は `text2 = redactedText` に、env が空でなければ改行 1 つと
@@ -369,8 +379,9 @@ byte 同一。報告出力 = stage 5 が受けた bytes。
    例外文言 / 確認プレビュー sink / 報告出力 sink) への書き込みが 0。marker と件数も外部へ出ず、検出値が現れない。
    位相 F2 (プレビュー後) の例外では、throw されず、どの channel にも検査済み全文の部分列でない bytes が出ない。確認プレビュー
    sink は検査済み全文の先頭部分だけを持つ。報告先は不在か全文と byte 同一のどちらかで、途中まで書かれた状態にならない。
-   戻り値の `release` / `staging` の報告は実状態と一致する。sink が一部を書いてから throw する場合、commit の後に throw する
-   場合、discard が消す前に throw する場合も同じ。
+   戻り値の `release` / `staging` は、観測が成功した場合は実状態と一致し、観測が失敗した場合 (`readBack` / `inspectStaging` の例外)
+   に限り `unknown` になる。discard は観測の成否にかかわらず 1 回試みる。sink が一部を書いてから throw する場合、commit の後に
+   throw する場合、discard が消す前・後に throw する場合、readBack / inspectStaging が throw する場合も同じ。
 2. 免除語 (dummy / example / fake 等) を含む行でも、報告経路では credential が検出される。既存の repo scan の挙動は不変。
 3. 許可外 env key (`GH_*` / `GITHUB_*` と、値が無害な未知 key を含む) の値が出力に現れない。許可 key でも値に secret があれば fail-close。
 4. Windows 形式と Linux 形式の path の全変種が出力に現れず、報告は成立する (placeholder へ置換されている)。
