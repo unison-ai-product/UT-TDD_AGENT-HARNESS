@@ -42,18 +42,18 @@ status: draft
 github_issue_id: 711
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:d33ed5411395d752b093e4ce51180a1e
-  command_id: plan-draft:issue-711:rechain-verifier:reverse:1
-  admitted_at: 2026-10-05T09:49:09.830Z
-  source_digest: sha256:770579f31d7a1bf9575c1b1c1744d9726a897f47479a071ed87b30cfd7df1b15
-  decision_digest: sha256:b85321f68626c44d62612c1381e6ddbda01e63f2c21a2d0c697b13539675ad79
-  receipt_digest: sha256:f5315309026b33b6f583b78163def5b9d0088311eb23ca8146b7dcb262247b39
+  receipt_id: certificate:0e927e07d6e67d5f360d2a5a2bba25c6
+  command_id: plan-revise:issue-711:rechain-verifier:reverse:sol-r1-fix:r2:06027f9a1d28
+  admitted_at: 2026-10-05T10:20:15.359Z
+  source_digest: sha256:213ed9e06386f40dc2d0abdc3648e2f6548fd8290e822a380c02c64338b8cab7
+  decision_digest: sha256:f9447e0d376614c79261665609b4cc29fcc518011b961d722cd1f40ec088506d
+  receipt_digest: sha256:8991524df4decc6338404e6fc143fb6c918c0809f443d03b71e733b3aed4abae
   binding:
     path: docs/plans/PLAN-REVERSE-711-rechain-verifier-backfill.md
     plan_id: PLAN-REVERSE-711-rechain-verifier-backfill
     asset_id: plan:d33ed5411395d752b093e4ce51180a1e
-    revision: 1
-    content_digest: sha256:770579f31d7a1bf9575c1b1c1744d9726a897f47479a071ed87b30cfd7df1b15
+    revision: 2
+    content_digest: sha256:213ed9e06386f40dc2d0abdc3648e2f6548fd8290e822a380c02c64338b8cab7
   route:
     signal: reverse
     mode: reverse
@@ -73,8 +73,9 @@ admission_receipt:
     target_plan_id: PLAN-L7-711-rechain-verifier
     target_revision: 1
     phase: forward_merge
-  escape_reason: "Issue #711: PLAN-L7-711 の re-chain 検証器 (S2) 実装を PLAN-L6-711 §2.3
-    / §2.6 へ逆向き照合する Reverse 対の R0 起票。"
+  escape_reason: "Issue #711: PR #841 Sol r1 FLAG の是正。PLAN-L6-711 rev 5 §2.6 項 5 は
+    domain separator v2 を既に明記しているため、R3 の gap G1 と R4 の改訂 routing を除去し、v2 は凍結済みで
+    #839 の実装が一致するという照合結果に直す。"
 ---
 
 # PLAN-REVERSE-711: re-chain 検証器 (S2) 実装の逆向き確認
@@ -98,12 +99,12 @@ PLAN-L7-711 が所有する `verifyRechainDelta` (`src/plan-admission/rechain-ve
 | 判定規則 (§2.3-1〜5) | U-RECHAIN-001..007、011、014、015 で正系・負系を固定する | R2 で照合 |
 | 再導出 (§2.3-6) | admission・`decision_digest`・`receipt_digest` を全て再導出し、許容項目だけを許す (U-RECHAIN-012 / 017) | R2 で照合 |
 | 同一 asset 複数再発行 (§2.3-6) | base の連鎖と `intermediatePlans` の key 集合の完全一致 (U-RECHAIN-018) | R2 で照合 |
-| `verifierDigest` (§2.6) | domain separator を版付きで固定し、v2 を使う (U-RECHAIN-016) | R2 で照合 |
+| `verifierDigest` (§2.6) | domain separator `ut-tdd.rechain-verifier.v2` を使う (U-RECHAIN-016) | 整合 (v2 は PLAN-L6-711 rev 5 §2.6 項 5 で凍結済みであり、#839 の実装はそれに一致する) |
 
 ## R3 gap
 
-- G1: §2.6 は domain separator を「版付き」と定めるが、現行の版番号を本文に書いていない。v2 の採用が意味変更でないことを R4 で判断する。
+- なし。`verifierDigest` の domain separator `ut-tdd.rechain-verifier.v2` は PLAN-L6-711 rev 5 §2.6 項 5 が既に明記して凍結しており (receipt revision 4 で v1 から v2 に改版)、#839 の実装 (`src/plan-admission/rechain-verifier.ts` の digest 関数) はそれに一致する。
 
 ## R4 routing
 
-G1 は gap-only とし、L6-711 の意味を変えない。版番号の明記が必要と判定した場合は、L6-711 の add-design 改訂として別に起票する。
+R3 で gap が無いため、L6-711 への改訂 routing は行わない。

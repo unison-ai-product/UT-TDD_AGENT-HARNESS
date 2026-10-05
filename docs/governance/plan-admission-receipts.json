@@ -6528,6 +6528,22 @@
         "revision": 1,
         "content_digest": "sha256:770579f31d7a1bf9575c1b1c1744d9726a897f47479a071ed87b30cfd7df1b15"
       }
+    },
+    {
+      "sequence": 409,
+      "previous_record_digest": "sha256:bc09c53361cfc57a0d5605f1dbb702f89ab39c7c2eb3b84aa69ceb6ba4bc9def",
+      "record_digest": "sha256:aa26e4bf82dea3548571f797c06cf181394bc031ab53e6511daff79e07d86e33",
+      "command_id": "plan-revise:issue-711:rechain-verifier:reverse:sol-r1-fix:r2:06027f9a1d28",
+      "receipt_id": "certificate:0e927e07d6e67d5f360d2a5a2bba25c6",
+      "receipt_digest": "sha256:8991524df4decc6338404e6fc143fb6c918c0809f443d03b71e733b3aed4abae",
+      "decision_digest": "sha256:f9447e0d376614c79261665609b4cc29fcc518011b961d722cd1f40ec088506d",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-711-rechain-verifier-backfill.md",
+        "plan_id": "PLAN-REVERSE-711-rechain-verifier-backfill",
+        "asset_id": "plan:d33ed5411395d752b093e4ce51180a1e",
+        "revision": 2,
+        "content_digest": "sha256:213ed9e06386f40dc2d0abdc3648e2f6548fd8290e822a380c02c64338b8cab7"
+      }
     }
   ]
 }
