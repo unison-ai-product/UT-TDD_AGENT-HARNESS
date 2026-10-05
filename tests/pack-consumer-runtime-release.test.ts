@@ -483,9 +483,21 @@ async function createPackrt013Fixture(): Promise<ProducerFixture> {
   const scriptPath = join(fixture.root, "scripts", "ut-tdd.ps1");
   mkdirSync(dirname(scriptPath), { recursive: true });
   writeFileSync(scriptPath, "Write-Output 'packrt-013 LF blob'\n", "utf8");
+  writeFileSync(
+    join(fixture.root, "scripts", "executable.sh"),
+    "#!/bin/sh\nprintf 'packrt-013\\n'\n",
+    "utf8",
+  );
   writeFileSync(join(fixture.root, ".gitattributes"), "*.ps1 text eol=crlf\n", "utf8");
   fixtureGit(fixture.root, ["config", "core.autocrlf", "true"]);
-  fixtureGit(fixture.root, ["add", "--", ".gitattributes", "scripts/ut-tdd.ps1"]);
+  fixtureGit(fixture.root, [
+    "add",
+    "--",
+    ".gitattributes",
+    "scripts/ut-tdd.ps1",
+    "scripts/executable.sh",
+  ]);
+  fixtureGit(fixture.root, ["update-index", "--chmod=+x", "--", "scripts/executable.sh"]);
   fixtureGit(fixture.root, ["commit", "--quiet", "--amend", "--no-edit"]);
   fixtureGit(fixture.root, ["checkout", "--force", "HEAD"]);
   fixture.c1 = fixtureGit(fixture.root, ["rev-parse", "HEAD"]);
@@ -1311,6 +1323,7 @@ describe("Pack consumer runtime release producer byte and fail-close oracles", (
     const outDir = mkdtempSync(join(tmpdir(), "ut-tdd-packrt-013-assets-"));
     try {
       const rawTree = readRawGitTree(packrt013.root, packrt013.c1);
+      expect(rawTree.get("scripts/executable.sh")?.mode).toBe("100755");
       const paths = [...rawTree.keys()];
       const plan = buildCleanDistributionPlan({ paths, sourceTag: packrt013.tag });
       expect(plan.ok).toBe(true);
@@ -1384,6 +1397,9 @@ describe("Pack consumer runtime release producer byte and fail-close oracles", (
         .map((entry) => ({ ...entry, mode: entry.mode as "100644" | "100755" }))
         .sort((left, right) => left.path.localeCompare(right.path));
       expect(readback).toEqual(expectedSorted);
+      expect(readback.find((entry) => entry.path === "scripts/executable.sh")?.mode).toBe(
+        "100755",
+      );
       const ps1Blob = rawTree.get("scripts/ut-tdd.ps1");
       const ps1TarEntry = readback.find((entry) => entry.path === "scripts/ut-tdd.ps1");
       expect(ps1Blob?.bytes).toEqual(Buffer.from("Write-Output 'packrt-013 LF blob'\n", "utf8"));
