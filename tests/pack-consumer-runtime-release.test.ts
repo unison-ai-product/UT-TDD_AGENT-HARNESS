@@ -163,15 +163,57 @@ function readRawGitTree(root: string, revision: string): Map<string, RawGitTreeE
     .toString("utf8")
     .split("\0")
     .filter(Boolean);
-  const entries = new Map<string, RawGitTreeEntry>();
+  const treeEntries: { mode: string; objectId: string; path: string }[] = [];
+  const paths = new Set<string>();
   for (const record of records) {
     const match = /^(\d{6}) blob ([a-f0-9]{40})\t(.+)$/.exec(record);
-    if (!match) continue;
-    const bytes = execFileSync("git", ["cat-file", "blob", match[2]], {
-      cwd: root,
-      encoding: "buffer",
-    });
-    entries.set(match[3], { path: match[3], mode: match[1], bytes });
+    if (!match) throw new Error(`unexpected raw Git tree record: ${record}`);
+    if (paths.has(match[3])) throw new Error(`duplicate raw Git tree path: ${match[3]}`);
+    paths.add(match[3]);
+    treeEntries.push({ mode: match[1], objectId: match[2], path: match[3] });
+  }
+
+  const objectIds = [...new Set(treeEntries.map((entry) => entry.objectId))];
+  if (objectIds.length === 0) return new Map();
+  const batch = execFileSync("git", ["cat-file", "--batch"], {
+    cwd: root,
+    input: Buffer.from(`${objectIds.join("\n")}\n`, "ascii"),
+    encoding: "buffer",
+    maxBuffer: 256 * 1024 * 1024,
+  });
+  const blobs = new Map<string, Buffer>();
+  let offset = 0;
+  for (const expectedObjectId of objectIds) {
+    const headerEnd = batch.indexOf(0x0a, offset);
+    if (headerEnd < 0) throw new Error("raw Git batch response is missing a header terminator");
+    const header = batch.subarray(offset, headerEnd).toString("ascii");
+    const match = /^([a-f0-9]{40}) blob (0|[1-9][0-9]*)$/.exec(header);
+    if (!match || match[1] !== expectedObjectId)
+      throw new Error(`unexpected raw Git batch header: ${header}`);
+    const size = Number(match[2]);
+    const contentStart = headerEnd + 1;
+    const contentEnd = contentStart + size;
+    if (!Number.isSafeInteger(size) || contentEnd >= batch.length)
+      throw new Error(`invalid raw Git batch blob size: ${header}`);
+    if (batch[contentEnd] !== 0x0a)
+      throw new Error(`raw Git batch blob delimiter missing: ${expectedObjectId}`);
+    const bytes = Buffer.from(batch.subarray(contentStart, contentEnd));
+    const actualObjectId = createHash("sha1")
+      .update(Buffer.from(`blob ${size}\0`, "ascii"))
+      .update(bytes)
+      .digest("hex");
+    if (actualObjectId !== expectedObjectId)
+      throw new Error(`raw Git batch blob hash mismatch: ${expectedObjectId}`);
+    blobs.set(expectedObjectId, bytes);
+    offset = contentEnd + 1;
+  }
+  if (offset !== batch.length) throw new Error("raw Git batch response has trailing bytes");
+
+  const entries = new Map<string, RawGitTreeEntry>();
+  for (const entry of treeEntries) {
+    const bytes = blobs.get(entry.objectId);
+    if (!bytes) throw new Error(`raw Git batch blob missing: ${entry.objectId}`);
+    entries.set(entry.path, { path: entry.path, mode: entry.mode, bytes });
   }
   return entries;
 }
