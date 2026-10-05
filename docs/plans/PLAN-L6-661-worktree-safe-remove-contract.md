@@ -53,18 +53,18 @@ sub_doc: function-spec
 github_issue_id: 661
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:39a9a55709513fa20c5411a2c28ab2be
-  command_id: plan-revise:issue-661:sol-r1-fix:r3:58c7be407e99
-  admitted_at: 2026-10-05T09:56:00.490Z
-  source_digest: sha256:acb3f93c21bcb0c64aec627e52e70491412375703166370d5801eac16526d1ae
-  decision_digest: sha256:d6f8c912660d32ad827e1bb8f83b93dd17b505faba3a8dd0950da9869dd288f1
-  receipt_digest: sha256:e62ae9b67c0a2e3a90571bee43349facc841c58bed4adba7b69278a30966046e
+  receipt_id: certificate:1898edc3fcff044b18b8f1be6bd4631d
+  command_id: plan-revise:issue-661:sol-r2-fix:r4:1917ece51224
+  admitted_at: 2026-10-05T10:22:38.604Z
+  source_digest: sha256:2e6ae8e092854db86d9cd9224474a3a29c5103e0956ec32f752a3da3eae03e23
+  decision_digest: sha256:58fe2575e7f4c90152cc47d8b692944950a4dc289057c0991b3c422dacd9dfb9
+  receipt_digest: sha256:99acad72278143ef1fb9e66cbd0d9684d600872bc06603f682b6343302da89eb
   binding:
     path: docs/plans/PLAN-L6-661-worktree-safe-remove-contract.md
     plan_id: PLAN-L6-661-worktree-safe-remove-contract
     asset_id: plan:04e1bab46c4ea60bbdbe6ce4773c8a18
-    revision: 3
-    content_digest: sha256:acb3f93c21bcb0c64aec627e52e70491412375703166370d5801eac16526d1ae
+    revision: 4
+    content_digest: sha256:2e6ae8e092854db86d9cd9224474a3a29c5103e0956ec32f752a3da3eae03e23
   route:
     signal: feature_addition
     mode: add-feature
@@ -79,12 +79,12 @@ admission_receipt:
     digest: sha256:09eda2251a316d5af39cb0ebbaebb8df50f51699dcb2033a75b2128b5cd27ffd
   reentry:
     target_plan_id: PLAN-L6-661-worktree-safe-remove-contract
-    target_revision: 3
+    target_revision: 4
     phase: forward_merge
-  escape_reason: "Issue 661: PR #838 Sol r1 FLAG 2 件の是正 (correction 1/3)。D4 に
-    do/then/else・PowerShell &・env と NAME=value・git -C/-c の限定正規化と負系 oracle
-    O16-O21 を定義し、sh -c 等の入れ子実行を guard 保証外 (command 経路のみ) と明記する。O2 を unlink 成功扱いで
-    link 残存の注入に、O11 を正規 command を誤 deny する mutation に改める。方式と scope は変えない"
+  escape_reason: "Issue 661: PR #838 Sol r2 FLAG 2 件の是正 (correction 2/3)。N4 を git
+    global option の一般化読み飛ばし (値付き option は次 token も飛ばす) と引用符外の worktree remove
+    連続に対する fail-close に改め、deny oracle O22-O27 を追加する。O9 と O21 の fixture を G3 だけが
+    deny 根拠になる形に明記する。方式と scope は変えない"
 ---
 
 # PLAN-L6-661: worktree 物理削除の正規経路と node_modules junction guard の契約 freeze
@@ -179,8 +179,16 @@ command 文字列を `;` / `&&` / `||` / `|` / 改行で segment に分け、各
   `do git worktree remove "$w"` を `git worktree remove "$w"` として判定する)。
 - N2 PowerShell の call operator: 先頭の `&` (`& git worktree remove C:/x`)。
 - N3 環境変数の前置: 先頭の `env` と、`NAME=value` 形の token (`MSYS_NO_PATHCONV=1 git worktree remove ...`)。
-- N4 git の global option: `git` の直後の `-C <path>` / `-c <key=value>` を剥がす。`-C <path>` があれば、対象 path は
-  その `<path>` を基準に解決する。`-C` の値が検査できない (変数等) ときは G3 で deny する。
+- N4 git の global option (列挙せず一般化する): `git` の直後から、`-` で始まる token をすべて飛ばし、最初の `-` で始まらない
+  token を subcommand とみなす。別 token で値を取る option (`=` を伴わない `-C` / `-c` / `--git-dir` / `--work-tree` /
+  `--namespace` / `--exec-path` / `--config-env` / `--super-prefix`) は、直後の 1 token も値として飛ばす。`--opt=value` 形と
+  値を取らない option (`--no-optional-locks` / `--no-pager` / `-P` / `--bare` 等) は、その token だけを飛ばす。
+  `-C <path>` があれば、対象 path はその `<path>` を基準に解決する (複数あれば git と同じく順に連結)。`-C` の値が検査できない
+  (変数等) ときは G3 で deny する。
+- N4 の fail-close: 上の規則で subcommand を決めたあとに `worktree remove` と一致しなくても、`git` を command 名とする segment の
+  **引用符外の token に連続する `worktree` `remove` が現れる** なら、検査不能として deny する (G3)。表に無い値付き option
+  (`git --未知 v worktree remove ...`) で値を subcommand と取り違えても、素通りさせないための保険である。
+  引用符内 (`git commit -m "worktree remove"` 等) は対象にしない。
 
 判定対象は正規化後の先頭が `git worktree remove`、`mklink /J` (`cmd /c` / `cmd //c` の直後に直接続く形を含む)、
 `New-Item -ItemType Junction|SymbolicLink`、`ln -s` の 4 形である。command 名は `git` / `mklink` / `New-Item` / `ln` に限る
@@ -236,6 +244,7 @@ C5 は `<wt>/node_modules` だけを対象にする。配下全体の reparse po
   - `.claude/CLAUDE.md` §Hooks の一覧と `rule-drift` の照合 (U-RDRIFT-007) を同時に更新する。
 - G2 deny 1: `git worktree remove <path>` で、`<path>/node_modules` が (junction / symlink / 実体のいずれでも) 存在する。
 - G3 deny 2: 判定対象 segment (§1 D4 の N1-N4 で正規化した後) の `<path>` または `git -C` の値が変数・command substitution・glob を含み、検査できない。
+  または N4 の fail-close (subcommand は `worktree remove` と判定できないが、引用符外に連続する `worktree` `remove` がある) に該当する。
 - G4 deny 3: `node_modules` を link 先または link 名とする junction / symlink の作成 (`mklink /J`、`New-Item -ItemType Junction|SymbolicLink`、
   `ln -s`、`cmd //c mklink`)。判定は §1 D4 の segment 先頭 token 方式 (N1-N4 の限定正規化を含む) に限る。
 - G5 deny 理由には `ut-tdd worktree remove <path>` と `npm ci` を案内として書く。
@@ -259,7 +268,7 @@ fixture 内の偽 `node_modules` 実体) だけで行う。primary の `node_mod
 | O6 | `<wt>` が primary checkout | C1 で拒否 | primary 照合を削除 → RED |
 | O7 | C8 で件数 N が減る (port で注入) | 非 0 + `npm ci` 案内 | C8 を存在確認だけに緩める → RED |
 | O8 | guard: `git worktree remove C:/x` で `C:/x/node_modules` あり | deny | G2 の存在判定を「junction のときだけ」に緩める → 実体ケースで RED |
-| O9 | guard: `for w in ...; do git worktree remove "$w"; done` | deny | G3 を削除 → RED |
+| O9 | guard: `for w in <fx>/a; do git worktree remove "$w"; done`。fixture: 対象を一意に決められず G2 は判定しない (literal `$w/node_modules` は存在しない) | deny (G3 のみが根拠) | G3 を削除 → allow になって RED |
 | O10 | guard: `cmd //c mklink /J C:/x/node_modules C:/y/node_modules` と `New-Item -ItemType Junction` | 両方 deny | G4 の pattern から 1 形式を削除 → その形式で RED |
 | O11 | guard: `ut-tdd worktree remove C:/x` (`C:/x/node_modules` あり) | allow | command 名照合 (`git` に限る) を外して「任意の command 名 + `worktree remove`」を対象にする (= G6 の除外が無い状態) → 正規 command を誤 deny して RED |
 | O13 | `git fetch` を失敗させる (port で注入)、`--offline` なし | C2 で拒否、remove 0 | fetch 失敗時にローカル `origin/main` で続行させる → RED |
@@ -269,8 +278,14 @@ fixture 内の偽 `node_modules` 実体) だけで行う。primary の `node_mod
 | O17 | guard (N1): `if true; then git worktree remove C:/a; fi` と `else git worktree remove C:/a` | 両方 deny | N1 から `then` / `else` の一方を削除 → その形で RED |
 | O18 | guard (N2): `& git worktree remove C:/a` | deny | N2 を削除 → RED |
 | O19 | guard (N3): `env git worktree remove C:/a` と `MSYS_NO_PATHCONV=1 git worktree remove C:/a` | 両方 deny | N3 から `env` か `NAME=value` の一方を削除 → その形で RED |
-| O20 | guard (N4): `git -C C:/repo worktree remove C:/a` と `git -c core.x=y worktree remove C:/a` | 両方 deny | N4 から `-C` か `-c` の一方を削除 → その形で RED |
-| O21 | guard (N4 + G3): `git -C "$R" worktree remove C:/a` | deny (検査不能) | `-C` 値の検査不能判定を削除 → RED |
+| O20 | guard (N4 値付き `-C` / `-c`): (a) `git -C <fx>/repo worktree remove <fx>/b` と `git -c core.x=y worktree remove <fx>/b` (`<fx>/b/node_modules` なし、他の deny 条件なし)、(c) `git -C <fx> worktree remove a` (相対 path、`<fx>/a/node_modules` あり、cwd 側には無い) | (a) 両方 allow、(c) deny (G2) | `-C` か `-c` の一方を値付き option 表から外す → その形の (a) が値を subcommand と取り違えて fail-close で誤 deny、RED。`-C` による解決基準を外す → (c) が cwd 基準で判定されて allow、RED |
+| O21 | guard (N4 + G3): `git -C "$R" worktree remove <fx>/a`。fixture: `<fx>/a` は存在し **`<fx>/a/node_modules` は存在しない**。他の deny 条件 (G2 / G4、N4 fail-close) は成り立たない | deny (`-C` 値の検査不能だけが根拠) | `-C` 値の検査不能判定を削除 → G2 も成り立たないので allow になって RED |
+| O22 | guard (N4 一般化): `git --no-optional-locks worktree remove <path>`。(a) deny 側 `<fx>/a` (`node_modules` あり) と (b) allow 側 `<fx>/b` (`node_modules` なし、他の deny 条件なし) の 2 件 | (a) deny (G2)、(b) allow | M1: N4 を rev 3 の形 (`-C` / `-c` だけ除去、fail-close なし) に戻す → (a) が allow で RED。M2: 一般化読み飛ばしだけを削除し fail-close は残す → (b) が誤 deny で RED |
+| O23 | guard (N4 一般化): `git --git-dir=<fx>/repo/.git worktree remove <path>`。(a) deny 側 `<fx>/a` (`node_modules` あり) と (b) allow 側 `<fx>/b` (`node_modules` なし、他の deny 条件なし) の 2 件 | (a) deny (G2)、(b) allow | O22 と同じ M1 / M2 → それぞれ (a) / (b) で RED |
+| O24 | guard (N4 値付き、allow 側で判別): `git --work-tree <fx>/repo worktree remove <fx>/b`。fixture: `<fx>/b` は存在し `<fx>/b/node_modules` は存在しない。他の deny 条件は成り立たない | allow (正しく `worktree remove` と解析され、G2 も成り立たない) | 値付き option の直後 token の読み飛ばしを削除 → `<fx>/repo` を subcommand と取り違え、N4 fail-close で誤 deny になって RED |
+| O25 | guard (N4 組合せ): `git -c a=b -C <fx>/repo --no-pager worktree remove <path>`。(a) deny 側 `<fx>/a` (`node_modules` あり) と (b) allow 側 `<fx>/b` (`node_modules` なし、他の deny 条件なし) の 2 件 | (a) deny (G2)、(b) allow | O22 と同じ M1 / M2 → それぞれ (a) / (b) で RED |
+| O26 | guard (N4 fail-close): `git --unknown-opt v worktree remove <fx>/a`。fixture: `<fx>/a/node_modules` は存在しない | deny (G3 の fail-close だけが根拠) | N4 の fail-close を削除 → `v` を subcommand とみなして allow、RED |
+| O27 | guard (N4 fail-close の範囲): `git commit -m "worktree remove"` | allow | fail-close を引用符内まで広げる → 誤 deny で RED |
 | O12 | rule-drift: `.codex/hooks.json` だけから guard 配線を外す | doctor rule-drift fail | 両ランタイム照合を片側だけにする → RED |
 
 ## 5. 実装分割 (1 PR = 1 論点)
@@ -285,7 +300,7 @@ fixture 内の偽 `node_modules` 実体) だけで行う。primary の `node_mod
 - S0 (本 PLAN): 契約 freeze と非著者 cross-review。D1-D4 / C5 は §1 で採択済み。
 - S1 (D2): 運用切替。`CLAUDE.md` / メモリの junction 手順を `npm ci` への pointer に置換し、暫定 guard (`.claude/settings.local.json`) の
   撤去手順を案内する。docs のみ。
-- S2 (D1 guard): L7 test-design へ O8-O12、O15-O21 を freeze (pair-freeze) し、guard entrypoint 1 本と対テスト、`.claude/settings.json` +
+- S2 (D1 guard): L7 test-design へ O8-O12、O15-O27 を freeze (pair-freeze) し、guard entrypoint 1 本と対テスト、`.claude/settings.json` +
   `.codex/hooks.json` + `.claude/CLAUDE.md` §Hooks の配線、rule-drift の照合追加。Codex 側の実機 deny を 1 回観測する。
 - S3 (command + D3): L7 test-design へ O1-O7、O13、O14 を freeze し、`src/runtime/worktree-lifecycle/` 配下に物理削除 adapter (source_module 1 個)
   と対テスト、最小の CLI 配線 (`ut-tdd worktree remove`)。S2 の deny 理由を command 案内へ差し替える。
