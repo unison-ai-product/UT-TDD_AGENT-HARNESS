@@ -44,21 +44,22 @@ dependencies:
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/809
 review_evidence: []
 status: draft
+sub_doc: function-spec
 github_issue_id: 815
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:e95ffbff498962a9f51d5282acf64c66
-  command_id: plan-revise:issue-815:report-security:rechain:sol-r3-fix:r4:da021b7ba55c
-  admitted_at: 2026-10-05T02:24:27.342Z
-  source_digest: sha256:68d8b3039dcfdee4d05283c25b6a6c400147e2e8150222827d42c1e995744507
-  decision_digest: sha256:602a9fb59ebed2f1560baa795467f84f25724c60772171c2d006cd7f14e26b10
-  receipt_digest: sha256:384e23ed2304c67ce92afc6c15f599fabfa49459de5e41a126b6810f625bc644
+  receipt_id: certificate:ca8a6517bb320f745d2c2a0e759a0650
+  command_id: plan-revise:issue-832:restore-sub-doc:PLAN-L6-1:r5:677ab9c41955
+  admitted_at: 2026-10-05T05:19:30.213Z
+  source_digest: sha256:dd174f2cc1895a0a7784fdac58b629b189f1adcaedb14fdfe62af56132dbbf98
+  decision_digest: sha256:3ac5738cc8212ff04f788492e73a8ee5e1c925f2974600c75e907a8351d0712b
+  receipt_digest: sha256:ddbec338e5282c1926def4d300eff89ef2da9b865e12a9877968f18958033e0f
   binding:
     path: docs/plans/PLAN-L6-106-report-write-security-contract.md
     plan_id: PLAN-L6-106-report-write-security-contract
     asset_id: plan:d10f80206656cb46a302ef2114d842e1
-    revision: 4
-    content_digest: sha256:68d8b3039dcfdee4d05283c25b6a6c400147e2e8150222827d42c1e995744507
+    revision: 5
+    content_digest: sha256:dd174f2cc1895a0a7784fdac58b629b189f1adcaedb14fdfe62af56132dbbf98
   route:
     signal: feature_addition
     mode: add-feature
@@ -73,11 +74,10 @@ admission_receipt:
     digest: sha256:610d332e78fa0b1893fd1299881eeef3237bd8801f5ba9364f5d70aec59c2c41
   reentry:
     target_plan_id: PLAN-L6-106-report-write-security-contract
-    target_revision: 4
+    target_revision: 5
     phase: forward_merge
-  escape_reason: "Issue 815: PR #820 Sol r3 の 2 件の是正 (戻り値の release / staging
-    を例外の有無から推定せず観測した実状態で報告し、観測失敗時に限り unknown とする。readBack → finally で discard →
-    inspectStaging)。段構成・SSoT・allowlist の方式は変えない"
+  escape_reason: "Issue 832: revise 時に manifest へ sub_doc を渡さなかったため frontmatter
+    から落ちた sub_doc: function-spec を復旧する (本文・方式は不変)"
 ---
 
 # PLAN-L6-106 (add-design): トラブル報告の書き込みセキュリティ契約 (S1)
