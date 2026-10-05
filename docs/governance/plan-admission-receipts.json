@@ -6052,49 +6052,33 @@
     {
       "sequence": 379,
       "previous_record_digest": "sha256:a298e74a7c0bd2f1172a2cc0cc4f4262d65d21c1bd752ee25066bc50e5c706ac",
-      "record_digest": "sha256:9c0b70c284946189d82fa75c3805d4519f6b86472c2c96d739551f6688fb56d1",
-      "command_id": "plan-draft:issue-814:consumer-safe-upgrade-contract:1",
-      "receipt_id": "certificate:d19459038adff829fcb3c25921395d6c",
-      "receipt_digest": "sha256:3ea5c0d254a00e0be24b836ce2db7849ebf870f337eea3858af48c35e963d624",
-      "decision_digest": "sha256:f4053860fd1cab60b09540cf5f1f5e8592ad433d823a3cfc18580984ed8002f2",
+      "record_digest": "sha256:735b57870e3193dc32bb4fa3ca373f39daad658d75197938d1b4dd870f94aeb4",
+      "command_id": "plan-revise:issue-807:projection-tail-rechain:p628:r12:3dbb4bbee2a3",
+      "receipt_id": "certificate:794c57b3a5d655168b4b81816d101e02",
+      "receipt_digest": "sha256:b7c3ebef064e77d81be97dde58c2f8aac41c7e0480470fa0d5ffa6cf1027dad7",
+      "decision_digest": "sha256:3b174ed5d02eb4077e63abfca33d1fe380e150721e9fb61dd2d4936cfbb9c158",
       "binding": {
-        "path": "docs/plans/PLAN-L6-105-consumer-safe-upgrade-contract.md",
-        "plan_id": "PLAN-L6-105-consumer-safe-upgrade-contract",
-        "asset_id": "plan:d19459038adff829fcb3c25921395d6c",
-        "revision": 1,
-        "content_digest": "sha256:3f107208199bfa56f3df90f1128bd9240fad175acd12e2edd5668f61a1b7f7ba"
+        "path": "docs/plans/PLAN-L7-628-pack-consumer-runtime-release-install.md",
+        "plan_id": "PLAN-L7-628-pack-consumer-runtime-release-install",
+        "asset_id": "plan:cd11a1885b1c948d89519002a2cec009",
+        "revision": 12,
+        "content_digest": "sha256:6db6881e6d3a8f53a611c091426aa81eee4ba614065b3facf76d47af57c4bbf6"
       }
     },
     {
       "sequence": 380,
-      "previous_record_digest": "sha256:9c0b70c284946189d82fa75c3805d4519f6b86472c2c96d739551f6688fb56d1",
-      "record_digest": "sha256:5ba36df5db97cf5e96964ef7ab0a372670e3e5ac55f425d7e61e604af8c3b53c",
-      "command_id": "plan-revise:issue-814:safe-upgrade:sol-r1-fix:r2:ffa5fd9b8d93",
-      "receipt_id": "certificate:31ebbd0617d027509feded58022ad1d4",
-      "receipt_digest": "sha256:37b0553e8f44ad9d1f94fc4f7e90453486909d8be33495e7cae5b0fac9bc467b",
-      "decision_digest": "sha256:a26e7d40660000b52b4bbae5e95e6ff08d32cb435ff8f402a20597e1341166ec",
+      "previous_record_digest": "sha256:735b57870e3193dc32bb4fa3ca373f39daad658d75197938d1b4dd870f94aeb4",
+      "record_digest": "sha256:fe97d5bc3e652c892fc0281780a41f6b33a9114a25aa8c8d0ce05dda91fd08a1",
+      "command_id": "plan-revise:issue-807:projection-tail-rechain:p628:r13:dcdccd30df8a",
+      "receipt_id": "certificate:2c16cb9810066f9f12e51a65e3d58e3f",
+      "receipt_digest": "sha256:8f917ebf4847f0cacfe55ec6866d48bed5a655ac8dc812a7ca630110d652744e",
+      "decision_digest": "sha256:03e923732f1c827416e2cc6ed5332e50ee8a3142304f9534f8b4e1587625ad0b",
       "binding": {
-        "path": "docs/plans/PLAN-L6-105-consumer-safe-upgrade-contract.md",
-        "plan_id": "PLAN-L6-105-consumer-safe-upgrade-contract",
-        "asset_id": "plan:d19459038adff829fcb3c25921395d6c",
-        "revision": 2,
-        "content_digest": "sha256:e9947dcf58727a7dd54d338069d52cd5447254f82df30a4ef39d56a09b1c8fa7"
-      }
-    },
-    {
-      "sequence": 381,
-      "previous_record_digest": "sha256:5ba36df5db97cf5e96964ef7ab0a372670e3e5ac55f425d7e61e604af8c3b53c",
-      "record_digest": "sha256:a87d3110038515aebb943708da8138ec48e8d5f587a4fc7fb0a525d7ecbf0750",
-      "command_id": "plan-revise:issue-814:safe-upgrade:sol-r2-fix:r3:7a419f2b0712",
-      "receipt_id": "certificate:cbd62d51e78442407cf65a9c5e796c1e",
-      "receipt_digest": "sha256:d668c3c63db3ddabfa5e748b808213e78c7573990ad95ec9cedc24abebcc8098",
-      "decision_digest": "sha256:319a93f5f1de1944a54b873206e089a35f2366ab0666ec8253aa9a97f2ca1a54",
-      "binding": {
-        "path": "docs/plans/PLAN-L6-105-consumer-safe-upgrade-contract.md",
-        "plan_id": "PLAN-L6-105-consumer-safe-upgrade-contract",
-        "asset_id": "plan:d19459038adff829fcb3c25921395d6c",
-        "revision": 3,
-        "content_digest": "sha256:cbf4a130044faa7201151435796b6047b9a3aed26c2b01d5c4ef59c03fc6dc47"
+        "path": "docs/plans/PLAN-L7-628-pack-consumer-runtime-release-install.md",
+        "plan_id": "PLAN-L7-628-pack-consumer-runtime-release-install",
+        "asset_id": "plan:cd11a1885b1c948d89519002a2cec009",
+        "revision": 13,
+        "content_digest": "sha256:3150182ce447bbeb69eba5bb792f45897d80b54eae3f4c66c4df1e87eaf2e142"
       }
     }
   ]
