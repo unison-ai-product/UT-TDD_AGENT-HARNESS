@@ -39,18 +39,18 @@ status: draft
 github_issue_id: 823
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:510ad564c781ca364359d949cb20d299
-  command_id: plan-draft:issue-823:pack-full-reverse-trial:1
-  admitted_at: 2026-10-05T03:27:53.018Z
-  source_digest: sha256:6b369e292782023de8726a178ae304b229a9d97757603630fe2eb8d16246bfc7
-  decision_digest: sha256:74b3261bc444e52e0e5cb78884aa6c0d55ff473f30b4aca3d9e100ea351cb483
-  receipt_digest: sha256:087279d3ef8a742b970f50d4c46654c37eba12163c89e438517bd8df581837f9
+  receipt_id: certificate:6b78dd9b4e535c359adbcb23ea3fbb7a
+  command_id: plan-revise:issue-823:pack-full-reverse-trial:sol-r1-fix:r2:32edf1d94d2a
+  admitted_at: 2026-10-05T03:42:03.334Z
+  source_digest: sha256:bf3e878b8e19115c45b01bd200b7a01e5c2347d4991d9f97f02b47814b270c49
+  decision_digest: sha256:09faa37a2bf308eda0d5ad4c955be1963c30db06da7373bd7a9e4e1198ea35cb
+  receipt_digest: sha256:06bdad2a50a546c202987e75002008f5a0b9d59207d6181573e0a8c2b98c10e6
   binding:
     path: docs/plans/PLAN-REVERSE-823-pack-full-reverse-trial.md
     plan_id: PLAN-REVERSE-823-pack-full-reverse-trial
     asset_id: plan:510ad564c781ca364359d949cb20d299
-    revision: 1
-    content_digest: sha256:6b369e292782023de8726a178ae304b229a9d97757603630fe2eb8d16246bfc7
+    revision: 2
+    content_digest: sha256:bf3e878b8e19115c45b01bd200b7a01e5c2347d4991d9f97f02b47814b270c49
   route:
     signal: reverse
     mode: reverse
@@ -68,12 +68,11 @@ admission_receipt:
     implementation_disposition: preserved
   reentry:
     target_plan_id: PLAN-REVERSE-823-pack-full-reverse-trial
-    target_revision: 1
+    target_revision: 2
     phase: forward_merge
-  escape_reason: "Issue 823 (親 822): V 字右腕の最初の実測として、Pack 全量 (994 ファイル) を Pack
-    だけを見る executor で R0-R4 フルに逆引きし、Reverse の性能 (読み落とし・誤認・作話) と設計・実装のずれを typed
-    record で測る。Reverse mode の正本 (PLAN-REVERSE-01 で正本化した
-    docs/process/modes/reverse.md) に従う。実装は変えず、ずれは別チケットへ回す"
+  escape_reason: "Issue 823: PR #826 Sol r1 FLAG の是正 (統合役の入力を凍結 read-only 入力
+    frozen/ として定義、採点の判定順・recall 式・oracle_only・ゼロ分母を定義、token 上限を実行中に集計・停止する
+    supervisor と計測不能時の fail-close を追加)。盲検・全量・族分離の方式は変えない"
 ---
 
 # PLAN-REVERSE-823: Pack 全量の blind Reverse 試行
@@ -146,15 +145,17 @@ PLAN ID の引用は 319 ファイル・2148 箇所、`docs/design/` への言�
   1. Claude Code に `--tools Read,Grep,Glob,Write`、`--strict-mcp-config` (MCP なし)、`--safe-mode` 相当の customization 無効化、
      固有の `--session-id <uuid>`、`--output-format stream-json` を渡す (いずれも 2.1.284 の `--help` で実在を確認)。
      Claude Code の版は固定せず、run ごとに `--version` を `run-manifest.json` に記録する。
-  2. path guard: Read / Grep / Glob の対象を実体 path (junction・symlink を解決した後) で凍結 Pack の中に、Write を `out/<shard_id>/` に限る。
-     path を省略した Grep / Glob は cwd (= `pack/`) を対象とみなして許す。
+  2. path guard: Read / Grep / Glob の対象を実体 path (junction・symlink を解決した後) で**読取 allowlist** の中に、Write を
+     そのセッションの出力先だけに限る。読取 allowlist は起動時に渡す閉じた path 集合で、executor は凍結 Pack だけ、
+     統合役 (R2 統合・R3a・R4) は凍結 Pack と §D3 の凍結入力 `frozen/` だけとする。path を省略した Grep / Glob は cwd (= `pack/`) を対象とみなして許す。
   3. provider の session UUID・cwd・argv・設定の digest を、生 transcript の path と結び付けて記録する。transcript の欠損・未知の形式は fail-close。
   4. 上記を満たさない起動を拒否する (profile を指定したのに条件が揃わなければ実行しない)。
   生 transcript の既定の置き場は `~/.claude/projects/<cwd-slug>/<session-uuid>.jsonl` で (`src/cli.ts:2015`、`src/state-db/token-tracker.ts:358`)、
   `assistant.message.content[].tool_use.input` と対応する `tool_result` を持つ。harness の session log は path の要約だけで
   offset / limit を残さず fail-open なので (`src/runtime/session-log.ts:119` / `:429`)、監査には使わない。
 - **起動時の生成物**: wrapper は SessionStart で skill assets を materialize する (`src/cli.ts:531`)。inventory は起動前に凍結し、
-  起動後に増えたファイル (`.ut-tdd/` 配下と `out/`) は読取対象にも網羅の分母にも入れない。
+  起動後に増えたファイル (`.ut-tdd/` 配下と `out/`) は読取対象にも網羅の分母にも入れない。統合役が読む shard の出力は、
+  `out/` を直接読ませず、§D3 の凍結入力 `frozen/` として digest 付きで渡す (生成ファイル全般への読取許可は広げない)。
 ### D2 全量網羅 (shard 分割と R0 網羅率)
 
 | 案 | 内容 | trade-off |
@@ -194,6 +195,13 @@ R0 網羅率の定義: ファイル f が「読まれた」とは、f に対す�
 | R3 検証 | PO | `intent-hypotheses` と採点サマリ | 採否の記録 (本 PLAN の R3 節) |
 | R4 | Opus (tl) | `findings.jsonl` | drift ごとの routing 先 (設計改訂 / 修正チケット / gap-only)。`missing_pair_artifacts` |
 
+**統合役の凍結入力**: 全 shard の R2 が終わり、各 shard の監査が valid になった時点で、作業場所のスクリプトが
+`out/<shard_id>/` の `r0-evidence.json` / `claims.jsonl` / `as-is.md` / `as-is-test.md` を `frozen/shards/<shard_id>/` へ複写する。
+同じスクリプトが Pack だけから import graph を抽出して `frozen/import-graph.json` に書く。`frozen/` の全ファイルの sha256 を
+`frozen_inputs_digest` (inventory_digest と同じ形) として `run-manifest.json` に記録し、以後は書き換えない。統合役の読取 allowlist は
+凍結 Pack と `frozen/` だけで、監査は `frozen/` 外の生成物 (`out/`・`.ut-tdd/`) の読取を違反とする。R3a と R4 は、統合役自身の出力
+(`out/_system/`) を同じ手順で `frozen/system/` に凍結してから読む。
+
 統合パスを工程の中心に置く。shard 単体では見えないサブシステム間の契約と全体方針の復元率を、system 階層の指標として別に出す (§D5)。
 executor はテストを実行しない (静的な読み取りだけ)。Pack 内には docs/design を読むテストがあり、Pack では前提が欠けるため。
 
@@ -221,26 +229,39 @@ Sol は 61 本から claim を抽出し、`path:line` を付けて `oracle-claim
 (`src/web/` 前提の L2-screen / L10-ux など) は `out_of_pack_scope` とし、recall の分母から外す。
 `L3-functional/roadmap.md` は検証計画の文書なので、claim 抽出の対象から外す。
 
-**判定**:
+**判定**: 次の順で決める (前の段で決まったものは後の段で上書きしない)。
+
+1. **重複の統合**: 同じ shard 階層で同義の復元 claim は 1 つに統合し、統合した claim_id を `merged_claim_ids` に残す。照合先 claim も同様に統合する。
+2. **復元 claim の真偽**: 各復元 claim をコードと突き合わせる。主語が Pack に実在しなければ `fabrication`、主語は実在するが内容がコードと
+   矛盾すれば `misread`。この 2 つは、照合先との対応にかかわらずここで確定する (誤った復元が hit になる経路を作らない)。
+3. **照合先 claim の真偽**: 各照合先 claim をコードと突き合わせ、`oracle_true` (成立) / `oracle_false` (矛盾または不在) /
+   `out_of_pack_scope` に分ける。
+4. **対応づけ**: 真である復元 claim と `oracle_true` の照合先 claim を、同義のもの同士で 1 対 1 に対応づける。
 
 | 状況 | score | drift |
 |---|---|---|
-| 復元 claim が照合先 claim と同義 | hit | なし。ただしコードと矛盾していれば design_stale / impl_drift |
-| 照合先 claim がコードで成立し、復元されていない | miss | なし (Reverse の性能の問題) |
-| 照合先 claim がコードと矛盾する、またはコードに無い | — (recall の分母外) | design_stale または impl_drift (候補)。どちらか判断できなければ unresolved |
-| 復元 claim の主語は実在するが、内容がコードと矛盾 | misread | なし |
-| 復元 claim の主語が Pack に実在しない | fabrication | なし |
-| 復元 claim がコードで成立し、照合先に無い | undocumented_true | undocumented |
+| 真である復元 claim が `oracle_true` の照合先 claim と対応した | `hit` | `none` |
+| `oracle_true` の照合先 claim に対応する復元が無い | `miss` | `none` (Reverse の性能の問題) |
+| 照合先 claim が `oracle_false` | `oracle_only` | `design_stale` / `impl_drift` の候補。判断できなければ `unresolved` |
+| 復元 claim が段 2 で `misread` | `misread` | `none` |
+| 復元 claim が段 2 で `fabrication` | `fabrication` | `none` |
+| 真である復元 claim に対応する照合先が無い | `undocumented_true` | `undocumented` |
+| 照合先 claim が `out_of_pack_scope` | `out_of_pack_scope` | `none` |
 
+`oracle_false` の照合先 claim と同じ主語について真である復元 claim がある場合は、`oracle_only` の record と
+`undocumented_true` の record を両方作り、互いの `finding_id` を `related_finding_ids` に入れる (ずれの証拠として対で残す)。
 design_stale と impl_drift の判定目安: Pack のテストがコードの挙動を assert していれば design_stale の候補、
 照合先 claim を裏づける PLAN の判断がコードより新しければ impl_drift の候補。最終判断は R4。
 
 **指標** (shard ごと、system 階層、全体):
 
-- recall = hit ÷ (コードで成立する照合先 claim)
-- precision = (hit + undocumented_true) ÷ 復元 claim
-- misread 率と fabrication 率 = それぞれ ÷ 復元 claim
-- 上記すべてを、全体の値と、根拠が code/test だけの claim に絞った値の 2 本立てで出す (§1 の既知の漏れ対策)
+- recall = `hit` の数 ÷ `oracle_true` の照合先 claim の数 (分子は分母の部分集合なので 1 を超えない)
+- precision = (`hit` + `undocumented_true`) ÷ 統合後の復元 claim の数
+- misread 率・fabrication 率 = それぞれの数 ÷ 統合後の復元 claim の数
+- 分母が 0 の指標は `null` とし、0 や 1 で埋めない。
+- 上記すべてを、全体の値と「根拠が code/test だけ」の値の 2 本立てで出す (§1 の既知の漏れ対策)。code/test の値では、
+  evidence が全て `code` か `test` の復元 claim だけを分子・分母に入れる。recall の分母は全体と同じ `oracle_true` の数とし、
+  対応した復元 claim の evidence に `comment` / `pack_doc` が含まれる `hit` は、code/test の値では `miss` として数える。
 
 shard への帰属は、claim の主語がコード上どこにあるかで決める。構造・方針の claim は system 階層に帰属させる。
 
@@ -260,7 +281,8 @@ shard への帰属は、claim の主語がコード上どこにあるかで決�
 | `subject` | `{kind, name}` | kind は §D5 の列挙 |
 | `oracle_claim` | `{claim_id, path, line, text, text_digest}` \| null | |
 | `restored_claim` | `{claim_id, text, evidence: [{path, line_start, line_end, evidence_kind}]}` \| null | evidence_kind ∈ {code, test, comment, pack_doc} |
-| `score` | `hit` \| `miss` \| `misread` \| `fabrication` \| `undocumented_true` \| `out_of_pack_scope` | |
+| `score` | `hit` \| `miss` \| `misread` \| `fabrication` \| `undocumented_true` \| `oracle_only` \| `out_of_pack_scope` | §D5 の判定順で決める |
+| `merged_claim_ids` / `related_finding_ids` | string[] | 重複統合した claim と、対で残した record (§D5) |
 | `drift` | `none` \| `design_stale` \| `impl_drift` \| `undocumented` \| `unresolved` | |
 | `confidence` | `high` \| `medium` \| `low` | |
 | `executor` / `adjudicator` | `{family, model, session_ref}` | 族分離を機械で照合するため |
@@ -285,7 +307,18 @@ routing したずれは、チケット (Issue) の本文に該当 record の JSO
 ### D7 予算と停止条件
 
 - **見込み**: 読み取り約 3M token (約 239k 行) + 出力と往復の分で、executor 合計約 6M。統合と R3a で約 1M。照合で約 3M。
-- **上限**: shard ごとに入力 1.2M token を超えたら、その shard を打ち切って再分割する。run 全体は 12M token で打ち切る。
+- **上限**: shard ごとに 1.2M token、run 全体で 12M token。
+- **集計範囲**: input (cache の作成と読取を含む) と output の合計。再試行・再分割・やり直しのセッションは元の shard に合算し、
+  統合・R3a・R4・採点のセッションは run 全体に合算する。
+- **実行中の集計と停止 (supervisor)**: 各 provider process は作業場所の supervisor スクリプトが子プロセスとして起動する。
+  Claude 側は隔離実行 profile の stream-json 出力 (#825) から message ごとの usage を読み、shard と run の累計を更新する。
+  累計が上限に達したら、supervisor が provider の process tree を停止し (Windows は `taskkill /T /F`、Linux は process group への
+  SIGKILL)、その shard を `aborted_budget` と記録する。Codex の採点は usage を逐次取得できる保証が無いため、照合先 claim を
+  一定数ずつの batch に分けて batch ごとに実行し、batch 終了時の usage で累計を更新して、次の batch を始める前に上限を判定する。
+- **計測不能時の fail-close**: usage が読めない (stream が途切れる・形式が未知・batch の usage が得られない) ときは、
+  その時点で停止して `aborted_unmetered` と記録する。usage を推定で埋めない。
+- **上限到達試験**: 本番の前に、上限を超える usage を流す合成 stream と、usage を欠く合成 stream で supervisor を動かし、
+  それぞれ停止と記録が起きることを確かめる (AC1b の合成 transcript 試験と同じ場で行う)。
 - **blind 違反**: 違反した shard を無効にし、新しいセッションで 1 回だけやり直す。同じ shard で 2 回違反するか、
   統合役が違反したら、run 全体を中止する。
 - **網羅不足**: R0 網羅率が 100% に届かなければ、未読ファイルだけを 1 回追加で読ませる。それでも届かなければ
@@ -320,7 +353,7 @@ distribution / setup のコードには触れない。固定点 S を一度決�
 | AC | 内容 | 検証 |
 |---|---|---|
 | AC1 | 本 PLAN が lint を通り、非著者 (Codex Sol) の review を受ける | `ut-tdd plan lint`、`review_evidence` の cross_agent 記録 |
-| AC1b | 隔離実行 profile の前提 PR が merge 済みで、本番前の合成 transcript 試験で監査スクリプトが仕込んだ違反を全て検出する | 前提 PR の merge commit、合成 transcript 試験の出力 |
+| AC1b | 隔離実行 profile の前提 PR が merge 済みで、本番前の合成 transcript 試験で、監査スクリプトが仕込んだ違反を全て検出し、supervisor が上限超過と計測不能で停止する | 前提 PR の merge commit、合成 transcript 試験の出力 |
 | AC2 | inventory が `distribution plan --json` の `artifactPaths` (固定点 S) と集合一致し、`inventory_digest` が manifest に記録される | 作業場所の inventory スクリプト + `node src/cli.ts distribution plan --json --tag <S>` |
 | AC3 | 全 executor と統合のセッションで blind 違反が 0 件 | transcript 監査スクリプトの出力 (`run-manifest.json` の audit 欄) |
 | AC4 | R0 網羅率が 100% (S 時点の inventory 件数。HEAD `6b5effbc` では 994 件) | 監査ログ × inventory の網羅スクリプト |
