@@ -6080,6 +6080,22 @@
         "revision": 2,
         "content_digest": "sha256:e9947dcf58727a7dd54d338069d52cd5447254f82df30a4ef39d56a09b1c8fa7"
       }
+    },
+    {
+      "sequence": 381,
+      "previous_record_digest": "sha256:5ba36df5db97cf5e96964ef7ab0a372670e3e5ac55f425d7e61e604af8c3b53c",
+      "record_digest": "sha256:a87d3110038515aebb943708da8138ec48e8d5f587a4fc7fb0a525d7ecbf0750",
+      "command_id": "plan-revise:issue-814:safe-upgrade:sol-r2-fix:r3:7a419f2b0712",
+      "receipt_id": "certificate:cbd62d51e78442407cf65a9c5e796c1e",
+      "receipt_digest": "sha256:d668c3c63db3ddabfa5e748b808213e78c7573990ad95ec9cedc24abebcc8098",
+      "decision_digest": "sha256:319a93f5f1de1944a54b873206e089a35f2366ab0666ec8253aa9a97f2ca1a54",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-105-consumer-safe-upgrade-contract.md",
+        "plan_id": "PLAN-L6-105-consumer-safe-upgrade-contract",
+        "asset_id": "plan:d19459038adff829fcb3c25921395d6c",
+        "revision": 3,
+        "content_digest": "sha256:cbf4a130044faa7201151435796b6047b9a3aed26c2b01d5c4ef59c03fc6dc47"
+      }
     }
   ]
 }

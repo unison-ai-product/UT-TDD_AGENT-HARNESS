@@ -49,18 +49,18 @@ status: draft
 github_issue_id: 814
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:31ebbd0617d027509feded58022ad1d4
-  command_id: plan-revise:issue-814:safe-upgrade:sol-r1-fix:r2:ffa5fd9b8d93
-  admitted_at: 2026-10-05T01:34:09.238Z
-  source_digest: sha256:e9947dcf58727a7dd54d338069d52cd5447254f82df30a4ef39d56a09b1c8fa7
-  decision_digest: sha256:a26e7d40660000b52b4bbae5e95e6ff08d32cb435ff8f402a20597e1341166ec
-  receipt_digest: sha256:37b0553e8f44ad9d1f94fc4f7e90453486909d8be33495e7cae5b0fac9bc467b
+  receipt_id: certificate:cbd62d51e78442407cf65a9c5e796c1e
+  command_id: plan-revise:issue-814:safe-upgrade:sol-r2-fix:r3:7a419f2b0712
+  admitted_at: 2026-10-05T01:43:13.723Z
+  source_digest: sha256:cbf4a130044faa7201151435796b6047b9a3aed26c2b01d5c4ef59c03fc6dc47
+  decision_digest: sha256:319a93f5f1de1944a54b873206e089a35f2366ab0666ec8253aa9a97f2ca1a54
+  receipt_digest: sha256:d668c3c63db3ddabfa5e748b808213e78c7573990ad95ec9cedc24abebcc8098
   binding:
     path: docs/plans/PLAN-L6-105-consumer-safe-upgrade-contract.md
     plan_id: PLAN-L6-105-consumer-safe-upgrade-contract
     asset_id: plan:d19459038adff829fcb3c25921395d6c
-    revision: 2
-    content_digest: sha256:e9947dcf58727a7dd54d338069d52cd5447254f82df30a4ef39d56a09b1c8fa7
+    revision: 3
+    content_digest: sha256:cbf4a130044faa7201151435796b6047b9a3aed26c2b01d5c4ef59c03fc6dc47
   route:
     signal: feature_addition
     mode: add-feature
@@ -75,11 +75,11 @@ admission_receipt:
     digest: sha256:604fcda0ef7e101ecd8df79e682704d0475dc9be62f6afb077916114f192df52
   reentry:
     target_plan_id: PLAN-L6-105-consumer-safe-upgrade-contract
-    target_revision: 2
+    target_revision: 3
     phase: forward_merge
-  escape_reason: "Issue 814 (親 364): PR #818 Sol r1 FLAG の是正 (baseline 事実
-    F1/F5/F7/F10 の訂正、--replace と conflict 停止の優先順位と AC2 の例外、全書込先 F11 の追加、AC3
-    比較範囲と回復状態の分離、--replace 範囲と高影響境界 §10.1 の明記)。契約の方式 D1-D5 は変えない"
+  escape_reason: "Issue 814 (親 364): PR #818 Sol r2 FLAG 2 件の是正 (backup の
+    committed は全 consumer 書込の成功後にだけ公開する順序の統一と crash fixture、006 の skill assets
+    conflict fixture)。契約の方式 D1-D5 は変えない"
 ---
 
 # PLAN-L6-105: consumer の安全な upgrade 契約
@@ -142,7 +142,7 @@ advisor 相談: `ut-tdd advisor --decision design --current-model claude-sonnet-
 
 ### D4 backup の置き場と rollback
 
-- **採用**: on-disk の `.ut-tdd/upgrade-backup/<upgrade_id>/` に、D1 の母集合の対象 path ごとの元 bytes・mode・存在有無と manifest (path / sha256 / mode / existed) を書く。manifest は `prepared` -> `committed` の 2 段階で、個々の書込は一時ファイル + rename。
+- **採用**: on-disk の `.ut-tdd/upgrade-backup/<upgrade_id>/` に、D1 の母集合の対象 path ごとの元 bytes・mode・存在有無と manifest (path / sha256 / mode / existed) を書く。manifest は `prepared` -> `committed` の 2 段階で、**`prepared` は backup の完成 (全対象 path の元 bytes と manifest が書き終わったこと) を表し、`committed` は全 consumer 書込が成功した後にだけ公開する** (consumer 書込は必ず `prepared` の後、`committed` の前に行う)。個々の書込は一時ファイル + rename。
 - **状態遷移と失敗後の期待状態** (AC3 / AC4 の比較範囲の定義):
   1. backup 書込中 (manifest 未完成): consumer 対象 tree は未変更。manifest が無い・不完全な `<upgrade_id>` directory は「未開始」とみなして次回起動時に無視・掃除する。
   2. `prepared` 書込後、consumer file の書込中・直後に in-process で失敗: 同 process が復元し、consumer 対象 tree は upgrade 前と一致する。manifest は `rolled-back` へ更新して**残す** (診断用の recovery metadata)。
@@ -161,7 +161,7 @@ advisor 相談: `ut-tdd advisor --decision design --current-model claude-sonnet-
 - **`--replace <path>` の許可範囲** (どうしても置換したい利用者向けの唯一の例外):
   - 対象は D1 で **`harness-owned` かつ plan が `conflict` (consumer 編集済み) と判定された path** のみ。`consumer-owned` と `marker-mixed` (壊れた目印を含む) は許可しない (前者は「一切触らない」、後者は目印外の consumer 内容を失うため。解消は利用者の手編集)。
   - `<path>` は consumer root からの正規化済み相対 path で、D1 の表に載る正確な 1 path。glob・ディレクトリ・複数指定・絶対 path・`..` を含む path・symlink 経由で root の外へ出る path は fail-close。
-  - 実行は D3 の diff 表示と D4 の backup を必須通過し、**backup の `committed` 前に置換しない**。置換前の bytes は backup に残るので、`--replace` で失われる consumer 編集は backup 経由で復元できる。
+  - 実行は D3 の diff 表示と D4 の backup を必須通過し、**backup が `prepared` として完成する前に置換しない。置換を含む全 consumer 書込が成功した後にだけ `committed` を公開する** (D4 の順序と同じ。置換の途中・直後に process が死亡した場合は `prepared` のまま残るので、次回起動時の rollback で置換前へ戻る)。置換前の bytes は backup に残るので、`--replace` で失われる consumer 編集は backup 経由で復元できる。
   - これは consumer-owned の「一切触らない」の例外ではない (対象に含めない)。D3 の「編集済み conflict は停止」に対する唯一の明示例外であり、利用者が path を名指しした場合に限る。
   - **優先順位**: plan の判定は (1) D1 の所有権分類 → (2) D3 の conflict 判定 → (3) `--replace` の受理判定 の順に行う。`--replace` が受理された path だけ、plan の action を `conflict` から `replace` に変える。他の conflict が 1 件でも残れば D3 どおり何も書かずに停止し、受理済みの `--replace` も実行しない。範囲外の `--replace` 指定はそれ自体が fail-close (書込 0、非 0 終了) で、conflict 停止より先に判定してよい。AC2 の byte 不変の例外は、受理されて実行まで到達した 1 path に限る。
   - **データ破壊を伴う操作なので、仕様の確定は PO 承認が要る** (§10.1 P1)。
@@ -241,7 +241,7 @@ PR-2 は PR-1 と並行してよい。順序は PR-1 -> PR-3 -> PR-4 -> PR-5 -> 
 
 | ID | 操作 | 内容 | 現時点の緩和 (承認の代替ではない) |
 | --- | --- | --- | --- |
-| P1 | `--replace <path>` による consumer 編集済みファイルの置換 | harness-owned かつ conflict の 1 path に限り、diff 表示 + backup `committed` 後に置換する (D5) | 範囲限定、diff 必須、backup で復元可能 |
+| P1 | `--replace <path>` による consumer 編集済みファイルの置換 | harness-owned かつ conflict の 1 path に限り、diff 表示 + backup `prepared` 完成後に置換し、全書込成功後に `committed` (D5) | 範囲限定、diff 必須、backup で復元可能 |
 | P2 | rollback による復元と、upgrade が新規作成した path の削除 | `restoreSetupFiles` と同じ意味論で bytes・mode を復元し、元々存在しなかった path を削除する (D4)。削除対象は upgrade が作成した path のみで、manifest の `existed: false` に限る | backup の manifest に基づく。consumer 既存 path は削除しない |
 | P3 | backup 世代の削除 | 上限を超えた古い `<upgrade_id>` の削除 (O2)。recovery data の消去に当たる | 承認まで自動削除しない (蓄積)。方式は O2 で別途 freeze |
 
