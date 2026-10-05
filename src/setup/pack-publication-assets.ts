@@ -157,8 +157,7 @@ function tarHeader(entry: SealedPublicationEntry): Buffer | null {
   if (!path) return null;
   const header = Buffer.alloc(TAR_BLOCK_SIZE);
   path.name.copy(header, 0);
-  const mode = entry.mode === "100755" ? "100644" : entry.mode;
-  Buffer.from(`0${mode}\0`, "ascii").copy(header, 100);
+  Buffer.from(`0${entry.mode}\0`, "ascii").copy(header, 100);
   if (
     !writeOctal({ target: header, offset: 108, width: 8, value: 0 }) ||
     !writeOctal({ target: header, offset: 116, width: 8, value: 0 }) ||
