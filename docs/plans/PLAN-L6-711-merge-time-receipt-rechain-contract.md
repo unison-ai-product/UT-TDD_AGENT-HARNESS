@@ -44,18 +44,18 @@ sub_doc: function-spec
 github_issue_id: 711
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:e64cbb4fce9218db1ba253f7853e1f50
-  command_id: plan-revise:issue-711:s1-input-shape:plan:r2:299d2f8bcfd2
-  admitted_at: 2026-09-28T07:13:01.026Z
-  source_digest: sha256:6ec8bac1ec6a35fe064177df53e27b585f893cc079fcaeb6d524d3f6976d659d
-  decision_digest: sha256:213bd419852b2bf14d057521b8fcb58cf156aaf260078fd0fb5edfa4c716a77b
-  receipt_digest: sha256:c90e34c0fa77c82785d047b1dcb73c9f5242d9f92ba91744dc7e1cda6ac7e3e1
+  receipt_id: certificate:aee2f968f08eac68241e2db83b62697c
+  command_id: plan-revise:issue-711:receipt-digest-preimage-sources:v2:r3:fd602b4a19cf
+  admitted_at: 2026-10-05T05:14:29.682Z
+  source_digest: sha256:d24c346d2365769a32b397aed2efdf46642a991a49dbbce0cec6ed976eb17517
+  decision_digest: sha256:e0836dadea509ab572b0ff091f0da0e674efc6c5517470651af8b32a405060e2
+  receipt_digest: sha256:0dce98947eb82018e1fb4fbdce98a625c595fe642f5bdd2771fd2416df51eb11
   binding:
     path: docs/plans/PLAN-L6-711-merge-time-receipt-rechain-contract.md
     plan_id: PLAN-L6-711-merge-time-receipt-rechain-contract
     asset_id: plan:ac2c23d3c72fc6e2886491ac1df09452
-    revision: 2
-    content_digest: sha256:6ec8bac1ec6a35fe064177df53e27b585f893cc079fcaeb6d524d3f6976d659d
+    revision: 3
+    content_digest: sha256:d24c346d2365769a32b397aed2efdf46642a991a49dbbce0cec6ed976eb17517
   route:
     signal: feature_addition
     mode: add-feature
@@ -70,11 +70,12 @@ admission_receipt:
     digest: sha256:1b6aa397ad9995b717907d3247e02b3bba3d6c4508874b7654f90fd29b388927
   reentry:
     target_plan_id: PLAN-L6-711-merge-time-receipt-rechain-contract
-    target_revision: 2
+    target_revision: 3
     phase: forward_merge
-  escape_reason: "S2 の実装前確認 (issue #711) に応え、検証器の入力形と Git 取得の境界を §2.6 に freeze する
-    (S1)。非著者 review (Sol r1、PR #720) の FLAG 2 件 (base の定義、verifierDigest の
-    preimage) を反映し、#719 merge 後の main tail に chain する。"
+  escape_reason: "Issue 711: PR #724 Sol r2 FLAG の是正中に見つかった契約齟齬の是正。§2.3-6 の
+    receipt_digest 再導出について preimage 各フィールドの源 (既に束縛された R/M の
+    blob・record・A_R・commits.M) と actor の契約定数を明記し、legacy bootstrap 経路を fail
+    として閉じる。§2.6 の入力形は変えない (advisor claude-fable-5 design)"
 ---
 
 # PLAN-L6-711: merge 時の自動 re-chain と簿記差分での再検免除の契約 freeze
@@ -189,6 +190,24 @@ PLAN ファイルの本文と frontmatter から `admission_receipt` ブロッ�
      - 上の入力から決定的に導かれる digest (source_digest、content_digest、decision_digest、receipt_digest、record_digest、receipt_id)。
    verifier はこれらの digest を自分で計算し直して照合する。record 内の値を信用しない。`reentry.targetRevision` 以外の admission フィールドが
    1 つでも `A_H` と異なれば `fail`。
+   - **`receipt_digest` の preimage の源 (2026-10-05 改訂)**: `receipt_digest` は ledger の certificate digest であり、
+     `derivePlanRevisionDigests` (`src/plan-asset/ledger/plan-revision-ledger.ts`) が `AppendPlanRevisionInput` から計算する。verifier は
+     同じ関数で R の各 record の `receipt_digest` を再導出し、R が持つ値と照合する。preimage の各フィールドは、次の既に束縛された源からだけ組む。
+     adapter が自由に供給する preimage フィールドは置かない (§2.6 の `RechainInput` は変えない)。
+     | フィールド | 源 |
+     |---|---|
+     | `commandId` / `certificateId` | R の tracked record の `command_id` (H 側の値 + 許容 suffix `:rechain-<n>`) と、その `command_id` からの正規導出 |
+     | `assetId` / `planId` / `sourcePath` | H 側 tracked record の `binding` (R と一致すること) |
+     | `baseRevision` | `M` の tracked receipt における同 asset の最新 record の `binding.revision` |
+     | `basePayloadDigest` | `M` の PLAN blob から正規の canonical payload 導出 (`plan-ledger-rehydrator` と同じ関数) |
+     | `canonicalPayloadJson` / `bodyDigest` / `contentDigest` | R の PLAN blob から正規 assembler で導出 |
+     | `sourceCommit` | `commits.M` (base 束縛を `M` に合わせる許容項目と同じ値) |
+     | `reason` / `routeTupleDigest` | `A_R` から導出 (`escapeReason ?? route:<routeSignal>` / `sha(stableJson(admission))`) |
+     | `occurredAt` | R の frontmatter `admission_receipt.admitted_at` |
+     | `actor` | 契約定数 `ut-tdd-pr-merge-rechain`。re-chain の再発行は wrapper (`ut-tdd pr merge`) が行い、actor は record にも frontmatter にも投影されないため、定数に固定して決定的にする。wrapper (S3 以降) はこの定数で append する |
+     いずれかの源が得られない、または legacy bootstrap 経路 (`revisionUsesLegacyBootstrap` が真になる asset) の record が再発行対象に含まれる場合は、
+     `fail` とし通常の再検へ戻す (legacy 経路は preimage に別の入力を含むため、本規則では再導出しない)。
+     再導出値と R の値が一致しなければ `fail` (理由: `receipt_digest_mismatch`)。
 
 ### 2.4 review 引き継ぎと CI
 
@@ -280,6 +299,7 @@ pair は `docs/test-design/harness/L7-unit-test-design.md` に、実装 PR で `
 | CANDIDATE-U-RECHAIN-014 | 非簿記 path を `H` と `M` の両側が別々に変え、git の内容 merge は成立する fixture → 検証器は `fail` (理由: 両側変更)。簿記 path の両側変更は §2.2 の規則で判定する | (m) path 単位 3-way の「両側変更は対象外」を外し、`X[p]` をそのまま期待値にする → `pass` して失敗 |
 | CANDIDATE-U-RECHAIN-015 | stack した PR: `H` が含む別 PR の commit `C` が待機中に `M` へ入った fixture (`base` = `C`)。PR 自身の append-only 追加だけが再適用され、`C` の変更は main 由来として扱われて `pass` | (m) `C` より前の旧 base を使う → `C` の変更が PR の追加に数えられて失敗 |
 | CANDIDATE-U-RECHAIN-016 | 同じ `RechainInput` を key の挿入順だけ変えて 2 通り組むと、`verifierDigest` が完全一致する。domain separator の版を変えると値が変わる | (m) `stableJson` の代わりに `JSON.stringify` を使う → 挿入順で値が変わって失敗 |
+| CANDIDATE-U-RECHAIN-017 | R の record の `receipt_digest` だけを任意値 (例 `sha256:` + `f` × 64) に置き換え、frontmatter と record digest を整合させて再計算した入力 → `fail` (理由: `receipt_digest_mismatch`)。同じ入力で `actor` 定数を別値にして再導出した値に置き換えた場合も `fail`。legacy bootstrap 経路の asset を再発行対象に含む入力 → `fail` | (m) `derivePlanRevisionDigests` による再導出を省き H の値の非流用だけを見る → 任意 digest が pass して失敗 |
 
 ## 5. 実測の根拠コマンド
 
@@ -313,3 +333,4 @@ git show --stat b8bdf6d8
 6. rev 6: PR #713 の非著者 review (Codex Sol r3) の FLAG 1 件を反映した。`workflow_phase` は `receiptFrontmatter` に投影されないため、§2.3-6 の投影照合の例から外した。投影フィールドは renderer の出力に合わせて全て列挙し、非投影入力は `decision_digest` 束縛だけで検証することを明記した。PR #713 は是正上限 (3 回) に達したので close し、本 revision を新しい PR で再提出した (CLAUDE.md §FLAG 後の限定是正と merge 2(c))。
 7. rev 2 (S1): 検証器の入力形と Git 取得の境界を §2.6 に freeze した (S2 の実装者 Codex root からの、実装前の確認依頼による。issue #711)。path 単位の 3-way、blob の範囲、`A_H` の照合、`verifierDigest`、adapter の信頼境界、oracle 008 と検証器の分担を定め、U-RECHAIN-013 (adapter の忠実性) と 014 (両側変更の非簿記 path) を追加した。
 8. rev 3 (S1 の是正): PR #720 の非著者 review (Codex Sol r1) の FLAG 2 件を反映した。(1) 旧 main tip 由来の base は stack した PR で `merge-base(H, M)` と一致しない反例があるため、§2.2 と §2.6 の base を `merge-base(H, M)` (git merge 自体の base) に統一し、旧 tip を使わないことにした。U-RECHAIN-015 を追加した。(2) `verifierDigest` の preimage、hash、domain separator (版付き) を既存の `stableJson` / `sha` を名指しして固定し、U-RECHAIN-016 を追加した。
+9. 2026-10-05 改訂 (契約齟齬の是正): S2 の実装 (PR #724) に対する非著者 review (Codex Sol r2) が、`receipt_digest` を再導出せず H の値の非流用だけを見ている点を FLAG とした。実装の是正中に、§2.3-6 が求める再導出の preimage の源が契約に書かれていないことが分かった (実装者は「harness.db にしかない」と判断して停止)。advisor (claude-fable-5、design) と実測 (`src/plan-admission/node-plan-revision-runner.ts:273-289`、renderer に `actor` の投影なし) により、`actor` 以外の全フィールドが既に束縛された源から導けることを確認し、§2.3-6 に源の表と `actor` の契約定数を追加した。§2.6 の入力形は変えない。B 案 (ledger を信頼根にする) は、R を生む append 自身が書いた行との照合でほぼ自己整合になり信頼境界を広げるため、C 案 (再導出をやめる) は契約を弱めるため、採らなかった。
