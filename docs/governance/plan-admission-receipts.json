@@ -6208,6 +6208,22 @@
         "revision": 1,
         "content_digest": "sha256:825929ad6b36a6b5e6bf9b7c1020ba1f296381d792fbca6a068107f3ce9b869c"
       }
+    },
+    {
+      "sequence": 389,
+      "previous_record_digest": "sha256:12fd5441edb83387a464f99abc9f7ab5afe7f02eee2674c9d5c3e972129f572f",
+      "record_digest": "sha256:0ca7398b633f269e6a9996c5c6e20bb591b01bd3d38bcaa79d6a608954a15740",
+      "command_id": "plan-revise:issue-815:report-command:sol-r1-fix:r2:c512187c9e3c",
+      "receipt_id": "certificate:2fd9a745c23ecfefc325213beb4cb81e",
+      "receipt_digest": "sha256:bcf0b91ec08d68ade308fbb712a87ebc26940eec04b1a0d8221ae3dc38f6afbc",
+      "decision_digest": "sha256:db7574230bd5a003fd3221c5186c9cd215746c3812d41a31a8fc8f0e233a1cbe",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-107-consumer-report-command-and-intake.md",
+        "plan_id": "PLAN-L6-107-consumer-report-command-and-intake",
+        "asset_id": "plan:ff8ec90a74ab5c281d4806a91966f1d5",
+        "revision": 2,
+        "content_digest": "sha256:09370048e695b988f60357b931a3e05185faa41490433a6a1882c78df5c2b989"
+      }
     }
   ]
 }
