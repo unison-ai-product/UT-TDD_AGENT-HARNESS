@@ -148,6 +148,7 @@ export function main(argv = process.argv.slice(2), deps = {}) {
   const now = deps.now ?? (() => new Date().toISOString());
   const run = deps.spawnSync ?? spawnSync;
   const parsed = parseArgs(argv);
+  const args = parsed.values;
   const requestedTag = args["--tag"] ?? CANARY_TAG;
   if (args["--tag"] && requestedTag !== CANARY_TAG && requestedTag !== AGENT_E2E_TAG)
     throw new Error("acceptance-tag-not-exact");
@@ -157,7 +158,6 @@ export function main(argv = process.argv.slice(2), deps = {}) {
   if (deps.fixtureTag && args["--tag"] && deps.fixtureTag !== args["--tag"])
     throw new Error("fixture-tag-not-allowed");
   if (parsed.phase === "verify") return verifySmoke(parsed, { now, run });
-  const args = parsed.values;
   const recordBytes = readFileSync(args["--record"]);
   const record = parsePublishRecord(JSON.parse(recordBytes.toString("utf8")), args["--comment-url"], { expectedTag: tag });
   const { directory, actualDigests } = verifyReleaseDirectory(args["--release-dir"], record);
@@ -283,9 +283,6 @@ function runProductGit(run, consumerRoot, args) {
 
 function productHead(run, consumerRoot) {
   const head = runProductGit(run, consumerRoot, ["rev-parse", "HEAD"]);
-  const expectedTag = args["--tag"] ?? CANARY_TAG;
-  if (expectedTag !== CANARY_TAG && expectedTag !== AGENT_E2E_TAG)
-    throw new Error("acceptance-tag-not-exact");
   if (!commitPattern.test(head)) throw new Error("consumer-head-invalid");
   return head;
 }
@@ -293,6 +290,9 @@ function productHead(run, consumerRoot) {
 function verifySmoke(parsed, { now, run }) {
   if (parsed.removedPaths.length < 2) throw new Error("verify-requires-removed-source-and-release-paths");
   const args = parsed.values;
+  const expectedTag = args["--tag"] ?? CANARY_TAG;
+  if (expectedTag !== CANARY_TAG && expectedTag !== AGENT_E2E_TAG)
+    throw new Error("acceptance-tag-not-exact");
   const consumerRoot = realpathSync.native(resolve(args["--consumer-root"]));
   if (!isInside(realpathSync.native(tmpdir()), consumerRoot))
     throw new Error("consumer-root-not-disposable-temp");

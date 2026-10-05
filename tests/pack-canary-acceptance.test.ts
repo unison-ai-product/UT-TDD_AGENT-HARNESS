@@ -343,12 +343,12 @@ describe("manual canary acceptance publish-record boundary", () => {
   it("U-ST-PACKCANARY-015: accepts only the exact canary.3 installer tag in the standard runner", () => {
     const anchor = sha("canary.3 anchor");
     expect(buildInstallerInvocation("C:/c3-release", anchor, AGENT_E2E_TAG)).toEqual([
-      `C:/c3-release/${AGENT_E2E_TAG}.ut-tdd.mjs`,
+      join("C:/c3-release", `${AGENT_E2E_TAG}.ut-tdd.mjs`),
       "setup", "--solo", "--consumer-runtime-release", "C:/c3-release",
       "--expected-consumer-digest", anchor,
     ]);
     expect(buildInstallerInvocation("C:/c2-release", anchor)).toEqual([
-      `C:/c2-release/${CANARY_TAG}.ut-tdd.mjs`,
+      join("C:/c2-release", `${CANARY_TAG}.ut-tdd.mjs`),
       "setup", "--solo", "--consumer-runtime-release", "C:/c2-release",
       "--expected-consumer-digest", anchor,
     ]);
