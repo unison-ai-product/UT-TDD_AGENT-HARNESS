@@ -24,7 +24,7 @@ decision_points:
   - when: "Writing a multi-line commit message"
     choose: "use a Bash heredoc (`git commit -F - <<'EOF' ... EOF`)"
     over: "using a PowerShell here-string"
-    because: "the `commit-msg` hook does not accept PowerShell here-strings for multi-line messages; only the Bash heredoc form is honored"
+    because: "there is no local `commit-msg` hook (CI `commitlint-invalid` is the enforcer); the Bash heredoc is advised only because PowerShell here-strings are error-prone for multi-line messages (quoting / line endings)"
   - when: "Verifying Vitest before pushing"
     choose: "run `npm run test`"
     over: "using an unspecified test command"
@@ -45,20 +45,22 @@ decision_points:
 
 # git
 
-Conventional Commits discipline, harness-check CI requirements, branch and PR
-rules, and the commit-msg hook for UT-TDD (FR-L1-17 version control).
+Conventional Commits discipline, harness-check CI requirements, and branch and
+PR rules for UT-TDD (FR-L1-17 version control).
 
 ## When to load this skill
 
 - Preparing a commit after implementing or reviewing a PLAN.
-- A `commit-msg` hook rejection needs diagnosis.
+- A CI `branch-type guard` (`commitlint-invalid`) rejection needs diagnosis.
 - A push will touch `.github/workflows/` and needs a workflow-scoped token.
 - A CI `harness-check` failure must be resolved before gate clearance.
 
 ## Conventional Commits format
 
-Every commit message must follow Conventional Commits or the `commit-msg` hook
-will reject it:
+Every commit message must follow Conventional Commits. CI rejects a subject that
+does not (`commitlint-invalid`; regex `CONVENTIONAL_COMMIT_RE` at
+`src/github/ops-guard.ts:41`, run by the `branch-type guard` step at
+`.github/workflows/harness-check.yml:78`; there is no local `commit-msg` hook):
 
 ```
 <type>(<scope>): <short description>
@@ -68,13 +70,12 @@ will reject it:
 [optional footer]
 ```
 
-Allowed types: `feat`, `fix`, `chore`, `docs`, `refactor`, `test`, `style`,
-`ci`, `perf`. Scope is the PLAN ID or module name (e.g., `PLAN-L7-44`,
+Allowed types are those in `CONVENTIONAL_COMMIT_RE`. Scope is the PLAN ID or module name (e.g., `PLAN-L7-44`,
 `projection-writer`). The short description is imperative mood, no trailing
 period.
 
 **Bash heredoc is required** for multi-line commit messages — PowerShell
-here-strings are not accepted by the hook:
+here-strings are not reliable for this:
 
 ```bash
 git commit -F - <<'EOF'
@@ -101,17 +102,11 @@ Confirm the diff contains only the files for the current PLAN.
 
 ## harness-check CI gates
 
-CI runs `harness-check` on every push. All four must be green before a push:
-
-| Check | Command | Common failure |
-|---|---|---|
-| Type check | `npm run typecheck` | Missing type declarations |
-| Vitest | `npm run test` | Use the canonical repository script |
-| Biome | `npm run lint` | Format violations from `biome lint` without `biome check` |
-| Doctor | `ut-tdd doctor` | Governance violations, missing PLAN dependencies |
-
-Run all four locally before pushing. `biome lint` alone does not check
-formatting — run `npm run lint` (which invokes `biome check`) to catch both.
+CI runs `harness-check` on every push; the sub-gates are defined in
+`.github/workflows/harness-check.yml` (typecheck :106, doctor :114, test :134,
+lint :155) and described in `ci-gate-design`. Run them locally before pushing
+(see the pre-push checklist). `biome lint` alone does not check formatting — use
+`npm run lint` (which invokes `biome check`).
 
 ## Branch strategy
 
@@ -135,6 +130,6 @@ workflow-scoped tokens in config files or environment variables.
 - [ ] `npm run test` (Vitest) exits 0 with no skipped tests in PLAN scope.
 - [ ] `ut-tdd doctor` exits 0.
 - [ ] `git diff --stat HEAD` shows only PLAN-scoped files.
-- [ ] Commit message accepted by `commit-msg` hook (Conventional Commits).
+- [ ] Commit subject matches Conventional Commits (CI `commitlint-invalid`).
 - [ ] If `.github/workflows/` touched: workflow-scoped PAT is in use and will be
       removed after push.
