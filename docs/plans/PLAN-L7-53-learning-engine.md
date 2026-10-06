@@ -7,7 +7,7 @@ layer: L7
 drive: db
 parent_design: docs/design/harness/L6-function-design/function-spec.md
 created: 2026-06-15
-updated: 2026-10-06
+updated: 2026-06-15
 agent_slots:
   - role: tl
     slot_label: TL - skill evaluation + learning engine review
@@ -71,18 +71,18 @@ route_mode: forward
 status: confirmed
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:d3e227277a0f68f27e11add75c7c34ec
-  command_id: plan-revise:issue-789:legacy-53:2:retire-exec:rechain-1
-  admitted_at: 2026-10-06T03:14:55.519Z
-  source_digest: sha256:9081ef80c06e54ee708db3326635fea7f9c8021dc2724a6e062607b79045c790
+  receipt_id: certificate:63b80361be06f529901f133281c4d76c
+  command_id: plan-revise:issue-789:legacy-53:3:restore-updated
+  admitted_at: 2026-10-06T03:28:39.894Z
+  source_digest: sha256:22bcfdaacb91fdc641033eb3e3e4f153a71573cf62f1d3d9d810e052efeb39c3
   decision_digest: sha256:452af953fe129f0c872f1466b55872ab99d912c97088d5666e79ebbb36186534
-  receipt_digest: sha256:80e4cd40f7226c5e8189e57b1932b201f9618e503e9d35f31115a8da74475515
+  receipt_digest: sha256:66c527e29efdd3115558c1ff9b06cfc32635a69a194f829b19067f3b42269817
   binding:
     path: docs/plans/PLAN-L7-53-learning-engine.md
     plan_id: PLAN-L7-53-learning-engine
     asset_id: plan:legacy:19e7f3da4b052a9326476c0f730417cd2c98cd9f6ccd4d955e103dea7d745d3c
-    revision: 2
-    content_digest: sha256:9081ef80c06e54ee708db3326635fea7f9c8021dc2724a6e062607b79045c790
+    revision: 3
+    content_digest: sha256:22bcfdaacb91fdc641033eb3e3e4f153a71573cf62f1d3d9d810e052efeb39c3
   route:
     signal: forward
     mode: forward
