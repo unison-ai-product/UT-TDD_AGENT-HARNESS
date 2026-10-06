@@ -1,29 +1,40 @@
 ---
 plan_id: PLAN-L7-53-learning-engine
-title: "PLAN-L7-53: skill learning engine — evaluation, trend, and recommendation feedback"
+title: "PLAN-L7-53: skill learning engine — evaluation, trend, and
+  recommendation feedback"
 kind: impl
 layer: L7
 drive: db
 parent_design: docs/design/harness/L6-function-design/function-spec.md
-status: confirmed
 created: 2026-06-15
-updated: 2026-06-15
+updated: 2026-10-06
 agent_slots:
   - role: tl
-    slot_label: 'TL - skill evaluation + learning engine review'
+    slot_label: TL - skill evaluation + learning engine review
   - role: qa
-    slot_label: 'QA - evaluation oracle and acceptance criteria'
+    slot_label: QA - evaluation oracle and acceptance criteria
 review_evidence:
   - reviewer: code-reviewer
     review_kind: intra_runtime_subagent
     worker_model: claude-opus-4-8
     reviewer_model: claude-sonnet-4-6
-    tests_green_at: "2026-06-15"
-    reviewed_at: "2026-06-15"
+    tests_green_at: 2026-06-15
+    reviewed_at: 2026-06-15
     verdict: pass
-    scope: "Learning Engine FR-L1-36/38/43 (projectSkillEvaluations/projectPocEvaluations/projectModelEvaluations + harness-db schema v12 + 3 evaluation test suites)。cold-start 不変条件 (0 telemetry/opt-in 無効で 0 行・throw しない) を 3 projection で確認、FR-38 cost-efficiency の explicit_l7_defer (token telemetry 未存在・捏造なし) 正当性、値の正しさ (skill rating=adoption×success / PoC=confirmed/(confirmed+rejected+pivot) pivot 非成功 / model=success_count/run_count、join=plan_registry.status IN PLAN_SUCCESS_STATUSES) を検証。Critical=0、APPROVE。Important I-1 (poc PK single-row 制約 doc note) は対応、I-2 (unused cutoff 30d 境界テスト) + Minor M-1..3 (asOf 対称性/PLAN_SUCCESS_STATUSES export/index コメント) は §Carry に test-hardening follow-up として記録 (非ブロッカー、green コードへの増分)。V-model closure 用の後追い review (実装は 2026-06-15 同日 merge 済 green、status=draft + review_evidence 空のまま放置されていたのを本クローズで confirmed 化)。"
+    scope: Learning Engine FR-L1-36/38/43
+      (projectSkillEvaluations/projectPocEvaluations/projectModelEvaluations +
+      harness-db schema v12 + 3 evaluation test suites)。cold-start 不変条件 (0
+      telemetry/opt-in 無効で 0 行・throw しない) を 3 projection で確認、FR-38
+      cost-efficiency の explicit_l7_defer (token telemetry 未存在・捏造なし) 正当性、値の正しさ
+      (skill rating=adoption×success / PoC=confirmed/(confirmed+rejected+pivot)
+      pivot 非成功 / model=success_count/run_count、join=plan_registry.status IN
+      PLAN_SUCCESS_STATUSES) を検証。Critical=0、APPROVE。Important I-1 (poc PK
+      single-row 制約 doc note) は対応、I-2 (unused cutoff 30d 境界テスト) + Minor M-1..3
+      (asOf 対称性/PLAN_SUCCESS_STATUSES export/index コメント) は §Carry に
+      test-hardening follow-up として記録 (非ブロッカー、green コードへの増分)。V-model closure
+      用の後追い review (実装は 2026-06-15 同日 merge 済 green、status=draft +
+      review_evidence 空のまま放置されていたのを本クローズで confirmed 化)。
 generates:
-  # FR-L1-36 (foundation slice — implemented in this PLAN)
   - artifact_path: src/schema/harness-db.ts
     artifact_type: source_module
   - artifact_path: src/state-db/projection-writer.ts
@@ -40,10 +51,6 @@ generates:
     artifact_type: markdown_doc
   - artifact_path: docs/design/harness/L1-requirements/functional-requirements.md
     artifact_type: design_doc
-  # FR-L1-38 (model evaluation — implemented in this PLAN)
-  - artifact_path: tests/model-evaluation.test.ts
-    artifact_type: test_code
-  # FR-L1-43 (PoC success measurement — implemented in this PLAN)
   - artifact_path: tests/poc-evaluation.test.ts
     artifact_type: test_code
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
@@ -59,6 +66,26 @@ dependencies:
     - docs/design/harness/L5-detailed-design/physical-data.md
     - docs/design/harness/L3-functional/business-detail.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
+route_signal: forward
+route_mode: forward
+status: confirmed
+admission_receipt:
+  schema_version: v2
+  receipt_id: certificate:d3e227277a0f68f27e11add75c7c34ec
+  command_id: plan-revise:issue-789:legacy-53:2:retire-exec:rechain-1
+  admitted_at: 2026-10-06T03:14:55.519Z
+  source_digest: sha256:9081ef80c06e54ee708db3326635fea7f9c8021dc2724a6e062607b79045c790
+  decision_digest: sha256:452af953fe129f0c872f1466b55872ab99d912c97088d5666e79ebbb36186534
+  receipt_digest: sha256:80e4cd40f7226c5e8189e57b1932b201f9618e503e9d35f31115a8da74475515
+  binding:
+    path: docs/plans/PLAN-L7-53-learning-engine.md
+    plan_id: PLAN-L7-53-learning-engine
+    asset_id: plan:legacy:19e7f3da4b052a9326476c0f730417cd2c98cd9f6ccd4d955e103dea7d745d3c
+    revision: 2
+    content_digest: sha256:9081ef80c06e54ee708db3326635fea7f9c8021dc2724a6e062607b79045c790
+  route:
+    signal: forward
+    mode: forward
 ---
 
 # PLAN-L7-53: skill learning engine
@@ -169,3 +196,12 @@ All three BR-21 FR slices are implemented in this PLAN.
   - I-2: `unused_flag` cutoff の **ちょうど 30 日前 (境界、`fired_at === cutoff`)** ケースを `tests/skill-evaluation.test.ts` に追加し inclusive (`>=`) を回帰固定。
   - M-1: `projectModelEvaluations` に `opts?: { asOf?: string }` を足し skill/poc と対称化 (値固定テスト可能化)。
   - M-3: `idx_poc_evaluations_rate` は単一行テーブルでは実質無効 = 「multi-row 拡張を見越した前倒し」コメント (I-1 の PK 注記とセット)。
+
+## 部分退役注記 (2026-10-06、PLAN-L6-789)
+
+`PLAN-L6-789-token-ingest-retirement` (Issue #789、PO 承認 2026-09-30) により、本 PLAN の FR-L1-38 (model 評価システム) 部分は退役した。formal supersede は token ingest の起点契約である `PLAN-L7-57` の 1 件だけで、本 PLAN は supersede 対象にしない (PLAN-L6-789 §3.1-3.3)。
+
+- `generates` から `tests/model-evaluation.test.ts` を外した。実装 PR (`PLAN-L7-789-token-ingest-retirement-execution`) が撤去した test であり、残すと `plan-artifact-existence` が phantom を出す。
+- U-FR-L1-38 oracle は L7 unit test design で撤回し、FR-L1-38 は L1 functional requirements で退役と記した。本文の FR-L1-38 / `tests/model-evaluation.test.ts` に関する記述は退役前の記録として残す。
+
+FR-L1-36 (スキル評価) と FR-L1-43 (PoC サクセス計測) は継承する。status は変えない。
