@@ -6864,6 +6864,22 @@
         "revision": 1,
         "content_digest": "sha256:ccd175ac8fdb1c141f0c7d361b3c948e1aa3282865ec7e143523310f6dc65063"
       }
+    },
+    {
+      "sequence": 430,
+      "previous_record_digest": "sha256:917a889585ad11cc239e7beb703f3a7ce57ac82652942b577ef65f89afedd0b6",
+      "record_digest": "sha256:11272f6ce51e9eb506fba312503072d40c19e3588dbdb6352b7ce07086f36813",
+      "command_id": "plan-draft:issue-835:windows-sessionstart-contract-reverse:20261006074748975",
+      "receipt_id": "certificate:22f47f3dd6d6ff5c42d4f9370eeed624",
+      "receipt_digest": "sha256:83007a0d6aece55e23a91655f5e40d61b4889987e8bd5234cde310c82470b099",
+      "decision_digest": "sha256:3fda73dfdff2641a3cf1191b6d040bf61f8802e67c2a351e743753b7f0242633",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-835-windows-sessionstart-contract-backfill.md",
+        "plan_id": "PLAN-REVERSE-835-windows-sessionstart-contract-backfill",
+        "asset_id": "plan:22f47f3dd6d6ff5c42d4f9370eeed624",
+        "revision": 1,
+        "content_digest": "sha256:d4dc276ab5771cb4c8b8eb3628f6c6ba5ae4005b83e0f46f361eb9168b40262c"
+      }
     }
   ]
 }
