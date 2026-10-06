@@ -27,12 +27,12 @@ UT-TDD harness は **AI 実装エージェント (Claude Code / Codex) を統制
 
 | 制約 (ADR-001) | 方式への影響 |
 |---|---|
-| 現行実体 = TypeScript (strict) / Bun、target = TypeScript / Node | mainにはBun production/test経路が残るため現状をNode化済みと扱わない。新規Bun依存は禁止し、Node parity receipt後に既存経路を段階撤去する |
+| 現行実体 = TypeScript (strict) / Node (`package.json` `utTdd.nodeToolchain`: `node_production` / `sealed`) | main の src / scripts / CI / hook に Bun 実行経路は無く、Bun は永久禁止 (#134)。旧Bun経路の撤去証明は §9 のcutover chainを正本とする |
 | state = `.ut-tdd/` YAML/JSON + SQLite projection DB (`.ut-tdd/harness.db`) | 永続化層は fs + projection。集約は file schema (data.md §8)、V-model 製本・trace/coverage/findings は SQLite projection (data.md §8.1) |
 | 対象リポジトリ言語非依存 | harness は対象コードを実行せず、doc/PLAN/state を検証する静的 + orchestration ツール |
 | Windows ネイティブ第一級 | path = Node `path`、改行 = `.gitattributes` 正規化、Codex sandbox 不安定を runtime adapter に隔離 |
 | ルール同一性 (concept §2.1.0) | Claude (hook) / Codex (AGENTS.md) が**同一 core**を呼ぶ。判定ロジックを 2 重実装しない |
-| 現行配布 = `bun build --compile`、target配布 = sealed Node generation | 旧配布をmigration debtとしてinventoryし、Node generationの同一性・rollback成立前に削除しない |
+| 配布 = sealed Node generation (`npm run build` = `node scripts/build-node.mjs`) | 旧 `bun build --compile` 配布は撤去済み。旧配布のinventoryは §9 / PLAN-L7-458 を正本とし、Node generationの同一性・rollback成立前に`build` scriptを削除しない |
 
 ## §2 主要技術決定 (arc42 §4 Solution Strategy)
 
@@ -41,16 +41,15 @@ UT-TDD harness は **AI 実装エージェント (Claude Code / Codex) を統制
 | 品質目標 (ISO 25010) | 技術決定 | 根拠 |
 |---|---|---|
 | 機能適合性 / 正確性 | **zod 単一正本** (`src/schema`) で enum・契約を型 + 実行時検証に展開 | drift 根絶 (ADR-001 Consequences、要件 §1.10 F) |
-| 移植性 (Windows/Linux 同一動作) | 現行TS/Bunをbaselineとして保持しつつ、TypeScript/Node + Node `path` + compiled ESMへ移行 | ADR-001 §3 クロスプラットフォーム規約 |
+| 移植性 (Windows/Linux 同一動作) | TypeScript/Node + Node `path` + compiled ESM | ADR-001 §3 クロスプラットフォーム規約 |
 | 信頼性 (fail-close) | guard / lint は exit≠0 で停止 (agent-guard / 5 lint / doctor) | 安全性を pass させない (.claude/CLAUDE.md) |
 | 保守性 / モジュール性 | 依存を `src/schema` へ一方向集約、循環禁止、lint は 1 関心 1 module | §3/§5 依存方向 |
 | テスト容易性 | 各 module が pure 関数 (`analyzeX(opt?)`) を export、副作用を entrypoint に隔離 | lint 5 種の共通様式、vitest |
 | 相互運用性 (Claude/Codex/MCP 圏) | commander CLI + 将来 MCP server 化を見据えた TS | ADR-001 Rationale (ecosystem fit) |
 
-技術スタックは二状態を区別する。**current**はTypeScript strict / Bun / commander / zod / vitest /
-YAML+JSON+SQLite / Bun単一バイナリでありmigration debtである。**target**はTypeScript strict /
-Node / compiled ESM / sealed generationである。Node parity receipt前にcurrentを削除せず、target成立後に
-current Bun経路を残さない。
+技術スタックは二状態を区別する。**current**はTypeScript strict / Node / commander / zod / vitest /
+YAML+JSON+SQLite (`node:sqlite`) / compiled ESM / sealed generationである。Bunは永久禁止 (#134) であり、
+旧Bun経路の撤去は§9のcutover chainで証明する。
 
 **削除禁止条項の保護範囲 (改訂、PLAN-L6-93 §5.1)**: 上記「Node parity receipt前にcurrentを
 削除せず」が保護するのは**再現可能なrollback成立性**であり、保護対象は
@@ -79,7 +78,7 @@ current Bun経路を残さない。
 | **lint** (`src/lint/`) | doc/PLAN/trace の静的検証群 (g3-trace / entity-coverage / fr-registry / doc-consistency / improvement-backlog / backfill-pairing / scrum-reverse / propagation / review-evidence / **roadmap-registry**)。**hard 判定 (doctor.ok 連動) の対象集合は `src/doctor/index.ts` が正本** (設計 doc に固定数を直書きしない、§6 m-4)。<br>**工程表メタモデル** (`roadmap-registry.ts` + `schema/roadmap.ts`): 工程表 (roadmap) = **人間向け全プログラム進行台帳** (機能群=結合テスト粒度、human/AI plane = 工程表:人間自己割当 / PLAN:AI オーケストレーション、定義正本 concept §10.2)。`analyzeProgramCoverage` が **全プログラム被覆** (forward 全バンド `PROGRAM_BANDS` の工程表登録) を doctor へ surface (未登録 = 「実装どこまで?」frontier、warn-first)。フロント (中央UI) へは harness.db projection 経由 (PLAN-RECOVERY-04 定義 / REVERSE-44 設計書) | `analyzeX(opt?)` pure 関数群 / `analyzeProgramCoverage` | schema (一部) / fs (loadX) |
 | **export** (`src/export/`) | canonical doc から派生 export dataset / render artifact projection を作る pure 変換層。CSV/Markdown は内蔵 renderer、XLSX/PPTX は renderer readiness finding に閉じる (PLAN-L7-35) | `parseCanonicalDocumentStructure()` / `buildDocumentExportDataset()` / `renderDocumentExport()` / `recordDocumentExportArtifact()` | schema (path normalization) |
 | **projection** (`src/projection/`) | DB非依存のprojection domain、application command、意味的read/store portを所有する。SQLやfilesystemをdomain/applicationへ漏らさず、具象SQLite adapterは`state-db`側で実装する | `ProjectionStore` / `PocEvaluationReadPort` / `ModelEvaluationReadPort` / `OperationalMetricsReadPort` / 各project command | applicationは`stable-id`、repository config adapterだけがnode:fs/path + yamlへ依存する。state-dbへ逆依存しない |
-| **state-db** (`src/state-db/`) | `.ut-tdd/harness.db` projection の SQLite adapter (bun:sqlite first / node:sqlite fallback、runtime 出し分け) + registry-driven migration (PRAGMA user_version) + idempotent upsert。projection 充填は span ② で配線 (PLAN-L7-44/45) | `openHarnessDb()` / `migrate()` / `upsertRow()` / `harnessDbStatus()` | schema (harness-db registry) / kernel alias resolver / fs |
+| **state-db** (`src/state-db/`) | `.ut-tdd/harness.db` projection の SQLite adapter (Node 24 `node:sqlite` `DatabaseSync` が唯一の driver) + registry-driven migration (PRAGMA user_version) + idempotent upsert。projection 充填は span ② で配線 (PLAN-L7-44/45) | `openHarnessDb()` / `migrate()` / `upsertRow()` / `harnessDbStatus()` | schema (harness-db registry) / kernel alias resolver / fs |
 | **cutover-ledger** (`src/runtime/cutover-transition.ts`) | canonical cutover receipt/object/refを専用`.ut-tdd/ledger/cutover-ledger.db`へappendする。独自migration registry、`user_version`、online backup/restoreを所有し、`.ut-tdd/harness.db`のprojection writerはread-only投影だけを行う。`.ut-tdd/ledger/harness-ledger.db`はPLAN ledger専用。物理正本はL5 [physical-data.md](../L5-detailed-design/physical-data.md) §2.7.1 | `initializeCutoverChain()` / `appendCutoverTransition()` / `backupCutoverLedger()` / `restoreCutoverLedger()` | schema / Node SQLite / fs |
 | **search** (`src/search/`) | `.ut-tdd/harness.db` の `search_index` を読み、PLAN/artifact/finding/skill/model/session の参照検索を提供する read-only query layer (PLAN-L7-47) | `findReference()` / `upsertSearchReference()` | state-db |
 | **feedback** (`src/feedback/`) | finding / quality_signal / skill recommendation/invocation を集約し、replanning input として `feedback_events` と skill metrics を projection する (PLAN-L7-47) | `computeSkillMetrics()` / `emitFeedbackEvents()` | state-db |
@@ -188,7 +187,7 @@ data.md の 5 集約 (構造) を src/ building block (実行) に配置する�
 | **commit-msg hook** | git `commit-msg` hook が Conventional Commits を fail-close 強制 (`feat\|fix\|docs\|...`、.claude/CLAUDE.md / [[project_commit_msg_hook]]) | **有効** |
 | **orchestrator-rule parity (Codex)** | Claude Code の hook 強制面 (agent-guard / work-guard / session-lifecycle) を **Codex 側 repo-local `.codex/hooks.json`** へ materialize し、両 orchestrator が同一 guard を機械強制する (PLAN-DISCOVERY-06 spike が ADOPT 判定 → PLAN-L7-139 で実装)。判定本体 = `src/lint/codex-hook-adapter.ts` + work-guard の `src/runtime/work-guard.ts#extractEditTargets` + agent-guard の `src/runtime/agent-guard.ts` (runtime 非依存 pure fn)。**偽パリティ caveat** (literal copy では発火しない): ① Codex `apply_patch` は freeform で `tool_input.file_path` 不在 (パスは patch 本文 → `extractEditTargets` で抽出)、② matcher tool 名差 (`spawn_agent\|spawn_agents_on_csv` / `apply_patch\|write_file` / `exec_command\|local_shell`)、③ `subagent-stop` のみ真の N/A。scope = direct Codex CLI/IDE の repo-local hook (hosted/API runtime の apply_patch は intercept 対象外) | **有効** (repo-local、global `~/.codex/` 書込みなし) |
 | その他 hook | PreToolUse(Write/Bash/WebSearch) 等 → package-local `ut-tdd` command | **未有効** (CLI 整備後、目標形は .claude/CLAUDE.md「Target UT-TDD Hooks」) |
-| **CI lint** | g1/g3-trace、pair-freeze、plan/vmodel、doctor hard gates を fail-close 実行 | current local gateは既存Bun commandで稼働するmigration debt。targetはsealed Node CLIへ同じ判定を移し、Node parity前に旧gateを削除せず、移行後にBun fallbackを残さない |
+| **CI lint** | g1/g3-trace、pair-freeze、plan/vmodel、doctor hard gates を fail-close 実行 | local gateはNode CLI (`node src/cli.ts`) で稼働する。Bun fallbackは永久禁止 (#134) |
 | entrypoint | `scripts/ut-tdd` (POSIX) / `ut-tdd.ps1` (Windows) は薄く core を呼ぶだけ (bash ロジック禁止)。**呼び先は `node src/cli.ts` であり、compiled binary への分岐 dispatch は持たない** (§2 削除禁止条項の保護範囲、PLAN-L6-93 §5.2.1 の allowlist 契約) | ADR-001 §3 |
 | 依存隔離 | 外部 service (Claude/Codex/GitHub/Sentry) 起動は **runtime adapter** に隔離、core は正規化 intent のみ発行 | external-if (PLAN-L4-04) で境界契約化 |
 

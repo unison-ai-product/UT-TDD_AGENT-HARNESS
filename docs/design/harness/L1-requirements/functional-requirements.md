@@ -83,10 +83,10 @@ FR-L1-01〜35: v2-import-ledger §6 より転写 (1:1 コピー)。FR-L1-37/39/4
 |---|---:|---|---|
 | subagent roster | active 19 件 = vendor 19 件。現状 byte 一致で未 harden | FR-L1-46 + FR-L1-49 | 被覆済み。TS 化対象は roster registry / capability resolver / guard / drift lint。prompt 本文は markdown 正本 |
 | skill pack | vendor `SKILL.md` 107 件、UT-TDD `docs/skills` 0 件 | FR-L1-47 + FR-L1-12 + FR-L1-49 | 被覆済み。TS 化対象は catalog / recommender / injector / lint。skill 本文は curate 後 markdown 正本 |
-| command assets | `docs/commands` 19 件、legacy CLI binaries 70 件 | FR-L1-48 + 既存 core CLI FR (FR-L1-01/05/10/11/13/14/17/18/20/23/33/34/37/39/42) | 被覆済み。動作は TS/Bun subcommand として再実装、command docs は UT-TDD CLI docs へ curate |
-| cli/lib capability waves | W1〜W17 | 各 wave は FR-L1-01〜49 の該当 FR に接続。runtime 内部資産 gap は FR-L1-46〜49 で閉塞 | 被覆済み。Python port ではなく TS/Bun 再実装 |
+| command assets | `docs/commands` 19 件、legacy CLI binaries 70 件 | FR-L1-48 + 既存 core CLI FR (FR-L1-01/05/10/11/13/14/17/18/20/23/33/34/37/39/42) | 被覆済み。動作は TS/Node subcommand として再実装、command docs は UT-TDD CLI docs へ curate |
+| cli/lib capability waves | W1〜W17 | 各 wave は FR-L1-01〜49 の該当 FR に接続。runtime 内部資産 gap は FR-L1-46〜49 で閉塞 | 被覆済み。Python port ではなく TS/Node 再実装 |
 
-**無修正転用の境界**: runtime として無修正転用できる legacy source 資産は **0 件**。`vendor source snapshot` は read-only evidence / regression idea としてのみ無修正参照できる。実行ロジック、hook、CLI、guard、catalog、lint は UT-TDD 所有パスで TS/Bun 再実装する。`.claude/agents/*.md` と `docs/skills/**/*.md` は TS literal 化せず markdown 正本として扱うが、legacy source 前提除去・role/capability class 化・用語置換・trigger 整備は必須。
+**無修正転用の境界**: runtime として無修正転用できる legacy source 資産は **0 件**。`vendor source snapshot` は read-only evidence / regression idea としてのみ無修正参照できる。実行ロジック、hook、CLI、guard、catalog、lint は UT-TDD 所有パスで TS/Node 再実装する。`.claude/agents/*.md` と `docs/skills/**/*.md` は TS literal 化せず markdown 正本として扱うが、legacy source 前提除去・role/capability class 化・用語置換・trigger 整備は必須。
 
 ### §1.1 legacy source 固有名 → UT-TDD 翻案注記 (anti-corruption layer)
 
@@ -103,7 +103,7 @@ FR-L1 35 件は source snapshot reference 設計概念参照 (v2-import-ledger �
 | `gate-checks.yaml` | UT-TDD でも同名 path で扱う (`docs/governance/gate-checks.yaml`、L4 carry) | FR-L1-05 |
 | source process doc 群 | UT-TDD では source process docs を read-only reference として参照し、工程定義の正本は `docs/process/` に置く (FR-L1-32 で fold) | FR-L1-32 |
 | legacy bench / PR commands | `ut-tdd bench` / `ut-tdd pr` 等の同等命令体系 (L4 CLI 設計 carry) | FR-L1-17, FR-L1-20 |
-| `feedback_hook` (legacy source 5 軸) | `.ut-tdd/hooks/feedback.ts` (Bun、ADR-001 整合) | FR-L1-19, FR-L1-20 |
+| `feedback_hook` (legacy source 5 軸) | `.ut-tdd/hooks/feedback.ts` (Node、ADR-001 整合) | FR-L1-19, FR-L1-20 |
 | `cutover_orchestrator` | `ut-tdd cutover` (Recovery 収束専用、L4 carry) | FR-L1-10 |
 | legacy interrupt command (cross-cutting-mechanisms.md 行 18) | `ut-tdd interrupt` (Sprint 割り込みイベント記録、L4 CLI 設計 carry) | FR-L1-11 |
 | legacy debt command | `ut-tdd debt` (技術負債台帳登録、L4 CLI 設計 carry) | FR-L1-11 |
@@ -115,7 +115,7 @@ FR-L1 35 件は source snapshot reference 設計概念参照 (v2-import-ledger �
 | (対応 source reference doc なし) | FR-L1-38/39 (model 評価 / タスク難易度測定) は source reference側に対応 doc なし、UT-TDD 独自設計 (PO directed 2026-05-28)。FR-L1-38 は PLAN-L7-53 で実装済み (2026-06-15) | FR-L1-38, FR-L1-39 |
 | (対応 source reference doc なし) | **FR-L1-45 (doc-reviewer) は UT-TDD 独自設計、L3 back-propagation 由来 (A-47 Critical C-02 「BR-08 派生 FR が L3 に不在で G3 lint 孤児リスク」 → A-49 で L1 に追加、BR-08 派生 P0)** | FR-L1-45 |
 
-注記の目的: source-derived 知見を概念的に取り込みつつ、実装は UT-TDD 独自 (TS/Bun + ファイルベース state + 個別 CLI) で再構築する。
+注記の目的: source-derived 知見を概念的に取り込みつつ、実装は UT-TDD 独自 (TS/Node + ファイルベース state + 個別 CLI) で再構築する。
 
 ### §1.2 L3 back-propagation 由来 FR-L1 carry note (A-49 ledger、2026-05-28)
 
