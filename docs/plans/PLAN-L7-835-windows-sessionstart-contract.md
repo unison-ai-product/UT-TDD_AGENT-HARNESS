@@ -1,0 +1,138 @@
+---
+plan_id: PLAN-L7-835-windows-sessionstart-contract
+title: "PLAN-L7-835 (troubleshoot): Windows consumer SessionStart の順序契約と実配布完走受入"
+kind: troubleshoot
+layer: L7
+drive: agent
+route_signal: hotfix_required
+route_mode: incident
+created: 2026-10-06
+updated: 2026-10-06
+owner: Codex worker proposal / PO review pending
+parent_design: docs/design/harness/L6-function-design/session-log.md
+pair_artifact: docs/test-design/harness/L7-session-start-order-test-design.md
+backprop_decision: required
+backprop_decision_reason: 実配布session start
+  actionのrequireRuntimeRepoRoot後に既存fail-open
+  appendを重いside-effectsより先に試みる順序契約、および実VS Code consumerのcold/warm
+  timeout受入を新たに規定する。既存L6/L7契約の不足をReverse 835で照合し、上流契約への差分が必要なら限定backfillする。
+agent_slots:
+  - role: aim
+    slot_label: AIM — incident境界、runtime root拒否前後、未決timeout方式を独立に整理する
+  - role: qa
+    slot_label: QA — CANDIDATE-U-835-001..007とCANDIDATE-AT-835-008の負系、実CLI順序、VS
+      Code実配布cold/warm受入を検証する
+  - role: tl
+    slot_label: TL — identity/fence、session-log既存所有、Pack AT-DIST-003との接合を非著者レビューする
+generates:
+  - artifact_path: docs/plans/PLAN-L7-835-windows-sessionstart-contract.md
+    artifact_type: markdown_doc
+dependencies:
+  parent: docs/plans/PLAN-L6-03-session-log.md
+  requires:
+    - docs/plans/PLAN-L6-03-session-log.md
+    - docs/plans/PLAN-L7-01-session-log.md
+  blocks: []
+  references:
+    - docs/plans/PLAN-L7-531-pack-internal-canary-smoke.md
+    - docs/plans/PLAN-L7-422-feedback-saturation-visibility.md
+    - docs/test-design/harness/L7-session-start-order-test-design.md
+    - docs/plans/PLAN-REVERSE-835-windows-sessionstart-contract-backfill.md
+    - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/835
+    - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/835#issuecomment-5990541679
+    - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/418#issuecomment-6010925970
+review_evidence: []
+status: draft
+github_issue_id: 835
+admission_receipt:
+  schema_version: v2
+  receipt_id: certificate:489e7cd4e95efaa5649138c6d686a0b9
+  command_id: plan-revise:issue835:forward:status-sync-r3:20261006083904558
+  admitted_at: 2026-10-06T08:39:04.558Z
+  source_digest: sha256:00a55bc49a98c6d7175d743bec8f56d4c4dd3834d56c61a9d040352c515d0f77
+  decision_digest: sha256:023809f55a94650be1567a7816a2fca0b33fe087c94cb22ca1b0d43f77e1f506
+  receipt_digest: sha256:7207df3682d0d1ed034758c0e7fdcc9f31c008a8c1e35fc7cfb1102dd002d88d
+  binding:
+    path: docs/plans/PLAN-L7-835-windows-sessionstart-contract.md
+    plan_id: PLAN-L7-835-windows-sessionstart-contract
+    asset_id: plan:e281d92c657b574bd0ea7a3ab6dfdb9e
+    revision: 3
+    content_digest: sha256:00a55bc49a98c6d7175d743bec8f56d4c4dd3834d56c61a9d040352c515d0f77
+  route:
+    signal: hotfix_required
+    mode: incident
+  issue:
+    provider: github
+    issue_id: 835
+    episode_id: issue-835
+    projection_state: unprojected
+  origin:
+    plan_id: PLAN-L7-531-pack-internal-canary-smoke
+    revision: 11
+    digest: sha256:691775ce8aa44fc963f8546e9acaba04d40984c50ab0d6d001ff7e508366fb6a
+  reentry:
+    target_plan_id: PLAN-L7-531-pack-internal-canary-smoke
+    target_revision: 11
+    phase: forward_merge
+  escape_reason: "Issue #835 / control #6012374220:
+    実経路のrequireRuntimeRepoRoot後に既存appendをside-effects前へ移し、claude-vscode実consume\
+    rの計測と失敗時rollbackをboundedに受け入れる。"
+---
+
+# PLAN-L7-835 (troubleshoot): Windows consumer SessionStart の順序契約と実配布完走受入
+
+## 1. 位置づけと事実
+
+本書は #835 のdraft提案であり、正規PLANの採番・admission receipt・reservation・pair-freeze・実装許可を主張しない。通常の `plan draft` writerで予約・起票する前に、rootがIssue bindingと契約を検収する。
+
+Issue #835 はWindows consumerで配布されたClaude SessionStartが設定済み5秒timeoutを超えてcancelされ、対象sessionの正規 `session_start` が残らなかった不具合である。Issue本文はcold 7413ms / timeout 5000msを報告し、comment 5990541679は同一consumerでwarm 6252ms / timeout 5000ms / cancel、対象IDのevent欠落、`--help` 約1.6秒、Stop 約3771msを記録する。したがってcold-only仮説ではなく、現在の実測5秒失敗を契約の前提として保持する。最新control宛comment 6010925970はevent-firstを採択し、timeoutをphase実測から選択する。
+
+incident originは `PLAN-L7-531-pack-internal-canary-smoke` revision 11、正規revision binding digest `sha256:691775ce8aa44fc963f8546e9acaba04d40984c50ab0d6d001ff7e508366fb6a`。reentryは同PLAN revision 11 / `forward_merge`。Issue bindingは明示的なincident識別子 `issue-835` / `projection_state: unprojected` とする。既存Execution Episode event、IssueProjected receipt、projection digestの発行済み状態は主張しない。
+
+## 2. bounded contract delta
+
+外部consumerの正規 `session start` CLI actionだけを対象とし、既存の共有session-log handler/schema/fail-open、forced-stop・escalation・skill・digest semanticsは維持する。
+
+```text
+stdin/session ID → requireRuntimeRepoRootによるruntime repo-root解決 →
+dispatch(SessionStart)による既存session_start appendの試行 → 現行SessionStart side-effects → 完了
+```
+
+実経路のroot boundaryは `requireRuntimeRepoRoot` (`src/runtime/repo-root.ts`) であり、`session start` は `requireProjectMemoryRoot` によるHEAD identity admissionを呼ばない。fail-close admissionは今回追加せず、event-firstの安全境界は `requireRuntimeRepoRoot` が拒否するrootではeventを含むruntime stateを書かないことに限定する。event-firstはroot resolution後、重いSessionStart side-effectsより前に既存appendを試みる順序を意味し、eventのdurabilityやhook完走を保証しない。
+
+この順序差分は event の到達を早めるだけであり、総実行時間を短縮するとは限らず、5秒以内のhook完走も保証しない。既存 `onSessionStart` はI/O失敗をfail-openで握るため、append試行とdurable eventは区別する。Issue acceptanceでは実consumer上の耐久eventを別途観測する。
+
+## 3. Scope / non-scope
+
+- 対象は外部Claude SessionStartの既存CLI callsite。必要なfault/order injectionは既存CLI/runtime module内に限定し、public CLI/new runtime moduleを追加しない。
+- delegation/team入口は今回のIssue証跡から変更しない。
+- PLAN-L7-422のF2 digest欠落可視化・doctor検出を再所有しない。422はdraftなのでdependencyではなくreferenceのみ。
+- PLAN-L6-03 / PLAN-L7-01のsession-log schema、fail-open、current-plan解決を変更しない。追加するのはCLI call orderingと、その順序を検証するbounded pair。
+- 新しいper-step budget / defer / restart機構やoptional maintenance分類は導入しない。phase計測でmaterialize/scan律速と判定された場合に限り、control comment 6010925970で採択された既存Stop detached patternの再利用を検討する。
+- 採択した対応は1 commitでrollback可能にする。detached化を採択した場合は当該detached call 1箇所を同期呼び出しへ戻し、timeout引上げを採択した場合は配布settingsのtimeout値1つを戻す。AT-835-008が失敗した場合は採択対応をrollbackして同じ計測条件で再計測する。
+
+## 4. 採択済み方針と実測によるtimeout選択
+
+Control comment [6010925970](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/418#issuecomment-6010925970)によりevent-firstが採択済みである。timeoutを固定値で先取りせず、専用pair §CANDIDATE-AT-835-008に定めるclean Windows consumerのcold/warm各5 run以上のphase別msから機械的に方式を選ぶ。各runに実Pack/bundle/version/settings argv・timeout・session ID・event・digest・exit/cancel状態を束縛し、cold/warm条件を区別する。root解決時間を記録し、存在しないidentity-admission phaseを計測項目にしない。現在のcold 7413ms / warm 6252ms / 5000ms cancelは削除・上書きしない。
+
+- **materializeSkillAssets / scanDanglingStops+sweepStaleGuardSlotsが律速**: 既存Stop detached起動patternを使ってhook外へ出し、timeoutは5s維持。`spawnDetachedStopRefresh`は現行DB refresh専用であるため直接呼ぶだけでskill/scan責務を移管できるとは扱わない。既存所有、entrypoint、競合、完了責務を実装pairで検証し、sealed consumer bundleを手編集/guard無効化しない。
+- **surfaceSessionStartDigestToStdoutが律速**: stdoutの同期出力を保つためPack timeoutを実測p95×2へ設定する。n=5以上のnearest-rank p95、全sample、ms→設定秒のround-upを記録する。n=5ではnearest-rank p95は最大値となる。計算値と異なる固定採択は禁止。
+- phase外のwrapper/CLI/identity/event等も別計測し、phase合計との差分を残す。どのphaseも支配的でなければ、測定根拠なしに上記分岐を選ばずレビューへ戻す。
+
+event-firstは性能改善/timeout内完走の証拠ではない。計測済みの該当分岐を非著者reviewと通常のPack設定変更/implementationで束縛し、1 commit rollback手順を実装契約とpairに含める。
+
+## 5. Acceptance candidates
+
+専用pair `docs/test-design/harness/L7-session-start-order-test-design.md` のCANDIDATE-U-835-001..007とCANDIDATE-AT-835-008を正本候補とする。targeted unit/order oracleだけではIssue完了にならない。
+
+実配布ATは専用clean Windows consumerをVS CodeのClaude拡張から実際に起動し、`CLAUDE_CODE_ENTRYPOINT=claude-vscode` を束縛する。consumerの `.claude/settings.json` にあるSessionStart command/args/configured timeoutをそのまま使い、端末からhook commandを直叩きしたrunは受入証拠にしない。phase計測後に選んだ上記方式を反映し、cold/warm各5 run以上の**全run**で同一実session IDをhook input・phase record・`.ut-tdd/logs/session/<id>.jsonl`に照合する。各runが設定timeout内に正常exit (0、cancelなし) し、同ID `session_start` がdurableに存在し、要求されたdigest出力が全runで存在すること。current timeout 5秒で失敗した既存証跡は消さず、別ID・mock・diagnostic bundle・source-only CLI・help・手書きmarkerで代替しない。AT-DIST-003への接合はPLAN-L7-531所有を尊重し、実配布smokeの必要差分だけ参照経由で統合する。受入runが1件でも失敗した場合は対応を1 commitでrollbackし、rollback後にcold/warm条件を保って再計測する。
+
+## 6. 所有境界とReentry
+
+L6-03/L7-01が所有するsession event schema/handler/fail-openを変更せず、L7-531のconsumer fixture/AT-DIST-003を再実装しない。Reverse 835はexisting upstream session-log/designとこのbounded order/timeout acceptanceの整合をgap-onlyで検査し、不足が確認された箇所のみbackfill候補とする。L7-422のdigest欠落detect/可視化は対象外。Forward merge再合流点はoriginと同じPLAN-L7-531 r11であり、その所有者/契約を置換しない。
+
+## 7. Status discipline
+
+本契約PRではForwardをdraftのまま保ち、契約をconfirmedにして実装を先行待ちさせない。control回答 [6011906920](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/676#issuecomment-6011906920) に従い、後続の同一実装PRで最初のcommitにpair candidate IDの正式化とtest-first Red/Greenを置き、CI green後にcanonical requestを出す。非著者Opus closing reviewがPASSした後、Codexは同PR内の通常 `plan revise` でForwardをconfirmedへ進め、review receiptを `cross_agent` evidence、CI runを `green_commands` として記録する。confirm commitのexact headをOpusが簿記限定で再検しPASSした後にmergeする。ReverseはR0/draftのままでよく、confirm前の追加待ち条件にしない。
+
+confirmedは契約着地と実装開始の新しい先行待ちではなく、CI/Opus PASS後に同じ実装PRへ記録する状態である。実装後のIssue closeはVS Code実consumerによるcold/warm全run acceptanceがPASSするまで行わない。契約confirmとIssue完了は別gateであり、全配布受入をconfirmへ混ぜない。
