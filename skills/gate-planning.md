@@ -104,7 +104,7 @@ updated or closed.
 
 ## Mode-aware review tier
 
-`ut-tdd gate <id>` reads the execution mode from `ut-tdd status`. Judgement gates
+`ut-tdd gate <id>` resolves the execution mode via `detectMode()` (the same detection `ut-tdd status` reports; `--mode <mode>` overrides it for tests, `src/cli.ts`). Judgement gates
 require cross-agent review evidence in hybrid mode, or `intra_runtime_subagent`
 evidence in single-runtime mode — never self-review alone.
 
