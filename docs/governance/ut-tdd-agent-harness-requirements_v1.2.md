@@ -411,7 +411,7 @@ validator は `requires` の各 PLAN の `status=completed` を機械検証。
 - [ ] 既存 conditional back-fill debt の allowlist は
       `docs/governance/conditional-backfill-decision-audit-2026-06-22.md` の Legacy Debt 表と完全一致する。
       片側だけに存在する場合は `backfill-pairing` の `legacyAuditGaps` で fail-close する。
-- [ ] **全 PLAN の `§6 用語更新` で宣言した語が L0 §10 用語集 (`concept_v3.1.md`) に存在** (living glossary back-merge、§G.9 と連動)。未 merge → doctor hard violation。
+- [ ] **全 PLAN (設計系 PLAN は設計文書側、§G.9 例外) の `§6 用語更新` で宣言した語が L0 §10 用語集 (`concept_v3.1.md`) に存在** (living glossary back-merge、§G.9 と連動)。未 merge → doctor hard violation。
 - 機構: `ut-tdd doctor` の `backfill` 行が `reverseOrphans` / `reverseLinkMissing` / `legacyAuditGaps` /
   `glossaryGaps` / `conditionalPending` / `conditionalDecisionMissing` を surface し、hard violation は
   doctor exit code に連動する。
@@ -569,7 +569,7 @@ L0 → L1 → L4 のドメイン継承チェーンを `ut-tdd plan lint` (sub_do
 
 各 L 層 design / impl PLAN の §用語更新 section を `ut-tdd plan lint` で検証 (living glossary の back-merge 強制、ユビキタス言語の各工程更新):
 
-- [ ] 各 design / impl PLAN に `## §6 用語更新` section が存在 (欠落 → exit 1)。当該工程で新規導入 / 精緻化した用語が無ければ本文に `用語更新なし` を明記
+- [ ] 各 design / impl PLAN に `## §6 用語更新` section が存在 (欠落 → exit 1)。当該工程で新規導入 / 精緻化した用語が無ければ本文に `用語更新なし` を明記。**例外 (issue #648)**: 新規起票の設計系 PLAN (`kind: design` / `add-design`、本文 4 項目規則。正本 `CLAUDE.md` §設計系 PLAN の本文 4 項目) は PLAN 本文に §6 を置かず、この section 存在義務は成果物の設計文書側に適用する (同等の検証は設計文書側で行う)。L0 §10 用語集への back-merge 義務は変わらない。impl PLAN は従来どおり PLAN 本文に §6 を要求する
 - [ ] §6 用語更新 に挙げた**新規用語**は L0 §10 用語集 (`docs/governance/ut-tdd-agent-harness-concept_v3.1.md`) に同名 entry として back-merge 済み (未 merge の独自定義 → exit 1、anti-corruption layer)
 - [ ] back-merge した §10 entry の **導入層** 列が当該 PLAN の `layer` と一致 (不一致 → P1 warning)
 - [ ] 既存用語の**意味変更**を行った場合、§10 該当 entry の **更新層** 列に当該 `layer` が追記済み (欠落 → P1 warning)
@@ -585,8 +585,6 @@ L0 → L1 → L4 のドメイン継承チェーンを `ut-tdd plan lint` (sub_do
 - [ ] **型4 件数整合** = §1 実数が header 件数確定宣言 (計 N / P0 / P1 / P2) と不一致 → exit 1 (A-54 doc 件数誤りの再発防止)
 - [ ] **型5 画面被覆** = P0 FR-L1 に対応画面が無い → exit 1 (P1/P2 は warn、screen §5.3 R3 と連動)
 - [ ] **型6 外部 corpus 漏れ (tier-2、自動化対象外)** = source 機能 inventory (legacy source 47 doc 等) との完全性突合は periodic subagent 監査。inventory を登録すれば将来自動化可能だが、それ未満では手動 audit が残る
-
-> 注記 (issue #648): 設計系 PLAN (`kind: design` / `add-design`、本文 4 項目規則。正本 `CLAUDE.md` §設計系 PLAN の本文 4 項目) では、§6 用語更新相当の差分は成果物の設計文書側に記録する。L0 §10 用語集への back-merge (反映) 義務そのものは変わらない。
 
 **登録機構 (registration)**: 各工程で発見した機能要求は PLAN §7 機能要求更新 (FR-L1 delta) に記載 → §1 への back-merge を必須化 (§1.2 back-propagation 6 step を機械強制)。設計系 PLAN (本文 4 項目) では §7 相当の機能要求 delta を成果物の設計文書側に記録し、§1 への back-merge 義務自体は変わらない。新 FR-L1 は (a) §1 行追加 (b) screen §5 trace 紐付け (c) header 件数確定宣言更新 (d) ledger 記録 を満たさなければ exit 1。
 
