@@ -6944,6 +6944,22 @@
         "revision": 3,
         "content_digest": "sha256:ec92b2f7400cfbd17cfad5a134e8b8b915fbf6580d78040c87a6d9d2e267c808"
       }
+    },
+    {
+      "sequence": 435,
+      "previous_record_digest": "sha256:8044e1aaa65b79a06e0aa8cb4d6d1cc83d92fee98d3bb42c85d401f390a2d25c",
+      "record_digest": "sha256:471f75f069f4194e8eceadc1381c4a60aa1f45b649a3ebeaf72ea0e2143391e1",
+      "command_id": "plan-revise:issue676:pr859-post-pass-confirmation:20261006",
+      "receipt_id": "certificate:66f10a3bc977023ab088feb7d6b2889f",
+      "receipt_digest": "sha256:e75e2ae0168d4584a041be28aec5703b13ee6903e443ca1a6d8e9809352386e4",
+      "decision_digest": "sha256:458b7e929338168e7c1fad1fc597a120b358c8a7a39ed7c2ed3b49f66c2c9ab2",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-855-codex-worker-sandbox-contract.md",
+        "plan_id": "PLAN-L7-855-codex-worker-sandbox-contract",
+        "asset_id": "plan:63b8377746b1e03160a41a993436c898",
+        "revision": 3,
+        "content_digest": "sha256:f79874c7ed5065844550a9f19cde7a6603319723c4cb9adb6574e2d6c67a37ba"
+      }
     }
   ]
 }
