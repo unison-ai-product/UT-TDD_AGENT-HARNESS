@@ -18,6 +18,11 @@ import {
   type ThinCoverageAdvisory,
   type TraceKeyedArtifact,
 } from "./descent-obligation-types.ts";
+import {
+  isFrCoverageRowOracleConnected,
+  loadL7UnitTestDesignText,
+  parseL6FrCoverageRows,
+} from "./l6-fr-coverage.ts";
 import { normalizePath } from "./shared.ts";
 
 const DOC_FR_TRACE_RE = /\bFR-L1-(\d+)(?:(?:[〜～]|\.\.)(?:FR-L1-)?(\d+)|((?:\/\d+)+))?/g;
@@ -285,11 +290,14 @@ export function loadFrUnitCoverageOracles(root = process.cwd()): Set<string> {
   const path = join(root, "docs", "design", "harness", "L6-function-design", "fr-unit-coverage.md");
   const oracles = new Set<string>();
   if (!existsSync(path)) return oracles;
-  for (const line of readFileSync(path, "utf8").split(/\r?\n/)) {
-    const row = line.match(/^\|\s*FR-L1-(\d+)\s*\|/);
+  // oracle 接続の判定は l6-fr-coverage と共有する (Issue #848: 退役行は宣言済み退役 oracle で接続)。
+  const l7TestDesignText = loadL7UnitTestDesignText(root);
+  for (const row of parseL6FrCoverageRows(readFileSync(path, "utf8"))) {
     // frId で正規化し、advisory の traceKey 生成 (documentTraceKeyProvenance も frId 経由) と
     // 同一表記 (2 桁 zero-pad) に揃える。1 桁/2 桁の表記揺れで filter が miss しないようにする。
-    if (row && /\bU-FR-L1-\d+\b/.test(line)) oracles.add(frId(row[1]));
+    if (isFrCoverageRowOracleConnected(row, l7TestDesignText)) {
+      oracles.add(frId(row.fr_id.slice("FR-L1-".length)));
+    }
   }
   return oracles;
 }

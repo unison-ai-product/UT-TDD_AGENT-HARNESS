@@ -27,6 +27,31 @@ function isDeclaredOracle(text: string | undefined, id: string): boolean {
   return new RegExp(`^\\|\\s*\`?${escapeRe(id)}\`?\\s*\\|`, "m").test(text);
 }
 
+function retiredOracleDeclared(
+  row: L6FrCoverageRow,
+  l7TestDesignText: string | undefined,
+): boolean {
+  const ids = oracleIds(row.unit_oracle);
+  return ids.length > 0 && ids.every((id) => isDeclaredOracle(l7TestDesignText, id));
+}
+
+/**
+ * fr-unit-coverage.md の行が U-* oracle へ接続済みか。l6-fr-coverage と descent-obligation の
+ * 両方がこの判定を共有する (Issue #848: 退役行は宣言済み退役 oracle で接続とみなす)。
+ */
+export function isFrCoverageRowOracleConnected(
+  row: L6FrCoverageRow,
+  l7TestDesignText: string | undefined,
+): boolean {
+  if (isRetiredRow(row)) return retiredOracleDeclared(row, l7TestDesignText);
+  return /\bU-FR-L1-\d+\b/.test(row.unit_oracle);
+}
+
+/** 実 repo の L7 unit test design 本文 (退役行の oracle 宣言確認用)。 */
+export function loadL7UnitTestDesignText(repoRoot: string): string {
+  return readSpecText(repoRoot, "docs/test-design/harness/L7-unit-test-design.md") ?? "";
+}
+
 export interface L6FrCoverageRow {
   fr_id: string;
   l6_spec: string;
@@ -149,8 +174,7 @@ export function analyzeL6FrCoverage(docs: L6FrCoverageDocs): L6FrCoverageResult 
     if (isRetiredRow(row)) {
       // 退役 FR (PLAN-L6-789 / Issue #848) だけは U-FR-L1-xx の代わりに、L7 unit test design に
       // 宣言済みの退役 oracle へ対応付けてよい。未宣言 ID が 1 つでもあれば fail-close する。
-      const ids = oracleIds(row.unit_oracle);
-      if (ids.length === 0 || !ids.every((id) => isDeclaredOracle(docs.l7TestDesignText, id))) {
+      if (!retiredOracleDeclared(row, docs.l7TestDesignText)) {
         missingFields.push("unit_oracle_undeclared");
       }
     } else if (row.unit_oracle && row.unit_oracle !== expectedOracle(row.fr_id)) {
@@ -221,8 +245,7 @@ export function loadL6FrCoverageDocs(repoRoot: string = process.cwd()): L6FrCove
       "utf8",
     ),
     repoRoot,
-    l7TestDesignText:
-      readSpecText(repoRoot, "docs/test-design/harness/L7-unit-test-design.md") ?? "",
+    l7TestDesignText: loadL7UnitTestDesignText(repoRoot),
   };
 }
 
