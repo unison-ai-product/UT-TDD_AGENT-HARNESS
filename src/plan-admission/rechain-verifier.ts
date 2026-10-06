@@ -1,3 +1,4 @@
+import { stringify } from "yaml";
 import { parseLegacyPlanSource } from "../plan-asset/adapters/legacy-plan-inventory.ts";
 import {
   type AppendPlanRevisionInput,
@@ -69,6 +70,8 @@ export const RECEIPT_PATH = "docs/governance/plan-admission-receipts.json";
 export const RECHAIN_ACTOR = "ut-tdd-pr-merge-rechain";
 /** `plan:legacy:` は legacy bootstrap で採番される asset id の prefix (legacyAssetId)。 */
 const LEGACY_ASSET_PREFIX = "plan:legacy:";
+/** PLAN-L6-711 §2.3-6 (receipt revision 6) の理由名。path suffix を付けない。 */
+export const LEGACY_BOOTSTRAP_UNSUPPORTED = "legacy_bootstrap_unsupported";
 const PLAN_PATH_RE = /^docs\/plans\/PLAN-[A-Za-z0-9-]+\.md$/;
 /** PLAN-L6-711 §2.3-6 condition 6: command_id は H の command_id に `:rechain-<n>` (n>=1) を付けたものに限る。 */
 const RECHAIN_COMMAND_SUFFIX_RE = /^:rechain-([1-9]\d*)$/;
@@ -94,11 +97,26 @@ export function verifyRechainDelta(input: RechainInput): RechainVerdict {
   const mAll = mReceipt.records;
   const rAll = rReceipt.records;
 
+  const hAppended = hAll.slice(base.length);
+
+  // --- legacy bootstrap 除外 (§2.3-6、receipt revision 6, U-RECHAIN-019) ---
+  // H 側の追加 record h と R 側の再発行 record r の組ごとに、h の asset が `plan:legacy:` で
+  // 始まり、かつ h / r のどちらかが revision 2 なら fail。command_id の形式・frontmatter・
+  // M 側 record の有無は使わない。他の条件と独立に先に評価し、他の失敗で短絡しない。
+  // legacy の組は再導出しない。理由を積んだ時点で以降の `reasons.length > 0` 判定が fail-close
+  // するので、他の理由の有無にかかわらず `reasons` に必ず含まれる。
+  const hasLegacyPair = hAppended.some((h, i) => {
+    const r = rAll[mAll.length + i] as TrackedReceiptRecord | undefined;
+    return (
+      h.binding.assetId.startsWith(LEGACY_ASSET_PREFIX) &&
+      (h.binding.revision === 2 || r?.binding.revision === 2)
+    );
+  });
+  if (hasLegacyPair) fail(LEGACY_BOOTSTRAP_UNSUPPORTED);
+
   if (!isRecordPrefix(base, hAll)) fail("receipt-base-not-prefix-of-H");
   if (!isRecordPrefix(base, mAll)) fail("receipt-base-not-prefix-of-M");
   if (reasons.length > 0) return { ok: false, reasons };
-
-  const hAppended = hAll.slice(base.length);
 
   // --- 1. admission 候補の対応付け (§2.3-6, U-RECHAIN-004/012) ---
   const admissionEntries = Object.entries(input.admission);
@@ -186,20 +204,12 @@ export function verifyRechainDelta(input: RechainInput): RechainVerdict {
     position.set(assetId, pos + 1);
     const isLast = pos === (assetCount.get(assetId) ?? 1) - 1;
 
-    // legacy bootstrap 経路は preimage が別なので再導出せず fail (§2.3-6)。
     const mLatest = mAll
       .filter((r) => r.binding.assetId === assetId)
       .reduce<number | undefined>(
         (max, r) => (max === undefined ? r.binding.revision : Math.max(max, r.binding.revision)),
         undefined,
       );
-    if (
-      assetId.startsWith(LEGACY_ASSET_PREFIX) &&
-      (mLatest === undefined || rRecord.binding.revision === 2)
-    ) {
-      fail(`legacy_bootstrap_unsupported:${path}`);
-      continue;
-    }
     if (mLatest === undefined) {
       fail(`receipt_digest_source_unavailable:${path}`);
       continue;
@@ -422,6 +432,12 @@ function verifyPlanReapplication(args: {
     if (rParsed.body !== expectedBody) {
       reasons.push(`plan-strip-mismatch:body:${path}`);
     }
+    // strip(R) の byte 一致 (§2.2-3 / §2.3-2): 意味比較だけでは YAML コメント等の
+    // 非意味 byte を素通しする。R の PLAN は正規 writer (tracked-receipt-renderer) の
+    // 直列化 `---\n${stringify(frontmatter)}---\n${body}` と byte 一致しなければならない。
+    if (rContent !== `---\n${stringify(rParsed.frontmatter)}---\n${rParsed.body}`) {
+      reasons.push(`plan-strip-mismatch:bytes:${path}`);
+    }
 
     // --- content_digest (§2.3-3) ---
     const rContentDigest = canonicalPlanContentDigest(rContent);
@@ -525,8 +541,13 @@ function verifyPlanReapplication(args: {
     reasons.push(`plan-bind-failed:${path}`);
     return { ok: false, reasons };
   }
-  if (!isLast && bound.contentDigest !== rRecord.binding.contentDigest) {
+  // 中間 blob は bind 前の blob 自体の canonical digest を key と照合する (§2.3-6 / §2.6-3)。
+  // bind 後の digest で照合すると、admission が書き戻す field (status 等) の差を見逃す。
+  if (!isLast && canonicalPlanContentDigest(recordBlob) !== rRecord.binding.contentDigest) {
     reasons.push(`intermediate_plan_digest_mismatch:${rRecord.binding.contentDigest}`);
+  } else if (bound.contentDigest !== rRecord.binding.contentDigest) {
+    // blob が A_R に束縛済みでなければ (bind で内容が変わるなら) record と一致しない。
+    reasons.push(`plan-bound-content-digest-mismatch:${path}`);
   }
   // occurredAt は契約どおり R の frontmatter admission_receipt.admitted_at (全 record 共通)。
   const occurredAt = actualReceiptBlock.admitted_at;

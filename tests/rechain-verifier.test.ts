@@ -11,6 +11,7 @@ import {
 import type { PlanAdmissionRequest } from "../src/plan-admission/policy.ts";
 import {
   type CommitObj,
+  LEGACY_BOOTSTRAP_UNSUPPORTED,
   RECEIPT_PATH,
   RECHAIN_ACTOR,
   type RechainInput,
@@ -1182,13 +1183,7 @@ describe("verifyRechainDelta receipt_digest 再導出 (receipt revision 5)", () 
     if (!verdict.ok) expect(verdict.reasons).toEqual([`receipt_digest_mismatch:${PLAN_PATH}`]);
   });
 
-  it("U-RECHAIN-017d: legacy bootstrap 経路の asset を再発行対象に含む入力は fail する", () => {
-    const { input } = buildBaseline({ assetId: `plan:legacy:${"a".repeat(64)}` });
-    const verdict = verifyRechainDelta(input);
-    expect(verdict.ok).toBe(false);
-    if (!verdict.ok)
-      expect(verdict.reasons.some((r) => r.startsWith("legacy_bootstrap_unsupported"))).toBe(true);
-  });
+  // legacy bootstrap 除外の判定は U-RECHAIN-019 で固定する (receipt revision 6)。
 });
 
 interface TwoRecordScenario {
@@ -1369,5 +1364,237 @@ describe("verifyRechainDelta 同一 asset 複数 record の base chain (U-RECHAI
     expect(verdict.ok).toBe(false);
     if (!verdict.ok)
       expect(verdict.reasons.some((r) => r.startsWith("intermediate_plan_unexpected"))).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// U-RECHAIN-019: legacy bootstrap 除外 (PLAN-L6-711 §2.3-6、receipt revision 6)
+// ---------------------------------------------------------------------------
+
+const LEGACY_ASSET = `plan:legacy:${"a".repeat(64)}`;
+const HEX32_ASSET = `plan:${"0123456789abcdef".repeat(2)}`;
+const LEGACY_COMMAND_IDS = [
+  "plan-revise:issue-1:legacy-x:r2:000000000000",
+  "pr154-legacy-x-r2",
+] as const;
+
+/**
+ * 同 asset の record を priorCount 件 (revision 1..priorCount) 持つ base から、H が
+ * revision priorCount+1 を 1 件 append した re-chain。`concurrent` のときは待機中に M が同 asset を
+ * revision priorCount+1 で admit しており、R は revision priorCount+2 で再発行する。
+ * R の digest は common 経路 (`AppendPlanRevisionInput`) で正しく導く。
+ */
+function buildChainScenario(opts: {
+  assetId: string;
+  priorCount: number;
+  concurrent?: boolean;
+  hCommandId?: string;
+}): RechainInput {
+  const { blobs, put } = makeBlobStore();
+  const baseFm = baseFrontmatterOther();
+  const bind = (revision: number) => ({
+    path: PLAN_PATH,
+    planId: PLAN_ID,
+    assetId: opts.assetId,
+    revision,
+  });
+  const priors: { content: string; record: TrackedReceiptRecord }[] = [];
+  for (let rev = 1; rev <= opts.priorCount; rev++) {
+    const previous = priors.at(-1);
+    priors.push(
+      makeRevision({
+        frontmatterOther: baseFm,
+        generates: BASE_GENERATES,
+        items: BASE_ITEMS,
+        admission: admissionFor(rev),
+        binding: bind(rev),
+        commandId: `plan-revise:issue-998:prior:plan:r${rev}`,
+        admittedAt: "2026-09-27T00:00:00.000Z",
+        priorRecords: priors.map((p) => p.record),
+        basePayloadDigest: previous ? payloadDigestOf(previous.content) : GENESIS_PAYLOAD_DIGEST,
+        actor: AUTHOR_ACTOR,
+        sourceCommit: COMMITS.base,
+      }),
+    );
+  }
+  const priorRecords = priors.map((p) => p.record);
+  const baseContent =
+    priors.at(-1)?.content ??
+    `---\n${stringify({ ...baseFm, generates: BASE_GENERATES })}---\n${bodyFor(BASE_ITEMS)}`;
+  const n = opts.priorCount;
+  const basePayload = n > 0 ? payloadDigestOf(baseContent) : GENESIS_PAYLOAD_DIGEST;
+
+  const hGenerates = [
+    ...BASE_GENERATES,
+    { artifact_path: "src/plan-admission/rechain-verifier.ts", artifact_type: "source_module" },
+  ];
+  const hItems = [...BASE_ITEMS, "rev (S2): 検証器を実装した。"];
+  const admissionH = admissionFor(n + 1);
+  const h = makeRevision({
+    frontmatterOther: baseFm,
+    generates: hGenerates,
+    items: hItems,
+    admission: admissionH,
+    binding: bind(n + 1),
+    commandId: opts.hCommandId ?? "plan-revise:issue-999:s2:plan:r1:h1",
+    admittedAt: H_ADMITTED_AT,
+    priorRecords,
+    basePayloadDigest: basePayload,
+    actor: AUTHOR_ACTOR,
+    sourceCommit: COMMITS.base,
+  });
+
+  let mContent = baseContent;
+  let mRecords = priorRecords;
+  let mGenerates: readonly unknown[] = BASE_GENERATES;
+  let mItems: readonly string[] = BASE_ITEMS;
+  if (opts.concurrent) {
+    mGenerates = [
+      ...BASE_GENERATES,
+      { artifact_path: "docs/plans/PLAN-L6-999-concurrent-note.md", artifact_type: "markdown_doc" },
+    ];
+    mItems = [...BASE_ITEMS, "rev (concurrent): 別 PR が先に merge した。"];
+    const m = makeRevision({
+      frontmatterOther: baseFm,
+      generates: mGenerates,
+      items: mItems,
+      admission: admissionFor(n + 1),
+      binding: bind(n + 1),
+      commandId: "plan-revise:issue-777:concurrent:plan:r1:c1",
+      admittedAt: "2026-09-28T00:30:00.000Z",
+      priorRecords,
+      basePayloadDigest: basePayload,
+      actor: AUTHOR_ACTOR,
+      sourceCommit: COMMITS.base,
+    });
+    mContent = m.content;
+    mRecords = [...priorRecords, m.record];
+  }
+
+  const rRevision = (mRecords.at(-1)?.binding.revision ?? n) + 1;
+  if (!admissionH.reentry) throw new Error("fixture-admission-missing-reentry");
+  const r = makeRevision({
+    frontmatterOther: baseFm,
+    generates: [...mGenerates, hGenerates[hGenerates.length - 1]],
+    items: [...mItems, hItems[hItems.length - 1]],
+    admission: { ...admissionH, reentry: { ...admissionH.reentry, targetRevision: rRevision } },
+    binding: bind(rRevision),
+    commandId: `${h.record.commandId}:rechain-1`,
+    admittedAt: R_ADMITTED_AT,
+    priorRecords: mRecords,
+    basePayloadDigest: mRecords.length > 0 ? payloadDigestOf(mContent) : GENESIS_PAYLOAD_DIGEST,
+  });
+
+  const baseTree: TreeMap = {
+    [PLAN_PATH]: put(baseContent),
+    [RECEIPT_PATH]: put(receiptFile(priorRecords)),
+  };
+  const mTree: TreeMap = {
+    [PLAN_PATH]: put(mContent),
+    [RECEIPT_PATH]: put(receiptFile(mRecords)),
+  };
+  return {
+    commits: { ...commitObjs(), M: COMMITS.M, base: COMMITS.base },
+    trees: {
+      base: baseTree,
+      H: {
+        [PLAN_PATH]: put(h.content),
+        [RECEIPT_PATH]: put(receiptFile([...priorRecords, h.record])),
+      },
+      M: mTree,
+      X: { ...mTree },
+      R: {
+        [PLAN_PATH]: put(r.content),
+        [RECEIPT_PATH]: put(receiptFile([...mRecords, r.record])),
+      },
+    },
+    blobs,
+    admission: { [h.record.recordDigest]: admissionH },
+    intermediatePlans: {},
+  };
+}
+
+describe("verifyRechainDelta legacy bootstrap 除外 (U-RECHAIN-019)", () => {
+  for (const commandId of LEGACY_COMMAND_IDS) {
+    it(`U-RECHAIN-019a1 [m4]: M に同 legacy asset の revision 1 があり H / R が revision 2 → reasons はちょうど [legacy_bootstrap_unsupported] (command_id=${commandId})`, () => {
+      const input = buildChainScenario({
+        assetId: LEGACY_ASSET,
+        priorCount: 1,
+        hCommandId: commandId,
+      });
+      const verdict = verifyRechainDelta(input);
+      expect(verdict.ok).toBe(false);
+      if (!verdict.ok) expect(verdict.reasons).toEqual([LEGACY_BOOTSTRAP_UNSUPPORTED]);
+    });
+
+    it(`U-RECHAIN-019a2 [m4/m5]: M に同 asset の record が無く H が revision 2 → reasons に legacy_bootstrap_unsupported を含む (command_id=${commandId})`, () => {
+      const input = buildChainScenario({
+        assetId: LEGACY_ASSET,
+        priorCount: 0,
+        hCommandId: commandId,
+      });
+      const verdict = verifyRechainDelta(input);
+      expect(verdict.ok).toBe(false);
+      if (!verdict.ok) expect(verdict.reasons).toContain(LEGACY_BOOTSTRAP_UNSUPPORTED);
+    });
+  }
+
+  it("U-RECHAIN-019b [m1]: H が legacy revision 2、待機中に M が同 asset を revision 2 で admit し R が revision 3 → fail", () => {
+    const input = buildChainScenario({ assetId: LEGACY_ASSET, priorCount: 1, concurrent: true });
+    const verdict = verifyRechainDelta(input);
+    expect(verdict.ok).toBe(false);
+    if (!verdict.ok) expect(verdict.reasons).toContain(LEGACY_BOOTSTRAP_UNSUPPORTED);
+  });
+
+  it("U-RECHAIN-019b0: (対照) 019b と同形で非 legacy asset なら pass する (019b の fail は legacy 判定だけに由来する)", () => {
+    const input = buildChainScenario({ assetId: ASSET_ID, priorCount: 1, concurrent: true });
+    const verdict = verifyRechainDelta(input);
+    expect(verdict.ok, JSON.stringify(verdict)).toBe(true);
+  });
+
+  it("U-RECHAIN-019c [m2]: (正系) M に同 legacy asset の最新 revision 2 があり H / R が revision 3 → pass (record 単位の除外)", () => {
+    const input = buildChainScenario({ assetId: LEGACY_ASSET, priorCount: 2 });
+    const verdict = verifyRechainDelta(input);
+    expect(verdict.ok, JSON.stringify(verdict)).toBe(true);
+  });
+
+  it("U-RECHAIN-019d [m3]: (正系) plan:<32 hex> asset で M の最新 revision 1、H / R が revision 2 → pass", () => {
+    const input = buildChainScenario({ assetId: HEX32_ASSET, priorCount: 1 });
+    const verdict = verifyRechainDelta(input);
+    expect(verdict.ok, JSON.stringify(verdict)).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// PR #839 Sol r1 FLAG の回帰 (中間 blob の bind 前 digest、strip(R) の byte 一致)
+// ---------------------------------------------------------------------------
+
+describe("verifyRechainDelta PR #839 r1 FLAG 回帰", () => {
+  it("U-RECHAIN-018h: 中間 blob の status を draft→confirmed に変えると、bind 後の digest が key と一致しても fail する", () => {
+    const s = buildTwoRecordScenario();
+    const tampered = clone(s.input);
+    const key = s.r1.record.binding.contentDigest;
+    const original = tampered.intermediatePlans[key];
+    expect(original.includes("status: draft")).toBe(true);
+    tampered.intermediatePlans[key] = original.split("status: draft").join("status: confirmed");
+    const verdict = verifyRechainDelta(tampered);
+    expect(verdict.ok).toBe(false);
+    if (!verdict.ok) expect(verdict.reasons).toContain(`intermediate_plan_digest_mismatch:${key}`);
+  });
+
+  it("U-RECHAIN-003b: R の frontmatter に YAML コメントを 1 行足す (意味は不変) と strip(R) の byte 不一致で fail する", () => {
+    const { input } = buildBaseline();
+    const tampered = clone(input);
+    const rContent = tampered.blobs[tampered.trees.R[PLAN_PATH]];
+    const injected = rContent
+      .split("\nadmission_receipt:")
+      .join("\n# injected unreviewed comment\nadmission_receipt:");
+    expect(injected).not.toBe(rContent);
+    const oid = sha(injected).slice(0, 40);
+    tampered.blobs[oid] = injected;
+    tampered.trees.R[PLAN_PATH] = oid;
+    const verdict = verifyRechainDelta(tampered);
+    expect(verdict.ok).toBe(false);
+    if (!verdict.ok) expect(verdict.reasons).toEqual([`plan-strip-mismatch:bytes:${PLAN_PATH}`]);
   });
 });
