@@ -132,7 +132,7 @@ Opus / Sonnet が orchestration を担当するとき、**設計・実装・修�
 - **advisor の回答を鵜呑みにしない**。前提が事実か実測で確かめ、食い違ったら実測を突き返す
   (2026-07-28 実例: doctor 二重実行の方式判断で、memo 共有テストが 1 件でなく 19 件という
   実測を差し戻して初回推奨が撤回された)。
-- 採択結果は PLAN の設計判断節へ記録する。推奨と異なる決定 (override) をした場合は、
+- 採択結果は設計文書 (設計系 PLAN の場合) / PLAN の設計判断節へ記録する。推奨と異なる決定 (override) をした場合は、
   その根拠となる実測 (run URL / テスト名 / 計測値) を併記する。
 
 これは**ルールであって機械強制ではない**。fail-close ゲートは作らない (2026-07-28 判断:
@@ -148,7 +148,7 @@ harness.db の `hook_events` へ投影する。session_id は `advisor-` prefix)
 node -e "const fs=require('fs'),d='.ut-tdd/logs/session';let n=0,by={};for(const f of fs.readdirSync(d).filter(x=>x.startsWith('advisor-')))for(const l of fs.readFileSync(d+'/'+f,'utf8').split(/\r?\n/)){if(!l.trim())continue;const o=JSON.parse(l);if(o.event_type==='tool_use'){n++;by[o.plan_id]=(by[o.plan_id]||0)+1}}console.log(n,by)"
 ```
 
-**機構化 (telemetry + 不在検知) の起票条件**: 対象は、設計判断節に 2 案以上の方式と
+**機構化 (telemetry + 不在検知) の起票条件**: 対象は、設計判断節 (設計系 PLAN は対応する設計文書) に 2 案以上の方式と
 trade-off を記録した PLAN とする。spot-check で (a) この対象に該当する直近 20 PLAN の
 全てが advisor 発火ゼロ、または (b) 同じ 20 PLAN 窓で override が実測併記なしに 2 件以上、
 のいずれかを観測したとき。

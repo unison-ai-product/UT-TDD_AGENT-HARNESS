@@ -82,7 +82,7 @@ PO への質問は **設計判断 (trade-off が実在する方式選択 / spec 
 選択肢 2〜4 個 + 各 trade-off + 推奨 1 つ (先頭、理由 1 行)。Claude の対話セッションでは
 AskUserQuestion をこの用途に限って使ってよい (必要なら preview 付き)。非対話セッションと
 Codex では `## 設計判断依頼` の markdown 選択肢表で等価に出力して停止する。採択結果は
-PLAN の設計判断節 / ADR に記録する (skill: `skills/design-decision-elicitation.md`)。
+設計文書 (設計系 PLAN の場合) / PLAN の設計判断節 / ADR に記録する (skill: `skills/design-decision-elicitation.md`)。
 
 #### PO 判断への反射的エスカレーション禁止 (PO ルール 2026-08-05)
 
@@ -264,7 +264,7 @@ PR #167、自己 supersede 7 件 #183)。以下を**再締結**する。新規�
 拘束力の再宣言である:
 
 1. **工程**: Forward の pair-freeze を跳ばさない。方式判断 (正本・信頼根・データ形式) は
-   実装前に PLAN へ freeze し、その改訂を review してから実装する (§UT-TDD Workflow、
+   実装前に契約へ freeze し (設計系 PLAN は設計文書へ = §設計系 PLAN の本文 4 項目、それ以外は PLAN の設計判断節へ)、その改訂を review してから実装する (§UT-TDD Workflow、
    §設計判断エリシテーション)。**独自方式のその場開発を禁止する** — 契約に無い方式が
    必要になったら実装を止めて契約改訂へ戻る。
 2. **merge**: closing review の PASS verdict 受領前に merge しない (exact-HEAD プロトコル、
@@ -295,7 +295,7 @@ close された)。新規機構は作らず、既存工程の遵守を規律と�
 1. **順序契約の厳守**: PLAN が宣言する実装順序 (例: D1→D3→D2) に従い、依存する正本が
    閉じる前に下流を着工しない。
 2. **契約 freeze が実装 PR の前提** (pair-freeze の復元): 正本・信頼根・データ形式などの
-   方式判断は実装 PR の中で発明・変更しない。先に PLAN の設計判断節へ契約を freeze し、
+   方式判断は実装 PR の中で発明・変更しない。先に契約 (設計系 PLAN は設計文書、それ以外は PLAN の設計判断節) へ方式を freeze し、
    その改訂を cross-review してから実装 PR を出す。実装中に方式変更が必要になったら
    PR を close して契約改訂へ戻る (積み増し禁止)。
 3. **1 PR = 1 論点**: 新規 source_module 1 個 + 対になるテスト + 最小配線まで。
