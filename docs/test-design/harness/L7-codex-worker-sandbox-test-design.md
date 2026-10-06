@@ -10,7 +10,7 @@ updated: 2026-10-06
 
 # Codex worker sandbox 境界の L7 テスト設計案
 
-状態は pair-freeze 提案であり、実装済み・検証済み・受入 PASS を意味しない。
+状態は pair-freeze 提案であり、実装済み・検証済み・受入 PASS を意味しない。4 oracle ID は実装 PR の最初の commit で正式昇格し、Red を先に記録する。
 所有対象は `PLAN-L7-855-codex-worker-sandbox-contract` の Issue #676 差分だけとする。
 共通 `L7-unit-test-design.md` は変更せず、既存の provider dispatch、model/effort、stdin、
 Claude invocation の回帰を維持する補足として扱う。
@@ -31,18 +31,18 @@ Claude invocation の回帰を維持する補足として扱う。
   既存 gate-role policy は変更しない。write flag の不在を OS sandbox の read-only 証明としない。
   `READ_ONLY_DELEGATION_ROLES` は frontier/model routing にも使うため、本修正で集合を拡張しない。
 
-## 独立 oracle 候補
+## 独立 oracle
 
-候補 ID は未昇格である。実装時には対応 test と mutation の実測を同一 revision に束縛する。
+以下の4 oracle ID は正式宣言とする。実装時には対応 test と mutation の実測を同一 revision に束縛する。
 
-| Candidate ID | 入力・変異 | 期待する判定 |
+| Oracle ID | 入力・変異 | 期待する判定 |
 | --- | --- | --- |
-| `CANDIDATE-U-ADAPTER-SANDBOX-001` | 6 writer role を個別指定 | argv に `--sandbox workspace-write` が1組だけ現れ、model/effort/stdin の既存契約を維持する。 |
-| `CANDIDATE-U-ADAPTER-SANDBOX-002` | advisor、`aim`、代表的な known non-writer、control 指定 reviewer role、unknown worker role を直接 adapter に指定 | いずれも新たに拒否せず、adapter plan が既存 argv を維持して `--sandbox workspace-write` を含めない。 |
-| `CANDIDATE-U-ADAPTER-SANDBOX-003` | Claude invocation と Codex non-writer routing | Claude argv/env、model・effort routing、stdin、既存 gate-role policy が不変である。 |
-| `CANDIDATE-U-ADAPTER-SANDBOX-004` | 正規 delegation の既存 role allowlist refusal と frontier/custody consumer (`tests/release-consumer-skills.test.ts:232-239` を含む) | 既存拒否・frontier routing・custody 振る舞いを維持し、read-only role 集合の誤拡張による regression を起こさない。 |
+| `U-ADAPTER-SANDBOX-001` | 6 writer role を個別指定 | argv に `--sandbox workspace-write` が1組だけ現れ、model/effort/stdin の既存契約を維持する。 |
+| `U-ADAPTER-SANDBOX-002` | advisor、`aim`、代表的な known non-writer、control 指定 reviewer role、unknown worker role を直接 adapter に指定 | いずれも新たに拒否せず、adapter plan が既存 argv を維持して `--sandbox workspace-write` を含めない。 |
+| `U-ADAPTER-SANDBOX-003` | Claude invocation と Codex non-writer routing | Claude argv/env、model・effort routing、stdin、既存 gate-role policy が不変である。 |
+| `U-ADAPTER-SANDBOX-004` | 正規 delegation の既存 role allowlist refusal と frontier/custody consumer (`tests/delegation-routing.test.ts` の `U-DELEG-001` / `U-DELEG-002` / `U-DELEG-008`、および `tests/release-consumer-skills.test.ts` の本 oracle assertion) | 既存拒否・frontier routing・custody 振る舞いを維持し、read-only role 集合の誤拡張による regression を起こさない。 |
 
-実装対象は `tests/runtime-adapter.test.ts` と必要最小限の既存 delegation/routing test。
+実装対象は `tests/runtime-adapter.test.ts`、`tests/release-consumer-skills.test.ts` と必要最小限の既存 delegation/routing test。
 writer 正例と代表的な non-writer の既存 invocation をそれぞれ到達させる。
 6 role の allowlist 欠落、write flag の重複挿入、non-writer への grant、Claude invocation の変更、
 既存 delegation/frontier consumer の regression を独立に検出する。unknown direct-adapter role の拒否を
