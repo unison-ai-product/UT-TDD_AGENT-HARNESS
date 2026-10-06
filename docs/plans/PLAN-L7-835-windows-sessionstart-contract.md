@@ -46,18 +46,18 @@ status: draft
 github_issue_id: 835
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:8dcdab09e4a7281400611e6523f555c0
-  command_id: plan-revise:issue835:forward:flag3-r2:20261006083417959
-  admitted_at: 2026-10-06T08:34:17.959Z
-  source_digest: sha256:197fcadeb7f4818306499cc339cf0bb604a6fa5e6ecaa7779c6c8e46baad64cf
+  receipt_id: certificate:489e7cd4e95efaa5649138c6d686a0b9
+  command_id: plan-revise:issue835:forward:status-sync-r3:20261006083904558
+  admitted_at: 2026-10-06T08:39:04.558Z
+  source_digest: sha256:00a55bc49a98c6d7175d743bec8f56d4c4dd3834d56c61a9d040352c515d0f77
   decision_digest: sha256:023809f55a94650be1567a7816a2fca0b33fe087c94cb22ca1b0d43f77e1f506
-  receipt_digest: sha256:fb17707490eb347427909739c78095fd86df77c2936ac5515dfb5699f7677539
+  receipt_digest: sha256:7207df3682d0d1ed034758c0e7fdcc9f31c008a8c1e35fc7cfb1102dd002d88d
   binding:
     path: docs/plans/PLAN-L7-835-windows-sessionstart-contract.md
     plan_id: PLAN-L7-835-windows-sessionstart-contract
     asset_id: plan:e281d92c657b574bd0ea7a3ab6dfdb9e
-    revision: 2
-    content_digest: sha256:197fcadeb7f4818306499cc339cf0bb604a6fa5e6ecaa7779c6c8e46baad64cf
+    revision: 3
+    content_digest: sha256:00a55bc49a98c6d7175d743bec8f56d4c4dd3834d56c61a9d040352c515d0f77
   route:
     signal: hotfix_required
     mode: incident
@@ -133,4 +133,6 @@ L6-03/L7-01が所有するsession event schema/handler/fail-openを変更せず�
 
 ## 7. Status discipline
 
-起票時はdraft。pair proposalやsource traceはreview evidenceではない。非著者の契約/pair review PASS後、通常writerのadmissionと正規確認workflowにより**実装前にconfirmed**へ進めてよい。実装後のIssue closeは上記実配布cold/warm全run acceptanceがPASSするまで行わない。契約confirmとIssue完了は別gateであり、完了条件をconfirmへ混ぜない。
+本契約PRではForwardをdraftのまま保ち、契約をconfirmedにして実装を先行待ちさせない。control回答 [6011906920](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/676#issuecomment-6011906920) に従い、後続の同一実装PRで最初のcommitにpair candidate IDの正式化とtest-first Red/Greenを置き、CI green後にcanonical requestを出す。非著者Opus closing reviewがPASSした後、Codexは同PR内の通常 `plan revise` でForwardをconfirmedへ進め、review receiptを `cross_agent` evidence、CI runを `green_commands` として記録する。confirm commitのexact headをOpusが簿記限定で再検しPASSした後にmergeする。ReverseはR0/draftのままでよく、confirm前の追加待ち条件にしない。
+
+confirmedは契約着地と実装開始の新しい先行待ちではなく、CI/Opus PASS後に同じ実装PRへ記録する状態である。実装後のIssue closeはVS Code実consumerによるcold/warm全run acceptanceがPASSするまで行わない。契約confirmとIssue完了は別gateであり、全配布受入をconfirmへ混ぜない。

@@ -43,18 +43,18 @@ status: draft
 github_issue_id: 835
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:06a129a688288588e950ad46f9d696bb
-  command_id: plan-revise:issue835:reverse:flag3-r2:20261006083557858
-  admitted_at: 2026-10-06T08:35:57.858Z
-  source_digest: sha256:b1c158a8f5462919fda5694de2ec4a9cd473cdffd3bddee6adcc9ba96ff1a095
+  receipt_id: certificate:e0238493787fd0ccc93729cf3b7ba262
+  command_id: plan-revise:issue835:reverse:status-sync-r3:20261006083926625
+  admitted_at: 2026-10-06T08:39:26.625Z
+  source_digest: sha256:ec92b2f7400cfbd17cfad5a134e8b8b915fbf6580d78040c87a6d9d2e267c808
   decision_digest: sha256:2dd9ef5a022bae2f588d21766a22c5f8021c5205361b5e42574f603dcd57d3c0
-  receipt_digest: sha256:202ac97a8691f4a19427feffef5c3fd9a708c3e54a1bd569040b310f1317076c
+  receipt_digest: sha256:55ef352aa19051ee5d84bc950846b0038dd8db8233729be68e138b28cd55aa69
   binding:
     path: docs/plans/PLAN-REVERSE-835-windows-sessionstart-contract-backfill.md
     plan_id: PLAN-REVERSE-835-windows-sessionstart-contract-backfill
     asset_id: plan:22f47f3dd6d6ff5c42d4f9370eeed624
-    revision: 2
-    content_digest: sha256:b1c158a8f5462919fda5694de2ec4a9cd473cdffd3bddee6adcc9ba96ff1a095
+    revision: 3
+    content_digest: sha256:ec92b2f7400cfbd17cfad5a134e8b8b915fbf6580d78040c87a6d9d2e267c808
   route:
     signal: reverse
     mode: reverse
@@ -113,4 +113,4 @@ Forward再合流はPLAN-L7-531 r11の所有面へ戻す。必要なAT-DIST-003�
 
 ## R4 exit / status
 
-Reverse候補自身はdraft/R0から開始する。R0-R4のレビュー結果を揃えるまではconfirmedにしない。上流要件改訂が不要ならgap-only/no-backfillの根拠を記録し、必要な場合も既存L6/L7 ownerの承認後に別の正規revisionとして処理する。Forwardの契約/pair非著者PASS・通常admission/confirmは実装前gate、全runのcold/warm実配布acceptanceは実装後のIssue close gateとして区別する。
+Reverse候補自身はdraft/R0のまま保持し、R0-R4完了やconfirmedを主張しない。#835のcontrol回答 [6011906920](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/676#issuecomment-6011906920) に従い、Forward契約PRではdraftを保ち、Reverseを実装開始前にconfirmする待ち条件にしない。後続の同一実装PRではpair candidate IDの正式化とtest-first Red/Greenを最初のcommitに置き、CI green後のcanonical requestと非著者Opus PASSを得てから、Codexが同PR内で通常 `plan revise` によりForwardをconfirmedへ進める。confirm commitのexact headをOpusが簿記限定で再検してPASSした後にmergeする。実装後のIssue closeはcold/warm実VS Code consumer acceptance全runがPASSした場合だけとする。
