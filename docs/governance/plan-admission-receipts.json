@@ -6752,38 +6752,6 @@
         "revision": 5,
         "content_digest": "sha256:9dd1d6dee1e532e812578ea02309019d8c0661a3b47d59207d57981c8262489c"
       }
-    },
-    {
-      "sequence": 423,
-      "previous_record_digest": "sha256:8a0345ae36c2e14f571ef74a0da182adf3a01a121fce2cf2b0264bee841a8385",
-      "record_digest": "sha256:70301e14ac5f38fa427565f388820a40aa1843e7efa2c773896640f8d08edf1d",
-      "command_id": "plan-draft:issue-676:reverse-worker-sandbox-backfill:20261006",
-      "receipt_id": "certificate:7813e6c7ce8631f18d875eb2e92d9e0a",
-      "receipt_digest": "sha256:9e0dc7acc7df1f553bcc9f756d1fbfaa0c0c74a30c49263f68bf7e426f3485ec",
-      "decision_digest": "sha256:2b5efec381f392ed88d4e37c890ef46261055dc696ad387ba1d938de04b49ab5",
-      "binding": {
-        "path": "docs/plans/PLAN-REVERSE-68-codex-worker-sandbox-backfill.md",
-        "plan_id": "PLAN-REVERSE-68-codex-worker-sandbox-backfill",
-        "asset_id": "plan:7813e6c7ce8631f18d875eb2e92d9e0a",
-        "revision": 1,
-        "content_digest": "sha256:301415f7aed1d39fa251ef4f47865d78b2fce53f1db3ed90350bf24eafd56e31"
-      }
-    },
-    {
-      "sequence": 424,
-      "previous_record_digest": "sha256:70301e14ac5f38fa427565f388820a40aa1843e7efa2c773896640f8d08edf1d",
-      "record_digest": "sha256:2c9d656d42c2178859eb7083113cfbe1f8441eed41e6294c25e347c195fc2cd0",
-      "command_id": "plan-revise:issue-676:codex-worker-sandbox:legacy-bootstrap:20261006",
-      "receipt_id": "certificate:df1cf44eb5d161a350417fac49dff8e3",
-      "receipt_digest": "sha256:c0ed0c94fbcb9029adad58b61d31296df696218d71ef99ee3f9f31456730be43",
-      "decision_digest": "sha256:5cd9ce1cf9a70e654b59b032fbaae43c81dea7aea289d851b2247d73a5e291cc",
-      "binding": {
-        "path": "docs/plans/PLAN-L7-68-provider-dispatch-portability.md",
-        "plan_id": "PLAN-L7-68-provider-dispatch-portability",
-        "asset_id": "plan:legacy:0d8b50f6f96daa7e97ca0b511fe54720e653b146f3e3ce46d0b1dcb37b51c88b",
-        "revision": 2,
-        "content_digest": "sha256:876ac10a8dfd184256f5a2aaf30520f379b2cbb92b6002dc00a0a1f66b1ba2f8"
-      }
     }
   ]
 }

@@ -1,7 +1,17 @@
+---
+layer: L6
+executed_at_layer: L7
+artifact_type: test_design
+status: draft
+parent_doc: docs/plans/PLAN-L7-855-codex-worker-sandbox-contract.md
+created: 2026-10-06
+updated: 2026-10-06
+---
+
 # Codex worker sandbox 境界の L7 テスト設計案
 
 状態は pair-freeze 提案であり、実装済み・検証済み・受入 PASS を意味しない。
-所有対象は `PLAN-L7-68-provider-dispatch-portability` の Issue #676 差分だけとする。
+所有対象は `PLAN-L7-855-codex-worker-sandbox-contract` の Issue #676 差分だけとする。
 共通 `L7-unit-test-design.md` は変更せず、既存の provider dispatch、model/effort、stdin、
 Claude invocation の回帰を維持する補足として扱う。
 
