@@ -7,7 +7,7 @@ drive: agent
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-09-28
-updated: 2026-09-28
+updated: 2026-10-05
 owner: Claude control lane (契約起草) / Codex (S2・S3 実装) / 非著者 frontier reviewer
 parent_design: docs/plans/PLAN-RECOVERY-16-plan-revision-authoring.md
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
@@ -44,18 +44,18 @@ sub_doc: function-spec
 github_issue_id: 711
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:c7f2795a5350d9e8d2f6104b723f06a0
-  command_id: plan-revise:issue-711:receipt-digest-preimage-sources:rechain-1:r5:39db5b4c872b
-  admitted_at: 2026-10-05T07:02:53.065Z
-  source_digest: sha256:1fc671f67f150f9b3f19478b370ec781f973c41c9b544c086f6f8a5084d6fb39
-  decision_digest: sha256:b1fe54589e4053d4ddf0e16e95a3df9dad248beb96b564e141aa33239a3f9bc2
-  receipt_digest: sha256:d076591bc0cd5372de08add80dbcdb37f0106a5f2d8d891631acfdaf5cbcf278
+  receipt_id: certificate:cf30abd72a39ba5f8e3ac8c0690d9f1a
+  command_id: plan-revise:issue-711:legacy-bootstrap-judgement:rechain-1:c1:r6:2241d42e49c5
+  admitted_at: 2026-10-06T01:28:30.063Z
+  source_digest: sha256:ccd27f750c9b636b10636f112df009a7210559bb5911a318b5df6b358cfcdba0
+  decision_digest: sha256:b60f7d4c57af22e41779e7f7430a353452258e1577a73ec7db94017e48e8db99
+  receipt_digest: sha256:c570cd48fdd2ce4ab4b694efd0de1ee79b1d1dd394051ae95abd4fc92c6f9300
   binding:
     path: docs/plans/PLAN-L6-711-merge-time-receipt-rechain-contract.md
     plan_id: PLAN-L6-711-merge-time-receipt-rechain-contract
     asset_id: plan:ac2c23d3c72fc6e2886491ac1df09452
-    revision: 5
-    content_digest: sha256:1fc671f67f150f9b3f19478b370ec781f973c41c9b544c086f6f8a5084d6fb39
+    revision: 6
+    content_digest: sha256:ccd27f750c9b636b10636f112df009a7210559bb5911a318b5df6b358cfcdba0
   route:
     signal: feature_addition
     mode: add-feature
@@ -70,12 +70,13 @@ admission_receipt:
     digest: sha256:1b6aa397ad9995b717907d3247e02b3bba3d6c4508874b7654f90fd29b388927
   reentry:
     target_plan_id: PLAN-L6-711-merge-time-receipt-rechain-contract
-    target_revision: 5
+    target_revision: 6
     phase: forward_merge
-  escape_reason: "Issue 711: PR #831 Sol r2 FLAG の是正。§2.3-6 で intermediatePlans の
-    key 集合を、2 件以上再発行する各 asset の最後以外の record の content_digest 集合との完全一致に定め、余分な
-    key・最後の record の blob の混入を intermediate_plan_unexpected で fail-close
-    にする。U-RECHAIN-018 に負系と mutation m4 を追加"
+  escape_reason: "Issue 711: PR #839 Sol FLAG (上流契約 gap) の是正。§2.3-6 の legacy
+    bootstrap 除外の判定根拠を、harness.db の provenance ではなく tracked receipt の
+    binding.asset_id prefix plan:legacy: と binding.revision === 2 (H 側と R 側の両方)
+    に凍結する。legacy 経路を包含する安全側の判定で、record 単位の除外とし revision 3 以上は再導出する。U-RECHAIN-019
+    を追加し、RechainInput は変えない"
 ---
 
 # PLAN-L6-711: merge 時の自動 re-chain と簿記差分での再検免除の契約 freeze
@@ -205,8 +206,31 @@ PLAN ファイルの本文と frontmatter から `admission_receipt` ブロッ�
      | `reason` / `routeTupleDigest` | `A_R` から導出 (`escapeReason ?? route:<routeSignal>` / `sha(stableJson(admission))`) |
      | `occurredAt` | R の frontmatter `admission_receipt.admitted_at` |
      | `actor` | 契約定数 `ut-tdd-pr-merge-rechain`。re-chain の再発行は wrapper (`ut-tdd pr merge`) が行い、actor は record にも frontmatter にも投影されないため、定数に固定して決定的にする。wrapper (S3 以降) はこの定数で append する |
-     いずれかの源が得られない、または legacy bootstrap 経路 (`revisionUsesLegacyBootstrap` が真になる asset) の record が再発行対象に含まれる場合は、
-     `fail` とし通常の再検へ戻す (legacy 経路は preimage に別の入力を含むため、本規則では再導出しない)。
+     いずれかの源が得られない場合は `fail` とし通常の再検へ戻す。
+     - **legacy bootstrap 除外 (receipt revision 6)**: legacy bootstrap 経路の record は preimage が別である (`BootstrapLegacyPlanRevisionInput` の base 側入力と
+       `bootstrapDigest`、`src/plan-admission/node-plan-revision-runner.ts:291-323`)。そのため本規則では再導出せず `fail` (理由: `legacy_bootstrap_unsupported`) とする。
+       verifier は harness.db を読まないので、`revisionUsesLegacyBootstrap` (DB の `legacy_plan_bootstrap_provenance` と `append_command_receipts` の join) は呼ばない。
+       §2.6 の入力も増やさない。判定は §2.6 で既に渡している tracked receipt の値だけで行う。
+       - 判定: §2.3-3 で対応付けた H 側の追加 record `h` と R 側の再発行 record `r` の組ごとに、`h.binding.asset_id` が `plan:legacy:` で始まり、
+         かつ `h.binding.revision === 2` または `r.binding.revision === 2` のとき `fail` とする (`r.binding.asset_id` は §2.3-3 で `h` と一致する)。
+       - 判定に使わないもの: `command_id` の形式 (prefix / suffix)、H / R の frontmatter、M に同 asset の record があるかどうか
+         (M 側の record の有無は `baseRevision` の源の有無として別に判定する)。
+       - 理由の集約: legacy 判定は §2.3 の他の条件 (preimage の源の有無を含む) と独立に評価し、他の条件の失敗で短絡しない。判定が成立した組が 1 つでもあれば、
+         他の理由が併存していても `reasons` に `legacy_bootstrap_unsupported` を必ず含める。M に同 asset の record が無い実運用の形では、源の欠落の理由と併存する。
+       - 除外範囲: record 単位とする。同じ `plan:legacy:` asset でも revision 3 以上の record は common 経路 (`AppendPlanRevisionInput`) で発行されるので、
+         他の record と同じく上の表で再導出し、全条件を満たせば `pass` とする。asset 単位では除外しない。
+       - 健全性 (包含の論証): 正規の writer が legacy 経路で発行した record は、必ずこの判定に当たる。(i) legacy 経路では assembler が
+         `asset_id === legacyAssetId(...)` (`plan:legacy:` prefix) を要求する (`src/plan-admission/plan-revision-command-assembler.ts:102-106,215-223`)。
+         (ii) bootstrap ledger は `baseRevision !== 1` を拒否し、revision 2 だけを作る (`src/plan-asset/ledger/plan-revision-bootstrap.ts:89,407`)。
+         (iii) `revisionUsesLegacyBootstrap` が真になる record も `provenance.revision + 1 = 2` に限られる (`node-plan-revision-runner.ts:342-357`)。
+         よって legacy 経路 ⇒ prefix ∧ revision 2 であり、判定は legacy 経路の集合を包含する。逆は成り立たない (ローカルで採用済みの asset や
+         legacy migration 経由の asset は、prefix ∧ revision 2 でも common 経路になりうる)。この差は安全側の過剰拒否として許容する (通常の再検へ戻るだけ)。
+         過剰拒否が起きないとは主張しない。`revisionUsesLegacyBootstrap` との同値は要求しない。
+       - H 側も判定する理由: H の bootstrap record (revision 2) は、待機中に M が同 asset を revision 2 で admit すると、R では common 経路の revision 3 として
+         再発行される。R 側だけで判定するとこの経路を見逃す。従来の「legacy bootstrap 経路の record が再発行対象に含まれる場合は fail」を保つため、H 側を含める。
+       - 実測 (§5 のコマンド、origin/main `4b541009`): tracked receipt 413 record のうち、`plan:legacy:` asset は 30 個 (record 171 件)。各 asset で revision 2 の
+         record はちょうど 1 件で、それが各 asset の最初の record である。prefix ∧ revision 2 は 30 件、残りの 141 件は revision 3 以上。
+         `command_id` の形式では区別できない (この 30 件に `plan-revise:` 6 件、`command:` 10 件、`pr154-` / `pr156-` 13 件、`plan-l6-` 1 件が混在する)。
      再導出値と R の値が一致しなければ `fail` (理由: `receipt_digest_mismatch`)。
      同一 asset に再発行 record が 2 件以上あるとき、最後以外の各 record について、`intermediatePlans` にその `content_digest` の key が無ければ `fail`
      (理由: `intermediate_plan_missing`)、渡された blob から正規 assembler と同じ規則で再計算した content digest が key (= record の `content_digest`) と
@@ -272,9 +296,11 @@ type RechainVerdict = { ok: true; verifierDigest: string } | { ok: false; reason
    `sha` と `stableJson` は `src/plan-admission/plan-revision-command-assembler.ts` の既存関数である。`stableJson` は object の key を
    UTF-8 bytes 順に整列し、`undefined` を落とす。`sha` は UTF-8 文字列の SHA-256 を小文字 hex で返す。先頭行 `ut-tdd.rechain-verifier.v2` は
    domain separator 兼 schema version であり、入力形を変えるときは版を上げる (receipt revision 4 で `intermediatePlans` を足したため v1 から v2 に上げた。v1 の値とは比較しない)。§2.4 の merge intent receipt の `rechain.verifier_digest` はこの値を記録する。
-6. **信頼境界**: adapter は harness 自身のコードであり、Git の plumbing (`rev-parse` / `ls-tree -r` / `cat-file`) だけを使う。
+6. **legacy 判定の入力 (receipt revision 6)**: §2.3-6 の legacy bootstrap 除外は、`blobs` で渡す H / R の receipt の `binding.asset_id` と
+   `binding.revision` だけで決める。provenance や harness.db 由来の値は入力に加えない。入力形は変えないので、`verifierDigest` の版は v2 のままとする。
+7. **信頼境界**: adapter は harness 自身のコードであり、Git の plumbing (`rev-parse` / `ls-tree -r` / `cat-file`) だけを使う。
    検証器は adapter の出力を信用するが、adapter の出力が実 Git object と一致することを別の oracle (U-RECHAIN-013) で固定する。
-7. **008 の境界**: git の 3-way merge 自体が衝突した場合は、wrapper が検証器を呼ぶ前に `rechain_conflict` で止める (U-RECHAIN-008、S3)。
+8. **008 の境界**: git の 3-way merge 自体が衝突した場合は、wrapper が検証器を呼ぶ前に `rechain_conflict` で止める (U-RECHAIN-008、S3)。
    検証器は wrapper の判断に依存せず、両側変更の非簿記 path を 2 のとおり独立に `fail` にする (U-RECHAIN-002 / 014、S2)。
 
 ## 3. scope boundary
@@ -309,8 +335,9 @@ pair は `docs/test-design/harness/L7-unit-test-design.md` に、実装 PR で `
 | CANDIDATE-U-RECHAIN-014 | 非簿記 path を `H` と `M` の両側が別々に変え、git の内容 merge は成立する fixture → 検証器は `fail` (理由: 両側変更)。簿記 path の両側変更は §2.2 の規則で判定する | (m) path 単位 3-way の「両側変更は対象外」を外し、`X[p]` をそのまま期待値にする → `pass` して失敗 |
 | CANDIDATE-U-RECHAIN-015 | stack した PR: `H` が含む別 PR の commit `C` が待機中に `M` へ入った fixture (`base` = `C`)。PR 自身の append-only 追加だけが再適用され、`C` の変更は main 由来として扱われて `pass` | (m) `C` より前の旧 base を使う → `C` の変更が PR の追加に数えられて失敗 |
 | CANDIDATE-U-RECHAIN-016 | 同じ `RechainInput` を key の挿入順だけ変えて 2 通り組むと、`verifierDigest` が完全一致する。domain separator の版を変えると値が変わる | (m) `stableJson` の代わりに `JSON.stringify` を使う → 挿入順で値が変わって失敗 |
-| CANDIDATE-U-RECHAIN-017 | R の record の `receipt_digest` だけを任意値 (例 `sha256:` + `f` × 64) に置き換え、frontmatter と record digest を整合させて再計算した入力 → `fail` (理由: `receipt_digest_mismatch`)。同じ入力で `actor` 定数を別値にして再導出した値に置き換えた場合も `fail`。legacy bootstrap 経路の asset を再発行対象に含む入力 → `fail` | (m) `derivePlanRevisionDigests` による再導出を省き H の値の非流用だけを見る → 任意 digest が pass して失敗 |
+| CANDIDATE-U-RECHAIN-017 | R の record の `receipt_digest` だけを任意値 (例 `sha256:` + `f` × 64) に置き換え、frontmatter と record digest を整合させて再計算した入力 → `fail` (理由: `receipt_digest_mismatch`)。同じ入力で `actor` 定数を別値にして再導出した値に置き換えた場合も `fail`。legacy bootstrap 除外の判定は U-RECHAIN-019 で固定する (receipt revision 6) | (m) `derivePlanRevisionDigests` による再導出を省き H の値の非流用だけを見る → 任意 digest が pass して失敗 |
 | CANDIDATE-U-RECHAIN-018 | 同一 asset について `H` が 2 件 append していた re-chain (`M` 側の同 asset 最新 revision を n とする)。(正系) 1 件目は base = (n、`M` の PLAN の canonical payload digest)、2 件目は base = (n + 1、1 件目の中間 blob の canonical payload digest) で再発行し、1 件目の中間 blob を `intermediatePlans` に渡した入力 → `pass`。(負系) 2 件目の base を `M` に固定 (n、`M` の digest) して `receipt_digest` を計算し、他の digest を整合させた入力 → `fail` (理由: `receipt_digest_mismatch`)。1 件目の中間 blob を 1 byte 変えて渡す (再計算 digest ≠ `content_digest`) → `fail` (理由: `intermediate_plan_digest_mismatch`)。中間 blob を渡さない → `fail` (理由: `intermediate_plan_missing`)。正系の入力に、どの record からも参照されない余分な key と blob を 1 つ足す → `fail` (理由: `intermediate_plan_unexpected`)。正系の入力に、2 件目 (最後の record) の `content_digest` を key とし R の PLAN blob を値とする entry を足す → `fail` (理由: `intermediate_plan_unexpected`) | (m1) 全 record の base を `M` から取る → 正系が `fail` して失敗。(m2) 中間 blob の digest 照合を省く → 改変 blob が pass して失敗。(m3) 中間 blob の欠落時に `R` の PLAN blob で代用する → 欠落入力が `intermediate_plan_missing` で止まらず失敗。(m4) key 集合の完全一致を「必要な key を含む」(superset を許す) に緩める → 余分な key と最後の record の blob を混ぜた入力が pass して失敗 |
+| CANDIDATE-U-RECHAIN-019 | legacy bootstrap 除外 (§2.3-6、receipt revision 6)。負系 a2 以外は、判定対象の条件以外を全て満たす fixture で判定する。(負系 a1) M が同じ `plan:legacy:` asset の revision 1 の record と PLAN blob を持ち (§2.3-6 の `baseRevision` / `basePayloadDigest` の源が得られる合成 fixture)、H / R の追加 record が同 asset の revision 2 で、R の digest を common 経路で正しく再計算した入力 → `fail` で、`reasons` はちょうど `[legacy_bootstrap_unsupported]` (他の理由を含まない)。(負系 a2) 実運用の形: M に同 asset の record が無く、H の追加 record が revision 2 → `fail` で、`reasons` は `legacy_bootstrap_unsupported` を含む (源の欠落の理由との併存を許す、§2.3-6 の理由の集約)。a1 / a2 とも、`h.command_id` を `plan-revise:issue-1:legacy-x:r2:000000000000` と `pr154-legacy-x-r2` の 2 通りにして同じ期待値になる。(負系 b) H の追加 record は `plan:legacy:` asset の revision 2 で、待機中に M が同 asset を revision 2 で admit したため R の再発行 record が revision 3 になり、R の digest を common 経路で正しく再計算した入力 → `fail` (reasons に `legacy_bootstrap_unsupported` を含む)。(正系 c) M に同 `plan:legacy:` asset の最新 revision n ≥ 2 があり、H / R の record が revision n + 1 で common preimage から正しく再導出された入力 → `pass`。(正系 d) `plan:<32 hex>` asset で M の最新 revision が 1 (draft)、H / R の record が revision 2 の入力 → `pass` | (m1) R 側だけで判定する (PR #839 の近似 `prefix ∧ (M に同 asset の record が無い ∨ r.revision === 2)` と同形) → 負系 b が `pass` して失敗。(m2) asset 単位で除外する (prefix だけで判定) → 正系 c が `fail` して失敗。(m3) prefix を見ず revision 2 だけで判定する → 正系 d が `fail` して失敗。(m4) 判定を `command_id` の形式に置き換える。式 X = `/^pr154-/.test(h.command_id)` → a1 / a2 の `plan-revise:issue-1:legacy-x:r2:000000000000` 形式で `legacy_bootstrap_unsupported` が出ず失敗。式 Y = `/^plan-revise:/.test(h.command_id)` → a1 / a2 の `pr154-legacy-x-r2` 形式で出ず、かつ正系 c / d (`command_id` は `plan-revise:...` 形式) が `fail` して失敗。(m5) 源の欠落を先に返して legacy 判定を短絡する → a2 で `legacy_bootstrap_unsupported` が出ず失敗 |
 
 ## 5. 実測の根拠コマンド
 
@@ -319,6 +346,8 @@ git show origin/main:docs/governance/plan-admission-receipts.json | node -e "con
 git log origin/main --since=2026-09-14 --format=%H -- docs/governance/plan-admission-receipts.json | wc -l   # 90
 git log origin/main --since=2026-09-14 --merges --format=%s | grep -c "Merge pull request"                  # 58
 git show --stat b8bdf6d8
+# legacy bootstrap 除外の実測 (§2.3-6、receipt revision 6): 413 30 171 30 true 141
+git show 4b541009:docs/governance/plan-admission-receipts.json | node -e "const r=JSON.parse(require('fs').readFileSync(0)).records;const L=r.filter(x=>x.binding.asset_id.startsWith('plan:legacy:'));const by={};for(const x of L)(by[x.binding.asset_id]=by[x.binding.asset_id]||[]).push(x);const v=Object.values(by);console.log(r.length,v.length,L.length,L.filter(x=>x.binding.revision===2).length,v.every(a=>a.filter(x=>x.binding.revision===2).length===1&&a[0].binding.revision===2),L.filter(x=>x.binding.revision>=3).length)"
 ```
 
 ## 6. Schedule と出口
@@ -327,7 +356,7 @@ git show --stat b8bdf6d8
 | --- | --- | --- | --- |
 | S0 | control lane の checkout から、他 PR の branch に対して headless に `plan revise` を実行する PoC (ledger custody) | serial | 成否と手順を本 PLAN の §8 に記録する。失敗なら §2.1 を改訂する |
 | S1 | 本 PLAN の pair-freeze (docs のみ、非著者 Codex Sol の review) | serial (S0 の後) | PASS receipt と CI green の後に confirm する |
-| S2 | `verifyRechainDelta` (pure function 1 module、§2.6 の入力形) と U-RECHAIN-001..007、011、012、014..018 | serial (S1 の後) | oracle が green、非著者 review が PASS |
+| S2 | `verifyRechainDelta` (pure function 1 module、§2.6 の入力形) と U-RECHAIN-001..007、011、012、014..019 | serial (S1 の後) | oracle が green、非著者 review が PASS |
 | S3 | adapter `readRechainSnapshot` と `ut-tdd pr merge` への配線、U-RECHAIN-008..010、013、CLAUDE.md の例外文言 | serial (S2 の後) | 実 PR 1 本で自動 re-chain による merge を実証する |
 
 ## 7. 非 Scope
@@ -347,3 +376,5 @@ git show --stat b8bdf6d8
 9. 2026-10-05 改訂 (契約齟齬の是正): S2 の実装 (PR #724) に対する非著者 review (Codex Sol r2) が、`receipt_digest` を再導出せず H の値の非流用だけを見ている点を FLAG とした。実装の是正中に、§2.3-6 が求める再導出の preimage の源が契約に書かれていないことが分かった (実装者は「harness.db にしかない」と判断して停止)。advisor (claude-fable-5、design) と実測 (`src/plan-admission/node-plan-revision-runner.ts:273-289`、renderer に `actor` の投影なし) により、`actor` 以外の全フィールドが既に束縛された源から導けることを確認し、§2.3-6 に源の表と `actor` の契約定数を追加した。§2.6 の入力形は変えない。B 案 (ledger を信頼根にする) は、R を生む append 自身が書いた行との照合でほぼ自己整合になり信頼境界を広げるため、C 案 (再導出をやめる) は契約を弱めるため、採らなかった。
 10. receipt revision 4 (2026-10-05、PR #831 の是正): 非著者 review (Codex Sol r1、PR #831) の FLAG 1 件を反映した。9 で追加した源の表は、同一 asset の record を複数再発行する場合に全 record の `baseRevision` / `basePayloadDigest` を `M` に固定しており、§2.3-3 の連番と矛盾していた (ledger は `revision = baseRevision + 1` で append し、`basePayloadDigest` が直前 revision の `canonical_payload_digest` と一致することを要求する。`src/plan-asset/ledger/plan-revision-ledger.ts:99-104,194-205`、`src/plan-admission/plan-revision-command-assembler.ts:109-124`)。§2.3-6 で 1 件目と k 件目 (k ≥ 2) の base を分けて定義し、各 record の payload をその record 自身の PLAN blob から導くことにした。最後以外の record の PLAN 全文は Git の tree に無いため、§2.6 の `RechainInput` に `intermediatePlans` (key = record の `content_digest`、内容は digest 照合で束縛) を追加し、9 の「§2.6 の入力形は変えない」を改めた。入力形を変えたので `verifierDigest` の domain separator を `ut-tdd.rechain-verifier.v2` に上げた。U-RECHAIN-018 を追加し、S2 の oracle に 017 / 018 を含めた。
 11. receipt revision 5 (2026-10-05、PR #831 の是正 2 回目): 非著者 review (Codex Sol r2、PR #831) の FLAG 1 件を反映した。revision 4 の `intermediatePlans` は必要 key の欠落と digest 不一致しか拒否せず、未参照の余分な key / blob を足しても全照合を満たした。§2.3-6 で key 集合を、再発行 record が 2 件以上ある各 asset の最後以外の record の `content_digest` 集合との完全一致に定め、余分な key と最後の record の blob の混入を `intermediate_plan_unexpected` で fail-close にした。U-RECHAIN-018 に負系 2 件と mutation m4 (superset を許す) を追加した。`RechainInput` の形は変えないため、`verifierDigest` の版は v2 のままとする。
+12. receipt revision 6 (2026-10-05、PR #839 の契約齟齬): S2 実装 (PR #839) の非著者 review (Codex Sol) が、§2.3-6 の legacy 除外が `revisionUsesLegacyBootstrap` (harness.db の provenance と command receipt の join) を要求する一方、§2.6 の入力に provenance が無く、実装の prefix / revision 近似との同値性も契約に無いことを上流 gap と判定した。advisor (gpt-6.1-sol、implementation、2026-10-05) と実測により、判定根拠を tracked receipt の `binding.asset_id` prefix `plan:legacy:` と `binding.revision === 2` (H 側と R 側の両方) に凍結した。これは legacy 経路の集合を包含する判定で、同値ではない (過剰拒否は安全側として許容)。除外は record 単位とし、revision 3 以上は再導出して `pass` させる。A 案 (provenance を入力に足す) は DB 由来の値の信頼境界・鮮度・record との束縛を新たに要するため、C 案 (`plan:legacy:` asset を全て除外) は 30 asset の common revision まで拒否するため、採らなかった。advisor の指摘で、R 側だけの判定 (H の bootstrap record が R で revision 3 になる経路を見逃す) を退けた。U-RECHAIN-019 を追加し、S2 の oracle に含めた。`RechainInput` の形は変えないので、`verifierDigest` の版は v2 のままとする。
+13. receipt revision 6 の是正 (2026-10-06、PR #845 の是正 1 回目): 非著者 review (Codex Sol r1、PR #845) の FLAG 2 件を反映した。(1) U-RECHAIN-019 負系 a は「他の全条件を満たす」と「M に同 asset の record が無い」を同時に要求しており、後者では §2.3-6 の `baseRevision` / `basePayloadDigest` の源が得られず別の理由でも fail するため、単一条件の oracle になっていなかった。M に revision 1 の base を置いた合成 fixture (a1、`reasons` がちょうど legacy の 1 件) と実運用の形 (a2、併存を許す) に分け、§2.3-6 に legacy 判定を他条件の失敗で短絡しない理由の集約規則を凍結した。(2) mutation m4 は判定式を固定しておらず、両形式を拒否する式では負系 a が RED にならなかった。誤判定式を X / Y の 2 式に固定し、それぞれで legacy 理由が欠落する `command_id` と期待値を記述した。短絡の mutation m5 を足した。`RechainInput` の形は変えないので、`verifierDigest` の版は v2 のままとする。
