@@ -6960,6 +6960,22 @@
         "revision": 3,
         "content_digest": "sha256:f79874c7ed5065844550a9f19cde7a6603319723c4cb9adb6574e2d6c67a37ba"
       }
+    },
+    {
+      "sequence": 436,
+      "previous_record_digest": "sha256:471f75f069f4194e8eceadc1381c4a60aa1f45b649a3ebeaf72ea0e2143391e1",
+      "record_digest": "sha256:306502c8ebc107796c13cc820a6bf06d29f4ed2bd9c377bb7dacc4d65f3b833a",
+      "command_id": "plan-revise:issue835:forward:pr865-post-pass-confirmation:20261006",
+      "receipt_id": "certificate:bf2cae5fee18b77a0ade95d9901b928f",
+      "receipt_digest": "sha256:386446f3e69ff1715426e6b1400894fea1de076a105e308315e172d4d4f265dd",
+      "decision_digest": "sha256:e2dfd822525c8daa39d8b6090917e677ffd9e88bd4a6b954099ee0f6744f9432",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-835-windows-sessionstart-contract.md",
+        "plan_id": "PLAN-L7-835-windows-sessionstart-contract",
+        "asset_id": "plan:e281d92c657b574bd0ea7a3ab6dfdb9e",
+        "revision": 4,
+        "content_digest": "sha256:fb7fbd740c60a5585a83104b25fd95798fdd8353a8b8f3d9b3830616f9b68d90"
+      }
     }
   ]
 }

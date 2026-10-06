@@ -41,23 +41,125 @@ dependencies:
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/835
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/835#issuecomment-5990541679
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/418#issuecomment-6010925970
-review_evidence: []
-status: draft
+review_evidence:
+  - reviewer: claude-opus-5
+    review_kind: cross_agent
+    reviewed_at: 2026-10-06T11:37:59.647Z
+    verdict: PASS
+    scope: "PR #865 Issue #835 bounded SessionStart event-first implementation;
+      exact implementation HEAD e3188bd6ae706b73ea62e2284c833fecd760efd9; CI 5/5
+      success and formal Opus review. This confirms the contract revision only;
+      real VS Code consumer AT-835-008 remains pending and Issue #835 remains
+      open."
+    tests_green_at: 2026-10-06T11:29:12Z
+    green_commands:
+      - kind: typecheck
+        command: npm run typecheck (CI harness-check-linux)
+        runner: ci
+        scope: full
+        exit_code: 0
+        completed_at: 2026-10-06T11:10:00Z
+        evidence_path: src/cli.ts
+        output_digest: sha256:0bb477a06df507d424803257d4efad0d140d827cf7964557894d63b5a4a8ebe0
+        anchor_commit: e3188bd6ae706b73ea62e2284c833fecd760efd9
+      - kind: typecheck
+        command: npm run typecheck (CI harness-check-windows)
+        runner: ci
+        scope: full
+        exit_code: 0
+        completed_at: 2026-10-06T11:10:13Z
+        evidence_path: src/cli.ts
+        output_digest: sha256:0bb477a06df507d424803257d4efad0d140d827cf7964557894d63b5a4a8ebe0
+        anchor_commit: e3188bd6ae706b73ea62e2284c833fecd760efd9
+      - kind: doctor
+        command: node src/cli.ts doctor --strict-green-command-digest --result-file
+          $UT_TDD_DOCTOR_RESULT_FILE (CI harness-check-linux)
+        runner: ci
+        scope: full
+        exit_code: 0
+        completed_at: 2026-10-06T11:12:48Z
+        evidence_path: .github/workflows/harness-check.yml
+        output_digest: sha256:f079c200785985cc0b7a4b42522f202c15d3356c5e1a5890aa8708a185bedab7
+        anchor_commit: e3188bd6ae706b73ea62e2284c833fecd760efd9
+      - kind: unit_test
+        command: npm run test (CI harness-check-linux; full Vitest regression)
+        runner: ci
+        scope: full
+        exit_code: 0
+        completed_at: 2026-10-06T11:24:35Z
+        evidence_path: tests/runtime-hook-entrypoints.test.ts
+        output_digest: sha256:767a3c500b2e79dc20424958f1e69a05bbe31bd54c4803abcc71da1fc90a44c0
+        anchor_commit: e3188bd6ae706b73ea62e2284c833fecd760efd9
+      - kind: lint
+        command: npm run lint (CI harness-check-linux; Biome)
+        runner: ci
+        scope: full
+        exit_code: 0
+        completed_at: 2026-10-06T11:24:38Z
+        evidence_path: src/cli.ts
+        output_digest: sha256:0bb477a06df507d424803257d4efad0d140d827cf7964557894d63b5a4a8ebe0
+        anchor_commit: e3188bd6ae706b73ea62e2284c833fecd760efd9
+      - kind: unit_test
+        command: npm run test:windows (CI harness-check-windows; full Vitest regression)
+        runner: ci
+        scope: full
+        exit_code: 0
+        completed_at: 2026-10-06T11:28:44Z
+        evidence_path: tests/release-consumer-skills.test.ts
+        output_digest: sha256:5b6581a665fd203b4c2f04dbd8913ff73342cd2ff5d35640b44ec83f761179f7
+        anchor_commit: e3188bd6ae706b73ea62e2284c833fecd760efd9
+      - kind: doctor
+        command: node src/cli.ts doctor --scope toolchain (CI harness-check-windows)
+        runner: ci
+        scope: full
+        exit_code: 0
+        completed_at: 2026-10-06T11:28:49Z
+        evidence_path: .github/workflows/harness-check.yml
+        output_digest: sha256:f079c200785985cc0b7a4b42522f202c15d3356c5e1a5890aa8708a185bedab7
+        anchor_commit: e3188bd6ae706b73ea62e2284c833fecd760efd9
+    worker_model: gpt-6-luna
+    reviewer_model: claude-opus-5
+    plan_revision: rev3
+    subject_head: e3188bd6ae706b73ea62e2284c833fecd760efd9
+    citations:
+      - "PR #865 canonical review receipt request
+        6c8d55c5034643f34e079956c32a719d1d5463db3078017201721aa8078d586a;
+        receipt file SHA-256
+        4eb0cac5be18e4034919b6472c63046d58d87e158e58323e73a56dcec5be61d7;
+        verdict PASS, blocking findings 0, exact implementation HEAD
+        e3188bd6ae706b73ea62e2284c833fecd760efd9."
+      - "Canonical review-custody audit: request
+        6c8d55c5034643f34e079956c32a719d1d5463db3078017201721aa8078d586a; exact
+        HEAD e3188bd6ae706b73ea62e2284c833fecd760efd9; claude-opus-5; receipt
+        digest 4eb0cac5be18e4034919b6472c63046d58d87e158e58323e73a56dcec5be61d7;
+        verdict digest
+        bc6e0aafaa89869811a48bd1dd0cd0310de9a3a8b006e1481d8f8357e6b815d4."
+      - CI run 37454533428 (5/5 success, exact HEAD
+        e3188bd6ae706b73ea62e2284c833fecd760efd9; aggregate
+        2026-10-06T11:29:12Z); independent evidence file
+        pr865-e3188-ci-terminal-evidence.md SHA-256
+        eb4bf01e7674943337a2e30083b6de0b4a52b278867178eab8cb0fb7c62c5a37.
+      - "Implementation PR #865 was reviewed on exact
+        e3188bd6ae706b73ea62e2284c833fecd760efd9. The current admission source
+        is separately rebased by main merge
+        2d9728fcb5e2758fbc72bd67235f725c8305a2fa; CI/review are not claims about
+        that merge commit."
+status: confirmed
 github_issue_id: 835
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:489e7cd4e95efaa5649138c6d686a0b9
-  command_id: plan-revise:issue835:forward:status-sync-r3:20261006083904558
-  admitted_at: 2026-10-06T08:39:04.558Z
-  source_digest: sha256:00a55bc49a98c6d7175d743bec8f56d4c4dd3834d56c61a9d040352c515d0f77
-  decision_digest: sha256:023809f55a94650be1567a7816a2fca0b33fe087c94cb22ca1b0d43f77e1f506
-  receipt_digest: sha256:7207df3682d0d1ed034758c0e7fdcc9f31c008a8c1e35fc7cfb1102dd002d88d
+  receipt_id: certificate:bf2cae5fee18b77a0ade95d9901b928f
+  command_id: plan-revise:issue835:forward:pr865-post-pass-confirmation:20261006
+  admitted_at: 2026-10-06T11:46:23.000Z
+  source_digest: sha256:fb7fbd740c60a5585a83104b25fd95798fdd8353a8b8f3d9b3830616f9b68d90
+  decision_digest: sha256:e2dfd822525c8daa39d8b6090917e677ffd9e88bd4a6b954099ee0f6744f9432
+  receipt_digest: sha256:386446f3e69ff1715426e6b1400894fea1de076a105e308315e172d4d4f265dd
   binding:
     path: docs/plans/PLAN-L7-835-windows-sessionstart-contract.md
     plan_id: PLAN-L7-835-windows-sessionstart-contract
     asset_id: plan:e281d92c657b574bd0ea7a3ab6dfdb9e
-    revision: 3
-    content_digest: sha256:00a55bc49a98c6d7175d743bec8f56d4c4dd3834d56c61a9d040352c515d0f77
+    revision: 4
+    content_digest: sha256:fb7fbd740c60a5585a83104b25fd95798fdd8353a8b8f3d9b3830616f9b68d90
   route:
     signal: hotfix_required
     mode: incident
@@ -74,16 +176,15 @@ admission_receipt:
     target_plan_id: PLAN-L7-531-pack-internal-canary-smoke
     target_revision: 11
     phase: forward_merge
-  escape_reason: "Issue #835 / control #6012374220:
-    実経路のrequireRuntimeRepoRoot後に既存appendをside-effects前へ移し、claude-vscode実consume\
-    rの計測と失敗時rollbackをboundedに受け入れる。"
+  escape_reason: "Issue #835 / control comment 6010925970: event-firstを保持し、実測未完のVS
+    Code ATは未完了のまま記録する。PR #865 exact e3188bd6のCI 5/5とOpus PASSに基づく同一PR内の通常確認。"
 ---
 
 # PLAN-L7-835 (troubleshoot): Windows consumer SessionStart の順序契約と実配布完走受入
 
 ## 1. 位置づけと事実
 
-本書は #835 のdraft提案であり、正規PLANの採番・admission receipt・reservation・pair-freeze・実装許可を主張しない。通常の `plan draft` writerで予約・起票する前に、rootがIssue bindingと契約を検収する。
+本書は通常のplan revise writerでadmitされたIssue #835の正規Forward PLANである。rev4のconfirmedは、実装PR #865のexact HEAD e3188bd6ae706b73ea62e2284c833fecd760efd9に対するCI 5/5 successとOpus PASSを同一PRで記録した契約着地を示す。これは実配布受入やIssue完了を意味しない。実VS Code consumerによるcold/warm各5 run以上のAT-835-008は未実施であり、Issue #835はopenのままとする。
 
 Issue #835 はWindows consumerで配布されたClaude SessionStartが設定済み5秒timeoutを超えてcancelされ、対象sessionの正規 `session_start` が残らなかった不具合である。Issue本文はcold 7413ms / timeout 5000msを報告し、comment 5990541679は同一consumerでwarm 6252ms / timeout 5000ms / cancel、対象IDのevent欠落、`--help` 約1.6秒、Stop 約3771msを記録する。したがってcold-only仮説ではなく、現在の実測5秒失敗を契約の前提として保持する。最新control宛comment 6010925970はevent-firstを採択し、timeoutをphase実測から選択する。
 
@@ -133,6 +234,4 @@ L6-03/L7-01が所有するsession event schema/handler/fail-openを変更せず�
 
 ## 7. Status discipline
 
-本契約PRではForwardをdraftのまま保ち、契約をconfirmedにして実装を先行待ちさせない。control回答 [6011906920](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/676#issuecomment-6011906920) に従い、後続の同一実装PRで最初のcommitにpair candidate IDの正式化とtest-first Red/Greenを置き、CI green後にcanonical requestを出す。非著者Opus closing reviewがPASSした後、Codexは同PR内の通常 `plan revise` でForwardをconfirmedへ進め、review receiptを `cross_agent` evidence、CI runを `green_commands` として記録する。confirm commitのexact headをOpusが簿記限定で再検しPASSした後にmergeする。ReverseはR0/draftのままでよく、confirm前の追加待ち条件にしない。
-
-confirmedは契約着地と実装開始の新しい先行待ちではなく、CI/Opus PASS後に同じ実装PRへ記録する状態である。実装後のIssue closeはVS Code実consumerによるcold/warm全run acceptanceがPASSするまで行わない。契約confirmとIssue完了は別gateであり、全配布受入をconfirmへ混ぜない。
+ForwardはPR #865のtest-first実装PRで最初draftとして維持し、正式oracleのRed/Greenを経て実装HEAD e3188bd6ae706b73ea62e2284c833fecd760efd9のCI 5/5 successを確認した。2026-10-06T11:37:59.647ZにOpusが同HEADをPASS（blocking findings 0）とし、その後、同一PRで通常plan revise writerにより本Forwardをrev4/confirmedへ記録する。確認対象は契約と実装PRの着地であり、実配布ATのPASSやIssue完了ではない。confirm後の簿記限定レビューはcontrol指示に従い、ReverseはR0/draftを維持し、confirm前の追加待ち条件にしない。実VS Code consumerでのAT-835-008（cold/warm各5 run以上）は未実施であり、Issue #835はopenのままとする。
