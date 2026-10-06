@@ -17,15 +17,18 @@ Claude invocation の回帰を維持する補足として扱う。
 
 ## 契約と不変条件
 
-- Codex の成果物作成 worker `se`、`docs`、`be-api`、`be-logic`、`db-schema`、
+- Codex 成果物作成 worker `se`、`docs`、`be-api`、`be-logic`、`db-schema`、
   `devops-deploy` の6 role にだけ、argv の `--sandbox workspace-write` を1組渡す。
-- 判断 gate、advisor、管理・調査 role、および他の既知 role へ write を付与しない。
-  `aim` は既知の non-writer とし、schema 登録を write 許可とは解釈しない。
-- 未登録 Codex role は、正規 delegation と直接 adapter 呼出しの双方で provider spawn 前に拒否する。
+- それ以外の全 role は既存の read-only invocation を維持する。これには判断 gate、advisor、
+  管理・調査 role、`aim`、および unknown role を含む。unknown role を理由に直接 adapter
+  invocation を新たに拒否してはならない。
+- 正規 delegation の既存 role allowlist refusal は変更しない。これは通常の delegation
+  境界であり、本修正で新しい direct-adapter spawn refusal を追加する根拠ではない。
+- write-role allowlist は既存 runtime 層から export する単一 constant とし、adapter はそれを
+  利用する。runtime から team routing への import、team routing の変更、新 source module、
+  第二の role registry は導入しない。
 - Claude argv/environment、model・effort routing、stdin framing、reviewer verdict custody、
   既存 gate-role policy は変更しない。write flag の不在を OS sandbox の read-only 証明としない。
-- runtime から team へ import しない。既存の lower-level role policy を再利用・集約し、
-  新 source module や第二の role registry を作らない。
   `READ_ONLY_DELEGATION_ROLES` は frontier/model routing にも使うため、本修正で集合を拡張しない。
 
 ## 独立 oracle 候補
@@ -35,17 +38,15 @@ Claude invocation の回帰を維持する補足として扱う。
 | Candidate ID | 入力・変異 | 期待する判定 |
 | --- | --- | --- |
 | `CANDIDATE-U-ADAPTER-SANDBOX-001` | 6 writer role を個別指定 | argv に `--sandbox workspace-write` が1組だけ現れ、model/effort/stdin の既存契約を維持する。 |
-| `CANDIDATE-U-ADAPTER-SANDBOX-002` | 全 decision-gate role | write を付与せず、gate role 集合と verdict custody を維持する。 |
-| `CANDIDATE-U-ADAPTER-SANDBOX-003` | `aim` とその他の既知 non-writer | role 認識を write 許可へ読み替えず、write を付与しない。 |
-| `CANDIDATE-U-ADAPTER-SANDBOX-004` | 正規 delegation へ未登録 Codex role | provider spawn 0 で拒否し、permissive fallback を使わない。 |
-| `CANDIDATE-U-ADAPTER-SANDBOX-005` | adapter へ未登録 Codex role を直接入力 | provider spawn 0 で拒否する。write を付与しないだけでは合格にしない。 |
-| `CANDIDATE-U-ADAPTER-SANDBOX-006` | Claude invocation と Codex non-writer routing | Claude argv/env、model routing、stdin、既存 gate policy が不変である。 |
+| `CANDIDATE-U-ADAPTER-SANDBOX-002` | advisor、`aim`、代表的な known non-writer、control 指定 reviewer role、unknown worker role を直接 adapter に指定 | いずれも新たに拒否せず、adapter plan が既存 argv を維持して `--sandbox workspace-write` を含めない。 |
+| `CANDIDATE-U-ADAPTER-SANDBOX-003` | Claude invocation と Codex non-writer routing | Claude argv/env、model・effort routing、stdin、既存 gate-role policy が不変である。 |
+| `CANDIDATE-U-ADAPTER-SANDBOX-004` | 正規 delegation の既存 role allowlist refusal と frontier/custody consumer (`tests/release-consumer-skills.test.ts:232-239` を含む) | 既存拒否・frontier routing・custody 振る舞いを維持し、read-only role 集合の誤拡張による regression を起こさない。 |
 
-実装対象は `tests/runtime-adapter.test.ts` と必要最小限の既存 delegation/team routing test。
-writer 正例、non-writer 負例、unknown 拒否を別々に到達させる。
-write-role 判定の除去、unknown 拒否の除去、write flag の重複挿入を独立に変異させ、
-対応 oracle が Red になることを検証する。具体的な拒否 error は既存 caller 契約と照合し、
-契約 freeze 時に確定する。新 error envelope をこの文書だけで発明しない。
+実装対象は `tests/runtime-adapter.test.ts` と必要最小限の既存 delegation/routing test。
+writer 正例と代表的な non-writer の既存 invocation をそれぞれ到達させる。
+6 role の allowlist 欠落、write flag の重複挿入、non-writer への grant、Claude invocation の変更、
+既存 delegation/frontier consumer の regression を独立に検出する。unknown direct-adapter role の拒否を
+新設する oracle は置かない。
 
 ## 範囲外と受入への接続
 
