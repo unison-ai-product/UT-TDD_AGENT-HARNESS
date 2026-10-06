@@ -1540,7 +1540,12 @@ describe("verifyRechainDelta legacy bootstrap 除外 (U-RECHAIN-019)", () => {
       });
       const verdict = verifyRechainDelta(input);
       expect(verdict.ok).toBe(false);
-      if (!verdict.ok) expect(verdict.reasons).toContain(LEGACY_BOOTSTRAP_UNSUPPORTED);
+      // 理由の集約 (§2.3-6): legacy 理由と源の欠落の理由が併存する (legacy で短絡しない)。
+      if (!verdict.ok)
+        expect(verdict.reasons).toEqual([
+          LEGACY_BOOTSTRAP_UNSUPPORTED,
+          `receipt_digest_source_unavailable:${PLAN_PATH}`,
+        ]);
     });
   }
 
@@ -1575,6 +1580,24 @@ describe("verifyRechainDelta legacy bootstrap 除外 (U-RECHAIN-019)", () => {
 // ---------------------------------------------------------------------------
 
 describe("verifyRechainDelta PR #839 r1 FLAG 回帰", () => {
+  it("U-RECHAIN-003c: R の frontmatter の key 順だけを変え (title を先頭へ)、digest と receipt を正規に再導出しても strip(R) の byte 不一致で fail する", () => {
+    const b = buildBaseline();
+    const { title, ...rest } = baseFrontmatterOther();
+    const reordered = { title, ...rest };
+    const hGenerates = [
+      ...BASE_GENERATES,
+      { artifact_path: "src/plan-admission/rechain-verifier.ts", artifact_type: "source_module" },
+    ];
+    const { content, record } = makeRevision(
+      rParams(b, { frontmatterOther: reordered, generates: hGenerates }),
+    );
+    expect(content.startsWith("---\ntitle:")).toBe(true);
+    const tampered = clone(b.input);
+    installR(tampered, content, [b.priorRecord, record]);
+    const verdict = verifyRechainDelta(tampered);
+    expect(verdict.ok).toBe(false);
+    if (!verdict.ok) expect(verdict.reasons).toEqual([`plan-strip-mismatch:bytes:${PLAN_PATH}`]);
+  });
   it("U-RECHAIN-018h: 中間 blob の status を draft→confirmed に変えると、bind 後の digest が key と一致しても fail する", () => {
     const s = buildTwoRecordScenario();
     const tampered = clone(s.input);

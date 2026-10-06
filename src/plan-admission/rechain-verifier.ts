@@ -103,20 +103,24 @@ export function verifyRechainDelta(input: RechainInput): RechainVerdict {
   // H 側の追加 record h と R 側の再発行 record r の組ごとに、h の asset が `plan:legacy:` で
   // 始まり、かつ h / r のどちらかが revision 2 なら fail。command_id の形式・frontmatter・
   // M 側 record の有無は使わない。他の条件と独立に先に評価し、他の失敗で短絡しない。
-  // legacy の組は再導出しない。理由を積んだ時点で以降の `reasons.length > 0` 判定が fail-close
-  // するので、他の理由の有無にかかわらず `reasons` に必ず含まれる。
-  const hasLegacyPair = hAppended.some((h, i) => {
+  // legacy の組は receipt_digest を照合しないが、他の独立条件 (源の有無を含む) は評価を続けて
+  // 理由を集約する。legacy 理由は他の条件の早期 return でも必ず先頭に含める (`done`)。
+  const legacyIndexes = new Set<number>();
+  hAppended.forEach((h, i) => {
     const r = rAll[mAll.length + i] as TrackedReceiptRecord | undefined;
-    return (
+    if (
       h.binding.assetId.startsWith(LEGACY_ASSET_PREFIX) &&
       (h.binding.revision === 2 || r?.binding.revision === 2)
-    );
+    ) {
+      legacyIndexes.add(i);
+    }
   });
-  if (hasLegacyPair) fail(LEGACY_BOOTSTRAP_UNSUPPORTED);
+  const legacyReasons = legacyIndexes.size > 0 ? [LEGACY_BOOTSTRAP_UNSUPPORTED] : [];
+  const done = (): RechainVerdict => ({ ok: false, reasons: [...legacyReasons, ...reasons] });
 
   if (!isRecordPrefix(base, hAll)) fail("receipt-base-not-prefix-of-H");
   if (!isRecordPrefix(base, mAll)) fail("receipt-base-not-prefix-of-M");
-  if (reasons.length > 0) return { ok: false, reasons };
+  if (reasons.length > 0) return done();
 
   // --- 1. admission 候補の対応付け (§2.3-6, U-RECHAIN-004/012) ---
   const admissionEntries = Object.entries(input.admission);
@@ -136,7 +140,7 @@ export function verifyRechainDelta(input: RechainInput): RechainVerdict {
     }
     matched.push({ record, candidate });
   }
-  if (reasons.length > 0) return { ok: false, reasons };
+  if (reasons.length > 0) return done();
 
   // --- 2. receipt chain の継続 (§2.3-3, U-RECHAIN-005) ---
   if (rAll.length !== mAll.length + hAppended.length) {
@@ -144,7 +148,7 @@ export function verifyRechainDelta(input: RechainInput): RechainVerdict {
   } else if (!isRecordPrefix(mAll, rAll)) {
     fail("receipt-chain-discontinuous:prefix");
   }
-  if (reasons.length > 0) return { ok: false, reasons };
+  if (reasons.length > 0) return done();
   const rAppended = rAll.slice(mAll.length);
 
   // --- 3. 追加 record の対象と件数 (§2.3-3, U-RECHAIN-004) ---
@@ -160,7 +164,7 @@ export function verifyRechainDelta(input: RechainInput): RechainVerdict {
       fail(`receipt-append-binding-mismatch:${h.binding.path}`);
     }
   }
-  if (reasons.length > 0) return { ok: false, reasons };
+  if (reasons.length > 0) return done();
 
   // --- 3b. 中間 blob の key 集合 (§2.3-6, receipt revision 5, U-RECHAIN-018) ---
   // 再発行 record が 2 件以上ある asset の「最後以外」の content_digest 集合と完全一致させる。
@@ -184,7 +188,7 @@ export function verifyRechainDelta(input: RechainInput): RechainVerdict {
   for (const key of Object.keys(input.intermediatePlans)) {
     if (!requiredIntermediate.has(key)) fail(`intermediate_plan_unexpected:${key}`);
   }
-  if (reasons.length > 0) return { ok: false, reasons };
+  if (reasons.length > 0) return done();
 
   // --- 4. PLAN 単位に束ねる ---
   const planPaths = [...new Set(hAppended.map((r) => r.binding.path))];
@@ -237,6 +241,7 @@ export function verifyRechainDelta(input: RechainInput): RechainVerdict {
       rRecord,
       isLast,
       basePayloadDigest: previous.payloadDigest,
+      skipReceiptDigest: legacyIndexes.has(i),
     });
     if (!planResult.ok) {
       for (const reason of planResult.reasons) fail(reason);
@@ -245,18 +250,18 @@ export function verifyRechainDelta(input: RechainInput): RechainVerdict {
     chain.set(assetId, { revision: expectedRevision, payloadDigest: planResult.payloadDigest });
     for (const p of planResult.addedArtifactPaths) addedArtifactPaths.add(p);
   }
-  if (reasons.length > 0) return { ok: false, reasons };
+  if (reasons.length > 0) return done();
 
   // --- 5. 成果物所有 (§2.3-5, U-RECHAIN-011) ---
   const ownershipViolations = checkArtifactOwnership(input, planPaths, addedArtifactPaths);
   for (const v of ownershipViolations) fail(v);
-  if (reasons.length > 0) return { ok: false, reasons };
+  if (reasons.length > 0) return done();
 
   // --- 6. 簿記以外の path (§2.3-1 / §2.6-2, U-RECHAIN-002/014) ---
   const bookkeepingPaths = new Set<string>([RECEIPT_PATH, ...planPaths]);
   const nonBookkeepingViolations = checkNonBookkeepingPaths(input, bookkeepingPaths);
   for (const v of nonBookkeepingViolations) fail(v);
-  if (reasons.length > 0) return { ok: false, reasons };
+  if (reasons.length > 0) return done();
 
   // --- 7. bookkeeping path は merge 時点で main 側を採る (X == M, §2.1(b)) ---
   for (const path of bookkeepingPaths) {
@@ -264,7 +269,7 @@ export function verifyRechainDelta(input: RechainInput): RechainVerdict {
       fail(`bookkeeping-merge-not-main:${path}`);
     }
   }
-  if (reasons.length > 0) return { ok: false, reasons };
+  if (reasons.length > 0) return done();
 
   // --- 8. commit 構造 (§2.3-4 rev5, U-RECHAIN-006) ---
   const { H, X, R, M } = input.commits;
@@ -274,7 +279,7 @@ export function verifyRechainDelta(input: RechainInput): RechainVerdict {
   if (X.parents.length !== 2 || X.parents[0] !== H.oid || X.parents[1] !== M) {
     fail("commit-structure-x-parents");
   }
-  if (reasons.length > 0) return { ok: false, reasons };
+  if (reasons.length > 0 || legacyReasons.length > 0) return done();
 
   return { ok: true, verifierDigest: verifierDigestOf(input) };
 }
@@ -340,9 +345,25 @@ function verifyPlanReapplication(args: {
   /** 同一 asset の最後の再発行 record か。最後だけが R の PLAN blob と frontmatter に束縛される。 */
   isLast: boolean;
   basePayloadDigest: string;
+  /** legacy bootstrap の組 (§2.3-6): preimage が別なので receipt_digest を照合しない。 */
+  skipReceiptDigest: boolean;
 }): PlanVerifyResult | PlanVerifyFailure {
-  const { input, path, candidate, expectedRevision, hRecord, rRecord, isLast, basePayloadDigest } =
-    args;
+  const {
+    input,
+    path,
+    candidate,
+    expectedRevision,
+    hRecord,
+    rRecord,
+    isLast,
+    basePayloadDigest,
+    skipReceiptDigest,
+  } = args;
+  // R 側の期待 admission A_R (§2.3-6): reentry.targetRevision だけを新 revision に置き換える。
+  const expectedAR: PlanAdmissionRequest =
+    candidate.reentry && candidate.reentry.targetPlanId === hRecord.binding.planId
+      ? { ...candidate, reentry: { ...candidate.reentry, targetRevision: expectedRevision } }
+      : candidate;
   const reasons: string[] = [];
 
   const baseContent = readBlob(input, input.trees.base[path]);
@@ -432,10 +453,24 @@ function verifyPlanReapplication(args: {
     if (rParsed.body !== expectedBody) {
       reasons.push(`plan-strip-mismatch:body:${path}`);
     }
-    // strip(R) の byte 一致 (§2.2-3 / §2.3-2): 意味比較だけでは YAML コメント等の
-    // 非意味 byte を素通しする。R の PLAN は正規 writer (tracked-receipt-renderer) の
-    // 直列化 `---\n${stringify(frontmatter)}---\n${body}` と byte 一致しなければならない。
-    if (rContent !== `---\n${stringify(rParsed.frontmatter)}---\n${rParsed.body}`) {
+    // strip(R) の byte 一致 (§2.2-3 / §2.3-2): 意味比較だけでは YAML コメントや key の並べ替えを
+    // 素通しする。期待値は §2.2 の 1・2 の決定的な結果を正規 writer で描画したものとする。
+    // key 順は M の順を基準に、M に無い key を H、base の順で後ろへ足す。そのうえで A_R を
+    // 正規の bindPlanSourceToAdmission で束縛し、tracked-receipt-renderer と同じく
+    // admission_receipt を末尾に置いて直列化する。R の PLAN 全体がこれと byte 一致しなければ fail。
+    const expectedRendered = renderExpectedPlan({
+      planId: rRecord.binding.planId,
+      keyOrder: [
+        ...Object.keys(mParsed.frontmatter),
+        ...Object.keys(hParsed.frontmatter),
+        ...Object.keys(baseParsed.frontmatter),
+      ],
+      frontmatter: expectedFrontmatter,
+      body: expectedBody,
+      admission: expectedAR,
+      receipt: rParsed.frontmatter.admission_receipt,
+    });
+    if (expectedRendered === undefined || rContent !== expectedRendered) {
       reasons.push(`plan-strip-mismatch:bytes:${path}`);
     }
 
@@ -461,10 +496,6 @@ function verifyPlanReapplication(args: {
   }
 
   // --- admission 意味の不変 (§2.3-6, U-RECHAIN-012) ---
-  const expectedAR: PlanAdmissionRequest =
-    candidate.reentry && candidate.reentry.targetPlanId === hRecord.binding.planId
-      ? { ...candidate, reentry: { ...candidate.reentry, targetRevision: expectedRevision } }
-      : candidate;
   const decisionDigest = admissionDecisionDigest(expectedAR);
   if (decisionDigest !== rRecord.decisionDigest) {
     reasons.push(`admission-decision-digest-mismatch:${path}`);
@@ -573,12 +604,45 @@ function verifyPlanReapplication(args: {
     occurredAt,
   };
   const derived = derivePlanRevisionDigests(ledgerInput);
-  if (rRecord.receiptDigest !== `sha256:${derived.certificateDigest}`) {
+  if (!skipReceiptDigest && rRecord.receiptDigest !== `sha256:${derived.certificateDigest}`) {
     reasons.push(`receipt_digest_mismatch:${path}`);
   }
 
   if (reasons.length > 0) return { ok: false, reasons };
   return { ok: true, addedArtifactPaths, payloadDigest: derived.canonicalPayloadDigest };
+}
+
+/** §2.2 の決定的な結果を正規 writer (bind → admission_receipt 末尾 → stringify) で描画する。 */
+function renderExpectedPlan(args: {
+  planId: string;
+  keyOrder: readonly string[];
+  frontmatter: Record<string, unknown>;
+  body: string;
+  admission: PlanAdmissionRequest;
+  receipt: unknown;
+}): string | undefined {
+  const ordered: Record<string, unknown> = {};
+  for (const key of args.keyOrder) {
+    if (key === "admission_receipt" || key in ordered) continue;
+    if (args.frontmatter[key] !== undefined) ordered[key] = args.frontmatter[key];
+  }
+  for (const key of Object.keys(args.frontmatter)) {
+    if (!(key in ordered) && args.frontmatter[key] !== undefined) {
+      ordered[key] = args.frontmatter[key];
+    }
+  }
+  try {
+    const bound = bindPlanSourceToAdmission({
+      source: `---\n${stringify(ordered)}---\n${args.body}`,
+      planId: args.planId,
+      admission: args.admission,
+    });
+    const parsed = parseLegacyPlanSource(bound.source);
+    if (!parsed) return undefined;
+    return `---\n${stringify({ ...parsed.frontmatter, admission_receipt: args.receipt })}---\n${args.body}`;
+  } catch {
+    return undefined;
+  }
 }
 
 function isRechainCommandId(hCommandId: string, rCommandId: string): boolean {
