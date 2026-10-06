@@ -6800,6 +6800,22 @@
         "revision": 2,
         "content_digest": "sha256:9081ef80c06e54ee708db3326635fea7f9c8021dc2724a6e062607b79045c790"
       }
+    },
+    {
+      "sequence": 426,
+      "previous_record_digest": "sha256:096a3943d2144afd393eb00dd059e591f71c08720fb5ee7c943fcfd1faf23ab3",
+      "record_digest": "sha256:5f71aa8a6773e4b229f72179ebb65097a5808751a2959f8c984070ee403774c4",
+      "command_id": "plan-draft:issue-789:token-ingest-retirement-execution:1:rechain-2",
+      "receipt_id": "certificate:a380115f1e74e8e8add8c7be8785cc45",
+      "receipt_digest": "sha256:a7b93f6fc634103d550b56b52650dfc14200426b6b0c939acb635a07fd9194ab",
+      "decision_digest": "sha256:f994e328c684b1eb8668a258f816bfbdda3af50e11fc3c426193dd4dca7f5148",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-789-token-ingest-retirement-execution.md",
+        "plan_id": "PLAN-L7-789-token-ingest-retirement-execution",
+        "asset_id": "plan:a380115f1e74e8e8add8c7be8785cc45",
+        "revision": 1,
+        "content_digest": "sha256:d68baa1e405fa0439974075658d9538fe0bed158af431a91e82cf27c2908664f"
+      }
     }
   ]
 }
