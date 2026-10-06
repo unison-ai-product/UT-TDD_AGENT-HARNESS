@@ -8,15 +8,16 @@ confirmed_reverse_type: code
 route_signal: reverse
 route_mode: reverse
 created: 2026-10-05
-updated: 2026-10-05
+updated: 2026-10-06
 owner: Claude control lane
 agent_slots:
   - role: tl
-    slot_label: Claude Opus (claude-opus-5) - R2 統合パス (import graph と CLI
-      入口からの全体構造復元) と R4 routing 判定
+    slot_label: Claude Opus (claude-opus-5、作業場所の標準サブエージェント reverse-integrator) - R2
+      統合パス (import graph と CLI 入口からの全体構造復元) と R4 routing 判定
   - role: qa
-    slot_label: Codex Sol (gpt-6.1-sol) - 照合・採点役。docs/design を読める唯一の役。atomic claim
-      抽出、hit / miss / misread / fabrication / undocumented 判定、drift 3 分類の候補付け
+    slot_label: Codex Sol (gpt-6.1-sol、Codex 側の標準サブエージェント) - 照合・採点役。docs/design
+      を読める唯一の役。atomic claim 抽出、hit / miss / misread / fabrication / undocumented
+      判定、drift 3 分類の候補付け
   - role: po
     slot_label: PO - R3 intent 仮説と採点サマリの検証 (reverse mode §5 で R3 必須)
 generates:
@@ -31,6 +32,7 @@ dependencies:
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/822
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/823
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/825
+    - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/619
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/575
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/588
 review_evidence: []
@@ -39,18 +41,18 @@ status: draft
 github_issue_id: 823
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:617dfe3fe142aeddf4a87a6ec3010827
-  command_id: plan-revise:issue-823:pack-full-reverse-trial:rechain-1:sol-r2-fix:r3:40178d31bfdd
-  admitted_at: 2026-10-05T05:58:49.282Z
-  source_digest: sha256:e88b373fcae0dca96b045b6c3abd7285ed67f00ccc778066f563909aac1de3e8
-  decision_digest: sha256:e9b37a4a0eef943830be450a9aab36fc005a8ec2ac2cbf690340c7f1b2dd152c
-  receipt_digest: sha256:d0b3bb50de2a1cb49021a212317a9f02ba12156484e0713a1d5d2af3f0caef71
+  receipt_id: certificate:69f9fbef76ab2bb90d6fc97ab6d80789
+  command_id: plan-revise:issue-823:exec-method:sol-r1-fix:r5:021de9d4e5d2
+  admitted_at: 2026-10-06T03:43:44.121Z
+  source_digest: sha256:9dd1d6dee1e532e812578ea02309019d8c0661a3b47d59207d57981c8262489c
+  decision_digest: sha256:61979faf705a5ab403a343f042f502c04ec4fdf079e4749d8141d91d3183d39c
+  receipt_digest: sha256:becc99530ad443bf33d2826bf9453ecc026dbe66fee89992e47cb3033ea21f92
   binding:
     path: docs/plans/PLAN-REVERSE-823-pack-full-reverse-trial.md
     plan_id: PLAN-REVERSE-823-pack-full-reverse-trial
     asset_id: plan:17005d81c24cbdca71cced133ed6d123
-    revision: 3
-    content_digest: sha256:e88b373fcae0dca96b045b6c3abd7285ed67f00ccc778066f563909aac1de3e8
+    revision: 5
+    content_digest: sha256:9dd1d6dee1e532e812578ea02309019d8c0661a3b47d59207d57981c8262489c
   route:
     signal: reverse
     mode: reverse
@@ -68,11 +70,12 @@ admission_receipt:
     implementation_disposition: preserved
   reentry:
     target_plan_id: PLAN-REVERSE-823-pack-full-reverse-trial
-    target_revision: 3
+    target_revision: 5
     phase: forward_merge
-  escape_reason: "Issue 823: PR #826 Sol r2 FLAG の是正 (監査規則を役別の読取 allowlist
-    に一致させ、採点結果を frozen/scoring/ に凍結して R4 の起動入力にする。Codex 採点は実行中の usage
-    計測を起動条件とし、停止 margin と境界試験を追加)。方式は変えない"
+  escape_reason: "Issue 823: PR #850 Sol r1 FLAG の是正。§D1 の監査規則に Grep / Glob の
+    pattern による探索範囲の逸脱 (.. segment・絶対 pattern・展開) と、tool_result が返した全 file path
+    の allowlist 照合を追加し fail-close とする。run 開始時の link 不在確認、合成試験の逸脱ケース、未検証の探索範囲を
+    unverifiable_residual に明記する。方式は変えない"
 ---
 
 # PLAN-REVERSE-823: Pack 全量の blind Reverse 試行
@@ -117,25 +120,46 @@ PLAN ID の引用は 319 ファイル・2148 箇所、`docs/design/` への言�
 
 ### D1 blind の担保 (隔離と証明)
 
+**改訂 (rev 4、2026-10-06)**: rev 3 までは、正規 wrapper `ut-tdd claude` に隔離実行 profile を足す前提 PR (#825) を
+起動時の強制と証明の手段にしていた。PO 方針 (#619 の方針メモ、2026-10-05) により #825 は着手しない
+(ハーネス独自の headless サブエージェント経路は延命しない)。本 rev では、実行方式を**各プロバイダーの標準サブエージェントの
+起動制約**と **GUI 側の作業場所の隔離**に置き換え、強制できない部分は**事後の transcript 監査で判定し、残余リスクとして記録する**。
+監査結果の承認は #619 の attestation 経路 (canonical request・exact HEAD・verdict・receipt) で行う (§D1 末尾)。
+盲検は起動時に**完全には強制できない**。本 PLAN はこれを隠さず、強制できる層・事後に検出する層・検出もできない層を分けて記録する。
+
 | 案 | 内容 | trade-off |
 |---|---|---|
-| **A (採択)** | repo の外に作業場所 `C:/dev/ut-reverse-823-<run_id>/` を作る。その下の `pack/` に、固定した source commit から `ut-tdd distribution sync-pack --repo-dir` で clean Pack を出す。executor はここを cwd とし、正規 wrapper の**隔離実行 profile** (前提 PR、§D1 末尾) で起動する。各セッションの生 transcript にある全 tool_use と、対応する tool_result を機械で監査する | 隔離を起動時に強制し、証明も機械で取れる。前提 PR (wrapper の拡張) が 1 本要る |
+| **A' (採択、rev 4)** | repo の外に作業場所 `C:/dev/ut-reverse-823-<run_id>/` を作り、その下の `pack/` に固定 commit から clean Pack を出す。作業場所の root を cwd にした GUI の Claude Code セッション (operator セッション) から、作業場所に置いた標準サブエージェント定義で executor・統合役を起動する。tool の集合はサブエージェント定義で閉じ、path と混入は全 transcript の機械監査で判定する | wrapper の改修が要らない。path の制限は起動時に強制できず、違反は事後検出 + その shard の無効化で扱う (盲検は部分的な強制) |
+| A (rev 3、撤回) | 作業場所は同じ。正規 wrapper の隔離実行 profile (#825) で tool・path・設定混入を起動時に強制する | 起動時の強制が最も強い。#825 を作らない方針と矛盾するため撤回 |
 | B | source repo の中で、指示だけで「docs/design を読むな」と縛る | 安いが、source の `CLAUDE.md` が自動で読み込まれ、誤読も防げない。証明にならない |
 | C | 公開済み Pack repo (canary.3) の clone を使う | 配布物そのもので測れる。ただし照合先 (oracle) の commit が canary.3 の受入進行に引きずられる |
 
-採択 A の詳細:
+採択 A' の詳細:
 
 - **固定点**: R0 着手時の main の HEAD を source commit `S` とし、Pack を `S` から生成する。照合先は `S` 時点の `docs/design/` を使う
   (同じ snapshot の設計と実装を突き合わせる)。公開済み canary の source に合わせない理由は、照合先の設計書を最新にしたいためである。
 - **inventory と digest**: Pack checkout から `.git/`・`.ut-tdd/`・`.ut-tdd-pack-sync-manifest.json` を除いた全ファイルを並べる。
   各行を `<posix path>\t<sha256(bytes)>\n` とし、path 昇順に連結した全体の sha256 を `inventory_digest` とする。
   `distribution plan --json` の `artifactPaths` と集合一致することを run 開始前に確かめる。
+- **作業場所の構成**: `pack/` (凍結 Pack)、`frozen/` (§D3 の凍結入力)、`out/` (各セッションの出力)、`.claude/` (作業場所の
+  Claude Code 設定)。Pack には `.claude/` と `CLAUDE.md` が含まれない (`src/setup/distribution.ts:148-185` の `CLEAN_ALLOW_*` に
+  無い) ので、作業場所の `.claude/` は作業スクリプトが置くものだけになる。source repo の `.claude/settings.json` の hook
+  (agent-guard・work-guard・SessionStart など) は作業場所では動かない。
+- **起動経路 (標準サブエージェント)**: operator セッションは作業場所の root を cwd とする GUI の Claude Code セッションとする。
+  executor と統合役は、作業場所の `.claude/agents/` に置く 2 つの定義で起動する。
+  | 定義 | frontmatter | 用途 |
+  |---|---|---|
+  | `reverse-executor` | `tools: Read, Grep, Glob, Write`、`model: claude-sonnet-5`、`maxTurns` を run 前に固定 | R0〜R2 の shard ごとの executor |
+  | `reverse-integrator` | `tools: Read, Grep, Glob, Write`、`model: claude-opus-5`、`maxTurns` を run 前に固定 | R2 統合・R3a・R4 |
+  どちらも `Bash` / `WebFetch` / `WebSearch` / MCP / `Agent` を tool に含めない。各サブエージェントへの指示文は、作業スクリプトが
+  shard 一覧と固定の雛形から生成し、その sha256 を `run-manifest.json` に記録する (operator セッションが手で書き足さない)。
+  2 つの定義ファイルと作業場所の `.claude/settings.json` の sha256 も `run-manifest.json` に記録する。
 - **executor に許す tool**: `Read` / `Grep` / `Glob` と、`out/<shard_id>/` への `Write` だけ。
   `Bash` / `WebFetch` / `WebSearch` / MCP / `Agent` の使用は、その shard の run を無効とする。
   GitHub 上の source repo は web 経由で読めてしまうため、web 系 tool も漏れの経路として扱う。
 - **監査規則**: Read / Grep / Glob の対象 path を実体 path に正規化し、そのセッションの役の**読取 allowlist** と照合する。
-  allowlist の外を指す path が 1 件でもあれば、そのセッションの run は無効。役ごとの読取 allowlist は次の閉じた集合で、
-  起動時に path guard へ渡すものと同一とする (§D1 の profile 2)。
+  allowlist の外を指す path が 1 件でもあれば、そのセッションの run は無効。役ごとの読取 allowlist は次の閉じた集合とする
+  (path は作業場所 root からの相対)。
   | 役 | 読取 allowlist |
   |---|---|
   | executor (R0〜R2) | `pack/` |
@@ -143,27 +167,44 @@ PLAN ID の引用は 319 ファイル・2148 箇所、`docs/design/` への言�
   | R3a | 統合役の allowlist + `frozen/system/` |
   | R4 | R3a の allowlist + `frozen/scoring/` |
   どの役でも、`docs/design`・`docs/plans`・`docs/test-design` を含む path と `C:/dev/UT-TDD-agent-harness` 配下の path は
-  allowlist に入らない。コメントや文字列に path が現れるのは違反ではない (判定対象は tool の入力 path だけ)。
+  allowlist に入らない。cwd は作業場所の root なので、path を省略した Grep / Glob は `out/`・`.claude/` を含んでしまう。
+  よって **path を省略した Grep / Glob は違反**とする (rev 3 の「cwd = `pack/` とみなして許す」は撤回)。
+  **Grep / Glob の探索範囲 (rev 5)**: 入力の path だけでなく、pattern (Glob の `pattern`、Grep の `glob`) が指す範囲も監査する。
+  実効の探索範囲は `resolve(path, pattern の固定部分)` とし、これが読取 allowlist の外に出れば違反とする。具体的には、(1) pattern に
+  `..` の segment を含む、(2) pattern が絶対 path (ドライブ文字・`/`・`\` で始まる) で allowlist の外を指す、(3) `~` や環境変数の展開を含む、
+  のいずれかを違反とする。さらに pattern の形に依らず、**tool_result が返した全ての file path** (Glob の一覧、Grep の
+  `files_with_matches` / `content` / `count` の各行の path) を実体 path に正規化し、読取 allowlist の外のものが 1 件でもあれば違反とする
+  (pattern の解釈が監査スクリプトとずれても、返却側で逸脱を捕まえる)。返却の path を解析できない tool_result は違反とみなす (fail-close)。
+  run 開始時に、作業場所の配下 (`pack/`・`frozen/`) に symlink・junction が 1 件も無いことを確かめて manifest に記録する。
+  許可する tool (Read / Grep / Glob / Write) では link を作れないので、run 中に増えることはない。
+  Write は、そのセッションの出力先 (`out/<shard_id>/`、統合役は `out/_system/`) の外を指せば違反とする。
+  さらに、サブエージェント transcript の user message のうち、最初の指示文 (sha256 が manifest の記録と一致すること) と
+  tool_result 以外のもの (operator セッションからの追加の指示) があれば違反とする。
+  コメントや文字列に path が現れるのは違反ではない (判定対象は tool の入力 path と、サブエージェントへの入力だけ)。
   照合役 (R3b、Codex Sol) は正解を読む側なので、この blind 監査の対象外とする (§D4)。
-- **起動経路と前提 PR**: 正規 wrapper (`ut-tdd claude`) は呼出元の cwd を子プロセスへ継承するので、`pack/` を cwd にした起動自体は
-  今のままでできる (`src/cli/delegation.ts:184` / `:212`、`src/feedback/repository-root.ts:32`)。ただし wrapper には tool を閉じる
-  汎用オプションが無く (`src/cli/delegation.ts:307`。既存の `--allowedTools` は review verdict 用の `Edit(path)` 追加に限る、`:491`)、
-  Claude 自身の user 設定・memory・hooks・plugins が混ざらないことも証明できない。そこで、wrapper に**隔離実行 profile** を足す
-  前提 PR を先に通す (Issue #825・別 PLAN、本 PLAN の外部依存)。profile が行うのは次の 4 点だけとする。
-  1. Claude Code に `--tools Read,Grep,Glob,Write`、`--strict-mcp-config` (MCP なし)、`--safe-mode` 相当の customization 無効化、
-     固有の `--session-id <uuid>`、`--output-format stream-json` を渡す (いずれも 2.1.284 の `--help` で実在を確認)。
-     Claude Code の版は固定せず、run ごとに `--version` を `run-manifest.json` に記録する。
-  2. path guard: Read / Grep / Glob の対象を実体 path (junction・symlink を解決した後) で**読取 allowlist** の中に、Write を
-     そのセッションの出力先だけに限る。読取 allowlist は起動時に渡す閉じた path 集合で、executor は凍結 Pack だけ、
-     統合役 (R2 統合・R3a・R4) は凍結 Pack と §D3 の凍結入力 `frozen/` だけとする。path を省略した Grep / Glob は cwd (= `pack/`) を対象とみなして許す。
-  3. provider の session UUID・cwd・argv・設定の digest を、生 transcript の path と結び付けて記録する。transcript の欠損・未知の形式は fail-close。
-  4. 上記を満たさない起動を拒否する (profile を指定したのに条件が揃わなければ実行しない)。
-  生 transcript の既定の置き場は `~/.claude/projects/<cwd-slug>/<session-uuid>.jsonl` で (`src/cli.ts:2015`、`src/state-db/token-tracker.ts:358`)、
-  `assistant.message.content[].tool_use.input` と対応する `tool_result` を持つ。harness の session log は path の要約だけで
-  offset / limit を残さず fail-open なので (`src/runtime/session-log.ts:119` / `:429`)、監査には使わない。
-- **起動時の生成物**: wrapper は SessionStart で skill assets を materialize する (`src/cli.ts:531`)。inventory は起動前に凍結し、
-  起動後に増えたファイル (`.ut-tdd/` 配下と `out/`) は読取対象にも網羅の分母にも入れない。統合役が読む shard の出力は、
-  `out/` を直接読ませず、§D3 の凍結入力 `frozen/` として digest 付きで渡す (生成ファイル全般への読取許可は広げない)。
+- **強制の層 (実測、HEAD `781647c5`、Claude Code 2.1.290)**:
+  | 層 | 内容 | 根拠 |
+  |---|---|---|
+  | 起動時に強制される | サブエージェントが使える tool の集合 (定義の `tools:`)、turn 数の上限 (`maxTurns`)、model | Claude Code の標準サブエージェント機能 (harness のコードではない)。run 前の probe (§D1 の合成試験) で、定義外の tool が呼べないことを実測してから本番に入る |
+  | 起動時に強制されない (事後に検出し、その run を無効にする) | Read / Grep / Glob / Write の対象 path、operator からの追加指示、web 系 tool の混入 | harness の agent-guard は `subagent_type` の allowlist と model の下限しか見ず、tool も path も検査しない (`src/runtime/agent-guard.ts:93-160`)。そもそも作業場所では source repo の hook が動かない。作業場所の `.claude/settings.json` に置く `permissions.deny` (source repo と `docs/design` 等への Read) は多層防御として置くが、Grep / Glob への効き方を証明できないので、判定には使わない |
+  | 検出もできない (残余リスクとして記録する) | user 階層の設定と指示の混入 (`~/.claude/settings.json` の hooks・env・permissions、`~/.claude/CLAUDE.md`)、サブエージェントが CLAUDE.md 類をどこまで受け取るか。Grep / Glob が内部で探索したが結果に現れなかったファイル (hit しなかった探索の範囲は transcript に残らない。結果に現れないので内容も名前も context に入らないが、探索したこと自体は証明も否定もできない) | GUI 起動では `--setting-sources` などの CLI option を渡せず、user 階層を外せない。代わりに、run 開始時の `~/.claude/settings.json` と `~/.claude/CLAUDE.md` の sha256、有効な plugin と MCP server の一覧 (0 件であること) を `run-manifest.json` に記録する。これらに `docs/design` の内容が無いことは run 前に operator が確かめ、確認結果を manifest に残す |
+- **生 transcript の所在 (実測)**: 標準サブエージェントの transcript は
+  `~/.claude/projects/<cwd-slug>/<operator-session-uuid>/subagents/agent-<agentId>.jsonl` に、定義名・model を持つ
+  `agent-<agentId>.meta.json` と対で残る (`agentType` / `model` / `toolUseId`)。各行は `isSidechain`・`agentId`・`cwd`・`sessionId`・
+  `version` (Claude Code の版) を持ち、assistant 行の `message.content[].tool_use.input` と、user 行の `tool_result` を持つ。
+  assistant 行は `message.usage` を持つ (§D7 の集計元)。harness の session log は path の要約だけで offset / limit を残さず
+  fail-open なので (`src/runtime/session-log.ts:119` / `:429`)、監査には使わない。transcript の欠損・未知の形式・meta.json の欠落は、
+  そのセッションの run を無効にする (fail-close)。
+- **監査結果の attestation**: 監査・網羅・採点の結果は、結果 PR (§D6 の置き場 A) で `.ut-tdd/reverse/<run_id>/` に commit する。
+  `run-manifest.json` には、operator セッションの UUID、各サブエージェントの `agentId`、transcript と meta.json の sha256、
+  Claude Code の版、上の「強制の層」の 3 段それぞれの判定 (`enforced_at_launch` / `audited_post_hoc` / `unverifiable_residual`)
+  を記録する。結果の承認は、結果 PR の exact HEAD に対する非著者 review を canonical な review custody
+  (canonical request → exact HEAD → verdict → receipt) で受けることで行う。#619 の attestation 経路 (標準サブエージェントの verdict
+  を canonical request と exact HEAD に結び付けて receipt にする) が実装されていればそれを使い、未実装の間は #619 の方針メモ 4 に従って
+  現行の正規委譲経路の review custody (`src/cli/delegation.ts:223-226` の `projectReviewVerdict`、型は `src/feedback/review-attestation.ts:37-59`) を使う。どちらでも、`unverifiable_residual` の項目を reviewer が確認できるように
+  verdict の対象へ含める。盲検を「証明済み」とは書かず、「起動時の tool 制限 + 事後監査で違反 0 件、残余リスクは manifest 記載のとおり」と書く。
+- **起動時の生成物**: inventory は起動前に凍結し、起動後に増えたファイル (`out/`) は読取対象にも網羅の分母にも入れない。統合役が読む
+  shard の出力は、`out/` を直接読ませず、§D3 の凍結入力 `frozen/` として digest 付きで渡す (生成ファイル全般への読取許可は広げない)。
 ### D2 全量網羅 (shard 分割と R0 網羅率)
 
 | 案 | 内容 | trade-off |
@@ -184,10 +225,14 @@ shard 規則 (決定的。run 開始前に `shard_plan_digest` として凍結�
 
 R0 網羅率の定義: ファイル f が「読まれた」とは、f に対する Read の tool_use のうち、対応する tool_result が成功し、
 その tool_result が**実際に返した行範囲**の和集合が f の全行を覆うこと。tool_use の offset / limit は要求範囲にすぎないので数えない。
+返した行範囲は、tool_result 本文の各行の先頭にある行番号から取る (標準サブエージェントの transcript では構造化された返却範囲がほとんど残らない、§D11 の実測)。構造化された結果が残っている場合は、行番号から取った範囲と一致しなければ読了に数えない。
+行番号の連続が途切れる・行番号の無い行が混じる tool_result は、途切れより後ろを読了に数えない。
 失敗・切り詰め (truncated 表示や省略記号) を含む tool_result は、その範囲を読了に数えない。Grep / Glob の hit も数えない。
 空ファイルは、成功した Read が 1 回あれば読了とする。テキストでないファイル (画像など) は inventory に載せたうえで分母から外し、
 件数を `run-manifest.json` に記録する。網羅率 = 読了ファイル数 ÷ 分母の件数で、100% が合格。監査ログと inventory を突き合わせて機械で算出する。
-監査スクリプトは本番の前に、外部の絶対 path・junction 経由の読取・禁止 tool・読取失敗・切り詰め・transcript 欠損を仕込んだ合成 transcript で、
+監査スクリプトは本番の前に、外部の絶対 path・junction 経由の読取・path を省略した Grep / Glob・
+Glob の pattern による逸脱 (path=`pack/` で pattern=`../out/**`、source repo を指す絶対 pattern)・Grep の `glob` による同じ逸脱・
+pattern は allowlist 内に見えるが返却 path が外にある結果・返却 path を解析できない結果・出力先外への Write・operator からの追加指示・禁止 tool・読取失敗・切り詰め・transcript 欠損・meta.json 欠落を仕込んだ合成 transcript で、
 それぞれを検出できることを確かめる。
 
 ### D3 工程 (R0〜R4 と統合パス)
@@ -217,10 +262,12 @@ executor はテストを実行しない (静的な読み取りだけ)。Pack 内
 
 ### D4 役割と族分離
 
-- executor = Claude Sonnet (`claude-sonnet-5`、worker tier、shard ごとに独立したセッション)。
-- 統合・R3a・R4 = Claude Opus (`claude-opus-5`、`ut-tdd claude --role tl`)。統合役も docs/design を読まず、§D1 の監査対象に入れる。
-- 照合・採点 = Codex Sol (`gpt-6.1-sol`、`ut-tdd codex --role qa`)。docs/design と PLAN を読めるのはこの役だけ。PO 判断の「Pack だけ」は
-  executor の制約であり、照合役は正解を知る側なので PLAN も読んでよい (drift の design_stale / impl_drift の判定に使う)。
+- executor = Claude Sonnet (`claude-sonnet-5`、worker tier)。作業場所の標準サブエージェント `reverse-executor` で、shard ごとに独立して起動する (§D1)。
+- 統合・R3a・R4 = Claude Opus (`claude-opus-5`)。作業場所の標準サブエージェント `reverse-integrator` で起動する。統合役も docs/design を読まず、§D1 の監査対象に入れる。
+- 照合・採点 = Codex Sol (`gpt-6.1-sol`)。Codex 側の標準サブエージェント (GUI 側のセッション) で起動し、`ut-tdd codex --role qa` の headless 経路は使わない
+  (#619 の方針メモ)。docs/design と PLAN を読めるのはこの役だけ。PO 判断の「Pack だけ」は executor の制約であり、照合役は正解を知る側なので
+  PLAN も読んでよい (drift の design_stale / impl_drift の判定に使う)。照合役のセッション記録 (Codex の session log) の path と sha256 を
+  `run-manifest.json` に記録する。
 - 復元側 (Claude) と採点側 (Codex) を別の族にする。利用上限で止まっても、別の族への代替はしない。止まったら待つ
   (代替すると族分離が崩れて採点が無効になる)。
 - 裁定規則: 採点は Sol の 1 回目を一次判定とする。そのうち confidence=low のもの、および drift=design_stale / impl_drift の全件を、
@@ -320,22 +367,24 @@ routing したずれは、チケット (Issue) の本文に該当 record の JSO
 - **上限**: shard ごとに 1.2M token、run 全体で 12M token。
 - **集計範囲**: input (cache の作成と読取を含む) と output の合計。再試行・再分割・やり直しのセッションは元の shard に合算し、
   統合・R3a・R4・採点のセッションは run 全体に合算する。
-- **実行中の集計と停止 (supervisor)**: 各 provider process は作業場所の supervisor スクリプトが子プロセスとして起動する。
-  Claude 側は隔離実行 profile の stream-json 出力 (#825) から message ごとの usage を読み、shard と run の累計を更新する。
-  累計が上限に達したら、supervisor が provider の process tree を停止し (Windows は `taskkill /T /F`、Linux は process group への
-  SIGKILL)、その shard を `aborted_budget` と記録する。
-- **停止の余裕 (margin)**: 1 message 分の usage は停止の判定より先に積まれるため、supervisor は累計が「上限 − margin」に
-  達した時点で停止する。margin は 1 message の最大 usage (入力 context の上限 + 出力の上限) 以上とし、run 前に値を
-  `run-manifest.json` に記録する。これにより、上限の直前で始まった message があっても累計は上限を超えない。
-- **Codex の採点**: Codex 側も実行中に usage を読めることを起動の条件とする。run 前の試験で、Codex の実行出力 (JSON の
-  event stream) に turn ごとの usage が現れ、supervisor がそれを読めることを確かめる。確かめられなければ採点を起動しない
-  (fail-close。batch 終了後の事後計測で代用しない)。起動した場合は、Claude 側と同じ supervisor・margin・停止方法を使う。
-- **計測不能時の fail-close**: usage が読めない (stream が途切れる・形式が未知・batch の usage が得られない) ときは、
-  その時点で停止して `aborted_unmetered` と記録する。usage を推定で埋めない。
-- **上限到達試験**: 本番の前に、次の合成 stream で supervisor を動かし、それぞれ停止と記録が起きることを確かめる
-  (AC1b の合成 transcript 試験と同じ場で行う)。(1) 上限を超える usage、(2) usage を欠く stream、(3) 境界: 累計が
-  「上限 − margin」の直前にあるところへ margin 以下の message が来る場合に、停止後の累計が上限を超えないこと。
-  (1)〜(3) を Claude 側と Codex 側の両方の stream 形式で行う。
+- **改訂 (rev 4)**: rev 3 の「supervisor が provider process tree を止めて、累計が上限を超えないことを保証する」は、#825 の stream-json 出力と
+  子プロセス起動を前提にしていた。標準サブエージェントは operator セッションの内部で動くので、作業スクリプトから個別に停止できない。
+  よって**上限を超えないことの保証は撤回**し、次の 3 つに置き換える (強制できるのは turn 数の上限だけである)。
+  1. **起動時の上限**: サブエージェント定義の `maxTurns` を run 前に固定し、`run-manifest.json` に記録する (Claude Code が強制する)。
+  2. **実行中の監視**: 作業スクリプトが各サブエージェント transcript の assistant 行の `message.usage` を読んで shard と run の累計を出し、
+     「上限 − margin」に達したら operator に停止を知らせる。operator は GUI でそのサブエージェントを止める。margin は 1 message の
+     最大 usage (入力 context の上限 + 出力の上限) 以上とし、run 前に値を記録する。停止は人手を挟むので即時ではない。
+  3. **結果の扱い (fail-close)**: 停止の成否にかかわらず、transcript から集計した累計が上限を超えた shard は `aborted_budget` とし、
+     その出力を採点にも網羅にも使わない。run 全体の累計が上限を超えたら、以後のセッションを起動しない。
+- **Codex の採点**: Codex のセッション記録から turn ごとの usage を読めることを起動の条件とする。run 前の試験で、Codex の session log に
+  usage が現れ、作業スクリプトがそれを読めることを確かめる。確かめられなければ採点を起動しない (fail-close)。起動した場合は、
+  Claude 側と同じ監視・margin・結果の扱いを使う。
+- **計測不能時の fail-close**: usage が読めない (transcript が途切れる・形式が未知・usage の欠落) セッションは `aborted_unmetered` とし、
+  その出力を使わない。usage を推定で埋めない。
+- **上限到達試験**: 本番の前に、次の合成 transcript で監視と集計を動かし、それぞれ通知と記録が起きることを確かめる
+  (AC1b の合成 transcript 試験と同じ場で行う)。(1) 上限を超える usage → `aborted_budget`、(2) usage を欠く行 → `aborted_unmetered`、
+  (3) 境界: 累計が「上限 − margin」の直前にあるところへ margin 以下の message が来る場合に、通知が出ること。
+  (1)〜(3) を Claude のサブエージェント transcript と Codex の session log の両方の形式で行う。
 - **blind 違反**: 違反した shard を無効にし、新しいセッションで 1 回だけやり直す。同じ shard で 2 回違反するか、
   統合役が違反したら、run 全体を中止する。
 - **網羅不足**: R0 網羅率が 100% に届かなければ、未読ファイルだけを 1 回追加で読ませる。それでも届かなければ
@@ -344,9 +393,9 @@ routing したずれは、チケット (Issue) の本文に該当 record の JSO
 
 ### D8 非目標
 
-- 本 PLAN ではコードを変更しない。`src/`・`tests/`・gitignore・配布コードには触れない。wrapper の隔離実行 profile (§D1) は
-  別 Issue・別 PLAN の前提 PR で入れ、本 PLAN はその merge を R0 着手の条件として参照する。
-- 監査・網羅・schema 検証のスクリプトは作業場所に置く使い捨てとし、sha256 を manifest に記録する。
+- 本 PLAN ではコードを変更しない。`src/`・`tests/`・gitignore・配布コードには触れない。rev 3 の前提 PR (#825、wrapper の隔離実行 profile) は
+  作らない (#619 の方針メモ)。作業場所に置くサブエージェント定義と `.claude/settings.json` は、作業場所の使い捨て設定であり、source repo には入れない。
+- 監査・網羅・schema 検証・usage 監視のスクリプトは作業場所に置く使い捨てとし、sha256 を manifest に記録する。
   試行が採用されたら、src への機械化は別チケットへ回す (#822 の採否に従う)。
 - 見つかったずれは、別のチケット / PLAN (設計改訂または Forward の修正) へ回す。本 PLAN の中では直さない。
 - harness.db へは直接書き込まない。Reverse mode のステージ記録は既存コマンドの経路だけを使う。
@@ -362,17 +411,36 @@ distribution / setup のコードには触れない。固定点 S を一度決�
 
 - 生き残った判断: wrapper は cwd を継承するので Pack を cwd にした起動はできる。生 transcript は tool_use と tool_result を持つ。
 - 反証された判断: 「wrapper を変えずに盲検と 100% 網羅を証明できる」。tool を閉じる手段が wrapper に無く、user 設定などの混入も否定できない。tool_use の offset / limit は読了の証拠にならない。
-- 採択: wrapper の隔離実行 profile を前提 PR とし (§D1)、網羅は成功した tool_result の実返却範囲で数える (§D2)。
+- 採択: wrapper の隔離実行 profile を前提 PR とし (§D1)、網羅は成功した tool_result の実返却範囲で数える (§D2)。 (前提 PR の部分は rev 4 で撤回、§D11)
 - 実測で直した点: advisor は Claude Code 2.1.281 の固定を推奨したが、この環境の実測は 2.1.284 で版は動く。版は固定せず run ごとに記録する。各 option (`--tools` / `--safe-mode` / `--strict-mcp-config` / `--session-id` / `--setting-sources` / `--output-format stream-json`) の実在は 2.1.284 の `--help` で確認した。
+
+### D11 実行方式の改訂記録 (rev 4、2026-10-06)
+
+外部監査の指摘 (#823 のコメント、2026-10-05) を受けた改訂。変えたのは実行方式だけで、shard 規則 (§D2 の分割)・工程 (§D3)・採点 (§D5)・
+record (§D6) の契約は変えない。
+
+- 撤回: wrapper の隔離実行 profile (#825) を前提とする起動・path guard・stream-json・supervisor による process 停止 (rev 3 の §D1 / §D7)。
+- 採択: 標準サブエージェントの起動制約 (tool 集合・`maxTurns`・model) + GUI 側の作業場所の隔離 + 全 transcript の事後監査 (§D1)。
+- 盲検の扱い: 起動時に強制できるのは tool の集合までで、path と user 階層の混入は強制できない。前者は事後監査で違反を検出して run を無効にし、
+  後者は `unverifiable_residual` として manifest に記録する。承認は結果 PR の exact HEAD に対する canonical な review custody で行う (§D1 末尾)。
+- 予算: 上限を超えないことの保証を撤回し、`maxTurns` + 監視 + 超過時の結果無効化に置き換えた (§D7)。
+- 方式に伴う oracle の調整: path を省略した Grep / Glob を違反に変更 (cwd が作業場所の root になるため)。Grep / Glob の pattern による探索範囲の逸脱と、
+  返却 path の allowlist 外を違反に追加し、合成試験に入れた (rev 5、#850 の Sol r1 FLAG の是正)。R0 網羅の行範囲の取り方を、
+  サブエージェント transcript の実形式に合わせた (§D2)。
+- 実測 (2026-10-06、当 repo の operator 環境の既存サブエージェント transcript 154 本、meta.json の欠落 0): Read の tool_use 843 件の全てに対応する
+  `tool_result` があり、構造化された結果 (`toolUseResult`) を持つのは 15 件だけ、本文の先頭が行番号の形 (行番号 + タブ) のものは 783 件だった。
+  よって返却範囲は本文の行番号を一次の根拠とし、構造化された結果がある場合は両者の一致を確かめる。
+- advisor: 方式の選択肢は PO 方針 (#619 の方針メモ、#823 のコメント) で決まっており、未解決の trade-off は「盲検の保証の強さ」だけである。
+  これは本 PLAN の非著者 review (Codex Sol) の判定対象とする。
 
 ## §3 受け入れ条件
 
 | AC | 内容 | 検証 |
 |---|---|---|
 | AC1 | 本 PLAN が lint を通り、非著者 (Codex Sol) の review を受ける | `ut-tdd plan lint`、`review_evidence` の cross_agent 記録 |
-| AC1b | 隔離実行 profile の前提 PR が merge 済みで、本番前の合成 transcript 試験で、監査スクリプトが仕込んだ違反を全て検出し、supervisor が上限超過と計測不能で停止する | 前提 PR の merge commit、合成 transcript 試験の出力 |
+| AC1b | 本番前の probe で、作業場所のサブエージェント定義に無い tool が呼べないことを実測し、合成 transcript 試験で監査スクリプトが仕込んだ違反を全て検出し、usage 監視が上限超過と計測不能を `aborted_budget` / `aborted_unmetered` に記録する | probe と合成 transcript 試験の出力 (sha256 を `run-manifest.json` に記録) |
 | AC2 | inventory が `distribution plan --json` の `artifactPaths` (固定点 S) と集合一致し、`inventory_digest` が manifest に記録される | 作業場所の inventory スクリプト + `node src/cli.ts distribution plan --json --tag <S>` |
-| AC3 | 全 executor と統合のセッションで blind 違反が 0 件 | transcript 監査スクリプトの出力 (`run-manifest.json` の audit 欄) |
+| AC3 | 全 executor と統合のセッションで blind 違反が 0 件で、`run-manifest.json` に強制の層 3 段 (`enforced_at_launch` / `audited_post_hoc` / `unverifiable_residual`) の判定と残余リスクが記録され、結果 PR の exact HEAD に対する非著者 review の receipt がある | transcript 監査スクリプトの出力 (`run-manifest.json` の audit 欄)、結果 PR の review receipt |
 | AC4 | R0 網羅率が 100% (S 時点の inventory 件数。HEAD `6b5effbc` では 994 件) | 監査ログ × inventory の網羅スクリプト |
 | AC5 | `findings.jsonl` の全行が `reverse-finding/v0` に適合し、executor と adjudicator の family が異なる | schema 検証スクリプト (作業場所、sha256 記録) |
 | AC6 | `metrics.json` に recall / precision / misread 率 / fabrication 率を shard・system・全体の 3 階層 × (全体 / code・test 根拠のみ) で出す | `metrics.json` の目視 + digest 照合 |
