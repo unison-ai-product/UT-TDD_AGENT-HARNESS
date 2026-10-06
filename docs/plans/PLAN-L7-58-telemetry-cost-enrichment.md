@@ -1,11 +1,11 @@
 ---
 plan_id: PLAN-L7-58-telemetry-cost-enrichment
-title: "PLAN-L7-58: token telemetry の $ cost enrichment + ut-tdd telemetry scan CLI 配線 (FR-L1-38 follow-up)"
+title: "PLAN-L7-58: token telemetry の $ cost enrichment + ut-tdd telemetry scan
+  CLI 配線 (FR-L1-38 follow-up)"
 kind: impl
 layer: L7
 drive: db
 parent_design: docs/design/harness/L4-basic-design/architecture.md
-status: confirmed
 created: 2026-06-15
 updated: 2026-06-15
 review_evidence:
@@ -13,13 +13,22 @@ review_evidence:
     review_kind: intra_runtime_subagent
     worker_model: claude-opus-4-8
     reviewer_model: claude-sonnet-4-6
-    tests_green_at: "2026-06-15"
-    reviewed_at: "2026-06-15"
+    tests_green_at: 2026-06-15
+    reviewed_at: 2026-06-15
     verdict: pass
-    scope: "Codex $ cost enrichment (OPENAI_PRICING 公式単価表 + computeCodexCostUsd + pricingKeyFor を variant 境界 -codex/-mini/-pro を跨がない安全 matcher へ一般化 + parseCodexSessionUsage cost 計算化 + summarizeRunUsage) と ut-tdd telemetry scan CLI 配線 (session-dir を option>env>OS default で解決、loadRuntimeSessionUsage→projectTokenUsage→projectModelEvaluations、CLI 非起動 file-scan)。code-reviewer verdict=APPROVE (Critical 0)。捏造防止不変条件 (未掲載モデル null)・OpenAI 課金式 (uncached×input + cached×cachedRate + output×output、reasoning 二重計上なし)・既存 oracle (gpt-5.4-codex→null) 非破壊・cold-start 安全を全数手計算で検証。Important 1 (cached>input 境界テスト) と Minor 2 (陳腐化コメント) を反映済み。"
+    scope: Codex $ cost enrichment (OPENAI_PRICING 公式単価表 + computeCodexCostUsd +
+      pricingKeyFor を variant 境界 -codex/-mini/-pro を跨がない安全 matcher へ一般化 +
+      parseCodexSessionUsage cost 計算化 + summarizeRunUsage) と ut-tdd telemetry
+      scan CLI 配線 (session-dir を option>env>OS default
+      で解決、loadRuntimeSessionUsage→projectTokenUsage→projectModelEvaluations、CLI
+      非起動 file-scan)。code-reviewer verdict=APPROVE (Critical 0)。捏造防止不変条件 (未掲載モデル
+      null)・OpenAI 課金式 (uncached×input + cached×cachedRate +
+      output×output、reasoning 二重計上なし)・既存 oracle (gpt-5.4-codex→null)
+      非破壊・cold-start 安全を全数手計算で検証。Important 1 (cached>input 境界テスト) と Minor 2
+      (陳腐化コメント) を反映済み。
 agent_slots:
   - role: tl
-    slot_label: "TL - FR-38 follow-up ($ enrichment + telemetry scan CLI)"
+    slot_label: TL - FR-38 follow-up ($ enrichment + telemetry scan CLI)
 generates:
   - artifact_path: src/state-db/token-tracker.ts
     artifact_type: source_module
@@ -37,6 +46,26 @@ dependencies:
     - docs/design/harness/L6-function-design/function-spec.md
     - docs/design/harness/L4-basic-design/architecture.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
+route_signal: forward
+route_mode: forward
+status: confirmed
+admission_receipt:
+  schema_version: v2
+  receipt_id: certificate:18152116c030cb6c1875b4c77946953b
+  command_id: plan-revise:issue-789:legacy-58:2:rechain-2
+  admitted_at: 2026-10-05T11:51:21.474Z
+  source_digest: sha256:ce1559f29bb4001d16ce65567647eee91be9bb665dd97a0617727acfc8efc90a
+  decision_digest: sha256:d5bba9e81269dbfdce734743d5382157a8153d40b911f12db6f2f0ff454e70fd
+  receipt_digest: sha256:d2e700814c372aa390f8b33e4365b86628f6fe279676635127ba000b80b25142
+  binding:
+    path: docs/plans/PLAN-L7-58-telemetry-cost-enrichment.md
+    plan_id: PLAN-L7-58-telemetry-cost-enrichment
+    asset_id: plan:legacy:fc88971bc08a98ebfd67018a9d9bbe8e5df69d45b9c1204bfc2e0b922b242a96
+    revision: 2
+    content_digest: sha256:ce1559f29bb4001d16ce65567647eee91be9bb665dd97a0617727acfc8efc90a
+  route:
+    signal: forward
+    mode: forward
 ---
 
 # PLAN-L7-58: token telemetry の $ cost enrichment + telemetry scan CLI 配線
@@ -88,3 +117,12 @@ PLAN-L7-57 が明示 carry として残した FR-L1-38 follow-up の 2 項目を
 - **telemetry scan は file-scan のみ**。CLI (`codex exec`/`claude`) を再実行する実装に変えない (8009001d / ADR-001)。
 - **pricingKeyFor の安全 matcher を pure-prefix に戻さない**。`gpt-5.4-codex`→`gpt-5.4` 誤マッチで $ 捏造が再発する。
 - reasoning tokens を output と別課金しない (OpenAI は output_tokens が reasoning を内包)。
+
+## 非適用注記 (2026-10-05、PLAN-L6-789)
+
+`PLAN-L6-789-token-ingest-retirement` (Issue #789、PO 承認 2026-09-30) により、本 PLAN の次の部分は非適用になる。formal supersede は token ingest の起点契約である `PLAN-L7-57` の 1 件だけで、本 PLAN は supersede 対象にしない (PLAN-L6-789 §3.1-3.3)。
+
+- L7-58-02 の `telemetry scan` による DB ingest (migrate + `projectTokenUsage`) と `projectModelEvaluations` の再集計。
+- Acceptance の「token を model_runs へ ingest、model_evaluations を再集計 (opt-in 無効なら no-op)」の部分。
+
+`telemetry scan` は表示専用 (DB 書き込みなし) になる。session-dir 解決 (option > 環境変数 > OS default) と CLI 非起動の file-scan による取得、L7-58-01 の料金計算 (`OPENAI_PRICING` / `computeCodexCostUsd` / `pricingKeyFor` / `summarizeRunUsage`) は継承する。generates と status は変えない。
