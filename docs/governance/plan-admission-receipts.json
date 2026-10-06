@@ -6724,97 +6724,49 @@
     {
       "sequence": 421,
       "previous_record_digest": "sha256:bb9def0a648589ab1c4b841b55c50dcdf120c5566006fe7a633fd21fb697a562",
-      "record_digest": "sha256:49e2a69b80755a11b5624047ff4967a99012d0d691aaf38b80959024ff75382f",
-      "command_id": "plan-revise:issue-789:legacy-423:2:retire-exec:rechain-1",
-      "receipt_id": "certificate:f8907b4a0998de0ca27eb9b2e9ee9005",
-      "receipt_digest": "sha256:36f472ca0c33688f83d15213c1a863d7521f099f17e99ac5881e03938b8c2580",
-      "decision_digest": "sha256:7afedf121a06086cc4d744ff2c7ae8690d1eb3e88452968a54aad904bd27dfbd",
+      "record_digest": "sha256:b71166e337117b289609680b78ce2987bb77f590def6e8a8a6dd01c52942a761",
+      "command_id": "plan-revise:issue-823:exec-method:r4:781647c5a41d",
+      "receipt_id": "certificate:45020f5aca9a1cdaeab8c93753edaf64",
+      "receipt_digest": "sha256:f72d91c39e3d15f146929aac5c1e9a7ab17031e4dbca4cfdacbe38a18e1034ac",
+      "decision_digest": "sha256:5a284a0c43cd7889ad1b2fe727761c44034807e9a67eb9c99bea92b6f2471c33",
       "binding": {
-        "path": "docs/plans/PLAN-L7-423-engine-swap-domain-objects-ports.md",
-        "plan_id": "PLAN-L7-423-engine-swap-domain-objects-ports",
-        "asset_id": "plan:legacy:cd4fbbe70850280e912cb74ec26a630b119fa415f99a113fe9cf0a8136256c82",
-        "revision": 2,
-        "content_digest": "sha256:d0987251dd1af0d2d0a533e541cc75da077ca10bf6514d2f1cbeed15aa578471"
+        "path": "docs/plans/PLAN-REVERSE-823-pack-full-reverse-trial.md",
+        "plan_id": "PLAN-REVERSE-823-pack-full-reverse-trial",
+        "asset_id": "plan:17005d81c24cbdca71cced133ed6d123",
+        "revision": 4,
+        "content_digest": "sha256:945f29abf72df419b4c9ab3f4d6b7a8bd75355dff419acaada00de2885b53cde"
       }
     },
     {
       "sequence": 422,
-      "previous_record_digest": "sha256:49e2a69b80755a11b5624047ff4967a99012d0d691aaf38b80959024ff75382f",
-      "record_digest": "sha256:dcda7d5cc3b67063520afd390d0086fafd49904bb7a239a0cd865801ab9cc630",
-      "command_id": "plan-revise:issue-789:legacy-53:2:retire-exec:rechain-1",
-      "receipt_id": "certificate:d3e227277a0f68f27e11add75c7c34ec",
-      "receipt_digest": "sha256:80e4cd40f7226c5e8189e57b1932b201f9618e503e9d35f31115a8da74475515",
-      "decision_digest": "sha256:452af953fe129f0c872f1466b55872ab99d912c97088d5666e79ebbb36186534",
+      "previous_record_digest": "sha256:b71166e337117b289609680b78ce2987bb77f590def6e8a8a6dd01c52942a761",
+      "record_digest": "sha256:8a0345ae36c2e14f571ef74a0da182adf3a01a121fce2cf2b0264bee841a8385",
+      "command_id": "plan-revise:issue-823:exec-method:sol-r1-fix:r5:021de9d4e5d2",
+      "receipt_id": "certificate:69f9fbef76ab2bb90d6fc97ab6d80789",
+      "receipt_digest": "sha256:becc99530ad443bf33d2826bf9453ecc026dbe66fee89992e47cb3033ea21f92",
+      "decision_digest": "sha256:61979faf705a5ab403a343f042f502c04ec4fdf079e4749d8141d91d3183d39c",
       "binding": {
-        "path": "docs/plans/PLAN-L7-53-learning-engine.md",
-        "plan_id": "PLAN-L7-53-learning-engine",
-        "asset_id": "plan:legacy:19e7f3da4b052a9326476c0f730417cd2c98cd9f6ccd4d955e103dea7d745d3c",
-        "revision": 2,
-        "content_digest": "sha256:9081ef80c06e54ee708db3326635fea7f9c8021dc2724a6e062607b79045c790"
+        "path": "docs/plans/PLAN-REVERSE-823-pack-full-reverse-trial.md",
+        "plan_id": "PLAN-REVERSE-823-pack-full-reverse-trial",
+        "asset_id": "plan:17005d81c24cbdca71cced133ed6d123",
+        "revision": 5,
+        "content_digest": "sha256:9dd1d6dee1e532e812578ea02309019d8c0661a3b47d59207d57981c8262489c"
       }
     },
     {
       "sequence": 423,
-      "previous_record_digest": "sha256:dcda7d5cc3b67063520afd390d0086fafd49904bb7a239a0cd865801ab9cc630",
-      "record_digest": "sha256:df195792ea9cd206b81c4b456cebc90c559e59f11aad408e2697720cd1fdba4b",
-      "command_id": "plan-draft:issue-789:token-ingest-retirement-execution:1:rechain-1",
-      "receipt_id": "certificate:ba37dc47dca5ab03e0603c125d407c43",
-      "receipt_digest": "sha256:a4a4a351d667f44a4b8de39a1e33f3d08557e9d25b053ff1165dac4b9f79e467",
-      "decision_digest": "sha256:f994e328c684b1eb8668a258f816bfbdda3af50e11fc3c426193dd4dca7f5148",
+      "previous_record_digest": "sha256:8a0345ae36c2e14f571ef74a0da182adf3a01a121fce2cf2b0264bee841a8385",
+      "record_digest": "sha256:82a42c801952e5b0fd364a1172d46a21f7b7c6cff4ca5d880cbcc1bbd22e98c1",
+      "command_id": "plan-revise:issue-832:l6-confirm:post-green:r2",
+      "receipt_id": "certificate:87b26bd48ef014443d82286166e6bb82",
+      "receipt_digest": "sha256:1ae31972d9a94c4c2a73642cd84aa4057b20e54dd09dc1fde9d0ac20ffe7662f",
+      "decision_digest": "sha256:aecd9473201834b3931da6ac6d20a9b4cab6bb28529e48d526c83569f2f89260",
       "binding": {
-        "path": "docs/plans/PLAN-L7-789-token-ingest-retirement-execution.md",
-        "plan_id": "PLAN-L7-789-token-ingest-retirement-execution",
-        "asset_id": "plan:ba37dc47dca5ab03e0603c125d407c43",
-        "revision": 1,
-        "content_digest": "sha256:d68baa1e405fa0439974075658d9538fe0bed158af431a91e82cf27c2908664f"
-      }
-    },
-    {
-      "sequence": 424,
-      "previous_record_digest": "sha256:df195792ea9cd206b81c4b456cebc90c559e59f11aad408e2697720cd1fdba4b",
-      "record_digest": "sha256:b3f7388626b005d47fddcd69cb3a5a3316f8e72ec8e4cbdfa06b735613274c6a",
-      "command_id": "plan-revise:issue-789:token-ingest-retirement-execution:parent-drive:r2:rechain-1",
-      "receipt_id": "certificate:f141d1464fa2dd4d789bbe55599c2d4d",
-      "receipt_digest": "sha256:3a7ca5a332a60fd431dd97f5466277a751e94ac236e803c586104e6b9411b336",
-      "decision_digest": "sha256:8745a7cdd4890bc51dbb9fd648ce54e33b6aca0aa81318c3bbb8c91f663c9342",
-      "binding": {
-        "path": "docs/plans/PLAN-L7-789-token-ingest-retirement-execution.md",
-        "plan_id": "PLAN-L7-789-token-ingest-retirement-execution",
-        "asset_id": "plan:ba37dc47dca5ab03e0603c125d407c43",
+        "path": "docs/plans/PLAN-L6-832-plan-revise-omission-preserve-contract.md",
+        "plan_id": "PLAN-L6-832-plan-revise-omission-preserve-contract",
+        "asset_id": "plan:ff594b3aaf6ea80c4aa443eabf6c9294",
         "revision": 2,
-        "content_digest": "sha256:4ae4bae7b167d20f100b0f6e8c64bb7593257e075ee008dc81fe5f751e3081eb"
-      }
-    },
-    {
-      "sequence": 425,
-      "previous_record_digest": "sha256:b3f7388626b005d47fddcd69cb3a5a3316f8e72ec8e4cbdfa06b735613274c6a",
-      "record_digest": "sha256:ee0be85068d20a9662d5cf755eef372addc5e5ff0a11d96916eb25f3cb3b495b",
-      "command_id": "plan-revise:issue-789:legacy-53:3:restore-updated",
-      "receipt_id": "certificate:63b80361be06f529901f133281c4d76c",
-      "receipt_digest": "sha256:66c527e29efdd3115558c1ff9b06cfc32635a69a194f829b19067f3b42269817",
-      "decision_digest": "sha256:452af953fe129f0c872f1466b55872ab99d912c97088d5666e79ebbb36186534",
-      "binding": {
-        "path": "docs/plans/PLAN-L7-53-learning-engine.md",
-        "plan_id": "PLAN-L7-53-learning-engine",
-        "asset_id": "plan:legacy:19e7f3da4b052a9326476c0f730417cd2c98cd9f6ccd4d955e103dea7d745d3c",
-        "revision": 3,
-        "content_digest": "sha256:22bcfdaacb91fdc641033eb3e3e4f153a71573cf62f1d3d9d810e052efeb39c3"
-      }
-    },
-    {
-      "sequence": 426,
-      "previous_record_digest": "sha256:ee0be85068d20a9662d5cf755eef372addc5e5ff0a11d96916eb25f3cb3b495b",
-      "record_digest": "sha256:12372a6a3379dbd7fc13feb07071db89fbd0d4ebbe4faee83cda6b8eedc69761",
-      "command_id": "plan-revise:issue-789:legacy-53:4:post-green-evidence",
-      "receipt_id": "certificate:566743078cec6313a2af93e1f60bfdea",
-      "receipt_digest": "sha256:6bd78751dccf0cc1d7d9cbd6f984058c802ad5f958f729f61fe8475e79d42ffb",
-      "decision_digest": "sha256:452af953fe129f0c872f1466b55872ab99d912c97088d5666e79ebbb36186534",
-      "binding": {
-        "path": "docs/plans/PLAN-L7-53-learning-engine.md",
-        "plan_id": "PLAN-L7-53-learning-engine",
-        "asset_id": "plan:legacy:19e7f3da4b052a9326476c0f730417cd2c98cd9f6ccd4d955e103dea7d745d3c",
-        "revision": 4,
-        "content_digest": "sha256:c692376e5f3082acd58c95817315357c531161ece718383b648ee2e8cb1180cc"
+        "content_digest": "sha256:971c23433b11ebe4cc73ef7a5c91d3ab113f9dabdcaa449c698806c4cf16edea"
       }
     }
   ]

@@ -77,6 +77,11 @@ PLAN requirements:
   PLAN doc itself at filing time; the implementing PR updates `generates`
   together with the confirm (2026-07-28 lesson: PR #167 went red on this).
 
+New design-kind PLANs (`kind: design` / `add-design`) carry only the 4-item
+body; the contract body lives in `docs/design/` (or `docs/test-design/`). Rule,
+per-document digest format, and example: `../CLAUDE.md` §PLAN Filing Rules
+(設計系 PLAN の本文 4 項目, issue #648).
+
 PLAN claim discipline (errata countermeasure, PLAN-L7-89):
 
 - A falsifiable safety / completeness claim in `review_evidence` or AC — e.g.

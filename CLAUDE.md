@@ -180,8 +180,56 @@ Codex はこれらの規律を一度も受け取っていなかった)。`rule-d
 - `kind=add-impl` は Reverse 対必須。conditional kind は Reverse 対か
   `backprop_decision: not_required` + 理由 (純修理なら not_required、新契約なら Reverse 対)。
 - falsifiable な claim は根拠となるテスト / コマンドを引用する (`coding ≠ substance`)。
+- **新規の設計系 PLAN (`kind: design` / `add-design`) は本文を 4 項目に絞る** (issue #648 の出血止め、
+  2026-10-06)。正本は下記「設計系 PLAN の本文 4 項目」。両アダプタはここへの pointer だけを持つ。
 
 詳細は `AGENTS.md` §PLAN Rules と `.claude/CLAUDE.md` §PLAN Rules (等価)。
+
+### 設計系 PLAN の本文 4 項目 (issue #648)
+
+新規に起票する `kind: design` / `add-design` の PLAN は、契約本文 (設計判断・trade-off・API / schema /
+アルゴリズム・fail-close 仕様・責務・不変条件) を `docs/design/` (テスト設計なら `docs/test-design/`) の
+文書に置き、PLAN 本文は次の 4 項目だけにする: **上流の設計 revision digest / 引き渡し物 / 検証の対 /
+完了条件**。v4 候補 (`docs/governance/candidates/ut-tdd-concept-v4.0.md` §工程間の契約と工程内の
+チケット、PO 採択 2026-09-30) の「工程間の簡易契約」を先行適用する出血止めであり、設計の本文が PLAN 側に
+溜まり続けて移行 backlog が増えるのを止めるためである。
+
+- **適用範囲**: 本規則の施行後に新規起票する設計系 PLAN だけ。既存 PLAN はこの規則では移行しない
+  (移行は #648 の手順 = 意味分類 → 三者照合 → 移行証跡で別途行う)。
+- **frontmatter は現行要件のまま**: `agent_slots`、`dependencies` (`add-*` は `parent` 必須)、
+  route certificate (`route_signal` + `route_mode`)、confirmed 時の `review_evidence` を従来どおり書く。
+  4 項目化は本文だけの規則であり、新しい gate は設けない (#648 M3 実測: 4 項目の本文は複製 tree の
+  `plan lint` で plan-governance / plan-schedule を通り、阻むのは frontmatter だけだった。4 項目の
+  機械強制は後続 PLAN の範囲)。
+- **設計の契約文を PLAN へ複製しない**。PLAN は設計文書を path と digest で指すだけにし、要約・抜粋・
+  表の写しも置かない (写しは正本とずれる。#648 の分類パイロットでは stale 9 件が見つかり、すべて
+  PLAN 側が古かった)。
+- **上流の設計 revision digest は文書ごとに書く**: 参照する設計文書 1 本につき 1 行、
+  `<path>@<commit>` と、その commit 時点の当該ファイルの blob bytes の sha256 を記録する
+  (`git cat-file blob <commit>:<path> | sha256sum`)。グローバルな receipt chain には繋がない
+  (繋ぐと rechain の律速 #711 が Design 側へ移るだけになる。advisor `claude-fable-5` の条件)。
+
+本文の例 (見出しはこの 4 つ。`## 完了条件` は checklist で書く):
+
+```markdown
+## 上流の設計 revision digest
+
+- `docs/design/harness/<layer-dir>/<topic>.md@<commit>` sha256:<64 hex>
+
+## 引き渡し物
+
+- `docs/design/harness/<layer-dir>/<topic>.md` (本 PLAN で凍結する設計文書)
+- `docs/test-design/harness/<topic>-test-design.md` (対になるテスト設計)
+
+## 検証の対
+
+- 設計 ↔ テスト設計: 上記 2 文書の対 (gate / テストレベル / 検証手法はテスト設計側に書く)
+
+## 完了条件
+
+- [ ] 引き渡し物が上流 digest の revision と整合し、非著者 family の review が PASS
+- [ ] `ut-tdd plan lint` exit 0
+```
 
 ## Coding Rules
 
