@@ -43,7 +43,7 @@ decision_points:
 
 Writing a V-model design doc or ADR that survives freeze and cross-agent review.
 Apply when authoring/updating any `docs/design/` doc or `docs/adr/ADR-NNN-*.md`,
-or when a freeze gate needs a readability check.
+or when a freeze needs the manual readability checklist below.
 
 ## When to load this skill
 
