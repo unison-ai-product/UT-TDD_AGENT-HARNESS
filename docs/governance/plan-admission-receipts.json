@@ -6720,6 +6720,22 @@
         "revision": 1,
         "content_digest": "sha256:6590e205e84be333d78b12584ff4a360eeed6462a7751812394bdc6ec44acc08"
       }
+    },
+    {
+      "sequence": 421,
+      "previous_record_digest": "sha256:bb9def0a648589ab1c4b841b55c50dcdf120c5566006fe7a633fd21fb697a562",
+      "record_digest": "sha256:78bb277f121e757a98e1a4e857c28936edce275708bbd92aaf29f23aad1bd553",
+      "command_id": "plan-revise:issue-711:rechain-verifier-confirm:forward:r2:7c4962eb1ef2",
+      "receipt_id": "certificate:a1539695568919882502d371e1edd65f",
+      "receipt_digest": "sha256:d1663eeda89075cf1102e877749ee1dd2eb4f8c3616e2f9a340e372fabd758c4",
+      "decision_digest": "sha256:836d053dac3e829132fd289dbd563c6ce351466ae99c1a7dac2824b122d2a20e",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-711-rechain-verifier.md",
+        "plan_id": "PLAN-L7-711-rechain-verifier",
+        "asset_id": "plan:f2a61a3ad7d3b7301f0fc4238d529547",
+        "revision": 2,
+        "content_digest": "sha256:2c0e0474cb629efaf90c328b8ebbce88912de854e37518b58be07d0819240a0b"
+      }
     }
   ]
 }
