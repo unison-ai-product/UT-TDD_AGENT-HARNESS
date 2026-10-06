@@ -1389,6 +1389,8 @@ function buildChainScenario(opts: {
   priorCount: number;
   concurrent?: boolean;
   hCommandId?: string;
+  /** H の追加 record の revision。省略時は priorCount+1 (legacy bootstrap 型は M に record 無しで 2)。 */
+  hRevision?: number;
 }): RechainInput {
   const { blobs, put } = makeBlobStore();
   const baseFm = baseFrontmatterOther();
@@ -1429,13 +1431,14 @@ function buildChainScenario(opts: {
     { artifact_path: "src/plan-admission/rechain-verifier.ts", artifact_type: "source_module" },
   ];
   const hItems = [...BASE_ITEMS, "rev (S2): 検証器を実装した。"];
-  const admissionH = admissionFor(n + 1);
+  const hRevision = opts.hRevision ?? n + 1;
+  const admissionH = admissionFor(hRevision);
   const h = makeRevision({
     frontmatterOther: baseFm,
     generates: hGenerates,
     items: hItems,
     admission: admissionH,
-    binding: bind(n + 1),
+    binding: bind(hRevision),
     commandId: opts.hCommandId ?? "plan-revise:issue-999:s2:plan:r1:h1",
     admittedAt: H_ADMITTED_AT,
     priorRecords,
@@ -1471,7 +1474,8 @@ function buildChainScenario(opts: {
     mRecords = [...priorRecords, m.record];
   }
 
-  const rRevision = (mRecords.at(-1)?.binding.revision ?? n) + 1;
+  const lastM = mRecords.at(-1);
+  const rRevision = lastM ? lastM.binding.revision + 1 : hRevision;
   if (!admissionH.reentry) throw new Error("fixture-admission-missing-reentry");
   const r = makeRevision({
     frontmatterOther: baseFm,
@@ -1531,6 +1535,7 @@ describe("verifyRechainDelta legacy bootstrap 除外 (U-RECHAIN-019)", () => {
       const input = buildChainScenario({
         assetId: LEGACY_ASSET,
         priorCount: 0,
+        hRevision: 2,
         hCommandId: commandId,
       });
       const verdict = verifyRechainDelta(input);
