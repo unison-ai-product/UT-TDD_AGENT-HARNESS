@@ -2779,12 +2779,12 @@ describe("rebuildHarnessDb: token projection is retired (Issue #789、PLAN-L6-78
             "SELECT COUNT(*) AS n FROM model_runs WHERE input_tokens IS NOT NULL OR role = 'session'",
           )
           .get() as { n: number };
-        expect(measured.n).toBe(0);
+        expect.soft(measured.n).toBe(0);
         // U-TOKRET-002: opt-in 有効でも model_evaluations は 0 行。
         const evaluations = db.prepare("SELECT COUNT(*) AS n FROM model_evaluations").get() as {
           n: number;
         };
-        expect(evaluations.n).toBe(0);
+        expect.soft(evaluations.n).toBe(0);
         // U-TOKRET-005: review-evidence 由来の worker / reviewer 行は PLAN に紐付いて生成され、orphan は 0。
         const reviewRuns = db
           .prepare("SELECT role, model FROM model_runs WHERE plan_id = ? ORDER BY role")

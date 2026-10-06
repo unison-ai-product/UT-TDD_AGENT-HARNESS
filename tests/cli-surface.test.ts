@@ -1576,8 +1576,9 @@ describe("L7 CLI surface closure", () => {
     try {
       expect(existsSync(join(root, ".ut-tdd"))).toBe(false);
       const summary = runTelemetryScan(root, writeTelemetryScanFixture(root));
-      expect(summary).toMatchObject({ claudeRuns: 1, codexRuns: 1, inputTokens: 311 });
-      expect(existsSync(defaultHarnessDbPath(root))).toBe(false);
+      // DB 未作成を先に判定する (旧 scan action は DB file を生成して RED になる)。
+      expect.soft(existsSync(defaultHarnessDbPath(root))).toBe(false);
+      expect.soft(summary).toMatchObject({ claudeRuns: 1, codexRuns: 1, inputTokens: 311 });
     } finally {
       removeTestTree(root);
     }
@@ -1601,14 +1602,14 @@ describe("L7 CLI surface closure", () => {
 
       runTelemetryScan(root, writeTelemetryScanFixture(root));
 
-      expect(digest()).toBe(before);
-      expect(siblings.filter((p) => existsSync(p))).toEqual([]);
+      expect.soft(digest()).toBe(before);
+      expect.soft(siblings.filter((p) => existsSync(p))).toEqual([]);
       const after = openHarnessDb(dbPath, { repoRoot: root });
       try {
         const sessionRows = after
           .prepare("SELECT COUNT(*) AS n FROM model_runs WHERE role = 'session'")
           .get() as { n: number };
-        expect(sessionRows.n).toBe(0);
+        expect.soft(sessionRows.n).toBe(0);
       } finally {
         after.close();
       }
