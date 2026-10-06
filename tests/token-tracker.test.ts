@@ -1,5 +1,5 @@
 /**
- * U-FR-L1-38 token telemetry tracker (PLAN-L7-57 + PLAN-L7-58 cost enrichment)
+ * token telemetry tracker の取得層 (PLAN-L7-57 + PLAN-L7-58 cost enrichment)。FR-L1-38 は PLAN-L6-789 で退役
  *
  * Oracle: 両 runtime の session JSONL を **CLI を起動せず** 読み、per-turn token usage を正規化する。
  * - Claude: per-message usage (累積差分 不要)、cost は CLAUDE_PRICING で計算。

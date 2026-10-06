@@ -12,6 +12,7 @@ import {
   collectDesignDetectionStats,
   DESIGN_QUALITY_CHECK_IDS,
 } from "../src/state-db/design-detection.ts";
+import { collectDriveDbRegistrationStats } from "../src/state-db/drive-registration.ts";
 import {
   decideRefactorCandidate,
   projectFeedbackEvents,
@@ -2700,8 +2701,8 @@ Fixture.
   });
 });
 
-describe("rebuildHarnessDb: token projection is retired (Issue #789 PR-2)", () => {
-  it("does not project token model_runs or model_evaluations even with repo session logs and opt-in", () => {
+describe("rebuildHarnessDb: token projection is retired (Issue #789、PLAN-L6-789 §5)", () => {
+  it("U-TOKRET-001 / U-TOKRET-002 / U-TOKRET-005: rebuild projects no token model_runs and no model_evaluations, while review-evidence model_runs stay PLAN-linked", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-token-retired-"));
     const claudeRoot = mkdtempSync(join(tmpdir(), "ut-tdd-token-retired-claude-"));
     const codexRoot = mkdtempSync(join(tmpdir(), "ut-tdd-token-retired-codex-"));
@@ -2710,6 +2711,36 @@ describe("rebuildHarnessDb: token projection is retired (Issue #789 PR-2)", () =
     try {
       mkdirSync(join(root, ".ut-tdd", "config"), { recursive: true });
       writeFileSync(join(root, ".ut-tdd", "config", "model-opt-in.yaml"), "enabled: true\n");
+      // review-evidence 由来の model_runs を作る PLAN fixture (U-TOKRET-005)。旧 projectModelEvaluations
+      // はこの行と opt-in から評価行を書くため、U-TOKRET-002 の反証入力にもなる。
+      const planId = "PLAN-L7-9789-token-retired-fixture";
+      mkdirSync(join(root, "docs", "plans"), { recursive: true });
+      writeFileSync(
+        join(root, "docs", "plans", `${planId}.md`),
+        [
+          "---",
+          `plan_id: ${planId}`,
+          "title: token retired fixture",
+          "kind: impl",
+          "layer: L7",
+          "drive: db",
+          "status: confirmed",
+          "created: 2026-10-06",
+          "updated: 2026-10-06",
+          "review_evidence:",
+          "  - reviewer: gpt-6.1-sol",
+          "    review_kind: cross_agent",
+          "    worker_model: claude-opus-5",
+          "    reviewer_model: gpt-6.1-sol",
+          '    reviewed_at: "2026-10-06"',
+          "    verdict: PASS",
+          "---",
+          "",
+          "# token retired fixture",
+          "",
+        ].join("\n"),
+        "utf8",
+      );
       const ownSlug = claudeProjectSlug(root);
       mkdirSync(join(claudeRoot, ownSlug), { recursive: true });
       writeFileSync(
@@ -2722,20 +2753,47 @@ describe("rebuildHarnessDb: token projection is retired (Issue #789 PR-2)", () =
         }),
         "utf8",
       );
+      writeFileSync(
+        join(codexRoot, "own.jsonl"),
+        [
+          JSON.stringify({ type: "session_meta", payload: { model: "gpt-5.3-codex", cwd: root } }),
+          JSON.stringify({
+            type: "event_msg",
+            payload: {
+              type: "token_count",
+              info: { total_token_usage: { input_tokens: 200, output_tokens: 80 } },
+            },
+          }),
+        ].join("\n"),
+        "utf8",
+      );
       process.env.UT_TDD_CLAUDE_SESSIONS_DIR = claudeRoot;
       process.env.UT_TDD_CODEX_SESSIONS_DIR = codexRoot;
       const db = openHarnessDb(":memory:", { repoRoot: root });
       try {
         const result = rebuildHarnessDb({ repoRoot: root, db });
         expect(result.ok).toBe(true);
+        // U-TOKRET-001: session ログ由来の token 行は 0 件。
         const measured = db
-          .prepare("SELECT COUNT(*) AS n FROM model_runs WHERE input_tokens IS NOT NULL")
+          .prepare(
+            "SELECT COUNT(*) AS n FROM model_runs WHERE input_tokens IS NOT NULL OR role = 'session'",
+          )
           .get() as { n: number };
         expect(measured.n).toBe(0);
+        // U-TOKRET-002: opt-in 有効でも model_evaluations は 0 行。
         const evaluations = db.prepare("SELECT COUNT(*) AS n FROM model_evaluations").get() as {
           n: number;
         };
         expect(evaluations.n).toBe(0);
+        // U-TOKRET-005: review-evidence 由来の worker / reviewer 行は PLAN に紐付いて生成され、orphan は 0。
+        const reviewRuns = db
+          .prepare("SELECT role, model FROM model_runs WHERE plan_id = ? ORDER BY role")
+          .all(planId);
+        expect(reviewRuns).toEqual([
+          { role: "reviewer", model: "gpt-6.1-sol" },
+          { role: "worker", model: "claude-opus-5" },
+        ]);
+        expect(collectDriveDbRegistrationStats(db, root).modelOrphans).toBe(0);
       } finally {
         db.close();
       }

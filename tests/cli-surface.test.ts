@@ -1,4 +1,5 @@
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import {
   chmodSync,
   existsSync,
@@ -1515,38 +1516,102 @@ describe("L7 CLI surface closure", () => {
     }
   });
 
-  it("telemetry scan counts only this repo's sessions and writes no harness.db (Issue #789 PR-2)", () => {
+  // Issue #789 退役 oracle (PLAN-L6-789 §5)。session-dir には未投入の非空 fixture を置き、
+  // totalRuns >= 1 を assert して空 fixture で素通りしないようにする。
+  function writeTelemetryScanFixture(root: string): { claudeDir: string; codexDir: string } {
+    const claudeDir = join(root, "sessions", "claude");
+    const codexDir = join(root, "sessions", "codex");
+    const slug = claudeProjectSlug(root);
+    mkdirSync(join(claudeDir, slug), { recursive: true });
+    mkdirSync(join(claudeDir, `${slug}-other`), { recursive: true });
+    mkdirSync(codexDir, { recursive: true });
+    const line = (cwd: string | undefined, input: number) =>
+      JSON.stringify({
+        type: "assistant",
+        sessionId: "s",
+        ...(cwd ? { cwd } : {}),
+        message: { model: "claude-opus-4-8", usage: { input_tokens: input, output_tokens: 1 } },
+      });
+    writeFileSync(join(claudeDir, slug, "own.jsonl"), line(root, 111), "utf8");
+    writeFileSync(
+      join(claudeDir, `${slug}-other`, "foreign.jsonl"),
+      line(undefined, 99999),
+      "utf8",
+    );
+    writeFileSync(
+      join(codexDir, "own.jsonl"),
+      [
+        JSON.stringify({ type: "session_meta", payload: { model: "gpt-5.3-codex", cwd: root } }),
+        JSON.stringify({
+          type: "event_msg",
+          payload: {
+            type: "token_count",
+            info: { total_token_usage: { input_tokens: 200, output_tokens: 80 } },
+          },
+        }),
+      ].join("\n"),
+      "utf8",
+    );
+    return { claudeDir, codexDir };
+  }
+
+  function runTelemetryScan(root: string, dirs: { claudeDir: string; codexDir: string }) {
+    const run = runCliIn(root, [
+      "telemetry",
+      "scan",
+      "--claude-dir",
+      dirs.claudeDir,
+      "--codex-dir",
+      dirs.codexDir,
+      "--json",
+    ]);
+    expect(run.status, run.stderr).toBe(0);
+    const summary = JSON.parse(run.stdout) as { totalRuns: number };
+    expect(summary.totalRuns).toBeGreaterThanOrEqual(1);
+    return summary;
+  }
+
+  it("U-TOKRET-003: telemetry scan counts only this repo's sessions and creates no harness.db", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-cli-telemetry-scope-"));
     try {
-      const claudeDir = join(root, "claude");
-      const slug = claudeProjectSlug(root);
-      mkdirSync(join(claudeDir, slug), { recursive: true });
-      mkdirSync(join(claudeDir, `${slug}-other`), { recursive: true });
-      const line = (cwd: string | undefined, input: number) =>
-        JSON.stringify({
-          type: "assistant",
-          sessionId: "s",
-          ...(cwd ? { cwd } : {}),
-          message: { model: "claude-opus-4-8", usage: { input_tokens: input, output_tokens: 1 } },
-        });
-      writeFileSync(join(claudeDir, slug, "own.jsonl"), line(root, 111), "utf8");
-      writeFileSync(
-        join(claudeDir, `${slug}-other`, "foreign.jsonl"),
-        line(undefined, 99999),
-        "utf8",
-      );
-      const run = runCliIn(root, [
-        "telemetry",
-        "scan",
-        "--claude-dir",
-        claudeDir,
-        "--codex-dir",
-        join(root, "missing-codex"),
-        "--json",
-      ]);
-      expect(run.status, run.stderr).toBe(0);
-      expect(JSON.parse(run.stdout)).toMatchObject({ claudeRuns: 1, inputTokens: 111 });
+      expect(existsSync(join(root, ".ut-tdd"))).toBe(false);
+      const summary = runTelemetryScan(root, writeTelemetryScanFixture(root));
+      expect(summary).toMatchObject({ claudeRuns: 1, codexRuns: 1, inputTokens: 311 });
       expect(existsSync(defaultHarnessDbPath(root))).toBe(false);
+    } finally {
+      removeTestTree(root);
+    }
+  });
+
+  it("U-TOKRET-004: telemetry scan leaves an existing migrated harness.db byte-identical", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-cli-telemetry-nowrite-"));
+    try {
+      const dbPath = defaultHarnessDbPath(root);
+      mkdirSync(join(root, ".ut-tdd"), { recursive: true });
+      const seeded = openHarnessDb(dbPath, { repoRoot: root });
+      try {
+        migrate(seeded);
+      } finally {
+        seeded.close();
+      }
+      const siblings = [`${dbPath}-wal`, `${dbPath}-journal`];
+      const digest = () => createHash("sha256").update(readFileSync(dbPath)).digest("hex");
+      const before = digest();
+      expect(siblings.filter((p) => existsSync(p))).toEqual([]);
+
+      runTelemetryScan(root, writeTelemetryScanFixture(root));
+
+      expect(digest()).toBe(before);
+      expect(siblings.filter((p) => existsSync(p))).toEqual([]);
+      const after = openHarnessDb(dbPath, { repoRoot: root });
+      try {
+        const sessionRows = after
+          .prepare("SELECT COUNT(*) AS n FROM model_runs WHERE role = 'session'")
+          .get() as { n: number };
+        expect(sessionRows.n).toBe(0);
+      } finally {
+        after.close();
+      }
     } finally {
       removeTestTree(root);
     }
