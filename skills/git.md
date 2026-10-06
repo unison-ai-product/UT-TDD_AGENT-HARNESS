@@ -24,7 +24,7 @@ decision_points:
   - when: "Writing a multi-line commit message"
     choose: "use a Bash heredoc (`git commit -F - <<'EOF' ... EOF`)"
     over: "using a PowerShell here-string"
-    because: "the `commit-msg` hook does not accept PowerShell here-strings for multi-line messages; only the Bash heredoc form is honored"
+    because: "there is no local `commit-msg` hook (CI `commitlint-invalid` is the enforcer); the Bash heredoc is advised only because PowerShell here-strings are error-prone for multi-line messages (quoting / line endings)"
   - when: "Verifying Vitest before pushing"
     choose: "run `npm run test`"
     over: "using an unspecified test command"
