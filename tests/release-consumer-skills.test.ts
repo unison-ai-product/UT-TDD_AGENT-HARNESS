@@ -262,6 +262,9 @@ describe("PR-2a release consumer skills", () => {
           },
           "hybrid",
         );
+        // U-ADAPTER-SANDBOX-004: this existing frontier consumer must keep its pre-grant argv.
+        expect(plan.args).not.toContain("--sandbox");
+        expect(plan.args).not.toContain("workspace-write");
         for (const path of [...injection.required_paths, ...injection.optional_paths])
           expect(plan.stdin).toContain(path);
       } finally {
