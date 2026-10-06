@@ -8,7 +8,7 @@ drive: agent
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-10-05
-updated: 2026-10-05
+updated: 2026-10-06
 owner: Claude control lane (PLAN 起票) · Codex worker (S2 implementation) · 非著者
   frontier reviewer
 parent_design: docs/plans/PLAN-L6-711-merge-time-receipt-rechain-contract.md
@@ -32,6 +32,10 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-711-rechain-verifier.md
     artifact_type: markdown_doc
+  - artifact_path: src/plan-admission/rechain-verifier.ts
+    artifact_type: source_module
+  - artifact_path: tests/rechain-verifier.test.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L6-711-merge-time-receipt-rechain-contract.md
   requires: []
@@ -44,23 +48,76 @@ dependencies:
     - src/plan-admission/tracked-receipt-renderer.ts
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/711
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/839
-review_evidence: []
-status: draft
+review_evidence:
+  - reviewer: gpt-6.1-sol
+    review_kind: cross_agent
+    reviewed_at: 2026-10-06T06:04:22.801Z
+    tests_green_at: 2026-10-06T06:01:36Z
+    verdict: pass
+    worker_model: claude-opus-5-5
+    reviewer_model: gpt-6.1-sol
+    subject_head: 25a9b4effc4a3c3bacc4872d8acef1d1f962f294
+    scope: "PR 839 exact head 25a9b4effc4a3c3bacc4872d8acef1d1f962f294 に対する非著者
+      post-green evidence review (Sol、receipt 694231e1…、verdict PASS / blocking
+      0 / reviewer family codex)。(a) 先行の rev 2 は CI green 前の review (#841 の Sol
+      PASS) を引用していたため 8c033d16 で取り下げ、本 review で積み直した。(b) 本 PLAN の confirm 前は新規
+      test file が deliverable-plan-trace の orphan-deliverable で fail-close し CI
+      が green になり得ないため、green 証跡は subject head での local node 実行とする (evidence dir
+      の local-green-meta.txt: start 2026-10-06T05:55:34Z / end
+      2026-10-06T06:01:36Z)。typecheck と lint の completed_at は各ログ (local-tsc.log
+      / local-biome.log) の最終書込み時刻 (mtime) であり、meta の window 内かつ tests_green_at
+      以前にある。(c) closing review r3 は 56738104 で PASS。"
+    green_commands:
+      - kind: unit_test
+        command: node scripts/run-vitest-snapshot.ts tests/rechain-verifier.test.ts
+        runner: node
+        scope: targeted
+        exit_code: 0
+        completed_at: 2026-10-06T06:01:36Z
+        evidence_path: tests/rechain-verifier.test.ts
+        output_digest: sha256:45fc91c32a301193019446a33d58bdb1144c088894cf760810bb7cf232135b04
+        anchor_commit: 25a9b4effc4a3c3bacc4872d8acef1d1f962f294
+      - kind: typecheck
+        command: npx tsc --noEmit
+        runner: node
+        scope: full
+        exit_code: 0
+        completed_at: 2026-10-06T05:56:15.358Z
+        evidence_path: src/plan-admission/rechain-verifier.ts
+        output_digest: sha256:15da40126c6ef008de1c5572441d145bfba4a4afef3067bd8ecf97da694ce550
+        anchor_commit: 25a9b4effc4a3c3bacc4872d8acef1d1f962f294
+      - kind: lint
+        command: biome check src/plan-admission/plan-revision-command-assembler.ts
+          src/plan-admission/rechain-verifier.ts
+          src/plan-admission/tracked-receipt-renderer.ts
+          tests/rechain-verifier.test.ts
+        runner: node
+        scope: changed-files
+        exit_code: 0
+        completed_at: 2026-10-06T05:56:16.742Z
+        evidence_path: src/plan-admission/rechain-verifier.ts
+        output_digest: sha256:15da40126c6ef008de1c5572441d145bfba4a4afef3067bd8ecf97da694ce550
+        anchor_commit: 25a9b4effc4a3c3bacc4872d8acef1d1f962f294
+    citations:
+      - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/839
+      - .ut-tdd/review/receipts/694231e1d5b1b1a4444a51032c4f49b34a6eb793801962fcd0f0381ac6976678.json
+      - .ut-tdd/review/packets/pr839-25a9b4ef/evidence/
+status: confirmed
 github_issue_id: 711
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:f2a61a3ad7d3b7301f0fc4238d529547
-  command_id: plan-draft:issue-711:rechain-verifier:forward:1:rechain-1
-  admitted_at: 2026-10-05T10:52:26.100Z
-  source_digest: sha256:0c88bd5899da820c83811e1f480e0b60944e5d77268c6af67340241b6ece038b
-  decision_digest: sha256:86287e9dd2acb23044114be083c6c17b98bffa2102b2c9fbacca06e78f6b1fc1
-  receipt_digest: sha256:849cf8fd640f11ce0c1a22f1d99320adfd3863daa48ac3e0e43dfa3abe5f9420
+  receipt_id: certificate:753e830b3256315b6b97d6f9cb53b0f9
+  command_id: plan-revise:issue-711:s2-verifier-confirm:post-green:r2
+  admitted_at: 2026-10-06T06:11:23.880Z
+  source_digest: sha256:722243eaa92f5ded0bab77e62469d3d9a4e7e1a5dc73bbd7cd76b1a54b14d964
+  decision_digest: sha256:a26ef5d9c190745591e7df9aa9942f980811178d74f4d2c0b193f226b72f7a77
+  receipt_digest: sha256:3b6fa488757d74b6ef25e3c3d4b44ee8b6ed74853e357689b7b2a2e15e6d5a1e
   binding:
     path: docs/plans/PLAN-L7-711-rechain-verifier.md
     plan_id: PLAN-L7-711-rechain-verifier
     asset_id: plan:f2a61a3ad7d3b7301f0fc4238d529547
-    revision: 1
-    content_digest: sha256:0c88bd5899da820c83811e1f480e0b60944e5d77268c6af67340241b6ece038b
+    revision: 2
+    content_digest: sha256:722243eaa92f5ded0bab77e62469d3d9a4e7e1a5dc73bbd7cd76b1a54b14d964
   route:
     signal: feature_addition
     mode: add-feature
@@ -78,12 +135,12 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-711-rechain-verifier
-    target_revision: 1
+    target_revision: 2
     phase: forward_merge
-  escape_reason: "Issue #711 S2: PR #839 の新規 source_module (rechain-verifier.ts) と
-    test の所有 PLAN が無く deliverable-plan-trace が orphan で fail-close
-    した。PLAN-L6-711 は design PLAN のため、precedent #722 に従い L7 add-impl を generates
-    = 自分自身だけで起票し、pair-freeze 後の confirm で所有を宣言する。"
+  escape_reason: "Issue #711 S2: PR #839 の実装
+    (src/plan-admission/rechain-verifier.ts と tests/rechain-verifier.test.ts) を
+    generates に宣言し、exact head 25a9b4ef に対する非著者 post-green evidence review (Sol
+    PASS) を review_evidence に記録して confirm する。契約本文は変えない。"
 ---
 
 # PLAN-L7-711: re-chain 差分の whitelist 検証器 verifyRechainDelta の実装 (#711 S2)
