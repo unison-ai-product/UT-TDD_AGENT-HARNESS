@@ -58,7 +58,7 @@ quality gate (FR-L1-05 static gate, FR-L1-18 cross-detection aggregation).
 
 The canonical CI run is `harness-check`; its sub-gates (branch-type guard,
 typecheck, doctor, vitest, biome lint, audit quality) are defined in
-`.github/workflows/harness-check.yml:78-160` — read that file, not a copy here.
+`.github/workflows/harness-check.yml` 全体 (linux / windows / node-generation / 集約 `harness-check` job) — read that file, not a copy here.
 Never skip a sub-gate to make CI pass. Use `npm run lint` (Biome check = format +
 lint) locally; `biome lint` alone does not check formatting.
 

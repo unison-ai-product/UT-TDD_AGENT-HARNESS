@@ -69,10 +69,10 @@ ut-tdd review --uncommitted
 ```
 
 Never bypass with `--no-verify`. The list above is the local pre-flight; the
-authoritative CI gate set (branch-type guard, plan admission-check, typecheck,
-db rebuild, doctor, test, lint, audit quality) is
-`.github/workflows/harness-check.yml:78-160`. A push that is local-green but
-fails CI usually tripped a CI-only step, not a skipped local command.
+authoritative CI gate set is the whole of `.github/workflows/harness-check.yml` 全体 (jobs: `harness-check-linux` / `harness-check-windows` / `node-generation-linux` / `node-generation-windows` / 集約 `harness-check`). A push that is local-green but
+fails CI usually tripped a CI-only step (e.g. branch-type guard, plan
+admission-check, db rebuild, audit quality, Windows verification, Node
+generation; not exhaustive), not a skipped local command.
 
 ## Strategy selection
 
