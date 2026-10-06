@@ -612,6 +612,9 @@ SMB/NFS/OneDrive をまたぐ strict lease、heartbeat、clock-skew 耐性は主
 | U-FRCOV-004 | `analyzeL6FrCoverage` | function-spec/governance/agent-slots ref に型 body + pseudocode/defer marker が無ければ missing substance |
 | U-FRCOV-005 | 実 repo guard | FR registry 46 件すべて L6 spec / U-* oracle / substance marker に接続 |
 | U-FRCOV-006 | `analyzeL6FrCoverage` | `explicit_l7_defer` 行の type body に `{...}` フィールドブロックが無ければ missing substance |
+| U-FRCOV-007 | `analyzeL6FrCoverage` | unit contract に `implementation_state: retired` を持つ退役行は、L7 unit test design の表の先頭セルで宣言済みの oracle (例: U-TOKRET-002) へ対応付ければ incomplete にならない (Issue #848) |
+| U-FRCOV-008 | `analyzeL6FrCoverage` | 退役行の oracle に未宣言 ID が 1 つでもあれば `unit_oracle_undeclared` で fail-close する |
+| U-FRCOV-009 | `analyzeL6FrCoverage` | 退役 marker の無い行は従来どおり `U-<FR id>` 以外の oracle を `unit_oracle_match` で fail-close する (宣言済み U-TOKRET を書いても通らない) |
 
 ### §1.21 U-FR-L1-21 (test perspective gate)
 

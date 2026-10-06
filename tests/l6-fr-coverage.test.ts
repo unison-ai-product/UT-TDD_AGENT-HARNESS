@@ -121,6 +121,64 @@ describe("L6 FR coverage (FR registry -> unit-level function spec)", () => {
     }
   });
 
+  describe("retired FR rows map to declared retirement oracles (Issue #848)", () => {
+    const l7TestDesignText = [
+      "| ID | 観点 |",
+      "| --- | --- |",
+      "| `U-TOKRET-001` | rebuild token rows 0 |",
+      "| `U-TOKRET-002` | model_evaluations 0 |",
+      "",
+      "本文中の U-TOKRET-099 は再引用であって宣言ではない。",
+    ].join("\n");
+    const coverage = (contract: string, oracle: string) => `
+| FR | L6 spec | unit contract | unit oracle |
+|---|---|---|---|
+| FR-L1-38 | docs/design/harness/L6-function-design/function-spec.md | ${contract} | ${oracle} |
+`;
+    const retired = "`projectModelEvaluations` は implementation_state: retired。";
+
+    it("U-FRCOV-007: a retired row may cite declared U-TOKRET oracles", () => {
+      const result = analyzeL6FrCoverage({
+        frIds: ["FR-L1-38"],
+        coverageText: coverage(retired, "U-TOKRET-001, U-TOKRET-002"),
+        l7TestDesignText,
+      });
+      expect(result.incomplete).toEqual([]);
+      expect(result.ok).toBe(true);
+    });
+
+    it("U-FRCOV-008: a retired row citing an undeclared oracle fails closed", () => {
+      for (const oracle of ["U-TOKRET-001, U-TOKRET-099", "U-TOKRET-099"]) {
+        const result = analyzeL6FrCoverage({
+          frIds: ["FR-L1-38"],
+          coverageText: coverage(retired, oracle),
+          l7TestDesignText,
+        });
+        expect(result.ok, oracle).toBe(false);
+        expect(result.incomplete).toEqual([
+          { fr_id: "FR-L1-38", missing: ["unit_oracle_undeclared"] },
+        ]);
+      }
+      const withoutDesign = analyzeL6FrCoverage({
+        frIds: ["FR-L1-38"],
+        coverageText: coverage(retired, "U-TOKRET-001"),
+      });
+      expect(withoutDesign.incomplete).toEqual([
+        { fr_id: "FR-L1-38", missing: ["unit_oracle_undeclared"] },
+      ]);
+    });
+
+    it("U-FRCOV-009: a non-retired row still requires U-<FR id>", () => {
+      const result = analyzeL6FrCoverage({
+        frIds: ["FR-L1-38"],
+        coverageText: coverage("`projectModelEvaluations` は退役済み。", "U-TOKRET-001"),
+        l7TestDesignText,
+      });
+      expect(result.ok).toBe(false);
+      expect(result.incomplete).toEqual([{ fr_id: "FR-L1-38", missing: ["unit_oracle_match"] }]);
+    });
+  });
+
   it("real repo covers every FR-L1 row with an L6 spec and U-* oracle", () => {
     const result = analyzeL6FrCoverage(loadL6FrCoverageDocs());
     expect(result.totalFr).toBe(51);
