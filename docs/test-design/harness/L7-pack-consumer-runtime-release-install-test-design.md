@@ -60,3 +60,4 @@ PR-1 は 001..004 と 011、PR-2 は 005..010 を所有する。012 (tag → cha
 | `U-PACKRT-008` | `tests/pack-consumer-runtime-release.test.ts` | exact 5 asset集合とtag混在の拒否 |
 | `U-PACKRT-009` | `tests/pack-consumer-runtime-release.test.ts` | canonical保存receipt照合、再導入write 0、pointer改変・payload欠落・複製先拒否 |
 | `U-PACKRT-010` | `tests/pack-consumer-runtime-release.test.ts` | 別releaseをupdate_unsupportedで拒否し既存runtime不変 |
+| `U-PACKRT-013` | `tests/pack-consumer-runtime-release.test.ts` | C1 Git tree から独立導出した path/mode/blob bytes と実tar readback全entryの exact 一致 |
