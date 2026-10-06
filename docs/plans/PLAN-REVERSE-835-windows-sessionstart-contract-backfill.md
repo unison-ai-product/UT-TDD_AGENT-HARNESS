@@ -43,18 +43,18 @@ status: draft
 github_issue_id: 835
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:22f47f3dd6d6ff5c42d4f9370eeed624
-  command_id: plan-draft:issue-835:windows-sessionstart-contract-reverse:20261006074748975
-  admitted_at: 2026-10-06T07:47:48.975Z
-  source_digest: sha256:d4dc276ab5771cb4c8b8eb3628f6c6ba5ae4005b83e0f46f361eb9168b40262c
-  decision_digest: sha256:3fda73dfdff2641a3cf1191b6d040bf61f8802e67c2a351e743753b7f0242633
-  receipt_digest: sha256:83007a0d6aece55e23a91655f5e40d61b4889987e8bd5234cde310c82470b099
+  receipt_id: certificate:06a129a688288588e950ad46f9d696bb
+  command_id: plan-revise:issue835:reverse:flag3-r2:20261006083557858
+  admitted_at: 2026-10-06T08:35:57.858Z
+  source_digest: sha256:b1c158a8f5462919fda5694de2ec4a9cd473cdffd3bddee6adcc9ba96ff1a095
+  decision_digest: sha256:2dd9ef5a022bae2f588d21766a22c5f8021c5205361b5e42574f603dcd57d3c0
+  receipt_digest: sha256:202ac97a8691f4a19427feffef5c3fd9a708c3e54a1bd569040b310f1317076c
   binding:
     path: docs/plans/PLAN-REVERSE-835-windows-sessionstart-contract-backfill.md
     plan_id: PLAN-REVERSE-835-windows-sessionstart-contract-backfill
     asset_id: plan:22f47f3dd6d6ff5c42d4f9370eeed624
-    revision: 1
-    content_digest: sha256:d4dc276ab5771cb4c8b8eb3628f6c6ba5ae4005b83e0f46f361eb9168b40262c
+    revision: 2
+    content_digest: sha256:b1c158a8f5462919fda5694de2ec4a9cd473cdffd3bddee6adcc9ba96ff1a095
   route:
     signal: reverse
     mode: reverse
@@ -74,22 +74,23 @@ admission_receipt:
     target_plan_id: PLAN-L7-531-pack-internal-canary-smoke
     target_revision: 11
     phase: forward_merge
-  escape_reason: "Issue #835 Reverse R0-R4: L6/L7 session-log契約とbounded
-    event-first/実配布cold-warm受入のgapのみを照合し、origin PLAN-L7-531 r11へ再合流する。"
+  escape_reason: "Issue #835 / control #6012374220:
+    root拒否境界、可逆なtimeout対応、claude-vscode実consumer受入だけをL6/L7契約へgap-only照合し、origin
+    PLAN-L7-531 r11へ再合流する。"
 ---
 
 # PLAN-REVERSE-835: SessionStart 順序/timeout契約のL6/L7 backfill確認
 
 ## R0: reverse境界
 
-このignored候補は、新しい設計規則の自己承認や上流契約の即時変更を意味しない。対象はPLAN-L7-835のevent-first順序差分、既存identity admissionをevent前に保つ条件、timeout未決判断、およびcold/warm実配布受入である。Issue bindingはForwardと同じ明示的incident識別子 `issue-835` / `projection_state: unprojected` とし、既存Episode eventやprojection receiptの存在を主張しない。origin/reentryはcontrolで確定したPLAN-L7-531 r11 bindingへ固定する。
+このignored候補は、新しい設計規則の自己承認や上流契約の即時変更を意味しない。対象はPLAN-L7-835のevent-first順序差分、`requireRuntimeRepoRoot`拒否時にeventを残さない境界、timeout未決判断、およびVS Code実consumerでのcold/warm受入である。`session start`は既存HEAD identity admissionを呼ばないため、新しいfail-close admissionは対象へ追加しない。Issue bindingはForwardと同じ明示的incident識別子 `issue-835` / `projection_state: unprojected` とし、既存Episode eventやprojection receiptの存在を主張しない。origin/reentryはcontrolで確定したPLAN-L7-531 r11 bindingへ固定する。
 
 ## R1: 既存契約との照合
 
 - `PLAN-L6-03-session-log` / `PLAN-L7-01-session-log` のevent schema、append/fail-open、active-plan resolution、digest semanticsは変更せず、CLI call orderingだけが既存設計の範囲に収まるか確認する。
 - `PLAN-L7-531` の受入fixture/AT-DIST-003所有は維持し、本Issueからfixture producer/consumer acceptance実装をコピーしない。
 - `PLAN-L7-422` F2のSessionStart digest欠落検出は別所有である。422はdraftであり、requiresに昇格せず referencesとして境界照合のみ行う。
-- `requireProjectMemoryRoot`の正規authority/admissionより前にeventが書かれないことを、負系CANDIDATE-U-835-002で確認する。
+- 実CLIの `requireRuntimeRepoRoot` がroot解決を拒否した場合にevent appendが0件であることを、負系CANDIDATE-U-835-002で確認する。`requireProjectMemoryRoot`/HEAD identity admissionを実経路として主張しない。
 
 ## R2: candidate trace
 
@@ -102,7 +103,8 @@ Forward §5のCANDIDATE-U-835-001..007とCANDIDATE-AT-835-008を、(a) L6-03の�
 - event-firstだけではtimeout内完走を解かない。comment 6010925970とmeasurement protocol candidateに従うcold/warm各5件以上のphase実測をForward pairへtraceし、律速phaseに対応するdetached-pattern/5s維持またはdigest p95×2/timeout更新を実装・配布受入へtraceする。
 - materialize/scan分岐で `spawnDetachedStopRefresh` のDB refresh責務を無検証に再利用しない。5秒維持とhook外移動が成立するentrypoint/責務/競合を実測・レビューする。
 - digest分岐はnearest-rank p95、n>=5、sample全件とmsから設定秒へのround-upを証跡化する。15s固定ではなく、phase実測から値を導く。
-- cold/warm各5件以上のすべてで設定timeout内exit0・cancelなし・event全件・digest出力が確認できない限りIssue close不可。
+- 選んだ変更は1 commitでrollback可能にする。detached化なら当該call 1箇所を同期呼び出しへ戻し、timeout引上げなら配布settingsのtimeout値1つを戻す。AT失敗時はrollbackして同じ条件で再計測する。
+- cold/warm各5件以上のすべてで、`CLAUDE_CODE_ENTRYPOINT=claude-vscode` の実VS Code consumer起動、設定timeout内exit0・cancelなし・event全件・digest出力が確認できない限りIssue close不可。端末直叩きを受入証拠にしない。
 - PLAN-L7-422のdigest欠落可視化は除外し、findingを本Reverseへ移管/再宣言しない。
 
 ## R4: Forward reentry
