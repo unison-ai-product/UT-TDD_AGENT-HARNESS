@@ -3,7 +3,7 @@ plan_id: PLAN-L7-789-token-ingest-retirement-execution
 title: "PLAN-L7-789 (impl): 常時 token 取り込みと model_evaluations 生成の退役の実行"
 kind: impl
 layer: L7
-drive: db
+drive: agent
 route_signal: forward
 route_mode: forward
 created: 2026-10-06
@@ -42,18 +42,18 @@ review_evidence: []
 status: draft
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:ba37dc47dca5ab03e0603c125d407c43
-  command_id: plan-draft:issue-789:token-ingest-retirement-execution:1:rechain-1
-  admitted_at: 2026-10-06T03:15:18.554Z
-  source_digest: sha256:d68baa1e405fa0439974075658d9538fe0bed158af431a91e82cf27c2908664f
-  decision_digest: sha256:f994e328c684b1eb8668a258f816bfbdda3af50e11fc3c426193dd4dca7f5148
-  receipt_digest: sha256:a4a4a351d667f44a4b8de39a1e33f3d08557e9d25b053ff1165dac4b9f79e467
+  receipt_id: certificate:f141d1464fa2dd4d789bbe55599c2d4d
+  command_id: plan-revise:issue-789:token-ingest-retirement-execution:parent-drive:r2:rechain-1
+  admitted_at: 2026-10-06T03:15:25.305Z
+  source_digest: sha256:4ae4bae7b167d20f100b0f6e8c64bb7593257e075ee008dc81fe5f751e3081eb
+  decision_digest: sha256:8745a7cdd4890bc51dbb9fd648ce54e33b6aca0aa81318c3bbb8c91f663c9342
+  receipt_digest: sha256:3a7ca5a332a60fd431dd97f5466277a751e94ac236e803c586104e6b9411b336
   binding:
     path: docs/plans/PLAN-L7-789-token-ingest-retirement-execution.md
     plan_id: PLAN-L7-789-token-ingest-retirement-execution
     asset_id: plan:ba37dc47dca5ab03e0603c125d407c43
-    revision: 1
-    content_digest: sha256:d68baa1e405fa0439974075658d9538fe0bed158af431a91e82cf27c2908664f
+    revision: 2
+    content_digest: sha256:4ae4bae7b167d20f100b0f6e8c64bb7593257e075ee008dc81fe5f751e3081eb
   route:
     signal: forward
     mode: forward
