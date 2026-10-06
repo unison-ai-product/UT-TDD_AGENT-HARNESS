@@ -6692,65 +6692,33 @@
     {
       "sequence": 419,
       "previous_record_digest": "sha256:c2e43c5020c539961000d58dc5534121edc2db331a96067d5476b4918483f39f",
-      "record_digest": "sha256:ceea6925e0fd8467ead70c8f5700ba3fcf5c94834423300c957336c5cead7c26",
-      "command_id": "plan-revise:issue-789:legacy-423:2:retire-exec",
-      "receipt_id": "certificate:85813555f63741149bc7b098a0f944ef",
-      "receipt_digest": "sha256:67f124f8cbb0a90dcef2c917746e0c74595225ac2d30c4956d73f0a5b1554b84",
-      "decision_digest": "sha256:7afedf121a06086cc4d744ff2c7ae8690d1eb3e88452968a54aad904bd27dfbd",
+      "record_digest": "sha256:752dc299e8aacbde7b2aa84a2d6a45b3696bfdb0502329acbbfc8e5240981b3c",
+      "command_id": "plan-revise:issue-711:legacy-bootstrap-judgement:rechain-1:c1:r6:2241d42e49c5",
+      "receipt_id": "certificate:cf30abd72a39ba5f8e3ac8c0690d9f1a",
+      "receipt_digest": "sha256:c570cd48fdd2ce4ab4b694efd0de1ee79b1d1dd394051ae95abd4fc92c6f9300",
+      "decision_digest": "sha256:b60f7d4c57af22e41779e7f7430a353452258e1577a73ec7db94017e48e8db99",
       "binding": {
-        "path": "docs/plans/PLAN-L7-423-engine-swap-domain-objects-ports.md",
-        "plan_id": "PLAN-L7-423-engine-swap-domain-objects-ports",
-        "asset_id": "plan:legacy:cd4fbbe70850280e912cb74ec26a630b119fa415f99a113fe9cf0a8136256c82",
-        "revision": 2,
-        "content_digest": "sha256:d0987251dd1af0d2d0a533e541cc75da077ca10bf6514d2f1cbeed15aa578471"
+        "path": "docs/plans/PLAN-L6-711-merge-time-receipt-rechain-contract.md",
+        "plan_id": "PLAN-L6-711-merge-time-receipt-rechain-contract",
+        "asset_id": "plan:ac2c23d3c72fc6e2886491ac1df09452",
+        "revision": 6,
+        "content_digest": "sha256:ccd27f750c9b636b10636f112df009a7210559bb5911a318b5df6b358cfcdba0"
       }
     },
     {
       "sequence": 420,
-      "previous_record_digest": "sha256:ceea6925e0fd8467ead70c8f5700ba3fcf5c94834423300c957336c5cead7c26",
-      "record_digest": "sha256:14a4059065fe193c24c5424fd52ef879778c86c56ae598431e059cdbb45c80d4",
-      "command_id": "plan-revise:issue-789:legacy-53:2:retire-exec",
-      "receipt_id": "certificate:0d0e317cddc0630763f17bb68a1fa5ad",
-      "receipt_digest": "sha256:ceb8b9719acbb9f473bc5f01c87c3ee961fcf6f0a3829c5aa91ceb3a45fababb",
-      "decision_digest": "sha256:452af953fe129f0c872f1466b55872ab99d912c97088d5666e79ebbb36186534",
+      "previous_record_digest": "sha256:752dc299e8aacbde7b2aa84a2d6a45b3696bfdb0502329acbbfc8e5240981b3c",
+      "record_digest": "sha256:bb9def0a648589ab1c4b841b55c50dcdf120c5566006fe7a633fd21fb697a562",
+      "command_id": "plan-draft:issue-816:release-notes-draft-contract:1:rechain-2",
+      "receipt_id": "certificate:2f5be4ac3a56270474529ae239e69d4d",
+      "receipt_digest": "sha256:c80df4095a26ab1c7dfceb71f1d65250f1dcfe1dbf7e76a41c4df1f4a140dd13",
+      "decision_digest": "sha256:9c341eef56a0b6dc1bf4d1de17cd2f9efd12a675789abddb089d8d26c7fa124a",
       "binding": {
-        "path": "docs/plans/PLAN-L7-53-learning-engine.md",
-        "plan_id": "PLAN-L7-53-learning-engine",
-        "asset_id": "plan:legacy:19e7f3da4b052a9326476c0f730417cd2c98cd9f6ccd4d955e103dea7d745d3c",
-        "revision": 2,
-        "content_digest": "sha256:9081ef80c06e54ee708db3326635fea7f9c8021dc2724a6e062607b79045c790"
-      }
-    },
-    {
-      "sequence": 421,
-      "previous_record_digest": "sha256:14a4059065fe193c24c5424fd52ef879778c86c56ae598431e059cdbb45c80d4",
-      "record_digest": "sha256:894c39580a2bd84de5719132dab55d443d635d41c229758b19df580adb92090a",
-      "command_id": "plan-draft:issue-789:token-ingest-retirement-execution:1",
-      "receipt_id": "certificate:6f4aadefa55d3ba865ea0f508c69fdea",
-      "receipt_digest": "sha256:7ff3e5eeda582c19fb272a7a4317450105d683e7f684c23d6cb15212a3a2eb67",
-      "decision_digest": "sha256:f994e328c684b1eb8668a258f816bfbdda3af50e11fc3c426193dd4dca7f5148",
-      "binding": {
-        "path": "docs/plans/PLAN-L7-789-token-ingest-retirement-execution.md",
-        "plan_id": "PLAN-L7-789-token-ingest-retirement-execution",
-        "asset_id": "plan:6f4aadefa55d3ba865ea0f508c69fdea",
+        "path": "docs/plans/PLAN-L6-816-release-notes-draft-contract.md",
+        "plan_id": "PLAN-L6-816-release-notes-draft-contract",
+        "asset_id": "plan:2f5be4ac3a56270474529ae239e69d4d",
         "revision": 1,
-        "content_digest": "sha256:d68baa1e405fa0439974075658d9538fe0bed158af431a91e82cf27c2908664f"
-      }
-    },
-    {
-      "sequence": 422,
-      "previous_record_digest": "sha256:894c39580a2bd84de5719132dab55d443d635d41c229758b19df580adb92090a",
-      "record_digest": "sha256:3ade59259c59179fc21a633ffaa2fd74e00ed222422f3999d19effa03393eb64",
-      "command_id": "plan-revise:issue-789:token-ingest-retirement-execution:parent-drive:r2",
-      "receipt_id": "certificate:5d6e145f38a574f82b710676ec7cab84",
-      "receipt_digest": "sha256:96dbe21d43941c8ee5f3904d6079be72de4442f5a64a682372b8458604f44d7e",
-      "decision_digest": "sha256:8745a7cdd4890bc51dbb9fd648ce54e33b6aca0aa81318c3bbb8c91f663c9342",
-      "binding": {
-        "path": "docs/plans/PLAN-L7-789-token-ingest-retirement-execution.md",
-        "plan_id": "PLAN-L7-789-token-ingest-retirement-execution",
-        "asset_id": "plan:6f4aadefa55d3ba865ea0f508c69fdea",
-        "revision": 2,
-        "content_digest": "sha256:4ae4bae7b167d20f100b0f6e8c64bb7593257e075ee008dc81fe5f751e3081eb"
+        "content_digest": "sha256:6590e205e84be333d78b12584ff4a360eeed6462a7751812394bdc6ec44acc08"
       }
     }
   ]
