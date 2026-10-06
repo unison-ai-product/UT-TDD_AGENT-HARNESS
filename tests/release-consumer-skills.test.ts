@@ -165,7 +165,7 @@ describe("PR-2a release consumer skills", () => {
     }
   });
 
-  it("CANDIDATE-U-RCDEV-007: bundled setup/session materialization is digest checked and ignored", () => {
+  it("U-835-001 / CANDIDATE-U-RCDEV-007: bundled setup/session materialization is digest checked and ignored", () => {
     const root = fixtureRoot();
     try {
       if (!generation) throw new Error("release-consumer bundle was not built");

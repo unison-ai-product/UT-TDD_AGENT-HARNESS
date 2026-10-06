@@ -75,7 +75,7 @@ async function runCapturedSessionStart(
     "UT_TDD_CODEX_SESSIONS_DIR",
   ];
   const savedEnv = new Map(envKeys.map((key) => [key, process.env[key]]));
-  const savedCwd = process.cwd();
+  // UT_TDD_PROJECT_DIR provides the isolated fixture root; do not mutate cwd.
   const savedArgv = process.argv;
   const savedExitCode = process.exitCode;
   const savedStdinIsTTY = Object.getOwnPropertyDescriptor(process.stdin, "isTTY");
@@ -87,7 +87,6 @@ async function runCapturedSessionStart(
   let result: unknown;
 
   try {
-    process.chdir(root);
     process.env.UT_TDD_PROJECT_DIR = root;
     process.env.CLAUDE_PROJECT_DIR = "";
     process.env.HOME = root;
@@ -132,7 +131,6 @@ async function runCapturedSessionStart(
       capturedCommandPrototype.parseAsync = originalParseAsync;
     }
     process.argv = savedArgv;
-    process.chdir(savedCwd);
     for (const [key, value] of savedEnv) {
       if (value === undefined) delete process.env[key];
       else process.env[key] = value;
@@ -212,7 +210,7 @@ describe("runtime hook entrypoints", () => {
     });
   });
 
-  it("shared CLI session/hook commands record a PLAN digest in a temp repo", () => {
+  it("U-835-007: shared CLI session/hook commands record a PLAN digest in a temp repo", () => {
     const cwd = mkdtempSync(join(tmpdir(), "ut-tdd-hook-"));
     try {
       ensureTrackedProjectIdentity(cwd, "fixture/runtime-hook-entrypoints");
@@ -346,7 +344,7 @@ describe("runtime hook entrypoints", () => {
     }
   });
 
-  it("blocks hook state writes when no repository root can be resolved", () => {
+  it("U-835-002: blocks hook state writes when no repository root can be resolved", () => {
     const isolated = mkdtempSync(join(tmpdir(), "ut-tdd-hook-unresolved-"));
     try {
       const run = runCli(

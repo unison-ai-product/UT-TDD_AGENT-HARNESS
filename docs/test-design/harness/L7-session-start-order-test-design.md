@@ -33,7 +33,19 @@ append試行は維持し、event durable性は実配布受入で別に検証す�
 
 ## Seven unit/integration oracles and one acceptance oracle
 
-| Formal oracle | 実行・mutation | RED / attack | Green観測 |
+| 正式オラクルID | 既存テストラベル / trace対象 |
+|---|---|
+| U-835-001 | `U-835-001 / CANDIDATE-U-RCDEV-007: bundled setup/session materialization is digest checked and ignored` in `tests/release-consumer-skills.test.ts`; shared generation fixture only |
+| U-835-002 | `U-835-002: blocks hook state writes when no repository root can be resolved` in `tests/runtime-hook-entrypoints.test.ts` |
+| U-835-003 | `U-835-003: the real session-start action appends before its materialize side-effect boundary` in `tests/runtime-hook-entrypoints.test.ts` |
+| U-835-004 | `U-835-004: the exact session event remains readable during a bounded side-effect barrier` in `tests/runtime-hook-entrypoints.test.ts` |
+| U-835-005 | `U-835-005: a side-effect error does not roll back the already-appended session event` in `tests/runtime-hook-entrypoints.test.ts` |
+| U-835-006 | `U-835-006: the real session-start action preserves its explicit session ID and current plan` in `tests/runtime-hook-entrypoints.test.ts` |
+| U-835-007 | `U-835-007 / U-FSF-007: scanDanglingStops は dangling session のみ forced_stop 記録 / idempotent / current 除外 / fail-open` in `tests/forced-stop.test.ts`; `U-835-007: shared CLI session/hook commands record a PLAN digest in a temp repo` in `tests/runtime-hook-entrypoints.test.ts` |
+
+### オラクル設計詳細
+
+| 設計参照行 | 実行・mutation | RED / attack | Green観測 |
 |---|---|---|---|
 | U-835-001 — bundled production-order witness | 既存共有 `buildNodeGeneration` / `runBundledCli` のconsumer fixtureを再利用。`.ut-tdd/assets/skills/SKILL_MAP.md` をdirectoryへ置換し、実sealed Node bundleでsession startを実行 | bundle materializationのdirectory-read errorより前にdispatchされず、exact eventが残らない。または別のsetup/root errorをmaterialize faultと誤認 | 期待するdirectory-read errorを明示確認し、同じsession IDの `session_start` が先行して保存されたことを確認。generation buildは増やさない |
 | U-835-002 — rejected-root negative | 既存 `tests/runtime-hook-entrypoints.test.ts` のroot markerを欠くisolated cwd/envによる実CLI起動 | rejection前のevent/JSONL/他session-state write、recovery diagnostic欠落、または実経路にないidentity admissionを要求 | `requireRuntimeRepoRoot` が既存recovery diagnosticで拒否し、session event appendは0件。identity/HEAD admissionの追加は主張しない |
@@ -46,7 +58,7 @@ append試行は維持し、event durable性は実配布受入で別に検証す�
 
 ## Existing ownership / pairing
 
-- U-SLOG-005 is the existing append/fail-open oracle. U-835-002 and U-835-007 reuse the named existing runtime-hook/forced-stop tests. U-835-001 reuses the shared release-consumer bundle fixture/build; U-835-003..006 exercise the production command route through a captured real Commander instance. These mappings supplement rather than replace existing tests.
+- U-SLOG-005は既存のappend/fail-open oracle。正式IDとtest labelの対応は上の宣言表に記す。U-835-001は既存release-consumer共有fixture/buildを再利用し、U-835-003..006はcaptured real Commander instanceを通じて実CLI command routeを実行する。既存testを置換せず、対応関係を補足する。
 - `session start` actionの既存境界は `requireRuntimeRepoRoot` によるroot解決。`requireProjectMemoryRoot` → `resolveProjectMemoryRoot` → `loadProjectIdentityFromHead` はこの実経路に含まれないため、identity admissionとして契約へ持ち込まない。
 - `PLAN-L7-531` owns actual Pack/AT-DIST-003 consumer path. `PLAN-L7-422` owns F2 digest-missing visibility and is only referenced.
 - Existing SESSION start fail-open, current-plan resolution, forced-stop current-ID exclusion, skill work, digest behavior, and other delegation/team entrypoints stay unchanged.
