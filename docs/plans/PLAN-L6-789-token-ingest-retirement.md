@@ -7,7 +7,7 @@ drive: agent
 route_signal: redesign
 route_mode: redesign
 created: 2026-10-05
-updated: 2026-10-05
+updated: 2026-10-06
 owner: PO / Claude (author) · Codex gpt-6.1-sol (非著者 closing review)
 parent_design: docs/design/harness/L6-function-design/function-spec.md
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
@@ -40,26 +40,53 @@ dependencies:
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/789
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/588
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/840
-review_evidence: []
-status: draft
+review_evidence:
+  - reviewer: gpt-6.1-sol
+    review_kind: cross_agent
+    reviewed_at: 2026-10-06T07:51:53.775Z
+    tests_green_at: 2026-10-06T07:46:31Z
+    verdict: PASS
+    worker_model: claude-opus-5-5
+    reviewer_model: gpt-6.1-sol
+    subject_head: 1efba92f232a6b5846abaf20fc16ce6d364f6aeb
+    scope: PR 847 (Issue 789 PR-1) の post-green 非著者 preflight review。PLAN-L6-789
+      の退役契約 (§2 supersede 境界、§4 PR-1、§5 退役 oracle) が exact head で実装・test-design
+      (U-TOKRET-001..005) に降りていることを確認した。PR 842 の Sol PASS (a57774ad) は CI green
+      より前だったため、本 entry で確定する。review receipt
+      sha256:cf6fbbc7d380e110f1bbed2e8176314eca467638f7437d3fdbfe1915bc54109b。
+    green_commands:
+      - kind: unit_test
+        command: node scripts/run-vitest-snapshot.ts (harness-check-linux /
+          harness-check-windows full 回帰、CI run 37429292978)
+        runner: ci
+        scope: full
+        exit_code: 0
+        completed_at: 2026-10-06T07:46:31Z
+        evidence_path: docs/test-design/harness/L7-unit-test-design.md
+        output_digest: sha256:05d48011553a6b7726ecb35ba8aa27e6c86802ea115964781c33b7f719059bec
+        anchor_commit: 1efba92f232a6b5846abaf20fc16ce6d364f6aeb
+    citations:
+      - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/847
+      - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/actions/runs/37429292978
+status: confirmed
 sub_doc: function-spec
 github_issue_id: 789
 supersedes:
   - PLAN-L7-57-token-telemetry-tracker
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:9eb40ac57c66832a75be2af3f89eca4f
-  command_id: plan-draft:issue-789:token-ingest-retirement:1:rechain-2
-  admitted_at: 2026-10-05T11:50:27.940Z
-  source_digest: sha256:6e321c50a2d970b43e360753ff86de89b2e43e21d6832c5565a5e4ec8b34b142
-  decision_digest: sha256:b4a466616ec7f69ee5334aaaf797873279afa79d17efae921ca5068d5e8add36
-  receipt_digest: sha256:e22ff235e075d4224f3208f685d100cc803d80d344b7b657dbae5b5438aeae2f
+  receipt_id: certificate:3c9aa93b31ac39975532e681ff837d0f
+  command_id: plan-revise:issue-789:l6-789:confirm:r2
+  admitted_at: 2026-10-06T08:03:10.784Z
+  source_digest: sha256:c9479166988ce0bfd700d72e3b350e46fbfd23eeff6ca011bb9d87f4446a0a55
+  decision_digest: sha256:1459039441dcea98e0a3465a73f590cb1540b8eeb63d77bd84709d88c2ea7188
+  receipt_digest: sha256:38d0714748a496838d4b4ada6e0474e8d862ad52166a422e8e6ce31731c0dc0a
   binding:
     path: docs/plans/PLAN-L6-789-token-ingest-retirement.md
     plan_id: PLAN-L6-789-token-ingest-retirement
     asset_id: plan:9eb40ac57c66832a75be2af3f89eca4f
-    revision: 1
-    content_digest: sha256:6e321c50a2d970b43e360753ff86de89b2e43e21d6832c5565a5e4ec8b34b142
+    revision: 2
+    content_digest: sha256:c9479166988ce0bfd700d72e3b350e46fbfd23eeff6ca011bb9d87f4446a0a55
   route:
     signal: redesign
     mode: redesign
@@ -80,11 +107,10 @@ admission_receipt:
       target_revision: 1
   reentry:
     target_plan_id: PLAN-L6-789-token-ingest-retirement
-    target_revision: 1
+    target_revision: 2
     phase: forward_merge
-  escape_reason: "Issue #789 (PO 承認 2026-09-30): 常時 token 取り込みと model_evaluations
-    生成を退役させる。PLAN-L7-57 の token ingest 契約を supersede し、#840 の削除 artifact を所有する
-    confirmed PLAN の部分退役を前例 #424 (PLAN-L6-104) と同形で記録する。"
+  escape_reason: "Issue #789 PR-1 (PR #847): PLAN-L6-789 を post-green 非著者
+    preflight review の evidence で confirmed にする。契約本文は変えない。"
   supersedes:
     - PLAN-L7-57-token-telemetry-tracker
 ---
