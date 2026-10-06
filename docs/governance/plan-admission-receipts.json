@@ -6976,6 +6976,22 @@
         "revision": 3,
         "content_digest": "sha256:23a01566d02e0b44e8a1ae6d2289823458257190b406329e265fc34ddbd785b1"
       }
+    },
+    {
+      "sequence": 437,
+      "previous_record_digest": "sha256:a6af93bdadbfe62b97131401158e0187467566aed875c5b76827a11e4f9a756f",
+      "record_digest": "sha256:5687f99e1de841dac7b8f9aa3d95815a92c3bb7e573c122f2a69d5bb56f14701",
+      "command_id": "plan-revise:issue-789:legacy-53:5:r4-pass-evidence",
+      "receipt_id": "certificate:4821cffacc6099e15d7c82bef179bbf6",
+      "receipt_digest": "sha256:3987265869f7c3e347f7732e7aa11ba109945e9add3206322036702f182e7ce8",
+      "decision_digest": "sha256:452af953fe129f0c872f1466b55872ab99d912c97088d5666e79ebbb36186534",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-53-learning-engine.md",
+        "plan_id": "PLAN-L7-53-learning-engine",
+        "asset_id": "plan:legacy:19e7f3da4b052a9326476c0f730417cd2c98cd9f6ccd4d955e103dea7d745d3c",
+        "revision": 5,
+        "content_digest": "sha256:7b6c20425b3672b034991d402c25d554803cc3de5f708be8bd3c1401cb86631d"
+      }
     }
   ]
 }

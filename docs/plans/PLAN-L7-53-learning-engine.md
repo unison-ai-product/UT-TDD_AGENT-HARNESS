@@ -16,33 +16,31 @@ agent_slots:
 review_evidence:
   - reviewer: gpt-6.1-sol
     review_kind: cross_agent
-    reviewed_at: 2026-10-06T04:33:45.377Z
-    tests_green_at: 2026-10-06T04:12:09Z
-    verdict: flag
+    reviewed_at: 2026-10-06T07:51:53.775Z
+    tests_green_at: 2026-10-06T07:46:31Z
+    verdict: PASS
     worker_model: claude-opus-5-5
     reviewer_model: gpt-6.1-sol
-    subject_head: a68b6e97ed30e508244e765fcaa97dc531ba9a9d
-    scope: PR 847 exact head a68b6e97ed30e508244e765fcaa97dc531ba9a9d に対する非著者
-      closing review (Sol r2b、post-green)。verdict は FLAG / blocking 1
-      件で、その唯一の指摘は本 PLAN の updated を 2026-06-15 へ巻き戻した点 (503c1b4c)。本 rev 4 で
-      updated を実変更日 2026-10-06 に戻し、旧 review_evidence を本文 §レビュー履歴 へ移して是正した。是正後の
-      exact head は r3 が再検する。receipt は author family claude / reviewer family
-      codex を記録している。
+    subject_head: 1efba92f232a6b5846abaf20fc16ce6d364f6aeb
+    scope: PR 847 exact head 1efba92f232a6b5846abaf20fc16ce6d364f6aeb に対する非著者
+      closing review (Sol r4、post-green、bounded 再検)。verdict は PASS / blocking
+      0。r2b の唯一の指摘 (本 PLAN の updated の巻き戻し) が rev 4
+      で是正されたことと、是正による退行が無いことを確認した。receipt は reviewer family codex を記録している。
     green_commands:
       - kind: unit_test
         command: node scripts/run-vitest-snapshot.ts (harness-check-linux /
-          harness-check-windows full 回帰、CI run 37410675854)
+          harness-check-windows full 回帰、CI run 37429292978)
         runner: ci
         scope: full
         exit_code: 0
-        completed_at: 2026-10-06T04:12:08Z
+        completed_at: 2026-10-06T07:46:31Z
         evidence_path: docs/test-design/harness/L7-unit-test-design.md
-        output_digest: sha256:920a481e00e262502ab4944869d34830c75371faaa1af7561382bb1967763064
-        anchor_commit: a68b6e97ed30e508244e765fcaa97dc531ba9a9d
+        output_digest: sha256:05d48011553a6b7726ecb35ba8aa27e6c86802ea115964781c33b7f719059bec
+        anchor_commit: 1efba92f232a6b5846abaf20fc16ce6d364f6aeb
     citations:
       - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/847
-      - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/actions/runs/37410675854
-      - .ut-tdd/review/receipts/0ff8d0adebd7e7c8c5b0324d546a4a2ed66c32ed482825374c49760d13f41724.json
+      - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/actions/runs/37429292978
+      - .ut-tdd/review/receipts/cf6fbbc7d380e110f1bbed2e8176314eca467638f7437d3fdbfe1915bc54109b.json
 generates:
   - artifact_path: src/schema/harness-db.ts
     artifact_type: source_module
@@ -80,18 +78,18 @@ route_mode: forward
 status: confirmed
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:9ebebf8af4035805de393ecdcc3275e8
-  command_id: plan-revise:issue-789:legacy-53:4:post-green-evidence:rechain-4
-  admitted_at: 2026-10-06T08:01:17.066Z
-  source_digest: sha256:c692376e5f3082acd58c95817315357c531161ece718383b648ee2e8cb1180cc
+  receipt_id: certificate:4821cffacc6099e15d7c82bef179bbf6
+  command_id: plan-revise:issue-789:legacy-53:5:r4-pass-evidence
+  admitted_at: 2026-10-06T08:06:05.653Z
+  source_digest: sha256:7b6c20425b3672b034991d402c25d554803cc3de5f708be8bd3c1401cb86631d
   decision_digest: sha256:452af953fe129f0c872f1466b55872ab99d912c97088d5666e79ebbb36186534
-  receipt_digest: sha256:db0f2ad78eee453ee4b7b64e5dcbf83711c6c6112afc27a9938a4956822abfe6
+  receipt_digest: sha256:3987265869f7c3e347f7732e7aa11ba109945e9add3206322036702f182e7ce8
   binding:
     path: docs/plans/PLAN-L7-53-learning-engine.md
     plan_id: PLAN-L7-53-learning-engine
     asset_id: plan:legacy:19e7f3da4b052a9326476c0f730417cd2c98cd9f6ccd4d955e103dea7d745d3c
-    revision: 4
-    content_digest: sha256:c692376e5f3082acd58c95817315357c531161ece718383b648ee2e8cb1180cc
+    revision: 5
+    content_digest: sha256:7b6c20425b3672b034991d402c25d554803cc3de5f708be8bd3c1401cb86631d
   route:
     signal: forward
     mode: forward
@@ -241,4 +239,41 @@ review_evidence:
       test-hardening follow-up として記録 (非ブロッカー、green コードへの増分)。V-model closure
       用の後追い review (実装は 2026-06-15 同日 merge 済 green、status=draft +
       review_evidence 空のまま放置されていたのを本クローズで confirmed 化)。
+```
+
+### rev 4 の review_evidence (rev 5 で移動)
+
+rev 5 (2026-10-06、#847) で frontmatter の review_evidence を Sol r4 の post-green PASS 証跡に置き換えたため、rev 4 の entry (Sol r2b、flag) を改変せずここへ移した。
+
+```yaml
+review_evidence:
+  - reviewer: gpt-6.1-sol
+    review_kind: cross_agent
+    reviewed_at: 2026-10-06T04:33:45.377Z
+    tests_green_at: 2026-10-06T04:12:09Z
+    verdict: flag
+    worker_model: claude-opus-5-5
+    reviewer_model: gpt-6.1-sol
+    subject_head: a68b6e97ed30e508244e765fcaa97dc531ba9a9d
+    scope: PR 847 exact head a68b6e97ed30e508244e765fcaa97dc531ba9a9d に対する非著者
+      closing review (Sol r2b、post-green)。verdict は FLAG / blocking 1
+      件で、その唯一の指摘は本 PLAN の updated を 2026-06-15 へ巻き戻した点 (503c1b4c)。本 rev 4 で
+      updated を実変更日 2026-10-06 に戻し、旧 review_evidence を本文 §レビュー履歴 へ移して是正した。是正後の
+      exact head は r3 が再検する。receipt は author family claude / reviewer family
+      codex を記録している。
+    green_commands:
+      - kind: unit_test
+        command: node scripts/run-vitest-snapshot.ts (harness-check-linux /
+          harness-check-windows full 回帰、CI run 37410675854)
+        runner: ci
+        scope: full
+        exit_code: 0
+        completed_at: 2026-10-06T04:12:08Z
+        evidence_path: docs/test-design/harness/L7-unit-test-design.md
+        output_digest: sha256:920a481e00e262502ab4944869d34830c75371faaa1af7561382bb1967763064
+        anchor_commit: a68b6e97ed30e508244e765fcaa97dc531ba9a9d
+    citations:
+      - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/847
+      - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/actions/runs/37410675854
+      - .ut-tdd/review/receipts/0ff8d0adebd7e7c8c5b0324d546a4a2ed66c32ed482825374c49760d13f41724.json
 ```
