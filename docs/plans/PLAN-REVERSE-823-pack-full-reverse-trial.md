@@ -41,18 +41,18 @@ status: draft
 github_issue_id: 823
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:45020f5aca9a1cdaeab8c93753edaf64
-  command_id: plan-revise:issue-823:exec-method:r4:781647c5a41d
-  admitted_at: 2026-10-06T03:35:24.422Z
-  source_digest: sha256:945f29abf72df419b4c9ab3f4d6b7a8bd75355dff419acaada00de2885b53cde
-  decision_digest: sha256:5a284a0c43cd7889ad1b2fe727761c44034807e9a67eb9c99bea92b6f2471c33
-  receipt_digest: sha256:f72d91c39e3d15f146929aac5c1e9a7ab17031e4dbca4cfdacbe38a18e1034ac
+  receipt_id: certificate:69f9fbef76ab2bb90d6fc97ab6d80789
+  command_id: plan-revise:issue-823:exec-method:sol-r1-fix:r5:021de9d4e5d2
+  admitted_at: 2026-10-06T03:43:44.121Z
+  source_digest: sha256:9dd1d6dee1e532e812578ea02309019d8c0661a3b47d59207d57981c8262489c
+  decision_digest: sha256:61979faf705a5ab403a343f042f502c04ec4fdf079e4749d8141d91d3183d39c
+  receipt_digest: sha256:becc99530ad443bf33d2826bf9453ecc026dbe66fee89992e47cb3033ea21f92
   binding:
     path: docs/plans/PLAN-REVERSE-823-pack-full-reverse-trial.md
     plan_id: PLAN-REVERSE-823-pack-full-reverse-trial
     asset_id: plan:17005d81c24cbdca71cced133ed6d123
-    revision: 4
-    content_digest: sha256:945f29abf72df419b4c9ab3f4d6b7a8bd75355dff419acaada00de2885b53cde
+    revision: 5
+    content_digest: sha256:9dd1d6dee1e532e812578ea02309019d8c0661a3b47d59207d57981c8262489c
   route:
     signal: reverse
     mode: reverse
@@ -70,13 +70,12 @@ admission_receipt:
     implementation_disposition: preserved
   reentry:
     target_plan_id: PLAN-REVERSE-823-pack-full-reverse-trial
-    target_revision: 4
+    target_revision: 5
     phase: forward_merge
-  escape_reason: "Issue 823: #825 (ut-tdd claude の隔離実行 profile) を作らない PO 方針 (#619
-    方針メモ 2026-10-05) により rev 3 の実行経路が失効したため、実行方式を標準サブエージェントの起動制約 + GUI 側の作業場所の隔離
-    + 全 transcript の事後監査に改訂する。盲検は部分的にしか強制できないことを強制の層 3 段で記録し、承認は結果 PR の exact
-    HEAD に対する canonical review custody (#619 attestation 経路) で行う。予算の上限保証を撤回し
-    maxTurns + 監視 + 超過時の結果無効化に置き換える。shard・工程・採点・record の契約は変えない"
+  escape_reason: "Issue 823: PR #850 Sol r1 FLAG の是正。§D1 の監査規則に Grep / Glob の
+    pattern による探索範囲の逸脱 (.. segment・絶対 pattern・展開) と、tool_result が返した全 file path
+    の allowlist 照合を追加し fail-close とする。run 開始時の link 不在確認、合成試験の逸脱ケース、未検証の探索範囲を
+    unverifiable_residual に明記する。方式は変えない"
 ---
 
 # PLAN-REVERSE-823: Pack 全量の blind Reverse 試行
@@ -170,6 +169,14 @@ PLAN ID の引用は 319 ファイル・2148 箇所、`docs/design/` への言�
   どの役でも、`docs/design`・`docs/plans`・`docs/test-design` を含む path と `C:/dev/UT-TDD-agent-harness` 配下の path は
   allowlist に入らない。cwd は作業場所の root なので、path を省略した Grep / Glob は `out/`・`.claude/` を含んでしまう。
   よって **path を省略した Grep / Glob は違反**とする (rev 3 の「cwd = `pack/` とみなして許す」は撤回)。
+  **Grep / Glob の探索範囲 (rev 5)**: 入力の path だけでなく、pattern (Glob の `pattern`、Grep の `glob`) が指す範囲も監査する。
+  実効の探索範囲は `resolve(path, pattern の固定部分)` とし、これが読取 allowlist の外に出れば違反とする。具体的には、(1) pattern に
+  `..` の segment を含む、(2) pattern が絶対 path (ドライブ文字・`/`・`\` で始まる) で allowlist の外を指す、(3) `~` や環境変数の展開を含む、
+  のいずれかを違反とする。さらに pattern の形に依らず、**tool_result が返した全ての file path** (Glob の一覧、Grep の
+  `files_with_matches` / `content` / `count` の各行の path) を実体 path に正規化し、読取 allowlist の外のものが 1 件でもあれば違反とする
+  (pattern の解釈が監査スクリプトとずれても、返却側で逸脱を捕まえる)。返却の path を解析できない tool_result は違反とみなす (fail-close)。
+  run 開始時に、作業場所の配下 (`pack/`・`frozen/`) に symlink・junction が 1 件も無いことを確かめて manifest に記録する。
+  許可する tool (Read / Grep / Glob / Write) では link を作れないので、run 中に増えることはない。
   Write は、そのセッションの出力先 (`out/<shard_id>/`、統合役は `out/_system/`) の外を指せば違反とする。
   さらに、サブエージェント transcript の user message のうち、最初の指示文 (sha256 が manifest の記録と一致すること) と
   tool_result 以外のもの (operator セッションからの追加の指示) があれば違反とする。
@@ -180,7 +187,7 @@ PLAN ID の引用は 319 ファイル・2148 箇所、`docs/design/` への言�
   |---|---|---|
   | 起動時に強制される | サブエージェントが使える tool の集合 (定義の `tools:`)、turn 数の上限 (`maxTurns`)、model | Claude Code の標準サブエージェント機能 (harness のコードではない)。run 前の probe (§D1 の合成試験) で、定義外の tool が呼べないことを実測してから本番に入る |
   | 起動時に強制されない (事後に検出し、その run を無効にする) | Read / Grep / Glob / Write の対象 path、operator からの追加指示、web 系 tool の混入 | harness の agent-guard は `subagent_type` の allowlist と model の下限しか見ず、tool も path も検査しない (`src/runtime/agent-guard.ts:93-160`)。そもそも作業場所では source repo の hook が動かない。作業場所の `.claude/settings.json` に置く `permissions.deny` (source repo と `docs/design` 等への Read) は多層防御として置くが、Grep / Glob への効き方を証明できないので、判定には使わない |
-  | 検出もできない (残余リスクとして記録する) | user 階層の設定と指示の混入 (`~/.claude/settings.json` の hooks・env・permissions、`~/.claude/CLAUDE.md`)、サブエージェントが CLAUDE.md 類をどこまで受け取るか | GUI 起動では `--setting-sources` などの CLI option を渡せず、user 階層を外せない。代わりに、run 開始時の `~/.claude/settings.json` と `~/.claude/CLAUDE.md` の sha256、有効な plugin と MCP server の一覧 (0 件であること) を `run-manifest.json` に記録する。これらに `docs/design` の内容が無いことは run 前に operator が確かめ、確認結果を manifest に残す |
+  | 検出もできない (残余リスクとして記録する) | user 階層の設定と指示の混入 (`~/.claude/settings.json` の hooks・env・permissions、`~/.claude/CLAUDE.md`)、サブエージェントが CLAUDE.md 類をどこまで受け取るか。Grep / Glob が内部で探索したが結果に現れなかったファイル (hit しなかった探索の範囲は transcript に残らない。結果に現れないので内容も名前も context に入らないが、探索したこと自体は証明も否定もできない) | GUI 起動では `--setting-sources` などの CLI option を渡せず、user 階層を外せない。代わりに、run 開始時の `~/.claude/settings.json` と `~/.claude/CLAUDE.md` の sha256、有効な plugin と MCP server の一覧 (0 件であること) を `run-manifest.json` に記録する。これらに `docs/design` の内容が無いことは run 前に operator が確かめ、確認結果を manifest に残す |
 - **生 transcript の所在 (実測)**: 標準サブエージェントの transcript は
   `~/.claude/projects/<cwd-slug>/<operator-session-uuid>/subagents/agent-<agentId>.jsonl` に、定義名・model を持つ
   `agent-<agentId>.meta.json` と対で残る (`agentType` / `model` / `toolUseId`)。各行は `isSidechain`・`agentId`・`cwd`・`sessionId`・
@@ -223,7 +230,9 @@ R0 網羅率の定義: ファイル f が「読まれた」とは、f に対す�
 失敗・切り詰め (truncated 表示や省略記号) を含む tool_result は、その範囲を読了に数えない。Grep / Glob の hit も数えない。
 空ファイルは、成功した Read が 1 回あれば読了とする。テキストでないファイル (画像など) は inventory に載せたうえで分母から外し、
 件数を `run-manifest.json` に記録する。網羅率 = 読了ファイル数 ÷ 分母の件数で、100% が合格。監査ログと inventory を突き合わせて機械で算出する。
-監査スクリプトは本番の前に、外部の絶対 path・junction 経由の読取・path を省略した Grep / Glob・出力先外への Write・operator からの追加指示・禁止 tool・読取失敗・切り詰め・transcript 欠損・meta.json 欠落を仕込んだ合成 transcript で、
+監査スクリプトは本番の前に、外部の絶対 path・junction 経由の読取・path を省略した Grep / Glob・
+Glob の pattern による逸脱 (path=`pack/` で pattern=`../out/**`、source repo を指す絶対 pattern)・Grep の `glob` による同じ逸脱・
+pattern は allowlist 内に見えるが返却 path が外にある結果・返却 path を解析できない結果・出力先外への Write・operator からの追加指示・禁止 tool・読取失敗・切り詰め・transcript 欠損・meta.json 欠落を仕込んだ合成 transcript で、
 それぞれを検出できることを確かめる。
 
 ### D3 工程 (R0〜R4 と統合パス)
@@ -415,7 +424,8 @@ record (§D6) の契約は変えない。
 - 盲検の扱い: 起動時に強制できるのは tool の集合までで、path と user 階層の混入は強制できない。前者は事後監査で違反を検出して run を無効にし、
   後者は `unverifiable_residual` として manifest に記録する。承認は結果 PR の exact HEAD に対する canonical な review custody で行う (§D1 末尾)。
 - 予算: 上限を超えないことの保証を撤回し、`maxTurns` + 監視 + 超過時の結果無効化に置き換えた (§D7)。
-- 方式に伴う oracle の調整: path を省略した Grep / Glob を違反に変更 (cwd が作業場所の root になるため)。R0 網羅の行範囲の取り方を、
+- 方式に伴う oracle の調整: path を省略した Grep / Glob を違反に変更 (cwd が作業場所の root になるため)。Grep / Glob の pattern による探索範囲の逸脱と、
+  返却 path の allowlist 外を違反に追加し、合成試験に入れた (rev 5、#850 の Sol r1 FLAG の是正)。R0 網羅の行範囲の取り方を、
   サブエージェント transcript の実形式に合わせた (§D2)。
 - 実測 (2026-10-06、当 repo の operator 環境の既存サブエージェント transcript 154 本、meta.json の欠落 0): Read の tool_use 843 件の全てに対応する
   `tool_result` があり、構造化された結果 (`toolUseResult`) を持つのは 15 件だけ、本文の先頭が行番号の形 (行番号 + タブ) のものは 783 件だった。
