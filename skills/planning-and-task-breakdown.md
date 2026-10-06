@@ -114,7 +114,7 @@ around pair-freeze and trace-freeze is a decomposition error.
 ```
 ut-tdd plan lint            # schema + schedule + dependency existence
 ut-tdd doctor               # all harness governance gates
-ut-tdd graph                # visualise PLAN dependency graph
+ut-tdd graph export         # visualise the relation graph (mermaid|dot)
 ut-tdd status               # surface active/stalled PLANs
 ```
 
