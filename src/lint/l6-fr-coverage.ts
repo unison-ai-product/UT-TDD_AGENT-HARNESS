@@ -7,6 +7,49 @@ export interface L6FrCoverageDocs {
   frIds: string[];
   coverageText: string;
   repoRoot?: string;
+  /** 退役行の oracle 宣言確認に使う L7 unit test design 本文。無ければ退役行は全て未宣言扱い。 */
+  l7TestDesignText?: string;
+}
+
+const RETIRED_ROW_MARKER = /\bimplementation_state:\s*retired\b/;
+
+function isRetiredRow(row: L6FrCoverageRow): boolean {
+  return RETIRED_ROW_MARKER.test(row.unit_contract);
+}
+
+function oracleIds(cell: string): string[] {
+  return [...cell.matchAll(/\bU-[A-Z0-9]+(?:-[A-Z0-9]+)*/g)].map((m) => m[0]);
+}
+
+/** 表の先頭セルで宣言された oracle だけを宣言とみなす (本文の再引用は数えない)。 */
+function isDeclaredOracle(text: string | undefined, id: string): boolean {
+  if (!text) return false;
+  return new RegExp(`^\\|\\s*\`?${escapeRe(id)}\`?\\s*\\|`, "m").test(text);
+}
+
+function retiredOracleDeclared(
+  row: L6FrCoverageRow,
+  l7TestDesignText: string | undefined,
+): boolean {
+  const ids = oracleIds(row.unit_oracle);
+  return ids.length > 0 && ids.every((id) => isDeclaredOracle(l7TestDesignText, id));
+}
+
+/**
+ * fr-unit-coverage.md の行が U-* oracle へ接続済みか。l6-fr-coverage と descent-obligation の
+ * 両方がこの判定を共有する (Issue #848: 退役行は宣言済み退役 oracle で接続とみなす)。
+ */
+export function isFrCoverageRowOracleConnected(
+  row: L6FrCoverageRow,
+  l7TestDesignText: string | undefined,
+): boolean {
+  if (isRetiredRow(row)) return retiredOracleDeclared(row, l7TestDesignText);
+  return /\bU-FR-L1-\d+\b/.test(row.unit_oracle);
+}
+
+/** 実 repo の L7 unit test design 本文 (退役行の oracle 宣言確認用)。 */
+export function loadL7UnitTestDesignText(repoRoot: string): string {
+  return readSpecText(repoRoot, "docs/test-design/harness/L7-unit-test-design.md") ?? "";
 }
 
 export interface L6FrCoverageRow {
@@ -128,7 +171,13 @@ export function analyzeL6FrCoverage(docs: L6FrCoverageDocs): L6FrCoverageResult 
     const refs = contractRefs(row.unit_contract);
     if (!row.unit_contract || refs.length === 0) missingFields.push("unit_contract");
     if (!/\bU-[A-Z0-9-]+/.test(row.unit_oracle)) missingFields.push("unit_oracle");
-    if (row.unit_oracle && row.unit_oracle !== expectedOracle(row.fr_id)) {
+    if (isRetiredRow(row)) {
+      // 退役 FR (PLAN-L6-789 / Issue #848) だけは U-FR-L1-xx の代わりに、L7 unit test design に
+      // 宣言済みの退役 oracle へ対応付けてよい。未宣言 ID が 1 つでもあれば fail-close する。
+      if (!retiredOracleDeclared(row, docs.l7TestDesignText)) {
+        missingFields.push("unit_oracle_undeclared");
+      }
+    } else if (row.unit_oracle && row.unit_oracle !== expectedOracle(row.fr_id)) {
       missingFields.push("unit_oracle_match");
     }
     if (missingFields.length > 0) {
@@ -196,6 +245,7 @@ export function loadL6FrCoverageDocs(repoRoot: string = process.cwd()): L6FrCove
       "utf8",
     ),
     repoRoot,
+    l7TestDesignText: loadL7UnitTestDesignText(repoRoot),
   };
 }
 

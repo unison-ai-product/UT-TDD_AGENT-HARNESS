@@ -182,7 +182,6 @@ export function checkDbProjectionIngestion(
         repoRoot,
         db,
         timing: options.timing === true,
-        skipTokenTelemetry: true,
       });
       let telemetryStats: DbTelemetryProvenanceStats[] = [];
       timed("telemetry-stats", () => {
@@ -224,7 +223,7 @@ export function checkDesignDetection(repoRoot: string): { messages: string[]; ok
   }
   const db = openHarnessDb(":memory:", { repoRoot });
   try {
-    rebuildHarnessDb({ repoRoot, db, skipTokenTelemetry: true });
+    rebuildHarnessDb({ repoRoot, db });
     const result = analyzeDesignDetectionStats(collectDesignDetectionStats(db));
     return { messages: designDetectionMessages(result), ok: result.ok };
   } catch {

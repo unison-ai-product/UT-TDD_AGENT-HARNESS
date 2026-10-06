@@ -319,7 +319,7 @@ describe("PR-2a release consumer skills", () => {
   it("CANDIDATE-U-RCDEV-010 regression: source projection paths stay under skills/", () => {
     const db = openHarnessDb(":memory:");
     try {
-      const rebuilt = rebuildHarnessDb({ repoRoot: process.cwd(), db, skipTokenTelemetry: true });
+      const rebuilt = rebuildHarnessDb({ repoRoot: process.cwd(), db });
       expect(rebuilt.ok).toBe(true);
       const paths = db
         .prepare("SELECT path FROM automation_assets WHERE asset_type = ?")

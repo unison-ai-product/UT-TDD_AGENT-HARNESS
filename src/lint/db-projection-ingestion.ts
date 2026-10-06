@@ -125,7 +125,6 @@ export const EVIDENCE_GATED_DB_PROJECTION_TABLES = [
   "mcp_server_runs",
   "external_tool_findings",
   "document_export_artifacts",
-  "model_evaluations",
   "retry_events",
   "detector_route_candidates",
   "github_review_lane_receipts",
@@ -149,11 +148,6 @@ export const TELEMETRY_PROVENANCE_REQUIREMENTS: DbProjectionIngestionRequirement
     table: "guardrail_decisions",
     reason:
       "guardrail telemetry must include runtime session provenance for fired safety decisions",
-  },
-  {
-    table: "model_runs",
-    reason:
-      "model telemetry must include captured token/cost rows, not only review-evidence model projections",
   },
 ];
 

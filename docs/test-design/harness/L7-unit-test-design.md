@@ -421,7 +421,6 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 | U-DOMAIN-002 | PoC pure projector | permitted decisionだけを正規化し、DB・filesystem・clockへ直接依存せずdeterministic eventを返す。 |
 | U-DOMAIN-003 | PoC application ports | read portの意味的countをdomainへ渡し、生成eventだけをstoreへ記録する。SQL文字列をportへ漏らさない。 |
 | U-DOMAIN-004 | `SqliteProjectionStore` / `clearRebuildableProjectionTables` | unknown tableをfail-closeし、schema列とPKを正規化し、free-form secretを永続化前に拒否する。未解決PLAN joinとstale runtime contextを区別し、audit/compound contextを誤検出しない。再構築ではrebuildable rowを消去する一方、`refactor_candidates`負債ledgerを保持する。 |
-| U-DOMAIN-005 | model evaluation domain/application/config/SQLite read | success rate 4桁、token効率2桁、cost効率6桁をpure計算し、success/token/cost不在時はNULLを捏造しない。disabled/malformed opt-inはread/store 0、cold-startはstore 0、時刻は注入値を使う。SQLiteは複数modelをgrouped集計し、orphan PLANをsuccess 0、全cost不明をNULLとして返す。 |
 | U-DOMAIN-006 | operational metrics domain/application/SQLite read | drive成功集合と丸め前0.8境界、hook trouble、workflow blocked/human/retry、0母数、4桁表示をpure policyで固定する。N drive modeからN+4 eventをhost locale非依存のcode-unit順・一意ID・注入時刻で生成する。同一mode factは合算する。SQLite grouped readはretryをplan/workflow/phase単位で数え、NULL/literal unknown modeを同一groupへ正規化してcompletedとsignalを失わず、非0signalを隠さない。 |
 
 ### §1.16.1f U-VTRIG L0-L7 (implementation verification cycle gate)
@@ -613,6 +612,9 @@ SMB/NFS/OneDrive をまたぐ strict lease、heartbeat、clock-skew 耐性は主
 | U-FRCOV-004 | `analyzeL6FrCoverage` | function-spec/governance/agent-slots ref に型 body + pseudocode/defer marker が無ければ missing substance |
 | U-FRCOV-005 | 実 repo guard | FR registry 46 件すべて L6 spec / U-* oracle / substance marker に接続 |
 | U-FRCOV-006 | `analyzeL6FrCoverage` | `explicit_l7_defer` 行の type body に `{...}` フィールドブロックが無ければ missing substance |
+| U-FRCOV-007 | `analyzeL6FrCoverage` | unit contract に `implementation_state: retired` を持つ退役行は、L7 unit test design の表の先頭セルで宣言済みの oracle (例: U-TOKRET-002) へ対応付ければ incomplete にならない (Issue #848) |
+| U-FRCOV-008 | `analyzeL6FrCoverage` | 退役行の oracle に未宣言 ID が 1 つでもあれば `unit_oracle_undeclared` で fail-close する |
+| U-FRCOV-009 | `analyzeL6FrCoverage` | 退役 marker の無い行は従来どおり `U-<FR id>` 以外の oracle を `unit_oracle_match` で fail-close する (宣言済み U-TOKRET を書いても通らない) |
 
 ### §1.21 U-FR-L1-21 (test perspective gate)
 
@@ -831,11 +833,9 @@ SMB/NFS/OneDrive をまたぐ strict lease、heartbeat、clock-skew 耐性は主
 |------|------|--------------|
 | U-FR-L1-43 | `projectPocEvaluations` | **Cold-start**: 0 decided PoC PLANs (or no poc kind at all) → 0 poc_evaluations rows (never throws). **AC-43-01**: 10 PoC PLANs (6 confirmed / 3 rejected / 1 pivot) → poc_success_rate=0.60, confirmed_count=6, rejected_count=3, pivot_count=1, total_count=10. **AC-43-02 cold-start**: 0 PoC PLANs → 0 rows. **Undecided PoC excluded**: plan_registry rows with kind="poc" and decision_outcome="" are not included in denominator. **Pivot is non-success**: pivot_count increments denominator but not numerator. **Single summary row**: id always "poc-evaluation:summary"; rebuild overwrites previous row. asOf parameter controls evaluated_at timestamp for deterministic tests. |
 
-### 2026-06-15 Model Evaluation Oracle (FR-L1-38, PLAN-L7-53)
+### 2026-06-15 Model Evaluation Oracle (FR-L1-38, PLAN-L7-53) — 撤回 (2026-10-06)
 
-| U-ID | 関数 | oracle (DbC) |
-|------|------|--------------|
-| U-FR-L1-38 | `projectModelEvaluations` | **Opt-in disabled (AC-38-02)**: no .ut-tdd/config/model-opt-in.yaml or enabled!=true → 0 model_evaluations rows (never throws). **AC-38-01 enabled**: seed model_runs + plan_registry, write model-opt-in.yaml (enabled:true) under tmp repoRoot → model-A (2 runs both success) writes row with success_rate=1.0, run_count=2, success_count=2; model-B (2 runs, 1 success) writes row with success_rate=0.5, run_count=2, success_count=1. **Cold-start**: enabled but 0 model_runs → 0 model_evaluations rows (never throws). **Success inference**: joins model_runs.plan_id -> plan_registry.status IN PLAN_SUCCESS_STATUSES ("confirmed","completed"); no token/cost column — cost-efficiency is explicit_l7_defer (token telemetry pending, PLAN-L7-53 follow-up). **Opt-in file parse failure**: treat as disabled (fail-open for opt-in gate). |
+FR-L1-38 の model 評価 oracle と、model evaluation domain/application/config/SQLite read の oracle (domain 表の 5 番) は、PLAN-L6-789 (Issue #789) の退役により撤回した。引用元の `tests/model-evaluation.test.ts` と `tests/model-evaluation-domain.test.ts` は撤去済みである。FR-L1-38 の退役 oracle は「Issue #789 退役 oracle (PLAN-L6-789 §5)」節の U-TOKRET が持つ。
 
 ### 2026-06-09 L6 FR Unit Coverage Addendum
 
@@ -873,7 +873,7 @@ SMB/NFS/OneDrive をまたぐ strict lease、heartbeat、clock-skew 耐性は主
 | U-DBPROJ-ATOMIC-01 | `rebuildHarnessDb` | The truncate + re-project sequence runs inside one `BEGIN IMMEDIATE` transaction. Injecting a failure during projection (a wrapped `db` that throws on the first `INSERT INTO plan_registry`, i.e. after `truncateProjectionTables` has emptied the tables) re-throws and **rolls back**, leaving the prior committed `plan_registry` projection intact (row count unchanged, not 0). Red→Green: fails pre-fix (188 → 0). |
 | U-DBPROJ-PROV-01 | `analyzeDbProjectionIngestion(..., { enforceTelemetryProvenance: true })` | Populated telemetry tables (`skill_invocations`, `test_runs`, `guardrail_decisions`, `model_runs`) with only projection provenance are not acceptable evidence for "fired/used/works" claims. Default doctor can surface migration state as partial, but provenance-enforced mode fail-closes when runtime rows are 0 and projection rows are non-zero. |
 | U-DBPROJ-PROV-02 | `projectRuntimeTestRunFromSessionEvent` | A session-log Bash verification event (`Bash (vitest)` etc.) creates exactly one `test_runs` row with non-empty `session_id`, `runtime=hook-session-log`, `scope=runtime-hook`, and the JSONL evidence path; non-verification Bash events such as `Bash (git)` do not fabricate runtime test evidence. |
-| U-DBPROJ-PROV-03 | `checkDbProjectionIngestion` / `projectRuntimeModelTelemetryForDoctor` | Doctor's in-memory DB rebuild overlays existing Claude/Codex JSONL token usage through `projectTokenUsage`, so `model_runs` with token/cost-valued columns count as runtime provenance without requiring provider CLI execution. The deterministic `db rebuild` command remains source-projection-only. |
+| U-DBPROJ-PROV-03 | `checkDbProjectionIngestion` | 退役 (2026-10-06、PLAN-L6-789 / Issue #789): doctor の in-memory rebuild は session JSONL の token 使用量を投入しない。`model_runs` は telemetry provenance 要求 (`TELEMETRY_PROVENANCE_REQUIREMENTS`) から外れ、`model_evaluations` は evidence-gated table 一覧から外れる。 |
 | U-DBPROJ-PROV-04 | `projectRuntimeGuardrailDecisionFromSessionEvent` | A session-log `forced_stop` event creates exactly one `guardrail_decisions` row with non-empty `session_id`, `guardrail=forced-stop`, `decision=block`, `mode=runtime-hook`, and the JSONL evidence path; ordinary `tool_use` events do not fabricate guardrail decisions. |
 | U-DBPROJ-PROV-05 | `summarize` / `projectRuntimeSkillInvocationFromSessionEvent` | A Bash command containing `skill suggest` is logged as `Bash (skill)`. A session-log `Bash (skill)` event creates `skill_invocations` rows with non-empty `session_id`, `source=runtime-hook:skill-suggest`, and accepted status from the hook outcome; generic `Bash (bash)` events do not fabricate skill invocations. |
 | U-DBPROJ-GATE-01 | `rebuildHarnessDb` / `.ut-tdd/gate_runs/*.json` | gate run evidence JSON を読み、`gate_runs` と `workflow_runs(workflow=routine-gate, phase=<gate_id>)` へ投影する。同一 `plan_id/workflow/phase` の複数 attempt は `projectRetryEvents` により `retry_events.attempt_count` として検出される。 |
@@ -2902,6 +2902,18 @@ v2正常fixtureはN=3、stable/canary両channelを対象とする。実producer�
 
 mutation M1–M7は正本§5と同一: exactly-oneへの退行、集合一致への弱体化、先頭mappingだけの比較、v1基数guard削除、attestation path束縛削除、promotion余剰scalar受理、rollback余剰scalar受理。
 対応するRed証跡は実装後に各単独mutationを実行して記録する。finding enum、reason precedence、producer/installer/validatorの既存意味は変更しない。
+
+## Issue #789 退役 oracle (PLAN-L6-789 §5)
+
+正本: `PLAN-L6-789-token-ingest-retirement` §5。実装 PLAN は `PLAN-L7-789-token-ingest-retirement-execution`。各 oracle は旧実装 (`projectTokenUsage` / `projectRepoScopedTokenUsage` / `projectModelEvaluations`、scan action の `openHarnessDb` → `migrate` → `projectTokenUsage` → `projectModelEvaluations`) を戻すと RED になる。
+
+| ID | 観点 | 失敗させる mutation | 実装テスト |
+| --- | --- | --- | --- |
+| `U-TOKRET-001` | rebuild 後に session ログ由来の `model_runs` 行 (token 列が非 NULL) が 0 件 | rebuild 経路の `projectRepoScopedTokenUsage` を戻すと、repo に帰属する Claude / Codex の session fixture から token 行が入り RED | `tests/projection-writer.test.ts` |
+| `U-TOKRET-002` | rebuild は opt-in 有効でも `model_evaluations` を 1 行も書かない | `projectModelEvaluations` を rebuild へ戻すと、review-evidence 由来の `model_runs` と opt-in から評価行が入り RED | `tests/projection-writer.test.ts` |
+| `U-TOKRET-003` | (a) `.ut-tdd/` を持たない一時 root で `telemetry scan --json` を実行しても `<root>/.ut-tdd/harness.db` が作られない。非空 fixture で `totalRuns` が 1 以上 | scan action の `openHarnessDb(defaultHarnessDbPath(repoRoot))` を戻すと DB file が生成され RED | `tests/cli-surface.test.ts` |
+| `U-TOKRET-004` | (b) migrate 済み harness.db を置いて `telemetry scan --json` を実行しても file の sha256 が変わらず、`-wal` / `-journal` sibling が無く、`role = 'session'` の `model_runs` 行が 0 件。非空 fixture で `totalRuns` が 1 以上 | scan action の `migrate` → `projectTokenUsage` → `projectModelEvaluations` を戻すと sha256 が変わり session 行が入り RED | `tests/cli-surface.test.ts` |
+| `U-TOKRET-005` | review-evidence 由来の `model_runs` 行は rebuild で従来どおり生成され、orphan 検査 (`collectDriveDbRegistrationStats` の `modelOrphans`) が 0 | review-evidence 由来行まで投入をやめると行数 0 で RED | `tests/projection-writer.test.ts` |
 
 ## Issue #789 PR-1: 常時 token scan 退役 oracle
 
