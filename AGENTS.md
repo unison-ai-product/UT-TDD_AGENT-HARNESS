@@ -312,6 +312,10 @@ and prefer extending an existing PLAN over creating an overlapping one.
   successor declares `supersedes: [<old plan_id>]` and the superseded PLAN gets
   a correction note naming the successor (`doctor plan-supersession` requires
   the back-reference).
+- New design-kind PLANs (`kind: design` / `add-design`) keep the contract body in
+  `docs/design/` (or `docs/test-design/`) and carry only the 4-item body. The
+  rule, per-document digest format, and example live in `CLAUDE.md`
+  §PLAN Filing Rules (設計系 PLAN の本文 4 項目, issue #648); do not restate them here.
 - PLAN files are LF-only. Rewriting one with a tool that emits CRLF breaks
   `deliverable-plan-trace` with an opaque YAML error (observed 2026-07-28).
 
