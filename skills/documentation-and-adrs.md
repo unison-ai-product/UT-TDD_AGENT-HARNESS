@@ -32,11 +32,11 @@ decision_points:
   - when: "An ADR reaches the point of setting Status"
     choose: "leave Status at `Proposed` until `ut-tdd review --uncommitted` is clean and `ut-tdd doctor` exits 0"
     over: "setting Status to `Accepted` as soon as the Decision text is written"
-    because: "PLAN `dependencies` reference ADRs by Status; a prematurely Accepted ADR with unresolved review findings fails governance lint downstream"
+    because: "PLAN `dependencies` reference ADRs by Status; a prematurely Accepted ADR with unresolved review findings misleads downstream readers (operational rule; no lint checks ADR Status)"
   - when: "A new term is introduced in a design doc or ADR"
     choose: "match the existing L0 glossary spelling, or add the term to the glossary in the same change"
     over: "using a near-synonym that reads naturally in context"
-    because: "synonym drift between docs and the glossary causes `rule-drift` / adapter checks to fail even when the prose is correct"
+    because: "terminology consistency is an operational duty checked by hand at review; no code compares doc terms with the glossary (`rule-drift` only checks fixed adapter markers and forbidden exec forms, `src/lint/rule-drift.ts`)"
 ---
 
 # documentation and adrs
@@ -66,8 +66,9 @@ Context, Decision, Consequences, and Status.
 - One claim per sentence; name the actor (active voice). Gate conditions are
   executable contracts — "CI must be green and `ut-tdd doctor` must exit 0
   before pair-freeze" beats "the freeze passes when tests are green".
-- Uniform terminology: match the spelling `ut-tdd doctor` / `rule-drift` checks;
-  synonym drift causes adapter rule-drift failures.
+- Uniform terminology: match the L0 glossary spelling. This is a manual review
+  duty; no code checks it (`rule-drift` verifies only fixed adapter markers and
+  forbidden exec forms, `src/lint/rule-drift.ts`).
 - No bare pronouns ("this", "it") without an explicit referent — a freeze-review
   failure.
 
@@ -96,7 +97,7 @@ Scope/Non-goals.
 4. List Consequences: positive, negative, risks-to-monitor.
 5. Set Status `Proposed`; move to `Accepted` only after `ut-tdd review
    --uncommitted` is clean and `ut-tdd doctor` exits 0. ADRs are referenced by
-   PLAN `dependencies`; a missing/mis-titled ADR fails governance lint.
+   PLAN `dependencies`; keep the ADR title and ID accurate (manual; no lint checks ADR Status or title).
 
 ## Reverse back-fill (R2–R4)
 
