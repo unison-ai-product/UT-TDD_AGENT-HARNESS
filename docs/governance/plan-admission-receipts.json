@@ -6800,6 +6800,22 @@
         "revision": 3,
         "content_digest": "sha256:22bcfdaacb91fdc641033eb3e3e4f153a71573cf62f1d3d9d810e052efeb39c3"
       }
+    },
+    {
+      "sequence": 426,
+      "previous_record_digest": "sha256:ee0be85068d20a9662d5cf755eef372addc5e5ff0a11d96916eb25f3cb3b495b",
+      "record_digest": "sha256:12372a6a3379dbd7fc13feb07071db89fbd0d4ebbe4faee83cda6b8eedc69761",
+      "command_id": "plan-revise:issue-789:legacy-53:4:post-green-evidence",
+      "receipt_id": "certificate:566743078cec6313a2af93e1f60bfdea",
+      "receipt_digest": "sha256:6bd78751dccf0cc1d7d9cbd6f984058c802ad5f958f729f61fe8475e79d42ffb",
+      "decision_digest": "sha256:452af953fe129f0c872f1466b55872ab99d912c97088d5666e79ebbb36186534",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-53-learning-engine.md",
+        "plan_id": "PLAN-L7-53-learning-engine",
+        "asset_id": "plan:legacy:19e7f3da4b052a9326476c0f730417cd2c98cd9f6ccd4d955e103dea7d745d3c",
+        "revision": 4,
+        "content_digest": "sha256:c692376e5f3082acd58c95817315357c531161ece718383b648ee2e8cb1180cc"
+      }
     }
   ]
 }
