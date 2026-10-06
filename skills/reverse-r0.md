@@ -21,7 +21,7 @@ decision_points:
     over: "Leaving it omitted or inferring it later"
     because: "The gate to R1/R2 requires has_existing_tests to be explicitly set, not omitted"
   - when: "The subject scope involves inter-module contracts"
-    choose: "Run ut-tdd graph or ut-tdd find to identify dependency edges"
+    choose: "Run ut-tdd graph impact or ut-tdd find to identify dependency edges"
     over: "Skipping dependency-edge analysis and relying on manual file inspection"
     because: "Contract-bearing subjects need mapped dependency edges as input for R1's contract extraction"
   - when: "The evidence map is incomplete at the R0-to-R1/R2 phase boundary"
