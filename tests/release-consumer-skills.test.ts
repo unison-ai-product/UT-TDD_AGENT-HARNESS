@@ -208,6 +208,30 @@ describe("PR-2a release consumer skills", () => {
       rmSync(skillMap);
       runBundledCli(generation, root, ["session", "start", "--session", "release-consumer-test"]);
       expectBundledSkillDigests(root, assets);
+
+      // U-835-001: use this already-built canonical consumer generation to prove
+      // the filesystem fault reaches bundled materialization on the real CLI route.
+      const sessionId = "issue835-bundled-materialize-fault";
+      rmSync(skillMap);
+      mkdirSync(skillMap);
+      let materializeFailure: unknown;
+      try {
+        runBundledCli(generation, root, ["session", "start", "--session", sessionId]);
+      } catch (error) {
+        materializeFailure = error;
+      }
+      expect(materializeFailure).toBeInstanceOf(Error);
+      const stderr = String((materializeFailure as { stderr?: unknown }).stderr ?? "");
+      expect(stderr).toMatch(/EISDIR|EPERM|illegal operation on a directory/i);
+      const eventFile = join(root, ".ut-tdd", "logs", "session", `${sessionId}.jsonl`);
+      expect(existsSync(eventFile)).toBe(true);
+      const eventTypes = readFileSync(eventFile, "utf8")
+        .split(/\r?\n/)
+        .filter(Boolean)
+        .map((line) => JSON.parse(line) as { session_id: string; event_type: string });
+      expect(eventTypes).toContainEqual(
+        expect.objectContaining({ session_id: sessionId, event_type: "session_start" }),
+      );
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
