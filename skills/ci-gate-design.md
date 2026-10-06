@@ -56,9 +56,11 @@ quality gate (FR-L1-05 static gate, FR-L1-18 cross-detection aggregation).
 
 ## harness-check composition
 
-The canonical CI run is `harness-check`; its sub-gates (branch-type guard,
-typecheck, doctor, vitest, biome lint, audit quality) are defined in
-`.github/workflows/harness-check.yml:78-160` — read that file, not a copy here.
+The canonical CI run is `harness-check`; its sub-gates are defined in
+`.github/workflows/harness-check.yml` 全体 (linux / windows / node-generation / 集約 `harness-check` job),
+which is the full set — read that file, not a copy here. (Examples only, not
+exhaustive: branch-type guard, plan admission-check, typecheck, db rebuild,
+doctor, vitest, biome lint, audit quality, Windows verification, Node generation.)
 Never skip a sub-gate to make CI pass. Use `npm run lint` (Biome check = format +
 lint) locally; `biome lint` alone does not check formatting.
 
@@ -82,7 +84,7 @@ content is correct. When designing a gate, ask: can it detect an *absent* or
 ## Failure response protocol
 
 1. Read the **full** output — never `| tail`. Truncation hides the root error.
-2. Identify the failed sub-gate (typecheck / lint / test / doctor).
+2. Identify the failed sub-gate (e.g. typecheck / lint / test / doctor; the full set is the workflow file).
 3. Fix the root cause in source. Do not silence with `// biome-ignore`,
    `// @ts-ignore`, or `.skip` without a PLAN-linked rationale.
 4. Re-run the full sequence locally before pushing.
