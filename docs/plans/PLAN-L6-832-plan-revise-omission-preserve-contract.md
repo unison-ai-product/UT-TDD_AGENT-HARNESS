@@ -7,7 +7,7 @@ drive: agent
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-10-05
-updated: 2026-10-05
+updated: 2026-10-06
 owner: Claude control lane (契約起草) / Codex (L7 add-impl 実装) / 非著者 frontier reviewer
 parent_design: docs/plans/PLAN-RECOVERY-16-plan-revision-authoring.md
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
@@ -41,24 +41,52 @@ dependencies:
     - src/schema/frontmatter.ts
     - docs/test-design/harness/L7-unit-test-design.md
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/832
-review_evidence: []
-status: draft
+review_evidence:
+  - reviewer: gpt-6.1-sol
+    review_kind: cross_agent
+    reviewed_at: 2026-10-06T05:09:23.532Z
+    tests_green_at: 2026-10-06T05:04:59Z
+    verdict: pass
+    worker_model: claude-opus-5-5
+    reviewer_model: gpt-6.1-sol
+    subject_head: 411e2b2021ddee1f2e1af14240bc0baef89332d5
+    scope: PR 854 exact head 411e2b2021ddee1f2e1af14240bc0baef89332d5 (本 PLAN 本文は PR
+      844 最終 head 66cb8e2e と同一) に対する非著者 post-green evidence review (Sol)。PR 844
+      の先行 PASS receipt (02f794b1…, d3ffdabf…) は CI green より前に出たものであるため、CI run
+      37415408484 green 後に取った本 review を confirm の拘束証跡とする。receipt は reviewer
+      family codex / verdict PASS / blocking 0 を記録している。
+    green_commands:
+      - kind: unit_test
+        command: node scripts/run-vitest-snapshot.ts (harness-check-linux /
+          harness-check-windows full 回帰、CI run 37415408484)
+        runner: ci
+        scope: full
+        exit_code: 0
+        completed_at: 2026-10-06T05:04:58Z
+        evidence_path: docs/test-design/harness/L7-unit-test-design.md
+        output_digest: sha256:8d50eeb00cb12bf303375dd3def331f53c76ea56dbf406ca91ec8d5549f788a4
+        anchor_commit: 411e2b2021ddee1f2e1af14240bc0baef89332d5
+    citations:
+      - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/854
+      - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/actions/runs/37415408484
+      - .ut-tdd/review/receipts/2bc88fb3e6676f4342213683c8396910c92e0d280d9a5200112ebf6a9e9a102c.json
+status: confirmed
 sub_doc: function-spec
 github_issue_id: 832
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:ff594b3aaf6ea80c4aa443eabf6c9294
-  command_id: plan-draft:issue-832:revise-omission-preserve:1:rechain-2
-  admitted_at: 2026-10-06T01:00:50.432Z
-  source_digest: sha256:20580848f8a8b32210186f10c5c2149c6f134307fcd4a954b59dcf60160a7d47
-  decision_digest: sha256:afb0329f0674028ffe066c279eae4e16b3b0b101818dea9e6f2987422a16b209
-  receipt_digest: sha256:3432dd9c3708971bcc066b0ee99eaa802ec4d17f8bbc07fb192038a33b094b8e
+  receipt_id: certificate:87b26bd48ef014443d82286166e6bb82
+  command_id: plan-revise:issue-832:l6-confirm:post-green:r2
+  admitted_at: 2026-10-06T05:21:07.891Z
+  source_digest: sha256:971c23433b11ebe4cc73ef7a5c91d3ab113f9dabdcaa449c698806c4cf16edea
+  decision_digest: sha256:aecd9473201834b3931da6ac6d20a9b4cab6bb28529e48d526c83569f2f89260
+  receipt_digest: sha256:1ae31972d9a94c4c2a73642cd84aa4057b20e54dd09dc1fde9d0ac20ffe7662f
   binding:
     path: docs/plans/PLAN-L6-832-plan-revise-omission-preserve-contract.md
     plan_id: PLAN-L6-832-plan-revise-omission-preserve-contract
     asset_id: plan:ff594b3aaf6ea80c4aa443eabf6c9294
-    revision: 1
-    content_digest: sha256:20580848f8a8b32210186f10c5c2149c6f134307fcd4a954b59dcf60160a7d47
+    revision: 2
+    content_digest: sha256:971c23433b11ebe4cc73ef7a5c91d3ab113f9dabdcaa449c698806c4cf16edea
   route:
     signal: feature_addition
     mode: add-feature
@@ -73,11 +101,10 @@ admission_receipt:
     digest: sha256:1b6aa397ad9995b717907d3247e02b3bba3d6c4508874b7654f90fd29b388927
   reentry:
     target_plan_id: PLAN-L6-832-plan-revise-omission-preserve-contract
-    target_revision: 1
+    target_revision: 2
     phase: forward_merge
-  escape_reason: "Issue #832: plan revise が manifest で省略された既存 route-owned field
-    (sub_doc 等) を黙って削除する。外部監査 (2026-10-05) の方針に従い、省略=保存と明示 clear の契約を
-    PLAN-RECOVERY-16 の追加契約として freeze する。"
+  escape_reason: "Issue #832 (PR #854): PLAN-L6-832 を post-green 非著者 evidence
+    review (Sol PASS) の証跡で confirmed にする。契約本文は変えない。"
 ---
 
 # PLAN-L6-832: plan revise の省略保存と明示 clear の契約 freeze

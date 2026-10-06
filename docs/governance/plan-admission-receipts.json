@@ -6756,65 +6756,33 @@
     {
       "sequence": 423,
       "previous_record_digest": "sha256:8a0345ae36c2e14f571ef74a0da182adf3a01a121fce2cf2b0264bee841a8385",
-      "record_digest": "sha256:17b05401536ad5551f9181a0d5c8c791360ae0a662a7d916e16c93a5b7d44ffc",
-      "command_id": "plan-draft:issue-676:codex-worker-sandbox-contract-reissue-855:20261006",
-      "receipt_id": "certificate:2ae3c06571968e821a0f2272b39ba782",
-      "receipt_digest": "sha256:746afd57f1881af2bdb7088b79a6bfe9b2b7a3c08a96974a8cf2a833a5fff7f4",
-      "decision_digest": "sha256:022cc1e63921551f7378b3d5642732ac4d03273115265804a07243d3585ccf53",
+      "record_digest": "sha256:82a42c801952e5b0fd364a1172d46a21f7b7c6cff4ca5d880cbcc1bbd22e98c1",
+      "command_id": "plan-revise:issue-832:l6-confirm:post-green:r2",
+      "receipt_id": "certificate:87b26bd48ef014443d82286166e6bb82",
+      "receipt_digest": "sha256:1ae31972d9a94c4c2a73642cd84aa4057b20e54dd09dc1fde9d0ac20ffe7662f",
+      "decision_digest": "sha256:aecd9473201834b3931da6ac6d20a9b4cab6bb28529e48d526c83569f2f89260",
       "binding": {
-        "path": "docs/plans/PLAN-L7-855-codex-worker-sandbox-contract.md",
-        "plan_id": "PLAN-L7-855-codex-worker-sandbox-contract",
-        "asset_id": "plan:2ae3c06571968e821a0f2272b39ba782",
-        "revision": 1,
-        "content_digest": "sha256:7861c00951d5cc2f297106a0e7d9f6229d94cb13e82cb39e6c24c459632f55ab"
+        "path": "docs/plans/PLAN-L6-832-plan-revise-omission-preserve-contract.md",
+        "plan_id": "PLAN-L6-832-plan-revise-omission-preserve-contract",
+        "asset_id": "plan:ff594b3aaf6ea80c4aa443eabf6c9294",
+        "revision": 2,
+        "content_digest": "sha256:971c23433b11ebe4cc73ef7a5c91d3ab113f9dabdcaa449c698806c4cf16edea"
       }
     },
     {
       "sequence": 424,
-      "previous_record_digest": "sha256:17b05401536ad5551f9181a0d5c8c791360ae0a662a7d916e16c93a5b7d44ffc",
-      "record_digest": "sha256:b4f3bf9d0b0160512a0c539201509e4b90839c845f86fb93921700963e62c302",
-      "command_id": "plan-draft:issue-676:reverse-worker-sandbox-backfill-reissue-855:20261006",
-      "receipt_id": "certificate:2899913ad54e00d875510805f827f3d3",
-      "receipt_digest": "sha256:934ec434ebbdcaa62d90a32ec212afd6d25d8f84084bd3408275ac46305a659b",
-      "decision_digest": "sha256:33b54abadfb008850acdd1211fd92c1e66952b5d9d890303b9d94d1fcf265090",
+      "previous_record_digest": "sha256:82a42c801952e5b0fd364a1172d46a21f7b7c6cff4ca5d880cbcc1bbd22e98c1",
+      "record_digest": "sha256:7c2fb8ac7aca8b2210049dd73c22ff055d2b20fa793b12c0950413658d8bce69",
+      "command_id": "plan-revise:issue-711:s2-verifier-confirm:post-green:r2",
+      "receipt_id": "certificate:753e830b3256315b6b97d6f9cb53b0f9",
+      "receipt_digest": "sha256:3b6fa488757d74b6ef25e3c3d4b44ee8b6ed74853e357689b7b2a2e15e6d5a1e",
+      "decision_digest": "sha256:a26ef5d9c190745591e7df9aa9942f980811178d74f4d2c0b193f226b72f7a77",
       "binding": {
-        "path": "docs/plans/PLAN-REVERSE-855-codex-worker-sandbox-backfill.md",
-        "plan_id": "PLAN-REVERSE-855-codex-worker-sandbox-backfill",
-        "asset_id": "plan:2899913ad54e00d875510805f827f3d3",
-        "revision": 1,
-        "content_digest": "sha256:b9d209d77449d52ee1aa34f8d24748e6678d0bd48e170fb8e24ebd70080461aa"
-      }
-    },
-    {
-      "sequence": 425,
-      "previous_record_digest": "sha256:b4f3bf9d0b0160512a0c539201509e4b90839c845f86fb93921700963e62c302",
-      "record_digest": "sha256:89b8b6aaf77ab52118553532d4e5c010216b991ca402786c558295eaf24ba4ec",
-      "command_id": "plan-revise:issue676:pr855-contract-flag3-correction:20261006",
-      "receipt_id": "certificate:ad9f697ba06781244415397894101bb5",
-      "receipt_digest": "sha256:5c37758a048c4a23857dc73c978bdd9119ff30e76796ecdc37111b4ce606e8c9",
-      "decision_digest": "sha256:b1486071d4f3e2eca60bee7a1b9f5fd2b66292a4fb0c8a2522256a441d3bbd2e",
-      "binding": {
-        "path": "docs/plans/PLAN-L7-855-codex-worker-sandbox-contract.md",
-        "plan_id": "PLAN-L7-855-codex-worker-sandbox-contract",
-        "asset_id": "plan:2ae3c06571968e821a0f2272b39ba782",
+        "path": "docs/plans/PLAN-L7-711-rechain-verifier.md",
+        "plan_id": "PLAN-L7-711-rechain-verifier",
+        "asset_id": "plan:f2a61a3ad7d3b7301f0fc4238d529547",
         "revision": 2,
-        "content_digest": "sha256:5cfe7610112e3a2eef6e2599c34279d982d680d00216d1c07957cad4cd2c37e3"
-      }
-    },
-    {
-      "sequence": 426,
-      "previous_record_digest": "sha256:89b8b6aaf77ab52118553532d4e5c010216b991ca402786c558295eaf24ba4ec",
-      "record_digest": "sha256:1ce5cee0ff44df6bbaef64ba8d3963465f5a316d3a0f281dfb39843bad506776",
-      "command_id": "plan-revise:issue676:pr855-reverse-flag3-correction:20261006",
-      "receipt_id": "certificate:a7520748afd73be8dbc05d756b0d5689",
-      "receipt_digest": "sha256:379675a0b86b5a1869310c042910042ad62ad60f03e292601372189d99c7ef87",
-      "decision_digest": "sha256:2b36771053ae48ade8573d48309384308bba2ad0b28d7381bdafe8d5a4b30f90",
-      "binding": {
-        "path": "docs/plans/PLAN-REVERSE-855-codex-worker-sandbox-backfill.md",
-        "plan_id": "PLAN-REVERSE-855-codex-worker-sandbox-backfill",
-        "asset_id": "plan:2899913ad54e00d875510805f827f3d3",
-        "revision": 2,
-        "content_digest": "sha256:1aec49759a92c3ee1f5e14eb66f81a2063bd491bbc0b6cf43c8346b91405d4ce"
+        "content_digest": "sha256:722243eaa92f5ded0bab77e62469d3d9a4e7e1a5dc73bbd7cd76b1a54b14d964"
       }
     }
   ]
