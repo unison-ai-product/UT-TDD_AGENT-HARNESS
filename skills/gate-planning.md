@@ -61,8 +61,8 @@ accumulate false-green state and hide V-model descent gaps.
 
 A unit of work is complete only when ALL hold:
 
-1. `npm run typecheck`, `npm run lint` (Biome check), and `npm run test`
-   (Vitest) are green.
+1. The CI `harness-check` gate set is green (`.github/workflows/harness-check.yml:78-160`;
+   locally `npm run typecheck`, `npm run lint`, `npm run test`).
 2. `ut-tdd doctor` exits 0 (no governance violation).
 3. `ut-tdd plan lint` exits 0 (PLAN schema valid, dependencies exist,
    `§工程表` schedule section checked).

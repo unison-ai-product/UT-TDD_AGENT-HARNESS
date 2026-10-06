@@ -68,8 +68,11 @@ ut-tdd plan lint      # PLAN schema, steps, dependency existence
 ut-tdd review --uncommitted
 ```
 
-Never bypass with `--no-verify`. A local-green push that fails CI almost always
-means one of these was skipped.
+Never bypass with `--no-verify`. The list above is the local pre-flight; the
+authoritative CI gate set (branch-type guard, plan admission-check, typecheck,
+db rebuild, doctor, test, lint, audit quality) is
+`.github/workflows/harness-check.yml:78-160`. A push that is local-green but
+fails CI usually tripped a CI-only step, not a skipped local command.
 
 ## Strategy selection
 

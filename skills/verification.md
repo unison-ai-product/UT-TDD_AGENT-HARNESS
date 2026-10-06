@@ -90,6 +90,7 @@ npm run test               # Vitest: no skipped tests without rationale
 ```
 
 Never pipe any of these through `| tail` — truncation hides the root error.
+CI runs its own authoritative step set: `.github/workflows/harness-check.yml:78-160`.
 
 ## Descent verification by layer group
 
