@@ -370,9 +370,7 @@ export function buildAdapterPlan(intent: AdapterIntent, mode: ExecutionMode): Ad
   const args = isCodex
     ? [
         CODEX_STDIN_ARGS[0],
-        ...(CODEX_WORKSPACE_WRITE_ROLES.has(intent.role)
-          ? ["--sandbox", "workspace-write"]
-          : []),
+        ...(CODEX_WORKSPACE_WRITE_ROLES.has(intent.role) ? ["--sandbox", "workspace-write"] : []),
         ...(intent.model ? [CODEX_MODEL_FLAG, intent.model] : []),
         // effort を argv へ貫通 (A-183 PY-2 是正、実機裏取り 2026-07-16:
         // codex-cli 0.144.1 で `-c model_reasoning_effort=low` および `=xhigh`

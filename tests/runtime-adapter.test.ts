@@ -105,7 +105,13 @@ describe("runtime adapter plan", () => {
 
   it("U-ADAPTER-SANDBOX-003: keeps Claude invocation unchanged even for a writer-named role", () => {
     const plan = buildAdapterPlan(
-      { provider: "claude", role: "se", task: "implement", model: "claude-sonnet-5", effort: "middle" },
+      {
+        provider: "claude",
+        role: "se",
+        task: "implement",
+        model: "claude-sonnet-5",
+        effort: "middle",
+      },
       "hybrid",
     );
     expect(plan.args).toEqual([
