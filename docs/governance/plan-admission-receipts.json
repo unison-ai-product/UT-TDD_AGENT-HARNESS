@@ -6800,6 +6800,22 @@
         "revision": 2,
         "content_digest": "sha256:5cfe7610112e3a2eef6e2599c34279d982d680d00216d1c07957cad4cd2c37e3"
       }
+    },
+    {
+      "sequence": 426,
+      "previous_record_digest": "sha256:89b8b6aaf77ab52118553532d4e5c010216b991ca402786c558295eaf24ba4ec",
+      "record_digest": "sha256:1ce5cee0ff44df6bbaef64ba8d3963465f5a316d3a0f281dfb39843bad506776",
+      "command_id": "plan-revise:issue676:pr855-reverse-flag3-correction:20261006",
+      "receipt_id": "certificate:a7520748afd73be8dbc05d756b0d5689",
+      "receipt_digest": "sha256:379675a0b86b5a1869310c042910042ad62ad60f03e292601372189d99c7ef87",
+      "decision_digest": "sha256:2b36771053ae48ade8573d48309384308bba2ad0b28d7381bdafe8d5a4b30f90",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-855-codex-worker-sandbox-backfill.md",
+        "plan_id": "PLAN-REVERSE-855-codex-worker-sandbox-backfill",
+        "asset_id": "plan:2899913ad54e00d875510805f827f3d3",
+        "revision": 2,
+        "content_digest": "sha256:1aec49759a92c3ee1f5e14eb66f81a2063bd491bbc0b6cf43c8346b91405d4ce"
+      }
     }
   ]
 }

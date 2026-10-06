@@ -31,18 +31,18 @@ status: draft
 github_issue_id: 676
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:2899913ad54e00d875510805f827f3d3
-  command_id: plan-draft:issue-676:reverse-worker-sandbox-backfill-reissue-855:20261006
-  admitted_at: 2026-10-06T06:05:50.000Z
-  source_digest: sha256:b9d209d77449d52ee1aa34f8d24748e6678d0bd48e170fb8e24ebd70080461aa
-  decision_digest: sha256:33b54abadfb008850acdd1211fd92c1e66952b5d9d890303b9d94d1fcf265090
-  receipt_digest: sha256:934ec434ebbdcaa62d90a32ec212afd6d25d8f84084bd3408275ac46305a659b
+  receipt_id: certificate:a7520748afd73be8dbc05d756b0d5689
+  command_id: plan-revise:issue676:pr855-reverse-flag3-correction:20261006
+  admitted_at: 2026-10-06T07:07:22.698Z
+  source_digest: sha256:1aec49759a92c3ee1f5e14eb66f81a2063bd491bbc0b6cf43c8346b91405d4ce
+  decision_digest: sha256:2b36771053ae48ade8573d48309384308bba2ad0b28d7381bdafe8d5a4b30f90
+  receipt_digest: sha256:379675a0b86b5a1869310c042910042ad62ad60f03e292601372189d99c7ef87
   binding:
     path: docs/plans/PLAN-REVERSE-855-codex-worker-sandbox-backfill.md
     plan_id: PLAN-REVERSE-855-codex-worker-sandbox-backfill
     asset_id: plan:2899913ad54e00d875510805f827f3d3
-    revision: 1
-    content_digest: sha256:b9d209d77449d52ee1aa34f8d24748e6678d0bd48e170fb8e24ebd70080461aa
+    revision: 2
+    content_digest: sha256:1aec49759a92c3ee1f5e14eb66f81a2063bd491bbc0b6cf43c8346b91405d4ce
   route:
     signal: reverse
     mode: reverse
@@ -60,41 +60,33 @@ admission_receipt:
     implementation_disposition: preserved
   reentry:
     target_plan_id: PLAN-L7-855-codex-worker-sandbox-contract
-    target_revision: 1
+    target_revision: 2
     phase: forward_merge
-  escape_reason: "Issue #676のworker capability/fail-close gapを、新bounded
-    PLAN855と専用pairから既存provider設計へReverse提案する。旧実装はpreservedとし、acceptance未達を維持する。"
+  escape_reason: Opus FLAG3とcontrol6011015340に従いdirect
+    adapterの新規spawn拒否を撤回し、writer6roleの限定grantだけを規定する。既存delegation/caller/Claudeは維持する。
 ---
-
 # PLAN-REVERSE-855-codex-worker-sandbox-backfill (Reverse / proposal)
 
 ## §0 位置づけ
 
-既存 PLAN-L7-68 の provider-dispatch 実装事実から、Issue #676 で承認された Codex worker の限定 workspace-write 権限と unknown-role fail-close 境界を、既存 provider function design へ back-fill する提案である。旧 confirmed revision の誤りを主張しない。新しい L6 設計文書は作らず、既存 function design への最小差分と専用 L7 test-design pair を使う。
+Issue #676 の承認に基づき、Codex worker 6 role に限る `workspace-write` 権限を既存 provider function design へ back-fill する提案である。既存 provider dispatch と通常 delegation allowlist refusal は維持する。旧 confirmed revision の誤りを主張せず、新しい L6 設計文書は作らない。
 
 ## §1 R0–R4 (候補・未受入)
 
 | phase | work | result / status |
 |---|---|---|
-| R0 evidence | a6ba5d0efaa8b8bf94256b5289adae8ff782eeba の既存 src/runtime/adapter.ts buildAdapterPlan、src/runtime/agent-guard-policy.ts、src/runtime/review-guard.ts、src/team/delegation-routing.ts、tests/runtime-adapter.test.ts、PLAN-L7-68 を参照する。 | source inspection のみ。provider/test は未実行。 |
-| R1 observed contract | 現 adapter は Codex argv に stdin/model/effort を構築するが role別 sandbox grant を構築しない。Issue #676 の明示契約は worker role 6件のみ write、gate/advisor等は non-writer、unknown は spawn前拒否。 | 観測と承認の照合。OS/provider sandbox 実効性は未検証。 |
-| R2 delta | adapter-level workspace-write allowlist、known non-writer と unknown-role の異なる扱い、normal delegation/direct adapter の spawn 0 oracle が未成立。 | contract gap。 |
-| R3 intent | se/docs/be-api/be-logic/db-schema/devops-deploy の6 roleだけに workspace-write を1組付与。判断 gate、advisor、管理/調査、aim等の既知 non-writerへ付与せず、unknown Codex roleは通常 delegation と直接 adapter の両方で provider spawn前に拒否する。Claude argv/env、model・effort routing、stdin、reviewer custody、SessionStartは不変。runtime→team import、新module、second role registryを導入しない。 | candidate contract。 |
-| R4 routing | 既存 docs/design/harness/L4-basic-design/function.md の provider invocation 節へ最小差分を戻し、新bounded owner PLAN-L7-855-codex-worker-sandbox-contract と専用 L7 pair を参照する。 | 将来の設計・pair review待ち。未freeze。 |
+| R0 evidence | 現行 adapter、runtime role policy、通常 delegation、既存 L7-68 と関連 test を source inspection する。 | source inspection のみ。provider/test は未実行。 |
+| R1 observed contract | Issue #676 の承認は writer 6 role に限定した workspace-write 付与である。他 role の既存 invocation と通常 delegation refusal は既存契約のまま扱う。 | 承認との照合。OS/provider sandbox 実効性は未検証。 |
+| R2 delta | adapter の限定 write-role allowlist と既存 runtime role policy からの単一 export が未成立。 | contract gap。unknown role の direct-adapter spawn refusal は gap ではない。 |
+| R3 intent | `se`、`docs`、`be-api`、`be-logic`、`db-schema`、`devops-deploy` の6 roleだけに `--sandbox workspace-write` を一組付与する。その他の role (advisor、reviewer/gate、管理・調査、`aim`、unknown worker を含む) は既存 invocation を維持し、新規 grant/refusal を加えない。 | candidate contract。 |
+| R4 routing | 既存 provider function design に最小差分を戻し、PLAN-L7-855 と専用 L7 test-design pair を参照する。runtime から team routing への import、team routing 変更、新 module、第二 role registry は追加しない。 | 将来の設計・pair review待ち。未freeze。 |
 
 ## §2 candidate oracle 対応 (すべて未実装・未達)
 
-| candidate | oracle要点 | 状態 |
-|---|---|---|
-| CANDIDATE-U-ADAPTER-SANDBOX-001 | 6 role個別にworkspace-writeが一度だけ付与され、既存model/effort/stdinを維持 | 未実装 |
-| CANDIDATE-U-ADAPTER-SANDBOX-002 | 全decision-gate roleはnon-writer、gate集合/custody不変 | 未実装 |
-| CANDIDATE-U-ADAPTER-SANDBOX-003 | aim等known non-writerはwriteを得ない | 未実装 |
-| CANDIDATE-U-ADAPTER-SANDBOX-004 | normal delegationのunknown Codex roleでprovider spawn 0 | 未実装 |
-| CANDIDATE-U-ADAPTER-SANDBOX-005 | direct adapterのunknown Codex roleでもprovider spawn 0 | 未実装 |
-| CANDIDATE-U-ADAPTER-SANDBOX-006 | Claude argv/env、model routing、stdin、gate policy不変 | 未実装 |
+専用 L7 test-design に定める4 oracleを対象とする: (1) writer 6 roleへ workspace-write をちょうど一組付与、(2) representative non-writer の既存 invocation 維持とgrant不在、(3) Claude invocation 不変、(4) 通常 delegation refusal と frontier/release-consumer 回帰不在。直接 adapter に渡された unknown role は既存 invocation を維持し、provider spawn 前の新規拒否は行わない。
 
-受入は未達。candidate row、設計提案、source inspectionを実装・test Green・provider実測の代替にしない。
+候補表や source inspection を実装・test Green・provider実測の代替にしない。受入は未達。
 
 ## §3 範囲外
 
-#835 SessionStart、providerのOS-level sandbox実効性、生成configの全role grant、verdict custody変更、PLAN-L7-160のbehavior-invariant extraction。Linux provider再測定は別のcontrol許可・attempt bindingに従う。
+SessionStart、provider/OS-level sandbox 実効性、全 role 一律 grant、verdict custody 変更、PLAN-L7-160 の behavior-invariant extraction は範囲外。Linux provider の再測定は別途 control が指定する。
