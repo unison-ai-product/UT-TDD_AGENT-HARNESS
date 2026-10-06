@@ -6612,33 +6612,97 @@
     {
       "sequence": 414,
       "previous_record_digest": "sha256:63c4a10e3e49e035b1b6eee355db13fe7fc154ab55941d06c715fb145b01109b",
-      "record_digest": "sha256:4fcccf57c8f21bafe9897e62f0e72d0d7e6ab95635afc220432452c75de25c2f",
-      "command_id": "plan-draft:issue-816:release-notes-draft-contract:1:rechain-1",
-      "receipt_id": "certificate:d0c95dafd276d2225a3917e11512ea13",
-      "receipt_digest": "sha256:c3f168078376693ff76fcb27a010063ebc9bbec75e88682ef777b6fc5592794d",
-      "decision_digest": "sha256:9c341eef56a0b6dc1bf4d1de17cd2f9efd12a675789abddb089d8d26c7fa124a",
+      "record_digest": "sha256:d3187d81a7f3c5f768958e7ed2c1f542ed1cbabc8137c4ef77d036be14422113",
+      "command_id": "plan-draft:issue-789:token-ingest-retirement:1:rechain-2",
+      "receipt_id": "certificate:9eb40ac57c66832a75be2af3f89eca4f",
+      "receipt_digest": "sha256:e22ff235e075d4224f3208f685d100cc803d80d344b7b657dbae5b5438aeae2f",
+      "decision_digest": "sha256:b4a466616ec7f69ee5334aaaf797873279afa79d17efae921ca5068d5e8add36",
       "binding": {
-        "path": "docs/plans/PLAN-L6-816-release-notes-draft-contract.md",
-        "plan_id": "PLAN-L6-816-release-notes-draft-contract",
-        "asset_id": "plan:d0c95dafd276d2225a3917e11512ea13",
+        "path": "docs/plans/PLAN-L6-789-token-ingest-retirement.md",
+        "plan_id": "PLAN-L6-789-token-ingest-retirement",
+        "asset_id": "plan:9eb40ac57c66832a75be2af3f89eca4f",
         "revision": 1,
-        "content_digest": "sha256:42d97d166cd7ce33a9eefef3a85d1d52eadefd3bc8fc42577e38cefe89ab2926"
+        "content_digest": "sha256:6e321c50a2d970b43e360753ff86de89b2e43e21d6832c5565a5e4ec8b34b142"
       }
     },
     {
       "sequence": 415,
-      "previous_record_digest": "sha256:4fcccf57c8f21bafe9897e62f0e72d0d7e6ab95635afc220432452c75de25c2f",
-      "record_digest": "sha256:3765cf2cda98f32a4a014fb530d74e9eb1263a089e19e01edadbd60839fe343e",
-      "command_id": "plan-revise:issue-816:release-notes:sol-r1-fix:r2:d7cb9fc3c23e",
-      "receipt_id": "certificate:0616e68f14ceac35dae94d62e2f231f9",
-      "receipt_digest": "sha256:62703380e180db10bcb95f53ee667d799ee98afbded31000dba4276b46b07138",
-      "decision_digest": "sha256:b7b8ed19383bd5265e2cb6e98e0592c42e9132241a30c89de87121589d77e6df",
+      "previous_record_digest": "sha256:d3187d81a7f3c5f768958e7ed2c1f542ed1cbabc8137c4ef77d036be14422113",
+      "record_digest": "sha256:b7adc456e29445647ca613dbd34836eae729ecf87fbf47208a3369c5a954477d",
+      "command_id": "plan-revise:issue-789:legacy-57:2:rechain-2",
+      "receipt_id": "certificate:310209d3e25ce567377c852e141efb70",
+      "receipt_digest": "sha256:cc7dced6c1aa7f694474ed32ef686333d91e508153c8ef333712e3e18f21e049",
+      "decision_digest": "sha256:d5bba9e81269dbfdce734743d5382157a8153d40b911f12db6f2f0ff454e70fd",
       "binding": {
-        "path": "docs/plans/PLAN-L6-816-release-notes-draft-contract.md",
-        "plan_id": "PLAN-L6-816-release-notes-draft-contract",
-        "asset_id": "plan:d0c95dafd276d2225a3917e11512ea13",
+        "path": "docs/plans/PLAN-L7-57-token-telemetry-tracker.md",
+        "plan_id": "PLAN-L7-57-token-telemetry-tracker",
+        "asset_id": "plan:legacy:c989324b0cd11472a30274933e6db786ea6bc2bfdc82fdd2880d03e1c174039a",
         "revision": 2,
-        "content_digest": "sha256:e7885e3f72021b0f1d39c921d834cbad7cfedf8b08fb6c85ac047d2f758345eb"
+        "content_digest": "sha256:4e5485819b2df9785db0c5448eea90cd0f247bd1f0d2f7a8cbdc90ca2907186f"
+      }
+    },
+    {
+      "sequence": 416,
+      "previous_record_digest": "sha256:b7adc456e29445647ca613dbd34836eae729ecf87fbf47208a3369c5a954477d",
+      "record_digest": "sha256:0f3d632c8ab1e9c651984347cf0eeb0f01549b72de99be3714e989815b58f4ea",
+      "command_id": "plan-revise:issue-789:legacy-454:2:rechain-2",
+      "receipt_id": "certificate:638bb23dcbd129523bc57e4fbe8a8e31",
+      "receipt_digest": "sha256:864ebcb21ef113a9cee099e9fd21115eb623a8b79a5bd37598651f6f437b9eba",
+      "decision_digest": "sha256:8d396d5031dc090a27df2a7d7d2fbfcc6a112fb2f9924ea762d7d18c02574d4c",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-454-runtime-token-telemetry-ingestion.md",
+        "plan_id": "PLAN-L7-454-runtime-token-telemetry-ingestion",
+        "asset_id": "plan:legacy:7e00bf799a5f194ec7e323bbfbd3e7a21859e251c0e73a9f46fda12cb870c54b",
+        "revision": 2,
+        "content_digest": "sha256:850f003cd0bba3ebe99f9b46efc2657d8a5fd36fc3797d97815212ad073236ab"
+      }
+    },
+    {
+      "sequence": 417,
+      "previous_record_digest": "sha256:0f3d632c8ab1e9c651984347cf0eeb0f01549b72de99be3714e989815b58f4ea",
+      "record_digest": "sha256:7a221efe87a8aea1d7e0cc8375aa996653831135ee9d60c31f535afcf7116c3c",
+      "command_id": "plan-revise:issue-789:legacy-58:2:rechain-2",
+      "receipt_id": "certificate:18152116c030cb6c1875b4c77946953b",
+      "receipt_digest": "sha256:d2e700814c372aa390f8b33e4365b86628f6fe279676635127ba000b80b25142",
+      "decision_digest": "sha256:d5bba9e81269dbfdce734743d5382157a8153d40b911f12db6f2f0ff454e70fd",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-58-telemetry-cost-enrichment.md",
+        "plan_id": "PLAN-L7-58-telemetry-cost-enrichment",
+        "asset_id": "plan:legacy:fc88971bc08a98ebfd67018a9d9bbe8e5df69d45b9c1204bfc2e0b922b242a96",
+        "revision": 2,
+        "content_digest": "sha256:ce1559f29bb4001d16ce65567647eee91be9bb665dd97a0617727acfc8efc90a"
+      }
+    },
+    {
+      "sequence": 418,
+      "previous_record_digest": "sha256:7a221efe87a8aea1d7e0cc8375aa996653831135ee9d60c31f535afcf7116c3c",
+      "record_digest": "sha256:c2e43c5020c539961000d58dc5534121edc2db331a96067d5476b4918483f39f",
+      "command_id": "plan-draft:issue-832:revise-omission-preserve:1:rechain-2",
+      "receipt_id": "certificate:ff594b3aaf6ea80c4aa443eabf6c9294",
+      "receipt_digest": "sha256:3432dd9c3708971bcc066b0ee99eaa802ec4d17f8bbc07fb192038a33b094b8e",
+      "decision_digest": "sha256:afb0329f0674028ffe066c279eae4e16b3b0b101818dea9e6f2987422a16b209",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-832-plan-revise-omission-preserve-contract.md",
+        "plan_id": "PLAN-L6-832-plan-revise-omission-preserve-contract",
+        "asset_id": "plan:ff594b3aaf6ea80c4aa443eabf6c9294",
+        "revision": 1,
+        "content_digest": "sha256:20580848f8a8b32210186f10c5c2149c6f134307fcd4a954b59dcf60160a7d47"
+      }
+    },
+    {
+      "sequence": 419,
+      "previous_record_digest": "sha256:c2e43c5020c539961000d58dc5534121edc2db331a96067d5476b4918483f39f",
+      "record_digest": "sha256:752dc299e8aacbde7b2aa84a2d6a45b3696bfdb0502329acbbfc8e5240981b3c",
+      "command_id": "plan-revise:issue-711:legacy-bootstrap-judgement:rechain-1:c1:r6:2241d42e49c5",
+      "receipt_id": "certificate:cf30abd72a39ba5f8e3ac8c0690d9f1a",
+      "receipt_digest": "sha256:c570cd48fdd2ce4ab4b694efd0de1ee79b1d1dd394051ae95abd4fc92c6f9300",
+      "decision_digest": "sha256:b60f7d4c57af22e41779e7f7430a353452258e1577a73ec7db94017e48e8db99",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-711-merge-time-receipt-rechain-contract.md",
+        "plan_id": "PLAN-L6-711-merge-time-receipt-rechain-contract",
+        "asset_id": "plan:ac2c23d3c72fc6e2886491ac1df09452",
+        "revision": 6,
+        "content_digest": "sha256:ccd27f750c9b636b10636f112df009a7210559bb5911a318b5df6b358cfcdba0"
       }
     }
   ]
