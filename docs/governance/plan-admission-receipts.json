@@ -6752,6 +6752,22 @@
         "revision": 5,
         "content_digest": "sha256:9dd1d6dee1e532e812578ea02309019d8c0661a3b47d59207d57981c8262489c"
       }
+    },
+    {
+      "sequence": 423,
+      "previous_record_digest": "sha256:8a0345ae36c2e14f571ef74a0da182adf3a01a121fce2cf2b0264bee841a8385",
+      "record_digest": "sha256:82a42c801952e5b0fd364a1172d46a21f7b7c6cff4ca5d880cbcc1bbd22e98c1",
+      "command_id": "plan-revise:issue-832:l6-confirm:post-green:r2",
+      "receipt_id": "certificate:87b26bd48ef014443d82286166e6bb82",
+      "receipt_digest": "sha256:1ae31972d9a94c4c2a73642cd84aa4057b20e54dd09dc1fde9d0ac20ffe7662f",
+      "decision_digest": "sha256:aecd9473201834b3931da6ac6d20a9b4cab6bb28529e48d526c83569f2f89260",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-832-plan-revise-omission-preserve-contract.md",
+        "plan_id": "PLAN-L6-832-plan-revise-omission-preserve-contract",
+        "asset_id": "plan:ff594b3aaf6ea80c4aa443eabf6c9294",
+        "revision": 2,
+        "content_digest": "sha256:971c23433b11ebe4cc73ef7a5c91d3ab113f9dabdcaa449c698806c4cf16edea"
+      }
     }
   ]
 }
