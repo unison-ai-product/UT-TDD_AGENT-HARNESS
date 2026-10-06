@@ -8,7 +8,7 @@ drive: agent
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-10-05
-updated: 2026-10-06
+updated: 2026-10-05
 owner: Claude control lane (PLAN 起票) · Codex worker (S2 implementation) · 非著者
   frontier reviewer
 parent_design: docs/plans/PLAN-L6-711-merge-time-receipt-rechain-contract.md
@@ -32,10 +32,6 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-711-rechain-verifier.md
     artifact_type: markdown_doc
-  - artifact_path: src/plan-admission/rechain-verifier.ts
-    artifact_type: source_module
-  - artifact_path: tests/rechain-verifier.test.ts
-    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L6-711-merge-time-receipt-rechain-contract.md
   requires: []
@@ -48,48 +44,23 @@ dependencies:
     - src/plan-admission/tracked-receipt-renderer.ts
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/711
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/839
-review_evidence:
-  - reviewer: gpt-6.1-sol
-    review_kind: cross_agent
-    worker_model: claude-opus-5
-    reviewer_model: gpt-6.1-sol
-    verdict: PASS
-    reviewed_at: 2026-10-05T11:27:02.704Z
-    tests_green_at: 2026-10-05T11:43:28Z
-    scope: PR 841 の非著者 closing review (本 PLAN と PLAN-REVERSE-711 の pair-freeze)。r1
-      FLAG (PLAN-REVERSE-711 の gap G1 が L6-711 rev 5 §2.6 の v2 明示と矛盾) を同 PR
-      内で是正し、exact head 8446c9e5 で blocking 0 の PASS。CI run 37302464553 は同 head
-      で全 job success。
-    subject_head: 8446c9e51ea69b6735eb77be9af3da5b2e803128
-    green_commands:
-      - kind: typecheck
-        command: npm run typecheck (harness-check CI run 37302464553)
-        runner: ci
-        scope: full
-        exit_code: 0
-        completed_at: 2026-10-05T11:43:28Z
-        evidence_path: tsconfig.json
-        output_digest: sha256:da3803fb5e8090f8bf4e48607a8b033c35a574705d52e558245935d2f164cd0c
-        anchor_commit: 8446c9e51ea69b6735eb77be9af3da5b2e803128
-    citations:
-      - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/841
-      - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/actions/runs/37302464553
-status: confirmed
+review_evidence: []
+status: draft
 github_issue_id: 711
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:a1539695568919882502d371e1edd65f
-  command_id: plan-revise:issue-711:rechain-verifier-confirm:forward:r2:7c4962eb1ef2
-  admitted_at: 2026-10-06T02:45:08.602Z
-  source_digest: sha256:2c0e0474cb629efaf90c328b8ebbce88912de854e37518b58be07d0819240a0b
-  decision_digest: sha256:836d053dac3e829132fd289dbd563c6ce351466ae99c1a7dac2824b122d2a20e
-  receipt_digest: sha256:d1663eeda89075cf1102e877749ee1dd2eb4f8c3616e2f9a340e372fabd758c4
+  receipt_id: certificate:f2a61a3ad7d3b7301f0fc4238d529547
+  command_id: plan-draft:issue-711:rechain-verifier:forward:1:rechain-1
+  admitted_at: 2026-10-05T10:52:26.100Z
+  source_digest: sha256:0c88bd5899da820c83811e1f480e0b60944e5d77268c6af67340241b6ece038b
+  decision_digest: sha256:86287e9dd2acb23044114be083c6c17b98bffa2102b2c9fbacca06e78f6b1fc1
+  receipt_digest: sha256:849cf8fd640f11ce0c1a22f1d99320adfd3863daa48ac3e0e43dfa3abe5f9420
   binding:
     path: docs/plans/PLAN-L7-711-rechain-verifier.md
     plan_id: PLAN-L7-711-rechain-verifier
     asset_id: plan:f2a61a3ad7d3b7301f0fc4238d529547
-    revision: 2
-    content_digest: sha256:2c0e0474cb629efaf90c328b8ebbce88912de854e37518b58be07d0819240a0b
+    revision: 1
+    content_digest: sha256:0c88bd5899da820c83811e1f480e0b60944e5d77268c6af67340241b6ece038b
   route:
     signal: feature_addition
     mode: add-feature
@@ -107,13 +78,12 @@ admission_receipt:
     implementation_disposition: none
   reentry:
     target_plan_id: PLAN-L7-711-rechain-verifier
-    target_revision: 2
+    target_revision: 1
     phase: forward_merge
-  escape_reason: "Issue #711 S2: PR #839 の実装
-    (src/plan-admission/rechain-verifier.ts と tests/rechain-verifier.test.ts) を
-    generates に宣言し、#841 の非著者 Sol PASS (exact head 8446c9e5、CI green) を
-    review_evidence に記録して confirm する。oracle 表に PLAN-L6-711 rev 6 の U-RECHAIN-019
-    と #839 r1 FLAG の回帰 (018h / 003b) を反映する。"
+  escape_reason: "Issue #711 S2: PR #839 の新規 source_module (rechain-verifier.ts) と
+    test の所有 PLAN が無く deliverable-plan-trace が orphan で fail-close
+    した。PLAN-L6-711 は design PLAN のため、precedent #722 に従い L7 add-impl を generates
+    = 自分自身だけで起票し、pair-freeze 後の confirm で所有を宣言する。"
 ---
 
 # PLAN-L7-711: re-chain 差分の whitelist 検証器 verifyRechainDelta の実装 (#711 S2)
@@ -139,7 +109,7 @@ generates = 自分自身だけで起票 → pair-freeze → confirm → 実装 P
 | §2.2 PLAN 差分の再適用規則 | base = `merge-base(H, M)` を前提にした path 単位 3-way、`generates` 末尾と §8 末尾の append-only 連結 |
 | §2.3-1〜4 | 非簿記 path の拒否、append-only 領域外変更の拒否、追加 record の件数・対象の照合、親の直接束縛 (`R^1 = X`、`X^1 = H`、`X^2 = M`) |
 | §2.3-5 | 待機中に `M` が作成・所有した path の再所有拒否 |
-| §2.3-6 (receipt revision 6 の legacy bootstrap 除外を含む) | 正規 assembler による admission の完全な再導出、許容項目の列挙、`A_H` と H の `decision_digest` の照合、`receipt_digest` の再導出 (preimage の源は §2.3-6 の表)、同一 asset 複数再発行時の base の連鎖と `intermediatePlans` の key 集合の完全一致 |
+| §2.3-6 | 正規 assembler による admission の完全な再導出、許容項目の列挙、`A_H` と H の `decision_digest` の照合、`receipt_digest` の再導出 (preimage の源は §2.3-6 の表)、同一 asset 複数再発行時の base の連鎖と `intermediatePlans` の key 集合の完全一致 |
 | §2.6 | 検証器の入力形 (`RechainInput`) と `verifierDigest` (`stableJson` + `sha`、版付き domain separator) |
 
 検証器が使う既存 module は、所有を移さずに参照だけする。
@@ -159,10 +129,8 @@ pair は `docs/test-design/harness/L7-unit-test-design.md` の「PLAN-L6-711 S2 
 | U-RECHAIN-014 | §2.6-7 (両側変更の非簿記 path) | 014 |
 | U-RECHAIN-015 | §2.2 / §2.6 (base = `merge-base(H, M)`、stacked PR) | 015 |
 | U-RECHAIN-016 | §2.6 (`verifierDigest`) | 016。domain separator は `ut-tdd.rechain-verifier.v2` |
-| U-RECHAIN-017 | §2.3-6 (`receipt_digest` の再導出) | 017a 任意 digest、017b actor 定数以外、017c sourceCommit が `M` 以外 (legacy bootstrap は 019 へ移した) |
-| U-RECHAIN-018 | §2.3-6 (同一 asset 複数再発行、`intermediatePlans`) | 018a 正系、018b〜018f 負系と mutation m1〜m4、018g 複数再発行が無いとき `intermediatePlans` は空、018h 中間 blob は bind 前の blob 自体の digest で照合する (#839 Sol r1 FINDING 1) |
-| U-RECHAIN-019 | §2.3-6 legacy bootstrap 除外 (L6-711 receipt revision 6) | 019a1 / 019a2 (各 `command_id` 2 形式)、019b、019b0 (019b の非 legacy 対照)、019c、019d。mutation m1〜m5 |
-| U-RECHAIN-003b | §2.2-3 / §2.3-2 (`strip(R)` の byte 一致) | R の frontmatter への YAML コメント混入を拒否する (#839 Sol r1 FINDING 2) |
+| U-RECHAIN-017 | §2.3-6 (`receipt_digest` の再導出) | 017a 任意 digest、017b actor 定数以外、017c sourceCommit が `M` 以外、017d legacy bootstrap 経路 asset |
+| U-RECHAIN-018 | §2.3-6 (同一 asset 複数再発行、`intermediatePlans`) | 018a 正系、018b〜018f 負系と mutation m1〜m4、018g 複数再発行が無いとき `intermediatePlans` は空 |
 
 pair-freeze review で確かめること:
 
@@ -172,7 +140,7 @@ pair-freeze review で確かめること:
 
 ## 4. 受入
 
-- AC1: U-RECHAIN-001..007、011、012、014..019 が green。各 mutation を入れると対応する oracle が red になる (#839 の test で示す)。
+- AC1: U-RECHAIN-001..007、011、012、014..018 が green。各 mutation を入れると対応する oracle が red になる (#839 の test で示す)。
 - AC2: 検証器は pure function であり、Git・file system・network に触れない (adapter は S3)。
 - AC3: 新規 source_module は `src/plan-admission/rechain-verifier.ts` の 1 個だけ (§PR スコープ規律 3)。
 - AC4: 本 PLAN の confirm 後、#839 が main を取り込み、`plan revise` で generates に

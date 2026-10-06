@@ -93,9 +93,9 @@ EU AI Act Art.14 human oversight は Elevation of Privilege 行の escalation ga
 本節は ZIP-DOC-056 (供給網セキュリティ設計書) の中核概念を dependency/distribution gate へ統合する
 (disposition catalog: merge)。
 
-### 6.1 依存パッケージ (bun) 監査
+### 6.1 依存パッケージ (npm / Node) 監査
 
-- HARNESS 実装の依存は `bun.lock` (lockfile) を正本とし、追加/更新は lockfile diff を伴う変更として通常の
+- HARNESS 実装の依存は `package-lock.json` (lockfile、`npm ci` で再現) を正本とし、追加/更新は lockfile diff を伴う変更として通常の
   review 経路 (`ut-tdd review`) を通す。lockfile 不在での依存追加は許容しない。
 - 依存更新判断 (追加・バージョン更新・削除) は「機能追加/修正のための必要最小限」を原則とし、無関係な
   一括更新を同一コミットに混在させない (Git Rules の「関係ない変更を混在させない」原則の供給網版)。
