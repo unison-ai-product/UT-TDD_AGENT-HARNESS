@@ -6800,6 +6800,22 @@
         "revision": 2,
         "content_digest": "sha256:d0987251dd1af0d2d0a533e541cc75da077ca10bf6514d2f1cbeed15aa578471"
       }
+    },
+    {
+      "sequence": 426,
+      "previous_record_digest": "sha256:54cd31fc800740164b0d5c338ad6141a8f38ecf0f4e42eefdbac5ab128a0e8d5",
+      "record_digest": "sha256:d2996c3217a85eb441968cba859d7574f11a47fabb4735c377259a659dcb986b",
+      "command_id": "plan-revise:issue-789:legacy-53:2:retire-exec:rechain-3",
+      "receipt_id": "certificate:bd545b311f5897bae61fe510ad50015d",
+      "receipt_digest": "sha256:0a7e4d533fc3148ede3d48adc1f19138261ead7c8fa922de866393ec9734695f",
+      "decision_digest": "sha256:452af953fe129f0c872f1466b55872ab99d912c97088d5666e79ebbb36186534",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-53-learning-engine.md",
+        "plan_id": "PLAN-L7-53-learning-engine",
+        "asset_id": "plan:legacy:19e7f3da4b052a9326476c0f730417cd2c98cd9f6ccd4d955e103dea7d745d3c",
+        "revision": 2,
+        "content_digest": "sha256:9081ef80c06e54ee708db3326635fea7f9c8021dc2724a6e062607b79045c790"
+      }
     }
   ]
 }
