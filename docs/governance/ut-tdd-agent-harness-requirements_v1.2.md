@@ -586,7 +586,9 @@ L0 → L1 → L4 のドメイン継承チェーンを `ut-tdd plan lint` (sub_do
 - [ ] **型5 画面被覆** = P0 FR-L1 に対応画面が無い → exit 1 (P1/P2 は warn、screen §5.3 R3 と連動)
 - [ ] **型6 外部 corpus 漏れ (tier-2、自動化対象外)** = source 機能 inventory (legacy source 47 doc 等) との完全性突合は periodic subagent 監査。inventory を登録すれば将来自動化可能だが、それ未満では手動 audit が残る
 
-**登録機構 (registration)**: 各工程で発見した機能要求は PLAN §7 機能要求更新 (FR-L1 delta) に記載 → §1 への back-merge を必須化 (§1.2 back-propagation 6 step を機械強制)。新 FR-L1 は (a) §1 行追加 (b) screen §5 trace 紐付け (c) header 件数確定宣言更新 (d) ledger 記録 を満たさなければ exit 1。
+> 注記 (issue #648): 設計系 PLAN (`kind: design` / `add-design`、本文 4 項目規則。正本 `CLAUDE.md` §設計系 PLAN の本文 4 項目) では、§6 用語更新相当の差分は成果物の設計文書側に記録する。L0 §10 用語集への back-merge (反映) 義務そのものは変わらない。
+
+**登録機構 (registration)**: 各工程で発見した機能要求は PLAN §7 機能要求更新 (FR-L1 delta) に記載 → §1 への back-merge を必須化 (§1.2 back-propagation 6 step を機械強制)。設計系 PLAN (本文 4 項目) では §7 相当の機能要求 delta を成果物の設計文書側に記録し、§1 への back-merge 義務自体は変わらない。新 FR-L1 は (a) §1 行追加 (b) screen §5 trace 紐付け (c) header 件数確定宣言更新 (d) ledger 記録 を満たさなければ exit 1。
 
 > **architecture 注記**: `implementation_status` (installed/partial/not-implemented) は変動する **runtime state** (`.ut-tdd/state/`) に置き、版管理対象の spec table (§1) には**列として持たない** (mutable status を spec に混入させない)。HM-01 は §1 registry (静的属性) × runtime status を join して表示する。`導入工程` (provenance) は現状 §1 `出典 doc` 列に自由記述で内包 (例: "L3 back-propagation")、正規化列化は将来 increment。
 

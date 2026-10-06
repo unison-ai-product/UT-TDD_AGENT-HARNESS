@@ -29,8 +29,8 @@ PO への質問は **設計判断 (trade-off が実在する方式選択 / spec 
 進捗確認・実行許可・自力で確定できる事実は聞かない (可逆作業は進める)。聞き方は
 `docs/governance/design-decision-elicitation.md` の共通フォーマットに従う。Codex には
 構造化質問ツールが無いため、`## 設計判断依頼` 見出し + 選択肢表 (案 / 得るもの / 失うもの、
-推奨を先頭に「(推奨)」+ 理由 1 行) の markdown を出力して停止する。採択結果は PLAN の
-設計判断節 / ADR に記録する (skill: `skills/design-decision-elicitation.md`)。
+推奨を先頭に「(推奨)」+ 理由 1 行) の markdown を出力して停止する。採択結果は設計文書
+(設計系 PLAN の場合) / PLAN の設計判断節 / ADR に記録する (skill: `skills/design-decision-elicitation.md`)。
 
 ## Core Reads
 
