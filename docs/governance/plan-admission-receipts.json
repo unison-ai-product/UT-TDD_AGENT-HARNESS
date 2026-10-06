@@ -6720,6 +6720,22 @@
         "revision": 1,
         "content_digest": "sha256:6590e205e84be333d78b12584ff4a360eeed6462a7751812394bdc6ec44acc08"
       }
+    },
+    {
+      "sequence": 421,
+      "previous_record_digest": "sha256:bb9def0a648589ab1c4b841b55c50dcdf120c5566006fe7a633fd21fb697a562",
+      "record_digest": "sha256:49e2a69b80755a11b5624047ff4967a99012d0d691aaf38b80959024ff75382f",
+      "command_id": "plan-revise:issue-789:legacy-423:2:retire-exec:rechain-1",
+      "receipt_id": "certificate:f8907b4a0998de0ca27eb9b2e9ee9005",
+      "receipt_digest": "sha256:36f472ca0c33688f83d15213c1a863d7521f099f17e99ac5881e03938b8c2580",
+      "decision_digest": "sha256:7afedf121a06086cc4d744ff2c7ae8690d1eb3e88452968a54aad904bd27dfbd",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-423-engine-swap-domain-objects-ports.md",
+        "plan_id": "PLAN-L7-423-engine-swap-domain-objects-ports",
+        "asset_id": "plan:legacy:cd4fbbe70850280e912cb74ec26a630b119fa415f99a113fe9cf0a8136256c82",
+        "revision": 2,
+        "content_digest": "sha256:d0987251dd1af0d2d0a533e541cc75da077ca10bf6514d2f1cbeed15aa578471"
+      }
     }
   ]
 }
