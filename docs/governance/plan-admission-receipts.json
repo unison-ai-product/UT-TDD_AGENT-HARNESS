@@ -6768,6 +6768,22 @@
         "revision": 2,
         "content_digest": "sha256:971c23433b11ebe4cc73ef7a5c91d3ab113f9dabdcaa449c698806c4cf16edea"
       }
+    },
+    {
+      "sequence": 424,
+      "previous_record_digest": "sha256:82a42c801952e5b0fd364a1172d46a21f7b7c6cff4ca5d880cbcc1bbd22e98c1",
+      "record_digest": "sha256:7c2fb8ac7aca8b2210049dd73c22ff055d2b20fa793b12c0950413658d8bce69",
+      "command_id": "plan-revise:issue-711:s2-verifier-confirm:post-green:r2",
+      "receipt_id": "certificate:753e830b3256315b6b97d6f9cb53b0f9",
+      "receipt_digest": "sha256:3b6fa488757d74b6ef25e3c3d4b44ee8b6ed74853e357689b7b2a2e15e6d5a1e",
+      "decision_digest": "sha256:a26ef5d9c190745591e7df9aa9942f980811178d74f4d2c0b193f226b72f7a77",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-711-rechain-verifier.md",
+        "plan_id": "PLAN-L7-711-rechain-verifier",
+        "asset_id": "plan:f2a61a3ad7d3b7301f0fc4238d529547",
+        "revision": 2,
+        "content_digest": "sha256:722243eaa92f5ded0bab77e62469d3d9a4e7e1a5dc73bbd7cd76b1a54b14d964"
+      }
     }
   ]
 }
