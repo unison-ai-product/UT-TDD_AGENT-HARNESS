@@ -7088,6 +7088,22 @@
         "revision": 16,
         "content_digest": "sha256:67d34747ac8c9d38e673259ba2dc0725be21e45b805ebdd390cd1cbf44985d40"
       }
+    },
+    {
+      "sequence": 444,
+      "previous_record_digest": "sha256:884212977fbcbd5a08ac35fcfd4200c9076c9ed67a237111eef003bac8469d08",
+      "record_digest": "sha256:226aeec3a355c14e9652e0e6ddb366728663428ea21c6da2f1d33530d2eb5439",
+      "command_id": "plan-revise:issue-418:linux-wsl-canary5:additive-r17-input-fix1:20261007",
+      "receipt_id": "certificate:81ea569282026a1d766d606f08b16f24",
+      "receipt_digest": "sha256:4da12c2b15b3101a4ae3f8bc839e98624da40e1c51c1da5b23ccb2131495a476",
+      "decision_digest": "sha256:7d9396aef8b045e7e0d633ea79cfc3c32e1c771565791ecca725f1d1cfec3831",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-531-pack-internal-canary-smoke.md",
+        "plan_id": "PLAN-L7-531-pack-internal-canary-smoke",
+        "asset_id": "plan:44f79788376b81c225ce5913fddbc48f",
+        "revision": 17,
+        "content_digest": "sha256:5e8b68947b93ff38bd2ced2aaa7a9687ba036512dc761635a50c17111bfa2e39"
+      }
     }
   ]
 }
