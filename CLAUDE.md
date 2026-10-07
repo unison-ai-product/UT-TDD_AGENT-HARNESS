@@ -30,8 +30,10 @@ source material is historical reference only; current UT-TDD runtime commands
 use `ut-tdd`, not legacy commands.
 
 ADR-001 is binding: source concepts may be used as design source material, but
-UT-TDD implementation is TypeScript/Node. old W1-W3a Python is not
-current product runtime.
+UT-TDD core implementation is TypeScript/Node. old W1-W3a Python is not
+current product runtime. The v4 management intelligence is the only Python
+component (ADR-001 decision 4): a separate, proposal-only process behind a
+JSON Schema boundary.
 
 ## Purpose
 
