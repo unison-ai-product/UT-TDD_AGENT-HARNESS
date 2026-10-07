@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// v4 決定台帳と L1 要求候補の対応を機械で確かめる (依存なし)。
-// 使い方: node scripts/v4-ledger-check.mjs [ledger.json] [requests.md]
+// v4 決定台帳と L1 要求候補・L3 要件候補の対応を機械で確かめる (依存なし)。
+// 使い方: node scripts/v4-ledger-check.mjs [ledger.json] [requests.md] [requirements.md]
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const ledgerPath = resolve(root, process.argv[2] ?? "docs/governance/candidates/v4-decision-ledger.json");
 const requestsPath = resolve(root, process.argv[3] ?? "docs/governance/candidates/ut-tdd-concept-v4-requests.md");
+const requirementsPath = resolve(root, process.argv[4] ?? "docs/governance/candidates/ut-tdd-concept-v4-requirements.md");
 
 const errors = [];
 const fail = (msg) => errors.push(msg);
@@ -53,12 +54,13 @@ for (const d of ledger) {
 
 // 2. requests doc の要求行を読む (## L1 要求候補 の表だけ)
 const md = readFileSync(requestsPath, "utf8");
-const section = (title) => {
-  const start = md.indexOf(`\n## ${title}`);
+const sectionIn = (text, title) => {
+  const start = text.indexOf(`\n## ${title}`);
   if (start < 0) return "";
-  const next = md.indexOf("\n## ", start + 4);
-  return md.slice(start, next < 0 ? undefined : next);
+  const next = text.indexOf("\n## ", start + 4);
+  return text.slice(start, next < 0 ? undefined : next);
 };
+const section = (title) => sectionIn(md, title);
 const requestSection = section("L1 要求候補");
 if (!requestSection) fail("requests doc に「## L1 要求候補」節が無い");
 const requests = new Map();
@@ -109,6 +111,79 @@ for (const line of dropped.split(/\r?\n/)) {
   for (const c of cited) if (!ids.has(c)) fail(`廃止表: ${c} が ledger に無い`);
 }
 
+// 6. L3 要件: 各要件行は実在の BR を 1 件以上、有効な V4D を 1 件以上引く
+//    列は | ID | 要件 | 要求 | 根拠 (V4D) | ... 。要求列と根拠列だけを読む。
+let reqMd = "";
+try {
+  reqMd = readFileSync(requirementsPath, "utf8");
+} catch (e) {
+  fail(`requirements doc を読めない: ${e.message}`);
+}
+const tableRows = (text) =>
+  text.split(/\r?\n/).filter((l) => l.startsWith("|") && !/^\|\s*-/.test(l));
+const frSection = sectionIn(reqMd, "要件候補");
+if (!frSection) fail("requirements doc に「## 要件候補」節が無い");
+const frs = new Map();
+const realized = new Set();
+for (const line of frSection.split(/\r?\n/)) {
+  const m = line.match(/^\|\s*(UTV4-FR-\d{3})\s*\|/);
+  if (!m) continue;
+  const fr = m[1];
+  if (frs.has(fr)) fail(`${fr}: 要件行が重複`);
+  frs.set(fr, line);
+  const cells = line.split("|");
+  const brs = [...new Set(cells[3]?.match(/UTV4-BR-\d{3}/g) ?? [])];
+  const v4ds = [...new Set(cells[4]?.match(/V4D-\d{3}/g) ?? [])];
+  if (brs.length === 0) fail(`${fr}: 要求列に UTV4-BR id が 1 件も無い`);
+  for (const br of brs) {
+    if (!requests.has(br)) fail(`${fr}: 要求 ${br} が requests doc に無い`);
+    else realized.add(br);
+  }
+  if (v4ds.length === 0) fail(`${fr}: 根拠列に V4D id が 1 件も無い`);
+  for (const c of v4ds) {
+    if (!ids.has(c)) fail(`${fr}: ${c} が ledger に無い`);
+    else if (!active.has(c)) fail(`${fr}: ${c} は superseded (有効な決定を引くこと)`);
+  }
+  if (!v4ds.some((c) => active.has(c))) fail(`${fr}: 有効な V4D を 1 件も引いていない`);
+}
+if (frs.size === 0) fail("要件行が 1 件も無い");
+
+// 7. 各要求は 1 件以上の要件で実現されるか、「要件化不要」表に理由付きで載る
+const notRequired = new Map();
+for (const line of tableRows(sectionIn(reqMd, "要件化不要"))) {
+  const m = line.match(/^\|\s*(UTV4-BR-\d{3})\s*\|([^|]*)\|/);
+  if (!m) continue;
+  if (!requests.has(m[1])) fail(`要件化不要: ${m[1]} が requests doc に無い`);
+  if (m[2].trim() === "") fail(`要件化不要: ${m[1]} に理由が無い`);
+  notRequired.set(m[1], m[2].trim());
+}
+for (const br of requests.keys()) {
+  const r = realized.has(br);
+  const n = notRequired.has(br);
+  if (!r && !n) fail(`${br}: どの要件にも実現されず、要件化不要にも無い`);
+  if (r && n) fail(`${br}: 要件で実現しているのに要件化不要にも載っている`);
+}
+
+// 8. 要件の廃止表は実在の V4D を引く。未確定表は実在の要件と有効な V4D を引く
+for (const line of tableRows(sectionIn(reqMd, "廃止した要件"))) {
+  const cells = line.split("|");
+  if (cells[1]?.trim().startsWith("旧 ID")) continue;
+  const cited = cells[3]?.match(/V4D-\d{3}/g) ?? [];
+  if (cited.length === 0) fail(`要件の廃止表の行に V4D id が無い: ${line.slice(0, 60)}`);
+  for (const c of cited) if (!ids.has(c)) fail(`要件の廃止表: ${c} が ledger に無い`);
+}
+for (const line of tableRows(sectionIn(reqMd, "要件で未確定"))) {
+  const cells = line.split("|");
+  if (cells[1]?.trim() === "項目") continue;
+  const at = cells[1]?.trim().slice(0, 20);
+  const refs = cells[2]?.match(/UTV4-FR-\d{3}/g) ?? [];
+  if (refs.length === 0) fail(`未確定 ${at}: 関係する要件が無い`);
+  for (const r of refs) if (!frs.has(r)) fail(`未確定 ${at}: ${r} が要件候補に無い`);
+  const cited = cells[5]?.match(/V4D-\d{3}/g) ?? [];
+  if (!cited.some((c) => active.has(c))) fail(`未確定 ${at}: 有効な V4D を引いていない`);
+  for (const c of cited) if (!active.has(c)) fail(`未確定 ${at}: ${c} は有効な決定でない`);
+}
+
 const count = (f) => ledger.filter(f).length;
 const summary = {
   decisions: ledger.length,
@@ -117,6 +192,9 @@ const summary = {
   out_of_scope: count((d) => typeof d.out_of_scope_reason === "string" && d.out_of_scope_reason.trim() !== ""),
   high_impact: count((d) => d.high_impact === true),
   requests: requests.size,
+  requirements: frs.size,
+  requests_realized: realized.size,
+  requests_not_required: notRequired.size,
 };
 
 if (errors.length > 0) {
