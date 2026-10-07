@@ -81,22 +81,21 @@ review_evidence:
         evidence_path: docs/test-design/harness/L12-pack-internal-canary-test-design.md
         output_digest: sha256:855449d6f72a7a879838eaec669a811815d29cf84ffbc15939927a66ff1b90bf
         anchor_commit: be1b16d9476feca9cf89b540f25185f935a8748d
-status: confirmed
 github_issue_id: 418
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:62fffca98ece4047724a1fadc9a542ba
-  command_id: plan-revise:issue-418:canary4-rebind:r12:20261007
-  admitted_at: 2026-10-07T01:12:30.000Z
-  source_digest: sha256:df7cab7f3ba0df79a0edd051028b7d975ba72430bb1e30be2aca7284da2d86b6
-  decision_digest: sha256:e19191541e30b994cfcbaf71e74ff84d9937b218d8872e4ca4f0bab1e3e4eb2f
-  receipt_digest: sha256:76375170a9ce0f7e22ae9aeb9cede7ba668cb57db319d206904154ac25bcc35f
+  receipt_id: certificate:40ed46329c52e47024cee5fb918b5ef4
+  command_id: plan-revise:issue-418:linux-vscode-devcontainers:r13:20261007
+  admitted_at: 2026-10-07T06:31:44.297Z
+  source_digest: sha256:edfc1ea827ba2ab66f102f9b1c9e52cd492f1fd6c6bf227bb229d7483865f7a2
+  decision_digest: sha256:66189b5c5a8d8cd2d6a6ee30f57ccf8eb31726f59c155a26ec36fcddc33929da
+  receipt_digest: sha256:7bb6ed7cfda9eda15225a7cd51debe93fa0aaa2ad7bed45ad4348d77858d1c5d
   binding:
     path: docs/plans/PLAN-L7-531-pack-internal-canary-smoke.md
     plan_id: PLAN-L7-531-pack-internal-canary-smoke
     asset_id: plan:44f79788376b81c225ce5913fddbc48f
-    revision: 12
-    content_digest: sha256:df7cab7f3ba0df79a0edd051028b7d975ba72430bb1e30be2aca7284da2d86b6
+    revision: 13
+    content_digest: sha256:edfc1ea827ba2ab66f102f9b1c9e52cd492f1fd6c6bf227bb229d7483865f7a2
   route:
     signal: feature_addition
     mode: add-feature
@@ -116,15 +115,11 @@ admission_receipt:
     target_plan_id: PLAN-L7-531-pack-internal-canary-smoke
     target_revision: 12
     phase: forward_merge
-  escape_reason: "Issue #418 control comment 6015987099 が許可した canary.4 cut 前の最小
-    binding PR。既存 AT-DIST-003 の full
-    scope/CANDIDATE-ST-PACKCANARY-015..019、C1/C2 tuple audit、source/subject
-    provenance、custody/隔離/受入条件を維持し、immutable Release identity のみを canary.3 から
-    canary.4 へ再束縛する。AT-DIST-002 の canary.2 binding と canary.2/canary.3
-    の記録・証跡は保持し、新しい公開 authority や network/auth exception は加えない。既存status confirmed
-    と review_evidence
-    は維持するが、この改訂は新しいreview/PASSを主張しない。本契約改訂PRではtag/Release公開を行わず、公開は既存承認経路の別工程で行\
-    う。"
+  escape_reason: "PO #418 comment 6032202315 authorizes only the Linux AT-DIST-003
+    actual-provider-review Dev Containers exception in §3.6.9(8) and §6.1; no
+    source/Pack mounts, host credential copy, fake entrypoint/marker/session, or
+    AT-DIST-002 change. Actual runs may precede merge, but PASS is claimable
+    only after merge."
 ---
 
 # PLAN-L7-531: Pack-only internal canary smoke (Windows/Linux)
@@ -485,11 +480,15 @@ bind mount しない disposable Linux container/VM (§6.1) の双方で取る。
    欄があることを**仮定しない** (join は再計算値と request / receipt の revision 一致で行う)。
 7. **PR コメントと merge**: PR コメントは**上記の専用 consumer repository にだけ**投稿する。この PR は
    **merge しない** (検証専用)。
-8. **network / auth の例外 (PO 承認済み)**: §6.1 の `--network none` / credential・env 注入なしの条件は、
-   **AT-DIST-003 の実 provider review の段階に限り**、provider と上記の専用 consumer repository への
-   通信と認証だけを許す形で緩める。この例外は **AT-DIST-002 には適用しない** (AT-DIST-002 の隔離条件は
-   変えない)。source の filesystem の持ち込みと bind mount は引き続き禁止する。PO 承認:
-   PR #812 comment 5929420300 (2026-10-01)。canary.2 の bytes と `latest` は変えない。
+8. **network / auth の限定例外 (PO 承認済み)**: §6.1 の disposable container における
+   `--network none` と credential/env 注入なしの条件は、**Linux AT-DIST-003 の実 provider review 段階に限り**、
+   provider と専用 consumer repository `unison-ai-product/ut-tdd-consumer-canary` への通信・認証、ならびに
+   VS Code Dev Containers で使い捨て `node:24.13.0-bookworm` container に接続し VS Code Server と Claude 拡張を
+   導入するための通信だけを許す。source / Pack checkout の持ち込みと
+   bind / volume mount、host credential の container へのコピー、`CLAUDE_CODE_ENTRYPOINT` の偽装、marker または
+   session の手書きは禁止する (provider 認証は既存の例外範囲で行う)。AT-DIST-002 には適用せず、その隔離条件は
+   変更しない。canary.2 の bytes と `latest` は変えない。PO 承認: PR #812 comment 5929420300 (既存例外)、
+   #418 comment 6032202315 (Dev Containers 追加、2026-10-07)。
 9. **evidence**: Windows と Linux (§6.1 の disposable container/VM、ただし本段階は上記 8 の例外下) の双方で、
    §3.6.6 の項目に加えて、専用 repository の PR 番号と head SHA、live-dispatch / live-consume の
    transcript、verdict / receipt のパス、subject の blob oid と SHA-256 の再計算値を取る。
@@ -573,11 +572,13 @@ PR-1 と PR-2 を 1 PR に統合しない。scope 構造を指す FLAG は close
 
 Linux 実受入は Docker Desktop の使い捨て `node:24.13.0-bookworm` container で実行する。`-slim` は git 不在のため使わない。host で GitHub Release の exact 5 asset と #418 publish record 写しを取得し、その 5 asset、写し、checked-in standalone runner だけを `docker cp` で container に渡す。container は `--network none`、bind/volume mount なし、credential/env 注入なしで起動し、source checkout と Pack checkout を持ち込まない。WSL2 backend の kernel を共有しても WSL2 distro を clean 受入環境とは扱わず、独立 filesystem の disposable container として扱う。証跡には `docker image inspect` の RepoDigests、`docker inspect` の NetworkMode/Mounts、`node --version`、`git --version`、Bun 不在、host の `/c` 非到達、copy 対象一覧、runner の transcript と公開 asset の独立 SHA-256/size を保存する。受入後 container は破棄し、公開取得に使った host credential は container へ渡さない。
 
-**AT-DIST-003 の実 provider review 段階の例外 (PO 承認済み)**: 上記の `--network none`・credential/env 注入なし・
-bind/volume mount なしの条件は AT-DIST-002 の受入にそのまま適用する。AT-DIST-003 の実 provider review の段階
-(§3.6.9) に限り、provider と専用 consumer repository `unison-ai-product/ut-tdd-consumer-canary` への通信と
-認証だけを許す (PO 承認: PR #812 comment 5929420300)。source filesystem の持ち込みと bind mount は禁止のままで、
-この例外は AT-DIST-002 へ波及しない。
+**AT-DIST-003 の実 provider review 段階に限る例外 (PO 承認済み)**: 本節の使い捨て
+`node:24.13.0-bookworm` container は、Linux の実 provider review に限り VS Code Dev Containers から接続してよい。
+VS Code Server と Claude 拡張の導入・通信、および review に必要な provider と専用 consumer repository
+`unison-ai-product/ut-tdd-consumer-canary` への通信・認証を許す。それ以外の段階の既定隔離条件は変えず、
+AT-DIST-002 には適用しない。source / Pack checkout の持ち込みと bind / volume mount、host credential のコピー、
+`CLAUDE_CODE_ENTRYPOINT` の偽装、marker / session の手書きは禁止する (provider 認証は既存の例外範囲で行う)。
+PO 承認: PR #812 comment 5929420300 (既存例外)、#418 comment 6032202315 (Dev Containers 追加、2026-10-07)。
 
 `#761` は control 判断により canary.2 後へ保留され、本 PR-2 の HARD predecessor ではない。公開および実受入は PO 承認なしに実行しない。
 
