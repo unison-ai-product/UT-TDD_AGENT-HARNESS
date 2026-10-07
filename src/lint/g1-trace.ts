@@ -75,9 +75,7 @@ export function extractG1BusinessIds(business: string): Set<string> {
     const firstCell = line.match(
       /^[ \t]*\|[ \t]*(?:\*\*((?:BR|UX)-\d{2})\*\*|((?:BR|UX)-\d{2}))[ \t]*\|/,
     );
-    const legacyIdCell = line.match(
-      /^[ \t]*\|[ \t]*\*\*ID\*\*[ \t]*\|[ \t]*(BR-\d{2})[ \t]*\|/,
-    );
+    const legacyIdCell = line.match(/^[ \t]*\|[ \t]*\*\*ID\*\*[ \t]*\|[ \t]*(BR-\d{2})[ \t]*\|/);
     const id = firstCell?.[1] ?? firstCell?.[2] ?? legacyIdCell?.[1];
     if (id) out.add(id);
   }
