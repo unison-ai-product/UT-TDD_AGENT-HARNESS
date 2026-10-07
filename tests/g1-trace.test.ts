@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
   analyzeG1Trace,
   extractG1BusinessIds,
+  extractG1BusinessTrace,
   extractG1P0FrIds,
   extractG1ScreenIds,
+  g1TraceOk,
   loadG1TraceDocs,
 } from "../src/lint/g1-trace.ts";
 
@@ -48,6 +50,70 @@ describe("G1-trace coverage (business/screen/functional)", () => {
     );
 
     expect([...business]).toEqual(["BR-01", "BR-02", "UX-03", "UX-04", "BR-21"]);
+  });
+
+  it("traces plain and bold business IDs in the leading table cell", () => {
+    const screen = [
+      "## §1 Screen overview",
+      "| PM-01 | Main screen |",
+      "## §2 Details",
+      "### §5.1 BR/UX to screen trace",
+      "| BR-01 | PM-01 |",
+      "| **UX-02** | PM-01 |",
+      "| related requirement | BR-03 |",
+      "| description | **BR-04** |",
+      "| **BR-05 | PM-01 |",
+      "| BR-006 | PM-01 |",
+      "### §5.3 Functional trace",
+      "### §5.5 Screen trace",
+      "| **PM-01** | BR-01 |",
+      "### §5.6 Details",
+    ].join("\n");
+    const trace = extractG1BusinessTrace(screen);
+
+    expect([...trace.keys()]).toEqual(["BR-01", "UX-02"]);
+    expect([...(trace.get("BR-01") ?? [])]).toEqual(["PM-01"]);
+    expect([...(trace.get("UX-02") ?? [])]).toEqual(["PM-01"]);
+  });
+
+  it("analyzes a plain-authored BR trace with the existing screen-table format", () => {
+    const plainDocs = {
+      business: ["| BR-01 | Plain requirement |"].join("\n"),
+      functional: "",
+      screen: [
+        "## §1 Screen overview",
+        "| PM-01 | Main screen |",
+        "## §2 Details",
+        "### §5.1 BR/UX to screen trace",
+        "| BR-01 | PM-01 |",
+        "### §5.3 Functional trace",
+        "### §5.5 Screen trace",
+        "| **PM-01** | BR-01 |",
+        "### §5.6 Details",
+      ].join("\n"),
+      plans: [],
+    };
+
+    const result = analyzeG1Trace(plainDocs);
+    expect(result.totals.screen).toBe(1);
+    expect(result.orphanBusiness).toEqual([]);
+    expect(g1TraceOk(result)).toBe(true);
+  });
+
+  it("preserves Unicode horizontal whitespace around a leading business ID", () => {
+    const trace = extractG1BusinessTrace(
+      [
+        "## §1 Screen overview",
+        "| PM-01 | Main screen |",
+        "## §2 Details",
+        "### §5.1 BR/UX to screen trace",
+        "|　**BR-01**　| PM-01 |",
+        "### §5.3 Functional trace",
+      ].join("\n"),
+    );
+
+    expect([...trace.keys()]).toEqual(["BR-01"]);
+    expect([...(trace.get("BR-01") ?? [])]).toEqual(["PM-01"]);
   });
 
   it("extracts only P0 functional requirements for blocking FR screen trace", () => {
