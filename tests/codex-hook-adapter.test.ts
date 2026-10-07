@@ -149,8 +149,14 @@ describe("codex-hook-adapter — Codex hooks.json parity (PLAN-L7-139, PLAN-L7-6
       description?: string;
       hooks: Record<string, { matcher?: string; hooks: { command: string } }[]>;
     };
-    expect(Object.keys(parsedGenerated).filter((key) => key !== "hooks").sort()).toEqual(
-      Object.keys(parsedRaw).filter((key) => key !== "hooks").sort(),
+    expect(
+      Object.keys(parsedGenerated)
+        .filter((key) => key !== "hooks")
+        .sort(),
+    ).toEqual(
+      Object.keys(parsedRaw)
+        .filter((key) => key !== "hooks")
+        .sort(),
     );
     expect(
       Object.values(parsedGenerated.hooks)
