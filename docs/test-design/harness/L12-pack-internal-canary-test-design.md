@@ -127,7 +127,7 @@ digest 再計算を独立に確認する。
 
 ### AT-DIST-003 collector の offline implementation oracles (Candidate 未昇格)
 
-2026-10-07 の入力契約改訂は、未完の AT-DIST-003 を canary.4 へ再束縛する。以下の canary.3 を名乗る既存 offline test は改訂前の実装記録であり、canary.4 対応の証明ではない。runner と対になる test の exact-tag 更新は、本契約改訂の非著者レビュー後に別の bounded implementation PR で行う。AT-DIST-002 の canary.2 束縛と過去の受入証跡は変更しない。
+2026-10-07 の入力契約改訂は、未完の AT-DIST-003 を canary.4 へ再束縛した。本 bounded implementation では既存 offline oracle の exact-tag owner test を canary.4 に更新する。これは offline binding の検証であり、実 provider / 公開 Release による AT-DIST-003 の受入証明ではない。AT-DIST-002 の canary.2 束縛と過去の受入証跡は変更しない。
 
 次の `U-ST-PACKCANARY-015..019` は、第 2 層 collector の validator / wiring を offline fixture で検査する実装 oracle である。
 同番号の `CANDIDATE-ST-PACKCANARY-015..019` が要求する実 provider、公開 Release からの実 bytes、canonical custody、
@@ -135,7 +135,7 @@ digest 再計算を独立に確認する。
 
 | Oracle ID | 所有 test (`tests/pack-canary-acceptance.test.ts`) | この oracle が保証する範囲 (実 provider / AT-DIST-003 acceptance は対象外) |
 | --- | --- | --- |
-| `U-ST-PACKCANARY-015` | `U-ST-PACKCANARY-015: accepts only the exact canary.3 installer tag in the standard runner`; `U-ST-PACKCANARY-015: the AT-DIST-003 lane accepts only exact canary.3 bytes and its record anchor` | exact canary.3 tag、5 asset digest 集合、record anchor、および installer invocation の offline binding。公開 Release の独立再取得や install 実行は証明しない |
+| `U-ST-PACKCANARY-015` | `U-ST-PACKCANARY-015: accepts exact canary.4 for the agent lane and canary.2 for the standard lane`; `U-ST-PACKCANARY-015: the AT-DIST-003 lane accepts only exact canary.4 bytes and its record anchor` | AT-DIST-003 の exact canary.4 tag、5 asset digest 集合、record anchor、および installer invocation の offline binding。標準 AT-DIST-002 の canary.2 lane は不変。公開 Release の独立再取得や install 実行は証明しない |
 | `U-ST-PACKCANARY-016` | `U-ST-PACKCANARY-016: rejects missing or non-agent authoring provenance`; `U-ST-PACKCANARY-016: rejects prefixed github.com repository identity`; `U-ST-PACKCANARY-016: routes authoring through registered se role and rejects worker`; `U-ST-PACKCANARY-016..018: mock adapter exercises consumer CLI wiring (not provider evidence)` | provenance / canonical repository identity validator の fail-close、production delegation routing の se 正系・worker 否定系、mock での normal consumer CLI 呼出し順。Codex provider 実 invocation は証明しない |
 | `U-ST-PACKCANARY-017` | `U-ST-PACKCANARY-017: rejects a non-applicable, failed, or could-not-run G1 positive`; `U-ST-PACKCANARY-016..018: mock adapter exercises consumer CLI wiring (not provider evidence)` | positive G1 evidence shape の拒否条件と mock の CLI wiring。実 subject の G1 pass は証明しない |
 | `U-ST-PACKCANARY-018` | `U-ST-PACKCANARY-018: rejects same-revision or unnamed-slot G1 negative`; `U-ST-PACKCANARY-016..018: mock adapter exercises consumer CLI wiring (not provider evidence)` | negative G1 evidence shape の拒否条件と mock の CLI wiring。実 subject の別 child revision に対する G1 fail は証明しない |

@@ -532,14 +532,14 @@ describe("manual canary acceptance publish-record boundary", () => {
     ).toThrow("install-evidence-not-verifiable");
   });
 
-  it("U-ST-PACKCANARY-015: accepts only the exact canary.3 installer tag in the standard runner", () => {
-    const anchor = sha("canary.3 anchor");
-    expect(buildInstallerInvocation("C:/c3-release", anchor, AGENT_E2E_TAG)).toEqual([
-      join("C:/c3-release", `${AGENT_E2E_TAG}.ut-tdd.mjs`),
+  it("U-ST-PACKCANARY-015: accepts exact canary.4 for the agent lane and canary.2 for the standard lane", () => {
+    const anchor = sha("canary.4 anchor");
+    expect(buildInstallerInvocation("C:/c4-release", anchor, "v0.2.0-canary.4")).toEqual([
+      join("C:/c4-release", "v0.2.0-canary.4.ut-tdd.mjs"),
       "setup",
       "--solo",
       "--consumer-runtime-release",
-      "C:/c3-release",
+      "C:/c4-release",
       "--expected-consumer-digest",
       anchor,
     ]);
@@ -552,7 +552,7 @@ describe("manual canary acceptance publish-record boundary", () => {
       "--expected-consumer-digest",
       anchor,
     ]);
-    for (const tag of ["v0.2.0-canary.4", "v0.1.4", "latest"]) {
+    for (const tag of ["v0.2.0-canary.3", "v0.1.4", "latest", "v0.2.0-canary.4-preview"]) {
       expect(() => buildInstallerInvocation("C:/other-release", anchor, tag)).toThrow(
         "acceptance-tag-not-canary-2-or-offline-fixture",
       );
@@ -902,26 +902,27 @@ describe("manual canary acceptance publish-record boundary", () => {
     ).toThrow("acceptance-tag-not-canary-2");
   });
 
-  it("U-ST-PACKCANARY-015: the AT-DIST-003 lane accepts only exact canary.3 bytes and its record anchor", () => {
+  it("U-ST-PACKCANARY-015: the AT-DIST-003 lane accepts only exact canary.4 bytes and its record anchor", () => {
     const input = agentRecord();
+    expect(input.value.tag).toBe("v0.2.0-canary.4");
     const parsed = parseAgentE2ERecord(input.value, commentUrl);
     const dir = agentReleaseDir(input.assetBytes);
-    expect(parsed.value.tag).toBe("v0.2.0-canary.3");
+    expect(parsed.value.tag).toBe("v0.2.0-canary.4");
     expect(Object.keys(verifyReleaseDirectory(dir, parsed).actualDigests).sort()).toEqual(
-      [...canaryAssetsForTag("v0.2.0-canary.3")].sort(),
+      [...canaryAssetsForTag("v0.2.0-canary.4")].sort(),
     );
-    expect(buildAgentE2EInstallerInvocation("C:/c3-release", parsed.consumerAnchorDigest)).toEqual([
-      join("C:/c3-release", "v0.2.0-canary.3.ut-tdd.mjs"),
+    expect(buildAgentE2EInstallerInvocation("C:/c4-release", parsed.consumerAnchorDigest)).toEqual([
+      join("C:/c4-release", "v0.2.0-canary.4.ut-tdd.mjs"),
       "setup",
       "--solo",
       "--consumer-runtime-release",
-      "C:/c3-release",
+      "C:/c4-release",
       "--expected-consumer-digest",
       parsed.consumerAnchorDigest,
     ]);
     expect(
-      buildInstallerInvocation("C:/c3-release", parsed.consumerAnchorDigest, AGENT_E2E_TAG),
-    ).toEqual(buildAgentE2EInstallerInvocation("C:/c3-release", parsed.consumerAnchorDigest));
+      buildInstallerInvocation("C:/c4-release", parsed.consumerAnchorDigest, AGENT_E2E_TAG),
+    ).toEqual(buildAgentE2EInstallerInvocation("C:/c4-release", parsed.consumerAnchorDigest));
     expect(() => parseAgentE2ERecord(record().value, commentUrl)).toThrow(
       "publish-record-tag-not-exact",
     );
@@ -929,6 +930,11 @@ describe("manual canary acceptance publish-record boundary", () => {
     const c2Bytes = structuredClone(input.value);
     c2Bytes.tag = CANARY_TAG;
     expect(() => parseAgentE2ERecord(c2Bytes, commentUrl)).toThrow("publish-record-tag-not-exact");
+    for (const tag of ["v0.2.0-canary.3", "latest", "v0.2.0-canary.4-preview"]) {
+      const wrongTag = structuredClone(input.value);
+      wrongTag.tag = tag;
+      expect(() => parseAgentE2ERecord(wrongTag, commentUrl)).toThrow("publish-record-tag-not-exact");
+    }
     const tampered = agentReleaseDir(input.assetBytes);
     writeFileSync(join(tampered, canaryAssetsForTag(AGENT_E2E_TAG)[2]), "tampered");
     expect(() => verifyReleaseDirectory(tampered, parsed)).toThrow("release-asset-digest-mismatch");
