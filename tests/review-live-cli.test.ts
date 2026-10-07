@@ -1,4 +1,4 @@
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import {
   chmodSync,
   mkdirSync,
@@ -604,4 +604,44 @@ process.stdin.on("end", () => {
       else process.env.UT_TDD_CLAUDE_BIN = previous;
     }
   }, 30_000);
+
+  it.each([
+    ["parent", ["review", "--json", "live-consume"]],
+    ["child", ["review", "live-consume", "--json"]],
+  ] as const)(
+    "U-RVATT-036 returns deny JSON through the real CLI when --json is on the %s command",
+    (_position, commandArgs) => {
+      const { root, envelopePath } = fixture();
+      execFileSync("git", ["init", "-q"], { cwd: root });
+      const binRoot = mkdtempSync(join(tmpdir(), "ut-review-deny-provider-"));
+      roots.push(binRoot);
+      const stub = join(binRoot, process.platform === "win32" ? "claude.cmd" : "claude");
+      writeFileSync(
+        stub,
+        process.platform === "win32"
+          ? "@echo off\r\nif \"%~1\"==\"--version\" (echo claude 0.0.0-stub& exit /b 0)\r\nexit /b 1\r\n"
+          : "#!/bin/sh\nif [ \"$1\" = \"--version\" ]; then echo claude 0.0.0-stub; exit 0; fi\nexit 1\n",
+        "utf8",
+      );
+      if (process.platform !== "win32") chmodSync(stub, 0o755);
+
+      const cliPath = join(process.cwd(), "src", "cli.ts");
+      const result = spawnSync(
+        process.execPath,
+        [cliPath, ...commandArgs, "--envelope", envelopePath],
+        {
+          cwd: root,
+          encoding: "utf8",
+          windowsHide: true,
+          env: { ...process.env, UT_TDD_CLAUDE_BIN: stub },
+        },
+      );
+
+      expect(result.status, result.stderr).toBe(1);
+      expect(JSON.parse(result.stdout) as unknown).toEqual({
+        ok: false,
+        reason: "reviewer_execution_failed",
+      });
+    },
+  );
 });
