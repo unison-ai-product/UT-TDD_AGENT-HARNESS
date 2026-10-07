@@ -85,18 +85,18 @@ status: confirmed
 github_issue_id: 418
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:ba95903f9379aa05537f3adb2def1c57
-  command_id: plan-revise:issue-418:linux-wsl-canary5:additive-r15:20261007
-  admitted_at: 2026-10-07T07:23:08.000Z
-  source_digest: sha256:b799242fd61b61de845f3e67e64e91a0942e6cc04cbeee4b8f7ec9941f2d8637
-  decision_digest: sha256:7e07036a34f7f8aaf20486de0fe2fb0f9f99862c28f999e6edc4f5b2da333896
-  receipt_digest: sha256:27eb4484ee3c52c142cbd4472943f9abc732836a2ac0b3f3d009a4c4cb814d28
+  receipt_id: certificate:74dbae6bae5db0a80016155c4bb0a2d1
+  command_id: plan-revise:issue-418:linux-wsl-canary5:additive-r16:20261007
+  admitted_at: 2026-10-07T07:27:24.000Z
+  source_digest: sha256:67d34747ac8c9d38e673259ba2dc0725be21e45b805ebdd390cd1cbf44985d40
+  decision_digest: sha256:1d22e0104e17b834feeffa7dc714981a9fa28d84ba3b69671c088ef1ca40a7f3
+  receipt_digest: sha256:6794fbf2686477a70307f71a9d8c416e8814ff5d6de81a0e3495118f8dd41024
   binding:
     path: docs/plans/PLAN-L7-531-pack-internal-canary-smoke.md
     plan_id: PLAN-L7-531-pack-internal-canary-smoke
     asset_id: plan:44f79788376b81c225ce5913fddbc48f
-    revision: 15
-    content_digest: sha256:b799242fd61b61de845f3e67e64e91a0942e6cc04cbeee4b8f7ec9941f2d8637
+    revision: 16
+    content_digest: sha256:67d34747ac8c9d38e673259ba2dc0725be21e45b805ebdd390cd1cbf44985d40
   route:
     signal: feature_addition
     mode: add-feature
@@ -116,11 +116,12 @@ admission_receipt:
     target_plan_id: PLAN-L7-531-pack-internal-canary-smoke
     target_revision: 12
     phase: forward_merge
-  escape_reason: "#418 comment 6032594757
-    に基づきAT-DIST-003をcanary.5へ再束縛し、C1差分0時だけ既存AT証跡を再利用する条件と、comment 6032687564
-    承認の専用WSL2隔離条件を加える。既存provider/repository例外、AT-DIST-002とcanary.2/latest不変条件は保\
-    持する。実作成者: Codex gpt-6-luna effort=high (author attribution only; no review,
-    PASS, or acceptance claim)."
+  escape_reason: "#418 comment 6032687564 に基づき§6.1のAT-DIST-003 Linux例外をDev
+    Containersから専用WSL2 distro条件へ置換する。§3.6.9(8)と同じrootfs
+    provenance、初回起動前隔離、asset内取得、device
+    flow、Remote-WSL、破棄条件を参照する。AT-DIST-002のDocker/Node/--network
+    none/bind・volumeなし条件は不変。実作成者: Codex gpt-6-luna effort=high (author
+    attribution only; no review, PASS, or acceptance claim)."
 ---
 
 # PLAN-L7-531: Pack-only internal canary smoke (Windows/Linux)
@@ -606,12 +607,14 @@ provider と専用 consumer repository `unison-ai-product/ut-tdd-consumer-canary
 (PO 承認: PR #812 comment 5929420300)。これは AT-DIST-002 に適用せず、source filesystem の持ち込みと bind mount
 も禁止のままとする。
 
-**Linux Dev Containers の追加例外 (AT-DIST-003 の実 provider review 段階のみ、PO 承認済み)**: Linux では
-使い捨て `node:24.13.0-bookworm` container に VS Code Dev Containers で接続してよい。VS Code Server と Claude
-拡張を container に導入するための通信・導入も許す。既定の隔離条件はこの段階以外では変更せず、AT-DIST-002
-にも適用しない。source / Pack checkout の持ち込みと bind / volume mount、host credential のコピー、
-`CLAUDE_CODE_ENTRYPOINT` の偽装、marker / session の手書きは禁止する (provider 認証は既存例外の範囲で行う)。
-PO 承認: #418 comment 6032202315 (2026-10-07)。
+**Linux 専用 WSL2 distro の例外 (AT-DIST-003 の実 provider review 段階のみ、PO 承認済み)**: Linux では
+§3.6.9(8) の全条件を満たす新規・専用・使い捨て WSL2 distro を使う。既存 `Ubuntu-26.04` は使わず、公式
+rootfs の取得元と SHA-256 を記録する。最初の起動前に `/etc/wsl.conf` で automount と interop / Windows PATH
+追加を無効にし、`/mnt/c` 不在、`cmd.exe` 起動不可、Windows path を含まない `$PATH` を実測する。source / Pack
+checkout と host credential は持ち込まず、公開 Release asset は distro 内で直接取得する。認証は PO device flow、
+VS Code は Remote-WSL とし、VS Code Server / Claude 拡張の導入通信をこの段階だけ許す。受入後は control が
+`wsl --unregister` で破棄する。AT-DIST-002 の Docker / `--network none` / bind・volume なしの条件には適用しない。
+PO 承認: #418 comment 6032687564 (2026-10-07)。
 
 `#761` は control 判断により canary.2 後へ保留され、本 PR-2 の HARD predecessor ではない。公開および実受入は PO 承認なしに実行しない。
 
