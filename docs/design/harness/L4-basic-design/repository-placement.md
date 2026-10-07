@@ -36,11 +36,11 @@ plan: pending (PLAN-L4-35 は issue 596 の ledger 取り込み後に plan draft
 | # | 矛盾 | 実測 |
 |---|---|---|
 | 1 | 配布する部品が `docs/` の中にある | Pack の `docs/templates/` に 101 本 (adapter 35、vmodel 49、github 11 ほか)。同じく配布する部品の skill は root の `skills/` にあり、基準が割れている |
-| 2 | リリース工場 (Pack を作って公開する側のコード) が consumer に配られている | `src/setup/` の 22 本のうち、`pack-publication-*` / `release-*` などの 9 本は producer 専用。consumer は Pack を公開しない |
+| 2 | リリース工場 (Pack を作って公開する側のコード) と consumer の実行コードが、import で絡み合ったまま配られている | `src/setup/` の 22 本のうち、名前が `pack-publication-*` / `release-*` の 9 本は Pack の生成・公開に使う。しかし、consumer 側の `consumer-local-runtime-admission.ts` と `consumer-runtime-release.ts` から import を辿ると、9 本のうち 6 本 (`pack-publication-assets` / `pack-publication-staging` / `release-aggregate-admission` / `release-artifact-resolver` / `release-channel-adapter` / `release-materializer`) に到達する (`setup/index.ts` を経由しない経路だけで数えた値)。名前では、工場と consumer を分けられない |
 | 3 | 使われていないコードが出荷されている | `src/document-disposition/`、`src/execution/`。`src/` からの import は 0 件で、テストからしか参照されていない |
 | 4 | 右腕の設計が `docs/process/` に紛れている | L11 / L13 の設計 (`docs/process/evidence/g11-uat-review-design.md`、`g13-post-deploy-verification-design.md`) が、`docs/design/` ではなく process の下にある |
 | 5 | source repo 自身の説明やルールが Pack に入っている | `docs/governance/repository-structure.md` は source repo の構造を説明したもので、Pack の構造とは一致しない。`coding-rules.md` などの、自分の開発ルールも同梱されている |
-| 6 | 製品が何なのかが二重になっている | consumer が実際に使うのは release asset (`ut-tdd.mjs` と consumer runtime)。一方、Pack repo はテスト 348 本と CI を含む完全な source になっている |
+| 6 | 製品が何なのかが二重になっている | consumer が実際に使うのは release asset (`ut-tdd.mjs` と consumer runtime)。一方、Pack repo はテスト (`tests/` 配下 348 ファイル、うち `.test.ts` は 330 本) と CI を含む完全な source になっている |
 | 7 | 正本の記述が現実と食い違っている | `repository-structure.md` と ADR-005 は「consumer がこの repo を git dependency (tag-pin) として pull する」と書いている。実際の配布は release asset (canary.2 以降) |
 | 8 | 同じ種類のテンプレートの置き場が 2 か所ある | `docs/templates/design/L6-function-spec-template.md` (78 行) と `docs/templates/vmodel/L6-function-spec.md` (56 行) |
 | 9 | builtin と disk の二重管理 | `BUILTIN_GITHUB_TEMPLATES` と disk のテンプレートで、45 ペアのうち 7 ペアが不一致 (#872)。consumer には builtin 側が届く |
@@ -108,7 +108,7 @@ UT-TDD-agent-harness/
 │   ├── tests/                       product/ のテスト
 │   ├── scripts/                     開発用のスクリプト
 │   ├── records/                     規律の証跡の正本 (JSON / JSONL: review receipt・memory・決定の記録)。追跡する
-│   └── release/                     リリース工場 (Pack の生成・公開。現 src/setup の 12 本)
+│   └── release/                     リリース工場 (Pack の生成・公開のうち、consumer の入口から import で到達しないものだけ。§4)
 │
 ├── .claude/  .codex/                ▲ 生成物: 内部デプロイが product/parts/adapters から作る。手で編集しない
 ├── CLAUDE.md  AGENTS.md             ▲ 生成物 + 入口: adapter 部分は生成し、この repo 固有のルールは dev/docs/governance を指すだけ
@@ -159,7 +159,11 @@ consumer の都合 (フレームワークが `src/` を要求する場合など)
 
 ### §3.4 Pack と配布の 3 段階
 
-1. **Pack repo** = `product/` の中身を root に出したもの。そこに `release/manifest.yaml` (その版の C2 の束縛) と、公開した asset を再現できるかを確かめる CI を足す。`tests/`・`docs/governance`・`docs/process`・`scripts/`・`vitest.config.ts` は入らない (dev 側)。3,178 本から 998 本を filter で選ぶ方式 (allowlist / denylist) をやめ、構造で決まるようにする。dev 専用 path の漏出検査は、「`dev/` が入っていないこと」の 1 行になる。テストと受入は、出荷前に source 側で済ませる。
+1. **Pack repo** = `product/` の中身を root に出したもの。そこに足してよいのは、次の 2 つだけである。足す path は registry (§4) に列挙し、それ以外は入れない。
+   - `release/manifest.yaml` (その版の C2 の束縛)
+   - 公開した asset を再現できるかを確かめる CI の workflow (`.github/workflows/` の下に置く、再現確認専用の 1 本)
+
+   `tests/`・`docs/governance`・`docs/process`・`scripts/`・`vitest.config.ts` は入らない (dev 側)。3,178 本から 998 本を filter で選ぶ方式 (allowlist / denylist) をやめ、構造で決まるようにする。dev 専用 path の漏出検査は、「`dev/` が入っていないこと」の 1 行になる。テストと受入は、出荷前に source 側で済ませる。
 2. **Release asset** = `product/` をビルドしたもの (現行の 5 本)。builtin のテンプレートは、`product/parts/templates/` から build 時に生成する (#872 のズレが構造的に起きなくなる)。管理知能 (Python) の配布物は、v4 の実装時に asset の一覧の契約へ追加する。
 3. **consumer の project** = asset をインストールした結果 (§3.3 の形)。この repo の root の生成物 (▲) も、consumer と同じ手順で作られる。
 
@@ -181,7 +185,7 @@ source の `product/` → Pack repo → asset → consumer とこの repo の ro
 - ルールの種類は次の 3 つ。
   - **path ルール**: 区分 (system / parts / dev / tool-root) と、その中の置き場所
   - **文書ルール**: frontmatter の `layer` / `sub_doc` / `doc_type_id` から、置き場所の層を決める
-  - **component ルール**: engine の帯と component (R3 で実測した dir。移行期間中は `src/`) ごとに、置くファイルのパターンを決める (例: `pack-publication-*` / `release-*` は `dev/release/`)
+  - **component ルール**: engine の帯と component (R3 で実測した dir。移行期間中は `src/`) ごとに、置き場所を決める。**配る物か配らない物かは、ファイル名ではなく、consumer の入口 (setup・consumer runtime・CLI の consumer 向け command) から import で到達するかで決める。** 到達するものは `product/engine/` に置く。到達しないものだけを `dev/release/` に置ける。到達性は import graph から機械で求める (§2 矛盾 2 の実測では、名前が `pack-publication-*` / `release-*` の 9 本のうち 6 本が到達する)
 - **未知の種類**: governed root (`product/`、`dev/`、それと移行期間中の `src/`、`docs/`、`tests/`、`scripts/`) の中で、どのルールにも当たらない新しいファイルは置けない。先に registry へルールを足す。scratchpad、`.ut-tdd/`、ignore 対象は governed root に含めない。
 - **例外**: 新しい機構は作らない。foreign-edit override と同じ、理由が必須の one-shot marker (`.ut-tdd/state/placement-override`) を再利用する。使うと消費され、監査ログ `.ut-tdd/logs/placement-overrides.jsonl` に残る。
 
@@ -231,7 +235,7 @@ source の `product/` → Pack repo → asset → consumer とこの repo の ro
 | 0 | root の役割不明の物を、確認できたものから 1 件ずつ削除 (2026-10-07 実施済み: `tmp_status*.json`、`x.command_id`、`tmp/`、`.pytest_cache/`)。残り (`memory/.update_check` の発生源、ZIP、`prt1-zip-templates.json`) は、既存の PO 条件を確認してから処理する | なし |
 | 1 | registry (§4) と、報告だけの patrol (§6)。ルールは**現状の構造**で書き、§2 の矛盾は既知の移行対象として報告する | なし |
 | 2 | 書き込み時の guard (§5) | なし |
-| 3 | 構造の切り替え (§3): `product/` (core / parts) と `dev/` の新設、テンプレートの移動、`vmodel/` の廃止、リリース工場の `dev/release/` への移動、右腕の設計の層ディレクトリへの移動、使われていないコードの削除、Pack inventory の構造化。v4 の層の切り替え (#822) と**同じ切り替え**で行う (触るファイルがほぼ同じなので、2 回動かさない) | あり。canary で配布し、受入で「Pack = `product/` の中身」と consumer に届くテンプレートの一致を確認する |
+| 3 | 構造の切り替え (§3): `product/` (core / parts) と `dev/` の新設、テンプレートの移動、`vmodel/` の廃止、リリース工場の `dev/release/` への移動 (先に consumer 側からの import を切り離し、到達しなくなったものだけを動かす)、右腕の設計の層ディレクトリへの移動、使われていないコードの削除、Pack inventory の構造化。v4 の層の切り替え (#822) と**同じ切り替え**で行う (触るファイルがほぼ同じなので、2 回動かさない) | あり。canary で配布し、受入で「Pack = `product/` の中身 + registry が列挙した追加 path」と、consumer に届くテンプレートの一致を確認する |
 | 4 | 内部デプロイ (§7) | なし (この repo の運用だけ) |
 
 registry のルールは、段階 3 で目標の構造へ切り替える。段階 1〜2 の間は、現状の構造を正として、新しい散らかりだけを止める。
