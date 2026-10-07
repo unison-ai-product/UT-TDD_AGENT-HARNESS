@@ -1,6 +1,6 @@
 ---
 layer: L4
-sub_doc: repository-placement
+sub_doc: architecture
 status: draft
 pair_artifact: docs/test-design/harness/L9-repository-placement-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
