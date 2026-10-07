@@ -367,7 +367,7 @@ export const BUILTIN_GITHUB_TEMPLATES: TemplateSet = {
     '            "type": "command",',
     '            "command": "node",',
     `            "args": ${JSON.stringify([...wrapperHookArgs("session-start")])},`,
-    '            "timeout": 30,',
+    '            "timeout": 5,',
     '            "statusMessage": "session-log: session start (fail-open)"',
     "          }",
     "        ]",
