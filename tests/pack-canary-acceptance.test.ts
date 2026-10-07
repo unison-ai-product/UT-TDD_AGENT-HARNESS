@@ -552,7 +552,13 @@ describe("manual canary acceptance publish-record boundary", () => {
       "--expected-consumer-digest",
       anchor,
     ]);
-    for (const tag of ["v0.2.0-canary.3", "v0.1.4", "latest", "v0.2.0-canary.4-preview"]) {
+    for (const tag of [
+      "v0.2.0-canary.3",
+      "v0.1.4",
+      "latest",
+      "v0.2.0-canary.4-preview",
+      "prefix-v0.2.0-canary.4",
+    ]) {
       expect(() => buildInstallerInvocation("C:/other-release", anchor, tag)).toThrow(
         "acceptance-tag-not-canary-2-or-offline-fixture",
       );
@@ -930,7 +936,12 @@ describe("manual canary acceptance publish-record boundary", () => {
     const c2Bytes = structuredClone(input.value);
     c2Bytes.tag = CANARY_TAG;
     expect(() => parseAgentE2ERecord(c2Bytes, commentUrl)).toThrow("publish-record-tag-not-exact");
-    for (const tag of ["v0.2.0-canary.3", "latest", "v0.2.0-canary.4-preview"]) {
+    for (const tag of [
+      "v0.2.0-canary.3",
+      "latest",
+      "v0.2.0-canary.4-preview",
+      "prefix-v0.2.0-canary.4",
+    ]) {
       const wrongTag = structuredClone(input.value);
       wrongTag.tag = tag;
       expect(() => parseAgentE2ERecord(wrongTag, commentUrl)).toThrow("publish-record-tag-not-exact");
