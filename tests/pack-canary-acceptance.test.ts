@@ -944,7 +944,9 @@ describe("manual canary acceptance publish-record boundary", () => {
     ]) {
       const wrongTag = structuredClone(input.value);
       wrongTag.tag = tag;
-      expect(() => parseAgentE2ERecord(wrongTag, commentUrl)).toThrow("publish-record-tag-not-exact");
+      expect(() => parseAgentE2ERecord(wrongTag, commentUrl)).toThrow(
+        "publish-record-tag-not-exact",
+      );
     }
     const tampered = agentReleaseDir(input.assetBytes);
     writeFileSync(join(tampered, canaryAssetsForTag(AGENT_E2E_TAG)[2]), "tampered");
