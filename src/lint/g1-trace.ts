@@ -70,9 +70,16 @@ function screenIds(text: string): Set<string> {
 }
 
 export function extractG1BusinessIds(business: string): Set<string> {
-  const out = ids(business, /\|\s*\*\*((?:BR|UX)-\d{2})\*\*\s*\|/g);
-  for (const m of business.matchAll(/\|\s*\*\*ID\*\*\s*\|\s*(BR-\d{2})\s*\|/g)) {
-    out.add(m[1]);
+  const out = new Set<string>();
+  for (const line of business.split(/\r?\n/)) {
+    const firstCell = line.match(
+      /^[ \t]*\|[ \t]*(?:\*\*((?:BR|UX)-\d{2})\*\*|((?:BR|UX)-\d{2}))[ \t]*\|/,
+    );
+    const legacyIdCell = line.match(
+      /^[ \t]*\|[ \t]*\*\*ID\*\*[ \t]*\|[ \t]*(BR-\d{2})[ \t]*\|/,
+    );
+    const id = firstCell?.[1] ?? firstCell?.[2] ?? legacyIdCell?.[1];
+    if (id) out.add(id);
   }
   return out;
 }
