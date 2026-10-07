@@ -85,18 +85,18 @@ status: confirmed
 github_issue_id: 418
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:74dbae6bae5db0a80016155c4bb0a2d1
-  command_id: plan-revise:issue-418:linux-wsl-canary5:additive-r16:20261007
-  admitted_at: 2026-10-07T07:27:24.000Z
-  source_digest: sha256:67d34747ac8c9d38e673259ba2dc0725be21e45b805ebdd390cd1cbf44985d40
-  decision_digest: sha256:1d22e0104e17b834feeffa7dc714981a9fa28d84ba3b69671c088ef1ca40a7f3
-  receipt_digest: sha256:6794fbf2686477a70307f71a9d8c416e8814ff5d6de81a0e3495118f8dd41024
+  receipt_id: certificate:17489c88fc6f0be968ccabe74a347a5f
+  command_id: plan-revise:issue-418:linux-wsl-canary5:additive-r18-preserve-confirmed-status:20261007
+  admitted_at: 2026-10-07T11:05:38.769Z
+  source_digest: sha256:bf6adb564853365cfaa782e5f7ac382d37d4d2699bf8ed1be71078b21680065d
+  decision_digest: sha256:274db05a0bb4dde4f710563b2fceed1078c01a9c13083fdd6f9e6bf42dbe768d
+  receipt_digest: sha256:8437cae154ceaad07740b766810b7e859a51f249032dc375a8328f1524f82b3f
   binding:
     path: docs/plans/PLAN-L7-531-pack-internal-canary-smoke.md
     plan_id: PLAN-L7-531-pack-internal-canary-smoke
     asset_id: plan:44f79788376b81c225ce5913fddbc48f
-    revision: 16
-    content_digest: sha256:67d34747ac8c9d38e673259ba2dc0725be21e45b805ebdd390cd1cbf44985d40
+    revision: 18
+    content_digest: sha256:bf6adb564853365cfaa782e5f7ac382d37d4d2699bf8ed1be71078b21680065d
   route:
     signal: feature_addition
     mode: add-feature
@@ -116,12 +116,10 @@ admission_receipt:
     target_plan_id: PLAN-L7-531-pack-internal-canary-smoke
     target_revision: 12
     phase: forward_merge
-  escape_reason: "#418 comment 6032687564 に基づき§6.1のAT-DIST-003 Linux例外をDev
-    Containersから専用WSL2 distro条件へ置換する。§3.6.9(8)と同じrootfs
-    provenance、初回起動前隔離、asset内取得、device
-    flow、Remote-WSL、破棄条件を参照する。AT-DIST-002のDocker/Node/--network
-    none/bind・volumeなし条件は不変。実作成者: Codex gpt-6-luna effort=high (author
-    attribution only; no review, PASS, or acceptance claim)."
+  escape_reason: "#418 PO 決定 6036338735 の Remote-SSH 契約を維持し、r17 の CLI revise 入力で
+    admission.status=confirmed を渡し忘れたため消えた既存 status を復元する。r16 からの status:
+    confirmed を保全し、origin / episode / reentry と review_evidence 履歴は変更しない。新しい
+    PASS、受入完了、実装完了は主張しない。"
 ---
 
 # PLAN-L7-531: Pack-only internal canary smoke (Windows/Linux)
@@ -435,6 +433,9 @@ authority・隔離条件は §3.6.9 で凍結する (本 join はその条件の
 保存する項目: canary.5 の tag、5 asset の sha256 と size、publish 記録のコメント URL と写しの SHA-256、
 anchor、Linux 専用 WSL2 distro の公式 rootfs 取得元と SHA-256、初回起動前に設定した `/etc/wsl.conf`、
 `/mnt/c` 不在・`cmd.exe` 起動不可・Windows path を含まない `$PATH` の実測、`node --version`、Bun 不在、
+sshd の有効設定と `127.0.0.1` のみの listen 実測、Remote-SSH 接続先、distro 内 VS Code Server の
+取得・起動確認、distro 側 Server 上の Claude 拡張稼働確認、該当 Claude 拡張プロセスの環境から
+実測した `CLAUDE_CODE_ENTRYPOINT=claude-vscode`、受入専用に新規作成した鍵対の公開鍵 fingerprint、
 canary.4 C1→canary.5 C1 の scoped diff コマンド・両 C1 値・終了 code・出力、AT 再検査/再利用の判定、
 author provider / model / 実 invocation の記録と transcript、
 baseline commit と subject commit と negative commit の SHA、subject の path・content digest・blob oid、
@@ -508,11 +509,16 @@ checkout・host credential を持ち込まない専用 disposable WSL2 distro (�
    とし、`ls /mnt/c` で `/mnt/c` 不在、`cmd.exe` 起動不可、`$PATH` に Windows path がないことを実測する。
    source / Pack checkout と host credential は持ち込まず、公開 Release asset は distro 内で直接取得する。
    認証は distro 内で PO の device flow により行い、control が device code を提供する。VS Code は
-   Remote-WSL で接続し、VS Code Server と Claude 拡張の導入に必要な通信・導入を許す。受入後は control が
-   `wsl --unregister` で distro を破棄する (同時に扱う distro は 1 件)。既存の provider / 専用 consumer
-   repository 通信例外は変えない。source / Pack checkout の持ち込み、bind / volume mount、host credential
-   のコピー、`CLAUDE_CODE_ENTRYPOINT` の偽装、marker / session の手書きは禁止する。AT-DIST-002 には適用しない。
-   PO 承認: #418 comment 6032687564 (2026-10-07)。
+   Remote-SSH で distro 内の sshd に接続し、sshd は `127.0.0.1` だけで listen させる。
+   公開鍵はこの受入専用に新規作成した鍵対のものだけを distro に配置し、秘密鍵を含む host credential は
+   コピーしない。VS Code Server は distro 内で取得・起動し、Claude 拡張も distro 側 Server で動かす。
+   該当する Claude 拡張プロセスの実環境から `CLAUDE_CODE_ENTRYPOINT=claude-vscode` を測定する。
+   受入後は control が `wsl --unregister` で distro を破棄する (同時に扱う distro は 1 件)。既存の provider /
+   専用 consumer repository 通信例外は変えない。source / Pack checkout の持ち込み、bind / volume mount、
+   host credential のコピー、`CLAUDE_CODE_ENTRYPOINT` の偽装、marker / session の手書きは禁止する。
+   AT-DIST-002 には適用しない。remote connection 方式だけを改訂する PO 決定: #418 comment 6036338735
+   (2026-10-07)。同決定は 6032687564 の rootfs / 初回起動前隔離 / device flow / 破棄条件を維持し、
+   Remote-WSL 指定だけを置換する。
 9. **evidence**: Windows と Linux (§6.1 の専用 disposable WSL2 distro、ただし本段階は上記 8 の例外下) の双方で,
    §3.6.6 の項目に加えて、専用 repository の PR 番号と head SHA、live-dispatch / live-consume の
    transcript、verdict / receipt のパス、subject の blob oid と SHA-256 の再計算値を取る。
@@ -612,9 +618,13 @@ provider と専用 consumer repository `unison-ai-product/ut-tdd-consumer-canary
 rootfs の取得元と SHA-256 を記録する。最初の起動前に `/etc/wsl.conf` で automount と interop / Windows PATH
 追加を無効にし、`/mnt/c` 不在、`cmd.exe` 起動不可、Windows path を含まない `$PATH` を実測する。source / Pack
 checkout と host credential は持ち込まず、公開 Release asset は distro 内で直接取得する。認証は PO device flow、
-VS Code は Remote-WSL とし、VS Code Server / Claude 拡張の導入通信をこの段階だけ許す。受入後は control が
-`wsl --unregister` で破棄する。AT-DIST-002 の Docker / `--network none` / bind・volume なしの条件には適用しない。
-PO 承認: #418 comment 6032687564 (2026-10-07)。
+VS Code は Remote-SSH で distro 内の sshd (`127.0.0.1` のみ listen) に接続する。受入専用に新規作成した鍵対の
+公開鍵だけを distro に置き、秘密鍵を含む host credential はコピーしない。VS Code Server は distro 内で取得・
+起動し、Claude 拡張が distro 側 Server で動くこと、該当 Claude 拡張プロセスの実環境が
+`CLAUDE_CODE_ENTRYPOINT=claude-vscode` であることを実測する。受入後は control が `wsl --unregister` で
+破棄する。AT-DIST-002 の Docker / `--network none` / bind・volume なしの条件には適用しない。
+この初回隔離条件は PO 承認 #418 comment 6032687564 (2026-10-07) を維持する。Remote-WSL 指定だけは、
+automount 無効条件と両立しないことを受けて #418 comment 6036338735 (2026-10-07) が Remote-SSH へ置換した。
 
 `#761` は control 判断により canary.2 後へ保留され、本 PR-2 の HARD predecessor ではない。公開および実受入は PO 承認なしに実行しない。
 
