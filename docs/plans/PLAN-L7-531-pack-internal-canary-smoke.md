@@ -81,21 +81,22 @@ review_evidence:
         evidence_path: docs/test-design/harness/L12-pack-internal-canary-test-design.md
         output_digest: sha256:855449d6f72a7a879838eaec669a811815d29cf84ffbc15939927a66ff1b90bf
         anchor_commit: be1b16d9476feca9cf89b540f25185f935a8748d
+status: confirmed
 github_issue_id: 418
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:81ea569282026a1d766d606f08b16f24
-  command_id: plan-revise:issue-418:linux-wsl-canary5:additive-r17-input-fix1:20261007
-  admitted_at: 2026-10-07T11:02:35.482Z
-  source_digest: sha256:5e8b68947b93ff38bd2ced2aaa7a9687ba036512dc761635a50c17111bfa2e39
-  decision_digest: sha256:7d9396aef8b045e7e0d633ea79cfc3c32e1c771565791ecca725f1d1cfec3831
-  receipt_digest: sha256:4da12c2b15b3101a4ae3f8bc839e98624da40e1c51c1da5b23ccb2131495a476
+  receipt_id: certificate:17489c88fc6f0be968ccabe74a347a5f
+  command_id: plan-revise:issue-418:linux-wsl-canary5:additive-r18-preserve-confirmed-status:20261007
+  admitted_at: 2026-10-07T11:05:38.769Z
+  source_digest: sha256:bf6adb564853365cfaa782e5f7ac382d37d4d2699bf8ed1be71078b21680065d
+  decision_digest: sha256:274db05a0bb4dde4f710563b2fceed1078c01a9c13083fdd6f9e6bf42dbe768d
+  receipt_digest: sha256:8437cae154ceaad07740b766810b7e859a51f249032dc375a8328f1524f82b3f
   binding:
     path: docs/plans/PLAN-L7-531-pack-internal-canary-smoke.md
     plan_id: PLAN-L7-531-pack-internal-canary-smoke
     asset_id: plan:44f79788376b81c225ce5913fddbc48f
-    revision: 17
-    content_digest: sha256:5e8b68947b93ff38bd2ced2aaa7a9687ba036512dc761635a50c17111bfa2e39
+    revision: 18
+    content_digest: sha256:bf6adb564853365cfaa782e5f7ac382d37d4d2699bf8ed1be71078b21680065d
   route:
     signal: feature_addition
     mode: add-feature
@@ -115,13 +116,10 @@ admission_receipt:
     target_plan_id: PLAN-L7-531-pack-internal-canary-smoke
     target_revision: 12
     phase: forward_merge
-  escape_reason: "#418 comment 6036338735 (2026-10-07) は、6032687564 の初回隔離条件を維持したまま
-    Remote-WSL 接続指定だけを Remote-SSH へ置換する。sshd は distro 内の 127.0.0.1 のみで listen
-    し、受入専用に新規作成した鍵対の公開鍵だけを distro へ置く。VS Code Server は distro 内で取得し、Claude 拡張の
-    distro 側 Server 稼働と、該当プロセス環境の CLAUDE_CODE_ENTRYPOINT=claude-vscode
-    を実測する。automount/interop/Windows PATH 無効、/mnt/c 不在、source/Pack checkout と
-    host credential の持込禁止、AT-DIST-002 の不変、受入後 control による wsl --unregister
-    を維持する。新しい PASS・受入完了・実装完了を主張しない。"
+  escape_reason: "#418 PO 決定 6036338735 の Remote-SSH 契約を維持し、r17 の CLI revise 入力で
+    admission.status=confirmed を渡し忘れたため消えた既存 status を復元する。r16 からの status:
+    confirmed を保全し、origin / episode / reentry と review_evidence 履歴は変更しない。新しい
+    PASS、受入完了、実装完了は主張しない。"
 ---
 
 # PLAN-L7-531: Pack-only internal canary smoke (Windows/Linux)
