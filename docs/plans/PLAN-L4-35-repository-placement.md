@@ -1,11 +1,11 @@
 ---
 plan_id: PLAN-L4-35-repository-placement
-title: "PLAN-L4-35 (design/repository-placement): リポジトリの置き場所と 3 区分の分離"
-kind: design
+title: "PLAN-L4-35 (add-design/repository-placement): リポジトリの置き場所と 3 区分の分離"
+kind: add-design
 layer: L4
 drive: fullstack
-route_signal: forward
-route_mode: forward
+route_signal: feature_addition
+route_mode: add-feature
 created: 2026-10-07
 updated: 2026-10-07
 owner: PO / TL
@@ -37,7 +37,7 @@ github_issue_id: 648
 backprop_decision: not_required
 backprop_decision_reason: >-
   新しい置き場所の契約 (3 区分、registry、guard、patrol、内部デプロイ) を定める genesis 設計であり、
-  既存実装を正本として設計へ引き戻す Reverse ではない。kind=design は Reverse 対を必須としない。
+  既存実装を正本として設計へ引き戻す Reverse ではない。kind=add-design は Reverse 対を必須としない。
 review_evidence: []
 status: draft
 ---
