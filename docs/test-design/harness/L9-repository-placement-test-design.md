@@ -23,7 +23,7 @@ plan: pending (PLAN-L4-35 は issue 596 の ledger 取り込み後に plan draft
 | CANDIDATE-PLACE-005 | 既存ファイルの編集 (§5) | 既存の誤配置ファイルの編集が、書き込み時の guard で止められる | 既存ファイルの編集は置き場所の判定の対象外 (patrol が扱う) |
 | CANDIDATE-PLACE-006 | Codex との対称性 (§5) | Codex 側の挙動が実測されないまま、対称または非対称と主張される | Codex hook の deny とメッセージ返却の能力を実測した記録があり、対称、または明記した非対称 (pre-commit と patrol で担保) のどちらかが成立している |
 | CANDIDATE-PLACE-007 | patrol (§6) | `misplaced` / `unreferenced` / `duplicate` のいずれかが、既知の実例を見落とす。実例は §2 の矛盾 3 (`src/document-disposition/`、`src/execution/`) と矛盾 8 (L6 テンプレートの 2 本) | 既知の実例をすべて検出し、件数を報告する。ファイルの移動や PR の作成はしない (報告だけ) |
-| CANDIDATE-PLACE-008 | Pack の構造化 (§3.4、段階 3) | Pack に `dev/` 配下のファイルが入る。`product/` の中身と、registry が列挙した追加 path (`release/manifest.yaml`、再現確認の CI workflow 1 本) 以外の path が入る。再現確認の CI workflow が入っていない | Pack の inventory が「`product/` の中身 + registry が列挙した追加 path」に完全に一致する |
+| CANDIDATE-PLACE-008 | Pack の構造化 (§3.4、段階 3) | Pack に `dev/` 配下のファイルが入る。`product/` の中身と、registry が列挙した追加 path (`release/manifest.yaml`、再現確認の CI workflow 1 本) 以外の path が入る。再現確認の CI workflow が入っていない。Pack 単体の checkout に、製品の npm manifest・lock・Node の版のどれかが無く、固定した Node / npm と lock から compiled ESM を再現できない | Pack の inventory が「`product/` の中身 + registry が列挙した追加 path」に完全に一致する。Pack 単体の checkout で、固定した Node / npm と lock から作った compiled ESM の digest が、公開した asset と一致する |
 | CANDIDATE-PLACE-009 | 内部デプロイ (§7) | この repo の hook が、開発中の `src/cli.ts` を直接起動している | hook が、インストールしたリリース済みの `ut-tdd.mjs` を経由して起動する |
 | CANDIDATE-PLACE-010 | 配る物の判定 (§4 component ルール) | ファイル名のパターンで配る物と配らない物を分ける。consumer の入口から import で到達するファイルが `dev/` に置かれる | 配る物の判定が import graph の到達性で決まる。到達するファイルはすべて `product/` 側にあり、`dev/release/` には到達しないファイルだけがある |
 

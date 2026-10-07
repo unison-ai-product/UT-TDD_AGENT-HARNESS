@@ -62,7 +62,7 @@ UT-TDD-agent-harness/
 │
 ├── product/                         ■ 配る物 (Pack = この中身そのまま)
 │   ├── README.md  LICENSE  NOTICE  CHANGELOG.md     製品としての説明・ライセンス
-│   ├── tsconfig.json
+│   ├── package.json  package-lock.json  .node-version  tsconfig.json   製品の npm manifest・lock・Node の版 (Pack 単体で build を再現する入力。ADR-001)
 │   ├── kernel/                      Assurance Kernel = 信頼の根 (TS)
 │   │   ├── gate-verdict/            gate の判定
 │   │   ├── review-custody/          request / verdict / receipt の検証
@@ -114,9 +114,9 @@ UT-TDD-agent-harness/
 ├── CLAUDE.md  AGENTS.md             ▲ 生成物 + 入口: adapter 部分は生成し、この repo 固有のルールは dev/docs/governance を指すだけ
 ├── .github/                         ● ツールが root を強制する dev の物 (この repo の CI)
 ├── .ut-tdd/                         ● CLI が探す root の目印 + インストールした harness + 実行状態・索引 (追跡しない)
-├── package.json  package-lock.json  ● npm が root を要求する
+├── package.json  package-lock.json  ● npm が root を要求する。開発用の manifest で、npm workspaces で `product/` を参照する。製品の依存と Node の版の正本は `product/` 側に置き、root で同じ値を書き直さない
 ├── biome.json                       ● repo 全体の lint / format
-└── .gitignore  .gitattributes  .editorconfig  .node-version
+└── .gitignore  .gitattributes  .editorconfig
 ```
 
 root の規則:
@@ -162,6 +162,8 @@ consumer の都合 (フレームワークが `src/` を要求する場合など)
 1. **Pack repo** = `product/` の中身を root に出したもの。そこに足してよいのは、次の 2 つだけである。足す path は registry (§4) に列挙し、それ以外は入れない。
    - `release/manifest.yaml` (その版の C2 の束縛)
    - 公開した asset を再現できるかを確かめる CI の workflow (`.github/workflows/` の下に置く、再現確認専用の 1 本)
+
+   Pack 単体の checkout から build を再現できるように、製品の npm manifest・lock・Node の版 (`package.json` / `package-lock.json` / `.node-version`) は `product/` の中に置く (§3.1)。そのため追加 path に数えず、`product/` の中身として Pack に入る。再現確認の CI は、Pack 単体の checkout で固定した Node / npm と lock から compiled ESM を作り、公開した asset と digest を突き合わせる (ADR-001)。
 
    `tests/`・`docs/governance`・`docs/process`・`scripts/`・`vitest.config.ts` は入らない (dev 側)。3,178 本から 998 本を filter で選ぶ方式 (allowlist / denylist) をやめ、構造で決まるようにする。dev 専用 path の漏出検査は、「`dev/` が入っていないこと」の 1 行になる。テストと受入は、出荷前に source 側で済ませる。
 2. **Release asset** = `product/` をビルドしたもの (現行の 5 本)。builtin のテンプレートは、`product/parts/templates/` から build 時に生成する (#872 のズレが構造的に起きなくなる)。管理知能 (Python) の配布物は、v4 の実装時に asset の一覧の契約へ追加する。
