@@ -7024,6 +7024,70 @@
         "revision": 5,
         "content_digest": "sha256:bb8c9dba29ed17f401676db23798ca032eaeadfa33e6c340f7c1b86673824aed"
       }
+    },
+    {
+      "sequence": 440,
+      "previous_record_digest": "sha256:1fede826628857519838c08e5258ac2227d3cec98d0f3c0b92f72d04979585bb",
+      "record_digest": "sha256:28d59d343cf7e0b9eb1a8e214fb86f1abd6250b63711552f032d1707d40b0e41",
+      "command_id": "plan-revise:issue-418:linux-vscode-devcontainers:r13:20261007",
+      "receipt_id": "certificate:40ed46329c52e47024cee5fb918b5ef4",
+      "receipt_digest": "sha256:7bb6ed7cfda9eda15225a7cd51debe93fa0aaa2ad7bed45ad4348d77858d1c5d",
+      "decision_digest": "sha256:66189b5c5a8d8cd2d6a6ee30f57ccf8eb31726f59c155a26ec36fcddc33929da",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-531-pack-internal-canary-smoke.md",
+        "plan_id": "PLAN-L7-531-pack-internal-canary-smoke",
+        "asset_id": "plan:44f79788376b81c225ce5913fddbc48f",
+        "revision": 13,
+        "content_digest": "sha256:edfc1ea827ba2ab66f102f9b1c9e52cd492f1fd6c6bf227bb229d7483865f7a2"
+      }
+    },
+    {
+      "sequence": 441,
+      "previous_record_digest": "sha256:28d59d343cf7e0b9eb1a8e214fb86f1abd6250b63711552f032d1707d40b0e41",
+      "record_digest": "sha256:ed5a116f46b226f596fe2993d4bb68d2c54ef97c6a61602d965d4469963580bc",
+      "command_id": "plan-revise:issue-418:linux-vscode-devcontainers:additive-r14:20261007",
+      "receipt_id": "certificate:de1041d1a5de3d956407c66cf300898f",
+      "receipt_digest": "sha256:4ec90c33303afc0e4aae8c67b27c9f452d1866cbe17a39dc404d8e20b4b0c18b",
+      "decision_digest": "sha256:86739c5b8f5fe170c9ab1023431730a73e5d62c51a28afea79d3f8160d65c1f4",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-531-pack-internal-canary-smoke.md",
+        "plan_id": "PLAN-L7-531-pack-internal-canary-smoke",
+        "asset_id": "plan:44f79788376b81c225ce5913fddbc48f",
+        "revision": 14,
+        "content_digest": "sha256:384cb77d5136e8b5d311c490e484acff60075f4e30ca79afeab3f3568426074c"
+      }
+    },
+    {
+      "sequence": 442,
+      "previous_record_digest": "sha256:ed5a116f46b226f596fe2993d4bb68d2c54ef97c6a61602d965d4469963580bc",
+      "record_digest": "sha256:bda10f8f3ac890ad7249a6ff44a9c6b6111beb02f5723a8f6077eb27ea8805e1",
+      "command_id": "plan-revise:issue-418:linux-wsl-canary5:additive-r15:20261007",
+      "receipt_id": "certificate:ba95903f9379aa05537f3adb2def1c57",
+      "receipt_digest": "sha256:27eb4484ee3c52c142cbd4472943f9abc732836a2ac0b3f3d009a4c4cb814d28",
+      "decision_digest": "sha256:7e07036a34f7f8aaf20486de0fe2fb0f9f99862c28f999e6edc4f5b2da333896",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-531-pack-internal-canary-smoke.md",
+        "plan_id": "PLAN-L7-531-pack-internal-canary-smoke",
+        "asset_id": "plan:44f79788376b81c225ce5913fddbc48f",
+        "revision": 15,
+        "content_digest": "sha256:b799242fd61b61de845f3e67e64e91a0942e6cc04cbeee4b8f7ec9941f2d8637"
+      }
+    },
+    {
+      "sequence": 443,
+      "previous_record_digest": "sha256:bda10f8f3ac890ad7249a6ff44a9c6b6111beb02f5723a8f6077eb27ea8805e1",
+      "record_digest": "sha256:884212977fbcbd5a08ac35fcfd4200c9076c9ed67a237111eef003bac8469d08",
+      "command_id": "plan-revise:issue-418:linux-wsl-canary5:additive-r16:20261007",
+      "receipt_id": "certificate:74dbae6bae5db0a80016155c4bb0a2d1",
+      "receipt_digest": "sha256:6794fbf2686477a70307f71a9d8c416e8814ff5d6de81a0e3495118f8dd41024",
+      "decision_digest": "sha256:1d22e0104e17b834feeffa7dc714981a9fa28d84ba3b69671c088ef1ca40a7f3",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-531-pack-internal-canary-smoke.md",
+        "plan_id": "PLAN-L7-531-pack-internal-canary-smoke",
+        "asset_id": "plan:44f79788376b81c225ce5913fddbc48f",
+        "revision": 16,
+        "content_digest": "sha256:67d34747ac8c9d38e673259ba2dc0725be21e45b805ebdd390cd1cbf44985d40"
+      }
     }
   ]
 }

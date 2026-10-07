@@ -85,18 +85,18 @@ status: confirmed
 github_issue_id: 418
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:62fffca98ece4047724a1fadc9a542ba
-  command_id: plan-revise:issue-418:canary4-rebind:r12:20261007
-  admitted_at: 2026-10-07T01:12:30.000Z
-  source_digest: sha256:df7cab7f3ba0df79a0edd051028b7d975ba72430bb1e30be2aca7284da2d86b6
-  decision_digest: sha256:e19191541e30b994cfcbaf71e74ff84d9937b218d8872e4ca4f0bab1e3e4eb2f
-  receipt_digest: sha256:76375170a9ce0f7e22ae9aeb9cede7ba668cb57db319d206904154ac25bcc35f
+  receipt_id: certificate:74dbae6bae5db0a80016155c4bb0a2d1
+  command_id: plan-revise:issue-418:linux-wsl-canary5:additive-r16:20261007
+  admitted_at: 2026-10-07T07:27:24.000Z
+  source_digest: sha256:67d34747ac8c9d38e673259ba2dc0725be21e45b805ebdd390cd1cbf44985d40
+  decision_digest: sha256:1d22e0104e17b834feeffa7dc714981a9fa28d84ba3b69671c088ef1ca40a7f3
+  receipt_digest: sha256:6794fbf2686477a70307f71a9d8c416e8814ff5d6de81a0e3495118f8dd41024
   binding:
     path: docs/plans/PLAN-L7-531-pack-internal-canary-smoke.md
     plan_id: PLAN-L7-531-pack-internal-canary-smoke
     asset_id: plan:44f79788376b81c225ce5913fddbc48f
-    revision: 12
-    content_digest: sha256:df7cab7f3ba0df79a0edd051028b7d975ba72430bb1e30be2aca7284da2d86b6
+    revision: 16
+    content_digest: sha256:67d34747ac8c9d38e673259ba2dc0725be21e45b805ebdd390cd1cbf44985d40
   route:
     signal: feature_addition
     mode: add-feature
@@ -116,15 +116,12 @@ admission_receipt:
     target_plan_id: PLAN-L7-531-pack-internal-canary-smoke
     target_revision: 12
     phase: forward_merge
-  escape_reason: "Issue #418 control comment 6015987099 が許可した canary.4 cut 前の最小
-    binding PR。既存 AT-DIST-003 の full
-    scope/CANDIDATE-ST-PACKCANARY-015..019、C1/C2 tuple audit、source/subject
-    provenance、custody/隔離/受入条件を維持し、immutable Release identity のみを canary.3 から
-    canary.4 へ再束縛する。AT-DIST-002 の canary.2 binding と canary.2/canary.3
-    の記録・証跡は保持し、新しい公開 authority や network/auth exception は加えない。既存status confirmed
-    と review_evidence
-    は維持するが、この改訂は新しいreview/PASSを主張しない。本契約改訂PRではtag/Release公開を行わず、公開は既存承認経路の別工程で行\
-    う。"
+  escape_reason: "#418 comment 6032687564 に基づき§6.1のAT-DIST-003 Linux例外をDev
+    Containersから専用WSL2 distro条件へ置換する。§3.6.9(8)と同じrootfs
+    provenance、初回起動前隔離、asset内取得、device
+    flow、Remote-WSL、破棄条件を参照する。AT-DIST-002のDocker/Node/--network
+    none/bind・volumeなし条件は不変。実作成者: Codex gpt-6-luna effort=high (author
+    attribution only; no review, PASS, or acceptance claim)."
 ---
 
 # PLAN-L7-531: Pack-only internal canary smoke (Windows/Linux)
@@ -372,13 +369,23 @@ work-guard の command 文字列をそのまま、撤去後の clean fixture で
 
 #### 3.6.1 immutable artifact
 
-- 公開予定の exact `v0.2.0-canary.4` の 5 asset (`PLAN-L7-628` §3)。tag は exact match で解決し、
-  `latest` / prefix / `v0.2.0-canary.2` / `v0.2.0-canary.3` を受け付けない。canary.2 / canary.3 の bytes は上書き・再利用しない
-  (canary.2 の AT-DIST-002 PASS と canary.3 の公開記録・既存実測は historical evidence として維持する)。
+- 公開予定の exact `v0.2.0-canary.5` の 5 asset (`PLAN-L7-628` §3)。tag は exact match で解決し、
+  `latest` / prefix / `v0.2.0-canary.2` / `v0.2.0-canary.3` / `v0.2.0-canary.4` を受け付けない。
+  canary.2 / canary.3 / canary.4 の bytes は上書き・再利用しない (canary.2 の AT-DIST-002 PASS、
+  canary.3 / canary.4 の公開記録と既存実測は historical evidence として維持する)。
 - 5 asset の sha256 と consumer anchor は、AT-DIST-002 と同じく §3.4 の様式の publish 記録
-  (canary.4 の publish 追跡 Issue #418 のコメント 1 件、producer 値と独立再計算値の 2 値一致) から
+  (canary.5 の publish 追跡 Issue #418 のコメント 1 件、producer 値と独立再計算値の 2 値一致) から
   だけ取る。取得した asset の再計算値を anchor にしない (§3.2)。記録が揃うまで本 E2E を開始しない。
-- canary.4 の公開は PO 承認を要する外向き操作であり、本節は公開を代替しない。
+- canary.5 の公開は PO 承認を要する外向き操作であり、本節は公開を代替しない。
+- AT-DIST-003 (015〜019) は canary.5 で全件を再検査する。canary.4 では authoring / G1 が #879
+  によって FAIL し、review join は未実行のため、canary.4 の結果をこの行の PASS に読み替えない。
+- AT-835-008 (Windows VS Code hook 3 run、canary.4 で PASS) と AT-DIST-002 (canary.3 で PASS) は、
+  canary.4 C1 から canary.5 C1 への差分について、
+  `git diff --name-status --no-renames <C4-C1> <C5-C1> -- src/runtime/ src/cli.ts docs/templates/adapter/.claude/settings.json src/setup/templates.ts`
+  が両 commit の存在・到達性を確認した上で exit 0 かつ空出力の場合だけ既存証拠を再利用する。
+  差分があれば自動再利用を拒否し、その差分に影響する AT のみを再検査する。source repository の
+  commit は使わず、Pack producer/operator の canonical C1 を入力とする。C5 C1 が公開記録に現れるまで
+  この照合結果や再利用可否を主張しない。
 
 #### 3.6.2 consumer fixture
 
@@ -425,24 +432,27 @@ authority・隔離条件は §3.6.9 で凍結する (本 join はその条件の
 
 #### 3.6.6 evidence fields (§6.1 と同形式)
 
-保存する項目: canary.4 の tag、5 asset の sha256 と size、publish 記録のコメント URL と写しの SHA-256、
-anchor、`docker image inspect` の RepoDigests と `docker inspect` の NetworkMode / Mounts (Linux 実行時)、
-`node --version`、Bun 不在、author provider / model / 実 invocation の記録と transcript、
+保存する項目: canary.5 の tag、5 asset の sha256 と size、publish 記録のコメント URL と写しの SHA-256、
+anchor、Linux 専用 WSL2 distro の公式 rootfs 取得元と SHA-256、初回起動前に設定した `/etc/wsl.conf`、
+`/mnt/c` 不在・`cmd.exe` 起動不可・Windows path を含まない `$PATH` の実測、`node --version`、Bun 不在、
+canary.4 C1→canary.5 C1 の scoped diff コマンド・両 C1 値・終了 code・出力、AT 再検査/再利用の判定、
+author provider / model / 実 invocation の記録と transcript、
 baseline commit と subject commit と negative commit の SHA、subject の path・content digest・blob oid、
 `G1` の positive / negative の出力 (applicable / passed / messages 全文)、review の request id・
-reviewer provider / model・verdict・receipt の subject revision。evidence は Windows と、source を
-bind mount しない disposable Linux container/VM (§6.1) の双方で取る。
+reviewer provider / model・verdict・receipt の subject revision。evidence は Windows と、source/Pack
+checkout・host credential を持ち込まない専用 disposable WSL2 distro (§6.1) の双方で取る。
+公開 Release の asset は distro 内で直接取得する。
 
 #### 3.6.7 oracle ID (本 PLAN 所有、pair test-design `L12-pack-internal-canary-test-design.md` が 1:1 で保持)
 
 | ID | 契約軸 |
 | --- | --- |
-| `CANDIDATE-ST-PACKCANARY-015` | 入力 artifact: exact `v0.2.0-canary.4` の 5 asset を §3.4 の publish 記録 (2 値一致) と照合する。canary.2 の bytes・tag を受け付けない |
+| `CANDIDATE-ST-PACKCANARY-015` | 入力 artifact: exact `v0.2.0-canary.5` の 5 asset を §3.4 の publish 記録 (2 値一致) と照合する。canary.2〜canary.4 の bytes・tag を受け付けない |
 | `CANDIDATE-ST-PACKCANARY-016` | subject の出所: テンプレート配送からの実エージェント執筆、baseline と subject の commit 分離、closed stub・手書き文書の拒否 |
 | `CANDIDATE-ST-PACKCANARY-017` | positive: 正しい subject で G1 が `applicable:true` かつ `passed:true` |
 | `CANDIDATE-ST-PACKCANARY-018` | negative: 別 revision の欠落 specimen で G1 が `applicable:true` / `passed:false` かつ欠落 slot 名を含む |
 | `CANDIDATE-ST-PACKCANARY-019` | review join: 実 subject (path + digest + revision) への非著者 canonical review、receipt が exact revision に束縛、同族 verdict と closed-stub receipt を拒否 |
-| `AT-DIST-003` | 受入行: 015〜019 を canary.4 の実 Release で通す。AT-DIST-002 と別行で、互いに代替しない |
+| `AT-DIST-003` | 受入行: 015〜019 を canary.5 の実 Release で全件通す。AT-DIST-002 と別行で、互いに代替しない |
 
 #### 3.6.8 未確定の入力 (実装開始前に別途 freeze、本節では決めない)
 
@@ -488,9 +498,22 @@ bind mount しない disposable Linux container/VM (§6.1) の双方で取る。
 8. **network / auth の例外 (PO 承認済み)**: §6.1 の `--network none` / credential・env 注入なしの条件は、
    **AT-DIST-003 の実 provider review の段階に限り**、provider と上記の専用 consumer repository への
    通信と認証だけを許す形で緩める。この例外は **AT-DIST-002 には適用しない** (AT-DIST-002 の隔離条件は
-   変えない)。source の filesystem の持ち込みと bind mount は引き続き禁止する。PO 承認:
+   変えない)。source の filesystem の持ち込みと bind mount は引き続き禁止する. PO 承認:
    PR #812 comment 5929420300 (2026-10-01)。canary.2 の bytes と `latest` は変えない。
-9. **evidence**: Windows と Linux (§6.1 の disposable container/VM、ただし本段階は上記 8 の例外下) の双方で、
+
+   **Linux 専用 WSL2 distro の追加条件 (同じ AT-DIST-003 provider-review 段階のみ)**: Linux の受入は
+   新規・専用・使い捨て WSL2 distro (例: `ut-canary5-at003-linux`) で行う。既存 `Ubuntu-26.04` は使わない。
+   rootfs は公式配布物から取得し、取得元と SHA-256 を記録する。最初の起動前に `/etc/wsl.conf` を
+   `[automount] enabled=false` / `mountFsTab=false`、`[interop] enabled=false` / `appendWindowsPath=false`
+   とし、`ls /mnt/c` で `/mnt/c` 不在、`cmd.exe` 起動不可、`$PATH` に Windows path がないことを実測する。
+   source / Pack checkout と host credential は持ち込まず、公開 Release asset は distro 内で直接取得する。
+   認証は distro 内で PO の device flow により行い、control が device code を提供する。VS Code は
+   Remote-WSL で接続し、VS Code Server と Claude 拡張の導入に必要な通信・導入を許す。受入後は control が
+   `wsl --unregister` で distro を破棄する (同時に扱う distro は 1 件)。既存の provider / 専用 consumer
+   repository 通信例外は変えない。source / Pack checkout の持ち込み、bind / volume mount、host credential
+   のコピー、`CLAUDE_CODE_ENTRYPOINT` の偽装、marker / session の手書きは禁止する。AT-DIST-002 には適用しない。
+   PO 承認: #418 comment 6032687564 (2026-10-07)。
+9. **evidence**: Windows と Linux (§6.1 の専用 disposable WSL2 distro、ただし本段階は上記 8 の例外下) の双方で,
    §3.6.6 の項目に加えて、専用 repository の PR 番号と head SHA、live-dispatch / live-consume の
    transcript、verdict / receipt のパス、subject の blob oid と SHA-256 の再計算値を取る。
 
@@ -507,6 +530,12 @@ bind mount しない disposable Linux container/VM (§6.1) の双方で取る。
   resolver を持たない。PO 判断 (#676 comment 5928029266) と `PLAN-L7-676` rev 24 (PR #810) に従い、
   G14 を含む main から公開する `v0.2.0-canary.3` に束縛する。canary.2 は上書きしない。
 - この理由と canary.3 への束縛は rev 11 時点の履歴として保持する。現行の未完 AT-DIST-003 / G14 consumer delivery の Release identity のみ、rev 12 で `v0.2.0-canary.4` へ再束縛する (本節の全スコープ・oracle・custody・隔離条件は不変)。本 rev 12 は新しい review / PASS evidence を主張せず、既存 review_evidence は履歴として保持する。
+- rev 15 で未完の AT-DIST-003 / CANDIDATE-ST-PACKCANARY-015..019 を `v0.2.0-canary.5` へ再束縛し、
+  canary.5 でこの受入行を全件再検査する。canary.4 から canary.5 の C1 scoped diff が空の場合のみ
+  AT-835-008 (canary.4 Windows VS Code hook 3 run) と AT-DIST-002 (canary.3) の既存証拠を再利用し、
+  差分がある場合は影響 AT だけを再検査する。Linux の受入方式は PO の新判断により既存 container/VM
+  から専用 disposable WSL2 distro へ置換する。canary.2 / canary.3 / canary.4 の tag・bytes・過去証跡は
+ 変更しない。rev 15 は新しい review / PASS / canary.5 公開を主張しない。
 - **非 Scope**: stable 昇格、新規 profile、A/B upgrade・rollback の自動化、tar 表現の修復 (#807)、
   #809、G1 以外の gate や L2〜L7 文書の E2E、gate 判定規則の変更、AT-DIST-002 の内容変更。
 - 本節は入力契約の凍結だけであり、準備資料 (Codex の input packet) は実行証跡ではない。
@@ -566,18 +595,26 @@ PR-1 と PR-2 を 1 PR に統合しない。scope 構造を指す FLAG は close
 
 | 案 | 内容 | 判定 |
 | --- | --- | --- |
-| **A (採択)** | `scripts/pack-canary-acceptance.mjs` を checked-in manual Node runner とし、exact `v0.2.0-canary.2` の Release 5 asset、Issue #418 の publish record 写し、外部 anchor を検証してから Release-assets-only installer を起動する。受入は Windows と、source checkout を bind mount しない disposable Linux container/VM (Node 24.13.0、WSL2 不可) の双方で行い、別 process/cwd/env で §5 の smoke と hook を実行する。 | 採択 |
+| **A (採択)** | `scripts/pack-canary-acceptance.mjs` を checked-in manual Node runner とし、exact `v0.2.0-canary.2` の Release 5 asset、Issue #418 の publish record 写し、外部 anchor を検証してから Release-assets-only installer を起動する。AT-DIST-002 の受入は Windows と、source checkout を bind mount しない disposable Linux container/VM (Node 24.13.0、WSL2 不可) の双方で行い、別 process/cwd/env で §5 の smoke と hook を実行する。AT-DIST-003 の Linux 実 provider review に限り、§3.6.9(8) の専用 WSL2 distro 条件を用いる。 | 採択 |
 | B | `workflow_dispatch` で同じ受入を起動する | 棄却: workflow に credential を持ち込むこと、新たな attack surface、`GITHUB_TOKEN` が環境変数に常在して env-clear 条件を曖昧にすること。人手起動であっても A より境界が複雑になる |
 
 §3.4 の正本は publish を追跡する source repo の #418 コメント 1 件であり、ローカル JSON はその写しである。runner は写しの SHA-256 と元コメント URL、5 asset 全 digest、anchor、コマンド transcript / exit code を evidence に保存するが、GitHub API を使わず JSON とコメントの一致を自己証明しない。Codex 著 PR-2 の Claude 族 non-author reviewer は、コメント本文との一致と公開 Release bytes からの独立再計算 digest を別途照合する。runner 自身の確認だけで受入完了を宣言しない。
 
-Linux 実受入は Docker Desktop の使い捨て `node:24.13.0-bookworm` container で実行する。`-slim` は git 不在のため使わない。host で GitHub Release の exact 5 asset と #418 publish record 写しを取得し、その 5 asset、写し、checked-in standalone runner だけを `docker cp` で container に渡す。container は `--network none`、bind/volume mount なし、credential/env 注入なしで起動し、source checkout と Pack checkout を持ち込まない。WSL2 backend の kernel を共有しても WSL2 distro を clean 受入環境とは扱わず、独立 filesystem の disposable container として扱う。証跡には `docker image inspect` の RepoDigests、`docker inspect` の NetworkMode/Mounts、`node --version`、`git --version`、Bun 不在、host の `/c` 非到達、copy 対象一覧、runner の transcript と公開 asset の独立 SHA-256/size を保存する。受入後 container は破棄し、公開取得に使った host credential は container へ渡さない。
+Linux 実受入は Docker Desktop の使い捨て `node:24.13.0-bookworm` container で実行する。`-slim` は git 不在のため使わない。host で GitHub Release の exact 5 asset と #418 publish record 写しを取得し、その 5 asset、写し、checked-in standalone runner だけを `docker cp` で container に渡す。container は `--network none`、bind/volume mount なし、credential/env 注入なしで起動し、source checkout と Pack checkout を持ち込まない。WSL2 backend の kernel を共有しても WSL2 distro を clean 受入環境とは扱わず、独立 filesystem の disposable container として扱う。証跡には `docker image inspect` の RepoDigests、`docker inspect` の NetworkMode/Mounts、`node --version`、`git --version`、Bun 不在、host の `/c` 非到達、copy 対象一覧、runner の transcript と公開 asset の独立 SHA-256/size を保存する。受入後 container は破棄し、公開取得に使った host credential は container へ渡さない。AT-DIST-002 のこの条件は不変である。AT-DIST-003 の Linux 実 provider review 段階には §3.6.9(8) の PO 承認済み専用 WSL2 distro を使い、通常の Docker container 条件を置換する。
 
-**AT-DIST-003 の実 provider review 段階の例外 (PO 承認済み)**: 上記の `--network none`・credential/env 注入なし・
-bind/volume mount なしの条件は AT-DIST-002 の受入にそのまま適用する。AT-DIST-003 の実 provider review の段階
-(§3.6.9) に限り、provider と専用 consumer repository `unison-ai-product/ut-tdd-consumer-canary` への通信と
-認証だけを許す (PO 承認: PR #812 comment 5929420300)。source filesystem の持ち込みと bind mount は禁止のままで、
-この例外は AT-DIST-002 へ波及しない。
+**AT-DIST-003 の実 provider review 段階の例外 (PO 承認済み)**: §3.6.9(8) の既存例外に従い、
+provider と専用 consumer repository `unison-ai-product/ut-tdd-consumer-canary` への通信・認証だけを許す
+(PO 承認: PR #812 comment 5929420300)。これは AT-DIST-002 に適用せず、source filesystem の持ち込みと bind mount
+も禁止のままとする。
+
+**Linux 専用 WSL2 distro の例外 (AT-DIST-003 の実 provider review 段階のみ、PO 承認済み)**: Linux では
+§3.6.9(8) の全条件を満たす新規・専用・使い捨て WSL2 distro を使う。既存 `Ubuntu-26.04` は使わず、公式
+rootfs の取得元と SHA-256 を記録する。最初の起動前に `/etc/wsl.conf` で automount と interop / Windows PATH
+追加を無効にし、`/mnt/c` 不在、`cmd.exe` 起動不可、Windows path を含まない `$PATH` を実測する。source / Pack
+checkout と host credential は持ち込まず、公開 Release asset は distro 内で直接取得する。認証は PO device flow、
+VS Code は Remote-WSL とし、VS Code Server / Claude 拡張の導入通信をこの段階だけ許す。受入後は control が
+`wsl --unregister` で破棄する。AT-DIST-002 の Docker / `--network none` / bind・volume なしの条件には適用しない。
+PO 承認: #418 comment 6032687564 (2026-10-07)。
 
 `#761` は control 判断により canary.2 後へ保留され、本 PR-2 の HARD predecessor ではない。公開および実受入は PO 承認なしに実行しない。
 
@@ -602,7 +639,7 @@ pair artifact の候補 oracle は次の通り。001..004 は Codex 先行 test-
 | `CANDIDATE-ST-PACKCANARY-009` | 受入証跡の出所 (Red: (a) runner の installer 呼び出しを `--consumer-runtime-input` (source-CLI helper `tests/support/pack-consumer-runtime.ts` と同じ経路) に差し替える、(b) runner が anchor を publish 記録ではなく `<release-dir>` の `.consumer.sha256` から再計算する、(c) 受入記録の tag が fixture tag / `v0.2.0-canary.2` 以外)。Green: PR-2 の CI test が runner を offline で呼ぶ。(b) の対照入力は、`.ut-tdd.mjs` を実行意味を変えない形 (末尾へのコメント 1 行追記等。改変後も手順 0〜2 の照合ロジックはそのまま動く) で改変し `.consumer.sha256` を整合的に書き換えた偽造 release-dir と、**5 asset の sha256 entry (producer 値・独立再計算値とも) を偽造 release-dir の値に合わせ、`consumer_anchor_digest` (2 値とも) だけを真正 fixture の anchor に固定した**記録である。この対照では §3.2 の asset 照合・exact 5 件・tag exact・§3.4 の 2 値一致の各 guard がすべて通るため、結果を分けるのは anchor の出所だけになる。正しい runner は spawn 引数の `--expected-consumer-digest` に記録の anchor (真正値) をそのまま渡し、installer 手順 0 が `consumer_runtime_anchor_mismatch` で deny して consumer root write 0。(b) の mutant は偽造 release-dir から再計算した anchor を渡すため手順 0〜2 を通過し deny されない — 観測点 (spawn 引数の anchor 値と deny 有無) の結果が反転し (b) が Red になる。§3.4 は runner に anchor と `.consumer.sha256` entry の相互照合を要求しない。PR-2 がこの相互照合を追加する場合は、005(b) と同じく相互照合を外した対照で本入力を実行する (相互照合が上流で deny すると (b) が識別されないため)。runner が起動する argv に `--consumer-runtime-release` があり `--consumer-runtime-input` が無いことを spawn 引数で assert する ((a) を殺す)。受入記録の tag が exact `v0.2.0-canary.2` でなければ受入記録を生成しない ((c) を殺す) | PR-2 CI (offline) |
 | `CANDIDATE-ST-PACKCANARY-010` | guard hook E2E (§3.5)。Red: (a) 生成 `.codex/hooks.json` / `.claude/settings.json` の work-guard が正常系も block する (canary.1 実測の全編集 block と同型)、(b) hook command が撤去済み path・存在しない launcher を指し、hook 失敗が非 block として素通りする、(c) 禁止系 payload を通す。Green: 撤去・別 shell 後の clean fixture で、登録された command 文字列をそのまま実行し、正常系 payload は通過、禁止系 payload は各 runtime の block 規約どおり block。(a)(b)(c) はいずれも Red | 第 1 層 / 第 2 層 (実 Release で再観測) |
 
-`CANDIDATE-ST-PACKCANARY-015..019` と受入行 `AT-DIST-003` は §3.6.7 が定義する agent 確認経路 E2E (`PLAN-L7-676` §3.7、`v0.2.0-canary.4` 束縛) の oracle であり、PR-1 / PR-2 の昇格対象ではない。実装 PR は §3.6.8 の残る未確定入力 (項目 2・3) が別途 freeze された後に (項目 1 の custody・authority・隔離条件は §3.6.9 で凍結済み)、本 PLAN の別の実装順序として起票する。
+`CANDIDATE-ST-PACKCANARY-015..019` と受入行 `AT-DIST-003` は §3.6.7 が定義する agent 確認経路 E2E (`PLAN-L7-676` §3.7、`v0.2.0-canary.5` 束縛) の oracle であり、PR-1 / PR-2 の昇格対象ではない。現行 offline owner test は canary.4 の実装履歴を保持し、canary.5 への bounded implementation 接合は未実施である。実装 PR は §3.6.8 の残る未確定入力 (項目 2・3) が別途 freeze された後に (項目 1 の custody・authority・隔離条件は §3.6.9 で凍結済み)、本 PLAN の別の実装順序として起票する。
 
 PR-2 offline oracle は `tests/pack-canary-acceptance.test.ts` が所有し、実 producer fixture の exact 5 bytes、asset 1-byte mutation / 欠落 / 余剰 / producer・独立 digest 欠落または不一致、wrong publish-record anchor、コメントURL束縛、installer argv (`--consumer-runtime-release` のみ) を検証する。正の anchor install と wrong-anchor deny は installer 本体を spawn し、consumer root write 0 も assert する。第1層の clean closure・review・hooks・Bun / source path trace は既存 `U-ST-PACKCANARY-003/007/010` を使い、PR-2 はこれを再実装しない。
 
