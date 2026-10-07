@@ -27,13 +27,18 @@ v4 では、もう 1 つ言語の判断が必要になった。管理知能 (意
 1. **再設計で進める (流用しない)**: source snapshot からは **設計概念のみ**を取り込み (v3.1/v1.2 に反映済み)、内部は `ut-tdd` として **全面再実装**する。legacy runtime commands・bash ディスパッチャ・legacy DB schema・個人絶対パスは持ち込まない。
 2. **実装言語は TypeScript に統一**: core を **TypeScript (strict) / Node runtime** で実装し、**bash 層を廃止**。OS 入口は薄い `ut-tdd.ps1` (Windows) / `ut-tdd` (POSIX) が同一の compiled ESM core を呼ぶだけにする。Bunは新規依存・fallback・検出器runtimeとして禁止し、既存経路だけを期限付きmigration debtとして段階撤去する（Issue #152 / bootstrap envelope #153）。
 3. **クロスプラットフォーム規約**: path は Node `path`、`.ut-tdd/` state は YAML + JSON + UT-TDD 独自の SQLite projection DB (`.ut-tdd/harness.db`) とし、core に bash を使わない、`.gitattributes` で改行正規化、subagent 起動は runtime adapter に隔離する。
-4. **管理知能は Python で実装する** (PO 決定 2026-10-07、#588 6034542428 / 6035244583)。決定 2 の「TypeScript に統一」は core に適用する。core は Assurance Kernel・gate・CLI・hook・state の writer を含み、引き続き TypeScript / Node である。管理知能だけを Python とし、次の境界を守る。
-   - **提案だけを出す**: 管理知能は record を直接書かない。書き込みは TypeScript の共通 writer が admission を経て行う。管理知能の出力は、Assurance Kernel が検証するまで有効にならない。
+4. **管理知能は Python で実装する** (PO 決定 2026-10-07、#588 6034542428 / 6035244583)。決定 2 の「TypeScript に統一」は core に適用する。core は Assurance Kernel・gate・CLI・hook・state の writer を含み、引き続き TypeScript / Node である。管理知能だけを Python とする。
+
+   **PO 決定に含まれる境界** (#588 6034542428 / 6035244583):
+   - **別プロセス・型付き JSON 境界・信頼の根にしない**: 管理知能は別プロセスで動き、core とは型付きの JSON 境界だけでやり取りする。信頼の根にはせず、その出力は Assurance Kernel が検証するまで有効にならない (6034542428、#575 の P1〜P3)。
    - **境界 schema の正本は JSON Schema**: 言語をまたぐ契約は、言語中立の JSON Schema 1 本を正本にする (置き場は配置設計 #883 の `product/contracts/`)。TypeScript 側の zod / 型と Python 側の型は、そこから生成する。zod を正本にして JSON Schema を生成する案は採らない (理由は判断理由の節)。
    - **生成の採用条件**: JSON Schema の draft と使う keyword、生成器の版を固定する。Windows + Node 24 で再生成しても差分が出ないことを示す。生成した TypeScript 側と Python 側の検証が、同じ入力に同じ合否を出すことを試験で示す (欠落と null の区別、未知の field、union、数値の範囲、default、型の自動変換。Python 側は strict に検証する)。生成器が扱えない構文は、生成の時点で拒否する。
-   - **鍵を持たない**: LLM の呼び出しは TypeScript 側の provider adapter を経由する。管理知能は API キーを持たない。
-   - **無くても core は動く**: 管理知能は任意の companion として配る。無い環境では、core は手動の計画で動き、管理知能が要る機能は fail-close で縮退する。
-   - **品質の条件**: Windows を第一級として CI マトリクスに入れる (path、長いパス名、子プロセス、cp932)。版と依存は lock とハッシュで完全に固定し、脆弱性の監査を入れる。lint と型検査は strict を必須にする。プロパティテストと mutation テストを最初から入れる。メモリと時間の上限、singleton lock を設ける。issue の本文などの外部テキストは、非信頼のデータとして扱う (外部監査 P-02、#588 5906948833)。
+
+   **外部監査 P-02 (#588 5906948833) から採用する条件** (PO 決定そのものではなく、上の境界を実装するときの採用条件。管理知能の設計で改める場合は、この ADR を更新する):
+   - **提案だけを出す** (P-02 の 3): 管理知能は record を直接書かない。書き込みは TypeScript の共通 writer が admission を経て行う。
+   - **鍵を持たない** (P-02 の 9): LLM の呼び出しは TypeScript 側の provider adapter を経由する。管理知能は API キーを持たない。
+   - **無くても core は動く** (P-02 の 4): 管理知能は任意の companion として配る。無い環境では、core は手動の計画で動き、管理知能が要る機能は fail-close で縮退する。
+   - **品質の条件** (P-02 の 5〜8、10): Windows を第一級として CI マトリクスに入れる (path、長いパス名、子プロセス、cp932)。版と依存は lock とハッシュで完全に固定し、脆弱性の監査を入れる。lint と型検査は strict を必須にする。プロパティテストと mutation テストを最初から入れる。メモリと時間の上限、singleton lock を設ける。issue の本文などの外部テキストは、非信頼のデータとして扱う。
 
 ### 技術スタック
 
@@ -103,4 +108,4 @@ TypeScript と Python の技術差は本ツール (型付きルール/検証/ル
 |---|---|---|---|
 | 2026-05-27 | 初版 (core は TypeScript / Node) | — | — |
 | 2026-06-08 | state に SQLite projection を採用 (ADR-007) | ADR-007 | — |
-| 2026-10-07 | 管理知能を Python とし、境界 schema の正本を JSON Schema とする (決定 4) | #588 6034542428 / 6035244583 | (本 PR) |
+| 2026-10-07 | 管理知能を Python とし、境界 schema の正本を JSON Schema とする (決定 4) | #588 6034542428 / 6035244583、外部監査 #588 5906948833 | #885 |
