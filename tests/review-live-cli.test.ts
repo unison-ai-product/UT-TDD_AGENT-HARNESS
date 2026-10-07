@@ -608,7 +608,7 @@ process.stdin.on("end", () => {
   it.each([
     ["parent", ["review", "--json", "live-consume"]],
     ["child", ["review", "live-consume", "--json"]],
-  ] as const)("U-RVATT-036 returns deny JSON through the real CLI when --json is on the %s command", (_position, commandArgs) => {
+  ] as const)("U-RVATT-036 returns consumer deny JSON through the real CLI when --json is on the %s command", (_position, commandArgs) => {
     const { root, envelopePath } = fixture();
     execFileSync("git", ["init", "-q"], { cwd: root });
     const binRoot = mkdtempSync(join(tmpdir(), "ut-review-deny-provider-"));
@@ -643,7 +643,7 @@ process.stdin.on("end", () => {
     expect(result.status, result.stderr).toBe(1);
     expect(JSON.parse(result.stdout) as unknown).toEqual({
       ok: false,
-      reason: "reviewer_execution_failed",
+      reason: "consumer_runtime_absent",
     });
   });
 
