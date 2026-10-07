@@ -196,7 +196,7 @@ describe("runtime hook entrypoints", () => {
       const settings = JSON.parse(readFileSync(path, "utf8"));
       expect(settings.hooks.SessionStart[0].hooks[0].timeout).toBe(30);
       expect(settings.hooks).toMatchObject({
-        PreToolUse: [{ hooks: [{ timeout: 5 }, { timeout: 5 }] }],
+        PreToolUse: [{ hooks: [{ timeout: 5 }] }, { hooks: [{ timeout: 5 }] }],
         PostToolUse: [{ hooks: [{ timeout: 5 }] }],
         Stop: [{ hooks: [{ timeout: 5 }] }, { hooks: [{ timeout: 930 }] }],
         SubagentStop: [{ hooks: [{ timeout: 5 }] }],
