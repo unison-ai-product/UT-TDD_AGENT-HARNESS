@@ -186,6 +186,24 @@ function writeFakeClaude(binDir: string): string {
 }
 
 describe("runtime hook entrypoints", () => {
+  it("SessionStart timeout is 30s in source and consumer settings without changing other hook timeouts", () => {
+    const settingsPaths = [
+      join(repoRoot, ".claude", "settings.json"),
+      join(repoRoot, "docs", "templates", "adapter", ".claude", "settings.json"),
+    ];
+
+    for (const path of settingsPaths) {
+      const settings = JSON.parse(readFileSync(path, "utf8"));
+      expect(settings.hooks.SessionStart[0].hooks[0].timeout).toBe(30);
+      expect(settings.hooks).toMatchObject({
+        PreToolUse: [{ hooks: [{ timeout: 5 }, { timeout: 5 }] }],
+        PostToolUse: [{ hooks: [{ timeout: 5 }] }],
+        Stop: [{ hooks: [{ timeout: 5 }] }, { hooks: [{ timeout: 930 }] }],
+        SubagentStop: [{ hooks: [{ timeout: 5 }] }],
+      });
+    }
+  });
+
   it("Claude settings route session-log hooks through the shared UT-TDD CLI", () => {
     const settings = JSON.parse(readFileSync(join(repoRoot, ".claude", "settings.json"), "utf8"));
     const hooks = settings.hooks;

@@ -7,7 +7,7 @@ drive: agent
 route_signal: hotfix_required
 route_mode: incident
 created: 2026-10-06
-updated: 2026-10-06
+updated: 2026-10-07
 owner: Codex worker proposal / PO review pending
 parent_design: docs/design/harness/L6-function-design/session-log.md
 pair_artifact: docs/test-design/harness/L7-session-start-order-test-design.md
@@ -18,7 +18,7 @@ backprop_decision_reason: 実配布session start
   timeout受入を新たに規定する。既存L6/L7契約の不足をReverse 835で照合し、上流契約への差分が必要なら限定backfillする。
 agent_slots:
   - role: aim
-    slot_label: AIM — incident境界、runtime root拒否前後、未決timeout方式を独立に整理する
+    slot_label: AIM — incident境界、runtime root拒否前後、PO指定timeout 30秒を独立に整理する
   - role: qa
     slot_label: QA — CANDIDATE-U-835-001..007とCANDIDATE-AT-835-008の負系、実CLI順序、VS
       Code実配布cold/warm受入を検証する
@@ -148,18 +148,18 @@ status: confirmed
 github_issue_id: 835
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:bf2cae5fee18b77a0ade95d9901b928f
-  command_id: plan-revise:issue835:forward:pr865-post-pass-confirmation:20261006
-  admitted_at: 2026-10-06T11:46:23.000Z
-  source_digest: sha256:fb7fbd740c60a5585a83104b25fd95798fdd8353a8b8f3d9b3830616f9b68d90
-  decision_digest: sha256:e2dfd822525c8daa39d8b6090917e677ffd9e88bd4a6b954099ee0f6744f9432
-  receipt_digest: sha256:386446f3e69ff1715426e6b1400894fea1de076a105e308315e172d4d4f265dd
+  receipt_id: certificate:bd8e7b07c9b4912e2150feb45bcca3a9
+  command_id: plan-revise:issue835:timeout30:r5:20261007
+  admitted_at: 2026-10-07T02:19:22.793Z
+  source_digest: sha256:bb8c9dba29ed17f401676db23798ca032eaeadfa33e6c340f7c1b86673824aed
+  decision_digest: sha256:2201c70f402ec74123042d04daac84941adf582300b5caa4fc10a1baa34f77f0
+  receipt_digest: sha256:fa54d80cb4aa33a1b890dd3d0ee60085e7fec3898e1ab1dee56fd4e33d93f305
   binding:
     path: docs/plans/PLAN-L7-835-windows-sessionstart-contract.md
     plan_id: PLAN-L7-835-windows-sessionstart-contract
     asset_id: plan:e281d92c657b574bd0ea7a3ab6dfdb9e
-    revision: 4
-    content_digest: sha256:fb7fbd740c60a5585a83104b25fd95798fdd8353a8b8f3d9b3830616f9b68d90
+    revision: 5
+    content_digest: sha256:bb8c9dba29ed17f401676db23798ca032eaeadfa33e6c340f7c1b86673824aed
   route:
     signal: hotfix_required
     mode: incident
@@ -176,17 +176,17 @@ admission_receipt:
     target_plan_id: PLAN-L7-531-pack-internal-canary-smoke
     target_revision: 11
     phase: forward_merge
-  escape_reason: "Issue #835 / control comment 6010925970: event-firstを保持し、実測未完のVS
-    Code ATは未完了のまま記録する。PR #865 exact e3188bd6のCI 5/5とOpus PASSに基づく同一PR内の通常確認。"
+  escape_reason: "Issue #835 / PO control 6029336405: SessionStartを固定30秒、未改変sealed
+    C4のcold1/warm2受入へ限定改訂。旧reviewは履歴であり、新PASSやAT完了を主張しない。"
 ---
 
 # PLAN-L7-835 (troubleshoot): Windows consumer SessionStart の順序契約と実配布完走受入
 
 ## 1. 位置づけと事実
 
-本書は通常のplan revise writerでadmitされたIssue #835の正規Forward PLANである。rev4のconfirmedは、実装PR #865のexact HEAD e3188bd6ae706b73ea62e2284c833fecd760efd9に対するCI 5/5 successとOpus PASSを同一PRで記録した契約着地を示す。これは実配布受入やIssue完了を意味しない。実VS Code consumerによるcold/warm各5 run以上のAT-835-008は未実施であり、Issue #835はopenのままとする。
+本書は通常のplan revise writerでadmitされたIssue #835の正規Forward PLANである。rev4のconfirmedは、実装PR #865のexact HEAD e3188bd6ae706b73ea62e2284c833fecd760efd9に対するCI 5/5 successとOpus PASSを同一PRで記録した契約着地を示す。これは実配布受入やIssue完了を意味しない。実VS Code consumerによるcold 1 run / warm 2 run（合計3 run）のAT-835-008は未実施であり、Issue #835はopenのままとする。
 
-Issue #835 はWindows consumerで配布されたClaude SessionStartが設定済み5秒timeoutを超えてcancelされ、対象sessionの正規 `session_start` が残らなかった不具合である。Issue本文はcold 7413ms / timeout 5000msを報告し、comment 5990541679は同一consumerでwarm 6252ms / timeout 5000ms / cancel、対象IDのevent欠落、`--help` 約1.6秒、Stop 約3771msを記録する。したがってcold-only仮説ではなく、現在の実測5秒失敗を契約の前提として保持する。最新control宛comment 6010925970はevent-firstを採択し、timeoutをphase実測から選択する。
+Issue #835 はWindows consumerで配布されたClaude SessionStartが設定済み5秒timeoutを超えてcancelされ、対象sessionの正規 `session_start` が残らなかった不具合である。Issue本文はcold 7413ms / timeout 5000msを報告し、comment 5990541679は同一consumerでwarm 6252ms / timeout 5000ms / cancel、対象IDのevent欠落、`--help` 約1.6秒、Stop 約3771msを記録する。したがってcold-only仮説ではなく、現在の実測5秒失敗を契約の前提として保持する。旧control comment 6010925970のphase選択方式は履歴として保持する。現行方針はPO/control comment 6029336405による固定30秒であり、旧方式を置き換える。
 
 incident originは `PLAN-L7-531-pack-internal-canary-smoke` revision 11、正規revision binding digest `sha256:691775ce8aa44fc963f8546e9acaba04d40984c50ab0d6d001ff7e508366fb6a`。reentryは同PLAN revision 11 / `forward_merge`。Issue bindingは明示的なincident識別子 `issue-835` / `projection_state: unprojected` とする。既存Execution Episode event、IssueProjected receipt、projection digestの発行済み状態は主張しない。
 
@@ -205,28 +205,26 @@ dispatch(SessionStart)による既存session_start appendの試行 → 現行Ses
 
 ## 3. Scope / non-scope
 
-- 対象は外部Claude SessionStartの既存CLI callsite。必要なfault/order injectionは既存CLI/runtime module内に限定し、public CLI/new runtime moduleを追加しない。
-- delegation/team入口は今回のIssue証跡から変更しない。
-- PLAN-L7-422のF2 digest欠落可視化・doctor検出を再所有しない。422はdraftなのでdependencyではなくreferenceのみ。
-- PLAN-L6-03 / PLAN-L7-01のsession-log schema、fail-open、current-plan解決を変更しない。追加するのはCLI call orderingと、その順序を検証するbounded pair。
-- 新しいper-step budget / defer / restart機構やoptional maintenance分類は導入しない。phase計測でmaterialize/scan律速と判定された場合に限り、control comment 6010925970で採択された既存Stop detached patternの再利用を検討する。
-- 採択した対応は1 commitでrollback可能にする。detached化を採択した場合は当該detached call 1箇所を同期呼び出しへ戻し、timeout引上げを採択した場合は配布settingsのtimeout値1つを戻す。AT-835-008が失敗した場合は採択対応をrollbackして同じ計測条件で再計測する。
+- 既存event-first順序、session-log schema/handler/fail-open、root境界、current-plan、forced-stop、skill、digest semanticsを維持する。
+- 今回の実装差分は開発用と配布templateのSessionStart timeoutを5秒から30秒へ変更することだけ。他hookのtimeoutとCLI/runtime side-effectsは変更しない。
+- materialize/scanのdetached化は採用しない。現行同期side-effectsを保持し、新module/CLI/per-step budget/defer/restart機構を追加しない。
+- rollbackは両settingsのSessionStart timeout値だけを1 commitで元へ戻す。sealed bundle手編集やguard無効化は禁止する。
 
-## 4. 採択済み方針と実測によるtimeout選択
+## 4. PO判断によるtimeout 30秒
 
-Control comment [6010925970](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/418#issuecomment-6010925970)によりevent-firstが採択済みである。timeoutを固定値で先取りせず、専用pair §CANDIDATE-AT-835-008に定めるclean Windows consumerのcold/warm各5 run以上のphase別msから機械的に方式を選ぶ。各runに実Pack/bundle/version/settings argv・timeout・session ID・event・digest・exit/cancel状態を束縛し、cold/warm条件を区別する。root解決時間を記録し、存在しないidentity-admission phaseを計測項目にしない。現在のcold 7413ms / warm 6252ms / 5000ms cancelは削除・上書きしない。
+[control comment 6029336405](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/418#issuecomment-6029336405)により、POは起動10〜30秒を許容し、根拠のない5秒制約を固定30秒へ置き換える。これは計測済み性能改善や完走の証明ではない。cold 7413ms / warm 6252ms / timeout 5000ms / cancelの既存失敗証拠は保持する。
 
-- **materializeSkillAssets / scanDanglingStops+sweepStaleGuardSlotsが律速**: 既存Stop detached起動patternを使ってhook外へ出し、timeoutは5s維持。`spawnDetachedStopRefresh`は現行DB refresh専用であるため直接呼ぶだけでskill/scan責務を移管できるとは扱わない。既存所有、entrypoint、競合、完了責務を実装pairで検証し、sealed consumer bundleを手編集/guard無効化しない。
-- **surfaceSessionStartDigestToStdoutが律速**: stdoutの同期出力を保つためPack timeoutを実測p95×2へ設定する。n=5以上のnearest-rank p95、全sample、ms→設定秒のround-upを記録する。n=5ではnearest-rank p95は最大値となる。計算値と異なる固定採択は禁止。
-- phase外のwrapper/CLI/identity/event等も別計測し、phase合計との差分を残す。どのphaseも支配的でなければ、測定根拠なしに上記分岐を選ばずレビューへ戻す。
+旧6010925970のphase律速によるdetached化/5秒維持、およびp95×2によるtimeout選択は今回採用しない。正式ATは未改変sealed canary.4を使うcold 1 run＋warm 2 runの合計3 runであり、phase診断は事前必須ではない。
 
-event-firstは性能改善/timeout内完走の証拠ではない。計測済みの該当分岐を非著者reviewと通常のPack設定変更/implementationで束縛し、1 commit rollback手順を実装契約とpairに含める。
+正式ATが1 runでも失敗した場合のみ別diagnostic artifactでphase原因を調査する。6029427046が承認したexact source＋未commit timing patchから既存scripts/build-node.mjsを使う診断はpatch/metafile/SHA-256を保存し、sealed receiptや正式AT/PASSを主張しない。dirty guard例外やdiagnostic commitは導入しない。
 
 ## 5. Acceptance candidates
 
-専用pair `docs/test-design/harness/L7-session-start-order-test-design.md` のCANDIDATE-U-835-001..007とCANDIDATE-AT-835-008を正本候補とする。targeted unit/order oracleだけではIssue完了にならない。
+専用pairのU-835-001..007とCANDIDATE-AT-835-008を維持する。順序unit oracleだけではIssue完了にならない。
 
-実配布ATは専用clean Windows consumerをVS CodeのClaude拡張から実際に起動し、`CLAUDE_CODE_ENTRYPOINT=claude-vscode` を束縛する。consumerの `.claude/settings.json` にあるSessionStart command/args/configured timeoutをそのまま使い、端末からhook commandを直叩きしたrunは受入証拠にしない。phase計測後に選んだ上記方式を反映し、cold/warm各5 run以上の**全run**で同一実session IDをhook input・phase record・`.ut-tdd/logs/session/<id>.jsonl`に照合する。各runが設定timeout内に正常exit (0、cancelなし) し、同ID `session_start` がdurableに存在し、要求されたdigest出力が全runで存在すること。current timeout 5秒で失敗した既存証跡は消さず、別ID・mock・diagnostic bundle・source-only CLI・help・手書きmarkerで代替しない。AT-DIST-003への接合はPLAN-L7-531所有を尊重し、実配布smokeの必要差分だけ参照経由で統合する。受入runが1件でも失敗した場合は対応を1 commitでrollbackし、rollback後にcold/warm条件を保って再計測する。
+未改変sealed v0.2.0-canary.4を導入したclean Windows consumerをVS CodeのClaude拡張から実起動し、CLAUDE_CODE_ENTRYPOINT=claude-vscodeを束縛する。consumerのSessionStart settings command/args/timeout 30秒をそのまま用い、cold 1 run＋warm 2 runの全3 runを測る。各runでwhole-hook msが30000以下、exit 0、cancelなし、hook inputと耐久session_startのsession ID一致、要求digest出力の存在を証明する。Pack/bundle/version、Node/Claude/VS Code、settings argv/timeout、cold/warm条件、event/digest、exit/cancelを保存する。
+
+端末直叩き、mock、diagnostic bundle、source-only CLI、別ID、手書きmarkerは正式ATの代替にしない。1件でも失敗すればPASSにせず、任意のphase診断で調査する。rollbackする場合はtimeout値だけを1 commitで戻し、同じcold/warm条件で再計測する。AT-DIST-003への接合はPLAN-L7-531の所有を尊重する。
 
 ## 6. 所有境界とReentry
 
@@ -234,4 +232,9 @@ L6-03/L7-01が所有するsession event schema/handler/fail-openを変更せず�
 
 ## 7. Status discipline
 
-ForwardはPR #865のtest-first実装PRで最初draftとして維持し、正式oracleのRed/Greenを経て実装HEAD e3188bd6ae706b73ea62e2284c833fecd760efd9のCI 5/5 successを確認した。2026-10-06T11:37:59.647ZにOpusが同HEADをPASS（blocking findings 0）とし、その後、同一PRで通常plan revise writerにより本Forwardをrev4/confirmedへ記録する。確認対象は契約と実装PRの着地であり、実配布ATのPASSやIssue完了ではない。confirm後の簿記限定レビューはcontrol指示に従い、ReverseはR0/draftを維持し、confirm前の追加待ち条件にしない。実VS Code consumerでのAT-835-008（cold/warm各5 run以上）は未実施であり、Issue #835はopenのままとする。
+ForwardはPR #865のtest-first実装PRで最初draftとして維持し、正式oracleのRed/Greenを経て実装HEAD e3188bd6ae706b73ea62e2284c833fecd760efd9のCI 5/5 successを確認した。2026-10-06T11:37:59.647ZにOpusが同HEADをPASS（blocking findings 0）とし、その後、同一PRで通常plan revise writerにより本Forwardをrev4/confirmedへ記録する。確認対象は契約と実装PRの着地であり、実配布ATのPASSやIssue完了ではない。confirm後の簿記限定レビューはcontrol指示に従い、ReverseはR0/draftを維持し、confirm前の追加待ち条件にしない。実VS Code consumerでのAT-835-008（cold 1 run / warm 2 run（合計3 run））は未実施であり、Issue #835はopenのままとする。
+
+## 8. rev5 PO timeout決定（2026-10-07）
+
+6029336405 / 6029427046に基づく30秒固定と正式AT 3 runへの改訂。既存rev4のconfirmed/review_evidenceはPR #865の履歴であり、本rev5の新しいOpus PASSや実配布AT完了を主張しない。今回のexact HEADへの非著者レビューとCI、C4公開後の正式ATは別途必要。Issue #835はopenのまま。
+
