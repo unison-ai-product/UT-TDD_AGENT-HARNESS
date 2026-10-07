@@ -5,7 +5,7 @@ status: draft
 pair_artifact: docs/test-design/harness/L9-repository-placement-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 next_pair_freeze: L9
-plan: docs/plans/PLAN-L4-35-repository-placement.md
+plan: pending (PLAN-L4-35 は issue 596 の ledger 取り込み後に plan draft で起票する)
 ---
 
 # UT-TDD Agent Harness — L4 基本設計: リポジトリの置き場所 (Repository Placement)
