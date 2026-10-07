@@ -558,6 +558,7 @@ describe("manual canary acceptance publish-record boundary", () => {
       "v0.2.0-canary.3",
       "v0.1.4",
       "latest",
+      "v0.2.0-canary.5-preview",
       "v0.2.0-canary.4-preview",
       "prefix-v0.2.0-canary.4",
     ]) {
@@ -942,6 +943,7 @@ describe("manual canary acceptance publish-record boundary", () => {
       "v0.2.0-canary.4",
       "v0.2.0-canary.3",
       "latest",
+      "v0.2.0-canary.5-preview",
       "v0.2.0-canary.4-preview",
       "prefix-v0.2.0-canary.4",
     ]) {
