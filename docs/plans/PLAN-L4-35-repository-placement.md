@@ -4,8 +4,8 @@ title: "PLAN-L4-35 (add-design/repository-placement): リポジトリの置き�
 kind: add-design
 layer: L4
 drive: fullstack
-route_signal: redesign
-route_mode: redesign
+route_signal: feature_addition
+route_mode: add-feature
 created: 2026-10-07
 updated: 2026-10-07
 owner: PO / TL
