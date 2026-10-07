@@ -1,7 +1,7 @@
 ---
 layer: L4
 sub_doc: architecture
-status: draft
+status: confirmed
 pair_artifact: docs/test-design/harness/L9-repository-placement-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 next_pair_freeze: L9
@@ -51,44 +51,128 @@ plan: pending (PLAN-L4-35 は issue 596 の ledger 取り込み後に plan draft
 - 「配る物」と「自分が開発に使う物」と「自分の開発記録」が、同じ階層に混ざっていること
 - 置き場所を判定する正本と、それを守らせる gate が無いこと
 
-## §3 目標の構造 (3 区分)
+## §3 目標の構造 (PO 確認済み、2026-10-07)
+
+最上位は「配る物 (`product/`)」と「配らない物 (`dev/`)」の 2 つに分ける。root を開いた時点で、配布物かどうかが名前で判別できるようにするためである (PO 指示「目的がひと目でわかるように」)。
+
+### §3.1 source repo (この repo)
 
 ```text
-<repo root>/
-├── src/            システム: consumer で動く harness 本体 (TypeScript)。Pack に含める
-├── parts/          HARNESS 部品: consumer へそのまま配る部品。Pack に含める
-│   ├── skills/
-│   ├── templates/
-│   │   ├── design/        設計テンプレート (L0〜L6)
-│   │   ├── test-design/   テスト設計テンプレート (L7〜L14)
-│   │   ├── adapter/       Claude / Codex の settings・hooks・agents 定義
-│   │   ├── github/
-│   │   ├── plan/
-│   │   ├── prompts/
-│   │   └── state/
-│   └── ...
-├── dev/            自己開発: この repo の開発にだけ使う物。Pack に含めない
-│   ├── release/    リリース工場 (現 src/setup の pack-publication-* / release-* など)
-│   ├── docs/       この repo 自身の PLAN・設計・テスト設計・governance
-│   ├── tests/
-│   └── scripts/
-├── .ut-tdd/  .claude/  .codex/  .github/  .vscode/   ツールの都合で root に置く必要がある物
-└── package.json  tsconfig*.json  biome.json  README.md  LICENSE  NOTICE  CHANGELOG.md ...
+UT-TDD-agent-harness/
+│
+├── product/                         ■ 配る物 (Pack = この中身そのまま)
+│   ├── README.md  LICENSE  NOTICE  CHANGELOG.md     製品としての説明・ライセンス
+│   ├── tsconfig.json
+│   ├── kernel/                      Assurance Kernel = 信頼の根 (TS)
+│   │   ├── gate-verdict/            gate の判定
+│   │   ├── review-custody/          request / verdict / receipt の検証
+│   │   └── admission/               受け入れの判定 (チケット・成果物)
+│   ├── engine/                      harness 本体 (TS)。R3 の 7 帯をディレクトリにする
+│   │   ├── b0-foundation/           土台 (schema・shared)
+│   │   ├── b1-lib/                  共通ライブラリ
+│   │   ├── b2-domain/               ドメイン (vmodel・trace・ticket・skill)
+│   │   ├── b3-state/                状態 (JSON 正本 + SQLite 索引)
+│   │   ├── b4-services/             サービス (gate・feedback・memory・github・registry)
+│   │   ├── b5-app/                  アプリ (workflow・team・consumer の setup)
+│   │   └── b6-entry/                入口 (CLI・hook の起動口)
+│   ├── intelligence/                管理知能 (Python・別プロセス、P6 決定 #575)
+│   │   ├── planner/                 工程間の境界・チケットの発行
+│   │   ├── team/                    区分ごとのチームチケット・リーダーの全体ビュー
+│   │   └── feedback/                パターン抽出 → 改善先の選択 (R6)
+│   ├── contracts/                   境界の契約 (JSON schema)。言語と区分をまたぐ唯一の正本
+│   │   ├── kernel-intelligence/     kernel ⇔ 管理知能
+│   │   ├── ticket/                  チケット (実行と検収のペア、種類)
+│   │   ├── acceptance-catalog/      受入の宣言 (#589)
+│   │   └── placement-registry/      置き場所のルール (§4)
+│   └── parts/                       部品 (そのまま配る)
+│       ├── skills/
+│       ├── templates/
+│       │   ├── design/              L1〜L6 の設計テンプレート
+│       │   ├── test-design/         L7〜L14 のテスト設計テンプレート
+│       │   ├── github/              consumer 用の CI・issue・PR テンプレート
+│       │   ├── prompts/
+│       │   └── state/
+│       └── adapters/
+│           ├── claude/              settings.json・agents・commands・CLAUDE.md の雛形
+│           └── codex/               config.toml・hooks.json・AGENTS.md の雛形
+│
+├── dev/                             ■ 自分の開発用 (配らない)
+│   ├── README.md                    この repo の開発の入口
+│   ├── tsconfig.json  vitest.config.ts
+│   ├── docs/
+│   │   ├── governance/              この repo の開発ルール・concept・requirements・ADR
+│   │   ├── design/harness/          この repo 自身の設計 (L1-requirements/ … L6-function-design/)
+│   │   ├── test-design/harness/     この repo 自身のテスト設計 (v4 の右腕: L7-unit/ L8-as-built/
+│   │   │                            L9-integration/ L10-system/ L11-ux/ L12-acceptance/ L13-post-deploy/ L14-operational/)
+│   │   └── archive/plans/           旧 PLAN 1,004 本 (凍結・読み取り専用、#533)
+│   ├── tests/                       product/ のテスト
+│   ├── scripts/                     開発用のスクリプト
+│   ├── records/                     規律の証跡の正本 (JSON / JSONL: review receipt・memory・決定の記録)。追跡する
+│   └── release/                     リリース工場 (Pack の生成・公開。現 src/setup の 12 本)
+│
+├── .claude/  .codex/                ▲ 生成物: 内部デプロイが product/parts/adapters から作る。手で編集しない
+├── CLAUDE.md  AGENTS.md             ▲ 生成物 + 入口: adapter 部分は生成し、この repo 固有のルールは dev/docs/governance を指すだけ
+├── .github/                         ● ツールが root を強制する dev の物 (この repo の CI)
+├── .ut-tdd/                         ● CLI が探す root の目印 + インストールした harness + 実行状態・索引 (追跡しない)
+├── package.json  package-lock.json  ● npm が root を要求する
+├── biome.json                       ● repo 全体の lint / format
+└── .gitignore  .gitattributes  .editorconfig  .node-version
 ```
 
-規則は次のとおり。
+root の規則:
 
-1. **Pack (配布物) = `src/` + `parts/`。** 現在の、3,178 本から 998 本を filter で選ぶ方式 (allowlist / denylist) をやめ、構造で決まるようにする。dev 専用 path の漏出検査は、「`dev/` が Pack に含まれていないこと」という 1 行の検査になる。
-2. **`dev/` は配布しない。** リリース工場は、この repo が Pack を作るための自己開発の道具であって、consumer の harness の一部ではない (矛盾 2)。
-3. **設計の文書は層のディレクトリに置く。** `dev/docs/design/harness/<層>/` と `dev/docs/test-design/harness/<層>/` を使う。右腕の層名は、PO が採択した v4 の構成 (#822: L7 単体テスト / L8 仕様書作成 (as-built、設計への適合検証) / L9 結合 / L10 システム / L11 UX 検証 / L12 受入 / L13 / L14) に合わせる。`docs/process/evidence/` にある右腕の設計は、ここへ戻す (矛盾 4)。
-4. **テンプレートは `parts/templates/` に一本化する。** `docs/templates/vmodel/` は廃止し、設計テンプレートとテスト設計テンプレートに振り分ける (矛盾 1 / 8)。builtin のテンプレートは、`parts/templates/` から build 時に生成する (矛盾 9。#872 の方式 A)。
-5. **使われていないコードは消す** (矛盾 3)。
-6. **製品は release asset と定める。** Pack repo は、release asset を再現する source として位置付ける。ADR-005 と `repository-structure.md` の「git dependency で pull する」は、§8 の切り替えで訂正する (矛盾 6 / 7)。
+1. ■ `product/` (配る) と `dev/` (配らない) の 2 つだけを、内容物の置き場とする。
+2. ▲ 生成物は手で編集しない。内部デプロイ (§7) で作り直される。
+3. ● ツールが root を強制する物は、最小限にする。
+4. それ以外は root に置かせない (§5 の guard が止める)。`.vscode/` は個人の設定なので追跡をやめ、ignore する。
 
-**未決 (本書の review で確定する):**
+### §3.2 規律を守らせる場所
 
-- `parts/` の名前。候補は `parts/` / `harness/` / `pack/`。PO 確認待ちのため、本書では仮に `parts/` と書く。
-- `docs/`・`tests/`・`scripts/` を `dev/` の下へ移すかどうか。移すと、CLAUDE.md の読み込み順、`vitest.config.ts`、`tsconfig`、CI のパス参照がすべて変わる。この影響は §8 の 3 で実測してから確定する。
+規律を守らせるのは、**インストールしたリリース済みの harness** (`.ut-tdd/` の下) であり、開発中の `product/` ではない。判定する側と判定される側を物理的に分け、自分の採点基準をその場で書き換えられないようにする。新しい規律は、内部デプロイの後から効く (§7)。
+
+| 守る場所 | 実体 | 置き場 |
+|---|---|---|
+| 書き込みの瞬間 | hook (置き場所の guard、foreign-edit、agent-guard) | `.claude/`・`.codex/` (生成物) → `.ut-tdd/` の launcher を起動 |
+| commit の瞬間 | git hook (置き場所、commit の規律) | install 時に `.git/hooks/` へ入れる |
+| PR / merge | gate の判定、review custody、merge wrapper | kernel (インストールした版の中) |
+| CI | doctor、lint、gate | `.github/` (生成物、`product/parts/templates/github/` から) |
+| 規律の中身 | 共通の規律 | `product/parts/adapters/` (CLAUDE.md / AGENTS.md の雛形) |
+| | その project 固有のルール | `dev/docs/governance/` |
+
+### §3.3 開発する物の置き場 (どの project でも同じ形)
+
+置き場所の規則は、この repo と consumer で共通にする。この repo は「`product/` と `dev/` を持つ consumer 0 号」である。
+
+```text
+<project>/
+├── product/            その project が作って届ける物 (この repo なら harness 本体、consumer ならその製品)
+├── dev/
+│   ├── docs/           その project の設計・テスト設計・governance (雛形は parts/templates から)
+│   ├── tests/
+│   └── records/        規律の証跡の正本 (追跡する)
+├── .ut-tdd/            インストールした harness と実行状態・索引 (追跡しない)
+├── .claude/ .codex/ .github/ CLAUDE.md AGENTS.md    生成物
+└── package.json など    ツール都合の root 必須物
+```
+
+consumer の都合 (フレームワークが `src/` を要求する場合など) は、置き場所の registry を project ごとに上書きして扱う。初期値は上の形とする。
+
+### §3.4 Pack と配布の 3 段階
+
+1. **Pack repo** = `product/` の中身を root に出したもの。そこに `release/manifest.yaml` (その版の C2 の束縛) と、公開した asset を再現できるかを確かめる CI を足す。`tests/`・`docs/governance`・`docs/process`・`scripts/`・`vitest.config.ts` は入らない (dev 側)。3,178 本から 998 本を filter で選ぶ方式 (allowlist / denylist) をやめ、構造で決まるようにする。dev 専用 path の漏出検査は、「`dev/` が入っていないこと」の 1 行になる。テストと受入は、出荷前に source 側で済ませる。
+2. **Release asset** = `product/` をビルドしたもの (現行の 5 本)。builtin のテンプレートは、`product/parts/templates/` から build 時に生成する (#872 のズレが構造的に起きなくなる)。管理知能 (Python) の配布物は、v4 の実装時に asset の一覧の契約へ追加する。
+3. **consumer の project** = asset をインストールした結果 (§3.3 の形)。この repo の root の生成物 (▲) も、consumer と同じ手順で作られる。
+
+source の `product/` → Pack repo → asset → consumer とこの repo の root、という 1 本の流れにし、配る物と配らない物が混ざる場所をなくす。
+
+### §3.5 補足の規則
+
+- 本体を `src/` ではなく `product/engine/` とし、信頼の根を `product/kernel/` に分ける。「source」という名前では、本体のコードか開発用のコードかを区別できず、信頼の根もディレクトリの段階で隔離されていないと守れないためである。kernel・engine・intelligence が互いに知ってよいのは `contracts/` だけとし、これを path で lint する。
+- engine は「帯 = ディレクトリ」とし、依存の向きの lint を path だけで判定できるようにする (R3 の実測: 逆向きの依存 0)。
+- 設計の文書は、層のディレクトリに置く。右腕の層名は、PO が採択した v4 の構成 (#822) に合わせる。`docs/process/evidence/` にある右腕の設計は、ここへ戻す (矛盾 4)。
+- テンプレートは `product/parts/templates/` に一本化し、`docs/templates/vmodel/` は廃止する (矛盾 1 / 8)。
+- 使われていないコードは消す (矛盾 3)。
+- 製品は release asset と定める。Pack repo は、release asset を再現する source として位置付ける。ADR-005 と `repository-structure.md` の「git dependency で pull する」は、§8 の切り替えで訂正する (矛盾 6 / 7)。
 
 ## §4 置き場所の registry (正本)
 
@@ -97,8 +181,8 @@ plan: pending (PLAN-L4-35 は issue 596 の ledger 取り込み後に plan draft
 - ルールの種類は次の 3 つ。
   - **path ルール**: 区分 (system / parts / dev / tool-root) と、その中の置き場所
   - **文書ルール**: frontmatter の `layer` / `sub_doc` / `doc_type_id` から、置き場所の層を決める
-  - **component ルール**: `src/` の component (R3 で実測した dir) ごとに、置くファイルのパターンを決める (例: `pack-publication-*` / `release-*` は `dev/release/`)
-- **未知の種類**: governed root (`src/`、`parts/`、`dev/`、それと移行期間中の `docs/`、`tests/`、`scripts/`) の中で、どのルールにも当たらない新しいファイルは置けない。先に registry へルールを足す。scratchpad、`.ut-tdd/`、ignore 対象は governed root に含めない。
+  - **component ルール**: engine の帯と component (R3 で実測した dir。移行期間中は `src/`) ごとに、置くファイルのパターンを決める (例: `pack-publication-*` / `release-*` は `dev/release/`)
+- **未知の種類**: governed root (`product/`、`dev/`、それと移行期間中の `src/`、`docs/`、`tests/`、`scripts/`) の中で、どのルールにも当たらない新しいファイルは置けない。先に registry へルールを足す。scratchpad、`.ut-tdd/`、ignore 対象は governed root に含めない。
 - **例外**: 新しい機構は作らない。foreign-edit override と同じ、理由が必須の one-shot marker (`.ut-tdd/state/placement-override`) を再利用する。使うと消費され、監査ログ `.ut-tdd/logs/placement-overrides.jsonl` に残る。
 
 ## §5 書き込み時の guard
@@ -115,7 +199,7 @@ plan: pending (PLAN-L4-35 は issue 596 の ledger 取り込み後に plan draft
 - doctor の check として `file-placement` scope を足す。`src/doctor/runtime-state-location.ts` (`.ut-tdd` の誤配置を `misplaced` として検出する既存の check) を一般化する。
 - 検出するものは次のとおり。
   - `misplaced`: registry と置き場所が一致しない
-  - `unreferenced`: `src/` の中で、どこからも import されていない (テストからだけの参照も対象)
+  - `unreferenced`: 本体 (移行期間中は `src/`、切り替え後は `product/`) の中で、どこからも import されていない (テストからだけの参照も対象)
   - `duplicate`: 同じ種類の正本が 2 か所にある (テンプレート、builtin と disk など)
 - 実行するのは、doctor、CI (`harness-check`)、SessionStart の digest (件数だけ) の 3 か所。
 - **最初は報告だけにする。** 修正用の PR を自動で作ることはしない (§9 判断 2)。報告の件数が、そのまま誤配置の発生率の計測になる。
@@ -123,12 +207,12 @@ plan: pending (PLAN-L4-35 は issue 596 の ledger 取り込み後に plan draft
 
 ## §7 内部デプロイ (自己ホスティング)
 
-この repo の開発は、**リリース済みの harness** で行う。開発中の `src/` そのものは使わない。
+この repo の開発は、**リリース済みの harness** で行う。開発中の `product/` (移行期間中は `src/`) そのものは使わない。
 
 ```text
 ① 開発用 HARNESS = リリース済みの版 (Pack から内部にインストールしたもの)
      ↓ これで hook・gate・review を回す
-② 自分自身の設計 / 実装 (src/・parts/ は製品。開発ツールとしては直接使わない)
+② 自分自身の設計 / 実装 (product/ は製品。開発ツールとしては直接使わない)
      ↓ canary を作る
 ③ 内部デプロイ = 新しい版を、自分の開発用 HARNESS にアップグレードする (自分への受入)
      ↓ 問題なければ consumer に配る。問題があれば rollback する
@@ -147,7 +231,7 @@ plan: pending (PLAN-L4-35 は issue 596 の ledger 取り込み後に plan draft
 | 0 | root の役割不明の物を、確認できたものから 1 件ずつ削除 (2026-10-07 実施済み: `tmp_status*.json`、`x.command_id`、`tmp/`、`.pytest_cache/`)。残り (`memory/.update_check` の発生源、ZIP、`prt1-zip-templates.json`) は、既存の PO 条件を確認してから処理する | なし |
 | 1 | registry (§4) と、報告だけの patrol (§6)。ルールは**現状の構造**で書き、§2 の矛盾は既知の移行対象として報告する | なし |
 | 2 | 書き込み時の guard (§5) | なし |
-| 3 | 構造の切り替え (§3): `parts/` の新設とテンプレートの移動、`vmodel/` の廃止、リリース工場の `dev/release/` への移動、右腕の設計の層ディレクトリへの移動、使われていないコードの削除、Pack inventory の構造化。v4 の層の切り替え (#822) と**同じ切り替え**で行う (触るファイルがほぼ同じなので、2 回動かさない) | あり。canary で配布し、受入で「Pack = `src/` + `parts/`」と consumer に届くテンプレートの一致を確認する |
+| 3 | 構造の切り替え (§3): `product/` (core / parts) と `dev/` の新設、テンプレートの移動、`vmodel/` の廃止、リリース工場の `dev/release/` への移動、右腕の設計の層ディレクトリへの移動、使われていないコードの削除、Pack inventory の構造化。v4 の層の切り替え (#822) と**同じ切り替え**で行う (触るファイルがほぼ同じなので、2 回動かさない) | あり。canary で配布し、受入で「Pack = `product/` の中身」と consumer に届くテンプレートの一致を確認する |
 | 4 | 内部デプロイ (§7) | なし (この repo の運用だけ) |
 
 registry のルールは、段階 3 で目標の構造へ切り替える。段階 1〜2 の間は、現状の構造を正として、新しい散らかりだけを止める。
