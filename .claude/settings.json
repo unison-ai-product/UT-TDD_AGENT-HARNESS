@@ -35,7 +35,7 @@
             "type": "command",
             "command": "node",
             "args": ["${CLAUDE_PROJECT_DIR}/src/cli.ts", "session", "start"],
-            "timeout": 5,
+            "timeout": 30,
             "statusMessage": "session-log: session start (fail-open)"
           }
         ]
