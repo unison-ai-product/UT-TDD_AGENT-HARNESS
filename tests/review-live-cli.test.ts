@@ -632,8 +632,13 @@ process.stdin.on("end", () => {
         {
           cwd: root,
           encoding: "utf8",
+          timeout: 15_000,
           windowsHide: true,
-          env: { ...process.env, UT_TDD_CLAUDE_BIN: stub },
+          env: {
+            ...process.env,
+            UT_TDD_CLAUDE_BIN: stub,
+            UT_TDD_CODEX_BIN: stub,
+          },
         },
       );
 
@@ -641,6 +646,65 @@ process.stdin.on("end", () => {
       expect(JSON.parse(result.stdout) as unknown).toEqual({
         ok: false,
         reason: "reviewer_execution_failed",
+      });
+    },
+  );
+
+  it.each([
+    ["parent", ["review", "--json", "live-dispatch"]],
+    ["child", ["review", "live-dispatch", "--json"]],
+  ] as const)(
+    "U-RVATT-042 emits parseable deny JSON through the real live-dispatch CLI with --json on the %s command",
+    (_position, commandArgs) => {
+      const { root, memoryPath } = fixture();
+      execFileSync("git", ["init", "-q"], { cwd: root });
+      const binRoot = mkdtempSync(join(tmpdir(), "ut-review-dispatch-provider-"));
+      roots.push(binRoot);
+      const stub = join(binRoot, process.platform === "win32" ? "provider.cmd" : "provider");
+      writeFileSync(
+        stub,
+        process.platform === "win32"
+          ? "@echo off\r\necho provider 0.0.0-stub\r\nexit /b 0\r\n"
+          : "#!/bin/sh\necho provider 0.0.0-stub\nexit 0\n",
+        "utf8",
+      );
+      if (process.platform !== "win32") chmodSync(stub, 0o755);
+
+      const result = spawnSync(
+        process.execPath,
+        [
+          join(process.cwd(), "src", "cli.ts"),
+          ...commandArgs,
+          "--memory-id",
+          "memory:d3a",
+          "--memory-path",
+          relative(root, memoryPath).replaceAll("\\", "/"),
+          "--pr",
+          "319",
+          "--head",
+          head,
+          "--revision",
+          "review-d3a-json-deny",
+          "--author-family",
+          "codex",
+        ],
+        {
+          cwd: root,
+          encoding: "utf8",
+          timeout: 15_000,
+          windowsHide: true,
+          env: {
+            ...process.env,
+            UT_TDD_CLAUDE_BIN: stub,
+            UT_TDD_CODEX_BIN: stub,
+          },
+        },
+      );
+
+      expect(result.status, result.stderr).toBe(1);
+      expect(JSON.parse(result.stdout) as unknown).toMatchObject({
+        ok: false,
+        reason: "exact_head_not_found",
       });
     },
   );
