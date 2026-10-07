@@ -24,6 +24,32 @@ describe("G1-trace coverage (business/screen/functional)", () => {
     expect(screens.has("GD-01")).toBe(true);
   });
 
+  it("accepts plain and bold first-cell IDs without over-extracting references", () => {
+    const business = extractG1BusinessIds(
+      [
+        "| BR-01 | plain business requirement |",
+        "| **BR-02** | bold business requirement |",
+        "| UX-03 | plain UX requirement |",
+        "| **UX-04** | bold UX requirement |",
+        "| **ID** | BR-21 |",
+        "prose refers to BR-05",
+        "| related requirement | BR-06 |",
+        "| description | **UX-07** |",
+        "| related requirement | **ID** | BR-08 |",
+        "| BR-1 | invalid short ID |",
+        "| BR-001 | invalid long ID |",
+        "| XBR-09 | invalid prefix |",
+        "| **BR-10 | unbalanced emphasis |",
+        "|",
+        "**BR-11** | ID on the next line |",
+        "|",
+        "**ID** | BR-12 | legacy marker on the next line |",
+      ].join("\n"),
+    );
+
+    expect([...business]).toEqual(["BR-01", "BR-02", "UX-03", "UX-04", "BR-21"]);
+  });
+
   it("extracts only P0 functional requirements for blocking FR screen trace", () => {
     const p0Fr = extractG1P0FrIds(docs.functional);
     expect(p0Fr.size).toBe(19);
