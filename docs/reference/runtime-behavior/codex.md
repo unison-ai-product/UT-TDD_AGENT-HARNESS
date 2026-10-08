@@ -9,12 +9,12 @@
 - 出典: issue #668、Claude 側 memory `reference-codex-hook-schema-probe.md`。`.ut-tdd/memory/project-pr-669-plan-l7-668-codex-hook-command-schema-r*.md` は PR #669 の review 依頼の記録で、仕様の本文は含まない。
 - ハーネスへの影響: hooks.json に `args` を書いても無言で失敗する。command を 1 本の文字列にする。
 
-### 生成した `.codex/hooks.json` の top-level `$comment` は未知 field として警告される
+### (未確認) 生成した `.codex/hooks.json` の top-level `$comment` は未知 field として警告される
 
 - 事実: Codex 0.159.2 (Windows) と 0.160.1 (Linux) で `unknown field $comment` / parse warning が実 transcript に再現した。native hook が正常に動いたかは未証明。
 - 対象バージョン: Codex 0.159.2 / 0.160.1
 - 確認日: 2026-10-07
-- 確認方法: canary.5 の実 authoring の transcript。
+- 確認方法: canary.5 の実 authoring の transcript。 対象版と実行コマンドの両方が記録されていない (コード閲覧・観測・transcript のみ、または版が未確認) ため、項目全体を未確認として扱う。再現して記録するまで、実測の事実として扱わない。
 - 出典: issue #418 のコメント (Windows / Linux の C5 実 authoring 結果)、issue #668、PR #886。
 - ハーネスへの影響: hooks metadata の修理 (#886) を canary.6 で再配布する方針。
 
@@ -27,12 +27,12 @@
 - 出典: Claude 側 memory `reference-codex-hook-schema-probe.md`、issue #668。
 - ハーネスへの影響: repo を移動したら、Codex の GUI では新しいスレッドで作業を始める。
 
-### `codex exec` の probe は scratch dir では project hook を起動しなかった
+### (未確認) `codex exec` の probe は scratch dir では project hook を起動しなかった
 
 - 事実: trust override を付けても hook は起動しなかった。確認は GUI の新スレッドで行う。
 - 対象バージョン: codex-cli 0.154.0-alpha
 - 確認日: 2026-09-18
-- 確認方法: scratch dir での `codex exec` probe。
+- 確認方法: scratch dir での `codex exec` probe。 対象版と実行コマンドの両方が記録されていない (コード閲覧・観測・transcript のみ、または版が未確認) ため、項目全体を未確認として扱う。再現して記録するまで、実測の事実として扱わない。
 - 出典: Claude 側 memory `reference-codex-hook-schema-probe.md`。
 - ハーネスへの影響: hook の動作確認に `codex exec` の scratch probe を使わない。
 

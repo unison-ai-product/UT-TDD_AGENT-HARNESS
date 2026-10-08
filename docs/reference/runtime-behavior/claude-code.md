@@ -9,12 +9,12 @@
 - 出典: issue #418 の 2026-10-07 コメント (「AT-DIST-003 019 (review join) は canary.5 では失敗します。製品の欠陥 #888」)。memory `project-canary5-wsl-toolchain-handoff-20261007.md` は Node の導入手順と明示 PATH を記録している (symlink の記述は無い)。
 - ハーネスへの影響: Linux 受入環境では、hook を走らせる前に node を標準 PATH へ置く前提確認が要る。
 
-### consumer の wake は、`CLAUDE_CODE_ENTRYPOINT=claude-vscode` のときだけ対象になる
+### (未確認) consumer の wake は、`CLAUDE_CODE_ENTRYPOINT=claude-vscode` のときだけ対象になる
 
 - 事実: `isClaudeMemoryWakeTarget` は `env.CLAUDE_CODE_ENTRYPOINT === "claude-vscode"` かつ `UT_TDD_DISABLE_CLAUDE_MEMORY_WAKE !== "1"` を要求する。generation marker は `<session>.generation` で、内容は `process.pid:Date.now()`。
 - 対象バージョン: main `3581ee5c` のコード。
 - 確認日: 2026-10-08
-- 確認方法: コードを読んだ。`src/runtime/claude-memory-wake.ts:266-270` (対象判定)、`:1314-1315` (marker 名と内容)。
+- 確認方法: コードを読んだ。`src/runtime/claude-memory-wake.ts:266-270` (対象判定)、`:1314-1315` (marker 名と内容)。 対象版と実行コマンドの両方が記録されていない (コード閲覧・観測・transcript のみ、または版が未確認) ため、項目全体を未確認として扱う。再現して記録するまで、実測の事実として扱わない。
 - 出典: 上記のコード。issue #887 の PO 決定が `CLAUDE_CODE_ENTRYPOINT=claude-vscode` の実測を AT-DIST-003 の契約へ入れるとしている。
 - ハーネスへの影響: `claude` コマンドの直起動など、entrypoint が違うセッションは wake の対象にならない。受入では VS Code 拡張経由のセッションを使う。marker は project の runtime bus root の下の `claude-memory-wake/` に置かれる (`src/runtime/claude-memory-wake.ts:291`、`requireProjectMemoryRoot(repoRoot).runtimeBusRoot`)。
 
