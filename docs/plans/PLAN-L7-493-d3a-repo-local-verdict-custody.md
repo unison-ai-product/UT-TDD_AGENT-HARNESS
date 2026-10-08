@@ -102,18 +102,18 @@ status: confirmed
 github_issue_id: 328
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:7ade5cd3884207a21722fa31ef57b888
-  command_id: plan-revise:issue-921:plan-l7-493-verdict-retention:r2:47b4659e9ab6
-  admitted_at: 2026-10-08T10:38:10.600Z
-  source_digest: sha256:47293fdc8320693d5d079d7113c50761c3f8aef52e9d1444899421ba200fc985
-  decision_digest: sha256:e6b1f054058b7699052c1c6836721e35e39efc9255835c84b9691d676097d046
-  receipt_digest: sha256:af3ed817ca2f928a5446e4d6ea9b66c90747ef0f46716857c0bd8e54e0961076
+  receipt_id: certificate:0a0e4ea42aa104e4d9312657847b8313
+  command_id: plan-revise:issue-922:plan493-helper-retention:r3:a39794a59b3b
+  admitted_at: 2026-10-08T11:10:51.250Z
+  source_digest: sha256:a2ff813522e369205dc78982416ae0e61199f8c1aaaff86b5b3531c42de16590
+  decision_digest: sha256:ad4660da60000e381c1a0e79da6cf8105c115f39d603783850e1b4b0f6a4d7cd
+  receipt_digest: sha256:73cc0ec60fe9c16be71254787f6897142c6fcb759038931625313c3d518921df
   binding:
     path: docs/plans/PLAN-L7-493-d3a-repo-local-verdict-custody.md
     plan_id: PLAN-L7-493-d3a-repo-local-verdict-custody
     asset_id: plan:legacy:3525b52b49af6df3e53b9a9d5471192a49654b7ad572f04ac2f4d54bdc1dd56c
-    revision: 2
-    content_digest: sha256:47293fdc8320693d5d079d7113c50761c3f8aef52e9d1444899421ba200fc985
+    revision: 3
+    content_digest: sha256:a2ff813522e369205dc78982416ae0e61199f8c1aaaff86b5b3531c42de16590
   route:
     signal: feature_addition
     mode: add-feature
@@ -124,15 +124,15 @@ admission_receipt:
     projection_state: unprojected
   origin:
     plan_id: PLAN-L7-493-d3a-repo-local-verdict-custody
-    revision: 1
-    digest: sha256:d8cb4189ef35d40d9a4ca7e5a13a90bc5c92c8601c9484a0094ba331a09e1b87
+    revision: 2
+    digest: sha256:8c1c7bebf933ec60a5dc5065833afc9289fadb4eb731970f6ca866ff520007d3
   reentry:
     target_plan_id: PLAN-L7-493-d3a-repo-local-verdict-custody
-    target_revision: 2
+    target_revision: 3
     phase: forward_merge
-  escape_reason: "Issue
-    #921の採択済み案Aに従う契約修正。成功後のverdict本文保持とU-RVATT-035の成功時oracleを一致させ、PLAN-L7-531・r\
-    unner・失敗経路は変更しない。"
+  escape_reason: "PR #922 FLAG
+    1の契約是正。成功receipt後にcleanupReviewAttemptを直接呼んでも成功attempt
+    verdictを削除せず保持する責務をhelper自身へ固定する。実装・test本体やPASS証拠は追加しない。"
 ---
 
 # PLAN-L7-493: D3a repo-local digest-bound verdict custody 契約 freeze
@@ -234,7 +234,8 @@ VERDICT: PASS|PASS-WEAK|FLAG
   最新の未supersede attempt ただ1つに限定し、reviewer の自己申告で選べない。旧 attempt の digest 不在時は sentinel を許容する。
 - receipt 成功後は新しい attempt の作成・supersede・上書きをすべて拒否する。これにより model escalation は digest を
   変更せずに収束でき、receipt は常に1件だけとなる。
-- Issue #921 の control は案A（receipt成功後もverdict本文を保持）を採択した。canonical receipt writeが成功した後も、attemptのverdict scratchは同じrepo-local pathに元のbytesのまま保持し、削除・書換えを行わない。成功経路ではscratch cleanupを開始せず、`cleanup_pending`も記録しない。既存のcleanup failure経路と§3.4のtyped event記録は変更しない。receipt前の削除・上書きは許可しない。
+- Issue #921 の control は案A（receipt成功後もverdict本文を保持）を採択した。canonical receipt write成功後も、attemptのverdict scratchは同じrepo-local pathに元のbytesのまま保持する。成功経路ではscratch cleanupを開始せず、`cleanup_pending`も記録しない。
+  削除能力を持つ`cleanupReviewAttempt`自身が、成功receipt済みattemptのverdictを削除・書換えない不変条件を保証する。呼出側がcleanup関数の呼出しを省略したかどうかだけに依存させず、同関数を直接呼んでも成功attemptのbytesを保持する。既存のcleanup failure経路と§3.4のtyped event記録は変更しない。receipt前の削除・上書きも許可しない。
 - 古い HEAD の verdict は current request / current HEAD へ再利用せず、consumer は `stale_head` または `verdict_identity_mismatch` で fail-close する。
 
 ### 3.4 legacy oracle と review fence の移行境界
