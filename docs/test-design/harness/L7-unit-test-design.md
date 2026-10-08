@@ -2933,3 +2933,22 @@ mutation M1–M7は正本§5と同一: exactly-oneへの退行、集合一致へ
 | U-RECHAIN-017 | R の record の `receipt_digest` を任意値に置き換え、frontmatter と record digest を整合させた入力 → `fail` (理由: `receipt_digest_mismatch`)。`actor` を契約定数 `ut-tdd-pr-merge-rechain` 以外、または `sourceCommit` を `M` 以外にして導いた値も `fail` (PLAN-L6-711 §2.3-6 の preimage の源の表) | (m) `derivePlanRevisionDigests` による再導出を省く → 任意 digest が pass して失敗 |
 | U-RECHAIN-018 | 同一 asset について `H` が 2 件 append していた re-chain。(正系) 1 件目 base = (n、`M` の canonical payload digest)、2 件目 base = (n + 1、1 件目の中間 blob の digest) → `pass`。(負系) 2 件目の base を `M` に固定 → `receipt_digest_mismatch`。中間 blob を 1 byte 変える、または status を draft→confirmed に変える (bind 後の digest は key と一致する) → `intermediate_plan_digest_mismatch` (bind 前の blob 自体の digest で照合する)。中間 blob を渡さない → `intermediate_plan_missing`。余分な key、最後の record の `content_digest` を key にした entry、複数再発行が無いときの非空 `intermediatePlans` → `intermediate_plan_unexpected` | (m1) 全 record の base を `M` から取る → 正系が fail。(m2) 中間 blob の digest 照合を省く、または bind 後の digest で照合する → 改変 blob が pass。(m3) 欠落時に `R` の PLAN blob で代用する。(m4) key 集合を superset 許容に緩める |
 | U-RECHAIN-019 | legacy bootstrap 除外 (PLAN-L6-711 §2.3-6、receipt revision 6)。組 (h, r) ごとに `h.binding.asset_id` が `plan:legacy:` で始まり、かつ `h.binding.revision === 2` または `r.binding.revision === 2` なら `fail` (理由: `legacy_bootstrap_unsupported`)。(a1) M に同 asset の revision 1 があり H / R が revision 2 → reasons はちょうど `[legacy_bootstrap_unsupported]`。(a2) M に同 asset の record が無く H が revision 2 → legacy 理由と源の欠落の理由が併存する。a1 / a2 とも `command_id` は `plan-revise:issue-1:legacy-x:r2:000000000000` と `pr154-legacy-x-r2` の 2 形式。(b) H が revision 2、M が待機中に同 asset を revision 2 で admit し R が revision 3 → `fail`。(c) M の最新 revision 2、H / R が revision 3 → `pass`。(d) `plan:<32 hex>` asset で H / R が revision 2 → `pass` | (m1) R 側だけで判定 → b が pass。(m2) prefix だけで判定 → c が fail。(m3) revision 2 だけで判定 → d が fail。(m4) `command_id` の形式で判定 (`/^pr154-/` または `/^plan-revise:/`) → a1 / a2 のどちらかの形式で legacy 理由が出ない。(m5) 源の欠落で短絡 → a2 で legacy 理由が出ない |
+
+## 設計書保護 diff gate (Issue #898) — 索引
+
+L6 契約は `docs/design/harness/L6-function-design/design-protection-diff-gate.md`。
+oracle の詳細 (入力・期待・殺す mutation・fixture・required evidence) は専用の
+`docs/test-design/harness/L7-design-protection-diff-gate-test-design.md` に置き、本節は索引だけを持つ。
+
+| 範囲 | 検証面 | 詳細 |
+| --- | --- | --- |
+| CANDIDATE-U-DPROT-001〜005 | 実装 PR での保護対象の M / D / R 拒否と A 許可 | 専用文書 §3 |
+| CANDIDATE-U-DPROT-006〜010 | 分類 (scripts・rename 元・契約 PR・対象外 PR・空 diff) | 専用文書 §3 |
+| CANDIDATE-U-DPROT-011〜014 | 入力の fail-close (path 区切り・不明 status・base 解決失敗) と出力・終了 code | 専用文書 §3 |
+| CANDIDATE-U-DPROT-015〜017 | 順序と PLAN への非依存、CI step の required 化、読み取り専用と override 不在 | 専用文書 §3 |
+| CANDIDATE-U-DPROT-018〜019 | 実装 PR での docs/test-design/ の D / R 拒否 | 専用文書 §3 |
+| CANDIDATE-U-DPROT-020〜023 | diff の実行失敗、copy status、mode だけの変更、削除後の同名追加 | 専用文書 §3 |
+| CANDIDATE-U-DPROT-024〜026 | CI 接続 (RUNTIME_STEP_MANIFESTS との一致、step の削除・条件緩和・順序違反の検出、pull_request 限定の条件) | 専用文書 §3 |
+
+上表の ID は backtick 無し表記である。候補台帳への再掲ではなく専用文書への参照であり、U-VMSRC-009 の一意性検査の対象外とする。
+正規 `U-DPROT-*` への昇格と Red test は、src/ も scripts/ も含まない PR (契約 PR + Red) で入れる (L6 契約 §10)。
