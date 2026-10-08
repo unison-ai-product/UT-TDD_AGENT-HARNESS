@@ -1173,17 +1173,21 @@ export function summarizeUnclaimedInbox(
   workspaceId: string,
 ): ClaudeInboxBacklogSummary {
   const root = runtimeRoot(repoRoot);
-  return summarizeUnclaimedInboxAtRuntimeRoot(repoRoot, root, workspaceId, () =>
-    readInbox(repoRoot),
-  );
+  return summarizeUnclaimedInboxAtRuntimeRoot({
+    repoRoot,
+    root,
+    workspaceId,
+    readEntries: () => readInbox(repoRoot),
+  });
 }
 
-function summarizeUnclaimedInboxAtRuntimeRoot(
-  repoRoot: string,
-  root: string,
-  workspaceId: string,
-  readEntries: () => ClaudeInboxEntry[],
-): ClaudeInboxBacklogSummary {
+function summarizeUnclaimedInboxAtRuntimeRoot(input: {
+  repoRoot: string;
+  root: string;
+  workspaceId: string;
+  readEntries: () => ClaudeInboxEntry[];
+}): ClaudeInboxBacklogSummary {
+  const { repoRoot, root, workspaceId, readEntries } = input;
   const claimed = new Set(claimedIds(root));
   const terminal = terminalIds(root);
   const allEntries = readEntries();
@@ -1239,12 +1243,12 @@ export function recoverAndSummarizeClaudeInboxForSessionStart(input: {
 
   const resolved = requireProjectMemoryRoot(input.repoRoot);
   const summaryRoot = join(resolved.runtimeBusRoot, "claude-memory-wake");
-  return summarizeUnclaimedInboxAtRuntimeRoot(
-    input.repoRoot,
-    summaryRoot,
-    resolved.projectNamespace,
-    () => readInboxAtRuntimeRoot(summaryRoot),
-  );
+  return summarizeUnclaimedInboxAtRuntimeRoot({
+    repoRoot: input.repoRoot,
+    root: summaryRoot,
+    workspaceId: resolved.projectNamespace,
+    readEntries: () => readInboxAtRuntimeRoot(summaryRoot),
+  });
 }
 
 function claim(input: {
