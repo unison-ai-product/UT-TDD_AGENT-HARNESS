@@ -743,11 +743,29 @@ process.stdin.on("end", () => {
   }, 30_000);
 
   it.each([
-    ["success payload", JSON.stringify({ review: { ok: true, receipt: {} } })],
-    ["empty stdout", ""],
-    ["malformed stdout", "not-json"],
-    ["unknown rejection", JSON.stringify({ review: { ok: false, reason: "unrecognized_reason" } })],
-  ] as const)("U-RVATT-036 keeps nonzero child %s fail-closed", (_name, childStdout) => {
+    [
+      "success payload",
+      JSON.stringify({ review: { ok: true, receipt: {} } }),
+      "reviewer_execution_failed",
+    ],
+    ["empty stdout", "", "reviewer_execution_failed"],
+    ["malformed stdout", "not-json", "reviewer_execution_failed"],
+    [
+      "unknown rejection",
+      JSON.stringify({ review: { ok: false, reason: "unrecognized_reason" } }),
+      "reviewer_execution_failed",
+    ],
+    [
+      "reviewer exit nonzero",
+      JSON.stringify({ review: { ok: false, reason: "reviewer_exit_nonzero" } }),
+      "reviewer_exit_nonzero",
+    ],
+    [
+      "verdict absent after provider failure",
+      JSON.stringify({ review: { ok: false, reason: "verdict_absent_after_provider_failure" } }),
+      "verdict_absent_after_provider_failure",
+    ],
+  ] as const)("U-RVATT-036 handles nonzero child %s fail-closed", (_name, childStdout, reason) => {
     const root = mkdtempSync(join(tmpdir(), "ut-review-nonzero-child-"));
     roots.push(root);
     const childPath = join(root, "child.cjs");
@@ -763,7 +781,7 @@ process.stdin.on("end", () => {
         args: [],
         cliPath: childPath,
       }),
-    ).toEqual({ ok: false, reason: "reviewer_execution_failed" });
+    ).toEqual({ ok: false, reason });
   });
 
   it.each([
