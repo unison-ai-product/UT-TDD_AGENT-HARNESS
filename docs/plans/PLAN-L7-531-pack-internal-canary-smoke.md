@@ -85,18 +85,18 @@ status: confirmed
 github_issue_id: 418
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:cbe35c2e31337f944ee55e8cedeead67
-  command_id: plan-revise:issue-418:canary6-normrow-fix-r21:20261008
-  admitted_at: 2026-10-08T02:11:45.357Z
-  source_digest: sha256:dc4e514eea7c0dcfa8259ec8044a05c1677db778d05a3608bc0cffe96ccce2d4
-  decision_digest: sha256:1a92e2e89275ddb797977ae29551d506eb2b90be7d1dfb37dcc92b47b579cd92
-  receipt_digest: sha256:93c79ff34bf3d2359824b2bee08fe5748d49beabb1c3f9ec23b7ae7cac6be234
+  receipt_id: certificate:8c8cc33ce230bd3cfa1d2e70e8ad7db3
+  command_id: plan-revise:issue-418:canary6-normrow-fix-r22-history-jp:20261008
+  admitted_at: 2026-10-08T02:15:18.025Z
+  source_digest: sha256:70fda562c0affcd740858cee403591fdf724891448de650bc9c5bea4657dd7a2
+  decision_digest: sha256:00286afc58874989439d3534d25c15b52131d06e7c166c102d50b29c7221c06f
+  receipt_digest: sha256:d747ce8e3aef27144fb267ad347261e8265de770bada144708e78cd8c23657cf
   binding:
     path: docs/plans/PLAN-L7-531-pack-internal-canary-smoke.md
     plan_id: PLAN-L7-531-pack-internal-canary-smoke
     asset_id: plan:44f79788376b81c225ce5913fddbc48f
-    revision: 21
-    content_digest: sha256:dc4e514eea7c0dcfa8259ec8044a05c1677db778d05a3608bc0cffe96ccce2d4
+    revision: 22
+    content_digest: sha256:70fda562c0affcd740858cee403591fdf724891448de650bc9c5bea4657dd7a2
   route:
     signal: feature_addition
     mode: add-feature
@@ -119,9 +119,10 @@ admission_receipt:
   escape_reason: "Issue #418 control comment 6050102089 scopes the unfinished
     AT-DIST-003 exact release identity to canary.6. PR #893 Claude review FLAG1
     receipt abd8bb863a78c6008c33bffff70a961d2eb7ad59b2dece38848a97a6ad36ae1f
-    identifies one stale normative AT-DIST-003 row; r21 corrects that row only.
-    Preserve confirmed status, all prior review_evidence and C5/C2 history; add
-    no acceptance result, new oracle, producer or runtime contract."
+    identifies the stale normative row. This r22 correction only restores the
+    prior full stop and translates the r21 history entry; preserve all prior
+    receipts, confirmed status, review_evidence and C5/C2 history, with no
+    acceptance result or PASS."
 ---
 
 # PLAN-L7-531: Pack-only internal canary smoke (Windows/Linux)
@@ -545,8 +546,9 @@ checkout・host credential を持ち込まない専用 disposable WSL2 distro (�
   から専用 disposable WSL2 distro へ置換する。canary.2 / canary.3 / canary.4 の tag・bytes・過去証跡は
  変更しない。rev 15 は新しい review / PASS / canary.5 公開を主張しない。
 - rev 19 は未完 AT-DIST-003 の Release identity を canary.6 へ再束縛したが、rev 15 の履歴記述を意図せず要約していた。新しい受入結果は追加していない。
-- rev 20 は rev 15 の履歴記述を上記の全文に復元し、その後へ C6 再束縛履歴を追記する是正である。canary.6 の exact Release identity 以外に AT-DIST-003 の oracle、custody・authority・隔離条件や標準 AT-DIST-002 の canary.2 束縛を変更せず、#886 の `src/setup/templates.ts` hook-template 変更を理由に AT-835-008 は C6 で再検査する。AT-DIST-002 (canary.3) の既存証拠再利用は canonical C5 C1→C6 C1 scoped diff の実測後まで決めない。C6 C1 は未公開・未確定であり、本 revision は新しい review / PASS / canary.6 公開 / 実受入を主張しない。confirmed status と review_evidence の履歴を保持する.
-- rev 21 は PR #893 の Claude non-author review FLAG1 (receipt `abd8bb863a78c6008c33bffff70a961d2eb7ad59b2dece38848a97a6ad36ae1f`) が指摘した §3.6.7 の AT-DIST-003 normative acceptance row の stale canary.5 target のみを exact canary.6 に修正する。C5 historical outcomes, AT-DIST-002, oracle, custody, authority, isolation, confirmed status, review_evidence, and prior revision notes remain unchanged; this entry records no acceptance run or PASS.
+- rev 20 は rev 15 の履歴記述を上記の全文に復元し、その後へ C6 再束縛履歴を追記する是正である。canary.6 の exact Release identity 以外に AT-DIST-003 の oracle、custody・authority・隔離条件や標準 AT-DIST-002 の canary.2 束縛を変更せず、#886 の `src/setup/templates.ts` hook-template 変更を理由に AT-835-008 は C6 で再検査する。AT-DIST-002 (canary.3) の既存証拠再利用は canonical C5 C1→C6 C1 scoped diff の実測後まで決めない。C6 C1 は未公開・未確定であり、本 revision は新しい review / PASS / canary.6 公開 / 実受入を主張しない。confirmed status と review_evidence の履歴を保持する。
+- rev 21 は PR #893 の Claude 非著者レビュー FLAG1 (receipt `abd8bb863a78c6008c33bffff70a961d2eb7ad59b2dece38848a97a6ad36ae1f`) が指摘した §3.6.7 の AT-DIST-003 受入行に残る古い canary.5 target を exact canary.6 へ修正した。C5 の歴史的結果、AT-DIST-002、oracle、custody、authority、隔離条件、confirmed status、review_evidence、過去の revision 履歴は変更せず、受入 run または PASS を主張しない。
+- rev 22 は r20 の句点と r21 履歴の日本語表記だけを整える是正であり、契約・受入条件・r21 receipt・confirmed status・review_evidence・C5/C2 履歴は変更しない。新しい受入 run または PASS を主張しない。
 - **非 Scope**: stable 昇格、新規 profile、A/B upgrade・rollback の自動化、tar 表現の修復 (#807)、
   #809、G1 以外の gate や L2〜L7 文書の E2E、gate 判定規則の変更、AT-DIST-002 の内容変更。
 - 本節は入力契約の凍結だけであり、準備資料 (Codex の input packet) は実行証跡ではない。
