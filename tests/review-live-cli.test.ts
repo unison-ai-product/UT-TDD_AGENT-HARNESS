@@ -741,6 +741,30 @@ process.stdin.on("end", () => {
   }, 30_000);
 
   it.each([
+    ["success payload", JSON.stringify({ review: { ok: true, receipt: {} } })],
+    ["empty stdout", ""],
+    ["malformed stdout", "not-json"],
+    ["unknown rejection", JSON.stringify({ review: { ok: false, reason: "unrecognized_reason" } })],
+  ] as const)("U-RVATT-036 keeps nonzero child %s fail-closed", (_name, childStdout) => {
+    const root = mkdtempSync(join(tmpdir(), "ut-review-nonzero-child-"));
+    roots.push(root);
+    const childPath = join(root, "child.cjs");
+    writeFileSync(
+      childPath,
+      `process.stdout.write(${JSON.stringify(childStdout)});\nprocess.exitCode = 1;\n`,
+      "utf8",
+    );
+    expect(
+      executeLiveReviewDelegation({
+        repoRoot: root,
+        provider: "claude",
+        args: [],
+        cliPath: childPath,
+      }),
+    ).toEqual({ ok: false, reason: "reviewer_execution_failed" });
+  });
+
+  it.each([
     ["parent", ["review", "--json", "live-dispatch"]],
     ["child", ["review", "live-dispatch", "--json"]],
   ] as const)("U-RVATT-042 emits parseable deny JSON through the real live-dispatch CLI with --json on the %s command", (_position, commandArgs) => {

@@ -462,8 +462,8 @@ describe("repo-local review verdict custody (U-RVATT-030..035)", () => {
 
   it("U-RVATT-032: first header block excludes body key lines after its boundary", () => {
     for (const suffix of [
-      "\n\nnegative: \"attempt-1 rejects nested approvals\"\nVERDICT: PASS",
-      "\nnegative: \"attempt-1 rejects nested approvals\"",
+      '\n\nnegative: "attempt-1 rejects nested approvals"\nVERDICT: PASS',
+      '\nnegative: "attempt-1 rejects nested approvals"',
     ]) {
       const root = gitRoot();
       try {
