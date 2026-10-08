@@ -7120,6 +7120,70 @@
         "revision": 18,
         "content_digest": "sha256:bf6adb564853365cfaa782e5f7ac382d37d4d2699bf8ed1be71078b21680065d"
       }
+    },
+    {
+      "sequence": 446,
+      "previous_record_digest": "sha256:a1e4e04029b3be997568aba76741d5a2b3208f9956baf70ce0b5181bf5cce855",
+      "record_digest": "sha256:a9c5f88953e103ba93939f0f4026ffb915d1c961f558ac72262f666f35a6f413",
+      "command_id": "plan-revise:issue-418:canary6-rebind:additive-r19:20261008",
+      "receipt_id": "certificate:ec961c9708a2fe392b8d16e97944c54e",
+      "receipt_digest": "sha256:f43a8a77f6358bf63ab9147f691cd7c062bedcc69db5bdd158181a3b67571848",
+      "decision_digest": "sha256:f4092f5747543badaebefddee74818b638034f85d02ec9e0d107b2a820e14ef2",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-531-pack-internal-canary-smoke.md",
+        "plan_id": "PLAN-L7-531-pack-internal-canary-smoke",
+        "asset_id": "plan:44f79788376b81c225ce5913fddbc48f",
+        "revision": 19,
+        "content_digest": "sha256:539e118beecbccd7d3ab033e441c05da3f1063e240d29a431a00511b9ba54056"
+      }
+    },
+    {
+      "sequence": 447,
+      "previous_record_digest": "sha256:a9c5f88953e103ba93939f0f4026ffb915d1c961f558ac72262f666f35a6f413",
+      "record_digest": "sha256:8584b74df8228c2f0e955acaa0347a6c2983d84d5d09fc155b0d64cd90a41378",
+      "command_id": "plan-revise:issue-418:canary6-rebind:history-correction-r20:20261008",
+      "receipt_id": "certificate:13b6aab07d8c16c1356e60640df54425",
+      "receipt_digest": "sha256:f9195e697db4cd647ccd799f4131fa721f50a78b5521078732ae3b0fc1b885bc",
+      "decision_digest": "sha256:ba9055a260b9996f74d9817ed1d68f4fb978b85f2839d851710b0c18964a637e",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-531-pack-internal-canary-smoke.md",
+        "plan_id": "PLAN-L7-531-pack-internal-canary-smoke",
+        "asset_id": "plan:44f79788376b81c225ce5913fddbc48f",
+        "revision": 20,
+        "content_digest": "sha256:5959073b994decc21d842c7a7fdae20e09acfe1890ea500bf66cc67eb61538c0"
+      }
+    },
+    {
+      "sequence": 448,
+      "previous_record_digest": "sha256:8584b74df8228c2f0e955acaa0347a6c2983d84d5d09fc155b0d64cd90a41378",
+      "record_digest": "sha256:0181a954c94f44c6e80e6090dfcc58a17f3c0fa16b94e01c245e24ff70124175",
+      "command_id": "plan-revise:issue-418:canary6-normrow-fix-r21:20261008",
+      "receipt_id": "certificate:cbe35c2e31337f944ee55e8cedeead67",
+      "receipt_digest": "sha256:93c79ff34bf3d2359824b2bee08fe5748d49beabb1c3f9ec23b7ae7cac6be234",
+      "decision_digest": "sha256:1a92e2e89275ddb797977ae29551d506eb2b90be7d1dfb37dcc92b47b579cd92",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-531-pack-internal-canary-smoke.md",
+        "plan_id": "PLAN-L7-531-pack-internal-canary-smoke",
+        "asset_id": "plan:44f79788376b81c225ce5913fddbc48f",
+        "revision": 21,
+        "content_digest": "sha256:dc4e514eea7c0dcfa8259ec8044a05c1677db778d05a3608bc0cffe96ccce2d4"
+      }
+    },
+    {
+      "sequence": 449,
+      "previous_record_digest": "sha256:0181a954c94f44c6e80e6090dfcc58a17f3c0fa16b94e01c245e24ff70124175",
+      "record_digest": "sha256:674d41518aa15e8c8156236987ea410597bd077649d856f6dbf9725d28e0107d",
+      "command_id": "plan-revise:issue-418:canary6-normrow-fix-r22-history-jp:20261008",
+      "receipt_id": "certificate:8c8cc33ce230bd3cfa1d2e70e8ad7db3",
+      "receipt_digest": "sha256:d747ce8e3aef27144fb267ad347261e8265de770bada144708e78cd8c23657cf",
+      "decision_digest": "sha256:00286afc58874989439d3534d25c15b52131d06e7c166c102d50b29c7221c06f",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-531-pack-internal-canary-smoke.md",
+        "plan_id": "PLAN-L7-531-pack-internal-canary-smoke",
+        "asset_id": "plan:44f79788376b81c225ce5913fddbc48f",
+        "revision": 22,
+        "content_digest": "sha256:70fda562c0affcd740858cee403591fdf724891448de650bc9c5bea4657dd7a2"
+      }
     }
   ]
 }
