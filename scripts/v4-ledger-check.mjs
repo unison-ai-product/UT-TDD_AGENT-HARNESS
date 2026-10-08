@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// v4 決定台帳と L1 要求候補・L3 要件候補の対応を機械で確かめる (依存なし)。
-// 使い方: node scripts/v4-ledger-check.mjs [ledger.json] [requests.md] [requirements.md]
+// v4 決定台帳と L1 要求候補・L3 要件候補・受入候補の対応を機械で確かめる (依存なし)。
+// 使い方: node scripts/v4-ledger-check.mjs [ledger.json] [requests.md] [requirements.md] [acceptance.md]
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -9,6 +9,7 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const ledgerPath = resolve(root, process.argv[2] ?? "docs/governance/candidates/v4-decision-ledger.json");
 const requestsPath = resolve(root, process.argv[3] ?? "docs/governance/candidates/ut-tdd-concept-v4-requests.md");
 const requirementsPath = resolve(root, process.argv[4] ?? "docs/governance/candidates/ut-tdd-concept-v4-requirements.md");
+const acceptancePath = resolve(root, process.argv[5] ?? "docs/governance/candidates/ut-tdd-concept-v4-acceptance.md");
 
 const errors = [];
 const fail = (msg) => errors.push(msg);
@@ -184,6 +185,63 @@ for (const line of tableRows(sectionIn(reqMd, "要件で未確定"))) {
   for (const c of cited) if (!active.has(c)) fail(`未確定 ${at}: ${c} は有効な決定でない`);
 }
 
+// 9. 受入: 各受入行は実在の要件を 1 件以上引き、release 必須 (yes / no) を持つ。
+//    列は | ID | 受け入れる要件 | 確認すること | 手段 | 合格条件 | release 必須 | 区分 |。
+let accMd = "";
+try {
+  accMd = readFileSync(acceptancePath, "utf8");
+} catch (e) {
+  fail(`acceptance doc を読めない: ${e.message}`);
+}
+const acSection = sectionIn(accMd, "受入候補");
+if (!acSection) fail("acceptance doc に「## 受入候補」節が無い");
+const acs = new Set();
+const accepted = new Set();
+let releaseBlocking = 0;
+for (const line of acSection.split(/\r?\n/)) {
+  const m = line.match(/^\|\s*(UTV4-AC-\d{3})\s*\|/);
+  if (!m) continue;
+  const ac = m[1];
+  if (acs.has(ac)) fail(`${ac}: 受入行が重複`);
+  acs.add(ac);
+  const cells = line.split("|");
+  const cited = [...new Set(cells[2]?.match(/UTV4-FR-\d{3}/g) ?? [])];
+  if (cited.length === 0) fail(`${ac}: 要件列に UTV4-FR id が 1 件も無い`);
+  for (const fr of cited) {
+    if (!frs.has(fr)) fail(`${ac}: 要件 ${fr} が requirements doc に無い`);
+    else accepted.add(fr);
+  }
+  const flag = cells[6]?.trim();
+  if (flag !== "yes" && flag !== "no") fail(`${ac}: release 必須の列が yes / no でない (${flag ?? "欠落"})`);
+  if (flag === "yes") releaseBlocking++;
+}
+if (acs.size === 0) fail("受入行が 1 件も無い");
+
+// 10. 各要件は 1 件以上の受入行で受け入れるか、「受入不要」表に理由付きで載る
+const noAcceptance = new Map();
+for (const line of tableRows(sectionIn(accMd, "受入不要"))) {
+  const m = line.match(/^\|\s*(UTV4-FR-\d{3})\s*\|([^|]*)\|/);
+  if (!m) continue;
+  if (!frs.has(m[1])) fail(`受入不要: ${m[1]} が requirements doc に無い`);
+  if (m[2].trim() === "") fail(`受入不要: ${m[1]} に理由が無い`);
+  noAcceptance.set(m[1], m[2].trim());
+}
+for (const fr of frs.keys()) {
+  const a = accepted.has(fr);
+  const n = noAcceptance.has(fr);
+  if (!a && !n) fail(`${fr}: どの受入行にも受け入れられず、受入不要にも無い`);
+  if (a && n) fail(`${fr}: 受入行があるのに受入不要にも載っている`);
+}
+
+// 11. 受入の廃止表は実在の V4D を引く
+for (const line of tableRows(sectionIn(accMd, "廃止した受入"))) {
+  const cells = line.split("|");
+  if (cells[1]?.trim().startsWith("旧 ID")) continue;
+  const cited = cells[3]?.match(/V4D-\d{3}/g) ?? [];
+  if (cited.length === 0) fail(`受入の廃止表の行に V4D id が無い: ${line.slice(0, 60)}`);
+  for (const c of cited) if (!ids.has(c)) fail(`受入の廃止表: ${c} が ledger に無い`);
+}
+
 const count = (f) => ledger.filter(f).length;
 const summary = {
   decisions: ledger.length,
@@ -195,6 +253,10 @@ const summary = {
   requirements: frs.size,
   requests_realized: realized.size,
   requests_not_required: notRequired.size,
+  acceptance: acs.size,
+  requirements_accepted: accepted.size,
+  requirements_no_acceptance: noAcceptance.size,
+  release_blocking: releaseBlocking,
 };
 
 if (errors.length > 0) {
