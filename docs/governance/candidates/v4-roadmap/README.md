@@ -27,9 +27,9 @@
 チケットへ切り替えた時点から、複数人で回せる形にします。R05 (0.5.0) のチケット自動発行・lease・動的な再計画は待ちません。
 
 - 配り方は「最初にまとめて配り、各自が消化する」にします。サイクルの初めに、互いに依存しない機能・責務の単位でチケットを複数枚切り (UTV4-FR-032)、触る path が重ならないことを確かめてから一度に配ります。各自は自分に割り当てられた分だけを消化します。途中で配り直したり取り合ったりしないので、lease や動的な再計画が無くても衝突が起きにくくなります。依存が残る部分は、先にインターフェースだけを決めるチケットを切ります。サイクル中に新しく出た作業は次のサイクルで配ります。blocker だけは例外として、その場で 1 人に割り当てます。
-- 共有の正本は GitHub に置きます。チケットは Issue / Sub-issue (UTV4-FR-004)、着手の宣言 (claim) は assignee と作業 branch (UTV4-FR-005)、主担当は 1 人 (UTV4-FR-003)、成果物は PR、担当替えは付け替えの記録を残す (UTV4-FR-030)。
-- review の結果を PR に紐づけて検証できる形で残し、誰の clone からでも merge の判定に使えるようにします。現状は receipt と harness.db が clone ごとの手元にしかないため (`.ut-tdd/review/receipts/` と `.ut-tdd/harness.db` は gitignore)、別の人の clone では merge できません。この修理は #907 (GUI で出した review が正規の receipt にならない) と同じ根なので、#907 と一緒に直します。
-- チケットの消化を GitHub Projects で見られるようにします。Projects の列と項目はチケット・PR・CI・review・merge の事実から一方向に同期し、人が手で状態を動かす入力にはしません (UTV4-FR-012)。状態は「未着手 (assignee なし) → 着手 (claim 済み) → PR あり → review PASS → merge 済み」で、子チケットの消化数を親へ集計します。同期の仕組みは新しく作らず、PLAN 単位で動いている既存の `src/github/project-v2.ts` (`syncForwardProject`) の単位をチケットへ付け替えます。
+- チケットの正本は repo の tracked ファイル (1 記録 = 1 ファイル) です (UTV4-FR-004 / FR-006)。全員が git の main で同じ正本を共有します。主担当は 1 人 (UTV4-FR-003) で、着手の宣言 (claim) もチケットの記録に残し、claim 済みへの 2 件目は deny します (UTV4-FR-005)。担当替えは付け替えの記録を残します (UTV4-FR-030)。成果物は PR です。GitHub の Issue / Sub-issue / assignee は正本からの一方向の投影で、GitHub 側の編集を正本へ読み戻しません。
+- review の証跡は PR の exact-head receipt に置き (UTV4-FR-004)、receipt は 1 記録 = 1 ファイルの正本、harness.db は正本から作り直せる索引にします (UTV4-FR-006)。これで誰の clone からでも、同じ receipt を merge の判定に使えます。receipt を git の中に置くか外に置くかは要件の未確定事項 U-1 なので、この版の前に決めます。現状は receipt と harness.db が clone ごとの手元にしかないため (`.ut-tdd/review/receipts/` と `.ut-tdd/harness.db` は gitignore)、別の人の clone では merge できません。この修理は #907 (GUI で出した review が正規の receipt にならない) と同じ根なので、#907 と一緒に直します。
+- チケットの消化を GitHub Projects で見られるようにします。Projects も正本からの一方向の投影です。列と項目はチケットの記録と PR・CI・review・merge の事実から一方向に同期し、人が手で状態を動かす入力にはしません (UTV4-FR-012)。状態は「未着手 (assignee なし) → 着手 (claim 済み) → PR あり → review PASS → merge 済み」で、子チケットの消化数を親へ集計します。同期の仕組みは新しく作らず、PLAN 単位で動いている既存の `src/github/project-v2.ts` (`syncForwardProject`) の単位をチケットへ付け替えます。
 - 入れる時期: ⑧ の最初の版。PLAN の廃止 (UTV4-FR-007) と同じ版にし、チケットが PLAN に代わる時点で複数人に対応させます。⑪ のチーム投入より前に、運用の実績を作るためです。
 
 ## 参考：版2.0 の版別範囲 (2026-09-08)
