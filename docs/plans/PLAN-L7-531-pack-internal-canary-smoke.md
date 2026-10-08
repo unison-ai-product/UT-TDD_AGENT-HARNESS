@@ -85,18 +85,18 @@ status: confirmed
 github_issue_id: 418
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:ec961c9708a2fe392b8d16e97944c54e
-  command_id: plan-revise:issue-418:canary6-rebind:additive-r19:20261008
-  admitted_at: 2026-10-08T01:23:44.108Z
-  source_digest: sha256:539e118beecbccd7d3ab033e441c05da3f1063e240d29a431a00511b9ba54056
-  decision_digest: sha256:f4092f5747543badaebefddee74818b638034f85d02ec9e0d107b2a820e14ef2
-  receipt_digest: sha256:f43a8a77f6358bf63ab9147f691cd7c062bedcc69db5bdd158181a3b67571848
+  receipt_id: certificate:13b6aab07d8c16c1356e60640df54425
+  command_id: plan-revise:issue-418:canary6-rebind:history-correction-r20:20261008
+  admitted_at: 2026-10-08T01:27:07.501Z
+  source_digest: sha256:5959073b994decc21d842c7a7fdae20e09acfe1890ea500bf66cc67eb61538c0
+  decision_digest: sha256:ba9055a260b9996f74d9817ed1d68f4fb978b85f2839d851710b0c18964a637e
+  receipt_digest: sha256:f9195e697db4cd647ccd799f4131fa721f50a78b5521078732ae3b0fc1b885bc
   binding:
     path: docs/plans/PLAN-L7-531-pack-internal-canary-smoke.md
     plan_id: PLAN-L7-531-pack-internal-canary-smoke
     asset_id: plan:44f79788376b81c225ce5913fddbc48f
-    revision: 19
-    content_digest: sha256:539e118beecbccd7d3ab033e441c05da3f1063e240d29a431a00511b9ba54056
+    revision: 20
+    content_digest: sha256:5959073b994decc21d842c7a7fdae20e09acfe1890ea500bf66cc67eb61538c0
   route:
     signal: feature_addition
     mode: add-feature
@@ -118,9 +118,10 @@ admission_receipt:
     phase: forward_merge
   escape_reason: "Issue #418 control comment 6050102089 directs only the
     unfinished AT-DIST-003/CANDIDATE-ST-PACKCANARY-015..019 exact release
-    identity from canary.5 to canary.6. Preserve confirmed status, prior
-    review_evidence and C5/C2 history; add no acceptance result, new oracle,
-    producer or runtime contract."
+    identity from canary.5 to canary.6. This r20 correction restores the full
+    rev15 history summarized in r19 and records that correction truthfully;
+    preserve confirmed status, prior review_evidence and C5/C2 history, and add
+    no acceptance result, new oracle, producer or runtime contract."
 ---
 
 # PLAN-L7-531: Pack-only internal canary smoke (Windows/Linux)
@@ -537,8 +538,14 @@ checkout・host credential を持ち込まない専用 disposable WSL2 distro (�
   resolver を持たない。PO 判断 (#676 comment 5928029266) と `PLAN-L7-676` rev 24 (PR #810) に従い、
   G14 を含む main から公開する `v0.2.0-canary.3` に束縛する。canary.2 は上書きしない。
 - この理由と canary.3 への束縛は rev 11 時点の履歴として保持する。現行の未完 AT-DIST-003 / G14 consumer delivery の Release identity のみ、rev 12 で `v0.2.0-canary.4` へ再束縛する (本節の全スコープ・oracle・custody・隔離条件は不変)。本 rev 12 は新しい review / PASS evidence を主張せず、既存 review_evidence は履歴として保持する。
-- rev 15 は未完の AT-DIST-003 / CANDIDATE-ST-PACKCANARY-015..019 を `v0.2.0-canary.5` へ再束縛した履歴として保持する。canary.2〜canary.5 の tag・bytes・C5 failure/history (#888 を含む) は変更せず、過去の個別 evidence も保持する。
-- rev 19 は未完の AT-DIST-003 / CANDIDATE-ST-PACKCANARY-015..019 の Release identity のみを exact `v0.2.0-canary.6` へ再束縛する。015..019 の oracle、custody・authority・隔離条件、標準 AT-DIST-002 の canary.2 束縛は変更しない。#886 の `src/setup/templates.ts` hook-template 変更を理由に AT-835-008 は C6 で再検査し、AT-DIST-002 の既存証拠の再利用は canonical C5 C1→C6 C1 scoped diff の実測後まで決めない。C6 C1 は未公開・未確定であり、本 revision は新しい review / PASS / canary.6 公開 / 実受入を主張しない。confirmed status と review_evidence の履歴は保持する。
+- rev 15 で未完の AT-DIST-003 / CANDIDATE-ST-PACKCANARY-015..019 を `v0.2.0-canary.5` へ再束縛し、
+  canary.5 でこの受入行を全件再検査する。canary.4 から canary.5 の C1 scoped diff が空の場合のみ
+  AT-835-008 (canary.4 Windows VS Code hook 3 run) と AT-DIST-002 (canary.3) の既存証拠を再利用し、
+  差分がある場合は影響 AT だけを再検査する。Linux の受入方式は PO の新判断により既存 container/VM
+  から専用 disposable WSL2 distro へ置換する。canary.2 / canary.3 / canary.4 の tag・bytes・過去証跡は
+ 変更しない。rev 15 は新しい review / PASS / canary.5 公開を主張しない。
+- rev 19 は未完 AT-DIST-003 の Release identity を canary.6 へ再束縛したが、rev 15 の履歴記述を意図せず要約していた。新しい受入結果は追加していない。
+- rev 20 は rev 15 の履歴記述を上記の全文に復元し、その後へ C6 再束縛履歴を追記する是正である。canary.6 の exact Release identity 以外に AT-DIST-003 の oracle、custody・authority・隔離条件や標準 AT-DIST-002 の canary.2 束縛を変更せず、#886 の `src/setup/templates.ts` hook-template 変更を理由に AT-835-008 は C6 で再検査する。AT-DIST-002 (canary.3) の既存証拠再利用は canonical C5 C1→C6 C1 scoped diff の実測後まで決めない。C6 C1 は未公開・未確定であり、本 revision は新しい review / PASS / canary.6 公開 / 実受入を主張しない。confirmed status と review_evidence の履歴を保持する。
 - **非 Scope**: stable 昇格、新規 profile、A/B upgrade・rollback の自動化、tar 表現の修復 (#807)、
   #809、G1 以外の gate や L2〜L7 文書の E2E、gate 判定規則の変更、AT-DIST-002 の内容変更。
 - 本節は入力契約の凍結だけであり、準備資料 (Codex の input packet) は実行証跡ではない。
