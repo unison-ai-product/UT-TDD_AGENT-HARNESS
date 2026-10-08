@@ -18,6 +18,10 @@
 | ⑩ | 設計正本を直し、設計・実装・仕様書を整え、フル Pack をデプロイする | 1.0.0 | R10 |
 | ⑪ | 別プロジェクト案件にチームで投入する | 1.0.0 以降 | 新設 |
 
+工程を通した規則 (補足 3): ③ から並行する別プロジェクトのフィードバックは、そのサイクルで直すのを blocker だけにし、それ以外は ⑤ か ⑥ の backlog に積みます。open issue をどの工程で閉じるかは [execution/04_ISSUE_INTAKE.md](execution/04_ISSUE_INTAKE.md) にあります。
+
+リリースの切り替え点の規則と工程ごとの一覧は [00_VERSION_STRATEGY.md](00_VERSION_STRATEGY.md) の「リリースの切り替え点」にあります。0.2.0 stable を ③ の直後に出すか ⑧ の最初に出すかは、⑥ で確定します。
+
 ## 簡易の複数人運用 (PO 2026-10-08)
 
 チケットへ切り替えた時点から、複数人で回せる形にします。R05 (0.5.0) のチケット自動発行・lease・動的な再計画は待ちません。
@@ -25,10 +29,6 @@
 - 共有の正本は GitHub に置きます。チケットは Issue / Sub-issue (UTV4-FR-004)、着手の宣言 (claim) は assignee と作業 branch (UTV4-FR-005)、主担当は 1 人 (UTV4-FR-003)、成果物は PR、担当替えは付け替えの記録を残す (UTV4-FR-030)。
 - review の結果を PR に紐づけて検証できる形で残し、誰の clone からでも merge の判定に使えるようにします。現状は receipt と harness.db が clone ごとの手元にしかないため (`.ut-tdd/review/receipts/` と `.ut-tdd/harness.db` は gitignore)、別の人の clone では merge できません。この修理は #907 (GUI で出した review が正規の receipt にならない) と同じ根なので、#907 と一緒に直します。
 - 入れる時期: ⑧ の最初の版。PLAN の廃止 (UTV4-FR-007) と同じ版にし、チケットが PLAN に代わる時点で複数人に対応させます。⑪ のチーム投入より前に、運用の実績を作るためです。
-
-工程を通した規則 (補足 3): ③ から並行する別プロジェクトのフィードバックは、そのサイクルで直すのを blocker だけにし、それ以外は ⑤ か ⑥ の backlog に積みます。open issue をどの工程で閉じるかは [execution/04_ISSUE_INTAKE.md](execution/04_ISSUE_INTAKE.md) にあります。
-
-リリースの切り替え点の規則と工程ごとの一覧は [00_VERSION_STRATEGY.md](00_VERSION_STRATEGY.md) の「リリースの切り替え点」にあります。0.2.0 stable を ③ の直後に出すか ⑧ の最初に出すかは、⑥ で確定します。
 
 ## 参考：版2.0 の版別範囲 (2026-09-08)
 
