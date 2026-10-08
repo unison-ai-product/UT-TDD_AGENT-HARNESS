@@ -1874,5 +1874,24 @@
       "UTV4-BR-037"
     ],
     "verified": true
+  },
+  {
+    "decision_id": "V4D-096",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 530,
+      "comment_ids": [
+        "6050333834"
+      ]
+    },
+    "date": "2026-10-08",
+    "summary_ja": "OSS は依存として採用せず、設計の考え方・データモデル・仕組みを参考にするだけにする。必要な仕組みは自前の TS / Node (管理知能は Python) で最小限に作り直し、OSS のコードはコピーしない。",
+    "status": "active",
+    "superseded_by": null,
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-047"
+    ],
+    "verified": true
   }
 ]
