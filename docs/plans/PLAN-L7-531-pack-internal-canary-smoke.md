@@ -85,18 +85,18 @@ status: confirmed
 github_issue_id: 418
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:13b6aab07d8c16c1356e60640df54425
-  command_id: plan-revise:issue-418:canary6-rebind:history-correction-r20:20261008
-  admitted_at: 2026-10-08T01:27:07.501Z
-  source_digest: sha256:5959073b994decc21d842c7a7fdae20e09acfe1890ea500bf66cc67eb61538c0
-  decision_digest: sha256:ba9055a260b9996f74d9817ed1d68f4fb978b85f2839d851710b0c18964a637e
-  receipt_digest: sha256:f9195e697db4cd647ccd799f4131fa721f50a78b5521078732ae3b0fc1b885bc
+  receipt_id: certificate:cbe35c2e31337f944ee55e8cedeead67
+  command_id: plan-revise:issue-418:canary6-normrow-fix-r21:20261008
+  admitted_at: 2026-10-08T02:11:45.357Z
+  source_digest: sha256:dc4e514eea7c0dcfa8259ec8044a05c1677db778d05a3608bc0cffe96ccce2d4
+  decision_digest: sha256:1a92e2e89275ddb797977ae29551d506eb2b90be7d1dfb37dcc92b47b579cd92
+  receipt_digest: sha256:93c79ff34bf3d2359824b2bee08fe5748d49beabb1c3f9ec23b7ae7cac6be234
   binding:
     path: docs/plans/PLAN-L7-531-pack-internal-canary-smoke.md
     plan_id: PLAN-L7-531-pack-internal-canary-smoke
     asset_id: plan:44f79788376b81c225ce5913fddbc48f
-    revision: 20
-    content_digest: sha256:5959073b994decc21d842c7a7fdae20e09acfe1890ea500bf66cc67eb61538c0
+    revision: 21
+    content_digest: sha256:dc4e514eea7c0dcfa8259ec8044a05c1677db778d05a3608bc0cffe96ccce2d4
   route:
     signal: feature_addition
     mode: add-feature
@@ -116,11 +116,11 @@ admission_receipt:
     target_plan_id: PLAN-L7-531-pack-internal-canary-smoke
     target_revision: 12
     phase: forward_merge
-  escape_reason: "Issue #418 control comment 6050102089 directs only the
-    unfinished AT-DIST-003/CANDIDATE-ST-PACKCANARY-015..019 exact release
-    identity from canary.5 to canary.6. This r20 correction restores the full
-    rev15 history summarized in r19 and records that correction truthfully;
-    preserve confirmed status, prior review_evidence and C5/C2 history, and add
+  escape_reason: "Issue #418 control comment 6050102089 scopes the unfinished
+    AT-DIST-003 exact release identity to canary.6. PR #893 Claude review FLAG1
+    receipt abd8bb863a78c6008c33bffff70a961d2eb7ad59b2dece38848a97a6ad36ae1f
+    identifies one stale normative AT-DIST-003 row; r21 corrects that row only.
+    Preserve confirmed status, all prior review_evidence and C5/C2 history; add
     no acceptance result, new oracle, producer or runtime contract."
 ---
 
@@ -455,7 +455,7 @@ checkout・host credential を持ち込まない専用 disposable WSL2 distro (�
 | `CANDIDATE-ST-PACKCANARY-017` | positive: 正しい subject で G1 が `applicable:true` かつ `passed:true` |
 | `CANDIDATE-ST-PACKCANARY-018` | negative: 別 revision の欠落 specimen で G1 が `applicable:true` / `passed:false` かつ欠落 slot 名を含む |
 | `CANDIDATE-ST-PACKCANARY-019` | review join: 実 subject (path + digest + revision) への非著者 canonical review、receipt が exact revision に束縛、同族 verdict と closed-stub receipt を拒否 |
-| `AT-DIST-003` | 受入行: 015〜019 を canary.5 の実 Release で全件通す。AT-DIST-002 と別行で、互いに代替しない |
+| `AT-DIST-003` | 受入行: 015〜019 を exact canary.6 の実 Release で全件通す。AT-DIST-002 と別行で、互いに代替しない |
 
 #### 3.6.8 未確定の入力 (実装開始前に別途 freeze、本節では決めない)
 
@@ -545,7 +545,8 @@ checkout・host credential を持ち込まない専用 disposable WSL2 distro (�
   から専用 disposable WSL2 distro へ置換する。canary.2 / canary.3 / canary.4 の tag・bytes・過去証跡は
  変更しない。rev 15 は新しい review / PASS / canary.5 公開を主張しない。
 - rev 19 は未完 AT-DIST-003 の Release identity を canary.6 へ再束縛したが、rev 15 の履歴記述を意図せず要約していた。新しい受入結果は追加していない。
-- rev 20 は rev 15 の履歴記述を上記の全文に復元し、その後へ C6 再束縛履歴を追記する是正である。canary.6 の exact Release identity 以外に AT-DIST-003 の oracle、custody・authority・隔離条件や標準 AT-DIST-002 の canary.2 束縛を変更せず、#886 の `src/setup/templates.ts` hook-template 変更を理由に AT-835-008 は C6 で再検査する。AT-DIST-002 (canary.3) の既存証拠再利用は canonical C5 C1→C6 C1 scoped diff の実測後まで決めない。C6 C1 は未公開・未確定であり、本 revision は新しい review / PASS / canary.6 公開 / 実受入を主張しない。confirmed status と review_evidence の履歴を保持する。
+- rev 20 は rev 15 の履歴記述を上記の全文に復元し、その後へ C6 再束縛履歴を追記する是正である。canary.6 の exact Release identity 以外に AT-DIST-003 の oracle、custody・authority・隔離条件や標準 AT-DIST-002 の canary.2 束縛を変更せず、#886 の `src/setup/templates.ts` hook-template 変更を理由に AT-835-008 は C6 で再検査する。AT-DIST-002 (canary.3) の既存証拠再利用は canonical C5 C1→C6 C1 scoped diff の実測後まで決めない。C6 C1 は未公開・未確定であり、本 revision は新しい review / PASS / canary.6 公開 / 実受入を主張しない。confirmed status と review_evidence の履歴を保持する.
+- rev 21 は PR #893 の Claude non-author review FLAG1 (receipt `abd8bb863a78c6008c33bffff70a961d2eb7ad59b2dece38848a97a6ad36ae1f`) が指摘した §3.6.7 の AT-DIST-003 normative acceptance row の stale canary.5 target のみを exact canary.6 に修正する。C5 historical outcomes, AT-DIST-002, oracle, custody, authority, isolation, confirmed status, review_evidence, and prior revision notes remain unchanged; this entry records no acceptance run or PASS.
 - **非 Scope**: stable 昇格、新規 profile、A/B upgrade・rollback の自動化、tar 表現の修復 (#807)、
   #809、G1 以外の gate や L2〜L7 文書の E2E、gate 判定規則の変更、AT-DIST-002 の内容変更。
 - 本節は入力契約の凍結だけであり、準備資料 (Codex の input packet) は実行証跡ではない。

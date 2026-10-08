@@ -7152,6 +7152,22 @@
         "revision": 20,
         "content_digest": "sha256:5959073b994decc21d842c7a7fdae20e09acfe1890ea500bf66cc67eb61538c0"
       }
+    },
+    {
+      "sequence": 448,
+      "previous_record_digest": "sha256:8584b74df8228c2f0e955acaa0347a6c2983d84d5d09fc155b0d64cd90a41378",
+      "record_digest": "sha256:0181a954c94f44c6e80e6090dfcc58a17f3c0fa16b94e01c245e24ff70124175",
+      "command_id": "plan-revise:issue-418:canary6-normrow-fix-r21:20261008",
+      "receipt_id": "certificate:cbe35c2e31337f944ee55e8cedeead67",
+      "receipt_digest": "sha256:93c79ff34bf3d2359824b2bee08fe5748d49beabb1c3f9ec23b7ae7cac6be234",
+      "decision_digest": "sha256:1a92e2e89275ddb797977ae29551d506eb2b90be7d1dfb37dcc92b47b579cd92",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-531-pack-internal-canary-smoke.md",
+        "plan_id": "PLAN-L7-531-pack-internal-canary-smoke",
+        "asset_id": "plan:44f79788376b81c225ce5913fddbc48f",
+        "revision": 21,
+        "content_digest": "sha256:dc4e514eea7c0dcfa8259ec8044a05c1677db778d05a3608bc0cffe96ccce2d4"
+      }
     }
   ]
 }
