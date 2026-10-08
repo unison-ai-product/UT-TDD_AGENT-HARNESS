@@ -2946,6 +2946,9 @@ oracle の詳細 (入力・期待・殺す mutation・fixture・required evidenc
 | CANDIDATE-U-DPROT-006〜010 | 分類 (scripts・rename 元・契約 PR・対象外 PR・空 diff) | 専用文書 §3 |
 | CANDIDATE-U-DPROT-011〜014 | 入力の fail-close (path 区切り・不明 status・base 解決失敗) と出力・終了 code | 専用文書 §3 |
 | CANDIDATE-U-DPROT-015〜017 | 順序と PLAN への非依存、CI step の required 化、読み取り専用と override 不在 | 専用文書 §3 |
+| CANDIDATE-U-DPROT-018〜019 | 実装 PR での docs/test-design/ の D / R 拒否 | 専用文書 §3 |
+| CANDIDATE-U-DPROT-020〜023 | diff の実行失敗、copy status、mode だけの変更、削除後の同名追加 | 専用文書 §3 |
+| CANDIDATE-U-DPROT-024〜026 | CI 接続 (RUNTIME_STEP_MANIFESTS との一致、step の削除・条件緩和・順序違反の検出、pull_request 限定の条件) | 専用文書 §3 |
 
 上表の ID は backtick 無し表記である。候補台帳への再掲ではなく専用文書への参照であり、U-VMSRC-009 の一意性検査の対象外とする。
 正規 `U-DPROT-*` への昇格と Red test は、src/ も scripts/ も含まない PR (契約 PR + Red) で入れる (L6 契約 §10)。

@@ -10,7 +10,7 @@ next_pair_freeze: L7
 plan: docs/plans/PLAN-L6-834-design-protection-diff-gate.md
 ---
 
-> **L6 contract marker**: `checkDesignProtection(input: DesignProtectionInput) => DesignProtectionResult` は unit-test-granularity contract である。DbC pre/post/invariant は §8 にまとめる。oracle の索引は共有の `docs/test-design/harness/L7-unit-test-design.md` (§設計書保護 diff gate) に置き、詳細 (CANDIDATE-U-DPROT-001〜017) は専用の `docs/test-design/harness/L7-design-protection-diff-gate-test-design.md` が固定する。
+> **L6 contract marker**: `checkDesignProtection(input: DesignProtectionInput) => DesignProtectionResult` は unit-test-granularity contract である。DbC pre/post/invariant は §8 にまとめる。oracle の索引は共有の `docs/test-design/harness/L7-unit-test-design.md` (§設計書保護 diff gate) に置き、詳細 (CANDIDATE-U-DPROT-001〜026) は専用の `docs/test-design/harness/L7-design-protection-diff-gate-test-design.md` が固定する。
 
 # 設計書保護 diff gate — 関数設計 (issue #898)
 
@@ -41,7 +41,13 @@ pathspec を付けない理由は、分類 (§3) に `src/` と `scripts/` の�
 
 - rename は `--find-renames` の既定類似度で検出する。
 - rename は「`from` の削除 + `path` の追加」として §4 の拒否規則にかける (control 決定の「変更 + 削除として扱う」)。
-- 上の 4 種以外の status (`T` など) は不明として fail-close にする (§5 の `input-error`)。
+- 上の 4 種以外の status は不明として fail-close にする (§5 の `error`、code `git-status-unknown`)。既存 `parseNameStatus` と同じ扱いで、挙動を変えない。
+  - `C<score>` (copy): gate は `--find-copies` を付けないので、通常は出ない。git config `diff.renames=copies` などで出た場合も、copy を added として読み替えずに fail-close にする。PR 全体 (契約 PR を含む) が BLOCK になるが、CI の checkout に config は無いので通常の運用では起きない。
+  - `T` (file と symlink などの type 変更) も fail-close にする。
+- mode だけの変更 (例: `100644` → `100755`) は git が `M` として出す。gate は内容と mode を区別せず modified として扱う (保護対象なら §4 で拒否)。
+- diff は base tree と head tree の 2 点比較で、途中の commit 履歴を見ない。break 検出 (`-B`) も使わない。
+  したがって途中の commit で削除して同じ path に追加し直した変更は、内容か mode が base と違えば `M`、同一なら変更なしになる。
+  「削除して作り直す」形で保護対象の書き換えを added に見せることはできない。
 - path は git が出す POSIX 形式の相対 path をそのまま使う。`\`、絶対 path、`.` / `..` を含む path は不正として fail-close にする。
 - path の比較は大文字と小文字を区別する (git tree の path と同じ)。
 
@@ -85,6 +91,8 @@ format の一括修正や文字化け修正のように src と docs を同時�
 
 - 違反は全件を path の辞書順で返す。最初の 1 件で打ち切らない。
 - base の解決失敗、diff の読み取り失敗、不明 status、不正 path はすべて `ok=false` にする (fail-close)。
+  - ref の解決失敗は `resolveCommit` の既存の扱いどおり `git-ref-invalid` になる。
+  - ref の解決後に `git diff` の実行自体が失敗した場合は `git-command-failed` になる。これを「変更 0 件」として扱ってはならない (空 diff の PASS と区別する)。
 - 終了 code は `ok=true` で 0、それ以外で 1 とする。`plan admission-check` (`src/cli/plan-admission.ts`) と同じ規約である。
 - 人が読む出力は `design-protection: PASS` / `design-protection: BLOCK` の 1 行と、違反 1 件につき 1 行である。
   BLOCK の行には「契約の変更は src/scripts を含まない別 PR に分ける」旨を 1 行添える。
@@ -116,13 +124,26 @@ v4 R05 で `src/plan-admission/` を削除するとき、本 gate が import し
 
 ## 7. CI への接続点
 
-既存の `.github/workflows/harness-check.yml` に step を 1 つ足す。新しい workflow は作らない。
+既存の `.github/workflows/harness-check.yml` の `jobs.harness-check-linux.steps` に step を 1 つ足す。新しい workflow は作らない。
+`harness-check-windows` と `node-generation-*` には足さない。
 
-- 位置: `plan admission-check` step の直後。
-- 実行条件: `github.event_name == 'pull_request'` のときだけ。main への push の diff は複数 PR にまたがり、契約 PR と実装 PR が 1 つの diff に混ざって誤って拒否されるからである。lane (`steps.classify.outputs.lane`) による skip は付けない。
-- 呼び出し: `node src/cli.ts github design-protection --base "${{ github.event.pull_request.base.sha }}" --head "${{ github.sha }}"`。
+- 位置: `plan admission-check (PLAN 編集の receipt 照合、fail-close)` step の直後、`typecheck (tsc --noEmit)` step の前。
+- 実行条件: step の `if` を `${{ github.event_name == 'pull_request' }}` にする。main への push の diff は複数 PR にまたがり、契約 PR と実装 PR が 1 つの diff に混ざって誤って拒否されるからである。lane (`steps.classify.outputs.lane`) による skip は付けない。
+- 呼び出し: `env.BASE_SHA` に `${{ github.event.pull_request.base.sha }}` を置き、`run` を `node src/cli.ts github design-protection --base "$BASE_SHA" --head "${{ github.sha }}"` にする。`shell`、`id`、`continue-on-error` は付けない。
 - `github.sha` は PR の merge commit で、その第 1 親が base.sha である。2 点 diff は「この PR が main に入れる変更」と一致する。
-- `src/lint/github-ci-policy.ts` の `SOURCE_REQUIRED_STEPS` に `{ label: "design protection", any: ["github design-protection"] }` を足し、step の削除を fail-close で検出する。
+
+workflow だけを直しても CI policy は通らない。`src/lint/github-ci-policy.ts` の `checkLaneSkipSafety` は、各 runtime leg の
+`steps` を `RUNTIME_STEP_MANIFESTS` と、順序込みの完全一致 (`canonicalSemantic` で正規化した JSON の比較) で照合する。
+一致しなければ `missing_runtime_leg` (detail `jobs.<leg>.steps must exactly match the ordered canonical semantic manifest`) になる。
+そのため、同じ実装 PR で次の 2 つを workflow と同時に直す。
+
+1. `RUNTIME_STEP_MANIFESTS["harness-check-linux"]` の、`plan admission-check` の `step(...)` と `typecheck` の `run(...)` の間に、
+   上の step と同じ `name` / `if` / `env` / `run` を持つ `step(...)` を 1 つ足す。`if` と式は既存の `githubExpression(...)` で組む。
+   `name` は workflow と manifest で同じ文字列にする (例: `design-protection (実装 PR の設計書書き換え拒否、fail-close)`)。
+2. `SOURCE_REQUIRED_STEPS` に `{ label: "design protection", any: ["github design-protection"] }` を足す。step が消えたときに、
+   manifest 不一致とは別に `missing_step` でも検出するためである。
+
+workflow と manifest の片方だけを直す PR は、`missing_runtime_leg` で fail する。
 - PLAN admission とは独立に動く。PLAN を含むかどうかで結果は変わらない。
 - v4 では Ticket / Gate の同じ規則へ移す。分類と拒否は path 集合だけで決まるので、そのまま移せる。
 
@@ -130,7 +151,7 @@ v4 R05 で `src/plan-admission/` を削除するとき、本 gate が import し
 
 | contract point | 不変条件 |
 |---|---|
-| pre | `baseRef` と `headRef` は空でなく、制御文字を含まない |
+| pre | `baseRef` と `headRef` は空でなく、NUL / LF / CR を含まない (既存 `resolveCommit` の検査そのもの。違反は `git-ref-invalid`)。それ以外の文字 (tab など) は検査せずに `git rev-parse --verify` へ渡し、解決できなければ同じく `git-ref-invalid` になる |
 | post (分類) | 分類は変更 path の集合だけで決まる。PLAN kind、branch 名、PR 本文、変更の順序に依存しない |
 | post (許可) | 非実装 PR では `violations=[]` かつ `ok=true` (入力エラーがなければ) |
 | post (拒否) | 実装 PR で保護対象の既存ファイルを M / D / R した変更 1 件につき違反 1 件 |
