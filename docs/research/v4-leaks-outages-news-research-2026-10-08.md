@@ -75,7 +75,7 @@ Oracle について: 2026 年の「Oracle 自身の新規侵害」を示す一�
 
 ## (c) パターンと v4 要件への対応
 
-v4 要件ファイル: `C:\dev\ut-v4-requirements-20261007\docs\governance\candidates\ut-tdd-concept-v4-requirements.md`
+v4 要件ファイル: `docs/governance/candidates/ut-tdd-concept-v4-requirements.md` (別 PR #892 で review 中)
 FR は全 76 件を要約レベルで確認した。NFR の id (UTV4-NFR) は存在しない。
 
 | # | パターン | 根拠となる事案 | 該当 FR | 判定 |

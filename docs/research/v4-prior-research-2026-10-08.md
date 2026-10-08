@@ -47,7 +47,7 @@
 
 ### a-4. OpenAI による SWE-bench Verified 監査 (2026 年初)
 - 出典: 二次報道のみ。 https://the-decoder.com/openai-wants-to-retire-the-ai-coding-benchmark-that-everyone-has-been-competing-on/ [二次]
-- 要点 (二次): GPT-5.2 が繰り返し失敗した 138 件のうち 59.4% にテスト欠陥。モデルが修正を記憶から再現する汚染も報告。
+- 要点 (二次): GPT-5.2 が繰り返し失敗した 138 件のうち 59.4% にテスト欠陥 [要確認]。モデルが修正を記憶から再現する汚染も報告。
 - 推奨: 要追加調査。OpenAI 一次資料を確認するまで数字を引用しない。使うなら定性 (テスト欠陥と汚染が実在する) に留める。
 - 備考: SWE-bench Pro にも同種の問題を指す 2026-09 の論文 (https://huggingface.co/papers/2609.08149) が検索で出た。[要追加調査] 刊行直後で未確認。
 
