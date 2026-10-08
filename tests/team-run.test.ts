@@ -509,9 +509,9 @@ describe("team run validation", () => {
     // 実装レーン (PO 指示 2026-07-08): 実装(se)=相手(codex) がクロス実行、
     // 検証(qa)=実行側と別 provider (=主 claude、フロンティア) がクロスレビュー。
     expect(se?.provider).toBe("codex");
-    expect(se?.model_selection.model).toBe("gpt-5.3-codex-spark");
+    expect(se?.model_selection.model).toBe(MODEL_IDS.codex.spark);
     expect(qa?.provider).toBe("claude");
-    expect(qa?.model_selection.model).toBe("claude-opus-5");
+    expect(qa?.model_selection.model).toBe(MODEL_IDS.claude.opus);
     expect(se?.provider).not.toBe(qa?.provider);
     expect(se?.adapter?.command).toBe("codex");
     expect(qa?.adapter?.command).toBe("claude");

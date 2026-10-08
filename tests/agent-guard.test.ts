@@ -55,6 +55,8 @@ describe("normalizeModelFamily", () => {
     expect(normalizeModelFamily("claude-haiku-4-5-20251001")).toBe("haiku");
     expect(normalizeModelFamily("claude-opus-4-7")).toBe("opus");
     expect(normalizeModelFamily("fable")).toBe("fable");
+    // Legacy model IDs remain normalizable; this is not the active guard catalog.
+    expect(normalizeModelFamily("claude-fable-5")).toBe("fable");
     expect(normalizeModelFamily("claude-fable-5-1")).toBe("fable");
     expect(normalizeModelFamily("claude-opus-5-5")).toBe("opus");
     expect(normalizeModelFamily("claude-sonnet-5-5")).toBe("sonnet");
