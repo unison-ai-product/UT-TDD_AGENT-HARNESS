@@ -45,8 +45,8 @@ PLAN-L4-03-function	N	haiku+sonnet agree	設計文書を正本として指すの
 PLAN-L4-04-external-if	N	haiku+sonnet agree	設計文書を正本として指すのみ (判断マーカーなし)
 PLAN-L4-05-workflow-orchestration	N	adjudicated	設計文書が正本 (参照 token 大半が design 側に存在)
 PLAN-L4-06-design-refresh	N	adjudicated	設計文書が正本 (参照 token 大半が design 側に存在)
-PLAN-L4-10-internal-asset-master	D	haiku+sonnet agree	v4 廃止対象 (title/本文が vmodel テンプレ・subagent・GPT-5 指定に関わる)
-PLAN-L4-11-roster	D	haiku+sonnet agree	v4 廃止対象 (title/本文が vmodel テンプレ・subagent・GPT-5 指定に関わる)
+PLAN-L4-10-internal-asset-master	M	reclassified r1	subagent は V4D-098 で撤廃だが skill curate (FR-L1-47)・command CLI (FR-L1-48)・drift lint (FR-L1-49) は継続 (Sol r1)
+PLAN-L4-11-roster	M	reclassified r1	subagent roster は撤廃 (V4D-098) だが command の設計は継続
 PLAN-L4-12-skill-pack	N	adjudicated	設計文書が正本 (参照 token 大半が design 側に存在)
 PLAN-L4-13-drift-lint	N	adjudicated	設計文書が正本 (参照 token 大半が design 側に存在)
 PLAN-L4-14-ui-standard	N	haiku+sonnet agree	設計文書を正本として指すのみ (判断マーカーなし)
@@ -75,7 +75,7 @@ PLAN-L5-01-physical-data	N	haiku+sonnet agree	設計文書を正本として指�
 PLAN-L5-02-module-decomposition	N	haiku+sonnet agree	設計文書を正本として指すのみ (判断マーカーなし)
 PLAN-L5-03-internal-processing	N	haiku+sonnet agree	設計文書を正本として指すのみ (判断マーカーなし)
 PLAN-L5-04-if-detail	N	haiku+sonnet agree	設計文書を正本として指すのみ (判断マーカーなし)
-PLAN-L5-05-roster	D	adjudicated	harness subagent roster (subagent 廃止方針、GUI lane へ移行)
+PLAN-L5-05-roster	M	reclassified r1	subagent roster は撤廃 (V4D-098) だが command の module 結合は継続
 PLAN-L5-06-skill	N	adjudicated	設計文書が正本 (参照 token 大半が design 側に存在)
 PLAN-L5-07-drift	N	adjudicated	設計文書が正本 (参照 token 大半が design 側に存在)
 PLAN-L5-08-harness-db-feedback	N	haiku+sonnet agree	設計文書を正本として指すのみ (判断マーカーなし)
@@ -607,7 +607,7 @@ PLAN-L7-450-test-traceability-detector-hardening	N	adjudicated	契約は dedicat
 PLAN-L7-451-github-ops-phase1-visibility-and-policy	A	adjudicated	PO 採択 2026-07-17 の設計判断 (github-ops 方針) が design/test-design に 0 件 (grep)
 PLAN-L7-452-forward-escape-contract-red	N	haiku+sonnet agree	設計契約なし (add-impl 実装/作業記録)
 PLAN-L7-453-snapshot-runner-root-guard	N	adjudicated	契約は dedicated test-design/design に既存 (token 一致 5-8 割) か、作業/診断記録
-PLAN-L7-454-runtime-token-telemetry-ingestion	D	adjudicated	本文に非適用注記 (PLAN-L6-789 で token ingest 撤去)
+PLAN-L7-454-runtime-token-telemetry-ingestion	M	reclassified r1	V4D-048 は token / cost を作業ログへ寄せる置き換えで、廃止ではない
 PLAN-L7-455-ci-cost-speedup-phase1	N	adjudicated	契約は dedicated test-design/design に既存 (token 一致 5-8 割) か、作業/診断記録
 PLAN-L7-457-fence-stream-hash-db-vacuum	N	haiku+sonnet agree	troubleshoot 作業記録・設計判断マーカーなし
 PLAN-L7-458-node-self-hosted-bun-ban-foundation	N	adjudicated	契約は dedicated test-design/design に既存 (token 一致 5-8 割) か、作業/診断記録
@@ -648,7 +648,7 @@ PLAN-L7-49-asset-catalog	N	haiku+sonnet agree	設計契約なし (impl 実装/�
 PLAN-L7-490-memory-write-collision-safety	N	haiku+sonnet agree	設計契約なし (add-impl 実装/作業記録)
 PLAN-L7-491-instruction-surface-bun-residual-followup	E2	haiku+sonnet agree	draft / issue #326 CLOSED
 PLAN-L7-492-pf5-release-aggregate-admission-pair-freeze	C	haiku+sonnet agree	後継 PLAN-L7-742-release-aggregate-v2-inventory-cardinality が明記
-PLAN-L7-493-d3a-repo-local-verdict-custody	N	adjudicated	契約は dedicated test-design/design に既存 (token 一致 5-8 割) か、作業/診断記録
+PLAN-L7-493-d3a-repo-local-verdict-custody	A	reclassified r1	requestDigest の 5-field preimage・review-request/v1・UTF-16 code-unit 順の正規化が docs/design / test-design に無い (Sol r1)
 PLAN-L7-494-release-promotion-rollback-gate	C	adjudicated	PLAN-L7-742 が supersedes で指名
 PLAN-L7-495-memory-delivery-backlog-visibility	N	haiku+sonnet agree	troubleshoot 作業記録・設計判断マーカーなし
 PLAN-L7-496-pack-independent-consumer-runtime	N	haiku+sonnet agree	設計契約なし (impl 実装/作業記録)
