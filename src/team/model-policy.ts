@@ -1,6 +1,8 @@
 import { recommendModelEffort } from "../workflow/contracts.ts";
 import type { TeamProvider } from "./run.ts";
 
+const CODEX_WORKER_MODEL_ID = "gpt-6-luna";
+
 /**
  * 正本モデル ID カタログ (SSoT)。tier-router の `TIER_TABLE` と本ファイルの `modelForProvider`
  * は同じ ID を二重に literal で持っていた (PLAN-L7-58 carry: typo/drift の温床)。両者がこの 1 箇所を
@@ -22,11 +24,11 @@ export const MODEL_IDS = {
     /** T0 フロンティア (検証/設計/相談の最上位帯)。 */
     frontier: "gpt-6.1-sol",
     /** T1 フロンティア以外の Codex worker role 共通実 ID (PO 指定 #911)。 */
-    worker: "gpt-6-luna",
-    luna: "gpt-6-luna",
-    spark: "gpt-6-luna",
-    mini: "gpt-6-luna",
-    codex: "gpt-6-luna",
+    worker: CODEX_WORKER_MODEL_ID,
+    luna: CODEX_WORKER_MODEL_ID,
+    spark: CODEX_WORKER_MODEL_ID,
+    mini: CODEX_WORKER_MODEL_ID,
+    codex: CODEX_WORKER_MODEL_ID,
   },
 } as const;
 
