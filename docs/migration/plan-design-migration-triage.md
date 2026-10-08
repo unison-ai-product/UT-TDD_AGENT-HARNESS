@@ -11,8 +11,8 @@ v4 工程 ② (PLAN を設計へ反映して設計正本を凍結する。#530 �
 | A | 移行対象。設計契約が PLAN にしか無い | 14 | 工程 ② で設計文書へ移す |
 | N | 移行しない。契約が設計文書にある、本文が 4 項目相当、または作業記録だけ | 671 | そのまま凍結する |
 | C | supersede 済み。後継が frontmatter か本文に明記されている | 16 | 凍結する |
-| D | 廃止予定。v4 で廃止が決まった対象**だけ**に関わる | 4 | v4 で廃止する |
-| M | 混在。v4 で廃止される部分と、継続する部分の両方を持つ | 4 | 廃止しない。継続部分の契約を三者照合で確かめ、移行が要れば A と同じ扱いにする |
+| D | 廃止予定。v4 で廃止が決まった対象**だけ**に関わる | 2 | v4 で廃止する |
+| M | 混在。v4 で廃止される部分と、継続する部分の両方を持つ | 6 | 廃止しない。継続部分の契約を三者照合で確かめ、移行が要れば A と同じ扱いにする |
 | E1 | 生きた draft。紐づく issue が open | 56 | issue と一緒に、該当する工程で処理する |
 | E2 | 放置 draft。issue が closed か、無い | 239 | 廃止候補 |
 | 計 | | 1004 | |
@@ -38,7 +38,7 @@ v4 工程 ② (PLAN を設計へ反映して設計正本を凍結する。#530 �
 
 移行先は候補です。三者照合 (PLAN・設計文書・実装) のときに確定します。
 
-## M: 混在 4 本
+## M: 混在 6 本
 
 | PLAN | 廃止される部分 | 継続する部分 |
 |---|---|---|
@@ -46,6 +46,8 @@ v4 工程 ② (PLAN を設計へ反映して設計正本を凍結する。#530 �
 | PLAN-L4-11-roster | subagent の roster (V4D-098) | command の設計 |
 | PLAN-L5-05-roster | subagent の roster (V4D-098) | command の module 結合 |
 | PLAN-L7-454-runtime-token-telemetry-ingestion | なし (置き換え) | token / cost の計測。V4D-048 で作業ログへ寄せる置き換えであり、廃止ではない |
+| PLAN-L7-399-agent-guard-quality-check-tier-floor | subagent の agent-guard (V4D-098) | review は orchestrator 以上の格で行う原則 (delegation routing の判断 tier 固定) |
+| PLAN-L7-426-codex-native-subagents | Codex native subagent の生成 (V4D-098) | hooks.json の parse 失敗で work-guard / session-log が無効になる問題の扱いと、hooks schema の回帰 fence |
 
 ## 判定の方法
 
@@ -60,6 +62,7 @@ v4 工程 ② (PLAN を設計へ反映して設計正本を凍結する。#530 �
 - PLAN-L4-02 と PLAN-L4-32 は、frontmatter の supersedes が自分自身を指しています (#209 の自己 supersede)。C にはしていません。
 - C は「後継の参照がある」ことを根拠にしています。後継が全責務を引き継いだかどうかは、まだ照合していません。三者照合の段で確かめます。
 - 2026-10-08 の review (Sol r1) で 2 件の指摘を受け、次のように直しました。PLAN-L4-10 を D から M へ移しました (subagent 以外の継続責務を持つ)。同じ理由で PLAN-L4-11 / L5-05 / L7-454 も M へ移しました。PLAN-L7-493 は N から A へ移しました (digest の導出契約が設計文書に無い)。
+- 同日の review (Sol、CLI の custody 経路) で 1 件の指摘を受けました。PLAN-L7-426 を D から M へ移しました (hooks.json の parse 失敗で work-guard / session-log が無効になる問題と、hooks schema の回帰 fence が継続する)。同じ観点で残りの D を見直し、PLAN-L7-399 も M へ移しました (review は orchestrator 以上の格で行う原則が継続する)。PLAN-L7-415 と PLAN-DISCOVERY-10 は、モデル世代を固定する話だけなので D のままです。
 - E1 / E2 は、紐づく issue の open / closed で分けています。issue 番号が無い draft は E2 です。
 
 ## 次の段

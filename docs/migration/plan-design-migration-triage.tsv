@@ -547,7 +547,7 @@ PLAN-L7-397-relation-graph-docs-root-ledger-coverage	N	haiku+sonnet agree	troubl
 PLAN-L7-397-right-lung-doc-governance	N	haiku+sonnet agree	設計契約なし (add-impl 実装/作業記録)
 PLAN-L7-398-scope-detection-dry-run-preview	N	haiku+sonnet agree	設計契約なし (add-impl 実装/作業記録)
 PLAN-L7-398-session-log-summarize-path-truncation	N	haiku+sonnet agree	troubleshoot 作業記録・設計判断マーカーなし
-PLAN-L7-399-agent-guard-quality-check-tier-floor	D	adjudicated	harness subagent の agent-guard tier floor (claude-opus-4-8 固定の旧指定)
+PLAN-L7-399-agent-guard-quality-check-tier-floor	M	adjudicated	subagent の agent-guard は廃止対象だが、review は orchestrator 以上の格で行う原則は継続する
 PLAN-L7-400-feedback-surface-group-before-slice	C	adjudicated	status=archived、後継 PLAN-L7-403 (本文明記)
 PLAN-L7-401-attempt-escalation-surface-cap	C	adjudicated	status=archived、後継 PLAN-L7-403 (本文明記)
 PLAN-L7-402-agent-definition-allowlist-coverage-check	E2	haiku+sonnet agree	draft / 紐づく issue 無し
@@ -580,7 +580,7 @@ PLAN-L7-424-git-hooks-ownership	E2	haiku+sonnet agree	draft / 紐づく issue �
 PLAN-L7-424-semantic-assessment-debt-router	E2	haiku+sonnet agree	draft / 紐づく issue 無し
 PLAN-L7-425-independent-detector-meta-verifier	E2	haiku+sonnet agree	draft / 紐づく issue 無し
 PLAN-L7-425-setup-standardization	E2	haiku+sonnet agree	draft / 紐づく issue 無し
-PLAN-L7-426-codex-native-subagents	D	adjudicated	Codex native subagent 生成 (draft、subagent 廃止方針)
+PLAN-L7-426-codex-native-subagents	M	adjudicated	subagent 生成は廃止対象だが、hooks.json の parse 失敗で work-guard / session-log が無効になる問題と、hooks schema の回帰 fence は継続する
 PLAN-L7-427-workspace-artifact-integrity-gate	E2	haiku+sonnet agree	draft / 紐づく issue 無し
 PLAN-L7-428-stage-bound-elicitation-context	N	adjudicated	契約は dedicated test-design/design に既存 (token 一致 5-8 割) か、作業/診断記録
 PLAN-L7-429-spec-ir-detector-scope	N	adjudicated	契約は dedicated test-design/design に既存 (token 一致 5-8 割) か、作業/診断記録
