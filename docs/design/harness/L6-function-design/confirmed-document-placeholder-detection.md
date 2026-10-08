@@ -1,10 +1,10 @@
 ---
 layer: L6
 artifact_type: design_doc
-status: draft
+status: confirmed
 sub_doc: function-spec
 artifact_role: topic_confirmed_document_placeholder_detection
-pair_artifact: docs/test-design/harness/L7-confirmed-document-placeholder-detection-test-design.md
+pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 next_pair_freeze: L7
 plan: docs/plans/PLAN-L6-833-confirmed-document-placeholder-detection.md
@@ -32,15 +32,9 @@ consumer の成果物文書を `confirmed` または `completed` に凍結する
 
 ## 3. 関数契約
 
-`findUnfilledTemplatePlaceholders(path, status, content) -> findings[]`
-
-- pre: `path`, `status`, `content` は既存 gate が選んだ同一文書の値である。ファイル探索・I/O は呼出側の既存 loader が担う。
-- post: `status` が `confirmed` / `completed` で、HTML comment 除去後の本文に正規表現一致があれば、各一致の path・行番号・列番号・字句を返す。
-- post: 一致がなければ空配列を返す。`draft` その他の status は本文を判定せず空配列を返す。
-- invariant: コメント以外の本文を正規化しない。fence・inline codeを無視せず、正規表現以外の山括弧を検出しない。
-- invariant: 一致が1件以上なら caller の既存 gate 結果を失敗させる。判定不能・対象読込エラーも既存 gate の fail-close 経路に従い、成功へ変換しない。
-
-行・列はコメント内容を除いた後も元本文の位置を保つ。診断順は path、行、列の昇順とする。出力形式を新 gate result 型や永続状態へ拡張しない。
+| Function(s) | Signature | pre | post | invariant | oracle |
+| --- | --- | --- | --- | --- | --- |
+| `findUnfilledTemplatePlaceholders` | `findUnfilledTemplatePlaceholders(path, status, content) => findings[]` | `path`, `status`, `content` は既存 gate が選んだ同一文書の値である。ファイル探索・I/O は呼出側の既存 loader が担う。 | `status` が `confirmed` / `completed` で、HTML comment 除去後の本文に正規表現一致があれば、各一致の path・行番号・列番号・字句を返す。一致がなければ空配列を返し、`draft` その他の status は本文を判定せず空配列を返す。行・列はコメント除去後も元本文の位置を保ち、診断順は path、行、列の昇順とする。一致が1件以上なら caller の既存 gate 結果を失敗させ、判定不能・対象読込エラーも既存の fail-close 経路で失敗させる。 | HTML comment 以外の本文は正規化しない。fence・inline codeを無視せず、正規表現以外の山括弧を検出しない。出力形式を新 gate result 型や永続状態へ拡張しない。 | `docs/test-design/harness/L7-confirmed-document-placeholder-detection-test-design.md` §3 の既存 CANDIDATE-U-PH-001..008 が純関数契約を検証し、§4 の既存 CANDIDATE-U-PH-010..024 がgate到達性を検証する。 |
 
 ## 4. 既存 gate への接続
 

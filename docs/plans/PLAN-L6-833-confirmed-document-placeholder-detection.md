@@ -10,7 +10,7 @@ created: 2026-10-08
 updated: 2026-10-08
 owner: Codex (契約PR) / Claude (契約レビュー) / control (割当)
 parent_design: docs/design/harness/L6-function-design/function-spec.md
-pair_artifact: docs/test-design/harness/L7-confirmed-document-placeholder-detection-test-design.md
+pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 next_pair_freeze: L7
 agent_slots:
   - role: tl
@@ -33,6 +33,10 @@ escape_reason: "Issue #894: freeze the approved confirmed-document placeholder
 generates:
   - artifact_path: docs/plans/PLAN-L6-833-confirmed-document-placeholder-detection.md
     artifact_type: markdown_doc
+  - artifact_path: docs/design/harness/L6-function-design/confirmed-document-placeholder-detection.md
+    artifact_type: design_doc
+  - artifact_path: docs/test-design/harness/L7-confirmed-document-placeholder-detection-test-design.md
+    artifact_type: test_design
 dependencies:
   parent: docs/design/harness/L6-function-design/function-spec.md
   requires: []
@@ -40,29 +44,30 @@ dependencies:
   references:
     - docs/design/harness/L6-function-design/confirmed-document-placeholder-detection.md
     - docs/test-design/harness/L7-confirmed-document-placeholder-detection-test-design.md
+    - docs/test-design/harness/L7-unit-test-design.md
     - docs/governance/ut-tdd-agent-harness-requirements_v1.2.md
     - src/gate/static.ts
     - src/gate/right-arm-static.ts
     - src/vmodel/lint.ts
     - tests/consumer-g14-static.test.ts
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/894
-status: draft
+status: confirmed
 sub_doc: function-spec
 github_issue_id: 894
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:60d769470c071d68016d6bf29acd9d4f
-  command_id: plan-draft:issue-894:PLAN-L6-833:20261008-contract-fresh-a2
-  admitted_at: 2026-10-08T03:59:20Z
-  source_digest: sha256:768e513bad7d7a0d11ec287a51c8eb518eec1cf5ea38497e091e7caf42476f27
-  decision_digest: sha256:3a4cf9b457d2eb1742580ff52cb2b084acd61db44b03775446b7515db6d2df0f
-  receipt_digest: sha256:2fa62090068bc0fcaac6211b4fb38d529ce3f727f23c46186c67b5c99ce741b3
+  receipt_id: certificate:fd5f22003142e732ff4ead6fce5d4668
+  command_id: plan-revise:issue-894:PLAN-L6-833:pr904-confirm-r1:20261008
+  admitted_at: 2026-10-08T05:25:30.106Z
+  source_digest: sha256:d0c061b149c337bff3503046a0764f859d1053dd6feb9c3018de4bc6b34c73ec
+  decision_digest: sha256:db60046ae95edbc4bd720090a6e2c4b453a1466f859942030de0ab032c6408cd
+  receipt_digest: sha256:8879dac3712cf8f7c8135d97ff9946e357592da68b023f1712714e03007055f7
   binding:
     path: docs/plans/PLAN-L6-833-confirmed-document-placeholder-detection.md
     plan_id: PLAN-L6-833-confirmed-document-placeholder-detection
     asset_id: plan:60d769470c071d68016d6bf29acd9d4f
-    revision: 1
-    content_digest: sha256:768e513bad7d7a0d11ec287a51c8eb518eec1cf5ea38497e091e7caf42476f27
+    revision: 2
+    content_digest: sha256:d0c061b149c337bff3503046a0764f859d1053dd6feb9c3018de4bc6b34c73ec
   route:
     signal: feature_addition
     mode: add-feature
@@ -99,12 +104,13 @@ Issue #894 comment `6051508799` が検出意味・適用owner・既存gate到達
 
 - L6 function design: `docs/design/harness/L6-function-design/confirmed-document-placeholder-detection.md`
 - L7 test design: `docs/test-design/harness/L7-confirmed-document-placeholder-detection-test-design.md`
+- 共有L7 pair index: `docs/test-design/harness/L7-unit-test-design.md` (候補IDと専用詳細への参照のみ。既存の共有ownerを維持する)
 - 既存48テンプレートのうち説明段落を持つ46本だけ、説明用の3記法例をHTML commentへ移す。これは Issue #894 comment `6051508799` §4 の明示許可による意味不変の契約差分であり、実欄・必須節・各gateのowner setは変更しない。残る2本には該当説明段落がないため変更しない。
 
 ## 3. Verification pair
 
-L6 function design と専用 L7 test-design を相互参照し、Issue #894 comment `6051508799` の exact matcher / confirmed・completed only / HTML-comment-only exclusion / fail-close / 既存owner setを固定する。48 template vocabulary×path inventory、純関数の反証 oracle、G1-G14 および右腕 G8-G10 fallback の現存入口到達 oracle、G14 confirmed fixture repair + 1-marker regression を pair で定義する。
+L6 function design は共有L7 pair index `docs/test-design/harness/L7-unit-test-design.md` を pair_artifact とし、専用 L7 test-design は同じL6文書を `parent_doc` で参照する。共有L7には既存候補IDと専用詳細への参照だけを置き、候補の入力・反証条件・期待値は専用 test-design に保持する。Issue #894 comment `6051508799` の exact matcher / confirmed・completed only / HTML-comment-only exclusion / fail-close / 既存owner setを固定する。48 template vocabulary×path inventory、純関数の反証 oracle、G1-G14 および右腕 G8-G10 fallback の現存入口到達 oracle、G14 confirmed fixture repair + 1-marker regression を pair で定義する。
 
 ## 4. Completion conditions
 
-この契約PRでは設計・test-design pairと上記の説明記法移動だけを提出する。新gate、全層走査、advisory/skip/成功洗浄、fixture status downgrade、matcher緩和、実装コード、実装テスト、Reverse artifact は含めない。差分で説明段落の例だけが移動し、実欄と必須節が保持されていること、PLAN lint と V-model pair lint が通ること、Claude の契約レビューがあることを確認してから契約をfreezeする。実装は別途承認された後続 add-impl PLAN で行う。
+この契約PRでは設計・test-design pairと上記の説明記法移動だけを提出する。新gate、全層走査、advisory/skip/成功洗浄、fixture status downgrade、matcher緩和、実装コード、実装テスト、Reverse artifact は含めない。差分で説明段落の例だけが移動し、実欄と必須節が保持されていること、PLAN lint と V-model pair lint が通ることを確認する。control comment `6052849799` の順序に従い、canonical plan revise で本PLAN/L6/専用test-designを confirmed とし、CI完了後にcontrolがexact-headのClaude Opus closing reviewを実施する。mergeはPASS時のみ、FLAGは同じPR内で修正する。現時点で未実施のCI/review結果は記録しない。実装は別途承認された後続 add-impl PLAN で行う。

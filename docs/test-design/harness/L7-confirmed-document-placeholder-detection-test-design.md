@@ -3,7 +3,7 @@ title: "確定文書のプレースホルダー検出 — L7テスト設計"
 artifact_type: test_design
 layer: L6
 executed_at_layer: L7
-status: draft
+status: confirmed
 pair_artifact: docs/design/harness/L6-function-design/
 parent_doc: docs/design/harness/L6-function-design/confirmed-document-placeholder-detection.md
 created: 2026-10-08
