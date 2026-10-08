@@ -14,7 +14,8 @@
 
 | 工程 | 件数 |
 |---|---:|
-| ① 現行リリースパック canary.6 | 13 |
+| ① 現行リリースパック canary.6 | 7 |
+| ①の受入後に ③ か ⑤ へ割り当てる | 6 |
 | ② PLAN を設計へ反映し設計正本を凍結 | 28 |
 | ③ canary.6 自己導入と別プロジェクト投入検証 | 16 |
 | ④ 新ディレクトリ構成へ再編 | 7 |
@@ -34,23 +35,30 @@
 
 ## 工程別の表
 
-### 工程 ① (13 件)
+### 工程 ① (7 件)
 
 | issue | 親 | 題名 | 根拠 |
 |---|---|---|---|
 | #393 | #873 | review custody: 完了した判定が失われる 3 経路 (envelope parser の全行走査 / receipt に根拠を残さず verdict file を削除 / review-guard の他ランタイム誤帰責) | PO 決定で ① と並行に前倒し (6051373331) |
 | #418 | #364 | S5 child: Pack-only upper-flow internal canary smoke (Windows/Linux) | canary.6 受入 (#418) の子 |
 | #676 | #418 | Release consumer で開発を開始できない穴: identity / repo-root、生成物、skills と設計テンプレートの配送 (#418 子) | canary.6 受入 (#418) の子 |
-| #758 | #676 | Windows CI で release-consumer 系の同期 process テスト (U-RCDEV-005 / 026) が間欠的に status=null / ETIMEDOUT で落ちる | canary.6 の blocker ではない。canary.6 の受入結果を見て ③ か ⑤ へ送る (6052098864) |
-| #809 | #418 | pack-canary-acceptance の証跡を計測値にする (trace 件数・source 監査・credential env・runner digest) | canary.6 の blocker ではない。canary.6 の受入結果を見て ③ か ⑤ へ送る (6052098864) |
-| #821 | #364 | Pack の C1 で実行可能ファイルの mode 100755 が 100644 に落ちる (sync-pack / Windows commit) | canary.6 の blocker ではない。canary.6 の受入結果を見て ③ か ⑤ へ送る (6052098864) |
 | #835 | #418 | Windows consumer の Claude SessionStart hook が 5 秒 timeout で cancelled になり session 記録が残らない (#418 子) | canary.6 受入 (#418) の子 |
-| #880 | #418 | G1 が business / screen / P0 FR の集合が空のまま passed=true を返す。consumer で必須とする集合と診断理由を契約に定める | canary.6 の blocker ではない。canary.6 の受入結果を見て ③ か ⑤ へ送る (6052098864) |
-| #881 | #418 | canary.4 の tar.gz が無圧縮になっている (#834 で、stored ブロックの fixedGzip 経路に切り替わった回帰) | canary.6 の blocker ではない。canary.6 の受入結果を見て ③ か ⑤ へ送る (6052098864) |
-| #889 | #676 | consumer: 公開 asset から導入した直後の consumer で SessionStart の要約に design-quality-load-error / missing-projection が出る | canary.6 の blocker ではない。canary.6 の受入結果を見て ③ か ⑤ へ送る (6052098864) |
 | #890 | #835 | perf(session-start): Windows consumer の SessionStart が初回 21.8 秒かかり、同時に 2 つ目のセッションができる | 計測で canary.6 の blocker と判明したため ① に残す。#909 で修理済み |
 | #911 | #418 | canary.6 blocker: model routing と agent guard の model ID を現行世代へ揃える | 別プロジェクトへの導入検証で判明した canary.6 の blocker |
 | #894 | #530 | 確定した設計文書にテンプレートの記入欄 (<記入>) が残っていたら止める検査を入れる | PO 決定で ⑦ を待たず前倒し (6051373331) |
+
+### ①の受入後に割り当てる (6 件)
+
+①の完了条件には入れません。canary.6 の blocker ではないためです (6052098864)。canary.6 の受入結果を見て、③ か ⑤ の表へ移し、上の件数表も合わせて直します。
+
+| issue | 親 | 題名 | 根拠 |
+|---|---|---|---|
+| #758 | #676 | Windows CI で release-consumer 系の同期 process テスト (U-RCDEV-005 / 026) が間欠的に status=null / ETIMEDOUT で落ちる | canary.6 の blocker ではない (6052098864) |
+| #809 | #418 | pack-canary-acceptance の証跡を計測値にする (trace 件数・source 監査・credential env・runner digest) | canary.6 の blocker ではない (6052098864) |
+| #821 | #364 | Pack の C1 で実行可能ファイルの mode 100755 が 100644 に落ちる (sync-pack / Windows commit) | canary.6 の blocker ではない (6052098864) |
+| #880 | #418 | G1 が business / screen / P0 FR の集合が空のまま passed=true を返す。consumer で必須とする集合と診断理由を契約に定める | canary.6 の blocker ではない (6052098864) |
+| #881 | #418 | canary.4 の tar.gz が無圧縮になっている (#834 で、stored ブロックの fixedGzip 経路に切り替わった回帰) | canary.6 の blocker ではない (6052098864) |
+| #889 | #676 | consumer: 公開 asset から導入した直後の consumer で SessionStart の要約に design-quality-load-error / missing-projection が出る | canary.6 の blocker ではない (6052098864) |
 
 ### 工程 ② (28 件)
 
