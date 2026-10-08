@@ -373,8 +373,7 @@ function agentReviewEvidence() {
 function agentReleaseDir(assetBytes: Record<string, string>, tag = AGENT_E2E_TAG) {
   const root = mkdtempSync(join(tmpdir(), "ut-canary-agent-release-"));
   tempRoots.push(root);
-  for (const name of canaryAssetsForTag(tag))
-    writeFileSync(join(root, name), assetBytes[name]);
+  for (const name of canaryAssetsForTag(tag)) writeFileSync(join(root, name), assetBytes[name]);
   return root;
 }
 
@@ -981,9 +980,9 @@ describe("manual canary acceptance publish-record boundary", () => {
     const wrongAnchorBytes = { ...input.assetBytes };
     const anchorName = canaryAssetsForTag(agentTag)[4];
     wrongAnchorBytes[anchorName] = "wrong anchor bytes";
-    expect(() => verifyReleaseDirectory(agentReleaseDir(wrongAnchorBytes, agentTag), parsed)).toThrow(
-      `release-asset-digest-mismatch:${anchorName}`,
-    );
+    expect(() =>
+      verifyReleaseDirectory(agentReleaseDir(wrongAnchorBytes, agentTag), parsed),
+    ).toThrow(`release-asset-digest-mismatch:${anchorName}`);
   });
 
   it("U-ST-PACKCANARY-016: rejects missing or non-agent authoring provenance", () => {
