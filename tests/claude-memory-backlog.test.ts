@@ -1,4 +1,12 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
@@ -9,10 +17,12 @@ import {
 import type { MemoryEntry } from "../src/memory/index.ts";
 import {
   buildClaudeInboxEntry,
+  buildClaudeProviderReviewInboxEntry,
   CLAUDE_WAKE_GENERATION_SCHEMA,
   claudeWorkspaceId,
   inspectClaudeMemoryWakeHook,
   publishClaudeInboxEntry,
+  recoverClaudeInboxBacklog,
   summarizeUnclaimedInbox,
   waitForClaudeMemory,
 } from "../src/runtime/claude-memory-wake.ts";
@@ -20,6 +30,19 @@ import { resolveProjectMemoryRoot } from "../src/runtime/project-memory-root.ts"
 import { openHarnessDb } from "../src/state-db/index.ts";
 import { migrate } from "../src/state-db/migration.ts";
 import { ensureTrackedProjectIdentity } from "./support/project-identity-fixture.ts";
+
+const projectMemoryRootResolution = vi.hoisted(() => ({ count: 0 }));
+
+vi.mock("../src/runtime/project-memory-root.ts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../src/runtime/project-memory-root.ts")>();
+  return {
+    ...actual,
+    requireProjectMemoryRoot: vi.fn((repoRoot: string) => {
+      projectMemoryRootResolution.count += 1;
+      return actual.requireProjectMemoryRoot(repoRoot);
+    }),
+  };
+});
 
 const memory: MemoryEntry = {
   memory_id: "memory:project:backlog-227",
@@ -44,7 +67,157 @@ function generationPath(root: string, sessionId: string): string {
   return join(project.runtimeBusRoot, "claude-memory-wake", `${sessionId}.generation`);
 }
 
+type SessionStartInboxRoute = (input: {
+  repoRoot: string;
+  pullRequestState?: (
+    pr: number,
+  ) => { pr: number; state: "OPEN" | "CLOSED" | "MERGED"; headSha: string } | undefined;
+}) => ReturnType<typeof summarizeUnclaimedInbox>;
+
+async function sessionStartInboxRoute(): Promise<SessionStartInboxRoute> {
+  const api = await import("../src/runtime/claude-memory-wake.ts");
+  const optimized = (
+    api as unknown as {
+      recoverAndSummarizeClaudeInboxForSessionStart?: SessionStartInboxRoute;
+    }
+  ).recoverAndSummarizeClaudeInboxForSessionStart;
+  if (optimized) return optimized;
+  // Red-only compatibility witness for the pre-fix production composition.
+  // This fallback is test-local and is removed once the SessionStart route exists.
+  return ({ repoRoot, pullRequestState }) => {
+    try {
+      recoverClaudeInboxBacklog({ repoRoot, dryRun: false, pullRequestState });
+    } catch {
+      // Match the current SessionStart fail-open recovery adapter.
+    }
+    return summarizeUnclaimedInbox(repoRoot, claudeWorkspaceId(repoRoot));
+  };
+}
+
 describe("Claude memory delivery backlog visibility", () => {
+  it("SessionStart inbox route recovers before summarizing with two validated contexts", async () => {
+    const root = fixture();
+    try {
+      const runSessionStart = await sessionStartInboxRoute();
+      const project = resolveProjectMemoryRoot(root);
+      if (!project.ok) throw new Error(project.reason);
+      const workspaceId = project.projectNamespace;
+      const current = buildClaudeInboxEntry({ memory, operationId: "session-current", workspaceId });
+      const foreign = buildClaudeInboxEntry({
+        memory,
+        operationId: "session-foreign",
+        workspaceId: "f".repeat(64),
+      });
+      const digest = "c".repeat(16);
+      const review = buildClaudeProviderReviewInboxEntry({
+        memory,
+        projectId: project.projectId,
+        operationId: "session-terminal",
+        workspaceId,
+        producer: { provider: "codex", sessionId: "codex-session-start" },
+        target: { scope: "session", provider: "claude", sessionId: "claude-session-start" },
+        requestDigest: digest,
+        requestPath: `.ut-tdd/review/requests/${digest}.json`,
+        pr: 227,
+        exactHead: "a".repeat(40),
+        reviewRevision: "session-start-r1",
+        authorFamily: "codex",
+      });
+      publishClaudeInboxEntry(root, current);
+      publishClaudeInboxEntry(root, foreign);
+      publishClaudeInboxEntry(root, review);
+
+      projectMemoryRootResolution.count = 0;
+      const summary = runSessionStart({
+        repoRoot: root,
+        pullRequestState: (pr) => ({ pr, state: "MERGED", headSha: review.exactHead }),
+      });
+      expect(projectMemoryRootResolution.count).toBe(2);
+      expect(summary).toMatchObject({
+        pending: 1,
+        targetMismatchPending: 1,
+        terminalized: 1,
+        workspaceId,
+      });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("SessionStart inbox route refuses an invalid identity before reading inbox files", async () => {
+    const root = fixture();
+    try {
+      const runSessionStart = await sessionStartInboxRoute();
+      const project = resolveProjectMemoryRoot(root);
+      if (!project.ok) throw new Error(project.reason);
+      const inboxDirectory = join(project.runtimeBusRoot, "claude-memory-wake", "inbox");
+      publishClaudeInboxEntry(
+        root,
+        buildClaudeInboxEntry({
+          memory,
+          operationId: "invalid-identity",
+          workspaceId: project.projectNamespace,
+        }),
+      );
+      writeFileSync(join(root, "ut-tdd.project.json"), "{\"invalid\":true}\n", "utf8");
+      const readdirSpy = vi.spyOn(await import("node:fs"), "readdirSync");
+      try {
+        expect(() => runSessionStart({ repoRoot: root })).toThrow(
+          "project_memory_root_project_identity_drift",
+        );
+        expect(
+          readdirSpy.mock.calls.some(([path]) => String(path) === inboxDirectory),
+        ).toBe(false);
+      } finally {
+        readdirSpy.mockRestore();
+      }
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("SessionStart inbox route revalidates identity after recovery before summary", async () => {
+    const root = fixture();
+    try {
+      const runSessionStart = await sessionStartInboxRoute();
+      const project = resolveProjectMemoryRoot(root);
+      if (!project.ok) throw new Error(project.reason);
+      const digest = "d".repeat(16);
+      const review = buildClaudeProviderReviewInboxEntry({
+        memory,
+        projectId: project.projectId,
+        operationId: "drift-after-recovery",
+        workspaceId: project.projectNamespace,
+        producer: { provider: "codex", sessionId: "codex-session-start" },
+        target: { scope: "session", provider: "claude", sessionId: "claude-session-start" },
+        requestDigest: digest,
+        requestPath: `.ut-tdd/review/requests/${digest}.json`,
+        pr: 228,
+        exactHead: "b".repeat(40),
+        reviewRevision: "session-start-r2",
+        authorFamily: "codex",
+      });
+      const inboxPath = publishClaudeInboxEntry(root, review);
+      projectMemoryRootResolution.count = 0;
+      expect(() =>
+        runSessionStart({
+          repoRoot: root,
+          pullRequestState: (pr) => {
+            writeFileSync(join(root, "ut-tdd.project.json"), "{\"drift\":true}\n", "utf8");
+            return { pr, state: "MERGED", headSha: review.exactHead };
+          },
+        }),
+      ).toThrow("project_memory_root_project_identity_drift");
+      const runtimeRoot = join(project.runtimeBusRoot, "claude-memory-wake");
+      expect(
+        readdirSync(runtimeRoot).some((name) => name.endsWith(".terminal.json")),
+      ).toBe(true);
+      expect(existsSync(inboxPath)).toBe(true);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it("U-MEMBACKLOG-001/002: current backlogとforeign targetを同時に可視化する", () => {
     const root = fixture();
     try {
