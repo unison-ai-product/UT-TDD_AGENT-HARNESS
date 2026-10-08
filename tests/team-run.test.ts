@@ -240,8 +240,12 @@ describe("team run validation", () => {
     expect(recommendation.definition?.name).toBe("proposal-coverage-team");
     expect(recommendation.definition?.max_parallel).toBe(7);
     const members = recommendation.definition?.members ?? [];
-    expect(members.filter((member) => member.model === MODEL_IDS.codex.mini)).toHaveLength(4);
-    expect(members.filter((member) => member.model === MODEL_IDS.codex.spark)).toHaveLength(3);
+    const miniLaneMembers = members.filter((member) => member.engine.includes("-t2-mini-"));
+    const sparkLaneMembers = members.filter((member) => member.engine.includes("-t2-spark-"));
+    expect(miniLaneMembers).toHaveLength(4);
+    expect(miniLaneMembers.every((member) => member.model === MODEL_IDS.codex.mini)).toBe(true);
+    expect(sparkLaneMembers).toHaveLength(3);
+    expect(sparkLaneMembers.every((member) => member.model === MODEL_IDS.codex.spark)).toBe(true);
     expect(members.some((member) => member.model === MODEL_IDS.codex.frontier)).toBe(false);
     expect(members.every((member) => member.ownership)).toBe(true);
     expect(members.some((member) => member.engine === "pmo-sonnet")).toBe(true);
@@ -249,12 +253,18 @@ describe("team run validation", () => {
     const plan = buildTeamRunPlan(recommendation.definition as TeamDefinition, "hybrid");
     expect(plan.ok).toBe(true);
     expect(plan.strategy).toBe("sequential");
+    const plannedMiniMembers = plan.members.filter((member) => member.engine.includes("-t2-mini-"));
+    const plannedSparkMembers = plan.members.filter((member) =>
+      member.engine.includes("-t2-spark-"),
+    );
+    expect(plannedMiniMembers).toHaveLength(4);
     expect(
-      plan.members.filter((member) => member.model_selection.model === MODEL_IDS.codex.mini),
-    ).toHaveLength(4);
+      plannedMiniMembers.every((member) => member.model_selection.model === MODEL_IDS.codex.mini),
+    ).toBe(true);
+    expect(plannedSparkMembers).toHaveLength(3);
     expect(
-      plan.members.filter((member) => member.model_selection.model === MODEL_IDS.codex.spark),
-    ).toHaveLength(3);
+      plannedSparkMembers.every((member) => member.model_selection.model === MODEL_IDS.codex.spark),
+    ).toBe(true);
     expect(plan.members.some((member) => member.prompt.includes("ownership:"))).toBe(true);
   });
 

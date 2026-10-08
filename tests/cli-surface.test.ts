@@ -621,18 +621,18 @@ describe("L7 CLI surface closure", () => {
           "--task",
           "mechanical ledger check",
           "--model",
-          "gpt-5.3-codex-spark",
+          MODEL_IDS.codex.spark,
         ],
         fake.env,
       );
       const payload = parseCliJson(run);
       expect(payload.dry_run).toBe(true);
-      expect(payload.model).toBe("gpt-5.3-codex-spark");
-      // PLAN-L7-255: effort 未指定でも routing が ladder 既定 (spark=high) を解決して注入する
+      expect(payload.model).toBe(MODEL_IDS.codex.spark);
+      // PLAN-L7-255: the shared Luna model's high ladder default is injected when effort is omitted.
       expect(payload.args).toEqual([
         "exec",
         "-m",
-        "gpt-5.3-codex-spark",
+        MODEL_IDS.codex.spark,
         "-c",
         "model_reasoning_effort=high",
         "-",
