@@ -7200,6 +7200,22 @@
         "revision": 1,
         "content_digest": "sha256:4fb8530edc5b43193b29317d47de823f8e426ff55b7152b8e0099c8da5a4d023"
       }
+    },
+    {
+      "sequence": 451,
+      "previous_record_digest": "sha256:4e54235b71f3cddbd674297c89775f62850714efb60ea43f9b2a3de6552111ea",
+      "record_digest": "sha256:95ed7cb575dc86d68f4da9f7de00de74474d7925792c6ae74a0a4d6f4fce8730",
+      "command_id": "plan-revise:issue-921:plan-l7-493-verdict-retention:r2:47b4659e9ab6",
+      "receipt_id": "certificate:7ade5cd3884207a21722fa31ef57b888",
+      "receipt_digest": "sha256:af3ed817ca2f928a5446e4d6ea9b66c90747ef0f46716857c0bd8e54e0961076",
+      "decision_digest": "sha256:e6b1f054058b7699052c1c6836721e35e39efc9255835c84b9691d676097d046",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-493-d3a-repo-local-verdict-custody.md",
+        "plan_id": "PLAN-L7-493-d3a-repo-local-verdict-custody",
+        "asset_id": "plan:legacy:3525b52b49af6df3e53b9a9d5471192a49654b7ad572f04ac2f4d54bdc1dd56c",
+        "revision": 2,
+        "content_digest": "sha256:47293fdc8320693d5d079d7113c50761c3f8aef52e9d1444899421ba200fc985"
+      }
     }
   ]
 }
