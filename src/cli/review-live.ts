@@ -70,17 +70,19 @@ interface ReviewSubjectCommandResult {
   readonly stdout: string;
 }
 
-// Keep this transport guard aligned with reasons emitted through rejectedVerdict
-// and extractVerdict; it is not a second source for the custody contract.
+// Keep this transport guard aligned with typed custody rejections, including
+// provider-failure results; it is not a second source for the custody contract.
 const REVIEW_VERDICT_REJECTION_REASONS = new Set([
   "verdict_file_missing",
   "invalid_review_attestation",
   "review_identity_mismatch",
+  "reviewer_exit_nonzero",
   "verdict_identity_mismatch",
   "same_family_reviewer_denied",
   "verdict_path_identity_mismatch",
   "verdict_file_unreadable",
   "verdict_absent",
+  "verdict_absent_after_provider_failure",
   "verdict_ambiguous",
   "verdict_unknown",
   "flag_without_findings",
