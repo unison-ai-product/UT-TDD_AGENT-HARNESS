@@ -28,6 +28,7 @@
 
 - 共有の正本は GitHub に置きます。チケットは Issue / Sub-issue (UTV4-FR-004)、着手の宣言 (claim) は assignee と作業 branch (UTV4-FR-005)、主担当は 1 人 (UTV4-FR-003)、成果物は PR、担当替えは付け替えの記録を残す (UTV4-FR-030)。
 - review の結果を PR に紐づけて検証できる形で残し、誰の clone からでも merge の判定に使えるようにします。現状は receipt と harness.db が clone ごとの手元にしかないため (`.ut-tdd/review/receipts/` と `.ut-tdd/harness.db` は gitignore)、別の人の clone では merge できません。この修理は #907 (GUI で出した review が正規の receipt にならない) と同じ根なので、#907 と一緒に直します。
+- チケットの消化を GitHub Projects で見られるようにします。Projects の列と項目はチケット・PR・CI・review・merge の事実から一方向に同期し、人が手で状態を動かす入力にはしません (UTV4-FR-012)。状態は「未着手 (assignee なし) → 着手 (claim 済み) → PR あり → review PASS → merge 済み」で、子チケットの消化数を親へ集計します。同期の仕組みは新しく作らず、PLAN 単位で動いている既存の `src/github/project-v2.ts` (`syncForwardProject`) の単位をチケットへ付け替えます。
 - 入れる時期: ⑧ の最初の版。PLAN の廃止 (UTV4-FR-007) と同じ版にし、チケットが PLAN に代わる時点で複数人に対応させます。⑪ のチーム投入より前に、運用の実績を作るためです。
 
 ## 参考：版2.0 の版別範囲 (2026-09-08)
