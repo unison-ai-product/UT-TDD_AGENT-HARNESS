@@ -33,10 +33,6 @@ escape_reason: "Issue #894: freeze the approved confirmed-document placeholder
 generates:
   - artifact_path: docs/plans/PLAN-L6-833-confirmed-document-placeholder-detection.md
     artifact_type: markdown_doc
-  - artifact_path: docs/design/harness/L6-function-design/confirmed-document-placeholder-detection.md
-    artifact_type: design_doc
-  - artifact_path: docs/test-design/harness/L7-confirmed-document-placeholder-detection-test-design.md
-    artifact_type: test_design
 dependencies:
   parent: docs/design/harness/L6-function-design/function-spec.md
   requires: []
@@ -51,23 +47,23 @@ dependencies:
     - src/vmodel/lint.ts
     - tests/consumer-g14-static.test.ts
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/894
-status: confirmed
+status: draft
 sub_doc: function-spec
 github_issue_id: 894
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:fd5f22003142e732ff4ead6fce5d4668
-  command_id: plan-revise:issue-894:PLAN-L6-833:pr904-confirm-r1:20261008
-  admitted_at: 2026-10-08T05:25:30.106Z
-  source_digest: sha256:d0c061b149c337bff3503046a0764f859d1053dd6feb9c3018de4bc6b34c73ec
-  decision_digest: sha256:db60046ae95edbc4bd720090a6e2c4b453a1466f859942030de0ab032c6408cd
-  receipt_digest: sha256:8879dac3712cf8f7c8135d97ff9946e357592da68b023f1712714e03007055f7
+  receipt_id: certificate:ec7ec10ff21b604fdd49588a988ab2ef
+  command_id: plan-revise:issue-894:PLAN-L6-833:flag-reopen-r3:20261008
+  admitted_at: 2026-10-08T06:02:26.358Z
+  source_digest: sha256:71df1fb82a58aaa6d3ccc478617665021115ce2bc828782e8109b1f7de7f273e
+  decision_digest: sha256:3a4cf9b457d2eb1742580ff52cb2b084acd61db44b03775446b7515db6d2df0f
+  receipt_digest: sha256:d639d59dbe93fd631a58656c89a7547e9ee8f4977e47491ff64ac646cd887895
   binding:
     path: docs/plans/PLAN-L6-833-confirmed-document-placeholder-detection.md
     plan_id: PLAN-L6-833-confirmed-document-placeholder-detection
     asset_id: plan:60d769470c071d68016d6bf29acd9d4f
-    revision: 2
-    content_digest: sha256:d0c061b149c337bff3503046a0764f859d1053dd6feb9c3018de4bc6b34c73ec
+    revision: 3
+    content_digest: sha256:71df1fb82a58aaa6d3ccc478617665021115ce2bc828782e8109b1f7de7f273e
   route:
     signal: feature_addition
     mode: add-feature
@@ -113,4 +109,4 @@ L6 function design は共有L7 pair index `docs/test-design/harness/L7-unit-test
 
 ## 4. Completion conditions
 
-この契約PRでは設計・test-design pairと上記の説明記法移動だけを提出する。新gate、全層走査、advisory/skip/成功洗浄、fixture status downgrade、matcher緩和、実装コード、実装テスト、Reverse artifact は含めない。差分で説明段落の例だけが移動し、実欄と必須節が保持されていること、PLAN lint と V-model pair lint が通ることを確認する。control comment `6052849799` の順序に従い、canonical plan revise で本PLAN/L6/専用test-designを confirmed とし、CI完了後にcontrolがexact-headのClaude Opus closing reviewを実施する。mergeはPASS時のみ、FLAGは同じPR内で修正する。現時点で未実施のCI/review結果は記録しない。実装は別途承認された後続 add-impl PLAN で行う。
+この契約PRでは設計・test-design pairと上記の説明記法移動だけを提出する。新gate、全層走査、advisory/skip/成功洗浄、fixture status downgrade、matcher緩和、実装コード、実装テスト、Reverse artifact は含めない。差分で説明段落の例だけが移動し、実欄と必須節が保持されていること、PLAN lint と V-model pair lint が通ることを確認する。Issue #894 control comment `6053437591` の是正順序は PLAN-L6-832 の契約PR #844 と post-green evidence PR #854 の二段階に合わせる。本revisionでは正規 plan revise によりPLANをdraftへ戻し、L6設計文書と専用test-designのconfirmed状態は維持する。このPR headに対するcontrolのbounded re-review PASSとCI 5/5完了が揃った後にmergeし、merge後は別PRで実際のpost-green review receiptとCI証跡を記録して正規 plan revise でPLANをconfirmedにする。未実施のPASS/evidenceは記録せず、FLAGをPASSへ読み替えない。実装は別途承認された後続 add-impl PLAN で行う。

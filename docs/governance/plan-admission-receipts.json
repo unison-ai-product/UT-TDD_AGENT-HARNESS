@@ -7216,6 +7216,22 @@
         "revision": 2,
         "content_digest": "sha256:d0c061b149c337bff3503046a0764f859d1053dd6feb9c3018de4bc6b34c73ec"
       }
+    },
+    {
+      "sequence": 452,
+      "previous_record_digest": "sha256:9c6e1f9abffc9212eb1b27861891f50af43fa5e261431a77701f72d0bcb1dad7",
+      "record_digest": "sha256:594059dd2d1a0181b208212a166d9c4b2bdee272c4b4da80e28a635c0790acf4",
+      "command_id": "plan-revise:issue-894:PLAN-L6-833:flag-reopen-r3:20261008",
+      "receipt_id": "certificate:ec7ec10ff21b604fdd49588a988ab2ef",
+      "receipt_digest": "sha256:d639d59dbe93fd631a58656c89a7547e9ee8f4977e47491ff64ac646cd887895",
+      "decision_digest": "sha256:3a4cf9b457d2eb1742580ff52cb2b084acd61db44b03775446b7515db6d2df0f",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-833-confirmed-document-placeholder-detection.md",
+        "plan_id": "PLAN-L6-833-confirmed-document-placeholder-detection",
+        "asset_id": "plan:60d769470c071d68016d6bf29acd9d4f",
+        "revision": 3,
+        "content_digest": "sha256:71df1fb82a58aaa6d3ccc478617665021115ce2bc828782e8109b1f7de7f273e"
+      }
     }
   ]
 }

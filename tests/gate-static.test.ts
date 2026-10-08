@@ -39,6 +39,9 @@ const cliPath = join(process.cwd(), "src", "cli.ts");
  * process.stdout.write(JSON.stringify(results, null, 2));
  * 保存時の明示正規化: message の path separator を / に統一 (それ以外の値は実測のまま)。
  * G8-G10 は doctor API の raw ok/messages。m2 は PR-GR の所有。
+ * 2026-10-08 の baseline 増分は Issue #894 control comment 6051508799 の confirmed L6/L7 契約追加による。
+ * current HEAD 0e19499efdf8acd04e9caa8f51d711bafc90600a で evaluateStaticGate を直接実行し、G6 L6 total/confirmed 29→30、G7 pair 58→59、verification base freeze 57/57→58/58 を採取した。
+ * G7 の coverage 未提供による失敗・threshold・PASS/failed 判定は変更しない。
  */
 const HARNESS_GATE_BASELINE = [
   {
@@ -81,7 +84,7 @@ const HARNESS_GATE_BASELINE = [
     gate: "G6",
     passed: true,
     applicable: true,
-    messages: ["g6-pair - OK (L6 total=29, confirmed=29, placeholder=0, draft=0, orphans=0)"],
+    messages: ["g6-pair - OK (L6 total=30, confirmed=30, placeholder=0, draft=0, orphans=0)"],
   },
   {
     gate: "G7",
@@ -92,8 +95,8 @@ const HARNESS_GATE_BASELINE = [
       "g7-static - failed (G7 requires trace evidence and coverage >=80%)",
       "impl-plan-trace — OK (src 全件 PLAN generates / baseline に被覆、NEW orphan 0)",
       "oracle-test-trace — OK (宣言 oracle 全件 tests citation / baseline 被覆、test-label 逆向き citation 断線 0、宣言 provenance 重複 0)",
-      "pair-freeze — OK (design⇔test-design 双方向 58 pair、孤児 0)",
-      "verification — 実装検証サイクルゲート [L0-L7] (左腕+谷): ✅ base freeze 完了 (57/57 confirmed, L7 plans 9/9 confirmed, evidence 9/9, 孤児0) / active revisions 1/1 confirmed → 検証サイクル発火可",
+      "pair-freeze — OK (design⇔test-design 双方向 59 pair、孤児 0)",
+      "verification — 実装検証サイクルゲート [L0-L7] (左腕+谷): ✅ base freeze 完了 (58/58 confirmed, L7 plans 9/9 confirmed, evidence 9/9, 孤児0) / active revisions 1/1 confirmed → 検証サイクル発火可",
     ],
   },
   {
