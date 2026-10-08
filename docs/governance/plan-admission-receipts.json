@@ -7184,6 +7184,22 @@
         "revision": 22,
         "content_digest": "sha256:70fda562c0affcd740858cee403591fdf724891448de650bc9c5bea4657dd7a2"
       }
+    },
+    {
+      "sequence": 450,
+      "previous_record_digest": "sha256:674d41518aa15e8c8156236987ea410597bd077649d856f6dbf9725d28e0107d",
+      "record_digest": "sha256:4e54235b71f3cddbd674297c89775f62850714efb60ea43f9b2a3de6552111ea",
+      "command_id": "plan-draft:issue-898:PLAN-L6-834:20261008-contract-a1",
+      "receipt_id": "certificate:8ca68930636199fa10036ecd1487a466",
+      "receipt_digest": "sha256:e45d9836fce24230a226664efee22f39c54cd72388148db9767442dcfbc1e3cd",
+      "decision_digest": "sha256:3e6c515a691c3c16ea4c55765920bafee62ca2280a3cc62eb1798c4698ffa8c5",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-834-design-protection-diff-gate.md",
+        "plan_id": "PLAN-L6-834-design-protection-diff-gate",
+        "asset_id": "plan:8ca68930636199fa10036ecd1487a466",
+        "revision": 1,
+        "content_digest": "sha256:4fb8530edc5b43193b29317d47de823f8e426ff55b7152b8e0099c8da5a4d023"
+      }
     }
   ]
 }

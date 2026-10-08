@@ -1,0 +1,1936 @@
+[
+  {
+    "decision_id": "V4D-001",
+    "source": {
+      "kind": "doc",
+      "path": "docs/plans/PLAN-L1-09-ut-tdd-concept-v4-candidates.md",
+      "section": "§1"
+    },
+    "date": "2026-09-04",
+    "summary_ja": "v4 の 2 大要求。A = JSON 化による機械可読性と、表・文書への即時変換による人間可読性。B = チーム開発の衝突対策と進捗管理 (チケット型の協調並行開発、責務の管理と分割、ナレッジ共有による改善)。枠組みは human-on-the-loop。",
+    "status": "active",
+    "superseded_by": null,
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-001",
+      "UTV4-BR-002",
+      "UTV4-BR-003",
+      "UTV4-BR-005",
+      "UTV4-BR-006",
+      "UTV4-BR-007"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-002",
+    "source": {
+      "kind": "doc",
+      "path": "docs/plans/PLAN-L1-09-ut-tdd-concept-v4-candidates.md",
+      "section": "§1.1"
+    },
+    "date": "2026-09-04",
+    "summary_ja": "v4 の目的は、判断ではなく人間が手で回している統合作業 (齟齬照合、チケット切り出し、合流順など) の高速化である。",
+    "status": "active",
+    "superseded_by": null,
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-016",
+      "UTV4-BR-017"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-003",
+    "source": {
+      "kind": "doc",
+      "path": "docs/plans/PLAN-L1-09-ut-tdd-concept-v4-candidates.md",
+      "section": "§3.2 (PO 追加指示 C)"
+    },
+    "date": "2026-09-04",
+    "summary_ja": "上流要求エンジンを採る。人間の intake、発見の append-only event、typed IR への compile、人間承認での freeze を一本の工程にする。",
+    "status": "active",
+    "superseded_by": null,
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-009"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-004",
+    "source": {
+      "kind": "doc",
+      "path": "docs/plans/PLAN-L1-09-ut-tdd-concept-v4-candidates.md",
+      "section": "§3.2 (PO 追加指示 D)"
+    },
+    "date": "2026-09-04",
+    "summary_ja": "Discovery PoC を production とは別の軸 (S0〜S4) で回し、S4 判断 record が揃うまで成果を混同しない。",
+    "status": "superseded",
+    "superseded_by": "V4D-054",
+    "high_impact": false,
+    "maps_to": [],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-005",
+    "source": {
+      "kind": "doc",
+      "path": "docs/plans/PLAN-L1-09-ut-tdd-concept-v4-candidates.md",
+      "section": "§3.2 (PO 追加指示 E)"
+    },
+    "date": "2026-09-04",
+    "summary_ja": "ハーネスメモリを「捕捉 → 正本化 → 証跡付き退役」の lifecycle で扱い、学習資産の owner を責務に置く。",
+    "status": "active",
+    "superseded_by": null,
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-011"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-006",
+    "source": {
+      "kind": "doc",
+      "path": "docs/plans/PLAN-L1-09-ut-tdd-concept-v4-candidates.md",
+      "section": "§3.2 (PO 追加指示 F)"
+    },
+    "date": "2026-09-04",
+    "summary_ja": "skill の適用範囲を typed registry で持ち、作業ごとに最小の知識 packet を渡し、効き目を測って可逆に整理する。",
+    "status": "active",
+    "superseded_by": null,
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-012"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-007",
+    "source": {
+      "kind": "doc",
+      "path": "docs/plans/PLAN-L1-09-ut-tdd-concept-v4-candidates.md",
+      "section": "§3.4"
+    },
+    "date": "2026-09-04",
+    "summary_ja": "詳細設計 (L5) と仕様 (L6) の作成・改訂・Reverse をチケットにする。L4 以上の本文と設計判断はチケットに入れない。",
+    "status": "active",
+    "superseded_by": null,
+    "partially_superseded_by": [
+      "V4D-056"
+    ],
+    "notes_ja": "当時のチケットが持つ lease / base・HEAD は V4D-056 (最小構造) で撤回。",
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-003"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-008",
+    "source": {
+      "kind": "doc",
+      "path": "docs/plans/PLAN-L1-09-ut-tdd-concept-v4-candidates.md",
+      "section": "§3.5"
+    },
+    "date": "2026-09-04",
+    "summary_ja": "要件と基本設計は 1 人がまとめる。上流の画面プロトはチケットにし、初期画面ルールを固めたら複数人で分担する。",
+    "status": "active",
+    "superseded_by": null,
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-015",
+      "UTV4-BR-031"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-009",
+    "source": {
+      "kind": "doc",
+      "path": "docs/plans/PLAN-L1-09-ut-tdd-concept-v4-candidates.md",
+      "section": "§3.6"
+    },
+    "date": "2026-09-04",
+    "summary_ja": "チーム開発の標準工程 (企画 → 画面モック → 集団プロト → 要件 → 基本設計 → チケット → 統合チェック → リリース切り分け → 随時 merge → 合流 → 検査 → リリース)。",
+    "status": "active",
+    "superseded_by": null,
+    "partially_superseded_by": [
+      "V4D-054",
+      "V4D-067"
+    ],
+    "notes_ja": "PoC 段は V4D-054 (Scrum / PoC 撤廃)、依存単位の切り方は V4D-067 (独立単位) で改訂。",
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-016"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-010",
+    "source": {
+      "kind": "doc",
+      "path": "docs/plans/PLAN-L1-09-ut-tdd-concept-v4-candidates.md",
+      "section": "§3.7"
+    },
+    "date": "2026-09-04",
+    "summary_ja": "人数が途中で変わっても回ること。全体の進捗を統括する層が要る。チケットは自動発行でないと並行 AI 開発は回らない。",
+    "status": "active",
+    "superseded_by": null,
+    "partially_superseded_by": [
+      "V4D-067",
+      "V4D-068"
+    ],
+    "notes_ja": "発行の主体は PO (V4D-067)、統括の見え方はリーダーの全体ビュー (V4D-068) に改訂。",
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-008",
+      "UTV4-BR-017"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-011",
+    "source": {
+      "kind": "doc",
+      "path": "docs/plans/PLAN-L1-09-ut-tdd-concept-v4-candidates.md",
+      "section": "§3.8"
+    },
+    "date": "2026-09-04",
+    "summary_ja": "チケットを大・中・小の 3 階層にし、発行の勾配 (上流は人、下流は自動) を持つ。",
+    "status": "superseded",
+    "superseded_by": "V4D-055",
+    "high_impact": false,
+    "maps_to": [],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-012",
+    "source": {
+      "kind": "doc",
+      "path": "docs/plans/PLAN-L1-09-ut-tdd-concept-v4-candidates.md",
+      "section": "§3.9 (3)"
+    },
+    "date": "2026-09-04",
+    "summary_ja": "チケットを大・中・小・原子の 4 階層で入れ子にし、下から上へ収束させる。",
+    "status": "superseded",
+    "superseded_by": "V4D-055",
+    "high_impact": false,
+    "maps_to": [],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-013",
+    "source": {
+      "kind": "doc",
+      "path": "docs/plans/PLAN-L1-09-ut-tdd-concept-v4-candidates.md",
+      "section": "§3.9 (1)(2)"
+    },
+    "date": "2026-09-04",
+    "summary_ja": "要求・要件・設計のスプレッドシート同期は必須。書類は 1 枚にまとめず分散させる。",
+    "status": "active",
+    "superseded_by": null,
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-006"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-014",
+    "source": {
+      "kind": "doc",
+      "path": "docs/plans/PLAN-L1-09-ut-tdd-concept-v4-candidates.md",
+      "section": "§3.9 (4)"
+    },
+    "date": "2026-09-04",
+    "summary_ja": "複数の責務に跨る全体影響バグを止めて直す仕組みを持つ。",
+    "status": "active",
+    "superseded_by": null,
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-018"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-015",
+    "source": {
+      "kind": "doc",
+      "path": "docs/plans/PLAN-L1-09-ut-tdd-concept-v4-candidates.md",
+      "section": "§3.9 (5)"
+    },
+    "date": "2026-09-04",
+    "summary_ja": "各 project の log・issue・コメントからハーネス改善のデータを集める場所を持つ。",
+    "status": "active",
+    "superseded_by": null,
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-019"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-016",
+    "source": {
+      "kind": "doc",
+      "path": "docs/plans/PLAN-L1-09-ut-tdd-concept-v4-candidates.md",
+      "section": "§3.9 (6)"
+    },
+    "date": "2026-09-04",
+    "summary_ja": "画面モックとプロトを正式文書へ製本する点を持つ。",
+    "status": "active",
+    "superseded_by": null,
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-020"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-017",
+    "source": {
+      "kind": "doc",
+      "path": "docs/plans/PLAN-L1-09-ut-tdd-concept-v4-candidates.md",
+      "section": "§3.9 (7)(8)"
+    },
+    "date": "2026-09-04",
+    "summary_ja": "汎用 skill から実録学習へ転換する。思想は人間ゲート付きの分散開発。",
+    "status": "active",
+    "superseded_by": null,
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-021"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-018",
+    "source": {
+      "kind": "doc",
+      "path": "docs/plans/PLAN-L1-09-ut-tdd-concept-v4-candidates.md",
+      "section": "§3.11 (1)〜(3)"
+    },
+    "date": "2026-09-04",
+    "summary_ja": "LLM の判断を仕組みとして蓄積し、ログを機械判断化する自己学習型ハーネス。高価な AI でなくても人間と AI で品質を守れること。",
+    "status": "active",
+    "superseded_by": null,
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-022",
+      "UTV4-BR-023"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-019",
+    "source": {
+      "kind": "doc",
+      "path": "docs/plans/PLAN-L1-09-ut-tdd-concept-v4-candidates.md",
+      "section": "§3.11 (4)(5)"
+    },
+    "date": "2026-09-04",
+    "summary_ja": "良否に加えて選好 (使いやすさ、AI が壊しにくい) の判断軸を skill として蓄積する。人間も同じ場所 (スプシ同期と画面の製本物) で読めること。",
+    "status": "active",
+    "superseded_by": null,
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-024",
+      "UTV4-BR-025"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-020",
+    "source": {
+      "kind": "doc",
+      "path": "docs/plans/PLAN-L1-09-ut-tdd-concept-v4-candidates.md",
+      "section": "§3.12"
+    },
+    "date": "2026-09-04",
+    "summary_ja": "依存グラフ・画面遷移・DB テーブルを機械的に図にし、機械と人間の認識の齟齬を減らす。",
+    "status": "active",
+    "superseded_by": null,
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-026"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-021",
+    "source": {
+      "kind": "doc",
+      "path": "docs/plans/PLAN-L1-09-ut-tdd-concept-v4-candidates.md",
+      "section": "§3.13"
+    },
+    "date": "2026-09-04",
+    "summary_ja": "下流から上流への還流 (Reverse) をチームでも成り立つ形にする。",
+    "status": "active",
+    "superseded_by": null,
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-027"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-022",
+    "source": {
+      "kind": "doc",
+      "path": "docs/plans/PLAN-L1-09-ut-tdd-concept-v4-candidates.md",
+      "section": "§3.14"
+    },
+    "date": "2026-09-04",
+    "summary_ja": "ハーネス固有の sub-agent を減らし、provider の sub-agent 機構へ寄せる。オーケストレーション形式も変える。",
+    "status": "active",
+    "superseded_by": null,
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-028"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-023",
+    "source": {
+      "kind": "doc",
+      "path": "docs/plans/PLAN-L1-09-ut-tdd-concept-v4-candidates.md",
+      "section": "§3.15"
+    },
+    "date": "2026-09-04",
+    "summary_ja": "単一 provider の場合は blind review で偏見を潰すことが重要。",
+    "status": "active",
+    "superseded_by": null,
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-013"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-024",
+    "source": {
+      "kind": "doc",
+      "path": "docs/plans/PLAN-L1-09-ut-tdd-concept-v4-candidates.md",
+      "section": "§3.16"
+    },
+    "date": "2026-09-04",
+    "summary_ja": "リファクタリングと退役 (削る作業) を階層ごとの責務として持ち、発火条件を機械で出す。",
+    "status": "active",
+    "superseded_by": null,
+    "partially_superseded_by": [
+      "V4D-055"
+    ],
+    "notes_ja": "原子・小・中・大の区分は V4D-055 (3 段) で消えた。削る責務と発火条件は有効。",
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-029"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-025",
+    "source": {
+      "kind": "doc",
+      "path": "docs/plans/PLAN-L1-09-ut-tdd-concept-v4-candidates.md",
+      "section": "§3.17"
+    },
+    "date": "2026-09-04",
+    "summary_ja": "PR の merge lane を別の人へ渡す三者分離 (author / reviewer / admitter)。結合テスト以上の実装は人間が review する。",
+    "status": "active",
+    "superseded_by": null,
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-030"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-026",
+    "source": {
+      "kind": "doc",
+      "path": "docs/plans/PLAN-L1-09-ut-tdd-concept-v4-candidates.md",
+      "section": "§3.18"
+    },
+    "date": "2026-09-04",
+    "summary_ja": "画面プロト工程の構成を厚くする。深さは画面ごとに選ぶ。",
+    "status": "active",
+    "superseded_by": null,
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-031"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-027",
+    "source": {
+      "kind": "doc",
+      "path": "docs/plans/PLAN-L1-09-ut-tdd-concept-v4-candidates.md",
+      "section": "§3.19"
+    },
+    "date": "2026-09-04",
+    "summary_ja": "要求は既定で暫定。PoC を通して違和感が無いとき、または人間が明示したときだけ固定する。AI が勝手に固定しない。",
+    "status": "active",
+    "superseded_by": null,
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-032"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-028",
+    "source": {
+      "kind": "doc",
+      "path": "docs/plans/PLAN-L1-09-ut-tdd-concept-v4-candidates.md",
+      "section": "§3.20"
+    },
+    "date": "2026-09-04",
+    "summary_ja": "PoC に scope / budget record を必須にし、超過したら S4 判断まで新しい PoC チケットを止める。",
+    "status": "superseded",
+    "superseded_by": "V4D-054",
+    "notes_ja": "S4 前提の仕組みのため撤廃。discovery チケットに budget を引き継ぐかは要確認。",
+    "high_impact": false,
+    "maps_to": [],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-029",
+    "source": {
+      "kind": "issue_body",
+      "issue": 530,
+      "related": [
+        {
+          "kind": "issue_body",
+          "issue": 533
+        }
+      ]
+    },
+    "date": "2026-09-08",
+    "summary_ja": "ロードマップ v2.0 の取り込み。版別の有効化 (planned / shadow / opt-in / default / deprecated / retired) と、新旧入替の共通原則 (棚卸し → shadow → 同等性 → 読み取り専用 → 退役)。版番号の割当は PO 未採択の提案。",
+    "status": "active",
+    "superseded_by": null,
+    "notes_ja": "PLAN-L1-09 §3.21 は版割当を『採択を宣言しない』としている。採るのは入替の原則だけ。",
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-014"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-030",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 575,
+      "comment_ids": [
+        "5658899065"
+      ]
+    },
+    "date": "2026-09-14",
+    "summary_ja": "管理知能の導入と合わせて物理的なフォルダ整理をする (チケット・receipt・設計 revision の配置、管理知能の置き場と TS との境界)。",
+    "status": "active",
+    "superseded_by": null,
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-043"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-031",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 575,
+      "comment_ids": [
+        "5658902130"
+      ]
+    },
+    "date": "2026-09-14",
+    "summary_ja": "管理層とプロダクト開発層を分ける。管理層の中で「プロダクトの管理」と「ハーネス自身の管理」を名前空間とフォルダで分ける。",
+    "status": "active",
+    "superseded_by": null,
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-033",
+      "UTV4-BR-043"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-032",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 575,
+      "comment_ids": [
+        "5659087032"
+      ]
+    },
+    "date": "2026-09-14",
+    "summary_ja": "管理知能を発行知能と収束知能の対称で定義する。",
+    "status": "superseded",
+    "superseded_by": "V4D-033",
+    "high_impact": false,
+    "maps_to": [],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-033",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 575,
+      "comment_ids": [
+        "5659094118"
+      ]
+    },
+    "date": "2026-09-14",
+    "summary_ja": "管理知能は進行 / 収束 / 管理の 3 知能。3 知能とも Kernel の検証下で候補を出す層で、信頼の根ではない。別プロセス + 型付き JSON 境界。",
+    "status": "active",
+    "superseded_by": null,
+    "notes_ja": "進行の欄にある『4 階層、lease 付き』は V4D-055 / V4D-056 で撤回。",
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-033"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-034",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 575,
+      "comment_ids": [
+        "5659105434"
+      ]
+    },
+    "date": "2026-09-14",
+    "summary_ja": "収束知能に merge 順序の導出と、必要な CI (verification plan) の導出を加える。省略は全回帰との比較で証明された場合だけ。",
+    "status": "active",
+    "superseded_by": null,
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-035",
+      "UTV4-BR-036"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-035",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 575,
+      "comment_ids": [
+        "5659278303"
+      ],
+      "related": [
+        {
+          "kind": "issue_body",
+          "issue": 591
+        }
+      ]
+    },
+    "date": "2026-09-14",
+    "summary_ja": "設計・実装の筋の悪い箇所 18 件を v4 で直す。review 往復の根 (memory 兼用、自由文 verdict、orphan request、identity 3 重比較)、DB が純 projection でないこと、PLAN と規律文の二重管理を含む。",
+    "status": "active",
+    "superseded_by": null,
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-005",
+      "UTV4-BR-013",
+      "UTV4-BR-014"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-036",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 575,
+      "comment_ids": [
+        "5659377191"
+      ]
+    },
+    "date": "2026-09-14",
+    "summary_ja": "「作る分だけ削る」収支原則。チケットに「消す対象」の列を持たせる規約。",
+    "status": "active",
+    "superseded_by": null,
+    "notes_ja": "『消す対象』列は V4D-056 (チケットは最小構造) と緊張する。要確認。",
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-014"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-037",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 588,
+      "comment_ids": [
+        "5659405186"
+      ]
+    },
+    "date": "2026-09-14",
+    "summary_ja": "利用者・権限 registry は現時点で起票しない。",
+    "status": "superseded",
+    "superseded_by": "V4D-038",
+    "high_impact": true,
+    "maps_to": [],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-038",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 588,
+      "comment_ids": [
+        "5659413597"
+      ]
+    },
+    "date": "2026-09-14",
+    "summary_ja": "最終的には複数人で作業する。利用者・権限 registry を #593 に起票する。authorization に触れるため実装前に PO 承認が要る。",
+    "status": "active",
+    "superseded_by": null,
+    "high_impact": true,
+    "maps_to": [
+      "UTV4-BR-048"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-039",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 575,
+      "comment_ids": [
+        "5862444534"
+      ]
+    },
+    "date": "2026-09-28",
+    "summary_ja": "Design Harness 内蔵化 (PLAN-L1-08、UX-FE の連続性) は v4 で扱う。それまで設計資料 (ZIP) は削除しない。",
+    "status": "active",
+    "superseded_by": null,
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-031"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-040",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 530,
+      "comment_ids": [
+        "5863591502"
+      ],
+      "related": [
+        {
+          "kind": "issue_comment",
+          "issue": 530,
+          "comment_ids": [
+            "6035195206"
+          ]
+        }
+      ]
+    },
+    "date": "2026-09-28",
+    "summary_ja": "版名の対応。現行本線は v0.2.0-canary.2 のまま。ロードマップの R01 (ライセンス切替) は 1 段ずらす。ライセンスの MPL → Apache-2.0 は #682 で完了済みで、承認待ちではない (6035195206)。",
+    "status": "active",
+    "superseded_by": null,
+    "out_of_scope_reason": "版名とライセンス切替の時期はリリース運用の割当であり、L1 要求の対象ではない。ライセンス切替は完了済み。",
+    "high_impact": true,
+    "maps_to": [],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-041",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 530,
+      "comment_ids": [
+        "5864453259"
+      ]
+    },
+    "date": "2026-09-28",
+    "summary_ja": "残チケット数 ÷ 巡航速度 (merge 実績から常に再計算) で完了を予測する。P50 / P85 の幅。未発行の範囲は ETA にせず、発行に必要な判断と期限で示す。最初の適用先は v4 自身。",
+    "status": "active",
+    "superseded_by": null,
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-008"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-042",
+    "source": {
+      "kind": "issue_body",
+      "issue": 769,
+      "related": [
+        {
+          "kind": "issue_comment",
+          "issue": 769,
+          "comment_ids": [
+            "6030239759"
+          ]
+        }
+      ]
+    },
+    "date": "2026-09-29",
+    "summary_ja": "concept v4 に WBS エンジンを入れる。決定台帳・非機能レベルから分解し、G6「WBS 完備」を機械判定し、仮値の見直しトリガーで再検討を起こす。管理知能の中核機能 (分解・計画) とする。",
+    "status": "active",
+    "superseded_by": null,
+    "partially_superseded_by": [
+      "V4D-067",
+      "V4D-078"
+    ],
+    "notes_ja": "WBS の役割は V4D-067 で『どこで切れば独立になるか』に改訂。入力の PLAN graph と出力の PLAN schedule step は V4D-078 (PLAN 廃止) で消えた。",
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-046"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-043",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 770,
+      "comment_ids": [
+        "5889251015",
+        "5889256103"
+      ]
+    },
+    "date": "2026-09-29",
+    "summary_ja": "発注者 / 受託者と契約形態は採らない (自社プロダクト開発)。工程 × 役割の RACI (AI 役割を含む、A は工程ごとに 1) を残す。G1 / G3 / G4 に ops を足すかを判断する。WBS は工程 × 役割を入力にする。",
+    "status": "active",
+    "superseded_by": null,
+    "partially_superseded_by": [
+      "V4D-054"
+    ],
+    "notes_ja": "『Scrum 経路で不可逆な決定をスプリント前に確定』は V4D-054 (Scrum 撤廃) で消えた。",
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-002",
+      "UTV4-BR-046"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-044",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 575,
+      "comment_ids": [
+        "5904110918",
+        "5904075963",
+        "5904223253"
+      ],
+      "related": [
+        {
+          "kind": "issue_comment",
+          "issue": 588,
+          "comment_ids": [
+            "5904111191"
+          ]
+        }
+      ]
+    },
+    "date": "2026-09-30",
+    "summary_ja": "工程間は PLAN (簡易契約、本文 4 項目)、工程内はチケット。",
+    "status": "superseded",
+    "superseded_by": "V4D-078",
+    "high_impact": false,
+    "maps_to": [],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-045",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 588,
+      "comment_ids": [
+        "5904242647"
+      ]
+    },
+    "date": "2026-09-30",
+    "summary_ja": "移行は Reverse → ずれの判定 (正解は設計へ / 不正解は実装を直す / 不要は依存ごと削除) → リファクタリングと再編 → 再実装。判定は作者と別の family。PO へ上げるのは product scope のずれだけ。移行の前後で成熟度の段が下がらないことを機械で確かめる。",
+    "status": "active",
+    "superseded_by": null,
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-038",
+      "UTV4-BR-040"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-046",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 588,
+      "comment_ids": [
+        "5904251605"
+      ]
+    },
+    "date": "2026-09-30",
+    "summary_ja": "移行の Reverse を V 字の右腕にする。右腕の各段 (v3.1 の層番号) で左腕と照合する。",
+    "status": "superseded",
+    "superseded_by": "V4D-073",
+    "notes_ja": "段の対応は v3.1 の層番号のため、V4D-073 (v4 の右腕の層構成) で置き換わった。",
+    "high_impact": false,
+    "maps_to": [],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-047",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 588,
+      "comment_ids": [
+        "5904267055"
+      ]
+    },
+    "date": "2026-09-30",
+    "summary_ja": "右腕の 4 つの働き (証拠集め / 設計還流 / リファクタリングによる最適化 / 検証による仕様書作成)。順序は証拠 → 判定 → 還流とリファクタ → 検証 → 仕様書。右腕で変えるのは振る舞い不変のものだけ。リファクタする family と検証する family を分ける。",
+    "status": "active",
+    "superseded_by": null,
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-041"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-048",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 588,
+      "comment_ids": [
+        "5905829915"
+      ]
+    },
+    "date": "2026-09-30",
+    "summary_ja": "token / cost は作業ログに寄せる。チケット 1 件 = 1 行。チケットを閉じるときに harness が 1 回集計する。L ステージで束ねる。専用テーブルは作らない。生データはセッションログ。常時の取り込みは削る。",
+    "status": "active",
+    "superseded_by": null,
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-045"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-049",
+    "source": {
+      "kind": "issue_body",
+      "issue": 822
+    },
+    "date": "2026-10-05",
+    "summary_ja": "左腕 = 推進 (Forward、速く)、右腕 = 証拠固め (Reverse で設計を復元、リファクタリングで挙動不変の構造整理) を定常の工程にする。最初の試行は Pack だけを見せ、1 サブシステムで行う。",
+    "status": "active",
+    "superseded_by": null,
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-041"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-050",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 822,
+      "comment_ids": [
+        "5987122275"
+      ]
+    },
+    "date": "2026-10-05",
+    "summary_ja": "右腕の Reverse とリファクタリングを回すのは管理知能とチケット。管理知能が右腕の作業を見つけてチケットを発行する。Reverse の採点結果は型付きの証拠として Kernel が検証する。",
+    "status": "active",
+    "superseded_by": null,
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-041"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-051",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 648,
+      "comment_ids": [
+        "6008047482"
+      ]
+    },
+    "date": "2026-10-06",
+    "summary_ja": "既存 PLAN の移行 4 手順 (意味分類 → 三者照合 → 1 PLAN 1 record の移行証跡 → JSON 化は最後)。",
+    "status": "superseded",
+    "superseded_by": "V4D-078",
+    "notes_ja": "V4D-078 で『PLAN 単位でなくコードを正、component ごと』に置き換わった。",
+    "high_impact": false,
+    "maps_to": [],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-052",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 648,
+      "comment_ids": [
+        "6010725399"
+      ]
+    },
+    "date": "2026-10-06",
+    "summary_ja": "成果物の所有 (generates) を PLAN から設計書 → 実装 trace へ移す。",
+    "status": "active",
+    "superseded_by": null,
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-038"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-053",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 648,
+      "comment_ids": [
+        "6014474819"
+      ]
+    },
+    "date": "2026-10-06",
+    "summary_ja": "PLAN は Forward と Reverse の 2 種だけ。それ以外はチケット。advisor 条件 D1〜D11 (タスク置き場 docs/tasks/*.yaml、タスクの review 証跡は PR exact-head receipt など)。",
+    "status": "superseded",
+    "superseded_by": "V4D-078",
+    "notes_ja": "PLAN 2 種は V4D-078 (全面廃止) で置換。D10 の『Scrum をチケット連鎖にする』は V4D-054 で置換。review 証跡 = PR receipt は V4D-056 に引き継がれた。",
+    "high_impact": false,
+    "maps_to": [],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-054",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 648,
+      "comment_ids": [
+        "6014483418"
+      ]
+    },
+    "date": "2026-10-06",
+    "summary_ja": "Scrum / PoC (S0〜S4) は v4 で撤廃する。チケット連鎖として残す案も採らない。v4 の工程は Forward と Reverse の 2 種とチケットだけ。既存の Scrum PLAN は読み取り専用で残す。",
+    "status": "active",
+    "superseded_by": null,
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-010",
+      "UTV4-BR-016"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-055",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 648,
+      "comment_ids": [
+        "6014537442"
+      ]
+    },
+    "date": "2026-10-06",
+    "summary_ja": "チケットは Issue / Sub-issue / PR の 3 段。正本はローカルの tracked ファイル。GitHub は一方向の投影で読み戻さない。ずれは doctor の advisory 警告だけ。",
+    "status": "active",
+    "superseded_by": null,
+    "notes_ja": "Issue ticket を『PLAN に束縛』とする部分は V4D-078 で PLAN が無くなった。",
+    "high_impact": true,
+    "maps_to": [
+      "UTV4-BR-003"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-056",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 648,
+      "comment_ids": [
+        "6014549462"
+      ]
+    },
+    "date": "2026-10-06",
+    "summary_ja": "チケットは最小構造 (やること / ゴールの検証と根拠コマンド / 親の参照)。generates は設計書が持つ。digest 束縛はチケットに持たせない。review 証跡は PR の receipt。",
+    "status": "active",
+    "superseded_by": null,
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-003",
+      "UTV4-BR-004",
+      "UTV4-BR-038"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-057",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 648,
+      "comment_ids": [
+        "6014560722"
+      ]
+    },
+    "date": "2026-10-06",
+    "summary_ja": "PLAN の定義 = つながりの保証義務 (設計 = 中身 / PLAN = つながり / チケット = やること)。",
+    "status": "superseded",
+    "superseded_by": "V4D-078",
+    "high_impact": false,
+    "maps_to": [],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-058",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 648,
+      "comment_ids": [
+        "6014843556"
+      ]
+    },
+    "date": "2026-10-06",
+    "summary_ja": "v4 基本原則 8 項目 (変更に強い / 予想外を予想内に / 一定の保証能力 / 強い推進力 × 強い保証 / クリーンシステム / 下流の課題は上流の整理不足 / すぐに直せる / 二重管理しない)。全設計判断の判定基準。",
+    "status": "active",
+    "superseded_by": null,
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-049"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-059",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 648,
+      "comment_ids": [
+        "6028981070"
+      ],
+      "related": [
+        {
+          "kind": "issue_comment",
+          "issue": 530,
+          "comment_ids": [
+            "6030240231"
+          ]
+        }
+      ]
+    },
+    "date": "2026-10-07",
+    "summary_ja": "v4 は複数の人間がそれぞれ AI を使うチーム開発を前提にする (R4)。一人運用前提のルールを洗い出す。",
+    "status": "active",
+    "superseded_by": null,
+    "notes_ja": "R4 本文は『要検討』だが、V4D-064 の F10 で PO 合意になった。",
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-001",
+      "UTV4-BR-048"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-060",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 648,
+      "comment_ids": [
+        "6029729044",
+        "6029810101"
+      ]
+    },
+    "date": "2026-10-07",
+    "summary_ja": "正本はファイル (JSON / JSONL)。harness.db は使い捨ての索引。DB にしか無い状態 (4 テーブル) はファイルへ移す (R5)。",
+    "status": "active",
+    "superseded_by": null,
+    "notes_ja": "R5 本文は『要検討』だが、V4D-064 の境界節で合意として扱われた。",
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-005"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-061",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 648,
+      "comment_ids": [
+        "6029810101",
+        "6029865225",
+        "6029878771"
+      ]
+    },
+    "date": "2026-10-07",
+    "summary_ja": "フィードバックシステム (R6、管理知能 F8)。ログ → 索引 → パターン抽出 → 振り分け 4 段 (テンプレート → gate → bot → ルール) → 効果確認の後に掃除。暴走の停止。保持期間と上限を最初から持つ。成功パターンも入力にする。",
+    "status": "active",
+    "superseded_by": null,
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-007"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-062",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 648,
+      "comment_ids": [
+        "6029912807"
+      ]
+    },
+    "date": "2026-10-07",
+    "summary_ja": "外部ライブラリの登録簿 (審査、lint で強制、ライセンスは PO 承認) と、コードから作る内部部品カタログ (再利用検索、社内ライブラリへ昇格) (R7、管理知能 F9)。",
+    "status": "active",
+    "superseded_by": null,
+    "high_impact": true,
+    "maps_to": [
+      "UTV4-BR-047"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-063",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 530,
+      "comment_ids": [
+        "6031356416"
+      ]
+    },
+    "date": "2026-10-07",
+    "summary_ja": "v4-shrink の棚卸し。D-a PLAN は接続の保証だけ / D-b 正本はファイル、DB は索引 / D-c 証跡の本体を PLAN の外へ出し ID と digest だけ持つ / D-e 管理知能 / Scrum 撤廃 / 候補文書は個別差し込みでなく作り直す。",
+    "status": "active",
+    "superseded_by": null,
+    "partially_superseded_by": [
+      "V4D-078"
+    ],
+    "notes_ja": "D-a は V4D-078 (PLAN 全面廃止) で置換。文書を作り直す方針は本 ledger と要求書の再構成そのもので履行する。",
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-005",
+      "UTV4-BR-038"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-064",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 575,
+      "comment_ids": [
+        "6031625172"
+      ],
+      "related": [
+        {
+          "kind": "issue_comment",
+          "issue": 575,
+          "comment_ids": [
+            "6030239342"
+          ]
+        }
+      ]
+    },
+    "date": "2026-10-07",
+    "summary_ja": "管理知能の機能リスト。前提 P1 別プロセス / P2 型付き JSON 境界 / P3 信頼の根にしない / P5 工程管理の頭脳で WBS が中核。機能 F1 取り込み・分類 / F2 チケット発行 / F3 分解・計画 / F4 割り当て / F5 進行管理 / F6 検収の判定 / F7 リリース管理 / F8 フィードバック / F9 参照 / F10 チームマネジメント (メンバーと権限、役割と責任、領域の持ち主、割り当てと空き、人をまたぐ実行と検収の分離、同時作業の調整、承認と上げ方、共有と通知、記録と説明責任)。",
+    "status": "active",
+    "superseded_by": null,
+    "partially_superseded_by": [
+      "V4D-078",
+      "V4D-079"
+    ],
+    "notes_ja": "P4 (工程間は PLAN) は V4D-078 で、P6 (言語は未決) は V4D-079 で置換。多くの項目は『合意』で、『確定』化の手続きは未記録。",
+    "high_impact": true,
+    "maps_to": [
+      "UTV4-BR-033",
+      "UTV4-BR-046",
+      "UTV4-BR-047",
+      "UTV4-BR-048",
+      "UTV4-BR-007"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-065",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 575,
+      "comment_ids": [
+        "6031625172"
+      ]
+    },
+    "date": "2026-10-07",
+    "summary_ja": "チケットの T4 / T5 / T6。T4 実行と検収をペアで発行し、検収の条件は先に固め、検収は別の family。T5 差し戻しは 2 種 (軽い是正は同じチケット内で 3 回まで / 契約の齟齬は設計のチケットを起こす)。T6 チケットのタイプ (route の 14 モードから Forward / Reverse / Scrum を除いたもの、タイプごとに検収の雛形)。",
+    "status": "active",
+    "superseded_by": null,
+    "notes_ja": "T6 のタイプ一覧は『候補 (案)』。",
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-030",
+      "UTV4-BR-010"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-066",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 575,
+      "comment_ids": [
+        "6031625172"
+      ]
+    },
+    "date": "2026-10-07",
+    "summary_ja": "T7 のうち、先行発行の在庫、claim、取る時点での親 PLAN 照合を必要とする部分。",
+    "status": "superseded",
+    "superseded_by": "V4D-067",
+    "notes_ja": "T7 の『PO 主体の pull 型』と『提案窓口』は V4D-067 に残っている。",
+    "high_impact": false,
+    "maps_to": [],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-067",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 575,
+      "comment_ids": [
+        "6031641657"
+      ]
+    },
+    "date": "2026-10-07",
+    "summary_ja": "T8: チケットと issue は依存しない機能・責務の単位で切る。依存が残るなら先にインターフェースのチケットを切る。WBS の役割は『どこで切れば独立になるか』。claim は二重着手の防止だけ。T7 のうち、発行は PO が主体でメンバーは取る (pull 型)、メンバーの発見は提案として出し PO が仕分ける、管理知能が下書きを作り PO がまとめて承認する、は維持。",
+    "status": "active",
+    "superseded_by": null,
+    "notes_ja": "『つなぐのは PLAN の仕事』の部分は V4D-078 後の受け皿が要確認。",
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-004",
+      "UTV4-BR-017",
+      "UTV4-BR-046"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-068",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 575,
+      "comment_ids": [
+        "6031695802"
+      ]
+    },
+    "date": "2026-10-07",
+    "summary_ja": "T9: PO は区分 (担当領域) ごとのチーム宛てにチケットを出し、分解はチームが行う。T10: 各チームの管理知能は自区分と区分境界の契約だけを見る。触る path が区分外なら Kernel が有効化しない。区分外は提案として出す。同期点は git main と区分境界の契約の 2 つ。リーダーの全体ビューは読むだけの一方向集約で、鮮度を必ず表示する。",
+    "status": "active",
+    "superseded_by": null,
+    "notes_ja": "原文の『境界 PLAN』は V4D-078 後の受け皿が要確認。",
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-004",
+      "UTV4-BR-008",
+      "UTV4-BR-017"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-069",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 589,
+      "comment_ids": [
+        "6032614769"
+      ]
+    },
+    "date": "2026-10-07",
+    "summary_ja": "原子 CI (R9)。差分と依存グラフ (import + ファイル読み込み依存) から、影響する AT と省略の根拠を機械で出す。自動回帰は当面全件。重い受入は依存経路に触れたときだけ。stable 昇格は全受入。宣言なき依存は影響ありに倒す。グラフは HEAD から再計算する。",
+    "status": "active",
+    "superseded_by": null,
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-036"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-070",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 589,
+      "comment_ids": [
+        "6033064601"
+      ]
+    },
+    "date": "2026-10-07",
+    "summary_ja": "リリース必須の検査を設計段階で宣言する。各 AT が検証する要件 / 依存範囲 / 実行種類 / 環境前提 / 入力形式 / 必須条件を宣言する。受入 catalog (JSON、test-design から生成)。環境の preflight。",
+    "status": "active",
+    "superseded_by": null,
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-037"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-071",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 648,
+      "comment_ids": [
+        "6033322996"
+      ]
+    },
+    "date": "2026-10-07",
+    "summary_ja": "既存 PLAN の中身の大半を設計書へ戻す (性質別の戻し先、コードを正、戻し終えた PLAN は 4 項目化して completed、component 単位、パイロットは Pack / 配布系)。",
+    "status": "superseded",
+    "superseded_by": "V4D-078",
+    "high_impact": false,
+    "maps_to": [],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-072",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 648,
+      "comment_ids": [
+        "6033344569"
+      ]
+    },
+    "date": "2026-10-07",
+    "summary_ja": "右側の層名を v3.1 の名前に合わせる訂正 (control の訂正)。",
+    "status": "superseded",
+    "superseded_by": "V4D-074",
+    "high_impact": false,
+    "maps_to": [],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-073",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 822,
+      "comment_ids": [
+        "6033404617"
+      ]
+    },
+    "date": "2026-10-07",
+    "summary_ja": "v4 の右腕の層構成。L7 単体テスト / L8 仕様書作成 (as-built) / L9 結合 / L10 システム / L11 UX 検証 / L12 受入 (UAT 含む) / L13・L14 は変更なし。対は L5 ↔ L9、L4 ↔ L10。L11 の総合レビューは各層の gate へ分散。v3 の番号は今は振り直さず、v4 切替時に一括で移す。",
+    "status": "active",
+    "superseded_by": null,
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-039"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-074",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 648,
+      "comment_ids": [
+        "6033406587"
+      ]
+    },
+    "date": "2026-10-07",
+    "summary_ja": "右側の設計の置き先の層名は v4 の右腕の構成に合わせる。L8 の as-built 仕様書が戻し作業の受け皿になる。",
+    "status": "active",
+    "superseded_by": null,
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-039",
+      "UTV4-BR-042"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-075",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 822,
+      "comment_ids": [
+        "6033416758"
+      ]
+    },
+    "date": "2026-10-07",
+    "summary_ja": "L8 は記録ではなく検証の工程。as-built 仕様書を L4〜L6 の設計と突き合わせる。食い違いは 3 つに振り分ける (実装を直す → L7 / 設計へ backfill (Reverse) / 設計判断へ)。gate は差分 0 または全件振り分け済み。PLAN から設計書へ戻す作業も L8 の検証として行う。",
+    "status": "active",
+    "superseded_by": null,
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-039",
+      "UTV4-BR-040"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-076",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 822,
+      "comment_ids": [
+        "6033443112"
+      ]
+    },
+    "date": "2026-10-07",
+    "summary_ja": "層構成の切り替えの完了条件に、テンプレートと skill (44 件) と src (16 件) の修正を含める。廃止した層番号と工程名の残存 0 を grep / lint で確かめる。",
+    "status": "active",
+    "superseded_by": null,
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-042"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-077",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 822,
+      "comment_ids": [
+        "6033474132"
+      ]
+    },
+    "date": "2026-10-07",
+    "summary_ja": "docs/templates/vmodel/ を廃止する。設計テンプレートは docs/templates/design/、テスト設計テンプレートは docs/templates/test-design/。重複する L6 の 2 本は 1 本にする。層の切り替えと同時に行い、consumer への path 変更として canary で確かめる。",
+    "status": "active",
+    "superseded_by": null,
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-042"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-078",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 533,
+      "comment_ids": [
+        "6034194669"
+      ]
+    },
+    "date": "2026-10-07",
+    "summary_ja": "v4 で PLAN を全面廃止する。既存の PLAN は削除せず凍結する。移行はコードを正とし、component ごとに L8 as-built 仕様書を作って設計と照合する。PLAN の機能の行き先 (契約本文 → 設計書、対と digest → 設計書 frontmatter、完了条件 → gate と受入 catalog、作業単位 → チケット、route 種類 → チケット種類、証跡 → ログ、設計判断 → 設計書)。照合の母集合 3 種を HEAD から作り、対応表に無い要素があれば fail-close。切り替えまでは PLAN 上の gate / CI を外さない。",
+    "status": "active",
+    "superseded_by": null,
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-038",
+      "UTV4-BR-040"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-079",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 575,
+      "comment_ids": [
+        "6034541806"
+      ]
+    },
+    "date": "2026-10-07",
+    "summary_ja": "P6 管理知能の実装言語は Python。core (Kernel / gate / CLI / hook) は TypeScript / Node のまま。境界の JSON schema が言語をまたぐ唯一の契約。",
+    "status": "active",
+    "superseded_by": null,
+    "partially_superseded_by": [
+      "V4D-085",
+      "V4D-087"
+    ],
+    "notes_ja": "原文の『ADR-010 で例外を起票』は V4D-085 / V4D-087 で『ADR-001 を更新 (PR #885)』に置き換わった。",
+    "high_impact": true,
+    "maps_to": [
+      "UTV4-BR-034"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-080",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 588,
+      "comment_ids": [
+        "6034909679"
+      ]
+    },
+    "date": "2026-10-07",
+    "summary_ja": "置き場所の構成を確定。最上位は product/ (配る物) と dev/ (配らない物)。product/ の中は kernel/ engine/ intelligence/ (Python) contracts/ parts/。規律を守らせるのはインストール済みのリリース harness (.ut-tdd/ の下) で、開発中の product/ ではない。",
+    "status": "active",
+    "superseded_by": null,
+    "notes_ja": "census は出典を #575 としていたが、実際は #588 のコメント。",
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-043",
+      "UTV4-BR-044"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-081",
+    "source": {
+      "kind": "pr_body",
+      "pr": 883
+    },
+    "date": "2026-10-07",
+    "summary_ja": "置き場所の L4 設計 (PO 指示)。置き場所の registry、書き込み時の guard (deny して正しい path を示す)、doctor の巡回 (当面は報告だけ)、内部デプロイ (この repo をリリース済みの harness で開発する)、移行の順序。",
+    "status": "active",
+    "superseded_by": null,
+    "notes_ja": "PR #883 は OPEN (未 merge)。本文は既に product/ と dev/ の構成で、census の『PR 本文は stale』は誤り。",
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-043",
+      "UTV4-BR-044"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-082",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 530,
+      "comment_ids": [
+        "6035195206"
+      ],
+      "related": [
+        {
+          "kind": "issue_comment",
+          "issue": 530,
+          "comment_ids": [
+            "6035134086"
+          ]
+        }
+      ]
+    },
+    "date": "2026-10-07",
+    "summary_ja": "PO 承認 (1): 4 文書を決定台帳に照らして作り直す。『反映先のない決定 = 0』を完了条件にする。順序は台帳 + 要求 → 要件 → 受入 → review → 設計。",
+    "status": "active",
+    "superseded_by": null,
+    "out_of_scope_reason": "候補文書の作り方の決定であり、チームの要求ではない。本 ledger と scripts/v4-ledger-check.mjs で履行する。",
+    "high_impact": false,
+    "maps_to": [],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-083",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 530,
+      "comment_ids": [
+        "6035195206"
+      ]
+    },
+    "date": "2026-10-07",
+    "summary_ja": "PO 承認 (2): 管理知能は Python、core は TS / Node、境界は JSON schema。外部監査 P-02 の 10 条件 (#588 5906948833: Python は record を直接書かず提案だけ、管理知能が無くても実行系は手動計画で動く、Windows 第一級、lock 固定、LLM 呼び出しは TS 側経由、メモリと時間の上限など) を ADR の条件に取り込む。",
+    "status": "active",
+    "superseded_by": null,
+    "partially_superseded_by": [
+      "V4D-085",
+      "V4D-086",
+      "V4D-087"
+    ],
+    "notes_ja": "『ADR-010 の起票』は V4D-085 / V4D-087 で『ADR-001 の更新』に置換。P-02 の『zod を正本にする』条件は V4D-086 (言語中立の JSON Schema を正本) に置換。",
+    "high_impact": true,
+    "maps_to": [
+      "UTV4-BR-034"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-084",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 530,
+      "comment_ids": [
+        "6035195206"
+      ]
+    },
+    "date": "2026-10-07",
+    "summary_ja": "PO 承認 (3): 利用者・権限の registry (#593) を要件に入れる。authorization を変える実装は、着手前に改めて PO の承認を取る。",
+    "status": "active",
+    "superseded_by": null,
+    "high_impact": true,
+    "maps_to": [
+      "UTV4-BR-048"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-085",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 588,
+      "comment_ids": [
+        "6035244583"
+      ]
+    },
+    "date": "2026-10-07",
+    "summary_ja": "ADR-010 は起票しない。管理知能の言語は ADR-001 の言語の決定を更新して扱う。ADR 本文には最新の決定だけを書き、経緯は PR と git の履歴で追う。末尾に短い改訂履歴 (PR 番号と comment id) を置く。",
+    "status": "active",
+    "superseded_by": null,
+    "partially_superseded_by": [
+      "V4D-087"
+    ],
+    "notes_ja": "『ADR は新しく足さない』の範囲は V4D-087 で『既存の論点なら更新、新しい論点なら新規 ADR』に正された。",
+    "high_impact": true,
+    "maps_to": [
+      "UTV4-BR-034",
+      "UTV4-BR-049"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-086",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 588,
+      "comment_ids": [
+        "6035244583"
+      ]
+    },
+    "date": "2026-10-07",
+    "summary_ja": "境界 schema の正本は product/contracts/ の言語中立な JSON Schema。TS 側の zod / 型と Python 側の型はそこから生成する。採用の条件: draft・keyword・生成器の版を固定する、Windows + Node 24 で再生成の差分 0、生成した TS と Python の検証が同じ入力に同じ合否を出す試験 (欠落と null、未知の field、union、数値範囲、default、型の自動変換。Pydantic は strict)、生成器が扱えない構文は生成時に拒否。",
+    "status": "active",
+    "superseded_by": null,
+    "high_impact": true,
+    "maps_to": [
+      "UTV4-BR-034"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-087",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 588,
+      "comment_ids": [
+        "6035315950"
+      ]
+    },
+    "date": "2026-10-07",
+    "summary_ja": "新しく作る物と既存を更新する物を分ける。新しい論点は新しい ADR を作る。既存の ADR の論点を変える決定はその ADR を更新する。管理知能の言語は ADR-001 の論点なので ADR-001 を更新する (PR #885)。同じ基準を候補文書の作り直しにも適用し、既存の要求と同じ内容を新しい ID で書き足さない。",
+    "status": "active",
+    "superseded_by": null,
+    "high_impact": true,
+    "maps_to": [
+      "UTV4-BR-034",
+      "UTV4-BR-049"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-088",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 418,
+      "comment_ids": [
+        "5910810194"
+      ]
+    },
+    "date": "2026-09-30",
+    "summary_ja": "v0.2.0-canary.2 の Pack 公開を承認。",
+    "status": "active",
+    "superseded_by": null,
+    "out_of_scope_reason": "#418 のリリース運用の決定であり、v4 の候補文書の対象外。",
+    "high_impact": true,
+    "maps_to": [],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-089",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 418,
+      "comment_ids": [
+        "5928030240"
+      ]
+    },
+    "date": "2026-10-01",
+    "summary_ja": "G14 と E2E は canary.3 で閉じる。",
+    "status": "active",
+    "superseded_by": null,
+    "out_of_scope_reason": "#418 のリリース運用の決定であり、v4 の候補文書の対象外。",
+    "high_impact": false,
+    "maps_to": [],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-090",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 418,
+      "comment_ids": [
+        "6010925970"
+      ]
+    },
+    "date": "2026-10-06",
+    "summary_ja": "リリース (R00) の受入だけに集中し、開発基盤の改善はリリース後に回す。",
+    "status": "active",
+    "superseded_by": null,
+    "out_of_scope_reason": "#418 のリリース運用の決定であり、v4 の候補文書の対象外。",
+    "high_impact": false,
+    "maps_to": [],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-091",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 418,
+      "comment_ids": [
+        "6014010142"
+      ]
+    },
+    "date": "2026-10-06",
+    "summary_ja": "canary.4 は Linux と Windows の修理が両方入ってから 1 回だけ切る。",
+    "status": "active",
+    "superseded_by": null,
+    "out_of_scope_reason": "#418 のリリース運用の決定であり、v4 の候補文書の対象外。",
+    "high_impact": false,
+    "maps_to": [],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-092",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 418,
+      "comment_ids": [
+        "6029336405"
+      ]
+    },
+    "date": "2026-10-07",
+    "summary_ja": "配布する SessionStart hook の timeout を 30 秒にする。",
+    "status": "active",
+    "superseded_by": null,
+    "out_of_scope_reason": "#418 のリリース運用の決定であり、v4 の候補文書の対象外。",
+    "high_impact": false,
+    "maps_to": [],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-093",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 418,
+      "comment_ids": [
+        "6032594757"
+      ]
+    },
+    "date": "2026-10-07",
+    "summary_ja": "canary.5 は改善リリースとし、再検査は差分の影響範囲 (AT-DIST-003) だけにする。",
+    "status": "active",
+    "superseded_by": null,
+    "out_of_scope_reason": "#418 のリリース運用の決定であり、v4 の候補文書の対象外。一般化した規則は V4D-069 (原子 CI) が持つ。",
+    "high_impact": false,
+    "maps_to": [],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-094",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 418,
+      "comment_ids": [
+        "6032687564"
+      ]
+    },
+    "date": "2026-10-07",
+    "summary_ja": "Linux の受入は専用の WSL2 distro で行い、seccomp profile の自作は取りやめる。",
+    "status": "active",
+    "superseded_by": null,
+    "out_of_scope_reason": "#418 のリリース運用の決定であり、v4 の候補文書の対象外。",
+    "high_impact": false,
+    "maps_to": [],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-095",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 589,
+      "comment_ids": [
+        "6050280913"
+      ]
+    },
+    "date": "2026-10-08",
+    "summary_ja": "release 必須 (yes) の受入の判定基準は 5 つ: 人間の authority の僭称 / 高影響境界の無承認の変更 / 検証 (CI・独立 review・merge admission) の迂回 / 正本や未 merge の作業の喪失・移し漏れの見逃し / secret・PII の流出。使い勝手や効率の受入は no。",
+    "status": "active",
+    "superseded_by": null,
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-037"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-096",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 530,
+      "comment_ids": [
+        "6050333834"
+      ]
+    },
+    "date": "2026-10-08",
+    "summary_ja": "OSS は依存として採用せず、設計の考え方・データモデル・仕組みを参考にするだけにする。必要な仕組みは自前の TS / Node (管理知能は Python) で最小限に作り直し、OSS のコードはコピーしない。",
+    "status": "active",
+    "superseded_by": null,
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-047"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-097",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 733,
+      "comment_ids": [
+        "6050468759"
+      ]
+    },
+    "date": "2026-10-08",
+    "summary_ja": "モデルは毎回 ID を書き換えず、常に最新の型番を指す。Claude はエイリアス (fable / opus / sonnet / haiku)、Codex は family 名 (astra / sol / luna) を起動時に最新の gpt-<N>-<family> へ解決する (無ければ fail-close、解決した ID を証跡に記録)。GPT-5 系は廃止する。",
+    "status": "active",
+    "superseded_by": null,
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-028"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-098",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 733,
+      "comment_ids": [
+        "6050480457",
+        "6050501179"
+      ]
+    },
+    "date": "2026-10-08",
+    "summary_ja": "ハーネスが手書きで持つ subagent 定義は基本的に撤廃する (残すのは理由を記録した例外だけ)。専門性は作業ごとに知識 (skill・判断パック・設計文書の該当部分) を組み合わせて持たせ、モデルは作業に応じて最適なもの (常に最新の型番) へ振り分ける。",
+    "status": "active",
+    "superseded_by": null,
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-028"
+    ],
+    "verified": true
+  }
+]
