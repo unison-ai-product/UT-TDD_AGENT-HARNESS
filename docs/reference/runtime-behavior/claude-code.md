@@ -1,11 +1,11 @@
 # Claude Code の挙動
 
-### Linux で distro の PATH に node が無いと、consumer の hook が `Executable not found: node` で失敗する
+### (未確認) Linux で distro の PATH に node が無いと、consumer の hook が `Executable not found: node` で失敗する
 
 - 事実: hook は PATH 上の `node` を探す。無いと hook が失敗する。`/usr/local/bin` に node / npm / npx / claude / codex の symlink を置くと解消した。
 - 対象バージョン: Claude Code のバージョンは記録なし (未確認)。Node は 24.13.0 (distro 内の `/opt/node-v24.13.0-linux-x64`)。
 - 確認日: 2026-10-07
-- 確認方法: symlink 設置後に SessionStart の `hook_success` と `entrypoint=claude-vscode` を実測した。
+- 確認方法: symlink 設置後に SessionStart の `hook_success` と `entrypoint=claude-vscode` を実測した。対象版または実行コマンドの記録が無いため、項目全体を未確認として扱う。再現して記録するまで、実測の事実として扱わない。
 - 出典: issue #418 の 2026-10-07 コメント (「AT-DIST-003 019 (review join) は canary.5 では失敗します。製品の欠陥 #888」)。memory `project-canary5-wsl-toolchain-handoff-20261007.md` は Node の導入手順と明示 PATH を記録している (symlink の記述は無い)。
 - ハーネスへの影響: Linux 受入環境では、hook を走らせる前に node を標準 PATH へ置く前提確認が要る。
 

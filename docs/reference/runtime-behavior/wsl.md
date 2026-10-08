@@ -18,11 +18,11 @@
 - 出典: memory `project-canary5-wsl-control-auth-ready-20261007.md`、`project-canary5-wsl-toolchain-handoff-20261007.md`。
 - ハーネスへの影響: Docker container で出た bwrap 拒否 (`codex.md` 参照) は、専用 WSL2 distro の probe では再現しなかった。実 authoring の結果は issue #418 の canary.5 記録で確認する。
 
-### WSL service が一度 `Wsl/Service/0x8007274c` の timeout を返したが、再実行は成功した
+### (未確認) WSL service が一度 `Wsl/Service/0x8007274c` の timeout を返したが、再実行は成功した
 
 - 事実: toolchain の追加確認中に一度 timeout が出て、同じ確認の root 再実行は exit 0 だった。サービス再起動と distro 再作成はしていない。
 - 対象バージョン: 記録なし。
 - 確認日: 2026-10-07
-- 確認方法: toolchain 追加確認の実行記録。
+- 確認方法: toolchain 追加確認の実行記録。対象版または実行コマンドの記録が無いため、項目全体を未確認として扱う。再現して記録するまで、実測の事実として扱わない。
 - 出典: memory `project-canary5-wsl-toolchain-handoff-20261007.md`。
 - ハーネスへの影響: 単発の timeout で distro を作り直さず、再実行で切り分ける。画面オフなど原因との関係は **未確認** (出典に記録なし)。
