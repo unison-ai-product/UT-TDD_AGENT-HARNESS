@@ -64,6 +64,57 @@ function wakeRuntimeRoot(root: string): string {
 }
 
 describe("Claude HARNESS memory async wake", () => {
+  it("U-PMEMROOT-007補遺: 他セッション宛てを保持して後続の自セッション通知を配送する", async () => {
+    const root = fixture();
+    try {
+      const project = resolveProjectMemoryRoot(root);
+      if (!project.ok) throw new Error(project.reason);
+      const common = {
+        memory,
+        projectId: project.projectId,
+        workspaceId: claudeWorkspaceId(root),
+        producer: { provider: "codex" as const, sessionId: "producer" },
+      };
+      const foreign = buildClaudeProviderInboxEntry({
+        ...common,
+        operationId: "foreign-first",
+        target: { scope: "session", provider: "claude", sessionId: "other-session" },
+        now: "2026-10-08T00:00:00.000Z",
+      });
+      const own = buildClaudeProviderInboxEntry({
+        ...common,
+        operationId: "own-second",
+        target: { scope: "session", provider: "claude", sessionId: "own-session" },
+        now: "2026-10-08T00:00:01.000Z",
+      });
+      const foreignPath = publishClaudeInboxEntry(root, foreign);
+      const foreignBytes = readFileSync(foreignPath, "utf8");
+      const bindingPath = join(
+        wakeRuntimeRoot(root), "envelope-bindings", `${inboxFileStem(foreign.id)}.json`,
+      );
+      const bindingBytes = readFileSync(bindingPath, "utf8");
+      const ownPath = publishClaudeInboxEntry(root, own);
+      const result = await waitForClaudeMemory({
+        repoRoot: root, sessionId: "own-session", pollIntervalMs: 10, maxWaitMs: 100,
+      });
+      expect(result.kind).toBe("delivered");
+      expect(result.entry?.id).toBe(own.id);
+      expect(existsSync(ownPath)).toBe(false);
+      expect(readFileSync(foreignPath, "utf8")).toBe(foreignBytes);
+      expect(readFileSync(bindingPath, "utf8")).toBe(bindingBytes);
+      expect(existsSync(join(wakeRuntimeRoot(root), `${inboxFileStem(foreign.id)}.claim`))).toBe(false);
+      expect(summarizeUnclaimedInbox(root, common.workspaceId)).toMatchObject({
+        pending: 1, oldestEntryId: foreign.id,
+      });
+      const audit = readFileSync(join(root, ".ut-tdd", "logs", "claude-memory-wake.jsonl"), "utf8")
+        .trim().split("\n").map((line) => JSON.parse(line));
+      expect(audit.filter((event) => event.event === "claim" && event.entryId === foreign.id))
+        .toMatchObject([{ status: "deny", reason: "target_session_mismatch" }]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it("U-PMEMROOT-007: provider envelope rejects each binding axis independently", async () => {
     const root = fixture();
     try {
