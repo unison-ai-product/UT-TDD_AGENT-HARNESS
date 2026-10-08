@@ -1,0 +1,1010 @@
+# PLAN 仕分けの全件一覧
+
+[plan-design-migration-triage.md](plan-design-migration-triage.md) の全件表です。列は `plan_id` / `class` / `source` (判定の出どころ) / `reason` です。
+
+| plan_id | class | source | reason |
+| --- | --- | --- | --- |
+| PLAN-DISCOVERY-01-workflow-metamodel | N | haiku+sonnet agree | poc 作業記録・設計判断マーカーなし |
+| PLAN-DISCOVERY-02-roster-design | N | haiku+sonnet agree | poc 作業記録・設計判断マーカーなし |
+| PLAN-DISCOVERY-03-skill-design | N | adjudicated | PoC 結果、API は実装済みで design に概要あり |
+| PLAN-DISCOVERY-04-process-workflows | N | haiku+sonnet agree | poc 作業記録・設計判断マーカーなし |
+| PLAN-DISCOVERY-05-roadmap-registration | N | haiku+sonnet agree | poc 作業記録・設計判断マーカーなし |
+| PLAN-DISCOVERY-06-orchestrator-rule-parity | N | haiku+sonnet agree | poc 作業記録・設計判断マーカーなし |
+| PLAN-DISCOVERY-07-design-bottomup-mode | N | haiku+sonnet agree | poc 作業記録・設計判断マーカーなし |
+| PLAN-DISCOVERY-08-forward-convergence-invariant | N | haiku+sonnet agree | poc 作業記録・設計判断マーカーなし |
+| PLAN-DISCOVERY-09-version-up-mode | N | haiku+sonnet agree | poc 作業記録・設計判断マーカーなし |
+| PLAN-DISCOVERY-10-gpt56-tier-routing-bench | M | adjudicated | GPT-5.6 世代の計測値は古いが、routing の変更をレーンごとの現職との paired 比較で決め、僅差なら現職を維持する評価方法は継続する |
+| PLAN-L0-01-vmodel-harness-upgrade-charter | N | adjudicated | 要求/charter/cutover: 正本は対応する設計文書、PLAN は記録 |
+| PLAN-L1-01-business-requirements | N | adjudicated | 要求/charter/cutover: 正本は対応する設計文書、PLAN は記録 |
+| PLAN-L1-02-functional-requirements | N | adjudicated | 要求/charter/cutover: 正本は対応する設計文書、PLAN は記録 |
+| PLAN-L1-03-screen-requirements | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L1-04-technical-requirements | N | adjudicated | 要求/charter/cutover: 正本は対応する設計文書、PLAN は記録 |
+| PLAN-L1-05-nfr | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L1-06-vmodel-upgrade-requirements | N | haiku+sonnet agree | research 作業記録・設計判断マーカーなし |
+| PLAN-L1-07-vmodel-engine-swap-requirements-delta | N | haiku+sonnet agree | research 作業記録・設計判断マーカーなし |
+| PLAN-L1-08-design-harness-internalization | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L1-09-ut-tdd-concept-v4-candidates | E1 | haiku+sonnet agree | draft / issue #530 OPEN |
+| PLAN-L10-01-engine-swap-ux-validation | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L11-01-engine-swap-uat-review | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L12-01-engine-swap-acceptance-deploy | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L13-01-engine-swap-post-deploy-verification | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L14-01-engine-swap-operational-value-verification | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L2-00-master | N | adjudicated | 要求/charter/cutover: 正本は対応する設計文書、PLAN は記録 |
+| PLAN-L2-01-screen-list | N | haiku+sonnet agree | 設計契約なし (design 実装/作業記録) |
+| PLAN-L2-02-screen-flow | N | haiku+sonnet agree | 設計契約なし (design 実装/作業記録) |
+| PLAN-L2-03-ui-element | N | haiku+sonnet agree | 設計契約なし (design 実装/作業記録) |
+| PLAN-L2-04-wireframe | N | haiku+sonnet agree | 設計契約なし (design 実装/作業記録) |
+| PLAN-L3-00-master | N | haiku+sonnet agree | 設計契約なし (design 実装/作業記録) |
+| PLAN-L3-01-functional-detail | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L3-02-business-detail | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L3-03-nfr-grade | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L3-04-upstream-schedule-reconciliation | N | adjudicated | 要求/charter/cutover: 正本は対応する設計文書、PLAN は記録 |
+| PLAN-L3-05-harness-telemetry-closure | N | adjudicated | 要求/charter/cutover: 正本は対応する設計文書、PLAN は記録 |
+| PLAN-L3-06-screen-functional-body | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L3-07-design-decision-elicitation-format | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L3-08-nfr-contract-catalog | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L4-00-master | N | adjudicated | 設計文書が正本 (参照 token 大半が design 側に存在) |
+| PLAN-L4-01-data | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L4-02-architecture | N | adjudicated | 設計文書が正本 (参照 token 大半が design 側に存在) |
+| PLAN-L4-03-function | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L4-04-external-if | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L4-05-workflow-orchestration | N | adjudicated | 設計文書が正本 (参照 token 大半が design 側に存在) |
+| PLAN-L4-06-design-refresh | N | adjudicated | 設計文書が正本 (参照 token 大半が design 側に存在) |
+| PLAN-L4-10-internal-asset-master | M | reclassified r1 | subagent は V4D-098 で撤廃だが skill curate (FR-L1-47)・command CLI (FR-L1-48)・drift lint (FR-L1-49) は継続 (Sol r1) |
+| PLAN-L4-11-roster | M | reclassified r1 | subagent roster は撤廃 (V4D-098) だが command の設計は継続 |
+| PLAN-L4-12-skill-pack | N | adjudicated | 設計文書が正本 (参照 token 大半が design 側に存在) |
+| PLAN-L4-13-drift-lint | N | adjudicated | 設計文書が正本 (参照 token 大半が design 側に存在) |
+| PLAN-L4-14-ui-standard | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L4-15-nfr-grade-ac-landing | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L4-16-security-design-slot | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L4-17-version-up-design-bottomup-band | N | adjudicated | 設計文書が正本 (参照 token 大半が design 側に存在) |
+| PLAN-L4-18-roadmap-drive-selection-hardening | N | adjudicated | 設計文書が正本 (参照 token 大半が design 側に存在) |
+| PLAN-L4-19-vmodel-spec-ir-data | N | adjudicated | 設計文書が正本 (参照 token 大半が design 側に存在) |
+| PLAN-L4-20-document-catalog-scale-profile-ssot | N | adjudicated | 設計文書が正本 (参照 token 大半が design 側に存在) |
+| PLAN-L4-21-domain-vo-coding-constraints | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L4-22-vmodel-source-disposition-profile-ssot | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L4-23-forward-fsm-plan-asset-v2 | N | haiku+sonnet agree | 設計契約なし (add-design 実装/作業記録) |
+| PLAN-L4-24-declarative-vmodel-contract-right-arm | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L4-25-repository-docs-engine-swap-audit | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L4-26-engine-swap-object-method-design | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L4-27-vmodel-semantic-self-audit | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L4-28-design-detection-self-proof | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L4-29-security-design-substance | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L4-30-execution-ledger-github-architecture | A | adjudicated | ExecutionEvent / recurrence_id / reentry_policy の語が docs/design に 0 件 (grep 実測) |
+| PLAN-L4-31-nfr-verification-foundation-architecture | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L4-32-resource-governed-execution-kernel | A | adjudicated | §2 ExecutionSpec/ExecutionEvent journal と §3 OS process-tree custody の契約 (admission_sealed 等) が設計文書に無い (grep 0) |
+| PLAN-L4-33-node-control-plane-redesign | N | adjudicated | 設計文書が正本 (参照 token 大半が design 側に存在) |
+| PLAN-L4-34-repository-runtime-placement-topology | E2 | haiku+sonnet agree | draft / issue #141 CLOSED |
+| PLAN-L5-00-master | N | adjudicated | 設計文書が正本 (参照 token 大半が design 側に存在) |
+| PLAN-L5-01-physical-data | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L5-02-module-decomposition | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L5-03-internal-processing | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L5-04-if-detail | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L5-05-roster | M | reclassified r1 | subagent roster は撤廃 (V4D-098) だが command の module 結合は継続 |
+| PLAN-L5-06-skill | N | adjudicated | 設計文書が正本 (参照 token 大半が design 側に存在) |
+| PLAN-L5-07-drift | N | adjudicated | 設計文書が正本 (参照 token 大半が design 側に存在) |
+| PLAN-L5-08-harness-db-feedback | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L5-09-ui-detail-body | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L5-10-drive-model-router-redesign | N | adjudicated | 設計文書が正本 (参照 token 大半が design 側に存在) |
+| PLAN-L5-11-forward-decomposition-tree-projection | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L5-12-externalization-by-design | N | adjudicated | 設計文書が正本 (参照 token 大半が design 側に存在) |
+| PLAN-L5-13-vmodel-spec-ir-physical-data | N | adjudicated | 設計文書が正本 (参照 token 大半が design 側に存在) |
+| PLAN-L5-14-ai-model-governance-card | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L5-15-feedback-lifecycle-physical-data | N | haiku+sonnet agree | 設計契約なし (add-design 実装/作業記録) |
+| PLAN-L5-16-vmodel-source-profile-physical-data | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L5-17-plan-asset-workflow-ledger-physical-data | N | haiku+sonnet agree | 設計契約なし (add-design 実装/作業記録) |
+| PLAN-L5-18-vmodel-contract-right-arm-physical-data | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L5-19-repository-document-disposition-ledger | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L5-20-engine-swap-module-decomposition | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L5-21-semantic-assessment-debt-routing-physical-data | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L5-22-detector-self-proof-receipt-physical-data | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L5-23-execution-ledger-github-physical-data | A | adjudicated | (episode_id,event_sequence) 等の key・execution_evidence_refs が physical-data.md に未反映 (token 一致 76%、欠落は key 契約) |
+| PLAN-L5-25-resource-kernel-physical-protocol | E2 | haiku+sonnet agree | draft / issue #152 CLOSED |
+| PLAN-L5-26-node-generation-activation | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L6-00-master | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L6-01-function-spec | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L6-02-edge-case | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L6-03-session-log | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L6-04-forced-stop-feedback | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L6-05-setup-solo-team | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L6-06-handover-mechanism | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L6-07-agent-slots | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L6-08-backfill-pairing | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L6-09-governance-enforcement | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L6-10-vmodel-pair-lint | N | adjudicated | 設計成果物が docs/design 側にあり、PLAN は 4 項目相当+作業記録 (token 一致 70%超 or 判断節なし) |
+| PLAN-L6-100-workflow-suggest-add-design | E1 | haiku+sonnet agree | draft / issue #304 OPEN |
+| PLAN-L6-101-pack-independent-multi-consumer-acceptance | N | adjudicated | 設計成果物が docs/design 側にあり、PLAN は 4 項目相当+作業記録 (token 一致 70%超 or 判断節なし) |
+| PLAN-L6-102-release-promotion-rollback-gate | E2 | haiku+sonnet agree | draft / issue #360 CLOSED |
+| PLAN-L6-103-claude-wake-liveness-deferred-routing | E1 | haiku+sonnet agree | draft / issue #454 OPEN |
+| PLAN-L6-104-memory-clean-cut-replacement | E1 | adjudicated | draft、issue #424 (open) の生きた設計 |
+| PLAN-L6-105-consumer-safe-upgrade-contract | E1 | haiku+sonnet agree | draft / issue #814 OPEN |
+| PLAN-L6-106-report-write-security-contract | E1 | haiku+sonnet agree | draft / issue #815 OPEN |
+| PLAN-L6-107-consumer-report-command-and-intake | E1 | haiku+sonnet agree | draft / issue #815 OPEN |
+| PLAN-L6-11-verification-trigger | N | adjudicated | 設計成果物が docs/design 側にあり、PLAN は 4 項目相当+作業記録 (token 一致 70%超 or 判断節なし) |
+| PLAN-L6-12-review-evidence | N | adjudicated | 設計成果物が docs/design 側にあり、PLAN は 4 項目相当+作業記録 (token 一致 70%超 or 判断節なし) |
+| PLAN-L6-13-cross-review-enforcement | N | adjudicated | 設計成果物が docs/design 側にあり、PLAN は 4 項目相当+作業記録 (token 一致 70%超 or 判断節なし) |
+| PLAN-L6-14-test-before-review | N | adjudicated | 設計成果物が docs/design 側にあり、PLAN は 4 項目相当+作業記録 (token 一致 70%超 or 判断節なし) |
+| PLAN-L6-15-module-drift | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L6-16-handover-quality | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L6-17-gate-confirm | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L6-18-review-evidence-stale | N | haiku+sonnet agree | 設計契約なし (add-design 実装/作業記録) |
+| PLAN-L6-19-plan-schedule-lint | N | haiku+sonnet agree | 設計契約なし (add-design 実装/作業記録) |
+| PLAN-L6-20-runtime-adapter-session-lifecycle | N | adjudicated | 設計成果物が docs/design 側にあり、PLAN は 4 項目相当+作業記録 (token 一致 70%超 or 判断節なし) |
+| PLAN-L6-21-fr-unit-coverage | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L6-22-l6-completion-readiness | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L6-23-coding-rules-workflow | N | adjudicated | 設計成果物が docs/design 側にあり、PLAN は 4 項目相当+作業記録 (token 一致 70%超 or 判断節なし) |
+| PLAN-L6-24-structured-error-handling | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L6-25-module-boundary-rule | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L6-26-domain-boundary-lint | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L6-27-invariant-test-trace | N | adjudicated | 設計成果物が docs/design 側にあり、PLAN は 4 項目相当+作業記録 (token 一致 70%超 or 判断節なし) |
+| PLAN-L6-28-red-first-tdd-evidence | N | adjudicated | 設計成果物が docs/design 側にあり、PLAN は 4 項目相当+作業記録 (token 一致 70%超 or 判断節なし) |
+| PLAN-L6-29-test-oracle-strength | N | adjudicated | 設計成果物が docs/design 側にあり、PLAN は 4 項目相当+作業記録 (token 一致 70%超 or 判断節なし) |
+| PLAN-L6-30-integration-gwt-lint | N | adjudicated | 設計成果物が docs/design 側にあり、PLAN は 4 項目相当+作業記録 (token 一致 70%超 or 判断節なし) |
+| PLAN-L6-31-cross-artifact-relation-graph | N | adjudicated | 設計成果物が docs/design 側にあり、PLAN は 4 項目相当+作業記録 (token 一致 70%超 or 判断節なし) |
+| PLAN-L6-32-mcp-profile-config-safety | N | adjudicated | 設計成果物が docs/design 側にあり、PLAN は 4 項目相当+作業記録 (token 一致 70%超 or 判断節なし) |
+| PLAN-L6-33-tool-adapter-probes | N | adjudicated | 設計成果物が docs/design 側にあり、PLAN は 4 項目相当+作業記録 (token 一致 70%超 or 判断節なし) |
+| PLAN-L6-34-canonical-document-export | N | adjudicated | 設計成果物が docs/design 側にあり、PLAN は 4 項目相当+作業記録 (token 一致 70%超 or 判断節なし) |
+| PLAN-L6-35-descent-obligation | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L6-36-screen-spec-body | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L6-37-skill-index-category | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L6-38-router-function-contracts | N | adjudicated | 設計成果物が docs/design 側にあり、PLAN は 4 項目相当+作業記録 (token 一致 70%超 or 判断節なし) |
+| PLAN-L6-39-vmodel-spec-ir-function-contracts | N | adjudicated | 設計成果物が docs/design 側にあり、PLAN は 4 項目相当+作業記録 (token 一致 70%超 or 判断節なし) |
+| PLAN-L6-40-route-filing-review-surface | N | haiku+sonnet agree | 設計契約なし (add-design 実装/作業記録) |
+| PLAN-L6-41-vmodel-activation-profile-join | N | haiku+sonnet agree | 設計契約なし (add-design 実装/作業記録) |
+| PLAN-L6-42-typed-spec-declaration-source | N | haiku+sonnet agree | 設計契約なし (add-design 実装/作業記録) |
+| PLAN-L6-43-typed-spec-trace-closure | N | haiku+sonnet agree | 設計契約なし (add-design 実装/作業記録) |
+| PLAN-L6-44-typed-spec-ledger-and-body-sync | N | haiku+sonnet agree | 設計契約なし (add-design 実装/作業記録) |
+| PLAN-L6-45-typed-spec-owned-artifact-dispersal | N | haiku+sonnet agree | 設計契約なし (add-design 実装/作業記録) |
+| PLAN-L6-46-typed-spec-phase-layer-alignment | N | adjudicated | 設計成果物が docs/design 側にあり、PLAN は 4 項目相当+作業記録 (token 一致 70%超 or 判断節なし) |
+| PLAN-L6-47-agent-contract-authoring-source | N | adjudicated | 設計成果物が docs/design 側にあり、PLAN は 4 項目相当+作業記録 (token 一致 70%超 or 判断節なし) |
+| PLAN-L6-48-vmodel-l2-freeze-l5-verification-design | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L6-49-refactor-and-qa-release-gates | N | haiku+sonnet agree | 設計契約なし (add-design 実装/作業記録) |
+| PLAN-L6-50-execution-assignment-ledger | A | adjudicated | assignment-target-missing 等の error code / archived_reason 契約が設計文書に 0 件 |
+| PLAN-L6-51-substance-fill-gate | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L6-52-signals-schedule-live-handover | N | adjudicated | 設計成果物が docs/design 側にあり、PLAN は 4 項目相当+作業記録 (token 一致 70%超 or 判断節なし) |
+| PLAN-L6-53-adversarial-review-mechanism | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L6-54-unrecorded-change-diff-gate | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L6-55-undeclared-doc-trace-gap-detection | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L6-56-adr-ledger-bidirectional-consistency | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L6-57-scope-detection-dry-run-preview | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L6-58-agent-contract-digest-export | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L6-59-design-doc-cross-integrity-check | N | adjudicated | 設計成果物が docs/design 側にあり、PLAN は 4 項目相当+作業記録 (token 一致 70%超 or 判断節なし) |
+| PLAN-L6-60-trace-impact-traversal-command | N | haiku+sonnet agree | 設計契約なし (add-design 実装/作業記録) |
+| PLAN-L6-600-codex-review-wake-contract | E2 | haiku+sonnet agree | draft / issue #600 CLOSED |
+| PLAN-L6-61-spec-rag-closure-ledger | N | adjudicated | 設計成果物が docs/design 側にあり、PLAN は 4 項目相当+作業記録 (token 一致 70%超 or 判断節なし) |
+| PLAN-L6-62-design-doc-secret-scan-gate | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L6-63-pack-staged-release-rollback | A | adjudicated | artifactInventoryDigest / validSymlink / releases.<id>.artifacts[] の契約が設計文書に 0 件。400 行の設計判断節 (§8) |
+| PLAN-L6-64-cli-shell-completion | A | adjudicated | completion の PowerShell 登録・--cursor/--list 契約と PO 採択記録が design に 0 件 (token 一致 44%) |
+| PLAN-L6-65-hook-immediate-revalidation-gate | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L6-66-code-minimalism-skill | E2 | adjudicated | draft、open issue 参照なし |
+| PLAN-L6-661-worktree-safe-remove-contract | E1 | haiku+sonnet agree | draft / issue #661 OPEN |
+| PLAN-L6-67-skill-admission-gate | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L6-68-memory-telemetry-lifecycle-contract | N | haiku+sonnet agree | 設計契約なし (add-design 実装/作業記録) |
+| PLAN-L6-69-active-upgrade-frontier-right-arm-contract | N | haiku+sonnet agree | 設計契約なし (add-design 実装/作業記録) |
+| PLAN-L6-70-source-catalog-profile-resolver-contracts | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L6-70-vmodel-judgement-skill-pack | E2 | adjudicated | draft、open issue 参照なし |
+| PLAN-L6-71-plan-asset-canonical-migration-contracts | N | haiku+sonnet agree | 設計契約なし (add-design 実装/作業記録) |
+| PLAN-L6-711-merge-time-receipt-rechain-contract | E1 | haiku+sonnet agree | draft / issue #711 OPEN |
+| PLAN-L6-72-forward-fsm-evidence-policy-contracts | C | adjudicated | PLAN-L6-89-layer-verification-contract が frontmatter supersedes で指名 |
+| PLAN-L6-73-vmodel-contract-compiler-right-arm-contracts | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L6-74-repository-docs-disposition-auditor-contracts | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L6-75-engine-swap-domain-method-port-contracts | N | haiku+sonnet agree | 設計契約なし (add-design 実装/作業記録) |
+| PLAN-L6-76-semantic-assessment-debt-routing-contracts | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L6-77-detector-compiler-meta-verifier-contracts | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L6-78-coding-structure-rules-contract | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L6-789-token-ingest-retirement | E1 | haiku+sonnet agree | draft / issue #789 OPEN |
+| PLAN-L6-79-plan-number-allocation-uniqueness | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L6-80-doctor-decomposition-check-contract-pairs | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L6-81-vmodel-specialist-agent-registry | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L6-816-release-notes-draft-contract | E1 | haiku+sonnet agree | draft / issue #816 OPEN |
+| PLAN-L6-82-universal-pr-trigger-contract | N | haiku+sonnet agree | 設計契約なし (add-design 実装/作業記録) |
+| PLAN-L6-83-forward-escape-issue-contract | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L6-832-plan-revise-omission-preserve-contract | A | adjudicated | admission.clear / bindPlanSourceToAdmission / omission preserve の凍結契約が設計文書に 0 件 (internal-processing.md は omission 語のみ) |
+| PLAN-L6-84-drive-model-reentry-verification-contract | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L6-85-automated-pr-cross-review-merge-contract | E2 | haiku+sonnet agree | draft / issue #213 CLOSED |
+| PLAN-L6-86-drive-plan-admission-contract | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L6-87-nfr-contract-evidence-gate-contracts | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L6-89-layer-verification-contract | E1 | haiku+sonnet agree | draft / issue #108 OPEN |
+| PLAN-L6-90-ci-responsibility-contract | E1 | haiku+sonnet agree | draft / issue #109 OPEN |
+| PLAN-L6-91-disposition-claim-integrity-gate | E1 | haiku+sonnet agree | draft / issue #119 OPEN |
+| PLAN-L6-92-resource-kernel-function-contracts | E2 | haiku+sonnet agree | draft / issue #152 CLOSED |
+| PLAN-L6-93-node-bootstrap-contract | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L6-94-cross-review-session-attestation | E1 | haiku+sonnet agree | draft / issue #131 OPEN |
+| PLAN-L6-95-runtime-env-doctor-contract | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L6-96-advisor-consultation-telemetry | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L6-97-memory-episode-retirement-contract | E2 | haiku+sonnet agree | draft / issue #175 CLOSED |
+| PLAN-L6-98-oracle-test-citation-contract | N | haiku+sonnet agree | 設計契約なし (add-design 実装/作業記録) |
+| PLAN-L6-99-doctor-result-envelope-measurement-contract | N | haiku+sonnet agree | 設計契約なし (add-design 実装/作業記録) |
+| PLAN-L7-01-session-log | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L7-02-forced-stop-feedback | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L7-03-setup-solo-team | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L7-04-handover-mechanism | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L7-05-biome-debt | N | haiku+sonnet agree | 設計契約なし (refactor 実装/作業記録) |
+| PLAN-L7-06-handover-enforcement | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-07-handover-prefill-scope | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-08-agent-slots | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-09-backfill-pairing | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-10-governance-enforcement | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-100-standard-deliverable-section-structure | N | haiku+sonnet agree | troubleshoot 作業記録・設計判断マーカーなし |
+| PLAN-L7-101-db-projection-backprop-gate | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-102-web-dashboard-phase-b | C | haiku+sonnet agree | 後継 PLAN-L7-141-web-dashboard-component-derived が明記 |
+| PLAN-L7-103-reverse-fullback-backprop-gate | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-104-conditional-backfill-decision-gate | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-105-artifact-type-path-governance-gate | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-106-backprop-classification-backlog-gate | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-107-reverse-fullback-scope-gate | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-108-review-green-command-evidence | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-109-review-green-command-db-projection | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-11-vmodel-pair-lint | N | adjudicated | 契約は dedicated test-design/design に既存 (token 一致 5-8 割) か、作業/診断記録 |
+| PLAN-L7-110-takeover-feedback-surface | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-111-reverse-fullback-claimed-artifact-gate | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-112-reverse-r4-claimed-artifact-gate | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-113-plan-l7-102-errata | N | haiku+sonnet agree | troubleshoot 作業記録・設計判断マーカーなし |
+| PLAN-L7-114-work-guard | N | haiku+sonnet agree | troubleshoot 作業記録・設計判断マーカーなし |
+| PLAN-L7-115-reverse-r4-route-backprop-gate | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-116-required-agent-role-gate | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-117-kind-layer-governance-gate | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-118-required-backfill-bidirectional-gate | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-119-conditional-backfill-audit-sync | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-12-verification-trigger | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-120-backfill-result-doc-sync | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-121-branch-kind-check | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-122-vmodel-injection-show | N | adjudicated | 契約は dedicated test-design/design に既存 (token 一致 5-8 割) か、作業/診断記録 |
+| PLAN-L7-123-route-eval-recommended-command | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-124-route-approval-gate | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-125-route-legacy-command-gate | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-126-route-config-dependency-gate | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-127-orchestration-degradation-record | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-128-route-escalation-boundary-gate | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-129-incident-route-token-coverage | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-13-review-evidence | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-130-right-arm-gate-planning | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-131-plan-complete-handover | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-132-green-command-digest-integrity | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-133-refactor-brush-up-workflow | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-134-tdd-drive-fit-classification | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-135-dynamic-skill-injection-materialization | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-136-harness-db-journal-status-filter | N | haiku+sonnet agree | troubleshoot 作業記録・設計判断マーカーなし |
+| PLAN-L7-137-feedback-surface-taxonomy | N | haiku+sonnet agree | troubleshoot 作業記録・設計判断マーカーなし |
+| PLAN-L7-138-quality-branch-audit | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-139-codex-hook-adapter | C | adjudicated | PLAN-L7-668 が supersedes で指名 |
+| PLAN-L7-14-cross-review-enforcement | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-140-proposal-document-coverage-lint | N | haiku+sonnet agree | troubleshoot 作業記録・設計判断マーカーなし |
+| PLAN-L7-141-web-dashboard-component-derived | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-142-relation-graph-requirement-nodes | N | haiku+sonnet agree | troubleshoot 作業記録・設計判断マーカーなし |
+| PLAN-L7-143-harness-db-warn-remediation | C | adjudicated | PLAN-L7-144 が supersedes で指名 |
+| PLAN-L7-144-warn-remediation-parity-and-join | N | haiku+sonnet agree | troubleshoot 作業記録・設計判断マーカーなし |
+| PLAN-L7-145-handover-path-leak-and-marker-drift | N | haiku+sonnet agree | troubleshoot 作業記録・設計判断マーカーなし |
+| PLAN-L7-146-serverless-readonly-share | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-147-refactor-candidate-detector | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-148-refactor-candidate-module-extraction | N | haiku+sonnet agree | 設計契約なし (refactor 実装/作業記録) |
+| PLAN-L7-149-relation-graph-process-doc-node | N | haiku+sonnet agree | troubleshoot 作業記録・設計判断マーカーなし |
+| PLAN-L7-15-test-before-review | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-150-refactor-candidate-closure-sweep | N | haiku+sonnet agree | 設計契約なし (refactor 実装/作業記録) |
+| PLAN-L7-151-refactor-scout-agent | N | haiku+sonnet agree | 設計契約なし (refactor 実装/作業記録) |
+| PLAN-L7-152-artifact-progress-decision-extraction | N | haiku+sonnet agree | 設計契約なし (refactor 実装/作業記録) |
+| PLAN-L7-153-proposal-research-data-extraction | N | haiku+sonnet agree | 設計契約なし (refactor 実装/作業記録) |
+| PLAN-L7-154-proposal-document-pack-split | N | haiku+sonnet agree | 設計契約なし (refactor 実装/作業記録) |
+| PLAN-L7-155-proposal-research-source-constants | N | haiku+sonnet agree | 設計契約なし (refactor 実装/作業記録) |
+| PLAN-L7-156-top-level-reference-doc-graph-node | N | haiku+sonnet agree | 設計契約なし (refactor 実装/作業記録) |
+| PLAN-L7-157-distribution-clean-pull | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L7-158-refactor-detector-precision-and-policy-extraction | N | haiku+sonnet agree | 設計契約なし (refactor 実装/作業記録) |
+| PLAN-L7-159-policy-sidecar-extraction-sweep | N | haiku+sonnet agree | 設計契約なし (refactor 実装/作業記録) |
+| PLAN-L7-16-module-drift | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-160-runtime-adapter-policy-extraction | N | haiku+sonnet agree | 設計契約なし (refactor 実装/作業記録) |
+| PLAN-L7-161-task-classify-policy-extraction | N | haiku+sonnet agree | 設計契約なし (refactor 実装/作業記録) |
+| PLAN-L7-162-team-run-policy-extraction | N | haiku+sonnet agree | 設計契約なし (refactor 実装/作業記録) |
+| PLAN-L7-163-workflow-contracts-policy-extraction | N | haiku+sonnet agree | 設計契約なし (refactor 実装/作業記録) |
+| PLAN-L7-164-agent-slots-roster-split | N | haiku+sonnet agree | 設計契約なし (refactor 実装/作業記録) |
+| PLAN-L7-165-review-artifact-graph-node | N | haiku+sonnet agree | troubleshoot 作業記録・設計判断マーカーなし |
+| PLAN-L7-166-setup-template-catalog-split | N | haiku+sonnet agree | 設計契約なし (refactor 実装/作業記録) |
+| PLAN-L7-167-descent-obligation-type-split | N | haiku+sonnet agree | 設計契約なし (refactor 実装/作業記録) |
+| PLAN-L7-168-g8-integration-workflow | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-168-verification-profile-type-split | N | haiku+sonnet agree | 設計契約なし (refactor 実装/作業記録) |
+| PLAN-L7-169-g8-integration-evidence-manifest | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-169-relation-graph-type-split | N | haiku+sonnet agree | 設計契約なし (refactor 実装/作業記録) |
+| PLAN-L7-17-handover-quality | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-170-external-review-remediation | N | haiku+sonnet agree | troubleshoot 作業記録・設計判断マーカーなし |
+| PLAN-L7-170-g8-evidence-graph-node | N | haiku+sonnet agree | troubleshoot 作業記録・設計判断マーカーなし |
+| PLAN-L7-170-plan-lint-type-policy-split | N | haiku+sonnet agree | 設計契約なし (refactor 実装/作業記録) |
+| PLAN-L7-171-g8-adapter-asset-evidence | N | haiku+sonnet agree | troubleshoot 作業記録・設計判断マーカーなし |
+| PLAN-L7-171-workflow-contracts-type-cleanup | N | haiku+sonnet agree | 設計契約なし (refactor 実装/作業記録) |
+| PLAN-L7-172-harness-db-catalog-section-split | N | haiku+sonnet agree | 設計契約なし (refactor 実装/作業記録) |
+| PLAN-L7-172-roster-cli-g8-evidence | N | haiku+sonnet agree | troubleshoot 作業記録・設計判断マーカーなし |
+| PLAN-L7-173-handover-type-constant-split | N | haiku+sonnet agree | 設計契約なし (refactor 実装/作業記録) |
+| PLAN-L7-173-roster-boundary-g8-evidence | N | haiku+sonnet agree | troubleshoot 作業記録・設計判断マーカーなし |
+| PLAN-L7-174-green-command-digest-correction | N | haiku+sonnet agree | 設計契約なし (refactor 実装/作業記録) |
+| PLAN-L7-174-skill-catalog-g8-evidence | N | haiku+sonnet agree | troubleshoot 作業記録・設計判断マーカーなし |
+| PLAN-L7-175-placeholder-threshold-g8-evidence | N | haiku+sonnet agree | troubleshoot 作業記録・設計判断マーカーなし |
+| PLAN-L7-176-adapter-invoke-result-g8-evidence | N | haiku+sonnet agree | troubleshoot 作業記録・設計判断マーカーなし |
+| PLAN-L7-177-adapter-error-policy-g8-evidence | N | haiku+sonnet agree | troubleshoot 作業記録・設計判断マーカーなし |
+| PLAN-L7-178-d-contract-dsl-g8-evidence | N | haiku+sonnet agree | troubleshoot 作業記録・設計判断マーカーなし |
+| PLAN-L7-179-g9-system-workflow | N | haiku+sonnet agree | troubleshoot 作業記録・設計判断マーカーなし |
+| PLAN-L7-18-gate-confirm | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-180-g9-evidence-relation-graph-projection | N | haiku+sonnet agree | troubleshoot 作業記録・設計判断マーカーなし |
+| PLAN-L7-181-g9-system-coverage-expansion | N | haiku+sonnet agree | troubleshoot 作業記録・設計判断マーカーなし |
+| PLAN-L7-182-readme-relation-graph-projection | N | haiku+sonnet agree | troubleshoot 作業記録・設計判断マーカーなし |
+| PLAN-L7-183-doctor-test-performance | N | haiku+sonnet agree | 設計契約なし (refactor 実装/作業記録) |
+| PLAN-L7-184-g10-ux-workflow | N | haiku+sonnet agree | troubleshoot 作業記録・設計判断マーカーなし |
+| PLAN-L7-185-g10-evidence-directory-projection | N | haiku+sonnet agree | troubleshoot 作業記録・設計判断マーカーなし |
+| PLAN-L7-186-test-lane-granularity | N | haiku+sonnet agree | troubleshoot 作業記録・設計判断マーカーなし |
+| PLAN-L7-187-g9-full-row-evidence | N | haiku+sonnet agree | troubleshoot 作業記録・設計判断マーカーなし |
+| PLAN-L7-188-verification-strategy-design-time-logging | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-189-shared-harness-memory-cross-runtime | N | adjudicated | 契約は dedicated test-design/design に既存 (token 一致 5-8 割) か、作業/診断記録 |
+| PLAN-L7-19-review-evidence-stale | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-190-distribution-runtime-asset-projection | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-191-distribution-helix-wording-erasure | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-192-db-telemetry-provenance-enforcement | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-193-runtime-test-run-provenance | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-194-green-command-digest-hard-gate | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-195-model-override-injection-hardening | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-196-runtime-config-hardening | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-197-github-ops-workflow-hardening | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-198-research-recovery-finding-routing | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-199-runtime-model-telemetry-provenance | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-20-plan-schedule-lint | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-200-runtime-guardrail-telemetry-provenance | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-201-runtime-skill-telemetry-provenance | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-202-adr-governance-relation-graph-node | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-203-windows-provider-spawn-verbatim | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-204-central-ui-vscode-webview-local | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-205-strict-telemetry-provenance-doctor | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-206-governance-document-system-map-node | N | haiku+sonnet agree | troubleshoot 作業記録・設計判断マーカーなし |
+| PLAN-L7-207-test-oracle-describe-inheritance | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-208-design-language-gate | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-209-governance-relation-graph-projection | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-21-runtime-adapter-session-lifecycle | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L7-210-artifact-progress-impact-closure | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-211-skill-index-category-materialization | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-212-route-certificate-governance | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-213-project-local-setup-wrapper | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-214-skill-root-relation-graph-projection | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-215-model-effort-advisor-routing | N | adjudicated | 契約は dedicated test-design/design に既存 (token 一致 5-8 割) か、作業/診断記録 |
+| PLAN-L7-216-setup-boundary-refactor | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-217-doctor-setup-smoke-extraction | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-218-setup-distribution-module-extraction | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-219-gate-phase-elicitation-guide | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-22-fr-unit-coverage | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L7-220-doctor-plan-governance-extraction | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-221-github-ci-policy-gate | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-222-doctor-runtime-surface-extraction | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-223-cli-distribution-registrar-extraction | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-224-doctor-db-projection-extraction | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-225-doctor-rule-quality-extraction | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-226-doctor-workflow-quality-extraction | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-227-doctor-doc-registry-extraction | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-228-doctor-roadmap-verification-extraction | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-229-cli-feedback-registrar-extraction | N | haiku+sonnet agree | 設計契約なし (refactor 実装/作業記録) |
+| PLAN-L7-23-l6-completion-readiness | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-230-runtime-projection-extraction | N | haiku+sonnet agree | 設計契約なし (refactor 実装/作業記録) |
+| PLAN-L7-231-skill-projection-extraction | N | haiku+sonnet agree | 設計契約なし (refactor 実装/作業記録) |
+| PLAN-L7-232-sync-pack-clean-tree-guard | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-233-personal-path-guard-generalization | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-234-pack-test-skip-guards | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-235-pack-windows-ci-job | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-236-audit-doc-curation | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-237-research-drive-hardening | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-238-retrofit-preflight-doc-command | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-239-contract-enforcement-wiring | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-24-coding-rules-workflow | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L7-240-reverse-right-arm-exit-gate | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-241-human-signoff-evidence-gate | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-242-mode-exit-enforcement-batch | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-243-mode-first-class-db-projection | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-244-right-arm-citation-gate | E2 | haiku+sonnet agree | draft / issue #165 CLOSED |
+| PLAN-L7-245-sub-doc-schema-integrity | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L7-246-doctor-result-aggregation-extraction | N | haiku+sonnet agree | 設計契約なし (refactor 実装/作業記録) |
+| PLAN-L7-246-feedback-event-lifecycle | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-247-db-driven-diagram-generation | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-248-diagram-view-expansion | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-249-operational-checklist-output | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-25-structured-error-handling | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L7-250-doctor-dependency-regression-extraction | N | haiku+sonnet agree | 設計契約なし (refactor 実装/作業記録) |
+| PLAN-L7-250-layer-question-catalog | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-251-observation-next-selector | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-252-pack-sync-explicit-stage-commands | N | haiku+sonnet agree | 設計契約なし (refactor 実装/作業記録) |
+| PLAN-L7-253-orchestrator-model-identity-advisor-triggers | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-254-judgment-gate-reviewer-tier-matrix | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-255-delegation-model-effort-injection | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-256-model-id-ssot-drift-gate | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-257-orchestration-cell-roster | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-258-github-branch-ref-normalization | N | haiku+sonnet agree | 設計契約なし (refactor 実装/作業記録) |
+| PLAN-L7-258-guard-firing-evidence | E2 | adjudicated | draft、open issue 参照なし |
+| PLAN-L7-259-hybrid-git-discipline-guards | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-259-pack-github-ci-profile-loader | N | haiku+sonnet agree | 設計契約なし (refactor 実装/作業記録) |
+| PLAN-L7-26-module-boundary-rule | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L7-260-sensitive-scan-boundary | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-261-escalation-boundary-detector | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-262-skill-telemetry-provenance | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-263-route-mode-kind-certificate | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L7-264-doctor-source-trace-extraction | N | haiku+sonnet agree | 設計契約なし (refactor 実装/作業記録) |
+| PLAN-L7-265-backfill-parent-pairing | N | haiku+sonnet agree | 設計契約なし (refactor 実装/作業記録) |
+| PLAN-L7-266-pack-source-only-test-guards | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L7-267-pack-ci-test-boundary | N | haiku+sonnet agree | 設計契約なし (refactor 実装/作業記録) |
+| PLAN-L7-268-github-ci-profile-table | N | haiku+sonnet agree | 設計契約なし (refactor 実装/作業記録) |
+| PLAN-L7-269-deprecation-mode | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-27-domain-boundary-lint | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L7-270-spec-change-cycle | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-271-deviation-signal-tokens | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-272-red-first-activation | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-273-test-results-ingest | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-274-mutation-oracle-hardening | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-275-glossary-code-consistency | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-276-doctor-check-collection | N | haiku+sonnet agree | 設計契約なし (refactor 実装/作業記録) |
+| PLAN-L7-277-skill-recommendation-discrimination | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-278-skill-injection-safety | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-279-xml-residue-lint | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-28-invariant-test-trace | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L7-281-orchestrator-skill-injection | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-282-pack-direct-source-only-guards | N | haiku+sonnet agree | 設計契約なし (refactor 実装/作業記録) |
+| PLAN-L7-283-doctor-process-quality-extraction | N | haiku+sonnet agree | 設計契約なし (refactor 実装/作業記録) |
+| PLAN-L7-284-cli-delegation-execution-extraction | N | haiku+sonnet agree | 設計契約なし (refactor 実装/作業記録) |
+| PLAN-L7-285-cli-runtime-delegation-helper | N | haiku+sonnet agree | 設計契約なし (refactor 実装/作業記録) |
+| PLAN-L7-286-cli-delegation-command-registration | N | haiku+sonnet agree | 設計契約なし (refactor 実装/作業記録) |
+| PLAN-L7-29-red-first-tdd-evidence | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L7-30-test-oracle-strength | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L7-300-doctor-scoped-execution | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-301-telemetry-retention | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-302-context-tiering | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-303-digest-commit-anchor | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-304-plan-pending-decision-gate | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-305-plan-bundle-split-gate | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-306-model-run-cost-population | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-307-ledger-aging-detection | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-308-plan-archive-mechanism | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-309-plan-reference-traceability | N | haiku+sonnet agree | 設計契約なし (refactor 実装/作業記録) |
+| PLAN-L7-31-integration-gwt-lint | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L7-310-audit-lens-wiring | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-311-probe-harness | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-312-plan-reference-freshness-analyzer | N | haiku+sonnet agree | 設計契約なし (refactor 実装/作業記録) |
+| PLAN-L7-313-operational-baseline-sentinel | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-314-plan-reference-freshness-advisory | N | haiku+sonnet agree | 設計契約なし (refactor 実装/作業記録) |
+| PLAN-L7-315-scope-integrity-gate | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-316-ux-verification-readiness | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-317-write-encoding-guard | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-318-doctor-plan-gate-extraction | N | haiku+sonnet agree | 設計契約なし (refactor 実装/作業記録) |
+| PLAN-L7-319-raw-os-purity | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-32-cross-artifact-relation-graph | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-320-ci-failure-ingestion | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-321-personal-path-guard-generalization | N | haiku+sonnet agree | 設計契約なし (refactor 実装/作業記録) |
+| PLAN-L7-322-readme-pack-onboarding | N | haiku+sonnet agree | 設計契約なし (refactor 実装/作業記録) |
+| PLAN-L7-323-handover-active-plan-freshness | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-324-memory-compaction-trigger | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-325-doctor-lint-gate-extraction | N | haiku+sonnet agree | 設計契約なし (refactor 実装/作業記録) |
+| PLAN-L7-325-goal-workflow-binding | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-326-doctor-runtime-state-extraction | N | haiku+sonnet agree | 設計契約なし (refactor 実装/作業記録) |
+| PLAN-L7-327-doctor-json-cli-contract | N | haiku+sonnet agree | 設計契約なし (refactor 実装/作業記録) |
+| PLAN-L7-328-design-stale-backfill | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-329-module-l6-design-backfill | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L7-33-mcp-profile-config-safety | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-330-test-design-l6-crosswalk | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-331-cli-contract-polish | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-332-lint-walk-util-consolidation | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-333-frontmatter-parse-ssot | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-334-registrar-test-hardening | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-335-lint-gate-interface-canon | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-336-fail-open-annotation | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-337-plan-design-reference-lint | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-338-oracle-id-citation-gate | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-339-projection-writer-split | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-34-tool-adapter-probes | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-340-cli-registrar-completion | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-341-cli-lint-direct-import-resolution | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-342-doctor-submodule-tests | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-343-route-eval-json-alias | N | haiku+sonnet agree | 設計契約なし (refactor 実装/作業記録) |
+| PLAN-L7-344-vendor-contract-doctor | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-345-toolchain-pin-gate | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-346-redaction-self-trigger-lint | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-347-git-hooks-distribution | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-348-runtime-state-recoverability | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-349-dependency-license-inventory | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-35-canonical-document-export | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-350-hot-zone-intent-registry | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-351-runtime-parity-doc-closure | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-352-guard-help-exit-code-contract | N | haiku+sonnet agree | 設計契約なし (refactor 実装/作業記録) |
+| PLAN-L7-353-design-doc-ir-gate | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-354-toolchain-biome-exact-pin | N | haiku+sonnet agree | 設計契約なし (refactor 実装/作業記録) |
+| PLAN-L7-355-doctor-check-registry-extraction | N | haiku+sonnet agree | 設計契約なし (refactor 実装/作業記録) |
+| PLAN-L7-356-wave-team-orchestration | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-357-doctor-timing-profile | N | haiku+sonnet agree | 設計契約なし (refactor 実装/作業記録) |
+| PLAN-L7-358-doctor-toolchain-scope | N | haiku+sonnet agree | 設計契約なし (refactor 実装/作業記録) |
+| PLAN-L7-359-consumer-setup-profile-wiring | N | haiku+sonnet agree | 設計契約なし (refactor 実装/作業記録) |
+| PLAN-L7-36-relation-graph-export | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-360-db-projection-profiling | N | haiku+sonnet agree | 設計契約なし (refactor 実装/作業記録) |
+| PLAN-L7-361-setup-noninteractive-package-tar-portability | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-362-pack-update-check-advisory | N | adjudicated | 契約は dedicated test-design/design に既存 (token 一致 5-8 割) か、作業/診断記録 |
+| PLAN-L7-363-routine-gate-run-projection | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-364-reverse-stage-db-obligation | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-365-harness-db-currency-hook | A | adjudicated | rebuild trigger / staleness 判定の設計 (Step 1) が design に無く test-design 単体行のみ (db currency 0 件) |
+| PLAN-L7-366-takeover-surface-warn-actionable | N | haiku+sonnet agree | 設計契約なし (refactor 実装/作業記録) |
+| PLAN-L7-367-refactor-candidate-lifecycle | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-368-design-lint-db-projection | N | adjudicated | 契約は dedicated test-design/design に既存 (token 一致 5-8 割) か、作業/診断記録 |
+| PLAN-L7-369-db-currency-doctor-gate | N | haiku+sonnet agree | 設計契約なし (refactor 実装/作業記録) |
+| PLAN-L7-370-doctor-profile-cli | N | haiku+sonnet agree | 設計契約なし (refactor 実装/作業記録) |
+| PLAN-L7-371-standalone-readiness-advisory | N | haiku+sonnet agree | 設計契約なし (refactor 実装/作業記録) |
+| PLAN-L7-372-consumer-doctor-command-templates | N | haiku+sonnet agree | 設計契約なし (refactor 実装/作業記録) |
+| PLAN-L7-373-doctor-profile-module | N | haiku+sonnet agree | 設計契約なし (refactor 実装/作業記録) |
+| PLAN-L7-374-doctor-runner-definition-modules | N | haiku+sonnet agree | 設計契約なし (refactor 実装/作業記録) |
+| PLAN-L7-375-consumer-toolchain-profile | N | haiku+sonnet agree | 設計契約なし (refactor 実装/作業記録) |
+| PLAN-L7-376-consumer-toolchain-template-guidance | N | haiku+sonnet agree | 設計契約なし (refactor 実装/作業記録) |
+| PLAN-L7-377-doctor-definition-groups | N | haiku+sonnet agree | 設計契約なし (refactor 実装/作業記録) |
+| PLAN-L7-378-doctor-test-lazy-cache | N | haiku+sonnet agree | 設計契約なし (refactor 実装/作業記録) |
+| PLAN-L7-379-doctor-submodule-direct-tests | N | haiku+sonnet agree | 設計契約なし (refactor 実装/作業記録) |
+| PLAN-L7-380-doctor-runtime-state-direct-tests | N | haiku+sonnet agree | 設計契約なし (refactor 実装/作業記録) |
+| PLAN-L7-381-vmodel-spec-ir-projection | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-382-detector-route-candidate-feedback | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-383-vmodel-schedule-authoring-source | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-384-route-filing-review-surface | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-385-vmodel-activation-profile-join | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-386-typed-spec-declaration-projection | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-387-typed-spec-trace-closure-gate | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-388-typed-spec-ledger-body-sync-gate | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-389-typed-spec-owned-artifact-dispersal-gate | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-390-typed-spec-phase-layer-alignment-gate | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-391-agent-contract-detect-gate | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-392-memory-promotion-handover-digest | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-393-vmodel-l2-freeze-l5-verification-gate | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-394-refactor-qa-release-contract-gate | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-395-byte-integrity-readability-guard | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-395-gate-id-format-lint | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-396-verify-gate-binding | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-397-relation-graph-docs-root-ledger-coverage | N | haiku+sonnet agree | troubleshoot 作業記録・設計判断マーカーなし |
+| PLAN-L7-397-right-lung-doc-governance | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-398-scope-detection-dry-run-preview | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-398-session-log-summarize-path-truncation | N | haiku+sonnet agree | troubleshoot 作業記録・設計判断マーカーなし |
+| PLAN-L7-399-agent-guard-quality-check-tier-floor | M | adjudicated | subagent の agent-guard は廃止対象だが、review は orchestrator 以上の格で行う原則は継続する |
+| PLAN-L7-400-feedback-surface-group-before-slice | C | adjudicated | status=archived、後継 PLAN-L7-403 (本文明記) |
+| PLAN-L7-401-attempt-escalation-surface-cap | C | adjudicated | status=archived、後継 PLAN-L7-403 (本文明記) |
+| PLAN-L7-402-agent-definition-allowlist-coverage-check | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-403-feedback-surface-context-efficiency | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-404-design-doc-cross-integrity-gate | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-405-spec-ir-detector-precision | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-406-stable-id-helper | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-407-route-mode-allowlist-completion | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-409-runtime-plan-context-join-signal | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-410-defect-routing-refactor-candidates | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-411-skill-admission-gate | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-412-schedule-live-session-digest | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-413-distribution-export-integrity-defects | N | haiku+sonnet agree | troubleshoot 作業記録・設計判断マーカーなし |
+| PLAN-L7-414-agent-guard-claude5-family-rank | N | haiku+sonnet agree | troubleshoot 作業記録・設計判断マーカーなし |
+| PLAN-L7-415-gpt56-tier-routing-adoption | M | adjudicated | 旧モデル ID の指定は廃止対象だが、頂点 tier の常用禁止、テストの literal を SSoT 参照にする契約、worker への頂点級割当を policy で拒否する AC は継続する |
+| PLAN-L7-416-active-upgrade-frontier-right-arm-gate | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-417-skill-decision-points-retrofit | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-417-source-disposition-profile-projection | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-418-plan-asset-v2-adapter-migration-ledger | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-419-forward-fsm-transition-workflow-cli | A | adjudicated | state×event×evidence の遷移契約と workflow status/explain の設計判断 (token 一致 40%、U-FSM 契約行は function-spec に断片のみ) |
+| PLAN-L7-419-hook-failopen-hardening | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-420-ci-strict-evidence-gates | N | haiku+sonnet agree | troubleshoot 作業記録・設計判断マーカーなし |
+| PLAN-L7-420-vmodel-contract-compiler-registry | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-421-generic-right-arm-doctor-gate | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-421-test-hygiene-live-tree-fence | N | haiku+sonnet agree | troubleshoot 作業記録・設計判断マーカーなし |
+| PLAN-L7-422-feedback-saturation-visibility | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-423-engine-swap-domain-objects-ports | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-423-gate-minor-hardening-batch | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-424-git-hooks-ownership | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-424-semantic-assessment-debt-router | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-425-independent-detector-meta-verifier | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-425-setup-standardization | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-426-codex-native-subagents | M | adjudicated | subagent 生成は廃止対象だが、hooks.json の parse 失敗で work-guard / session-log が無効になる問題と、hooks schema の回帰 fence は継続する |
+| PLAN-L7-427-workspace-artifact-integrity-gate | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-428-stage-bound-elicitation-context | N | adjudicated | 契約は dedicated test-design/design に既存 (token 一致 5-8 割) か、作業/診断記録 |
+| PLAN-L7-429-spec-ir-detector-scope | N | adjudicated | 契約は dedicated test-design/design に既存 (token 一致 5-8 割) か、作業/診断記録 |
+| PLAN-L7-43-implementation-verification-group | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L7-430-task-kind-model-routing-v2 | N | haiku+sonnet agree | 設計契約なし (retrofit 実装/作業記録) |
+| PLAN-L7-434-universal-pr-trigger-impl | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-435-drive-plan-admission-impl | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L7-436-execution-ledger-episode-domain | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-437-github-issue-projection-inbound | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-438-reentry-internal-ci-auto-pr | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-439-cross-review-merge-learning-closure | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-44-harness-db-master | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L7-440-plan-admission-cutover | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-441-plan-draft-recovery-v4 | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-442-doctor-singleton-guard | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-444-engine-swap-g8-evidence-contract | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-445-ops-rule-mechanization | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-446-model-policy-enforcement | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-447-memory-rule-builder | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-448-source-repo-windows-ci-job | E2 | adjudicated | draft、#81 closed (#70 は弱い言及のみ) |
+| PLAN-L7-449-cli-shell-completion-impl | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L7-45-harness-db-foundation | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-450-test-traceability-detector-hardening | N | adjudicated | 契約は dedicated test-design/design に既存 (token 一致 5-8 割) か、作業/診断記録 |
+| PLAN-L7-451-github-ops-phase1-visibility-and-policy | A | adjudicated | PO 採択 2026-07-17 の設計判断 (github-ops 方針) が design/test-design に 0 件 (grep) |
+| PLAN-L7-452-forward-escape-contract-red | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-453-snapshot-runner-root-guard | N | adjudicated | 契約は dedicated test-design/design に既存 (token 一致 5-8 割) か、作業/診断記録 |
+| PLAN-L7-454-runtime-token-telemetry-ingestion | M | reclassified r1 | V4D-048 は token / cost を作業ログへ寄せる置き換えで、廃止ではない |
+| PLAN-L7-455-ci-cost-speedup-phase1 | N | adjudicated | 契約は dedicated test-design/design に既存 (token 一致 5-8 割) か、作業/診断記録 |
+| PLAN-L7-457-fence-stream-hash-db-vacuum | N | haiku+sonnet agree | troubleshoot 作業記録・設計判断マーカーなし |
+| PLAN-L7-458-node-self-hosted-bun-ban-foundation | N | adjudicated | 契約は dedicated test-design/design に既存 (token 一致 5-8 割) か、作業/診断記録 |
+| PLAN-L7-459-doc-consistency-audit-errata | N | haiku+sonnet agree | 設計契約なし (refactor 実装/作業記録) |
+| PLAN-L7-46-projection-writer | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-460-db-refresh-resource-guardrails | E1 | haiku+sonnet agree | draft / issue #124 OPEN |
+| PLAN-L7-461-ci-cost-speedup-phase2 | N | adjudicated | 契約は dedicated test-design/design に既存 (token 一致 5-8 割) か、作業/診断記録 |
+| PLAN-L7-462-bun-runtime-withdrawal | N | adjudicated | 契約は dedicated test-design/design に既存 (token 一致 5-8 割) か、作業/診断記録 |
+| PLAN-L7-463-vitest-snapshot-fixed-cost-cache | E1 | adjudicated | draft、issue #98 (open) |
+| PLAN-L7-464-doctor-incremental-and-lock-granularity | E1 | haiku+sonnet agree | draft / issue #70 OPEN |
+| PLAN-L7-465-cross-review-author-binding | C | adjudicated | PLAN-L7-517 が supersedes で指名 (契約は test-design L7-review-author-provenance 等へ) |
+| PLAN-L7-466-resource-kernel-native-companion | E2 | haiku+sonnet agree | draft / issue #152 CLOSED |
+| PLAN-L7-467-repository-document-disposition-closure-gate | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-469-design-freeze-mechanization-ownership | N | adjudicated | 契約は dedicated test-design/design に既存 (token 一致 5-8 割) か、作業/診断記録 |
+| PLAN-L7-47-search-metrics-feedback | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-470-review-dispatch-analyzer-ownership | N | haiku+sonnet agree | troubleshoot 作業記録・設計判断マーカーなし |
+| PLAN-L7-471-github-forward-foundation | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L7-472-claude-memory-async-wake | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L7-473-staged-release-channel-manifest | E1 | haiku+sonnet agree | draft / issue #224 OPEN |
+| PLAN-L7-474-worktree-topology-detector | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L7-475-worktree-topology-pf1-pure-analyzer | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-476-worktree-topology-pf2-os-collector | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-477-worktree-topology-pf3-doctor-advisory | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-478-worktree-topology-pf4-migration-acceptance | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-479-release-manifest-pf1-pure-domain | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-48-readiness-guardrail | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-480-oracle-id-token-boundary | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-481-parent-drive-mismatch-all-kinds | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-482-oracle-provenance-uniqueness | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-483-oracle-test-citation-trace | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L7-484-doctor-result-envelope-measurement | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-485-workflow-suggest-composition | E1 | haiku+sonnet agree | draft / issue #304 OPEN |
+| PLAN-L7-486-release-materializer-pf2 | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-487-isolated-git-artifact-resolver-pf3 | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-488-instruction-surface-bun-residual | E2 | haiku+sonnet agree | draft / issue #322 CLOSED |
+| PLAN-L7-489-pf4-sync-pack-channel-adapter-pair-freeze | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-49-asset-catalog | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-490-memory-write-collision-safety | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-491-instruction-surface-bun-residual-followup | E2 | haiku+sonnet agree | draft / issue #326 CLOSED |
+| PLAN-L7-492-pf5-release-aggregate-admission-pair-freeze | C | haiku+sonnet agree | 後継 PLAN-L7-742-release-aggregate-v2-inventory-cardinality が明記 |
+| PLAN-L7-493-d3a-repo-local-verdict-custody | A | reclassified r1 | requestDigest の 5-field preimage・review-request/v1・UTF-16 code-unit 順の正規化が docs/design / test-design に無い (Sol r1) |
+| PLAN-L7-494-release-promotion-rollback-gate | C | adjudicated | PLAN-L7-742 が supersedes で指名 |
+| PLAN-L7-495-memory-delivery-backlog-visibility | N | haiku+sonnet agree | troubleshoot 作業記録・設計判断マーカーなし |
+| PLAN-L7-496-pack-independent-consumer-runtime | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-497-green-command-anchor-required | A | adjudicated | 「全 entry 必須 (案 B)」「可変参照禁止」「実在検査撤回」の A/B/C 判断が review-evidence.md に無い (anchor 語 0 件) |
+| PLAN-L7-498-green-command-anchor-reachability | E1 | haiku+sonnet agree | draft / issue #367 OPEN |
+| PLAN-L7-499-pack-publication-manifest-v2-pure-domain | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-50-feature-list-residual-closure | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-500-pack-publication-assets-pure-domain | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-501-worktree-lifecycle-domain | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-502-review-head-eligibility-supersession | E2 | haiku+sonnet agree | draft / issue #392 CLOSED |
+| PLAN-L7-503-review-custody-delegation-root | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-504-review-merge-root-single-normalization | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-506-merged-plan-status-landing-guidance | E2 | haiku+sonnet agree | draft / issue #390 CLOSED |
+| PLAN-L7-508-pack-publication-staging-auditor | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-51-descent-obligation | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-510-snapshot-runner-cost | E2 | haiku+sonnet agree | draft / issue #409 CLOSED |
+| PLAN-L7-512-project-scoped-memory-root | C | adjudicated | PLAN-L6-104 が supersedes で指名 |
+| PLAN-L7-513-worktree-lifecycle-application | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-514-claude-hook-schema-rolling-upgrade | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-515-pack-remote-canary-publication | C | adjudicated | PLAN-L7-565 が supersedes で指名 |
+| PLAN-L7-516-pack-self-contained-consumer-runtime | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-517-review-author-provenance | E1 | haiku+sonnet agree | draft / issue #437 OPEN |
+| PLAN-L7-518-review-request-retraction | E1 | haiku+sonnet agree | draft / issue #439 OPEN |
+| PLAN-L7-519-pack-publication-adapter | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L7-52-l7-completion-audit-closure | N | adjudicated | 契約は dedicated test-design/design に既存 (token 一致 5-8 割) か、作業/診断記録 |
+| PLAN-L7-520-review-receipt-supersession-contract | N | adjudicated | 契約は dedicated test-design/design に既存 (token 一致 5-8 割) か、作業/診断記録 |
+| PLAN-L7-521-review-consume-subject-snapshot-binding | E2 | haiku+sonnet agree | draft / issue #465 CLOSED |
+| PLAN-L7-522-pack-consumer-bun-path-removal | E1 | haiku+sonnet agree | draft / issue #450 OPEN |
+| PLAN-L7-523-release-version-identity | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-524-pack-consumer-generated-bun-removal | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L7-526-windows-ci-single-snapshot | N | haiku+sonnet agree | 設計契約なし (refactor 実装/作業記録) |
+| PLAN-L7-527-pack-consumer-node-readiness | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-528-pack-authoring-template-scope | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L7-529-project-identity-bootstrap | N | adjudicated | 契約は dedicated test-design/design に既存 (token 一致 5-8 割) か、作業/診断記録 |
+| PLAN-L7-53-learning-engine | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-530-bun-final-retirement | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-531-pack-internal-canary-smoke | N | adjudicated | 契約は dedicated test-design/design に既存 (token 一致 5-8 割) か、作業/診断記録 |
+| PLAN-L7-532-pack-publication-driver | C | adjudicated | PLAN-L7-565 が supersedes で指名 (draft) |
+| PLAN-L7-533-memory-completion-fence | C | adjudicated | 本文に後継 PLAN-L6-104 の撤回注記 (issue #550 close) |
+| PLAN-L7-534-d3b-provider-evidence-composition | N | adjudicated | 契約は dedicated test-design/design に既存 (token 一致 5-8 割) か、作業/診断記録 |
+| PLAN-L7-54-merged-plan-status-gate | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-55-plan-artifact-existence-gate | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-56-artifact-progress-state | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-562-d3b-provider-judgment | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-565-pack-publication-atomic-ref-cas | E1 | haiku+sonnet agree | draft / issue #565 OPEN |
+| PLAN-L7-566-memory-clean-cut-replacement | N | adjudicated | 契約は dedicated test-design/design に既存 (token 一致 5-8 割) か、作業/診断記録 |
+| PLAN-L7-57-token-telemetry-tracker | C | adjudicated | PLAN-L6-789 が supersedes で指名 (token ingest 撤去) |
+| PLAN-L7-58-telemetry-cost-enrichment | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L7-59-detector-hardening | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-60-change-set-integrity | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-61-telemetry-ingestion-metatest | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-62-runtime-portability-guard | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-625-pack-publication-preparation | E1 | haiku+sonnet agree | draft / issue #625 OPEN |
+| PLAN-L7-626-pack-publication-admission-binding | N | haiku+sonnet agree | 設計契約なし (add-impl 実装/作業記録) |
+| PLAN-L7-627-pack-publication-admitted-publish | E1 | haiku+sonnet agree | draft / issue #627 OPEN |
+| PLAN-L7-628-pack-consumer-runtime-release-install | N | adjudicated | 契約は dedicated test-design/design に既存 (token 一致 5-8 割) か、作業/診断記録 |
+| PLAN-L7-63-plan-registry-fingerprint | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-64-team-runner-launch | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-65-deterministic-model-policy | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-66-existing-repo-onboarding-readme | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-668-codex-hook-command-schema | N | adjudicated | 契約は dedicated test-design/design に既存 (token 一致 5-8 割) か、作業/診断記録 |
+| PLAN-L7-67-team-launch-policy | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-676-release-consumer-dev-start | N | adjudicated | 契約は dedicated test-design/design に既存 (token 一致 5-8 割) か、作業/診断記録 |
+| PLAN-L7-678-consumer-launcher-path-alias | N | haiku+sonnet agree | troubleshoot 作業記録・設計判断マーカーなし |
+| PLAN-L7-68-provider-dispatch-portability | N | haiku+sonnet agree | troubleshoot 作業記録・設計判断マーカーなし |
+| PLAN-L7-69-encoding-corruption-expanded-guard | N | haiku+sonnet agree | troubleshoot 作業記録・設計判断マーカーなし |
+| PLAN-L7-690-issue-binding-projection-state-contract | E1 | adjudicated | draft、#692 (open) の前提契約 |
+| PLAN-L7-70-skill-pack-curation | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-71-slash-commands | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-711-rechain-verifier | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L7-72-task-classify-cli | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-722-plan-revision-digest-query | N | adjudicated | 契約は dedicated test-design/design に既存 (token 一致 5-8 割) か、作業/診断記録 |
+| PLAN-L7-729-ci-fail-fast | E1 | haiku+sonnet agree | draft / issue #729 OPEN |
+| PLAN-L7-73-claude-native-semver-resolution | N | haiku+sonnet agree | troubleshoot 作業記録・設計判断マーカーなし |
+| PLAN-L7-733-sonnet-alias-effort-high | E1 | haiku+sonnet agree | draft / issue #733 OPEN |
+| PLAN-L7-74-task-risk-whole-word-match | N | haiku+sonnet agree | troubleshoot 作業記録・設計判断マーカーなし |
+| PLAN-L7-742-release-aggregate-v2-inventory-cardinality | A | adjudicated | 基数契約 (採用 A2)・entries[].path / destinationPath 対応が設計文書に 0 件 (節内 token 一致 36%) |
+| PLAN-L7-75-cost-tiered-provider-router | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L7-76-review-remediation-reliability | N | haiku+sonnet agree | troubleshoot 作業記録・設計判断マーカーなし |
+| PLAN-L7-77-codex-stdin-prompt-dispatch | N | haiku+sonnet agree | troubleshoot 作業記録・設計判断マーカーなし |
+| PLAN-L7-78-claude-stdin-prompt-dispatch | N | haiku+sonnet agree | troubleshoot 作業記録・設計判断マーカーなし |
+| PLAN-L7-79-mcp-launcher-argv-tokenization | N | haiku+sonnet agree | troubleshoot 作業記録・設計判断マーカーなし |
+| PLAN-L7-80-session-digest-event-watermark | N | haiku+sonnet agree | troubleshoot 作業記録・設計判断マーカーなし |
+| PLAN-L7-81-codex-wrapper-parity-gate | N | haiku+sonnet agree | troubleshoot 作業記録・設計判断マーカーなし |
+| PLAN-L7-82-feedback-log-discipline-lint | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-83-handover-drift-and-accumulation | N | adjudicated | 契約は dedicated test-design/design に既存 (token 一致 5-8 割) か、作業/診断記録 |
+| PLAN-L7-835-windows-sessionstart-contract | N | haiku+sonnet agree | troubleshoot 作業記録・設計判断マーカーなし |
+| PLAN-L7-84-status-next-action-field | N | haiku+sonnet agree | 設計文書を正本として指すのみ (判断マーカーなし) |
+| PLAN-L7-85-review-readonly-guard | N | haiku+sonnet agree | troubleshoot 作業記録・設計判断マーカーなし |
+| PLAN-L7-855-codex-worker-sandbox-contract | N | haiku+sonnet agree | troubleshoot 作業記録・設計判断マーカーなし |
+| PLAN-L7-86-merged-plan-status-deliverable-scope | C | adjudicated | PLAN-L7-87 が supersedes で指名 |
+| PLAN-L7-87-merged-plan-status-kind-independent | N | haiku+sonnet agree | troubleshoot 作業記録・設計判断マーカーなし |
+| PLAN-L7-88-handover-summary-injection-cap | N | haiku+sonnet agree | troubleshoot 作業記録・設計判断マーカーなし |
+| PLAN-L7-89-plan-errata-supersession-gate | N | haiku+sonnet agree | troubleshoot 作業記録・設計判断マーカーなし |
+| PLAN-L7-90-ci-readability-gitignored-artifact | N | haiku+sonnet agree | troubleshoot 作業記録・設計判断マーカーなし |
+| PLAN-L7-91-hollow-deliverable-detection | N | haiku+sonnet agree | troubleshoot 作業記録・設計判断マーカーなし |
+| PLAN-L7-92-plan-body-substance-gate | N | haiku+sonnet agree | troubleshoot 作業記録・設計判断マーカーなし |
+| PLAN-L7-93-plan-completion-drift-gate | N | haiku+sonnet agree | troubleshoot 作業記録・設計判断マーカーなし |
+| PLAN-L7-94-outstanding-work-surface | N | haiku+sonnet agree | 設計契約なし (impl 実装/作業記録) |
+| PLAN-L7-95-lint-wiring-meta-gate | N | haiku+sonnet agree | troubleshoot 作業記録・設計判断マーカーなし |
+| PLAN-L7-96-screen-db-projection | N | haiku+sonnet agree | troubleshoot 作業記録・設計判断マーカーなし |
+| PLAN-L7-97-deliverable-catalog-extension | N | haiku+sonnet agree | troubleshoot 作業記録・設計判断マーカーなし |
+| PLAN-L7-98-handover-outstanding-reconciliation | N | haiku+sonnet agree | troubleshoot 作業記録・設計判断マーカーなし |
+| PLAN-L7-99-sub-doc-catalog-drift-gate | N | haiku+sonnet agree | troubleshoot 作業記録・設計判断マーカーなし |
+| PLAN-L8-01-engine-swap-integration-verification | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-L9-01-engine-swap-system-verification | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-M-00-verify-cutover | N | adjudicated | 要求/charter/cutover: 正本は対応する設計文書、PLAN は記録 |
+| PLAN-M-01-cutover-backfill | N | adjudicated | 要求/charter/cutover: 正本は対応する設計文書、PLAN は記録 |
+| PLAN-RECOVERY-01-internal-asset-recovery | N | haiku+sonnet agree | recovery 作業記録・設計判断マーカーなし |
+| PLAN-RECOVERY-02-vmodel-canonical | N | haiku+sonnet agree | recovery 作業記録・設計判断マーカーなし |
+| PLAN-RECOVERY-03-codex-l7-overstep | N | haiku+sonnet agree | recovery 作業記録・設計判断マーカーなし |
+| PLAN-RECOVERY-04-roadmap-definition | N | haiku+sonnet agree | recovery 作業記録・設計判断マーカーなし |
+| PLAN-RECOVERY-05-iron-law-attempt-escalation | N | haiku+sonnet agree | recovery 作業記録・設計判断マーカーなし |
+| PLAN-RECOVERY-06-pack-consumer-doctor-profile | N | haiku+sonnet agree | recovery 作業記録・設計判断マーカーなし |
+| PLAN-RECOVERY-07-design-bottomup-backmerge | N | haiku+sonnet agree | recovery 作業記録・設計判断マーカーなし |
+| PLAN-RECOVERY-08-orchestrator-cold-l7-runaway | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-RECOVERY-09-test-design-right-arm-placement | N | haiku+sonnet agree | recovery 作業記録・設計判断マーカーなし |
+| PLAN-RECOVERY-10-right-lung-quality-assurance | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-RECOVERY-11-snapshot-fence-foreign-activity | E1 | haiku+sonnet agree | draft / issue #77 OPEN |
+| PLAN-RECOVERY-12-design-doc-reality-backmerge | N | adjudicated | 契約は dedicated test-design/design に既存 (token 一致 5-8 割) か、作業/診断記録 |
+| PLAN-RECOVERY-13-powershell-session-log-visibility | N | adjudicated | 契約は dedicated test-design/design に既存 (token 一致 5-8 割) か、作業/診断記録 |
+| PLAN-RECOVERY-14-db-orphan-debt-closure | E2 | haiku+sonnet agree | draft / issue #87 CLOSED |
+| PLAN-RECOVERY-15-cross-os-ci-aggregate-gate | E2 | haiku+sonnet agree | draft / issue #97 CLOSED |
+| PLAN-RECOVERY-16-plan-revision-authoring | N | haiku+sonnet agree | recovery 作業記録・設計判断マーカーなし |
+| PLAN-RECOVERY-17-redesign-bundle-reentry | E1 | haiku+sonnet agree | draft / issue #102 OPEN |
+| PLAN-RECOVERY-18-merged-plan-target-evidence | N | haiku+sonnet agree | recovery 作業記録・設計判断マーカーなし |
+| PLAN-RECOVERY-19-gate-run-orphan-projection-fix | N | haiku+sonnet agree | recovery 作業記録・設計判断マーカーなし |
+| PLAN-RECOVERY-20-merged-plan-premerge-landing | A | adjudicated | landed_on_target / classifyTargetArtifacts の契約・不変条件が design/test-design に 0 件 (grep) |
+| PLAN-RECOVERY-21-memory-sync-local-surface | E1 | haiku+sonnet agree | draft / issue #242 OPEN |
+| PLAN-REVERSE-01-process-docs | N | adjudicated | Reverse backfill: 契約は設計文書へ逆流済みが目的、本文は作業記録 |
+| PLAN-REVERSE-02-session-log | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-03-forced-stop-feedback | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-04-setup-solo-team | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-05-handover-mechanism | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-06-workflow-improvements | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-07-backfill-pairing | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-08-discovery-metamodel | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-09-governance-enforcement | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-10-vmodel-pair-lint | N | adjudicated | Reverse backfill: 契約は設計文書へ逆流済みが目的、本文は作業記録 |
+| PLAN-REVERSE-101-db-projection-backprop-gate | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-103-reverse-fullback-backprop-gate | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-104-conditional-backfill-decision-gate | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-105-artifact-type-path-governance-gate | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-106-backprop-classification-backlog-gate | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-107-reverse-fullback-scope-gate | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-108-review-green-command-evidence | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-109-review-green-command-db-projection | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-11-verification-trigger | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-111-reverse-fullback-claimed-artifact-gate | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-112-reverse-r4-claimed-artifact-gate | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-115-reverse-r4-route-backprop-gate | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-116-required-agent-role-gate | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-117-kind-layer-governance-gate | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-118-required-backfill-bidirectional-gate | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-119-conditional-backfill-audit-sync | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-12-review-evidence | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-12-self-pair-normalization | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-120-backfill-result-doc-sync | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-121-branch-kind-check | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-122-vmodel-injection-show | N | adjudicated | Reverse backfill: 契約は設計文書へ逆流済みが目的、本文は作業記録 |
+| PLAN-REVERSE-123-route-eval-recommended-command | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-124-route-approval-gate | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-125-route-legacy-command-gate | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-126-route-config-dependency-gate | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-127-orchestration-degradation-record | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-128-route-escalation-boundary-gate | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-129-incident-route-token-coverage | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-13-cross-review-enforcement | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-130-right-arm-gate-planning | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-131-plan-complete-handover | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-133-refactor-brush-up-workflow | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-134-tdd-drive-fit-classification | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-135-dynamic-skill-injection-materialization | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-138-quality-branch-audit | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-139-codex-hook-adapter | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-14-test-before-review | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-140-forward-convergence-version-up-backfill | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-141-refactor-candidate-detector-backfill | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-15-module-drift | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-16-handover-quality | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-168-g8-integration-workflow | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-169-g8-integration-evidence-manifest | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-17-gate-confirm | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-18-review-evidence-stale | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-19-plan-schedule-lint | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-20-runtime-adapter-session-lifecycle | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-21-fr-unit-coverage | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-22-l6-completion-readiness | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-23-coding-rules-workflow | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-238-cited-command-backfill | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-24-structured-error-handling | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-243-mode-first-class-backfill | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-245-sub-doc-schema-integrity-backfill | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-REVERSE-25-module-boundary-rule | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-253-advisor-triggers-backfill | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-REVERSE-255-delegation-injection-backfill | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-REVERSE-26-domain-boundary-lint | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-262-skill-telemetry-provenance-backfill | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-263-route-mode-kind-backfill | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-269-deprecation-mode-backfill | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-REVERSE-27-invariant-test-trace | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-270-spec-change-backfill | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-REVERSE-271-deviation-signal-backfill | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-REVERSE-272-red-first-backfill | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-REVERSE-273-test-results-backfill | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-REVERSE-274-mutation-backfill | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-REVERSE-275-glossary-backfill | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-REVERSE-277-skill-recommendation-backfill | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-278-skill-injection-backfill | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-REVERSE-279-xml-residue-backfill | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-REVERSE-28-red-first-tdd-evidence | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-280-skill-root-doc-sync | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-REVERSE-281-orchestrator-injection-backfill | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-REVERSE-29-test-oracle-strength | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-30-integration-gwt-lint | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-31-codex-l7-overstep | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-317-write-encoding-guard-backfill | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-32-cross-artifact-relation-graph | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-33-mcp-profile-config-safety | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-34-tool-adapter-probes | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-35-canonical-document-export | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-36-verification-cycle-gate-naming | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-362-pack-update-check-advisory-backfill | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-363-gate-run-projection-backfill | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-365-harness-db-currency-backfill | E2 | haiku+sonnet agree | draft / issue #78 CLOSED |
+| PLAN-REVERSE-367-refactor-candidate-lifecycle-backfill | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-368-design-lint-db-projection-backfill | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-381-vmodel-spec-ir-projection-backfill | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-382-detector-route-candidate-feedback-backfill | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-383-vmodel-schedule-authoring-source-backfill | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-384-route-filing-review-surface-backfill | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-385-vmodel-activation-profile-join-backfill | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-386-typed-spec-declaration-projection-backfill | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-387-typed-spec-trace-closure-gate-backfill | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-388-typed-spec-ledger-body-sync-gate-backfill | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-389-typed-spec-owned-artifact-dispersal-backfill | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-390-typed-spec-phase-layer-alignment-backfill | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-391-agent-contract-detect-gate-backfill | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-392-memory-promotion-digest-backfill | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-393-vmodel-l2-freeze-l5-verification-gate-backfill | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-394-refactor-qa-release-contract-gate-backfill | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-395-cli-command-design-backfill | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-395-gate-id-format-lint-backfill | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-396-encoding-byte-integrity-backfill | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-396-verify-gate-binding-backfill | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-397-right-lung-doc-governance-backfill | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-398-scope-detection-dry-run-preview-backfill | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-40-orphan-governance | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-403-feedback-surface-context-efficiency-backfill | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-404-design-doc-cross-integrity-backfill | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-405-spec-ir-detector-precision-backfill | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-406-stable-id-helper-backfill | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-407-route-mode-allowlist-backfill | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-409-runtime-plan-context-join-signal-backfill | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-41-substance-lints | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-410-defect-routing-refactor-backfill | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-411-skill-admission-backfill | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-REVERSE-412-schedule-live-session-digest-backfill | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-416-active-upgrade-frontier-right-arm-backfill | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-417-source-disposition-profile-backfill | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-418-plan-asset-v2-backfill | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-419-forward-fsm-backfill | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-REVERSE-42-regression-dependency-drift | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-420-vmodel-contract-compiler-backfill | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-421-generic-right-arm-backfill | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-423-engine-swap-domain-backfill | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-REVERSE-424-semantic-assessment-backfill | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-REVERSE-425-detector-meta-verifier-backfill | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-REVERSE-428-stage-bound-elicitation-backfill | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-429-spec-ir-detector-scope-backfill | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-REVERSE-43-implementation-verification-group | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-434-universal-pr-trigger-backfill | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-435-drive-plan-admission-backfill | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-REVERSE-436-execution-ledger-episode-backfill | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-REVERSE-437-github-issue-projection-backfill | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-REVERSE-438-reentry-internal-ci-backfill | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-REVERSE-439-cross-review-merge-backfill | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-REVERSE-44-roadmap-definition-design | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-440-plan-admission-cutover-backfill | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-REVERSE-441-plan-draft-recovery-v4-backfill | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-REVERSE-442-doctor-singleton-backfill | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-REVERSE-444-engine-swap-g8-evidence-backfill | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-REVERSE-445-ops-rule-mechanization-backfill | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-REVERSE-446-model-policy-enforcement-backfill | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-REVERSE-447-memory-rule-builder-backfill | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-REVERSE-448-source-repo-windows-ci-job-backfill | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-REVERSE-449-cli-shell-completion-backfill | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-REVERSE-45-descent-obligation | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-450-test-traceability-detector-backfill | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-REVERSE-451-github-ops-phase1-backfill | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-REVERSE-452-forward-escape-contract-backfill | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-REVERSE-458-node-self-hosted-bun-ban-backfill | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-46-deliverable-catalog-extension | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-460-db-refresh-guardrail-backfill | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-REVERSE-465-cross-review-author-binding-backfill | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-REVERSE-466-resource-kernel-native-scaffold-backfill | E2 | haiku+sonnet agree | draft / issue #152 CLOSED |
+| PLAN-REVERSE-467-repository-document-ledger-backfill | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-REVERSE-472-claude-memory-async-wake-backfill | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-473-staged-release-backfill | N | adjudicated | Reverse backfill: 契約は設計文書へ逆流済みが目的、本文は作業記録 |
+| PLAN-REVERSE-474-worktree-topology-detector-backfill | E2 | haiku+sonnet agree | draft / issue #232 CLOSED |
+| PLAN-REVERSE-485-workflow-suggest-backfill | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-REVERSE-490-memory-write-collision-safety-backfill | E2 | haiku+sonnet agree | draft / issue #325 CLOSED |
+| PLAN-REVERSE-493-d3a-repo-local-verdict-custody-backfill | E1 | haiku+sonnet agree | draft / issue #386 OPEN |
+| PLAN-REVERSE-494-release-promotion-rollback-gate-backfill | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-REVERSE-496-pack-independent-consumer-runtime-backfill | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-497-green-command-anchor-backfill | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-498-green-command-anchor-reachability-backfill | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-REVERSE-499-pack-publication-manifest-v2-backfill | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-500-pack-publication-assets-backfill | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-REVERSE-501-worktree-lifecycle-domain-backfill | E1 | haiku+sonnet agree | draft / issue #384 OPEN |
+| PLAN-REVERSE-502-review-head-eligibility-supersession-backfill | E1 | adjudicated | draft、親 PLAN-L7-502 も draft、#384 (open) 参照 (弱い根拠) |
+| PLAN-REVERSE-503-review-custody-delegation-root-backfill | E2 | haiku+sonnet agree | draft / issue #396 CLOSED |
+| PLAN-REVERSE-504-review-merge-root-single-normalization-backfill | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-REVERSE-505-pack-staged-release-rollback-backfill | E2 | haiku+sonnet agree | draft / issue #402 CLOSED |
+| PLAN-REVERSE-506-merged-plan-status-landing-guidance-backfill | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-REVERSE-508-pack-publication-staging-auditor-backfill | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-512-project-scoped-memory-root-backfill | E2 | haiku+sonnet agree | draft / issue #544 CLOSED |
+| PLAN-REVERSE-513-worktree-lifecycle-application-backfill | E1 | adjudicated | draft、#384/#426 (open) |
+| PLAN-REVERSE-514-claude-hook-schema-rolling-upgrade-backfill | E2 | haiku+sonnet agree | draft / issue #433 CLOSED |
+| PLAN-REVERSE-515-pack-remote-canary-publication-backfill | E2 | haiku+sonnet agree | draft / issue #414 CLOSED |
+| PLAN-REVERSE-516-pack-self-contained-consumer-runtime-backfill | E2 | haiku+sonnet agree | draft / issue #420 CLOSED |
+| PLAN-REVERSE-517-review-author-provenance-backfill | E1 | haiku+sonnet agree | draft / issue #437 OPEN |
+| PLAN-REVERSE-518-review-request-retraction-backfill | E1 | haiku+sonnet agree | draft / issue #439 OPEN |
+| PLAN-REVERSE-519-pack-publication-adapter-backfill | E2 | haiku+sonnet agree | draft / issue #414 CLOSED |
+| PLAN-REVERSE-520-review-receipt-supersession-backfill | E1 | haiku+sonnet agree | draft / issue #386 OPEN |
+| PLAN-REVERSE-521-review-consume-subject-snapshot-binding-backfill | E2 | haiku+sonnet agree | draft / issue #465 CLOSED |
+| PLAN-REVERSE-522-pack-consumer-bun-path-removal-backfill | E1 | haiku+sonnet agree | draft / issue #418 OPEN |
+| PLAN-REVERSE-523-release-version-identity-backfill | E2 | haiku+sonnet agree | draft / issue #474 CLOSED |
+| PLAN-REVERSE-524-pack-consumer-generated-bun-removal-backfill | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-REVERSE-527-pack-consumer-node-readiness-backfill | E2 | haiku+sonnet agree | draft / issue #471 CLOSED |
+| PLAN-REVERSE-528-pack-authoring-template-scope-backfill | E2 | haiku+sonnet agree | draft / issue #482 CLOSED |
+| PLAN-REVERSE-529-project-identity-bootstrap-backfill | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-530-bun-final-retirement-backfill | E2 | haiku+sonnet agree | draft / issue #487 CLOSED |
+| PLAN-REVERSE-531-pack-internal-canary-smoke-backfill | E1 | haiku+sonnet agree | draft / issue #418 OPEN |
+| PLAN-REVERSE-532-pack-publication-driver-backfill | E1 | haiku+sonnet agree | draft / issue #565 OPEN |
+| PLAN-REVERSE-533-memory-completion-fence-backfill | C | adjudicated | 本文に後継 PLAN-L6-104 の撤回注記 |
+| PLAN-REVERSE-534-d3b-provider-evidence-composition-backfill | E2 | haiku+sonnet agree | draft / issue #570 CLOSED |
+| PLAN-REVERSE-56-artifact-progress-state | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-562-d3b-provider-judgment-backfill | E1 | haiku+sonnet agree | draft / issue #562 OPEN |
+| PLAN-REVERSE-565-pack-publication-atomic-ref-cas | E1 | haiku+sonnet agree | draft / issue #565 OPEN |
+| PLAN-REVERSE-566-memory-clean-cut-replacement | E1 | haiku+sonnet agree | draft / issue #424 OPEN |
+| PLAN-REVERSE-600-claude-inbox-terminal-gc | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-625-pack-publication-preparation | E1 | haiku+sonnet agree | draft / issue #625 OPEN |
+| PLAN-REVERSE-626-pack-publication-admission-binding-backfill | E1 | haiku+sonnet agree | draft / issue #626 OPEN |
+| PLAN-REVERSE-627-pack-publication-admitted-publish-backfill | E1 | haiku+sonnet agree | draft / issue #627 OPEN |
+| PLAN-REVERSE-628-pack-consumer-runtime-release-install-backfill | E1 | haiku+sonnet agree | draft / issue #418 OPEN |
+| PLAN-REVERSE-676-release-consumer-dev-start-backfill | E1 | haiku+sonnet agree | draft / issue #676 OPEN |
+| PLAN-REVERSE-711-rechain-verifier-backfill | E1 | haiku+sonnet agree | draft / issue #711 OPEN |
+| PLAN-REVERSE-722-plan-revision-digest-query-backfill | E1 | haiku+sonnet agree | draft / issue #722 OPEN |
+| PLAN-REVERSE-742-release-aggregate-v2-inventory-cardinality-backfill | N | haiku+sonnet agree | reverse 作業記録・設計判断マーカーなし |
+| PLAN-REVERSE-77-snapshot-fence-foreign-activity-backfill | E2 | haiku+sonnet agree | draft / 紐づく issue 無し |
+| PLAN-REVERSE-823-pack-full-reverse-trial | E1 | haiku+sonnet agree | draft / issue #823 OPEN |
+| PLAN-REVERSE-835-windows-sessionstart-contract-backfill | E1 | haiku+sonnet agree | draft / issue #835 OPEN |
+| PLAN-REVERSE-855-codex-worker-sandbox-backfill | E1 | haiku+sonnet agree | draft / issue #676 OPEN |
