@@ -32,6 +32,7 @@ import { migrate } from "../src/state-db/migration.ts";
 import { ensureTrackedProjectIdentity } from "./support/project-identity-fixture.ts";
 
 const projectMemoryRootResolution = vi.hoisted(() => ({ count: 0 }));
+const directoryReadObservations = vi.hoisted(() => ({ paths: [] as string[] }));
 
 vi.mock("../src/runtime/project-memory-root.ts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../src/runtime/project-memory-root.ts")>();
@@ -42,6 +43,15 @@ vi.mock("../src/runtime/project-memory-root.ts", async (importOriginal) => {
       return actual.requireProjectMemoryRoot(repoRoot);
     }),
   };
+});
+
+vi.mock("node:fs", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("node:fs")>();
+  const readdirSync = ((...args: Parameters<typeof actual.readdirSync>) => {
+    directoryReadObservations.paths.push(String(args[0]));
+    return actual.readdirSync(...args);
+  }) as typeof actual.readdirSync;
+  return { ...actual, readdirSync };
 });
 
 const memory: MemoryEntry = {
@@ -144,7 +154,7 @@ describe("Claude memory delivery backlog visibility", () => {
     }
   });
 
-  it("SessionStart inbox route refuses an invalid identity before reading inbox files", async () => {
+  it("SessionStart inbox route rejects unavailable identity before reading inbox files", async () => {
     const root = fixture();
     try {
       const runSessionStart = await sessionStartInboxRoute();
@@ -160,23 +170,17 @@ describe("Claude memory delivery backlog visibility", () => {
         }),
       );
       writeFileSync(join(root, "ut-tdd.project.json"), "{\"invalid\":true}\n", "utf8");
-      const readdirSpy = vi.spyOn(await import("node:fs"), "readdirSync");
-      try {
-        expect(() => runSessionStart({ repoRoot: root })).toThrow(
-          "project_memory_root_project_identity_drift",
-        );
-        expect(
-          readdirSpy.mock.calls.some(([path]) => String(path) === inboxDirectory),
-        ).toBe(false);
-      } finally {
-        readdirSpy.mockRestore();
-      }
+      directoryReadObservations.paths.length = 0;
+      expect(() => runSessionStart({ repoRoot: root })).toThrow(
+        "project_memory_root_project_identity_unavailable",
+      );
+      expect(directoryReadObservations.paths).not.toContain(inboxDirectory);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
   });
 
-  it("SessionStart inbox route revalidates identity after recovery before summary", async () => {
+  it("SessionStart inbox route rejects unavailable identity after recovery before summary", async () => {
     const root = fixture();
     try {
       const runSessionStart = await sessionStartInboxRoute();
@@ -207,7 +211,7 @@ describe("Claude memory delivery backlog visibility", () => {
             return { pr, state: "MERGED", headSha: review.exactHead };
           },
         }),
-      ).toThrow("project_memory_root_project_identity_drift");
+      ).toThrow("project_memory_root_project_identity_unavailable");
       const runtimeRoot = join(project.runtimeBusRoot, "claude-memory-wake");
       expect(
         readdirSync(runtimeRoot).some((name) => name.endsWith(".terminal.json")),
