@@ -2,8 +2,8 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
-  readFileSync,
   readdirSync,
+  readFileSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
@@ -22,7 +22,7 @@ import {
   claudeWorkspaceId,
   inspectClaudeMemoryWakeHook,
   publishClaudeInboxEntry,
-  recoverClaudeInboxBacklog,
+  recoverAndSummarizeClaudeInboxForSessionStart,
   summarizeUnclaimedInbox,
   waitForClaudeMemory,
 } from "../src/runtime/claude-memory-wake.ts";
@@ -77,42 +77,19 @@ function generationPath(root: string, sessionId: string): string {
   return join(project.runtimeBusRoot, "claude-memory-wake", `${sessionId}.generation`);
 }
 
-type SessionStartInboxRoute = (input: {
-  repoRoot: string;
-  pullRequestState?: (
-    pr: number,
-  ) => { pr: number; state: "OPEN" | "CLOSED" | "MERGED"; headSha: string } | undefined;
-}) => ReturnType<typeof summarizeUnclaimedInbox>;
-
-async function sessionStartInboxRoute(): Promise<SessionStartInboxRoute> {
-  const api = await import("../src/runtime/claude-memory-wake.ts");
-  const optimized = (
-    api as unknown as {
-      recoverAndSummarizeClaudeInboxForSessionStart?: SessionStartInboxRoute;
-    }
-  ).recoverAndSummarizeClaudeInboxForSessionStart;
-  if (optimized) return optimized;
-  // Red-only compatibility witness for the pre-fix production composition.
-  // This fallback is test-local and is removed once the SessionStart route exists.
-  return ({ repoRoot, pullRequestState }) => {
-    try {
-      recoverClaudeInboxBacklog({ repoRoot, dryRun: false, pullRequestState });
-    } catch {
-      // Match the current SessionStart fail-open recovery adapter.
-    }
-    return summarizeUnclaimedInbox(repoRoot, claudeWorkspaceId(repoRoot));
-  };
-}
-
 describe("Claude memory delivery backlog visibility", () => {
   it("SessionStart inbox route recovers before summarizing with two validated contexts", async () => {
     const root = fixture();
     try {
-      const runSessionStart = await sessionStartInboxRoute();
+      const runSessionStart = recoverAndSummarizeClaudeInboxForSessionStart;
       const project = resolveProjectMemoryRoot(root);
       if (!project.ok) throw new Error(project.reason);
       const workspaceId = project.projectNamespace;
-      const current = buildClaudeInboxEntry({ memory, operationId: "session-current", workspaceId });
+      const current = buildClaudeInboxEntry({
+        memory,
+        operationId: "session-current",
+        workspaceId,
+      });
       const foreign = buildClaudeInboxEntry({
         memory,
         operationId: "session-foreign",
@@ -157,7 +134,7 @@ describe("Claude memory delivery backlog visibility", () => {
   it("SessionStart inbox route rejects unavailable identity before reading inbox files", async () => {
     const root = fixture();
     try {
-      const runSessionStart = await sessionStartInboxRoute();
+      const runSessionStart = recoverAndSummarizeClaudeInboxForSessionStart;
       const project = resolveProjectMemoryRoot(root);
       if (!project.ok) throw new Error(project.reason);
       const inboxDirectory = join(project.runtimeBusRoot, "claude-memory-wake", "inbox");
@@ -169,7 +146,7 @@ describe("Claude memory delivery backlog visibility", () => {
           workspaceId: project.projectNamespace,
         }),
       );
-      writeFileSync(join(root, "ut-tdd.project.json"), "{\"invalid\":true}\n", "utf8");
+      writeFileSync(join(root, "ut-tdd.project.json"), '{"invalid":true}\n', "utf8");
       directoryReadObservations.paths.length = 0;
       expect(() => runSessionStart({ repoRoot: root })).toThrow(
         "project_memory_root_project_identity_unavailable",
@@ -183,7 +160,7 @@ describe("Claude memory delivery backlog visibility", () => {
   it("SessionStart inbox route rejects unavailable identity after recovery before summary", async () => {
     const root = fixture();
     try {
-      const runSessionStart = await sessionStartInboxRoute();
+      const runSessionStart = recoverAndSummarizeClaudeInboxForSessionStart;
       const project = resolveProjectMemoryRoot(root);
       if (!project.ok) throw new Error(project.reason);
       const digest = "d".repeat(16);
@@ -207,15 +184,13 @@ describe("Claude memory delivery backlog visibility", () => {
         runSessionStart({
           repoRoot: root,
           pullRequestState: (pr) => {
-            writeFileSync(join(root, "ut-tdd.project.json"), "{\"drift\":true}\n", "utf8");
+            writeFileSync(join(root, "ut-tdd.project.json"), '{"drift":true}\n', "utf8");
             return { pr, state: "MERGED", headSha: review.exactHead };
           },
         }),
       ).toThrow("project_memory_root_project_identity_unavailable");
       const runtimeRoot = join(project.runtimeBusRoot, "claude-memory-wake");
-      expect(
-        readdirSync(runtimeRoot).some((name) => name.endsWith(".terminal.json")),
-      ).toBe(true);
+      expect(readdirSync(runtimeRoot).some((name) => name.endsWith(".terminal.json"))).toBe(true);
       expect(existsSync(inboxPath)).toBe(true);
     } finally {
       rmSync(root, { recursive: true, force: true });
