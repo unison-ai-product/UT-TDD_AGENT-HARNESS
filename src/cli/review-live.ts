@@ -70,6 +70,39 @@ interface ReviewSubjectCommandResult {
   readonly stdout: string;
 }
 
+// Keep this transport guard aligned with typed custody rejections, including
+// provider-failure results; it is not a second source for the custody contract.
+const REVIEW_VERDICT_REJECTION_REASONS = new Set([
+  "verdict_file_missing",
+  "invalid_review_attestation",
+  "review_identity_mismatch",
+  "reviewer_exit_nonzero",
+  "verdict_identity_mismatch",
+  "same_family_reviewer_denied",
+  "verdict_path_identity_mismatch",
+  "verdict_file_unreadable",
+  "verdict_absent",
+  "verdict_absent_after_provider_failure",
+  "verdict_ambiguous",
+  "verdict_unknown",
+  "flag_without_findings",
+  "findings_on_pass",
+]);
+
+function rejectedReviewResult(output: unknown): ReviewVerdictProjectionResult | undefined {
+  if (!output || typeof output !== "object" || Array.isArray(output)) return undefined;
+  const review = (output as Record<string, unknown>).review;
+  if (!review || typeof review !== "object" || Array.isArray(review)) return undefined;
+  const result = review as Record<string, unknown>;
+  if (
+    result.ok !== false ||
+    typeof result.reason !== "string" ||
+    !REVIEW_VERDICT_REJECTION_REASONS.has(result.reason)
+  )
+    return undefined;
+  return { ok: false, reason: result.reason };
+}
+
 /** Resolve the review subject from Git and GitHub before any canonical request is written. */
 export function validateLiveReviewSubject(input: {
   readonly repoRoot: string;
@@ -125,7 +158,15 @@ export function executeLiveReviewDelegation(input: {
     encoding: "utf8",
     stdio: ["ignore", "pipe", "inherit"],
   });
-  if (child.status !== 0) return { ok: false, reason: "reviewer_execution_failed" };
+  if (child.status !== 0) {
+    try {
+      const rejection = rejectedReviewResult(JSON.parse(child.stdout) as unknown);
+      if (rejection) return rejection;
+    } catch {
+      // A missing or malformed result remains an execution failure.
+    }
+    return { ok: false, reason: "reviewer_execution_failed" };
+  }
   try {
     const execution = JSON.parse(child.stdout) as { review?: ReviewVerdictProjectionResult };
     return execution.review ?? { ok: false, reason: "review_receipt_missing" };
@@ -366,8 +407,8 @@ export function registerLiveReviewCommands(
           },
         });
         if (json) process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
-        else
-          process.stdout.write(`review live-consume: ${result.ok ? "completed" : result.reason}\n`);
+        else if (result.ok) process.stdout.write("review live-consume: completed\n");
+        else process.stderr.write(`review live-consume: ${result.reason}\n`);
         process.exitCode = result.ok ? 0 : 1;
       } catch (error) {
         process.stderr.write(
