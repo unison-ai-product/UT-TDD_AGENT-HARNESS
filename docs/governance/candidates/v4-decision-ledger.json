@@ -1893,5 +1893,44 @@
       "UTV4-BR-047"
     ],
     "verified": true
+  },
+  {
+    "decision_id": "V4D-097",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 733,
+      "comment_ids": [
+        "6050468759"
+      ]
+    },
+    "date": "2026-10-08",
+    "summary_ja": "モデルは毎回 ID を書き換えず、常に最新の型番を指す。Claude はエイリアス (fable / opus / sonnet / haiku)、Codex は family 名 (astra / sol / luna) を起動時に最新の gpt-<N>-<family> へ解決する (無ければ fail-close、解決した ID を証跡に記録)。GPT-5 系は廃止する。",
+    "status": "active",
+    "superseded_by": null,
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-028"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-098",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 733,
+      "comment_ids": [
+        "6050480457",
+        "6050501179"
+      ]
+    },
+    "date": "2026-10-08",
+    "summary_ja": "ハーネスが手書きで持つ subagent 定義は基本的に撤廃する (残すのは理由を記録した例外だけ)。専門性は作業ごとに知識 (skill・判断パック・設計文書の該当部分) を組み合わせて持たせ、モデルは作業に応じて最適なもの (常に最新の型番) へ振り分ける。",
+    "status": "active",
+    "superseded_by": null,
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-028"
+    ],
+    "verified": true
   }
 ]

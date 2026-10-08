@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 // v4 決定台帳と L1 要求候補・L3 要件候補・受入候補の対応を機械で確かめる (依存なし)。
-// 使い方: node scripts/v4-ledger-check.mjs [ledger.json] [requests.md] [requirements.md] [acceptance.md]
+// 使い方: node docs/governance/candidates/v4-ledger-check.mjs [ledger.json] [requests.md] [requirements.md] [acceptance.md]
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const root = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 const ledgerPath = resolve(root, process.argv[2] ?? "docs/governance/candidates/v4-decision-ledger.json");
 const requestsPath = resolve(root, process.argv[3] ?? "docs/governance/candidates/ut-tdd-concept-v4-requests.md");
 const requirementsPath = resolve(root, process.argv[4] ?? "docs/governance/candidates/ut-tdd-concept-v4-requirements.md");
