@@ -102,6 +102,8 @@ afterEach(() => {
 });
 
 describe("review live CLI composition", () => {
+  const executionCliPath = join(process.cwd(), "src", "cli.ts");
+
   it("U-RVATT-042 validates a real commit and exact PR HEAD before dispatch", () => {
     const calls: Array<{ command: string; args: readonly string[] }> = [];
     const run = (command: string, args: readonly string[]) => {
@@ -623,7 +625,7 @@ process.stdin.on("end", () => {
     );
     if (process.platform !== "win32") chmodSync(stub, 0o755);
 
-    const cliPath = join(process.cwd(), "src", "cli.ts");
+    const cliPath = executionCliPath;
     const result = spawnSync(
       process.execPath,
       [cliPath, ...commandArgs, "--envelope", envelopePath],
@@ -699,7 +701,7 @@ process.stdin.on("end", () => {
           repoRoot,
           provider,
           args,
-          cliPath: join(process.cwd(), "src", "cli.ts"),
+          cliPath: executionCliPath,
         }),
     });
     const stdout: string[] = [];
