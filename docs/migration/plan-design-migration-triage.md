@@ -2,7 +2,7 @@
 
 v4 工程 ② (PLAN を設計へ反映して設計正本を凍結する。#530 の PO 決定 6051336079、補足 6051373331、進行 6052098864) の最初の段として、`docs/plans/` の PLAN 1004 本を仕分けた結果です。#648 の移行手順 (意味分類 → 三者照合 → 移行証跡) の前段に当たります。基準は main `3581ee5c` (2026-10-08) です。
 
-全件の区分は [plan-design-migration-triage.tsv](plan-design-migration-triage.tsv) にあります。列は `plan_id` / `class` / `source` (判定の出どころ) / `reason` です。
+全件の区分は [plan-design-migration-triage-list.md](plan-design-migration-triage-list.md) にあります (Markdown の表)。列は `plan_id` / `class` / `source` (判定の出どころ) / `reason` です。
 
 ## 結果
 
