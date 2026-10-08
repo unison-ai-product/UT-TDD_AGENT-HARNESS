@@ -458,7 +458,16 @@ projection であり、LLM の「気づき」だけで発火させない (気づ
 L0-L14 と正規 V-pair、Forward / Reverse / Recovery、9-mode と routeFiling SSoT、fail-close、cross-family
 review、TypeScript/Node 一本 (ADR-001)、Pack 配布 (PLAN-L6-63 系) は Kernel / Control Plane へ継承する。
 §9 の 5 役割は Sovereignty Plane の層別境界表と統合する。旧 Bun runtime、personal legacy path、memory 中心の
-継続、宣言のみの evidence は current identity として再出力しない。
+継続、宣言のみの evidence は current identity として再出力しない。ハーネスが手書きで持つ subagent 定義も、
+理由を記録した例外を除いて継承しない (V4D-098)。
+
+移行は v4 完遂までの工程順 (PO 決定 2026-10-08、#530 6051336079) に従う: ② 全 PLAN を生きている / supersede 済み /
+廃止予定に仕分け、設計書を保護する gate を入れ、実装と設計の参照照合 (`src/` module と設計文書の対応表、ずれの列挙) を
+行い、ずれは原因が上流にあるかを判定して、設計の欠陥なら Redesign で設計を直し (実装は Forward の Red / Green で作り直す)、生きている契約で
+設計側をリファクタリングして設計正本を凍結する →
+③ Pack 経由の自己導入 → ④ 新ディレクトリ構成への再編 → ⑤ リバースリファクタリング (実装を製本に設計を検証・修正し、
+責務を分割する。上記 §移行 の最初の周回) → ⑥ 要件の再整理と凍結。工程と配布版の対応は
+`v4-roadmap/README.md` の結論表を正とする。
 
 ## 非目標
 
@@ -475,3 +484,6 @@ prompt 集、persona 集、multi-agent chat room、全会話保存、Issue を�
 5. concept v4.0 を `docs/governance/` へ昇格し、v3.1 を archive へ降格、CLAUDE.md / AGENTS.md / README /
    repository-structure の参照を一方向更新する (rule-drift 対応)。
 6. L1 delta (VUP-REQ-11〜) を PLAN-L1 系で起こし、charter PLAN-L0-01 §4 に後続テーマを追加する。
+
+時期は工程順 (`v4-roadmap/README.md`) に合わせる: 1〜4 は工程 ⑥ (要件の再整理と凍結) で終える。5 と 6 は ⑥ の
+凍結後、工程 ⑦ で v4 の設計に入る前に行う。それまでの ①〜⑤ は v3.1 を current authority として進める。

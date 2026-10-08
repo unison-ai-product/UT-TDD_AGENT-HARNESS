@@ -7,6 +7,10 @@ R / SL / MIG / DEC / RM-ADD / SCHED の各 ID は資料内のローカル提案 
 PLAN-L1-09 と 5 候補文書 (`docs/governance/candidates/ut-tdd-concept-v4*.md`) へ差し込みで行う。
 本ディレクトリ側を編集して正本化しない (S0 = issue #531)。
 
+**2026-10-08 から改訂を始めた (版2.1)。** 工程順 ①〜⑪ の PO 決定 (#530 6051336079) に合わせ、README・00・02・execution・trace・
+一部の release / migration 文書を直した。以後、本ディレクトリは原文のままではない。下表の sha256 は収容時の原本の値で、
+改訂の内容は `CHANGELOG.md` にある。`data/*.json` は 2026-09-08 の版2.0 の記録のまま変えていない (再計算は工程 ⑥)。
+
 ## 原本
 
 | 項目 | 値 |

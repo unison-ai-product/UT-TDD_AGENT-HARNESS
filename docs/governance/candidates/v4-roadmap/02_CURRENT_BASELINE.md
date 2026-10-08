@@ -1,5 +1,7 @@
 # 起点の事実と、既存資産の再利用
 
+**2026-10-08 の更新:** 起点は main `3581ee5c` (2026-10-08)。Pack は canary.5 まで公開済み、ライセンスは Apache-2.0、Bun は撤去済み。v4 候補は決定台帳 (PR #892) で 49 BR / 76 FR / 89 AC (release 必須 41) に作り直し中で、FR-077 (製品保護 profile) と FR-078 (運用証跡の期限) を #892 の merge 後に追加する (#530 6050756161)。open issue の処理順は下の「既存Issueの処理順を決めるルール」ではなく、工程順に沿った [execution/04_ISSUE_INTAKE.md](execution/04_ISSUE_INTAKE.md) を正とする。下の本文は 2026-09-08 時点の記録。
+
 確認日：2026-09-08。main `84cd7f896f7dfbd67b38b250b5a943eaee3f6640`、#517 HEAD `c21b54fb0d3f2d5a73a7826cc41233634456cac9`。
 mainは#521のBun最終撤去「契約」merge。package.jsonは`0.2.0-canary.1`、MIT、`bun build`表記が残る。従って契約mergeを物理撤去済みとしない。#517はdraft/openの候補。[GH-MAIN][GH-PKG][GH-PR517]
 

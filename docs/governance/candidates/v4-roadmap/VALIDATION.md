@@ -1,5 +1,20 @@
 # 資料の整合検査結果
 
+## 版2.1 (2026-10-08)
+
+`data/*.json` は変えていないため、ID・coverage・DAG・生成 Markdown の同一性の検査は再実行していません (python tool は repo 外へ退避済み、[INTAKE_MANIFEST.md](INTAKE_MANIFEST.md))。生成元から作られた Markdown (release・trace) には冒頭の注記だけを手で足したので、生成物との同一性は成り立ちません。再生成と再計算は工程 ⑥ で行います。
+
+node の一時スクリプト (repo 外) で行った検査:
+
+| 検査 | 結果 | 詳細 |
+|---|---|---|
+| JSON parse | PASS | 10 files |
+| 相対 Markdown リンク | PASS | 確認 123 件、切れ・ディレクトリ外 0 件 |
+| 文字化け (U+FFFD) | PASS | 0 files |
+| issue 割当の網羅と親子 | PASS (例外 1) | open 157 件をすべて 1 工程に割当。子の工程が親より後になるのは #705 の 1 件 ([execution/04_ISSUE_INTAKE.md](execution/04_ISSUE_INTAKE.md)) |
+
+## 版2.0 (2026-09-08)
+
 **結果：PASS（資料検査のみ）。**
 
 これは計画のID・参照・依存・移行順と、固定した架空scheduleの検査です。UTの実装/CI/セキュリティ試験/非著者レビュー/製品受入を実行した結果ではありません。

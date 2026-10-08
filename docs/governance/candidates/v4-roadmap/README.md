@@ -1,8 +1,30 @@
 # UT-TDD：構想v4までのリリース・置換・移行ロードマップ
 
-**文書版2.0／2026-09-08。** 前版v1.3のテーマ表を、配布版ごとの利用可能範囲・旧新置換・切替条件へ分割した計画書です。作業順序予測を正式な追補案に含めます。GitHubへのコミット、実ライセンス変更、runtime実装、CI実行、製品受入は行っていません。
+**文書版2.1／2026-10-08 (版2.0 は 2026-09-08)。** 版2.0 の版別計画を、2026-10-08 に PO が決めた v4 完遂までの工程順 ①〜⑪ (#530 コメント 6051336079、補足 6051373331) に合わせて直しました。**工程順が版割当より優先します。** 版割当が工程順と食い違う箇所は工程順に合わせ、決められない対応は「⑥ で確定」としています。runtime 実装・CI 実行・製品受入は行っていません。
 
-## 結論：何をどの版へ載せるか
+## 結論：工程 ①〜⑪ と配布版
+
+| 工程 | やること | 配布版 | 旧 R との対応 |
+|---|---|---|---|
+| ① | 現行のリリースパックを出す。完了条件は (1) canary.6 の公開、(2) 公開 asset からの AT-DIST-003 (015〜019) と AT-835-008 の PASS、(3) #418 のクローズ の 3 点 (6052098864)。#393 (review custody の取りこぼし) と #894 (記入欄の残存検査) を並行で直す | 0.2.0-canary.6 | R00 を閉じる。R01 のライセンス切替は Apache-2.0 で実施済み (#682) |
+| ② | 旧設計をリファクタリングして設計正本を凍結する。順序は (a) 全 PLAN を「生きている / supersede 済み / 廃止予定」に仕分けて量を確定する、(b) 設計書を保護する gate (実装 PR で設計書・oracle を書き換えられず、変更は契約改訂 PR に限る) を入れる、(c) 実装と設計の参照照合: `src/` の module と設計文書の対応表を作り、設計の無い実装・実装の無い設計・内容のずれを列挙する、(d) ずれごとに証拠を集め、原因が上流 (設計) にあるかを判定する。設計の欠陥なら Redesign (route `redesign`: 差し替える既存設計を 1 件 supersede し、設計から実装へ降りる) で設計を直し、実装は Forward の Red / Green PR で作り直す。設計が古いだけなら設計を実装に合わせる。実装だけの欠陥なら Red / Green の修理 PR にする。併せて設計側のリファクタリング (生きている PLAN の契約の反映、重複の統合、責務単位への再編、欠落の補完) を行う、(e) 凍結。実装 PR では設計書を書き換えない ((b) の gate)。振る舞い不変の責務分割は ⑤。移行は複数 PR に分ける | なし (内部作業) | 新設。R03 の契約 inventory (SL-R03-01) の前提になる |
+| ③ | canary.6 を開発ハーネス自身に Pack consumer として導入し、Pack 経由で版上げする (更新・保持確認・rollback を実測)。前提として、前の版へ戻す rollback と、緊急時に source の CLI で動ける退避路を用意する。並行して別プロジェクトへ投入し、フィードバックを受ける | 0.2.0-canary.6 (自己導入) | R02 の rollback / updater (#481) を前提として前倒し。2 consumer 受入 (#364) もここ |
+| ④ | 新ディレクトリ構成へ再編する | 内部 canary (番号は ⑥ で確定) | 新設 |
+| ⑤ | リバースリファクタリング: 実装を製本として設計を検証・修正し、責務を分割する | 内部 canary (番号は ⑥ で確定) | 新設。構想書 §移行 (Reverse を右腕として回す) の最初の周回 |
+| ⑥ | 要件を再整理して凍結する。版割当 (R02〜R10 の中身と順序) と trace の再計算もここで確定する | なし | 全 R の範囲を見直す |
+| ⑦ | テンプレートとスキルを補強してから設計する | なし | 新設 |
+| ⑧ | 実装→内部デプロイ→リリースのサイクルを回す。⑨ の対象範囲と完了条件は ⑧ が終わる前に決める | 0.2.0 stable と 0.3.0〜0.9.0 (候補順は旧 R02〜R09、⑥ で確定) | R02〜R09 |
+| ⑨ | リバース工程に入り、設計と検証を行う | 1.0.0 の rc | 新設 (R10 の前段) |
+| ⑩ | 設計正本を直し、設計・実装・仕様書を整え、フル Pack をデプロイする | 1.0.0 | R10 |
+| ⑪ | 別プロジェクト案件にチームで投入する | 1.0.0 以降 | 新設 |
+
+工程を通した規則 (補足 3): ③ から並行する別プロジェクトのフィードバックは、そのサイクルで直すのを blocker だけにし、それ以外は ⑤ か ⑥ の backlog に積みます。open issue をどの工程で閉じるかは [execution/04_ISSUE_INTAKE.md](execution/04_ISSUE_INTAKE.md) にあります。
+
+0.2.0 stable を ③ の直後に出すか ⑧ の最初に出すか、④⑤ の内部 canary の番号は、⑥ で確定します。
+
+## 参考：版2.0 の版別範囲 (2026-09-08)
+
+下表は版2.0 の版別範囲です。**R02〜R10 の中身と順序は ⑥ で見直します。** R00/R01 の行は実績と食い違っています (Pack は canary.1〜5 を公開済み、ライセンスは MPL-2.0 ではなく Apache-2.0)。
 
 | 配布版案 | 利用可能にする範囲 | まだ有効にしないもの |
 |---|---|---|
@@ -18,7 +40,7 @@
 | 0.9.0 | 対策資産・context縮退・低価格化、**実績で校正する順序予測** | 新モデルだから安全/速いという無根拠昇格 |
 | 1.0.0 | **構想v4の全範囲・移行・consumer統合受入**とpublic API安定化 | 未移行のactive二重writer・架空のPASS |
 
-**構想v4.0とpackage4.0.0は同じではありません。** 現在のpackageは0.2.0-canary.1です。本計画では構想v4統合受入をpackage1.0.0へ対応付けます。版割当は今回の具体案であり、公開済みtagでも正式採番の完了でもありません。[GH-PKG][GH-PR517]
+**構想v4.0とpackage4.0.0は同じではありません。** 2026-10-08 時点で Pack は 0.2.0-canary.5 まで公開済みで、canary.6 が工程 ① です (source の package.json の表示は 0.2.0-canary.1 のまま、#867)。本計画では構想v4統合受入をpackage1.0.0へ対応付けます。版割当は今回の具体案であり、公開済みtagでも正式採番の完了でもありません。[GH-PKG][GH-PR517]
 
 ## 読む入口
 
@@ -39,7 +61,8 @@
 | 実装順・並行可能範囲・責務別作業単位 | [execution/01_DEPENDENCIES_AND_WORK_PACKAGES.md](execution/01_DEPENDENCIES_AND_WORK_PACKAGES.md) |
 | #517へ渡す短い差し込み指示 | [execution/02_PR517_INTEGRATION.md](execution/02_PR517_INTEGRATION.md) |
 | 実装前に採択する16契約判断 | [execution/03_CONTRACT_DECISIONS.md](execution/03_CONTRACT_DECISIONS.md) |
-| 元の32BR・59FR・72ACをどの版で閉じるか | [trace/REQUIREMENT_COVERAGE.md](trace/REQUIREMENT_COVERAGE.md) / [AC_COVERAGE.md](trace/AC_COVERAGE.md) |
+| open issue を閉じる工程 | [execution/04_ISSUE_INTAKE.md](execution/04_ISSUE_INTAKE.md) |
+| 旧候補 (32BR・59FR・72AC) をどの版で閉じるか。現行の候補は 49BR・76FR・89AC (release 必須 41) で、対応表の再計算は ⑥ | [trace/REQUIREMENT_COVERAGE.md](trace/REQUIREMENT_COVERAGE.md) / [AC_COVERAGE.md](trace/AC_COVERAGE.md) |
 | 今回までの追加13要求 | [trace/ADDITIONS.md](trace/ADDITIONS.md) |
 | 出典と、行った資料検査の範囲 | [SOURCES.md](SOURCES.md) / [VALIDATION.md](VALIDATION.md) |
 
@@ -78,9 +101,4 @@
 
 ## 資料検査の再実行
 
-```sh
-python tools/render_roadmap.py --check
-python tools/validate_roadmap.py
-```
-
-このPythonは配布した計画資料のオフライン整合検査用です。UT本体のTypeScript/Node方針の変更、CIへの導入、scheduler/BugBotの実装を意味しません。外部通信やGitHub書込みはしません。
+版2.0 の python 検査 tool は repo に収容していません ([INTAKE_MANIFEST.md](INTAKE_MANIFEST.md))。版2.1 で行った検査と結果は [VALIDATION.md](VALIDATION.md) にあります。
