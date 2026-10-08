@@ -11,8 +11,8 @@ v4 工程 ② (PLAN を設計へ反映して設計正本を凍結する。#530 �
 | A | 移行対象。設計契約が PLAN にしか無い | 14 | 工程 ② で設計文書へ移す |
 | N | 移行しない。契約が設計文書にある、本文が 4 項目相当、または作業記録だけ | 671 | そのまま凍結する |
 | C | supersede 済み。後継が frontmatter か本文に明記されている | 16 | 凍結する |
-| D | 廃止予定。v4 で廃止が決まった対象**だけ**に関わる | 2 | v4 で廃止する |
-| M | 混在。v4 で廃止される部分と、継続する部分の両方を持つ | 6 | 廃止しない。継続部分の契約を三者照合で確かめ、移行が要れば A と同じ扱いにする |
+| D | 廃止予定。v4 で廃止が決まった対象**だけ**に関わる | 0 | v4 で廃止する |
+| M | 混在。v4 で廃止される部分と、継続する部分の両方を持つ | 8 | 廃止しない。継続部分の契約を三者照合で確かめ、移行が要れば A と同じ扱いにする |
 | E1 | 生きた draft。紐づく issue が open | 56 | issue と一緒に、該当する工程で処理する |
 | E2 | 放置 draft。issue が closed か、無い | 239 | 廃止候補 |
 | 計 | | 1004 | |
@@ -38,7 +38,7 @@ v4 工程 ② (PLAN を設計へ反映して設計正本を凍結する。#530 �
 
 移行先は候補です。三者照合 (PLAN・設計文書・実装) のときに確定します。
 
-## M: 混在 6 本
+## M: 混在 8 本
 
 | PLAN | 廃止される部分 | 継続する部分 |
 |---|---|---|
@@ -48,6 +48,8 @@ v4 工程 ② (PLAN を設計へ反映して設計正本を凍結する。#530 �
 | PLAN-L7-454-runtime-token-telemetry-ingestion | なし (置き換え) | token / cost の計測。V4D-048 で作業ログへ寄せる置き換えであり、廃止ではない |
 | PLAN-L7-399-agent-guard-quality-check-tier-floor | subagent の agent-guard (V4D-098) | review は orchestrator 以上の格で行う原則 (delegation routing の判断 tier 固定) |
 | PLAN-L7-426-codex-native-subagents | Codex native subagent の生成 (V4D-098) | hooks.json の parse 失敗で work-guard / session-log が無効になる問題の扱いと、hooks schema の回帰 fence |
+| PLAN-L7-415-gpt56-tier-routing-adoption | 旧モデル ID (gpt-5.6 系) の指定 | 頂点 tier の常用禁止、テストの literal を SSoT 参照にする契約、worker への頂点級割当を policy で拒否する AC |
+| PLAN-DISCOVERY-10-gpt56-tier-routing-bench | GPT-5.6 世代の計測値 | routing の変更をレーンごとの現職との paired 比較で決め、僅差なら現職を維持する評価方法 |
 
 ## 判定の方法
 
@@ -62,11 +64,12 @@ v4 工程 ② (PLAN を設計へ反映して設計正本を凍結する。#530 �
 - PLAN-L4-02 と PLAN-L4-32 は、frontmatter の supersedes が自分自身を指しています (#209 の自己 supersede)。C にはしていません。
 - C は「後継の参照がある」ことを根拠にしています。後継が全責務を引き継いだかどうかは、まだ照合していません。三者照合の段で確かめます。
 - 2026-10-08 の review (Sol r1) で 2 件の指摘を受け、次のように直しました。PLAN-L4-10 を D から M へ移しました (subagent 以外の継続責務を持つ)。同じ理由で PLAN-L4-11 / L5-05 / L7-454 も M へ移しました。PLAN-L7-493 は N から A へ移しました (digest の導出契約が設計文書に無い)。
-- 同日の review (Sol、CLI の custody 経路) で 1 件の指摘を受けました。PLAN-L7-426 を D から M へ移しました (hooks.json の parse 失敗で work-guard / session-log が無効になる問題と、hooks schema の回帰 fence が継続する)。同じ観点で残りの D を見直し、PLAN-L7-399 も M へ移しました (review は orchestrator 以上の格で行う原則が継続する)。PLAN-L7-415 と PLAN-DISCOVERY-10 は、モデル世代を固定する話だけなので D のままです。
+- 同日の review (Sol、CLI の custody 経路) で 1 件の指摘を受けました。PLAN-L7-426 を D から M へ移しました (hooks.json の parse 失敗で work-guard / session-log が無効になる問題と、hooks schema の回帰 fence が継続する)。同じ観点で残りの D を見直し、PLAN-L7-399 も M へ移しました (review は orchestrator 以上の格で行う原則が継続する)。PLAN-L7-415 と PLAN-DISCOVERY-10 は D のままにしていました。
+- 3 回目の review (Sol、CLI) で、PLAN-L7-415 も継続する契約を持つと指摘を受けました。PLAN-L7-415 を M へ移し、同じ理由で PLAN-DISCOVERY-10 も M へ移しました。D は 0 本になりました。D の定義は残しますが、廃止に当たる PLAN は、継続部分が無いことを三者照合で確かめてから D に入れます。
 - E1 / E2 は、紐づく issue の open / closed で分けています。issue 番号が無い draft は E2 です。
 
 ## 次の段
 
 1. 設計書を保護する gate (#898) を先に入れます (補足 6051373331)。
 2. A の 14 本と、M の継続部分を、移行先が近いものごとに 2〜3 本の PR にまとめ、#648 の手順で移します。
-3. E2 (239 本) の廃止と、D (4 本) の扱いは、v4 の移行 (工程 ④〜⑥) でまとめて決めます。
+3. E2 (239 本) の廃止は、v4 の移行 (工程 ④〜⑥) でまとめて決めます。D は今回 0 本です。
