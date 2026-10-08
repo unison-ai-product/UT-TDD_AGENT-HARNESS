@@ -6,9 +6,8 @@ layer: L7
 drive: be
 route_signal: feature_addition
 route_mode: add-feature
-status: confirmed
 created: 2026-08-18
-updated: 2026-08-24
+updated: 2026-10-08
 owner: PM / PO / Codex
 parent_design: docs/plans/PLAN-L6-94-cross-review-session-attestation.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
@@ -16,11 +15,11 @@ pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 next_pair_freeze: L7
 agent_slots:
   - role: tl
-    slot_label: "TL - verdict custody の信頼境界、request digest、sandbox 書込許可の独立レビュー"
+    slot_label: TL - verdict custody の信頼境界、request digest、sandbox 書込許可の独立レビュー
   - role: se
-    slot_label: "SE - 既存 D3a attestation / delegation / review guard への最小降下設計"
+    slot_label: SE - 既存 D3a attestation / delegation / review guard への最小降下設計
   - role: qa
-    slot_label: "QA - repo-local write、外部拒否、identity mutation、retry、cleanup の Red oracle"
+    slot_label: QA - repo-local write、外部拒否、identity mutation、retry、cleanup の Red oracle
 generates:
   - artifact_path: docs/plans/PLAN-L7-493-d3a-repo-local-verdict-custody.md
     artifact_type: markdown_doc
@@ -49,44 +48,91 @@ dependencies:
     - src/runtime/review-guard.ts
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/328
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/386
-github_issue_id: 328
 backprop_decision: required
-backprop_decision_reason: "delegated verdict の信頼境界と再合流時のreceipt入力を変更するため、既存Forwardの証跡へReverse検証を戻す。"
+backprop_decision_reason: delegated verdict の信頼境界と再合流時のreceipt入力を変更するため、既存Forwardの証跡へReverse検証を戻す。
 review_evidence:
   - reviewer: codex-primary-preflight
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-08-19T08:25:25.1454025Z"
-    tests_green_at: "2026-08-19T08:25:25.1454025Z"
-    verdict: "preflight green; non-author exact-head closing review pending"
-    scope: "#328 repo-local custody implementation preflight; Claude non-author claim-blind/spec-blind review remains required before merge."
+    reviewed_at: 2026-08-19T08:25:25.1454025Z
+    tests_green_at: 2026-08-19T08:25:25.1454025Z
+    verdict: preflight green; non-author exact-head closing review pending
+    scope: "#328 repo-local custody implementation preflight; Claude non-author
+      claim-blind/spec-blind review remains required before merge."
     green_commands:
       - kind: unit_test
-        command: "node node_modules/vitest/vitest.mjs run tests/review-verdict-custody.test.ts tests/review-live-cli.test.ts tests/review-attestation.test.ts tests/review-guard.test.ts tests/live-review-projection.test.ts tests/review-verdict-contract.test.ts --reporter=dot --maxWorkers=1 --minWorkers=1"
+        command: node node_modules/vitest/vitest.mjs run
+          tests/review-verdict-custody.test.ts tests/review-live-cli.test.ts
+          tests/review-attestation.test.ts tests/review-guard.test.ts
+          tests/live-review-projection.test.ts
+          tests/review-verdict-contract.test.ts --reporter=dot --maxWorkers=1
+          --minWorkers=1
         runner: node
         scope: targeted
         exit_code: 0
-        completed_at: "2026-08-19T08:25:25.1454025Z"
+        completed_at: 2026-08-19T08:25:25.1454025Z
         evidence_path: tests/review-verdict-custody.test.ts
-        output_digest: "sha256:afe6356826df1cc08d888bfd2b1139db1a163a3d14d6a943a25dcd6e16557449"
+        output_digest: sha256:afe6356826df1cc08d888bfd2b1139db1a163a3d14d6a943a25dcd6e16557449
         anchor_commit: 39846e948bfd75570f95bd42e96237a50533833e
       - kind: typecheck
-        command: "node_modules/.bin/tsc.cmd --noEmit --pretty false"
+        command: node_modules/.bin/tsc.cmd --noEmit --pretty false
         runner: node
         scope: changed-files
         exit_code: 0
-        completed_at: "2026-08-19T08:25:25.1454025Z"
+        completed_at: 2026-08-19T08:25:25.1454025Z
         evidence_path: src/feedback/review-verdict-custody.ts
-        output_digest: "sha256:2a3821be9e7c26dc0bbf5c633337d81580c098af94c0d71e603f5c3eb3dd5d84"
+        output_digest: sha256:2a3821be9e7c26dc0bbf5c633337d81580c098af94c0d71e603f5c3eb3dd5d84
         anchor_commit: 39846e948bfd75570f95bd42e96237a50533833e
       - kind: lint
-        command: "node_modules/.bin/biome.cmd check src/feedback/review-verdict-custody.ts src/feedback/review-attestation.ts src/feedback/review-verdict-contract.ts src/cli/delegation.ts src/feedback/live-review-projection.ts src/runtime/review-guard.ts tests/support/git-workspace-fingerprint.ts tests/review-verdict-custody.test.ts tests/review-live-cli.test.ts tests/review-attestation.test.ts tests/review-guard.test.ts"
+        command: node_modules/.bin/biome.cmd check
+          src/feedback/review-verdict-custody.ts
+          src/feedback/review-attestation.ts
+          src/feedback/review-verdict-contract.ts src/cli/delegation.ts
+          src/feedback/live-review-projection.ts src/runtime/review-guard.ts
+          tests/support/git-workspace-fingerprint.ts
+          tests/review-verdict-custody.test.ts tests/review-live-cli.test.ts
+          tests/review-attestation.test.ts tests/review-guard.test.ts
         runner: node
         scope: changed-files
         exit_code: 0
-        completed_at: "2026-08-19T08:25:25.1454025Z"
+        completed_at: 2026-08-19T08:25:25.1454025Z
         evidence_path: src/feedback/review-verdict-custody.ts
-        output_digest: "sha256:2a3821be9e7c26dc0bbf5c633337d81580c098af94c0d71e603f5c3eb3dd5d84"
+        output_digest: sha256:2a3821be9e7c26dc0bbf5c633337d81580c098af94c0d71e603f5c3eb3dd5d84
         anchor_commit: 39846e948bfd75570f95bd42e96237a50533833e
+status: confirmed
+github_issue_id: 328
+admission_receipt:
+  schema_version: v2
+  receipt_id: certificate:0a0e4ea42aa104e4d9312657847b8313
+  command_id: plan-revise:issue-922:plan493-helper-retention:r3:a39794a59b3b
+  admitted_at: 2026-10-08T11:10:51.250Z
+  source_digest: sha256:a2ff813522e369205dc78982416ae0e61199f8c1aaaff86b5b3531c42de16590
+  decision_digest: sha256:ad4660da60000e381c1a0e79da6cf8105c115f39d603783850e1b4b0f6a4d7cd
+  receipt_digest: sha256:73cc0ec60fe9c16be71254787f6897142c6fcb759038931625313c3d518921df
+  binding:
+    path: docs/plans/PLAN-L7-493-d3a-repo-local-verdict-custody.md
+    plan_id: PLAN-L7-493-d3a-repo-local-verdict-custody
+    asset_id: plan:legacy:3525b52b49af6df3e53b9a9d5471192a49654b7ad572f04ac2f4d54bdc1dd56c
+    revision: 3
+    content_digest: sha256:a2ff813522e369205dc78982416ae0e61199f8c1aaaff86b5b3531c42de16590
+  route:
+    signal: feature_addition
+    mode: add-feature
+  issue:
+    provider: github
+    issue_id: 328
+    episode_id: E4-328-d3a-repo-local-verdict-custody
+    projection_state: unprojected
+  origin:
+    plan_id: PLAN-L7-493-d3a-repo-local-verdict-custody
+    revision: 2
+    digest: sha256:8c1c7bebf933ec60a5dc5065833afc9289fadb4eb731970f6ca866ff520007d3
+  reentry:
+    target_plan_id: PLAN-L7-493-d3a-repo-local-verdict-custody
+    target_revision: 3
+    phase: forward_merge
+  escape_reason: "PR #922 FLAG
+    1の契約是正。成功receipt後にcleanupReviewAttemptを直接呼んでも成功attempt
+    verdictを削除せず保持する責務をhelper自身へ固定する。実装・test本体やPASS証拠は追加しない。"
 ---
 
 # PLAN-L7-493: D3a repo-local digest-bound verdict custody 契約 freeze
@@ -188,8 +234,8 @@ VERDICT: PASS|PASS-WEAK|FLAG
   最新の未supersede attempt ただ1つに限定し、reviewer の自己申告で選べない。旧 attempt の digest 不在時は sentinel を許容する。
 - receipt 成功後は新しい attempt の作成・supersede・上書きをすべて拒否する。これにより model escalation は digest を
   変更せずに収束でき、receipt は常に1件だけとなる。
-- receipt の canonical write が成功した後にだけ verdict scratch を削除する。削除不能は `<git-common-dir>/ut-tdd-runtime/review-custody/review-custody.jsonl` へ
-   `cleanup_pending` として記録するが、既に検証済みの receipt を成功から失敗へ反転させない。receipt 前の削除・上書きは許可しない。
+- Issue #921 の control は案A（receipt成功後もverdict本文を保持）を採択した。canonical receipt write成功後も、attemptのverdict scratchは同じrepo-local pathに元のbytesのまま保持する。成功経路ではscratch cleanupを開始せず、`cleanup_pending`も記録しない。
+  削除能力を持つ`cleanupReviewAttempt`自身が、成功receipt済みattemptのverdictを削除・書換えない不変条件を保証する。呼出側がcleanup関数の呼出しを省略したかどうかだけに依存させず、同関数を直接呼んでも成功attemptのbytesを保持する。既存のcleanup failure経路と§3.4のtyped event記録は変更しない。receipt前の削除・上書きも許可しない。
 - 古い HEAD の verdict は current request / current HEAD へ再利用せず、consumer は `stale_head` または `verdict_identity_mismatch` で fail-close する。
 
 ### 3.4 legacy oracle と review fence の移行境界
@@ -228,7 +274,7 @@ VERDICT: PASS|PASS-WEAK|FLAG
 | `U-RVATT-032` | envelope の8 custody fieldsを1点ずつ mutation（canonical identity 7 fields + consumer attempt） | `verdict_identity_mismatch`、receipt 0 |
 | `U-RVATT-033` | nonce混線、stale HEAD、別revision、別provider | canonical request以外を拒否、merge 0 |
 | `U-RVATT-034` | 同一 digest・同一 attempt retry、receipt前の別 model escalation（同一 model を含む）、別 HEAD retry | 同一 attempt は冪等、別 attempt は `superseded_attempt` 後に最新 attempt だけを 1 receipt へ投影、別 HEAD は別 digest |
-| `U-RVATT-035` | receipt成功後cleanup、cleanup failure、receipt前cleanup | receipt前は0、成功後はreceipt保持 + `cleanup_pending` |
+| `U-RVATT-035` | receipt成功後のverdict保持、receipt前cleanup禁止、cleanup failure | receipt前削除は0、canonical receipt成功後もverdictの同一bytesを保持し、成功経路の`cleanup_pending`は0。既存cleanup failureはcommon-dir `cleanup_pending` typed eventへ記録 |
 | `U-RVATT-036` | 実 providerを通す dispatch→consume→receipt→wrapper の一回の実repo E2E | current exact HEADだけ allow、外部/欠落は deny |
 
 実装時の最小責務は、既存 `review-attestation.ts` / `review-custody-canonical.ts` の identity projection、
