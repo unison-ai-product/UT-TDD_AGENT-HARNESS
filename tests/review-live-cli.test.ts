@@ -667,9 +667,13 @@ process.stdin.on("end", () => {
     const match = prompt.match(new RegExp("^" + key + ":\\s*(.*)$", "m"));
     return key + ": " + (match ? match[1].trim() : "");
   }).join("\n");
+  const rejectedFields = fields.replace(
+    /^(request_digest: ).*$/m,
+    "$1" + "b".repeat(64),
+  );
   fs.writeFileSync(
     process.env.UT_TDD_REVIEW_VERDICT_FILE,
-    fields + "\nVERDICT: PASS\nnegative: reviewer body detail\n",
+    rejectedFields + "\nVERDICT: PASS\nnegative: reviewer body detail\n",
     "utf8",
   );
   process.stdout.write("VERDICT: PASS\n");
