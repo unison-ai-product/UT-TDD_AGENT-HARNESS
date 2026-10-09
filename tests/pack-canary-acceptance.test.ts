@@ -872,7 +872,7 @@ describe("manual canary acceptance publish-record boundary", () => {
       ],
       runnerDeps,
     );
-    expect(tarCalls).toEqual([{ archive: names[0], cwd: fixture.releaseDir }]);
+    expect(tarCalls).toEqual([{ archive: names[0], cwd: realpathSync.native(fixture.releaseDir) }]);
     const evidence = JSON.parse(readFileSync(evidencePath, "utf8"));
     expect(evidence).toMatchObject({
       tag: "v0.0.0-canary.0",
