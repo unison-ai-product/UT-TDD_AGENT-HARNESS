@@ -1,21 +1,21 @@
 ---
 plan_id: PLAN-L7-465-cross-review-author-binding
-title: "PLAN-L7-465 (add-impl): cross-review セッション実在照合の実装 — PLAN-L6-94 契約の L7 降下 (U-XREV-*)"
+title: "PLAN-L7-465 (add-impl): cross-review セッション実在照合の実装 — PLAN-L6-94 契約の L7 降下
+  (U-XREV-*)"
 kind: add-impl
 layer: L7
 drive: be
 route_signal: feature_addition
 route_mode: add-feature
 parent_design: docs/plans/PLAN-L6-94-cross-review-session-attestation.md
-status: confirmed
 created: 2026-07-28
-updated: 2026-08-14
+updated: 2026-10-09
 owner: PM / PO
 agent_slots:
   - role: tl
-    slot_label: "TL - 突合キーの決定論性と author 導出元 (trailer / session log) の証拠力レビュー"
+    slot_label: TL - 突合キーの決定論性と author 導出元 (trailer / session log) の証拠力レビュー
   - role: se
-    slot_label: "SE - 4 検査の実装 + evidence スキーマ拡張 + U-XREV-* 配線"
+    slot_label: SE - 4 検査の実装 + evidence スキーマ拡張 + U-XREV-* 配線
 generates:
   - artifact_path: docs/plans/PLAN-L7-465-cross-review-author-binding.md
     artifact_type: markdown_doc
@@ -69,57 +69,97 @@ related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 review_evidence:
   - reviewer: claude-pr299-blind-re-review
     review_kind: cross_agent
-    reviewed_at: "2026-08-07T13:55:53Z"
-    tests_green_at: "2026-08-07T13:55:53Z"
-    verdict: "blind re-review blocking 0"
+    reviewed_at: 2026-08-07T13:55:53Z
+    tests_green_at: 2026-08-07T13:55:53Z
+    verdict: blind re-review blocking 0
     worker_model: gpt-5.6-luna
     reviewer_model: claude-opus-5
-    scope: "PR #299 コメント (subject 021cb536) の blind re-review。B-3、oracle 宣言、generates 所有、PLAN-L7-470 追補を残債として特定したうえで blocking 0。rebase 後 HEAD 5215bc23 の closing review は本 slice の検証後に再取得予定。"
+    scope: "PR #299 コメント (subject 021cb536) の blind re-review。B-3、oracle
+      宣言、generates 所有、PLAN-L7-470 追補を残債として特定したうえで blocking 0。rebase 後 HEAD
+      5215bc23 の closing review は本 slice の検証後に再取得予定。"
     lane: claim-blind
     citations:
-      - "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/299#issuecomment-5217956975"
+      - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/299#issuecomment-5217956975
     green_commands:
       - kind: unit_test
-        command: "node scripts/run-vitest-snapshot.ts tests/review-merge-gate.test.ts"
+        command: node scripts/run-vitest-snapshot.ts tests/review-merge-gate.test.ts
         runner: node
         scope: targeted
         exit_code: 0
-        completed_at: "2026-08-07T13:55:53Z"
+        completed_at: 2026-08-07T13:55:53Z
         evidence_path: tests/review-merge-gate.test.ts
-        output_digest: "sha256:23754e2ad74b4a617922363349c8bde8bea925f9dffc3d13b6c27aa01d9b387a"
+        output_digest: sha256:23754e2ad74b4a617922363349c8bde8bea925f9dffc3d13b6c27aa01d9b387a
         anchor_commit: 021cb536
   - reviewer: codex-closing-285
     review_kind: cross_agent
-    reviewed_at: "2026-08-07T07:26:50Z"
-    tests_green_at: "2026-08-07T07:19:50Z"
+    reviewed_at: 2026-08-07T07:26:50Z
+    tests_green_at: 2026-08-07T07:19:50Z
     verdict: approve
     worker_model: claude-opus-5
     reviewer_model: gpt-5.6-sol
-    scope: "PR #285 exact HEAD 9dff55704b1c22b1c22272502006a2c24035e0c2; CI run 31156402592 (Linux/Windows/aggregate) green; claim-blind/spec-blind closing review PASS; post-merge live dispatch was deferred until merge by design."
-    subject_head: "9dff55704b1c22b1c22272502006a2c24035e0c2"
+    scope: "PR #285 exact HEAD 9dff55704b1c22b1c22272502006a2c24035e0c2; CI run
+      31156402592 (Linux/Windows/aggregate) green; claim-blind/spec-blind
+      closing review PASS; post-merge live dispatch was deferred until merge by
+      design."
+    subject_head: 9dff55704b1c22b1c22272502006a2c24035e0c2
     attack_trials: 3
     citations:
-      - "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/285#issuecomment-5213879263"
-      - "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/actions/runs/31156402592"
+      - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/285#issuecomment-5213879263
+      - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/actions/runs/31156402592
     green_commands:
       - kind: unit_test
-        command: "npm run test"
+        command: npm run test
         runner: ci
         scope: targeted
         exit_code: 0
-        completed_at: "2026-08-07T07:19:50Z"
+        completed_at: 2026-08-07T07:19:50Z
         evidence_path: tests/review-custody.test.ts
-        output_digest: "sha256:a5634d67b958d1bc04056ab3993bee80845e5c340e028663c294e5307db2c4ba"
+        output_digest: sha256:a5634d67b958d1bc04056ab3993bee80845e5c340e028663c294e5307db2c4ba
         anchor_commit: 9dff55704b1c22b1c22272502006a2c24035e0c2
       - kind: typecheck
-        command: "npm run typecheck"
+        command: npm run typecheck
         runner: ci
         scope: targeted
         exit_code: 0
-        completed_at: "2026-08-07T07:19:50Z"
+        completed_at: 2026-08-07T07:19:50Z
         evidence_path: src/feedback/review-custody-runner.ts
-        output_digest: "sha256:ff15ed577f28a9a0ed8cd2b5f6391037d09019ebc7e00f84d2732f671e0d1dd8"
+        output_digest: sha256:ff15ed577f28a9a0ed8cd2b5f6391037d09019ebc7e00f84d2732f671e0d1dd8
         anchor_commit: 9dff55704b1c22b1c22272502006a2c24035e0c2
+status: confirmed
+github_issue_id: 926
+admission_receipt:
+  schema_version: v2
+  receipt_id: certificate:00f1a480218b87801c98c107f33af6ab
+  command_id: plan-revise:issue-926:b-custody-contract:forward:r2
+  admitted_at: 2026-10-09T04:21:40.275Z
+  source_digest: sha256:8b2d85c3ff2ddf182643eede470cea38de08f9fc744e02c4ef9c297ffb3f9ed0
+  decision_digest: sha256:6c5d0636521449c6e9f3f357ff52f7b996fe04d62c095111765eda8bff8f1e18
+  receipt_digest: sha256:4d033c61ce6d8bf2821a44c3ed5f5f6d9783f56e7e400d46126e7d4550d1d604
+  binding:
+    path: docs/plans/PLAN-L7-465-cross-review-author-binding.md
+    plan_id: PLAN-L7-465-cross-review-author-binding
+    asset_id: plan:legacy:9900b987be73e3200e372b9b412613f302398d1bcd1f68f6727833b99226434d
+    revision: 2
+    content_digest: sha256:8b2d85c3ff2ddf182643eede470cea38de08f9fc744e02c4ef9c297ffb3f9ed0
+  route:
+    signal: feature_addition
+    mode: add-feature
+  issue:
+    provider: github
+    issue_id: 926
+    episode_id: issue-926
+    projection_state: unprojected
+  origin:
+    plan_id: PLAN-L7-465-cross-review-author-binding
+    revision: 1
+    digest: sha256:3c39c97d1be94a0a8a465e150c5ebc2aa7dbb4b29d791cac7e1864750319184a
+  reentry:
+    target_plan_id: PLAN-L7-465-cross-review-author-binding
+    target_revision: 2
+    phase: forward_merge
+  escape_reason: "Issue #926: freeze the D2-B terminal-custody integrity
+    predicate, strict legacy cutoff, and independent negative oracles without
+    changing family-authority or GUI producer scope."
 ---
 
 # PLAN-L7-465 (add-impl): cross-review セッション実在照合の実装
@@ -798,6 +838,19 @@ D3 の live 結合試験はこれで閉じる。`unverified_family` を先へ進
 
 B 面の deny 対象に custody を含めない。custody は A 面の最終 AND に属する。現状の D3d は
 `unverified_family` 固定であるため、B 面へ custody を含めると全 merge が拒否されるためである。
+
+
+### B-wrapper terminal-custody integrity follow-up (Issue #926, 2026-10-09)
+
+The 2026-08-13 A-5 ruling keeps reviewer-family authorization in the existing A/D3 authority surface; it is not a waiver of B's evidence-integrity checks. B remains fail-close on the exact current PR HEAD and additionally enforces terminal-custody integrity for post-cutoff verdicts. This check establishes byte/identity/attempt consistency only; it does not claim provider-family authorization or change the D3d `unverified_family` outcome.
+
+**Grandfather boundary.** A canonical review verdict receipt whose own `at` timestamp is strictly earlier than `2026-09-16T09:51:00Z` is grandfathered from the new terminal-event requirement, preserving the 64 pre-terminal receipts inventoried in Issue #926. Equality is not earlier: a receipt at or after the cutoff must satisfy the full terminal chain. Grandfathering removes only this new custody predicate; all existing D1 exact-HEAD, non-author, PASS-family, open-PR, and green-check requirements remain in force.
+
+**Post-cutoff consumer predicate.** The B wrapper accepts a post-cutoff verdict only after a consumer-side verifier establishes one unique, non-superseded, non-conflicting completed attempt bound end-to-end: the canonical request digest and request identity (repository, PR, exact HEAD, memory ID, review revision, author family); the request's exact invocation nonce carried into the composed provider-judgment identity; the receipt bytes parsed by the verifier and their digest equal to that attempt's `receiptFileDigest`; the verdict bytes/artifact and `verdictDigest` agree; and the completed event's request digest, provider family, attempt number, exact HEAD, and canonical attempt verdict path agree with that same request and attempt. A bare verdict comment, receipt filename/hash without parsing, or helper that checks only receipt-file/event equality is insufficient. No attempt may be selected by list order, and an older attempt cannot satisfy a newer request or be used after supersession/conflict.
+
+This is a local B-consumer integrity contract. It does not create a GUI-comment producer, project comments into review custody, or claim cross-clone evidence sharing; those producer/distribution requirements remain in Issue #907. The generic delegated-work producer-attribution question in Issue #915 is also outside this merge consumer's scope.
+
+**Independent negative-oracle set (paired test-design U-RVMG-024..032).** Pin the strict cutoff boundary; with otherwise-valid exact-head D1 facts, independently mutate only (a) invocation nonce, (b) one request identity field, (c) receipt bytes, (d) verdict bytes/digest, (e) attempt number/path, and (f) add superseded/conflict evidence. Each mutation denies with merge-call count zero. A fully valid post-cutoff chain permits merge; the pre-cutoff fixture permits merge without an attempt event but still fails if any existing D1 condition is broken.
 
 ### B-3 deny receipt の束縛
 

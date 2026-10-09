@@ -7280,6 +7280,22 @@
         "revision": 2,
         "content_digest": "sha256:238d0e99ffc9fd83a2ea422797075dfe336f689766c64c9f79eaf730ccef2ff0"
       }
+    },
+    {
+      "sequence": 456,
+      "previous_record_digest": "sha256:822f6fcd5c61d391bd58a11c18fe63e3dc8b2ae0201d885ca0dfcaebafd12f55",
+      "record_digest": "sha256:3680adbb7676672f5a491f5f07fd4a19f23bffadbcf01754fec4f496d8e644a7",
+      "command_id": "plan-revise:issue-926:b-custody-contract:forward:r2",
+      "receipt_id": "certificate:00f1a480218b87801c98c107f33af6ab",
+      "receipt_digest": "sha256:4d033c61ce6d8bf2821a44c3ed5f5f6d9783f56e7e400d46126e7d4550d1d604",
+      "decision_digest": "sha256:6c5d0636521449c6e9f3f357ff52f7b996fe04d62c095111765eda8bff8f1e18",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-465-cross-review-author-binding.md",
+        "plan_id": "PLAN-L7-465-cross-review-author-binding",
+        "asset_id": "plan:legacy:9900b987be73e3200e372b9b412613f302398d1bcd1f68f6727833b99226434d",
+        "revision": 2,
+        "content_digest": "sha256:8b2d85c3ff2ddf182643eede470cea38de08f9fc744e02c4ef9c297ffb3f9ed0"
+      }
     }
   ]
 }
