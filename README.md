@@ -14,7 +14,7 @@ provider の API キーはリポジトリへ置かず、ローカル CLI と機�
 ![Vitest](https://img.shields.io/badge/Vitest-passing-6E9F18?style=for-the-badge&logo=vitest&logoColor=white)
 ![Biome](https://img.shields.io/badge/Biome-lint%20%2B%20format-60A5FA?style=for-the-badge&logo=biome&logoColor=white)
 
-![Platform](https://img.shields.io/badge/platform-Windows%20·%20macOS%20·%20Linux-555?style=flat-square)
+![Platform](https://img.shields.io/badge/platform-Windows%20(supported)%20·%20Linux%20(best%20effort)-555?style=flat-square)
 ![Architecture](https://img.shields.io/badge/architecture-ADR--001-8B5CF6?style=flat-square)
 ![Typecheck](https://img.shields.io/badge/tsc-strict-3178C6?style=flat-square&logo=typescript&logoColor=white)
 ![Zod](https://img.shields.io/badge/schema-Zod-3E67B1?style=flat-square&logo=zod&logoColor=white)
@@ -181,6 +181,9 @@ Windows PowerShell では、1 行目の代わりに `Add-Content -Encoding ascii
 setup は、asset の SHA-256 が consumer anchor と一致することを確かめてから、runtime を `.ut-tdd/` に入れます。
 一致しなければ、何も書かずに止まります。入ったあとは、リポジトリの中で `node .ut-tdd/bin/ut-tdd.mjs <command>` を使います。
 Claude Code (VS Code 拡張を含む) と Codex の hook も、この runtime を呼びます。
+
+> [!IMPORTANT]
+> **動作保証環境は Windows です。** Linux / WSL2 はベストエフォートで、CI と公開前のリハーサルでは確かめていますが、版ごとの正式な受入は必要が出てきた時点で行います ([#928](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/928))。macOS は検証していません。
 
 > [!NOTE]
 > Pack を clone して `node src/cli.ts <command>` を直接実行するのは、ハーネス自体を開発・検証するときの使い方です。
@@ -405,7 +408,10 @@ model that routes work to specialised roles, and a deterministic `harness.db`
 projection that makes progress, gaps, and drift machine-visible. Workflow
 rules are enforced by schema, lint, doctor gates, and hooks — not by prose.
 
-- **Runtime**: TypeScript on Node.js 24.13.0 (Windows-first; macOS/Linux supported). No
+- **Runtime**: TypeScript on Node.js 24.13.0. Windows is the supported platform
+  (accepted per release from the published assets); Linux / WSL2 is best effort
+  (CI and pre-release rehearsal, formal acceptance deferred to #928); macOS is
+  untested. No
   provider API keys are stored in the repository — agents run through local
   CLIs (Claude Code / Codex) wrapped by the `ut-tdd` CLI.
 - **Documentation language**: docs are intentionally written in Japanese

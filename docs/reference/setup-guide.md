@@ -16,7 +16,9 @@
 | Claude Code CLI / VS Code の Claude 拡張 | `claude --version` | 任意。Claude の hook と委譲を使う場合 |
 | Codex CLI | `codex --version` | 任意。Codex の委譲と、Claude との相互 review を使う場合 |
 
-- OS は Windows / Linux のどちらでも使えます。Windows は native で動き、WSL は要りません。
+- **動作保証環境は Windows です** (native で動き、WSL は要りません)。公開した release asset を使った受入を、版ごとに行っています。
+- **Linux / WSL2 はベストエフォートです。** CI は Linux でも毎回走らせ、公開前のリハーサルでも動作を確かめています。ただし、版ごとの正式な受入は、利用の実績や必要が出てきた時点で行います ([#928](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/928))。Linux で動かない場合は、バグ報告で知らせてください。再現できたものは修理し、回帰テストを足します。
+- macOS は検証していません。
 - provider の API キーを、repository や設定ファイルに書く必要は**ありません**。認証は、各公式 CLI のログインがそのまま使われます。
 
 > **Windows**: `node -v` が失敗する場合は、Node.js の公式インストーラーで PATH を有効にし、シェルを開き直してください。
