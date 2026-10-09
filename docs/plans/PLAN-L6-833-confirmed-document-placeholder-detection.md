@@ -52,16 +52,16 @@ sub_doc: function-spec
 github_issue_id: 894
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:b97211a840c1921ea5ad192ce5cec686
-  command_id: plan-draft:issue-894:PLAN-L6-833:reissue-20261008-0839-a1
-  admitted_at: 2026-10-08T08:54:20.000Z
+  receipt_id: certificate:dd2c09788501e0d7c9dcb70d046e670c
+  command_id: plan-draft:issue-894:PLAN-L6-833:redraft-20261009-a1
+  admitted_at: 2026-10-09T01:51:14.581Z
   source_digest: sha256:ce2a5d9d363217d6a348f8210443f7790cc19476e5dcbefb4e283c52781ec33b
-  decision_digest: sha256:b05611b6ba624156a63ef0578f46721de137a091234f29b0815beb0ab3d7ddeb
-  receipt_digest: sha256:87ab59450b0bb1e63e49e2e8d09a27f23e8027736cc2470cc4aed27ea7a0e6b0
+  decision_digest: sha256:43f1f4e37f4433bd6e03401c566223701aa9545de30b8019226963fac55c282b
+  receipt_digest: sha256:8bb6b4d46f390a78b202fd09049622ea0b76274c9cfbd1b63fe670e6fce026a7
   binding:
     path: docs/plans/PLAN-L6-833-confirmed-document-placeholder-detection.md
     plan_id: PLAN-L6-833-confirmed-document-placeholder-detection
-    asset_id: plan:b97211a840c1921ea5ad192ce5cec686
+    asset_id: plan:dd2c09788501e0d7c9dcb70d046e670c
     revision: 1
     content_digest: sha256:ce2a5d9d363217d6a348f8210443f7790cc19476e5dcbefb4e283c52781ec33b
   route:
