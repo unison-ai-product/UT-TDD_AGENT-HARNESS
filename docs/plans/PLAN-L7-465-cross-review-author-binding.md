@@ -129,17 +129,17 @@ status: confirmed
 github_issue_id: 926
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:5a5d40f7272a3a88a87997e50c9eab9d
-  command_id: plan-revise:issue-926:b-custody-contract:forward:r4
-  admitted_at: 2026-10-09T04:40:04Z
+  receipt_id: certificate:e8c32df846e6abbd0d91b57c2715c315
+  command_id: plan-revise:issue-926:b-custody-contract:forward:rebind-main-939
+  admitted_at: 2026-10-09T06:41:51Z
   source_digest: sha256:7c746e946c6b5d9650d87cc7b5f0933d07f80b7f9afa1bebc1635b28baffffb4
-  decision_digest: sha256:fc9cf47b5cb04d434fe24b295385efbdbc18a7cf25184f021cdd43cc51a11346
-  receipt_digest: sha256:d413e4fbb696df139dc2f7fb9eca4d52f26dfb3dcbbb75cab8b3f41e58bd50ff
+  decision_digest: sha256:89ee9bb7d5d2baade77fcca8669ef80c9c51d3b660cb30e67c6d246d22d67ed7
+  receipt_digest: sha256:648bbb641c011e684884745dbf893f25bc4dd8ebcba12f41fc908a6ca3b9e6c0
   binding:
     path: docs/plans/PLAN-L7-465-cross-review-author-binding.md
     plan_id: PLAN-L7-465-cross-review-author-binding
     asset_id: plan:legacy:9900b987be73e3200e372b9b412613f302398d1bcd1f68f6727833b99226434d
-    revision: 4
+    revision: 2
     content_digest: sha256:7c746e946c6b5d9650d87cc7b5f0933d07f80b7f9afa1bebc1635b28baffffb4
   route:
     signal: feature_addition
@@ -155,7 +155,7 @@ admission_receipt:
     digest: sha256:34da7110f126a856f594d28e89b49a08d8d6ad3058d49162a96e0c0352c64b2b
   reentry:
     target_plan_id: PLAN-L7-465-cross-review-author-binding
-    target_revision: 4
+    target_revision: 2
     phase: forward_merge
   escape_reason: "Issue #926 corrective revision: keep terminal-custody oracle
     rows explicitly candidate-only until implementation Red tests exist."

@@ -36,17 +36,17 @@ status: draft
 github_issue_id: 926
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:8ff4c236f20969e326e2b1eb24e094d2
-  command_id: plan-revise:issue-926:b-custody-contract:reverse:r5
-  admitted_at: 2026-10-09T04:48:53Z
+  receipt_id: certificate:d8664a0a3e25f3ba7671c162f64909e0
+  command_id: plan-revise:issue-926:b-custody-contract:reverse:rebind-main-939
+  admitted_at: 2026-10-09T06:42:15Z
   source_digest: sha256:a16628d79dc0304ce904da178e941ee6967bd82cda31753c888b44a216891d34
-  decision_digest: sha256:376d4c5fc28489b72058307c94c5f84ec225c45e164f40dd0305e804e78bd7de
-  receipt_digest: sha256:f9469fcc86aa875692fa9cb743c439670b9b1779e5dd1b6afa81b0268a5cd678
+  decision_digest: sha256:e3b969f2a872e40452dc9b4d7beec5de4bba6f0bef824f81676932bc0f4f2429
+  receipt_digest: sha256:029ebeff30d3b0727bc3f9240162964875bf2278c9e7a338f9344f21aa1dd615
   binding:
     path: docs/plans/PLAN-REVERSE-465-cross-review-author-binding-backfill.md
     plan_id: PLAN-REVERSE-465-cross-review-author-binding-backfill
     asset_id: plan:legacy:39cf6458a39e9c20e1e650240726fddfe605a90d4a49c98b71c4c082b79b6419
-    revision: 5
+    revision: 2
     content_digest: sha256:a16628d79dc0304ce904da178e941ee6967bd82cda31753c888b44a216891d34
   route:
     signal: drift
@@ -58,14 +58,14 @@ admission_receipt:
     projection_state: unprojected
   origin:
     plan_id: PLAN-L7-465-cross-review-author-binding
-    revision: 4
-    digest: sha256:34da7110f126a856f594d28e89b49a08d8d6ad3058d49162a96e0c0352c64b2b
+    revision: 2
+    digest: sha256:97189758abaf298c7a6ab31b8d7e4d7d40430423b6bb0a974396da2864f37533
   transition:
     direction: implementation_to_design
     implementation_disposition: preserved
   reentry:
     target_plan_id: PLAN-REVERSE-465-cross-review-author-binding-backfill
-    target_revision: 5
+    target_revision: 2
     phase: forward_merge
   escape_reason: "Issue #926 Reverse corrective revision: bind upstream to Forward
     revision 4 and retain U-RVMG-024..032 as candidate-only until implementation
