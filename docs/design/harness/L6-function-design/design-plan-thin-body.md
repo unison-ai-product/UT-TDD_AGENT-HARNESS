@@ -1,7 +1,7 @@
 ---
 layer: L6
 artifact_type: design_doc
-status: draft
+status: confirmed
 sub_doc: function-spec
 artifact_role: topic_design_plan_thin_body
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
