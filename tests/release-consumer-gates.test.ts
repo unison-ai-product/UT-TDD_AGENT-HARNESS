@@ -1071,7 +1071,7 @@ function writeConsumerG13Fixture(root: string): void {
       .replace("status: draft", "status: confirmed")
       .replace(/^plan: .*$/m, "plan: docs/plans/PLAN-CONSUMER-01.md")
       .replace(
-        "| <SMOKE-ID> | <観測内容> | <合否基準> | <AT-ID> |",
+        "| <記入> | <記入> | <記入> | <記入> |",
         "| SMOKE-CONSUMER-01 | status / doctor の実行 | exit 0 | AT-FR-01-01 |\n| SMOKE-CONSUMER-02 | projection の rebuild | 失敗 0 | AT-FR-01-01 |",
       ),
   );
