@@ -85,18 +85,18 @@ status: confirmed
 github_issue_id: 418
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:692203a97c229aa3dc1fbb76138356ed
-  command_id: plan-revise:issue-946:canary7-exact-acceptance-r23:20261009
-  admitted_at: 2026-10-09T08:28:22.954Z
-  source_digest: sha256:8350b03f489661306bd6648dc59e0c0a2f61b384cded40f2c7a919cc64902547
-  decision_digest: sha256:e3f72595dd1b968b916f409285a71b23a8d6f8416274ad42f532300f3687f265
-  receipt_digest: sha256:3368f8b13f9320e9a61106e8302c488e8adcf64774f3b10be57a339af022a28f
+  receipt_id: certificate:8c8cc33ce230bd3cfa1d2e70e8ad7db3
+  command_id: plan-revise:issue-418:canary6-normrow-fix-r22-history-jp:20261008
+  admitted_at: 2026-10-08T02:15:18.025Z
+  source_digest: sha256:70fda562c0affcd740858cee403591fdf724891448de650bc9c5bea4657dd7a2
+  decision_digest: sha256:00286afc58874989439d3534d25c15b52131d06e7c166c102d50b29c7221c06f
+  receipt_digest: sha256:d747ce8e3aef27144fb267ad347261e8265de770bada144708e78cd8c23657cf
   binding:
     path: docs/plans/PLAN-L7-531-pack-internal-canary-smoke.md
     plan_id: PLAN-L7-531-pack-internal-canary-smoke
     asset_id: plan:44f79788376b81c225ce5913fddbc48f
-    revision: 23
-    content_digest: sha256:8350b03f489661306bd6648dc59e0c0a2f61b384cded40f2c7a919cc64902547
+    revision: 22
+    content_digest: sha256:70fda562c0affcd740858cee403591fdf724891448de650bc9c5bea4657dd7a2
   route:
     signal: feature_addition
     mode: add-feature
@@ -116,7 +116,13 @@ admission_receipt:
     target_plan_id: PLAN-L7-531-pack-internal-canary-smoke
     target_revision: 12
     phase: forward_merge
-  escape_reason: "Issue #946 control6077234929指定のC7 exact受入再束縛。既存履歴・証拠保持、受入PASSを主張しない。"
+  escape_reason: "Issue #418 control comment 6050102089 scopes the unfinished
+    AT-DIST-003 exact release identity to canary.6. PR #893 Claude review FLAG1
+    receipt abd8bb863a78c6008c33bffff70a961d2eb7ad59b2dece38848a97a6ad36ae1f
+    identifies the stale normative row. This r22 correction only restores the
+    prior full stop and translates the r21 history entry; preserve all prior
+    receipts, confirmed status, review_evidence and C5/C2 history, with no
+    acceptance result or PASS."
 ---
 
 # PLAN-L7-531: Pack-only internal canary smoke (Windows/Linux)
@@ -364,13 +370,23 @@ work-guard の command 文字列をそのまま、撤去後の clean fixture で
 
 #### 3.6.1 immutable artifact
 
-- 公開済み exact `v0.2.0-canary.7` の 5 asset (`PLAN-L7-628` §3)。tag は exact match で解決し、latest、prefix、canary.2〜canary.6 の tag / bytes を受け付けない。
-- canary.2〜canary.6 の bytes、receipt、failure/history、個別 authoring/G1 成果は historical evidence として変更・上書きしない。旧受入をC7の同じ受入行へ読み替えない。
-- 5 asset の sha256 と consumer anchor は、§3.4 の様式を持つ canary.7 の publish 追跡 Issue #946 のコメント1件 (producer値と公開後独立再計算値の2値一致) からだけ取る。取得asset自身からanchorを作らず、記録が揃うまで本E2Eを開始しない。
-- 公開はcontrol / POの所有で、本契約改訂は公開や受入PASSを代替しない。AT-DIST-003 (015〜019) はcanary.7で全件を再検査する。
-- AT-835-008と既存ATの再利用可否は、canonical C6-C1 `f6477cae06dc5ee2456bc2b5ea4ffd4c634355ee` → C7-C1 `ee693cc78b2000c3a91ec72d7e851a2a9fa2501f` の差分について、
-  `git diff --name-status --no-renames <C6-C1> <C7-C1> -- src/runtime/ src/cli.ts docs/templates/adapter/.claude/settings.json src/setup/templates.ts`
-  を両commitの存在・到達性確認後に実行し、exit0かつ空出力の場合だけ既存の実受入証拠の再利用候補とする。証拠が無い場合は空diffでもPASSや再利用を作らない。差分があれば自動再利用を拒否し、影響するATを再検査する。source commitは使わずPack canonical C1を入力とする。今回のcontrol指示6077118153はAT-835-008再実行を指定している。
+- 公開予定の exact `v0.2.0-canary.6` の 5 asset (`PLAN-L7-628` §3)。tag は exact match で解決し、
+  `latest` / prefix / `v0.2.0-canary.2` / `v0.2.0-canary.3` / `v0.2.0-canary.4` / `v0.2.0-canary.5` を受け付けない。
+  canary.2〜canary.5 の bytes とC5 failure/history (#888 を含む) は変更・上書きせず historical evidence として維持する。
+- 5 asset の sha256 と consumer anchor は、AT-DIST-002 と同じく §3.4 の様式の publish 記録
+  (canary.6 の publish 追跡 Issue #418 のコメント 1 件、producer 値と独立再計算値の 2 値一致) から
+  だけ取る。取得した asset の再計算値を anchor にしない (§3.2)。記録が揃うまで本 E2E を開始しない。
+- canary.6 の公開は PO 承認を要する外向き操作であり、本節は公開を代替しない。
+- AT-DIST-003 (015〜019) は canary.6 で全件を再検査する。canary.5 の結果はC5の歴史として保持し、
+  canary.6 の同じ受入行に読み替えない。canary.5 の個別 authoring/G1 成果も無効とは扱わない。
+- AT-835-008 (Windows VS Code hook 3 run) は #886 が `src/setup/templates.ts` の hook template を
+  変更したため、canary.6 で再検査する。AT-DIST-002 (canary.3) の既存証拠は、
+  canary.5 C1 から canary.6 C1 への差分について、
+  `git diff --name-status --no-renames <C5-C1> <C6-C1> -- src/runtime/ src/cli.ts docs/templates/adapter/.claude/settings.json src/setup/templates.ts`
+  が両 commit の存在・到達性を確認した上で exit 0 かつ空出力の場合だけ再利用する。
+  差分があれば自動再利用を拒否し、その差分に影響する AT のみを再検査する。source repository の
+  commit は使わず、Pack producer/operator の canonical C1 を入力とする。未公開の C6 C1 が公開記録に現れるまで
+  差分照合・再利用可否・受入 PASS を主張しない。
 
 #### 3.6.2 consumer fixture
 
@@ -417,13 +433,13 @@ authority・隔離条件は §3.6.9 で凍結する (本 join はその条件の
 
 #### 3.6.6 evidence fields (§6.1 と同形式)
 
-保存する項目: canary.7 の tag、5 asset の sha256 と size、publish 記録のコメント URL と写しの SHA-256、
+保存する項目: canary.6 の tag、5 asset の sha256 と size、publish 記録のコメント URL と写しの SHA-256、
 anchor、Linux 専用 WSL2 distro の公式 rootfs 取得元と SHA-256、初回起動前に設定した `/etc/wsl.conf`、
 `/mnt/c` 不在・`cmd.exe` 起動不可・Windows path を含まない `$PATH` の実測、`node --version`、Bun 不在、
 sshd の有効設定と `127.0.0.1` のみの listen 実測、Remote-SSH 接続先、distro 内 VS Code Server の
 取得・起動確認、distro 側 Server 上の Claude 拡張稼働確認、該当 Claude 拡張プロセスの環境から
 実測した `CLAUDE_CODE_ENTRYPOINT=claude-vscode`、受入専用に新規作成した鍵対の公開鍵 fingerprint、
-canary.6 C1→canary.7 C1 の scoped diff コマンド・両 C1 値・終了 code・出力、AT 再検査/再利用の判定、
+canary.5 C1→canary.6 C1 の scoped diff コマンド・両 C1 値・終了 code・出力、AT 再検査/再利用の判定、
 author provider / model / 実 invocation の記録と transcript、
 baseline commit と subject commit と negative commit の SHA、subject の path・content digest・blob oid、
 `G1` の positive / negative の出力 (applicable / passed / messages 全文)、review の request id・
@@ -435,12 +451,12 @@ checkout・host credential を持ち込まない専用 disposable WSL2 distro (�
 
 | ID | 契約軸 |
 | --- | --- |
-| `CANDIDATE-ST-PACKCANARY-015` | 入力 artifact: exact `v0.2.0-canary.7` の 5 asset を §3.4 の publish 記録 (Issue #946、2 値一致) と照合する。canary.2〜canary.6 の bytes・tag を受け付けない |
+| `CANDIDATE-ST-PACKCANARY-015` | 入力 artifact: exact `v0.2.0-canary.6` の 5 asset を §3.4 の publish 記録 (2 値一致) と照合する。canary.2〜canary.5 の bytes・tag を受け付けない |
 | `CANDIDATE-ST-PACKCANARY-016` | subject の出所: テンプレート配送からの実エージェント執筆、baseline と subject の commit 分離、closed stub・手書き文書の拒否 |
 | `CANDIDATE-ST-PACKCANARY-017` | positive: 正しい subject で G1 が `applicable:true` かつ `passed:true` |
 | `CANDIDATE-ST-PACKCANARY-018` | negative: 別 revision の欠落 specimen で G1 が `applicable:true` / `passed:false` かつ欠落 slot 名を含む |
 | `CANDIDATE-ST-PACKCANARY-019` | review join: 実 subject (path + digest + revision) への非著者 canonical review、receipt が exact revision に束縛、同族 verdict と closed-stub receipt を拒否 |
-| `AT-DIST-003` | 受入行: 015〜019 を exact canary.7 の実 Release で全件通す。AT-DIST-002 と別行で、互いに代替しない |
+| `AT-DIST-003` | 受入行: 015〜019 を exact canary.6 の実 Release で全件通す。AT-DIST-002 と別行で、互いに代替しない |
 
 #### 3.6.8 未確定の入力 (実装開始前に別途 freeze、本節では決めない)
 
@@ -705,7 +721,3 @@ fallback、legacy/旧 2-asset release の誤取得、anchor 未指定経路の�
    offline CI は公開前に進めてよい。公開の実施は PO 承認を要する高影響境界であり、本 PLAN は承認を代替しない)。
 5. production source を第 1 層・第 2 層とも変更しないこと。方式変更が必要になったら PR を
    close して本 PLAN の契約改訂へ戻る。
-
-## rev 23: canary.7 exact受入再束縛（2026-10-09）
-
-control #946 comment6077234929に従い、現行015〜019の入力だけをC7へ再束縛する。C6/C5以前の履歴とreview_evidenceを保持し、標準AT-DIST-002のC2束縛、oracle/custody/authority/隔離条件を変えない。新しいreview/PASSや実受入完了を主張しない。

@@ -7476,17 +7476,17 @@
     {
       "sequence": 468,
       "previous_record_digest": "sha256:f190d4886f745d1a16455aa063772e35a2c75c446f0d502f4c6f1fc5030b54d8",
-      "record_digest": "sha256:e2cce42e48de494fce729d0efdbdd982029135450ea32ec634370e65e1a0ced5",
-      "command_id": "plan-revise:issue-946:canary7-exact-acceptance-r23:20261009",
-      "receipt_id": "certificate:692203a97c229aa3dc1fbb76138356ed",
-      "receipt_digest": "sha256:3368f8b13f9320e9a61106e8302c488e8adcf64774f3b10be57a339af022a28f",
-      "decision_digest": "sha256:e3f72595dd1b968b916f409285a71b23a8d6f8416274ad42f532300f3687f265",
+      "record_digest": "sha256:d5b9837025c88525c72bd06d948c6aefd23a31ac837553e0348450e862ab3a08",
+      "command_id": "plan-revise:issue-816:l6-stale-note-fix:r3:9f94fd8654fd",
+      "receipt_id": "certificate:0b0dfbee547b17e8b5da1625d4cb2a69",
+      "receipt_digest": "sha256:ac7a42f9758455807321b010ac0de2153e7ec213ca55d5da5d39a99ed330dda5",
+      "decision_digest": "sha256:3841029a367e41a1d25dab332a293cfaf6252cee7839b8c649fe4e1e8608a681",
       "binding": {
-        "path": "docs/plans/PLAN-L7-531-pack-internal-canary-smoke.md",
-        "plan_id": "PLAN-L7-531-pack-internal-canary-smoke",
-        "asset_id": "plan:44f79788376b81c225ce5913fddbc48f",
-        "revision": 23,
-        "content_digest": "sha256:8350b03f489661306bd6648dc59e0c0a2f61b384cded40f2c7a919cc64902547"
+        "path": "docs/plans/PLAN-L6-816-release-notes-draft-contract.md",
+        "plan_id": "PLAN-L6-816-release-notes-draft-contract",
+        "asset_id": "plan:2f5be4ac3a56270474529ae239e69d4d",
+        "revision": 3,
+        "content_digest": "sha256:3d6a0fe7c0511bcc1533a19e8829b76d42bcea5d22a246a60eb20ba791fae835"
       }
     }
   ]

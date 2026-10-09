@@ -78,18 +78,18 @@ sub_doc: function-spec
 github_issue_id: 816
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:7463fe4c0d4940af31f908b631a10175
-  command_id: plan-revise:issue-816:l6-confirm:post-green:r2:e7176af1ade5
-  admitted_at: 2026-10-09T04:17:23.551Z
-  source_digest: sha256:20212a77b064673f8dd31b1a018103c606304a7ff68f69e6229efc208610077a
-  decision_digest: sha256:7dde0fba34e5445c8cd391b565ed23aea4200fbdd98a1cb7a3e510c567b92532
-  receipt_digest: sha256:8eb516fdd55ec3ec7bcb4872e08cf54e27d388441f161ba912dcc910fb02c724
+  receipt_id: certificate:0b0dfbee547b17e8b5da1625d4cb2a69
+  command_id: plan-revise:issue-816:l6-stale-note-fix:r3:9f94fd8654fd
+  admitted_at: 2026-10-09T07:58:21.970Z
+  source_digest: sha256:3d6a0fe7c0511bcc1533a19e8829b76d42bcea5d22a246a60eb20ba791fae835
+  decision_digest: sha256:3841029a367e41a1d25dab332a293cfaf6252cee7839b8c649fe4e1e8608a681
+  receipt_digest: sha256:ac7a42f9758455807321b010ac0de2153e7ec213ca55d5da5d39a99ed330dda5
   binding:
     path: docs/plans/PLAN-L6-816-release-notes-draft-contract.md
     plan_id: PLAN-L6-816-release-notes-draft-contract
     asset_id: plan:2f5be4ac3a56270474529ae239e69d4d
-    revision: 2
-    content_digest: sha256:20212a77b064673f8dd31b1a018103c606304a7ff68f69e6229efc208610077a
+    revision: 3
+    content_digest: sha256:3d6a0fe7c0511bcc1533a19e8829b76d42bcea5d22a246a60eb20ba791fae835
   route:
     signal: feature_addition
     mode: add-feature
@@ -104,10 +104,10 @@ admission_receipt:
     digest: sha256:d61f55125e5d53fd7247758abc29d128e1584fd4ea743a4593b40f1c86f566f2
   reentry:
     target_plan_id: PLAN-L6-816-release-notes-draft-contract
-    target_revision: 2
+    target_revision: 3
     phase: forward_merge
-  escape_reason: "Issue #816 (PR #933): PLAN-L6-816 を post-green 非著者 evidence
-    review (Sol PASS) の証跡で confirmed にする。契約本文は変えない。"
+  escape_reason: "Issue #816: L7 準備で見つかった §3.4 / §3.5 の古い注記 (rev 2 F1 以前の記述)
+    を訂正する。契約・oracle は変えない。"
 ---
 
 # PLAN-L6-816: Pack リリースノート下書きの機械生成 (段階 1) の契約 freeze
@@ -247,7 +247,7 @@ L7 実装 PLAN は `PLAN-L7-816-release-notes-draft` (add-impl、route `add-feat
 
 ### 3.4 判断 D: identity の読み方
 
-identity の値は全て、次の 3 つの信頼根から機械で読む。operator が値を入力する欄は、§3.1 の素材 commit だけである。
+identity の値は全て、次の 3 つの信頼根から機械で読む。operator が値を入力する欄は無い。素材 commit も、§3.1 の C1 `Source-Commit:` trailer から機械で読む。
 
 | 欄 | 読む場所 | 照合 (不一致は fail-close) |
 | --- | --- | --- |
@@ -274,7 +274,7 @@ producer JSON の扱い: `ok === true` でなければ拒否する。`tag` / `so
 
 1. `<tag>.release-notes.md` (`gh release create --notes-file` に渡す本文):
    1. 見出し `## <tag> (内部 canary)` (stable なら `(安定版)`)。
-   2. 「release identity」節: 素材 (「申告値 (祖先検査のみ)」の注記付き) と比較元の素材、C1、C2、releaseId、
+   2. 「release identity」節: 素材 (C1 の `Source-Commit:` trailer から導いた値。C1 の push 後は不変) と比較元の素材、C1、C2、releaseId、
       5 asset の SHA-256 (asset 名の辞書順)、consumer anchor。
    3. 「主な変更 (source repo)」節: §3.3 の型別の節と「未分類の commit」節。
    4. 固定の注記: canary は prerelease であり、stable への昇格と `latest` の変更をしないこと。追跡 issue の参照
@@ -363,6 +363,9 @@ fixture は一時 directory の git repo (source 側と Pack 側) で作り、�
   (U-RNOTES-009) だけを保証する。
 
 ## 7. 改訂履歴
+
+- 2026-10-09 (admission revision 3、#816 の L7 準備で見つかった古い注記の訂正。契約は変えない)
+  - §3.4 と §3.5 に残っていた rev 2 以前の記述 (operator が素材 commit を入力する、素材は申告値) を、rev 2 F1 で決めた C1 `Source-Commit:` trailer からの機械読み取りに合わせた。
 
 - rev 3 (2026-10-06、Sol r1 FLAG の是正 1/3 の続き。再検の前に advisor (design、claude-fable-5、2026-10-06) が SURVIVE (条件付き) と判定した条件を反映)
   - sync-pack は working tree を写すので、operator 票に sync-pack 直前の clean tree (`status --porcelain` が空) を必須にした (§3.1)。
