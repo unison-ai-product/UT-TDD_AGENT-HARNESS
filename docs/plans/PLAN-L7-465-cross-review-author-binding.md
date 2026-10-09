@@ -129,18 +129,18 @@ status: confirmed
 github_issue_id: 926
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:009a3be26c65b94cec00efa88bd7f94e
-  command_id: plan-revise:issue-926:b-custody-contract:forward:flag2-origin-projection-digest
-  admitted_at: 2026-10-09T07:06:50Z
-  source_digest: sha256:19947f4d46e827ffe4f16475bc21656975a274e765376f3b8bdf807455fb58d1
-  decision_digest: sha256:3e45210b8c6f029ce05b46ad274dd9d7aa14eb46d892a3c54d2f9baf09989798
-  receipt_digest: sha256:8bbbda29c78169b9fa703f5ed1d8cc90a5a8b5e135658bcc29281cc24c8ae348
+  receipt_id: certificate:f44af2916fa30af977ab788ce3435dbd
+  command_id: plan-revise:issue-926:b-custody-contract:forward:flag2-preserve-boundary-add-unlisted-backdate
+  admitted_at: 2026-10-09T07:11:54Z
+  source_digest: sha256:c7d09e7b3a8bec5e71a58c9e152d6abffacaff1e09ea20376c6e98fd1d8b7618
+  decision_digest: sha256:ea4b877ab80c7acd29e9d60d6ed0022f528ae7902e0bd2adb7f444e07f06c5a9
+  receipt_digest: sha256:dfd891c75ec87b07e6bb3071245748fff98d0e9c0318c3ad1ef94d166a31a5c8
   binding:
     path: docs/plans/PLAN-L7-465-cross-review-author-binding.md
     plan_id: PLAN-L7-465-cross-review-author-binding
     asset_id: plan:legacy:9900b987be73e3200e372b9b412613f302398d1bcd1f68f6727833b99226434d
-    revision: 4
-    content_digest: sha256:19947f4d46e827ffe4f16475bc21656975a274e765376f3b8bdf807455fb58d1
+    revision: 5
+    content_digest: sha256:c7d09e7b3a8bec5e71a58c9e152d6abffacaff1e09ea20376c6e98fd1d8b7618
   route:
     signal: feature_addition
     mode: add-feature
@@ -151,14 +151,15 @@ admission_receipt:
     projection_state: unprojected
   origin:
     plan_id: PLAN-L7-465-cross-review-author-binding
-    revision: 2
-    digest: sha256:7c746e946c6b5d9650d87cc7b5f0933d07f80b7f9afa1bebc1635b28baffffb4
+    revision: 4
+    digest: sha256:19947f4d46e827ffe4f16475bc21656975a274e765376f3b8bdf807455fb58d1
   reentry:
     target_plan_id: PLAN-L7-465-cross-review-author-binding
-    target_revision: 4
+    target_revision: 5
     phase: forward_merge
-  escape_reason: "Issue #926 FLAG2 correction: bind this Forward admission origin
-    to revision 2 projection content_digest, not revision-digest."
+  escape_reason: "Issue #926 FLAG2 correction: preserve the cutoff negative, add
+    backdated unlisted and allowlisted-byte-mutation candidates, and bind
+    admission origin to Forward revision 4 projection content_digest."
 ---
 
 # PLAN-L7-465 (add-impl): cross-review セッション実在照合の実装
@@ -918,7 +919,7 @@ a83c71aac11be3bee89c2e7fcc41b089abe0e46fc39d33aa227785273c8a402b
 
 これは local B-consumer の integrity 契約である。GUI comment を custody producer として扱う実装、PR comment の custody への転記、clone 間共有はここで作らず、Issue #907 の別契約に残す。汎用 delegation の producer attribution 課題 (#915) もこの merge consumer の範囲外である。
 
-**独立 negative-oracle 候補 (paired test-design `CANDIDATE-U-RVMG-024..033`)。** strict cutoff と閉じた digest allowlist を固定し、他の exact-head D1 事実を保ったまま (a) nonce、(b) request identity の単一 field、(c) receipt bytes、(d) verdict bytes/digest、(e) attempt number/path をそれぞれ独立に変異し、各ケースで merge 呼出し 0 を要求する。さらに対象 attempt の superseded/conflict event を個別に加えた場合も deny する。allowlist 外の receipt は `at` を cutoff 前へ戻しても deny し、allowlist 対象 receipt の raw bytes を 1 byte 変更した場合も digest 不一致で deny する。完全に valid な post-cutoff chain だけを allow し、既存 D1 条件を破れば deny する。これらは未実装の契約候補であり、実装済みまたは Green を意味しない。
+**独立 negative-oracle 候補 (paired test-design `CANDIDATE-U-RVMG-024..034`)。** strict cutoff と閉じた digest allowlist を固定し、他の exact-head D1 事実を保ったまま (a) nonce、(b) request identity の単一 field、(c) receipt bytes、(d) verdict bytes/digest、(e) attempt number/path をそれぞれ独立に変異し、各ケースで merge 呼出し 0 を要求する。さらに対象 attempt の superseded/conflict event を個別に加えた場合も deny する。allowlist 外の receipt は `at` を cutoff 前へ戻しても deny し、allowlist 対象 receipt の raw bytes を 1 byte 変更した場合も digest 不一致で deny する。cutoff と等しい時刻または以後の receipt も、完全な terminal chain がなければ deny する。完全に valid な post-cutoff chain だけを allow し、既存 D1 条件を破れば deny する。これらは未実装の契約候補であり、実装済みまたは Green を意味しない。
 
 ### B-3 deny receipt の束縛
 

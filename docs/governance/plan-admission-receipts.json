@@ -7440,6 +7440,38 @@
         "revision": 4,
         "content_digest": "sha256:a428ee99adb77b1e9ee4319a098f025caa808532e36b0d5563b32f58712dc41b"
       }
+    },
+    {
+      "sequence": 466,
+      "previous_record_digest": "sha256:9812c446486e12a5d3c1e8f79e2db45cb73f47fa4f7fa26c9db6f02fc95bb0cb",
+      "record_digest": "sha256:33f1a4bd170ab636134a77e7d5e67399bd927eb82e5b27c2325590c0b38b11ae",
+      "command_id": "plan-revise:issue-926:b-custody-contract:forward:flag2-preserve-boundary-add-unlisted-backdate",
+      "receipt_id": "certificate:f44af2916fa30af977ab788ce3435dbd",
+      "receipt_digest": "sha256:dfd891c75ec87b07e6bb3071245748fff98d0e9c0318c3ad1ef94d166a31a5c8",
+      "decision_digest": "sha256:ea4b877ab80c7acd29e9d60d6ed0022f528ae7902e0bd2adb7f444e07f06c5a9",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-465-cross-review-author-binding.md",
+        "plan_id": "PLAN-L7-465-cross-review-author-binding",
+        "asset_id": "plan:legacy:9900b987be73e3200e372b9b412613f302398d1bcd1f68f6727833b99226434d",
+        "revision": 5,
+        "content_digest": "sha256:c7d09e7b3a8bec5e71a58c9e152d6abffacaff1e09ea20376c6e98fd1d8b7618"
+      }
+    },
+    {
+      "sequence": 467,
+      "previous_record_digest": "sha256:33f1a4bd170ab636134a77e7d5e67399bd927eb82e5b27c2325590c0b38b11ae",
+      "record_digest": "sha256:f190d4886f745d1a16455aa063772e35a2c75c446f0d502f4c6f1fc5030b54d8",
+      "command_id": "plan-revise:issue-926:b-custody-contract:reverse:flag2-bind-final-forward5-content",
+      "receipt_id": "certificate:4bf445bed73d7c5b79949109deb8fb66",
+      "receipt_digest": "sha256:37b9f9007ba240996484deafa91f6e43e55c587652e95307a1850df634836aa4",
+      "decision_digest": "sha256:75796708c6fb9ba0d7bb03fa0309c9da0cb08bcb636ac80c4ce94510996fe2d5",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-465-cross-review-author-binding-backfill.md",
+        "plan_id": "PLAN-REVERSE-465-cross-review-author-binding-backfill",
+        "asset_id": "plan:legacy:39cf6458a39e9c20e1e650240726fddfe605a90d4a49c98b71c4c082b79b6419",
+        "revision": 5,
+        "content_digest": "sha256:8718886b9f145fae82053b6f8e7e177eb606fa012bc779c8a3995ae2fa2d8c39"
+      }
     }
   ]
 }
