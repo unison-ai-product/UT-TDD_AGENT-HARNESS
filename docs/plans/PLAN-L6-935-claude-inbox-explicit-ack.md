@@ -41,24 +41,49 @@ dependencies:
     - docs/test-design/harness/L7-unit-test-design.md
     - docs/test-design/harness/L7-claude-inbox-explicit-ack-test-design.md
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/935
-review_evidence: []
-status: draft
+review_evidence:
+  - reviewer: Claude Opus
+    review_kind: cross_agent
+    reviewed_at: 2026-10-09T11:05:20.407Z
+    verdict: PASS-WEAK
+    tests_green_at: 2026-10-09T11:01:03Z
+    worker_model: codex-primary
+    reviewer_model: claude-opus
+    subject_head: 18db7e51c219d4cf4c338f1d223a550701e5410b
+    plan_revision: "5"
+    scope: control6079630887指定のpost-green FLAG2限定再検。canonical
+      rv1-f7ca0bbb、blocking0。モデル型番はcontrolのOpus指定以上を推測しない。
+    citations:
+      - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/944#issuecomment-6079630887
+      - .ut-tdd/review/receipts/f7ca0bbbc1eaead527d05a29b3e5f6be3303ea5dc956a47dc6af8eaeddd5d6ae.json
+      - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/actions/runs/37918847013
+    green_commands:
+      - kind: unit_test
+        command: vitest run (Linux/Windows required full regression; run37918847013)
+        runner: ci
+        scope: full
+        exit_code: 0
+        completed_at: 2026-10-09T11:01:03Z
+        evidence_path: .ut-tdd/issue935-r5-ci37918847013.json
+        output_digest: sha256:d0c6d64e92e368d240e6cfa802fdccd2a7e83d9707d2e01da4f403cd7c00712d
+        anchor_commit: 18db7e51c219d4cf4c338f1d223a550701e5410b
+status: confirmed
 sub_doc: function-spec
 github_issue_id: 935
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:2dcc7acff32f5fdf3aabacce72c0586e
-  command_id: plan-revise:issue-935:flag2-plan-pointer-only-20261009-r5
-  admitted_at: 2026-10-09T10:36:51.504Z
-  source_digest: sha256:d86aa5833b1abeab5efa57db69e7bd0584688ae9d23b0fee702eb4db4add5239
-  decision_digest: sha256:f6052408e1c005e2a1fa0d259dc7631d761438e80ab994ac978458db7acac4c7
-  receipt_digest: sha256:6ce4d7fea1cd233d4c14b725a390a2ccb4748fa89582d7b9274d0f21746275c7
+  receipt_id: certificate:4a697cd0f00f370f41379bed929bc0d9
+  command_id: plan-revise:issue-935:confirm-postgreen-20261009-r6
+  admitted_at: 2026-10-09T11:07:57.738Z
+  source_digest: sha256:1aeb5a847073733c86bdf9b9a362b6d0c574678a3ee891a63420c16f71fb1d4a
+  decision_digest: sha256:4f237c1d7d42c11e645a4f26a09faf5ab41c74202df00f7c92acbec32312ad5e
+  receipt_digest: sha256:4c84e728ba44821d6e6e0be9d987976b1bd8a93153cf8aa6a84782377d3f4368
   binding:
     path: docs/plans/PLAN-L6-935-claude-inbox-explicit-ack.md
     plan_id: PLAN-L6-935-claude-inbox-explicit-ack
     asset_id: plan:c5d545dfdce9219f6a26e0c008657605
-    revision: 5
-    content_digest: sha256:d86aa5833b1abeab5efa57db69e7bd0584688ae9d23b0fee702eb4db4add5239
+    revision: 6
+    content_digest: sha256:1aeb5a847073733c86bdf9b9a362b6d0c574678a3ee891a63420c16f71fb1d4a
   route:
     signal: feature_addition
     mode: add-feature

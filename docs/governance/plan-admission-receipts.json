@@ -7536,6 +7536,22 @@
         "revision": 5,
         "content_digest": "sha256:d86aa5833b1abeab5efa57db69e7bd0584688ae9d23b0fee702eb4db4add5239"
       }
+    },
+    {
+      "sequence": 472,
+      "previous_record_digest": "sha256:6c2af4ca95631f6128b6618e207e98b495bbe4a1790d9b92bcd0c5058f78a77a",
+      "record_digest": "sha256:4936a7d94408dccef765607069220d677dae8b5cd1f291a7a19061f599781d6b",
+      "command_id": "plan-revise:issue-935:confirm-postgreen-20261009-r6",
+      "receipt_id": "certificate:4a697cd0f00f370f41379bed929bc0d9",
+      "receipt_digest": "sha256:4c84e728ba44821d6e6e0be9d987976b1bd8a93153cf8aa6a84782377d3f4368",
+      "decision_digest": "sha256:4f237c1d7d42c11e645a4f26a09faf5ab41c74202df00f7c92acbec32312ad5e",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-935-claude-inbox-explicit-ack.md",
+        "plan_id": "PLAN-L6-935-claude-inbox-explicit-ack",
+        "asset_id": "plan:c5d545dfdce9219f6a26e0c008657605",
+        "revision": 6,
+        "content_digest": "sha256:1aeb5a847073733c86bdf9b9a362b6d0c574678a3ee891a63420c16f71fb1d4a"
+      }
     }
   ]
 }
