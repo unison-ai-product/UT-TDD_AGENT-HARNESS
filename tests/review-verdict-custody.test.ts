@@ -665,6 +665,14 @@ vi.mock("node:fs", async (importOriginal) => {
       throw Object.assign(new Error("injected second-read failure"), { code: "EACCES" });
     }
     const result = actual.readFileSync(path, options);
+    if (String(path) === fault.path && fault.mode === "replace" && !fault.parsed) {
+      fault.parsed = true;
+      const original = actual.readFileSync(fault.path);
+      actual.writeFileSync(
+        fault.path,
+        original.toString("utf8").replace("VERDICT: PASS", "VERDICT: FLAG"),
+      );
+    }
     if (String(path) === fault.path && options === "utf8" && !fault.parsed) {
       fault.parsed = true;
       if (fault.mode === "delete") actual.unlinkSync(fault.path);
@@ -767,6 +775,29 @@ describe("Issue #914: strict verdict second-read custody regression", () => {
       result: { ok: true },
       mutations: 1,
     });
+  });
+
+  it("binds the receipt verdictDigest to the exact bytes parsed when PASS is replaced by FLAG", () => {
+    const { root, request, attestation, path } = fixture();
+    const originalBytes = readFileSync(path);
+    const expectedDigest = createHash("sha256").update(originalBytes).digest("hex");
+    fault.path = path;
+    fault.mode = "replace";
+
+    const projected = projectReviewVerdict({
+      repoRoot: root,
+      request,
+      attestation,
+      verdictFile: path,
+    });
+    const completed = readReviewCustodyAudit(root).find(
+      (event) => event.kind === "attempt_completed",
+    );
+
+    expect(fault.parsed).toBe(true);
+    expect(readFileSync(path, "utf8")).toContain("VERDICT: FLAG");
+    expect(projected).toMatchObject({ ok: true, receipt: { verdict: "PASS" } });
+    expect(completed?.verdictDigest).toBe(expectedDigest);
   });
 
   it.each([
