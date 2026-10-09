@@ -55,6 +55,8 @@ G8〜G10 の workflow 経路と right-arm fallback は別の既存分岐とし�
 
 48 template の字句・path 対応は pair test-design の inventory 表に固定する。事前実測値は説明用記法のHTML comment移動前の inventory であり、matcher一致数は合否基準ではない。HTML comment内の説明例を除外しても、実欄の検出能力は維持する。
 
+この契約PRでは説明例の移動に加え、`L13-production-observation.md` の G13 検証ケース行を、`<SMOKE-ID>` / `<観測内容>` / `<合否基準>` / `<AT-ID>` から4セルとも `<記入>` へ正規化する。旧記法は凍結した regex に一致せず、confirmed 文書に残っても検出できないためである。実欄の列構造・必須節・matcher・gate owner set は変更しない。
+
 ## 6. 非スコープ
 
 - 必須節の有無、文書品質、テンプレート充実度の判定。

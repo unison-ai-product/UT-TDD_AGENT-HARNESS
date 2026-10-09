@@ -22,6 +22,8 @@ updated: 2026-10-08
 
 表記はHTML entityで表す。fixtureへ渡すときはテスト側でentityを復号し、実際の template bytes と正規 matcherで照合する。下の件数はHTML commentを除いた変更前 corpus の観測値であり、閾値ではない。46本の説明段落にあった3つずつの説明例はHTML commentへ移す契約差分である。L2とL6はその説明段落を持たない。
 
+説明例の移動とは別に、L13 の G13 検証ケース行の4セルを `&lt;SMOKE-ID&gt;` / `&lt;観測内容&gt;` / `&lt;合否基準&gt;` / `&lt;AT-ID&gt;` から全て `&lt;記入&gt;` へ正規化する。旧記法は凍結 regex に一致せず、confirmed 文書に残っても検出できないためである。下表は変更前 corpus の観測値のまま保持し、正規化後の実欄が検出対象になることと列構造・必須節が保持されることを差分で確認する。matcher自体は緩和しない。
+
 | template path | matcher vocabulary | 説明例移動前の一致数 |
 | --- | --- | ---: |
 | `docs/templates/vmodel/L0-charter.md` | `&lt;記入&gt;`, `&lt;本文を記入&gt;`, `&lt;項目を記入&gt;` | 47 |
