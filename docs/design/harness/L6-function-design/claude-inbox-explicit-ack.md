@@ -4,7 +4,7 @@ layer: L6
 status: draft
 sub_doc: function-spec
 plan: PLAN-L6-935-claude-inbox-explicit-ack
-pair_artifact: docs/test-design/harness/claude-inbox-explicit-ack-test-design.md
+pair_artifact: docs/test-design/harness/L7-claude-inbox-explicit-ack-test-design.md
 ---
 
 # Claude inbox の明示 ACK 契約案 (#935)
