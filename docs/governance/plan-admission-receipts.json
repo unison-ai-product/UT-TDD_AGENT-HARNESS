@@ -7376,6 +7376,22 @@
         "revision": 2,
         "content_digest": "sha256:a16628d79dc0304ce904da178e941ee6967bd82cda31753c888b44a216891d34"
       }
+    },
+    {
+      "sequence": 462,
+      "previous_record_digest": "sha256:ff4e9036a3f0d92e5cb99244d5635d3582e8a25dd50ba18e4d1cfecf3c3780a9",
+      "record_digest": "sha256:9e6c11a08d6fb2481750d64e96bef9632719f16de37837817d7effb63c439897",
+      "command_id": "plan-revise:issue-926:b-custody-contract:reverse:correct-reason-origin-rebind-939",
+      "receipt_id": "certificate:91904738eeb004cf310910285c7ac816",
+      "receipt_digest": "sha256:ed2173471147686fba6049daad5029d3f4a3c002dc6715424c611c7fc0f720f6",
+      "decision_digest": "sha256:4a9ea9279962b2447c4b4d2355368d6d11203121c6872fca329b9a30d66236f1",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-465-cross-review-author-binding-backfill.md",
+        "plan_id": "PLAN-REVERSE-465-cross-review-author-binding-backfill",
+        "asset_id": "plan:legacy:39cf6458a39e9c20e1e650240726fddfe605a90d4a49c98b71c4c082b79b6419",
+        "revision": 3,
+        "content_digest": "sha256:a16628d79dc0304ce904da178e941ee6967bd82cda31753c888b44a216891d34"
+      }
     }
   ]
 }

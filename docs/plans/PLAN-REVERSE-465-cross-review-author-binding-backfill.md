@@ -36,17 +36,17 @@ status: draft
 github_issue_id: 926
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:d8664a0a3e25f3ba7671c162f64909e0
-  command_id: plan-revise:issue-926:b-custody-contract:reverse:rebind-main-939
-  admitted_at: 2026-10-09T06:42:15Z
+  receipt_id: certificate:91904738eeb004cf310910285c7ac816
+  command_id: plan-revise:issue-926:b-custody-contract:reverse:correct-reason-origin-rebind-939
+  admitted_at: 2026-10-09T06:46:08Z
   source_digest: sha256:a16628d79dc0304ce904da178e941ee6967bd82cda31753c888b44a216891d34
-  decision_digest: sha256:e3b969f2a872e40452dc9b4d7beec5de4bba6f0bef824f81676932bc0f4f2429
-  receipt_digest: sha256:029ebeff30d3b0727bc3f9240162964875bf2278c9e7a338f9344f21aa1dd615
+  decision_digest: sha256:4a9ea9279962b2447c4b4d2355368d6d11203121c6872fca329b9a30d66236f1
+  receipt_digest: sha256:ed2173471147686fba6049daad5029d3f4a3c002dc6715424c611c7fc0f720f6
   binding:
     path: docs/plans/PLAN-REVERSE-465-cross-review-author-binding-backfill.md
     plan_id: PLAN-REVERSE-465-cross-review-author-binding-backfill
     asset_id: plan:legacy:39cf6458a39e9c20e1e650240726fddfe605a90d4a49c98b71c4c082b79b6419
-    revision: 2
+    revision: 3
     content_digest: sha256:a16628d79dc0304ce904da178e941ee6967bd82cda31753c888b44a216891d34
   route:
     signal: drift
@@ -59,17 +59,17 @@ admission_receipt:
   origin:
     plan_id: PLAN-L7-465-cross-review-author-binding
     revision: 2
-    digest: sha256:97189758abaf298c7a6ab31b8d7e4d7d40430423b6bb0a974396da2864f37533
+    digest: sha256:34da7110f126a856f594d28e89b49a08d8d6ad3058d49162a96e0c0352c64b2b
   transition:
     direction: implementation_to_design
     implementation_disposition: preserved
   reentry:
     target_plan_id: PLAN-REVERSE-465-cross-review-author-binding-backfill
-    target_revision: 2
+    target_revision: 3
     phase: forward_merge
-  escape_reason: "Issue #926 Reverse corrective revision: bind upstream to Forward
-    revision 4 and retain U-RVMG-024..032 as candidate-only until implementation
-    Red tests exist."
+  escape_reason: "Issue #926 Reverse rebind after PR #939: bind upstream to actual
+    Forward revision 2 and retain CANDIDATE-U-RVMG024..032 as candidate-only
+    until implementation Red tests exist."
 ---
 
 # PLAN-REVERSE-465: cross-review author binding の上流合流
