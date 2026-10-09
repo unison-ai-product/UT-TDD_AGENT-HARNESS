@@ -1628,6 +1628,8 @@ exact current HEADへ投影する境界を検証する。
 `tests/review-merge-gate.test.ts`。D1 `merge_ready` の exact HEAD 判定を B 面の正規 merge 経路へ
 束縛し、deny receipt の verdict は判定 entry へ束縛するか、特定不能時は null とする。
 
+Issue #926 の `U-RVMG-024..032` は契約上の候補 oracle 宣言であり、実装済みまたは Green を意味しない。この契約改訂に production 実装は含まない。
+
 | U-ID | mutation / fixture | expected |
 |---|---|---|
 | `U-RVMG-001` | isolated fixture の exact HEAD + 非author family PASS | merge と intent/result receipt を同じ HEAD・authorized entry で記録 |

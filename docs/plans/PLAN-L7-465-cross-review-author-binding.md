@@ -129,18 +129,18 @@ status: confirmed
 github_issue_id: 926
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:00f1a480218b87801c98c107f33af6ab
-  command_id: plan-revise:issue-926:b-custody-contract:forward:r2
-  admitted_at: 2026-10-09T04:21:40.275Z
-  source_digest: sha256:8b2d85c3ff2ddf182643eede470cea38de08f9fc744e02c4ef9c297ffb3f9ed0
-  decision_digest: sha256:6c5d0636521449c6e9f3f357ff52f7b996fe04d62c095111765eda8bff8f1e18
-  receipt_digest: sha256:4d033c61ce6d8bf2821a44c3ed5f5f6d9783f56e7e400d46126e7d4550d1d604
+  receipt_id: certificate:2a1e114e385546d50c7defebe509b52e
+  command_id: plan-revise:issue-926:b-custody-contract:forward:r3
+  admitted_at: 2026-10-09T04:27:20.613Z
+  source_digest: sha256:854509f56a74899611b4e2115787a4bdd03d2978ebff4b0432c9eee506dc4aba
+  decision_digest: sha256:ec65fb8eb76fabd8f47eea2c9b66b36020c08f28773d75c86306e8032e55ce51
+  receipt_digest: sha256:3d4d29039de03b16fcd37a1c6c40c64455aadc2c9728661a43a388937a590e50
   binding:
     path: docs/plans/PLAN-L7-465-cross-review-author-binding.md
     plan_id: PLAN-L7-465-cross-review-author-binding
     asset_id: plan:legacy:9900b987be73e3200e372b9b412613f302398d1bcd1f68f6727833b99226434d
-    revision: 2
-    content_digest: sha256:8b2d85c3ff2ddf182643eede470cea38de08f9fc744e02c4ef9c297ffb3f9ed0
+    revision: 3
+    content_digest: sha256:854509f56a74899611b4e2115787a4bdd03d2978ebff4b0432c9eee506dc4aba
   route:
     signal: feature_addition
     mode: add-feature
@@ -151,15 +151,15 @@ admission_receipt:
     projection_state: unprojected
   origin:
     plan_id: PLAN-L7-465-cross-review-author-binding
-    revision: 1
-    digest: sha256:3c39c97d1be94a0a8a465e150c5ebc2aa7dbb4b29d791cac7e1864750319184a
+    revision: 2
+    digest: sha256:34da7110f126a856f594d28e89b49a08d8d6ad3058d49162a96e0c0352c64b2b
   reentry:
     target_plan_id: PLAN-L7-465-cross-review-author-binding
-    target_revision: 2
+    target_revision: 3
     phase: forward_merge
-  escape_reason: "Issue #926: freeze the D2-B terminal-custody integrity
-    predicate, strict legacy cutoff, and independent negative oracles without
-    changing family-authority or GUI producer scope."
+  escape_reason: "Issue #926: revise the B-wrapper terminal-custody contract in
+    Japanese and mark U-RVMG-024..032 as candidate declarations, not
+    implemented/Green evidence."
 ---
 
 # PLAN-L7-465 (add-impl): cross-review セッション実在照合の実装
@@ -840,17 +840,17 @@ B 面の deny 対象に custody を含めない。custody は A 面の最終 AND
 `unverified_family` 固定であるため、B 面へ custody を含めると全 merge が拒否されるためである。
 
 
-### B-wrapper terminal-custody integrity follow-up (Issue #926, 2026-10-09)
+### Issue #926: B wrapper の terminal-custody 整合性 (2026-10-09)
 
-The 2026-08-13 A-5 ruling keeps reviewer-family authorization in the existing A/D3 authority surface; it is not a waiver of B's evidence-integrity checks. B remains fail-close on the exact current PR HEAD and additionally enforces terminal-custody integrity for post-cutoff verdicts. This check establishes byte/identity/attempt consistency only; it does not claim provider-family authorization or change the D3d `unverified_family` outcome.
+2026-08-13 の A-5 裁定は、reviewer family の権限確認を既存の A/D3 authority 面に置いたものである。これは B の証拠 integrity 検査を免除する規定ではない。B は従来どおり現在の PR exact HEAD を fail-close し、cutoff 以後の verdict には terminal-custody 整合性も要求する。この検査が示すのは bytes・identity・attempt の整合だけであり、provider-family authorization の成立を意味せず、D3d の `unverified_family` 判定も変更しない。
 
-**Grandfather boundary.** A canonical review verdict receipt whose own `at` timestamp is strictly earlier than `2026-09-16T09:51:00Z` is grandfathered from the new terminal-event requirement, preserving the 64 pre-terminal receipts inventoried in Issue #926. Equality is not earlier: a receipt at or after the cutoff must satisfy the full terminal chain. Grandfathering removes only this new custody predicate; all existing D1 exact-HEAD, non-author, PASS-family, open-PR, and green-check requirements remain in force.
+**Grandfather 境界。** canonical review verdict receipt 自身の `at` が `2026-09-16T09:51:00Z` より厳密に前なら、新しい terminal-event 要件だけを適用しない。これは Issue #926 の棚卸しで確認された terminal 記録開始前の 64 receipt を遡って拒否しないための扱いである。cutoff と等しい時刻は「前」ではない。receipt の `at` が cutoff 以後なら完全な terminal chain を要求する。grandfather はこの新しい custody predicate だけに限り、既存 D1 の exact-HEAD・non-author・PASS・OPEN PR・green check 条件はすべて維持する。
 
-**Post-cutoff consumer predicate.** The B wrapper accepts a post-cutoff verdict only after a consumer-side verifier establishes one unique, non-superseded, non-conflicting completed attempt bound end-to-end: the canonical request digest and request identity (repository, PR, exact HEAD, memory ID, review revision, author family); the request's exact invocation nonce carried into the composed provider-judgment identity; the receipt bytes parsed by the verifier and their digest equal to that attempt's `receiptFileDigest`; the verdict bytes/artifact and `verdictDigest` agree; and the completed event's request digest, provider family, attempt number, exact HEAD, and canonical attempt verdict path agree with that same request and attempt. A bare verdict comment, receipt filename/hash without parsing, or helper that checks only receipt-file/event equality is insufficient. No attempt may be selected by list order, and an older attempt cannot satisfy a newer request or be used after supersession/conflict.
+**cutoff 以後の consumer predicate。** B wrapper は consumer-side verifier が一意で non-superseded かつ non-conflicting な completed attempt を end-to-end に検証できる場合だけ post-cutoff verdict を受理する。結合対象は、canonical request digest と request identity (repository / PR / exact HEAD / memory ID / review revision / author family)、request の exact invocation nonce と composed provider-judgment identity、検証器が parse した receipt bytes と event の `receiptFileDigest`、verdict bytes/artifact と `verdictDigest`、およびその request/attempt に一致する completed event の request digest・provider family・attempt number・exact HEAD・canonical attempt verdict path である。verdict comment 単独、receipt の filename/hash だけ、または receipt-file/event の一致だけを確認する helper は十分でない。attempt は順序で選ばず、別 request の attempt や superseded/conflict 済み attempt を流用してはならない。
 
-This is a local B-consumer integrity contract. It does not create a GUI-comment producer, project comments into review custody, or claim cross-clone evidence sharing; those producer/distribution requirements remain in Issue #907. The generic delegated-work producer-attribution question in Issue #915 is also outside this merge consumer's scope.
+これは local B-consumer の integrity 契約である。GUI comment を custody producer として扱う実装、PR comment の custody への転記、clone 間共有はここで作らず、Issue #907 の別契約に残す。汎用 delegation の producer attribution 課題 (#915) もこの merge consumer の範囲外である。
 
-**Independent negative-oracle set (paired test-design U-RVMG-024..032).** Pin the strict cutoff boundary; with otherwise-valid exact-head D1 facts, independently mutate only (a) invocation nonce, (b) one request identity field, (c) receipt bytes, (d) verdict bytes/digest, (e) attempt number/path, and (f) add superseded/conflict evidence. Each mutation denies with merge-call count zero. A fully valid post-cutoff chain permits merge; the pre-cutoff fixture permits merge without an attempt event but still fails if any existing D1 condition is broken.
+**独立 negative-oracle 候補 (paired test-design `U-RVMG-024..032`)。** strict cutoff 境界を固定し、他の exact-head D1 事実を保ったまま (a) nonce、(b) request identity の単一 field、(c) receipt bytes、(d) verdict bytes/digest、(e) attempt number/path をそれぞれ独立に変異し、各ケースで merge 呼出し 0 を要求する。さらに対象 attempt の superseded/conflict event を個別に加えた場合も deny する。完全に valid な post-cutoff chain だけを allow とし、pre-cutoff fixture は attempt event なしでも allow される一方、既存 D1 条件を破れば deny される。これらの oracle は契約候補であり、実装済みまたは Green を意味しない。
 
 ### B-3 deny receipt の束縛
 
