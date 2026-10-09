@@ -99,6 +99,9 @@ updated: 2026-10-08
 | CANDIDATE-U-PH-017..019 | G8、G9、G10 workflow branch | 各gateが現在所有するL8、L9、L10の文書にそれぞれmarkerを注入する。他のworkflow証跡を保ったまま、既存gateが失敗することを確認する。 |
 | CANDIDATE-U-PH-020..023 | G11、G12、G13、G14 right-arm static slot branch | 現在のslot ownerごとに1件テストする。選択されたconfirmed/completed slotのtarget markerで失敗し、無関係なpair文書には触れない。 |
 | CANDIDATE-U-PH-024 | workflow inputを利用できない場合のright-arm G8-G10 fallback branch | 既存fallback slot ownerに同じ検査を適用し、失敗することを確認する。fallbackで成功する経路は新設しない。 |
+| CANDIDATE-U-PH-025 | 実repo (harness自身) のG1〜G6 clean対照 | fixture repositoryへ置き換えず、`process.cwd()` の実harness repoに対して既存の `evaluateStaticGate` entry pointをG1〜G6各々で呼び、各結果がapplicableかつpassedであることを確認する。特にG6が既存 `loadPairDocs` owner set内のconfirmed L6 design docを含んでもplaceholder findingがなく、既存owner setやmatcherを拡張・緩和せずcleanであることを確認する。 |
+
+実repo clean対照の負系は既存のCANDIDATE-U-PH-010..015（各layer ownerにmarkerを注入して失敗）に委譲し、CANDIDATE-U-PH-025自体は実repoを変更しない正系に限定する。
 
 各branch testには、新しいpredicateを通過し、既存assertionも弱めないclean control fixtureを用意する。テストによる変更はfixture内だけで行い、実行後に破棄する。
 
