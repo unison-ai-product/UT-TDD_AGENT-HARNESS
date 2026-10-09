@@ -178,9 +178,12 @@ function writeStrictReceiptWithCompletion(input: {
   const target = join(directory, `${digest}.json`);
   const bytes = Buffer.from(`${JSON.stringify(input.receipt, null, 2)}\n`, "utf8");
   const receiptFileDigest = createHash("sha256").update(bytes).digest("hex");
-  const verdictDigest = existsSync(input.verdictPath)
-    ? createHash("sha256").update(readFileSync(input.verdictPath)).digest("hex")
-    : undefined;
+  let verdictDigest: string;
+  try {
+    verdictDigest = createHash("sha256").update(readFileSync(input.verdictPath)).digest("hex");
+  } catch {
+    return { ok: false, reason: "receipt_write_failed" };
+  }
   const auditEvent = {
     kind: "attempt_completed" as const,
     requestDigest: digest,
@@ -193,7 +196,7 @@ function writeStrictReceiptWithCompletion(input: {
     model: input.model,
     exitCode: 0,
     receiptFileDigest,
-    ...(verdictDigest ? { verdictDigest } : {}),
+    verdictDigest,
   };
   mkdirSync(directory, { recursive: true });
   {
