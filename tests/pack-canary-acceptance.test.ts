@@ -1,8 +1,8 @@
 import {
   execFileSync,
-  spawnSync,
   type SpawnSyncOptionsWithStringEncoding,
   type SpawnSyncReturns,
+  spawnSync,
 } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
