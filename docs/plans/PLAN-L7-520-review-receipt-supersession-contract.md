@@ -1,25 +1,24 @@
 ---
 plan_id: PLAN-L7-520-review-receipt-supersession-contract
-title: "PLAN-L7-520 (add-impl): review receipt supersession を append-only attempt custody へ限定する"
+title: "PLAN-L7-520 (add-impl): review receipt supersession を append-only
+  attempt custody へ限定する"
 kind: add-impl
 layer: L7
 drive: be
 route_signal: feature_addition
 route_mode: add-feature
-status: confirmed
 created: 2026-08-28
 updated: 2026-08-28
 owner: PM / PO / Codex
-github_issue_id: 386
 parent_design: docs/plans/PLAN-L7-493-d3a-repo-local-verdict-custody.md
 pair_artifact: docs/test-design/harness/L7-review-receipt-supersession-test-design.md
 agent_slots:
   - role: tl
-    slot_label: "TL - canonical receipt immutability と retry custody の独立検収"
+    slot_label: TL - canonical receipt immutability と retry custody の独立検収
   - role: se
-    slot_label: "SE - append-only attempt outcome と create-exclusive receipt の最小降下"
+    slot_label: SE - append-only attempt outcome と create-exclusive receipt の最小降下
   - role: qa
-    slot_label: "QA - audit、receipt write、history preservation を独立変異で検証"
+    slot_label: QA - audit、receipt write、history preservation を独立変異で検証
 generates:
   - artifact_path: docs/plans/PLAN-L7-520-review-receipt-supersession-contract.md
     artifact_type: markdown_doc
@@ -43,34 +42,69 @@ dependencies:
 review_evidence:
   - reviewer: claude
     review_kind: cross_agent
-    reviewed_at: "2026-08-28T03:49:55.518Z"
-    tests_green_at: "2026-08-28T03:43:45.336Z"
-    verdict: "PASS / blocking 0"
+    reviewed_at: 2026-08-28T03:49:55.518Z
+    tests_green_at: 2026-08-28T03:43:45.336Z
+    verdict: PASS / blocking 0
     worker_model: gpt-5.6-sol
     reviewer_model: claude-opus-5
     effort: low
     plan_revision: 0f5a5e4448adf6072e1020489b8fc82f0cef4a72
     subject_head: 0f5a5e4448adf6072e1020489b8fc82f0cef4a72
-    scope: >-
-      PR #458のdocs-only pair-freezeを非著者review。append-only attempt custody、
-      create-exclusive canonical receipt、retry terminal vocabulary、candidate ID非衝突を確認した。
-      production実装、canonical receipt retryの実走、Reverse R2-R4は証明しない。
+    scope: "PR #458のdocs-only pair-freezeを非著者review。append-only attempt custody、
+      create-exclusive canonical receipt、retry terminal vocabulary、candidate
+      ID非衝突を確認した。 production実装、canonical receipt retryの実走、Reverse R2-R4は証明しない。"
     citations:
-      - ".ut-tdd/review/receipts/f207341d75a9dc20c33634a14437c7383f51c2541fcc5ac9a42fcc96ed4ccc6e.json"
-      - "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/458#issuecomment-5448165567"
-      - "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/actions/runs/33139729035"
+      - .ut-tdd/review/receipts/f207341d75a9dc20c33634a14437c7383f51c2541fcc5ac9a42fcc96ed4ccc6e.json
+      - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/458#issuecomment-5448165567
+      - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/actions/runs/33139729035
     green_commands:
       - kind: lint
-        command: "node --experimental-strip-types src/cli.ts plan lint"
+        command: node --experimental-strip-types src/cli.ts plan lint
         runner: node
         scope: targeted
         exit_code: 0
-        completed_at: "2026-08-28T03:43:45.336Z"
+        completed_at: 2026-08-28T03:43:45.336Z
         evidence_path: docs/test-design/harness/L7-review-receipt-supersession-test-design.md
-        output_digest: "sha256:6e7ec8ce403a263ab68ee70b465ab9931201b2e44a6a1f272390bb361ddb370c"
+        output_digest: sha256:6e7ec8ce403a263ab68ee70b465ab9931201b2e44a6a1f272390bb361ddb370c
         anchor_commit: 0f5a5e4448adf6072e1020489b8fc82f0cef4a72
 backprop_decision: required
-backprop_decision_reason: "canonical receipt の不変性と retry 終端を変更するため、D3a custody と merge gate へ Reverse 検証を戻す。"
+backprop_decision_reason: canonical receipt の不変性と retry 終端を変更するため、D3a custody と
+  merge gate へ Reverse 検証を戻す。
+status: confirmed
+github_issue_id: 386
+admission_receipt:
+  schema_version: v2
+  receipt_id: certificate:28f01481b94c88635754f549e1537a9d
+  command_id: plan-revise:issue-921:plan520-success-retention:r2:a39794a59b3b
+  admitted_at: 2026-10-08T11:16:13.690Z
+  source_digest: sha256:d06a58a0921fdaa9f493787be3c5b5caa987648f23ddf17f271410fef3df07ff
+  decision_digest: sha256:c55df7683e2166c8faa800da522ff15df021b7dff3ebf44cf7ce1d6a5c86bd82
+  receipt_digest: sha256:14dc3882d37ea9913c561b353e1e3efcc399e4156c8c976dcfb08d56d1ca8028
+  binding:
+    path: docs/plans/PLAN-L7-520-review-receipt-supersession-contract.md
+    plan_id: PLAN-L7-520-review-receipt-supersession-contract
+    asset_id: plan:legacy:deebdc955f418972e8fe492f5c18ca905bbcbe72e21cb5a7b96bef426055fbb5
+    revision: 2
+    content_digest: sha256:d06a58a0921fdaa9f493787be3c5b5caa987648f23ddf17f271410fef3df07ff
+  route:
+    signal: feature_addition
+    mode: add-feature
+  issue:
+    provider: github
+    issue_id: 386
+    episode_id: issue-386
+    projection_state: unprojected
+  origin:
+    plan_id: PLAN-L7-520-review-receipt-supersession-contract
+    revision: 1
+    digest: sha256:f1c63f63efe66ab034dd47bfb64678ae1a275b24023e201286e1c0a55db86cdc
+  reentry:
+    target_plan_id: PLAN-L7-520-review-receipt-supersession-contract
+    target_revision: 2
+    phase: forward_merge
+  escape_reason: "Issue #921 canary.6 blockerとPR #922 Opus FLAG
+    1による契約整合。PLAN-L7-520の成功receipt後verdict保持をPLAN-L7-493
+    §3.3へ委譲し、cleanupReviewAttempt自身を保持保証境界とする。実装・test本体やPASS証拠は追加しない。"
 ---
 
 # PLAN-L7-520: review receipt supersession contract
@@ -163,7 +197,7 @@ PR #448 は merge せず close し、branch を監査用に保存した。本 PL
    `verdict_identity_conflict`。既存 file の truncate、rename-overwrite、delete-then-write を禁止する。
 3. canonical receipt の生成後は、failed/successを問わず新 attempt を開始しない。receipt 自体へ
    `executionOutcome: failed` を保存する経路を作らない。
-4. receipt 後 cleanup は `PLAN-L7-493` §3.3を維持する。ただし過去 attempt と custody audit はcleanup対象外とする。
+4. receipt成功後も成功attemptのverdict scratchは保持する。削除能力を持つ`cleanupReviewAttempt`自身が、callerがcleanup呼出しを省略したか否かに依存せず、成功receipt済みattemptを削除・書換えないことを保証する（`PLAN-L7-493` §3.3）。過去attemptとcustody auditもcleanup対象外とする。
 
 ### 4.4 audit preservation
 

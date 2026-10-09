@@ -7204,17 +7204,49 @@
     {
       "sequence": 451,
       "previous_record_digest": "sha256:4e54235b71f3cddbd674297c89775f62850714efb60ea43f9b2a3de6552111ea",
-      "record_digest": "sha256:81ad82730ecec28e2ab3723ed8e2519864e534b80b25a28c67ff6ae2be61d1f9",
-      "command_id": "plan-draft:issue-894:PLAN-L6-833:reissue-20261008-0839-a1",
-      "receipt_id": "certificate:b97211a840c1921ea5ad192ce5cec686",
-      "receipt_digest": "sha256:87ab59450b0bb1e63e49e2e8d09a27f23e8027736cc2470cc4aed27ea7a0e6b0",
-      "decision_digest": "sha256:b05611b6ba624156a63ef0578f46721de137a091234f29b0815beb0ab3d7ddeb",
+      "record_digest": "sha256:95ed7cb575dc86d68f4da9f7de00de74474d7925792c6ae74a0a4d6f4fce8730",
+      "command_id": "plan-revise:issue-921:plan-l7-493-verdict-retention:r2:47b4659e9ab6",
+      "receipt_id": "certificate:7ade5cd3884207a21722fa31ef57b888",
+      "receipt_digest": "sha256:af3ed817ca2f928a5446e4d6ea9b66c90747ef0f46716857c0bd8e54e0961076",
+      "decision_digest": "sha256:e6b1f054058b7699052c1c6836721e35e39efc9255835c84b9691d676097d046",
       "binding": {
-        "path": "docs/plans/PLAN-L6-833-confirmed-document-placeholder-detection.md",
-        "plan_id": "PLAN-L6-833-confirmed-document-placeholder-detection",
-        "asset_id": "plan:b97211a840c1921ea5ad192ce5cec686",
-        "revision": 1,
-        "content_digest": "sha256:ce2a5d9d363217d6a348f8210443f7790cc19476e5dcbefb4e283c52781ec33b"
+        "path": "docs/plans/PLAN-L7-493-d3a-repo-local-verdict-custody.md",
+        "plan_id": "PLAN-L7-493-d3a-repo-local-verdict-custody",
+        "asset_id": "plan:legacy:3525b52b49af6df3e53b9a9d5471192a49654b7ad572f04ac2f4d54bdc1dd56c",
+        "revision": 2,
+        "content_digest": "sha256:47293fdc8320693d5d079d7113c50761c3f8aef52e9d1444899421ba200fc985"
+      }
+    },
+    {
+      "sequence": 452,
+      "previous_record_digest": "sha256:95ed7cb575dc86d68f4da9f7de00de74474d7925792c6ae74a0a4d6f4fce8730",
+      "record_digest": "sha256:78209175fb7db11d1f802db7ce2a2d41e712062a51bbed0a2875e9d1c214b0e2",
+      "command_id": "plan-revise:issue-922:plan493-helper-retention:r3:a39794a59b3b",
+      "receipt_id": "certificate:0a0e4ea42aa104e4d9312657847b8313",
+      "receipt_digest": "sha256:73cc0ec60fe9c16be71254787f6897142c6fcb759038931625313c3d518921df",
+      "decision_digest": "sha256:ad4660da60000e381c1a0e79da6cf8105c115f39d603783850e1b4b0f6a4d7cd",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-493-d3a-repo-local-verdict-custody.md",
+        "plan_id": "PLAN-L7-493-d3a-repo-local-verdict-custody",
+        "asset_id": "plan:legacy:3525b52b49af6df3e53b9a9d5471192a49654b7ad572f04ac2f4d54bdc1dd56c",
+        "revision": 3,
+        "content_digest": "sha256:a2ff813522e369205dc78982416ae0e61199f8c1aaaff86b5b3531c42de16590"
+      }
+    },
+    {
+      "sequence": 453,
+      "previous_record_digest": "sha256:78209175fb7db11d1f802db7ce2a2d41e712062a51bbed0a2875e9d1c214b0e2",
+      "record_digest": "sha256:60e358a540f3c74762777b859a52e7b1328549f177ef2f124d069291e5df7b9c",
+      "command_id": "plan-revise:issue-921:plan520-success-retention:r2:a39794a59b3b",
+      "receipt_id": "certificate:28f01481b94c88635754f549e1537a9d",
+      "receipt_digest": "sha256:14dc3882d37ea9913c561b353e1e3efcc399e4156c8c976dcfb08d56d1ca8028",
+      "decision_digest": "sha256:c55df7683e2166c8faa800da522ff15df021b7dff3ebf44cf7ce1d6a5c86bd82",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-520-review-receipt-supersession-contract.md",
+        "plan_id": "PLAN-L7-520-review-receipt-supersession-contract",
+        "asset_id": "plan:legacy:deebdc955f418972e8fe492f5c18ca905bbcbe72e21cb5a7b96bef426055fbb5",
+        "revision": 2,
+        "content_digest": "sha256:d06a58a0921fdaa9f493787be3c5b5caa987648f23ddf17f271410fef3df07ff"
       }
     }
   ]
