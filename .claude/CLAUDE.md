@@ -129,7 +129,7 @@ Opus が orchestration を担当するとき、**設計・実装・修正の方�
 - 実行: `ut-tdd advisor --decision <kind> --current-model <model> --execute --task "..."`
   (`--plan <id>` を付けると発火ログが PLAN に紐づく)。技術判断 (implementation /
   troubleshooting) は `gpt-6.1-sol` 一次、設計・進行判断 (design / progress) と
-  デザイン/UI は `claude-fable-5` 一次 (Model / Effort Routing 節、PO 2026-07-29)。
+  デザイン/UI は `claude-fable-5-1` 一次 (Model / Effort Routing 節、PO 2026-07-29)。
   レーン選択・着手順・優先順位は **progress** であって技術判断ではない。
 - **advisor の回答を鵜呑みにしない**。前提が事実か実測で確かめ、食い違ったら実測を突き返す
   (2026-07-28 実例: doctor 二重実行の方式判断で、memo 共有テストが 1 件でなく 19 件という
@@ -162,8 +162,8 @@ trade-off を記録した PLAN とする。spot-check で (a) この対象に該
 書き下ろすのではなく、創出は worker tier、判断は frontier tier に置く。Sonnet が指揮するときは
 Sonnet 自身が worker tier なので、通常の作業は自分で行う (「あなたが○○なら」の表の Sonnet 行)。
 
-- 文書作成 = Sonnet (`claude-sonnet-5`)。実装 = Codex 側 worker (`gpt-5.6-terra` /
-  `gpt-5.6-luna`)。軽量探索・doc パッチ = spark / mini / haiku 級。
+- 文書作成 = Sonnet (`claude-sonnet-5-5`)。実装 = Codex 側 worker (Luna `gpt-6-luna`)。
+  軽量探索・doc パッチ = Haiku 級。
 - 判断ゲート (review / blind-review / qa / tl / security) は族内 frontier tier。
   正規委譲経路 (`ut-tdd codex|claude --role <role>`) がこの routing を機械強制する
   (`src/team/delegation-routing.ts`、未登録 role は fail-close)。

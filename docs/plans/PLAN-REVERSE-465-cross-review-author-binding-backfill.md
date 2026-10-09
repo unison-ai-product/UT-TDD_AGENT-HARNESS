@@ -1,6 +1,7 @@
 ---
 plan_id: PLAN-REVERSE-465-cross-review-author-binding-backfill
-title: "PLAN-REVERSE-465: cross-review author binding 実装事実の上流合流 (L6 契約への gap-only backfill)"
+title: "PLAN-REVERSE-465: cross-review author binding 実装事実の上流合流 (L6 契約への
+  gap-only backfill)"
 kind: reverse
 layer: cross
 drive: be
@@ -8,15 +9,15 @@ route_signal: drift
 route_mode: reverse
 confirmed_reverse_type: design
 created: 2026-07-28
-updated: 2026-07-28
+updated: 2026-10-09
 owner: PM / PO
 parent_design: docs/plans/PLAN-L7-465-cross-review-author-binding.md
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 agent_slots:
   - role: tl
-    slot_label: "TL - 実装で確定した照合規則と unverified 判定式の L6 契約への合流判定"
+    slot_label: TL - 実装で確定した照合規則と unverified 判定式の L6 契約への合流判定
   - role: qa
-    slot_label: "QA - 上流記述と実装挙動 (provider 族導出・回避条項) の照合"
+    slot_label: QA - 上流記述と実装挙動 (provider 族導出・回避条項) の照合
 generates:
   - artifact_path: docs/plans/PLAN-REVERSE-465-cross-review-author-binding-backfill.md
     artifact_type: markdown_doc
@@ -28,10 +29,47 @@ dependencies:
     - docs/plans/PLAN-L6-94-cross-review-session-attestation.md
     - docs/plans/PLAN-L6-13-cross-review-enforcement.md
     - src/lint/review-evidence.ts
-workflow_phase: R0
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
-status: draft
 review_evidence: []
+workflow_phase: R0
+status: draft
+github_issue_id: 926
+admission_receipt:
+  schema_version: v2
+  receipt_id: certificate:4bf445bed73d7c5b79949109deb8fb66
+  command_id: plan-revise:issue-926:b-custody-contract:reverse:flag2-bind-final-forward5-content
+  admitted_at: 2026-10-09T07:12:25Z
+  source_digest: sha256:8718886b9f145fae82053b6f8e7e177eb606fa012bc779c8a3995ae2fa2d8c39
+  decision_digest: sha256:75796708c6fb9ba0d7bb03fa0309c9da0cb08bcb636ac80c4ce94510996fe2d5
+  receipt_digest: sha256:37b9f9007ba240996484deafa91f6e43e55c587652e95307a1850df634836aa4
+  binding:
+    path: docs/plans/PLAN-REVERSE-465-cross-review-author-binding-backfill.md
+    plan_id: PLAN-REVERSE-465-cross-review-author-binding-backfill
+    asset_id: plan:legacy:39cf6458a39e9c20e1e650240726fddfe605a90d4a49c98b71c4c082b79b6419
+    revision: 5
+    content_digest: sha256:8718886b9f145fae82053b6f8e7e177eb606fa012bc779c8a3995ae2fa2d8c39
+  route:
+    signal: drift
+    mode: reverse
+  issue:
+    provider: github
+    issue_id: 926
+    episode_id: issue-926
+    projection_state: unprojected
+  origin:
+    plan_id: PLAN-L7-465-cross-review-author-binding
+    revision: 5
+    digest: sha256:c7d09e7b3a8bec5e71a58c9e152d6abffacaff1e09ea20376c6e98fd1d8b7618
+  transition:
+    direction: implementation_to_design
+    implementation_disposition: preserved
+  reentry:
+    target_plan_id: PLAN-REVERSE-465-cross-review-author-binding-backfill
+    target_revision: 5
+    phase: forward_merge
+  escape_reason: "Issue #926 FLAG2 correction: bind Reverse origin to Forward
+    revision 5 projection content digest; preserve custody checks as
+    candidate-only until implementation Red tests exist."
 ---
 
 # PLAN-REVERSE-465: cross-review author binding の上流合流
@@ -54,6 +92,7 @@ PLAN-L7-465 は PLAN-L6-94 契約の L7 実装であり、既存 cross-review �
    (tracked source 唯一の定数 = D 実装 PR HEAD commit の committer date)、merged PR 一覧の
    pagination 終端まで全走査、途中失敗・partial/malformed・終端不能を「検知不能」へ倒す
    fail-close 表示。これらが実装だけが知る条件にならないよう gap-only で L6 契約へ記述する。
+5. **Issue #926 B-wrapper custody-integrity follow-up**: terminal event 要求を免除する pre-cutoff grandfather は、Forward PLAN-L7-465 に固定された Issue #914 receipt raw-byte SHA-256 allowlist との完全一致と `receipt.at < 2026-09-16T09:51:00Z` の両方を要求する。allowlist 外・再現不能・digest 不一致の receipt は、`at` が cutoff 前でも nonce / canonical request identity / parsed receipt bytes and digest / verdict bytes and digest / unique exact attempt and canonical path / supersession-conflict 状態を含む完全 chain を要求し、未達なら deny する。allowlist receipt でも cutoff と等しい時刻または以後なら同じ full-chain predicate を要求する。B consumer は family-authority authorization と独立にこの integrity を検証する。backdated unlisted receipt と allowlisted raw bytes の 1-byte mutation は別々に deny する。これは family-authority authorization の代替ではない。GUI producer・PR comment の custody 取込・cross-clone distribution は Issue #907 側で別途扱う。対応する paired test-design oracle は `CANDIDATE-U-RVMG-024..034` の範囲をすべて未実装候補として扱い、正式宣言・実装済み・Green の主張ではない。
 
 ## Schedule
 
@@ -73,3 +112,4 @@ PLAN-L7-465 は PLAN-L6-94 契約の L7 実装であり、既存 cross-review �
 - AC-4: D2-D backstop の検知 2 類型 / cutoff baseline の確定手続 / pagination 全走査と検知不能
   表示 (Forward oracle 対 1〜9) が L6 契約に記載され、実装挙動と一致することを照合済み。
   Forward §D2-D の宣言と本 Reverse の scope/AC が二読みなく一致していること。
+- AC-5: Issue #926 の strict cutoff (2026-09-16T09:51:00Z)、Forward に固定した exact receipt-byte digest allowlist と pre-cutoff 要件、境界時刻欠落terminal chain / allowlist 外 backdated receipt / digest 1-byte mutation の独立 deny、ならびに complete B-consumer full-chain predicate が L7 と同じ境界で L6 の B-wrapper merge contract に gap-only backfill されている。nonce / request / receipt / verdict / attempt の各 identity mismatch は独立した negative oracle で deny、GUI/comment/cross-clone producer work は #907 に残す。

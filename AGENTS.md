@@ -130,6 +130,24 @@ Design decisions, judgement gates, and R4 merge decisions should go through a
 different runtime / model family when feasible. In single-runtime modes, record
 `intra_runtime_subagent` as the review substitute and leave evidence.
 
+### あなたが○○なら (Codex 指揮モデル別の振る舞い、PO ルール 2026-10-09)
+
+Codex 側で使うモデルは GPT-6 の Astra / Sol / Luna の 3 つだけである (ID の正本は
+`src/team/model-policy.ts` の `MODEL_IDS`)。自分の行に従い、解けない判断は **1 段上へ相談する**。
+
+| あなたが | 解けない判断・難所 | やること | 仲間 (下に回す先) |
+|---|---|---|---|
+| Astra (`gpt-6-astra`) | ― | 常用しない。Sol から、超局所の難所の相談だけを受ける | ― |
+| Sol (`gpt-6.1-sol`) | どうしても解けないときだけ Astra に相談する | 常用。自分で判断し、control lane (Claude) と相談しながら Luna に振り、上がってきた成果を検収する | Luna |
+| Luna (`gpt-6-luna`) | Sol に相談する | worker。control lane の指示を受けて実装・テスト実装・文書修正・探索を行う | Luna の subagent (仲間を増やして並列に戦う) |
+
+- Sol の「検収」は PR を出す前の族内チェックであり、closing review の代わりにしない。Codex 著の成果物の
+  closing review は従来どおり Claude Opus が行う (§Blind review role、`CLAUDE.md` §FLAG 後の限定是正と merge)。
+- Luna の仲間 (subagent) は closing の権限を持たない。
+- Astra は `MODEL_IDS` に未登録であり、相談するときは明示の `--model gpt-6-astra` で呼ぶ。
+- PO へ上げてよい条件は `CLAUDE.md` §PO 判断への反射的エスカレーション禁止 のまま。
+- Claude 側の同じ表は `.claude/CLAUDE.md` §委譲と判断層 にある。
+
 ### Blind review role (`--role blind-reviewer`)
 
 `ut-tdd codex --role blind-reviewer --task "<packet>"` is the Codex side of blind
@@ -166,25 +184,24 @@ read-only のまま。契約改訂へ戻すのは上位契約の齟齬だけ。
 
 Model / effort routing defaults (task-kind ベース、PO rule 2026-07-14):
 
-- Codex: テスト実装 = `gpt-5.6-terra` (effort `middle`); 実装/ドキュメント修正 =
-  `gpt-5.6-luna` (effort `high`); 検証/設計 = `gpt-6.1-sol` (effort `low`);
-  軽量実装/内部探索/web 検索/doc パッチ = `gpt-5.3-codex-spark` / `gpt-5.4-mini`。
-- Claude: フロントデザイン/設計ドキュメント作成 = Opus (`claude-opus-5`);
-  UI デザイン実装/ドキュメント修正 = Sonnet (`claude-sonnet-5`);
-  web 検索/doc パッチ = Haiku (`claude-haiku-4-5`)。
-- Lightweight parallel lanes use spark/mini-class GPT/Codex models with no
-  closing authority.
+- Codex (GPT-6 の 3 モデルだけ、PO 2026-10-09): 実装/テスト実装/ドキュメント修正/軽量探索 =
+  Luna (`gpt-6-luna`、effort `high`); 検証/設計/判断 = Sol (`gpt-6.1-sol`、effort `low`);
+  超局所の難所の相談だけ = Astra (`gpt-6-astra`、常用しない)。指揮モデル別の振る舞いは
+  `AGENTS.md` §Codex / Claude Code Harness の「あなたが○○なら」の表。
+- Claude: フロントデザイン/UI デザインの判断・レビュー/設計ドキュメント作成 = Opus (`claude-opus-5-5`);
+  決まった UI デザインの実装/ドキュメント修正 = Sonnet (`claude-sonnet-5-5`);
+  web 検索/doc パッチ = Haiku (`claude-haiku-5-5`)。
+- 並列の軽量レーンは Luna の subagent と Claude Haiku が担い、closing の権限を持たない。
 - Effort はモデル別基準ラダー (PO rule 2026-07-28) が既定: Sol/Fable = `low`、
-  Opus/Terra/Sonnet = `middle`、Luna/spark/mini = `high`。回答が浅い時は
+  Opus/Sonnet = `middle`、Luna = `high`。回答が浅い時は
   **まず effort を 1 段、その先はモデルを上げる** (`escalateShallowResponse`):
-  Sol/Fable → `middle`、Opus/Terra/Sonnet → `high`、そこでも浅ければ
-  Sonnet→Opus `middle` / Opus・Terra・Luna・Fable→Sol `low` / spark・mini→Terra
-  `middle`。**`xhigh` は既定として配らない** (PO rule 2026-07-28:
+  Sol/Fable → `middle`、Opus/Sonnet → `high`、そこでも浅ければ
+  Sonnet→Opus `middle` / Opus・Luna・Fable→Sol `low`。**`xhigh` は既定として配らない** (PO rule 2026-07-28:
   「xhigh 以上はモデルを上げたほうがいい」)。ラダー外 (haiku 等) は従来既定
   (Claude `high` / GPT `middle`)。明示 `--effort xhigh` は有効で、UI/UX は
   task-kind 例外 (PO rule 2026-07-08)。
 - Design/implementation review uses a top reviewer model: GPT frontier
-  (`gpt-6.1-sol`) or Claude Opus (`claude-opus-5`) or above, behind the
+  (`gpt-6.1-sol`) or Claude Opus (`claude-opus-5-5`) or above, behind the
   explicit frontier gate.
 - 正規委譲経路 (`ut-tdd codex/claude --role <role>`) は上記 routing を機械強制する
   (PLAN-L7-255、`src/team/delegation-routing.ts`): 未登録 role は fail-close、
@@ -194,7 +211,7 @@ Model / effort routing defaults (task-kind ベース、PO rule 2026-07-14):
 - advisor (PO rule 2026-07-29、2026-07-14 の行列を supersede): **技術判断**
   (実装方式 / トラブルシューティング) は `gpt-6.1-sol` 一次 (fallback Fable)、
   **設計・進行判断** (設計方式 / レーン選択 / 優先順位 / 段取り) と
-  **デザイン/UI 判断** は `claude-fable-5` 一次 (次点 `gpt-6.1-sol`)。
+  **デザイン/UI 判断** は `claude-fable-5-1` 一次 (次点 `gpt-6.1-sol`)。
   判断種別は `--decision design|progress|implementation|troubleshooting|uiux`
   で明示でき、省略時は task 文から推論する (進行語は technical 語より優先)。
   迷う場合は `ut-tdd advisor --task "..." --current-model <model>` を使い、

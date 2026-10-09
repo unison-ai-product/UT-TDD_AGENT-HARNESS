@@ -7344,6 +7344,166 @@
         "revision": 3,
         "content_digest": "sha256:3690f01debf16e908b6f4c1cd07dcd30ed1bca38a1ca09219264989280ca6d32"
       }
+    },
+    {
+      "sequence": 460,
+      "previous_record_digest": "sha256:f8c873d0fb95b082413019f18606fcf4a2b1e7bf1ba158d88836a54e064ffb8d",
+      "record_digest": "sha256:7df8d91562731411ca5e95c1b6dbab108dacb636d885ad6b7f8cab125b8889f5",
+      "command_id": "plan-revise:issue-926:b-custody-contract:forward:rebind-main-939",
+      "receipt_id": "certificate:e8c32df846e6abbd0d91b57c2715c315",
+      "receipt_digest": "sha256:648bbb641c011e684884745dbf893f25bc4dd8ebcba12f41fc908a6ca3b9e6c0",
+      "decision_digest": "sha256:89ee9bb7d5d2baade77fcca8669ef80c9c51d3b660cb30e67c6d246d22d67ed7",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-465-cross-review-author-binding.md",
+        "plan_id": "PLAN-L7-465-cross-review-author-binding",
+        "asset_id": "plan:legacy:9900b987be73e3200e372b9b412613f302398d1bcd1f68f6727833b99226434d",
+        "revision": 2,
+        "content_digest": "sha256:7c746e946c6b5d9650d87cc7b5f0933d07f80b7f9afa1bebc1635b28baffffb4"
+      }
+    },
+    {
+      "sequence": 461,
+      "previous_record_digest": "sha256:7df8d91562731411ca5e95c1b6dbab108dacb636d885ad6b7f8cab125b8889f5",
+      "record_digest": "sha256:ff4e9036a3f0d92e5cb99244d5635d3582e8a25dd50ba18e4d1cfecf3c3780a9",
+      "command_id": "plan-revise:issue-926:b-custody-contract:reverse:rebind-main-939",
+      "receipt_id": "certificate:d8664a0a3e25f3ba7671c162f64909e0",
+      "receipt_digest": "sha256:029ebeff30d3b0727bc3f9240162964875bf2278c9e7a338f9344f21aa1dd615",
+      "decision_digest": "sha256:e3b969f2a872e40452dc9b4d7beec5de4bba6f0bef824f81676932bc0f4f2429",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-465-cross-review-author-binding-backfill.md",
+        "plan_id": "PLAN-REVERSE-465-cross-review-author-binding-backfill",
+        "asset_id": "plan:legacy:39cf6458a39e9c20e1e650240726fddfe605a90d4a49c98b71c4c082b79b6419",
+        "revision": 2,
+        "content_digest": "sha256:a16628d79dc0304ce904da178e941ee6967bd82cda31753c888b44a216891d34"
+      }
+    },
+    {
+      "sequence": 462,
+      "previous_record_digest": "sha256:ff4e9036a3f0d92e5cb99244d5635d3582e8a25dd50ba18e4d1cfecf3c3780a9",
+      "record_digest": "sha256:9e6c11a08d6fb2481750d64e96bef9632719f16de37837817d7effb63c439897",
+      "command_id": "plan-revise:issue-926:b-custody-contract:reverse:correct-reason-origin-rebind-939",
+      "receipt_id": "certificate:91904738eeb004cf310910285c7ac816",
+      "receipt_digest": "sha256:ed2173471147686fba6049daad5029d3f4a3c002dc6715424c611c7fc0f720f6",
+      "decision_digest": "sha256:4a9ea9279962b2447c4b4d2355368d6d11203121c6872fca329b9a30d66236f1",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-465-cross-review-author-binding-backfill.md",
+        "plan_id": "PLAN-REVERSE-465-cross-review-author-binding-backfill",
+        "asset_id": "plan:legacy:39cf6458a39e9c20e1e650240726fddfe605a90d4a49c98b71c4c082b79b6419",
+        "revision": 3,
+        "content_digest": "sha256:a16628d79dc0304ce904da178e941ee6967bd82cda31753c888b44a216891d34"
+      }
+    },
+    {
+      "sequence": 463,
+      "previous_record_digest": "sha256:9e6c11a08d6fb2481750d64e96bef9632719f16de37837817d7effb63c439897",
+      "record_digest": "sha256:0435ce92f7b8e9464cdf00284a10d6b38a00f35abdc49dafd5beb7ea07a2468e",
+      "command_id": "plan-revise:issue-926:b-custody-contract:forward:flag2-closed-grandfather-allowlist",
+      "receipt_id": "certificate:5cd8cb368a6b25c1f356f614c7c1fd8b",
+      "receipt_digest": "sha256:265b85ed9a79dc2f368b8fa33c13c8b0726316ef1b06416386702e3b1f7ece76",
+      "decision_digest": "sha256:580855a43fd65739eb6a8c773413fd817617c3aaa41963bc6dab2838471199f4",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-465-cross-review-author-binding.md",
+        "plan_id": "PLAN-L7-465-cross-review-author-binding",
+        "asset_id": "plan:legacy:9900b987be73e3200e372b9b412613f302398d1bcd1f68f6727833b99226434d",
+        "revision": 3,
+        "content_digest": "sha256:19947f4d46e827ffe4f16475bc21656975a274e765376f3b8bdf807455fb58d1"
+      }
+    },
+    {
+      "sequence": 464,
+      "previous_record_digest": "sha256:0435ce92f7b8e9464cdf00284a10d6b38a00f35abdc49dafd5beb7ea07a2468e",
+      "record_digest": "sha256:975835a15edf890055cb3827ecd21dbbb7977c070907df7f9ab897b3bf608d9a",
+      "command_id": "plan-revise:issue-926:b-custody-contract:forward:flag2-origin-projection-digest",
+      "receipt_id": "certificate:009a3be26c65b94cec00efa88bd7f94e",
+      "receipt_digest": "sha256:8bbbda29c78169b9fa703f5ed1d8cc90a5a8b5e135658bcc29281cc24c8ae348",
+      "decision_digest": "sha256:3e45210b8c6f029ce05b46ad274dd9d7aa14eb46d892a3c54d2f9baf09989798",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-465-cross-review-author-binding.md",
+        "plan_id": "PLAN-L7-465-cross-review-author-binding",
+        "asset_id": "plan:legacy:9900b987be73e3200e372b9b412613f302398d1bcd1f68f6727833b99226434d",
+        "revision": 4,
+        "content_digest": "sha256:19947f4d46e827ffe4f16475bc21656975a274e765376f3b8bdf807455fb58d1"
+      }
+    },
+    {
+      "sequence": 465,
+      "previous_record_digest": "sha256:975835a15edf890055cb3827ecd21dbbb7977c070907df7f9ab897b3bf608d9a",
+      "record_digest": "sha256:9812c446486e12a5d3c1e8f79e2db45cb73f47fa4f7fa26c9db6f02fc95bb0cb",
+      "command_id": "plan-revise:issue-926:b-custody-contract:reverse:flag2-grandfather-and-forward4-projection-origin",
+      "receipt_id": "certificate:3a31db4b070b6b6658833a0d0aeca050",
+      "receipt_digest": "sha256:cf4626ad69bdfa8f8e700183814a1f5c9ff25ac891d7ba8171105cdbd5162e59",
+      "decision_digest": "sha256:a019cfdad60833ea56800418115c4cb052e5805950b9fc5296dee4292b27bc0b",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-465-cross-review-author-binding-backfill.md",
+        "plan_id": "PLAN-REVERSE-465-cross-review-author-binding-backfill",
+        "asset_id": "plan:legacy:39cf6458a39e9c20e1e650240726fddfe605a90d4a49c98b71c4c082b79b6419",
+        "revision": 4,
+        "content_digest": "sha256:a428ee99adb77b1e9ee4319a098f025caa808532e36b0d5563b32f58712dc41b"
+      }
+    },
+    {
+      "sequence": 466,
+      "previous_record_digest": "sha256:9812c446486e12a5d3c1e8f79e2db45cb73f47fa4f7fa26c9db6f02fc95bb0cb",
+      "record_digest": "sha256:33f1a4bd170ab636134a77e7d5e67399bd927eb82e5b27c2325590c0b38b11ae",
+      "command_id": "plan-revise:issue-926:b-custody-contract:forward:flag2-preserve-boundary-add-unlisted-backdate",
+      "receipt_id": "certificate:f44af2916fa30af977ab788ce3435dbd",
+      "receipt_digest": "sha256:dfd891c75ec87b07e6bb3071245748fff98d0e9c0318c3ad1ef94d166a31a5c8",
+      "decision_digest": "sha256:ea4b877ab80c7acd29e9d60d6ed0022f528ae7902e0bd2adb7f444e07f06c5a9",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-465-cross-review-author-binding.md",
+        "plan_id": "PLAN-L7-465-cross-review-author-binding",
+        "asset_id": "plan:legacy:9900b987be73e3200e372b9b412613f302398d1bcd1f68f6727833b99226434d",
+        "revision": 5,
+        "content_digest": "sha256:c7d09e7b3a8bec5e71a58c9e152d6abffacaff1e09ea20376c6e98fd1d8b7618"
+      }
+    },
+    {
+      "sequence": 467,
+      "previous_record_digest": "sha256:33f1a4bd170ab636134a77e7d5e67399bd927eb82e5b27c2325590c0b38b11ae",
+      "record_digest": "sha256:f190d4886f745d1a16455aa063772e35a2c75c446f0d502f4c6f1fc5030b54d8",
+      "command_id": "plan-revise:issue-926:b-custody-contract:reverse:flag2-bind-final-forward5-content",
+      "receipt_id": "certificate:4bf445bed73d7c5b79949109deb8fb66",
+      "receipt_digest": "sha256:37b9f9007ba240996484deafa91f6e43e55c587652e95307a1850df634836aa4",
+      "decision_digest": "sha256:75796708c6fb9ba0d7bb03fa0309c9da0cb08bcb636ac80c4ce94510996fe2d5",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-465-cross-review-author-binding-backfill.md",
+        "plan_id": "PLAN-REVERSE-465-cross-review-author-binding-backfill",
+        "asset_id": "plan:legacy:39cf6458a39e9c20e1e650240726fddfe605a90d4a49c98b71c4c082b79b6419",
+        "revision": 5,
+        "content_digest": "sha256:8718886b9f145fae82053b6f8e7e177eb606fa012bc779c8a3995ae2fa2d8c39"
+      }
+    },
+    {
+      "sequence": 468,
+      "previous_record_digest": "sha256:f190d4886f745d1a16455aa063772e35a2c75c446f0d502f4c6f1fc5030b54d8",
+      "record_digest": "sha256:d5b9837025c88525c72bd06d948c6aefd23a31ac837553e0348450e862ab3a08",
+      "command_id": "plan-revise:issue-816:l6-stale-note-fix:r3:9f94fd8654fd",
+      "receipt_id": "certificate:0b0dfbee547b17e8b5da1625d4cb2a69",
+      "receipt_digest": "sha256:ac7a42f9758455807321b010ac0de2153e7ec213ca55d5da5d39a99ed330dda5",
+      "decision_digest": "sha256:3841029a367e41a1d25dab332a293cfaf6252cee7839b8c649fe4e1e8608a681",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-816-release-notes-draft-contract.md",
+        "plan_id": "PLAN-L6-816-release-notes-draft-contract",
+        "asset_id": "plan:2f5be4ac3a56270474529ae239e69d4d",
+        "revision": 3,
+        "content_digest": "sha256:3d6a0fe7c0511bcc1533a19e8829b76d42bcea5d22a246a60eb20ba791fae835"
+      }
+    },
+    {
+      "sequence": 469,
+      "previous_record_digest": "sha256:d5b9837025c88525c72bd06d948c6aefd23a31ac837553e0348450e862ab3a08",
+      "record_digest": "sha256:1848e8808b568d4a87a0a0d7067e429e1dae43f5b58d4a56b529ec057f917bbc",
+      "command_id": "plan-revise:issue-946:canary7-exact-acceptance-r23:20261009:rechain-1",
+      "receipt_id": "certificate:3b888c347be844f9366a96c9108dd5d6",
+      "receipt_digest": "sha256:660c61af28f4cc6ff1880323496556f8e94c13c5ef97e9cb3e9cfa68b8c0201a",
+      "decision_digest": "sha256:e3f72595dd1b968b916f409285a71b23a8d6f8416274ad42f532300f3687f265",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-531-pack-internal-canary-smoke.md",
+        "plan_id": "PLAN-L7-531-pack-internal-canary-smoke",
+        "asset_id": "plan:44f79788376b81c225ce5913fddbc48f",
+        "revision": 23,
+        "content_digest": "sha256:8350b03f489661306bd6648dc59e0c0a2f61b384cded40f2c7a919cc64902547"
+      }
     }
   ]
 }

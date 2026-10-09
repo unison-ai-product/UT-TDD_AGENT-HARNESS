@@ -1,21 +1,21 @@
 ---
 plan_id: PLAN-L7-465-cross-review-author-binding
-title: "PLAN-L7-465 (add-impl): cross-review セッション実在照合の実装 — PLAN-L6-94 契約の L7 降下 (U-XREV-*)"
+title: "PLAN-L7-465 (add-impl): cross-review セッション実在照合の実装 — PLAN-L6-94 契約の L7 降下
+  (U-XREV-*)"
 kind: add-impl
 layer: L7
 drive: be
 route_signal: feature_addition
 route_mode: add-feature
 parent_design: docs/plans/PLAN-L6-94-cross-review-session-attestation.md
-status: confirmed
 created: 2026-07-28
-updated: 2026-08-14
+updated: 2026-10-09
 owner: PM / PO
 agent_slots:
   - role: tl
-    slot_label: "TL - 突合キーの決定論性と author 導出元 (trailer / session log) の証拠力レビュー"
+    slot_label: TL - 突合キーの決定論性と author 導出元 (trailer / session log) の証拠力レビュー
   - role: se
-    slot_label: "SE - 4 検査の実装 + evidence スキーマ拡張 + U-XREV-* 配線"
+    slot_label: SE - 4 検査の実装 + evidence スキーマ拡張 + U-XREV-* 配線
 generates:
   - artifact_path: docs/plans/PLAN-L7-465-cross-review-author-binding.md
     artifact_type: markdown_doc
@@ -69,57 +69,97 @@ related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 review_evidence:
   - reviewer: claude-pr299-blind-re-review
     review_kind: cross_agent
-    reviewed_at: "2026-08-07T13:55:53Z"
-    tests_green_at: "2026-08-07T13:55:53Z"
-    verdict: "blind re-review blocking 0"
+    reviewed_at: 2026-08-07T13:55:53Z
+    tests_green_at: 2026-08-07T13:55:53Z
+    verdict: blind re-review blocking 0
     worker_model: gpt-5.6-luna
     reviewer_model: claude-opus-5
-    scope: "PR #299 コメント (subject 021cb536) の blind re-review。B-3、oracle 宣言、generates 所有、PLAN-L7-470 追補を残債として特定したうえで blocking 0。rebase 後 HEAD 5215bc23 の closing review は本 slice の検証後に再取得予定。"
+    scope: "PR #299 コメント (subject 021cb536) の blind re-review。B-3、oracle
+      宣言、generates 所有、PLAN-L7-470 追補を残債として特定したうえで blocking 0。rebase 後 HEAD
+      5215bc23 の closing review は本 slice の検証後に再取得予定。"
     lane: claim-blind
     citations:
-      - "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/299#issuecomment-5217956975"
+      - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/299#issuecomment-5217956975
     green_commands:
       - kind: unit_test
-        command: "node scripts/run-vitest-snapshot.ts tests/review-merge-gate.test.ts"
+        command: node scripts/run-vitest-snapshot.ts tests/review-merge-gate.test.ts
         runner: node
         scope: targeted
         exit_code: 0
-        completed_at: "2026-08-07T13:55:53Z"
+        completed_at: 2026-08-07T13:55:53Z
         evidence_path: tests/review-merge-gate.test.ts
-        output_digest: "sha256:23754e2ad74b4a617922363349c8bde8bea925f9dffc3d13b6c27aa01d9b387a"
+        output_digest: sha256:23754e2ad74b4a617922363349c8bde8bea925f9dffc3d13b6c27aa01d9b387a
         anchor_commit: 021cb536
   - reviewer: codex-closing-285
     review_kind: cross_agent
-    reviewed_at: "2026-08-07T07:26:50Z"
-    tests_green_at: "2026-08-07T07:19:50Z"
+    reviewed_at: 2026-08-07T07:26:50Z
+    tests_green_at: 2026-08-07T07:19:50Z
     verdict: approve
     worker_model: claude-opus-5
     reviewer_model: gpt-5.6-sol
-    scope: "PR #285 exact HEAD 9dff55704b1c22b1c22272502006a2c24035e0c2; CI run 31156402592 (Linux/Windows/aggregate) green; claim-blind/spec-blind closing review PASS; post-merge live dispatch was deferred until merge by design."
-    subject_head: "9dff55704b1c22b1c22272502006a2c24035e0c2"
+    scope: "PR #285 exact HEAD 9dff55704b1c22b1c22272502006a2c24035e0c2; CI run
+      31156402592 (Linux/Windows/aggregate) green; claim-blind/spec-blind
+      closing review PASS; post-merge live dispatch was deferred until merge by
+      design."
+    subject_head: 9dff55704b1c22b1c22272502006a2c24035e0c2
     attack_trials: 3
     citations:
-      - "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/285#issuecomment-5213879263"
-      - "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/actions/runs/31156402592"
+      - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/285#issuecomment-5213879263
+      - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/actions/runs/31156402592
     green_commands:
       - kind: unit_test
-        command: "npm run test"
+        command: npm run test
         runner: ci
         scope: targeted
         exit_code: 0
-        completed_at: "2026-08-07T07:19:50Z"
+        completed_at: 2026-08-07T07:19:50Z
         evidence_path: tests/review-custody.test.ts
-        output_digest: "sha256:a5634d67b958d1bc04056ab3993bee80845e5c340e028663c294e5307db2c4ba"
+        output_digest: sha256:a5634d67b958d1bc04056ab3993bee80845e5c340e028663c294e5307db2c4ba
         anchor_commit: 9dff55704b1c22b1c22272502006a2c24035e0c2
       - kind: typecheck
-        command: "npm run typecheck"
+        command: npm run typecheck
         runner: ci
         scope: targeted
         exit_code: 0
-        completed_at: "2026-08-07T07:19:50Z"
+        completed_at: 2026-08-07T07:19:50Z
         evidence_path: src/feedback/review-custody-runner.ts
-        output_digest: "sha256:ff15ed577f28a9a0ed8cd2b5f6391037d09019ebc7e00f84d2732f671e0d1dd8"
+        output_digest: sha256:ff15ed577f28a9a0ed8cd2b5f6391037d09019ebc7e00f84d2732f671e0d1dd8
         anchor_commit: 9dff55704b1c22b1c22272502006a2c24035e0c2
+status: confirmed
+github_issue_id: 926
+admission_receipt:
+  schema_version: v2
+  receipt_id: certificate:f44af2916fa30af977ab788ce3435dbd
+  command_id: plan-revise:issue-926:b-custody-contract:forward:flag2-preserve-boundary-add-unlisted-backdate
+  admitted_at: 2026-10-09T07:11:54Z
+  source_digest: sha256:c7d09e7b3a8bec5e71a58c9e152d6abffacaff1e09ea20376c6e98fd1d8b7618
+  decision_digest: sha256:ea4b877ab80c7acd29e9d60d6ed0022f528ae7902e0bd2adb7f444e07f06c5a9
+  receipt_digest: sha256:dfd891c75ec87b07e6bb3071245748fff98d0e9c0318c3ad1ef94d166a31a5c8
+  binding:
+    path: docs/plans/PLAN-L7-465-cross-review-author-binding.md
+    plan_id: PLAN-L7-465-cross-review-author-binding
+    asset_id: plan:legacy:9900b987be73e3200e372b9b412613f302398d1bcd1f68f6727833b99226434d
+    revision: 5
+    content_digest: sha256:c7d09e7b3a8bec5e71a58c9e152d6abffacaff1e09ea20376c6e98fd1d8b7618
+  route:
+    signal: feature_addition
+    mode: add-feature
+  issue:
+    provider: github
+    issue_id: 926
+    episode_id: issue-926
+    projection_state: unprojected
+  origin:
+    plan_id: PLAN-L7-465-cross-review-author-binding
+    revision: 4
+    digest: sha256:19947f4d46e827ffe4f16475bc21656975a274e765376f3b8bdf807455fb58d1
+  reentry:
+    target_plan_id: PLAN-L7-465-cross-review-author-binding
+    target_revision: 5
+    phase: forward_merge
+  escape_reason: "Issue #926 FLAG2 correction: preserve the cutoff negative, add
+    backdated unlisted and allowlisted-byte-mutation candidates, and bind
+    admission origin to Forward revision 4 projection content_digest."
 ---
 
 # PLAN-L7-465 (add-impl): cross-review セッション実在照合の実装
@@ -798,6 +838,88 @@ D3 の live 結合試験はこれで閉じる。`unverified_family` を先へ進
 
 B 面の deny 対象に custody を含めない。custody は A 面の最終 AND に属する。現状の D3d は
 `unverified_family` 固定であるため、B 面へ custody を含めると全 merge が拒否されるためである。
+
+
+### Issue #926: B wrapper の terminal-custody 整合性 (2026-10-09)
+
+2026-08-13 の A-5 裁定は、reviewer family の権限確認を既存の A/D3 authority 面に置いたものである。これは B の証拠 integrity 検査を免除する規定ではない。B は従来どおり現在の PR exact HEAD を fail-close し、cutoff 以後の verdict には terminal-custody 整合性も要求する。この検査が示すのは bytes・identity・attempt の整合だけであり、provider-family authorization の成立を意味せず、D3d の `unverified_family` 判定も変更しない。
+
+**Grandfather 境界。** terminal-event 要件だけを免除する grandfather は、canonical receipt file の raw bytes digest が以下の固定 SHA-256 allowlist に完全一致し、かつ receipt 自身の `at` が `2026-09-16T09:51:00Z` より厳密に前の場合に限る。`at < cutoff` だけでは grandfather にならず、allowlist receipt であっても cutoff と等しい時刻または以後なら完全な terminal chain を要求する。Issue #914 inventory (comment `6073020397`) が列挙する request-digest filenames に対応する receipt files を、`C:\dev\UT-TDD-agent-harness\.ut-tdd\review\receipts\<requestDigest>.json` から `Get-FileHash -LiteralPath <exact path> -Algorithm SHA256` で再計算した。再現結果は inventory 64 件中 64 件、unique raw-byte digests 64 件 (各 receipt は `PASS`)。filename の request digest は receipt bytes digest ではなく、allowlist に filename digest を用いてはならない。inventory にない receipt、再現できない receipt、または digest が一致しない receipt は grandfather せず、cutoff 前後を問わず完全な terminal chain を要求する。cutoff と等しい時刻は「前」ではない。grandfather はこの新しい custody predicate だけに限り、既存 D1 の exact-HEAD・non-author・PASS・OPEN PR・green check 条件はすべて維持する。
+
+閉じた allowlist (canonical receipt file raw-byte SHA-256):
+
+```text
+30a4f79777dbf19cca1c17d9fb60ca37c85cc54b9bf8e88e6b6215bb39d2fba0
+9d75b7e21ad9a5308ed0e97e8b82276f246898462204e43f50a5f9274dbccb0e
+a2000a59ad9a7fe505c207baef3a3b2ea18c64bac31f503d97bba7058b676801
+603af8d951f5750170186adbd843792364d44d1c7d947c2886ce204d9fb35743
+87c45d3a5f34d93391e00e36755e2c0eec081a4aae1ec953287a2423573be51d
+696df57c3865f7c2705cd6d34db481346e692e38a4bd87bf65bbebe78657d77e
+f1f911d766ad294a092d2d28997b8f5a6d64843c7154ddaec09bb0d9f0ec966e
+fcdd69313d883779ec3bde102c7c956a605f95583289712f89f19344fdfe9a96
+3611bb0b7c0588ddf972741fc754b27b4d69d53f37eb3b4b69fe6bc5daa1d8cb
+1b4b3ef9846214221590a710eb463a9991820384e3ee421863a1e37ef9ca435f
+3c2c5420f0dc2db0fe5abc6771df4733ea47fdb70c996691332b018153eb6a9c
+33cf7dfdfabc7a31d54c1bea93b952926155da71df6acf556840da3639ccb366
+5c62c8a958fff595b972f75001b8941e0bdc2bd9c1d10bb5cb019907670358dc
+fab1639e52ca83695c676c16d6658a80d7ca0064f1915ba8751bbcc11611cc06
+e62967424a3d05e5fc6891e0c5a5b0d3d14de480fdf15f60b613ab7026d9f6ac
+45c0c2c38037fe6393fa86ad35aa1a9e3c2f74db36423c59a7d63a7c1934d065
+52ed215c2b09dd0e78d6b07e8212074fc2eada72fe4920ff9cc811720fdd8173
+a84415c31f3f059e3d4a42c25af1f354b37d39f5e0f84a8e407ae265c0b22350
+b72869e6ed9ceb4cef6d0a4bd4599e9da41d3781652b5c5932a5826ff421a8e1
+90d6ad5ebe5ba4dec0a65c25d02a56cad55e4010f0f24204e576c4a0f19f80d7
+7dce40778176a6c8ce81f74cd2dc3832cefaf134f2a31571f5428d3ce1676320
+f1f0e42479aee698a716fb5eb068d56edfaf456cbae2edaa07c00559a3c08461
+0a840292020be33ddefc8519bd36f132d1d0e7f8656b2c78c6d62d41e8ce8c0f
+fd8d7d3121628e451fe78f7409cd613653ccc7b66ece9b249148fb14d34feb64
+88da3f9daf6095b7edf57aad09872fe98a09ee999e858371cc8e28369fe3461e
+51ab545a8e81e6b42b5833b7b6a310312dff37c0687b28d702f9a33a6371608d
+104a653d01715a4c3e7e7c67c5da5e6bde200c28ffc2dff91d2626c515d70350
+4643dc9ede853427d48e83fe0ae89c7a57af05fc4b1937b94984e577a9cefc01
+f6d65a4d102d61f41e498fdf11cb9b14035cd8b951f653d0f629b522b10a8140
+4336ddbec83a7f490198145aac01bbdb165a3b6f7ca70c2ce3a170f245ad93b1
+5663c52447410b4c4f44d67739cff4262d8cefc23e858c2aa7ae5956aff9dce8
+b5dfb0d4297238026f8b0a7f9fd18a460d9b3f4885cf1d05f3b7b881188cfb98
+24b635693973f8600fd351e5cb38e25e422dfe4bf89737850e61e7ae3beff719
+5e8ff5ba5403fe13302ab86711bdbc07201d6a2790ddd2292206bcbfc2b3fc5e
+e326fbf8ffb54447f2b88dbed02744ca750fc29736486c5c1e56906086373ba5
+bcb846e740ea4e709525839bc1cae39a357ae7603f5e75ccb5f18c2dc404e5dc
+04ba788197259d255aac04f302219a3ced2d9d7332279f440c71c951eb270a4e
+ed867dff0ee6a28e67fce3494d92af30330606ac46e3ffeceb5a983c981d95ca
+425cc14b6190e8c9ca62b5d0de12c90b561dcb0f5f3291eede30d6763dd8d20c
+f11b69aafe37f3c52d79b80b97483c2c6299e66b8722eb123b26bf61867bd4ef
+53b90c82438123ccb02f4d798e20d196e923429dd906102006de136fa3c083b1
+5ef7511baea0a0b641f4030d8542ecf974f24793eab80f5a51aa042f02a47427
+54724411670983e07c52bf7563771fd8cc599e60fc9a9a98c26535198b13e561
+4285a69fc0cf5a64c49e0355fb9b52fdd273710c69369cf372c0f156839d37b7
+daf4af018ea35464d780dfdf30bd6f3d5c5ac779b383232f62cb689430a06cd5
+36f1e8e2e79039c4f7f5e501997c1b2c8be619fcdb25c13a6408c12321309184
+2676af05423f9bda24d291bc28cda6b343aa49c14721066773bd27988b143cef
+ea2f64ab21706d749a56e7f9cae8593ad074ba2043272df929ac5bdc2394ac0b
+94f962759628ea58b7dfe81048591225d6f4340f538de93be2f433eed3a9ebce
+367a71152fc02c9ab3f57e6c516732e648c7caf39bdc10d16304d89c7311b446
+08854b1e1a49cf06241da8f1c2ac8df6ae2e73ca1b093d6826b8be35bf94b611
+458591bd8247ba5b418ce511aba5a859a35f2c125c19d3e3bc54cfc335954fad
+3ea5d03d372ed255b8a4d31708314c0b56a2488147bd09d72ffb3c43f686a8f9
+c03457f218f587ca222f7c6d49aab2e81fc8303b9a6ce686f58a807ef332dd87
+b577953943499c9f495e3cbd1d707092e7012765577f9355639eb4537fb1ea2b
+849b80ddbeb5fb118f90d4d34b747de70ca55e3da823300e7f469e1c0d5261b9
+402d08324bfbbc89eac5b2fe58999252d4983ddb7c6fd8b86becf05e5b0a5551
+df13739cb733f6abe36eb29d2ab1c60f65b61698ab99d3964ba2670c4ba2ffff
+142d15dfe6172ac1e9a39772d0facb6203403337dd44c7bfa10dcacb8ca4e13c
+e24cd87613a1557d7ab3f1da278857ee0feb9bc59cf6754704a6ff047f1a6c57
+049fb2a5db8436476b18879aef414487db4da43a923def44538864f1f5b617a0
+faa7353cc0dcab2a796f600a1f48bf6dc15d4e0ce2b39cd814d3eb15d8cb9231
+a83c71aac11be3bee89c2e7fcc41b089abe0e46fc39d33aa227785273c8a402b
+6c5eb21268e8bf34114818559331611fe1eb7f0cac84740f3e4a36437b7239fc
+```
+
+**cutoff 以後の consumer predicate。** B wrapper は consumer-side verifier が一意で non-superseded かつ non-conflicting な completed attempt を end-to-end に検証できる場合だけ post-cutoff verdict を受理する。結合対象は、canonical request digest と request identity (repository / PR / exact HEAD / memory ID / review revision / author family)、request の exact invocation nonce と composed provider-judgment identity、検証器が parse した receipt bytes と event の `receiptFileDigest`、verdict bytes/artifact と `verdictDigest`、およびその request/attempt に一致する completed event の request digest・provider family・attempt number・exact HEAD・canonical attempt verdict path である。verdict comment 単独、receipt の filename/hash だけ、または receipt-file/event の一致だけを確認する helper は十分でない。attempt は順序で選ばず、別 request の attempt や superseded/conflict 済み attempt を流用してはならない。
+
+これは local B-consumer の integrity 契約である。GUI comment を custody producer として扱う実装、PR comment の custody への転記、clone 間共有はここで作らず、Issue #907 の別契約に残す。汎用 delegation の producer attribution 課題 (#915) もこの merge consumer の範囲外である。
+
+**独立 negative-oracle 候補 (paired test-design `CANDIDATE-U-RVMG-024..034`)。** strict cutoff と閉じた digest allowlist を固定し、他の exact-head D1 事実を保ったまま (a) nonce、(b) request identity の単一 field、(c) receipt bytes、(d) verdict bytes/digest、(e) attempt number/path をそれぞれ独立に変異し、各ケースで merge 呼出し 0 を要求する。さらに対象 attempt の superseded/conflict event を個別に加えた場合も deny する。allowlist 外の receipt は `at` を cutoff 前へ戻しても deny し、allowlist 対象 receipt の raw bytes を 1 byte 変更した場合も digest 不一致で deny する。cutoff と等しい時刻または以後の receipt も、完全な terminal chain がなければ deny する。完全に valid な post-cutoff chain だけを allow し、既存 D1 条件を破れば deny する。これらは未実装の契約候補であり、実装済みまたは Green を意味しない。
 
 ### B-3 deny receipt の束縛
 
