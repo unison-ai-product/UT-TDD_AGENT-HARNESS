@@ -7504,6 +7504,22 @@
         "revision": 23,
         "content_digest": "sha256:8350b03f489661306bd6648dc59e0c0a2f61b384cded40f2c7a919cc64902547"
       }
+    },
+    {
+      "sequence": 470,
+      "previous_record_digest": "sha256:1848e8808b568d4a87a0a0d7067e429e1dae43f5b58d4a56b529ec057f917bbc",
+      "record_digest": "sha256:3e0118408a6feacff3f5604454cd7c569202fe72255ed76757414452d6200e18",
+      "command_id": "plan-revise:issue-935:flag1-terminal-conflict-after-950-20261009-r4",
+      "receipt_id": "certificate:e9b55a418b10fe8be8ce253e8d9b19a5",
+      "receipt_digest": "sha256:b8d844aa1c7de5cfc59a71deae374ea7bce876a93835339cbd5f2d9403b8369b",
+      "decision_digest": "sha256:f1eef424ffcd5e2ed802b819ef5e14cc0094833f71a2ac9faa628afc060f2813",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-935-claude-inbox-explicit-ack.md",
+        "plan_id": "PLAN-L6-935-claude-inbox-explicit-ack",
+        "asset_id": "plan:c5d545dfdce9219f6a26e0c008657605",
+        "revision": 4,
+        "content_digest": "sha256:e247f428a33a4beb613d91f57ac92c44cd58e3cae73495e02bd249b4fce2020e"
+      }
     }
   ]
 }
