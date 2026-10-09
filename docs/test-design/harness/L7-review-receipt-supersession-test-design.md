@@ -38,8 +38,9 @@ append-only conflict marker を残し、次 attempt と receipt の write を 0 
 2. canonical receiptが0、failed outcome eventが1、attempt-1 fileが残ることを現物で検査する。
 3. terminal outcome（`attempt_execution_failed` または `attempt_verdict_rejected`）を照合してattempt-2を開始し、`superseded_attempt` eventを1件生成する。
 4. attempt-2をexit 0で成功させ、canonical receiptをcreate-exclusiveで1件生成する。
-5. receipt後cleanupを実行し、過去のattempt-1 file、failed outcome、superseded eventは残る一方、
-   成功attempt-2のscratch directoryだけが削除され、canonical receiptが成功内容から不変であることを再読する。
+5. receipt後に`cleanupReviewAttempt`を直接呼び出し、削除能力を持つhelper自身が成功attempt-2のverdictを
+   元のbytesのまま保持することを現物で検査する。過去のattempt-1 file、failed outcome、superseded eventも残り、
+   canonical receiptが成功内容から不変であることを再読する。callerがcleanup呼び出しを省略するだけでは合格にしない。
 
 040-A〜Dは別fixtureまたはmutation対象を限定したtable testとして実装する。一つのfixture初期化失敗で
 全caseが同時にRedになる構造、戻り値だけのassertion、実装関数をoracleとして再利用する構造は禁止する。
@@ -57,7 +58,7 @@ append-only conflict marker を残し、次 attempt と receipt の write を 0 
 
 `CANDIDATE-U-RVATT-040` は composition fixture と case A〜D の独立変異を同一の
 review custody APIへ接続する。case A/D は audit event の欠落・重複を現物で検査し、
-case B は canonical receipt bytes の不変性と conflict を直接検査する。成功後の cleanup
-では旧 attempt file と `attempt_execution_failed` / `attempt_verdict_rejected` / `superseded_attempt` を保持し、
-成功 attempt の scratch だけを削除する。戻り値・件数だけを oracle とせず、audit JSONL、
-attempt path、receipt bytes を再読する。
+case B は canonical receipt bytes の不変性と conflict を直接検査する。receipt後に
+`cleanupReviewAttempt`を呼んでもhelper自身が削除せず、成功 attempt の verdict bytesを保持する。
+旧 attempt file と `attempt_execution_failed` / `attempt_verdict_rejected` / `superseded_attempt` も保持する。
+戻り値・件数だけを oracle とせず、audit JSONL、attempt pathとbytes、receipt bytesを再読する。
