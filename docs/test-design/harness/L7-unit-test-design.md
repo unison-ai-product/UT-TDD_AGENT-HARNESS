@@ -3007,3 +3007,4 @@ oracle の詳細 (入力・期待・殺す mutation・fixture・required evidenc
 |---|---|---|
 | `CANDIDATE-U-PH-001..008` | `docs/design/harness/L6-function-design/confirmed-document-placeholder-detection.md` | `docs/test-design/harness/L7-confirmed-document-placeholder-detection-test-design.md` §3 |
 | `CANDIDATE-U-PH-010..024` | `docs/design/harness/L6-function-design/confirmed-document-placeholder-detection.md` | `docs/test-design/harness/L7-confirmed-document-placeholder-detection-test-design.md` §4 |
+| `CANDIDATE-U-PH-025` | `docs/design/harness/L6-function-design/confirmed-document-placeholder-detection.md` | `docs/test-design/harness/L7-confirmed-document-placeholder-detection-test-design.md` §4 |
