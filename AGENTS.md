@@ -188,9 +188,9 @@ Model / effort routing defaults (task-kind ベース、PO rule 2026-07-14):
   Luna (`gpt-6-luna`、effort `high`); 検証/設計/判断 = Sol (`gpt-6.1-sol`、effort `low`);
   超局所の難所の相談だけ = Astra (`gpt-6-astra`、常用しない)。指揮モデル別の振る舞いは
   `AGENTS.md` §Codex / Claude Code Harness の「あなたが○○なら」の表。
-- Claude: フロントデザイン/設計ドキュメント作成 = Opus (`claude-opus-5`);
-  UI デザイン実装/ドキュメント修正 = Sonnet (`claude-sonnet-5`);
-  web 検索/doc パッチ = Haiku (`claude-haiku-4-5`)。
+- Claude: フロントデザイン/UI デザインの判断・レビュー/設計ドキュメント作成 = Opus (`claude-opus-5-5`);
+  決まった UI デザインの実装/ドキュメント修正 = Sonnet (`claude-sonnet-5-5`);
+  web 検索/doc パッチ = Haiku (`claude-haiku-5-5`)。
 - 並列の軽量レーンは Luna の subagent と Claude Haiku が担い、closing の権限を持たない。
 - Effort はモデル別基準ラダー (PO rule 2026-07-28) が既定: Sol/Fable = `low`、
   Opus/Sonnet = `middle`、Luna = `high`。回答が浅い時は
@@ -201,7 +201,7 @@ Model / effort routing defaults (task-kind ベース、PO rule 2026-07-14):
   (Claude `high` / GPT `middle`)。明示 `--effort xhigh` は有効で、UI/UX は
   task-kind 例外 (PO rule 2026-07-08)。
 - Design/implementation review uses a top reviewer model: GPT frontier
-  (`gpt-6.1-sol`) or Claude Opus (`claude-opus-5`) or above, behind the
+  (`gpt-6.1-sol`) or Claude Opus (`claude-opus-5-5`) or above, behind the
   explicit frontier gate.
 - 正規委譲経路 (`ut-tdd codex/claude --role <role>`) は上記 routing を機械強制する
   (PLAN-L7-255、`src/team/delegation-routing.ts`): 未登録 role は fail-close、
@@ -211,7 +211,7 @@ Model / effort routing defaults (task-kind ベース、PO rule 2026-07-14):
 - advisor (PO rule 2026-07-29、2026-07-14 の行列を supersede): **技術判断**
   (実装方式 / トラブルシューティング) は `gpt-6.1-sol` 一次 (fallback Fable)、
   **設計・進行判断** (設計方式 / レーン選択 / 優先順位 / 段取り) と
-  **デザイン/UI 判断** は `claude-fable-5` 一次 (次点 `gpt-6.1-sol`)。
+  **デザイン/UI 判断** は `claude-fable-5-1` 一次 (次点 `gpt-6.1-sol`)。
   判断種別は `--decision design|progress|implementation|troubleshooting|uiux`
   で明示でき、省略時は task 文から推論する (進行語は technical 語より優先)。
   迷う場合は `ut-tdd advisor --task "..." --current-model <model>` を使い、
