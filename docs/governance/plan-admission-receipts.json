@@ -7280,6 +7280,22 @@
         "revision": 2,
         "content_digest": "sha256:238d0e99ffc9fd83a2ea422797075dfe336f689766c64c9f79eaf730ccef2ff0"
       }
+    },
+    {
+      "sequence": 456,
+      "previous_record_digest": "sha256:822f6fcd5c61d391bd58a11c18fe63e3dc8b2ae0201d885ca0dfcaebafd12f55",
+      "record_digest": "sha256:f59b463e877f22d07a1b287d3b6e1b731c7ce9fe1deb126cb8929da87aa2749a",
+      "command_id": "plan-draft:issue-935:inbox-explicit-ack:redraft-20261009-a1",
+      "receipt_id": "certificate:9c94a88935a538fb529cc198148f03fd",
+      "receipt_digest": "sha256:0890bff21846d8109917ebe0789afc6e5e158b1111702b25e02431030962159e",
+      "decision_digest": "sha256:02214dcc4b691a48ef7f3c9cefee33416551c6b3a9cf5cfec64d1badb6879052",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-935-claude-inbox-explicit-ack.md",
+        "plan_id": "PLAN-L6-935-claude-inbox-explicit-ack",
+        "asset_id": "plan:9c94a88935a538fb529cc198148f03fd",
+        "revision": 1,
+        "content_digest": "sha256:385f894a15a929a8440781f92e8bea157c43309653a76e74a13a57992e7b4e62"
+      }
     }
   ]
 }
