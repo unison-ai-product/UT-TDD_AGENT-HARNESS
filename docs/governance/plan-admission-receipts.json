@@ -7552,6 +7552,22 @@
         "revision": 6,
         "content_digest": "sha256:1aeb5a847073733c86bdf9b9a362b6d0c574678a3ee891a63420c16f71fb1d4a"
       }
+    },
+    {
+      "sequence": 473,
+      "previous_record_digest": "sha256:4936a7d94408dccef765607069220d677dae8b5cd1f291a7a19061f599781d6b",
+      "record_digest": "sha256:aede5de354594bf63d684d24ccbad06ff42b1cd22ad530b8a414cebedb7329a2",
+      "command_id": "plan-revise:issue-935:evidence-anchor-correction-20261009-r7",
+      "receipt_id": "certificate:ee0870edd21800c7d416b66a1c1c6712",
+      "receipt_digest": "sha256:85f46d1c7edefcbc4226aa943c0e71927818dadabe349587a1f55569d339468b",
+      "decision_digest": "sha256:4f237c1d7d42c11e645a4f26a09faf5ab41c74202df00f7c92acbec32312ad5e",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-935-claude-inbox-explicit-ack.md",
+        "plan_id": "PLAN-L6-935-claude-inbox-explicit-ack",
+        "asset_id": "plan:c5d545dfdce9219f6a26e0c008657605",
+        "revision": 7,
+        "content_digest": "sha256:34595e8224ef7d0292272c64ec8bffdc1960885b4aab0bb7fa7410a50ddd52df"
+      }
     }
   ]
 }

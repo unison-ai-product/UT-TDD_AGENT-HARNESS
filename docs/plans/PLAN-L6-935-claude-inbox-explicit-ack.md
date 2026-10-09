@@ -64,26 +64,26 @@ review_evidence:
         scope: full
         exit_code: 0
         completed_at: 2026-10-09T11:01:03Z
-        evidence_path: .ut-tdd/issue935-r5-ci37918847013.json
+        evidence_path: .ut-tdd/evidence/issue935-ci37918847013.json
         output_digest: sha256:d0c6d64e92e368d240e6cfa802fdccd2a7e83d9707d2e01da4f403cd7c00712d
-        anchor_commit: 18db7e51c219d4cf4c338f1d223a550701e5410b
+        anchor_commit: 9d9252d1a48e31bbf1b3c2184f99638c01c5a356
 status: confirmed
 sub_doc: function-spec
 github_issue_id: 935
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:4a697cd0f00f370f41379bed929bc0d9
-  command_id: plan-revise:issue-935:confirm-postgreen-20261009-r6
-  admitted_at: 2026-10-09T11:07:57.738Z
-  source_digest: sha256:1aeb5a847073733c86bdf9b9a362b6d0c574678a3ee891a63420c16f71fb1d4a
+  receipt_id: certificate:ee0870edd21800c7d416b66a1c1c6712
+  command_id: plan-revise:issue-935:evidence-anchor-correction-20261009-r7
+  admitted_at: 2026-10-09T11:17:41.311Z
+  source_digest: sha256:34595e8224ef7d0292272c64ec8bffdc1960885b4aab0bb7fa7410a50ddd52df
   decision_digest: sha256:4f237c1d7d42c11e645a4f26a09faf5ab41c74202df00f7c92acbec32312ad5e
-  receipt_digest: sha256:4c84e728ba44821d6e6e0be9d987976b1bd8a93153cf8aa6a84782377d3f4368
+  receipt_digest: sha256:85f46d1c7edefcbc4226aa943c0e71927818dadabe349587a1f55569d339468b
   binding:
     path: docs/plans/PLAN-L6-935-claude-inbox-explicit-ack.md
     plan_id: PLAN-L6-935-claude-inbox-explicit-ack
     asset_id: plan:c5d545dfdce9219f6a26e0c008657605
-    revision: 6
-    content_digest: sha256:1aeb5a847073733c86bdf9b9a362b6d0c574678a3ee891a63420c16f71fb1d4a
+    revision: 7
+    content_digest: sha256:34595e8224ef7d0292272c64ec8bffdc1960885b4aab0bb7fa7410a50ddd52df
   route:
     signal: feature_addition
     mode: add-feature
