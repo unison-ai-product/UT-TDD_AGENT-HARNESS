@@ -1,4 +1,9 @@
-import { execFileSync, spawnSync } from "node:child_process";
+import {
+  execFileSync,
+  type SpawnSyncOptionsWithStringEncoding,
+  type SpawnSyncReturns,
+  spawnSync,
+} from "node:child_process";
 import { createHash } from "node:crypto";
 import {
   copyFileSync,
@@ -40,7 +45,17 @@ interface AcceptanceModule {
   buildAgentE2EInstallerInvocation(releaseDirectory: string, anchorDigest: string): string[];
   canaryAssetsForTag(tag: string): readonly string[];
   createConsumerPlan(consumerRoot: string, source: string): void;
-  main(argv: string[], deps?: { fixtureTag?: string }): void;
+  main(
+    argv: string[],
+    deps?: {
+      fixtureTag?: string;
+      spawnSync?: (
+        command: string,
+        args: string[],
+        options: SpawnSyncOptionsWithStringEncoding,
+      ) => SpawnSyncReturns<string>;
+    },
+  ): void;
   findForbiddenReferences(root: string, forbiddenPaths: string[]): string[];
   createClosedReviewProviders(
     auditRoot: string,
@@ -813,6 +828,33 @@ describe("manual canary acceptance publish-record boundary", () => {
     const recordPath = join(fixture.root, "fixture-publish-record.json");
     const evidencePath = join(fixture.root, "fixture-acceptance-evidence.json");
     writeFileSync(recordPath, JSON.stringify(publish.value));
+    const tarCalls: Array<{ archive: string; cwd: string | URL | undefined }> = [];
+    const spawnWithGnuTarDriveLetterGuard = (
+      command: string,
+      args: string[],
+      options: SpawnSyncOptionsWithStringEncoding,
+    ): SpawnSyncReturns<string> => {
+      if (command === "tar") {
+        const archive = args[1] ?? "";
+        tarCalls.push({ archive, cwd: options.cwd });
+        if (process.platform === "win32" && /^[A-Za-z]:[\\/]/.test(archive)) {
+          const stderr = "tar: Cannot connect to C: resolve failed";
+          return {
+            pid: 0,
+            output: ["", "", stderr],
+            stdout: "",
+            stderr,
+            status: 2,
+            signal: null,
+          };
+        }
+      }
+      return spawnSync(command, args, options);
+    };
+    const runnerDeps = {
+      fixtureTag: "v0.0.0-canary.0",
+      spawnSync: spawnWithGnuTarDriveLetterGuard,
+    };
     main(
       [
         "--phase",
@@ -828,8 +870,9 @@ describe("manual canary acceptance publish-record boundary", () => {
         "--evidence",
         evidencePath,
       ],
-      { fixtureTag: "v0.0.0-canary.0" },
+      runnerDeps,
     );
+    expect(tarCalls).toEqual([{ archive: names[0], cwd: realpathSync.native(fixture.releaseDir) }]);
     const evidence = JSON.parse(readFileSync(evidencePath, "utf8"));
     expect(evidence).toMatchObject({
       tag: "v0.0.0-canary.0",
