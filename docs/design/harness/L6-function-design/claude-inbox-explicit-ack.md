@@ -1,10 +1,10 @@
 ---
 artifact_type: design_doc
 layer: L6
-status: draft
+status: confirmed
 sub_doc: function-spec
-plan: PLAN-L6-935-claude-inbox-explicit-ack
-pair_artifact: docs/test-design/harness/L7-claude-inbox-explicit-ack-test-design.md
+plan: docs/plans/PLAN-L6-935-claude-inbox-explicit-ack.md
+pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 ---
 
 # Claude inbox の明示 ACK 契約案 (#935)
@@ -16,6 +16,16 @@ pair_artifact: docs/test-design/harness/L7-claude-inbox-explicit-ack-test-design
 `PLAN-L7-472-claude-memory-async-wake` と `PLAN-REVERSE-600-claude-inbox-terminal-gc` の配送専用 terminal 境界への設計増分とする。既存4理由による自動終端は維持する。review request / verdict / merge authority を変更しない。#934 の最優先指示に基づき、古い通知を受信側が明示的に確認済みとして配送抑止する経路だけを追加する。
 
 対象は同一 project の現在の受信 session に束縛された entry。foreign session の claim・削除・retarget、runtime の手動削除、年齢だけによる失効、Stop の配送件数変更は対象外。通知 ACK は review の実施・PASS・request lifecycle の終端を意味しない。
+
+## 既存の受信 API 境界 (変更なし)
+
+本契約は既存の受信 API を変更せず、新しい ACK 関数シグネチャを凍結しない。下記は既存 memory.md の
+即時配送契約を参照し、現在の実装で公開されている waitForClaudeMemory とその既存 DbC / oracle を記録する。
+ACK の追加動作は既存 .claim CAS と共有するが、既存 API の意味は変更しない。
+
+| 関数 | Signature | pre | post | invariant | oracle |
+| --- | --- | --- | --- | --- | --- |
+| waitForClaudeMemory | waitForClaudeMemory(input: Parameters<typeof waitForClaudeMemory>[0]) => Promise<ClaudeMemoryWakeResult> (input は src/runtime/claude-memory-wake.ts の既存 inline type) | pollIntervalMs と maxWaitMs は有限の正数。既定値は既存契約どおり | 未claim entry を選び、同一受信 session に一度だけ配送する | generation identity を検証した後だけ marker を更新し、claim 成功時のみ配送済み entry を除去する。ACK 候補が既存 delivery claim を変更しない | U-MEMWAKE-001 / U-MEMWAKE-005 / U-MEMWAKE-007 |
 
 ## 操作と対象の確定
 
