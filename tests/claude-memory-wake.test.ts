@@ -230,6 +230,9 @@ describe("Claude HARNESS memory async wake", () => {
             ownId: own.id,
             foreign,
             inbox,
+            foreignInboxFilesRetained: foreign.every((entry) =>
+              existsSync(join(inbox, `${inboxFileStem(entry.id)}.json`)),
+            ),
           };
         } finally {
           wakeReadCounters.active = false;
@@ -248,13 +251,10 @@ describe("Claude HARNESS memory async wake", () => {
     expect(fiftyForeign.result.entry?.id).toBe(fiftyForeign.ownId);
     expect(fiftyForeign.gitExecFileSyncCalls).toBe(oneForeign.gitExecFileSyncCalls);
     expect(fiftyForeign.gitExecFileSyncCalls).toBeLessThanOrEqual(20);
-    expect(oneForeign.inboxDirectoryReads).toBe(1);
-    expect(fiftyForeign.inboxDirectoryReads).toBe(1);
-    expect(
-      fiftyForeign.foreign.every((entry) =>
-        existsSync(join(fiftyForeign.inbox, `${inboxFileStem(entry.id)}.json`)),
-      ),
-    ).toBe(true);
+    // One startup prune plus one inbox snapshot; foreign count must not add rescans.
+    expect(oneForeign.inboxDirectoryReads).toBe(2);
+    expect(fiftyForeign.inboxDirectoryReads).toBe(2);
+    expect(fiftyForeign.foreignInboxFilesRetained).toBe(true);
   }, 20_000);
 
   it("U-PMEMROOT-007: provider envelope rejects each binding axis independently", async () => {
