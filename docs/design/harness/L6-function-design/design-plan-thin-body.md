@@ -107,11 +107,12 @@ plan: docs/plans/PLAN-L6-955-design-plan-thin-body-lint.md
 
 対象は `引き渡し物` / `検証の対` / `完了条件` の行。
 
-- **path**: backtick span が `^(docs|src|tests|scripts|skills)/[^\s#]+\.[A-Za-z0-9]+(#.*)?$` に一致する場合、`#` より前の path が `repoRoot` に存在すること。違反は `path_missing`。`#` 以降 (fragment) は解決しない (§9)。
+- **path**: backtick span が `^(docs|src|tests|scripts|skills)/[^\s#]+\.[A-Za-z0-9]+(#.*)?$` に一致する場合、`#` より前の path が `repoRoot` に存在すること。違反は `path_missing`。
+- **見出し参照の禁止**: path に `#<fragment>` を付けた参照 (backtick span と markdown link の target)、および path の直後の ` §<token>` は fail とする。違反は `anchor_forbidden`。4 項目の本文は文書を path だけで指し、見出しは指さない。これで「参照する見出し・アンカーが実在する」(issue #955 やること 4) は、見出し参照が 0 件であることで常に成り立ち、slug の再現が要らない。施行後の適合 PLAN (PLAN-L6-834、PLAN-L6-935 rev5) は見出し参照を 1 件も使っていない (実測 2026-10-09)。
 - **見出しの literal 埋め込み**: 行の本文 (行頭の見出し記号ではなく、行の途中) に `## ` (`#` 2 個以上 + 空白) を含む行は fail とする (例: `「## FLAG1に対する事後訂正提案 (確認ではない)」`)。違反は `heading_literal`。PLAN 本文は設計文書の見出しを書き写して指さず、path だけで指す。
 - `上流の設計 revision digest` の path は過去 revision を指すため、存在検査をしない。
 
-PR #944 rev4 の実害 (存在しない見出しへの参照) は、`heading_literal` と C3 (段落禁止・残余長) で止まる。見出し解決そのものは行わない。
+PR #944 rev4 の実害 (存在しない見出しへの参照) は、`heading_literal` と C3 (段落禁止・残余長) で止まる。`#fragment` / `§token` による参照は `anchor_forbidden` で止まるため、見出しの解決は行わない。
 
 ## 5. 出力と message
 
@@ -134,6 +135,7 @@ PR #944 rev4 の実害 (存在しない見出しへの参照) は、`heading_lit
 | `checklist_form` | 完了条件に checklist 以外の行 |
 | `empty_section` | 必須節が空 / 引き渡し物に path が無い |
 | `path_missing` | 参照 path が repo に無い |
+| `anchor_forbidden` | path に `#fragment` を付けた参照、または path 直後の `§token` がある |
 | `heading_literal` | 本文に `## ` の見出し literal を埋め込んでいる |
 
 ## 6. 置き場所と配線
@@ -166,7 +168,7 @@ PR #944 rev4 の実害 (存在しない見出しへの参照) は、`heading_lit
 - 完了条件 item の長さ制限。
 - 「複製」の意味判定 (設計文書との文字列類似度など)。
 - 施行前の設計系 PLAN の移行 (#648 の手順で別途行う)。
-- 見出しアンカーの解決 (`<path>#<fragment>` の GitHub slug 照合) と `§token` の見出し照合 (control 判断 2026-10-09)。理由: CJK を含む GitHub slug の再現は壊れやすく、最小実装原則に反する。PR #944 の実害 (存在しない見出しへの参照) は `heading_literal` と `path_missing` で止まる。
+- 見出しアンカーの解決 (`<path>#<fragment>` の GitHub slug 照合) と `§token` の見出し照合。理由: CJK を含む GitHub slug の再現は壊れやすく、最小実装原則に反する。代わりに C5 の `anchor_forbidden` で見出し参照そのものを禁止する (PR #956 の FLAG 1 への是正、2026-10-09)。
 
 ## 10. 実装順序の前提 (control 判断 2026-10-09)
 

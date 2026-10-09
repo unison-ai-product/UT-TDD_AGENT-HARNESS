@@ -3019,6 +3019,6 @@ oracle の詳細 (入力・期待・殺す mutation) は専用の
 | CANDIDATE-U-THINPLAN-001〜003 | 実例 (PLAN-L6-935 rev4 の fail、rev5 と CLAUDE.md の例の pass) | 専用文書 §4 |
 | CANDIDATE-U-THINPLAN-004〜019 | 見出しの集合と順序、digest 行、list と残余文字数、checklist、path の実在、見出し literal、HTML コメント | 専用文書 §4 |
 | CANDIDATE-U-THINPLAN-020〜024 | 適用範囲 (施行日・kind・archived) と plan lint / governance gate への配線 | 専用文書 §4 |
-| CANDIDATE-U-THINPLAN-025〜027 | real-repo の exit 0、適用判定の集合、決定性 | 専用文書 §4 |
+| CANDIDATE-U-THINPLAN-025〜028 | real-repo の exit 0、適用判定の集合、決定性、見出し参照の禁止 | 専用文書 §4 |
 
 上表の ID は backtick 無し表記である。候補台帳への再掲ではなく専用文書への参照であり、U-VMSRC-009 の一意性検査の対象外とする。

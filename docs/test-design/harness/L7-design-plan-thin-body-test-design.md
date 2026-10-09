@@ -63,7 +63,7 @@ updated: 2026-10-09
 | `CANDIDATE-U-THINPLAN-013` | 引き渡し物に残余 10 code point + 長さ 150 の backtick path 1 本 | finding 0 | backtick 内を残余に数える |
 | `CANDIDATE-U-THINPLAN-014` | 引き渡し物にネスト list (`  - x`) | `item_form` | ネストを許す |
 | `CANDIDATE-U-THINPLAN-015` | 完了条件に (a) `- 項目` (checkbox なし)、(b) 段落、(c) `- [X] ` 大文字 | 各 `checklist_form` | checklist 以外を許す |
-| `CANDIDATE-U-THINPLAN-016` | 引き渡し物の (a) `` `docs/design/harness/L6-function-design/missing.md` `` (fake false)、(b) `` `docs/design/x.md#no-such` `` (x.md は fake true) | (a) `path_missing`、(b) finding 0 (fragment は解決しない) | path 存在を見ない / fragment を path に含めて存在判定する / fragment を解決しようとする |
+| `CANDIDATE-U-THINPLAN-016` | 引き渡し物の (a) `` `docs/design/harness/L6-function-design/missing.md` `` (fake false)、(b) `` `docs/design/x.md#no-such` `` (x.md は fake true) | (a) `path_missing`、(b) `anchor_forbidden` | path 存在を見ない / fragment を path に含めて存在判定する / fragment 付き参照を許す |
 | `CANDIDATE-U-THINPLAN-017` | 検証の対に `` - `docs/design/x.md` の「## 3. 入力」 `` (残余 80 以下) | `heading_literal` | 短い行の見出し literal を許す (長さ規則だけに頼る) |
 | `CANDIDATE-U-THINPLAN-018` | digest 節の path が fake false | finding 0 | digest path にも存在検査を掛ける (過去 revision を誤って fail) |
 | `CANDIDATE-U-THINPLAN-019` | HTML コメント行 (`<!-- ... -->`) を各節に 1 行 | finding 0 | コメントを本文行として扱う |
@@ -75,11 +75,12 @@ updated: 2026-10-09
 | `CANDIDATE-U-THINPLAN-025` (real-repo) | `lintPlanWithGate(undefined, process.cwd())` | `ok=true` (exit 0 相当) | 施行前 PLAN を対象に含める / 施行後 PLAN の未是正 |
 | `CANDIDATE-U-THINPLAN-026` (real-repo) | `docs/plans/` の設計系 PLAN 全件に §2 の適用判定だけを掛ける | `created < 2026-10-06` の全件が false。true の集合は PLAN-L6-833 / PLAN-L6-834 / PLAN-L6-935 / PLAN-L6-955 (と以後の新規分) を含む | 適用判定の条件を変える |
 | `CANDIDATE-U-THINPLAN-027` | 同一入力を 2 回 | 同じ finding 列 (順序含む) | 非決定的な走査順 |
+| `CANDIDATE-U-THINPLAN-028` | 適合済みの PLAN-L6-834 本文の引き渡し物を (a) `` `docs/design/harness/L6-function-design/design-protection-diff-gate.md#definitely-no-such-heading-955` ``、(b) `` `docs/design/harness/L6-function-design/design-protection-diff-gate.md` §存在しない節 ``、(c) markdown link `[x](docs/design/harness/L6-function-design/design-protection-diff-gate.md#x)` に置換 | 各 `anchor_forbidden` (PR #956 FLAG 1 の反例) | fragment / §token / link target のどれかを見落とす |
 
 ## 5. Gate and scope fence
 
 - 本 lint は `plan-governance` の 1 reason であり、新しい doctor row を作らない。doctor の既存 `plan-governance` row が 024 と同じ結果を返すことを、`checkPlanGovernance` の既存テストの様式で 1 行確かめる。
-- 見出しアンカー / `§token` の解決は範囲外 (設計文書 §9)。その oracle は置かない。016 (b) が「解決しない」ことを固定する。
+- 見出しアンカー / `§token` の解決は範囲外 (設計文書 §9)。見出し参照は `anchor_forbidden` で禁止し、016 (b) と 028 がそれを固定する。
 - 025 は main で exit 0 を要求する。設計文書 §10 の順序 (PLAN-L6-935 → PLAN-L6-833 の是正 merge → 本 lint の実装 merge) を満たす前に実装 PR を merge しない。
 - 001 / 002 の literal fixture は rev4 / rev5 の本文を変えずに写す (frontmatter は除く)。
 
