@@ -129,18 +129,18 @@ status: confirmed
 github_issue_id: 926
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:2a1e114e385546d50c7defebe509b52e
-  command_id: plan-revise:issue-926:b-custody-contract:forward:r3
-  admitted_at: 2026-10-09T04:27:20.613Z
-  source_digest: sha256:854509f56a74899611b4e2115787a4bdd03d2978ebff4b0432c9eee506dc4aba
-  decision_digest: sha256:ec65fb8eb76fabd8f47eea2c9b66b36020c08f28773d75c86306e8032e55ce51
-  receipt_digest: sha256:3d4d29039de03b16fcd37a1c6c40c64455aadc2c9728661a43a388937a590e50
+  receipt_id: certificate:5a5d40f7272a3a88a87997e50c9eab9d
+  command_id: plan-revise:issue-926:b-custody-contract:forward:r4
+  admitted_at: 2026-10-09T04:40:04Z
+  source_digest: sha256:7c746e946c6b5d9650d87cc7b5f0933d07f80b7f9afa1bebc1635b28baffffb4
+  decision_digest: sha256:fc9cf47b5cb04d434fe24b295385efbdbc18a7cf25184f021cdd43cc51a11346
+  receipt_digest: sha256:d413e4fbb696df139dc2f7fb9eca4d52f26dfb3dcbbb75cab8b3f41e58bd50ff
   binding:
     path: docs/plans/PLAN-L7-465-cross-review-author-binding.md
     plan_id: PLAN-L7-465-cross-review-author-binding
     asset_id: plan:legacy:9900b987be73e3200e372b9b412613f302398d1bcd1f68f6727833b99226434d
-    revision: 3
-    content_digest: sha256:854509f56a74899611b4e2115787a4bdd03d2978ebff4b0432c9eee506dc4aba
+    revision: 4
+    content_digest: sha256:7c746e946c6b5d9650d87cc7b5f0933d07f80b7f9afa1bebc1635b28baffffb4
   route:
     signal: feature_addition
     mode: add-feature
@@ -155,11 +155,10 @@ admission_receipt:
     digest: sha256:34da7110f126a856f594d28e89b49a08d8d6ad3058d49162a96e0c0352c64b2b
   reentry:
     target_plan_id: PLAN-L7-465-cross-review-author-binding
-    target_revision: 3
+    target_revision: 4
     phase: forward_merge
-  escape_reason: "Issue #926: revise the B-wrapper terminal-custody contract in
-    Japanese and mark U-RVMG-024..032 as candidate declarations, not
-    implemented/Green evidence."
+  escape_reason: "Issue #926 corrective revision: keep terminal-custody oracle
+    rows explicitly candidate-only until implementation Red tests exist."
 ---
 
 # PLAN-L7-465 (add-impl): cross-review セッション実在照合の実装
@@ -850,7 +849,7 @@ B 面の deny 対象に custody を含めない。custody は A 面の最終 AND
 
 これは local B-consumer の integrity 契約である。GUI comment を custody producer として扱う実装、PR comment の custody への転記、clone 間共有はここで作らず、Issue #907 の別契約に残す。汎用 delegation の producer attribution 課題 (#915) もこの merge consumer の範囲外である。
 
-**独立 negative-oracle 候補 (paired test-design `U-RVMG-024..032`)。** strict cutoff 境界を固定し、他の exact-head D1 事実を保ったまま (a) nonce、(b) request identity の単一 field、(c) receipt bytes、(d) verdict bytes/digest、(e) attempt number/path をそれぞれ独立に変異し、各ケースで merge 呼出し 0 を要求する。さらに対象 attempt の superseded/conflict event を個別に加えた場合も deny する。完全に valid な post-cutoff chain だけを allow とし、pre-cutoff fixture は attempt event なしでも allow される一方、既存 D1 条件を破れば deny される。これらの oracle は契約候補であり、実装済みまたは Green を意味しない。
+**独立 negative-oracle 候補 (paired test-design `CANDIDATE-U-RVMG-024..032`)。** strict cutoff 境界を固定し、他の exact-head D1 事実を保ったまま (a) nonce、(b) request identity の単一 field、(c) receipt bytes、(d) verdict bytes/digest、(e) attempt number/path をそれぞれ独立に変異し、各ケースで merge 呼出し 0 を要求する。さらに対象 attempt の superseded/conflict event を個別に加えた場合も deny する。完全に valid な post-cutoff chain だけを allow とし、pre-cutoff fixture は attempt event なしでも allow される一方、既存 D1 条件を破れば deny される。これらの oracle は契約候補であり、実装済みまたは Green を意味しない。
 
 ### B-3 deny receipt の束縛
 

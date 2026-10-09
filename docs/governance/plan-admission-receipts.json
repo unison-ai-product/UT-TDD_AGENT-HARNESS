@@ -7360,6 +7360,38 @@
         "revision": 4,
         "content_digest": "sha256:12bf68f62db033f8fe2f33fd1fa128e4f1ed37997933ce1692faafa136a35ac1"
       }
+    },
+    {
+      "sequence": 461,
+      "previous_record_digest": "sha256:a49bb71011b111192f67306028ffae8d0b842598cbfb0ab7e717627016480337",
+      "record_digest": "sha256:55ae269c1b0b7424cfe7953c1ceb8ef0f77451473bc8d5dd030ce4505b0a1bad",
+      "command_id": "plan-revise:issue-926:b-custody-contract:forward:r4",
+      "receipt_id": "certificate:5a5d40f7272a3a88a87997e50c9eab9d",
+      "receipt_digest": "sha256:d413e4fbb696df139dc2f7fb9eca4d52f26dfb3dcbbb75cab8b3f41e58bd50ff",
+      "decision_digest": "sha256:fc9cf47b5cb04d434fe24b295385efbdbc18a7cf25184f021cdd43cc51a11346",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-465-cross-review-author-binding.md",
+        "plan_id": "PLAN-L7-465-cross-review-author-binding",
+        "asset_id": "plan:legacy:9900b987be73e3200e372b9b412613f302398d1bcd1f68f6727833b99226434d",
+        "revision": 4,
+        "content_digest": "sha256:7c746e946c6b5d9650d87cc7b5f0933d07f80b7f9afa1bebc1635b28baffffb4"
+      }
+    },
+    {
+      "sequence": 462,
+      "previous_record_digest": "sha256:55ae269c1b0b7424cfe7953c1ceb8ef0f77451473bc8d5dd030ce4505b0a1bad",
+      "record_digest": "sha256:c42a2c421d44354614b5a13b06aaae7520d4a4a74bea50991f7651732a29a158",
+      "command_id": "plan-revise:issue-926:b-custody-contract:reverse:r5",
+      "receipt_id": "certificate:8ff4c236f20969e326e2b1eb24e094d2",
+      "receipt_digest": "sha256:f9469fcc86aa875692fa9cb743c439670b9b1779e5dd1b6afa81b0268a5cd678",
+      "decision_digest": "sha256:376d4c5fc28489b72058307c94c5f84ec225c45e164f40dd0305e804e78bd7de",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-465-cross-review-author-binding-backfill.md",
+        "plan_id": "PLAN-REVERSE-465-cross-review-author-binding-backfill",
+        "asset_id": "plan:legacy:39cf6458a39e9c20e1e650240726fddfe605a90d4a49c98b71c4c082b79b6419",
+        "revision": 5,
+        "content_digest": "sha256:a16628d79dc0304ce904da178e941ee6967bd82cda31753c888b44a216891d34"
+      }
     }
   ]
 }

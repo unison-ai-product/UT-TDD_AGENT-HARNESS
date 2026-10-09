@@ -36,18 +36,18 @@ status: draft
 github_issue_id: 926
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:9163bdd8f3a7fbd8f5a761072c455cad
-  command_id: plan-revise:issue-926:b-custody-contract:reverse:r4
-  admitted_at: 2026-10-09T04:29:13.122Z
-  source_digest: sha256:12bf68f62db033f8fe2f33fd1fa128e4f1ed37997933ce1692faafa136a35ac1
-  decision_digest: sha256:851506e087b28402dfdf6dac04f49995ce542535f1ff54e6f5df1d64b7d0832b
-  receipt_digest: sha256:49875b011634a80085775e6212441f29f20e2ce0e18ab694b433c83009143003
+  receipt_id: certificate:8ff4c236f20969e326e2b1eb24e094d2
+  command_id: plan-revise:issue-926:b-custody-contract:reverse:r5
+  admitted_at: 2026-10-09T04:48:53Z
+  source_digest: sha256:a16628d79dc0304ce904da178e941ee6967bd82cda31753c888b44a216891d34
+  decision_digest: sha256:376d4c5fc28489b72058307c94c5f84ec225c45e164f40dd0305e804e78bd7de
+  receipt_digest: sha256:f9469fcc86aa875692fa9cb743c439670b9b1779e5dd1b6afa81b0268a5cd678
   binding:
     path: docs/plans/PLAN-REVERSE-465-cross-review-author-binding-backfill.md
     plan_id: PLAN-REVERSE-465-cross-review-author-binding-backfill
     asset_id: plan:legacy:39cf6458a39e9c20e1e650240726fddfe605a90d4a49c98b71c4c082b79b6419
-    revision: 4
-    content_digest: sha256:12bf68f62db033f8fe2f33fd1fa128e4f1ed37997933ce1692faafa136a35ac1
+    revision: 5
+    content_digest: sha256:a16628d79dc0304ce904da178e941ee6967bd82cda31753c888b44a216891d34
   route:
     signal: drift
     mode: reverse
@@ -58,18 +58,18 @@ admission_receipt:
     projection_state: unprojected
   origin:
     plan_id: PLAN-L7-465-cross-review-author-binding
-    revision: 3
+    revision: 4
     digest: sha256:34da7110f126a856f594d28e89b49a08d8d6ad3058d49162a96e0c0352c64b2b
   transition:
     direction: implementation_to_design
     implementation_disposition: preserved
   reentry:
     target_plan_id: PLAN-REVERSE-465-cross-review-author-binding-backfill
-    target_revision: 4
+    target_revision: 5
     phase: forward_merge
-  escape_reason: "Issue #926 Reverse backfill: bind the upstream record to the
-    latest canonical PLAN-L7-465 revision 3 digest without changing the
-    already-aligned contract text."
+  escape_reason: "Issue #926 Reverse corrective revision: bind upstream to Forward
+    revision 4 and retain U-RVMG-024..032 as candidate-only until implementation
+    Red tests exist."
 ---
 
 # PLAN-REVERSE-465: cross-review author binding の上流合流
@@ -92,7 +92,7 @@ PLAN-L7-465 は PLAN-L6-94 契約の L7 実装であり、既存 cross-review �
    (tracked source 唯一の定数 = D 実装 PR HEAD commit の committer date)、merged PR 一覧の
    pagination 終端まで全走査、途中失敗・partial/malformed・終端不能を「検知不能」へ倒す
    fail-close 表示。これらが実装だけが知る条件にならないよう gap-only で L6 契約へ記述する。
-5. **Issue #926 B-wrapper custody-integrity follow-up**: cutoff より厳密に前の既存 receipt は terminal event 要求だけを grandfather し、cutoff と等しい時刻または以後の receipt は nonce / canonical request identity / parsed receipt bytes and digest / verdict bytes and digest / unique exact attempt and canonical path / supersession-conflict 状態の完全 chain を B consumer が独立して検証する。これは family-authority authorization の代替ではない。GUI producer・PR comment の custody 取込・cross-clone distribution は Issue #907 側で別途扱う。
+5. **Issue #926 B-wrapper custody-integrity follow-up**: cutoff より厳密に前の既存 receipt は terminal event 要求だけを grandfather し、cutoff と等しい時刻または以後の receipt は nonce / canonical request identity / parsed receipt bytes and digest / verdict bytes and digest / unique exact attempt and canonical path / supersession-conflict 状態の完全 chain を B consumer が独立して検証する。これは family-authority authorization の代替ではない。GUI producer・PR comment の custody 取込・cross-clone distribution は Issue #907 側で別途扱う。 対応する paired test-design oracle は `CANDIDATE-U-RVMG-024..032` として予約するだけで、正式宣言・実装済み・Green の主張ではない。
 
 ## Schedule
 
