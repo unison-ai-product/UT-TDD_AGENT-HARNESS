@@ -36,17 +36,17 @@ status: draft
 github_issue_id: 926
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:817b6f0bf094c9aabcdd08133353984d
-  command_id: plan-revise:issue-926:b-custody-contract:reverse:r2
-  admitted_at: 2026-10-09T04:22:25.406Z
+  receipt_id: certificate:ec89e42a6fcf522e8910301f5781f098
+  command_id: plan-revise:issue-926:b-custody-contract:reverse:r3
+  admitted_at: 2026-10-09T04:24:21.704Z
   source_digest: sha256:12bf68f62db033f8fe2f33fd1fa128e4f1ed37997933ce1692faafa136a35ac1
-  decision_digest: sha256:c49ffb2c0166f33fad2ac8fa0fe6d34cb41aa6c29d246b0ecae7f100cfe495e8
-  receipt_digest: sha256:a3b228121d5fea96acfaf6f647b69ec6a1e55871a136f92c82e0bc27f35189be
+  decision_digest: sha256:e8340900b414ff8cd922590ab0de3ff4303348da8b8684807b3c304249b57539
+  receipt_digest: sha256:dbfb1064b3632e9ad74375d18618b86936d451c931f866d5ea8f8db99cb10523
   binding:
     path: docs/plans/PLAN-REVERSE-465-cross-review-author-binding-backfill.md
     plan_id: PLAN-REVERSE-465-cross-review-author-binding-backfill
     asset_id: plan:legacy:39cf6458a39e9c20e1e650240726fddfe605a90d4a49c98b71c4c082b79b6419
-    revision: 2
+    revision: 3
     content_digest: sha256:12bf68f62db033f8fe2f33fd1fa128e4f1ed37997933ce1692faafa136a35ac1
   route:
     signal: drift
@@ -59,13 +59,13 @@ admission_receipt:
   origin:
     plan_id: PLAN-L7-465-cross-review-author-binding
     revision: 2
-    digest: sha256:895c5796a635ea99bc4e7133b37c5946d5165c74989998058d50429b28815600
+    digest: sha256:34da7110f126a856f594d28e89b49a08d8d6ad3058d49162a96e0c0352c64b2b
   transition:
     direction: implementation_to_design
     implementation_disposition: preserved
   reentry:
     target_plan_id: PLAN-REVERSE-465-cross-review-author-binding-backfill
-    target_revision: 2
+    target_revision: 3
     phase: forward_merge
   escape_reason: "Issue #926 reverse backfill: align L6 cross-review contracts and
     reverse ACs with PLAN-L7-465's frozen B-wrapper cutoff and terminal-custody
