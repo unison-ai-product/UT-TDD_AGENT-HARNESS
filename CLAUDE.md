@@ -418,8 +418,9 @@ Task-kind ベースの割当 (PO rule 2026-07-14、旧 tier 記述を supersede)
 - Codex: テスト実装 = `gpt-5.6-terra` (effort `middle`); 実装/ドキュメント修正 =
   `gpt-5.6-luna` (effort `high`); 検証/設計 = `gpt-6.1-sol` (effort `low`);
   軽量実装/内部探索/web 検索/doc パッチ = `gpt-5.3-codex-spark` / `gpt-5.4-mini`。
-- Claude: フロントデザイン/設計ドキュメント作成 = Opus (`claude-opus-5`);
-  UI デザイン実装/ドキュメント修正 = Sonnet (`claude-sonnet-5`);
+- Claude: フロントデザイン/UI デザインの判断・レビュー/設計ドキュメント作成 = Opus (`claude-opus-5`);
+  決まった UI デザインの実装/ドキュメント修正 = Sonnet (`claude-sonnet-5`)
+  (指揮モデル別の相談先と委譲先は `.claude/CLAUDE.md` §委譲と判断層 の「あなたが○○なら」の表);
   web 検索/doc パッチ = Haiku (`claude-haiku-4-5`)。
 - Lightweight parallel lanes use spark/mini-class GPT/Codex models with no
   closing authority.

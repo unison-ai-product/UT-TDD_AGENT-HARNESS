@@ -119,8 +119,10 @@ can be recorded.
 
 ## 着手前 advisor 合意形成 (PO ルール 2026-07-28、Claude 固有)
 
-Opus / Sonnet が orchestration を担当するとき、**設計・実装・修正の方式判断は着手前に
-`ut-tdd advisor` で合意形成する**。対象は「trade-off が実在する方式選択」に限る
+Opus が orchestration を担当するとき、**設計・実装・修正の方式判断は着手前に
+`ut-tdd advisor` で合意形成する**。Fable が指揮するときは、設計・進行・UI の判断は自分で決めて記録し
+(advisor の一次が自分自身のため)、技術判断だけ `ut-tdd advisor` で Sol に掛ける。Sonnet が指揮するときの
+相談先は Opus であり、advisor は使わない (§委譲と判断層 の「あなたが○○なら」の表)。対象は「trade-off が実在する方式選択」に限る
 (`docs/governance/design-decision-elicitation.md` と同じ線引き。自明な修正・可逆な作業・
 自力で確定できる事実は対象外)。
 
@@ -156,8 +158,9 @@ trade-off を記録した PLAN とする。spot-check で (a) この対象に該
 
 ## 委譲と判断層 (PO ルール 2026-07-28、Claude 固有)
 
-**作業は下位モデルへ委ねて判断層を厚くする。** orchestrator (Opus / Sonnet) が自分で
-書き下ろすのではなく、創出は worker tier、判断は frontier tier に置く。
+**作業は下位モデルへ委ねて判断層を厚くする。** orchestrator (Fable / Opus) が自分で
+書き下ろすのではなく、創出は worker tier、判断は frontier tier に置く。Sonnet が指揮するときは
+Sonnet 自身が worker tier なので、通常の作業は自分で行う (「あなたが○○なら」の表の Sonnet 行)。
 
 - 文書作成 = Sonnet (`claude-sonnet-5`)。実装 = Codex 側 worker (`gpt-5.6-terra` /
   `gpt-5.6-luna`)。軽量探索・doc パッチ = spark / mini / haiku 級。
@@ -180,9 +183,34 @@ trade-off を記録した PLAN とする。spot-check で (a) この対象に該
   同 PR 内で是正 → Opus が新 exact head を再検。Claude 著 PR では Sol が FLAG → Claude (Sonnet 是正、
   別 session) → Sol が再検 → Claude control lane が wrapper merge。review の族分離は変えない。
 
+### あなたが○○なら (指揮モデル別の振る舞い、PO ルール 2026-10-09)
+
+指揮 (orchestration) を担当するモデルは、自分の行に従う。PO が `/model` でどのモデルを選んでも
+指揮が回るようにするためであり、迷った判断は **1 段上のモデルへ相談する**。
+
+| あなたが | 迷った判断・難所 | レビュー・UI デザイン判断 | 通常の作業 | 軽い作業 |
+|---|---|---|---|---|
+| Fable | 自分で決めて記録する。技術判断だけ Sol に相談する (`ut-tdd advisor`) | Opus の subagent | Sonnet | Haiku |
+| Opus | `ut-tdd advisor` で相談する。設計・進行・UI は Fable、技術判断は Sol (Model / Effort Routing の振り分けどおり) | 自分、または Opus の subagent | Sonnet | Haiku |
+| Sonnet | Opus に相談する (Agent tool で Opus の subagent を呼ぶ) | Opus の subagent | 自分 | Haiku |
+| Haiku | 指揮をしない。判断が出たら Sonnet に相談する | ― | ― | 自分 |
+
+- 「通常の作業」は文書作成・決まった型での issue / PR 返信・決まった UI デザインの実装、「軽い作業」は
+  gh の状態確認・grep・CI の見張り・ログの要約。
+- どの行でも変えないもの: モデル割当は Model / Effort Routing (`../CLAUDE.md`) と
+  `src/team/delegation-routing.ts` の機械強制に従う。review の族分離 (Codex 著 → Claude Opus、
+  Claude 著 → Codex Sol) は指揮モデルに依らない。PO へ上げてよい条件は `../CLAUDE.md`
+  §PO 判断への反射的エスカレーション禁止 のまま (相談しても割れた trade-off と高影響境界だけ)。
+- 根拠 (2026-10-09 実測): Sonnet で control lane を回した間に、古い wake 通知への 1 行返事に
+  数十ターンを使い、自分で決めるべき canary.7 の時期を PO に尋ね、#939 の再検が遅れた。
+  1 段上へ相談する経路が無かったことが原因である。
+- ルールであって機械強制ではない。同じ失敗が再発したら、SessionStart で指揮モデルの行を表示する
+  仕組みを検討する。
+
 ### 唯一の回避条件: 利用上限による停止
 
-上記の委譲・cross-review 構造を外してよいのは、**担当すべき family / tier のモデルが
+上記の委譲・cross-review 構造を外してよいのは (「あなたが○○なら」の表の Sonnet 行の自己実行は
+委譲構造の一部であり、ここでいう回避ではない)、**担当すべき family / tier のモデルが
 利用上限 (rate / usage cap) で停止していて実行できないときだけ**。それ以外の理由
 (急ぎ・面倒・コスト・自分で書いた方が速い) は回避理由にならない。
 
