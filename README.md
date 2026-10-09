@@ -214,7 +214,7 @@ Claude Code (VS Code 拡張を含む) と Codex の hook も、この runtime �
 
 > [!WARNING]
 > **いまの canary 版の制約** (どちらも修正予定です)
-> - release asset から入れた環境では、`ut-tdd status` の更新通知が動きません。`update: check skipped (harness package.json unreadable)` と表示されます ([#929](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/929))。
+> - release asset から入れた環境では、`ut-tdd status` の更新通知が動きません。`update: check skipped (harness package.json unreadable)` と表示されます ([#867](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/867))。
 > - 一度入れた runtime を、新しい版の asset で上書きすることはできません。setup が `consumer_runtime_update_unsupported` で止まり、元の版のまま残ります ([#930](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/930))。
 >
 > 新しい版を試すときは、まだ入れていない repository (または新しい clone) に入れてください。
@@ -434,7 +434,7 @@ rules are enforced by schema, lint, doctor gates, and hooks — not by prose.
   Afterwards use `node .ut-tdd/bin/ut-tdd.mjs <command>`. Only Node.js 24 is
   needed; no `npm ci`.
 - **Known canary limits**: the `status` update notice does not work for
-  release-asset installs (#929), and an installed runtime cannot yet be
+  release-asset installs (#867), and an installed runtime cannot yet be
   upgraded in place (#930). Watch the Pack repository's Releases instead.
 - **Bug reports**: open an issue on the Pack repository with the version, OS,
   `node -v`, the exact command, the full output, and the steps to reproduce.

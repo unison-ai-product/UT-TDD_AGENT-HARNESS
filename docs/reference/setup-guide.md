@@ -87,7 +87,7 @@ node .ut-tdd/bin/ut-tdd.mjs setup --dry-run --team --tl-team @org/tl --qa-team @
 GitHub で Pack リポジトリを **Watch → Custom → Releases** に設定しておくと、公開したときに通知が届きます。
 
 > **いまの canary 版の制約** (どちらも修正予定です)
-> - release asset から入れた環境では、`ut-tdd status` の更新通知が動きません。`update: check skipped (harness package.json unreadable)` と表示されます ([#929](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/929))。新しい版は、上の Watch で知ってください。
+> - release asset から入れた環境では、`ut-tdd status` の更新通知が動きません。`update: check skipped (harness package.json unreadable)` と表示されます ([#867](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/867))。新しい版は、上の Watch で知ってください。
 > - 一度入れた runtime を、新しい版の asset で上書きすることはできません。setup が `consumer_runtime_update_unsupported` で止まり、元の版のまま残ります ([#930](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/930))。新しい版を試すときは、まだ入れていない repository (または新しい clone) に入れてください。
 
 ## 4. setup を流し直したとき
