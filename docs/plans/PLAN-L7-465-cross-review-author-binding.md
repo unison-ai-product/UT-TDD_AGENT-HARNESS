@@ -129,17 +129,17 @@ status: confirmed
 github_issue_id: 926
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:5cd8cb368a6b25c1f356f614c7c1fd8b
-  command_id: plan-revise:issue-926:b-custody-contract:forward:flag2-closed-grandfather-allowlist
-  admitted_at: 2026-10-09T07:05:02Z
+  receipt_id: certificate:009a3be26c65b94cec00efa88bd7f94e
+  command_id: plan-revise:issue-926:b-custody-contract:forward:flag2-origin-projection-digest
+  admitted_at: 2026-10-09T07:06:50Z
   source_digest: sha256:19947f4d46e827ffe4f16475bc21656975a274e765376f3b8bdf807455fb58d1
-  decision_digest: sha256:580855a43fd65739eb6a8c773413fd817617c3aaa41963bc6dab2838471199f4
-  receipt_digest: sha256:265b85ed9a79dc2f368b8fa33c13c8b0726316ef1b06416386702e3b1f7ece76
+  decision_digest: sha256:3e45210b8c6f029ce05b46ad274dd9d7aa14eb46d892a3c54d2f9baf09989798
+  receipt_digest: sha256:8bbbda29c78169b9fa703f5ed1d8cc90a5a8b5e135658bcc29281cc24c8ae348
   binding:
     path: docs/plans/PLAN-L7-465-cross-review-author-binding.md
     plan_id: PLAN-L7-465-cross-review-author-binding
     asset_id: plan:legacy:9900b987be73e3200e372b9b412613f302398d1bcd1f68f6727833b99226434d
-    revision: 3
+    revision: 4
     content_digest: sha256:19947f4d46e827ffe4f16475bc21656975a274e765376f3b8bdf807455fb58d1
   route:
     signal: feature_addition
@@ -152,14 +152,13 @@ admission_receipt:
   origin:
     plan_id: PLAN-L7-465-cross-review-author-binding
     revision: 2
-    digest: sha256:34da7110f126a856f594d28e89b49a08d8d6ad3058d49162a96e0c0352c64b2b
+    digest: sha256:7c746e946c6b5d9650d87cc7b5f0933d07f80b7f9afa1bebc1635b28baffffb4
   reentry:
     target_plan_id: PLAN-L7-465-cross-review-author-binding
-    target_revision: 3
+    target_revision: 4
     phase: forward_merge
-  escape_reason: "Issue #926 FLAG2 correction: grandfather only exact
-    inventory-reproduced receipt bytes and bind Reverse to the corrected Forward
-    projection receipt."
+  escape_reason: "Issue #926 FLAG2 correction: bind this Forward admission origin
+    to revision 2 projection content_digest, not revision-digest."
 ---
 
 # PLAN-L7-465 (add-impl): cross-review セッション実在照合の実装

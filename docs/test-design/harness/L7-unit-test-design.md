@@ -1628,7 +1628,7 @@ exact current HEADへ投影する境界を検証する。
 `tests/review-merge-gate.test.ts`。D1 `merge_ready` の exact HEAD 判定を B 面の正規 merge 経路へ
 束縛し、deny receipt の verdict は判定 entry へ束縛するか、特定不能時は null とする。
 
-Issue #926 の `CANDIDATE-U-RVMG-024..032` は契約上の候補 oracle 宣言であり、実装済みまたは Green を意味しない。この契約改訂に production 実装は含まない。
+Issue #926 の custody oracle 行は契約上の候補宣言であり、実装済みまたは Green を意味しない。この契約改訂に production 実装は含まない。
 
 | ID | mutation / fixture | expected |
 |---|---|---|
@@ -1655,15 +1655,17 @@ Issue #926 の `CANDIDATE-U-RVMG-024..032` は契約上の候補 oracle 宣言�
 | `U-RVMG-021` | 先頭 page は正常、2 ページ目だけに receipt 無し merge を置く | pagination 全走査で 2 ページ目の `bypass_merge` を検知する |
 | `U-RVMG-022` | 同一 page の反復と `MAX_MERGED_PR_PAGES` 個の full page を投入 | 無限 loop を起こさず、上限到達を「検知不能」にする |
 | `U-RVMG-023` | HTTP 成功 page の merge commit SHA / mergedAt / PR 番号等を欠落・不正化 | 必須 field 欠落・malformed は部分結果を green に丸めず「検知不能」にする |
-| `CANDIDATE-U-RVMG-024` | receipt `at` が `2026-09-16T09:51:00Z` より厳密に前の既存 exact-HEAD PASS と、attempt terminal event のない fixture | legacy receipt は新しい terminal-custody 条件だけを grandfather し、既存 D1 の exact-HEAD / non-author 判定を保って merge を許可する |
+| `CANDIDATE-U-RVMG-024` | #914 inventory から再現した allowlisted raw receipt digest と `at < 2026-09-16T09:51:00Z` の既存 exact-HEAD PASS、attempt terminal event のない fixture | exact raw-byte digest と strict pre-cutoff 時刻の双方が一致する場合のみ新しい terminal-custody 条件を grandfather し、既存 D1 の exact-HEAD / non-author 判定を保って merge を許可する |
 | `CANDIDATE-U-RVMG-025` | receipt `at` が cutoff と等しい (または後) で `attempt_completed` が無い fixture | 境界時刻は grandfather せず wrapper が deny、merge 0 |
 | `CANDIDATE-U-RVMG-026` | cutoff 以後の request / receipt / verdict / terminal attempt が全て同一 nonce・request identity・attempt に束縛された exact-HEAD PASS | end-to-end custody consumer が chain 全体を検証したときだけ merge を許可する |
-| `CANDIDATE-U-RVMG-027` | `CANDIDATE-U-RVMG-026` の完全 fixture から invocation nonce だけを別値へ変異 | nonce を同じ request/verdict chain に結合できず deny、merge 0 |
-| `CANDIDATE-U-RVMG-028` | `CANDIDATE-U-RVMG-026` の完全 fixture から request digest / PR / exact HEAD / memory ID / review revision のいずれか 1 項目だけを変異 | identity mismatch を deny、merge 0。別 request / HEAD の event を流用できない |
-| `CANDIDATE-U-RVMG-029` | `CANDIDATE-U-RVMG-026` の完全 fixtureから receipt bytes だけを変更 | `receiptFileDigest` と event が一致せず deny、merge 0 |
-| `CANDIDATE-U-RVMG-030` | `CANDIDATE-U-RVMG-026` の完全 fixtureから verdict bytes / verdict digest だけを変更 | terminal event と composed verdict artifact の不一致を deny、merge 0 |
-| `CANDIDATE-U-RVMG-031` | `CANDIDATE-U-RVMG-026` の完全 fixtureから attempt number または canonical verdict path だけをずらす | exact attempt binding が崩れ deny、merge 0 |
-| `CANDIDATE-U-RVMG-032` | `CANDIDATE-U-RVMG-026` の完全 fixtureへ対象 attempt の superseded / outcome-conflict event を1件追加 | 当該 attempt は terminal として消費せず deny、merge 0 |
+| `CANDIDATE-U-RVMG-027` | invocation nonce だけを別値へ変異した正常系 fixture | nonce を同じ request/verdict chain に結合できず deny、merge 0 |
+| `CANDIDATE-U-RVMG-028` | request digest / PR / exact HEAD / memory ID / review revision のいずれか 1 項目だけを変異した正常系 fixture | identity mismatch を deny、merge 0。別 request / HEAD の event を流用できない |
+| `CANDIDATE-U-RVMG-029` | receipt bytes だけを変更した正常系 fixture | `receiptFileDigest` と event が一致せず deny、merge 0 |
+| `CANDIDATE-U-RVMG-030` | verdict bytes / verdict digest だけを変更した正常系 fixture | terminal event と composed verdict artifact の不一致を deny、merge 0 |
+| `CANDIDATE-U-RVMG-031` | attempt number または canonical verdict path だけをずらした正常系 fixture | exact attempt binding が崩れ deny、merge 0 |
+| `CANDIDATE-U-RVMG-032` | 正常系 fixtureへ対象 attempt の superseded / outcome-conflict event を1件追加 | 当該 attempt は terminal として消費せず deny、merge 0 |
+| `CANDIDATE-U-RVMG-033` | 許可正常系 fixtureの allowlisted receipt raw bytes を1 byteだけ変更し、変更後 digest が allowlist にない fixture | allowlist digest の完全一致を要求し、1-byte mutation を deny、merge 0 |
+| `CANDIDATE-U-RVMG-034` | allowlist 外 receipt の `at` だけを cutoff より前へ backdate し、attempt terminal event を欠く fixture | 自己申告時刻だけでは grandfather せず wrapper が deny、merge 0 |
 
 ## Claude HARNESS memory async wake oracle (2026-08-03)
 
