@@ -100,7 +100,7 @@ describe("Claude HARNESS memory async wake", () => {
         repoRoot: root,
         sessionId: "own-session",
         pollIntervalMs: 10,
-        maxWaitMs: 30_000,
+        maxWaitMs: 100,
       });
       expect(result.kind).toBe("delivered");
       expect(result.entry?.id).toBe(own.id);
@@ -124,7 +124,75 @@ describe("Claude HARNESS memory async wake", () => {
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
-  }, 60_000);
+  });
+
+  it("U-PMEMROOT-007補遺: 50件のforeign通知後に自session通知をboundedで配送する", async () => {
+    const root = fixture();
+    try {
+      const project = resolveProjectMemoryRoot(root);
+      if (!project.ok) throw new Error(project.reason);
+      const common = {
+        memory,
+        projectId: project.projectId,
+        workspaceId: claudeWorkspaceId(root),
+        producer: { provider: "codex" as const, sessionId: "producer" },
+      };
+      const foreign = Array.from({ length: 50 }, (_, index) =>
+        buildClaudeProviderInboxEntry({
+          ...common,
+          operationId: `foreign-${index}`,
+          target: { scope: "session", provider: "claude", sessionId: `other-${index}` },
+          now: new Date(Date.parse("2026-10-08T00:00:00.000Z") + index * 1_000).toISOString(),
+        }),
+      );
+      const own = buildClaudeProviderInboxEntry({
+        ...common,
+        operationId: "own-after-foreign-fanout",
+        target: { scope: "session", provider: "claude", sessionId: "own-session" },
+        now: "2026-10-08T00:01:00.000Z",
+      });
+      const runtime = wakeRuntimeRoot(root);
+      const inbox = join(runtime, "inbox");
+      const bindings = join(runtime, "envelope-bindings");
+      mkdirSync(inbox, { recursive: true });
+      mkdirSync(bindings, { recursive: true });
+      for (const entry of [...foreign, own]) {
+        const stem = inboxFileStem(entry.id);
+        writeFileSync(join(inbox, `${stem}.json`), `${JSON.stringify(entry)}\n`, "utf8");
+        writeFileSync(
+          join(bindings, `${stem}.json`),
+          `${JSON.stringify({
+            schemaVersion: "ut-tdd.claude-provider-binding/v1",
+            entryId: entry.id,
+            projectId: entry.projectId,
+            memoryId: entry.memoryId,
+            operationId: entry.operationId,
+            producer: entry.producer,
+            target: entry.target,
+            envelopeDigest: entry.envelopeDigest,
+          })}\n`,
+          "utf8",
+        );
+      }
+
+      const started = Date.now();
+      const result = await waitForClaudeMemory({
+        repoRoot: root,
+        sessionId: "own-session",
+        pollIntervalMs: 10,
+        maxWaitMs: 5_000,
+      });
+
+      expect(result.kind).toBe("delivered");
+      expect(result.entry?.id).toBe(own.id);
+      expect(Date.now() - started).toBeLessThan(5_000);
+      expect(
+        foreign.every((entry) => existsSync(join(inbox, `${inboxFileStem(entry.id)}.json`))),
+      ).toBe(true);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  }, 15_000);
 
   it("U-PMEMROOT-007: provider envelope rejects each binding axis independently", async () => {
     const root = fixture();
