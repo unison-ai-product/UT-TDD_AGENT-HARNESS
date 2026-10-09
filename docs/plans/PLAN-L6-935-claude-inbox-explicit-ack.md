@@ -47,18 +47,18 @@ sub_doc: function-spec
 github_issue_id: 935
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:cb55482d6baf9e4b276b9f3f25cb93f0
-  command_id: plan-revise:issue-935:ack-descriptor-hol-flag-20261009-r2
-  admitted_at: 2026-10-09T06:05:42Z
-  source_digest: sha256:1bf9c7546e9ab7d3c8ff17c3f0cc6075cfc698452cee3ebe8c8a6b399db3a3c2
+  receipt_id: certificate:c22c41a4e744248f8f2b980ef4f873a9
+  command_id: plan-revise:issue-935:ack-descriptor-hol-flag-upstream-digests-20261009-r3
+  admitted_at: 2026-10-09T06:09:02Z
+  source_digest: sha256:3690f01debf16e908b6f4c1cd07dcd30ed1bca38a1ca09219264989280ca6d32
   decision_digest: sha256:02214dcc4b691a48ef7f3c9cefee33416551c6b3a9cf5cfec64d1badb6879052
-  receipt_digest: sha256:55ad8e6cf890402c7af5cda2da760d085ab7069fc30f0b783aa559af1f6cdeb6
+  receipt_digest: sha256:8b157fcacf9f76f2ba4f932de39e6b482c1b3b2e6e45fbacfc65999804e33fdd
   binding:
     path: docs/plans/PLAN-L6-935-claude-inbox-explicit-ack.md
     plan_id: PLAN-L6-935-claude-inbox-explicit-ack
     asset_id: plan:c5d545dfdce9219f6a26e0c008657605
-    revision: 2
-    content_digest: sha256:1bf9c7546e9ab7d3c8ff17c3f0cc6075cfc698452cee3ebe8c8a6b399db3a3c2
+    revision: 3
+    content_digest: sha256:3690f01debf16e908b6f4c1cd07dcd30ed1bca38a1ca09219264989280ca6d32
   route:
     signal: feature_addition
     mode: add-feature
@@ -84,6 +84,8 @@ admission_receipt:
 
 - `docs/plans/PLAN-L7-472-claude-memory-async-wake.md@0a1856e01d242e08bb9c33ad7660301689bc9496` sha256:3946926af018adf4db1955e3307d9e97c28565d0bd04fe319d0f6f69579bcd66
 - `docs/plans/PLAN-REVERSE-600-claude-inbox-terminal-gc.md@0a1856e01d242e08bb9c33ad7660301689bc9496` sha256:ffe627dad02a4ce1ba35f00a906082b214382473f920a723d21f421cd17466d7
+- `docs/design/harness/L6-function-design/claude-inbox-explicit-ack.md@8279a3fa73ec66c270c18562cc19d74fd2f7214e` sha256:4b05e76d69406497ab25985fba6eab65c4a1329e6032dfa4d1617915e0cb1499
+- `docs/test-design/harness/L7-claude-inbox-explicit-ack-test-design.md@8279a3fa73ec66c270c18562cc19d74fd2f7214e` sha256:0336d078b36ccf6396f6a24b53d47119193544f5dacbfa5a700d3e5a31fa3077
 
 ## 引き渡し物
 
