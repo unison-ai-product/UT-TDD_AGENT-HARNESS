@@ -10,7 +10,7 @@ created: 2026-10-09
 updated: 2026-10-09
 owner: Codex (契約起草) / Claude control (review・merge)
 parent_design: docs/plans/PLAN-L7-472-claude-memory-async-wake.md
-pair_artifact: docs/test-design/harness/L7-claude-inbox-explicit-ack-test-design.md
+pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 next_pair_freeze: L7
 agent_slots:
   - role: tl
@@ -38,6 +38,7 @@ dependencies:
   references:
     - docs/plans/PLAN-REVERSE-600-claude-inbox-terminal-gc.md
     - docs/design/harness/L6-function-design/claude-inbox-explicit-ack.md
+    - docs/test-design/harness/L7-unit-test-design.md
     - docs/test-design/harness/L7-claude-inbox-explicit-ack-test-design.md
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/935
 review_evidence: []
@@ -46,18 +47,18 @@ sub_doc: function-spec
 github_issue_id: 935
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:7f89c92e59ccf2144cdf2b6e98837a0b
-  command_id: plan-revise:issue-935:inbox-explicit-ack:test-design-l7-name-20261009
-  admitted_at: 2026-10-09T04:38:40Z
-  source_digest: sha256:82d828d576d068941d73169610f7ba8d2eed84f45719d939163f9ab357e96e3b
+  receipt_id: certificate:c5d545dfdce9219f6a26e0c008657605
+  command_id: plan-draft:issue-935:inbox-explicit-ack:main-tail-20261009-r1
+  admitted_at: 2026-10-09T05:04:00Z
+  source_digest: sha256:1bf9c7546e9ab7d3c8ff17c3f0cc6075cfc698452cee3ebe8c8a6b399db3a3c2
   decision_digest: sha256:02214dcc4b691a48ef7f3c9cefee33416551c6b3a9cf5cfec64d1badb6879052
-  receipt_digest: sha256:9f0c3220f909ef20a5928cc66ebc65057a2b8166ef0174cacbbe0e9af96f86d2
+  receipt_digest: sha256:9c6e011527a2b42f68fd1b73b3ee823e1a7a06cec639bfab7847ce747c416333
   binding:
     path: docs/plans/PLAN-L6-935-claude-inbox-explicit-ack.md
     plan_id: PLAN-L6-935-claude-inbox-explicit-ack
-    asset_id: plan:9c94a88935a538fb529cc198148f03fd
-    revision: 2
-    content_digest: sha256:82d828d576d068941d73169610f7ba8d2eed84f45719d939163f9ab357e96e3b
+    asset_id: plan:c5d545dfdce9219f6a26e0c008657605
+    revision: 1
+    content_digest: sha256:1bf9c7546e9ab7d3c8ff17c3f0cc6075cfc698452cee3ebe8c8a6b399db3a3c2
   route:
     signal: feature_addition
     mode: add-feature
@@ -87,11 +88,12 @@ admission_receipt:
 ## 引き渡し物
 
 - `docs/design/harness/L6-function-design/claude-inbox-explicit-ack.md`
-- `docs/test-design/harness/L7-claude-inbox-explicit-ack-test-design.md`
+- `docs/test-design/harness/L7-unit-test-design.md` (shared L7 candidate registry)
+- `docs/test-design/harness/L7-claude-inbox-explicit-ack-test-design.md` (individual detailed pair)
 
 ## 検証の対
 
-上記設計文書とcandidate test-designを対にする。契約本文は設計文書のみを正本とする。
+shared L7 registry のファイル名節と candidate IDs、および個別詳細 pair を検証の対として扱う。契約本文は設計文書のみを正本とする。
 
 ## 完了条件
 
