@@ -7392,6 +7392,22 @@
         "revision": 3,
         "content_digest": "sha256:a16628d79dc0304ce904da178e941ee6967bd82cda31753c888b44a216891d34"
       }
+    },
+    {
+      "sequence": 463,
+      "previous_record_digest": "sha256:9e6c11a08d6fb2481750d64e96bef9632719f16de37837817d7effb63c439897",
+      "record_digest": "sha256:0435ce92f7b8e9464cdf00284a10d6b38a00f35abdc49dafd5beb7ea07a2468e",
+      "command_id": "plan-revise:issue-926:b-custody-contract:forward:flag2-closed-grandfather-allowlist",
+      "receipt_id": "certificate:5cd8cb368a6b25c1f356f614c7c1fd8b",
+      "receipt_digest": "sha256:265b85ed9a79dc2f368b8fa33c13c8b0726316ef1b06416386702e3b1f7ece76",
+      "decision_digest": "sha256:580855a43fd65739eb6a8c773413fd817617c3aaa41963bc6dab2838471199f4",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-465-cross-review-author-binding.md",
+        "plan_id": "PLAN-L7-465-cross-review-author-binding",
+        "asset_id": "plan:legacy:9900b987be73e3200e372b9b412613f302398d1bcd1f68f6727833b99226434d",
+        "revision": 3,
+        "content_digest": "sha256:19947f4d46e827ffe4f16475bc21656975a274e765376f3b8bdf807455fb58d1"
+      }
     }
   ]
 }
