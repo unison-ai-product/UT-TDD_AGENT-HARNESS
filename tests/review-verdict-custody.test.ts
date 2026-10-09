@@ -661,21 +661,23 @@ const fault = vi.hoisted(() => ({ path: "", mode: "none", parsed: false }));
 vi.mock("node:fs", async (importOriginal) => {
   const actual = await importOriginal<typeof import("node:fs")>();
   const read: typeof actual.readFileSync = ((path, options) => {
+    if (String(path) === fault.path && !fault.parsed && fault.mode === "initial-unreadable") {
+      fault.parsed = true;
+      throw Object.assign(new Error("injected first-read failure"), { code: "EACCES" });
+    }
     if (String(path) === fault.path && fault.parsed && fault.mode === "unreadable") {
       throw Object.assign(new Error("injected second-read failure"), { code: "EACCES" });
     }
     const result = actual.readFileSync(path, options);
-    if (String(path) === fault.path && fault.mode === "replace" && !fault.parsed) {
-      fault.parsed = true;
-      const original = actual.readFileSync(fault.path);
-      actual.writeFileSync(
-        fault.path,
-        original.toString("utf8").replace("VERDICT: PASS", "VERDICT: FLAG"),
-      );
-    }
-    if (String(path) === fault.path && options === "utf8" && !fault.parsed) {
+    if (String(path) === fault.path && !fault.parsed) {
       fault.parsed = true;
       if (fault.mode === "delete") actual.unlinkSync(fault.path);
+      if (fault.mode === "replace") {
+        actual.writeFileSync(
+          fault.path,
+          result.toString("utf8").replace("VERDICT: PASS", "VERDICT: FLAG"),
+        );
+      }
     }
     return result;
   }) as typeof actual.readFileSync;
@@ -777,10 +779,11 @@ describe("Issue #914: strict verdict second-read custody regression", () => {
     });
   });
 
-  it("binds the receipt verdictDigest to the exact bytes parsed when PASS is replaced by FLAG", () => {
+  it("rejects a PASS-to-FLAG replacement before receipt/audit/link", () => {
     const { root, request, attestation, path } = fixture();
     const originalBytes = readFileSync(path);
     const expectedDigest = createHash("sha256").update(originalBytes).digest("hex");
+    const before = readReviewCustodyAudit(root);
     fault.path = path;
     fault.mode = "replace";
 
@@ -790,14 +793,17 @@ describe("Issue #914: strict verdict second-read custody regression", () => {
       attestation,
       verdictFile: path,
     });
-    const completed = readReviewCustodyAudit(root).find(
-      (event) => event.kind === "attempt_completed",
-    );
+    fault.path = "";
+    const merge = measureMerge(root, request.exactHead);
 
     expect(fault.parsed).toBe(true);
     expect(readFileSync(path, "utf8")).toContain("VERDICT: FLAG");
-    expect(projected).toMatchObject({ ok: true, receipt: { verdict: "PASS" } });
-    expect(completed?.verdictDigest).toBe(expectedDigest);
+    expect(createHash("sha256").update(readFileSync(path)).digest("hex")).not.toBe(expectedDigest);
+    expect(projected).toEqual({ ok: false, reason: "receipt_write_failed" });
+    expect(merge).toMatchObject({ result: { ok: false }, mutations: 0 });
+    expect(readReviewCustodyAudit(root)).toEqual(before);
+    const receipts = join(root, ".ut-tdd", "review", "receipts");
+    expect(existsSync(receipts) ? readdirSync(receipts) : []).toEqual([]);
   });
 
   it.each([
@@ -827,6 +833,27 @@ describe("Issue #914: strict verdict second-read custody regression", () => {
     expect(merge).toMatchObject({ result: { ok: false }, mutations: 0 });
     expect(projected).toEqual({ ok: false, reason: "receipt_write_failed" });
     expect(readReviewCustodyAudit(root)).toEqual(before);
+    const receipts = join(root, ".ut-tdd", "review", "receipts");
+    expect(existsSync(receipts) ? readdirSync(receipts) : []).toEqual([]);
+  });
+
+  it("returns verdict_file_unreadable when the initial verdict read fails", () => {
+    const { root, request, attestation, path } = fixture();
+    fault.path = path;
+    fault.mode = "initial-unreadable";
+
+    const projected = projectReviewVerdict({
+      repoRoot: root,
+      request,
+      attestation,
+      verdictFile: path,
+    });
+    fault.path = "";
+    const merge = measureMerge(root, request.exactHead);
+
+    expect(fault.parsed).toBe(true);
+    expect(projected).toEqual({ ok: false, reason: "verdict_file_unreadable" });
+    expect(merge).toMatchObject({ result: { ok: false }, mutations: 0 });
     const receipts = join(root, ".ut-tdd", "review", "receipts");
     expect(existsSync(receipts) ? readdirSync(receipts) : []).toEqual([]);
   });
