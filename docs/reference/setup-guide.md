@@ -12,7 +12,7 @@
 |---|---|---|
 | **Node.js 24** | `node -v` | 必須。release asset はこの Node だけで動きます (`npm ci` は不要) |
 | **git** | `git --version` | 必須 |
-| 入れる先の git repository と **origin remote** | `git remote -v` | 必須。origin が無いと、setup は exit 2 (`identity_repository_unbound`) で終わります |
+| 入れる先の git repository と **origin remote** | `git remote -v` | 必須。origin が無いと、setup は runtime を入れたうえで exit 2 (`identity_repository_unbound`) で終わります (§5) |
 | Claude Code CLI / VS Code の Claude 拡張 | `claude --version` | 任意。Claude の hook と委譲を使う場合 |
 | Codex CLI | `codex --version` | 任意。Codex の委譲と、Claude との相互 review を使う場合 |
 
@@ -23,7 +23,7 @@
 
 ## 1. 導入 (release asset から入れる)
 
-1. [Releases](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS-Pack/releases) から、使いたい版の asset を 5 つともダウンロードし、同じフォルダに置きます。
+1. [Releases](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS-Pack/releases) から、使いたい版の asset を 5 つともダウンロードし、**新しく作った空のフォルダ**に置きます。そのフォルダには、この 5 つ以外のファイルを置かないでください (ほかのファイルがあると、setup が `consumer_runtime_asset_set_mismatch` で止まります)。
 
    | asset | 中身 |
    |---|---|
@@ -33,14 +33,14 @@
    | `<版>.tar.gz` | Pack の配布物一式 |
    | `<版>.tar.gz.sha256` | 配布物一式の SHA-256 |
 
-2. 入れたい repository で、次を実行します。`<consumer anchor>` には、その版の release notes にある consumer anchor (`sha256:...`) を入れてください。
+2. 入れたい repository で、次を実行します (Windows の PowerShell でもそのまま使えるように、1 行で書いています)。`<consumer anchor>` には、その版の release notes にある consumer anchor (`sha256:...`) を入れてください。
 
 ```sh
 echo ".ut-tdd/" >> .git/info/exclude   # runtime の状態を git の差分に出さない
-node <フォルダ>/<版>.ut-tdd.mjs setup --solo \
-  --consumer-runtime-release <フォルダ> \
-  --expected-consumer-digest <consumer anchor>
+node <フォルダ>/<版>.ut-tdd.mjs setup --solo --consumer-runtime-release <フォルダ> --expected-consumer-digest <consumer anchor>
 ```
+
+Windows PowerShell では、1 行目の代わりに `Add-Content -Encoding ascii .git/info/exclude ".ut-tdd/"` を使ってください (`>>` だと UTF-16 で書き込まれ、git が読めません)。
 
 setup は、asset の SHA-256 が consumer anchor と一致することを最初に確かめます。一致しない場合は
 `consumer_runtime_anchor_mismatch` を出して exit 1 で止まり、ファイルを 1 つも書きません。
@@ -55,7 +55,13 @@ setup が作るもの:
 
 作られたファイルは、確認してから commit してください。
 
-チーム開発で使う場合は、`--solo` の代わりに `--team --tl-team @org/tl --qa-team @org/qa --po-team @org/po` を指定します。
+release asset からの導入 (`--consumer-runtime-release`) は `--solo` だけに対応しています (`--team` や `--dry-run` と一緒に指定すると exit 1 で止まります)。
+チーム開発で使う場合は、上の手順で導入したあとに、launcher で次を実行します。まず `--dry-run` を付けて書き込む内容を確かめ、問題なければ `--dry-run` を外して実行してください。
+
+```sh
+node .ut-tdd/bin/ut-tdd.mjs setup --dry-run --team --tl-team @org/tl --qa-team @org/qa --po-team @org/po
+```
+
 3 つのチームは必ずセットで指定してください。ブランチ保護は既定では出力するだけで、適用は人の手で行います。
 
 ## 2. 動作確認チェックリスト
@@ -95,7 +101,8 @@ GitHub で Pack リポジトリを **Watch → Custom → Releases** に設定�
 | 症状 | 原因と対処 |
 |---|---|
 | setup が `consumer_runtime_anchor_mismatch` で止まる | `--expected-consumer-digest` の値が、その版の release notes の consumer anchor と違います。asset が途中で壊れていないかも確認してください。ファイルは 1 つも書かれていません |
-| setup が exit 2 で `identity_repository_unbound` と出る | origin remote がありません。`git remote add origin <url>` のあと、setup を流し直してください |
+| setup が exit 2 で `identity_repository_unbound` と出る | origin remote がありません。runtime はすでに入っているので、最初の導入コマンドを流し直しても `already installed` で終わるだけです。`git remote add origin <url>` のあと、`node .ut-tdd/bin/ut-tdd.mjs setup --solo` を実行してください。案内が出たら、`ut-tdd.project.json` を commit します |
+| setup が `consumer_runtime_asset_set_mismatch` で止まる | asset を置いたフォルダに、5 つの asset 以外のファイルがあります。5 つだけを入れた空のフォルダを使ってください |
 | setup が `consumer_runtime_update_unsupported` で止まる | すでに別の版の runtime が入っています。§3 の制約を見てください |
 | setup が止まっているように見える | 対話シェルで、上書きの確認 (`[y/N]`) を待っています。Enter (=N) を押せば、既存のファイルを残したまま進みます |
 | フラグなしの `doctor` が exit 1 | 異常ではありません (§2)。導入の判定は `doctor --setup-smoke` で行ってください |

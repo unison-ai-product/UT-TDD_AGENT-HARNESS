@@ -163,20 +163,20 @@ worker と reviewer を**別 provider**(Codex ↔ Claude)に割り当て、同�
 
 いま使っているリポジトリに入れる手順です (Pack の clone と `npm ci` は不要で、必要なのは Node.js 24 だけです)。
 
-1. [Releases](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS-Pack/releases) から、使いたい版の asset を 5 つともダウンロードして、同じフォルダに置きます。
+1. [Releases](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS-Pack/releases) から、使いたい版の asset を 5 つともダウンロードして、**新しく作った空のフォルダ**に置きます。そのフォルダには、この 5 つ以外のファイルを置かないでください (ほかのファイルがあると、setup が `consumer_runtime_asset_set_mismatch` で止まります)。
    - `<版>.ut-tdd.mjs`
    - `<版>.consumer-runtime.json`
    - `<版>.consumer.sha256`
    - `<版>.tar.gz`
    - `<版>.tar.gz.sha256`
-2. 入れたいリポジトリで、次を実行します。`<consumer anchor>` には、その版の release notes にある consumer anchor (`sha256:...`) を入れてください。
+2. 入れたいリポジトリで、次を実行します (Windows の PowerShell でもそのまま使えるように、1 行で書いています)。`<consumer anchor>` には、その版の release notes にある consumer anchor (`sha256:...`) を入れてください。
 
 ```sh
 echo ".ut-tdd/" >> .git/info/exclude   # runtime の状態を git の差分に出さない
-node <フォルダ>/<版>.ut-tdd.mjs setup --solo \
-  --consumer-runtime-release <フォルダ> \
-  --expected-consumer-digest <consumer anchor>
+node <フォルダ>/<版>.ut-tdd.mjs setup --solo --consumer-runtime-release <フォルダ> --expected-consumer-digest <consumer anchor>
 ```
+
+Windows PowerShell では、1 行目の代わりに `Add-Content -Encoding ascii .git/info/exclude ".ut-tdd/"` を使ってください (`>>` だと UTF-16 で書き込まれ、git が読めません)。
 
 setup は、asset の SHA-256 が consumer anchor と一致することを確かめてから、runtime を `.ut-tdd/` に入れます。
 一致しなければ、何も書かずに止まります。入ったあとは、リポジトリの中で `node .ut-tdd/bin/ut-tdd.mjs <command>` を使います。
@@ -199,7 +199,8 @@ Claude Code (VS Code 拡張を含む) と Codex の hook も、この runtime �
 | ブランチ保護まで適用 | `ut-tdd setup --team … --apply-branch-protection` |
 
 > `--tl-team` / `--qa-team` / `--po-team` は 3 つセットで指定(CODEOWNERS の `@TODO` 混入防止)。`.ut-tdd/state/setup.json` と GitHub workflow / テンプレートを生成し、ブランチ保護は既定で emit-only。
-> 入れる先の repository には origin remote が必要です (無いと exit 2 の `identity_repository_unbound` で終わります)。
+> 入れる先の repository には origin remote が必要です。無いと、setup は runtime を入れたうえで exit 2 (`identity_repository_unbound`) で終わります。その場合は、`git remote add origin <url>` のあとに `node .ut-tdd/bin/ut-tdd.mjs setup --solo` を実行してください。
+> release asset からの導入 (`--consumer-runtime-release`) は `--solo` だけに対応しています。チームで使う場合は、導入したあとに `ut-tdd setup --team ...` を実行してください (まず `--dry-run` を付けて、書き込む内容を確かめてください)。
 
 ## 🔄 バージョン更新
 
@@ -419,7 +420,8 @@ rules are enforced by schema, lint, doctor gates, and hooks — not by prose.
   (the `package.json` of the Pack artifact is rewritten to point there at
   sync time).
 - **Quick start (users)**: download all five assets of a release from the Pack
-  Releases page into one folder, then run, inside your git repository (an
+  Releases page into a new, empty folder (no other files, or setup stops with
+  `consumer_runtime_asset_set_mismatch`), then run, inside your git repository (an
   `origin` remote is required):
   `node <dir>/<version>.ut-tdd.mjs setup --solo --consumer-runtime-release <dir> --expected-consumer-digest <consumer anchor from the release notes>`.
   Setup verifies the SHA-256 against the anchor and writes nothing on mismatch.
