@@ -11,7 +11,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { MemoryEntry } from "../src/memory/index.ts";
 import {
   buildClaudeInboxEntry,
@@ -34,6 +34,41 @@ import {
 } from "../src/runtime/claude-memory-wake.ts";
 import { resolveProjectMemoryRoot } from "../src/runtime/project-memory-root.ts";
 import { ensureTrackedProjectIdentity } from "./support/project-identity-fixture.ts";
+
+const wakeReadCounters = vi.hoisted(() => ({
+  active: false,
+  gitExecFileSyncCalls: 0,
+  inboxDirectoryReads: 0,
+}));
+
+vi.mock("node:child_process", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("node:child_process")>();
+  return {
+    ...actual,
+    execFileSync: (...args: Parameters<typeof actual.execFileSync>) => {
+      if (wakeReadCounters.active && args[0] === "git") wakeReadCounters.gitExecFileSyncCalls += 1;
+      return actual.execFileSync(...args);
+    },
+  };
+});
+
+vi.mock("node:fs", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("node:fs")>();
+  return {
+    ...actual,
+    readdirSync: (...args: Parameters<typeof actual.readdirSync>) => {
+      const target = args[0];
+      if (
+        wakeReadCounters.active &&
+        typeof target === "string" &&
+        target.replaceAll("\\", "/").endsWith("/claude-memory-wake/inbox")
+      ) {
+        wakeReadCounters.inboxDirectoryReads += 1;
+      }
+      return actual.readdirSync(...args);
+    },
+  };
+});
 
 const memory: MemoryEntry = {
   memory_id: "memory:project:review-218",
@@ -127,72 +162,100 @@ describe("Claude HARNESS memory async wake", () => {
   });
 
   it("U-PMEMROOT-007補遺: 50件のforeign通知後に自session通知をboundedで配送する", async () => {
-    const root = fixture();
-    try {
-      const project = resolveProjectMemoryRoot(root);
-      if (!project.ok) throw new Error(project.reason);
-      const common = {
-        memory,
-        projectId: project.projectId,
-        workspaceId: claudeWorkspaceId(root),
-        producer: { provider: "codex" as const, sessionId: "producer" },
-      };
-      const foreign = Array.from({ length: 50 }, (_, index) =>
-        buildClaudeProviderInboxEntry({
-          ...common,
-          operationId: `foreign-${index}`,
-          target: { scope: "session", provider: "claude", sessionId: `other-${index}` },
-          now: new Date(Date.parse("2026-10-08T00:00:00.000Z") + index * 1_000).toISOString(),
-        }),
-      );
-      const own = buildClaudeProviderInboxEntry({
-        ...common,
-        operationId: "own-after-foreign-fanout",
-        target: { scope: "session", provider: "claude", sessionId: "own-session" },
-        now: "2026-10-08T00:01:00.000Z",
-      });
-      const runtime = wakeRuntimeRoot(root);
-      const inbox = join(runtime, "inbox");
-      const bindings = join(runtime, "envelope-bindings");
-      mkdirSync(inbox, { recursive: true });
-      mkdirSync(bindings, { recursive: true });
-      for (const entry of [...foreign, own]) {
-        const stem = inboxFileStem(entry.id);
-        writeFileSync(join(inbox, `${stem}.json`), `${JSON.stringify(entry)}\n`, "utf8");
-        writeFileSync(
-          join(bindings, `${stem}.json`),
-          `${JSON.stringify({
-            schemaVersion: "ut-tdd.claude-provider-binding/v1",
-            entryId: entry.id,
-            projectId: entry.projectId,
-            memoryId: entry.memoryId,
-            operationId: entry.operationId,
-            producer: entry.producer,
-            target: entry.target,
-            envelopeDigest: entry.envelopeDigest,
-          })}\n`,
-          "utf8",
+    const runWake = async (foreignCount: number) => {
+      const root = fixture();
+      try {
+        const project = resolveProjectMemoryRoot(root);
+        if (!project.ok) throw new Error(project.reason);
+        const common = {
+          memory,
+          projectId: project.projectId,
+          workspaceId: claudeWorkspaceId(root),
+          producer: { provider: "codex" as const, sessionId: "producer" },
+        };
+        const foreign = Array.from({ length: foreignCount }, (_, index) =>
+          buildClaudeProviderInboxEntry({
+            ...common,
+            operationId: `foreign-${index}`,
+            target: { scope: "session", provider: "claude", sessionId: `other-${index}` },
+            now: new Date(Date.parse("2026-10-08T00:00:00.000Z") + index * 1_000).toISOString(),
+          }),
         );
+        const own = buildClaudeProviderInboxEntry({
+          ...common,
+          operationId: "own-after-foreign-fanout",
+          target: { scope: "session", provider: "claude", sessionId: "own-session" },
+          now: new Date(
+            Date.parse("2026-10-08T00:00:00.000Z") + foreignCount * 1_000,
+          ).toISOString(),
+        });
+        const runtime = wakeRuntimeRoot(root);
+        const inbox = join(runtime, "inbox");
+        const bindings = join(runtime, "envelope-bindings");
+        mkdirSync(inbox, { recursive: true });
+        mkdirSync(bindings, { recursive: true });
+        for (const entry of [...foreign, own]) {
+          const stem = inboxFileStem(entry.id);
+          writeFileSync(join(inbox, `${stem}.json`), `${JSON.stringify(entry)}\n`, "utf8");
+          writeFileSync(
+            join(bindings, `${stem}.json`),
+            `${JSON.stringify({
+              schemaVersion: "ut-tdd.claude-provider-binding/v1",
+              entryId: entry.id,
+              projectId: entry.projectId,
+              memoryId: entry.memoryId,
+              operationId: entry.operationId,
+              producer: entry.producer,
+              target: entry.target,
+              envelopeDigest: entry.envelopeDigest,
+            })}\n`,
+            "utf8",
+          );
+        }
+
+        wakeReadCounters.gitExecFileSyncCalls = 0;
+        wakeReadCounters.inboxDirectoryReads = 0;
+        wakeReadCounters.active = true;
+        try {
+          const result = await waitForClaudeMemory({
+            repoRoot: root,
+            sessionId: "own-session",
+            pollIntervalMs: 10,
+            maxWaitMs: 5_000,
+          });
+          return {
+            result,
+            gitExecFileSyncCalls: wakeReadCounters.gitExecFileSyncCalls,
+            inboxDirectoryReads: wakeReadCounters.inboxDirectoryReads,
+            ownId: own.id,
+            foreign,
+            inbox,
+          };
+        } finally {
+          wakeReadCounters.active = false;
+        }
+      } finally {
+        rmSync(root, { recursive: true, force: true });
       }
+    };
 
-      const started = Date.now();
-      const result = await waitForClaudeMemory({
-        repoRoot: root,
-        sessionId: "own-session",
-        pollIntervalMs: 10,
-        maxWaitMs: 5_000,
-      });
+    const oneForeign = await runWake(1);
+    const fiftyForeign = await runWake(50);
 
-      expect(result.kind).toBe("delivered");
-      expect(result.entry?.id).toBe(own.id);
-      expect(Date.now() - started).toBeLessThan(5_000);
-      expect(
-        foreign.every((entry) => existsSync(join(inbox, `${inboxFileStem(entry.id)}.json`))),
-      ).toBe(true);
-    } finally {
-      rmSync(root, { recursive: true, force: true });
-    }
-  }, 15_000);
+    expect(oneForeign.result.kind).toBe("delivered");
+    expect(oneForeign.result.entry?.id).toBe(oneForeign.ownId);
+    expect(fiftyForeign.result.kind).toBe("delivered");
+    expect(fiftyForeign.result.entry?.id).toBe(fiftyForeign.ownId);
+    expect(fiftyForeign.gitExecFileSyncCalls).toBe(oneForeign.gitExecFileSyncCalls);
+    expect(fiftyForeign.gitExecFileSyncCalls).toBeLessThanOrEqual(20);
+    expect(oneForeign.inboxDirectoryReads).toBe(1);
+    expect(fiftyForeign.inboxDirectoryReads).toBe(1);
+    expect(
+      fiftyForeign.foreign.every((entry) =>
+        existsSync(join(fiftyForeign.inbox, `${inboxFileStem(entry.id)}.json`)),
+      ),
+    ).toBe(true);
+  }, 20_000);
 
   it("U-PMEMROOT-007: provider envelope rejects each binding axis independently", async () => {
     const root = fixture();
