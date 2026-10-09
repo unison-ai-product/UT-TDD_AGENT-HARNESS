@@ -3007,3 +3007,18 @@ oracle の詳細 (入力・期待・殺す mutation・fixture・required evidenc
 |---|---|---|
 | `CANDIDATE-U-PH-001..008` | `docs/design/harness/L6-function-design/confirmed-document-placeholder-detection.md` | `docs/test-design/harness/L7-confirmed-document-placeholder-detection-test-design.md` §3 |
 | `CANDIDATE-U-PH-010..024` | `docs/design/harness/L6-function-design/confirmed-document-placeholder-detection.md` | `docs/test-design/harness/L7-confirmed-document-placeholder-detection-test-design.md` §4 |
+
+## 設計系 PLAN 本文 4 項目 lint (Issue #955 / PLAN-L6-955) — 索引
+
+L6 契約は `docs/design/harness/L6-function-design/design-plan-thin-body.md`。
+oracle の詳細 (入力・期待・殺す mutation) は専用の
+`docs/test-design/harness/L7-design-plan-thin-body-test-design.md` に置き、本節は索引だけを持つ。
+
+| 範囲 | 検証面 | 詳細 |
+| --- | --- | --- |
+| CANDIDATE-U-THINPLAN-001〜003 | 実例 (PLAN-L6-935 rev4 の fail、rev5 と CLAUDE.md の例の pass) | 専用文書 §4 |
+| CANDIDATE-U-THINPLAN-004〜019 | 見出しの集合と順序、digest 行、list と残余文字数、checklist、path の実在、見出し literal、HTML コメント | 専用文書 §4 |
+| CANDIDATE-U-THINPLAN-020〜024 | 適用範囲 (施行日・kind・archived) と plan lint / governance gate への配線 | 専用文書 §4 |
+| CANDIDATE-U-THINPLAN-025〜028 | real-repo の exit 0、適用判定の集合、決定性、見出し参照の禁止 | 専用文書 §4 |
+
+上表の ID は backtick 無し表記である。候補台帳への再掲ではなく専用文書への参照であり、U-VMSRC-009 の一意性検査の対象外とする。
