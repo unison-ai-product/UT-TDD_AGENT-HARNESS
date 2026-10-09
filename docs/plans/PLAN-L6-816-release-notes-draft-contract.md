@@ -7,7 +7,7 @@ drive: agent
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-10-05
-updated: 2026-10-09
+updated: 2026-10-05
 owner: Claude control lane (契約起草) · Codex worker (L7 実装) · 非著者 frontier reviewer
 parent_design: docs/design/harness/L6-function-design/function-spec.md
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
@@ -44,52 +44,24 @@ dependencies:
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/816
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/418
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/807
-review_evidence:
-  - reviewer: gpt-6.1-sol
-    review_kind: cross_agent
-    reviewed_at: 2026-10-09T04:01:55.809Z
-    tests_green_at: 2026-10-09T03:56:52Z
-    verdict: pass
-    worker_model: claude-opus-5-5
-    reviewer_model: gpt-6.1-sol
-    subject_head: 5d0ef7198e33ce04e7a9a7661d615029c58af16c
-    scope: PR 933 exact head 5d0ef7198e33ce04e7a9a7661d615029c58af16c (本 PLAN 本文は PR
-      843 最終 head 95ca4efb と同一) に対する非著者 post-green evidence review (Sol)。PR 843
-      の先行 PASS receipt (b375dd7b…) は CI green (02:27Z) より前の 02:08Z に出たものであるため、CI
-      run 37879977558 green 後に取った本 review を confirm の拘束証跡とする。receipt は reviewer
-      family codex / verdict PASS / blocking 0 を記録している。
-    green_commands:
-      - kind: unit_test
-        command: node scripts/run-vitest-snapshot.ts (harness-check-linux /
-          harness-check-windows full 回帰、CI run 37879977558)
-        runner: ci
-        scope: full
-        exit_code: 0
-        completed_at: 2026-10-09T03:56:52Z
-        evidence_path: docs/test-design/harness/L7-unit-test-design.md
-        output_digest: sha256:7cfc96eb7d27b84c7b67cc6baf253db1a42589f2a0637aaeb630e38718b2ad3a
-        anchor_commit: 5d0ef7198e33ce04e7a9a7661d615029c58af16c
-    citations:
-      - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/933
-      - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/actions/runs/37879977558
-      - .ut-tdd/review/receipts/5e73eb79c0bf5f9107b5a55cb1113166940989768fe76bc56f6e9ddb49ceb131.json
-status: confirmed
+review_evidence: []
+status: draft
 sub_doc: function-spec
 github_issue_id: 816
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:2f20d93d5ca7f2c4398b3bba14f90417
-  command_id: plan-revise:issue-816:l6-confirm:post-green:r2:650a2ffdf8d2
-  admitted_at: 2026-10-09T04:10:07.441Z
-  source_digest: sha256:20212a77b064673f8dd31b1a018103c606304a7ff68f69e6229efc208610077a
-  decision_digest: sha256:7dde0fba34e5445c8cd391b565ed23aea4200fbdd98a1cb7a3e510c567b92532
-  receipt_digest: sha256:213af5524c3359bdfd6eb871db26011eb32e62044aabf38d14559907a26a6125
+  receipt_id: certificate:2f5be4ac3a56270474529ae239e69d4d
+  command_id: plan-draft:issue-816:release-notes-draft-contract:1:rechain-2
+  admitted_at: 2026-10-06T01:55:06.715Z
+  source_digest: sha256:6590e205e84be333d78b12584ff4a360eeed6462a7751812394bdc6ec44acc08
+  decision_digest: sha256:9c341eef56a0b6dc1bf4d1de17cd2f9efd12a675789abddb089d8d26c7fa124a
+  receipt_digest: sha256:c80df4095a26ab1c7dfceb71f1d65250f1dcfe1dbf7e76a41c4df1f4a140dd13
   binding:
     path: docs/plans/PLAN-L6-816-release-notes-draft-contract.md
     plan_id: PLAN-L6-816-release-notes-draft-contract
     asset_id: plan:2f5be4ac3a56270474529ae239e69d4d
-    revision: 2
-    content_digest: sha256:20212a77b064673f8dd31b1a018103c606304a7ff68f69e6229efc208610077a
+    revision: 1
+    content_digest: sha256:6590e205e84be333d78b12584ff4a360eeed6462a7751812394bdc6ec44acc08
   route:
     signal: feature_addition
     mode: add-feature
@@ -104,10 +76,11 @@ admission_receipt:
     digest: sha256:d61f55125e5d53fd7247758abc29d128e1584fd4ea743a4593b40f1c86f566f2
   reentry:
     target_plan_id: PLAN-L6-816-release-notes-draft-contract
-    target_revision: 2
+    target_revision: 1
     phase: forward_merge
-  escape_reason: "Issue #816 (PR #933): PLAN-L6-816 を post-green 非著者 evidence
-    review (Sol PASS) の証跡で confirmed にする。契約本文は変えない。"
+  escape_reason: "Issue #816 段階 1 (PO 判断 2026-10-01): Pack リリースノートの下書きを producer
+    出力と local git から機械生成する。PLAN-L7-628 の producer 出力を読むだけの operator 補助であり、L6
+    で契約を凍結してから L7 add-impl で scripts/ に実装する (前例 PLAN-L6-711)。"
 ---
 
 # PLAN-L6-816: Pack リリースノート下書きの機械生成 (段階 1) の契約 freeze
