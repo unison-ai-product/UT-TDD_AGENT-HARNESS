@@ -1713,7 +1713,7 @@ docs/test-design/harness/L7-claude-inbox-explicit-ack-test-design.md を参照�
 | CANDIDATE-U-INBOXACK-022 | immutable approval descriptor | 詳細 pair 022 |
 | CANDIDATE-U-INBOXACK-023 | snapshot / preview JSON validation | 詳細 pair 023 |
 | CANDIDATE-U-INBOXACK-024 | CLI surface と hook 限定 claim | 詳細 pair 024 |
-| CANDIDATE-U-INBOXACK-025 | descriptor selection / 7日 cleanup | 詳細 pair 025 |
+| CANDIDATE-U-INBOXACK-025 | descriptor selection・terminal-conflict skip / 7日 cleanup | 詳細 pair 025 |
 
 ### Issue #444 terminal GC backfill (PLAN-REVERSE-600)
 

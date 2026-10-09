@@ -27,7 +27,7 @@ reentry:
   target_plan_id: PLAN-L6-01-function-spec
   target_revision: 3
   phase: forward_merge
-escape_reason: "Issue #935 control指定の明示ACK契約増分を設計ペアとして起票する。"
+escape_reason: "Issue #935 PR #944 FLAG2の是正として、検証の対をpair path参照だけに戻し、契約本文の重複を除く。"
 generates:
   - artifact_path: docs/plans/PLAN-L6-935-claude-inbox-explicit-ack.md
     artifact_type: markdown_doc
@@ -41,24 +41,49 @@ dependencies:
     - docs/test-design/harness/L7-unit-test-design.md
     - docs/test-design/harness/L7-claude-inbox-explicit-ack-test-design.md
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/935
-review_evidence: []
-status: draft
+review_evidence:
+  - reviewer: Claude Opus
+    review_kind: cross_agent
+    reviewed_at: 2026-10-09T11:05:20.407Z
+    verdict: PASS-WEAK
+    tests_green_at: 2026-10-09T11:01:03Z
+    worker_model: codex-primary
+    reviewer_model: claude-opus
+    subject_head: 18db7e51c219d4cf4c338f1d223a550701e5410b
+    plan_revision: "5"
+    scope: control6079630887指定のpost-green FLAG2限定再検。canonical
+      rv1-f7ca0bbb、blocking0。モデル型番はcontrolのOpus指定以上を推測しない。
+    citations:
+      - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/944#issuecomment-6079630887
+      - .ut-tdd/review/receipts/f7ca0bbbc1eaead527d05a29b3e5f6be3303ea5dc956a47dc6af8eaeddd5d6ae.json
+      - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/actions/runs/37918847013
+    green_commands:
+      - kind: unit_test
+        command: vitest run (Linux/Windows required full regression; run37918847013)
+        runner: ci
+        scope: full
+        exit_code: 0
+        completed_at: 2026-10-09T11:01:03Z
+        evidence_path: .ut-tdd/evidence/issue935-ci37918847013.json
+        output_digest: sha256:d0c6d64e92e368d240e6cfa802fdccd2a7e83d9707d2e01da4f403cd7c00712d
+        anchor_commit: 9d9252d1a48e31bbf1b3c2184f99638c01c5a356
+status: confirmed
 sub_doc: function-spec
 github_issue_id: 935
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:c22c41a4e744248f8f2b980ef4f873a9
-  command_id: plan-revise:issue-935:ack-descriptor-hol-flag-upstream-digests-20261009-r3
-  admitted_at: 2026-10-09T06:09:02Z
-  source_digest: sha256:3690f01debf16e908b6f4c1cd07dcd30ed1bca38a1ca09219264989280ca6d32
-  decision_digest: sha256:02214dcc4b691a48ef7f3c9cefee33416551c6b3a9cf5cfec64d1badb6879052
-  receipt_digest: sha256:8b157fcacf9f76f2ba4f932de39e6b482c1b3b2e6e45fbacfc65999804e33fdd
+  receipt_id: certificate:ee0870edd21800c7d416b66a1c1c6712
+  command_id: plan-revise:issue-935:evidence-anchor-correction-20261009-r7
+  admitted_at: 2026-10-09T11:17:41.311Z
+  source_digest: sha256:34595e8224ef7d0292272c64ec8bffdc1960885b4aab0bb7fa7410a50ddd52df
+  decision_digest: sha256:4f237c1d7d42c11e645a4f26a09faf5ab41c74202df00f7c92acbec32312ad5e
+  receipt_digest: sha256:85f46d1c7edefcbc4226aa943c0e71927818dadabe349587a1f55569d339468b
   binding:
     path: docs/plans/PLAN-L6-935-claude-inbox-explicit-ack.md
     plan_id: PLAN-L6-935-claude-inbox-explicit-ack
     asset_id: plan:c5d545dfdce9219f6a26e0c008657605
-    revision: 3
-    content_digest: sha256:3690f01debf16e908b6f4c1cd07dcd30ed1bca38a1ca09219264989280ca6d32
+    revision: 7
+    content_digest: sha256:34595e8224ef7d0292272c64ec8bffdc1960885b4aab0bb7fa7410a50ddd52df
   route:
     signal: feature_addition
     mode: add-feature
@@ -75,7 +100,7 @@ admission_receipt:
     target_plan_id: PLAN-L6-01-function-spec
     target_revision: 3
     phase: forward_merge
-  escape_reason: "Issue #935 control指定の明示ACK契約増分を設計ペアとして起票する。"
+  escape_reason: "Issue #935 PR #944 FLAG2の是正として、検証の対をpair path参照だけに戻し、契約本文の重複を除く。"
 ---
 
 # PLAN-L6-935: Claude inbox明示ACK
@@ -84,8 +109,9 @@ admission_receipt:
 
 - `docs/plans/PLAN-L7-472-claude-memory-async-wake.md@0a1856e01d242e08bb9c33ad7660301689bc9496` sha256:3946926af018adf4db1955e3307d9e97c28565d0bd04fe319d0f6f69579bcd66
 - `docs/plans/PLAN-REVERSE-600-claude-inbox-terminal-gc.md@0a1856e01d242e08bb9c33ad7660301689bc9496` sha256:ffe627dad02a4ce1ba35f00a906082b214382473f920a723d21f421cd17466d7
-- `docs/design/harness/L6-function-design/claude-inbox-explicit-ack.md@8279a3fa73ec66c270c18562cc19d74fd2f7214e` sha256:4b05e76d69406497ab25985fba6eab65c4a1329e6032dfa4d1617915e0cb1499
-- `docs/test-design/harness/L7-claude-inbox-explicit-ack-test-design.md@8279a3fa73ec66c270c18562cc19d74fd2f7214e` sha256:0336d078b36ccf6396f6a24b53d47119193544f5dacbfa5a700d3e5a31fa3077
+- `docs/design/harness/L6-function-design/claude-inbox-explicit-ack.md@2c8404fe47a61c776415ec3112ac9c9c8d1efb13` sha256:39474540d565c5a75ad2a5e559949cf8f3681354ff9cb7ef74326073138b0bd7
+- `docs/test-design/harness/L7-claude-inbox-explicit-ack-test-design.md@2c8404fe47a61c776415ec3112ac9c9c8d1efb13` sha256:fbba3450e5e5bfc387c5aab8a1faaf483a96b8a7870c50d03f0fc3c07cab4e85
+- `docs/test-design/harness/L7-unit-test-design.md@a12449fc7b77543e2cfc016cc3b082c48c4d0f96` sha256:05007812cdb2f20b20f29fe86261208b6f44273836d2e9bb999f9c36dd9a5c4e
 
 ## 引き渡し物
 
@@ -95,10 +121,13 @@ admission_receipt:
 
 ## 検証の対
 
-shared L7 registry のファイル名節と candidate IDs、および個別詳細 pair を検証の対として扱う。契約本文は設計文書のみを正本とする。
+- `docs/design/harness/L6-function-design/claude-inbox-explicit-ack.md`
+- `docs/test-design/harness/L7-unit-test-design.md`
+- `docs/test-design/harness/L7-claude-inbox-explicit-ack-test-design.md`
 
 ## 完了条件
 
 - [ ] 設計ペアの未確定境界を解消し、controlが実装への引き渡しを指示する
 - [ ] 正規draft/revise、plan lint、exact HEAD CI、非著者reviewの証跡を揃える
 - [ ] 実装と実inboxのACKは本契約起草に含めない
+
