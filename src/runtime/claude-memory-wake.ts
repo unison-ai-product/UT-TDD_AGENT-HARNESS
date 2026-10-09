@@ -355,6 +355,25 @@ function validateProviderBinding(input: {
   });
 }
 
+function validateProviderBindingForDeclaredTarget(input: {
+  repoRoot: string;
+  entry: ClaudeProviderInboxEntry;
+  provider: ClaudeProvider;
+}): ClaudeProviderEnvelopeValidation {
+  const { repoRoot, entry, provider } = input;
+  const bindingResult = readProviderBinding(repoRoot, entry);
+  if (!bindingResult.ok) return bindingResult;
+  return validateClaudeProviderConsumerEnvelope({
+    entry,
+    projectId: requireProjectMemoryRoot(repoRoot).projectId,
+    provider,
+    sessionId: bindingResult.binding.target.sessionId,
+    expectedMemoryId: bindingResult.binding.memoryId,
+    expectedOperationId: bindingResult.binding.operationId,
+    expectedProducer: bindingResult.binding.producer,
+  });
+}
+
 function readProviderBinding(
   repoRoot: string,
   entry: ClaudeProviderInboxEntry,
@@ -1508,6 +1527,24 @@ export async function waitForClaudeMemory(input: {
           });
         const envelopeResult = envelopeGuard();
         if (!envelopeResult.ok) {
+          if (
+            envelopeResult.reason === "target_session_mismatch" &&
+            validateProviderBindingForDeclaredTarget({
+              repoRoot: input.repoRoot,
+              entry,
+              provider,
+            }).ok
+          ) {
+            writeAuditLog(input.repoRoot, {
+              event: "claim",
+              status: "deny",
+              entryId: entry.id,
+              operationId: entry.operationId,
+              reason: envelopeResult.reason,
+            });
+            unclaimable.add(entry.id);
+            continue;
+          }
           writeAuditLog(input.repoRoot, {
             event: "claim",
             status: "deny",
