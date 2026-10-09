@@ -47,17 +47,17 @@ sub_doc: function-spec
 github_issue_id: 935
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:c5d545dfdce9219f6a26e0c008657605
-  command_id: plan-draft:issue-935:inbox-explicit-ack:main-tail-20261009-r1
-  admitted_at: 2026-10-09T05:04:00Z
+  receipt_id: certificate:cb55482d6baf9e4b276b9f3f25cb93f0
+  command_id: plan-revise:issue-935:ack-descriptor-hol-flag-20261009-r2
+  admitted_at: 2026-10-09T06:05:42Z
   source_digest: sha256:1bf9c7546e9ab7d3c8ff17c3f0cc6075cfc698452cee3ebe8c8a6b399db3a3c2
   decision_digest: sha256:02214dcc4b691a48ef7f3c9cefee33416551c6b3a9cf5cfec64d1badb6879052
-  receipt_digest: sha256:9c6e011527a2b42f68fd1b73b3ee823e1a7a06cec639bfab7847ce747c416333
+  receipt_digest: sha256:55ad8e6cf890402c7af5cda2da760d085ab7069fc30f0b783aa559af1f6cdeb6
   binding:
     path: docs/plans/PLAN-L6-935-claude-inbox-explicit-ack.md
     plan_id: PLAN-L6-935-claude-inbox-explicit-ack
     asset_id: plan:c5d545dfdce9219f6a26e0c008657605
-    revision: 1
+    revision: 2
     content_digest: sha256:1bf9c7546e9ab7d3c8ff17c3f0cc6075cfc698452cee3ebe8c8a6b399db3a3c2
   route:
     signal: feature_addition

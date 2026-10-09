@@ -38,7 +38,7 @@ pair_artifact: docs/design/harness/L6-function-design/claude-inbox-explicit-ack.
 | CANDIDATE-U-INBOXACK-022 | 同一preview digestのdescriptorを競合作成・再承認 | `ack-approval-sha256-<hex>.json`をno-clobberで一度だけ作成し、同一bytes再実行はidempotent、異なるbytesはconflict。消費後もdescriptorを保持し、別digestは別descriptor |
 | CANDIDATE-U-INBOXACK-023 | snapshot/preview JSONのschema・key・row正規化 | schema文字列不一致、unknown/duplicate key、duplicate entryId、preview/approvalの空entriesを拒否。空snapshotは表現可能。raw inbox/claim bytes digestの変化でsnapshot digestが変わり、entryIdのUTF-8 bytes順でのみ正規化 |
 | CANDIDATE-U-INBOXACK-024 | CLI surface | 既存`ut-tdd memory` groupの`inbox-ack preview/approve`のみを確認し、provider委譲commandに混在せず、CLI apply commandがなくclaim獲得はStop hookに限定される |
-| CANDIDATE-U-INBOXACK-025 | 複数descriptor・消費済みdescriptor・foreign descriptorの選択と7日cleanup | filename順で自分宛て未完了terminalの回復または未消費ACKの最初の1承認だけ処理。回復を含め最大256entry、同じStopで別descriptorへ続行0。消費済みtailを新規claimしない。foreign descriptor不変。descriptorと未terminal ACK claimを7日cleanupで削除しない |
+| CANDIDATE-U-INBOXACK-025 | 複数descriptor・消費済みdescriptor・foreign descriptorの選択と7日cleanup | filename順で自分宛ての最初のprocessable descriptorのみ選択。先行するstale/rejected descriptor Aは変更せず256件枠も消費せずskipし、filename上は後続のfreshでprocessableなBを選べる（AがBを恒久阻害しない）。matching ACK claimに未完了terminalがある場合はそのclaimのterminal回復のみ。回復を含め選んだprocessable descriptorのentryを最大256件、同じStopで別descriptorへ続行0。消費済みtailを新規claimしない。foreign descriptor不変。descriptorと未terminal ACK claimを7日cleanupで削除しない |
 
 ## 検証実行の境界
 

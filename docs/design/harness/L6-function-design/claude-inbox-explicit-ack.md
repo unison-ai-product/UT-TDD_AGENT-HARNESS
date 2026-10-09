@@ -54,7 +54,7 @@ canonical JSONは各objectの表に記したfield順を固定し、unknown key�
 
 control回答 (issuecomment-6074148271) により、approvalはpreview digestごとに1つのimmutable descriptorとして残し、preview digestを消費authorityの識別子に使う。descriptor filenameは既存tracked外runtime directory直下の`ack-approval-sha256-<64 lowercase hex>.json`とする。`previewDigest`は`sha256:<64 lowercase hex>`形式だけを受け入れ、filenameにはprefixを除いたhexを使う。descriptorはno-clobberで新規作成し、同pathが既にあれば上書き・削除・置換しない。既存descriptorのraw bytesが新規descriptorと一致する場合だけidempotent already-approved扱いとし、不一致はconflict。anchor claimが消費正本でありdescriptorは監査用に残す。別preview digestは別filename / descriptor。index、追加ledger、lockは作らない。filenameはdigestから決定論的に構成し、受信sessionはdescriptor内の`target`で束縛し、apply対象はStop hook自身と同じproject / workspace / sessionに限る。
 
-Stopは自分宛ての検証済みdescriptorをfilenameのUTF-8 bytes順で走査し、「matching ACK claimに未完了terminalがある」または「anchor claim未取得」の最初の1承認だけを選ぶ。前者は既獲得claimのterminal回復のみ、後者は新規ACK処理とし、同じStopで別descriptorへ続行しない。全既獲得claimのterminalが完了した消費済みdescriptorはskipするが、未獲得tailの実行候補には戻さない。回復も含め選んだ1承認の最大256entryを処理件数として数える。foreign descriptorは処理・変更しない。破損descriptorから宛先や成功を推測しない。descriptorと未terminal ACK claimは既存7日cleanupの一律削除対象から除外する。監査保持の別GC規則は本契約に追加しない。
+Stopは自分宛てdescriptorをfilenameのUTF-8 bytes順で走査し、最初のprocessable descriptorだけを選ぶ。matching ACK claimに未完了terminalがあるdescriptorは、snapshot再一致を要求せず、その既獲得claimのterminal回復だけを行う候補とする。新規ACK候補は、anchor claim未取得であり、preview/snapshot digestとentry/session/claim状態を現在の対象に対して再検証できたdescriptorに限る。matching未完了claimのないstaleまたはrejected descriptorは変更せず新規ACKの選択候補から除外して次へ進むため、filename順で先行しても後続の新しい有効承認を阻害しない。選択後は同じStopで別descriptorへ続行しない。全既獲得claimのterminalが完了した消費済みdescriptorはskipし、未獲得tailの実行候補には戻さない。回復も含め、選んだprocessable descriptorのentry処理を最大256件とする。拒否descriptorの走査はentry処理件数・256件枠に数えない。foreign descriptorは処理・変更しない。破損descriptorから宛先や成功を推測しない。descriptorと未terminal ACK claimは既存7日cleanupの一律削除対象から除外する。監査保持の別GC規則は本契約に追加しない。
 
 承認の監査情報は actor identity、approvedAt (UTC ISO 8601)、承認された preview digest の組とする。各新規 ACK terminal にこの組を記録し、対象 entry 群がどの一覧として誰にいつ承認されたかを追跡可能にする。actor は control の承認主体を表す監査 provenance であり、任意の文字列入力や受信 session ID 自体を新しい認可根拠にしない。適用操作の実行主体は control に限る。
 
@@ -90,7 +90,7 @@ anchor CAS前のcrashは承認未消費・claim未獲得であり、再開時も
 
 generation authority は既存 `ClaudeWakeAuthority` (`workspaceId`, `sessionId`, `generation`, `authorityEpoch`) を再利用し、anchor claimにowner identityを保持する。各claim公開の直前にauthorityを再検証し、失効を観測したwaiterはそのCASを行わない。ただしgeneration authority更新と別 `.claim` path の公開は既存実装上別のfilesystem operationであり、両者を跨ぐ物理atomicityはこの案では新設しない。single-useはgeneration更新に依存せず共通anchor CASで保証する。generation fencingの強い主張は既存validationの観測範囲を超えて行わず、実装で強い保証が必要ならcontrolへ戻す。
 
-control回答 (issuecomment-6074061826, issuecomment-6074148271) により、preview / Stop 1回あたり最大256件とし、空の対象一覧は拒否する。anchorを件数に含める。上限超過分まで暗黙拡大せず、未獲得分は新しいpreview / 承認とする。実測でhook時間が長ければ契約改訂で上限を縮める。上限を理由に同じ承認で残りを暗黙再開しない。通常通知の配送件数は変更しない。
+control回答 (issuecomment-6074061826, issuecomment-6074148271) により、preview / Stop 1回あたり最大256件とし、空の対象一覧は拒否する。anchorを件数に含める。拒否descriptorの走査はentry処理上限に含めない。上限超過分まで暗黙拡大せず、未獲得分は新しいpreview / 承認とする。実測でhook時間が長ければ契約改訂で上限を縮める。上限を理由に同じ承認で残りを暗黙再開しない。通常通知の配送件数は変更しない。
 
 ## 実装への引き渡し条件
 
