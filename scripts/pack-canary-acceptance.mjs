@@ -18,11 +18,13 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { tmpdir } from "node:os";
 
 export const CANARY_TAG = "v0.2.0-canary.2";
-export const AGENT_E2E_TAG = "v0.2.0-canary.6";
+export const AGENT_E2E_TAG = "v0.2.0-canary.7";
 export const PACK_RELEASE_PREFIX =
   "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS-Pack/releases/tag/";
 export const SOURCE_ISSUE_PREFIX =
   "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/418#issuecomment-";
+export const AGENT_E2E_SOURCE_ISSUE_PREFIX =
+  "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/946#issuecomment-";
 export const canaryAssetsForTag = (tag) => Object.freeze([
   `${tag}.tar.gz`,
   `${tag}.tar.gz.sha256`,
@@ -59,7 +61,7 @@ function verifyPair(pair, field) {
   return producer;
 }
 
-/** Parse a JSON copy of the canonical #418 publish comment; the comment remains authoritative. */
+/** Parse a JSON copy of the canonical issue-bound publish comment; the comment remains authoritative. */
 export function parsePublishRecord(value, commentUrl, { expectedTag = CANARY_TAG } = {}) {
   if (!objectWith(value, [
     "tag", "release_url", "c1_commit", "c2_commit", "recorded_by", "recorded_at",
@@ -82,9 +84,12 @@ export function parsePublishRecord(value, commentUrl, { expectedTag = CANARY_TAG
     verifyPair(value.assets[name], `assets.${name}`),
   ]));
   const consumerAnchorDigest = verifyPair(value.consumer_anchor_digest, "consumer_anchor_digest");
+  const issueCommentPrefix = expectedTag === AGENT_E2E_TAG
+    ? AGENT_E2E_SOURCE_ISSUE_PREFIX
+    : SOURCE_ISSUE_PREFIX;
   if (typeof commentUrl !== "string" ||
-      !commentUrl.startsWith(SOURCE_ISSUE_PREFIX) ||
-      !/^\d+$/.test(commentUrl.slice(SOURCE_ISSUE_PREFIX.length)))
+      !commentUrl.startsWith(issueCommentPrefix) ||
+      !/^\d+$/.test(commentUrl.slice(issueCommentPrefix.length)))
     throw new Error("publish-record-comment-url-invalid");
   return { value, assetDigests, consumerAnchorDigest, commentUrl };
 }
@@ -125,7 +130,7 @@ export function parseAgentE2ERecord(value, commentUrl) {
   return parsePublishRecord(value, commentUrl, { expectedTag: AGENT_E2E_TAG });
 }
 
-/** Build only the canary.6 Release-assets installer command used by AT-DIST-003. */
+/** Build only the canary.7 Release-assets installer command used by AT-DIST-003. */
 export function buildAgentE2EInstallerInvocation(releaseDirectory, anchorDigest) {
   if (!digestPattern.test(anchorDigest)) throw new Error("agent-e2e-anchor-invalid");
   return [
