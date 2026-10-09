@@ -954,9 +954,13 @@ describe("manual canary acceptance publish-record boundary", () => {
 
     const c2Bytes = structuredClone(input.value);
     c2Bytes.tag = CANARY_TAG;
-    expect(() => parseAgentE2ERecord(c2Bytes, agentCommentUrl)).toThrow("publish-record-tag-not-exact");
+    expect(() => parseAgentE2ERecord(c2Bytes, agentCommentUrl)).toThrow(
+      "publish-record-tag-not-exact",
+    );
     const c6Input = agentRecord("v0.2.0-canary.6");
-    expect(() => parseAgentE2ERecord(c6Input.value, commentUrl)).toThrow("publish-record-tag-not-exact");
+    expect(() => parseAgentE2ERecord(c6Input.value, commentUrl)).toThrow(
+      "publish-record-tag-not-exact",
+    );
     const c6Dir = agentReleaseDir(c6Input.assetBytes, "v0.2.0-canary.6");
     expect(() => verifyReleaseDirectory(c6Dir, parsed)).toThrow("release-asset-set-not-exact");
     for (const tag of [
