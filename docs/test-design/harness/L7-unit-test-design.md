@@ -2952,3 +2952,12 @@ oracle の詳細 (入力・期待・殺す mutation・fixture・required evidenc
 
 上表の ID は backtick 無し表記である。候補台帳への再掲ではなく専用文書への参照であり、U-VMSRC-009 の一意性検査の対象外とする。
 正規 `U-DPROT-*` への昇格と Red test は、src/ も scripts/ も含まない PR (契約 PR + Red) で入れる (L6 契約 §10)。
+
+## 確定文書のテンプレート記入欄検出 (Issue #894 / PLAN-L6-833)
+
+`docs/design/harness/L6-function-design/confirmed-document-placeholder-detection.md` は本書を共有L7 pair artifactとして参照する。候補オラクルの詳細な入力・反証条件・期待値は専用の `docs/test-design/harness/L7-confirmed-document-placeholder-detection-test-design.md` に置き、本書では既存候補IDを索引する。status判定、所有gate、matcher、HTML comment除外の契約はそれぞれのL6文書と専用test-designを正本とし、本書は共有索引を担う。
+
+| 候補オラクルID | L6設計 | 詳細テスト設計・対応行 |
+|---|---|---|
+| `CANDIDATE-U-PH-001..008` | `docs/design/harness/L6-function-design/confirmed-document-placeholder-detection.md` | `docs/test-design/harness/L7-confirmed-document-placeholder-detection-test-design.md` §3 |
+| `CANDIDATE-U-PH-010..024` | `docs/design/harness/L6-function-design/confirmed-document-placeholder-detection.md` | `docs/test-design/harness/L7-confirmed-document-placeholder-detection-test-design.md` §4 |
