@@ -27,9 +27,7 @@ reentry:
   target_plan_id: PLAN-L6-01-function-spec
   target_revision: 3
   phase: forward_merge
-escape_reason: "Issue #935 PR #944 FLAG1の是正として、ACK
-  terminalのfsync後no-clobber公開とtorn/malformed
-  terminal競合descriptorの非阻害skipを契約に反映する。"
+escape_reason: "Issue #935 PR #944 FLAG2の是正として、検証の対をpair path参照だけに戻し、契約本文の重複を除く。"
 generates:
   - artifact_path: docs/plans/PLAN-L6-935-claude-inbox-explicit-ack.md
     artifact_type: markdown_doc
@@ -49,18 +47,18 @@ sub_doc: function-spec
 github_issue_id: 935
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:e9b55a418b10fe8be8ce253e8d9b19a5
-  command_id: plan-revise:issue-935:flag1-terminal-conflict-after-950-20261009-r4
-  admitted_at: 2026-10-09T09:46:04.130Z
-  source_digest: sha256:e247f428a33a4beb613d91f57ac92c44cd58e3cae73495e02bd249b4fce2020e
-  decision_digest: sha256:f1eef424ffcd5e2ed802b819ef5e14cc0094833f71a2ac9faa628afc060f2813
-  receipt_digest: sha256:b8d844aa1c7de5cfc59a71deae374ea7bce876a93835339cbd5f2d9403b8369b
+  receipt_id: certificate:2dcc7acff32f5fdf3aabacce72c0586e
+  command_id: plan-revise:issue-935:flag2-plan-pointer-only-20261009-r5
+  admitted_at: 2026-10-09T10:36:51.504Z
+  source_digest: sha256:d86aa5833b1abeab5efa57db69e7bd0584688ae9d23b0fee702eb4db4add5239
+  decision_digest: sha256:f6052408e1c005e2a1fa0d259dc7631d761438e80ab994ac978458db7acac4c7
+  receipt_digest: sha256:6ce4d7fea1cd233d4c14b725a390a2ccb4748fa89582d7b9274d0f21746275c7
   binding:
     path: docs/plans/PLAN-L6-935-claude-inbox-explicit-ack.md
     plan_id: PLAN-L6-935-claude-inbox-explicit-ack
     asset_id: plan:c5d545dfdce9219f6a26e0c008657605
-    revision: 4
-    content_digest: sha256:e247f428a33a4beb613d91f57ac92c44cd58e3cae73495e02bd249b4fce2020e
+    revision: 5
+    content_digest: sha256:d86aa5833b1abeab5efa57db69e7bd0584688ae9d23b0fee702eb4db4add5239
   route:
     signal: feature_addition
     mode: add-feature
@@ -77,9 +75,7 @@ admission_receipt:
     target_plan_id: PLAN-L6-01-function-spec
     target_revision: 3
     phase: forward_merge
-  escape_reason: "Issue #935 PR #944 FLAG1の是正として、ACK
-    terminalのfsync後no-clobber公開とtorn/malformed
-    terminal競合descriptorの非阻害skipを契約に反映する。"
+  escape_reason: "Issue #935 PR #944 FLAG2の是正として、検証の対をpair path参照だけに戻し、契約本文の重複を除く。"
 ---
 
 # PLAN-L6-935: Claude inbox明示ACK
@@ -100,11 +96,9 @@ admission_receipt:
 
 ## 検証の対
 
-shared L7 registry のファイル名節と candidate IDs、および個別詳細 pair を検証の対として扱う。契約本文は設計文書のみを正本とする。
-
-FLAG1訂正区分（「## FLAG1に対する事後訂正提案 (確認ではない)」）として、ACK terminal v2はclaimと同じ完全payload公開方式を用いる。canonical terminal bytesを同一directory内の一時fileへexclusive createし、全bytesを書き込み、fsync・close後にterminal pathへhard-linkでno-clobber公開する。既存bytesは上書きせず、rename／truncateへのfallbackを行わない。tornまたはmalformed bytesが既存terminal pathにある場合はtyped terminal-conflictとして報告し、claimとterminal bytesを保持してそのdescriptorをprocessableでないものとしてskipする。これによりentry処理件数・256件枠を消費せず、後続のprocessable descriptorを走査できる。matching ACK claimがありterminalが未作成の場合は、同じclaimのretryで回復する。
-
-個別test-designのCANDIDATE-U-INBOXACK-025は、terminal conflictのdescriptor Aと後続の有効なdescriptor Bを使うnegative oracleを定義する。Aはbytesを一切変更せずtyped conflictを報告し、entry capを消費せず、続くBの選択・処理を阻害しない。既存candidate 009（malformed terminalのconflict／上書きなし）とcandidate 012（terminal未作成時のsame-claim retry）は維持する。
+- `docs/design/harness/L6-function-design/claude-inbox-explicit-ack.md`
+- `docs/test-design/harness/L7-unit-test-design.md`
+- `docs/test-design/harness/L7-claude-inbox-explicit-ack-test-design.md`
 
 ## 完了条件
 
