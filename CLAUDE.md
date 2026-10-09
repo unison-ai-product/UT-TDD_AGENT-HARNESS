@@ -415,21 +415,20 @@ effort は codex にも argv (`-c model_reasoning_effort=...`) で実注入さ�
 
 Task-kind ベースの割当 (PO rule 2026-07-14、旧 tier 記述を supersede):
 
-- Codex: テスト実装 = `gpt-5.6-terra` (effort `middle`); 実装/ドキュメント修正 =
-  `gpt-5.6-luna` (effort `high`); 検証/設計 = `gpt-6.1-sol` (effort `low`);
-  軽量実装/内部探索/web 検索/doc パッチ = `gpt-5.3-codex-spark` / `gpt-5.4-mini`。
+- Codex (GPT-6 の 3 モデルだけ、PO 2026-10-09): 実装/テスト実装/ドキュメント修正/軽量探索 =
+  Luna (`gpt-6-luna`、effort `high`); 検証/設計/判断 = Sol (`gpt-6.1-sol`、effort `low`);
+  超局所の難所の相談だけ = Astra (`gpt-6-astra`、常用しない)。指揮モデル別の振る舞いは
+  `AGENTS.md` §Codex / Claude Code Harness の「あなたが○○なら」の表。
 - Claude: フロントデザイン/UI デザインの判断・レビュー/設計ドキュメント作成 = Opus (`claude-opus-5`);
   決まった UI デザインの実装/ドキュメント修正 = Sonnet (`claude-sonnet-5`)
   (指揮モデル別の相談先と委譲先は `.claude/CLAUDE.md` §委譲と判断層 の「あなたが○○なら」の表);
   web 検索/doc パッチ = Haiku (`claude-haiku-4-5`)。
-- Lightweight parallel lanes use spark/mini-class GPT/Codex models with no
-  closing authority.
+- 並列の軽量レーンは Luna の subagent と Claude Haiku が担い、closing の権限を持たない。
 - Effort はモデル別基準ラダー (PO rule 2026-07-28) が既定: Sol/Fable = `low`、
-  Opus/Terra/Sonnet = `middle`、Luna/spark/mini = `high`。回答が浅い時は
+  Opus/Sonnet = `middle`、Luna = `high`。回答が浅い時は
   **まず effort を 1 段、その先はモデルを上げる** (`escalateShallowResponse`):
-  Sol/Fable → `middle`、Opus/Terra/Sonnet → `high`、そこでも浅ければ
-  Sonnet→Opus `middle` / Opus・Terra・Luna・Fable→Sol `low` / spark・mini→Terra
-  `middle`。**`xhigh` は既定として配らない** (PO rule 2026-07-28:
+  Sol/Fable → `middle`、Opus/Sonnet → `high`、そこでも浅ければ
+  Sonnet→Opus `middle` / Opus・Luna・Fable→Sol `low`。**`xhigh` は既定として配らない** (PO rule 2026-07-28:
   「xhigh 以上はモデルを上げたほうがいい」)。ラダー外 (haiku 等) は従来既定
   (Claude `high` / GPT `middle`)。明示 `--effort xhigh` は有効で、UI/UX は
   task-kind 例外 (PO rule 2026-07-08)。

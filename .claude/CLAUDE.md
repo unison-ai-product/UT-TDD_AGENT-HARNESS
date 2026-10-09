@@ -162,8 +162,8 @@ trade-off を記録した PLAN とする。spot-check で (a) この対象に該
 書き下ろすのではなく、創出は worker tier、判断は frontier tier に置く。Sonnet が指揮するときは
 Sonnet 自身が worker tier なので、通常の作業は自分で行う (「あなたが○○なら」の表の Sonnet 行)。
 
-- 文書作成 = Sonnet (`claude-sonnet-5`)。実装 = Codex 側 worker (`gpt-5.6-terra` /
-  `gpt-5.6-luna`)。軽量探索・doc パッチ = spark / mini / haiku 級。
+- 文書作成 = Sonnet (`claude-sonnet-5`)。実装 = Codex 側 worker (Luna `gpt-6-luna`)。
+  軽量探索・doc パッチ = Haiku 級。
 - 判断ゲート (review / blind-review / qa / tl / security) は族内 frontier tier。
   正規委譲経路 (`ut-tdd codex|claude --role <role>`) がこの routing を機械強制する
   (`src/team/delegation-routing.ts`、未登録 role は fail-close)。
