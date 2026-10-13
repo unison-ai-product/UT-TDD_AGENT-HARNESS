@@ -833,6 +833,12 @@ SMB/NFS/OneDrive をまたぐ strict lease、heartbeat、clock-skew 耐性は主
 
 ### 2026-06-15 Model Evaluation Oracle (FR-L1-38, PLAN-L7-53)
 
+#### Issue #789 の段階的退役境界 (control 決定 2026-10-13)
+
+この契約改訂だけでは実装やテストを撤去しない。契約 PR の merge 後、PR1 (`forward`) で rebuild / doctor / telemetry scan の呼び出し元と SQLite の model evaluation read 実装を撤去する。PR1 では PLAN-L7-423 所有の domain / application / adapter / domain test の 4 ファイルと `ModelEvaluationConfigPort` / `ModelEvaluationReadPort` の型を残す。新しい no-op facade は作らない。
+
+PR2 (`add-feature`) は PR1 merge 後の main から開始し、PLAN-L7-423 の正規 revise と同時に 4 ファイルと型 2 件を撤去する。`U-DOMAIN-005` は PR2 で `tests/model-evaluation-domain.test.ts` を撤去する時点まで宣言と引用を維持し、その時点で撤回する。`U-FR-L1-38` は PR1 で `tests/model-evaluation.test.ts` の撤去と同時に撤回する。退役の実測は PLAN-L6-789 §5 の oracle に引き継ぎ、旧実装を戻す mutation で Red を確認する。撤回予定という記載は現時点の実装完了や検証済みを意味しない。
+
 | U-ID | 関数 | oracle (DbC) |
 |------|------|--------------|
 | U-FR-L1-38 | `projectModelEvaluations` | **Opt-in disabled (AC-38-02)**: no .ut-tdd/config/model-opt-in.yaml or enabled!=true → 0 model_evaluations rows (never throws). **AC-38-01 enabled**: seed model_runs + plan_registry, write model-opt-in.yaml (enabled:true) under tmp repoRoot → model-A (2 runs both success) writes row with success_rate=1.0, run_count=2, success_count=2; model-B (2 runs, 1 success) writes row with success_rate=0.5, run_count=2, success_count=1. **Cold-start**: enabled but 0 model_runs → 0 model_evaluations rows (never throws). **Success inference**: joins model_runs.plan_id -> plan_registry.status IN PLAN_SUCCESS_STATUSES ("confirmed","completed"); no token/cost column — cost-efficiency is explicit_l7_defer (token telemetry pending, PLAN-L7-53 follow-up). **Opt-in file parse failure**: treat as disabled (fail-open for opt-in gate). |
@@ -2948,6 +2954,18 @@ v2正常fixtureはN=3、stable/canary両channelを対象とする。実producer�
 
 mutation M1–M7は正本§5と同一: exactly-oneへの退行、集合一致への弱体化、先頭mappingだけの比較、v1基数guard削除、attestation path束縛削除、promotion余剰scalar受理、rollback余剰scalar受理。
 対応するRed証跡は実装後に各単独mutationを実行して記録する。finding enum、reason precedence、producer/installer/validatorの既存意味は変更しない。
+
+## Issue #789 退役 oracle (PLAN-L6-789 §5)
+
+正本: `PLAN-L6-789-token-ingest-retirement` §5。実装 PLAN は `PLAN-L7-789-token-ingest-retirement-execution`。PR1 で実装・実測する退役 oracle を以下に定義する。現契約 PR は実測完了を主張しない。各 oracle は旧実装 (`projectTokenUsage` / `projectRepoScopedTokenUsage` / `projectModelEvaluations`、scan action の `openHarnessDb` → `migrate` → `projectTokenUsage` → `projectModelEvaluations`) を戻すと RED になる。
+
+| ID | 観点 | 失敗させる mutation | 実装テスト |
+| --- | --- | --- | --- |
+| `U-TOKRET-001` | rebuild 後に session ログ由来の `model_runs` 行 (token 列が非 NULL) が 0 件 | rebuild 経路の `projectRepoScopedTokenUsage` を戻すと、repo に帰属する Claude / Codex の session fixture から token 行が入り RED | `tests/projection-writer.test.ts` |
+| `U-TOKRET-002` | rebuild は opt-in 有効でも `model_evaluations` を 1 行も書かない | `projectModelEvaluations` を rebuild へ戻すと、review-evidence 由来の `model_runs` と opt-in から評価行が入り RED | `tests/projection-writer.test.ts` |
+| `U-TOKRET-003` | (a) `.ut-tdd/` を持たない一時 root で `telemetry scan --json` を実行しても `<root>/.ut-tdd/harness.db` が作られない。非空 fixture で `totalRuns` が 1 以上 | scan action の `openHarnessDb(defaultHarnessDbPath(repoRoot))` を戻すと DB file が生成され RED | `tests/cli-surface.test.ts` |
+| `U-TOKRET-004` | (b) migrate 済み harness.db を置いて `telemetry scan --json` を実行しても file の sha256 が変わらず、`-wal` / `-journal` sibling が無く、`role = 'session'` の `model_runs` 行が 0 件。非空 fixture で `totalRuns` が 1 以上 | scan action の `migrate` → `projectTokenUsage` → `projectModelEvaluations` を戻すと sha256 が変わり session 行が入り RED | `tests/cli-surface.test.ts` |
+| `U-TOKRET-005` | review-evidence 由来の `model_runs` 行は rebuild で従来どおり生成され、orphan 検査 (`collectDriveDbRegistrationStats` の `modelOrphans`) が 0 | review-evidence 由来行まで投入をやめると行数 0 で RED | `tests/projection-writer.test.ts` |
 
 ## Issue #789 PR-1: 常時 token scan 退役 oracle
 
