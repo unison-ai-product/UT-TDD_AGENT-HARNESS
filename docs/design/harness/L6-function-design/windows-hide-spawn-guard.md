@@ -10,7 +10,7 @@ next_pair_freeze: L7
 plan: pending (issue #693。台帳の Claude 手番で plan draft により起票する)
 ---
 
-> **L6 contract marker**: `analyzeWindowsHide(sources, baseline) => WindowsHideResult` は unit-test-granularity contract である。DbC pre/post/invariant は §7 にまとめる。oracle の索引は共有の `docs/test-design/harness/L7-unit-test-design.md` (§子プロセスの windowsHide 検査) に置き、詳細 (CANDIDATE-U-WHIDE-001〜012) は専用の `docs/test-design/harness/L7-windows-hide-spawn-guard-test-design.md` が固定する。
+> **L6 contract marker**: `analyzeWindowsHide(sources, baseline, previousBaseline) => WindowsHideResult` は unit-test-granularity contract である。DbC pre/post/invariant は §7 にまとめる。oracle の索引は共有の `docs/test-design/harness/L7-unit-test-design.md` (§子プロセスの windowsHide 検査) に置き、詳細 (CANDIDATE-U-WHIDE-001〜018) は専用の `docs/test-design/harness/L7-windows-hide-spawn-guard-test-design.md` が固定する。
 
 # 子プロセスの windowsHide 検査 — 関数設計 (issue #693)
 
@@ -30,31 +30,35 @@ Windows では、Node の `child_process` で起動した子プロセスに `win
 
 ## 3. 判定規則
 
-1 件の呼び出しは、options 引数が次のどちらかを満たすときだけ適合とする。
+1 件の呼び出しは、options 引数が次のどちらかを満たすときだけ適合とする。どちらも「実行時の `windowsHide` の実効値が `true` に決まる」ことを静的に言える形だけを認める。
 
-1. object literal で、`windowsHide` プロパティの値が literal の `true` である。spread (`...base`) と並んでいてもよいが、`windowsHide: true` は literal の中に直接書かれていなければならない。
-2. 同じファイル内の `const` 宣言を指す識別子で、その初期化子が 1. を満たす object literal である。
+1. **object literal**: `windowsHide: true` (値は literal の `true`) を持ち、そのプロパティより**後ろ**に spread (`...x`) も同名プロパティも無い。前にある spread は、後ろの `windowsHide: true` が上書きするので構わない。`windowsHide` を 2 回以上書いたものは、最後の 1 つで判定する。
+2. **同じファイル内の `const` 参照**: 識別子が、同じファイルの最上位または同じ関数内の `const` 宣言を指し、その初期化子が 1. を満たす object literal である。さらに、そのファイルの中でその識別子が次のいずれにも現れない: 代入の左辺のメンバー (`X.windowsHide = …`、`X[k] = …`)、`delete X.…`、`Object.assign(X, …)` の第 1 引数、`Object.defineProperty(X, …)` / `Reflect.set(X, …)` などの第 1 引数。現れたら、書き換えの有無を推測せず `windows-hide-unverifiable` とする。
 
 それ以外は違反とし、理由を 2 種に分ける。
 
-- `windows-hide-missing`: options が無い、または object literal に `windowsHide` が無い、または値が `true` 以外。
-- `windows-hide-unverifiable`: options が関数呼び出し・別ファイルの値・条件式など、上の 2 形で静的に確かめられない。
+- `windows-hide-missing`: options が無い、object literal に `windowsHide` が無い、最後の `windowsHide` の値が `true` 以外、または `windowsHide: true` の後ろに spread がある。
+- `windows-hide-unverifiable`: options が関数呼び出し・別ファイルの値・条件式・書き換えのある const など、上の 2 形で静的に確かめられない。
 
-options 引数の位置は API ごとに決まっている: `spawn` / `spawnSync` / `execFile` / `execFileSync` は第 2 引数が配列なら第 3 引数、そうでなければ第 2 引数。`exec` / `execSync` は第 2 引数。
+**options 引数の位置** は Node の overload (`normalizeSpawnArguments` / `normalizeExecFileArgs`) に合わせる。
 
-例外は設けない。`stdio: "inherit"` で親の console を共有する呼び出しにも `windowsHide: true` を付ける (新しい console を作らないので、付けても動作は変わらない)。
+- `spawn` / `spawnSync` / `execFile` / `execFileSync`: 第 2 引数が配列 literal、`null`、`undefined` (または省略) のときは第 3 引数が options。第 2 引数が object literal のときは第 2 引数が options。第 2 引数が識別子のときは、同じファイルの const で初期化子が配列 literal なら第 3 引数、object literal なら第 2 引数とし、それ以外 (型が静的に決まらない) は `windows-hide-unverifiable`。`execFile` の最後の引数が関数 (callback) なら、それは options の候補から外す。
+- `exec` / `execSync`: 第 2 引数が object literal または const 参照なら options。第 2 引数が関数 (callback) か省略なら options 無し (`windows-hide-missing`)。
+
+**適用範囲と GUI の起動**: 本検査は console アプリ (git / gh / node / npm / shell など) の起動を対象にする。`windowsHide: true` は stdio の設定に関係なく初期 window を非表示 (`SW_HIDE`) にするので、GUI アプリの window を見せるために起動する呼び出しには付けてはならない。そうした呼び出しは、直前の行に `// windows-hide: gui-launch <理由>` の注記を置いたときだけ対象から外し、出力の集計に `gui=<件数>` として数える。理由が空の注記は無効 (`windows-hide-missing` のまま) とする。2026-10-13 時点で GUI を起動する呼び出しは無い。
 
 ## 4. baseline (既存違反の記録)
 
 - 既存の違反は `src/lint/windows-hide-baseline.ts` に「ファイル path → 違反件数」として記録する。
 - ファイルの違反件数が baseline を**超えた**ら fail-close する (`windows-hide-new`)。新しい呼び出しは必ず `windowsHide: true` 付きで書く。
-- ファイルの違反件数が baseline を**下回った**ら、baseline の更新を求めて fail-close する (`windows-hide-stale-baseline`)。直したら同じ PR で baseline を減らす。baseline は縮小のみ可で、増やす変更は §6 の領域 PR を含めて認めない。
+- ファイルの違反件数が baseline を**下回った**ら、baseline の更新を求めて fail-close する (`windows-hide-stale-baseline`)。直したら同じ PR で baseline を減らす。
 - baseline に無いファイルで違反が出たら `windows-hide-new` とする。
+- **縮小のみの比較元**: baseline そのものが増やされると上の 2 規則は素通りする。そこで、比較元の baseline (`previousBaseline`) を入力に取り、各ファイルの件数が比較元より増えたら、または比較元に無いファイルが baseline に足されたら `windows-hide-baseline-grown` で fail-close する (ファイル間で件数を付け替えても、増えた側のファイルで検出される)。比較元は、doctor が `git merge-base HEAD origin/main` の commit にある `src/lint/windows-hide-baseline.ts` を読んで得る。merge-base の commit は解決できたがそこにファイルが無いときは、baseline を初めて入れる PR とみなして比較を省く。merge-base を解決できない、またはファイルはあるが読めない・解釈できないときは `windows-hide-baseline-base-unreadable` で fail-close する。
 
 ## 5. doctor への接続
 
 - doctor の check 名は `windows-hide`、CI の doctor (governance hard gates) で fail-close する。
-- 出力は違反ごとに `path:line:reason`、末尾に `checked=<走査ファイル数> calls=<対象呼び出し数> violations=<baseline 外の違反数> baseline=<baseline 合計>`。
+- 出力は違反ごとに `path:line:reason`、末尾に `checked=<走査ファイル数> calls=<対象呼び出し数> violations=<baseline 外の違反数> baseline=<baseline 合計> gui=<gui-launch 注記の件数>`。
 
 ## 6. baseline を 0 にする順序
 
@@ -68,8 +72,8 @@ options 引数の位置は API ごとに決まっている: `spawn` / `spawnSync
 
 ## 7. 不変条件 (DbC)
 
-- Pre: 入力は走査対象のファイルの path と内容の列、および baseline。読み取りだけを行い、ファイルを書かない。
-- Post: `ok` は `windows-hide-new` / `windows-hide-stale-baseline` が 0 件のときだけ true。違反は path と行で一意に並べ、入力の順序に依存しない。
+- Pre: 入力は走査対象のファイルの path と内容の列、baseline、比較元の baseline (`previousBaseline`、無ければ null)。読み取りだけを行い、ファイルを書かない。
+- Post: `ok` は `windows-hide-new` / `windows-hide-stale-baseline` / `windows-hide-baseline-grown` / `windows-hide-baseline-base-unreadable` が 0 件のときだけ true。違反は path と行で一意に並べ、入力の順序に依存しない。
 - Invariant: 適合の判定は §3 の 2 形だけで行い、実行時の値や他ファイルを推測しない。推測できないものは `windows-hide-unverifiable` として違反に数える。
 
 ## 8. 範囲外
