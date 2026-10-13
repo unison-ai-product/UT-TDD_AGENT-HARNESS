@@ -176,18 +176,18 @@ AI runtime / 外部ツール (Claude Code / Codex CLI / gh ...)  ← いずれ�
 - merge queue / `merge_group` と、Actions への write 権限拡大は採らない。
 - CI 相当の検証はハーネス自前を正とし、GitHub Actions への依存は既存 `harness-check` の枠内に留める。
 
-### §10.3 Job Summary
+### §10.3 ジョブの要約出力
 
-- `ut-tdd github summary` は gate matrix / failed tests / doctor 所見 / next action を markdown で stdout へ出し、workflow が `>> "$GITHUB_STEP_SUMMARY"` で追記する。
+- `ut-tdd github summary` は harness.db の `gate_runs` から読んだ gate matrix (gate_id ごとの最新観測)・notes・失敗 gate の next action を markdown で stdout へ出し、workflow が `>> "$GITHUB_STEP_SUMMARY"` で追記する (`src/github/job-summary.ts:16-74`)。failed tests と doctor 所見は出力しない。
 - 表示は projection であって判定正本ではない。生成失敗でも exit 0 で degrade し、CI を summary 失敗で red にしない。
 
-### §10.4 typed PR trace contract (`ut-tdd:trace/v1`)
+### §10.4 PR 本文の型付き追跡ブロック (`ut-tdd:trace/v1`)
 
 - PR body に hidden block `<!-- ut-tdd:trace/v1 ... -->` を置く。必須キー: `plan_id` / `route_mode` / `subject_head` / `base_sha` / `issue_number`。任意キー: `plan_revision` / `episode_id` / `admission_receipt_digest` / `review_receipt_digest`。
 - `ut-tdd github pr render` が block を生成する (手入力しない)。`ut-tdd github pr validate --body-file <path>` は block 欠落・重複・不正行・未知キー・キー重複・必須キー欠落・値不正を finding とし exit 1 で fail-close する。
 - 項目語彙は PLAN-L6-85 の PR body 規定を正とし、本契約で拡張しない。
 
-### §10.5 Issue Forms
+### §10.5 Issue の入力フォーム
 
-- `.github/ISSUE_TEMPLATE/` に recovery / reverse / redesign / incident / nfr-failure の 5 form を置き、`config.yml` で blank issue を禁止する。
-- 必須項目は PLAN-L6-83 の Issue 本文規定 (origin PLAN / revision / observed state / reason / observed HEAD / evidence / drive model / reentry target) に従う。通常 Forward は Issue 化しない。
+- `.github/ISSUE_TEMPLATE/` に recovery / reverse / redesign / incident / nfr-failure の 5 form を置き、`config.yml` で blank issue を禁止する。通常 Forward は Issue 化しない。
+- 5 form 共通の必須項目は hierarchy role / parent issue / closure condition / observed state / observed HEAD / evidence / reason code / drive model / reentry target である。origin PLAN は recovery / reverse / redesign で必須、incident で任意、nfr-failure には無い (nfr-failure は代わりに NFR ID が必須)。revision は recovery にだけ任意項目 (`origin_revision`、`required: false`) として置き、他の 4 form には無い (`.github/ISSUE_TEMPLATE/*.yml`)。PLAN-L6-83 の Issue 本文規定が挙げる revision の必須化は未実装である。
