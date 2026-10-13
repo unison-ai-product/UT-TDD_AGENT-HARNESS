@@ -896,7 +896,7 @@ owner は完了後に最大 1 回だけ再実行する (1 回目と合わせて�
 `src/state-db/stop-refresh-coordinator.ts` の実装と U-DBCURRENCY 系テストを正とし、本節では契約化しない
 (三者照合未了、移行証跡 g2 の保留項目)。
 
-### `db-currency` doctor gate
+### `db-currency` の doctor 検査
 
 `checkDbCurrency` は persisted harness.db の plan registry を現行 `docs/plans` と突き合わせ (`analyzeDbCurrency`)、
 次の violation を独立に fail-close する: `missing_db`、`stale_plan_registry` (`count` = DB 件数 − 期待件数)、
@@ -1896,9 +1896,13 @@ kind 1以上・同revision・accepted producerで要求する。policy ID未登�
 ambiguous=`plan-migration-collision`、unknown=`plan-asset-not-found`、future revision=`plan-revision-not-found`とする。
 CLI/hook/doctorはrule ID、verdict、exit classを変換せず、同じrequest digestなら同じcommand ID再送を冪等に扱う。
 
-実装済みのexit class割当は次のとおり。許可表外のevent・現stateから辿れないedge・`expectedFrom`不一致は
-`forward-transition-illegal`でexit 1。必須evidenceの欠落・期限切れは表のspecialized ruleまたは`forward-evidence-missing`、
-例外commandのcontext不足は`forward-exception-context-missing`で、いずれもexit 2とし、期限切れrecordをeligibleに数えない。
+実装済みのexit class割当と検査順序は次のとおり (`src/forward/domain/workflow.ts:70-108`)。検査は (1) eventが許可表にあるか、
+(2) 例外commandのcontext、(3) 必須evidence、(4) 現stateからのedgeと`expectedFrom`の順に行い、最初に失敗した検査のruleを返す。
+(1) で許可表外のeventは`forward-transition-illegal`でexit 1。(2) のcontext不足は`forward-exception-context-missing`、
+(3) の必須evidenceの欠落・期限切れは表のspecialized ruleまたは`forward-evidence-missing`で、いずれもexit 2とし、
+期限切れrecordをeligibleに数えない。(4) の現stateから辿れないedge・`expectedFrom`不一致は (2)(3) を通過した場合に限り
+`forward-transition-illegal`でexit 1となる。したがってedgeが不正でもevidenceが欠けていればexit 2が先に返る
+(例: `proposed`からevidence無しの`accept`は`forward-accept-evidence-missing`でexit 2)。
 ledger/projectionが利用不能、ledgerとprojectionのstate/digest不一致、subject不一致は`forward-ledger-unavailable`でexit 3とし、
 PLAN frontmatterのstatusからstateを補完しない。拒否時はevent/outbox/外部intentを生成しない。`explain`は有効なqueryであれば
 policyが遷移を拒否してもexit 0で`verdict: explain`と拒否ruleを返す。
