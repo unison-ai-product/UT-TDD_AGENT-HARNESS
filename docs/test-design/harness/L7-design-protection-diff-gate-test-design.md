@@ -25,6 +25,7 @@ updated: 2026-10-13
 - git 経路の行 (013、014、022、023) は temp directory に実 git repository を作る。開発 worktree や実 repository を対象にしない。
 - 保護対象の既存ファイルは `docs/design/harness/x.md` と `docs/test-design/harness/y.md` を base に commit して用意する。
 - 実装 PR は `src/a.ts` の変更を、scripts の行は `scripts/b.sh` の変更を含めて作る。
+- 単一定義点の行 (027) は実 repo の `docs/governance/repository-structure.md` を読む。028 と 029 は `paths` 引数か fake の変更列を使う純粋関数の行、030 は実 repo と temp の実 git repository の行である。
 - CI policy の行 (016、024〜026) は、実 repo の workflow を読み込んだ `GithubWorkflowDoc` を複製し、1 点だけ変えて `analyzeGithubCiPolicy` にかける。
 - 各行は L6 の規則を 1 本だけ殺すように作る。D / R は `docs/design/` (002 / 003) と `docs/test-design/` (018 / 019) を別の行で固定する。ref の解決失敗 (013) と diff の実行失敗 (020) も別の行で固定する。
 
@@ -58,14 +59,18 @@ updated: 2026-10-13
 | `CANDIDATE-U-DPROT-024` | 実装 PR の完成形 (workflow の `jobs.harness-check-linux.steps` と `RUNTIME_STEP_MANIFESTS["harness-check-linux"]` の両方に、L6 §7 の位置・`name`・`if`・`env`・`run` で step を足す) を、実 repo の workflow に対して `analyzeGithubCiPolicy` にかける | `ok=true`。`missing_runtime_leg` も `missing_step` も出ない | workflow だけを直し manifest を更新しない (`missing_runtime_leg` で fail する) |
 | `CANDIDATE-U-DPROT-025` | manifest は正しく更新したまま、workflow 側の step を 1 点ずつ変える: (a) `if` を削除 (push でも動く)、(b) `if` を `${{ always() }}` に変更、(c) `plan admission-check` の前へ移動、(d) `typecheck` の後へ移動、(e) `continue-on-error: true` を追加、(f) 同じ step を `harness-check-windows` にも追加 | (a)〜(e) は `jobs.harness-check-linux` の `missing_runtime_leg`。(f) は `jobs.harness-check-windows` の `missing_runtime_leg` | manifest 照合を順序なしの集合比較にする ((c)(d) が通る) / `if` を比較から外す ((a)(b) が通る) |
 | `CANDIDATE-U-DPROT-026` | 実 repo の `.github/workflows/harness-check.yml` を parse し、`jobs.harness-check-linux.steps` から `run` に `github design-protection` を含む step を取り出す | ちょうど 1 件。`if` は `${{ github.event_name == 'pull_request' }}` と完全一致。`env` は `BASE_SHA` だけで値は `${{ github.event.pull_request.base.sha }}` と完全一致 (`|| github.event.before` を含まない)。024 と合わせて manifest 側も同じ値に固定される | workflow と manifest を揃えて `if` を外す (025 は manifest との一致しか見ないので通る) / base に push の `before` を混ぜる |
+| `CANDIDATE-U-DPROT-027` | 実 repo の `docs/governance/repository-structure.md` §3.1 の 2 つの表 (判定 path、保護 path) を読み、`IMPLEMENTATION_PATH_PREFIXES` / `PROTECTED_PATH_PREFIXES` と比べる。加えて、(a) 表の見出しを変えた文書、(b) 表の行を 0 件にした文書、(c) 表に `lib/` を 1 行足した文書を同じ比較関数にかける | 実 repo では両方とも集合として一致。(a)(b) は「表を読めない」で失敗し、空集合同士の一致として通さない。(c) は判定 path の不一致で失敗し、差分に `lib/` を示す。加えて (d) 2 つの表それぞれの行の順序を入れ替えた文書 (定数は据え置き) は一致する | 定数か表の片方だけを変えても通る / 表が読めないとき空集合を返して、空の定数と一致させる / 順序込みで比べて、並べ替えだけで赤にする ((d) が失敗する) |
+| `CANDIDATE-U-DPROT-028` | `paths = { implementation: ["product/"], protected: ["spec/design/"] }` を渡す。(a) `product/a.ts` と `spec/design/x.md` を M、(b) `src/a.ts` と `spec/design/x.md` を M、(c) `product/a.ts` と `docs/design/harness/x.md` を M | (a) `ok=false`、分類 `implementation`、違反 `protected-modified` (path = spec/design/x.md)。(b) 分類 `non-implementation`、`ok=true`。(c) 分類 `implementation`、違反 0 件、`ok=true` | 分類か拒否の関数の中に `src/` / `docs/design/` を直接書き、`paths` を無視する ((a) が PASS、(b) が BLOCK になる) |
+| `CANDIDATE-U-DPROT-029` | 実装 PR で (a) `src/a.ts` → `product/a.ts` の R (既定の定数のまま)、(b) `scripts/b.sh` → `tools/b.sh` の R、(c) `src/a.ts` → `src/sub/a.ts` の R、(d) `paths.implementation = ["src/", "product/"]` を渡して (a) と同じ R、(e) `src/a.ts` → `docs/design/harness/moved.md` の R | (a)(b)(e) は `ok=false`、違反 `implementation-moved-out` 1 件だけ (path = 移動先、from = 移動元)。(e) は保護対象への rename の許可 (004) より移動の拒否が優先する。(c)(d) は違反 0 件、`ok=true` | 判定 path の外への rename を許可する ((a) が PASS) / 判定 path の中での rename まで拒否する ((c) が BLOCK) / 移動先の判定に定数ではなく固定の `src/` を使う ((d) が BLOCK) / 保護対象への rename の許可を先に判定する ((e) が PASS) |
+| `CANDIDATE-U-DPROT-030` | 実 repo の HEAD で `git ls-files` を読み、`IMPLEMENTATION_PATH_PREFIXES` と `PROTECTED_PATH_PREFIXES` の各 prefix の配下の追跡ファイルを数える。加えて、temp の実 git repository で `src/` 配下を全部 `product/` へ動かした commit (定数は据え置き) に同じ確認をかける | 実 repo では各 prefix とも 1 件以上。temp repository では `src/` が 0 件で失敗し、空の prefix に `src/` を示す | 置き場の存在を確かめない (全部を動かしても 027 が一致のまま通る) / working tree を読み、追跡されていないファイルで空を見逃す |
 
 ## 4. Gate and scope fence
 
 - 本書の oracle は `docs/design/` と `docs/test-design/` の保護だけを扱う。`tests/` の oracle 保護、追加による実質上書き、push event の検査は対象外 (設計文書 §9)。
 - テスト設計の確定・正式 ID への昇格・Red のテストは、src/ も scripts/ も含まない PR (契約 PR + Red) で入れる (設計文書 §10.2)。実装 PR は本書と共有の索引に触れず、Green にするだけにする。本書は昇格のための例外 oracle を持たない。
 - candidate の存在だけを Green の証跡にしない。
-- 009(b)(c) は L6 §3 / §9 の初版の非保証境界を固定する。workflow 内容の CI policy 検査016/024〜026とは別である。issue #913 による新構成への gate 導入後は、契約改訂で009(b)(c)の該当入力を新しい実装・保護 path に対応させ、期待を `implementation` / `BLOCK` に反転する。現行の期待は #913 導入前に限る。
-- 構成変更後の判定・保護 path の保証は #913 の後続契約と pair が所有する。移動 PR と同時の path 更新、単一定義点と構成正本の照合、移動後の実装 PR の Red→Green をその pair で検証する。現行001〜026を移動後の証明へ流用しない。移動だけの先行 merge は認めない。
+- 009(b)(c) は L6 §3 / §9 の初版の非保証境界を固定する。workflow 内容の CI policy 検査016/024〜026とは別である。issue #973 で分類対象を広げると決めた場合は、その契約改訂で009(b)(c)の期待を `implementation` / `BLOCK` に反転する。
+- 027〜030 は L6 §3.1 の単一定義点と、表と定数を据え置いた移動の検出を固定する (issue #913)。工程 ④ の移動 PR は repository-structure.md §3.1 の表と定数を同時に直し、027 を Green のまま通す。移動後の実際の path で実装 PR が BLOCK になる Red→Green は、その移動 PR が自分の差分で示す。現行001〜026を移動後の証明へ流用しない。
 
 ## 5. Required evidence
 

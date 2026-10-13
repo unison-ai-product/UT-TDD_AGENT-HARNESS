@@ -10,7 +10,7 @@ next_pair_freeze: L7
 plan: docs/plans/PLAN-L6-834-design-protection-diff-gate.md
 ---
 
-> **L6 contract marker**: `checkDesignProtection(input: DesignProtectionInput) => DesignProtectionResult` は unit-test-granularity contract である。DbC pre/post/invariant は §8 にまとめる。oracle の索引は共有の `docs/test-design/harness/L7-unit-test-design.md` (§設計書保護 diff gate) に置き、詳細 (CANDIDATE-U-DPROT-001〜026) は専用の `docs/test-design/harness/L7-design-protection-diff-gate-test-design.md` が固定する。
+> **L6 contract marker**: `checkDesignProtection(input: DesignProtectionInput) => DesignProtectionResult` は unit-test-granularity contract である。DbC pre/post/invariant は §8 にまとめる。oracle の索引は共有の `docs/test-design/harness/L7-unit-test-design.md` (§設計書保護 diff gate) に置き、詳細 (CANDIDATE-U-DPROT-001〜030) は専用の `docs/test-design/harness/L7-design-protection-diff-gate-test-design.md` が固定する。
 
 # 設計書保護 diff gate — 関数設計 (issue #898)
 
@@ -55,7 +55,7 @@ pathspec を付けない理由は、分類 (§3) に `src/` と `scripts/` の�
 
 PR の種別は変更 path の集合だけで決める。PLAN の kind、branch 名、PR 本文には依存しない。
 
-- **実装 PR**: 変更 path (rename は `from` と `path` の両方) のどれか 1 つが `src/` または `scripts/` で始まる PR。
+- **実装 PR**: 変更 path (rename は `from` と `path` の両方) のどれか 1 つが判定 path (`src/` または `scripts/`) で始まる PR。
 - **非実装 PR**: それ以外の PR。この gate は何も拒否しない。
 
 契約 PR (src も scripts も含まず、設計文書だけを直す PR) は非実装 PR として通る。
@@ -64,11 +64,28 @@ src も docs も含まない PR も非実装 PR で、この gate の対象外�
 初版の分類対象は、PO が採用した `src/` と `scripts/` に限る。
 `.claude/hooks/` や `.github/workflows/` だけの実行系変更は、設計文書の変更を伴っても、この分類では非実装 PR となる。
 この gate は、それらの単独変更による設計書の書き換えを防ぐ保証を持たない。workflow の内容を検査する §7 の CI policy とは別の境界である。
-分類対象を将来の構成に合わせて拡張する後続契約は issue #913 が所有する。初版の分類対象は #913 の契約改訂まで変更しない。
+分類対象を実行系の設定へ広げるかは issue #973 で決める。それまで初版の分類対象を変更しない。
+
+### 3.1 判定 path と保護 path の単一定義点 (issue #913)
+
+判定 path (`src/`、`scripts/`) と保護 path (§4 の `docs/design/`、`docs/test-design/`) の正本は `docs/governance/repository-structure.md` §3.1 の 2 つの表である。
+
+- 実装は、この 2 つの一覧を `src/github/design-protection.ts` の export 定数 `IMPLEMENTATION_PATH_PREFIXES` と `PROTECTED_PATH_PREFIXES` の 1 か所にだけ置く。分類 (§3) と拒否 (§4) はこの定数だけを読み、関数の中に path の文字列を直接書かない。
+- `classifyPullRequestChanges` と `checkDesignProtection` は、省略可能な引数 `paths: { implementation: readonly string[]; protected: readonly string[] }` を受け取る。省略時は上の 2 定数を使う。CLI は引数を渡さない (定数だけで動く)。この引数はテストで別の構成を与えるためだけにある。
+- 各要素は `/` で終わる repository root からの相対 prefix である。比較は §2 と同じく大文字と小文字を区別する前方一致とする。
+- テストは repository-structure.md §3.1 の 2 つの表を読み、2 定数と集合として一致することを確かめる。表が見つからない、または読めた行が 0 件なら、一致とみなさずに失敗する。
+- 置き場を動かす PR (v4 工程 ④ など) は、repository-structure.md §3.1 の表と 2 定数を同じ変更で直す。片方だけ直すと上のテストが赤になる。移動だけを先に merge しない。
+
+表と定数を両方とも据え置いたまま中身だけを動かす PR は、上の一致テストでは止まらない。次の 2 つで止める。
+
+- **判定 path の外への rename の拒否 (gate)**: rename の `from` が判定 path の配下で、`path` がどの判定 path の配下でもない変更を、違反 `implementation-moved-out` (path = `path`、from = `from`) にする。`from` が判定 path なので、この PR は必ず実装 PR になる。移動先を判定 path に足す PR (表と定数を同時に直した移動 PR) では、移動先が判定 path の配下になるので違反にならない。
+- **置き場が空でないことの確認 (テスト)**: テストは HEAD の `git ls-files` を読み、2 定数の各 prefix の配下に追跡ファイルが 1 件以上あることを確かめる。git が rename と検出しない移動 (削除 + 内容を大きく変えた追加) でも、全部を動かせば元の置き場が空になり赤になる。
+
+一部だけを rename と検出されない形で動かす PR は、どちらでも止まらない。これは既知の制約として §9 に記す。
 
 ## 4. 拒否規則
 
-保護対象は `docs/design/` と `docs/test-design/` の配下にある全ファイルである。
+保護対象は保護 path (`docs/design/` と `docs/test-design/`、§3.1) の配下にある全ファイルである。
 実装 PR でだけ、次の規則を適用する。
 
 | 正規化後の変更 | 保護対象との関係 | 判定 |
@@ -76,8 +93,11 @@ src も docs も含まない PR も非実装 PR で、この gate の対象外�
 | modified | path が保護対象 | 拒否 (`protected-modified`) |
 | deleted | path が保護対象 | 拒否 (`protected-deleted`) |
 | renamed | `from` が保護対象 | 拒否 (`protected-renamed`。保護対象の外へ出す rename も含む) |
-| renamed | `from` が保護対象外で `path` だけが保護対象 | 許可 (保護対象への新規追加と同じ) |
+| renamed | `from` が保護対象外かつ判定 path の外で、`path` だけが保護対象 | 許可 (保護対象への新規追加と同じ) |
 | added | path が保護対象 | 許可 |
+| renamed | `from` が判定 path の配下で、`path` がどの判定 path の配下でもない | 拒否 (`implementation-moved-out`、§3.1)。`path` が保護対象でも同じで、上の許可より優先する |
+
+1 件の rename に当たる規則は高々 1 つである。`from` が保護対象なら `protected-renamed`、`from` が判定 path の配下で `path` が判定 path の外なら `implementation-moved-out`、それ以外で `path` だけが保護対象なら許可になる。判定 path と保護 path は重ならないので、最初の 2 つが同時に当たることはない。
 
 例外経路は作らない。override の marker、PR label、環境変数も作らない。
 format の一括修正や文字化け修正のように src と docs を同時に直す変更も、PR を分けて出す。
@@ -91,7 +111,7 @@ format の一括修正や文字化け修正のように src と docs を同時�
 | `ok` | 違反 0 件かつ入力エラーなしのときだけ `true` |
 | `classification` | `implementation` / `non-implementation` / `unknown` (入力エラー時) |
 | `implementationPaths` | 分類の根拠になった `src/` / `scripts/` の path (先頭から最大 5 件) |
-| `violations` | `{ code, path, from? }` の配列。code は `protected-modified` / `protected-deleted` / `protected-renamed` |
+| `violations` | `{ code, path, from? }` の配列。code は `protected-modified` / `protected-deleted` / `protected-renamed` / `implementation-moved-out` (§3.1) |
 | `error` | 入力エラーのときだけ `{ code, detail }`。code は既存の `GitDiffAdapterErrorCode` をそのまま使う |
 
 - 違反は全件を path の辞書順で返す。最初の 1 件で打ち切らない。
@@ -115,6 +135,7 @@ format の一括修正や文字化け修正のように src と docs を同時�
 | name-status の解釈 | 同 file の `parseNameStatus` から PLAN path の絞り込みを外した汎用版 `parseNameStatusEntries(fields)` を切り出す。既存の `parseNameStatus` はその結果を PLAN path で絞るだけにする。既存の admission テストは無変更で green のままであること |
 | 変更の型 | `src/plan-admission/diff-fence.ts` の `PlanChange` (added / modified / deleted / renamed) をそのまま使う |
 | エラーの型 | `GitDiffAdapterError` と `GitDiffAdapterErrorCode` をそのまま使う |
+| path の一覧 | 同 file の export 定数 `IMPLEMENTATION_PATH_PREFIXES` / `PROTECTED_PATH_PREFIXES` (§3.1 の単一定義点) |
 | 判定 | 新規 `src/github/design-protection.ts` に純粋関数 `classifyPullRequestChanges(changes) => "implementation" \| "non-implementation"` と `checkDesignProtection(input) => DesignProtectionResult` を置く |
 | CLI | `ut-tdd github design-protection --base <ref> --head <ref> [--json]` を `src/cli.ts` の既存 `github` command group に 1 つ足す |
 
@@ -157,10 +178,12 @@ workflow と manifest の片方だけを直す PR は、`missing_runtime_leg` �
 | contract point | 不変条件 |
 |---|---|
 | pre | `baseRef` と `headRef` は空でなく、NUL / LF / CR を含まない (既存 `resolveCommit` の検査そのもの。違反は `git-ref-invalid`)。それ以外の文字 (tab など) は検査せずに `git rev-parse --verify` へ渡し、解決できなければ同じく `git-ref-invalid` になる |
-| post (分類) | 分類は変更 path の集合だけで決まる。PLAN kind、branch 名、PR 本文、変更の順序に依存しない |
+| post (分類) | 分類は変更 path の集合と判定 path だけで決まる。PLAN kind、branch 名、PR 本文、変更の順序に依存しない |
+| invariant (単一定義点) | 判定 path と保護 path は §3.1 の 2 定数にだけあり、repository-structure.md §3.1 の表と集合として一致する。各 prefix の配下に HEAD の追跡ファイルが 1 件以上ある |
+| post (移動) | 判定 path の配下から判定 path の外への rename 1 件につき違反 `implementation-moved-out` 1 件 |
 | post (許可) | 非実装 PR では `violations=[]` かつ `ok=true` (入力エラーがなければ) |
 | post (拒否) | 実装 PR で保護対象の既存ファイルを M / D / R した変更 1 件につき違反 1 件 |
-| post (追加) | added と、保護対象外から保護対象への rename は違反にしない |
+| post (追加) | added と、保護対象外かつ判定 path の外から保護対象への rename は違反にしない。判定 path の配下から保護対象への rename は `implementation-moved-out` になる |
 | invariant (fail-close) | 入力エラーは `ok=true` にならない。空の diff は「非実装 PR」で `ok=true` (読めた上で 0 件だから) |
 | invariant (読み取り専用) | gate は git object も working tree も書き換えない |
 | invariant (例外なし) | override の入口 (marker、label、環境変数、CLI option) を持たない |
@@ -172,8 +195,9 @@ workflow と manifest の片方だけを直す PR は、`missing_runtime_leg` �
 - `docs/governance/` や `docs/plans/` の保護。PLAN の編集は PLAN admission (`plan admission-check`) が見る。
 - clean Pack の consumer workflow (`docs/templates/github/common/pack-harness-check.yml`) への展開。
 - main への push event での検査。保護は PR の時点で効かせる (理由は §7)。
-- `.claude/hooks/` / `.github/workflows/` 単独変更を実装 PR として分類すること。初版は #898 の PO 決定どおり `src/` / `scripts/` に限る。これらの変更を含めた全実行系の保護は保証しない。将来の構成に合わせた分類対象の再定義は issue #913 が所有する。
-- 工程④の構成変更後の path への対応は #913 が所有する。現在の固定 prefix のままコードや設計書だけを移すと、分類・保護が外れて PASS になる既知の制約がある。#913 は、移動 PR と同じ変更で判定 path と保護 path を更新し、path 一覧の単一定義点と構成正本を照合するテスト、移動後の実装 PR が gate に当たる Red→Green を先に凍結する。移動だけを先に merge しない。本 PLAN はその後続検証の完了を主張しない。
+- `.claude/hooks/` / `.github/workflows/` 単独変更を実装 PR として分類すること。初版は #898 の PO 決定どおり `src/` / `scripts/` に限る。これらの変更を含めた全実行系の保護は保証しない。広げるかどうかは issue #973 で決める。
+- 判定 path の一部だけを、git が rename と検出しない形 (削除 + 内容を大きく変えた追加) で判定 path の外へ動かす PR。§3.1 の 2 つの仕組みはどちらも反応しない。全部を動かした時点で置き場が空になり、§3.1 のテストが赤になる。
+- 工程 ④ の移動 PR そのものの検証。§3.1 は、移動 PR が表と定数を同時に直すこと、定数を差し替えれば別の構成でも gate が効くことまでを固定する。移動後の実際の path で実装 PR が BLOCK になる Red→Green は、その移動 PR が自分の差分で示す (#913 の完了条件 2)。
 
 ## 10. テスト設計の確定と oracle 昇格の運用 (PO 決定)
 
