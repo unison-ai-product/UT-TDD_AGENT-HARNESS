@@ -836,6 +836,74 @@ spec RAG と工程 RAG は別の read-model である。`spec_rag_closure_entrie
 `review_evidence.green_commands` は証跡履歴として残すが、ID 単位の実行・検証対象を代替しない。
 検出系は PLAN 粒度 evidence に合わせて台帳を薄めず、typed spec ID と V-pair から導いた実行単位に合わせる。
 
+### 台帳 row / gate ID 契約 (未実装)
+
+**未実装**: 本節の authoring source・row・gate ID は L6 設計 freeze 済みだが、`src/` / `tests/` に実装は無い
+(実装は PLAN-L6-50 §3.3 が後続 L7 add-impl へ送ったまま未起票。所有は PLAN-L6-50 / VMS-014 / TVMS-014)。
+
+authoring source は tracked file `docs/governance/vmodel-execution-assignment-ledger.md` とし、harness.db は
+検索用 projection であって正本にしない。row は最低限次の論理列を持つ。
+
+| field | 契約 |
+|---|---|
+| `assignment_id` | `spec_id` + `task_kind` から作る stable ID。rebuild で変わらない |
+| `spec_id` | `spec_defs.spec_id` に存在する ID |
+| `task_kind` | `implementation` / `verification` / `review` |
+| `target_artifacts` | 対応設計・実装・テスト・review packet の path 配列 |
+| `completion_criteria` | `implementation` は対応 test / oracle、`verification` は検証レベルと再実行対象を含む |
+| `status` | `planned` / `in_progress` / `done` / `pass` / `fail` / `archived` |
+| `evidence` | command / PR / path / issue などの検証可能アンカー配列。`done` / `pass` / `fail` では必須 |
+| `archived_reason` | `archived` のときだけ必須。宣言から消えた ID は削除せず `archived` へ退避する |
+
+| gate ID | 検出条件 |
+|---|---|
+| `execution-assignment-evidence-missing` | `done` / `pass` / `fail` なのに evidence が空、または「確認しました」等の非アンカーだけ |
+| `execution-assignment-unknown-spec` | `spec_id` が `spec_defs` に存在しない |
+| `execution-assignment-target-missing` | `target_artifacts` または `completion_criteria` が空 |
+| `execution-assignment-archive-reason-missing` | `archived` なのに `archived_reason` が無い |
+| `execution-assignment-non-idempotent` | 同一入力で `assignment_id` / row 数 / archived row が揺れる |
+
+`checkExecutionAssignmentLedger` が finding 化する「同一 assignment の重複」は上表と別の既存契約であり、本表で置き換えない。
+
+移行元: `docs/plans/PLAN-L6-50-execution-assignment-ledger.md` (issue #648)
+
+## harness.db on-disk currency 契約 (PLAN-L7-365)
+
+on-disk `.ut-tdd/harness.db` の**鮮度 (currency)** だけを扱う。backup / recovery ledger / recovery-probe の
+recoverability 軸は PLAN-L7-348 の範囲であり、本節に混ぜない。projection ロジック自体は変えない。
+
+### 自動追従の置き場所
+
+- 自動 re-projection は **Stop hook 境界** に置く。doctor は read-only を保ち、stale を remediation 付きの fail で
+  報告するだけで自動修復しない (doctor singleton 規律 PLAN-L7-442 を壊さないため)。
+- DB I/O は pure な log 圧縮 core (`src/runtime/session-log.ts` onStop) に入れず、CLI 層 `session summary` が担う。
+- `session summary` は refresh を **detached fire-and-forget** で起動して即 return する (`spawnDetachedStopRefresh`)。
+  Stop hook の timeout 予算内で同期 full rebuild を行わない。起動しなかった場合は stderr に理由
+  (`dirty-marker-unavailable` / `coordinator-unavailable` / `missing-entrypoint` / `bun-runtime-refused` /
+  `unsupported-refresh-entrypoint` / `ownership-handoff-failed` / `spawn-error: ...`) を出し、exit 0 を維持する。
+  active owner が居る場合は `coalesced` として畳み、警告しない。
+- 内部エントリ `ut-tdd session db-refresh --generation <id>` が実 refresh を行う。`refreshHarnessDbOnStop` は persisted
+  harness.db を full rebuild し、完走後に条件付き VACUUM (PLAN-L7-457) を行う。例外・lock を含む全失敗は
+  `skippedReason` (`rebuild-failed` / `rebuild-error: ...`) へ落とし throw しない (fail-open)。
+- token / cost ingest は Stop refresh に**含めない** (`skipTokenTelemetry: true`、`tokenRunsIngested` は常に 0)。
+  手動 `ut-tdd telemetry scan` の所有整理は別 slice。
+
+### 多重 Stop の coalescing
+
+`runCoalescedStopRefresh` は lease を持つ owner 1 つだけが refresh を実行する。実行中に来た Stop は dirty demand に畳み、
+owner は完了後に最大 1 回だけ再実行する (1 回目と合わせて最大 2 run)。失敗時は failure を記録し、demand を再試行可能に
+戻してから lease を解放する。detached child への ownership 引き継ぎの詳細 (birth 検証・PID 再利用) は
+`src/state-db/stop-refresh-coordinator.ts` の実装と U-DBCURRENCY 系テストを正とし、本節では契約化しない
+(三者照合未了、移行証跡 g2 の保留項目)。
+
+### `db-currency` の doctor 検査
+
+`checkDbCurrency` は persisted harness.db の plan registry を現行 `docs/plans` と突き合わせ (`analyzeDbCurrency`)、
+次の violation を独立に fail-close する: `missing_db`、`stale_plan_registry` (`count` = DB 件数 − 期待件数)、
+`stale_plan_registry_fingerprint`。repo root または DB が読めない場合も violation とする。
+
+移行元: `docs/plans/PLAN-L7-365-harness-db-currency-hook.md` (issue #648)
+
 ## Vモデルengine-swap進捗投影契約
 
 ### ActiveUpgradeFrontier
@@ -1828,6 +1896,19 @@ kind 1以上・同revision・accepted producerで要求する。policy ID未登�
 ambiguous=`plan-migration-collision`、unknown=`plan-asset-not-found`、future revision=`plan-revision-not-found`とする。
 CLI/hook/doctorはrule ID、verdict、exit classを変換せず、同じrequest digestなら同じcommand ID再送を冪等に扱う。
 
+実装済みのexit class割当と検査順序は次のとおり (`src/forward/domain/workflow.ts:70-108`)。検査は (1) eventが許可表にあるか、
+(2) 例外commandのcontext、(3) 必須evidence、(4) 現stateからのedgeと`expectedFrom`の順に行い、最初に失敗した検査のruleを返す。
+(1) で許可表外のeventは`forward-transition-illegal`でexit 1。(2) のcontext不足は`forward-exception-context-missing`、
+(3) の必須evidenceの欠落・期限切れは表のspecialized ruleまたは`forward-evidence-missing`で、いずれもexit 2とし、
+期限切れrecordをeligibleに数えない。(4) の現stateから辿れないedge・`expectedFrom`不一致は (2)(3) を通過した場合に限り
+`forward-transition-illegal`でexit 1となる。したがってedgeが不正でもevidenceが欠けていればexit 2が先に返る
+(例: `proposed`からevidence無しの`accept`は`forward-accept-evidence-missing`でexit 2)。
+ledger/projectionが利用不能、ledgerとprojectionのstate/digest不一致、subject不一致は`forward-ledger-unavailable`でexit 3とし、
+PLAN frontmatterのstatusからstateを補完しない。拒否時はevent/outbox/外部intentを生成しない。`explain`は有効なqueryであれば
+policyが遷移を拒否してもexit 0で`verdict: explain`と拒否ruleを返す。
+
+移行元: `docs/plans/PLAN-L7-419-forward-fsm-transition-workflow-cli.md` (issue #648)
+
 `P-FSM-001` generatorはseedをevidenceへ記録し、0〜64 event、全normal/exception command、valid/invalid evidence、
 duplicate/gap/out-of-order sequenceを生成する。shrinkerは連続chunk削除→単event削除→optional evidence/reason縮小の順で、
 subject/revisionを勝手に変更しない。最低10,000列または全state×command pairを網羅し、非許可state到達0、invalid列受理0を要求する。
@@ -1882,7 +1963,7 @@ kernel DTO/portだけで行い、別contextのdomainを直接importしない。
 ### L7 test ID
 
 - Plan Asset: `U-PA-001..007`
-- Forward FSM: `U-FSM-001..007`, `P-FSM-001`
+- Forward FSM: `U-FSM-001..009`, `P-FSM-001`
 - Contract: `U-VMC-001..005`, `I-VMC-001`
 - Disposition/profile: `U-DISP-001..005`, `I-DISP-001`, `U-PROFILE-001..005`
 - ドキュメント台帳／ドメイン／意味評価: `U-DOCLEDGER-001..005`, `U-DOMAIN-001..004`, `U-ASSESS-001..006`
