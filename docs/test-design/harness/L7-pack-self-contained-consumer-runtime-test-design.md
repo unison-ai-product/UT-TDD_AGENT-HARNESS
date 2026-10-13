@@ -39,12 +39,24 @@ Green証跡ではない。各mutationは他の入力が整合した状態で単�
 
 契約入力は `.ut-tdd/evidence/issue930-l7-516-release-binding-proposal.md`。control6136055277に従い、契約内容の非著者レビュー後にL7-516の正規revisionへ束縛する。この追記は既存表の行を置き換えず、001・005の下位caseだけを追加する。既存007の起動検証と他のoracleは不変である。既存Greenをbinding実測へ流用しない。
 
-| 既存候補 | 追加する独立入力・対照 | 観測する結果 |
+| 既存候補の一意case ID | 追加する独立入力・対照 | 観測する結果 |
 |---|---|---|
-| CANDIDATE-U-PACKNODE-001 | digest・pointer・identity/history linkageが整合するsealed receiptにvalid exact `release_binding: { tag }`を与える。bindingless legacyは別fixtureとする | readerは封印した正確なtagを返し、consumer 7-field tupleは不変。legacy readerはunknownを返し、local_versionで代用しない。表示出力は本caseの対象外 |
-| CANDIDATE-U-PACKNODE-001 | bindingのnull/array/primitive、tag欠落・空・既存safe-tag条件違反、binding内unknown key、receipt top-level unknown keyを独立に与える。保存receipt変異時はfile/bundle digestとpointerを整合する | 一般digest不一致ではなくreceipt parser拒否を識別する。既存pre-lock readerで検出するinvalid bindingではlock/staging/payload write/seal/public bundle publish/active-pointer CAS・write/launchは0。既存表のgeneration/identity変異のwrite・activation・receipt append・launch 0も維持し、別receiptで補完しない |
-| CANDIDATE-U-PACKNODE-005 | activeなbindingless legacy receiptをread-only readerで読み、前後のreceipt bytes、6-file digest map、bundle digest、pointer bytes/mode/digestを比較する | readerのtagはunknown、全比較値は不変でありbackfill/resealしない。実install/updateの正常pointer切替は別の既存matrixで測定する。既存のfault/ack-loss/partial/unknown/cleanup/prior-state条件は撤回しない |
-| CANDIDATE-U-PACKNODE-005 | malformed candidateを既存write port後に初めて検出する場合を、pre-lock検出とは別に与える | lock/snapshot/private staging作成0を主張しない。payload write/seal/public publish/pointer CAS・write/launchの0とcleanup/quarantine、prior-state保持を分離する |
+| CANDIDATE-U-PACKNODE-001-a | 整合するsealed receiptへvalid exact `release_binding: { tag }`を与える | readerは封印した正確なtagを返し、consumer 7-field tupleは不変。表示出力は対象外 |
+| CANDIDATE-U-PACKNODE-001-b | bindingless legacyを独立fixtureで読む | readerはunknownを返し、local_versionで代用しない |
+| CANDIDATE-U-PACKNODE-001-c | bindingだけをnullにする | 共通のparser拒否・pre-lock deny-0を観測 |
+| CANDIDATE-U-PACKNODE-001-d | bindingだけをarrayにする | 共通のparser拒否・pre-lock deny-0を観測 |
+| CANDIDATE-U-PACKNODE-001-e | bindingだけをprimitiveにする | 共通のparser拒否・pre-lock deny-0を観測 |
+| CANDIDATE-U-PACKNODE-001-f | binding objectのtagだけを欠落させる | 共通のparser拒否・pre-lock deny-0を観測 |
+| CANDIDATE-U-PACKNODE-001-g | tagだけを空にする | 共通のparser拒否・pre-lock deny-0を観測 |
+| CANDIDATE-U-PACKNODE-001-h | tagだけを既存safe-tag条件違反にする | 共通のparser拒否・pre-lock deny-0を観測 |
+| CANDIDATE-U-PACKNODE-001-i | binding内にunknown keyだけを追加する | 共通のparser拒否・pre-lock deny-0を観測 |
+| CANDIDATE-U-PACKNODE-001-j | receipt top-levelへunknown keyだけを追加する | 共通のparser拒否・pre-lock deny-0を観測 |
+| CANDIDATE-U-PACKNODE-005-a | activeなbindingless legacyをread-only readerで読み、前後のreceipt bytes、6-file digest map、bundle digest、pointer bytes/mode/digestを比較する | tagはunknown、全比較値は不変、backfill/resealしない。実install/updateの正常pointer切替は別matrix。既存fault/ack-loss/partial/unknown/cleanup/prior-state条件は撤回しない |
+| CANDIDATE-U-PACKNODE-005-b | malformed candidateを既存write port後に初めて検出する場合を、pre-lock検出とは別に与える | lock/snapshot/private staging作成0を主張しない。payload write/seal/public publish/pointer CAS・write/launchの0とcleanup/quarantine、prior-state保持を分離する |
+
+001-c〜jの共通条件: 保存receipt変異時はfile/bundle digest・pointer・その他identity/history linkageを整合し、一般digest不一致ではなくreceipt parser拒否を識別する。既存pre-lock readerで検出するinvalid bindingはlock/staging/payload write/seal/public bundle publish/active-pointer CAS・write/launchが0。既存001のgeneration/identity変異のwrite・activation・receipt append・launch 0も維持し、別receiptで補完しない。各sub-IDを独立した実テスト・Red→Green・exact HEAD証跡に対応付ける。
+
+required 6 payloadの根拠は `src/setup/consumer-node-runtime.ts:660` の配列であり、`consumer-runtime.json`は含まれない。optional receipt fieldを追加するだけで、consumer bundleに追加ファイルを作らない。現行schemaは `src/setup/consumer-runtime-release.ts:23` のv1だけ。後続metadata pairへの制約は「v1はrequirement無しで読取互換」「v2はrequirement必須」「schema versionで分ける」「absent sentinelを作らない」の4点を維持する。binding封印のrelease.tag一致はv1/v2共通であり、v1はrequirement無しを許容して検証済みtagを使い、v2はmandatory requirementも検証したtagを使う。v2欠落をv1へ縮退せず封印を拒否する。このversion別admissionのoracleは後続ownerが持ち、stored-reader caseの成功で代替しない。
 
 同一targetのassetとbindingのadmission照合、v1/v2 metadataとgzip、再起動後のタグ表示は後続#930の別pairで扱う。表示ownerは現物から確定し、PLAN-L7-362 / PLAN-L7-523を照合する。L7-628を表示ownerと決め打ちしない。後続表示はsealed receiptのtop-level `release_binding.tag`だけを読み、欠落はunknown、local_version代用なしとする。表示の削除後正系は別oracleとし、007へ混ぜない。表示完了まで#930を閉じず、canary.8受入は保存・読取と表示の両方を要求する。
 

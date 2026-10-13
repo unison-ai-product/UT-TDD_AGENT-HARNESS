@@ -20,11 +20,13 @@ source_blob_oid: d510b8f1b039d3cb84465fdb1574df2ff5d8b036
 
 対象は `consumer-receipt.json` 内の binding 保存・読取まで。producer の v1/v2 metadata、gzip、同一target asset admission、CLI表示、実装・実測・publicationは対象外である。
 
+現物のrequired配列は `src/setup/consumer-node-runtime.ts:660` にあり、`consumer-receipt.json`、`history.jsonl`、`marker.json`、`node-bootstrap-receipt.json`、`operation-state.json`、`ut-tdd.mjs` の6 payloadである。`consumer-runtime.json` はこの集合に含まれない。receipt内のoptional fieldだけを追加し、metadataをconsumer bundleへ同梱する追加ファイルを作らない。
+
 ## §11.2 に加える保存・読取契約
 
 1. receipt の既存required fieldと `consumer` object内の7-field tupleを保持する。optional top-level sibling `release_binding` を1つだけ許可する。bindingをtupleに混ぜず、payload名・個数・既存digest式・pointer形式を変更しない。
 2. present binding は exact `{ tag: string }` objectである。null / array / primitive、tag欠落・空・既存 `verifyConsumerRuntimeReleaseAssets` のsafe-tag条件に反する値、binding内unknown key、receipt top-level unknown keyを拒否する。別のtag grammarを追加しない。
-3. 新規bindingは同一targetの検証済み `consumer-runtime.json` の `release.tag` と完全一致する値だけを封印する。asset/anchor検証とreceiptの対応は後続 #930 admission ownerが検証する。この照合のoracleをstored-reader pairへ重複して移さない。
+3. 新規bindingは同一targetの検証済み `consumer-runtime.json` の `release.tag` と完全一致する値だけを封印する。このtag一致規則はv1/v2共通である。v1ではrequirement無しの読取互換を保ち、検証済みrelease.tagを使う。v2では後続ownerがmandatory requirementも検証したmetadataのrelease.tagだけを使う。requirement欠落のv2をv1へ読み替えず、bindingを封印しない。asset/anchor検証とreceiptの対応は後続 #930 admission ownerが検証する。この照合のoracleをstored-reader pairへ重複して移さない。
 4. 封印経路は receipt bytes → receipt file digest → bundle digest → active pointer の既存経路を維持する。readerは整合するsealed receiptからbindingのtagを読み取る。任意caller stringや削除済みmetadataから補完しない。
 5. bindingが無いlegacy receiptは受理し、readerのtag値は `unknown` とする。`local_version`やcompiled ESM版文字列で代用しない。旧receipt bytes・6-file digest map・bundle digest・active pointerをbackfill / resealしない。
 
@@ -37,6 +39,8 @@ source_blob_oid: d510b8f1b039d3cb84465fdb1574df2ff5d8b036
 - 007は既存のsetup元削除後startup検証のままとする。タグ表示の正系を追加しない。
 
 ## 範囲外と後続の責務
+
+metadata実装は後続#930へ分けるが、次の制約をそのまま引き渡す: **v1はrequirement無しで読取互換、v2はrequirement必須、schema versionで分ける、absentのsentinelを作らない**。現行 `src/setup/consumer-runtime-release.ts:23` はschema_versionをv1だけに限定している。v2実装済みとは主張せず、後続pairでv1読取正系・v2requirement欠落拒否を独立検証する。両versionの検証済みrelease.tagは同じ封印規則3で照合する。
 
 再起動後のタグ表示は #930 後続PRで担当する。後続表示はsealed `consumer-receipt.json` のoptional top-level `release_binding.tag`を読み、bindingなしはunknown、local_version代用なしとする。key名・位置・欠落時の意味は先行改訂で凍結する。
 
