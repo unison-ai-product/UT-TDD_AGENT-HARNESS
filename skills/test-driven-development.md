@@ -56,6 +56,21 @@ implementation it exercises provides zero design signal and weaker oracle value
 
 ## Red-Green-Refactor cycle (UT-TDD order)
 
+How the three steps map to PRs in this repository (issue #968; the design-protection gate,
+`docs/design/harness/L6-function-design/design-protection-diff-gate.md` §10.2, compares only
+the base and head path sets and does not see commits, so the order is a review rule):
+
+| Step | Where | Commit type | What may change |
+|---|---|---|---|
+| Red | contract PR + Red (no `src/` / `scripts/`) | `test:` | test design promotion and `it.fails` tests |
+| Green | implementation PR, first commits | `feat:` / `fix:` | minimal source; `it.fails` back to `it` |
+| Refactor | implementation PR, after Green | `refactor:` | source structure only; `tests/` content diff 0 (renames only); no test design |
+
+If there is nothing to refactor, say "Refactor なし" with the reason in the PR body; do not skip
+silently. Large structural changes go to a `kind: refactor` PLAN and the code-simplify skill.
+The non-author reviewer checks the commit order and that the Refactor commits leave `tests/`
+content unchanged.
+
 ### 1. Red — write the failing test first
 
 - Derive the test contract from the L6 unit-test design doc paired with the
@@ -65,7 +80,8 @@ implementation it exercises provides zero design signal and weaker oracle value
 - If the test passes before any source change it is either a vacuous assertion
   or the feature already exists — both require investigation, not celebration.
 - Commit the failing test as a standalone commit so the Red evidence is in git
-  history (FR-L1-02 traceability requirement).
+  history (FR-L1-02 traceability requirement). In this repository the Red tests
+  land in the contract PR + Red as `it.fails`, so `main` CI stays Green.
 
 ### 2. Green — write the minimum source to pass
 
@@ -78,7 +94,10 @@ implementation it exercises provides zero design signal and weaker oracle value
 
 ### 3. Refactor — improve structure while tests stay Green
 
-- Rename, extract, or reorganise source and tests. No behaviour changes.
+- Rename, extract, or reorganise source. No behaviour changes. Test files may be
+  renamed or moved, but their assertions and contents stay identical (`tests/`
+  content diff 0); changing a test is not a refactor.
+- Use `refactor:` commits after the Green commits in the same implementation PR.
 - Re-run the full suite (`npm run typecheck && npm run lint && npm run test &&
   ut-tdd doctor`) after every structural change.
 - If any test turns Red, stop and revert the last change.
