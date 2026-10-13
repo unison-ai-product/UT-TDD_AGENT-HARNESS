@@ -33,7 +33,7 @@ Windows では、Node の `child_process` で起動した子プロセスに `win
 1 件の呼び出しは、options 引数が次のどちらかを満たすときだけ適合とする。どちらも「実行時の `windowsHide` の実効値が `true` に決まる」ことを静的に言える形だけを認める。
 
 1. **object literal**: `windowsHide: true` (値は literal の `true`) を持ち、そのプロパティより**後ろ**に spread (`...x`) も同名プロパティも無い。前にある spread は、後ろの `windowsHide: true` が上書きするので構わない。`windowsHide` を 2 回以上書いたものは、最後の 1 つで判定する。
-2. **同じファイル内の `const` 参照**: 識別子が、同じファイルの最上位または同じ関数内の `const` 宣言を指し、その初期化子が 1. を満たす object literal である。さらに、そのファイルの中でその識別子が次のいずれにも現れない: 代入の左辺のメンバー (`X.windowsHide = …`、`X[k] = …`)、`delete X.…`、`Object.assign(X, …)` の第 1 引数、`Object.defineProperty(X, …)` / `Reflect.set(X, …)` などの第 1 引数。現れたら、書き換えの有無を推測せず `windows-hide-unverifiable` とする。
+2. **同じファイル内の `const` 参照**: 識別子が、同じファイルの最上位または同じ関数内の `const` 宣言を指し、その初期化子が 1. を満たす object literal である。さらに、そのファイルの中でその識別子が使われるのは、§2 の対象呼び出しの options 引数の位置だけでなければならない。それ以外の参照 (メンバー代入・`delete`・`Object.assign` などへの引き渡し、別の変数への代入 (alias)、関数の引数・戻り値・object や配列の要素への格納、export など) が 1 つでもあれば、書き換えの有無を推測せず `windows-hide-unverifiable` とする。参照が流出しうる形をまとめて拒否することで、alias を経由した書き換えも静的に排除する。
 
 それ以外は違反とし、理由を 2 種に分ける。
 
