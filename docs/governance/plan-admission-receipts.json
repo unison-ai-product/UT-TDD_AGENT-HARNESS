@@ -7648,6 +7648,22 @@
         "revision": 9,
         "content_digest": "sha256:5bb0e19926bf8385d9d964a4cf5ccd51484f90e8efb56864f20c1ff525659878"
       }
+    },
+    {
+      "sequence": 479,
+      "previous_record_digest": "sha256:10d6a5db3d99162afacdfb65191291569775f7580e11f86c30d0ee220862363d",
+      "record_digest": "sha256:ea40815fc213c5cce52900987fdbdeedd4defe94791fb5c4c49d8d0ac1c2d116",
+      "command_id": "plan-revise:issue943:PLAN-REVERSE-473-staged-release-backfill:r2:20261013",
+      "receipt_id": "certificate:2f91172912384c861aa73d2b534b08c2",
+      "receipt_digest": "sha256:0161c42a796eef887e36b5053dc6222633d38153ff0775f00a1e8c255dbf0258",
+      "decision_digest": "sha256:a3aebe42c8ae04a44524673bba5d2511d1f615f690445b8b3e095f73666232cb",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-473-staged-release-backfill.md",
+        "plan_id": "PLAN-REVERSE-473-staged-release-backfill",
+        "asset_id": "plan:legacy:cab12055bea212b9df1245f7bd6db1cec854132b822a50494f45008b48b99775",
+        "revision": 2,
+        "content_digest": "sha256:dac7b1b14b4562bf4a55b6b9590a22227e7bb89d9040372b26b864c68ba933bc"
+      }
     }
   ]
 }

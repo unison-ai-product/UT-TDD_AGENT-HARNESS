@@ -4,13 +4,11 @@ title: "PLAN-REVERSE-473: 段階リリース管理 設計backfill"
 kind: reverse
 layer: cross
 drive: agent
-workflow_phase: R4
 confirmed_reverse_type: fullback
 route_signal: reverse
 route_mode: reverse
-status: confirmed
 created: 2026-08-04
-updated: 2026-08-19
+updated: 2026-10-13
 owner: PO / Claude
 forward_routing: L5
 promotion_strategy: reuse-with-hardening
@@ -19,26 +17,26 @@ pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 backprop_scope:
   - layer: requirements
     decision: not_impacted
-    reason: "段階リリースの既存要求は変更せず、実装境界を詳細化した。"
+    reason: 段階リリースの既存要求は変更せず、実装境界を詳細化した。
   - layer: L4-basic-design
     decision: not_impacted
-    reason: "外部機能境界とcomponent責務は既存のまま維持する。"
+    reason: 外部機能境界とcomponent責務は既存のまま維持する。
   - layer: L5-detailed-design
     decision: not_impacted
-    reason: "既存の配置・実行境界を変更せず、L6契約へ具体化した。"
+    reason: 既存の配置・実行境界を変更せず、L6契約へ具体化した。
   - layer: L6-function-design
     decision: updated
     evidence_path: docs/design/harness/L6-function-design/release-channel-manifest.md
-    reason: "R3で再導出したrelease channel manifestの関数契約をL6へbackfillした。"
+    reason: R3で再導出したrelease channel manifestの関数契約をL6へbackfillした。
   - layer: L7-unit-test-design
     decision: updated
     evidence_path: docs/test-design/harness/L7-unit-test-design.md
-    reason: "既存U-RELMAN対応とPF5 advisoryの再検証責務をL7へ束ねた。"
+    reason: 既存U-RELMAN対応とPF5 advisoryの再検証責務をL7へ束ねた。
 agent_slots:
   - role: se
-    slot_label: "SE - 既存sync-pack/buildPackSyncPlanとの責務境界をbackfill"
+    slot_label: SE - 既存sync-pack/buildPackSyncPlanとの責務境界をbackfill
   - role: qa
-    slot_label: "QA - L6/L7対とrollback非破壊契約を検証"
+    slot_label: QA - L6/L7対とrollback非破壊契約を検証
 generates:
   - artifact_path: docs/plans/PLAN-REVERSE-473-staged-release-backfill.md
     artifact_type: markdown_doc
@@ -64,43 +62,44 @@ dependencies:
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/249
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/250
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/251
-review_evidence:
-  - reviewer: Claude
-    review_kind: cross_agent
-    reviewed_at: "2026-08-19T09:35:53+09:00"
-    tests_green_at: "2026-08-19T09:35:00+09:00"
-    verdict: approve
-    worker_model: gpt-5.6-sol
-    reviewer_model: claude-opus-5
-    scope: "R3 aggregate再検収、PF1-PF5の正本選択・digest・原子性・rollback境界"
-    green_commands:
-      - kind: lint
-        command: "node src/cli.ts plan lint"
-        runner: powershell
-        scope: targeted
-        exit_code: 0
-        completed_at: "2026-08-19T09:35:00+09:00"
-        evidence_path: docs/plans/PLAN-L7-492-pf5-release-aggregate-admission-pair-freeze.md
-        output_digest: "sha256:b935b237f83b9887fef591468c0bf60f3739f910e3e92722cdacd4ad81661e55"
-        anchor_commit: afaf56fedcf1658866045b15cfd7efe95cb55c5a
-  - reviewer: Claude
-    review_kind: cross_agent
-    reviewed_at: "2026-08-19T19:28:31+09:00"
-    tests_green_at: "2026-08-19T19:26:02+09:00"
-    verdict: approve
-    worker_model: gpt-5.6-sol
-    reviewer_model: claude-opus-5
-    scope: "PR #341 R4 backfill (L6 release-channel-manifest 関数契約 / L7 backfill 節 / REVERSE-473 R4 confirm) の non-author closing review。exact HEAD 7fbe432a50941e1d1786d089712b50bc5c42d817、CI run 32241648580 (headSha 照合済、linux/windows/aggregate SUCCESS)。R3で挙げたL6合流単位5件の着地とadvisory A-1〜A-3の未完保持を再導出して確認。"
-    green_commands:
-      - kind: integration_test
-        command: "harness-check (linux / windows / aggregate)"
-        runner: ci
-        scope: full
-        exit_code: 0
-        completed_at: "2026-08-19T19:26:02+09:00"
-        evidence_path: docs/design/harness/L6-function-design/release-channel-manifest.md
-        output_digest: "sha256:46aec5a9a366db1e9b139784138e108ff868f444cb25fa7be26900a1e40b0b96"
-        anchor_commit: 2f3f15af0e221deff792fc137c6fe2f6c61aad44
+review_evidence: []
+workflow_phase: R4
+status: draft
+github_issue_id: 943
+admission_receipt:
+  schema_version: v2
+  receipt_id: certificate:2f91172912384c861aa73d2b534b08c2
+  command_id: plan-revise:issue943:PLAN-REVERSE-473-staged-release-backfill:r2:20261013
+  admitted_at: 2026-10-13T08:28:33.568Z
+  source_digest: sha256:dac7b1b14b4562bf4a55b6b9590a22227e7bb89d9040372b26b864c68ba933bc
+  decision_digest: sha256:a3aebe42c8ae04a44524673bba5d2511d1f615f690445b8b3e095f73666232cb
+  receipt_digest: sha256:0161c42a796eef887e36b5053dc6222633d38153ff0775f00a1e8c255dbf0258
+  binding:
+    path: docs/plans/PLAN-REVERSE-473-staged-release-backfill.md
+    plan_id: PLAN-REVERSE-473-staged-release-backfill
+    asset_id: plan:legacy:cab12055bea212b9df1245f7bd6db1cec854132b822a50494f45008b48b99775
+    revision: 2
+    content_digest: sha256:dac7b1b14b4562bf4a55b6b9590a22227e7bb89d9040372b26b864c68ba933bc
+  route:
+    signal: reverse
+    mode: reverse
+  issue:
+    provider: github
+    issue_id: 943
+    episode_id: E4-943-contract-correction
+    projection_state: unprojected
+  origin:
+    plan_id: PLAN-REVERSE-473-staged-release-backfill
+    revision: 1
+    digest: sha256:fe551a0f6e4a035e04cb90f822a3ab3092421f3f7bfa3020c27215c100c68c51
+  transition:
+    direction: implementation_to_design
+    implementation_disposition: preserved
+  reentry:
+    target_plan_id: PLAN-REVERSE-473-staged-release-backfill
+    target_revision: 2
+    phase: forward_merge
+  escape_reason: "Issue #943: control承認4owner順による既存設計の事実訂正。production/pair/oracle不変。"
 ---
 
 # PLAN-REVERSE-473: 段階リリース管理 設計backfill
@@ -172,3 +171,7 @@ L7 test-designへ明示した。実装コード、S3 promotion/rollback、Pack r
 - [x] R3: exact main `427e07beb39700fc590097e7688b3231f3fe999a`に対するClaude non-author PASS、blocking 0。
 - [x] R4: L6契約、L7対、`forward_routing=L5`、`promotion_strategy=reuse-with-hardening`を本PRで確定した。
 - [ ] PF5 advisory A-1〜A-3: S2実装の追加mutationと実測が未完了。これをR4完了の証拠へ水増ししない。
+
+## Issue #943 契約訂正（revision 2、非著者検収前）
+
+control指定の既存ownerとして、実装を変更せず担当設計の事実記述だけを訂正する。旧reviewは前revisionの履歴であり、今回の改訂を承認した証跡ではない。allowlist集合・権限・model policy・PF2/PF3の実装・既存oracleは不変。今回のexact HEADのCIと非著者reviewが成立後に正規confirmする。
