@@ -2384,7 +2384,7 @@ prefix/length/algorithm混同とrevision replayをnegativeにする。payload ob
 `payload_schema == schema_id`を検証する。F0c OS lane run差、Q0 expected/executed set差、aggregateの
 failure/cancelled/skippedをtyped fieldsから再導出して拒否する。
 `evidence_digest` / `object_digest` alias lookup、payload content digestによる取得を拒否する。CutoverAdmissionはvalidated Q0
-SliceAdmissionとL6ConfirmationReceiptをdirect参照し、独自`issuer_key_id`を拒否する。attestationは
+SliceAdmissionとL6ConfirmationReceipt (退役: #977、Node切替chain退役注記は internal-processing.md §Node切替receipt chain)をdirect参照し、独自`issuer_key_id`を拒否する。attestationは
 schemaVersion/algorithm/authorityId/keyVersion/signatureのnested exact shape、producer+recordDigestはverifier
 inputとして検証する。flat field、schemaVersion/algorithm欠落、forged/unknown authority又はversionを拒否する。
 通常D0のSliceAdmission保存graphはpredecessor/required input refsとD0から既存ReviewBundleへのouter refを必須とし、
@@ -2422,7 +2422,7 @@ reviewerFamily/model/PASS注入、historical commentのreceipt昇格、row片側
 再mint、削除後再発行は0とする。
 F0b compile custodyでは`tsconfig.node.json`の欠落、別path、内容digest drift、receipt field省略を独立mutationし、
 いずれもcompile/process生成0で拒否する。
-`CAND-CUTOVER-009`はPLAN-L6-93 exact revision/status confirmed/content/head bindingのattested
+`CAND-CUTOVER-009` (退役: #977、L6ConfirmationReceiptはNode切替chainごと退役済み。根拠と範囲は internal-processing.md §Node切替receipt chain の退役注記、モジュール/テスト削除は#592 D2/D3所管)はPLAN-L6-93 exact revision/status confirmed/content/head bindingのattested
 L6ConfirmationReceiptをpositiveとし、draft/unconfirmed/wrong-plan/stale-head/unsigned/forgedを個別negativeにする。
 AttestedTracked wrapperとL6Confirmationの全field順、record/receipt二段digest、nested attestation mutationを検証する。
 通常D0/CutoverのReviewBundle coreのexact 8 fields/self除外7-field ordered preimage、各coreを包むexact 7-field

@@ -38,7 +38,7 @@ external-if.md (what/形状) の **how = adapter 詳細契約**を確定する (
 | 型 | 概要 |
 |---|---|
 | `WorkerIntent` | `{role, task, context?, budget?}` (role∈roleSchema 相当) |
-| `InvokeResult` | `{ok, output?, error?, audit_ref}` (audit_ref = `.ut-tdd/audit/` への記録 ID) |
+| `InvokeResult` | 判別共用体 (`src/runtime/adapter.ts`)。成功 `{ok: true, provider, plan_id?, command, args, exit_code, output, stderr}` / 失敗 `{ok: false, provider, plan_id?, command, args, exit_code\|null, signal\|null, error_class: "provider_error"\|"malformed_output", message, stderr}`。`audit_ref` は持たない。監査の紐付けは、委譲 wrapper (`src/cli/delegation.ts`) が SessionStart を `session_id` 付きで session log (`.ut-tdd/logs/session/`) へ記録し、harness.db `hook_events` へ投影される経路で行う (#977) |
 | `AdapterError` | `{kind: "absent"\|"auth"\|"rate-limit"\|"timeout"\|"unknown", retryable: boolean, message}` |
 
 > 詳細 zod スキーマ (フィールド型/必須任意) は L7 実装で `src/schema` または adapter module に定義。本 doc は型の輪郭まで。
@@ -50,7 +50,7 @@ external-if.md (what/形状) の **how = adapter 詳細契約**を確定する (
 |---|---|
 | リトライ | `AdapterError.retryable=true` (rate-limit/timeout) のみ指数バックオフ最大 N 回。auth/absent は即 fail (非リトライ) |
 | タイムアウト | 操作別タイムアウト (例: doctor detector 30s = AC-FR-18-03)。超過は該当のみ skip + warn |
-| 冪等性 | invoke は audit_ref で重複検出。同一 intent 再実行は副作用を二重化しない (adapter が dedup) |
+| 冪等性 | **汎用の invoke dedup 契約は退役** (#977)。retry と再 review は意図した再実行であり dedup しない。拒否するのは同一 exact head への重複 review request だけ (`duplicate_request_conflict`、`src/feedback/review-dispatch.ts`) |
 
 ## §4 エラー分類 → fail-close マッピング
 
