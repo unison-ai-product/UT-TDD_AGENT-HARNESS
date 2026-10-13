@@ -67,7 +67,7 @@ interface DesignProtectionInput {
 - 全 tree の読み取りは `src/github/design-protection.ts` が持つ。同 file に `readDesignProtectionChanges(git, baseRef, headRef) => PlanChange[]` を置き、`resolveCommit` で base と head を解決してから、§2 の `git diff --name-status -z --find-renames <base> <head>` を pathspec なしで 1 回実行し、`splitNul` と `parseNameStatusEntries` で変更列にする。
 - 既存の `readAdmissionGitDiff` (`-- docs/plans` の pathspec 固定) は変えず、この gate からも呼ばない。全 tree を見ないためである。
 - `checkDesignProtection` は `GitDiffAdapterError` だけを捕まえ、その code を `error.code` にして `ok=false` を返す。それ以外の例外は捕まえない (CLI はそのまま非 0 で終わり、fail-close のまま)。
-- ref の事前検査 (空文字、NUL / LF / CR) は `resolveCommit` が subprocess を起動する前に行う。違反なら git を 1 回も呼ばずに `git-ref-invalid` になる。NUL を含む文字列は OS のプロセス引数に載らないので、この検査は CLI ではなく入力境界の unit oracle で固定する (テスト設計の CANDIDATE-U-DPROT-031)。subprocess の起動失敗を `git-ref-invalid` として扱わない。
+- ref の事前検査 (空文字、NUL / LF / CR) は `resolveCommit` が subprocess を起動する前に行う。違反なら git を 1 回も呼ばずに `git-ref-invalid` になる。NUL を含む文字列は OS のプロセス引数に載らないので、この検査は CLI ではなく入力境界の unit oracle で固定する (テスト設計の CANDIDATE-U-DPROT-031)。`resolveCommit` は事前検査を通った ref の `rev-parse` が失敗したとき (起動失敗を含む) も `git-ref-invalid` を返す。これは既存の挙動で、本 gate でも変えない (§6)。そのため、CLI に NUL などを渡して subprocess の起動が失敗した結果は、同じ code になっても事前検査の証拠に数えない。事前検査の証拠は、git を 1 回も呼んでいないこと (031 の fake port の呼び出し 0 回) で示す。
 
 ### 2.2 CLI handler の形
 
