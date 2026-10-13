@@ -61,6 +61,11 @@ PR の種別は変更 path の集合だけで決める。PLAN の kind、branch 
 契約 PR (src も scripts も含まず、設計文書だけを直す PR) は非実装 PR として通る。
 src も docs も含まない PR も非実装 PR で、この gate の対象外である。
 
+初版の分類対象は、PO が採用した `src/` と `scripts/` に限る。
+`.claude/hooks/` や `.github/workflows/` だけの実行系変更は、設計文書の変更を伴っても、この分類では非実装 PR となる。
+この gate は、それらの単独変更による設計書の書き換えを防ぐ保証を持たない。workflow の内容を検査する §7 の CI policy とは別の境界である。
+分類対象を将来の構成に合わせて拡張する後続契約は issue #913 が所有する。初版の分類対象は #913 の契約改訂まで変更しない。
+
 ## 4. 拒否規則
 
 保護対象は `docs/design/` と `docs/test-design/` の配下にある全ファイルである。
@@ -167,6 +172,8 @@ workflow と manifest の片方だけを直す PR は、`missing_runtime_leg` �
 - `docs/governance/` や `docs/plans/` の保護。PLAN の編集は PLAN admission (`plan admission-check`) が見る。
 - clean Pack の consumer workflow (`docs/templates/github/common/pack-harness-check.yml`) への展開。
 - main への push event での検査。保護は PR の時点で効かせる (理由は §7)。
+- `.claude/hooks/` / `.github/workflows/` 単独変更を実装 PR として分類すること。初版は #898 の PO 決定どおり `src/` / `scripts/` に限る。これらの変更を含めた全実行系の保護は保証しない。将来の構成に合わせた分類対象の再定義は issue #913 が所有する。
+- 工程④の構成変更後の path への対応は #913 が所有する。現在の固定 prefix のままコードや設計書だけを移すと、分類・保護が外れて PASS になる既知の制約がある。#913 は、移動 PR と同じ変更で判定 path と保護 path を更新し、path 一覧の単一定義点と構成正本を照合するテスト、移動後の実装 PR が gate に当たる Red→Green を先に凍結する。移動だけを先に merge しない。本 PLAN はその後続検証の完了を主張しない。
 
 ## 10. テスト設計の確定と oracle 昇格の運用 (PO 決定)
 
