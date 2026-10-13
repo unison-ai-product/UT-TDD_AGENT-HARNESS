@@ -3037,3 +3037,18 @@ oracle の詳細 (入力・期待・殺す mutation) は専用の
 | CANDIDATE-U-MEMEPI-009〜010、018 | 即時配送の抑止と、unknown・推定分の配送 | 専用文書 §4 |
 
 上表の ID は backtick 無し表記である。候補台帳への再掲ではなく専用文書への参照であり、U-VMSRC-009 の一意性検査の対象外とする。
+
+## 子プロセスの windowsHide 検査 (Issue #693) — 索引
+
+L6 契約は `docs/design/harness/L6-function-design/windows-hide-spawn-guard.md`。
+oracle の詳細 (入力・期待・殺す mutation) は専用の
+`docs/test-design/harness/L7-windows-hide-spawn-guard-test-design.md` に置き、本節は索引だけを持つ。
+
+| 範囲 | 検証面 | 詳細 |
+| --- | --- | --- |
+| CANDIDATE-U-WHIDE-001〜005 | 対象 API・import の解決・適合と違反の判定 | 専用文書 §3 |
+| CANDIDATE-U-WHIDE-006〜008 | options の const 参照・spread・関数戻り値・引数位置 | 専用文書 §3 |
+| CANDIDATE-U-WHIDE-009〜010 | baseline の上限・縮小のみ・実 repo との一致 | 専用文書 §3 |
+| CANDIDATE-U-WHIDE-011〜012 | 順序非依存と doctor の出力 | 専用文書 §3 |
+
+上表の ID は backtick 無し表記である。候補台帳への再掲ではなく専用文書への参照であり、U-VMSRC-009 の一意性検査の対象外とする。
