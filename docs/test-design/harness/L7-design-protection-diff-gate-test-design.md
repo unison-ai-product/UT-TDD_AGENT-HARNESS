@@ -16,7 +16,7 @@ updated: 2026-10-13
 共有の `docs/test-design/harness/L7-unit-test-design.md` には索引 (§設計書保護 diff gate) だけを置き、本書が詳細の正本である。
 
 この pair-freeze では候補 ID (`CANDIDATE-U-DPROT-*`) だけを宣言する。
-正式 ID `U-DPROT-*` への 1:1 の昇格は、Red のテスト (`it.fails`) と同じ契約 PR + Red で行う (設計文書 §10.2)。実装 PR は `it.fails` を `it` に戻して Green を観測するだけで、本書には触れない。
+正式 ID `U-DPROT-*` への 1:1 の昇格は、Red のテスト (`it.fails`、候補 ID で引用) を入れた後の PR で、テストの引用の書き換えと一緒に行う (設計文書 §10.3)。実装 PR は `it.fails` を `it` に戻して Green を観測するだけで、本書には触れない。
 既存の `plan admission-check` の oracle は再定義しない。§2 の再利用部品の挙動不変は、既存の admission テストが無変更で green であることで確かめる。
 
 ## 2. fixture
