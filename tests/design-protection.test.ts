@@ -98,11 +98,13 @@ function diffFor(changes: readonly Change[]): Uint8Array {
 
 class FakeGit implements GitPort {
   calls: string[][] = [];
+  private readonly diff: Uint8Array;
+  private readonly diffError?: GitDiffAdapterError;
 
-  constructor(
-    private readonly diff: Uint8Array,
-    private readonly diffError?: GitDiffAdapterError,
-  ) {}
+  constructor(diff: Uint8Array, diffError?: GitDiffAdapterError) {
+    this.diff = diff;
+    this.diffError = diffError;
+  }
 
   run(args: readonly string[]): Uint8Array {
     this.calls.push([...args]);
