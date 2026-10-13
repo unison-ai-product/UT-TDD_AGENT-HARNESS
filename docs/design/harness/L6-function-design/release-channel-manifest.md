@@ -169,7 +169,7 @@ promotion/rollbackのpointer変更は別のS3 pair-freeze（`CANDIDATE-RELMAN-00
 - consumer-local admission は v2 variant だけを受け入れ、余剰の `destinationPath` を持つ plan と v1 plan を
   fail-close する (`src/setup/consumer-local-runtime-admission.ts:219-236`)。
 
-### 8.3 promotion / rollback gate
+### 8.3 昇格・巻き戻しの gate
 
 - 入力は `mappings: readonly ReleaseChannelMapping[]` (`src/setup/release-promotion-rollback-gate.ts:104`)。
   v2 は mappings と artifacts の順序付き完全一致と `sealedPlan.entries[i].path === artifacts[i].destinationPath`、
