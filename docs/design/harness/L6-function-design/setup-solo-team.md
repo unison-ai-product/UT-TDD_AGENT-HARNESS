@@ -130,7 +130,7 @@ U-SETUP-001 (`detectProjectScale` never-throws / gh 失敗→unknown) / U-SETUP-
 | 確定の所在 | 実行時に毎回検出 | `.ut-tdd/state/setup.json` に**記録**して安定化 |
 | 安全側 | — | 検出不能 → solo (緩い側) フォールバック |
 
-deps 注入 (`GhRunner`/`FsReader`/`FsWriter`/`confirm`) は session-log の `nodeDeps` パターン、`gh` の有無は事前判定しない（`onPath` は撤去済み）。検出・推奨・確定は分かれている。検出の `detectProjectScale` (`src/setup/index.ts`) はローカルの CODEOWNERS を先に読み、そのあと `deps.gh(...)` を直接呼ぶ。gh が失敗 (`ok:false`) した信号 (`ownerType` / `collaborators` / `hasBranchProtection`) は不明のまま返し、CODEOWNERS の検出結果は保持する (never throws)。推奨の `recommendPhase` は、org 所有・collaborator 2 名以上・CODEOWNERS あり・branch protection ありのどれかで team (0-B) を返し、個人 owner かつ collaborator 1 名以下で solo (0-A) を返す。どれにも当たらない信号不足のときだけ、安全側の solo (0-A、confidence low) に倒す。確定は人間の確認を経て `.ut-tdd/state/setup.json` に記録する。
+deps 注入 (`GhRunner`/`FsReader`/`FsWriter`/`confirm`) は session-log の `nodeDeps` パターン、`gh` の有無は事前判定しない（`onPath` は撤去済み）。検出・推奨・確定は分かれている。検出の `detectProjectScale` (`src/setup/index.ts`) はローカルの CODEOWNERS を先に読み、そのあと `deps.gh(...)` を直接呼ぶ。repo の取得 (`gh api repos/{owner}/{repo}`) が失敗 (`ok:false`) したときは、`ownerType` は `unknown`、`collaborators` と `hasBranchProtection` は `null` (不明) のまま返す。repo を取得できたときは、collaborators の取得失敗は `null` のまま、branch protection の取得結果は `ok` をそのまま `hasBranchProtection` にする (取得失敗は `false` = 保護なし)。どの場合も CODEOWNERS の検出結果は保持する (never throws)。推奨の `recommendPhase` は、org 所有・collaborator 2 名以上・CODEOWNERS あり・branch protection ありのどれかで team (0-B) を返し、個人 owner かつ collaborator 1 名以下で solo (0-A) を返す。どれにも当たらない信号不足のときだけ、安全側の solo (0-A、confidence low) に倒す。確定は人間の確認を経て `.ut-tdd/state/setup.json` に記録する。
 
 ## §5 上位整合 (後段 Reverse で back-fill)
 
