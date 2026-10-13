@@ -10,7 +10,7 @@ next_pair_freeze: L7
 plan: pending (issue #693。台帳の Claude 手番で plan draft により起票する)
 ---
 
-> **L6 contract marker**: `analyzeWindowsHide(sources, baseline, previousBaseline) => WindowsHideResult` は unit-test-granularity contract である。DbC pre/post/invariant は §7 にまとめる。oracle の索引は共有の `docs/test-design/harness/L7-unit-test-design.md` (§子プロセスの windowsHide 検査) に置き、詳細 (CANDIDATE-U-WHIDE-001〜018) は専用の `docs/test-design/harness/L7-windows-hide-spawn-guard-test-design.md` が固定する。
+> **L6 contract marker**: `analyzeWindowsHide(sources, baseline, previousBaseline) => WindowsHideResult` は unit-test-granularity contract である。DbC pre/post/invariant は §7 にまとめる。oracle の索引は共有の `docs/test-design/harness/L7-unit-test-design.md` (§子プロセスの windowsHide 検査) に置き、詳細 (CANDIDATE-U-WHIDE-001〜019) は専用の `docs/test-design/harness/L7-windows-hide-spawn-guard-test-design.md` が固定する。
 
 # 子プロセスの windowsHide 検査 — 関数設計 (issue #693)
 
@@ -32,7 +32,7 @@ Windows では、Node の `child_process` で起動した子プロセスに `win
 
 1 件の呼び出しは、options 引数が次のどちらかを満たすときだけ適合とする。どちらも「実行時の `windowsHide` の実効値が `true` に決まる」ことを静的に言える形だけを認める。
 
-1. **object literal**: `windowsHide: true` (値は literal の `true`) を持ち、そのプロパティより**後ろ**に spread (`...x`) も同名プロパティも無い。前にある spread は、後ろの `windowsHide: true` が上書きするので構わない。`windowsHide` を 2 回以上書いたものは、最後の 1 つで判定する。
+1. **object literal**: `windowsHide: true` (値は literal の `true`) を持ち、そのプロパティより**後ろ**に spread (`...x`) も同名プロパティも無い。前にある spread は、後ろの `windowsHide: true` が上書きするので構わない (spread は literal の評価時に値として写されるので、getter は残らない)。`windowsHide` を 2 回以上書いたものは、最後の 1 つで判定する。さらに literal は**データだけの literal** でなければならない: spread 以外の全プロパティが計算キーでない `key: value` (短縮形 `key` を含む) で、値が関数式・arrow 関数・class 式でないこと。getter (`get k() {}`)・setter・メソッド (`k() {}`)・計算キー (`[k]: v`)・関数値のいずれかを含むものは、Node が options を読むときに `this` 経由で `windowsHide` を書き換えうるので、`windows-hide-unverifiable` とする。
 2. **同じファイル内の `const` 参照**: 識別子が、同じファイルの最上位または同じ関数内の `const` 宣言を指し、その初期化子が 1. を満たす object literal である。さらに、そのファイルの中でその識別子が使われるのは、§2 の対象呼び出しの options 引数の位置だけでなければならない。それ以外の参照 (メンバー代入・`delete`・`Object.assign` などへの引き渡し、別の変数への代入 (alias)、関数の引数・戻り値・object や配列の要素への格納、export など) が 1 つでもあれば、書き換えの有無を推測せず `windows-hide-unverifiable` とする。参照が流出しうる形をまとめて拒否することで、alias を経由した書き換えも静的に排除する。
 
 それ以外は違反とし、理由を 2 種に分ける。
@@ -74,13 +74,14 @@ Windows では、Node の `child_process` で起動した子プロセスに `win
 
 - Pre: 入力は走査対象のファイルの path と内容の列、baseline、比較元の baseline (`previousBaseline`、無ければ null)。読み取りだけを行い、ファイルを書かない。
 - Post: `ok` は `windows-hide-new` / `windows-hide-stale-baseline` / `windows-hide-baseline-grown` / `windows-hide-baseline-base-unreadable` が 0 件のときだけ true。違反は path と行で一意に並べ、入力の順序に依存しない。
-- Invariant: 適合の判定は §3 の 2 形だけで行い、実行時の値や他ファイルを推測しない。推測できないものは `windows-hide-unverifiable` として違反に数える。
+- Invariant: 適合の判定は §3 の 2 形だけで行い、実行時の値や他ファイルを推測しない。推測できないものは `windows-hide-unverifiable` として違反に数える。`Object.prototype` の汚染 (`Object.prototype.windowsHide` の書き換えなど、プロセス全体の改変) は本検査の範囲外とする (§8)。
 
 ## 8. 範囲外
 
 - `fork` と worker thread。
 - `child_process` を介さない外部プロセス起動 (例: shell script 内の起動)。shell script は既存の `runtime-portability` の範囲とする。
 - 実行時に console window が開いたかの観測。本検査は静的な規則だけを扱う。
+- `Object.prototype` の汚染など、プロセス全体の組み込み object の改変。リポジトリの他の規律 (lint・review) で扱い、本検査の静的規則は options の literal と const 参照の範囲で閉じる。
 
 ## 9. 根拠
 

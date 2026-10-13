@@ -3047,7 +3047,7 @@ oracle の詳細 (入力・期待・殺す mutation) は専用の
 | 範囲 | 検証面 | 詳細 |
 | --- | --- | --- |
 | CANDIDATE-U-WHIDE-001〜005 | 対象 API・import の解決・適合と違反の判定 | 専用文書 §3 |
-| CANDIDATE-U-WHIDE-006〜008、013〜015 | options の const 参照と書き換え・spread と重複キー・関数戻り値・引数位置 (null・undefined・配列 const・callback) | 専用文書 §3 |
+| CANDIDATE-U-WHIDE-006〜008、013〜015、019 | options の const 参照と書き換え・spread と重複キー・literal 内の accessor とメソッド・関数戻り値・引数位置 (null・undefined・配列 const・callback) | 専用文書 §3 |
 | CANDIDATE-U-WHIDE-009〜010、016〜017 | baseline の上限・比較元との縮小のみ比較・比較元の取得・実 repo との一致 | 専用文書 §3 |
 | CANDIDATE-U-WHIDE-011〜012、018 | 順序非依存・doctor の出力・GUI 起動の注記 | 専用文書 §3 |
 
