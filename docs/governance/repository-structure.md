@@ -120,6 +120,24 @@ UT-TDD-agent-harness/
 | ③ テスト設計 (文書) | `docs/test-design/` |
 | ④ テストコード | `tests/` |
 
+### 3.1 設計書保護 gate の判定 path と保護 path (正本、issue #913)
+
+設計書保護 gate (`docs/design/harness/L6-function-design/design-protection-diff-gate.md`) は、次の 2 つの表を判定 path と保護 path の正本として読む。gate の定数は 1 か所に置き、この表と食い違ったらテストが赤になる。
+
+置き場を動かす PR (v4 工程 ④ など) は、この表と gate の定数を同じ変更で直す。移動だけを先に merge しない。
+
+| 判定 path (どれか 1 つを変える PR が実装 PR) | 対応する置き場 |
+|----------|--------|
+| `src/` | §3 の ② 実装コード |
+| `scripts/` | §2 の OS entrypoint |
+
+| 保護 path (実装 PR では既存ファイルの変更・削除・rename を拒否) | 対応する置き場 |
+|----------|--------|
+| `docs/design/` | §3 の ① 設計 |
+| `docs/test-design/` | §3 の ③ テスト設計 |
+
+`.claude/hooks/`、`.claude/settings.json`、`.codex/`、`.github/workflows/` などの実行系の設定は、判定 path に入っていない。広げるかどうかは issue #973 で決める。
+
 ## 4. 命名規約
 
 - PLAN: `docs/plans/PLAN-NNN-slug.md` / ADR: `docs/adr/ADR-NNN-slug.md`
