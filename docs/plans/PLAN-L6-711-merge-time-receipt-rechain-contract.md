@@ -44,18 +44,18 @@ sub_doc: function-spec
 github_issue_id: 711
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:cf30abd72a39ba5f8e3ac8c0690d9f1a
-  command_id: plan-revise:issue-711:legacy-bootstrap-judgement:rechain-1:c1:r6:2241d42e49c5
-  admitted_at: 2026-10-06T01:28:30.063Z
-  source_digest: sha256:ccd27f750c9b636b10636f112df009a7210559bb5911a318b5df6b358cfcdba0
-  decision_digest: sha256:b60f7d4c57af22e41779e7f7430a353452258e1577a73ec7db94017e48e8db99
-  receipt_digest: sha256:c570cd48fdd2ce4ab4b694efd0de1ee79b1d1dd394051ae95abd4fc92c6f9300
+  receipt_id: certificate:0b8df99183e6652e60cc6164b336bfaf
+  command_id: plan-revise:issue-711:s1-pair-freeze:20261013:eb73c1ad
+  admitted_at: 2026-10-13T05:23:31.347Z
+  source_digest: sha256:85ae0d6913c33dda18a4e05f9f47caed34ddc72933a3a704616a5dbf0b574610
+  decision_digest: sha256:16ce906b259489452c1e54e2706c4251b5595310050d8636fb4c889f47ad9bfa
+  receipt_digest: sha256:a51257778362e91be63bd00e969affe4d9d0c30e42bf6062e922d1ad2104b4fa
   binding:
     path: docs/plans/PLAN-L6-711-merge-time-receipt-rechain-contract.md
     plan_id: PLAN-L6-711-merge-time-receipt-rechain-contract
     asset_id: plan:ac2c23d3c72fc6e2886491ac1df09452
-    revision: 6
-    content_digest: sha256:ccd27f750c9b636b10636f112df009a7210559bb5911a318b5df6b358cfcdba0
+    revision: 7
+    content_digest: sha256:85ae0d6913c33dda18a4e05f9f47caed34ddc72933a3a704616a5dbf0b574610
   route:
     signal: feature_addition
     mode: add-feature
@@ -70,13 +70,10 @@ admission_receipt:
     digest: sha256:1b6aa397ad9995b717907d3247e02b3bba3d6c4508874b7654f90fd29b388927
   reentry:
     target_plan_id: PLAN-L6-711-merge-time-receipt-rechain-contract
-    target_revision: 6
+    target_revision: 7
     phase: forward_merge
-  escape_reason: "Issue 711: PR #839 Sol FLAG (上流契約 gap) の是正。§2.3-6 の legacy
-    bootstrap 除外の判定根拠を、harness.db の provenance ではなく tracked receipt の
-    binding.asset_id prefix plan:legacy: と binding.revision === 2 (H 側と R 側の両方)
-    に凍結する。legacy 経路を包含する安全側の判定で、record 単位の除外とし revision 3 以上は再導出する。U-RECHAIN-019
-    を追加し、RechainInput は変えない"
+  escape_reason: "Issue #711 S1: control
+    S0実測と限界、main統合済みS2の所有範囲を記録し、既存S3候補4件をpair-freezeする。S3実装や新しい方式は追加しない。"
 ---
 
 # PLAN-L6-711: merge 時の自動 re-chain と簿記差分での再検免除の契約 freeze
@@ -378,3 +375,6 @@ git show 4b541009:docs/governance/plan-admission-receipts.json | node -e "const 
 11. receipt revision 5 (2026-10-05、PR #831 の是正 2 回目): 非著者 review (Codex Sol r2、PR #831) の FLAG 1 件を反映した。revision 4 の `intermediatePlans` は必要 key の欠落と digest 不一致しか拒否せず、未参照の余分な key / blob を足しても全照合を満たした。§2.3-6 で key 集合を、再発行 record が 2 件以上ある各 asset の最後以外の record の `content_digest` 集合との完全一致に定め、余分な key と最後の record の blob の混入を `intermediate_plan_unexpected` で fail-close にした。U-RECHAIN-018 に負系 2 件と mutation m4 (superset を許す) を追加した。`RechainInput` の形は変えないため、`verifierDigest` の版は v2 のままとする。
 12. receipt revision 6 (2026-10-05、PR #839 の契約齟齬): S2 実装 (PR #839) の非著者 review (Codex Sol) が、§2.3-6 の legacy 除外が `revisionUsesLegacyBootstrap` (harness.db の provenance と command receipt の join) を要求する一方、§2.6 の入力に provenance が無く、実装の prefix / revision 近似との同値性も契約に無いことを上流 gap と判定した。advisor (gpt-6.1-sol、implementation、2026-10-05) と実測により、判定根拠を tracked receipt の `binding.asset_id` prefix `plan:legacy:` と `binding.revision === 2` (H 側と R 側の両方) に凍結した。これは legacy 経路の集合を包含する判定で、同値ではない (過剰拒否は安全側として許容)。除外は record 単位とし、revision 3 以上は再導出して `pass` させる。A 案 (provenance を入力に足す) は DB 由来の値の信頼境界・鮮度・record との束縛を新たに要するため、C 案 (`plan:legacy:` asset を全て除外) は 30 asset の common revision まで拒否するため、採らなかった。advisor の指摘で、R 側だけの判定 (H の bootstrap record が R で revision 3 になる経路を見逃す) を退けた。U-RECHAIN-019 を追加し、S2 の oracle に含めた。`RechainInput` の形は変えないので、`verifierDigest` の版は v2 のままとする。
 13. receipt revision 6 の是正 (2026-10-06、PR #845 の是正 1 回目): 非著者 review (Codex Sol r1、PR #845) の FLAG 2 件を反映した。(1) U-RECHAIN-019 負系 a は「他の全条件を満たす」と「M に同 asset の record が無い」を同時に要求しており、後者では §2.3-6 の `baseRevision` / `basePayloadDigest` の源が得られず別の理由でも fail するため、単一条件の oracle になっていなかった。M に revision 1 の base を置いた合成 fixture (a1、`reasons` がちょうど legacy の 1 件) と実運用の形 (a2、併存を許す) に分け、§2.3-6 に legacy 判定を他条件の失敗で短絡しない理由の集約規則を凍結した。(2) mutation m4 は判定式を固定しておらず、両形式を拒否する式では負系 a が RED にならなかった。誤判定式を X / Y の 2 式に固定し、それぞれで legacy 理由が欠落する `command_id` と期待値を記述した。短絡の mutation m5 を足した。`RechainInput` の形は変えないので、`verifierDigest` の版は v2 のままとする。
+14. S0 (2026-10-09、control lane の報告、Issue #711 comment 6076919904): control lane の checkout `C:/dev/ut-orch-profiles` から、`origin/main` `9f94fd86` を base とする PR #948 の branch 上で headless `plan revise --manifest` を実行した。checkout 固有の `.ut-tdd` ledger は、別 checkout で発行された PLAN-L6-816 rev2 (PR #933) を認識していなかった。manifest の base は tracked frontmatter と projection ledger から機械的に導出し、local ledger の事前同期も対話入力も使わなかった。writer は revision 3 (`certificate:0b0dfbee…`) を発行し、`plan admission-check --base origin/main --head HEAD` は PASS した。PR #948 は後に main へ merge された (merge commit `1f72a33`)。
+15. S0 で確認した範囲は、別 ledger の checkout でも tracked frontmatter / projection から base を導いて正規 writer が headless に revision を発行できることに限る。merge 後の author branch での re-chain と、同時に複数 writer を動かす場合は確認していない。後者を S0 の実績から推定しない。
+16. S2 は PR #839 (merge commit `a3f77e319a2d0d43a8ebda2c77a94c67fb070cb7`) で実装・confirm 済みであり、所有 PLAN は PLAN-L7-711、対象は pure `verifyRechainDelta` と既存 S2 oracle である。adapter / wrapper / CLAUDE.md 例外はその PLAN の対象外で、S3 に属する。S1 候補は、既存 L6 候補 U-RECHAIN-008/009/010/013 を shared L7 test-design と対にする docs-only pair-freeze であり、S3 の実装完了を意味しない。

@@ -2980,7 +2980,19 @@ mutation M1–M7は正本§5と同一: exactly-oneへの退行、集合一致へ
 | U-RECHAIN-018 | 同一 asset について `H` が 2 件 append していた re-chain。(正系) 1 件目 base = (n、`M` の canonical payload digest)、2 件目 base = (n + 1、1 件目の中間 blob の digest) → `pass`。(負系) 2 件目の base を `M` に固定 → `receipt_digest_mismatch`。中間 blob を 1 byte 変える、または status を draft→confirmed に変える (bind 後の digest は key と一致する) → `intermediate_plan_digest_mismatch` (bind 前の blob 自体の digest で照合する)。中間 blob を渡さない → `intermediate_plan_missing`。余分な key、最後の record の `content_digest` を key にした entry、複数再発行が無いときの非空 `intermediatePlans` → `intermediate_plan_unexpected` | (m1) 全 record の base を `M` から取る → 正系が fail。(m2) 中間 blob の digest 照合を省く、または bind 後の digest で照合する → 改変 blob が pass。(m3) 欠落時に `R` の PLAN blob で代用する。(m4) key 集合を superset 許容に緩める |
 | U-RECHAIN-019 | legacy bootstrap 除外 (PLAN-L6-711 §2.3-6、receipt revision 6)。組 (h, r) ごとに `h.binding.asset_id` が `plan:legacy:` で始まり、かつ `h.binding.revision === 2` または `r.binding.revision === 2` なら `fail` (理由: `legacy_bootstrap_unsupported`)。(a1) M に同 asset の revision 1 があり H / R が revision 2 → reasons はちょうど `[legacy_bootstrap_unsupported]`。(a2) M に同 asset の record が無く H が revision 2 → legacy 理由と源の欠落の理由が併存する。a1 / a2 とも `command_id` は `plan-revise:issue-1:legacy-x:r2:000000000000` と `pr154-legacy-x-r2` の 2 形式。(b) H が revision 2、M が待機中に同 asset を revision 2 で admit し R が revision 3 → `fail`。(c) M の最新 revision 2、H / R が revision 3 → `pass`。(d) `plan:<32 hex>` asset で H / R が revision 2 → `pass` | (m1) R 側だけで判定 → b が pass。(m2) prefix だけで判定 → c が fail。(m3) revision 2 だけで判定 → d が fail。(m4) `command_id` の形式で判定 (`/^pr154-/` または `/^plan-revise:/`) → a1 / a2 のどちらかの形式で legacy 理由が出ない。(m5) 源の欠落で短絡 → a2 で legacy 理由が出ない |
 
+## PLAN-L6-711 S3 adapter / wrapper (Issue #711) — pair-freeze 候補
+
+契約は PLAN-L6-711 §2.1 / §2.4 / §2.5 / §2.6 / §4 の既存候補。S1 で対をレビューし、confirm 後に別の S3 実装で検証する。ここでは実装済み・Green を主張しない。S2 の pure verifier と既存 oracle は変更しない。
+
+| ID | 正系 / 期待結果 | 独立した負系・mutation / 期待結果 |
+| --- | --- | --- |
+| CANDIDATE-U-RECHAIN-008 | append-only 領域外で 3-way merge conflict が起きる fixture → wrapper は verifier を呼ぶ前に `rechain_conflict` で停止し、merge しない | conflict を解消扱いにする、または main 側を黙って優先して続行する → 中止せず失敗 |
+| CANDIDATE-U-RECHAIN-009 | verifier が `pass` でも R の required CI が red または未完了なら merge しない。verifier `pass` かつ required CI green なら merge し、intent receipt に `rechain` 結果を残す | required CI の完了待ちを省き、red / 未完了 fixture で merge を許す → oracle が失敗 |
+| CANDIDATE-U-RECHAIN-010 | H の PASS のうち、same-family、`blocking > 0`、または exact head 不一致の各証跡を、それぞれ R に引き継がない | 他の field は有効なまま family 検査だけを外す → same-family 証跡が転送され oracle が失敗 |
+| CANDIDATE-U-RECHAIN-013 | fixture repository の adapter `readRechainSnapshot` 出力 (commit の parents / tree、5 つの TreeMap、blob の範囲、`base`) が、Git `rev-parse` / `ls-tree -r` / `cat-file` と `merge-base(H, M)` の実 object 結果に完全一致 | 非簿記 path を blob 範囲へ混ぜる、または TreeMap の path を 1 件落とす → 完全一致検査が失敗 |
+
 ## 設計書保護 diff gate (Issue #898) — 索引
+
 
 L6 契約は `docs/design/harness/L6-function-design/design-protection-diff-gate.md`。
 oracle の詳細 (入力・期待・殺す mutation・fixture・required evidence) は専用の
