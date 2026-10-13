@@ -1932,5 +1932,24 @@
       "UTV4-BR-028"
     ],
     "verified": true
+  },
+  {
+    "decision_id": "V4D-099",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 998,
+      "comment_ids": [
+        "6144312027"
+      ]
+    },
+    "date": "2026-10-13",
+    "summary_ja": "教訓はプロバイダー個別の標準メモリではなくハーネスメモリに書く。標準メモリへの書き込みは最終的に hook guard で止める (共有されず、学習機構にも載らないため)。改善はメモリに書くことではなく、機構か規律の正本にすることで行う。",
+    "status": "active",
+    "superseded_by": null,
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-011"
+    ],
+    "verified": true
   }
 ]
