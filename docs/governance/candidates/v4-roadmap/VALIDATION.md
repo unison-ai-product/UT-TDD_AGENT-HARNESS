@@ -1,5 +1,14 @@
 # 資料の整合検査結果
 
+## 版2.2 (2026-10-13)
+
+`data/*.json` と生成 Markdown は変えていない。README の「現在地」「移行の進み具合の指標」と工程 ③ の行、04_ISSUE_INTAKE の追補だけを足した。検査は次の 2 つ (repo 外の一時コマンド)。
+
+| 検査 | 結果 | 詳細 |
+|---|---|---|
+| open issue の割当漏れ | PASS | `gh issue list --state open` の 178 件が、すべて 04_ISSUE_INTAKE の表か追補の行にある (漏れ 0) |
+| 追記した issue / PR 番号の実在 | PASS | 追記行の `#NNN` をすべて `gh issue view` / `gh pr view` で解決できた |
+
 ## 版2.1 (2026-10-08)
 
 `data/*.json` は変えていないため、ID・coverage・DAG・生成 Markdown の同一性の検査は再実行していません (python tool は repo 外へ退避済み、[INTAKE_MANIFEST.md](INTAKE_MANIFEST.md))。生成元から作られた Markdown (release・trace) には冒頭の注記だけを手で足したので、生成物との同一性は成り立ちません。再生成と再計算は工程 ⑥ で行います。

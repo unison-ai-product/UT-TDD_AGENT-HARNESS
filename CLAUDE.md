@@ -305,6 +305,14 @@ close された)。新規機構は作らず、既存工程の遵守を規律と�
 4. **scope 構造を指す FLAG は close→分割再出が既定**。同一 PR への是正 commit
    積み増しで応じない (ここで禁じるのは scope 構造 FLAG への積み増し。軽作業の是正 commit は
    §FLAG 後の限定是正と merge に従い author family が同 PR 内に積む)。
+5. **TDD は Red → Green → Refactor の順で、Refactor を飛ばさない** (PO 指摘 2026-10-13、issue #968。
+   実測: 直近の実装 PR 19 本のうち `refactor:` commit を持つのは 1 本)。Red は契約 PR + Red
+   (`it.fails`、設計書保護 gate §10.2) で先に入れる。実装 PR の commit は Green (`feat:` / `fix:`、
+   `it.fails` を `it` に戻す最小実装) → Refactor (`refactor:`) の順にする。Refactor の commit は
+   `tests/` の内容差分 0 (rename だけ可) でテスト設計にも触れず、commit ごとに full suite を流す。
+   直す余地が無いときは PR 本文に「Refactor なし (理由)」と書く。大きな構造変更は `kind: refactor` の
+   PLAN へ回す。非著者 reviewer は commit の順と Refactor commit の `tests/` 差分 0 を確かめる。
+   手順の正本は `skills/test-driven-development.md`。
 
 この規律から外れた PR は内容の当否に関わらず FLAG (process violation) とする
 (宣言の初出: issue #218、2026-08-03)。
