@@ -194,6 +194,94 @@ Stop summaryはsession内の`commit`/`plan_switch`と明示的なmemory write成
 1行だけ表示する。本文、prompt、git diffは入力にしない。DB不在・lock・破損ではnudgeを捨ててexit 0とする。
 memoryは永続知識だけを保存し、進捗や次の一手を保存する経路にはしない。
 
+## §4.2 エピソードの回収 (PLAN-L6-97、issue #963)
+
+`.ut-tdd/memory` には、durable な教訓と、PR / issue に紐づくエピソード (レビュー依頼の錨、lane の連絡) が
+同じ置き場に入る。エピソードは対象が閉じると役目を終えるが、回収する経路が無く溜まり続ける
+(2026-10-13 実測: 1865 本中 git 追跡は 46 本、名前に `pr-N` を含むもの 1435 本、1 日約 100 本増)。
+本節はエピソードを分類し、対象が閉じたら archive へ退避する契約を定める。削除はしない。
+
+置き場を分ける案 (エピソードを #424 の transient runtime bus へ書く) は v4 で扱う。review dispatch・通知・
+Codex 経路の 3 面を変えることになり、工程 ② の設計凍結と #424 の未決を踏むためである
+(advisor `claude-fable-5-1`、design、2026-10-13)。本節の `bound_to` の形式は bus 側が読める形で凍結し、
+bus の着地時に archive を bus の receipt 側へ畳む。
+
+### 分類
+
+- frontmatter に `lifecycle` (`durable` | `episode`) と `bound_to` (GitHub の PR / issue URL の配列) を
+  optional field として足す。`episode` は `bound_to` が 1 件以上必須。path や PLAN ID は取らない。
+- `bound_to` の URL は HEAD の `ut-tdd.project.json` の `repository_identity` から組み立てた
+  `https://github.com/<owner>/<repo>/pull/<N>` または `/issues/<N>` だけを受理する。別 repo の URL は拒否する。
+
+### 書き込み時 (`memory add`)
+
+1. `--lifecycle` / `--bound-to` の明示が最優先。
+2. 明示が無く `kind=project` のとき、title と tags から `pr-?<N>` / `PR ?<N>` / `issue-?<N>` / `Issue ?<N>`
+   (大文字小文字を区別しない) を拾えたら `episode` と、拾えた全番号の `bound_to` を付ける。これを宣言として
+   扱う (Codex 側の呼び出しは無改修で済む)。PR と issue の区別は字句どおり。
+3. `kind` が `feedback` / `reference` / `user` で明示が無いときは `durable`。これらの kind は定義上 durable で
+   あり、黙った既定ではなく kind からの規則である。
+4. 上のどれにも当たらない `kind=project` は fail-close する (エラーに `--lifecycle` の指定を案内する)。
+   PLAN-L6-97 §3.3 の「新規は宣言必須」を保ちつつ、推定できたものを宣言とみなすよう改める。
+
+### 読み取り時 (既存分)
+
+- `lifecycle` 未宣言の既存ファイルは、git 追跡済みなら常に `durable` (clean-cut で選別済みの正本)。
+- untracked かつ `kind=project` のものは、書き込み時 2 と同じ規則で `episode` を推定し、推定の出自を
+  `inferred` として報告に出す。推定できないものと、`kind` が `project` 以外のものは `durable`。
+  不明は保持側へ倒す (誤って退避すると教訓が見えなくなるため)。
+
+### 回収の判定
+
+各 `bound_to` を次の三値で判定し、エピソード全体は「全件 closed なら `retirable`、1 件でも open なら `ok`、
+それ以外は `unknown`」とする。
+
+- PR: `git log --first-parent <default branch>` に `Merge pull request #<N> ` の merge commit があれば closed
+  (ネットに頼らない)。無い場合は GitHub を引き、merge されずに close なら closed、open なら open、
+  到達できなければ unknown。
+- issue: GitHub を引く。close なら closed、open なら open、到達できなければ unknown。
+- `unknown` は `retirable` にも `ok` にも混ぜない。
+
+### 退避 (`ut-tdd memory retire`)
+
+- 既定は dry-run で、`retirable` / `ok` / `unknown` の件数と、`retirable` の一覧 (推定の出自つき) を出す。
+- `--archive` で `retirable` だけを `.ut-tdd/archive/memory-episodes/<YYYY-MM>/` へ移す (`.ut-tdd/archive/` は
+  gitignore 済み)。手順は 1 件ごとに「manifest へ行を追記 → rename → `memory_entries` から当該行を削除」。
+  manifest の行は `memory_id`、元 path、退避先 path、sha256、bytes、`bound_to`、判定の根拠 (merge commit または
+  GitHub の状態)、退避時刻を持つ。途中で落ちても、再実行は manifest と実ファイルの位置から続きを行う (冪等)。
+- 退避先の manifest と sha256 は `src/memory/legacy-archive-manifest.ts` の部品を再利用する。新しい archive 形式は作らない。
+- ファイルを削除する経路は持たない。git 追跡済みのファイルは対象外。
+- doctor の `memory-retirable` row は dry-run と同じ集計を出す advisory で、doctor を fail させない。
+- EOD の閉店処理で `memory retire --archive` を 1 回流す。
+
+### 配送側
+
+- Claude への即時配送 (claude-memory-wake) は、`episode` かつ判定が `retirable` (確定的に closed) のものを配送しない。
+  `unknown` は配送する (生きた依頼を offline を理由に落とさない)。doctor 側と向きが逆である理由ごと凍結する
+  (PLAN-L6-97 §3.6)。
+
+### review dispatch との関係
+
+PLAN-L6-97 §3.7 は「レビュー依頼や進捗連絡は memory に書かない」としていたが、現行の review dispatch は
+`--review-memory-id` を必須とし、依頼の錨を memory に書く。本節はこの錨を正当な `episode` として扱い、
+退避の対象にする。`readCanonicalMemoryByIdentity` は dispatch の時点でしか錨を読まないので、PR が閉じた後の
+退避は参照を壊さない。錨を memory から外すかどうかは、置き場を分ける v4 の作業で決める。
+
+### エッジケース
+
+| # | ケース | 期待挙動 | oracle |
+|---|---|---|---|
+| 1 | `kind=project`、明示なし、title に `PR 962` と `Issue 898` | `episode`、`bound_to` = PR 962 と issue 898 | CANDIDATE-U-MEMEPI-012 |
+| 2 | `kind=project`、明示なし、番号も無し | fail-close (exit 1) | CANDIDATE-U-MEMEPI-011 |
+| 3 | `kind=feedback`、title に `PR 551` | `durable` (推定しない) | CANDIDATE-U-MEMEPI-013 |
+| 4 | git 追跡済み、`lifecycle` 未宣言 | `durable`、退避しない | CANDIDATE-U-MEMEPI-002 |
+| 5 | `bound_to` の PR が merge 済み (merge commit あり、offline) | `retirable` | CANDIDATE-U-MEMEPI-003 |
+| 6 | `bound_to` の 1 件が open | `ok` | CANDIDATE-U-MEMEPI-004 |
+| 7 | merge commit が無く GitHub に届かない | `unknown`、doctor は fail しない | CANDIDATE-U-MEMEPI-005 |
+| 8 | `--archive` の途中で中断し、再実行 | 二重移動なし、manifest と実ファイルが一致、db 行も一致 | CANDIDATE-U-MEMEPI-014 |
+| 9 | 退避後に `ut-tdd db status` / `readMemory` | index-only 行が残らず `fresh` | CANDIDATE-U-MEMEPI-015 |
+| 10 | dry-run (`--archive` なし) | ファイル・db とも不変 | CANDIDATE-U-MEMEPI-007 |
+
 ## §5 検証接続
 
 L7 unit-test design の U-MEMORY-* が本 doc の contract を検証する。`tests/memory-*.test.ts` と `tests/projection-writer.test.ts` の `memory_entries` projection が回帰 fence になる。
