@@ -7,10 +7,10 @@
  "counts": {
   "redesign": 0,
   "red_green_fix": 0,
-  "design_follow": 7,
+  "design_follow": 6,
   "hold": 9,
   "retire_or_planned": 25,
-  "false_positive": 24
+  "false_positive": 25
  },
  "judgments": [
   {
@@ -187,19 +187,22 @@
    "id": "CD-11",
    "design_path": "docs/design/harness/L4-basic-design/security.md",
    "symbol": "review_evidence",
-   "verdict": "design_follow",
+   "verdict": "false_positive",
    "implementation_paths": [
-    "src/schema/frontmatter.ts:219",
-    "src/doctor/plan-governance.ts:226"
+    "src/lint/review-evidence.ts:255-257",
+    "src/lint/review-evidence.ts:319-324"
    ],
    "evidence": [
     "src/schema/frontmatter.ts:219-225 — review_evidence は reviewer/review_kind/reviewed_at/verdict が必須",
     "src/schema/frontmatter.ts:252 — anchor_commit は green_commands[] の要素内にある optional field",
     "src/doctor/plan-governance.ts:226 — checkReviewEvidence",
-    "docs/design/harness/L4-basic-design/security.md:78 — 『reviewer / review_kind / verdict / anchor_commit を必須化』"
+    "docs/design/harness/L4-basic-design/security.md:78 — 『reviewer / review_kind / verdict / anchor_commit を必須化』",
+    "src/lint/review-evidence.ts:255-257 — anchor_commit 欠落で missing_anchor_commit を返す",
+    "src/lint/review-evidence.ts:319-324 — requiresGreenCommands の PLAN で各 crossEntry を検査",
+    "docs/design/harness/L6-function-design/test-before-review.md:83,100 — 全 green_commands entry で必須"
    ],
-   "rationale": "review_evidence と checkReviewEvidence は実装済みである。ただし anchor_commit は entry 直下の必須項目ではなく green_commands 内の optional であり、設計の記述が実装の構造とずれている。",
-   "follow_up": "security.md の Repudiation 行に書かれた必須項目を、実装に合わせて直す doc 修正 PR を出す (reviewer/review_kind/reviewed_at/verdict は必須、anchor_commit は green_commands 内の optional)。"
+   "rationale": "frontmatter の schema では anchor_commit は任意だが、review-evidence lint が green_commands の各要素で欠落を missing_anchor_commit として拒否する。実効の契約は設計の「必須」と一致しており、ずれではない (Sol r1 の指摘で control が再判定、下書きの design_follow から変更)。",
+   "follow_up": ""
   },
   {
    "id": "CD-12",

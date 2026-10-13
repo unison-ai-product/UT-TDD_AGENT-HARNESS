@@ -10,21 +10,20 @@
 |---|---|---|
 | 設計を直す (Redesign) | 設計に欠陥がある。既存設計を supersede して設計から作り直す | 0 |
 | 実装を直す (Red / Green) | 設計は正しく、実装が無いか誤っている | 0 |
-| 設計を実装に合わせる | 実装は正しく、設計の記述が古い | 7 |
+| 設計を実装に合わせる | 実装は正しく、設計の記述が古い | 6 |
 | 保留 | repo の証拠だけでは決められない。理由と、決めるために要るものを書く | 9 |
 | 予定済み・退役済み | draft の契約・後続 slice・将来版など、実装が後に来ると明記されている | 25 |
-| 誤検出 | 実装がある。字句の照合が別名・別 module・否定文を拾った | 24 |
+| 誤検出 | 実装がある。字句の照合が別名・別 module・否定文を拾った | 25 |
 | 合計 | | 65 |
 
 設計を直すものと実装を直すものは 0 件でした。実装の不具合として直すべきずれは、この 65 件の中には見つかっていません。
 
 下書きは Claude Opus の subagent 4 本が作り、control (Claude) が確かめました。DWI-03 は下書きの「実装を直す」を「予定済み」へ変えました (理由は表に記載)。誤検出のうち CD-01 / CD-10 / CD-24 / CD-30 は、control が引用先を開いて実装を確かめました。
 
-## 設計を実装に合わせる (7 件)
+## 設計を実装に合わせる (6 件)
 
 | ID | 設計文書 | 対象 | 実装 | 判定理由 | 次の一手 |
 |---|---|---|---|---|---|
-| CD-11 | `L4-basic-design/security.md` | `review_evidence` | `src/schema/frontmatter.ts:219`<br>`src/doctor/plan-governance.ts:226` | review_evidence と checkReviewEvidence は実装済みである。ただし anchor_commit は entry 直下の必須項目ではなく green_commands 内の optional であり、設計の記述が実装の構造とずれている。 | security.md の Repudiation 行に書かれた必須項目を、実装に合わせて直す doc 修正 PR を出す (reviewer/review_kind/reviewed_at/verdict は必須、anchor_commit は green_commands 内の optional)。 |
 | CD-31 | `L6-function-design/function-spec.md` | `DispositionRecord` | `src/document-disposition/domain/document-disposition.ts`<br>`src/document-disposition/domain/analyze-repository-document-closure.ts` | disposition record は DocumentDispositionInput として実装され、同一文書 :953 も新名を使っているため、:1614 の DTO 表だけが旧名・旧 field (blobOid/zone/impactTags) のまま残っている。 | function-spec.md:1614 の DTO 行を DocumentDispositionInput の現行 field (baselinePath, applicability 等) へ合わせる design patch PR。zone/impactTags の廃止有無は PR 内で document-disposition の上位設計と照合する。 |
 | CD-33 | `L6-function-design/function-spec.md` | `DocumentProfileCatalogInput` | `src/profile/domain/resolver.ts`<br>`src/profile/adapters/tracked-profile-loader.ts` | strict loader 出力と catalog 生成は TrackedDocumentProfileCatalog / createProfileCatalog / ProfileCatalog として実装され、sourcePath/digest は loader 側へ分離、knownDocTypeIds 等が入力に加わっている。設計の型名と入力構成が古い。 | function-spec.md:1633-1634 を createProfileCatalog / ProfileCatalog / TrackedDocumentProfileCatalog の現行名と入力 field へ更新する design patch PR。 |
 | CD-34 | `L6-function-design/function-spec.md` | `EvidenceInput` | `src/plan-asset/domain/evidence-types.ts` | 契約は EvidenceRecordInput として field 完全一致で実装されており、設計の型名だけが古い。 | function-spec.md:1608 の型名を EvidenceRecordInput へ改める design patch PR (field 変更なし)。 |
@@ -76,7 +75,7 @@
 | DWI-03 | `L6-function-design/confirmed-document-placeholder-detection.md` |  |  | Issue #894 の L6 契約 (PLAN-L6-833) は確定の手続き中で、完了条件に「後続実装への引き渡し」が残っている。契約を先に凍結して実装が後に続く正規の順序であり、ずれではない。 | PLAN-L6-833 の confirm 後に、#894 の実装 (findUnfilledTemplatePlaceholders) を lane へ引き渡す。 |
 | DWI-12 | `L6-function-design/screen-spec.md` |  |  | screen-spec は中央 dashboard の画面機能仕様であり、その L7 実装は PLAN-L7-141 で将来版として明示保全されている。 |  |
 
-## 誤検出 (24 件)
+## 誤検出 (25 件)
 
 | ID | 設計文書 | 対象 | 実装 | 判定理由 | 次の一手 |
 |---|---|---|---|---|---|
@@ -85,6 +84,7 @@
 | CD-05 | `L4-basic-design/data.md` | `DocumentScaleProfileEntry` | `src/state-db/spec-ir-projections.ts:142`<br>`src/schema/harness-db-tables-spec-ir.ts:118` | 規模 profile ごとの文書採用・skip・理由を持つ projection は実装済みである。型名に Row 接尾辞が付いている点だけが異なる。 |  |
 | CD-06 | `L4-basic-design/data.md` | `ScheduleEntry` | `src/state-db/spec-ir-projections.ts:71`<br>`src/state-db/spec-ir-projections.ts:497` | 工程管理表を正本とする ScheduleEntry projection は、ScheduleEntryRow / schedule_entries として実装済みである。ただし、工程表を PLAN fallback より優先する順序の厳密な検証は本調査では行っていない。 |  |
 | CD-10 | `L4-basic-design/function.md` | `checkScrumReverse` | `src/doctor/plan-governance.ts:66`<br>`src/doctor/check-definition-groups.ts:160` | src/doctor に実装されている。自動照合の対象 module に src/doctor が含まれていなかったため、未検出と判定された。 |  |
+| CD-11 | `L4-basic-design/security.md` | `review_evidence` | `src/lint/review-evidence.ts:255-257`<br>`src/lint/review-evidence.ts:319-324` | frontmatter の schema では anchor_commit は任意だが、review-evidence lint が green_commands の各要素で欠落を missing_anchor_commit として拒否する。実効の契約は設計の「必須」と一致しており、ずれではない (Sol r1 の指摘で control が再判定、下書きの design_follow から変更)。 |  |
 | CD-13 | `L5-detailed-design/if-detail.md` | `absent` | `src/runtime/adapter-policy.ts:18`<br>`src/runtime/adapter-policy.ts:57` | absent のときの降格動作は、adapter-policy に設計どおり実装されている。自動照合の対象 module に src/runtime が含まれていなかった。 |  |
 | CD-14 | `L5-detailed-design/if-detail.md` | `auth` | `src/runtime/adapter-policy.ts:80` | auth を CLI の未ログインとして fail-close し、ログイン案内を返す実装がある。設計にある gh auth は provider 外の例示であり、問題にならない。 |  |
 | CD-24 | `L6-function-design/descent-obligation.md` | `active` | `src/lint/descent-obligation.ts` | condition: active は src/lint/descent-obligation.ts に実装されており、検査対象 source の列挙漏れによる誤検出である。 |  |
@@ -107,7 +107,7 @@
 
 ## 後続の進め方
 
-- **設計を実装に合わせる (7 件)**: 設計文書だけを直す契約 PR にまとめます (src を含まない)。設計書保護 gate の対象なので、実装 PR には混ぜません。
+- **設計を実装に合わせる (6 件)**: 設計文書だけを直す契約 PR にまとめます (src を含まない)。設計書保護 gate の対象なので、実装 PR には混ぜません。
 - **保留 (9 件)**: 表の「次の一手」にある判断材料をそろえてから、別の判定に移します。review receipt 3 種 (CD-20〜22) は #134 系の進め方と合わせて control が判断します。
 - **予定済み・退役済み (25 件)**: 対応する PLAN / issue の進行に任せます。この表では追跡しません。
-- **誤検出 (24 件)**: 対応は不要です。照合の対象 module から `src/doctor` や `src/runtime` が漏れていた件は、次に対応表を作り直すときの改善点です。
+- **誤検出 (25 件)**: 対応は不要です。照合の対象 module から `src/doctor` や `src/runtime` が漏れていた件は、次に対応表を作り直すときの改善点です。
