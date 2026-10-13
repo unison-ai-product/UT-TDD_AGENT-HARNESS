@@ -265,16 +265,18 @@ bus の着地時に archive を bus の receipt 側へ畳む。
   判定の根拠 = merge commit または GitHub の状態、出自、時刻) を追記 → (2) rename → (3) `memory_entries` から当該行を削除 →
   (4) `state: done` の行を追記。
 - 再実行時の復旧: `intent` だけの行について、元 path にあれば (2) からやり直し、移し先にあって sha256 が一致すれば (3) から
-  やり直す。どちらにも無い、または sha256 が合わなければ止めて報告する (推測で埋めない)。`done` の行は再処理しない。
+  やり直す。どちらにも無い、または sha256 が合わなければ、その entry で処理全体を止めて報告し exit 1 とする
+  (`done` を書かず、db 行も消さない。推測で埋めない)。`done` の行は再処理しない。
 - ファイルを削除する経路は持たない。git 追跡済みのファイルは対象外。
 - doctor の `memory-retirable` row は dry-run と同じ集計を出す advisory で、doctor を fail させない。
 - EOD の閉店処理で `memory retire --archive` (declared のみ) を 1 回流す。
 
 ### 配送側
 
-- Claude への即時配送 (claude-memory-wake) は、`episode` かつ判定が `retirable` (確定的に closed) のものを配送しない。
-  `unknown` は配送する (生きた依頼を offline を理由に落とさない)。doctor 側と向きが逆である理由ごと凍結する
-  (PLAN-L6-97 §3.6)。
+- Claude への即時配送 (claude-memory-wake) は、`episode` かつ `lifecycle_source: declared` かつ判定が `retirable`
+  (確定的に closed) のものを配送しない。`inferred` は判定にかかわらず配送する (番号の引用だけの恒久教訓を、配送面でも
+  推定で落とさない)。`unknown` は配送する (生きた依頼を offline を理由に落とさない)。doctor 側と向きが逆である
+  理由ごと凍結する (PLAN-L6-97 §3.6)。
 
 ### review dispatch との関係
 
@@ -299,6 +301,8 @@ PLAN-L6-97 §3.7 は「レビュー依頼や進捗連絡は memory に書かな�
 | 10 | dry-run (`--archive` なし) | ファイル・db とも不変 | CANDIDATE-U-MEMEPI-007 |
 | 11 | untracked、`kind=project`、未宣言、title「PR 949 で学んだ恒久の設計制約」、PR 949 は merge 済み | `episode_retirable_inferred`。`--archive` では移らず、`--include-inferred` を付けたときだけ移る | CANDIDATE-U-MEMEPI-017 |
 | 12 | 集計 | 区分の合計 = 全ファイル数、tracked は全件 `tracked_durable` | CANDIDATE-U-MEMEPI-016 |
+| 13 | 推定 episode (引用だけの恒久教訓) の即時配送 | 配送する | CANDIDATE-U-MEMEPI-018 |
+| 14 | 中断後に移し先の bytes が変わった、または両方の path から消えた | 止めて報告、exit 1、`done` なし、db 行は残る | CANDIDATE-U-MEMEPI-019 |
 
 ## §5 検証接続
 

@@ -3019,7 +3019,7 @@ oracle の詳細 (入力・期待・殺す mutation) は専用の
 | --- | --- | --- |
 | CANDIDATE-U-MEMEPI-001、006、011〜013 | 書き込み時の宣言・推定・fail-close と bound_to の形式 | 専用文書 §4 |
 | CANDIDATE-U-MEMEPI-002〜005、008、017 | 既存分の扱い・回収の三値判定・推定分の退避条件 | 専用文書 §4 |
-| CANDIDATE-U-MEMEPI-007、014〜016 | 退避の dry-run・冪等性・db 同期・real-repo 集計 | 専用文書 §4 |
-| CANDIDATE-U-MEMEPI-009〜010 | 即時配送の抑止と unknown の配送 | 専用文書 §4 |
+| CANDIDATE-U-MEMEPI-007、014〜016、019 | 退避の dry-run・冪等性・復旧時の停止・db 同期・real-repo 集計 | 専用文書 §4 |
+| CANDIDATE-U-MEMEPI-009〜010、018 | 即時配送の抑止と、unknown・推定分の配送 | 専用文書 §4 |
 
 上表の ID は backtick 無し表記である。候補台帳への再掲ではなく専用文書への参照であり、U-VMSRC-009 の一意性検査の対象外とする。
