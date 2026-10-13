@@ -98,7 +98,7 @@
 
 ## 実装担当へ渡す単位
 
-最初に版規則と当該release文書を読み、その版のSL、対象MIG、FR/AC、該当workstreamだけを渡します。全資料を毎回promptへ投入しません。Markdownは方針説明、`data/*.json`はこの**計画資料**の版・依存・対応表の正本です。製品の実行用schemaやapproval recordではありません。
+最初に版規則と当該release文書を読み、その版のSL、対象MIG、FR/AC、該当workstreamだけを渡します。全資料を毎回promptへ投入しません。Markdownは方針説明、`data/*.json`はこの**計画資料**の版・依存・対応表の正本です。製品の実行用schemaやapproval recordではありません。ただし `data/*.json` の版・channel・公開手順 (例: `data/releases.json` の R02 / 0.2.0 stable、「canary/rc で A/B 検証後 stable channel へ」) は版2.0 (2026-09-08) の旧参考です。工程順 ①〜⑪ と、正式版を 1.0.0 だけにする PO 決定 (2026-10-13、#530 コメント 6139060937) と食い違う箇所は、上の結論表と [00_VERSION_STRATEGY.md](00_VERSION_STRATEGY.md) を正とします。
 
 各release文書は「できること／未対応／旧新／依存／作業単位／受入／有効化／切戻し／退役／要求対応／読取範囲」を持ちます。既定化はそのconsumerの承認と移行成立後であり、全導入先への強制更新ではありません。
 
