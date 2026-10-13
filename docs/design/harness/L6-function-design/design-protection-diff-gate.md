@@ -10,7 +10,7 @@ next_pair_freeze: L7
 plan: docs/plans/PLAN-L6-834-design-protection-diff-gate.md
 ---
 
-> **L6 contract marker**: `checkDesignProtection(input: DesignProtectionInput) => DesignProtectionResult` は unit-test-granularity contract である。DbC pre/post/invariant は §8 にまとめる。oracle の索引は共有の `docs/test-design/harness/L7-unit-test-design.md` (§設計書保護 diff gate) に置き、詳細 (CANDIDATE-U-DPROT-001〜030) は専用の `docs/test-design/harness/L7-design-protection-diff-gate-test-design.md` が固定する。
+> **L6 contract marker**: `checkDesignProtection(input: DesignProtectionInput) => DesignProtectionResult` は unit-test-granularity contract である。DbC pre/post/invariant は §8 にまとめる。oracle の索引は共有の `docs/test-design/harness/L7-unit-test-design.md` (§設計書保護 diff gate) に置き、詳細 (CANDIDATE-U-DPROT-001〜032) は専用の `docs/test-design/harness/L7-design-protection-diff-gate-test-design.md` が固定する。
 
 # 設計書保護 diff gate — 関数設計 (issue #898)
 
@@ -50,6 +50,31 @@ pathspec を付けない理由は、分類 (§3) に `src/` と `scripts/` の�
   「削除して作り直す」形で保護対象の書き換えを added に見せることはできない。
 - path は git が出す POSIX 形式の相対 path をそのまま使う。`\`、絶対 path、`.` / `..` を含む path は不正として fail-close にする。
 - path の比較は大文字と小文字を区別する (git tree の path と同じ)。
+
+### 2.1 入力の型と全 tree の読み取り (issue #898、2026-10-13 の契約確認)
+
+`checkDesignProtection` の入力は次の型である。
+
+```ts
+interface DesignProtectionInput {
+  baseRef: string;
+  headRef: string;
+  git: GitCommandPort;
+  paths?: { implementation: readonly string[]; protected: readonly string[] }; // 省略時は §3.1 の 2 定数
+}
+```
+
+- 全 tree の読み取りは `src/github/design-protection.ts` が持つ。同 file に `readDesignProtectionChanges(git, baseRef, headRef) => PlanChange[]` を置き、`resolveCommit` で base と head を解決してから、§2 の `git diff --name-status -z --find-renames <base> <head>` を pathspec なしで 1 回実行し、`splitNul` と `parseNameStatusEntries` で変更列にする。
+- 既存の `readAdmissionGitDiff` (`-- docs/plans` の pathspec 固定) は変えず、この gate からも呼ばない。全 tree を見ないためである。
+- `checkDesignProtection` は `GitDiffAdapterError` だけを捕まえ、その code を `error.code` にして `ok=false` を返す。それ以外の例外は捕まえない (CLI はそのまま非 0 で終わり、fail-close のまま)。
+- ref の事前検査 (空文字、NUL / LF / CR) は `resolveCommit` が subprocess を起動する前に行う。違反なら git を 1 回も呼ばずに `git-ref-invalid` になる。NUL を含む文字列は OS のプロセス引数に載らないので、この検査は CLI ではなく入力境界の unit oracle で固定する (テスト設計の CANDIDATE-U-DPROT-031)。subprocess の起動失敗を `git-ref-invalid` として扱わない。
+
+### 2.2 CLI handler の形
+
+CLI は `runDesignProtectionCommand(argv, deps: { git: GitCommandPort; write: (line: string) => void }) => number` を通して動く。`src/cli.ts` は `deps.git` に `SystemGitCommandPort` を渡すだけにする。
+
+- 終了 code は `checkDesignProtection` の結果の `ok` だけで決める (`ok=true` で 0、それ以外で 1)。違反の件数やエラーの種類から別に計算しない。
+- この形にするのは、diff の実行失敗 (`git-command-failed`) を実 git では安定して起こせないためである。unit の結果 (CANDIDATE-U-DPROT-020) と CLI の終了 code (CANDIDATE-U-DPROT-032) を、注入した git port で別々に固定する。
 
 ## 3. 分類規則
 
@@ -136,6 +161,7 @@ format の一括修正や文字化け修正のように src と docs を同時�
 | 変更の型 | `src/plan-admission/diff-fence.ts` の `PlanChange` (added / modified / deleted / renamed) をそのまま使う |
 | エラーの型 | `GitDiffAdapterError` と `GitDiffAdapterErrorCode` をそのまま使う |
 | path の一覧 | 同 file の export 定数 `IMPLEMENTATION_PATH_PREFIXES` / `PROTECTED_PATH_PREFIXES` (§3.1 の単一定義点) |
+| 全 tree の読み取り | 同 file の `readDesignProtectionChanges` (§2.1)。`readAdmissionGitDiff` は使わない |
 | 判定 | 新規 `src/github/design-protection.ts` に純粋関数 `classifyPullRequestChanges(changes) => "implementation" \| "non-implementation"` と `checkDesignProtection(input) => DesignProtectionResult` を置く |
 | CLI | `ut-tdd github design-protection --base <ref> --head <ref> [--json]` を `src/cli.ts` の既存 `github` command group に 1 つ足す |
 
