@@ -385,6 +385,45 @@ working tree を相手ランタイムが常時書き換えるため、full tree 
   エピソード状態 (進捗・次の一手) はメモリに書かず、DB/HEAD 由来の digest に任せる
   (stale 化する層を作らない)。
 
+### 教訓はメモリではなく仕組みにして改善する (PO ルール 2026-10-13、両ランタイム共通)
+
+PO: 「原則プロバイダー個別メモリじゃなくてハーネスメモリを使う、メモリに書いて改善ではなく仕組みにして改善すること。」
+
+- **書く先は HARNESS メモリだけ**: 教訓・PO ルール・落とし穴は `ut-tdd memory add` で共有 HARNESS メモリへ書く。
+  プロバイダー個別のメモリ (Claude の auto-memory、Codex の私的メモリなど) に書かない。もう一方のランタイムからは
+  見えず、規律の正本からも外れるためである。
+- **改善は仕組みで行う**: メモリへの記録は、改善の完了ではなく、仕組みにするまでの一時置きである。同じ失敗を
+  防ぐ手段は、次の順で選ぶ: (1) 機構 (hook・CLI・lint / doctor・テスト)、(2) 規律の正本 (本ファイル・AGENTS.md
+  の該当節、機械照合できるなら rule-drift の marker)。機構にも正本にもしないまま、メモリだけで再発防止とは
+  しない。
+- 仕組みにしたら、その教訓のメモリに昇格先 (path・PR) を書いて退避する。棚卸しと昇格の進め方は #998 が持つ。
+- プロバイダーの標準メモリへの書き込みは、最終的に hook guard で拒否して `ut-tdd memory add` へ誘導する
+  (PO 2026-10-13、#998)。標準メモリは、もう一方のランタイムからも harness.db の学習機構 (feedback_events /
+  memory projection) からも見えないためである。guard が入るまでは、本節を規律として守る。
+- 2026-10-13 時点で、共有 HARNESS メモリの feedback は 132 件ある。同じ教訓が何度も記録され、そのたびに
+  同じ事故が繰り返されていた (#998 の表)。control lane も、教訓を Claude の私的メモリに書いていた。
+
+### runtime 間のやりとりは GUI lane (PO ルール 2026-10-08、両ランタイム共通)
+
+Claude と Codex の間の作業依頼・closing review の依頼・結果の受け渡しは、常駐の GUI lane (Claude の
+VS Code session と Codex の GUI root lane) で、Issue / PR コメントと HARNESS メモリを通して行う
+(#733 comment 6050530566)。
+
+- `ut-tdd codex|claude --role ... --execute` などの CLI 委譲は補助であり、使ってよいのは局所の穴埋め
+  review と、下の例外だけとする。使った回数は数えられるようにする (週次の利用上限の内側で使う)。
+- **例外 (#907 が閉じるまで)**: review custody (request → verdict → receipt) を封印できるのは、今は
+  CLI 委譲の経路 (`src/cli/delegation.ts`) だけである。GUI lane の判定は PR コメントに残るだけで、
+  `ut-tdd pr merge` から見ると review が無い状態になる。判定をコメントから custody へ書き写すのは
+  捏造なので禁止する。そのため、merge に使う closing review は、#907 で GUI 経路の封印ができるまで
+  CLI 委譲の正規経路で行ってよい。並行させるときは、review ごとに別の clean worktree から実行する
+  (review-guard は実行した checkout の作業ツリーだけを見るので、他レーンの書き込みで receipt が
+  落ちるのを避けられる。2026-10-13 に 4 本並列で全 receipt を確認)。
+- レーンの中の並列 (Luna の subagent、Claude の Agent tool) は別の話であり、本節は制限しない。上限は
+  §Shared Guard Discipline の 8 のまま。
+
+2026-10-08 の決定は Claude の私的メモリと #733 にしか無く、規律の正本に入っていなかった。その間に、
+control lane は補助のはずの CLI 経路を記録なしに常用していた (2026-10-13、#998 の昇格対象の実例)。
+
 ## GitHub Issue Hierarchy
 
 - 正本は `docs/governance/github-issue-hierarchy.md`。
