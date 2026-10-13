@@ -10,7 +10,7 @@ next_pair_freeze: L7
 plan: docs/plans/PLAN-L6-834-design-protection-diff-gate.md
 ---
 
-> **L6 contract marker**: `checkDesignProtection(input: DesignProtectionInput) => DesignProtectionResult` は unit-test-granularity contract である。DbC pre/post/invariant は §8 にまとめる。oracle の索引は共有の `docs/test-design/harness/L7-unit-test-design.md` (§設計書保護 diff gate) に置き、詳細 (CANDIDATE-U-DPROT-001〜028) は専用の `docs/test-design/harness/L7-design-protection-diff-gate-test-design.md` が固定する。
+> **L6 contract marker**: `checkDesignProtection(input: DesignProtectionInput) => DesignProtectionResult` は unit-test-granularity contract である。DbC pre/post/invariant は §8 にまとめる。oracle の索引は共有の `docs/test-design/harness/L7-unit-test-design.md` (§設計書保護 diff gate) に置き、詳細 (CANDIDATE-U-DPROT-001〜030) は専用の `docs/test-design/harness/L7-design-protection-diff-gate-test-design.md` が固定する。
 
 # 設計書保護 diff gate — 関数設計 (issue #898)
 
@@ -76,6 +76,13 @@ src も docs も含まない PR も非実装 PR で、この gate の対象外�
 - テストは repository-structure.md §3.1 の 2 つの表を読み、2 定数と集合として一致することを確かめる。表が見つからない、または読めた行が 0 件なら、一致とみなさずに失敗する。
 - 置き場を動かす PR (v4 工程 ④ など) は、repository-structure.md §3.1 の表と 2 定数を同じ変更で直す。片方だけ直すと上のテストが赤になる。移動だけを先に merge しない。
 
+表と定数を両方とも据え置いたまま中身だけを動かす PR は、上の一致テストでは止まらない。次の 2 つで止める。
+
+- **判定 path の外への rename の拒否 (gate)**: rename の `from` が判定 path の配下で、`path` がどの判定 path の配下でもない変更を、違反 `implementation-moved-out` (path = `path`、from = `from`) にする。`from` が判定 path なので、この PR は必ず実装 PR になる。移動先を判定 path に足す PR (表と定数を同時に直した移動 PR) では、移動先が判定 path の配下になるので違反にならない。
+- **置き場が空でないことの確認 (テスト)**: テストは HEAD の `git ls-files` を読み、2 定数の各 prefix の配下に追跡ファイルが 1 件以上あることを確かめる。git が rename と検出しない移動 (削除 + 内容を大きく変えた追加) でも、全部を動かせば元の置き場が空になり赤になる。
+
+一部だけを rename と検出されない形で動かす PR は、どちらでも止まらない。これは既知の制約として §9 に記す。
+
 ## 4. 拒否規則
 
 保護対象は保護 path (`docs/design/` と `docs/test-design/`、§3.1) の配下にある全ファイルである。
@@ -88,6 +95,7 @@ src も docs も含まない PR も非実装 PR で、この gate の対象外�
 | renamed | `from` が保護対象 | 拒否 (`protected-renamed`。保護対象の外へ出す rename も含む) |
 | renamed | `from` が保護対象外で `path` だけが保護対象 | 許可 (保護対象への新規追加と同じ) |
 | added | path が保護対象 | 許可 |
+| renamed | `from` が判定 path の配下で、`path` がどの判定 path の配下でもない | 拒否 (`implementation-moved-out`、§3.1) |
 
 例外経路は作らない。override の marker、PR label、環境変数も作らない。
 format の一括修正や文字化け修正のように src と docs を同時に直す変更も、PR を分けて出す。
@@ -101,7 +109,7 @@ format の一括修正や文字化け修正のように src と docs を同時�
 | `ok` | 違反 0 件かつ入力エラーなしのときだけ `true` |
 | `classification` | `implementation` / `non-implementation` / `unknown` (入力エラー時) |
 | `implementationPaths` | 分類の根拠になった `src/` / `scripts/` の path (先頭から最大 5 件) |
-| `violations` | `{ code, path, from? }` の配列。code は `protected-modified` / `protected-deleted` / `protected-renamed` |
+| `violations` | `{ code, path, from? }` の配列。code は `protected-modified` / `protected-deleted` / `protected-renamed` / `implementation-moved-out` (§3.1) |
 | `error` | 入力エラーのときだけ `{ code, detail }`。code は既存の `GitDiffAdapterErrorCode` をそのまま使う |
 
 - 違反は全件を path の辞書順で返す。最初の 1 件で打ち切らない。
@@ -169,7 +177,8 @@ workflow と manifest の片方だけを直す PR は、`missing_runtime_leg` �
 |---|---|
 | pre | `baseRef` と `headRef` は空でなく、NUL / LF / CR を含まない (既存 `resolveCommit` の検査そのもの。違反は `git-ref-invalid`)。それ以外の文字 (tab など) は検査せずに `git rev-parse --verify` へ渡し、解決できなければ同じく `git-ref-invalid` になる |
 | post (分類) | 分類は変更 path の集合と判定 path だけで決まる。PLAN kind、branch 名、PR 本文、変更の順序に依存しない |
-| invariant (単一定義点) | 判定 path と保護 path は §3.1 の 2 定数にだけあり、repository-structure.md §3.1 の表と集合として一致する |
+| invariant (単一定義点) | 判定 path と保護 path は §3.1 の 2 定数にだけあり、repository-structure.md §3.1 の表と集合として一致する。各 prefix の配下に HEAD の追跡ファイルが 1 件以上ある |
+| post (移動) | 判定 path の配下から判定 path の外への rename 1 件につき違反 `implementation-moved-out` 1 件 |
 | post (許可) | 非実装 PR では `violations=[]` かつ `ok=true` (入力エラーがなければ) |
 | post (拒否) | 実装 PR で保護対象の既存ファイルを M / D / R した変更 1 件につき違反 1 件 |
 | post (追加) | added と、保護対象外から保護対象への rename は違反にしない |
@@ -185,6 +194,7 @@ workflow と manifest の片方だけを直す PR は、`missing_runtime_leg` �
 - clean Pack の consumer workflow (`docs/templates/github/common/pack-harness-check.yml`) への展開。
 - main への push event での検査。保護は PR の時点で効かせる (理由は §7)。
 - `.claude/hooks/` / `.github/workflows/` 単独変更を実装 PR として分類すること。初版は #898 の PO 決定どおり `src/` / `scripts/` に限る。これらの変更を含めた全実行系の保護は保証しない。広げるかどうかは issue #973 で決める。
+- 判定 path の一部だけを、git が rename と検出しない形 (削除 + 内容を大きく変えた追加) で判定 path の外へ動かす PR。§3.1 の 2 つの仕組みはどちらも反応しない。全部を動かした時点で置き場が空になり、§3.1 のテストが赤になる。
 - 工程 ④ の移動 PR そのものの検証。§3.1 は、移動 PR が表と定数を同時に直すこと、定数を差し替えれば別の構成でも gate が効くことまでを固定する。移動後の実際の path で実装 PR が BLOCK になる Red→Green は、その移動 PR が自分の差分で示す (#913 の完了条件 2)。
 
 ## 10. テスト設計の確定と oracle 昇格の運用 (PO 決定)
