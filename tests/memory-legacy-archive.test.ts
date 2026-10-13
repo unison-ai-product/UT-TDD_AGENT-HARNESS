@@ -30,7 +30,10 @@ function git(args: readonly string[], encoding: "buffer"): Buffer;
 function git(args: readonly string[], encoding: "utf8" | "buffer"): string | Buffer {
   // PR 範囲の blob 走査は、数 MB の追跡ファイル (棚卸しの JSON 等) を含みうる。既定の 1MB を超えると
   // ENOBUFS で落ちるため上限を広げる (2026-10-13、PR #965 / #966 で実測)。
-  const out = execFileSync("git", ["-C", root, ...args], { encoding, maxBuffer: 256 * 1024 * 1024 });
+  const out = execFileSync("git", ["-C", root, ...args], {
+    encoding,
+    maxBuffer: 256 * 1024 * 1024,
+  });
   return encoding === "utf8" ? String(out).trim() : (out as Buffer);
 }
 
