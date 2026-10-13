@@ -7,7 +7,7 @@ drive: agent
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-10-08
-updated: 2026-10-08
+updated: 2026-10-13
 owner: Claude (契約PR) / Codex (契約レビュー) / control (割当)
 parent_design: docs/design/harness/L6-function-design/function-spec.md
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
@@ -45,23 +45,48 @@ dependencies:
     - docs/governance/candidates/ut-tdd-concept-v4-requirements.md
     - docs/governance/candidates/ut-tdd-concept-v4-acceptance.md
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/898
-status: draft
+review_evidence:
+  - reviewer: claude-opus-5-5
+    review_kind: cross_agent
+    reviewed_at: 2026-10-13T03:14:34.559Z
+    tests_green_at: 2026-10-13T03:10:47Z
+    verdict: PASS
+    worker_model: codex
+    reviewer_model: claude-opus-5-5
+    plan_revision: PLAN-L6-834 r1 (draft source reviewed; confirmation to r2)
+    subject_head: cda7128ff4ecda537f7a02be5ac96ba71c880165
+    citations:
+      - .ut-tdd/review/receipts/e185bb35612d8ac16b53bca3435560c54cf4ddf01ca85b91339cef39a51c13a8.json
+      - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/962#issuecomment-6137399436
+      - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/actions/runs/38338563382
+    green_commands:
+      - kind: integration_test
+        command: "GitHub Actions harness-check run 38338563382 (Linux, Windows, Node
+          generation Linux/Windows, aggregate): all five jobs succeeded"
+        runner: ci
+        scope: full
+        exit_code: 0
+        completed_at: 2026-10-13T03:10:47Z
+        evidence_path: .github/workflows/harness-check.yml
+        output_digest: sha256:f079c200785985cc0b7a4b42522f202c15d3356c5e1a5890aa8708a185bedab7
+        anchor_commit: cda7128ff4ecda537f7a02be5ac96ba71c880165
+status: confirmed
 sub_doc: function-spec
 github_issue_id: 898
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:8ca68930636199fa10036ecd1487a466
-  command_id: plan-draft:issue-898:PLAN-L6-834:20261008-contract-a1
-  admitted_at: 2026-10-08T05:33:58Z
-  source_digest: sha256:4fb8530edc5b43193b29317d47de823f8e426ff55b7152b8e0099c8da5a4d023
-  decision_digest: sha256:3e6c515a691c3c16ea4c55765920bafee62ca2280a3cc62eb1798c4698ffa8c5
-  receipt_digest: sha256:e45d9836fce24230a226664efee22f39c54cd72388148db9767442dcfbc1e3cd
+  receipt_id: certificate:0b8e082148f04ee77a070d70af661a0f
+  command_id: plan-revise:issue-898:PLAN-L6-834:r2:confirm-20261013T0329Z
+  admitted_at: 2026-10-13T03:43:12.771Z
+  source_digest: sha256:930ee5d0086549133fe377e4186b2457e07ec803defda72fa89e0318eb6b35c2
+  decision_digest: sha256:894621bd0ecccb7dd1035347d20bc6ba867653266c52e8116e1824ba5a41927a
+  receipt_digest: sha256:a6e02b75658df8bc8ea9b05e692a960ed0133cfe8209aabcf8259a22494a6c6e
   binding:
     path: docs/plans/PLAN-L6-834-design-protection-diff-gate.md
     plan_id: PLAN-L6-834-design-protection-diff-gate
     asset_id: plan:8ca68930636199fa10036ecd1487a466
-    revision: 1
-    content_digest: sha256:4fb8530edc5b43193b29317d47de823f8e426ff55b7152b8e0099c8da5a4d023
+    revision: 2
+    content_digest: sha256:930ee5d0086549133fe377e4186b2457e07ec803defda72fa89e0318eb6b35c2
   route:
     signal: feature_addition
     mode: add-feature
@@ -86,9 +111,9 @@ admission_receipt:
 
 ## 上流の設計 revision digest
 
-- `docs/design/harness/L6-function-design/function-spec.md@d8e2e41fc8224d7f3b23033b98e17fed542cd58f` sha256:35831a1356fd84abdbd74741b8f6453da73fadb9e6a7d7a35763edfb8d89425a
-- `docs/governance/candidates/ut-tdd-concept-v4-requirements.md@d8e2e41fc8224d7f3b23033b98e17fed542cd58f` sha256:9f373cc54a34125b64980ac69ed23e21ab58ed8941db8d9f1ff60af4bc3e76f2
-- `docs/governance/candidates/ut-tdd-concept-v4-acceptance.md@d8e2e41fc8224d7f3b23033b98e17fed542cd58f` sha256:320394c303e3e8a5a32049a66990f3545f66dbc303982b023c32ebef62d229f9
+- `docs/design/harness/L6-function-design/function-spec.md@3ca0692d6c6a180b058c492475080be2a140e667` sha256:35831a1356fd84abdbd74741b8f6453da73fadb9e6a7d7a35763edfb8d89425a
+- `docs/governance/candidates/ut-tdd-concept-v4-requirements.md@3ca0692d6c6a180b058c492475080be2a140e667` sha256:cc3c78e1599acfe656ef010e32e687c0c1a856c6bb1b994a6725617fa03cc592
+- `docs/governance/candidates/ut-tdd-concept-v4-acceptance.md@3ca0692d6c6a180b058c492475080be2a140e667` sha256:14c129f1c5e19c4b7f6a726eb111a81b5fc192c6694728d4352eb8327fd44e9f
 
 ## 引き渡し物
 

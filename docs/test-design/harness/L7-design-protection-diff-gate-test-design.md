@@ -4,7 +4,7 @@ layer: L7
 executed_at_layer: L7
 artifact_type: test_design
 status: draft
-updated: 2026-10-08
+updated: 2026-10-13
 ---
 
 # 設計書保護 diff gate テスト設計 (issue #898)
@@ -40,7 +40,7 @@ updated: 2026-10-08
 | `CANDIDATE-U-DPROT-006` | `scripts/b.sh` だけを含み src を含まない PR で `docs/design/harness/x.md` を M | `ok=false`、分類 `implementation` | 実装 PR の判定を `src/` だけにする |
 | `CANDIDATE-U-DPROT-007` | 実装側の path が rename の `from` だけにある PR (`src/a.ts` → `lib/a.ts` の R) で `docs/design/harness/x.md` を M | `ok=false`、分類 `implementation` | 分類で rename の `from` を見ない |
 | `CANDIDATE-U-DPROT-008` | 契約 PR + Red (src も scripts も含まない) で `docs/design/harness/x.md` と `docs/test-design/harness/y.md` を M、別の設計文書を D、`tests/z.test.ts` を A と M | `ok=true`、分類 `non-implementation`、違反 0 件 | 分類を見ずに常に保護規則をかける / `tests/` を実装 PR の発火条件に入れる |
-| `CANDIDATE-U-DPROT-009` | src も docs も含まない PR (`README.md` と `.ut-tdd/memory/m.md` を M) | `ok=true`、分類 `non-implementation`、違反 0 件 | 対象外 PR を BLOCK にする |
+| `CANDIDATE-U-DPROT-009` | (a) src も docs も含まない PR (`README.md` と `.ut-tdd/memory/m.md` を M)、(b) `.claude/hooks/work-guard.ts` と `docs/design/harness/x.md` を M、(c) `.github/workflows/harness-check.yml` と `docs/test-design/harness/y.md` を M。いずれも src/scripts は含まない | すべて `ok=true`、分類 `non-implementation`、違反 0 件。初版の非保証境界を観測するもので、全実行系保護の成功例ではない | 対象外 PR を BLOCK にする / 初版の分類を承認なしに hooks/workflows へ拡張する |
 | `CANDIDATE-U-DPROT-010` | 空の diff (変更 0 件) | `ok=true`、分類 `non-implementation`、`error` なし | 空 diff を入力エラーにする / 空 diff で例外を投げる |
 | `CANDIDATE-U-DPROT-011` | Windows のパス区切り: (a) fake git が `docs\design\harness\x.md` を返す、(b) `C:/x` や `../x` を返す、(c) 大文字の `Docs/Design/x.md` と `SRC/a.ts` を M | (a)(b) `ok=false`、`error.code = git-path-invalid` (区切りを `/` へ置換して通さない)。(c) `Docs/` も `SRC/` も対象外として `ok=true` | `\` を `/` に正規化して判定を続ける / 大文字小文字を無視して比較する |
 | `CANDIDATE-U-DPROT-012` | fake git が (a) 未知 status `T`、(b) NUL 終端の無い出力、(c) R の path 欠落を返す | 3 つとも `ok=false`、分類 `unknown`、`error.code` はそれぞれ `git-status-unknown` / `git-diff-malformed` / `git-diff-malformed` | 不明 status を読み飛ばす / 部分的に読めた変更だけで判定する |
@@ -64,6 +64,8 @@ updated: 2026-10-08
 - 本書の oracle は `docs/design/` と `docs/test-design/` の保護だけを扱う。`tests/` の oracle 保護、追加による実質上書き、push event の検査は対象外 (設計文書 §9)。
 - テスト設計の確定・正式 ID への昇格・Red のテストは、src/ も scripts/ も含まない PR (契約 PR + Red) で入れる (設計文書 §10.2)。実装 PR は本書と共有の索引に触れず、Green にするだけにする。本書は昇格のための例外 oracle を持たない。
 - candidate の存在だけを Green の証跡にしない。
+- 009(b)(c) は L6 §3 / §9 の初版の非保証境界を固定する。workflow 内容の CI policy 検査016/024〜026とは別である。issue #913 による新構成への gate 導入後は、契約改訂で009(b)(c)の該当入力を新しい実装・保護 path に対応させ、期待を `implementation` / `BLOCK` に反転する。現行の期待は #913 導入前に限る。
+- 構成変更後の判定・保護 path の保証は #913 の後続契約と pair が所有する。移動 PR と同時の path 更新、単一定義点と構成正本の照合、移動後の実装 PR の Red→Green をその pair で検証する。現行001〜026を移動後の証明へ流用しない。移動だけの先行 merge は認めない。
 
 ## 5. Required evidence
 
