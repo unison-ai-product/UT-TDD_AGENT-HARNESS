@@ -35,6 +35,19 @@ Green証跡ではない。各mutationは他の入力が整合した状態で単�
 
 ## 実装時の昇格と証跡
 
+### Release binding の改訂入力（Issue #930、未発行・未実測）
+
+契約入力は `.ut-tdd/evidence/issue930-l7-516-release-binding-proposal.md`。control6136055277に従い、契約内容の非著者レビュー後にL7-516の正規revisionへ束縛する。この追記は既存表の行を置き換えず、001・005の下位caseだけを追加する。既存007の起動検証と他のoracleは不変である。既存Greenをbinding実測へ流用しない。
+
+| 既存候補 | 追加する独立入力・対照 | 観測する結果 |
+|---|---|---|
+| CANDIDATE-U-PACKNODE-001 | digest・pointer・identity/history linkageが整合するsealed receiptにvalid exact `release_binding: { tag }`を与える。bindingless legacyは別fixtureとする | readerは封印した正確なtagを返し、consumer 7-field tupleは不変。legacy readerはunknownを返し、local_versionで代用しない。表示出力は本caseの対象外 |
+| CANDIDATE-U-PACKNODE-001 | bindingのnull/array/primitive、tag欠落・空・既存safe-tag条件違反、binding内unknown key、receipt top-level unknown keyを独立に与える。保存receipt変異時はfile/bundle digestとpointerを整合する | 一般digest不一致ではなくreceipt parser拒否を識別する。既存pre-lock readerで検出するinvalid bindingではlock/staging/payload write/seal/public bundle publish/active-pointer CAS・write/launchは0。既存表のgeneration/identity変異のwrite・activation・receipt append・launch 0も維持し、別receiptで補完しない |
+| CANDIDATE-U-PACKNODE-005 | activeなbindingless legacy receiptをread-only readerで読み、前後のreceipt bytes、6-file digest map、bundle digest、pointer bytes/mode/digestを比較する | readerのtagはunknown、全比較値は不変でありbackfill/resealしない。実install/updateの正常pointer切替は別の既存matrixで測定する。既存のfault/ack-loss/partial/unknown/cleanup/prior-state条件は撤回しない |
+| CANDIDATE-U-PACKNODE-005 | malformed candidateを既存write port後に初めて検出する場合を、pre-lock検出とは別に与える | lock/snapshot/private staging作成0を主張しない。payload write/seal/public publish/pointer CAS・write/launchの0とcleanup/quarantine、prior-state保持を分離する |
+
+同一targetのassetとbindingのadmission照合、v1/v2 metadataとgzip、再起動後のタグ表示は後続#930の別pairで扱う。表示ownerは現物から確定し、PLAN-L7-362 / PLAN-L7-523を照合する。L7-628を表示ownerと決め打ちしない。後続表示はsealed receiptのtop-level `release_binding.tag`だけを読み、欠落はunknown、local_version代用なしとする。表示の削除後正系は別oracleとし、007へ混ぜない。表示完了まで#930を閉じず、canary.8受入は保存・読取と表示の両方を要求する。
+
 各U/P候補は同番号の実テストへ昇格し、Red→Greenの時刻、PLAN revision、exact HEAD、worker model、
 Linux/Windows/aggregate CI、非著者review receiptを束ねる。破壊的E2Eは一時fixtureを使い、実開発
 repository、OneDrive、共有`harness.db`、実ユーザーデータを削除対象にしない。deny時の0件主張は
