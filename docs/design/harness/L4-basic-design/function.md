@@ -394,10 +394,11 @@ E3/E4 outbox 境界だけ)。
 - **`ReentryCertificate` の束縛**: episode、origin PLAN Asset/revision/state、採択 drive model、E6 駆動モデル内検証、
   E8 中間 test、再入先、source/head SHA、発行 policy revision、証拠 digest を結ぶ。別 episode・別 revision・別 HEAD の
   certificate は使えない。
-- **merge 条件 (AND)**: (1) E9 certificate が有効で E10 で一度だけ消費済み、(2) E6・E8・E11 の必須 test/CI が各 subject SHA で
-  Green かつ E11 以降の PR head と一致、(3) author と別 runtime/model family の cross-review PASS、(4) PR head・review 対象・
-  CI 対象・merge 対象の SHA が一致、(5) unresolved blocker・未処理 outbox・矛盾する inbox observation が 0、
-  (6) branch protection が許せば auto-merge、許さなければ human approval 付き merge へ分岐する。draft PR は E11 通過後だけ生成する。
+- **merge 条件**: E9 certificate の E10 での一度だけの消費、E11 後だけの draft PR 生成、別 provider の cross-review PASS・
+  required CI・exact head・re-entry certificate・accept evidence の AND 条件は L6 `function-spec.md` の契約不変条件を正本とする。
+  本節はそれに次を加える: E6・E8・E11 の必須 test/CI は各 subject SHA で Green かつ E11 以降の PR head と一致すること、
+  unresolved blocker・未処理 outbox・矛盾する inbox observation が 0 であること、branch protection が許せば auto-merge、
+  許さなければ human approval 付き merge へ分岐すること。
 - **設計学習**: Issue 数の削減を目標にしない。`layer × escape_type × cause × drive_model × recurrence_id × reentry outcome` で
   集計し、同一原因の再発率を下げる。PoC は S4 decision・採否・再合流先まで閉じなければ完了扱いにしない。telemetry は
   設計変更を自動承認せず、PLAN / ADR へ戻す入力に留める。

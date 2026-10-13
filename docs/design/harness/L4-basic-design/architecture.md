@@ -381,17 +381,24 @@ OS custody container に属し、未所属期間を作らない。(3) success / 
 
 呼出側が無制限を指定することは禁止し、上限緩和は理由付き override evidence を要する。
 
-**`ExecutionEvent`** は `attempt_id + sequence` を identity とする append-only の事実で、kind は
-`admission_requested | control_started | probe_recorded | capability_negotiated | admission_sealed | authority_prepared |
+**`ExecutionEvent`** は `attempt_id + sequence` を identity とする append-only の事実で、kind は次の値集合とする。
+retry は新しい `attempt_id` へ分岐する。
+
+```text
+admission_requested | control_started | probe_recorded | capability_negotiated | admission_sealed | authority_prepared |
 custody_created | handoff_committed | process_attached | started | limit_observed | authority_recovery_requested |
 recovery_observation_verified | lease_reissued | termination_requested | dispatch_indeterminate | dispatch_reconciled |
-process_reaped | custody_empty | lease_released | finished` とする。retry は新しい `attempt_id` へ分岐する。
+process_reaped | custody_empty | lease_released | finished
+```
 
 **`ExecutionReceipt`** は terminal 到達時だけ event 列から導出・封印する immutable 証跡 (`execution_id + attempt_id`) であり、
 outcome で判別する union とする: `RootNotCreated` (`custody_disposition: absent | prepared_then_empty`)、
-`RootCreatedNotStarted` (`started_at` を持たない)、`RootStarted`。exit kind は
-`success | protocol_failure | bundle_failure | process_failure | deadline | cpu_budget | memory_budget | process_budget |
-output_budget | cancelled | validation_failure | capability_failure | launch_failure | custody_failure | orphan_detected`。
+`RootCreatedNotStarted` (`started_at` を持たない)、`RootStarted`。exit kind は次の値集合とする。
+
+```text
+success | protocol_failure | bundle_failure | process_failure | deadline | cpu_budget | memory_budget | process_budget |
+output_budget | cancelled | validation_failure | capability_failure | launch_failure | custody_failure | orphan_detected
+```
 `lease_released`・`finished` event と receipt seal は一つの atomic terminal transaction (または同じ commit position の
 recoverable outbox) で確定し、片肺を許さない。receipt の success は domain test の pass を意味しない。
 
