@@ -191,6 +191,20 @@ data.md の 5 集約 (構造) を src/ building block (実行) に配置する�
 | entrypoint | `scripts/ut-tdd` (POSIX) / `ut-tdd.ps1` (Windows) は薄く core を呼ぶだけ (bash ロジック禁止)。**呼び先は `node src/cli.ts` であり、compiled binary への分岐 dispatch は持たない** (§2 削除禁止条項の保護範囲、PLAN-L6-93 §5.2.1 の allowlist 契約) | ADR-001 §3 |
 | 依存隔離 | 外部 service (Claude/Codex/GitHub/Sentry) 起動は **runtime adapter** に隔離、core は正規化 intent のみ発行 | external-if (PLAN-L4-04) で境界契約化 |
 
+### §6.1 `.codex/hooks.json` の検査範囲 (codex-hook-adapter)
+
+`.codex/hooks.json` の妥当性は、Codex CLI 本体の schema ではなく、repo 側の `codex-hook-adapter`
+(`src/lint/codex-hook-adapter.ts`) が次の範囲で検査する。
+
+- JSON として parse できなければ `malformed_json`、ファイルが無ければ `missing_hooks_json` で fail-close する。
+- `type: "command"` の各 hook entry について、field を `type` / `command` / `timeout` / `statusMessage` /
+  `async` / `additionalContextLimit` の allowlist と照合し、それ以外は `unsupported_hook_field` で fail-close する
+  (Codex はこれ以外の field を無音で無視するため。PLAN-L7-668 §3.1)。
+- top-level の key (`hooks` 以外) は検査しない。Codex CLI の binary や実 schema を呼んで検証する経路は持たない。
+
+移行元: `docs/plans/PLAN-L7-426-codex-native-subagents.md` (issue #648)。PLAN は「Codex の schema で実 parse する
+fence」を掲げるが、実装は上記の JSON parse + field allowlist である (差分は移行証跡 g5 に記録)。
+
 ## §7 ADR 仕組み (arc42 §9、IMP-023)
 
 L4 方式設計 sub-doc は **ADR を必須 artifact** とする。様式 = arc42 §9 / MADR 準拠。
