@@ -130,7 +130,7 @@ U-SETUP-001 (`detectProjectScale` never-throws / gh 失敗→unknown) / U-SETUP-
 | 確定の所在 | 実行時に毎回検出 | `.ut-tdd/state/setup.json` に**記録**して安定化 |
 | 安全側 | — | 検出不能 → solo (緩い側) フォールバック |
 
-deps 注入 (`GhRunner`/`FsReader`/`FsWriter`/`confirm`) は session-log の `nodeDeps` パターン、`onPath` (`gh` 有無判定) は `src/runtime/detect.ts` を再利用する。
+deps 注入 (`GhRunner`/`FsReader`/`FsWriter`/`confirm`) は session-log の `nodeDeps` パターン、`gh` の有無は事前判定しない（`onPath` は撤去済み）。`detectProjectScale` (`src/setup/index.ts`) は `deps.gh(...)` を直接呼び、失敗 (`ok:false`) なら `ownerType: unknown` のまま solo へフォールバックする（never throws）。
 
 ## §5 上位整合 (後段 Reverse で back-fill)
 

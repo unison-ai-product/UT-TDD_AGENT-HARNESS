@@ -891,10 +891,10 @@ profile解決順はsize baseline→product overlay→explicit overrideで、unkn
 
 ### Forward FSM / contract compiler契約
 
-- `ForwardWorkflow.reconstruct(subject, events): Result<ForwardWorkflow, WorkflowError>`
-- `ForwardWorkflow.explain(command, context): GuardVerdict`
-- `ForwardWorkflow.transition(command, context): Result<WorkflowTransition, WorkflowError>`
-- `reduceForward(events): Result<ForwardState, WorkflowError>`
+- `ForwardWorkflow.reconstruct(subject, events, evidencePolicy?): ForwardResult<ForwardWorkflow>`
+- `ForwardWorkflow.explain(command, context): ForwardGuardVerdict`
+- `ForwardWorkflow.transition(command, context): ForwardResult<ForwardTransition>`
+- `reduceForward(events): ForwardReduction | ForwardError`
 - `VModelContract.create(dto): Result<VModelContract, ContractViolation[]>`
 - `compileVModelContract(contract): CompiledContract`
 
@@ -1605,13 +1605,14 @@ usage=2を維持する。
 |---|---|---|
 | `PlanAssetInput` | `assetId`, `alias`, `initialRevision`, `canonicalPayload`, `dependencies[]` | 空ID、重複dependency、revision≠1、payload digest不一致は`PlanAssetError` |
 | `RevisePlanCommand` | `assetId`, `baseRevision`, `changeSet`, `actor`, `reason` | base≠latest、空reason、identity変更は拒否 |
-| `EvidenceInput` | `evidenceId`, `evidenceKind`, `subjectId`, `subjectRevision`, `sourceCommit`, branded `commandArgs`, kind別typed `claims`, `outputDigest`, `exitCode`, typed `producer`, `producedAt`, `expiresAt?`, `supersedesEvidenceId?` | claimsを含むrecord digestをcanonical fieldから内部生成する。issuerがある場合はauthority/key version/producer/record digestを長さprefix frame化してattestationを発行する。非0 exitと未署名recordも監査用recordとしてvalid |
+| `EvidenceRecordInput` | `evidenceId`, `evidenceKind`, `subjectId`, `subjectRevision`, `sourceCommit`, branded `commandArgs`, kind別typed `claims`, `outputDigest`, `exitCode`, typed `producer`, `producedAt`, `expiresAt?`, `supersedesEvidenceId?` | claimsを含むrecord digestをcanonical fieldから内部生成する。issuerがある場合はauthority/key version/producer/record digestを長さprefix frame化してattestationを発行する。非0 exitと未署名recordも監査用recordとしてvalid |
 | `EvidencePolicy` | `policyId`, `revision`, `requirements[]`（各要素=`requirementId`, `requiredKind`, `minCount`, `maxCount?`, `acceptedProducers[]`, `exitRule`, typed `claimsRule`）、`maxAge?`、composition root固定`EvidenceAttestationVerifierPort` | 全nested ruleをdefensive copy/deep freezeする。trusted verifierがauthority/key/producer binding/署名を検証したrecordだけをfrontier候補にする。未署名・署名不正、別kind/revision/commit、期限切れ、producer外、exit/claims不適合を件数へ数えず、requirement別eligible/rejected IDをstable順で返す |
-| `WorkflowCommand` | `subjectId`, `expectedFrom`, `to`, `actor`, `reason?`, `evidenceIds[]` | 許可表外、sequence不整合、guard不足は`WorkflowError` |
-| `WorkflowContext` | `subjectRevision`, `events[]`, `evidence[]`, `now`, `policyRevision` | event/evidenceが別subjectならfail-close |
+| `ForwardCommand` | `event`, `commandId?`, `expectedFrom?`, `sourceCommit?`, `evidenceIds?`, `exceptionContext?` | 許可表外、sequence不整合、guard不足は`ForwardError`（`ok:false`, `ruleId`, `exitCode`, `message?`） |
+| `ForwardSubject` | `subjectId`, `subjectRevision`, `sourceCommit` | `ForwardWorkflow.reconstruct(subject, events)`は、subjectが不正、またはeventの`subjectId`/`subjectRevision`/`sourceCommit`が1件でもsubjectと不一致ならfail-close（`forward-ledger-unavailable`） |
+| `ForwardEvidenceContext` | `evidence?`, `now?`, `authorFamily?`, `evidencePolicy?` | 旧`WorkflowContext`をsubject（上記）とevidence文脈へ分離した。`explain`/`transition`の第2引数であり、eventは`reconstruct`時にsubjectへ束縛済み |
 | `VModelContractDto` | `revision`, `layers[]`, `gates[]`, `pairs[]`, `exceptions[]`, `evidencePolicies[]`, `defectRoutes[]` | exactly-once、未知参照、理由なし例外は`ContractViolation[]` |
 | `DocsSnapshot` | `commit`, `treeOid`, `trackedCount`, `pathSetSha256`, `pathStreamAlgorithm` | algorithmは`git-ls-tree-z-v1`、working tree値で代替禁止 |
-| `DispositionRecord` | `path`, `blobOid`, `zone`, `disposition`, `reason?`, `targets[]`, `planIds[]`, `impactTags[]`, `applicationStatus` | conditional field不足は`DispositionFinding` |
+| `DocumentDispositionInput` | `baselinePath`, `disposition`, `reason`, `targets[]`, `planIds[]`, `applicationStatus`, `applicability{kind, reason?, observedCondition?, reevaluationTrigger?, planId?, decider?}` | conditional field不足は`DispositionFinding`。旧`DispositionRecord`の`blobOid`/`zone`はsnapshot側（`DocsSnapshot`、L5 physical-data §zone/frame `(path, blob_oid, content_sha256, file_mode, zone)`）が保持し、入力DTOには含めない。旧`impactTags[]`は上位設計にも実装にも定義が無いため撤去した（issue #977 CD-31） |
 | `SemanticAssessmentInput` | `itemId`, `sourceRevision`, `applicability`, `designEvidence[]`, `runtimeEvidence[]`, `testEvidence[]`, `review`, `debtRoute?` | verified 3面、gap route、conditional理由を強制 |
 | `SelfProofRequest` | `contractRevision`, `sourceHash`, `compiledHash`, `rules[]`, `fixtures[]`, `mutations[]`, `surfaces[]` | rule/fixture/mutation/surface identityを重複なく1回ずつ定義 |
 | `SelfProofDeps` | `processRunner`, `sourceHasher`, `receiptStore`, `clock` | detector verdict関数をdependencyとして受け取らない |
@@ -1630,8 +1631,8 @@ usage=2を維持する。
 | `ItemTargetEdge` | `edgeId`, `itemId`, `targetStatus`, `reason`, `sourceDigest`, `targetKind?`, `targetRef?`, `planId?` | targetKind=`artifact_path|artifact_family|plan_alias|target_slot`。runtimeでsource→targetを継承・推論しない。pendingはtarget禁止、adopt/merge/reference/deferのtarget欠落=`catalog-item-target-incomplete` |
 | `DocumentProfileDecision` | `decisionId`, `profileId`, `docTypeId`, `decision`, `detailOverride`, `statusOverride`, `reason`, `rowDigest`, `requiredPlanId?` | semantic itemへmapしない。conditional/skip/deferはreason必須、deferはPLAN必須 |
 | `DocumentProfile` | `profileId`, `profileAxis`, `profileRank`, `description`, `defaultStatus`, `defaultDetail`, `scopePolicy`, `rowDigest` | profile master全fieldをround-tripし、decision rowをmaster代用にしない |
-| `DocumentProfileCatalogInput` | `sourcePath`, `sourceDigest`, `profiles: DocumentProfile[]`, `decisions: DocumentProfileDecision[]` | strict loaderの単一出力。profile/decision IDとFKをcreate前に検証 |
-| `DocumentProfileCatalog.create` | `(input: DocumentProfileCatalogInput) -> Result<DocumentProfileCatalog, CatalogViolation[]>` | master全field/entryをlossless保持。unknown enum/FK/duplicateをfail-closeしresolverへvalid aggregateだけ渡す |
+| `createProfileCatalog` 入力 | `profiles: DocumentProfile[]`, `decisions: DocumentProfileDecision[]`, `knownDocTypeIds`, `requiredDocTypeIds`, `coreDocTypeIds`, `knownCapabilityFlags?` | `sourcePath`/`sourceDigest`はdomain入力に含めず、`TrackedDocumentProfileCatalog`（`src/profile/adapters/tracked-profile-loader.ts`: `sourcePath`, `sourceDigest`, `catalogSourcePath`, `catalogSourceDigest`, `catalog`）がloader側で保持する。profile/decision IDとFKをcreate前に検証 |
+| `createProfileCatalog` | `(input) -> Result<ProfileCatalog>`（`{ok:true,value}` / `{ok:false,findings: ProfileFinding[]}`） | master全field/entryをlossless保持。unknown enum/FK/duplicateをfail-closeしresolverへvalid aggregateだけ渡す |
 | `ProfileSelection` | `sizeProfileId`, `productProfileIds[]`, `explicitDecisions[]`, `capabilityFlags[]` | product IDはstable昇順、同precedence同slot異値=`profile-overlay-conflict`、同値duplicateもidentity重複で拒否 |
 | `ResolvedDocumentDecision` | `docTypeId`, `decision`, `detail`, `status`, `reason`, `winningDecisionId`, `appliedDecisionIds[]`, `requiredPlanId?` | core/security detailを弱化しない。required slot欠落=`profile-decision-missing` |
 | `ResolvedProfile` | `selectionDigest`, `decisions: ResolvedDocumentDecision[]`, `applicationReceipt[]`, `findings[]` | size→stable product→explicitの適用順をreceiptへ保持し、未定義をdefault生成しない |

@@ -24,15 +24,23 @@ R3で確認されたPF5のadvisory（attestation再照合、apply後cleanup/rest
 
 | 関数 | 署名 | 事前条件 (pre) | 事後条件 (post) | 不変条件 (invariant) | 検証oracle |
 | --- | --- | --- | --- | --- | --- |
-| `parseCanonicalReleaseManifest` | `parseCanonicalReleaseManifest(input) => Result` | canonical bytes、schema・型・own propertyが妥当 | freeze済みmanifestまたはtyped error | 入力不変、未知field拒否 | `U-RELMAN-001`, `U-RELMAN-009`, `U-RELMAN-013` |
+| `parseReleaseManifest` / `parsePublicationManifest` | `parseReleaseManifest(input: unknown) => ReleaseManifestParseResult` / `parsePublicationManifest(input: unknown) => PublicationManifestParseResult` (`src/schema/release-manifest.ts`) | canonical bytes、schema・型・own propertyが妥当 | freeze済みmanifestまたはtyped error | 入力不変、未知field拒否 | `U-RELMAN-001`, `U-RELMAN-009`, `U-RELMAN-013` |
 | `resolveReleaseChannel` | `resolveReleaseChannel(manifest, channel) => ReleaseRecord` | 登録済みown channel | 選択recordまたは`unknown_channel` | manifest/order/write不変 | `U-RELMAN-002`, `U-RELMAN-007` |
 | `materializeReleaseArtifacts` | `materializeReleaseArtifacts(record, reader, materializer) => ArtifactSet` | object・versionが利用可能 | framed digest付きartifact set | worktree/network/write非依存 | `U-RELMAN-011`, `U-RELMAN-012` |
-| `buildCleanDistributionPlan` | `buildCleanDistributionPlan(manifest, artifacts, allowlist) => SealedPlan` | 3 predicateが成立 | sealed planまたはtyped failure | side effect前にAND判定 | `U-RELMAN-014`, `U-RELMAN-015`, `U-RELMAN-016` |
+| `admitReleaseAggregate` | `admitReleaseAggregate(input: ReleaseAggregateAdmissionInput, dependencies) => Promise<ReleaseAggregateAdmissionResult>` (`src/setup/release-aggregate-admission.ts`、sealed planは`SealedReleaseAggregatePlan`) | 3 predicateが成立 | sealed planまたはtyped failure | side effect前にAND判定 | `U-RELMAN-014`, `U-RELMAN-015`, `U-RELMAN-016` |
 | `applySealedReleaseAggregate` | `applySealedReleaseAggregate(plan, ports) => ApplyResult` | exact final treeとattestation | `not_applied` / `applied` / `indeterminate` | prior state不変、partial publish 0 | `U-RELMAN-017`, `U-RELMAN-018` |
+
+> 訂正注記 (issue #977 design_follow): 旧版は `parseCanonicalReleaseManifest` と
+> `buildCleanDistributionPlan` を契約名としていたが、前者は実装に存在せず（実体は
+> `parseReleaseManifest` / `parsePublicationManifest`）、後者は `src/setup/distribution.ts` の別の既存関数
+> （legacy clean distribution planner）と衝突する名前だった（実体は `admitReleaseAggregate`）。
+> 経緯は errata memory `docs/archive/memory-legacy-2026-09/feedback-errata-on-merged-l6-release-channel-manifest-section-4-it-names-buildcleandistributionplan-c9fff25e16963a22.md` を参照。
+> oracle対応: `U-RELMAN-001/009/013` は `tests/release-manifest.test.ts`、`U-RELMAN-014/015/016` は
+> `tests/release-aggregate-admission.test.ts` が検証する。対応は変更しない。
 
 ## 2. 正規manifestの契約
 
-### `parseCanonicalReleaseManifest(input)`
+### `parseReleaseManifest(input)` / `parsePublicationManifest(input)`
 
 - **Pre**: 正規manifest pathから得たUTF-8 bytesだけを入力し、未知field、prototype由来property、
   不正なschema version、release/channel/orderの型・形式違反を受け付けない。
@@ -61,7 +69,7 @@ R3で確認されたPF5のadvisory（attestation再照合、apply後cleanup/rest
 
 ## 4. 許可済み配布計画の契約
 
-### `buildCleanDistributionPlan(manifest, artifactSet, allowlist)`
+### `admitReleaseAggregate(input, dependencies)`
 
 - **Pre**: clean Pack allowlistとcontrol manifestの対応が一意であり、選択revisionから許可された
   destinationへの写像が存在すること。
