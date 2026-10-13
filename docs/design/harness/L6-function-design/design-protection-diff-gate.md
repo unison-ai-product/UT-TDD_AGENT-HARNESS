@@ -93,9 +93,11 @@ src も docs も含まない PR も非実装 PR で、この gate の対象外�
 | modified | path が保護対象 | 拒否 (`protected-modified`) |
 | deleted | path が保護対象 | 拒否 (`protected-deleted`) |
 | renamed | `from` が保護対象 | 拒否 (`protected-renamed`。保護対象の外へ出す rename も含む) |
-| renamed | `from` が保護対象外で `path` だけが保護対象 | 許可 (保護対象への新規追加と同じ) |
+| renamed | `from` が保護対象外かつ判定 path の外で、`path` だけが保護対象 | 許可 (保護対象への新規追加と同じ) |
 | added | path が保護対象 | 許可 |
-| renamed | `from` が判定 path の配下で、`path` がどの判定 path の配下でもない | 拒否 (`implementation-moved-out`、§3.1) |
+| renamed | `from` が判定 path の配下で、`path` がどの判定 path の配下でもない | 拒否 (`implementation-moved-out`、§3.1)。`path` が保護対象でも同じで、上の許可より優先する |
+
+1 件の rename に当たる規則は高々 1 つである。`from` が保護対象なら `protected-renamed`、`from` が判定 path の配下で `path` が判定 path の外なら `implementation-moved-out`、それ以外で `path` だけが保護対象なら許可になる。判定 path と保護 path は重ならないので、最初の 2 つが同時に当たることはない。
 
 例外経路は作らない。override の marker、PR label、環境変数も作らない。
 format の一括修正や文字化け修正のように src と docs を同時に直す変更も、PR を分けて出す。
@@ -181,7 +183,7 @@ workflow と manifest の片方だけを直す PR は、`missing_runtime_leg` �
 | post (移動) | 判定 path の配下から判定 path の外への rename 1 件につき違反 `implementation-moved-out` 1 件 |
 | post (許可) | 非実装 PR では `violations=[]` かつ `ok=true` (入力エラーがなければ) |
 | post (拒否) | 実装 PR で保護対象の既存ファイルを M / D / R した変更 1 件につき違反 1 件 |
-| post (追加) | added と、保護対象外から保護対象への rename は違反にしない |
+| post (追加) | added と、保護対象外かつ判定 path の外から保護対象への rename は違反にしない。判定 path の配下から保護対象への rename は `implementation-moved-out` になる |
 | invariant (fail-close) | 入力エラーは `ok=true` にならない。空の diff は「非実装 PR」で `ok=true` (読めた上で 0 件だから) |
 | invariant (読み取り専用) | gate は git object も working tree も書き換えない |
 | invariant (例外なし) | override の入口 (marker、label、環境変数、CLI option) を持たない |
