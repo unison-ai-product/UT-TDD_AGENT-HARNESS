@@ -44,18 +44,18 @@ sub_doc: function-spec
 github_issue_id: 711
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:0b8df99183e6652e60cc6164b336bfaf
-  command_id: plan-revise:issue-711:s1-pair-freeze:20261013:eb73c1ad
-  admitted_at: 2026-10-13T05:23:31.347Z
-  source_digest: sha256:85ae0d6913c33dda18a4e05f9f47caed34ddc72933a3a704616a5dbf0b574610
-  decision_digest: sha256:16ce906b259489452c1e54e2706c4251b5595310050d8636fb4c889f47ad9bfa
-  receipt_digest: sha256:a51257778362e91be63bd00e969affe4d9d0c30e42bf6062e922d1ad2104b4fa
+  receipt_id: certificate:09c50baf80b6f8bd935a1a456dd8117f
+  command_id: plan-revise:issue-711:s1-reviewer-correction:20261013:r8
+  admitted_at: 2026-10-13T05:44:02.534Z
+  source_digest: sha256:a36db2a1e305a2ffc786ced423588a09dcfc7f628997b9e9942123591660d510
+  decision_digest: sha256:5cde78cceb13d2938e3faadf0aa5abeaf15a9cc087054da843a548c6c71665c6
+  receipt_digest: sha256:8a27b99d18d469f86cd84bd76dc2c785cdfe940b33b7a27166ac025b5ca75bf6
   binding:
     path: docs/plans/PLAN-L6-711-merge-time-receipt-rechain-contract.md
     plan_id: PLAN-L6-711-merge-time-receipt-rechain-contract
     asset_id: plan:ac2c23d3c72fc6e2886491ac1df09452
-    revision: 7
-    content_digest: sha256:85ae0d6913c33dda18a4e05f9f47caed34ddc72933a3a704616a5dbf0b574610
+    revision: 8
+    content_digest: sha256:a36db2a1e305a2ffc786ced423588a09dcfc7f628997b9e9942123591660d510
   route:
     signal: feature_addition
     mode: add-feature
@@ -70,10 +70,9 @@ admission_receipt:
     digest: sha256:1b6aa397ad9995b717907d3247e02b3bba3d6c4508874b7654f90fd29b388927
   reentry:
     target_plan_id: PLAN-L6-711-merge-time-receipt-rechain-contract
-    target_revision: 7
+    target_revision: 8
     phase: forward_merge
-  escape_reason: "Issue #711 S1: control
-    S0実測と限界、main統合済みS2の所有範囲を記録し、既存S3候補4件をpair-freezeする。S3実装や新しい方式は追加しない。"
+  escape_reason: "Issue #711 S1: control指定の非著者Claude Opusに工程表のreviewerを整合する。方式とoracleは変更しない。"
 ---
 
 # PLAN-L6-711: merge 時の自動 re-chain と簿記差分での再検免除の契約 freeze
@@ -352,7 +351,7 @@ git show 4b541009:docs/governance/plan-admission-receipts.json | node -e "const 
 | step | 内容 | mode | 出口 |
 | --- | --- | --- | --- |
 | S0 | control lane の checkout から、他 PR の branch に対して headless に `plan revise` を実行する PoC (ledger custody) | serial | 成否と手順を本 PLAN の §8 に記録する。失敗なら §2.1 を改訂する |
-| S1 | 本 PLAN の pair-freeze (docs のみ、非著者 Codex Sol の review) | serial (S0 の後) | PASS receipt と CI green の後に confirm する |
+| S1 | 本 PLAN の pair-freeze (docs のみ、非著者 Claude Opus の review) | serial (S0 の後) | PASS receipt と CI green の後に confirm する |
 | S2 | `verifyRechainDelta` (pure function 1 module、§2.6 の入力形) と U-RECHAIN-001..007、011、012、014..019 | serial (S1 の後) | oracle が green、非著者 review が PASS |
 | S3 | adapter `readRechainSnapshot` と `ut-tdd pr merge` への配線、U-RECHAIN-008..010、013、CLAUDE.md の例外文言 | serial (S2 の後) | 実 PR 1 本で自動 re-chain による merge を実証する |
 
@@ -378,3 +377,4 @@ git show 4b541009:docs/governance/plan-admission-receipts.json | node -e "const 
 14. S0 (2026-10-09、control lane の報告、Issue #711 comment 6076919904): control lane の checkout `C:/dev/ut-orch-profiles` から、`origin/main` `9f94fd86` を base とする PR #948 の branch 上で headless `plan revise --manifest` を実行した。checkout 固有の `.ut-tdd` ledger は、別 checkout で発行された PLAN-L6-816 rev2 (PR #933) を認識していなかった。manifest の base は tracked frontmatter と projection ledger から機械的に導出し、local ledger の事前同期も対話入力も使わなかった。writer は revision 3 (`certificate:0b0dfbee…`) を発行し、`plan admission-check --base origin/main --head HEAD` は PASS した。PR #948 は後に main へ merge された (merge commit `1f72a33`)。
 15. S0 で確認した範囲は、別 ledger の checkout でも tracked frontmatter / projection から base を導いて正規 writer が headless に revision を発行できることに限る。merge 後の author branch での re-chain と、同時に複数 writer を動かす場合は確認していない。後者を S0 の実績から推定しない。
 16. S2 は PR #839 (merge commit `a3f77e319a2d0d43a8ebda2c77a94c67fb070cb7`) で実装・confirm 済みであり、所有 PLAN は PLAN-L7-711、対象は pure `verifyRechainDelta` と既存 S2 oracle である。adapter / wrapper / CLAUDE.md 例外はその PLAN の対象外で、S3 に属する。S1 候補は、既存 L6 候補 U-RECHAIN-008/009/010/013 を shared L7 test-design と対にする docs-only pair-freeze であり、S3 の実装完了を意味しない。
+17. receipt revision 8 (2026-10-13、S1検収): control の Issue #711 comment 6076878199 が S1 closing reviewer を非著者 Claude Opus と明示しているため、§6 の古い Codex Sol 表記を合わせた。S3契約、候補oracle、既存S2実装は変更しない。
