@@ -129,3 +129,65 @@ AI runtime / 外部ツール (Claude Code / Codex CLI / gh ...)  ← いずれ�
 - provider 引継ぎ (FR-L1-42) の context+budget 連携 = `provider-handover.v1` package (`ut-tdd handover provider export/status`, `.ut-tdd/handover/provider/`)
 - **function.md §8 も参照** (mode-routing.yaml / gate-checks.yaml の DSL schema = L5 D-CONTRACT carry を含む。本 doc §8 と function.md §8 で carry 先が相補的)
 - **CLI user boundary (PLAN-REVERSE-395)**: top-level command catalog、subcommand path、`--json` 有無、終了コード分類は L6 `buildCommandCatalog` / L7 CLI surface tests へ降下する。`PLAN-L6-64` の shell completion はこの as-is catalog を入力とし、completion 側で command path を再発明しない。
+
+## §9 CLI shell completion 契約 (CLI user boundary の詳細、未実装)
+
+> 移行元: `docs/plans/PLAN-L6-64-cli-shell-completion.md` (issue #648)。実装の所有は `docs/plans/PLAN-L7-449-cli-shell-completion-impl.md` (draft)。2026-10-13 時点で `src/cli.ts` に `completion` command は存在しない。本節は **未実装の計画契約** である。
+
+§2 (g) / §4 の不変条件 (completion は command catalog を入力とし、存在しない subcommand を候補に出さない) を前提に、次を固定する。
+
+### §9.1 対象シェル (PO 採択 2026-07-13)
+
+- 採択: **PowerShell のみ・動的方式**。`Register-ArgumentCompleter -CommandName ut-tdd` で登録し、候補は実行時に CLI へ問い合わせる。
+- bash (P1) / zsh (P2、bashcompinit 経由) は対象外。需要が観測された時点で別 PLAN で扱う。
+- 却下案と理由: PS+bash+zsh 一括 = 需要の裏付けが薄い段階で約 3 倍の先行投資。静的生成 = build 時に焼き込んだ候補と `src/cli.ts` が乖離する二重管理 (PLAN-REVERSE-395 が警告する SSoT drift)。機能見送り = CLI の利用体験価値を認め最小投資で提供する。
+
+### §9.2 コマンド契約 (未実装)
+
+- `ut-tdd completion powershell`: PowerShell 用ローダースクリプトを stdout へ出す。スクリプトは候補列挙ロジックを持たず、`ut-tdd completion --list` を呼び返すだけのブリッジとする。
+- `ut-tdd completion --list [--cursor <n>] -- <token...>`:
+  - 入力はシェル側で tokenize 済みの argv (`--` 以降の token 列)。単一文字列は受けない (引用符・空白の解釈はシェル側 completer の責務)。PowerShell 側は `$commandAst` から token 列を作る。
+  - 補完対象は `--cursor` (0-based token index) の token、省略時は最終 token。
+  - cursor token を prefix として commander tree 上の当該階層の子コマンド名 / フラグ名を prefix filtering し、行区切りで返す。空文字列なら当該階層の全子要素を返す。
+  - 候補は登録済み command path / フラグの部分集合に限る。
+- 終了コード: 未対応シェル指定は exit 1 (§3 (g) の validation failure)。**`--list` は不正・欠落した文脈でも exit 0 + 空候補** とし、これは §3 (g) の「必須入力欠落は exit 1」への明示的な例外である (呼び出し元は補完スクリプトであり、非 0 終了はシェルの補完体験を壊すため)。
+- 候補源: commander `program.commands` を再帰 walk する extractor を新設し、completion と `buildCommandCatalog` が同じ commander tree を共有する。catalog entry の必須 metadata は command path、flags (名前と引数有無)、description、`--json` 対応有無、exit profile、registrar family。path だけの縮退出力は不可。
+- 非機能: `--list` は `.ut-tdd/` state 読み込みや DB open をしない軽量な早期分岐を持つ (レイテンシは Node 起動 + tree walk に限る)。
+- 単体 oracle (L7 降下時): extractor 出力と commander 登録の一致 + 必須 metadata 全件存在 / 候補の部分集合性 / 正例 3 件 (空文脈 → `status`・`doctor`・`plan` を含む非空集合、`plan` 階層 → `lint` を含む、prefix `doc` → `doctor` を含み不一致候補を含まない) / 上記終了コード (例外を含む負系)。常に空集合を返す実装は正例 oracle で落ちる。
+
+## §10 GitHub 運用 policy (VCS・CI 境界の詳細、PO 採択 2026-07-17)
+
+> 移行元: `docs/plans/PLAN-L7-451-github-ops-phase1-visibility-and-policy.md` (issue #648)。実装: `src/github/{job-summary,pr-trace,repository-policy}.ts`、`src/cli.ts` の `github summary|pr|policy`、`docs/governance/github-repository-policy.yaml`、`.github/ISSUE_TEMPLATE/`。
+
+§2 (b) / §3 (b) の VCS・CI 境界について、採択済みの運用 policy と CLI 面を固定する。
+
+### §10.1 repository policy (Rulesets 段階適用)
+
+- authoring source は `docs/governance/github-repository-policy.yaml`。GitHub 側の Rulesets / branch protection は適用先であり正本ではない。
+- 採択内容: required status check は集約 `harness-check` 1 本、`main` の force push 禁止、branch 削除禁止、bypass actor は repository admin (PO) のみ。approval 系 (required approvals / stale approval dismissal / conversation resolution) は solo 運用で自己ブロックになるため適用しない。provider 独立性の証明は GitHub approval ではなく UT-TDD review receipt が担う。
+- 適用操作は PO の gh 認証で行う別手順。harness の CLI は read-only に留める。
+- `ut-tdd github policy inspect`: 現物の Rulesets を取得して表示する。gh / 外部障害は exit 3。
+- `ut-tdd github policy diff`: authoring source と現物の乖離を finding (`github-required-check-missing` / `github-force-push-enabled` / `github-branch-deletion-enabled` / `github-approval-rule-unexpected` / `github-approval-rule-missing`) として列挙する。一致 exit 0、乖離 exit 1、authoring source の読込・parse 失敗 exit 1、gh / 外部障害 exit 3 (判定を偽装しない)。`--observed-file` で観測 JSON を与えられる。
+- 現行実装の制約: `bypass_actors` は parse されるが diff の検査対象ではない (bypass actor の乖離は finding にならない)。
+
+### §10.2 不採用の決定
+
+- GitHub App、Check Run、PR 固定ステータスコメントは作らない (鍵管理コストに見合わない)。可視化は read-only の Job Summary で賄う。
+- merge queue / `merge_group` と、Actions への write 権限拡大は採らない。
+- CI 相当の検証はハーネス自前を正とし、GitHub Actions への依存は既存 `harness-check` の枠内に留める。
+
+### §10.3 ジョブの要約出力
+
+- `ut-tdd github summary` は harness.db の `gate_runs` から読んだ gate matrix (gate_id ごとの最新観測)・notes・失敗 gate の next action を markdown で stdout へ出し、workflow が `>> "$GITHUB_STEP_SUMMARY"` で追記する (`src/github/job-summary.ts:16-74`)。failed tests と doctor 所見は出力しない。
+- 表示は projection であって判定正本ではない。生成失敗でも exit 0 で degrade し、CI を summary 失敗で red にしない。
+
+### §10.4 PR 本文の型付き追跡ブロック (`ut-tdd:trace/v1`)
+
+- PR body に hidden block `<!-- ut-tdd:trace/v1 ... -->` を置く。必須キー: `plan_id` / `route_mode` / `subject_head` / `base_sha` / `issue_number`。任意キー: `plan_revision` / `episode_id` / `admission_receipt_digest` / `review_receipt_digest`。
+- `ut-tdd github pr render` が block を生成する (手入力しない)。`ut-tdd github pr validate --body-file <path>` は block 欠落・重複・不正行・未知キー・キー重複・必須キー欠落・値不正を finding とし exit 1 で fail-close する。
+- 項目語彙は PLAN-L6-85 の PR body 規定を正とし、本契約で拡張しない。
+
+### §10.5 Issue の入力フォーム
+
+- `.github/ISSUE_TEMPLATE/` に recovery / reverse / redesign / incident / nfr-failure の 5 form を置き、`config.yml` で blank issue を禁止する。通常 Forward は Issue 化しない。
+- 5 form 共通の必須項目は hierarchy role / parent issue / closure condition / observed state / observed HEAD / evidence / reason code / drive model / reentry target である。origin PLAN は recovery / reverse / redesign で必須、incident で任意、nfr-failure には無い (nfr-failure は代わりに NFR ID が必須)。revision は recovery にだけ任意項目 (`origin_revision`、`required: false`) として置き、他の 4 form には無い (`.github/ISSUE_TEMPLATE/*.yml`)。PLAN-L6-83 の Issue 本文規定が挙げる revision の必須化は未実装である。
