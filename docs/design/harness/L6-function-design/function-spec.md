@@ -1603,7 +1603,7 @@ usage=2を維持する。
 
 | 型 | 必須field | 不変条件 / error |
 |---|---|---|
-| `PlanAssetInput` | `assetId`, `alias`, `initialRevision`, `canonicalPayload`, `dependencies[]` | 空ID、重複dependency、revision≠1、payload digest不一致は`PlanAssetError` |
+| `PlanAssetInput` | `assetId`, `alias`, `payload`, `bodyDigest` (`PlanAsset.create`の入力。revisionは1固定、`contentDigest`は`hashCanonical({alias, bodyDigest, payload})`で内部計算、dependenciesはcanonical payload (frontmatter)内に含まれ独立フィールドを持たない) | 不正`assetId`、空alias、`bodyDigest`の形式不正は`PlanAssetError` (`plan-asset-invalid-id` / `plan-revision-invalid`)。dependency重複・payload digest不一致の検査は実装にも PLAN-L6-71 の設計判断にも存在しない (#977で除去) |
 | `RevisePlanCommand` | `assetId`, `baseRevision`, `changeSet`, `actor`, `reason` | base≠latest、空reason、identity変更は拒否 |
 | `EvidenceRecordInput` | `evidenceId`, `evidenceKind`, `subjectId`, `subjectRevision`, `sourceCommit`, branded `commandArgs`, kind別typed `claims`, `outputDigest`, `exitCode`, typed `producer`, `producedAt`, `expiresAt?`, `supersedesEvidenceId?` | claimsを含むrecord digestをcanonical fieldから内部生成する。issuerがある場合はauthority/key version/producer/record digestを長さprefix frame化してattestationを発行する。非0 exitと未署名recordも監査用recordとしてvalid |
 | `EvidencePolicy` | `policyId`, `revision`, `requirements[]`（各要素=`requirementId`, `requiredKind`, `minCount`, `maxCount?`, `acceptedProducers[]`, `exitRule`, typed `claimsRule`）、`maxAge?`、composition root固定`EvidenceAttestationVerifierPort` | 全nested ruleをdefensive copy/deep freezeする。trusted verifierがauthority/key/producer binding/署名を検証したrecordだけをfrontier候補にする。未署名・署名不正、別kind/revision/commit、期限切れ、producer外、exit/claims不適合を件数へ数えず、requirement別eligible/rejected IDをstable順で返す |
@@ -2256,6 +2256,12 @@ retrospective review record又はcustody admittedは入力にせず、`family_st
 command authorityと各rowの`d0-design-owner` / `f0a-toolchain-owner` producerを混同してはならない。
 通常D0 eligibility判定へこのlegacy setを渡してはならず、固定履歴を再構成不能なら
 `legacy_evidence_unavailable`、partial/double mint又は再利用はtyped rejectとする。
+
+> **退役注記 (#977)**: 以下のcutover genesis / `L6ConfirmationReceipt` (CD-37) は退役済み。Node切替がこのchainなしで
+> 完了 (sealed) したため (#487 close、#152 / #153 close)、実装予定はない。範囲・根拠・有効のまま残る部分
+> (`SliceAdmissionReceipt`等)・削除の所管 (#592 D2 / D3)は
+> [internal-processing.md](../L5-detailed-design/internal-processing.md) §Node切替receipt chain の退役注記を正本とする。
+> `projectGithubReviewLaneReceipts` (GitHub review lane projection)とは別物。
 
 production cutover genesisは`L6ConfirmationReceipt` exact 1を要求する。PLAN-L6-93のexact plan/revision、
 status confirmed、content digest、candidate HEADとtrusted nested attestationをchain-onlyで再検証し、
