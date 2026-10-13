@@ -7,7 +7,7 @@ drive: agent
 route_signal: redesign
 route_mode: redesign
 created: 2026-10-05
-updated: 2026-10-05
+updated: 2026-10-13
 owner: PO / Claude (author) · Codex gpt-6.1-sol (非著者 closing review)
 parent_design: docs/design/harness/L6-function-design/function-spec.md
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
@@ -48,18 +48,18 @@ supersedes:
   - PLAN-L7-57-token-telemetry-tracker
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:9eb40ac57c66832a75be2af3f89eca4f
-  command_id: plan-draft:issue-789:token-ingest-retirement:1:rechain-2
-  admitted_at: 2026-10-05T11:50:27.940Z
-  source_digest: sha256:6e321c50a2d970b43e360753ff86de89b2e43e21d6832c5565a5e4ec8b34b142
-  decision_digest: sha256:b4a466616ec7f69ee5334aaaf797873279afa79d17efae921ca5068d5e8add36
-  receipt_digest: sha256:e22ff235e075d4224f3208f685d100cc803d80d344b7b657dbae5b5438aeae2f
+  receipt_id: certificate:3d6ea174390700e660a51d7826ace892
+  command_id: plan-revise:issue789:PLAN-L6-789:r2:20261013
+  admitted_at: 2026-10-13T09:31:04.491Z
+  source_digest: sha256:2a5d6ad1d1e0fde79414ffe62db07655e91ecbe6f045ae4b77e22d609a924a1a
+  decision_digest: sha256:e33bc3510cd05f9fd439ec842e440a264e65fb3872486e51371427502bdcfaf9
+  receipt_digest: sha256:ab2a272a95c6b41e315f0a09acdf364bff94a5e5c2330ea8bb76080a60386ae4
   binding:
     path: docs/plans/PLAN-L6-789-token-ingest-retirement.md
     plan_id: PLAN-L6-789-token-ingest-retirement
     asset_id: plan:9eb40ac57c66832a75be2af3f89eca4f
-    revision: 1
-    content_digest: sha256:6e321c50a2d970b43e360753ff86de89b2e43e21d6832c5565a5e4ec8b34b142
+    revision: 2
+    content_digest: sha256:2a5d6ad1d1e0fde79414ffe62db07655e91ecbe6f045ae4b77e22d609a924a1a
   route:
     signal: redesign
     mode: redesign
@@ -80,7 +80,7 @@ admission_receipt:
       target_revision: 1
   reentry:
     target_plan_id: PLAN-L6-789-token-ingest-retirement
-    target_revision: 1
+    target_revision: 2
     phase: forward_merge
   escape_reason: "Issue #789 (PO 承認 2026-09-30): 常時 token 取り込みと model_evaluations
     生成を退役させる。PLAN-L7-57 の token ingest 契約を supersede し、#840 の削除 artifact を所有する
