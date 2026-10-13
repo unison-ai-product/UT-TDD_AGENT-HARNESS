@@ -859,10 +859,15 @@ describe("design-protection L7 candidate Red (PR #981)", () => {
   });
 
   it.fails("U-DPROT-024: workflowとruntime manifestに正しいLinux stepがあればpolicy OK", () => {
-    const proposed = withProtectionStep(
-      readFileSync(join(REPO_ROOT, ".github/workflows/harness-check.yml"), "utf8"),
+    const actual = readFileSync(join(REPO_ROOT, ".github/workflows/harness-check.yml"), "utf8");
+    const workflow = parseYaml(actual) as WorkflowShape;
+    const installed = workflow.jobs["harness-check-linux"].steps.filter((step) =>
+      step.run?.includes("github design-protection"),
     );
-    const result = policyWithRuntime(proposed);
+    // A synthetic extra step can be ignored by the old policy. Require the
+    // completed repository workflow before checking its runtime manifest join.
+    expect(installed).toEqual([designStep()]);
+    const result = policyWithRuntime(actual);
     expect(result.ok).toBe(true);
     expect(result.violations).toEqual([]);
   });
