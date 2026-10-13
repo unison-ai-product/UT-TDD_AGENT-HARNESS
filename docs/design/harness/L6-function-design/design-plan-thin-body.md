@@ -148,7 +148,7 @@ PR #944 rev4 の実害 (存在しない見出しへの参照) は、`heading_lit
 - `src/plan/lint-types.ts` の `PlanGovernanceViolationReason` に `design_plan_thin_body` を追加。
 - 新しい registry / schema / CLI option は作らない。
 
-## 7. fail-close / warn
+## 7. 失敗時の扱い (fail-close)
 
 - 全 code を fail-close とする (governance violation = `ok=false` = `plan lint` exit 1、doctor `plan-governance` 失敗)。
 - 理由: 対象は施行後起票の PLAN だけで、§11 の実測で現時点の対象は 3 件。warn 段階を置くと FLAG 往復の削減 (本 issue の目的) が得られない。
