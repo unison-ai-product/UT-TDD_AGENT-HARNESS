@@ -3008,3 +3008,18 @@ oracle の詳細 (入力・期待・殺す mutation・fixture・required evidenc
 | `CANDIDATE-U-PH-001..008` | `docs/design/harness/L6-function-design/confirmed-document-placeholder-detection.md` | `docs/test-design/harness/L7-confirmed-document-placeholder-detection-test-design.md` §3 |
 | `CANDIDATE-U-PH-010..024` | `docs/design/harness/L6-function-design/confirmed-document-placeholder-detection.md` | `docs/test-design/harness/L7-confirmed-document-placeholder-detection-test-design.md` §4 |
 | `CANDIDATE-U-PH-025` | `docs/design/harness/L6-function-design/confirmed-document-placeholder-detection.md` | `docs/test-design/harness/L7-confirmed-document-placeholder-detection-test-design.md` §4 |
+
+## 共有メモリのエピソード回収 (Issue #963 / PLAN-L6-97) — 索引
+
+L6 契約は `docs/design/harness/L6-function-design/memory.md` §4.2。
+oracle の詳細 (入力・期待・殺す mutation) は専用の
+`docs/test-design/harness/L7-memory-episode-retirement-test-design.md` に置き、本節は索引だけを持つ。
+
+| 範囲 | 検証面 | 詳細 |
+| --- | --- | --- |
+| CANDIDATE-U-MEMEPI-001、006、011〜013 | 書き込み時の宣言・推定・fail-close と bound_to の形式 | 専用文書 §4 |
+| CANDIDATE-U-MEMEPI-002〜005、008、017 | 既存分の扱い・回収の三値判定・推定分の退避条件 | 専用文書 §4 |
+| CANDIDATE-U-MEMEPI-007、014〜016、019 | 退避の dry-run・冪等性・復旧時の停止・db 同期・real-repo 集計 | 専用文書 §4 |
+| CANDIDATE-U-MEMEPI-009〜010、018 | 即時配送の抑止と、unknown・推定分の配送 | 専用文書 §4 |
+
+上表の ID は backtick 無し表記である。候補台帳への再掲ではなく専用文書への参照であり、U-VMSRC-009 の一意性検査の対象外とする。
