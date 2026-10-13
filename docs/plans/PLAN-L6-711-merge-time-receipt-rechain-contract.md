@@ -7,7 +7,7 @@ drive: agent
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-09-28
-updated: 2026-10-05
+updated: 2026-10-13
 owner: Claude control lane (契約起草) / Codex (S2・S3 実装) / 非著者 frontier reviewer
 parent_design: docs/plans/PLAN-RECOVERY-16-plan-revision-authoring.md
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
@@ -38,24 +38,50 @@ dependencies:
     - src/feedback/review-dispatch.ts
     - docs/test-design/harness/L7-unit-test-design.md
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/711
-review_evidence: []
-status: draft
+review_evidence:
+  - reviewer: claude-opus-5-5
+    review_kind: cross_agent
+    worker_model: codex
+    reviewer_model: claude-opus-5-5
+    verdict: pass
+    reviewed_at: 2026-10-13T07:15:23.974Z
+    tests_green_at: 2026-10-13T07:04:33Z
+    subject_head: 3470ad608a4bd9dee73cfe403142c2359f239262
+    plan_revision: "8"
+    anchor_commit: 3470ad608a4bd9dee73cfe403142c2359f239262
+    evidence_path: https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/975
+    scope: S1 docs-only pair-freezeのexact HEADを非著者Claude
+      Opusが再検しPASS/blocking0。同一attempt3のrequired CI全5job
+      SUCCESSとsource/workflow変更0を確認。S3実装や実PR re-chain実証は対象外。canonical receipt
+      e84964248eb5aacea0920f5baca512f23242134f18afc1dcd8de4958261ac303。
+    green_commands:
+      - kind: unit_test
+        command: "GitHub Actions harness-check run 38353044674 attempt 3: Linux/Windows
+          full regression + Node generation + aggregate"
+        runner: ci
+        scope: full
+        exit_code: 0
+        completed_at: 2026-10-13T07:04:33Z
+        evidence_path: tests/rechain-verifier.test.ts
+        output_digest: sha256:45fc91c32a301193019446a33d58bdb1144c088894cf760810bb7cf232135b04
+        anchor_commit: 3470ad608a4bd9dee73cfe403142c2359f239262
+status: confirmed
 sub_doc: function-spec
 github_issue_id: 711
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:09c50baf80b6f8bd935a1a456dd8117f
-  command_id: plan-revise:issue-711:s1-reviewer-correction:20261013:r8
-  admitted_at: 2026-10-13T05:44:02.534Z
-  source_digest: sha256:a36db2a1e305a2ffc786ced423588a09dcfc7f628997b9e9942123591660d510
-  decision_digest: sha256:5cde78cceb13d2938e3faadf0aa5abeaf15a9cc087054da843a548c6c71665c6
-  receipt_digest: sha256:8a27b99d18d469f86cd84bd76dc2c785cdfe940b33b7a27166ac025b5ca75bf6
+  receipt_id: certificate:fa269b43b46a6657395427aefe862123
+  command_id: plan-revise:issue-711:s1-confirm:20261013:r9
+  admitted_at: 2026-10-13T07:18:26.859Z
+  source_digest: sha256:5bb0e19926bf8385d9d964a4cf5ccd51484f90e8efb56864f20c1ff525659878
+  decision_digest: sha256:682fb9c625488f29f1fefc57f33bd4b7b99ef7f0d1ec456f5fdd5b8faa858f25
+  receipt_digest: sha256:559b9567affdc8ff4bb2f61a96ca194b8e5d7c0faf430134b507c96589b1766a
   binding:
     path: docs/plans/PLAN-L6-711-merge-time-receipt-rechain-contract.md
     plan_id: PLAN-L6-711-merge-time-receipt-rechain-contract
     asset_id: plan:ac2c23d3c72fc6e2886491ac1df09452
-    revision: 8
-    content_digest: sha256:a36db2a1e305a2ffc786ced423588a09dcfc7f628997b9e9942123591660d510
+    revision: 9
+    content_digest: sha256:5bb0e19926bf8385d9d964a4cf5ccd51484f90e8efb56864f20c1ff525659878
   route:
     signal: feature_addition
     mode: add-feature
@@ -70,9 +96,10 @@ admission_receipt:
     digest: sha256:1b6aa397ad9995b717907d3247e02b3bba3d6c4508874b7654f90fd29b388927
   reentry:
     target_plan_id: PLAN-L6-711-merge-time-receipt-rechain-contract
-    target_revision: 8
+    target_revision: 9
     phase: forward_merge
-  escape_reason: "Issue #711 S1: control指定の非著者Claude Opusに工程表のreviewerを整合する。方式とoracleは変更しない。"
+  escape_reason: "Issue #711 S1:
+    CI完走後のexact-head非著者PASSを正規証跡へ束縛しpair-freezeをconfirmする。S3未実装範囲を維持。"
 ---
 
 # PLAN-L6-711: merge 時の自動 re-chain と簿記差分での再検免除の契約 freeze
@@ -378,3 +405,4 @@ git show 4b541009:docs/governance/plan-admission-receipts.json | node -e "const 
 15. S0 で確認した範囲は、別 ledger の checkout でも tracked frontmatter / projection から base を導いて正規 writer が headless に revision を発行できることに限る。merge 後の author branch での re-chain と、同時に複数 writer を動かす場合は確認していない。後者を S0 の実績から推定しない。
 16. S2 は PR #839 (merge commit `a3f77e319a2d0d43a8ebda2c77a94c67fb070cb7`) で実装・confirm 済みであり、所有 PLAN は PLAN-L7-711、対象は pure `verifyRechainDelta` と既存 S2 oracle である。adapter / wrapper / CLAUDE.md 例外はその PLAN の対象外で、S3 に属する。S1 候補は、既存 L6 候補 U-RECHAIN-008/009/010/013 を shared L7 test-design と対にする docs-only pair-freeze であり、S3 の実装完了を意味しない。
 17. receipt revision 8 (2026-10-13、S1検収): control の Issue #711 comment 6076878199 が S1 closing reviewer を非著者 Claude Opus と明示しているため、§6 の古い Codex Sol 表記を合わせた。S3契約、候補oracle、既存S2実装は変更しない。
+18. receipt revision 9 (2026-10-13、S1 confirm): exact HEAD 3470ad60のrequired CI run38353044674 attempt3が5/5 Greenで完走後、非著者Claude Opus r3がPASS/blocking0。定量検証→定性reviewの順を確認してS1だけconfirmedへ上げた。S3 adapter/wrapper/実PR実証は未実装であり、別PLANとpair-freeze後に扱う。
