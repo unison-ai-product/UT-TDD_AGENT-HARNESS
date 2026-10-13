@@ -1,0 +1,1149 @@
+{
+ "schema": "ut-tdd.v4-stage2d-drift-judgments/v1",
+ "issue": 977,
+ "input": "docs/governance/candidates/v4-roadmap/migration/issue960-module-design-inventory-20261013.json",
+ "input_source_commit": "3ca0692d6c6a180b058c492475080be2a140e667",
+ "judged_against": "origin/main 2026-10-13",
+ "counts": {
+  "redesign": 0,
+  "red_green_fix": 0,
+  "design_follow": 6,
+  "hold": 9,
+  "retire_or_planned": 25,
+  "false_positive": 25
+ },
+ "judgments": [
+  {
+   "id": "CD-01",
+   "design_path": "docs/design/harness/L4-basic-design/data.md",
+   "symbol": "ActivationEntry",
+   "verdict": "false_positive",
+   "implementation_paths": [
+    "src/state-db/spec-ir-projections.ts:88",
+    "src/schema/harness-db-tables-spec-ir.ts:57"
+   ],
+   "evidence": [
+    "src/state-db/spec-ir-projections.ts:88 — interface ActivationEntryRow (profile_id/scope_status/target_version/defer_reason)",
+    "src/schema/harness-db-tables-spec-ir.ts:57 — table activation_entries",
+    "docs/design/harness/L4-basic-design/data.md:56 — ActivationEntry は projection entity (§8.1 で table activation_entries と対応)",
+    "git grep -n -e activation_entries 3ca0692d -- src — table/index/ingestion で該当あり"
+   ],
+   "rationale": "ActivationEntry は L4 のドメイン名であり、実装には ActivationEntryRow と activation_entries table がある。名前の差は投影行に付ける Row 接尾辞だけで、許容範囲である。",
+   "follow_up": ""
+  },
+  {
+   "id": "CD-02",
+   "design_path": "docs/design/harness/L4-basic-design/data.md",
+   "symbol": "ClosureReceipt",
+   "verdict": "hold",
+   "implementation_paths": [
+    "src/document-disposition/domain/analyze-repository-document-closure.ts:52"
+   ],
+   "evidence": [
+    "src/document-disposition/domain/analyze-repository-document-closure.ts:52 — DocumentClosureResult は finalSnapshotDigest/deltaChainDigest/findings を持つ。baseline/reference 集合 digest・run time・tool version は無い",
+    "docs/design/harness/L6-function-design/function-spec.md:1258 — typed reference reader 契約は『後続slice候補、unit oracle ID未採番』",
+    "docs/plans/PLAN-L7-467-repository-document-disposition-closure-gate.md:7 — status confirmed。本文は typed reference closure / 正規化DB schema / CLI を planned deliverables に挙げる",
+    "git grep -n -e document_disposition_runs 3ca0692d -- src — 0 件 (data.md §8.1 の run table は未実装)",
+    "docs/plans/PLAN-L4-25-repository-docs-engine-swap-audit.md — status draft (L4 §11 の上流)"
+   ],
+   "rationale": "run 単位の ClosureReceipt は、L6 で後続候補とされた reference closure slice に依存する。現行の DocumentClosureResult がその部分実装なのか別物なのかは、本調査では判定できない。confirmed の PLAN-L7-467 が planned deliverables をすべて満たしていない点も整理されていない。",
+   "follow_up": "PLAN-L7-467 の完了範囲と、PLAN-L4-25/L5-19 (draft) の reference closure slice の所有を照合する。そのうえで ClosureReceipt を後続 slice の予定とするか、DocumentClosureResult への design_follow とするかを決める。"
+  },
+  {
+   "id": "CD-03",
+   "design_path": "docs/design/harness/L4-basic-design/data.md",
+   "symbol": "DocumentCatalogEntry",
+   "verdict": "false_positive",
+   "implementation_paths": [
+    "src/state-db/spec-ir-projections.ts:124",
+    "src/schema/harness-db-tables-spec-ir.ts:97"
+   ],
+   "evidence": [
+    "src/state-db/spec-ir-projections.ts:124 — interface DocumentCatalogEntryRow (layer/sub_doc/category/default_status/profile_controlled)",
+    "src/schema/harness-db-tables-spec-ir.ts:97 — table document_catalog_entries",
+    "src/doctor/db-projection.ts:316 — doctor が document_catalog_entries を読む"
+   ],
+   "rationale": "設計が述べる document_catalog_entries projection とその列は実装済みである。型名に Row 接尾辞が付いている点だけが異なる。",
+   "follow_up": ""
+  },
+  {
+   "id": "CD-04",
+   "design_path": "docs/design/harness/L4-basic-design/data.md",
+   "symbol": "DocumentReferenceParseReceipt",
+   "verdict": "retire_or_planned",
+   "implementation_paths": [],
+   "evidence": [
+    "docs/design/harness/L6-function-design/function-spec.md:1173 — DocumentReferenceParseReceipt の型定義",
+    "docs/design/harness/L6-function-design/function-spec.md:1258 — 『typed reference reader契約 (後続slice候補、unit oracle ID未採番)』",
+    "git grep -n -i -e DocumentReferenceEdge -e SnapshotIdentity -e ParseReceipt 3ca0692d -- src — document-disposition に該当 0 件 (reader は未実装)",
+    "git ls-tree 3ca0692d src/document-disposition — snapshot/delta/disposition/closure のみ"
+   ],
+   "rationale": "typed reference reader と parse receipt は、L6 で後続 slice 候補と明示されている。oracle も未採番であり、予定項目にあたる。",
+   "follow_up": ""
+  },
+  {
+   "id": "CD-05",
+   "design_path": "docs/design/harness/L4-basic-design/data.md",
+   "symbol": "DocumentScaleProfileEntry",
+   "verdict": "false_positive",
+   "implementation_paths": [
+    "src/state-db/spec-ir-projections.ts:142",
+    "src/schema/harness-db-tables-spec-ir.ts:118"
+   ],
+   "evidence": [
+    "src/state-db/spec-ir-projections.ts:142 — interface DocumentScaleProfileEntryRow (profile_id/decision/reason/required_plan_id)",
+    "src/schema/harness-db-tables-spec-ir.ts:118 — table document_scale_profile_entries",
+    "src/state-db/migration.ts:110 — migration の対象"
+   ],
+   "rationale": "規模 profile ごとの文書採用・skip・理由を持つ projection は実装済みである。型名に Row 接尾辞が付いている点だけが異なる。",
+   "follow_up": ""
+  },
+  {
+   "id": "CD-06",
+   "design_path": "docs/design/harness/L4-basic-design/data.md",
+   "symbol": "ScheduleEntry",
+   "verdict": "false_positive",
+   "implementation_paths": [
+    "src/state-db/spec-ir-projections.ts:71",
+    "src/state-db/spec-ir-projections.ts:497",
+    "src/schema/harness-db-tables-spec-ir.ts:38"
+   ],
+   "evidence": [
+    "src/state-db/spec-ir-projections.ts:71 — interface ScheduleEntryRow (current_location/v_pair/predecessor_plan_ids/rag/blocked_reason)",
+    "src/state-db/spec-ir-projections.ts:497 — authoring source として docs/governance/vmodel-upgrade-schedule.md を読む",
+    "src/schema/harness-db-tables-spec-ir.ts:38 — table schedule_entries",
+    "src/handover/session-start-digest.ts:205 — schedule_entries を読む"
+   ],
+   "rationale": "工程管理表を正本とする ScheduleEntry projection は、ScheduleEntryRow / schedule_entries として実装済みである。ただし、工程表を PLAN fallback より優先する順序の厳密な検証は本調査では行っていない。",
+   "follow_up": ""
+  },
+  {
+   "id": "CD-07",
+   "design_path": "docs/design/harness/L4-basic-design/function.md",
+   "symbol": "DriveSelectionPolicy",
+   "verdict": "retire_or_planned",
+   "implementation_paths": [],
+   "evidence": [
+    "docs/design/harness/L4-basic-design/function.md:358-375 — Appendix C (Forward escape / GitHub 再合流アーキテクチャ) の component 表",
+    "git grep -n -i -e ExecutionEpisode -e GithubProjectionPort -e EscapeLearningProjector -e ReentryCertificate 3ca0692d -- src — 0 件",
+    "docs/plans/PLAN-L7-436-execution-ledger-episode-domain.md — kind add-impl / status draft",
+    "docs/plans/PLAN-L7-437-github-issue-projection-inbound.md — status draft (CLAUDE.md では blocked と明記)",
+    "docs/plans/PLAN-L4-30-execution-ledger-github-architecture.md — 設計側は confirmed"
+   ],
+   "rationale": "Appendix C の episode domain 一式は、実装 PLAN (L7-436/437) が draft のままであり、未着手の予定実装である。",
+   "follow_up": ""
+  },
+  {
+   "id": "CD-08",
+   "design_path": "docs/design/harness/L4-basic-design/function.md",
+   "symbol": "MergeAuthorizationPolicy",
+   "verdict": "retire_or_planned",
+   "implementation_paths": [
+    "src/kernel/github-closure-receipt.ts:23",
+    "src/feedback/review-dispatch.ts:46"
+   ],
+   "evidence": [
+    "docs/design/harness/L6-function-design/function-spec.md:2005 — authorizeMerge(input: MergeEvidenceInput) の契約",
+    "src/kernel/github-closure-receipt.ts:23 — MergeClosureReceipt (現行 merge gate の一部)",
+    "src/feedback/review-dispatch.ts:46 — CI 入力は opaque な checksGreen であり、re-entry 証拠は扱わない",
+    "docs/plans/PLAN-L7-436-execution-ledger-episode-domain.md — status draft",
+    "git grep -n -e MergeAuthorization 3ca0692d -- src — 0 件"
+   ],
+   "rationale": "review・CI・HEAD の判定は、現行の pr merge 経路に部分的に存在する。しかし re-entry 証拠まで含めて集合判定する MergeAuthorizationPolicy は、episode domain の予定実装 (draft PLAN) に属する。",
+   "follow_up": ""
+  },
+  {
+   "id": "CD-09",
+   "design_path": "docs/design/harness/L4-basic-design/function.md",
+   "symbol": "ReentryCertificatePolicy",
+   "verdict": "retire_or_planned",
+   "implementation_paths": [],
+   "evidence": [
+    "docs/design/harness/L4-basic-design/data.md:263 — ReentryCertificate の値オブジェクト定義 (§10)",
+    "git grep -n -i -e ReentryCertificate 3ca0692d -- src — 0 件",
+    "docs/plans/PLAN-L7-436-execution-ledger-episode-domain.md — status draft"
+   ],
+   "rationale": "再入証明は ExecutionEpisode 集約の一部である。実装 PLAN が draft のため、予定項目にあたる。",
+   "follow_up": ""
+  },
+  {
+   "id": "CD-10",
+   "design_path": "docs/design/harness/L4-basic-design/function.md",
+   "symbol": "checkScrumReverse",
+   "verdict": "false_positive",
+   "implementation_paths": [
+    "src/doctor/plan-governance.ts:66",
+    "src/doctor/check-definition-groups.ts:160"
+   ],
+   "evidence": [
+    "src/doctor/plan-governance.ts:66 — export function checkScrumReverse",
+    "src/doctor/check-definition-groups.ts:160 — doctor check scrum-reverse として登録",
+    "tests/doctor.test.ts:1524 — checkScrumReverse のテスト"
+   ],
+   "rationale": "src/doctor に実装されている。自動照合の対象 module に src/doctor が含まれていなかったため、未検出と判定された。",
+   "follow_up": ""
+  },
+  {
+   "id": "CD-11",
+   "design_path": "docs/design/harness/L4-basic-design/security.md",
+   "symbol": "review_evidence",
+   "verdict": "false_positive",
+   "implementation_paths": [
+    "src/lint/review-evidence.ts:255-257",
+    "src/lint/review-evidence.ts:319-324"
+   ],
+   "evidence": [
+    "src/schema/frontmatter.ts:219-225 — review_evidence は reviewer/review_kind/reviewed_at/verdict が必須",
+    "src/schema/frontmatter.ts:252 — anchor_commit は green_commands[] の要素内にある optional field",
+    "src/doctor/plan-governance.ts:226 — checkReviewEvidence",
+    "docs/design/harness/L4-basic-design/security.md:78 — 『reviewer / review_kind / verdict / anchor_commit を必須化』",
+    "src/lint/review-evidence.ts:255-257 — anchor_commit 欠落で missing_anchor_commit を返す",
+    "src/lint/review-evidence.ts:319-324 — requiresGreenCommands の PLAN で各 crossEntry を検査",
+    "docs/design/harness/L6-function-design/test-before-review.md:83,100 — 全 green_commands entry で必須"
+   ],
+   "rationale": "frontmatter の schema では anchor_commit は任意だが、review-evidence lint が green_commands の各要素で欠落を missing_anchor_commit として拒否する。実効の契約は設計の「必須」と一致しており、ずれではない (Sol r1 の指摘で control が再判定、下書きの design_follow から変更)。",
+   "follow_up": ""
+  },
+  {
+   "id": "CD-12",
+   "design_path": "docs/design/harness/L5-detailed-design/if-detail.md",
+   "symbol": "InvokeResult",
+   "verdict": "hold",
+   "implementation_paths": [
+    "src/runtime/adapter.ts:69",
+    "src/runtime/adapter.ts:411"
+   ],
+   "evidence": [
+    "src/runtime/adapter.ts:69 — InvokeResult は ok/provider/command/args/exit_code/output|error_class/message を持つが、audit_ref は持たない",
+    "git grep -n audit_ref 3ca0692d -- src — 0 件",
+    "docs/design/harness/L5-detailed-design/if-detail.md:41,50 — InvokeResult.audit_ref と、audit_ref による invoke の重複排除 (冪等性) を規定",
+    "tests/runtime-adapter.test.ts:434 — IT-ADAPTER-01 の正規化テスト"
+   ],
+   "rationale": "型自体は存在する。しかし設計の audit_ref と重複排除の契約に対応する実装が見つからない。監査との連結が別経路 (session log) で満たされていれば design_follow、未実装なら red_green_fix になるが、本調査では判別できない。",
+   "follow_up": "invoke の監査記録と重複実行防止がどこで担保されているか (src/runtime の session log 書き込み) を確認し、design_follow か red_green_fix かを決める。"
+  },
+  {
+   "id": "CD-13",
+   "design_path": "docs/design/harness/L5-detailed-design/if-detail.md",
+   "symbol": "absent",
+   "verdict": "false_positive",
+   "implementation_paths": [
+    "src/runtime/adapter-policy.ts:18",
+    "src/runtime/adapter-policy.ts:57"
+   ],
+   "evidence": [
+    "src/runtime/adapter-policy.ts:18 — AdapterErrorKind = absent|auth|rate-limit|timeout|unknown",
+    "src/runtime/adapter-policy.ts:57-78 — absent は degrade + exit 0。degradation が許されない場合は fail-close"
+   ],
+   "rationale": "absent のときの降格動作は、adapter-policy に設計どおり実装されている。自動照合の対象 module に src/runtime が含まれていなかった。",
+   "follow_up": ""
+  },
+  {
+   "id": "CD-14",
+   "design_path": "docs/design/harness/L5-detailed-design/if-detail.md",
+   "symbol": "auth",
+   "verdict": "false_positive",
+   "implementation_paths": [
+    "src/runtime/adapter-policy.ts:80"
+   ],
+   "evidence": [
+    "src/runtime/adapter-policy.ts:80-93 — auth は fail-close + exit 1。next_action で codex login / Claude Code 認証を案内する"
+   ],
+   "rationale": "auth を CLI の未ログインとして fail-close し、ログイン案内を返す実装がある。設計にある gh auth は provider 外の例示であり、問題にならない。",
+   "follow_up": ""
+  },
+  {
+   "id": "CD-15",
+   "design_path": "docs/design/harness/L5-detailed-design/internal-processing.md",
+   "symbol": "AggregateCiReceipt",
+   "verdict": "retire_or_planned",
+   "implementation_paths": [
+    "src/feedback/review-dispatch.ts:46"
+   ],
+   "evidence": [
+    "docs/plans/PLAN-L7-465-cross-review-author-binding.md:335-370 — 『後続 slice (本 slice に含めない)』。D2 で harness-ci-aggregate を typed AggregateCiReceipt へ変換し、『現HEADはまだopaque checksGreen』と明記",
+    "src/feedback/review-dispatch.ts:46 — 現行は checksGreen: boolean",
+    "git grep -n harness-ci-aggregate 3ca0692d -- .github src — 0 件"
+   ],
+   "rationale": "AggregateCiReceipt は、PLAN-L7-465 で後続 D2 slice と明示された未実装の予定項目である。",
+   "follow_up": ""
+  },
+  {
+   "id": "CD-16",
+   "design_path": "docs/design/harness/L5-detailed-design/internal-processing.md",
+   "symbol": "CandidateAuthorshipReceipt",
+   "verdict": "retire_or_planned",
+   "implementation_paths": [],
+   "evidence": [
+    "docs/test-design/harness/L7-unit-test-design.md:2219-2221 — Node self-host bootstrap の候補 unit pair は『D0時点では全て設計候補』で、ID は CAND-*",
+    "docs/plans/PLAN-L7-465-cross-review-author-binding.md:335-337 — D3 の trusted receipt producer は後続 slice",
+    "docs/plans/PLAN-L6-93-node-bootstrap-contract.md:388 — 設計契約 (confirmed)",
+    "git grep -n -i -e candidate-authorship -e author_identity_digest 3ca0692d -- src — 0 件"
+   ],
+   "rationale": "oracle は候補 (CAND-*) のままで U-* へ昇格していない。実装も後続 slice とされており、予定項目にあたる。",
+   "follow_up": ""
+  },
+  {
+   "id": "CD-17",
+   "design_path": "docs/design/harness/L5-detailed-design/internal-processing.md",
+   "symbol": "ExecuteRequest",
+   "verdict": "retire_or_planned",
+   "implementation_paths": [],
+   "evidence": [
+    "docs/design/harness/L5-detailed-design/internal-processing.md:1015 — 付録 D Resource Kernel (Rust companion)、PLAN-L5-25",
+    "docs/plans/PLAN-L5-25-resource-kernel-physical-protocol.md — status draft",
+    "docs/plans/PLAN-L7-466-resource-kernel-native-companion.md — add-impl / status draft",
+    "git grep -n -e ProbeRequest -e spawn_attached -e RecoveryCustodyCommand 3ca0692d -- src tests — 0 件"
+   ],
+   "rationale": "Resource Kernel の wire protocol は、設計 PLAN・実装 PLAN とも draft であり、未着手の予定項目である。",
+   "follow_up": ""
+  },
+  {
+   "id": "CD-18",
+   "design_path": "docs/design/harness/L5-detailed-design/internal-processing.md",
+   "symbol": "L6ConfirmationReceipt",
+   "verdict": "retire_or_planned",
+   "implementation_paths": [
+    "src/runtime/cutover-transition.ts:74",
+    "src/runtime/cutover-transition.ts:359"
+   ],
+   "evidence": [
+    "src/runtime/cutover-transition.ts:74,359 — l6-confirmation は注入 port の validateDirectReceipt で検証するだけで、exact schema (l6-confirmation.v1) は src に無い",
+    "tests/cutover-transition.test.ts:50 — validateDirectReceipt: () => true の stub",
+    "docs/test-design/harness/L7-unit-test-design.md:2387-2426 — L6ConfirmationReceipt の oracle は CAND-CUTOVER-009 (候補 ID、未昇格)",
+    "git grep -n l6-confirmation.v1 3ca0692d -- src — 0 件"
+   ],
+   "rationale": "cutover 遷移は port 経由の受理判定だけを実装している。receipt の exact schema は候補 oracle 段階であり、予定項目にあたる。",
+   "follow_up": ""
+  },
+  {
+   "id": "CD-19",
+   "design_path": "docs/design/harness/L5-detailed-design/internal-processing.md",
+   "symbol": "ProbeRequest",
+   "verdict": "retire_or_planned",
+   "implementation_paths": [],
+   "evidence": [
+    "docs/design/harness/L5-detailed-design/internal-processing.md:1015 — 付録 D は PLAN-L5-25 の Resource Kernel ワイヤ処理",
+    "git show 3ca0692d:docs/plans/PLAN-L5-25-resource-kernel-physical-protocol.md | grep ^status — draft",
+    "PLAN-L6-92-resource-kernel-function-contracts / PLAN-L7-466-resource-kernel-native-companion — 共に status: draft",
+    "docs/plans/PLAN-L7-466-resource-kernel-native-companion.md:73 — `ProbeRequest | ExecuteRequest`分離を最初のTDD修正とする将来作業と明記",
+    "git grep -n ProbeRequest 3ca0692d -- src tests — 0 件; git ls-tree -r 3ca0692d に .rs ファイル 0 件"
+   ],
+   "rationale": "ProbeRequest は draft の PLAN-L5-25/L7-466 が将来の最初の TDD 修正として予定している Resource Kernel ワイヤ型であり、未実装は計画どおりである。",
+   "follow_up": ""
+  },
+  {
+   "id": "CD-20",
+   "design_path": "docs/design/harness/L5-detailed-design/internal-processing.md",
+   "symbol": "ReviewLaneReceipt",
+   "verdict": "hold",
+   "implementation_paths": [
+    "src/schema/cutover-transition.ts",
+    "src/runtime/cutover-transition.ts",
+    "src/schema/node-slice-admission.ts"
+   ],
+   "evidence": [
+    "docs/design/harness/L5-detailed-design/internal-processing.md:851 — Node切替receipt chain (Issue #152 D0-N) の typed review/identity receipt 契約 (ReviewLaneReceipt)",
+    "git grep -n ReviewLaneReceipt 3ca0692d -- src tests — 0 件 (docs 以外に実装なし)",
+    "git grep -n -e claim-blind -e review-lane -e session-identity -e candidate-work-provenance 3ca0692d -- src/runtime/cutover-transition.ts src/schema/cutover-transition.ts — 0 件",
+    "src/runtime/cutover-transition.ts:410 — review.bundle は evidence row の receipt_digest を review_digest に写すだけで lane/session/authorship を検証しない",
+    "src/schema/node-slice-admission.ts:71 — D0 requiredKinds に 'ReviewBundleReceipt' 文字列のみ (lane/session 型なし)",
+    "src/schema/cutover-transition.ts:39-44 — implementedCutoverEdgeIdSchema は sealed edge を除く 4 edge",
+    "docs/plans/PLAN-L6-93-node-bootstrap-contract.md:467 — sealed edge と debt #153 は #487 後段、本 slice は未対応",
+    "gh issue view 487 / 153 / 540 — いずれも CLOSED (Bun 撤去完了、sealed edge 未実装のまま)"
+   ],
+   "rationale": "ReviewLaneReceipt を含む typed review/identity receipt 群は confirmed 設計 (PLAN-L5-26/L6-93) に残るが、実装は review.bundle を不透明 digest として扱うだけで当該 receipt は存在しない。Bun 撤去 (#487) は sealed edge 無しで close 済みのため、実装すべき残契約か退役すべき設計かを repo 実測だけでは決められない。",
+   "follow_up": "cutover chain の sealed edge と typed review lane/session/work-provenance receipt を実装するか退役するかを #134 系で判断し (advisor progress)、退役なら L5 §Node切替receipt chain に退役注記を入れる design PR、実装なら Red/Green PR を起こす。"
+  },
+  {
+   "id": "CD-21",
+   "design_path": "docs/design/harness/L5-detailed-design/internal-processing.md",
+   "symbol": "SessionIdentityReceipt",
+   "verdict": "hold",
+   "implementation_paths": [
+    "src/schema/cutover-transition.ts",
+    "src/runtime/cutover-transition.ts",
+    "src/schema/node-slice-admission.ts"
+   ],
+   "evidence": [
+    "docs/design/harness/L5-detailed-design/internal-processing.md:723 — Node切替receipt chain (Issue #152 D0-N) の typed review/identity receipt 契約 (SessionIdentityReceipt)",
+    "git grep -n SessionIdentityReceipt 3ca0692d -- src tests — 0 件 (docs 以外に実装なし)",
+    "git grep -n -e claim-blind -e review-lane -e session-identity -e candidate-work-provenance 3ca0692d -- src/runtime/cutover-transition.ts src/schema/cutover-transition.ts — 0 件",
+    "src/runtime/cutover-transition.ts:410 — review.bundle は evidence row の receipt_digest を review_digest に写すだけで lane/session/authorship を検証しない",
+    "src/schema/node-slice-admission.ts:71 — D0 requiredKinds に 'ReviewBundleReceipt' 文字列のみ (lane/session 型なし)",
+    "src/schema/cutover-transition.ts:39-44 — implementedCutoverEdgeIdSchema は sealed edge を除く 4 edge",
+    "docs/plans/PLAN-L6-93-node-bootstrap-contract.md:467 — sealed edge と debt #153 は #487 後段、本 slice は未対応",
+    "gh issue view 487 / 153 / 540 — いずれも CLOSED (Bun 撤去完了、sealed edge 未実装のまま)",
+    "git grep -n -e ManagedSessionAttestation -e MANAGED-SESSION-TRUST-REGISTRY 3ca0692d -- src tests — 0 件"
+   ],
+   "rationale": "SessionIdentityReceipt を含む typed review/identity receipt 群は confirmed 設計 (PLAN-L5-26/L6-93) に残るが、実装は review.bundle を不透明 digest として扱うだけで当該 receipt は存在しない。Bun 撤去 (#487) は sealed edge 無しで close 済みのため、実装すべき残契約か退役すべき設計かを repo 実測だけでは決められない。",
+   "follow_up": "cutover chain の sealed edge と typed review lane/session/work-provenance receipt を実装するか退役するかを #134 系で判断し (advisor progress)、退役なら L5 §Node切替receipt chain に退役注記を入れる design PR、実装なら Red/Green PR を起こす。"
+  },
+  {
+   "id": "CD-22",
+   "design_path": "docs/design/harness/L5-detailed-design/internal-processing.md",
+   "symbol": "WorkProvenanceEventReceipt",
+   "verdict": "hold",
+   "implementation_paths": [
+    "src/schema/cutover-transition.ts",
+    "src/runtime/cutover-transition.ts",
+    "src/schema/node-slice-admission.ts"
+   ],
+   "evidence": [
+    "docs/design/harness/L5-detailed-design/internal-processing.md:817 — Node切替receipt chain (Issue #152 D0-N) の typed review/identity receipt 契約 (WorkProvenanceEventReceipt)",
+    "git grep -n WorkProvenanceEventReceipt 3ca0692d -- src tests — 0 件 (docs 以外に実装なし)",
+    "git grep -n -e claim-blind -e review-lane -e session-identity -e candidate-work-provenance 3ca0692d -- src/runtime/cutover-transition.ts src/schema/cutover-transition.ts — 0 件",
+    "src/runtime/cutover-transition.ts:410 — review.bundle は evidence row の receipt_digest を review_digest に写すだけで lane/session/authorship を検証しない",
+    "src/schema/node-slice-admission.ts:71 — D0 requiredKinds に 'ReviewBundleReceipt' 文字列のみ (lane/session 型なし)",
+    "src/schema/cutover-transition.ts:39-44 — implementedCutoverEdgeIdSchema は sealed edge を除く 4 edge",
+    "docs/plans/PLAN-L6-93-node-bootstrap-contract.md:467 — sealed edge と debt #153 は #487 後段、本 slice は未対応",
+    "gh issue view 487 / 153 / 540 — いずれも CLOSED (Bun 撤去完了、sealed edge 未実装のまま)",
+    "git grep -n CandidateAuthorshipReceipt 3ca0692d -- src tests — 0 件"
+   ],
+   "rationale": "WorkProvenanceEventReceipt を含む typed review/identity receipt 群は confirmed 設計 (PLAN-L5-26/L6-93) に残るが、実装は review.bundle を不透明 digest として扱うだけで当該 receipt は存在しない。Bun 撤去 (#487) は sealed edge 無しで close 済みのため、実装すべき残契約か退役すべき設計かを repo 実測だけでは決められない。",
+   "follow_up": "cutover chain の sealed edge と typed review lane/session/work-provenance receipt を実装するか退役するかを #134 系で判断し (advisor progress)、退役なら L5 §Node切替receipt chain に退役注記を入れる design PR、実装なら Red/Green PR を起こす。"
+  },
+  {
+   "id": "CD-23",
+   "design_path": "docs/design/harness/L5-detailed-design/internal-processing.md",
+   "symbol": "promote_by",
+   "verdict": "retire_or_planned",
+   "implementation_paths": [
+    "src/plan/lint-policy.ts",
+    "src/plan/lint.ts"
+   ],
+   "evidence": [
+    "docs/design/harness/L5-detailed-design/internal-processing.md:317-325 — C.4 免除台帳の promote_by 期限 fail-close",
+    "src/plan/lint-policy.ts:88 — ROUTE_MODE_KIND_DRAFT_DEBT_PLAN_IDS は期限なしの Set",
+    "git grep -c promote_by 3ca0692d -- docs/governance/route-mode-kind-debt-audit-2026-07-02.md — 0 件",
+    "src/lint/deliverable-plan-trace.ts:102 — promoteBy は deliverable-trace 台帳用で route-mode-kind 台帳とは別",
+    "docs/test-design/harness/L7-unit-test-design.md:1016 — U-ROUTE-R7: promote_by 有効期限 + justification は Appendix C.4 carry として別 slice で固定",
+    "docs/plans/PLAN-L7-263-route-mode-kind-certificate.md:152 — promote_by 期限 hardening を残 carry として分離記録"
+   ],
+   "rationale": "route-mode-kind 免除台帳の promote_by 期限 gate は未実装だが、L7 テスト設計と PLAN-L7-263 が明示的に別 slice への carry と記録している計画済み項目である。",
+   "follow_up": "C.4 carry を担う slice (PLAN-RECOVERY-08 系、draft) の着手時に台帳 promote_by 列と期限 fail-close を Red/Green で入れる。"
+  },
+  {
+   "id": "CD-24",
+   "design_path": "docs/design/harness/L6-function-design/descent-obligation.md",
+   "symbol": "active",
+   "verdict": "false_positive",
+   "implementation_paths": [
+    "src/lint/descent-obligation.ts"
+   ],
+   "evidence": [
+    "docs/design/harness/L6-function-design/descent-obligation.md:104 — condition: active の定義",
+    "src/lint/descent-obligation.ts:26 — ACTIVE_STATUSES = new Set([\"active\"])",
+    "src/lint/descent-obligation.ts:151 — 既定 status 'active'",
+    "src/lint/descent-obligation.ts:308 — rule.condition === \"active\" 分岐"
+   ],
+   "rationale": "condition: active は src/lint/descent-obligation.ts に実装されており、検査対象 source の列挙漏れによる誤検出である。",
+   "follow_up": ""
+  },
+  {
+   "id": "CD-25",
+   "design_path": "docs/design/harness/L6-function-design/descent-obligation.md",
+   "symbol": "checkDescentObligation",
+   "verdict": "false_positive",
+   "implementation_paths": [
+    "src/doctor/lint-gates.ts",
+    "src/doctor/check-definition-groups.ts"
+   ],
+   "evidence": [
+    "docs/design/harness/L6-function-design/descent-obligation.md:52 — doctor 配線は §6 で別扱いと明記",
+    "src/doctor/lint-gates.ts:86 — export function checkDescentObligation",
+    "src/doctor/lint-gates.ts:92 — analyzeDescentObligations を呼ぶ",
+    "src/doctor/check-definition-groups.ts:174 — descent-obligation doctor check 登録",
+    "tests/doctor.test.ts:1251 — checkDescentObligation 実 repo テスト"
+   ],
+   "rationale": "設計どおり doctor 側 (src/doctor/lint-gates.ts) に純関数群と分離して実装されている。対応 module の source 一覧に該当 doctor file が無かったための誤検出である。",
+   "follow_up": ""
+  },
+  {
+   "id": "CD-26",
+   "design_path": "docs/design/harness/L6-function-design/descent-obligation.md",
+   "symbol": "deferred",
+   "verdict": "false_positive",
+   "implementation_paths": [
+    "src/lint/descent-obligation.ts"
+   ],
+   "evidence": [
+    "docs/design/harness/L6-function-design/descent-obligation.md:164 — E3 deferred",
+    "src/lint/descent-obligation.ts:406 — defer && !hasImpl なら status: \"deferred\"",
+    "src/lint/descent-obligation.ts:146 — 'defer'/'deferred' の正規化"
+   ],
+   "rationale": "E3 の deferred 分類は analyzeDescentObligations 内で実装されている。",
+   "follow_up": ""
+  },
+  {
+   "id": "CD-27",
+   "design_path": "docs/design/harness/L6-function-design/descent-obligation.md",
+   "symbol": "unmet",
+   "verdict": "false_positive",
+   "implementation_paths": [
+    "src/lint/descent-obligation.ts"
+   ],
+   "evidence": [
+    "docs/design/harness/L6-function-design/descent-obligation.md:163 — E2 unmet",
+    "src/lint/descent-obligation.ts:404,408 — status: \"unmet\"",
+    "src/lint/descent-obligation.ts:489 — unmet があれば ok=false"
+   ],
+   "rationale": "E2 の unmet 分類と fail-close は実装済みである。",
+   "follow_up": ""
+  },
+  {
+   "id": "CD-28",
+   "design_path": "docs/design/harness/L6-function-design/function-spec.md",
+   "symbol": "AggregateCiReceipt",
+   "verdict": "retire_or_planned",
+   "implementation_paths": [
+    ".github/workflows/harness-check.yml"
+   ],
+   "evidence": [
+    "docs/design/harness/L6-function-design/function-spec.md:2026-2050 — D2 target 契約 (Issue #231 訂正)",
+    "git grep -n -e AggregateCiReceipt -e harness-ci-aggregate 3ca0692d -- src .github — 0 件",
+    ".github/workflows/harness-check.yml:7-8 — 将来の D2 はこの aggregate 出力へ投影すると記載",
+    "docs/plans/PLAN-L7-465-cross-review-author-binding.md:363 — 現HEADはまだopaque checksGreen のため実装済みとは扱わない",
+    "docs/plans/PLAN-L7-465-cross-review-author-binding.md:439-441 — D2は未着工、target で AggregateCiReceipt へ変換"
+   ],
+   "rationale": "AggregateCiReceipt は D2 target 契約として明示的に未着工と記録された計画項目であり、現行は opaque checksGreen である。",
+   "follow_up": ""
+  },
+  {
+   "id": "CD-29",
+   "design_path": "docs/design/harness/L6-function-design/function-spec.md",
+   "symbol": "CatalogInput",
+   "verdict": "false_positive",
+   "implementation_paths": [
+    "src/disposition/domain/document-disposition-catalog.ts",
+    "src/disposition/adapters/tracked-vmodel-loader.ts"
+   ],
+   "evidence": [
+    "docs/design/harness/L6-function-design/function-spec.md:1623 — CatalogInput DTO",
+    "src/disposition/domain/document-disposition-catalog.ts:84 — CatalogInput.sources: CatalogSource[] (同ファイルで定義、tracked-vmodel-loader.ts:6 が import)",
+    "src/disposition/adapters/tracked-vmodel-loader.ts:53-56 — loadTrackedCatalogInput(): CatalogInput"
+   ],
+   "rationale": "CatalogInput は src/disposition/domain に実装されており、mapped module の source 列挙漏れによる誤検出である。",
+   "follow_up": ""
+  },
+  {
+   "id": "CD-30",
+   "design_path": "docs/design/harness/L6-function-design/function-spec.md",
+   "symbol": "CatalogSource",
+   "verdict": "false_positive",
+   "implementation_paths": [
+    "src/disposition/domain/document-disposition-catalog.ts"
+   ],
+   "evidence": [
+    "docs/design/harness/L6-function-design/function-spec.md:1624 — CatalogSource の 8 field",
+    "src/disposition/domain/document-disposition-catalog.ts:25-34 — interface CatalogSource { sourceId, ordinal, sourceTitle, disposition, targetRef, reason, rowDigest, manifestDigest } (設計と完全一致)"
+   ],
+   "rationale": "設計の 8 field と同名・同構成で実装されている。",
+   "follow_up": ""
+  },
+  {
+   "id": "CD-31",
+   "design_path": "docs/design/harness/L6-function-design/function-spec.md",
+   "symbol": "DispositionRecord",
+   "verdict": "design_follow",
+   "implementation_paths": [
+    "src/document-disposition/domain/document-disposition.ts",
+    "src/document-disposition/domain/analyze-repository-document-closure.ts"
+   ],
+   "evidence": [
+    "docs/design/harness/L6-function-design/function-spec.md:1614 — DispositionRecord { path, blobOid, zone, disposition, reason?, targets[], planIds[], impactTags[], applicationStatus }",
+    "git grep -n DispositionRecord 3ca0692d -- src tests — 0 件",
+    "src/document-disposition/domain/document-disposition.ts:27-42 — DocumentDispositionInput { baselinePath, disposition, reason, targets, planIds, applicationStatus, applicability{...} }",
+    "docs/design/harness/L6-function-design/function-spec.md:953 — 同一文書の別節は既に record: DocumentDispositionInput を使用",
+    "src/document-disposition/domain/analyze-repository-document-closure.ts:39 — ledger.records: DocumentDispositionInput[]"
+   ],
+   "rationale": "disposition record は DocumentDispositionInput として実装され、同一文書 :953 も新名を使っているため、:1614 の DTO 表だけが旧名・旧 field (blobOid/zone/impactTags) のまま残っている。",
+   "follow_up": "function-spec.md:1614 の DTO 行を DocumentDispositionInput の現行 field (baselinePath, applicability 等) へ合わせる design patch PR。zone/impactTags の廃止有無は PR 内で document-disposition の上位設計と照合する。"
+  },
+  {
+   "id": "CD-32",
+   "design_path": "docs/design/harness/L6-function-design/function-spec.md",
+   "symbol": "DocumentClosureResult",
+   "verdict": "false_positive",
+   "implementation_paths": [
+    "src/document-disposition/domain/analyze-repository-document-closure.ts"
+   ],
+   "evidence": [
+    "docs/design/harness/L6-function-design/function-spec.md:1566 — outer DocumentClosureResult が effective 集合/reduction digest/delta chain digest を保持",
+    "src/document-disposition/domain/analyze-repository-document-closure.ts:52-60 — interface DocumentClosureResult { finalSnapshotDigest, deltaChainDigest, effective?, reductionDigest?, findings, closure, exitCode }",
+    "同ファイル :121 — analyze 関数の戻り型"
+   ],
+   "rationale": "設計どおり同名で src/document-disposition に実装されており、module 対応外による誤検出である。",
+   "follow_up": ""
+  },
+  {
+   "id": "CD-33",
+   "design_path": "docs/design/harness/L6-function-design/function-spec.md",
+   "symbol": "DocumentProfileCatalogInput",
+   "verdict": "design_follow",
+   "implementation_paths": [
+    "src/profile/domain/resolver.ts",
+    "src/profile/adapters/tracked-profile-loader.ts"
+   ],
+   "evidence": [
+    "docs/design/harness/L6-function-design/function-spec.md:1633-1634 — DocumentProfileCatalogInput {sourcePath, sourceDigest, profiles, decisions} と DocumentProfileCatalog.create",
+    "git grep -n -e DocumentProfileCatalogInput -e DocumentProfileCatalog.create 3ca0692d -- src tests — 0 件",
+    "src/profile/domain/resolver.ts:68-75 — createProfileCatalog({profiles, decisions, knownDocTypeIds, requiredDocTypeIds, coreDocTypeIds, knownCapabilityFlags?}): Result<ProfileCatalog>",
+    "src/profile/adapters/tracked-profile-loader.ts:53-59 — TrackedDocumentProfileCatalog { sourcePath, sourceDigest, catalogSourcePath, catalogSourceDigest, catalog }",
+    "src/profile/domain/resolver.ts:37 — ProfileCatalog"
+   ],
+   "rationale": "strict loader 出力と catalog 生成は TrackedDocumentProfileCatalog / createProfileCatalog / ProfileCatalog として実装され、sourcePath/digest は loader 側へ分離、knownDocTypeIds 等が入力に加わっている。設計の型名と入力構成が古い。",
+   "follow_up": "function-spec.md:1633-1634 を createProfileCatalog / ProfileCatalog / TrackedDocumentProfileCatalog の現行名と入力 field へ更新する design patch PR。"
+  },
+  {
+   "id": "CD-34",
+   "design_path": "docs/design/harness/L6-function-design/function-spec.md",
+   "symbol": "EvidenceInput",
+   "verdict": "design_follow",
+   "implementation_paths": [
+    "src/plan-asset/domain/evidence-types.ts"
+   ],
+   "evidence": [
+    "docs/design/harness/L6-function-design/function-spec.md:1608 — EvidenceInput の field 列",
+    "git grep -n EvidenceInput 3ca0692d -- src — GateRunEvidenceInput / VerificationEvidenceInput 等の別物のみ",
+    "src/plan-asset/domain/evidence-types.ts:93-107 — EvidenceRecordInput<K> { evidenceId, evidenceKind, subjectId, subjectRevision, sourceCommit, commandArgs: RedactedCommandArgs, claims, outputDigest, exitCode, producer, producedAt, expiresAt?, supersedesEvidenceId? } (field は設計と一致)"
+   ],
+   "rationale": "契約は EvidenceRecordInput として field 完全一致で実装されており、設計の型名だけが古い。",
+   "follow_up": "function-spec.md:1608 の型名を EvidenceRecordInput へ改める design patch PR (field 変更なし)。"
+  },
+  {
+   "id": "CD-35",
+   "design_path": "docs/design/harness/L6-function-design/function-spec.md",
+   "symbol": "EvidencePolicy",
+   "verdict": "false_positive",
+   "implementation_paths": [
+    "src/plan-asset/domain/evidence-policy.ts",
+    "src/forward/application/forward-evidence-policy.ts"
+   ],
+   "evidence": [
+    "docs/design/harness/L6-function-design/function-spec.md:1609 — EvidencePolicy { policyId, revision, requirements[], maxAge?, verifier port }",
+    "src/plan-asset/domain/evidence-policy.ts:39-44 — class EvidencePolicy { policyId, revision, requirements, maxAgeMs?, #verify }",
+    "src/plan-asset/domain/evidence-policy.ts:22-30 — EvidenceRequirement { requirementId, requiredKind, minCount, maxCount?, acceptedProducers, exitRule, claimsRule }",
+    "src/plan-asset/domain/evidence-policy.ts:68-76 — create(input, verifier: EvidenceAttestationVerifierPort)",
+    "src/forward/application/forward-evidence-policy.ts:56 — EvidencePolicy.create 利用"
+   ],
+   "rationale": "EvidencePolicy は src/plan-asset/domain に同名で実装され、requirements の field も一致する (maxAge は単位付き maxAgeMs)。plan-asset module が対応外だったための誤検出である。",
+   "follow_up": ""
+  },
+  {
+   "id": "CD-36",
+   "design_path": "docs/design/harness/L6-function-design/function-spec.md",
+   "symbol": "GithubCiPolicy",
+   "verdict": "false_positive",
+   "implementation_paths": [
+    "src/lint/github-ci-policy.ts",
+    "src/doctor/runtime-surface.ts"
+   ],
+   "evidence": [
+    "docs/design/harness/L6-function-design/function-spec.md:2042-2046 — GithubCiPolicy は profile を明示入力で区別し自己推論しない",
+    "src/lint/github-ci-policy.ts:8-9 — GithubWorkflowDoc.profile: \"source\"|\"pack\" と role を明示入力で持つ",
+    "src/lint/github-ci-policy.ts:183 — GITHUB_CI_PROFILE_SPECS (profile 別 spec)",
+    "src/lint/github-ci-policy.ts:998 — analyzeGithubCiPolicy(docs)",
+    "src/doctor/runtime-surface.ts:41 — checkGithubCiPolicy doctor 配線",
+    ".github/workflows/harness-check.yml:294-316 — 現行 aggregate harness-check の needs/result guard (D2 四 job topology は未着工、CD-28 参照)"
+   ],
+   "rationale": "GithubCiPolicy は analyzeGithubCiPolicy / checkGithubCiPolicy として profile 明示入力つきで実装されている。D2 target topology の要求は設計自身が target 実装 PR までの移行扱いとしており、symbol としては誤検出である。",
+   "follow_up": ""
+  },
+  {
+   "id": "CD-37",
+   "design_path": "docs/design/harness/L6-function-design/function-spec.md",
+   "symbol": "L6ConfirmationReceipt",
+   "verdict": "hold",
+   "implementation_paths": [
+    "src/runtime/cutover-transition.ts"
+   ],
+   "evidence": [
+    "src/runtime/cutover-transition.ts:70,76 — validateDirectReceipt port の expected に \"l6-confirmation\" がある",
+    "src/runtime/cutover-transition.ts:164,184 — CutoverAdmission の record/receipt digest に l6_confirmation_receipt_digest を封印",
+    "src/runtime/cutover-transition.ts:359-361 — l6_confirmation_receipt_digest を port 経由で direct 検証",
+    "tests/cutover-transition.test.ts:50,604 — validateDirectReceipt は () => true / false の stub のみ",
+    "git grep -n -e validateDirectReceipt -e L6Confirmation -e l6ConfirmationReceipt 3ca0692d -- src tests — production adapter も L6ConfirmationReceipt record 型 (plan/revision/status/content/head/tracked digest/owner/attestation の封印) も無い"
+   ],
+   "rationale": "CutoverAdmission 側の direct ref と検証 port は実装されているが、function-spec.md:2259-2263 が定める L6ConfirmationReceipt の record 構造と PLAN-L6-93 exact 再検証を行う production adapter は src に見当たらない。production cutover が未着地の計画段階なのか実装欠落なのかを判別する証拠が足りない。",
+   "follow_up": "Issue #152 系の cutover 実装 PLAN の generates/残 DoD を確認し、production 用 validateDirectReceipt(\"l6-confirmation\") adapter が計画済みなら retire_or_planned、計画外なら red_green_fix (adapter + record 型) に確定する。"
+  },
+  {
+   "id": "CD-38",
+   "design_path": "docs/design/harness/L6-function-design/function-spec.md",
+   "symbol": "PlanAssetInput",
+   "verdict": "hold",
+   "implementation_paths": [
+    "src/plan-asset/domain/plan-asset.ts"
+   ],
+   "evidence": [
+    "src/plan-asset/domain/plan-asset.ts:76-91 — PlanAsset.create の入力は inline {assetId, alias, payload, bodyDigest}。revision は 1 固定、dependencies/initialRevision/canonicalPayload は無い",
+    "src/plan-asset/domain/plan-asset.ts:37-58 — 空/不正 ID は plan-asset-invalid-id、contentDigest は内部生成 (供給 digest との不一致検査という概念が無い)",
+    "git grep -n -e dependencies -e canonicalPayload -e initialRevision 3ca0692d -- src/plan-asset — dependencies は legacy-plan-inventory.ts:157 の既知 frontmatter key のみ、重複 dependency 拒否は無い",
+    "docs/test-design/harness/L7-unit-test-design.md:1323-1326 — U-PA-001〜004 に重複 dependency / payload digest 不一致の oracle は無い",
+    "docs/plans/PLAN-L7-418-plan-asset-v2-adapter-migration-ledger.md — status confirmed、dependency 検証の言及なし"
+   ],
+   "rationale": "PlanAsset.create は確定実装 (PLAN-L7-418 confirmed) だが、DTO 表の dependencies[] 重複拒否と payload digest 不一致拒否は実装にもテスト設計にも無い。dependencies を payload 内に畳む現行形が意図どおりで設計が古いのか、domain 検証の欠落なのかを決める根拠が無い。",
+   "follow_up": "PLAN-L6-71 の設計 owner に dependencies 検証の所在 (domain か plan lint か) を確認する。前者なら red_green_fix、後者なら DTO 表を PlanAsset.create の現行入力へ合わせる design_follow。"
+  },
+  {
+   "id": "CD-39",
+   "design_path": "docs/design/harness/L6-function-design/function-spec.md",
+   "symbol": "ProjectionContext",
+   "verdict": "hold",
+   "implementation_paths": [
+    "src/projection/domain/plan-projection.ts",
+    "src/state-db/sqlite-projection-store.ts"
+   ],
+   "evidence": [
+    "src/projection/domain/plan-projection.ts:18-21 — PlanProjectionContext {stableId, hash} だけ。clock/ProjectionIdFactory 注入は無い",
+    "src/projection/domain/plan-projection.ts:29-32 — projectPlanSources(sources, context) は純粋 projector の形",
+    "git grep -n -e HarnessProjectionSourcePort -e ProjectionRebuildCommand -e ProjectionTransactionPort -e ProjectionIdFactory 3ca0692d -- src — 0 件",
+    "src/state-db/sqlite-projection-store.ts:216 — 移行中 recordFinding を ProjectionWrite と同じ境界に置くコメントのみ",
+    "docs/design/harness/L6-function-design/function-spec.md:1593 — 節見出しが「PLAN-L6-75 / L7-423残DoD」で残作業であることを示す"
+   ],
+   "rationale": "PLAN projector だけが部分的に契約形 (PlanProjectionContext) で実装され、immutable ProjectionContext・ProjectionIdFactory・rebuild application 群は未実装。節自体が残 DoD と明記しており、残 DoD の追跡先 (PLAN/issue) が確認できないため保留する。",
+   "follow_up": "PLAN-L7-423 (confirmed) の残 DoD がどの後継 PLAN/issue に引き継がれているかを確認する。引き継ぎ先があれば retire_or_planned、無ければ追跡 issue 起票のうえ red_green_fix。PlanProjectionContext の名前差は実装時に揃える。"
+  },
+  {
+   "id": "CD-40",
+   "design_path": "docs/design/harness/L6-function-design/function-spec.md",
+   "symbol": "ReplayDocumentDeltasInput",
+   "verdict": "false_positive",
+   "implementation_paths": [
+    "src/document-disposition/domain/replay-document-deltas.ts"
+   ],
+   "evidence": [
+    "src/document-disposition/domain/replay-document-deltas.ts:122-132 — ReplayDocumentDeltasInput {ledgerId, baseline, final, deltas, decisions, baselineSnapshotDigest, finalSnapshotDigest, expectedDeltaChainDigest, policyRevision}",
+    "src/document-disposition/domain/replay-document-deltas.ts:148 — replayDocumentDeltas(input) が消費",
+    "tests/document-disposition/replay-document-deltas.test.ts:9,33 — テストが型を使用",
+    "git grep -n ReplayDocumentDeltasInput 3ca0692d -- src tests — 上記 4 件"
+   ],
+   "rationale": "同名の型が src/document-disposition に存在し、設計 (function-spec.md:1254-1256) の baseline/final・event 列・decisions・ledger/policy identity・expected chain digest をすべて持つ。検査対象 module の対応付けが src/lint だったための誤検出。",
+   "follow_up": ""
+  },
+  {
+   "id": "CD-41",
+   "design_path": "docs/design/harness/L6-function-design/function-spec.md",
+   "symbol": "SelfProofDeps",
+   "verdict": "retire_or_planned",
+   "implementation_paths": [],
+   "evidence": [
+    "docs/plans/PLAN-L6-77-detector-compiler-meta-verifier-contracts.md:39 — runSelfProof(request,deps) を独立 meta-verifier facade とする。status: draft",
+    "docs/plans/PLAN-L7-425-independent-detector-meta-verifier.md — status: draft (実装 PLAN 未着手)",
+    "docs/test-design/harness/L7-unit-test-design.md:1452-1455 — CANDIDATE-SP-001〜004 (draft 実装 PLAN の未 freeze 候補、同 1320 行目の注記)",
+    "git grep -n -e runSelfProof -e SelfProof -e ProcessRunner -e SourceHasher -e ReceiptStore 3ca0692d -- src — 0 件"
+   ],
+   "rationale": "self-proof meta-verifier は L6 契約 (PLAN-L6-77) と L7 実装 (PLAN-L7-425) がともに draft で、テスト設計も CANDIDATE 扱いの計画済み項目。実装が無いのは drift ではない。",
+   "follow_up": "PLAN-L7-425 着手時に実装する。本監査での対応は不要。"
+  },
+  {
+   "id": "CD-42",
+   "design_path": "docs/design/harness/L6-function-design/function-spec.md",
+   "symbol": "SelfProofRequest",
+   "verdict": "retire_or_planned",
+   "implementation_paths": [],
+   "evidence": [
+    "docs/plans/PLAN-L6-77-detector-compiler-meta-verifier-contracts.md:39 — runSelfProof(request,deps)。status: draft",
+    "docs/plans/PLAN-L7-425-independent-detector-meta-verifier.md — status: draft",
+    "docs/test-design/harness/L7-unit-test-design.md:1452-1455 — CANDIDATE-SP-*",
+    "git grep -n SelfProof 3ca0692d -- src tests — 0 件"
+   ],
+   "rationale": "CD-41 と同じく、self-proof は draft PLAN の計画済み契約であり実装前である。",
+   "follow_up": "PLAN-L7-425 着手時に実装する。本監査での対応は不要。"
+  },
+  {
+   "id": "CD-43",
+   "design_path": "docs/design/harness/L6-function-design/function-spec.md",
+   "symbol": "SemanticAssessmentInput",
+   "verdict": "retire_or_planned",
+   "implementation_paths": [],
+   "evidence": [
+    "docs/plans/PLAN-L6-76-semantic-assessment-debt-routing-contracts.md:39 — evaluateSemanticItem(input, policy) の契約。status: draft",
+    "docs/plans/PLAN-L7-424-semantic-assessment-debt-router.md — status: draft",
+    "git grep -n -e SemanticAssessment -e evaluateSemanticItem -e routeAssessmentDebt 3ca0692d -- src — 0 件"
+   ],
+   "rationale": "semantic assessment は L6 契約 (PLAN-L6-76) と L7 実装 (PLAN-L7-424) がともに draft の計画済み項目で、実装が無いのは想定どおり。",
+   "follow_up": "PLAN-L7-424 着手時に実装する。本監査での対応は不要。"
+  },
+  {
+   "id": "CD-44",
+   "design_path": "docs/design/harness/L6-function-design/function-spec.md",
+   "symbol": "WorkflowContext",
+   "verdict": "design_follow",
+   "implementation_paths": [
+    "src/forward/domain/types.ts",
+    "src/forward/domain/workflow.ts",
+    "src/forward/application/forward-evidence-policy.ts",
+    "src/plan-asset/domain/evidence-policy.ts"
+   ],
+   "evidence": [
+    "src/forward/domain/types.ts:4-8 — subjectRevision は ForwardSubject {subjectId, subjectRevision, sourceCommit} が持つ",
+    "src/forward/domain/types.ts:42-47 — ForwardEvidenceContext {evidence, now, authorFamily, evidencePolicy} が evidence/now を運ぶ",
+    "src/forward/domain/workflow.ts:40-54 — events は ForwardWorkflow.reconstruct(subject, events) に渡し、別 subject/revision/commit の event は forward-ledger-unavailable で fail-close",
+    "src/forward/application/forward-evidence-policy.ts:77-82 — evidence は subjectId/subjectRevision/sourceCommit で照合し別 subject は accepted に数えない",
+    "src/plan-asset/domain/evidence-policy.ts:142 — policyRevision は EvidencePolicy の結果側に出る (context の入力 field ではない)",
+    "docs/plans/PLAN-L7-419-forward-fsm-transition-workflow-cli.md — status confirmed",
+    "git grep -n WorkflowContext 3ca0692d -- src tests — 0 件"
+   ],
+   "rationale": "契約 (event/evidence の subject 不一致を fail-close / 不採用) は confirmed の PLAN-L7-419 実装で満たされているが、単一 DTO WorkflowContext ではなく ForwardSubject・reconstruct の events・ForwardEvidenceContext に分割され、policyRevision は policy object 側に移っている。設計の DTO 名と field 構成が実装より古い。",
+   "follow_up": "docs-only PR で function-spec.md:1611 の WorkflowContext 行を ForwardSubject + ForwardEvidenceContext (evidence, now, authorFamily, evidencePolicy) と reconstruct(subject, events) の構成へ書き換える。同表の WorkflowCommand/WorkflowError 行も ForwardCommand/ForwardError へ揃えるかを同じ PR で確認する。"
+  },
+  {
+   "id": "CD-45",
+   "design_path": "docs/design/harness/L6-function-design/function-spec.md",
+   "symbol": "XSource",
+   "verdict": "false_positive",
+   "implementation_paths": [
+    "src/lint/"
+   ],
+   "evidence": [
+    "docs/design/harness/L6-function-design/function-spec.md:315 — 「統一 XSource 型は存在しない。実 export 名・型は src/lint/*.ts を正本」と否定形で言及",
+    "docs/design/harness/L6-function-design/function-spec.md:313 — loader 型は lint 別 (DocSource / FrDocSource / DocConsistencySource 等) と明記",
+    "git grep -n XSource 3ca0692d -- src tests — 0 件 (設計どおり)"
+   ],
+   "rationale": "設計は XSource が存在しないことを明示しており、src に無いことは契約どおり。字句検査が否定文中の記号を拾った誤検出。",
+   "follow_up": ""
+  },
+  {
+   "id": "CD-46",
+   "design_path": "docs/design/harness/L6-function-design/memory.md",
+   "symbol": "bound_to",
+   "verdict": "retire_or_planned",
+   "implementation_paths": [],
+   "evidence": [
+    "docs/plans/PLAN-L6-97-memory-episode-retirement-contract.md — status: draft, kind: add-design (3ca0692d)",
+    "docs/design/harness/L6-function-design/memory.md:196-262 — §4.2 は #963/#964 で足された設計凍結。lifecycle/bound_to/memory retire の契約",
+    "git grep -n -e lifecycle -e retire 3ca0692d -- src/memory — 0 件 (実装未着手)",
+    "gh issue view 963 — OPEN「共有メモリのライフサイクル管理」",
+    "git grep -n bound_to 3ca0692d -- src tests — review-custody の無関係な文字列 (provider_family_identity_not_bound_to_subject) のみ"
+   ],
+   "rationale": "設計 (PLAN-L6-97 draft、issue #963 open) が 2026-10-13 に凍結されたばかりで、実装 PLAN/PR はまだ無い。設計に先行する計画済み項目であり drift ではない。",
+   "follow_up": "#963 の実装 PR (memory add の --lifecycle/--bound-to と memory retire) で実装する。本監査での対応は不要。"
+  },
+  {
+   "id": "CD-47",
+   "design_path": "docs/design/harness/L6-function-design/memory.md",
+   "symbol": "durable",
+   "verdict": "retire_or_planned",
+   "implementation_paths": [],
+   "evidence": [
+    "docs/plans/PLAN-L6-97-memory-episode-retirement-contract.md — status: draft, kind: add-design (3ca0692d)",
+    "docs/design/harness/L6-function-design/memory.md:196-262 — §4.2 は #963/#964 で足された設計凍結。lifecycle/bound_to/memory retire の契約",
+    "git grep -n -e lifecycle -e retire 3ca0692d -- src/memory — 0 件 (実装未着手)",
+    "gh issue view 963 — OPEN「共有メモリのライフサイクル管理」"
+   ],
+   "rationale": "設計 (PLAN-L6-97 draft、issue #963 open) が 2026-10-13 に凍結されたばかりで、実装 PLAN/PR はまだ無い。設計に先行する計画済み項目であり drift ではない。",
+   "follow_up": "#963 の実装 PR (memory add の --lifecycle/--bound-to と memory retire) で実装する。本監査での対応は不要。"
+  },
+  {
+   "id": "CD-48",
+   "design_path": "docs/design/harness/L6-function-design/memory.md",
+   "symbol": "lifecycle",
+   "verdict": "retire_or_planned",
+   "implementation_paths": [],
+   "evidence": [
+    "docs/plans/PLAN-L6-97-memory-episode-retirement-contract.md — status: draft, kind: add-design (3ca0692d)",
+    "docs/design/harness/L6-function-design/memory.md:196-262 — §4.2 は #963/#964 で足された設計凍結。lifecycle/bound_to/memory retire の契約",
+    "git grep -n -e lifecycle -e retire 3ca0692d -- src/memory — 0 件 (実装未着手)",
+    "gh issue view 963 — OPEN「共有メモリのライフサイクル管理」"
+   ],
+   "rationale": "設計 (PLAN-L6-97 draft、issue #963 open) が 2026-10-13 に凍結されたばかりで、実装 PLAN/PR はまだ無い。設計に先行する計画済み項目であり drift ではない。",
+   "follow_up": "#963 の実装 PR (memory add の --lifecycle/--bound-to と memory retire) で実装する。本監査での対応は不要。"
+  },
+  {
+   "id": "CD-49",
+   "design_path": "docs/design/harness/L6-function-design/memory.md",
+   "symbol": "lifecycle_source",
+   "verdict": "retire_or_planned",
+   "implementation_paths": [],
+   "evidence": [
+    "docs/plans/PLAN-L6-97-memory-episode-retirement-contract.md — status: draft, kind: add-design (3ca0692d)",
+    "docs/design/harness/L6-function-design/memory.md:196-262 — §4.2 は #963/#964 で足された設計凍結。lifecycle/bound_to/memory retire の契約",
+    "git grep -n -e lifecycle -e retire 3ca0692d -- src/memory — 0 件 (実装未着手)",
+    "gh issue view 963 — OPEN「共有メモリのライフサイクル管理」",
+    "git grep -n lifecycle_source 3ca0692d -- src tests — 0 件"
+   ],
+   "rationale": "設計 (PLAN-L6-97 draft、issue #963 open) が 2026-10-13 に凍結されたばかりで、実装 PLAN/PR はまだ無い。設計に先行する計画済み項目であり drift ではない。",
+   "follow_up": "#963 の実装 PR (memory add の --lifecycle/--bound-to と memory retire) で実装する。本監査での対応は不要。"
+  },
+  {
+   "id": "CD-50",
+   "design_path": "docs/design/harness/L6-function-design/memory.md",
+   "symbol": "parse_failed",
+   "verdict": "retire_or_planned",
+   "implementation_paths": [],
+   "evidence": [
+    "docs/plans/PLAN-L6-97-memory-episode-retirement-contract.md — status: draft, kind: add-design (3ca0692d)",
+    "docs/design/harness/L6-function-design/memory.md:196-262 — §4.2 は #963/#964 で足された設計凍結。lifecycle/bound_to/memory retire の契約",
+    "git grep -n -e lifecycle -e retire 3ca0692d -- src/memory — 0 件 (実装未着手)",
+    "gh issue view 963 — OPEN「共有メモリのライフサイクル管理」",
+    "git grep -n parse_failed 3ca0692d -- src tests — 0 件"
+   ],
+   "rationale": "設計 (PLAN-L6-97 draft、issue #963 open) が 2026-10-13 に凍結されたばかりで、実装 PLAN/PR はまだ無い。設計に先行する計画済み項目であり drift ではない。",
+   "follow_up": "#963 の実装 PR (memory add の --lifecycle/--bound-to と memory retire) で実装する。本監査での対応は不要。"
+  },
+  {
+   "id": "CD-51",
+   "design_path": "docs/design/harness/L6-function-design/memory.md",
+   "symbol": "retirable",
+   "verdict": "retire_or_planned",
+   "implementation_paths": [],
+   "evidence": [
+    "docs/plans/PLAN-L6-97-memory-episode-retirement-contract.md — status: draft, kind: add-design (3ca0692d)",
+    "docs/design/harness/L6-function-design/memory.md:196-262 — §4.2 は #963/#964 で足された設計凍結。lifecycle/bound_to/memory retire の契約",
+    "git grep -n -e lifecycle -e retire 3ca0692d -- src/memory — 0 件 (実装未着手)",
+    "gh issue view 963 — OPEN「共有メモリのライフサイクル管理」",
+    "git grep -n retirable 3ca0692d -- src tests — src/runtime/worktree-topology.ts:62 (worktree 用の別概念) のみ"
+   ],
+   "rationale": "設計 (PLAN-L6-97 draft、issue #963 open) が 2026-10-13 に凍結されたばかりで、実装 PLAN/PR はまだ無い。設計に先行する計画済み項目であり drift ではない。",
+   "follow_up": "#963 の実装 PR (memory add の --lifecycle/--bound-to と memory retire) で実装する。本監査での対応は不要。"
+  },
+  {
+   "id": "CD-52",
+   "design_path": "docs/design/harness/L6-function-design/memory.md",
+   "symbol": "untracked_durable",
+   "verdict": "retire_or_planned",
+   "implementation_paths": [],
+   "evidence": [
+    "docs/plans/PLAN-L6-97-memory-episode-retirement-contract.md — status: draft, kind: add-design (3ca0692d)",
+    "docs/design/harness/L6-function-design/memory.md:196-262 — §4.2 は #963/#964 で足された設計凍結。lifecycle/bound_to/memory retire の契約",
+    "git grep -n -e lifecycle -e retire 3ca0692d -- src/memory — 0 件 (実装未着手)",
+    "gh issue view 963 — OPEN「共有メモリのライフサイクル管理」",
+    "git grep -n untracked_durable 3ca0692d -- src tests — 0 件"
+   ],
+   "rationale": "設計 (PLAN-L6-97 draft、issue #963 open) が 2026-10-13 に凍結されたばかりで、実装 PLAN/PR はまだ無い。設計に先行する計画済み項目であり drift ではない。",
+   "follow_up": "#963 の実装 PR (memory add の --lifecycle/--bound-to と memory retire) で実装する。本監査での対応は不要。"
+  },
+  {
+   "id": "CD-53",
+   "design_path": "docs/design/harness/L6-function-design/setup-solo-team.md",
+   "symbol": "onPath",
+   "verdict": "design_follow",
+   "implementation_paths": [
+    "src/setup/index.ts",
+    "src/runtime/detect.ts"
+   ],
+   "evidence": [
+    "docs/design/harness/L6-function-design/setup-solo-team.md:133 — 「onPath (gh 有無判定) は src/runtime/detect.ts を再利用する」",
+    "src/runtime/detect.ts:22-25,49-51 — detect.ts は onPath を持たず isProviderSpawnable / isProviderCommandSpawnable で claude/codex だけを判定",
+    "src/setup/index.ts:653-680 — detectProjectScale は gh の事前有無判定をせず、deps.gh(...) の ok:false で unknown に倒す",
+    "src/setup/index.ts:1174-1185 — nodeGh は execFileSync(\"gh\") の例外を ok:false に正規化 (gh 不在もここで吸収)",
+    "git log --oneline -S onPath 3ca0692d -- src/runtime/detect.ts — 873112115 (fix: provider dispatch and handover split) で onPath が detect.ts から消えた",
+    "git grep -n onPath 3ca0692d -- src tests — 0 件 (destinationPath 等の部分一致のみ)"
+   ],
+   "rationale": "gh 不在時の安全側フォールバック (unknown → solo) は GhRunner の失敗吸収で実装されており正しく動くが、設計が参照する detect.ts の onPath は 873112115 で削除済み。設計の再利用記述が古い。",
+   "follow_up": "docs-only PR で setup-solo-team.md:133 の onPath 再利用記述を「gh の有無は GhRunner (nodeGh) の実行失敗を ok:false として扱い unknown→solo へ倒す」へ書き換える。"
+  },
+  {
+   "id": "DWI-01",
+   "design_path": "docs/design/harness/L4-basic-design/ui-standard.md",
+   "verdict": "retire_or_planned",
+   "implementation_paths": [],
+   "evidence": [
+    "git ls-tree -r --name-only origin/main | grep '^src/web' — src/web/.gitkeep のみ (実装 0)",
+    "docs/governance/document-system-map.md:118 — L7 `src/web` 実装コードは「(L7-141 で未着手)」",
+    "docs/plans/PLAN-L7-141-web-dashboard-component-derived.md:7-9 — status: draft / version_target: future / route_signal: version_deferral",
+    "docs/plans/PLAN-L7-141-web-dashboard-component-derived.md:43 — PO 決定 (2026-06-26) で中央 UI 実装は後回し、将来版で再開する明示保全",
+    "docs/plans/PLAN-L7-141-web-dashboard-component-derived.md:45 — current close では Pack に src/web UI runtime を含めてはならない",
+    "src/lint/runtime-portability.ts:593 / src/lint/frontend-design-coverage.ts:85 — src/web は descent marker と除外対象としてのみ参照",
+    "git grep -n -F AppShell / RouteRegistry / DataProvider origin/main -- src tests — 0 件"
+   ],
+   "rationale": "ui-standard が指す L7 src/web 実装は PLAN-L7-141 で version_target: future として PO 決定により将来版へ繰り延べられている。設計の欠陥ではなく、計画済みの将来機能である。",
+   "follow_up": ""
+  },
+  {
+   "id": "DWI-02",
+   "design_path": "docs/design/harness/L5-detailed-design/ui-detail.md",
+   "verdict": "retire_or_planned",
+   "implementation_paths": [],
+   "evidence": [
+    "docs/design/harness/L5-detailed-design/ui-detail.md:17-29 — AppShell / RouteRegistry / QueryState / DataProvider / EvidenceLink / CopyButton / TableView を中央 dashboard の FE module として定義",
+    "git grep -n -F 'AppShell' origin/main -- src tests (RouteRegistry, DataProvider, EvidenceLink も同様) — 0 件",
+    "git ls-tree -r --name-only origin/main | grep '^src/web' — src/web/.gitkeep のみ",
+    "docs/plans/PLAN-L7-141-web-dashboard-component-derived.md:8,43,45 — 中央 UI 実装は version_target: future、PO 決定で繰り延べ",
+    "docs/governance/document-system-map.md:117-118 — L5 ui-detail は body 起票済、L7 実装は L7-141 で未着手"
+   ],
+   "rationale": "ui-detail は中央 dashboard の FE 内部設計であり、その実装 PLAN-L7-141 は将来版として明示保全されている。未実装は計画どおりの状態である。",
+   "follow_up": ""
+  },
+  {
+   "id": "DWI-03",
+   "design_path": "docs/design/harness/L6-function-design/confirmed-document-placeholder-detection.md",
+   "verdict": "retire_or_planned",
+   "implementation_paths": [],
+   "evidence": [
+    "docs/design/harness/L6-function-design/confirmed-document-placeholder-detection.md:37 — 純関数 findUnfilledTemplatePlaceholders(path, status, content) の契約 (oracle CANDIDATE-U-PH-001..025)",
+    "docs/design/harness/L6-function-design/confirmed-document-placeholder-detection.md:41-48 — G1〜G14 の既存 gate 経路への接続を規定",
+    "git grep -n findUnfilledTemplatePlaceholders origin/main — 設計 doc の 1 件のみ、src/tests に 0 件",
+    "git grep -n '記入\\[' origin/main -- src tests — 0 件 (regex 実装なし)",
+    "docs/plans/PLAN-L6-833-confirmed-document-placeholder-detection.md:50 — status: draft、完了条件に「後続実装への引き渡し」を control が判断する",
+    "git log origin/main --oneline --grep=894 — e2fd03fe (契約 reissue) / 31c44e96 (post-green confirm 準備) のみで実装 commit なし",
+    "docs/plans/PLAN-L6-833-confirmed-document-placeholder-detection.md:110-115 — 完了条件に「後続実装への引き渡し」が未完了 (control 再判定 2026-10-13: 下書きの red_green_fix から変更)"
+   ],
+   "rationale": "Issue #894 の L6 契約 (PLAN-L6-833) は確定の手続き中で、完了条件に「後続実装への引き渡し」が残っている。契約を先に凍結して実装が後に続く正規の順序であり、ずれではない。",
+   "follow_up": "PLAN-L6-833 の confirm 後に、#894 の実装 (findUnfilledTemplatePlaceholders) を lane へ引き渡す。"
+  },
+  {
+   "id": "DWI-04",
+   "design_path": "docs/design/harness/L6-function-design/doctor-result-envelope-measurement.md",
+   "verdict": "false_positive",
+   "implementation_paths": [
+    "src/doctor/index.ts",
+    "src/doctor/result-file.ts",
+    "src/cli.ts"
+   ],
+   "evidence": [
+    "src/doctor/index.ts:152-191 — DoctorMeasurement {result, checkIds, profile} と runDoctorMeasured。setup-smoke では checkIds=['setup-smoke'] (164 行)",
+    "src/doctor/index.ts:193-198 — runDoctor は runDoctorMeasured(...).result の projection (設計 §3 の invariant どおり)",
+    "src/doctor/result-file.ts:92-111 — buildDoctorResultEnvelope が measurement の checkIds を check_ids に書き出す",
+    "src/cli.ts:770,849-867 — --result-file で writeDoctorResultEnvelopeFile に measured.checkIds を渡す",
+    "tests/doctor-result-file.test.ts:355 — U-DOCTORENV-012 / tests/cli-surface.test.ts:407 — U-DOCTORENV-016",
+    "git grep -n -E 'checkIds|result-file|DoctorResultEnvelope' origin/main -- src — 上記がヒット"
+   ],
+   "rationale": "設計が定める runDoctorMeasured と envelope 生成器は src/doctor に実装されており、対応 oracle テストもある。設計 doc は src path を書いていないので、inventory 側の未解決にすぎず doc の修正は不要。",
+   "follow_up": ""
+  },
+  {
+   "id": "DWI-05",
+   "design_path": "docs/design/harness/L6-function-design/edge-case.md",
+   "verdict": "hold",
+   "implementation_paths": [
+    "src/runtime/agent-guard.ts",
+    "src/runtime/detect.ts",
+    "src/vmodel/lint.ts",
+    "src/plan/lint.ts"
+   ],
+   "evidence": [
+    "src/runtime/agent-guard.ts:93 evaluateAgentGuard / src/runtime/detect.ts:53 detectMode / src/vmodel/lint.ts:605 lintVmodel / src/plan/lint.ts:1150 lintPlan — §1 の対象関数は実在",
+    "docs/design/harness/L6-function-design/edge-case.md:13 — marker deriveEdgeCaseOracle と U-EDGE-001..005。git grep deriveEdgeCaseOracle origin/main -- src tests は 0 件で、本文 (31-56 行) の U-EDGE-02/03 と ID 体系も合っていない",
+    "docs/test-design/harness/L7-unit-test-design.md:80-85 — U-EDGE-01..03 は「候補」のまま",
+    "src/lint/oracle-test-trace-widened-baseline.ts:195-197,211-214 — U-EDGE-01..03 / U-FUNC-01..04 はテスト citation 無しの既知債務 baseline",
+    "edge-case.md §2 表 — `trace check` / `sprint check` を core 操作に挙げるが、src/cli.ts:1135 の trace の配下は impact / rag だけで、git grep -i sprint origin/main -- src/cli.ts src/cli は 0 件",
+    "docs/design/harness/L3-functional/functional-requirements.md:99,108 — AC-FR-02-01/03 が `ut-tdd sprint check` を要求しており、上流 FR 側でも未実装"
+   ],
+   "rationale": "§1 の関数は実装済みなので、§1 は false positive。一方 §2 の `sprint check` / `trace check` は上流 L3 FR-02 の AC ごと未実装で、retire・planned・未実装のどれなのかを本 doc だけでは判定できない。marker の oracle ID も本文と食い違っている。",
+   "follow_up": "L3 FR-02 (sprint check) の処遇を FR registry / PLAN で確定させてから判定する。retire なら edge-case §2 と marker の ID を design-follow PR で直し、存続なら sprint check を Red/Green 実装 PR に回す。"
+  },
+  {
+   "id": "DWI-06",
+   "design_path": "docs/design/harness/L6-function-design/fr-unit-coverage.md",
+   "verdict": "false_positive",
+   "implementation_paths": [
+    "src/lint/l6-fr-coverage.ts",
+    "src/doctor/process-quality.ts"
+   ],
+   "evidence": [
+    "src/lint/l6-fr-coverage.ts:111 — export function analyzeL6FrCoverage (設計 marker の契約名と一致)",
+    "src/doctor/process-quality.ts:36,354 — doctor から analyzeL6FrCoverage(loadL6FrCoverageDocs(repoRoot)) を呼ぶ",
+    "src/state-db/projection-writer.ts:32,333 — projection でも利用",
+    "git grep -ln 'l6-fr-coverage|analyzeL6FrCoverage' origin/main -- tests — tests/l6-fr-coverage.test.ts ほか 4 件"
+   ],
+   "rationale": "marker の analyzeL6FrCoverage は src/lint/l6-fr-coverage.ts に実装され、doctor から配線されている。doc は src path を書いていないため、修正は不要。",
+   "follow_up": ""
+  },
+  {
+   "id": "DWI-07",
+   "design_path": "docs/design/harness/L6-function-design/gate-confirm.md",
+   "verdict": "false_positive",
+   "implementation_paths": [
+    "src/lint/gate-confirm.ts",
+    "src/doctor/rule-quality.ts"
+   ],
+   "evidence": [
+    "src/lint/gate-confirm.ts:77 layerToGate / :97 parseGateStatuses / :115 parseConfirmDoc / :140 loadGateConfirmDocs / :155 analyzeGateConfirm / :173 gateConfirmMessages — §2 の 6 関数がすべて実在",
+    "src/doctor/rule-quality.ts:20,163 — doctor 配線",
+    "tests/gate-confirm.test.ts:19 — U-GCONF-001 (ほか 001b/001c)"
+   ],
+   "rationale": "§2 の関数表は src/lint/gate-confirm.ts と完全に一致し、oracle テストもある。doc に src path の記載がないので、inventory 側の未解決にすぎない。",
+   "follow_up": ""
+  },
+  {
+   "id": "DWI-08",
+   "design_path": "docs/design/harness/L6-function-design/oracle-test-citation-trace.md",
+   "verdict": "false_positive",
+   "implementation_paths": [
+    "src/lint/oracle-test-citation.ts",
+    "src/lint/oracle-test-citation-baseline.ts",
+    "src/lint/oracle-test-trace.ts",
+    "src/doctor/source-trace.ts"
+   ],
+   "evidence": [
+    "src/lint/oracle-test-trace.ts:19-26 — collectOracleCitationSites (./oracle-test-citation.ts) と ORACLE_TEST_CITATION_BASELINE を import し、逆向き citation を突合",
+    "src/lint/oracle-test-trace.ts:99 analyzeOracleTestTrace / src/doctor/source-trace.ts:136 / src/doctor/check-definition-groups.ts:241 — doctor gate oracle-test-trace",
+    "tests/oracle-test-trace.test.ts:10,422,439 — collectOracleCitationSites のテスト",
+    "git ls-tree --name-only origin/main src/lint/ | grep oracle-test-citation — oracle-test-citation.ts と -baseline.ts"
+   ],
+   "rationale": "設計の逆向き citation collector は src/lint/oracle-test-citation.ts に実装され、oracle-test-trace gate に組み込まれている。doc に path の記載がないので、修正は不要。",
+   "follow_up": ""
+  },
+  {
+   "id": "DWI-09",
+   "design_path": "docs/design/harness/L6-function-design/plan-schedule-lint.md",
+   "verdict": "false_positive",
+   "implementation_paths": [
+    "src/plan/lint.ts"
+   ],
+   "evidence": [
+    "src/plan/lint.ts:73 extractScheduleSection / :87 analyzePlanSchedule / :116 loadPlanScheduleDocs / :134 planScheduleMessages / :1150 lintPlan / :1161 lintPlanDefault — §2 の 6 関数がすべて実在",
+    "src/plan/lint.ts:1177 — gate 未指定時は lintPlanDefault (設計 §3 の既定動作と一致)",
+    "tests/plan-lint.test.ts:154 — U-PLANSCH-001"
+   ],
+   "rationale": "関数表は src/plan/lint.ts と一致する。実装は src/lint ではなく src/plan 配下にあるが、doc は path を書いていないので修正は不要。",
+   "follow_up": ""
+  },
+  {
+   "id": "DWI-10",
+   "design_path": "docs/design/harness/L6-function-design/release-channel-manifest.md",
+   "verdict": "design_follow",
+   "implementation_paths": [
+    "src/schema/release-manifest.ts",
+    "src/setup/release-materializer.ts",
+    "src/setup/release-aggregate-admission.ts",
+    "src/setup/distribution.ts"
+   ],
+   "evidence": [
+    "docs/design/harness/L6-function-design/release-channel-manifest.md:27,35 — parseCanonicalReleaseManifest を規定。git grep parseCanonicalReleaseManifest origin/main -- src tests は 0 件。実装は src/schema/release-manifest.ts:340 parseReleaseManifest / :347 parsePublicationManifest",
+    "tests/release-manifest.test.ts:398 — U-RELMAN-001 は src/schema/release-manifest.ts 側を検証",
+    "src/schema/release-manifest.ts:357 resolveReleaseChannel / src/setup/release-materializer.ts:130 materializeReleaseArtifacts — 名前が一致",
+    "docs/design/harness/L6-function-design/release-channel-manifest.md:30,64 — buildCleanDistributionPlan(manifest, artifacts, allowlist) => SealedPlan と規定",
+    "src/setup/distribution.ts:319 — 同名の buildCleanDistributionPlan は {paths, sourceTag} を取る別関数 (src/cli/distribution.ts:658 で使用)",
+    "src/setup/release-aggregate-admission.ts:237 admitReleaseAggregate / :305 applySealedReleaseAggregate — sealed plan の契約の実体。tests/release-aggregate-admission.test.ts:394 が U-RELMAN-014",
+    "docs/archive/memory-legacy-2026-09/feedback-errata-on-merged-l6-release-channel-manifest-section-4-... — 同じ取り違えを errata として記録済み (S2 実装前に訂正必須)",
+    "docs/plans/PLAN-L7-473-staged-release-channel-manifest.md:9 — status: draft"
+   ],
+   "rationale": "段階リリースの部品は実装済みだが、設計 doc の関数名 (parseCanonicalReleaseManifest、§4 の buildCleanDistributionPlan) が実装と食い違っている。後者は既存の別関数を指しており、errata が記録済みのまま doc に反映されていない。",
+   "follow_up": "design-follow PR で release-channel-manifest.md の DbC 表と §3/§4 を parseReleaseManifest / parsePublicationManifest と admitReleaseAggregate に合わせ、oracle 割当 (U-RELMAN-001/014-016) との対応を確認する。"
+  },
+  {
+   "id": "DWI-11",
+   "design_path": "docs/design/harness/L6-function-design/review-evidence-stale.md",
+   "verdict": "false_positive",
+   "implementation_paths": [
+    "src/lint/review-evidence.ts"
+   ],
+   "evidence": [
+    "src/lint/review-evidence.ts:160 extractReviewEntries / :269 analyzeReviewEvidence / :360 reviewEvidenceMessages — §2 の 3 関数が実在",
+    "src/lint/review-evidence.ts:90,274,302,334-340 — staleApprovalViolations (draft_with_approval) を ok 判定に含める",
+    "tests/review-evidence.test.ts:409 — U-REVIEW-007"
+   ],
+   "rationale": "stale approval の検出は src/lint/review-evidence.ts に実装され、oracle テストもある。doc に path の記載がないので、修正は不要。",
+   "follow_up": ""
+  },
+  {
+   "id": "DWI-12",
+   "design_path": "docs/design/harness/L6-function-design/screen-spec.md",
+   "verdict": "retire_or_planned",
+   "implementation_paths": [],
+   "evidence": [
+    "docs/design/harness/L6-function-design/screen-spec.md:18-30 — 中央 dashboard の per-screen 契約 ScreenFunctionSpec",
+    "git grep -n -F ScreenFunctionSpec origin/main -- src tests — 0 件",
+    "tests/l6-completion.test.ts:166-174 — U-SCREEN oracle family の doc citation だけを検査 (実装テストではない)",
+    "docs/plans/PLAN-L7-141-web-dashboard-component-derived.md:8,43,45 — 中央 UI 実装は version_target: future、PO 決定で繰り延べ",
+    "docs/governance/document-system-map.md:117-118 — L6 screen-spec は body 起票済、L7 src/web は L7-141 で未着手"
+   ],
+   "rationale": "screen-spec は中央 dashboard の画面機能仕様であり、その L7 実装は PLAN-L7-141 で将来版として明示保全されている。",
+   "follow_up": ""
+  }
+ ]
+}
