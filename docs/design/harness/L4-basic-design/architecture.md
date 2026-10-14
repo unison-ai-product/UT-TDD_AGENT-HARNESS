@@ -525,6 +525,18 @@ lifecycle の record / event と sealed terminal・retire receipt が authoring 
 
 retire は dry-run を既定とし、対象 realpath / admin entry / head / branch、保全理由、deny reason、state 分類、receipt digest、期待 operation id を immutable plan に記録する。apply は同じ canonical snapshot と plan digest を再検証してから、worktree 実体の retention quarantine への原子的退避、admin entry 解除、worktree-local cache 整理の順に段階適用し、canonical / durable な HARNESS state は削除しない。quarantine 実体の物理削除は terminal retire receipt の seal と retention boundary 到達後に限る。各境界の crash / retry は operation id と append-only receipt で冪等に再生し、旧対象の喪失や部分成功の Green 報告を許さず `retained` + typed fault に収束させる。
 
+### §14.3 worktree path の診断 (旧 U-PLACE-013 の生存部分)
+
+`CanonicalPathLineagePort` の入力となる worktree path は、次の条件をすべて満たす場合だけ受理し、満たさない場合は typed deny `path_invalid` で fail-close する (`src/runtime/worktree-lifecycle/application/service.ts` の登録経路が実装している)。
+
+- 対象 platform (win32 / linux) の規則で絶対 path であること。
+- canonical 化 (native realpath) に成功し、worktree 実体と admin entry の双方が解決できること。canonical 化できない場合に文字列比較や擬似 realpath へ倒れない。
+- canonical root が正規化済みであり、worktree の canonical path が root の直下の子、admin entry が `<root>/.git/worktrees` の直下の子であること (root 外・admin 境界外への逃げを拒否する)。
+- canonical 化後の worktree path と admin entry path が 240 UTF-16 code unit 以下であること。
+- win32 では、worktree 名が予約デバイス名 (CON / PRN / AUX / NUL / COM1-9 / LPT1-9。拡張子付きと末尾の空白・ドットを含む) でないこと。
+
+空白を含む path は deny せず、argv 契約で受け渡す。検証の対応は L9 §10.4 と `CANDIDATE-ST-WTLIFE-012` / `013` である。
+
 ## §15 repository / runtime placement topology の cutover (PLAN-L4-34 の残り、廃止)
 
 PLAN-L4-34 の `PlacementCutoverReceipt` chain (`prepared → fenced_old → active_new → rollback_window → retired_old`)、old clone write fence、dual-canonical の拒否、canonical state root resolver、4-class 台帳は、OneDrive 上の primary clone を OneDrive 外へ cutover する前提の契約だった。この前提は、2026-08-24 の OneDrive アプリ撤去と OneDrive 外の開発 root への配置で消え、PO 判断 (#958 の判断記録) で **廃止** した。`src/` には cutover runner、write fence、receipt chain、state root resolver、OneDrive 検出のいずれも実在せず (grep `PlacementCutover` / `write fence` / `onedrive` / `stateRoot` が 0 件)、廃止で失われる現行機構は無い。
@@ -533,6 +545,7 @@ PLAN-L4-34 の `PlacementCutoverReceipt` chain (`prepared → fenced_old → act
 
 - worktree lifecycle (PLAN-L4-34 §3.3、AC-PLACE-10..13、旧 `U-PLACE-010`): §14 と L9 §10 (`src/runtime/worktree-lifecycle/` に実装あり)。
 - Bun 禁止 (AC-PLACE-07、旧 `U-PLACE-015`): §1 / §2 と §9 の Node 制御面。
+- path 診断 (AC-PLACE-06 のうち OneDrive 検出を除く部分、旧 `U-PLACE-013`): absolute / canonicalization / root・admin 境界 / 240 UTF-16 制限 / Windows 予約名は §14.3 と L9 §10.4 (`src/runtime/worktree-lifecycle/application/service.ts` に実装あり)。
 - cutover receipt の一般形 (一方向の状態遷移、chain 不一致の fail-close): §9 の `CutoverTransitionReceipt`。
 
-OneDrive 検出 (AC-PLACE-06、旧 `U-PLACE-013` / `014`)、path 診断、4-class 台帳 (旧 `U-PLACE-002`)、state root の一意解決 (旧 `U-PLACE-001`) は、現行の `src/` にも運用にも無い。再び必要になったら新規 PLAN で起票する。旧 `U-PLACE-001` / `003` / `017` / `018` などの oracle は、対象機構ごと廃止したため test-design へ移さない。
+廃止するのは、OneDrive 検出 (旧 `U-PLACE-014`、旧 `U-PLACE-013` のうち OneDrive 固有の部分)、4-class 台帳 (旧 `U-PLACE-002`)、state root の一意解決 (旧 `U-PLACE-001`) で、現行の `src/` にも運用にも無い。再び必要になったら新規 PLAN で起票する。旧 `U-PLACE-013` の path 診断は上の生存部分であり、廃止しない。旧 `U-PLACE-001` / `003` / `017` / `018` などの oracle は、対象機構ごと廃止したため test-design へ移さない。

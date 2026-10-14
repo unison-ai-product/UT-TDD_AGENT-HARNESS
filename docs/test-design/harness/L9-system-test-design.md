@@ -493,6 +493,7 @@ Green、`negative` は一見成功する実装を必ず Red にする条件で�
 
 Linux では realpath、mount/device、POSIX `PATH_MAX`、symlink、process/lease probe を実測し、Windows では
 drive-letter case、junction/reparse、UTF-16 long path、reserved name、spaces を native fixture で実測する。
+診断の境界値は、非 absolute path、canonicalization 不能、root / admin entry の境界外、canonical 化後 240 UTF-16 code unit の超過、win32 予約名であり、いずれも `path_invalid` で fail-close する (L4 architecture §14.3)。
 OS capability、realpath、inventory、terminal input、process/lease probe、retire apply の各境界を一つずつ fault
 注入し、観測不能を Green に丸めない。#232/#124 の既存証跡を同一 attempt に束縛できない場合は
 `inventory_unavailable` または terminal typed deny とする。
