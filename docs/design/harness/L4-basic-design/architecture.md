@@ -422,3 +422,34 @@ recoverable outbox) で確定し、片肺を許さない。receipt の success �
 macOS は Linux 同等を自己申告せず、証明できる capability だけを公開する。
 
 移行元: docs/plans/PLAN-L4-32-resource-governed-execution-kernel.md (issue #648)
+
+## §11 宣言型 V-model contract と右腕 engine (PLAN-L4-24 / L4-27 / L4-28 からの還流)
+
+L0-L14 の layer / gate / V-pair / 成果物 / case ID / evidence / exit criteria / defect routing / approval / profile は宣言型正本 `docs/process/vmodel-contract.yaml` に集約する。contract loader が検証した同一 DTO から plan lint、generic right-arm detector、doctor definition、roadmap obligation を導出し、手書きの gate mapping 定数 (`VERIFICATION_GATE_BY_LAYER` 等) が contract 由来 registry と一致しなければ CI / doctor が fail-close する。detector は欠落した設計判断を補完しない。L8-L14 は各層 `kind: verify` PLAN を最低 1 件持ち、工程表の G8→G14 predecessor chain に載せる (L8-01〜L14-01 は起票済)。verification band の恒久 park は撤去し、未完は残 frontier として表示する。未達 (目標): contract が draft の間は right-arm detector が `IN-PROGRESS` を表示し、confirmed 後の不足は hard failure にする。
+
+### §11.1 detector の独立自己証明 (PLAN-L4-28)
+
+信頼鎖は `authored contract → schema validator → deterministic compiler/registry → runtime detector/doctor → normalized finding/receipt` とし、独立 meta-verifier は検査対象 detector の判定関数を oracle に再利用せず、構造・digest・fixture 期待値・process exit を照合する。照合項目は source 完全性、source hash と生成 digest、contract rule と detector 登録の exactly-once、mutation / negative control での実発火、receipt と commit / revision / test run の対応である。rule ごとの receipt は `rule_id`、contract revision、source/generated hash、detector_id、positive/negative fixture、期待/実測 finding・exit、test_run_id、source commit、verified_at、verifier version を持つ。receipt が無い rule は「未統制」とし green coverage に数えない。mutation 注入 (条件削除・mapping ずれ・未配線・例外握り潰し・DB-only 補完) を meta-verifier が全て検出すること、CLI / hook / doctor / CI が同じ rule identity と verdict を返すこと、DB 再構築後も receipt と finding が再現することを要求する (すべて未実装の目標契約)。
+
+negative fixture の現況 (2026-07-13 監査、L7 降下時の初期 scope): 有 = evidence 欠落 (`tests/review-evidence.test.ts`)、stale evidence 流用 (`tests/green-command-digest.test.ts`)、orphan gate run (`tests/doctor.test.ts`)、DB projection drift (`tests/db-currency.test.ts`)、Markdown-ledger 不一致 (`tests/merged-plan-status.test.ts`)、workspace 汚染 (`tests/tracked-canonical.test.ts`)。限定 = revision 不一致、generated registry drift (正常系のみ)。無 = duplicate YAML key (parser は fail-close だが専用負系なし)、merge key `<<`、deny artifact 混入、Windows path 衝突 (検出ロジック自体が不在で新規 detector 設計が要る)。
+
+### §11.2 semantic item 自己適合監査の語彙 (PLAN-L4-27)
+
+ZIP 163 item を HARNESS 自身が満たすかは `verified | partial | gap | profile_conditional | not_applicable | pending_review` の 6 状態で評価する。`verified` は design・implementation・test/evidence の 3 面を要し、存在確認だけの green を認めない。`partial|gap` は負債 PLAN・severity・owner・次遷移、`profile_conditional|not_applicable` は理由・profile・製品境界を持つ。self-assessment から detector / doctor を生成し、detector は評価結果を創作しない。object / class / method 対象 item は data.md §13 に接続する。
+
+## §12 非機能検証基盤の方式 (PLAN-L4-31 からの還流、未実装の目標契約)
+
+現行 verify 基盤は `src/lint/verification-profile-catalog.ts` の 8 profile のみで、NFR 実測の profile・adapter・evidence・gate は存在しない。目標は 5 層 (NFR Contract → Verification Profile → Tool Adapter → Normalized Evidence → NFR Gate) とし、判定ロジックを adapter 側へ分散させない。raw 出力は evidence artifact として保存し gate は normalized row のみ参照する。既存系統 (V-model / doctor / verify profile / harness.db / Gate) へ統合し、別系統を作らない。
+
+- **stage 割当**: L7 軽量静的 + security、L8 結合障害・data integrity、L9 負荷・耐久・DAST・互換・a11y、L10 人間ユーザビリティ、L11 負荷分散・冗長・復旧、L12 release 証跡集約、L13-L14 本番観測・SLO/MTTR/cost。G8-G14 へ NFR evidence 要求を接続する。
+- **実行環境 4 面** (local / GitHub Actions / VPS staging / AWS): environment を evidence の必須 field とし、対象外環境の evidence 流用は gate で fail-close する (staging 実測を本番相当と誤読しない)。
+- **profile**: 初期 8 (NFR-STATIC / NFR-SEC-CODE / NFR-PERF-SMOKE / NFR-PERF-STAGING / NFR-RESILIENCE / NFR-WEB-QUALITY / NFR-RECOVERY / NFR-OBSERVABILITY) を既存 catalog へ統合し、riskTier / requiresNetwork / requiresHumanApproval を継承する。Windows native での adapter 動作可否は前提条件 field で宣言し、OS × 環境の evidence matrix に接続する。manual evidence は承認者を記録し、承認者の家族分離 (人間承認版の `same_model_approval: forbidden`) を定める。
+- **Tool Adapter 候補**: k6 / Trivy / Gitleaks / Semgrep or CodeQL / Checkov / OWASP ZAP / Playwright / axe-core / Toxiproxy。
+- **projection**: `nfr_contracts` / `nfr_evidence` の追加を宣言し、物理設計は L5 に委ねる。
+- **追加観点**: AI 固有 NFR (判定再現性・model version drift・prompt injection 耐性・token 予算、cost 測定 adapter) は category 追加か理由付き除外で確定する。検証基盤の自己負荷上限 (並行数・メモリ・実行時間 budget、singleton / queue) は doctor singleton の規律を NFR runner へ一般化する。compliance (privacy・license・SBOM・署名) は security と別軸で割り当て、供給網設計 (`security.md` §6) と責務分離する。evidence への secret/PII 混入は既存 sensitive-scan gate に接続する。
+- **実装順 (後続 PLAN 単位)**: Phase 1 schema + gate core → Phase 2 STATIC / SEC-CODE / PERF-SMOKE → Phase 3 staging 系 → Phase 4 recovery / observability / AWS。契約は L6 `PLAN-L6-87`、物理は L5 が受ける。
+- **L3 NFR carry**: `nfr-grade.md` の NFR-02 (更新性) / NFR-09 (rule parity) の閾値・AC placeholder は L3 側に carry として残っている (A-174 F-3、PLAN-L4-15)。本節の検証基盤方式で閾値と検証方法を確定し、`nfr-grade.md` の placeholder 節と AT-NFR-02/09 を置換する (未着手)。
+
+## §13 Node 制御面の補足契約 (PLAN-L4-33 からの還流)
+
+current の Bun は migration debt、target の Node は未実装の設計状態として別 field・別 receipt で表す。activation は append-only の immutable marker で、既存 current pointer を上書きしない。publish lease (`dist/node-publish.lock/` の atomic mkdir) の crash 残留は F0 で永久に fail-close とし、recovery・steal・clear を持たない。F0 の rollback は同一 revision 内に限り、revision をまたぐ戻しは unsupported (git revert から新 revision を build する)。review + admission 済み D0 draft が許すのは順序内の非 activation 作業だけで、production activation・hook/runtime switch・Bun 最終削除・cutover は L6 confirmed + D0 admission まで禁止する。pair oracle は L9 の `CAND-NODEBOOT-201..213` で、対応 test と実装の同一 commit Red 実測まで正式 `ST-*` へ昇格しない。

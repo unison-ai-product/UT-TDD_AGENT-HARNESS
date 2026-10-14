@@ -404,3 +404,15 @@ E3/E4 outbox 境界だけ)。
   設計変更を自動承認せず、PLAN / ADR へ戻す入力に留める。
 
 移行元: docs/plans/PLAN-L4-30-execution-ledger-github-architecture.md (issue #648)
+
+## Appendix D: Forward FSM と PLAN Asset v2 の外部契約 (PLAN-L4-23 からの還流)
+
+Forward は append-only の状態機械として執行する (方式は ADR-008、細則は `docs/process/forward/overview.md` / `docs/process/plan-asset-v2.md`、L6 は `function-spec.md`)。正規遷移は `proposed → planned → pair_freeze_ready → pair_frozen → red_frozen → implementing → implementation_complete → trace_freeze_ready → trace_frozen → review_ready → reviewed → accepted → archived`。`blocked | superseded | rejected | reopened` は理由と revision / exception event を必須とする。
+
+- 拒否条件: pair freeze 前の implement、Red evidence 無しの implement、trace freeze 前の review、review・test 不足の accept。stale・期限切れ・別 revision の evidence は accept に使えない。
+- PLAN Asset v2 は不変の `asset_id`、可読 alias、revision、artifact ID、依存 asset ID、evidence policy を持つ。rename・layer 変更で `asset_id` は変わらず、revision 更新後も旧 evidence を改変しない。transition と evidence は append-only の ledger とし、subject revision・source commit・digest・expiry を結合する。
+- v1 PLAN は canonical v2 DTO の adapter で読み、新規 authoring と意味変更時に v2 へ昇格する。numeric core の衝突群は migration ledger に列挙する。
+- schedule / gate / trace / review / accept の detector は canonical parser と FSM verdict を共有する。projection を全削除して再構築しても transition / evidence の identity と reduction 結果は一致する。
+- CLI 面: `workflow status|transition|explain`、`plan migrate|validate|revise`。
+
+依存: 本 Appendix の Execution Episode (Appendix C) は Forward FSM と PLAN Asset の revision を origin として束縛する (Appendix C の責務が本 Appendix の成果に依存する)。

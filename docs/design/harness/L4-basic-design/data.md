@@ -310,3 +310,33 @@ renameはdelete+addの推測ではなく、旧新pathを一つのdeltaとしてa
 - canonical responsibilityの重複、supersession cycle、case-fold collision、短縮PLAN ID多義を拒否する。
 - archive/historical/negative fixtureの文をcanonical assertionとしてprojectionしない。
 - DB rowはprojectionでありauthoring sourceを逆生成しない。再build失敗時は旧projectionを保持し全rollbackする。
+
+### §11.1 disposition と closure の意味 (PLAN-L4-25 からの還流)
+
+`DispositionDecision` の各値は次の後条件を持つ。`update` は自己 target と適用後 blob と変更 PLAN、`merge` は target canonical と移送する意味と旧 path の最終処置、`retain` は整合理由と比較対象 (未確認を retain にしない)、`supersede` は successor と参照書換えと旧 path の処置、`archive` は canonical からの参照禁止範囲、`not_applicable` は条件・観測値・再評価 trigger・判断主体を必須とする。`reference` は disposition ではなく authority であり、reference 文書にも処置が要る。`generated_view` は generator と入力 schema を target に持ち、手編集で closure を作らない。
+
+closure は baseline だけでなく final snapshot を単位とし、baseline record・明示 delta・final path・typed edge を同じ run に束縛する。`pending / missing / duplicate / phantom / semantic_mismatch / orphan / stale_inbound` がすべて 0 のときだけ完了とする。reference は存在確認だけで closed にせず、source が渡す意味と target が所有する意味の一致を検証する。canonical edge から archive・削除 path・generated view を正本として参照しない。target slot の無い reference、anchor・PLAN full ID・spec/test ID の多義、supersession の循環、case-fold collision は warning に縮退せず open finding とする。detector は台帳を読むだけで、監査対象・判断・target を推測生成しない。L9 `ST-DOCSEM-01..08` が oracle を持つ。
+
+## §12 文書カタログ・規模プロファイル・source disposition の SSoT (PLAN-L4-20 / L4-22 からの還流)
+
+- **正本と投影**: 文書種別カタログ (種別 ID・カテゴリ・状態・詳細度) と規模プロファイルの authoring source は `docs/governance/vmodel-document-catalog.md` / `vmodel-document-scale-profiles.md` であり、`harness.db` は投影先 (§8.1 の `document_catalog_entries` / `document_scale_profile_*`) に限る。役割境界は、本節がカタログと規模プロファイルの SSoT 定義、scope detection dry-run は SSoT を使う表示側 (上下関係)、activation profile は version 単位の対象/除外である。
+- **profile 解決**: size 3 (PoC / Standard / Enterprise) × product 5 (Web / Mobile / Desktop / CLI / APIService) の 8 profile を直交軸で定義し、default + override (`adopt|conditional|skip|defer`、`detail_override`、`status_override`) で決定論的に解決する。unknown profile / item は fail-close。detector は authored decision を補完しない。
+- **理由の必須化**: `skip|defer|conditional` は理由必須とし、「未着手」と「意図的 skip」を区別する (product-select の環境定義・ネットワーク・DR/BCP 等は skip 判定で「無いこと」を残す)。catalog 欠落、理由欠落、`required_plan_id` 未解決は finding 化し、投影側で補完しない。
+- **source → item → target**: checked ZIP の 109 source / 163 semantic item / 21 category / 8 profile を exactly once で inventory する (provenance は `vmodel-source-manifest.md` の sha256・件数が正本)。source disposition は `adopt|merge|reference|defer|not_applicable|reject`。`defer` は既存 PLAN、`not_applicable|reject|reference|merge` は理由、`adopt|merge` は target artifact か起票 PLAN を持つ。item の存在・target 接続を実装の正しさとみなさない (意味・実装・test の自己適合監査は `vmodel-semantic-item-self-assessment.md` が所有し、`pending_review` は coverage に数えない)。
+- **未達の訂正 (A-187、目標。2026-10-14 時点で governance 側に未反映)**: ZIP-DOC-109 の target を `vmodel-refactor-qa-release-gates.md` へ訂正する (現状 `docs/process/gates.md`)。ZIP-DOC-041 (i18n は日本語固定 Q31 と衝突) と 048/060/062/065/070 (target に概念軸不在) の disposition 再判断。reference 先 slot 不在 6 件 (ZIP-DOC-054/055/059/063/066/068) の slot 追加か理由付き not_applicable への変更。012 / 069 / 096 / 098 / 101 / 102 の claim-only・target 誤指定の訂正。semantic catalog の誤 `done` (mesh_vmodel / perf / sectest) の訂正。`.ut-tdd/cache/` の sha 不一致解消か取得元の manifest 明記。
+
+## §13 engine-swap の aggregate / class 判断 (PLAN-L4-26 からの還流)
+
+class は状態・不変条件・lifecycle を所有する場合だけ採用し、namespace や DTO wrapper には使わない (§3.1 / §3.2 の規約に従う)。parser・serializer・DB adapter・fs loader は port/adapter に隔離し、巨大な汎用 manager class を導入しない。
+
+| 対象 | 判断 | 現状 (architecture §3.1 の公開 IF) |
+|---|---|---|
+| `PlanAsset` | identity / revision 不変条件を持つ aggregate class | `PlanAsset.create/reconstruct/revise()` 実装済 |
+| `PlanRevision` / `EvidenceRecord` | immutable value object | `EvidenceRecord.isUsableFor()` 実装済 |
+| `ForwardWorkflow` / `WorkflowTransition` | event append 以外の mutation 禁止。transition は immutable event | reducer (`reduceForward()`) と `ForwardWorkflowApplication` で実現 (class でなく reducer 関数) |
+| `VModelContract` | exactly-once 検証済み aggregate | `compileRightArmContract()` で registry へコンパイル |
+| `DocumentDispositionCatalog` | source/item/target edge と orphan 不変条件を持つ aggregate | `DocumentDispositionCatalog.create()` 実装済 |
+| `ProfileOverlayResolver` | stateless domain service | `resolveDocumentProfile()` 実装済 |
+| `PlanIdReservation` | 競合拒否の aggregate | `PlanIdReservation.reserve()` 実装済 |
+
+未達の目標: 各公開 signature の pre/post/invariant と test ID の対応を L6 に固定すること、L5 module-decomposition で 1 module 1 責務・循環 0 を固定すること、新規差分の関数長・nesting・複雑度・CQS 違反 0 (既存違反は負債 PLAN へ)。責務漏れ・god object・data clump・重複 parser を見つけたら負債台帳と PLAN に起票する (黙って carry しない)。
