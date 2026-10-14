@@ -107,7 +107,7 @@ analyzeModuleDrift(docs: { listed, actual }) -> { orphans, listedCount, actualCo
 - adapter 出力の DB 正規化は、project が setup で opt-in したときだけ薄く配線する。未導入を前提に gate を組まない。adapter ごとの probe / normalize / findings / 優先順位を core に持たない。
 - MCP / verification profile (playwright / testcontainers / github-mcp / msw / mcp-inspector / vitest-browser) は gate を支える検証 (must-tool 系) であり、この降格の対象外として profile と機械着地を維持する (`function-spec.md` の MCP profile config / safety 追補)。
 
-現状との差: `src/` に `setup graph-tools` は無く (`src/setup/` と `src/cli.ts` に該当なし)、`tool-adapter.ts` は catalog 型のまま confirmed している。降格を実装するか catalog を正とするかは未決である (証跡: `docs/migration/plan-design-migration-evidence/backflow-s6e.md`)。
+現状との差: 上の setup + announce への置き換えは PO 決定 (IMP-131) で確定済みの目標契約であり、採否は未決ではない。`src/` には `setup graph-tools` がまだ無く (`src/setup/` と `src/cli.ts` に該当なし)、`tool-adapter.ts` の catalog 実装は移行前の実装である。未実装なのは目標契約の実現であり、実現時に catalog 実装を置き換える (証跡: `docs/migration/plan-design-migration-evidence/backflow-s6e.md`)。
 
 ### Coding Rules 追補
 

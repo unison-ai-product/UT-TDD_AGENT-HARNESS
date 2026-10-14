@@ -289,6 +289,12 @@ type QualitySignal = { signal_type: string; subject_id: string; score?: number; 
 | `deriveArtifactProgressDecision` | `ArtifactProgressDecisionInput { linkedTestCount: number; dependencyChecked: boolean; openDependencyImpacts: number; recoveryPlanIds?: string[] } -> ArtifactProgressDecision { state: dependency_unchecked/implemented_unverified/verified; color: red/yellow/green; reason: string }` | `src/state-db/projection-writer.ts` に実装済み。pseudocode = dependency unchecked または open impacts があれば red、linked tests なしまたは recovery active なら yellow、それ以外は green。 |
 | `projectArtifactProgress` | `ArtifactProgressProjectionInput { graph?: RelationGraphProjection; db: HarnessDb } -> void` | `src/state-db/projection-writer.ts` に実装済み。pseudocode = source nodes を collect し、covered-by test edges を count し、impact_results/recovery PLANs を join し、decision を derive して rebuildable `artifact_progress` rows を upsert する。 |
 
+### VMS-007 typed spec phase/layer alignment の契約 (PLAN-L6-46 の移設先)
+
+本節は VMS-007 (`typed-spec-phase-layer-alignment`、`traces_from: VMS-004`、検証 `TVMS-007`) の契約を所有する移設先である。VMS-007 は typed spec 台帳の `v_phase` と、宣言元 artifact から解決した owner phase を一致させる設計であり、検出系が owner phase を推測で作らないことを保証する。これにより VMS-004 の `traces_to` は VMS-007 に解決する。契約の実体は上の `analyzeTypedSpecPhaseLayerAlignment` / `checkTypedSpecPhaseLayerAlignment` の行と、L5 `physical-data.md` の `typed-spec-owner-phase-missing` 診断が持つ。
+
+`spec.defines` の宣言 block は、移行の途中では PLAN-L6-46 に残っている (唯一の宣言元)。block を本節へ複製すると同一 ID の二重宣言になるため、宣言の移設は ② の freeze で PLAN を一括で退役させる手順の中で、PLAN 側の削除と同時に行う。その際 `docs/governance/vmodel-typed-spec-definitions.md` の VMS-007 の `ledger_sources` を、PLAN から本文書 (`function-spec.md`) へ付け替える。
+
 ## 2026-06-09 L6 completion readiness 追補
 
 `analyzeL6Completion` は G6 readiness aggregator である。`freezeInputReady` (status flip 前の G6 audit に trace/substance が ready) と final `ready` (confirmed docs/plans、confirmed L7、G6 PASS 後の L6 completion) を分離する。これは L6 design doc status、各 L6 doc の owning `plan:` reference、各 L6 doc の `pair_artifact`、L6 doc filename による L7 reverse reference、minimum unit-contract substance marker (contract/signature、DbC または oracle、U-* oracle family)、base L6 `kind=design` PLAN status と review evidence、L7 unit-test-design status、G6 gate table row を読む。Post-G6 `kind=add-design` PLAN は add-feature/backfill/review evidence で統制し、base G6 completion を reopen しない。unit oracle は `L7-unit-test-design.md` の U-L6COMP-001..005 とする。
