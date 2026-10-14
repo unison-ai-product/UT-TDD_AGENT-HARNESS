@@ -4,7 +4,7 @@ artifact_type: test_design
 layer: L6
 executed_at_layer: L7
 status: draft
-pair_artifact: docs/plans/PLAN-L6-105-consumer-safe-upgrade-contract.md
+pair_artifact: docs/design/harness/L6-function-design/consumer-safe-upgrade.md
 parent_doc: docs/design/harness/L6-function-design/setup-solo-team.md
 created: 2026-10-01
 updated: 2026-10-01

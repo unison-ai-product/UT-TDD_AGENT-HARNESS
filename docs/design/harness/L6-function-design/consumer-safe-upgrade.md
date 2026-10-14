@@ -146,7 +146,7 @@ Pack release 単位の publication・rollback、`update-check` の advisory、JS
 - M3: 全 `COMMON_FILES` について consumer が実際に編集している率。
 - M4: `.ut-tdd/state/setup.json` と `ut-tdd.project.json` の実内容と版の有無 (v0 規則の入力)。
 
-## 9. open questions
+## 9. 未決の問い
 
 - O1: upgrade の入口を新 verb (`ut-tdd upgrade`) とするか、`ut-tdd setup` の既存 consumer 検出時の挙動とするか。PR-6 の前に契約を改訂して freeze する。
 - O2: backup の世代上限 (3 は暫定) と、世代を超えた backup の掃除方式。P3 の PO 承認が前提で、承認まで自動削除しない。

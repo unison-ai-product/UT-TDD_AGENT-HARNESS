@@ -4,7 +4,7 @@ artifact_type: test_design
 layer: L6
 executed_at_layer: L7
 status: draft
-pair_artifact: docs/plans/PLAN-L6-107-consumer-report-command-and-intake.md
+pair_artifact: docs/design/harness/L6-function-design/trouble-submission-command-intake.md
 parent_doc: docs/design/harness/L6-function-design/secret.md
 created: 2026-10-05
 updated: 2026-10-05
