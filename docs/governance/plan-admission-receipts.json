@@ -7716,15 +7716,31 @@
     {
       "sequence": 483,
       "previous_record_digest": "sha256:fee73ab9c62cf0e68334dad26715628e50dc6597855aad3cb4022084a54f746f",
-      "record_digest": "sha256:bf704f333a8c3c5683a275ee71ad3629443c0033fb6bd3829cd5d103678468ac",
-      "command_id": "plan-draft:issue-693:PLAN-L6-693:r1-20261014",
-      "receipt_id": "certificate:8ff8f94e6adfd10e967a2f5b0ff996b9",
-      "receipt_digest": "sha256:36f1beeb28bc439370402a0415281f44e13796300b999151c88bfc97d9d0e6dc",
+      "record_digest": "sha256:b42a9d85aedb0de29be9c47df93c9eeb091f4fa829e496721fc787a5923a5076",
+      "command_id": "plan-draft:issue-971:PLAN-L6-971:r1-20261014",
+      "receipt_id": "certificate:001ff66ae3b64ea010094219d033d04d",
+      "receipt_digest": "sha256:eae01ce3d3978e73286c548486acf600ec0c2b243f682594142cab44983f453a",
+      "decision_digest": "sha256:38de0a60e961675ccc400d6cfcad5113f3ceff1c8693032896680597bc04028a",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-971-consumer-trace-gates.md",
+        "plan_id": "PLAN-L6-971-consumer-trace-gates",
+        "asset_id": "plan:001ff66ae3b64ea010094219d033d04d",
+        "revision": 1,
+        "content_digest": "sha256:e9cb7fedac015792fcdcbc1d65a55224d4136d74038f808b269891be186fb4cf"
+      }
+    },
+    {
+      "sequence": 484,
+      "previous_record_digest": "sha256:b42a9d85aedb0de29be9c47df93c9eeb091f4fa829e496721fc787a5923a5076",
+      "record_digest": "sha256:f8a3ae76db255c22b54ef35be44cdc0d8b5ce70996ca7f4bcca22e1bba7f9f5a",
+      "command_id": "plan-draft:issue-693:PLAN-L6-693:r2-20261014",
+      "receipt_id": "certificate:985acb6dfda67ed5b5ab3c8faf355556",
+      "receipt_digest": "sha256:aff8c4379896a587d3f8ab3261fbf0117864f2f1798c3ef088d3d04c6738f8d7",
       "decision_digest": "sha256:cf5702a9dde550647d411461c4c5e6573bb52e40404c6417803e84362cd177ff",
       "binding": {
         "path": "docs/plans/PLAN-L6-693-windows-hide-spawn-guard.md",
         "plan_id": "PLAN-L6-693-windows-hide-spawn-guard",
-        "asset_id": "plan:8ff8f94e6adfd10e967a2f5b0ff996b9",
+        "asset_id": "plan:985acb6dfda67ed5b5ab3c8faf355556",
         "revision": 1,
         "content_digest": "sha256:02056eaab9af52b88c352a5c9b45fdf37dc3d66c94ee6fd98df8b902c89909b3"
       }

@@ -46,16 +46,16 @@ sub_doc: function-spec
 github_issue_id: 693
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:8ff8f94e6adfd10e967a2f5b0ff996b9
-  command_id: plan-draft:issue-693:PLAN-L6-693:r1-20261014
-  admitted_at: 2026-10-14T03:13:37.631Z
+  receipt_id: certificate:985acb6dfda67ed5b5ab3c8faf355556
+  command_id: plan-draft:issue-693:PLAN-L6-693:r2-20261014
+  admitted_at: 2026-10-14T04:00:11.020Z
   source_digest: sha256:02056eaab9af52b88c352a5c9b45fdf37dc3d66c94ee6fd98df8b902c89909b3
   decision_digest: sha256:cf5702a9dde550647d411461c4c5e6573bb52e40404c6417803e84362cd177ff
-  receipt_digest: sha256:36f1beeb28bc439370402a0415281f44e13796300b999151c88bfc97d9d0e6dc
+  receipt_digest: sha256:aff8c4379896a587d3f8ab3261fbf0117864f2f1798c3ef088d3d04c6738f8d7
   binding:
     path: docs/plans/PLAN-L6-693-windows-hide-spawn-guard.md
     plan_id: PLAN-L6-693-windows-hide-spawn-guard
-    asset_id: plan:8ff8f94e6adfd10e967a2f5b0ff996b9
+    asset_id: plan:985acb6dfda67ed5b5ab3c8faf355556
     revision: 1
     content_digest: sha256:02056eaab9af52b88c352a5c9b45fdf37dc3d66c94ee6fd98df8b902c89909b3
   route:
