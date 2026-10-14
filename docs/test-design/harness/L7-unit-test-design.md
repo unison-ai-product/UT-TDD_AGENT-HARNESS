@@ -58,7 +58,7 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 | U-ID (候補) | 検証対象 | oracle (DbC) |
 |---|---|---|
 | U-FUNC-01 | `analyzeX` 純粋性 + post (orphans/totals) | 同入力→同出力、orphans==[]⟺ok (既存 seed) |
-| U-FUNC-02 | `evaluateAgentGuard` allowlist/model/family | block 判定 + fail-close (既存 seed) |
+| U-FUNC-02 | `evaluateAgentGuard` model 明示/floor/汎用経路 (#1002) | block 判定 + fail-close (既存 seed) |
 | U-FUNC-03 | `detectMode` mode 決定 | mode∈4種、副作用なし (既存 seed) |
 | U-FUNC-04 | `lintPlan`/`lintVmodel` 本実装 | schedule lint + PLAN governance/frontmatter strict gate + G1/G3 trace gate / 12 edge (L7.2/L7.3 implemented) |
 

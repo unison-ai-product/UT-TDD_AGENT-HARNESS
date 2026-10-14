@@ -282,7 +282,7 @@ L1 機能要求 (FR-L1-*、ユーザー視点の「何の機能が必要か」) 
 #### AC-FR-09-01 (正常系)
 - **Given**: Claude Code が `Agent({subagent_type: "pmo-sonnet", model: "sonnet"})` 呼び出し
 - **When**: agent-guard 検証
-- **Then**: 許可リスト pass / model 明示 pass / opus override なし / 終了コード 0 / audit `.ut-tdd/audit/agent-invocations/` 記録
+- **Then**: 定義済み型の floor pass / model 明示 pass / opus override なし / 終了コード 0 / audit `.ut-tdd/audit/agent-invocations/` 記録
 
 #### AC-FR-09-02 (異常系)
 - **Given**: Claude Code が model を指定しない `Agent({subagent_type: "general-purpose"})` 呼び出し (定義の有無を問わず、model の無い呼び出し)
