@@ -7,7 +7,7 @@ drive: agent
 route_signal: redesign
 route_mode: redesign
 created: 2026-10-05
-updated: 2026-10-13
+updated: 2026-10-14
 owner: PO / Claude (author) · Codex gpt-6.1-sol (非著者 closing review)
 parent_design: docs/design/harness/L6-function-design/function-spec.md
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
@@ -47,18 +47,18 @@ supersedes:
   - PLAN-L7-57-token-telemetry-tracker
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:6330e0c0f34d21d6c1a10d3b6b0c9eac
-  command_id: plan-revise:issue789:staged-contract-candidates:20261013:r3
-  admitted_at: 2026-10-13T11:55:24.844Z
-  source_digest: sha256:bf7f38fc28cc11880e022a4a9c6f71acd8d15d489574779f5281775baa773f0a
-  decision_digest: sha256:43339daa702dede9e85daa2cc5412f9b789e9637efba0ad872d0a6a7fbff5c53
-  receipt_digest: sha256:5e3a7c6af85b99fb641fadf00b562f3cac7f34f190ff2e9e3637a98de9a081c0
+  receipt_id: certificate:6c71a757cc8ab6afeece99557cc71614
+  command_id: plan-revise:issue789:staged-contract-order:20261014:r4
+  admitted_at: 2026-10-14T01:31:13.006Z
+  source_digest: sha256:6bd4d517fb05b9528838abfd3b34f0b1261b1b26a106f80ae54cd60838b3fdc7
+  decision_digest: sha256:b492616a20184da42b91a0590b5386a64e8cd4d8f8ee50edcd57ff5eb4bef169
+  receipt_digest: sha256:2f560d49d23be2f58875720b944751fb523f577b1e6f56a5cf22918d397353a5
   binding:
     path: docs/plans/PLAN-L6-789-token-ingest-retirement.md
     plan_id: PLAN-L6-789-token-ingest-retirement
     asset_id: plan:9eb40ac57c66832a75be2af3f89eca4f
-    revision: 3
-    content_digest: sha256:bf7f38fc28cc11880e022a4a9c6f71acd8d15d489574779f5281775baa773f0a
+    revision: 4
+    content_digest: sha256:6bd4d517fb05b9528838abfd3b34f0b1261b1b26a106f80ae54cd60838b3fdc7
   route:
     signal: redesign
     mode: redesign
@@ -79,7 +79,7 @@ admission_receipt:
       target_revision: 1
   reentry:
     target_plan_id: PLAN-L6-789-token-ingest-retirement
-    target_revision: 3
+    target_revision: 4
     phase: forward_merge
   escape_reason: "Issue #789 (PO 承認 2026-09-30): 常時 token 取り込みと model_evaluations
     生成を退役させる。PLAN-L7-57 の token ingest 契約を supersede し、#840 の削除 artifact を所有する
@@ -184,6 +184,10 @@ open PR の変更 file にも無い (2026-10-05、`gh pr list --state open --jso
 
 既存の PR-0 の supersede / 非適用注記は維持する。この改訂では退役の実行順序を凍結し、functional-requirements / fr-unit-coverage / function-spec / L14 / L7 test-design を先に整合させる。source / tests は変更しない。§5 と FR coverage の参照は候補 ID に揃え、未実装の正式 oracle を先行宣言しない。
 
+### PR1 前提: Issue #848 の退役判定分岐
+
+先行契約 merge 後、Issue #848 を独立した契約 → Red → 実装の slice として導入する。既存 l6-fr-coverage に退役の分岐を追加し、退役した FR の根拠を検証する。PR1 はこの分岐の main 到達を前提とする。新しい機構を作らず、この契約 PR に runtime 判定を同梱しない。
+
 ### PR1 (forward): caller と SQLite read の撤去
 
 - projectTokenUsage / projectRepoScopedTokenUsage による常時 token 行投入を撤去する。
@@ -192,7 +196,7 @@ open PR の変更 file にも無い (2026-10-05、`gh pr list --state open --jso
 - telemetry scan は loadRepoScopedRuntimeSessionUsage による表示専用とし、DB を開かず書き込まない。PLAN-L7-58 の取得・料金計算は保持する。
 - PLAN-L7-53 の tests/model-evaluation.test.ts の所有を正規 plan revise で撤回する。PLAN-L7-789 は impl / forward の正規 admission で管理する。
 - PLAN-L7-423 の domain / application / adapter / domain test の4ファイルと ModelEvaluationConfigPort / ModelEvaluationReadPort の型2件は残す。新しい no-op facade は作らない。
-- テストは CANDIDATE-U-TOKRET-001..005 を引用する。U-FR-L1-38 の撤回は対応する test の撤去と同時に行い、U-DOMAIN-005 は保持する。
+- テストは CANDIDATE-U-TOKRET-001..005 を引用する。U-FR-L1-38 の撤回は対応する test の撤去と同時に行い、同じ PR1 で FR-L1-38 を #848 の分岐を使って退役の状態へ切り替える。U-DOMAIN-005 は保持する。
 
 ### 昇格 PR (source 変更なし)
 
@@ -240,10 +244,11 @@ Issue #789 の受入条件「PR-1 / PR-2 の oracle が、旧実装を戻すと 
 ## 6. Schedule (serial)
 
 1. 先行契約 PR を非著者 frontier reviewer が review し、control が merge する。
-2. PR1 (forward) で caller 撤去と候補 oracle のテストを実装・実測し、review / merge する。
-3. source 変更なしの昇格 PR で宣言と引用を同時に正式化し、review / merge する。
-4. PR2 (add-feature) で L7-423 の所有と4ファイル・型2件・U-DOMAIN-005 を同時に退役させる。
-5. 退役 merge 後の正規 db rebuild と doctor の実測を Issue #789 / #739 に記録する。harness.db の直接操作はしない。
+2. Issue #848 を独立した契約 → Red → 実装の slice で main へ導入する。
+3. PR1 (forward) で caller と旧 test を撤去し、U-FR-L1-38 を同時撤回する。FR-L1-38 は #848 の分岐で退役の状態へ切り替え、候補 oracle のテストを実装・実測して review / merge する。
+4. source 変更なしの昇格 PR で宣言と引用を同時に正式化し、review / merge する。
+5. PR2 (add-feature) で L7-423 の所有と4ファイル・型2件・U-DOMAIN-005 を同時に退役させる。
+6. 退役 merge 後の正規 db rebuild と doctor の実測を Issue #789 / #739 に記録する。harness.db の直接操作はしない。
 
 ## 7. 非対象と残余リスク
 

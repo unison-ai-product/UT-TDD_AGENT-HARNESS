@@ -839,7 +839,7 @@ SMB/NFS/OneDrive をまたぐ strict lease、heartbeat、clock-skew 耐性は主
 
 PR1 のテストは下記の候補 ID を引用する。PR1 の後に source 変更なしの昇格 PR を挟み、テスト・PLAN-L6-789 §5・FR coverage の引用と候補宣言を同時に正式 ID へ昇格する。新しい gate や例外は作らない (control コメント 6144875387)。
 
-PR2 (`add-feature`) は昇格 PR merge 後の main から開始し、PLAN-L7-423 の正規 revise と同時に 4 ファイルと型 2 件を撤去する。`U-DOMAIN-005` は PR2 で `tests/model-evaluation-domain.test.ts` を撤去する時点まで宣言と引用を維持し、その時点で撤回する。`U-FR-L1-38` は PR1 で `tests/model-evaluation.test.ts` の撤去と同時に撤回する。退役の実測は PLAN-L6-789 §5 の oracle に引き継ぎ、旧実装を戻す mutation で Red を確認する。撤回予定という記載は現時点の実装完了や検証済みを意味しない。
+PR2 (`add-feature`) は昇格 PR merge 後の main から開始し、PLAN-L7-423 の正規 revise と同時に 4 ファイルと型 2 件を撤去する。`U-DOMAIN-005` は PR2 で `tests/model-evaluation-domain.test.ts` を撤去する時点まで宣言と引用を維持し、その時点で撤回する。PR1 より前に Issue #848 の退役判定分岐を独立した契約 → Red → 実装の slice で main へ導入する。`U-FR-L1-38` は PR1 で `tests/model-evaluation.test.ts` の撤去と同時に撤回し、同じ PR1 で FR-L1-38 を #848 の分岐を使って退役の状態へ切り替える。退役の実測は PLAN-L6-789 §5 の oracle に引き継ぎ、旧実装を戻す mutation で Red を確認する。撤回予定という記載は現時点の実装完了や検証済みを意味しない。
 
 | U-ID | 関数 | oracle (DbC) |
 |------|------|--------------|
