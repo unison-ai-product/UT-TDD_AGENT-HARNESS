@@ -3057,3 +3057,21 @@ oracle の詳細 (入力・期待・殺す mutation) は専用の
 | CANDIDATE-U-MEMEPI-009〜010、018 | 即時配送の抑止と、unknown・推定分の配送 | 専用文書 §4 |
 
 上表の ID は backtick 無し表記である。候補台帳への再掲ではなく専用文書への参照であり、U-VMSRC-009 の一意性検査の対象外とする。
+
+## consumer trace gate (Issue #971 / #972 / #880) — 索引
+
+L6 契約は `docs/design/harness/L6-function-design/consumer-trace-gates.md`。
+oracle の詳細 (入力・期待・殺す mutation・fixture・required evidence) は専用の
+`docs/test-design/harness/L7-consumer-trace-gates-test-design.md` に置き、本節は索引だけを持つ。
+
+| 範囲 | 検証面 | 詳細 |
+| --- | --- | --- |
+| CANDIDATE-U-CTRACE-001〜002 | harness / consumer の分岐 (design root の layout で決まる) と harness 分岐の挙動不変 | 専用文書 §3 |
+| CANDIDATE-U-CTRACE-003〜009 | prefix に依存しない ID 抽出、placeholder の除外、範囲表記の展開と不正な範囲 | 専用文書 §3 |
+| CANDIDATE-U-CTRACE-010〜015 | trace 規則 T1〜T4 (展開先・関連機能・トレース元の実在、参照 0 個の行) | 専用文書 §3 |
+| CANDIDATE-U-CTRACE-016〜018、025 | 必須集合 (要求・画面・機能) の空集合拒否 (#880) | 専用文書 §3 |
+| CANDIDATE-U-CTRACE-019〜022、026 | harness 専用文書を読まないこと、2 つの入口の一致、core 文書の欠落と doc_type_id 不一致の fail-close、L3 PLAN 検査をしないこと | 専用文書 §3 |
+| CANDIDATE-U-CTRACE-023〜024 | 章見出しと必須列の freeze、章の範囲外の表を読まないこと | 専用文書 §3 |
+
+上表の ID は backtick 無し表記である。候補台帳への再掲ではなく専用文書への参照であり、U-VMSRC-009 の一意性検査の対象外とする。
+正規 `U-CTRACE-*` への昇格と Red test は、src/ も scripts/ も含まない PR (契約 PR + Red) で入れる (`design-protection-diff-gate.md` §10.2)。
