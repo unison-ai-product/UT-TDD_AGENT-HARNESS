@@ -277,12 +277,12 @@ L1 機能要求 (FR-L1-*、ユーザー視点の「何の機能が必要か」) 
 - **L1 上流**: FR-L1-09
 - **入力**: AI 操作ログ、役割定義 (agent_slots)、budget 上限
 - **出力**: 逸脱警告 / 停止 / audit ログ
-- **振る舞い**: `.claude/hooks/agent-guard.ts` (既存実装、PreToolUse Agent) で model 明示 + override 禁止を fail-close。定義ファイルを持つ型は frontmatter の floor を下回る model を拒否し、定義ファイルの無い汎用の型 (general-purpose 等、subagent_type 省略を含む) は model 明示だけで通す (fable は不可。#1002、PO 2026-10-14)
+- **振る舞い**: `.claude/hooks/agent-guard.ts` (既存実装、PreToolUse Agent) で model 明示 + floor 未満への格下げ禁止を fail-close。定義ファイルを持つ型は frontmatter の floor を下回る model を拒否し、定義ファイルの無い汎用の型 (general-purpose 等、subagent_type 省略を含む) は model 明示だけで通す (fable は不可。#1002、PO 2026-10-14)
 
 #### AC-FR-09-01 (正常系)
 - **Given**: Claude Code が `Agent({subagent_type: "pmo-sonnet", model: "sonnet"})` 呼び出し
 - **When**: agent-guard 検証
-- **Then**: 定義済み型の floor pass / model 明示 pass / opus override なし / 終了コード 0 / audit `.ut-tdd/audit/agent-invocations/` 記録
+- **Then**: 定義済み型の floor pass / model 明示 pass / 終了コード 0 / audit `.ut-tdd/audit/agent-invocations/` 記録
 
 #### AC-FR-09-02 (異常系)
 - **Given**: Claude Code が model を指定しない `Agent({subagent_type: "general-purpose"})` 呼び出し (定義の有無を問わず、model の無い呼び出し)
