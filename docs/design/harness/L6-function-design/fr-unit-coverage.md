@@ -41,6 +41,25 @@ plan: docs/plans/PLAN-L6-21-fr-unit-coverage.md
 
 この契約は機械実装、test追加、L1 registry状態変更を含まない。FR-L1-38を含む現在のregistry行・formal U-FR対応は契約PR後も変更されない。後続実装PRがRed oracleを追加し、契約に従う判定を実装するまで、この分岐は未実装である。`function-spec`へFR退役markerを置く旧CFAC案は採用せず、FR registryの状態と退役PLAN参照を唯一の判定起点とする。
 
+### Issue #848 の完了条件と後続工程の責務（未達の目標条件）
+
+退役分岐は設計のみで未達である。次の4条件がすべて満たされるまで、退役分岐を完了済みとして扱わない。既存の通常FR coverage（FR-L1 全件の L6 spec / unit contract / U-FR oracle）の完了は、この4条件を満たした証拠にならない。
+
+1. 本節を含む L6 設計（本書と `function-spec.md`）が設計検収を受けている。
+2. L7 の候補テスト設計（`CANDIDATE-U-FRCOV-007〜023`）が本契約の各条件に対応し、独立した負例と正例を持つ。候補設計は実test実行や Red 結果の証跡ではない。
+3. 通常FRの既存 coverage と正式 oracle を維持することと、後続の Red 登録→formal 昇格→実装 Green の順序が、L6 と L7 の間で一致している。
+4. 検収対象の exact revision に対する文書検査と、成果物を書いていない family の reviewer による review が記録されている。
+
+後続工程の責務は次のとおり分担する。これらは本書の設計追補の完了証跡に含めない。
+
+| 後続工程 | 責務 | 前提となる成果 |
+|---|---|---|
+| L7 Red 登録 | 候補 oracle の実 test を Red として `tests/l6-fr-coverage.test.ts` へ追加する | 上記条件 1〜3（設計検収と候補設計の対応） |
+| formal 昇格 PR | coverage matrix の退役行・L7 の宣言表・実 test 内の oracle 引用の3面を同一 PR で切り替える | Red 登録の完了 |
+| 実装 Green（実装 owner は PLAN-L7-22 と REVERSE-21） | `analyzeL6FrCoverage` の退役分岐を実装し、対象 test を Green にする。`ut-tdd doctor` と L6 descent／closure reader が同じ判定を使うことを実測する | formal 昇格の完了 |
+
+依存の向きは、設計検収 → Red 登録 → formal 昇格 → 実装 Green の一方向である。上流が閉じる前に下流を着工しない。
+
 追加 requirement bundle mapping:
 
 | 追加 requirement | 被覆 FR rows | Unit contract の焦点 |

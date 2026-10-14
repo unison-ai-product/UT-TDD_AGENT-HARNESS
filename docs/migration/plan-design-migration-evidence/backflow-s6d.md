@@ -7,7 +7,7 @@
 既に設計文書にあることを確かめる。各 PLAN は全文を読み、逆方向の参照 (設計文書・test-design が PLAN を指すか) も grep で確認した。
 
 - 基準 commit: `6a50a74834bbc008abd69359e91300c96dd7392d` (origin/main)
-- 件数: 使い捨て可 12 / 還流済み 2 / 廃止 0 / 要判断 1 (計 15)
+- 件数: 使い捨て可 12 / 還流済み 3 / 廃止 0 / 要判断 0 (計 15)
 
 ## 一覧
 
@@ -18,7 +18,7 @@
 | PLAN-L6-18-review-evidence-stale | fe2c6b4ee62959141c4a2deeee0429acf2bf78949625fa90ac807740e17f74d4 | 使い捨て可 | 既存: `L6-function-design/review-evidence-stale.md` §2〜§4、L7 U-REVIEW-007 / 008 | parent PLAN-L6-12 (完了済み) | 未チェック DoD 2 件 (draft+approve 検出 / confirmed+approve・draft 証跡なしは ok) は設計 §3 と `tests/review-evidence.test.ts` で充足 |
 | PLAN-L6-19-plan-schedule-lint | 8b3018b33e1fca57b59794d42504acecc943a15a66dbe33c871dad20445a6b6b | 使い捨て可 | 既存: `L6-function-design/plan-schedule-lint.md` §2〜§4、L7 U-PLANSCH-001〜006 | parent PLAN-L6-00-master (完了済み) | 未チェック DoD (欠落検出) は設計 §2 / §4 と `tests/plan-lint.test.ts` で充足。doctor hard/fail-close も §3 に記載済み |
 | PLAN-L6-20-runtime-adapter-session-lifecycle | 5cec6f48737a56c8280651ef6013fd7c104a148b44983af78391a70e2cdf4bc0 | 還流済み | `L6-function-design/session-log.md` 「Runtime Adapter Lifecycle 追補」末尾に 4 項目追記 (adapter lifecycle wrapper の契約 / hook 入口の共有と shim / `--task-file` と stdin / provider 解決)。既存: L4 `function.md` §委譲 surface、L7 U-SLOG-007 / U-ADAPTER-001〜013 | requires PLAN-L6-03 (完了済み) | 実装 `src/cli/delegation.ts` を確認して記述。session-log.md には `plan_id` 受け渡しと `session_end` しか無かったため、wrapper の起動前後 lifecycle・handover warnings・`--task-file` の排他契約を補った |
-| PLAN-L6-21-fr-unit-coverage | baab19c21bc347be29d1f8e241bf3a98c1aa974fe3b1f0fc4bf6f8bbc9367751 | 要判断 | (移さない) 設計本体は既存: `fr-unit-coverage.md` 「Issue #848」節、`function-spec.md` 「Issue #848」節、L7 `CANDIDATE-U-FRCOV-007〜` | requires PLAN-L6-00-master (完了済み) は剥離可 | #848 の進行中の改訂 (2026-10-14 receipt) で、未達 DoD 4 件は実装 owner PLAN-L7-22 / REVERSE-21 の後続工程 (Red 登録 → formal 昇格 → 実装 Green) に実在する依存を持つ。要判断を参照 |
+| PLAN-L6-21-fr-unit-coverage | baab19c21bc347be29d1f8e241bf3a98c1aa974fe3b1f0fc4bf6f8bbc9367751 | 還流済み | `L6-function-design/fr-unit-coverage.md` 「Issue #848 の完了条件と後続工程の責務（未達の目標条件）」に、未達 DoD 4 件を目標条件として、後続工程 (Red 登録 → formal 昇格 → 実装 Green) の責務と依存の向きを追記。既存: 同書「Issue #848」節 (退役 coverage 契約)、`function-spec.md` 「Issue #848」節、L7 `CANDIDATE-U-FRCOV-007〜023` (独立した正例・負例を含む) | requires PLAN-L6-00-master (完了済み) は剥離。実在する依存 (設計検収 → Red 登録 → formal 昇格 → 実装 Green、実装 owner は PLAN-L7-22 / REVERSE-21) は設計文書へ移したため PLAN 側では不要 | PLAN は変更しない。旧 DoD の [x] は既存 coverage の歴史的証跡で、#848 追補の完了証跡ではない。改訂 receipt は発行事実だけで review PASS を意味しない |
 | PLAN-L6-22-l6-completion-readiness | 49a97f90443699e82e5b89b16b53b7e5730b2a2c3a61e82972f831805689db4a | 還流済み | `L6-function-design/function-spec.md` 「L6 completion readiness 追補」に doctor 配線 (hard/fail-close、`ok = ready`、入力不能は violation) を追記。`L7-unit-test-design.md` U-L6COMP-003 を実装に合わせて是正 | parent PLAN-L6-00-master・`fr-unit-coverage.md` (完了済み) | **設計と実装の差**: L7 U-L6COMP-003 は warn-only と書かれていたが、`src/doctor/process-quality.ts` の `checkL6Completion` は `ok = r.ready` で hard (`check-definition-groups.ts` に `l6-completion` として登録)。実装に合わせて是正した |
 | PLAN-L6-23-coding-rules-workflow | 2cf454914a5ddda54f6648bf46725667e3bc39d560c87b839d384aedf1abf400 | 使い捨て可 | 既存: `docs/governance/coding-rules.md`、`module-drift.md` 「Coding Rules 追補」、L7 U-CODE-001〜 | parent PLAN-L6-00-master (完了済み) | DoD 全件 [x]。`CODING-RULE-WORKFLOW` anchor と doctor `coding-rules` 配線も既存 |
 | PLAN-L6-24-structured-error-handling | 5e62d22efaf49c947d6b4890a28b65e62b750b5f27e795546961f7298d76305f | 使い捨て可 | 既存: `coding-rules.md` rule `structured-error-handling`、`module-drift.md` 「error handling」、L7 U-CODE-008 | requires PLAN-L6-23 (完了済み) | 空 catch / rethrow-only catch の違反形が設計・oracle に既存 |
@@ -31,10 +31,11 @@
 
 ## 要判断
 
-- **PLAN-L6-21 (#848)**: 設計内容 (退役 FR の coverage 契約、候補 oracle CANDIDATE-U-FRCOV-007〜、昇格順序) は設計文書に既にあり、今回移すものは無い。ただし未達 DoD 4 件 (設計検収 / 候補 test 設計の対応 / 順序一致 / 正規改訂 revision への非著者 review) と実装 Green は PLAN-L7-22 / REVERSE-21 の後続工程に実在する依存を持ち、#848 が進行中で他 lane が改訂している。質問: **#848 の実装 PR (Red 登録 → formal 昇格 → Green) が閉じるまで PLAN-L6-21 を使い捨て可にせず保持してよいか。それとも未達 DoD を #848 本体 (issue) の AC へ移して PLAN を使い捨て可にするか。**
+なし。PLAN-L6-21 は前版で「要判断」としたが、未達 DoD と後続工程の責務は設計の責務であり、PLAN に保持せず設計文書へ移した (上の表)。
 
 ## 触った設計文書
 
+- `docs/design/harness/L6-function-design/fr-unit-coverage.md` (PLAN-L6-21)
 - `docs/design/harness/L6-function-design/session-log.md` (PLAN-L6-20)
 - `docs/design/harness/L6-function-design/function-spec.md` (PLAN-L6-22)
 - `docs/test-design/harness/L7-unit-test-design.md` (U-L6COMP-003 の是正、PLAN-L6-22)
