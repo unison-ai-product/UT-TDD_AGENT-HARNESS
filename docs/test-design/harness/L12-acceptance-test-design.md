@@ -97,7 +97,7 @@ updated: 2026-07-09
 | **AT-FR-18-01** | AC-FR-18-01 (doctor clean) | 検出 0 件 → HM-07 All clean / exit 0 | vitest doctor test |
 | **AT-FR-18-02** | AC-FR-18-02 (doctor 検出 3 件) | error 1 + warn 2 → severity 別表示 / error で exit 1 | vitest doctor test |
 | **AT-FR-18-03** | AC-FR-18-03 (detector timeout) | 30s 超 → skip + warn / 他結果集約 | vitest doctor test |
-| **AT-FR-09-04** | AC-FR-09-04 (opus override 禁止、A-54 で functional に AC 追加) | `Agent({subagent_type: "pmo-sonnet", model: "opus"})` → fail-close exit 2 / audit block 記録 (pdm-* 以外への opus 指定は block) | vitest agent-guard test 拡張 |
+| **AT-FR-09-04** | AC-FR-09-04 (floor 未満への格下げ禁止、A-54 で functional に AC 追加、#1002 で floor 規則へ改訂) | `Agent({subagent_type: "pmo-sonnet", model: "haiku"})` → fail-close exit 2 / audit block 記録 (floor 以上の `opus` は許可) | vitest agent-guard test 拡張 |
 | **AT-FR-45-01** | AC-FR-45-01 (doc-reviewer 召喚正常系) | `ut-tdd review --uncommitted --reviewer doc-reviewer` → `.ut-tdd/audit/doc-reviews/<timestamp>.json` 記録 / pass → 次工程許可 / exit 0 | vitest review test |
 | **AT-FR-45-02** | AC-FR-45-02 (未召喚で G3 fail-close) | doc-reviewer 未召喚 + `ut-tdd gate G3` → fail-close error / next_action 提示 / exit 1 | vitest gate + review test |
 | **AT-FR-45-03** | AC-FR-45-03 (PO bypass) | `UT_TDD_DOC_REVIEWER_BYPASS=1` + 理由 → bypass + audit / D-08 集計 / exit 0 | vitest gate + audit test |

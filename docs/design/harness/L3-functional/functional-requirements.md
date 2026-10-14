@@ -294,10 +294,10 @@ L1 機能要求 (FR-L1-*、ユーザー視点の「何の機能が必要か」) 
 - **When**: 同じ呼び出し
 - **Then**: warn + audit `bypass used by PO (reason: ...)` 記録必須 / KPI D-06 集計対象 / Agent 起動許可 / 終了コード 0
 
-#### AC-FR-09-04 (異常系: opus override 禁止、A-54 audit C-04 / 軸4 補完)
-- **Given**: Claude Code が `Agent({subagent_type: "pmo-sonnet", model: "opus"})` 呼び出し (pdm-* 以外への opus 指定)
+#### AC-FR-09-04 (異常系: frontmatter の floor 未満への格下げ禁止、A-54 audit C-04 / 軸4 補完、#1002 で floor 規則へ改訂)
+- **Given**: Claude Code が `Agent({subagent_type: "pmo-sonnet", model: "haiku"})` 呼び出し (定義済み型への floor 未満の model 指定)
 - **When**: agent-guard 検証 (model family 解決)
-- **Then**: fail-close `Error: model opus は pmo-sonnet の frontmatter (sonnet) と不一致、opus は pdm-* のみ許可` / Agent 起動 block / 終了コード 2 / audit に block 記録 ([[feedback-subagent-model-explicit]] / weekly quota 保護)
+- **Then**: fail-close (model haiku は pmo-sonnet の frontmatter の floor (sonnet) を下回る) / Agent 起動 block / 終了コード 2 / audit に block 記録。floor 以上への昇格 (例: `model: "opus"`) は許可する (PLAN-L7-399 の floor 規則)
 
 ---
 

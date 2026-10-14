@@ -30,7 +30,7 @@ decision_points:
     choose: "redact before injection and assert their absence in a test"
     over: "pass the context through unredacted and rely on the model to ignore it"
     because: "the harness safety boundary prohibits PII/credentials/payload bodies in injected context outright, and models cannot be relied on to withhold received data"
-  - when: "an agent call's requested model does not match the family declared in the agent frontmatter"
+  - when: "an agent call for a defined subagent requests a model below the family floor declared in its frontmatter"
     choose: "let `agent-guard.ts` block the call at PreToolUse"
     over: "hard-code a mismatched or cost-cutting model in source to work around the guard"
     because: "hard-coding around the guard defeats the model-family floor the guard exists to enforce (FR-L1-09)"

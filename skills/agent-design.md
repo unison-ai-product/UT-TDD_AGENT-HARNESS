@@ -49,7 +49,7 @@ an existing agent definition matches its actual use.
 - A `PreToolUse(Agent)` guard rejection requires diagnosing which rule failed.
 - A Discovery or Add-feature PLAN needs a specialist role (use the generic route;
   do not add a definition, #1002).
-- Refactoring an existing agent definition to correct a model-family mismatch.
+- Refactoring an existing agent definition whose model is below its intended floor.
 
 ## Anatomy of a subagent definition
 
