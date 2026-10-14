@@ -13,14 +13,14 @@
 
 | 候補 | 件数 | 意味 |
 | --- | ---: | --- |
-| 生きている | 257 | 現契約・直接oracle・実装endpointで根拠づけられた限定責務。PLAN全体の完了・移管済みとは異なる。 |
-| 保留 | 286 | 個別owner・対・直接oracle・責務移管・受入に未解決点がある。廃止や未監査ではない。 |
+| 生きている | 251 | 現契約・直接oracle・実装endpointで根拠づけられた限定責務。PLAN全体の完了・移管済みとは異なる。 |
+| 保留 | 292 | 個別owner・対・直接oracle・責務移管・受入に未解決点がある。廃止や未監査ではない。 |
 | 廃止予定 | 0 | statusや生成先の欠落だけで廃止を認定しない。 |
 | supersede済み | 0 | 一方向参照・部分移管・成果物のarchiveだけでPLAN全体の置換を認定しない。 |
 
 ## 判定基準
 
-status、generates、source pathの実在だけでは判定しない。完全IDごとにowner、個別上位契約、直接oracle、実装endpointを区別し、保持する限定範囲と未解決carryを各行へ残す。共通helperや隣接機能が存在するだけでは、そのPLAN全体の責務移管を証明しない。
+status、generates、source pathの実在だけでは判定しない。完全IDごとにowner、個別上位契約、直接oracle、実装endpointを区別し、保持する限定範囲と未解決carryを各行へ残す。共通helperや隣接機能が存在するだけでは、そのPLAN全体の責務移管を証明しない。bounded aliveとする場合も、隣接する現機能が存在するだけでは当該完全IDをaliveにしない。そのID自身に結び付く現owner・契約・直接oracle・実装endpointの対応が確認できない責務は保留とし、隣接機能をowner移管の代用にしない。保留は廃止や未監査を意味しない。
 
 PLAN-L7-421の2件は、数値coreの曖昧なIssue参照を後継・退役の根拠にせず、それぞれの完全IDで確認したright-arm gateとtest-hygiene fenceの限定責務を保持する。PLAN-L7-400/401の過去bundleとPLAN-L7-403の現ownerも分ける。PLAN-L7-58は取得・料金計算・表示専用走査を保持し、退役対象のDB ingestを復活させない。PLAN-L7-835のrev4証跡をrev5受入の完了証拠へ流用しない。
 
@@ -28,6 +28,7 @@ PLAN-L7-421の2件は、数値coreの曖昧なIssue参照を後継・退役の�
 
 - 543件の完全ID・source blob OID・SHA-256・bytes・一次表の順序を固定Gitと照合した。不一致0。
 - 監査入力の逐語引用2,787件を固定Gitで照合した。不一致0。公開JSONは重複する同一引用を2,703件のcatalogへ集約し、各行は参照IDで結ぶ。
+- control review correction 6159333663（#1007 r1）の独立再点検を実施し、生きている257行すべてのreason/citationを走査した。完全IDの現owner/契約/直接oracleに対応付かず、隣接機能だけを根拠にしていた6行（PLAN-L7-232、246、260、323、336、347）を保留候補へ訂正。該当6行のsourceScope/sourceReason/sourceCandidateLabel/evidenceRefsは履歴として保持し、source由来分類とreviewCorrection後のcandidateをreasonで区別する。その他537行は分類・scope/reason・引用参照とも変更していない。
 - 日本語訳は3区間で原scope/whyへ対応させ、543件の完全ID・順序・空欄・参照文字列保持を確認した。原文はsourceScope/sourceReasonとして残した。
 - 構造・引用・翻訳の内部点検は、意味分類の非著者closingを代替しない。controlがOpus reviewと三レーンの結合・最終判断を行う。
 - 元PLAN、設計、実装、tests、台帳、DBは変更しない。過去のGreenやstatusから現在の実装・受入・移管完了を推測しない。

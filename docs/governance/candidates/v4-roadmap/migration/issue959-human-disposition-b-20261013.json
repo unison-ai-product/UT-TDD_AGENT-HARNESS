@@ -8,8 +8,8 @@
   },
   "classificationIsFinal": false,
   "summary": {
-    "生きている": 257,
-    "保留": 286
+    "生きている": 251,
+    "保留": 292
   },
   "validation": {
     "inputSha256": "75e5bd34ba8b6952a911894bf2144a5649fc26e1161a1b1bfedb6e9e12780e14",
@@ -18,8 +18,8 @@
     "sourceFailures": 0,
     "citationFailures": 0,
     "summary": {
-      "生きている": 257,
-      "保留": 286
+      "生きている": 251,
+      "保留": 292
     },
     "evidenceCatalog": 2703,
     "translationRecords": 543,
@@ -38762,10 +38762,17 @@
       "sourceBlobOid": "a4ecf775e6d403b8adb9cb5b4b583820ecbc7e52",
       "sourceSha256": "08294923c02bcbe23930745f358d836b157a2dca1fdc860adbc580e284e717e5",
       "sourceBytes": 2480,
-      "dispositionCandidate": "生きている",
+      "dispositionCandidate": "保留",
       "sourceCandidateLabel": "alive",
-      "scope": "PLAN-L7-232 sync-pack clean-tree guardとsync commit規約の機械的強制。",
-      "reason": "PLAN-L7-232はgeneric parent pointerだけでなくPM/PO ownershipを割当て、setup-solo-teamをdesign contractとして特定し、dirty tree時のsync-pack exit-1 regressionを未checkedで残す。owner roleが結びついた具体的implementation/test obligationなのでlive候補だが、個人staffingは独立再確認されていない。",
+      "scope": "保留：sync-pack dirty-tree時のfail-closeとsync commitへのsource SHA記録を機械強制する提案。固定sourceでは、この完全IDの現行owner・paired oracle・implementation endpointが確認できていない。退役判断ではない。",
+      "reason": "reviewCorrection control6159333663: 今回固定sourceのdocs/design、docs/test-design、src、testsを完全IDで照合した範囲では、PLAN-L7-232をownerとして名指す設計/test/source実装を確認できない。setup-solo-teamのparent pointer、PLAN自身のPM/PO宣言、未checkedの実装/test obligationだけでは現行責務の契約・受入を証明しない。clean distributionやsync-packの隣接機能をこの完全IDへ帰属させず、個別owner/oracle/endpointの対応確認まで保留とする。廃止・未監査を意味しない。",
+      "reviewCorrection": {
+        "controlCommentId": 6159333663,
+        "fromDispositionCandidate": "生きている",
+        "toDispositionCandidate": "保留",
+        "previousReason": "PLAN-L7-232はgeneric parent pointerだけでなくPM/PO ownershipを割当て、setup-solo-teamをdesign contractとして特定し、dirty tree時のsync-pack exit-1 regressionを未checkedで残す。owner roleが結びついた具体的implementation/test obligationなのでlive候補だが、個人staffingは独立再確認されていない。",
+        "currentReason": "今回固定sourceのdocs/design、docs/test-design、src、testsを完全IDで照合した範囲では、PLAN-L7-232をownerとして名指す設計/test/source実装を確認できない。setup-solo-teamのparent pointer、PLAN自身のPM/PO宣言、未checkedの実装/test obligationだけでは現行責務の契約・受入を証明しない。clean distributionやsync-packの隣接機能をこの完全IDへ帰属させず、個別owner/oracle/endpointの対応確認まで保留とする。廃止・未監査を意味しない。"
+      },
       "sourceScope": "PLAN title: \"PLAN-L7-232 (impl): sync-pack の clean-tree guard と sync commit 規約の機械強制\"",
       "sourceReason": "This is more than a parent-design pointer: the PLAN assigns PM/PO ownership, names setup-solo-team as the design contract, and leaves the dirty-tree sync-pack exit-1 regression unchecked. That is a concrete owner-role-bound implementation/test obligation, so retain as a live candidate; current individual staffing is not independently reconfirmed.",
       "evidenceRefs": [
@@ -39117,10 +39124,17 @@
       "sourceBlobOid": "af028c07408dc0709de2f09da72b51cebb2b2014",
       "sourceSha256": "17ca2338a3acb74825cb3fad49eed95be1b9f15b7afe9d1cf9ddd6e8d416cb8e",
       "sourceBytes": 3309,
-      "dispositionCandidate": "生きている",
+      "dispositionCandidate": "保留",
       "sourceCandidateLabel": "alive",
-      "scope": "限定された現行feedback lifecycleのみ：source-generation reconciliation、append-only consumed-state projection、terminal fallback resurfacing suppression。元のfeedback_events direct-close／actionable-routing提案とPLAN全体の移管は含まない。",
-      "reason": "現L5-15 physical-data ownerとphysical-data §9は、再構築可能なfeedback_events observationsとappend-onlyのfeedback_lifecycle consumption historyを区別する。L8 IT-FLC-01..05、U-MEMORY-006、implementationおよび直接testsは、同一generationで再openしないこと、新generationでopenすること、source-resolutionによるclose、terminal fallback suppressionを検証する。この限定lifecycle capabilityは元のPLAN提案とは独立にaliveである。元提案の妥当性、全DoD完了、またはsource全体の責務移管を意味しない。",
+      "scope": "保留：feedback_eventsのsource条件再評価によるclose/stale整理、actionable eventからroute candidateへの接続、open/closed流量表示。L5-15のfeedback_lifecycle消化履歴は隣接する別責務であり、この完全IDのowner/oracle/endpointとして流用しない。退役判断ではない。",
+      "reason": "reviewCorrection control6159333663: 今回確認した固定sourceの引用箇所にあるL5-15/physical-data、U-MEMORY-006/IT-FLC tests、implementationは既存generation-aware feedback_lifecycle consumption projectionを裏付けるが、そこではL7-246をownerとして名指していない。L7-246本文のfeedback_events direct-close/stale cleanup/actionable-to-routing提案は提示されたowner/oracle/endpoint証拠に結び付かず、同PLANのDoDも未完である。既存の隣接lifecycle capabilityをこの完全IDの責務とせず、対応付け確認まで保留とする。廃止・未監査を意味しない。",
+      "reviewCorrection": {
+        "controlCommentId": 6159333663,
+        "fromDispositionCandidate": "生きている",
+        "toDispositionCandidate": "保留",
+        "previousReason": "現L5-15 physical-data ownerとphysical-data §9は、再構築可能なfeedback_events observationsとappend-onlyのfeedback_lifecycle consumption historyを区別する。L8 IT-FLC-01..05、U-MEMORY-006、implementationおよび直接testsは、同一generationで再openしないこと、新generationでopenすること、source-resolutionによるclose、terminal fallback suppressionを検証する。この限定lifecycle capabilityは元のPLAN提案とは独立にaliveである。元提案の妥当性、全DoD完了、またはsource全体の責務移管を意味しない。",
+        "currentReason": "今回確認した固定sourceの引用箇所にあるL5-15/physical-data、U-MEMORY-006/IT-FLC tests、implementationは既存generation-aware feedback_lifecycle consumption projectionを裏付けるが、そこではL7-246をownerとして名指していない。L7-246本文のfeedback_events direct-close/stale cleanup/actionable-to-routing提案は提示されたowner/oracle/endpoint証拠に結び付かず、同PLANのDoDも未完である。既存の隣接lifecycle capabilityをこの完全IDの責務とせず、対応付け確認まで保留とする。廃止・未監査を意味しない。"
+      },
       "sourceScope": "bounded current feedback lifecycle only: source-generation reconciliation, append-only consumed-state projection, and terminal fallback resurfacing suppression; excludes the original feedback_events direct-close/actionable-routing proposal and whole-PLAN transfer",
       "sourceReason": "The current L5-15 physical-data owner and physical-data §9 distinguish rebuildable feedback_events observations from append-only feedback_lifecycle consumption history. L8 IT-FLC-01..05, U-MEMORY-006, implementation and direct tests exercise same-generation non-reopen, new-generation open, source-resolution close, and terminal fallback suppression. This bounded lifecycle capability remains alive independently of the original PLAN proposal; it does not mean that proposal is valid, all DoD complete, or whole-source responsibility transferred.",
       "evidenceRefs": [
@@ -39498,10 +39512,17 @@
       "sourceBlobOid": "a0d6116ad61b5c0e6975150a6dc9da5dd8b698cd",
       "sourceSha256": "e5a903315c8894ac1b9b52d955e8a3a20ab42b6ce5185157b555faa6db5ca610",
       "sourceBytes": 6925,
-      "dispositionCandidate": "生きている",
+      "dispositionCandidate": "保留",
       "sourceCandidateLabel": "alive",
-      "scope": "PLAN-L7-260のsensitive-scan surface拡張（.ut-tdd/audit・logs・docs）、preflight/pre-pushとe2e test。",
-      "reason": "PLAN-L7-260本文はscan/preflight/pre-push widened surface/e2e testの実装完了を記録し、これらは未作業ではない。confirmationはfail-close promotionのoperational evidence待ちで、setup auto-installは明示scope外。operational-evidence gateだけをbounded live candidateにし、implementation未完了やsetup integrationをここへ含めない。",
+      "scope": "保留：fail-close昇格に必要な運用証跡の受入・確認責務。scan/preflight/pre-push実装の存在は認めるが、この完全IDの現行owner・直接oracle・昇格endpointは未確認。setup auto-installは別scope。退役判断ではない。",
+      "reason": "reviewCorrection control6159333663: 固定sourceのPLAN本文はscan/preflight/pre-push実装とe2e testの実施を記録する一方、今回確認した本文外の引用範囲では、公開scopeに残るfail-close昇格のoperational-evidence gateについて現行owner・直接受入oracle・implementation/decision endpointを対応付けられない。scannerの存在だけではこの完全IDへの当該gate責務移管を証明しないため、運用証跡とowner/oracleの対応確認まで保留とする。実装済み範囲を否定せず、setup統合の追加も主張しない。廃止・未監査を意味しない。",
+      "reviewCorrection": {
+        "controlCommentId": 6159333663,
+        "fromDispositionCandidate": "生きている",
+        "toDispositionCandidate": "保留",
+        "previousReason": "PLAN-L7-260本文はscan/preflight/pre-push widened surface/e2e testの実装完了を記録し、これらは未作業ではない。confirmationはfail-close promotionのoperational evidence待ちで、setup auto-installは明示scope外。operational-evidence gateだけをbounded live candidateにし、implementation未完了やsetup integrationをここへ含めない。",
+        "currentReason": "固定sourceのPLAN本文はscan/preflight/pre-push実装とe2e testの実施を記録する一方、今回確認した本文外の引用範囲では、公開scopeに残るfail-close昇格のoperational-evidence gateについて現行owner・直接受入oracle・implementation/decision endpointを対応付けられない。scannerの存在だけではこの完全IDへの当該gate責務移管を証明しないため、運用証跡とowner/oracleの対応確認まで保留とする。実装済み範囲を否定せず、setup統合の追加も主張しない。廃止・未監査を意味しない。"
+      },
       "sourceScope": "PLAN title: \"PLAN-L7-260 (impl): 機密スキャン境界の拡張 (.ut-tdd/audit・logs・docs 全域)\"",
       "sourceReason": "The body now records implementation of the scan, preflight, pre-push widened surface, and e2e test; those are not missing tasks. It still explicitly withholds confirmation because fail-close promotion awaits operational evidence, and setup auto-install is explicitly out of scope. Treat the bounded operational-evidence gate as a live candidate, not as proof that implementation remains unfinished or that setup integration belongs here.",
       "evidenceRefs": [
@@ -40637,10 +40658,17 @@
       "sourceBlobOid": "262acf94767e100770110c9eae79d8b610d83edf",
       "sourceSha256": "33b779b914bc22d467e1395b4094e10df3d23da8da4c2c8fa1098e34ff7e0c4d",
       "sourceBytes": 4935,
-      "dispositionCandidate": "生きている",
+      "dispositionCandidate": "保留",
       "sourceCandidateLabel": "alive",
-      "scope": "bounded alive：U-SLOG-006が扱う既存active-plan marker timestamp freshnessのうち、default 24hのみ。PLANが求める48h threshold、terminal-PLAN detection、CURRENT／prose freshness surfacingは別scopeであり、確立されていない。",
-      "reason": "現L6／L7 pairとimplementation／testはmaxHoursを使ったactive-plan marker stalenessを確立し、固定HEAD implementationのdefaultは24時間である。PLANは別途48h thresholdとterminal-PLAN detectionを求めるが、U-SLOG-006はそれらの追加を証明しない。aliveは既存の24h-default marker contractに限り、PLAN全体の移管を意味しない。",
+      "scope": "保留：48h stale判定、terminal PLAN検出、CURRENT/proseへのfreshness表示、commit-msgによるactive-plan更新というPLAN-L7-323自身の未解決責務。既存U-SLOG-006の24h marker freshnessは隣接する別契約であり、移管証拠にしない。退役判断ではない。",
+      "reason": "reviewCorrection control6159333663: 引用した固定sourceのL6 handover design/U-SLOG-006/session-log実装・testが確立するのはIMP-078由来の既存24h active-plan marker stale判定であり、PLAN-L7-323の48h threshold、terminal-PLAN detection、CURRENT/prose freshness表示、commit-msg更新のowner/oracleではない。隣接する24h契約をこの完全IDへ帰属させず、PLAN-L7-323自身の責務に対する現行owner・paired oracle・endpoint確認まで保留とする。廃止・未監査を意味しない。",
+      "reviewCorrection": {
+        "controlCommentId": 6159333663,
+        "fromDispositionCandidate": "生きている",
+        "toDispositionCandidate": "保留",
+        "previousReason": "現L6／L7 pairとimplementation／testはmaxHoursを使ったactive-plan marker stalenessを確立し、固定HEAD implementationのdefaultは24時間である。PLANは別途48h thresholdとterminal-PLAN detectionを求めるが、U-SLOG-006はそれらの追加を証明しない。aliveは既存の24h-default marker contractに限り、PLAN全体の移管を意味しない。",
+        "currentReason": "引用した固定sourceのL6 handover design/U-SLOG-006/session-log実装・testが確立するのはIMP-078由来の既存24h active-plan marker stale判定であり、PLAN-L7-323の48h threshold、terminal-PLAN detection、CURRENT/prose freshness表示、commit-msg更新のowner/oracleではない。隣接する24h契約をこの完全IDへ帰属させず、PLAN-L7-323自身の責務に対する現行owner・paired oracle・endpoint確認まで保留とする。廃止・未監査を意味しない。"
+      },
       "sourceScope": "bounded alive: U-SLOG-006's existing active-plan marker timestamp freshness with 24h default only; the PLAN's requested 48h threshold, terminal-PLAN detection, and CURRENT/prose freshness surfacing remain distinct/unestablished",
       "sourceReason": "The current L6/L7 pair and implementation/test establish active-plan marker staleness using maxHours, whose fixed-HEAD implementation defaults to 24 hours. The PLAN separately requests a 48h threshold and terminal-PLAN detection; U-SLOG-006 does not prove those additions, so alive applies only to the existing 24h-default marker contract and is not whole-PLAN transfer.",
       "evidenceRefs": [
@@ -40929,10 +40957,17 @@
       "sourceBlobOid": "53d97d6b33391e499f5ee6724972813171b53fea",
       "sourceSha256": "730600eae4c2bea31a0334ffb2397a628491f396f60f88be89abd3d2e7e54a7b",
       "sourceBytes": 3663,
-      "dispositionCandidate": "生きている",
+      "dispositionCandidate": "保留",
       "sourceCandidateLabel": "alive",
-      "scope": "undocumented empty/rethrow-only catch detectionの現行契約のみbounded alive。fail-open intent declaration、warn-first rollout、ratchet/backfillは未証明。",
-      "reason": "independent meaning reviewはstructured-error-handlingの既存契約だけを支持する。L6 module-driftとU-CODE-008はundocumented emptyまたはrethrow-only source catchをdetector/direct testsとpairにする。このevidenceはPLANの広いintent-declaration convention、warn-first rollout、baseline ratchet、backfill、whole-plan completionを立証せず、これらはparkedのまま。",
+      "scope": "保留：PLAN-L7-336自身が提案するfail-open intent宣言規約、新規変更のwarn-first検出、baseline ratchet、既存catch backfill。L6 module-drift/U-CODE-008の一般structured-error-handling検出は隣接する別責務であり、owner移管とは扱わない。退役判断ではない。",
+      "reason": "reviewCorrection control6159333663: 引用した固定sourceのL6 module-drift/U-CODE-008、coding-rules実装とtestsは一般のundocumented empty/rethrow-only catch検出契約を支えるが、PLAN-L7-336のintent declaration、warn-first rollout、baseline ratchet、backfillをownerとして受け入れた根拠にはならない。既存structured-error-handling機能をこの完全IDの責務へ流用せず、提案された各責務の現行owner・paired oracle・endpoint確認まで保留とする。廃止・未監査を意味しない。",
+      "reviewCorrection": {
+        "controlCommentId": 6159333663,
+        "fromDispositionCandidate": "生きている",
+        "toDispositionCandidate": "保留",
+        "previousReason": "independent meaning reviewはstructured-error-handlingの既存契約だけを支持する。L6 module-driftとU-CODE-008はundocumented emptyまたはrethrow-only source catchをdetector/direct testsとpairにする。このevidenceはPLANの広いintent-declaration convention、warn-first rollout、baseline ratchet、backfill、whole-plan completionを立証せず、これらはparkedのまま。",
+        "currentReason": "引用した固定sourceのL6 module-drift/U-CODE-008、coding-rules実装とtestsは一般のundocumented empty/rethrow-only catch検出契約を支えるが、PLAN-L7-336のintent declaration、warn-first rollout、baseline ratchet、backfillをownerとして受け入れた根拠にはならない。既存structured-error-handling機能をこの完全IDの責務へ流用せず、提案された各責務の現行owner・paired oracle・endpoint確認まで保留とする。廃止・未監査を意味しない。"
+      },
       "sourceScope": "bounded undocumented empty/rethrow-only catch detection contract; fail-open intent declaration, warn-first/ratchet/backfill acceptance remains unproven",
       "sourceReason": "Independent meaning review supports only the currently specified structured-error-handling contract: L6 module-drift and U-CODE-008 pair undocumented empty or rethrow-only source catches with the detector and direct tests. This does not establish the broader PLAN intent-declaration convention, warn-first rollout, baseline ratchet, backfill, or whole-PLAN completion; those remain parked.",
       "evidenceRefs": [
@@ -41175,10 +41210,17 @@
       "sourceBlobOid": "c6355e232c930b2910fdc36df6083259fffe31e0",
       "sourceSha256": "a4f4afcc9c832e98b8108e07684d853940abaaf18beab3778e8764e555430993",
       "sourceBytes": 3575,
-      "dispositionCandidate": "生きている",
+      "dispositionCandidate": "保留",
       "sourceCandidateLabel": "alive",
-      "scope": "tracked pre-push secret scanのper-commit widened-surface blobsに限りbounded alive。setup、commit-msg、他hooks、doctor probeは未解決。",
-      "reason": "L6 secret design/U-DOCSECRET-007、tracked pre-push hook、scanner、bare-remote direct testがpre-push secret scanningだけのcurrent owner/oracle pairを構成する。PLAN-L7-260はautomatic ut-tdd setup integrationを明示的にscope外とする。#347のfresh-clone setup、other-hook parity、doctor probeは未移管でありwhole-plan completionではない。",
+      "scope": "保留：tracked hook配布とfresh-clone/setup有効化、commit-msgを含むhook parity、doctor installation probeというPLAN-L7-347自身の未解決責務。既存pre-push secret scanは隣接する別契約であり、移管証拠にしない。退役判断ではない。",
+      "reason": "reviewCorrection control6159333663: 引用した固定sourceのL6 secret design/U-DOCSECRET-007、tracked pre-push hook、scannerおよびbare-remote testsが支えるのはper-commit secret scanningであり、PLAN-L7-347のtracked hook distribution、fresh-clone/setup、commit-msg parity、doctor installation probeではない。PLAN-L7-260がsetup integrationをscope外とすることも、L7-347へのowner移管を証明しない。隣接するpre-push機能をこの完全IDの責務へ流用せず、個別owner・paired oracle・endpoint確認まで保留とする。廃止・未監査を意味しない。",
+      "reviewCorrection": {
+        "controlCommentId": 6159333663,
+        "fromDispositionCandidate": "生きている",
+        "toDispositionCandidate": "保留",
+        "previousReason": "L6 secret design/U-DOCSECRET-007、tracked pre-push hook、scanner、bare-remote direct testがpre-push secret scanningだけのcurrent owner/oracle pairを構成する。PLAN-L7-260はautomatic ut-tdd setup integrationを明示的にscope外とする。#347のfresh-clone setup、other-hook parity、doctor probeは未移管でありwhole-plan completionではない。",
+        "currentReason": "引用した固定sourceのL6 secret design/U-DOCSECRET-007、tracked pre-push hook、scannerおよびbare-remote testsが支えるのはper-commit secret scanningであり、PLAN-L7-347のtracked hook distribution、fresh-clone/setup、commit-msg parity、doctor installation probeではない。PLAN-L7-260がsetup integrationをscope外とすることも、L7-347へのowner移管を証明しない。隣接するpre-push機能をこの完全IDの責務へ流用せず、個別owner・paired oracle・endpoint確認まで保留とする。廃止・未監査を意味しない。"
+      },
       "sourceScope": "bounded alive: tracked pre-push secret-scan for per-commit widened-surface blobs only; setup, commit-msg, other hooks and doctor probe remain unresolved",
       "sourceReason": "L6 secret design/U-DOCSECRET-007 plus the tracked pre-push hook, scanner and bare-remote direct test form a current owner/oracle pair for pre-push secret scanning only. PLAN-L7-260 explicitly leaves automatic ut-tdd setup integration out of scope; #347's fresh-clone setup, other-hook parity and doctor probe remain untransferred. Candidate is bounded, not whole-PLAN completion.",
       "evidenceRefs": [
