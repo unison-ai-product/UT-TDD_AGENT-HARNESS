@@ -8,7 +8,7 @@
 - PLAN本文固定ref：`3ca0692d6c6a180b058c492475080be2a140e667`。
 - 設計・実装・test-design三者照合の固定ref：`d5ad67fb50c148ea8dd6d5475bab4b88f2d4cd4c`。
 - 下表の完全ID、blob OID、blob bytes SHA-256は固定入力のprovenanceであり、本書で再分類しない。
-- #742 Reverse R4の現状確認だけは上記`3ca...`のPLAN snapshotとは別で、配列/設計照合ref `d5ad67fb50c148ea8dd6d5475bab4b88f2d4cd4c`と本WT `HEAD=998b283b3ec0501c26001da7e1af625dcd284112`を確認した。`docs/plans/PLAN-REVERSE-742-release-aggregate-v2-inventory-cardinality-backfill.md`は両refでblob OID `3fd36b293797dd524ab9e665cef935bfb7285040`、raw bytes SHA-256 `e35d5fc63b88f46b77149b4675e71774897c7c0285d4850146c6324f243c6b4d`と一致する。従ってR4 confirmedの根拠を古い`3ca...` snapshotに遡及させない。
+- #742 Reverse R4の現状確認だけは上記`3ca...`のPLAN snapshotとは別で、配列/設計照合ref `d5ad67fb50c148ea8dd6d5475bab4b88f2d4cd4c`と照合時の作業HEAD `998b283b3ec0501c26001da7e1af625dcd284112`を確認した。`docs/plans/PLAN-REVERSE-742-release-aggregate-v2-inventory-cardinality-backfill.md`は両refでblob OID `3fd36b293797dd524ab9e665cef935bfb7285040`、raw bytes SHA-256 `e35d5fc63b88f46b77149b4675e71774897c7c0285d4850146c6324f243c6b4d`と一致する。従ってR4 confirmedの根拠を古い`3ca...` snapshotに遡及させない。
 
 | 配列index | PLAN完全ID | 固定PLAN blob OID | 固定blob bytes SHA-256 | この設計で保持する責務 |
 | ---: | --- | --- | --- | --- |
