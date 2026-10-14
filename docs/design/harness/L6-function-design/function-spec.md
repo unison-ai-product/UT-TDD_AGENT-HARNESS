@@ -287,6 +287,36 @@ type QualitySignal = { signal_type: string; subject_id: string; score?: number; 
 
 `analyzeL6Completion` は G6 readiness aggregator である。`freezeInputReady` (status flip 前の G6 audit に trace/substance が ready) と final `ready` (confirmed docs/plans、confirmed L7、G6 PASS 後の L6 completion) を分離する。これは L6 design doc status、各 L6 doc の owning `plan:` reference、各 L6 doc の `pair_artifact`、L6 doc filename による L7 reverse reference、minimum unit-contract substance marker (contract/signature、DbC または oracle、U-* oracle family)、base L6 `kind=design` PLAN status と review evidence、L7 unit-test-design status、G6 gate table row を読む。Post-G6 `kind=add-design` PLAN は add-feature/backfill/review evidence で統制し、base G6 completion を reopen しない。unit oracle は `L7-unit-test-design.md` の U-L6COMP-001..005 とする。
 
+### L6 completion の範囲と inventory (PLAN-L6-00 から還流、#958)
+
+- L6 completion の範囲は、原本の `function-spec` / `edge-case` に限らない。`docs/design/harness/L6-function-design/` 配下を生成または改訂する L6 add-design PLAN の成果物はすべて G6 readiness の対象である。
+- L6 設計文書全体の pair artifact は `docs/test-design/harness/L7-unit-test-design.md` の 1 本である。各 L6 設計文書は、そこに U-* oracle family を 1 つ以上持たなければならない。
+- 追加要求 (SQLite projection・drive/model ログ・skill 発火指標・検索コスト削減・機械品質検査) は `fr-unit-coverage.md` の FR-L1 行が受ける。
+- G6 audit の入力条件は、(1) 各文書に owning `plan:` と `pair_artifact` と unit 契約の中身がある、(2) 所有する design / add-design PLAN が構造 lint 違反なし、(3) L7 に対応する U-* family がある、(4) `l6-fr-coverage` / `pair-freeze` / `plan-schedule` / `review-evidence` と typecheck / vitest / doctor が green、である。最終完了は、全文書と所有 PLAN が confirmed (または confirmed PLAN で supersede)、L7 が confirmed、gate-design に G6 PASS と audit 参照が記録された状態である。
+- クラス設計は非 OOP のため縮退し、本 doc §3 に統合する (上記)。
+
+| L6 設計文書 | 所有 PLAN | L7 oracle family |
+|---|---|---|
+| function-spec.md | PLAN-L6-01 (追補 PLAN-L6-20 / 21) | U-FUNC / U-CORE / U-RULE / U-FR-L1-* |
+| edge-case.md | PLAN-L6-02 | U-EDGE |
+| session-log.md | PLAN-L6-03 / 20 | U-SLOG |
+| forced-stop-feedback.md | PLAN-L6-04 | U-FSF |
+| setup-solo-team.md | PLAN-L6-05 | U-SETUP |
+| handover-mechanism.md | PLAN-L6-06 / 16 | U-HOVER |
+| agent-slots.md | PLAN-L6-07 | U-SLOT / U-TEAM |
+| backfill-pairing.md | PLAN-L6-08 | U-BACKFILL |
+| governance-enforcement.md | PLAN-L6-09 | U-SCRUMREV / U-PROP |
+| vmodel-pair-freeze.md | PLAN-L6-10 / 11 | U-VPAIR / U-VTRIG |
+| review-evidence.md | PLAN-L6-12 (stale 検知は PLAN-L6-18) | U-REVIEW |
+| cross-review-enforcement.md | PLAN-L6-13 | U-XREVIEW |
+| test-before-review.md | PLAN-L6-14 | U-TORDER |
+| module-drift.md | PLAN-L6-15 (追補 PLAN-L6-26..30) | U-MDRIFT / U-FR-L1-49 / U-DDDTDD / U-FR-L1-50 |
+| gate-confirm.md | PLAN-L6-17 | U-GCONF |
+| plan-schedule-lint.md | PLAN-L6-19 | U-PLANSCH |
+| fr-unit-coverage.md | PLAN-L6-21 | U-FR-L1-01..50 |
+
+この表は、後から追加された L6 文書 (descent-obligation / skill-index など) の oracle family を網羅しない。後発文書の対応は L7-unit-test-design.md の module-design crosswalk と各文書の `plan:` が持つ。
+
 > **SSoT 参照**: module 公開 IF = [module-decomposition.md](../L5-detailed-design/module-decomposition.md) / DbC pre-post-invariant = [internal-processing.md](../L5-detailed-design/internal-processing.md) §3-§5 / 型の単一正本 = `src/schema/` / pseudocode 標準 = [document-system-map](../../../governance/document-system-map.md) §1 (IEEE 1016 §5.7)。本 doc は公開 IF に **関数 signature + アルゴリズム pseudocode + 型設計 + WBS** を付与する (L6、IEEE 1016 §5.7)。
 >
 > **V-pair**: `pair_artifact = L7-unit-test-design.md` (L6↔L7)。DbC 契約から単体テスト oracle (U-*) を導出 (document-system-map §3)。

@@ -4,7 +4,7 @@ executed_at_layer: L7
 artifact_type: test_design
 status: confirmed
 pair_artifact: docs/design/harness/L6-function-design/
-parent_doc: docs/plans/PLAN-L6-00-master.md
+parent_doc: docs/design/harness/L6-function-design/function-spec.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 related_l6_function_spec: docs/design/harness/L6-function-design/function-spec.md
 related_l6_edge_case: docs/design/harness/L6-function-design/edge-case.md
@@ -18,7 +18,7 @@ updated: 2026-07-10
 
 The historical pair text below was written when L6 only had `function-spec` and `edge-case`. For G6 readiness, the current L6 pair scope is the full directory `docs/design/harness/L6-function-design/*.md`, including add-design slices PLAN-L6-03..21.
 
-This L7 document remains the single pair artifact for L6 and must carry a U-* oracle family for every L6 design artifact listed in `docs/plans/PLAN-L6-00-master.md` "L6 completion scope addendum".
+This L7 document remains the single pair artifact for L6 and must carry a U-* oracle family for every L6 design artifact listed in `docs/design/harness/L6-function-design/function-spec.md` "L6 completion の範囲と inventory".
 
 The additional SQLite/reference-feedback/search/drive-log/skill-metric requirements are covered through `docs/design/harness/L6-function-design/fr-unit-coverage.md` and the U-FR-L1-* rows added at the end of this document. This is coverage of the function-design contract, not proof that every L7 implementation test already exists.
 
