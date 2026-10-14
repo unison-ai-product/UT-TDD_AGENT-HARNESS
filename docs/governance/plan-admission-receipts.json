@@ -7712,6 +7712,22 @@
         "revision": 4,
         "content_digest": "sha256:6bd4d517fb05b9528838abfd3b34f0b1261b1b26a106f80ae54cd60838b3fdc7"
       }
+    },
+    {
+      "sequence": 483,
+      "previous_record_digest": "sha256:fee73ab9c62cf0e68334dad26715628e50dc6597855aad3cb4022084a54f746f",
+      "record_digest": "sha256:b42a9d85aedb0de29be9c47df93c9eeb091f4fa829e496721fc787a5923a5076",
+      "command_id": "plan-draft:issue-971:PLAN-L6-971:r1-20261014",
+      "receipt_id": "certificate:001ff66ae3b64ea010094219d033d04d",
+      "receipt_digest": "sha256:eae01ce3d3978e73286c548486acf600ec0c2b243f682594142cab44983f453a",
+      "decision_digest": "sha256:38de0a60e961675ccc400d6cfcad5113f3ceff1c8693032896680597bc04028a",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-971-consumer-trace-gates.md",
+        "plan_id": "PLAN-L6-971-consumer-trace-gates",
+        "asset_id": "plan:001ff66ae3b64ea010094219d033d04d",
+        "revision": 1,
+        "content_digest": "sha256:e9cb7fedac015792fcdcbc1d65a55224d4136d74038f808b269891be186fb4cf"
+      }
     }
   ]
 }
