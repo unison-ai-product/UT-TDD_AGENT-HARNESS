@@ -7,7 +7,7 @@ drive: agent
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-10-08
-updated: 2026-10-08
+updated: 2026-10-14
 owner: Codex (契約PR) / Claude (契約レビュー) / control (割当)
 parent_design: docs/design/harness/L6-function-design/function-spec.md
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
@@ -47,23 +47,36 @@ dependencies:
     - src/vmodel/lint.ts
     - tests/consumer-g14-static.test.ts
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/894
-status: draft
+review_evidence:
+  - reviewer: claude-opus-5-5
+    review_kind: cross_agent
+    worker_model: gpt-6.1-sol
+    reviewer_model: claude-opus-5-5
+    tests_green_at: 2026-10-14T06:25:13Z
+    reviewed_at: 2026-10-14T06:42:52.413Z
+    verdict: PASS-WEAK
+    scope: "PR #1022 exact 5b4afabbc9da1a51821c330a062fcee377d17786 のrevision
+      3設計のみ。canonical receipt
+      232d8a1da51a68c141b3eea84c4fb7a43560e458548491c3764f5a480cae8467。reviewer\
+      は独立CI実行不可、rootがrun 38519783998の全required SUCCESSを確認。機能実装の完了証跡ではない。revision
+      4簿記差分は別途再検する。"
+status: confirmed
 sub_doc: function-spec
 github_issue_id: 894
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:fb1b66f1b8ef99df812eb622d4641346
-  command_id: plan-revise:issue-894:PLAN-L6-833:r3-four-items-20261009-1148
-  admitted_at: 2026-10-09T11:48:41.057Z
-  source_digest: sha256:572e9b148aff4f214e8d093cec3d46788b54a334937ecbb6f947c9e96fe6ace0
-  decision_digest: sha256:60a548abeaa8b74092238a6f1e2061d8cf18cc307ecb6217b712fb1b3240c56a
-  receipt_digest: sha256:fb653e0f261b50137cde1bd09d3b0c16d8efbd2b74392a80b3e6a7981d63c578
+  receipt_id: certificate:af54b09289ca371226460066e3620849
+  command_id: plan-revise:issue-894:PLAN-L6-833:r4-confirm-20261014
+  admitted_at: 2026-10-14T06:54:10.727Z
+  source_digest: sha256:73dc800432e7072a3f0a49204ac4fe5443e6ceec485f1edc9719c8ccdc409b0f
+  decision_digest: sha256:5ad25813bcc74998b90494e9a44c5da0aee0c4dc4366f9897a01df52435201da
+  receipt_digest: sha256:34873141791d448670dfe28845a5205b804fd1b314e9ba56baa4954e25499e10
   binding:
     path: docs/plans/PLAN-L6-833-confirmed-document-placeholder-detection.md
     plan_id: PLAN-L6-833-confirmed-document-placeholder-detection
     asset_id: plan:dd2c09788501e0d7c9dcb70d046e670c
-    revision: 3
-    content_digest: sha256:572e9b148aff4f214e8d093cec3d46788b54a334937ecbb6f947c9e96fe6ace0
+    revision: 4
+    content_digest: sha256:73dc800432e7072a3f0a49204ac4fe5443e6ceec485f1edc9719c8ccdc409b0f
   route:
     signal: feature_addition
     mode: add-feature
@@ -80,8 +93,8 @@ admission_receipt:
     target_plan_id: PLAN-L6-01-function-spec
     target_revision: 3
     phase: forward_merge
-  escape_reason: "Issue #894: freeze the approved confirmed-document placeholder
-    detection contract as an add-feature design increment."
+  escape_reason: "Issue #894: fresh exact-head post-green Opus
+    PASS後、control指定の正規confirmを行う。設計のみで実装完了は主張しない。"
 ---
 
 # PLAN-L6-833: 確定文書の記入欄検出契約
@@ -109,8 +122,8 @@ admission_receipt:
 
 ## 完了条件
 
-- [ ] 正規plan reviseにより次revisionを発行し、draftを維持する
-- [ ] plan lintとexact HEADのrequired CIを通す
-- [ ] control指定の非著者full Opus reviewを取得する
+- [x] revision 3を正規plan reviseでdraftとして発行済み。本revisionはpost-green review後のconfirm改訂とする
+- [x] review対象5b4afabbのrequired CI run 38519783998が全Green。confirm差分の検証は後続で行う
+- [x] review対象5b4afabbにOpus canonical PASS-WEAK / blocking 0を取得（receiptはfrontmatter参照）
 - [ ] controlがconfirm・merge・後続実装への引き渡しを判断する
 
