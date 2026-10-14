@@ -26,7 +26,8 @@ R3で確認されたPF5のadvisory（attestation再照合、apply後cleanup/rest
 | --- | --- | --- | --- | --- | --- |
 | `parseReleaseManifest` / `parsePublicationManifest` | `parseReleaseManifest(input: unknown) => ReleaseManifestParseResult` / `parsePublicationManifest(input: unknown) => PublicationManifestParseResult` (`src/schema/release-manifest.ts`) | canonical bytes、schema・型・own propertyが妥当 | freeze済みmanifestまたはtyped error | 入力不変、未知field拒否 | `U-RELMAN-001`, `U-RELMAN-009`, `U-RELMAN-013` |
 | `resolveReleaseChannel` | `resolveReleaseChannel(manifest, channel) => ReleaseRecord` | 登録済みown channel | 選択recordまたは`unknown_channel` | manifest/order/write不変 | `U-RELMAN-002`, `U-RELMAN-007` |
-| `materializeReleaseArtifacts` | `materializeReleaseArtifacts(record, reader, materializer) => ArtifactSet` | object・versionが利用可能 | framed digest付きartifact set | worktree/network/write非依存 | `U-RELMAN-011`, `U-RELMAN-012` |
+| PF-2 `materializeReleaseArtifacts` | `materializeReleaseArtifacts(input, dependencies?: ReleaseMaterializerDependencies) => ReleaseMaterializationResult` (`src/setup/release-materializer.ts`) | version tokenと読取済みtracked entriesを入力する | materialized entriesとframed digest、またはtyped failure | pure変換のみ、Git読取/worktree/network/writeなし | `U-RELMAN-011` / PLAN-L7-486 |
+| PF-3 `resolveReleaseArtifacts` | `resolveReleaseArtifacts(input, dependencies: ReleaseArtifactResolverDependencies) => Promise<ReleaseArtifactResolution>` (`src/setup/release-artifact-resolver.ts`) | selected release identityとlocal Git object portを入力する | exact object読取とPF-2呼出しの結果、またはtyped failure | worktree/remote fallback/copy/writeなし、digest attestationはPF-4 | `U-RELMAN-012` / PLAN-L7-487 |
 | `admitReleaseAggregate` | `admitReleaseAggregate(input: ReleaseAggregateAdmissionInput, dependencies) => Promise<ReleaseAggregateAdmissionResult>` (`src/setup/release-aggregate-admission.ts`、sealed planは`SealedReleaseAggregatePlan`) | 3 predicateが成立 | sealed planまたはtyped failure | side effect前にAND判定 | `U-RELMAN-014`, `U-RELMAN-015`, `U-RELMAN-016` |
 | `applySealedReleaseAggregate` | `applySealedReleaseAggregate(plan, ports) => ApplyResult` | exact final treeとattestation | `not_applied` / `applied` / `indeterminate` | prior state不変、partial publish 0 | `U-RELMAN-017`, `U-RELMAN-018` |
 
@@ -57,15 +58,35 @@ R3で確認されたPF5のadvisory（attestation再照合、apply後cleanup/rest
 
 ## 3. artifact revision とdigest
 
-### `materializeReleaseArtifacts(record, sourceReader, materializer)`
+### 3.1 PF-2 `materializeReleaseArtifacts(input, dependencies?)`
 
-- **Pre**: recordの `artifactSourceCommit` と `materializerVersion` が実装済みで、sourceReaderは
-  current worktreeやnetwork補完を使わず対象Git objectを読めること。
-- **Post**: Pack destinationのPOSIX path、mode、変換後contentをbyte順に固定したartifact setと、
-  length-prefix framingによる `artifactSetDigest` を返す。release ID導出値との不一致は
-  `mismatch`、object・version不在は `unavailable` とする。
-- **Invariant**: control manifest自身をartifact digestへ混入させず、入力・source objectを変更しない。
-  symlink、mode、path衝突、root外参照、unsupported kindはtyped failureで閉じる。
+- **Pre**: `input = { materializerVersion: unknown, entries: readonly ReleaseSourceEntry[] }` と、
+  任意の `ReleaseMaterializerDependencies` を受け取る。tracked sourceのpath/mode/contentは読取済みであり、
+  PF-2自身にGit object readerを渡さない。
+- **Post**: `ReleaseMaterializationResult` として、Pack destinationのPOSIX path、mode、変換後contentを
+  byte順に固定したentriesとlength-prefix framingによるdigest、または既存typed failure
+  (`unavailable` / `invalid_distribution_plan` / `invalid_artifact`)を返す。
+- **Invariant**: pure変換のみ。Git/worktree/network/filesystemへのアクセスやcopy/writeをせず、
+  control manifest自身をartifact digestへ混入させず、入力を変更しない。symlink、mode、path衝突、
+  root外参照、unsupported kindはtyped failureで閉じる。release identityへのdigest attestationは行わない。
+- **検証/所有**: `U-RELMAN-011`、PLAN-L7-486、`tests/release-materializer.test.ts`。
+
+### 3.2 PF-3 `resolveReleaseArtifacts(input, dependencies)`
+
+- **Pre**: `input = { repository: string, release: ReleaseIdentity }` と、
+  `ReleaseArtifactResolverDependencies`を受け取る。`git: LocalGitObjectReader`は選択releaseの
+  local Git commit/tree/blobだけを読み、`materialize` portへ読取済みentriesを渡す。
+- **Post**: `Promise<ReleaseArtifactResolution>`として、選択identity、materialized entries、計算digest、
+  または既存typed failure (`unavailable` / `invalid_distribution_plan` / `invalid_artifact`)を返す。
+  object/version不在や読取例外は`unavailable`で閉じる。
+- **Invariant**: current worktree、Pack checkout、lazy fetch、network補完、source reconstruction、copy/writeを
+  用いない。source objectを変更せず、control manifestをartifact digestから除外するPF-2境界を維持する。
+  releaseの`artifactSetDigest`を運ぶが計算digestとの一致を検収しない。一致/`mismatch`判定は
+  PF-4 `attestReleaseChannel`が所有し、PF-2/PF-3へ移さない。
+- **検証/所有**: `U-RELMAN-012`、PLAN-L7-487、`tests/release-artifact-resolver.test.ts`。
+
+> Issue #943訂正: 旧表/§3はPF-2 pure materializerとPF-3 local Git resolverを一つの署名に混ぜていた。
+> 既存実装・owner・oracleを変更せず二つの境界へ分離した。#980のparse/aggregate名訂正は維持する。
 
 ## 4. 許可済み配布計画の契約
 
@@ -98,3 +119,85 @@ identity再照合）、A-2（apply後cleanup/restore失敗時の `indeterminate`
 
 外部GitHub、Pack repository、force push、tag付替え、commit/pushは本契約の副作用ではない。
 promotion/rollbackのpointer変更は別のS3 pair-freeze（`CANDIDATE-RELMAN-003/004/005/008/010`）で扱う。
+
+## 7. v2 publication manifest の出荷集合と inventory digest
+
+移行元: `docs/plans/PLAN-L6-63-pack-staged-release-rollback.md` (issue #648)
+
+### 7.1 `releases.<releaseId>.artifacts[]` の形
+
+- 新規公開の入力は schema `v2` だけとする。`parsePublicationManifest` は v1 を `v1_read_only` で拒否し、
+  v1 は既存 release の解決・監査用の read-only 互換に留める。v1 から tracked tree や allowlist を読んで
+  集合を補完する fallback は持たない (`src/schema/release-manifest.ts:347-350`)。
+- v2 の release record は `materializerVersion` (印字可能 ASCII)、`artifactSourceCommit`、`artifactSetDigest`、
+  `artifactInventoryDigest`、`releaseAssetInventoryDigest`、`releaseRecordDigest`、`artifacts[]` を strict に持つ。
+  `artifacts[]` の各 entry は `sourcePath` / `destinationPath` / `mode` / `size` (非負 safe integer) /
+  `contentDigest` (`sha256:<64 lowerhex>`) だけを持つ。v2 の channels は `canary` / `stable` の 2 件、
+  `channelOrder` は `[canary, stable]` に固定する (`src/schema/release-manifest.ts:160-180`、`:262-270`)。
+- `artifacts[]` が出荷集合の唯一の列挙である。glob、directory walk、current worktree、Pack checkout から
+  暗黙に追加しない。entry は `destinationPath` の UTF-8 byte 順で厳密昇順、source / destination とも重複 0。
+  path は空・NUL・backslash・先頭 `/`・drive・UNC・非正規形・空 / `.` / `..` segment を拒否する
+  (`validPublicationPath` / `validPublicationArtifacts`、`src/schema/release-manifest.ts:194-230`)。
+- `mode` は `100644` / `100755` だけを受け付ける。mode `120000` (symlink) は v2 公開契約では拒否する
+  (`PUBLICATION_MODES`、`src/schema/release-manifest.ts:9`)。
+
+### 7.2 digest の framing
+
+- `artifactInventoryDigest` = SHA-256 of: ASCII `ut-tdd-pack-inventory-v2\0`、entry 数 u32be、各 entry の
+  `sourcePath` / `destinationPath` / `mode` / `contentDigest` を「u32be byte 長 + UTF-8 bytes」、`size` を u64be。
+  `mode` と `contentDigest` は文字列表現 (`sha256:` prefix を含む) を length-prefix で入れる
+  (`deriveArtifactInventoryDigest`、`src/schema/release-manifest.ts:110-125`)。
+- `releaseRecordDigest` = SHA-256 of: ASCII `ut-tdd-pack-release-v2\0`、`materializerVersion` の length-prefix、
+  40 byte ASCII の source commit、`artifactSetDigest` / `artifactInventoryDigest` / `releaseAssetInventoryDigest`
+  の raw 32 bytes (`deriveReleaseRecordDigest`、`src/schema/release-manifest.ts:127-143`)。
+- `artifactSetDigest` は §3 の既存 framing のままで、inventory digest で置き換えない。parse 時に releaseId 導出値、
+  inventory digest、record digest のいずれかが不一致なら manifest を拒否する
+  (`src/schema/release-manifest.ts:283-310`)。
+
+### 7.3 設計判断
+
+- immutable release record と可変 channel pointer を分ける。rollback を履歴破壊なしの pointer 宣言にし、
+  canary / stable の同時異 version 運用を保つため。
+- 出荷集合は明示 manifest (`artifacts[]`) で固定する。profile 名や directory allowlist で集合を暗黙に広げる
+  方式は採らない。`pack-docs/local/consumer/admin` profile と least-privilege capability は本契約の範囲外とする。
+- symlink は実需が無いため開かない。将来必要になった場合は別 slice で
+  `src/setup/consumer-local-runtime-admission.ts:120` の `validSymlink` (相対 target のみ、NUL / backslash /
+  drive / UNC / absolute 禁止、destination root escape 禁止) を再利用し、oracle を先に足す (未実装、PLAN-L6-63 §2)。
+
+## 8. v2 multi-artifact inventory の基数契約
+
+移行元: `docs/plans/PLAN-L7-742-release-aggregate-v2-inventory-cardinality.md` (issue #648)
+
+### 8.1 admission (`admitReleaseAggregate`)
+
+- v1 / v2 は selected release が `artifacts` 配列を持つかで判別する (`isPublicationRelease`、
+  `src/setup/release-aggregate-admission.ts:140-142`)。
+- v1 は従来どおり対象 channel の mapping exactly-one。2 件以上は `missing_channel_mapping`。
+- v2 は対象 channel で filter した mapping 列が selected release の `artifacts` 列と**順序付き完全一致**
+  (件数 N ≥ 1、各 index で `sourcePath` / `destinationPath` 一致) を要求する。欠落・余剰・重複・順序入替は
+  全て不一致。述語 `publicationMappingsMatchArtifacts` は 1 つだけ置いて export し、promotion gate が再利用する
+  (`src/setup/release-aggregate-admission.ts:125-138`)。各 mapping は既存 PF-5 条件 (channel / releaseId /
+  sourceRevision / path 形式 / `sourcePaths` 所属 / allowlist) を個別に満たす (`:144-189`)。
+  不一致は既存の `missing_channel_mapping` で返し、finding 列挙は増やさない。ここまでは attestation 呼出し前に判定する。
+- attestation 後・sealed plan 発行前に `entries[i].path === artifacts[i].destinationPath` (件数一致を含む) を
+  検査し、不一致は `invalid_artifact` とする (`src/setup/release-aggregate-admission.ts:290-297`)。
+
+### 8.2 sealed plan の destination 正本
+
+- `SealedReleaseAggregatePlan` は `schemaVersion: "v1" | "v2"` の判別共用体とする。v2 variant は scalar
+  `destinationPath` を持たず、destination の正本は `entries[].path` だけ (並行配列も持たない)。v1 variant だけが
+  scalar `destinationPath` を保持する (`src/setup/release-aggregate-admission.ts:66-74`、`:223-233`)。
+- consumer-local admission は v2 variant だけを受け入れ、余剰の `destinationPath` を持つ plan と v1 plan を
+  fail-close する (`src/setup/consumer-local-runtime-admission.ts:219-236`)。
+
+### 8.3 昇格・巻き戻しの gate
+
+- 入力は `mappings: readonly ReleaseChannelMapping[]` (`src/setup/release-promotion-rollback-gate.ts:104`)。
+  v2 は mappings と artifacts の順序付き完全一致と `sealedPlan.entries[i].path === artifacts[i].destinationPath`、
+  v1 は `mappings.length === 1` と scalar destination の一致を要求する。manifest と sealed plan の version が
+  食い違えば不一致とする (`:600-632`)。不一致は既存 `identity_mismatch`、shape 不正は既存 `invalid_input`。
+- v2 variant に余剰の scalar `destinationPath` がある sealed plan は promotion / rollback の shape 検証でも
+  `invalid_input` とする (`validSealedPlanShape`、`:332-358`)。rollback の候補選択の意味は変えない。
+- 採択は案 A2。棄却: A' (scalar に先頭 artifact を入れる。意味が無く destination 記録が二重化する)、
+  B (mapping を release あたり 1 件へ畳む。artifact ごとの allowlist 検査が消える)。
+- oracle: `CANDIDATE-U-RELAGGV2-001..009` (`docs/test-design/harness/L7-unit-test-design.md`)。

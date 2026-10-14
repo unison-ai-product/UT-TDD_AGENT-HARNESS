@@ -77,3 +77,17 @@ analyzeReviewEvidence(plans: ParsedReviewPlan[]) -> { missing, ok }
 
 - freeze 後増分追補の review (本事故の核) を確実に append させる運用補助 (将来 hook 候補) — 未着手。
 - (review 由来) backfill-pairing の `checkBackfill` comment と実挙動の不整合は解消済み。`normalizeTerm` 単体テスト追加は別 IMP carry。
+
+## §8 review request の identity digest (`requestDigest`)
+
+移行元: `docs/plans/PLAN-L7-493-d3a-repo-local-verdict-custody.md` (issue #648)
+
+- `requestDigest` は次の identity object を canonical JSON 化した UTF-8 bytes の SHA-256 (64 桁 lowercase hex、
+  切り詰めなし) とする (`reviewIdentityObject` / `reviewIdentityDigest`、`src/feedback/review-verdict-custody.ts:60-81`)。
+  field 集合は `schemaVersion` (= `review-request/v1`)、`memoryId`、`pr`、`exactHead`、`authorFamily` の 5 つだけ。
+- canonical JSON の key 順は locale ではなく UTF-16 code-unit 順に固定する (RFC 8785 相当、
+  `canonicalJson`、`src/feedback/review-verdict-custody.ts:44-58`)。
+- `requestedAt`、raw task 本文、provider / model、`invocationNonce`、`reviewRevision` は retry で変わり得る metadata
+  なので preimage に入れない。reviewer の族は `authorFamily` の反対側から導出し、自己申告の reviewer role も入れない。
+- `reviewRevision` は `rv1-<requestDigest>` と一致しなければならない。strict request はこの一致を
+  `isStrictReviewRequest` で検証してから path を導出する (`src/feedback/review-verdict-custody.ts:20`、`:83-90`)。

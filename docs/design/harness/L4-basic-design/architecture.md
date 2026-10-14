@@ -191,6 +191,20 @@ data.md の 5 集約 (構造) を src/ building block (実行) に配置する�
 | entrypoint | `scripts/ut-tdd` (POSIX) / `ut-tdd.ps1` (Windows) は薄く core を呼ぶだけ (bash ロジック禁止)。**呼び先は `node src/cli.ts` であり、compiled binary への分岐 dispatch は持たない** (§2 削除禁止条項の保護範囲、PLAN-L6-93 §5.2.1 の allowlist 契約) | ADR-001 §3 |
 | 依存隔離 | 外部 service (Claude/Codex/GitHub/Sentry) 起動は **runtime adapter** に隔離、core は正規化 intent のみ発行 | external-if (PLAN-L4-04) で境界契約化 |
 
+### §6.1 `.codex/hooks.json` の検査範囲 (codex-hook-adapter)
+
+`.codex/hooks.json` の妥当性は、Codex CLI 本体の schema ではなく、repo 側の `codex-hook-adapter`
+(`src/lint/codex-hook-adapter.ts`) が次の範囲で検査する。
+
+- JSON として parse できなければ `malformed_json`、ファイルが無ければ `missing_hooks_json` で fail-close する。
+- `type: "command"` の各 hook entry について、field を `type` / `command` / `timeout` / `statusMessage` /
+  `async` / `additionalContextLimit` の allowlist と照合し、それ以外は `unsupported_hook_field` で fail-close する
+  (Codex はこれ以外の field を無音で無視するため。PLAN-L7-668 §3.1)。
+- top-level の key (`hooks` 以外) は検査しない。Codex CLI の binary や実 schema を呼んで検証する経路は持たない。
+
+移行元: `docs/plans/PLAN-L7-426-codex-native-subagents.md` (issue #648)。PLAN は「Codex の schema で実 parse する
+fence」を掲げるが、実装は上記の JSON parse + field allowlist である (差分は移行証跡 g5 に記録)。
+
 ## §7 ADR 仕組み (arc42 §9、IMP-023)
 
 L4 方式設計 sub-doc は **ADR を必須 artifact** とする。様式 = arc42 §9 / MADR 準拠。
@@ -351,3 +365,60 @@ Linuxのmanaged rootは、broker自身ではなくbroker外のdurable deadline o
 scope/timerまたは同等のkernel-backed supervisorが、brokerと通常のuser-space recovery supervisorのdual-crash後も期限内に`cgroup.kill`を発行し、
 bounded recovery内に再起動broker/subreaperが`populated=0`、zombie 0、managed orphan 0まで閉じる。
 このowner・kill・reapを強制不能なら開始前に拒否し、証拠欠測をfail-close findingへ変換するだけでは代替しない。
+
+### §10.1 ExecutionSpec / ExecutionEvent / ExecutionReceipt / capability の契約 (未実装、Issue #152 D0-R)
+
+本節は目標契約である。`src/resource-kernel/` は origin/main に存在せず、下記 object はまだ実装されていない。
+
+**fail-close 不変条件**: (1) `ExecutionSpec` が欠落・不正・強制不能なら開始しない。(2) accepted execution は必ず一つの
+OS custody container に属し、未所属期間を作らない。(3) success / failure / timeout / budget exceeded / cancel / launcher crash の
+全経路で子孫を reap する。(4) 終了時の managed orphan は 0 であり、証明できなければ success を返さない。(5) receipt は
+実際に適用した制約と観測値を記録し、要求値を適用済みと自己申告しない。(6) platform capability を開始前に negotiation し、
+完全強制できない組合せは開始しない。(7) 観測事実は append-only event、終端判定はそこから導く immutable receipt とし、
+同じ record を兼用しない。Kernel は業務 command の意味・test の合否・GitHub workflow の状態を所有しない。
+
+**`ExecutionSpec`** (開始前に完全生成する immutable value object):
+
+| field | 契約 |
+|---|---|
+| `execution_id` | 論理実行要求の安定 ID。別 canonical spec digest での再利用を拒否 |
+| `attempt_id` | admission ごとに新規発行。retry / recovery を混同しない |
+| `work_key` | operation・input/policy revision・program/argv/cwd/env・budget・deadline・termination policy・required capabilities から導く canonical spec digest。D0-R では coalescing identity に使わない |
+| `program` / `argv` | shell 文字列でなく実行ファイルと argv。shell 利用は明示 adapter 種別を要求 |
+| `cwd` / `environment` | canonical cwd と allowlist 済み env delta。secret 値を receipt へ保存しない |
+| `input_revision` | commit SHA・working delta digest・fixture digest 等の immutable 入力 identity |
+| `resource_budget` | wall time、CPU time、peak memory、process count、output bytes、必要時 I/O |
+| `deadline` | wall seal を admission 時に一度だけ `effective_deadline_monotonic_ms` へ縮小変換し、tree 全体に適用。開始後に延長しない |
+| `termination_policy` | graceful 猶予→強制終了→descendant reap→lease release→journal flush→terminal receipt seal の順序。`recovery_grace_ms` は正整数かつ policy の `max_recovery_grace_ms` 以下 |
+| `classification` | 実行種別。種別ごとの既定 budget は policy revision で固定 |
+| `required_capabilities` | tree custody、hard memory/CPU/process limit、crash recovery 等の必須 capability 集合 |
+
+呼出側が無制限を指定することは禁止し、上限緩和は理由付き override evidence を要する。
+
+**`ExecutionEvent`** は `attempt_id + sequence` を identity とする append-only の事実で、kind は次の値集合とする。
+retry は新しい `attempt_id` へ分岐する。
+
+```text
+admission_requested | control_started | probe_recorded | capability_negotiated | admission_sealed | authority_prepared |
+custody_created | handoff_committed | process_attached | started | limit_observed | authority_recovery_requested |
+recovery_observation_verified | lease_reissued | termination_requested | dispatch_indeterminate | dispatch_reconciled |
+process_reaped | custody_empty | lease_released | finished
+```
+
+**`ExecutionReceipt`** は terminal 到達時だけ event 列から導出・封印する immutable 証跡 (`execution_id + attempt_id`) であり、
+outcome で判別する union とする: `RootNotCreated` (`custody_disposition: absent | prepared_then_empty`)、
+`RootCreatedNotStarted` (`started_at` を持たない)、`RootStarted`。exit kind は次の値集合とする。
+
+```text
+success | protocol_failure | bundle_failure | process_failure | deadline | cpu_budget | memory_budget | process_budget |
+output_budget | cancelled | validation_failure | capability_failure | launch_failure | custody_failure | orphan_detected
+```
+`lease_released`・`finished` event と receipt seal は一つの atomic terminal transaction (または同じ commit position の
+recoverable outbox) で確定し、片肺を許さない。receipt の success は domain test の pass を意味しない。
+
+**`PlatformCapabilities`** は OS 名でなく強制可能な capability を version 付きで公開する: `atomic_attach_before_user_code`、
+`tree_kill`、`tree_empty_proof`、`hard_memory_limit`、`hard_cpu_limit`、`hard_process_limit`、`crash_surviving_custodian`、
+`broker_external_deadline_owner`、`non_inheritable_custody_handle`。不足を warning・PID polling・soft limit へ縮退させない。
+macOS は Linux 同等を自己申告せず、証明できる capability だけを公開する。
+
+移行元: docs/plans/PLAN-L4-32-resource-governed-execution-kernel.md (issue #648)

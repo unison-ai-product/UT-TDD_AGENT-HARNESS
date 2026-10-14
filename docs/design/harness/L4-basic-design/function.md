@@ -373,3 +373,34 @@ escapeだけを`ExecutionEpisode` aggregateとして起票し、GitHub Issue/PR�
 依存方向は`domain → ports ← adapters`とし、domain policyはDB、filesystem、clock、GitHub CLI/APIをimportしない。
 projection失敗はepisodeを失敗扱いにせずoutbox pendingとして保持する一方、Issue必須escapeがE4未到達のまま
 E5以降へ進むことはfail-closeする。
+
+### C.1 正本・再合流・merge・学習の契約 (未実装、PLAN-L4-30 の後続降下)
+
+本節は Execution Episode の目標契約であり、`src/` に `ExecutionEpisode` / `ReentryCertificate` /
+merge authorization の実装はまだ無い (現行実装は `src/execution/forward-escape.ts` の E2 custody と
+E3/E4 outbox 境界だけ)。
+
+- **正本と projection**: append-only `ExecutionEvent` とその reducer 結果だけを制御正本とする。GitHub Issue /
+  branch / check / PR / review / merge は外部 projection であり、全削除・再構築できる。外部 ID と `episode_id` の
+  対応は一意で監査可能にする。outbox が送信意図、inbox が外部観測を durable に保持し、API 呼出しの成功だけを
+  状態遷移の根拠にしない。webhook と polling は同じ inbox normalization を通し、配送順ではなく GitHub event identity と
+  head SHA で整列する。
+- **episode の不変属性**: `episode_id`、`recurrence_id`、`event_sequence`、origin (`plan_asset_id` / `plan_revision` /
+  `layer` / `forward_state`)、`escape_type`・`reason_code`・検証対象の assumption/decision、必須 `drive_model` と選択根拠・
+  human override evidence、`reentry_target_state`・`reentry_policy_revision`、source commit・latest observed HEAD・
+  required CI profile、Issue/branch/PR の外部 identity mapping。
+- **E0-E15**: 状態の意味と遷移に必要な証拠は requirements v1.2 §6.8 の E0-E15 表を正本とする。状態の飛越しを禁止し、
+  外部副作用の再試行は同じ冪等 key を再利用して同じ event を二重 append しない。失敗・取消し・stale 化も event として残す。
+- **`ReentryCertificate` の束縛**: episode、origin PLAN Asset/revision/state、採択 drive model、E6 駆動モデル内検証、
+  E8 中間 test、再入先、source/head SHA、発行 policy revision、証拠 digest を結ぶ。別 episode・別 revision・別 HEAD の
+  certificate は使えない。
+- **merge 条件**: E9 certificate の E10 での一度だけの消費、E11 後だけの draft PR 生成、別 provider の cross-review PASS・
+  required CI・exact head・re-entry certificate・accept evidence の AND 条件は L6 `function-spec.md` の契約不変条件を正本とする。
+  本節はそれに次を加える: E6・E8・E11 の必須 test/CI は各 subject SHA で Green かつ E11 以降の PR head と一致すること、
+  unresolved blocker・未処理 outbox・矛盾する inbox observation が 0 であること、branch protection が許せば auto-merge、
+  許さなければ human approval 付き merge へ分岐すること。
+- **設計学習**: Issue 数の削減を目標にしない。`layer × escape_type × cause × drive_model × recurrence_id × reentry outcome` で
+  集計し、同一原因の再発率を下げる。PoC は S4 decision・採否・再合流先まで閉じなければ完了扱いにしない。telemetry は
+  設計変更を自動承認せず、PLAN / ADR へ戻す入力に留める。
+
+移行元: docs/plans/PLAN-L4-30-execution-ledger-github-architecture.md (issue #648)

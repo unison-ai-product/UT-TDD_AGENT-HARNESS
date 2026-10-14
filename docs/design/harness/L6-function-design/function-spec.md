@@ -165,7 +165,7 @@ proposal-stage subagent lane names は advisory であり、`tierFor` / `routeTe
 | FR-L1-35 | `renderFoundationReadiness` | renderFoundationReadiness(input: RenderFoundationReadinessInput, deps: RenderFoundationReadinessDeps) => RenderFoundationReadinessResult | infrastructure category inventory を与える。 | implemented/designed/missing categories を報告する。 | report は missing categories を implemented として扱えない。 | U-FR-L1-35 |
 | FR-L1-36 | `projectSkillEvaluations` | projectSkillEvaluations(db: HarnessDb, opts?: { asOf?: string }) => void | skill_invocations と plan_registry rows が存在する。asOf は ISO timestamp (default = nowIso())。 | accepted=1 invocation を持つ skill_id ごとに `skill_evaluations` row を 1 件書く。skill_rating = success_count / adoption_count。asOf から 30 日以内に invocation がなければ unused_flag = 1。cold-start (0 invocations) は 0 rows で throw しない。 | unused skills は auto-delete しない。削除は human-only。success states ("confirmed"/"completed") は source に記録し、single-source-of-truth hardcoded とする理由を持つ。 | U-FR-L1-36 |
 | FR-L1-43 | `projectPocEvaluations` | projectPocEvaluations(db: HarnessDb, opts?: { asOf?: string }) => void | plan_registry は PLAN frontmatter 由来の decision_outcome を持つ kind="poc" rows を含む。 | `poc_evaluations` summary row (id="poc-evaluation:summary") を 1 件書く。poc_success_rate = confirmed_count / total_count、confirmed_count、rejected_count、pivot_count、total_count、evaluated_at を保持する。decision_outcome 空の PoC PLANs は分母から除外し、cold-start (0 decided PoC PLANs) は 0 rows で throw しない。 | pivot は non-success と数える。decision_outcome values は理由付き single-source-hardcoded。row id は常に "poc-evaluation:summary" (rebuild ごとに summary row 1 件)。 | U-FR-L1-43 |
-| FR-L1-38 | `projectModelEvaluations` | projectModelEvaluations(db: HarnessDb, repoRoot: string) => void | model_runs table は projectReviewModelRuns と、token/cost telemetry 用の `projectTokenUsage` で populate 済み。evaluation 実行には .ut-tdd/config/model-opt-in.yaml が enabled:true で存在する。PLAN_SUCCESS_STATUSES は success inference の single-source constant。 | opt-in disabled (file absent または enabled!=true) なら 0 rows を書いて return。有効なら distinct model ごとに success_rate = success_count / run_count (`model_runs.plan_id` → `plan_registry.status IN PLAN_SUCCESS_STATUSES`) を持つ `model_evaluations` row を書く。cold-start (0 model_runs) は 0 rows で throw しない。token/cost rows は file-scan のみで `ut-tdd telemetry scan` が取り込む。 | cost-efficiency (tokens_per_success/cost_per_success) は PLAN-L7-57 と PLAN-L7-58 で discharge 済み。cost は既知 model の local pricing tables だけで計算し、未公開/unknown models は cost_usd=null のまま (cost 捏造なし)。success states は PLAN_SUCCESS_STATUSES で single-source-hardcoded。 | U-FR-L1-38 |
+| FR-L1-38 | `projectModelEvaluations` | projectModelEvaluations(db: HarnessDb, repoRoot: string) => void | **退役予定 (PLAN-L6-789 / Issue #789)**: 本契約 PR は実装を変更しない。退役完了時の目標は評価行の生成 0 と表示専用 scan であり、PR1 / 昇格 / PR2 の順に実装と引用を切り替える。現時点の正式 oracle は U-FR-L1-38、退役候補は CANDIDATE-U-TOKRET-001..005。現行契約: model_runs table は projectReviewModelRuns と、token/cost telemetry 用の `projectTokenUsage` で populate 済み。evaluation 実行には .ut-tdd/config/model-opt-in.yaml が enabled:true で存在する。PLAN_SUCCESS_STATUSES は success inference の single-source constant。 | opt-in disabled (file absent または enabled!=true) なら 0 rows を書いて return。有効なら distinct model ごとに success_rate = success_count / run_count (`model_runs.plan_id` → `plan_registry.status IN PLAN_SUCCESS_STATUSES`) を持つ `model_evaluations` row を書く。cold-start (0 model_runs) は 0 rows で throw しない。token/cost rows は file-scan のみで `ut-tdd telemetry scan` が取り込む。 | cost-efficiency (tokens_per_success/cost_per_success) は PLAN-L7-57 と PLAN-L7-58 で discharge 済み。cost は既知 model の local pricing tables だけで計算し、未公開/unknown models は cost_usd=null のまま (cost 捏造なし)。success states は PLAN_SUCCESS_STATUSES で single-source-hardcoded。 | U-FR-L1-38 |
 | FR-L1-37 | `recommendModelEffort` | recommendModelEffort(input: RecommendModelEffortInput, deps: RecommendModelEffortDeps) => RecommendModelEffortResult | task、drive、layer、size、uncertainty signals を与える。 | model family と reasoning effort recommendation を返す。 | model recommendation は evidence として記録し、hidden prompt state にしない。 | U-FR-L1-37 |
 | FR-L1-39 | `scoreTaskComplexity` | scoreTaskComplexity(input: ScoreTaskComplexityInput, deps: ScoreTaskComplexityDeps) => ScoreTaskComplexityResult | size、dependency、uncertainty、affected artifact signals を与える。 | deterministic score と class を返す。 | unknown inputs は explicit uncertainty を生み、low complexity と捏造しない。 | U-FR-L1-39 |
 | FR-L1-40 | `resolveDriveStatePartition` | resolveDriveStatePartition(input: ResolveDriveStatePartitionInput, deps: ResolveDriveStatePartitionDeps) => ResolveDriveStatePartitionResult | drive/mode/kind/layer を与える。 | `.ut-tdd/drive/<drive>` partition と skip/defer rules を返す。 | drive state は plan/session で join し、他 drive partitions を汚染しない。 | U-FR-L1-40 |
@@ -278,7 +278,7 @@ type QualitySignal = { signal_type: string; subject_id: string; score?: number; 
 | `buildCommandCatalog` | `BuildCommandCatalogInput { command_docs[]; cli_surface } -> BuildCommandCatalogResult extends ContractResult { commands[] }` | implemented pseudocode: `src/workflow/contracts.ts` に実装済み。search rows は rebuildable projection。PLAN-REVERSE-395 の as-is CLI 復元により、`commands[]` は `command` (例: `ut-tdd trace impact`)、source path、required/optional args、options、`hasJson` / json alias、expected exit profile (0/1/2/provider-propagated)、category (core/delegation/distribution/feedback) を持つ command registry として扱う。`src/cli.ts` と registrar (`src/cli/delegation.ts` / `src/cli/distribution.ts` / `src/cli/feedback.ts`) が SSoT 生成元であり、`builder catalog` や prose 代表導線だけで完全集合を再構成してはならない。PLAN-L6-64 shell completion はこの registry を入力にし、未登録 command path を候補化しない。 |
 | `projectSkillEvaluations` | `SkillEvaluationsInput { asOf?: string } -> void` | implemented pseudocode: `src/state-db/skill-projections.ts` に core 実装、`src/state-db/projection-writer.ts` に既存 public signature の wrapper を保持。skill_invocations + plan_registry から per-skill rating/adoption/success/unused を算出し、cold-start は zero rows。 |
 | `projectPocEvaluations` | `PocEvaluationsInput { asOf?: string } -> void` | implemented pseudocode: pure集計coreは `src/projection/domain/poc-evaluations.ts`、meaningful read/store portを結ぶapplicationは `src/projection/application/project-poc-evaluations.ts`、SQLite read/persistは`src/state-db/sqlite-projection-store.ts`、既存public APIの互換facadeは `src/state-db/projection-writer.ts`。summary row は 1 件で、poc_success_rate = confirmed/(confirmed+rejected+pivot)。decided PoC PLANs がなければ zero rows。pivot は non-success。 |
-| `projectModelEvaluations` | `ModelEvaluationsInput { repoRoot: string } -> void` | implemented pseudocode: repository opt-in adapterは`src/projection/adapters/model-evaluation-config.ts`、application/pure計算は`src/projection/application/project-model-evaluations.ts`と`domain/model-evaluations.ts`、grouped SQLite read/persistは`src/state-db/sqlite-projection-store.ts`、旧public facadeは`projection-writer.ts`。.ut-tdd/config/model-opt-in.yaml (enabled:true) で opt-inする。per-model success_rate = success_count/run_count、cold-startはzero rows。**cost-efficiency DISCHARGED** (PLAN-L7-57 token telemetry + PLAN-L7-58 cost enrichment): cross-runtime session JSONLからtoken efficiencyを取り込み、published pricingのないmodelはcost=nullのまま捏造しない。分子=全model run token/cost、分母=PLAN成功数の意図的な非対称を維持する。取り込みは`ut-tdd telemetry scan`。 |
+| `projectModelEvaluations` | `ModelEvaluationsInput { repoRoot: string } -> void` | implementation_state: implemented; retirement staged per PLAN-L6-789 (PR1 / promotion / PR2)。現時点では rebuild / doctor / telemetry scan からの caller が存在する。PR1 で caller / SQLite read、PR2 で domain / application / adapter / port を撤去する予定であり、撤去済みとは扱わない。現行 implemented pseudocode: repository opt-in adapterは`src/projection/adapters/model-evaluation-config.ts`、application/pure計算は`src/projection/application/project-model-evaluations.ts`と`domain/model-evaluations.ts`、grouped SQLite read/persistは`src/state-db/sqlite-projection-store.ts`、旧public facadeは`projection-writer.ts`。.ut-tdd/config/model-opt-in.yaml (enabled:true) で opt-inする。per-model success_rate = success_count/run_count、cold-startはzero rows。**cost-efficiency DISCHARGED** (PLAN-L7-57 token telemetry + PLAN-L7-58 cost enrichment): cross-runtime session JSONLからtoken efficiencyを取り込み、published pricingのないmodelはcost=nullのまま捏造しない。分子=全model run token/cost、分母=PLAN成功数の意図的な非対称を維持する。取り込みは`ut-tdd telemetry scan`。 |
 | `projectOperationalMetrics` | `OperationalMetricsInput { computedAt } -> void` | implemented pseudocode: pure policyは`src/projection/domain/operational-metrics.ts`、application event生成は`src/projection/application/project-operational-metrics.ts`、drive/hook/workflow grouped readとpersistは`src/state-db/sqlite-projection-store.ts`、旧rebuild facadeは`projection-writer.ts`。drive成功statusはcompleted/confirmed/documented、threshold 0.8。statusは丸め前の率で判定し、表示値だけ4桁にする。NULL modeはliteral unknownと同じ`unknown` groupへ正規化・合算し、completed過少計上とsignal ID衝突を防ぐ。trouble/blocked/human/retryは0件をpass、非0をwarnとし、0母数をsilent skipせず0としてsignal化する。 |
 | `deriveArtifactProgressDecision` | `ArtifactProgressDecisionInput { linkedTestCount: number; dependencyChecked: boolean; openDependencyImpacts: number; recoveryPlanIds?: string[] } -> ArtifactProgressDecision { state: dependency_unchecked/implemented_unverified/verified; color: red/yellow/green; reason: string }` | `src/state-db/projection-writer.ts` に実装済み。pseudocode = dependency unchecked または open impacts があれば red、linked tests なしまたは recovery active なら yellow、それ以外は green。 |
 | `projectArtifactProgress` | `ArtifactProgressProjectionInput { graph?: RelationGraphProjection; db: HarnessDb } -> void` | `src/state-db/projection-writer.ts` に実装済み。pseudocode = source nodes を collect し、covered-by test edges を count し、impact_results/recovery PLANs を join し、decision を derive して rebuildable `artifact_progress` rows を upsert する。 |
@@ -835,6 +835,74 @@ spec RAG と工程 RAG は別の read-model である。`spec_rag_closure_entrie
 実行割当台帳は ZIP `assign.py` / `docs/assign.yaml` 相当の HARNESS 翻訳である。PLAN 粒度の
 `review_evidence.green_commands` は証跡履歴として残すが、ID 単位の実行・検証対象を代替しない。
 検出系は PLAN 粒度 evidence に合わせて台帳を薄めず、typed spec ID と V-pair から導いた実行単位に合わせる。
+
+### 台帳 row / gate ID 契約 (未実装)
+
+**未実装**: 本節の authoring source・row・gate ID は L6 設計 freeze 済みだが、`src/` / `tests/` に実装は無い
+(実装は PLAN-L6-50 §3.3 が後続 L7 add-impl へ送ったまま未起票。所有は PLAN-L6-50 / VMS-014 / TVMS-014)。
+
+authoring source は tracked file `docs/governance/vmodel-execution-assignment-ledger.md` とし、harness.db は
+検索用 projection であって正本にしない。row は最低限次の論理列を持つ。
+
+| field | 契約 |
+|---|---|
+| `assignment_id` | `spec_id` + `task_kind` から作る stable ID。rebuild で変わらない |
+| `spec_id` | `spec_defs.spec_id` に存在する ID |
+| `task_kind` | `implementation` / `verification` / `review` |
+| `target_artifacts` | 対応設計・実装・テスト・review packet の path 配列 |
+| `completion_criteria` | `implementation` は対応 test / oracle、`verification` は検証レベルと再実行対象を含む |
+| `status` | `planned` / `in_progress` / `done` / `pass` / `fail` / `archived` |
+| `evidence` | command / PR / path / issue などの検証可能アンカー配列。`done` / `pass` / `fail` では必須 |
+| `archived_reason` | `archived` のときだけ必須。宣言から消えた ID は削除せず `archived` へ退避する |
+
+| gate ID | 検出条件 |
+|---|---|
+| `execution-assignment-evidence-missing` | `done` / `pass` / `fail` なのに evidence が空、または「確認しました」等の非アンカーだけ |
+| `execution-assignment-unknown-spec` | `spec_id` が `spec_defs` に存在しない |
+| `execution-assignment-target-missing` | `target_artifacts` または `completion_criteria` が空 |
+| `execution-assignment-archive-reason-missing` | `archived` なのに `archived_reason` が無い |
+| `execution-assignment-non-idempotent` | 同一入力で `assignment_id` / row 数 / archived row が揺れる |
+
+`checkExecutionAssignmentLedger` が finding 化する「同一 assignment の重複」は上表と別の既存契約であり、本表で置き換えない。
+
+移行元: `docs/plans/PLAN-L6-50-execution-assignment-ledger.md` (issue #648)
+
+## harness.db on-disk currency 契約 (PLAN-L7-365)
+
+on-disk `.ut-tdd/harness.db` の**鮮度 (currency)** だけを扱う。backup / recovery ledger / recovery-probe の
+recoverability 軸は PLAN-L7-348 の範囲であり、本節に混ぜない。projection ロジック自体は変えない。
+
+### 自動追従の置き場所
+
+- 自動 re-projection は **Stop hook 境界** に置く。doctor は read-only を保ち、stale を remediation 付きの fail で
+  報告するだけで自動修復しない (doctor singleton 規律 PLAN-L7-442 を壊さないため)。
+- DB I/O は pure な log 圧縮 core (`src/runtime/session-log.ts` onStop) に入れず、CLI 層 `session summary` が担う。
+- `session summary` は refresh を **detached fire-and-forget** で起動して即 return する (`spawnDetachedStopRefresh`)。
+  Stop hook の timeout 予算内で同期 full rebuild を行わない。起動しなかった場合は stderr に理由
+  (`dirty-marker-unavailable` / `coordinator-unavailable` / `missing-entrypoint` / `bun-runtime-refused` /
+  `unsupported-refresh-entrypoint` / `ownership-handoff-failed` / `spawn-error: ...`) を出し、exit 0 を維持する。
+  active owner が居る場合は `coalesced` として畳み、警告しない。
+- 内部エントリ `ut-tdd session db-refresh --generation <id>` が実 refresh を行う。`refreshHarnessDbOnStop` は persisted
+  harness.db を full rebuild し、完走後に条件付き VACUUM (PLAN-L7-457) を行う。例外・lock を含む全失敗は
+  `skippedReason` (`rebuild-failed` / `rebuild-error: ...`) へ落とし throw しない (fail-open)。
+- token / cost ingest は Stop refresh に**含めない** (`skipTokenTelemetry: true`、`tokenRunsIngested` は常に 0)。
+  手動 `ut-tdd telemetry scan` の所有整理は別 slice。
+
+### 多重 Stop の coalescing
+
+`runCoalescedStopRefresh` は lease を持つ owner 1 つだけが refresh を実行する。実行中に来た Stop は dirty demand に畳み、
+owner は完了後に最大 1 回だけ再実行する (1 回目と合わせて最大 2 run)。失敗時は failure を記録し、demand を再試行可能に
+戻してから lease を解放する。detached child への ownership 引き継ぎの詳細 (birth 検証・PID 再利用) は
+`src/state-db/stop-refresh-coordinator.ts` の実装と U-DBCURRENCY 系テストを正とし、本節では契約化しない
+(三者照合未了、移行証跡 g2 の保留項目)。
+
+### `db-currency` の doctor 検査
+
+`checkDbCurrency` は persisted harness.db の plan registry を現行 `docs/plans` と突き合わせ (`analyzeDbCurrency`)、
+次の violation を独立に fail-close する: `missing_db`、`stale_plan_registry` (`count` = DB 件数 − 期待件数)、
+`stale_plan_registry_fingerprint`。repo root または DB が読めない場合も violation とする。
+
+移行元: `docs/plans/PLAN-L7-365-harness-db-currency-hook.md` (issue #648)
 
 ## Vモデルengine-swap進捗投影契約
 
@@ -1828,6 +1896,19 @@ kind 1以上・同revision・accepted producerで要求する。policy ID未登�
 ambiguous=`plan-migration-collision`、unknown=`plan-asset-not-found`、future revision=`plan-revision-not-found`とする。
 CLI/hook/doctorはrule ID、verdict、exit classを変換せず、同じrequest digestなら同じcommand ID再送を冪等に扱う。
 
+実装済みのexit class割当と検査順序は次のとおり (`src/forward/domain/workflow.ts:70-108`)。検査は (1) eventが許可表にあるか、
+(2) 例外commandのcontext、(3) 必須evidence、(4) 現stateからのedgeと`expectedFrom`の順に行い、最初に失敗した検査のruleを返す。
+(1) で許可表外のeventは`forward-transition-illegal`でexit 1。(2) のcontext不足は`forward-exception-context-missing`、
+(3) の必須evidenceの欠落・期限切れは表のspecialized ruleまたは`forward-evidence-missing`で、いずれもexit 2とし、
+期限切れrecordをeligibleに数えない。(4) の現stateから辿れないedge・`expectedFrom`不一致は (2)(3) を通過した場合に限り
+`forward-transition-illegal`でexit 1となる。したがってedgeが不正でもevidenceが欠けていればexit 2が先に返る
+(例: `proposed`からevidence無しの`accept`は`forward-accept-evidence-missing`でexit 2)。
+ledger/projectionが利用不能、ledgerとprojectionのstate/digest不一致、subject不一致は`forward-ledger-unavailable`でexit 3とし、
+PLAN frontmatterのstatusからstateを補完しない。拒否時はevent/outbox/外部intentを生成しない。`explain`は有効なqueryであれば
+policyが遷移を拒否してもexit 0で`verdict: explain`と拒否ruleを返す。
+
+移行元: `docs/plans/PLAN-L7-419-forward-fsm-transition-workflow-cli.md` (issue #648)
+
 `P-FSM-001` generatorはseedをevidenceへ記録し、0〜64 event、全normal/exception command、valid/invalid evidence、
 duplicate/gap/out-of-order sequenceを生成する。shrinkerは連続chunk削除→単event削除→optional evidence/reason縮小の順で、
 subject/revisionを勝手に変更しない。最低10,000列または全state×command pairを網羅し、非許可state到達0、invalid列受理0を要求する。
@@ -1882,7 +1963,7 @@ kernel DTO/portだけで行い、別contextのdomainを直接importしない。
 ### L7 test ID
 
 - Plan Asset: `U-PA-001..007`
-- Forward FSM: `U-FSM-001..007`, `P-FSM-001`
+- Forward FSM: `U-FSM-001..009`, `P-FSM-001`
 - Contract: `U-VMC-001..005`, `I-VMC-001`
 - Disposition/profile: `U-DISP-001..005`, `I-DISP-001`, `U-PROFILE-001..005`
 - ドキュメント台帳／ドメイン／意味評価: `U-DOCLEDGER-001..005`, `U-DOMAIN-001..004`, `U-ASSESS-001..006`
