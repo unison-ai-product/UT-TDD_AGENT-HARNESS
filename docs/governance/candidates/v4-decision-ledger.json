@@ -1951,5 +1951,43 @@
       "UTV4-BR-011"
     ],
     "verified": true
+  },
+  {
+    "decision_id": "V4D-100",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 530,
+      "comment_ids": [
+        "6158873379"
+      ]
+    },
+    "date": "2026-10-14",
+    "summary_ja": "作ったシステムのセキュリティを攻撃して確かめる仕組み (ペネトレーションテスト / レッドチーム) を置く。ハーネス自身 (guard・hook・review custody のすり抜け、prompt injection、供給網) と、ハーネスで作った製品 (脅威モデルからの攻撃シナリオ、DAST / fuzz / ペネトレーションテストを L7 とリリース gate に置く) の両方を対象にする。攻撃役は書いた family とは別の family。",
+    "status": "active",
+    "superseded_by": null,
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-050"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-101",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 530,
+      "comment_ids": [
+        "6158873379"
+      ]
+    },
+    "date": "2026-10-14",
+    "summary_ja": "CI を小さな単位に分け、変更に関係する検査だけを回す (原子 CI 化)。品質保証は落とさず、main への merge 後とリリース前は全部を回す。",
+    "status": "active",
+    "superseded_by": null,
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-036"
+    ],
+    "verified": true
   }
 ]
