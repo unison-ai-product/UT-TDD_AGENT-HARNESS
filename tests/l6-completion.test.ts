@@ -70,8 +70,9 @@ function l6FixtureText(doc: FixtureL6Doc): string {
 function l7FixtureText(doc: FixtureL7Doc): string {
   return [
     "---",
-    "artifact_type: test_design",
+    "layer: L6",
     "executed_at_layer: L7",
+    "artifact_type: test_design",
     ...(doc.status ? [`status: ${doc.status}`] : []),
     "---",
     doc.body,
@@ -105,7 +106,7 @@ function writeIssueOwnedNoPlanFixture(root: string): void {
         fileName: "issue-only.md",
         owner: "issue: 1035",
         pairArtifact: "docs/test-design/harness/L7-unit-test-design.md",
-        oracleId: "CANDIDATE-U-L6COMP-010",
+        oracleId: "U-L6COMP-010",
       },
     ],
     l7Docs: [
@@ -200,7 +201,8 @@ describe("L6 completion readiness", () => {
           ].join("\n"),
         },
       ],
-      l7Text: "status: confirmed\nfunction-spec.md\n",
+      l7Text:
+        "layer: L6\nexecuted_at_layer: L7\nartifact_type: test_design\nstatus: confirmed\nfunction-spec.md\n",
       gateText: gatePass,
     });
 
@@ -228,7 +230,8 @@ describe("L6 completion readiness", () => {
           text: "plan_id: PLAN-L6-01-function-spec\nkind: design\nstatus: draft\n",
         },
       ],
-      l7Text: "status: draft\nfunction-spec.md\n",
+      l7Text:
+        "layer: L6\nexecuted_at_layer: L7\nartifact_type: test_design\nstatus: draft\nfunction-spec.md\n",
       gateText: gateNotReached,
     });
 
@@ -268,7 +271,8 @@ describe("L6 completion readiness", () => {
           text: "plan_id: PLAN-L6-24-structured-error-handling\nkind: add-design\nstatus: draft\n",
         },
       ],
-      l7Text: "status: confirmed\nfunction-spec.md\n",
+      l7Text:
+        "layer: L6\nexecuted_at_layer: L7\nartifact_type: test_design\nstatus: confirmed\nfunction-spec.md\n",
       gateText: gatePass,
     });
 
@@ -276,14 +280,14 @@ describe("L6 completion readiness", () => {
     expect(result.draftPlans).toEqual([]);
   });
 
-  it.fails("CANDIDATE-U-L6COMP-006: accepts a positive issue as the sole L6 owner", () => {
+  it.fails("U-L6COMP-006: accepts a positive issue as the sole L6 owner", () => {
     const l6Doc = {
       path: "docs/design/harness/L6-function-design/issue-owned.md",
       text: l6FixtureText({
         fileName: "issue-owned.md",
         owner: "issue: 1035",
         pairArtifact: "docs/test-design/harness/L7-unit-test-design.md",
-        oracleId: "CANDIDATE-U-L6COMP-006",
+        oracleId: "U-L6COMP-006",
       }),
     };
     const result = analyzeL6Completion({
@@ -313,7 +317,7 @@ describe("L6 completion readiness", () => {
     }
   });
 
-  it("CANDIDATE-U-L6COMP-007: an issue cannot cover an unresolved plan path", () => {
+  it("U-L6COMP-007: an issue cannot cover an unresolved plan path", () => {
     const docPath = "docs/design/harness/L6-function-design/plan-and-issue.md";
     const planPath = "docs/plans/PLAN-L6-missing.md";
     const result = analyzeL6Completion({
@@ -324,7 +328,7 @@ describe("L6 completion readiness", () => {
             fileName: "plan-and-issue.md",
             owner: `plan: ${planPath}\nissue: 1035`,
             pairArtifact: "docs/test-design/harness/L7-unit-test-design.md",
-            oracleId: "CANDIDATE-U-L6COMP-007",
+            oracleId: "U-L6COMP-007",
           }),
         },
       ],
@@ -341,7 +345,7 @@ describe("L6 completion readiness", () => {
     expect(result.ready).toBe(false);
   });
 
-  it.fails("CANDIDATE-U-L6COMP-008: accepts an existing eligible alternate L7 pair", () => {
+  it.fails("U-L6COMP-008: accepts an existing eligible alternate L7 pair", () => {
     withFixtureRoot((root) => {
       writeL6CompletionFixture(root, {
         docs: [
@@ -349,7 +353,7 @@ describe("L6 completion readiness", () => {
             fileName: "alternate-pair.md",
             owner: `plan: ${fixturePlanPath}`,
             pairArtifact: "docs/test-design/harness/L7-alternate.md",
-            oracleId: "CANDIDATE-U-L6COMP-008",
+            oracleId: "U-L6COMP-008",
           },
         ],
         l7Docs: [
@@ -375,7 +379,7 @@ describe("L6 completion readiness", () => {
     "missing",
     "wrong-layer",
     "wrong-name",
-  ])("CANDIDATE-U-L6COMP-008: rejects an ineligible selected pair (%s)", (axis) => {
+  ])("U-L6COMP-008: rejects an ineligible selected pair (%s)", (axis) => {
     withFixtureRoot((root) => {
       const fileName = axis === "wrong-name" ? "other.md" : "L7-invalid.md";
       const pairArtifact = `docs/test-design/harness/${fileName}`;
@@ -385,7 +389,7 @@ describe("L6 completion readiness", () => {
             fileName: "invalid-pair.md",
             owner: `plan: ${fixturePlanPath}`,
             pairArtifact,
-            oracleId: "CANDIDATE-U-L6COMP-008",
+            oracleId: "U-L6COMP-008",
           },
         ],
         l7Docs: [
@@ -412,7 +416,7 @@ describe("L6 completion readiness", () => {
     });
   });
 
-  it.fails("CANDIDATE-U-L6COMP-009: reverse reference must be in the selected pair artifact", () => {
+  it.fails("U-L6COMP-009: reverse reference must be in the selected pair artifact", () => {
     withFixtureRoot((root) => {
       const docPath = "docs/design/harness/L6-function-design/pair-bound-ref.md";
       writeL6CompletionFixture(root, {
@@ -421,7 +425,7 @@ describe("L6 completion readiness", () => {
             fileName: "pair-bound-ref.md",
             owner: `plan: ${fixturePlanPath}`,
             pairArtifact: "docs/test-design/harness/L7-pair-a.md",
-            oracleId: "CANDIDATE-U-L6COMP-009",
+            oracleId: "U-L6COMP-009",
           },
         ],
         l7Docs: [
@@ -439,7 +443,7 @@ describe("L6 completion readiness", () => {
     });
   });
 
-  it("CANDIDATE-U-L6COMP-010 setup loads valid L6, L7, and G6 inputs", () => {
+  it("U-L6COMP-010 setup loads valid L6, L7, and G6 inputs", () => {
     withFixtureRoot((root) => {
       writeIssueOwnedNoPlanFixture(root);
 
@@ -452,7 +456,7 @@ describe("L6 completion readiness", () => {
     });
   });
 
-  it.fails("CANDIDATE-U-L6COMP-010: a complete issue-owned tree loads without docs/plans", () => {
+  it.fails("U-L6COMP-010: a complete issue-owned tree loads without docs/plans", () => {
     withFixtureRoot((root) => {
       writeIssueOwnedNoPlanFixture(root);
 
@@ -462,7 +466,7 @@ describe("L6 completion readiness", () => {
     });
   });
 
-  it.fails("CANDIDATE-U-L6COMP-011: accepts two confirmed selected pairs", () => {
+  it.fails("U-L6COMP-011: accepts two confirmed selected pairs", () => {
     withFixtureRoot((root) => {
       writeL6CompletionFixture(root, {
         docs: [
@@ -470,13 +474,13 @@ describe("L6 completion readiness", () => {
             fileName: "pair-confirmed.md",
             owner: `plan: ${fixturePlanPath}`,
             pairArtifact: "docs/test-design/harness/L7-unit-test-design.md",
-            oracleId: "CANDIDATE-U-L6COMP-011",
+            oracleId: "U-L6COMP-011",
           },
           {
             fileName: "pair-draft.md",
             owner: `plan: ${fixturePlanPath}`,
             pairArtifact: "docs/test-design/harness/L7-other.md",
-            oracleId: "CANDIDATE-U-L6COMP-011",
+            oracleId: "U-L6COMP-011",
           },
         ],
         l7Docs: [
@@ -500,7 +504,7 @@ describe("L6 completion readiness", () => {
   it.fails.each([
     "draft",
     undefined,
-  ])("CANDIDATE-U-L6COMP-011: a selected pair with status %s keeps completion not-ready", (status) => {
+  ])("U-L6COMP-011: a selected pair with status %s keeps completion not-ready", (status) => {
     withFixtureRoot((root) => {
       writeL6CompletionFixture(root, {
         docs: [
@@ -508,13 +512,13 @@ describe("L6 completion readiness", () => {
             fileName: "pair-confirmed.md",
             owner: `plan: ${fixturePlanPath}`,
             pairArtifact: "docs/test-design/harness/L7-unit-test-design.md",
-            oracleId: "CANDIDATE-U-L6COMP-011",
+            oracleId: "U-L6COMP-011",
           },
           {
             fileName: "pair-draft.md",
             owner: `plan: ${fixturePlanPath}`,
             pairArtifact: "docs/test-design/harness/L7-other.md",
-            oracleId: "CANDIDATE-U-L6COMP-011",
+            oracleId: "U-L6COMP-011",
           },
         ],
         l7Docs: [
@@ -556,5 +560,28 @@ describe("L6 completion readiness", () => {
       expect(screenSpec).toContain(id);
       expect(l7).toContain(id);
     }
+
+    // U-L6COMP-012: bind the consistency oracle to the declared L6-completion family.
+    const familyHeading = "### 2026-06-09 L6 Completion Readiness Addendum";
+    const nextHeading = "## PLAN-L7-68 Provider Dispatch Addendum";
+    const familyStart = l7.indexOf(familyHeading);
+    const familyEnd = l7.indexOf(nextHeading, familyStart + familyHeading.length);
+    expect(familyStart).toBeGreaterThanOrEqual(0);
+    expect(familyEnd).toBeGreaterThan(familyStart);
+    const family = l7.slice(familyStart, familyEnd);
+    for (const id of ["006", "007", "008", "009", "010", "011", "012"]) {
+      expect(family).toContain(`- U-L6COMP-${id}:`);
+    }
+    expect(family).not.toMatch(/^\s*-\s*CANDIDATE-U-L6COMP-\d{3}\b/m);
+
+    const ownerRules = family.match(/^- U-L6COMP-00[12]:.*$/gm) ?? [];
+    expect(ownerRules).toHaveLength(2);
+    for (const rule of ownerRules) {
+      expect(rule).toContain("所有者");
+      expect(rule).toContain("正の整数の `issue:`");
+    }
+    expect(ownerRules.join("\n")).not.toMatch(
+      /owning\s+L6\s+PLAN(?:へ|に)?(?:解決|resolve)|所有PLAN必須|所有PLANへ解決|所有者(?:は|が)\s*(?:実在する)?L6\s*PLAN(?:へ|に)(?:解決|必須)/i,
+    );
   });
 });
