@@ -1952,7 +1952,7 @@ state 変更・event・outbox・外部 intent は 0 件。
 | `complete-implementation` | implementing | implementation_complete | `implementation-digest`, `targeted-test-run` | `forward-evidence-missing` |
 | `prepare-trace-freeze` | implementation_complete | trace_freeze_ready | `trace-materialization` | 同上 |
 | `freeze-trace` | trace_freeze_ready | trace_frozen | `trace-closure`, `green-test-run` | 同上 |
-| `prepare-review` | trace_frozen | review_ready | `trace-closure`, `green-test-run` | `forward-trace-freeze-missing` |
+| `prepare-review` | `trace_frozen` | `review_ready` | `trace-closure`, `green-test-run` | `forward-trace-freeze-missing` |
 | `submit-review` | review_ready | reviewed | `independent-review` (非著者 family) | `forward-evidence-missing` |
 | `accept` | reviewed | accepted | `independent-review`, `gate-run` | `forward-accept-evidence-missing` |
 | `archive` | accepted | archived | `acceptance-decision`, `retention-decision` | `forward-evidence-missing` |

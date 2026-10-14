@@ -249,7 +249,7 @@ source revision / Pack object SHA を指さなければ公開を成立させず 
   含める点は PLAN 本文の記述より厳密で、実装に合わせた)。意味的に同じ manifest は YAML の表現や map 挿入順が違っても
   同じ digest になる。
 - 生成は一方向 DAG とする: `artifact entries → artifactSetDigest / artifactInventoryDigest → deterministic payload tarball
-  / checksum → releaseAssetInventoryDigest → releaseRecordDigest → control manifest snapshot → Pack commit / tree →
+  / checksum → releaseAssetInventoryDigest → releaseRecordDigest → control の manifest の snapshot → Pack の commit / tree →
   annotated tag / draft Release`。Pack commit / tree / tag と control manifest snapshot を release record へ戻さない
   (digest の自己参照を構造的に作らない)。
 
