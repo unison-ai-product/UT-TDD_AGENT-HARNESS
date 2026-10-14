@@ -302,6 +302,17 @@ Minimum G8 close profile for the first L8 ascent:
 `IT-DOCLEDGER-01..07`は実装前TDD Redである。既存921件receiptはbaseline数量証拠に限定し、
 typed reference closure、route freshness、surface parityのGreen代用にしない。
 
+### Vモデルcontract / 右腕 evidence manifest 結合テスト設計 候補 (PLAN-L5-18 還流)
+
+> 設計ペア: `physical-data.md` §9.15.5。未実装の目標契約であり、`CANDIDATE-` ID は L8 本起票で採番を確定する。
+
+| IT-ID | Given | When | Then |
+|---|---|---|---|
+| `CANDIDATE-IT-VMCONTRACT-02` | layer または gate を欠落・重複させた contract fixture | compile する | exactly-once 違反が安定 finding で fail-close する |
+| `CANDIDATE-IT-VMCONTRACT-03` | G8-G14 の evidence manifest を欠いた fixture | 右腕検査を実行する | manifest 欠落が fail-close する |
+| `CANDIDATE-IT-VMCONTRACT-04` | design freeze 済みで program accept が無い fixture、および draft / archived / 無関係 PLAN だけを証拠とする fixture | 完了判定を実行する | 両状態が別に保存され、該当 PLAN は完了証拠に数えられない |
+| `CANDIDATE-IT-VMCONTRACT-05` | contract 再生成後と DB 全削除 rebuild 後 | rule ID、digest、右腕不足集合を比較する | 3 つとも一致する |
+
 ## Execution Ledger / GitHub integration (PLAN-L5-23、2026-07-15)
 
 | IT-ID | Given | When | Then | Evidence |

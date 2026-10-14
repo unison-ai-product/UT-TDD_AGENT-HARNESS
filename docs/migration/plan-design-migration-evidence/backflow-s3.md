@@ -4,13 +4,13 @@
 
 基準 commit: origin/main `d5ad67fb50c148ea8dd6d5475bab4b88f2d4cd4c`。blob sha256 は `git cat-file blob origin/main:docs/plans/<file> | sha256sum` の値。
 
-処理済み: 18 件 / 26 件。
+処理済み: 23 件 / 26 件。
 
 区分ごとの件数 (処理済み分):
 
-- 使い捨て可: 16
+- 使い捨て可: 20
 - 要判断: 1
-- 還流済み: 1
+- 還流済み: 2
 
 | PLAN | blob sha256 (origin/main) | 区分 | 移し先 (path と節) | 剥離した依存 | 備考 |
 |---|---|---|---|---|---|
@@ -32,3 +32,8 @@
 | PLAN-L5-15-feedback-lifecycle-physical-data | `67d2a03fe92e299c7ec3d3adbef685c69a3d9df16ad31afc2516c974bee7241e` | 使い捨て可 | 既存: physical-data.md (feedback_events.source_generation、feedback_lifecycle、authoring source と projection 境界)、L8 Appendix G | requires L5-08 (完了済み)、blocks L6-68 (後続向き、設計実在) | DoD 全チェック済 |
 | PLAN-L5-16-vmodel-source-profile-physical-data | `3001af918721742842466d4958f45ff92b076f59bed559f201bbacc47a3bc137` | 使い捨て可 | 既存: physical-data.md §9.15.1-§9.15.4 (vmodel_sources / semantic items / source-item-target edges、profile、109 / 163 / 21 / 8 の件数照合)、L8 engine-swap 節 | requires L5-13 (完了済み)、blocks L6-70 (後続向き、設計実在) | draft のままだが受入条件 3 点は §9.15 と L8 に既存 |
 | PLAN-L5-17-plan-asset-workflow-ledger-physical-data | `13f2618c7f733bdf6e05f0052509719c3300cc4ad5075108acf955e105a7d8f1` | 使い捨て可 | 既存: physical-data.md §9.15.4 (plan_assets / plan_alias_events / plan_revisions / plan_id_reservation_events / workflow_transition_events / evidence_records / legacy_plan_migration_events) | requires L5-08 / L5-15 (完了済み)、blocks L6-71 / L6-72 (後続向き、設計実在) | ADR-008 と整合 |
+| PLAN-L5-18-vmodel-contract-right-arm-physical-data | `3210f1da60b3f8608ee34438902081df5f8bbadd5ea9c87b9e8372521bc92210` | 還流済み | physical-data.md §9.15.5 (未実装の目標契約)、L8-integration-test-design.md「Vモデルcontract / 右腕 evidence manifest」節 (CANDIDATE-IT-VMCONTRACT-02〜05)。既存: §9.15.1 の contract identity 行、IT-VMCONTRACT-01 | blocks L6-73 (後続向き)。右腕不足集合が evidence_records / PLAN revision に依存する実在の依存を §9.15.5 に責務依存として記載 | 右腕 evidence manifest の物理項目、design freeze と program accept の状態分離は設計文書に無く、src/schema にも table が無かったため目標契約として移した |
+| PLAN-L5-19-repository-document-disposition-ledger | `6822a14c5f34af0cfa41aa992f839b2ad27978cd31b732fa6cbdef3412209a84` | 使い捨て可 | 既存: physical-data.md §9.15.2-§9.15.3 (snapshot / shard / delta / effective path / reference edge / parse receipt / rebuild / legacy_unbound)、L8 IT-DOCLEDGER-01〜05 | blocks L6-74 (後続向き)、references のみ | draft。受入条件は §9.15 と IT-DOCLEDGER に既存。canonical-frame-v1、zone 5 種、baseline 921 件も既存 |
+| PLAN-L5-20-engine-swap-module-decomposition | `2f404101c20f34edf8a9845ff9a1afbd0d3b09c293c582054339e93fb793a355` | 使い捨て可 | 既存: module-decomposition.md 付録C (C.1 責務、C.1.1 wave、C.2 依存規則、C.3 規模 / 循環 / CQS gate) | requires L4-21 (完了済み)、blocks L6-75 (後続向き) | ProfileOverlayResolver は付録C の profile 行 (`resolveProfile`、stateless resolver) に既存。draft のまま |
+| PLAN-L5-21-semantic-assessment-debt-routing-physical-data | `0ebee1bad70594e83dc79cd6e79ed5e07a5ffbcec52e36c7a27c04c5c511f44a` | 使い捨て可 | 既存: physical-data.md §9.15 の semantic_assessments / semantic_assessment_evidence / semantic_assessment_reviews / semantic_assessment_debt_routes | blocks L6-76 (後続向き) | draft。受入条件の 163 item / 3 面証拠 / debt route 100% は §9.15 と L8 engine-swap 節に既存 |
+| PLAN-L5-22-detector-self-proof-receipt-physical-data | `cd0e42b3746f6a03e66627c96d2353ce6ce10bbcbed701a27285798ef32d9091` | 使い捨て可 | 既存: physical-data.md §9.15 の self_proof_receipts / self_proof_fixture_executions / self_proof_surface_observations / self_proof_mutation_results、§9.15.1 の自己証明行 | blocks L6-77 (後続向き) | draft。mutation survivor 0 等の oracle は L8 engine-swap 節に既存 |

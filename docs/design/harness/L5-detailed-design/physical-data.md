@@ -818,6 +818,17 @@ ledger DB不在・schema不一致・digest破損は空ledgerとして補完せ�
 `(event_id,subject_id,subject_revision)`→workflow event、`(evidence_id,subject_id,subject_revision)`→evidenceのcomposite FKで
 cross-subject/revision linkをSQLite実制約として拒否する。
 
+### §9.15.5 Vモデルcontract / 右腕 evidence manifest の物理契約 (未実装の目標契約、PLAN-L5-18 還流)
+
+> 本節は未実装の目標契約である。`src/vmodel-contract/` は YAML loader と contract compiler を持つが、右腕 evidence manifest を保持する table は `src/schema/` に無い。table の追加は後続の L6 契約と L7 実装が担う。
+
+- **単一 revision への結合**: L0-L14、G0.5 / G1-G14、V-pair、成果物、case、evidence policy、exit criteria、defect route、approval / profile を同一 `contract_revision` で保持する。layer と gate はそれぞれ exactly once とし、pair と例外は宣言された集合に限る。
+- **正本と派生物**: authored YAML (`docs/process/vmodel-contract.yaml`) を正本とし、compiled registry と DB は派生物にする。source hash、generated digest、revision を結合し、契約再生成と DB rebuild で `rule_id`、digest、右腕不足集合が一致しなければならない。
+- **右腕 evidence manifest (L8-L14)**: case ID、producer、commit、digest、実行時刻、expiry、verdict、defect route を必須にする。G8-G14 の manifest 欠落は fail-close とする。
+- **状態の分離**: design freeze と program accept は別状態として保存する。draft / archived / 無関係な PLAN を完了証拠に数えない。
+
+責務の依存: right-arm の不足集合の算出は、§9.15.4 の `evidence_records` (subject revision・commit・digest・expiry への拘束) と PLAN Asset の revision に依存する (実在する依存)。
+
 ### 9.10 GitHub Forward基盤テーブル（PLAN-L7-471）
 
 この節の5表はPLAN・依存グラフ・GitHub Project/Issue/branch/PR/check/review/mergeを結ぶ現行の
