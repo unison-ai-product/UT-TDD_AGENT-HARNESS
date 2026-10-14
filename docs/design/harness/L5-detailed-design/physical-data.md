@@ -751,7 +751,8 @@ source dispositionの値域は`adopt|merge|reference|defer|not_applicable|reject
 item targetは`pending_review|adopt|merge|reference|defer|not_applicable|reject`、target kindは
 `artifact_path|artifact_family|plan_alias|target_slot`とする。`pending_review`は判断target禁止、
 `adopt|merge|reference|defer`はtyped target必須とし、この判断規則は変更しない。別途、任意の
-`design_path`を設計参照として持てる。値がある場合はrepo-relativeの完全path (`/`区切り、Unicode NFC) とし、
+`design_path`を設計参照として持てる。省略・NULL・authoringの空欄/`—`は未設定として扱い、`defer`では未設定を拒否する。
+入力DTOに明示された空文字は有効なpathではない。値がある場合はrepo-relativeの完全path (`/`区切り、Unicode NFC) とし、
 `docs/design/` 配下のtrackedかつ作業tree上で実在する通常ファイルを指すこと。空値、absolute path、`.` / `..` segment、
 path escape、非設計path、tracked pathへの正規化後の不一致、欠落または読み取り不能はfail-closeする。basename aliasや
 部分pathから補完しない。既存のtracked-target registry / artifact-path resolverを使ってtracked実体を照合し、設計pathの
