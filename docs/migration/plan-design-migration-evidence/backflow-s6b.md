@@ -3,11 +3,11 @@
 目的: L6 中盤 36 PLAN を「使い捨て可」または「廃止 / supersede 済み」にするため、PLAN にしか無い契約・依存・carry を設計文書へ移す。
 基準 commit: `d5ad67fb50c148ea8dd6d5475bab4b88f2d4cd4c` (origin/main)
 
-本ファイルは **途中経過 (第 1 回 commit)** である。処理済みは下表の 16 件、残りは末尾に列挙する。
+本ファイルは **途中経過 (第 2 回 commit)** である。処理済みは下表の 23 件、残りは末尾に列挙する。
 
 | 区分 | 件数 (処理済みのみ) |
 | --- | ---: |
-| 使い捨て可 | 9 |
+| 使い捨て可 | 16 |
 | 還流済み | 7 |
 | 廃止 | 0 |
 | 要判断 | 0 |
@@ -32,12 +32,19 @@
 | PLAN-L6-61-spec-rag-closure-ledger.md | 776fe1d1e1fca19ac7929cbf3d80068c917591881debb2e6479ad98602830f3a | 使い捨て可 | FS §PLAN-L6-61 `deriveSpecRagClosureEntries` / `ut-tdd trace rag`、工程 RAG との分離 | requires PLAN-L6-43 / L6-60 (完了済み) | 実装済み。L5 physical-data に table 契約あり |
 | PLAN-L6-65-hook-immediate-revalidation-gate.md | bfaa9e565634690d2e3fa398573b076da1f3fa6ac540167c37bf7fe3ea55ed97 | 還流済み | UMG §8、test-design `CANDIDATE-VMUG-013..014` | (requires なし) | src に実装なし。既存ログ記録の非破壊を明記 |
 | PLAN-L6-66-code-minimalism-skill.md | 77b091b590c233f3206b76668413778d9511f711698dc0bc1a074cd5d94b2a40 | 使い捨て可 | `skills/code-minimalism.md`、`skills/SKILL_MAP.md` (どちらも実在) | (requires なし) | 成果物は skill 本体が正本。PLAN は skill の存在確認のみで足りる |
+| PLAN-L6-67-skill-admission-gate.md | 65f58445e32065dabca227b760e8418e5482934d81e657f80c2405d5b1f7e5a4 | 使い捨て可 | `skill-admission.md` (status: confirmed、plan 欄が本 PLAN)、L7 `U-SKILL-ADMIT-001..009` | requires PLAN-L6-37 (完了済み) | 実装は後続 L7 (PLAN 本文どおり) |
+| PLAN-L6-68-memory-telemetry-lifecycle-contract.md | 9ca042360c9818cac8b4caf66d96960a13b149c9145882d46a7de8a083002708 | 使い捨て可 | `memory.md` (`memory_promotion_missed`)、`forced-stop-feedback.md` §2.6.1、L7 `U-MEMORY-005/006` | requires PLAN-L5-15 / L7-189 (完了済み) | 実装は PLAN-L7-392 / L7-246 が所有 |
+| PLAN-L6-69-active-upgrade-frontier-right-arm-contract.md | 4a9aa0a08c12ba38ee1fa899c86411eb75efdb200e0ea3192f2323cc89e4f2c2 | 使い捨て可 | FS (ActiveUpgradeFrontier / EngineSwapRightArmCoverage の節)、L7 `U-VUP-FRONTIER` / `U-RIGHT-ARM-ENGINE` | requires PLAN-L1-07 (完了済み) | 識別子単位で照合 (FS 側の bullet 単位の全照合は未了) |
+| PLAN-L6-70-source-catalog-profile-resolver-contracts.md | b32f3220feac0f95e9e197bc8a68aaed5e089ee16e3b2c8e32e9746d4b30f345 | 使い捨て可 | FS §Vモデル engine-swap L6契約群 (catalog / profile resolver)、L7 `U-DISP-001` / `U-PROFILE-001` | blocks PLAN-L7-417 (順序のみ。剥離) | 識別子単位で照合 |
+| PLAN-L6-73-vmodel-contract-compiler-right-arm-contracts.md | 9ea837bb709ccb7c244962f6f23bd2ff98bf3b3e1b1e4a25c7dbe5df5459e713 | 使い捨て可 | FS (VModelContract / compileVModelContract)、L7 `U-VMC-001` / `I-VMC-001` | requires PLAN-L6-69 (完了済み)、blocks PLAN-L7-420 / L7-421 (順序のみ。剥離) | 識別子単位で照合 |
+| PLAN-L6-76-semantic-assessment-debt-routing-contracts.md | 974c2452cb3306c532eb5be4b964f6ba2ebdcd4966f5fa48d818640177a5b356 | 使い捨て可 | FS `evaluateSemanticItem` / `routeAssessmentDebt`、L7 `CANDIDATE-ASSESS-*` | blocks PLAN-L7-424 (順序のみ。剥離) | oracle は CANDIDATE のまま (正式 oracle は実装 PR で昇格) |
+| PLAN-L6-77-detector-compiler-meta-verifier-contracts.md | 4361afc0c518864c2a1f110e140a8a818cb61c94f77780117dcdcb5b34829f57 | 使い捨て可 | FS (`runSelfProof` / `U-SP-001` 系)、L7 `M-SP-001` / `I-SP-001` | blocks PLAN-L7-425 (順序のみ。剥離) | L7 に `U-SP-001` の実体が無く FS にのみ存在する点は要追跡 (識別子 grep の結果) |
 
 ## 未処理 (別の worker または次回に引き継ぐ)
 
 PLAN-L6-48 (L2 / L5 freeze 契約の現行 owner を要確認)、PLAN-L6-62、PLAN-L6-63 (g1 の d 行が未照合)、PLAN-L6-64 (g4 で移行済みの照合のみ)、
-PLAN-L6-67、PLAN-L6-68、PLAN-L6-69、PLAN-L6-70-source-catalog-profile-resolver-contracts、PLAN-L6-70-vmodel-judgement-skill-pack、
-PLAN-L6-71、PLAN-L6-72 (FS / L7 に FSM 表が既存。L6-89 との分担を照合)、PLAN-L6-73、PLAN-L6-74、PLAN-L6-75、PLAN-L6-76、PLAN-L6-77、
+PLAN-L6-70-vmodel-judgement-skill-pack、PLAN-L6-71、PLAN-L6-72 (FS / L7 に FSM 表が既存。L6-89 との分担を照合)、PLAN-L6-74、PLAN-L6-75、
 PLAN-L6-78、PLAN-L6-79、PLAN-L6-80、PLAN-L6-81。
 
 読了済みの所見 (判断は未了): L6-70-vmodel-judgement-skill-pack は skills/ に design-family-* 9 本を含め大半が実在し、PLAN 本文の「ファミリ 9 本は未作成」は stale。
+L6-72 は FS / L7 に \`forward-transition-illegal\` / \`U-FSM-00*\` / \`P-FSM-001\` が既存で、実装 (`src/forward/`) もある。\`CANDIDATE-U-FSM\` は design 側に 0 件。
