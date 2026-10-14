@@ -26,6 +26,8 @@ r1是正ではL1-01..05を、未解決carry・依存移管のため保留へ訂�
 
 JSONのsourceReason/sourceCandidateLabelとvalidationの入力集計は原監査入力の履歴として保持する。訂正後の分類件数は公開summaryとrecordsで示し、reviewCorrectionにcontrolコメントを記録した。
 
+r2では廃止予定14件すべてを、固定sourceの`src/`・`tests/`に対し完全IDとbare core IDの両方で再検索した。M-00のproduction参照・実repo検証を含む10行へ依存を追加し、65件の逐語参照を固定Gitへ束縛した。bare core参照は完全IDへの結合が未確定なので、責務移管・廃止の証明と区別する。検索で直接参照が見つからなかった4行もJSONのdependencyScanへ記録したが、動的・意味上の依存の不存在は主張しない。taxonomy/identity fixtureとproductionの直接依存も区別し、いずれも廃止前の照合対象として保持する。
+
 L6-63はlocal stagingの限定契約を保持する一方、remote publication・stable昇格・rollback等の未完責務を切り分ける。L6-83/86、L8-01、L9-01も個別の限定責務を保持する候補であり、Forward/右腕/実行閉包全体の完了を意味しない。
 
 ## 検証と限界
@@ -33,6 +35,7 @@ L6-63はlocal stagingの限定契約を保持する一方、remote publication�
 - 218行のsource blob OID・SHA-256・bytes・一次表完全ID対応を検証。不一致0。
 - 元の証拠参照先157パスに加え、r1ではlive codeと直接testの6参照を固定Git objectへ束縛した。参照IDの未定義0。
 - 元の数値行範囲の逐語引用377件は変更せず、r1の6件を追加して固定Git bytesとの一致を検証した。不一致0。残る190件は複合参照などで逐語検査の対象外であり、解釈として区別する。
+- r2の65追加参照も固定Git bytes・SHA・サイズとの一致を検証した。不一致0。候補ラベル・source bindings・元reason・元参照はr1から変更していない。
 - 上記は構造・固定source・引用の検証であり、意味分類のclosing reviewの代わりではない。
 - 元PLAN、設計、実装、tests、台帳、DBは変更しない。本文の過去Greenを現HEADの検証として流用しない。
 - 現mainの共有契約は固定sourceから進むため、実移行前に鮮度差分を検証する。
