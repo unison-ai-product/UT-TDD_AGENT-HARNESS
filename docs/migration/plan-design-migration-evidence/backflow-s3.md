@@ -4,11 +4,12 @@
 
 基準 commit: origin/main `d5ad67fb50c148ea8dd6d5475bab4b88f2d4cd4c`。blob sha256 は `git cat-file blob origin/main:docs/plans/<file> | sha256sum` の値。
 
-処理済み: 13 件 / 26 件。
+処理済み: 18 件 / 26 件。
 
 区分ごとの件数 (処理済み分):
 
-- 使い捨て可: 12
+- 使い捨て可: 16
+- 要判断: 1
 - 還流済み: 1
 
 | PLAN | blob sha256 (origin/main) | 区分 | 移し先 (path と節) | 剥離した依存 | 備考 |
@@ -26,3 +27,8 @@
 | PLAN-L5-10-drive-model-router-redesign | `80bb5d0ef1c914fb0e932b5b3a478616d6a1fe48263a00d83208dd21d17d8158` | 使い捨て可 | 既存: internal-processing.md Appendix C.1-C.7 (default-Forward、routeFiling 決定表、layer 強制と l7-cold-intake、two-phase intake、escape governance)、L6 function-spec routeFiling、L8 Appendix D | parent L5-03 (順序) | DoD が未チェックのまま status confirmed。設計判断 (b) の全 mode 横展開は C.2 に採択済みで既存。L7 実装は C.6 carry 先の add-impl が持つ |
 | PLAN-L5-11-forward-decomposition-tree-projection | `f917fbca289fc368cec421b384463e6c460f65836611685a9579da162fee3f58` | 還流済み | physical-data.md §9.5.1 (未実装の目標契約と明記)、L8-integration-test-design.md Appendix H (CANDIDATE-IT-FWDTREE-01〜06) | references のみ (requires 空)。完備性 lint と matrix view が node / edge に依存する実在の依存は §9.5.1 末尾に責務依存として記載 | draft で DoD 未達だった設計本文が設計文書に無かったため移した。実装は src に無い (decomposes / pairs edge 不在、section_id は空文字) ため目標契約として記載 |
 | PLAN-L5-12-externalization-by-design | `a9b641302d7c149d63f0fa1e842931d571f802cc4c739fbbbef5df04014e04a0` | 使い捨て可 | 既存: internal-processing.md C.7、L8 Appendix E (IT-EXT-01〜05) | parent L5-03 (順序) | DoD 未チェックのまま confirmed。C.7 は PLAN の要件を全て含み、未知キー fail-close 等はむしろ詳細化済み |
+| PLAN-L5-13-vmodel-spec-ir-physical-data | `281821cfcd0174438923ef48b232755cc226a9a1dbde77ce66d34f2400ccc0f6` | 使い捨て可 | 既存: physical-data.md §9.9 (spec_defs / spec_relations / schedule_entries / activation_entries / detector_route_candidates)、L8 Appendix F (IT-SPECIR-01〜04) | requires L4-19 / L4-18 / L5-08 (完了済み)、blocks L6-39 / L7-381 (後続が本 PLAN の成果を使う向きで、設計は実在するため剥離) | detector が FilingTarget を創作しない旨は §9.9 と IT-SPECIR-03 に既存 |
+| PLAN-L5-14-ai-model-governance-card | `7034e9bb85c5f723e4848dcd380b9be9c082bb142b38637fe5840e499e96c527` | 要判断 | 移さない (設計文書に該当契約なし) | requires PLAN-L7-256 (model-id SSoT) はメタデータ層の位置づけ上の依存で、設計文書に書く内容が未確定のため剥離しない | vmodel-item-target-ledger.md の ITEM-TARGET-MODEL-GOV が pending_review (PO/TL item-level target review 待ち)。判断: モデルカード / 来歴台帳を L5 設計 (physical-data) として新設するか、disposition catalog の merge 先 (L4 architecture の model routing evidence) だけで足りるとして廃止するか |
+| PLAN-L5-15-feedback-lifecycle-physical-data | `67d2a03fe92e299c7ec3d3adbef685c69a3d9df16ad31afc2516c974bee7241e` | 使い捨て可 | 既存: physical-data.md (feedback_events.source_generation、feedback_lifecycle、authoring source と projection 境界)、L8 Appendix G | requires L5-08 (完了済み)、blocks L6-68 (後続向き、設計実在) | DoD 全チェック済 |
+| PLAN-L5-16-vmodel-source-profile-physical-data | `3001af918721742842466d4958f45ff92b076f59bed559f201bbacc47a3bc137` | 使い捨て可 | 既存: physical-data.md §9.15.1-§9.15.4 (vmodel_sources / semantic items / source-item-target edges、profile、109 / 163 / 21 / 8 の件数照合)、L8 engine-swap 節 | requires L5-13 (完了済み)、blocks L6-70 (後続向き、設計実在) | draft のままだが受入条件 3 点は §9.15 と L8 に既存 |
+| PLAN-L5-17-plan-asset-workflow-ledger-physical-data | `13f2618c7f733bdf6e05f0052509719c3300cc4ad5075108acf955e105a7d8f1` | 使い捨て可 | 既存: physical-data.md §9.15.4 (plan_assets / plan_alias_events / plan_revisions / plan_id_reservation_events / workflow_transition_events / evidence_records / legacy_plan_migration_events) | requires L5-08 / L5-15 (完了済み)、blocks L6-71 / L6-72 (後続向き、設計実在) | ADR-008 と整合 |
