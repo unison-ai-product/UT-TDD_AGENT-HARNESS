@@ -1457,6 +1457,11 @@ DB空集合からのauthoring補完、共有repoのvolatile logをfixed-point証
 | `CANDIDATE-ASSESS-004` | conditional/NA理由・profile・承認欠落 | evaluator | `assessment-applicability-incomplete`, exit 1 |
 | `CANDIDATE-ASSESS-005` | source revision/digest変更 | evaluator | 旧verifiedをstale扱い、exit 1 |
 | `CANDIDATE-ASSESS-006` | 163 item全件fixture | aggregate query | pending 0、gap/partial route coverage 100% |
+| `CANDIDATE-ASSESS-007` | 1件のevaluate入力 | evaluator | assessment / 3面evidence / review event / debt route を別identityで返し、identity集合が互いに重ならない |
+| `CANDIDATE-ASSESS-008` | 同一itemを2回evaluate | evaluator + review event store | 既存review eventは更新・削除されず追記だけが増える。更新を試みると拒否、exit 1 |
+| `CANDIDATE-ASSESS-009` | conditional/NAのprofile・reason・approval | evaluator→永続化→再読込 | 3値が欠落なく再読込できる。欠落は`assessment-applicability-incomplete`、exit 1 |
+| `CANDIDATE-ASSESS-010` | partial/gapでseverity・owner・debt PLAN・次遷移のいずれか欠落 | evaluator | verified/closeにせずfindingを返す、exit 1 |
+| `CANDIDATE-ASSESS-011` | debt route決定 | `routeAssessmentDebt` | `routeFiling`へ委譲した結果と一致し、局所heuristicのlayer/kindを返さない |
 | `CANDIDATE-SP-001` | rule/registry duplicate/orphan | meta-verifier | `self-proof-registration-mismatch`, exit 1 |
 | `CANDIDATE-SP-002` | source/generated digest不一致 | meta-verifier | `self-proof-generated-stale`, exit 1 |
 | `CANDIDATE-SP-003` | CLI/hook/doctor/CI surface欠落 | meta-verifier | `self-proof-surface-missing`, exit 1 |
@@ -1474,6 +1479,7 @@ DB空集合からのauthoring補完、共有repoのvolatile logをfixed-point証
 | `CANDIDATE-M-SP-005` | exception fail-open mutation | mutation runner | mutation killed、exit 1 |
 | `CANDIDATE-M-SP-006` | DB-only補完mutation | mutation runner | mutation killed、exit 1 |
 | `CANDIDATE-M-SP-007` | surface登録脱落mutation | mutation runner | mutation killed、exit 1 |
+| `CANDIDATE-SP-009` | receiptを持たないrule | meta-verifier coverage | 未統制として扱いcoverageから除外し、統制済み件数に数えない |
 
 `U-DOCLEDGER-001..005`を本sliceの実装前Red freezeとする。reference解析・canonical assertion・
 debt routeを扱う後続5件は、後続sliceでIDを再採番してfreezeするまでoracle宣言へ含めない。test実体とGreen証拠が揃うまで

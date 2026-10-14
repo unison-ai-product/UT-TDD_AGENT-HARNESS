@@ -982,6 +982,18 @@ doctor definition、roadmap obligationを生成し、source/generated digest dri
 snapshot queryはGit objectからraw NUL path集合を読む。batch commandはselectorを全path recordへmaterializeし、validatorは
 selectorを再評価しない。semantic evaluatorはauthored evidenceを照合するだけでverdictを創作しない。meta-verifierは
 ProcessRunner/Hasher/ReceiptStoreをport注入し、検査対象detectorのverdict関数をoracleとしてimportしない。
+receiptを持たないruleは未統制としてself-proofのcoverageから除外し、統制済みと数えない (accept条件は上記のmutation survivor 0と正常fixture false-positive 0)。
+
+`evaluateSemanticItem`の出力 (PLAN-L6-76、実装は PLAN-L7-424 の未実装契約) は次の4つを**別identity**で返す。
+(1) `assessment` (verified / partial / gap / profile conditional / NA / pending のverdict)、
+(2) design / runtime / test の3面evidence (面ごとに1 identity)、
+(3) append-only の`review event` (既存eventを更新・削除せず、追記だけで履歴を作る)、
+(4) `debt route` (`routeAssessmentDebt`の戻り)。
+conditional / NA の profile・reason・approval は、永続化できる形で assessment 側に必須とする (欠落は`assessment-applicability-incomplete`)。
+verified は design+runtime+test/evidence の3面、partial / gap は severity・owner・debt PLAN・次の遷移、
+conditional / NA は理由・profile・承認を要求する。`routeAssessmentDebt`は`routeFiling` SSoTへ委譲し、
+layer / kind / pairing を局所のheuristicで決めない。source / revision / digest が変わった verified は stale へ戻し、
+163 item の集計は pending 0 を決定論的に返す。
 
 #### リポジトリ文書snapshot／disposition／reference closureのfreeze (PLAN-L6-74)
 
@@ -1788,6 +1800,10 @@ document profileの6正本を、見出し名・column集合・row幅・inline co
 未知/重複column、欠落row、row幅不一致、silent skipはそれぞれ`catalog-authoring-schema-invalid`、
 `catalog-authoring-row-invalid`、`catalog-authoring-count-invalid`としてfail-closeする。複数findingは
 `ruleId, subjectId, evidenceRefs`のbytewise stable順にし、canonical digestはlength-prefixed frameで計算する。
+
+manifestの宣言件数 (109 / 163 / 21 / 8) はchecked ZIP revisionのacceptance fixtureであり、aggregateへ恒久定数として持たない。
+Catalogとdocument profile resolverは別aggregateとし、document profileは`doc_type_id`を保持してsemantic `item_id`へmapしない
+(PLAN-L6-70 の還流。実装は PLAN-L7-417)。
 
 catalog createはauthoring構造がvalidなら`pending_review`を保持したまま成功できる。pendingは完了判断ではなく、
 `unresolved()`が純粋queryとしてstable ID順に全件返す。accept/closeだけがpending 0を要求し、DB空集合やsource-targetから
