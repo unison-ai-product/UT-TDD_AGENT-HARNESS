@@ -4,9 +4,9 @@
 
 基準 commit: origin/main `d5ad67fb50c148ea8dd6d5475bab4b88f2d4cd4c`
 
-件数: 使い捨て可 19、還流済み 11、未処理 1、要判断 1 (計 32)
+件数: 使い捨て可 19、還流済み 12、要判断 1 (計 32)
 
-触った設計文書: `docs/design/harness/L4-basic-design/data.md` (§11.1 / §12 / §13)、`architecture.md` (§11-§15)、`function.md` (Appendix D)。test-design は触っていない。
+触った設計文書: `docs/design/harness/L4-basic-design/data.md` (§11.1 / §12 / §13)、`architecture.md` (§10.2-§15)、`function.md` (Appendix D)、`docs/test-design/harness/L9-system-test-design.md` (§11)。
 
 注記: 実装状況の記述は architecture §3.1 の公開 IF からの引用であり、`src/` を個別に開いて照合していない項目がある (備考に明記)。
 
@@ -41,6 +41,6 @@
 | PLAN-L4-29-security-design-substance | `4472fc632436108471ad94ec910613b581deaed5a8ca72717a398e1bc791192e` | 使い捨て可 | security.md §5-§10 (既存) | なし |  |
 | PLAN-L4-30-execution-ledger-github-architecture | `27013fa2e07ebb1defdab01e331ade481286bdccb82529d3f2dd411d32ad6597` | 使い捨て可 | function.md Appendix C (g3.md 既存) + L9 §8 | requires L4-23 / L6-50、blocks L5-23 は順序 (剥離) | g3.md で移行済み。受入条件の oracle は L9 §8 に既存 |
 | PLAN-L4-31-nfr-verification-foundation-architecture | `b387fc75b28d76bf6e08ba9cda80976b19ed12104bf05f87e02d0ee37ca9ea15` | 還流済み | architecture.md §12 | requires L3-03 / L7-34 (完了済み) | draft。IMP-173 の設計書カバレッジ欠落をこれで解消。未実装の目標契約と明記 |
-| PLAN-L4-32-resource-governed-execution-kernel | `e7c75c437c0744d4fe278c88267571f05c46892a34faf8aa9672d8c2bd5652cd` | 未処理 | g3.md が一部移行済み (architecture §10/§10.1) | 未判定 | 残り件数の都合で未着手 (g3 の保留 d 項目が残る) |
 | PLAN-L4-33-node-control-plane-redesign | `a5b65bf38588178d7d836a3c0b909651bd082f744b8a15b5a2dcf8fcfcb178cb` | 還流済み | architecture.md §9 (既存) + §13 | blocks PLAN-L5-26 は降下順序 (剥離) |  |
 | PLAN-L4-34-repository-runtime-placement-topology | `a680cb0c06fb28c3fdda27d74335012d790c5072c22e42798c4b493f23d99883` | 要判断 | architecture.md §14 (worktree lifecycle、#384 部分を還流済み) / §15 (cutover 部分は移さず問いを記録) | S2/S3 の将来 edge (#232 / #134 / #228 / #169 / #124 / #384) は完了順序の依存を含む。#384 部分は §14.2 の port に依存として記録 | 質問: OneDrive 撤去と C:\dev 配置が済んだ今も、OneDrive 外 cutover の receipt chain / write fence (§3.1-§5、AC-PLACE-01..09、U-PLACE-001..018) を設計目標として維持するか、廃止するか。U-PLACE-010 以外の oracle は L9 に未移送 (PLAN にだけ存在) |
+| PLAN-L4-32-resource-governed-execution-kernel | `e7c75c437c0744d4fe278c88267571f05c46892a34faf8aa9672d8c2bd5652cd` | 還流済み | architecture.md §10.2-§10.4 (g3.md の移行分 §10/§10.1 に加え、責務・OS 別 custody・deferred AC・段階導入)、L9-system-test-design.md §11 (incident evidence) | requires 系の PR #154 D0-N は §10.4 の段階導入 (4) に責務依存として記録。L5-25 / L6-92 / L7-466 は降下順序で剥離 | g3 で保留 (d) だった Windows SCM supervisor / POSIX uid drop / macOS 境界 / crash recovery を移した。実装は未存在 (src/resource-kernel/ なし) の目標契約。§1.3 の不変条件→L9 写像は L9 §9.1 に同内容が既存のため移さず |

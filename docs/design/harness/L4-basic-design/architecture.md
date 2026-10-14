@@ -423,6 +423,43 @@ macOS は Linux 同等を自己申告せず、証明できる capability だけ�
 
 移行元: docs/plans/PLAN-L4-32-resource-governed-execution-kernel.md (issue #648)
 
+### §10.2 Kernel の責務範囲と object / port (PLAN-L4-32 からの還流)
+
+Kernel が所有するのは、HARNESS が直接・間接に起動する全 process tree の開始・監視・cancel・reap、wall-clock deadline と CPU・memory・process 数・出力 bytes・任意の I/O の予算、実行 identity と入力 revision と予算と終了理由と出力 digest を結ぶ immutable receipt、署名済み companion bundle の検証・probe・sealed admission token・managed root 生成前の capability fail-close である。業務 command の意味・test の合否・GitHub workflow の状態・DB/CAS 再利用・single-flight・local CI 全体の queue/headroom は所有しない。個別の kill や timeout 追加では閉じないという認識 (Issue #124 の孤児化) が出発点で、Bun 固有の回避策にせず Node/Git/PowerShell など全子プロセスを同じ境界で扱う。
+
+| object / port | 責務 |
+|---|---|
+| `ExecutionKernel` | validate → admit → custody attach → run → terminate/reap → receipt の lifecycle 調停。巨大 runner にしない |
+| `ResourcePolicy` | classification 別 budget と override 可否の純粋判定 |
+| `ProcessCustody` | process tree の attach、usage 観測、tree 全体への signal、reap 証明 |
+| `ExecutionJournal` | event append、terminal receipt 封印、冪等 attempt、crash 後 reconcile |
+| `CapabilityNegotiator` | required capability と platform adapter の適合を開始前に fail-close 判定 |
+
+control process (署名・digest 検証済みの companion / 常駐 custodian / broker) と managed workload の root は別の identity とし、`control_process_created` と `managed_root_created` を単一の boolean で兼用しない。bundle の静的検証後に control process を起動して probe できるが、probe fact を journal に durable append し admission が required capability との完全一致を確定するまで `managed_root_created=false` を保つ。各 identity の PID・nonce・bundle digest・生成時刻は別々に記録する。native 側へ domain rule・GitHub 判断・DB/CAS 判断を移さず、companion bundle を検証できなければ direct spawn に fallback せず `capability_failure` とする。
+
+### §10.3 OS 別 custody (未実装の目標契約)
+
+- **Windows**: Job Object を作り、root を `CREATE_SUSPENDED` で生成して `AssignProcessToJobObject` 成功後に `ResumeThread` する (custody 外で user code が動く窓を作らない)。`JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE`・active process 数・job memory・必要な CPU rate/deadline 監視を組み合わせ、Job handle は child に継承させない (標準入出力を継承する場合は `PROC_THREAD_ATTRIBUTE_HANDLE_LIST` に必要 handle だけを列挙し Job/custodian handle を除く。不要なら継承自体を無効)。実行 worker は Job handle を持たず、常駐 custodian と別監督境界の supervisor (Service Control Manager 管理の別 service) だけが非継承 handle を持つ。custodian の heartbeat 喪失時は supervisor が Job 全体の terminate を要求し active process 0 を確認して最後の handle を閉じる。Job は attempt GUID を含む named object と最小 ACL で作り、journal には raw handle 値でなく attempt/custody identity を保存する。supervisor 再起動時は custodian 生存中に限り `OpenJobObject` で同じ Job を開き attempt GUID と journal nonce を照合して handle を再取得し、custodian は認証済み supervisor 以外へ `DuplicateHandle` しない。双方喪失で object が消えた後の reopen は禁止し、再起動 supervisor は process creation sentinel と独立 probe で active process 0 を確認する (未知の生存 process・観測欠測は success にせず `custody_failure`)。親が既存 Job 内なら nested Job の capability を実測 negotiation し、成立する環境だけを受理する (breakaway・limit 競合・custodian 自身の閉じ込めは開始しない。PID 監視への黙った縮退も禁止)。window 表示抑止は native executable + argv と `CREATE_NO_WINDOW` 相当・`windowsHide` で行い、`cmd.exe` / PowerShell を暗黙に挿入しない (必要な shell は `ExecutionSpec` に明示)。
+- **Linux**: 常駐 broker を subreaper (`PR_SET_CHILD_SUBREAPER`) とし、execution ごとの cgroup v2 に user code 開始前に root を置く。hard custody 分類は `clone3(CLONE_INTO_CGROUP)` を必須とし、非対応 kernel では開始しない (停止 child の事後 attach は未所属区間を作るため低 capability の開発 class に限る)。delegated subtree の ownership と permission は broker に限り、payload の uid / user namespace からの `cgroup.procs` 移動・子 cgroup 作成・delegation 変更を許さない。payload は非特権 uid に落とし、ambient/inheritable capability を空にし、`CAP_SYS_ADMIN`・任意 user namespace・cgroup mount/write 権限を拒否する (強制不能な特権 payload は hard custody として開始しない)。memory/CPU/process 上限と `cgroup.kill`・`cgroup.events` の `populated=0` が custody と reap の証明の正本で、脱出した再親子は subreaper が `waitid/waitpid` で回収する。cgroup delegation・subreaper・常駐 broker のどれかが不足する場合、orphan zero を要求する production 分類は開始しない。process group / session だけの adapter は capability が明示的に低い開発 class に限り、hard custody 要求には選ばない。wall deadline の owner は architecture §10 の broker 外 durable owner と同じ契約に従う。
+- **macOS**: cgroup / subreaper 相当の hard custody を標準提供しないため、専用常駐 broker の session / process-group 監視で証明できる capability だけを公開し、`tree_kill` / `tree_empty_proof` を要求する分類で完全証明できなければ `capability_failure` とする。daemonize / double-fork を許す外部 service は Kernel 管理外として別境界を宣言し、Kernel の success 証拠に含めない。
+- **crash recovery と orphan zero**: 開始前に intent を journal に durable append し、常駐 custodian/broker が custody identity を所有してから started を記録する (CLI/worker の寿命に custody を結ばない)。再起動時は未完了 attempt を列挙し、OS custody が生存していれば終了・reap、消滅済みなら観測可能な証拠とともに `launch_failure` か `custody_failure` へ収束する。PID だけで所有権を推定して無関係な process を終了しない。正常終了の定義は root の終了でなく、custody container 空・lease 解放・journal flush・terminal event と receipt の seal/publish までである。
+
+### §10.4 deferred 要件 (Issue #152 later performance/control-plane wave) と段階導入
+
+次の要件は削除・免除せず ID を予約したまま後続 wave へ移す。D0-R はその設計・実装・Green evidence を merge 条件にせず、native custody を D0-N の activation / cutover 正本へ逆流させない。後続 wave の producer process も本 Kernel の budget / custody / capability / terminal receipt 境界を使う。
+
+| deferred AC | 保存する要件 | 後続 wave の閉鎖条件 |
+|---|---|---|
+| `AC-RGK-07` | source fingerprint dirty-set による DB incremental rebuild と full rebuild の canonical digest 同値 | schema/projector 変更・reader/writer 競合・failure rollback を含む選択 corpus が Green |
+| `AC-RGK-08` | 保証互換 `work_key` だけの single-flight、Request/Producer receipt 分離、waiter の独立 terminal | 非互換 budget/deadline/capability 混入・cancel・producer crash の負 oracle が Green |
+| `AC-RGK-09` | 完全 input identity の snapshot CAS、hermetic materialize、atomic publish/lease/GC | hit/miss・overlay・undeclared access・disk/rename/GC fault corpus が Green |
+| `AC-RGK-10` | hook/doctor/snapshot/local CI 横断の queue/headroom admission、visible shell 0、managed 外 process 0 | 全 surface 同時負荷と queue deadline の system evidence が Green |
+| `AC-RGK-13` | DB canonical digest と CAS identity の型・順序・locale・EOL・mode・symlink・toolchain/env 識別 | identity 一要素 mutation と semantic equivalence corpus が Green |
+
+段階導入: (1) 観測段階 = read-only observer が既存 runner の usage / process tree を shadow 観測する (`ObservationReport` として隔離し、Kernel admission・custody・receipt を名乗らず Green 証拠にも使わない)。(2) custody 段階 = 代表 fixture を Windows Job/custodian か Linux cgroup v2/subreaper/broker 外 deadline owner へ移し、macOS 不足 class は fail-close。(3) 資源段階 = classification 別 budget を fail-close 化し、適用値と観測値を receipt に保存。(4) native activation = D0-N の verified Node 入口からだけ Kernel port を呼び、companion 経路の direct spawn を禁止する。各段階は feature flag で旧経路へ黙って fallback せず、rollback は明示 policy revision と receipt を伴う。companion bundle を旧 component へ戻す場合も旧 manifest を再利用せず、現在 floor より大きい新 sequence で再 review・再署名し通常の trust / target / capability oracle を再通過させる。旧 direct-spawn 経路への rollback は禁止し、必要 capability を満たせない platform は利用停止する。
+
+完了の非条件: 単一 PID の手動停止、`windowsHide` だけの追加、timeout 値の延長、重い検証の GitHub CI への移送、DB rebuild 頻度の単純削減、snapshot 一時 directory の掃除だけでは本負債の完了証拠にならない。D0-R の merge 判定に算入する AC は `AC-RGK-01..06/11/12/14/15` で、L9 §9.1 が正負 oracle を持つ。L5/L6/L7 への降下順序は `L4/L9 → L5/L8 → L6/L7 → L7 実装 → L8 統合 → L9 system` で、OS で強制不能な要求を見つけたら L4 か ADR に戻し、detector の allowlist で覆い隠さない。降下先 PLAN は `PLAN-L5-25` / `PLAN-L6-92` / `PLAN-L7-466` (当初予定の L5-24 / L6-89 は別 branch の PLAN と衝突したため再利用しない)。
+
 ## §11 宣言型 V-model contract と右腕 engine (PLAN-L4-24 / L4-27 / L4-28 からの還流)
 
 L0-L14 の layer / gate / V-pair / 成果物 / case ID / evidence / exit criteria / defect routing / approval / profile は宣言型正本 `docs/process/vmodel-contract.yaml` に集約する。contract loader が検証した同一 DTO から plan lint、generic right-arm detector、doctor definition、roadmap obligation を導出し、手書きの gate mapping 定数 (`VERIFICATION_GATE_BY_LAYER` 等) が contract 由来 registry と一致しなければ CI / doctor が fail-close する。detector は欠落した設計判断を補完しない。L8-L14 は各層 `kind: verify` PLAN を最低 1 件持ち、工程表の G8→G14 predecessor chain に載せる (L8-01〜L14-01 は起票済)。verification band の恒久 park は撤去し、未完は残 frontier として表示する。未達 (目標): contract が draft の間は right-arm detector が `IN-PROGRESS` を表示し、confirmed 後の不足は hard failure にする。

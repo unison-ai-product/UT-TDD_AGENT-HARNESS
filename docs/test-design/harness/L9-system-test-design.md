@@ -503,3 +503,16 @@ Given/When/Then、Linux/Windows/path/fault 行、#141/#232/#124 dependency、sco
 正しく示す。レビュー前に `confirmed`、実装 Green、cleanup 完了、Memory通知済みと記述してはならない。pair-freeze
 後の実装 PR だけが対応 test を Green へ昇格し、PLAN の `updated` と `review_evidence` を同一 revision/HEADへ
 束縛する。
+
+## §11 観測済み incident evidence (受入 baseline ではない、PLAN-L4-32 からの還流)
+
+次は Resource Kernel 不在を示す観測報告であり、raw telemetry を欠くため性能閾値や orphan-zero の再現 baseline には使わない。欠測値を 0 で補完せず、Red oracle の実行時は §9.4 の evidence schema を満たす新規 receipt を採取する (候補 ID は `CANDIDATE-RGK-EV-*` として扱う)。
+
+| evidence ID | 対象 | 観測 | 限界 |
+|---|---|---|---|
+| `RGK-EV-LOCAL-01` | Issue #124 `session db-refresh` (PID 8312、revision 未記録) | 2026-07-22、CPU 約 293 秒、working set 約 3.07 GiB。parent 喪失後も残留し手動停止 | wall 不明、raw receipt なし |
+| `RGK-EV-LOCAL-02` | Issue #124 comment の snapshot runner (PR #125 `d0cabedc` 以降、PID 19180) | 2026-07-22、300 秒超。shell 応答不能後に子孫を回収し最終 orphan 0 | peak 未計測、開始終了時刻と PID tree telemetry なし |
+| `RGK-EV-CI-01` | Actions run `29891794487` Windows job `88833527906` (`0ccf10c0`) | 04:43:07Z-04:47:37Z、DB 20 秒、tests 190 秒、cancel | PID / peak / orphan 未計測 |
+| `RGK-EV-CI-02` | 同 run Linux job `88833527923` | 04:43:06Z-04:47:32Z、DB 13 秒、tests 236 秒、failure | 同上 |
+| `RGK-EV-CI-03` | Actions run `29892125300` Windows job `88834471971` (`72604cd1`) | 04:50:44Z-04:55:04Z、DB 19 秒、tests 200 秒、failure | 同上 |
+| `RGK-EV-CI-04` | 同 run Linux job `88834471970` | 04:50:44Z-04:55:23Z、DB 14 秒、tests 249 秒、failure | 同上 |
