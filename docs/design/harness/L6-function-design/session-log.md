@@ -18,6 +18,10 @@ plan: docs/plans/PLAN-L6-03-session-log.md
 - `onStop(input, deps)` は session jsonl を plan digest へ compress する前に、`input.plan_id ?? resolveActivePlan(deps)` 付きの `session_end` event を 1 件記録する。
 - adapter wrapper は明示 `--plan` value を session-log lifecycle input にだけ渡し、provider CLI args へは渡さない。
 - `ut-tdd codex|claude --execute --plan <id>` で生成される plan digest は、`<id>` 向けの `session_start`、`tool_use`、`session_end` count を含む必要がある。
+- **adapter lifecycle wrapper の契約** (`src/cli/delegation.ts`): `--execute` は provider 起動の前に SessionStart (`runSessionStartSideEffects`)、起動の区間に PostToolUse、終了後に Stop (どちらも `dispatch`) を記録し (session_id = `<provider>-<epoch ms>`)、最後に handover warnings を surface する。lifecycle 記録の失敗は provider の exit code を変えない (§6 fail-open)。provider の exit code は review 結果の失敗でのみ 1 に上書きされる。
+- **hook 入口の共有**: Claude hook の canonical 実装は `src/cli.ts` の `session start` / `hook post-tool-use` / `session summary` であり、`.claude/hooks/session-log.ts` は後方互換 shim に留める。`SessionHookInput.plan_id` を許容し、adapter wrapper が明示 PLAN を digest に渡せる。
+- **`--task-file`**: Windows の ARG_MAX を避けるための provider 非依存の入力経路。`--task` と `--task-file` はちょうど 1 つ指定する (どちらも無い・両方ある場合は adapter が拒否する)。provider への prompt 本文は両 provider とも stdin に載せる (Codex=`exec -`、Claude=`--print --input-format text`)。
+- **provider 解決**: native provider の解決は `UT_TDD_CODEX_BIN` / `UT_TDD_CLAUDE_BIN` を正とし、legacy raw-wrapper の env 名は provider 実行へ引き継がない (PLAN-L7-68 が旧挙動を置換)。
 
 <!--
 ① 設計 (L6 機能設計) — session-log 機能。
