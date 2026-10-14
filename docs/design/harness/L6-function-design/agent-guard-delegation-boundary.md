@@ -1,10 +1,10 @@
 ---
 layer: L6
 artifact_type: design_doc
-status: draft
+status: confirmed
 sub_doc: function-spec
 artifact_role: topic_agent_guard_delegation_boundary
-pair_artifact: docs/test-design/harness/L7-agent-guard-delegation-boundary-test-design.md
+pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 next_pair_freeze: L7
 plan: pending
@@ -44,7 +44,7 @@ plan: pending
 | model 必須 | 全ての型で必須。正規化できなければ BLOCK | 変更なし |
 | bypass | `UT_TDD_ALLOW_RAW_AGENT=1` で WARN + code 0 | 変更なし。適用範囲を §3.4 に明記する |
 | 委譲 role の許可 | `READ_ONLY_DELEGATION_ROLES` ∪ `WORKER_DELEGATION_ROLES` ∪ `SUBAGENT_ALLOWLIST` | `READ_ONLY_DELEGATION_ROLES` ∪ 判断ゲート名 3 つ ∪ `WORKER_DELEGATION_ROLES` ∪ `CODEX_WORKSPACE_WRITE_ROLES`。`SUBAGENT_ALLOWLIST` への依存を断つ |
-| 判断ゲート role の floor | `REVIEW_GATE_ROLES` (frontier reviewer tier へ固定)。許可 role は `SUBAGENT_ALLOWLIST` との合流で決まる | 変更なし。floor の正本として明記し、agent-guard 側の floor と二重にしない |
+| 判断ゲート role の floor | `REVIEW_GATE_ROLES` (frontier reviewer tier へ固定)。許可 role は `SUBAGENT_ALLOWLIST` との合流で決まる。明示 `--model` は無条件に優先され、低位の model も通る | floor の正本として明記し、agent-guard 側の floor と二重にしない。明示 `--model` が下限未満なら `ok: false` (§5.1)。review custody の入口も同じ判定で拒否する |
 | `CODEX_WORKSPACE_WRITE_ROLES` | `se` / `docs` / `be-api` / `be-logic` / `db-schema` / `devops-deploy` (Codex の sandbox 権限の role 名) | 据え置き。コメントだけ「role 名であり定義ファイルとは関係ない」へ直す |
 | roster 一覧・整合 | `ut-tdd roster list/check`、`listRosterRegistry` / `checkRosterConsistency` (`src/assets/catalog.ts`) | 撤廃 |
 | asset-drift の agent 照合 | `missing-allowlisted-agent` / `non-allowlisted-agent` (`src/lint/asset-drift.ts`)。doctor が `SUBAGENT_ALLOWLIST` を注入する (`src/doctor/lint-gates.ts`) | agent 照合と `allowlist` 入力を削除する |
@@ -127,7 +127,16 @@ DELEGATION_ROLE_ALLOWLIST =
 
 ## 5. floor の正本
 
-- floor (判断ゲートは worker tier へ落とさず、族内の frontier reviewer tier に固定する) を持つのは `REVIEW_GATE_ROLES` = `READ_ONLY_DELEGATION_ROLES` ∪ `GATE_SUBAGENT_ROLES` の 1 か所だけにする。実際の model は `resolveDelegationRouting` が `REVIEW_LANE_MODELS[lane][provider]` から引く (明示 `--model` / `--effort` が常に優先される現状の挙動は変えない)。
+- floor (判断ゲートは worker tier へ落とさず、族内の frontier reviewer tier に固定する) を持つのは `REVIEW_GATE_ROLES` = `READ_ONLY_DELEGATION_ROLES` ∪ `GATE_SUBAGENT_ROLES` の 1 か所だけにする。明示指定が無いときの model は `resolveDelegationRouting` が `REVIEW_LANE_MODELS[lane][provider]` から引く。
+### 5.1 明示 --model に対する floor (fail-close)
+
+現状の `resolveDelegationRouting` の判断ゲート分岐は `input.model ?? REVIEW_LANE_MODELS[lane][provider]` を返すので、判断ゲート role に低位の model (例: `blind-reviewer` に `claude-sonnet-5-5`) を明示すれば、そのまま通ってしまう。floor が「既定値」でしかなく、拒否条件を持たない。本契約はこれを fail-close にする。
+
+- **強制する関数**: `src/team/model-policy.ts` に純粋関数 `isReviewFloorModel(provider, model): boolean` を置く。判定の基準は既存の `MODEL_CAPABILITY_RANK` で、provider ごとの下限は `REVIEW_LANE_MODELS` の各 lane の model の rank とする (claude は opus (rank 3) 以上 = opus / fable、codex は frontier (rank 4) = `gpt-6.1-sol`)。rank 表に無い model は **下限未満として扱う** (未知を通さない。`advisorHeavyUseRecommended` と同じ向き)。
+- **拒否の場所**: `resolveDelegationRouting` の判断ゲート分岐で、`input.model` が指定され、かつ `isReviewFloorModel(input.provider, input.model)` が false なら `ok: false` を返す。message は role・provider・指定された model・下限の model を示す。`--effort` の明示は従来どおり受け付ける (floor は model だけに課す)。下限以上の明示指定 (例: claude で `claude-fable-5-1`) は `model_source: "explicit"` で通す。
+- **closing の入口でも同じ関数を使う**: review custody の attempt 記録 (`src/feedback/review-verdict-custody.ts` の、provider と model を受け取る入口) は、記録する `model` が `isReviewFloorModel(provider, model)` を満たさなければ `reviewer_model_below_floor` で拒否する。非著者 family の判定 (`same_family_reviewer_denied`) と同じ層に置き、family が正しくても低位 tier の verdict は receipt にならない。
+- **Agent tool の出力は入口に届かない**: Agent tool の subagent の結果は、委譲経路 (`ut-tdd claude|codex --role`) を通らないので `resolveDelegationRouting` を呼ばず、custody の入口にも渡る経路が無い。agent-guard の返り値は `code` / `message` / `bypassed` だけで (§3)、verdict の field を持たない。
+
 - agent-guard に floor を持ち込まない (§3.3)。floor を agent-guard に残すと定義ファイルが要る。
 - `blind-reviewer` は role 名として必須である (`src/feedback/live-review-projection.ts` が `--role blind-reviewer` を渡し、`src/runtime/review-guard.ts` が read-only 契約の対象にする)。この名前は定義ファイルとは無関係に残る。
 
@@ -138,7 +147,7 @@ DELEGATION_ROLE_ALLOWLIST =
 ## 7. 不変条件 (DbC)
 
 - **evaluateAgentGuard** — Pre: `input` は hook の envelope、`ctx = { allowRaw: boolean }`。ファイルシステムを読まず、環境変数を読まず、書かない。Post: 返り値は `{ code: 0 | 2, message?, bypassed? }`。`code === 0 && bypassed !== true` は「G2 で対象外」または「G3〜G6 の全てを満たした」ときだけ。Invariant: 同じ `(input, ctx)` に同じ結果を返す。判定は型の集合・model の存在・正規化・fable の 4 点だけで、定義ファイルの有無に依存しない。
-- **resolveDelegationRouting** — Pre: `role` は任意の文字列 (trim + lowercase で正規化)。Post: `DELEGATION_ROLE_ALLOWLIST` に無い role は `ok: false`。`REVIEW_GATE_ROLES` の role は `model_source` が `review-lane` または `explicit`。Invariant: 許可 role の集合は agent-guard の許可集合 (`GENERIC_SUBAGENT_TYPES`) と交わらない (両者は別の層の語彙である)。`REVIEW_GATE_ROLES ⊆ DELEGATION_ROLE_ALLOWLIST`、`CODEX_WORKSPACE_WRITE_ROLES ⊆ DELEGATION_ROLE_ALLOWLIST`。
+- **resolveDelegationRouting** — Pre: `role` は任意の文字列 (trim + lowercase で正規化)。Post: `DELEGATION_ROLE_ALLOWLIST` に無い role は `ok: false`。`REVIEW_GATE_ROLES` の role は `model_source` が `review-lane` または `explicit` (explicit は floor 以上に限る、§5.1)。Invariant: 判断ゲート role の model は、明示指定でも `isReviewFloorModel(provider, model)` を満たす (満たさなければ `ok: false`)。許可 role の集合は agent-guard の許可集合 (`GENERIC_SUBAGENT_TYPES`) と交わらない (両者は別の層の語彙である)。`REVIEW_GATE_ROLES ⊆ DELEGATION_ROLE_ALLOWLIST`、`CODEX_WORKSPACE_WRITE_ROLES ⊆ DELEGATION_ROLE_ALLOWLIST`。
 - **集合の SSoT**: agent-guard の許可型は `GENERIC_SUBAGENT_TYPES`、委譲 role の floor は `REVIEW_GATE_ROLES`、Codex の書き込み role は `CODEX_WORKSPACE_WRITE_ROLES`。同じ事実を 2 か所に書かない。`.claude/CLAUDE.md` §Subagent Guard の型の一覧は `GENERIC_SUBAGENT_TYPES` と機械照合する (§8.7)。
 
 ## 8. 周辺の扱い
@@ -211,8 +220,9 @@ DELEGATION_ROLE_ALLOWLIST =
 
 順序契約: 依存する正本が閉じる前に下流を着工しない。1 PR = 1 論点。各 PR は Red (`it.fails`) を先に入れる。
 
-0. **契約 PR (本 PR)**: L4 function.md C12 の差し替え、本書、test-design (候補 oracle `CANDIDATE-U-AGBOUND-*` と既存 oracle の改訂表)。PLAN は台帳の手番が来てから起票する。
-1. **契約 PR + Red**: `src/` を含まない PR で、既存 oracle の改訂表を適用し (対象文書の行を書き換える)、候補 oracle を `U-AGBOUND-*` へ昇格し、Red のテスト (`it.fails`) を入れる。順序は `design-protection-diff-gate.md` §10.3 に従う。
+0. **契約 PR (本 PR)**: L4 function.md C12 の差し替え、本書、test-design (候補 oracle `CANDIDATE-U-AGBOUND-*` と既存 oracle の改訂表)。PLAN の起票は工程②の最後に一括で行う (本 PR では起票しない)。
+1. **登録 + Red (src/ は登録行だけ)**: Red のテスト (`it.fails`) を入れ、テスト名は候補 ID (`CANDIDATE-U-AGBOUND-*`) で引用する。開発 repo の source text を読むテストファイル (013・024・026・027 など) には、同じ PR に `src/doctor/test-repository-isolation.ts` の `repositoryReadContracts` の登録行だけを足す。design / test-design は変えない。順序の根拠は `design-protection-diff-gate.md` §10.3 である。
+   - 1b. **昇格 (src/ を含まない)**: 既存 oracle の改訂表 (test-design §4) の適用、候補 ID から正式 ID `U-AGBOUND-*` への昇格 (全件)、テスト名の引用を候補 ID から正式 ID へ書き換える変更を、同じ PR で入れる。src/ も scripts/ も含まないので非実装 PR であり、test-design を変えてよい。昇格を Red より先に入れると、未引用の正式 ID を `oracle-test-trace` が拒否する。
 2. **agent-guard の縮小**: §3 を実装する (`agent-guard.ts`、`agent-guard-policy.ts` の `GENERIC_SUBAGENT_TYPES`、`src/cli.ts`、`.claude/hooks/agent-guard.ts`、`tests/agent-guard.test.ts`)。`SUBAGENT_ALLOWLIST` は他の consumer のためにこの PR では残す。§10 の規律の書き直しを同じ PR で入れる。
 3. **委譲 role の許可集合を allowlist から切り離す**: §4〜§6 を実装する (`delegation-routing.ts`、`review-guard.ts` の `code-reviewer` 削除、`skills/` の role 案内)。
 4. **定義ファイルの削除と周辺**: §8.1〜§8.3、§8.6〜§8.7 を実装する。`.claude/agents/` 20 本、`docs/templates/adapter/.claude/agents/`、roster CLI、asset-drift の agent 照合、setup template、Pack catalog、distribution テストを同時に外し、`SUBAGENT_ALLOWLIST` を削除する。Pack の配布に触れるので、canary への影響を PR 本文に書く (§8.3)。

@@ -16,14 +16,19 @@ pair_artifact: docs/design/harness/L6-function-design/agent-guard-delegation-bou
 本書はその §3 agent-guard の契約、§4 委譲 role の許可集合、§5 floor の正本、§6 `CODEX_WORKSPACE_WRITE_ROLES`、§7 不変条件、§8 周辺の扱いを検証する oracle と、定義ファイルの撤廃で影響を受ける既存 oracle の改訂表を定める。
 共有の `docs/test-design/harness/L7-unit-test-design.md` には索引 (§agent-guard と委譲の境界) だけを置き、本書が詳細の正本である。
 
-この pair-freeze では候補 ID (`CANDIDATE-U-AGBOUND-*`) だけを宣言する。工程は設計保護 gate の L6 `design-protection-diff-gate.md` §10.3 と同じ順序にする: (1) 既存 oracle の改訂表 (§4) を適用し、候補を正式 ID `U-AGBOUND-*` へ昇格して、Red のテスト (`it.fails`) を候補 ID で引用して入れる (src/ を含まない PR)。(2) 実装 PR (L6 §11 の PR 2〜5) で `it.fails` を `it` に戻して Green にする。昇格を Red より先に入れると、未引用の正式 ID を `oracle-test-trace` が拒否する。
+この pair-freeze では候補 ID (`CANDIDATE-U-AGBOUND-*`) だけを宣言する。工程は設計保護 gate の L6 `design-protection-diff-gate.md` §10.3 の三段階に揃える。013・024・026・027 は開発 repo の source text を読むので、`test-repository-isolation` の登録行が要り、次の順になる。
+
+1. **登録 + Red (src/ は登録行だけ)**: Red のテスト (`it.fails`) を候補 ID で引用して入れる。開発 repo を読むテストファイルには、同じ PR に `src/doctor/test-repository-isolation.ts` の `repositoryReadContracts` の登録行だけを足す。design / test-design は変えない。
+2. **昇格 (src/ を含まない)**: §4 の改訂表の適用、候補の正式 ID `U-AGBOUND-*` への昇格 (全件)、テスト名の引用を正式 ID へ書き換える変更を、同じ PR で入れる。昇格を Red より先に入れると、未引用の正式 ID を `oracle-test-trace` が拒否する。
+3. **実装 PR (L6 §11 の PR 2〜5)**: `it.fails` を `it` に戻して Green にする。実装 PR は `docs/test-design/` を変えない。
 
 ## 2. fixture
 
 - 001〜014 は `evaluateAgentGuard` と集合の定数を直接呼ぶ純粋関数のテストで、ファイルシステムも環境変数も使わない。入力は `{ tool_name, tool_input }` の envelope と `{ allowRaw }`。
-- 013・024・026・027 の「無いこと」の検査は、`src/` と `.claude/hooks/` の source text を読む静的検査で、開発 repo を読むテストとして `test-repository-isolation` の登録行が要る (src/ は登録行だけ)。
+- 013・024・026・027 の「無いこと」の検査は、`src/` と `.claude/hooks/` の source text を読む静的検査で、開発 repo を読むテストとして `test-repository-isolation` の登録行が要る。登録行は段階 1 (Red と同じ PR、src/ は登録行だけ) で入れる (§1)。
 - 016・017 は temp directory に最小の repo (定義ファイルの directory が無い) を作り、hook shim を子プロセスで起動する。
 - 018〜024 は `resolveDelegationRouting` と集合を直接呼ぶ。集合の等価は、Set 同士の対称差が空であることで判定する。
+- 034〜036 は `isReviewFloorModel`・`resolveDelegationRouting`・custody の attempt 記録の入口を直接呼ぶ。custody は temp directory に最小の repo を作る。
 - 各行は L6 の規則を 1 本だけ殺すように作る。負例 (通ってはならない入力) を各規則に最低 1 つ含める。
 
 ## 3. Candidate oracle matrix
@@ -63,10 +68,13 @@ pair_artifact: docs/design/harness/L6-function-design/agent-guard-delegation-bou
 | `CANDIDATE-U-AGBOUND-031` | §3.5 / §8.2 | 実 repo の `src/` 全体で `SUBAGENT_ALLOWLIST` を検索し、`checkAssetDrift` を実 repo に対して実行する | 実装 PR 4 の後は `SUBAGENT_ALLOWLIST` が 0 件で、`checkAssetDrift` は `ok=true` | 参照が残ったまま定数だけ消す / 実 repo で drift を出す |
 | `CANDIDATE-U-AGBOUND-032` | §3 / §9 | `evaluateAgentGuard` の返り値のキー集合を、通過・BLOCK・bypass の全ての分岐で集める | キーは `code` / `message` / `bypassed` の部分集合だけ。verdict・receipt・review の field を持たない (Agent tool の subagent は closing の権限を持たない) | guard の結果に closing の意味を持たせる |
 | `CANDIDATE-U-AGBOUND-033` | §10 | 規律の書き直し後の実 repo に対して、`rule-drift` と `.claude/CLAUDE.md` §Hooks の一覧 ↔ `.claude/settings.json` の機械照合 (`U-RDRIFT-007`) を実行する | どちらも通る。三アダプタの marker 節が残る | 規律の書き直しで marker 節や hook 一覧を壊す |
+| `CANDIDATE-U-AGBOUND-034` | §5.1 | `isReviewFloorModel` に provider と model の組を渡す: claude の `claude-haiku-5-5` / `claude-sonnet-5-5` / `claude-opus-5-5` / `claude-fable-5-1`、codex の `gpt-6-luna` / `gpt-6.1-sol`、未知の `unknown-model`、空文字 | claude は haiku・sonnet が false、opus・fable が true。codex は luna が false、sol が true。未知と空は false (未知を通さない) | 下限を既定値だけにする / 未知の model を通す / rank 比較の向きを誤る |
+| `CANDIDATE-U-AGBOUND-035` | §5.1 | `resolveDelegationRouting` に判断ゲート role (`blind-reviewer` / `reviewer` / `ut-tdd-tl` / `qa-test` / `security-audit`) を渡す。(a) claude + 明示 `claude-sonnet-5-5`、(b) claude + 明示 `claude-haiku-5-5`、(c) codex + 明示 `gpt-6-luna`、(d) claude + 明示 `claude-opus-5-5`、(e) claude + 明示 `claude-fable-5-1`、(f) codex + 明示 `gpt-6.1-sol`、(g) claude + 明示 `claude-sonnet-5-5` と明示 effort。対照に worker role `se` + 明示 `claude-sonnet-5-5` | (a)(b)(c)(g) は 5 role すべてで `ok: false`、message に role・provider・指定 model・下限を含む。(d)(e)(f) は `ok: true` で `model_source` は `explicit`。worker role の `se` は従来どおり `ok: true` | 明示指定を無条件に優先する / effort の明示で floor を迂回する / worker role まで巻き添えで拒否する |
+| `CANDIDATE-U-AGBOUND-036` | §5.1 | review custody の attempt 記録の入口に、(a) 非著者 family + frontier tier の model、(b) 非著者 family + 低位 tier の model (author=codex なら claude + `claude-sonnet-5-5`、author=claude なら codex + `gpt-6-luna`)、(c) 著者と同じ family + frontier tier、(d) model が空を渡す。さらに (e) agent-guard の返り値 (`code` / `message` / `bypassed`) を verdict として渡す試み | (a) は受理。(b) は `reviewer_model_below_floor`。(c) は `same_family_reviewer_denied`。(d) は `invalid_attempt_outcome`。(e) は型の検査で拒否され、受理されない。いずれも receipt を作らない | family だけ検査して tier を見ない / Agent tool 側の出力を closing に昇格する |
 
 ## 4. 既存 oracle の改訂表
 
-PO 決定 (2026-10-08 撤廃、2026-10-13 即時対応) と L6 の方式を根拠にする。L1 の要件 (BR-22 / FR-L1-46 / FR-L1-49 など) は、本表に**改訂案**を置くだけで、要件文書そのものは本 PR では書き換えない。表の「新しい文面」の適用は、L6 §11 の PR 1 (契約 + Red、src/ を含まない) で、L7〜L14 の文書は同じ PR、L1・L3 の要件文書は L1 の別の手順で行う。文書の場所は実 repo を grep した結果である。
+PO 決定 (2026-10-08 撤廃、2026-10-13 即時対応) と L6 の方式を根拠にする。L1 の要件 (BR-22 / FR-L1-46 / FR-L1-49 など) は、本表に**改訂案**を置くだけで、要件文書そのものは本 PR では書き換えない。表の「新しい文面」の適用は、§1 の段階 2 (昇格、src/ を含まない) で、L7〜L14 の文書は同じ PR、L1・L3 の要件文書は L1 の別の手順で行う。文書の場所は実 repo を grep した結果である。
 
 「削除」は oracle の行を外す (置き換えは候補 oracle に移る)。「言い換え」は新しい文面に差し替える。「据え置き」は理由を付けて行を変えない。
 
@@ -81,45 +89,48 @@ PO 決定 (2026-10-08 撤廃、2026-10-13 即時対応) と L6 の方式を根�
 | FR-L1-49 | L1 functional-requirements | 言い換え | 「内部資産 drift lint (legacy absolute path 残存 / docs-skills 空の機械検証)」。「roster↔guard 整合」を外す。入力の「roster」「guard allowlist」も外す |
 | NFR-13 | L1 nfr | 据え置き | `.claude/hooks/agent-guard.ts` は PreToolUse の hook として残る。dev-local と CI の二重実行の要求は、guard の許可集合の内容に依存しない |
 | D-06 | L1 business-requirements | 据え置き | `UT_TDD_ALLOW_RAW_AGENT=1` の bypass 件数の計測は、bypass が G3〜G6 に効く新契約でも変わらない (CANDIDATE-U-AGBOUND-012) |
-| C12 | L4 function.md | 言い換え | 本 PR で適用済み (内部資産 roster の building block を外し、Agent tool の許可・委譲 role の許可集合と floor の正本・専門性の受け渡しへ差し替え) |
+| C12 | L4 function.md | 言い換え | 本 PR で適用済み (内部資産 roster の building block を外し、Agent tool の許可・委譲 role の許可集合と floor の正本・専門性の受け渡しへ差し替え)。C12 の「L7 完遂時点の実装証跡」(`resolveRosterCapability` など) は完遂時点の**履歴**であり、撤廃の目標ではない。履歴であることは L4 function.md の該当注記に明示した |
 
 ### 4.2 L7 単体テスト設計 (`L7-unit-test-design.md`)
 
 | ID | 扱い | 新しい文面 / 理由 |
 | --- | --- | --- |
-| U-DELEG-002 | 言い換え | 「判断ゲート role (blind-reviewer / reviewer / ut-tdd-tl / qa-test / security-audit 等) を族内 frontier reviewer tier (sol/opus) + ladder base effort へ固定する」。`code-reviewer` を例から外す。固定の事実は変わらない |
-| U-DELEG-007 | 言い換え | 「`DELEGATION_ROLE_ALLOWLIST` は実 repo の役割語彙 (qa / blind-reviewer / tl / tl-advisor / se / reviewer / ut-tdd-tl / qa-test / security-audit / be-api 等) を許容し、撤廃した `pmo-*` / `pdm-*` / `refactor-scout` / `code-reviewer` は許容しない」。凍結された旧文面の `code-reviewer` / `pmo-*` を許容する要求を取り消す (CANDIDATE-U-AGBOUND-018 / 019) |
-| U-ASSETDRIFT-001 | 言い換え | 「enrolled `docs/skills` / prompt template の asset に個人 legacy source workspace path があれば `legacy-source-path-residue` + `ok=false`」。`.claude/agents` を enrolled root から外す |
-| U-ASSETDRIFT-004 | 削除 | guard allowlist と定義ファイルの照合は無くなる。置き換えは CANDIDATE-U-AGBOUND-025 |
-| U-ASSETDRIFT-006 | 言い換え (一覧に無い行、読んで追加) | 末尾の「missing allowlisted agent 0」を外す |
-| U-MDRIFT-004 | 据え置き | 「設計が web/roster/skills を余分列挙しても drift でない」の `roster` は module 名の例で、agent 定義の roster 資産とは無関係 |
-| U-SETUP-009 | 言い換え | `0-A` の生成計画の adapter テンプレ一覧から `.claude/agents/ut-tdd-tl.md` を外し、「`.claude/agents/` 配下の path を含まない」を足す (CANDIDATE-U-AGBOUND-027) |
-| U-SETUP-014 | 据え置き | 検査は adapter hook の配線 (`agent-guard` / `work-guard` など) の有無と JSON の解釈で、許可する型の一覧にも定義ファイルにも触れない |
-| U-FSF-006 | 言い換え | 「`emitClassifyRequest` は、撤廃した `pmo-haiku` ではなく残る worker role (`docs`) を `role` に持つ分類リクエスト契約 (`role` / `text` / `output_schema.category` / `output_schema.attention`) を含む」。`pmo-haiku` を許可しないので、`src/cli/feedback.ts` 側の role も同じ PR で `docs` に直す (L6 §11 の PR 3) |
-| U-CXHOOK-006 | 据え置き | 「共有 guard は runtime 非依存で、model 無しの subagent 呼び出しは block する」は新契約でも真 (G4)。Codex の agent-guard が deferred surface であるという整理も変えない |
-| U-RCDEV-003 | 据え置き | `hook agent-guard` が `requireRuntimeRepoRoot` を通る経路の検査で、guard の判定内容に触れない |
+| 既存 U-DELEG-002 | 言い換え | 「判断ゲート role (blind-reviewer / reviewer / ut-tdd-tl / qa-test / security-audit 等) を族内 frontier reviewer tier (sol/opus) + ladder base effort へ固定する」。`code-reviewer` を例から外す。固定の事実は変わらない |
+| 既存 U-DELEG-007 | 言い換え | 「`DELEGATION_ROLE_ALLOWLIST` は実 repo の役割語彙 (qa / blind-reviewer / tl / tl-advisor / se / reviewer / ut-tdd-tl / qa-test / security-audit / be-api 等) を許容し、撤廃した `pmo-*` / `pdm-*` / `refactor-scout` / `code-reviewer` は許容しない」。凍結された旧文面の `code-reviewer` / `pmo-*` を許容する要求を取り消す (CANDIDATE-U-AGBOUND-018 / 019) |
+| 既存 U-ASSETDRIFT-001 | 言い換え | 「enrolled `docs/skills` / prompt template の asset に個人 legacy source workspace path があれば `legacy-source-path-residue` + `ok=false`」。`.claude/agents` を enrolled root から外す |
+| 既存 U-ASSETDRIFT-004 | 削除 | guard allowlist と定義ファイルの照合は無くなる。置き換えは CANDIDATE-U-AGBOUND-025 |
+| 既存 U-ASSETDRIFT-006 | 言い換え (一覧に無い行、読んで追加) | 末尾の「missing allowlisted agent 0」を外す |
+| 既存 U-MDRIFT-004 | 据え置き | 「設計が web/roster/skills を余分列挙しても drift でない」の `roster` は module 名の例で、agent 定義の roster 資産とは無関係 |
+| 既存 U-SETUP-009 | 言い換え | `0-A` の生成計画の adapter テンプレ一覧から `.claude/agents/ut-tdd-tl.md` を外し、「`.claude/agents/` 配下の path を含まない」を足す (CANDIDATE-U-AGBOUND-027) |
+| 既存 U-SETUP-009a | 言い換え (行全体は消さず、残す部分を明示する) | **外す部分**: 配布 subagent template が `model:` frontmatter を持つこと、代表 3 family (`pmo-sonnet`=sonnet / `pmo-haiku`=haiku / `pdm-tech-innovation`=opus) の確認、およびその model ID の `MODEL_IDS.claude` catalog 検査 (配布する subagent template が無くなるため、CANDIDATE-U-AGBOUND-027 / 028 の「生成・同梱しない」が置き換える)。**残す部分**: consumer 向け adapter docs / commands が `ut-tdd doctor --profile consumer-setup-smoke` を既定の health check とし、full `ut-tdd doctor` は source / governance repository 用と明示すること。新しい文面は「consumer-facing adapter docs/commands は `ut-tdd doctor --profile consumer-setup-smoke` を既定 health check とし、full `ut-tdd doctor` は source/governance repository 用として明示する。配布 adapter に subagent template は含まない」 |
+| 既存 U-SETUP-011 | 言い換え | 「adapter templates には Claude/Codex hook・command 設定を含む (subagent 設定は含まない、CANDIDATE-U-AGBOUND-027 / 028)」。`buildCleanDistributionPlan` の他の要求 (channel、LICENSE / package / src を含む、dogfood と開発用状態と UI を含まない、release integrity artifact) は変えない |
+| 既存 U-MODELID-SSOT | 言い換え | 検査の対象から `.claude/agents` の frontmatter model を外し、`docs/templates/adapter` と `BUILTIN_GITHUB_TEMPLATES` の model が `MODEL_IDS.claude` catalog 内だけであること、旧 suffix が再混入しないことを残す。`.claude/agents` が無いこと自体は CANDIDATE-U-AGBOUND-028 が持つ |
+| 既存 U-SETUP-014 | 据え置き | 検査は adapter hook の配線 (`agent-guard` / `work-guard` など) の有無と JSON の解釈で、許可する型の一覧にも定義ファイルにも触れない |
+| 既存 U-FSF-006 | 言い換え | 「`emitClassifyRequest` は、撤廃した `pmo-haiku` ではなく残る worker role (`docs`) を `role` に持つ分類リクエスト契約 (`role` / `text` / `output_schema.category` / `output_schema.attention`) を含む」。`pmo-haiku` を許可しないので、`src/cli/feedback.ts` 側の role も同じ PR で `docs` に直す (L6 §11 の PR 3) |
+| 既存 U-CXHOOK-006 | 据え置き | 「共有 guard は runtime 非依存で、model 無しの subagent 呼び出しは block する」は新契約でも真 (G4)。Codex の agent-guard が deferred surface であるという整理も変えない |
+| 既存 U-RCDEV-003 | 据え置き | `hook agent-guard` が `requireRuntimeRepoRoot` を通る経路の検査で、guard の判定内容に触れない |
 
 ### 4.3 L8 結合テスト設計 (`L8-integration-test-design.md`、各 ID は 2 つの表に載る)
 
 | ID | 扱い | 新しい文面 / 理由 |
 | --- | --- | --- |
-| IT-ASSET-01 | 削除 | `roster list` の scan→registry が無くなる (CANDIDATE-U-AGBOUND-026) |
-| IT-ASSET-02 | 削除 | `roster check` と guard allowlist の整合が無くなる。置き換えは CANDIDATE-U-AGBOUND-015 (型の一覧の機械照合) と 018 |
-| IT-ASSET-03 | 削除 | `runtime(guard) → roster` の依存方向が無くなる。guard が定義にも roster にも依存しないことは CANDIDATE-U-AGBOUND-013 / 024 が持つ |
-| IT-ASSET-DB-01 | 言い換え | 「Skill / command markdown fixtures (valid / empty / legacy-runtime drift) を catalog・index する」。fixture から roster を外す |
+| 既存 IT-ASSET-01 | 削除 | `roster list` の scan→registry が無くなる (CANDIDATE-U-AGBOUND-026) |
+| 既存 IT-ASSET-02 | 削除 | `roster check` と guard allowlist の整合が無くなる。置き換えは CANDIDATE-U-AGBOUND-015 (型の一覧の機械照合) と 018 |
+| 既存 IT-ASSET-03 | 削除 | `runtime(guard) → roster` の依存方向が無くなる。guard が定義にも roster にも依存しないことは CANDIDATE-U-AGBOUND-013 / 024 が持つ |
+| 既存 IT-ASSET-DB-01 | 言い換え | 「Skill / command markdown fixtures (valid / empty / legacy-runtime drift) を catalog・index する」。fixture から roster を外す |
 
 ### 4.4 L9 システムテスト設計 (`L9-system-test-design.md`)
 
 | ID | 扱い | 新しい文面 / 理由 |
 | --- | --- | --- |
-| ST-ARCH-03 | 言い換え | 「PreToolUse(Agent) で型の閉集合・model 明示・fable 禁止を検証 (#1002)」。「floor 検証」を外す |
-| ST-ASSET-01 | 削除 | roster registry の SSoT と孤児 subagent の概念が無くなる |
-| ST-ASSET-02 | 削除 | roster ↔ guard allowlist の整合が無くなる (CANDIDATE-U-AGBOUND-015 / 018) |
-| ST-ASSET-03 | 言い換え | 「`ut-tdd asset` が system として動く。`ut-tdd roster list/check` は存在しない (unknown command)」 |
-| ST-ASSET-04 | 言い換え | placeholder の説明から roster を外す (skill recommender / drift 判定のうち実装済みの slice を指す) |
-| ST-ASSET-07 | 削除 | roster ↔ guard 整合 (`resolveRosterCapability` と asset-drift の allowlist 照合) の実装証跡が無くなる |
-| ST-EXT-01 | 据え置き | 「agent-guard 通過後のみ AI 起動」は新契約でも真 |
-| ST-EXT-06 | 据え置き | security 境界の「agent-guard が fail-close する」は G1〜G6 で成り立つ |
+| 既存 ST-ARCH-03 | 言い換え | 「PreToolUse(Agent) で型の閉集合・model 明示・fable 禁止を検証 (#1002)」。「floor 検証」を外す |
+| 既存 ST-ASSET-01 | 削除 | roster registry の SSoT と孤児 subagent の概念が無くなる |
+| 既存 ST-ASSET-02 | 削除 | roster ↔ guard allowlist の整合が無くなる (CANDIDATE-U-AGBOUND-015 / 018) |
+| 既存 ST-ASSET-03 | 言い換え | 「`ut-tdd asset` が system として動く。`ut-tdd roster list/check` は存在しない (unknown command)」 |
+| 既存 ST-ASSET-04 | 言い換え | placeholder の説明から roster を外す (skill recommender / drift 判定のうち実装済みの slice を指す) |
+| 既存 ST-ASSET-07 | 削除 | roster ↔ guard 整合 (`resolveRosterCapability` と asset-drift の allowlist 照合) の実装証跡が無くなる |
+| 既存 ST-EXT-01 | 据え置き | 「agent-guard 通過後のみ AI 起動」は新契約でも真 |
+| 既存 ST-EXT-06 | 据え置き | security 境界の「agent-guard が fail-close する」は G1〜G6 で成り立つ |
 
 ### 4.5 L12 受入テスト設計 (`L12-acceptance-test-design.md`)
 
@@ -141,7 +152,7 @@ PO 決定 (2026-10-08 撤廃、2026-10-13 即時対応) と L6 の方式を根�
 
 ### 4.7 表の件数と、一覧に無く読んで見つかった影響
 
-一覧の 38 行 (§4.1 の 8 行 = L1 の 7 + C12 の 1、§4.2 の 10 行、§4.3 の 4 行、§4.4 の 8 行、§4.5 の 7 行、§4.6 の 1 行) の内訳は **削除 7 / 言い換え 17 / 据え置き 14** である。§4.2 の U-ASSETDRIFT-006 は一覧に無い追加の行で、この件数に含めない。
+一覧の 41 行 (§4.1 の 8 行 = L1 の 7 + C12 の 1、§4.2 の 13 行、§4.3 の 4 行、§4.4 の 8 行、§4.5 の 7 行、§4.6 の 1 行) の内訳は **削除 7 / 言い換え 20 / 据え置き 14** である。§4.2 の U-ASSETDRIFT-006 は一覧に無い追加の行で、この件数に含めない。
 
 他の文書にも定義ファイル・roster・`pmo-sonnet` 等の言及がある。実装 PR の前に、次の文書を同じ方針で書き直す (扱いは各 PR で確定するが、方向は固定する)。
 
@@ -157,6 +168,6 @@ PO 決定 (2026-10-08 撤廃、2026-10-13 即時対応) と L6 の方式を根�
 
 ## 5. 運用
 
-- 候補 ID は、L6 §11 の PR 1 (契約 + Red) で正式 ID `U-AGBOUND-*` へ昇格する。Red のテストは候補 ID を引用して入れ、昇格の PR で引用を書き換える。実装 PR は `docs/test-design/` を変更せず、`tests/` は `it.fails` を `it` に戻す変更に限る (設計書保護 gate)。
-- 実装 PR ごとの対応: PR 2 は 001〜017・032、PR 3 は 018〜024・030、PR 4 は 025〜028・031、PR 5 は 029。033 は規律の書き直しを入れる PR 2 で確認する。
-- 既存テスト (`tests/agent-guard.test.ts`・`tests/delegation-routing.test.ts`・`tests/asset-drift.test.ts`・`tests/asset-catalog.test.ts`・`tests/setup.test.ts`・`tests/setup-agent-floor.test.ts`・`tests/model-id-ssot-drift.test.ts` など) の書き直しは、§4 の扱いに従って PR 1 で行う。
+- 候補 ID は、§1 の三段階で扱う。段階 1 (登録 + Red) は候補 ID を引用する `it.fails` と `repositoryReadContracts` の登録行だけ (src/ はこの行だけ)、段階 2 (昇格、src/ を含まない) は改訂表の適用・正式 ID `U-AGBOUND-*` への昇格・引用の書き換え、段階 3 (実装 PR) は `it.fails` を `it` に戻す変更に限る。実装 PR は `docs/test-design/` を変更しない (設計書保護 gate)。
+- 実装 PR ごとの対応: PR 2 は 001〜017・032、PR 3 は 018〜024・030・034〜036、PR 4 は 025〜028・031、PR 5 は 029。033 は規律の書き直しを入れる PR 2 で確認する。
+- 既存テスト (`tests/agent-guard.test.ts`・`tests/delegation-routing.test.ts`・`tests/asset-drift.test.ts`・`tests/asset-catalog.test.ts`・`tests/setup.test.ts`・`tests/setup-agent-floor.test.ts`・`tests/model-id-ssot-drift.test.ts` など) の書き直しは、§4 の扱いに従って段階 2 で行う。
