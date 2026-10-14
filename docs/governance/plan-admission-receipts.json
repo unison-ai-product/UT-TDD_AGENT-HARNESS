@@ -7712,6 +7712,22 @@
         "revision": 4,
         "content_digest": "sha256:6bd4d517fb05b9528838abfd3b34f0b1261b1b26a106f80ae54cd60838b3fdc7"
       }
+    },
+    {
+      "sequence": 483,
+      "previous_record_digest": "sha256:fee73ab9c62cf0e68334dad26715628e50dc6597855aad3cb4022084a54f746f",
+      "record_digest": "sha256:bf704f333a8c3c5683a275ee71ad3629443c0033fb6bd3829cd5d103678468ac",
+      "command_id": "plan-draft:issue-693:PLAN-L6-693:r1-20261014",
+      "receipt_id": "certificate:8ff8f94e6adfd10e967a2f5b0ff996b9",
+      "receipt_digest": "sha256:36f1beeb28bc439370402a0415281f44e13796300b999151c88bfc97d9d0e6dc",
+      "decision_digest": "sha256:cf5702a9dde550647d411461c4c5e6573bb52e40404c6417803e84362cd177ff",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-693-windows-hide-spawn-guard.md",
+        "plan_id": "PLAN-L6-693-windows-hide-spawn-guard",
+        "asset_id": "plan:8ff8f94e6adfd10e967a2f5b0ff996b9",
+        "revision": 1,
+        "content_digest": "sha256:02056eaab9af52b88c352a5c9b45fdf37dc3d66c94ee6fd98df8b902c89909b3"
+      }
     }
   ]
 }
