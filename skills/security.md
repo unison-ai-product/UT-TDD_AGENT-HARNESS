@@ -85,11 +85,12 @@ The `agent-guard.ts` hook enforces:
    `subagent_type` — an implicit model is the unsafe default.
 2. A `subagent_type` without a harness definition (generic route) passes only with an
    explicit, recognised, non-fable model; it has no closing authority (#1002).
-3. The model family must match the agent frontmatter declaration.
+3. For a defined subagent, the model family must be at or above the family declared
+   in its frontmatter (a floor; downgrades are rejected).
 4. Bypass requires `UT_TDD_ALLOW_RAW_AGENT=1` AND must write evidence to
    `.ut-tdd/audit/`.
-5. Invalid stdin JSON fails closed — silently ignoring parse errors is
-   prohibited.
+5. Invalid stdin JSON, and an envelope without `tool_name` (including empty stdin),
+   fail closed — silently ignoring parse errors is prohibited.
 
 When reviewing a PLAN that modifies agent-guard behaviour, verify each of these
 five rules is still enforced after the change.

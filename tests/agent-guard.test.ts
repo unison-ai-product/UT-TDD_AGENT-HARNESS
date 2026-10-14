@@ -84,6 +84,15 @@ describe("evaluateAgentGuard", () => {
     expect(evaluateAgentGuard({ tool_name: "Edit" }, ctx()).code).toBe(0);
   });
 
+  it("blocks an envelope without tool_name (empty stdin parses to {}), even with allowRaw", () => {
+    for (const allowRaw of [false, true]) {
+      const d = evaluateAgentGuard({}, ctx(allowRaw));
+      expect(d.code).toBe(2);
+      expect(d.message).toContain("no tool_name");
+      expect(evaluateAgentGuard({ tool_name: "" }, ctx(allowRaw)).code).toBe(2);
+    }
+  });
+
   it("blocks the default route (no subagent_type) when the model is missing", () => {
     expect(evaluateAgentGuard(agent({}), ctx()).code).toBe(2);
   });

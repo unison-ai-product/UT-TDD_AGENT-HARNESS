@@ -62,10 +62,11 @@ Every `.claude/agents/<name>.md` must carry:
 | `description` | One-line capability summary | Used by `ut-tdd skill suggest` |
 | `tools` | Declared tool list | (operational; not guard-checked) |
 
-The `subagent_type` must be in `SUBAGENT_ALLOWLIST`
-(`src/runtime/agent-guard-policy.ts:2`; the list is not copied here — it drifts);
-unlisted roles are blocked fail-close. To add a role, update that list with a
-test (`tests/agent-guard.test.ts`) and document the capability class here.
+A `subagent_type` in `SUBAGENT_ALLOWLIST` (`src/runtime/agent-guard-policy.ts:2`; the
+list is not copied here — it drifts) is a defined subagent and keeps its frontmatter floor.
+Any other `subagent_type` (or none) takes the generic route: it passes only with an
+explicit, recognised, non-fable model and has no closing authority (#1002, PO 2026-10-14).
+Do not add new definitions; #1002 retires the existing ones.
 
 ## Capability class taxonomy
 
