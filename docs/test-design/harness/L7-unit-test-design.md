@@ -3076,7 +3076,7 @@ oracle の詳細 (入力・期待・殺す mutation・fixture・required evidenc
 上表の ID は backtick 無し表記である。候補台帳への再掲ではなく専用文書への参照であり、U-VMSRC-009 の一意性検査の対象外とする。
 正規 `U-CTRACE-*` への昇格と Red test は、src/ も scripts/ も含まない PR (契約 PR + Red) で入れる (`design-protection-diff-gate.md` §10.2)。
 
-## PLAN 台帳の asset 分割 (Issue #1011) — 索引
+## PLAN 台帳の asset 分割 (1 revision = 1 ファイル、Issue #1011) — 索引
 
 L6 契約は `docs/design/harness/L6-function-design/plan-admission-record-partition.md`。
 oracle の詳細 (入力・期待・殺す mutation・fixture・required evidence) は専用の
@@ -3085,10 +3085,10 @@ oracle の詳細 (入力・期待・殺す mutation・fixture・required evidenc
 | 範囲 | 検証面 | 詳細 |
 | --- | --- | --- |
 | CANDIDATE-U-PARTREC-001〜003、022、024 | legacy 483 records の凍結 (digest 不変)、ROOT.json、凍結後の legacy・ROOT の不変 | 専用文書 §3 |
-| CANDIDATE-U-PARTREC-004〜006 | asset ファイルの形式 (先頭の previous = ROOT の root)、revise の base を asset の末尾に束縛すること、legacy asset の続きの revision | 専用文書 §3 |
-| CANDIDATE-U-PARTREC-007〜010 | 別々の PLAN の PR が rechain なしでどちらの順でも merge できること、同じ PLAN の revision の衝突は後発を拒否、append-only | 専用文書 §3 |
-| CANDIDATE-U-PARTREC-011〜014、017〜018 | alias・path・command_id の衝突の検出、ファイル名と asset_id の一致、想定外のファイルの拒否 | 専用文書 §3 |
-| CANDIDATE-U-PARTREC-015〜016、019〜021、023 | asset ファイルの欠落・改ざんの fail-close、集約した lookup、rehydrate、検査の決定性、手番の運用の削除 | 専用文書 §3 |
+| CANDIDATE-U-PARTREC-004〜006、025 | revision ファイルの形式 (先頭の previous = ROOT の root、sequence = revision)、revise の base を asset の末尾に束縛すること、legacy asset の続きの revision、書き込みは新規ファイル 1 つだけ | 専用文書 §3 |
+| CANDIDATE-U-PARTREC-007〜010 | 別々の PLAN の PR が rechain なしでどちらの順でも merge できること、同じ PLAN の同じ revision の衝突 (add/add、fork) は後発を拒否、欠番・fork の枝、既存ファイルの不変 | 専用文書 §3 |
+| CANDIDATE-U-PARTREC-011〜014、017〜018 | alias・path・command_id の衝突の検出、パスと asset_id・revision の一致、想定外のファイルの拒否 | 専用文書 §3 |
+| CANDIDATE-U-PARTREC-015〜016、019〜021、023 | asset・revision ファイルの欠落・改ざんの fail-close、集約した lookup、rehydrate、検査の決定性、手番の運用の削除 | 専用文書 §3 |
 | U-RECHAIN-004、005、019 の改訂 | 分割モードでは単一台帳の rechain の経路を使わない | 専用文書 §4 |
 
 上表の ID は backtick 無し表記である。候補台帳への再掲ではなく専用文書への参照であり、U-VMSRC-009 の一意性検査の対象外とする。
