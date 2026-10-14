@@ -81,7 +81,7 @@ docs/governance/plan-admission-receipts/<asset>/<revision>.json   # record 1 件
 - asset の revision は連続する。legacy 台帳にも records を持つ asset の続きは、先頭の revision が「legacy 台帳でのその asset の最後の revision + 1」でなければならない。legacy に無い asset の先頭は 1 である。
 - `binding.asset_id` は、ディレクトリ名から逆算した asset_id と一致する。
 
-### 3.3 ROOT.json
+### 3.3 凍結の root (ROOT.json)
 
 ```json
 {
