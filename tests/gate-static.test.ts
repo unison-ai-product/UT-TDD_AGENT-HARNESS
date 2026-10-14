@@ -20,7 +20,7 @@ const cliPath = join(process.cwd(), "src", "cli.ts");
 /**
  * RCDEV-037 実測 baseline: 066b842f1a3161f1cb67c3d383a28d76d9c36041 (G0 merge-base Git archive).
  * Issue #935 confirmed design-pair increment (exact HEAD 2e88e53ae35ca01ba1b633c3916a882e4f277219):
- * direct evaluateStaticGate measured G6 L6 total=33/confirmed=33, G7 pair-freeze=62, verification=61/61 confirmed.
+ * direct evaluateStaticGate measured G6 L6 total=34/confirmed=34, G7 pair-freeze=62, verification=61/61 confirmed.
  * 明示採取: node rcdev037-capture.mjs <baseline-root>
  * 採取 script (再生成は明示操作のみ、テスト内で期待値を再生成しない):
  * import { pathToFileURL } from 'node:url';
@@ -83,7 +83,7 @@ const HARNESS_GATE_BASELINE = [
     gate: "G6",
     passed: true,
     applicable: true,
-    messages: ["g6-pair - OK (L6 total=33, confirmed=33, placeholder=0, draft=0, orphans=0)"],
+    messages: ["g6-pair - OK (L6 total=34, confirmed=34, placeholder=0, draft=0, orphans=0)"],
   },
   {
     gate: "G7",
