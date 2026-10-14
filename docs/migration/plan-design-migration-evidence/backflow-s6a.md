@@ -3,9 +3,9 @@
 目的: L6 前半 47 PLAN を、使い捨て可 / 還流済み / 廃止 / 要判断 に区分する。
 基準 commit: origin/main `d5ad67fb50c148ea8dd6d5475bab4b88f2d4cd4c`
 
-状態: 途中。処理済み 11 件 (PLAN-L6-00 〜 PLAN-L6-10)。残り 36 件は未処理。
+状態: 途中。処理済み 16 件 (PLAN-L6-00 〜 PLAN-L6-15)。残り 31 件は未処理。
 
-集計 (処理済み 11 件): 使い捨て可 11 / 還流済み 0 / 廃止 0 / 要判断 0
+集計 (処理済み 16 件): 使い捨て可 16 / 還流済み 0 / 廃止 0 / 要判断 0
 
 | PLAN | blob sha256 (origin/main) | 区分 | 移し先 (path と節) | 剥離した依存 | 備考 |
 | --- | --- | --- | --- | --- | --- |
@@ -22,9 +22,15 @@
 | PLAN-L6-09-governance-enforcement | 16cef16e0683432746cbff93e090d6c9d4afc6a21d155944522166339f5a00f7 | 使い捨て可 | governance-enforcement.md / L7-unit U-SCRUMREV U-PROP (既存) | なし | analyze 契約と U-ID が既存 |
 | PLAN-L6-10-vmodel-pair-lint | 48b0a9ff2d89ef167a03170ee3249bbc52758c4650b1fdca137e5c62cd8858d7 | 使い捨て可 | vmodel-pair-freeze.md / L7-unit §1.13 U-VPAIR (既存) | なし | DoD 未チェック 3 件は設計文書と U-VPAIR の実在で充足 (stale) |
 
+| PLAN-L6-11-verification-trigger | baac96798e1ba93f348f6204ea36c4fcf04594e574aa757f224f44eb3ca5c149 | 使い捨て可 | vmodel-pair-freeze.md §7 / L7-unit §1.14 U-VTRIG (既存) | なし | 検証発火単位 (層群) §7.1 が既存。DoD 未チェックは stale |
+| PLAN-L6-12-review-evidence | 5b4d9149a89e050ea8367b82c7e92a31cdc92c2237210ae822f7dd6bc4b26f37 | 使い捨て可 | review-evidence.md / L7-unit U-REVIEW (既存) | なし | DoD 全 [x]。対象選定・schema・U-REVIEW が既存 |
+| PLAN-L6-13-cross-review-enforcement | 254011efa3a5c148fe7ff5d4c648a76f3e5d78e99303e995c398cf068ac8d080 | 使い捨て可 | cross-review-enforcement.md / U-XREVIEW (既存) | requires: L6-12 (完了済み、剥離。設計文書は review-evidence を参照済み) | worker_model/reviewer_model・same_model 弾き・scope OUT (subagent 配置) が既存 |
+| PLAN-L6-14-test-before-review | f8cc8ac6156c891fa0e5f04fc756dd4bb489a612cb7c86831d55d96f6d29b34e | 使い捨て可 | test-before-review.md / U-TORDER (既存) | requires: L6-12 (完了済み、剥離。設計文書は review-evidence を参照済み) | tests_green_at ≤ reviewed_at 不変条件と review_before_test が既存 |
+| PLAN-L6-15-module-drift | 5b9b9817658b63b5bae09df939106008a1096d15275b1f893f88869f081d6e55 | 使い捨て可 | module-drift.md / architecture.md §4.1 (L161-163、IMP-074/075 の実装証跡と carry plan_id) (既存) | なし | PLAN の Step 2 (architecture §4.1 carry plan_id 明示) は architecture.md に実在 (grep)。PLAN-REVERSE-15 参照は PLAN 側の back-fill 記録で設計責務ではない |
+
 ## 未処理 (次の worker へ)
 
-PLAN-L6-11 〜 PLAN-L6-46 (s6-00 の 12 行目以降の 36 件)。
+PLAN-L6-16 〜 PLAN-L6-46 (s6-00 の 17 行目以降の 31 件)。
 
 観察 (引き継ぎ用): 仮判定の傾向は、ほとんどが confirmed の add-design で DoD [x]、設計文書が正本として存在し使い捨て可と見込まれる。
 個別に確認が要るもの: L6-10/11/17/18/19 (DoD 未チェック、設計文書で充足確認)、L6-15 (architecture §4.1 carry plan_id)、
