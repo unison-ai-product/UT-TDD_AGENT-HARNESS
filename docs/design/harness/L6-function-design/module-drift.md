@@ -107,6 +107,16 @@ analyzeModuleDrift(docs: { listed, actual }) -> { orphans, listedCount, actualCo
 - **module boundary**: `lint` は runtime/doctor/CLI feature module を import してはならない。`runtime` は governance check を import してはならない。`schema` は feature module より下位に置く。違反は `module-boundary` とする。
 - **machine-surface language**: machine-facing CLI/doctor/lint/gate/status message は日本語説明を含んでよいが、decision token は安定した ASCII English (`OK`, `violation`, `warning`, `skipped`, `note`, `error`, `ready`, `not ready`) とする。machine message line の日本語のみ decision word は `machine-surface-language` violation とする。**Impl (2026-06-19、A-141)**: `analyzeCodingRules` の `violatesMachineSurfaceLanguage` が machine-surface 行パターン × 非 ASCII 判定語 × ASCII token 不在で検出し、`describe`/`it`/`test` の title literal は除外する (false-positive 回避)。`REQUIRED_RULE_IDS` + SSoT `coding-rules.md` に `machine-surface-language` を登録。oracle U-CODE-010。実 repo violations 0。
 - **scope split**: no-any / no-suppression / file naming は source と test に適用する。max-params / structured-error-handling / module-boundary は `src/**` のみに適用する。test helper arity は readability と local test design で統制する。
+- **構造規約 analyzer の契約 (PLAN-L6-78 還流、未実装の目標契約)**: L4 の構造規約 (`docs/design/harness/L4-basic-design/data.md` §3.2、`docs/governance/coding-rules.md`) の機械検査は、
+  `src/lint/coding-rules.ts` の `analyzeCodingRules` が持つ workflow anchor・SSoT 欠落の検出とは別の analyzer として足す。実測では構造規約 (nesting・行数・循環的複雑度・CQS・guard clause) を
+  検査するコードは `src/` に無く、宣言のみの規約である (`coding ≠ substance` の残債)。
+  - **分類 (排他)**: 各構造規約は「機械検査対象 (rule id を持つ)」か「review 責務 (理由つき)」のどちらか一方に置き、宙吊りを残さない。`max-nesting-depth` / `max-function-lines` / `max-cyclomatic-complexity` は
+    AST で判定できるので機械検査対象。`command-query-separation` と `prefer-guard-clause` は false positive が出やすいので、限定 pattern を実測で決めるまで review 責務とし、pattern が固まった rule から機械検査へ移す。
+  - **関数契約**: 入力は対象 TS ファイルの集合 (`src/**` のみ、test helper は対象外) と閾値 policy、出力は rule id・path・位置・実測値・閾値を持つ finding 列。閾値は coding-rules.md を SSoT とし、analyzer に
+    直書きしない。対象ファイルを parse できないときは skip せず violation にする (fail-close)。finding の合流先は既存の `coding-rules` doctor check と同じ結果面とし、新しい gate を並べない。
+  - **段階導入**: ① 既存 repo の実測値を L7 実装 PLAN で記録 → ② 限定 pattern の rule は warn から始める → ③ 既存の超過は silent grandfather にせず refactor candidate または期限つき例外として記録 →
+    ④ analyzer と L7 oracle が揃った rule だけ `coding_rules` YAML の hard gate へ昇格 (coding-rules.md の「hard gate 化の順序」と同じ)。それまで、新規 source の閾値 (L5 `module-decomposition.md` C.3) は規律であって機械強制ではない。
+  - **oracle**: rule ごとの違反 fixture (negative fixture 族) と、実 repo に対する回帰 (昇格時に violation 0) の両方を持つ。
 
 ### DDD/TDD strictness 追補 (FR-L1-50)
 

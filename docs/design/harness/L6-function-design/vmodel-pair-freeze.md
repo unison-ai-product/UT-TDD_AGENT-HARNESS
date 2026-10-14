@@ -139,3 +139,30 @@ function analyzePairFreeze(docs):
 ### §7.4 「機械発火」の範囲
 
 surface まで (doctor が「層群 X freeze 完了 → 検証サイクル発火可」を機械的に告げる)。**検証 PLAN の起票は人間トリガー** (concept §2.6 signal→mode と同じく、機械は提示・人間が起票)。検証サイクルの自動起票は後続 carry。
+
+## §8 Forward freeze contract (L2 prototype 合意 / L5 検証設計の被覆、PLAN-L6-48 / PLAN-L7-393 / VMS-010)
+
+> 本節は pair-freeze lint (§1-§7) の隣に置く別契約で、L2 画面の prototype 合意と L5 詳細設計の L8 検証設計を、
+> L3 凍結・実装着手の前提として機械検査する。実装は `src/vmodel/lint.ts` の `analyzeForwardFreezeContracts` /
+> `forwardFreezeContractMessages` と doctor full profile の `forward-freeze-contracts` check。oracle は L7 の
+> `U-FREEZE-CONTRACT-001..004` (TVMS-010 / TVMS-011)。
+
+### §8.1 検査対象と条件
+
+| 対象 | 条件 | 違反 reason |
+|---|---|---|
+| L2 screen 6 件 (`business-flow` / `screen-detail` / `screen-flow` / `screen-list` / `ui-element` / `wireframe`) | `status=confirmed`、`pair_artifact=docs/test-design/harness/L10-ux-validation-test-design.md`、`next_pair_freeze=L10`、本文か status に G2 / PO / サインオフ / 合意 / prototype 等の合意 marker | `l2-doc-missing` / `l2-status-not-confirmed` / `l2-pair-mismatch` / `l2-next-freeze-mismatch` / `l2-prototype-evidence-missing` |
+| L5 detailed-design 5 件 (`if-detail` / `internal-processing` / `module-decomposition` / `physical-data` / `ui-detail`) | `status=confirmed`、`pair_artifact=docs/test-design/harness/L8-integration-test-design.md`、`next_pair_freeze=L8` | `l5-doc-missing` / `l5-status-not-confirmed` / `l5-pair-mismatch` / `l5-next-freeze-mismatch` |
+| L8 integration test design | `status=confirmed`、`pair_artifact=docs/design/harness/L5-detailed-design/`、frontmatter `executed_at_layer=L8`、L5 5 件の basename をすべて本文に含む (`ui-detail.md` も L5 の一部として L8 が被覆する)、`IT-ID / Given / When / Then` 表を持つ | `l8-test-design-missing` / `l8-test-design-not-confirmed` / `l8-pair-mismatch` / `l8-execution-layer-mismatch` / `l8-coverage-missing` / `l8-gwt-missing` |
+
+### §8.2 不変条件
+
+- L2 の placeholder / carry の存在だけでは prototype 合意の凍結とみなさない (合意 marker を必須にする)。
+- L5 の pair frontmatter が緑でも、L8 側が GWT 表か L5 文書の被覆を欠けば検証設計は未整備とみなす。
+- 検出器は設計差分を創作しない。対象 path は上の定数集合で固定し、正本は既存の design / test-design 文書から読む。
+
+### §8.3 受け入れ条件
+
+- doctor に `forward-freeze-contracts - OK (checked=12, l2=6, l5=5)` が現れる。
+- L2 合意 marker 欠落、L8 被覆欠落、real repo green を `tests/vmodel-forward-freeze-contracts.test.ts` が検証する。
+- typed spec 台帳 (`docs/governance/vmodel-typed-spec-definitions.md`) に VMS-010 / TVMS-010 が宣言元として現れる。

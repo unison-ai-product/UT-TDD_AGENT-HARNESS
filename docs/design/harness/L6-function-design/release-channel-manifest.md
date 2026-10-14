@@ -201,3 +201,126 @@ promotion/rollbackのpointer変更は別のS3 pair-freeze（`CANDIDATE-RELMAN-00
 - 採択は案 A2。棄却: A' (scalar に先頭 artifact を入れる。意味が無く destination 記録が二重化する)、
   B (mapping を release あたり 1 件へ畳む。artifact ごとの allowlist 検査が消える)。
 - oracle: `CANDIDATE-U-RELAGGV2-001..009` (`docs/test-design/harness/L7-unit-test-design.md`)。
+
+## 9. Pack 公開トランザクション (identity・byte 契約・段階公開・rollback)
+
+移行元: `docs/plans/PLAN-L6-63-pack-staged-release-rollback.md` の §1〜§8・§10 (issue #958。§7.x は #648 で移行済みの
+manifest 形と digest framing、本節はその残り)。Pack repository 側の公開境界だけを扱い、source 側の PF-5 aggregate
+admission (§4)、promotion / rollback の pointer gate (§8.3)、Pack 導入後の二 consumer 隔離 (`PLAN-L6-101` が所有) は
+再実装しない。
+
+### 9.1 公開 object と可変範囲
+
+| object | identity | 可変範囲 |
+|---|---|---|
+| immutable release record | `releaseId`、source commit、materializer version、inventory / artifact-set / asset-inventory / record の各 digest | 作成後は不変 |
+| control manifest snapshot | release records と channel pointer を含む snapshot digest | pointer 変更ごとに新 snapshot を append し、過去 snapshot を上書きしない |
+| Git tag | exact Pack commit と release record digest を指す annotated tag | 付替え・削除・force push 禁止 |
+| GitHub Release | tag / Pack commit / release record へ束縛された draft から可視化する record | notes 編集で identity・asset・digest を変えない。asset 差替え禁止 |
+| tarball / checksum | manifest の明示集合から生成した bytes とその SHA-256 | 同一 release ID で再生成・差替えしない |
+| channel pointer | `canary` / `stable` から release ID への宣言 | 明示した宣言変更だけ。release record 自体は変えない |
+
+semver / tag は表示・取得の locator であり release identity の代替ではない。可変 channel を含む snapshot digest を
+immutable release identity へ入れず、receipt は release record digest と、pointer 変更前後の snapshot digest を
+別 field で束縛する。tag / Release / manifest / tarball / checksum / receipt のどれかが同じ `releaseId` / digest /
+source revision / Pack object SHA を指さなければ公開を成立させず `mismatch` として監査する。
+
+### 9.2 release asset と snapshot の byte 契約
+
+- release asset は exact に `ut-tdd-pack-<releaseId の 64 lowerhex>.tar.gz` とその `.sha256` の 2 件だけ
+  (`src/setup/pack-publication-assets.ts:311-323`)。payload tarball は `artifacts[]` の destination だけを含み、control
+  manifest・Release notes・checksum・signature を含めない。control manifest は Pack commit 内の sidecar として配布し、artifact-set
+  digest・payload tarball・asset inventory の全てから除外する。
+- tar は POSIX ustar の regular entry だけを destination path 順に並べる (directory / symlink / hardlink / PAX / GNU
+  extension 禁止、ustar で表現できない path は fail-close)。header は mode = manifest 値、uid / gid = 0、mtime = 0、
+  typeflag = `0`、uname / gname 空、devmajor / devminor = 0、padding はゼロ、末尾は 2 ブロックのゼロ
+  (`tarHeader` / `createTar`、`:160-215`)。
+- gzip は CM = 8、FLG = 0、MTIME = 0、XFL = 0、OS = 255、extra / name / comment 無しで、DEFLATE は stored block
+  (BTYPE = 00、入力を 65535 byte 以下で順に分割) とし、CRC32 / ISIZE の trailer を付ける (`fixedGzip`、`:225-240`)。
+  checksum file の bytes は `<64 lowerhex>  <tarball 名>\n`。
+- `releaseAssetInventoryDigest` = SHA-256 of: ASCII `ut-tdd-pack-assets-v2\0`、asset 数 u32be、asset を名前の UTF-8
+  byte 順に並べ、名前を「u32be 長 + UTF-8」、size を u64be、content の SHA-256 を raw 32 bytes で連結
+  (`deriveReleaseAssetInventoryDigest`、`:241-250`)。tarball の SHA-256、checksum file が宣言する値、実 bytes の再計算値、
+  release record が束縛する asset inventory が全て一致するまで可視化しない。
+- `controlManifestSnapshotDigest` は YAML serializer の出力を信用せず、SHA-256 of: ASCII `ut-tdd-pack-control-v2\0`、
+  `releases` ラベルと件数、releaseId の UTF-8 順に `releaseId + releaseRecordDigest`、`channels` ラベルと件数、
+  `channelOrder` 順に `channelName + releaseId` を、すべて u32be length-prefix でフレーミングする
+  (`deriveControlManifestSnapshotDigest`、`src/setup/pack-publication-staging.ts:167-185`。ラベルと件数を digest に
+  含める点は PLAN 本文の記述より厳密で、実装に合わせた)。意味的に同じ manifest は YAML の表現や map 挿入順が違っても
+  同じ digest になる。
+- 生成は一方向 DAG とする: `artifact entries → artifactSetDigest / artifactInventoryDigest → deterministic payload tarball
+  / checksum → releaseAssetInventoryDigest → releaseRecordDigest → control manifest snapshot → Pack commit / tree →
+  annotated tag / draft Release`。Pack commit / tree / tag と control manifest snapshot を release record へ戻さない
+  (digest の自己参照を構造的に作らない)。
+
+### 9.3 段階公開と promotion
+
+公開順は `sealed PF-5 artifact → Pack commit / release record / draft Release / tarball / checksum → assets attested →
+annotated tag → Release visible → canary pointer → canary の Linux / Windows / aggregate と Pack-only 二 consumer の
+証跡 → human-approved promotion receipt → stable pointer` の直列とする。
+
+- `canary` と `stable` は異なる immutable release を同時に指せる。canary の harness-check、artifact identity 再計算、
+  二 consumer 隔離、監査証跡が `attested` になるまで stable へ進めない。`mismatch` / `unavailable` は理由を保持して
+  fail-close し、成功へ丸めない。
+- stable 昇格は新しい宣言変更であり、既存 release の編集や暗黙の `latest` upgrade ではない。PR、必須 CI、非著者の
+  closing receipt、QA の Go / No-Go、承認済み remote mutation receipt を束ねる (pointer gate は §8.3)。
+- source / worktree / dev DB / PLAN / evidence / local Pack checkout を、公開・昇格の実行入力や fallback にしてはならない。
+  sealed artifact、manifest、Pack repository の公開 object、typed receipt だけで再現できなければ拒否する。
+
+### 9.4 remote mutation と receipt
+
+計画生成 (`sync-plan` / `release-plan` / auditor) は read-only / emit-only とし、適用側は人間の明示承認なしに remote
+を変更しない。承認対象は tag 作成、Release 作成、asset upload、channel pointer 更新、promotion、rollback の操作単位。
+
+- 承認 receipt は exact な operation plan digest、repository、before-state digest、release ID、nonce、expiry、approver を
+  束縛して one-shot で消費する。期限切れ・nonce 再利用・before-state drift・別 repository / operation への転用は副作用前に
+  拒否する (実装は `PackPublicationApproval` に transition / mutation / operationId / nonce / expiresAt / intentDigest /
+  approvalStateDigest / idempotencyKey を持たせ、port が消費した nonce を adapter が自分で照合する。
+  `src/setup/pack-publication-adapter.ts:34-60`)。
+- 実行 receipt は receiptId、releaseId、channel、対象 ref、before / after digest、承認者と実行者、manifest・tarball・
+  checksum・tag・Release の観測結果、CI / QA / closing receipt、成功操作の順序、失敗操作、remote response、auditor の判定を
+  残す。欠落・identity 不一致・remote 取得不能は `unavailable` / `mismatch` とし、完了や昇格を宣言しない。
+- force push、tag 付替え、tag 削除後の再利用、既存 asset の差替え、channel pointer の無承認変更は禁止する。
+
+### 9.5 partial publication と rollback
+
+- 公開は跨サービスで atomic にできないため、append-only の state machine とする。実装の遷移は `planned → pack_commit →
+  release_draft → assets → tag → release_visible → canary` (mutation は `planned` / `pack_branch_commit` / `pack_pr_create`
+  / `pack_pr_merge` / `release_draft_create` / `asset_upload:<name>` / `tag_create` / `release_visibility` /
+  `canary_pointer_append`、`src/setup/pack-publication-adapter.ts:18-35`、`:710-745`)。各遷移は before-state への CAS、
+  operation id / idempotency key、期待 remote identity を要求する。同一 identity の object が既にあるときだけ安全な再開と
+  みなし、別 identity・欠損 asset・順序飛越・観測不能は `partial_publication` / `mismatch` / `indeterminate` で止める。
+  再開は auditor が remote を再観測して最後の attested 状態から行い、成功を推測しない。
+- GitHub Release は draft で作り、全 asset の name / size / digest を attest するまで公開しない。consumer が取得できる境界は
+  tag / Release / assets を attest した後の canary pointer CAS であり、途中の tag や draft は stable / canary から発見されない。
+- **未実装の目標契約**: `stable` pointer の append (遷移名 `stable_attested`) と、独立した rollback の append-only 遷移
+  `rollback_planned → rollback_approved → pointer_cas_applied → rollback_attested` は adapter に実装が無い
+  (実測: adapter の遷移は canary まで)。契約は次のとおり。rollback は過去 object を壊さない supersede-forward とし、
+  `rollback_planned` が channel・current release ID・before snapshot digest・pointer gate (§8.3) が一意に選んだ直前の
+  attested release ID・operation id を束縛する。候補 0 件 / 複数、current pointer drift、target の attestation 不一致は
+  write 0 で拒否する。`rollback_approved` は同じ plan digest に対する未使用の nonce / expiry を消費する。pointer CAS 後に
+  応答を失ったら `indeterminate` として auditor が snapshot を再観測し、同じ target への CAS 成立だけを再開し、別 target・
+  未知 snapshot・部分変更は `rollback_failed` で止める。`rollback_attested` は pointer・snapshot・target の
+  release / tag / Release / assets の全 identity を再計算した後にだけ成立する。復旧に失敗しても別 channel や別 consumer へ波及
+  させず、未変更と誤報しない。
+
+### 9.6 設計判断と持ち越し
+
+- 設計判断 (record / pointer 分離、出荷集合の明示 manifest、profile 範囲外) は §7.3 のとおり。remote mutation は人間承認 receipt と
+  auditor の観測を必須にし、自動 push / force update は採らない。
+- **持ち越し (正式 stable と L12 受入の前の条件)**: `pack-docs` / `pack-local` / `pack-consumer` / `pack-admin` の
+  least-privilege profile は本契約では採用していない。広い `src/**` / `tests/**` / `scripts/**` の同梱を維持する根拠、または
+  profile / capability の分離を、実 artifact inventory と consumer の権限境界で検証するまで、正式 stable は完成と扱わない。
+- 旧 `release-plan` は Node 正規 CLI ではなく Bun を含む command と、package 処理が生成しない `.sig` asset を出す
+  参考面に留まり、実行可能な publication plan の正本として再利用してはならない。後続の publication slice が Node 正規
+  CLI と実生成 asset inventory に置換するまで read-only の known gap とする (Issue #376)。
+- Pack 導入後の二 consumer 受入 (source 非依存、A / B の異 version 同時稼働、片系だけの upgrade / rollback、局所障害の
+  非波及) は `PLAN-L6-101` の責務で、本契約は Pack 公開の前提と非依存境界だけを定める。
+
+### 9.7 oracle の対
+
+`CANDIDATE-PACKPUB-001..004` (B-1: 公開 object と遷移の crosswalk、B-2: 明示 inventory 外の混入拒否、B-3: remote mutation の
+承認 / 実行 receipt、B-4: supersede-forward rollback と `indeterminate` 保持) は
+`docs/test-design/harness/L7-unit-test-design.md` の「PLAN-L6-63 / PLAN-REVERSE-505」節に登録済みで、local staging 部分は
+`U-PACKPUB-STAGE-001..010` へ昇格済み。remote adapter 側は `docs/test-design/harness/L7-pack-publication-*-test-design.md`
+が対になる。rollback FSM と stable pointer (§9.5 の未実装部分) の oracle は上記 `CANDIDATE-PACKPUB-003/004` のまま残る。

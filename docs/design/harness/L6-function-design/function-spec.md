@@ -1664,6 +1664,12 @@ findingを消さず、`closure="closed"`はfinding 0の場合だけ返す。既�
 ことと、完了判定をGreenにすることを分離する。CLIはGreen=0、contract/closure violation=1、
 usage=2を維持する。
 
+**未実装の目標契約 (PLAN-L6-74 還流)**: 文書台帳の CLI は command と query を分ける。write command は `init` / `materialize` / `set`
+(`materialize` は selector を最終 record へ展開し、`set` は明示した 1 件の disposition だけを書く)、query は `diff` / `references check` /
+`check` / `report` とし、query は authoring source も DB も更新せず、query 結果から判断を自動記入しない。終了コードは Green = 0、contract
+violation = 1、usage = 2。実測 (`src/cli.ts`、`src/document-disposition/`) では snapshot capture と closure analyzer の domain/application
+だけが実装され、この CLI surface と reference reader の実装は無い。
+
 ### Projection rebuild application契約 (PLAN-L6-75 / L7-423残DoD)
 
 - `HarnessProjectionSourcePort.load(): HarnessProjectionSourceBundle` はrepository I/Oをadapterへ閉じ込め、bundleにcaptured revision、capturedAt、source digestを必ず含める。application/domainはrepo root、filesystem、YAML、SQLiteを知らない。
@@ -1737,6 +1743,13 @@ v1/v2 parserは`schema_version=ut-tdd.plan/v2`の有無でdiscriminated unionに
 候補をstable順で返す`plan-migration-collision`とし、最初の候補を選ばない。現HEADのcollision 27群/55 PLANは
 `legacy_plan_migration_events`へexactly once materializeする。full legacy IDからのasset IDはcollisionに関係なく生成し、
 判断未確定行は`resolvedAlias=NULL`+`reviewPlanId`必須とする。
+
+legacy plan の asset ID は、`ut-tdd-plan-legacy-v1` と repository identity と full legacy plan ID を、それぞれ「u32be 長 + UTF-8 bytes」で
+連結した SHA-256 を `plan:legacy:<hex>` として初回だけ導出する (`deriveLegacyAssetId`、`src/plan-asset/adapters/legacy-plan-adapter.ts:48-57`)。
+rename・layer 変更・path は入力にせず、以後の `PlanAsset.revise` は同じ asset ID の下に revision を 1 つ進めるだけで、旧 instance と
+evidence を変更しない (`src/plan-asset/domain/plan-asset.ts:105-135`)。v1 の unknown frontmatter field も canonical payload に保持する。
+numeric core の衝突や情報損失は自動選択せず、`plan-migration-collision` / `plan-migration-loss` の finding として返す。
+
 
 legacy migration applicationは`observe` / `decide` / `revise`のdiscriminated commandと純粋reducerを正本にする。
 初期状態へ許されるのは`observe(pending)`だけで、既存streamへ`observe`を重ねない。`decide`はpendingから
@@ -1919,6 +1932,67 @@ policyが遷移を拒否してもexit 0で`verdict: explain`と拒否ruleを返�
 duplicate/gap/out-of-order sequenceを生成する。shrinkerは連続chunk削除→単event削除→optional evidence/reason縮小の順で、
 subject/revisionを勝手に変更しない。最低10,000列または全state×command pairを網羅し、非許可state到達0、invalid列受理0を要求する。
 
+#### Forward FSM の実装正本 (event 語彙・evidence policy 行・CLI envelope、PLAN-L6-72 還流)
+
+> 還流元: `docs/plans/PLAN-L6-72-forward-fsm-evidence-policy-contracts.md` (issue #958)。上の「完全遷移表」と「workflow CLI共通envelope」は
+> 設計が実装より先に書かれたため、event 名 (`prepare_pair_freeze` 等の underscore 表記)、一部の rule ID、`resume` の復帰先、envelope の
+> field が実装と食い違っている。実装 (`src/forward/domain/transition-policy.ts`、`src/forward/application/forward-workflow.ts`) を確かめた結果、
+> **食い違う箇所は本節を正とする**。上の表の gate の考え方 (隣接遷移のみ・Red 先行・証跡優先) は変わらない。
+
+event は kebab-case の 17 件で、許可 edge は次の closed-world とする。表にない `state × event` は `forward-transition-illegal` で、
+state 変更・event・outbox・外部 intent は 0 件。
+
+| event | from | to | 必須 evidence | 欠落時の rule |
+|---|---|---|---|---|
+| `plan` | proposed | planned | `scope-approval` | `forward-evidence-missing` |
+| `prepare-pair-freeze` | planned | pair_freeze_ready | `pair-artifact-declaration`, `design-pair-review` | 同上 |
+| `freeze-pair` | pair_freeze_ready | pair_frozen | 同上 | 同上 |
+| `freeze-red` | pair_frozen | red_frozen | `red-test-run` (期待された非 0 exit を含む) | 同上 |
+| `begin-implementation` | red_frozen | implementing | `pair-artifact-declaration`, `red-test-run` | `forward-red-evidence-missing` |
+| `complete-implementation` | implementing | implementation_complete | `implementation-digest`, `targeted-test-run` | `forward-evidence-missing` |
+| `prepare-trace-freeze` | implementation_complete | trace_freeze_ready | `trace-materialization` | 同上 |
+| `freeze-trace` | trace_freeze_ready | trace_frozen | `trace-closure`, `green-test-run` | 同上 |
+| `prepare-review` | trace_frozen | review_ready | `trace-closure`, `green-test-run` | `forward-trace-freeze-missing` |
+| `submit-review` | review_ready | reviewed | `independent-review` (非著者 family) | `forward-evidence-missing` |
+| `accept` | reviewed | accepted | `independent-review`, `gate-run` | `forward-accept-evidence-missing` |
+| `archive` | accepted | archived | `acceptance-decision`, `retention-decision` | `forward-evidence-missing` |
+| `block` | accepted / archived 以外の正常 state | blocked | `exception-context` | `forward-exception-context-missing` |
+| `supersede` | archived 以外の正常 state (accepted を含む) | superseded | `exception-context` (replacement subject) | 同上 |
+| `reject` | review_ready, reviewed | rejected | `exception-context` | 同上 |
+| `reopen` | blocked, superseded, rejected | reopened | `exception-context` (新 revision) | 同上 |
+| `resume` | reopened | **planned** | `exception-context` | 同上 |
+
+上の「完全遷移表」との差は次のとおり。(1) `resume` は元の normal state ではなく常に `planned` へ戻し、pair / Red / trace の evidence を
+暗黙に引き継がず、必要な gate を再び成立させる保守的な再入とする (`resumeState` を保持する旧記述は実装に無い)。(2) `superseded` は
+terminal ではなく `reopen` で再入できる。terminal は `archived` だけ。(3) `reject` は review_ready / reviewed からだけ許す。
+(4) `accepted` からは `archive` と、replacement を伴う `supersede` だけを許す (これは PLAN frontmatter の `supersedes` ではなく Forward ledger 上の
+置換操作で、二つは独立に監査される)。(5) 欠落時の rule は上表の 3 つの特化 rule と共通の `forward-evidence-missing` に集約し、event ごとの
+新しい rule ID を作らない。期限切れ record は eligible に数えず、欠落と同じ precedence (exit 2) で扱う。
+
+evidence policy の行は次のとおり (cardinality は `subjectId + subjectRevision` の active frontier 単位で、`exception-context` だけは
+exception event ごとに 1 件)。全 record が `subjectRevision` / `sourceCommit` / `recordDigest` に束縛され、revision 不一致・期限切れ・
+許可 producer 以外・exit rule 不一致は eligible に数えない。
+
+| kind | 件数 | 期限 | 許可 producer | exit rule |
+|---|---|---|---|---|
+| `scope-approval`, `acceptance-decision`, `retention-decision` | 1 | revision 束縛 | `po`, `human` | exact 0 |
+| `pair-artifact-declaration` | 1 | revision 束縛 | `codex`, `claude`, `human` | exact 0 |
+| `design-pair-review`, `independent-review` | 1 | revision 束縛 | `codex`, `claude` (independent-review は著者と異なる family) | exact 0 |
+| `red-test-run` | 1 | 24h + revision 束縛 | `codex`, `claude`, `ci` | nonzero |
+| `targeted-test-run` | 1 以上 | 24h + revision 束縛 | `codex`, `claude`, `ci` | exact 0 |
+| `green-test-run`, `gate-run` | 1 | 24h + revision 束縛 | `ci` | exact 0 |
+| `implementation-digest`, `trace-materialization` | 1 | revision 束縛 | `codex`, `claude` (trace-materialization は `ci` も可) | exact 0 |
+| `trace-closure` | 1 | 24h + revision 束縛 | `codex`, `claude`, `ci` | exact 0 |
+| `exception-context` | event ごとに 1 | revision 束縛 | `po`, `human`, `codex`, `claude` | exact 0 |
+
+CLI envelope (`workflow status|transition|explain` 共通、`schemaVersion: "forward-cli/v1"`) は次の field を必ず返し、`event` / `nextState` は
+`transition` 以外でも null で出す (key を省略しない)。`planId`, `subjectId`, `subjectRevision`, `state`, `currentState`, `event`, `nextState`,
+`verdict` (`allow|deny|explain`), `ruleId`, `evidence { required[], accepted[], rejected[] }`, `digest`, `exitCode`。ledger が無い・
+projection が再構築できない・digest が食い違う場合は `forward-ledger-unavailable` / exit 3 で、frontmatter の status から state を補完しない。
+exit は 0 = allow または valid な explain / status、1 = 要求した遷移・入力の policy violation、2 = evidence / context の欠落・期限切れ、
+3 = ledger / transaction / projection / parser の利用不能。`status` / `explain` は有効な read-only query なら verdict が deny でも exit 0 で、
+state・event・outbox を変更しない。
+
 #### reservation / self-proof port契約
 
 | port / method | signature | 契約 |
@@ -1938,6 +2012,13 @@ releaseとexpireの競合は`BEGIN IMMEDIATE`で先にreceiptを確定したcomm
 `plan-id-reservation-not-active`。同一command ID+同一payload再送は同じevent/lease result、異payloadは
 `plan-id-reservation-command-conflict`。reconstructはsequence、event/command identity、token hash、expiry条件を再検証し、
 event全削除→canonical ledger再読込後のstate/event/command payload digest集合差0を要求する。
+
+**PLAN 番号の一意性 (PLAN-L6-79 還流)**: 短縮表記 `PLAN-<layer>-<number>` が曖昧になるのを防ぐため、`plan lint` は full slug の一意性 (`duplicate_plan_id`) に加えて、namespace と数値 ordinal
+(`parsePlanIdIdentity`、ゼロ詰めを除いた同一座標) の一意性を `duplicate_plan_identity` で検査する。既存の衝突は `LEGACY_PLAN_ID_COLLISION_DEBT` (`src/plan/lint-policy.ts`) に declared な exact set として凍結し、
+その座標の実在 PLAN 集合が宣言と完全一致するときだけ許す。座標への追加 (3 件目) も、宣言との不一致も、全 PLAN を拒否する (silent な追加はできない)。新規の衝突は fail-close。既存衝突の改番は行わず、
+並行する作業と合流した時点で別 slice として判断する。短縮参照が曖昧になる座標では full slug で書く。採番の入口は `PlanIdReservation` (上記 reservation の契約) が正本だが、`plan draft` からの予約の配線は
+実測では無い (`src/plan-admission/` と `src/cli/plan-draft.ts` に reserve の呼び出しが無い) ので、予約台帳で hybrid の同時採番を機械的に防ぐ部分は **未実装の目標契約** である。それまでは、起票前に origin/main と
+相手ランタイムの進行中 branch の双方で最大番号を確認する。oracle は `U-PLANGOV-002a..d`。
 
 #### L7実装ownership DAG
 

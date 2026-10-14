@@ -3030,6 +3030,43 @@ mutation M1–M7は正本§5と同一: exactly-oneへの退行、集合一致へ
 | U-RECHAIN-018 | 同一 asset について `H` が 2 件 append していた re-chain。(正系) 1 件目 base = (n、`M` の canonical payload digest)、2 件目 base = (n + 1、1 件目の中間 blob の digest) → `pass`。(負系) 2 件目の base を `M` に固定 → `receipt_digest_mismatch`。中間 blob を 1 byte 変える、または status を draft→confirmed に変える (bind 後の digest は key と一致する) → `intermediate_plan_digest_mismatch` (bind 前の blob 自体の digest で照合する)。中間 blob を渡さない → `intermediate_plan_missing`。余分な key、最後の record の `content_digest` を key にした entry、複数再発行が無いときの非空 `intermediatePlans` → `intermediate_plan_unexpected` | (m1) 全 record の base を `M` から取る → 正系が fail。(m2) 中間 blob の digest 照合を省く、または bind 後の digest で照合する → 改変 blob が pass。(m3) 欠落時に `R` の PLAN blob で代用する。(m4) key 集合を superset 許容に緩める |
 | U-RECHAIN-019 | legacy bootstrap 除外 (PLAN-L6-711 §2.3-6、receipt revision 6)。組 (h, r) ごとに `h.binding.asset_id` が `plan:legacy:` で始まり、かつ `h.binding.revision === 2` または `r.binding.revision === 2` なら `fail` (理由: `legacy_bootstrap_unsupported`)。(a1) M に同 asset の revision 1 があり H / R が revision 2 → reasons はちょうど `[legacy_bootstrap_unsupported]`。(a2) M に同 asset の record が無く H が revision 2 → legacy 理由と源の欠落の理由が併存する。a1 / a2 とも `command_id` は `plan-revise:issue-1:legacy-x:r2:000000000000` と `pr154-legacy-x-r2` の 2 形式。(b) H が revision 2、M が待機中に同 asset を revision 2 で admit し R が revision 3 → `fail`。(c) M の最新 revision 2、H / R が revision 3 → `pass`。(d) `plan:<32 hex>` asset で H / R が revision 2 → `pass` | (m1) R 側だけで判定 → b が pass。(m2) prefix だけで判定 → c が fail。(m3) revision 2 だけで判定 → d が fail。(m4) `command_id` の形式で判定 (`/^pr154-/` または `/^plan-revise:/`) → a1 / a2 のどちらかの形式で legacy 理由が出ない。(m5) 源の欠落で短絡 → a2 で legacy 理由が出ない |
 
+## shell completion の単体 oracle (PLAN-L6-64 / `docs/design/harness/L4-basic-design/external-if.md` §9、2026-10-14 還流)
+
+実装 (`ut-tdd completion`) は未実装で、Red の作成は `PLAN-L7-449` が所有する。下表は契約 PR + Red の前段として置く候補であり、
+実装が入った時点で正規 `U-CLICOMP-*` へ昇格する。
+
+| ID | 対象 | 入力 / 変異 | 期待 |
+|---|---|---|---|
+| `CANDIDATE-U-CLICOMP-001` | catalog extractor | commander `program.commands` を再帰 walk した結果と、実登録 command との差分 (登録の追加・削除・外出し registrar の登録) | command 一覧が commander 登録と完全一致し、drift を検出する。`builder catalog` も同じ extractor を入力源とする |
+| `CANDIDATE-U-CLICOMP-002` | catalog entry の必須 metadata | command path、flags (名前と引数有無)、description、`--json` 対応有無、exit profile、registrar family のいずれかを欠落 | 全 entry に 6 項目が存在する。path のみの縮退出力は fail |
+| `CANDIDATE-U-CLICOMP-003` | `completion --list` の部分集合性 | 任意の文脈 (存在しない階層・未知フラグを含む) | 返る候補はすべて実在する command path / フラグの部分集合。存在しない path を創作しない |
+| `CANDIDATE-U-CLICOMP-004` | `completion --list` の正例 (退化実装の排除) | (a) 空文脈 (b) `plan` 階層 (c) prefix `doc` | (a) `status` / `doctor` / `plan` を含む非空集合、(b) `lint` を含む、(c) `doctor` を含み prefix 不一致の候補を含まない。常時空集合を返す実装は fail |
+| `CANDIDATE-U-CLICOMP-005` | 入力プロトコル | 単一文字列で渡す / `--cursor` 省略 / `--cursor` を途中 token に指定 | 単一文字列は受けない。cursor 省略は最終 token、指定時はその 0-based token を prefix にして当該階層だけを絞り込む |
+| `CANDIDATE-U-CLICOMP-006` | 終了コード | 未対応 shell 名 / `--list` に不正・欠落・未確定の文脈 | 未対応 shell は exit 1。`--list` は exit 0 + 空候補 (外部 IF §3 (g) の「必須入力欠落は exit 1」への明示的な例外であり、この oracle が例外側を正とする) |
+| `CANDIDATE-U-CLICOMP-007` | `--list` の軽量早期分岐 | `.ut-tdd/` state 読み込みと DB open の呼出し回数 | 0 回 (Node 起動 + tree walk だけで返る) |
+
+## クラス・メソッド構造規約 analyzer の oracle 候補 (PLAN-L6-78 / `module-drift.md` Coding Rules 追補、2026-10-14 還流)
+
+analyzer は未実装である。実装する add-impl PLAN が Red から昇格させる候補を置く。
+
+| ID | 対象 | fixture / 変異 | 期待 |
+|---|---|---|---|
+| `CANDIDATE-U-CODSTRUCT-001` | 規約の排他分類 | L4 の構造規約 5 件 | 各規約が「機械検査対象 (rule id あり)」か「review 責務 (理由あり)」のどちらか一方に分類され、宙吊りが 0 件 |
+| `CANDIDATE-U-CODSTRUCT-002` | `max-nesting-depth` | 制御 nesting 3 / 4 の function | 4 だけを finding にする。閾値は coding-rules.md から読み、analyzer に直書きしない |
+| `CANDIDATE-U-CODSTRUCT-003` | `max-function-lines` | 非空行 80 / 81 の function | 81 だけを finding にする。test helper は対象外 |
+| `CANDIDATE-U-CODSTRUCT-004` | `max-cyclomatic-complexity` | 分岐点 12 / 13 の function | 13 だけを finding にする |
+| `CANDIDATE-U-CODSTRUCT-005` | fail-close | parse できない TS ファイル | skip せず violation にする |
+| `CANDIDATE-U-CODSTRUCT-006` | 実 repo 回帰 | 機械検査へ昇格する rule を実 repo に実行 | 既存の超過は debt / 期限つき例外として台帳にあり、台帳に無い violation が 0 |
+
+## doctor check の契約 pair の oracle 候補 (PLAN-L6-80 / `governance-enforcement.md` §9、2026-10-14 還流)
+
+| ID | 対象 | fixture / 変異 | 期待 |
+|---|---|---|---|
+| `CANDIDATE-U-DOCPAIR-001` | check ↔ 契約 ↔ oracle の 3 点 trace | check を 1 件追加して契約 ID または oracle を欠落させる | pair の無い check を debt として台帳に列挙し、fail-close の受け口が働く |
+| `CANDIDATE-U-DOCPAIR-002` | pure core | 代表 3 系統 (plan-governance / source-trace / runtime-surface) の判定関数 | 構造化データの fixture だけで全分岐を検証でき、repo 走査・git・DB を呼ばない |
+| `CANDIDATE-U-DOCPAIR-003` | 環境検査の隔離 | toolchain / PATH / git 状態の precondition | `environment` profile にだけ現れ、機能 check の結果と失敗帰属が混ざらない |
+| `CANDIDATE-U-DOCPAIR-004` | 挙動不変 | 分解の前後で同じ repo に doctor を実行 | 各 check の判定結果が変わらない |
+
 ## PLAN-L6-711 S3 adapter / wrapper (Issue #711) — pair-freeze 候補
 
 契約は PLAN-L6-711 §2.1 / §2.4 / §2.5 / §2.6 / §4 の既存候補。S1 で対をレビューし、confirm 後に別の S3 実装で検証する。ここでは実装済み・Green を主張しない。S2 の pure verifier と既存 oracle は変更しない。

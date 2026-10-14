@@ -1118,6 +1118,169 @@ port欠測をfail-closeする。SQLite、PKI、rotation/revocation、secure cloc
 D0-N receiptを再review・再署名し、通常のL8/L9 oracleを再通過したmanifestだけを受理する。
 受理不能なら旧direct-spawnへ戻さず利用停止する。
 
+### D.5 責務配置と禁止事項の対 (PLAN-L5-25 §1 還流)
+
+> **還流元と状態**: 本節から D.9 までは `docs/plans/PLAN-L5-25-resource-kernel-physical-protocol.md` (issue #958) の物理契約のうち、
+> D.1〜D.4 に無かった field 集合・variant・状態機械・式を移したものである。**未実装の目標契約**であり、実測では
+> `src/resource-kernel/` も Rust companion も存在しない (実装の所有は `PLAN-L7-466`、draft)。D.1〜D.4 と重複する記述は書かない。
+
+| component | 所有する物理責務 | 所有禁止 |
+|---|---|---|
+| TypeScript/Node control plane | spec / policy / capability 要求の正本、journal / outbox transaction、terminal receipt の seal、bundle 検証、deadline / admission | Job / cgroup の事実の捏造、direct spawn fallback、Rust への domain 判断の委譲 |
+| Node `CustodyClient` | 検証済 binary の shell 無し argv 起動、bounded framed I/O、request / response の対応づけ、transport deadline、probe fact の journal 化、admission token 送信、protocol error の正規化 | resource policy の決定、receipt seal、PATH 探索、Bun API、handshake だけでの workload 開始 |
+| Rust companion | strict wire の decode / encode、OS probe、admission token 照合、開始前の custody 作成・attach・resume、limit 適用、terminate と empty / reap proof | PLAN / GitHub / DB / CAS 判断、admission policy、terminal success の判定、SQLite journal、空 required capability での execute 受理 |
+| Windows custodian / supervisor | 継承しない Job handle を launcher と別 failure domain で保持、SCM での再 reconcile、tree empty を OS identity で証明 | PID polling を custody proof とすること、attach 前の resume |
+| Linux broker / subreaper | cgroup v2 identity、`clone3(CLONE_INTO_CGROUP)`、subreaper、`cgroup.kill`、`populated=0` + reap | 事後 attach を hard custody として受理すること、process group だけでの成功判定 |
+
+Rust は OS fact を返す port adapter であり、Node と重複する domain state machine を持たない。
+
+### D.6 wire のスキーマと故障の分類
+
+- request の必須 field は `protocol_version` / `request_id` / `command` / `payload` / `deadline_unix_ms` / `expected_bundle_digest`。
+  unknown field・enum、duplicate key、非 canonical number、末尾 byte を拒否する。frame の最大 size は bundle manifest の protocol
+  policy で固定する (改行区切り・EOF 推測・複数 JSON の連結は受理しない)。
+- response は同じ `request_id` と `protocol_version` を持ち、`ok:{fact}` と `error:{NativeError}` の排他的 union とする。
+- 故障の 2 分類。**PreDispatchWireFault**: request の decode 完了前の EOF / oversize / partial frame / UTF-8・JSON・schema 不正。
+  workload の `NativeError` に丸めず、Kernel 境界で closed な `protocol_failure` へ exactly once に正規化する。request 未生成で
+  launcher / custody の side effect は 0。**PostDispatchResponseFault**: mutating request を送信した後の response 側の EOF / pipe 切断 /
+  oversize / partial / 不正 UTF-8・JSON・schema / 末尾 byte / request ID・version・bundle の不一致。これらは
+  `DispatchIndeterminate(execution_id, execution_spec_digest, attempt_id, custody_nonce, operation, request_digest)` へ遷移させ、
+  side effect 0 や terminal `protocol_failure` へ推測しない。同じ idempotency identity で authority / journal / native fact を
+  reconcile し、実際の root / custody の判別子を確定するまで terminal receipt を seal しない。
+- schema の正本は TypeScript 側の versioned protocol schema で、release 時に canonical schema digest を生成する。Rust DTO は生成物または
+  適合実装であり、独立に語彙を足さない。digest が食い違う bundle は起動前に拒否する。stdout は protocol 専用、診断は bounded stderr に
+  分け、secret / raw env / 署名鍵 / payload 本文を log や receipt へ複製しない。
+
+### D.7 admission token・authority lease・recovery observation のスキーマ
+
+**command union**: `ProbeRequest | ExecuteRequest | RecoveryObservationCommand | RecoveryCustodyCommand | ControlCommand` の 5 variant の closed union。
+`ProbeRequest` は bundle / protocol identity だけを入力に OS fact を返し、workload launcher への参照を型として持たない。
+`ExecuteRequest.operation` だけが `create_custody | spawn_attached | resume` を所有する。
+
+**`AdmissionStageTokenV1`** (control plane が封印、`ExecuteRequest` が必須で持つ) の field:
+`execution_id` / `execution_spec_digest` / `attempt_id` / `admission_chain_id` / `custody_nonce` / `bundle_digest` / `probe_digest` /
+`required_capabilities` / `operation` / `operation_sequence` / `predecessor_fact_digest` / `custody_binding` / `termination_policy_digest` /
+`issued_unix_ms` / `budget_ms` / `deadline_unix_ms` / `token_nonce` / `issuer_key_id` / `policy_revision` / `authenticator`。
+authenticated preimage は `authenticator` 自身だけを除く全 field を schema 順に canonical 化した bytes とする (自己包含を避ける)。
+`AdmissionTokenAuthenticatorPort.seal/verify` 以外の自己申告 token を認証済みに昇格せず、unknown key / version、authenticator 不一致、
+同 nonce の別 payload、別 operation への replay を拒否する。token 無し・空 required capability・期限切れ・別 probe・別 attempt では
+custody 作成・spawn・resume をすべて 0 にし、`managed_root_created=false` のまま拒否する。
+
+`custody_nonce` は OS の custody identity ではなく、`issueCreateCustodyToken` の前に control plane が一意に予約する creation nonce である。
+`create_custody` はこの nonce を入力に custody identity を一度だけ生成し、返す lease へ同じ nonce と identity を束縛する。未予約・再利用・
+別 execution / spec への移送は side effect の前に拒否する。token は 3 operation で流用せず、同じ予約済み `custody_nonce` に対して
+`create_custody` (sequence 1、`custody_binding=reserved`)、`spawn_attached` (sequence 2、`custody_binding=custody_identity + executor_id + authority_epoch + lease_nonce`)、
+`resume` (sequence 3、同じ lease) を 1 枚ずつ封印する。各 `token_nonce` は異なり、直前 phase と current lease を journal で確認した後だけ
+次 token を発行する。skip / reorder / 消費済み token の replay / 同 operation の別 payload を side effect 前に拒否し、3 token の消費を
+同一 attempt へ durable 化する。
+
+**`AuthorityLeaseV1`** は `create_custody` が arm 済み deadline executor に束縛して返す closed union (3 variant)。共通必須 field は
+`authority_epoch` / `execution_id` / `execution_spec_digest` / `attempt_id` / `custody_nonce` / `bundle_digest` / `custody_identity` /
+`executor_id` / `deadline_unix_ms` / `termination_policy_digest` / `recovery_grace_ms` / `recovery_deadline_unix_ms` / `lease_nonce` /
+`issuer_key_id` / `authenticator` だけで、variant 固有は次で閉じる。
+
+| variant | discriminant と追加必須 field | 許可 operation | 明示的に持たない field |
+|---|---|---|---|
+| `ExecutionAuthorityLeaseV1` | `schema_version=execution-authority/v1`, `authority_mode=live`, `boot_id`, `effective_deadline_monotonic_ms`, `recovery_deadline_monotonic_ms` | `spawn_attached`, `resume` | predecessor / transition、previous・current boot、platform boot fact、cleanup deadline |
+| `CleanupAuthorityLeaseV1` | `schema_version=cleanup-authority/v1`, `authority_mode=cleanup_only`, `boot_id`, `effective_deadline_monotonic_ms`, `recovery_deadline_monotonic_ms`, `predecessor_lease_digest`, `cleanup_transition_fact_digest` | `observe`, `terminate_tree`, `prove_empty`, `release_custody` | previous・current boot、platform boot fact、cleanup deadline、create / spawn / resume |
+| `BootFencedCleanupLeaseV1` | `schema_version=boot-fenced-cleanup/v1`, `authority_mode=boot_fenced`, `previous_boot_id`, `current_boot_id`, `platform_boot_fact_digest`, `cleanup_deadline_monotonic_ms` | `observe`, `prove_empty`, `release_custody` | `boot_id`、旧 boot の effective・recovery monotonic deadline、predecessor / transition、`terminate_tree`、旧 PID、create / spawn / resume |
+
+`BootFencedCleanupLeaseV1` は元の wall `deadline_unix_ms` / `recovery_deadline_unix_ms` を共通 field として保持するが、旧 boot の monotonic field は
+持たず、`cleanup_deadline_monotonic_ms` を `current_boot_id` の domain で非延長に再導出する。各 variant の `allowed_operations` は上表から導出する固定
+literal 配列として canonical preimage に含める。表にない field は unknown として拒否し、missing / stale epoch、別 attempt・nonce・executor の binding、
+operation × variant の不一致を side effect 前に拒否する。`AuthorityLeaseAuthenticatorPort.issue/verify` は `authenticator` 自身を除く exact field 集合と
+固定 `allowed_operations` を canonical authentication payload として認証し、unknown version・key、authenticator 不一致、同 `lease_nonce` の別 payload を拒否する。
+
+**recovery 系 command**: `RecoveryObservationCommand.operation` は `observe_recovery_fact | prove_boot_fence` だけで、native observation fact を返すが
+authority state・epoch・lease・journal の delta は常に 0。`RecoveryCustodyCommand.operation` は `observe | terminate_tree | prove_empty | release_custody` だけ
+(`observe | prove_empty | release_custody` は両 cleanup variant、`terminate_tree` は `CleanupAuthorityLeaseV1` だけが必須)。control process の終了は別 union の
+`ControlCommand.shutdown_companion` に分ける。TypeScript 内部の `recoverAuthority` だけが次の observation を入力にする。
+
+| observation | discriminant と必須 field |
+|---|---|
+| `SameBootExecutorRecoveryObservationV1` | `schema_version=same-boot-executor-recovery-observation/v1`, `executor_id`, `execution_id`, `execution_spec_digest`, `attempt_id`, `custody_nonce`, `bundle_digest`, `custody_identity`, `previous_authority_epoch`, `boot_id`, `effective_deadline_monotonic_ms`, `termination_policy_digest`, `recovery_grace_ms`, `recovery_deadline_monotonic_ms`, `last_transition_digest`, `recovery_nonce`, `issuer_key_id`, `authenticator` |
+| `CrossBootFenceObservationV1` | `schema_version=cross-boot-fence-observation/v1`, `executor_id`, `execution_id`, `execution_spec_digest`, `attempt_id`, `custody_nonce`, `bundle_digest`, `custody_identity`, `previous_authority_epoch`, `previous_boot_id`, `current_boot_id`, `platform_boot_fact_digest`, `deadline_unix_ms`, `recovery_deadline_unix_ms`, `observed_wall_unix_ms`, `observed_monotonic_ms`, `termination_policy_digest`, `recovery_grace_ms`, `last_transition_digest`, `recovery_nonce`, `issuer_key_id`, `authenticator` |
+
+cross-boot variant は旧 boot の monotonic deadline、authority mode、lease、launcher / resume field を持たない。Rust の `NativeObservationSignerPort.seal` は pinned
+companion bundle の native signer identity で fact を封印し、TypeScript の `RecoveryObservationAuthenticatorPort.verify` は `BundleTrustPort` が検証済みの bundle signer と
+policy revision だけを trust input にする (unknown signer・version、別 bundle の key、canonical field の変異は CAS 前に拒否する)。observation と durable journal / current epoch の
+全一致の後に、TypeScript の `CustodyAuthorityPort` が CAS で epoch を 1 つ進め、same-boot は `CleanupAuthorityLeaseV1`、cross-boot は `BootFencedCleanupLeaseV1` だけを返す。
+admission token の期限後も既存 custody の安全な terminate / reap を妨げず、stale epoch や別 execution・attempt・nonce は state delta 0 で拒否する。`release_custody` は
+`empty_proven` と reap proof を事前条件とし、running / terminating では拒否して deadline executor と authority を維持する。`shutdown_companion` は active custody 0、
+pending response 0、未解決の `consumed_pending_dispatch | dispatch_indeterminate | dispatch_reconciled_without_result` 0、terminal outbox の flush 済みの場合だけ許可し、
+custody state を変更しない。各 response は `control_process_created` と `managed_root_created` を別 field で返す。`spawn_attached` は Windows では suspended root を
+Job へ assign した後だけ resume でき、Linux では最初の user instruction より前に target cgroup へ所属させる。native fact は custody identity・root identity・適用 limit・
+monotonic observation・OS error identity を返し、`success` や domain verdict は返さない。
+
+**stage dispatch record の状態機械**: `issued → consumed_pending_dispatch → result_committed`、または
+`consumed_pending_dispatch → dispatch_indeterminate → dispatch_reconciled → result_committed`。token の消費と
+`consumed_pending_dispatch(request_id, token_digest, idempotency_identity, request_digest)` の append を同じ transaction で行う。`request_digest` は authenticator を含む
+canonical な request bytes 全体の digest で、全 state に継承する。同じ `request_id + admission_stage_token_digest + idempotency identity + request_digest` の再送は新しい token の
+消費ではなく、`result_committed` なら同一 result fact を返し、`consumed_pending_dispatch | dispatch_indeterminate` なら authority・native fact を reconcile する。side effect 0 を
+独立に証明できた場合だけ同じ logical command を同じ idempotency identity で継続し、不明なら actual phase が確定するまで再 dispatch しない。`dispatch_reconciled` が durable で
+result 未 commit のときは、4 digest と `actual_phase` / `fact_digest` の exact 一致を確認し、native side effect を再実行せずに `result_committed` を append する。managed root を
+生成する command の idempotency identity は `execution_id + execution_spec_digest + attempt_id + custody_nonce + operation + operation_sequence`。新 request ID・別 payload・別 identity・
+一致する pending / result record の無い再送は logical replay として拒否する。dispatch 後の response 消失は `dispatch_indeterminate` から actual phase を commit して同一 retry に応答し、
+token を再消費しない。
+
+### D.8 custody の状態と authority の式 (D.2 の補足)
+
+| state | 許可 event | 不変条件 |
+|---|---|---|
+| `absent` | probe / create | process 0、custody identity 未発行 |
+| `prepared` | spawn-attached / abort→terminating | custody container は存在、user code は未開始。root 未生成の failure・deadline・cancel でも cleanup できる |
+| `attached_suspended` | resume / abort→terminating | root は custody 所属、Windows は suspended。attach 失敗・deadline・cancel では resume 0 |
+| `running` | observe / terminate / normal-root-exit→terminating | root と子孫は同一 custody identity で追跡し、root exit 単独を terminal にしない |
+| `terminating` | terminate→reap | 新規 child を contain し続ける |
+| `empty_proven` | empty + reap proof | Job empty または `populated=0`、zombie・managed orphan 0 |
+| `released` | release-custody transaction | empty / reap proof の後、platform release → release fact commit → deadline executor disarm → authority revoke と released の atomic commit を完了する。再利用された PID だけで所有を判定しない |
+
+- authority mode は `live → cleanup_only → revoked`。deadline / cancel / abort に加え、正常な root exit と明示的な terminate intent も `live → cleanup_only` を CAS し、同じ transaction で
+  新しい lease nonce / authenticator の `CleanupAuthorityLeaseV1` を発行して execution capability を不可逆に除去する (CAS の敗者は lease 0 で current mode を再読込する)。boot が変わったら
+  `live | cleanup_only → boot_fenced → revoked` とし、cross-boot proof から `BootFencedCleanupLeaseV1` 以外を発行しない。`cleanup_only | boot_fenced` から `live` に戻る辺は無い。
+- `release_id = digest(execution_id, execution_spec_digest, attempt_id, custody_identity, authority_epoch, empty_fact_digest, reap_fact_digest)` を先に journal へ commit し、Rust の
+  `CustodyReleasePort.ensureAbsent(release_id)` は同じ custody identity を「存在しない」終状態へ収束させる冪等 operation とする。`CustodyAbsentFact(release_id, custody_identity, empty_fact_digest, reap_fact_digest)`
+  は削除の因果を主張せず終状態の absence だけを証明する。release effect の存在→不在は最大 1 回、`ensureAbsent` の invocation は再試行でき、Rust 側に durable DB・marker を追加しない。
+  同じ raw OS identity が別 generation で再利用されていたら削除せず `custody_identity_reused` fact で quarantine する。custody は empty / reap 済みなので、release 後に deadline executor が再 kill しても
+  no-target fact になり、fact commit の後にだけ disarm する (disarm 前は cleanup authority を保持するため crash retry できる)。
+- probe と execution の間の durability barrier: verified bundle から control process を起動した事実・probe digest・capability 集合を journal へ append し、その digest を含む admission token を
+  control plane が封印した後だけ `prepared` に遷移する。token 検証前・probe 欠測・control process だけ生成済みの状態では `managed_root_created=false`。reconnect は bundle identity・attempt・
+  custody nonce を照合し、別 attempt を誤って kill しない。
+
+### D.9 deadline・recovery の式と pair-freeze 条件
+
+- **authority の分離**: `CustodyAuthority` (command / lease 照合)、`RecoverySupervisor` (再接続 / reap)、`DurableDeadlineExecutor` (期限 kill) を別 identity とし、executor を他の 2 つと同じ failure domain に置かない
+  (Windows は SCM / Job、Linux は broker 外の system-manager scope / timer または同等の kernel-backed executor)。`create_custody` は authority に `authority_epoch + attempt_id + custody_nonce +
+  effective_deadline_monotonic_ms + boot_id + termination_policy_digest + recovery_grace_ms + recovery_deadline_monotonic_ms` を durable 化させ、`ExecutionAuthorityLeaseV1` を返す。companion は lease を
+  照合してから suspended root / cgroup child を atomic に attach し、`handoff_committed` fact を authority と journal の双方が同じ nonce で観測するまで resume / exec しない。
+- **deadline の封印**: token verifier は受理時の `wall_now` と `monotonic_now` を同じ観測点で取り、`remaining_ms = min(budget_ms, max(0, deadline_unix_ms - wall_now))`、
+  `effective_deadline_monotonic_ms = monotonic_now + remaining_ms` を一度だけ封印する。`deadline_unix_ms - issued_unix_ms != budget_ms`、許容 skew の超過、wall の rollback / forward の不整合は
+  開始前に拒否する。開始後の wall clock の跳躍で deadline を再計算せず、process 再起動は durable な remaining fact と wall deadline の早い方を採り、boot ID の不一致・clock 不確実時は期限切れとして kill する。
+  延長 fail-open は禁止 (secure clock・key rotation の具体方式は後続)。
+- **recovery grace**: `recovery_grace_ms` は正整数で policy revision の `max_recovery_grace_ms` 以下。`recovery_deadline_unix_ms = deadline_unix_ms + recovery_grace_ms` と
+  `recovery_deadline_monotonic_ms = effective_deadline_monotonic_ms + recovery_grace_ms` を同じ観測点で封印する。effective deadline は create / spawn / resume の許可上限であり、既存 custody を
+  減らす方向の `observe | terminate_tree | prove_empty | release_custody` の失効時刻ではない。recovery deadline は cleanup 完了の SLA / escalation 境界であって cleanup 権限の失効時刻ではなく、
+  超過時は overdue fact と新規 admission の遮断を必須にするが、terminate / prove / release は拒否しない。
+- **boot をまたぐ cleanup**: same-boot の再起動は `SameBootExecutorRecoveryObservationV1`、host boot の変更は `CrossBootFenceObservationV1` で分け、execution / spec・authority epoch・attempt・nonce・bundle digest・
+  policy・last durable transition を照合する。旧 epoch・旧 boot の通常 command は拒否する。cross-boot fence proof は旧 boot の workload が現 boot で実行不能であることだけを証明し、empty proof を先取りしない。
+  旧 monotonic 値は比較せず、元の wall recovery deadline と新 boot の wall / monotonic の同時観測から非延長の cleanup 上限を導出する。recovery deadline 超過の overdue / escalation と新規 admission 遮断は
+  TypeScript が記録し、cleanup authority は失効させない。
+- **二重 crash**: authority API と recovery supervisor が同時に失われても、別 failure domain の executor が Windows では Job kill、Linux では期限内の `cgroup.kill` を発行し、再起動した
+  broker / subreaper が recovery deadline までに `populated=0`・zombie 0・managed orphan 0 を証明する。owner や bound を開始前に強制できなければ managed root を作らず拒否する。executor・system manager・
+  kernel 自体を同時に失う host failure では workload の再開を禁止し、boot 後は cross-boot fence → empty proof → release transaction で収束させ、kill / empty / release を証明するまで新規 admission を遮断する
+  (proof 不能なら quarantine を維持する)。これを process の二重 crash の Green と混同しない。独立 proof 欠測時の `custody_failure` と新規 admission 遮断は追加措置で、既存 payload の kill / reap の代替ではない。
+- **Rust の内部 port**: `PlatformProbe` / `CustodyFactory` / `AttachedLauncher` / `LimitApplier` / `TreeTerminator` / `EmptyProof` / `CustodyReleasePort` / `BootFenceProofPort` / `ControlShutdownPort`。custody release・
+  authority revoke・control shutdown を同じ operation に畳まない。Windows と Linux の adapter は同じ port を実装し、capability の差を共通最小集合へ丸めない (unsupported・権限不足は capability 0 を事実として返し、launcher call 0 で閉じる)。
+  事実を確定できない場合は `orphan_detected` または `custody_failure` に収束させ、success へ補完しない。
+- **bundle の補足**: `TrustDecisionPort` は bundle 外の versioned installer / release policy を入力に manifest と署名を検証して `accepted | rejected`、decision digest、policy version を返す。port 欠測・unknown version・署名不一致・
+  companion / protocol / SBOM / target / D0-N receipt digest の不一致は control process の起動前に fail-close する。D0 は鍵の rotation・revocation epoch、secure clock、re-anchor、installer registry、SQLite schema を固定せず、
+  後続の installer / release PLAN に委譲する。DB incremental・snapshot CAS・performance convergence は本 protocol の責務外 (Issue #152 の後続 slice)。
+- **pair-freeze 条件 (A)**: L8 の `IT-RGK-PHYS-001..042` が全件実在して欠番・範囲外が 0、42 case それぞれの lane・対象 OS・required capability・fixture・観測点・negative expected・control / workload 別 created count が
+  L8 の「Resource Kernel物理統合 freeze属性」節で固定され、L5 の物理契約から 42 ID への全数写像 (契約 `C-RGK-01..58`) が双方向に孤児 0 であること。`tests/resource-kernel-pair-mapping.test.ts` が実 repo で検査する。
+  **confirmed 昇格条件 (B)**: 実 runner を要する 15 件 (`real-OS` 6 + `mock+real-OS` 9) を Windows / Linux の両 lane で実行して fixture・観測点・negative expected・created count の実測値を保存し、mock lane の Green を
+  Job / cgroup の Green に読み替えず lane 別に証跡を分け、`PLAN-L7-466` の実装と `PLAN-REVERSE-466` の back-fill が着地していること。(A) は実装不要で充足でき、(B) は実装が無い間は充足できない。
+  なお `src/lint/oracle-test-trace.ts` の `ORACLE_ID` は 3 segment の ID (`IT-RGK-PHYS-001`) に一致せず、汎用 oracle-test-trace gate から 42 件は見えていない (issue #165 と同族の抽出漏れ)。
+
 ## 付録 E: PLAN 系譜 seal の preimage 契約 (PLAN-RECOVERY-16、Issue #542)
 
 `SealedLineageLocalMigration` (`src/plan-asset/ledger/sealed-lineage-local-migration.ts`、artifact owner は

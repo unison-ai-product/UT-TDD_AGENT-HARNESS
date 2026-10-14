@@ -94,3 +94,18 @@ PowerShell `Get-Content` / `Set-Content` / `Out-File` の既定 encoding 差分�
 | `runWriteEncodingGuard` | `runWriteEncodingGuard(input, deps) -> WriteEncodingGuardResult` | `repoRoot` は作業 repo。検査は advisory である。 | 対象 artifact を single read し、`analyzeArtifacts` を再利用して違反 message と jsonl 証跡を出す。 | 検出ロジックは readability gate と同じ `src/lint` 境界で共有し、hook は exit 0 の fail-open を維持する。 | U-WENC-001..004 |
 
 `hook post-tool-use` は既存 session-log 記録の後に `runWriteEncodingGuard` を呼ぶ。`Write` / `Edit` / `MultiEdit` / `apply_patch` / `write_file` は明示 target だけを検査する。`Bash` / `exec_command` / `local_shell` は tool payload から書込先を決定できないため、`git status --porcelain` の changed file list を fallback target とする。完全性は doctor/CI の `readability` / `runtime-readability` が引き続き担保し、PostToolUse guard は事故の早期発見と連鎖防止を担う。
+
+## §9 doctor check の契約 pair と pure core の分離 (PLAN-L6-80 還流、未実装の目標契約)
+
+doctor は「エンジンと対になる検証器」であるべきだが、実測では多数の check が L6 の機能契約と 1:1 の pair を持たず、real-repo の aggregate (`tests/doctor.test.ts` の 1 テストが 6 分超、
+U-TESTHYGIENE-028 の実測 389 秒) の合算値だけが正しさの根拠になっている。個別 check の退行は aggregate の中でしか観測できず、判定ロジックが repo 走査 (I/O)・git 呼び出しと 1 関数に混在して
+fixture 単体で検証できない。次を設計目標とする (個別 check の判定仕様は変えず、**挙動は不変**)。
+
+1. **check ↔ 契約 ↔ oracle の 3 点 trace**: 各 doctor check を L6 function-spec の契約 1 項目と対にし、`check_id` ↔ 契約 ID ↔ L7 oracle (fixture 単体テスト) の trace を DB projection で機械検証する。
+   pair の無い check は fail-close で debt として台帳に列挙する (lint 化の受け口を含む)。台帳の粒度が分割単位を決めるので、現行 check 全件の棚卸し (check と契約 ID の対応表) を先に作る。
+2. **pure core と adapter の分離**: 判定ロジックを pure 関数 (入力 = 構造化データ、出力 = violation list) へ分け、repo 走査・git・DB 読みは adapter に隔離する。L7 oracle は pure core を fixture で直接叩き、
+   live repo に依存せず全分岐を検証する。まず代表 3 系統 (plan-governance / source-trace / runtime-surface) で入出力契約を function-spec に書く。既存の doctor 分割 PLAN 群 (L7-217〜L7-380) は adapter 層の分割として再利用する。
+3. **環境検査の隔離**: toolchain・PATH・git 状態などの環境 precondition は機能 check から分け、`environment` profile へ移す。aggregate の実行時間と失敗帰属を機能検査から切り離す。
+4. **oracle の命名と fixture 方針**: check 単位の oracle の命名規約と fixture 方針を `docs/test-design/harness/L7-unit-test-design.md` に pair-freeze する。
+
+範囲外: meta-verifier 本体 (独立 detector の自己証明) は `PLAN-L7-425` / `PLAN-L6-77` の責務。
