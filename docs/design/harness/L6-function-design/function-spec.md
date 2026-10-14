@@ -231,7 +231,7 @@ type QualitySignal = { signal_type: string; subject_id: string; score?: number; 
 | `analyzeTypedSpecTraceClosure` | `AnalyzeTypedSpecTraceClosureInput { defs; relations } -> TypedSpecTraceClosureResult { typedSpecCount; relationCount; findings[]; ok }` | PLAN-L6-43。post: typed spec 宣言だけを対象に `traces_to`↔相手 `traces_from`、`tests`↔test spec `traces_from` を突合し、片側欠落を `typed-spec-trace-reverse-missing` / `typed-spec-test-backlink-missing` finding にする。test を要求する kind に test edge が無い場合は `typed-spec-test-missing`。invariant: 閉包を projection 側で補完せず、doctor hard gate が fail-close できる finding として返す。 |
 | `deriveSpecRagClosureEntries` | `DeriveSpecRagClosureEntriesInput { defs; relations; closureFindings; indexedAt } -> SpecRagClosureEntryRow[]` | PLAN-L6-61。post: typed spec 宣言を `spec_rag_closure_entries` row へ投影し、`requires_test`、upstream/downstream/test 到達数、typed-spec closure finding 数、`rag`、`closure_status`、`impact_summary` を deterministic に返す。`traces_from` / `requires` は `PLAN-L6-60` の impact traversal と同じく依存元から影響先へ反転し、`traces_to` / `tests` は宣言方向を使う。`pairs` は spec RAG の到達判定に混入しない。invariant: `schedule_entries.rag` を更新せず、spec 閉包 RAG と工程 RAG を分離する。 |
 | `analyzeTypedSpecLedgerBodySync` | `AnalyzeTypedSpecLedgerBodySyncInput { defs; relations; sources } -> TypedSpecLedgerBodySyncResult { typedSpecCount; ledgerRowCount; findings[]; ok }` | PLAN-L6-44。post: typed spec 宣言を、同じ authoring source の本文実体、`spec_id` / `ledger_sources` / `v_phase` 台帳、relation の phase 方向と突合する。本文実体欠落、台帳行欠落、未知台帳ID、重複台帳ID、phase 欠落、phase 逆流を finding にする。invariant: 台帳や本文を DB projection から補完せず、source docs から rebuild して判定する。 |
-| `analyzeTypedSpecOwnedArtifactDispersal` | `AnalyzeTypedSpecOwnedArtifactDispersalInput { defs; sources } -> TypedSpecOwnedArtifactDispersalResult { typedSpecCount; dispersedSpecCount; findings[]; ok }` | PLAN-L6-45。post: typed spec 宣言の `source_path` が台帳 `ledger_sources` のいずれかと一致することを検査し、一致しない宣言を `typed-spec-owned-source-mismatch` finding にする。invariant: central bootstrap doc は移行足場であり、所有外 ID の宣言元になれない。 |
+| `analyzeTypedSpecOwnedArtifactDispersal` | `AnalyzeTypedSpecOwnedArtifactDispersalInput { defs; sources } -> TypedSpecOwnedArtifactDispersalResult { typedSpecCount; dispersedSpecCount; findings[]; ok }` | PLAN-L6-45。post: typed spec 宣言の `source_path` が台帳 `ledger_sources` のいずれかと一致することを検査し、一致しない宣言を `typed-spec-owned-source-mismatch` finding にする。invariant: central bootstrap doc は移行足場であり、所有外 ID の宣言元になれない。宣言元になれるのは `loadSpecIrSources` が source に取る `docs/` 配下の markdown だけであり、`tests/*.ts` は宣言元にならない (`src/state-db/spec-ir-projections.ts` `loadSpecIrSources`、`tests/` は evidence 参照の prefix 扱い)。test 側の typed spec (`TVMS-*`) は test-design に宣言する。 |
 | `analyzeTypedSpecPhaseLayerAlignment` | `AnalyzeTypedSpecPhaseLayerAlignmentInput { defs; sources } -> TypedSpecPhaseLayerAlignmentResult { typedSpecCount; alignedSpecCount; findings[]; ok }` | PLAN-L6-46。post: typed spec 台帳の `v_phase` と宣言元 artifact の owner phase (`typed_spec_phase_owner` / `executed_at_layer` / `layer` / path 由来 layer) を突合し、owner phase 欠落を `typed-spec-owner-phase-missing`、不一致を `typed-spec-phase-layer-mismatch` finding にする。invariant: governance doc のような横断 artifact は `typed_spec_phase_owner` を明示し、検出器が layer を推測で創作しない。 |
 | `analyzeAgentContractIntegrity` | `AnalyzeAgentContractIntegrityInput { contracts; sources; knownDoctorGateIds? } -> AgentContractIntegrityResult { contractCount; findings[]; ok }` | PLAN-L6-47。post: agent contract の ID、target path、defines、read_first、done_when を検査し、欠落や未知 doctor gate を `agent-contract-*` finding にする。invariant: `read_first` / `done_when` を projection 側で補完せず、source docs と doctor gate ID から fail-close 判定する。 |
 | `projectSpecIr` | `ProjectSpecIrInput { defs; relations; schedules; activations; activation_schedule_reviews; document_catalog_entries; document_scale_profile_entries; document_scale_profile_reviews; spec_rag_closure_entries; candidates?; db } -> ProjectSpecIrResult { rows_by_table; findings[] }` | PLAN-L6-39/41/L4-20/L6-61。post: `spec_defs` / `spec_relations` / `schedule_entries` / `activation_entries` / `activation_schedule_reviews` / `document_catalog_entries` / `document_scale_profile_entries` / `document_scale_profile_reviews` / `spec_rag_closure_entries` / `detector_route_candidates` を deterministic upsert し、同一入力の rebuild は row counts と IDs が安定する。invariant: projection は rebuildable であり authoring source ではない。source docs / PLAN / test-design / schedule / activation profile / document catalog / document scale profile / spec RAG は書き換えない。 |
@@ -289,11 +289,47 @@ type QualitySignal = { signal_type: string; subject_id: string; score?: number; 
 | `deriveArtifactProgressDecision` | `ArtifactProgressDecisionInput { linkedTestCount: number; dependencyChecked: boolean; openDependencyImpacts: number; recoveryPlanIds?: string[] } -> ArtifactProgressDecision { state: dependency_unchecked/implemented_unverified/verified; color: red/yellow/green; reason: string }` | `src/state-db/projection-writer.ts` に実装済み。pseudocode = dependency unchecked または open impacts があれば red、linked tests なしまたは recovery active なら yellow、それ以外は green。 |
 | `projectArtifactProgress` | `ArtifactProgressProjectionInput { graph?: RelationGraphProjection; db: HarnessDb } -> void` | `src/state-db/projection-writer.ts` に実装済み。pseudocode = source nodes を collect し、covered-by test edges を count し、impact_results/recovery PLANs を join し、decision を derive して rebuildable `artifact_progress` rows を upsert する。 |
 
+### VMS-007 typed spec phase/layer alignment の契約 (PLAN-L6-46 の移設先)
+
+本節は VMS-007 (`typed-spec-phase-layer-alignment`、`traces_from: VMS-004`、検証 `TVMS-007`) の契約を所有する移設先である。VMS-007 は typed spec 台帳の `v_phase` と、宣言元 artifact から解決した owner phase を一致させる設計であり、検出系が owner phase を推測で作らないことを保証する。これにより VMS-004 の `traces_to` は VMS-007 に解決する。契約の実体は上の `analyzeTypedSpecPhaseLayerAlignment` / `checkTypedSpecPhaseLayerAlignment` の行と、L5 `physical-data.md` の `typed-spec-owner-phase-missing` 診断が持つ。
+
+`spec.defines` の宣言 block は、移行の途中では PLAN-L6-46 に残っている (唯一の宣言元)。block を本節へ複製すると同一 ID の二重宣言になるため、宣言の移設は ② の freeze で PLAN を一括で退役させる手順の中で、PLAN 側の削除と同時に行う。その際 `docs/governance/vmodel-typed-spec-definitions.md` の VMS-007 の `ledger_sources` を、PLAN から本文書 (`function-spec.md`) へ付け替える。
+
 ## 2026-06-09 L6 completion readiness 追補
 
 `analyzeL6Completion` は G6 readiness aggregator である。`freezeInputReady` (status flip 前の G6 audit に trace/substance が ready) と final `ready` (confirmed docs/plans、confirmed L7、G6 PASS 後の L6 completion) を分離する。これは L6 design doc status、各 L6 doc の owning `plan:` reference、各 L6 doc の `pair_artifact`、L6 doc filename による L7 reverse reference、minimum unit-contract substance marker (contract/signature、DbC または oracle、U-* oracle family)、base L6 `kind=design` PLAN status と review evidence、L7 unit-test-design status、G6 gate table row を読む。Post-G6 `kind=add-design` PLAN は add-feature/backfill/review evidence で統制し、base G6 completion を reopen しない。unit oracle は `L7-unit-test-design.md` の U-L6COMP-001..005 とする。
 
 doctor 配線: `checkL6Completion` (`src/doctor/process-quality.ts`、`l6-completion` check) は hard/fail-close であり、`ok` は final `ready` と一致する (`freezeInputReady` だけでは `ok` にならない)。入力を読めない場合・集約が例外を投げた場合も `violation` を返して `ok=false` とし、silent PASS を作らない。未完了状態は draft docs / owning plan 欠落・未解決 / L7 pair 欠落 / L7 reverse reference 欠落 / unit-contract substance 不足 / draft PLAN / L7 draft / G6 not-pass として列挙する。`ready=true` は全条件が揃った場合に限り、`freezeInputReady=true` は status・gate の flip 前でも trace/substance が揃えば成立する (U-L6COMP-002 / 004)。
+
+### L6 completion の範囲と inventory (PLAN-L6-00 から還流、#958)
+
+- L6 completion の範囲は、原本の `function-spec` / `edge-case` に限らない。`docs/design/harness/L6-function-design/` 配下を生成または改訂する L6 add-design PLAN の成果物はすべて G6 readiness の対象である。
+- L6 設計文書全体の pair artifact は `docs/test-design/harness/L7-unit-test-design.md` の 1 本である。各 L6 設計文書は、そこに U-* oracle family を 1 つ以上持たなければならない。
+- 追加要求 (SQLite projection・drive/model ログ・skill 発火指標・検索コスト削減・機械品質検査) は `fr-unit-coverage.md` の FR-L1 行が受ける。
+- G6 audit の入力条件は、(1) 各文書に owning `plan:` と `pair_artifact` と unit 契約の中身がある、(2) 所有する design / add-design PLAN が構造 lint 違反なし、(3) L7 に対応する U-* family がある、(4) `l6-fr-coverage` / `pair-freeze` / `plan-schedule` / `review-evidence` と typecheck / vitest / doctor が green、である。最終完了は、全文書と所有 PLAN が confirmed (または confirmed PLAN で supersede)、L7 が confirmed、gate-design に G6 PASS と audit 参照が記録された状態である。
+- クラス設計は非 OOP のため縮退し、本 doc §3 に統合する (上記)。
+
+| L6 設計文書 | 所有 PLAN | L7 oracle family |
+|---|---|---|
+| `function-spec.md` | `PLAN-L6-01` (追補 `PLAN-L6-20` / 21) | `U-FUNC` / `U-CORE` / `U-RULE` / `U-FR-L1-*` |
+| `edge-case.md` | `PLAN-L6-02` | `U-EDGE` |
+| `session-log.md` | `PLAN-L6-03` / 20 | `U-SLOG` |
+| `forced-stop-feedback.md` | `PLAN-L6-04` | `U-FSF` |
+| `setup-solo-team.md` | `PLAN-L6-05` | `U-SETUP` |
+| `handover-mechanism.md` | `PLAN-L6-06` / 16 | `U-HOVER` |
+| `agent-slots.md` | `PLAN-L6-07` | `U-SLOT` / `U-TEAM` |
+| `backfill-pairing.md` | `PLAN-L6-08` | `U-BACKFILL` |
+| `governance-enforcement.md` | `PLAN-L6-09` | `U-SCRUMREV` / `U-PROP` |
+| `vmodel-pair-freeze.md` | `PLAN-L6-10` / 11 | `U-VPAIR` / `U-VTRIG` |
+| `review-evidence.md` | `PLAN-L6-12` (`stale` 検知は `PLAN-L6-18`) | `U-REVIEW` |
+| `cross-review-enforcement.md` | `PLAN-L6-13` | `U-XREVIEW` |
+| `test-before-review.md` | `PLAN-L6-14` | `U-TORDER` |
+| `module-drift.md` | `PLAN-L6-15` (追補 `PLAN-L6-26..30`) | `U-MDRIFT` / `U-FR-L1-49` / `U-DDDTDD` / `U-FR-L1-50` |
+| `gate-confirm.md` | `PLAN-L6-17` | `U-GCONF` |
+| `plan-schedule-lint.md` | `PLAN-L6-19` | `U-PLANSCH` |
+| `fr-unit-coverage.md` | `PLAN-L6-21` | `U-FR-L1-01..50` |
+
+この表は、後から追加された L6 文書 (descent-obligation / skill-index など) の oracle family を網羅しない。後発文書の対応は L7-unit-test-design.md の module-design crosswalk と各文書の `plan:` が持つ。
 
 > **SSoT 参照**: module 公開 IF = [module-decomposition.md](../L5-detailed-design/module-decomposition.md) / DbC pre-post-invariant = [internal-processing.md](../L5-detailed-design/internal-processing.md) §3-§5 / 型の単一正本 = `src/schema/` / pseudocode 標準 = [document-system-map](../../../governance/document-system-map.md) §1 (IEEE 1016 §5.7)。本 doc は公開 IF に **関数 signature + アルゴリズム pseudocode + 型設計 + WBS** を付与する (L6、IEEE 1016 §5.7)。
 >
