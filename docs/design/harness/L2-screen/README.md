@@ -11,7 +11,7 @@ updated: 2026-06-22
 
 L1 画面要求 (15 画面 PM/HM/GD) を L2 画面設計に詳細化する sub-doc 群。
 
-> **materialization 状況 (2026-06-22)**: 4 sub-doc は PLAN-L2-00 master + PLAN-L2-01〜04 で content 本材料化済 (PM-06 設計書ビューア追加で 15 画面)。`status` は placeholder 維持 — confirmed 昇格は G2 freeze (PO サインオフ、gate-confirm IMP-079 遵守)。
+> **materialization 状況 (2026-06-22、2026-10-14 訂正)**: 4 sub-doc (screen-list / screen-flow / ui-element / wireframe) は content 本材料化済で、G2 freeze (PO サインオフ 2026-06-22) により各 sub-doc の `status` は confirmed である (PM-06 設計書ビューア追加で 15 画面)。本 README は索引で、下の「Forward handling」の placeholder / carry 記述は L2 起票前の履歴である。
 
 > **Forward handling**: 本ディレクトリは L0→L3 時点では意図的な placeholder / carry。L3 は L1 screen §5 の trace を参照して AC / AT を確定し、L2 画面設計そのものは PLAN-L2-01〜04 起票時に本確定する。したがって L3 G3 判定では「L2 が存在しない漏れ」ではなく「L2 起票待ちの明示 carry」として扱う。
 
@@ -21,10 +21,10 @@ L1 画面要求 (15 画面 PM/HM/GD) を L2 画面設計に詳細化する sub-d
 
 | sub-doc | 役割 | status | 必須/省略可 |
 |---------|------|--------|-------------|
-| `screen-list.md` | 画面 ID 一覧 (PM-01〜PM-06 / HM-01〜HM-08 / GD-01 = 15 件) | placeholder | **必須** (PLAN-L2-01 で本材料化済) |
-| `screen-flow.md` | 画面遷移詳細 (6 シナリオ + 3 カテゴリ間 deep-link) | placeholder | **必須** (PLAN-L2-02 で本材料化済) |
-| `ui-element.md` | 主要 UI コンポーネント (PM-01 4 階層プルダウン / HM-02 heat map / HM-03 動的配線 / HM-04 DB 整合性 / GD-01 サイドナビ / PM-06 設計書ツリー+プレビュー等) | placeholder | **必須** (PLAN-L2-03 で本材料化済) |
-| `wireframe.md` | レイアウト・情報配置 (Low-Fi ASCII art デフォルト) | placeholder | **省略可** (Low-Fi デフォルト、High-Fi モックは **ケース別判断**: harness 内保持 OR 外部依頼のいずれか、PO 外部は許容オプションで必須ではない) |
+| `screen-list.md` | 画面 ID 一覧 (PM-01〜PM-06 / HM-01〜HM-08 / GD-01 = 15 件) | confirmed | **必須** (PLAN-L2-01 で本材料化済) |
+| `screen-flow.md` | 画面遷移詳細 (6 シナリオ + 3 カテゴリ間 deep-link) | confirmed | **必須** (PLAN-L2-02 で本材料化済) |
+| `ui-element.md` | 主要 UI コンポーネント (PM-01 4 階層プルダウン / HM-02 heat map / HM-03 動的配線 / HM-04 DB 整合性 / GD-01 サイドナビ / PM-06 設計書ツリー+プレビュー等) | confirmed | **必須** (PLAN-L2-03 で本材料化済) |
+| `wireframe.md` | レイアウト・情報配置 (Low-Fi ASCII art デフォルト) | confirmed | **省略可** (Low-Fi デフォルト、High-Fi モックは **ケース別判断**: harness 内保持 OR 外部依頼のいずれか、PO 外部は許容オプションで必須ではない) |
 
 ## モック方針 (2026-05-28 PO 確定、PO 訂正反映 2 回)
 

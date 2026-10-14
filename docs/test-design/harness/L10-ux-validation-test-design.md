@@ -61,6 +61,22 @@ BDD 形式 (Given/When/Then = 前提/操作/期待結果)。用語は L0 glossar
 | UXV-A11Y-02 | CLIをscreen reader/高contrast terminalで利用する | error/help/status outputを検証する | 色だけに依存せずfinding ID、reason、next actionを取得できる | PLAN-L10-01 |
 | UXV-VRT-02 | engine-swap前後のstatus/doctor JSON fixtureがある | semantic snapshotを比較する | 意図したschema delta以外0、human text差分はreview evidenceへ残る | PLAN-L10-01 |
 
+### §2.1 engine-swap CLI / feedback UX 検証の枠 (CANDIDATE、PLAN-L10-01 から還流)
+
+上の UXV-REVIEW-02 / UXV-A11Y-02 / UXV-VRT-02 が engine-swap の UX 検証 case である。ここでは、それらを束ねる
+実施の枠 (対象 task、manifest の項目、合格条件、差戻し先) を置く。本節の ID は正式 oracle ではなく、
+昇格前の候補である (`CANDIDATE-` 接頭辞、UXV family の機械検査 (`UXV-` 接頭辞の数え上げ) には入れない)。
+
+| 候補 ID | 内容 | 合格条件 |
+|---|---|---|
+| CANDIDATE-G10ENG-01 | 対象 task を 4 群に分けて実施する: workflow の status / transition / explain、plan の migrate / validate / revise、docs audit、self-proof 結果の理解と修正 | 4 群すべてに、persona と fixture を固定した task が 1 件以上ある |
+| CANDIDATE-G10ENG-02 | `.ut-tdd/evidence/g10-ux/engine-swap.json` に task、persona、fixture、成功率、誤操作、所要時間、CLI 出力の digest を記録する | 項目の欠落が 0 (欠落は fail-close) |
+| CANDIDATE-G10ENG-03 | G9 (system) が pass した後に実施する。blocked の理由と次 action が 1 つに決まり、silent pass と hidden frontier が無い | silent pass 0、hidden frontier 0、critical task の成功率が閾値以上 |
+
+- critical task の成功率の閾値は未確定である (旧 PLAN にも数値は無い)。数値の決定は、この枠を正式 oracle へ昇格する時に行う。
+- 失敗の差戻し先: UX の文言と情報構造は L10 自身で直す。CLI の契約の不備は L4 / L6 へ Reverse する。runtime の不具合は L7。
+  アクセシビリティとセキュリティは該当する設計へ回す。
+
 ## §3 検証設計 (環境・実データ・計測・評価)
 
 - **環境**: 実レンダリング検証 (src/web 実装後)。vitest / doctor / render / review command を

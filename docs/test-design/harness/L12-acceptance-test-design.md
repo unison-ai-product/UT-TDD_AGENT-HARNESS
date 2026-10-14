@@ -253,5 +253,10 @@ verification_design: 検証環境、受入データ実在性、計測方法、�
 | `AT-ENGINE-03` | Pack artifactと既存版 | update→smoke→rollback→再smokeを実行 | update/rollback双方doctor exit 0 |
 | `AT-ENGINE-04` | G8-G11 evidence manifests | acceptance manifestへjoinする | mandatory evidence missing/stale 0、PO signoffあり |
 
+候補 (`CANDIDATE-`、PLAN-L12-01 から還流、正式 oracle ではない): `CANDIDATE-AT-ENGINE-05` — acceptance manifest
+(`.ut-tdd/evidence/g12-acceptance/engine-swap.json`) は AT-ID、command、artifact digest、environment、rollback の結果、
+approval を記録し、合格の判定には「既知の blocker が 0」と「release decision の記録」を加える。AT-ENGINE-01〜04 が
+カバーする範囲は、L1 の AC、配布と更新、migration と rollback、cross-platform、security と readability、証跡の完全性である。
+
 engine-swap mandatory ATは4/4 passを要求し、deferはprogram acceptへ使用できない。失敗はL12 correction、
 deployment design Reverse、L7 implementation、Recovery/Incidentへscope別にrouteする。

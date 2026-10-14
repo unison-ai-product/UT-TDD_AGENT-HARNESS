@@ -35,3 +35,13 @@ execution_evidence: OT ID、asset revision、commit、command、exit、finding c
 exit_criteria: 必須OTがpassし、pending/gap/debt/mutation survivorが未記録のままacceptされない。
 defect_routing: owning left layer、Reverse、Recovery、debt PLAN、次サイクルL0 feedbackへrouteする。
 verification_design: 実行環境、独立oracle、mutation operator、証拠freshnessをOTごとに固定する。
+
+## 候補 oracle (PLAN-L14-01 から還流、正式 oracle ではない)
+
+| 候補 ID | 観測 | green 条件 |
+|---|---|---|
+| CANDIDATE-OT-ENGINE-01 | 継続運用の観測窓で、handover と memory、false-green と negative の率、docs / semantic debt の burn-down、保守性を計測する | 観測窓、KPI、baseline と actual の値、feedback と debt の closure が manifest (`.ut-tdd/evidence/g14-operational/engine-swap.json`) に残る |
+| CANDIDATE-OT-ENGINE-02 | PO の value outcome (KPI の判定) と残 debt の承認、program の exit decision | operational blocker 0、value KPI の判定が記録済み、残 debt に承認がある、exit decision が記録済み |
+
+失敗の差戻し先: 運用の欠陥は L14 または Incident、価値が届かない場合は L0 / L1、設計の欠陥は Reverse、実装の欠陥は L7。
+KPI の具体値は未確定であり、候補を正式 oracle へ昇格する時に決める。
