@@ -297,23 +297,23 @@ type QualitySignal = { signal_type: string; subject_id: string; score?: number; 
 
 | L6 設計文書 | 所有 PLAN | L7 oracle family |
 |---|---|---|
-| function-spec.md | PLAN-L6-01 (追補 PLAN-L6-20 / 21) | U-FUNC / U-CORE / U-RULE / U-FR-L1-* |
-| edge-case.md | PLAN-L6-02 | U-EDGE |
-| session-log.md | PLAN-L6-03 / 20 | U-SLOG |
-| forced-stop-feedback.md | PLAN-L6-04 | U-FSF |
-| setup-solo-team.md | PLAN-L6-05 | U-SETUP |
-| handover-mechanism.md | PLAN-L6-06 / 16 | U-HOVER |
-| agent-slots.md | PLAN-L6-07 | U-SLOT / U-TEAM |
-| backfill-pairing.md | PLAN-L6-08 | U-BACKFILL |
-| governance-enforcement.md | PLAN-L6-09 | U-SCRUMREV / U-PROP |
-| vmodel-pair-freeze.md | PLAN-L6-10 / 11 | U-VPAIR / U-VTRIG |
-| review-evidence.md | PLAN-L6-12 (stale 検知は PLAN-L6-18) | U-REVIEW |
-| cross-review-enforcement.md | PLAN-L6-13 | U-XREVIEW |
-| test-before-review.md | PLAN-L6-14 | U-TORDER |
-| module-drift.md | PLAN-L6-15 (追補 PLAN-L6-26..30) | U-MDRIFT / U-FR-L1-49 / U-DDDTDD / U-FR-L1-50 |
-| gate-confirm.md | PLAN-L6-17 | U-GCONF |
-| plan-schedule-lint.md | PLAN-L6-19 | U-PLANSCH |
-| fr-unit-coverage.md | PLAN-L6-21 | U-FR-L1-01..50 |
+| `function-spec.md` | `PLAN-L6-01` (追補 `PLAN-L6-20` / 21) | `U-FUNC` / `U-CORE` / `U-RULE` / `U-FR-L1-*` |
+| `edge-case.md` | `PLAN-L6-02` | `U-EDGE` |
+| `session-log.md` | `PLAN-L6-03` / 20 | `U-SLOG` |
+| `forced-stop-feedback.md` | `PLAN-L6-04` | `U-FSF` |
+| `setup-solo-team.md` | `PLAN-L6-05` | `U-SETUP` |
+| `handover-mechanism.md` | `PLAN-L6-06` / 16 | `U-HOVER` |
+| `agent-slots.md` | `PLAN-L6-07` | `U-SLOT` / `U-TEAM` |
+| `backfill-pairing.md` | `PLAN-L6-08` | `U-BACKFILL` |
+| `governance-enforcement.md` | `PLAN-L6-09` | `U-SCRUMREV` / `U-PROP` |
+| `vmodel-pair-freeze.md` | `PLAN-L6-10` / 11 | `U-VPAIR` / `U-VTRIG` |
+| `review-evidence.md` | `PLAN-L6-12` (`stale` 検知は `PLAN-L6-18`) | `U-REVIEW` |
+| `cross-review-enforcement.md` | `PLAN-L6-13` | `U-XREVIEW` |
+| `test-before-review.md` | `PLAN-L6-14` | `U-TORDER` |
+| `module-drift.md` | `PLAN-L6-15` (追補 `PLAN-L6-26..30`) | `U-MDRIFT` / `U-FR-L1-49` / `U-DDDTDD` / `U-FR-L1-50` |
+| `gate-confirm.md` | `PLAN-L6-17` | `U-GCONF` |
+| `plan-schedule-lint.md` | `PLAN-L6-19` | `U-PLANSCH` |
+| `fr-unit-coverage.md` | `PLAN-L6-21` | `U-FR-L1-01..50` |
 
 この表は、後から追加された L6 文書 (descent-obligation / skill-index など) の oracle family を網羅しない。後発文書の対応は L7-unit-test-design.md の module-design crosswalk と各文書の `plan:` が持つ。
 
