@@ -304,6 +304,26 @@ PLAN-L6-97 §3.7 は「レビュー依頼や進捗連絡は memory に書かな�
 | 13 | 推定 episode (引用だけの恒久教訓) の即時配送 | 配送する | CANDIDATE-U-MEMEPI-018 |
 | 14 | 中断後に移し先の bytes が変わった、または両方の path から消えた | 止めて報告、exit 1、`done` なし、db 行は残る | CANDIDATE-U-MEMEPI-019 |
 
+## §4.3 legacy corpus の clean-cut 置換 (PLAN-L6-104、issue #424 / #550)
+
+実装済み (PLAN-L7-566、PR-1 migration 撤去・PR-2 corpus 置換。`src/memory/legacy-archive-manifest.ts`、`src/memory/curation-ledger.ts`、`tests/memory-clean-cut-removal.test.ts`、`tests/memory-clean-cut-non-read.test.ts`)。oracle は `docs/test-design/harness/L7-memory-clean-cut-replacement-test-design.md`。PO 決定 (2026-09-15、#424 comment 5678404390、#550 comment 5678404737) を次の契約として保持する。
+
+1. **置換方式**: legacy corpus は migrate せず clean-cut で置換する。削除は禁止し、archive は runtime の read root の外に置く。
+2. **継承境界**: project-scoped canonical root (#431 / #512 / #523) と provider envelope (#529) を維持し、PLAN-L7-512 の Slice 4 (migration / inventory / quarantine / recovery / completion) とその成果物 (`src/runtime/project-memory-migration.ts`、対の test) だけを撤去した。Slice 1/3 の canonical project root (`src/runtime/project-memory-root.ts`)、`src/runtime/claude-provider-envelope.ts`、Pack parity は継承する。
+3. **archive 配置**: PR-2 時点で tracked の `.ut-tdd/memory` は `git mv` で `docs/archive/memory-legacy-2026-09/` へ移し (bytes と digest を保持)、untracked は commit せず gitignore 対象の local archive `.ut-tdd/archive/memory-legacy-2026-09/` へ移す。linked worktree の legacy `.ut-tdd/memory` は触れない (#578)。したがって legacy corpus の完全保存は主張しない。`docs/archive/` と `.ut-tdd/` は `CLEAN_DENY_PREFIXES` に含まれ clean Pack artifact set に入らない。
+4. **non-read 保証**: canonical root、archive、linked worktree legacy を同時に置いた fixture を正本 oracle とする。archive 側には同一 `memory_id`・異 digest、frontmatter 破損、symlink の adversarial entry を加える。全 reader / projection / CLI / provider / doctor・status が canonical だけを返す。archive 配下を新しい reader が再帰 scan する退行は、関数単体でなく全 consumer の composition oracle で継続検出する。
+5. **curation**: 自動分類は候補の提示だけに使う。author が candidate table を作り、別 family の frontier reviewer が採否を検証する。採用は次の全てを満たすものに限る: 再利用可能、現行の canonical doc / code / incident evidence に裏付け、具体的な action / decision rule、PR 番号・exact head・review request・verdict・handoff・進捗から独立、secret / PII / 個人環境を含まない、同義語を統合済みで他の entry と矛盾しない。受入件数に固定値を使わない。
+6. **登録と台帳**: 採用 entry は `ut-tdd memory add` で 1 件ずつ登録する。curation ledger (`docs/governance/memory-curation-ledger-2026-09.md`、機械部は ```json block) には、tracked source の archive path、untracked source の内容 digest と opaque な local-archive custody id (path は記録しない)、adopt / reject の理由を記録し、各 adopt 行に `memory add` の registration receipt (operation id・memory id・canonical source path・content digest・exit code) の digest を束縛する。手書き file の同値性だけでは採用を正当化できない。
+7. **commit する manifest / summary**: rename digest manifest (`MANIFEST.json`) と generated summary (`SUMMARY.md`) は untracked の path・title・本文を書かず、件数と集合 digest だけを持つ。manifest から summary を再生成できる。
+
+### 責務どうしの依存
+
+curation ledger (6) は archive の manifest (3) の source 行と `memory add` の receipt に依存する。non-read 保証 (4) は archive の配置 (3) を前提にする。manifest / summary (7) は rename (3) の実行結果に依存する。
+
+### 残余リスク
+
+linked worktree corpus の cleanup / preservation は #578 の責務。`docs/archive/` 配下は readability (mojibake) と secret-scan の走査対象に入るため、legacy file に文字化けや credential marker があると CI が red になる (scanner の scope 変更は本契約の範囲外)。
+
 ## §5 検証接続
 
 L7 unit-test design の U-MEMORY-* が本 doc の contract を検証する。`tests/memory-*.test.ts` と `tests/projection-writer.test.ts` の `memory_entries` projection が回帰 fence になる。
