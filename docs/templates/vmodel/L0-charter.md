@@ -6,7 +6,7 @@ source_id: [ZIP-DOC-001]
 source_entries:
   - zip_entry: "vmodel-docgen-clean/templates/01_企画書.yaml"
     sha256: "sha256:e83807e2a7e65f0b4b65d0180a4f0e9194899b7571a4494ecedb11be75b0ee50"
-disposition_target: "PLAN-L0-01"
+disposition_target: "docs/design/harness/L0-planning/charter.md"
 pair_artifact: docs/test-design/harness/L7-release-consumer-dev-start-test-design.md
 plan: docs/plans/PLAN-<id>.md
 ---
