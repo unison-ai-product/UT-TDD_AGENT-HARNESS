@@ -570,9 +570,9 @@ describe("L6 completion readiness", () => {
     expect(familyEnd).toBeGreaterThan(familyStart);
     const family = l7.slice(familyStart, familyEnd);
     for (const id of ["006", "007", "008", "009", "010", "011", "012"]) {
-      expect(family).toContain(`- U-L6COMP-${id}:`);
+      expect(family).toContain(`| U-L6COMP-${id} |`);
     }
-    expect(family).not.toMatch(/^\s*-\s*CANDIDATE-U-L6COMP-\d{3}\b/m);
+    expect(family).not.toMatch(/CANDIDATE-U-L6COMP-\d{3}\b/);
 
     const ownerRules = family.match(/^- U-L6COMP-00[12]:.*$/gm) ?? [];
     expect(ownerRules).toHaveLength(2);

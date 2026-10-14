@@ -890,13 +890,15 @@ PR2 (`add-feature`) は昇格 PR merge 後の main から開始し、PLAN-L7-423
 - U-L6COMP-003: `checkL6Completion` surfaces readiness in `doctor` as hard/fail-close (`ok = analyzeL6Completion().ready`; input unreadable も violation で `ok=false`)。実装 `src/doctor/process-quality.ts` に合わせて 2026-10-14 に是正した (旧記述は warn-only、#958)。
 - U-L6COMP-004: `analyzeL6Completion` reports `freezeInputReady=true` when L6 trace/substance inputs are complete even if docs/plans/L7/G6 are still draft before the G6 audit.
 - U-L6COMP-005: post-G6 `kind=add-design` PLAN drafts do not reopen base L6 completion; add-feature completeness is handled by backfill/pair/review evidence.
-- U-L6COMP-006: `analyzeL6Completion` は、`plan:` を持たず `issue: <正の整数>` を持つ L6 文書を、所有者ありとして扱う (`missingDocPlans` に入れない)。issueがGitHub上に実在するかは検査しない。負例: `issue:` の値が 0・負数・数字以外なら所有者なしとして not-ready。
-- U-L6COMP-007: `plan:` が実在しない path を指す L6 文書は、`issue:` を併せ持っていても `unresolvedDocPlans` に入り not-ready (誤った PLAN 参照を issue で覆い隠さない)。
-- U-L6COMP-008: `pair_artifact` が実在する `docs/test-design/harness/L7-*.md` (frontmatter に `artifact_type: test_design` と `executed_at_layer: L7`) を指せば、`L7-unit-test-design.md` 以外でも対ありとする。既存の `L7-unit-test-design.md` (`layer: L6` / `executed_at_layer: L7`) を指す L6 文書も、引き続き対ありになる。負例: 実在しない path、`executed_at_layer: L7` を持たないファイル、`L7-` で始まらないファイルは対なし。
-- U-L6COMP-009: L6 文書のファイル名を、その文書の `pair_artifact` が指す文書の本文が含めば逆参照ありとする。負例: `pair_artifact` の文書 A は名前を含まず、別の `L7-*.md` B にだけ名前がある場合は `missingL7DocRefs` に入り not-ready。
-- U-L6COMP-010: `docs/plans/` が存在しない (または L6 の PLAN が 0 件の) tree では、`draftPlans` / `missingReviewPlans` は空集合で、それだけを理由に not-ready にならない。L6 文書がすべて confirmed で所有者・対・逆参照・unit 契約の中身を持ち、各選択pairが confirmed で G6 が PASS なら ready になる。
-- U-L6COMP-011: L6 文書の `pair_artifact` が指す文書の集合のうち 1 本でも `status: draft` (または status が無い) なら not-ready。負例: L6 文書 X の対 `L7-other.md` が draft で、別の L6 文書 Y の対 `L7-unit-test-design.md` が confirmed の tree は、`L7-unit-test-design.md` の status だけでは ready にならない。
-- U-L6COMP-012: 正式昇格後は、001 / 002 の旧「owning L6 PLAN」「単一のL7 pair」「全L6文書名の共有L7への逆参照」「単一L7 status」条件を本familyの006〜011へ置換する。`issue:` だけを持つL6文書をnot-readyとする旧判定と、006/010によりreadyとする新判定を併存させない。
+| U-ID | Target | Oracle |
+|---|---|---|
+| U-L6COMP-006 | `analyzeL6Completion` | `plan:` を持たず `issue: <正の整数>` を持つ L6 文書を、所有者ありとして扱う (`missingDocPlans` に入れない)。issueがGitHub上に実在するかは検査しない。負例: `issue:` の値が 0・負数・数字以外なら所有者なしとして not-ready。 |
+| U-L6COMP-007 | `analyzeL6Completion` | `plan:` が実在しない path を指す L6 文書は、`issue:` を併せ持っていても `unresolvedDocPlans` に入り not-ready (誤った PLAN 参照を issue で覆い隠さない)。 |
+| U-L6COMP-008 | `analyzeL6Completion` | `pair_artifact` が実在する `docs/test-design/harness/L7-*.md` (frontmatter に `artifact_type: test_design` と `executed_at_layer: L7`) を指せば、`L7-unit-test-design.md` 以外でも対ありとする。既存の `L7-unit-test-design.md` (`layer: L6` / `executed_at_layer: L7`) を指す L6 文書も、引き続き対ありになる。負例: 実在しない path、`executed_at_layer: L7` を持たないファイル、`L7-` で始まらないファイルは対なし。 |
+| U-L6COMP-009 | `analyzeL6Completion` | L6 文書のファイル名を、その文書の `pair_artifact` が指す文書の本文が含めば逆参照ありとする。負例: `pair_artifact` の文書 A は名前を含まず、別の `L7-*.md` B にだけ名前がある場合は `missingL7DocRefs` に入り not-ready。 |
+| U-L6COMP-010 | `analyzeL6Completion` | `docs/plans/` が存在しない (または L6 の PLAN が 0 件の) tree では、`draftPlans` / `missingReviewPlans` は空集合で、それだけを理由に not-ready にならない。L6 文書がすべて confirmed で所有者・対・逆参照・unit 契約の中身を持ち、各選択pairが confirmed で G6 が PASS なら ready になる。 |
+| U-L6COMP-011 | `analyzeL6Completion` | L6 文書の `pair_artifact` が指す文書の集合のうち 1 本でも `status: draft` (または status が無い) なら not-ready。負例: L6 文書 X の対 `L7-other.md` が draft で、別の L6 文書 Y の対 `L7-unit-test-design.md` が confirmed の tree は、`L7-unit-test-design.md` の status だけでは ready にならない。 |
+| U-L6COMP-012 | completion contract promotion | 正式昇格後は、001 / 002 の旧「owning L6 PLAN」「単一のL7 pair」「全L6文書名の共有L7への逆参照」「単一L7 status」条件を本familyの006〜011へ置換する。`issue:` だけを持つL6文書をnot-readyとする旧判定と、006/010によりreadyとする新判定を併存させない。 |
 
 ## PLAN-L7-68 Provider Dispatch Addendum
 
