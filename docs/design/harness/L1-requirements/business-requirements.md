@@ -70,7 +70,7 @@ UX 要求 (UX-01〜03):
 | **DDD anti-corruption layer** | L1 entity は L0 §10 用語集と 1:1 対応、独自定義禁止 (§10 業務 entity 一覧で機械検証) | concept §3.1.2.2 / requirements §1.10.G.7 |
 | **NFR 体系** | IPA 非機能要求グレード 2018 6 大項目 + ISO 25010 二軸タグ | nfr §6 / nfr §7 |
 | **Forward フロー** | `plan → pair-freeze → implement → trace-freeze → review → accept` | concept §3.1 / §3.2 |
-| **AI ガード** | subagent guard (PreToolUse Agent、許可リスト 15 / model 明示 / override 禁止、fail-close) | `.claude/CLAUDE.md` Guard Rules / `.claude/hooks/agent-guard.ts` |
+| **AI ガード** | subagent guard (PreToolUse Agent、model 明示必須 / 定義済み型は floor 以上 / 汎用型は non-fable、fail-close、#1002) | `.claude/CLAUDE.md` Guard Rules / `.claude/hooks/agent-guard.ts` |
 | **MVP 業務最重要 3 要素** (B10=a 採用) | V-model + Forward フロー / 4 artifact + 3 段階 freeze / AI ガード | B10=a PO 承認 2026-05-28 |
 
 本宣言節は U-体系-0 (体系自己宣言、PLAN-L1-01 §3.1 ヒアリング項目由来) の確定版。本書以降の L1 5 sub-doc は本体系を前提として記述する。

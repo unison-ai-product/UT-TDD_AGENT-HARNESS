@@ -79,7 +79,7 @@ architecture.md §3 の 7 building block を実装単位のモジュール (関�
 | lint (各) | `analyzeX(docs?: Source): Result` | docs 注入可 (pure)、result = `{orphans[], totals}` |
 | lint (各) | `loadX(): Source` | fs 読込 (副作用端点) |
 | runtime | `detectMode(): RuntimeDetection` | env/binary から mode |
-| runtime | `evaluateAgentGuard(input, ctx): GuardDecision` | allowlist/model 判定 |
+| runtime | `evaluateAgentGuard(input, ctx): GuardDecision` | model 明示・floor・汎用経路の判定 (#1002) |
 | plan/vmodel | `lintX(path?): LintResult` | `{ok, messages[]}` |
 | doctor | `runDoctor(): LintResult` | 集約 |
 

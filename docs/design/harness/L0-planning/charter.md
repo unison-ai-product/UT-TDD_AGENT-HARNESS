@@ -134,6 +134,10 @@ PLAN-L0-01 のうち、この文書の時点で未達または carry のもの�
 - DoD (§5) 未チェック 7 項目: 受け皿と ZIP 中核の対応説明 / 旧 ZIP を対象外にする明記 /
   source 109 件すべての処置と 163 item・target slot への join / U1→U7 順での再凍結 /
   既存 docs 全部の inventory と差分更新 / DB を投影に限る原則 / 工程管理表と DB 投影の接続。
+- 未達事項を閉じる条件 (PLAN-L0-01 の DoD、省略不可):
+  - 既存 docs 全部を inventory し、activation / profile / trace closure に基づく差分更新、または理由付きの非適用として閉じる (155 行)。差分更新、DB 接続、統合だけでは閉じない。
+  - 工程管理表は人間向けの進行台帳であり、AI の PLAN オーケストレーションと分離したうえで、DB projection で接続する (157 行)。
+  - checked ZIP の 109 source docs / 163 item は、disposition catalog で全件を exactly once 扱いにし、silent omission を許さない (167 行)。
 - 未決事項 (§6) 5 件: `spec.defines` の置き場 (frontmatter か本文 `spec:`) / 工程管理表を `roadmap:` 拡張か新 schedule 投影か /
   activation・profile と PLAN status の分離 / DDD/OOP 強化を L4 data 主導か L5/L6 主導か /
   109 source docs の target slot への統合。

@@ -9,7 +9,7 @@
             "command": "node",
             "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/agent-guard.ts"],
             "timeout": 5,
-            "statusMessage": "subagent allowlist + explicit-model + opus-override guard (env-independent TS)",
+            "statusMessage": "explicit-model + frontmatter-floor guard (env-independent TS)",
             "blockOnFailure": true
           }
         ]

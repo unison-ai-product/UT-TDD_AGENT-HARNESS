@@ -127,7 +127,7 @@ YAML+JSON+SQLite (`node:sqlite`) / compiled ESM / sealed generationである。B
 
 - **schema**: `index.ts` (主要 enum 群 `VALID_*` + `V_MODEL_PAIRS`、**件数は `schema/index.ts` が正本** = 設計 doc に固定数を直書きしない) / `frontmatter.ts` (kind 別 superRefine: poc→S0-S4・cross、reverse R4→routing+strategy、design L1-L6→sub_doc、design/impl→review_evidence)。
 - **lint 共通様式**: `loadX()` (fs 読込) → `analyzeX(docs?)` (pure、テスト時は docs 注入) → result object (`{orphans, totals}`)。テストは orphans=[] + totals>0 (非空虚) を assert。
-- **runtime**: `detect.ts` (binary + probe + env で claude/codex 検出 → mode) / `agent-guard.ts` (subagent_type allowlist 15 + model 明示 + family 一致、fail-close) / `agent-slots.ts` (並列 slot fire→release 記録、IMP-050) / `forced-stop.ts` (dangling session 推定、IMP-068) / `session-log.ts` (session 観測ログ、IMP-068)。
+- **runtime**: `detect.ts` (binary + probe + env で claude/codex 検出 → mode) / `agent-guard.ts` (model 明示必須 + 定義済み型は frontmatter の floor 以上 + 汎用型は認識できる non-fable model (#1002)、fail-close) / `agent-slots.ts` (並列 slot fire→release 記録、IMP-050) / `forced-stop.ts` (dangling session 推定、IMP-068) / `session-log.ts` (session 観測ログ、IMP-068)。
 
 ## §4 集約 → module マッピング (arc42 §5 view、IMP-025)
 
@@ -171,7 +171,7 @@ data.md の 5 集約 (構造) を src/ building block (実行) に配置する�
 | **status** | entrypoint → `cli status` → `detectMode()` (binary/probe/env) → mode 出力 | — (検出のみ) |
 | **plan lint** | `cli plan lint` → `lintPlan()` → schema frontmatter validate → result | exit 1 (CI 停止) |
 | **doctor** | `cli doctor` → `runDoctor()` → lint 群 + state 突合集約 → ok/messages | exit 1 |
-| **agent-guard** (有効 hook) | Claude `PreToolUse(Agent)` → `node agent-guard.ts` → allowlist 15 + model 明示 + family 一致 | **exit 2 = block** (fail-close)。bypass = `UT_TDD_ALLOW_RAW_AGENT=1` → warn+pass (理由を会話記録、.claude/CLAUDE.md) |
+| **agent-guard** (有効 hook) | Claude `PreToolUse(Agent)` → `node agent-guard.ts` → model 明示必須 + 定義済み型は frontmatter の floor 以上 + 汎用型は認識できる non-fable model (#1002) | **exit 2 = block** (fail-close)。bypass = `UT_TDD_ALLOW_RAW_AGENT=1` → warn+pass (理由を会話記録、.claude/CLAUDE.md) |
 | **handover** (実装済) | `cli handover` → `runHandover()` → CURRENT.json 生成/consume + 鮮度判定 | — (生成/記録、§1-§2 auto / §3-§6 人手) |
 | **setup** (実装済) | `cli setup` → `runSetup()` → solo/team 別 GitHub 設定ファイル emit (branch protection は emit-only) | precondition 不成立で停止 (非対話 + `--apply-branch-protection` 等) |
 | **目標 hook** (未有効) | PreToolUse(Write/Bash)/PostToolUse 等 → `ut-tdd ...` | UT-TDD CLI 整備後に有効化 |
