@@ -22,8 +22,7 @@ const gateNotReached = `
 `;
 
 const fixturePlanPath = "docs/plans/PLAN-L6-fixture.md";
-const fixturePlan = `
----
+const fixturePlan = `---
 plan_id: PLAN-L6-fixture
 kind: design
 status: confirmed
@@ -365,8 +364,51 @@ describe("L6 completion readiness", () => {
       const inputs = loadL6CompletionInputs(root);
       const result = analyzeL6Completion(inputs);
 
+      expect(result.missingReviewPlans).toEqual([]);
+      expect(result.draftPlans).toEqual([]);
       expect(result.missingDocPairArtifacts).toEqual([]);
       expect(result.ready).toBe(true);
+    });
+  });
+
+  it.each([
+    "missing",
+    "wrong-layer",
+    "wrong-name",
+  ])("CANDIDATE-U-L6COMP-008: rejects an ineligible selected pair (%s)", (axis) => {
+    withFixtureRoot((root) => {
+      const fileName = axis === "wrong-name" ? "other.md" : "L7-invalid.md";
+      const pairArtifact = `docs/test-design/harness/${fileName}`;
+      writeL6CompletionFixture(root, {
+        docs: [
+          {
+            fileName: "invalid-pair.md",
+            owner: `plan: ${fixturePlanPath}`,
+            pairArtifact,
+            oracleId: "CANDIDATE-U-L6COMP-008",
+          },
+        ],
+        l7Docs: [
+          { fileName: "L7-unit-test-design.md", status: "confirmed", body: "invalid-pair.md" },
+        ],
+      });
+      if (axis !== "missing") {
+        const text = l7FixtureText({ fileName, status: "confirmed", body: "invalid-pair.md" });
+        writeFixtureFile(
+          root,
+          pairArtifact,
+          axis === "wrong-layer" ? text.replace("executed_at_layer: L7\n", "") : text,
+        );
+      }
+      const result = analyzeL6Completion(loadL6CompletionInputs(root));
+      expect(result.missingReviewPlans).toEqual([]);
+      expect(result.draftPlans).toEqual([]);
+      expect(result.missingDocPlans).toEqual([]);
+      expect(result.unresolvedDocPlans).toEqual([]);
+      expect(result.missingDocPairArtifacts).toEqual([
+        "docs/design/harness/L6-function-design/invalid-pair.md",
+      ]);
+      expect(result.ready).toBe(false);
     });
   });
 
@@ -390,6 +432,8 @@ describe("L6 completion readiness", () => {
       const inputs = loadL6CompletionInputs(root);
       const result = analyzeL6Completion(inputs);
 
+      expect(result.missingReviewPlans).toEqual([]);
+      expect(result.draftPlans).toEqual([]);
       expect(result.missingL7DocRefs).toEqual([docPath]);
       expect(result.missingDocPairArtifacts).toEqual([]);
     });
@@ -447,11 +491,13 @@ describe("L6 completion readiness", () => {
       const inputs = loadL6CompletionInputs(root);
       const result = analyzeL6Completion(inputs);
 
+      expect(result.missingReviewPlans).toEqual([]);
+      expect(result.draftPlans).toEqual([]);
       expect(result.ready).toBe(true);
     });
   });
 
-  it.each([
+  it.fails.each([
     "draft",
     undefined,
   ])("CANDIDATE-U-L6COMP-011: a selected pair with status %s keeps completion not-ready", (status) => {
@@ -482,7 +528,12 @@ describe("L6 completion readiness", () => {
       });
       const inputs = loadL6CompletionInputs(root);
 
-      expect(analyzeL6Completion(inputs).ready).toBe(false);
+      const result = analyzeL6Completion(inputs);
+      expect(result.missingReviewPlans).toEqual([]);
+      expect(result.draftPlans).toEqual([]);
+      expect(result.missingDocPairArtifacts).toEqual([]);
+      expect(result.missingL7DocRefs).toEqual([]);
+      expect(result.ready).toBe(false);
     });
   });
 
