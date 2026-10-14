@@ -890,6 +890,11 @@ PR2 (`add-feature`) は昇格 PR merge 後の main から開始し、PLAN-L7-423
 - U-L6COMP-003: `checkL6Completion` surfaces readiness in `doctor` as hard/fail-close (`ok = analyzeL6Completion().ready`; input unreadable も violation で `ok=false`)。実装 `src/doctor/process-quality.ts` に合わせて 2026-10-14 に是正した (旧記述は warn-only、#958)。
 - U-L6COMP-004: `analyzeL6Completion` reports `freezeInputReady=true` when L6 trace/substance inputs are complete even if docs/plans/L7/G6 are still draft before the G6 audit.
 - U-L6COMP-005: post-G6 `kind=add-design` PLAN drafts do not reopen base L6 completion; add-feature completeness is handled by backfill/pair/review evidence.
+- CANDIDATE-U-L6COMP-006: `analyzeL6Completion` は、`plan:` を持たず `issue: <正の整数>` を持つ L6 文書を、所有者ありとして扱う (`missingDocPlans` に入れない)。負例: `issue:` の値が 0・負数・数字以外なら所有者なしとして not-ready。
+- CANDIDATE-U-L6COMP-007: `plan:` が実在しない path を指す L6 文書は、`issue:` を併せ持っていても `unresolvedDocPlans` に入り not-ready (誤った PLAN 参照を issue で覆い隠さない)。
+- CANDIDATE-U-L6COMP-008: `pair_artifact` が実在する `docs/test-design/harness/L7-*.md` (frontmatter `layer: L7`) を指せば、`L7-unit-test-design.md` 以外でも対ありとする。負例: 実在しない path、`layer: L7` を持たないファイル、`L7-` で始まらないファイルは対なし。
+- CANDIDATE-U-L6COMP-009: L6 文書のファイル名を、`docs/test-design/harness/L7-*.md` のどれか 1 本の本文が含めば逆参照ありとする。どの `L7-*.md` も含まなければ `missingL7DocRefs` に入る。
+- CANDIDATE-U-L6COMP-010: `docs/plans/` が存在しない (または L6 の PLAN が 0 件の) tree では、`draftPlans` / `missingReviewPlans` は空集合で、それだけを理由に not-ready にならない。L6 文書がすべて confirmed で所有者・対・逆参照・unit 契約の中身を持ち、L7 が confirmed で G6 が PASS なら ready になる。
 
 ## PLAN-L7-68 Provider Dispatch Addendum
 
