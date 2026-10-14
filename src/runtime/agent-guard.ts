@@ -92,7 +92,10 @@ function firstString(...values: Array<string | undefined>): string {
 export function evaluateAgentGuard(input: AgentGuardInput, ctx: AgentGuardContext): GuardDecision {
   // An envelope without tool_name (empty stdin parsed as {}) cannot be verified: fail closed.
   if (typeof input.tool_name !== "string" || input.tool_name.length === 0) {
-    return { code: 2, message: "[ut-tdd-guard] BLOCK: hook envelope has no tool_name (fail-close)." };
+    return {
+      code: 2,
+      message: "[ut-tdd-guard] BLOCK: hook envelope has no tool_name (fail-close).",
+    };
   }
   if (!AGENT_TOOL_NAMES.has(input.tool_name)) return { code: 0 };
 
