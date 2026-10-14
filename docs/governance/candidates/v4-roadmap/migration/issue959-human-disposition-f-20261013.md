@@ -26,7 +26,7 @@ r1是正ではL1-01..05を、未解決carry・依存移管のため保留へ訂�
 
 JSONのsourceReason/sourceCandidateLabelとvalidationの入力集計は原監査入力の履歴として保持する。訂正後の分類件数は公開summaryとrecordsで示し、reviewCorrectionにcontrolコメントを記録した。
 
-r2では廃止予定14件すべてを、固定sourceの`src/`・`tests/`に対し完全IDとbare core IDの両方で再検索した。M-00のproduction参照・実repo検証を含む10行へ依存を追加し、65件の逐語参照を固定Gitへ束縛した。bare core参照は完全IDへの結合が未確定なので、責務移管・廃止の証明と区別する。検索で直接参照が見つからなかった4行もJSONのdependencyScanへ記録したが、動的・意味上の依存の不存在は主張しない。taxonomy/identity fixtureとproductionの直接依存も区別し、いずれも廃止前の照合対象として保持する。
+r2では完全IDとbare core IDを再検索したが、境界正規表現で接尾辞付き参照を除外していたため、網羅的な再検索の根拠として不十分だった。r3では全14行を同一のGit正規表現検索で再走査し、接尾辞による除外を廃止した。PLAN-を省略したDISCOVERY-03等と、M-00/01等のslash列挙もfamilyと数値で展開して対応づけた。完全ID参照と、core・コメント・接尾辞付きfixture・別slug・省略表記の参照を別欄へ記録し、各行のreason/evidenceRefs/matchedPathsへ全ヒットを残した。後者を完全IDのproduction責務へ自動結合しない。検索コマンド・行別filter・件数・参照種別はJSONのdependencyScanへ記録した。検索ヒット0も動的・意味上の依存の不存在を証明しない。
 
 L6-63はlocal stagingの限定契約を保持する一方、remote publication・stable昇格・rollback等の未完責務を切り分ける。L6-83/86、L8-01、L9-01も個別の限定責務を保持する候補であり、Forward/右腕/実行閉包全体の完了を意味しない。
 

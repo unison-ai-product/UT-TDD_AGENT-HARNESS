@@ -10,166 +10,1461 @@
   "classificationIsFinal": false,
   "reviewCorrection": {
     "controlComment": 6158709680,
-    "round": "r2",
+    "round": "r3",
     "policyChoice": "L1-01..05はcarry未解決のため保留へ訂正。原入力のsourceCandidateLabel/sourceReason/validationは履歴として保持し、公開summaryは訂正後のrecordsを集計する。",
     "liveCodeDependencies": "L1-01/02/03、PLAN-M-01、L4-13の固定source参照を退役前の未解消依存として追記。",
     "dependencyScan": {
-      "controlComment": 6158964399,
+      "controlComment": 6159137481,
       "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
       "surfaces": [
         "src/",
         "tests/"
       ],
-      "queryKinds": [
-        "exact full ID",
-        "bare numeric core"
+      "rule": "全14行を同一Git regex queryで検索し、familyと数値で行別に対応づける。完全ID・接尾辞fixture・PLAN-省略・slash列挙(M-00/01等)を含め、裸coreの文脈を除外しない。完全IDと省略/接尾辞参照を別記し、コメント/fixture/別slugをproduction責務へ自動結合しない。ヒット行はすべてreason/evidenceRefs/references/matchedPathsへ残す。",
+      "aggregateCommand": [
+        "git",
+        "grep",
+        "-n",
+        "-E",
+        "-e",
+        "(PLAN-)?(DISCOVERY|L2|L4|M)-[0-9]+(/[0-9]+)*",
+        "3ca0692d6c6a180b058c492475080be2a140e667",
+        "--",
+        "src",
+        "tests"
       ],
       "retirementRows": 14,
-      "addedLiteralReferences": 65,
+      "queryMatchedLines": 569,
+      "uniqueMatchedLines": 141,
+      "perRowMatches": 145,
+      "addedLiteralReferences": 141,
       "rows": [
         {
           "planId": "PLAN-DISCOVERY-01-workflow-metamodel",
-          "exactFullIdMatches": 1,
-          "bareCoreMatches": 1,
-          "matchedPaths": [
-            "tests/plan-id-taxonomy.test.ts",
-            "tests/handover.test.ts"
+          "searchCore": "PLAN-DISCOVERY-01",
+          "command": [
+            "git",
+            "grep",
+            "-n",
+            "-E",
+            "-e",
+            "(PLAN-)?(DISCOVERY|L2|L4|M)-[0-9]+(/[0-9]+)*",
+            "3ca0692d6c6a180b058c492475080be2a140e667",
+            "--",
+            "src",
+            "tests"
           ],
-          "result": "依存をreason/evidenceRefsへ追加"
+          "rowFilter": "同じfamilyの数値を比較する。PLAN-省略とslash列挙の各数値を展開し、接尾辞付きfixtureも除外しない。",
+          "matchCount": 5,
+          "exactFullIdMatches": 1,
+          "coreOrSuffixedMatches": 4,
+          "matchedPaths": [
+            "src/lint/scrum-reverse.ts",
+            "tests/handover.test.ts",
+            "tests/mode-catalog.test.ts",
+            "tests/plan-id-taxonomy.test.ts",
+            "tests/schema.test.ts"
+          ],
+          "references": [
+            {
+              "path": "src/lint/scrum-reverse.ts",
+              "line": 5,
+              "evidenceRef": "F-R3-CORE-1447ad9f420cb8d022e5",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "source-reference-observation"
+            },
+            {
+              "path": "tests/handover.test.ts",
+              "line": 483,
+              "evidenceRef": "F-R3-CORE-3ff4193ceb276253f750",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/mode-catalog.test.ts",
+              "line": 44,
+              "evidenceRef": "F-R3-CORE-b79752598460d1760268",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/plan-id-taxonomy.test.ts",
+              "line": 23,
+              "evidenceRef": "F-R3-CORE-7f509c2f79571c76382c",
+              "matchKind": "exact-full-id",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/schema.test.ts",
+              "line": 16,
+              "evidenceRef": "F-R3-CORE-ac7814723c1aa5375dac",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            }
+          ],
+          "result": "全ヒットを記録。完全IDとcore/省略/接尾辞参照を区別する。"
         },
         {
           "planId": "PLAN-DISCOVERY-03-skill-design",
+          "searchCore": "PLAN-DISCOVERY-03",
+          "command": [
+            "git",
+            "grep",
+            "-n",
+            "-E",
+            "-e",
+            "(PLAN-)?(DISCOVERY|L2|L4|M)-[0-9]+(/[0-9]+)*",
+            "3ca0692d6c6a180b058c492475080be2a140e667",
+            "--",
+            "src",
+            "tests"
+          ],
+          "rowFilter": "同じfamilyの数値を比較する。PLAN-省略とslash列挙の各数値を展開し、接尾辞付きfixtureも除外しない。",
+          "matchCount": 3,
           "exactFullIdMatches": 0,
-          "bareCoreMatches": 1,
+          "coreOrSuffixedMatches": 3,
           "matchedPaths": [
+            "src/lint/plan-completion-drift.ts",
+            "tests/handover.test.ts",
             "tests/plan-completion-drift.test.ts"
           ],
-          "result": "依存をreason/evidenceRefsへ追加"
+          "references": [
+            {
+              "path": "src/lint/plan-completion-drift.ts",
+              "line": 20,
+              "evidenceRef": "F-R3-CORE-10af267a6fe9705b0ba1",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "source-reference-observation"
+            },
+            {
+              "path": "tests/handover.test.ts",
+              "line": 361,
+              "evidenceRef": "F-R3-CORE-b340cb49c412b964388f",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/plan-completion-drift.test.ts",
+              "line": 64,
+              "evidenceRef": "F-R3-CORE-f84f902176855dfdd3b3",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            }
+          ],
+          "result": "全ヒットを記録。完全IDとcore/省略/接尾辞参照を区別する。"
         },
         {
           "planId": "PLAN-DISCOVERY-04-process-workflows",
-          "exactFullIdMatches": 0,
-          "bareCoreMatches": 1,
-          "matchedPaths": [
-            "src/schema/index.ts"
+          "searchCore": "PLAN-DISCOVERY-04",
+          "command": [
+            "git",
+            "grep",
+            "-n",
+            "-E",
+            "-e",
+            "(PLAN-)?(DISCOVERY|L2|L4|M)-[0-9]+(/[0-9]+)*",
+            "3ca0692d6c6a180b058c492475080be2a140e667",
+            "--",
+            "src",
+            "tests"
           ],
-          "result": "依存をreason/evidenceRefsへ追加"
+          "rowFilter": "同じfamilyの数値を比較する。PLAN-省略とslash列挙の各数値を展開し、接尾辞付きfixtureも除外しない。",
+          "matchCount": 2,
+          "exactFullIdMatches": 0,
+          "coreOrSuffixedMatches": 2,
+          "matchedPaths": [
+            "src/schema/index.ts",
+            "tests/frontmatter.test.ts"
+          ],
+          "references": [
+            {
+              "path": "src/schema/index.ts",
+              "line": 130,
+              "evidenceRef": "F-R3-CORE-25e865dc1004a27256d8",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "source-reference-observation"
+            },
+            {
+              "path": "tests/frontmatter.test.ts",
+              "line": 621,
+              "evidenceRef": "F-R3-CORE-a35258b942a42b41c6e5",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            }
+          ],
+          "result": "全ヒットを記録。完全IDとcore/省略/接尾辞参照を区別する。"
         },
         {
           "planId": "PLAN-DISCOVERY-06-orchestrator-rule-parity",
+          "searchCore": "PLAN-DISCOVERY-06",
+          "command": [
+            "git",
+            "grep",
+            "-n",
+            "-E",
+            "-e",
+            "(PLAN-)?(DISCOVERY|L2|L4|M)-[0-9]+(/[0-9]+)*",
+            "3ca0692d6c6a180b058c492475080be2a140e667",
+            "--",
+            "src",
+            "tests"
+          ],
+          "rowFilter": "同じfamilyの数値を比較する。PLAN-省略とslash列挙の各数値を展開し、接尾辞付きfixtureも除外しない。",
+          "matchCount": 2,
           "exactFullIdMatches": 0,
-          "bareCoreMatches": 1,
+          "coreOrSuffixedMatches": 2,
           "matchedPaths": [
             "tests/frontmatter.test.ts"
           ],
-          "result": "依存をreason/evidenceRefsへ追加"
+          "references": [
+            {
+              "path": "tests/frontmatter.test.ts",
+              "line": 469,
+              "evidenceRef": "F-R3-CORE-af159b435f410d711961",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/frontmatter.test.ts",
+              "line": 470,
+              "evidenceRef": "F-R3-CORE-b9389d533e7dbf7d4f49",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            }
+          ],
+          "result": "全ヒットを記録。完全IDとcore/省略/接尾辞参照を区別する。"
         },
         {
           "planId": "PLAN-DISCOVERY-08-forward-convergence-invariant",
-          "exactFullIdMatches": 0,
-          "bareCoreMatches": 3,
-          "matchedPaths": [
-            "src/lint/forward-convergence.ts"
+          "searchCore": "PLAN-DISCOVERY-08",
+          "command": [
+            "git",
+            "grep",
+            "-n",
+            "-E",
+            "-e",
+            "(PLAN-)?(DISCOVERY|L2|L4|M)-[0-9]+(/[0-9]+)*",
+            "3ca0692d6c6a180b058c492475080be2a140e667",
+            "--",
+            "src",
+            "tests"
           ],
-          "result": "依存をreason/evidenceRefsへ追加"
+          "rowFilter": "同じfamilyの数値を比較する。PLAN-省略とslash列挙の各数値を展開し、接尾辞付きfixtureも除外しない。",
+          "matchCount": 4,
+          "exactFullIdMatches": 0,
+          "coreOrSuffixedMatches": 4,
+          "matchedPaths": [
+            "src/lint/forward-convergence.ts",
+            "tests/forward-convergence.test.ts"
+          ],
+          "references": [
+            {
+              "path": "src/lint/forward-convergence.ts",
+              "line": 2,
+              "evidenceRef": "F-R3-CORE-c88a3cb3108d73987813",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "source-reference-observation"
+            },
+            {
+              "path": "src/lint/forward-convergence.ts",
+              "line": 42,
+              "evidenceRef": "F-R3-CORE-852cf35e65cf02607463",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "source-reference-observation"
+            },
+            {
+              "path": "src/lint/forward-convergence.ts",
+              "line": 100,
+              "evidenceRef": "F-R3-CORE-13c2787bd7c07cbf7a03",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "source-reference-observation"
+            },
+            {
+              "path": "tests/forward-convergence.test.ts",
+              "line": 150,
+              "evidenceRef": "F-R3-CORE-4ccd12d0f3617e751884",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            }
+          ],
+          "result": "全ヒットを記録。完全IDとcore/省略/接尾辞参照を区別する。"
         },
         {
           "planId": "PLAN-DISCOVERY-09-version-up-mode",
+          "searchCore": "PLAN-DISCOVERY-09",
+          "command": [
+            "git",
+            "grep",
+            "-n",
+            "-E",
+            "-e",
+            "(PLAN-)?(DISCOVERY|L2|L4|M)-[0-9]+(/[0-9]+)*",
+            "3ca0692d6c6a180b058c492475080be2a140e667",
+            "--",
+            "src",
+            "tests"
+          ],
+          "rowFilter": "同じfamilyの数値を比較する。PLAN-省略とslash列挙の各数値を展開し、接尾辞付きfixtureも除外しない。",
+          "matchCount": 20,
           "exactFullIdMatches": 0,
-          "bareCoreMatches": 9,
+          "coreOrSuffixedMatches": 20,
           "matchedPaths": [
             "src/lint/forward-convergence.ts",
             "src/lint/outstanding.ts",
-            "src/schema/frontmatter.ts"
+            "src/schema/frontmatter.ts",
+            "tests/frontmatter.test.ts",
+            "tests/scrum-reverse.test.ts"
           ],
-          "result": "依存をreason/evidenceRefsへ追加"
+          "references": [
+            {
+              "path": "src/lint/forward-convergence.ts",
+              "line": 15,
+              "evidenceRef": "F-R3-CORE-ba1b1408870c68d5fec2",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "source-reference-observation"
+            },
+            {
+              "path": "src/lint/forward-convergence.ts",
+              "line": 36,
+              "evidenceRef": "F-R3-CORE-dc929119b9e97cac96d9",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "source-reference-observation"
+            },
+            {
+              "path": "src/lint/forward-convergence.ts",
+              "line": 92,
+              "evidenceRef": "F-R3-CORE-bea9e5fbaa62a4086ba9",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "source-reference-observation"
+            },
+            {
+              "path": "src/lint/forward-convergence.ts",
+              "line": 182,
+              "evidenceRef": "F-R3-CORE-92af85794b43ae1a4ab8",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "source-reference-observation"
+            },
+            {
+              "path": "src/lint/outstanding.ts",
+              "line": 36,
+              "evidenceRef": "F-R3-CORE-fa778e8db0150ab0e0a9",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "source-reference-observation"
+            },
+            {
+              "path": "src/lint/outstanding.ts",
+              "line": 48,
+              "evidenceRef": "F-R3-CORE-cafaa55b0becb4061a59",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "source-reference-observation"
+            },
+            {
+              "path": "src/schema/frontmatter.ts",
+              "line": 203,
+              "evidenceRef": "F-R3-CORE-bd19f12d7d8f3dea7d93",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "source-reference-observation"
+            },
+            {
+              "path": "src/schema/frontmatter.ts",
+              "line": 589,
+              "evidenceRef": "F-R3-CORE-d033fc58254875446719",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "source-reference-observation"
+            },
+            {
+              "path": "src/schema/frontmatter.ts",
+              "line": 595,
+              "evidenceRef": "F-R3-CORE-0eb0ac1dc922e69d82e4",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "source-reference-observation"
+            },
+            {
+              "path": "tests/frontmatter.test.ts",
+              "line": 562,
+              "evidenceRef": "F-R3-CORE-9bdf007f7defa09a05ce",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/scrum-reverse.test.ts",
+              "line": 27,
+              "evidenceRef": "F-R3-CORE-bfadd2be098f1dbad061",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/scrum-reverse.test.ts",
+              "line": 39,
+              "evidenceRef": "F-R3-CORE-7876e98b1b2773c92849",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/scrum-reverse.test.ts",
+              "line": 48,
+              "evidenceRef": "F-R3-CORE-a90d58d76a99328091e5",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/scrum-reverse.test.ts",
+              "line": 55,
+              "evidenceRef": "F-R3-CORE-829686c5a4703534b35c",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/scrum-reverse.test.ts",
+              "line": 61,
+              "evidenceRef": "F-R3-CORE-543cd3ceb9b22c4d68e4",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/scrum-reverse.test.ts",
+              "line": 78,
+              "evidenceRef": "F-R3-CORE-2bdd24c98c1c30b6181e",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/scrum-reverse.test.ts",
+              "line": 87,
+              "evidenceRef": "F-R3-CORE-c3d7bbe2167cc7200520",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/scrum-reverse.test.ts",
+              "line": 93,
+              "evidenceRef": "F-R3-CORE-3604b643093f952321df",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/scrum-reverse.test.ts",
+              "line": 102,
+              "evidenceRef": "F-R3-CORE-0a3ef8955b497e1800d9",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/scrum-reverse.test.ts",
+              "line": 111,
+              "evidenceRef": "F-R3-CORE-65579fda789388261942",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            }
+          ],
+          "result": "全ヒットを記録。完全IDとcore/省略/接尾辞参照を区別する。"
         },
         {
           "planId": "PLAN-DISCOVERY-10-gpt56-tier-routing-bench",
+          "searchCore": "PLAN-DISCOVERY-10",
+          "command": [
+            "git",
+            "grep",
+            "-n",
+            "-E",
+            "-e",
+            "(PLAN-)?(DISCOVERY|L2|L4|M)-[0-9]+(/[0-9]+)*",
+            "3ca0692d6c6a180b058c492475080be2a140e667",
+            "--",
+            "src",
+            "tests"
+          ],
+          "rowFilter": "同じfamilyの数値を比較する。PLAN-省略とslash列挙の各数値を展開し、接尾辞付きfixtureも除外しない。",
+          "matchCount": 0,
           "exactFullIdMatches": 0,
-          "bareCoreMatches": 0,
+          "coreOrSuffixedMatches": 0,
           "matchedPaths": [],
-          "result": "固定sourceのsrc/testsに完全IDまたはbare coreの直接参照なし（意味上の間接依存が無いことは証明しない）"
+          "references": [],
+          "result": "統一検索ヒット0。意味上・動的な依存の不存在は主張しない。"
         },
         {
           "planId": "PLAN-L2-01-screen-list",
+          "searchCore": "PLAN-L2-01",
+          "command": [
+            "git",
+            "grep",
+            "-n",
+            "-E",
+            "-e",
+            "(PLAN-)?(DISCOVERY|L2|L4|M)-[0-9]+(/[0-9]+)*",
+            "3ca0692d6c6a180b058c492475080be2a140e667",
+            "--",
+            "src",
+            "tests"
+          ],
+          "rowFilter": "同じfamilyの数値を比較する。PLAN-省略とslash列挙の各数値を展開し、接尾辞付きfixtureも除外しない。",
+          "matchCount": 0,
           "exactFullIdMatches": 0,
-          "bareCoreMatches": 0,
+          "coreOrSuffixedMatches": 0,
           "matchedPaths": [],
-          "result": "固定sourceのsrc/testsに完全IDまたはbare coreの直接参照なし（意味上の間接依存が無いことは証明しない）"
+          "references": [],
+          "result": "統一検索ヒット0。意味上・動的な依存の不存在は主張しない。"
         },
         {
           "planId": "PLAN-L4-13-drift-lint",
+          "searchCore": "PLAN-L4-13",
+          "command": [
+            "git",
+            "grep",
+            "-n",
+            "-E",
+            "-e",
+            "(PLAN-)?(DISCOVERY|L2|L4|M)-[0-9]+(/[0-9]+)*",
+            "3ca0692d6c6a180b058c492475080be2a140e667",
+            "--",
+            "src",
+            "tests"
+          ],
+          "rowFilter": "同じfamilyの数値を比較する。PLAN-省略とslash列挙の各数値を展開し、接尾辞付きfixtureも除外しない。",
+          "matchCount": 10,
           "exactFullIdMatches": 1,
-          "bareCoreMatches": 9,
+          "coreOrSuffixedMatches": 9,
           "matchedPaths": [
             "src/plan/lint-policy.ts",
             "tests/plan-supersession.test.ts",
             "tests/runtime-hook-entrypoints.test.ts"
           ],
-          "result": "依存をreason/evidenceRefsへ追加"
+          "references": [
+            {
+              "path": "src/plan/lint-policy.ts",
+              "line": 17,
+              "evidenceRef": "F-R3-CORE-452103ee082b02e5940a",
+              "matchKind": "exact-full-id",
+              "surface": "source-reference-observation"
+            },
+            {
+              "path": "tests/plan-supersession.test.ts",
+              "line": 32,
+              "evidenceRef": "F-R3-CORE-f1a6dad4659b6bffcbb7",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/plan-supersession.test.ts",
+              "line": 35,
+              "evidenceRef": "F-R3-CORE-e6ea6e0cbb14683b8908",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/runtime-hook-entrypoints.test.ts",
+              "line": 240,
+              "evidenceRef": "F-R3-CORE-07d26e5881f96a9f3389",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/runtime-hook-entrypoints.test.ts",
+              "line": 268,
+              "evidenceRef": "F-R3-CORE-a8525f0c8d8e5ef4ef33",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/runtime-hook-entrypoints.test.ts",
+              "line": 270,
+              "evidenceRef": "F-R3-CORE-4b61c3c3c0296f771d3a",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/runtime-hook-entrypoints.test.ts",
+              "line": 511,
+              "evidenceRef": "F-R3-CORE-e1db81dae063865ce46e",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/runtime-hook-entrypoints.test.ts",
+              "line": 521,
+              "evidenceRef": "F-R3-CORE-49618a90d87c96868d4c",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/runtime-hook-entrypoints.test.ts",
+              "line": 548,
+              "evidenceRef": "F-R3-CORE-95a06a978dcbf2b418d1",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/runtime-hook-entrypoints.test.ts",
+              "line": 558,
+              "evidenceRef": "F-R3-CORE-a02c76c6d5c9aa859133",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            }
+          ],
+          "result": "全ヒットを記録。完全IDとcore/省略/接尾辞参照を区別する。"
         },
         {
           "planId": "PLAN-L4-16-security-design-slot",
+          "searchCore": "PLAN-L4-16",
+          "command": [
+            "git",
+            "grep",
+            "-n",
+            "-E",
+            "-e",
+            "(PLAN-)?(DISCOVERY|L2|L4|M)-[0-9]+(/[0-9]+)*",
+            "3ca0692d6c6a180b058c492475080be2a140e667",
+            "--",
+            "src",
+            "tests"
+          ],
+          "rowFilter": "同じfamilyの数値を比較する。PLAN-省略とslash列挙の各数値を展開し、接尾辞付きfixtureも除外しない。",
+          "matchCount": 6,
           "exactFullIdMatches": 4,
-          "bareCoreMatches": 2,
+          "coreOrSuffixedMatches": 2,
           "matchedPaths": [
-            "tests/scope-preview.test.ts",
             "src/schema/index.ts",
+            "tests/scope-preview.test.ts",
             "tests/sub-doc-catalog-drift.test.ts"
           ],
-          "result": "依存をreason/evidenceRefsへ追加"
+          "references": [
+            {
+              "path": "src/schema/index.ts",
+              "line": 51,
+              "evidenceRef": "F-R3-CORE-7ecdb3ffd02f54fbc83d",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "source-reference-observation"
+            },
+            {
+              "path": "tests/scope-preview.test.ts",
+              "line": 89,
+              "evidenceRef": "F-R3-CORE-48ccd0def03910b94149",
+              "matchKind": "exact-full-id",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/scope-preview.test.ts",
+              "line": 97,
+              "evidenceRef": "F-R3-CORE-c157511cc0c9ec09c91d",
+              "matchKind": "exact-full-id",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/scope-preview.test.ts",
+              "line": 125,
+              "evidenceRef": "F-R3-CORE-b06821106d9e1f0c1e72",
+              "matchKind": "exact-full-id",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/scope-preview.test.ts",
+              "line": 152,
+              "evidenceRef": "F-R3-CORE-554e8129c44f8ec0a97a",
+              "matchKind": "exact-full-id",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/sub-doc-catalog-drift.test.ts",
+              "line": 97,
+              "evidenceRef": "F-R3-CORE-db6321687a73bccc45b2",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            }
+          ],
+          "result": "全ヒットを記録。完全IDとcore/省略/接尾辞参照を区別する。"
         },
         {
           "planId": "PLAN-L4-17-version-up-design-bottomup-band",
+          "searchCore": "PLAN-L4-17",
+          "command": [
+            "git",
+            "grep",
+            "-n",
+            "-E",
+            "-e",
+            "(PLAN-)?(DISCOVERY|L2|L4|M)-[0-9]+(/[0-9]+)*",
+            "3ca0692d6c6a180b058c492475080be2a140e667",
+            "--",
+            "src",
+            "tests"
+          ],
+          "rowFilter": "同じfamilyの数値を比較する。PLAN-省略とslash列挙の各数値を展開し、接尾辞付きfixtureも除外しない。",
+          "matchCount": 0,
           "exactFullIdMatches": 0,
-          "bareCoreMatches": 0,
+          "coreOrSuffixedMatches": 0,
           "matchedPaths": [],
-          "result": "固定sourceのsrc/testsに完全IDまたはbare coreの直接参照なし（意味上の間接依存が無いことは証明しない）"
+          "references": [],
+          "result": "統一検索ヒット0。意味上・動的な依存の不存在は主張しない。"
         },
         {
           "planId": "PLAN-L4-29-security-design-substance",
+          "searchCore": "PLAN-L4-29",
+          "command": [
+            "git",
+            "grep",
+            "-n",
+            "-E",
+            "-e",
+            "(PLAN-)?(DISCOVERY|L2|L4|M)-[0-9]+(/[0-9]+)*",
+            "3ca0692d6c6a180b058c492475080be2a140e667",
+            "--",
+            "src",
+            "tests"
+          ],
+          "rowFilter": "同じfamilyの数値を比較する。PLAN-省略とslash列挙の各数値を展開し、接尾辞付きfixtureも除外しない。",
+          "matchCount": 0,
           "exactFullIdMatches": 0,
-          "bareCoreMatches": 0,
+          "coreOrSuffixedMatches": 0,
           "matchedPaths": [],
-          "result": "固定sourceのsrc/testsに完全IDまたはbare coreの直接参照なし（意味上の間接依存が無いことは証明しない）"
+          "references": [],
+          "result": "統一検索ヒット0。意味上・動的な依存の不存在は主張しない。"
         },
         {
           "planId": "PLAN-M-00-verify-cutover",
-          "exactFullIdMatches": 18,
-          "bareCoreMatches": 4,
+          "searchCore": "PLAN-M-00",
+          "command": [
+            "git",
+            "grep",
+            "-n",
+            "-E",
+            "-e",
+            "(PLAN-)?(DISCOVERY|L2|L4|M)-[0-9]+(/[0-9]+)*",
+            "3ca0692d6c6a180b058c492475080be2a140e667",
+            "--",
+            "src",
+            "tests"
+          ],
+          "rowFilter": "同じfamilyの数値を比較する。PLAN-省略とslash列挙の各数値を展開し、接尾辞付きfixtureも除外しない。",
+          "matchCount": 22,
+          "exactFullIdMatches": 17,
+          "coreOrSuffixedMatches": 5,
           "matchedPaths": [
             "src/lint/cycle-p4-verification.ts",
+            "src/lint/readability.ts",
             "src/plan/lint.ts",
             "src/state-db/projection-writer.ts",
             "tests/plan-id-identity.test.ts",
             "tests/plan-id-taxonomy.test.ts",
+            "tests/plan-supersession.test.ts",
             "tests/projection-writer.test.ts",
             "tests/readability.test.ts",
+            "tests/rechain-verifier.test.ts",
             "tests/roadmap.test.ts",
-            "tests/session-start-digest.test.ts",
-            "src/lint/readability.ts",
-            "tests/plan-supersession.test.ts"
+            "tests/session-start-digest.test.ts"
           ],
-          "result": "依存をreason/evidenceRefsへ追加"
+          "references": [
+            {
+              "path": "src/lint/cycle-p4-verification.ts",
+              "line": 68,
+              "evidenceRef": "F-R3-CORE-41a8f046a7efbf185bc8",
+              "matchKind": "exact-full-id",
+              "surface": "source-reference-observation"
+            },
+            {
+              "path": "src/lint/readability.ts",
+              "line": 37,
+              "evidenceRef": "F-R3-CORE-18b76c73775d8bb3eb2a",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "source-reference-observation"
+            },
+            {
+              "path": "src/plan/lint.ts",
+              "line": 257,
+              "evidenceRef": "F-R3-CORE-dad83e5924e886271e7a",
+              "matchKind": "exact-full-id",
+              "surface": "source-reference-observation"
+            },
+            {
+              "path": "src/state-db/projection-writer.ts",
+              "line": 192,
+              "evidenceRef": "F-R3-CORE-6c33acad449829551089",
+              "matchKind": "exact-full-id",
+              "surface": "source-reference-observation"
+            },
+            {
+              "path": "tests/plan-id-identity.test.ts",
+              "line": 12,
+              "evidenceRef": "F-R3-CORE-c9c848f6a8c27b02b7ee",
+              "matchKind": "exact-full-id",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/plan-id-identity.test.ts",
+              "line": 22,
+              "evidenceRef": "F-R3-CORE-274574734ff88f96b5b0",
+              "matchKind": "exact-full-id",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/plan-id-taxonomy.test.ts",
+              "line": 7,
+              "evidenceRef": "F-R3-CORE-dd04247fd18571a7a91d",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/plan-id-taxonomy.test.ts",
+              "line": 25,
+              "evidenceRef": "F-R3-CORE-0cdca2fa34725f65df06",
+              "matchKind": "exact-full-id",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/plan-supersession.test.ts",
+              "line": 24,
+              "evidenceRef": "F-R3-CORE-ebaf81a6556276f1c307",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/projection-writer.test.ts",
+              "line": 67,
+              "evidenceRef": "F-R3-CORE-e65ace009865de21d100",
+              "matchKind": "exact-full-id",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/projection-writer.test.ts",
+              "line": 2511,
+              "evidenceRef": "F-R3-CORE-4b1d5437570a48242062",
+              "matchKind": "exact-full-id",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/projection-writer.test.ts",
+              "line": 2558,
+              "evidenceRef": "F-R3-CORE-051802d18410473f18d6",
+              "matchKind": "exact-full-id",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/projection-writer.test.ts",
+              "line": 2585,
+              "evidenceRef": "F-R3-CORE-f4565c530c6b15289296",
+              "matchKind": "exact-full-id",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/projection-writer.test.ts",
+              "line": 2587,
+              "evidenceRef": "F-R3-CORE-e7ea41d23d09aca460ac",
+              "matchKind": "exact-full-id",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/projection-writer.test.ts",
+              "line": 2613,
+              "evidenceRef": "F-R3-CORE-df82ae880b6072fa39f3",
+              "matchKind": "exact-full-id",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/readability.test.ts",
+              "line": 45,
+              "evidenceRef": "F-R3-CORE-fecaf1fa004f7a66110e",
+              "matchKind": "exact-full-id",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/rechain-verifier.test.ts",
+              "line": 243,
+              "evidenceRef": "F-R3-CORE-3eef9eee79ac94a496ce",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/roadmap.test.ts",
+              "line": 205,
+              "evidenceRef": "F-R3-CORE-e5236b55d0b406e4e523",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/roadmap.test.ts",
+              "line": 218,
+              "evidenceRef": "F-R3-CORE-8c1a191c08399197692e",
+              "matchKind": "exact-full-id",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/session-start-digest.test.ts",
+              "line": 202,
+              "evidenceRef": "F-R3-CORE-1d1badbdc6b6b0f27f92",
+              "matchKind": "exact-full-id",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/session-start-digest.test.ts",
+              "line": 209,
+              "evidenceRef": "F-R3-CORE-266c5a89354ac3b90a32",
+              "matchKind": "exact-full-id",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/session-start-digest.test.ts",
+              "line": 216,
+              "evidenceRef": "F-R3-CORE-e363a68816aacec42b6f",
+              "matchKind": "exact-full-id",
+              "surface": "test-reference-observation"
+            }
+          ],
+          "result": "全ヒットを記録。完全IDとcore/省略/接尾辞参照を区別する。"
         },
         {
           "planId": "PLAN-M-01-cutover-backfill",
+          "searchCore": "PLAN-M-01",
+          "command": [
+            "git",
+            "grep",
+            "-n",
+            "-E",
+            "-e",
+            "(PLAN-)?(DISCOVERY|L2|L4|M)-[0-9]+(/[0-9]+)*",
+            "3ca0692d6c6a180b058c492475080be2a140e667",
+            "--",
+            "src",
+            "tests"
+          ],
+          "rowFilter": "同じfamilyの数値を比較する。PLAN-省略とslash列挙の各数値を展開し、接尾辞付きfixtureも除外しない。",
+          "matchCount": 71,
           "exactFullIdMatches": 12,
-          "bareCoreMatches": 0,
+          "coreOrSuffixedMatches": 59,
           "matchedPaths": [
+            "src/cli.ts",
+            "src/handover/index.ts",
             "src/lint/cycle-p4-verification.ts",
+            "src/lint/oracle-test-trace-widened-baseline.ts",
+            "src/lint/outstanding.ts",
+            "src/lint/readability.ts",
             "src/plan/lint.ts",
+            "src/runtime/agent-slots.ts",
+            "src/runtime/detect.ts",
+            "src/schema/harness-db-tables-evaluation.ts",
+            "src/setup/pack-publication-admission.ts",
             "src/state-db/projection-writer.ts",
+            "tests/claude-memory-terminal-gc.test.ts",
+            "tests/design-elicitation.test.ts",
+            "tests/forward/fsm.test.ts",
+            "tests/g1-trace.test.ts",
+            "tests/git-workspace-fingerprint.test.ts",
+            "tests/mode-catalog.test.ts",
+            "tests/oracle-test-trace.test.ts",
+            "tests/pack-canary-acceptance.test.ts",
+            "tests/pack-publication-admission.test.ts",
+            "tests/plan-admission.test.ts",
             "tests/plan-id-identity.test.ts",
             "tests/plan-id-taxonomy.test.ts",
             "tests/projection-writer.test.ts",
-            "tests/roadmap.test.ts"
+            "tests/release-consumer-gates.test.ts",
+            "tests/roadmap.test.ts",
+            "tests/runtime.test.ts",
+            "tests/screen-impl-pair-freeze.test.ts",
+            "tests/team-schema.test.ts",
+            "tests/vmodel-source-assets.test.ts"
           ],
-          "result": "依存をreason/evidenceRefsへ追加"
+          "references": [
+            {
+              "path": "src/cli.ts",
+              "line": 736,
+              "evidenceRef": "F-R3-CORE-3e81b163cc113a4dc035",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "source-reference-observation"
+            },
+            {
+              "path": "src/handover/index.ts",
+              "line": 145,
+              "evidenceRef": "F-R3-CORE-347bb437a7b673dabeab",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "source-reference-observation"
+            },
+            {
+              "path": "src/lint/cycle-p4-verification.ts",
+              "line": 69,
+              "evidenceRef": "F-R3-CORE-d471cc2ab6d9518794d1",
+              "matchKind": "exact-full-id",
+              "surface": "source-reference-observation"
+            },
+            {
+              "path": "src/lint/oracle-test-trace-widened-baseline.ts",
+              "line": 136,
+              "evidenceRef": "F-R3-CORE-c53c790334c38944f5fc",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "source-reference-observation"
+            },
+            {
+              "path": "src/lint/outstanding.ts",
+              "line": 17,
+              "evidenceRef": "F-R3-CORE-eecf027f0be99ca09d4e",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "source-reference-observation"
+            },
+            {
+              "path": "src/lint/readability.ts",
+              "line": 37,
+              "evidenceRef": "F-R3-CORE-18b76c73775d8bb3eb2a",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "source-reference-observation"
+            },
+            {
+              "path": "src/plan/lint.ts",
+              "line": 257,
+              "evidenceRef": "F-R3-CORE-dad83e5924e886271e7a",
+              "matchKind": "exact-full-id",
+              "surface": "source-reference-observation"
+            },
+            {
+              "path": "src/runtime/agent-slots.ts",
+              "line": 323,
+              "evidenceRef": "F-R3-CORE-db934a6b4ab22214fe32",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "source-reference-observation"
+            },
+            {
+              "path": "src/runtime/detect.ts",
+              "line": 32,
+              "evidenceRef": "F-R3-CORE-df213a32b1e40ad6bfb3",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "source-reference-observation"
+            },
+            {
+              "path": "src/schema/harness-db-tables-evaluation.ts",
+              "line": 122,
+              "evidenceRef": "F-R3-CORE-389d38a5c8a405a914c2",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "source-reference-observation"
+            },
+            {
+              "path": "src/setup/pack-publication-admission.ts",
+              "line": 18,
+              "evidenceRef": "F-R3-CORE-3de7a16f87ddb4811695",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "source-reference-observation"
+            },
+            {
+              "path": "src/state-db/projection-writer.ts",
+              "line": 1078,
+              "evidenceRef": "F-R3-CORE-9b968080119e321c8b98",
+              "matchKind": "exact-full-id",
+              "surface": "source-reference-observation"
+            },
+            {
+              "path": "src/state-db/projection-writer.ts",
+              "line": 2562,
+              "evidenceRef": "F-R3-CORE-8b6755d31206a5c12bc3",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "source-reference-observation"
+            },
+            {
+              "path": "tests/claude-memory-terminal-gc.test.ts",
+              "line": 66,
+              "evidenceRef": "F-R3-CORE-1df9fd3d5840bfee4e4a",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/design-elicitation.test.ts",
+              "line": 27,
+              "evidenceRef": "F-R3-CORE-aa45906c9e66a3bb06e5",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/design-elicitation.test.ts",
+              "line": 43,
+              "evidenceRef": "F-R3-CORE-cf1b5155325ba62c8e0e",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/design-elicitation.test.ts",
+              "line": 85,
+              "evidenceRef": "F-R3-CORE-ff0a45d44f70aa6dfa6c",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/design-elicitation.test.ts",
+              "line": 121,
+              "evidenceRef": "F-R3-CORE-1342e3f26bf6fb59a67b",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/forward/fsm.test.ts",
+              "line": 47,
+              "evidenceRef": "F-R3-CORE-db0d3e2d0b45b72e8711",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/forward/fsm.test.ts",
+              "line": 68,
+              "evidenceRef": "F-R3-CORE-f53836d25026a3745920",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/forward/fsm.test.ts",
+              "line": 368,
+              "evidenceRef": "F-R3-CORE-ae4065f9029c3cd1584c",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/forward/fsm.test.ts",
+              "line": 518,
+              "evidenceRef": "F-R3-CORE-d1f75e8bb26220b4c7a9",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/g1-trace.test.ts",
+              "line": 23,
+              "evidenceRef": "F-R3-CORE-64e0b93a877566c6dcd3",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/g1-trace.test.ts",
+              "line": 58,
+              "evidenceRef": "F-R3-CORE-b04cb0ded6e01571bc36",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/g1-trace.test.ts",
+              "line": 61,
+              "evidenceRef": "F-R3-CORE-e8043bd11095fee75ef2",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/g1-trace.test.ts",
+              "line": 62,
+              "evidenceRef": "F-R3-CORE-02c9a87bac7375d2c48d",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/g1-trace.test.ts",
+              "line": 65,
+              "evidenceRef": "F-R3-CORE-1724c3427e124d7e9473",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/g1-trace.test.ts",
+              "line": 66,
+              "evidenceRef": "F-R3-CORE-18e6a50efd847cf6a2b8",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/g1-trace.test.ts",
+              "line": 69,
+              "evidenceRef": "F-R3-CORE-9a03ed3d7a863b63d89b",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/g1-trace.test.ts",
+              "line": 75,
+              "evidenceRef": "F-R3-CORE-c45c6b9ae4d1ecf2777b",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/g1-trace.test.ts",
+              "line": 76,
+              "evidenceRef": "F-R3-CORE-0e4437135c77cdcbaedf",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/g1-trace.test.ts",
+              "line": 85,
+              "evidenceRef": "F-R3-CORE-dcf6aad690ce0e1d15ed",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/g1-trace.test.ts",
+              "line": 88,
+              "evidenceRef": "F-R3-CORE-ca0b4307c9d3b9f8c0fb",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/g1-trace.test.ts",
+              "line": 91,
+              "evidenceRef": "F-R3-CORE-a4048d733ff7e0dfce34",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/g1-trace.test.ts",
+              "line": 107,
+              "evidenceRef": "F-R3-CORE-068bea62c9058181ab3f",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/g1-trace.test.ts",
+              "line": 110,
+              "evidenceRef": "F-R3-CORE-c311dbf9e49672f3abf2",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/g1-trace.test.ts",
+              "line": 116,
+              "evidenceRef": "F-R3-CORE-8500d7fab22dba33b1d3",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/git-workspace-fingerprint.test.ts",
+              "line": 254,
+              "evidenceRef": "F-R3-CORE-767bca07a99cd5287fa6",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/mode-catalog.test.ts",
+              "line": 47,
+              "evidenceRef": "F-R3-CORE-6f4492ea0029d37fecbf",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/oracle-test-trace.test.ts",
+              "line": 311,
+              "evidenceRef": "F-R3-CORE-6f8c165219d47fca74b8",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/pack-canary-acceptance.test.ts",
+              "line": 1391,
+              "evidenceRef": "F-R3-CORE-fc904b4edc2e050324d2",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/pack-canary-acceptance.test.ts",
+              "line": 1392,
+              "evidenceRef": "F-R3-CORE-9c55a5cee1dfbc09d17b",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/pack-publication-admission.test.ts",
+              "line": 174,
+              "evidenceRef": "F-R3-CORE-62419293b687cf7d5495",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/pack-publication-admission.test.ts",
+              "line": 309,
+              "evidenceRef": "F-R3-CORE-27865c98181cd4c7a472",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/plan-admission.test.ts",
+              "line": 15,
+              "evidenceRef": "F-R3-CORE-554fdb36f4bdd36d89b5",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/plan-id-identity.test.ts",
+              "line": 23,
+              "evidenceRef": "F-R3-CORE-d79345262f12350f3ec0",
+              "matchKind": "exact-full-id",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/plan-id-taxonomy.test.ts",
+              "line": 7,
+              "evidenceRef": "F-R3-CORE-dd04247fd18571a7a91d",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/plan-id-taxonomy.test.ts",
+              "line": 26,
+              "evidenceRef": "F-R3-CORE-7b987a2e8a4fab876ef4",
+              "matchKind": "exact-full-id",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/projection-writer.test.ts",
+              "line": 68,
+              "evidenceRef": "F-R3-CORE-3d91243d7208b19b8899",
+              "matchKind": "exact-full-id",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/projection-writer.test.ts",
+              "line": 2377,
+              "evidenceRef": "F-R3-CORE-4bdeb78435093b751236",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/projection-writer.test.ts",
+              "line": 2517,
+              "evidenceRef": "F-R3-CORE-e09185eaeacc2ac9c779",
+              "matchKind": "exact-full-id",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/projection-writer.test.ts",
+              "line": 2523,
+              "evidenceRef": "F-R3-CORE-fa8bf63917ba54818ec0",
+              "matchKind": "exact-full-id",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/projection-writer.test.ts",
+              "line": 2534,
+              "evidenceRef": "F-R3-CORE-4d7f47fa6756e1aae410",
+              "matchKind": "exact-full-id",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/projection-writer.test.ts",
+              "line": 2637,
+              "evidenceRef": "F-R3-CORE-e5ed9f4ca20ae148937a",
+              "matchKind": "exact-full-id",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/projection-writer.test.ts",
+              "line": 2646,
+              "evidenceRef": "F-R3-CORE-970e75e2de1868ebf768",
+              "matchKind": "exact-full-id",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/release-consumer-gates.test.ts",
+              "line": 138,
+              "evidenceRef": "F-R3-CORE-a7efa73bc5b3e05ec5a7",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/roadmap.test.ts",
+              "line": 205,
+              "evidenceRef": "F-R3-CORE-e5236b55d0b406e4e523",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/roadmap.test.ts",
+              "line": 222,
+              "evidenceRef": "F-R3-CORE-4612dcb967e9f8cbce07",
+              "matchKind": "exact-full-id",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/runtime.test.ts",
+              "line": 53,
+              "evidenceRef": "F-R3-CORE-ac803b59aaf7d4e31851",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/screen-impl-pair-freeze.test.ts",
+              "line": 31,
+              "evidenceRef": "F-R3-CORE-f2e580d29a81f2ea52fe",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/screen-impl-pair-freeze.test.ts",
+              "line": 36,
+              "evidenceRef": "F-R3-CORE-33656803cba1991fb715",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/screen-impl-pair-freeze.test.ts",
+              "line": 43,
+              "evidenceRef": "F-R3-CORE-468f297889c7871f852e",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/screen-impl-pair-freeze.test.ts",
+              "line": 69,
+              "evidenceRef": "F-R3-CORE-e7e36d8556b6fff6b2fc",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/screen-impl-pair-freeze.test.ts",
+              "line": 77,
+              "evidenceRef": "F-R3-CORE-97fa82decee2cffb4aa5",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/screen-impl-pair-freeze.test.ts",
+              "line": 81,
+              "evidenceRef": "F-R3-CORE-d5e204d3caf0f46c5fed",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/screen-impl-pair-freeze.test.ts",
+              "line": 108,
+              "evidenceRef": "F-R3-CORE-4fb1222b22c4ee4f4f01",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/screen-impl-pair-freeze.test.ts",
+              "line": 112,
+              "evidenceRef": "F-R3-CORE-5ba04547046626e15969",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/screen-impl-pair-freeze.test.ts",
+              "line": 118,
+              "evidenceRef": "F-R3-CORE-432fa4fde84ad3030f38",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/team-schema.test.ts",
+              "line": 10,
+              "evidenceRef": "F-R3-CORE-52b8277f3a7ee12db46e",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/vmodel-source-assets.test.ts",
+              "line": 246,
+              "evidenceRef": "F-R3-CORE-790eac333193b3d431c5",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            },
+            {
+              "path": "tests/vmodel-source-assets.test.ts",
+              "line": 247,
+              "evidenceRef": "F-R3-CORE-1f33e3a6caa6b82d25b2",
+              "matchKind": "core-or-suffixed-reference",
+              "surface": "test-reference-observation"
+            }
+          ],
+          "result": "全ヒットを記録。完全IDとcore/省略/接尾辞参照を区別する。"
         }
       ],
-      "limitations": "直接文字列参照の再検索であり、動的・意味上の依存の不存在や廃止完了を証明しない。"
+      "limitations": "静的なID表記の参照観測であり、動的依存の不存在・productionへの結合・移管完了・削除許可は証明しない。M-00のVERIFY_CUTOVER_PLAN_ID経由1078参照は前回の証拠も保持する。"
     }
   },
   "scope": {
@@ -8061,6 +9356,1839 @@
         "sha256": "b9343f88aebd63c431182d51ac0042f8c306c325e9da29ad722a2477c6660fea",
         "bytes": 16009
       }
+    },
+    {
+      "id": "F-R3-CORE-1447ad9f420cb8d022e5",
+      "path": "src/lint/scrum-reverse.ts",
+      "lines": "5",
+      "quote": " * §3.3 scrum_reverse_lint。本 harness 開発で「DISCOVERY-01 を confirmed にし concept §2.5 を",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "f54544f66b845f272c2e36f04d868741e21fc935",
+        "sha256": "11fdbe9723108ae778cb8e86a3e4d2b810dd113703987821b60a5281223be91f",
+        "bytes": 6408
+      }
+    },
+    {
+      "id": "F-R3-CORE-3ff4193ceb276253f750",
+      "path": "tests/handover.test.ts",
+      "lines": "483",
+      "quote": "    expect(inferPlanFromCommit(\"PLAN-DISCOVERY-01\")).toBe(\"PLAN-DISCOVERY-01\");",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "d8ca87ef64ee79034650948d53d9d2426139240f",
+        "sha256": "d8365e7db10d40367ac2f344a66de9fe6ad6d8691ecd1f3122058b44bfda4577",
+        "bytes": 40837
+      }
+    },
+    {
+      "id": "F-R3-CORE-b79752598460d1760268",
+      "path": "tests/mode-catalog.test.ts",
+      "lines": "44",
+      "quote": "    expect(workflowModeForPlan({ planId: \"PLAN-DISCOVERY-01-x\" })).toBe(\"Discovery\");",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "22867214c59afc853e4fbf6212c4311477047a1e",
+        "sha256": "de70a654448243fabe8d31d0776b37a1b506bd0cad8d01dc39754a77bdce9298",
+        "bytes": 5147
+      }
+    },
+    {
+      "id": "F-R3-CORE-7f509c2f79571c76382c",
+      "path": "tests/plan-id-taxonomy.test.ts",
+      "lines": "23",
+      "quote": "    \"PLAN-DISCOVERY-01-workflow-metamodel\",",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "9bc071a2fd4029d95be15442f52777ec7c7d7fd8",
+        "sha256": "0ce36d954d4bfe3f9422d88a6327b193251b778368e3fc42c6959f0381451cf7",
+        "bytes": 1960
+      }
+    },
+    {
+      "id": "F-R3-CORE-ac7814723c1aa5375dac",
+      "path": "tests/schema.test.ts",
+      "lines": "16",
+      "quote": "    expect(planIdSchema.safeParse(\"PLAN-DISCOVERY-01-workflow\").success).toBe(true);",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "d88f3b16028a349bc89924ebcd47caf41bb51fdb",
+        "sha256": "858a1194d9d6a2b1f37817112a4bf3244f95ff4bdd8399e337f88d435641bb67",
+        "bytes": 2822
+      }
+    },
+    {
+      "id": "F-R3-CORE-10af267a6fe9705b0ba1",
+      "path": "src/lint/plan-completion-drift.ts",
+      "lines": "20",
+      "quote": " *   - DoD が部分チェック (`- [ ]` 残あり) の PLAN は真に作業中なので violation にしない (DISCOVERY-03",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "d9366b9b10e0fb33cc80b9646e1d13e8c2e6d72b",
+        "sha256": "1163f1ee23fe7642fa36072b9855b2171ec8e898c76720fd4fd222a2cb662516",
+        "bytes": 6430
+      }
+    },
+    {
+      "id": "F-R3-CORE-b340cb49c412b964388f",
+      "path": "tests/handover.test.ts",
+      "lines": "361",
+      "quote": "    const md = `# Session Handover — 2026-06-04\\n\\n## §5 未了 PO 判断\\n\\n- DISCOVERY-03 PO サインオフ待ち\\n\\n## §6 x\\n`;",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "d8ca87ef64ee79034650948d53d9d2426139240f",
+        "sha256": "d8365e7db10d40367ac2f344a66de9fe6ad6d8691ecd1f3122058b44bfda4577",
+        "bytes": 40837
+      }
+    },
+    {
+      "id": "F-R3-CORE-f84f902176855dfdd3b3",
+      "path": "tests/plan-completion-drift.test.ts",
+      "lines": "64",
+      "quote": "      { planId: \"PLAN-DISCOVERY-03\", status: \"draft\", checkedItems: 1, uncheckedItems: 3 },",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "5458ac0e1725adc444e1854617be9fa72dd07ffb",
+        "sha256": "cef93a2d5a0e32f83ae3d19468d80b7455f7efb292355b856a333dd3bfbb3975",
+        "bytes": 6147
+      }
+    },
+    {
+      "id": "F-R3-CORE-25e865dc1004a27256d8",
+      "path": "src/schema/index.ts",
+      "lines": "130",
+      "quote": " * §1.6 VALID_DRIVES (5 種 = 専門職のみ。PLAN-DISCOVERY-04 V7 / PLAN-REVERSE-01 R3)。",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "a3c436e2680c5eb8016f4f7b714a5f63def6f90c",
+        "sha256": "a13ca408343fc761c2d9f5ee476833ee39e98aa120c0f2a76af6ef3aa411ac45",
+        "bytes": 11198
+      }
+    },
+    {
+      "id": "F-R3-CORE-a35258b942a42b41c6e5",
+      "path": "tests/frontmatter.test.ts",
+      "lines": "621",
+      "quote": "  it(\"drive は専門職 5 種のみ・mode 値 (駆動モデル) を拒否する (§1.6 軸分離、DISCOVERY-04 V7)\", () => {",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "eb2013b080471b0442be0cd785baa8290c83c4fe",
+        "sha256": "76d6681c08664fa4eff81b283917da43cd78c4c1e57630ef399dafe37cf50407",
+        "bytes": 24115
+      }
+    },
+    {
+      "id": "F-R3-CORE-af159b435f410d711961",
+      "path": "tests/frontmatter.test.ts",
+      "lines": "469",
+      "quote": "      plan_id: \"PLAN-DISCOVERY-06-poc\",",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "eb2013b080471b0442be0cd785baa8290c83c4fe",
+        "sha256": "76d6681c08664fa4eff81b283917da43cd78c4c1e57630ef399dafe37cf50407",
+        "bytes": 24115
+      }
+    },
+    {
+      "id": "F-R3-CORE-b9389d533e7dbf7d4f49",
+      "path": "tests/frontmatter.test.ts",
+      "lines": "470",
+      "quote": "      title: \"PLAN-DISCOVERY-06: poc\",",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "eb2013b080471b0442be0cd785baa8290c83c4fe",
+        "sha256": "76d6681c08664fa4eff81b283917da43cd78c4c1e57630ef399dafe37cf50407",
+        "bytes": 24115
+      }
+    },
+    {
+      "id": "F-R3-CORE-c88a3cb3108d73987813",
+      "path": "src/lint/forward-convergence.ts",
+      "lines": "2",
+      "quote": " * forward-convergence lint — PLAN-DISCOVERY-08 (Step5 = fail-close)。",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "5362de68d1cb0bafb35d9d76a18581602b0b0607",
+        "sha256": "99c74dd01c4fc1fb3dcc9c7642b5bbe4f4d9c4d0250c7602b9770f258c2413ca",
+        "bytes": 16674
+      }
+    },
+    {
+      "id": "F-R3-CORE-852cf35e65cf02607463",
+      "path": "src/lint/forward-convergence.ts",
+      "lines": "42",
+      "quote": " * fail-close 前から存在する未集約 landed impl の audited 債務 (PLAN-DISCOVERY-08 Step5、baseline 2026-06-26)。",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "5362de68d1cb0bafb35d9d76a18581602b0b0607",
+        "sha256": "99c74dd01c4fc1fb3dcc9c7642b5bbe4f4d9c4d0250c7602b9770f258c2413ca",
+        "bytes": 16674
+      }
+    },
+    {
+      "id": "F-R3-CORE-13c2787bd7c07cbf7a03",
+      "path": "src/lint/forward-convergence.ts",
+      "lines": "100",
+      "quote": "  /** fail-close: ok = 新規違反 (legacy 除く) が 0。doctor.ok と連動する (PLAN-DISCOVERY-08 Step5)。 */",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "5362de68d1cb0bafb35d9d76a18581602b0b0607",
+        "sha256": "99c74dd01c4fc1fb3dcc9c7642b5bbe4f4d9c4d0250c7602b9770f258c2413ca",
+        "bytes": 16674
+      }
+    },
+    {
+      "id": "F-R3-CORE-4ccd12d0f3617e751884",
+      "path": "tests/forward-convergence.test.ts",
+      "lines": "150",
+      "quote": "      [plan({ plan_id: \"PLAN-DISCOVERY-08-x\", kind: \"poc\", status: \"confirmed\" })],",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "a086c521fa34d6428d8db1a4b107700637c2b493",
+        "sha256": "b4bda85f94faaf75d1ab53724971a2689c1055fd6490d632b0155e1c37905287",
+        "bytes": 11511
+      }
+    },
+    {
+      "id": "F-R3-CORE-ba1b1408870c68d5fec2",
+      "path": "src/lint/forward-convergence.ts",
+      "lines": "15",
+      "quote": " * version_target (PLAN-DISCOVERY-09 version-up) 付き draft は将来版へ保全 = deferred(version-up) 種別。",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "5362de68d1cb0bafb35d9d76a18581602b0b0607",
+        "sha256": "99c74dd01c4fc1fb3dcc9c7642b5bbe4f4d9c4d0250c7602b9770f258c2413ca",
+        "bytes": 16674
+      }
+    },
+    {
+      "id": "F-R3-CORE-dc929119b9e97cac96d9",
+      "path": "src/lint/forward-convergence.ts",
+      "lines": "36",
+      "quote": " * version-up parked の許可 target ledger (PLAN-DISCOVERY-09)。`version_target` は任意文字列でなく",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "5362de68d1cb0bafb35d9d76a18581602b0b0607",
+        "sha256": "99c74dd01c4fc1fb3dcc9c7642b5bbe4f4d9c4d0250c7602b9770f258c2413ca",
+        "bytes": 16674
+      }
+    },
+    {
+      "id": "F-R3-CORE-bea9e5fbaa62a4086ba9",
+      "path": "src/lint/forward-convergence.ts",
+      "lines": "92",
+      "quote": "  /** spine-外で未 landing かつ version_target 付き = 将来版へ保全 (version-up、PLAN-DISCOVERY-09)。 */",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "5362de68d1cb0bafb35d9d76a18581602b0b0607",
+        "sha256": "99c74dd01c4fc1fb3dcc9c7642b5bbe4f4d9c4d0250c7602b9770f258c2413ca",
+        "bytes": 16674
+      }
+    },
+    {
+      "id": "F-R3-CORE-92af85794b43ae1a4ab8",
+      "path": "src/lint/forward-convergence.ts",
+      "lines": "182",
+      "quote": "          reason: `version_target=${p.versionTarget} で将来版へ保全 (PLAN-DISCOVERY-09)`,",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "5362de68d1cb0bafb35d9d76a18581602b0b0607",
+        "sha256": "99c74dd01c4fc1fb3dcc9c7642b5bbe4f4d9c4d0250c7602b9770f258c2413ca",
+        "bytes": 16674
+      }
+    },
+    {
+      "id": "F-R3-CORE-fa778e8db0150ab0e0a9",
+      "path": "src/lint/outstanding.ts",
+      "lines": "36",
+      "quote": "  /** 非終端のうち version-up parked (version_target 付き draft) 数 (PLAN-DISCOVERY-09)。",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "85db0d11885a7056ebb6244dc7734b6ff87b9d4d",
+        "sha256": "9eca6186f79ccfde84edb4e94842cb6f912a8202aa293e383931247fb1e49691",
+        "bytes": 5991
+      }
+    },
+    {
+      "id": "F-R3-CORE-cafaa55b0becb4061a59",
+      "path": "src/lint/outstanding.ts",
+      "lines": "48",
+      "quote": "  /** version-up parked マーカー (PLAN-DISCOVERY-09)。null = 通常。 */",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "85db0d11885a7056ebb6244dc7734b6ff87b9d4d",
+        "sha256": "9eca6186f79ccfde84edb4e94842cb6f912a8202aa293e383931247fb1e49691",
+        "bytes": 5991
+      }
+    },
+    {
+      "id": "F-R3-CORE-bd19f12d7d8f3dea7d93",
+      "path": "src/schema/frontmatter.ts",
+      "lines": "203",
+      "quote": "  /** PLAN-DISCOVERY-09 version-up: 将来版へ保全 (deferred-but-committed-future) する PLAN のマーカー。",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "b82949aee979814f88d60752d0a5fa13e65245e2",
+        "sha256": "84b3ed24b9303c4da64b6c6394535dbf720a1a481c2f4337bc04eb717664f120",
+        "bytes": 24819
+      }
+    },
+    {
+      "id": "F-R3-CORE-d033fc58254875446719",
+      "path": "src/schema/frontmatter.ts",
+      "lines": "589",
+      "quote": "  // PLAN-DISCOVERY-09: version_target (version-up parked) は status=draft のみ有効 (landed 除外禁止)",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "b82949aee979814f88d60752d0a5fa13e65245e2",
+        "sha256": "84b3ed24b9303c4da64b6c6394535dbf720a1a481c2f4337bc04eb717664f120",
+        "bytes": 24819
+      }
+    },
+    {
+      "id": "F-R3-CORE-0eb0ac1dc922e69d82e4",
+      "path": "src/schema/frontmatter.ts",
+      "lines": "595",
+      "quote": "        \"version_target は status=draft のみ有効 (landed=confirmed/completed には付与不可、PLAN-DISCOVERY-09)\",",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "b82949aee979814f88d60752d0a5fa13e65245e2",
+        "sha256": "84b3ed24b9303c4da64b6c6394535dbf720a1a481c2f4337bc04eb717664f120",
+        "bytes": 24819
+      }
+    },
+    {
+      "id": "F-R3-CORE-9bdf007f7defa09a05ce",
+      "path": "tests/frontmatter.test.ts",
+      "lines": "562",
+      "quote": "      frontmatterSchema.safeParse({ ...recBase, plan_id: \"PLAN-DISCOVERY-09-x\" }).success,",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "eb2013b080471b0442be0cd785baa8290c83c4fe",
+        "sha256": "76d6681c08664fa4eff81b283917da43cd78c4c1e57630ef399dafe37cf50407",
+        "bytes": 24115
+      }
+    },
+    {
+      "id": "F-R3-CORE-bfadd2be098f1dbad061",
+      "path": "tests/scrum-reverse.test.ts",
+      "lines": "27",
+      "quote": "plan_id: PLAN-DISCOVERY-09-x",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "fc37c8769a8ed65705387eb907a4725298b491f3",
+        "sha256": "d6aed9c2a50d4cdbc9dac56ebd572b8902220ac76bffc81cfc0a37be83286685",
+        "bytes": 4181
+      }
+    },
+    {
+      "id": "F-R3-CORE-7876e98b1b2773c92849",
+      "path": "tests/scrum-reverse.test.ts",
+      "lines": "39",
+      "quote": "    const p = parseSrPlan(\"PLAN-DISCOVERY-09-x.md\", content);",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "fc37c8769a8ed65705387eb907a4725298b491f3",
+        "sha256": "d6aed9c2a50d4cdbc9dac56ebd572b8902220ac76bffc81cfc0a37be83286685",
+        "bytes": 4181
+      }
+    },
+    {
+      "id": "F-R3-CORE-a90d58d76a99328091e5",
+      "path": "tests/scrum-reverse.test.ts",
+      "lines": "48",
+      "quote": "    const r = analyzeScrumReverse([plan({ plan_id: \"PLAN-DISCOVERY-09-x\" })]);",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "fc37c8769a8ed65705387eb907a4725298b491f3",
+        "sha256": "d6aed9c2a50d4cdbc9dac56ebd572b8902220ac76bffc81cfc0a37be83286685",
+        "bytes": 4181
+      }
+    },
+    {
+      "id": "F-R3-CORE-829686c5a4703534b35c",
+      "path": "tests/scrum-reverse.test.ts",
+      "lines": "55",
+      "quote": "      plan({ plan_id: \"PLAN-DISCOVERY-09-x\" }),",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "fc37c8769a8ed65705387eb907a4725298b491f3",
+        "sha256": "d6aed9c2a50d4cdbc9dac56ebd572b8902220ac76bffc81cfc0a37be83286685",
+        "bytes": 4181
+      }
+    },
+    {
+      "id": "F-R3-CORE-543cd3ceb9b22c4d68e4",
+      "path": "tests/scrum-reverse.test.ts",
+      "lines": "61",
+      "quote": "        links: [\"docs/plans/PLAN-DISCOVERY-09-x.md\"],",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "fc37c8769a8ed65705387eb907a4725298b491f3",
+        "sha256": "d6aed9c2a50d4cdbc9dac56ebd572b8902220ac76bffc81cfc0a37be83286685",
+        "bytes": 4181
+      }
+    },
+    {
+      "id": "F-R3-CORE-2bdd24c98c1c30b6181e",
+      "path": "tests/scrum-reverse.test.ts",
+      "lines": "78",
+      "quote": "      plan({ plan_id: \"PLAN-DISCOVERY-09-x\", decision_outcome: \"pivot\" }),",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "fc37c8769a8ed65705387eb907a4725298b491f3",
+        "sha256": "d6aed9c2a50d4cdbc9dac56ebd572b8902220ac76bffc81cfc0a37be83286685",
+        "bytes": 4181
+      }
+    },
+    {
+      "id": "F-R3-CORE-c3d7bbe2167cc7200520",
+      "path": "tests/scrum-reverse.test.ts",
+      "lines": "87",
+      "quote": "      plan({ plan_id: \"PLAN-DISCOVERY-09-x\", decision_outcome: \"pivot\" }),",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "fc37c8769a8ed65705387eb907a4725298b491f3",
+        "sha256": "d6aed9c2a50d4cdbc9dac56ebd572b8902220ac76bffc81cfc0a37be83286685",
+        "bytes": 4181
+      }
+    },
+    {
+      "id": "F-R3-CORE-3604b643093f952321df",
+      "path": "tests/scrum-reverse.test.ts",
+      "lines": "93",
+      "quote": "        links: [\"docs/plans/PLAN-DISCOVERY-09-x.md\"],",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "fc37c8769a8ed65705387eb907a4725298b491f3",
+        "sha256": "d6aed9c2a50d4cdbc9dac56ebd572b8902220ac76bffc81cfc0a37be83286685",
+        "bytes": 4181
+      }
+    },
+    {
+      "id": "F-R3-CORE-0a3ef8955b497e1800d9",
+      "path": "tests/scrum-reverse.test.ts",
+      "lines": "102",
+      "quote": "    const r = analyzeScrumReverse([plan({ plan_id: \"PLAN-DISCOVERY-09-x\", status: \"archived\" })]);",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "fc37c8769a8ed65705387eb907a4725298b491f3",
+        "sha256": "d6aed9c2a50d4cdbc9dac56ebd572b8902220ac76bffc81cfc0a37be83286685",
+        "bytes": 4181
+      }
+    },
+    {
+      "id": "F-R3-CORE-65579fda789388261942",
+      "path": "tests/scrum-reverse.test.ts",
+      "lines": "111",
+      "quote": "      scrumReverseMessages(analyzeScrumReverse([plan({ plan_id: \"PLAN-DISCOVERY-09-x\" })])).some(",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "fc37c8769a8ed65705387eb907a4725298b491f3",
+        "sha256": "d6aed9c2a50d4cdbc9dac56ebd572b8902220ac76bffc81cfc0a37be83286685",
+        "bytes": 4181
+      }
+    },
+    {
+      "id": "F-R3-CORE-452103ee082b02e5940a",
+      "path": "src/plan/lint-policy.ts",
+      "lines": "17",
+      "quote": "  \"PLAN-L4-13-drift-lint\",",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "c466898cd8a094c9cb4cce41ece358d7d255fab6",
+        "sha256": "2c692035f622a4d1baae8c27e9228a0e91d8d82cffd539122057fc905fff1541",
+        "bytes": 11303
+      }
+    },
+    {
+      "id": "F-R3-CORE-f1a6dad4659b6bffcbb7",
+      "path": "tests/plan-supersession.test.ts",
+      "lines": "32",
+      "quote": "      \"  - PLAN-L4-13\",",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "70f688a4b7132e21bad69e364eeb9a4bf974f014",
+        "sha256": "b134e6d8f54c5863ab97622f441e665e107f19be1dc257f28ee883d4f3b24ce1",
+        "bytes": 12421
+      }
+    },
+    {
+      "id": "F-R3-CORE-e6ea6e0cbb14683b8908",
+      "path": "tests/plan-supersession.test.ts",
+      "lines": "35",
+      "quote": "    expect(parseSupersedes(fm)).toEqual([\"PLAN-L7-86-x\", \"PLAN-L4-13\"]);",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "70f688a4b7132e21bad69e364eeb9a4bf974f014",
+        "sha256": "b134e6d8f54c5863ab97622f441e665e107f19be1dc257f28ee883d4f3b24ce1",
+        "bytes": 12421
+      }
+    },
+    {
+      "id": "F-R3-CORE-07d26e5881f96a9f3389",
+      "path": "tests/runtime-hook-entrypoints.test.ts",
+      "lines": "240",
+      "quote": "      const start = runCli(cwd, [\"plan\", \"use\", \"PLAN-L4-13\"]);",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "60de61bb50a58c945040bc5c5904dc893577c4ff",
+        "sha256": "7f9ccb786710a20b1b8a9be8867b18a95e8484da6b9223d525c3fc8a22950bda",
+        "bytes": 29077
+      }
+    },
+    {
+      "id": "F-R3-CORE-a8525f0c8d8e5ef4ef33",
+      "path": "tests/runtime-hook-entrypoints.test.ts",
+      "lines": "268",
+      "quote": "        readFileSync(join(cwd, \".ut-tdd\", \"logs\", \"plan\", \"PLAN-L4-13.digest.json\"), \"utf8\"),",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "60de61bb50a58c945040bc5c5904dc893577c4ff",
+        "sha256": "7f9ccb786710a20b1b8a9be8867b18a95e8484da6b9223d525c3fc8a22950bda",
+        "bytes": 29077
+      }
+    },
+    {
+      "id": "F-R3-CORE-4b61c3c3c0296f771d3a",
+      "path": "tests/runtime-hook-entrypoints.test.ts",
+      "lines": "270",
+      "quote": "      expect(digest.plan_id).toBe(\"PLAN-L4-13\");",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "60de61bb50a58c945040bc5c5904dc893577c4ff",
+        "sha256": "7f9ccb786710a20b1b8a9be8867b18a95e8484da6b9223d525c3fc8a22950bda",
+        "bytes": 29077
+      }
+    },
+    {
+      "id": "F-R3-CORE-e1db81dae063865ce46e",
+      "path": "tests/runtime-hook-entrypoints.test.ts",
+      "lines": "511",
+      "quote": "      expect(runCli(cwd, [\"plan\", \"use\", \"PLAN-L4-13\"]).status).toBe(0);",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "60de61bb50a58c945040bc5c5904dc893577c4ff",
+        "sha256": "7f9ccb786710a20b1b8a9be8867b18a95e8484da6b9223d525c3fc8a22950bda",
+        "bytes": 29077
+      }
+    },
+    {
+      "id": "F-R3-CORE-49618a90d87c96868d4c",
+      "path": "tests/runtime-hook-entrypoints.test.ts",
+      "lines": "521",
+      "quote": "        readFileSync(join(cwd, \".ut-tdd\", \"logs\", \"plan\", \"PLAN-L4-13.digest.json\"), \"utf8\"),",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "60de61bb50a58c945040bc5c5904dc893577c4ff",
+        "sha256": "7f9ccb786710a20b1b8a9be8867b18a95e8484da6b9223d525c3fc8a22950bda",
+        "bytes": 29077
+      }
+    },
+    {
+      "id": "F-R3-CORE-95a06a978dcbf2b418d1",
+      "path": "tests/runtime-hook-entrypoints.test.ts",
+      "lines": "548",
+      "quote": "      expect(runCli(cwd, [\"plan\", \"use\", \"PLAN-L4-13\"]).status).toBe(0);",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "60de61bb50a58c945040bc5c5904dc893577c4ff",
+        "sha256": "7f9ccb786710a20b1b8a9be8867b18a95e8484da6b9223d525c3fc8a22950bda",
+        "bytes": 29077
+      }
+    },
+    {
+      "id": "F-R3-CORE-a02c76c6d5c9aa859133",
+      "path": "tests/runtime-hook-entrypoints.test.ts",
+      "lines": "558",
+      "quote": "        readFileSync(join(cwd, \".ut-tdd\", \"logs\", \"plan\", \"PLAN-L4-13.digest.json\"), \"utf8\"),",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "60de61bb50a58c945040bc5c5904dc893577c4ff",
+        "sha256": "7f9ccb786710a20b1b8a9be8867b18a95e8484da6b9223d525c3fc8a22950bda",
+        "bytes": 29077
+      }
+    },
+    {
+      "id": "F-R3-CORE-7ecdb3ffd02f54fbc83d",
+      "path": "src/schema/index.ts",
+      "lines": "51",
+      "quote": "// security は PLAN-L4-16 で L4 slot として confirmed。認証/認可/秘密情報/監査境界を扱う",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "a3c436e2680c5eb8016f4f7b714a5f63def6f90c",
+        "sha256": "a13ca408343fc761c2d9f5ee476833ee39e98aa120c0f2a76af6ef3aa411ac45",
+        "bytes": 11198
+      }
+    },
+    {
+      "id": "F-R3-CORE-48ccd0def03910b94149",
+      "path": "tests/scope-preview.test.ts",
+      "lines": "89",
+      "quote": "        required_plan_id: \"PLAN-L4-16-security-design-slot\",",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "7211d29ccab3a9ef91a8abfa817bb4e927d56a7a",
+        "sha256": "d271c124218680180b63386687d387060c79a9715af1b918ba25d9bd9dfddd36",
+        "bytes": 7901
+      }
+    },
+    {
+      "id": "F-R3-CORE-c157511cc0c9ec09c91d",
+      "path": "tests/scope-preview.test.ts",
+      "lines": "97",
+      "quote": "          plan_id: \"PLAN-L4-16-security-design-slot\",",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "7211d29ccab3a9ef91a8abfa817bb4e927d56a7a",
+        "sha256": "d271c124218680180b63386687d387060c79a9715af1b918ba25d9bd9dfddd36",
+        "bytes": 7901
+      }
+    },
+    {
+      "id": "F-R3-CORE-b06821106d9e1f0c1e72",
+      "path": "tests/scope-preview.test.ts",
+      "lines": "125",
+      "quote": "            required_action: \"follow required plan PLAN-L4-16-security-design-slot\",",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "7211d29ccab3a9ef91a8abfa817bb4e927d56a7a",
+        "sha256": "d271c124218680180b63386687d387060c79a9715af1b918ba25d9bd9dfddd36",
+        "bytes": 7901
+      }
+    },
+    {
+      "id": "F-R3-CORE-554e8129c44f8ec0a97a",
+      "path": "tests/scope-preview.test.ts",
+      "lines": "152",
+      "quote": "        required_plan_id: \"PLAN-L4-16-security-design-slot\",",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "7211d29ccab3a9ef91a8abfa817bb4e927d56a7a",
+        "sha256": "d271c124218680180b63386687d387060c79a9715af1b918ba25d9bd9dfddd36",
+        "bytes": 7901
+      }
+    },
+    {
+      "id": "F-R3-CORE-db6321687a73bccc45b2",
+      "path": "tests/sub-doc-catalog-drift.test.ts",
+      "lines": "97",
+      "quote": "  it(\"U-SDCD-011: L4 security slot が登録され schema↔要件 §G.1 で drift 0 (PLAN-L4-16)\", () => {",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "0769eef6d27cdbb0d57a44fc2fcee5740466e24b",
+        "sha256": "50fa025698c757cafa5936ee257644e61ef020747fcc42a1cbf9ae352cdd2069",
+        "bytes": 5736
+      }
+    },
+    {
+      "id": "F-R3-CORE-41a8f046a7efbf185bc8",
+      "path": "src/lint/cycle-p4-verification.ts",
+      "lines": "68",
+      "quote": "  \"docs/plans/PLAN-M-00-verify-cutover.md\",",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "9ee14f5afde7c56cef27d43101519faa138d684f",
+        "sha256": "1a5ebf9327afb91bb503556b41421d8ec2a113b1232d0c0471dcbaf8108665cf",
+        "bytes": 8879
+      }
+    },
+    {
+      "id": "F-R3-CORE-18b76c73775d8bb3eb2a",
+      "path": "src/lint/readability.ts",
+      "lines": "37",
+      "quote": "  // 直列→逶ｴ蛻余 class that the curated kanji list below missed (PLAN-M-00/01, 2026-06-17).",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "60be445c2764b91ea43a4953a965e371a79c6a07",
+        "sha256": "f02d73edaa8441af0042a6e1e94b45cf7a82f1e8b61a9bedea5e8e5a016106e7",
+        "bytes": 13327
+      }
+    },
+    {
+      "id": "F-R3-CORE-dad83e5924e886271e7a",
+      "path": "src/plan/lint.ts",
+      "lines": "257",
+      "quote": "const PLAN_ID_LEGACY_FROZEN = new Set([\"PLAN-M-00-verify-cutover\", \"PLAN-M-01-cutover-backfill\"]);",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "ca01aa1e61adc380fe5f18fc6114c732ca5a4e98",
+        "sha256": "d9635ef497c1ad98934b21879289fcc600d8b56b483a25a1f4fb5a983c9b53c1",
+        "bytes": 44169
+      }
+    },
+    {
+      "id": "F-R3-CORE-6c33acad449829551089",
+      "path": "src/state-db/projection-writer.ts",
+      "lines": "192",
+      "quote": "const VERIFY_CUTOVER_PLAN_ID = \"PLAN-M-00-verify-cutover\";",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "ea4de31119abc8bca201065c6c8101a7ff1a054b",
+        "sha256": "18e8bfcaacf16895734532b4e7cde19445457509dbe5647aec434bfceb4762ba",
+        "bytes": 96789
+      }
+    },
+    {
+      "id": "F-R3-CORE-c9c848f6a8c27b02b7ee",
+      "path": "tests/plan-id-identity.test.ts",
+      "lines": "12",
+      "quote": "    [\"PLAN-M-00-verify-cutover\", \"M\", \"00\", 0],",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "fb55b0d55a1edcb971f7b1db5339e9f40999a1ad",
+        "sha256": "8656b1b0cca38239e306ed7f17c60a1cc248a8b32b2aeb45cf771ce4f21484d1",
+        "bytes": 1788
+      }
+    },
+    {
+      "id": "F-R3-CORE-274574734ff88f96b5b0",
+      "path": "tests/plan-id-identity.test.ts",
+      "lines": "22",
+      "quote": "    expect(parseReservablePlanIdIdentity(\"PLAN-M-00-verify-cutover\")).toBeNull();",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "fb55b0d55a1edcb971f7b1db5339e9f40999a1ad",
+        "sha256": "8656b1b0cca38239e306ed7f17c60a1cc248a8b32b2aeb45cf771ce4f21484d1",
+        "bytes": 1788
+      }
+    },
+    {
+      "id": "F-R3-CORE-dd04247fd18571a7a91d",
+      "path": "tests/plan-id-taxonomy.test.ts",
+      "lines": "7",
+      "quote": " * 背景: 2026-07-15、既存 PLAN-M-00/M-01 (cutover/migration 専用) から",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "9bc071a2fd4029d95be15442f52777ec7c7d7fd8",
+        "sha256": "0ce36d954d4bfe3f9422d88a6327b193251b778368e3fc42c6959f0381451cf7",
+        "bytes": 1960
+      }
+    },
+    {
+      "id": "F-R3-CORE-0cdca2fa34725f65df06",
+      "path": "tests/plan-id-taxonomy.test.ts",
+      "lines": "25",
+      "quote": "    \"PLAN-M-00-verify-cutover\",",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "9bc071a2fd4029d95be15442f52777ec7c7d7fd8",
+        "sha256": "0ce36d954d4bfe3f9422d88a6327b193251b778368e3fc42c6959f0381451cf7",
+        "bytes": 1960
+      }
+    },
+    {
+      "id": "F-R3-CORE-ebaf81a6556276f1c307",
+      "path": "tests/plan-supersession.test.ts",
+      "lines": "24",
+      "quote": "    expect(planCoreId(\"PLAN-M-00\")).toBe(\"PLAN-M-00\");",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "70f688a4b7132e21bad69e364eeb9a4bf974f014",
+        "sha256": "b134e6d8f54c5863ab97622f441e665e107f19be1dc257f28ee883d4f3b24ce1",
+        "bytes": 12421
+      }
+    },
+    {
+      "id": "F-R3-CORE-e65ace009865de21d100",
+      "path": "tests/projection-writer.test.ts",
+      "lines": "67",
+      "quote": "  existsSync(join(process.cwd(), \"docs\", \"plans\", \"PLAN-M-00-verify-cutover.md\")) &&",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "be50fd1dbfa9579f3c6e8e49ff0fe79c5de6743a",
+        "sha256": "8421559a61148d49cd25050e9ee36f37893ab2c8ad94db62ea863296f3eef79b",
+        "bytes": 102246
+      }
+    },
+    {
+      "id": "F-R3-CORE-4b1d5437570a48242062",
+      "path": "tests/projection-writer.test.ts",
+      "lines": "2511",
+      "quote": "      expect(String(verificationBand?.roadmap_ids)).toContain(\"PLAN-M-00-verify-cutover\");",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "be50fd1dbfa9579f3c6e8e49ff0fe79c5de6743a",
+        "sha256": "8421559a61148d49cd25050e9ee36f37893ab2c8ad94db62ea863296f3eef79b",
+        "bytes": 102246
+      }
+    },
+    {
+      "id": "F-R3-CORE-051802d18410473f18d6",
+      "path": "tests/projection-writer.test.ts",
+      "lines": "2558",
+      "quote": "          \"PLAN-M-00-verify-cutover\",",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "be50fd1dbfa9579f3c6e8e49ff0fe79c5de6743a",
+        "sha256": "8421559a61148d49cd25050e9ee36f37893ab2c8ad94db62ea863296f3eef79b",
+        "bytes": 102246
+      }
+    },
+    {
+      "id": "F-R3-CORE-f4565c530c6b15289296",
+      "path": "tests/projection-writer.test.ts",
+      "lines": "2585",
+      "quote": "        .get(\"PLAN-M-00-verify-cutover\", \"L8\") as DriveRunRow | undefined;",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "be50fd1dbfa9579f3c6e8e49ff0fe79c5de6743a",
+        "sha256": "8421559a61148d49cd25050e9ee36f37893ab2c8ad94db62ea863296f3eef79b",
+        "bytes": 102246
+      }
+    },
+    {
+      "id": "F-R3-CORE-e7ea41d23d09aca460ac",
+      "path": "tests/projection-writer.test.ts",
+      "lines": "2587",
+      "quote": "        plan_id: \"PLAN-M-00-verify-cutover\",",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "be50fd1dbfa9579f3c6e8e49ff0fe79c5de6743a",
+        "sha256": "8421559a61148d49cd25050e9ee36f37893ab2c8ad94db62ea863296f3eef79b",
+        "bytes": 102246
+      }
+    },
+    {
+      "id": "F-R3-CORE-df82ae880b6072fa39f3",
+      "path": "tests/projection-writer.test.ts",
+      "lines": "2613",
+      "quote": "        .all(\"PLAN-M-00-verify-cutover\", \"G-VERIFY.L%\") as unknown as VerificationGateRow[];",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "be50fd1dbfa9579f3c6e8e49ff0fe79c5de6743a",
+        "sha256": "8421559a61148d49cd25050e9ee36f37893ab2c8ad94db62ea863296f3eef79b",
+        "bytes": 102246
+      }
+    },
+    {
+      "id": "F-R3-CORE-fecaf1fa004f7a66110e",
+      "path": "tests/readability.test.ts",
+      "lines": "45",
+      "quote": "      expect(paths).toContain(\"docs/plans/PLAN-M-00-verify-cutover.md\");",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "1d776673cbdc1f67552dbc661a4f51b1711ea04a",
+        "sha256": "e13b348d7830d6b8042e4dc611ff9602419d01361a9e3124641c6fdb0a1a6abb",
+        "bytes": 13231
+      }
+    },
+    {
+      "id": "F-R3-CORE-3eef9eee79ac94a496ce",
+      "path": "tests/rechain-verifier.test.ts",
+      "lines": "243",
+      "quote": "  M: \"commit-M-0000000000000000000000000\",",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "409b9f093560dc8f50d774d39374c65ccbf79bb1",
+        "sha256": "45fc91c32a301193019446a33d58bdb1144c088894cf760810bb7cf232135b04",
+        "bytes": 70402
+      }
+    },
+    {
+      "id": "F-R3-CORE-e5236b55d0b406e4e523",
+      "path": "tests/roadmap.test.ts",
+      "lines": "205",
+      "quote": "  it(\"U-ROADMAP-024: real repo verification/cutover bands are covered by PLAN-M-00/M-01\", () => {",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "5953d82056b8c56ccf52d9f9683bcec2c0ca7069",
+        "sha256": "b9343f88aebd63c431182d51ac0042f8c306c325e9da29ad722a2477c6660fea",
+        "bytes": 16009
+      }
+    },
+    {
+      "id": "F-R3-CORE-8c1a191c08399197692e",
+      "path": "tests/roadmap.test.ts",
+      "lines": "218",
+      "quote": "      roadmaps: expect.arrayContaining([\"PLAN-M-00-verify-cutover\"]),",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "5953d82056b8c56ccf52d9f9683bcec2c0ca7069",
+        "sha256": "b9343f88aebd63c431182d51ac0042f8c306c325e9da29ad722a2477c6660fea",
+        "bytes": 16009
+      }
+    },
+    {
+      "id": "F-R3-CORE-1d1badbdc6b6b0f27f92",
+      "path": "tests/session-start-digest.test.ts",
+      "lines": "202",
+      "quote": "      plan_id: \"PLAN-M-00-verify-cutover\",",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "8b22d971482f6901e0ffdaa57d6655cff14d31dd",
+        "sha256": "70e6a6ec9978cf0508e4cebba50c6f0d926c7be5fa3758dd8a3361ebac9bd2d2",
+        "bytes": 10714
+      }
+    },
+    {
+      "id": "F-R3-CORE-266c5a89354ac3b90a32",
+      "path": "tests/session-start-digest.test.ts",
+      "lines": "209",
+      "quote": "      plan_id: \"PLAN-M-00-verify-cutover\",",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "8b22d971482f6901e0ffdaa57d6655cff14d31dd",
+        "sha256": "70e6a6ec9978cf0508e4cebba50c6f0d926c7be5fa3758dd8a3361ebac9bd2d2",
+        "bytes": 10714
+      }
+    },
+    {
+      "id": "F-R3-CORE-e363a68816aacec42b6f",
+      "path": "tests/session-start-digest.test.ts",
+      "lines": "216",
+      "quote": "      plan_id: \"PLAN-M-00-verify-cutover\",",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "8b22d971482f6901e0ffdaa57d6655cff14d31dd",
+        "sha256": "70e6a6ec9978cf0508e4cebba50c6f0d926c7be5fa3758dd8a3361ebac9bd2d2",
+        "bytes": 10714
+      }
+    },
+    {
+      "id": "F-R3-CORE-3e81b163cc113a4dc035",
+      "path": "src/cli.ts",
+      "lines": "736",
+      "quote": "      // (A-138 ITEM-1、PLAN-L7-84、IMP-139、taxonomy=current)。判断ゲートの進め方 + 未了量を提示。",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "a25b02d0795ab8681b6776e07a7b5e67d2646ded",
+        "sha256": "a05ff1dbd1bb29d2feced0de8174d5db08d79cb6e6e1706b696f7e313c1a763f",
+        "bytes": 186141
+      }
+    },
+    {
+      "id": "F-R3-CORE-347bb437a7b673dabeab",
+      "path": "src/handover/index.ts",
+      "lines": "145",
+      "quote": "  // string はそのまま、failures (object) は固定順フィールド列挙でキー化 (M-1: プロパティ順非依存)。",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "40f570871304467f44d8e38935311ffe7e7a926a",
+        "sha256": "3be4dbb79bf355b6b1e218c6367e1b5325dcb01743e6e59fcf18849dc5a840e8",
+        "bytes": 36096
+      }
+    },
+    {
+      "id": "F-R3-CORE-d471cc2ab6d9518794d1",
+      "path": "src/lint/cycle-p4-verification.ts",
+      "lines": "69",
+      "quote": "  \"docs/plans/PLAN-M-01-cutover-backfill.md\",",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "9ee14f5afde7c56cef27d43101519faa138d684f",
+        "sha256": "1a5ebf9327afb91bb503556b41421d8ec2a113b1232d0c0471dcbaf8108665cf",
+        "bytes": 8879
+      }
+    },
+    {
+      "id": "F-R3-CORE-c53c790334c38944f5fc",
+      "path": "src/lint/oracle-test-trace-widened-baseline.ts",
+      "lines": "136",
+      "quote": "  \"ST-DOCSEM-01\",",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "d6e35cbad569287c833e5a945fc3e9cc58c4687d",
+        "sha256": "18fa925de3ee329a9483902c1f4f3d3835bf01d8114e1fe873ac40b8404e1128",
+        "bytes": 7740
+      }
+    },
+    {
+      "id": "F-R3-CORE-eecf027f0be99ca09d4e",
+      "path": "src/lint/outstanding.ts",
+      "lines": "17",
+      "quote": " * 公開契約は additive のみ (status --json は nextAction を additive 付加した A-138 ITEM-1 / PLAN-L7-84",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "85db0d11885a7056ebb6244dc7734b6ff87b9d4d",
+        "sha256": "9eca6186f79ccfde84edb4e94842cb6f912a8202aa293e383931247fb1e49691",
+        "bytes": 5991
+      }
+    },
+    {
+      "id": "F-R3-CORE-db934a6b4ab22214fe32",
+      "path": "src/runtime/agent-slots.ts",
+      "lines": "323",
+      "quote": "  // M-1: idSeq を closure に閉じ込め module 状態を持たない (テスト間リセット不能を回避)。",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "bf53d1ac32af5e5bccda1bb1f4566cd2ef885973",
+        "sha256": "2a73b7f661072791b3c72cbab5ae81ae180e2801ec1bbc550f1a2582aefa4930",
+        "bytes": 13523
+      }
+    },
+    {
+      "id": "F-R3-CORE-df213a32b1e40ad6bfb3",
+      "path": "src/runtime/detect.ts",
+      "lines": "32",
+      "quote": " * (`:` 手前) で機械 switch でき、後続が人間可読ガイダンス (A-138 ITEM-1、taxonomy=current)。",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "4abd42743eb624ea8d4baaf944d218e0405e4971",
+        "sha256": "331ea264c9d169987b59e5f4ef18cfb5c5b48507c3cfec83e6616b519eb95e7d",
+        "bytes": 3314
+      }
+    },
+    {
+      "id": "F-R3-CORE-389d38a5c8a405a914c2",
+      "path": "src/schema/harness-db-tables-evaluation.ts",
+      "lines": "122",
+      "quote": "  // HM-04 (DB 閲覧) / HM-01 (機能一覧→画面) / PM-06 (設計書ビューア) の DB 駆動を可能にする (従来 doc-only)。",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "e176da718d598f8f84c2726e5131b0d80c5031ba",
+        "sha256": "3a1b475a3eec5a00feb9915c1dcca16ea228e17d83cdcc6c2a5a9055bd3f07d2",
+        "bytes": 4621
+      }
+    },
+    {
+      "id": "F-R3-CORE-3de7a16f87ddb4811695",
+      "path": "src/setup/pack-publication-admission.ts",
+      "lines": "18",
+      "quote": "    \"CANDIDATE-PACKPUB-ADM-001\",",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "bc7462e7438b211419f72cfcc99d028990510779",
+        "sha256": "bb218426849c327f517031c0a24dc5031cbd85de659243626aa884905d0a47e2",
+        "bytes": 31357
+      }
+    },
+    {
+      "id": "F-R3-CORE-9b968080119e321c8b98",
+      "path": "src/state-db/projection-writer.ts",
+      "lines": "1078",
+      "quote": "    [VERIFY_CUTOVER_PLAN_ID, \"PLAN-M-01-cutover-backfill\", \"pass\"],",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "ea4de31119abc8bca201065c6c8101a7ff1a054b",
+        "sha256": "18e8bfcaacf16895734532b4e7cde19445457509dbe5647aec434bfceb4762ba",
+        "bytes": 96789
+      }
+    },
+    {
+      "id": "F-R3-CORE-8b6755d31206a5c12bc3",
+      "path": "src/state-db/projection-writer.ts",
+      "lines": "2562",
+      "quote": " * HM-01 (機能一覧→画面) / PM-06 (設計書ビューア) を DB 駆動できなかった。",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "ea4de31119abc8bca201065c6c8101a7ff1a054b",
+        "sha256": "18e8bfcaacf16895734532b4e7cde19445457509dbe5647aec434bfceb4762ba",
+        "bytes": 96789
+      }
+    },
+    {
+      "id": "F-R3-CORE-1df9fd3d5840bfee4e4a",
+      "path": "tests/claude-memory-terminal-gc.test.ts",
+      "lines": "66",
+      "quote": "  it(\"U-MEMTERM-001: claims, merged/closed PRs, and replaced heads are typed terminal states\", () => {",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "a171b8df547afd0d97e342df44b922d727307bf3",
+        "sha256": "1f883f979bc3539197b670b367aa118c1856cc3b554b9f4cf9f48e1905ab1205",
+        "bytes": 8899
+      }
+    },
+    {
+      "id": "F-R3-CORE-aa45906c9e66a3bb06e5",
+      "path": "tests/design-elicitation.test.ts",
+      "lines": "27",
+      "quote": "    screen_id: \"PM-01\",",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "d1d94f16ac8bf2ba507f2a511ef32eb183f2990b",
+        "sha256": "e0c2dfca68d77762a7c13328ac7f7e1869eeac487926318b0581eb01c036084f",
+        "bytes": 8404
+      }
+    },
+    {
+      "id": "F-R3-CORE-cf1b5155325ba62c8e0e",
+      "path": "tests/design-elicitation.test.ts",
+      "lines": "43",
+      "quote": "  { screen_id: \"PM-01\", requirement_id: \"BR-03\", requirement_kind: \"BR\" },",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "d1d94f16ac8bf2ba507f2a511ef32eb183f2990b",
+        "sha256": "e0c2dfca68d77762a7c13328ac7f7e1869eeac487926318b0581eb01c036084f",
+        "bytes": 8404
+      }
+    },
+    {
+      "id": "F-R3-CORE-ff0a45d44f70aa6dfa6c",
+      "path": "tests/design-elicitation.test.ts",
+      "lines": "85",
+      "quote": "    const pm = r.candidates.find((c) => c.screen_id === \"PM-01\");",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "d1d94f16ac8bf2ba507f2a511ef32eb183f2990b",
+        "sha256": "e0c2dfca68d77762a7c13328ac7f7e1869eeac487926318b0581eb01c036084f",
+        "bytes": 8404
+      }
+    },
+    {
+      "id": "F-R3-CORE-1342e3f26bf6fb59a67b",
+      "path": "tests/design-elicitation.test.ts",
+      "lines": "121",
+      "quote": "    expect(l3?.screen_ids.sort()).toEqual([\"HM-04\", \"PM-01\"]);",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "d1d94f16ac8bf2ba507f2a511ef32eb183f2990b",
+        "sha256": "e0c2dfca68d77762a7c13328ac7f7e1869eeac487926318b0581eb01c036084f",
+        "bytes": 8404
+      }
+    },
+    {
+      "id": "F-R3-CORE-db0d3e2d0b45b72e8711",
+      "path": "tests/forward/fsm.test.ts",
+      "lines": "47",
+      "quote": "  it(\"U-FSM-001: derives every allowed edge from the single policy table and rejects closed-world gaps\", () => {",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "a665d4f370862f52552c529a145ed159b7193ed1",
+        "sha256": "2c7539d5b8c48a29e453fe7562631425c00614ae0bc05f416c1185098efecaa6",
+        "bytes": 25164
+      }
+    },
+    {
+      "id": "F-R3-CORE-f53836d25026a3745920",
+      "path": "tests/forward/fsm.test.ts",
+      "lines": "68",
+      "quote": "  it(\"U-FSM-001: evaluates the complete 17 state by 17 event closed world\", () => {",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "a665d4f370862f52552c529a145ed159b7193ed1",
+        "sha256": "2c7539d5b8c48a29e453fe7562631425c00614ae0bc05f416c1185098efecaa6",
+        "bytes": 25164
+      }
+    },
+    {
+      "id": "F-R3-CORE-ae4065f9029c3cd1584c",
+      "path": "tests/forward/fsm.test.ts",
+      "lines": "368",
+      "quote": "  it(\"P-FSM-001: generated sequences never reach an undeclared state and sequence faults fail closed\", () => {",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "a665d4f370862f52552c529a145ed159b7193ed1",
+        "sha256": "2c7539d5b8c48a29e453fe7562631425c00614ae0bc05f416c1185098efecaa6",
+        "bytes": 25164
+      }
+    },
+    {
+      "id": "F-R3-CORE-d1f75e8bb26220b4c7a9",
+      "path": "tests/forward/fsm.test.ts",
+      "lines": "518",
+      "quote": "      return { runnerId: \"vitest\", testIds: [\"U-FSM-001\"] };",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "a665d4f370862f52552c529a145ed159b7193ed1",
+        "sha256": "2c7539d5b8c48a29e453fe7562631425c00614ae0bc05f416c1185098efecaa6",
+        "bytes": 25164
+      }
+    },
+    {
+      "id": "F-R3-CORE-64e0b93a877566c6dcd3",
+      "path": "tests/g1-trace.test.ts",
+      "lines": "23",
+      "quote": "    expect(screens.has(\"PM-01\")).toBe(true);",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "77abec12fee629e08b9ec38297b000d5f02fa012",
+        "sha256": "050efafc90c1bed21ca9701f408caf9ca28acf5bc1c4b171aacb6dcadd6a8f61",
+        "bytes": 5431
+      }
+    },
+    {
+      "id": "F-R3-CORE-b04cb0ded6e01571bc36",
+      "path": "tests/g1-trace.test.ts",
+      "lines": "58",
+      "quote": "      \"| PM-01 | Main screen |\",",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "77abec12fee629e08b9ec38297b000d5f02fa012",
+        "sha256": "050efafc90c1bed21ca9701f408caf9ca28acf5bc1c4b171aacb6dcadd6a8f61",
+        "bytes": 5431
+      }
+    },
+    {
+      "id": "F-R3-CORE-e8043bd11095fee75ef2",
+      "path": "tests/g1-trace.test.ts",
+      "lines": "61",
+      "quote": "      \"| BR-01 | PM-01 |\",",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "77abec12fee629e08b9ec38297b000d5f02fa012",
+        "sha256": "050efafc90c1bed21ca9701f408caf9ca28acf5bc1c4b171aacb6dcadd6a8f61",
+        "bytes": 5431
+      }
+    },
+    {
+      "id": "F-R3-CORE-02c9a87bac7375d2c48d",
+      "path": "tests/g1-trace.test.ts",
+      "lines": "62",
+      "quote": "      \"| **UX-02** | PM-01 |\",",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "77abec12fee629e08b9ec38297b000d5f02fa012",
+        "sha256": "050efafc90c1bed21ca9701f408caf9ca28acf5bc1c4b171aacb6dcadd6a8f61",
+        "bytes": 5431
+      }
+    },
+    {
+      "id": "F-R3-CORE-1724c3427e124d7e9473",
+      "path": "tests/g1-trace.test.ts",
+      "lines": "65",
+      "quote": "      \"| **BR-05 | PM-01 |\",",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "77abec12fee629e08b9ec38297b000d5f02fa012",
+        "sha256": "050efafc90c1bed21ca9701f408caf9ca28acf5bc1c4b171aacb6dcadd6a8f61",
+        "bytes": 5431
+      }
+    },
+    {
+      "id": "F-R3-CORE-18e6a50efd847cf6a2b8",
+      "path": "tests/g1-trace.test.ts",
+      "lines": "66",
+      "quote": "      \"| BR-006 | PM-01 |\",",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "77abec12fee629e08b9ec38297b000d5f02fa012",
+        "sha256": "050efafc90c1bed21ca9701f408caf9ca28acf5bc1c4b171aacb6dcadd6a8f61",
+        "bytes": 5431
+      }
+    },
+    {
+      "id": "F-R3-CORE-9a03ed3d7a863b63d89b",
+      "path": "tests/g1-trace.test.ts",
+      "lines": "69",
+      "quote": "      \"| **PM-01** | BR-01 |\",",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "77abec12fee629e08b9ec38297b000d5f02fa012",
+        "sha256": "050efafc90c1bed21ca9701f408caf9ca28acf5bc1c4b171aacb6dcadd6a8f61",
+        "bytes": 5431
+      }
+    },
+    {
+      "id": "F-R3-CORE-c45c6b9ae4d1ecf2777b",
+      "path": "tests/g1-trace.test.ts",
+      "lines": "75",
+      "quote": "    expect([...(trace.get(\"BR-01\") ?? [])]).toEqual([\"PM-01\"]);",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "77abec12fee629e08b9ec38297b000d5f02fa012",
+        "sha256": "050efafc90c1bed21ca9701f408caf9ca28acf5bc1c4b171aacb6dcadd6a8f61",
+        "bytes": 5431
+      }
+    },
+    {
+      "id": "F-R3-CORE-0e4437135c77cdcbaedf",
+      "path": "tests/g1-trace.test.ts",
+      "lines": "76",
+      "quote": "    expect([...(trace.get(\"UX-02\") ?? [])]).toEqual([\"PM-01\"]);",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "77abec12fee629e08b9ec38297b000d5f02fa012",
+        "sha256": "050efafc90c1bed21ca9701f408caf9ca28acf5bc1c4b171aacb6dcadd6a8f61",
+        "bytes": 5431
+      }
+    },
+    {
+      "id": "F-R3-CORE-dcf6aad690ce0e1d15ed",
+      "path": "tests/g1-trace.test.ts",
+      "lines": "85",
+      "quote": "        \"| PM-01 | Main screen |\",",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "77abec12fee629e08b9ec38297b000d5f02fa012",
+        "sha256": "050efafc90c1bed21ca9701f408caf9ca28acf5bc1c4b171aacb6dcadd6a8f61",
+        "bytes": 5431
+      }
+    },
+    {
+      "id": "F-R3-CORE-ca0b4307c9d3b9f8c0fb",
+      "path": "tests/g1-trace.test.ts",
+      "lines": "88",
+      "quote": "        \"| BR-01 | PM-01 |\",",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "77abec12fee629e08b9ec38297b000d5f02fa012",
+        "sha256": "050efafc90c1bed21ca9701f408caf9ca28acf5bc1c4b171aacb6dcadd6a8f61",
+        "bytes": 5431
+      }
+    },
+    {
+      "id": "F-R3-CORE-a4048d733ff7e0dfce34",
+      "path": "tests/g1-trace.test.ts",
+      "lines": "91",
+      "quote": "        \"| **PM-01** | BR-01 |\",",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "77abec12fee629e08b9ec38297b000d5f02fa012",
+        "sha256": "050efafc90c1bed21ca9701f408caf9ca28acf5bc1c4b171aacb6dcadd6a8f61",
+        "bytes": 5431
+      }
+    },
+    {
+      "id": "F-R3-CORE-068bea62c9058181ab3f",
+      "path": "tests/g1-trace.test.ts",
+      "lines": "107",
+      "quote": "        \"| PM-01 | Main screen |\",",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "77abec12fee629e08b9ec38297b000d5f02fa012",
+        "sha256": "050efafc90c1bed21ca9701f408caf9ca28acf5bc1c4b171aacb6dcadd6a8f61",
+        "bytes": 5431
+      }
+    },
+    {
+      "id": "F-R3-CORE-c311dbf9e49672f3abf2",
+      "path": "tests/g1-trace.test.ts",
+      "lines": "110",
+      "quote": "        \"|　**BR-01**　| PM-01 |\",",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "77abec12fee629e08b9ec38297b000d5f02fa012",
+        "sha256": "050efafc90c1bed21ca9701f408caf9ca28acf5bc1c4b171aacb6dcadd6a8f61",
+        "bytes": 5431
+      }
+    },
+    {
+      "id": "F-R3-CORE-8500d7fab22dba33b1d3",
+      "path": "tests/g1-trace.test.ts",
+      "lines": "116",
+      "quote": "    expect([...(trace.get(\"BR-01\") ?? [])]).toEqual([\"PM-01\"]);",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "77abec12fee629e08b9ec38297b000d5f02fa012",
+        "sha256": "050efafc90c1bed21ca9701f408caf9ca28acf5bc1c4b171aacb6dcadd6a8f61",
+        "bytes": 5431
+      }
+    },
+    {
+      "id": "F-R3-CORE-767bca07a99cd5287fa6",
+      "path": "tests/git-workspace-fingerprint.test.ts",
+      "lines": "254",
+      "quote": "    ] as const)(\"U-FSTREAM-1: chunked hash matches whole-buffer sha256 for a %s file (%i bytes)\", (_label, size) => {",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "076b512339e86d401514aadba8efc8cc830b332d",
+        "sha256": "1e86e40f8b442be92d050fb3510fd6cb2ebc4743d910af41f285ce442b49df66",
+        "bytes": 12318
+      }
+    },
+    {
+      "id": "F-R3-CORE-6f4492ea0029d37fecbf",
+      "path": "tests/mode-catalog.test.ts",
+      "lines": "47",
+      "quote": "    expect(workflowModeForPlan({ planId: \"PLAN-M-01-cutover\" })).toBe(\"Verification\");",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "22867214c59afc853e4fbf6212c4311477047a1e",
+        "sha256": "de70a654448243fabe8d31d0776b37a1b506bd0cad8d01dc39754a77bdce9298",
+        "bytes": 5147
+      }
+    },
+    {
+      "id": "F-R3-CORE-6f8c165219d47fca74b8",
+      "path": "tests/oracle-test-trace.test.ts",
+      "lines": "311",
+      "quote": "        \"| `CANDIDATE-P-FSM-001` | 未実装 oracle | RED |\",",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "63a8dfc7e6ac5a2c7c245fe38454fe2db00663ad",
+        "sha256": "f1ffa9663ffd316557565ed1f24c480b89648c1bde8a06de9b40ac999bc8317e",
+        "bytes": 21739
+      }
+    },
+    {
+      "id": "F-R3-CORE-fc904b4edc2e050324d2",
+      "path": "tests/pack-canary-acceptance.test.ts",
+      "lines": "1391",
+      "quote": "        screen: { source_id: \"SC-001\", derived_id: \"PM-01\" },",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "9dec8f65db3c95f4a36ff24e8f7f7c26f74501cf",
+        "sha256": "820abd6d61d7f51f4890982105f5c7636333973f8a6d8eece94209ccaf614964",
+        "bytes": 56730
+      }
+    },
+    {
+      "id": "F-R3-CORE-9c55a5cee1dfbc09d17b",
+      "path": "tests/pack-canary-acceptance.test.ts",
+      "lines": "1392",
+      "quote": "        trace: { business_id: \"BR-01\", functional_id: \"FR-L1-01\", screen_id: \"PM-01\" },",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "9dec8f65db3c95f4a36ff24e8f7f7c26f74501cf",
+        "sha256": "820abd6d61d7f51f4890982105f5c7636333973f8a6d8eece94209ccaf614964",
+        "bytes": 56730
+      }
+    },
+    {
+      "id": "F-R3-CORE-62419293b687cf7d5495",
+      "path": "tests/pack-publication-admission.test.ts",
+      "lines": "174",
+      "quote": "      \"CANDIDATE-PACKPUB-ADM-001\",",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "4f925b03a65d1f91f8414062f638ae69364b064c",
+        "sha256": "5ea9924190b274774d4e0da3c01da44abfa14c52dda6914364256946e1dfdfd7",
+        "bytes": 22890
+      }
+    },
+    {
+      "id": "F-R3-CORE-27865c98181cd4c7a472",
+      "path": "tests/pack-publication-admission.test.ts",
+      "lines": "309",
+      "quote": "  it(\"U-PACKPUB-ADM-001 denies a different observed PR number\", async () => {",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "4f925b03a65d1f91f8414062f638ae69364b064c",
+        "sha256": "5ea9924190b274774d4e0da3c01da44abfa14c52dda6914364256946e1dfdfd7",
+        "bytes": 22890
+      }
+    },
+    {
+      "id": "F-R3-CORE-554fdb36f4bdd36d89b5",
+      "path": "tests/plan-admission.test.ts",
+      "lines": "15",
+      "quote": "  it(\"U-PADM-001: permits a normal Forward PLAN without an Issue\", () => {",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "4f9d5083d6c35af27961b418cad3582898db437c",
+        "sha256": "6fb802e2e10ee024c9fef32c534373b4821dc29b68210e3e775da023eacbda37",
+        "bytes": 14703
+      }
+    },
+    {
+      "id": "F-R3-CORE-d79345262f12350f3ec0",
+      "path": "tests/plan-id-identity.test.ts",
+      "lines": "23",
+      "quote": "    expect(parseReservablePlanIdIdentity(\"PLAN-M-01-cutover-backfill\")).toBeNull();",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "fb55b0d55a1edcb971f7b1db5339e9f40999a1ad",
+        "sha256": "8656b1b0cca38239e306ed7f17c60a1cc248a8b32b2aeb45cf771ce4f21484d1",
+        "bytes": 1788
+      }
+    },
+    {
+      "id": "F-R3-CORE-7b987a2e8a4fab876ef4",
+      "path": "tests/plan-id-taxonomy.test.ts",
+      "lines": "26",
+      "quote": "    \"PLAN-M-01-cutover-backfill\",",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "9bc071a2fd4029d95be15442f52777ec7c7d7fd8",
+        "sha256": "0ce36d954d4bfe3f9422d88a6327b193251b778368e3fc42c6959f0381451cf7",
+        "bytes": 1960
+      }
+    },
+    {
+      "id": "F-R3-CORE-3d91243d7208b19b8899",
+      "path": "tests/projection-writer.test.ts",
+      "lines": "68",
+      "quote": "  existsSync(join(process.cwd(), \"docs\", \"plans\", \"PLAN-M-01-cutover-backfill.md\"));",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "be50fd1dbfa9579f3c6e8e49ff0fe79c5de6743a",
+        "sha256": "8421559a61148d49cd25050e9ee36f37893ab2c8ad94db62ea863296f3eef79b",
+        "bytes": 102246
+      }
+    },
+    {
+      "id": "F-R3-CORE-4bdeb78435093b751236",
+      "path": "tests/projection-writer.test.ts",
+      "lines": "2377",
+      "quote": "        .all(\"HM-01\") as { requirement_id: string }[];",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "be50fd1dbfa9579f3c6e8e49ff0fe79c5de6743a",
+        "sha256": "8421559a61148d49cd25050e9ee36f37893ab2c8ad94db62ea863296f3eef79b",
+        "bytes": 102246
+      }
+    },
+    {
+      "id": "F-R3-CORE-e09185eaeacc2ac9c779",
+      "path": "tests/projection-writer.test.ts",
+      "lines": "2517",
+      "quote": "      expect(String(cutoverBand?.roadmap_ids)).toContain(\"PLAN-M-01-cutover-backfill\");",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "be50fd1dbfa9579f3c6e8e49ff0fe79c5de6743a",
+        "sha256": "8421559a61148d49cd25050e9ee36f37893ab2c8ad94db62ea863296f3eef79b",
+        "bytes": 102246
+      }
+    },
+    {
+      "id": "F-R3-CORE-fa8bf63917ba54818ec0",
+      "path": "tests/projection-writer.test.ts",
+      "lines": "2523",
+      "quote": "        .get(\"PLAN-M-01-cutover-backfill\", \"G-CUTOVER.B\");",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "be50fd1dbfa9579f3c6e8e49ff0fe79c5de6743a",
+        "sha256": "8421559a61148d49cd25050e9ee36f37893ab2c8ad94db62ea863296f3eef79b",
+        "bytes": 102246
+      }
+    },
+    {
+      "id": "F-R3-CORE-4d7f47fa6756e1aae410",
+      "path": "tests/projection-writer.test.ts",
+      "lines": "2534",
+      "quote": "        .get(\"PLAN-M-01-cutover-backfill\");",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "be50fd1dbfa9579f3c6e8e49ff0fe79c5de6743a",
+        "sha256": "8421559a61148d49cd25050e9ee36f37893ab2c8ad94db62ea863296f3eef79b",
+        "bytes": 102246
+      }
+    },
+    {
+      "id": "F-R3-CORE-e5ed9f4ca20ae148937a",
+      "path": "tests/projection-writer.test.ts",
+      "lines": "2637",
+      "quote": "        .get(\"PLAN-M-01-cutover-backfill\");",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "be50fd1dbfa9579f3c6e8e49ff0fe79c5de6743a",
+        "sha256": "8421559a61148d49cd25050e9ee36f37893ab2c8ad94db62ea863296f3eef79b",
+        "bytes": 102246
+      }
+    },
+    {
+      "id": "F-R3-CORE-970e75e2de1868ebf768",
+      "path": "tests/projection-writer.test.ts",
+      "lines": "2646",
+      "quote": "        .get(\"PLAN-M-01-cutover-backfill\", String(skillRecommendation?.skill_id ?? \"\"));",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "be50fd1dbfa9579f3c6e8e49ff0fe79c5de6743a",
+        "sha256": "8421559a61148d49cd25050e9ee36f37893ab2c8ad94db62ea863296f3eef79b",
+        "bytes": 102246
+      }
+    },
+    {
+      "id": "F-R3-CORE-a7efa73bc5b3e05ec5a7",
+      "path": "tests/release-consumer-gates.test.ts",
+      "lines": "138",
+      "quote": "    `${l1Adapt()}\\n\\n## §1 画面一覧\\nPM-01\\n## §2 次\\n### §5.1 業務要求トレース\\n| **BR-01** | PM-01 |\\n### §5.3 機能要求トレース\\n| **FR-L1-01** | PM-01 |\\n### §5.4 次\\n### §5.5 画面トレース\\n| **PM-01** | BR-01 / FR-L1-01 |\\n### §5.6 次\\n`,",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "288c73541b00c1139f60adfb9421ad418b90a581",
+        "sha256": "e427a173d3cbece85042b47a176a2b14a83737910aa873eced939db0032a5358",
+        "bytes": 119287
+      }
+    },
+    {
+      "id": "F-R3-CORE-4612dcb967e9f8cbce07",
+      "path": "tests/roadmap.test.ts",
+      "lines": "222",
+      "quote": "      roadmaps: expect.arrayContaining([\"PLAN-M-01-cutover-backfill\"]),",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "5953d82056b8c56ccf52d9f9683bcec2c0ca7069",
+        "sha256": "b9343f88aebd63c431182d51ac0042f8c306c325e9da29ad722a2477c6660fea",
+        "bytes": 16009
+      }
+    },
+    {
+      "id": "F-R3-CORE-ac803b59aaf7d4e31851",
+      "path": "tests/runtime.test.ts",
+      "lines": "53",
+      "quote": "describe(\"nextActionForMode (PLAN-L7-84 / A-138 ITEM-1, requirements §6)\", () => {",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "ddd68990cf5de428aa9356a99194569a122d29da",
+        "sha256": "21660bb9bc4b19f82e8e275178592a23f23897cf6fcf972ce35351cbb0bb4e62",
+        "bytes": 2943
+      }
+    },
+    {
+      "id": "F-R3-CORE-f2e580d29a81f2ea52fe",
+      "path": "tests/screen-impl-pair-freeze.test.ts",
+      "lines": "31",
+      "quote": "      implementedScreens: [\"PM-01\", \"HM-01\"],",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "223ca136817cbb27b0383ae5e983284648d8b733",
+        "sha256": "be4bea690afb03bb5b2ae247f4f32ba78139a2461e674b08ad519a1a27f1da1a",
+        "bytes": 5757
+      }
+    },
+    {
+      "id": "F-R3-CORE-33656803cba1991fb715",
+      "path": "tests/screen-impl-pair-freeze.test.ts",
+      "lines": "36",
+      "quote": "    expect(r.violations).toEqual([\"PM-01\", \"HM-01\"]);",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "223ca136817cbb27b0383ae5e983284648d8b733",
+        "sha256": "be4bea690afb03bb5b2ae247f4f32ba78139a2461e674b08ad519a1a27f1da1a",
+        "bytes": 5757
+      }
+    },
+    {
+      "id": "F-R3-CORE-468f297889c7871f852e",
+      "path": "tests/screen-impl-pair-freeze.test.ts",
+      "lines": "43",
+      "quote": "      implementedScreens: [\"PM-01\"],",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "223ca136817cbb27b0383ae5e983284648d8b733",
+        "sha256": "be4bea690afb03bb5b2ae247f4f32ba78139a2461e674b08ad519a1a27f1da1a",
+        "bytes": 5757
+      }
+    },
+    {
+      "id": "F-R3-CORE-e7e36d8556b6fff6b2fc",
+      "path": "tests/screen-impl-pair-freeze.test.ts",
+      "lines": "69",
+      "quote": "      base({ implementedScreens: [\"PM-01\"], nextPairFreeze: null }),",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "223ca136817cbb27b0383ae5e983284648d8b733",
+        "sha256": "be4bea690afb03bb5b2ae247f4f32ba78139a2461e674b08ad519a1a27f1da1a",
+        "bytes": 5757
+      }
+    },
+    {
+      "id": "F-R3-CORE-97fa82decee2cffb4aa5",
+      "path": "tests/screen-impl-pair-freeze.test.ts",
+      "lines": "77",
+      "quote": "    const r = analyzeScreenImplPairFreeze(base({ implementedScreens: [\"PM-01\"] }));",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "223ca136817cbb27b0383ae5e983284648d8b733",
+        "sha256": "be4bea690afb03bb5b2ae247f4f32ba78139a2461e674b08ad519a1a27f1da1a",
+        "bytes": 5757
+      }
+    },
+    {
+      "id": "F-R3-CORE-d5e204d3caf0f46c5fed",
+      "path": "tests/screen-impl-pair-freeze.test.ts",
+      "lines": "81",
+      "quote": "    expect(msg).toContain(\"PM-01\");",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "223ca136817cbb27b0383ae5e983284648d8b733",
+        "sha256": "be4bea690afb03bb5b2ae247f4f32ba78139a2461e674b08ad519a1a27f1da1a",
+        "bytes": 5757
+      }
+    },
+    {
+      "id": "F-R3-CORE-4fb1222b22c4ee4f4f01",
+      "path": "tests/screen-impl-pair-freeze.test.ts",
+      "lines": "108",
+      "quote": "    writeScreenList('next_pair_freeze: L10\\nimplemented_screens: \"PM-01 PM-02\"');",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "223ca136817cbb27b0383ae5e983284648d8b733",
+        "sha256": "be4bea690afb03bb5b2ae247f4f32ba78139a2461e674b08ad519a1a27f1da1a",
+        "bytes": 5757
+      }
+    },
+    {
+      "id": "F-R3-CORE-5ba04547046626e15969",
+      "path": "tests/screen-impl-pair-freeze.test.ts",
+      "lines": "112",
+      "quote": "    expect(input.implementedScreens).toEqual([\"PM-01\", \"PM-02\"]);",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "223ca136817cbb27b0383ae5e983284648d8b733",
+        "sha256": "be4bea690afb03bb5b2ae247f4f32ba78139a2461e674b08ad519a1a27f1da1a",
+        "bytes": 5757
+      }
+    },
+    {
+      "id": "F-R3-CORE-432fa4fde84ad3030f38",
+      "path": "tests/screen-impl-pair-freeze.test.ts",
+      "lines": "118",
+      "quote": "    writeScreenList('next_pair_freeze: L4\\nimplemented_screens: \"PM-01\"');",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "223ca136817cbb27b0383ae5e983284648d8b733",
+        "sha256": "be4bea690afb03bb5b2ae247f4f32ba78139a2461e674b08ad519a1a27f1da1a",
+        "bytes": 5757
+      }
+    },
+    {
+      "id": "F-R3-CORE-52b8277f3a7ee12db46e",
+      "path": "tests/team-schema.test.ts",
+      "lines": "10",
+      "quote": "describe(\"U-TEAM-001 teamDefinitionSchema\", () => {",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "aa8f8babab02fc4b3e1afda69ec57b3a6df0c8ab",
+        "sha256": "de9df80524de0489ee56810ea4c60e4794de01c4cf4d9de3b43af2ecc8cd35ce",
+        "bytes": 4668
+      }
+    },
+    {
+      "id": "F-R3-CORE-790eac333193b3d431c5",
+      "path": "tests/vmodel-source-assets.test.ts",
+      "lines": "246",
+      "quote": "    expect(candidateIds).not.toContain(\"CANDIDATE-P-FSM-001\");",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "9e0d11f4c7c3bcabadde8ba0dd8c4636c1eba3bd",
+        "sha256": "f886a0ea18b8b990a9762022799742851ed62301aed962e48b7f2e1bfdfd88c0",
+        "bytes": 14056
+      }
+    },
+    {
+      "id": "F-R3-CORE-1f33e3a6caa6b82d25b2",
+      "path": "tests/vmodel-source-assets.test.ts",
+      "lines": "247",
+      "quote": "    expect(unitDesign).toContain(\"| `P-FSM-001` |\");",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "9e0d11f4c7c3bcabadde8ba0dd8c4636c1eba3bd",
+        "sha256": "f886a0ea18b8b990a9762022799742851ed62301aed962e48b7f2e1bfdfd88c0",
+        "bytes": 14056
+      }
     }
   ],
   "records": [
@@ -8073,14 +11201,19 @@
       "sourceBytes": 15680,
       "dispositionCandidate": "廃止予定",
       "sourceCandidateLabel": "retirement-planned",
-      "reason": "S0-S4のPoC工程は将来の運用廃止候補。S4 promote先はPLAN-REVERSE-08/concept §2.5。V4D-054/078に沿って本PLANはread-only履歴として保持する候補であり、現在の退役完了・削除許可を意味しない。 r2で固定sourceのsrc/testsを完全IDとbare core IDの両方で再検索した。 tests/plan-id-taxonomy.test.tsにも参照があり、taxonomy/identity fixtureと実repo・projection検証を区別して保持する。 bare core参照は完全IDへの結合未確定として別に保持し、責務移管・廃止の証明にしない。 これらの依存は将来の廃止前に照合・解消し、現時点の削除許可を導かない。",
+      "reason": "S0-S4のPoC工程は将来の運用廃止候補。S4 promote先はPLAN-REVERSE-08/concept §2.5。V4D-054/078に沿って本PLANはread-only履歴として保持する候補であり、現在の退役完了・削除許可を意味しない。 r2で固定sourceのsrc/testsを完全IDとbare core IDの両方で再検索した。 tests/plan-id-taxonomy.test.tsにも参照があり、taxonomy/identity fixtureと実repo・projection検証を区別して保持する。 bare core参照は完全IDへの結合未確定として別に保持し、責務移管・廃止の証明にしない。 これらの依存は将来の廃止前に照合・解消し、現時点の削除許可を導かない。 r3の統一検索では完全ID参照1件、core・接尾辞・PLAN省略・slash省略表記の参照4件を記録した。後者にはコメント・別slug・fixtureを含み、完全IDのproduction責務へ自動結合しない。すべて証拠参照へ残し、将来退役前の依存照合対象とする。",
       "sourceReason": "S0-S4のPoC工程は将来の運用廃止候補。S4 promote先はPLAN-REVERSE-08/concept §2.5。V4D-054/078に沿って本PLANはread-only履歴として保持する候補であり、現在の退役完了・削除許可を意味しない。",
       "evidenceRefs": [
         "V4D-054",
         "V4D-078",
         "DISCOVERY-01-S4",
         "F-R2-DEPENDENCY-7f509c2f79571c76382c",
-        "F-R2-DEPENDENCY-3ff4193ceb276253f750"
+        "F-R2-DEPENDENCY-3ff4193ceb276253f750",
+        "F-R3-CORE-1447ad9f420cb8d022e5",
+        "F-R3-CORE-3ff4193ceb276253f750",
+        "F-R3-CORE-b79752598460d1760268",
+        "F-R3-CORE-7f509c2f79571c76382c",
+        "F-R3-CORE-ac7814723c1aa5375dac"
       ]
     },
     {
@@ -8109,13 +11242,16 @@
       "sourceBytes": 14446,
       "dispositionCandidate": "廃止予定",
       "sourceCandidateLabel": "retirement-planned",
-      "reason": "skill PoC工程は将来運用の廃止候補。score飽和/category carryはPLAN-L6-37がdischarge先。V4D方針どおり本PLANは根拠履歴としてread-only保持する候補であり、退役完了・削除許可や他の残carry消滅を意味しない。 r2で固定sourceのsrc/testsを完全IDとbare core IDの両方で再検索した。 bare core参照は完全IDへの結合未確定として別に保持し、責務移管・廃止の証明にしない。 これらの依存は将来の廃止前に照合・解消し、現時点の削除許可を導かない。",
+      "reason": "skill PoC工程は将来運用の廃止候補。score飽和/category carryはPLAN-L6-37がdischarge先。V4D方針どおり本PLANは根拠履歴としてread-only保持する候補であり、退役完了・削除許可や他の残carry消滅を意味しない。 r2で固定sourceのsrc/testsを完全IDとbare core IDの両方で再検索した。 bare core参照は完全IDへの結合未確定として別に保持し、責務移管・廃止の証明にしない。 これらの依存は将来の廃止前に照合・解消し、現時点の削除許可を導かない。 r3の統一検索では完全ID参照0件、core・接尾辞・PLAN省略・slash省略表記の参照3件を記録した。後者にはコメント・別slug・fixtureを含み、完全IDのproduction責務へ自動結合しない。すべて証拠参照へ残し、将来退役前の依存照合対象とする。",
       "sourceReason": "skill PoC工程は将来運用の廃止候補。score飽和/category carryはPLAN-L6-37がdischarge先。V4D方針どおり本PLANは根拠履歴としてread-only保持する候補であり、退役完了・削除許可や他の残carry消滅を意味しない。",
       "evidenceRefs": [
         "V4D-054",
         "V4D-078",
         "DISCOVERY-03-TRANSFER",
-        "F-R2-DEPENDENCY-f84f902176855dfdd3b3"
+        "F-R2-DEPENDENCY-f84f902176855dfdd3b3",
+        "F-R3-CORE-10af267a6fe9705b0ba1",
+        "F-R3-CORE-b340cb49c412b964388f",
+        "F-R3-CORE-f84f902176855dfdd3b3"
       ]
     },
     {
@@ -8127,13 +11263,15 @@
       "sourceBytes": 21282,
       "dispositionCandidate": "廃止予定",
       "sourceCandidateLabel": "retirement-planned",
-      "reason": "S0-S4 PoC工程は将来運用の廃止候補。process正本化はREVERSE-01へ移管済み。V4D方針どおり本PLANはread-only履歴として保持する候補で、退役完了・削除許可を意味しない。REVERSE-01側のcross-mode walkthrough PO判断carryは別途残る。 r2で固定sourceのsrc/testsを完全IDとbare core IDの両方で再検索した。 bare core参照は完全IDへの結合未確定として別に保持し、責務移管・廃止の証明にしない。 これらの依存は将来の廃止前に照合・解消し、現時点の削除許可を導かない。",
+      "reason": "S0-S4 PoC工程は将来運用の廃止候補。process正本化はREVERSE-01へ移管済み。V4D方針どおり本PLANはread-only履歴として保持する候補で、退役完了・削除許可を意味しない。REVERSE-01側のcross-mode walkthrough PO判断carryは別途残る。 r2で固定sourceのsrc/testsを完全IDとbare core IDの両方で再検索した。 bare core参照は完全IDへの結合未確定として別に保持し、責務移管・廃止の証明にしない。 これらの依存は将来の廃止前に照合・解消し、現時点の削除許可を導かない。 r3の統一検索では完全ID参照0件、core・接尾辞・PLAN省略・slash省略表記の参照2件を記録した。後者にはコメント・別slug・fixtureを含み、完全IDのproduction責務へ自動結合しない。すべて証拠参照へ残し、将来退役前の依存照合対象とする。",
       "sourceReason": "S0-S4 PoC工程は将来運用の廃止候補。process正本化はREVERSE-01へ移管済み。V4D方針どおり本PLANはread-only履歴として保持する候補で、退役完了・削除許可を意味しない。REVERSE-01側のcross-mode walkthrough PO判断carryは別途残る。",
       "evidenceRefs": [
         "V4D-054",
         "V4D-078",
         "DISCOVERY-04-TRANSFER",
-        "F-R2-DEPENDENCY-25e865dc1004a27256d8"
+        "F-R2-DEPENDENCY-25e865dc1004a27256d8",
+        "F-R3-CORE-25e865dc1004a27256d8",
+        "F-R3-CORE-a35258b942a42b41c6e5"
       ]
     },
     {
@@ -8162,13 +11300,15 @@
       "sourceBytes": 10967,
       "dispositionCandidate": "廃止予定",
       "sourceCandidateLabel": "retirement-planned",
-      "reason": "repo-local parityのPoC実行は将来の運用廃止候補。L7-139がCodex hook実装、REVERSE-139が採用モデルをL4 architectureへ移管。global ~/.codex/変更はPoC本文が将来PO判断のscope外としている。本PLANはread-only履歴候補であり、退役完了/削除許可ではない。 r2で固定sourceのsrc/testsを完全IDとbare core IDの両方で再検索した。 bare core参照は完全IDへの結合未確定として別に保持し、責務移管・廃止の証明にしない。 これらの依存は将来の廃止前に照合・解消し、現時点の削除許可を導かない。",
+      "reason": "repo-local parityのPoC実行は将来の運用廃止候補。L7-139がCodex hook実装、REVERSE-139が採用モデルをL4 architectureへ移管。global ~/.codex/変更はPoC本文が将来PO判断のscope外としている。本PLANはread-only履歴候補であり、退役完了/削除許可ではない。 r2で固定sourceのsrc/testsを完全IDとbare core IDの両方で再検索した。 bare core参照は完全IDへの結合未確定として別に保持し、責務移管・廃止の証明にしない。 これらの依存は将来の廃止前に照合・解消し、現時点の削除許可を導かない。 r3の統一検索では完全ID参照0件、core・接尾辞・PLAN省略・slash省略表記の参照2件を記録した。後者にはコメント・別slug・fixtureを含み、完全IDのproduction責務へ自動結合しない。すべて証拠参照へ残し、将来退役前の依存照合対象とする。",
       "sourceReason": "repo-local parityのPoC実行は将来の運用廃止候補。L7-139がCodex hook実装、REVERSE-139が採用モデルをL4 architectureへ移管。global ~/.codex/変更はPoC本文が将来PO判断のscope外としている。本PLANはread-only履歴候補であり、退役完了/削除許可ではない。",
       "evidenceRefs": [
         "V4D-054",
         "V4D-078",
         "DISCOVERY-06-TRANSFER",
-        "F-R2-DEPENDENCY-b9389d533e7dbf7d4f49"
+        "F-R2-DEPENDENCY-b9389d533e7dbf7d4f49",
+        "F-R3-CORE-af159b435f410d711961",
+        "F-R3-CORE-b9389d533e7dbf7d4f49"
       ]
     },
     {
@@ -8197,7 +11337,7 @@
       "sourceBytes": 15242,
       "dispositionCandidate": "廃止予定",
       "sourceCandidateLabel": "retirement-planned",
-      "reason": "forward-convergence invariant自体は現在のrequirement/lint/test契約として存続し、REVERSE-140がDISCOVERY-08のS4 fullbackを正本化。将来retire候補なのはPoC運用PLAN面だけで、gateや契約の削除ではない。PLAN本文/evidenceもread-only保持候補で、移行完了や削除許可を意味しない。 r2で固定sourceのsrc/testsを完全IDとbare core IDの両方で再検索した。 bare core参照は完全IDへの結合未確定として別に保持し、責務移管・廃止の証明にしない。 これらの依存は将来の廃止前に照合・解消し、現時点の削除許可を導かない。",
+      "reason": "forward-convergence invariant自体は現在のrequirement/lint/test契約として存続し、REVERSE-140がDISCOVERY-08のS4 fullbackを正本化。将来retire候補なのはPoC運用PLAN面だけで、gateや契約の削除ではない。PLAN本文/evidenceもread-only保持候補で、移行完了や削除許可を意味しない。 r2で固定sourceのsrc/testsを完全IDとbare core IDの両方で再検索した。 bare core参照は完全IDへの結合未確定として別に保持し、責務移管・廃止の証明にしない。 これらの依存は将来の廃止前に照合・解消し、現時点の削除許可を導かない。 r3の統一検索では完全ID参照0件、core・接尾辞・PLAN省略・slash省略表記の参照4件を記録した。後者にはコメント・別slug・fixtureを含み、完全IDのproduction責務へ自動結合しない。すべて証拠参照へ残し、将来退役前の依存照合対象とする。",
       "sourceReason": "forward-convergence invariant自体は現在のrequirement/lint/test契約として存続し、REVERSE-140がDISCOVERY-08のS4 fullbackを正本化。将来retire候補なのはPoC運用PLAN面だけで、gateや契約の削除ではない。PLAN本文/evidenceもread-only保持候補で、移行完了や削除許可を意味しない。",
       "evidenceRefs": [
         "V4D-054",
@@ -8205,7 +11345,11 @@
         "DISCOVERY-08-TRANSFER",
         "F-R2-DEPENDENCY-c88a3cb3108d73987813",
         "F-R2-DEPENDENCY-852cf35e65cf02607463",
-        "F-R2-DEPENDENCY-13c2787bd7c07cbf7a03"
+        "F-R2-DEPENDENCY-13c2787bd7c07cbf7a03",
+        "F-R3-CORE-c88a3cb3108d73987813",
+        "F-R3-CORE-852cf35e65cf02607463",
+        "F-R3-CORE-13c2787bd7c07cbf7a03",
+        "F-R3-CORE-4ccd12d0f3617e751884"
       ]
     },
     {
@@ -8217,7 +11361,7 @@
       "sourceBytes": 9693,
       "dispositionCandidate": "廃止予定",
       "sourceCandidateLabel": "retirement-planned",
-      "reason": "PoC工程PLANは将来freeze/read-only候補。mode契約はREVERSE-140/concept/processにbackfillされ、deferred-but-committed-futureとversion_targetを現在も維持する。将来保全機能の取消しや移行完了ではなく、PoC履歴PLANの将来退役候補のみ。 r2で固定sourceのsrc/testsを完全IDとbare core IDの両方で再検索した。 bare core参照は完全IDへの結合未確定として別に保持し、責務移管・廃止の証明にしない。 これらの依存は将来の廃止前に照合・解消し、現時点の削除許可を導かない。",
+      "reason": "PoC工程PLANは将来freeze/read-only候補。mode契約はREVERSE-140/concept/processにbackfillされ、deferred-but-committed-futureとversion_targetを現在も維持する。将来保全機能の取消しや移行完了ではなく、PoC履歴PLANの将来退役候補のみ。 r2で固定sourceのsrc/testsを完全IDとbare core IDの両方で再検索した。 bare core参照は完全IDへの結合未確定として別に保持し、責務移管・廃止の証明にしない。 これらの依存は将来の廃止前に照合・解消し、現時点の削除許可を導かない。 r3の統一検索では完全ID参照0件、core・接尾辞・PLAN省略・slash省略表記の参照20件を記録した。後者にはコメント・別slug・fixtureを含み、完全IDのproduction責務へ自動結合しない。すべて証拠参照へ残し、将来退役前の依存照合対象とする。",
       "sourceReason": "PoC工程PLANは将来freeze/read-only候補。mode契約はREVERSE-140/concept/processにbackfillされ、deferred-but-committed-futureとversion_targetを現在も維持する。将来保全機能の取消しや移行完了ではなく、PoC履歴PLANの将来退役候補のみ。",
       "evidenceRefs": [
         "V4D-054",
@@ -8231,7 +11375,27 @@
         "F-R2-DEPENDENCY-cafaa55b0becb4061a59",
         "F-R2-DEPENDENCY-bd19f12d7d8f3dea7d93",
         "F-R2-DEPENDENCY-d033fc58254875446719",
-        "F-R2-DEPENDENCY-0eb0ac1dc922e69d82e4"
+        "F-R2-DEPENDENCY-0eb0ac1dc922e69d82e4",
+        "F-R3-CORE-ba1b1408870c68d5fec2",
+        "F-R3-CORE-dc929119b9e97cac96d9",
+        "F-R3-CORE-bea9e5fbaa62a4086ba9",
+        "F-R3-CORE-92af85794b43ae1a4ab8",
+        "F-R3-CORE-fa778e8db0150ab0e0a9",
+        "F-R3-CORE-cafaa55b0becb4061a59",
+        "F-R3-CORE-bd19f12d7d8f3dea7d93",
+        "F-R3-CORE-d033fc58254875446719",
+        "F-R3-CORE-0eb0ac1dc922e69d82e4",
+        "F-R3-CORE-9bdf007f7defa09a05ce",
+        "F-R3-CORE-bfadd2be098f1dbad061",
+        "F-R3-CORE-7876e98b1b2773c92849",
+        "F-R3-CORE-a90d58d76a99328091e5",
+        "F-R3-CORE-829686c5a4703534b35c",
+        "F-R3-CORE-543cd3ceb9b22c4d68e4",
+        "F-R3-CORE-2bdd24c98c1c30b6181e",
+        "F-R3-CORE-c3d7bbe2167cc7200520",
+        "F-R3-CORE-3604b643093f952321df",
+        "F-R3-CORE-0a3ef8955b497e1800d9",
+        "F-R3-CORE-65579fda789388261942"
       ]
     },
     {
@@ -8971,7 +12135,7 @@
       "sourceBytes": 5324,
       "dispositionCandidate": "廃止予定",
       "sourceCandidateLabel": "retirement-planned",
-      "reason": "L4-13固有のasset-drift sliceはarchitecture設計/doctor gate、PLAN-L5-07とL8 IT-ASSET pair、L6のimplemented-slice signatures/U-oraclesへ降下した明示根拠があるため、将来freeze候補を維持する。ただしL9は未実装roster/skill/command面を別carryとして明記しており、内部asset全体の完了・PLAN責務全部の移管・現在の削除許可は主張しない。 固定sourceのplan/lint-policyがPLAN-L4-13を固定で参照する。将来の廃止前に、このlive code依存を先に解消する必要がある。 r2で固定sourceのsrc/testsを完全IDとbare core IDの両方で再検索した。 production参照はsrc/plan/lint-policy.tsにある。 bare core参照は完全IDへの結合未確定として別に保持し、責務移管・廃止の証明にしない。 これらの依存は将来の廃止前に照合・解消し、現時点の削除許可を導かない。",
+      "reason": "L4-13固有のasset-drift sliceはarchitecture設計/doctor gate、PLAN-L5-07とL8 IT-ASSET pair、L6のimplemented-slice signatures/U-oraclesへ降下した明示根拠があるため、将来freeze候補を維持する。ただしL9は未実装roster/skill/command面を別carryとして明記しており、内部asset全体の完了・PLAN責務全部の移管・現在の削除許可は主張しない。 固定sourceのplan/lint-policyがPLAN-L4-13を固定で参照する。将来の廃止前に、このlive code依存を先に解消する必要がある。 r2で固定sourceのsrc/testsを完全IDとbare core IDの両方で再検索した。 production参照はsrc/plan/lint-policy.tsにある。 bare core参照は完全IDへの結合未確定として別に保持し、責務移管・廃止の証明にしない。 これらの依存は将来の廃止前に照合・解消し、現時点の削除許可を導かない。 r3の統一検索では完全ID参照1件、core・接尾辞・PLAN省略・slash省略表記の参照9件を記録した。後者にはコメント・別slug・fixtureを含み、完全IDのproduction責務へ自動結合しない。すべて証拠参照へ残し、将来退役前の依存照合対象とする。",
       "preservedContractPath": "docs/design/harness/L4-basic-design/architecture.md; docs/design/harness/L5-detailed-design/module-decomposition.md; docs/design/harness/L6-function-design/module-drift.md",
       "sourceReason": "L4-13固有のasset-drift sliceはarchitecture設計/doctor gate、PLAN-L5-07とL8 IT-ASSET pair、L6のimplemented-slice signatures/U-oraclesへ降下した明示根拠があるため、将来freeze候補を維持する。ただしL9は未実装roster/skill/command面を別carryとして明記しており、内部asset全体の完了・PLAN責務全部の移管・現在の削除許可は主張しない。",
       "evidenceRefs": [
@@ -8987,7 +12151,17 @@
         "F-R2-DEPENDENCY-e1db81dae063865ce46e",
         "F-R2-DEPENDENCY-49618a90d87c96868d4c",
         "F-R2-DEPENDENCY-95a06a978dcbf2b418d1",
-        "F-R2-DEPENDENCY-a02c76c6d5c9aa859133"
+        "F-R2-DEPENDENCY-a02c76c6d5c9aa859133",
+        "F-R3-CORE-452103ee082b02e5940a",
+        "F-R3-CORE-f1a6dad4659b6bffcbb7",
+        "F-R3-CORE-e6ea6e0cbb14683b8908",
+        "F-R3-CORE-07d26e5881f96a9f3389",
+        "F-R3-CORE-a8525f0c8d8e5ef4ef33",
+        "F-R3-CORE-4b61c3c3c0296f771d3a",
+        "F-R3-CORE-e1db81dae063865ce46e",
+        "F-R3-CORE-49618a90d87c96868d4c",
+        "F-R3-CORE-95a06a978dcbf2b418d1",
+        "F-R3-CORE-a02c76c6d5c9aa859133"
       ]
     },
     {
@@ -9032,7 +12206,7 @@
       "sourceBytes": 4719,
       "dispositionCandidate": "廃止予定",
       "sourceCandidateLabel": "retirement-planned",
-      "reason": "PLAN-L4-16の個別成果はsecurity sub_doc採択・schema/catalog/profile/requirements同期・L4 bodyとL9 pair接続。security.mdはPLAN-L4-16をslotのsource pointerとして保持し、L4-29が§5-9の追加security substanceを担う。L6-62/L7-260がsecret-scan chainのownerであり、L7-260 pre-push carryは別scopeとして残る。よって将来のPlan-workflow freeze候補だが、現行security slot/source pointerや下流gateの移管完了・削除許可は意味しない。 r2で固定sourceのsrc/testsを完全IDとbare core IDの両方で再検索した。 tests/scope-preview.test.tsにも参照があり、taxonomy/identity fixtureと実repo・projection検証を区別して保持する。 bare core参照は完全IDへの結合未確定として別に保持し、責務移管・廃止の証明にしない。 これらの依存は将来の廃止前に照合・解消し、現時点の削除許可を導かない。",
+      "reason": "PLAN-L4-16の個別成果はsecurity sub_doc採択・schema/catalog/profile/requirements同期・L4 bodyとL9 pair接続。security.mdはPLAN-L4-16をslotのsource pointerとして保持し、L4-29が§5-9の追加security substanceを担う。L6-62/L7-260がsecret-scan chainのownerであり、L7-260 pre-push carryは別scopeとして残る。よって将来のPlan-workflow freeze候補だが、現行security slot/source pointerや下流gateの移管完了・削除許可は意味しない。 r2で固定sourceのsrc/testsを完全IDとbare core IDの両方で再検索した。 tests/scope-preview.test.tsにも参照があり、taxonomy/identity fixtureと実repo・projection検証を区別して保持する。 bare core参照は完全IDへの結合未確定として別に保持し、責務移管・廃止の証明にしない。 これらの依存は将来の廃止前に照合・解消し、現時点の削除許可を導かない。 r3の統一検索では完全ID参照4件、core・接尾辞・PLAN省略・slash省略表記の参照2件を記録した。後者にはコメント・別slug・fixtureを含み、完全IDのproduction責務へ自動結合しない。すべて証拠参照へ残し、将来退役前の依存照合対象とする。",
       "preservedContractPath": "docs/design/harness/L4-basic-design/security.md; docs/test-design/harness/L9-system-test-design.md; docs/governance/vmodel-document-catalog.md",
       "sourceReason": "PLAN-L4-16の個別成果はsecurity sub_doc採択・schema/catalog/profile/requirements同期・L4 bodyとL9 pair接続。security.mdはPLAN-L4-16をslotのsource pointerとして保持し、L4-29が§5-9の追加security substanceを担う。L6-62/L7-260がsecret-scan chainのownerであり、L7-260 pre-push carryは別scopeとして残る。よって将来のPlan-workflow freeze候補だが、現行security slot/source pointerや下流gateの移管完了・削除許可は意味しない。",
       "evidenceRefs": [
@@ -9043,7 +12217,13 @@
         "F-R2-DEPENDENCY-b06821106d9e1f0c1e72",
         "F-R2-DEPENDENCY-554e8129c44f8ec0a97a",
         "F-R2-DEPENDENCY-7ecdb3ffd02f54fbc83d",
-        "F-R2-DEPENDENCY-db6321687a73bccc45b2"
+        "F-R2-DEPENDENCY-db6321687a73bccc45b2",
+        "F-R3-CORE-7ecdb3ffd02f54fbc83d",
+        "F-R3-CORE-48ccd0def03910b94149",
+        "F-R3-CORE-c157511cc0c9ec09c91d",
+        "F-R3-CORE-b06821106d9e1f0c1e72",
+        "F-R3-CORE-554e8129c44f8ec0a97a",
+        "F-R3-CORE-db6321687a73bccc45b2"
       ]
     },
     {
@@ -12078,7 +15258,7 @@
       "sourceBytes": 6829,
       "dispositionCandidate": "廃止予定",
       "sourceCandidateLabel": "retirement-planned",
-      "reason": "PLAN-M-00の具体scopeはverification bandのroadmap host、local L8-L14実行記録、A-132境界auditで、各要素がPlan本文とpinned A-132に対応する。これは完了した一回限りのlocal Plan lifecycleの将来retirement candidateに限る。A-132とroadmapはproduction deploy、post-deploy observation、PO final UATをhuman_required/out-of-scopeと明記するため、その外部責務が完了した、またはこのPLANで代替されたとは主張しない。 r2で固定sourceのsrc/testsを完全IDとbare core IDの両方で再検索した。 production参照はsrc/lint/cycle-p4-verification.ts、src/plan/lint.ts、src/state-db/projection-writer.tsにある。 tests/plan-id-identity.test.ts、tests/plan-id-taxonomy.test.ts、tests/projection-writer.test.ts、tests/readability.test.ts、tests/roadmap.test.ts、tests/session-start-digest.test.tsにも参照があり、taxonomy/identity fixtureと実repo・projection検証を区別して保持する。 bare core参照は完全IDへの結合未確定として別に保持し、責務移管・廃止の証明にしない。 これらの依存は将来の廃止前に照合・解消し、現時点の削除許可を導かない。",
+      "reason": "PLAN-M-00の具体scopeはverification bandのroadmap host、local L8-L14実行記録、A-132境界auditで、各要素がPlan本文とpinned A-132に対応する。これは完了した一回限りのlocal Plan lifecycleの将来retirement candidateに限る。A-132とroadmapはproduction deploy、post-deploy observation、PO final UATをhuman_required/out-of-scopeと明記するため、その外部責務が完了した、またはこのPLANで代替されたとは主張しない。 r2で固定sourceのsrc/testsを完全IDとbare core IDの両方で再検索した。 production参照はsrc/lint/cycle-p4-verification.ts、src/plan/lint.ts、src/state-db/projection-writer.tsにある。 tests/plan-id-identity.test.ts、tests/plan-id-taxonomy.test.ts、tests/projection-writer.test.ts、tests/readability.test.ts、tests/roadmap.test.ts、tests/session-start-digest.test.tsにも参照があり、taxonomy/identity fixtureと実repo・projection検証を区別して保持する。 bare core参照は完全IDへの結合未確定として別に保持し、責務移管・廃止の証明にしない。 これらの依存は将来の廃止前に照合・解消し、現時点の削除許可を導かない。 r3の統一検索では完全ID参照17件、core・接尾辞・PLAN省略・slash省略表記の参照5件を記録した。後者にはコメント・別slug・fixtureを含み、完全IDのproduction責務へ自動結合しない。すべて証拠参照へ残し、将来退役前の依存照合対象とする。",
       "preservedContractPath": "docs/design/harness/L3-functional/roadmap.md; .ut-tdd/audit/A-132-l8-l14-verification-band-execution.md",
       "sourceReason": "PLAN-M-00の具体scopeはverification bandのroadmap host、local L8-L14実行記録、A-132境界auditで、各要素がPlan本文とpinned A-132に対応する。これは完了した一回限りのlocal Plan lifecycleの将来retirement candidateに限る。A-132とroadmapはproduction deploy、post-deploy observation、PO final UATをhuman_required/out-of-scopeと明記するため、その外部責務が完了した、またはこのPLANで代替されたとは主張しない。",
       "evidenceRefs": [
@@ -12105,7 +15285,29 @@
         "F-R2-DEPENDENCY-18b76c73775d8bb3eb2a",
         "F-R2-DEPENDENCY-dd04247fd18571a7a91d",
         "F-R2-DEPENDENCY-ebaf81a6556276f1c307",
-        "F-R2-DEPENDENCY-e5236b55d0b406e4e523"
+        "F-R2-DEPENDENCY-e5236b55d0b406e4e523",
+        "F-R3-CORE-41a8f046a7efbf185bc8",
+        "F-R3-CORE-18b76c73775d8bb3eb2a",
+        "F-R3-CORE-dad83e5924e886271e7a",
+        "F-R3-CORE-6c33acad449829551089",
+        "F-R3-CORE-c9c848f6a8c27b02b7ee",
+        "F-R3-CORE-274574734ff88f96b5b0",
+        "F-R3-CORE-dd04247fd18571a7a91d",
+        "F-R3-CORE-0cdca2fa34725f65df06",
+        "F-R3-CORE-ebaf81a6556276f1c307",
+        "F-R3-CORE-e65ace009865de21d100",
+        "F-R3-CORE-4b1d5437570a48242062",
+        "F-R3-CORE-051802d18410473f18d6",
+        "F-R3-CORE-f4565c530c6b15289296",
+        "F-R3-CORE-e7ea41d23d09aca460ac",
+        "F-R3-CORE-df82ae880b6072fa39f3",
+        "F-R3-CORE-fecaf1fa004f7a66110e",
+        "F-R3-CORE-3eef9eee79ac94a496ce",
+        "F-R3-CORE-e5236b55d0b406e4e523",
+        "F-R3-CORE-8c1a191c08399197692e",
+        "F-R3-CORE-1d1badbdc6b6b0f27f92",
+        "F-R3-CORE-266c5a89354ac3b90a32",
+        "F-R3-CORE-e363a68816aacec42b6f"
       ]
     },
     {
@@ -12117,7 +15319,7 @@
       "sourceBytes": 4756,
       "dispositionCandidate": "廃止予定",
       "sourceCandidateLabel": "retirement-planned",
-      "reason": "retirement-planned候補のscopeは、PLAN-M-01自身の完了済みlocal backfill/projection DoDと、そこから得られたstrategy/roadmap evidenceの保持に限る。statusだけを根拠とはしない。productionに影響するcutoverは明示的にscope外で、人の承認を要するため、production signoffや外部責務は退役対象ではない。 固定sourceのcycle-p4-verification、plan lint、projection-writerがPLAN-M-01を直接参照する。このlive code依存は未解消であり、将来の廃止前に先に解消する条件として保持する。 r2で固定sourceのsrc/testsを完全IDとbare core IDの両方で再検索した。 production参照はsrc/lint/cycle-p4-verification.ts、src/plan/lint.ts、src/state-db/projection-writer.tsにある。 tests/plan-id-identity.test.ts、tests/plan-id-taxonomy.test.ts、tests/projection-writer.test.ts、tests/roadmap.test.tsにも参照があり、taxonomy/identity fixtureと実repo・projection検証を区別して保持する。 これらの依存は将来の廃止前に照合・解消し、現時点の削除許可を導かない。",
+      "reason": "retirement-planned候補のscopeは、PLAN-M-01自身の完了済みlocal backfill/projection DoDと、そこから得られたstrategy/roadmap evidenceの保持に限る。statusだけを根拠とはしない。productionに影響するcutoverは明示的にscope外で、人の承認を要するため、production signoffや外部責務は退役対象ではない。 固定sourceのcycle-p4-verification、plan lint、projection-writerがPLAN-M-01を直接参照する。このlive code依存は未解消であり、将来の廃止前に先に解消する条件として保持する。 r2で固定sourceのsrc/testsを完全IDとbare core IDの両方で再検索した。 production参照はsrc/lint/cycle-p4-verification.ts、src/plan/lint.ts、src/state-db/projection-writer.tsにある。 tests/plan-id-identity.test.ts、tests/plan-id-taxonomy.test.ts、tests/projection-writer.test.ts、tests/roadmap.test.tsにも参照があり、taxonomy/identity fixtureと実repo・projection検証を区別して保持する。 これらの依存は将来の廃止前に照合・解消し、現時点の削除許可を導かない。 r3の統一検索では完全ID参照12件、core・接尾辞・PLAN省略・slash省略表記の参照59件を記録した。後者にはコメント・別slug・fixtureを含み、完全IDのproduction責務へ自動結合しない。すべて証拠参照へ残し、将来退役前の依存照合対象とする。",
       "preservedContractPath": "docs/design/harness/L3-functional/roadmap.md; docs/migration/helix-to-ut-tdd-cutover-strategy.md; .ut-tdd/audit/A-130-harness-db-segment-accept.md; docs/plans/PLAN-M-00-verify-cutover.md",
       "sourceReason": "Retirement-planned candidate is limited to PLAN-M-01's own completed local backfill/projection DoD and preservation of its resulting strategy/roadmap evidence; status alone is not the basis. Production-impacting cutover explicitly remains out of scope and human-approved, so no production signoff or external responsibility is retired.",
       "evidenceRefs": [
@@ -12139,7 +15341,78 @@
         "F-R2-DEPENDENCY-4d7f47fa6756e1aae410",
         "F-R2-DEPENDENCY-e5ed9f4ca20ae148937a",
         "F-R2-DEPENDENCY-970e75e2de1868ebf768",
-        "F-R2-DEPENDENCY-4612dcb967e9f8cbce07"
+        "F-R2-DEPENDENCY-4612dcb967e9f8cbce07",
+        "F-R3-CORE-3e81b163cc113a4dc035",
+        "F-R3-CORE-347bb437a7b673dabeab",
+        "F-R3-CORE-d471cc2ab6d9518794d1",
+        "F-R3-CORE-c53c790334c38944f5fc",
+        "F-R3-CORE-eecf027f0be99ca09d4e",
+        "F-R3-CORE-18b76c73775d8bb3eb2a",
+        "F-R3-CORE-dad83e5924e886271e7a",
+        "F-R3-CORE-db934a6b4ab22214fe32",
+        "F-R3-CORE-df213a32b1e40ad6bfb3",
+        "F-R3-CORE-389d38a5c8a405a914c2",
+        "F-R3-CORE-3de7a16f87ddb4811695",
+        "F-R3-CORE-9b968080119e321c8b98",
+        "F-R3-CORE-8b6755d31206a5c12bc3",
+        "F-R3-CORE-1df9fd3d5840bfee4e4a",
+        "F-R3-CORE-aa45906c9e66a3bb06e5",
+        "F-R3-CORE-cf1b5155325ba62c8e0e",
+        "F-R3-CORE-ff0a45d44f70aa6dfa6c",
+        "F-R3-CORE-1342e3f26bf6fb59a67b",
+        "F-R3-CORE-db0d3e2d0b45b72e8711",
+        "F-R3-CORE-f53836d25026a3745920",
+        "F-R3-CORE-ae4065f9029c3cd1584c",
+        "F-R3-CORE-d1f75e8bb26220b4c7a9",
+        "F-R3-CORE-64e0b93a877566c6dcd3",
+        "F-R3-CORE-b04cb0ded6e01571bc36",
+        "F-R3-CORE-e8043bd11095fee75ef2",
+        "F-R3-CORE-02c9a87bac7375d2c48d",
+        "F-R3-CORE-1724c3427e124d7e9473",
+        "F-R3-CORE-18e6a50efd847cf6a2b8",
+        "F-R3-CORE-9a03ed3d7a863b63d89b",
+        "F-R3-CORE-c45c6b9ae4d1ecf2777b",
+        "F-R3-CORE-0e4437135c77cdcbaedf",
+        "F-R3-CORE-dcf6aad690ce0e1d15ed",
+        "F-R3-CORE-ca0b4307c9d3b9f8c0fb",
+        "F-R3-CORE-a4048d733ff7e0dfce34",
+        "F-R3-CORE-068bea62c9058181ab3f",
+        "F-R3-CORE-c311dbf9e49672f3abf2",
+        "F-R3-CORE-8500d7fab22dba33b1d3",
+        "F-R3-CORE-767bca07a99cd5287fa6",
+        "F-R3-CORE-6f4492ea0029d37fecbf",
+        "F-R3-CORE-6f8c165219d47fca74b8",
+        "F-R3-CORE-fc904b4edc2e050324d2",
+        "F-R3-CORE-9c55a5cee1dfbc09d17b",
+        "F-R3-CORE-62419293b687cf7d5495",
+        "F-R3-CORE-27865c98181cd4c7a472",
+        "F-R3-CORE-554fdb36f4bdd36d89b5",
+        "F-R3-CORE-d79345262f12350f3ec0",
+        "F-R3-CORE-dd04247fd18571a7a91d",
+        "F-R3-CORE-7b987a2e8a4fab876ef4",
+        "F-R3-CORE-3d91243d7208b19b8899",
+        "F-R3-CORE-4bdeb78435093b751236",
+        "F-R3-CORE-e09185eaeacc2ac9c779",
+        "F-R3-CORE-fa8bf63917ba54818ec0",
+        "F-R3-CORE-4d7f47fa6756e1aae410",
+        "F-R3-CORE-e5ed9f4ca20ae148937a",
+        "F-R3-CORE-970e75e2de1868ebf768",
+        "F-R3-CORE-a7efa73bc5b3e05ec5a7",
+        "F-R3-CORE-e5236b55d0b406e4e523",
+        "F-R3-CORE-4612dcb967e9f8cbce07",
+        "F-R3-CORE-ac803b59aaf7d4e31851",
+        "F-R3-CORE-f2e580d29a81f2ea52fe",
+        "F-R3-CORE-33656803cba1991fb715",
+        "F-R3-CORE-468f297889c7871f852e",
+        "F-R3-CORE-e7e36d8556b6fff6b2fc",
+        "F-R3-CORE-97fa82decee2cffb4aa5",
+        "F-R3-CORE-d5e204d3caf0f46c5fed",
+        "F-R3-CORE-4fb1222b22c4ee4f4f01",
+        "F-R3-CORE-5ba04547046626e15969",
+        "F-R3-CORE-432fa4fde84ad3030f38",
+        "F-R3-CORE-52b8277f3a7ee12db46e",
+        "F-R3-CORE-790eac333193b3d431c5",
+        "F-R3-CORE-1f33e3a6caa6b82d25b2"
       ]
     }
   ]
