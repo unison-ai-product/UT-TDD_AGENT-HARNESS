@@ -7776,6 +7776,22 @@
         "revision": 4,
         "content_digest": "sha256:73dc800432e7072a3f0a49204ac4fe5443e6ceec485f1edc9719c8ccdc409b0f"
       }
+    },
+    {
+      "sequence": 487,
+      "previous_record_digest": "sha256:dcee5c01db17c1c982e5bf42c6af2f959036818198bcb3ff4d484f8c19cdb382",
+      "record_digest": "sha256:6e4472ec08a4145828f89868ccca9b46250c627d5759c2f9faeab34735deb2f5",
+      "command_id": "plan-revise:issue-894:PLAN-L6-833:r5-green-command-correction-20261014",
+      "receipt_id": "certificate:89cb7ac8cfcdc6a8d8a54ee16d0c49da",
+      "receipt_digest": "sha256:2c516677920b5d4c0797dd12cda25769fcc0d84302cd0c6bb1823831a14d4198",
+      "decision_digest": "sha256:37fce17350dbf98519ac8048689aa87cc201556311e76f1fef84cbd7d2a0578d",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-833-confirmed-document-placeholder-detection.md",
+        "plan_id": "PLAN-L6-833-confirmed-document-placeholder-detection",
+        "asset_id": "plan:dd2c09788501e0d7c9dcb70d046e670c",
+        "revision": 5,
+        "content_digest": "sha256:bdb588c533955d352c2a4ee4d18fe29dcc708793f3d16b240dde87d7edd4d98b"
+      }
     }
   ]
 }

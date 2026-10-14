@@ -55,6 +55,30 @@ review_evidence:
     tests_green_at: 2026-10-14T06:25:13Z
     reviewed_at: 2026-10-14T06:42:52.413Z
     verdict: PASS-WEAK
+    subject_head: 5b4afabbc9da1a51821c330a062fcee377d17786
+    plan_revision: "3"
+    citations:
+      - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/actions/runs/38519783998/job/115706590449
+    green_commands:
+      - kind: doctor
+        command: node src/cli.ts doctor --strict-green-command-digest --result-file
+          "$UT_TDD_DOCTOR_RESULT_FILE"
+        runner: ci
+        scope: full
+        exit_code: 0
+        completed_at: 2026-10-14T06:03:55Z
+        evidence_path: docs/plans/PLAN-L6-833-confirmed-document-placeholder-detection.md
+        output_digest: sha256:96030dea90bf5a9f935479e2711171c94848fd0eec2bb27e08cb710e8280dae0
+        anchor_commit: 5b4afabbc9da1a51821c330a062fcee377d17786
+      - kind: unit_test
+        command: npm run test
+        runner: ci
+        scope: full
+        exit_code: 0
+        completed_at: 2026-10-14T06:13:18Z
+        evidence_path: tests/review-evidence.test.ts
+        output_digest: sha256:f617c0caa02c8713ecfd5ab61ded67654b8ec613448db0b2698c8b039c621140
+        anchor_commit: 5b4afabbc9da1a51821c330a062fcee377d17786
     scope: "PR #1022 exact 5b4afabbc9da1a51821c330a062fcee377d17786 のrevision
       3設計のみ。canonical receipt
       232d8a1da51a68c141b3eea84c4fb7a43560e458548491c3764f5a480cae8467。reviewer\
@@ -65,18 +89,18 @@ sub_doc: function-spec
 github_issue_id: 894
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:af54b09289ca371226460066e3620849
-  command_id: plan-revise:issue-894:PLAN-L6-833:r4-confirm-20261014
-  admitted_at: 2026-10-14T06:54:10.727Z
-  source_digest: sha256:73dc800432e7072a3f0a49204ac4fe5443e6ceec485f1edc9719c8ccdc409b0f
-  decision_digest: sha256:5ad25813bcc74998b90494e9a44c5da0aee0c4dc4366f9897a01df52435201da
-  receipt_digest: sha256:34873141791d448670dfe28845a5205b804fd1b314e9ba56baa4954e25499e10
+  receipt_id: certificate:89cb7ac8cfcdc6a8d8a54ee16d0c49da
+  command_id: plan-revise:issue-894:PLAN-L6-833:r5-green-command-correction-20261014
+  admitted_at: 2026-10-14T07:21:35.828Z
+  source_digest: sha256:bdb588c533955d352c2a4ee4d18fe29dcc708793f3d16b240dde87d7edd4d98b
+  decision_digest: sha256:37fce17350dbf98519ac8048689aa87cc201556311e76f1fef84cbd7d2a0578d
+  receipt_digest: sha256:2c516677920b5d4c0797dd12cda25769fcc0d84302cd0c6bb1823831a14d4198
   binding:
     path: docs/plans/PLAN-L6-833-confirmed-document-placeholder-detection.md
     plan_id: PLAN-L6-833-confirmed-document-placeholder-detection
     asset_id: plan:dd2c09788501e0d7c9dcb70d046e670c
-    revision: 4
-    content_digest: sha256:73dc800432e7072a3f0a49204ac4fe5443e6ceec485f1edc9719c8ccdc409b0f
+    revision: 5
+    content_digest: sha256:bdb588c533955d352c2a4ee4d18fe29dcc708793f3d16b240dde87d7edd4d98b
   route:
     signal: feature_addition
     mode: add-feature
@@ -93,8 +117,8 @@ admission_receipt:
     target_plan_id: PLAN-L6-01-function-spec
     target_revision: 3
     phase: forward_merge
-  escape_reason: "Issue #894: fresh exact-head post-green Opus
-    PASS後、control指定の正規confirmを行う。設計のみで実装完了は主張しない。"
+  escape_reason: "Issue #894: revision4のmissing_green_commandsを、fresh post-green
+    review前に成功したexact CIの実測stepとanchorを記録する正規改訂で是正。新HEADのPASSは別途再検する。"
 ---
 
 # PLAN-L6-833: 確定文書の記入欄検出契約
