@@ -7732,17 +7732,33 @@
     {
       "sequence": 484,
       "previous_record_digest": "sha256:b42a9d85aedb0de29be9c47df93c9eeb091f4fa829e496721fc787a5923a5076",
-      "record_digest": "sha256:f8a3ae76db255c22b54ef35be44cdc0d8b5ce70996ca7f4bcca22e1bba7f9f5a",
-      "command_id": "plan-draft:issue-693:PLAN-L6-693:r2-20261014",
-      "receipt_id": "certificate:985acb6dfda67ed5b5ab3c8faf355556",
-      "receipt_digest": "sha256:aff8c4379896a587d3f8ab3261fbf0117864f2f1798c3ef088d3d04c6738f8d7",
-      "decision_digest": "sha256:cf5702a9dde550647d411461c4c5e6573bb52e40404c6417803e84362cd177ff",
+      "record_digest": "sha256:c08f70dcb05a011e1ee189186f2a4e96124c2029439b904f9a93259aec8788c9",
+      "command_id": "plan-revise:issue-898:PLAN-L6-834:r3:generates-20261014T044201000Z",
+      "receipt_id": "certificate:59a3de61436a8737f81baa07b1ae1f2c",
+      "receipt_digest": "sha256:9b97c0fbfa44ffcfe4a49f1e906d48c983b2ee204634e6fab54565bade9ef0d6",
+      "decision_digest": "sha256:fc40efbe652b25bb7342883a4480763c91cff7b091f46498c0e3c7d94a6d5087",
       "binding": {
-        "path": "docs/plans/PLAN-L6-693-windows-hide-spawn-guard.md",
-        "plan_id": "PLAN-L6-693-windows-hide-spawn-guard",
-        "asset_id": "plan:985acb6dfda67ed5b5ab3c8faf355556",
-        "revision": 1,
-        "content_digest": "sha256:02056eaab9af52b88c352a5c9b45fdf37dc3d66c94ee6fd98df8b902c89909b3"
+        "path": "docs/plans/PLAN-L6-834-design-protection-diff-gate.md",
+        "plan_id": "PLAN-L6-834-design-protection-diff-gate",
+        "asset_id": "plan:8ca68930636199fa10036ecd1487a466",
+        "revision": 3,
+        "content_digest": "sha256:a5b5f175acbac4b1aae47bbf15e8eda88c068d8a0a191ce4edb23170e6e134e7"
+      }
+    },
+    {
+      "sequence": 485,
+      "previous_record_digest": "sha256:c08f70dcb05a011e1ee189186f2a4e96124c2029439b904f9a93259aec8788c9",
+      "record_digest": "sha256:74f97fe7a380715cc922e8c5cad6a38b18889e544e6bc74acde76078930a83e4",
+      "command_id": "plan-revise:issue-848:PLAN-L6-21:r2:20261014-lease-d",
+      "receipt_id": "certificate:d78801f3d4f89515f258414e009b2876",
+      "receipt_digest": "sha256:87c47846586063a47d39ae52ccd57d1f253371397726af0049b37a467a2fa319",
+      "decision_digest": "sha256:15a975341abdcebe5bb1e0346cfe865b66f848bdbf3406f3f212fa123abc3f5d",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-21-fr-unit-coverage.md",
+        "plan_id": "PLAN-L6-21-fr-unit-coverage",
+        "asset_id": "plan:legacy:a761d5f9a126929e47a8e2cb3f27e45e8645126ee24876dda7e6454d42413c5e",
+        "revision": 2,
+        "content_digest": "sha256:8019663d7150c29dd16b06d0fddb262cef97e93ab6d616c9e055830077a1b200"
       }
     }
   ]

@@ -277,27 +277,27 @@ L1 機能要求 (FR-L1-*、ユーザー視点の「何の機能が必要か」) 
 - **L1 上流**: FR-L1-09
 - **入力**: AI 操作ログ、役割定義 (agent_slots)、budget 上限
 - **出力**: 逸脱警告 / 停止 / audit ログ
-- **振る舞い**: `.claude/hooks/agent-guard.ts` (既存実装、PreToolUse Agent) で許可リスト 15 件 + model 明示 + override 禁止を fail-close
+- **振る舞い**: `.claude/hooks/agent-guard.ts` (既存実装、PreToolUse Agent) で model 明示 + floor 未満への格下げ禁止を fail-close。定義ファイルを持つ型は frontmatter の floor を下回る model を拒否し、定義ファイルの無い汎用の型 (general-purpose 等、subagent_type 省略を含む) は model 明示だけで通す (fable は不可。#1002、PO 2026-10-14)
 
 #### AC-FR-09-01 (正常系)
 - **Given**: Claude Code が `Agent({subagent_type: "pmo-sonnet", model: "sonnet"})` 呼び出し
 - **When**: agent-guard 検証
-- **Then**: 許可リスト pass / model 明示 pass / opus override なし / 終了コード 0 / audit `.ut-tdd/audit/agent-invocations/` 記録
+- **Then**: 定義済み型の floor pass / model 明示 pass / 終了コード 0 / audit `.ut-tdd/audit/agent-invocations/` 記録
 
 #### AC-FR-09-02 (異常系)
-- **Given**: Claude Code が許可リスト外の `Agent({subagent_type: "be-api"})` 呼び出し
+- **Given**: Claude Code が model を指定しない `Agent({subagent_type: "general-purpose"})` 呼び出し (定義の有無を問わず、model の無い呼び出し)
 - **When**: agent-guard 検証
-- **Then**: fail-close `Error: subagent be-api は許可リスト 15 件外 (CLAUDE.md Subagent Guard)` / Agent 起動 block / 終了コード 2
+- **Then**: fail-close `[ut-tdd-guard] BLOCK: subagent_type=general-purpose call is missing model.` / Agent 起動 block / 終了コード 2
 
 #### AC-FR-09-03 (境界系)
 - **Given**: `UT_TDD_ALLOW_RAW_AGENT=1` 環境変数で bypass 試行 (PO 専属 S-03)
 - **When**: 同じ呼び出し
 - **Then**: warn + audit `bypass used by PO (reason: ...)` 記録必須 / KPI D-06 集計対象 / Agent 起動許可 / 終了コード 0
 
-#### AC-FR-09-04 (異常系: opus override 禁止、A-54 audit C-04 / 軸4 補完)
-- **Given**: Claude Code が `Agent({subagent_type: "pmo-sonnet", model: "opus"})` 呼び出し (pdm-* 以外への opus 指定)
+#### AC-FR-09-04 (異常系: frontmatter の floor 未満への格下げ禁止、A-54 audit C-04 / 軸4 補完、#1002 で floor 規則へ改訂)
+- **Given**: Claude Code が `Agent({subagent_type: "pmo-sonnet", model: "haiku"})` 呼び出し (定義済み型への floor 未満の model 指定)
 - **When**: agent-guard 検証 (model family 解決)
-- **Then**: fail-close `Error: model opus は pmo-sonnet の frontmatter (sonnet) と不一致、opus は pdm-* のみ許可` / Agent 起動 block / 終了コード 2 / audit に block 記録 ([[feedback-subagent-model-explicit]] / weekly quota 保護)
+- **Then**: fail-close (model haiku は pmo-sonnet の frontmatter の floor (sonnet) を下回る) / Agent 起動 block / 終了コード 2 / audit に block 記録。floor 以上への昇格 (例: `model: "opus"`) は許可する (PLAN-L7-399 の floor 規則)
 
 ---
 

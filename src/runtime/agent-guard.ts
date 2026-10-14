@@ -2,9 +2,10 @@
  * UT-TDD subagent guard.
  *
  * Claude Code Agent calls are controlled fail-closed:
- * 1. Missing subagent_type is blocked.
- * 2. Non-allowlisted subagents are blocked.
- * 3. Missing model is blocked.
+ * 1. Missing model is blocked, for every subagent_type.
+ * 2. A subagent_type without a harness definition (generic route, or no subagent_type) passes
+ *    with an explicit, normalizable, non-fable model (#1002). It has no closing authority.
+ * 3. Allowlisted (defined) subagents keep their frontmatter floor until #1002 retires them.
  * 4. Calls that request a model family *below* the one declared in frontmatter are
  *    blocked (no quiet downgrade / cost-cutting). Requesting a family *at or above*
  *    the declared floor is allowed (PLAN-L7-399): review-critical subagents
@@ -84,14 +85,19 @@ export function normalizeModelFamily(raw: string | null | undefined): ModelFamil
   return hits.size === 1 ? [...hits][0] : null;
 }
 
-const ALLOWLIST_TEXT = [...SUBAGENT_ALLOWLIST].join(" ");
-
 function firstString(...values: Array<string | undefined>): string {
   return values.find((value) => typeof value === "string" && value.trim().length > 0)?.trim() ?? "";
 }
 
 export function evaluateAgentGuard(input: AgentGuardInput, ctx: AgentGuardContext): GuardDecision {
-  if (!AGENT_TOOL_NAMES.has(input.tool_name ?? "")) return { code: 0 };
+  // An envelope without tool_name (empty stdin parsed as {}) cannot be verified: fail closed.
+  if (typeof input.tool_name !== "string" || input.tool_name.length === 0) {
+    return {
+      code: 2,
+      message: "[ut-tdd-guard] BLOCK: hook envelope has no tool_name (fail-close).",
+    };
+  }
+  if (!AGENT_TOOL_NAMES.has(input.tool_name)) return { code: 0 };
 
   const ti = input.tool_input ?? {};
   const subagentType = firstString(ti.subagent_type, ti.agent_type, ti.agent, ti.role, ti.name);
@@ -106,18 +112,30 @@ export function evaluateAgentGuard(input: AgentGuardInput, ctx: AgentGuardContex
         }
       : { code: 2, message };
 
-  if (!subagentType) {
-    return blockOrBypass(
-      `[ut-tdd-guard] BLOCK: Agent call is missing subagent_type.\nAllowed: ${ALLOWLIST_TEXT}\n${AGENT_GUARD_BYPASS_HINT}`,
-    );
-  }
-
-  if (!SUBAGENT_ALLOWLIST.has(subagentType)) {
-    return blockOrBypass(
-      `[ut-tdd-guard] BLOCK: subagent_type=${subagentType} is not allowlisted.\n` +
-        `Allowed: ${ALLOWLIST_TEXT}\n` +
-        `Use an approved subagent or route provider work through ut-tdd codex --role ...\n${AGENT_GUARD_BYPASS_HINT}`,
-    );
+  // Generic route (#1002, PO 2026-10-14): a subagent without a harness definition file
+  // (general-purpose / Explore / Plan, or no subagent_type) has no closing authority and no
+  // floor, but the model must still be explicit and fable stays reserved for judgement gates.
+  if (!subagentType || !SUBAGENT_ALLOWLIST.has(subagentType)) {
+    const label = subagentType || "(none)";
+    if (!model) {
+      return blockOrBypass(
+        `[ut-tdd-guard] BLOCK: subagent_type=${label} call is missing model.\n` +
+          `Pass an explicit model (${MODEL_FAMILY_TEXT}).\n${AGENT_GUARD_BYPASS_HINT}`,
+      );
+    }
+    const requested = normalizeModelFamily(model);
+    if (requested === null) {
+      return blockOrBypass(
+        `[ut-tdd-guard] BLOCK: model=${model} cannot be normalized to ${MODEL_FAMILY_TEXT}.`,
+      );
+    }
+    if (requested === "fable") {
+      return blockOrBypass(
+        `[ut-tdd-guard] BLOCK: apex-tier policy reserves fable for quality-check subagents; ` +
+          `generic subagent_type=${label} is not eligible.`,
+      );
+    }
+    return { code: 0 };
   }
 
   const family = ctx.resolveAgentFamily(subagentType);
