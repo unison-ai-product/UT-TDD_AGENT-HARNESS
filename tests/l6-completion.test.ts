@@ -1,6 +1,13 @@
-import { readFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { analyzeL6Completion, l6CompletionMessages } from "../src/lint/l6-completion.ts";
+import {
+  analyzeL6Completion,
+  canLoadL6CompletionInputs,
+  l6CompletionMessages,
+  loadL6CompletionInputs,
+} from "../src/lint/l6-completion.ts";
 
 const gatePass = `
 | Gate | Status | Evidence |
@@ -13,6 +20,113 @@ const gateNotReached = `
 |---|---|---|
 | G6 | not reached | - |
 `;
+
+const fixturePlanPath = "docs/plans/PLAN-L6-fixture.md";
+const fixturePlan = `
+---
+plan_id: PLAN-L6-fixture
+kind: design
+status: confirmed
+review_evidence:
+  - reviewer: fixture-reviewer
+---
+`;
+
+interface FixtureL6Doc {
+  fileName: string;
+  owner: string;
+  pairArtifact: string;
+  oracleId: string;
+}
+
+interface FixtureL7Doc {
+  fileName: string;
+  status?: string;
+  body: string;
+}
+
+function fixtureRoot(): string {
+  return mkdtempSync(join(tmpdir(), "ut-tdd-l6-completion-red-"));
+}
+
+function writeFixtureFile(root: string, relativePath: string, text: string): void {
+  const path = join(root, ...relativePath.split("/"));
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, text, "utf8");
+}
+
+function l6FixtureText(doc: FixtureL6Doc): string {
+  return [
+    "---",
+    "status: confirmed",
+    doc.owner,
+    `pair_artifact: ${doc.pairArtifact}`,
+    "---",
+    "",
+    `L6 contract marker: resolve(input: string) => Result. DbC pre/post. Oracle family ${doc.oracleId}.`,
+    "",
+  ].join("\n");
+}
+
+function l7FixtureText(doc: FixtureL7Doc): string {
+  return [
+    "---",
+    "artifact_type: test_design",
+    "executed_at_layer: L7",
+    ...(doc.status ? [`status: ${doc.status}`] : []),
+    "---",
+    doc.body,
+    "",
+  ].join("\n");
+}
+
+function writeL6CompletionFixture(
+  root: string,
+  options: { docs: FixtureL6Doc[]; l7Docs: FixtureL7Doc[]; plans?: boolean },
+): void {
+  for (const doc of options.docs) {
+    writeFixtureFile(
+      root,
+      `docs/design/harness/L6-function-design/${doc.fileName}`,
+      l6FixtureText(doc),
+    );
+  }
+  if (options.plans !== false) writeFixtureFile(root, fixturePlanPath, fixturePlan);
+  for (const doc of options.l7Docs) {
+    writeFixtureFile(root, `docs/test-design/harness/${doc.fileName}`, l7FixtureText(doc));
+  }
+  writeFixtureFile(root, "docs/governance/gate-design.md", gatePass);
+}
+
+function writeIssueOwnedNoPlanFixture(root: string): void {
+  writeL6CompletionFixture(root, {
+    plans: false,
+    docs: [
+      {
+        fileName: "issue-only.md",
+        owner: "issue: 1035",
+        pairArtifact: "docs/test-design/harness/L7-unit-test-design.md",
+        oracleId: "CANDIDATE-U-L6COMP-010",
+      },
+    ],
+    l7Docs: [
+      {
+        fileName: "L7-unit-test-design.md",
+        status: "confirmed",
+        body: "issue-only.md",
+      },
+    ],
+  });
+}
+
+function withFixtureRoot(run: (root: string) => void): void {
+  const root = fixtureRoot();
+  try {
+    run(root);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+}
 
 describe("L6 completion readiness", () => {
   it("requires confirmed L6 docs, owning PLAN refs, L7 doc refs, confirmed PLANs, confirmed L7, and G6 PASS", () => {
@@ -161,6 +275,215 @@ describe("L6 completion readiness", () => {
 
     expect(result.ready).toBe(true);
     expect(result.draftPlans).toEqual([]);
+  });
+
+  it.fails("CANDIDATE-U-L6COMP-006: accepts a positive issue as the sole L6 owner", () => {
+    const l6Doc = {
+      path: "docs/design/harness/L6-function-design/issue-owned.md",
+      text: l6FixtureText({
+        fileName: "issue-owned.md",
+        owner: "issue: 1035",
+        pairArtifact: "docs/test-design/harness/L7-unit-test-design.md",
+        oracleId: "CANDIDATE-U-L6COMP-006",
+      }),
+    };
+    const result = analyzeL6Completion({
+      l6Docs: [l6Doc],
+      l6Plans: [],
+      l7Text: l7FixtureText({
+        fileName: "L7-unit-test-design.md",
+        status: "confirmed",
+        body: "issue-owned.md",
+      }),
+      gateText: gatePass,
+    });
+
+    expect(result.ready).toBe(true);
+    for (const issue of ["0", "-1", "not-a-number"]) {
+      const invalid = analyzeL6Completion({
+        l6Docs: [{ ...l6Doc, text: l6Doc.text.replace("issue: 1035", `issue: ${issue}`) }],
+        l6Plans: [],
+        l7Text: l7FixtureText({
+          fileName: "L7-unit-test-design.md",
+          status: "confirmed",
+          body: "issue-owned.md",
+        }),
+        gateText: gatePass,
+      });
+      expect(invalid.ready).toBe(false);
+    }
+  });
+
+  it("CANDIDATE-U-L6COMP-007: an issue cannot cover an unresolved plan path", () => {
+    const docPath = "docs/design/harness/L6-function-design/plan-and-issue.md";
+    const planPath = "docs/plans/PLAN-L6-missing.md";
+    const result = analyzeL6Completion({
+      l6Docs: [
+        {
+          path: docPath,
+          text: l6FixtureText({
+            fileName: "plan-and-issue.md",
+            owner: `plan: ${planPath}\nissue: 1035`,
+            pairArtifact: "docs/test-design/harness/L7-unit-test-design.md",
+            oracleId: "CANDIDATE-U-L6COMP-007",
+          }),
+        },
+      ],
+      l6Plans: [],
+      l7Text: l7FixtureText({
+        fileName: "L7-unit-test-design.md",
+        status: "confirmed",
+        body: "plan-and-issue.md",
+      }),
+      gateText: gatePass,
+    });
+
+    expect(result.unresolvedDocPlans).toEqual([`${docPath} -> ${planPath}`]);
+    expect(result.ready).toBe(false);
+  });
+
+  it.fails("CANDIDATE-U-L6COMP-008: accepts an existing eligible alternate L7 pair", () => {
+    withFixtureRoot((root) => {
+      writeL6CompletionFixture(root, {
+        docs: [
+          {
+            fileName: "alternate-pair.md",
+            owner: `plan: ${fixturePlanPath}`,
+            pairArtifact: "docs/test-design/harness/L7-alternate.md",
+            oracleId: "CANDIDATE-U-L6COMP-008",
+          },
+        ],
+        l7Docs: [
+          { fileName: "L7-unit-test-design.md", status: "confirmed", body: "shared index" },
+          {
+            fileName: "L7-alternate.md",
+            status: "confirmed",
+            body: "alternate-pair.md",
+          },
+        ],
+      });
+      const inputs = loadL6CompletionInputs(root);
+      const result = analyzeL6Completion(inputs);
+
+      expect(result.missingDocPairArtifacts).toEqual([]);
+      expect(result.ready).toBe(true);
+    });
+  });
+
+  it.fails("CANDIDATE-U-L6COMP-009: reverse reference must be in the selected pair artifact", () => {
+    withFixtureRoot((root) => {
+      const docPath = "docs/design/harness/L6-function-design/pair-bound-ref.md";
+      writeL6CompletionFixture(root, {
+        docs: [
+          {
+            fileName: "pair-bound-ref.md",
+            owner: `plan: ${fixturePlanPath}`,
+            pairArtifact: "docs/test-design/harness/L7-pair-a.md",
+            oracleId: "CANDIDATE-U-L6COMP-009",
+          },
+        ],
+        l7Docs: [
+          { fileName: "L7-pair-a.md", status: "confirmed", body: "does not name the L6 doc" },
+          { fileName: "L7-unit-test-design.md", status: "confirmed", body: "pair-bound-ref.md" },
+        ],
+      });
+      const inputs = loadL6CompletionInputs(root);
+      const result = analyzeL6Completion(inputs);
+
+      expect(result.missingL7DocRefs).toEqual([docPath]);
+      expect(result.missingDocPairArtifacts).toEqual([]);
+    });
+  });
+
+  it("CANDIDATE-U-L6COMP-010 setup loads valid L6, L7, and G6 inputs", () => {
+    withFixtureRoot((root) => {
+      writeIssueOwnedNoPlanFixture(root);
+
+      const inputs = loadL6CompletionInputs(root);
+      expect(inputs.l6Docs).toHaveLength(1);
+      expect(inputs.l6Plans).toHaveLength(0);
+      expect(inputs.l7Text.trim()).not.toBe("");
+      expect(inputs.l7Text).toContain("status: confirmed");
+      expect(inputs.gateText).toContain("| G6 | PASS |");
+    });
+  });
+
+  it.fails("CANDIDATE-U-L6COMP-010: a complete issue-owned tree loads without docs/plans", () => {
+    withFixtureRoot((root) => {
+      writeIssueOwnedNoPlanFixture(root);
+
+      const inputs = loadL6CompletionInputs(root);
+      expect(canLoadL6CompletionInputs(root)).toBe(true);
+      expect(analyzeL6Completion(inputs).ready).toBe(true);
+    });
+  });
+
+  it.fails("CANDIDATE-U-L6COMP-011: accepts two confirmed selected pairs", () => {
+    withFixtureRoot((root) => {
+      writeL6CompletionFixture(root, {
+        docs: [
+          {
+            fileName: "pair-confirmed.md",
+            owner: `plan: ${fixturePlanPath}`,
+            pairArtifact: "docs/test-design/harness/L7-unit-test-design.md",
+            oracleId: "CANDIDATE-U-L6COMP-011",
+          },
+          {
+            fileName: "pair-draft.md",
+            owner: `plan: ${fixturePlanPath}`,
+            pairArtifact: "docs/test-design/harness/L7-other.md",
+            oracleId: "CANDIDATE-U-L6COMP-011",
+          },
+        ],
+        l7Docs: [
+          {
+            fileName: "L7-unit-test-design.md",
+            status: "confirmed",
+            body: "pair-confirmed.md",
+          },
+          { fileName: "L7-other.md", status: "confirmed", body: "pair-draft.md" },
+        ],
+      });
+      const inputs = loadL6CompletionInputs(root);
+      const result = analyzeL6Completion(inputs);
+
+      expect(result.ready).toBe(true);
+    });
+  });
+
+  it.each([
+    "draft",
+    undefined,
+  ])("CANDIDATE-U-L6COMP-011: a selected pair with status %s keeps completion not-ready", (status) => {
+    withFixtureRoot((root) => {
+      writeL6CompletionFixture(root, {
+        docs: [
+          {
+            fileName: "pair-confirmed.md",
+            owner: `plan: ${fixturePlanPath}`,
+            pairArtifact: "docs/test-design/harness/L7-unit-test-design.md",
+            oracleId: "CANDIDATE-U-L6COMP-011",
+          },
+          {
+            fileName: "pair-draft.md",
+            owner: `plan: ${fixturePlanPath}`,
+            pairArtifact: "docs/test-design/harness/L7-other.md",
+            oracleId: "CANDIDATE-U-L6COMP-011",
+          },
+        ],
+        l7Docs: [
+          {
+            fileName: "L7-unit-test-design.md",
+            status: "confirmed",
+            body: "pair-confirmed.md",
+          },
+          { fileName: "L7-other.md", status, body: "pair-draft.md" },
+        ],
+      });
+      const inputs = loadL6CompletionInputs(root);
+
+      expect(analyzeL6Completion(inputs).ready).toBe(false);
+    });
   });
 
   it("cites the screen-spec U-SCREEN oracle family in L6 and L7 docs", () => {
