@@ -191,6 +191,10 @@ digest 再計算を独立に確認する。
   引用されないことを `CANDIDATE-ST-PACKCANARY-009` の offline test で機械検査する。
 - Linux/Windows/aggregate CI、PLAN lint、L12受入証跡、成果物を書いていない族 (cross-family) の canonical non-author closing receipt、
   Reverse R1〜R4が同一exact revisionへ束縛される。
+- 専用 consumer repository `unison-ai-product/ut-tdd-consumer-canary` は一時的な検証用であり、恒久の資産ではない
+  (PO 2026-10-01、PR #812)。AT-DIST-003 の受入と独立照合が終わったら、受入の証跡 (PR コメント・receipt の
+  参照先など) を `C:/dev/_archive` へ退避した上で repository を削除する。merge はしない検証用である。
+  AT-DIST-002 の network none の境界は変えず、通信と認証の例外は AT-DIST-003 の実 provider 段階に限る。
 
 ## 6. 現在の実測範囲(未完了の受入を区別する)
 
