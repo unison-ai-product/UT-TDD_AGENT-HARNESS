@@ -2227,7 +2227,7 @@ PF-0〜PF-5の実装順序自体も検証対象とする。各実装PRは当該s
 PR metadata / PLAN referenceに持ち、存在しない、未merge、または後続sliceを指す場合は
 implementation-firstとしてadmission/closing reviewで拒否する。
 
-## Pack単独・2 consumer隔離受入候補（Issue #357 / PLAN-L6-101）
+## Pack単独・2 consumer隔離受入候補（Issue #357 / pack-consumer-isolation.md）
 
 以下はL6 freeze時点の候補であり、Issue #362実装で同じ番号の`U-PACKISO-*`へ昇格した。PF-1〜PF-5の
 source-side artifact admissionを、consumer runtime隔離の代替証拠として用いない。
@@ -2295,8 +2295,8 @@ source-side artifact admissionを、consumer runtime隔離の代替証拠とし�
 
 `CAND-NODEBOOT-023`、`027`、`028`、`208` の最終撤去実装とpair evidenceの所有者は
 `PLAN-L7-530-bun-final-retirement`、上位へのgap-only backfillは
-`PLAN-REVERSE-530-bun-final-retirement-backfill`である。`PLAN-L6-93`は023/027/028の
-設計契約を保持し、`PLAN-L7-458`はQ0から最終撤去へ渡す順序を参照する。候補IDの記述を
+`PLAN-REVERSE-530-bun-final-retirement-backfill`である。023/027/028の設計契約は
+function-spec.md「旧 Bun 配布経路の処遇」に置く (`build` script の Node 化で撤去対象が消滅し、receipt tuple 条件は発動する場面が無い)。`PLAN-L7-458`はQ0から最終撤去へ渡す順序を参照する。候補IDの記述を
 Green実績と解釈せず、実装PRでRed実測後に正式 `U-*` へ昇格する。
 
 `PLAN-L7-530` の全tracked-tree inventoryは、候補を広く収集してからfalse positiveを

@@ -8,7 +8,7 @@ plan_id: PLAN-L7-516-pack-self-contained-consumer-runtime
 
 # Sealed self-contained consumer Node runtime test design
 
-`PLAN-L6-101`のconsumer隔離、`PLAN-L7-496`のadmission再利用、`PLAN-L6-93 §5`のsealed Node
+`pack-consumer-isolation.md`のconsumer隔離、`PLAN-L7-496`のadmission再利用、`PLAN-L6-93 §5`のsealed Node
 generation tupleを、consumer-local runtimeの実装と対になるRED oracleへ固定する。readiness判定の
 変更所有は`src/setup/distribution.ts#buildConsumerReadinessPlan`であり、candidateは
 docs-only freeze時点では未実装であり、既存の`CANDIDATE-PACKISO-*` / `CAND-NODEBOOT-*`の代替や

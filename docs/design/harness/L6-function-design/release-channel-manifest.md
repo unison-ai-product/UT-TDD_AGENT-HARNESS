@@ -118,7 +118,7 @@ identity再照合）、A-2（apply後cleanup/restore失敗時の `indeterminate`
 境界）はS2実装前にmutationとして追加し、単体Greenの合算だけでR4完了を宣言しない。
 
 外部GitHub、Pack repository、force push、tag付替え、commit/pushは本契約の副作用ではない。
-promotion/rollbackのpointer変更は別のS3 pair-freeze（`CANDIDATE-RELMAN-003/004/005/008/010`）で扱う。
+promotion/rollbackのpointer変更の許可判定（S3、`CANDIDATE-RELMAN-003/004/005/008/010`）は§9で扱う。
 
 ## 7. v2 publication manifest の出荷集合と inventory digest
 
@@ -201,3 +201,100 @@ promotion/rollbackのpointer変更は別のS3 pair-freeze（`CANDIDATE-RELMAN-00
 - 採択は案 A2。棄却: A' (scalar に先頭 artifact を入れる。意味が無く destination 記録が二重化する)、
   B (mapping を release あたり 1 件へ畳む。artifact ごとの allowlist 検査が消える)。
 - oracle: `CANDIDATE-U-RELAGGV2-001..009` (`docs/test-design/harness/L7-unit-test-design.md`)。
+
+## 9. S3 promotion admission / rollback admission gate (Issue #360)
+
+実装は `src/setup/release-promotion-rollback-gate.ts` (PLAN-L7-494)。本節は PF-1〜PF-5 が確定した release artifact を次の
+配布段階へ進める promotion admission と、直前の attested release へ戻す rollback admission の判定契約を定める。
+
+### 9.1 責務境界
+
+S3 が新規に所有するのは、既存の receipt と identity を合成する **pure な decision gate だけ**である。gate 自身の `sideEffects` は
+常に `"none"` で、apply / restore の実行結果は既存 port の別 receipt として入力される。次は S3 の範囲外とする: Pack copy、
+consumer runtime の導入・更新・復旧 (`pack-consumer-isolation.md` の責務)、GitHub Release、D1〜D3 の authority、Execution Episode、
+force push、tag 付替え、commit / push。新しい artifact 生成、publish、rollback apply engine を発明しない。
+
+pure predicate 単体の呼び出し回数は「副作用 0」の証跡に数えない。deny と indeterminate の各経路の副作用 0 は、既存 PF-5 の
+pointer write / publish / apply / restore の injected port を composition harness へ渡し、spy count と prior state で観測する。
+pure gate は port を直接 import も呼び出しもせず、観測は composition 側が所有する。
+
+### 9.2 入力の正本と型境界
+
+| 入力 | 正本 | S3 での扱い |
+|---|---|---|
+| release identity / channel order | `src/schema/release-manifest.ts` の `ReleaseIdentity` / `ReleaseManifest`、本書 §2〜§3 | `releaseId`、`materializerVersion`、`artifactSourceCommit`、`artifactSetDigest` を正本値とし、channel は manifest の own property と `channelOrder` から解決する |
+| PF4 attestation | `src/setup/release-channel-adapter.ts` の `ReleaseChannelAttestation` | `status: "attested"` だけを受理し、`releaseId` / `artifactSourceCommit` / `expectedDigest` / `actualDigest` を manifest と再照合する。`mismatch` / `unavailable` は deny |
+| PF5 sealed aggregate | `src/setup/release-aggregate-admission.ts` の `SealedReleaseAggregatePlan` | `channel` / `releaseId` / `sourceRevision` / `expectedDigest` / `actualDigest` を同じ release identity へ束縛する |
+| canonical CI | `CanonicalCiEvidence` | `checkName` は `REQUIRED_GITHUB_CHECK`、exact HEAD、PLAN revision、`legs` (linux / windows / aggregate) がすべて `success`、`evidenceDigest`、`observedAt` を必須とする |
+| QA Go/No-Go | `QaReleaseGateEvidence` | G01〜G08 の各判定、対象 release identity、source revision、artifact digest、channel、`evidenceDigest` を必須とする。`go` 以外は `qa_no_go` |
+| review | `ReviewGateEvidence` | 既存 D1 の `ReviewDispatchEntry`、D2 の `MergeGateDecision` と `MergeGateFacts`、`claimBlind` / `specBlind` の `ReviewReceiptSource` を、派生コピーにせず**そのまま束縛**する |
+
+型の制約は次のとおりとする。
+
+- 値は `success` / `go` 以外を成功へ coerce せず、unknown field、欠落、重複は typed deny とする。
+- `observedAt` は監査と同一入力内の順序確認にだけ使う。暗黙の TTL や wall-clock 依存の期限切れ判定は導入しない。freshness は
+  exact subject / head / PLAN revision / evidence digest の一致と、既存契約が要求する timestamp の形式・順序で決める。
+- review は、D1 が `merge_ready` で verdict が `PASS` か `PASS-WEAK`、breaches / blocking / reasons が空、D2 が `ok` かつ
+  `merge_ready` で reasons が空、`facts.state` が `OPEN` で checks green、`claimBlind` と `specBlind` の両 lane が
+  `validCrossReviewSource` を通ること、を要求する。片 lane の欠落、lane の混線、D1 の blocking 残存、D2 の subject 不一致は
+  deny である。`ReviewReceiptSource` 単体を D1 / D2 の代用にしない。
+- 比較は exact head と PLAN revision (`facts.headSha`、`evaluatedHeadSha`、`d2.headSha`、`d1.exactHead`、全 lane の subject) の
+  全一致、author / reviewer family と receipt digest の `expectedEvidence` との一致で行う。
+
+### 9.3 promotion admission
+
+次の全条件の AND が成立した場合だけ `allow` とする。
+
+1. manifest の選択 identity、PF4 attestation (`attested`)、PF5 sealed plan、channel mapping が、同一 release identity で成功している。
+2. `CanonicalCiEvidence` が exact HEAD と PLAN revision に束縛され、`harness-check` の Linux / Windows / aggregate が成功している。
+3. `QaReleaseGateEvidence` が G01〜G08 すべて `go` で、対象の release identity、source revision、artifact digest、channel、
+   evidence digest に exact に束縛されている。
+4. review が §9.2 のとおり ready である。
+5. manifest、materialized artifact、resolver 結果、channel mapping、PF5 sealed aggregate の `releaseId` / `sourceRevision` /
+   `artifactDigest` が一致する。
+6. target channel が `channelOrder` 上で current channel の**直後**である。
+
+いずれかが欠落・不一致・stale (head、PLAN revision、evidence digest の不一致)・別 subject なら `deny` とする。promotion 先への
+write、publish、tag 変更、commit、push は 0 である。receipt を別 release から再利用する fallback と、CI / QA の一部成功を
+promotion 成功へ丸める fallback は持たない。
+
+判定結果は `allow` (identity と束縛済み evidence digest を持つ sealed decision。publish / apply は呼び出し側の後段 port に委ねる)
+または `deny` (typed reason) だけである。reason の優先順位は次のとおりで、先に該当したものを返す。
+
+| 順 | reason | 該当 |
+|---|---|---|
+| 1 | `invalid_input` | typed input の shape 不正、必須 field の欠落 |
+| 2 | `identity_mismatch` | stale または別 subject (HEAD、PLAN revision、release identity、artifact digest、evidence digest、channel の不一致)。stale を missing へ丸めない |
+| 3 | `ci_missing` | canonical CI evidence の欠落 |
+| 4 | `qa_missing` / `qa_no_go` | QA evidence の欠落 / G01〜G08 のいずれかが `go` でない |
+| 5 | `review_missing` | D1 / D2 / claim-blind / spec-blind のいずれかの欠落、または ready でない |
+| 6 | `channel_transition_invalid` | target が current の直後でない、unknown channel |
+| 7 | `attestation_unavailable` | attestation の欠落または `attested` でない |
+
+### 9.4 rollback admission
+
+rollback の対象は、現在の release に対して**直前に attest 済み**で、identity (releaseId、sourceRevision、artifactDigest、
+materializer version、channel) が完全一致する**一つの** release だけである。判定は 2 段に分かれる。
+
+1. **候補選択** (`selectRollbackCandidate`): 現行 `ReleaseIdentity`、current / target channel、exact head、PLAN revision、
+   期待する review binding、候補を受ける。review 証跡は rollback でも必須で、欠落または shape 不正は `invalid_input`、
+   identity 不一致は `identity_mismatch`、ready でない場合は `invalid_input` とする。target channel は current の**直前**でなければならない。
+   候補が 0 件なら `candidate_missing`、2 件以上なら `candidate_ambiguous` で deny する。一意の候補は pointer delta
+   (channel、from、to) と、その digest を持つ `allow` になる。
+2. **apply 結果の分類** (`classifyRollbackApply`): 既存 `ReleaseAggregateApplyResult` を次のとおり写像する。
+   `{ ok: true, applied: 1 }` は `allow`、`{ ok: false, error: "unavailable", applied: 0 }` は
+   `deny` / `artifact_unavailable`、`{ ok: false, error: "rollback_failed", applied: "indeterminate" }` は
+   `indeterminate` / `rollback_failed`。それ以外は `deny` / `invalid_input`。`rollback_failed` は indeterminate decision の唯一の
+   reason であり、別の restore-unknown reason は導入しない。
+
+候補選択の reason 優先順位は、`invalid_input` → `identity_mismatch` (review の不一致) → `candidate_missing` /
+`candidate_ambiguous` → `identity_mismatch` (候補の stale、別 subject、非隣接 target を含む) → `attestation_missing` →
+`artifact_unavailable` とする。private staging / apply の復元不能は成功へ丸めず、`rollback_failed` / `indeterminate` として
+fail-close する。rollback の選択は同一入力から再実行して同じ結果になる決定論的な手順とする。rollback 対象外の release、最新化による
+暗黙 upgrade、source repository への fallback は許可しない。promotion と同様に force push、tag 付替え、commit、push、
+consumer runtime 操作は行わない。
+
+### 9.5 oracle との対
+
+`CANDIDATE-RELMAN-003/004/005/008/010` と `019`〜`023` が、`docs/test-design/harness/L7-unit-test-design.md` の
+`U-RELMAN-*` (S3 promotion / rollback) として本節を検証する。新しい ID は発明せず、対応する `U-RELMAN-*` へ 1:1 で対応させる。

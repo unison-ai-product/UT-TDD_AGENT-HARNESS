@@ -15,7 +15,7 @@ github_issue_id: 418
 `PLAN-REVERSE-531-pack-internal-canary-smoke-backfill` 専用の pair artifact である。
 Issue #418 のうち、Bun の到達面、Memory/notification 実装、Pack の remote
 publication、`PLAN-L7-628` の producer / installer semantics を所有しない、clean Pack
-fixture の境界検証を定義する。consumer隔離と source非依存の契約は `PLAN-L6-101` を正本として
+fixture の境界検証を定義する。consumer隔離と source非依存の契約は `docs/design/harness/L6-function-design/pack-consumer-isolation.md` を正本として
 再利用し、canary の release asset 集合・schema・installer 契約は confirmed `PLAN-L7-628`
 §3/§4/§6 を正本として再利用する。既存の `CANDIDATE-PACKISO-*` / `U-PACKISO-*` /
 `CANDIDATE-U-PACKRT-*` (`PLAN-L7-628` 所有) を再採番・再所有しない。
@@ -181,7 +181,7 @@ digest 再計算を独立に確認する。
 ## 5. 完了条件
 
 - #418の非Bun境界 Candidate が、同じテスト設計・実装 revisionでRed→Greenになる。
-- `PLAN-L6-101` の consumer隔離責務、`PLAN-L7-628` の producer 出力 (asset 集合・schema・
+- `pack-consumer-isolation.md` の consumer隔離責務、`PLAN-L7-628` の producer 出力 (asset 集合・schema・
   anchor 発行)、`PLAN-L7-516` のconsumer-local runtime境界と1:1 traceする。
 - source/worktree/local Pack checkoutへのruntime fallbackがないことを、単なる文字列検査
   ではなく実materialize・setup・setup元撤去・別cwd起動で確認する。

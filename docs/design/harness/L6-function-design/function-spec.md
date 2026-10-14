@@ -2393,6 +2393,109 @@ cutover 3関数`initializeCutoverChain` / `appendCutoverTransition` / `projectCu
 `tests/node-slice-admission.test.ts`、zod正本は`src/schema/cutover-transition.ts` /
 `src/schema/node-slice-admission.ts`である。D0では将来生成契約としてfreezeする。
 
+### slice admission の履歴完全性と祖先判定 (PLAN-L6-93 §3 の還流)
+
+`admitNodeSlice` は、前段 slice の receipt が束縛する canonical merge commit (D0 / F0a) が candidate HEAD の祖先であることを、
+Git の object graph だけから検証する。prerequisite receipt の `subject_revision` は candidate HEAD との exact equality を要求しない。
+
+- **履歴完全性を先に確認する**: ancestor 判定の前に、`assertCompleteGitHistory` (`src/runtime/node-slice-admission.ts`) が履歴の
+  完全性を確認する。`git rev-parse --is-shallow-repository` が `false`、shallow 境界ファイルが空、promisor / partial clone filter の
+  設定が無く、検査対象の commit (祖先側と candidate HEAD) がすべて実在することを、全て満たさない場合は ancestor 判定を実行せず、
+  typed reject `history_incomplete` とする。不完全な graph を承認に変えない。
+- **祖先判定**: 完全履歴を確認した後に、`git merge-base --is-ancestor` で祖先を判定し、非祖先は `not_ancestor` とする。
+  canonical merge commit を含まない fork、canonical predecessor を含まない stale HEAD、別 edge / 別 producer への receipt 流用、
+  同一 target slice かつ同一 candidate HEAD の二重 admission、canonical predecessor を置換しようとする stale receipt は、
+  それぞれ固有の typed reject とし、process 生成と receipt 書き込みの前に fail-close する。後続 candidate が同じ immutable
+  predecessor receipt を参照すること自体は replay ではない。
+- **目標契約と実装の差**: 設計の目標は、欠落 object の検査に `git rev-list --objects --missing=print <d0-merge> <f0a-merge>
+  <candidate-head>` を使い、欠落が 1 件でもあれば `history_incomplete` とすることである (対応 oracle は
+  `docs/test-design/harness/L7-unit-test-design.md` の `CAND-NODEBOOT-018` 周辺)。2026-10-14 時点の実装は commit の実在確認
+  (`git cat-file -e <commit>^{commit}`) までで、commit 以外の欠落 object の検査は未実装である。
+
+### 旧 Bun 配布経路の処遇 (PLAN-L6-93 §5 の還流)
+
+L4 `architecture.md` §2 の削除禁止条項の保護範囲の改訂 (再現可能な rollback 成立性として、`build` script と `node src/cli.ts` の
+source 実行経路だけを保護し、`dist/` 残置物への silent dispatch は保護対象外とする) は、同書に既に反映されている。
+
+**`build` script の撤去条件 (sealed build receipt と Node parity receipt の束縛 tuple、`retirement_subject`) は退役する。**
+`package.json` の `build` は `node scripts/build-node.mjs` へ移行済みで、撤去対象だった `bun build --compile` の経路が存在しないためである
+(最終撤去は `PLAN-L7-530-bun-final-retirement` が所有)。これに伴い、`docs/test-design/harness/L7-unit-test-design.md` の
+`CAND-NODEBOOT-023` / `027` / `028` が前提とする撤去対象 (`bun build --compile` の `build` script) は消滅しており、この receipt tuple 条件は発動する場面が無い。
+
+以下の wrapper 契約は**未実装の目標契約**である。2026-10-14 時点の `scripts/ut-tdd` は compiled binary (`dist/ut-tdd`) を優先して
+dispatch する形のままで、下の canonical text には倒していない。実装時にこの契約を変える必要が出たら、実装を止めて本節の改訂へ戻る。
+
+#### wrapper allowlist 契約
+
+方式は allowlist であり、禁止構文を列挙する denylist ではない。`runtime-portability` lint が `scripts/ut-tdd` と
+`scripts/ut-tdd.ps1` の 2 ファイルだけを対象とし、**ファイル全文が canonical text と完全一致しない場合に fail-close** する。
+comment 行と空行を含めて全文が固定であり、自由記述の余地は無い。判定は構文解析やデータフロー追跡を伴わない、byte 列の集合帰属である。
+
+POSIX `scripts/ut-tdd` の canonical text:
+
+```sh
+#!/usr/bin/env sh
+# UT-TDD thin POSIX entrypoint (ADR-001). Node source CLI only; no compiled dispatch.
+set -e
+exec node "$(dirname -- "$0")/../src/cli.ts" "$@"
+```
+
+PowerShell `scripts/ut-tdd.ps1` の canonical text:
+
+```powershell
+# UT-TDD thin Windows PowerShell entrypoint (ADR-001). Node source CLI only; no compiled dispatch.
+$ErrorActionPreference = "Stop"
+& node (Join-Path (Split-Path -Parent $PSScriptRoot) "src\cli.ts") @args
+exit $LASTEXITCODE
+```
+
+- **比較は raw bytes** で行い、text decode も Unicode 正規化もしない。canonical byte 列 `C` は、canonical text を UTF-8・LF 改行・
+  終端 LF ちょうど 1 個で encode した列である。`.ps1` だけは先頭に BOM (`EF BB BF`) をちょうど 1 個前置する
+  (`C_ps1 = EF BB BF || T_ps1`、`C_posix = T_posix`)。
+- **受理するのは 4 つの byte 列だけ**である。`C`、`C0` (終端 LF を除いた列)、`CRLF(C)`、`CRLF(C0)` (BOM を除く部分の全 LF を
+  CRLF に置換した列)。これにより、lone CR、NUL、末尾の追加空行、行末 trailing whitespace、Unicode 正規化差異、homoglyph、
+  zero-width 文字、不正な UTF-8、別 encoding (UTF-16 など) への差し替えは、個別規則を書かずに不一致として落ちる。
+- **BOM の扱いは 2 ファイルで非対称**である。`scripts/ut-tdd` は BOM 禁止 (`EF BB BF` が `#!` より前に来ると shebang が成立せず、
+  kernel が interpreter を解決できない)。`scripts/ut-tdd.ps1` は BOM 必須でちょうど 1 個 (Windows PowerShell 5.1 は BOM 無しを
+  ANSI として誤読する)。2026-10-14 時点の `scripts/ut-tdd.ps1` は BOM を持たない。実装は BOM を付与する。
+- **`C` の信頼源**は lint source 内の immutable な byte literal だけとする。外部 fixture ファイルを期待値として読むことと、
+  wrapper 自身や生成物から `C` を導出することを禁止する (期待値が対象に追随して検出が恒真になる、または wrapper と fixture の同時
+  書き換えで fail-open になるため)。`C` の変更は本節の改訂を要する。
+- **comment 行を自由記述にしない**。comment は意味的に不活性ではなく、POSIX では canonical shebang より前の別の `#!` 行が別
+  interpreter を選択でき、PowerShell の `#requires -Modules` は実行文より前に module code を load する。
+- **trade-off (意図的に受け入れる)**: allowlist は正当な変更にも脆い (`set -u` の追加、Node 版数チェック、comment 1 語の修正も
+  契約改訂を要する)。4 行の trust root に対してはその硬さが妥当であり、実装 PR 内で方式を発明させない。
+
+**scope 境界**。閉じるのは、wrapper 2 本のファイル内容から到達し得る全ての起動である。閉じないもの (意図的):
+
+| 面 | 閉じない理由 |
+|---|---|
+| PATH 上の `node` 実体の差し替え、symlink 付け替え | wrapper text では制約できない。絶対 path を焼くと OS・環境ごとに壊れ、可搬性という ADR-001 の目的を損なう |
+| `NODE_OPTIONS` / `--import` による preload | 呼び出し側 process の env であり、ファイル内容の外側にある |
+| `src/cli.ts` 以降の source 改竄 | wrapper ではなく repo 全体の integrity の問題で、review / CI / git history が担う |
+| repo 外に置いた symlink 経由の起動 | POSIX sh は `$0` の symlink を追跡しないため、解決先は symlink の所在に従う。現行 main と同一の挙動であり、本契約が導入する性質ではない |
+
+本契約は「wrapper text を信頼根とする」とだけ主張し、「wrapper を固定すれば node の実行体まで一意に定まる」とは主張しない。
+
+**起動形の検証**。現行の `ROOT="$(CDPATH= cd -- … && pwd)"` は絶対・正規化された root を得るが、canonical text は未正規化の path を
+Node へ渡す。bare-name (PATH 経由)・symlink・相対 PATH entry の 3 形を oracle で固定する。symlink 形は**等価 oracle**
+(canonical 形の解決先 == 現行 main 形の解決先) であり、絶対的な正しさ (「必ず repo source を実行する」) の oracle ではない。
+bare-name 形と相対 PATH entry 形は等価性を主張せず、実測値を固定する。
+
+**oracle との対**: `CAND-NODEBOOT-021` / `022` / `024` / `025` / `029` / `030` は同一の全文一致規則に対する別々の攻撃 case であり、
+独立した検出規則ではない。`CAND-NODEBOOT-026` は起動形の等価 oracle である。いずれも
+`docs/test-design/harness/L7-unit-test-design.md` にある。実装先は `src/lint/runtime-portability.ts`、対のテストは
+`tests/runtime-portability.test.ts` である。
+
+### Node toolchain provenance (PLAN-L6-93 §1・§5.7 の還流)
+
+Node / npm の provenance 入力は、L5 の `NODE-TOOLCHAIN-PROVENANCE-REGISTRY-v1`
+(`docs/design/harness/L5-detailed-design/node-toolchain-provenance-registry-v1.json`) を唯一の閉じた正本とする。registry は
+`design_input_registry` の役割だけを持ち、runtime registry への materialization はこの registry digest からのみ許可する。
+L7 runtime verifier の実装や governance registry の生成は、registry の設計と対にして先行させない。`package.json` の engines identity の
+custody は `node` と `npm` に限り、`engines.bun` は削除済みで registry に収録しない。mutation oracle の正本は
+`docs/test-design/harness/L7-node-toolchain-provenance-test-design.md` の `CAND-NODEPROV-001..011` である。
+
 ## PLAN-L6-92 Resource Kernelプロトコル・エラー・プラットフォームポート契約
 
 本節は`PLAN-L5-25`のL6降下であり、`L7-unit-test-design.md`の`U-RGK-WIRE-*`、`U-RGK-TRUST-*`、
@@ -2502,6 +2605,28 @@ Bun依存またはdirect spawn fallbackを追加する実装は入力条件に�
 bundle rollbackは過去artifactを直接再activationせず、現在floorより厳密に大きいsequenceの新revisionとしてmanifestを再署名し、
 通常のtrust・component・target検証を再通過させる。D0はtrust/activationを抽象portに留め、
 rotation、revocation transport、secure clock、re-anchor、物理log schemaを後続implementation revisionへ送る。
+
+### 実装着手境界と検証の対 (PLAN-L6-92 の還流)
+
+本節の契約と、実装側の `PLAN-L7-466` (resource kernel native companion、draft) は対である。責務 A (本節のプロトコル・エラー・
+プラットフォームポート契約) の成果を責務 B (L7-466 の実 Job / cgroup adapter と native custody の実装) が使うため、L7-466 は
+本節に依存する (実在の依存)。route は `PLAN-L5-25` (物理プロトコル) から本節、L7-466 の順である。
+
+- **検証の対**: L7 は `U-RGK-WIRE-*` / `U-RGK-TRUST-*` / `U-RGK-ERROR-*` / `U-RGK-CAP-*` / `U-RGK-LIFE-*` / `U-RGK-PORT-*` /
+  `U-RGK-BUNDLE-*`、L8 は `IT-RGK-PHYS-001..042` (`docs/test-design/harness/L8-integration-test-design.md` §5)。各 ID の
+  fixture と oracle は対応する test-design だけを正本とし、本節へ再掲しない。
+- **active safety contract**: resource authority の epoch / mode CAS と release transaction は本節 (D0-R) の active safety contract で
+  あり、L6 / L7 gate から除外しない。Issue #152 へ defer するのは、incremental DB、projection snapshot CAS、性能収束、
+  local CI scheduler だけである。
+- **所有境界**: TypeScript / Node は policy、journal、admission、receipt を所有し、Rust は strict wire と OS custody fact だけを所有する。
+- **着手境界**: 実 Job / cgroup adapter の実装完了、native custody の Green、R4 再合流は、L7 pair、L8 42 件、対象 OS の
+  capability、独立 review が freeze されるまで主張しない。
+- **本節が列挙する不変条件の要点** (上の関数契約・メソッド契約に既出。ここでは L7-466 の受け入れ観点としての索引だけを置く):
+  probe から launcher へ到達しない、valid admission 前の managed root 生成 0、stage token の skip / reorder / replay 拒否、
+  authority lease の closed union、Rust native observation と TS `recoverAuthority` transaction の分離、cleanup 権限の
+  effective deadline 後の維持、release は executor disarm 後に revoke と released を atomic commit、mutating dispatch 後の
+  response fault は `DispatchIndeterminate`、Windows は attach-before-resume、Linux は start-in-cgroup で root exit を terminal と
+  しない、bundle は PATH 探索・download・片側 rollback を拒否し rollback は現在 floor より厳密に大きい sequence の再署名 manifest で行う。
 
 ## 2026-08-31 legacy slice receipt 境界
 
