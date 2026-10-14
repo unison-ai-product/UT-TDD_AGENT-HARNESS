@@ -4,7 +4,7 @@
 
 基準 commit: origin/main `d5ad67fb50c148ea8dd6d5475bab4b88f2d4cd4c`
 
-件数: 使い捨て可 19、還流済み 12、要判断 1 (計 32)
+件数: 使い捨て可 19、還流済み 12、廃止 1 (計 32)。是正 1/3 で PLAN-L4-34 を要判断から廃止へ、PLAN-L4-12 を使い捨て可のまま補足 (後述)
 
 触った設計文書: `docs/design/harness/L4-basic-design/data.md` (§11.1 / §12 / §13)、`architecture.md` (§10.2-§15)、`function.md` (Appendix D)、`docs/test-design/harness/L9-system-test-design.md` (§11)。
 
@@ -21,7 +21,7 @@
 | PLAN-L4-06-design-refresh | `171e784743083972069342c489579f8c151e0c76be6925173665181ed53ec816` | 使い捨て可 | data.md §3/§6、architecture.md §3.1/§6、function.md §3 (既存) | IMP-072〜075 は improvement-backlog が正本 (未照合) | carry 3 件 (ST-EXT の c/d 被覆、ScrumType/evaluation_batch lifecycle、asset-drift の carry PLAN) は未検証。backlog 側の追跡に任せる |
 | PLAN-L4-10-internal-asset-master | `61cc78d93e8cac0e6cca0a39a7ad6267627065313d48d5c4c75ef4e1af0fc5bc` | 使い捨て可 | g4.md 既存 + architecture.md §3.1 roster/skill-engine、§4.1 (既存) | sub-master と child の親子関係 (完了済み) | 層1/層2 境界は ADR-004 が正本 |
 | PLAN-L4-11-roster | `77ec53fe16c7cf9c3fd01dd5492eadfab1f4a33c25d85dd4ed0fd6160a3e6044` | 使い捨て可 | function.md §1.1 C12、§2 (既存) | なし | g4.md 既存 |
-| PLAN-L4-12-skill-pack | `64b298510676933f93114b81c2495414218361163b8cb604aee9bd58d4fc2cd2` | 使い捨て可 | architecture.md §3.1 skill-engine 行 (既存) | なし | skill root 訂正 (2026-07-16) は反映済み |
+| PLAN-L4-12-skill-pack | `64b298510676933f93114b81c2495414218361163b8cb604aee9bd58d4fc2cd2` | 使い捨て可 | architecture.md §3.1 skill-engine 行 (既存)、§4.1 の検査表 (是正で追記) | なし | skill root 訂正 (2026-07-16) は反映済み。§3 carry の検知責務は §4.1 に保持した: skill root 空の検知は `src/lint/asset-drift.ts` の `empty-docs-skills` と `analyzeSkillAssignments` で実装済み。skill ↔ SKILL_MAP 不整合の検知は `src/` に実装が無く、未実装の目標契約として §4.1 に明記し、後継契約を L6 skill-admission.md §7.3 / §8 (`renderSkillCatalogIndex` と `catalogDrift`、SKILL_MAP 手保守の廃止) に置換した |
 | PLAN-L4-13-drift-lint | `586b0ba5faa2823c966642ac606ccedd3b6558bba39eda659ffc51bc61823212` | 使い捨て可 | architecture.md §4.1 (既存、検査 4 項目と実装証跡) | なし |  |
 | PLAN-L4-14-ui-standard | `56cb428a9ad9ec5dda11a0ee63b8e1899284f7bc4a1488470334ee4e15af3f46` | 使い捨て可 | ui-standard.md §1-§7 (既存、descent 鎖は §1) | requires L2 ui-element / L4 data (完了済み) | AC 未チェックは review_evidence と gate で担保。D6 (L10 visual-design の reframe) の現状は未確認 |
 | PLAN-L4-15-nfr-grade-ac-landing | `5c2d311bd0bb8ba93d122a121591760a84b10aa8e1a1af8701c09971b3ed73b6` | 還流済み | architecture.md §12 末尾「L3 NFR carry」 | なし | draft。nfr-grade.md の placeholder (NFR-02/09) は未着手のまま。carry を設計文書へ明記した |
@@ -42,5 +42,5 @@
 | PLAN-L4-30-execution-ledger-github-architecture | `27013fa2e07ebb1defdab01e331ade481286bdccb82529d3f2dd411d32ad6597` | 使い捨て可 | function.md Appendix C (g3.md 既存) + L9 §8 | requires L4-23 / L6-50、blocks L5-23 は順序 (剥離) | g3.md で移行済み。受入条件の oracle は L9 §8 に既存 |
 | PLAN-L4-31-nfr-verification-foundation-architecture | `b387fc75b28d76bf6e08ba9cda80976b19ed12104bf05f87e02d0ee37ca9ea15` | 還流済み | architecture.md §12 | requires L3-03 / L7-34 (完了済み) | draft。IMP-173 の設計書カバレッジ欠落をこれで解消。未実装の目標契約と明記 |
 | PLAN-L4-33-node-control-plane-redesign | `a5b65bf38588178d7d836a3c0b909651bd082f744b8a15b5a2dcf8fcfcb178cb` | 還流済み | architecture.md §9 (既存) + §13 | blocks PLAN-L5-26 は降下順序 (剥離) |  |
-| PLAN-L4-34-repository-runtime-placement-topology | `a680cb0c06fb28c3fdda27d74335012d790c5072c22e42798c4b493f23d99883` | 要判断 | architecture.md §14 (worktree lifecycle、#384 部分を還流済み) / §15 (cutover 部分は移さず問いを記録) | S2/S3 の将来 edge (#232 / #134 / #228 / #169 / #124 / #384) は完了順序の依存を含む。#384 部分は §14.2 の port に依存として記録 | 質問: OneDrive 撤去と C:\dev 配置が済んだ今も、OneDrive 外 cutover の receipt chain / write fence (§3.1-§5、AC-PLACE-01..09、U-PLACE-001..018) を設計目標として維持するか、廃止するか。U-PLACE-010 以外の oracle は L9 に未移送 (PLAN にだけ存在) |
+| PLAN-L4-34-repository-runtime-placement-topology | `a680cb0c06fb28c3fdda27d74335012d790c5072c22e42798c4b493f23d99883` | 廃止 (生きている契約は還流済み) | architecture.md §14 (worktree lifecycle)、§15 (廃止の記録と生存部分の所在)、L9 §10 | S2/S3 の将来 edge (#232 / #134 / #228 / #169 / #124 / #384) のうち #384 は §14.2 の port に依存として記録済み。cutover 系の edge は廃止で剥離 | 廃止根拠: OneDrive アプリ撤去と開発 root への配置 (2026-08-24) で cutover の前提が消え、PO 判断 (#958) で廃止。`src/` に PlacementCutover / write fence / OneDrive 検出 / state root resolver は実在せず (grep 0 件)、失われる現行機構は無い。生存部分: worktree lifecycle (AC-PLACE-10..13、旧 U-PLACE-010) は §14 + L9 §10、Bun 禁止 (AC-PLACE-07、旧 U-PLACE-015) は §1/§2/§9、receipt chain の一般形は §9 `CutoverTransitionReceipt`。旧 U-PLACE-001..009/011..014/016..018 は対象機構ごと廃止のため test-design へ移さない |
 | PLAN-L4-32-resource-governed-execution-kernel | `e7c75c437c0744d4fe278c88267571f05c46892a34faf8aa9672d8c2bd5652cd` | 還流済み | architecture.md §10.2-§10.4 (g3.md の移行分 §10/§10.1 に加え、責務・OS 別 custody・deferred AC・段階導入)、L9-system-test-design.md §11 (incident evidence) | requires 系の PR #154 D0-N は §10.4 の段階導入 (4) に責務依存として記録。L5-25 / L6-92 / L7-466 は降下順序で剥離 | g3 で保留 (d) だった Windows SCM supervisor / POSIX uid drop / macOS 境界 / crash recovery を移した。実装は未存在 (src/resource-kernel/ なし) の目標契約。§1.3 の不変条件→L9 写像は L9 §9.1 に同内容が既存のため移さず |

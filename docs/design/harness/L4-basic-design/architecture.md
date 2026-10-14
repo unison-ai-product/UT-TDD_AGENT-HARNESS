@@ -153,7 +153,8 @@ data.md の 5 集約 (構造) を src/ building block (実行) に配置する�
 |---|---|
 | legacy absolute path residue | `.claude/agents/*.md` が `~/ai-dev-kit-vscode/` / `C:\Users\micro` を含む → fail |
 | legacy runtime command direct call | subagent 本文に legacy runtime command direct call が残存 → fail |
-| `docs/skills/` 空 (curate 未着手) | skill pack が `.gitkeep` のみ → fail (curate 完了を強制) |
+| skill root 空 (curate 未着手) | `skills/` (無ければ `docs/skills/`) に `.gitkeep` 以外の curate 済み asset が無い → fail (`src/lint/asset-drift.ts` の `empty-docs-skills`。`analyzeSkillAssignments` も `docs.length > 0` を `ok` の条件にする)。実装済み |
+| skill ↔ SKILL_MAP 索引の不整合 | **未実装の目標契約**。現行の `src/` に SKILL_MAP と skill 本文の突合検査は無い。後継契約は L6 [skill-admission.md](../L6-function-design/skill-admission.md) §7.3 / §8 の `renderSkillCatalogIndex` 生成物と committed カタログの `catalogDrift` 検査で、SKILL_MAP の手保守は廃止して機械生成物に置き換える。索引モデルは [skill-index.md](../L6-function-design/skill-index.md) |
 | roster ↔ guard allowlist 整合 | `.claude/agents/*.md` の model family と agent-guard allowlist (15) が乖離 → fail |
 
 > **既存 `dependency-drift` (ADR-002) と並置**: gate-design §5 rule registry に `dependency-drift` が既存。内部資産 `asset-drift` を同列追加 (両方 IMP-033 rule)。Current hard gate sliceは legacy path residue / legacy command residue / docs-skills vacancy / guard allowlist missing agent docs を doctor 経路で fail-close 済み。active design/test-design に残った L7 待ち `placeholder_deps` は `placeholder-deps` doctor gate で fail-close する。
@@ -489,7 +490,7 @@ ZIP 163 item を HARNESS 自身が満たすかは `verified | partial | gap | pr
 
 ## §13 Node 制御面の補足契約 (PLAN-L4-33 からの還流)
 
-current の Bun は migration debt、target の Node は未実装の設計状態として別 field・別 receipt で表す。activation は append-only の immutable marker で、既存 current pointer を上書きしない。publish lease (`dist/node-publish.lock/` の atomic mkdir) の crash 残留は F0 で永久に fail-close とし、recovery・steal・clear を持たない。F0 の rollback は同一 revision 内に限り、revision をまたぐ戻しは unsupported (git revert から新 revision を build する)。review + admission 済み D0 draft が許すのは順序内の非 activation 作業だけで、production activation・hook/runtime switch・Bun 最終削除・cutover は L6 confirmed + D0 admission まで禁止する。pair oracle は L9 の `CAND-NODEBOOT-201..213` で、対応 test と実装の同一 commit Red 実測まで正式 `ST-*` へ昇格しない。
+本節は Node 制御面へ切り替えた過去 revision の移行契約の記録である。現況は §1 / §2 が正本で、current は sealed Node、Bun の実行経路は無く Bun は永久禁止である (#134)。以下の「Bun は migration debt、Node は未実装」という区別は移行期の設計状態であり、現行の契約ではない。移行期は current の Bun と target の Node を別 field・別 receipt で表した。activation は append-only の immutable marker で、既存 current pointer を上書きしない。publish lease (`dist/node-publish.lock/` の atomic mkdir) の crash 残留は F0 で永久に fail-close とし、recovery・steal・clear を持たない。F0 の rollback は同一 revision 内に限り、revision をまたぐ戻しは unsupported (git revert から新 revision を build する)。review + admission 済み D0 draft が許すのは順序内の非 activation 作業だけで、production activation・hook/runtime switch・Bun 最終削除・cutover は L6 confirmed + D0 admission まで禁止する。pair oracle は L9 の `CAND-NODEBOOT-201..213` で、対応 test と実装の同一 commit Red 実測まで正式 `ST-*` へ昇格しない。
 
 ## §14 worktree lifecycle の方式 (PLAN-L4-34 §3.3 / Issue #384 からの還流)
 
@@ -524,6 +525,14 @@ lifecycle の record / event と sealed terminal・retire receipt が authoring 
 
 retire は dry-run を既定とし、対象 realpath / admin entry / head / branch、保全理由、deny reason、state 分類、receipt digest、期待 operation id を immutable plan に記録する。apply は同じ canonical snapshot と plan digest を再検証してから、worktree 実体の retention quarantine への原子的退避、admin entry 解除、worktree-local cache 整理の順に段階適用し、canonical / durable な HARNESS state は削除しない。quarantine 実体の物理削除は terminal retire receipt の seal と retention boundary 到達後に限る。各境界の crash / retry は operation id と append-only receipt で冪等に再生し、旧対象の喪失や部分成功の Green 報告を許さず `retained` + typed fault に収束させる。
 
-## §15 repository / runtime placement topology の cutover (PLAN-L4-34 の残り、要判断)
+## §15 repository / runtime placement topology の cutover (PLAN-L4-34 の残り、廃止)
 
-PLAN-L4-34 の §3.1 (`PlacementCutoverReceipt` chain: `prepared → fenced_old → active_new → rollback_window → retired_old`、old clone write fence、dual-canonical の拒否)、§3.2 (OS / path 境界)、§4-§5 (S1/S2/S3 の段階化と L12/L13/L14 の `AT-PLACE-*` / `DT-PLACE-*` / `OT-PLACE-*`)、§7 (AC-PLACE-01..09) は、OneDrive 上の primary clone を OneDrive 外へ cutover する前提で書かれている。この前提が 2026-08-24 の OneDrive アプリ撤去と `C:\dev\` への配置で変わったため、この契約を設計目標として残すかを上流が決めるまで、本節には移さず PLAN 側に残す。決めるべき問いは「cutover / write fence / receipt chain の設計目標を維持するか、廃止するか」である。
+PLAN-L4-34 の `PlacementCutoverReceipt` chain (`prepared → fenced_old → active_new → rollback_window → retired_old`)、old clone write fence、dual-canonical の拒否、canonical state root resolver、4-class 台帳は、OneDrive 上の primary clone を OneDrive 外へ cutover する前提の契約だった。この前提は、2026-08-24 の OneDrive アプリ撤去と OneDrive 外の開発 root への配置で消え、PO 判断 (#958 の判断記録) で **廃止** した。`src/` には cutover runner、write fence、receipt chain、state root resolver、OneDrive 検出のいずれも実在せず (grep `PlacementCutover` / `write fence` / `onedrive` / `stateRoot` が 0 件)、廃止で失われる現行機構は無い。
+
+生きている部分は次のとおり移し先に既にある。これ以外を本節で再定義しない。
+
+- worktree lifecycle (PLAN-L4-34 §3.3、AC-PLACE-10..13、旧 `U-PLACE-010`): §14 と L9 §10 (`src/runtime/worktree-lifecycle/` に実装あり)。
+- Bun 禁止 (AC-PLACE-07、旧 `U-PLACE-015`): §1 / §2 と §9 の Node 制御面。
+- cutover receipt の一般形 (一方向の状態遷移、chain 不一致の fail-close): §9 の `CutoverTransitionReceipt`。
+
+OneDrive 検出 (AC-PLACE-06、旧 `U-PLACE-013` / `014`)、path 診断、4-class 台帳 (旧 `U-PLACE-002`)、state root の一意解決 (旧 `U-PLACE-001`) は、現行の `src/` にも運用にも無い。再び必要になったら新規 PLAN で起票する。旧 `U-PLACE-001` / `003` / `017` / `018` などの oracle は、対象機構ごと廃止したため test-design へ移さない。
