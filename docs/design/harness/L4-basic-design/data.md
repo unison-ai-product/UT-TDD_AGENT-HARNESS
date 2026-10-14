@@ -178,7 +178,7 @@ AI が生成する TypeScript core は、後でリファクタする前提では
 | Plan | kind=reverse ∧ R4 → forward_routing ∧ promotion_strategy 必須 | frontmatter superRefine |
 | Plan | kind=design ∧ layer∈[L1-L6] → sub_doc 必須 ∧ ∈ VALID_SUB_DOCS[layer] | G.1/G.3 |
 | Plan | kind=verify → layer∈[L8-L14] ∧ workflow_phase 禁止 ∧ `PLAN-L<N>-...` の L token は layer と一致 | frontmatter superRefine / plan governance |
-| Plan | agent_slot.model ∈ allowlist、opus は pdm-* のみ | agent-guard |
+| Plan | Agent 呼び出しの model は明示必須。定義済み型は frontmatter の floor 以上、汎用型は認識できる non-fable model (#1002) | agent-guard |
 | Workflow | 前工程未完了で後工程着手不可 (V-model 順序、D-03=0) | doctor / plan lint |
 | Evaluation | verified 評価は紐付け (実装/A-番号) 必須 | improvement-backlog |
 | Plan | confirmed/completed の design/impl/add-* PLAN は **review 前置証跡 (review_evidence) 必須** (review-skip freeze 禁止) | `doctor checkReviewEvidence` (IMP-071、hard/fail-close) |

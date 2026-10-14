@@ -7744,6 +7744,22 @@
         "revision": 3,
         "content_digest": "sha256:a5b5f175acbac4b1aae47bbf15e8eda88c068d8a0a191ce4edb23170e6e134e7"
       }
+    },
+    {
+      "sequence": 485,
+      "previous_record_digest": "sha256:c08f70dcb05a011e1ee189186f2a4e96124c2029439b904f9a93259aec8788c9",
+      "record_digest": "sha256:74f97fe7a380715cc922e8c5cad6a38b18889e544e6bc74acde76078930a83e4",
+      "command_id": "plan-revise:issue-848:PLAN-L6-21:r2:20261014-lease-d",
+      "receipt_id": "certificate:d78801f3d4f89515f258414e009b2876",
+      "receipt_digest": "sha256:87c47846586063a47d39ae52ccd57d1f253371397726af0049b37a467a2fa319",
+      "decision_digest": "sha256:15a975341abdcebe5bb1e0346cfe865b66f848bdbf3406f3f212fa123abc3f5d",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-21-fr-unit-coverage.md",
+        "plan_id": "PLAN-L6-21-fr-unit-coverage",
+        "asset_id": "plan:legacy:a761d5f9a126929e47a8e2cb3f27e45e8645126ee24876dda7e6454d42413c5e",
+        "revision": 2,
+        "content_digest": "sha256:8019663d7150c29dd16b06d0fddb262cef97e93ab6d616c9e055830077a1b200"
+      }
     }
   ]
 }

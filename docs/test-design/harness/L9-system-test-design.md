@@ -57,7 +57,7 @@ L4 基本設計の各設計要素が L9 総合テスト (ST-*) で被覆され�
 |---|---|---|---|
 | ST-ARCH-01 | 依存方向 schema 一方向・循環禁止 (§3) | 循環 import 導入 → 検出 (D-03=0) | dependency lint (L7) |
 | ST-ARCH-02 | fail-close (§2/§5) | guard/lint/gate が exit≠0 で停止 | vitest 統合 |
-| ST-ARCH-03 | agent-guard hook 配線 (§6) | PreToolUse(Agent) で allowlist/model 検証 | vitest agent-guard (既存) |
+| ST-ARCH-03 | agent-guard hook 配線 (§6) | PreToolUse(Agent) で model 明示・floor 検証 (#1002) | vitest agent-guard (既存) |
 | ST-ARCH-04 | CLI ↔ module 統合 (§3.1) | status/doctor/plan/vmodel end-to-end | vitest CLI 統合 |
 
 ### §1.3 ST-FUNC (function.md 由来 — コマンド / workflow end-to-end)

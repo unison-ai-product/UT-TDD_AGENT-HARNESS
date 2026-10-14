@@ -51,7 +51,7 @@ module-decomposition の公開 IF に処理ロジックと Design by Contract �
 | `sprint check` | Red test 存在確認 → 本体実装 commit 順序確認 → TDD trace 記録 → pass/fail |
 | `doctor` | 全 detector/lint 実行 (g3-trace/entity-coverage/fr-registry/doc-consistency/improvement-backlog + state 突合) → severity 別集約 → error 1件以上で exit 1 |
 | `detectMode` | env/binary probe (claude/codex 検出) → mode 決定 (standalone/claude-only/codex-only/hybrid) → `RuntimeDetection` (副作用なし) |
-| `evaluateAgentGuard` | input(subagent_type/model) → allowlist check → model 明示 check → family 一致 check → `GuardDecision` |
+| `evaluateAgentGuard` | input(tool_name/subagent_type/model) → tool_name check → model 明示 check → model 正規化 → (定義済み型) floor check / (汎用型) fable 拒否 → `GuardDecision` (#1002) |
 | `roster list` | `.claude/agents/*.md` scan → registry (id=filename stem、name/model 抽出) → capability class + model family resolve → 一覧出力 (id 昇順、副作用なし read-only) |
 | `roster check` | scan→registry → guard `SUBAGENT_ALLOWLIST` と突合 (allowlistedPresent / nonAllowlisted [Codex 委譲組] / missingFromRoster / nameMismatches) → **乖離 (missingFromRoster>0 ∨ nameMismatches>0) で fail-close** → report/exit |
 
@@ -66,7 +66,7 @@ module-decomposition の公開 IF に処理ロジックと Design by Contract �
 | `trace check` | 対象 PLAN が registry に存在 / generates 宣言あり |
 | `sprint check` | L6 機能設計確定 / 対象 test ファイル path 解決可 |
 | `doctor` | (前提なし、いつでも実行可) / detector/lint が読む doc/state が path 解決可 |
-| `evaluateAgentGuard` | input に subagent_type 存在 / ctx に allowlist 提供 |
+| `evaluateAgentGuard` | input に tool_name 存在 / ctx に allowlist (定義済み型の集合) 提供 |
 | `roster list` / `roster check` | `.claude/agents/` が path 解決可 / `roster check` は guard `SUBAGENT_ALLOWLIST` が参照可 |
 
 ## §4 DbC postcondition (事後条件 = 操作保証)

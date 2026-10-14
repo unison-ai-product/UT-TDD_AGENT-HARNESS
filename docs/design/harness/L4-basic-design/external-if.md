@@ -51,7 +51,7 @@ harness が依存する外部 service との**境界契約**を Design by Contra
 
 | 境界 | Precondition (前提) | Postcondition (保証) | Invariant (不変) |
 |---|---|---|---|
-| **(a) AI runtime** | agent-guard 通過 (allowlist 15 + model 明示) + 契約プラン CLI が認証済 (Claude Code 常駐 / `codex login` 済) | 呼び出し記録が `.ut-tdd/audit/` に append (invocation_log) | **API 直叩きでなく契約プラン CLI/hook 経由のみ** (CLAUDE.md)。core は provider SDK/API/key に依存しない (adapter = CLI subprocess + hook、ADR-001) |
+| **(a) AI runtime** | agent-guard 通過 (model 明示必須、#1002) + 契約プラン CLI が認証済 (Claude Code 常駐 / `codex login` 済) | 呼び出し記録が `.ut-tdd/audit/` に append (invocation_log) | **API 直叩きでなく契約プラン CLI/hook 経由のみ** (CLAUDE.md)。core は provider SDK/API/key に依存しない (adapter = CLI subprocess + hook、ADR-001) |
 | **(b) VCS・CI** | ローカル gate 証跡が存在 | CI 側 gate 再実行結果がローカルと一致 (NFR-13 dev-local+CI 整合) | branch protection は gate pass を必須化、bypass は Incident のみ (FR-17) |
 | **(c) 観測・監視** | (inbound) alert payload が schema 準拠 | Incident mode 自動 routing trigger (FR-08/16) | 観測は記録のみ、harness の判定ロジックに副作用を直接与えない (mode routing 経由) |
 | **(d) 依存管理** | (inbound) Dependabot PR/alert | security NFR 経路で triage (人間トリアージ) | 自動マージしない (人間確認、禁止事項) |
