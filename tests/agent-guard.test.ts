@@ -84,7 +84,7 @@ describe("evaluateAgentGuard", () => {
     expect(evaluateAgentGuard({ tool_name: "Edit" }, ctx()).code).toBe(0);
   });
 
-  it("blocks missing subagent_type (general-purpose default route)", () => {
+  it("blocks the default route (no subagent_type) when the model is missing", () => {
     expect(evaluateAgentGuard(agent({}), ctx()).code).toBe(2);
   });
 
@@ -119,12 +119,26 @@ describe("evaluateAgentGuard", () => {
     expect(evaluateAgentGuard({ tool_name: "Agent" }, ctx()).code).toBe(2);
   });
 
-  it("blocks non-allowlisted subagent even with valid model", () => {
-    const d = evaluateAgentGuard(agent({ subagent_type: "rogue-agent", model: "sonnet" }), ctx());
-    expect(d.code).toBe(2);
-    expect(d.message).toContain("not allowlisted");
-    expect(d.message).toContain("ut-tdd codex --role");
-    expect(d.message).not.toContain(legacyRuntimeCommand);
+  it("passes a generic subagent (no harness definition) with an explicit model (#1002)", () => {
+    for (const subagent_type of ["general-purpose", "Explore", "Plan", undefined]) {
+      for (const model of ["sonnet", "haiku", "opus", "claude-sonnet-5-5"]) {
+        expect(evaluateAgentGuard(agent({ subagent_type, model }), ctx()).code).toBe(0);
+      }
+    }
+  });
+
+  it("blocks a generic subagent without a model, with an unnormalizable model, or with fable", () => {
+    const missing = evaluateAgentGuard(agent({ subagent_type: "general-purpose" }), ctx());
+    expect(missing.code).toBe(2);
+    expect(missing.message).toContain("missing model");
+    expect(missing.message).not.toContain(legacyRuntimeCommand);
+    expect(
+      evaluateAgentGuard(agent({ subagent_type: "general-purpose", model: "gpt-6-luna" }), ctx())
+        .code,
+    ).toBe(2);
+    const fable = evaluateAgentGuard(agent({ subagent_type: "Explore", model: "fable" }), ctx());
+    expect(fable.code).toBe(2);
+    expect(fable.message).toContain("apex-tier");
   });
 
   it("blocks an unnormalizable or ambiguous model on an allowlisted agent", () => {
@@ -244,10 +258,7 @@ describe("evaluateAgentGuard", () => {
   });
 
   it("bypasses block when allowRaw is set", () => {
-    const d = evaluateAgentGuard(
-      agent({ subagent_type: "rogue-agent", model: "sonnet" }),
-      ctx(true),
-    );
+    const d = evaluateAgentGuard(agent({ subagent_type: "general-purpose" }), ctx(true));
     expect(d.code).toBe(0);
     expect(d.bypassed).toBe(true);
   });

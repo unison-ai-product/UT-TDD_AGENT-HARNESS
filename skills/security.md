@@ -81,9 +81,10 @@ Escalation means stopping the current PLAN, documenting the boundary crossed in
 
 The `agent-guard.ts` hook enforces:
 
-1. `subagent_type` must be in the allowlist (currently 14 named agents). Any
-   unknown type exits 1 — fail-close is the only safe default.
-2. Agent calls without a `model` field are rejected.
+1. Agent calls without a `model` field are rejected (exit 2), for every
+   `subagent_type` — an implicit model is the unsafe default.
+2. A `subagent_type` without a harness definition (generic route) passes only with an
+   explicit, recognised, non-fable model; it has no closing authority (#1002).
 3. The model family must match the agent frontmatter declaration.
 4. Bypass requires `UT_TDD_ALLOW_RAW_AGENT=1` AND must write evidence to
    `.ut-tdd/audit/`.

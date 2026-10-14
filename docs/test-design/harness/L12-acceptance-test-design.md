@@ -68,7 +68,7 @@ updated: 2026-07-09
 | **AT-FR-08-02** | AC-FR-08-02 (複数シグナル優先度) | drift + 劣化 + 暴走 → Recovery routing / 他 warn | vitest routing test |
 | **AT-FR-08-03** | AC-FR-08-03 (PO 手動 mode) | `ut-tdd route --mode reverse --force` → warn + audit / routing | vitest CLI + audit test |
 | **AT-FR-09-01** | AC-FR-09-01 (許可 subagent pass) | pmo-sonnet + model 明示 → agent-guard pass / audit | vitest agent-guard test (既存カバー) |
-| **AT-FR-09-02** | AC-FR-09-02 (許可外 block) | be-api 試行 → fail-close exit 2 | vitest agent-guard test |
+| **AT-FR-09-02** | AC-FR-09-02 (model 指定なし block) | model を指定しない general-purpose 試行 → fail-close exit 2 (model を指定した汎用の型は pass、#1002) | vitest agent-guard test |
 | **AT-FR-09-03** | AC-FR-09-03 (PO bypass) | UT_TDD_ALLOW_RAW_AGENT=1 + 理由 → warn + audit / exit 0 | vitest agent-guard test |
 | **AT-FR-10-01** | AC-FR-10-01 (Recovery 再開ポイント) | 5 連続 gate fail + budget 超過 → Recovery / cutover コマンド生成 | vitest recovery test |
 | **AT-FR-10-02** | AC-FR-10-02 (再開ポイント無し) | 全 gate fail → warn / `ut-tdd reset --to-charter` 案内 | vitest recovery test |
