@@ -622,7 +622,7 @@ SMB/NFS/OneDrive をまたぐ strict lease、heartbeat、clock-skew 耐性は主
 >
 > 既存U-FRCOV-001..006とactive/通常FRの `U-FR-L1-NN` 完全一致は不変。L6の退役分岐が免除するのはこの通常formal-oracle一致要件だけで、L6 spec path・named unit contract・type body/pseudocodeまたは有効な `explicit_l7_defer` のsubstance要件を退役ラベルで迂回しない。退役状態の根拠欠落・未知状態は通常FRの例外経路にしない。doctor gateとdescent-obligationの `loadFrUnitCoverageOracles` readerは同じ退役行を同じ基準で受理/拒否する。readerの表面上の行一致だけでtyped/substance欠落を覆い隠してはならない。
 >
-> **状態**: 下記 `CANDIDATE-U-FRCOV-007..023` はRed設計候補であり、現時点では実testも実装も存在しない。各行が示す `tests/l6-fr-coverage.test.ts` は将来の実test引用先であって、現在の実test citationや検証証跡ではない。正式 `U-FRCOV-007..023` へは昇格しておらず、既存の正式U-FRCOV-001..006を変更・置換しない。
+> **状態**: 下記 `CANDIDATE-U-FRCOV-007..023` はRed設計候補であり、現時点では実testも実装も存在しない。各行が示す `tests/l6-fr-coverage.test.ts` は将来の実test引用先であって、現在の実test citationや検証証跡ではない。これらの候補は正式IDへ昇格しておらず、既存の正式U-FRCOV-001..006を変更・置換しない。
 
 | Test ID | 対象 / 実test引用予定 | 期待 (各negativeは記載した条件だけを変え、他条件は有効fixtureのまま保つ) |
 |---|---|---|
