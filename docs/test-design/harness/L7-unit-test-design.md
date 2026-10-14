@@ -3061,7 +3061,7 @@ oracle の詳細 (入力・期待・殺す mutation・fixture・required evidenc
 | U-DPROT-027〜030 | 判定 path と保護 path の単一定義点 (構成正本の表との一致、別構成を渡したときの判定、判定 path の外への rename の拒否、置き場が空でないこと) | 専用文書 §3 |
 
 上表の ID は backtick 無し表記である。候補台帳への再掲ではなく専用文書への参照であり、U-VMSRC-009 の一意性検査の対象外とする。
-正規 `U-DPROT-001〜032` と Red test (`tests/design-protection.test.ts`) は、src/ も scripts/ も含まないこの契約 PR + Redで入れる (L6 契約 §10)。実装とGreenの証拠は別PRで記録する。
+候補IDで引用したRedは #1012 で登録済みである。この昇格PRでは正規 `U-DPROT-001〜032` への昇格と、`tests/design-protection.test.ts` / `tests/design-protection-repository-contract.test.ts` の引用変更を同時に行う (L6 契約 §10.3)。src/ と scripts/ は変更せず、実装とGreenの証拠は別PRで記録する。
 
 ## 確定文書のテンプレート記入欄検出 (Issue #894 / PLAN-L6-833)
 
