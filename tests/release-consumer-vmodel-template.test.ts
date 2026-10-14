@@ -33,7 +33,7 @@ const REQUIRED_TEMPLATES: readonly RequiredTemplateExpectation[] = [
   {
     docTypeId: "DOC-L0-CHARTER",
     sourcePath: "docs/templates/vmodel/L0-charter.md",
-    consumerPath: "docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md",
+    consumerPath: "docs/design/L0-planning/charter.md",
   },
   {
     docTypeId: "DOC-L1-REQUIREMENTS",
@@ -488,7 +488,7 @@ describe("PR-2c release consumer V-model template writer", () => {
   it("U-RCDEV-039: validates every required destination before the first write", () => {
     const root = fixtureRoot();
     const outsideRoot = fixtureRoot();
-    const designRootLink = join(root, "docs", "design");
+    const designRootLink = join(root, "docs", "design", "L1-requirements");
     const outsideSentinel = join(outsideRoot, "sentinel.txt");
     const sentinelBytes = Buffer.from("external fixture remains unchanged\n", "utf8");
     mkdirSync(dirname(designRootLink), { recursive: true });
@@ -508,9 +508,9 @@ describe("PR-2c release consumer V-model template writer", () => {
       );
       if (!firstEscapingTemplate) throw new Error("required L1 destination oracle is missing");
       expect(`${result.stdout}\n${result.stderr}`).toContain(firstEscapingTemplate.consumerPath);
-      // L0 is the normal docs/plans destination and precedes this outside
-      // ancestor in the frozen port index; validation interleaved with writes
-      // would leave a partial charter here.
+      // L0 stays at its normal docs/design/L0-planning destination and precedes
+      // this outside L1 ancestor in the frozen port index; validation
+      // interleaved with writes would leave a partial charter here.
       expect(filesUnder(root)).toEqual([]);
       expect(filesUnder(outsideRoot)).toEqual(["sentinel.txt"]);
       expect(readFileSync(outsideSentinel)).toEqual(sentinelBytes);
@@ -561,7 +561,7 @@ describe("PR-2c release consumer V-model template writer", () => {
   it("U-RCDEV-039: denies an outside ancestor during required dry-run without writes", () => {
     const root = fixtureRoot();
     const outsideRoot = fixtureRoot();
-    const designRootLink = join(root, "docs", "design");
+    const designRootLink = join(root, "docs", "design", "L1-requirements");
     const outsideSentinel = join(outsideRoot, "sentinel.txt");
     const sentinelBytes = Buffer.from("external fixture remains unchanged\n", "utf8");
     mkdirSync(dirname(designRootLink), { recursive: true });

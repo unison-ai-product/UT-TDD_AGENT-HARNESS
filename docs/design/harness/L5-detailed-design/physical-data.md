@@ -755,7 +755,9 @@ item targetは`pending_review|adopt|merge|reference|defer|not_applicable|reject`
 `docs/design/` 配下のtrackedかつ作業tree上で実在する通常ファイルを指すこと。空値、absolute path、`.` / `..` segment、
 path escape、非設計path、tracked pathへの正規化後の不一致、欠落または読み取り不能はfail-closeする。basename aliasや
 部分pathから補完しない。既存のtracked-target registry / artifact-path resolverを使ってtracked実体を照合し、設計pathの
-prefix・完全path・作業tree上の実在性も別途検証する。issue番号やPLAN IDを `design_path` の代わりとして受理しない。
+prefix・完全path・作業tree上の実在性も別途検証する。Git modeは通常ファイルの`100644`または`100755`に限り、
+symlink (`120000`)を受理しない。親directoryのjunction/reparse pointを含めた実体pathもcanonical repo root内に
+収まることを確認し、repo外の実体を読まない。issue番号やPLAN IDを `design_path` の代わりとして受理しない。
 
 本項の未実装目標契約は#959 T1の入力であり、実装済みを意味しない。現在のactive item-target authoringでは
 `pending_review`の163件すべてに管理参照として

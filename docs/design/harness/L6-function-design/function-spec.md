@@ -1749,7 +1749,7 @@ usage=2を維持する。
 | `CatalogItem` | `itemId`, `itemName`, `categoryId`, `sourceStatus`, `sourceRef`, `sourceFile`, `rowDigest` | category/source edge欠落=`catalog-orphan-edge` |
 | `SourceItemEdge` | `edgeId`, `sourceId`, `itemId`, `sourceStatus`, `sourceFile`, `rowDigest` | edgeIdは`sourceRef,itemId`のframed digestだけから導出し、reasonを創作しない |
 | `SourceTargetEdge` | `edgeId`, `sourceId`, `targetType`, `targetRef`, `disposition`, `rowDigest` | targetType=`plan_alias|artifact_family|artifact_path|target_slot`。source targetはitem targetのdefaultではない |
-| `ItemTargetEdge` | `edgeId`, `itemId`, `targetStatus`, `reason`, `sourceDigest`, `targetKind?`, `targetRef?`, `planId?` | targetKind=`artifact_path|artifact_family|plan_alias|target_slot`。runtimeでsource→targetを継承・推論しない。pendingはtarget禁止、adopt/merge/reference/deferのtarget欠落=`catalog-item-target-incomplete` |
+| `ItemTargetEdge` | `edgeId`, `itemId`, `targetStatus`, `reason`, `sourceDigest`, `targetKind?`, `targetRef?`, `planId?`, `designPath?` | targetKind=`artifact_path|artifact_family|plan_alias|target_slot`。`designPath`はL5 §9.15.4の別個のsemantic管理・設計参照であり、判断targetではない。runtimeでsource→targetを継承・推論しない。pendingはtarget禁止、adopt/merge/reference/deferのtyped target欠落=`catalog-item-target-incomplete`、deferは有効な`designPath`必須で`planId`不要。非NULL `planId` はlegacy互換としてplan FKを維持する |
 | `DocumentProfileDecision` | `decisionId`, `profileId`, `docTypeId`, `decision`, `detailOverride`, `statusOverride`, `reason`, `rowDigest`, `requiredPlanId?` | semantic itemへmapしない。conditional/skip/deferはreason必須、deferはPLAN必須 |
 | `DocumentProfile` | `profileId`, `profileAxis`, `profileRank`, `description`, `defaultStatus`, `defaultDetail`, `scopePolicy`, `rowDigest` | profile master全fieldをround-tripし、decision rowをmaster代用にしない |
 | `createProfileCatalog` 入力 | `profiles: DocumentProfile[]`, `decisions: DocumentProfileDecision[]`, `knownDocTypeIds`, `requiredDocTypeIds`, `coreDocTypeIds`, `knownCapabilityFlags?` | `sourcePath`/`sourceDigest`はdomain入力に含めず、`TrackedDocumentProfileCatalog`（`src/profile/adapters/tracked-profile-loader.ts`: `sourcePath`, `sourceDigest`, `catalogSourcePath`, `catalogSourceDigest`, `catalog`）がloader側で保持する。profile/decision IDとFKをcreate前に検証 |
@@ -1841,6 +1841,18 @@ document profileの6正本を、見出し名・column集合・row幅・inline co
 未知/重複column、欠落row、row幅不一致、silent skipはそれぞれ`catalog-authoring-schema-invalid`、
 `catalog-authoring-row-invalid`、`catalog-authoring-count-invalid`としてfail-closeする。複数findingは
 `ruleId, subjectId, evidenceRefs`のbytewise stable順にし、canonical digestはlength-prefixed frameで計算する。
+
+T1のitem-target ledgerでは`design_path`列をstrict schemaへ追加し、空欄は未設定として`designPath`へlosslessにmapする。
+非空値はL5 §9.15.4の完全なrepo-relative `docs/design/` tracked path規則で検証し、basename aliasやPLAN IDから補完しない。
+`designPath`はitem-target edgeのcanonical digestとprojectionへ含める。active 163件はすべて
+`pending_review`を維持し、`designPath=docs/design/harness/L5-detailed-design/physical-data.md`、`planId=NULL`とする。
+item identity/status/target kind・ref/reason/source digestの値・集合は変えず、pending判断を昇格・推論しない。
+deferはvalidな`designPath`を要しPLAN IDを要しない一方、非NULLのlegacy `planId`は既存plan FK検証を維持する。
+
+このT1 schema移行は`addMissingColumns`による列追加だけでは完了しない。旧defer CHECKを置換するtable rebuildと
+`rebuildHarnessDb`のcanonical projection rebuild/swapを同一のtransaction/savepoint rollback境界へ含め、
+source・FK・CHECK・digest検証の失敗ではschemaとprojection双方をrollbackして旧Green投影を保持する。
+これは未実装の設計契約であり、実装済みを意味しない。
 
 catalog createはauthoring構造がvalidなら`pending_review`を保持したまま成功できる。pendingは完了判断ではなく、
 `unresolved()`が純粋queryとしてstable ID順に全件返す。accept/closeだけがpending 0を要求し、DB空集合やsource-targetから
