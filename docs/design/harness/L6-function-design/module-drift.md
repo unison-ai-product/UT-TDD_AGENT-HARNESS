@@ -98,6 +98,17 @@ analyzeModuleDrift(docs: { listed, actual }) -> { orphans, listedCount, actualCo
 | `normalizeToolAdapterRun` | normalizeToolAdapterRun(input: ToolAdapterRunEvidence) => ToolAdapterProjection | raw adapter evidence path、command、exit code、version、scope、parsed output summary を与える。 | normalized `tool_runs`、`dependency_edges`、`diagram_artifacts`、`findings` row を返す。 | raw DOT/JSON/SVG/Mermaid/D2 output は evidence として残す。gate は normalized projection row だけを消費する。 | U-TOOLADAPTER-006..008 |
 | `planDiagramRefresh` | planDiagramRefresh(input: DiagramRefreshInput) => DiagramRefreshPlan | graph snapshot digest、existing diagram artifact、requested format、adapter readiness を与える。 | Mermaid/DOT/D2 diagram artifact に対する refresh/mark-stale/no-op action を返す。 | stale diagram は current review evidence として扱えない。optional renderer 欠落は finding を返す。 | U-TOOLADAPTER-009..010 |
 
+#### tool adapter のスコープ改訂 (IMP-131、PO 2026-06-10) — 未実装の目標契約
+
+上表の `catalogToolAdapters` / `probeToolAdapter` / `normalizeToolAdapterRun` / `planDiagramRefresh` は `src/lint/tool-adapter.ts` の現行実装 (adapter catalog + probe) の契約である。これに対し、PO 決定 (IMP-131、`docs/improvement-backlog.md`) は tool adapter (dependency-cruiser / Knip / Madge / Graphviz DOT / Mermaid / D2) を **gate truth でない insight 系**と位置づけ、harness core の profile catalog としてモデル化せず次の形へ降格する方針である。この降格は未実装であり、以下は**未実装の目標契約**である。
+
+- `ut-tdd setup graph-tools [--with <adapter,...>]` の一括セットアップコマンドを置く。冪等で、`--with` で dependency-cruiser / knip / madge / graphviz / mermaid / d2 から選んで導入する。生成する config は git 秘匿の外に置き、§6.8.10 の安全則 (secret・利用者固有の global mount を commit しない) を踏襲する。first slice は dependency-cruiser + Knip + Mermaid とし、Madge / DOT / D2 は conditional とする。
+- layer-context が、関連する V-model 工程で導入手順をアナウンスする。
+- adapter 出力の DB 正規化は、project が setup で opt-in したときだけ薄く配線する。未導入を前提に gate を組まない。adapter ごとの probe / normalize / findings / 優先順位を core に持たない。
+- MCP / verification profile (playwright / testcontainers / github-mcp / msw / mcp-inspector / vitest-browser) は gate を支える検証 (must-tool 系) であり、この降格の対象外として profile と機械着地を維持する (`function-spec.md` の MCP profile config / safety 追補)。
+
+現状との差: `src/` に `setup graph-tools` は無く (`src/setup/` と `src/cli.ts` に該当なし)、`tool-adapter.ts` は catalog 型のまま confirmed している。降格を実装するか catalog を正とするかは未決である (証跡: `docs/migration/plan-design-migration-evidence/backflow-s6e.md`)。
+
 ### Coding Rules 追補
 
 - **coding-rules**: requirements `Coding Rules SSoT` から `src/lint/coding-rules.ts` へ落とす TS core 規約。explicit `any`、TS/lint suppression comment、TS file-name drift、source max-params drift は doctor hard failure。
