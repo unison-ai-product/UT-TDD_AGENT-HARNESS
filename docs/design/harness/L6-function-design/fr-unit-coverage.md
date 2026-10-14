@@ -9,7 +9,7 @@ related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 plan: docs/plans/PLAN-L6-21-fr-unit-coverage.md
 ---
 
-> **L6 契約マーカー**: `analyzeL6FrCoverage(input: L6FrCoverageDocs) => L6FrCoverageResult` は unit-test 粒度の契約である。DbC の pre/post/invariant は、すべての FR registry 行が L6 spec、名前付き contract、対応する U-FR oracle へ解決されることを要求する。
+> **L6 契約マーカー**: `analyzeL6FrCoverage(input: L6FrCoverageDocs) => L6FrCoverageResult` は unit-test 粒度の契約である。通常状態の FR registry 行は L6 spec、名前付き contract、ID完全一致する U-FR oracle へ解決する。FR registry が明示的に退役を宣言する場合だけ、Issue #848 の退役分岐へ解決する。
 
 # L6 FR unit coverage マトリクス
 
@@ -21,6 +21,25 @@ plan: docs/plans/PLAN-L6-21-fr-unit-coverage.md
 - すべての FR-L1 row が 1 つの L6 spec path、1 つの deterministic unit contract、1 つの U-* oracle を持つ場合だけ coverage complete とする。
 - contract name の実装は後続でもよい。ただし L7 で新しい requirement を発明せず unit test にできる粒度まで狭める。
 - L6 docs は design SSoT のままにする。`harness.db` と他の DB projection は authoring source ではない。
+
+## Issue #848: FR registry の退役行 coverage 契約（設計のみ・未実装）
+
+この分岐は、FR-L1 自身の明示的な状態を起点に coverage を判定する。PLAN の status、`generates`、実装やtestの存在だけから FR の退役を推定してはならない。
+
+### 入力と状態
+
+- 将来、L1 FR registry §1 の既存7列の末尾へ `fr_state` と `retirement_plan` を任意列として追加する。現在の7列だけで記載された行、および `fr_state` が未指定または空欄の行は後方互換のため `active` と解釈する。この契約PRでは列の追加、実FR状態の設定、既存FR行の変更を行わない。
+- `fr_state` の許容値は `active` と `retired`。空欄／未指定は後方互換のため `active`。その他の値はfail-closeする。`active` 行では `retirement_plan` は空欄／未指定でなければならず、非空ならfail-closeする。
+- `retired` 行は `retirement_plan` に完全なPLAN ID、またはcanonicalな `docs/plans/<完全なPLAN-ID>.md` repo-relative pathを必須とする。短縮形や数値suffixだけの参照は認めない。path参照では `.md` を除いたfilename stemが完全なPLAN IDであり、文書frontmatterの `plan_id` と完全一致しなければならない。ID参照・path参照のいずれもrepo内で一意に解決し、参照するPLAN ID、filename stem（path参照の場合）、frontmatter `plan_id` が該当する範囲で一致すること。欠落、未解決、曖昧、参照／filename／frontmatter間の不一致はfail-closeする。PLANのstatusやartifact列挙はこの判定の代替にならない。
+
+### coverage 分岐
+
+- **active**: 現行規則をそのまま適用する。coverage matrixに1行あり、L6 spec pathと名前付きunit contractが解決し、unit oracleは当該FRの正式ID `U-<FR-L1-ID>` と完全一致すること。候補IDはactive FRのoracleとして認めない。
+- **retired**: 通常の `U-<FR-L1-ID>` 要求だけを免除し、退役証拠を同じcoverage行に要求する。行の `unit_oracle` は、次のどちらか一方の宣言IDと完全一致すること: (a) L7 unit-test designのcandidate oracle表に宣言された `CANDIDATE-U-*`、または (b) 同designの正式oracle表に宣言された `U-*`。candidate／formal oracle宣言行のtargetまたはexpected欄は、対象となるFRの完全IDを明示しなければならず、欠落や別FRのIDはfail-closeする。別FRを対象とした宣言を流用してはならない。宣言には当該oracle IDを引用する実test pathが結び付き、そのpathが解決可能な実test fileであり、file本文が同じoracle IDを明示的に引用すること。test本文でのFR ID引用は追加要件としない。未宣言ID、曖昧な二重宣言、target／expected欄のFR ID欠落または不一致、path欠落／未解決、test側oracle ID不一致はfail-closeする。引用の無いIDや宣言だけのIDは退役oracleにならない。
+- candidate oracleはcandidate表にある間は候補のままであり、正式IDとして扱わない。昇格PRは (1)本matrixの退役行、(2)L7 test-designのcandidate表から正式表への宣言、(3)実test file内のID引用、の3面を同一PRで切り替える。途中の混在状態は不一致としてfail-closeし、coverage判定を通過させない。退役PLANへの参照はそのまま保持する。
+- `ut-tdd doctor` とL6 descent／closure readerは同じ `analyzeL6FrCoverage` の退役判定結果を用いる。別々の解釈や重複した判定規則を持たない。
+
+この契約は機械実装、test追加、L1 registry状態変更を含まない。FR-L1-38を含む現在のregistry行・formal U-FR対応は契約PR後も変更されない。後続実装PRがRed oracleを追加し、契約に従う判定を実装するまで、この分岐は未実装である。`function-spec`へFR退役markerを置く旧CFAC案は採用せず、FR registryの状態と退役PLAN参照を唯一の判定起点とする。
 
 追加 requirement bundle mapping:
 
