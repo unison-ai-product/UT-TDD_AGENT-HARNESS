@@ -308,6 +308,15 @@ doctor 配線: `checkL6Completion` (`src/doctor/process-quality.ts`、`l6-comple
 - 追加要求 (SQLite projection・drive/model ログ・skill 発火指標・検索コスト削減・機械品質検査) は `fr-unit-coverage.md` の FR-L1 行が受ける。
 - G6 audit の入力条件は、(1) 各文書に owning `plan:` と `pair_artifact` と unit 契約の中身がある、(2) 所有する design / add-design PLAN が構造 lint 違反なし、(3) L7 に対応する U-* family がある、(4) `l6-fr-coverage` / `pair-freeze` / `plan-schedule` / `review-evidence` と typecheck / vitest / doctor が green、である。最終完了は、全文書と所有 PLAN が confirmed (または confirmed PLAN で supersede)、L7 が confirmed、gate-design に G6 PASS と audit 参照が記録された状態である。
 - クラス設計は非 OOP のため縮退し、本 doc §3 に統合する (上記)。
+- **PLAN 退役に向けた改訂 (#958、未実装の目標契約)**: PLAN は工程②の最後に一括で退役させる (PO 2026-10-14)。そのため、L6 completion の入力から PLAN と単一の L7 文書への依存を外す。実装 (`src/lint/l6-completion.ts`) は 2026-10-14 時点で旧規則のままであり、`plan:` が `docs/plans/PLAN-L6-*.md` の実在 path を指すこと (`DOC_PLAN_RE` / `unresolvedDocPlans`)、`pair_artifact` が `L7-unit-test-design.md` であること (`PAIR_ARTIFACT_RE`)、その本文が L6 文書のファイル名を含むこと (`missingL7DocRefs`) を要求している。目標の規則は次のとおり。
+  - 所有者: 各 L6 文書は、`plan:` (実在する PLAN の path) か `issue:` (GitHub issue の番号、正の整数) のどちらか 1 つ以上を持つ。どちらも無い文書と、`plan:` が実在しない path を指す文書は、従来どおり not-ready にする。`issue:` の番号が GitHub に実在するかは検査しない (オフラインで決まる入力だけを使う)。
+  - 対: `pair_artifact` は `docs/test-design/harness/L7-*.md` のどれでもよい。そのファイルが実在し、frontmatter に `artifact_type: test_design` と `executed_at_layer: L7` を持つこと (右腕の文書は、設計層を `layer`、実行層を `executed_at_layer` で表す。共有の `L7-unit-test-design.md` は `layer: L6` / `executed_at_layer: L7` で、この条件を満たす)。
+  - 逆参照: L6 文書のファイル名を、その L6 文書の `pair_artifact` が指す文書の本文が含むこと。別の `L7-*.md` にだけ名前があっても、対は成立しない (指定した対と逆参照を同じ文書に束縛する)。
+  - base L6 の `kind=design` PLAN の status の検査 (`draftPlans` / `missingReviewPlans`) は、PLAN が実在する間だけ行う。`docs/plans/` が無いか、L6 の PLAN が 0 件なら、その項目は空集合として扱い、not-ready の理由にしない。
+  - L7 の status: L6 文書の `pair_artifact` が指す文書の集合 (重複を除く) のすべてが `status: confirmed` であること。1 本でも draft か status が無い文書があれば not-ready にする。単一の `l7Status` (L7-unit-test-design.md の status) だけで判定しない。
+  - G6 の PASS は、従来どおり必須とする。
+  - 既存 oracle の改訂: 正式昇格のとき、U-L6COMP-001 の「owning `plan:` が無い」は「所有者 (`plan:` か `issue:`) が無い」に、U-L6COMP-002 の「owning L6 PLAN へ解決する」は「所有者が、実在する PLAN か正の整数の issue へ解決する」に置き換える。001 / 002 の「L7 の `pair_artifact`」「L7 から名前で参照される」「L7 が confirmed」は、上の対・逆参照・L7 の status の規則に置き換える。旧い文面は、置き換えた時点で残さない (同じ入力に反対の判定を求める oracle を併存させない)。
+  - 上の表の「所有 PLAN」の列は、PLAN を退役させるときに、対応する issue へ置き換える。
 
 | L6 設計文書 | 所有 PLAN | L7 oracle family |
 |---|---|---|
