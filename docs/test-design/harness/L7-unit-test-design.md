@@ -614,6 +614,36 @@ SMB/NFS/OneDrive をまたぐ strict lease、heartbeat、clock-skew 耐性は主
 | U-FRCOV-005 | 実 repo guard | FR registry 46 件すべて L6 spec / U-* oracle / substance marker に接続 |
 | U-FRCOV-006 | `analyzeL6FrCoverage` | `explicit_l7_defer` 行の type body に `{...}` フィールドブロックが無ければ missing substance |
 
+#### Issue #848: FR retirement-aware coverage (candidate Red only)
+
+> Owner は既存の PLAN-L6-21 / PLAN-L7-22 / REVERSE-21 を維持する (control issue #848、6158936589; oracle-to-FR declaration binding decision 6159675813)。この追補は退役FRをregistryから消さず、既存 `fr-unit-coverage.md` のactive FR判定を維持したまま、retired rowの根拠とoracle接続を検証するための候補test designである。入力fieldと値の契約はL6 `fr-unit-coverage.md` に従い、`fr_state` が `retired` のとき `retirement_plan` にPLAN IDまたはpathを要求し、そのPLANをrepo内で一意に解決する。L7は別schemaや追加の `tracked` 条件を導入しない。
+>
+> retired rowを受理する条件は、(1) registry row自身が `fr_state=retired` を明示、(2) `retirement_plan` がL6契約どおりrepo内で一意に解決し、その文書の `plan_id` と参照が一致、(3) coverageが参照するexact candidate/formal IDがこのtest-designの対応表に同じ状態で宣言され、oracle declaration行の対象/期待欄にregistry rowと同じ完全なFR IDが明記され、(4) 宣言にそのoracle IDを引用する実test pathが結び付き、pathが解決可能な実test fileで本文に同じexact oracle IDのtest引用が存在、の全てである。宣言行で対象FRが欠落または別FRならfail-closeする。test本文にはoracle IDの引用を要求するが、FR ID引用は要求しない。候補ID宣言・formal ID宣言・coverage引用・実test引用は別々の面として照合し、本文中の言及、bare numeric PLAN ID、似た接頭辞、既存shared helperだけでは代用しない。formalへ昇格するときはcoverage / declaration / test引用の3面を同時に切り替え、片面だけの昇格は拒否する。
+>
+> 既存U-FRCOV-001..006とactive/通常FRの `U-FR-L1-NN` 完全一致は不変。L6の退役分岐が免除するのはこの通常formal-oracle一致要件だけで、L6 spec path・named unit contract・type body/pseudocodeまたは有効な `explicit_l7_defer` のsubstance要件を退役ラベルで迂回しない。退役状態の根拠欠落・未知状態は通常FRの例外経路にしない。doctor gateとdescent-obligationの `loadFrUnitCoverageOracles` readerは同じ退役行を同じ基準で受理/拒否する。readerの表面上の行一致だけでtyped/substance欠落を覆い隠してはならない。
+>
+> **状態**: 下記 `CANDIDATE-U-FRCOV-007..023` はRed設計候補であり、現時点では実testも実装も存在しない。各行が示す `tests/l6-fr-coverage.test.ts` は将来の実test引用先であって、現在の実test citationや検証証跡ではない。正式 `U-FRCOV-007..023` へは昇格しておらず、既存の正式U-FRCOV-001..006を変更・置換しない。
+
+| Test ID | 対象 / 実test引用予定 | 期待 (各negativeは記載した条件だけを変え、他条件は有効fixtureのまま保つ) |
+|---|---|---|
+| CANDIDATE-U-FRCOV-007 | `analyzeL6FrCoverage`; `tests/l6-fr-coverage.test.ts` の通常FR互換test | active/通常FRは従来どおりregistryとcoverageに存在し、coverage oracleが `U-FR-L1-NN` とFR IDに完全一致し、参照L6 specとunit-contract substanceも満たすときだけ通る。候補退役IDだけを通常FRのoracle欄へ置いた反例は `unit_oracle_match` 相当で拒否する。U-FRCOV-001..006の既存期待は変わらない。 |
+| CANDIDATE-U-FRCOV-008 | retirement-aware analyzer; `tests/l6-fr-coverage.test.ts` のcandidate-positive test | 既知retired registry row (`FR-L1-NN`)、canonical repo内で一意に解決する退役PLAN、coverageのcandidate IDと一致する本表宣言が揃い、宣言行の対象/期待欄が同じ完全な `FR-L1-NN` を示し、実testがそのcandidate oracle IDを引用するfixtureは候補状態として受理する。test本文にFR ID引用は要求しない。candidate acceptanceでありformal acceptanceや現PLANの実装完了を意味しない。 |
+| CANDIDATE-U-FRCOV-009 | retirement-aware analyzer; `tests/l6-fr-coverage.test.ts` のformal-positive fixture test | formal状態のfixtureではcoverageのexact formal ID、formal宣言、実test中のoracle ID引用が三面すべて同じで、retired rowと解決済PLANも有効なら受理する。formal宣言行の対象/期待欄にはretired rowと同じ完全な `FR-L1-NN` を置く。test本文にFR ID引用は要求しない。candidate文字列が残るfixture、またはformal面の一つだけが未昇格ならpositive例にしない。 |
+| CANDIDATE-U-FRCOV-010 | retirement evidence validation; `tests/l6-fr-coverage.test.ts` のmissing-plan test | 有効なretired state・exact declaration・test引用を保ち、retirement PLAN参照だけを欠落させたfixtureを拒否する。状態値だけを根拠にcoverage済みとしない。 |
+| CANDIDATE-U-FRCOV-011 | PLAN resolver; `tests/l6-fr-coverage.test.ts` のunresolved-path test | それ以外はCANDIDATE-U-FRCOV-008と同一に保ち、退役PLAN参照だけを存在しない/解決不能なtargetへ変更したfixtureを拒否する。宣言済みIDや実testがあってもPLAN解決を代替しない。 |
+| CANDIDATE-U-FRCOV-012 | PLAN resolver; `tests/l6-fr-coverage.test.ts` のambiguous-identity test | PLAN参照が同じnumeric suffix等を持つ複数のPLANへ解釈できるfixtureを拒否する。L6契約どおり、参照と文書 `plan_id` がrepo内で一意に解決するpositive fixtureは維持し、曖昧なID/pathを推測解決しない。 |
+| CANDIDATE-U-FRCOV-013 | candidate declaration resolver; `tests/l6-fr-coverage.test.ts` のcandidate-undeclared test | retired row、解決PLAN、coverage candidate ID、実test引用を揃えたうえで、candidate対応表の宣言行だけを除くfixtureを拒否する。本文のproseにIDを一度書いただけではdeclarationとして数えない。 |
+| CANDIDATE-U-FRCOV-014 | formal declaration resolver; `tests/l6-fr-coverage.test.ts` のformal-undeclared test | retired row、PLAN解決、coverageのformal ID、実test引用を揃え、formal対応表の宣言だけを欠落させたfixtureを拒否する。別状態のcandidate宣言や本文中のformal ID言及で補完しない。 |
+| CANDIDATE-U-FRCOV-015 | test-reference resolver; `tests/l6-fr-coverage.test.ts` のmissing-test-citation test | state・PLAN・exact candidate/formal declaration・coverage参照を有効にしたまま、IDを引用する解決可能な実test fileまたは実test caseだけを欠くfixtureを拒否する。L7のtest-design記述自体を実test citationとして扱わない。 |
+| CANDIDATE-U-FRCOV-016 | exact test-reference resolver; `tests/l6-fr-coverage.test.ts` のwrong-test-id test | 実testは存在するが、test caseが別のcandidate/formal IDを引用するfixtureを拒否する。coverageとdeclarationのexact IDが一致している条件は維持し、似たprefixや同一番号の別IDを対応済みにしない。 |
+| CANDIDATE-U-FRCOV-017 | three-surface promotion agreement; `tests/l6-fr-coverage.test.ts` のpartial-promotion tests | 有効なcandidate-positive fixtureから、coverageだけ、declarationだけ、実test引用だけをformal IDへ切り替える1面formalの3 caseに加え、coverage+declaration、coverage+実test引用、declaration+実test引用をformal IDへ切り替える2面formalの3 caseを独立に作り、計6 caseすべてを拒否する。各caseで記載した面以外のtuple条件とretired state/PLANは有効なcandidate状態に保ち、三面が同時に切り替わらないpartial promotionを許さない。 |
+| CANDIDATE-U-FRCOV-018 | state/source-reader/doctor-descent consistency; `tests/l6-fr-coverage.test.ts` とdescent reader統合testの予定 | 独立fixtureで、未知のregistry stateだけを与えた場合、および既知retired stateでも退役根拠だけを欠く場合はdoctorが拒否し、通常FRへfallbackしない。`loadFrUnitCoverageOracles` / descent-obligation readerもdoctorと同じ有効・無効判定を返す。さらにU-FRCOV-006既存反例（`DeferredInput -> DeferredResult` だけで `{ field: type }` blockがない `explicit_l7_defer` row）にretired/candidate labelを付けてもsubstance errorを隠せず、source readerがそのFRを検証済みとして除外しない。各negative fixtureは他のtuple面をvalidに保つ。 |
+| CANDIDATE-U-FRCOV-019 | retirement evidence validation; `tests/l6-fr-coverage.test.ts` のactive-state/stray-plan test予定 | `fr_state=active` のregistry rowに `retirement_plan` だけを非空値で与え、それ以外のactive coverage・oracle・L6 spec・unit-contract条件を有効にしたfixtureを拒否する。active状態を退役例外へ読み替えず、L6のactive + 空欄／未指定規則を単独で検証する。 |
+| CANDIDATE-U-FRCOV-020 | oracle declaration resolver; `tests/l6-fr-coverage.test.ts` のambiguous-double-declaration test予定 | 有効なretired row、PLAN根拠、coverage oracle、実test pathと同一ID引用を保ち、そのexact oracle IDだけを同じ状態の対応表に二重宣言し、宣言ごとに異なる解決可能な実test pathを結び付けたfixtureを拒否する。宣言の優先順位を推測せず、L6の曖昧な二重宣言fail-closeを単独で検証する。 |
+| CANDIDATE-U-FRCOV-021 | PLAN resolver; `tests/l6-fr-coverage.test.ts` のresolved-plan-id-mismatch test予定 | `retirement_plan` pathがrepo内のPLAN文書へ一意に解決する一方、その文書frontmatterの `plan_id` が参照ID（およびfilenameから特定されるPLAN ID）と異なるfixtureを拒否する。retired state、oracle宣言・test引用、その他のcoverage条件は有効に保ち、解決済み文書のID不一致だけを単独で検証する。 |
+| CANDIDATE-U-FRCOV-022 | oracle declaration resolver; `tests/l6-fr-coverage.test.ts` のmissing-target-FR test予定 | retired row、解決PLAN、coverage oracle、宣言されたexact oracle ID、同IDを引用する実testを有効に保ち、oracle declaration行の対象/期待欄に対象FR完全IDが欠ける点だけを変えて拒否する。実test本文のoracle ID引用を維持し、FR引用を要求しない。 |
+| CANDIDATE-U-FRCOV-023 | oracle declaration resolver; `tests/l6-fr-coverage.test.ts` のwrong-target-FR test予定 | retired row、解決PLAN、coverage oracle、宣言されたexact oracle ID、同IDを引用する実testを有効に保ち、oracle declaration行の対象/期待欄だけを別FRの完全IDに変えて拒否する。実test本文のoracle ID引用を維持し、FR引用を要求しない。 |
+
 ### §1.21 U-FR-L1-21 (test perspective gate)
 
 > ペア = `vmodel-pair-freeze.md` §7.3.1。pair presence だけではなく、設計層ごとに必要な test perspective が欠けていないことを検査する。

@@ -19,6 +19,12 @@ v2_import: docs/migration/v2-import-ledger.md
 - `src/lint/l6-fr-coverage.ts` はこの rule の mechanical guard であり、`ut-tdd doctor` に配線されている。
 - `fr-unit-coverage.md` に列挙する contracts は unit-test-granularity specifications である。L7 は direct unit tests として実装しても、confirmed follow-up PLAN へ route してもよい。ただし implementation time に欠けている FR coverage を発明してはいけない。
 
+### Issue #848: FR registry 退役行の判定分岐（契約のみ・未実装）
+
+`analyzeL6FrCoverage` の退役分岐は `fr-unit-coverage.md` の Issue #848 節を唯一の詳細契約とする。判定起点はFR registry側の `fr_state` であり、registryの既存7列だけの行および `fr_state` 欠落／空欄行は後方互換でactiveとなる。active rowの `retirement_plan` は空欄／未指定に限り、非空ならfail-closeする。通常のactive rowには従来どおり正式な `U-<FR-L1-ID>` の完全一致を要求し、候補oracleで代替しない。退役rowの `retirement_plan` は完全なPLAN IDまたはcanonicalな `docs/plans/<完全なPLAN-ID>.md` repo-relative pathとし、短縮・数値suffix参照を認めず、path filename stemとfrontmatter `plan_id` は完全一致かつ一意に解決する。退役rowに限り、L7 test-design候補表または正式表の宣言を認めるが、宣言行target／expected欄に当該FRの完全IDが必要で、別FR宣言の流用やID欠落はfail-closeする。対応する実test fileはoracle IDを完全一致で引用する（test本文でのFR ID引用は要求しない）。candidateから正式oracleへの昇格はcoverage matrix、test-design表、実test引用の3面を同一PRで変更し、混在状態は通過させない。
+
+doctorとL6 descent／closure readerは同じanalyzer判定を共有する。function-specへretired markerを追加する旧CFAC案は採用しない。この契約PRでは `FR-L1-38` を含むregistry row、source、tests、PLAN、ledgerを変更せず、退役分岐は未実装の設計契約として残す。候補IDはformal IDへ昇格するまで候補のままである。
+
 ## 2026-06-09 Harness DB feedback function 追補
 
 この追補は requirements §6.8.6 / §6.8.7 と L5 `physical-data.md` §9 / `internal-processing.md` Appendix B を L6 function-level contracts へ降下する。SQLite DB は docs/state/logs の rebuildable projection であり、authoring source ではない。
