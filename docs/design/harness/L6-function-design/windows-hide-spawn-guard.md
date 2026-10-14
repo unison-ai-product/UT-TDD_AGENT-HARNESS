@@ -7,7 +7,7 @@ artifact_role: topic_windows_hide_spawn_guard
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 next_pair_freeze: L7
-plan: pending (issue #693。台帳の Claude 手番で plan draft により起票する)
+plan: docs/plans/PLAN-L6-693-windows-hide-spawn-guard.md
 ---
 
 > **L6 contract marker**: `analyzeWindowsHide(sources, baseline, previousBaseline) => WindowsHideResult` は unit-test-granularity contract である。DbC pre/post/invariant は §7 にまとめる。oracle の索引は共有の `docs/test-design/harness/L7-unit-test-design.md` (§子プロセスの windowsHide 検査) に置き、詳細 (CANDIDATE-U-WHIDE-001〜019) は専用の `docs/test-design/harness/L7-windows-hide-spawn-guard-test-design.md` が固定する。
