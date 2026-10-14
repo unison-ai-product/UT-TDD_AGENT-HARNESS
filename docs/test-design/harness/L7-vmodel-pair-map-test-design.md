@@ -75,7 +75,7 @@ issue: 1019
 | `docs/design/harness/L6-function-design/claude-inbox-explicit-ack.md` | L6 | L7 | `docs/test-design/harness/L7-unit-test-design.md` : 節「Claude inbox 明示 ACK candidate oracle (PL」内の言及 (1725 行) | 対あり |
 | `docs/design/harness/L6-function-design/confirmed-document-placeholder-detection.md` | L6 | L7 | `docs/test-design/harness/L7-unit-test-design.md` : CANDIDATE-U-PH-001..008 (3072 行); CANDIDATE-U-PH-010..024 (3073 行); CANDIDATE-U-PH-025 (3074 行) | 対あり |
 | `docs/design/harness/L6-function-design/consumer-trace-gates.md` | L6 | L7 | `docs/test-design/harness/L7-unit-test-design.md` : 節「consumer trace gate (Issue #971 / #972 /」内の言及 (3093 行) | 対あり |
-| `docs/design/harness/L6-function-design/context.md` | L6 | L7 | `docs/test-design/harness/L7-unit-test-design.md` : U-DOMAIN-004 (423 行); U-PLANLINT-004 (602 行); U-PA-045 (1405 行) | 対あり |
+| `docs/design/harness/L6-function-design/context.md` | L6 | L7 | `docs/test-design/harness/L7-unit-test-design.md` : U-CONTEXT-001..005 (31 行、対の索引の行) | 対あり |
 | `docs/design/harness/L6-function-design/cross-review-enforcement.md` | L6 | L7 | `docs/test-design/harness/L7-unit-test-design.md` : §5 対応表の行 (1027 行); 「§2 量閉じ一覧 (L6 設計 → U 被覆、孤児チェック)」の項 (800 行) | 対あり |
 | `docs/design/harness/L6-function-design/descent-obligation.md` | L6 | L7 | `docs/test-design/harness/L7-unit-test-design.md` : 見出し「§1.22 U-DESC (descent-obligation ledger 由来、PLAN-」(678 行); CANDIDATE-U-FRCOV-018 (640 行); §5 対応表の行 (1030 行) | 対あり |
 | `docs/design/harness/L6-function-design/design-protection-diff-gate.md` | L6 | L7 | `docs/test-design/harness/L7-unit-test-design.md` : 節「設計書保護 diff gate (Issue #898) — 索引」内の言及 (3047 行) | 対あり |
