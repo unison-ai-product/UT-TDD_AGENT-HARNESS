@@ -265,8 +265,9 @@ Codex はこれらの規律を一度も受け取っていなかった)。`rule-d
 - CI is `harness-check`: typecheck, Vitest, Biome lint, and doctor.
 - Review evidence is required before confirmation gates where applicable.
 - PR merge は必ず `ut-tdd pr merge --pr <N>` 経由とし、`gh pr merge` の直叩きで迂回しない。
-- merge の後は、合流した HEAD で CI / doctor / 回帰の安全確認まで行い、結果を `ut-tdd memory add` で
-  HARNESS メモリへ記録して相手ランタイムと PO に伝わる状態にする。merge 条件 (draft 解除・review
+- merge の後は、合流した HEAD で CI / doctor / 回帰の安全確認まで行い、確認した HEAD と結果を PR コメントと
+  正規のイベント・証跡に残して相手ランタイムと PO に伝わる状態にする。確認結果そのもの (エピソード状態) は
+  メモリに書かない。永続的な決定や教訓が得られたときだけ HARNESS メモリへ昇格させる。merge 条件 (draft 解除・review
   evidence 成立・required CI green・PLAN status gate) を、Green の偽装 (未完成 PLAN の帳尻 confirm、
   detector の allowlist 追加、base 負債の PR 固有扱い) で満たしたことにしない。依頼に「merge しない」と
   明記された PR は、その指示を優先する。
@@ -424,10 +425,12 @@ working tree を相手ランタイムが常時書き換えるため、full tree 
   **メモリファイルの手書き作成は禁止** — frontmatter (memory_id/kind/title/tags/updated_at)
   欠落は db rebuild が fail-close し CI が赤化する (2026-07-28 実例: PR #167)。必ず
   `ut-tdd memory add` 経由で書く。
-  既存メモリの本文を直すときは、既存ファイルを `git rm` してから同じ body で `memory add --body-file`
-  を再実行する。`memory add` は body が同一なら既存 entry をそのまま返し、異なれば例外を投げるので、
-  ツール経由の変更は diff が `updated_at` だけになる。レビュアは「body が変わったのに `updated_at` が
-  変わっていない」commit を手編集として検出できる。
+  既存メモリの扱いは次のとおり (`src/memory/service.ts` の `writeMemoryEntry`)。同じ kind と title は同じ
+  memory_id・同じファイルに解決される。同じ内容 (body・tags) の登録し直しは既存 entry をそのまま返す。
+  body が異なる登録は、既存ファイルが残っている間は例外で拒否される。本文を変えるときは、既存ファイルを
+  `git rm` してから、kind / title / tags を保ったまま変更後の body を `memory add --body-file` に渡す。
+  新しい `updated_at` で書き直される。この手順を通らない body の変更は手編集であり、レビュアは
+  「body が変わったのに `updated_at` が変わっていない」commit を手編集として検出できる。
   エピソード状態 (進捗・次の一手) はメモリに書かず、DB/HEAD 由来の digest に任せる
   (stale 化する層を作らない)。
 
