@@ -886,6 +886,13 @@ attemptを加算し、retry可能な`pending`を維持する。
 `merge`はrepository同期 (merge closure receipt) の経路だけが書き、手動観測の記録経路 (`recordGithubBinding`) は`merge`を拒否する。
 `project`というkindは実装に無い。
 
+学習・current state の projection (PLAN-L5-23 還流、未実装の目標契約): `escape_learning_facts` は PLAN-L5-23 の `forward_escape_observations` (layer / escape type / cause / drive model / recurrence / PoC S4 decision / reentry・route・merge outcome) に相当する同一責務の表であり、別表を重ねない。PoC S4 decision と reentry / route / merge outcome が上表の列に無い場合は列を追加する。上表に無い次の 2 つの再構築可能 projection を目標契約とする。
+
+- `execution_episode_projection`: reducer が算出する current E-state、block reason、next legal action、latest head、merge readiness。merge ready の判定入力にしない (上の追加契約どおり authoritative refs を再評価する)。
+- `forward_escape_rollups`: policy revision と集計 window 単位で再構築する。生 event を捨てて rollup だけを正本にせず、同一 recurrence を二重計上しない。
+
+GitHub Project V2 同期の事前検証 (実装済みの挙動に合わせた記述): `syncForwardProject` (`src/github/project-v2.ts`) は remote mutation の前に、必須 field の存在、single-select option の存在、同一 PLAN の重複 item を全件検証し、欠落・重複は mutation を一件も出さずに fail-close する。`src/github/repository-bindings.ts` は trace の base SHA を repository-scoped compare で PR HEAD の祖先または同一 (`ahead` / `identical`) と確認できない場合、`base-sha-unverified` として skip する。remote 観測は SQLite transaction の開始前に完了し、transaction 内から network / API を呼ばない (目標契約。コード上の担保は未確認)。
+
 PLAN-L7-452の先行sliceでは、全episode schemaの完成を待たずE2 custodyとE3/E4 outbox境界を
 `harness.db` schema version 27へ次の2表で実装する。これは検出器都合の簡略化ではなく、
 上表の`execution_episode_events` / `execution_github_projection_outbox`へ後続合流するまでのdurable契約である。

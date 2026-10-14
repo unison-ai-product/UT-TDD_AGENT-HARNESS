@@ -2,15 +2,15 @@
 
 目的: すべての PLAN を「使い捨て可」か「廃止 / supersede 済み」にするため、PLAN にだけ残る未達 DoD・carry・実在する依存・oracle・責務を設計文書へ移す (PO 2026-10-14)。
 
-基準 commit: origin/main `d5ad67fb50c148ea8dd6d5475bab4b88f2d4cd4c`。blob sha256 は `git cat-file blob origin/main:docs/plans/<file> | sha256sum` の値。
+基準 commit: origin/main `c6e81f90966f9435643988b014252ceaa2c72661`。blob sha256 は `git cat-file blob origin/main:docs/plans/<file> | sha256sum` の値。
 
-処理済み: 23 件 / 26 件。
+処理済み: 24 件 / 26 件。
 
 区分ごとの件数 (処理済み分):
 
 - 使い捨て可: 20
 - 要判断: 1
-- 還流済み: 2
+- 還流済み: 3
 
 | PLAN | blob sha256 (origin/main) | 区分 | 移し先 (path と節) | 剥離した依存 | 備考 |
 |---|---|---|---|---|---|
@@ -37,3 +37,4 @@
 | PLAN-L5-20-engine-swap-module-decomposition | `2f404101c20f34edf8a9845ff9a1afbd0d3b09c293c582054339e93fb793a355` | 使い捨て可 | 既存: module-decomposition.md 付録C (C.1 責務、C.1.1 wave、C.2 依存規則、C.3 規模 / 循環 / CQS gate) | requires L4-21 (完了済み)、blocks L6-75 (後続向き) | ProfileOverlayResolver は付録C の profile 行 (`resolveProfile`、stateless resolver) に既存。draft のまま |
 | PLAN-L5-21-semantic-assessment-debt-routing-physical-data | `0ebee1bad70594e83dc79cd6e79ed5e07a5ffbcec52e36c7a27c04c5c511f44a` | 使い捨て可 | 既存: physical-data.md §9.15 の semantic_assessments / semantic_assessment_evidence / semantic_assessment_reviews / semantic_assessment_debt_routes | blocks L6-76 (後続向き) | draft。受入条件の 163 item / 3 面証拠 / debt route 100% は §9.15 と L8 engine-swap 節に既存 |
 | PLAN-L5-22-detector-self-proof-receipt-physical-data | `cd0e42b3746f6a03e66627c96d2353ce6ce10bbcbed701a27285798ef32d9091` | 使い捨て可 | 既存: physical-data.md §9.15 の self_proof_receipts / self_proof_fixture_executions / self_proof_surface_observations / self_proof_mutation_results、§9.15.1 の自己証明行 | blocks L6-77 (後続向き) | draft。mutation survivor 0 等の oracle は L8 engine-swap 節に既存 |
+| PLAN-L5-23-execution-ledger-github-physical-data | `831d0391c8d7a24d7ae2df9014e4178b207b7ede2d3074c4885c00562e134fc3` | 還流済み | physical-data.md「Execution Episode / GitHub配送の目標テーブル」節末尾 (escape_learning_facts と forward_escape_observations の同一責務化、execution_episode_projection / forward_escape_rollups の目標契約、Project V2 事前検証と base compare の実装挙動、transaction 内 network 禁止)。他は g3.md で移行済みの既存分 | requires L4-23 / L6-50 (完了済み)、blocks 空 | g3.md で保留 (d) だった 2 項目を処理した。transaction 内 network 禁止は目標契約で、コード上の担保は未確認と本文に明記 |
