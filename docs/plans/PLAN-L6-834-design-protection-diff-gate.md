@@ -34,6 +34,10 @@ escape_reason: "Issue #898: freeze the design-protection diff gate contract (PO
 generates:
   - artifact_path: docs/plans/PLAN-L6-834-design-protection-diff-gate.md
     artifact_type: markdown_doc
+  - artifact_path: tests/design-protection.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/design-protection-repository-contract.test.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/design/harness/L6-function-design/function-spec.md
   requires: []
@@ -75,18 +79,18 @@ sub_doc: function-spec
 github_issue_id: 898
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:0b8e082148f04ee77a070d70af661a0f
-  command_id: plan-revise:issue-898:PLAN-L6-834:r2:confirm-20261013T0329Z
-  admitted_at: 2026-10-13T03:43:12.771Z
-  source_digest: sha256:930ee5d0086549133fe377e4186b2457e07ec803defda72fa89e0318eb6b35c2
-  decision_digest: sha256:894621bd0ecccb7dd1035347d20bc6ba867653266c52e8116e1824ba5a41927a
-  receipt_digest: sha256:a6e02b75658df8bc8ea9b05e692a960ed0133cfe8209aabcf8259a22494a6c6e
+  receipt_id: certificate:59a3de61436a8737f81baa07b1ae1f2c
+  command_id: plan-revise:issue-898:PLAN-L6-834:r3:generates-20261014T044201000Z
+  admitted_at: 2026-10-14T04:42:01.000Z
+  source_digest: sha256:a5b5f175acbac4b1aae47bbf15e8eda88c068d8a0a191ce4edb23170e6e134e7
+  decision_digest: sha256:fc40efbe652b25bb7342883a4480763c91cff7b091f46498c0e3c7d94a6d5087
+  receipt_digest: sha256:9b97c0fbfa44ffcfe4a49f1e906d48c983b2ee204634e6fab54565bade9ef0d6
   binding:
     path: docs/plans/PLAN-L6-834-design-protection-diff-gate.md
     plan_id: PLAN-L6-834-design-protection-diff-gate
     asset_id: plan:8ca68930636199fa10036ecd1487a466
-    revision: 2
-    content_digest: sha256:930ee5d0086549133fe377e4186b2457e07ec803defda72fa89e0318eb6b35c2
+    revision: 3
+    content_digest: sha256:a5b5f175acbac4b1aae47bbf15e8eda88c068d8a0a191ce4edb23170e6e134e7
   route:
     signal: feature_addition
     mode: add-feature
@@ -120,6 +124,8 @@ admission_receipt:
 - `docs/design/harness/L6-function-design/design-protection-diff-gate.md` (本 PLAN で凍結する設計文書)
 - `docs/test-design/harness/L7-design-protection-diff-gate-test-design.md` (対になるテスト設計)
 - `docs/test-design/harness/L7-unit-test-design.md` の索引節 (設計書保護 diff gate)
+- `tests/design-protection.test.ts` (CANDIDATE-U-DPROT-001〜015、017〜023、028〜029、031〜032の26件を候補IDで引用するRed用test_code。subject moduleの解決失敗だけは個別candidateのRed証拠ではなく、実装PRでcandidate別mutation証跡を残す。)
+- `tests/design-protection-repository-contract.test.ts` (CANDIDATE-U-DPROT-016、024〜027、030の6件に対する実repo参照のrepository-read contractを固定するRed用test_code。)
 
 ## 検証の対
 

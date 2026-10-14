@@ -834,6 +834,28 @@ attemptを加算し、retry可能な`pending`を維持する。
 | `execution_github_object_bindings` | `episode_id`, `object_kind`, `repository`, `external_id`, `number`, `url`, `remote_version`, `last_reconciled_head`, `projection_revision` | `(episode_id,object_kind)` UNIQUE。付替えはevent必須。現行PLAN bindingと別表で、episode未確定値を補完しない |
 | `reentry_certificates` | `certificate_id`, `episode_id`, origin/target binding, drive/intermediate evidence digest, `policy_revision`, `issued_at`, `expires_at?`, `supersedes_id?`, `certificate_digest` | episode+origin revision FK、supersession cycle/fork禁止 |
 | `escape_learning_facts` | `episode_id`, origin L, escape type/cause, drive model, recurrence identity, outcome, upstream action, closed_at | E15から再構築可能、手入力status禁止 |
+| `drive_model_selections` | `episode_id`, selection revision, model, 適合結果, 根拠digest, override有無・actor・reason・evidence | episodeごとのactive revisionは一意。overrideは元選択を更新せず新revisionをappend |
+| `execution_evidence_refs` | `episode_id`, `event_id`, evidence種別 (test run / CI run / review / artifact), 参照, digest | evidence種別間の代用を禁止。別episode・別revision・別headのevidenceをFKとpolicyで拒否 |
+
+上表の追加契約 (未実装、移行元: docs/plans/PLAN-L5-23-execution-ledger-github-physical-data.md (issue #648)):
+
+- Issue / branch / PR の create operation の冪等keyは`(repository, episode_id, object_kind, intent_revision)`とし、HTTP timeout後も
+  同一keyで外部照会(reconcile)してから再送する。webhook delivery IDだけに依存せず、provider event identityとobject/head identityで重複を吸収する。
+- transaction境界: domain event appendとoutbox enqueueは同一transaction。inbox insert・normalization・処理結果記録はcrash-safeに分け、
+  lease timeout後に再開できる。E9 certificate consume・E10 event append・projection更新意図は同一transaction。同一command IDから
+  生成できるauthoritative eventは最大1件。merge ready判定はprojection cacheでなくcertificate・CI・review・head SHAのauthoritative refsを
+  同一snapshotで再評価する。external bindingの付替えは履歴eventを要し、URL/numberを直接上書きしない。
+- schema registryがFK・複合UNIQUE・CHECK・partial index・append-only triggerを表現できない場合は、registry/migration機構を先に拡張し、
+  application validationだけで代替しない。
+- retryは指数backoffと上限を持つが、上限到達でepisodeを消さず、新しいblocked eventと運用actionを生成する。worker crash後は
+  leaseを回収し、送信済み未ackは外部照会を先に行う。
+- event・drive selection・certificate・evidence refs・outbox/inbox raw digestは監査期間中append-onlyで保持する。projectionはeventとinboxから
+  再構築でき、rebuildは外部副作用 (GitHub write) を一度も発生させない。payloadへsecret/PIIを保存せずredacted canonical formとdigestを持つ。
+  schema migrationは旧eventを意味変換せず、upcaster versionと変換digestを記録する。
+
+現行`github_object_bindings.object_kind`の実装値は`project_item | issue | branch | pull_request | check_run | review | merge`である。
+`merge`はrepository同期 (merge closure receipt) の経路だけが書き、手動観測の記録経路 (`recordGithubBinding`) は`merge`を拒否する。
+`project`というkindは実装に無い。
 
 PLAN-L7-452の先行sliceでは、全episode schemaの完成を待たずE2 custodyとE3/E4 outbox境界を
 `harness.db` schema version 27へ次の2表で実装する。これは検出器都合の簡略化ではなく、

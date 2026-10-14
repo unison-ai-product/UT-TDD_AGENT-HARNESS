@@ -10,7 +10,7 @@ plan: docs/plans/PLAN-L6-02-edge-case.md
 v2_import: docs/migration/v2-import-ledger.md
 ---
 
-> **L6 contract marker**: `deriveEdgeCaseOracle(input: EdgeCaseInput) => EdgeCaseOracle` は unit-test-granularity contract である。DbC pre/post/invariant は各 function signature を edge coverage へ対応づける。L7 oracle family は U-EDGE-001..005 とする。
+> **L6 contract marker**: `deriveEdgeCaseOracle(input: EdgeCaseInput) => EdgeCaseOracle` は unit-test-granularity contract である。DbC pre/post/invariant は各 function signature を edge coverage へ対応づける。L7 oracle family は U-EDGE-01..03 とする。
 
 
 > **SSoT 参照**: 関数 signature = [function-spec.md](./function-spec.md) §1/§2 / edge docstring 枠 = [internal-processing.md](../L5-detailed-design/internal-processing.md) §7 (G5 凍結) / fail-close 形式 = internal-processing §6。本 doc は各関数に `@edge-normal/error/boundary/throws` の 4 観点を per-function 確定する (L6、IMP-014)。
@@ -64,8 +64,8 @@ function-spec §1/§2 の各関数に **正常/異常/境界/throws の 4 観点
 |---|---|---|---|
 | `plan draft` | plan_id 重複 → exit 1 / kind-layer 不整合 (例 charter≠L0) | sub_doc 必須層で未指定 | frontmatterSchema parse 失敗 → ZodError / exit 1 (原子性: file 不変) |
 | `gate <G-ID>` | 前工程未通過 → exit 1 (V-model 順序) | G-ID 範囲外 / gate-checks.yaml 不在 | check.run() 例外 → fail-close |
-| `trace check` | 孤児 edge ≥1 → exit 1 | generates 空宣言 | PLAN registry 不在 → Error / exit 1 |
-| `sprint check` | Red commit が Green の後 → TDD 違反 exit 1 | test ファイル path 解決不能 | L6 未凍結で sprint check → pre 違反 |
+| `trace check` (現状は `vmodel lint` で部分実現: function.md §FR→サブコマンド対応) | 孤児 edge ≥1 → exit 1 | generates 空宣言 | PLAN registry 不在 → Error / exit 1 |
+| `sprint check` (FR-02 は未実装の将来形: function.md L4 §FR→サブコマンド対応「将来形」「未」。以下は将来形の oracle) | Red commit が Green の後 → TDD 違反 exit 1 | test ファイル path 解決不能 | L6 未凍結で sprint check → pre 違反 |
 
 > bypass (PO 専属 S-03): `UT_TDD_*_BYPASS=1` → warn + audit (PO ID + 理由必須) + exit 0 (internal-processing §6)。
 

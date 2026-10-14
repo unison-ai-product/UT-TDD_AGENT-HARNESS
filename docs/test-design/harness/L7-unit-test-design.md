@@ -833,6 +833,14 @@ SMB/NFS/OneDrive をまたぐ strict lease、heartbeat、clock-skew 耐性は主
 
 ### 2026-06-15 Model Evaluation Oracle (FR-L1-38, PLAN-L7-53)
 
+#### Issue #789 の段階的退役境界 (control 決定 2026-10-13)
+
+この契約改訂だけでは実装やテストを撤去しない。契約 PR の merge 後、PR1 (`forward`) で rebuild / doctor / telemetry scan の呼び出し元と SQLite の model evaluation read 実装を撤去する。PR1 では PLAN-L7-423 所有の domain / application / adapter / domain test の 4 ファイルと `ModelEvaluationConfigPort` / `ModelEvaluationReadPort` の型を残す。新しい no-op facade は作らない。
+
+PR1 のテストは下記の候補 ID を引用する。PR1 の後に source 変更なしの昇格 PR を挟み、テスト・PLAN-L6-789 §5・FR coverage の引用と候補宣言を同時に正式 ID へ昇格する。新しい gate や例外は作らない (control コメント 6144875387)。
+
+PR2 (`add-feature`) は昇格 PR merge 後の main から開始し、PLAN-L7-423 の正規 revise と同時に 4 ファイルと型 2 件を撤去する。`U-DOMAIN-005` は PR2 で `tests/model-evaluation-domain.test.ts` を撤去する時点まで宣言と引用を維持し、その時点で撤回する。PR1 より前に Issue #848 の退役判定分岐を独立した契約 → Red → 実装の slice で main へ導入する。`U-FR-L1-38` は PR1 で `tests/model-evaluation.test.ts` の撤去と同時に撤回し、同じ PR1 で FR-L1-38 を #848 の分岐を使って退役の状態へ切り替える。退役の実測は PLAN-L6-789 §5 の oracle に引き継ぎ、旧実装を戻す mutation で Red を確認する。撤回予定という記載は現時点の実装完了や検証済みを意味しない。
+
 | U-ID | 関数 | oracle (DbC) |
 |------|------|--------------|
 | U-FR-L1-38 | `projectModelEvaluations` | **Opt-in disabled (AC-38-02)**: no .ut-tdd/config/model-opt-in.yaml or enabled!=true → 0 model_evaluations rows (never throws). **AC-38-01 enabled**: seed model_runs + plan_registry, write model-opt-in.yaml (enabled:true) under tmp repoRoot → model-A (2 runs both success) writes row with success_rate=1.0, run_count=2, success_count=2; model-B (2 runs, 1 success) writes row with success_rate=0.5, run_count=2, success_count=1. **Cold-start**: enabled but 0 model_runs → 0 model_evaluations rows (never throws). **Success inference**: joins model_runs.plan_id -> plan_registry.status IN PLAN_SUCCESS_STATUSES ("confirmed","completed"); no token/cost column — cost-efficiency is explicit_l7_defer (token telemetry pending, PLAN-L7-53 follow-up). **Opt-in file parse failure**: treat as disabled (fail-open for opt-in gate). |
@@ -2384,7 +2392,7 @@ prefix/length/algorithm混同とrevision replayをnegativeにする。payload ob
 `payload_schema == schema_id`を検証する。F0c OS lane run差、Q0 expected/executed set差、aggregateの
 failure/cancelled/skippedをtyped fieldsから再導出して拒否する。
 `evidence_digest` / `object_digest` alias lookup、payload content digestによる取得を拒否する。CutoverAdmissionはvalidated Q0
-SliceAdmissionとL6ConfirmationReceiptをdirect参照し、独自`issuer_key_id`を拒否する。attestationは
+SliceAdmissionとL6ConfirmationReceipt (退役: #977、Node切替chain退役注記は internal-processing.md §Node切替receipt chain)をdirect参照し、独自`issuer_key_id`を拒否する。attestationは
 schemaVersion/algorithm/authorityId/keyVersion/signatureのnested exact shape、producer+recordDigestはverifier
 inputとして検証する。flat field、schemaVersion/algorithm欠落、forged/unknown authority又はversionを拒否する。
 通常D0のSliceAdmission保存graphはpredecessor/required input refsとD0から既存ReviewBundleへのouter refを必須とし、
@@ -2422,7 +2430,7 @@ reviewerFamily/model/PASS注入、historical commentのreceipt昇格、row片側
 再mint、削除後再発行は0とする。
 F0b compile custodyでは`tsconfig.node.json`の欠落、別path、内容digest drift、receipt field省略を独立mutationし、
 いずれもcompile/process生成0で拒否する。
-`CAND-CUTOVER-009`はPLAN-L6-93 exact revision/status confirmed/content/head bindingのattested
+`CAND-CUTOVER-009` (退役: #977、L6ConfirmationReceiptはNode切替chainごと退役済み。根拠と範囲は internal-processing.md §Node切替receipt chain の退役注記、モジュール/テスト削除は#592 D2/D3所管)はPLAN-L6-93 exact revision/status confirmed/content/head bindingのattested
 L6ConfirmationReceiptをpositiveとし、draft/unconfirmed/wrong-plan/stale-head/unsigned/forgedを個別negativeにする。
 AttestedTracked wrapperとL6Confirmationの全field順、record/receipt二段digest、nested attestation mutationを検証する。
 通常D0/CutoverのReviewBundle coreのexact 8 fields/self除外7-field ordered preimage、各coreを包むexact 7-field
@@ -2949,6 +2957,18 @@ v2正常fixtureはN=3、stable/canary両channelを対象とする。実producer�
 mutation M1–M7は正本§5と同一: exactly-oneへの退行、集合一致への弱体化、先頭mappingだけの比較、v1基数guard削除、attestation path束縛削除、promotion余剰scalar受理、rollback余剰scalar受理。
 対応するRed証跡は実装後に各単独mutationを実行して記録する。finding enum、reason precedence、producer/installer/validatorの既存意味は変更しない。
 
+## Issue #789 退役 oracle (PLAN-L6-789 §5)
+
+正本: `PLAN-L6-789-token-ingest-retirement` §5。実装 PLAN は `PLAN-L7-789-token-ingest-retirement-execution`。PR1 で実装・実測する退役 oracle を以下に定義する。現契約 PR は実測完了を主張しない。各 oracle は旧実装 (`projectTokenUsage` / `projectRepoScopedTokenUsage` / `projectModelEvaluations`、scan action の `openHarnessDb` → `migrate` → `projectTokenUsage` → `projectModelEvaluations`) を戻すと RED になる。
+
+| ID | 観点 | 失敗させる mutation | 実装テスト |
+| --- | --- | --- | --- |
+| `CANDIDATE-U-TOKRET-001` | rebuild 後に session ログ由来の `model_runs` 行 (token 列が非 NULL) が 0 件 | rebuild 経路の `projectRepoScopedTokenUsage` を戻すと、repo に帰属する Claude / Codex の session fixture から token 行が入り RED | `tests/projection-writer.test.ts` |
+| `CANDIDATE-U-TOKRET-002` | rebuild は opt-in 有効でも `model_evaluations` を 1 行も書かない | `projectModelEvaluations` を rebuild へ戻すと、review-evidence 由来の `model_runs` と opt-in から評価行が入り RED | `tests/projection-writer.test.ts` |
+| `CANDIDATE-U-TOKRET-003` | (a) `.ut-tdd/` を持たない一時 root で `telemetry scan --json` を実行しても `<root>/.ut-tdd/harness.db` が作られない。非空 fixture で `totalRuns` が 1 以上 | scan action の `openHarnessDb(defaultHarnessDbPath(repoRoot))` を戻すと DB file が生成され RED | `tests/cli-surface.test.ts` |
+| `CANDIDATE-U-TOKRET-004` | (b) migrate 済み harness.db を置いて `telemetry scan --json` を実行しても file の sha256 が変わらず、`-wal` / `-journal` sibling が無く、`role = 'session'` の `model_runs` 行が 0 件。非空 fixture で `totalRuns` が 1 以上 | scan action の `migrate` → `projectTokenUsage` → `projectModelEvaluations` を戻すと sha256 が変わり session 行が入り RED | `tests/cli-surface.test.ts` |
+| `CANDIDATE-U-TOKRET-005` | review-evidence 由来の `model_runs` 行は rebuild で従来どおり生成され、orphan 検査 (`collectDriveDbRegistrationStats` の `modelOrphans`) が 0 | review-evidence 由来行まで投入をやめると行数 0 で RED | `tests/projection-writer.test.ts` |
+
 ## Issue #789 PR-1: 常時 token scan 退役 oracle
 
 対象は Stop hook と doctor の常時経路だけとする。手動の `telemetry scan` と token projection 自体は PR-2 の所有であり、この PR では変更しない。
@@ -2980,7 +3000,19 @@ mutation M1–M7は正本§5と同一: exactly-oneへの退行、集合一致へ
 | U-RECHAIN-018 | 同一 asset について `H` が 2 件 append していた re-chain。(正系) 1 件目 base = (n、`M` の canonical payload digest)、2 件目 base = (n + 1、1 件目の中間 blob の digest) → `pass`。(負系) 2 件目の base を `M` に固定 → `receipt_digest_mismatch`。中間 blob を 1 byte 変える、または status を draft→confirmed に変える (bind 後の digest は key と一致する) → `intermediate_plan_digest_mismatch` (bind 前の blob 自体の digest で照合する)。中間 blob を渡さない → `intermediate_plan_missing`。余分な key、最後の record の `content_digest` を key にした entry、複数再発行が無いときの非空 `intermediatePlans` → `intermediate_plan_unexpected` | (m1) 全 record の base を `M` から取る → 正系が fail。(m2) 中間 blob の digest 照合を省く、または bind 後の digest で照合する → 改変 blob が pass。(m3) 欠落時に `R` の PLAN blob で代用する。(m4) key 集合を superset 許容に緩める |
 | U-RECHAIN-019 | legacy bootstrap 除外 (PLAN-L6-711 §2.3-6、receipt revision 6)。組 (h, r) ごとに `h.binding.asset_id` が `plan:legacy:` で始まり、かつ `h.binding.revision === 2` または `r.binding.revision === 2` なら `fail` (理由: `legacy_bootstrap_unsupported`)。(a1) M に同 asset の revision 1 があり H / R が revision 2 → reasons はちょうど `[legacy_bootstrap_unsupported]`。(a2) M に同 asset の record が無く H が revision 2 → legacy 理由と源の欠落の理由が併存する。a1 / a2 とも `command_id` は `plan-revise:issue-1:legacy-x:r2:000000000000` と `pr154-legacy-x-r2` の 2 形式。(b) H が revision 2、M が待機中に同 asset を revision 2 で admit し R が revision 3 → `fail`。(c) M の最新 revision 2、H / R が revision 3 → `pass`。(d) `plan:<32 hex>` asset で H / R が revision 2 → `pass` | (m1) R 側だけで判定 → b が pass。(m2) prefix だけで判定 → c が fail。(m3) revision 2 だけで判定 → d が fail。(m4) `command_id` の形式で判定 (`/^pr154-/` または `/^plan-revise:/`) → a1 / a2 のどちらかの形式で legacy 理由が出ない。(m5) 源の欠落で短絡 → a2 で legacy 理由が出ない |
 
+## PLAN-L6-711 S3 adapter / wrapper (Issue #711) — pair-freeze 候補
+
+契約は PLAN-L6-711 §2.1 / §2.4 / §2.5 / §2.6 / §4 の既存候補。S1 で対をレビューし、confirm 後に別の S3 実装で検証する。ここでは実装済み・Green を主張しない。S2 の pure verifier と既存 oracle は変更しない。
+
+| ID | 正系 / 期待結果 | 独立した負系・mutation / 期待結果 |
+| --- | --- | --- |
+| CANDIDATE-U-RECHAIN-008 | append-only 領域外で 3-way merge conflict が起きる fixture → wrapper は verifier を呼ぶ前に `rechain_conflict` で停止し、merge しない | conflict を解消扱いにする、または main 側を黙って優先して続行する → 中止せず失敗 |
+| CANDIDATE-U-RECHAIN-009 | verifier が `pass` でも R の required CI が red または未完了なら merge しない。verifier `pass` かつ required CI green なら merge し、intent receipt に `rechain` 結果を残す | required CI の完了待ちを省き、red / 未完了 fixture で merge を許す → oracle が失敗 |
+| CANDIDATE-U-RECHAIN-010 | H の PASS のうち、same-family、`blocking > 0`、または exact head 不一致の各証跡を、それぞれ R に引き継がない | 他の field は有効なまま family 検査だけを外す → same-family 証跡が転送され oracle が失敗 |
+| CANDIDATE-U-RECHAIN-013 | fixture repository の adapter `readRechainSnapshot` 出力 (commit の parents / tree、5 つの TreeMap、blob の範囲、`base`) が、Git `rev-parse` / `ls-tree -r` / `cat-file` と `merge-base(H, M)` の実 object 結果に完全一致 | 非簿記 path を blob 範囲へ混ぜる、または TreeMap の path を 1 件落とす → 完全一致検査が失敗 |
+
 ## 設計書保護 diff gate (Issue #898) — 索引
+
 
 L6 契約は `docs/design/harness/L6-function-design/design-protection-diff-gate.md`。
 oracle の詳細 (入力・期待・殺す mutation・fixture・required evidence) は専用の
@@ -3025,3 +3057,21 @@ oracle の詳細 (入力・期待・殺す mutation) は専用の
 | CANDIDATE-U-MEMEPI-009〜010、018 | 即時配送の抑止と、unknown・推定分の配送 | 専用文書 §4 |
 
 上表の ID は backtick 無し表記である。候補台帳への再掲ではなく専用文書への参照であり、U-VMSRC-009 の一意性検査の対象外とする。
+
+## consumer trace gate (Issue #971 / #972 / #880) — 索引
+
+L6 契約は `docs/design/harness/L6-function-design/consumer-trace-gates.md`。
+oracle の詳細 (入力・期待・殺す mutation・fixture・required evidence) は専用の
+`docs/test-design/harness/L7-consumer-trace-gates-test-design.md` に置き、本節は索引だけを持つ。
+
+| 範囲 | 検証面 | 詳細 |
+| --- | --- | --- |
+| CANDIDATE-U-CTRACE-001〜002 | harness / consumer の分岐 (design root の layout で決まる) と harness 分岐の挙動不変 | 専用文書 §3 |
+| CANDIDATE-U-CTRACE-003〜009 | prefix に依存しない ID 抽出、placeholder の除外、範囲表記の展開と不正な範囲 | 専用文書 §3 |
+| CANDIDATE-U-CTRACE-010〜015 | trace 規則 T1〜T4 (展開先・関連機能・トレース元の実在、参照 0 個の行) | 専用文書 §3 |
+| CANDIDATE-U-CTRACE-016〜018、025 | 必須集合 (要求・画面・機能) の空集合拒否 (#880) | 専用文書 §3 |
+| CANDIDATE-U-CTRACE-019〜022、026 | harness 専用文書を読まないこと、2 つの入口の一致、core 文書の欠落と doc_type_id 不一致の fail-close、L3 PLAN 検査をしないこと | 専用文書 §3 |
+| CANDIDATE-U-CTRACE-023〜024 | 章見出しと必須列の freeze、章の範囲外の表を読まないこと | 専用文書 §3 |
+
+上表の ID は backtick 無し表記である。候補台帳への再掲ではなく専用文書への参照であり、U-VMSRC-009 の一意性検査の対象外とする。
+正規 `U-CTRACE-*` への昇格と Red test は、src/ も scripts/ も含まない PR (契約 PR + Red) で入れる (`design-protection-diff-gate.md` §10.2)。

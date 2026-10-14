@@ -580,6 +580,25 @@ slice admission流用、skip、同一edge二重approvedを拒否する。
 
 ### Node切替receipt chain
 
+> **退役注記 (#977、2026-10-13)**: 本節のcutover genesis / sealed edge chain (`CutoverAdmissionReceipt`、
+> `L6ConfirmationReceipt`、`CutoverTransitionReceipt`の5状態遷移) と、これに付随する`ReviewLaneReceipt`
+> (CD-20)、`SessionIdentityReceipt` (CD-21)、`WorkProvenanceEventReceipt` (CD-22)、`L6ConfirmationReceipt` (CD-37)
+> は**退役済みの設計**であり、実装予定はない。退役理由はNode切替がこのchainなしで完了 (sealed) したためである。
+> 根拠: #487はsealed edgeもtyped receiptも持たないまま2026-09-18にclose (PR #651)、#152 / #153は
+> 2026-09-25に後継 (PLAN-L7-458 / PLAN-L7-462) で完了としてclose、Node authorityは
+> `package.json` `utTdd.nodeAuthority = "sealed"`と`docs/governance/repository-structure.md`で宣言済み。
+> chain writer (`src/runtime/cutover-transition.ts`の`initializeCutoverChain` / `appendCutoverTransition`)の
+> 呼び出し元はテストのみで、これを計画するopen issue / PLANは存在しない。
+> 以下の記述は退役前の設計の履歴として残し、実装の根拠にしない。
+> **現行のまま有効な部分**: `SliceAdmissionReceipt`は`src/schema/node-slice-admission.ts` /
+> `src/runtime/node-slice-admission.ts`で実装済みであり、`AttestedReceiptEnvelope<SliceAdmissionReceipt>`、
+> `ReviewBundleReceipt`、`CandidateAuthorshipReceipt`、`CaseManifestObject`の封印規則とともに有効のままとする
+> `ReviewBundleReceipt` は slice admission の d0 が必要な kind として参照しており (`src/schema/node-slice-admission.ts:71`)、slice admission の一部として有効のまま残る。`CandidateAuthorshipReceipt` は src にも tests にも実装と参照が無い (2026-10-13 時点の `git grep`)。本注記では退役を判断せず、tests からしか呼ばれない module の扱いと一緒に #592 (D2) で判定する。
+> `src/schema/cutover-transition.ts` / `src/runtime/cutover-transition.ts`とそのテストの削除は#592 (D2 / D3)が所管し、
+> 本注記は削除を行わない。
+> **名前衝突の注意**: `src/state-db/projection-writer.ts`の`projectGithubReviewLaneReceipts`はGitHub review lane
+> のprojectionであり、退役した`ReviewLaneReceipt`とは別物である。
+
 cutover writerはvalidated latest receiptを読み、5状態の隣接一方向遷移だけを受理する。各guardはinventory freeze、
 Node parity aggregate、fallback/process 0、final deletion+独立reviewの順に対応する。canonical receiptへ
 下記唯一schemaのfieldを封印して`receipt_digest`を計算しappendする。
@@ -1330,3 +1349,37 @@ E.3〜E.5 の各項目について、1 bit 改変で write 0 となる負系を�
 封印対象ごとの固定 preimage は `ut-tdd:genesis-rebase-migration/v1` 形式で Issue 本文に宣言し
 (先例 Issue #143、L6-93 は Issue #541)、`Inference forbidden: true` を明記する。
 本付録の semantics は新規であり、既存 `review_evidence` を根拠にしない。実装前に非著者 review を取得する。
+
+## 付録 F: `plan revise` の route-owned optional field の省略と clear (PLAN-L6-832、Issue #832)
+
+移行元: `docs/plans/PLAN-L6-832-plan-revise-omission-preserve-contract.md` (issue #648)
+
+### F.1 現行の実装の振る舞い (2026-10-13 origin/main 時点)
+
+- `bindPlanSourceToAdmission` (`src/plan-admission/plan-content-binding.ts`) は、`source.content` の
+  frontmatter から `admission_receipt` と route-owned の 5 項目 (`workflow_phase` / `status` / `sub_doc` /
+  `github_issue_id` / `supersedes`) を取り除き、admission request にある値だけを戻す。`kind` / `layer` /
+  `drive` / `route_signal` / `route_mode` は admission の値で常に上書きする。これ以外の key (`title` /
+  `generates` / `pair_artifact` など) は `source.content` のまま残る。
+- したがって現行では、manifest の `admission` で省略した route-owned optional field は revise 後に**消える**。
+  この削除は `tests/plan-content-binding.test.ts` の `U-PA-BIND-001` が oracle として固定している。
+  `U-PA-BIND-003` は、指定した `supersedes` が旧値を継承せず置換されることを固定している。
+- `admission_receipt` は ledger transaction の出力であり、content preimage に含めない。
+
+### F.2 省略=保存と明示 clear の契約 (**未実装**、owner: Issue #832 の L7 add-impl。PLAN は未起票)
+
+F.1 の削除は、正規 writer が canonical metadata を黙って消せる欠陥である (2026-10-05 に PLAN-L6-105 / 106 / 107
+の `sub_doc` が失われた)。次を freeze 済みの契約とし、実装されるまで F.1 が現行の振る舞いである。
+
+| ID | 契約 | 採らなかった案と理由 |
+|---|---|---|
+| D1 | 明示 clear は `admission.clear: [key...]` で表す。要素は D3 の key 名の閉じた enum (`workflow_phase` / `sub_doc` / `issue` / `supersedes`)。重複・空配列・未知 key は schema で拒否する | 値に `null` を書く案は「未指定」と「消去」の差が JSON の書き方 1 つに依存する。top-level `clear` は admission request との対応が崩れる |
+| D2 | 保存の継承元は、manifest の `base` (`source_commit` / `source_blob_oid` / `source_content_digest`) で検証した base 本文とする (`boundBaseSource` と同じ検証) | `source.content` から継承すると admission を通らない author 入力が混入する。現在 HEAD から継承すると replay が非決定的になる |
+| D3 | 対象は route-owned の 5 項目に限る (admission key `workflow_phase` / `status` / `sub_doc` / `issue` / `supersedes`)。`issue` は base の embedded `admission_receipt.issue` の binding 全体を継承元とする。base の `github_issue_id` と receipt の issue が一致しない、または receipt に issue が無いのに `github_issue_id` だけがある場合は fail-close し、明示 `issue` か clear を要求する | 全 optional frontmatter を対象にすると、本文編集で key を消す通常操作を禁止することになる |
+| D4 | `kind` / `layer` / `drive` / `route_signal` / `route_mode` は必須のまま manifest 値が勝つ。`status` は省略時に保存し、指定時は置換する。`status` は clear できない。`revision` と `admission_receipt` は保存・clear の対象外。`supersedes: []` は空配列への置換であり、clear (key を除く) とは別の操作である | `status` を clear 可能にすると既定値 `draft` への暗黙の降格を許す |
+| D5 | 省略値の解決は純関数 `resolveRevisionAdmission({ manifest, baseSource })` の 1 箇所で行い、解決済み request を CLI の事前評価 (`src/cli/plan-revise.ts` の `evaluatePlanAdmission`)、runner の `assertAdmission`、binder、replay 照合の全てに渡す。replay は保存済み manifest と同じ base から解決し直し、初回と同じ admission / digest / 本文になることを照合する | runner だけで解決すると、CLI の事前評価が継承前の request で走る |
+| D6 | 保存した値が新しい kind / layer / route で不適合になる場合 (例: design で禁止の `workflow_phase`、Forward 遷移で残る `issue`) は自動で落とさず、ledger / source / projection の write 0 で fail-close して明示 clear か置換を要求する。同じ key に値と clear を両方書いたら schema で拒否する。render 後の最終 frontmatter も schema 検査を通す | 不適合値を自動で落とすと「省略=保存」を条件付きで破る |
+
+- route-owned 以外の key の扱いは変えない。`plan draft` (新規 asset、base 無し) は対象外である。
+- 実装時は `U-PA-BIND-001` を「省略した key は base 値を保存し、clear した key だけ消える」へ反転し、
+  `U-PA-BIND-003` は維持する。oracle ID の採番は L7 add-impl が `docs/test-design/harness/L7-unit-test-design.md` で行う。

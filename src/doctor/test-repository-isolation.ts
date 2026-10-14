@@ -155,6 +155,19 @@ repositoryReadContracts["tests/plan-revision-digest-query.test.ts"] = {
     "CLI subprocess loads the source under test from the writable execution snapshot and reads ledger data only from a temporary fixture root",
 };
 
+repositoryReadContracts["tests/design-protection.test.ts"] = {
+  mode: "isolated_fixture",
+  calls: 1,
+  reason:
+    "design-protection unit oracles resolve subject and CLI paths from the writable execution snapshot",
+};
+repositoryReadContracts["tests/design-protection-repository-contract.test.ts"] = {
+  mode: "isolated_fixture",
+  calls: 1,
+  reason:
+    "design-protection repository-contract oracles resolve subject and repository paths from the writable execution snapshot",
+};
+
 export const REPOSITORY_READ_CONTRACTS: Readonly<Record<string, RepositoryReadContract>> =
   repositoryReadContracts;
 

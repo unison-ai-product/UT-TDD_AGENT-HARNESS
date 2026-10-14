@@ -15,8 +15,8 @@ updated: 2026-10-13
 本書はその §3 分類規則、§4 拒否規則、§5 出力、§7 CI 接続、§8 不変条件を検証する oracle を定義する。
 共有の `docs/test-design/harness/L7-unit-test-design.md` には索引 (§設計書保護 diff gate) だけを置き、本書が詳細の正本である。
 
-この契約 PR + Red で、候補001〜032を正式 ID `U-DPROT-*` へ1:1に昇格する。
-対応するRedのテスト (`it.fails`) は `tests/design-protection.test.ts` に置く (設計文書 §10.2)。実装 PR は `it.fails` を `it` に戻して Green を観測するだけで、本書には触れない。
+候補IDで引用したRedの登録は #1012 でmainへ到達した。この昇格PRで候補001〜032を正式 ID `U-DPROT-*` へ1:1に昇格し、登録済みRedの引用も同時に書き換える (設計文書 §10.3)。
+Redのテスト (`it.fails`) は `tests/design-protection.test.ts` と `tests/design-protection-repository-contract.test.ts` に置く。実装 PR は `it.fails` を `it` に戻して Green を観測するだけで、本書には触れない。
 既存の `plan admission-check` の oracle は再定義しない。§2 の再利用部品の挙動不変は、既存の admission テストが無変更で green であることで確かめる。
 
 ## 2. fixture
@@ -69,7 +69,8 @@ updated: 2026-10-13
 ## 4. Gate and scope fence
 
 - 本書の oracle は `docs/design/` と `docs/test-design/` の保護だけを扱う。`tests/` の oracle 保護、追加による実質上書き、push event の検査は対象外 (設計文書 §9)。
-- テスト設計の確定・正式 ID への昇格・Red のテストは、src/ も scripts/ も含まない PR (契約 PR + Red) で入れる (設計文書 §10.2)。実装 PR は本書と共有の索引に触れず、Green にするだけにする。本書は昇格のための例外 oracle を持たない。
+- テスト設計の確定・正式 ID への昇格・Red のテストは、src/ も scripts/ も含まない PR (契約 PR + Red) で入れる (設計文書 §10.2)。開発 repo を読むテストファイルがあるときは次項の §10.3 の順序が優先する。実装 PR は本書と共有の索引に触れず、Green にするだけにする。本書は昇格のための例外 oracle を持たない。
+- 開発 repo を読むテストファイル (`test-repository-isolation` が読取ありと判定するもの) の Red は、その登録行と一緒に入れる。順序は L6 §10.3 に従い、(1) 候補 ID で引用する Red と登録行、(2) 昇格 (全件) とテストの引用の正式 ID への書き換え、(3) 実装 PR とする。昇格を Red より先に入れない (未引用の正式 ID は `oracle-test-trace` が拒否する)。
 - candidate の存在だけを Green の証跡にしない。
 - 契約 PR + Red で、`src/github/design-protection.ts` がまだ無いために import が失敗して `it.fails` が成立しても、それは各 guard の Red の証拠にならない。実装 PR は、候補ごとに L6 の規則を 1 本だけ殺す mutation を入れて Red になることを確かめ、そのログを §5 の証跡に残す (issue #898 の契約確認、2026-10-13)。
 - 009(b)(c) は L6 §3 / §9 の初版の非保証境界を固定する。workflow 内容の CI policy 検査016/024〜026とは別である。issue #973 で分類対象を広げると決めた場合は、その契約改訂で009(b)(c)の期待を `implementation` / `BLOCK` に反転する。

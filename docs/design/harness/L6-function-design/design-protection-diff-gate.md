@@ -247,6 +247,17 @@ test-design の書き換えの多くは、`CANDIDATE-*` を正式 ID へ昇格�
 - 契約 PR + Red で入れる Red のテストは、main の CI を赤にしないよう Vitest の `it.fails` で書く (失敗している間は pass 扱いになる)。実装 PR は `it.fails` を `it` に戻して Green にする。この戻しは `tests/` の変更なので、この gate には当たらない。実装が先に通ってしまうと `it.fails` 自体が fail するため、Red が実際に赤だったことも CI で確かめられる。
 
 この運用では、昇格と Red を入れる PR は src/ を含まないので、この gate を通る。
+
+### 10.3 開発 repo 自身を読む Red テストの分け方 (issue #898、2026-10-13)
+
+一部の oracle (現時点では 016、024〜027、030) は、テストが開発 repo 自身 (実 workflow、`RUNTIME_STEP_MANIFESTS`、`docs/governance/repository-structure.md`、`git ls-files`) を読む。こうしたテストは、doctor の `test-repository-isolation` が `src/doctor/test-repository-isolation.ts` の `repositoryReadContracts` への登録行を要求する。登録行は読取を行うテストファイルと同じ変更でしか入れられない (登録だけを先に入れると `stale-contract` になる)。登録行は src/ にあるので、10.2 の「契約 PR + Red は src/ を含まない」と両立しない。そこで開発 repo を読むテストファイルがあるときは、10.2 の「昇格と Red を同じ PR で入れる」に代えて次の順序で分ける。
+
+1. **登録 + Red (src/ は登録行だけ)**: Red のテスト (`it.fails`) を入れ、テスト名は候補 ID (`CANDIDATE-U-DPROT-*`) で引用する。開発 repo を読むテストファイルには、同じ PR に `repositoryReadContracts` の登録行だけを足す。この PR は src/ を含むので §3 では実装 PR になるが、保護対象 (`docs/design/` と `docs/test-design/`) を変えないので §4 の拒否には当たらない。src/ の変更は登録行に限り、gate の実装や他の src/ を含めない。
+2. **昇格 (src/ を含まない)**: テスト設計の昇格 (`CANDIDATE-U-DPROT-*` → `U-DPROT-*`、全件) と、テスト名の引用を候補 ID から正式 ID へ書き換える変更を同じ PR で入れる。src/ も scripts/ も含まないので非実装 PR であり、test-design を変えてよい。
+3. **実装 PR**: テストファイルの `it.fails` を `it` に戻して Green にする。
+
+順序を 1 → 2 にする理由は、doctor の `oracle-test-trace` が正式 ID を宣言したら同じ変更でテストの引用を要求し (未引用の宣言は baseline 外の違反になる)、候補 ID には引用を要求しないためである (`src/lint/oracle-test-trace.ts` の `CANDIDATE-*` 除外)。昇格だけを先に入れると、引用するテストが無いので CI が赤になる (PR #985 の 3c30fced で実測)。
+どのテストファイルが開発 repo を読むかは、実装レーンが `test-repository-isolation` の判定 (登録が要るか) で確定する。テストの subject や CLI の解決に `process.cwd()` を使うファイルも、この判定では読取ありになる (PR #985 で実測)。1 の新しいテストファイルは、その PR で PLAN-L6-834 の `generates` に canonical `plan revise` で足す (`deliverable-plan-trace` の owner)。
 実装 PR は src/ を含むので、昇格や登録のために test-design を書き換えると §4 で拒否される。
 
 ## 11. 根拠
