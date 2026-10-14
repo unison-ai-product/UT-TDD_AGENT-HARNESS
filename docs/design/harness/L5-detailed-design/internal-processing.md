@@ -1383,3 +1383,5 @@ F.1 の削除は、正規 writer が canonical metadata を黙って消せる欠
 - route-owned 以外の key の扱いは変えない。`plan draft` (新規 asset、base 無し) は対象外である。
 - 実装時は `U-PA-BIND-001` を「省略した key は base 値を保存し、clear した key だけ消える」へ反転し、
   `U-PA-BIND-003` は維持する。oracle ID の採番は L7 add-impl が `docs/test-design/harness/L7-unit-test-design.md` で行う。
+- 候補 oracle `CANDIDATE-PREVISE-C1..C9` (省略の保存、明示 clear、schema 拒否、issue 不整合、不適合時の fail-close、解決点の一元化、replay の決定性) は
+  `docs/test-design/harness/L7-plan-revise-omission-preserve-test-design.md` が持つ。実装順は、同じ revise 系の正本に触れる Issue #711 の S3 と合わせる。
