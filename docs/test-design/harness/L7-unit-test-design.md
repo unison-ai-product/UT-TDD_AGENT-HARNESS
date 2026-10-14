@@ -3105,3 +3105,27 @@ oracle の詳細 (入力・期待・殺す mutation・fixture・required evidenc
 
 上表の ID は backtick 無し表記である。候補台帳への再掲ではなく専用文書への参照であり、U-VMSRC-009 の一意性検査の対象外とする。
 正規 `U-CTRACE-*` への昇格と Red test は、src/ も scripts/ も含まない PR (契約 PR + Red) で入れる (`design-protection-diff-gate.md` §10.2)。
+
+## residual / telemetry 閉包 lint の候補 oracle (PLAN-L3-04 / PLAN-L3-05 の設計還流、issue #958)
+
+対になる設計は `docs/design/harness/L6-function-design/function-spec.md` の D.7 (residual 閉包) と D.8 (telemetry / 自己改善の閉包) である。下の ID は既存 test の見出しに現れる ID (`U-DMP-*` など) と同じ語幹を持つが、この文書では未宣言だったため、候補 ID (`CANDIDATE-U-*`) として宣言する。既に実装と test がある契約なので、正規 `U-*` への昇格では test の ID を揃えるだけでよい (`U-L14CLOSE-*` は上で宣言済み)。
+
+| 候補 ID | oracle | 現在の裏付けの test |
+|---|---|---|
+| `CANDIDATE-U-DMP-001` | 入口 mode 11 件がそろった passage 表を受理する | `tests/drive-model-passage.test.ts` |
+| `CANDIDATE-U-DMP-002` | Forward の合流先を示す語が無い行を `missing_forward_target` で拒否する。表が無い文書は違反として報告する | `tests/drive-model-passage.test.ts` |
+| `CANDIDATE-U-DMP-003` | 現行の PLAN-L3-04 の表が 11 mode をすべて持つ | `tests/drive-model-passage.test.ts` |
+| `CANDIDATE-U-RAC-001` | closure 表の行を解析し、`closed` 以外の規則を `openRows` として出す | `tests/rule-automation-closure.test.ts` |
+| `CANDIDATE-U-RAC-002` | 既知の自動化担い手を持たない文章だけの規則を `unknown_owner` で拒否する。表が無い文書は違反として報告する | `tests/rule-automation-closure.test.ts` |
+| `CANDIDATE-U-RAC-003` | 現行の PLAN-L3-04 に、文章だけの規則と scheduled の規則が残っていない | `tests/rule-automation-closure.test.ts` |
+| `CANDIDATE-U-HOWRD-001` | residual の行に `closed` 以外が残り、最新 handover が「次の作業なし」と書くと警告する | `tests/handover-completion-wording.test.ts` |
+| `CANDIDATE-U-HOWRD-002` | residual の行がすべて `closed` なら警告しない | `tests/handover-completion-wording.test.ts` |
+| `CANDIDATE-U-HOWRD-003` | `CURRENT.json` の `latest_doc` だけを走査し、過去の handover は走査しない | `tests/handover-completion-wording.test.ts` |
+| `CANDIDATE-U-TCLOS-001` | 非 closed の status を明示した telemetry 表を受理する | `tests/telemetry-closure.test.ts` |
+| `CANDIDATE-U-TCLOS-002` | 期待する要件の行が欠けると `missing_expected_requirement` で拒否する。audit が無ければ違反として報告する | `tests/telemetry-closure.test.ts` |
+| `CANDIDATE-U-TCLOS-003` | 現行の A-134 audit が 9 件の要件をすべて持つ | `tests/telemetry-closure.test.ts` |
+| `CANDIDATE-U-CP4-001` | 必須の 11 行が、実在する証跡 path とともにそろっていれば受理する | `tests/cycle-p4-verification.test.ts` |
+| `CANDIDATE-U-CP4-002` | source 隔離の行が欠けると拒否する | `tests/cycle-p4-verification.test.ts` |
+| `CANDIDATE-U-CP4-003` | 実在する証跡 path を持たない closure 行を `missing_evidence_path` で拒否する | `tests/cycle-p4-verification.test.ts` |
+| `CANDIDATE-U-CP4-004` | 現行の A-136 audit が完全である | `tests/cycle-p4-verification.test.ts` |
+| `CANDIDATE-U-CP4-005` | 現行運用ファイルに旧移植元の語彙が戻ると `forbidden_legacy_source_term` で拒否する | `tests/cycle-p4-verification.test.ts` |

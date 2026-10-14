@@ -156,6 +156,16 @@ verification_design: system environment, data reality, measurement method, evalu
 G4 pair-freezeは本節とL4-22〜28を双方向traceし、L5/L8、L6/L7へ順に降下する。system greenだけで
 設計判断やsemantic verdictを補完せず、失敗原因が上流contractならReverse、実装ならL7、verification設計ならL9へrouteする。
 
+### engine-swap G9 の close 条件 (PLAN-L9-01 の設計還流、issue #958)
+
+engine-swap の system 検証を G9 として閉じるときの条件を残す。一般の G9 workflow は §6 の `G9-WORKFLOW` が正本であり、ここには engine-swap に固有の差分だけを書く。
+
+- **対象と実行面**: `ST-ENGINE-01..08` を、システム全体の CLI / DB / doctor / CI の面で実行する。
+- **実行順序の依存**: G9 は G8 (engine-swap の結合検証、`L8-integration-test-design.md`) が pass してから実行する。
+- **証跡 manifest**: `.ut-tdd/evidence/g9-system/engine-swap.json` (2026-10-14 時点では未生成)。ST-ID、environment、command、exit、revision / digest、defect の経路を保持する。
+- **exit criteria**: L4 ↔ L9 の pair が成立している。数量 (source 文書 109、semantic item 163、category 21、profile 8) が揃っている。文書台帳の pending と orphan が 0。semantic の pending が 0。mutation survivor が 0。
+- **defect の経路**: §6 の `defect_routing` に従う (system test の誤りは L9、L4 の契約の誤りは Reverse、L7 の配線は add-impl の修正、regression は Recovery)。
+
 ### §7.1 Repository Document Ledger system oracle (PLAN-L4-25)
 
 | ST-ID | Given / When | system oracle | 負例・exit |

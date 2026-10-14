@@ -69,3 +69,16 @@ Codex には構造化質問ツールが無いため、**同じ内容を markdown
 review で指摘対象。フォーマット自体の改訂は本 doc を更新し、両ランタイムの
 ルール節 (`CLAUDE.md` / `AGENTS.md`) と `skills/design-decision-elicitation.md`
 を同時に揃える (rule-drift と同じ divergence 防止方針)。
+
+## 設計判断の記録
+
+本フォーマットを置いたときの判断 (PLAN-L3-07 からの設計還流、issue #958)。
+
+1. **ツールを改造しない**: `AskUserQuestion` は組み込みツールでスキーマを変えられない。そのため、使ってよい範囲を設計判断に限る運用ルール (`CLAUDE.md` / `AGENTS.md`)、質問の形を固定する skill (`skills/design-decision-elicitation.md`)、Codex 向けの等価な markdown 表現 (上記「Codex CLI 側の実装」) の 3 層で実現する。従来の PO ルール「AskUserQuestion 不使用」は「設計判断に限り使用可 (対話セッションのみ)」へ改訂した (2026-07-13)。
+2. **hook による機械強制は見送る**: `PreToolUse(AskUserQuestion)` の guard は設けない。過剰な機構化を避けるためであり、運用の逸脱が観測されたら、後続の slice で fail-close にする。
+
+## 後続候補 (未実装の目標)
+
+PO の示唆 (2026-07-13)。本フォーマットの範囲外で、まだ実装も契約も無い。
+
+- **ステージ紐付きのエリシテーション**: harness.db の `schedule_entries` (工程表の projection。SessionStart の digest が current / next / blocked を判定する元) と設計判断の依頼を結び、質問へ `plan_id` と現在地 (`current_location`) を自動で付け、採択結果を DB へ投影する。step 粒度で自分のステージを認識するには、Forward FSM の実装 (`PLAN-L7-419-forward-fsm-transition-workflow-cli`) が先に要る。この依存が解けるまで着手しない。

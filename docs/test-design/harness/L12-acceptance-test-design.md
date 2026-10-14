@@ -255,3 +255,16 @@ verification_design: 検証環境、受入データ実在性、計測方法、�
 
 engine-swap mandatory ATは4/4 passを要求し、deferはprogram acceptへ使用できない。失敗はL12 correction、
 deployment design Reverse、L7 implementation、Recovery/Incidentへscope別にrouteする。
+
+## §8 NFR Contract catalog の候補 oracle (PLAN-L3-08 の設計還流、issue #958)
+
+対になる設計は `docs/design/harness/L3-functional/nfr-grade.md` §8 (未実装の目標契約) である。契約の schema・契約 lint は `src/` に無いため、ここでは候補 ID (`CANDIDATE-AT-NFRC-*`) だけを宣言する。正規 `AT-*` への昇格と Red test は、契約 PR + Red で入れる。
+
+| 候補 ID | Given | When | Then |
+|---|---|---|---|
+| `CANDIDATE-AT-NFRC-001` | 12 種の category と、12 種の外にある候補 (privacy / compliance、AI 固有の品質、i18n、データ移行の RPO・RTO) | catalog を分類する | 全 category が「契約の対象」または「対象外 (理由付き)」のどちらかへ排他的に入り、宙に浮いた category が 0 件。12 種の外の候補も「category の追加」または「理由付きの除外」へ入る |
+| `CANDIDATE-AT-NFRC-002` | catalog の全契約 | `subject` を検査する | 全契約が `subject` を持ち、harness の契約とプロダクトの契約が catalog 上で分離されている (harness の evidence でプロダクトの契約を満たせない) |
+| `CANDIDATE-AT-NFRC-003` | NFR-01〜17 のうち定量閾値を持つ NFR | `trace` を検査する | 全件が最低 1 つの契約へ trace される (孤児の NFR 0、孤児の契約 0) |
+| `CANDIDATE-AT-NFRC-004` | 未知の category、metric の単位欠落、`min` と `max` の両方の欠落、stage 未定義、environment 未定義の 5 種の負系 fixture | 契約 lint を実行する | 5 種とも reject され、安定した理由コードと exit が返る |
+| `CANDIDATE-AT-NFRC-005` | 閾値を緩めた契約の変更 (後継契約なし / 後継契約あり) | supersession を検査する | 後継契約・双方向の参照・理由が揃わない緩和は reject され、黙った上書きは成立しない |
+| `CANDIDATE-AT-NFRC-006` | percentile だけを宣言した性能系 metric と、測定回数・warmup・分散の上限・ベースライン較正まで宣言した metric | 契約 lint を実行する | 前者は reject され、単発の測定による pass が契約として成立しない |

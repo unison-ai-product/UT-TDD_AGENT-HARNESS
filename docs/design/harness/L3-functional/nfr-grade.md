@@ -226,7 +226,65 @@ NFR-01〜17 + 新規 KPI を以下 3 tier に分類:
 - 全 NFR-* (15 件 + L4/Phase B carry) の AC を L12 で AT-* に変換 (孤児 NFR = 0)
 - 機械検証ルール (R4 NFR → 閾値 → AT) は L7 carry
 
-## §8 関連 doc
+## §8 NFR Contract catalog (未実装の目標契約)
+
+> **状態**: 本節は **未実装の目標契約** である。`src/` と `tests/` に NFR Contract の schema・契約 lint・projection は無い (`nfr_contract` / `NfrContract` の grep は 0 件、2026-10-14 実測)。設計が先行しており、実装は §8.7 の順序に従って後から降りる。出典: PLAN-L3-08 (issue #958 の設計還流)、`docs/improvement-backlog.md` の IMP-168 / IMP-174 / IMP-176 / IMP-177。
+
+### §8.1 なぜ契約が要るか
+
+§1〜§6 の閾値は prose の表であり、doctor や gate から参照できない。そのため「宣言した = 検証した」という誤読を機械的に防げない (`coding ≠ substance`)。機械検証の入力になる NFR Contract (id / category / stage / environment / metrics) を、prose 閾値と 1 対 1 で結ぶ形で定義する。
+
+### §8.2 契約の必須 field
+
+| field | 内容 | 備考 |
+|---|---|---|
+| `id` | `NFR-<CAT>-NNN` | `<CAT>` は §8.3 の category |
+| `category` | §8.3 の 12 種の enum | 未知の値は reject |
+| `stage` | 検証する工程 (L7〜L14) | 未定義は reject |
+| `environment` | 検証する実行環境 | 未定義は reject。別環境の evidence を流用しない |
+| `metrics` | metric 名 × `min` / `max` × 単位 | 単位の欠落、`min` と `max` の両方の欠落は reject |
+| `subject` | `harness` (この harness 自身) または `downstream-product` (対象プロダクト) | 必須。既存の NFR-01〜17 は harness 自身の NFR であり、harness の evidence でプロダクトの契約を満たしたことにしない (型で禁止する) |
+| `trace` | 対応する NFR-xx と、本書 §1〜§6 の閾値の行 | 必須。孤児の契約 0、孤児の NFR 0 (定量閾値を持つ NFR は、最低 1 つの契約へ trace される) |
+| `version` | 契約の版 | §8.5 の supersession と対で使う |
+| 統計的判定の属性 | 性能系の metrics に、percentile に加えて測定回数・warmup・分散の上限・ベースライン較正を宣言する | 性能系で必須。単発の測定が pass になる契約を作れないようにする |
+
+### §8.3 category (12 種)
+
+`performance` / `scalability` / `reliability` / `recovery` / `security` / `data_integrity` / `compatibility` / `accessibility` / `maintainability` / `observability` / `cost` / `usability`。
+
+12 種のそれぞれを「契約の対象」または「対象外 (理由付き)」へ排他的に分類し、宙に浮いた category を 0 にする。12 種の外にある候補 (privacy / compliance、AI 固有の品質 (LLM 判定の非決定性・model version の drift・prompt injection への耐性・token 予算)、i18n、データ移行の RPO / RTO) も、「category の追加」または「理由付きの除外」のどちらかへ分類する。この分類は未了であり、IMP-174 / IMP-176 / IMP-177 が追う (§8.8)。
+
+### §8.4 fail-close 規則
+
+契約 lint は、次の 5 種を reject する。
+
+1. 未知の category
+2. metric の単位の欠落
+3. `min` と `max` の両方の欠落
+4. stage の未定義
+5. environment の未定義
+
+### §8.5 契約のライフサイクル
+
+契約の版と閾値の変更は、PLAN の claim 規律 (`CLAUDE.md` §PLAN Filing Rules) と同型に扱う。閾値を緩める変更は、後継の契約を立て、旧契約との双方向の参照と理由を必須とする。契約をその場で黙って上書きしない。
+
+### §8.6 人間承認が要る契約
+
+L10 のユーザビリティのように、人間の承認が必須の契約 (manual evidence) の宣言方法を、契約 schema に持たせる。宣言の具体形 (field 名と承認者の表現) は未確定であり、§8.8 の open 項目に置く。
+
+### §8.7 降下の順序 (責務の依存)
+
+- **L4 方式設計** は、5 層構造 (NFR Contract → Verification Profile → Tool Adapter → Normalized Evidence → NFR Gate) への統合を受け持つ。PLAN-L4-31 が受ける。本節の契約が先に凍結していることが前提である。
+- **L6 契約** (PLAN-L6-87) が凍結してから、schema の zod 化と契約 lint の実装 (L7 の add-impl + Reverse の対) を起票する。本節の凍結前に実装を始めない。
+- したがって依存の向きは 契約 catalog (L3) → 方式設計 (L4) → 契約の関数設計 (L6) → 実装 (L7) である。
+
+### §8.8 未了の項目
+
+- 12 種の category の排他分類 (契約の対象 / 対象外) と、12 種の外にある候補の分類 (§8.3)。
+- manual evidence の宣言の具体形 (§8.6)。
+- 受入条件に対応する oracle は、`docs/test-design/harness/L12-acceptance-test-design.md` の `CANDIDATE-AT-NFRC-*` に置いた (正規 ID への昇格は契約 PR + Red で行う)。
+
+## §9 関連 doc
 
 - L1 NFR (上流): `docs/design/harness/L1-requirements/nfr.md`
 - L1 business §6.5 KPI: `docs/design/harness/L1-requirements/business-requirements.md` §6.5

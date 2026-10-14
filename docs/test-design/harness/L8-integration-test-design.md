@@ -289,6 +289,15 @@ Minimum G8 close profile for the first L8 ascent:
 `IT-DOCLEDGER-01..07`は実装前TDD Redである。既存921件receiptはbaseline数量証拠に限定し、
 typed reference closure、route freshness、surface parityのGreen代用にしない。
 
+### engine-swap G8 の close 条件 (PLAN-L8-01 の設計還流、issue #958)
+
+engine-swap の結合検証を G8 として閉じるときの条件を残す。一般の G8 workflow は §6 の `G8-WORKFLOW` が正本であり、ここには engine-swap に固有の差分だけを書く。
+
+- **初期の close 対象** (PLAN-L8-01 が 2026-07-10 に選んだ selection): `IT-VMSOURCE-01..02`、`IT-PLANASSET-01`、`IT-WORKFLOW-01`、`IT-VMCONTRACT-01`、`IT-DOCLEDGER-01..02`、`IT-MODULE-01`、`IT-ASSESS-01`、`IT-SELFPROOF-01`。その後に上表へ加わった `IT-DOCLEDGER-03..07` と `IT-PROJECTION-REBUILD-01..03` を engine-swap の G8 で mandatory にするかは、まだ宣言されていない (未了。mandatory / optional / deferred の区分を `test_plan` で決める)。
+- **証跡 manifest**: `.ut-tdd/evidence/g8-integration/engine-swap.json` (2026-10-14 時点では未生成)。§6 の `execution_evidence` が求める項目 (command・exit code・IT-ID・evidence path・selected / deferred の件数・失敗の経路) に加えて、commit / revision、digest、finding を記録する。
+- **exit criteria** (engine-swap 固有): mandatory の IT がすべて pass、defer が期限内、rebuild 前後の identity の差分が 0、blocking な doctor finding が 0。
+- **defect の経路**: §6 の `defect_routing` に従う (テスト設計の誤りは L8、L5 / L6 の契約の誤りは Reverse、実装は L7、構造の劣化は Refactor、regression は Recovery)。
+
 ## Execution Ledger / GitHub integration (PLAN-L5-23、2026-07-15)
 
 | IT-ID | Given | When | Then | Evidence |

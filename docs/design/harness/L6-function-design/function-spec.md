@@ -679,6 +679,111 @@ parent PLAN = PLAN-L7-48 / PLAN-L7-52。L7-48 監査で唯一の機能リスク 
 
 invariant: option C は authz outcome を一切変えない (advisory のみ)。実ブロックする **hard-gate (option A)** は authorization/human-signoff の仕様確定に該当し PO 留保 (CLAUDE.md Guard Rule)。advisory は warn-first phased rollout の Phase 0 (descent-obligation §7 と同型)。U-* = IT-GUARDRAIL-ADVISORY-01。`same-model-self-review` の空文字非該当は blank evidence の false-positive を防ぐための必須不変条件。
 
+### D.7 residual 閉包の lint 群 (`drive-model-passage` / `rule-automation-closure` / handover 完了表現 guard)
+
+上流 FR の residual (carry のまま宙に浮いた要件) を、V 字の行として閉じるための規則と、その機械検査の契約を残す (PLAN-L3-04 からの設計還流、issue #958)。実装は merge 済み: `src/lint/drive-model-passage.ts`、`src/lint/rule-automation-closure.ts`、`src/lint/fr-roadmap-coverage.ts` (D.5)、`src/handover/index.ts` の `checkHandoverCompletionWording`。
+
+**閉包原則 (無漏れ)**:
+
+- 行が無ければ `gap`、曖昧な行も `gap`。carry だけの行は完了ではない。
+- 登録済み roadmap が green でも、機能一覧が green とは限らない (band の被覆と機能の被覆は別)。
+- 完了は区間 (segment) の名前を付けて述べる。「L7 roadmap の完了」と「L7 層の完了」を混同しない。
+- 実装着手は、行に 要件・基本設計・詳細設計・機能設計・テスト設計・WBS・source 対象・test 対象・coverage gate の証跡 (または理由付きの `N/A`) が揃うときだけ許す。
+- residual 行に `gap` / `scheduled` / `parked` / `PO decision` が残る間、handover は「次の作業なし」と書かない。
+
+**V 字の閉包表に必須の列**:
+
+| 範囲 | 必須列 |
+|---|---|
+| 要件定義 | `BR`、`FR-L1`、優先度、利用者向けの要求、carry の理由 |
+| 基本設計 | L4 の architecture / module / flow 文書、設計 gate の証跡 |
+| 詳細設計 | L5 の D-DB / D-CONTRACT / D-STATE / physical-data 文書 |
+| 機能設計 | L6 の function 契約、不変条件、明示的な defer 印 |
+| テスト設計 | L7 / L8 / L9 の oracle ID、GWT、期待する fixture |
+| 工程表 | PLAN ID、roadmap の span、依存、L4 sprint、feature flag、rollback |
+| 実装 | `src` のファイル、export する関数 / module、実装 PLAN |
+| テスト | `tests` のファイル、oracle の引用、coverage gate |
+
+**drive model passage certificate**: drive model (PLAN frontmatter の `drive` とは別軸で、Forward へ再合流する workflow mode) ごとに、次の列を持つ証明の行を要求する。
+
+| drive model / 入口 mode | 必須列 |
+|---|---|
+| Discovery | trigger、仮説、S3 の検証証跡、S4 の決定、Forward の合流先、Reverse 昇格の要否、residual status |
+| Scrum | feedback signal、increment の証跡、受入の証跡、Reverse fullback PLAN、Forward の合流先、pair-freeze gate、residual status |
+| Reverse | reverse type、R0 の証跡、R1/R2 の観測契約または省略理由、R3 の PO 検証、R4 `forward_routing`、欠けている対の成果物、再合流 gate、residual status |
+| Recovery | incident class、承認範囲、根本原因、再開点、是正成果物、再発防止の guard / test / rule、Forward の合流先、residual status |
+| Incident | 本番影響、triage、hotfix PLAN、安定化の証跡、recovery PLAN、恒久修正の Forward 経路、postmortem、residual status |
+| Refactor | 振る舞い不変の証明、影響 module、回帰 test、設計が変わらない証明、振る舞いが変わった場合の昇格経路、residual status |
+| Retrofit | 影響 matrix、移行 / rollback 計画、回帰・性能・データ整合の証跡、変更時の設計 / 要件への経路、residual status |
+| Add-feature | parent PLAN、要件の行、add-design の行、add-impl の行、test-design の oracle、WBS、実装対象、Reverse 還流の状態、residual status |
+| Research | 判断の問い、選択肢、ADR、棄却した選択肢、research memo、Forward の合流先、実現性が未知のままなら Discovery へ切り替える条件、residual status |
+| Design-bottomup | backend から導いた FE 要件の証跡、エリシテーション結果、mock / Discovery の再利用証跡、Forward の合流先、residual status |
+| Version-up | version 対象、後送りした能力の証跡、有効化の経路、Forward の合流先、residual status |
+
+通過規則: どの drive model も、Forward の合流先 (層 / gate) を名指すか、明示的に `gap` / `parked` / `PO decision` とするかのどちらかでなければ closed にできない。
+
+**DB 登録 gate**: certificate は harness.db にも載っていなければ完了とみなさない。`drive_runs` (drive model / 入口 mode の実行ごとに 1 行)、`workflow_runs` (`drive_run_id` で結ぶ phase の readiness)、`hook_events` (`session_id` / `plan_id` で結ぶ hook 証跡)、`model_runs` (`plan_id` で結ぶ worker / reviewer の実行証跡) を要求する。drive model が完了していても `drive_runs` の行が無ければ、PLAN 文書と局所 test が green でも certificate の行は `gap` のままにする。検査の実装契約は D.4 (`drive-db-registration`) を正本とし、本節は重ねて書かない。
+
+**drive model passage の検査契約**:
+
+| 関数 (実 export) | signature | 契約 |
+|---|---|---|
+| `analyzeDriveModelPassage` | `(docs: DriveModelPassageDoc[]) => DriveModelPassageResult` | 純粋関数。各 doc の `## Section 2.1 Drive-model Passage Certificate Required` 節の表を読み、列 `drive model / entry mode` と `required certificate columns` を持つ行ごとに、本文へ Forward 合流先を示す語 (`forward` / `re-entry` / `route` / `target` / `routing`) と residual status を示す語 (`residual status` / `status` / `gap` / `parked` / `po decision`) が現れるかを見る。期待する入口 mode は 11 件 (上表の全行) で、欠けた mode は違反。違反の理由は `missing_section` / `missing_table` / `malformed_row` / `missing_mode` / `missing_forward_target` / `missing_residual_status` / `missing_expected_mode`。 |
+| `loadDriveModelPassageDocs` | `(repoRoot?: string) => DriveModelPassageDoc[]` | fs 端点。現行の唯一の入力は PLAN-L3-04 の本文 (`docs/plans/PLAN-L3-04-upstream-schedule-reconciliation.md`) である。対象が無ければ空配列を返し、`driveModelPassageMessages` が「表が見つからない」違反を出す。 |
+| `driveModelPassageMessages` | `(result) => string[]` | 違反があれば最大 8 件の `file:mode:reason` を含む 1 件、無ければ `OK (checked, modes, expected)` を返す。 |
+
+限界: 本検査は見出し文に語が現れるかを見るだけで、各 mode の行が実際に証跡を満たしているかは見ない。実質の充足は review に委ねる (`coding ≠ substance`)。
+
+**rule automation closure**: 規則が文章だけで終わらないよう、規則ごとに自動化の担い手を 1 つ要求する。担い手の無い規則は、governance・設計・PLAN・handover のどこに書かれていても `gap` のままである。
+
+| 規則 | 必須の自動化担い手 |
+|---|---|
+| FR / carry / addendum から WBS / L7 の被覆へ | `fr-roadmap-coverage` lint + doctor 配線 |
+| drive model passage certificate | analyzer / checker + doctor または plan-lint の配線 |
+| drive model の DB 登録 | projection writer + `drive_runs` / `workflow_runs` / `hook_events` / `model_runs` の検査 |
+| handover の完了表現 | handover 生成 guard + doctor / handover 規律の検査 |
+| 行の欠落・曖昧は fail-close | 既定値を `gap` とする表 analyzer |
+
+| 関数 (実 export) | signature | 契約 |
+|---|---|---|
+| `analyzeRuleAutomationClosure` | `(docs: RuleAutomationClosureDoc[]) => RuleAutomationClosureResult` | 純粋関数。`## Section 2.3 Rule Automation Closure Required` 節の表 (列 `Rule` / `Required automation owner` / `Current status`) を読む。status は `closed` / `scheduled` / `gap` / `parked` / `PO decision` のいずれか。owner 欄には既知の自動化の種類 (doctor / plan-lint / vmodel / hook / db / ci / projection / writer / analyzer / checker / lint / handover / fr-roadmap-coverage) を示す語が必要。違反の理由は `missing_section` / `missing_table` / `malformed_row` / `missing_owner` / `unknown_owner` / `unknown_status`。`closed` 以外の行は違反ではなく `openRows` として集計し、メッセージで件数と status 別内訳を示す。 |
+| `loadRuleAutomationClosureDocs` | `(repoRoot?: string) => RuleAutomationClosureDoc[]` | fs 端点。現行の唯一の入力は PLAN-L3-04 の本文である。 |
+| `ruleAutomationClosureMessages` | `(result) => string[]` | 違反がある場合、未 closed がある場合、全 closed の場合の 3 通りのメッセージを返す。 |
+
+**handover の完了表現 guard** (`checkHandoverCompletionWording(deps: HandoverDeps): string[]`): `.ut-tdd/handover/CURRENT.json` の `latest_doc` だけを対象にする (過去 handover の無関係な文言は拾わない)。`.ut-tdd/audit/A-133-upstream-vmodel-coverage-audit.md` の `## Residual Feature Buckets` 表から `R<n>` 行の status を読み、`gap` / `scheduled` / `parked` / `po decision` が 1 件でもあり、かつ `latest_doc` に「no next action」「次に着手する作業はなし」「未了…なし」「残…なし」などの完了表現があれば、行番号付きの警告文字列を 1 件返す。pointer・audit・`latest_doc` のいずれかが読めない場合は空配列を返す (fail-open)。
+
+### D.8 telemetry / 自己改善 閉包の lint 群 (`telemetry-closure` / `cycle-p4-verification` / `l14-close-audit`)
+
+計測と自己改善の仕組みを「closed」と誤って言わないための閉包規則と、その機械検査の契約を残す (PLAN-L3-05 からの設計還流、issue #958)。実装は merge 済み: `src/lint/telemetry-closure.ts`、`src/lint/cycle-p4-verification.ts`、`src/lint/l14-close-audit.ts`。動的 skill 推薦 (`src/skill-engine/recommend.ts`) と skill 割当 (`src/lint/skill-assignment.ts`) の契約は `skill-index.md`、project-hook の検査 (`analyzeProjectHooks`) は本書の hook 節が正本であり、ここには重ねて書かない。
+
+**閉包原則**:
+
+- 行数 0 の schema table は運用証跡ではない。
+- 設計上の関数名は、CLI や runtime の機能ではない。
+- 分類の無い hook / session log は、trouble log ではない。
+- 上流の event 捕捉が無い metrics command は、端から端までの telemetry ではない。
+- GitHub connector の能力は、dry-run・人間承認・back-reference の規則が凍結されるまで、承認済みの製品機能ではない。実際の GitHub 変更は人間承認を経る別工程であり、queue と外部から渡された back-reference の挙動だけを対象にする。
+- 自己改善 loop が closed になるのは、計測行が finding・feedback event・improvement backlog または issue-queue の項目・doctor から見える closure 証跡を生んだときだけである。
+
+**closed と呼べない条件** (いずれも、証跡が無ければ closed にできない):
+
+- 動的 skill 注入: `skill_recommendations` と `skill_invocations` が空のまま。drive model 条件付きの注入: drive 条件付き推薦の証跡が無いまま。
+- 発火率・retry・bottleneck・trouble log の分析: 導出された `quality_signals`・`findings`・`feedback_events` が無いまま。
+- Forward 外の GitHub issue 作成: dry-run queue・人間承認の意味・back-reference の証跡が無いまま。
+- 自己改善: 計測行が feedback event と、追跡可能な backlog または承認済み issue queue の項目を生んでいないまま。
+- project hook: `.claude/settings.json` が package-local の command を使い、doctor が検査している状態でないまま。
+- Cycle P4 / L7-DB: DB projection、局所の L8-L14 検証行、source 隔離の語彙、handover、telemetry、機能の残差、placeholder の carry 境界がすべて機械検査されていないまま。
+
+**3 つの closure matrix の検査契約**:
+
+| lint | 入力 (audit の節) | 列 | status の値域 | 必須の行 | 主な追加検査 |
+|---|---|---|---|---|---|
+| `telemetry-closure` (`analyzeTelemetryClosure`) | `.ut-tdd/audit/A-134-harness-telemetry-self-improvement-audit.md` の `## Telemetry Closure Matrix` | Requirement / Required evidence / Current evidence / Automation owner / Status | `closed` / `partial` / `scheduled` / `gap` / `blocked-human` | 9 件: Skill firing parameters / Trouble logs / GitHub issue creation outside Forward / Drive model firing-rate measurement / Plan/workflow retry detection / Bottleneck detection / Improvement log / Measurement-to-feedback loop / Project hook configuration | 各行が必須証跡・現在証跡・自動化担い手 (db / doctor / cli / projection / feedback / improvement-backlog / github issue queue / hook / project-hook / session-log / quality_signals のいずれかを示す語) を持つこと |
+| `cycle-p4-verification` (`analyzeCycleP4Verification`) | `.ut-tdd/audit/A-136-cycle-p4-verification-audit.md` の `## Cycle P4 Verification Closure Matrix` | Requirement / Scope / Required evidence / Current evidence / Automation owner / Status | `closed` / `human_required` / `out_of_scope` | 11 件: Cycle P4 L7 DB integration / L8-L14 local verification band / UT-TDD Run P4 L9-L11 boundary / Production and PO signoff boundary / Handover current action / Source isolation current vocabulary / Telemetry and self-improvement closure / Feature residual closure / Placeholder-deps carry boundary / Skill assignment closure / Source migration coverage | Current evidence の backtick path が実在すること (`.ut-tdd/harness.db` は projection writer の実在で代用)。現行運用ファイル 5 本 (verification roadmap・M 系 PLAN 2 本・A-136・`roadmap-registry.ts`) に、旧移植元の語彙が現れないこと (`forbidden_legacy_source_term`) |
+| `l14-close-audit` (`analyzeL14CloseAudit`) | `.ut-tdd/audit/A-143-l14-close-system-foundation-audit.md` の `## L14 Close System Foundation Audit Matrix` | item / question / evidence / gap / next action / status | `closed` / `partial` / `human_required` / `external_required` / `parked_future` | 17 件: workflow-definition / system-foundation / claude-codex-parity / clean-distribution-package / version-up-nonbreaking / brownfield-onboarding / cross-project-test-workflow / l1-l2-mock-roundtrip / l10-ux-close / l11-uat-boundary / l12-release-acceptance-boundary / l13-post-deploy-boundary / l14-ops-feedback-boundary / drive-model-bookbinding / l8-l14-right-arm / release-publication-boundary / green-evidence-integrity | 証跡 path の実在、項目ごとの必須証跡 path、境界を示す語 (署名付き tarball・PO UAT・公開後の観測など) が gap / next action に残ること、`partial` には gap、未 closed には next action が必要 |
+
+L10〜L14 を 5 行に分けるのは、workflow 定義の改善・L2/L10 の mock 昇格・UAT・release 受入・公開後の観測・運用 feedback が、広い「L14 close」の主張の中に隠れないようにするためである。3 lint とも、節や表の欠落・行の不備・status の値域外・期待行の欠落を違反とし、`closed` 以外の行は違反ではなくメッセージで件数を示す。
+
 ## 2026-06-17 コスト階層 Dual-Provider Role Router 追補 (PLAN-L7-75 back-fill)
 
 この addendum は §7.8.7.1 (hybrid 機能分散 MUST) / §1.8 (VALID_ROLES) / FR-L1-39 (classifyTask) を
