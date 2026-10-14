@@ -4,11 +4,11 @@
 
 基準 commit: origin/main `d5ad67fb50c148ea8dd6d5475bab4b88f2d4cd4c`
 
-件数: 使い捨て可 19、還流済み 11、未処理 2 (計 32)
+件数: 使い捨て可 19、還流済み 11、未処理 1、要判断 1 (計 32)
 
-触った設計文書: `docs/design/harness/L4-basic-design/data.md` (§11.1 / §12 / §13)、`architecture.md` (§11 / §12 / §13)、`function.md` (Appendix D)。test-design は触っていない。
+触った設計文書: `docs/design/harness/L4-basic-design/data.md` (§11.1 / §12 / §13)、`architecture.md` (§11-§15)、`function.md` (Appendix D)。test-design は触っていない。
 
-注記: 設計文書の実装状況の記述は architecture §3.1 の公開 IF からの引用であり、`src/` を個別に開いて照合していない項目がある (備考に明記)。PLAN-L4-32 / PLAN-L4-34 は未処理。
+注記: 実装状況の記述は architecture §3.1 の公開 IF からの引用であり、`src/` を個別に開いて照合していない項目がある (備考に明記)。
 
 | PLAN | blob sha256 (origin/main) | 区分 | 移し先 (path と節) | 剥離した依存 | 備考 |
 |---|---|---|---|---|---|
@@ -43,4 +43,4 @@
 | PLAN-L4-31-nfr-verification-foundation-architecture | `b387fc75b28d76bf6e08ba9cda80976b19ed12104bf05f87e02d0ee37ca9ea15` | 還流済み | architecture.md §12 | requires L3-03 / L7-34 (完了済み) | draft。IMP-173 の設計書カバレッジ欠落をこれで解消。未実装の目標契約と明記 |
 | PLAN-L4-32-resource-governed-execution-kernel | `e7c75c437c0744d4fe278c88267571f05c46892a34faf8aa9672d8c2bd5652cd` | 未処理 | g3.md が一部移行済み (architecture §10/§10.1) | 未判定 | 残り件数の都合で未着手 (g3 の保留 d 項目が残る) |
 | PLAN-L4-33-node-control-plane-redesign | `a5b65bf38588178d7d836a3c0b909651bd082f744b8a15b5a2dcf8fcfcb178cb` | 還流済み | architecture.md §9 (既存) + §13 | blocks PLAN-L5-26 は降下順序 (剥離) |  |
-| PLAN-L4-34-repository-runtime-placement-topology | `a680cb0c06fb28c3fdda27d74335012d790c5072c22e42798c4b493f23d99883` | 未処理 | repository-placement.md (未照合) | 未判定 | 未読 |
+| PLAN-L4-34-repository-runtime-placement-topology | `a680cb0c06fb28c3fdda27d74335012d790c5072c22e42798c4b493f23d99883` | 要判断 | architecture.md §14 (worktree lifecycle、#384 部分を還流済み) / §15 (cutover 部分は移さず問いを記録) | S2/S3 の将来 edge (#232 / #134 / #228 / #169 / #124 / #384) は完了順序の依存を含む。#384 部分は §14.2 の port に依存として記録 | 質問: OneDrive 撤去と C:\dev 配置が済んだ今も、OneDrive 外 cutover の receipt chain / write fence (§3.1-§5、AC-PLACE-01..09、U-PLACE-001..018) を設計目標として維持するか、廃止するか。U-PLACE-010 以外の oracle は L9 に未移送 (PLAN にだけ存在) |

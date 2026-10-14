@@ -453,3 +453,40 @@ ZIP 163 item を HARNESS 自身が満たすかは `verified | partial | gap | pr
 ## §13 Node 制御面の補足契約 (PLAN-L4-33 からの還流)
 
 current の Bun は migration debt、target の Node は未実装の設計状態として別 field・別 receipt で表す。activation は append-only の immutable marker で、既存 current pointer を上書きしない。publish lease (`dist/node-publish.lock/` の atomic mkdir) の crash 残留は F0 で永久に fail-close とし、recovery・steal・clear を持たない。F0 の rollback は同一 revision 内に限り、revision をまたぐ戻しは unsupported (git revert から新 revision を build する)。review + admission 済み D0 draft が許すのは順序内の非 activation 作業だけで、production activation・hook/runtime switch・Bun 最終削除・cutover は L6 confirmed + D0 admission まで禁止する。pair oracle は L9 の `CAND-NODEBOOT-201..213` で、対応 test と実装の同一 commit Red 実測まで正式 `ST-*` へ昇格しない。
+
+## §14 worktree lifecycle の方式 (PLAN-L4-34 §3.3 / Issue #384 からの還流)
+
+worktree の増加は、作業面に owner・TTL・終了時の登録解除が無く、終了済みの作業面を機械的に判別・回収できないことが根本原因である (`git worktree prune --dry-run` は全 worktree を生きた参照とみなして 0 件を返す)。本節は repository lineage 単位の lifecycle record と状態機械、安全な retire、retention 境界、status / doctor / HARNESS Memory への read-only projection だけを所有する。配置 cutover、canonical state root の移設、worktree topology detector (#232) の再実装、worker 停止・resource・cancellation (#124) は所有しない。pair は L9 §10 (`CANDIDATE-ST-WTLIFE-*`) と L7 単体候補 `CANDIDATE-U-WTLIFE-001..016` で、双方向 1:1 の対応表は L9 §10.3.1 が正本である。
+
+### §14.1 record と状態機械
+
+repository lineage は `origin canonical URL + initial root commit OID + common-dir object-format` を束縛した `repository_lineage_id` で一意に解決し、path・worktree 名・cwd・DB path を identity にしない。record は `(repository_lineage_id, lifecycle_id, canonical_worktree_realpath)` を一意キーとし、`admin_entry_realpath`、owner/session、Issue、PLAN と revision、`use` (`worker | review | snapshot | scratch`)、branch と `head_oid`、作成時刻、activation deadline、TTL と expires_at、path lease、親 process/session、state、terminal receipt digest、retention policy の id/revision・retain-until・disposition を同時に保持する。realpath は `realpath.native` の解決結果で lineage に再束縛する。
+
+record は managed worker の起動前に `planned` として原子的に登録する。worktree 作成、path lease 取得、record 登録、worker spawn の各 operation id を同じ attempt に束縛し、登録できなければ spawn 0 とする。許可する遷移は次だけである。
+
+| 遷移 | 条件 |
+|---|---|
+| `planned → active` | 登録済み record、owner / Issue / PLAN revision / use / TTL / path lease、#232 inventory の link facts、worker start receipt が同一 attempt で一致する場合のみ。欠落時は worker を起動しない |
+| `planned → terminal_pending` | spawn 前後の `activation_failed` / `cancel_before_start` / `activation_timeout` / owner-session loss を lifecycle authority が観測し、sealed activation-abort receipt (process start 0 か観測結果、lease 解放結果) を作る。TTL 超過だけでは作らない |
+| `active → terminal_pending` | #124 の typed terminal input (`success | failure | timeout | parent_loss | cancel`) か認証済み owner/session-loss 観測を同一 lifecycle・attempt に束縛する。後者は terminal receipt を捏造せず `terminal_missing` を保持する。TTL 超過だけでは遷移しない |
+| `terminal_pending → retained` | terminal receipt の欠落・不一致、dirty / unpushed / unmerged、active process / lease、owner 不明、path / lineage 不一致、retention 中のいずれかで retire を拒否し、保全理由を typed deny として保存する |
+| `terminal_pending → retired` | sealed terminal receipt、最新 inventory、canonical realpath / lineage、process 0、path lease 解放、retention 条件が同一 snapshot に束縛され、dry-run digest と apply 入力が一致する場合のみ |
+| `retained → terminal_pending` | 後着の #124 receipt、policy 承認済みの recovery receipt、欠測していた inventory / process / lease fact の到着時に、旧 deny 集合を上書きせず新 revision で再評価する |
+| `retained → retired` | retention boundary 到達後に同じ再検証と policy 承認済み apply を行う場合のみ。canonical / durable state は retained のままで、worktree-local の cache / scratch だけが対象 |
+
+`retired` は終端で、旧 receipt の replay・別 path からの再活性化・state row の上書きを許さない。拒否は typed deny reason (`activation_unresolved | dirty | unpushed | unmerged | active_process | active_path_lease | owner_unknown | terminal_missing | terminal_mismatch | realpath_mismatch | lineage_mismatch | admin_entry_mismatch | inventory_unavailable | retention_active | canonical_state | replay_conflict`) のいずれか、複合時は安定した全件集合で返す。
+
+### §14.2 authority と port
+
+lifecycle の record / event と sealed terminal・retire receipt が authoring source であり、SQLite・status・doctor・Memory は再構築可能な projection に留める。
+
+- `WorktreeTopologyInventoryPort` (#232): link / dir / dirty / unmerged / unpushed / detached / merged の read-only fact を供給するだけで、lifecycle state と retire 適格性は決めない。
+- `TerminalReceiptInputPort` (#124): typed terminal・lease-release receipt を同一 attempt に束縛して消費するだけで、Stop worker や process cleanup を複製しない。
+- `CanonicalPathLineagePort` は native realpath・admin entry の双方向 link・lineage を照合し、`ProcessLeaseProbePort` は active process / path lease を観測する。`WorktreeRetirePort` は sealed plan に対する dry-run / apply の副作用境界、`StatusDoctorMemoryProjectionPort` は deny reason と retention の read-only 投影を担う。
+- `RetentionPolicyPort` は repository governance が署名した policy id/revision・用途別 retain-until・clock 観測を返す。worker / session / cleanup adapter は retention 値や時刻を自己申告できず、policy revision の欠落・drift した apply は `retention_active` で拒否する。
+
+retire は dry-run を既定とし、対象 realpath / admin entry / head / branch、保全理由、deny reason、state 分類、receipt digest、期待 operation id を immutable plan に記録する。apply は同じ canonical snapshot と plan digest を再検証してから、worktree 実体の retention quarantine への原子的退避、admin entry 解除、worktree-local cache 整理の順に段階適用し、canonical / durable な HARNESS state は削除しない。quarantine 実体の物理削除は terminal retire receipt の seal と retention boundary 到達後に限る。各境界の crash / retry は operation id と append-only receipt で冪等に再生し、旧対象の喪失や部分成功の Green 報告を許さず `retained` + typed fault に収束させる。
+
+## §15 repository / runtime placement topology の cutover (PLAN-L4-34 の残り、要判断)
+
+PLAN-L4-34 の §3.1 (`PlacementCutoverReceipt` chain: `prepared → fenced_old → active_new → rollback_window → retired_old`、old clone write fence、dual-canonical の拒否)、§3.2 (OS / path 境界)、§4-§5 (S1/S2/S3 の段階化と L12/L13/L14 の `AT-PLACE-*` / `DT-PLACE-*` / `OT-PLACE-*`)、§7 (AC-PLACE-01..09) は、OneDrive 上の primary clone を OneDrive 外へ cutover する前提で書かれている。この前提が 2026-08-24 の OneDrive アプリ撤去と `C:\dev\` への配置で変わったため、この契約を設計目標として残すかを上流が決めるまで、本節には移さず PLAN 側に残す。決めるべき問いは「cutover / write fence / receipt chain の設計目標を維持するか、廃止するか」である。
