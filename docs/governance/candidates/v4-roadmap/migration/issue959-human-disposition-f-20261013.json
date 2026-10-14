@@ -8,12 +8,18 @@
     "gitBlobOid": "01871fad5745eb86cced27f8b197464223dcfbc8"
   },
   "classificationIsFinal": false,
+  "reviewCorrection": {
+    "controlComment": 6158709680,
+    "round": "r1",
+    "policyChoice": "L1-01..05はcarry未解決のため保留へ訂正。原入力のsourceCandidateLabel/sourceReason/validationは履歴として保持し、公開summaryは訂正後のrecordsを集計する。",
+    "liveCodeDependencies": "L1-01/02/03、PLAN-M-01、L4-13の固定source参照を退役前の未解消依存として追記。"
+  },
   "scope": {
     "total": 218
   },
   "summary": {
-    "廃止予定": 19,
-    "保留": 93,
+    "廃止予定": 14,
+    "保留": 98,
     "生きている": 106
   },
   "method": {
@@ -6974,6 +6980,84 @@
         "bytes": 62993
       },
       "evidenceKind": "literal-citation-candidate"
+    },
+    {
+      "id": "F-R1-G1-L1-CODE",
+      "path": "src/lint/g1-trace.ts",
+      "lines": "25-29",
+      "quote": "const REQUIRED_L3_REQUIRES = [\n  \"PLAN-L1-01-business-requirements\",\n  \"PLAN-L1-02-functional-requirements\",\n  \"PLAN-L1-03-screen-requirements\",\n] as const;",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "f0b7f9c86fd025ec4dc3000c6d1e1e0f93c7ba06",
+        "sha256": "4e5a81bcd1a63538111f59852c0ecd880bbdf382927e29ed60272c70abb3e88c",
+        "bytes": 6993
+      }
+    },
+    {
+      "id": "F-R1-G1-L1-TEST",
+      "path": "tests/g1-trace.test.ts",
+      "lines": "155-165",
+      "quote": "      ],\n    };\n    const r = analyzeG1Trace(broken);\n    expect(r.missingL3Requires).toEqual([\n      {\n        file: \"docs/plans/PLAN-L3-X.md\",\n        missing: [\"PLAN-L1-01-business-requirements\"],\n      },\n    ]);\n  });\n});",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "77abec12fee629e08b9ec38297b000d5f02fa012",
+        "sha256": "050efafc90c1bed21ca9701f408caf9ca28acf5bc1c4b171aacb6dcadd6a8f61",
+        "bytes": 5431
+      }
+    },
+    {
+      "id": "F-R1-M01-CYCLE",
+      "path": "src/lint/cycle-p4-verification.ts",
+      "lines": "65-73",
+      "quote": "const EVIDENCE_PATH_RE = /`([^`]+)`/g;\nconst CURRENT_OPERATIONAL_FILES = [\n  \"docs/design/harness/L3-functional/roadmap.md\",\n  \"docs/plans/PLAN-M-00-verify-cutover.md\",\n  \"docs/plans/PLAN-M-01-cutover-backfill.md\",\n  \".ut-tdd/audit/A-136-cycle-p4-verification-audit.md\",\n  \"src/lint/roadmap-registry.ts\",\n] as const;\nconst LEGACY_RUNTIME_NAME = [\"he\", \"lix\"].join(\"\");",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "9ee14f5afde7c56cef27d43101519faa138d684f",
+        "sha256": "1a5ebf9327afb91bb503556b41421d8ec2a113b1232d0c0471dcbaf8108665cf",
+        "bytes": 8879
+      }
+    },
+    {
+      "id": "F-R1-M01-LINT",
+      "path": "src/plan/lint.ts",
+      "lines": "253-261",
+      "quote": " * 弾く。許可系列: PLAN-L<0..14>-<n>-<slug> / PLAN-REVERSE / PLAN-DISCOVERY /\n * PLAN-RECOVERY。PLAN-M-* は cutover/migration 専用の凍結 legacy 2 件のみ。\n * 新系列が必要な場合は governance で語彙を定義してから本 allowlist を更新する。\n */\nconst PLAN_ID_LEGACY_FROZEN = new Set([\"PLAN-M-00-verify-cutover\", \"PLAN-M-01-cutover-backfill\"]);\n\nexport function planIdTaxonomyViolations(\n  planId: string,\n): { reason: \"plan_id_taxonomy\"; detail: string }[] {",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "ca01aa1e61adc380fe5f18fc6114c732ca5a4e98",
+        "sha256": "d9635ef497c1ad98934b21879289fcc600d8b56b483a25a1f4fb5a983c9b53c1",
+        "bytes": 44169
+      }
+    },
+    {
+      "id": "F-R1-M01-PROJECTION",
+      "path": "src/state-db/projection-writer.ts",
+      "lines": "1074-1082",
+      "quote": "  );\n  const passingReviewEvidence = scalarNumber(\n    db,\n    \"SELECT COUNT(*) AS value FROM review_evidence_registry WHERE plan_id IN (?, ?) AND has_evidence = 1 AND verdict = ?\",\n    [VERIFY_CUTOVER_PLAN_ID, \"PLAN-M-01-cutover-backfill\", \"pass\"],\n  );\n  const checkedAt = nowIso();\n  const driveRunId = stableId(\"drive-run\", `${VERIFY_CUTOVER_PLAN_ID}:documented`);\n  const localPass =",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "ea4de31119abc8bca201065c6c8101a7ff1a054b",
+        "sha256": "18e8bfcaacf16895734532b4e7cde19445457509dbe5647aec434bfceb4762ba",
+        "bytes": 96789
+      }
+    },
+    {
+      "id": "F-R1-L413-POLICY",
+      "path": "src/plan/lint-policy.ts",
+      "lines": "13-21",
+      "quote": "const INTERNAL_ASSET_EXTENSION_PLAN_IDS = new Set([\n  \"PLAN-L4-10-internal-asset-master\",\n  \"PLAN-L4-11-roster\",\n  \"PLAN-L4-12-skill-pack\",\n  \"PLAN-L4-13-drift-lint\",\n  \"PLAN-L5-05-roster\",\n  \"PLAN-L5-06-skill\",\n  \"PLAN-L5-07-drift\",\n]);",
+      "evidenceKind": "literal-citation-candidate",
+      "gitBinding": {
+        "sourceCommit": "3ca0692d6c6a180b058c492475080be2a140e667",
+        "gitBlobOid": "c466898cd8a094c9cb4cce41ece358d7d255fab6",
+        "sha256": "2c692035f622a4d1baae8c27e9228a0e91d8d82cffd539122057fc905fff1541",
+        "bytes": 11303
+      }
     }
   ],
   "records": [
@@ -7172,15 +7256,17 @@
       "sourceBlobOid": "94ab9628ba98e1e1d48b2be7ccaa366094b56f1a",
       "sourceSha256": "0fb7cbf8dad6e0f824fd9f87053c5110682917b9ccd7b02a93c379e1272e9ff1",
       "sourceBytes": 15290,
-      "dispositionCandidate": "廃止予定",
+      "dispositionCandidate": "保留",
       "sourceCandidateLabel": "retirement-planned",
-      "reason": "PLAN §0が中間準備ドシエと宣言しbusiness-requirements.mdを出力する。BR契約はdocに保持、B3はL3、entity/schema/doctor coverageはL4-01/dataへ具体carry。現DOC catalogにbusiness slotはなく、PLAN-L1-02/03/04/05とL3-01が現在もsource PLANを参照する。したがって将来freeze候補だが、依存ID/pair/evidence/metadata移管前の退役完了ではない。",
+      "reason": "PLAN §0が中間準備ドシエと宣言しbusiness-requirements.mdを出力する。BR契約はdocに保持、B3はL3、entity/schema/doctor coverageはL4-01/dataへ具体carry。現DOC catalogにbusiness slotはなく、PLAN-L1-02/03/04/05とL3-01が現在もsource PLANを参照する。したがって将来freeze候補だが、依存ID/pair/evidence/metadata移管前の退役完了ではない。 個別のcarry・依存・証跡移管が未解決のため、r1是正では保留とする。契約文書の存在だけで廃止予定とは判定しない。 固定sourceのg1-traceがこの完全PLAN IDを必須参照し、g1-trace.testはL1-01欠落を拒否する。将来の廃止前にコード・テストの依存を別の正規契約で解消する必要がある。",
       "preservedContractPath": "docs/design/harness/L1-requirements/business-requirements.md",
       "sourceReason": "PLAN §0が中間準備ドシエと宣言しbusiness-requirements.mdを出力する。BR契約はdocに保持、B3はL3、entity/schema/doctor coverageはL4-01/dataへ具体carry。現DOC catalogにbusiness slotはなく、PLAN-L1-02/03/04/05とL3-01が現在もsource PLANを参照する。したがって将来freeze候補だが、依存ID/pair/evidence/metadata移管前の退役完了ではない。",
       "evidenceRefs": [
         "V4D-078",
         "L1-01-05-OUTPUT",
-        "L1-01-CARRY"
+        "L1-01-CARRY",
+        "F-R1-G1-L1-CODE",
+        "F-R1-G1-L1-TEST"
       ]
     },
     {
@@ -7190,16 +7276,18 @@
       "sourceBlobOid": "b9584432758e27a6912efbb62cda4acd2f347bbc",
       "sourceSha256": "3abe716aa889dc91968d3d26ab15d7a5a5e48352e2c514eb3d3a61b889e351c7",
       "sourceBytes": 13353,
-      "dispositionCandidate": "廃止予定",
+      "dispositionCandidate": "保留",
       "sourceCandidateLabel": "retirement-planned",
-      "reason": "functional-requirements.mdはDOC-L1-REQUIREMENTSのrequired authoring sourceで、現行FR契約51件を保持。L3-01/L3-02は現在PLAN-L1-02をrequiresに持ち、AC詳細化等のL3 carryを明記。PoC/authoring PLAN面は将来freeze候補だが、現依存・V-pair/digest/evidence移管前の完了/削除許可ではない。",
+      "reason": "functional-requirements.mdはDOC-L1-REQUIREMENTSのrequired authoring sourceで、現行FR契約51件を保持。L3-01/L3-02は現在PLAN-L1-02をrequiresに持ち、AC詳細化等のL3 carryを明記。PoC/authoring PLAN面は将来freeze候補だが、現依存・V-pair/digest/evidence移管前の完了/削除許可ではない。 個別のcarry・依存・証跡移管が未解決のため、r1是正では保留とする。契約文書の存在だけで廃止予定とは判定しない。 固定sourceのg1-traceがこの完全PLAN IDを必須参照し、g1-trace.testはL1-01欠落を拒否する。将来の廃止前にコード・テストの依存を別の正規契約で解消する必要がある。",
       "preservedContractPath": "docs/design/harness/L1-requirements/functional-requirements.md",
       "sourceReason": "functional-requirements.mdはDOC-L1-REQUIREMENTSのrequired authoring sourceで、現行FR契約51件を保持。L3-01/L3-02は現在PLAN-L1-02をrequiresに持ち、AC詳細化等のL3 carryを明記。PoC/authoring PLAN面は将来freeze候補だが、現依存・V-pair/digest/evidence移管前の完了/削除許可ではない。",
       "evidenceRefs": [
         "V4D-078",
         "L1-01-05-OUTPUT",
         "DOC-CATALOG-CORE",
-        "L1-02-CARRY"
+        "L1-02-CARRY",
+        "F-R1-G1-L1-CODE",
+        "F-R1-G1-L1-TEST"
       ]
     },
     {
@@ -7209,15 +7297,17 @@
       "sourceBlobOid": "f3ec35962ed404e9e0b3adeaa2a1ec3365d921c2",
       "sourceSha256": "60c76064bdca7fd32a31ee4606b5412f323ef07f6fa157ca8f9d08078edaff1f",
       "sourceBytes": 16791,
-      "dispositionCandidate": "廃止予定",
+      "dispositionCandidate": "保留",
       "sourceCandidateLabel": "retirement-planned",
-      "reason": "screen-requirements.mdは15画面の現行L1契約を保持し、詳細UIはL2へ分離。L2-00/01/02等が現時点でsource PLAN-L1-03をrequiresにし、L2/L3/L4へのcarryも残る。screen-doc slotはcatalogに個別登録されていないため、将来freeze前にsource owner/pair/evidenceとplan-ID依存の置換を明示する。現時点の退役完了ではない。",
+      "reason": "screen-requirements.mdは15画面の現行L1契約を保持し、詳細UIはL2へ分離。L2-00/01/02等が現時点でsource PLAN-L1-03をrequiresにし、L2/L3/L4へのcarryも残る。screen-doc slotはcatalogに個別登録されていないため、将来freeze前にsource owner/pair/evidenceとplan-ID依存の置換を明示する。現時点の退役完了ではない。 個別のcarry・依存・証跡移管が未解決のため、r1是正では保留とする。契約文書の存在だけで廃止予定とは判定しない。 固定sourceのg1-traceがこの完全PLAN IDを必須参照し、g1-trace.testはL1-01欠落を拒否する。将来の廃止前にコード・テストの依存を別の正規契約で解消する必要がある。",
       "preservedContractPath": "docs/design/harness/L1-requirements/screen-requirements.md",
       "sourceReason": "screen-requirements.mdは15画面の現行L1契約を保持し、詳細UIはL2へ分離。L2-00/01/02等が現時点でsource PLAN-L1-03をrequiresにし、L2/L3/L4へのcarryも残る。screen-doc slotはcatalogに個別登録されていないため、将来freeze前にsource owner/pair/evidenceとplan-ID依存の置換を明示する。現時点の退役完了ではない。",
       "evidenceRefs": [
         "V4D-078",
         "L1-01-05-OUTPUT",
-        "L1-03-CARRY"
+        "L1-03-CARRY",
+        "F-R1-G1-L1-CODE",
+        "F-R1-G1-L1-TEST"
       ]
     },
     {
@@ -7227,9 +7317,9 @@
       "sourceBlobOid": "f8aa0af45793b8dc8521bb9eb9e39933500b9dd3",
       "sourceSha256": "a33fa47f43efc847fe8a97ebb6533eab15b9dd0d1b5eac7773df598262a94959",
       "sourceBytes": 14203,
-      "dispositionCandidate": "廃止予定",
+      "dispositionCandidate": "保留",
       "sourceCandidateLabel": "retirement-planned",
-      "reason": "technical-requirements.mdはPhase A/B・state schema等のL1要求を保持し、L3-00は現在PLAN-L1-04をrequiresにする。idempotency/rollback、skill schema、discrepancy trigger/drift detectorは明記されたL4 carryだが、契約文書だけでdownstream実装/owner移管完了とはいえない。DoDの未チェックpair/OT/metadataと現docのfield存在も不整合。将来freeze候補のみで、先にcarryとchecklist/evidenceを照合する。",
+      "reason": "technical-requirements.mdはPhase A/B・state schema等のL1要求を保持し、L3-00は現在PLAN-L1-04をrequiresにする。idempotency/rollback、skill schema、discrepancy trigger/drift detectorは明記されたL4 carryだが、契約文書だけでdownstream実装/owner移管完了とはいえない。DoDの未チェックpair/OT/metadataと現docのfield存在も不整合。将来freeze候補のみで、先にcarryとchecklist/evidenceを照合する。 個別のcarry・依存・証跡移管が未解決のため、r1是正では保留とする。契約文書の存在だけで廃止予定とは判定しない。",
       "preservedContractPath": "docs/design/harness/L1-requirements/technical-requirements.md",
       "sourceReason": "technical-requirements.mdはPhase A/B・state schema等のL1要求を保持し、L3-00は現在PLAN-L1-04をrequiresにする。idempotency/rollback、skill schema、discrepancy trigger/drift detectorは明記されたL4 carryだが、契約文書だけでdownstream実装/owner移管完了とはいえない。DoDの未チェックpair/OT/metadataと現docのfield存在も不整合。将来freeze候補のみで、先にcarryとchecklist/evidenceを照合する。",
       "evidenceRefs": [
@@ -7245,9 +7335,9 @@
       "sourceBlobOid": "63d4345e81b67fc0d2f2af88c06501cd335d69c4",
       "sourceSha256": "f4d404317e28fce466e880728872c8ba4b7c36b46bce7189aa06e1d4c0d29370",
       "sourceBytes": 14269,
-      "dispositionCandidate": "廃止予定",
+      "dispositionCandidate": "保留",
       "sourceCandidateLabel": "retirement-planned",
-      "reason": "nfr.mdは15件のNFR契約とcarry宣言を保持。L3-03/L4-15/L14が現在の下流consumer、ただしNFR-02/09のAC/ADRはL4-15でplaceholder未着地、NFR-16 telemetryはPhase B carry。よってPLAN面は将来freeze候補に限り、NFR契約・L4/L12 carry・証跡を削らず、残carryの移行/維持を確認するまで退役完了扱いしない。",
+      "reason": "nfr.mdは15件のNFR契約とcarry宣言を保持。L3-03/L4-15/L14が現在の下流consumer、ただしNFR-02/09のAC/ADRはL4-15でplaceholder未着地、NFR-16 telemetryはPhase B carry。よってPLAN面は将来freeze候補に限り、NFR契約・L4/L12 carry・証跡を削らず、残carryの移行/維持を確認するまで退役完了扱いしない。 個別のcarry・依存・証跡移管が未解決のため、r1是正では保留とする。契約文書の存在だけで廃止予定とは判定しない。",
       "preservedContractPath": "docs/design/harness/L1-requirements/nfr.md",
       "sourceReason": "nfr.mdは15件のNFR契約とcarry宣言を保持。L3-03/L4-15/L14が現在の下流consumer、ただしNFR-02/09のAC/ADRはL4-15でplaceholder未着地、NFR-16 telemetryはPhase B carry。よってPLAN面は将来freeze候補に限り、NFR契約・L4/L12 carry・証跡を削らず、残carryの移行/維持を確認するまで退役完了扱いしない。",
       "evidenceRefs": [
@@ -7861,12 +7951,13 @@
       "sourceBytes": 5324,
       "dispositionCandidate": "廃止予定",
       "sourceCandidateLabel": "retirement-planned",
-      "reason": "L4-13固有のasset-drift sliceはarchitecture設計/doctor gate、PLAN-L5-07とL8 IT-ASSET pair、L6のimplemented-slice signatures/U-oraclesへ降下した明示根拠があるため、将来freeze候補を維持する。ただしL9は未実装roster/skill/command面を別carryとして明記しており、内部asset全体の完了・PLAN責務全部の移管・現在の削除許可は主張しない。",
+      "reason": "L4-13固有のasset-drift sliceはarchitecture設計/doctor gate、PLAN-L5-07とL8 IT-ASSET pair、L6のimplemented-slice signatures/U-oraclesへ降下した明示根拠があるため、将来freeze候補を維持する。ただしL9は未実装roster/skill/command面を別carryとして明記しており、内部asset全体の完了・PLAN責務全部の移管・現在の削除許可は主張しない。 固定sourceのplan/lint-policyがPLAN-L4-13を固定で参照する。将来の廃止前に、このlive code依存を先に解消する必要がある。",
       "preservedContractPath": "docs/design/harness/L4-basic-design/architecture.md; docs/design/harness/L5-detailed-design/module-decomposition.md; docs/design/harness/L6-function-design/module-drift.md",
       "sourceReason": "L4-13固有のasset-drift sliceはarchitecture設計/doctor gate、PLAN-L5-07とL8 IT-ASSET pair、L6のimplemented-slice signatures/U-oraclesへ降下した明示根拠があるため、将来freeze候補を維持する。ただしL9は未実装roster/skill/command面を別carryとして明記しており、内部asset全体の完了・PLAN責務全部の移管・現在の削除許可は主張しない。",
       "evidenceRefs": [
         "V4D-078",
-        "L4-13-TRANSFERRED-SLICE-AND-CARRY"
+        "L4-13-TRANSFERRED-SLICE-AND-CARRY",
+        "F-R1-L413-POLICY"
       ]
     },
     {
@@ -10968,14 +11059,17 @@
       "sourceBytes": 4756,
       "dispositionCandidate": "廃止予定",
       "sourceCandidateLabel": "retirement-planned",
-      "reason": "retirement-planned候補のscopeは、PLAN-M-01自身の完了済みlocal backfill/projection DoDと、そこから得られたstrategy/roadmap evidenceの保持に限る。statusだけを根拠とはしない。productionに影響するcutoverは明示的にscope外で、人の承認を要するため、production signoffや外部責務は退役対象ではない。",
+      "reason": "retirement-planned候補のscopeは、PLAN-M-01自身の完了済みlocal backfill/projection DoDと、そこから得られたstrategy/roadmap evidenceの保持に限る。statusだけを根拠とはしない。productionに影響するcutoverは明示的にscope外で、人の承認を要するため、production signoffや外部責務は退役対象ではない。 固定sourceのcycle-p4-verification、plan lint、projection-writerがPLAN-M-01を直接参照する。このlive code依存は未解消であり、将来の廃止前に先に解消する条件として保持する。",
       "preservedContractPath": "docs/design/harness/L3-functional/roadmap.md; docs/migration/helix-to-ut-tdd-cutover-strategy.md; .ut-tdd/audit/A-130-harness-db-segment-accept.md; docs/plans/PLAN-M-00-verify-cutover.md",
       "sourceReason": "Retirement-planned candidate is limited to PLAN-M-01's own completed local backfill/projection DoD and preservation of its resulting strategy/roadmap evidence; status alone is not the basis. Production-impacting cutover explicitly remains out of scope and human-approved, so no production signoff or external responsibility is retired.",
       "evidenceRefs": [
         "V4D-078",
         "M-00-M-01-CUTOVER-EVIDENCE-CLOSED-LOCAL-BAND",
         "F-M01-OWN-DOD",
-        "F-M01-HUMAN-CARRY"
+        "F-M01-HUMAN-CARRY",
+        "F-R1-M01-CYCLE",
+        "F-R1-M01-LINT",
+        "F-R1-M01-PROJECTION"
       ]
     }
   ]
