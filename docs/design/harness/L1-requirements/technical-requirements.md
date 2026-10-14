@@ -43,7 +43,7 @@ v2_import: docs/migration/v2-import-ledger.md
 
 ### carry note: ダッシュボード server sync (Phase B、BR-21 相当)
 
-Phase B のサーバー同期 (PGlite + ElectricSQL 候補) は L3/L4 forward carry。ADR-002 候補として L4 外部 IF 設計 sub-doc で検討する。現時点では Phase A (local DB + local dashboard) を対象とする。**最終形 = ADR-005 D2 の「中央・全 project 横断 Web UI (team server、GitHub backbone)」**。Phase A local はその bootstrap であり、Phase B server sync が中央化に接続する (後続作業追跡は ADR-005 Follow-ups が正本)。
+Phase B のサーバー同期は L3/L4 forward carry である。当初の候補 (PGlite + ElectricSQL) は、ADR-005 D2 の「Phase B server sync 方向」(SQLite を非正本 projection とし、GitHub webhook と定期 reconcile のハイブリッドで同期する。direction-only で未 freeze) に置き換わった。なお ADR-002 は別の主題 (依存方向ルールと依存マップ自動生成) で採番済みなので、Phase B の ADR 番号としては使わない。現時点では Phase A (local DB + local dashboard) を対象とする。**最終形 = ADR-005 D2 の「中央・全 project 横断 Web UI (team server、GitHub backbone)」**。Phase A local はその bootstrap であり、Phase B server sync が中央化に接続する (後続作業追跡は ADR-005 Follow-ups が正本)。
 
 ## §3 既存システム制約
 
@@ -139,6 +139,8 @@ closure event 契約: `idempotency_key = mode + plan_id + closure_event_id` + ro
 | `recommended_skills` | 推奨 skill ファイル群 |
 | `recommended_commands` | 推奨 `ut-tdd` サブコマンド |
 | `orchestration_mode` | standalone / claude-only / codex-only / hybrid のいずれか |
+
+**現行実装との差 (2026-10-14 実測、`src/vmodel/injection.ts` の `resolveVmodelInjection`)**: 実装は上の 6 フィールドのうち `recommended_agents` を持たず、`owner_role` / `mandatory_agents` / `recommended_skills` / `recommended_commands` / `orchestration_mode` の 5 つを返す (L4 `function.md` §3.7 と一致)。値は `docs/skills/<L>-injection.yaml` ではなく、drive × layer の対応表としてコードに持つ。`orchestration_mode` は `pm_lead` / `claude_judge` / `claude_design_impl` / `claude_judge_codex_impl` / `codex_impl_qa_verify` の 5 値で、実行 mode (standalone / claude-only / codex-only / hybrid) とは別軸である。実行 mode への縮退は `degraded_from` / `degraded_to` / `degradation_reason` で明示する。公開 surface は `ut-tdd vmodel show <drive> <layer> --injection`。上表の `orchestration_mode` 行の値域は、この実装の 5 値に読み替える。
 
 注入機構の目的: AI の選択空間を L 単位で限定し、迷いを排除する (FR-L1-12)。詳細設計は L4 基本設計 (方式設計 sub-doc) で確定。
 

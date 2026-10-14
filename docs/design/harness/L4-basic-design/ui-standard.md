@@ -220,6 +220,7 @@ ui-element §2 部品から構成され、table-dumper 描画が無い」を設�
   ベクトルを持つもの — `HeatmapGrid` cell / `CoverageHeatmap` cell / `WiringDiagram` エッジ / `TraceGraph` エッジ /
   `DoctorResultTree` severity / `GateResultPanel` gate — × 関連状態を追加対象とする。
 - 環境 = Desktop 固定幅 (`size.layout.minWidth`)・light 固定 (Q30)・日本語固定 (Q31)。
+- **画面の実装方式 (フレームワーク。旧 PLAN-L1-03 の L4 carry) は未決である**。`src/web` は空 (`.gitkeep` のみ) で、実装は version-up の parked PLAN (PLAN-L7-141 / PLAN-L7-146、`version_target: future`) が持つ。着手時に add-design (L4) で方式を決め、ADR を起こす。
 - **実装は L7 (src/web、PLAN-L7-141)**。本 doc は回帰の **対象と粒度** を定める設計まで。回帰 snapshot の
   実行・WCAG 実比検証は impl 後 (L10 UX 磨き / a11y script) が担う (本標準は設計目標、実測は L7/L10)。
 

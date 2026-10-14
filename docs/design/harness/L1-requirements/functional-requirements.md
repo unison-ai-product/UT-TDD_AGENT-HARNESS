@@ -277,7 +277,7 @@ doc-reviewer (pmo-sonnet とは責務分離した doc 品質専用 read-only rev
 ### carry note: ダッシュボード Phase A/B (BR-06 / BR-20 下流)
 
 - **Phase A** (local DB + local dashboard): FR-L1-20 (観測・計測層) + FR-L1-06 (state 一元管理) で基盤確立。L3 機能要件で dashboard 機能仕様を具体化。
-- **Phase B** (server sync + telemetry + self-improvement): L3 forward carry。PGlite + ElectricSQL 等のアーキ候補は L4 技術要求 §2 で ADR-002 候補として検討。
+- **Phase B** (server sync + telemetry + self-improvement): L3 forward carry。当初のアーキ候補 (PGlite + ElectricSQL 等) は ADR-005 D2 の「Phase B server sync 方向」に置き換わった (L1 技術要求 §2 の carry note を参照。ADR-002 は依存方向の ADR で、Phase B の同期方式は扱わない)。
 
 ## §6 関連 doc
 

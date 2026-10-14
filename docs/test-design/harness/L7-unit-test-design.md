@@ -1842,6 +1842,41 @@ content-addressed に投影する。D1 analyzer には投影済み artifact だ�
 `CANDIDATE-*` は implementation PR の exact HEAD、実行コマンド、exit code、write count、
 content-addressed path を citation してから `U-*` へ昇格する。
 
+## design-bottomup elicitation の候補 oracle (PLAN-DISCOVERY-07 の還流)
+
+対象は `docs/process/modes/design-bottomup.md` §5 の出力契約である。実装の `tests/design-elicitation.test.ts` が同じ挙動を検査している。下表は検査の中身を候補 ID で固定する。正式な ID への昇格は、対象実装と Red の実測を同一 commit に束縛して Reverse R1 で行う。なお、実装の engine が CLI・doctor に配線されていない点は同 §5 の未実装欄に記してあり、配線の oracle は配線する PLAN が持つ。
+
+| Candidate | Stimulus | Oracle |
+|---|---|---|
+| CANDIDATE-U-DBUP-001 | 画面と backend capability と trace を持つ入力 | 画面ごとに 3 slot (L3 / L5 / L6) の候補が `derived_from` つきで出る |
+| CANDIDATE-U-DBUP-002 | capability も trace も無い画面 | 候補を作らず `fe-requirement-ungrounded` を warn で出す |
+| CANDIDATE-U-DBUP-003 | trace を持つ画面と持たない画面が同じ category にある | trace を持つ画面の `derived_from` は画面固有の trace を含み、generic な capability だけに潰れない |
+| CANDIDATE-U-DBUP-004 | 候補があり slot の `has_body` が false | slot ごとの signal (`screen_requirement_gap` / `ui_detail_gap` / `screen_spec_gap`) で gap が出る。slot が未定義でも gap になる |
+| CANDIDATE-U-DBUP-005 | slot の `has_body` が true | gap にしない |
+| CANDIDATE-U-DBUP-006 | gap が 1 つ以上ある | `entry_signal=design_uncertain` の Discovery エントリが出て、`route_candidates` に discovery を含み、`forward_merge=L3-L6` になる |
+| CANDIDATE-U-DBUP-007 | gap が 0 件 | `discovery=null` (no-op) |
+| CANDIDATE-U-DBUP-008 | `runDesignBottomup` | candidates / gaps / discovery を連鎖して返す。mode taxonomy の strong fit に design-bottomup が載る |
+
+## forward-convergence 判定の候補 oracle (PLAN-DISCOVERY-08 / 09 の還流)
+
+対象は L6 `function-spec.md` の「forward-convergence 判定契約」である。実装の `tests/forward-convergence.test.ts` は既に同じ挙動を検査しているが、正式な oracle ID を持っていない。下表は検査の中身を候補 ID で固定する。正式な ID への昇格は、対象実装と Red の実測を同一 commit に束縛して Reverse R1 で行う。
+
+| Candidate | Stimulus | Oracle |
+|---|---|---|
+| CANDIDATE-U-FCONV-001 | roadmap span 登録・`parent_design` が `docs/design/` 配下・`requires` が L1〜L6 設計 PLAN のそれぞれを持つ impl | いずれも `spine-internal` |
+| CANDIDATE-U-FCONV-002 | 接続を持たない impl、および `parent_design` が `docs/process/` / `docs/adr/` を指す impl | spine 外として扱う (境界の回帰防止) |
+| CANDIDATE-U-FCONV-003 | landed × spine 外 × disposition なし × reverse 参照なし | `unconverged-landed`。`newViolations` に入り `ok=false` |
+| CANDIDATE-U-FCONV-004 | 未 landing の spine 外 impl (version_target なし) | `draft-deferred`。違反にしない |
+| CANDIDATE-U-FCONV-005 | reverse PLAN から requires / references で参照された landed | `converged` |
+| CANDIDATE-U-FCONV-006 | `local_impl_only` の landed、理由 10 文字以上の `not_required` の landed、理由が空の `not_required` の landed | 前 2 者は `local-impl-only`。後者は免除にならず `unconverged-landed` |
+| CANDIDATE-U-FCONV-007 | kind が poc の PLAN | 対象外。bucket に入らない |
+| CANDIDATE-U-FCONV-008 | kind が verify の PLAN | 対象内。spine 判定を受ける |
+| CANDIDATE-U-FCONV-009 | draft かつ台帳内 label の `version_target`、landed に付いた `version_target`、台帳外 label の `version_target` | 1 つ目だけ `version-up-parked`。残りは version-up と認めない |
+| CANDIDATE-U-FCONV-010 | 合成 allowlist を注入した grandfather と NEW 違反 | allowlist 内は `legacyDebt` で `ok` を落とさない。外は `newViolations` で `ok=false`。実 allowlist は空 |
+| CANDIDATE-U-FCONV-011 | allowlist と audit 台帳の双方向照合 (合成 allowlist、実 allowlist、片側欠落) | 一致なら ok。片側欠落は `missingInAudit` / `missingInAllowlist` に出る。表行の抽出は行頭の PLAN id だけを拾う |
+| CANDIDATE-U-FCONV-012 | 判定結果の表示 | ok は件数の 1 行、violation は件数と plan_id を含む |
+| CANDIDATE-U-FCONV-013 | `analyzeOutstandingWork` に draft かつ `version_target` ありの PLAN と通常の draft を混ぜて渡す | `versionUpParked` が前者の件数、`activeDraftTotal` が非終端の合計から前者を引いた値になる。**現状のテストはこの oracle を検査していない** (`tests/outstanding.test.ts` は `versionUpParked: 0` の値しか見ない。2026-10-14 実測) |
+
 ## PLAN-L7-457 fence streaming hash / harness.db VACUUM oracle (issue #118、2026-07-22)
 
 対象 = `tests/support/chunked-hash.ts`（fence/snapshot共通のstreaming hashヘルパー）、

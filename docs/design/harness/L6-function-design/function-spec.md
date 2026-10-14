@@ -797,6 +797,37 @@ provider CLI を起動する。
 | `buildAdvisorDecision` | `(input: AdvisorInput) => AdvisorDecision` | `task` と `mode` がある。`provider` は未指定可。 | `provider`、上位 `model`、`effort`、`task_intent`、`adapterPlan` を返す。 | 技術判断 (`implementation` / `troubleshooting`) は Sol (`MODEL_IDS.codex.frontier`) + `low`、設計・進行・デザイン判断 (`design` / `progress` / `uiux`) は Fable (`MODEL_IDS.claude.fable`) + `low` を一次とし、他方を fallback にする (PO 2026-07-29)。orchestrator が frontier 級 (opus) の場合、相談は provider を問わず `adversarial` へ切り替える。下位 orchestrator からの相談は `current_model_lower_than_advisor=true` で surface する。 | U-CLI-ADVISOR dry-run / execute、U-ROUTE2-011〜U-ROUTE2-014 |
 | `ut-tdd advisor` | `--task/--task-file`, `--provider`, `--decision`, `--current-model`, `--reason`, `--plan`, `--mode`, `--execute`, `--json` | `--task` と `--task-file` は相互排他。`provider` は `claude` / `codex` のみ。`--decision` の受理集合は `ADVISOR_DECISION_KINDS` (SSoT) と一致する。 | dry-run では adapter plan JSON を返す。`--execute` では既存 adapter 実行と同じ session logging を通して provider を起動する。 | advisor は read-only judgement prompt であり、file edit や gate close を主張しない。CLI 側に受理集合を別持ちしない (別持ちが `uiux` / `troubleshooting` を指定不能にする drift を生んでいた)。 | `tests/cli-surface.test.ts` |
 
+## forward-convergence 判定契約 (PLAN-DISCOVERY-08 / 09 の還流、実装 = `src/lint/forward-convergence.ts`)
+
+要件 `ut-tdd-agent-harness-requirements_v1.2.md` §6.8.8.1 が不変条件 (別フローの最終実態は Forward へ集約され、未集約の landed 実装は fail-close) を定める。本節はその判定を行う純関数群の契約を持つ。I/O は `loadConvergenceDocs` に分離する。
+
+**判定の対象**: `CONVERGENCE_SCOPE_KINDS = {impl, verify}` の PLAN だけを分類する。poc (確定済み) の集約は `scrum-reverse`、add-impl / refactor / retrofit / troubleshoot の集約は `backfill-pairing` の `KIND_BACKFILL` が担い、本関数は二重に判定しない。archived の PLAN は読み込まない。
+
+**分類 (`analyzeForwardConvergence`)**: 対象 PLAN を次の順で判定し、最初に当たった bucket に入れる。
+
+| 順 | 条件 | bucket |
+|---|---|---|
+| 1 | spine に接続している (`isSpineConnected`) | `spine-internal` (集約義務なし) |
+| 2 | 未 landing (status が confirmed / completed でない) かつ `isValidVersionUp` | `version-up-parked` |
+| 3 | 未 landing で version-up でない | `draft-deferred` (将来作業。違反にしない) |
+| 4 | landed かつ `hasLocalImplOnlyDisposition` | `local-impl-only` |
+| 5 | landed かつ reverse PLAN が requires / references で指している | `converged` |
+| 6 | 上のいずれでもない landed | `unconverged-landed` (違反) |
+
+**spine 接続 (`isSpineConnected`)**: 次のいずれかを満たす。(a) 登録済み工程表 (roadmap) の span に `plan_id` がある、(b) `parent_design` が `docs/design/` を含む、(c) `requires` が L1〜L6 の設計 PLAN (`PLAN-L[1-6]-`) か `docs/design/` を指す。`parent_design` が `docs/process/` や `docs/adr/` を指すだけなら spine 外である。
+
+**`local_impl_only` (`hasLocalImplOnlyDisposition`)**: `backprop_decision` が `local_impl_only` なら成立する。`not_required` は `backprop_decision_reason` が 10 文字以上のときだけ成立し、理由が空か短い `not_required` は免除にしない。
+
+**version-up parked (`isValidVersionUp`)**: `version_target` があり、status が draft で、値が台帳 `VERSION_UP_ALLOWED_TARGETS` (現在 `future` / `v2`) に含まれるときだけ成立する。landed の PLAN に `version_target` が付いていても version-up と認めず、通常の集約判定 (bucket 4〜6) に進む (landing 時の除外を許さない)。台帳外の label も認めない。
+
+**fail-close と grandfather**: `unconvergedLanded` を `partitionConvergenceDebt` が `legacyDebt` (allowlist `FORWARD_CONVERGENCE_LEGACY_DEBT` に載るもの) と `newViolations` に分ける。結果の `ok` は `newViolations` が 0 件であることで決まり、doctor の `forward-convergence` check がこれを hard-fail として使う。allowlist は現在空である (baseline の 2 件は解消済みで、解消の履歴は `docs/governance/forward-convergence-legacy-debt-audit.md` が持つ)。allowlist と audit 台帳の表行は `analyzeLegacyAuditDrift` が双方向に照合し、doctor の `forward-convergence-audit` check がこれを使う。audit 台帳が読めなければ allowlist 全件を未記載として扱う (黙って OK にしない)。
+
+**表示 (`forwardConvergenceMessages`)**: ok なら bucket 別の件数を 1 行で返し、violation なら新規違反の件数と plan_id を返す。grandfather した件は常に表示する。
+
+**version-up の outstanding 分離 (`analyzeOutstandingWork`、`src/lint/outstanding.ts`)**: 非終端の PLAN のうち、status が draft で `version_target` が空でないものを `versionUpParked` に数え、`activeDraftTotal` は非終端の合計からそれを引いた値とする (将来版の保全を WIP と混同しない)。この関数は `version_target` の値が台帳にあるかを見ない (台帳照合は上の `isValidVersionUp` だけが行う)。status の draft 限定は frontmatter schema も fail-close で検査する。
+
+**未実装の部分**: `not_required` の理由の最低長を schema (frontmatter) 側にも明記することは未実施である (PLAN-DISCOVERY-08 の Step 5 follow-up。現在は本関数だけが 10 文字を判定する)。
+
 ## 2026-06-23 artifact progress workflow trigger 追補
 
 `deriveArtifactProgressDecision(input)` は static test link だけでなく test-run と dependency-check evidence を使う。
