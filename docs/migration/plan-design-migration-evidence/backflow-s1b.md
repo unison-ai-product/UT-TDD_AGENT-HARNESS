@@ -13,8 +13,8 @@ PLAN 12 件が「使い捨て可」(設計文書への pointer 以外を捨て�
 
 | 区分 | 件数 | PLAN |
 |---|---|---|
-| 使い捨て可 | 7 | PLAN-L11-01、PLAN-L13-01、PLAN-L2-00 〜 04 |
-| 還流済み | 3 | PLAN-L10-01、PLAN-L12-01、PLAN-L14-01 |
+| 使い捨て可 | 6 | PLAN-L11-01、PLAN-L2-00 〜 04 |
+| 還流済み | 4 | PLAN-L10-01、PLAN-L12-01、PLAN-L13-01、PLAN-L14-01 |
 | 廃止 | 0 | - |
 | 要判断 | 2 | PLAN-L1-08、PLAN-L1-09 |
 
@@ -27,7 +27,7 @@ PLAN 12 件が「使い捨て可」(設計文書への pointer 以外を捨て�
 | PLAN-L10-01-engine-swap-ux-validation | 3d00cb91ceabebd731db2342944aa2abd85db4092d1860a8cb2c843912edcc9b | 還流済み | `docs/test-design/harness/L10-ux-validation-test-design.md` §2.1 (新設、CANDIDATE-G10ENG-01〜03) | `dependencies.parent` PLAN-L4-24、`references` の PLAN-L1-07 / L9-01 / L6-72 (順序は UXV-REVIEW-02 の前提「G9 が green」に既存) | 備考 A |
 | PLAN-L11-01-engine-swap-uat-review | 60e642b33310cec0092da1f565804034a837667186835d9e6b8a1189d2ce7775 | 使い捨て可 | 既存: `docs/process/evidence/g11-uat-review-design.md` (G11-WORKFLOW、UAT-ENGINE-01〜03)。L11 は pair-map 表 2 の置き場 | `parent` PLAN-L4-24、`references` | 備考 A。case coverage、manifest の項目、exit criteria (3/3 pass、未承認 scope 0、open blocker 0、PO decision)、defect routing はすべて既存と一致 |
 | PLAN-L12-01-engine-swap-acceptance-deploy | d014ce524b5e4a8d93759b03cc89bf698a7d116db823441ef598192174b506e9 | 還流済み | `docs/test-design/harness/L12-acceptance-test-design.md` §7 末尾 (CANDIDATE-AT-ENGINE-05) | `parent` PLAN-L4-24、`references` (順序は AT-ENGINE-01 の前提「G11 UAT 3/3 pass」に既存) | 備考 A。既存は AT-ENGINE-01〜04 と defect routing。不足していた「既知の blocker 0」「release decision の記録」と manifest の項目を候補として追加 |
-| PLAN-L13-01-engine-swap-post-deploy-verification | f8aa4691a810973bd176f138b3ecd5cef8b12188c493ef9aee8153997e37fe84 | 使い捨て可 | 既存: `docs/process/evidence/g13-post-deploy-verification-design.md` (G13-WORKFLOW、SMOKE-ENGINE-01〜03、SLI-ENGINE-01)。L13 は pair-map 表 2 の置き場 | `parent` PLAN-L4-24、`references` | 備考 A。PLAN の 4 項目 (case coverage、manifest、exit criteria、routing) は既存に全て含まれる |
+| PLAN-L13-01-engine-swap-post-deploy-verification | f8aa4691a810973bd176f138b3ecd5cef8b12188c493ef9aee8153997e37fe84 | 還流済み | `docs/process/evidence/g13-post-deploy-verification-design.md` `defect_routing` に「evidence不足=L13」(差戻し先は L13、再実行で解消) を追記。既存: 同書 (G13-WORKFLOW、SMOKE-ENGINE-01〜03、SLI-ENGINE-01)。L13 は pair-map 表 2 の置き場 | `parent` PLAN-L4-24、`references` | 備考 A。前版は「4 項目は既存に全て含まれる」としたが誤り。PLAN の defect routing 4 分類のうち「evidence不足=L13」は設計文書に無く、`docs/process/vmodel-contract.yaml` も `incident_recovery_or_rollback` のみだった。設計文書へ移した。contract yaml 側の機械形は本 slice では触れない (PLAN 退役時の pointer 差し替えと同じ扱い)
 | PLAN-L14-01-engine-swap-operational-value-verification | 64647ea88be9c2144d79a18ba7bb1b48d36994bddc6561058cdc7e9d955a8563 | 還流済み | `docs/test-design/harness/L14-vmodel-engine-swap-operational-test-design.md` 末尾の「候補 oracle」(CANDIDATE-OT-ENGINE-01、02) | `parent` PLAN-L4-24、`references` | 備考 A。既存は OT-VUP-008A / 009 / 010 と G14-WORKFLOW。不足していた継続運用の KPI、value outcome、残 debt の承認、program exit decision を候補として追加。KPI の具体値は未確定と本文に明記 |
 | PLAN-L2-00-master | 9bf1fe93358326bd744bd625a66d1cdeef3ca3df6f9e17b49e95143fb15abd24 | 使い捨て可 | 既存: `docs/design/harness/L2-screen/` の 4 sub-doc (confirmed、G2 freeze)。索引 `README.md` の古い記述を訂正 (備考 B) | `requires` PLAN-L1-03 (confirmed、完了済み) | 全 AC が [x]。Sequence 1〜4 は完了。Out of scope (src/web 実装は L10 確定後) は `wireframe.md` 末尾と L10 test-design の「実行時期」に既存。③ pair=self の記述は PLAN-RECOVERY-09 で撤去済みで、L10 test-design が pair の正本 |
 | PLAN-L2-01-screen-list | b4abc01dd263562d9c66d20219bb960bb3eb0ff5454782c8ca01f8d7291271c5 | 使い捨て可 | 既存: `docs/design/harness/L2-screen/screen-list.md` (URL 設計、ID と URL の 1:1、認証認可、ステート保持、PM-06) | `requires` PLAN-L1-03、PLAN-L2-00 (完了済み)、`parent` | 備考 B |

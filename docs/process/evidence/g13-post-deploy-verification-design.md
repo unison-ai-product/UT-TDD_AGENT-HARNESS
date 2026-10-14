@@ -16,7 +16,7 @@ coverage_items: install/update、doctor/status、DB rebuild、workflow transitio
 test_procedures: clean Pack install、`ut-tdd doctor`、`ut-tdd db rebuild`、workflow smoke、rollback rehearsalを実行する。
 execution_evidence: command/exit、metric、alert、decision、artifact digestを`.ut-tdd/evidence/g13-post-deploy/engine-swap.json`へ記録する。
 exit_criteria: mandatory 4/4 pass、SLO内、critical finding 0、rollback不要または成功。
-defect_routing: production defectはIncident/Recovery、threshold設計はNFR Reverse、runtimeはL7へ戻す。
+defect_routing: production defectはIncident/Recovery、threshold設計はNFR Reverse、runtimeはL7へ戻す。evidence不足（manifestの項目欠落、sample windowの不足、判定に足りない観測）は欠陥ではなくL13の再実行で解消し、L13を差戻し先とする。
 verification_design: environment/version、sample window 30分以上、p95、error rate、rollback decisionを固定する。
 
 | case ID | 観測 | 閾値 |
