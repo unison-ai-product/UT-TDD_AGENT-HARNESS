@@ -102,7 +102,7 @@ const HARNESS_GATE_BASELINE = [
     gate: "G8",
     ok: true,
     messages: [
-      "g8-integration-workflow - OK (it_cases=140, manifests=2, selected_it=14, mandatory_it=14)",
+      "g8-integration-workflow - OK (it_cases=150, manifests=2, selected_it=14, mandatory_it=14)",
     ],
   },
   {
