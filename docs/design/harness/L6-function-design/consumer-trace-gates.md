@@ -7,7 +7,7 @@ artifact_role: topic_consumer_trace_gates
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 next_pair_freeze: L7
-plan: PLAN-L6-971-consumer-trace-gates
+plan: docs/plans/PLAN-L6-971-consumer-trace-gates.md
 ---
 
 > **L6 contract marker**: G1-trace / G3-trace の consumer 分岐 (`analyzeConsumerG1Trace(reader) => ConsumerTraceResult` / `analyzeConsumerG3Trace(reader) => ConsumerTraceResult`、出力の形は §8) は unit-test-granularity contract である。DbC pre/post/invariant は §10 にまとめる。oracle の索引は共有の `docs/test-design/harness/L7-unit-test-design.md` (§consumer trace gate) に置き、詳細 (CANDIDATE-U-CTRACE-001〜026) は専用の `docs/test-design/harness/L7-consumer-trace-gates-test-design.md` が固定する。
