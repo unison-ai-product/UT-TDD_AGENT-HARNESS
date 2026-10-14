@@ -137,6 +137,5 @@ PLAN-L0-01 のうち、この文書の時点で未達または carry のもの�
 - 未決事項 (§6) 5 件: `spec.defines` の置き場 (frontmatter か本文 `spec:`) / 工程管理表を `roadmap:` 拡張か新 schedule 投影か /
   activation・profile と PLAN status の分離 / DDD/OOP 強化を L4 data 主導か L5/L6 主導か /
   109 source docs の target slot への統合。
-- 後続 PLAN 化するテーマ (§4) 8 件: requirements / roadmap-drive-selection / declarative-spec-ir /
-  spec-trace-closure / activation-profile-scope / ddd-oop-design / plan-asset-format / right-lung-quality-loop-db。
+- 後続 PLAN 化するテーマ (§4) は 8 件ある: `requirements`、`roadmap-drive-selection`、`declarative-spec-ir`、`spec-trace-closure`、`activation-profile-scope`、`ddd-oop-design`、`plan-asset-format`、`right-lung-quality-loop-db`。
 - frontmatter `status=confirmed` は方針承認であり、program 完遂ではない (§5 冒頭)。
