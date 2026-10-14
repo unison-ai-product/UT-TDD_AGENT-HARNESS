@@ -59,7 +59,8 @@ UT-TDD externalises provider calls into `ut-tdd claude --role <role>`,
    it through the wrappers so session lifecycle, handover warnings, and cost
    telemetry are captured.
 2. The `PreToolUse(Agent)` guard (`src/runtime/agent-guard.ts:93`
-   `evaluateAgentGuard`) blocks disallowed `subagent_type` / model downgrades —
+   `evaluateAgentGuard`) blocks a missing model, fable on the generic route, and
+   model downgrades below a defined subagent's floor —
    never hard-code a mismatched model.
 3. Apply low-cost-first: use the lightest viable model for mechanical subtasks;
    reserve the frontier model for judgement gates and design decisions (see the

@@ -18,16 +18,16 @@ decision_points:
     choose: "set model explicitly, even if it would match the parent"
     over: "omitting model and relying on inheritance"
     because: "the guard blocks omitted model — it does NOT silently inherit the parent, so an omission is a hard failure, not a convenience"
-  - when: "a subagent_type is needed but does not appear in the current guard allowlist"
-    choose: "update agent-guard.ts allowlist and document the capability class before using it"
-    over: "invoking the role anyway or approximating with a similar allowlisted name"
-    because: "any role outside the list is blocked fail-close; there is no fuzzy match"
+  - when: "a subagent is needed for a role that has no harness definition"
+    choose: "use a generic subagent_type (general-purpose / Explore / Plan) with an explicit, recognised, non-fable model, and keep closing review on the ut-tdd claude|codex --role path"
+    over: "adding a new .claude/agents definition or a new allowlist entry"
+    because: "#1002 retires the hand-written definitions; the generic route passes with an explicit model and has no closing authority"
   - when: "assigning a model tier to a new agent's capability class"
     choose: "assign the minimum capable tier for that class (e.g., fast/cheap for research, primary-equivalent for adversarial review)"
     over: "defaulting every new agent to the primary model for safety"
     because: "the taxonomy exists precisely to avoid over-provisioning cost to roles that don't need primary-tier judgement"
   - when: "the guard rejects an Agent call and the cause is unclear"
-    choose: "check subagent_type match, model presence, and allowlist membership in that order before assuming a bug"
+    choose: "check model presence, model normalization (recognised family, not fable on the generic route), and, for a defined subagent, the frontmatter floor, in that order before assuming a bug"
     over: "reaching for UT_TDD_ALLOW_RAW_AGENT=1 as the first fix"
     because: "bypass is for a diagnosed emergency only, not a default troubleshooting step"
   - when: "UT_TDD_ALLOW_RAW_AGENT=1 is used to unblock a spawn"
@@ -47,8 +47,8 @@ an existing agent definition matches its actual use.
 
 - Authoring or editing a `.claude/agents/<name>.md` frontmatter definition.
 - A `PreToolUse(Agent)` guard rejection requires diagnosing which rule failed.
-- A Discovery or Add-feature PLAN needs a new specialist role not yet in the
-  allowlist.
+- A Discovery or Add-feature PLAN needs a specialist role (use the generic route;
+  do not add a definition, #1002).
 - Refactoring an existing agent definition to correct a model-family mismatch.
 
 ## Anatomy of a subagent definition
@@ -91,8 +91,8 @@ unsuitable.
 
 - [ ] `name` in frontmatter matches the filename (kebab-case, no spaces).
 - [ ] `model` field is explicit — no blank, no placeholder.
-- [ ] `subagent_type` in the spawn call matches an allowlist entry exactly.
+- [ ] A defined `subagent_type` matches an allowlist entry exactly; any other type takes the generic route.
 - [ ] Capability class justified: the chosen model tier is the minimum needed.
-- [ ] If the role is new: allowlist in `agent-guard.ts` updated and tested.
+- [ ] No new definition or allowlist entry is added (#1002); new roles use the generic route.
 - [ ] Bypass evidence written to `.ut-tdd/audit/` when `UT_TDD_ALLOW_RAW_AGENT=1`
       was set.
