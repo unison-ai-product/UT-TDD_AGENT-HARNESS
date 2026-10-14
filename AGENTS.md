@@ -243,8 +243,8 @@ Codex tool names differ from Claude, so matchers are mapped (not copied):
   `Stop` / `UserPromptSubmit` hook events (no `SubagentStop`).
 - `agent-guard` **is wired** for Codex: `.codex/hooks.json` matches
   `spawn_agent|spawn_agents_on_csv` and runs the same `.claude/hooks/agent-guard.ts`
-  with `blockOnFailure`, so non-allowlisted Codex subagent spawns are blocked the
-  same way Claude's are. (This entry read "not yet wired" until 2026-07-28, which
+  with `blockOnFailure`, so Codex subagent spawns follow the same rule as Claude's
+  (a missing model is blocked; #1002). (This entry read "not yet wired" until 2026-07-28, which
   the hook config itself already contradicted. Read `.codex/hooks.json` when in
   doubt — it is the SSoT for what is actually wired.)
 

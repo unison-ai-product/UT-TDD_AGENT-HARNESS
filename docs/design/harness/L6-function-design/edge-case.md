@@ -35,8 +35,8 @@ function-spec §1/§2 の各関数に **正常/異常/境界/throws の 4 観点
 ### §1.2 `evaluateAgentGuard`
 | 観点 | edge | → U-* |
 |---|---|---|
-| `@edge-normal` | allowlist 内 + model 明示 + family 一致 → `code=0` | U-FUNC-02 |
-| `@edge-error` | allowlist 外 / model 無指定 / family 不一致 → `code=2` (exit 2 は hook shim) | U-EDGE-02 |
+| `@edge-normal` | model 明示 + (定義済み型なら frontmatter の floor 以上 / 汎用型なら認識できる non-fable model) → `code=0` | U-FUNC-02 |
+| `@edge-error` | model 無指定 / model 正規化不能 / 定義済み型の floor 未満 / 汎用型で fable → `code=2` (exit 2 は hook shim、#1002) | U-EDGE-02 |
 | `@edge-boundary` | `allowRaw=true` (UT_TDD_ALLOW_RAW_AGENT=1) bypass → `bypassed=true` + message warn (理由記録) | U-EDGE-03 |
 | `@throws` | stdin/JSON 解析失敗 → `code=2` (fail-close、安全性検証不能を pass させない。exit は shim) | code=2 |
 

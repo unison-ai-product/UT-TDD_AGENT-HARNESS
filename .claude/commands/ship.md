@@ -17,9 +17,9 @@ First establish the change set and gate state:
 ## Phase A — parallel fan-out
 
 Issue all three Agent calls in a single turn so they run in parallel (sequential
-calls defeat the purpose). Each `subagent_type` must be allowlisted by the
-`PreToolUse(Agent)` guard, and each call must pass an explicit `model` matching
-the agent frontmatter family:
+calls defeat the purpose). Each call must pass an explicit `model` (the
+`PreToolUse(Agent)` guard blocks a missing model, #1002); a defined `subagent_type`
+needs a model at or above its frontmatter floor:
 
 1. **code-reviewer** — five-axis review (correctness, readability, architecture,
    security, performance) on the staged/uncommitted change. Reference the

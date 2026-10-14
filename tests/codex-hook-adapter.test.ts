@@ -664,13 +664,13 @@ describe("codex-hook-adapter — Codex hooks.json parity (PLAN-L7-139, PLAN-L7-6
         input: JSON.stringify({
           session_id: "cxhookcmd-004-agent",
           tool_name: "spawn_agent",
-          tool_input: { subagent_type: "not-allowlisted", model: "sonnet" },
+          tool_input: { subagent_type: "general-purpose" },
         }),
         env: { CLAUDE_PROJECT_DIR: consumer, UT_TDD_PROJECT_DIR: consumer },
       });
       expect(disallowedSpawn.status).toBe(2);
 
-      // allowlist 内 (pmo-haiku, model floor haiku) の spawn は pass する。
+      // model を指定しない spawn は、汎用の型でも block する (#1002)。allowlist 内 (pmo-haiku, model floor haiku) の spawn は pass する。
       const allowlistedSpawn = spawnCodexHookCommand(agentGuardCommand, {
         cwd: consumer,
         input: JSON.stringify({

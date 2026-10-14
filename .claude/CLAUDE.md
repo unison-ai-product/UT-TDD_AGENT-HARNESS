@@ -240,8 +240,11 @@ node "${CLAUDE_PROJECT_DIR}/.claude/hooks/agent-guard.ts"
 
 Rules:
 
-1. `subagent_type` must be in the allowlist.
-2. Agent calls without a model are blocked.
+1. Agent calls without a model are blocked, for every `subagent_type`.
+2. A `subagent_type` with no harness definition (`general-purpose` / `Explore` / `Plan`, or none)
+   passes with an explicit model; `fable` is not allowed there. It has no closing authority
+   (closing review goes through `ut-tdd claude|codex --role`). The allowlist below lists the
+   defined subagents, which keep their frontmatter floor until #1002 retires them.
 3. The requested model must be at or above the capability family declared in
    the agent frontmatter (a floor, not an exact pin) — downgrades (cost-cutting)
    are blocked; escalating to the orchestrator's own tier or higher is allowed.

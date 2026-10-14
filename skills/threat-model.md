@@ -27,10 +27,10 @@ decision_points:
     choose: "treat it as one input and still manually enumerate novel attack surfaces"
     over: "treating secret-scan-green as a complete threat model"
     because: "the secret scan checks secrets and known patterns only; it does not enumerate new attack surfaces"
-  - when: "the agent-guard hook receives an unknown subagent_type or missing model field"
+  - when: "the agent-guard hook receives a call with a missing or unrecognised model, or an envelope without tool_name"
     choose: "fail closed (exit non-zero)"
     over: "failing open and allowing the call through"
-    because: "fail-open on an unrecognized agent identity defeats the purpose of the allowlist guard"
+    because: "an implicit model is the unsafe default; generic subagents pass only with an explicit model and hold no closing authority (#1002)"
   - when: "a guard bypass occurs via UT_TDD_ALLOW_RAW_AGENT=1"
     choose: "require a written evidence record in .ut-tdd/audit/"
     over: "allowing a silent bypass with no trace"
@@ -65,8 +65,8 @@ The harness has four primary threat surfaces:
 2. **Hook entry points.** `PreToolUse`, `PostToolUse`, `SessionStart`, `Stop`,
    `SubagentStop` hooks read stdin JSON. Threat: malformed or adversarial JSON
    causing fail-open behaviour instead of fail-close.
-3. **Agent allowlist.** The subagent type allowlist in `.claude/settings.json`.
-   Threat: an unlisted agent type bypassing the guard without `UT_TDD_ALLOW_RAW_AGENT=1`.
+3. **Agent guard.** The model rule in `src/runtime/agent-guard.ts`. Threat: a subagent
+   running on an implicit model, or a generic subagent being treated as a closing reviewer.
 4. **State files.** `.ut-tdd/` YAML/JSON files read by doctor and projection
    writers. Threat: crafted state that makes a broken system report green.
 
@@ -88,8 +88,9 @@ link to a mitigation PLAN before pair-freeze.
 
 ## Mitigation requirements
 
-- **Agent guard fail-close.** The `agent-guard.ts` hook must exit non-zero for
-  any unknown `subagent_type` or missing model field. Fail-open is not acceptable.
+- **Agent guard fail-close.** The `agent-guard.ts` hook must exit non-zero for a
+  missing or unrecognised model, fable on the generic route, or an envelope without
+  `tool_name`. Fail-open is not acceptable.
 - **No credentials in state.** `.ut-tdd/`, `docs/`, audit evidence, and handover
   files must not contain API keys, passwords, or session tokens. Confirm the
   `pre-push` secret scan (`src/lint/secret-scan.ts`) passes before accepting any PLAN that touches these paths.

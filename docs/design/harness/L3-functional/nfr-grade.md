@@ -33,7 +33,7 @@ updated: 2026-05-28
 - **Then**: 3 OS 全件で `npx vitest run` + `ut-tdd plan lint` pass / 3 OS で同等結果
 
 #### AC-NFR-06 (異常系)
-- **Given**: agent-guard で許可リスト外 subagent_type 指定 (例: `be-api`)
+- **Given**: agent-guard で model を指定しない Agent 呼び出し (例: `subagent_type=general-purpose`、model なし。汎用型でも model は必須、#1002)
 - **When**: Agent 呼び出し
 - **Then**: fail-close exit 2 / Agent 起動されず / audit に block 記録
 
