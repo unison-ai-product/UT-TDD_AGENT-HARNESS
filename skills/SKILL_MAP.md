@@ -71,6 +71,7 @@ packs for the current task.
 | Deprecation / cutover | deprecation-cutover |
 | Browser / screen (L10) verification | browser-testing-and-screen-verification |
 | Git / Conventional Commits / CI | git |
+| PR を出す直前の自己検査 (merge 条件 / blocker / 偽の Red / 旧記述の残り。#1037 までの一時規律) | pr-preflight |
 | Doc maintenance (README / runbook prose) | documentation |
 | Before writing any code (delete/absorb/reuse/config first) | code-minimalism |
 | Test-case ideation quality / oracle / when to stop testing | test-breakage-thinking |
