@@ -37,7 +37,6 @@ export interface L6CompletionResult {
   ready: boolean;
 }
 
-const STATUS_RE = /^status:\s*([^\s#]+)/m;
 const PLAN_ID_RE = /^plan_id:\s*([^\s#]+)/m;
 const ELIGIBLE_L7_PATH_RE = /^docs\/test-design\/harness\/L7-[^/\\]+\.md$/;
 const DESIGN_KIND_RE = /^kind:\s*design$/m;
@@ -76,7 +75,8 @@ function frontmatterValue(text: string, key: string): unknown {
 }
 
 function statusOf(text: string): string | null {
-  return text.match(STATUS_RE)?.[1] ?? null;
+  const status = frontmatterValue(text, "status");
+  return typeof status === "string" ? status : null;
 }
 
 function frontmatterStatusOf(text: string): string | null {
@@ -278,9 +278,13 @@ export function loadL6CompletionInputs(repoRoot: string): L6CompletionInputs {
     .filter((name) => name.endsWith(".md"))
     .map((name) => {
       const path = join(l6Dir, name);
+      const text = readFileSync(path, "utf8");
+      if (frontmatterOf(text) === null) {
+        throw new Error(`L6 completion input has invalid frontmatter: ${path}`);
+      }
       return {
         path: `${roots.designRoot}/L6-function-design/${name}`,
-        text: readFileSync(path, "utf8"),
+        text,
       };
     });
   const l6Plans = (existsSync(planDir) ? readdirSync(planDir) : [])
