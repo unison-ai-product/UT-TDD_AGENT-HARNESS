@@ -895,6 +895,8 @@ PR2 (`add-feature`) は昇格 PR merge 後の main から開始し、PLAN-L7-423
 - CANDIDATE-U-L6COMP-008: `pair_artifact` が実在する `docs/test-design/harness/L7-*.md` (frontmatter に `artifact_type: test_design` と `executed_at_layer: L7`) を指せば、`L7-unit-test-design.md` 以外でも対ありとする。既存の `L7-unit-test-design.md` (`layer: L6` / `executed_at_layer: L7`) を指す L6 文書も、引き続き対ありになる。負例: 実在しない path、`executed_at_layer: L7` を持たないファイル、`L7-` で始まらないファイルは対なし。
 - CANDIDATE-U-L6COMP-009: L6 文書のファイル名を、その文書の `pair_artifact` が指す文書の本文が含めば逆参照ありとする。負例: `pair_artifact` の文書 A は名前を含まず、別の `L7-*.md` B にだけ名前がある場合は `missingL7DocRefs` に入り not-ready。
 - CANDIDATE-U-L6COMP-010: `docs/plans/` が存在しない (または L6 の PLAN が 0 件の) tree では、`draftPlans` / `missingReviewPlans` は空集合で、それだけを理由に not-ready にならない。L6 文書がすべて confirmed で所有者・対・逆参照・unit 契約の中身を持ち、L7 が confirmed で G6 が PASS なら ready になる。
+- CANDIDATE-U-L6COMP-011: L6 文書の `pair_artifact` が指す文書の集合のうち 1 本でも `status: draft` (または status が無い) なら not-ready。負例: L6 文書 X の対 `L7-other.md` が draft で、別の L6 文書 Y の対 `L7-unit-test-design.md` が confirmed の tree は、`L7-unit-test-design.md` の status だけでは ready にならない。
+- CANDIDATE-U-L6COMP-012: 正式昇格のとき、U-L6COMP-001 / 002 の「owning L6 PLAN」「L7 の pair_artifact」「L7 から名前で参照」「L7 が confirmed」の条件は、006〜011 の規則へ置き換わる。昇格後の oracle 集合に、`issue:` だけを持つ L6 文書を not-ready とする oracle と ready とする oracle が併存しないこと。
 
 ## PLAN-L7-68 Provider Dispatch Addendum
 
