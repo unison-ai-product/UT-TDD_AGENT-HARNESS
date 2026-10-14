@@ -699,7 +699,7 @@ digestへ含めない。Markdown ledgerは生成view、DBはprojectionである�
 | `vmodel_semantic_items` | `item_id TEXT`, `item_name TEXT`, `category_id TEXT`, `source_status TEXT`, `source_ref TEXT`, `source_file TEXT`, `row_digest TEXT` | PK=`item_id`、category/source FK、全列NOT NULL | category/source/item index |
 | `vmodel_source_item_edges` | `edge_id TEXT`, `source_id TEXT`, `item_id TEXT`, `source_status TEXT`, `source_file TEXT`, `row_digest TEXT` | PK=`edge_id`、source/item FK、全列NOT NULL | source/item双方index |
 | `vmodel_source_target_edges` | `edge_id TEXT`, `source_id TEXT`, `disposition TEXT`, `target_type TEXT`, `target_ref TEXT`, `row_digest TEXT` | PK=`edge_id`、source FK、全列NOT NULL | source/target index |
-| `vmodel_item_target_edges` | `edge_id TEXT`, `item_id TEXT`, `target_status TEXT`, `target_kind TEXT?`, `target_ref TEXT?`, `plan_id TEXT?`, `reason TEXT`, `source_digest TEXT` | PK=`edge_id`、item FK、全判断でreason/source digest必須。pendingはtarget NULL、adopt/merge/reference/deferはtyped target必須 | item/status/target index |
+| `vmodel_item_target_edges` | `edge_id TEXT`, `item_id TEXT`, `target_status TEXT`, `target_kind TEXT?`, `target_ref TEXT?`, `plan_id TEXT?`, `design_path TEXT?`, `reason TEXT`, `source_digest TEXT` | PK=`edge_id`、item FK、nullable `plan_id` は legacy 互換として `plan_registry.plan_id` FK を保持する。全判断でreason/source digest必須。pendingはtarget NULL、adopt/merge/reference/deferはtyped target必須。DB CHECK: `defer`なら`design_path IS NOT NULL`。`design_path` は判断status/targetとは独立した設計参照で、path規則を満たす | item/status/target index |
 | `document_scale_profiles` | `profile_id TEXT`, `profile_axis TEXT`, `profile_rank INTEGER`, `description TEXT`, `default_status TEXT`, `default_detail TEXT`, `scope_policy TEXT`, `row_digest TEXT` | PK=`profile_id`、axis=`size|product`、全列NOT NULL | axis+rank index |
 | `document_scale_profile_entries` | `document_scale_profile_entry_id TEXT`, `profile_id TEXT`, `doc_type_id TEXT`, `decision TEXT`, `detail_override TEXT`, `status_override TEXT`, `reason TEXT`, `required_plan_id TEXT?`, `row_digest TEXT` | PK=`document_scale_profile_entry_id`、profile/doc type FK、同一profile/slot UNIQUE | profile+doc type index |
 | `plan_assets` | `asset_id TEXT`, `created_at TEXT`, `created_source_commit TEXT`, `identity_algorithm TEXT` | PK=`asset_id`、全列NOT NULL。aliasを保持せずidentity rootだけを所有 | `created_at` / `created_source_commit` index |
@@ -749,8 +749,37 @@ bounded contextのmaster / authored decision / derived reviewである。semanti
 entry→master/doc catalog FKを検証する。
 source dispositionの値域は`adopt|merge|reference|defer|not_applicable|reject`、reasonは全状態必須とする。
 item targetは`pending_review|adopt|merge|reference|defer|not_applicable|reject`、target kindは
-`artifact_path|artifact_family|plan_alias|target_slot`。`pending_review`はtarget禁止、
-`adopt|merge|reference|defer`はtyped target必須、`defer`は実在PLAN必須、その他のplanは任意とする。
+`artifact_path|artifact_family|plan_alias|target_slot`とする。`pending_review`は判断target禁止、
+`adopt|merge|reference|defer`はtyped target必須とし、この判断規則は変更しない。別途、任意の
+`design_path`を設計参照として持てる。省略・NULL・authoringの空欄/`—`は未設定として扱い、`defer`では未設定を拒否する。
+入力DTOに明示された空文字は有効なpathではない。値がある場合はrepo-relativeの完全path (`/`区切り、Unicode NFC) とし、
+`docs/design/` 配下のtrackedかつ作業tree上で実在する通常ファイルを指すこと。空値、absolute path、`.` / `..` segment、
+path escape、非設計path、tracked pathへの正規化後の不一致、欠落または読み取り不能はfail-closeする。basename aliasや
+部分pathから補完しない。既存のtracked-target registry / artifact-path resolverを使ってtracked実体を照合し、設計pathの
+prefix・完全path・作業tree上の実在性も別途検証する。Git modeは通常ファイルの`100644`または`100755`に限り、
+symlink (`120000`)を受理しない。親directoryのjunction/reparse pointを含めた実体pathもcanonical repo root内に
+収まることを確認し、repo外の実体を読まない。issue番号やPLAN IDを `design_path` の代わりとして受理しない。
+
+本項の未実装目標契約は#959 T1の入力であり、実装済みを意味しない。現在のactive item-target authoringでは
+`pending_review`の163件すべてに管理参照として
+`docs/design/harness/L5-detailed-design/physical-data.md` を `design_path` として記録し、`plan_id` は空/NULLとする。
+この変換ではitem identity、status、target_kind/ref、reason、source_digestの値と集合を変えず、判断statusを推論・昇格しない。
+将来の`defer`は根拠として実在する`design_path`を必須とし、`plan_id`だけでは代替できない。DB CHECKとdomain validationの
+両方で`defer => design_path IS NOT NULL`を強制し、`defer`にPLAN IDの存在を要求しない。その他の`plan_id`もoptional
+legacy値としてFK検査を受けるが、新たな管理参照には使わない。非NULLの`plan_id`値は常に既存`plan_registry`行を指す。
+FKを無効化したり、参照先の架空PLANを作ったりしない。
+
+追加列はschema registryにnullable `design_path TEXT`を加える。ただし既存`vmodel_item_target_edges`のdefer用CHECK
+(`defer`時に`plan_id`必須)は`addMissingColumns`では置換できないため、`SCHEMA_VERSION`をbumpし、既存migrationの
+`runSqliteTransaction`の既存transaction/savepoint規律で当該projection tableを再構築する。新DDLはitem FK、nullable legacy
+`plan_id`の`plan_registry.plan_id` FK、item UNIQUE、status enum CHECK、pending/typed-target CHECKを保ち、旧defer用
+`plan_id` CHECKを`defer => design_path IS NOT NULL` CHECKへ置き換える。`plan_id` FKを外す・無効化する変更ではない。
+
+旧defer行に`design_path`が無い場合、PLAN IDや他fieldからpathを推測・生成せず、migration/rebuildを不完備としてfail-close
+する。変換対象のstatus/target/reason/source_digestとitem identity集合がauthoring sourceと一致しない場合、またはFK・CHECK・
+digest検証が1件でも失敗する場合は、schema table rebuildとcanonical projection rebuild/swapを同一transactionでrollbackし、
+旧Green projectionを保持する。旧投影値の置換はcanonical rebuildで行い、DBへの手作業backfill、部分projectionのcommit、架空PLAN
+の作成をしない。
 
 現行schema registryがFK、NOT NULL、UNIQUE、CHECK、複合PKを表現できない場合、PLAN-L7-417はregistry modelを先に拡張する。
 application validationだけでL5制約を代替してはならず、DDL制約とdomain validationの両面をRed/Greenにする。
