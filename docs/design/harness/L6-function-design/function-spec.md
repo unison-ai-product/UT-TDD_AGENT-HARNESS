@@ -299,6 +299,8 @@ type QualitySignal = { signal_type: string; subject_id: string; score?: number; 
 
 `analyzeL6Completion` は G6 readiness aggregator である。`freezeInputReady` (status flip 前の G6 audit に trace/substance が ready) と final `ready` (confirmed docs/plans、confirmed L7、G6 PASS 後の L6 completion) を分離する。これは L6 design doc status、各 L6 doc の owning `plan:` reference、各 L6 doc の `pair_artifact`、L6 doc filename による L7 reverse reference、minimum unit-contract substance marker (contract/signature、DbC または oracle、U-* oracle family)、base L6 `kind=design` PLAN status と review evidence、L7 unit-test-design status、G6 gate table row を読む。Post-G6 `kind=add-design` PLAN は add-feature/backfill/review evidence で統制し、base G6 completion を reopen しない。unit oracle は `L7-unit-test-design.md` の U-L6COMP-001..005 とする。
 
+doctor 配線: `checkL6Completion` (`src/doctor/process-quality.ts`、`l6-completion` check) は hard/fail-close であり、`ok` は final `ready` と一致する (`freezeInputReady` だけでは `ok` にならない)。入力を読めない場合・集約が例外を投げた場合も `violation` を返して `ok=false` とし、silent PASS を作らない。未完了状態は draft docs / owning plan 欠落・未解決 / L7 pair 欠落 / L7 reverse reference 欠落 / unit-contract substance 不足 / draft PLAN / L7 draft / G6 not-pass として列挙する。`ready=true` は全条件が揃った場合に限り、`freezeInputReady=true` は status・gate の flip 前でも trace/substance が揃えば成立する (U-L6COMP-002 / 004)。
+
 ### L6 completion の範囲と inventory (PLAN-L6-00 から還流、#958)
 
 - L6 completion の範囲は、原本の `function-spec` / `edge-case` に限らない。`docs/design/harness/L6-function-design/` 配下を生成または改訂する L6 add-design PLAN の成果物はすべて G6 readiness の対象である。

@@ -887,7 +887,7 @@ PR2 (`add-feature`) は昇格 PR merge 後の main から開始し、PLAN-L7-423
 
 - U-L6COMP-001: `analyzeL6Completion` reports not-ready when any L6 design doc is draft, lacks an owning `plan:` reference, lacks the L7 `pair_artifact`, is not referenced by filename from L7, lacks minimum unit-contract substance (contract/signature + DbC/oracle + U-* family), any base L6 `kind=design` PLAN is draft, L7 is draft, or G6 is not PASS.
 - U-L6COMP-002: `analyzeL6Completion` reports ready only when all L6 docs are confirmed, all L6 docs resolve to an owning L6 PLAN and L7 reverse reference, all L6 docs expose unit-test-granularity contract substance, all base L6 `kind=design` PLANs are confirmed with review evidence, L7 is confirmed, and G6 is PASS.
-- U-L6COMP-003: `checkL6Completion` surfaces readiness in `doctor` as warn-only until the G6 freeze audit is ready to harden it.
+- U-L6COMP-003: `checkL6Completion` surfaces readiness in `doctor` as hard/fail-close (`ok = analyzeL6Completion().ready`; input unreadable も violation で `ok=false`)。実装 `src/doctor/process-quality.ts` に合わせて 2026-10-14 に是正した (旧記述は warn-only、#958)。
 - U-L6COMP-004: `analyzeL6Completion` reports `freezeInputReady=true` when L6 trace/substance inputs are complete even if docs/plans/L7/G6 are still draft before the G6 audit.
 - U-L6COMP-005: post-G6 `kind=add-design` PLAN drafts do not reopen base L6 completion; add-feature completeness is handled by backfill/pair/review evidence.
 
