@@ -131,3 +131,9 @@ content unchanged.
 - Running an unspecified test command instead of the repository's canonical `npm run test` script.
 - Treating `ut-tdd doctor` green as evidence that the test design is correct —
   doctor checks structural governance, not oracle quality or cycle order.
+- Setting `UT_TDD_TEST_EXECUTION_ROOT` / `UT_TDD_TEST_FENCE_ROOT` / `UT_TDD_HEAD_SNAPSHOT_ROOT`
+  by hand to get past a raw Vitest refusal (global-setup) on a dirty worktree. That run is an
+  unapproved bypass and is not Red/Green or review evidence. Commit the Red test normally first,
+  then run `npm run test:vitest-snapshot` (`scripts/run-vitest-snapshot.ts`) against the committed
+  HEAD. Do not fake the env to dodge the snapshot refusal, and do not promote a diagnostic run to
+  formal evidence.

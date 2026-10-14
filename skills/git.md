@@ -133,3 +133,21 @@ workflow-scoped tokens in config files or environment variables.
 - [ ] Commit subject matches Conventional Commits (CI `commitlint-invalid`).
 - [ ] If `.github/workflows/` touched: workflow-scoped PAT is in use and will be
       removed after push.
+
+## Removing a worktree (node_modules junction)
+
+A worktree's `node_modules` is one of three things: a junction/symlink to the primary checkout, an
+independent copy, or absent. Entry counts (`ls | wc -l`) and appearance cannot tell the first two
+apart. Running `git worktree remove` (with or without `--force`) on a worktree whose `node_modules`
+is a junction follows the link and empties the primary's `node_modules`, so every CLI start then
+fails with `ERR_MODULE_NOT_FOUND`.
+
+1. Probe, non-destructively: create a temporary file under the primary's `node_modules` and check
+   whether the same path appears in the worktree's `node_modules` (SHARED vs independent). Remove the
+   probe file afterwards.
+2. If SHARED, unlink only the link with `rmdir` (never `rm -rf`) before `git worktree remove`. After
+   the unlink, confirm the junction is really gone before the next step; do not chain `rmdir` and
+   `git worktree remove --force` unconditionally with `;`.
+3. After removal, verify the primary: its `node_modules` entry count and a CLI start such as
+   `node src/cli.ts --help`. Do not treat the remove command's exit code as the success signal.
+4. Recovery is `npm ci` (the lockfile is the source of truth), seconds to minutes.
