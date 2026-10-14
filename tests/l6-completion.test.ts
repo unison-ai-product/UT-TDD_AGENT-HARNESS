@@ -280,7 +280,7 @@ describe("L6 completion readiness", () => {
     expect(result.draftPlans).toEqual([]);
   });
 
-  it.fails("U-L6COMP-006: accepts a positive issue as the sole L6 owner", () => {
+  it("U-L6COMP-006: accepts a positive issue as the sole L6 owner", () => {
     const l6Doc = {
       path: "docs/design/harness/L6-function-design/issue-owned.md",
       text: l6FixtureText({
@@ -345,7 +345,7 @@ describe("L6 completion readiness", () => {
     expect(result.ready).toBe(false);
   });
 
-  it.fails("U-L6COMP-008: accepts an existing eligible alternate L7 pair", () => {
+  it("U-L6COMP-008: accepts an existing eligible alternate L7 pair", () => {
     withFixtureRoot((root) => {
       writeL6CompletionFixture(root, {
         docs: [
@@ -416,7 +416,7 @@ describe("L6 completion readiness", () => {
     });
   });
 
-  it.fails("U-L6COMP-009: reverse reference must be in the selected pair artifact", () => {
+  it("U-L6COMP-009: reverse reference must be in the selected pair artifact", () => {
     withFixtureRoot((root) => {
       const docPath = "docs/design/harness/L6-function-design/pair-bound-ref.md";
       writeL6CompletionFixture(root, {
@@ -456,7 +456,7 @@ describe("L6 completion readiness", () => {
     });
   });
 
-  it.fails("U-L6COMP-010: a complete issue-owned tree loads without docs/plans", () => {
+  it("U-L6COMP-010: a complete issue-owned tree loads without docs/plans", () => {
     withFixtureRoot((root) => {
       writeIssueOwnedNoPlanFixture(root);
 
@@ -466,7 +466,7 @@ describe("L6 completion readiness", () => {
     });
   });
 
-  it.fails("U-L6COMP-011: accepts two confirmed selected pairs", () => {
+  it("U-L6COMP-011: accepts two confirmed selected pairs", () => {
     withFixtureRoot((root) => {
       writeL6CompletionFixture(root, {
         docs: [
@@ -501,7 +501,7 @@ describe("L6 completion readiness", () => {
     });
   });
 
-  it.fails.each([
+  it.each([
     "draft",
     undefined,
   ])("U-L6COMP-011: a selected pair with status %s keeps completion not-ready", (status) => {
