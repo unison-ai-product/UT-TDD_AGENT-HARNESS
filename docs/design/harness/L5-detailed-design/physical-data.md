@@ -449,6 +449,24 @@ tool adapter profile:
 - changed DB projection table は、対応する `projects_to` source docs/state/logs と dependent quality/impact query の review を要求する。
 - changed relation graph snapshot は、同じ scope の diagram artifact refresh または stale marking を要求する。
 
+#### §9.5.1 Forward 分解ツリー射影 (未実装の目標契約、PLAN-L5-11 還流)
+
+> 本節は未実装の目標契約である。実装 (`src/state-db/projection-writer.ts` の relation-graph 射影は `section_id` / `layer` に空文字を書く) は設計項目粒度の系譜も `decomposes` / `pairs` edge も持たない。実装は後続 add-impl (L7) が担い、関数契約は L6 function-spec 追補が担う。
+
+Forward の完備性 invariant (internal-processing Appendix C 冒頭原則) の DB 上の正規表現は、左肺の分解ツリーと右肺の鏡映集約からなる行列である。左肺は `L0 → L1 → L3 → L4 → L5 → L6 → L7` の設計項目粒度の親子系譜、右肺は `L8 → L9 → L10 → L12 → L13 → L14` が対層 node を集約して L0 へ戻る系譜とする。完備性はこの行列に空セルが無い状態であり、空セルは機械の事実として検出する (散文の主張を要しない)。
+
+- **設計項目 node**: `graph_nodes` を設計項目粒度で張る。node は安定 ID (既存 FR / BR / AT / U-xxx oracle ID を第一 source、無い doc は heading anchor から導出)、`layer` (必須、空文字禁止)、`section_id` (doc 内位置) を持つ。ID の rename / split は supersession を記録し、系譜を黙って断絶しない。
+- **edge 2 種の第一級化**: `decomposes` (左肺の親→子 descent 背骨) と `pairs` (左肺 node→右肺対層 node。V-model ペア L1↔L14 / L2↔L10 / L3↔L12 / L4↔L9 / L5↔L8 / L6↔L7) を `edge_kind` に追加する。`is_expected` / `is_actual` の区別は保つ。
+- **被覆規則**: 左 node は右ペア層で被覆数 1 以上 (n:m 許容)。厳密 1:1 は stub セル埋めの Goodhart を誘発するため不変条件にしない。
+- **証跡拘束**: 右肺 node は oracle ID / テスト / evidence への参照を持たない限り被覆と数えない。散文で埋めたセルは空セルと同判定とする。
+- **完備性 lint (fail-close)**: 被覆 0 の左 node と descent 子 0 の中間 node は永続エラーとする (作るまで消えない)。許容は理由付き opt-out のみで、opt-out は監査ログへ記録する。`.ut-tdd/config` の policy は project 単位に強化のみ可 (C.2c と同型)。
+- **matrix view**: 行=左肺系譜、列=layer の表形式 query (`ut-tdd status --forward-tree` 相当) を projection から導出する (human plane)。
+- **L13 成果物ファミリー**: 本番 (L13) 列の成果物種別と対応を定義する。粒度は L1 対応とする (現状未定義)。
+- **漸進移行**: 項目 ID を parse できない既存 doc は doc 粒度 node + `warn` として可視化し、一括書き直しを要求しない。
+- **駆動モデルのブランチ overlay**: 非 Forward 駆動 (Reverse / Recovery / Refactor / add-* 等) の PLAN・作業行は本体ツリー (Forward) の外側にブランチ行として置き、本体 node を指す差し込み点 (insertion node = layer + node ID) を持つ。ブランチ行は駆動モデルの選択と進行順 (plan) を持つ。Reverse のみ、出所 (branch / PLAN) と直す場所 (差し込み node) を必須で持つ。検出クエリは差し込み node から `decomposes` / `pairs` を下流展開して修正すべきセルを列挙し、合流未了のブランチ対象 node は非 green (要修正) とする (internal-processing C.2b の機械検出)。Reverse は指し戻し先 node・反映内容・検証結果を PLAN と証跡で照合可能に記録し、指し戻し未検証の Reverse は合流完了とみなさない (fail-close)。
+
+責務の依存: 完備性 lint と matrix view は設計項目 node と `decomposes` / `pairs` edge の存在に依存する (実在する依存)。既存 L1-L6 doc への安定 ID back-fill は別 PLAN の責務であり、本節は受け皿の schema と移行規則だけを定める。
+
 ### §9.6 MCP と external verification profile projection (A-125 / IMP-121..124)
 
 A-125 は relation graph を externally installed MCP servers、plugins、test foundations へ拡張する。これらは authoring source ではない。environment-dependent verification profiles として、discovery、probe result、invocation、normalized findings を query 可能にしなければならない。

@@ -232,6 +232,19 @@ requirements produced here.
 | IT-FLC-05 | sourceが消滅したactionable feedback | rebuild/reconcileを実行する。 | lifecycleはclosedとなり、理由と時刻がappend-onlyで残る。 | source absence detector -> lifecycle appender | silent deleteせず監査履歴を残す。 |
 | IT-FLC-06 | `.ut-tdd/logs`不在、またはDB/log書込失敗 | append/reconcile/Stop summaryを実行する。 | 正常時はdirectoryを作り永続化、失敗時はhook exit 0。 | hook -> filesystem -> DB | fail-openはruntime継続であり、正常書込の無観測消失を許可しない。 |
 
+## Appendix H: Forward 分解ツリー射影 結合テスト設計 候補 (PLAN-L5-11 還流)
+
+> 設計ペア: `docs/design/harness/L5-detailed-design/physical-data.md` §9.5.1。未実装の目標契約であり、実装 (add-impl L7) 着地後に④実行する。実装前 green は主張しない。ID は `CANDIDATE-` 接頭辞で、採番確定は L8 本起票で行う。
+
+| IT-ID | 前提 (Given) | 操作 (When) | 期待結果 (Then) | 不変条件 |
+|---|---|---|---|---|
+| CANDIDATE-IT-FWDTREE-01 | 右ペア層に被覆 0 の左 node を含む fixture | 完備性 lint を実行する。 | 空セルが永続エラーとして fail-close する。 | 空セルは作るまで消えない。 |
+| CANDIDATE-IT-FWDTREE-02 | 右 node が oracle / テスト / evidence 参照を持たない fixture | 被覆を算出する。 | 証跡なし右 node は被覆と数えず空セル判定になる。 | 散文で埋めたセルは被覆でない。 |
+| CANDIDATE-IT-FWDTREE-03 | 左 node 1 件に右 node が 2 件対応する fixture | 完備性 lint を実行する。 | 被覆数 1 以上で pass し、1:1 は強制されない。 | 被覆規則は n:m 許容。 |
+| CANDIDATE-IT-FWDTREE-04 | 項目 ID を parse できない既存 doc の fixture | projection を実行する。 | doc 粒度 node + `warn` として可視化され fail しない。 | 欠落は隠さず warn で見える。 |
+| CANDIDATE-IT-FWDTREE-05 | 差し込み node を持つ Reverse ブランチ行 (指し戻し未検証) の fixture | 合流検査を実行する。 | 下流展開したセルが非 green となり、合流完了とみなされない。 | 指し戻し未検証の Reverse は fail-close。 |
+| CANDIDATE-IT-FWDTREE-06 | Reverse ブランチ行が出所と差し込み node のいずれかを欠く fixture | PLAN / projection を検査する。 | 出所・差し込み node 欠落が fail-close する。 | Reverse は出所と差し込み点が必須。 |
+
 ## §6 G8-WORKFLOW: integration verification workflow
 
 This section defines the executable workflow granularity for closing L8/G8. It
