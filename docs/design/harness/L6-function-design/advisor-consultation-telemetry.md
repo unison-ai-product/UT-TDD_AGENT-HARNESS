@@ -27,7 +27,7 @@ pair_artifact: docs/test-design/harness/L7-advisor-consultation-telemetry-test-d
 1. 発火ログは既に存在し、harness.db へ投影済みである。`ut-tdd advisor` の実行は
    `.ut-tdd/logs/session/advisor-<provider>-<ts>.jsonl` (session_start / tool_use / session_end) を書き、
    `src/state-db/projection-writer.ts` の `projectHookEvents` が `hook_events` テーブルへ投影する
-   (event_id / session_id / plan_id / hook_name / event_type / occurred_at / digest=outcome / evidence_path)。
+   (`event_id` / `session_id` / `plan_id` / `hook_name` / `event_type` / `occurred_at` / `digest` (outcome) / `evidence_path`)。
    session_id が `advisor-` prefix を持つため、advisor 発火はクエリできる。
 2. 不足は 3 点だけである。
    - row に `tool=advisor`、provider、model、decision_kind が載らない (hook_name が `PostToolUse` に丸められる)。

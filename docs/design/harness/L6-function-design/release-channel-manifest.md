@@ -202,7 +202,7 @@ promotion/rollbackのpointer変更の許可判定（S3、`CANDIDATE-RELMAN-003/0
   B (mapping を release あたり 1 件へ畳む。artifact ごとの allowlist 検査が消える)。
 - oracle: `CANDIDATE-U-RELAGGV2-001..009` (`docs/test-design/harness/L7-unit-test-design.md`)。
 
-## 9. S3 promotion admission / rollback admission gate (Issue #360)
+## 9. S3 の昇格受理 (promotion admission) と巻き戻し受理 (rollback admission) の gate (Issue #360)
 
 実装は `src/setup/release-promotion-rollback-gate.ts` (PLAN-L7-494)。本節は PF-1〜PF-5 が確定した release artifact を次の
 配布段階へ進める promotion admission と、直前の attested release へ戻す rollback admission の判定契約を定める。
@@ -241,7 +241,7 @@ pure gate は port を直接 import も呼び出しもせず、観測は composi
 - 比較は exact head と PLAN revision (`facts.headSha`、`evaluatedHeadSha`、`d2.headSha`、`d1.exactHead`、全 lane の subject) の
   全一致、author / reviewer family と receipt digest の `expectedEvidence` との一致で行う。
 
-### 9.3 promotion admission
+### 9.3 昇格受理 (promotion admission)
 
 次の全条件の AND が成立した場合だけ `allow` とする。
 
@@ -271,7 +271,7 @@ promotion 成功へ丸める fallback は持たない。
 | 6 | `channel_transition_invalid` | target が current の直後でない、unknown channel |
 | 7 | `attestation_unavailable` | attestation の欠落または `attested` でない |
 
-### 9.4 rollback admission
+### 9.4 巻き戻し受理 (rollback admission)
 
 rollback の対象は、現在の release に対して**直前に attest 済み**で、identity (releaseId、sourceRevision、artifactDigest、
 materializer version、channel) が完全一致する**一つの** release だけである。判定は 2 段に分かれる。

@@ -29,7 +29,7 @@ consumer へ導入した後の runtime 隔離を所有する。
 ## 2. 正本と runtime 境界
 
 1. consumer の正本は、各 product repository 内の Pack artifact、product-local configuration、product runtime root である。
-   source development repository、source worktree、source `.ut-tdd`、source harness DB、source PLAN / test-design / evidence、
+   開発元 repository、開発元 worktree、開発元の `.ut-tdd`、開発元の harness DB、開発元の PLAN / test-design / 証跡、
    ローカルの Pack checkout は、runtime discovery の入力にしてはならない。
 2. `consumerRoot` は各 product の canonical repository root、`runtimeRoot` はその product だけが所有する runtime state root とする。
    DB、Memory、PLAN projection、lock、hook state、review receipt、evidence は `runtimeRoot` の外を参照・列挙・再利用しない。
