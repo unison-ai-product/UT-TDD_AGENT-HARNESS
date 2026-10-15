@@ -139,6 +139,7 @@ function gitPath(repoRoot: string, args: readonly string[]): string {
   return execFileSync("git", ["-C", repoRoot, ...args], {
     encoding: "utf8",
     stdio: ["ignore", "pipe", "ignore"],
+    windowsHide: true,
   }).trim();
 }
 
