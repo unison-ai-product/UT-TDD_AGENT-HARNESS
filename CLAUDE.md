@@ -67,6 +67,14 @@ Design and implementation should be judged by these pillars:
 英語/原語のまま。Windows 文字化けは UTF-8 化 (`.editorconfig` charset=utf-8 / `.gitattributes` eol=lf) と
 `readability` gate (mojibake fail-close) で防ぐ前提であり、**文字化け回避を理由に doc を英語化しない**。
 
+### PO 指示の解釈 (PO ルール)
+
+- 「改善する」は**実装すること**を指す。調査・提案で止めない (§教訓はメモリではなく仕組みにして改善する)。
+- 工程は記録のために必ず通す。近道で省略しない (§運用規律の再締結 1)。
+- Recovery は本線であり、傍流の後回し作業として扱わない。
+- 強制停止 (作業の即時中断を要する事態) は最高 severity として扱う。PLAN 完了時の handover は必須である
+  (機構は `docs/design/` の forced-stop-feedback / handover-mechanism が正本)。
+
 ### GitHub 記載言語 (PO ルール 2026-09-16)
 
 GitHub の Issue / PR / Discussion のタイトル、本文、コメント、レビュー記録、ラベル説明、リリースノートは、
@@ -257,6 +265,12 @@ Codex はこれらの規律を一度も受け取っていなかった)。`rule-d
 - CI is `harness-check`: typecheck, Vitest, Biome lint, and doctor.
 - Review evidence is required before confirmation gates where applicable.
 - PR merge は必ず `ut-tdd pr merge --pr <N>` 経由とし、`gh pr merge` の直叩きで迂回しない。
+- merge の後は、合流した HEAD で CI / doctor / 回帰の安全確認まで行い、確認した HEAD と結果を PR コメントと
+  正規のイベント・証跡に残して相手ランタイムと PO に伝わる状態にする。確認結果そのもの (エピソード状態) は
+  メモリに書かない。永続的な決定や教訓が得られたときだけ HARNESS メモリへ昇格させる。merge 条件 (draft 解除・review
+  evidence 成立・required CI green・PLAN status gate) を、Green の偽装 (未完成 PLAN の帳尻 confirm、
+  detector の allowlist 追加、base 負債の PR 固有扱い) で満たしたことにしない。依頼に「merge しない」と
+  明記された PR は、その指示を優先する。
 
 ### 運用規律の再締結 (PO ルール 2026-08-03、両ランタイム共通)
 
@@ -314,6 +328,13 @@ close された)。新規機構は作らず、既存工程の遵守を規律と�
    PLAN へ回す。非著者 reviewer は commit の順と Refactor commit の `tests/` 差分 0 を確かめる。
    手順の正本は `skills/test-driven-development.md`。
 
+6. **WIP 上限と共有文書の直列化** (PO 指摘 2026-10-14): 自 lane の open PR に FLAG・CI 赤・衝突が
+   残っている間は、新しい PR を出さない。`docs/test-design/harness/L7-unit-test-design.md`、
+   `function-spec.md`、`tests/gate-static.test.ts` のような共有の文書・テストを変える作業は直列にし、
+   同じファイルを並行する複数の PR に分けない (1 本 merge するたびに残りが衝突して再検になる)。
+   並列にしてよいのは、変更するファイルが重ならない範囲だけである。初回の FLAG 率が高い作業は、worker を
+   増やす前に手順書を直す。
+
 この規律から外れた PR は内容の当否に関わらず FLAG (process violation) とする
 (宣言の初出: issue #218、2026-08-03)。
 
@@ -346,6 +367,14 @@ dispatch (same-family verdict は `same_family_reviewer` で拒否) が機械強
    `FINDING:` 行で是正内容を指し、author family が同 PR 内に path 明示 stage・history 非破壊 (reset / force
    禁止) で積み、PR コメントに是正内容を記録する。§Hybrid 多ランタイム commit 協調の例外は設けない。
 6. **Codex worker の役割**: 初回実装 + 自 PR の軽作業是正 + 契約齟齬時の契約改訂。
+7. **収束規律** (PO 2026-09-17): 再検の判定対象は「前回 FINDING が直ったか」と「是正で新たに壊れた回帰」
+   だけにする。再検で見つけた新規の探索指摘は non-blocking observation として記録し、別 issue へ回す
+   (blocking にできるのは前回 FINDING の未是正と是正起因の回帰だけ)。是正 3 回 (2c) で blocking 0 に
+   ならなければ close→分割再出を執行する。契約改訂は著者 family が書いて非著者 family が review し、
+   依頼が再度来ても所有権を再判定せず同じ回答を返す。
+8. **rebase は GitHub が CONFLICTING を返す時だけ**行う。base が古いだけ (MERGEABLE) なら不要である。
+   exact-head review は PR head の内容に束縛され、merge は現 main と結合されるので、rebase しても
+   CI と両 family review の往復が 1 回増えるだけになる。rebase した場合は新 head で request を 1 本だけ出す。
 
 ### Hybrid 多ランタイム commit 協調 (Claude ↔ Codex、必須)
 
@@ -366,6 +395,20 @@ dispatch (same-family verdict は `same_family_reviewer` で拒否) が機械強
 - 真に off-task な overstep (相手ランタイムの作業でも自分の作業でもない net-new) と疑う場合でも、
   **revert する前に PO 確認**を取り、IMP で記録する (完了済み成果を捨てる誤判定を防ぐ)。
 
+### 委譲した成果物の検収 (両ランタイム共通)
+
+- **worker が生成した manifest / JSON** は、CLI や harness DB へ投入する前に root が内容を読み、
+  `JSON.parse` と実 shell での再現を通す。worker の「作成した」「通った」は検収の根拠にしない。根拠は
+  正規 receipt (`.ut-tdd/review/receipts/`) と git diff の実物である。worker は自分が走る shell
+  (cmd.exe / PowerShell / Git Bash) を誤認し、heredoc・単一引用符・パイプで誤りやすい。worker の草案は
+  破棄せず、root が有効な JSON を作り直して正規経路で投入し、失敗した manifest は誤再利用を防ぐため削除する。
+- **ドキュメント範囲の縮小を委譲するとき**は「削除」と書かず、改訂する節を名指しして「改訂」と指示する。
+  置き換え後の文章またはその形を示し、frontmatter と他の節は残すことを明示する (曖昧な「削除」は
+  ファイル全体の削除として返ってくる)。
+- **共有 worktree へ書き込みを委譲する前**に、worktree の実 HEAD (`git rev-parse HEAD`) と PR の HEAD を
+  比較する。PR HEAD だけを見て「停滞している」と判断しない。ローカル worktree は PR HEAD を動かさずに進む
+  ことがあり、実 HEAD が食い違っていれば別セッションが同じブランチを操作中の兆候なので、書き込みを止める。
+
 ### 引き継ぎ・検証の基準点 = HEAD (共有 tree を測るな、必須)
 
 引き継ぎ (session takeover) と検証の基準点は **commit/push 済の HEAD ただ一つ**。hybrid では
@@ -382,6 +425,12 @@ working tree を相手ランタイムが常時書き換えるため、full tree 
   **メモリファイルの手書き作成は禁止** — frontmatter (memory_id/kind/title/tags/updated_at)
   欠落は db rebuild が fail-close し CI が赤化する (2026-07-28 実例: PR #167)。必ず
   `ut-tdd memory add` 経由で書く。
+  既存メモリの扱いは次のとおり (`src/memory/service.ts` の `writeMemoryEntry`)。同じ kind と title は同じ
+  memory_id・同じファイルに解決される。同じ内容 (body・tags) の登録し直しは既存 entry をそのまま返す。
+  body が異なる登録は、既存ファイルが残っている間は例外で拒否される。本文を変えるときは、既存ファイルを
+  `git rm` してから、kind / title / tags を保ったまま変更後の body を `memory add --body-file` に渡す。
+  新しい `updated_at` で書き直される。この手順を通らない body の変更は手編集であり、レビュアは
+  「body が変わったのに `updated_at` が変わっていない」commit を手編集として検出できる。
   エピソード状態 (進捗・次の一手) はメモリに書かず、DB/HEAD 由来の digest に任せる
   (stale 化する層を作らない)。
 
@@ -418,6 +467,11 @@ VS Code session と Codex の GUI root lane) で、Issue / PR コメントと HA
   CLI 委譲の正規経路で行ってよい。並行させるときは、review ごとに別の clean worktree から実行する
   (review-guard は実行した checkout の作業ツリーだけを見るので、他レーンの書き込みで receipt が
   落ちるのを避けられる。2026-10-13 に 4 本並列で全 receipt を確認)。
+- **review request は control lane だけが出す** (#700、2026-09-25)。同じ exact head に control lane と
+  Codex lane の request が重なると、verdict の無い request が 1 件でも残る限り merge gate
+  (`src/feedback/review-merge-gate.ts`) が merge を拒否し、request を取り下げる正規の手段が無いため
+  2 件とも review しないと merge できない。Codex lane は是正を push したら PR コメントで報告して止まる。
+  1 つの作業は、control lane が発注した 1 本だけを進める (同じ PR の並行再起票も同じ原因で詰まる)。
 - レーンの中の並列 (Luna の subagent、Claude の Agent tool) は別の話であり、本節は制限しない。上限は
   §Shared Guard Discipline の 8 のまま。
 
@@ -533,6 +587,14 @@ Task-kind ベースの割当 (PO rule 2026-07-14、旧 tier 記述を supersede)
 - **並列 subagent は既定上限 8** (`DEFAULT_MAX_PARALLEL`、`src/runtime/agent-slots.ts`)。
   `agent-slots` が fire/release を記録し上限到達を警告する (fail-open advisory であって
   fail-close gate ではない)。
+- **Vitest の snapshot guard を env で迂回しない**。raw Vitest が global-setup に拒否されたとき、
+  `UT_TDD_TEST_EXECUTION_ROOT` / `UT_TDD_TEST_FENCE_ROOT` / `UT_TDD_HEAD_SNAPSHOT_ROOT` を dirty な
+  worktree へ手設定して再実行しない。その実行は Red / Green やレビューの証拠にならない
+  (Issue #890 の実例)。Red テストを先に通常 commit し、`npm run test:vitest-snapshot` 系
+  (`scripts/run-vitest-snapshot.ts`) を committed HEAD に対して流す。
+- **Docker Desktop は使っていないときは停止する** (PO 2026-10-01)。Linux 受入の使い捨て container
+  など必要な作業の前に `docker desktop start` で起動し、作業と証跡の退避が終わったら
+  `docker desktop stop` で落とす。
 - **foreign-edit override は one-shot**。`.ut-tdd/state/foreign-edit-override` に非空の理由を
   書いた場合のみ 1 回通り、その編集で消費 (削除) される。空 marker は通さない (理由なき
   silent override を作らない)。bypass は `.ut-tdd/logs/foreign-edit-overrides.jsonl` へ監査
