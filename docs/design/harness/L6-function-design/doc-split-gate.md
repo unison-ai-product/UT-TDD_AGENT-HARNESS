@@ -10,7 +10,7 @@ next_pair_freeze: L7
 issue: 1032
 ---
 
-> **L6 contract marker**: `analyzeDocSplit(sources, baseline, previousBaseline, renames) => DocSplitResult` は unit-test-granularity contract である (未実装の目標契約。実装は本書の凍結後)。DbC pre/post/invariant は §9 にまとめる。oracle の詳細 (CANDIDATE-U-DOCSPLIT-001〜) は専用の `docs/test-design/harness/L7-doc-split-gate-test-design.md` が固定する。共有の `L7-unit-test-design.md` は、肥大の当事者なので本契約では触らず、索引行も足さない (§8.3 に既存検査との衝突を記す)。
+> **L6 contract marker**: `analyzeDocSplit(sources, baseline, previousBaseline, mergeBaseMeasures, renames) => DocSplitResult` は unit-test-granularity contract である (未実装の目標契約。実装は本書の凍結後)。DbC pre/post/invariant は §9 にまとめる。oracle の詳細 (CANDIDATE-U-DOCSPLIT-001〜) は専用の `docs/test-design/harness/L7-doc-split-gate-test-design.md` が固定する。共有の `L7-unit-test-design.md` は、肥大の当事者なので本契約では触らず、索引行も足さない (§8.3 に既存検査との衝突を記す)。
 
 # 設計文書の肥大検査 (doc-split gate) — 関数設計 (issue #1032)
 
@@ -77,6 +77,11 @@ path は `/` 区切りに正規化する。内容は CRLF を LF に直してか
 - 初期値 (本文に数値を固定しない): 初期の baseline は、**実装 PR (Green) の base commit で、本書 §3 の測り方 (gate 自身の測定規則) により実測し**、その時点で §4.2 の上限を超えている文書だけを、path の昇順に 1 文書 1 行で `docs/governance/doc-split-baseline.json` に記録して、同じ Green PR で入れる (記録する文書の集合は「Green の base commit で上限を超える文書」であり、本書は列挙しない)。理由: main は Green が入るまで育ち続けるので、本文に固定した行数・責務の数は必ず古くなり、レビューのたびに本文の改訂が要る (PR #1034 の r5 で FLAG)。記録後は §5 の規則が働き、各文書の値は**縮むだけ**で、増えれば `doc-split-baseline-grown` (比較元との差) と `exceeds-baseline` で fail-close する。Green の base 以降に main で値が育った分は、Green PR が rebase / merge した後に再測定して記録する (記録値は常に Green PR の head の実測と一致させる。食い違いは `doc-split-stale-baseline` か `exceeds-baseline` になる)。**新規文書は baseline に載せない**: 本書 (`doc-split-gate.md`) と `L7-doc-split-gate-test-design.md` は新規なので、責務の数を上限の内側に収めておく (本書は見出し 15、L7 は family 4)。`handover-mechanism.md` はコードフェンス内の見出しを数えないと 16 で、上限の内側なので載せない。
 - **rename の引き継ぎ**: 同じ種別の rename・移動 (`from` → `to`) で、`to` の baseline の行を新しく置くときは、`previousBaseline` に `from` の行があり、`to` の値が `from` の値以下であることを条件に、`previousBaseline` に無い行の追加として扱わない。同じ変更で `from` の行を消す (消さないと `missing-file`)。値を増やす、`from` の行が無い、種別が変わる、のいずれかは §6 の finding になる。
 - 縮小のみの比較元: baseline そのものが増やされると §6 の規則は素通りする。そこで `previousBaseline` (比較元) を入力に取り、各文書の `lines` と `responsibilities` が比較元より増えたら、または比較元に無い文書が (上の引き継ぎを除いて) baseline に足されたら `doc-split-baseline-grown` で fail-close する。比較元は、doctor と CLI が `git merge-base HEAD origin/main` の commit にある `docs/governance/doc-split-baseline.json` を `git show` で読み、`JSON.parse` して得る。merge-base は解決できたがその commit にファイルが無いときは、baseline を初めて入れる PR とみなして比較を省く (`previousBaseline = null`)。merge-base を解決できない、またはファイルはあるが読めない・解釈できないときは `doc-split-baseline-base-unreadable` で fail-close する。git の起動には `windowsHide: true` を付ける (issue #693)。
+- **初回記録の照合 (信頼できる実測との突き合わせ)**: `previousBaseline = null` (baseline を初めて入れる PR) では §5 の「縮小のみ」比較が働かず、head の実測が記録値と一致するだけでは、Green PR 自身が文書を育てて育てた値を記録した場合や、Green PR が新規の肥大文書を baseline に登録した場合を見分けられない (base の 500 行を Green が 600 行に育てて 600 と記録しても、head の実測は 600 で一致する)。そこで信頼できる基準を **merge-base の commit (`git merge-base HEAD origin/main`、main を取り込んだ後の base) にある文書の内容を、§3 と同じ測り方で測った値** と定める。測るのは作業木ではなく `git show <merge-base>:<path>` で読んだ内容であり、Green PR 自身の変更を含まない。adapter が、この merge-base の commit id を git で解決して入力に取り、`mergeBaseMeasures` (path → `{ lines, responsibilities }`。merge-base に文書が無い path は含めない) として純粋関数へ渡す。`previousBaseline` が `null` でないときは §5 の比較元の規則で足りるので、`mergeBaseMeasures` は `null` を渡して照合しない。`previousBaseline = null` のとき、baseline の各行を次で照合する。
+  - その path が merge-base に存在しない、または merge-base の実測が class の上限(§4.2) を超えていない: `doc-split-initial-baseline-new-entry` (Green が新規文書や上限の内側の文書を登録した)。
+  - 記録値 (`lines` か `responsibilities`) が merge-base の実測より大きい: `doc-split-initial-baseline-grown` (Green 自身の成長を記録した)。`layer-doc` の `responsibilities` (`null`) は比べない。
+  - merge-base で上限を超えているのに baseline に行が無い文書は、これまでどおり `new-doc-over-limit` で止まる (記録が必須)。
+  - merge-base の commit id を解決できない場合は `mergeBaseMeasures` を作れないので、`doc-split-baseline-base-unreadable` で fail-close する (「照合なし」で通さない)。
 
 ## 6. 判定規則と finding
 
@@ -90,10 +95,10 @@ path は `/` 区切りに正規化する。内容は CRLF を LF に直してか
    - `within-limit`: baseline にある文書が、class の上限の内側に収まった。baseline の行を消す。
    - `missing-file`: baseline にある path の文書が走査対象に無い。baseline の行を消す。
 3. **`doc-split-class-changed`** (fail-close)。`renames` の `from` → `to` で `classifyDoc(from)` と `classifyDoc(to)` が異なる (`null` を含む。ただし `from` が `null` で `to` が対象のときは新規の取り込みであり対象外)。finding の `path` は `to`。種別を変えると上限が変わるので、種別を変える path の変更は分割ではなく緩和であり、拒否する。
-4. **`doc-split-baseline-grown`** と **`doc-split-baseline-base-unreadable`** (fail-close)。§5。
+4. **`doc-split-baseline-grown`**、**`doc-split-initial-baseline-new-entry`**、**`doc-split-initial-baseline-grown`**、**`doc-split-baseline-base-unreadable`** (fail-close)。§5。`doc-split-initial-baseline-*` は初回記録 (`previousBaseline = null`) の merge-base 実測との照合で、前者は上限を超えていない・存在しない文書の登録、後者は記録値が merge-base の実測より大きい場合である。
 5. **`doc-split-input-unreadable`** (fail-close)。走査対象の文書が 1 本も無い (`sources` が空)、または adapter が対象文書を読めなかった。入力が読めないことを「違反なし」と取り違えない。
 
-`ok` は上の 5 種の finding が 0 件のときだけ true。`doc-split-required` のメッセージは分割先の形を指示する。
+`ok` は上の finding (5 項目) が 0 件のときだけ true。`doc-split-required` のメッセージは分割先の形を指示する。
 
 ```
 <path>:doc-split-required:<reason> lines=<n>/<limit> responsibilities=<m>/<limit>
@@ -113,10 +118,11 @@ path は `/` 区切りに正規化する。内容は CRLF を LF に直してか
 |---|---|---|
 | `classifyDoc` | `(path: string) => DocClass \| null` | path から class を再帰的に決める (§2)。対象外は `null` |
 | `measureDoc` | `(source: DocSplitSource) => DocMeasure` | §3 の値を測る。`{ path, docClass, lines, responsibilities, names }` |
-| `analyzeDocSplit` | `(sources: readonly DocSplitSource[], baseline: DocSplitBaseline, previousBaseline: DocSplitBaseline \| null, renames: readonly DocRename[]) => DocSplitResult` | §6 の規則を適用する。`{ ok, findings, summary }` |
+| `analyzeDocSplit` | `(sources: readonly DocSplitSource[], baseline: DocSplitBaseline, previousBaseline: DocSplitBaseline \| null, mergeBaseMeasures: DocSplitBaseline \| null, renames: readonly DocRename[]) => DocSplitResult` | §6 の規則を適用する。`{ ok, findings, summary }` |
 | `parseDocSplitBaseline` | `(sourceText: string) => DocSplitBaseline \| null` | baseline の JSON を解釈する。解釈できなければ `null` |
 | `loadDocSplitSources` | `(repoRoot: string) => { sources: DocSplitSource[]; unreadable: string[] }` | adapter。走査対象の `.md` を読む。読めない path は `unreadable` に積む |
 | `loadPreviousDocSplitBaseline` | `(repoRoot: string) => { kind: "found"; baseline: DocSplitBaseline } \| { kind: "absent" } \| { kind: "unreadable" }` | adapter。§5 の merge-base 経路 |
+| `loadMergeBaseMeasures` | `(repoRoot: string, paths: readonly string[]) => { kind: "found"; measures: DocSplitBaseline } \| { kind: "unreadable" }` | adapter。`git merge-base HEAD origin/main` の commit id を解決し、baseline の各 path を `git show <merge-base>:<path>` で読んで §3 の測り方で測る (作業木は読まない)。commit id を解決できなければ `unreadable` |
 | `loadRenamedDocs` | `(repoRoot: string) => { kind: "found"; renames: DocRename[] } \| { kind: "unreadable" }` | adapter。merge-base と作業木の `git diff -M --name-status` の R 行から、走査対象に関係する (`from` か `to` が対象 path の) rename を集める |
 | `checkDocSplit` | `(repoRoot: string) => { messages: string[]; ok: boolean }` | adapter の合成。doctor と CLI が共有する |
 
@@ -177,8 +183,8 @@ path は `/` 区切りに正規化する。内容は CRLF を LF に直してか
 
 ## 9. 不変条件 (DbC)
 
-- Pre: 入力は走査対象の文書の path と内容の列、baseline、比較元の baseline (`previousBaseline`、無ければ `null`)、rename の列。読み取りだけを行い、ファイルを書かない。
-- Post: `ok` は `doc-split-required` / `doc-split-stale-baseline` / `doc-split-class-changed` / `doc-split-baseline-grown` / `doc-split-baseline-base-unreadable` / `doc-split-input-unreadable` が 0 件のときだけ true。finding は入力の順序に依存せず、一意に並ぶ。同じ入力から必ず同じ出力を返す (純粋性)。
+- Pre: 入力は走査対象の文書の path と内容の列、baseline、比較元の baseline (`previousBaseline`、無ければ `null`)、rename の列、初回記録のときの merge-base の実測 (`mergeBaseMeasures`、それ以外は `null`)。読み取りだけを行い、ファイルを書かない。
+- Post: `ok` は `doc-split-required` / `doc-split-stale-baseline` / `doc-split-class-changed` / `doc-split-baseline-grown` / `doc-split-initial-baseline-new-entry` / `doc-split-initial-baseline-grown` / `doc-split-baseline-base-unreadable` / `doc-split-input-unreadable` が 0 件のときだけ true。finding は入力の順序に依存せず、一意に並ぶ。同じ入力から必ず同じ出力を返す (純粋性)。
 - Invariant: 値は §3 の定義だけで測り、frontmatter・更新日・git の履歴を推測に使わない (rename の列は adapter が git から得た入力であり、純粋関数は git を読まない)。書式 (見出しの階層、ID のセルの位置) と path (子ディレクトリ、`L7-` の prefix) の変更だけでは測定値と種別が緩まない (§2 / §3)。閾値の変更は設計の改訂であり、baseline の追記では通らない (`doc-split-baseline-grown`)。分割で文書の中身を変えない (§8.4 の手順 3)。
 
 ## 10. 範囲外
