@@ -37,6 +37,19 @@ function git(args: readonly string[], encoding: "utf8" | "buffer"): string | Buf
   return encoding === "utf8" ? String(out).trim() : (out as Buffer);
 }
 
+// `git ls-tree -r -z <rev> -- <dir>` を 1 回だけ流し、path -> blob oid の Map にする。
+// 行ごとの `git rev-parse` (607 行 x 2 回の子プロセス) を避けるためのバッチ化 (#1063)。
+function blobOids(rev: string, dir: string): Map<string, string> {
+  const oids = new Map<string, string>();
+  for (const entry of git(["ls-tree", "-r", "-z", rev, "--", dir], "utf8").split("\0")) {
+    const tab = entry.indexOf("\t");
+    if (tab < 0) continue;
+    const oid = entry.slice(0, tab).split(" ")[2];
+    if (oid) oids.set(entry.slice(tab + 1), oid);
+  }
+  return oids;
+}
+
 function manifestOf(): LegacyArchiveManifest {
   return readLegacyArchiveManifest(root);
 }
@@ -119,10 +132,15 @@ describe("memory clean-cut PR-2: legacy corpus archive (U-MEMCUT-017..021, P-MEM
       const [status, from, to] = line.split("\t");
       if (status?.startsWith("R") && from && to) renames.set(from, to);
     }
+    const baseOids = blobOids(manifest.base_commit, LEGACY_MEMORY_SOURCE_ROOT);
+    const headOids = blobOids("HEAD", LEGACY_MEMORY_ARCHIVE_ROOT);
     let mutated = false;
     for (const row of manifest.tracked) {
-      const baseOid = git(["rev-parse", `${manifest.base_commit}:${row.source_path}`], "utf8");
-      const headOid = git(["rev-parse", `HEAD:${row.archive_path}`], "utf8");
+      const baseOid = baseOids.get(row.source_path);
+      const headOid = headOids.get(row.archive_path);
+      // 旧 `git rev-parse` は path 不在で throw した。Map では undefined 同士が一致しうるため明示的に落とす。
+      expect(baseOid, `${row.source_path} (base blob)`).toBeDefined();
+      expect(headOid, `${row.archive_path} (HEAD blob)`).toBeDefined();
       expect(headOid, row.source_path).toBe(baseOid);
       expect(renames.get(row.source_path), row.source_path).toBe(row.archive_path);
       const bytes = readFileSync(join(root, row.archive_path));
