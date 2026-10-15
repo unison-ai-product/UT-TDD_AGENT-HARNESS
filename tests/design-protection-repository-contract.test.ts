@@ -140,7 +140,7 @@ function inventory(root: string, prefixes: readonly string[]): Map<string, strin
 }
 
 describe("design-protection L7 candidate Red (PR #981)", () => {
-  it.fails("U-DPROT-016: workflowからstepを消す/skip-ifへ変えるとpolicyが拒否する", () => {
+  it("U-DPROT-016: workflowからstepを消す/skip-ifへ変えるとpolicyが拒否する", () => {
     const baseline = withProtectionStep(
       readFileSync(join(REPO_ROOT, ".github/workflows/harness-check.yml"), "utf8"),
     );
@@ -178,7 +178,7 @@ describe("design-protection L7 candidate Red (PR #981)", () => {
     );
   });
 
-  it.fails("U-DPROT-024: workflowとruntime manifestに正しいLinux stepがあればpolicy OK", () => {
+  it("U-DPROT-024: workflowとruntime manifestに正しいLinux stepがあればpolicy OK", () => {
     const actual = readFileSync(join(REPO_ROOT, ".github/workflows/harness-check.yml"), "utf8");
     const workflow = parseYaml(actual) as WorkflowShape;
     const installed = workflow.jobs["harness-check-linux"].steps.filter((step) =>
@@ -192,7 +192,7 @@ describe("design-protection L7 candidate Red (PR #981)", () => {
     expect(result.violations).toEqual([]);
   });
 
-  it.fails("U-DPROT-025: order/if/error/window変異はruntime manifest不一致になる", () => {
+  it("U-DPROT-025: order/if/error/window変異はruntime manifest不一致になる", () => {
     const proposed = withProtectionStep(
       readFileSync(join(REPO_ROOT, ".github/workflows/harness-check.yml"), "utf8"),
     );
@@ -265,7 +265,7 @@ describe("design-protection L7 candidate Red (PR #981)", () => {
     }
   });
 
-  it.fails("U-DPROT-026:実workflowのstepは一件・PR限定・BASE_SHAはPR base only", () => {
+  it("U-DPROT-026:実workflowのstepは一件・PR限定・BASE_SHAはPR base only", () => {
     const workflow = parseYaml(
       readFileSync(join(REPO_ROOT, ".github/workflows/harness-check.yml"), "utf8"),
     ) as WorkflowShape;
@@ -279,7 +279,7 @@ describe("design-protection L7 candidate Red (PR #981)", () => {
     expect(steps[0]?.run).not.toContain("github.event.before");
   });
 
-  it.fails("U-DPROT-027: repository-structureの2表と定数は集合一致し壊れた表を拒否", async () => {
+  it("U-DPROT-027: repository-structureの2表と定数は集合一致し壊れた表を拒否", async () => {
     const api = await loadGate();
     const path = join(REPO_ROOT, "docs/governance/repository-structure.md");
     const content = readFileSync(path, "utf8");
@@ -315,7 +315,7 @@ describe("design-protection L7 candidate Red (PR #981)", () => {
     ).toEqual(sorted(api.PROTECTED_PATH_PREFIXES));
   });
 
-  it.fails("U-DPROT-030: HEAD git ls-filesで各prefixの存在を確認し全src移動を検出", async () => {
+  it("U-DPROT-030: HEAD git ls-filesで各prefixの存在を確認し全src移動を検出", async () => {
     const api = await loadGate();
     const implementationInventory = inventory(REPO_ROOT, api.IMPLEMENTATION_PATH_PREFIXES);
     const protectedInventory = inventory(REPO_ROOT, api.PROTECTED_PATH_PREFIXES);
