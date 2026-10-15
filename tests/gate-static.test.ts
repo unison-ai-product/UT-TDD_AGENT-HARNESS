@@ -83,7 +83,7 @@ const HARNESS_GATE_BASELINE = [
     gate: "G6",
     passed: true,
     applicable: true,
-    messages: ["g6-pair - OK (L6 total=34, confirmed=34, placeholder=0, draft=0, orphans=0)"],
+    messages: ["g6-pair - OK (L6 total=35, confirmed=35, placeholder=0, draft=0, orphans=0)"],
   },
   {
     gate: "G7",
