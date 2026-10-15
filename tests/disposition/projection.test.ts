@@ -576,6 +576,7 @@ function prepareFixtureCatalogEdits(
   expectedTrackedRegularPath?: string,
 ): void {
   const paths = [...new Set(edits.map((edit) => edit.path))];
+  for (const path of paths) chmodSync(join(root, path), 0o644);
   for (const edit of edits) updateFixtureTableRow(root, edit);
   execFileSync("git", ["add", "--", ...paths], { cwd: root, stdio: "ignore" });
   commitFixtureIndex(root);
@@ -605,6 +606,7 @@ function restoreFixtureCatalog(
   originalDisposition: string,
   originalSourceTargets: string,
 ): void {
+  for (const path of [dispositionPath, sourceTargetPath]) chmodSync(join(root, path), 0o644);
   writeFileSync(join(root, dispositionPath), originalDisposition, "utf8");
   writeFileSync(join(root, sourceTargetPath), originalSourceTargets, "utf8");
   execFileSync("git", ["add", "--", dispositionPath, sourceTargetPath], {
