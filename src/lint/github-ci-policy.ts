@@ -882,7 +882,7 @@ function checkHarnessTriggers(input: {
   }
 }
 
-export const ATTESTATION_WORKFLOW_FILE = join(".github", "workflows", "review-attestation.yml");
+export const ATTESTATION_WORKFLOW_FILE = ".github/workflows/review-attestation.yml";
 const ATTESTATION_JOB = "review-attestation";
 const ATTESTATION_PERMISSIONS: Readonly<Record<string, string>> = {
   contents: "read",
@@ -1226,7 +1226,7 @@ export function loadGithubCiPolicyDocs(input: LoadGithubCiPolicyDocsInput): Gith
     if (!existsSync(absoluteFile)) return;
     const content = readFileSync(absoluteFile, "utf8");
     candidates.push({
-      file: relativeFile,
+      file: relativeFile.replaceAll("\\", "/"),
       content,
       profile,
       role,
