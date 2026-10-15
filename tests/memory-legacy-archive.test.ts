@@ -50,6 +50,34 @@ function blobOids(rev: string, dir: string): Map<string, string> {
   return oids;
 }
 
+// `git cat-file --batch` を 1 プロセスだけ起動し、全 oid の type と内容をまとめて読む (#1063)。
+// 出力は `<oid> <type> <size>\n<content>\n` の繰り返し。`<oid> missing` は旧 `cat-file -t` の失敗と同じく throw する。
+function catFileBatch(oids: readonly string[]): { type: string; content: Buffer }[] {
+  const out = execFileSync("git", ["-C", root, "cat-file", "--batch"], {
+    input: `${oids.join("\n")}\n`,
+    maxBuffer: 1024 * 1024 * 1024,
+    windowsHide: true,
+  });
+  const objects: { type: string; content: Buffer }[] = [];
+  let pos = 0;
+  for (const oid of oids) {
+    const eol = out.indexOf(0x0a, pos);
+    if (eol < 0) throw new Error(`cat-file --batch: truncated output at ${oid}`);
+    const header = out.toString("utf8", pos, eol);
+    const [gotOid, type, size] = header.split(" ");
+    if (gotOid !== oid || !type || type === "missing" || size === undefined) {
+      throw new Error(`cat-file --batch: object not readable: ${oid} (${header})`);
+    }
+    const start = eol + 1;
+    const end = start + Number(size);
+    if (end > out.length) throw new Error(`cat-file --batch: truncated content at ${oid}`);
+    objects.push({ type, content: out.subarray(start, end) });
+    pos = end + 1;
+  }
+  if (pos !== out.length) throw new Error("cat-file --batch: unexpected trailing output");
+  return objects;
+}
+
 function manifestOf(): LegacyArchiveManifest {
   return readLegacyArchiveManifest(root);
 }
@@ -180,10 +208,9 @@ describe("memory clean-cut PR-2: legacy corpus archive (U-MEMCUT-017..021, P-MEM
       .map((line) => line.split(" ")[0])
       .filter(Boolean);
     let leaked = 0;
-    for (const oid of rangeBlobs) {
-      const type = git(["cat-file", "-t", oid], "utf8");
+    for (const { type, content } of catFileBatch(rangeBlobs)) {
       if (type !== "blob") continue;
-      if (untrackedDigests.has(sha256Hex(git(["cat-file", "-p", oid], "buffer")))) leaked += 1;
+      if (untrackedDigests.has(sha256Hex(content))) leaked += 1;
     }
     expect(leaked).toBe(0);
   });
