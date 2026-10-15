@@ -83,8 +83,7 @@ HEAD `f829e9414d0f14aa67d3e62364865d3c291ca995`のWindows scoped 279.93s / CLI 2
 ## 2026-10-15 追補: Windows leg 3 shard の candidate oracle (Issue #1063)
 
 対になる設計は `docs/design/harness/L6-function-design/function-spec.md` §「2026-10-15 Windows leg の vitest 3 shard 契約」
-である。実装 PR (Issue #898 の Green が main に入った後) が Red test を追加して Green 化するまで、下表は正式 `U-*` へ
-昇格させない。`W` (上記 Canonical set model) の意味は変えず、`test:windows` の選択集合を shard で分割するだけである。
+である。上記の順序 (契約 → 登録 + Red → 昇格 → 実装 Green) で進め、昇格 PR までは下表を正式 `U-*` へ昇格させない。`W` (上記 Canonical set model) の意味は変えず、`test:windows` の選択集合を shard で分割するだけである。
 oracle は workflow YAML、`package.json`、policy manifest をそれぞれ構造 parse して突合し、文字列 grep だけで通さない。
 
 | Candidate | Stimulus / mutation (mutant) | 独立 oracle |
@@ -96,7 +95,9 @@ oracle は workflow YAML、`package.json`、policy manifest をそれぞれ構�
 | `CANDIDATE-U-CISHARD-005` | aggregate の `needs.harness-check-windows.result` 判定を削除・`always()` 削除・`!= "failure"` へ緩める、matrix 一部 `skipped` を success 扱いにする | `REQUIRED_AGGREGATE_COMMAND` が不変で、`failure` / `cancelled` / `skipped` / 結果欠落を Red にする (matrix 集約の挙動を fixture で検証)。 |
 | `CANDIDATE-U-CISHARD-006` | shard evidence artifact を 1 つ欠落、同一 shard を重複、4 つ目を余剰に置く | aggregate の検証関数が shard 集合をちょうど `{1/3,2/3,3/3}` として要求し、欠落・重複・余剰を拒否する。 |
 | `CANDIDATE-U-CISHARD-007` | evidence の `run_attempt` / `run_id` / `head_sha` を別 attempt・別 run・別 HEAD に差し替える (failed-job-only rerun を模す) | aggregate 自身の `GITHUB_RUN_ATTEMPT` / run / HEAD と一致しない evidence は `attempt_binding_mismatch` で拒否する。別 attempt の artifact を今 attempt の証拠として拾わない。 |
-| `CANDIDATE-U-CISHARD-008` | 実行ファイル数 0 の shard を成功扱いにする、全 shard で件数合計が 0 | 件数合計 0 または 0 件 shard の成功を拒否する (空振り成功の穴)。 |
+| `CANDIDATE-U-CISHARD-008` | full lane で shard 件数 `[10,0,10]` (合計は正、1 つが 0)、全 shard 0 件、負数・非整数の件数を成功扱いにする | 各 shard の実行ファイル数がそれぞれ正の整数であることを要求し、混在 0 を含む全 mutant を拒否する。 |
+| `CANDIDATE-U-CISHARD-013` | (正常系) doc lane の run で vitest evidence が 3 shard とも無く、`lane=doc` が同一 run / attempt / HEAD に束縛され、再計算 lane も `doc` | aggregate が Green (evidence 不在を理由に Red にしない)。doc lane の `source-doc-lane` doctor 成功を前提にする。 |
+| `CANDIDATE-U-CISHARD-014` | full lane の run を doc lane に偽装する (evidence 無し + claimed `doc` + 変更ファイルから再計算すると `full`)、doc lane なのに shard evidence が存在する、lane evidence の run / attempt / HEAD 差替え | `src/github/change-lane.ts` の再計算と claimed lane の不一致を拒否し、偽装 doc を Red にする。判定不能・新種 path は `full` へ倒れる。 |
 | `CANDIDATE-U-CISHARD-009` | `test:windows` の除外集合から 1 件落とす、shard 引数が runner で vitest へ透過されず全件実行になる | `vitest list --shard=i/3` (i=1..3) の和集合が独立算出した `W` と一致し、shard 同士が互いに素であること。runner が `--shard` を透過する (全件実行へ退行しない) こと。 |
 | `CANDIDATE-U-CISHARD-010` | Linux leg に matrix / `--shard` を足す | Linux leg は従来の step manifest と一致し、shard しない (本契約の範囲外) ことを固定する。 |
 | `CANDIDATE-U-CISHARD-011` | branch protection の required context に `harness-check-windows (i/3)` を足す、`harness-ci-aggregate` 相当を required に足す | required context は `harness-check` 1 件のままで、matrix 表示名は required に入らない (設定は実測で確認し、取得不能なら「設定済み」と推測せず block)。 |
@@ -104,8 +105,11 @@ oracle は workflow YAML、`package.json`、policy manifest をそれぞれ構�
 
 ## 実装 PR の順序と fence
 
-- Issue #898 の Green が `src/lint/github-ci-policy.ts` を変更するため、本契約の実装 PR は #898 merge 後に出す。
-- 実装 PR は Red (`it.fails`) → Green → Refactor の順で commit し、1 PR = 1 論点 (policy + workflow + aggregate step の
-  最小配線まで。Linux の shard 化、手動分割、larger runner は別 PR / 別判断)。
+`design-protection-diff-gate.md` §10.2 / §10.3 に従う。実装 PR は test-design に触れないため、昇格は実装 PR より前に入れる。
+
+1. 契約 (本 PR、docs のみ)。
+2. 登録 + Red: `it.fails` で候補 ID を引用する。実 workflow を読むテストなので `repositoryReadContracts` の登録行だけを同じ PR に足す (src/ は登録行に限る)。
+3. 昇格: `CANDIDATE-U-CISHARD-*` を正式 ID へ昇格し、引用を書き換える (src/ を含まない)。
+4. 実装 Green (policy + workflow + aggregate step、1 PR = 1 論点): Issue #898 の Green が `src/lint/github-ci-policy.ts` を変更するため、#898 merge 後に出す。Linux の shard 化、手動分割、larger runner は別 PR / 別判断。
 - required gate の弱体化 (テスト除外・skip、aggregate の `needs` 緩和、doctor strict flag 削除) は shard 化の名目でも行わない。
 - 短縮見積り (job wall 約 10〜12.5 分) は candidate であり、達成値の根拠にしない。

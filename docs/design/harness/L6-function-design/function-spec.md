@@ -2590,11 +2590,22 @@ artifact `windows-shard-<index>-attempt-<run_attempt>` として upload する�
 
 - `run_id`、`run_attempt`、`head_sha`、`shard` (例: `2/3`)、vitest が実行したテストファイル数と結果。
 
-aggregate は自分の `GITHUB_RUN_ATTEMPT` と同じ attempt の artifact を集め、次を全て要求する。
+aggregate は lane 判定に束縛して検証する。lane は `.github/workflows/harness-check.yml` の
+`classify changed files` step の出力 `steps.classify.outputs.lane` (`full` / `doc`、実装は
+`src/github/change-lane.ts`、判定不能・新種 path は必ず `full`) であり、Windows の
+`test:windows` step は `lane == 'full'` のときだけ走る。doc lane では `source-doc-lane` doctor だけが走り、
+vitest evidence は生成されない。したがって evidence の要否を無条件にせず、lane で分ける。
 
-1. shard 集合がちょうど `{1/3, 2/3, 3/3}` で、重複・欠落・余剰がない。
-2. 全 evidence の `run_id` と `run_attempt` が aggregate 自身と一致し、`head_sha` が checkout した HEAD と一致する。
-3. 全 shard の結果が成功で、実行ファイル数の合計が 0 でない (shard が空振りして成功する穴を塞ぐ)。
+- **full lane**: 全 3 shard の evidence を必須とする。要求は次の全てである。
+  1. shard 集合がちょうど `{1/3, 2/3, 3/3}` で、重複・欠落・余剰がない。
+  2. 全 evidence の `run_id` と `run_attempt` が aggregate 自身と一致し、`head_sha` が checkout した HEAD と一致する。
+  3. 全 shard の結果が成功で、**各 shard の実行ファイル数がそれぞれ正の整数**である (合計が正でも
+     `[10,0,10]` のように 1 つでも 0 の shard があれば拒否する。空振りした shard の成功を通さない)。
+- **doc lane**: vitest evidence は期待しない (3 shard 全て無くてよい)。ただし lane 判定そのものを
+  同じ run / attempt / HEAD に束縛した `lane` evidence (各 leg の classify 出力) で検証する。
+  aggregate が checkout した HEAD の変更ファイルから `src/github/change-lane.ts` の判定で自前に lane を再計算し、
+  claimed lane と食い違う場合は拒否する。特に「evidence が無い + claimed `doc` + 再計算が `full`」は
+  full lane を doc lane に偽装した run として Red にする。doc lane で 3 shard evidence が存在する矛盾も拒否する。
 
 「失敗した job だけ再実行」で新 attempt が始まると、前 attempt で成功した shard は今 attempt の artifact を
 持たない。この場合 aggregate は `attempt_binding_mismatch` で Red になり、全 job 再実行を要求する
@@ -2654,8 +2665,15 @@ cleanup 約 21 秒で合計約 110 秒。typecheck 約 14 秒と workflow 側 db
 
 ### 実装 PR の順序
 
-1. Issue #898 の Green (Codex、`src/lint/github-ci-policy.ts` を変更) を先に main へ入れる。
-2. Issue #1063 項目 1 (`memory-legacy-archive` の git 呼び出しバッチ化) は独立で、先でも後でもよいが、
-   shard の偏りを減らすため先に入れるのが望ましい。
-3. 本契約の Red (`it.fails` の `CANDIDATE-U-CISHARD-*`) → Green (policy + workflow + aggregate step)
-   → Refactor の順に、実装 PR を #898 merge 後に出す。
+`design-protection-diff-gate.md` §10.2 / §10.3 に従い、実装 PR (src/ か scripts/ を含む PR) は設計文書と
+test-design に触れない。
+
+1. **契約 (本 PR)**: 設計と candidate oracle を凍結する (docs のみ)。
+2. **登録 + Red**: `it.fails` のテストを候補 ID (`CANDIDATE-U-CISHARD-*`) で引用して入れる。テストは実 workflow と
+   `RUNTIME_STEP_MANIFESTS` を読むため、`test-repository-isolation` の `repositoryReadContracts` 登録行だけを同じ PR に足す
+   (§10.3 の 1。src/ は登録行に限る)。
+3. **昇格 (src/ を含まない)**: `CANDIDATE-U-CISHARD-*` を正式 ID へ昇格し、テスト名の引用を書き換える。
+4. **実装 Green**: policy + workflow + aggregate step で `it.fails` を `it` に戻す。Issue #898 の Green
+   (`src/lint/github-ci-policy.ts` を変更する) が main に入った後に出す。
+
+Issue #1063 項目 1 (`memory-legacy-archive` の git 呼び出しバッチ化) は独立で、shard の偏りを減らすため先が望ましい。
