@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { checkResourceKernelFixtureManifest } from "../src/doctor/doc-registry.ts";
 import {
   ALLOWED_FIXTURE_STATUSES,
   analyzeFixtureManifest,
@@ -275,6 +276,17 @@ describe("Resource Kernel fixture manifest lint (U-RGKFIX, PLAN-L5-25 §7)", () 
       expect(result.unknownContractRef).toEqual([]);
       expect(fixtureManifestMessages(result)).toEqual([]);
       expect(result.ok).toBe(true);
+    } finally {
+      fixture.cleanup();
+    }
+  });
+
+  it("CANDIDATE-U-RGKPAIR-PLANLESS-004: doctorのmanifest checkがplanless L5 contract_docを受理する", () => {
+    const fixture = planlessManifestFixture();
+    try {
+      const result = checkResourceKernelFixtureManifest(fixture.root);
+      expect(result.ok).toBe(true);
+      expect(result.messages.join(" ")).toContain("resource-kernel-fixture-manifest — OK");
     } finally {
       fixture.cleanup();
     }
