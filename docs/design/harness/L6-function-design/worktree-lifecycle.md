@@ -102,16 +102,22 @@ issue: 1069
 | S1 | 先端が main に含まれる | `git merge-base --is-ancestor refs/heads/<b> origin/main`。含まれないときは、§7 の退避 ref の作成と読み戻しに**成功**した場合のみ次へ進める。PR が MERGED でも先端が含まれなければ、退避なしでは消さない (#707) |
 | S2 | 対象が対象外ではない | worktree 名が `ut-review-*` ではない、primary checkout (`C:/dev/UT-TDD-agent-harness`) ではない、`git worktree list` に登録されている、`C:/dev` 直下である |
 | S3 | 保持記録が無い、または期限切れ・条件成立から猶予 2 日が切れた | 有効な保持記録がある間は消さない |
-| S4 | 呼び出し元の作業 worktree ではない (補助) | 呼び出し元の cwd がその worktree 配下なら消さない。**他プロセスの cwd は Windows で portable に観測できないため、安全の根拠にしない**。根拠は S7 と Windows のロック |
+| S4 | 呼び出し元の作業 worktree ではない (補助) | 呼び出し元の cwd がその worktree 配下なら消さない。他プロセスの cwd は Windows で portable に観測できないため、安全の根拠にしない。根拠は S7 (lease と mtime) と Windows のロック |
 | S5 | `node_modules` が junction なら先に外す | worktree 直下の `node_modules` が reparse point なら、link だけを外す (中身を辿って消さない)。外した後に不在を確かめ、確かめられなければ**remove へ進まない** |
 | S6 | remove の後に primary の健全性を確かめる | 直後に primary の `node_modules` が存在することを確かめる。欠けていたら以降の削除を全て止め、監査ログに `error` を残す |
-| S7 | 稼働中ではない (**全ての削除に適用**。`worktree prune` / reap のみが削除するため) | worktree 配下 (`node_modules` と `.git` を除く) のどのファイルの mtime も 6 時間以内に変わっていないこと。mtime が読めない・走査が途中で失敗したときは**消さない** (`activity_unknown`)。更新が 6 時間以内なら `active_recently` |
+| S7 | 稼働中ではない (**全ての削除に適用**。`worktree prune` / reap のみが削除するため) | 次の**両方**を満たすこと。(a) **lease**: worktree の `.ut-tdd/state/worktree-lease.json` (§6.1) の `updated_at` が 6 時間以内ではない (lease が無い場合は (a) を満たす)。(b) **書き込み**: worktree 配下 (`node_modules` と `.git` を除く) のどのファイルの mtime も 6 時間以内ではない。lease が読めない・壊れている、または mtime が読めないときは**消さない** (`activity_unknown`)。lease が 6 時間以内なら `lease_active`、mtime が 6 時間以内なら `active_recently` |
 | S8 | 1 run の削除が 20 件以内 (`worktree prune` のみ) | 超過分は次回 |
 | S9 | 退避が必要なら退避が完了している | §7。退避の ref を作れなかった、または読み戻した oid が一致しなかった場合は**消さない** |
 | S10 | 監査ログへ追記できる | §4 |
 
 - **`--force` は退避の検証が通ったときだけ許す**。未コミットの変更がある worktree は `git worktree remove` が終了コード 128 で拒否するため、削除には `--force` が要る。許す条件は §7 の検証 (退避 ref が存在し、その tree を再構成して記録した tree hash と一致する) が成功した場合に限る。検証が 1 つでも失敗したら `--force` を使わず、削除しない。退避が不要な (clean な) worktree では `--force` を使わない。branch は S1 を満たした後にだけ消す。Windows のロック (他プロセスが掴んでいる、`EBUSY` / `EPERM`) で消せないときは、`error:locked` を監査ログに記録して先へ進み、再試行しない (次回の run に回す)。ロックは他プロセスが使っている worktree の最後の防護である。
 - 未コミットの変更は**自動削除の阻害要件ではなく、退避の対象**である (PO 追記 2026-10-15。§7)。`merged` でも `reaped` でも、削除するのは `worktree prune` で、退避・検証を済ませてから消す。
+
+### 6.1 lease と残る危険
+
+- **lease**: harness 管理の session (Claude と Codex。既存の PostToolUse / SessionStart の hook) は、自分が動いている worktree の `.ut-tdd/state/worktree-lease.json` (untracked) を heartbeat として更新する。項目は `pid` / `provider` / `session` / `updated_at`。削除側は S7 のとおり、6 時間以内の lease があれば消さない。lease が読めない・壊れているときも消さない。
+- **残る危険 (明示)**: harness の外のプロセス (人間のエディタ、外部ツール) の読み取りや解析は観測できない。mtime も lease も更新されないため、S7 を通る。緩和は 2 つで、(1) 削除の前に必ず退避し復元できる (042・044)、(2) Windows のロックで他プロセスが掴んでいれば削除が失敗して止まる。失われうるのは、そのプロセスのメモリ上の作業だけで、repository の内容は失われない。
+
 
 ## 7. 退避
 
@@ -126,7 +132,12 @@ issue: 1069
 2. **main に含まれない commit**: branch の先端はそのまま `refs/ut-tdd/archive/<branch>` に `git update-ref` する。1 と 2 の両方があるときは 1 の commit W (親は HEAD = branch 先端) が先端の commit を含む。
 3. **検証 (force 削除の前提)**: (a) `git rev-parse refs/ut-tdd/archive/<branch>` が作った oid W と一致する。(b) W の tree と I の tree を再構成して (一時 index に `read-tree` し `write-tree` する)、退避時に記録した tree hash (worktree tree と index tree) と一致する。(c) W の親に I と元の先端がある。1 つでも失敗したら S9 で**削除しない**。`--force` も使わない。
 4. 同名の archive ref が既にあるときは上書きせず、`refs/ut-tdd/archive/<branch>@<yyyymmddThhmmssZ>` を使う。
-5. **取り戻し方** (監査ログと SessionStart に出す): `git worktree add C:/dev/<name> refs/ut-tdd/archive/<branch>` で W の tree が作業ツリーに展開される。そのあと新しい worktree で `git read-tree <I>` を実行すると index が退避時 (staged) に戻る。
+5. **取り戻し方** (監査ログと SessionStart に出す): 次の手順で HEAD・index・作業ツリーを退避時と同じに戻す。W を直接 checkout すると HEAD が W になり、`git diff --cached` が崩れる (実測) ので使わない。
+   1. `git worktree add --detach <path> <W^1>` (HEAD = 元の先端 A)。
+   2. `git -C <path> read-tree --reset -u <W>` (index と作業ツリーを W にする。HEAD は動かない)。
+   3. `git -C <path> read-tree <I>` (index を I にする。作業ツリーは触らない)。W にあって I にも A にも無いファイルは、未追跡に戻る。
+   4. branch 名を戻すときは `git -C <path> switch -c <branch>` (index と作業ツリーを保つ)。
+   結果は HEAD = A、index = B(staged)、作業ツリー = C。
 6. archive ref は remote へ push しない (local の保険)。
 
 ## 8. fail-open / fail-close
@@ -148,7 +159,7 @@ issue: 1069
 実装 PR で置く純粋関数と薄い adapter の境界。層を増やさず、判定を純粋関数にして副作用から切り離す。
 
 - `classifyTarget(facts, record | undefined, now, config) => TargetState`: §3 の状態を導く純粋関数。
-- `evaluateDeletion(facts, record | undefined, state, context) => { allow: true, archive: ArchivePlan | null } | { allow: false, reason: DenyReason }`: §6 の S1 から S5 と S7 (S7 の mtime は facts として渡す。読めなければ `activity_unknown`) を判定する純粋関数。`DenyReason` は列挙 (`tip_not_in_main` / `protected_target` / `retained` / `current_cwd` / `activity_unknown` / `junction_unresolved` / `active_recently` / `dirty_on_merged` など)。
+- `evaluateDeletion(facts, record | undefined, state, context) => { allow: true, archive: ArchivePlan | null } | { allow: false, reason: DenyReason }`: §6 の S1 から S5 と S7 (S7 の lease と mtime は facts として渡す。読めなければ `activity_unknown`、lease が新しければ `lease_active`) を判定する純粋関数。`DenyReason` は列挙 (`tip_not_in_main` / `protected_target` / `retained` / `current_cwd` / `activity_unknown` / `junction_unresolved` / `active_recently` / `dirty_on_merged` など)。
 - `planRun(targets, config) => { delete: Target[]; deferred: Target[] }`: 20 件上限を適用する純粋関数。
 - adapter (副作用): `git` / `gh` / ファイルの read と write、junction の unlink、archive ref の作成と読み戻し、監査ログの追記。
 
@@ -176,7 +187,7 @@ issue: 1069
 ## 12. 決定事項 (control lane、2026-10-15)
 
 1. **削除 primitive の所有**: PLAN-L6-661 の `ut-tdd worktree remove` が先に入ればそれを共有する。先に入らなければ Green B が同じ契約の primitive を置き、661 はそれを呼ぶ側に回る。どちらかは実装着手時に PLAN-L6-661 の status を実測して決める。
-2. **稼働中の 6 時間ガード**: 全ての削除 (prune / reap) に適用する。worktree 配下 (`node_modules` と `.git` を除く) の mtime が 6 時間以内に変わっていたら消さず、mtime が読めなければ消さない (fail-close)。`pr merge` の後処理は削除しないので、このガードの対象ではない。(先の「後処理は S1 と S4 に依拠する」は取り下げた。他プロセスの cwd は portable に観測できない。)
+2. **稼働中の 6 時間ガード**: 全ての削除 (prune / reap) に適用する。lease (harness session の heartbeat) と mtime の両方が 6 時間より古いことを要求し、どちらかが読めなければ消さない (fail-close)。`pr merge` の後処理は削除しないので対象外。harness 外のプロセスは観測できず、残る危険として §6.1 に明記し、退避と Windows のロックで緩和する。
 
 ## 13. 採らない案
 
