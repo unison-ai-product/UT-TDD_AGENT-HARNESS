@@ -315,6 +315,7 @@ function gitBranch(): string | null {
   try {
     return execFileSync("git", ["rev-parse", "--abbrev-ref", "HEAD"], {
       encoding: "utf8",
+      windowsHide: true,
     }).trim();
   } catch {
     return null;

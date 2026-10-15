@@ -781,6 +781,40 @@ digest検証が1件でも失敗する場合は、schema table rebuildとcanonica
 旧Green projectionを保持する。旧投影値の置換はcanonical rebuildで行い、DBへの手作業backfill、部分projectionのcommit、架空PLAN
 の作成をしない。
 
+##### T1 の観測境界と検証責務 (Issue #959)
+
+以下は上記の未実装目標契約を検証可能にする追補である。候補は既存の
+`L7-unit-test-design.md` の `CANDIDATE-U-DISPPTR-002/003/007/008` を使い、正式 oracle の追加や
+Green 済みの主張はしない。L5 の正規の対である L8 と、既存 L7 候補の宣言・責務は維持する。
+
+**設計参照の観測。** catalog の bytes と authoring receipt だけでは、Git mode、実在性、読取可否、
+実体 path の境界を証明できない。repository adapter は、対象 repo root と、その repo の tracked 完全 path / Git mode、
+作業 tree の通常ファイル判定・読取可否・realpath を観測し、既存の tracked-target registry / artifact-path resolver に
+接続してから domain validation と projection へ渡す。別の repo、basename alias、caller の成功 boolean を根拠にしない。
+bytes を解析する既存 `loadTrackedCatalogInput` の成功だけでこの観測を完了扱いにしてはならない。
+観測に必要な情報が欠けた場合も fail-close し、行を無言で除外しない。finding は対象の item / edge identity と
+違反した path 軸を識別できるものとする。検査を通った行は、既存の全 authoring 値と identity 集合を保持する。
+
+候補 002 は、他の制約を満たす同一 defer 行で、実在する設計 path の受理と、PLAN だけ／設計 path 欠落の拒否を比較する。
+候補 003 は path の各違反軸を一つずつ変異させ、header 不一致や provenance 不備で先に落ちる fixture を使わない。
+Git mode と親 junction / reparse point を含む実体境界は実際の repository / filesystem 観測を通して検証する。
+純粋な path 文字列検査の成功を、物理境界まで検証した証拠にしない。
+
+**投影の観測。** 候補 007 は実 `rebuildHarnessDb` から既存の V-model authoring projector と spec-IR projector を通し、
+DOC-L0-CHARTER、ZIP-DOC-001/071、EDGE001/071 の設計実体への束縛を、生成された DB 行で照合する。
+正常な入力が実投影まで到達する正例を先に成立させ、ID / slot だけ、別 path、実体欠落の負例はそれぞれ独立させる。
+loader や fixture 準備の失敗を projection の拒否証拠に数えない。テスト専用の第二 projector や、全 PLAN のコピーで
+観測条件を満たさず、必要な authoring 入力と既存 projector で再現する。
+
+**原子的な DB 更新の観測。** 候補 008 の保証範囲は schema table 再構築、`user_version`、canonical DB projection の
+更新である。`materializeSkillAssets` など SQLite transaction より前に行うファイル生成は、この DB rollback 保証に含めない。
+現行の v29 から同じ v29 への no-op migration は正例として保持するが、schema rollback の証拠には使わない。
+実 migration を伴う検査では、固定した旧 v29 schema と正常な adopt 行、NULL の legacy `plan_id` を用意し、
+外側の test transaction を作らずに実 rebuild を呼ぶ。旧 defer 行の不足で早期拒否される fixture は候補 004 に属する。
+候補 008 は実 item-target insert 到達後の最後の COMMIT だけを故障させ、旧 schema / 制約 / version と全既存 projection の
+行・digest が保持されることを確認する。migration の先行 COMMIT と後続 projection の別 transaction が残る場合、
+この検査は schema / version の残存で Red となる。同一 transaction へまとめる実装は後続 Green の責務である。
+
 現行schema registryがFK、NOT NULL、UNIQUE、CHECK、複合PKを表現できない場合、PLAN-L7-417はregistry modelを先に拡張する。
 application validationだけでL5制約を代替してはならず、DDL制約とdomain validationの両面をRed/Greenにする。
 PLAN-L7-417のDB waveでtyped `ColumnDef/TableDef`へNOT NULL、inline/composite FK、UNIQUE、閉じたCHECK AST、

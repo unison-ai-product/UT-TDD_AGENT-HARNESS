@@ -3122,3 +3122,16 @@ oracle の詳細 (入力・期待・殺す mutation・fixture・required evidenc
 
 上表の ID は backtick 無し表記である。候補台帳への再掲ではなく専用文書への参照であり、U-VMSRC-009 の一意性検査の対象外とする。
 正規 `U-CTRACE-*` への昇格と Red test は、src/ も scripts/ も含まない PR (契約 PR + Red) で入れる (`design-protection-diff-gate.md` §10.2)。
+
+## agent-guard と委譲の境界 (Issue #1002) — 索引
+
+L6 契約は `docs/design/harness/L6-function-design/agent-guard-delegation-boundary.md` (未実装の目標契約)。
+oracle の詳細 (入力・期待・殺す mutation) と既存 oracle の改訂表は専用の
+`docs/test-design/harness/L7-agent-guard-delegation-boundary-test-design.md` に置き、本節は索引だけを持つ。
+
+| 範囲 | 検証面 | 詳細 |
+| --- | --- | --- |
+| CANDIDATE-U-AGBOUND-001〜036 | agent-guard の許可集合・model 必須・fable 禁止・bypass、委譲 role の許可集合と floor の正本、`CODEX_WORKSPACE_WRITE_ROLES` の据え置き、roster / asset-drift / setup template / Pack / skill-engine の撤去、規律の書き直しで marker 節を壊さないこと、判断ゲート role の明示 model の floor (fail-close) と review custody の入口の tier 検査 | 専用文書 §3 (既存 oracle の改訂表は §4) |
+
+上表の ID は backtick 無し表記である。候補台帳への再掲ではなく専用文書への参照であり、U-VMSRC-009 の一意性検査の対象外とする。
+正規 `U-AGBOUND-*` への昇格は、`design-protection-diff-gate.md` §10.3 の三段階 (登録 + Red、src/ を含まない昇格、実装 PR) に従う。開発 repo を読む oracle があるので、Red を先に入れ、昇格はその後の別 PR にする。
