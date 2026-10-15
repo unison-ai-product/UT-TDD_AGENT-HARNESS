@@ -3,7 +3,7 @@ title: "L7 windows hide default test design"
 layer: L7
 executed_at_layer: L7
 artifact_type: test_design
-status: draft
+status: confirmed
 updated: 2026-10-15
 ---
 
@@ -30,9 +30,9 @@ updated: 2026-10-15
 | --- | --- | --- | --- |
 | `CANDIDATE-U-WHIDE-001` | fake module に適用したあと、7 関数 (`spawn` / `spawnSync` / `execFile` / `execFileSync` / `exec` / `execSync` / `fork`) をそれぞれ `windowsHide` 無しの options で呼ぶ | 下位に渡った options の `windowsHide` が全関数で `true`、他のキーは変わらない | 一部の関数だけ包む / 既定を `true` 以外にする |
 | `CANDIDATE-U-WHIDE-002` | 適用後に、実 `node:child_process` を子プロセスの Node で `import { spawnSync } from "node:child_process"` し、受け取った options を観測する (`syncBuiltinESMExports()` の有無で比較) | named import の `spawnSync` が wrapper で、既定が `true` で下位に渡る。(最初の Red 候補) | `syncBuiltinESMExports()` を呼ばず ESM の束縛が元の関数のまま |
-| `CANDIDATE-U-WHIDE-003` | 引数形: (a) args 配列を省略した `spawnSync("git", { cwd })`、(b) options を省略した `spawnSync("git", ["status"])`、(c) 第 2 引数が `null` / `undefined`、(d) `execFile("git", ["x"], cb)` と `execFile("git", ["x"], {}, cb)`、(e) `exec("git status", cb)` と `execSync("git status")` | すべて `windowsHide: true` が補われ、callback は最後の引数のまま、args の位置が崩れない | options の位置を常に第 3 引数と決める / callback を options と取り違える / options 無しの形に補わない |
+| `CANDIDATE-U-WHIDE-003` | 引数形 (L6 §2 の正規化表の全行): (a) `spawn(cmd)` / `spawnSync(cmd)` / `execFileSync(cmd)` / `fork(m)`、(b) `(cmd, args)`、(c) `(cmd, options)` (args 省略)、(d) 第 2 引数が `null` / `undefined`、(e) `execFile(file)`、`execFile(file, callback)`、`execFile(file, args, callback)`、`execFile(file, options, callback)`、`execFile(file, args, options, callback)`、(f) `exec(cmd)`、`exec(cmd, callback)`、`exec(cmd, options, callback)`、`execSync(cmd)`、`execSync(cmd, options)` | 下位に渡った引数列が表の正規化形と一致する (例: `execFile(file, callback)` → `(file, {windowsHide:true}, callback)`)。callback は最後の引数のまま、args の位置が崩れない | options の位置を常に第 3 引数と決める / callback を options と取り違える / 第 2 引数が callback のとき options を補わない |
 | `CANDIDATE-U-WHIDE-004` | 明示 `windowsHide: false` と `windowsHide: true` を 7 関数に渡す | `false` は `false` のまま、`true` は `true` のまま | 明示の `false` を `true` に上書きする |
-| `CANDIDATE-U-WHIDE-005` | 同じ fake module に wrapper を 2 回適用し、1 回の呼び出しで下位の呼び出し回数と包み段数を観測する | 下位の呼び出しは 1 回、options は 1 回だけ補われる。適用 2 回目は no-op | 二重に包む (呼び出しが 2 重になる / 印が無い) |
+| `CANDIDATE-U-WHIDE-005` | (i) 同じ fake module に適用関数を 2 回呼ぶ。(ii) 同じ fake module に対し、wrapper module を cache を避けて 2 回評価 (query 付き import など) する。いずれも適用後の `spawnSync` の関数の同一性と、元の関数に辿るまでの包み段数を観測する | (i)(ii) とも、2 回目の適用の前後で関数の同一性が保たれ、包み段数は 1。印は `Symbol.for("ut-tdd.windowsHide.wrapped")` を使う。下位の呼び出し回数だけでは二重に包んでも 1 回なので、観測の根拠にしない | module ごとに新しい Symbol を作り、再評価で二重に包む / 呼び出し回数だけを見て二重の包みを見逃す |
 | `CANDIDATE-U-WHIDE-006` | 呼び出し側が持つ options object を渡し、呼び出し後にその object を調べる。同じ object を 2 回目の呼び出しにも渡す | 呼び出し側の object に `windowsHide` が足されていない (shallow copy を渡している) | 呼び出し側の object を書き換えて共有状態を汚す |
 | `CANDIDATE-U-WHIDE-007` | wrapper が戻り値・例外・`this` を変えないこと: fake 側が返した object の同一性、throw した例外の同一性を比べる | 戻り値と例外が同一 object のまま届く | 戻り値を包み直す / 例外を握りつぶす |
 | `CANDIDATE-U-WHIDE-008` | doctor の `windows-hide` (a): 入口 (`src/cli.ts`、`.claude/hooks/` の各 hook、`vitest.config.ts` の `setupFiles` が指す entry、`scripts/` の `child_process` を使う入口) のうち、(i) すべて wrapper を import する fixture、(ii) hook 1 件が import を欠く fixture、(iii) import があるが先頭の import 文でない fixture | (i) は違反 0。(ii) は `windows-hide-entry-missing` で `path:line:reason`。(iii) は `windows-hide-entry-missing` | import の有無を見ない / 先頭の import であることを確かめない |

@@ -25,13 +25,13 @@ Windows では、Node の `child_process` で起動した子プロセスに `win
 単一の module `src/runtime/windows-hide.ts` (計画。本 PR では実装しない) を置く。この module は **import した時点で** `node:child_process` の次の 7 関数を差し替える: `spawn` / `spawnSync` / `execFile` / `execFileSync` / `exec` / `execSync` / `fork`。
 
 - **既定規則**: 呼び出しの options の `windowsHide` が `undefined` (キー無しを含む) なら `true` にする。明示の `false` は変えない。`true` はそのまま。
-- **引数形の吸収**: Node の overload に合わせて options の位置を決める。
-  - `spawn` / `spawnSync` / `execFile` / `execFileSync` / `fork`: 第 2 引数が配列、または `null` / `undefined` / 省略のときは第 3 引数が options。第 2 引数が object のときはそれが options。`execFile` / `exec` の最後の引数が関数 (callback) なら options から外す。
-  - `exec` / `execSync`: 第 2 引数が object なら options。第 2 引数が callback か省略なら options が無いので、`{ windowsHide: true }` を補う。
-  - options が無い形では、位置に応じて `{ windowsHide: true }` を挿入し、callback は最後の引数のまま保つ。
+- **引数形の正規化**: 引数の型で overload を判別する (配列 = args、function = callback、`null` / `undefined` 以外の object = options、`null` / `undefined` = 無し)。`windowsHide` を足した options を、次の表の位置に挿入する。callback は常に最後の引数のまま保つ。
+  - `spawn` / `spawnSync` / `execFileSync` / `fork`: `(file)` → `(file, [], {windowsHide:true})`、`(file, args)` → `(file, args, {windowsHide:true})`、`(file, options)` → `(file, copy(options))`、`(file, null|undefined, options)` と `(file, args, options)` は options の copy に足す、`(file, null|undefined)` → `(file, [], {windowsHide:true})`。
+  - `execFile`: 上と同じ規則に callback を加える。`(file, callback)` → `(file, {windowsHide:true}, callback)`、`(file, args, callback)` → `(file, args, {windowsHide:true}, callback)`、`(file, options, callback)` と `(file, args, options, callback)` は options の copy に足す。`(file)` / `(file, args)` は上と同じ。第 2 引数が function のときに、args 配列も options も無い形として扱うことを明示する。
+  - `exec`: `(command)` → `(command, {windowsHide:true})`、`(command, callback)` → `(command, {windowsHide:true}, callback)`、`(command, options[, callback])` は options の copy に足す。`execSync`: `(command)` → `(command, {windowsHide:true})`、`(command, options)` は copy に足す。
   - 呼び出し側の options object を**書き換えず**、shallow copy に `windowsHide` を足して渡す (呼び出し側が同じ object を再利用しても共有状態が汚れない)。
 - **ESM named import**: 差し替えのあとで `module.syncBuiltinESMExports()` を呼び、`import { spawnSync } from "node:child_process"` の名前付き束縛にも wrapper を見せる。これが無いと ESM 側は元の関数を掴んだままで、wrapper が効かない (最初の Red 候補)。
-- **冪等**: wrapper を適用済みの関数は印 (内部 Symbol) を持ち、2 度目の import では二重に包まない。
+- **冪等**: 包んだ関数には、`Symbol.for("ut-tdd.windowsHide.wrapped")` (global symbol registry に登録され、module を再評価しても同じ値になる) をキーとする印と、元の関数への参照を持たせる。適用時に印がある関数は包まない。module-local の `Symbol()` は再評価ごとに別の値になり、印を見失って二重に包むので使わない。包みの段数は 1 を超えない。
 - **副作用の範囲**: `windowsHide` 以外の引数・戻り値・例外・`this` は変えない。非 Windows でも差し替える (Node は非 Windows で `windowsHide` を無視するので、分岐を持たない)。
 
 ## 3. wrapper を最初に import する入口
