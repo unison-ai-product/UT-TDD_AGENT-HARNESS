@@ -134,18 +134,18 @@ issue: 1069
 7. **branch**: `merged_clean` (下) のときだけ、`git update-ref -d refs/heads/<b> <oid>` で消す。`<oid>` は消す直前に読み直した先端で、`git merge-base --is-ancestor <oid> origin/main` が真であることを確かめたもの。`git branch -d` は使わない (merged 判定が HEAD / upstream に依存する)。それ以外の branch は**消さない**。
 8. 監査ログに `trashed` を追記し、S6 の健全性を確かめる。
 
-**`meta.json`**: `original_path` / `branch` / `head_oid` (回収時点の HEAD) / `moved_at` / `reason` / `index_ref_oid` (index 保護 ref が指す commit の oid) / `lease_evidence` (`dead_pid` / `pid_reuse` / `none` / `undeterminable`) / `merged_clean` (真偽) / `content_evidence` (内容 hash 一覧と非 ignored ファイル集合の digest) / `dirty_file_count` / `unmerged_commit_count`。
+**`meta.json`**: `original_path` / `branch` / `head_oid` (回収時点の HEAD) / `moved_at` / `reason` / `index_ref_oid` (index 保護 ref が指す commit の oid) / `lease_evidence` (`dead_pid` / `pid_reuse` / `none` / `undeterminable`) / `merged_clean` (真偽) / `content_evidence` (追跡ファイルの内容 hash 一覧の digest / 非 ignored ファイル集合の digest / `index_tree_oid`) / `dirty_file_count` / `unmerged_commit_count`。
 
 **`merged_clean`**: 回収時点で次の**全て**が真。(1) `git merge-base --is-ancestor <head_oid> origin/main`。(2) 追跡・未追跡の変更が無い (`git status --porcelain` が空。ignored は数えない)。(3) **不確かな対象ではない**: `git ls-files -v` に assume-unchanged (小文字の tag) または skip-worktree (`S` または `s` の tag) が付いた追跡ファイルが 1 つも無い。これらは `git status` を偽の空にできるため、(2) の空は証拠にならない。1 つでもあれば `merged_clean` は偽で、`dirty_file_count` には該当ファイル数を足し、自動 purge の対象にならない。(4) **実 byte の一致**: 追跡ファイル全てについて、作業ツリーの内容 hash (`git hash-object` 相当。mtime や stat は使わない) が HEAD の blob と等しく、実 index の tree が HEAD の tree と等しく (実 index の一時コピーに対する `write-tree`)、非 ignored のファイル集合 (追跡 + 未追跡) が HEAD の追跡一覧と一致する。
 
-`merged_clean` の根拠にした証拠 (追跡ファイルの path と内容 hash の一覧の digest、非 ignored のファイル集合の digest) は `meta.json` の `content_evidence` に記録する。
+`merged_clean` の根拠にした証拠は `meta.json` の `content_evidence` に記録する。中身は 3 つで、追跡ファイルの path と内容 hash の一覧の digest、非 ignored のファイル集合の digest、`index_tree_oid` (reap 時に `GIT_INDEX_FILE=<実 index の一時コピー> git write-tree` で得た tree の oid。実 index には書かない) である。`index_tree_oid` は §6.2 の 3 で index 保護 ref の commit を作るときの tree と同一なので、常に `index_ref_oid^{tree}` と等しい。
 
 ### 6.3 purge: trash の実体削除
 
 - **自動 purge の対象**: `merged_clean` が真で、trash に移して 14 日が過ぎたものだけ。assume-unchanged / skip-worktree が 1 つでもあった対象は §6.2 の `merged_clean` が偽なので、ここに入らない。実行の直前に次を再検査する。
   - (a) trash の中に alive な lease の pid (起動時刻一致) が無い。lease が壊れている・読めないときも削除しない。
   - (b) trash の中のどのファイルの mtime も `moved_at` より後ではない。mtime が読めなければ削除しない。ただし mtime は (e) の代わりにならない (mtime を保ったまま内容を変えられるため)。
-  - (c) **実 byte の再検査**: 追跡ファイルの内容 hash、実 index の tree、非 ignored のファイル集合を、いま trash の中で再計算し、`meta.json` の `content_evidence` と一致することを確かめる。1 つでも不一致なら削除せず、`error:content_changed` を記録して「purge 要確認」へ回す。assume-unchanged / skip-worktree が trash の中で新たに現れた場合も同じ。
+  - (c) **実 byte の再検査**: 追跡ファイルの内容 hash、実 index の tree、非 ignored のファイル集合を、いま trash の中で再計算し、`meta.json` の `content_evidence` と一致することを確かめる。index の tree は reap 時と同じ非破壊の方法 (実 index の byte コピーに対する `GIT_INDEX_FILE=<一時コピー> git write-tree`) で再計算し、保存した `index_tree_oid` と比べる (`index_ref_oid^{tree}` とも等しいこと)。1 つでも不一致なら削除せず、`error:content_changed` を記録して「purge 要確認」へ回す。assume-unchanged / skip-worktree が trash の中で新たに現れた場合も同じ。
   - (d) 監査ログへ追記できる。
   - 削除前に `node_modules` の junction があれば link だけを外し、不在を確かめる (辿らない)。実体の削除が済んだあとに、index 保護 ref を `git update-ref -d refs/ut-tdd/trash/<entry-id>/index <index_ref_oid>` で消す (expected-oid つき。oid が異なれば消さず、`error` を記録する)。
 - **残るリスク (明示)**: `merged_clean` の追跡内容は main に含まれると証明できるが、次の **ignored の runtime 状態**と、稼働中の reader の作業途中の状態は purge で失われる。lease が無い reader は検出できない。`.gitignore` 由来の主なカテゴリ: `.ut-tdd/state/*`、`.ut-tdd/logs/`、`.ut-tdd/review/{requests,receipts,verdicts}/`、`.ut-tdd/gate_runs/`、`.ut-tdd/cache/*`、`.ut-tdd/tmp/`、`.ut-tdd/archive/`、`.ut-tdd/harness.db`、`.env*`、`.claude/settings.local.json`、`node_modules`。これらは機械生成または machine 固有で、repository の正本は main にあるため、自動 purge の対象として受け入れる。
