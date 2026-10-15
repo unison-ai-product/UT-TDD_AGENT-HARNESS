@@ -50,7 +50,7 @@ function planlessPairFixture(): { root: string; cleanup: () => void } {
     writeFileSync(target, readFileSync(join(source, rel), "utf8"), "utf8");
   }
   const isolatedRoot = workspaceRead({
-    id: "CANDIDATE-U-RGKPAIR-PLANLESS-001",
+    id: "U-RGKPAIR-PLANLESS-001",
     mode: "isolated_fixture",
     root,
     reason: "候補RedはL5 canonical文書とL8 freeze表だけのsnapshotでgate readerを検証する",
@@ -90,7 +90,7 @@ function mutatedRepo(mutate: (docs: { l8: string; l5: string }) => { l8: string;
 }
 
 describe("Resource Kernel L5↔L8 pair mapping lint (U-RGKPAIR, PLAN-L5-25 §7.1)", () => {
-  it("CANDIDATE-U-RGKPAIR-PLANLESS-001 setup: planless fixture has 58 real D.5 rows and 42 L8 rows", () => {
+  it("U-RGKPAIR-PLANLESS-001 setup: planless fixture has 58 real D.5 rows and 42 L8 rows", () => {
     const fixture = planlessPairFixture();
     try {
       expect(existsSync(join(fixture.root, "docs/plans"))).toBe(false);
@@ -573,7 +573,7 @@ describe("Resource Kernel L5↔L8 pair mapping lint (U-RGKPAIR, PLAN-L5-25 §7.1
     }
   });
 
-  it.fails("CANDIDATE-U-RGKPAIR-PLANLESS-001: L5 canonical D.5 parserが58契約行を読む", () => {
+  it.fails("U-RGKPAIR-PLANLESS-001: L5 canonical D.5 parserが58契約行を読む", () => {
     const fixture = planlessPairFixture();
     try {
       const parsed = parsePlanlessPair(fixture.root);
@@ -588,7 +588,7 @@ describe("Resource Kernel L5↔L8 pair mapping lint (U-RGKPAIR, PLAN-L5-25 §7.1
     }
   });
 
-  it.fails("CANDIDATE-U-RGKPAIR-PLANLESS-001: PLANなしsnapshotでdoctor readerがcanonical L5/L8を読む", () => {
+  it.fails("U-RGKPAIR-PLANLESS-001: PLANなしsnapshotでdoctor readerがcanonical L5/L8を読む", () => {
     const fixture = planlessPairFixture();
     try {
       const gate = checkResourceKernelPairMapping(fixture.root);
@@ -599,7 +599,7 @@ describe("Resource Kernel L5↔L8 pair mapping lint (U-RGKPAIR, PLAN-L5-25 §7.1
     }
   });
 
-  it.fails("CANDIDATE-U-RGKPAIR-PLANLESS-002: planless正本の契約・oracle集合変異をID付きでfail-closeする", () => {
+  it.fails("U-RGKPAIR-PLANLESS-002: planless正本の契約・oracle集合変異をID付きでfail-closeする", () => {
     const fixture = planlessPairFixture();
     try {
       const base = parsePlanlessPair(fixture.root);
@@ -651,7 +651,7 @@ describe("Resource Kernel L5↔L8 pair mapping lint (U-RGKPAIR, PLAN-L5-25 §7.1
     }
   });
 
-  it.fails("CANDIDATE-U-RGKPAIR-PLANLESS-003: edge 004→028とoracle 004欠落を別々に検出する", () => {
+  it.fails("U-RGKPAIR-PLANLESS-003: edge 004→028とoracle 004欠落を別々に検出する", () => {
     const fixture = planlessPairFixture();
     try {
       const base = parsePlanlessPair(fixture.root);

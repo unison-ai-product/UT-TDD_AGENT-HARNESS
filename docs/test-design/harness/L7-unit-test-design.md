@@ -3105,6 +3105,20 @@ oracle の詳細 (入力・期待・殺す mutation) は専用の
 
 上表の ID は backtick 無し表記である。候補台帳への再掲ではなく専用文書への参照であり、U-VMSRC-009 の一意性検査の対象外とする。
 
+## 子プロセスの windowsHide 既定 (Issue #693) — 索引
+
+L6 契約は `docs/design/harness/L6-function-design/windows-hide-default.md`。
+oracle の詳細 (入力・期待・殺す mutation) は専用の
+`docs/test-design/harness/L7-windows-hide-default-test-design.md` に置き、本節は索引だけを持つ。
+
+| 範囲 | 検証面 | 詳細 |
+| --- | --- | --- |
+| CANDIDATE-U-WHIDE-001〜007 | wrapper の既定規則・ESM named import・引数形・明示 false の保持・冪等・呼び出し側 object の不変 | 専用文書 §3 |
+| CANDIDATE-U-WHIDE-008〜012 | doctor の入口 import 検査・false の理由コメント・順序非依存・実 repo | 専用文書 §3 |
+| CANDIDATE-U-WHIDE-013〜014 | Pack の配布集合・既存テストへの影響 | 専用文書 §3 |
+
+上表の ID は backtick 無し表記である。候補台帳への再掲ではなく専用文書への参照であり、U-VMSRC-009 の一意性検査の対象外とする。
+
 ## consumer trace gate (Issue #971 / #972 / #880) — 索引
 
 L6 契約は `docs/design/harness/L6-function-design/consumer-trace-gates.md`。
