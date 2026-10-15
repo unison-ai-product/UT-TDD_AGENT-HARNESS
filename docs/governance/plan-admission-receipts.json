@@ -7776,6 +7776,22 @@
         "revision": 2,
         "content_digest": "sha256:32e7729a5f3e3244e053dd263ae98c55385dc944cfa505c513ee30be72a3f3e6"
       }
+    },
+    {
+      "sequence": 487,
+      "previous_record_digest": "sha256:f4ce81ffa5dea23c9e3ad54667596d1ab601f5bb912919188457bfd6d2aad881",
+      "record_digest": "sha256:e358b9351928685c9ad14e969e160f9b39a211e0241e4bc4e8e7122bbb9d5af2",
+      "command_id": "issue1002-agbound-red-owner-127097de-99ea-4148-8e25-58bc8fbfe193",
+      "receipt_id": "certificate:50897da9696e0ae82a88f0e573de8756",
+      "receipt_digest": "sha256:3c02c8eb65841b23d33adab4bf3756c58c2649a95d21669b0e6ac8ae34907298",
+      "decision_digest": "sha256:fe4658a6e97b3888a16f5e29c96a857f03d672a0ed4378f6e7371f740f6b2e4b",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-399-agent-guard-quality-check-tier-floor.md",
+        "plan_id": "PLAN-L7-399-agent-guard-quality-check-tier-floor",
+        "asset_id": "plan:legacy:128c25ac60fd0e6fabc0975cb42fd0cdb93ce0d6586a2d8be2a12672bf3c6d1d",
+        "revision": 2,
+        "content_digest": "sha256:b928e8a8d510a3e426ae1464f8f1e525c0ac1982b1b603bf0cd8a536ad1cd825"
+      }
     }
   ]
 }

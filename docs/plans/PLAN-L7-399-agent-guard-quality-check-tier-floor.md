@@ -1,56 +1,63 @@
 ---
 plan_id: PLAN-L7-399-agent-guard-quality-check-tier-floor
-title: "PLAN-L7-399 (troubleshoot): agent-guard を exact-match から capability floor へ、品質チェック系 subagent を opus floor に是正"
+title: "PLAN-L7-399 (troubleshoot): agent-guard を exact-match から capability
+  floor へ、品質チェック系 subagent を opus floor に是正"
 kind: troubleshoot
 layer: L7
 drive: agent
-status: confirmed
 created: 2026-07-08
 updated: 2026-07-08
 owner: Claude / PO
 route_signal: incident
 route_mode: incident
 backprop_decision: not_required
-backprop_decision_reason: "Claude Code subagent guard + agent frontmatter model floor の是正。ユーザー向け product 機能ではなく harness 自身の運用ポリシー実装。"
+backprop_decision_reason: Claude Code subagent guard + agent frontmatter model
+  floor の是正。ユーザー向け product 機能ではなく harness 自身の運用ポリシー実装。
 review_evidence:
   - reviewer: PO
     review_kind: human
-    reviewed_at: "2026-07-08T22:24:00+09:00"
-    tests_green_at: "2026-07-08T22:23:57+09:00"
+    reviewed_at: 2026-07-08T22:24:00+09:00
+    tests_green_at: 2026-07-08T22:23:57+09:00
     verdict: approve
-    scope: "PO 指示 (2026-07-08、原文: 「ワーカーは下位モデル、品質チェックは上位モデルの原則にして」) に基づく方針決定 + Claude 実装。agent-guard の exact-match を capability floor (downgrade block / upgrade allow) へ変更し、code-reviewer/ut-tdd-tl/security-audit/qa-test の宣言 model を opus floor へ引き上げ。"
+    scope: "PO 指示 (2026-07-08、原文: 「ワーカーは下位モデル、品質チェックは上位モデルの原則にして」) に基づく方針決定 + Claude
+      実装。agent-guard の exact-match を capability floor (downgrade block / upgrade
+      allow) へ変更し、code-reviewer/ut-tdd-tl/security-audit/qa-test の宣言 model を
+      opus floor へ引き上げ。"
     worker_model: claude-sonnet-5
     reviewer_model: human
     green_commands:
       - kind: unit_test
-        command: "bunx vitest run tests/agent-guard.test.ts tests/asset-drift.test.ts tests/codex-hook-adapter.test.ts"
+        command: bunx vitest run tests/agent-guard.test.ts tests/asset-drift.test.ts
+          tests/codex-hook-adapter.test.ts
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-07-08T22:23:57+09:00"
+        completed_at: 2026-07-08T22:23:57+09:00
         evidence_path: tests/agent-guard.test.ts
-        output_digest: "sha256:f9c937b259ea5ec62508b5df32b820ffd682e09a0023760f9258d5af91fceff7"
+        output_digest: sha256:f9c937b259ea5ec62508b5df32b820ffd682e09a0023760f9258d5af91fceff7
         anchor_commit: 18da439c0f8fc3c76c4d2101e97815b6200b5d64
       - kind: typecheck
-        command: "bun run typecheck"
+        command: bun run typecheck
         runner: bun
         scope: full
         exit_code: 0
-        completed_at: "2026-07-08T22:19:00+09:00"
+        completed_at: 2026-07-08T22:19:00+09:00
         evidence_path: src/runtime/agent-guard.ts
-        output_digest: "sha256:dfc634f6d5d74ef1d22498ea31a669f213719f049879ca309c4eddb5d6729911"
+        output_digest: sha256:dfc634f6d5d74ef1d22498ea31a669f213719f049879ca309c4eddb5d6729911
         anchor_commit: 18da439c0f8fc3c76c4d2101e97815b6200b5d64
 agent_slots:
   - role: tl
-    slot_label: "TL - agent-guard capability floor 是正レビュー"
+    slot_label: TL - agent-guard capability floor 是正レビュー
   - role: aim
-    slot_label: "AIM - troubleshoot and cross-runtime review"
+    slot_label: AIM - troubleshoot and cross-runtime review
 generates:
   - artifact_path: docs/plans/PLAN-L7-399-agent-guard-quality-check-tier-floor.md
     artifact_type: markdown_doc
   - artifact_path: src/runtime/agent-guard.ts
     artifact_type: source_module
   - artifact_path: tests/agent-guard.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/agent-guard-delegation-boundary.test.ts
     artifact_type: test_code
   - artifact_path: .claude/agents/code-reviewer.md
     artifact_type: markdown_doc
@@ -66,6 +73,40 @@ dependencies:
   references:
     - docs/plans/PLAN-L7-114-work-guard.md
     - src/task/tier-router-policy.ts
+status: confirmed
+github_issue_id: 1002
+admission_receipt:
+  schema_version: v2
+  receipt_id: certificate:50897da9696e0ae82a88f0e573de8756
+  command_id: issue1002-agbound-red-owner-127097de-99ea-4148-8e25-58bc8fbfe193
+  admitted_at: 2026-10-15T09:36:33.630Z
+  source_digest: sha256:b928e8a8d510a3e426ae1464f8f1e525c0ac1982b1b603bf0cd8a536ad1cd825
+  decision_digest: sha256:fe4658a6e97b3888a16f5e29c96a857f03d672a0ed4378f6e7371f740f6b2e4b
+  receipt_digest: sha256:3c02c8eb65841b23d33adab4bf3756c58c2649a95d21669b0e6ac8ae34907298
+  binding:
+    path: docs/plans/PLAN-L7-399-agent-guard-quality-check-tier-floor.md
+    plan_id: PLAN-L7-399-agent-guard-quality-check-tier-floor
+    asset_id: plan:legacy:128c25ac60fd0e6fabc0975cb42fd0cdb93ce0d6586a2d8be2a12672bf3c6d1d
+    revision: 2
+    content_digest: sha256:b928e8a8d510a3e426ae1464f8f1e525c0ac1982b1b603bf0cd8a536ad1cd825
+  route:
+    signal: incident
+    mode: incident
+  issue:
+    provider: github
+    issue_id: 1002
+    episode_id: E1-1002-agent-guard-delegation-boundary
+    projection_state: unprojected
+  origin:
+    plan_id: PLAN-L7-399-agent-guard-quality-check-tier-floor
+    revision: 1
+    digest: sha256:1cfa51686c21f51121ca75dd1b2a284123d077531a643a2405f923b7093ae847
+  reentry:
+    target_plan_id: PLAN-L7-399-agent-guard-quality-check-tier-floor
+    target_revision: 2
+    phase: forward_merge
+  escape_reason: "Issue #1002 agent-guard/delegation boundary Red: attach the new
+    Red test file to its existing agent-guard owner PLAN"
 ---
 
 # PLAN-L7-399: agent-guard capability floor + 品質チェック系 subagent の opus floor 是正
