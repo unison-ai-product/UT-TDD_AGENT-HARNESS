@@ -665,19 +665,19 @@ describe("Resource Kernel L5↔L8 pair mapping lint (U-RGKPAIR, PLAN-L5-25 §7.1
             ? {
                 ...row,
                 oracles: row.oracles.map((id) =>
-                  id === "IT-RGK-PHYS-004" ? "IT-RGK-PHYS-028" : id,
+                  id === EXPECTED_ORACLE_IDS[3] ? EXPECTED_ORACLE_IDS[27] : id,
                 ),
               }
             : row,
         ),
       });
-      expect(changedEdge.oraclesMissingFromMapping).toEqual(["IT-RGK-PHYS-004"]);
+      expect(changedEdge.oraclesMissingFromMapping).toEqual([EXPECTED_ORACLE_IDS[3]]);
 
       const removedOracle = analyzeResourceKernelPairMapping({
         ...base,
-        freezeRows: base.freezeRows.filter((row) => row.id !== "IT-RGK-PHYS-004"),
+        freezeRows: base.freezeRows.filter((row) => row.id !== EXPECTED_ORACLE_IDS[3]),
       });
-      expect(removedOracle.oraclesMissingFromFreeze).toEqual(["IT-RGK-PHYS-004"]);
+      expect(removedOracle.oraclesMissingFromFreeze).toEqual([EXPECTED_ORACLE_IDS[3]]);
     } finally {
       fixture.cleanup();
     }
