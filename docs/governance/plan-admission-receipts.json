@@ -7760,6 +7760,22 @@
         "revision": 2,
         "content_digest": "sha256:8019663d7150c29dd16b06d0fddb262cef97e93ab6d616c9e055830077a1b200"
       }
+    },
+    {
+      "sequence": 486,
+      "previous_record_digest": "sha256:74f97fe7a380715cc922e8c5cad6a38b18889e544e6bc74acde76078930a83e4",
+      "record_digest": "sha256:f4ce81ffa5dea23c9e3ad54667596d1ab601f5bb912919188457bfd6d2aad881",
+      "command_id": "issue959-t4-owner-803d1eae-efcb-4a5a-9ddd-e71c407a4903",
+      "receipt_id": "certificate:f4efff7d9c1b955076e2796460c3872c",
+      "receipt_digest": "sha256:6c67dc0aba56dbef5dac81e5d8a77dee719fb07c1aadb228bcb6d2dff4e21d3c",
+      "decision_digest": "sha256:ec1c9f406a88b2307b33b12232c858171979d9f9b7585ce991b65cb5173ddca8",
+      "binding": {
+        "path": "docs/plans/PLAN-L3-04-upstream-schedule-reconciliation.md",
+        "plan_id": "PLAN-L3-04-upstream-schedule-reconciliation",
+        "asset_id": "plan:legacy:8fa24ee529c4fc4d64f280e43f9f4b674992bb99b30df4e16e6232375e67a771",
+        "revision": 2,
+        "content_digest": "sha256:32e7729a5f3e3244e053dd263ae98c55385dc944cfa505c513ee30be72a3f3e6"
+      }
     }
   ]
 }

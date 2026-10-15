@@ -19,6 +19,7 @@ const cliPath = join(process.cwd(), "src", "cli.ts");
 
 /**
  * RCDEV-037 実測 baseline: 066b842f1a3161f1cb67c3d383a28d76d9c36041 (G0 merge-base Git archive).
+ * 件数値 (36/67/66 等) は G0 時点の参考値で、比較は正規化後に行う (U-RCDEV-037, Issue #1058)。
  * Issue #935 confirmed design-pair increment (exact HEAD 2e88e53ae35ca01ba1b633c3916a882e4f277219):
  * direct evaluateStaticGate measured G6 L6 total=38/confirmed=38, G7 pair-freeze=69, verification=68/68 confirmed.
  * 明示採取: node rcdev037-capture.mjs <baseline-root>
@@ -119,21 +120,62 @@ const HARNESS_GATE_BASELINE = [
   },
 ];
 
+/**
+ * U-RCDEV-037 (1): 件数 token だけを N へ正規化する。golden 側・実測側の両方へ同じ順で適用する。
+ * 許される件数増減は total= / confirmed= / 双方向 N pair / verification message 内の分数だけ。
+ * placeholder= / draft= / orphans= / 孤児 N / 状態語 / ゲート ID は置換せずそのまま比較する。
+ */
+function normalizeCounts(message: string): string {
+  let out = message
+    .replace(/total=\d+/g, "total=N")
+    .replace(/confirmed=\d+/g, "confirmed=N")
+    .replace(/双方向 \d+ pair/g, "双方向 N pair");
+  if (out.startsWith("verification — ")) out = out.replace(/\d+\/\d+/g, "N/N");
+  return out;
+}
+
 function normalizedHarnessMessages(messages: string[], root: string): string[] {
   return [
     ...new Set(
       messages.map((message) =>
-        message.replaceAll("\\", "/").replaceAll(root.replaceAll("\\", "/"), "<repoRoot>"),
+        normalizeCounts(
+          message.replaceAll("\\", "/").replaceAll(root.replaceAll("\\", "/"), "<repoRoot>"),
+        ),
       ),
     ),
   ].sort();
 }
 
+function normalizedBaseline() {
+  return HARNESS_GATE_BASELINE.map((entry) => ({
+    ...entry,
+    messages: [...new Set(entry.messages.map(normalizeCounts))].sort(),
+  }));
+}
+
+function allNumbers(messages: string[], pattern: RegExp): number[] {
+  return messages.flatMap((message) => [...message.matchAll(pattern)].map((m) => Number(m[1])));
+}
+
+/** G0 時点の実測 floor (参考値ではなく「これ未満に減ったら削除とみなす」下限。m4 を殺す)。 */
+const PAIR_TOTAL_FLOOR: Record<string, number> = {
+  G1: 7,
+  G2: 6,
+  G3: 5,
+  G4: 7,
+  G5: 6,
+  G6: 37,
+};
+const PAIR_FREEZE_FLOOR = 68;
+const VERIFICATION_FLOOR = { base: 67, l7Plans: 9, evidence: 9 };
+
 it("U-RCDEV-037: preserves harness G1-G7 static and G8-G10 workflow baseline", () => {
   const root = process.cwd();
   const actual = [];
+  const raw = new Map<string, string[]>();
   for (let i = 1; i <= 7; i++) {
     const result = evaluateStaticGate({ gate: `G${i}`, repoRoot: root });
+    raw.set(result.gate, result.messages);
     actual.push({
       gate: result.gate,
       passed: result.passed,
@@ -153,7 +195,43 @@ it("U-RCDEV-037: preserves harness G1-G7 static and G8-G10 workflow baseline", (
       messages: normalizedHarnessMessages(result.messages, root),
     });
   }
-  expect(actual).toEqual(HARNESS_GATE_BASELINE);
+  // (1) golden 比較: 件数 token を正規化した上で passed / applicable / message 集合を比較する
+  expect(actual).toEqual(normalizedBaseline());
+
+  // (2) 不変条件: 件数を固定せず、整合 (total==confirmed、draft/orphans 0 など) を表明する
+  for (const [gate, floor] of Object.entries(PAIR_TOTAL_FLOOR)) {
+    const messages = (raw.get(gate) ?? []).filter((m) =>
+      m.startsWith(`${gate.toLowerCase()}-pair`),
+    );
+    expect(messages).toHaveLength(1);
+    const message = messages[0] as string;
+    const total = Number(/total=(\d+)/.exec(message)?.[1]);
+    const confirmed = Number(/confirmed=(\d+)/.exec(message)?.[1]);
+    expect(confirmed).toBe(total);
+    expect(message).toContain("placeholder=0");
+    expect(message).toContain("draft=0");
+    expect(message).toContain("orphans=0");
+    // (3) floor: 実測件数が baseline 未満へ減る (設計 pair の削除) と失敗する
+    expect(total).toBeGreaterThanOrEqual(floor);
+  }
+  const g7 = raw.get("G7") ?? [];
+  const pairFreeze = g7.filter((m) => m.startsWith("pair-freeze"));
+  expect(pairFreeze).toHaveLength(1);
+  expect(pairFreeze[0]).toContain("孤児 0");
+  expect(allNumbers(pairFreeze, /双方向 (\d+) pair/g)[0]).toBeGreaterThanOrEqual(PAIR_FREEZE_FLOOR);
+  const verification = g7.filter((m) => m.startsWith("verification — "));
+  expect(verification).toHaveLength(1);
+  const message = verification[0] as string;
+  const base = /\((\d+)\/(\d+) confirmed/.exec(message);
+  const l7 = /L7 plans (\d+)\/(\d+) confirmed/.exec(message);
+  const evidence = /evidence (\d+)\/(\d+)/.exec(message);
+  for (const m of [base, l7, evidence]) {
+    expect(m).not.toBeNull();
+    expect(m?.[1]).toBe(m?.[2]);
+  }
+  expect(Number(base?.[1])).toBeGreaterThanOrEqual(VERIFICATION_FLOOR.base);
+  expect(Number(l7?.[1])).toBeGreaterThanOrEqual(VERIFICATION_FLOOR.l7Plans);
+  expect(Number(evidence?.[1])).toBeGreaterThanOrEqual(VERIFICATION_FLOOR.evidence);
 });
 
 function runCli(args: string[], cwd = process.cwd()) {
