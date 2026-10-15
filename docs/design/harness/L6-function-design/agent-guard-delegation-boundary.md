@@ -7,7 +7,7 @@ artifact_role: topic_agent_guard_delegation_boundary
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 next_pair_freeze: L7
-plan: pending
+issue: 1002
 ---
 
 > **L6 contract marker**: `evaluateAgentGuard(input, ctx) => GuardDecision` と `resolveDelegationRouting(input) => DelegationRouting`、および `DELEGATION_ROLE_ALLOWLIST` / `REVIEW_GATE_ROLES` / `GENERIC_SUBAGENT_TYPES` の集合は unit-test-granularity contract である。DbC pre/post/invariant は §7 にまとめる。oracle の索引は共有の `docs/test-design/harness/L7-unit-test-design.md` (§agent-guard と委譲の境界) に置き、詳細 (CANDIDATE-U-AGBOUND-001〜) と既存 oracle の改訂表は専用の `docs/test-design/harness/L7-agent-guard-delegation-boundary-test-design.md` が固定する。
