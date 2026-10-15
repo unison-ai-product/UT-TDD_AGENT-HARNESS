@@ -331,6 +331,7 @@ describe("design-protection L7 candidate Red (PR #981)", () => {
       mkdirSync(join(root, "product"), { recursive: true });
       git(root, "mv", "src/a.ts", "product/a.ts");
       commit(root, "move all implementation files out of src");
+      writeRepoFile(root, "src/untracked.ts", "untracked\n");
       const pathsAfter = inventory(root, ["src/"]);
       expect(pathsAfter.get("src/")?.length ?? 0).toBe(0);
       expect(pathsAfter.has("src/")).toBe(true);
