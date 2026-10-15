@@ -10,7 +10,7 @@ next_pair_freeze: L7
 issue: 1062
 ---
 
-> **L6 contract marker**: 本書は「状態を相手へ伝える経路」の正本割当と、それを機械で守る 4 つの契約を凍結する。(1) `memory add` の拒否規則 `classifyMemoryAdd(input) => accept | reject(reason)`、(2) review request の identity v2 `reviewIdentityObjectV2(request)`、(3) 通知レコード `ut-tdd.notification/v1`、(4) handover prose の退役。oracle の索引は共有の `docs/test-design/harness/L7-unit-test-design.md` (§状態を伝える経路の一本化) に置き、詳細 (CANDIDATE-U-STCHAN-001〜024) は専用の `docs/test-design/harness/L7-state-channel-consolidation-test-design.md` が固定する。
+> **L6 contract marker**: 本書は「状態を相手へ伝える経路」の正本割当と、それを機械で守る 4 つの契約を凍結する。(1) `memory add` の拒否規則 `classifyMemoryAdd(input) => accept | reject(reason)`、(2) review request の identity v2 `reviewIdentityObjectV2(request)`、(3) 通知レコード `ut-tdd.notification/v1`、(4) handover prose の退役。oracle の索引は共有の `docs/test-design/harness/L7-unit-test-design.md` (§状態を伝える経路の一本化) に置き、詳細 (CANDIDATE-U-STCHAN-001〜027) は専用の `docs/test-design/harness/L7-state-channel-consolidation-test-design.md` が固定する。
 
 # 状態を伝える経路の一本化 — 関数設計 (issue #1062)
 
@@ -165,6 +165,10 @@ classifyMemoryAdd({ kind, durableReason }) =
 ## 7. 既存分の移行
 
 - **選別**: **拒否規則 (§8 の 3) が有効になる前に存在した**、未追跡 ∧ `kind=project`。実測 210 件 (§1.1)。対象集合は 3 の cutover で凍結する: 3 の PR が、その時点の該当 memory の `memory_id` と内容 digest の一覧を `.ut-tdd/archive/memory-episodes/target-snapshot.jsonl` に 1 回だけ記録し、移行 PR はこの一覧に載るものだけを動かす。追跡済みと feedback / reference / user は触らない。
+- **改ざん検知**: 凍結一覧は gitignore 済みなので、それだけを信頼しない。
+  1. 拒否規則の PR(§8 の 3)は、一覧の sha256(行を `memory_id` で昇順に並べ、LF 区切り・末尾 LF の canonical bytes に対する値)と件数を、**追跡される単一の小さい証跡ファイル `docs/migration/state-channel-target-snapshot.json`** に同じ PR で commit する(`{schema, sha256, count, recorded_at}` だけ)。置き場に `docs/migration/` を選ぶ理由は、既存の移行文書の置き場で追跡済み・レビュー対象であり、`.ut-tdd/` は実行時の状態で追跡しない規則だからである。
+  2. 一覧の書き手は、一覧または証跡ファイルが既に存在すれば拒否する(`target_snapshot_exists`)。再生成・上書きの経路は持たない。
+  3. 移行 PR は、何かを動かす前に (a) 一覧の sha256 と件数を証跡ファイルと照合し、(b) 一覧の各 entry について対象ファイルの bytes の sha256 を再計算して照合する。一覧の欠落(`target_snapshot_missing`)、行の追加・削除・置換(`target_snapshot_digest_mismatch`)、対象 bytes の変化(`target_bytes_changed`)のいずれかで、1 件も動かさず exit 1 で止まる。
 - **保持**: `durable_reason` を持つ project memory は、一覧に載っていても移さない。拒否規則の後に理由付きで受理された memory は一覧に載らず、移行後も `memory_entries` に残り検索できる。
 - **除外**: open な review request (terminal receipt が無い) が task 本文として参照している memory は移さない。custody の差し替え (§4) が先に入っていれば参照は存在しない。
 - **手段**: `memory.md` §4.2 の `memory retire` の退避部品 (write-ahead の manifest、`memory_entries` 行の同時削除、dry-run 既定) を、選別規則を差し替えて使う。`.ut-tdd/archive/memory-episodes/` へ移し、削除しない。dry-run の件数を PR に記録し、実行後に `ut-tdd db status` が `fresh` で、移した件数 + 残りの件数 = 移行前の総数であることを確かめる。
@@ -176,7 +180,7 @@ classifyMemoryAdd({ kind, durableReason }) =
 | --- | --- | --- | --- |
 | 1 | 契約 (本 PR) | 本書 + L7 テスト設計 + 索引 | なし |
 | 2 | Red | `it.fails` を CANDIDATE-U-STCHAN-* で引用して入れる (設計保護 gate §10.3 の順)。続けて正式 ID への昇格 | 1 の非著者 review PASS |
-| 3 | 拒否規則 | `classifyMemoryAdd` + `memory add` 配線 (001〜006)、移行対象の凍結一覧 `target-snapshot.jsonl` の記録 (§7) | 2 |
+| 3 | 拒否規則 | `classifyMemoryAdd` + `memory add` 配線 (001〜006)、移行対象の凍結一覧 `target-snapshot.jsonl` の記録と、その sha256・件数の証跡ファイルの commit (§7) | 2 |
 | 4 | custody v2 | `reviewIdentityObjectV2`、読み取りの v1 / v2 両対応、`review live-dispatch` の `--task-file` 化、`--review-memory-id` の無視化 (007〜014) | 2。3 とは独立 |
 | 5 | 通知レコード | `ut-tdd notify claude`、entry から memory 項目を除く、旧 entry の復号 (015〜018) | 4 (review 通知が v2 の request を指すため) |
 | 6 | handover | scaffold 生成の停止、`doc_entry_count` の撤去、doctor `handover-prose` (019〜021) | 2。3〜5 とは独立 |

@@ -3117,7 +3117,7 @@ oracle の詳細 (入力・期待・殺す mutation) は専用の
 | CANDIDATE-U-STCHAN-007〜014 | review custody の identity v2・v1 の読み取り・`--review-memory-id` の無視化と廃止・memory 非依存の dispatch | 専用文書 §3 |
 | CANDIDATE-U-STCHAN-015〜018 | 通知レコード `ut-tdd.notification/v1`・旧 entry の復号・memory に触れない発行 | 専用文書 §3 |
 | CANDIDATE-U-STCHAN-019〜021 | handover prose の生成停止・doctor `handover-prose`・md 照合の撤去 | 専用文書 §3 |
-| CANDIDATE-U-STCHAN-022〜024 | memory と handover の既存分の退避・real-repo 集計 | 専用文書 §3 |
+| CANDIDATE-U-STCHAN-022〜027 | memory と handover の既存分の退避・real-repo 集計・凍結一覧の改ざん検知 | 専用文書 §3 |
 
 上表の ID は backtick 無し表記である。候補台帳への再掲ではなく専用文書への参照であり、U-VMSRC-009 の一意性検査の対象外とする。
 
