@@ -16,7 +16,6 @@ import { headSnapshotRoot, workspaceRead } from "./support/workspace-roots.ts";
 
 const L8 = "docs/test-design/harness/L8-integration-test-design.md";
 const MANIFEST = "docs/test-design/harness/resource-kernel-fixture-manifest.yaml";
-const PLAN = "docs/plans/PLAN-L5-25-resource-kernel-physical-protocol.md";
 const L5_CANONICAL = "docs/design/harness/L5-detailed-design/resource-kernel-wire-custody.md";
 const SOURCE_2_FIXTURE_IDS = [
   "fx-rgk-frame-split",
@@ -40,11 +39,12 @@ function snapshotRoot(): string {
 
 function loadRepoInput() {
   const root = snapshotRoot();
+  const manifest = parseFixtureManifest(readFileSync(join(root, MANIFEST), "utf8"));
   return {
     root,
     rows: parseL8FixtureRows(readFileSync(join(root, L8), "utf8")),
-    manifest: parseFixtureManifest(readFileSync(join(root, MANIFEST), "utf8")),
-    contractSections: parseContractSections(readFileSync(join(root, PLAN), "utf8")),
+    manifest,
+    contractSections: parseContractSections(readFileSync(join(root, manifest.contractDoc), "utf8")),
     pathExists: (p: string) => existsSync(join(root, p)),
   };
 }
@@ -54,7 +54,6 @@ function planlessManifestFixture(manifestMutation?: (text: string) => string) {
   const source = snapshotRoot();
   const root = mkdtempSync(join(tmpdir(), "rgk-fixture-planless-"));
   const l8Text = readFileSync(join(source, L8), "utf8");
-  const l5Text = readFileSync(join(source, L5_CANONICAL), "utf8");
   const sourceManifestText = readFileSync(join(source, MANIFEST), "utf8");
   const changedManifestText = sourceManifestText.replace(
     /^contract_doc: .*$/m,
@@ -64,6 +63,8 @@ function planlessManifestFixture(manifestMutation?: (text: string) => string) {
   if (contractDocLines.length !== 1 || contractDocLines[0] !== `contract_doc: ${L5_CANONICAL}`) {
     throw new Error("fixture manifest contract_doc must be the canonical design path exactly once");
   }
+  const manifest = parseFixtureManifest(changedManifestText);
+  const l5Text = readFileSync(join(source, manifest.contractDoc), "utf8");
   const manifestText = manifestMutation
     ? manifestMutation(changedManifestText)
     : changedManifestText;
@@ -82,10 +83,11 @@ function planlessManifestFixture(manifestMutation?: (text: string) => string) {
     root,
     reason: "候補Redはmanifest contract_docと実L5 parserをPLANなしsnapshotで検証する",
   });
-  const actualL5Text = readFileSync(join(isolatedRoot, L5_CANONICAL), "utf8");
+  const isolatedManifest = parseFixtureManifest(readFileSync(join(isolatedRoot, MANIFEST), "utf8"));
+  const actualL5Text = readFileSync(join(isolatedRoot, isolatedManifest.contractDoc), "utf8");
   const input = {
     rows: parseL8FixtureRows(readFileSync(join(isolatedRoot, L8), "utf8")),
-    manifest: parseFixtureManifest(readFileSync(join(isolatedRoot, MANIFEST), "utf8")),
+    manifest: isolatedManifest,
     // 実export parserの出力をそのままresolverへ渡す。テスト側でlocator集合を合成しない。
     contractSections: parseContractSections(actualL5Text),
     pathExists: (p: string) => existsSync(join(isolatedRoot, p)),
@@ -147,7 +149,7 @@ const baseEntry = {
 
 function manifestOf(entries: (typeof baseEntry)[]): FixtureManifest {
   return {
-    contractDoc: PLAN,
+    contractDoc: L5_CANONICAL,
     fixtureRoot: "tests/fixtures/resource-kernel",
     entries,
   };
@@ -270,7 +272,7 @@ describe("Resource Kernel fixture manifest lint (U-RGKFIX, PLAN-L5-25 §7)", () 
     }
   });
 
-  it.fails("U-RGKPAIR-PLANLESS-004: canonical L5 D.6が42 locator refを解決し、PLANなしでも全fixtureを保つ", () => {
+  it("U-RGKPAIR-PLANLESS-004: canonical L5 D.6が42 locator refを解決し、PLANなしでも全fixtureを保つ", () => {
     const fixture = planlessManifestFixture();
     try {
       const result = analyzePlanlessManifest(fixture.l5Text, fixture);
@@ -282,7 +284,7 @@ describe("Resource Kernel fixture manifest lint (U-RGKFIX, PLAN-L5-25 §7)", () 
     }
   });
 
-  it.fails("U-RGKPAIR-PLANLESS-004: doctorのmanifest checkがplanless L5 contract_docを受理する", () => {
+  it("U-RGKPAIR-PLANLESS-004: doctorのmanifest checkがplanless L5 contract_docを受理する", () => {
     const fixture = planlessManifestFixture();
     try {
       const result = checkResourceKernelFixtureManifest(fixture.root);
@@ -293,7 +295,7 @@ describe("Resource Kernel fixture manifest lint (U-RGKFIX, PLAN-L5-25 §7)", () 
     }
   });
 
-  it.fails("U-RGKPAIR-PLANLESS-004: D.6 source §2削除は対応する全4fixtureをunknownにする", () => {
+  it("U-RGKPAIR-PLANLESS-004: D.6 source §2削除は対応する全4fixtureをunknownにする", () => {
     const fixture = planlessManifestFixture();
     try {
       const changed = withoutSourceHeading(fixture.l5Text, "2");
@@ -305,7 +307,7 @@ describe("Resource Kernel fixture manifest lint (U-RGKFIX, PLAN-L5-25 §7)", () 
     }
   });
 
-  it.fails("U-RGKPAIR-PLANLESS-004: D.6 source §2改名は対応する全4fixtureをunknownにする", () => {
+  it("U-RGKPAIR-PLANLESS-004: D.6 source §2改名は対応する全4fixtureをunknownにする", () => {
     const fixture = planlessManifestFixture();
     try {
       const changed = fixture.l5Text.replace(
@@ -321,7 +323,7 @@ describe("Resource Kernel fixture manifest lint (U-RGKFIX, PLAN-L5-25 §7)", () 
     }
   });
 
-  it.fails("U-RGKPAIR-PLANLESS-004: D.6外のsource §2は同番号でも救済せず対応4件をunknownにする", () => {
+  it("U-RGKPAIR-PLANLESS-004: D.6外のsource §2は同番号でも救済せず対応4件をunknownにする", () => {
     const fixture = planlessManifestFixture();
     try {
       const changed = moveSourceHeadingOutsideD6(fixture.l5Text, "2");
@@ -333,7 +335,7 @@ describe("Resource Kernel fixture manifest lint (U-RGKFIX, PLAN-L5-25 §7)", () 
     }
   });
 
-  it.fails("U-RGKPAIR-PLANLESS-004: D.6 source §4.1欠落は対応する全6fixtureをunknownにする", () => {
+  it("U-RGKPAIR-PLANLESS-004: D.6 source §4.1欠落は対応する全6fixtureをunknownにする", () => {
     const fixture = planlessManifestFixture();
     try {
       const changed = withoutSourceHeading(fixture.l5Text, "4.1");

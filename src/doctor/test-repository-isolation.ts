@@ -12,6 +12,7 @@ export interface RepositoryReadContract {
 }
 
 const CONTRACT_ROWS = `
+agent-guard-delegation-boundary:1
 asset-catalog:3 asset-drift:1 backfill-pairing:2 cited-command-existence:1 cli-surface:2 cli:1
 advisory-strict-gate-aging:4
 codex-hook-adapter:5 coding-rules:1 context-doc-router:2 cycle-p4-verification:5 db-currency:1 db-projection-coverage:1 db-projection-ingestion:3
@@ -177,6 +178,12 @@ repositoryReadContracts["tests/design-protection-repository-contract.test.ts"] =
   calls: 1,
   reason:
     "design-protection repository-contract oracles resolve subject and repository paths from the writable execution snapshot",
+};
+repositoryReadContracts["tests/upstream-schedule-reader.test.ts"] = {
+  mode: "head_snapshot",
+  calls: 1,
+  reason:
+    "upstream-schedule reader oracles seed isolated filesystem fixtures from the immutable L3 topic",
 };
 
 export const REPOSITORY_READ_CONTRACTS: Readonly<Record<string, RepositoryReadContract>> =
