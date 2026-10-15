@@ -27,6 +27,12 @@ import {
   type ReviewCustodyRequest,
 } from "../src/feedback/review-verdict-custody.ts";
 import { type AssetDriftInput, analyzeAssetDrift } from "../src/lint/asset-drift.ts";
+import {
+  analyzeHookParity,
+  analyzeRuleDrift,
+  loadClaudeHookSettings,
+  loadRuleAdapterDocs,
+} from "../src/lint/rule-drift.ts";
 import { buildAdapterPlan } from "../src/runtime/adapter.ts";
 import * as guard from "../src/runtime/agent-guard.ts";
 import * as policy from "../src/runtime/agent-guard-policy.ts";
@@ -357,6 +363,15 @@ describe("issue #1002 agent-guard と委譲の境界 (Red)", () => {
   });
 
   it.fails("CANDIDATE-U-AGBOUND-021: 層の語彙は混ざらず、許可集合は GENERIC_SUBAGENT_TYPES と交わらない", () => {
+    // 集合の等価 (過不足の両方を検出): REVIEW_GATE_ROLES = READ_ONLY ∪ {ut-tdd-tl, qa-test, security-audit}
+    expect(
+      setEqual(REVIEW_GATE_ROLES, [
+        ...READ_ONLY_DELEGATION_ROLES,
+        "ut-tdd-tl",
+        "qa-test",
+        "security-audit",
+      ]),
+    ).toBe(true);
     const generic = genericTypes();
     const normalized = [...DELEGATION_ROLE_ALLOWLIST].map((r) => r.trim().toLowerCase());
     const genericNormalized = new Set([...generic].map((r) => r.trim().toLowerCase()));
@@ -479,21 +494,34 @@ describe("issue #1002 agent-guard と委譲の境界 (Red)", () => {
   });
 
   it.fails("CANDIDATE-U-AGBOUND-029: 分類の出力は recommended_lanes で、レーンの role は委譲 role の語彙", () => {
-    const coverage = classifyProposalDocumentCoverage({
-      text: "design a new schema and implement the feature",
-    });
-    const record = coverage as unknown as Record<string, unknown>;
-    expect(record.recommended_subagents).toBeUndefined();
-    const lanes = record.recommended_lanes as
-      | Array<{ role: string; closing_authority: boolean }>
-      | undefined;
-    expect(Array.isArray(lanes)).toBe(true);
-    for (const lane of lanes ?? []) {
-      expect(DELEGATION_ROLE_ALLOWLIST.has(lane.role), lane.role).toBe(true);
+    // worker 判定はレーンの tier (T0-frontier 以外) で行い、role 名を決め打ちしない。
+    // fixture: se(T1-worker) の経路と uiux(T2-mini) の経路。docs は常に T2-mini。
+    // qa(T1-worker) は discovery が G5 (= risky) のため classify.ts の現行経路では到達できない。
+    const texts = [
+      "design a new schema and implement the feature",
+      "screen ui layout for the settings page",
+      "screen ui layout with password authentication",
+    ];
+    const seenWorkerTiers = new Set<string>();
+    for (const text of texts) {
+      const record = classifyProposalDocumentCoverage({ text }) as unknown as Record<
+        string,
+        unknown
+      >;
+      expect(record.recommended_subagents).toBeUndefined();
+      const lanes = record.recommended_lanes as
+        | Array<{ role: string; tier: string; closing_authority: boolean }>
+        | undefined;
+      expect(Array.isArray(lanes), text).toBe(true);
+      for (const lane of lanes ?? []) {
+        expect(DELEGATION_ROLE_ALLOWLIST.has(lane.role), lane.role).toBe(true);
+        if (lane.tier !== "T0-frontier") {
+          seenWorkerTiers.add(lane.tier);
+          expect(lane.closing_authority, `${lane.role}/${lane.tier}`).toBe(false);
+        }
+      }
     }
-    expect(
-      (lanes ?? []).filter((lane) => ["docs", "se"].includes(lane.role) && lane.closing_authority),
-    ).toEqual([]);
+    expect([...seenWorkerTiers].sort()).toEqual(["T1-worker", "T2-mini"]);
   });
 
   it.fails("CANDIDATE-U-AGBOUND-030: skills は撤廃済みの role を --role で案内しない", () => {
@@ -549,6 +577,10 @@ describe("issue #1002 agent-guard と委譲の境界 (Red)", () => {
           expect(result.message).toContain(role);
           expect(result.message).toContain(provider);
           expect(result.message).toContain(model);
+          // 下限 model (L6 §5.1): claude は opus 級、codex は gpt-6.1-sol を示す。
+          expect(result.message).toContain(
+            provider === "claude" ? "claude-opus-5-5" : "gpt-6.1-sol",
+          );
         }
       }
       for (const [provider, model] of [
@@ -605,5 +637,148 @@ describe("issue #1002 agent-guard と委譲の境界 (Red)", () => {
       });
       expect(existsSync(join(box.dir, ".ut-tdd", "review", "receipts"))).toBe(false);
     });
+  });
+});
+
+describe("issue #1002 現行 main で既に成立する境界 (回帰 oracle)", () => {
+  const AGENT_TOOLS = ["Agent", "Task", "spawn_agent", "spawn_agents_on_csv"];
+
+  it("CANDIDATE-U-AGBOUND-001: G1 は tool_name 無し・空を code 2 にし bypass しない", () => {
+    expect(run(undefined, {}).code).toBe(2);
+    expect(run("", {}).code).toBe(2);
+    const raw = run("", {}, true);
+    expect(raw.code).toBe(2);
+    expect(raw.bypassed).toBeUndefined();
+  });
+
+  it("CANDIDATE-U-AGBOUND-002: G2 は Agent 系以外の tool を検査しない", () => {
+    for (const tool of ["Bash", "Edit", "Read"]) {
+      const result = run(tool, { subagent_type: "foo" });
+      expect(result.code, tool).toBe(0);
+      expect(result.message, tool).toBeUndefined();
+    }
+  });
+
+  it("CANDIDATE-U-AGBOUND-003: 4 tool x 汎用の型 4 種 + sonnet の 16 通りは通る", () => {
+    for (const tool of AGENT_TOOLS)
+      for (const type of GENERIC) {
+        const result = run(tool, { subagent_type: type, model: "sonnet" });
+        expect(result.code, `${tool}/${type}`).toBe(0);
+        expect(result.bypassed, `${tool}/${type}`).toBeUndefined();
+      }
+  });
+
+  it("CANDIDATE-U-AGBOUND-004: 型の解決は最初の非空 field、空は general-purpose 扱い", () => {
+    expect(run("Agent", { model: "sonnet" }).code).toBe(0);
+    expect(run("Agent", { subagent_type: "", role: "Plan", model: "sonnet" }).code).toBe(0);
+    expect(run("Agent", { subagent_type: "Explore", role: "be-api", model: "sonnet" }).code).toBe(
+      0,
+    );
+    expect(run("Agent", {}).code).toBe(2);
+  });
+
+  it("CANDIDATE-U-AGBOUND-007: G4 は全ての汎用の型で model 必須", () => {
+    for (const type of GENERIC) {
+      const result = run("Agent", { subagent_type: type });
+      expect(result.code, type).toBe(2);
+      expect(result.message, type).toContain("missing model");
+    }
+  });
+
+  it("CANDIDATE-U-AGBOUND-008: G5 は正規化不能・曖昧な model を拒否し正規 ID を通す", () => {
+    for (const model of ["gpt-6.1-sol", "sonnet opus", "unknown-model"])
+      expect(run("Agent", { subagent_type: "general-purpose", model }).code, model).toBe(2);
+    expect(
+      run("Agent", { subagent_type: "general-purpose", model: "claude-sonnet-5-5" }).code,
+    ).toBe(0);
+  });
+
+  it("CANDIDATE-U-AGBOUND-010: 汎用の型は haiku/sonnet/opus を全て通す (floor 無し)", () => {
+    for (const type of GENERIC)
+      for (const model of ["haiku", "sonnet", "opus"])
+        expect(run("Agent", { subagent_type: type, model }).code, `${type}/${model}`).toBe(0);
+  });
+
+  describe("CANDIDATE-U-AGBOUND-017 発火記録", () => {
+    const box = { repo: "" };
+    beforeAll(() => {
+      box.repo = mkdtempSync(join(tmpdir(), "agbound-017-"));
+      mkdirSync(join(box.repo, ".claude", "hooks"), { recursive: true });
+      cpSync(
+        join(root, ".claude", "hooks", "agent-guard.ts"),
+        join(box.repo, ".claude", "hooks", "agent-guard.ts"),
+      );
+      cpSync(join(root, "src"), join(box.repo, "src"), { recursive: true });
+      cpSync(join(root, "node_modules", "zod"), join(box.repo, "node_modules", "zod"), {
+        recursive: true,
+      });
+      writeFileSync(join(box.repo, "package.json"), '{"type":"module"}\n', "utf8");
+    });
+    afterAll(() => {
+      if (box.repo) rmSync(box.repo, { recursive: true, force: true });
+    });
+    const shim = (value: unknown) =>
+      spawnSync(process.execPath, [join(box.repo, ".claude", "hooks", "agent-guard.ts")], {
+        input: JSON.stringify(value),
+        encoding: "utf8",
+        cwd: box.repo,
+      });
+
+    it("CANDIDATE-U-AGBOUND-017: 記録は code 0 かつ型が空でないときだけで、記録の失敗は判定を変えない", () => {
+      const state = join(box.repo, ".ut-tdd");
+      const pass = {
+        tool_name: "Agent",
+        tool_input: { subagent_type: "general-purpose", model: "sonnet" },
+      };
+      expect(shim(pass).status).toBe(0);
+      expect(existsSync(state)).toBe(true);
+      rmSync(state, { recursive: true, force: true });
+      expect(shim({ tool_name: "Agent", tool_input: { model: "sonnet" } }).status).toBe(0);
+      expect(existsSync(state)).toBe(false);
+      expect(
+        shim({ tool_name: "Agent", tool_input: { subagent_type: "foo", model: "fable" } }).status,
+      ).toBe(2);
+      expect(existsSync(state)).toBe(false);
+      writeFileSync(state, "not a directory", "utf8");
+      expect(shim(pass).status).toBe(0);
+    });
+  });
+
+  it("CANDIDATE-U-AGBOUND-020: 判断ゲート role は族内 frontier tier の review-lane、worker は policy", () => {
+    for (const role of GATE_ROLES)
+      for (const provider of ["claude", "codex"] as const) {
+        const result = resolveDelegationRouting({ provider, role, task: "t" });
+        expect(result.ok, `${role}/${provider}`).toBe(true);
+        if (result.ok && result.review_lane) {
+          expect(result.model_source).toBe("review-lane");
+          expect(result.model).toBe(modelPolicy.REVIEW_LANE_MODELS[result.review_lane][provider]);
+        } else expect.fail(`${role}/${provider} has no review_lane`);
+      }
+    for (const role of ["se", "be-api"]) {
+      const result = resolveDelegationRouting({ provider: "claude", role, task: "t" });
+      expect(result.ok && result.model_source).toBe("policy");
+    }
+  });
+
+  it("CANDIDATE-U-AGBOUND-032: evaluateAgentGuard の返り値は code/message/bypassed だけ", () => {
+    const allowed = new Set(["code", "message", "bypassed"]);
+    const cases: Array<[Record<string, string>, boolean]> = [
+      [{ subagent_type: "general-purpose", model: "sonnet" }, false],
+      [{ subagent_type: "foo", model: "sonnet" }, false],
+      [{ subagent_type: "general-purpose" }, true],
+    ];
+    for (const [input, raw] of cases)
+      for (const key of Object.keys(run("Agent", input, raw)))
+        expect(allowed.has(key), key).toBe(true);
+  });
+
+  it("CANDIDATE-U-AGBOUND-033: rule-drift と §Hooks 一覧 ↔ settings.json の機械照合が通る", () => {
+    const docs = loadRuleAdapterDocs(root);
+    expect(analyzeRuleDrift(docs).ok).toBe(true);
+    const parity = analyzeHookParity({
+      claudeRuntimeDoc: docs.claudeRuntime,
+      settingsJson: loadClaudeHookSettings(root),
+    });
+    expect(parity.ok).toBe(true);
   });
 });
