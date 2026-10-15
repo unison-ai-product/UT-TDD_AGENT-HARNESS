@@ -283,7 +283,7 @@ bus の着地時に archive を bus の receipt 側へ畳む。
 PLAN-L6-97 §3.7 は「レビュー依頼や進捗連絡は memory に書かない」としていたが、現行の review dispatch は
 `--review-memory-id` を必須とし、依頼の錨を memory に書く。本節はこの錨を正当な `episode` として扱い、
 退避の対象にする。`readCanonicalMemoryByIdentity` は dispatch の時点でしか錨を読まないので、PR が閉じた後の
-退避は参照を壊さない。錨を memory から外すかどうかは、置き場を分ける v4 の作業で決める。
+退避は参照を壊さない。錨を memory から外すかどうかは `state-channel-consolidation.md` (issue #1062) が決めた: 錨は review request 自体に移り、新規のレビュー依頼・lane 連絡は memory に書かれない。本節の書き込み時 3・配送側・本項は、その実装 PR で同文書に置き換わる。既存分の退避部品は同文書 §7 が再利用する。
 
 ### エッジケース
 
