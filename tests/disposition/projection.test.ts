@@ -807,7 +807,7 @@ function authoringDepsWithLedger(
   };
 }
 
-function createDocsGitFixture(input: {
+function createDocsGitFixture(fixtureOptions: {
   ensureTracked?: string;
   planMode?: "none" | "legacy";
 }): string {
@@ -817,14 +817,14 @@ function createDocsGitFixture(input: {
     recursive: true,
     filter: (source) => source !== plansRoot && !source.startsWith(`${plansRoot}${sep}`),
   });
-  if (input.planMode !== "none") {
+  if (fixtureOptions.planMode !== "none") {
     const legacyPlanPath = "docs/plans/PLAN-L7-417-source-disposition-profile-projection.md";
     const destination = join(root, legacyPlanPath);
     mkdirSync(dirname(destination), { recursive: true });
     cpSync(join(repoRoot, legacyPlanPath), destination);
   }
-  if (input.ensureTracked) {
-    const extraPath = join(root, input.ensureTracked);
+  if (fixtureOptions.ensureTracked) {
+    const extraPath = join(root, fixtureOptions.ensureTracked);
     if (!existsSync(extraPath)) {
       // Small missing-file fixtures are added to the Git index before the
       // worktree entry is removed by the calling test.
