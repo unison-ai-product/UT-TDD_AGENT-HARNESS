@@ -4,21 +4,30 @@ title: "PLAN-L3-04: upstream FR residual schedule reconciliation"
 kind: add-design
 layer: L3
 drive: fullstack
-status: confirmed
 created: 2026-06-12
 updated: 2026-06-22
 review_evidence:
   - reviewer: PM (Opus) verification (intra_runtime_subagent)
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-06-22"
-    tests_green_at: "2026-06-22"
+    reviewed_at: 2026-06-22
+    tests_green_at: 2026-06-22
     verdict: pass
-    scope: "add-design 増分 (upstream FR residual → V-model closure table + 9-mode drive-model passage certificate + rule-automation-closure 表) の status drift (src merge 済なのに draft 放置) を解消し confirmed 化。成果物 src/lint/{rule-automation-closure,drive-model-passage,fr-roadmap-coverage}.ts + src/handover/index.ts は 2026-06-12 (239cb32) で merge 済。機械再検証: ①4 src module 全実在 ②doctor に配線 load-bearing (rule-automation-closure / drive-model-passage / fr-roadmap-coverage 各 doctor refs ≥3) ③§2.3 rule-automation-closure 表は全 5 行 closed (automation owner 実在) ④Vitest 787/787 green / doctor EXIT=0。AC §4 (A-133 audit 実在 / drive-model passage 9 mode / DB registration gate / rule automation owner) は merged + wired + tested で充足。"
+    scope: "add-design 増分 (upstream FR residual → V-model closure table + 9-mode
+      drive-model passage certificate + rule-automation-closure 表) の status
+      drift (src merge 済なのに draft 放置) を解消し confirmed 化。成果物
+      src/lint/{rule-automation-closure,drive-model-passage,fr-roadmap-coverage\
+      }.ts + src/handover/index.ts は 2026-06-12 (239cb32) で merge 済。機械再検証: ①4
+      src module 全実在 ②doctor に配線 load-bearing (rule-automation-closure /
+      drive-model-passage / fr-roadmap-coverage 各 doctor refs ≥3) ③§2.3
+      rule-automation-closure 表は全 5 行 closed (automation owner 実在) ④Vitest
+      787/787 green / doctor EXIT=0。AC §4 (A-133 audit 実在 / drive-model passage
+      9 mode / DB registration gate / rule automation owner) は merged + wired +
+      tested で充足。"
     worker_model: claude-opus-4-8
     reviewer_model: claude-opus-4-8
 agent_slots:
   - role: tl
-    slot_label: "TL - upstream FR residual to V-model WBS reconciliation"
+    slot_label: TL - upstream FR residual to V-model WBS reconciliation
 generates:
   - artifact_path: docs/plans/PLAN-L3-04-upstream-schedule-reconciliation.md
     artifact_type: markdown_doc
@@ -32,6 +41,8 @@ generates:
     artifact_type: source_module
   - artifact_path: src/handover/index.ts
     artifact_type: source_module
+  - artifact_path: tests/upstream-schedule-reader.test.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L3-00-master.md
   requires:
@@ -43,6 +54,42 @@ dependencies:
   blocks:
     - docs/plans/PLAN-L7-50-fr-roadmap-coverage-lint.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
+route_signal: add-feature
+route_mode: add-feature
+status: confirmed
+github_issue_id: 959
+admission_receipt:
+  schema_version: v2
+  receipt_id: certificate:f4efff7d9c1b955076e2796460c3872c
+  command_id: issue959-t4-owner-803d1eae-efcb-4a5a-9ddd-e71c407a4903
+  admitted_at: 2026-10-15T07:29:49.156Z
+  source_digest: sha256:32e7729a5f3e3244e053dd263ae98c55385dc944cfa505c513ee30be72a3f3e6
+  decision_digest: sha256:ec1c9f406a88b2307b33b12232c858171979d9f9b7585ce991b65cb5173ddca8
+  receipt_digest: sha256:6c67dc0aba56dbef5dac81e5d8a77dee719fb07c1aadb228bcb6d2dff4e21d3c
+  binding:
+    path: docs/plans/PLAN-L3-04-upstream-schedule-reconciliation.md
+    plan_id: PLAN-L3-04-upstream-schedule-reconciliation
+    asset_id: plan:legacy:8fa24ee529c4fc4d64f280e43f9f4b674992bb99b30df4e16e6232375e67a771
+    revision: 2
+    content_digest: sha256:32e7729a5f3e3244e053dd263ae98c55385dc944cfa505c513ee30be72a3f3e6
+  route:
+    signal: add-feature
+    mode: add-feature
+  issue:
+    provider: github
+    issue_id: 959
+    episode_id: E1-959-upstream-schedule-reader
+    projection_state: unprojected
+  origin:
+    plan_id: PLAN-L3-04-upstream-schedule-reconciliation
+    revision: 1
+    digest: sha256:56677fa3f2ba838c876fb52fb1be79bf93a7a3278293ef87bef52de616c108c9
+  reentry:
+    target_plan_id: PLAN-L3-04-upstream-schedule-reconciliation
+    target_revision: 2
+    phase: forward_merge
+  escape_reason: "Issue #959 T4: attach the L7 test-design pair to its existing L3
+    source owner"
 ---
 
 # PLAN-L3-04: upstream FR residual schedule reconciliation
