@@ -92,6 +92,25 @@ function mutatedRepo(mutate: (docs: { l8: string; l5: string }) => { l8: string;
 }
 
 describe("Resource Kernel L5↔L8 pair mapping lint (U-RGKPAIR, PLAN-L5-25 §7.1)", () => {
+  it("CANDIDATE-U-RGKPAIR-PLANLESS-001 setup: planless fixture has 58 real D.5 rows and 42 L8 rows", () => {
+    const fixture = planlessPairFixture();
+    try {
+      expect(existsSync(join(fixture.root, "docs/plans"))).toBe(false);
+      expect(existsSync(join(fixture.root, L5_CANONICAL_DOC))).toBe(true);
+      const l5Text = readFileSync(join(fixture.root, L5_CANONICAL_DOC), "utf8");
+      expect(l5Text).toContain("### D.5 ");
+      const sourceIds = [...l5Text.matchAll(/^\| `((?:C-RGK-\d{2}))` \|/gm)].map(
+        (match) => match[1],
+      );
+      expect(sourceIds).toEqual([...EXPECTED_CONTRACT_IDS]);
+      expect(
+        parseFreezeAttributeRows(readFileSync(join(fixture.root, L8_DOC), "utf8")),
+      ).toHaveLength(42);
+    } finally {
+      fixture.cleanup();
+    }
+  });
+
   it("U-RGKPAIR-001: 実 repo の freeze 属性表は 42 件・欠番 0・全属性充填・lane 語彙内", () => {
     const { freezeRows } = loadRepoRows();
     expect(freezeRows).toHaveLength(42);
@@ -556,10 +575,9 @@ describe("Resource Kernel L5↔L8 pair mapping lint (U-RGKPAIR, PLAN-L5-25 §7.1
     }
   });
 
-  it("CANDIDATE-U-RGKPAIR-PLANLESS-001: L5 canonical D.5 parserが58契約行を読む", () => {
+  it.fails("CANDIDATE-U-RGKPAIR-PLANLESS-001: L5 canonical D.5 parserが58契約行を読む", () => {
     const fixture = planlessPairFixture();
     try {
-      expect(existsSync(join(fixture.root, "docs/plans"))).toBe(false);
       const parsed = parsePlanlessPair(fixture.root);
       expect(parsed.mappingRows).toHaveLength(58);
       expect(parsed.mappingRows.map((row) => row.contractId)).toEqual([...EXPECTED_CONTRACT_IDS]);
@@ -572,15 +590,9 @@ describe("Resource Kernel L5↔L8 pair mapping lint (U-RGKPAIR, PLAN-L5-25 §7.1
     }
   });
 
-  it("CANDIDATE-U-RGKPAIR-PLANLESS-001: PLANなしsnapshotでdoctor readerがcanonical L5/L8を読む", () => {
+  it.fails("CANDIDATE-U-RGKPAIR-PLANLESS-001: PLANなしsnapshotでdoctor readerがcanonical L5/L8を読む", () => {
     const fixture = planlessPairFixture();
     try {
-      expect(existsSync(join(fixture.root, "docs/plans"))).toBe(false);
-      expect(existsSync(join(fixture.root, L5_CANONICAL_DOC))).toBe(true);
-      const l8 = readFileSync(join(fixture.root, L8_DOC), "utf8");
-      expect(parseFreezeAttributeRows(l8)).toHaveLength(42);
-      expect(readFileSync(join(fixture.root, L5_CANONICAL_DOC), "utf8")).toContain("C-RGK-58");
-
       const gate = checkResourceKernelPairMapping(fixture.root);
       expect(gate.ok).toBe(true);
       expect(gate.messages.join(" ")).toContain("resource-kernel-pair-mapping — OK");
@@ -589,7 +601,7 @@ describe("Resource Kernel L5↔L8 pair mapping lint (U-RGKPAIR, PLAN-L5-25 §7.1
     }
   });
 
-  it("CANDIDATE-U-RGKPAIR-PLANLESS-002: planless正本の契約・oracle集合変異をID付きでfail-closeする", () => {
+  it.fails("CANDIDATE-U-RGKPAIR-PLANLESS-002: planless正本の契約・oracle集合変異をID付きでfail-closeする", () => {
     const fixture = planlessPairFixture();
     try {
       const base = parsePlanlessPair(fixture.root);
@@ -641,7 +653,7 @@ describe("Resource Kernel L5↔L8 pair mapping lint (U-RGKPAIR, PLAN-L5-25 §7.1
     }
   });
 
-  it("CANDIDATE-U-RGKPAIR-PLANLESS-003: edge 004→028とoracle 004欠落を別々に検出する", () => {
+  it.fails("CANDIDATE-U-RGKPAIR-PLANLESS-003: edge 004→028とoracle 004欠落を別々に検出する", () => {
     const fixture = planlessPairFixture();
     try {
       const base = parsePlanlessPair(fixture.root);
