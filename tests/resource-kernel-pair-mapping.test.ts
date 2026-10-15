@@ -9,6 +9,7 @@ import {
   EXPECTED_CONTRACT_COUNT,
   EXPECTED_CONTRACT_IDS,
   EXPECTED_ORACLE_COUNT,
+  EXPECTED_ORACLE_IDS,
   type LaneDeclaration,
   parseContractMappingRows,
   parseFreezeAttributeRows,
