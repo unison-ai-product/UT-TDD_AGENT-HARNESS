@@ -76,7 +76,7 @@ function planlessManifestFixture(manifestMutation?: (text: string) => string) {
     writeFileSync(target, text, "utf8");
   }
   const isolatedRoot = workspaceRead({
-    id: "CANDIDATE-U-RGKPAIR-PLANLESS-004",
+    id: "U-RGKPAIR-PLANLESS-004",
     mode: "isolated_fixture",
     root,
     reason: "候補Redはmanifest contract_docと実L5 parserをPLANなしsnapshotで検証する",
@@ -240,7 +240,7 @@ describe("Resource Kernel fixture manifest lint (U-RGKFIX, PLAN-L5-25 §7)", () 
     expect(r.pathOutsideRoot).toEqual(["fx-rgk-frame-split: tests/elsewhere/x"]);
   });
 
-  it("CANDIDATE-U-RGKPAIR-PLANLESS-004 setup: 42件のmanifest属性とD.6 locator見出しを保持したplanless fixture", () => {
+  it("U-RGKPAIR-PLANLESS-004 setup: 42件のmanifest属性とD.6 locator見出しを保持したplanless fixture", () => {
     const fixture = planlessManifestFixture();
     try {
       expect(existsSync(join(fixture.root, "docs/plans"))).toBe(false);
@@ -269,7 +269,7 @@ describe("Resource Kernel fixture manifest lint (U-RGKFIX, PLAN-L5-25 §7)", () 
     }
   });
 
-  it.fails("CANDIDATE-U-RGKPAIR-PLANLESS-004: canonical L5 D.6が42 locator refを解決し、PLANなしでも全fixtureを保つ", () => {
+  it.fails("U-RGKPAIR-PLANLESS-004: canonical L5 D.6が42 locator refを解決し、PLANなしでも全fixtureを保つ", () => {
     const fixture = planlessManifestFixture();
     try {
       const result = analyzePlanlessManifest(fixture.l5Text, fixture);
@@ -281,7 +281,7 @@ describe("Resource Kernel fixture manifest lint (U-RGKFIX, PLAN-L5-25 §7)", () 
     }
   });
 
-  it.fails("CANDIDATE-U-RGKPAIR-PLANLESS-004: doctorのmanifest checkがplanless L5 contract_docを受理する", () => {
+  it.fails("U-RGKPAIR-PLANLESS-004: doctorのmanifest checkがplanless L5 contract_docを受理する", () => {
     const fixture = planlessManifestFixture();
     try {
       const result = checkResourceKernelFixtureManifest(fixture.root);
@@ -292,7 +292,7 @@ describe("Resource Kernel fixture manifest lint (U-RGKFIX, PLAN-L5-25 §7)", () 
     }
   });
 
-  it.fails("CANDIDATE-U-RGKPAIR-PLANLESS-004: D.6 source §2削除は対応する全4fixtureをunknownにする", () => {
+  it.fails("U-RGKPAIR-PLANLESS-004: D.6 source §2削除は対応する全4fixtureをunknownにする", () => {
     const fixture = planlessManifestFixture();
     try {
       const changed = withoutSourceHeading(fixture.l5Text, "2");
@@ -304,7 +304,7 @@ describe("Resource Kernel fixture manifest lint (U-RGKFIX, PLAN-L5-25 §7)", () 
     }
   });
 
-  it.fails("CANDIDATE-U-RGKPAIR-PLANLESS-004: D.6 source §2改名は対応する全4fixtureをunknownにする", () => {
+  it.fails("U-RGKPAIR-PLANLESS-004: D.6 source §2改名は対応する全4fixtureをunknownにする", () => {
     const fixture = planlessManifestFixture();
     try {
       const changed = fixture.l5Text.replace(
@@ -320,7 +320,7 @@ describe("Resource Kernel fixture manifest lint (U-RGKFIX, PLAN-L5-25 §7)", () 
     }
   });
 
-  it.fails("CANDIDATE-U-RGKPAIR-PLANLESS-004: D.6外のsource §2は同番号でも救済せず対応4件をunknownにする", () => {
+  it.fails("U-RGKPAIR-PLANLESS-004: D.6外のsource §2は同番号でも救済せず対応4件をunknownにする", () => {
     const fixture = planlessManifestFixture();
     try {
       const changed = moveSourceHeadingOutsideD6(fixture.l5Text, "2");
@@ -332,7 +332,7 @@ describe("Resource Kernel fixture manifest lint (U-RGKFIX, PLAN-L5-25 §7)", () 
     }
   });
 
-  it.fails("CANDIDATE-U-RGKPAIR-PLANLESS-004: D.6 source §4.1欠落は対応する全6fixtureをunknownにする", () => {
+  it.fails("U-RGKPAIR-PLANLESS-004: D.6 source §4.1欠落は対応する全6fixtureをunknownにする", () => {
     const fixture = planlessManifestFixture();
     try {
       const changed = withoutSourceHeading(fixture.l5Text, "4.1");
