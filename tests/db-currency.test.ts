@@ -817,7 +817,7 @@ describe("db-currency lint", () => {
     const worker = join(root, "worker.ts");
     writeFileSync(
       worker,
-      `import { existsSync, writeFileSync } from "node:fs";\nimport { joinStopRefreshLease } from ${JSON.stringify(stopRefreshCoordinatorModuleUrl)};\nwhile (!existsSync(${JSON.stringify(go)})) await new Promise((resolve) => setTimeout(resolve, 2));\nwriteFileSync(${JSON.stringify(joined)}, joinStopRefreshLease(${JSON.stringify(root)}, "self-join-generation") ? "joined" : "failed");\nwhile (!existsSync(${JSON.stringify(release)})) await new Promise((resolve) => setTimeout(resolve, 2));\n`,
+      `import { existsSync, renameSync, writeFileSync } from "node:fs";\nimport { joinStopRefreshLease } from ${JSON.stringify(stopRefreshCoordinatorModuleUrl)};\nwhile (!existsSync(${JSON.stringify(go)})) await new Promise((resolve) => setTimeout(resolve, 2));\nconst statusPath = ${JSON.stringify(joined)};\nconst statusTempPath = statusPath + ".tmp-" + process.pid;\nwriteFileSync(statusTempPath, joinStopRefreshLease(${JSON.stringify(root)}, "self-join-generation") ? "joined" : "failed");\nrenameSync(statusTempPath, statusPath);\nwhile (!existsSync(${JSON.stringify(release)})) await new Promise((resolve) => setTimeout(resolve, 2));\n`,
       "utf8",
     );
     const child = spawn(process.execPath, [worker], { cwd: root, stdio: "ignore" });
