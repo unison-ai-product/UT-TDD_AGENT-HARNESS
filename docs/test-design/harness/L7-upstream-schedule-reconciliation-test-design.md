@@ -3,7 +3,7 @@ title: "上流スケジュール調整 — L7 テスト設計"
 layer: L6
 executed_at_layer: L7
 artifact_type: test_design
-status: draft
+status: confirmed
 pair_artifact: docs/design/harness/L6-function-design/upstream-schedule-reader.md
 parent_doc: docs/design/harness/L6-function-design/upstream-schedule-reader.md
 next_pair_freeze: L7

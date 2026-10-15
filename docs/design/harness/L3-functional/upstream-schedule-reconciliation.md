@@ -2,7 +2,7 @@
 layer: L3
 sub_doc: functional
 artifact_role: topic_upstream_schedule_reconciliation
-status: draft
+status: confirmed
 pair_artifact: docs/test-design/harness/L12-acceptance-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 related_plan: docs/plans/PLAN-L3-04-upstream-schedule-reconciliation.md
@@ -15,7 +15,7 @@ updated: 2026-10-15
 
 ## §0 位置付けと責務の帰属
 
-本書は Issue #959 の T4 F lane が所有する、上流スケジュール調整の L3 設計正本候補である。契約 PR ではソース／テスト実装を含めず、`status: draft` の未実装目標契約として扱う。
+本書は Issue #959 の T4 F lane が所有する、上流スケジュール調整の L3 設計正本である。契約 PR ではソース／テスト実装を含めず、`status: confirmed` の未実装目標契約として扱う。
 
 frontmatter の `related_plan` は移設元の履歴参照であり、実行時入力・設計正本ではない。PLAN-L3-04 の §2.1〜§2.3 は、規範的意味を保って日本語化して本書へ移設する対象である。各表の行・列の構造、識別子、`Current status` の値は維持し、説明文と見出しだけを意味不変で日本語化する。移設後は本書を唯一の設計入力とし、PLAN の読取件数を 0 にすることを受入候補とする。現時点では PLAN・ソース・テストを変更しておらず、この状態は未達である。新しいレビュー証跡、実装済み判定、正式 oracle ID はここでは主張しない。
 

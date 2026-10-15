@@ -3,7 +3,7 @@ title: "上流スケジュール調整 — L6 reader 契約"
 layer: L6
 artifact_type: design_doc
 issue: 959
-status: draft
+status: confirmed
 sub_doc: function-spec
 artifact_role: topic_upstream_schedule_reader
 pair_artifact: docs/test-design/harness/L7-upstream-schedule-reconciliation-test-design.md
@@ -18,9 +18,9 @@ updated: 2026-10-15
 
 ## §1 位置付けと実装状態
 
-本書は `drive-model-passage` と `rule-automation-closure` の reader が、PLAN-L3-04 ではなく L3 topic `docs/design/harness/L3-functional/upstream-schedule-reconciliation.md` を正本として読むための L6 契約候補である。`function-spec.md` は 2,500 行を超える共有契約集のため、本 topic をそこへ追加せず専用 addendum に分ける。frontmatter の `related_plan` は移設元の履歴参照であり、reader 入力ではない。
+本書は `drive-model-passage` と `rule-automation-closure` の reader が、PLAN-L3-04 ではなく L3 topic `docs/design/harness/L3-functional/upstream-schedule-reconciliation.md` を正本として読むための L6 reader 契約である。`function-spec.md` は 2,500 行を超える共有契約集のため、本 topic をそこへ追加せず専用 addendum に分ける。frontmatter の `related_plan` は移設元の履歴参照であり、reader 入力ではない。
 
-現行実装 (`src/lint/drive-model-passage.ts`、`src/lint/rule-automation-closure.ts`) の loader は PLAN-L3-04 を読む。本契約 PR はその実装変更・検証ではなく、実装時に守るべき未実装契約を記録する。したがって本書も L3 topic も `status: draft` であり、読取切替済み、PLAN 読取 0、正式 oracle、Green の証跡を主張しない。
+現行実装 (`src/lint/drive-model-passage.ts`、`src/lint/rule-automation-closure.ts`) の loader は PLAN-L3-04 を読む。本契約 PR はその実装変更・検証ではなく、実装時に守るべき未実装契約を記録する。本書と L3 topic は `status: confirmed` だが、読取切替済み、PLAN 読取 0、正式 oracle、Green の証跡を主張しない。
 
 ## §2 入力選択と読み取り境界
 
