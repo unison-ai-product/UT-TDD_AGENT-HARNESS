@@ -22,8 +22,14 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
+  canonicalizeReviewRequest,
+  issueReviewRequest,
+  projectReviewVerdict,
+} from "../src/feedback/review-attestation.ts";
+import {
   beginReviewAttempt,
   canonicalReviewRevision,
+  hasTerminalReviewReceipt,
   type ReviewCustodyRequest,
 } from "../src/feedback/review-verdict-custody.ts";
 import { type AssetDriftInput, analyzeAssetDrift } from "../src/lint/asset-drift.ts";
@@ -609,6 +615,59 @@ describe("issue #1002 agent-guard と委譲の境界 (Red)", () => {
       const base = { memoryId: `agbound-${pr}`, pr, exactHead: "a".repeat(40), authorFamily };
       return { ...base, reviewRevision: canonicalReviewRevision({ ...base, reviewRevision: "" }) };
     };
+
+    it("CANDIDATE-U-AGBOUND-036: (e) agent-guard の返り値を verdict.txt に書いても projectReviewVerdict は verdict_identity_mismatch で拒否し、receipt を作らない", () => {
+      const custodyRepo = mkdtempSync(join(tmpdir(), "agbound-036e-"));
+      try {
+        execFileSync("git", ["init", "--quiet"], { cwd: custodyRepo, stdio: "ignore" });
+        const issued = issueReviewRequest({
+          repoRoot: custodyRepo,
+          request: canonicalizeReviewRequest({
+            memoryId: "memory:agbound-036e",
+            pr: 1002,
+            exactHead: "a".repeat(40),
+            reviewRevision: "legacy-revision",
+            authorFamily: "codex",
+            requestedAt: "2026-10-15T00:00:00.000Z",
+          }),
+          strict: true,
+        });
+        if (!issued.ok) throw new Error(issued.reason);
+        const attempt = beginReviewAttempt({
+          repoRoot: custodyRepo,
+          request: issued.request,
+          provider: "claude",
+          model: "claude-opus-5-5",
+        });
+        if (!attempt.ok) throw new Error(attempt.reason);
+        // agent-guard の実際の返り値 (verdict envelope を持たない guard 判定の形)。
+        const decision = run("Agent", { subagent_type: "general-purpose", model: "sonnet" });
+        writeFileSync(attempt.path, JSON.stringify(decision), "utf8");
+        const result = projectReviewVerdict({
+          repoRoot: custodyRepo,
+          request: issued.request,
+          attestation: {
+            provider: "claude",
+            role: "blind-reviewer",
+            model: "claude-opus-5-5",
+            pr: issued.request.pr,
+            head: issued.request.exactHead,
+            reviewRevision: issued.request.reviewRevision,
+            startedAt: "2026-10-15T00:00:00.000Z",
+            completedAt: "2026-10-15T00:01:00.000Z",
+            exitCode: 0,
+            attempt: attempt.attempt,
+            invocationNonce: issued.request.invocationNonce,
+          },
+          verdictFile: attempt.path,
+        });
+        expect(result).toEqual({ ok: false, reason: "verdict_identity_mismatch" });
+        expect(hasTerminalReviewReceipt(custodyRepo, issued.request)).toBe(false);
+        expect(existsSync(join(custodyRepo, ".ut-tdd", "review", "receipts"))).toBe(false);
+      } finally {
+        rmSync(custodyRepo, { recursive: true, force: true });
+      }
+    });
 
     it.fails("CANDIDATE-U-AGBOUND-036: 非著者 family でも下限未満の model は受理されず、receipt を作らない", () => {
       const attempt = (
