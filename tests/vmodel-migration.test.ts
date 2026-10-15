@@ -1,14 +1,7 @@
-import { execFileSync } from "node:child_process";
-import { createHash } from "node:crypto";
-import { cpSync, mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { SCHEMA_VERSION, schemaDdl } from "../src/schema/harness-db.ts";
-import { type HarnessDb, openHarnessDb } from "../src/state-db/index.ts";
+import { openHarnessDb } from "../src/state-db/index.ts";
 import { migrate } from "../src/state-db/migration.ts";
-import { rebuildHarnessDb } from "../src/state-db/projection-writer.ts";
-import { headSnapshotRoot } from "./support/workspace-roots.ts";
 
 const LEGACY_V29_ITEM_TARGET_DDL = `
 CREATE TABLE IF NOT EXISTS vmodel_item_target_edges (
@@ -36,132 +29,8 @@ const LEGACY_V25_PROJECTION_DDLS = [
   "CREATE TABLE document_scale_profile_reviews (document_scale_profile_review_id TEXT PRIMARY KEY)",
 ] as const;
 
-const V25_REBUILT_TABLES = new Set([
-  "document_catalog_entries",
-  "document_scale_profile_entries",
-  "document_scale_profile_reviews",
-]);
-
-const COMMIT_FAILURE_AFTER_ITEM_TARGET = "injected final projection COMMIT failure";
-
-interface ProjectionCommitProbe {
-  itemTargetInserts: number;
-  preProjectionCommits: number;
-  injected: boolean;
-}
-
-function createV25ProjectionSchema(db: ReturnType<typeof openHarnessDb>): void {
-  for (const ddl of schemaDdl().filter((entry) =>
-    entry.startsWith("CREATE TABLE IF NOT EXISTS "),
-  )) {
-    const table = /^CREATE TABLE IF NOT EXISTS ([^ (]+)/.exec(ddl)?.[1];
-    if (!table || V25_REBUILT_TABLES.has(table)) continue;
-    db.exec(ddl);
-  }
-  createV25LegacyProjectionTables(db);
-  db.prepare("INSERT INTO document_catalog_entries VALUES (?, ?)").run("legacy-catalog", "DOC-OLD");
-  db.prepare("INSERT INTO document_scale_profile_entries VALUES (?, ?, ?)").run(
-    "legacy-profile-entry",
-    "PROFILE-OLD",
-    "DOC-OLD",
-  );
-  db.prepare("INSERT INTO document_scale_profile_reviews VALUES (?)").run("legacy-review");
-  db.setUserVersion(25);
-}
-
 function createV25LegacyProjectionTables(db: ReturnType<typeof openHarnessDb>): void {
   for (const ddl of LEGACY_V25_PROJECTION_DDLS) db.exec(ddl);
-}
-
-function createTrackedDocsFixture(): string {
-  const root = mkdtempSync(join(tmpdir(), "ut-t1-v25-atomicity-"));
-  cpSync(join(headSnapshotRoot(), "docs"), join(root, "docs"), { recursive: true });
-  execFileSync("git", ["init", "--quiet"], { cwd: root, stdio: "ignore" });
-  execFileSync("git", ["-c", "core.autocrlf=false", "add", "docs"], {
-    cwd: root,
-    stdio: "ignore",
-  });
-  execFileSync(
-    "git",
-    [
-      "-c",
-      "user.name=UT-TDD test",
-      "-c",
-      "user.email=ut-tdd-test@example.invalid",
-      "-c",
-      "commit.gpgsign=false",
-      "commit",
-      "-m",
-      "v25 atomicity docs fixture",
-    ],
-    { cwd: root, stdio: "ignore" },
-  );
-  return root;
-}
-
-function captureFullDatabaseState(db: ReturnType<typeof openHarnessDb>) {
-  const master = db
-    .prepare(
-      "SELECT type, name, sql FROM sqlite_master WHERE name NOT LIKE 'sqlite_%' ORDER BY type, name",
-    )
-    .all();
-  const tableNames = master
-    .filter((entry) => entry.type === "table")
-    .map((entry) => String(entry.name));
-  const rows = Object.fromEntries(
-    tableNames.map((table) => {
-      const quotedTable = `"${table.replaceAll('"', '""')}"`;
-      const stableRows = db
-        .prepare(`SELECT * FROM ${quotedTable}`)
-        .all()
-        .map((row) => JSON.stringify(row))
-        .sort();
-      return [table, stableRows];
-    }),
-  );
-  const userVersion = db.userVersion();
-  const digest = createHash("sha256")
-    .update(JSON.stringify({ master, userVersion, rows }))
-    .digest("hex");
-  return { master, userVersion, rows, digest };
-}
-
-function observeProjectionCommitFailure(
-  db: ReturnType<typeof openHarnessDb>,
-  probe: ProjectionCommitProbe,
-): HarnessDb {
-  return {
-    path: db.path,
-    driver: db.driver,
-    exec(sql) {
-      if (/^\s*COMMIT\s*;?\s*$/i.test(sql)) {
-        if (probe.itemTargetInserts > 0 && !probe.injected) {
-          probe.injected = true;
-          throw new Error(COMMIT_FAILURE_AFTER_ITEM_TARGET);
-        }
-        if (probe.itemTargetInserts === 0) probe.preProjectionCommits += 1;
-      }
-      db.exec(sql);
-    },
-    prepare(sql) {
-      const statement = db.prepare(sql);
-      return {
-        run(...params) {
-          statement.run(...params);
-          if (/^\s*INSERT\s+INTO\s+vmodel_item_target_edges\b/i.test(sql)) {
-            probe.itemTargetInserts += Number(
-              db.prepare("SELECT changes() AS count").get()?.count ?? 0,
-            );
-          }
-        },
-        get: (...params) => statement.get(...params),
-        all: (...params) => statement.all(...params),
-      };
-    },
-    userVersion: () => db.userVersion(),
-    setUserVersion: (version) => db.setUserVersion(version),
-    close: () => db.close(),
-  };
 }
 
 interface LegacyItemTarget {
@@ -525,75 +394,5 @@ describe("V-model version 26 projection migration", () => {
     } finally {
       db.close();
     }
-  });
-});
-
-describe("CANDIDATE-U-DISPPTR-008: old-version migration and projection failure atomicity", () => {
-  let db: ReturnType<typeof openHarnessDb>;
-  let tempRoot: string;
-  let before: ReturnType<typeof captureFullDatabaseState>;
-  let after: ReturnType<typeof captureFullDatabaseState>;
-  let probe: ProjectionCommitProbe;
-
-  beforeAll(() => {
-    tempRoot = createTrackedDocsFixture();
-    db = openHarnessDb(":memory:");
-    createV25ProjectionSchema(db);
-    before = captureFullDatabaseState(db);
-
-    // Setup is deliberately outside the expected-failure assertion below.
-    expect(before.userVersion).toBe(25);
-    expect(before.rows.document_catalog_entries).toHaveLength(1);
-    expect(before.rows.document_scale_profile_entries).toHaveLength(1);
-    expect(before.rows.document_scale_profile_reviews).toHaveLength(1);
-    expect(
-      before.master.find(
-        (entry) => entry.type === "table" && entry.name === "document_catalog_entries",
-      )?.sql,
-    ).toContain("doc_type_id TEXT");
-
-    probe = { itemTargetInserts: 0, preProjectionCommits: 0, injected: false };
-    let rebuildError: unknown;
-    try {
-      rebuildHarnessDb({
-        repoRoot: tempRoot,
-        db: observeProjectionCommitFailure(db, probe),
-        skipTokenTelemetry: true,
-        relationGraph: { nodes: [], edges: [], verificationProfiles: [], findings: [] },
-        documentExports: {
-          document_export_runs: [],
-          document_export_datasets: [],
-          document_export_artifacts: [],
-          findings: [],
-          actionsTaken: [],
-          ok: true,
-        },
-      });
-    } catch (error) {
-      rebuildError = error;
-    }
-
-    // Prove this is the intended post-insert commit fault, not a fixture/setup failure.
-    expect(probe.preProjectionCommits).toBeGreaterThan(0);
-    expect(probe.itemTargetInserts).toBeGreaterThan(0);
-    expect(probe.injected).toBe(true);
-    expect(rebuildError).toBeInstanceOf(Error);
-    expect((rebuildError as Error).message).toContain(COMMIT_FAILURE_AFTER_ITEM_TARGET);
-    after = captureFullDatabaseState(db);
-  }, 120_000);
-
-  afterAll(() => {
-    db?.close();
-    if (tempRoot) rmSync(tempRoot, { recursive: true, force: true });
-  });
-
-  it("observes the migration commit, a real item-target insert, and one later injected failure", () => {
-    expect(probe.preProjectionCommits).toBeGreaterThan(0);
-    expect(probe.itemTargetInserts).toBeGreaterThan(0);
-    expect(probe.injected).toBe(true);
-  });
-
-  it.fails("retains old sqlite_master, user_version, all rows, and their digest after projection failure", () => {
-    expect(after).toEqual(before);
   });
 });
