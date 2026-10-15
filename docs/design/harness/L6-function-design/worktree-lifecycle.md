@@ -51,8 +51,8 @@ issue: 1069
 | 状態 | 入る条件 | 起きること | 主体 |
 |---|---|---|---|
 | `active` | 作成直後、または PR 未 merge で最終活動から 7 日未満 | 何もしない | - |
-| `stale` | 保持記録が無く、未 merge で最終活動から 7 日以上 | doctor が警告する (消すかは人が決める)。自動削除はしない | doctor |
-| `merged` | PR が MERGED で、head branch の先端が `origin/main` に含まれる | §6 の安全条件を満たせば即削除。外れたら理由を出して残す (merge は成功のまま) | `pr merge` の後処理 / `worktree prune` |
+| `stale` | 保持記録が無く、未 merge で最終活動から 7 日以上 (検出時刻を T0 とする) | T0 に仮の保持記録 (下の T0 規則) を作る。以後は `warning` から `expired`、`reaped` へ進む | doctor / prune |
+| `merged` | PR が MERGED で、head branch の先端が `origin/main` に含まれる | `pr merge` の後処理は**何も削除しない**。`merged` (merge commit と時刻) を記録するだけ。削除は `worktree prune` が §6 の全条件 (稼働中ガードを含む) を満たしたときに行う | `pr merge` の後処理 (記録のみ) / `worktree prune` (削除) |
 | `retained` | 保持記録が有効 (理由 + 回収期限または回収条件) | 期限・条件まで保持。回収の自動実行はしない | - |
 | `warning` | `retained` の期限の 3 日前から | SessionStart と EOD 棚卸しで保持者 (lane) へ警告。延長は理由と新しい期限を書き直す | doctor / session start |
 | `expired` | 期限を過ぎた、または回収条件が成立した | 猶予 2 日の間、毎回警告する | doctor / session start |
@@ -62,7 +62,7 @@ issue: 1069
 - 日数 (stale 7 日 / 警告 3 日前 / 猶予 2 日 / 退避 ref の保持 90 日 / 稼働中判定 6 時間) は既定値で、設定で変えられる。
 - `ut-review-*` など review 用の固定 worktree は対象外 (どの状態にも入れない)。
 - 回収条件 (`issue_closed:#N` / `pr_merged:#N`) の成立は `gh` で観測する。観測に失敗した場合は成立と見なさない (消さない側に倒す)。
-- `stale` は保持記録の無い対象に出る警告であり、その後に保持記録を付ければ `retained` に入り、付けなければ猶予なしでは消さない (消すのは `merged` と `reaped` だけ)。stale のまま放置された対象の最終処理は §10 の 4 に従う。
+- 時計は 1 本にする。`stale` を初めて検出した時刻を **T0** とし、T0 に仮の保持記録 (reason: 初回の stale 回収、holder: 機械、due: T0 + 7 日) を作る。T0 から due までの 7 日が警告期間で、状態は T0 から `warning`。due で `expired`、due + 2 日 (= T0 + 9 日) で `reaped`。`prune` を再実行しても T0 は動かない (記録が既にあれば作らない)。保持者が延長すれば通常の延長 (§4) になる。
 
 ## 4. 保持記録
 
@@ -88,7 +88,7 @@ issue: 1069
 
 | 面 | 内容 |
 |---|---|
-| `pr merge` の後処理 | `runPrMerge` が `ok` を返したあと、その PR の head branch について §6 を評価し、満たせば worktree を外して local branch を消す。対象は 1 件だけなので 20 件の上限は関係しない。結果は `pr merge` の出力に 1 行足す (`cleanup=removed` / `cleanup=kept:<reason>` / `cleanup=error:<reason>`) |
+| `pr merge` の後処理 | `runPrMerge` が `ok` を返したあと、その PR の head branch を `merged` として記録する (merge commit・時刻)。**削除は試みない**。結果は `pr merge` の出力に 1 行足す (`cleanup=recorded` / `cleanup=error:<reason>`)。実際の削除は `worktree prune` が行う (他プロセスの cwd は portable に観測できず、merge 直後の削除は稼働中の worktree を壊しうるため) |
 | `ut-tdd worktree prune` | 既定は dry-run。対象を「消せる / 保持中 (理由・期限) / 消せない (理由)」に分けて列挙する。`--apply` を付けたときだけ実行し、1 run の削除は 20 件まで。超えた分は次回へ回す。`--apply` は dry-run と同じ判定関数を使い、判定の経路を 2 本にしない |
 | doctor check `worktree-retention` | **warn のみ** (fail-close にしない)。(a) 期限切れ・条件成立の保持、(b) `stale`、(c) 理由なしまたは壊れた保持記録、(d) `warning` / `expired` の件数を出す。出力は `branch: state (reason)` と末尾の集計行 |
 | SessionStart / EOD 棚卸し | `warning` / `expired` の対象と、直近の退避 (archive ref 名と取り戻し方) を `escalationLines` に載せる。EOD 棚卸し (`CLAUDE.md` §定期棚卸し) の 1 行に `ut-tdd worktree prune` (dry-run) を足す |
@@ -102,31 +102,31 @@ issue: 1069
 | S1 | 先端が main に含まれる | `git merge-base --is-ancestor refs/heads/<b> origin/main`。含まれないときは、§7 の退避 ref の作成と読み戻しに**成功**した場合のみ次へ進める。PR が MERGED でも先端が含まれなければ、退避なしでは消さない (#707) |
 | S2 | 対象が対象外ではない | worktree 名が `ut-review-*` ではない、primary checkout (`C:/dev/UT-TDD-agent-harness`) ではない、`git worktree list` に登録されている、`C:/dev` 直下である |
 | S3 | 保持記録が無い、または期限切れ・条件成立から猶予 2 日が切れた | 有効な保持記録がある間は消さない |
-| S4 | 現在の作業 worktree ではない | 呼び出し元の cwd がその worktree 配下なら消さない |
+| S4 | 呼び出し元の作業 worktree ではない (補助) | 呼び出し元の cwd がその worktree 配下なら消さない。**他プロセスの cwd は Windows で portable に観測できないため、安全の根拠にしない**。根拠は S7 と Windows のロック |
 | S5 | `node_modules` が junction なら先に外す | worktree 直下の `node_modules` が reparse point なら、link だけを外す (中身を辿って消さない)。外した後に不在を確かめ、確かめられなければ**remove へ進まない** |
 | S6 | remove の後に primary の健全性を確かめる | 直後に primary の `node_modules` が存在することを確かめる。欠けていたら以降の削除を全て止め、監査ログに `error` を残す |
-| S7 | 稼働中ではない (`worktree prune` のみ) | worktree の `logs/HEAD` の更新が 6 時間以内なら稼働中の可能性として消さない。`pr merge` の後処理には適用しない (§12 の未決 2) |
+| S7 | 稼働中ではない (**全ての削除に適用**。`worktree prune` / reap のみが削除するため) | worktree 配下 (`node_modules` と `.git` を除く) のどのファイルの mtime も 6 時間以内に変わっていないこと。mtime が読めない・走査が途中で失敗したときは**消さない** (`activity_unknown`)。更新が 6 時間以内なら `active_recently` |
 | S8 | 1 run の削除が 20 件以内 (`worktree prune` のみ) | 超過分は次回 |
 | S9 | 退避が必要なら退避が完了している | §7。退避の ref を作れなかった、または読み戻した oid が一致しなかった場合は**消さない** |
 | S10 | 監査ログへ追記できる | §4 |
 
-- **force を使わない**。`git worktree remove --force` は使わない。branch は S1 を満たした後にだけ消す。Windows のロック (他プロセスが掴んでいる、`EBUSY` / `EPERM`) で消せないときは、`error:locked` を監査ログに記録して先へ進み、再試行しない (次回の run に回す)。
-- 未コミットの変更は**自動削除の阻害要件ではなく、退避の対象**である (PO 追記 2026-10-15。§7)。ただし `pr merge` の後処理 (`merged`) では、未コミットの変更がある worktree は退避せず**消さない** (merge 直後に作者が作業を続けている可能性があるため)。`reaped` のときだけ退避して消す。
+- **`--force` は退避の検証が通ったときだけ許す**。未コミットの変更がある worktree は `git worktree remove` が終了コード 128 で拒否するため、削除には `--force` が要る。許す条件は §7 の検証 (退避 ref が存在し、その tree を再構成して記録した tree hash と一致する) が成功した場合に限る。検証が 1 つでも失敗したら `--force` を使わず、削除しない。退避が不要な (clean な) worktree では `--force` を使わない。branch は S1 を満たした後にだけ消す。Windows のロック (他プロセスが掴んでいる、`EBUSY` / `EPERM`) で消せないときは、`error:locked` を監査ログに記録して先へ進み、再試行しない (次回の run に回す)。ロックは他プロセスが使っている worktree の最後の防護である。
+- 未コミットの変更は**自動削除の阻害要件ではなく、退避の対象**である (PO 追記 2026-10-15。§7)。`merged` でも `reaped` でも、削除するのは `worktree prune` で、退避・検証を済ませてから消す。
 
 ## 7. 退避
 
 「無音で消えても成果が失われない」ための仕組み。退避先は `refs/ut-tdd/archive/<branch>` (branch 名の `/` はそのまま階層になる)。退避 ref は 90 日で回収する (`worktree prune --apply` が、監査ログの退避イベントの `at` から 90 日を超えた archive ref を削除する。commit の committer date は使わない)。
 
-1. **未コミットの変更** (追跡ファイルの変更、staged の変更、未追跡ファイル): 素の `git stash create` は**未追跡ファイルを捕まえない** (一時 repo での実測)。issue #1069 コメントの「`git stash create` 相当 (未追跡ファイルを含む)」はそのままでは成り立たないので、次の手順に固定する。worktree 内で、実 index に触れずに行う。
-   1. `GIT_INDEX_FILE=<一時ファイル>` を設定し、`git read-tree HEAD` で一時 index を HEAD に初期化する。
-   2. 同じ一時 index に `git add -A` する (`.gitignore` を尊重する。追跡の変更・削除・未追跡ファイル・入れ子の未追跡 dir を含む)。
-   3. `git write-tree` で tree を得て、`git commit-tree <tree> -p HEAD -m <msg>` で commit を作る。
-   4. 一時 index を削除する。実 index・作業ツリー・stash リストは変えない。
-   - **ignored ファイルは意図的に退避から除く**: `node_modules` (再生成可能で巨大。junction の先を辿る事故も避ける)、`.ut-tdd/` の runtime state・log (機械固有で、ほかの場所に正本がある)、build 成果物 (`dist/` 等)。復元で byte 同一を保証する範囲は「`.gitignore` に該当しない全ファイル」であり、除外する集合は実装で明示的な定数として持つ (暗黙に増減させない)。ignored に誤分類された手書きの成果物は退避されないことが既知の限界で、監査ログに除外した件数を残す。
-2. **main に含まれない commit**: branch の先端をそのまま `refs/ut-tdd/archive/<branch>` に `git update-ref` する。1 と 2 の両方があるときは 1 の commit (親は HEAD = branch 先端) を `git update-ref refs/ut-tdd/archive/<branch> <commit>` で載せる。
-3. **読み戻し検証**: `git rev-parse refs/ut-tdd/archive/<branch>` が、作った oid と一致することを確かめる。一致しなければ S9 で**削除しない**。
+1. **未コミットの変更** (追跡ファイルの変更、staged の変更、未追跡ファイル): 素の `git stash create` は**未追跡ファイルを捕まえない**(一時 repo での実測)。また worktree の内容だけを保存すると、staged の内容が失われる (HEAD=A、index=B、worktree=C のとき C しか残らない)。`git stash` と同じ二層構造で、実 index に触れずに保存する。
+   1. **index commit**: 実 index の `git write-tree` (読み取りのみで index を変えない) の tree から `git commit-tree <tree> -p HEAD` で commit I を作る。
+   2. **worktree commit**: `GIT_INDEX_FILE=<一時ファイル>` を設定し、`git read-tree HEAD` で一時 index を HEAD に初期化し、`git add -A` する (`.gitignore` を尊重。追跡の変更・削除・未追跡ファイル・入れ子の未追跡 dir を含む)。`git write-tree` の tree から `git commit-tree <tree> -p HEAD -p <I>` で commit W を作る。
+   3. 一時 index を削除する。実 index・作業ツリー・stash リストは変えない。
+   4. `git update-ref refs/ut-tdd/archive/<branch> <W>`。
+   - **ignored ファイルは意図的に退避から除く**: `node_modules` (再生成可能で巨大。junction の先を辿る事故も避ける)、`.ut-tdd/` の runtime state・log (機械固有)、build 成果物 (`dist/` 等)。復元で byte 同一を保証する範囲は「`.gitignore` に該当しない全ファイル」。除外集合は実装で明示的な定数として持つ。ignored に誤分類された手書きの成果物は退避されないのが既知の限界で、監査ログに除外件数を残す。
+2. **main に含まれない commit**: branch の先端はそのまま `refs/ut-tdd/archive/<branch>` に `git update-ref` する。1 と 2 の両方があるときは 1 の commit W (親は HEAD = branch 先端) が先端の commit を含む。
+3. **検証 (force 削除の前提)**: (a) `git rev-parse refs/ut-tdd/archive/<branch>` が作った oid W と一致する。(b) W の tree と I の tree を再構成して (一時 index に `read-tree` し `write-tree` する)、退避時に記録した tree hash (worktree tree と index tree) と一致する。(c) W の親に I と元の先端がある。1 つでも失敗したら S9 で**削除しない**。`--force` も使わない。
 4. 同名の archive ref が既にあるときは上書きせず、`refs/ut-tdd/archive/<branch>@<yyyymmddThhmmssZ>` を使う。
-5. **取り戻し方** (監査ログと SessionStart に出す): `git worktree add C:/dev/<name> refs/ut-tdd/archive/<branch>` で復元する。未コミット分を含む場合は、その commit の tree が作業ツリーに展開される。
+5. **取り戻し方** (監査ログと SessionStart に出す): `git worktree add C:/dev/<name> refs/ut-tdd/archive/<branch>` で W の tree が作業ツリーに展開される。そのあと新しい worktree で `git read-tree <I>` を実行すると index が退避時 (staged) に戻る。
 6. archive ref は remote へ push しない (local の保険)。
 
 ## 8. fail-open / fail-close
@@ -148,7 +148,7 @@ issue: 1069
 実装 PR で置く純粋関数と薄い adapter の境界。層を増やさず、判定を純粋関数にして副作用から切り離す。
 
 - `classifyTarget(facts, record | undefined, now, config) => TargetState`: §3 の状態を導く純粋関数。
-- `evaluateDeletion(facts, record | undefined, state, context) => { allow: true, archive: ArchivePlan | null } | { allow: false, reason: DenyReason }`: §6 の S1 から S5 と S7 を判定する純粋関数。`DenyReason` は列挙 (`tip_not_in_main` / `protected_target` / `retained` / `current_cwd` / `junction_unresolved` / `active_recently` / `dirty_on_merged` など)。
+- `evaluateDeletion(facts, record | undefined, state, context) => { allow: true, archive: ArchivePlan | null } | { allow: false, reason: DenyReason }`: §6 の S1 から S5 と S7 (S7 の mtime は facts として渡す。読めなければ `activity_unknown`) を判定する純粋関数。`DenyReason` は列挙 (`tip_not_in_main` / `protected_target` / `retained` / `current_cwd` / `activity_unknown` / `junction_unresolved` / `active_recently` / `dirty_on_merged` など)。
 - `planRun(targets, config) => { delete: Target[]; deferred: Target[] }`: 20 件上限を適用する純粋関数。
 - adapter (副作用): `git` / `gh` / ファイルの read と write、junction の unlink、archive ref の作成と読み戻し、監査ログの追記。
 
@@ -157,7 +157,7 @@ issue: 1069
 1. 実装 PR の後、`ut-tdd worktree prune` (dry-run) の出力を PR コメントに貼り、分類 (消せる / 保持中 / 消せない) の件数を記録する。
 2. 保持が要る worktree / branch (作業中の lane、blocked な PLAN など) には、`ut-tdd worktree retain` で理由と期限を付ける。これは**各保持者が行う**。
 3. `ut-tdd worktree prune --apply` を、1 run 20 件で繰り返し、dry-run の「消せる」が 0 になるまで続ける。run ごとに監査ログと件数を記録する。
-4. 保持記録を持たない stale な branch は、初回に限り、記録の付与を促す警告 (SessionStart と EOD) を 1 週間出したあと、`retained` 扱いの仮記録 (理由: 初回回収の猶予、期限: 警告開始から 3 日 + 猶予 2 日) を機械が付け、通常の `warning` から `reaped` に乗せる。一括では消さない。
+4. 保持記録を持たない stale な branch は、§3 の T0 の規則に従う (T0 に仮の保持記録、due は T0 + 7 日、T0 + 9 日で reap)。一括では消さない。T0 は `prune` の再実行で動かない。
 5. 完了条件は issue #1069 のとおり: (a) merge 後に安全な worktree / branch が自動で消える、(b) 残すものは全て理由と期限 / 条件を持つ、(c) 既存の残骸が保持付きのものを除いて片付く。
 
 ## 11. 実装 PR の順序 (1 PR = 1 論点)
@@ -166,7 +166,7 @@ issue: 1069
 2. Red: `it.fails` で候補 ID (CANDIDATE-U-WTLIFE-*) を引用し、安全条件と退避の oracle を入れる。
 3. Green A: `evaluateDeletion` / `classifyTarget` / `planRun` (純粋関数) と保持記録の read / write。
 4. Green B: 退避 (archive ref) と削除 adapter (junction unlink を含む。PLAN-L6-661 の primitive と共有)。
-5. Green C: `pr merge` の後処理 (fail-open)。
+5. Green C: `pr merge` の後処理 (`merged` の記録のみ。fail-open)。
 6. Green D: `ut-tdd worktree prune` (dry-run 既定 / `--apply`)、`retain` / `extend`。
 7. Green E: doctor check `worktree-retention` と SessionStart / EOD の警告。
 8. 既存の残骸の回収 (§10)。
@@ -176,7 +176,7 @@ issue: 1069
 ## 12. 決定事項 (control lane、2026-10-15)
 
 1. **削除 primitive の所有**: PLAN-L6-661 の `ut-tdd worktree remove` が先に入ればそれを共有する。先に入らなければ Green B が同じ契約の primitive を置き、661 はそれを呼ぶ側に回る。どちらかは実装着手時に PLAN-L6-661 の status を実測して決める。
-2. **稼働中の 6 時間ガード**: `worktree prune` / reap のみに適用する。`pr merge` の後処理は S1 (先端が origin/main に含まれる) と S4 (どのプロセスの cwd でもない) に依拠し、6 時間ガードは適用しない。
+2. **稼働中の 6 時間ガード**: 全ての削除 (prune / reap) に適用する。worktree 配下 (`node_modules` と `.git` を除く) の mtime が 6 時間以内に変わっていたら消さず、mtime が読めなければ消さない (fail-close)。`pr merge` の後処理は削除しないので、このガードの対象ではない。(先の「後処理は S1 と S4 に依拠する」は取り下げた。他プロセスの cwd は portable に観測できない。)
 
 ## 13. 採らない案
 

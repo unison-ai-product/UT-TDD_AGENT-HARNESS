@@ -33,8 +33,8 @@ updated: 2026-10-15
 | --- | --- | --- | --- |
 | `CANDIDATE-U-WTLIFE-001` | PR が MERGED だが、branch 先端が `origin/main` に含まれない (merge 後に push された commit)。退避 ref は未作成 | `allow: false`、`tip_not_in_main`。branch と worktree は残る。退避なしでは消さない (#707) | PR の MERGED だけで削除する / 含有判定を `origin/main` でなくローカル `main` で行う |
 | `CANDIDATE-U-WTLIFE-002` | 先端が main に含まれない branch で、`reaped` により退避を作れた場合 | 退避 ref を作り、読み戻して oid が一致してから削除する。archive ref が指す commit は元の先端を含む | 退避より先に削除する / 読み戻しを省く |
-| `CANDIDATE-U-WTLIFE-003` | worktree 名が `ut-review-*` (期限切れ・merged 相当の他条件が全て満たされていても) | 全状態で対象外。`worktree prune --apply` でも `pr merge` の後処理でも消さない。dry-run の一覧にも「消せる」に出さない | 名前でなく path の一部一致で判定する / `--apply` だけ除外を忘れる |
-| `CANDIDATE-U-WTLIFE-004` | 6 時間以内に `logs/HEAD` が更新された worktree に `worktree prune --apply` | `active_recently` で消さない。6 時間を超えたものは消せる (境界: 360 分ちょうど) | ガードを `pr merge` の後処理にだけ付ける / 境界を逆にする |
+| `CANDIDATE-U-WTLIFE-003` | worktree 名が `ut-review-*` (期限切れ・merged 相当の他条件が全て満たされていても) | 全状態で対象外。`worktree prune --apply` でも消さない。dry-run の一覧にも「消せる」に出さない。`pr merge` の後処理も `merged` の記録を作らない | 名前でなく path の一部一致で判定する / `--apply` だけ除外を忘れる |
+| `CANDIDATE-U-WTLIFE-004` | 稼働中ガード (L6 S7): worktree 配下 (`node_modules` と `.git` を除く) のファイル mtime が (a) 6 時間以内、(b) 360 分ちょうど、(c) 360 分 + 1 秒、(d) 6 時間以内の mtime が `node_modules`/`.git` 配下だけ、の worktree に `worktree prune --apply` | (a) は `active_recently` で消さない。(b) は消さない、(c) は消せる (境界: 360 分以上で消せる)。(d) は除外対象なので消せる。merged/reaped の別を問わず同じガード | ガードを一部の状態にだけ付ける / 境界を逆にする / `node_modules` の mtime で稼働中と誤判定 |
 | `CANDIDATE-U-WTLIFE-005` | `node_modules` が directory junction の worktree を削除する。junction の先 (primary 役 dir) に印ファイルがある | junction は link だけが外れ、remove 後も primary の `node_modules` と印ファイルが残る。junction を辿る削除が起きない | junction を外さず `worktree remove` へ進む / 外した後の不在確認を省く |
 | `CANDIDATE-U-WTLIFE-006` | junction の unlink に失敗する fixture (権限なし/ファイル掴み) | その対象は remove せず、`junction_unresolved` を記録して先へ進む。remove は呼ばれない | unlink 失敗を無視して remove を呼ぶ |
 | `CANDIDATE-U-WTLIFE-007` | remove 後に primary の `node_modules` が欠けた fixture | 以降の対象の処理を全て止め、監査ログに `error`。run は非 0 | 欠落を検知しても次の対象へ進む |
@@ -43,9 +43,9 @@ updated: 2026-10-15
 | `CANDIDATE-U-WTLIFE-010` | `retained` で期限が未来、または回収条件が未成立の branch | 消さない (`retained`)。他の条件が全て満たされていても | 保持記録を参照せず merge 済みなら消す |
 | `CANDIDATE-U-WTLIFE-011` | 退避 ref の作成に失敗する fixture (`update-ref` が失敗) | 削除を行わない (S9)。branch と worktree は残り、`archive_failed` を記録する | 退避失敗を警告にして削除を続行する |
 | `CANDIDATE-U-WTLIFE-012` | 退避 ref を作ったが、読み戻した oid が作った oid と一致しない fixture | 削除を行わない | 読み戻し検証を省く |
-| `CANDIDATE-U-WTLIFE-013` | 現在の cwd がその worktree 配下 | `current_cwd` で消さない | cwd を見ない |
+| `CANDIDATE-U-WTLIFE-013` | **他プロセスが worktree 内で動いている状態**: (a) 呼び出し元の cwd が worktree の外で、別プロセスが内側で作業している状態を、直近の mtime で模擬する、(b) 呼び出し元の cwd がその worktree 配下 | (a) は他プロセスの cwd を観測せず、mtime ガードで `active_recently` として拒否される。(b) は `current_cwd` でも拒否される (補助)。呼び出し元が外にいることだけでは削除しない | 呼び出し元の cwd だけを見て他プロセスを無視する |
 | `CANDIDATE-U-WTLIFE-014` | primary checkout、`git worktree list` に未登録の dir、`C:/dev` 外の path | いずれも消さない | 登録の有無を見ない / primary を除外し忘れる |
-| `CANDIDATE-U-WTLIFE-015` | `pr merge` の後処理で、未コミットの変更がある (`merged` 状態) worktree | 退避せず消さない (`dirty_on_merged`)。`reaped` の同条件では退避して消す (028) | merged でも dirty を退避して消す |
+| `CANDIDATE-U-WTLIFE-015` | 未コミットの変更がある `merged` の worktree: (a) `pr merge` の後処理、(b) mtime が 6 時間静止したあとの `worktree prune --apply` | (a) は削除しない (`merged` の記録だけ)。(b) は退避・検証を済ませてから `--force` で削除し、worktree が消える (028・044) | 後処理で dirty を削除する / 退避前に削除する |
 | `CANDIDATE-U-WTLIFE-016` | 監査ログへの追記が失敗する fixture | その run の削除を行わない | 追記失敗を握りつぶして削除する |
 | `CANDIDATE-U-WTLIFE-017` | 判定前の `git fetch origin` が失敗する fixture | 削除しない (`fetch_failed`) | fetch 失敗時に古い `origin/main` で判定する |
 | `CANDIDATE-U-WTLIFE-018` | 保持記録のファイルが壊れた JSON | 何も削除しない。doctor は warn で「保持記録が壊れている」を出す | 壊れたら空と見なして全部消せる扱いにする |
@@ -62,16 +62,20 @@ updated: 2026-10-15
 | `CANDIDATE-U-WTLIFE-024` | 延長 (`extend`): 理由と新しい期限を渡す / 理由なし / 新しい期限が現在より過去 | 理由と未来の期限があるときだけ受理され、`extensions` に `{at, reason, previous_due, new_due, by}` が追記される (回数が履歴の length)。拒否時は記録が変わらず非 0 | 履歴を上書きする / 理由なしを受理する |
 | `CANDIDATE-U-WTLIFE-025` | 延長後の時刻での状態 | 新しい期限に基づき `retained`/`warning` に戻り、`reaped` にならない | 延長しても元の期限で回収する |
 | `CANDIDATE-U-WTLIFE-026` | 保持記録の作成 (`retain`): reason 空 / holder 空 / due が 0 個 / due が 2 個 | いずれも非 0 で終了し、記録を作らない。reason・holder・due が揃ったときだけ受理 | 理由なしの保持を認める |
-| `CANDIDATE-U-WTLIFE-027` | 保持記録が無く未 merge で 6 日 23 時間、7 日、の branch | 6 日台は `active`、7 日から `stale`。`stale` は doctor に警告され、自動削除されない | `stale` を自動削除する |
+| `CANDIDATE-U-WTLIFE-027` | 保持記録が無く未 merge の最終活動が 6 日 23 時間前と 7 日前の branch | 6 日台は `active`、7 日から `stale` で、この検出時刻 T0 に仮の保持記録 (due = T0 + 7 日) が作られる。`stale` の検出自体では削除されない | `stale` を検出時に削除する / T0 に記録を作らない |
 
 ### 3.3 退避と復元
 
 | Candidate | 観測 | 期待 | 殺す mutation |
 | --- | --- | --- | --- |
 | `CANDIDATE-U-WTLIFE-028` | `reaped` の worktree に未コミットの変更 (追跡ファイルの変更と未追跡ファイルの両方) | `refs/ut-tdd/archive/<branch>` に commit が作られ、その tree に追跡の変更と未追跡ファイルの両方が含まれる。実 index・作業ツリー・`git stash list` は退避前後で変わらない。そのあと worktree が外れる | 未追跡ファイルを退避から落とす / stash push を使う / 実 index を書き換える |
-| `CANDIDATE-U-WTLIFE-042` | **往復 (必須)**: 次を全て持つ worktree を「退避 → 削除 → `git worktree add <path> <archive ref>`」で復元する: 追跡ファイルの modified、staged の変更、追跡ファイルの削除、未追跡ファイル、入れ子の未追跡 dir、空白を含む名前、日本語名のファイル。ignored (`node_modules`・`.ut-tdd/state`) も置く | 復元した tree が、元の worktree の「ignored を除く全ファイル」と byte 同一 (内容 hash の集合が一致)。ignored 集合は退避に含まれないことも確かめる (宣言した除外集合と一致) | 素の `git stash create` を使う (未追跡ファイルが落ちる。**この mutant を 042 が必ず殺す**) / `add -A` を `add -u` にする / 日本語名・空白名で path を壊す / ignored を含めて node_modules を取り込む |
+| `CANDIDATE-U-WTLIFE-042` | **往復 (必須)**: 次を全て持つ worktree を「退避 → 検証 → 削除 → 復元」する: 追跡ファイルの modified、**partial stage の A/B/C (HEAD=A、index=B、worktree=C のファイル)**、追跡ファイルの削除、未追跡ファイル、入れ子の未追跡 dir、空白を含む名前、日本語名のファイル。ignored (`node_modules`・`.ut-tdd/state`) も置く。復元は新しい worktree に W の tree を展開し、`git read-tree <I>` で index を戻す | 復元した作業ツリーが、元の「ignored を除く全ファイル」と byte 同一 (内容 hash の集合が一致)。**復元した index の当該ファイルが B、作業ツリーが C**。ignored は退避に含まれない (宣言した除外集合と一致) | 素の `git stash create` を使う (未追跡が落ちる。**必ず殺す**) / worktree の内容だけを保存し staged を失う / `add -A` を `add -u` にする / 日本語名・空白名で path を壊す / ignored を含めて node_modules を取り込む |
 | `CANDIDATE-U-WTLIFE-043` | **退避失敗は削除しない (必須)**: 一時 index の作成、`commit-tree`、`update-ref` のそれぞれを失敗させた fixture (例: ref の lock 競合、書き込み不可) | どの失敗でも worktree と branch は残り、`archive_failed` が監査ログに出る。一時 index は残らない。実 index は変わらない | 失敗を警告にして削除を続行する / 一時 index を片付けない |
-| `CANDIDATE-U-WTLIFE-029` | main に含まれない commit と未コミット変更の両方 | 1 つの ref に載り、その commit の親が元の先端。commit も変更も復元できる | 2 つの ref に分けて片方を落とす |
+| `CANDIDATE-U-WTLIFE-044` | **force の条件 (実 git)**: 未コミット変更のある実 worktree で (a) 退避 → 検証 → `git worktree remove --force`、(b) 検証を改ざんした fixture (archive ref を別の oid に差し替える / 記録した tree hash を変える / I の親を欠かす) | (a) は成功し worktree が消える。clean な worktree では `--force` を使わない。(b) は `remove` を**試みず**(呼び出しを観測)、worktree と branch が残り `archive_verify_failed` が出る。plain `git worktree remove` が dirty で終了コード 128 になることも観測する | 検証前に `--force` する / 検証失敗でも `--force` で消す / clean な対象にも `--force` を使う |
+| `CANDIDATE-U-WTLIFE-045` | **稼働中ガードの fail-close**: mtime が読めない(権限なし、走査が途中で失敗する) worktree に `worktree prune --apply` | `activity_unknown` で消さない。他の条件が全て満たされていても | 読めないとき静止と見なして消す |
+| `CANDIDATE-U-WTLIFE-046` | **単一時計の境界**: stale を T0 に検出し、T0 / T0 + 7 日 − ε / T0 + 7 日 / T0 + 9 日 − ε / T0 + 9 日 の各時刻で状態を評価する。T0 の後に `prune` を 2 回再実行する | T0 から T0 + 7 日 − ε は `warning` (消さない)。T0 + 7 日 (= due) で `expired` (消さない)。T0 + 9 日 − ε は `expired`。T0 + 9 日で `reaped` (他条件を満たせば消せる)。再実行しても仮の保持記録は 1 件のまま、`created_at` と due は変わらない (idempotent) | T0 を再実行で更新する / 警告期間と猶予を別の時計にする / 境界を逆にする |
+| `CANDIDATE-U-WTLIFE-047` | **merged + 静止 → prune が削除**: `merged` として記録済みで、mtime が 6 時間 + 1 秒静止し、S1・S2・S3 を満たす worktree | `worktree prune --apply` で退避の要否を判定し、削除される。mtime が 6 時間未満なら消えない | merged を即削除する / 静止を見ない |
+| `CANDIDATE-U-WTLIFE-029` | main に含まれない commit と未コミット変更の両方 | 1 つの ref (W) に載り、W の親に I と元の先端がある。commit も変更も復元できる | 2 つの ref に分けて片方を落とす / 親を欠く |
 | `CANDIDATE-U-WTLIFE-030` | 同名の archive ref が既にある | 上書きせず `@<timestamp>` 付きの別名で退避する | 既存の退避を上書きする |
 | `CANDIDATE-U-WTLIFE-031` | 復元: 退避 ref から `git worktree add <path> <ref>` を実行 | 作業ツリーに退避時の追跡の変更と未追跡ファイルが復元される | ref が指す tree が空 |
 | `CANDIDATE-U-WTLIFE-032` | 退避後の監査ログ・SessionStart の通知 | archive ref 名と復元コマンドが出力される | 退避先を通知しない |
@@ -81,9 +85,9 @@ updated: 2026-10-15
 
 | Candidate | 観測 | 期待 | 殺す mutation |
 | --- | --- | --- | --- |
-| `CANDIDATE-U-WTLIFE-034` | `pr merge` で merge は成功し、後処理が例外を投げる fixture (git が落ちる、ロック、保持記録の破損) | `runPrMerge` の結果 `ok` と終了コード 0 は変わらず、出力に `cleanup=error:<reason>` が出る。merge は取り消されない | 後処理の失敗で `pr merge` を失敗にする |
+| `CANDIDATE-U-WTLIFE-034` | `pr merge` で merge は成功し、後処理(`merged` の記録)が例外を投げる fixture (保持記録の破損、書き込み不可) | `runPrMerge` の結果 `ok` と終了コード 0 は変わらず、出力に `cleanup=error:<reason>` が出る。merge は取り消されない | 後処理の失敗で `pr merge` を失敗にする |
 | `CANDIDATE-U-WTLIFE-035` | `pr merge` が DENY / `merge_failed` の場合 | 後処理を呼ばない (branch と worktree は残る) | merge に失敗しても片付ける |
-| `CANDIDATE-U-WTLIFE-036` | 安全な merged branch (先端が main に含まれ、保持なし、dirty なし) に `pr merge` | worktree が外れ、local branch が消え、`cleanup=removed` が出る。remote branch には触れない | 後処理が何もしない / remote branch を消す |
+| `CANDIDATE-U-WTLIFE-036` | 安全な merged branch に `pr merge` | `merged` (merge commit・時刻) が記録され、`cleanup=recorded` が出る。**worktree も local branch も remote branch も削除されない** (git の状態が前後で同一)。その後 mtime が 6 時間静止した状態の `worktree prune --apply` で worktree と local branch が削除される | 後処理が削除を行う / 記録が無く prune が対象に気づけない |
 | `CANDIDATE-U-WTLIFE-037` | `worktree prune` (dry-run、既定) | 「消せる / 保持中 (理由・期限) / 消せない (理由)」が列挙され、branch・worktree・ref・保持記録・監査ログが一切変わらない。`--apply` と同じ判定関数の結果と一致する | dry-run が副作用を持つ / dry-run と apply で判定が別経路 |
 | `CANDIDATE-U-WTLIFE-038` | doctor `worktree-retention` に、期限切れ・理由なし・壊れた記録・stale を含む fixture | 全て warn として列挙し、doctor の終了コードを変えない (fail-close しない)。集計行を出す | 警告を fail-close にする / 件数を出さない |
 | `CANDIDATE-U-WTLIFE-039` | SessionStart の digest に、`warning` と `expired` の対象がある fixture | `escalationLines` に対象・状態・保持者が載る。対象が無ければ行を足さない。生成が失敗しても session start は落ちない | 失敗で session start を落とす |
@@ -92,6 +96,6 @@ updated: 2026-10-15
 
 ## 4. 運用
 
-- 各 oracle は Green のあと、L6 の規則を 1 本だけ殺す mutation を手元で入れ (commit しない)、該当の行が fail することを確かめて PR の証跡に残す。001, 005, 011, 034, 042 を最優先で確かめる。
-- 必ず削除してはいけないケースの網羅 (001〜019 と 043) は、実装 PR の完了条件に含める。1 件でも `it.fails` のままなら merge しない。
+- 各 oracle は Green のあと、L6 の規則を 1 本だけ殺す mutation を手元で入れ (commit しない)、該当の行が fail することを確かめて PR の証跡に残す。001, 005, 011, 034, 042, 044 を最優先で確かめる。
+- 必ず削除してはいけないケースの網羅 (001〜019、043〜045) は、実装 PR の完了条件に含める。1 件でも `it.fails` のままなら merge しない。
 - 実 repo の既存 145 worktree / 540 branch に対する実行は、oracle の対象にしない (初回回収は L6 §10 の手順で行い、実行ごとに dry-run を記録する)。
