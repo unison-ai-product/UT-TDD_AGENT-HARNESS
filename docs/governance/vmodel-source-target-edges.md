@@ -18,7 +18,7 @@ tracked target slotへ展開するための一時的な設計参照である。d
 
 | `edge_id` | `source_id` | `disposition` | `target_type` | `target_ref` |
 |---|---|---|---|---|
-| `EDGE-001` | `ZIP-DOC-001` | `merge` | `plan_alias` | `PLAN-L0-01-vmodel-harness-upgrade-charter` |
+| `EDGE-001` | `ZIP-DOC-001` | `merge` | `artifact_path` | `docs/design/harness/L0-planning/charter.md` |
 | `EDGE-002` | `ZIP-DOC-002` | `merge` | `artifact_family` | `docs/design/harness/L1-requirements/` |
 | `EDGE-003` | `ZIP-DOC-003` | `merge` | `artifact_family` | `docs/design/harness/L3-functional/` |
 | `EDGE-004` | `ZIP-DOC-004` | `merge` | `artifact_family` | `docs/design/harness/L4-basic-design/` |
@@ -88,7 +88,7 @@ tracked target slotへ展開するための一時的な設計参照である。d
 | `EDGE-068` | `ZIP-DOC-068` | `reference` | `artifact_path` | `docs/governance/vmodel-document-scale-profiles.md` |
 | `EDGE-069` | `ZIP-DOC-069` | `merge` | `artifact_path` | `docs/design/harness/L1-requirements/nfr.md` |
 | `EDGE-070` | `ZIP-DOC-070` | `merge` | `artifact_path` | `docs/design/harness/L4-basic-design/architecture.md` |
-| `EDGE-071` | `ZIP-DOC-071` | `merge` | `plan_alias` | `PLAN-L0-01-vmodel-harness-upgrade-charter` |
+| `EDGE-071` | `ZIP-DOC-071` | `merge` | `artifact_path` | `docs/design/harness/L0-planning/charter.md` |
 | `EDGE-072` | `ZIP-DOC-072` | `merge` | `artifact_path` | `docs/design/harness/L4-basic-design/ui-standard.md` |
 | `EDGE-073` | `ZIP-DOC-073` | `reference` | `target_slot` | `DOC-L4-UI-STANDARD` |
 | `EDGE-074` | `ZIP-DOC-074` | `reference` | `target_slot` | `DOC-L4-UI-STANDARD` |

@@ -453,6 +453,24 @@ projection であり、LLM の「気づき」だけで発火させない (気づ
 10. LLM の判断を record 無しに消費しない。calibration 証拠の無い判断を機械判断へ昇格しない。モデルの高価さや
     tier を品質・authority の代替にしない。
 
+## 正本 1 個と生成物 (Canonical Contract + Derived Projection、PO 方針 2026-09-17)
+
+現行リリースでは、上流に無い field を下流が前提にする (#625 / #626)、receipt・admitted_at・review evidence を手書きする、
+PLAN / Reverse / test-design / receipt / projection / review evidence / Pack-Canary contract へ同一契約を複製する、といった
+二重管理が drift の原因になった。v4 は「同期を減らす」と「残った同期を自動化する」の 2 段構えで応える。
+
+- **正本を 1 個にして、他は生成物に落とす**: 要求・設計の正本 → Contract JSON / IR → チケット → 実装 → テスト / CI →
+  review → release receipt の順に導出する。required checks・artifact digest・対象 revision などは Contract JSON の
+  1 field を全員が参照する。
+- **人間 / AI が同じ意味の値を 2 箇所以上へ手書きすることを原則禁止する**。
+- 改善の順序: (1) 二重管理の削除 (PLAN に設計契約を複製しない、Reverse PLAN は状態 / 差分 record へ、review evidence の
+  手書き廃止)、(2) Canonical JSON 化 (requirement identity・design revision・artifact identity・dependencies・required
+  tests・required review・release gate)、(3) 派生物の自動生成 (チケット・test trace・review request・receipt・
+  release admission)、(4) 同期ではなく drift 検出 (「B は A から生成された digest X でなければ fail」)、
+  (5) 状態遷移の自動化 (CI green + review blocking 0 + dependency landed + receipt 存在 → 機械遷移)。(4) が要である。
+- 「PLAN 新規発行停止」「共通 JSON 正本」「チケット化」はこの方向の施策であり、プレリリース後の review コメント棚卸し
+  (PO 2026-09-16) の整理軸にもする。
+
 ## v3.1 資産の移行
 
 L0-L14 と正規 V-pair、Forward / Reverse / Recovery、9-mode と routeFiling SSoT、fail-close、cross-family
@@ -468,6 +486,13 @@ review、TypeScript/Node 一本 (ADR-001)、Pack 配布 (PLAN-L6-63 系) は Ker
 ③ Pack 経由の自己導入 → ④ 新ディレクトリ構成への再編 → ⑤ リバースリファクタリング (実装を製本に設計を検証・修正し、
 責務を分割する。上記 §移行 の最初の周回) → ⑥ 要件の再整理と凍結。工程と配布版の対応は
 `v4-roadmap/README.md` の結論表を正とする。
+
+### 自己ホスト consumer の goal (PO 更新 2026-10-08)
+
+goal は、Design 移行済みの範囲から開発ハーネスを **Pack 自己ホストの consumer** へ載せ、source repository / local checkout を
+実行時依存にしないことである。後段の v4 移行は、旧 Pack の導入 → 昇格済み新版の適用 → 設定・状態・履歴・依存グラフ・
+監査証跡の保持 → rollback → 再更新を実測で確かめる。各 release の **更新 / rollback / 再開は必須の受入**とする。
+自己ホストへの移行・新方式・層の振替は、個別の変更へ混ぜず、control の開始と正規契約の凍結を経てから行う。
 
 ## 非目標
 

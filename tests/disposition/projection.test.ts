@@ -15,6 +15,7 @@ const tables = [
   "vmodel_item_target_edges",
   "document_scale_profiles",
 ] as const;
+const repoRoot = process.cwd();
 
 describe("I-DISP-001 V-model projection", () => {
   it("materializes exact tracked identities and is a delete/rebuild fixed point", () => {
@@ -22,7 +23,7 @@ describe("I-DISP-001 V-model projection", () => {
     try {
       migrate(db);
       seedPlan(db);
-      projectVmodelAuthoring(process.cwd(), db);
+      projectVmodelAuthoring(repoRoot, db);
       expect(count(db, "vmodel_sources")).toBe(109);
       expect(count(db, "vmodel_categories")).toBe(21);
       expect(count(db, "vmodel_meta_source_mappings")).toBe(1);
@@ -42,6 +43,35 @@ describe("I-DISP-001 V-model projection", () => {
       clear(db);
       projectVmodelAuthoring(process.cwd(), db);
       expect(snapshot(db)).toEqual(first);
+    } finally {
+      db.close();
+    }
+  });
+
+  it.fails("CANDIDATE-U-DISPPTR-001: projects all pending items to physical-data without a PLAN seed", () => {
+    const db = openHarnessDb(":memory:");
+    try {
+      migrate(db);
+      projectVmodelAuthoring(repoRoot, db);
+      expect(count(db, "vmodel_semantic_items")).toBe(163);
+      expect(count(db, "vmodel_item_target_edges")).toBe(163);
+      const itemTargetColumns = db
+        .prepare("PRAGMA table_info(vmodel_item_target_edges)")
+        .all()
+        .map((column) => column.name);
+      expect(itemTargetColumns).toContain("design_path");
+      const pendingTargets = db
+        .prepare(
+          `SELECT target_status, plan_id, design_path
+             FROM vmodel_item_target_edges ORDER BY item_id`,
+        )
+        .all();
+      expect(pendingTargets).toHaveLength(163);
+      expect(pendingTargets.every((row) => row.target_status === "pending_review")).toBe(true);
+      expect(pendingTargets.every((row) => row.plan_id === null)).toBe(true);
+      expect(pendingTargets.map((row) => row.design_path)).toEqual(
+        Array(163).fill("docs/design/harness/L5-detailed-design/physical-data.md"),
+      );
     } finally {
       db.close();
     }
