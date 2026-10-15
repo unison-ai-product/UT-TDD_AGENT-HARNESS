@@ -209,7 +209,7 @@ describe("upstream schedule reader candidate oracles", () => {
     ).toHaveLength(11);
     expect(
       content.match(
-        /^\| (FR\/carry\/addendum|駆動モデル通過証明書|駆動モデルDB登録|引継ぎ完了の表現|行の欠落／曖昧性に対する fail-close) \|/gm,
+        /^\| (FR\/carry\/addendum -> WBS\/L7 対象網羅|駆動モデル通過証明書|駆動モデルDB登録|引継ぎ完了の表現|行の欠落／曖昧性に対する fail-close) \|/gm,
       ),
     ).toHaveLength(5);
   });
