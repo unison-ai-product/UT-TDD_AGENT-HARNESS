@@ -26,6 +26,7 @@ import {
   isolatedCanaryEnv,
   removeCanaryFixtureTree,
 } from "./support/pack-internal-canary.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 
 interface AcceptanceModule {
   CANARY_ASSETS: readonly string[];
@@ -202,7 +203,7 @@ const sha = (value: string) => `sha256:${createHash("sha256").update(value).dige
 afterEach(() => {
   for (const root of tempRoots.splice(0)) {
     if (root.startsWith(join(tmpdir(), "ut-tdd-packcanary-pr1-"))) removeCanaryFixtureTree(root);
-    else rmSync(root, { recursive: true, force: true });
+    else removeTestTree(root);
   }
 });
 
