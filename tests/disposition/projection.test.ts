@@ -1,16 +1,31 @@
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
+import {
+  accessSync,
+  chmodSync,
+  constants,
+  cpSync,
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  statSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { GitAuthoringProvenance } from "../../src/disposition/adapters/git-authoring-provenance.ts";
-import type { AuthoringProvenancePort } from "../../src/disposition/ports/authoring-provenance.ts";
 import { gitBlobOid } from "../../src/disposition/domain/authoring-provenance.ts";
+import type { AuthoringProvenancePort } from "../../src/disposition/ports/authoring-provenance.ts";
 import { openHarnessDb } from "../../src/state-db/index.ts";
 import { migrate } from "../../src/state-db/migration.ts";
-import { projectVmodelAuthoring } from "../../src/state-db/vmodel-projections.ts";
 import { rebuildHarnessDb } from "../../src/state-db/projection-writer.ts";
+import { projectVmodelAuthoring } from "../../src/state-db/vmodel-projections.ts";
 
 const tables = [
   "vmodel_sources",
@@ -107,7 +122,9 @@ describe("I-DISP-001 V-model projection", () => {
       expect(projectionFailure).toBeUndefined();
       expect(
         db
-          .prepare("SELECT target_status, plan_id, design_path FROM vmodel_item_target_edges WHERE edge_id = ?")
+          .prepare(
+            "SELECT target_status, plan_id, design_path FROM vmodel_item_target_edges WHERE edge_id = ?",
+          )
           .get("ITEM-TARGET-KIKAKU"),
       ).toMatchObject({
         target_status: "defer",
@@ -119,57 +136,186 @@ describe("I-DISP-001 V-model projection", () => {
     }
   });
 
-  it.fails("CANDIDATE-U-DISPPTR-003: after a valid path baseline, rejects independent invalid design_path values", () => {
-    const tempRoot = createDocsGitFixture({
-      ensureTracked: "docs/design/harness/L5-detailed-design/missing-physical-data.md",
-    });
-    rmSync(join(tempRoot, "docs/design/harness/L5-detailed-design/missing-physical-data.md"));
+  it.fails("CANDIDATE-U-DISPPTR-002 contrast: rejects legacy plan_id-only defer without a design_path column", () => {
     const db = openHarnessDb(":memory:");
     try {
       migrate(db);
       seedPlan(db);
-      const validLedger = ledgerWithDesignPath({
-        designPath: "docs/design/harness/L5-detailed-design/physical-data.md",
-        planId: "PLAN-L7-417-source-disposition-profile-projection",
-      });
-      let baselineFailure: unknown;
+      const ledger = legacyLedgerWithPlanOnlyDefer(
+        "PLAN-L7-417-source-disposition-profile-projection",
+      );
+      expect(ledger).not.toContain("design_path");
+      let projectionFailure: unknown;
       try {
-        projectVmodelAuthoring(tempRoot, db, authoringDepsWithLedger(tempRoot, validLedger));
+        projectVmodelAuthoring(repoRoot, db, authoringDepsWithLedger(repoRoot, ledger));
       } catch (error) {
-        baselineFailure = error;
+        projectionFailure = error;
       }
-      // Keep the negative variants behind a valid real-projector baseline. The
-      // current Red stops here at the unsupported design_path header.
-      expect(baselineFailure).toBeUndefined();
-      const invalidPaths = [
-        "docs/design/harness/L5-detailed-design/missing-physical-data.md",
-        "",
-        "physical-data.md",
-        "C:/docs/design/harness/L5-detailed-design/physical-data.md",
-        "docs/design/harness/../harness/L5-detailed-design/physical-data.md",
-        "docs\\design\\harness\\L5-detailed-design\\physical-data.md",
-        "docs/design/harness/L5-detailed-design/cafe\u0301.md",
-        "docs/design/harness/L5-detailed-design/../L5-detailed-design/physical-data.md",
-        "docs/governance/README.md",
-      ];
-
-      for (const designPath of invalidPaths) {
-        const invalidLedger = ledgerWithDesignPath({
-          designPath,
-          planId: "PLAN-L7-417-source-disposition-profile-projection",
-        });
-        let projectionFailure: unknown;
-        try {
-          projectVmodelAuthoring(tempRoot, db, authoringDepsWithLedger(tempRoot, invalidLedger));
-        } catch (error) {
-          projectionFailure = error;
-        }
-        expect(projectionFailure, `design_path=${JSON.stringify(designPath)}`).toBeInstanceOf(Error);
-      }
+      expect(projectionFailure).toBeInstanceOf(Error);
     } finally {
       db.close();
-      rmSync(tempRoot, { recursive: true, force: true });
     }
+  });
+
+  describe("CANDIDATE-U-DISPPTR-003 physical path variants", () => {
+    const validPath = "docs/design/harness/L5-detailed-design/physical-data.md";
+    const missingPath = "docs/design/harness/L5-detailed-design/missing-physical-data.md";
+    const unreadablePath = "docs/design/harness/L5-detailed-design/unreadable-fixture.md";
+    const gitSymlinkPath = "docs/design/harness/L5-detailed-design/git-symlink-fixture.md";
+    const junctionPath = "docs/design/harness/L5-detailed-design/junction-escape/target.md";
+    let tempRoot: string;
+    let junctionOutside: string | undefined;
+
+    beforeAll(() => {
+      tempRoot = createDocsGitFixture({ ensureTracked: missingPath });
+      rmSync(join(tempRoot, missingPath));
+      addTrackedFixtureFile(tempRoot, unreadablePath);
+      addTrackedFixtureFile(tempRoot, gitSymlinkPath);
+      const symlinkOid = execFileSync("git", ["hash-object", gitSymlinkPath], {
+        cwd: tempRoot,
+        encoding: "utf8",
+      }).trim();
+      execFileSync(
+        "git",
+        ["update-index", "--add", "--cacheinfo", `120000,${symlinkOid},${gitSymlinkPath}`],
+        { cwd: tempRoot, stdio: "ignore" },
+      );
+
+      addTrackedFixtureFile(tempRoot, junctionPath);
+      commitFixtureIndex(tempRoot);
+      expect(
+        execFileSync("git", ["ls-tree", "HEAD", "--", gitSymlinkPath], {
+          cwd: tempRoot,
+          encoding: "utf8",
+        }),
+      ).toMatch(/^120000\s/m);
+      expect(
+        execFileSync("git", ["ls-tree", "HEAD", "--", junctionPath], {
+          cwd: tempRoot,
+          encoding: "utf8",
+        }),
+      ).toMatch(/^100644\s/m);
+      junctionOutside = mkdtempSync(join(tmpdir(), "ut-t1-disposition-junction-outside-"));
+      writeFileSync(join(junctionOutside, "target.md"), "outside target\n", "utf8");
+      const junctionDirectory = dirname(join(tempRoot, junctionPath));
+      rmSync(junctionDirectory, { recursive: true });
+      const junctionParent = dirname(junctionDirectory);
+      symlinkSync(
+        junctionOutside,
+        join(junctionParent, "junction-escape"),
+        process.platform === "win32" ? "junction" : "dir",
+      );
+    });
+
+    afterAll(() => {
+      rmSync(tempRoot, { recursive: true, force: true });
+      if (junctionOutside) rmSync(junctionOutside, { recursive: true, force: true });
+    });
+
+    it.fails("rejects lexical/noncanonical paths after a valid tracked-path baseline", () => {
+      const db = openHarnessDb(":memory:");
+      try {
+        migrate(db);
+        seedPlan(db);
+        expect(projectFailure(tempRoot, db, validPath)).toBeUndefined();
+        const invalidPaths = [
+          missingPath,
+          "",
+          "physical-data.md",
+          "C:/docs/design/harness/L5-detailed-design/physical-data.md",
+          "docs/design/harness/../harness/L5-detailed-design/physical-data.md",
+          "docs\\design\\harness\\L5-detailed-design\\physical-data.md",
+          "docs/design/harness/L5-detailed-design/cafe\u0301.md",
+          "docs/design/harness/L5-detailed-design/../L5-detailed-design/physical-data.md",
+          "docs/governance/README.md",
+        ];
+
+        for (const designPath of invalidPaths) {
+          expect(
+            projectFailure(tempRoot, db, designPath),
+            `design_path=${JSON.stringify(designPath)}`,
+          ).toBeInstanceOf(Error);
+        }
+      } finally {
+        db.close();
+      }
+    });
+
+    const verifyPosixUnreadableTarget = () => {
+      const path = join(tempRoot, unreadablePath);
+      const originalMode = statSync(path).mode & 0o777;
+      chmodSync(path, 0);
+      try {
+        expect(statSync(path).mode & 0o444).toBe(0);
+        expect(() => accessSync(path, constants.R_OK)).toThrow();
+        const db = openHarnessDb(":memory:");
+        try {
+          migrate(db);
+          seedPlan(db);
+          expect(projectFailure(tempRoot, db, validPath)).toBeUndefined();
+          expect(projectFailure(tempRoot, db, unreadablePath)).toBeInstanceOf(Error);
+        } finally {
+          db.close();
+        }
+      } finally {
+        chmodSync(path, originalMode);
+      }
+    };
+
+    if (process.platform === "win32") {
+      it.skip("read-inaccessible target fixture requires POSIX permission semantics", () => {});
+    } else if (process.getuid?.() === 0) {
+      it.skip("root bypasses POSIX read-permission checks, so chmod is not an access-denial fixture", () => {});
+    } else {
+      it.fails(
+        "rejects a tracked target with no read permission on POSIX",
+        verifyPosixUnreadableTarget,
+      );
+    }
+
+    it.fails("rejects a Git mode-120000 target even when a regular worktree file exists", () => {
+      const path = join(tempRoot, gitSymlinkPath);
+      const indexEntry = execFileSync("git", ["ls-files", "--stage", "--", gitSymlinkPath], {
+        cwd: tempRoot,
+        encoding: "utf8",
+      });
+      expect(indexEntry).toMatch(/^120000\s/m);
+      expect(lstatSync(path).isFile()).toBe(true);
+
+      const db = openHarnessDb(":memory:");
+      try {
+        migrate(db);
+        seedPlan(db);
+        expect(projectFailure(tempRoot, db, validPath)).toBeUndefined();
+        expect(projectFailure(tempRoot, db, gitSymlinkPath)).toBeInstanceOf(Error);
+      } finally {
+        db.close();
+      }
+    });
+
+    it.fails("rejects a tracked target that resolves through a junction/symlink outside the fixture", () => {
+      if (!junctionOutside) throw new Error("junction escape fixture was not initialized");
+      const physicalTarget = realpathSync.native(join(tempRoot, junctionPath));
+      expect(existsSync(physicalTarget)).toBe(true);
+      expect(readFileSync(physicalTarget, "utf8")).toBe("outside target\n");
+      expect(physicalTarget.startsWith(realpathSync.native(junctionOutside))).toBe(true);
+      expect(
+        execFileSync("git", ["ls-files", "--error-unmatch", "--", junctionPath], {
+          cwd: tempRoot,
+          encoding: "utf8",
+        }).trim(),
+      ).toBe(junctionPath);
+
+      const db = openHarnessDb(":memory:");
+      try {
+        migrate(db);
+        seedPlan(db);
+        expect(projectFailure(tempRoot, db, validPath)).toBeUndefined();
+        expect(projectFailure(tempRoot, db, junctionPath)).toBeInstanceOf(Error);
+      } finally {
+        db.close();
+      }
+    });
   });
 
   describe("CANDIDATE-U-DISPPTR-007 rebuild boundary", () => {
@@ -191,7 +337,9 @@ describe("I-DISP-001 V-model projection", () => {
         expect(result.ok).toBe(true);
         expect(
           db
-            .prepare("SELECT authoring_source_path, projection_table FROM document_catalog_entries WHERE doc_type_id = ?")
+            .prepare(
+              "SELECT authoring_source_path, projection_table FROM document_catalog_entries WHERE doc_type_id = ?",
+            )
             .get("DOC-L0-CHARTER"),
         ).toMatchObject({
           authoring_source_path: targetPath,
@@ -199,7 +347,9 @@ describe("I-DISP-001 V-model projection", () => {
         });
         expect(
           db
-            .prepare("SELECT edge_id, target_type, target_ref FROM vmodel_source_target_edges WHERE edge_id IN (?, ?) ORDER BY edge_id")
+            .prepare(
+              "SELECT edge_id, target_type, target_ref FROM vmodel_source_target_edges WHERE edge_id IN (?, ?) ORDER BY edge_id",
+            )
             .all("EDGE-001", "EDGE-071"),
         ).toEqual([
           { edge_id: "EDGE-001", target_type: "artifact_path", target_ref: targetPath },
@@ -314,14 +464,35 @@ function rebuildFixture(root: string, db: ReturnType<typeof openHarnessDb>) {
   });
 }
 
+function projectFailure(root: string, db: ReturnType<typeof openHarnessDb>, designPath: string) {
+  try {
+    projectVmodelAuthoring(
+      root,
+      db,
+      authoringDepsWithLedger(
+        root,
+        ledgerWithDesignPath({
+          designPath,
+          planId: "PLAN-L7-417-source-disposition-profile-projection",
+        }),
+      ),
+    );
+  } catch (error) {
+    return error;
+  }
+  return undefined;
+}
+
 function clear(db: ReturnType<typeof openHarnessDb>): void {
   for (const table of [...tables].reverse()) db.exec(`DELETE FROM ${table}`);
   db.prepare("DELETE FROM findings WHERE source = ?").run("vmodel-item-target");
 }
 
 function ledgerWithDesignPath(input: { designPath: string; planId: string }): string {
-  const lines = readFileSync(join(repoRoot, "docs/governance/vmodel-item-target-ledger.md"), "utf8")
-    .split(/\r?\n/);
+  const lines = readFileSync(
+    join(repoRoot, "docs/governance/vmodel-item-target-ledger.md"),
+    "utf8",
+  ).split(/\r?\n/);
   let header: string[] | undefined;
   let inItemTable = false;
   const result = lines.map((line) => {
@@ -338,8 +509,13 @@ function ledgerWithDesignPath(input: { designPath: string; planId: string }): st
     if (/^\|\s*[-:| ]+\|\s*$/.test(line)) return `${line.slice(0, -1)}---|`;
 
     const columns = [...(header ?? []), "design_path"];
-    const values = line.split("|").slice(1, -1).map((cell) => cell.trim());
-    const cells = Object.fromEntries((header ?? []).map((key, index) => [key, values[index] ?? ""]));
+    const values = line
+      .split("|")
+      .slice(1, -1)
+      .map((cell) => cell.trim());
+    const cells = Object.fromEntries(
+      (header ?? []).map((key, index) => [key, values[index] ?? ""]),
+    );
     if (cells.edge_id === "`ITEM-TARGET-KIKAKU`") {
       cells.target_status = "`defer`";
       cells.target_kind = "`plan_alias`";
@@ -357,6 +533,22 @@ function ledgerWithDesignPath(input: { designPath: string; planId: string }): st
     return `| ${columns.map((key, index) => values[index] ?? "").join(" | ")} |`;
   });
   return result.join("\n");
+}
+
+function legacyLedgerWithPlanOnlyDefer(planId: string): string {
+  const expanded = ledgerWithDesignPath({ designPath: "", planId });
+  const lines = expanded.split(/\r?\n/);
+  let inItemTable = false;
+  return lines
+    .map((line) => {
+      if (!inItemTable && line.startsWith("| `edge_id` | `item_id` |")) inItemTable = true;
+      if (inItemTable && !line.startsWith("|")) inItemTable = false;
+      if (!inItemTable || !line.startsWith("|")) return line;
+      const cells = line.split("|");
+      cells.splice(-2, 1);
+      return cells.join("|");
+    })
+    .join("\n");
 }
 
 function authoringDepsWithLedger(
@@ -399,8 +591,43 @@ function createDocsGitFixture(input: { ensureTracked: string }): string {
   execFileSync("git", ["-c", "core.autocrlf=false", "add", "docs"], { cwd: root, stdio: "ignore" });
   execFileSync(
     "git",
-    ["-c", "user.name=UT-TDD test", "-c", "user.email=ut-tdd-test@example.invalid", "-c", "commit.gpgsign=false", "commit", "-m", "test fixture"],
+    [
+      "-c",
+      "user.name=UT-TDD test",
+      "-c",
+      "user.email=ut-tdd-test@example.invalid",
+      "-c",
+      "commit.gpgsign=false",
+      "commit",
+      "-m",
+      "test fixture",
+    ],
     { cwd: root, stdio: "ignore" },
   );
   return root;
+}
+
+function addTrackedFixtureFile(root: string, relativePath: string): void {
+  const path = join(root, relativePath);
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, "tracked fixture target\n", "utf8");
+  execFileSync("git", ["add", "--", relativePath], { cwd: root, stdio: "ignore" });
+}
+
+function commitFixtureIndex(root: string): void {
+  execFileSync(
+    "git",
+    [
+      "-c",
+      "user.name=UT-TDD test",
+      "-c",
+      "user.email=ut-tdd-test@example.invalid",
+      "-c",
+      "commit.gpgsign=false",
+      "commit",
+      "-m",
+      "add disposition target boundary fixtures",
+    ],
+    { cwd: root, stdio: "ignore" },
+  );
 }
