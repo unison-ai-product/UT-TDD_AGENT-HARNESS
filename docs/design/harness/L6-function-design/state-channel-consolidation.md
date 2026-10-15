@@ -169,7 +169,8 @@ classifyMemoryAdd({ kind, durableReason }) =
   1. 拒否規則の PR(§8 の 3)は、一覧の sha256(行を `memory_id` で昇順に並べ、LF 区切り・末尾 LF の canonical bytes に対する値)と件数を、**追跡される単一の小さい証跡ファイル `docs/migration/state-channel-target-snapshot.json`** に同じ PR で commit する(`{schema, sha256, count, recorded_at}` だけ)。置き場に `docs/migration/` を選ぶ理由は、既存の移行文書の置き場で追跡済み・レビュー対象であり、`.ut-tdd/` は実行時の状態で追跡しない規則だからである。
   2. 一覧の書き手は、一覧または証跡ファイルが既に存在すれば拒否する(`target_snapshot_exists`)。再生成・上書きの経路は持たない。
   3. 移行 PR は、何かを動かす前に (a) 一覧の sha256 と件数を証跡ファイルと照合し、(b) 一覧の各 entry について対象ファイルの bytes の sha256 を再計算して照合する。一覧の欠落(`target_snapshot_missing`)、行の追加・削除・置換(`target_snapshot_digest_mismatch`)、対象 bytes の変化(`target_bytes_changed`)のいずれかで、1 件も動かさず exit 1 で止まる。
-- **保持**: `durable_reason` を持つ project memory は、一覧に載っていても移さない。拒否規則の後に理由付きで受理された memory は一覧に載らず、移行後も `memory_entries` に残り検索できる。
+- **保持**: 検証(上の改ざん検知 3)が通った後で、**凍結時点で既に** `durable_reason` を持っていた project memory は、一覧に載っていても移さない(bytes は凍結時と同じなので検証は通る)。拒否規則の後に理由付きで受理された memory は一覧に載らず、移行後も `memory_entries` に残り検索できる。
+- **凍結後の編集**: 一覧の対象を凍結後に編集すると(`durable_reason` の追記を含む)bytes が変わるので、検証は all-or-nothing のまま `target_bytes_changed` で全体を止め、何も動かさない。保持規則を検証より先に評価して検証を飛ばす経路は持たない。operator の手順は、(1) 編集を凍結時の bytes に戻して再実行する、または (2) 残したい memory は**拒否規則の PR が凍結する前に** `durable_reason` を付けておく、の 2 つだけである。凍結後に追記して残す経路と再凍結の経路は無い(戻した memory は凍結一覧どおり移される)。この例外を足したくなったら、契約の改訂として別 PR で扱う。
 - **除外**: open な review request (terminal receipt が無い) が task 本文として参照している memory は移さない。custody の差し替え (§4) が先に入っていれば参照は存在しない。
 - **手段**: `memory.md` §4.2 の `memory retire` の退避部品 (write-ahead の manifest、`memory_entries` 行の同時削除、dry-run 既定) を、選別規則を差し替えて使う。`.ut-tdd/archive/memory-episodes/` へ移し、削除しない。dry-run の件数を PR に記録し、実行後に `ut-tdd db status` が `fresh` で、移した件数 + 残りの件数 = 移行前の総数であることを確かめる。
 - 移行はメモリの「整理」であって正本の変更ではないので、教訓の内容には触れない。
