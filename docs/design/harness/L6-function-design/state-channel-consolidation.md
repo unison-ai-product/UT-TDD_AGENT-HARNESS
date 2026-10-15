@@ -86,7 +86,7 @@ issue: 1062
 | --- | --- | --- |
 | B1: 通知レコードの id を `memoryId` の代わりにする | 置換が機械的 | custody が受信箱の存在に依存する。受信箱は消える (claim で除去) 前提の bus で、custody の正本にならない |
 | B2: 現状維持 (memory id) | 変更なし | 完了条件「custody がメモリを要求しない」を満たさない |
-| **B3: request 自体を錨にする (identity から `memoryId` を除く)** | identity は既に `pr` + `exactHead` + `authorFamily` で一意に決まる。memory id は opaque で、未指定時の代入値 `review:<pr>:<head>:<rev>` は同じ情報の再表現にすぎない。同一 head への request が 1 つに収束し、PO ルール「1 exact head に request は 1 つ」(重複 request が merge を塞ぐ) が構造で守られる | digest が変わる (migration window が要る、§4.3) |
+| **B3: request 自体を錨にする (identity から `memoryId` を除く)** | identity は既に `pr` + `exactHead` + `authorFamily` で一意に決まる。memory id は opaque で、未指定時の代入値 `review:<pr>:<head>:<rev>` は同じ情報の再表現にすぎない。同一 head への request が 1 つに収束し、PO ルール「1 exact head に request は 1 つ」(重複 request が merge を塞ぐ) が構造で守られる | digest が変わる (移行期間 が要る、§4.3) |
 
 **採択: B3**。理由は、メモリ id が identity に寄与している情報は無く、取り除いても一意性を失わず、むしろ重複 request の源 (memory ごとに別 digest) を断つからである。
 
@@ -107,7 +107,7 @@ issue: 1062
 
 - `memory_id` / `memoryPath` を持たない。`purpose=review` の reviewer への task 本文は、`review live-dispatch --task-file <path>` で渡された file を `.ut-tdd/review/requests/<digest>.task.md` に複製して使う (request と同じ置き場、同じ digest 名)。task 本文は identity に入れない (同じ digest に別の task 本文が来ても複製は先勝ちで上書きせず、警告を出す) (reviewer が著者の主張に束縛されないため、blind packet の規律を保つ)。
 - 発行口は `ut-tdd notify claude --ref <url> --body <text> [--operation-id <id>]` を 1 つだけ足す (`purpose=note`)。`purpose=review` は `review live-dispatch` が発行する (現行どおり)。
-- 配送 (Stop hook の選択・claim・terminal 判定・backlog 要約) は変えない。`decodeClaudeInboxEntry` は migration window の間、v3 / v4 の旧 entry も復号する (§4.3)。
+- 配送 (Stop hook の選択・claim・terminal 判定・backlog 要約) は変えない。`decodeClaudeInboxEntry` は 移行期間 の間、v3 / v4 の旧 entry も復号する (§4.3)。
 - 受信側は `ref` を読んで GitHub のコメントを確認する。通知の本文だけで判断を進めない (現行の描画文言「現行契約・HEAD・CI を再確認して処理してください」を維持し、「共有HARNESSメモリからの通知」を「通知レコードからの通知」に直す)。
 
 ## 4. review custody の差し替え
@@ -133,7 +133,7 @@ reviewRevision = "rv1-" + sha256(canonicalJson(reviewIdentityObjectV2))
 | window 中 (実装 PR) | 受理するが無視し、stderr に `review_memory_id_deprecated` を出す。request は v2 で作る。識別子の部分指定の検査 (`review_head_required`) は変えない |
 | cutover (最後の PR) | 指定したら exit 1 `review_memory_id_retired`。委譲 CLI の宣言入力の判定 (`reviewIdentityRequested`) から外す |
 
-### 4.3 migration window
+### 4.3 移行期間 (v1 と v2 の併存)
 
 - 読み取り側 (merge gate、`review-dispatch`、post-merge-backstop、provider-judgment-composition) は `review-request/v1` と `v2` の両方を検証する。書き込みは v2 だけ。
 - (a) **書き込み**: v2 cutover 以降、v1 の request / receipt を新規に作らない。例外は、cutover 前に始まった v1 の attempt を完了させる書き込みだけ (新しい head は v2 で始める)。
