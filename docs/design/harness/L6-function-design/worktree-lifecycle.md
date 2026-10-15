@@ -167,7 +167,7 @@ trash から戻す (purge される前)。archive commit は持たない。trash
 
 結果として `git rev-parse HEAD` が `head_oid` (unborn にならない) になり、index・作業ツリー・未追跡・ignored は reap 前と byte 同一で、`git worktree list` に現れる。`restored` を監査ログに残す。
 
-## 8. fail-open / fail-close
+## 8. 失敗時に止めるか進めるか (fail-open / fail-close)
 
 | 工程 | 失敗時 |
 |---|---|
