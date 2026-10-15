@@ -1,6 +1,7 @@
 ---
 layer: L5
-sub_doc: resource-kernel-wire-custody
+sub_doc: internal-processing
+artifact_role: topic_resource-kernel-wire-custody
 status: confirmed
 pair_artifact: docs/test-design/harness/L8-integration-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
