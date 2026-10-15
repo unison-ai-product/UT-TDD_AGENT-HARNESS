@@ -12,6 +12,7 @@ export interface RepositoryReadContract {
 }
 
 const CONTRACT_ROWS = `
+agent-guard-delegation-boundary:1
 asset-catalog:3 asset-drift:1 backfill-pairing:2 cited-command-existence:1 cli-surface:2 cli:1
 advisory-strict-gate-aging:4
 codex-hook-adapter:5 coding-rules:1 context-doc-router:2 cycle-p4-verification:5 db-currency:1 db-projection-coverage:1 db-projection-ingestion:3
