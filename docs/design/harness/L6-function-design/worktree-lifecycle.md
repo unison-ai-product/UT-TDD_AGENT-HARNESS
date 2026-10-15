@@ -1,7 +1,7 @@
 ---
 layer: L6
 artifact_type: design_doc
-status: draft
+status: confirmed
 sub_doc: function-spec
 artifact_role: topic_worktree_retention_lifecycle
 pair_artifact: docs/test-design/harness/L7-worktree-lifecycle-test-design.md

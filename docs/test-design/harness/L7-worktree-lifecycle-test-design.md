@@ -3,7 +3,8 @@ title: "L7 worktree lifecycle test design"
 layer: L7
 executed_at_layer: L7
 artifact_type: test_design
-status: draft
+pair_artifact: docs/design/harness/L6-function-design/worktree-lifecycle.md
+status: confirmed
 updated: 2026-10-15
 ---
 
