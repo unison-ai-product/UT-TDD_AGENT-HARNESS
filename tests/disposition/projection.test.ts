@@ -835,7 +835,11 @@ function createDocsGitFixture(fixtureOptions: {
     }
   }
   execFileSync("git", ["init", "--quiet"], { cwd: root, stdio: "ignore" });
-  execFileSync("git", ["-c", "core.autocrlf=false", "add", "docs"], { cwd: root, stdio: "ignore" });
+  writeFileSync(join(root, ".gitignore"), "/.ut-tdd/logs/feedback-lifecycle.jsonl\n", "utf8");
+  execFileSync("git", ["-c", "core.autocrlf=false", "add", "docs", ".gitignore"], {
+    cwd: root,
+    stdio: "ignore",
+  });
   execFileSync(
     "git",
     [
