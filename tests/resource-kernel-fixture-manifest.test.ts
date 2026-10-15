@@ -60,8 +60,9 @@ function planlessManifestFixture(manifestMutation?: (text: string) => string) {
     /^contract_doc: .*$/m,
     `contract_doc: ${L5_CANONICAL}`,
   );
-  if (changedManifestText === sourceManifestText) {
-    throw new Error("fixture manifest contract_doc was not updated in the isolated candidate copy");
+  const contractDocLines = changedManifestText.match(/^contract_doc: .*$/gm) ?? [];
+  if (contractDocLines.length !== 1 || contractDocLines[0] !== `contract_doc: ${L5_CANONICAL}`) {
+    throw new Error("fixture manifest contract_doc must be the canonical design path exactly once");
   }
   const manifestText = manifestMutation
     ? manifestMutation(changedManifestText)
