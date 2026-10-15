@@ -173,10 +173,10 @@ issue: 1069
 
 各 Green の後に Refactor (または「Refactor なし (理由)」) を置く (`CLAUDE.md` §PR スコープ規律 5)。
 
-## 12. 未決事項
+## 12. 決定事項 (control lane、2026-10-15)
 
-1. **削除 primitive の所有**: PLAN-L6-661 の `ut-tdd worktree remove` は draft で未実装 (`src/cli.ts` に `worktree` command は無い)。既定は「661 の primitive が先」だが、間に合わない場合は Green B で同じ契約の primitive を 1 箇所に置き、661 はその module を呼ぶ側に回る。実装着手時に PLAN-L6-661 の status を実測して決める。
-2. **稼働中の 6 時間ガード**: 手運用 script にある。本書は `worktree prune` のみに適用し、`pr merge` の後処理には適用しない、と暫定した。merge 直後は S1 (先端が main に含まれる) と S4 (cwd) が防護になる、という判断を実装 PR の review で確かめる。
+1. **削除 primitive の所有**: PLAN-L6-661 の `ut-tdd worktree remove` が先に入ればそれを共有する。先に入らなければ Green B が同じ契約の primitive を置き、661 はそれを呼ぶ側に回る。どちらかは実装着手時に PLAN-L6-661 の status を実測して決める。
+2. **稼働中の 6 時間ガード**: `worktree prune` / reap のみに適用する。`pr merge` の後処理は S1 (先端が origin/main に含まれる) と S4 (どのプロセスの cwd でもない) に依拠し、6 時間ガードは適用しない。
 
 ## 13. 採らない案
 
