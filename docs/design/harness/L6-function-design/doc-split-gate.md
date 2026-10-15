@@ -33,7 +33,7 @@ issue: 1032
 
 path は `/` 区切りに正規化する。内容は CRLF を LF に直してから数える。
 
-- **行数 (`lines`)**: 内容を `\n` で分けた行の数。末尾が `\n` で終わるときは、その後ろの空要素を数えない。空のファイルは 0。`wc -l` と同じ値になる (2026-10-14 実測: `function-spec.md` 2,515、`L7-unit-test-design.md` 3,107)。
+- **行数 (`lines`)**: 内容を `\n` で分けた行の数。末尾が `\n` で終わるときは、その後ろの空要素を数えない。空のファイルは 0。`wc -l` と同じ値になる。
 - **コードフェンス**: 行頭が 3 個のバッククォートの行で開閉する。フェンスの内側は、行数には含めるが、見出しと ID の抽出からは除く。
 - **責務の数 (`responsibilities`)** は class ごとに定義する。書式 (見出しの階層、ID を書くセルの位置) を変えるだけでは数が減らないことが要件である。
   - `l6-topic`: フェンスの外にある見出しのうち、`#` 1 個の題名を除く、レベル 2〜6 (`##` 〜 `######`) の**全見出しの合計**。階層を問わず合計するので、全見出しを `####` に下げる、`##` と `###` に分ける、といった階層の変更では数が減らない (レベル 1 の題名だけは文書ごとに 1 個の題名として除く)。レベル 7 以上は見出しではない。見出しの文言を変えずに階層だけを動かしても、見出しの個数は保たれる。
@@ -43,22 +43,22 @@ path は `/` 区切りに正規化する。内容は CRLF を LF に直してか
 
 ## 4. 閾値
 
-閾値は 2026-10-14 の `origin/main` 全文書 (対象 123 本: l6-topic 33、l7-topic 48、layer-doc 42) の実測から決めた。行数は肥大した 2 本を外れ値として分布から除き、残りの最大値に余裕を持たせて丸める。責務の数の上限 (l6-topic 16、l7-topic 4) は PO 確定値であり、数え方 (§3) を直しても動かさない。数え方を直した結果として上限を超える既存文書は、外れ値として §5 の baseline に載せる。
+閾値は 2026-10-14 の `origin/main` 全文書 (対象 123 本: l6-topic 33、l7-topic 48、layer-doc 42) の実測から決めた。行数は肥大した 2 本を外れ値として分布から除き、残りの最大値に余裕を持たせて丸める。責務の数の上限 (l6-topic 16、l7-topic 4) は PO 確定値であり、数え方 (§3) を直しても動かさない。数え方を直した結果として上限を超える既存文書は、外れ値として §5 の baseline に載せる (どの文書が載るかは Green の base commit での実測で決まり、本書には書かない)。
 
-**4.1 実測の分布**
+**4.1 実測の分布** (閾値を決めた 2026-10-14 時点の根拠。baseline の初期値ではなく、凍結後に更新しない。外れ値の個別の行数・責務の数は本書に固定しない)
 
 | class | 本数 | 行数の中央値 | 行数の p90 | 外れ値を除いた最大 | 外れ値 |
 |---|---|---|---|---|---|
-| `l6-topic` | 33 | 116 | 267 | 309 (`memory.md`) | `function-spec.md` 2,515 行 |
-| `l7-topic` | 48 | 73 | 157 | 230 (`L7-pack-publication-admission-binding-test-design.md`) | `L7-unit-test-design.md` 3,107 行 |
-| `layer-doc` | 42 | 193 | 525 | 1,385 (`L5-detailed-design/internal-processing.md`) | なし (連続した分布) |
+| `l6-topic` | 33 | 116 | 267 | 309 (`memory.md`) | 上限を超える文書は §5 の baseline (Green の base で測る) |
+| `l7-topic` | 48 | 73 | 157 | 230 (`L7-pack-publication-admission-binding-test-design.md`) | 上限を超える文書は §5 の baseline (Green の base で測る) |
+| `layer-doc` | 42 | 193 | 525 | 950 (`L3-functional/functional-requirements.md`) | 1200 行を超える文書は §5 の baseline (Green の base で測る) |
 
 | class | 責務の数 | 外れ値を除いた最大 | 外れ値 |
 |---|---|---|---|
-| `l6-topic` (`##`〜`######` の全見出しの合計) | 中央値 9、p90 19 | 16 超の外れ値 6 本: `function-spec.md` 90、`skill-admission.md` 26、`release-channel-manifest.md` 20、`consumer-trace-gates.md` 20、`memory.md` 19、`design-protection-diff-gate.md` 17 (いずれも §5 の baseline。`handover-mechanism.md` はコードフェンス内の見出しを除くと 16 で、外れ値ではない) | `function-spec.md` 90 |
-| `l7-topic` (表の全セルの family の数) | 中央値 1、p90 3 | 4 | `L7-unit-test-design.md` 138、`L7-release-consumer-dev-start-test-design.md` 5、`L7-session-start-order-test-design.md` 6 |
+| `l6-topic` (`##`〜`######` の全見出しの合計) | 中央値 9、p90 19 | 16 (上限。`handover-mechanism.md` はコードフェンス内の見出しを除くと 16 で、外れ値ではない) | 16 を超える文書は §5 の baseline (Green の base で測る) |
+| `l7-topic` (表の全セルの family の数) | 中央値 1、p90 3 | 4 (上限) | 4 を超える文書は §5 の baseline (Green の base で測る) |
 
-`layer-doc` の上位は `internal-processing.md` 1,385 行、`L3-functional/functional-requirements.md` 950 行、`physical-data.md` 895 行、`L1-requirements/screen-requirements.md` 566 行、`L8-integration-test-design.md` 525 行と連続している。
+`layer-doc` の上位は `L3-functional/functional-requirements.md` 950 行、`physical-data.md` 895 行、`L1-requirements/screen-requirements.md` 566 行、`L8-integration-test-design.md` 525 行と連続している。
 
 **4.2 決めた値**
 
@@ -66,15 +66,15 @@ path は `/` 区切りに正規化する。内容は CRLF を LF に直してか
 |---|---|---|---|
 | `l6-topic` | 400 | 16 | 行数は外れ値を除いた最大 (309 行) のおよそ 1.3 倍を丸める。責務の数 16 は PO 確定値 |
 | `l7-topic` | 400 | 4 | 行数は同 230 行のおよそ 1.7 倍。責務の数 4 は PO 確定値で、表の全セルで数えた family の分布の 90% 点 (3) の内側に収まる |
-| `layer-doc` | 1200 | なし | 連続した分布の中で、950 行までを許し、1,385 行を外れ値として baseline に載せる |
+| `layer-doc` | 1200 | なし | 連続した分布の中で、950 行までを許し、1200 行を超える文書を外れ値として baseline に載せる |
 
-この値で既存の違反は 10 本 (§5 の初期値) になる。閾値は `src/lint/doc-split.ts` の定数 `DOC_SPLIT_LIMITS` に置く。値を変える変更は設計の改訂 (本書の §4.2 と oracle の同時改訂) として扱い、baseline に既存違反を足して通すことはしない (§5)。この閾値は PO 確定 (2026-10-14) であり、責務の数え方 (§3) を直しても変えない。
+この値で上限を超える既存文書は、Green の base commit での実測により §5 の baseline の行になる (本数は本書に固定しない)。閾値は `src/lint/doc-split.ts` の定数 `DOC_SPLIT_LIMITS` に置く。値を変える変更は設計の改訂 (本書の §4.2 と oracle の同時改訂) として扱い、baseline に既存違反を足して通すことはしない (§5)。この閾値は PO 確定 (2026-10-14) であり、責務の数え方 (§3) を直しても変えない。
 
 ## 5. baseline
 
 - 既存の違反は **`docs/governance/doc-split-baseline.json`** に、文書の path ごとに `{ "lines": n, "responsibilities": m }` として記録する (`layer-doc` の `responsibilities` は `null`)。1 文書を 1 行に書き、path の昇順に並べる。複数の分割 PR が別々の文書の行を縮めても、git が行単位で衝突なく merge できる。
 - **置き場所を src の外にする理由**: 設計書保護 gate (`design-protection-diff-gate.md` §3 / §4 / §10) は、`src/` か `scripts/` を含む PR で `docs/design/` と `docs/test-design/` の M / D / R を拒否する。baseline を `src/` に置くと、文書を縮める PR が `src/` を含むので拒否され、分割と baseline の更新を同じ PR で出せない (分割だけ先に出せば `doc-split-stale-baseline`、baseline だけ先に縮めれば `exceeds-baseline` で、どちらの中間状態も本 gate 自身が止める)。`docs/governance/` は保護 path (`docs/design/`、`docs/test-design/`) の外なので、docs だけの分割 PR が文書と baseline を同時に変えられる。閾値の定数 `DOC_SPLIT_LIMITS` は `src/` に置くままでよい (閾値の変更は設計の改訂であり、分割 PR で動かさない)。
-- 初期値 (実装 PR で入れる。2026-10-14 の再測定、path の昇順に 1 文書 1 行): `docs/design/harness/L5-detailed-design/internal-processing.md` が `{ "lines": 1385, "responsibilities": null }`、`docs/design/harness/L6-function-design/consumer-trace-gates.md` が `{ "lines": 208, "responsibilities": 20 }`、`design-protection-diff-gate.md` が `{ "lines": 267, "responsibilities": 17 }`、`function-spec.md` が `{ "lines": 2515, "responsibilities": 90 }`、`memory.md` が `{ "lines": 309, "responsibilities": 19 }`、`release-channel-manifest.md` が `{ "lines": 203, "responsibilities": 20 }`、`skill-admission.md` が `{ "lines": 207, "responsibilities": 26 }`、`docs/test-design/harness/L7-release-consumer-dev-start-test-design.md` が `{ "lines": 224, "responsibilities": 5 }`、`L7-session-start-order-test-design.md` が `{ "lines": 74, "responsibilities": 6 }`、`L7-unit-test-design.md` が `{ "lines": 3107, "responsibilities": 138 }`。実装 PR は着手時に実測し直して書く (責務の数は縮むだけなので、実測が初期値より大きいときは数え方の食い違いであり、baseline を増やして通さず、本節を改訂する)。**新規文書は baseline に載せない**: 本書 (`doc-split-gate.md`) と `L7-doc-split-gate-test-design.md` は新規なので、責務の数を上限の内側に収めておく (本書は見出し 15、L7 は family 4)。`handover-mechanism.md` はコードフェンス内の見出しを数えないと 16 で、上限の内側なので載せない。
+- 初期値 (本文に数値を固定しない): 初期の baseline は、**実装 PR (Green) の base commit で、本書 §3 の測り方 (gate 自身の測定規則) により実測し**、その時点で §4.2 の上限を超えている文書だけを、path の昇順に 1 文書 1 行で `docs/governance/doc-split-baseline.json` に記録して、同じ Green PR で入れる (記録する文書の集合は「Green の base commit で上限を超える文書」であり、本書は列挙しない)。理由: main は Green が入るまで育ち続けるので、本文に固定した行数・責務の数は必ず古くなり、レビューのたびに本文の改訂が要る (PR #1034 の r5 で FLAG)。記録後は §5 の規則が働き、各文書の値は**縮むだけ**で、増えれば `doc-split-baseline-grown` (比較元との差) と `exceeds-baseline` で fail-close する。Green の base 以降に main で値が育った分は、Green PR が rebase / merge した後に再測定して記録する (記録値は常に Green PR の head の実測と一致させる。食い違いは `doc-split-stale-baseline` か `exceeds-baseline` になる)。**新規文書は baseline に載せない**: 本書 (`doc-split-gate.md`) と `L7-doc-split-gate-test-design.md` は新規なので、責務の数を上限の内側に収めておく (本書は見出し 15、L7 は family 4)。`handover-mechanism.md` はコードフェンス内の見出しを数えないと 16 で、上限の内側なので載せない。
 - **rename の引き継ぎ**: 同じ種別の rename・移動 (`from` → `to`) で、`to` の baseline の行を新しく置くときは、`previousBaseline` に `from` の行があり、`to` の値が `from` の値以下であることを条件に、`previousBaseline` に無い行の追加として扱わない。同じ変更で `from` の行を消す (消さないと `missing-file`)。値を増やす、`from` の行が無い、種別が変わる、のいずれかは §6 の finding になる。
 - 縮小のみの比較元: baseline そのものが増やされると §6 の規則は素通りする。そこで `previousBaseline` (比較元) を入力に取り、各文書の `lines` と `responsibilities` が比較元より増えたら、または比較元に無い文書が (上の引き継ぎを除いて) baseline に足されたら `doc-split-baseline-grown` で fail-close する。比較元は、doctor と CLI が `git merge-base HEAD origin/main` の commit にある `docs/governance/doc-split-baseline.json` を `git show` で読み、`JSON.parse` して得る。merge-base は解決できたがその commit にファイルが無いときは、baseline を初めて入れる PR とみなして比較を省く (`previousBaseline = null`)。merge-base を解決できない、またはファイルはあるが読めない・解釈できないときは `doc-split-baseline-base-unreadable` で fail-close する。git の起動には `windowsHide: true` を付ける (issue #693)。
 
@@ -190,6 +190,6 @@ path は `/` 区切りに正規化する。内容は CRLF を LF に直してか
 ## 11. 根拠
 
 - issue #1032 (PO 指摘 2026-10-14: 「そもそも設計が 1 枚のドキュメントに依存しすぎ」「文書分割自体が機能してないのが問題。ここもルールやゲートで分割指示が出るようにすべき」)。
-- 2026-10-14 の実測: `function-spec.md` 2,515 行、`L7-unit-test-design.md` 3,107 行、同日の設計還流で open の branch 9 本と 7 本が同じ文書を同時に変更。責務の数え方の再測定 (`##`〜`######` の全見出しの合計、表の全セルの family) もこの日の `origin/main` の対象 123 本で行った。
+- 2026-10-14 の実測: 肥大した 2 本 (`function-spec.md`、`L7-unit-test-design.md`)、同日の設計還流で open の branch 9 本と 7 本が同じ文書を同時に変更。責務の数え方の再測定 (`##`〜`######` の全見出しの合計、表の全セルの family) もこの日の `origin/main` の対象 123 本で行った。
 - baseline の型: `docs/design/harness/L6-function-design/windows-hide-spawn-guard.md` (issue #693) §4。
 - PR の順序: `docs/design/harness/L6-function-design/design-protection-diff-gate.md` §3 / §4 / §10.2 / §10.3。
