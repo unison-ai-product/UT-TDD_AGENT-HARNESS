@@ -13,7 +13,7 @@
 # 実 runner 証跡は本 manifest の対象外 (PLAN-L5-25 §7.2 (B) が confirmed 昇格条件として保持する)。
 schema_version: v1
 plan_id: PLAN-L5-25-resource-kernel-physical-protocol
-contract_doc: docs/plans/PLAN-L5-25-resource-kernel-physical-protocol.md
+contract_doc: docs/design/harness/L5-detailed-design/resource-kernel-wire-custody.md
 pair_artifact: docs/test-design/harness/L8-integration-test-design.md
 fixture_root: tests/fixtures/resource-kernel
 fixtures:

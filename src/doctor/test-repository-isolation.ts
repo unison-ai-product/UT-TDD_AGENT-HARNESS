@@ -184,6 +184,12 @@ repositoryReadContracts["tests/design-protection-repository-contract.test.ts"] =
   reason:
     "design-protection repository-contract oracles resolve subject and repository paths from the writable execution snapshot",
 };
+repositoryReadContracts["tests/upstream-schedule-reader.test.ts"] = {
+  mode: "head_snapshot",
+  calls: 1,
+  reason:
+    "upstream-schedule reader oracles seed isolated filesystem fixtures from the immutable L3 topic",
+};
 
 export const REPOSITORY_READ_CONTRACTS: Readonly<Record<string, RepositoryReadContract>> =
   repositoryReadContracts;

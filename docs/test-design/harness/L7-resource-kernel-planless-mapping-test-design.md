@@ -14,8 +14,8 @@ parent_doc: docs/design/harness/L5-detailed-design/resource-kernel-wire-custody.
 本書は、[resource-kernel-wire-custody.md](../../design/harness/L5-detailed-design/resource-kernel-wire-custody.md) D.5の
 Resource Kernel契約索引と、[L8-integration-test-design.md](./L8-integration-test-design.md)の
 `IT-RGK-PHYS-001..042` freeze表との双方向・全数対応、およびfixture manifestの42件の契約参照を、
-`docs/plans/`を入力にせず検査する候補oracleを定義する。
-これは未実装の目標契約であり、candidate IDは正式昇格済みIDではない。本書追加だけで既存lint/testが
+`docs/plans/`を入力にせず検査する正式oracleを定義する。4件のoracle IDは正式昇格済みだが、
+対応するPLAN非依存動作がGreenになったことは示さない。本書の追加やID昇格だけで既存lint/testが
 PLAN非依存になった、あるいはPLAN退役を完了したとは扱わない。
 
 本書の完了受入条件は、対象gateとその回帰testが`docs/plans/` path自体の無いsnapshotで通ること
@@ -30,21 +30,21 @@ PLAN非依存になった、あるいはPLAN退役を完了したとは扱わな
 - L8 freeze属性のlane表/宣言との集合一致、lane件数、fixture対応など既存の検査範囲はこの変更で弱めない。
 - 表の行・契約説明・oracle対応を再設計しない。付録D.5の58行は既存表と内容同一のまま保持する。
 
-## 候補オラクル
+## 正式オラクル
 
-| Candidate ID | 入力 | 期待するGreen不変条件 | 変異/旧動作でのRed |
+| Oracle ID | 入力 | 期待するGreen不変条件 | 変異/旧動作でのRed |
 |---|---|---|---|
-| `CANDIDATE-U-RGKPAIR-PLANLESS-001` | `docs/plans/` pathが存在しない一時snapshotに付録D.5とL8 freeze表だけを置き、対応gateを呼ぶ | gateがこの2 canonical documentだけから入力を読み、成功する。読み取り対象記録にPLAN pathが無い | PLAN-L5-25の固定pathを開く、またはPLANへfallbackすると、対象path欠落でfailする |
-| `CANDIDATE-U-RGKPAIR-PLANLESS-002` | 上と同じsnapshotで、L5表のID・L8表のID・mapping参照を基準集合から一要素ずつ欠落/重複/未知IDへ変異する | それぞれの欠陥を特定ID付きでfail-closeし、PLAN有無に結果が左右されない | Set化で重複を吸収、未知IDを無視、片方向だけを比較、空sectionを空集合同士としてPASSする |
-| `CANDIDATE-U-RGKPAIR-PLANLESS-003` | 契約IDは全て残し、単独で参照されるoracle `004` を指す唯一のedge (`C-RGK-34`) を、既知oracle `028` へ差替える。また別入力ではL8の該当oracle行だけを除去する | 対応差分と両方向の孤児を検出する。正しい表では58契約・42 oracleの全行を検査する | 集合全体の件数だけ比較し、意味のあるpair edge差分または単独被覆oracle `004` の孤児化を見逃す |
-| `CANDIDATE-U-RGKPAIR-PLANLESS-004` | src-free正式昇格後のfixture manifest (`contract_doc`だけを新L5 pathへ更新し、`plan_id`・42件のentryと各`contract_ref`は不変) と、`docs/plans/`を含まないsnapshotのD.5/D.6・L8 freeze表をfixture-manifest checkへ渡す | manifestの42件すべてを保持したまま、各§1〜§6 locatorを付録D.6の対応見出しへ解決し、既存の契約/oracle対応検査を行う。読取対象にPLAN pathがなく、fallbackもない | 固定PLAN pathを入力として読む、または参照先を解決するためPLANへfallbackする |
+| `U-RGKPAIR-PLANLESS-001` | `docs/plans/` pathが存在しない一時snapshotに付録D.5とL8 freeze表だけを置き、対応gateを呼ぶ | gateがこの2 canonical documentだけから入力を読み、成功する。読み取り対象記録にPLAN pathが無い | PLAN-L5-25の固定pathを開く、またはPLANへfallbackすると、対象path欠落でfailする |
+| `U-RGKPAIR-PLANLESS-002` | 上と同じsnapshotで、L5表のID・L8表のID・mapping参照を基準集合から一要素ずつ欠落/重複/未知IDへ変異する | それぞれの欠陥を特定ID付きでfail-closeし、PLAN有無に結果が左右されない | Set化で重複を吸収、未知IDを無視、片方向だけを比較、空sectionを空集合同士としてPASSする |
+| `U-RGKPAIR-PLANLESS-003` | 契約IDは全て残し、単独で参照されるoracle `004` を指す唯一のedge (`C-RGK-34`) を、既知oracle `028` へ差替える。また別入力ではL8の該当oracle行だけを除去する | 対応差分と両方向の孤児を検出する。正しい表では58契約・42 oracleの全行を検査する | 集合全体の件数だけ比較し、意味のあるpair edge差分または単独被覆oracle `004` の孤児化を見逃す |
+| `U-RGKPAIR-PLANLESS-004` | 正式昇格後のfixture manifest (`contract_doc`だけを新L5 pathへ更新し、`plan_id`・42件のentryと各`contract_ref`は不変) と、`docs/plans/`を含まないsnapshotのD.5/D.6・L8 freeze表をfixture-manifest checkへ渡す | manifestの42件すべてを保持したまま、各§1〜§6 locatorを付録D.6の対応見出しへ解決し、既存の契約/oracle対応検査を行う。読取対象にPLAN pathがなく、fallbackもない | 固定PLAN pathを入力として読む、または参照先を解決するためPLANへfallbackする |
 
-## 実装・昇格受入 (未実装)
+## 実装受入 (未実装)
 
-1. この契約・Red段階では候補IDでテストを登録する。期待失敗や旧PLAN固定readerによる失敗は、個別規則のmutation証拠でも、source実装済み・Green済みの根拠でもない。
-2. 候補Redの後、別のsrc-free正式昇格PRで候補IDを正式IDへ昇格し、fixture manifestの`contract_doc`だけを`docs/design/harness/L5-detailed-design/resource-kernel-wire-custody.md`へ変更する。`plan_id`は歴史的識別子として保持し、42件のentry、全`contract_ref`値、fixture属性は変更しない。このポインタ移設をRed登録と同一PRにもGreen実装PRにも混在させない。
+1. 正式IDのtest failureや旧PLAN固定readerによる失敗は、個別規則のmutation証拠でも、source実装済み・Green済みの根拠でもない。
+2. 正式昇格では候補IDを正式IDへ昇格し、fixture manifestの`contract_doc`だけを`docs/design/harness/L5-detailed-design/resource-kernel-wire-custody.md`へ変更する。`plan_id`は歴史的識別子として保持し、42件のentry、全`contract_ref`値、fixture属性は変更しない。このポインタ移設をRed登録やGreen実装PRに混在させない。
 3. Green実装PRではreaderと必要なtest loaderだけを更新し、L5/L8/manifestなどdocs変更は0とする。fixture-manifest readerはmanifestの`contract_doc`を契約入力として読み、pair-mapping readerはL5 canonical文書のD.5を読む。`§1`〜`§6`および`§4.1`を、D.6の同番号`source §...`見出しへ解決する。固定PLAN path読取とfallbackは両検査・test loaderとも0。
-4. `docs/plans/` treeを物理的に欠くtest snapshotでcandidate/formalized 001〜004の対応testを実行し、さらにdoctor hard gateと両検査が通ることを記録する。58契約・42 oracleのexact集合、lane分布、fixture対応、重複/未知/孤児検出という現行保証を維持する。実OS runner証跡やResource Kernel本体の実装をGreenへ読み替えない。
+4. `docs/plans/` treeを物理的に欠くtest snapshotで正式ID 001〜004の対応testを実行し、さらにdoctor hard gateと両検査が通ることを記録する。58契約・42 oracleのexact集合、lane分布、fixture対応、重複/未知/孤児検出という現行保証を維持する。実OS runner証跡やResource Kernel本体の実装をGreenへ読み替えない。
 5. repository全体で`docs/plans/`を退役させる完了判定は、同pathを読む他のgate/testも解消された後に別途確認する。本書は全体退役の実測証拠ではない。
 
 ## 出典locatorの解決
@@ -65,7 +65,7 @@ PLAN非依存になった、あるいはPLAN退役を完了したとは扱わな
 | §5 | D.6 source §5 — platform portとfailure isolation | C-RGK-48..50 |
 | §6 | D.6 source §6 — companion bundle配置と供給網境界 | C-RGK-51..58 |
 
-この対応は、詳細本文への物理的移設と既存locatorの保持を示す。D.5の契約記述・ID・oracle参照およびmanifestの42件の`contract_ref`値は変更しない。契約PRではmanifestを変更せず、後続のsrc-free正式昇格PRで`contract_doc` pathだけをL5へ移す。gate/testは付録D.5/D.6、L8とmanifestを照合し、旧PLANを開かない。
+この対応は、詳細本文への物理的移設と既存locatorの保持を示す。D.5の契約記述・ID・oracle参照およびmanifestの42件の`contract_ref`値は変更しない。src-free正式昇格ではmanifestの`contract_doc` pathだけをL5へ移し、他属性は保持する。gate/testは付録D.5/D.6、L8とmanifestを照合し、旧PLANを開かない。
 
 ## 範囲外
 
