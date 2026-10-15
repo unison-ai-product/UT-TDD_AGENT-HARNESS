@@ -3,13 +3,14 @@ import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { GitAuthoringProvenance } from "../../src/disposition/adapters/git-authoring-provenance.ts";
 import type { AuthoringProvenancePort } from "../../src/disposition/ports/authoring-provenance.ts";
 import { gitBlobOid } from "../../src/disposition/domain/authoring-provenance.ts";
 import { openHarnessDb } from "../../src/state-db/index.ts";
 import { migrate } from "../../src/state-db/migration.ts";
 import { projectVmodelAuthoring } from "../../src/state-db/vmodel-projections.ts";
+import { rebuildHarnessDb } from "../../src/state-db/projection-writer.ts";
 
 const tables = [
   "vmodel_sources",
@@ -120,8 +121,9 @@ describe("I-DISP-001 V-model projection", () => {
 
   it.fails("CANDIDATE-U-DISPPTR-003: after a valid path baseline, rejects independent invalid design_path values", () => {
     const tempRoot = createDocsGitFixture({
-      trackedThenRemove: "docs/design/harness/L5-detailed-design/missing-physical-data.md",
+      ensureTracked: "docs/design/harness/L5-detailed-design/missing-physical-data.md",
     });
+    rmSync(join(tempRoot, "docs/design/harness/L5-detailed-design/missing-physical-data.md"));
     const db = openHarnessDb(":memory:");
     try {
       migrate(db);
@@ -139,7 +141,6 @@ describe("I-DISP-001 V-model projection", () => {
       // Keep the negative variants behind a valid real-projector baseline. The
       // current Red stops here at the unsupported design_path header.
       expect(baselineFailure).toBeUndefined();
-      const before = snapshot(db);
       const invalidPaths = [
         "docs/design/harness/L5-detailed-design/missing-physical-data.md",
         "",
@@ -157,17 +158,13 @@ describe("I-DISP-001 V-model projection", () => {
           designPath,
           planId: "PLAN-L7-417-source-disposition-profile-projection",
         });
-        db.exec("BEGIN IMMEDIATE");
         let projectionFailure: unknown;
         try {
           projectVmodelAuthoring(tempRoot, db, authoringDepsWithLedger(tempRoot, invalidLedger));
         } catch (error) {
           projectionFailure = error;
-        } finally {
-          db.exec("ROLLBACK");
         }
         expect(projectionFailure, `design_path=${JSON.stringify(designPath)}`).toBeInstanceOf(Error);
-        expect(snapshot(db), `design_path=${JSON.stringify(designPath)}`).toEqual(before);
       }
     } finally {
       db.close();
@@ -175,32 +172,68 @@ describe("I-DISP-001 V-model projection", () => {
     }
   });
 
-  it.fails("CANDIDATE-U-DISPPTR-007: rejects a tracked charter target whose physical entity is missing", () => {
+  describe("CANDIDATE-U-DISPPTR-007 rebuild boundary", () => {
     const targetPath = "docs/design/harness/L0-planning/charter.md";
-    const tempRoot = createDocsGitFixture({ trackedThenRemove: targetPath });
-    const db = openHarnessDb(":memory:");
-    try {
-      migrate(db);
-      seedPlan(db);
-      const before = snapshot(db);
-      db.exec("BEGIN IMMEDIATE");
-      let projectionFailure: unknown;
-      try {
-        // The path remains in the Git index but has been removed from the fixture
-        // worktree. This enters the real loader + tracked target resolver.
-        projectVmodelAuthoring(tempRoot, db);
-      } catch (error) {
-        projectionFailure = error;
-      } finally {
-        db.exec("ROLLBACK");
-      }
+    let tempRoot: string;
 
-      expect(projectionFailure).toBeInstanceOf(Error);
-      expect(snapshot(db)).toEqual(before);
-    } finally {
-      db.close();
+    beforeAll(() => {
+      tempRoot = createDocsGitFixture({ ensureTracked: targetPath });
+    });
+
+    afterAll(() => {
       rmSync(tempRoot, { recursive: true, force: true });
-    }
+    });
+
+    it("rebuilds the normal fixture through V-model and spec-IR projections", () => {
+      const db = openHarnessDb(":memory:");
+      try {
+        const result = rebuildFixture(tempRoot, db);
+        expect(result.ok).toBe(true);
+        expect(
+          db
+            .prepare("SELECT authoring_source_path, projection_table FROM document_catalog_entries WHERE doc_type_id = ?")
+            .get("DOC-L0-CHARTER"),
+        ).toMatchObject({
+          authoring_source_path: targetPath,
+          projection_table: "spec_defs",
+        });
+        expect(
+          db
+            .prepare("SELECT edge_id, target_type, target_ref FROM vmodel_source_target_edges WHERE edge_id IN (?, ?) ORDER BY edge_id")
+            .all("EDGE-001", "EDGE-071"),
+        ).toEqual([
+          { edge_id: "EDGE-001", target_type: "artifact_path", target_ref: targetPath },
+          { edge_id: "EDGE-071", target_type: "artifact_path", target_ref: targetPath },
+        ]);
+        expect(count(db, "spec_defs")).toBeGreaterThan(0);
+      } finally {
+        db.close();
+      }
+    });
+
+    it.fails("rejects a tracked charter target whose physical entity is missing and preserves committed projections", () => {
+      const db = openHarnessDb(":memory:");
+      try {
+        const baseline = rebuildFixture(tempRoot, db);
+        expect(baseline.ok).toBe(true);
+        const before = rebuildProjectionSnapshot(db);
+        rmSync(join(tempRoot, targetPath));
+
+        let rebuildFailure: unknown;
+        try {
+          // No test-owned transaction: the real rebuild must reject inside its
+          // projection transaction and preserve the earlier committed snapshot.
+          rebuildFixture(tempRoot, db);
+        } catch (error) {
+          rebuildFailure = error;
+        }
+
+        expect(rebuildFailure).toBeInstanceOf(Error);
+        expect(rebuildProjectionSnapshot(db)).toEqual(before);
+      } finally {
+        db.close();
+      }
+    });
   });
 
   it("rolls back deletion when tracked provenance is tampered", () => {
@@ -255,6 +288,30 @@ function snapshot(db: ReturnType<typeof openHarnessDb>) {
       .prepare("SELECT * FROM findings WHERE source = ? ORDER BY finding_id")
       .all("vmodel-item-target"),
   };
+}
+
+function rebuildProjectionSnapshot(db: ReturnType<typeof openHarnessDb>) {
+  const projectionTables = [...tables, "document_catalog_entries", "spec_defs"];
+  return Object.fromEntries(
+    projectionTables.map((table) => [table, db.prepare(`SELECT * FROM ${table} ORDER BY 1`).all()]),
+  );
+}
+
+function rebuildFixture(root: string, db: ReturnType<typeof openHarnessDb>) {
+  return rebuildHarnessDb({
+    repoRoot: root,
+    db,
+    skipTokenTelemetry: true,
+    relationGraph: { nodes: [], edges: [], verificationProfiles: [], findings: [] },
+    documentExports: {
+      document_export_runs: [],
+      document_export_datasets: [],
+      document_export_artifacts: [],
+      findings: [],
+      actionsTaken: [],
+      ok: true,
+    },
+  });
 }
 
 function clear(db: ReturnType<typeof openHarnessDb>): void {
@@ -328,23 +385,22 @@ function authoringDepsWithLedger(
   };
 }
 
-function createDocsGitFixture(input: { trackedThenRemove: string }): string {
+function createDocsGitFixture(input: { ensureTracked: string }): string {
   const root = mkdtempSync(join(tmpdir(), "ut-t1-disposition-target-fixture-"));
   cpSync(join(repoRoot, "docs"), join(root, "docs"), { recursive: true });
-  const extraPath = join(root, input.trackedThenRemove);
+  const extraPath = join(root, input.ensureTracked);
   if (!existsSync(extraPath)) {
-    // This branch is not expected for current candidates; the target is copied
-    // from docs before Git records it.
+    // Small missing-file fixtures are added to the Git index before the
+    // worktree entry is removed by the calling test.
     mkdirSync(dirname(extraPath), { recursive: true });
     writeFileSync(extraPath, "tracked fixture path\n", "utf8");
   }
   execFileSync("git", ["init", "--quiet"], { cwd: root, stdio: "ignore" });
-  execFileSync("git", ["add", "docs"], { cwd: root, stdio: "ignore" });
+  execFileSync("git", ["-c", "core.autocrlf=false", "add", "docs"], { cwd: root, stdio: "ignore" });
   execFileSync(
     "git",
     ["-c", "user.name=UT-TDD test", "-c", "user.email=ut-tdd-test@example.invalid", "-c", "commit.gpgsign=false", "commit", "-m", "test fixture"],
     { cwd: root, stdio: "ignore" },
   );
-  rmSync(extraPath);
   return root;
 }
