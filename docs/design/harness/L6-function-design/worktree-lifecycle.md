@@ -52,7 +52,7 @@ issue: 1069
 | 状態 | 入る条件 | 起きること | 主体 |
 |---|---|---|---|
 | `active` | 作成直後、または PR 未 merge で最終活動から 7 日未満 | 何もしない | - |
-| `stale` | 保持記録が無く、未 merge で最終活動から 7 日以上 (検出時刻を T0 とする) | T0 に仮の保持記録を作る (下の T0 規則)。以後 `warning` から `expired`、`reaped` へ進む | doctor / prune |
+| `stale` | 保持記録が無く、未 merge で最終活動から 7 日以上 | `worktree prune --apply` が初めて観測した時刻を T0 として仮の保持記録を作る (下の T0 規則)。dry-run と doctor は記録を書かず、暫定の T0 を報告するだけ。以後 `warning` から `expired`、`reaped` へ進む | doctor / prune |
 | `merged` | PR が MERGED で、head branch の先端が `origin/main` に含まれる | `pr merge` の後処理は**何も動かさず**、`merged` (merge commit と時刻) を記録するだけ。回収は `worktree prune` が §6 を満たしたときに行う | `pr merge` の後処理 (記録のみ) / `worktree prune` |
 | `retained` | 保持記録が有効 (理由 + 回収期限または回収条件) | 期限・条件まで保持 | - |
 | `warning` | `retained` の期限の 3 日前から | SessionStart と EOD 棚卸しで保持者 (lane) へ警告。延長は理由と新しい期限を書き直す | doctor / session start |
@@ -65,7 +65,7 @@ issue: 1069
 - 日数 (stale 7 日 / 警告 3 日前 / 猶予 2 日 / trash の保持 14 日 / 静止判定 6 時間) は既定値で、設定で変えられる。
 - `ut-review-*` など review 用の固定 worktree は対象外 (どの状態にも入れない)。
 - 回収条件 (`issue_closed:#N` / `pr_merged:#N`) の成立は `gh` で観測する。観測に失敗した場合は成立と見なさない。
-- 時計は 1 本にする。`stale` を初めて検出した時刻を **T0** とし、T0 に仮の保持記録 (reason: 初回の stale 回収、holder: 機械、due: T0 + 7 日) を作る。T0 から due までの 7 日が警告期間で、状態は T0 から `warning`。due で `expired`、due + 2 日 (= T0 + 9 日) で `reaped`。`prune` を再実行しても T0 は動かない。保持者が延長すれば通常の延長 (§4) になる。
+- 時計は 1 本にする。**T0 を書く主体は `worktree prune --apply` だけ**で、`stale` を最初に観測した apply の実行時刻を T0 とし、その run が仮の保持記録 (reason: 初回の stale 回収、holder: 機械、due: T0 + 7 日) を作る。dry-run (既定) と doctor と session start は保持記録を一切書かない (read-only)。これらが stale を見たときは、記録がまだ無い対象に「暫定 T0 = 現在時刻、due = 現在 + 7 日 (暫定)」を**暫定**と明示して報告し、暫定値は永続化も再利用もしない。T0 から due までの 7 日が警告期間で、状態は T0 から `warning`。due で `expired`、due + 2 日 (= T0 + 9 日) で `reaped`。記録ができた後は、`prune` (dry-run も apply も) を再実行しても T0 は動かない。同じ run の apply が T0 を書いた直後に reap することはない (T0 + 9 日が必要)。保持者が延長すれば通常の延長 (§4) になる。
 
 ## 4. 保持記録
 
@@ -134,16 +134,19 @@ issue: 1069
 7. **branch**: `merged_clean` (下) のときだけ、`git update-ref -d refs/heads/<b> <oid>` で消す。`<oid>` は消す直前に読み直した先端で、`git merge-base --is-ancestor <oid> origin/main` が真であることを確かめたもの。`git branch -d` は使わない (merged 判定が HEAD / upstream に依存する)。それ以外の branch は**消さない**。
 8. 監査ログに `trashed` を追記し、S6 の健全性を確かめる。
 
-**`meta.json`**: `original_path` / `branch` / `head_oid` (回収時点の HEAD) / `moved_at` / `reason` / `index_ref_oid` (index 保護 ref が指す commit の oid) / `lease_evidence` (`dead_pid` / `pid_reuse` / `none` / `undeterminable`) / `merged_clean` (真偽) / `dirty_file_count` / `unmerged_commit_count`。
+**`meta.json`**: `original_path` / `branch` / `head_oid` (回収時点の HEAD) / `moved_at` / `reason` / `index_ref_oid` (index 保護 ref が指す commit の oid) / `lease_evidence` (`dead_pid` / `pid_reuse` / `none` / `undeterminable`) / `merged_clean` (真偽) / `content_evidence` (内容 hash 一覧と非 ignored ファイル集合の digest) / `dirty_file_count` / `unmerged_commit_count`。
 
-**`merged_clean`**: 回収時点で次の**両方**が真。(1) `git merge-base --is-ancestor <head_oid> origin/main`。(2) 追跡・未追跡の変更が無い (`git status --porcelain` が空。ignored は数えない)。
+**`merged_clean`**: 回収時点で次の**全て**が真。(1) `git merge-base --is-ancestor <head_oid> origin/main`。(2) 追跡・未追跡の変更が無い (`git status --porcelain` が空。ignored は数えない)。(3) **不確かな対象ではない**: `git ls-files -v` に assume-unchanged (小文字の tag) または skip-worktree (`S` または `s` の tag) が付いた追跡ファイルが 1 つも無い。これらは `git status` を偽の空にできるため、(2) の空は証拠にならない。1 つでもあれば `merged_clean` は偽で、`dirty_file_count` には該当ファイル数を足し、自動 purge の対象にならない。(4) **実 byte の一致**: 追跡ファイル全てについて、作業ツリーの内容 hash (`git hash-object` 相当。mtime や stat は使わない) が HEAD の blob と等しく、実 index の tree が HEAD の tree と等しく (実 index の一時コピーに対する `write-tree`)、非 ignored のファイル集合 (追跡 + 未追跡) が HEAD の追跡一覧と一致する。
+
+`merged_clean` の根拠にした証拠 (追跡ファイルの path と内容 hash の一覧の digest、非 ignored のファイル集合の digest) は `meta.json` の `content_evidence` に記録する。
 
 ### 6.3 purge: trash の実体削除
 
-- **自動 purge の対象**: `merged_clean` が真で、trash に移して 14 日が過ぎたものだけ。実行の直前に次を再検査する。
+- **自動 purge の対象**: `merged_clean` が真で、trash に移して 14 日が過ぎたものだけ。assume-unchanged / skip-worktree が 1 つでもあった対象は §6.2 の `merged_clean` が偽なので、ここに入らない。実行の直前に次を再検査する。
   - (a) trash の中に alive な lease の pid (起動時刻一致) が無い。lease が壊れている・読めないときも削除しない。
-  - (b) trash の中のどのファイルの mtime も `moved_at` より後ではない。mtime が読めなければ削除しない。
-  - (c) 監査ログへ追記できる。
+  - (b) trash の中のどのファイルの mtime も `moved_at` より後ではない。mtime が読めなければ削除しない。ただし mtime は (e) の代わりにならない (mtime を保ったまま内容を変えられるため)。
+  - (c) **実 byte の再検査**: 追跡ファイルの内容 hash、実 index の tree、非 ignored のファイル集合を、いま trash の中で再計算し、`meta.json` の `content_evidence` と一致することを確かめる。1 つでも不一致なら削除せず、`error:content_changed` を記録して「purge 要確認」へ回す。assume-unchanged / skip-worktree が trash の中で新たに現れた場合も同じ。
+  - (d) 監査ログへ追記できる。
   - 削除前に `node_modules` の junction があれば link だけを外し、不在を確かめる (辿らない)。実体の削除が済んだあとに、index 保護 ref を `git update-ref -d refs/ut-tdd/trash/<entry-id>/index <index_ref_oid>` で消す (expected-oid つき。oid が異なれば消さず、`error` を記録する)。
 - **残るリスク (明示)**: `merged_clean` の追跡内容は main に含まれると証明できるが、次の **ignored の runtime 状態**と、稼働中の reader の作業途中の状態は purge で失われる。lease が無い reader は検出できない。`.gitignore` 由来の主なカテゴリ: `.ut-tdd/state/*`、`.ut-tdd/logs/`、`.ut-tdd/review/{requests,receipts,verdicts}/`、`.ut-tdd/gate_runs/`、`.ut-tdd/cache/*`、`.ut-tdd/tmp/`、`.ut-tdd/archive/`、`.ut-tdd/harness.db`、`.env*`、`.claude/settings.local.json`、`node_modules`。これらは機械生成または machine 固有で、repository の正本は main にあるため、自動 purge の対象として受け入れる。
 - **それ以外の trash** (`merged_clean` が偽。dirty・unmerged を含む。lease が無かったもの、判定不能のものも、`merged_clean` が真でなければここに入る): **自動 purge しない**。dry-run と EOD に「purge 要確認」として、元の path・`moved_at`・経過日数・失われるもの (`dirty_file_count`、`unmerged_commit_count`) を出す。人が `ut-tdd worktree prune --purge-confirmed <id...>` で消す。
