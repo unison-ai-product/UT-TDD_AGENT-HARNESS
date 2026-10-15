@@ -1,10 +1,10 @@
 import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
-import { pathToFileURL } from "node:url";
+import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
+import * as designProtection from "../src/github/design-protection.ts";
 import { analyzeGithubCiPolicy, loadGithubCiPolicyDocs } from "../src/lint/github-ci-policy.ts";
 
 /*
@@ -26,10 +26,7 @@ interface GateApi {
 }
 
 async function loadGate(): Promise<GateApi> {
-  // Resolve at test time so this file compiles before the production subject exists.
-  // If it is absent, that import failure is deliberately not treated as per-guard proof.
-  const subjectUrl = pathToFileURL(resolve(REPO_ROOT, "src/github/design-protection.ts")).href;
-  return (await import(subjectUrl)) as unknown as GateApi;
+  return designProtection as unknown as GateApi;
 }
 
 function initRepo(files: Record<string, string>): { root: string; base: string } {

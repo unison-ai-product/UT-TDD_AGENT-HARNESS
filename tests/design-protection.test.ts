@@ -1,9 +1,9 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
-import { pathToFileURL } from "node:url";
+import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
+import * as designProtection from "../src/github/design-protection.ts";
 import {
   type GitCommandPort,
   GitDiffAdapterError,
@@ -73,10 +73,7 @@ interface GateApi {
 }
 
 async function loadGate(): Promise<GateApi> {
-  // Resolve at test time so this file compiles before the production subject exists.
-  // If it is absent, that import failure is deliberately not treated as per-guard proof.
-  const subjectUrl = pathToFileURL(resolve(REPO_ROOT, "src/github/design-protection.ts")).href;
-  return (await import(subjectUrl)) as unknown as GateApi;
+  return designProtection as unknown as GateApi;
 }
 
 function nul(...fields: string[]): Uint8Array {
