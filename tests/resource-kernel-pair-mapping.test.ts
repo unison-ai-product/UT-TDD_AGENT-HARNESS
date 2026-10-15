@@ -21,7 +21,6 @@ import {
 import { headSnapshotRoot, workspaceRead } from "./support/workspace-roots.ts";
 
 const L8_DOC = "docs/test-design/harness/L8-integration-test-design.md";
-const L5_DOC = "docs/plans/PLAN-L5-25-resource-kernel-physical-protocol.md";
 const L5_CANONICAL_DOC = "docs/design/harness/L5-detailed-design/resource-kernel-wire-custody.md";
 
 function snapshotRoot(): string {
@@ -34,7 +33,7 @@ function loadRepoRows() {
   const l8Markdown = readFileSync(join(root, L8_DOC), "utf8");
   return {
     freezeRows: parseFreezeAttributeRows(l8Markdown),
-    mappingRows: parseContractMappingRows(readFileSync(join(root, L5_DOC), "utf8")),
+    mappingRows: parseContractMappingRows(readFileSync(join(root, L5_CANONICAL_DOC), "utf8")),
     laneDeclarations: parseLaneDeclarations(l8Markdown),
     declaredRealRunnerTotal: parseRealRunnerTotal(l8Markdown),
   };
@@ -77,11 +76,11 @@ function mutatedRepo(mutate: (docs: { l8: string; l5: string }) => { l8: string;
   const root = mkdtempSync(join(tmpdir(), "rgk-pair-doctor-"));
   const docs = mutate({
     l8: readFileSync(join(source, L8_DOC), "utf8"),
-    l5: readFileSync(join(source, L5_DOC), "utf8"),
+    l5: readFileSync(join(source, L5_CANONICAL_DOC), "utf8"),
   });
   for (const [rel, text] of [
     [L8_DOC, docs.l8],
-    [L5_DOC, docs.l5],
+    [L5_CANONICAL_DOC, docs.l5],
   ] as const) {
     mkdirSync(dirname(join(root, rel)), { recursive: true });
     writeFileSync(join(root, rel), text, "utf8");
@@ -573,7 +572,7 @@ describe("Resource Kernel L5↔L8 pair mapping lint (U-RGKPAIR, PLAN-L5-25 §7.1
     }
   });
 
-  it.fails("U-RGKPAIR-PLANLESS-001: L5 canonical D.5 parserが58契約行を読む", () => {
+  it("U-RGKPAIR-PLANLESS-001: L5 canonical D.5 parserが58契約行を読む", () => {
     const fixture = planlessPairFixture();
     try {
       const parsed = parsePlanlessPair(fixture.root);
@@ -588,7 +587,7 @@ describe("Resource Kernel L5↔L8 pair mapping lint (U-RGKPAIR, PLAN-L5-25 §7.1
     }
   });
 
-  it.fails("U-RGKPAIR-PLANLESS-001: PLANなしsnapshotでdoctor readerがcanonical L5/L8を読む", () => {
+  it("U-RGKPAIR-PLANLESS-001: PLANなしsnapshotでdoctor readerがcanonical L5/L8を読む", () => {
     const fixture = planlessPairFixture();
     try {
       const gate = checkResourceKernelPairMapping(fixture.root);
@@ -599,7 +598,7 @@ describe("Resource Kernel L5↔L8 pair mapping lint (U-RGKPAIR, PLAN-L5-25 §7.1
     }
   });
 
-  it.fails("U-RGKPAIR-PLANLESS-002: planless正本の契約・oracle集合変異をID付きでfail-closeする", () => {
+  it("U-RGKPAIR-PLANLESS-002: planless正本の契約・oracle集合変異をID付きでfail-closeする", () => {
     const fixture = planlessPairFixture();
     try {
       const base = parsePlanlessPair(fixture.root);
@@ -651,7 +650,7 @@ describe("Resource Kernel L5↔L8 pair mapping lint (U-RGKPAIR, PLAN-L5-25 §7.1
     }
   });
 
-  it.fails("U-RGKPAIR-PLANLESS-003: edge 004→028とoracle 004欠落を別々に検出する", () => {
+  it("U-RGKPAIR-PLANLESS-003: edge 004→028とoracle 004欠落を別々に検出する", () => {
     const fixture = planlessPairFixture();
     try {
       const base = parsePlanlessPair(fixture.root);
