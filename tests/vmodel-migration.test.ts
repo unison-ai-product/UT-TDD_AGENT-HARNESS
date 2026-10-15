@@ -95,6 +95,29 @@ function insertLegacyItemTarget(db: ReturnType<typeof openHarnessDb>, row: Legac
   );
 }
 
+function fullDatabaseState(db: ReturnType<typeof openHarnessDb>) {
+  const master = db
+    .prepare(
+      "SELECT type, name, sql FROM sqlite_master WHERE name NOT LIKE 'sqlite_%' ORDER BY type, name",
+    )
+    .all();
+  const rows = Object.fromEntries(
+    master
+      .filter((entry) => entry.type === "table")
+      .map((entry) => {
+        const table = String(entry.name);
+        const quotedTable = `"${table.replaceAll('"', '""')}"`;
+        const stableRows = db
+          .prepare(`SELECT * FROM ${quotedTable}`)
+          .all()
+          .map((row) => JSON.stringify(row))
+          .sort();
+        return [table, stableRows];
+      }),
+  );
+  return { master, rows, userVersion: db.userVersion() };
+}
+
 function legacyItemTargetState(db: ReturnType<typeof openHarnessDb>) {
   return {
     sql: db
@@ -391,6 +414,42 @@ describe("V-model version 26 projection migration", () => {
           .all()
           .map((row) => row.design_path),
       ).toEqual([null, null]);
+    } finally {
+      db.close();
+    }
+  });
+});
+
+describe("CANDIDATE-U-DISPPTR-008: current v29 migration no-op", () => {
+  it("preserves schema, user_version, and normal adopt/null-plan rows", () => {
+    const db = openHarnessDb(":memory:");
+    try {
+      for (const ddl of schemaDdl()) db.exec(ddl);
+      seedV29ItemTargetParents(db, ["ITEM-DISPPTR-008-V29"]);
+      db.prepare(
+        `INSERT INTO vmodel_item_target_edges
+          (edge_id, item_id, target_status, target_kind, target_ref, plan_id, design_path, reason, source_digest)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ).run(
+        "EDGE-DISPPTR-008-V29",
+        "ITEM-DISPPTR-008-V29",
+        "adopt",
+        "artifact_path",
+        "docs/design/harness/L5-detailed-design/physical-data.md",
+        null,
+        null,
+        "ordinary current-schema adoption without a PLAN reference",
+        "digest-v29-noop",
+      );
+      db.setUserVersion(29);
+      const before = fullDatabaseState(db);
+
+      const result = migrate(db);
+
+      expect(result.fromVersion).toBe(29);
+      expect(result.toVersion).toBe(29);
+      expect(result.applied).toBe(false);
+      expect(fullDatabaseState(db)).toEqual(before);
     } finally {
       db.close();
     }
