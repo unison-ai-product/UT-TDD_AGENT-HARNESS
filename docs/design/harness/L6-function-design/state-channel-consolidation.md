@@ -10,7 +10,7 @@ next_pair_freeze: L7
 issue: 1062
 ---
 
-> **L6 contract marker**: 本書は「状態を相手へ伝える経路」の正本割当と、それを機械で守る 4 つの契約を凍結する。(1) `memory add` の拒否規則 `classifyMemoryAdd(input) => accept | reject(reason)`、(2) review request の identity v2 `reviewIdentityObjectV2(request)`、(3) 通知レコード `ut-tdd.notification/v1`、(4) handover prose の退役。oracle の索引は共有の `docs/test-design/harness/L7-unit-test-design.md` (§状態を伝える経路の一本化) に置き、詳細 (CANDIDATE-U-STCHAN-001〜027) は専用の `docs/test-design/harness/L7-state-channel-consolidation-test-design.md` が固定する。
+> **L6 contract marker**: 本書は「状態を相手へ伝える経路」の正本割当と、それを機械で守る 4 つの契約を凍結する。(1) `memory add` の拒否規則 `classifyMemoryAdd(input) => accept | reject(reason)`、(2) review request の identity v2 `reviewIdentityObjectV2(request)`、(3) 通知レコード `ut-tdd.notification/v1`、(4) handover prose の退役。oracle の索引は共有の `docs/test-design/harness/L7-unit-test-design.md` (§状態を伝える経路の一本化) に置き、詳細 (CANDIDATE-U-STCHAN-001〜028) は専用の `docs/test-design/harness/L7-state-channel-consolidation-test-design.md` が固定する。
 
 # 状態を伝える経路の一本化 — 関数設計 (issue #1062)
 
@@ -172,7 +172,7 @@ classifyMemoryAdd({ kind, durableReason }) =
 - **保持**: 検証(上の改ざん検知 3)が通った後で、**凍結時点で既に** `durable_reason` を持っていた project memory は、一覧に載っていても移さない(bytes は凍結時と同じなので検証は通る)。拒否規則の後に理由付きで受理された memory は一覧に載らず、移行後も `memory_entries` に残り検索できる。
 - **凍結後の編集**: 一覧の対象を凍結後に編集すると(`durable_reason` の追記を含む)bytes が変わるので、検証は all-or-nothing のまま `target_bytes_changed` で全体を止め、何も動かさない。保持規則を検証より先に評価して検証を飛ばす経路は持たない。operator の手順は、(1) 編集を凍結時の bytes に戻して再実行する、または (2) 残したい memory は**拒否規則の PR が凍結する前に** `durable_reason` を付けておく、の 2 つだけである。凍結後に追記して残す経路と再凍結の経路は無い(戻した memory は凍結一覧どおり移される)。この例外を足したくなったら、契約の改訂として別 PR で扱う。
 - **除外**: open な review request (terminal receipt が無い) が task 本文として参照している memory は移さない。custody の差し替え (§4) が先に入っていれば参照は存在しない。
-- **手段**: `memory.md` §4.2 の `memory retire` の退避部品 (write-ahead の manifest、`memory_entries` 行の同時削除、dry-run 既定) を、選別規則を差し替えて使う。`.ut-tdd/archive/memory-episodes/` へ移し、削除しない。dry-run の件数を PR に記録し、実行後に `ut-tdd db status` が `fresh` で、移した件数 + 残りの件数 = 移行前の総数であることを確かめる。
+- **手段**: `memory.md` §4.2 の `memory retire` の退避部品 (write-ahead の manifest、`memory_entries` 行の同時削除、dry-run 既定) を、選別規則を差し替えて使う。`.ut-tdd/archive/memory-episodes/` へ移し、削除しない。dry-run の件数を PR に記録し、dry-run は memory ファイルも `memory_entries` 行も動かさない。実行(`--archive`)は、移した各 memory について、ファイルの移動と `memory_entries` 行の削除を同じ write-ahead の手順で行い、完了した entry の行は残らない。実行後の保証は、`ut-tdd db status` が `fresh` で index-only 行が 0 であること、移した件数 + 残りの件数 = 移行前の総数、保持した memory(R1 / R2)の行と検索結果が移行前と同じであること、の 3 つである。dry-run の集計だけでは行の削除を保証できないので、実行の保証は隔離 fixture での実行で検証し(STCHAN-028)、実 repo では dry-run の集計だけを照合する(STCHAN-024)。
 - 移行はメモリの「整理」であって正本の変更ではないので、教訓の内容には触れない。
 
 ## 8. 実装 PR の順序 (1 PR = 1 論点)
