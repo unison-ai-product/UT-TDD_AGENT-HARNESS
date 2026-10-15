@@ -887,7 +887,7 @@ describe("github-ci-policy lint", () => {
       });
       expect(loaded[0]?.profile).toBe("source");
       expect(analyzeGithubCiPolicy(loaded).violations).toContainEqual({
-        file: join(".github", "workflows", "harness-check.yml"),
+        file: ".github/workflows/harness-check.yml",
         profile: "source",
         reason: "missing_runtime_leg",
         detail: "jobs.harness-check-linux",
