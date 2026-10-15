@@ -117,8 +117,13 @@ issue: 1069
 
 「無音で消えても成果が失われない」ための仕組み。退避先は `refs/ut-tdd/archive/<branch>` (branch 名の `/` はそのまま階層になる)。退避 ref は 90 日で回収する (`worktree prune --apply` が、監査ログの退避イベントの `at` から 90 日を超えた archive ref を削除する。commit の committer date は使わない)。
 
-1. **未コミットの変更** (追跡ファイルの変更と未追跡ファイル): 一時 index に追跡・未追跡の全ファイルを入れて `git write-tree` / `git commit-tree` で commit object を作る (親は branch 先端)。`git stash push` は使わない (worktree の状態を変えず、repo 共有の stash リストを汚さないため)。
-2. **main に含まれない commit**: branch の先端をそのまま `refs/ut-tdd/archive/<branch>` に `git update-ref` する。1 と 2 の両方があるときは 1 の commit (親が先端) を ref に載せる。
+1. **未コミットの変更** (追跡ファイルの変更、staged の変更、未追跡ファイル): 素の `git stash create` は**未追跡ファイルを捕まえない** (一時 repo での実測)。issue #1069 コメントの「`git stash create` 相当 (未追跡ファイルを含む)」はそのままでは成り立たないので、次の手順に固定する。worktree 内で、実 index に触れずに行う。
+   1. `GIT_INDEX_FILE=<一時ファイル>` を設定し、`git read-tree HEAD` で一時 index を HEAD に初期化する。
+   2. 同じ一時 index に `git add -A` する (`.gitignore` を尊重する。追跡の変更・削除・未追跡ファイル・入れ子の未追跡 dir を含む)。
+   3. `git write-tree` で tree を得て、`git commit-tree <tree> -p HEAD -m <msg>` で commit を作る。
+   4. 一時 index を削除する。実 index・作業ツリー・stash リストは変えない。
+   - **ignored ファイルは意図的に退避から除く**: `node_modules` (再生成可能で巨大。junction の先を辿る事故も避ける)、`.ut-tdd/` の runtime state・log (機械固有で、ほかの場所に正本がある)、build 成果物 (`dist/` 等)。復元で byte 同一を保証する範囲は「`.gitignore` に該当しない全ファイル」であり、除外する集合は実装で明示的な定数として持つ (暗黙に増減させない)。ignored に誤分類された手書きの成果物は退避されないことが既知の限界で、監査ログに除外した件数を残す。
+2. **main に含まれない commit**: branch の先端をそのまま `refs/ut-tdd/archive/<branch>` に `git update-ref` する。1 と 2 の両方があるときは 1 の commit (親は HEAD = branch 先端) を `git update-ref refs/ut-tdd/archive/<branch> <commit>` で載せる。
 3. **読み戻し検証**: `git rev-parse refs/ut-tdd/archive/<branch>` が、作った oid と一致することを確かめる。一致しなければ S9 で**削除しない**。
 4. 同名の archive ref が既にあるときは上書きせず、`refs/ut-tdd/archive/<branch>@<yyyymmddThhmmssZ>` を使う。
 5. **取り戻し方** (監査ログと SessionStart に出す): `git worktree add C:/dev/<name> refs/ut-tdd/archive/<branch>` で復元する。未コミット分を含む場合は、その commit の tree が作業ツリーに展開される。

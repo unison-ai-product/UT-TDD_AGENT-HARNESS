@@ -68,7 +68,9 @@ updated: 2026-10-15
 
 | Candidate | 観測 | 期待 | 殺す mutation |
 | --- | --- | --- | --- |
-| `CANDIDATE-U-WTLIFE-028` | `reaped` の worktree に未コミットの変更 (追跡ファイルの変更と未追跡ファイルの両方) | `refs/ut-tdd/archive/<branch>` に commit が作られ、その tree に追跡の変更と未追跡ファイルの両方が含まれる。worktree と stash リストは退避前後で変わらない (`git stash list` が増えない)。そのあと worktree が外れる | 未追跡ファイルを退避から落とす / stash push を使う |
+| `CANDIDATE-U-WTLIFE-028` | `reaped` の worktree に未コミットの変更 (追跡ファイルの変更と未追跡ファイルの両方) | `refs/ut-tdd/archive/<branch>` に commit が作られ、その tree に追跡の変更と未追跡ファイルの両方が含まれる。実 index・作業ツリー・`git stash list` は退避前後で変わらない。そのあと worktree が外れる | 未追跡ファイルを退避から落とす / stash push を使う / 実 index を書き換える |
+| `CANDIDATE-U-WTLIFE-042` | **往復 (必須)**: 次を全て持つ worktree を「退避 → 削除 → `git worktree add <path> <archive ref>`」で復元する: 追跡ファイルの modified、staged の変更、追跡ファイルの削除、未追跡ファイル、入れ子の未追跡 dir、空白を含む名前、日本語名のファイル。ignored (`node_modules`・`.ut-tdd/state`) も置く | 復元した tree が、元の worktree の「ignored を除く全ファイル」と byte 同一 (内容 hash の集合が一致)。ignored 集合は退避に含まれないことも確かめる (宣言した除外集合と一致) | 素の `git stash create` を使う (未追跡ファイルが落ちる。**この mutant を 042 が必ず殺す**) / `add -A` を `add -u` にする / 日本語名・空白名で path を壊す / ignored を含めて node_modules を取り込む |
+| `CANDIDATE-U-WTLIFE-043` | **退避失敗は削除しない (必須)**: 一時 index の作成、`commit-tree`、`update-ref` のそれぞれを失敗させた fixture (例: ref の lock 競合、書き込み不可) | どの失敗でも worktree と branch は残り、`archive_failed` が監査ログに出る。一時 index は残らない。実 index は変わらない | 失敗を警告にして削除を続行する / 一時 index を片付けない |
 | `CANDIDATE-U-WTLIFE-029` | main に含まれない commit と未コミット変更の両方 | 1 つの ref に載り、その commit の親が元の先端。commit も変更も復元できる | 2 つの ref に分けて片方を落とす |
 | `CANDIDATE-U-WTLIFE-030` | 同名の archive ref が既にある | 上書きせず `@<timestamp>` 付きの別名で退避する | 既存の退避を上書きする |
 | `CANDIDATE-U-WTLIFE-031` | 復元: 退避 ref から `git worktree add <path> <ref>` を実行 | 作業ツリーに退避時の追跡の変更と未追跡ファイルが復元される | ref が指す tree が空 |
@@ -90,6 +92,6 @@ updated: 2026-10-15
 
 ## 4. 運用
 
-- 各 oracle は Green のあと、L6 の規則を 1 本だけ殺す mutation を手元で入れ (commit しない)、該当の行が fail することを確かめて PR の証跡に残す。001, 005, 011, 034 を最優先で確かめる。
-- 必ず削除してはいけないケースの網羅 (001〜019) は、実装 PR の完了条件に含める。1 件でも `it.fails` のままなら merge しない。
+- 各 oracle は Green のあと、L6 の規則を 1 本だけ殺す mutation を手元で入れ (commit しない)、該当の行が fail することを確かめて PR の証跡に残す。001, 005, 011, 034, 042 を最優先で確かめる。
+- 必ず削除してはいけないケースの網羅 (001〜019 と 043) は、実装 PR の完了条件に含める。1 件でも `it.fails` のままなら merge しない。
 - 実 repo の既存 145 worktree / 540 branch に対する実行は、oracle の対象にしない (初回回収は L6 §10 の手順で行い、実行ごとに dry-run を記録する)。
