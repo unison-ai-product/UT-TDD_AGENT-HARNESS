@@ -45,6 +45,7 @@ function gitUncommittedFiles(): string[] {
   const out = execFileSync("git", ["status", "--porcelain"], {
     cwd: repoRoot,
     encoding: "utf8",
+    windowsHide: true,
   });
   const files: string[] = [];
   for (const line of out.split("\n")) {
