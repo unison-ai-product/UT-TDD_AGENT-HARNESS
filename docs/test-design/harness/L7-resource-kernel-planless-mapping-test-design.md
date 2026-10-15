@@ -51,6 +51,8 @@ PLAN非依存になった、あるいはPLAN退役を完了したとは扱わな
 
 候補004の独立負系では、D.6の `source §N` 見出しの削除、改名、D.6範囲外の同番号見出しによる代用、`source §4.1` の欠落を一軸ずつ与える。それぞれ、そのlocatorを持つ具体的なmanifest entry IDを伴う `unknownContractRef` を要求する。他の番号付き見出しや旧PLANでは救済しない。正常形では42件を維持し、各負系は他のdigest・属性・参照を正常のままにして検査する。
 
+例えば `source §2` の削除・改名・D.6外への移動では `fx-rgk-frame-split`（`contract_ref: §2`）を、`source §4.1` の欠落では `fx-rgk-deadline-race`（`contract_ref: §4.1`）を含む `unknownContractRef` を個別にassertする。これらは既存manifestの実entryであり、負系のために新規entryやlocatorを作らない。
+
 付録D.5の「出典」列とfixture manifestの42件の`contract_ref`は、以下の対応で付録D.6の同番号詳細契約本文へ解決する。旧PLANの節番号とmanifest値は変換・再割当てせず保持し、D.1〜D.4を詳細本文の代用にしない。
 
 | 旧locator | L5 canonical詳細本文 | 付録D.5契約ID |
