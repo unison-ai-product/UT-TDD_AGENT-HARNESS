@@ -18,9 +18,11 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { GitAuthoringProvenance } from "../../src/disposition/adapters/git-authoring-provenance.ts";
+import { loadTrackedCatalogInput } from "../../src/disposition/adapters/tracked-vmodel-loader.ts";
 import { gitBlobOid } from "../../src/disposition/domain/authoring-provenance.ts";
+import { DocumentDispositionCatalog } from "../../src/disposition/domain/document-disposition-catalog.ts";
 import type { AuthoringProvenancePort } from "../../src/disposition/ports/authoring-provenance.ts";
 import { openHarnessDb } from "../../src/state-db/index.ts";
 import { migrate } from "../../src/state-db/migration.ts";
@@ -117,9 +119,9 @@ describe("I-DISP-001 V-model projection", () => {
         projectionFailure = error;
       }
 
-      // Current observation: the projection fails with `no such column:
-      // design_path`, before this defer row reaches physical path validation.
-      // This is a query/schema gap, not evidence of the target-path guard.
+      // Current observation: projectVmodelAuthoring returns successfully here;
+      // the following SELECT fails with `no such column: design_path`. Neither
+      // NULL-plan persistence nor the tracked-path guard is established here.
       expect(projectionFailure).toBeUndefined();
       expect(
         db
@@ -325,13 +327,20 @@ describe("I-DISP-001 V-model projection", () => {
     const dispositionPath = "docs/governance/vmodel-document-disposition-catalog.md";
     const sourceTargetPath = "docs/governance/vmodel-source-target-edges.md";
     let tempRoot: string;
+    let negativeRoot: string;
+    let originalDisposition: string;
+    let originalSourceTargets: string;
 
     beforeAll(() => {
       tempRoot = createDocsGitFixture({ ensureTracked: targetPath });
+      negativeRoot = createDocsGitFixture({ ensureTracked: targetPath });
+      originalDisposition = readFileSync(join(negativeRoot, dispositionPath), "utf8");
+      originalSourceTargets = readFileSync(join(negativeRoot, sourceTargetPath), "utf8");
     });
 
     afterAll(() => {
       rmSync(tempRoot, { recursive: true, force: true });
+      rmSync(negativeRoot, { recursive: true, force: true });
     });
 
     it("rebuilds the normal fixture through V-model and spec-IR projections", () => {
@@ -365,19 +374,9 @@ describe("I-DISP-001 V-model projection", () => {
       }
     });
 
-    it.fails("does not treat ZIP IDs and a target slot alone as physical-path binding", () => {
-      const baselineDb = openHarnessDb(":memory:");
-      try {
-        const baseline = rebuildFixture(tempRoot, baselineDb);
-        expect(baseline.ok).toBe(true);
-        expectCharterEdges(baselineDb, targetPath);
-      } finally {
-        baselineDb.close();
-      }
-
-      withFixtureCatalogEdits(
-        tempRoot,
-        [
+    describe("ID/slot-only binding", () => {
+      beforeEach(() => {
+        prepareFixtureCatalogEdits(negativeRoot, [
           { path: dispositionPath, rowId: "ZIP-DOC-001", cells: { 4: "`DOC-L0-CHARTER`" } },
           { path: dispositionPath, rowId: "ZIP-DOC-071", cells: { 4: "`DOC-L0-CHARTER`" } },
           {
@@ -390,57 +389,59 @@ describe("I-DISP-001 V-model projection", () => {
             rowId: "EDGE-071",
             cells: { 4: "`target_slot`", 5: "`DOC-L0-CHARTER`" },
           },
-        ],
-        () => {
-          const db = openHarnessDb(":memory:");
-          try {
-            const result = rebuildFixture(tempRoot, db);
-            expect(result.ok).toBe(true);
-            expectCharterEdges(db, targetPath);
-          } finally {
-            db.close();
-          }
-        },
+        ]);
+      });
+
+      afterEach(() =>
+        restoreFixtureCatalog(
+          negativeRoot,
+          dispositionPath,
+          sourceTargetPath,
+          originalDisposition,
+          originalSourceTargets,
+        ),
       );
+
+      it.fails("rejects slot-only ZIP-DOC-001/071 bindings after a valid physical-path rebuild", () => {
+        expectRebuildRejectsWithoutChangingProjection(tempRoot, negativeRoot);
+      });
     });
 
-    it.fails("does not allow ZIP-DOC-001/071 charter bindings to drift to a different tracked path", () => {
-      const baselineDb = openHarnessDb(":memory:");
-      try {
-        const baseline = rebuildFixture(tempRoot, baselineDb);
-        expect(baseline.ok).toBe(true);
-        expectCharterEdges(baselineDb, targetPath);
-      } finally {
-        baselineDb.close();
-      }
+    describe("different tracked path", () => {
+      beforeEach(() => {
+        prepareFixtureCatalogEdits(
+          negativeRoot,
+          [
+            { path: dispositionPath, rowId: "ZIP-DOC-001", cells: { 4: `\`${alternatePath}\`` } },
+            { path: dispositionPath, rowId: "ZIP-DOC-071", cells: { 4: `\`${alternatePath}\`` } },
+            {
+              path: sourceTargetPath,
+              rowId: "EDGE-001",
+              cells: { 5: `\`${alternatePath}\`` },
+            },
+            {
+              path: sourceTargetPath,
+              rowId: "EDGE-071",
+              cells: { 5: `\`${alternatePath}\`` },
+            },
+          ],
+          alternatePath,
+        );
+      });
 
-      withFixtureCatalogEdits(
-        tempRoot,
-        [
-          { path: dispositionPath, rowId: "ZIP-DOC-001", cells: { 4: `\`${alternatePath}\`` } },
-          { path: dispositionPath, rowId: "ZIP-DOC-071", cells: { 4: `\`${alternatePath}\`` } },
-          {
-            path: sourceTargetPath,
-            rowId: "EDGE-001",
-            cells: { 5: `\`${alternatePath}\`` },
-          },
-          {
-            path: sourceTargetPath,
-            rowId: "EDGE-071",
-            cells: { 5: `\`${alternatePath}\`` },
-          },
-        ],
-        () => {
-          const db = openHarnessDb(":memory:");
-          try {
-            const result = rebuildFixture(tempRoot, db);
-            expect(result.ok).toBe(true);
-            expectCharterEdges(db, targetPath);
-          } finally {
-            db.close();
-          }
-        },
+      afterEach(() =>
+        restoreFixtureCatalog(
+          negativeRoot,
+          dispositionPath,
+          sourceTargetPath,
+          originalDisposition,
+          originalSourceTargets,
+        ),
       );
+
+      it.fails("rejects ZIP-DOC-001/071 bindings to another tracked regular file after baseline rebuild", () => {
+        expectRebuildRejectsWithoutChangingProjection(tempRoot, negativeRoot);
+      });
     });
 
     it.fails("rejects a tracked charter target whose physical entity is missing and preserves committed projections", () => {
@@ -542,22 +543,97 @@ function expectCharterEdges(db: ReturnType<typeof openHarnessDb>, targetPath: st
   ]);
 }
 
-function withFixtureCatalogEdits(
+const trackedCatalogPaths = [
+  "docs/governance/vmodel-source-manifest.md",
+  "docs/governance/vmodel-document-disposition-catalog.md",
+  "docs/governance/vmodel-semantic-item-catalog.md",
+  "docs/governance/vmodel-source-target-edges.md",
+  "docs/governance/vmodel-item-target-ledger.md",
+] as const;
+
+function prepareFixtureCatalogEdits(
   root: string,
   edits: Array<{ path: string; rowId: string; cells: Record<number, string> }>,
-  run: () => void,
+  expectedTrackedRegularPath?: string,
 ): void {
   const paths = [...new Set(edits.map((edit) => edit.path))];
-  const original = new Map(paths.map((path) => [path, readFileSync(join(root, path), "utf8")]));
+  for (const edit of edits) updateFixtureTableRow(root, edit);
+  execFileSync("git", ["add", "--", ...paths], { cwd: root, stdio: "ignore" });
+  commitFixtureIndex(root);
+  expect(
+    execFileSync("git", ["status", "--porcelain=v1", "--untracked-files=all"], {
+      cwd: root,
+      encoding: "utf8",
+    }),
+  ).toBe("");
+  validateTrackedFixtureCatalog(root);
+  if (expectedTrackedRegularPath) {
+    const absolutePath = join(root, expectedTrackedRegularPath);
+    expect(lstatSync(absolutePath).isFile()).toBe(true);
+    expect(
+      execFileSync("git", ["ls-files", "--stage", "--", expectedTrackedRegularPath], {
+        cwd: root,
+        encoding: "utf8",
+      }),
+    ).toMatch(/^100644\s/m);
+  }
+}
+
+function restoreFixtureCatalog(
+  root: string,
+  dispositionPath: string,
+  sourceTargetPath: string,
+  originalDisposition: string,
+  originalSourceTargets: string,
+): void {
+  writeFileSync(join(root, dispositionPath), originalDisposition, "utf8");
+  writeFileSync(join(root, sourceTargetPath), originalSourceTargets, "utf8");
+  execFileSync("git", ["add", "--", dispositionPath, sourceTargetPath], {
+    cwd: root,
+    stdio: "ignore",
+  });
+  commitFixtureIndex(root);
+  expect(
+    execFileSync("git", ["status", "--porcelain=v1", "--untracked-files=all"], {
+      cwd: root,
+      encoding: "utf8",
+    }),
+  ).toBe("");
+  validateTrackedFixtureCatalog(root);
+}
+
+function validateTrackedFixtureCatalog(root: string): void {
+  const bundle = Object.fromEntries(
+    trackedCatalogPaths.map((path) => [path, readFileSync(join(root, path))]),
+  );
+  const input = loadTrackedCatalogInput(
+    bundle,
+    new GitAuthoringProvenance(root).receipts(trackedCatalogPaths),
+  );
+  expect(DocumentDispositionCatalog.create(input).ok).toBe(true);
+}
+
+function expectRebuildRejectsWithoutChangingProjection(
+  baselineRoot: string,
+  negativeRoot: string,
+): void {
+  const db = openHarnessDb(":memory:");
   try {
-    for (const edit of edits) updateFixtureTableRow(root, edit);
-    execFileSync("git", ["add", "--", ...paths], { cwd: root, stdio: "ignore" });
-    commitFixtureIndex(root);
-    run();
+    const baseline = rebuildFixture(baselineRoot, db);
+    expect(baseline.ok).toBe(true);
+    expectCharterEdges(db, "docs/design/harness/L0-planning/charter.md");
+    const before = rebuildProjectionSnapshot(db);
+
+    let rebuildFailure: unknown;
+    try {
+      rebuildFixture(negativeRoot, db);
+    } catch (error) {
+      rebuildFailure = error;
+    }
+    expect(rebuildFailure).toBeInstanceOf(Error);
+    expect(rebuildProjectionSnapshot(db)).toEqual(before);
   } finally {
-    for (const [path, content] of original) writeFileSync(join(root, path), content, "utf8");
-    execFileSync("git", ["add", "--", ...paths], { cwd: root, stdio: "ignore" });
-    commitFixtureIndex(root);
+    db.close();
   }
 }
 
