@@ -767,7 +767,7 @@ function ledgerWithDesignPath(input: { designPath: string; planId: string }): st
       cells.target_status = "`defer`";
       cells.target_kind = "`plan_alias`";
       cells.target_ref = "`PLAN-L7-417-source-disposition-profile-projection`";
-      cells["判断理由"] = "valid design_path defer fixture";
+      cells["判断理由"] = "valid defer fixture";
       cells.plan_id = input.planId === "—" ? "—" : `\`${input.planId}\``;
       values[values.length] = input.designPath ? `\`${input.designPath}\`` : "";
       for (const [key, value] of Object.entries(cells)) {
