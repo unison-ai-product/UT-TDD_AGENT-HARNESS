@@ -10,7 +10,7 @@ plan: docs/plans/PLAN-L5-25-resource-kernel-physical-protocol.md
 ---
 # Resource Kernel ワイヤ・カストディ設計と対応契約
 
-> **V-pair**: 本書のL5物理契約・58行の写像表は[L8 integration test design](../../test-design/harness/L8-integration-test-design.md)のfreeze表と対を成す。PLAN非依存の対応検査候補は[L7 test design](../../test-design/harness/L7-resource-kernel-planless-mapping-test-design.md)で定義する。旧PLANは履歴・locatorの由来であり、検査入力やfallbackではない。
+> **V-pair**: 本書のL5物理契約・58行の写像表は[L8 integration test design](../../../test-design/harness/L8-integration-test-design.md)のfreeze表と対を成す。PLAN非依存の対応検査候補は[L7 test design](../../../test-design/harness/L7-resource-kernel-planless-mapping-test-design.md)で定義する。旧PLANは履歴・locatorの由来であり、検査入力やfallbackではない。
 
 ### D.5 L5物理契約からL8 oracleへの全数写像
 

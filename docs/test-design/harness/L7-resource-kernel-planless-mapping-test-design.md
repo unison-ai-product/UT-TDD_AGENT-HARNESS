@@ -3,15 +3,15 @@ artifact_type: test_design
 layer: L5
 executed_at_layer: L7
 status: draft
-pair_artifact: docs/design/harness/L5-detailed-design/internal-processing.md
-parent_doc: docs/design/harness/L5-detailed-design/internal-processing.md
+pair_artifact: docs/design/harness/L5-detailed-design/resource-kernel-wire-custody.md
+parent_doc: docs/design/harness/L5-detailed-design/resource-kernel-wire-custody.md
 ---
 
 # Resource Kernel PLAN 非依存 L5-L8 対応検査 — L7 test design
 
 ## 目的と状態
 
-本書は、[internal-processing.md](../../design/harness/L5-detailed-design/internal-processing.md) 付録D.5の
+本書は、[resource-kernel-wire-custody.md](../../design/harness/L5-detailed-design/resource-kernel-wire-custody.md) D.5の
 Resource Kernel契約索引と、[L8-integration-test-design.md](./L8-integration-test-design.md)の
 `IT-RGK-PHYS-001..042` freeze表との双方向・全数対応、およびfixture manifestの42件の契約参照を、
 `docs/plans/`を入力にせず検査する候補oracleを定義する。
@@ -42,12 +42,14 @@ PLAN非依存になった、あるいはPLAN退役を完了したとは扱わな
 ## 実装・昇格受入 (未実装)
 
 1. この契約・Red段階では候補IDでテストを登録する。期待失敗や旧PLAN固定readerによる失敗は、個別規則のmutation証拠でも、source実装済み・Green済みの根拠でもない。
-2. 候補Redの後、別のsrc-free正式昇格PRで候補IDを正式IDへ昇格し、fixture manifestの`contract_doc`だけを`docs/design/harness/L5-detailed-design/internal-processing.md`へ変更する。`plan_id`は歴史的識別子として保持し、42件のentry、全`contract_ref`値、fixture属性は変更しない。このポインタ移設をRed登録と同一PRにもGreen実装PRにも混在させない。
+2. 候補Redの後、別のsrc-free正式昇格PRで候補IDを正式IDへ昇格し、fixture manifestの`contract_doc`だけを`docs/design/harness/L5-detailed-design/resource-kernel-wire-custody.md`へ変更する。`plan_id`は歴史的識別子として保持し、42件のentry、全`contract_ref`値、fixture属性は変更しない。このポインタ移設をRed登録と同一PRにもGreen実装PRにも混在させない。
 3. Green実装PRではreaderと必要なtest loaderだけを更新し、L5/L8/manifestなどdocs変更は0とする。fixture-manifest readerはmanifestの`contract_doc`を契約入力として読み、pair-mapping readerはL5 canonical文書のD.5を読む。`§1`〜`§6`および`§4.1`を、D.6の同番号`source §...`見出しへ解決する。固定PLAN path読取とfallbackは両検査・test loaderとも0。
 4. `docs/plans/` treeを物理的に欠くtest snapshotでcandidate/formalized 001〜004の対応testを実行し、さらにdoctor hard gateと両検査が通ることを記録する。58契約・42 oracleのexact集合、lane分布、fixture対応、重複/未知/孤児検出という現行保証を維持する。実OS runner証跡やResource Kernel本体の実装をGreenへ読み替えない。
 5. repository全体で`docs/plans/`を退役させる完了判定は、同pathを読む他のgate/testも解消された後に別途確認する。本書は全体退役の実測証拠ではない。
 
 ## 出典locatorの解決
+
+候補004の独立負系では、D.6の `source §N` 見出しの削除、改名、D.6範囲外の同番号見出しによる代用、`source §4.1` の欠落を一軸ずつ与える。それぞれ、そのlocatorを持つ具体的なmanifest entry IDを伴う `unknownContractRef` を要求する。他の番号付き見出しや旧PLANでは救済しない。正常形では42件を維持し、各負系は他のdigest・属性・参照を正常のままにして検査する。
 
 付録D.5の「出典」列とfixture manifestの42件の`contract_ref`は、以下の対応で付録D.6の同番号詳細契約本文へ解決する。旧PLANの節番号とmanifest値は変換・再割当てせず保持し、D.1〜D.4を詳細本文の代用にしない。
 

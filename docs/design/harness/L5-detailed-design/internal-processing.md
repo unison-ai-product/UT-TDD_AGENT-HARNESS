@@ -1033,9 +1033,7 @@ migrationはbackup完了後の`BEGIN IMMEDIATE`内でadditive DDL+全chain検証
 
 ## 付録 D: Resource Kernelワイヤ・カストディ内部処理
 
-本節はResource KernelのL5設計正本であり、`L8-integration-test-design.md`の
-`IT-RGK-PHYS-001..042`と対を成す。Node control planeはdomain/policy/journal/receipt sealを所有し、
-Rust companionはstrict wireとprivileged OS custody factだけを所有する。両者に同じpolicy reducerや
+本節はResource KernelのL5設計正本であり、`L8-integration-test-design.md`の`IT-RGK-PHYS-001..042`と対を成す。Node control planeはdomain/policy/journal/receipt sealを所有し、Rust companionはstrict wireとprivileged OS custody factだけを所有する。両者に同じpolicy reducerや
 journalを置かない。新規Bun runtime/API/test pathは永久禁止する。
 
 ### D.1 厳格ワイヤ処理
@@ -1118,10 +1116,7 @@ port欠測をfail-closeする。SQLite、PKI、rotation/revocation、secure cloc
 D0-N receiptを再review・再署名し、通常のL8/L9 oracleを再通過したmanifestだけを受理する。
 受理不能なら旧direct-spawnへ戻さず利用停止する。
 
-### D.5/D.6 Resource Kernel契約の正本
-
 58件のL5契約写像・詳細本文と locator 対応は[resource-kernel-wire-custody.md](./resource-kernel-wire-custody.md)に移設し、L8 freeze表との既存pairを保つ。PLAN非依存の対応検査条件と候補oracleは[L7 test design](../../../test-design/harness/L7-resource-kernel-planless-mapping-test-design.md)にある。
-
 ## 付録 E: PLAN 系譜 seal の preimage 契約 (PLAN-RECOVERY-16、Issue #542)
 
 `SealedLineageLocalMigration` (`src/plan-asset/ledger/sealed-lineage-local-migration.ts`、artifact owner は
