@@ -105,7 +105,7 @@ issue: 1062
 | `body` | string ≤ 8,000 | 現行の `CLAUDE_WAKE_BODY_MAX_CHARS`。要約だけを置き、判断材料は `ref` 先の GitHub コメントを正とする |
 | `requestDigest` / `requestPath` / `pr` / `exactHead` / `reviewRevision` / `authorFamily` | `purpose=review` のみ | 現行と同じ。`requestPath` は `.ut-tdd/review/requests/<digest>.json` だけを受理 |
 
-- `memory_id` / `memoryPath` を持たない。`purpose=review` の reviewer への task 本文は、`review live-dispatch --task-file <path>` で渡された file を `.ut-tdd/review/requests/<digest>.task.md` に複製して使う (request と同じ置き場、同じ digest 名)。task 本文は identity に入れない (reviewer が著者の主張に束縛されないため、blind packet の規律を保つ)。
+- `memory_id` / `memoryPath` を持たない。`purpose=review` の reviewer への task 本文は、`review live-dispatch --task-file <path>` で渡された file を `.ut-tdd/review/requests/<digest>.task.md` に複製して使う (request と同じ置き場、同じ digest 名)。task 本文は identity に入れない (同じ digest に別の task 本文が来ても複製は先勝ちで上書きせず、警告を出す) (reviewer が著者の主張に束縛されないため、blind packet の規律を保つ)。
 - 発行口は `ut-tdd notify claude --ref <url> --body <text> [--operation-id <id>]` を 1 つだけ足す (`purpose=note`)。`purpose=review` は `review live-dispatch` が発行する (現行どおり)。
 - 配送 (Stop hook の選択・claim・terminal 判定・backlog 要約) は変えない。`decodeClaudeInboxEntry` は migration window の間、v3 / v4 の旧 entry も復号する (§4.3)。
 - 受信側は `ref` を読んで GitHub のコメントを確認する。通知の本文だけで判断を進めない (現行の描画文言「現行契約・HEAD・CI を再確認して処理してください」を維持し、「共有HARNESSメモリからの通知」を「通知レコードからの通知」に直す)。
@@ -136,8 +136,9 @@ reviewRevision = "rv1-" + sha256(canonicalJson(reviewIdentityObjectV2))
 ### 4.3 migration window
 
 - 読み取り側 (merge gate、`review-dispatch`、post-merge-backstop、provider-judgment-composition) は `review-request/v1` と `v2` の両方を検証する。書き込みは v2 だけ。
-- cutover 時点で v1 の open request (terminal receipt が無いもの) を持つ head は v1 のまま完了させる。新しい head は v2 で始める。v1 の closed な receipt は残し、読めなくしない。
-- v1 の読み取りは、open な v1 request が 0 件になり、かつ cutover から 1 回の `ut-tdd db rebuild` を経た後の別 PR で削除する (§7 の 7)。
+- (a) **書き込み**: v2 cutover 以降、v1 の request / receipt を新規に作らない。例外は、cutover 前に始まった v1 の attempt を完了させる書き込みだけ (新しい head は v2 で始める)。
+- (b) **読み取り**: 既存の v1 request / receipt は **恒久的に読める**。merge gate と post-merge-backstop は read-only の v1 parser を残す (`review-merge-gate.ts` は request / receipt の JSON を直接読み、`ut-tdd db rebuild` は v1 を v2 へ変換しないため、parser を消すと terminal な v1 receipt を持つ未 merge の PR や後の backstop が読めなくなる)。変換器で移す案は、元 bytes の digest を保つ検証が別途要り、parser を残すより大きいので採らない。
+- (c) v1 parser の削除は本書の範囲外とする。将来やるなら別 PR で、「terminal な v1 receipt を持つ未 merge の PR が 0 件」を実測した上でのみ行う (open な request の件数では判定しない)。
 
 ## 5. handover prose の退役
 
@@ -163,7 +164,8 @@ classifyMemoryAdd({ kind, durableReason }) =
 
 ## 7. 既存分の移行
 
-- **選別**: 未追跡 ∧ `kind=project`。実測 210 件 (§1.1)。追跡済みと feedback / reference / user は触らない。
+- **選別**: **拒否規則 (§8 の 3) が有効になる前に存在した**、未追跡 ∧ `kind=project`。実測 210 件 (§1.1)。対象集合は 3 の cutover で凍結する: 3 の PR が、その時点の該当 memory の `memory_id` と内容 digest の一覧を `.ut-tdd/archive/memory-episodes/target-snapshot.jsonl` に 1 回だけ記録し、移行 PR はこの一覧に載るものだけを動かす。追跡済みと feedback / reference / user は触らない。
+- **保持**: `durable_reason` を持つ project memory は、一覧に載っていても移さない。拒否規則の後に理由付きで受理された memory は一覧に載らず、移行後も `memory_entries` に残り検索できる。
 - **除外**: open な review request (terminal receipt が無い) が task 本文として参照している memory は移さない。custody の差し替え (§4) が先に入っていれば参照は存在しない。
 - **手段**: `memory.md` §4.2 の `memory retire` の退避部品 (write-ahead の manifest、`memory_entries` 行の同時削除、dry-run 既定) を、選別規則を差し替えて使う。`.ut-tdd/archive/memory-episodes/` へ移し、削除しない。dry-run の件数を PR に記録し、実行後に `ut-tdd db status` が `fresh` で、移した件数 + 残りの件数 = 移行前の総数であることを確かめる。
 - 移行はメモリの「整理」であって正本の変更ではないので、教訓の内容には触れない。
@@ -174,11 +176,11 @@ classifyMemoryAdd({ kind, durableReason }) =
 | --- | --- | --- | --- |
 | 1 | 契約 (本 PR) | 本書 + L7 テスト設計 + 索引 | なし |
 | 2 | Red | `it.fails` を CANDIDATE-U-STCHAN-* で引用して入れる (設計保護 gate §10.3 の順)。続けて正式 ID への昇格 | 1 の非著者 review PASS |
-| 3 | 拒否規則 | `classifyMemoryAdd` + `memory add` 配線 (001〜006) | 2 |
+| 3 | 拒否規則 | `classifyMemoryAdd` + `memory add` 配線 (001〜006)、移行対象の凍結一覧 `target-snapshot.jsonl` の記録 (§7) | 2 |
 | 4 | custody v2 | `reviewIdentityObjectV2`、読み取りの v1 / v2 両対応、`review live-dispatch` の `--task-file` 化、`--review-memory-id` の無視化 (007〜014) | 2。3 とは独立 |
 | 5 | 通知レコード | `ut-tdd notify claude`、entry から memory 項目を除く、旧 entry の復号 (015〜018) | 4 (review 通知が v2 の request を指すため) |
 | 6 | handover | scaffold 生成の停止、`doc_entry_count` の撤去、doctor `handover-prose` (019〜021) | 2。3〜5 とは独立 |
-| 7 | 移行と cutover | memory 210 件の退避、handover 直下の退避、`--review-memory-id` / `--notify-claude` の廃止、v1 読み取りの削除 (022〜024) | 3〜6、退避部品 (#963 の実装)、open な v1 request が 0 |
+| 7 | 移行と cutover | memory 210 件の退避、handover 直下の退避、`--review-memory-id` / `--notify-claude` の廃止 (022〜024)。v1 の読み取りは残す (§4.3) | 3〜6、退避部品 (#963 の実装) |
 
 各 PR は Green → Refactor の順で commit し、Refactor の commit は `tests/` の内容差分 0 とする (CLAUDE.md §PR スコープ規律 5)。
 
