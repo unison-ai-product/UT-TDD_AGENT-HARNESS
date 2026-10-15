@@ -21,7 +21,7 @@ source document、semantic item、HARNESS target slotは別集約である。本
 
 | source_id | source_title | disposition | target | profile / 判断理由 |
 |---|---|---|---|---|
-| ZIP-DOC-001 | 企画書 | merge | `PLAN-L0-01` | engine-swap charterへ統合 |
+| ZIP-DOC-001 | 企画書 | merge | `docs/design/harness/L0-planning/charter.md` | engine-swap charterへ統合 |
 | ZIP-DOC-002 | 要求定義書 | merge | `docs/design/harness/L1-requirements/` | L1要求群へ分解統合 |
 | ZIP-DOC-003 | 要件定義書 | merge | `docs/design/harness/L3-functional/` | FR/AC正本へ統合 |
 | ZIP-DOC-004 | 基本設計書 | merge | `docs/design/harness/L4-basic-design/` | L4 sub-doc群へ分解統合 |
@@ -91,7 +91,7 @@ source document、semantic item、HARNESS target slotは別集約である。本
 | ZIP-DOC-068 | コンプライアンス対応・統制マッピング設計書 | reference | `vmodel-document-scale-profiles.md` | regulated profileで採用 |
 | ZIP-DOC-069 | 性能設計書 | merge | `docs/design/harness/L1-requirements/nfr.md` | performance NFRへ統合 |
 | ZIP-DOC-070 | モデルガバナンス・ML-BOM設計書 | merge | `docs/design/harness/L4-basic-design/architecture.md` | model routing/advisor evidenceへ統合 |
-| ZIP-DOC-071 | ビジネス分析・システム化計画書 | merge | `PLAN-L0-01` | L0 value/engine-swap programへ統合 |
+| ZIP-DOC-071 | ビジネス分析・システム化計画書 | merge | `docs/design/harness/L0-planning/charter.md` | L0 value/engine-swap programへ統合 |
 | ZIP-DOC-072 | フロントエンド設計書 | merge | `docs/design/harness/L4-basic-design/ui-standard.md` | UI architecture slotへ統合 |
 | ZIP-DOC-073 | ブラウザ対応・レスポンシブ設計書 | reference | `DOC-L4-UI-STANDARD` | Web profileで採用 |
 | ZIP-DOC-074 | Web性能設計書 | reference | `DOC-L4-UI-STANDARD` | Web profileで採用 |

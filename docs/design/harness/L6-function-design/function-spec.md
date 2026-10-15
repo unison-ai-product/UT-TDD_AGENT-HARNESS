@@ -297,15 +297,26 @@ type QualitySignal = { signal_type: string; subject_id: string; score?: number; 
 
 ## 2026-06-09 L6 completion readiness 追補
 
-`analyzeL6Completion` は G6 readiness aggregator である。`freezeInputReady` (status flip 前の G6 audit に trace/substance が ready) と final `ready` (confirmed docs/plans、confirmed L7、G6 PASS 後の L6 completion) を分離する。これは L6 design doc status、各 L6 doc の owning `plan:` reference、各 L6 doc の `pair_artifact`、L6 doc filename による L7 reverse reference、minimum unit-contract substance marker (contract/signature、DbC または oracle、U-* oracle family)、base L6 `kind=design` PLAN status と review evidence、L7 unit-test-design status、G6 gate table row を読む。Post-G6 `kind=add-design` PLAN は add-feature/backfill/review evidence で統制し、base G6 completion を reopen しない。unit oracle は `L7-unit-test-design.md` の U-L6COMP-001..005 とする。
+**現実装の旧挙動（後続 Green で置換する対象）**: `analyzeL6Completion` は G6 readiness aggregator である。`freezeInputReady` (status flip 前の G6 audit に trace/substance が ready) と final `ready` (confirmed docs/plans、confirmed L7、G6 PASS 後の L6 completion) を分離する。2026-10-14 時点の実装は L6 design doc status、各 L6 doc の owning `plan:` reference、各 L6 doc の `pair_artifact`、L6 doc filename による L7 reverse reference、minimum unit-contract substance marker (contract/signature、DbC または oracle、U-* oracle family)、base L6 `kind=design` PLAN status と review evidence、単一の `L7-unit-test-design.md` status、G6 gate table row を読む。Post-G6 `kind=add-design` PLAN は add-feature/backfill/review evidence で統制し、base G6 completion を reopen しない。この段落は現実装の説明であり、PLAN 所有必須・単一L7参照を正式な目標契約として追加するものではない。正式 oracle family は `L7-unit-test-design.md` の U-L6COMP-001..012 である。
+
+doctor 配線: `checkL6Completion` (`src/doctor/process-quality.ts`、`l6-completion` check) は hard/fail-close であり、`ok` は final `ready` と一致する (`freezeInputReady` だけでは `ok` にならない)。入力を読めない場合・集約が例外を投げた場合も `violation` を返して `ok=false` とし、silent PASS を作らない。2026-10-14 時点の実装が出す旧診断一覧は draft docs / owning plan 欠落・未解決 / L7 pair 欠落 / L7 reverse reference 欠落 / unit-contract substance 不足 / draft PLAN / L7 draft / G6 not-pass である。これは旧挙動の説明に限り、正式契約では `issue:` だけで正当な所有者を持つ文書を owning PLAN 欠落のみで not-ready としない。`ready=true` は全条件が揃った場合に限り、`freezeInputReady=true` は status・gate の flip 前でも trace/substance が揃えば成立する (U-L6COMP-002 / 004)。
 
 ### L6 completion の範囲と inventory (PLAN-L6-00 から還流、#958)
 
 - L6 completion の範囲は、原本の `function-spec` / `edge-case` に限らない。`docs/design/harness/L6-function-design/` 配下を生成または改訂する L6 add-design PLAN の成果物はすべて G6 readiness の対象である。
-- L6 設計文書全体の pair artifact は `docs/test-design/harness/L7-unit-test-design.md` の 1 本である。各 L6 設計文書は、そこに U-* oracle family を 1 つ以上持たなければならない。
+- **現実装の旧挙動**: L6 設計文書全体の pair artifact を `docs/test-design/harness/L7-unit-test-design.md` の 1 本に固定し、各文書の U-* oracle family をそこから読む。これは後続 Green で置換する現実装の説明であり、正式な目標契約では各 L6 文書が選択した `pair_artifact` と、その同一文書内の oracle family / 逆参照を使う。
 - 追加要求 (SQLite projection・drive/model ログ・skill 発火指標・検索コスト削減・機械品質検査) は `fr-unit-coverage.md` の FR-L1 行が受ける。
-- G6 audit の入力条件は、(1) 各文書に owning `plan:` と `pair_artifact` と unit 契約の中身がある、(2) 所有する design / add-design PLAN が構造 lint 違反なし、(3) L7 に対応する U-* family がある、(4) `l6-fr-coverage` / `pair-freeze` / `plan-schedule` / `review-evidence` と typecheck / vitest / doctor が green、である。最終完了は、全文書と所有 PLAN が confirmed (または confirmed PLAN で supersede)、L7 が confirmed、gate-design に G6 PASS と audit 参照が記録された状態である。
+- G6 audit の正式な目標入力条件は、(1) 各文書に所有者 (`plan:` または `issue:`)、選択した `pair_artifact`、unit 契約の中身がある、(2) 所有する PLAN が実在する場合はその design / add-design PLAN に構造 lint 違反がない、(3) 選択した各 L7 文書に対応する U-* family がある、(4) `l6-fr-coverage` / `pair-freeze` / `plan-schedule` / `review-evidence` と typecheck / vitest / doctor が green、である。最終完了は、全文書が confirmed、実在する所有 PLAN は confirmed (または confirmed PLAN で supersede)、選択された全 L7 文書が confirmed、gate-design に G6 PASS と audit 参照が記録された状態である。
 - クラス設計は非 OOP のため縮退し、本 doc §3 に統合する (上記)。
+- **PLAN 退役に向けた改訂 (#958、未実装の目標契約)**: PLAN は工程②の最後に一括で退役させる (PO 2026-10-14)。そのため、L6 completion の入力から PLAN と単一の L7 文書への依存を外す。実装 (`src/lint/l6-completion.ts`) は 2026-10-14 時点で旧規則のままであり、`plan:` が `docs/plans/PLAN-L6-*.md` の実在 path を指すこと (`DOC_PLAN_RE` / `unresolvedDocPlans`)、`pair_artifact` が `L7-unit-test-design.md` であること (`PAIR_ARTIFACT_RE`)、その本文が L6 文書のファイル名を含むこと (`missingL7DocRefs`) を要求している。以下の箇条書きは旧実装記述に優先する正式な未実装目標契約である。各文書の所有者は有効な `plan:` または `issue:` で示し、`pair_artifact` が選択した同一のL7文書へ逆参照を束縛する。目標の規則は次のとおり。
+  - 所有者: 各 L6 文書は、`plan:` (実在する PLAN の path) か `issue:` (GitHub issue の番号、正の整数) のどちらか 1 つ以上を持つ。どちらも無い文書と、`plan:` が実在しない path を指す文書は、従来どおり not-ready にする。`issue:` の番号が GitHub に実在するかは検査しない (オフラインで決まる入力だけを使う)。
+  - 対: `pair_artifact` は `docs/test-design/harness/L7-*.md` のどれでもよい。そのファイルが実在し、frontmatter に `artifact_type: test_design` と `executed_at_layer: L7` を持つこと (右腕の文書は、設計層を `layer`、実行層を `executed_at_layer` で表す。共有の `L7-unit-test-design.md` は `layer: L6` / `executed_at_layer: L7` で、この条件を満たす)。
+  - 逆参照: L6 文書のファイル名を、その L6 文書の `pair_artifact` が指す文書の本文が含むこと。別の `L7-*.md` にだけ名前があっても、対は成立しない (指定した対と逆参照を同じ文書に束縛する)。
+  - base L6 の `kind=design` PLAN の status の検査 (`draftPlans` / `missingReviewPlans`) は、PLAN が実在する間だけ行う。`docs/plans/` が無いか、L6 の PLAN が 0 件なら、その項目は空集合として扱い、not-ready の理由にしない。
+  - L7 の status: L6 文書の `pair_artifact` が指す文書の集合 (重複を除く) のすべてが `status: confirmed` であること。1 本でも draft か status が無い文書があれば not-ready にする。単一の `l7Status` (L7-unit-test-design.md の status) だけで判定しない。
+  - G6 の PASS は、従来どおり必須とする。
+  - 既存 oracle の改訂と正式昇格: `U-L6COMP-006..012` を正式 oracle として引用する。U-L6COMP-001 の「owning `plan:` が無い」は「所有者 (`plan:` か `issue:`) が無い」に、U-L6COMP-002 の「owning L6 PLAN へ解決する」は「所有者が、実在する PLAN か正の整数の issue へ解決する」に置き換える。U-L6COMP-006..011 は上の所有者・対・逆参照・PLAN status / L7 status 規則を検証し、U-L6COMP-012 は正式 oracle 集合に相反する旧 oracle が併存しないことを検証する。001 / 002 の「L7 の `pair_artifact`」「L7 から名前で参照される」「L7 が confirmed」は、上の対・逆参照・L7 の status の規則に置き換える。旧い文面は、置き換えた時点で残さない (同じ入力に反対の判定を求める oracle を併存させない)。
+  - 上の表の「所有 PLAN」の列は、PLAN を退役させるときに、対応する issue へ置き換える。
 
 | L6 設計文書 | 所有 PLAN | L7 oracle family |
 |---|---|---|
@@ -327,7 +338,7 @@ type QualitySignal = { signal_type: string; subject_id: string; score?: number; 
 | `plan-schedule-lint.md` | `PLAN-L6-19` | `U-PLANSCH` |
 | `fr-unit-coverage.md` | `PLAN-L6-21` | `U-FR-L1-01..50` |
 
-この表は、後から追加された L6 文書 (descent-obligation / skill-index など) の oracle family を網羅しない。後発文書の対応は L7-unit-test-design.md の module-design crosswalk と各文書の `plan:` が持つ。
+この表は現時点の PLAN 起点 inventory であり、後から追加された L6 文書 (descent-obligation / skill-index など) の oracle family を網羅しない。これは正式な目標契約上の必須所有者形式を限定しない。後発文書の対応は、正式契約では各文書の所有者 (`plan:` または `issue:`) と選択した L7 文書に束縛される。
 
 > **SSoT 参照**: module 公開 IF = [module-decomposition.md](../L5-detailed-design/module-decomposition.md) / DbC pre-post-invariant = [internal-processing.md](../L5-detailed-design/internal-processing.md) §3-§5 / 型の単一正本 = `src/schema/` / pseudocode 標準 = [document-system-map](../../../governance/document-system-map.md) §1 (IEEE 1016 §5.7)。本 doc は公開 IF に **関数 signature + アルゴリズム pseudocode + 型設計 + WBS** を付与する (L6、IEEE 1016 §5.7)。
 >
@@ -1738,7 +1749,7 @@ usage=2を維持する。
 | `CatalogItem` | `itemId`, `itemName`, `categoryId`, `sourceStatus`, `sourceRef`, `sourceFile`, `rowDigest` | category/source edge欠落=`catalog-orphan-edge` |
 | `SourceItemEdge` | `edgeId`, `sourceId`, `itemId`, `sourceStatus`, `sourceFile`, `rowDigest` | edgeIdは`sourceRef,itemId`のframed digestだけから導出し、reasonを創作しない |
 | `SourceTargetEdge` | `edgeId`, `sourceId`, `targetType`, `targetRef`, `disposition`, `rowDigest` | targetType=`plan_alias|artifact_family|artifact_path|target_slot`。source targetはitem targetのdefaultではない |
-| `ItemTargetEdge` | `edgeId`, `itemId`, `targetStatus`, `reason`, `sourceDigest`, `targetKind?`, `targetRef?`, `planId?` | targetKind=`artifact_path|artifact_family|plan_alias|target_slot`。runtimeでsource→targetを継承・推論しない。pendingはtarget禁止、adopt/merge/reference/deferのtarget欠落=`catalog-item-target-incomplete` |
+| `ItemTargetEdge` | `edgeId`, `itemId`, `targetStatus`, `reason`, `sourceDigest`, `targetKind?`, `targetRef?`, `planId?`, `designPath?` | targetKind=`artifact_path|artifact_family|plan_alias|target_slot`。`designPath`はL5 §9.15.4の別個のsemantic管理・設計参照であり、判断targetではない。runtimeでsource→targetを継承・推論しない。pendingはtarget禁止、adopt/merge/reference/deferのtyped target欠落=`catalog-item-target-incomplete`、deferは有効な`designPath`必須で`planId`不要。非NULL `planId` はlegacy互換としてplan FKを維持する |
 | `DocumentProfileDecision` | `decisionId`, `profileId`, `docTypeId`, `decision`, `detailOverride`, `statusOverride`, `reason`, `rowDigest`, `requiredPlanId?` | semantic itemへmapしない。conditional/skip/deferはreason必須、deferはPLAN必須 |
 | `DocumentProfile` | `profileId`, `profileAxis`, `profileRank`, `description`, `defaultStatus`, `defaultDetail`, `scopePolicy`, `rowDigest` | profile master全fieldをround-tripし、decision rowをmaster代用にしない |
 | `createProfileCatalog` 入力 | `profiles: DocumentProfile[]`, `decisions: DocumentProfileDecision[]`, `knownDocTypeIds`, `requiredDocTypeIds`, `coreDocTypeIds`, `knownCapabilityFlags?` | `sourcePath`/`sourceDigest`はdomain入力に含めず、`TrackedDocumentProfileCatalog`（`src/profile/adapters/tracked-profile-loader.ts`: `sourcePath`, `sourceDigest`, `catalogSourcePath`, `catalogSourceDigest`, `catalog`）がloader側で保持する。profile/decision IDとFKをcreate前に検証 |
@@ -1830,6 +1841,18 @@ document profileの6正本を、見出し名・column集合・row幅・inline co
 未知/重複column、欠落row、row幅不一致、silent skipはそれぞれ`catalog-authoring-schema-invalid`、
 `catalog-authoring-row-invalid`、`catalog-authoring-count-invalid`としてfail-closeする。複数findingは
 `ruleId, subjectId, evidenceRefs`のbytewise stable順にし、canonical digestはlength-prefixed frameで計算する。
+
+T1のitem-target ledgerでは`design_path`列をstrict schemaへ追加し、空欄は未設定として`designPath`へlosslessにmapする。
+非空値はL5 §9.15.4の完全なrepo-relative `docs/design/` tracked path規則で検証し、basename aliasやPLAN IDから補完しない。
+`designPath`はitem-target edgeのcanonical digestとprojectionへ含める。active 163件はすべて
+`pending_review`を維持し、`designPath=docs/design/harness/L5-detailed-design/physical-data.md`、`planId=NULL`とする。
+item identity/status/target kind・ref/reason/source digestの値・集合は変えず、pending判断を昇格・推論しない。
+deferはvalidな`designPath`を要しPLAN IDを要しない一方、非NULLのlegacy `planId`は既存plan FK検証を維持する。
+
+このT1 schema移行は`addMissingColumns`による列追加だけでは完了しない。旧defer CHECKを置換するtable rebuildと
+`rebuildHarnessDb`のcanonical projection rebuild/swapを同一のtransaction/savepoint rollback境界へ含め、
+source・FK・CHECK・digest検証の失敗ではschemaとprojection双方をrollbackして旧Green投影を保持する。
+これは未実装の設計契約であり、実装済みを意味しない。
 
 catalog createはauthoring構造がvalidなら`pending_review`を保持したまま成功できる。pendingは完了判断ではなく、
 `unresolved()`が純粋queryとしてstable ID順に全件返す。accept/closeだけがpending 0を要求し、DB空集合やsource-targetから

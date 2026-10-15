@@ -131,3 +131,5 @@ content unchanged.
 - Running an unspecified test command instead of the repository's canonical `npm run test` script.
 - Treating `ut-tdd doctor` green as evidence that the test design is correct —
   doctor checks structural governance, not oracle quality or cycle order.
+- Bypassing the Vitest snapshot guard by hand-setting its env vars: forbidden; the rule lives in
+  `CLAUDE.md` §Shared Guard Discipline (Vitest の snapshot guard を env で迂回しない).

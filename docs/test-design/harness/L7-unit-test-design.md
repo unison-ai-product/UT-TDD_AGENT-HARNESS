@@ -885,11 +885,20 @@ PR2 (`add-feature`) は昇格 PR merge 後の main から開始し、PLAN-L7-423
 
 ### 2026-06-09 L6 Completion Readiness Addendum
 
-- U-L6COMP-001: `analyzeL6Completion` reports not-ready when any L6 design doc is draft, lacks an owning `plan:` reference, lacks the L7 `pair_artifact`, is not referenced by filename from L7, lacks minimum unit-contract substance (contract/signature + DbC/oracle + U-* family), any base L6 `kind=design` PLAN is draft, L7 is draft, or G6 is not PASS.
-- U-L6COMP-002: `analyzeL6Completion` reports ready only when all L6 docs are confirmed, all L6 docs resolve to an owning L6 PLAN and L7 reverse reference, all L6 docs expose unit-test-granularity contract substance, all base L6 `kind=design` PLANs are confirmed with review evidence, L7 is confirmed, and G6 is PASS.
-- U-L6COMP-003: `checkL6Completion` surfaces readiness in `doctor` as warn-only until the G6 freeze audit is ready to harden it.
+- U-L6COMP-001: `analyzeL6Completion` は、L6設計文書のいずれかがdraftである、所有者 (`plan:` または正の整数の `issue:`) を持たない、`plan:` が未解決である (`issue:` も併記されていても同じ)、有効な選択済みL7 `pair_artifact` がない、その選択済みpair内にファイル名の逆参照がない、または最小単体テスト契約の実質 (contract/signature + DbC/oracle + U-* family) を欠く場合にnot-readyを返す。加えて、L6 PLANが存在する場合にbase L6 `kind=design` PLANがdraftまたは必要なreview evidenceを欠く、選択済みpair artifactのいずれかがdraftまたはstatus未記載、あるいはG6がPASSでない場合もnot-readyとする。`docs/plans/`が存在しないかL6 PLANが0件ならPLAN status由来のfindingは空集合とする。
+- U-L6COMP-002: `analyzeL6Completion` は、全L6文書がconfirmedであり、各文書が所有者 (`plan:` は実在PLANへ解決、または正の整数の `issue:`。未解決の `plan:` は `issue:` で救済しない。GitHub issueの実在性は検査しない) を持ち、各 `pair_artifact` が実在する適格な `L7-*.md` test-designを指し、その同じ文書内にL6文書のファイル名を含み、全L6文書が単体テスト粒度の契約実質を備え、選択済みpair artifactがすべてconfirmedで、該当するbase L6 `kind=design` PLANがreview evidence付きでconfirmedとなり、かつG6がPASSの場合に限りreadyを返す。`docs/plans/`が存在しないかL6 PLANが0件なら、PLAN status条件は空集合として充足扱いにする。
+- U-L6COMP-003: `checkL6Completion` surfaces readiness in `doctor` as hard/fail-close (`ok = analyzeL6Completion().ready`; input unreadable も violation で `ok=false`)。実装 `src/doctor/process-quality.ts` に合わせて 2026-10-14 に是正した (旧記述は warn-only、#958)。
 - U-L6COMP-004: `analyzeL6Completion` reports `freezeInputReady=true` when L6 trace/substance inputs are complete even if docs/plans/L7/G6 are still draft before the G6 audit.
 - U-L6COMP-005: post-G6 `kind=add-design` PLAN drafts do not reopen base L6 completion; add-feature completeness is handled by backfill/pair/review evidence.
+| U-ID | Target | Oracle |
+|---|---|---|
+| U-L6COMP-006 | `analyzeL6Completion` | `plan:` を持たず `issue: <正の整数>` を持つ L6 文書を、所有者ありとして扱う (`missingDocPlans` に入れない)。issueがGitHub上に実在するかは検査しない。負例: `issue:` の値が 0・負数・数字以外なら所有者なしとして not-ready。 |
+| U-L6COMP-007 | `analyzeL6Completion` | `plan:` が実在しない path を指す L6 文書は、`issue:` を併せ持っていても `unresolvedDocPlans` に入り not-ready (誤った PLAN 参照を issue で覆い隠さない)。 |
+| U-L6COMP-008 | `analyzeL6Completion` | `pair_artifact` が実在する `docs/test-design/harness/L7-*.md` (frontmatter に `artifact_type: test_design` と `executed_at_layer: L7`) を指せば、`L7-unit-test-design.md` 以外でも対ありとする。既存の `L7-unit-test-design.md` (`layer: L6` / `executed_at_layer: L7`) を指す L6 文書も、引き続き対ありになる。負例: 実在しない path、`executed_at_layer: L7` を持たないファイル、`L7-` で始まらないファイルは対なし。 |
+| U-L6COMP-009 | `analyzeL6Completion` | L6 文書のファイル名を、その文書の `pair_artifact` が指す文書の本文が含めば逆参照ありとする。負例: `pair_artifact` の文書 A は名前を含まず、別の `L7-*.md` B にだけ名前がある場合は `missingL7DocRefs` に入り not-ready。 |
+| U-L6COMP-010 | `analyzeL6Completion` | `docs/plans/` が存在しない (または L6 の PLAN が 0 件の) tree では、`draftPlans` / `missingReviewPlans` は空集合で、それだけを理由に not-ready にならない。L6 文書がすべて confirmed で所有者・対・逆参照・unit 契約の中身を持ち、各選択pairが confirmed で G6 が PASS なら ready になる。 |
+| U-L6COMP-011 | `analyzeL6Completion` | L6 文書の `pair_artifact` が指す文書の集合のうち 1 本でも `status: draft` (または status が無い) なら not-ready。負例: L6 文書 X の対 `L7-other.md` が draft で、別の L6 文書 Y の対 `L7-unit-test-design.md` が confirmed の tree は、`L7-unit-test-design.md` の status だけでは ready にならない。 |
+| U-L6COMP-012 | completion contract promotion | 正式昇格後は、001 / 002 の旧「owning L6 PLAN」「単一のL7 pair」「全L6文書名の共有L7への逆参照」「単一L7 status」条件を本familyの006〜011へ置換する。`issue:` だけを持つL6文書をnot-readyとする旧判定と、006/010によりreadyとする新判定を併存させない。 |
 
 ## PLAN-L7-68 Provider Dispatch Addendum
 
@@ -1434,6 +1443,14 @@ TVMS-015 は VMS-015 の工程 live state / 固定4段 SessionStart digest contr
 | `U-DISP-003` | source/item/target orphan | catalog create | `catalog-orphan-edge`, exit 1 |
 | `U-DISP-004` | disposition理由/target/PLAN欠落 | catalog create | `catalog-disposition-incomplete`, exit 1 |
 | `U-DISP-005` | 同一edge ID重複 | catalog create | `catalog-edge-duplicate`, exit 1 |
+| `CANDIDATE-U-DISPPTR-001` | docs/plansなし、全163 itemがpendingのtracked catalog | catalog create → DB rebuild | 全件pendingを保持し、design_path=`docs/design/harness/L5-detailed-design/physical-data.md`、plan_id=NULL。item identity、target/status、reason、source_digestを変えない。本候補は未昇格で既存U-DISP-004を変更しない。後続formal promotionではU-DISP-004のPLAN必須をdesign_path必須へ置換し、旧条件を併存させない。 |
+| `CANDIDATE-U-DISPPTR-002` | defer rowに、Git-tracked exact pathでregular fileとして実在し、realpathがrepo root内に収まる`docs/design/**`を指定。plan_id=NULL。対照fixtureはplan_idのみ、またはdesign_path欠落 | pure path resolver → domain validate | canonical realpathがrepo内にあるvalid design_pathのdeferを受理する。plan_idだけ、design_path欠落は拒否し、deferをPLAN必須で判定しない。 |
+| `CANDIDATE-U-DISPPTR-003` | 次を各1変異fixtureで与える (optionalな`design_path`の省略/NULLは負例にしない。空文字は、required pathを持つ`defer` rowで指定する): trackedだが物理欠落、read不可、explicit empty string、basename/partial path alias、absolute path、`.`/`..` segment、backslash区切り、非NFC表記、入力pathの正規化結果が別のtracked pathへ化ける不一致、tracked・実在の非`docs/design/` path、Git mode `120000` symlink、親junction/reparse point経由でrepo外へ出るpath | tracked path resolver + regular-file/realpath containment/domain check | 各変異を拒否し、projection commit 0・既存projectionを保持する。 |
+| `CANDIDATE-U-DISPPTR-004` | legacy `vmodel_item_target_edges` CHECKのdefer row（plan_idあり、design_path列なし）と旧`user_version` | transactional table migration | design_pathをPLAN等から推定せずmigrationを失敗させる。rollback後も旧table CHECK、全row、旧`user_version`を保持する。 |
+| `CANDIDATE-U-DISPPTR-005` | design_path列追加とCHECK置換を行う旧table copy/swap。親item/plan rowを用意 | SQLite FK constraint inspection + invalid-reference insert | `item_id→vmodel_semantic_items` と nullable `plan_id→plan_registry` のFKを保持する。NULL plan_idは許可し、存在しないitem/plan参照は拒否する。 |
+| `CANDIDATE-U-DISPPTR-006` | valid legacy schema/versionと保全対象row | schema migration | 成功後`PRAGMA user_version = SCHEMA_VERSION`、既存rowの全authoring値を保持し、新nullable `design_path`を持つ。 |
+| `CANDIDATE-U-DISPPTR-007` | DOC-L0-CHARTER catalog、ZIP-DOC-001/071 disposition target、EDGE001/071 (`artifact_path`) typed edge | source catalog loader + tracked artifact resolver | authoring_source_path=`docs/design/harness/L0-planning/charter.md`、projection_table=`spec_defs`、target/edge pathが同実体へ束縛される。ID/slotのみ、別path、実体欠落ではprojection commitを許さず既存projectionを保持する。 |
+| `CANDIDATE-U-DISPPTR-008` | memory-only DBの旧schema/version・既存projectionを用意。`HarnessDb` wrapperでitem-target実insertを観測した後の最終`COMMIT`だけを失敗させ、先行migrate commitは許可 | 実`rebuildHarnessDb` call（外側test transactionで包まない） | faultは実V-model projection後に発生し、失敗時は旧`sqlite_master.sql`、`user_version`、全既存projection rows/digestsを保持する。migrateがprojection前にcommitする実装ではschema/version変更が残りRedとなる。 |
 | `U-TARGET-001` | 4 typed target | canonical resolver | plan/path/family/slotをregistryだけで解決、exit 0 |
 | `U-TARGET-002` | disposition short alias / edge full alias | reconcile | canonical identity一致、exit 0 |
 | `U-TARGET-003` | unknown/ambiguous/absent target | canonical resolver | typed finding、exit 1 |
