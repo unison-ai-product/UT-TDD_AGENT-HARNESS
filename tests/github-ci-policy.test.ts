@@ -449,17 +449,9 @@ describe("github-ci-policy lint", () => {
       const result = analyzeGithubCiPolicy(docs);
 
       expect(docs.map((doc) => [doc.file, doc.profile, doc.role])).toEqual([
-        [join(".github", "workflows", "harness-check.yml"), "source", "runtime"],
-        [
-          join("docs", "templates", "github", "common", "harness-check.yml"),
-          "source",
-          "source_template",
-        ],
-        [
-          join("docs", "templates", "github", "common", "pack-harness-check.yml"),
-          "pack",
-          "pack_template",
-        ],
+        [".github/workflows/harness-check.yml", "source", "runtime"],
+        ["docs/templates/github/common/harness-check.yml", "source", "source_template"],
+        ["docs/templates/github/common/pack-harness-check.yml", "pack", "pack_template"],
         ["setup-builtin:common/harness-check.yml", "source", "setup_builtin"],
       ]);
       expect(result.ok).toBe(true);
@@ -492,17 +484,9 @@ describe("github-ci-policy lint", () => {
       const result = analyzeGithubCiPolicy(docs);
 
       expect(docs.map((doc) => [doc.file, doc.profile, doc.role])).toEqual([
-        [join(".github", "workflows", "harness-check.yml"), "pack", "runtime"],
-        [
-          join("docs", "templates", "github", "common", "harness-check.yml"),
-          "source",
-          "source_template",
-        ],
-        [
-          join("docs", "templates", "github", "common", "pack-harness-check.yml"),
-          "pack",
-          "pack_template",
-        ],
+        [".github/workflows/harness-check.yml", "pack", "runtime"],
+        ["docs/templates/github/common/harness-check.yml", "source", "source_template"],
+        ["docs/templates/github/common/pack-harness-check.yml", "pack", "pack_template"],
         ["setup-builtin:common/harness-check.yml", "source", "setup_builtin"],
       ]);
       expect(result.ok).toBe(true);
