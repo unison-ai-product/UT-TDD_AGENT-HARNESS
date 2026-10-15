@@ -126,14 +126,15 @@ issue: 1069
 
 1. §6 の条件を満たす。
 2. `node_modules` が junction なら外し、不在を確かめる (S5)。
-3. admin entry (`<git-common-dir>/worktrees/<name>/`) を trash の隣 (`<name>.admin/`) に**コピー**する。コピーできなければ中止する。
+3. **index 保護 ref を作る**: rename の前に、worktree の実 index が参照する object を GC から守る。`git -C <worktree> write-tree` (実 index を読むだけで変更しない。worktree の改行変換などは通らず、index の内容そのまま) の tree から `git commit-tree <tree> -p <HEAD>` で commit を作り、`git update-ref refs/ut-tdd/trash/<entry-id>/index <commit> 0000000000000000000000000000000000000000` (既存なら失敗する create-only) で ref を作る。commit の oid を `meta.json` の `index_ref_oid` に記録する。`write-tree` が失敗する (未解決の conflict を含む index など) か、`update-ref` が失敗した (ref が既にある等) ときは、**回収を拒否**し、何も変えない。index にだけある object (HEAD=A、staged=B、worktree=C の B) は、admin entry を prune すると GC の起点でなくなり、trash の `.admin/` のコピーも起点ではないため、この ref が無いと GC で失われる。未追跡・ignored のファイルは object ではなく trash の中の生 byte なので ref は要らない。
+3b. admin entry (`<git-common-dir>/worktrees/<name>/`) を trash の隣 (`<name>.admin/`) に**コピー**する。コピーできなければ中止する。
 4. worktree の directory を `<git-common-dir>/ut-tdd-trash/worktrees/<yyyymmddThhmmssZ>-<name>` へ **同一 volume の rename** で移す。copy も delete もしない。byte は一切変わらない (改行、clean filter の対象、権限を含む)。volume が異なる場合は `cross_volume`、rename が失敗した場合 (Windows で使用中など) は `error:rename_failed` を記録し、**何も変えずに停止**する (再試行しない)。停止時、S5 で外した junction は作り直す。
 5. 隣に `<yyyymmddThhmmssZ>-<name>.meta.json` を書く。
 6. `git worktree prune` で git の worktree 一覧から外す。
 7. **branch**: `merged_clean` (下) のときだけ、`git update-ref -d refs/heads/<b> <oid>` で消す。`<oid>` は消す直前に読み直した先端で、`git merge-base --is-ancestor <oid> origin/main` が真であることを確かめたもの。`git branch -d` は使わない (merged 判定が HEAD / upstream に依存する)。それ以外の branch は**消さない**。
 8. 監査ログに `trashed` を追記し、S6 の健全性を確かめる。
 
-**`meta.json`**: `original_path` / `branch` / `head_oid` (回収時点の HEAD) / `moved_at` / `reason` / `lease_evidence` (`dead_pid` / `pid_reuse` / `none` / `undeterminable`) / `merged_clean` (真偽) / `dirty_file_count` / `unmerged_commit_count`。
+**`meta.json`**: `original_path` / `branch` / `head_oid` (回収時点の HEAD) / `moved_at` / `reason` / `index_ref_oid` (index 保護 ref が指す commit の oid) / `lease_evidence` (`dead_pid` / `pid_reuse` / `none` / `undeterminable`) / `merged_clean` (真偽) / `dirty_file_count` / `unmerged_commit_count`。
 
 **`merged_clean`**: 回収時点で次の**両方**が真。(1) `git merge-base --is-ancestor <head_oid> origin/main`。(2) 追跡・未追跡の変更が無い (`git status --porcelain` が空。ignored は数えない)。
 
@@ -143,7 +144,7 @@ issue: 1069
   - (a) trash の中に alive な lease の pid (起動時刻一致) が無い。lease が壊れている・読めないときも削除しない。
   - (b) trash の中のどのファイルの mtime も `moved_at` より後ではない。mtime が読めなければ削除しない。
   - (c) 監査ログへ追記できる。
-  - 削除前に `node_modules` の junction があれば link だけを外し、不在を確かめる (辿らない)。purge は filesystem の削除で、git の操作ではない。
+  - 削除前に `node_modules` の junction があれば link だけを外し、不在を確かめる (辿らない)。実体の削除が済んだあとに、index 保護 ref を `git update-ref -d refs/ut-tdd/trash/<entry-id>/index <index_ref_oid>` で消す (expected-oid つき。oid が異なれば消さず、`error` を記録する)。
 - **残るリスク (明示)**: `merged_clean` の追跡内容は main に含まれると証明できるが、次の **ignored の runtime 状態**と、稼働中の reader の作業途中の状態は purge で失われる。lease が無い reader は検出できない。`.gitignore` 由来の主なカテゴリ: `.ut-tdd/state/*`、`.ut-tdd/logs/`、`.ut-tdd/review/{requests,receipts,verdicts}/`、`.ut-tdd/gate_runs/`、`.ut-tdd/cache/*`、`.ut-tdd/tmp/`、`.ut-tdd/archive/`、`.ut-tdd/harness.db`、`.env*`、`.claude/settings.local.json`、`node_modules`。これらは機械生成または machine 固有で、repository の正本は main にあるため、自動 purge の対象として受け入れる。
 - **それ以外の trash** (`merged_clean` が偽。dirty・unmerged を含む。lease が無かったもの、判定不能のものも、`merged_clean` が真でなければここに入る): **自動 purge しない**。dry-run と EOD に「purge 要確認」として、元の path・`moved_at`・経過日数・失われるもの (`dirty_file_count`、`unmerged_commit_count`) を出す。人が `ut-tdd worktree prune --purge-confirmed <id...>` で消す。
   - 1 run に最大 20 id。各 id を**個別に**再検査する (静止の再確認、mtime、監査ログ)。
@@ -157,9 +158,12 @@ trash から戻す (purge される前)。archive commit は持たない。trash
 
 1. `<name>.admin/` を `<git-common-dir>/worktrees/<name>/` へ戻す。
 2. trash の directory を `original_path` へ rename する。
-3. branch を `meta.json` に合わせて整える。branch が**無い**ときは `head_oid` に作り直す。**同じ oid** にあるときはそのまま。**異なる oid** にあるときは動かさず、戻した worktree を `head_oid` で detach したままにして報告する。
+3. **index 保護 ref を確かめる**: `refs/ut-tdd/trash/<entry-id>/index` が存在し `index_ref_oid` と一致し、その tree が戻した index の `git write-tree` と等しいことを確かめる(rename と repair の後)。一致しなければ、復元を完了と報告せず `error` を出す(ref は消さない)。
+3b. branch を `meta.json` に合わせて整える。branch が**無い**ときは `head_oid` に作り直す。**同じ oid** にあるときはそのまま。**異なる oid** にあるときは動かさず、戻した worktree を `head_oid` で detach したままにして報告する。
 4. `git worktree repair <original_path>` を実行する。
 5. S5 で外した `node_modules` の junction を、必要なら作り直す。
+
+復元が検証を通ったら、`git update-ref -d refs/ut-tdd/trash/<entry-id>/index <index_ref_oid>` で ref を消す (expected-oid つき)。
 
 結果として `git rev-parse HEAD` が `head_oid` (unborn にならない) になり、index・作業ツリー・未追跡・ignored は reap 前と byte 同一で、`git worktree list` に現れる。`restored` を監査ログに残す。
 
@@ -170,6 +174,7 @@ trash から戻す (purge される前)。archive commit は持たない。trash
 | `pr merge` の後処理 | **fail-open**: 終了コードと `ok` は merge の成否だけで決まる。例外は握って `cleanup=error:<reason>` |
 | 回収前の安全条件 (S2 から S10) の評価 | **fail-close** (動かさない) |
 | junction の外しと不在確認 (S5) | 確かめられなければ rename へ進まない |
+| index 保護 ref の作成 (§6.2 の 3) | **fail-close**: `write-tree` か `update-ref` の失敗は回収を拒否し、何も変えない |
 | admin entry のコピー、rename (§6.2) | **fail-close**: 何も変えずに停止 (外した junction は作り直す)。rename 後の失敗 (meta 書き込み、prune) は trash の実体を残し、戻せる状態で `error` |
 | lease の読み取り・生存判定 | 壊れている・読めない・判定できないときは動かさない。lease が無いことは静止の証拠にならない |
 | 自動 purge の再検査 | **fail-close**: 1 つでも外れたら削除しない |
@@ -214,7 +219,7 @@ trash から戻す (purge される前)。archive commit は持たない。trash
 
 1. **junction の扱いの共有**: PLAN-L6-661 の primitive が先に入れば S5 の junction 外しを共有する。先に入らなければ Green B が同じ契約で置き、661 はそれを呼ぶ側に回る。実装着手時に 661 の status を実測して決める。
 2. **稼働中の判定と回収の性質**: pid の生存と起動時刻の一致で判定し (古さに関わらず生存なら動かさない)、mtime が 6 時間静止であることを併せて要求する。lease が無いことは静止の証拠にしない。回収は破壊的にせず、実体の削除は `merged_clean` の自動 purge と、人の確認 purge だけが行う。
-3. **archive commit の廃止**: index commit / worktree commit による退避は廃止した。`git add -A` は改行変換や clean filter で byte 同一にならず、tree hash の検証も正規化後の tree を比べるため、byte 保存の根拠にならない。trash の rename が byte を保つ。未 merge の branch は自動では消さないので、object は到達可能なまま残る。
+3. **archive commit の廃止**: index commit / worktree commit による退避は廃止した。`git add -A` は改行変換や clean filter で byte 同一にならず、tree hash の検証も正規化後の tree を比べるため、byte 保存の根拠にならない。trash の rename が worktree 内のファイルの byte を保つ。ただし index にだけある object (staged の B) は、admin entry を prune すると GC の起点でなくなる (trash の admin コピーも起点ではない。Sol r2 が `git gc` で再現)。branch が保つのは commit から辿れる object だけなので、「branch が object を到達可能に保つ」は index 専用の object には成り立たない。そのため reap の前に `git write-tree` + `commit-tree` で commit を作り、`refs/ut-tdd/trash/<entry-id>/index` で保護する (§6.2 の 3)。復元と purge でこの ref を expected-oid つきで消す。未追跡・ignored のファイルは trash の中の生 byte で、object ではない。
 
 ## 13. 採らない案
 
