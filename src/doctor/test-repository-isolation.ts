@@ -78,11 +78,15 @@ for (const [path, calls] of Object.entries({
   "tests/plan-id-naming.test.ts": 1,
   "tests/setup-project-identity-bootstrap.test.ts": 2,
   "tests/sub-doc-schema-integrity.test.ts": 3,
+  "tests/vmodel-migration.test.ts": 1,
 }))
   repositoryReadContracts[path] = {
     mode: "head_snapshot",
     calls,
-    reason: "repository contract read is fixed to detached HEAD",
+    reason:
+      path === "tests/vmodel-migration.test.ts"
+        ? "legacy-schema atomicity projection reads tracked V-model inputs from the exact execution HEAD"
+        : "repository contract read is fixed to detached HEAD",
   };
 
 // PLAN-L7-461: doctor envelope の consumer は「検証対象 = detached HEAD snapshot」を
