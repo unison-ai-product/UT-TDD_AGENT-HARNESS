@@ -110,14 +110,14 @@ repositoryReadContracts["tests/doctor.test.ts"] = {
 };
 
 repositoryReadContracts["tests/resource-kernel-pair-mapping.test.ts"] = {
-  mode_calls: { head_snapshot: 1, isolated_fixture: 1 },
+  mode_calls: { head_snapshot: 1 },
   reason:
-    "Resource Kernel pair mapping reads immutable L5/L8 source docs and checks the gate against a separate planless fixture",
+    "Resource Kernel pair mapping reads immutable L5/L8 source docs from headSnapshotRoot; planless fixture access uses the shared workspace-roots wrapper",
 };
 repositoryReadContracts["tests/resource-kernel-fixture-manifest.test.ts"] = {
-  mode_calls: { head_snapshot: 1, isolated_fixture: 1 },
+  mode_calls: { head_snapshot: 1 },
   reason:
-    "Resource Kernel fixture manifest reads immutable source docs and resolves locator refs from a separate planless fixture",
+    "Resource Kernel fixture manifest reads immutable source docs from headSnapshotRoot; planless fixture access uses the shared workspace-roots wrapper",
 };
 
 repositoryReadContracts["tests/workspace-roots.test.ts"] = {

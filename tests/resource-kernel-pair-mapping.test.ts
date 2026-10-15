@@ -17,18 +17,15 @@ import {
   REAL_RUNNER_LANES,
   resourceKernelPairMappingMessages,
 } from "../src/lint/resource-kernel-pair-mapping.ts";
-import { workspaceRead } from "./support/workspace-roots.ts";
+import { headSnapshotRoot, workspaceRead } from "./support/workspace-roots.ts";
 
 const L8_DOC = "docs/test-design/harness/L8-integration-test-design.md";
 const L5_DOC = "docs/plans/PLAN-L5-25-resource-kernel-physical-protocol.md";
 const L5_CANONICAL_DOC = "docs/design/harness/L5-detailed-design/resource-kernel-wire-custody.md";
 
 function snapshotRoot(): string {
-  return workspaceRead({
-    id: "U-RGKPAIR",
-    mode: "head_snapshot",
-    reason: "D0-R の L5↔L8 pair 写像は HEAD の 2 doc を突合して判定する",
-  });
+  // U-RGKPAIR: D0-R の L5↔L8 pair 写像は immutable HEAD の 2 doc を突合して判定する。
+  return headSnapshotRoot();
 }
 
 function loadRepoRows() {

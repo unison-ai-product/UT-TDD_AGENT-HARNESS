@@ -11,7 +11,7 @@ import {
   parseFixtureManifest,
   parseL8FixtureRows,
 } from "../src/lint/resource-kernel-fixture-manifest.ts";
-import { workspaceRead } from "./support/workspace-roots.ts";
+import { headSnapshotRoot, workspaceRead } from "./support/workspace-roots.ts";
 
 const L8 = "docs/test-design/harness/L8-integration-test-design.md";
 const MANIFEST = "docs/test-design/harness/resource-kernel-fixture-manifest.yaml";
@@ -33,11 +33,8 @@ const SOURCE_4_1_FIXTURE_IDS = [
 ];
 
 function snapshotRoot(): string {
-  return workspaceRead({
-    id: "U-RGKFIX",
-    mode: "head_snapshot",
-    reason: "fixture manifest は HEAD の L8 表・manifest・契約節と突合して判定する",
-  });
+  // U-RGKFIX: fixture manifest は immutable HEAD の L8 表・manifest・契約節と突合して判定する。
+  return headSnapshotRoot();
 }
 
 function loadRepoInput() {
