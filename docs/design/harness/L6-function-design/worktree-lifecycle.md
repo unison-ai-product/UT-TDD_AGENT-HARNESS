@@ -58,7 +58,7 @@ issue: 1069
 | `expired` | 期限を過ぎた、または回収条件が成立した | 猶予 2 日の間、毎回警告する | doctor / session start |
 | `reaped` | 猶予 (2 日) が切れた | §7 の退避を先に行い、§6 の安全条件を満たせば §6.2 の回収 (trash への同一 volume の rename) を行う。**削除はしない** | `worktree prune --apply` |
 | `trashed` | trash に移した (§6.2) | 14 日間、元の path へ戻せる。監査ログと SessionStart に戻し方を出す | - |
-| `purged` | trash に移してから 14 日が過ぎ、§6.3 の再検査を通った | trash の実体を削除する | `worktree prune --apply` |
+| `purged` | trash に移してから 14 日が過ぎ、§6.3 の再検査を通った。自動は `lease_evidence` が `dead_pid` / `pid_reuse` のものだけで、`none` / `undeterminable` は人の `--purge-confirmed <id>` が要る | trash の実体を削除する | `worktree prune --apply` (自動) / 人 (`--purge-confirmed`) |
 
 - **無音は自動回収**: 警告に応答が無ければ `reaped` へ進む。保持を続けるときだけ延長の操作 (理由と新しい期限) が要る。
 - 日数 (stale 7 日 / 警告 3 日前 / 猶予 2 日 / trash の保持 14 日 / 退避 ref の保持 90 日 / 静止判定 6 時間) は既定値で、設定で変えられる。
@@ -91,7 +91,7 @@ issue: 1069
 | 面 | 内容 |
 |---|---|
 | `pr merge` の後処理 | `runPrMerge` が `ok` を返したあと、その PR の head branch を `merged` として記録する (merge commit・時刻)。**削除は試みない**。結果は `pr merge` の出力に 1 行足す (`cleanup=recorded` / `cleanup=error:<reason>`)。実際の削除は `worktree prune` が行う (他プロセスの cwd は portable に観測できず、merge 直後の削除は稼働中の worktree を壊しうるため) |
-| `ut-tdd worktree prune` | 既定は dry-run。対象を「回収できる / 保持中 (理由・期限) / 回収できない (理由)」に分けて列挙し、purge の対象 (14 日経過) も出す。`--apply` を付けたときだけ実行し、1 run の回収と purge はそれぞれ 20 件まで。超えた分は次回へ回す。`--apply` は dry-run と同じ判定関数を使い、判定の経路を 2 本にしない |
+| `ut-tdd worktree prune` | 既定は dry-run。対象を「回収できる / 保持中 (理由・期限) / 回収できない (理由)」に分けて列挙し、purge の対象 (14 日経過) と「purge 要確認」(lease の無い trash) も出す。`--apply` を付けたときだけ実行し、1 run の回収と purge はそれぞれ 20 件まで。超えた分は次回へ回す。`--apply` は dry-run と同じ判定関数を使い、判定の経路を 2 本にしない |
 | doctor check `worktree-retention` | **warn のみ** (fail-close にしない)。(a) 期限切れ・条件成立の保持、(b) `stale`、(c) 理由なしまたは壊れた保持記録、(d) `warning` / `expired` の件数を出す。出力は `branch: state (reason)` と末尾の集計行 |
 | SessionStart / EOD 棚卸し | `warning` / `expired` の対象と、直近の退避 (archive ref 名と取り戻し方) を `escalationLines` に載せる。EOD 棚卸し (`CLAUDE.md` §定期棚卸し) の 1 行に `ut-tdd worktree prune` (dry-run) を足す |
 
@@ -130,20 +130,23 @@ reap (回収) は **破壊的でない**。実体を削除せず、退避を済�
 1. §6 の条件 (S9 の退避と検証を含む) を満たす。
 2. admin entry (`<git-common-dir>/worktrees/<name>/`) を trash の隣 (`<name>.admin/`) に**コピー**する (小さく、戻すときに使う)。コピーできなければ中止する。
 3. worktree の directory を `<git-common-dir>/ut-tdd-trash/worktrees/<yyyymmddThhmmssZ>-<name>` へ **同一 volume の rename** で移す。copy も delete もしない。volume が異なる場合は `cross_volume` で何もしない。rename が失敗した場合 (Windows で使用中など) は、**何も変えずに停止**し、`error:rename_failed` を監査ログに記録して先へ進む (再試行しない)。
-4. 隣に `<yyyymmddThhmmssZ>-<name>.meta.json` を書く (`original_path` / `branch` / `moved_at` / `archive_ref` / `reason`)。
+4. 隣に `<yyyymmddThhmmssZ>-<name>.meta.json` を書く (`original_path` / `branch` / `head_oid` (回収時点の HEAD の oid) / `moved_at` / `archive_ref` / `reason` / `lease_evidence`)。`lease_evidence` は reap の判定時点の lease の状態で、`dead_pid` (lease があり pid が死んでいた) / `pid_reuse` (pid が生存だが起動時刻が異なり再利用と判定) / `none` (lease が無かった) / `undeterminable` (生存を判定できなかった) のいずれか。
 5. `git worktree prune` で git の worktree 一覧から外す。
 6. 先端が `origin/main` に含まれる branch だけ `git branch -d` で消す (含まれない branch は残す)。
 7. 監査ログに `trashed` を追記し、S6 の健全性を確かめる。
 
-**戻す** (trash の中で 14 日以内): `<name>.admin/` を `<git-common-dir>/worktrees/<name>/` へ戻し、trash の directory を `original_path` へ rename し、`git worktree repair <original_path>` を実行する。`git worktree list` に再び現れ、内容は回収前と byte 同一である。別の方法として、§7 の 5 の手順で archive ref から復元する。
+**戻す** (purge される前): (1) `<name>.admin/` を `<git-common-dir>/worktrees/<name>/` へ戻し、(2) trash の directory を `original_path` へ rename する。(3) branch を `meta.json` の `branch` / `head_oid` に合わせて整える。branch が**無い**とき(merged で reap 時に消した場合)は `head_oid` に branch を作り直す。branch が**同じ oid** にあるときはそのまま。branch が**異なる oid** にあるときは動かさず、戻した worktree を `head_oid` で detach したままにして、その旨を報告する。(4) `git worktree repair <original_path>` を実行する。結果として `git rev-parse HEAD` が `head_oid` になり(HEAD が unborn にならない)、index・作業ツリー・未追跡は reap 前と同一である。`git worktree list` に再び現れる。別の方法として、§7 の 5 の手順で archive ref から復元する。
 
 ### 6.3 purge: trash の実体削除
 
-trash に移してから 14 日が過ぎたものだけが対象。実行の直前に次を**全て**再検査する。1 つでも外れたら削除せず、trash に残す。
+reap (trash への移動) は無音で自動だが、**実体の最終削除は、静止の肯定的な証拠があるものだけ自動**にする。読み取りだけの稼働プロセスは mtime を変えないので、lease が無い対象は 14 日後でも静止を証明できない。
 
-- (a) trash の directory の中に、alive な lease の pid (起動時刻が一致するもの) が無い。lease が壊れている・読めないときも削除しない。
-- (b) trash の中のどのファイルの mtime も `moved_at` より後ではない (`node_modules` は junction を辿らず、junction 自体の存在だけを見る)。mtime が読めなければ削除しない。
-- (c) 監査ログへ追記できる。
+- **自動 purge の対象**: `lease_evidence` が `dead_pid` または `pid_reuse` で、かつ trash に移してから 14 日が過ぎたもの。実行の直前に次を**全て**再検査する。1 つでも外れたら削除せず trash に残す。
+  - (a) trash の directory の中に、alive な lease の pid (起動時刻が一致するもの) が無い。lease が壊れている・読めないときも削除しない。
+  - (b) trash の中のどのファイルの mtime も `moved_at` より後ではない (`node_modules` は junction を辿らず、junction 自体の存在だけを見る)。mtime が読めなければ削除しない。
+  - (c) 監査ログへ追記できる。
+- **自動 purge しない対象**: `lease_evidence` が `none` または `undeterminable` のもの。14 日が過ぎても削除しない。EOD 棚卸しと `worktree prune` の dry-run に「purge 要確認」として一覧に出す(`id`・元の path・`moved_at`・経過日数)。人が確認して、**1 コマンドに 1 対象**の `ut-tdd worktree prune --purge-confirmed <id>` で削除する。この操作は (a)(b)(c) の再検査を行い(外れたら拒否)、`purged` を確認者つきで監査ログに記録する。
+- 自動の purge で消える実体は少なくとも 1 つの肯定的な証拠(死んだ pid の lease)を持つ。lease の無い対象は、C:/dev から消える(trash に移る)ところまでは無音で進み、ディスクから消すところだけが人の確認を要する。
 
 削除する前に、`node_modules` の junction があれば link だけを外し、不在を確かめる (辿らない)。外せなければ削除しない。purge は通常の filesystem 削除で、git の操作ではない。Windows のロックで消せなければ `error:locked` を記録して次回に回す。purge のあと、S6 の健全性を確かめる。unmerged の local branch が残っていれば、purge と同時に消す (先端は archive ref が 90 日保つ)。
 
@@ -177,7 +180,7 @@ trash に移してから 14 日が過ぎたものだけが対象。実行の直�
 | 退避の作成と検証 (S9) | **fail-close**: 退避が必要なのに作れなかったら動かさない |
 | admin entry のコピー、rename (§6.2) | **fail-close**: 失敗したら何も変えずに停止する。rename 後の失敗 (meta 書き込み、prune) は trash の実体を残し、戻せる状態で `error` を記録する |
 | lease の読み取り・生存判定 | 壊れている・読めない・判定できないときは動かさない。lease が無いことは静止の証拠にならない |
-| purge の再検査 (§6.3) | **fail-close**: 1 つでも外れたら削除しない |
+| purge の再検査 (§6.3) | **fail-close**: 1 つでも外れたら削除しない。lease の無い対象は自動では削除しない |
 | 保持記録の読み込み | 壊れていたら何も回収しない |
 | 回収条件の観測 (`gh`) | 観測できなければ条件不成立と見なす |
 | 監査ログの追記 | **fail-close** (その run の回収・purge を行わない) |
@@ -200,7 +203,7 @@ trash に移してから 14 日が過ぎたものだけが対象。実行の直�
 
 1. 実装 PR の後、`ut-tdd worktree prune` (dry-run) の出力を PR コメントに貼り、分類 (回収できる / 保持中 / 回収できない) の件数を記録する。
 2. 保持が要る worktree / branch (作業中の lane、blocked な PLAN など) には、`ut-tdd worktree retain` で理由と期限を付ける。これは**各保持者が行う**。
-3. `ut-tdd worktree prune --apply` を、1 run 20 件で繰り返し、dry-run の「回収できる」が 0 になるまで続ける。run ごとに監査ログと件数を記録する。実体の削除は trash に移してから 14 日後の purge で起きる。
+3. `ut-tdd worktree prune --apply` を、1 run 20 件で繰り返し、dry-run の「回収できる」が 0 になるまで続ける。run ごとに監査ログと件数を記録する。実体の削除は trash に移してから 14 日後の purge で起きる (lease が無かった対象は人の確認が要る)。
 4. 保持記録を持たない stale な branch は、§3 の T0 の規則に従う (T0 に仮の保持記録、due は T0 + 7 日、T0 + 9 日で reap)。一括では消さない。T0 は `prune` の再実行で動かない。
 5. 完了条件は issue #1069 のとおり: (a) merge 後に安全な worktree / branch が自動で回収され (trash)、14 日後に消える、(b) 残すものは全て理由と期限 / 条件を持つ、(c) 既存の残骸が保持付きのものを除いて片付く。
 
@@ -211,7 +214,7 @@ trash に移してから 14 日が過ぎたものだけが対象。実行の直�
 3. Green A: `evaluateDeletion` / `classifyTarget` / `planRun` (純粋関数) と保持記録の read / write。
 4. Green B: 退避 (archive ref)、trash への rename、purge の adapter (junction unlink を含む。PLAN-L6-661 の primitive と共有できる部分は共有)。
 5. Green C: `pr merge` の後処理 (`merged` の記録のみ。fail-open)。
-6. Green D: `ut-tdd worktree prune` (dry-run 既定 / `--apply`)、`retain` / `extend`。
+6. Green D: `ut-tdd worktree prune` (dry-run 既定 / `--apply` / `--purge-confirmed <id>`)、`retain` / `extend`。
 7. Green E: doctor check `worktree-retention` と SessionStart / EOD の警告。
 8. 既存の残骸の回収 (§10)。
 
@@ -220,7 +223,7 @@ trash に移してから 14 日が過ぎたものだけが対象。実行の直�
 ## 12. 決定事項 (control lane、2026-10-15)
 
 1. **削除 primitive の所有**: PLAN-L6-661 の `ut-tdd worktree remove` が先に入ればそれを共有する。先に入らなければ Green B が同じ契約の primitive を置き、661 はそれを呼ぶ側に回る。どちらかは実装着手時に PLAN-L6-661 の status を実測して決める。
-2. **稼働中の判定と回収の性質**: pid の生存と起動時刻の一致で判定し (古さに関わらず生存なら動かさない)、mtime が 6 時間静止であることを併せて要求する。lease が無いことは静止の証拠にしない。回収 (reap) は破壊的にせず、退避の検証後に同一 volume の rename で trash へ移し、実体の削除は 14 日後の purge だけが再検査付きで行う。`pr merge` の後処理は記録のみ。
+2. **稼働中の判定と回収の性質**: pid の生存と起動時刻の一致で判定し (古さに関わらず生存なら動かさない)、mtime が 6 時間静止であることを併せて要求する。lease が無いことは静止の証拠にしない。回収 (reap) は破壊的にせず、退避の検証後に同一 volume の rename で trash へ移し、実体の削除は 14 日後の purge だけが再検査付きで行い、lease が無かった対象は人の `--purge-confirmed` を要する。`pr merge` の後処理は記録のみ。
 
 ## 13. 採らない案
 
