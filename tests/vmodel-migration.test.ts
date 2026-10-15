@@ -23,6 +23,16 @@ CREATE TABLE IF NOT EXISTS vmodel_item_target_edges (
 )
 `;
 
+const LEGACY_V25_PROJECTION_DDLS = [
+  "CREATE TABLE document_catalog_entries (document_catalog_entry_id TEXT PRIMARY KEY, doc_type_id TEXT)",
+  "CREATE TABLE document_scale_profile_entries (document_scale_profile_entry_id TEXT PRIMARY KEY, profile_id TEXT, doc_type_id TEXT)",
+  "CREATE TABLE document_scale_profile_reviews (document_scale_profile_review_id TEXT PRIMARY KEY)",
+] as const;
+
+function createV25LegacyProjectionTables(db: ReturnType<typeof openHarnessDb>): void {
+  for (const ddl of LEGACY_V25_PROJECTION_DDLS) db.exec(ddl);
+}
+
 interface LegacyItemTarget {
   edgeId: string;
   itemId: string;
@@ -85,6 +95,29 @@ function insertLegacyItemTarget(db: ReturnType<typeof openHarnessDb>, row: Legac
   );
 }
 
+function fullDatabaseState(db: ReturnType<typeof openHarnessDb>) {
+  const master = db
+    .prepare(
+      "SELECT type, name, sql FROM sqlite_master WHERE name NOT LIKE 'sqlite_%' ORDER BY type, name",
+    )
+    .all();
+  const rows = Object.fromEntries(
+    master
+      .filter((entry) => entry.type === "table")
+      .map((entry) => {
+        const table = String(entry.name);
+        const quotedTable = `"${table.replaceAll('"', '""')}"`;
+        const stableRows = db
+          .prepare(`SELECT * FROM ${quotedTable}`)
+          .all()
+          .map((row) => JSON.stringify(row))
+          .sort();
+        return [table, stableRows];
+      }),
+  );
+  return { master, rows, userVersion: db.userVersion() };
+}
+
 function legacyItemTargetState(db: ReturnType<typeof openHarnessDb>) {
   return {
     sql: db
@@ -101,15 +134,7 @@ describe("V-model version 26 projection migration", () => {
   it("rebuilds derived profile tables with typed constraints instead of nullable ALTER", () => {
     const db = openHarnessDb(":memory:");
     try {
-      db.exec(
-        "CREATE TABLE document_catalog_entries (document_catalog_entry_id TEXT PRIMARY KEY, doc_type_id TEXT)",
-      );
-      db.exec(
-        "CREATE TABLE document_scale_profile_entries (document_scale_profile_entry_id TEXT PRIMARY KEY, profile_id TEXT, doc_type_id TEXT)",
-      );
-      db.exec(
-        "CREATE TABLE document_scale_profile_reviews (document_scale_profile_review_id TEXT PRIMARY KEY)",
-      );
+      createV25LegacyProjectionTables(db);
       db.exec("INSERT INTO document_catalog_entries VALUES ('old','DOC-OLD')");
       db.setUserVersion(25);
       const result = migrate(db);
@@ -389,6 +414,42 @@ describe("V-model version 26 projection migration", () => {
           .all()
           .map((row) => row.design_path),
       ).toEqual([null, null]);
+    } finally {
+      db.close();
+    }
+  });
+});
+
+describe("CANDIDATE-U-DISPPTR-008: current v29 migration no-op", () => {
+  it("keeps a migrated v29 schema and normal adopt/null-plan rows on repeat", () => {
+    const db = openHarnessDb(":memory:");
+    try {
+      createV29SchemaWithLegacyItemTarget(db);
+      seedV29ItemTargetParents(db, ["ITEM-DISPPTR-008-V29"]);
+      insertLegacyItemTarget(db, {
+        edgeId: "EDGE-DISPPTR-008-V29",
+        itemId: "ITEM-DISPPTR-008-V29",
+        targetStatus: "adopt",
+        targetKind: "artifact_path",
+        targetRef: "docs/design/harness/L5-detailed-design/physical-data.md",
+        planId: null,
+        reason: "ordinary current-schema adoption without a PLAN reference",
+        sourceDigest: "digest-v29-noop",
+      });
+      for (const ddl of schemaDdl().filter(
+        (entry) => !entry.startsWith("CREATE TABLE IF NOT EXISTS "),
+      )) {
+        db.exec(ddl);
+      }
+      db.setUserVersion(29);
+      const before = fullDatabaseState(db);
+
+      const result = migrate(db);
+
+      expect(result.fromVersion).toBe(29);
+      expect(result.toVersion).toBe(29);
+      expect(result.applied).toBe(false);
+      expect(fullDatabaseState(db)).toEqual(before);
     } finally {
       db.close();
     }
