@@ -126,7 +126,7 @@ issue: 1069
 
 1. §6 の条件を満たす。
 2. `node_modules` が junction なら外し、不在を確かめる (S5)。
-3. **index 保護 ref を作る**: rename の前に、worktree の実 index が参照する object を GC から守る。`git -C <worktree> write-tree` (実 index を読むだけで変更しない。worktree の改行変換などは通らず、index の内容そのまま) の tree から `git commit-tree <tree> -p <HEAD>` で commit を作り、`git update-ref refs/ut-tdd/trash/<entry-id>/index <commit> 0000000000000000000000000000000000000000` (既存なら失敗する create-only) で ref を作る。commit の oid を `meta.json` の `index_ref_oid` に記録する。`write-tree` が失敗する (未解決の conflict を含む index など) か、`update-ref` が失敗した (ref が既にある等) ときは、**回収を拒否**し、何も変えない。index にだけある object (HEAD=A、staged=B、worktree=C の B) は、admin entry を prune すると GC の起点でなくなり、trash の `.admin/` のコピーも起点ではないため、この ref が無いと GC で失われる。未追跡・ignored のファイルは object ではなく trash の中の生 byte なので ref は要らない。
+3. **index 保護 ref を作る**: rename の前に、worktree の実 index が参照する object を GC から守る。実 index の**コピー**に対する `write-tree` (`git write-tree` は cache-tree 拡張を更新して index file に書き戻すため、実 index に直接実行しない。Sol r3 が 110→129 byte の増加を測定): `git -C <worktree> rev-parse --git-path index` で実 index の path を解決し、その file を byte 単位で一時 file にコピーし、`GIT_INDEX_FILE=<一時コピー> git -C <worktree> write-tree` を実行して、終わったら一時コピーを削除する。worktree の改行変換などは通らず、index の内容そのまま。得た tree から `git commit-tree <tree> -p <HEAD>` で commit を作り、`git update-ref refs/ut-tdd/trash/<entry-id>/index <commit> 0000000000000000000000000000000000000000` (既存なら失敗する create-only) で ref を作る。commit の oid を `meta.json` の `index_ref_oid` に記録する。`write-tree` が失敗する (未解決の conflict を含む index など) か、`update-ref` が失敗した (ref が既にある等) ときは、**回収を拒否**する。どの失敗経路でも、実 index の file は byte 単位で変わらず(書かれるのは一時コピーだけ)、一時コピーは削除される。index にだけある object (HEAD=A、staged=B、worktree=C の B) は、admin entry を prune すると GC の起点でなくなり、trash の `.admin/` のコピーも起点ではないため、この ref が無いと GC で失われる。未追跡・ignored のファイルは object ではなく trash の中の生 byte なので ref は要らない。
 3b. admin entry (`<git-common-dir>/worktrees/<name>/`) を trash の隣 (`<name>.admin/`) に**コピー**する。コピーできなければ中止する。
 4. worktree の directory を `<git-common-dir>/ut-tdd-trash/worktrees/<yyyymmddThhmmssZ>-<name>` へ **同一 volume の rename** で移す。copy も delete もしない。byte は一切変わらない (改行、clean filter の対象、権限を含む)。volume が異なる場合は `cross_volume`、rename が失敗した場合 (Windows で使用中など) は `error:rename_failed` を記録し、**何も変えずに停止**する (再試行しない)。停止時、S5 で外した junction は作り直す。
 5. 隣に `<yyyymmddThhmmssZ>-<name>.meta.json` を書く。
@@ -158,7 +158,7 @@ trash から戻す (purge される前)。archive commit は持たない。trash
 
 1. `<name>.admin/` を `<git-common-dir>/worktrees/<name>/` へ戻す。
 2. trash の directory を `original_path` へ rename する。
-3. **index 保護 ref を確かめる**: `refs/ut-tdd/trash/<entry-id>/index` が存在し `index_ref_oid` と一致し、その tree が戻した index の `git write-tree` と等しいことを確かめる(rename と repair の後)。一致しなければ、復元を完了と報告せず `error` を出す(ref は消さない)。
+3. **index 保護 ref を確かめる**: `refs/ut-tdd/trash/<entry-id>/index` が存在し `index_ref_oid` と一致し、その tree が戻した index の tree と等しいことを(§6.2 の 3 と同じく、実 index の一時コピーに対する `write-tree` で求める。実 index には書かない)確かめる(rename と repair の後)。一致しなければ、復元を完了と報告せず `error` を出す(ref は消さない)。
 3b. branch を `meta.json` に合わせて整える。branch が**無い**ときは `head_oid` に作り直す。**同じ oid** にあるときはそのまま。**異なる oid** にあるときは動かさず、戻した worktree を `head_oid` で detach したままにして報告する。
 4. `git worktree repair <original_path>` を実行する。
 5. S5 で外した `node_modules` の junction を、必要なら作り直す。
@@ -174,7 +174,7 @@ trash から戻す (purge される前)。archive commit は持たない。trash
 | `pr merge` の後処理 | **fail-open**: 終了コードと `ok` は merge の成否だけで決まる。例外は握って `cleanup=error:<reason>` |
 | 回収前の安全条件 (S2 から S10) の評価 | **fail-close** (動かさない) |
 | junction の外しと不在確認 (S5) | 確かめられなければ rename へ進まない |
-| index 保護 ref の作成 (§6.2 の 3) | **fail-close**: `write-tree` か `update-ref` の失敗は回収を拒否し、何も変えない |
+| index 保護 ref の作成 (§6.2 の 3) | **fail-close**: `write-tree` か `update-ref` の失敗は回収を拒否する。実 index file は byte 同一のまま(`write-tree` は一時コピーにだけ行う)で、一時コピーは削除される |
 | admin entry のコピー、rename (§6.2) | **fail-close**: 何も変えずに停止 (外した junction は作り直す)。rename 後の失敗 (meta 書き込み、prune) は trash の実体を残し、戻せる状態で `error` |
 | lease の読み取り・生存判定 | 壊れている・読めない・判定できないときは動かさない。lease が無いことは静止の証拠にならない |
 | 自動 purge の再検査 | **fail-close**: 1 つでも外れたら削除しない |
