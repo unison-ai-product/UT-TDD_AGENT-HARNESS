@@ -113,6 +113,17 @@ repositoryReadContracts["tests/doctor.test.ts"] = {
   reason: "doctor aggregate test exercises both detached HEAD and execution fixture",
 };
 
+repositoryReadContracts["tests/resource-kernel-pair-mapping.test.ts"] = {
+  mode_calls: { head_snapshot: 1 },
+  reason:
+    "Resource Kernel pair mapping reads immutable L5/L8 source docs from headSnapshotRoot; planless fixture access uses the shared workspace-roots wrapper",
+};
+repositoryReadContracts["tests/resource-kernel-fixture-manifest.test.ts"] = {
+  mode_calls: { head_snapshot: 1 },
+  reason:
+    "Resource Kernel fixture manifest reads immutable source docs from headSnapshotRoot; planless fixture access uses the shared workspace-roots wrapper",
+};
+
 repositoryReadContracts["tests/workspace-roots.test.ts"] = {
   mode_calls: { isolated_fixture: 1 },
   reason: "root capability test exercises the writable execution fixture",
