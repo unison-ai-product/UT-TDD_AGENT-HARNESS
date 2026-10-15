@@ -26,6 +26,7 @@ import { openHarnessDb } from "../../src/state-db/index.ts";
 import { migrate } from "../../src/state-db/migration.ts";
 import { rebuildHarnessDb } from "../../src/state-db/projection-writer.ts";
 import { projectVmodelAuthoring } from "../../src/state-db/vmodel-projections.ts";
+import { headSnapshotRoot } from "../support/workspace-roots.ts";
 
 const tables = [
   "vmodel_sources",
@@ -37,7 +38,7 @@ const tables = [
   "vmodel_item_target_edges",
   "document_scale_profiles",
 ] as const;
-const repoRoot = process.cwd();
+const repoRoot = headSnapshotRoot();
 
 describe("I-DISP-001 V-model projection", () => {
   it("materializes exact tracked identities and is a delete/rebuild fixed point", () => {
@@ -60,10 +61,10 @@ describe("I-DISP-001 V-model projection", () => {
       ).toBe(163);
       expect(count(db, "document_scale_profiles")).toBe(8);
       const first = snapshot(db);
-      projectVmodelAuthoring(process.cwd(), db);
+      projectVmodelAuthoring(repoRoot, db);
       expect(snapshot(db)).toEqual(first);
       clear(db);
-      projectVmodelAuthoring(process.cwd(), db);
+      projectVmodelAuthoring(repoRoot, db);
       expect(snapshot(db)).toEqual(first);
     } finally {
       db.close();
@@ -116,9 +117,9 @@ describe("I-DISP-001 V-model projection", () => {
         projectionFailure = error;
       }
 
-      // The input path is a real Git-tracked regular file. The current fixed
-      // header rejects it first; the old defer PLAN requirement is another
-      // pre-path blocker after that parser gap is removed.
+      // Current observation: the projection fails with `no such column:
+      // design_path`, before this defer row reaches physical path validation.
+      // This is a query/schema gap, not evidence of the target-path guard.
       expect(projectionFailure).toBeUndefined();
       expect(
         db
@@ -320,6 +321,9 @@ describe("I-DISP-001 V-model projection", () => {
 
   describe("CANDIDATE-U-DISPPTR-007 rebuild boundary", () => {
     const targetPath = "docs/design/harness/L0-planning/charter.md";
+    const alternatePath = "docs/design/harness/L4-basic-design/architecture.md";
+    const dispositionPath = "docs/governance/vmodel-document-disposition-catalog.md";
+    const sourceTargetPath = "docs/governance/vmodel-source-target-edges.md";
     let tempRoot: string;
 
     beforeAll(() => {
@@ -361,6 +365,84 @@ describe("I-DISP-001 V-model projection", () => {
       }
     });
 
+    it.fails("does not treat ZIP IDs and a target slot alone as physical-path binding", () => {
+      const baselineDb = openHarnessDb(":memory:");
+      try {
+        const baseline = rebuildFixture(tempRoot, baselineDb);
+        expect(baseline.ok).toBe(true);
+        expectCharterEdges(baselineDb, targetPath);
+      } finally {
+        baselineDb.close();
+      }
+
+      withFixtureCatalogEdits(
+        tempRoot,
+        [
+          { path: dispositionPath, rowId: "ZIP-DOC-001", cells: { 4: "`DOC-L0-CHARTER`" } },
+          { path: dispositionPath, rowId: "ZIP-DOC-071", cells: { 4: "`DOC-L0-CHARTER`" } },
+          {
+            path: sourceTargetPath,
+            rowId: "EDGE-001",
+            cells: { 4: "`target_slot`", 5: "`DOC-L0-CHARTER`" },
+          },
+          {
+            path: sourceTargetPath,
+            rowId: "EDGE-071",
+            cells: { 4: "`target_slot`", 5: "`DOC-L0-CHARTER`" },
+          },
+        ],
+        () => {
+          const db = openHarnessDb(":memory:");
+          try {
+            const result = rebuildFixture(tempRoot, db);
+            expect(result.ok).toBe(true);
+            expectCharterEdges(db, targetPath);
+          } finally {
+            db.close();
+          }
+        },
+      );
+    });
+
+    it.fails("does not allow ZIP-DOC-001/071 charter bindings to drift to a different tracked path", () => {
+      const baselineDb = openHarnessDb(":memory:");
+      try {
+        const baseline = rebuildFixture(tempRoot, baselineDb);
+        expect(baseline.ok).toBe(true);
+        expectCharterEdges(baselineDb, targetPath);
+      } finally {
+        baselineDb.close();
+      }
+
+      withFixtureCatalogEdits(
+        tempRoot,
+        [
+          { path: dispositionPath, rowId: "ZIP-DOC-001", cells: { 4: `\`${alternatePath}\`` } },
+          { path: dispositionPath, rowId: "ZIP-DOC-071", cells: { 4: `\`${alternatePath}\`` } },
+          {
+            path: sourceTargetPath,
+            rowId: "EDGE-001",
+            cells: { 5: `\`${alternatePath}\`` },
+          },
+          {
+            path: sourceTargetPath,
+            rowId: "EDGE-071",
+            cells: { 5: `\`${alternatePath}\`` },
+          },
+        ],
+        () => {
+          const db = openHarnessDb(":memory:");
+          try {
+            const result = rebuildFixture(tempRoot, db);
+            expect(result.ok).toBe(true);
+            expectCharterEdges(db, targetPath);
+          } finally {
+            db.close();
+          }
+        },
+      );
+    });
+
     it.fails("rejects a tracked charter target whose physical entity is missing and preserves committed projections", () => {
       const db = openHarnessDb(":memory:");
       try {
@@ -391,14 +473,14 @@ describe("I-DISP-001 V-model projection", () => {
     try {
       migrate(db);
       seedPlan(db);
-      projectVmodelAuthoring(process.cwd(), db);
+      projectVmodelAuthoring(repoRoot, db);
       const before = snapshot(db);
-      const provenance = new GitAuthoringProvenance(process.cwd());
+      const provenance = new GitAuthoringProvenance(repoRoot);
       let projectionFailure: unknown;
       db.exec("BEGIN IMMEDIATE");
       try {
         clear(db);
-        projectVmodelAuthoring(process.cwd(), db, {
+        projectVmodelAuthoring(repoRoot, db, {
           provenance,
           read: (path) =>
             path.endsWith("vmodel-source-manifest.md")
@@ -445,6 +527,59 @@ function rebuildProjectionSnapshot(db: ReturnType<typeof openHarnessDb>) {
   return Object.fromEntries(
     projectionTables.map((table) => [table, db.prepare(`SELECT * FROM ${table} ORDER BY 1`).all()]),
   );
+}
+
+function expectCharterEdges(db: ReturnType<typeof openHarnessDb>, targetPath: string): void {
+  expect(
+    db
+      .prepare(
+        "SELECT edge_id, target_type, target_ref FROM vmodel_source_target_edges WHERE edge_id IN (?, ?) ORDER BY edge_id",
+      )
+      .all("EDGE-001", "EDGE-071"),
+  ).toEqual([
+    { edge_id: "EDGE-001", target_type: "artifact_path", target_ref: targetPath },
+    { edge_id: "EDGE-071", target_type: "artifact_path", target_ref: targetPath },
+  ]);
+}
+
+function withFixtureCatalogEdits(
+  root: string,
+  edits: Array<{ path: string; rowId: string; cells: Record<number, string> }>,
+  run: () => void,
+): void {
+  const paths = [...new Set(edits.map((edit) => edit.path))];
+  const original = new Map(paths.map((path) => [path, readFileSync(join(root, path), "utf8")]));
+  try {
+    for (const edit of edits) updateFixtureTableRow(root, edit);
+    execFileSync("git", ["add", "--", ...paths], { cwd: root, stdio: "ignore" });
+    commitFixtureIndex(root);
+    run();
+  } finally {
+    for (const [path, content] of original) writeFileSync(join(root, path), content, "utf8");
+    execFileSync("git", ["add", "--", ...paths], { cwd: root, stdio: "ignore" });
+    commitFixtureIndex(root);
+  }
+}
+
+function updateFixtureTableRow(
+  root: string,
+  edit: { path: string; rowId: string; cells: Record<number, string> },
+): void {
+  const path = join(root, edit.path);
+  const lines = readFileSync(path, "utf8").split(/\r?\n/);
+  const lineIndex = lines.findIndex((line) => {
+    const firstCell = line.split("|")[1]?.trim().replace(/^`|`$/g, "");
+    return firstCell === edit.rowId;
+  });
+  if (lineIndex < 0) throw new Error(`fixture row not found: ${edit.path} ${edit.rowId}`);
+  const cells = lines[lineIndex].split("|");
+  for (const [index, value] of Object.entries(edit.cells)) {
+    const cellIndex = Number(index);
+    if (cellIndex >= cells.length - 1) throw new Error(`fixture cell out of range: ${index}`);
+    cells[cellIndex] = ` ${value} `;
+  }
+  lines[lineIndex] = cells.join("|");
+  writeFileSync(path, lines.join("\n"), "utf8");
 }
 
 function rebuildFixture(root: string, db: ReturnType<typeof openHarnessDb>) {
