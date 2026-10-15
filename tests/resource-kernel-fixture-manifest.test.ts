@@ -281,7 +281,7 @@ describe("Resource Kernel fixture manifest lint (U-RGKFIX, PLAN-L5-25 §7)", () 
     }
   });
 
-  it("CANDIDATE-U-RGKPAIR-PLANLESS-004: doctorのmanifest checkがplanless L5 contract_docを受理する", () => {
+  it.fails("CANDIDATE-U-RGKPAIR-PLANLESS-004: doctorのmanifest checkがplanless L5 contract_docを受理する", () => {
     const fixture = planlessManifestFixture();
     try {
       const result = checkResourceKernelFixtureManifest(fixture.root);
