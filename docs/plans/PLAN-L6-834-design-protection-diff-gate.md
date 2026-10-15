@@ -32,6 +32,8 @@ reentry:
 escape_reason: "Issue #898: freeze the design-protection diff gate contract (PO
   decision B, comment 6052938069) as an add-feature design increment."
 generates:
+  - artifact_path: src/github/design-protection.ts
+    artifact_type: source_module
   - artifact_path: docs/plans/PLAN-L6-834-design-protection-diff-gate.md
     artifact_type: markdown_doc
   - artifact_path: tests/design-protection.test.ts
@@ -79,18 +81,18 @@ sub_doc: function-spec
 github_issue_id: 898
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:59a3de61436a8737f81baa07b1ae1f2c
-  command_id: plan-revise:issue-898:PLAN-L6-834:r3:generates-20261014T044201000Z
-  admitted_at: 2026-10-14T04:42:01.000Z
-  source_digest: sha256:a5b5f175acbac4b1aae47bbf15e8eda88c068d8a0a191ce4edb23170e6e134e7
-  decision_digest: sha256:fc40efbe652b25bb7342883a4480763c91cff7b091f46498c0e3c7d94a6d5087
-  receipt_digest: sha256:9b97c0fbfa44ffcfe4a49f1e906d48c983b2ee204634e6fab54565bade9ef0d6
+  receipt_id: certificate:cf0a3fe29e8f36c9f87b036dc1666e5d
+  command_id: plan-revise:issue-898:PLAN-L6-834:r4:source-module:2026-10-15T04:31:11.392Z
+  admitted_at: 2026-10-15T04:31:11.392Z
+  source_digest: sha256:a0853d9e6858693f644ceba590c43c178e95698903639a60bcd510f80110df8f
+  decision_digest: sha256:96534b03470d44f11756c7a071957ffbe01e72d1f080a0ab48415a2c1f58f06b
+  receipt_digest: sha256:9962badd629e9ffb3de23af1b55e3a6748e0972322a519a8b12240b9229071ae
   binding:
     path: docs/plans/PLAN-L6-834-design-protection-diff-gate.md
     plan_id: PLAN-L6-834-design-protection-diff-gate
     asset_id: plan:8ca68930636199fa10036ecd1487a466
-    revision: 3
-    content_digest: sha256:a5b5f175acbac4b1aae47bbf15e8eda88c068d8a0a191ce4edb23170e6e134e7
+    revision: 4
+    content_digest: sha256:a0853d9e6858693f644ceba590c43c178e95698903639a60bcd510f80110df8f
   route:
     signal: feature_addition
     mode: add-feature

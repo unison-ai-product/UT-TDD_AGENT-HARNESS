@@ -148,6 +148,7 @@ const SOURCE_REQUIRED_STEPS = [
   { label: "setup-node@v4", any: ["actions/setup-node@v4"] },
   { label: "frozen install", any: ["npm ci"] },
   { label: "github guard", any: ["github guard"] },
+  { label: "design protection", any: ["github design-protection"] },
   { label: "typecheck", any: ["npm run typecheck"] },
   { label: "db rebuild", any: ["db rebuild"] },
   { label: "full tests", any: ["npm run test"] },
@@ -408,6 +409,11 @@ node src/cli.ts github guard --head-ref "$HEAD_REF" --base-ref "$BASE_REF" --pr-
         BASE_SHA: githubExpression("github.event.pull_request.base.sha || github.event.before"),
       },
       run: `node src/cli.ts plan admission-check --base "$BASE_SHA" --head "${githubExpression("github.sha")}"`,
+    }),
+    step("design-protection (実装 PR の設計書書き換え拒否、fail-close)", {
+      if: githubExpression("github.event_name == 'pull_request'"),
+      env: { BASE_SHA: githubExpression("github.event.pull_request.base.sha") },
+      run: `node src/cli.ts github design-protection --base "$BASE_SHA" --head "${githubExpression("github.sha")}"`,
     }),
     run("typecheck (tsc --noEmit)", "npm run typecheck", LANE_FULL_ONLY_IF),
     run(

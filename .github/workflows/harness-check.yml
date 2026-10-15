@@ -103,6 +103,12 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
         run: node src/cli.ts plan admission-check --base "$BASE_SHA" --head "${{ github.sha }}"
 
+      - name: design-protection (実装 PR の設計書書き換え拒否、fail-close)
+        if: ${{ github.event_name == 'pull_request' }}
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: node src/cli.ts github design-protection --base "$BASE_SHA" --head "${{ github.sha }}"
+
       - name: typecheck (tsc --noEmit)
         if: ${{ steps.classify.outputs.lane == 'full' }}
         run: npm run typecheck

@@ -56,6 +56,7 @@ import { evaluateGateReview, loadReviewChecklistIfPresent } from "./gate/review-
 import { writeGateRunEvidence } from "./gate/run-evidence.ts";
 import { evaluateStaticGate } from "./gate/static.ts";
 import { runChangeLaneClassification, SystemGitDiffNamesPort } from "./github/change-lane.ts";
+import { runDesignProtectionCommand } from "./github/design-protection.ts";
 import { collectJobSummary, renderJobSummary } from "./github/job-summary.ts";
 import { evaluateGithubOpsGuard, renderGithubOpsGuard } from "./github/ops-guard.ts";
 import { renderPrTraceBlock, validatePrTraceBody } from "./github/pr-trace.ts";
@@ -140,6 +141,7 @@ import {
   writeMemory,
 } from "./memory/service.ts";
 import { lintPlanWithGate } from "./plan/lint.ts";
+import { SystemGitCommandPort } from "./plan-admission/git-diff-adapter.ts";
 import { createNodePlanDraftRunner } from "./plan-admission/node-plan-draft-runner.ts";
 import { createNodePlanRevisionRunner } from "./plan-admission/node-plan-revision-runner.ts";
 import {
@@ -3729,6 +3731,21 @@ branch
   });
 
 const github = program.command("github").description("GitHub operations guards");
+
+github
+  .command("design-protection")
+  .description("実装 PR による設計書・テスト設計の書き換えをfail-closeで拒否")
+  .requiredOption("--base <ref>", "比較元commit/ref")
+  .requiredOption("--head <ref>", "比較先commit/ref")
+  .option("--json", "JSON output")
+  .action((options: { base: string; head: string; json?: boolean }) => {
+    const argv = ["--base", options.base, "--head", options.head];
+    if (options.json) argv.push("--json");
+    process.exitCode = runDesignProtectionCommand(argv, {
+      git: new SystemGitCommandPort(process.cwd()),
+      write: (line) => process.stdout.write(`${line}\n`),
+    });
+  });
 
 const githubProject = github
   .command("project")
