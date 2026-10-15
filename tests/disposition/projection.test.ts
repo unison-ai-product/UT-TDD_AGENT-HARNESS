@@ -9,6 +9,7 @@ import {
   lstatSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   realpathSync,
   rmSync,
@@ -728,17 +729,31 @@ function ledgerWithDesignPath(input: { designPath: string; planId: string }): st
   let header: string[] | undefined;
   let inItemTable = false;
   const result = lines.map((line) => {
-    if (!inItemTable && line.startsWith("| `edge_id` | `item_id` |")) {
+    const candidateHeader = line.startsWith("|")
+      ? line
+          .split("|")
+          .slice(1, -1)
+          .map((cell) => cell.trim().replace(/^`|`$/g, ""))
+      : [];
+    if (
+      !inItemTable &&
+      candidateHeader[0] === "edge_id" &&
+      candidateHeader[1] === "item_id" &&
+      candidateHeader.at(-1) === "plan_id"
+    ) {
       inItemTable = true;
-      header = line
-        .split("|")
-        .slice(1, -1)
-        .map((cell) => cell.trim().replace(/^`|`$/g, ""));
-      return `${line.slice(0, -1)} \`design_path\` |`;
+      header = candidateHeader;
+      return `| ${[...header, "design_path"].join(" | ")} |`;
     }
     if (inItemTable && !line.startsWith("|")) inItemTable = false;
     if (!inItemTable || !line.startsWith("|")) return line;
-    if (/^\|\s*[-:| ]+\|\s*$/.test(line)) return `${line.slice(0, -1)}---|`;
+    if (/^\|\s*[-:| ]+\|\s*$/.test(line)) {
+      const divider = line
+        .split("|")
+        .slice(1, -1)
+        .map((cell) => cell.trim());
+      return `| ${[...divider, "---"].join(" | ")} |`;
+    }
 
     const columns = [...(header ?? []), "design_path"];
     const values = line
@@ -764,16 +779,105 @@ function ledgerWithDesignPath(input: { designPath: string; planId: string }): st
     }
     return `| ${columns.map((key, index) => values[index] ?? "").join(" | ")} |`;
   });
-  return result.join("\n");
+  const expanded = result.join("\n");
+  const expandedLines = expanded.split(/\r?\n/);
+  const expandedHeaderIndex = expandedLines.findIndex((line) => {
+    const cells = line
+      .split("|")
+      .slice(1, -1)
+      .map((cell) => cell.trim().replace(/^`|`$/g, ""));
+    return cells[0] === "edge_id" && cells[1] === "item_id";
+  });
+  expect(expandedHeaderIndex).toBeGreaterThanOrEqual(0);
+  const expandedHeader = expandedLines[expandedHeaderIndex]
+    .split("|")
+    .slice(1, -1)
+    .map((cell) => cell.trim().replace(/^`|`$/g, ""));
+  expect(expandedHeader.filter((cell) => cell === "design_path")).toHaveLength(1);
+  const designPathIndex = expandedHeader.indexOf("design_path");
+  const tableLinesAfter = (rows: string[], start: number): string[] => {
+    const tableLines: string[] = [];
+    for (const line of rows.slice(start)) {
+      if (!line.startsWith("|")) break;
+      tableLines.push(line);
+    }
+    return tableLines;
+  };
+  const expandedTableLines = tableLinesAfter(expandedLines, expandedHeaderIndex + 1);
+  expect(expandedTableLines.length).toBeGreaterThan(0);
+  expect(
+    expandedTableLines.every(
+      (line) => line.split("|").slice(1, -1).length === expandedHeader.length,
+    ),
+  ).toBe(true);
+  const expandedRows = expandedTableLines.filter((line) => !/^\|\s*[-:| ]+\|\s*$/.test(line));
+  const sourceHeaderIndex = lines.findIndex((line) => {
+    const cells = line
+      .split("|")
+      .slice(1, -1)
+      .map((cell) => cell.trim().replace(/^`|`$/g, ""));
+    return cells[0] === "edge_id" && cells[1] === "item_id";
+  });
+  const sourceRows = tableLinesAfter(lines, sourceHeaderIndex + 1).filter(
+    (line) => !/^\|\s*[-:| ]+\|\s*$/.test(line),
+  );
+  expect(expandedRows).toHaveLength(sourceRows.length);
+  const kikakuRows = expandedRows.filter(
+    (line) => line.split("|")[1]?.trim() === "`ITEM-TARGET-KIKAKU`",
+  );
+  expect(kikakuRows).toHaveLength(1);
+  const kikakuCells = kikakuRows[0]
+    .split("|")
+    .slice(1, -1)
+    .map((cell) => cell.trim());
+  const statusIndex = expandedHeader.indexOf("target_status");
+  const kindIndex = expandedHeader.indexOf("target_kind");
+  const planIdIndex = expandedHeader.indexOf("plan_id");
+  expect(kikakuCells).toHaveLength(expandedHeader.length);
+  expect(kikakuCells[statusIndex]).toBe("`defer`");
+  expect(kikakuCells[kindIndex]).toBe("`plan_alias`");
+  expect(kikakuCells[planIdIndex]).toBe(input.planId === "—" ? "—" : `\`${input.planId}\``);
+  expect(kikakuCells[designPathIndex]).toBe(input.designPath ? `\`${input.designPath}\`` : "");
+  return expanded;
 }
 
 function legacyLedgerWithPlanOnlyDefer(planId: string): string {
   const expanded = ledgerWithDesignPath({ designPath: "", planId });
   const lines = expanded.split(/\r?\n/);
+  const header = lines
+    .find((line) => {
+      const cells = line
+        .split("|")
+        .slice(1, -1)
+        .map((cell) => cell.trim().replace(/^`|`$/g, ""));
+      return cells[0] === "edge_id" && cells[1] === "item_id";
+    })
+    ?.split("|")
+    .slice(1, -1)
+    .map((cell) => cell.trim().replace(/^`|`$/g, ""));
+  expect(header?.filter((cell) => cell === "design_path")).toHaveLength(1);
+  const designPathIndex = header?.indexOf("design_path") ?? -1;
+  const kikakuRow = lines.find((line) => line.split("|")[1]?.trim() === "`ITEM-TARGET-KIKAKU`");
+  expect(kikakuRow).toBeDefined();
+  const kikakuCells =
+    kikakuRow
+      ?.split("|")
+      .slice(1, -1)
+      .map((cell) => cell.trim()) ?? [];
+  expect(kikakuCells).toHaveLength(header?.length ?? 0);
+  expect(kikakuCells[designPathIndex]).toBe("");
+  expect(kikakuCells[header?.indexOf("target_status") ?? -1]).toBe("`defer`");
   let inItemTable = false;
-  return lines
+  const legacy = lines
     .map((line) => {
-      if (!inItemTable && line.startsWith("| `edge_id` | `item_id` |")) inItemTable = true;
+      const headerCells = line.startsWith("|")
+        ? line
+            .split("|")
+            .slice(1, -1)
+            .map((cell) => cell.trim().replace(/^`|`$/g, ""))
+        : [];
+      if (!inItemTable && headerCells[0] === "edge_id" && headerCells[1] === "item_id")
+        inItemTable = true;
       if (inItemTable && !line.startsWith("|")) inItemTable = false;
       if (!inItemTable || !line.startsWith("|")) return line;
       const cells = line.split("|");
@@ -781,6 +885,46 @@ function legacyLedgerWithPlanOnlyDefer(planId: string): string {
       return cells.join("|");
     })
     .join("\n");
+  const legacyLines = legacy.split(/\r?\n/);
+  const legacyHeader = legacyLines
+    .find((line) => {
+      const cells = line
+        .split("|")
+        .slice(1, -1)
+        .map((cell) => cell.trim().replace(/^`|`$/g, ""));
+      return cells[0] === "edge_id" && cells[1] === "item_id";
+    })
+    ?.split("|")
+    .slice(1, -1)
+    .map((cell) => cell.trim().replace(/^`|`$/g, ""));
+  expect(legacyHeader?.includes("design_path")).toBe(false);
+  const legacyHeaderIndex = legacyLines.findIndex((line) => {
+    const cells = line
+      .split("|")
+      .slice(1, -1)
+      .map((cell) => cell.trim().replace(/^`|`$/g, ""));
+    return cells[0] === "edge_id" && cells[1] === "item_id";
+  });
+  const legacyTableLines: string[] = [];
+  for (const line of legacyLines.slice(legacyHeaderIndex + 1)) {
+    if (!line.startsWith("|")) break;
+    legacyTableLines.push(line);
+  }
+  expect(
+    legacyTableLines.every((line) => line.split("|").slice(1, -1).length === legacyHeader?.length),
+  ).toBe(true);
+  const legacyKikaku = legacyLines.find(
+    (line) => line.split("|")[1]?.trim() === "`ITEM-TARGET-KIKAKU`",
+  );
+  const legacyKikakuCells =
+    legacyKikaku
+      ?.split("|")
+      .slice(1, -1)
+      .map((cell) => cell.trim()) ?? [];
+  expect(legacyKikakuCells).toHaveLength(legacyHeader?.length ?? 0);
+  expect(legacyKikakuCells[legacyHeader?.indexOf("target_status") ?? -1]).toBe("`defer`");
+  expect(legacyKikakuCells[legacyHeader?.indexOf("plan_id") ?? -1]).toBe(`\`${planId}\``);
+  return legacy;
 }
 
 function authoringDepsWithLedger(
@@ -819,6 +963,13 @@ function createDocsGitFixture(fixtureOptions: {
     recursive: true,
     filter: (source) => source !== plansRoot && !source.startsWith(`${plansRoot}${sep}`),
   });
+  const makeDirectoriesWritable = (directory: string): void => {
+    chmodSync(directory, 0o755);
+    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+      if (entry.isDirectory()) makeDirectoriesWritable(join(directory, entry.name));
+    }
+  };
+  makeDirectoriesWritable(join(root, "docs"));
   if (fixtureOptions.planMode !== "none") {
     const legacyPlanPath = "docs/plans/PLAN-L7-417-source-disposition-profile-projection.md";
     const destination = join(root, legacyPlanPath);
