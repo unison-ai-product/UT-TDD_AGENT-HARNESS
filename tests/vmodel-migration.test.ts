@@ -421,26 +421,26 @@ describe("V-model version 26 projection migration", () => {
 });
 
 describe("CANDIDATE-U-DISPPTR-008: current v29 migration no-op", () => {
-  it("preserves schema, user_version, and normal adopt/null-plan rows", () => {
+  it("keeps a migrated v29 schema and normal adopt/null-plan rows on repeat", () => {
     const db = openHarnessDb(":memory:");
     try {
-      for (const ddl of schemaDdl()) db.exec(ddl);
+      createV29SchemaWithLegacyItemTarget(db);
       seedV29ItemTargetParents(db, ["ITEM-DISPPTR-008-V29"]);
-      db.prepare(
-        `INSERT INTO vmodel_item_target_edges
-          (edge_id, item_id, target_status, target_kind, target_ref, plan_id, design_path, reason, source_digest)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      ).run(
-        "EDGE-DISPPTR-008-V29",
-        "ITEM-DISPPTR-008-V29",
-        "adopt",
-        "artifact_path",
-        "docs/design/harness/L5-detailed-design/physical-data.md",
-        null,
-        null,
-        "ordinary current-schema adoption without a PLAN reference",
-        "digest-v29-noop",
-      );
+      insertLegacyItemTarget(db, {
+        edgeId: "EDGE-DISPPTR-008-V29",
+        itemId: "ITEM-DISPPTR-008-V29",
+        targetStatus: "adopt",
+        targetKind: "artifact_path",
+        targetRef: "docs/design/harness/L5-detailed-design/physical-data.md",
+        planId: null,
+        reason: "ordinary current-schema adoption without a PLAN reference",
+        sourceDigest: "digest-v29-noop",
+      });
+      for (const ddl of schemaDdl().filter(
+        (entry) => !entry.startsWith("CREATE TABLE IF NOT EXISTS "),
+      )) {
+        db.exec(ddl);
+      }
       db.setUserVersion(29);
       const before = fullDatabaseState(db);
 

@@ -17,7 +17,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname, join, sep } from "node:path";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { GitAuthoringProvenance } from "../../src/disposition/adapters/git-authoring-provenance.ts";
 import { loadTrackedCatalogInput } from "../../src/disposition/adapters/tracked-vmodel-loader.ts";
@@ -73,33 +73,52 @@ describe("I-DISP-001 V-model projection", () => {
     }
   });
 
-  it.fails("CANDIDATE-U-DISPPTR-001: projects all pending items to physical-data without a PLAN seed", () => {
-    const db = openHarnessDb(":memory:");
-    try {
-      migrate(db);
-      projectVmodelAuthoring(repoRoot, db);
-      expect(count(db, "vmodel_semantic_items")).toBe(163);
-      expect(count(db, "vmodel_item_target_edges")).toBe(163);
-      const itemTargetColumns = db
-        .prepare("PRAGMA table_info(vmodel_item_target_edges)")
-        .all()
-        .map((column) => column.name);
-      expect(itemTargetColumns).toContain("design_path");
-      const pendingTargets = db
-        .prepare(
-          `SELECT target_status, plan_id, design_path
+  describe("CANDIDATE-U-DISPPTR-001: projection without docs/plans", () => {
+    let noPlanRoot: string;
+
+    beforeAll(() => {
+      noPlanRoot = createDocsGitFixture({ planMode: "none" });
+      expect(existsSync(join(noPlanRoot, "docs", "plans"))).toBe(false);
+      expect(
+        execFileSync("git", ["ls-tree", "-r", "--name-only", "HEAD", "--", "docs/plans"], {
+          cwd: noPlanRoot,
+          encoding: "utf8",
+        }).trim(),
+      ).toBe("");
+    });
+
+    afterAll(() => {
+      rmSync(noPlanRoot, { recursive: true, force: true });
+    });
+
+    it.fails("projects all pending items to physical-data without a PLAN seed", () => {
+      const db = openHarnessDb(":memory:");
+      try {
+        migrate(db);
+        projectVmodelAuthoring(noPlanRoot, db);
+        expect(count(db, "vmodel_semantic_items")).toBe(163);
+        expect(count(db, "vmodel_item_target_edges")).toBe(163);
+        const itemTargetColumns = db
+          .prepare("PRAGMA table_info(vmodel_item_target_edges)")
+          .all()
+          .map((column) => column.name);
+        expect(itemTargetColumns).toContain("design_path");
+        const pendingTargets = db
+          .prepare(
+            `SELECT target_status, plan_id, design_path
              FROM vmodel_item_target_edges ORDER BY item_id`,
-        )
-        .all();
-      expect(pendingTargets).toHaveLength(163);
-      expect(pendingTargets.every((row) => row.target_status === "pending_review")).toBe(true);
-      expect(pendingTargets.every((row) => row.plan_id === null)).toBe(true);
-      expect(pendingTargets.map((row) => row.design_path)).toEqual(
-        Array(163).fill("docs/design/harness/L5-detailed-design/physical-data.md"),
-      );
-    } finally {
-      db.close();
-    }
+          )
+          .all();
+        expect(pendingTargets).toHaveLength(163);
+        expect(pendingTargets.every((row) => row.target_status === "pending_review")).toBe(true);
+        expect(pendingTargets.every((row) => row.plan_id === null)).toBe(true);
+        expect(pendingTargets.map((row) => row.design_path)).toEqual(
+          Array(163).fill("docs/design/harness/L5-detailed-design/physical-data.md"),
+        );
+      } finally {
+        db.close();
+      }
+    });
   });
 
   it.fails("CANDIDATE-U-DISPPTR-002: accepts defer with tracked design_path and NULL legacy plan_id", () => {
@@ -788,15 +807,30 @@ function authoringDepsWithLedger(
   };
 }
 
-function createDocsGitFixture(input: { ensureTracked: string }): string {
+function createDocsGitFixture(input: {
+  ensureTracked?: string;
+  planMode?: "none" | "legacy";
+}): string {
   const root = mkdtempSync(join(tmpdir(), "ut-t1-disposition-target-fixture-"));
-  cpSync(join(repoRoot, "docs"), join(root, "docs"), { recursive: true });
-  const extraPath = join(root, input.ensureTracked);
-  if (!existsSync(extraPath)) {
-    // Small missing-file fixtures are added to the Git index before the
-    // worktree entry is removed by the calling test.
-    mkdirSync(dirname(extraPath), { recursive: true });
-    writeFileSync(extraPath, "tracked fixture path\n", "utf8");
+  const plansRoot = join(repoRoot, "docs", "plans");
+  cpSync(join(repoRoot, "docs"), join(root, "docs"), {
+    recursive: true,
+    filter: (source) => source !== plansRoot && !source.startsWith(`${plansRoot}${sep}`),
+  });
+  if (input.planMode !== "none") {
+    const legacyPlanPath = "docs/plans/PLAN-L7-417-source-disposition-profile-projection.md";
+    const destination = join(root, legacyPlanPath);
+    mkdirSync(dirname(destination), { recursive: true });
+    cpSync(join(repoRoot, legacyPlanPath), destination);
+  }
+  if (input.ensureTracked) {
+    const extraPath = join(root, input.ensureTracked);
+    if (!existsSync(extraPath)) {
+      // Small missing-file fixtures are added to the Git index before the
+      // worktree entry is removed by the calling test.
+      mkdirSync(dirname(extraPath), { recursive: true });
+      writeFileSync(extraPath, "tracked fixture path\n", "utf8");
+    }
   }
   execFileSync("git", ["init", "--quiet"], { cwd: root, stdio: "ignore" });
   execFileSync("git", ["-c", "core.autocrlf=false", "add", "docs"], { cwd: root, stdio: "ignore" });
