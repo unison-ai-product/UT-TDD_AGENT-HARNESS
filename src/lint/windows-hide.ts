@@ -104,17 +104,23 @@ function windowsHideFalseLines(source: WindowsHideSource): { line: number; expla
   const file = sourceFile(source);
   const findings: { line: number; explained: boolean }[] = [];
   const commentsByLine = new Map<number, string[]>();
-  const scanner = ts.createScanner(
-    ts.ScriptTarget.Latest,
-    false,
-    ts.LanguageVariant.Standard,
-    source.content,
-  );
-  for (let token = scanner.scan(); token !== ts.SyntaxKind.EndOfFileToken; token = scanner.scan()) {
-    if (token !== ts.SyntaxKind.SingleLineCommentTrivia) continue;
-    const line = file.getLineAndCharacterOfPosition(scanner.getTokenPos()).line;
+  const commentRanges = new Map<number, ts.CommentRange>();
+  const collectCommentRanges = (node: ts.Node): void => {
+    for (const range of [
+      ...(ts.getLeadingCommentRanges(source.content, node.getFullStart()) ?? []),
+      ...(ts.getTrailingCommentRanges(source.content, node.end) ?? []),
+    ]) {
+      if (range.kind === ts.SyntaxKind.SingleLineCommentTrivia) {
+        commentRanges.set(range.pos, range);
+      }
+    }
+    ts.forEachChild(node, collectCommentRanges);
+  };
+  collectCommentRanges(file);
+  for (const range of commentRanges.values()) {
+    const line = file.getLineAndCharacterOfPosition(range.pos).line;
     const comments = commentsByLine.get(line) ?? [];
-    comments.push(scanner.getTokenText());
+    comments.push(source.content.slice(range.pos, range.end));
     commentsByLine.set(line, comments);
   }
   const visit = (node: ts.Node): void => {
