@@ -1,6 +1,6 @@
 // PLAN-REVERSE-40 塊A: impl→PLAN トレーサビリティ検査 (IMP-088)。
 // src module/CLI/lint/doctor check が PLAN generates に紐づくか。NEW orphan を fail-close。
-// 既存 untraced 8 件は baseline (known-debt)、IMP-087 の 4 件は REVERSE-40 へ back-fill 済。
+// design-source traceで3件をback-fillした後のknown-debtは5件。IMP-087の4件もREVERSE-40へback-fill済。
 
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -65,13 +65,16 @@ describe("analyzeImplPlanTrace (U-IPT-001..003)", () => {
 });
 
 describe("loadImplPlanTraceInput real repo (U-IPT-004/005)", () => {
-  it("U-IPT-004: 実 repo の orphan は 0 (4 back-fill + 8 baseline 適用後、fail-close 回帰網)", () => {
+  it("U-IPT-004: 実 repo の orphan は 0 (4 PLAN back-fill + 3 design trace + 5 baseline 適用後)", () => {
     const r = analyzeImplPlanTrace(loadImplPlanTraceInput(process.cwd()));
     expect(r.orphans).toEqual([]);
   });
 
-  it("U-IPT-005: baseline は 8 件 (IMP-087 の 4 は back-fill で trace = baseline に含めない)", () => {
-    expect(IMPL_PLAN_TRACE_BASELINE.size).toBe(8);
+  it.fails("U-IPT-005: baselineはdesign-source traceを反映して8件から5件へ縮小する", () => {
+    expect(IMPL_PLAN_TRACE_BASELINE.size).toBe(5);
+    expect(IMPL_PLAN_TRACE_BASELINE.has("src/lint/asset-drift.ts")).toBe(false);
+    expect(IMPL_PLAN_TRACE_BASELINE.has("src/lint/g3-trace.ts")).toBe(false);
+    expect(IMPL_PLAN_TRACE_BASELINE.has("src/lint/readability.ts")).toBe(false);
     // 縮小のみ可の回帰網: 新規モジュールを baseline へ足して gate を黙らせない
     // (2026-08-05 に一度 9 件化した実例の再発防止。trace は PLAN 側で持つ)。
     expect(IMPL_PLAN_TRACE_BASELINE.has("src/plan/parent-drive-mismatch-baseline.ts")).toBe(false);
