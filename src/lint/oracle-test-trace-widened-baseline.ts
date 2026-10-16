@@ -15,7 +15,6 @@
  */
 export const ORACLE_TEST_TRACE_WIDENED_BASELINE: ReadonlySet<string> = new Set([
   "IT-ASSESS-01",
-  "IT-ASSET-02",
   "IT-CIAGG-01",
   "IT-CIAGG-02",
   "IT-CIAGG-03",
@@ -122,7 +121,6 @@ export const ORACLE_TEST_TRACE_WIDENED_BASELINE: ReadonlySet<string> = new Set([
   "ST-ASSET-03",
   "ST-ASSET-05",
   "ST-ASSET-06",
-  "ST-ASSET-07",
   "ST-CLOSURE-01",
   "ST-DATA-03",
   "ST-DATA-04",
