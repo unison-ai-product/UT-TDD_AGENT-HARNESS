@@ -10,6 +10,7 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import { resolveNodeBinary } from "../scripts/run-vitest-snapshot.ts";
 import { buildFullDoctorCheckDefinitions } from "../src/doctor/check-definitions.ts";
@@ -173,7 +174,7 @@ describe("issue #693 子プロセス windowsHide 既定 (Red)", () => {
       import { spawnSync } from "node:child_process";
       let observed;
       childProcess.spawnSync = (...args) => { observed = args; return { status: 0 }; };
-      await import(${JSON.stringify(new URL(WINDOWS_HIDE_MODULE, import.meta.url).href)});
+      await import(${JSON.stringify(pathToFileURL(join(root, "src/runtime/windows-hide.ts")).href)});
       spawnSync("stub");
       process.stdout.write(JSON.stringify(observed));
     `;
