@@ -120,7 +120,7 @@ compressPlanDigest(events, planId, prev):
 - `.gitignore` に `.ut-tdd/logs/` を追加。
 - `.claude/settings.json`: `SessionStart` / `PostToolUse(Edit|Write|MultiEdit|Bash|PowerShell)` / `Stop` に登録。**`blockOnFailure` を付けない (fail-open)**。Windows ネイティブ Claude Code の主シェルツール `PowerShell` を matcher に含める (PLAN-RECOVERY-13 / issue #86: 除外時は Windows セッションのシェル操作が session log / hook_events から構造的に欠落する)。
 
-### consumer記録hookのtimeout予算 (Issue #1057)
+### consumer記録hookのtimeout予算 (Issue #1057 / U-SLOG-010)
 
 Pack が consumer に生成する設定では、従来5秒だった記録hookを30秒にする。対象は
 Claude の `PostToolUse` と `Stop`、Codex の `SessionStart`・`PostToolUse`・`Stop`。
