@@ -188,7 +188,7 @@ function writeFakeClaude(binDir: string): string {
 
 describe("runtime hook entrypoints", () => {
   describe("U-SLOG-010: Pack consumerの5記録hookを30秒にする", () => {
-    it.fails("U-SLOG-010: Pack consumerの5記録hookを30秒にする", () => {
+    it("U-SLOG-010: Pack consumerの5記録hookを30秒にする", () => {
       const claudeSettings = [
         JSON.parse(
           readFileSync(
