@@ -518,7 +518,7 @@ describe("Issue #1062: review custody no longer depends on memory", () => {
     const result = runCli(root, [
       "codex",
       "--role",
-      "worker",
+      "se",
       "--task",
       "review fixture",
       "--dry-run",
@@ -543,7 +543,7 @@ describe("Issue #1062: review custody no longer depends on memory", () => {
     const result = runCli(root, [
       "codex",
       "--role",
-      "worker",
+      "se",
       "--task",
       "review fixture",
       "--dry-run",
