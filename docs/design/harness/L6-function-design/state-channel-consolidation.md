@@ -100,7 +100,10 @@ issue: 1062
 | `purpose` | `"review"` \| `"note"` | `review` = review request の起動合図、`note` = lane への合図 |
 | `id` | string | `<purpose>:<digest>:workspace:<id>:op:<operationId>` 形式。memory id を含めない |
 | `operationId` | string | 冪等キー |
-| `projectId` / `producer` / `target` / `envelopeDigest` | 現行 provider envelope と同じ | v4 の検証 (`validateClaudeProviderConsumerEnvelope`) を流用 |
+| `targetWorkspaceId` | lower-case hex 64桁 | `id` の `workspace:<id>` に使う consumer workspace identity |
+| `originRuntime` | `"codex"` \| `"system"` | 現行 inbox の配送 metadata を維持 |
+| `createdAt` | UTC ISO 8601 timestamp | 現行 inbox の配送順序 metadata を維持 |
+| `projectId` / `producer` / `target` / `envelopeDigest` | 現行 provider envelope と同じ | 下記 §3.1 の v1 envelope / binding 検証 |
 | `ref` | string (GitHub の Issue / PR / コメントの URL) | `purpose=note` で必須。`ut-tdd.project.json` の `repository_identity` と同じ repo だけ受理 (`memory.md` §4.2 の `bound_to` と同じ検査) |
 | `body` | string ≤ 8,000 | 現行の `CLAUDE_WAKE_BODY_MAX_CHARS`。要約だけを置き、判断材料は `ref` 先の GitHub コメントを正とする |
 | `requestDigest` / `requestPath` / `pr` / `exactHead` / `reviewRevision` / `authorFamily` | `purpose=review` のみ | 現行と同じ。`requestPath` は `.ut-tdd/review/requests/<digest>.json` だけを受理 |
@@ -109,6 +112,28 @@ issue: 1062
 - 発行口は `ut-tdd notify claude --ref <url> --body <text> [--operation-id <id>]` を 1 つだけ足す (`purpose=note`)。`purpose=review` は `review live-dispatch` が発行する (現行どおり)。
 - 配送 (Stop hook の選択・claim・terminal 判定・backlog 要約) は変えない。`decodeClaudeInboxEntry` は 移行期間 の間、v3 / v4 の旧 entry も復号する (§4.3)。
 - 受信側は `ref` を読んで GitHub のコメントを確認する。通知の本文だけで判断を進めない (現行の描画文言「現行契約・HEAD・CI を再確認して処理してください」を維持し、「共有HARNESSメモリからの通知」を「通知レコードからの通知」に直す)。
+
+### 3.1 memory-free v1 envelope と binding の整合性
+
+`ut-tdd.notification/v1` の `envelopeDigest` は、v4 の `computeClaudeProviderEnvelopeDigest` が使う serialization recipe と同じく、以下の literal object を列挙順のまま `JSON.stringify` し、その UTF-8 bytes に SHA-256 を適用した lowercase 64-hex (prefix なし) とする。これは v4 の実際の `JSON.stringify` recipe を指し、JCS、`canonicalJson`、field の並べ替えは使わない。
+
+```js
+{
+  schemaVersion: "ut-tdd.notification/v1",
+  projectId,
+  operationId,
+  producer: { provider, sessionId },
+  target: { scope, provider, sessionId },
+}
+```
+
+この preimage は v4 の `{ schemaVersion, projectId, memoryId, operationId, producer, target }` から `memoryId` を除き、`schemaVersion` を `ut-tdd.notification/v1` にしたもの。nested key も上記順序で固定する。notification entry の `id` は `<purpose>:<envelopeDigest>:workspace:<targetWorkspaceId>:op:<operationId>` とし、`id` 内の digest は `envelopeDigest` と同一値にする。別の id digest を計算しない。
+
+provider binding は v4 binding (`schemaVersion: "ut-tdd.claude-provider-binding/v1"`) と混在させず、binding 自身の schema discriminator で分岐する。v1 binding は `schemaVersion: "ut-tdd.notification-binding/v1"`、exact keys `{ schemaVersion, entryId, projectId, operationId, producer, target, envelopeDigest }` とする。v4 binding は既存の schema discriminator と v4 exact key 集合 (`memoryId` を含む) を維持する。いずれの経路も schema と exact keys を検査し、unknown / missing key を受理しない。v1 entry も exact keys を検査し、未定義・欠落 key を受理しない。`purpose=note` の key 集合は `{ schemaVersion, purpose, id, body, originRuntime, operationId, targetWorkspaceId, createdAt, projectId, producer, target, envelopeDigest, ref }`、`purpose=review` はこの集合から `ref` を除いて `{ requestDigest, requestPath, pr, exactHead, reviewRevision, authorFamily }` を加えた集合とする。
+
+v1 では `expectedMemoryId` の照合だけを行わない。trusted consumer context から得る `projectId`, `operationId`, `producer`, `target.provider`, `target.sessionId` の照合、target scope / nested shape の検査、envelope digest と `id` の再計算一致、および v1 用 binding の `entryId` / identity / digest 一致は引き続き必須とする。したがって v1 の受理は memory identity の撤去で他の binding / integrity guard を省略することを意味しない。
+
+terminal marker の再読込も marker の `schema` で分岐する。notification v1 用 schema は `ut-tdd.notification-terminal/v1` とし、`entryId` には v1 entry の完全な `id` (`<purpose>:<envelopeDigest>:workspace:<targetWorkspaceId>:op:<operationId>`) を記録する。v1 の `purpose=note` / `reason=claimed` marker の exact keys は `{ schema, entryId, reason, terminalAt, purpose }`。v1 の `purpose=review` marker は reason によらず、entry 由来の `{ requestDigest, requestPath, pr, exactHead, reviewRevision, authorFamily }` を保持し、exact keys を `{ schema, entryId, reason, terminalAt, purpose, requestDigest, requestPath, pr, exactHead, reviewRevision, authorFamily }` に固定する。`note` に `claimed` 以外の terminal reason は認めない。v1 marker は `memoryPath` を持たず、代用の偽値も置かない。旧 `ut-tdd.claude-inbox-terminal/v1` marker の parser (review で `memoryPath` 必須) は変更せず、新 parser は schema で振り分ける。claim / terminal の判定条件、配送抑止、inbox 保持の意味は変えず、schema ごとの記録・再読込 key shape だけを定義する。
 
 ## 4. review custody の差し替え
 
@@ -174,6 +199,23 @@ classifyMemoryAdd({ kind, durableReason }) =
 - **除外**: open な review request (terminal receipt が無い) が task 本文として参照している memory は移さない。custody の差し替え (§4) が先に入っていれば参照は存在しない。
 - **手段**: `memory.md` §4.2 の `memory retire` の退避部品 (write-ahead の manifest、`memory_entries` 行の同時削除、dry-run 既定) を、選別規則を差し替えて使う。`.ut-tdd/archive/memory-episodes/` へ移し、削除しない。dry-run の件数を PR に記録し、dry-run は memory ファイルも `memory_entries` 行も動かさない。実行(`--archive`)は、移した各 memory について、ファイルの移動と `memory_entries` 行の削除を同じ write-ahead の手順で行い、完了した entry の行は残らない。実行後の保証は、`ut-tdd db status` が `fresh` で index-only 行が 0 であること、移した件数 + 残りの件数 = 移行前の総数、保持した memory(R1 / R2)の行と検索結果が移行前と同じであること、の 3 つである。dry-run の集計だけでは行の削除を保証できないので、実行の保証は隔離 fixture での実行で検証し(STCHAN-028)、実 repo では dry-run の集計だけを照合する(STCHAN-024)。
 - 移行はメモリの「整理」であって正本の変更ではないので、教訓の内容には触れない。
+
+### 7.1 実行口 (候補 oracle 023 / 025〜028)
+
+本節は L7 §3 の候補 oracle 023 / 025〜028 が参照する core 入力、結果、fail-closed 理由を固定する。実装は後続 PR で行う。
+
+- memory core の `nowISO` は有効な UTC ISO-8601 timestamp でなければならず、不正値は filesystem I/O 前に `TypeError` とする。移し先月はその `nowISO` から UTC で決める。既存 `done` row は source が無く destination が存在し、その digest が row と一致するときだけ処理済みとして受理する。それ以外は `memory_archive_recovery_conflict` で全体停止する。
+- handover の既存 `done` row も source が無く destination が存在し、その digest が row と一致するときだけ処理済みとして受理する。それ以外は `handover_archive_recovery_conflict` で全体停止する。
+- 新しい memory / handover intent は `recorded_at=nowISO` とし、その operation の done row も同じ `recorded_at` を使う。intent recovery は記録済み `destination_path` / `sha256` / `recorded_at` を再利用し、再試行時の `nowISO` で別 destination や月を再 mint しない。snapshot evidence の `recorded_at` は writer に渡された `recordedAtISO`、省略時は writer 呼出時に一度だけ採取した UTC clock 値とする。
+- intent が無い snapshot row で source が見つからない場合は `target_bytes_changed` として全体停止する。handover は新しい移動を始める前に、すべての候補と既存 manifest recovery state の source/destination/hash を preflight し、どれか一つでも conflict があれば全体停止する。
+
+- 凍結一覧 writer core は `writeStateChannelTargetSnapshot({ repoRoot, recordedAtISO? })` とする。`recordedAtISO` を省略した場合は呼出時の UTC clock を使い、指定値は有効な UTC ISO-8601 timestamp とする。不正値は filesystem I/O 前に `TypeError`。成功値は `{ ok: true, count, sha256, snapshotPath, evidencePath }`。`target-snapshot.jsonl` は exact keys `{ memory_id, content_sha256 }` の JSON object を1行ずつ記録し、`memory_id` 昇順、各行を `canonicalJson`、UTF-8、LF 区切り・末尾 LF とする。両 digest は `sha256:` prefix を持たない lowercase 64-hex。`content_sha256` は memory file raw bytes の SHA-256。空集合の snapshot は 0 bytes、証跡 count は 0。証跡 `docs/migration/state-channel-target-snapshot.json` は exact keys `{ schema, sha256, count, recorded_at }`、schema は `ut-tdd.state-channel-target-snapshot/v1`、sha256 は JSONL bytes の SHA-256。どちらかの final path があれば `{ ok:false, reason:"target_snapshot_exists" }`、作成 I/O failure は `{ ok:false, reason:"target_snapshot_write_failed" }`。writer CLI は `ut-tdd memory retire --record-target-snapshot [--recorded-at ISO]` とし、このモードは `--selector` / `--archive` / `--dry-run` / `--include-inferred` と併用できない。mode conflict は filesystem I/O 前に exit 1・write 0。二つの final path の作成は exclusive とし、上書き・削除・再凍結はしない。filesystem transaction はないため、片側作成後の I/O failure ではその bytes を残し、次回は `target_snapshot_exists` で停止して自動修復しない。writer は memory files と `memory_entries` を変更しない。
+- memory episode archive core は `archiveStateChannelMemoryEpisodes({ repoRoot, nowISO, dryRun? })` とし、`nowISO` は有効な UTC ISO-8601 timestamp (`<UTC YYYY-MM>` の移し先を決める)、不正値は filesystem I/O 前に `TypeError`、`dryRun` 省略値は `true`。これは別の公開 selector/API/CLI ではなく、既存 `ut-tdd memory retire` 内から呼ぶ composition point である。`ut-tdd memory retire --selector state-channel-snapshot [--dry-run|--archive]` を明示した場合だけこの core を使い、`--selector` 省略時は #963 の declared/inferred selector と動作を維持する。snapshot selector と `--include-inferred` は併用不可。`--record-target-snapshot` は前項の排他的 writer mode である。mode conflict は filesystem I/O 前に exit 1・write 0。snapshot が無ければ `target_snapshot_missing` で失敗し、#963 selector へ fallback しない。core 成功値は `{ ok:true, dryRun, total, categories, moved, preserved }`、failure は `{ ok:false, reason }`。`categories` は `[{ category:"moved", count }, { category:"preserved", count }]` の2区分だけとし、countの合計は `total`。呼出時に扱う各 memory id は `moved` または `preserved` のちょうど一方に現れ、重複なく両配列とも `memory_id` 昇順とする。`moved` item は `{ memory_id, source_path, destination_path, sha256 }`、`preserved` item は `{ memory_id, source_path, reason }` (`reason` は空でない string)。dry-run の `moved` は移動予定一覧で、実移動済みを表さない。CLI は core `{ok:false}` で exit 1 とする。
+- snapshot selector は `target-snapshot.jsonl` 全体の canonical bytes digest/count、証跡 exact keys、全行の raw bytes digest を検証する。各行と `memory_entries` を突合し、tracked feedback、snapshot 外の memory、凍結時点ですでに `durable_reason` を持つ project、open request が参照する project は `preserved` に理由付きで出す。snapshot に無い後続 memory は対象へ追加しない。全 snapshot 行と既存 recovery row の source/destination/hash の preflight が完了するまで、ファイル・manifest・DB を変更しない。行の追加・削除・置換または証跡との不一致は `target_snapshot_digest_mismatch`、対象 bytes の差異は `target_bytes_changed`。
+- memory archive は `memory.md` §4.2 の manifest path `.ut-tdd/archive/memory-episodes/manifest.jsonl`、append-only write-ahead、rename、`memory_entries` 削除、intent recovery の部品だけを再利用する。state-channel event はこの PR で schema `ut-tdd.state-channel-memory-archive/v1` として新定義し、exact keys `{ schema, state, memory_id, source_path, destination_path, sha256, bytes, bound_to, selection_basis, recorded_at }` を持つ。`state` は `intent` / `done`、`bound_to` は `[]`、`selection_basis` は `{ kind:"state-channel-target-snapshot/v1", snapshot_sha256, memory_id, content_sha256 }`。GitHub terminal 判定を捏造せず、snapshot digest と row identity を選別根拠として typed discriminator で区別する。
+- 同じ append-only manifest の state-channel row は snapshot selector だけが解釈し、#963 row は既存 #963 parser / selection path に委譲する。#963 selector は state-channel row を処理せず、各 mode は他方の既知 row を選別・recovery input として流用しない。未知または破損した row は schema 違いとして黙って無視せず、`memory_archive_recovery_conflict` で全体停止する。
+- intent recovery は全体停止を維持する。source のみが存在し hash が一致する場合は rename から再開する。source が無く、検証済 intent に結び付く destination のみが存在して hash が一致する場合は、その destination bytes を global preflight の対象 bytes として照合し、DB row 削除から再開する。intent と digest が一致する既存 destination は snapshot bytes 検証にも使う。source と destination の両方が存在する場合、両方が無い場合、または存在する側の digest が不一致の場合は `memory_archive_recovery_conflict` で処理全体を停止し、DB row を削除せず、新しい entry に着手しない。その他の archive I/O failure は `memory_archive_io_failed`。既に `done` の row は再処理せず、重複 `done` row を追記しない。
+- handover prose archive core は `archiveHandoverProse({ repoRoot, nowISO, dryRun? })`。`nowISO` は有効な UTC ISO-8601 timestamp、invalid の場合は filesystem I/O 前に `TypeError`。`dryRun` の省略値は `true`。成功値は `{ ok:true, dryRun, moved, preserved }`。各 moved item は `{ sourcePath, destinationPath, sha256 }`、digest は lowercase 64-hex。preserved item は `{ path, kind }` で、`kind` は `allowlisted` / `directory` / `recent_file` / `non_regular`。許可された `CURRENT.json`、`.gitkeep`、`provider/`、`archive/` は `allowlisted` として preserve する。許可リスト外の direct directory と non-regular entry も再帰・追跡せず preserve する。その他の direct regular file は mtime が `nowISO - 24h` より**古い**ものだけ (厳密に `mtime < nowISO - 24h`) `.ut-tdd/archive/handover-prose/<UTC YYYY-MM>/` へ移す。月は `nowISO` から UTC で決める。manifest は `.ut-tdd/archive/handover-prose/manifest.jsonl`、schema `ut-tdd.handover-prose-archive/v1`、各行 exact keys `{ schema, state, sha256, source_path, destination_path, recorded_at }`、state は `intent` / `done`。`intent` を先行追記して rename 後に `done` を追記する。intent-only recovery は source のみ・destination なしで source digest が一致すれば rename から、source なし・destination のみで destination digest が一致すれば `done` 追記から再開する。source/destination の両方がある・両方が無い・digest 不一致は `handover_archive_recovery_conflict` で全体停止する。既に `done` の同一 source/destination/digest は再処理せず、重複 `done` 行を追記しない。dry-run は moved予定一覧と preserve 一覧を返すが file/directory/manifest を一切書かない。削除・上書きをしない。その他の I/O failure は `{ ok:false, reason:"handover_archive_io_failed" }`。公開 CLI は `ut-tdd handover archive [--dry-run|--archive]`、省略時 dry-run、core `{ok:false}` は exit 1 とする。
 
 ## 8. 実装 PR の順序 (1 PR = 1 論点)
 
