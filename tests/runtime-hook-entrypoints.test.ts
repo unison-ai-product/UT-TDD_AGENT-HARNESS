@@ -187,47 +187,49 @@ function writeFakeClaude(binDir: string): string {
 }
 
 describe("runtime hook entrypoints", () => {
-  it.fails("CANDIDATE-U-SLOG-010: Pack consumerの5記録hookを30秒にする", () => {
-    const claudeSettings = [
-      JSON.parse(
-        readFileSync(
-          join(repoRoot, "docs", "templates", "adapter", ".claude", "settings.json"),
-          "utf8",
+  describe("U-SLOG-010: Pack consumerの5記録hookを30秒にする", () => {
+    it.fails("U-SLOG-010: Pack consumerの5記録hookを30秒にする", () => {
+      const claudeSettings = [
+        JSON.parse(
+          readFileSync(
+            join(repoRoot, "docs", "templates", "adapter", ".claude", "settings.json"),
+            "utf8",
+          ),
         ),
-      ),
-      JSON.parse(BUILTIN_GITHUB_TEMPLATES["adapter/.claude/settings.json"]),
-    ];
-    for (const settings of claudeSettings) {
-      expect(settings.hooks.SessionStart[0].hooks[0].timeout).toBe(30);
-      expect(settings.hooks.PostToolUse[0].hooks[0].timeout).toBe(30);
-      expect(settings.hooks.Stop[0].hooks[0].timeout).toBe(30);
-      expect(
-        settings.hooks.PreToolUse.map(
-          (entry: { hooks: Array<{ timeout: number }> }) => entry.hooks[0].timeout,
-        ),
-      ).toEqual([5, 5]);
-      expect(settings.hooks.Stop[1].hooks[0].timeout).toBe(930);
-    }
+        JSON.parse(BUILTIN_GITHUB_TEMPLATES["adapter/.claude/settings.json"]),
+      ];
+      for (const settings of claudeSettings) {
+        expect(settings.hooks.SessionStart[0].hooks[0].timeout).toBe(30);
+        expect(settings.hooks.PostToolUse[0].hooks[0].timeout).toBe(30);
+        expect(settings.hooks.Stop[0].hooks[0].timeout).toBe(30);
+        expect(
+          settings.hooks.PreToolUse.map(
+            (entry: { hooks: Array<{ timeout: number }> }) => entry.hooks[0].timeout,
+          ),
+        ).toEqual([5, 5]);
+        expect(settings.hooks.Stop[1].hooks[0].timeout).toBe(930);
+      }
 
-    const codexHooks = [
-      JSON.parse(
-        readFileSync(
-          join(repoRoot, "docs", "templates", "adapter", ".codex", "hooks.json"),
-          "utf8",
+      const codexHooks = [
+        JSON.parse(
+          readFileSync(
+            join(repoRoot, "docs", "templates", "adapter", ".codex", "hooks.json"),
+            "utf8",
+          ),
         ),
-      ),
-      JSON.parse(BUILTIN_GITHUB_TEMPLATES["adapter/.codex/hooks.json"]),
-    ];
-    for (const settings of codexHooks) {
-      expect(settings.hooks.SessionStart[0].hooks[0].timeout).toBe(30);
-      expect(settings.hooks.PostToolUse[0].hooks[0].timeout).toBe(30);
-      expect(settings.hooks.Stop[0].hooks[0].timeout).toBe(30);
-      expect(
-        settings.hooks.PreToolUse.map(
-          (entry: { hooks: Array<{ timeout: number }> }) => entry.hooks[0].timeout,
-        ),
-      ).toEqual([5, 5]);
-    }
+        JSON.parse(BUILTIN_GITHUB_TEMPLATES["adapter/.codex/hooks.json"]),
+      ];
+      for (const settings of codexHooks) {
+        expect(settings.hooks.SessionStart[0].hooks[0].timeout).toBe(30);
+        expect(settings.hooks.PostToolUse[0].hooks[0].timeout).toBe(30);
+        expect(settings.hooks.Stop[0].hooks[0].timeout).toBe(30);
+        expect(
+          settings.hooks.PreToolUse.map(
+            (entry: { hooks: Array<{ timeout: number }> }) => entry.hooks[0].timeout,
+          ),
+        ).toEqual([5, 5]);
+      }
+    });
   });
 
   it("SessionStart timeout is 30s in source and consumer settings without changing other hook timeouts", () => {
