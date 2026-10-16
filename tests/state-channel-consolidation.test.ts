@@ -739,7 +739,9 @@ describe("Issue #1062: review custody no longer depends on memory", () => {
         name.endsWith(".task.md"),
       ),
     ).toEqual([`${expectedDigest}.task.md`]);
-    const inbox = join(root, ".ut-tdd", "runtime", "claude-memory-wake", "inbox");
+    const project = resolveProjectMemoryRoot(root);
+    if (!project.ok) throw new Error(`notification inbox root: ${project.reason}`);
+    const inbox = join(project.runtimeBusRoot, "claude-memory-wake", "inbox");
     const notifications = readdirSync(inbox).filter((name) => name.endsWith(".json"));
     expect(notifications.length).toBeGreaterThan(0);
     const entries = notifications.map(
@@ -916,7 +918,9 @@ describe("Issue #1062: runtime notifications are memory-free", () => {
     expect(result.stdout).toContain("ut-tdd.notification/v1");
     expect(result.stdout).toContain('"purpose":"note"');
     expect(result.stdout).not.toMatch(/memory_id|memoryPath/);
-    const inbox = join(root, ".ut-tdd", "runtime", "claude-memory-wake", "inbox");
+    const project = resolveProjectMemoryRoot(root);
+    if (!project.ok) throw new Error(`notification inbox root: ${project.reason}`);
+    const inbox = join(project.runtimeBusRoot, "claude-memory-wake", "inbox");
     const files = readdirSync(inbox).filter((name) => name.endsWith(".json"));
     expect(files).toHaveLength(1);
     const inboxFile = requireOnly(files, "notification inbox entry");
@@ -942,7 +946,9 @@ describe("Issue #1062: runtime notifications are memory-free", () => {
       "https://example.com/x",
     ]) {
       const root = tempRepo();
-      const inbox = join(root, ".ut-tdd", "runtime", "claude-memory-wake", "inbox");
+      const project = resolveProjectMemoryRoot(root);
+      if (!project.ok) throw new Error(`notification inbox root: ${project.reason}`);
+      const inbox = join(project.runtimeBusRoot, "claude-memory-wake", "inbox");
       const args = ["notify", "claude", "--body", "x"];
       if (ref) args.push("--ref", ref);
       const result = runCli(root, args);
@@ -1003,6 +1009,71 @@ describe("Issue #1062: runtime notifications are memory-free", () => {
     });
   });
 
+  it.fails("CANDIDATE-U-STCHAN-017: mixed v3/v4/v1 selection preserves legacy order and leaves v1 nonterminal before claim", async () => {
+    const module = await import("../src/runtime/claude-memory-wake.ts");
+    const workspaceId = "a".repeat(64);
+    const memory = {
+      memory_id: "memory:feedback:mixed-inbox",
+      kind: "feedback",
+      title: "mixed inbox fixture",
+      body: "mixed version memory entry",
+      tags: [],
+      source_path: ".ut-tdd/memory/feedback-mixed-inbox.md",
+      updated_at: "2026-10-15T00:00:00.000Z",
+      content_hash: createHash("sha256").update("mixed version memory entry").digest("hex"),
+    } as MemoryEntry;
+    const oldV3 = module.buildClaudeInboxEntry({
+      memory,
+      operationId: "op-mixed-v3",
+      workspaceId,
+      originRuntime: "codex",
+      now: "2026-10-15T00:00:00.000Z",
+    });
+    const providerModule = await import("../src/runtime/claude-provider-envelope.ts");
+    const oldV4 = providerModule.buildClaudeProviderInboxEntry({
+      memory,
+      projectId: "fixture-project",
+      operationId: "op-mixed-v4",
+      workspaceId,
+      producer: { provider: "codex", sessionId: "producer" },
+      target: { scope: "session", provider: "claude", sessionId: "target" },
+      now: "2026-10-15T00:00:01.000Z",
+    });
+    const digest = notificationEnvelopeDigest("fixture-project", "op-mixed-v1");
+    const v1 = {
+      schemaVersion: "ut-tdd.notification/v1",
+      purpose: "note",
+      id: `note:${digest}:workspace:${workspaceId}:op:op-mixed-v1`,
+      body: "mixed inbox v1 note",
+      originRuntime: "codex",
+      operationId: "op-mixed-v1",
+      targetWorkspaceId: workspaceId,
+      createdAt: "2026-10-15T00:00:02.000Z",
+      projectId: "fixture-project",
+      producer: { provider: "codex", sessionId: "producer" },
+      target: { scope: "session", provider: "claude", sessionId: "target" },
+      envelopeDigest: digest,
+      ref: "https://github.com/example/repo/issues/1062#issuecomment-1",
+    };
+    const decoded = [oldV3, oldV4, v1].map((entry) =>
+      module.decodeClaudeInboxEntry(JSON.stringify(entry)),
+    );
+    expect(decoded.every((entry) => entry !== undefined)).toBe(true);
+    if (decoded.some((entry) => entry === undefined)) return;
+    const entries = decoded as NonNullable<(typeof decoded)[number]>[];
+    const decodedV1 = requireDefined(
+      entries.find((entry) => entry.id === v1.id),
+      "mixed v1 entry",
+    );
+
+    expect(module.selectClaudeInboxEntry(entries, new Set())?.id).toBe(oldV3.id);
+    expect(module.selectClaudeInboxEntry(entries, new Set([oldV3.id]))?.id).toBe(oldV4.id);
+    expect(module.selectClaudeInboxEntry(entries, new Set([oldV3.id, oldV4.id]))?.id).toBe(v1.id);
+    expect(module.evaluateClaudeInboxTerminal({ entry: decodedV1, claimed: false })).toEqual({
+      terminal: false,
+    });
+  });
+
   it("CANDIDATE-U-STCHAN-017: frozen v1 note digest fixture is independently reproducible", () => {
     const preimage =
       '{"schemaVersion":"ut-tdd.notification/v1","projectId":"fixture-project","operationId":"op-note","producer":{"provider":"codex","sessionId":"producer"},"target":{"scope":"session","provider":"claude","sessionId":"target"}}';
@@ -1057,6 +1128,8 @@ describe("Issue #1062: runtime notifications are memory-free", () => {
 
   describe("CANDIDATE-U-STCHAN-017 v1 filesystem consumers", () => {
     const fixtureRoots: Record<string, string> = {};
+    const terminalWorkspaceIds: Record<string, string> = {};
+    const terminalMarkerPaths: Record<string, string> = {};
     const noteOperation = "op-note-integration";
 
     const makeNote = (repoRoot: string, operationId: string) => {
@@ -1090,6 +1163,10 @@ describe("Issue #1062: runtime notifications are memory-free", () => {
         "note-v4id",
         "note-project",
         "terminals",
+        "terminal-missing-key",
+        "terminal-bad-schema",
+        "terminal-bad-purpose",
+        "terminal-note-pr-merged",
       ]) {
         const root = mkdtempSync(join(tmpdir(), "ut-tdd-state-channel-v1-"));
         fixtureRoots[name] = root;
@@ -1222,6 +1299,38 @@ describe("Issue #1062: runtime notifications are memory-free", () => {
         operationId: "op-review-claimed",
         envelopeDigest: claimedReviewDigest,
       };
+
+      for (const [name, operationId] of [
+        ["terminal-missing-key", "op-terminal-missing-key"],
+        ["terminal-bad-schema", "op-terminal-bad-schema"],
+        ["terminal-bad-purpose", "op-terminal-bad-purpose"],
+        ["terminal-note-pr-merged", "op-terminal-note-pr-merged"],
+      ] as const) {
+        const root = fixtureRoots[name];
+        const entry = makeNote(root, operationId);
+        writeRawNotificationEntry(root, entry, notificationBinding(entry));
+        const terminalProject = resolveProjectMemoryRoot(root);
+        if (!terminalProject.ok)
+          throw new Error(`notification terminal reject fixture root: ${terminalProject.reason}`);
+        terminalWorkspaceIds[name] = terminalProject.projectNamespace;
+        const terminalRoot = join(terminalProject.runtimeBusRoot, "claude-memory-wake");
+        const terminalPath = join(
+          terminalRoot,
+          `${notificationFileStem(String(entry.id))}.terminal.json`,
+        );
+        terminalMarkerPaths[name] = terminalPath;
+        writeFileSync(
+          terminalPath,
+          `${JSON.stringify({
+            schema: "ut-tdd.notification-terminal/v1",
+            entryId: entry.id,
+            reason: "claimed",
+            terminalAt: "2026-10-16T00:00:03.000Z",
+            purpose: "note",
+          })}\n`,
+        );
+      }
+
       writeRawNotificationEntry(fixtureRoots.terminals, note, notificationBinding(note));
       writeRawNotificationEntry(fixtureRoots.terminals, review, notificationBinding(review));
       writeRawNotificationEntry(
@@ -1241,6 +1350,73 @@ describe("Issue #1062: runtime notifications are memory-free", () => {
     afterAll(() => {
       for (const root of Object.values(fixtureRoots)) removeTestTree(root);
     }, 30_000);
+
+    const readTerminalSummary = (name: string) => {
+      const moduleRoot = fixtureRoots[name];
+      const workspaceId = terminalWorkspaceIds[name];
+      if (!moduleRoot || !workspaceId)
+        throw new Error(`notification terminal fixture is incomplete: ${name}`);
+      return import("../src/runtime/claude-memory-wake.ts").then((module) =>
+        module.summarizeUnclaimedInbox(moduleRoot, workspaceId),
+      );
+    };
+
+    it.fails("CANDIDATE-U-STCHAN-017: v1 claimed-note terminal controls are recognized before malformed-marker checks", async () => {
+      for (const name of [
+        "terminal-missing-key",
+        "terminal-bad-schema",
+        "terminal-bad-purpose",
+        "terminal-note-pr-merged",
+      ]) {
+        const summary = await readTerminalSummary(name);
+        expect(summary.terminalized, `${name} valid marker`).toBe(1);
+        expect(summary.pending, `${name} valid marker`).toBe(0);
+      }
+    });
+
+    const rejectMalformedNoteTerminal = async (
+      name: string,
+      mutate: (marker: Record<string, unknown>) => Record<string, unknown>,
+    ) => {
+      const markerPath = terminalMarkerPaths[name];
+      if (!markerPath) throw new Error(`notification terminal marker is missing: ${name}`);
+      const before = await readTerminalSummary(name);
+      expect(before.terminalized, `${name} valid marker control`).toBe(1);
+      expect(before.pending, `${name} valid marker control`).toBe(0);
+      const marker = JSON.parse(readFileSync(markerPath, "utf8")) as Record<string, unknown>;
+      writeFileSync(markerPath, `${JSON.stringify(mutate(marker))}\n`);
+      const after = await readTerminalSummary(name);
+      expect(after.terminalized, `${name} malformed marker`).toBe(0);
+      expect(after.pending, `${name} malformed marker`).toBe(1);
+    };
+
+    it.fails("CANDIDATE-U-STCHAN-017: v1 terminal rejects a missing required key", async () => {
+      await rejectMalformedNoteTerminal("terminal-missing-key", (marker) => {
+        const { terminalAt: _terminalAt, ...withoutTerminalAt } = marker;
+        return withoutTerminalAt;
+      });
+    });
+
+    it.fails("CANDIDATE-U-STCHAN-017: v1 terminal rejects an unsupported schema", async () => {
+      await rejectMalformedNoteTerminal("terminal-bad-schema", (marker) => ({
+        ...marker,
+        schema: "ut-tdd.notification-terminal/v9",
+      }));
+    });
+
+    it.fails("CANDIDATE-U-STCHAN-017: note terminal rejects the review purpose", async () => {
+      await rejectMalformedNoteTerminal("terminal-bad-purpose", (marker) => ({
+        ...marker,
+        purpose: "review",
+      }));
+    });
+
+    it.fails("CANDIDATE-U-STCHAN-017: note terminal rejects pr_merged", async () => {
+      await rejectMalformedNoteTerminal("terminal-note-pr-merged", (marker) => ({
+        ...marker,
+        reason: "pr_merged",
+      }));
+    });
 
     it("017 integration fixture preconditions resolve identity, workspace, digest, and binding", () => {
       for (const name of [
@@ -1862,17 +2038,44 @@ describe("Issue #1062: migration is frozen, verifiable, and atomic", () => {
     expectStarted(before.db);
     expect(before.db.status).toBe(0);
 
-    const result = runCli(root, ["memory", "retire", "--dry-run", "--json"]);
+    const result = runCli(root, [
+      "memory",
+      "retire",
+      "--selector",
+      "state-channel-snapshot",
+      "--dry-run",
+      "--json",
+    ]);
     expectStarted(result);
     expect(result.status).toBe(0);
     const report = JSON.parse(result.stdout) as Record<string, unknown>;
+    const moved = report.moved as Array<{ memory_id: string }>;
+    const preserved = report.preserved as Array<{ memory_id: string; reason: string }>;
+    expect(moved.map((item) => item.memory_id)).toEqual(
+      [numbered.memory_id, unnumbered.memory_id].sort(),
+    );
+    expect(preserved.map((item) => item.memory_id)).toEqual(
+      [
+        trackedFeedback.memory_id,
+        untrackedFeedback.memory_id,
+        referenced.memory_id,
+        durableBeforeFreeze.memory_id,
+        durableAfterFreeze.memory_id,
+      ].sort(),
+    );
+    expect(
+      preserved.every((item) => typeof item.reason === "string" && item.reason.length > 0),
+    ).toBe(true);
+    // L6 §7.1 fixes a nonempty preservation reason, not a literal reason token.
+    expect(
+      preserved.find((item) => item.memory_id === referenced.memory_id)?.reason.length,
+    ).toBeGreaterThan(0);
     const reportText = JSON.stringify(report);
     expect(reportText).toContain(numbered.memory_id);
     expect(reportText).toContain(unnumbered.memory_id);
     expect(reportText).toContain(referenced.memory_id);
     expect(reportText).toContain(durableBeforeFreeze.memory_id);
     expect(reportText).toContain(durableAfterFreeze.memory_id);
-    expect(reportText).toContain("skip");
     expect(reportText).toContain("feedback");
     expect(report.total).toBe(7);
     expect(report.categories).toBeInstanceOf(Array);
@@ -1934,7 +2137,14 @@ describe("Issue #1062: migration is frozen, verifiable, and atomic", () => {
     };
     expectStarted(before.db);
     expect(before.db.status).toBe(0);
-    const memoryRun = runCli(repoRoot, ["memory", "retire", "--dry-run", "--json"]);
+    const memoryRun = runCli(repoRoot, [
+      "memory",
+      "retire",
+      "--selector",
+      "state-channel-snapshot",
+      "--dry-run",
+      "--json",
+    ]);
     expectStarted(memoryRun);
     expect(memoryRun.status).toBe(0);
     const handoverRun = runCli(repoRoot, ["handover", "archive", "--dry-run", "--json"]);
@@ -1947,15 +2157,29 @@ describe("Issue #1062: migration is frozen, verifiable, and atomic", () => {
       memoryReport.categories.reduce((sum: number, row: { count: number }) => sum + row.count, 0),
     );
     expect(memoryReport.total).toBe(readdirSync(join(repoRoot, paths[0])).length);
+    expect(memoryReport.categories).toEqual([
+      { category: "moved", count: memoryReport.moved.length },
+      { category: "preserved", count: memoryReport.preserved.length },
+    ]);
+    const trackedMemory = before.tracked.filter((path) => path.startsWith(".ut-tdd/memory/"));
     expect(
-      memoryReport.categories.some(
-        (row: { count: number }) => row.count === 46 && JSON.stringify(row).includes("tracked"),
+      memoryReport.moved.some((item: { source_path: string }) =>
+        trackedMemory.includes(item.source_path),
+      ),
+    ).toBe(false);
+    expect(
+      trackedMemory.every((path) =>
+        memoryReport.preserved.some((item: { source_path: string }) => item.source_path === path),
       ),
     ).toBe(true);
-    expect(handoverReport.total).toBe(
-      handoverReport.categories.reduce((sum: number, row: { count: number }) => sum + row.count, 0),
+    expect(handoverReport.moved.length + handoverReport.preserved.length).toBe(
+      readdirSync(join(repoRoot, paths[1])).length,
     );
-    expect(handoverReport.total).toBe(readdirSync(join(repoRoot, paths[1])).length);
+    const reportedHandoverPaths = [
+      ...handoverReport.moved.map((item: { sourcePath: string }) => item.sourcePath),
+      ...handoverReport.preserved.map((item: { path: string }) => item.path),
+    ];
+    expect(new Set(reportedHandoverPaths).size).toBe(reportedHandoverPaths.length);
     const afterDb = runCli(repoRoot, ["db", "status", "--json"]);
     expectStarted(afterDb);
     expect(afterDb.status).toBe(0);
