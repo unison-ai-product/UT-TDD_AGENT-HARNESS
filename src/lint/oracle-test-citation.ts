@@ -28,6 +28,11 @@ interface StaticTestLabelSite {
   line: number;
 }
 
+interface ScanTestLabelsOptions {
+  idPattern?: RegExp;
+  modifiers?: ReadonlySet<string>;
+}
+
 function skipString(text: string, start: number, quote: string): number {
   for (let index = start + 1; index < text.length; index += 1) {
     if (text[index] === "\\") {
@@ -166,9 +171,10 @@ function lineAt(text: string, index: number): number {
 function scanTestLabels(
   text: string,
   relativePath: string,
-  idPattern: RegExp = ORACLE_ID,
-  modifiers: ReadonlySet<string> = LABEL_MODIFIERS,
+  options: ScanTestLabelsOptions = {},
 ): StaticTestLabelSite[] {
+  const idPattern = options.idPattern ?? ORACLE_ID;
+  const modifiers = options.modifiers ?? LABEL_MODIFIERS;
   const sites: StaticTestLabelSite[] = [];
   let index = 0;
   while (index < text.length) {
@@ -230,7 +236,7 @@ function collectCitationSites(
       } else if (entry.endsWith(".ts")) {
         const relativePath = full.slice(repoRoot.length + 1).replaceAll("\\", "/");
         sites.push(
-          ...scanTestLabels(readFileSync(full, "utf8"), relativePath, idPattern, modifiers),
+          ...scanTestLabels(readFileSync(full, "utf8"), relativePath, { idPattern, modifiers }),
         );
       }
     }
