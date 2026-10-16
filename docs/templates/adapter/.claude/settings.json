@@ -49,7 +49,7 @@
             "type": "command",
             "command": "node",
             "args": [".ut-tdd/bin/ut-tdd.mjs","hook","post-tool-use"],
-            "timeout": 5,
+            "timeout": 30,
             "statusMessage": "session-log: post tool use (fail-open)"
           }
         ]
@@ -62,7 +62,7 @@
             "type": "command",
             "command": "node",
             "args": [".ut-tdd/bin/ut-tdd.mjs","session","summary"],
-            "timeout": 5,
+            "timeout": 30,
             "statusMessage": "session-log: PLAN digest summary (fail-open)"
           }
         ]
