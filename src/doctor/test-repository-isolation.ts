@@ -191,6 +191,11 @@ repositoryReadContracts["tests/upstream-schedule-reader.test.ts"] = {
   reason:
     "upstream-schedule reader oracles seed isolated filesystem fixtures from the immutable L3 topic",
 };
+repositoryReadContracts["tests/state-channel-consolidation.test.ts"] = {
+  mode_calls: { isolated_fixture: 1 },
+  reason:
+    "state-channel migration oracles read the exact execution snapshot and write only to isolated repositories",
+};
 repositoryReadContracts["tests/windows-hide-default.test.ts"] = {
   mode_calls: { isolated_fixture: 1 },
   reason:
