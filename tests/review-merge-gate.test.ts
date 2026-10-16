@@ -785,6 +785,40 @@ describe("D2-B PR merge gate", () => {
     }
   });
 
+  const rollupFacts = (statusCheckRollup: unknown[]) => {
+    const output = JSON.stringify({ headRefOid: head, state: "OPEN", statusCheckRollup });
+    const exec = ((..._args: unknown[]) => output) as never;
+    return createGhPrMergePorts({ execFileSync: exec }).getPullRequest(465);
+  };
+  const run = (conclusion: string, time?: string) => ({
+    workflowName: "ci",
+    name: "harness-check",
+    status: "COMPLETED",
+    conclusion,
+    ...(time ? { startedAt: time, completedAt: time } : {}),
+  });
+
+  it.fails("U-RVMG-035: 同じ check 名は古い FAILURE より新しい SUCCESS を採り checksGreen=true とする", () => {
+    const result = rollupFacts([
+      run("FAILURE", "2026-10-16T01:00:00Z"),
+      run("SUCCESS", "2026-10-16T02:00:00Z"),
+    ]);
+    expect(result.checksGreen).toBe(true);
+  });
+
+  it("U-RVMG-036: 同じ check 名で最新が FAILURE なら古い SUCCESS があっても checksGreen=false とする", () => {
+    const result = rollupFacts([
+      run("SUCCESS", "2026-10-16T01:00:00Z"),
+      run("FAILURE", "2026-10-16T02:00:00Z"),
+    ]);
+    expect(result.checksGreen).toBe(false);
+  });
+
+  it("U-RVMG-037: 同じ check 名で時刻欠落により最新を決められなければ checksGreen=false とする", () => {
+    const result = rollupFacts([run("FAILURE"), run("SUCCESS", "2026-10-16T02:00:00Z")]);
+    expect(result.checksGreen).toBe(false);
+  });
+
   it("U-RVMG-011: adapter の第二観測と gh merge は exact HEAD に束縛される", () => {
     const snapshots = [
       JSON.stringify({ headRefOid: head, state: "OPEN", statusCheckRollup: [] }),

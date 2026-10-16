@@ -1727,6 +1727,16 @@ Issue #926 の custody oracle 行は契約上の候補宣言であり、実装�
 | `CANDIDATE-U-RVMG-033` | 許可正常系 fixtureの allowlisted receipt raw bytes を1 byteだけ変更し、変更後 digest が allowlist にない fixture | allowlist digest の完全一致を要求し、1-byte mutation を deny、merge 0 |
 | `CANDIDATE-U-RVMG-034` | allowlist 外 receipt の `at` だけを cutoff より前へ backdate し、attempt terminal event を欠く fixture | 自己申告時刻だけでは grandfather せず wrapper が deny、merge 0 |
 
+#### 同じ head の古い check run (Issue #1104)
+
+設計正本は `docs/design/harness/L6-function-design/merge-gate-check-run-selection.md`。実テストは `tests/review-merge-gate.test.ts`。
+
+| ID | mutation / fixture | expected |
+|---|---|---|
+| `U-RVMG-035` | 同じ check 名 (workflow + job) の古い FAILURE と新しい SUCCESS を `completedAt` 付きで rollup に投入 | 最新だけで判定し `checksGreen=true` |
+| `U-RVMG-036` | 同じ check 名の古い SUCCESS と新しい FAILURE を投入 | 最新が SUCCESS 以外なので `checksGreen=false` |
+| `U-RVMG-037` | 同じ check 名の複数エントリのうち 1 件の時刻を欠落させ最新を決められない fixture | 最新不明を緑に丸めず `checksGreen=false` |
+
 ## Claude HARNESS memory async wake oracle (2026-08-03)
 
 対象 = `src/runtime/claude-memory-wake.ts`、`src/cli.ts`、Claude Stop hook、consumer setup
