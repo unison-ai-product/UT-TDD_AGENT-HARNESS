@@ -34,7 +34,7 @@ L3 FR 26 件 (FR-01〜18 + FR-45 + FR-23〜27 / FR-29 / FR-30) を 11 カテゴ�
 | **C7 検出 doctor** | FR-18 / FR-11 | 全集約 (横断) | doctor + lint |
 | **C8 CI 連携** | FR-17 | Workflow / Artifact | (将来 CI 配線) |
 | **C9 doc-review** | FR-45 | Artifact | (将来 review module) |
-| **C10 文脈注入** | FR-12 | Plan | `src/skill-engine/recommend.ts` + `src/workflow/contracts.ts#suggestSkillInjection` |
+| **C10 文脈注入** | FR-12 | Plan | `src/skill-engine/recommend.ts` (`ut-tdd skill suggest`。配線の無い `suggestSkillInjection` は #1084 で退役) |
 | **C11 Recovery** | FR-10 | Workflow / Handover | (将来 cutover) |
 | **C12 内部資産 (skill/command、subagent roster は #1002 で撤廃)** | FR-L1-46 / FR-L1-47 / FR-L1-48 | Plan (agent_slot) のみ — skill は**集約なし** (in-memory scan-on-demand、fs 正本、data.md §1/§8)。Agent tool の許可は汎用の型と model 必須だけで、定義ファイルを資産として持たない (§1.1) | `src/runtime/agent-guard.ts` + `src/team/delegation-routing.ts` + `src/skill-engine/recommend.ts` + `src/assets/catalog.ts` + cli |
 
@@ -93,7 +93,8 @@ FR → `ut-tdd` サブコマンドの対応 (architecture.md cli module に集�
 | `ut-tdd route --mode` | FR-08 | 未 | 手動 mode 切替 (S-03) |
 | `ut-tdd cutover --to` | FR-10 / FR-26 | 実装済 (dry-run / approval gate) | ロールバック計画と事前 check を出力。実適用は human-approved runbook 必須 |
 | `ut-tdd roster list/check` | FR-L1-46 | 撤廃 (実装 PR 4。#1002、roster を持たないので一覧・整合確認の対象が無い) | — |
-| `ut-tdd asset catalog` / `ut-tdd builder catalog` | FR-L1-48 | 実装済 | 内部資産 (skill pack / command / builder) カタログ (porting-map W11/W12/W16) |
+| `ut-tdd asset catalog` | FR-L1-48 | 実装済 | 内部資産 (skill pack / command) カタログ (porting-map W11/W12/W16) |
+| `ut-tdd builder catalog` | FR-L1-48 | 撤廃 (#1084。固定配列を自分自身に照合するだけで常に成功する自己検証であり、CLI 面の実測を見ない。CLI 面の registry は external-if.md §(g) の設計と PLAN-L6-64 / PLAN-L7-449 が持つ) | — |
 
 > コマンドの Precondition/Postcondition (DbC 契約) は L5 D-API で確定 (§8 carry)。各 subcommand の関数粒度 signature は L6 機能設計 (=仕様設計) で単体テスト設計粒度に分解 (back-fill、PLAN-L4-11)。
 
@@ -319,7 +320,7 @@ L3 §3.1 の P1 carry を L4 sub-PLAN として機能境界を割り当て (§3.
 | FR-L1-28 (W 2 段設計) | Phase1 一般 + Phase2 agent 昇華 (drive=agent) | PLAN-L4-NN-w2-stage | (将来 workflow) |
 | FR-L1-37 (model 推挙) | task×drive×L 別 model + reasoning effort 選定 | PLAN-L4-NN-model-suggestion | (将来 skill/orchestration) |
 | FR-L1-39 (タスク難易度) | 規模/依存/不確実性×drive スコアリング | PLAN-L4-NN-task-complexity | (将来 orchestration) |
-| FR-L1-40 (drive 別 state 分離) | `.ut-tdd/drive/<drive>/` 区画 + skip_sub_doc 強制 | PLAN-L4-NN-drive-state-isolation | runtime/state |
+| FR-L1-40 (drive 別 state 分離) | `.ut-tdd/drive/<drive>/` 区画 + skip_sub_doc 強制 | PLAN-L4-NN-drive-state-isolation | runtime/state (L6 の対応実装 `resolveDriveStatePartition` / `validateDriveStatePartitions` は live な呼び出し元が無く #1084 で退役。契約は未配線) |
 | FR-L1-41 (drive 自動判定) | PLAN/コード/拡張子 → drive 分類 → routing | PLAN-L4-NN-drive-auto-classify | runtime(detect) |
 | FR-L1-42 (provider 引継ぎ) | Claude↔Codex context+PLAN+budget 連携 | implemented 2026-06-08 (`provider-handover.v1`) | runtime(adapter) |
 | FR-L1-44 (onboarding) | 既存 repo へ harness baseline 確立 | PLAN-L4-NN-onboarding | cli(setup) |
