@@ -2542,3 +2542,138 @@ decisionを発行できたことだけである。過去のreview実施、custod
 入力に注入された`reviewerFamily`、`reviewerModel`、`PASS`その他の自己申告は、receiptの判定結果を変えない。
 固定行・Git blob・chain・digestの欠落または不一致は`legacy_evidence_unavailable`で停止し、歴史的reviewを推測して
 補完しない。二receiptの発行は#484だけが同一atomic operationでexactly once実施し、通常registryへ一般化しない。
+
+## 2026-10-15 Windows leg の vitest 3 shard 契約 (Issue #1063)
+
+> 本節は Issue #1063 項目 2 の契約であり、実装は含まない。`harness-check-windows` の job 形状を変えるため、
+> `GithubCiPolicy` の oracle (`checkLaneSkipSafety` 系) と対のテスト設計
+> (`docs/test-design/harness/L7-windows-ci-single-snapshot-test-design.md` 末尾の `CANDIDATE-U-CISHARD-*`) を先に凍結する。
+
+### 背景 (実測)
+
+`harness-check` の律速は Windows leg (job 1521〜1567 秒、うち vitest step 1429〜1465 秒) である。Linux leg は
+576〜964 秒で、aggregate は両 leg の最大値になる。Windows の vitest は Duration 1328 秒、テスト時間合計 3589 秒で
+並列度は約 2.7 (逆算)。上位 25 ファイルが全ファイル時間の約 87% を占める。実測の出所は main 成功 3 run
+(38694546173 / 38692344625 / 38690207164) の job log である。
+
+### 決定 1: matrix 1 job (job id `harness-check-windows` を維持)
+
+`harness-check-windows` を `strategy.matrix.shard: ["1/3", "2/3", "3/3"]` + `fail-fast: false` の 1 job にする。
+明示 3 job (`harness-check-windows-1..3`) は採らない。
+
+| 観点 | matrix 1 job (採用) | 明示 3 job (不採用) |
+| --- | --- | --- |
+| required check 名 | required context は `harness-check` 1 件のみ (branch protection 実測: `contexts=["harness-check"]`)。`harness-check-windows (1/3)` 等の表示名は required に入らず、保護設定の変更が不要 | 同左。ただし job が 3 個に増える |
+| aggregate | `needs.harness-check-windows.result` が matrix 全 instance の集約 (1 つでも failure / cancelled なら success にならない) で、`REQUIRED_AGGREGATE_COMMAND` と `needs` 完全一致の既存契約が不変 | `RUNTIME_LEGS` が 6 要素になり、aggregate の `needs` と result 式の全てを書き換える |
+| policy | step manifest は 1 組のまま。`strategy` の照合だけを追加する | step manifest を 3 job 分に複製するため drift 源が増える |
+| shard 集合の欠落 | matrix 定義 (`shard` 配列) をポリシーが exact 照合する (決定 3) | 3 job の存在を `needs` で照合する |
+
+### 決定 2: policy 契約の変更範囲
+
+- Windows leg の許可キーを `runs-on` / `steps` から `runs-on` / `strategy` / `steps` へ広げる。他の job
+  (Linux、node-generation 系) は従来のキー集合のまま (`strategy` を持たせたら violation)。
+- `strategy` は `{ "fail-fast": false, matrix: { shard: ["1/3", "2/3", "3/3"] } }` と exact に一致する。
+  shard 数・順序・`fail-fast: true`・`include` / `exclude` の追加・動的 matrix (`fromJSON`) は violation。
+- step manifest の差分は test step 1 つだけで、`npm run test:windows -- --shard=${{ matrix.shard }}` になる。
+  それ以外の step (typecheck / db rebuild / toolchain doctor / classify) は全 shard で同一に実行する。
+  重複実行は runner 時間を増やすが wall time は増やさず、特定 shard にだけ検査を置くことで
+  「その shard が skip された run が通る」穴を作らない。
+- job レベルの `if`、matrix の一部 shard だけを skip する条件、`continue-on-error` は引き続き禁止する。
+- 実装 PR は Issue #898 の Green (`src/lint/github-ci-policy.ts` を変更する) が main に入った後に出す。
+
+### 決定 3: aggregate が 3 shard を検証する方法
+
+aggregate の `needs.harness-check-windows.result == success` を一次ゲートとして維持する。matrix 全 instance が
+成功した場合だけ success になるため、1 つでも failure / cancelled / skipped があれば既存の
+`test ... = "success"` が Red になる。二次の束縛として、各 shard は終了時に次の evidence を
+artifact `windows-shard-<index>-attempt-<run_attempt>` として upload する。
+
+- `run_id`、`run_attempt`、`head_sha`、`shard` (例: `2/3`)、vitest が実行したテストファイル数と結果。
+
+aggregate は lane 判定に束縛して検証する。lane は `.github/workflows/harness-check.yml` の
+`classify changed files` step の出力 `steps.classify.outputs.lane` (`full` / `doc`、実装は
+`src/github/change-lane.ts`、判定不能・新種 path は必ず `full`) であり、Windows の
+`test:windows` step は `lane == 'full'` のときだけ走る。doc lane では `source-doc-lane` doctor だけが走り、
+vitest evidence は生成されない。したがって evidence の要否を無条件にせず、lane で分ける。
+
+- **full lane**: 全 3 shard の evidence を必須とする。要求は次の全てである。
+  1. shard 集合がちょうど `{1/3, 2/3, 3/3}` で、重複・欠落・余剰がない。
+  2. 全 evidence の `run_id` と `run_attempt` が aggregate 自身と一致し、`head_sha` が checkout した HEAD と一致する。
+  3. 全 shard の結果が成功で、**各 shard の実行ファイル数がそれぞれ正の整数**である (合計が正でも
+     `[10,0,10]` のように 1 つでも 0 の shard があれば拒否する。空振りした shard の成功を通さない)。
+- **doc lane**: vitest evidence は期待しない (3 shard 全て無くてよい)。ただし lane 判定そのものを
+  同じ run / attempt / HEAD に束縛した `lane` evidence (各 leg の classify 出力) で検証する。
+  aggregate が checkout した HEAD の変更ファイルから `src/github/change-lane.ts` の判定で自前に lane を再計算し、
+  claimed lane と食い違う場合は拒否する。特に「evidence が無い + claimed `doc` + 再計算が `full`」は
+  full lane を doc lane に偽装した run として Red にする。doc lane で 3 shard evidence が存在する矛盾も拒否する。
+
+「失敗した job だけ再実行」で新 attempt が始まると、前 attempt で成功した shard は今 attempt の artifact を
+持たない。この場合 aggregate は `attempt_binding_mismatch` で Red になり、全 job 再実行を要求する
+(既存運用: rerun は常に全 job)。artifact 名に attempt を含めるのは、upload-artifact v4 の同名衝突を避けつつ、
+別 attempt の evidence を今 attempt の証拠として拾わないためである。
+
+### 決定 4: shard 失敗の報告
+
+- `fail-fast: false` で、1 つの shard の失敗が他 shard を打ち切らない。全 shard の失敗ファイルを 1 回の run で
+  集められるため、再実行の往復が減る。
+- 各 shard は `harness-check-windows (i/3)` として個別に Red / Green になる。aggregate の失敗メッセージは
+  どの shard が欠落または不成功かを列挙する。
+- job summary (`github summary`) は shard ごとの所要時間と失敗ファイルを出す。
+
+### 決定 5: shard の分割単位と等価性
+
+- 分割は vitest 組み込みの `--shard=i/3` を使う。ファイルを手で割り当てる方式は、テスト追加のたびに
+  割当表を保守する必要があり、drift 源になるため採らない。
+- `W` (既存の `test:windows` の選択集合、PLAN-L7-526) の 3 shard の和は `W` に一致し、shard 同士は
+  互いに素である。これは `vitest list --shard=i/3` の結果で機械的に確かめる。
+- snapshot runner (`scripts/run-vitest-snapshot.ts`) は shard ごとに別 runner 上で 1 回ずつ起動する。
+  sealed execution snapshot、foreign-write fence、reference fingerprint、test-repository-isolation と
+  global-setup の fence は shard ごとに従来どおり成立する (runner を共有しない)。`--shard` は runner の
+  引数として vitest へ透過される必要があり、透過されず全件実行になる退行は Red にする。
+- shard の偏りは vitest の既定 sequencer 次第である。最大ファイル (`memory-legacy-archive` 約 489 秒) は
+  Issue #1063 項目 1 で縮める前提とし、本契約は偏りの補正 (手動分割) を含めない。
+
+### 決定 6: Linux は shard しない
+
+Linux leg は 576〜964 秒で、Windows を shard した後の次の律速になるが、現時点ではクリティカルパス外である。
+Linux には `doctor` と DB 系テストがあり、shard すると doctor singleton や projection の前提 (PLAN-L7-442)
+との相互作用を新たに検証する必要があるため、Windows の効果を実測してから別 Issue で判断する。
+
+### 固定費と期待時間
+
+shard ごとに固定費がかかる (snapshot 作成 約 23 秒、`npm ci` 約 28 秒、db rebuild 約 36 秒、seal / fingerprint /
+cleanup 約 21 秒で合計約 110 秒。typecheck 約 14 秒と workflow 側 db rebuild 約 36 秒も shard ごと)。
+
+| 項目 | 現状 | 3 shard 後の見積り |
+| --- | --- | --- |
+| vitest 本体 | 約 1330 秒 | 約 1330 / 3 ≒ 443 秒 (偏り 1.3 倍想定で最大約 575 秒) |
+| 固定費 + typecheck | 約 160 秒 | 約 160 秒 (並列のため増えない) |
+| job wall time | 約 1521〜1567 秒 | 約 600〜750 秒 (10〜12.5 分) |
+
+見積りは Issue #1063 の実測からの逆算であり、実装 PR の exact HEAD の run で測り直して置き換える
+(未計測値を達成値として書かない)。runner 時間 (課金) は約 3 倍の固定費を払うため、wall time と引き換えに増える。
+
+### 採らない案
+
+| 案 | 不採用の理由 |
+| --- | --- |
+| 重い e2e を non-required の別 job に逃がす | required gate `harness-check` が弱まる。回帰を merge 後にしか検出できない |
+| path filter で e2e を絞る | 変更ファイルの推定誤りが無検査の穴になる。doc lane の fail-close 方針 (PLAN-L7-455) に反する |
+| `isolate:false` / `--pool=threads` | 支配要因は子プロセス spawn で効果が小さく、global state の汚染と fence の前提崩れのリスクが大きい |
+| テスト手動分割 (明示ファイル割当) | 追加・改名のたびに割当表が drift する。組み込み `--shard` で足りる |
+| larger runner (8 vCPU) | コード変更なしで約 8 分短縮できるが有料。別判断 (PO) の対象であり、shard と併用も可能 |
+
+### 実装 PR の順序
+
+`design-protection-diff-gate.md` §10.2 / §10.3 に従い、実装 PR (src/ か scripts/ を含む PR) は設計文書と
+test-design に触れない。
+
+1. **契約 (本 PR)**: 設計と candidate oracle を凍結する (docs のみ)。
+2. **登録 + Red**: `it.fails` のテストを候補 ID (`CANDIDATE-U-CISHARD-*`) で引用して入れる。テストは実 workflow と
+   `RUNTIME_STEP_MANIFESTS` を読むため、`test-repository-isolation` の `repositoryReadContracts` 登録行だけを同じ PR に足す
+   (§10.3 の 1。src/ は登録行に限る)。
+3. **昇格 (src/ を含まない)**: `CANDIDATE-U-CISHARD-*` を正式 ID へ昇格し、テスト名の引用を書き換える。
+4. **実装 Green**: policy + workflow + aggregate step で `it.fails` を `it` に戻す。Issue #898 の Green
+   (`src/lint/github-ci-policy.ts` を変更する) が main に入った後に出す。
+
+Issue #1063 項目 1 (`memory-legacy-archive` の git 呼び出しバッチ化) は独立で、shard の偏りを減らすため先が望ましい。
