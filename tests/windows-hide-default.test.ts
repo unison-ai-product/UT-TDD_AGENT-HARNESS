@@ -100,7 +100,7 @@ function entrySource(path: string, content?: string) {
       ? "../../src/runtime/windows-hide.ts"
       : path.startsWith("scripts/git-hooks/")
         ? "../../src/runtime/windows-hide.ts"
-      : "../src/runtime/windows-hide.ts";
+        : "../src/runtime/windows-hide.ts";
   content ??= `import "${importPath}";\nexport {};`;
   return { path, content };
 }
