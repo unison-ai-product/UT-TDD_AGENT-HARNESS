@@ -191,6 +191,11 @@ repositoryReadContracts["tests/upstream-schedule-reader.test.ts"] = {
   reason:
     "upstream-schedule reader oracles seed isolated filesystem fixtures from the immutable L3 topic",
 };
+repositoryReadContracts["tests/windows-hide-default.test.ts"] = {
+  mode_calls: { isolated_fixture: 1 },
+  reason:
+    "windows-hide doctor and Pack checks inspect the writable execution snapshot and isolated fixture roots",
+};
 
 export const REPOSITORY_READ_CONTRACTS: Readonly<Record<string, RepositoryReadContract>> =
   repositoryReadContracts;
