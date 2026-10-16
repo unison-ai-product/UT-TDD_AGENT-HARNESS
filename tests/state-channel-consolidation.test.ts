@@ -273,7 +273,7 @@ afterEach(() => {
 });
 
 describe("Issue #1062: memory becomes lesson-only", () => {
-  it.fails("CANDIDATE-U-STCHAN-001: episodic project memory is rejected before any file is written", () => {
+  it.fails("U-STCHAN-001: episodic project memory is rejected before any file is written", () => {
     const root = tempRepo();
     const result = runCli(root, [
       "memory",
@@ -293,7 +293,7 @@ describe("Issue #1062: memory becomes lesson-only", () => {
     expect(existsSync(join(root, ".ut-tdd", "memory"))).toBe(false);
   });
 
-  it.fails("CANDIDATE-U-STCHAN-002: a durable reason admits project memory and is persisted", () => {
+  it.fails("U-STCHAN-002: a durable reason admits project memory and is persisted", () => {
     const root = tempRepo();
     const result = runCli(root, [
       "memory",
@@ -317,7 +317,7 @@ describe("Issue #1062: memory becomes lesson-only", () => {
     );
   });
 
-  it.fails("CANDIDATE-U-STCHAN-003: whitespace-only durable reason is rejected", () => {
+  it.fails("U-STCHAN-003: whitespace-only durable reason is rejected", () => {
     const root = tempRepo();
     const result = runCli(root, [
       "memory",
@@ -337,7 +337,7 @@ describe("Issue #1062: memory becomes lesson-only", () => {
     expect(existsSync(join(root, ".ut-tdd", "memory"))).toBe(false);
   });
 
-  it("CANDIDATE-U-STCHAN-004: feedback with a PR number remains accepted", () => {
+  it("U-STCHAN-004: feedback with a PR number remains accepted", () => {
     const root = tempRepo();
     const result = runCli(root, [
       "memory",
@@ -359,7 +359,7 @@ describe("Issue #1062: memory becomes lesson-only", () => {
     );
   });
 
-  it("CANDIDATE-U-STCHAN-005: reference and user lessons containing an issue number remain accepted", () => {
+  it("U-STCHAN-005: reference and user lessons containing an issue number remain accepted", () => {
     for (const kind of ["reference", "user"] as const) {
       const root = tempRepo();
       const result = runCli(root, [
@@ -383,7 +383,7 @@ describe("Issue #1062: memory becomes lesson-only", () => {
     }
   });
 
-  it.fails("CANDIDATE-U-STCHAN-006: every tracked memory record is accepted by the classifier", async () => {
+  it.fails("U-STCHAN-006: every tracked memory record is accepted by the classifier", async () => {
     const module = await import("../src/memory/service.ts");
     const classify = (module as Record<string, unknown>).classifyMemoryAdd;
     expect(typeof classify).toBe("function");
@@ -413,7 +413,7 @@ describe("Issue #1062: memory becomes lesson-only", () => {
 });
 
 describe("Issue #1062: review custody no longer depends on memory", () => {
-  it.fails("CANDIDATE-U-STCHAN-007: v2 identity has four keys and an independently derived stable digest", async () => {
+  it.fails("U-STCHAN-007: v2 identity has four keys and an independently derived stable digest", async () => {
     const identityInput = { pr: 283, exactHead: "a".repeat(40), authorFamily: "codex" as const };
     const identity = {
       schemaVersion: "review-request/v2",
@@ -485,7 +485,7 @@ describe("Issue #1062: review custody no longer depends on memory", () => {
     );
   });
 
-  it.fails("CANDIDATE-U-STCHAN-008: changing exactHead changes the v2 identity digest", async () => {
+  it.fails("U-STCHAN-008: changing exactHead changes the v2 identity digest", async () => {
     const module = await import("../src/feedback/review-custody-canonical.ts");
     const buildIdentity = (module as Record<string, unknown>).reviewIdentityObjectV2;
     expect(typeof buildIdentity).toBe("function");
@@ -501,7 +501,7 @@ describe("Issue #1062: review custody no longer depends on memory", () => {
     expect(derive(base)).not.toBe(derive(changed));
   });
 
-  it("CANDIDATE-U-STCHAN-009: fixed historical v1 terminal evidence remains readable beside a v2 request", () => {
+  it("U-STCHAN-009: fixed historical v1 terminal evidence remains readable beside a v2 request", () => {
     const root = tempRepo();
     const head = "b".repeat(40);
     const legacyIdentity = {
@@ -619,7 +619,7 @@ describe("Issue #1062: review custody no longer depends on memory", () => {
     expect(backstop.detections).toEqual([]);
   });
 
-  it.fails("CANDIDATE-U-STCHAN-010: deprecated review memory id is ignored with a warning", () => {
+  it.fails("U-STCHAN-010: deprecated review memory id is ignored with a warning", () => {
     const root = tempRepo();
     const result = runCli(root, [
       "codex",
@@ -644,7 +644,7 @@ describe("Issue #1062: review custody no longer depends on memory", () => {
     expect(result.stdout).not.toContain('"memoryId"');
   });
 
-  it.fails("CANDIDATE-U-STCHAN-011: retired review memory id fails before creating a request", () => {
+  it.fails("U-STCHAN-011: retired review memory id fails before creating a request", () => {
     const root = tempRepo();
     const result = runCli(root, [
       "codex",
@@ -668,7 +668,7 @@ describe("Issue #1062: review custody no longer depends on memory", () => {
     expect(existsSync(join(root, ".ut-tdd", "review", "requests"))).toBe(false);
   });
 
-  it.fails("CANDIDATE-U-STCHAN-012: live dispatch identity excludes task prose and preserves first task copy", () => {
+  it.fails("U-STCHAN-012: live dispatch identity excludes task prose and preserves first task copy", () => {
     const root = tempRepo();
     const taskOne = join(root, "review-task-one.md");
     const taskTwo = join(root, "review-task-two.md");
@@ -763,7 +763,7 @@ describe("Issue #1062: review custody no longer depends on memory", () => {
     expect(reviewNotification).not.toHaveProperty("memoryPath");
   });
 
-  it.fails("CANDIDATE-U-STCHAN-013: v2 request rejects an added memoryId key but accepts the exact request", async () => {
+  it.fails("U-STCHAN-013: v2 request rejects an added memoryId key but accepts the exact request", async () => {
     const root = tempRepo();
     const identity = {
       schemaVersion: "review-request/v2",
@@ -830,7 +830,7 @@ describe("Issue #1062: review custody no longer depends on memory", () => {
     expect(loadCanonicalLiveReviewRequest({ repoRoot: root, envelope })).toBeNull();
   });
 
-  it.fails("CANDIDATE-U-STCHAN-014: custody runner accepts a v2 request without memory identity env", async () => {
+  it.fails("U-STCHAN-014: custody runner accepts a v2 request without memory identity env", async () => {
     const values: Record<string, string> = {
       GITHUB_REPOSITORY: "example/repo",
       UT_TDD_CUSTODY_PR: "283",
@@ -900,7 +900,7 @@ describe("Issue #1062: review custody no longer depends on memory", () => {
 });
 
 describe("Issue #1062: runtime notifications are memory-free", () => {
-  it.fails("CANDIDATE-U-STCHAN-015: notify claude writes a memory-free notification v1 entry", () => {
+  it.fails("U-STCHAN-015: notify claude writes a memory-free notification v1 entry", () => {
     const root = tempRepo();
     const result = runCli(root, [
       "notify",
@@ -939,7 +939,7 @@ describe("Issue #1062: runtime notifications are memory-free", () => {
     expect(entry).not.toHaveProperty("memoryPath");
   });
 
-  it.fails("CANDIDATE-U-STCHAN-016: notify rejects a missing, foreign-repository, or non-GitHub ref", () => {
+  it.fails("U-STCHAN-016: notify rejects a missing, foreign-repository, or non-GitHub ref", () => {
     for (const ref of [
       undefined,
       "https://github.com/other/repo/pull/1",
@@ -959,7 +959,7 @@ describe("Issue #1062: runtime notifications are memory-free", () => {
     }
   });
 
-  it("CANDIDATE-U-STCHAN-017: legacy v3/v4 inbox entries remain readable", async () => {
+  it("U-STCHAN-017: legacy v3/v4 inbox entries remain readable", async () => {
     const module = await import("../src/runtime/claude-memory-wake.ts");
     const decode = module.decodeClaudeInboxEntry;
     const select = module.selectClaudeInboxEntry;
@@ -1009,7 +1009,7 @@ describe("Issue #1062: runtime notifications are memory-free", () => {
     });
   });
 
-  it.fails("CANDIDATE-U-STCHAN-017: mixed v3/v4/v1 selection preserves legacy order and leaves v1 nonterminal before claim", async () => {
+  it.fails("U-STCHAN-017: mixed v3/v4/v1 selection preserves legacy order and leaves v1 nonterminal before claim", async () => {
     const module = await import("../src/runtime/claude-memory-wake.ts");
     const workspaceId = "a".repeat(64);
     const memory = {
@@ -1074,7 +1074,7 @@ describe("Issue #1062: runtime notifications are memory-free", () => {
     });
   });
 
-  it("CANDIDATE-U-STCHAN-017: frozen v1 note digest fixture is independently reproducible", () => {
+  it("U-STCHAN-017: frozen v1 note digest fixture is independently reproducible", () => {
     const preimage =
       '{"schemaVersion":"ut-tdd.notification/v1","projectId":"fixture-project","operationId":"op-note","producer":{"provider":"codex","sessionId":"producer"},"target":{"scope":"session","provider":"claude","sessionId":"target"}}';
     expect(createHash("sha256").update(preimage, "utf8").digest("hex")).toBe(
@@ -1087,7 +1087,7 @@ describe("Issue #1062: runtime notifications are memory-free", () => {
     );
   });
 
-  it.fails("CANDIDATE-U-STCHAN-017: raw v1 note fixture decodes", async () => {
+  it.fails("U-STCHAN-017: raw v1 note fixture decodes", async () => {
     const module = await import("../src/runtime/claude-memory-wake.ts");
     const digest = "97f5c919948ab92a1cfb4006674323b57a3609c0c3f4c5bf068196cf41c8f4e1";
     const workspaceId = "a".repeat(64);
@@ -1126,7 +1126,7 @@ describe("Issue #1062: runtime notifications are memory-free", () => {
     ]);
   });
 
-  describe("CANDIDATE-U-STCHAN-017 v1 filesystem consumers", () => {
+  describe("U-STCHAN-017 v1 filesystem consumers", () => {
     const fixtureRoots: Record<string, string> = {};
     const terminalWorkspaceIds: Record<string, string> = {};
     const terminalMarkerPaths: Record<string, string> = {};
@@ -1361,7 +1361,7 @@ describe("Issue #1062: runtime notifications are memory-free", () => {
       );
     };
 
-    it.fails("CANDIDATE-U-STCHAN-017: v1 claimed-note terminal controls are recognized before malformed-marker checks", async () => {
+    it.fails("U-STCHAN-017: v1 claimed-note terminal controls are recognized before malformed-marker checks", async () => {
       for (const name of [
         "terminal-missing-key",
         "terminal-bad-schema",
@@ -1390,28 +1390,28 @@ describe("Issue #1062: runtime notifications are memory-free", () => {
       expect(after.pending, `${name} malformed marker`).toBe(1);
     };
 
-    it.fails("CANDIDATE-U-STCHAN-017: v1 terminal rejects a missing required key", async () => {
+    it.fails("U-STCHAN-017: v1 terminal rejects a missing required key", async () => {
       await rejectMalformedNoteTerminal("terminal-missing-key", (marker) => {
         const { terminalAt: _terminalAt, ...withoutTerminalAt } = marker;
         return withoutTerminalAt;
       });
     });
 
-    it.fails("CANDIDATE-U-STCHAN-017: v1 terminal rejects an unsupported schema", async () => {
+    it.fails("U-STCHAN-017: v1 terminal rejects an unsupported schema", async () => {
       await rejectMalformedNoteTerminal("terminal-bad-schema", (marker) => ({
         ...marker,
         schema: "ut-tdd.notification-terminal/v9",
       }));
     });
 
-    it.fails("CANDIDATE-U-STCHAN-017: note terminal rejects the review purpose", async () => {
+    it.fails("U-STCHAN-017: note terminal rejects the review purpose", async () => {
       await rejectMalformedNoteTerminal("terminal-bad-purpose", (marker) => ({
         ...marker,
         purpose: "review",
       }));
     });
 
-    it.fails("CANDIDATE-U-STCHAN-017: note terminal rejects pr_merged", async () => {
+    it.fails("U-STCHAN-017: note terminal rejects pr_merged", async () => {
       await rejectMalformedNoteTerminal("terminal-note-pr-merged", (marker) => ({
         ...marker,
         reason: "pr_merged",
@@ -1478,7 +1478,7 @@ describe("Issue #1062: runtime notifications are memory-free", () => {
       }
     });
 
-    it.fails("CANDIDATE-U-STCHAN-017: v1 binding authorizes the valid memory-free note", async () => {
+    it.fails("U-STCHAN-017: v1 binding authorizes the valid memory-free note", async () => {
       const module = await import("../src/runtime/claude-memory-wake.ts");
       const result = await module.waitForClaudeMemory({
         repoRoot: fixtureRoots.note,
@@ -1490,7 +1490,7 @@ describe("Issue #1062: runtime notifications are memory-free", () => {
       expect(result.entry?.id).toBe(makeNote(fixtureRoots.note, noteOperation).id);
     });
 
-    it.fails("CANDIDATE-U-STCHAN-017: changed preimage with coherent binding is rejected", async () => {
+    it.fails("U-STCHAN-017: changed preimage with coherent binding is rejected", async () => {
       const module = await import("../src/runtime/claude-memory-wake.ts");
       const validControl = await module.waitForClaudeMemory({
         repoRoot: fixtureRoots["note-project"],
@@ -1514,7 +1514,7 @@ describe("Issue #1062: runtime notifications are memory-free", () => {
       expectNotificationClaimAbsent(fixtureRoots["note-project"], badEntry);
     });
 
-    it.fails("CANDIDATE-U-STCHAN-017: v1 binding rejects an added memoryId key", async () => {
+    it.fails("U-STCHAN-017: v1 binding rejects an added memoryId key", async () => {
       const module = await import("../src/runtime/claude-memory-wake.ts");
       const validControl = await module.waitForClaudeMemory({
         repoRoot: fixtureRoots["note-memoryid"],
@@ -1541,7 +1541,7 @@ describe("Issue #1062: runtime notifications are memory-free", () => {
       );
     });
 
-    it.fails("CANDIDATE-U-STCHAN-017: v1 entry rejects an added memoryId key", async () => {
+    it.fails("U-STCHAN-017: v1 entry rejects an added memoryId key", async () => {
       const module = await import("../src/runtime/claude-memory-wake.ts");
       const repoRoot = fixtureRoots["note-entry-memoryid"];
       const validControl = await module.waitForClaudeMemory({
@@ -1566,7 +1566,7 @@ describe("Issue #1062: runtime notifications are memory-free", () => {
       expectNotificationClaimAbsent(repoRoot, badEntry);
     });
 
-    it.fails("CANDIDATE-U-STCHAN-017: v1 rejects a v4-format id even when binding entryId agrees", async () => {
+    it.fails("U-STCHAN-017: v1 rejects a v4-format id even when binding entryId agrees", async () => {
       const module = await import("../src/runtime/claude-memory-wake.ts");
       const validControl = await module.waitForClaudeMemory({
         repoRoot: fixtureRoots["note-v4id"],
@@ -1590,7 +1590,7 @@ describe("Issue #1062: runtime notifications are memory-free", () => {
       expectNotificationClaimAbsent(fixtureRoots["note-v4id"], badEntry);
     });
 
-    it.fails("CANDIDATE-U-STCHAN-017: claimed and merged v1 terminal markers record, reload, and reject extra keys", async () => {
+    it.fails("U-STCHAN-017: claimed and merged v1 terminal markers record, reload, and reject extra keys", async () => {
       const module = await import("../src/runtime/claude-memory-wake.ts");
       const root = fixtureRoots.terminals;
       const pullRequests = [{ pr: 283, state: "MERGED" as const, headSha: "c".repeat(40) }];
@@ -1720,7 +1720,7 @@ describe("Issue #1062: runtime notifications are memory-free", () => {
   });
 
   describe.skipIf(!(process.platform === "win32" || process.getuid?.() !== 0))(
-    "CANDIDATE-U-STCHAN-018 permission-denied fixture",
+    "U-STCHAN-018 permission-denied fixture",
     () => {
       let root: string | undefined;
       let memoryPath: string | undefined;
@@ -1798,7 +1798,7 @@ describe("Issue #1062: runtime notifications are memory-free", () => {
         }
       });
 
-      it.fails("CANDIDATE-U-STCHAN-018: notify succeeds with the memory directory unreadable", () => {
+      it.fails("U-STCHAN-018: notify succeeds with the memory directory unreadable", () => {
         // Before the notify command exists, this is only a command-surface Red:
         // the expected failure is this success assertion. Once implemented,
         // a zero exit under the verified deny fixture is the non-reference oracle.
@@ -1809,7 +1809,7 @@ describe("Issue #1062: runtime notifications are memory-free", () => {
 });
 
 describe("Issue #1062: handover prose is retired", () => {
-  it.fails("CANDIDATE-U-STCHAN-019: handover writes only CURRENT.json and dry-run is non-mutating", () => {
+  it.fails("U-STCHAN-019: handover writes only CURRENT.json and dry-run is non-mutating", () => {
     const root = tempRepo();
     mkdirSync(join(root, ".ut-tdd", "handover", "provider"), { recursive: true });
     mkdirSync(join(root, ".ut-tdd", "handover", "archive"), { recursive: true });
@@ -1862,7 +1862,7 @@ describe("Issue #1062: handover prose is retired", () => {
     expect(pointer).not.toHaveProperty("doc_entry_count");
   });
 
-  it.fails("CANDIDATE-U-STCHAN-020: the isolated doctor handover-prose definition reports an advisory count", () => {
+  it.fails("U-STCHAN-020: the isolated doctor handover-prose definition reports an advisory count", () => {
     const root = tempRepo();
     const handover = join(root, ".ut-tdd", "handover");
     mkdirSync(join(handover, "provider"), { recursive: true });
@@ -1893,7 +1893,7 @@ describe("Issue #1062: handover prose is retired", () => {
     );
   });
 
-  describe("CANDIDATE-U-STCHAN-021 pointer fixture", () => {
+  describe("U-STCHAN-021 pointer fixture", () => {
     const repoRoot = "/repo";
     const pointer = { active_plan: "PLAN-L7-04" };
     const files = new Map<string, string>([
@@ -1914,14 +1914,14 @@ describe("Issue #1062: handover prose is retired", () => {
       expect(readPointer(deps)).toEqual(pointer);
     });
 
-    it.fails("CANDIDATE-U-STCHAN-021: pointer without doc_entry_count does not trigger a handover bypass warning", () => {
+    it.fails("U-STCHAN-021: pointer without doc_entry_count does not trigger a handover bypass warning", () => {
       expect(checkHandoverBypass(deps)).toEqual([]);
     });
   });
 });
 
 describe("Issue #1062: migration is frozen, verifiable, and atomic", () => {
-  it.fails("CANDIDATE-U-STCHAN-022: dry-run selects only frozen untracked project episodes", () => {
+  it.fails("U-STCHAN-022: dry-run selects only frozen untracked project episodes", () => {
     const root = tempRepo();
     const add = (kind: "feedback" | "project", title: string, body: string) =>
       writeMemory({ repoRoot: root, input: { kind, title, body } });
@@ -2127,7 +2127,7 @@ describe("Issue #1062: migration is frozen, verifiable, and atomic", () => {
     });
   });
 
-  it.fails("CANDIDATE-U-STCHAN-024: real-repository migration dry-run is read-only and accounts for all files", () => {
+  it.fails("U-STCHAN-024: real-repository migration dry-run is read-only and accounts for all files", () => {
     const paths = [".ut-tdd/memory", ".ut-tdd/handover"] as const;
     const before = {
       memory: snapshotTree(join(repoRoot, paths[0])),
@@ -2196,7 +2196,7 @@ describe("Issue #1062: migration is frozen, verifiable, and atomic", () => {
     });
   });
 
-  describe("CANDIDATE-U-STCHAN-023: handover prose archive", () => {
+  describe("U-STCHAN-023: handover prose archive", () => {
     let root: string;
     let month: string;
     let oldPath: string;
@@ -2247,7 +2247,7 @@ describe("Issue #1062: migration is frozen, verifiable, and atomic", () => {
       afterArchive = snapshotTree(root);
     }, 30_000);
 
-    it.fails("CANDIDATE-U-STCHAN-023: moves only old direct prose with a done manifest and keeps dry-run read-only", () => {
+    it.fails("U-STCHAN-023: moves only old direct prose with a done manifest and keeps dry-run read-only", () => {
       expect(dryRun.status).toBe(0);
       expect(afterDryRun).toEqual(beforeDryRun);
       expect(archiveRootExistsAfterDryRun).toBe(false);
@@ -2371,7 +2371,7 @@ describe("Issue #1062: migration is frozen, verifiable, and atomic", () => {
         };
       }, 30_000);
 
-      it.fails("CANDIDATE-U-STCHAN-025: rejects a frozen target snapshot before moving files or changing index rows", () => {
+      it.fails("U-STCHAN-025: rejects a frozen target snapshot before moving files or changing index rows", () => {
         expect(result.status).toBe(1);
         expect(`${result.stdout}\n${result.stderr}`).toContain(expectedReason);
         expect(after).toEqual(before);
@@ -2415,29 +2415,25 @@ describe("Issue #1062: migration is frozen, verifiable, and atomic", () => {
   }
 
   defineSnapshotMismatchCase(
-    "CANDIDATE-U-STCHAN-025 add row",
+    "U-STCHAN-025 add row",
     "target_snapshot_digest_mismatch",
     appendCanonicalSnapshotRow,
   );
   defineSnapshotMismatchCase(
-    "CANDIDATE-U-STCHAN-025 remove row",
+    "U-STCHAN-025 remove row",
     "target_snapshot_digest_mismatch",
     removeCanonicalSnapshotRow,
   );
   defineSnapshotMismatchCase(
-    "CANDIDATE-U-STCHAN-025 replace row digest",
+    "U-STCHAN-025 replace row digest",
     "target_snapshot_digest_mismatch",
     replaceCanonicalSnapshotRow,
   );
-  defineSnapshotMismatchCase(
-    "CANDIDATE-U-STCHAN-025 missing snapshot",
-    "target_snapshot_missing",
-    (root) => {
-      const path = join(root, ".ut-tdd", "archive", "memory-episodes", "target-snapshot.jsonl");
-      if (!existsSync(path)) throw new Error("snapshot fixture missing before mutation");
-      unlinkSync(path);
-    },
-  );
+  defineSnapshotMismatchCase("U-STCHAN-025 missing snapshot", "target_snapshot_missing", (root) => {
+    const path = join(root, ".ut-tdd", "archive", "memory-episodes", "target-snapshot.jsonl");
+    if (!existsSync(path)) throw new Error("snapshot fixture missing before mutation");
+    unlinkSync(path);
+  });
 
   function defineWriterExistsCase(
     label: string,
@@ -2527,7 +2523,7 @@ describe("Issue #1062: migration is frozen, verifiable, and atomic", () => {
         };
       }, 30_000);
 
-      it.fails("CANDIDATE-U-STCHAN-026: refuses to replace an existing frozen snapshot or evidence file", () => {
+      it.fails("U-STCHAN-026: refuses to replace an existing frozen snapshot or evidence file", () => {
         expect(result.status).toBe(1);
         expect(`${result.stdout}\n${result.stderr}`).toContain("target_snapshot_exists");
         expect(after).toEqual(before);
@@ -2535,11 +2531,11 @@ describe("Issue #1062: migration is frozen, verifiable, and atomic", () => {
     });
   }
 
-  defineWriterExistsCase("CANDIDATE-U-STCHAN-026 same snapshot content", (root, base) => {
+  defineWriterExistsCase("U-STCHAN-026 same snapshot content", (root, base) => {
     freezeTargetSnapshot(root, [base]);
   });
 
-  defineWriterExistsCase("CANDIDATE-U-STCHAN-026 new project memory after freeze", (root, base) => {
+  defineWriterExistsCase("U-STCHAN-026 new project memory after freeze", (root, base) => {
     freezeTargetSnapshot(root, [base]);
     writeMemory({
       repoRoot: root,
@@ -2551,7 +2547,7 @@ describe("Issue #1062: migration is frozen, verifiable, and atomic", () => {
     });
   });
 
-  defineWriterExistsCase("CANDIDATE-U-STCHAN-026 evidence without snapshot", (root) => {
+  defineWriterExistsCase("U-STCHAN-026 evidence without snapshot", (root) => {
     const evidencePath = join(root, "docs", "migration", "state-channel-target-snapshot.json");
     mkdirSync(join(root, "docs", "migration"), { recursive: true });
     const evidence = canonicalize({
@@ -2643,7 +2639,7 @@ describe("Issue #1062: migration is frozen, verifiable, and atomic", () => {
         };
       }, 30_000);
 
-      it.fails("CANDIDATE-U-STCHAN-027: fails closed on changed frozen bytes and succeeds after exact restore", () => {
+      it.fails("U-STCHAN-027: fails closed on changed frozen bytes and succeeds after exact restore", () => {
         expect(result.status).toBe(1);
         expect(`${result.stdout}\n${result.stderr}`).toContain("target_bytes_changed");
         expect(afterFailure).toEqual(before);
@@ -2677,28 +2673,24 @@ describe("Issue #1062: migration is frozen, verifiable, and atomic", () => {
     });
   }
 
-  defineChangedTargetBytesCase(
-    "CANDIDATE-U-STCHAN-027 one-byte body mutation",
-    0,
-    (root, entry) => {
-      const path = join(root, entry.source_path);
-      const bytes = readFileSync(path);
-      const bodyOffset = bytes.indexOf(Buffer.from("fixture body for"));
-      if (bodyOffset < 0) throw new Error("memory fixture body marker missing");
-      bytes[bodyOffset] = bytes[bodyOffset] === 0x66 ? 0x67 : 0x66;
-      writeFileSync(path, bytes);
-    },
-  );
+  defineChangedTargetBytesCase("U-STCHAN-027 one-byte body mutation", 0, (root, entry) => {
+    const path = join(root, entry.source_path);
+    const bytes = readFileSync(path);
+    const bodyOffset = bytes.indexOf(Buffer.from("fixture body for"));
+    if (bodyOffset < 0) throw new Error("memory fixture body marker missing");
+    bytes[bodyOffset] = bytes[bodyOffset] === 0x66 ? 0x67 : 0x66;
+    writeFileSync(path, bytes);
+  });
 
   defineChangedTargetBytesCase(
-    "CANDIDATE-U-STCHAN-027 post-freeze durable reason mutation",
+    "U-STCHAN-027 post-freeze durable reason mutation",
     1,
     (root, entry) => {
       addDurableReason(root, entry.source_path, "added after the frozen snapshot");
     },
   );
 
-  describe("CANDIDATE-U-STCHAN-028: isolated actual archive keeps rows and search aligned", () => {
+  describe("U-STCHAN-028: isolated actual archive keeps rows and search aligned", () => {
     let root: string;
     let targets: ReturnType<typeof writeMemory>[];
     let durableBeforeFreeze: ReturnType<typeof writeMemory>;
@@ -2793,7 +2785,7 @@ describe("Issue #1062: migration is frozen, verifiable, and atomic", () => {
       expect(statusRun.status).not.toBeNull();
     }, 30_000);
 
-    it.fails("CANDIDATE-U-STCHAN-028: archives two target rows while retained memories remain searchable", () => {
+    it.fails("U-STCHAN-028: archives two target rows while retained memories remain searchable", () => {
       expect(archiveRun.status).toBe(0);
       const movedIds = new Set(targets.map((entry) => entry.memory_id));
       const retainedEntries = entries.filter((entry) => !movedIds.has(entry.memory_id));
