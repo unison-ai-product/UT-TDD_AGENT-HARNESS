@@ -412,7 +412,7 @@ node src/cli.ts github guard --head-ref "$HEAD_REF" --base-ref "$BASE_REF" --pr-
     }),
     step("design-protection (実装 PR の設計書書き換え拒否、fail-close)", {
       if: githubExpression("github.event_name == 'pull_request'"),
-      env: { BASE_SHA: githubExpression("github.event.pull_request.base.sha") },
+      env: { BASE_SHA: `${githubExpression("github.sha")}^1` },
       run: `node src/cli.ts github design-protection --base "$BASE_SHA" --head "${githubExpression("github.sha")}"`,
     }),
     run("typecheck (tsc --noEmit)", "npm run typecheck", LANE_FULL_ONLY_IF),
