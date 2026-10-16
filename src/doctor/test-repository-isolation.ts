@@ -196,6 +196,11 @@ repositoryReadContracts["tests/state-channel-consolidation.test.ts"] = {
   reason:
     "state-channel migration oracles read the exact execution snapshot and write only to isolated repositories",
 };
+repositoryReadContracts["tests/windows-hide-default.test.ts"] = {
+  mode_calls: { isolated_fixture: 1 },
+  reason:
+    "windows-hide doctor and Pack checks inspect the writable execution snapshot and isolated fixture roots",
+};
 
 export const REPOSITORY_READ_CONTRACTS: Readonly<Record<string, RepositoryReadContract>> =
   repositoryReadContracts;
