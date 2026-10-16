@@ -200,7 +200,7 @@ describe("Issue #958 test-design owner candidates", () => {
       );
     });
 
-    it.fails("U-DPTOWN-002: formal oracle trace supplies test ownership", () => {
+    it("U-DPTOWN-002: formal oracle trace supplies test ownership", () => {
       expect(input.tracedPaths.has(target)).toBe(true);
     });
   });
@@ -239,7 +239,7 @@ describe("Issue #958 test-design owner candidates", () => {
       expect(citations.some((site) => site.id === candidateId)).toBe(false);
     });
 
-    it.fails("U-DPTOWN-003: candidate it.fails trace owns its test file", () => {
+    it("U-DPTOWN-003: candidate it.fails trace owns its test file", () => {
       expect(input.tracedPaths.has(target)).toBe(true);
     });
   });
