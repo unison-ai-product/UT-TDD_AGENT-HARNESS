@@ -19,6 +19,7 @@
  * 内部エラー (git 失敗 / parse 失敗 / state 不明) は **fail-open** (exit 0): ガードの不調で
  * 全 Edit を止めない。block は「衝突を確実に検知できた時」のみ。
  */
+import "../../src/runtime/windows-hide.ts";
 import { execFileSync } from "node:child_process";
 import { appendFileSync, existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
 import { dirname, join } from "node:path";

@@ -1,3 +1,4 @@
+import "../src/runtime/windows-hide.ts";
 import { build } from "esbuild";
 import { execFileSync } from "node:child_process";
 import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
