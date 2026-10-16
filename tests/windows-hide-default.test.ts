@@ -125,12 +125,14 @@ function windowsHideCheck(repoRoot: string) {
 function writeValidWindowsHideFixture(fixtureRoot: string, omitCliImport = false): void {
   const wrapper = wrapperSource();
   writeFixtureFile(fixtureRoot, wrapper.path, wrapper.content);
-  for (const path of STATIC_ENTRIES)
-    writeFixtureFile(
-      fixtureRoot,
-      path,
-      omitCliImport && path === "src/cli.ts" ? "export {};\n" : entrySource(path).content,
-    );
+  for (const path of STATIC_ENTRIES) {
+    const content =
+      omitCliImport && path === "src/cli.ts" ? "export {};\n" : entrySource(path).content;
+    const scriptContent = path.startsWith("scripts/")
+      ? content.replace("\nexport {};", '\nimport "node:child_process";\nexport {};')
+      : content;
+    writeFixtureFile(fixtureRoot, path, scriptContent);
+  }
   writeFixtureFile(
     fixtureRoot,
     "vitest.config.ts",
