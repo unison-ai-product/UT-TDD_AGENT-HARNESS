@@ -163,28 +163,39 @@ analyzer は引き続き、現在の subject から再導出した widened debt 
 widened 集合との完全な要素集合一致を要求する。これにより U-OIDGATE-005/006 を維持し、欠落した免除と stale
 免除の両方を検出する。
 
-これとは別に、必須 PR check は pull request event が示す不変の base commit SHA に対する縮小専用の進化を証明する。
-各集合について `headSet ⊆ trustedBaseSet` を確認し、base JSON はその Git object から、head JSON は検証対象の
-exact HEAD から読む。ref 解決不能、object 読取不能、データ不正、base authority 欠落は fail-close とする。
-trusted base の代わりに `origin/main`、可変 branch 名、analyzer 導出集合、working tree 上の複製を使ってはならない。
-現在の derived set との完全一致は、この subset 証明の代わりにならない。未 citation の oracle を新たに宣言し、
+これとは別に、必須 PR check は GitHub Actions が PR 用に固定した検証 merge commit `M = github.sha` を使って
+縮小専用の進化を証明する。信頼する比較組は常に `B = M^1` (merge commit の第 1 親) と `H = M` である。
+各集合について `headSet(H) ⊆ trustedBaseSet(B)` を確認し、base JSON は `B` の Git tree から、head JSON は
+`H` の Git tree から読む。`pull_request.base.sha`、PR branch HEAD、`origin/main`、可変 branch 名、analyzer 導出集合、
+working tree 上の複製を `B` または `H` の代わりに使ってはならない。`M`、その第 1 親、Git object、各 JSON を解決・読取
+できない場合、またはデータが不正な場合は fail-close とする。`M` を検証対象 HEAD とする点は、既存
+`design-protection-diff-gate.md` §7 の CI pair (`BASE_SHA=${{ github.sha }}^1`, `--head "${{ github.sha }}"`) と一致させる。
+必須 check の PR context は GitHub Actions の `github.event_name == pull_request` と immutable `github.sha` を信頼元とし、
+branch 名・本文・任意の environment variable から推測しない。ローカル実行では同じ役割の immutable SHA 組 `(B, H)` を
+明示引数で渡した場合に限り同じ比較を再現できる。信頼できる PR event context または明示された immutable SHA 組が無い
+通常の doctor / static run は subset 証明を実行・主張せず、strict JSON authority と current-derived set の完全一致だけを
+検証する。現在の derived set との完全一致は subset 証明の代わりにならない。未 citation の oracle を新たに宣言し、
 同じ ID を head baseline と derived debt の双方へ足すと、完全一致を保ったまま縮小専用規則に違反し得るためである。
 
 PR 外の doctor / static-analysis path は、現在の strict JSON authority を検証・利用し analyzer の集合一致を強制する。
 不変の trusted base が明示されない限り、履歴に対する subset 証明を行ったとは主張しない。baseline JSON が変更される
 すべての PR に対して、変更分類が docs-only であっても PR ratchet check を必須にする。
 
-**初回移行だけに限定した bootstrap route を許す。** 必須 PR check は変更不能な pull request base commit（merge commit
-の第 1 親）を Git object から調べる。base tree に baseline JSON がなく、旧 TS 定数ファイル 2 つと正規の定数宣言が存在し、
+**初回移行だけに限定した bootstrap route を許す。** 必須 PR check は上記の不変比較組 `(B, H) = (M^1, M)` を使い、
+`B` の Git tree を調べる。base tree に baseline JSON がなく、旧 TS 定数ファイル 2 つと正規の定数宣言が存在し、
 そこから得る legacy=89 / widened=317 の値が完全に認識・検証できる場合に限り、head JSON と旧 TS 集合を要素単位で完全一致
 させる。head JSON は通常の strict decode を通ることも必要である。ファイル欠落、宣言形の不一致、値の不正、要素差異は
 fail-close とする。任意 branch、cwd、自己申告 bootstrap flag によってこの route に入ってはならない。
 
 これは runtime authority の例外ではない。runtime 対象 HEAD に JSON が無い・壊れている場合は常に fail-close とし、旧 TS
-定数を runtime fallback に使わない。JSON が base tree に存在する変更では、旧 TS 定数が残っていても初回 route に入らず、
-JSON を trusted base とする subset check を使う。migration merge 後は base JSON があるため bootstrap route に再入しない。
-未使用 route を残さないよう、#1099 Refactor または直後の別 PR で route の削除を行い、専用 L7 oracle でも削除を固定する。
-初回 JSON は旧 main の legacy=89 / widened=317 と完全一致させ、#1097 の 315 件には置き換えない。
+定数を runtime fallback に使わない。JSON が `B` に存在する変更では、旧 TS 定数が残っていても初回 route に再入せず、
+JSON を trusted base とする subset check を使う。#1099 の初回 migration では `CANDIDATE-U-OIDBASE-001` と
+`-011` だけを migration 限定 oracle として扱う。migration Green は両者の初回移行条件を満たすが、bootstrap route 削除を
+要求する `-012` は未実装 Red のまま残し、#1099 全 oracle の closure と称してはならない。migration 後、source を変更しない
+oracle retirement contract PR が `-001` / `-011` の宣言と test label を同期して退役させる。その後の独立した bootstrap
+retirement Green PR が source route を削除し、`-012` だけを完了する。Refactor に route 削除を混ぜず、Refactor の
+`tests/` 差分は 0 のままとする。初回 JSON は旧 main の legacy=89 / widened=317 と完全一致させ、#1097 の 315 件には
+置き換えない。
 
 ### 7.3 design-protection と配布の境界
 
@@ -192,6 +203,13 @@ JSON を trusted base とする subset check を使う。migration merge 後は 
 `scripts/`) は変更しない。`docs/governance/` をその集合へ追加・削除せず、path 専用の例外も設けない。baseline JSON は
 data であり、implementation PR で保護対象の design / test-design を変更する許可にはならない。JSON の編集可能性は、
 strict decoder、必須の trusted-base shrink-only check、analyzer の集合一致で拘束する。
+
+既存 `U-OIDGATE-005/006/007` と `U-OTT-006` の意味・期待値は増やさない。source を変更しない Red / 正式 oracle 工程で、
+TS 定数を直接参照している既存 test を、production `loadOracleTestTraceInput` の戻り値へ付け替える。具体的には
+`U-OIDGATE-005/006` は JSON-backed `input.widenedBaseline`、`U-OIDGATE-007` は JSON-backed `input.baseline.size === 89`
+と既存の widened との交差 0、`U-OTT-006` は同じ loader の `input.baseline.size === 89` だけを維持する。付け替えの
+所有表は supplemental L7 §3 に置き、loader が debt を適用する等の新しい oracle は追加しない。初回 migration の旧定数と
+JSON の一時的な完全一致証明は candidate `-001` だけが所有し、継続する JSON 集合の assertion と混同しない。
 
 JSON は runtime authority であるため、oracle checker が利用する clean Pack の asset inventory / bundle に明示的に
 含める。source checkout と Pack は、現在の working directory に依存せず、Windows / Linux で同じ versioned content を
