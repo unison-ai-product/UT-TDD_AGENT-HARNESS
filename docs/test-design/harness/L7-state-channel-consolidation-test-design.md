@@ -62,6 +62,14 @@ L6 `design-protection-diff-gate.md` §10.3 と同じ順序にする: (1) Red の
 | CANDIDATE-U-STCHAN-027 | 凍結一覧と証跡ファイルは正しいまま、対象の 1 件の memory ファイルの本文を 1 byte 変える。別ケースとして、凍結一覧に載る別の 1 件に、凍結**後**に `durable_reason` を追記する(bytes が変わる) | どちらのケースも exit 1、`target_bytes_changed`、memory ファイルも `memory_entries` も 1 件も動かない(追記したものも他の対象も同様)。追記を凍結時の bytes に戻して再実行すると検証を通り、凍結一覧どおりに移される(再凍結・追記して残す経路は無い) | 一覧の digest だけを検証して対象の bytes を見ない / 検証を移動の途中で行う / `durable_reason` の追記を保持として扱い、検証を飛ばして残す / 失敗時に他の対象だけ移す |
 | CANDIDATE-U-STCHAN-028 | **隔離 fixture(一時 git repo + 一時 harness.db)で `--archive` を実際に実行**する。凍結一覧の対象 3 件(移す対象 2 件 + R1)、R2 1 件、未追跡 feedback 1 件、追跡 feedback 1 件を `memory_entries` に索引済みにしてから実行 | 移した 2 件は、ファイルが移し先にあり sha256 が一致し、`memory_entries` に行が無い。R1 / R2 / feedback 2 件は元の path に残り、`memory_entries` の行が移行前と同一で、`memory list --query` で検索できる(移した 2 件は検索に出ない)。`ut-tdd db status` は `fresh`、index-only 行 0。移した件数 + 残り = 移行前の総数 | 行の削除を省く(移したものが検索に出続ける) / 残すべき R1 / R2 の行まで消す / ファイル移動の後に db 更新を飛ばす / 実行後の `db status` を見ない |
 
+### 3.1 Candidate 023 / 025〜028 の実行口
+
+これらは候補 oracle の入力と期待値を変更せず、core 呼び出しと既存 CLI 接続だけを補う。L6 §7.1 を実行口の正本とする。
+
+- writer は `writeStateChannelTargetSnapshot({ repoRoot, recordedAtISO })`。`recordedAtISO` 不正は filesystem I/O 前に `TypeError`。JSONL row exact keys は `{ memory_id, content_sha256 }`、evidence exact keys は `{ schema, sha256, count, recorded_at }`。両 SHA-256 は prefix なしの lowercase 64-hex。`canonicalJson`・UTF-8・LF を使い、failure reason は `target_snapshot_exists` / `target_snapshot_write_failed`。Candidate 026 の各 core `{ok:false, reason:"target_snapshot_exists"}` は、呼出元の移行/writer CLI では exit 1 になる。
+- memory の移行は新しい selector/API/CLI を増やさず、既存 `ut-tdd memory retire` が snapshot を唯一の selector として用い、#963 の write-ahead/rename/DB-row removal/recovery 部品を再利用する。failure reason は `target_snapshot_missing` / `target_snapshot_digest_mismatch` / `target_bytes_changed` と #963 の archive recovery / I/O failure。
+- handover archive core は `archiveHandoverProse({ repoRoot, nowISO, dryRun? })`、dry-run default true。`dryRun:true` の戻り値は移動**予定**一覧で、実移動済みを表さない。実行 CLI は `ut-tdd handover archive [--dry-run|--archive]`、省略時 dry-run。再試行で解決できない archive 状態は `handover_archive_recovery_conflict`、他の archive I/O failure は `handover_archive_io_failed`。
+
 ## 4. 既存テストへの影響
 
 | 既存 oracle | 影響 |
