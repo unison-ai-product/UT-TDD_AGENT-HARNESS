@@ -173,6 +173,29 @@ describe("宣言 site 収集 (Issue #206)", () => {
     }
   });
 
+  it.fails("ST-ID / AC 複合セルは ST oracle を宣言として収集する", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-system-oracle-"));
+    try {
+      mkdirSync(join(root, "docs", "test-design"), { recursive: true });
+      writeFileSync(
+        join(root, "docs", "test-design", "L9.md"),
+        [
+          "### System red oracles",
+          "| ST-ID / AC | system fixture / fault | positive expected | negative expected |",
+          "|---|---|---|---|",
+          "| `ST-ZZSYS-901` / `AC-ZZSYS-901` | fault fixture | deny | accept |",
+        ].join("\n"),
+        "utf8",
+      );
+
+      const { declared, declarationSites } = collectOracleIds(root);
+      expect([...declared]).toEqual(["ST-ZZSYS-901"]);
+      expect(declarationSites.map((site) => site.id)).toEqual(["ST-ZZSYS-901"]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it("正確なIDセルだけを宣言として収集し、family range の再引用を除外する", () => {
     const root = declarationFixture(
       [
