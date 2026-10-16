@@ -141,13 +141,8 @@ export function readUtf8BlobAtRef(git: GitCommandPort, ref: string, path: string
   }
 }
 
-function resolveCommit(git: GitCommandPort, ref: string): string {
-  if (!ref || ref.includes("\0") || ref.includes("\n") || ref.includes("\r")) {
-    throw new GitDiffAdapterError(
-      "git-ref-invalid",
-      "git ref is empty or contains a control separator",
-    );
-  }
+export function resolveCommit(git: GitCommandPort, ref: string): string {
+  validateCommitRef(ref);
   let output: string;
   try {
     output = decodeUtf8(
@@ -166,7 +161,28 @@ function resolveCommit(git: GitCommandPort, ref: string): string {
   return output;
 }
 
+export function validateCommitRef(ref: string): void {
+  if (!ref || ref.includes("\0") || ref.includes("\n") || ref.includes("\r")) {
+    throw new GitDiffAdapterError(
+      "git-ref-invalid",
+      "git ref is empty or contains a control separator",
+    );
+  }
+}
+
 function parseNameStatus(fields: readonly string[]): PlanChange[] {
+  return parseNameStatusEntries(fields).flatMap((change): PlanChange[] => {
+    if (change.kind !== "renamed") return PLAN_PATH.test(change.path) ? [change] : [];
+    const fromIsPlan = PLAN_PATH.test(change.from);
+    const pathIsPlan = PLAN_PATH.test(change.path);
+    if (fromIsPlan && pathIsPlan) return [change];
+    if (fromIsPlan) return [{ kind: "deleted", path: change.from }];
+    if (pathIsPlan) return [{ kind: "added", path: change.path }];
+    return [];
+  });
+}
+
+export function parseNameStatusEntries(fields: readonly string[]): PlanChange[] {
   const changes: PlanChange[] = [];
   for (let index = 0; index < fields.length; ) {
     const status = fields[index++];
@@ -174,18 +190,13 @@ function parseNameStatus(fields: readonly string[]): PlanChange[] {
     if (/^R\d{1,3}$/.test(status)) {
       const from = requirePath(fields[index++]);
       const path = requirePath(fields[index++]);
-      const fromIsPlan = PLAN_PATH.test(from);
-      const pathIsPlan = PLAN_PATH.test(path);
-      if (fromIsPlan && pathIsPlan) changes.push({ kind: "renamed", from, path });
-      else if (fromIsPlan) changes.push({ kind: "deleted", path: from });
-      else if (pathIsPlan) changes.push({ kind: "added", path });
+      changes.push({ kind: "renamed", from, path });
       continue;
     }
     if (status !== "A" && status !== "M" && status !== "D") {
       throw new GitDiffAdapterError("git-status-unknown", `unsupported git diff status: ${status}`);
     }
     const path = requirePath(fields[index++]);
-    if (!PLAN_PATH.test(path)) continue;
     changes.push({
       kind: status === "A" ? "added" : status === "M" ? "modified" : "deleted",
       path,
@@ -240,7 +251,7 @@ function readBlobs(git: GitCommandPort, commit: string, paths: ReadonlySet<strin
   });
 }
 
-function splitNul(bytes: Uint8Array): string[] {
+export function splitNul(bytes: Uint8Array): string[] {
   if (bytes.length === 0) return [];
   if (bytes.at(-1) !== 0)
     throw new GitDiffAdapterError("git-diff-malformed", "NUL diff output is not terminated");

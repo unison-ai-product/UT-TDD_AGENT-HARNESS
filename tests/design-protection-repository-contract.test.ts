@@ -1,10 +1,10 @@
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
-import { pathToFileURL } from "node:url";
+import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
+import * as designProtection from "../src/github/design-protection.ts";
 import { analyzeGithubCiPolicy, loadGithubCiPolicyDocs } from "../src/lint/github-ci-policy.ts";
 
 /*
@@ -16,7 +16,7 @@ import { analyzeGithubCiPolicy, loadGithubCiPolicyDocs } from "../src/lint/githu
 
 const REPO_ROOT = process.cwd();
 const PROTECTION_IF = "$" + "{{ github.event_name == 'pull_request' }}";
-const BASE_SHA_EXPR = "$" + "{{ github.event.pull_request.base.sha }}";
+const BASE_SHA_EXPR = "$" + "{{ github.sha }}^1";
 const GITHUB_SHA_EXPR = "$" + "{{ github.sha }}";
 const FULL_LANE_IF = "$" + "{{ steps.classify.outputs.lane == 'full' }}";
 
@@ -26,10 +26,7 @@ interface GateApi {
 }
 
 async function loadGate(): Promise<GateApi> {
-  // Resolve at test time so this file compiles before the production subject exists.
-  // If it is absent, that import failure is deliberately not treated as per-guard proof.
-  const subjectUrl = pathToFileURL(resolve(REPO_ROOT, "src/github/design-protection.ts")).href;
-  return (await import(subjectUrl)) as unknown as GateApi;
+  return designProtection as unknown as GateApi;
 }
 
 function initRepo(files: Record<string, string>): { root: string; base: string } {
@@ -140,7 +137,7 @@ function inventory(root: string, prefixes: readonly string[]): Map<string, strin
 }
 
 describe("design-protection L7 candidate Red (PR #981)", () => {
-  it.fails("U-DPROT-016: workflowからstepを消す/skip-ifへ変えるとpolicyが拒否する", () => {
+  it("U-DPROT-016: workflowからstepを消す/skip-ifへ変えるとpolicyが拒否する", () => {
     const baseline = withProtectionStep(
       readFileSync(join(REPO_ROOT, ".github/workflows/harness-check.yml"), "utf8"),
     );
@@ -178,7 +175,7 @@ describe("design-protection L7 candidate Red (PR #981)", () => {
     );
   });
 
-  it.fails("U-DPROT-024: workflowとruntime manifestに正しいLinux stepがあればpolicy OK", () => {
+  it("U-DPROT-024: workflowとruntime manifestに正しいLinux stepがあればpolicy OK", () => {
     const actual = readFileSync(join(REPO_ROOT, ".github/workflows/harness-check.yml"), "utf8");
     const workflow = parseYaml(actual) as WorkflowShape;
     const installed = workflow.jobs["harness-check-linux"].steps.filter((step) =>
@@ -192,7 +189,7 @@ describe("design-protection L7 candidate Red (PR #981)", () => {
     expect(result.violations).toEqual([]);
   });
 
-  it.fails("U-DPROT-025: order/if/error/window変異はruntime manifest不一致になる", () => {
+  it("U-DPROT-025: order/if/error/window変異はruntime manifest不一致になる", () => {
     const proposed = withProtectionStep(
       readFileSync(join(REPO_ROOT, ".github/workflows/harness-check.yml"), "utf8"),
     );
@@ -265,7 +262,7 @@ describe("design-protection L7 candidate Red (PR #981)", () => {
     }
   });
 
-  it.fails("U-DPROT-026:実workflowのstepは一件・PR限定・BASE_SHAはPR base only", () => {
+  it("U-DPROT-026:実workflowのmerge第1親基準はmain変更を除外しPR変更を拒否する", () => {
     const workflow = parseYaml(
       readFileSync(join(REPO_ROOT, ".github/workflows/harness-check.yml"), "utf8"),
     ) as WorkflowShape;
@@ -277,9 +274,96 @@ describe("design-protection L7 candidate Red (PR #981)", () => {
     expect(steps[0]?.env).toEqual({ BASE_SHA: BASE_SHA_EXPR });
     expect(steps[0]?.run).toBe(designStep().run);
     expect(steps[0]?.run).not.toContain("github.event.before");
-  });
+    const baseExpression = steps[0]?.env?.BASE_SHA;
+    if (baseExpression === undefined) throw new Error("workflow BASE_SHA is required");
 
-  it.fails("U-DPROT-027: repository-structureの2表と定数は集合一致し壊れた表を拒否", async () => {
+    const { root, base: original } = initRepo({
+      "src/a.ts": "original source\n",
+      "docs/design/harness/x.md": "original main design\n",
+      "docs/test-design/harness/y.md": "original PR design\n",
+    });
+    const invoke = (baseRef: string, head: string) => {
+      const run = spawnSync(
+        process.execPath,
+        [
+          join(REPO_ROOT, "src", "cli.ts"),
+          "github",
+          "design-protection",
+          "--base",
+          baseRef,
+          "--head",
+          head,
+          "--json",
+        ],
+        { cwd: root, encoding: "utf8", windowsHide: true },
+      );
+      expect(run.error?.message ?? "", "production CLI must start").toBe("");
+      expect(run.signal, "production CLI must exit normally").toBeNull();
+      expect(run.stdout.trim(), `stderr: ${run.stderr}`).not.toBe("");
+      return { status: run.status, result: JSON.parse(run.stdout) };
+    };
+    const fromWorkflow = (head: string) =>
+      invoke(baseExpression.replaceAll(GITHUB_SHA_EXPR, head), head);
+
+    try {
+      git(root, "checkout", "--quiet", "-b", "main-line", original);
+      writeRepoFile(root, "docs/design/harness/x.md", "advanced main design\n");
+      const main = commit(root, "main changes x only");
+      git(root, "checkout", "--quiet", "-b", "pr-line", original);
+      writeRepoFile(root, "src/a.ts", "PR source\n");
+      const pr = commit(root, "PR changes source only");
+      git(root, "checkout", "--quiet", "main-line");
+      git(root, "merge", "--quiet", "--no-ff", "-m", "test merge source PR", pr);
+      const merge = git(root, "rev-parse", "HEAD").trim();
+      expect(git(root, "rev-parse", `${merge}^1`).trim()).toBe(main);
+      expect(git(root, "rev-parse", `${merge}^2`).trim()).toBe(pr);
+
+      const sourceOnly = fromWorkflow(merge);
+      expect(sourceOnly.status).toBe(0);
+      expect(sourceOnly.result).toMatchObject({
+        ok: true,
+        classification: "implementation",
+        violations: [],
+      });
+      const staleEventBase = invoke(original, merge);
+      expect(staleEventBase.status).toBe(1);
+      expect(staleEventBase.result).toMatchObject({
+        ok: false,
+        classification: "implementation",
+        violations: [{ code: "protected-modified", path: "docs/design/harness/x.md" }],
+      });
+
+      git(root, "checkout", "--quiet", "-b", "pr-line-two", original);
+      writeRepoFile(root, "src/a.ts", "second PR source\n");
+      writeRepoFile(root, "docs/test-design/harness/y.md", "PR changes design\n");
+      const prTwo = commit(root, "PR changes source and y");
+      git(root, "checkout", "--quiet", "-b", "main-line-two", main);
+      git(root, "merge", "--quiet", "--no-ff", "-m", "test merge design PR", prTwo);
+      const mergeTwo = git(root, "rev-parse", "HEAD").trim();
+      expect(git(root, "rev-parse", `${mergeTwo}^1`).trim()).toBe(main);
+      expect(git(root, "rev-parse", `${mergeTwo}^2`).trim()).toBe(prTwo);
+      const changedDesign = fromWorkflow(mergeTwo);
+      expect(changedDesign.status).toBe(1);
+      expect(changedDesign.result).toMatchObject({
+        ok: false,
+        classification: "implementation",
+        violations: [{ code: "protected-modified", path: "docs/test-design/harness/y.md" }],
+      });
+
+      expect(git(root, "rev-list", "--parents", "-n", "1", original).trim()).toBe(original);
+      const parentAbsent = fromWorkflow(original);
+      expect(parentAbsent.status).toBe(1);
+      expect(parentAbsent.result).toMatchObject({
+        ok: false,
+        classification: "unknown",
+        error: { code: "git-ref-invalid" },
+      });
+    } finally {
+      removeRepo(root);
+    }
+  }, 60_000);
+
+  it("U-DPROT-027: repository-structureの2表と定数は集合一致し壊れた表を拒否", async () => {
     const api = await loadGate();
     const path = join(REPO_ROOT, "docs/governance/repository-structure.md");
     const content = readFileSync(path, "utf8");
@@ -315,7 +399,7 @@ describe("design-protection L7 candidate Red (PR #981)", () => {
     ).toEqual(sorted(api.PROTECTED_PATH_PREFIXES));
   });
 
-  it.fails("U-DPROT-030: HEAD git ls-filesで各prefixの存在を確認し全src移動を検出", async () => {
+  it("U-DPROT-030: HEAD git ls-filesで各prefixの存在を確認し全src移動を検出", async () => {
     const api = await loadGate();
     const implementationInventory = inventory(REPO_ROOT, api.IMPLEMENTATION_PATH_PREFIXES);
     const protectedInventory = inventory(REPO_ROOT, api.PROTECTED_PATH_PREFIXES);
@@ -331,6 +415,7 @@ describe("design-protection L7 candidate Red (PR #981)", () => {
       mkdirSync(join(root, "product"), { recursive: true });
       git(root, "mv", "src/a.ts", "product/a.ts");
       commit(root, "move all implementation files out of src");
+      writeRepoFile(root, "src/untracked.ts", "untracked\n");
       const pathsAfter = inventory(root, ["src/"]);
       expect(pathsAfter.get("src/")?.length ?? 0).toBe(0);
       expect(pathsAfter.has("src/")).toBe(true);
