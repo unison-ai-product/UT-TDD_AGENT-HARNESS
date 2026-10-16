@@ -235,6 +235,17 @@ loadOracleTestTraceInput(subjectRoot: string, ports?: OracleTestTracePorts)
 `{ok:false,reason:"authority_read_failed"}` はI/O失敗を表す。missingとI/Oを同じ理由に畳まない。
 JSON decode後のschema/token/重複検証も上記 `OracleTraceFailureReason` でtypedに失敗し、例外文面を解析しない。
 この optional loader port は authority reader だけを受け取り、Git pair / CI context を受け取らない。
+loader の成功値は従来どおり `OracleTestTraceInput` のままとし、失敗時は次の名前付き typed error を throw する。
+既存の成功出力型や analyzer の入力・結果 shape は変更しない。
+
+```ts
+export class OracleTestTraceLoadError extends Error {
+  readonly reason: OracleTraceFailureReason;
+}
+```
+
+この型は `src/lint/oracle-test-trace.ts` から名前付き export として公開する。`OracleTestTraceLoadError.reason` は欠落・読取・decode/schema/token の既存 literal を保持する。
+呼出側は `instanceof OracleTestTraceLoadError` と `reason` を確認し、例外 message から分類を推定しない。
 
 縮小専用比較の独立入口は次のとおりとする。これは既存 loader の option ではなく、既存
 `OracleTestTraceInput` / `OracleTestTraceResult` / `analyzeOracleTestTrace` の集合・出力を変更しない。
@@ -256,6 +267,10 @@ type OracleBaselineRatchetResult =
   | { ok: false; reason: OracleBaselineRatchetFailureReason };
 
 interface OracleBaselineRatchetInput {
+  /**
+   * Loader と同じ authority binding を composition で受け取る。
+   * CI ratchet はこの reader の readText を呼ばず、比較対象 blob は git port だけから読む。
+   */
   authority: OracleTraceAuthority;
   ci: {
     eventName: string;
@@ -272,7 +287,8 @@ interface OracleBaselineRatchetInput {
 checkOracleBaselineRatchet(input: OracleBaselineRatchetInput): OracleBaselineRatchetResult
 ```
 
-`checkOracleBaselineRatchet` は source checkout / Pack の同じ authority 解決境界と、明示された CI Git reader を受け取る。
+`checkOracleBaselineRatchet` は loader と同じ authority binding を composition で受け取り、明示された CI Git reader を使う。
+ただし ratchet は `authority.readText` を呼ばず、base/head JSON は immutable な Git tree の `B` / `H` からだけ読む。
 PR用 required check は GitHub Actions の `harness-check` workflow の専用 step からこの関数を呼び、
 `eventName = github.event_name`、`mergeSha = github.sha` をそのまま渡す。step は `{ok:false, reason}` を
 non-zero で失敗させ、reason literal を結果として保持する。関数は例外を投げず、成功は `{ok:true}`、失敗は
@@ -280,8 +296,9 @@ non-zero で失敗させ、reason literal を結果として保持する。関�
 context や比較 pair を補わない。
 
 PRでは `readFirstParent(mergeSha)` で B を解決し、`readTextAt(B, BASELINE_JSON_PATH)` /
-`readTextAt(mergeSha, BASELINE_JSON_PATH)` でbase/head blobを読む。結果のnullは `git_first_parent_missing` /
-`git_baseline_missing`、reader失敗は `git_first_parent_read_failed` / `git_object_read_failed`、不正blobは
+`readTextAt(mergeSha, BASELINE_JSON_PATH)` でbase/head blobを読む。Git reader の結果のnullは `git_first_parent_missing` /
+`git_baseline_missing`、I/O failure は ratchet 側の `git_first_parent_read_failed` /
+`git_object_read_failed`、不正blobは
 `trusted_baseline_invalid` とする。明示CI contextが不完全・不正なら `pr_context_invalid` でfail-closeする。
 初回移行だけの構造不一致は `bootstrap_base_invalid`、旧集合との値不一致は `bootstrap_value_mismatch` とする。
 有効な組における legacy / widened いずれかの head-only ID は `baseline_growth` とする。
