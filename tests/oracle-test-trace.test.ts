@@ -1,7 +1,7 @@
 // PLAN-REVERSE-41 塊B: oracle 宣言 ⇔ 実テスト citation の突合 (IMP-128、forward-citation 規律)。
 // test-design 宣言 oracle (U-*/IT-*/ST-*/P-*/M-*) が tests/ に ID citation を持つか。NEW は fail、
 // 既存 89 は baseline、検出範囲拡張 (issue #165 / PLAN-L7-480) の 344 は widened baseline。
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -137,6 +137,42 @@ describe("宣言 provenance の一意性 (Issue #206)", () => {
 });
 
 describe("宣言 site 収集 (Issue #206)", () => {
+  it.fails("退役表中の既存ID参照は宣言にせず、正確なIDセル宣言は orphan に残す", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-retired-id-"));
+    try {
+      mkdirSync(join(root, "docs", "test-design"), { recursive: true });
+      writeFileSync(
+        join(root, "docs", "test-design", "L7.md"),
+        [
+          "### Confirmed test design",
+          "| ID | Description | Result |",
+          "|---|---|---|",
+          "| `U-ZZCANON-901` | canonical declaration | reject |",
+          "",
+          "### Retired references",
+          "| Former oracle | Reason |",
+          "|---|---|",
+          "| 既存 `U-ZZRETIRE-901` | retired, not a declaration |",
+        ].join("\n"),
+        "utf8",
+      );
+
+      const { declared, declarationSites } = collectOracleIds(root);
+      expect([...declared].sort()).toEqual(["U-ZZCANON-901"]);
+      expect(declarationSites.map((site) => site.id)).toEqual(["U-ZZCANON-901"]);
+      const result = analyzeOracleTestTrace({
+        declared: [...declared],
+        referenced: new Set(),
+        baseline: new Set(),
+        widenedBaseline: new Set(),
+        declarationSites,
+      });
+      expect(result.orphans).toEqual(["U-ZZCANON-901"]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it("正確なIDセルだけを宣言として収集し、family range の再引用を除外する", () => {
     const root = declarationFixture(
       [
