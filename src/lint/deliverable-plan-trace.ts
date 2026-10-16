@@ -5,7 +5,14 @@ import {
   analyzeArtifactOwnership,
   type DuplicateArtifactOwnershipFinding,
 } from "./artifact-ownership.ts";
+import {
+  collectCandidateOracleCitationSites,
+  collectOracleCitationSites,
+} from "./oracle-test-citation.ts";
+import { collectOracleDeclarationSites } from "./oracle-test-trace.ts";
 import { normalizePath } from "./shared.ts";
+
+const CANDIDATE_ID = /(?<![A-Z0-9-])CANDIDATE-[A-Z0-9]+(?:-[A-Z0-9]+)*-[0-9]{3}(?![A-Z0-9-])/g;
 
 export interface DeliverablePlanTraceFinding {
   kind: "orphan-deliverable" | "stale-deliverable-trace-debt";
@@ -111,6 +118,70 @@ function loadLedger(content: string): {
   return { baseline, ownershipBaseline };
 }
 
+function markdownCells(line: string): string[] | null {
+  const trimmed = line.trim();
+  if (!trimmed.startsWith("|") || !trimmed.endsWith("|")) return null;
+  return trimmed
+    .slice(1, -1)
+    .replaceAll("\\|", "\u0000")
+    .split("|")
+    .map((cell) => cell.replaceAll("\u0000", "|").trim());
+}
+
+function isMarkdownSeparatorRow(line: string): boolean {
+  const cells = markdownCells(line);
+  return cells !== null && cells.length > 0 && cells.every((cell) => /^:?-{3,}:?$/u.test(cell));
+}
+
+interface CandidateDeclarationSite {
+  id: string;
+  path: string;
+  line: number;
+}
+
+function candidateDeclarationSitesFromFile(
+  markdown: string,
+  path: string,
+): CandidateDeclarationSite[] {
+  const lines = markdown.split(/\r?\n/u);
+  const sites: CandidateDeclarationSite[] = [];
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index] ?? "";
+    if (/^#{1,6}\s/u.test(line)) continue;
+    const cells = markdownCells(line);
+    if (!cells || isMarkdownSeparatorRow(line) || isMarkdownSeparatorRow(lines[index + 1] ?? ""))
+      continue;
+    const ids = cells.flatMap((cell) => {
+      CANDIDATE_ID.lastIndex = 0;
+      const matches = [...cell.matchAll(CANDIDATE_ID)];
+      const normalized = cell.replace(/`/gu, "").trim();
+      return matches.length === 1 && normalized === matches[0]?.[0] ? [matches[0][0]] : [];
+    });
+    for (const id of ids) sites.push({ id, path, line: index + 1 });
+  }
+  return sites;
+}
+
+function collectCandidateDeclarationSites(repoRoot: string): CandidateDeclarationSite[] {
+  const paths: string[] = [];
+  try {
+    listFiles(join(repoRoot, "docs", "test-design"), repoRoot, paths);
+  } catch {
+    return [];
+  }
+  const sites: CandidateDeclarationSite[] = [];
+  for (const path of paths) {
+    if (!path.endsWith(".md")) continue;
+    const content = readFileSync(join(repoRoot, path), "utf8");
+    sites.push(...candidateDeclarationSitesFromFile(content, path));
+  }
+  return sites;
+}
+
+function isTestArtifactPath(path: string): boolean {
+  return /^tests\/.*\.test\.ts$/.test(path);
+}
+
 export function loadDeliverablePlanTraceInput(repoRoot: string): DeliverablePlanTraceInput {
   const artifactFiles: string[] = [];
   for (const root of ["scripts", ".claude", "tests"]) {
@@ -137,6 +208,28 @@ export function loadDeliverablePlanTraceInput(repoRoot: string): DeliverablePlan
       const normalized = normalizePath(artifactPath);
       tracedPaths.add(normalized);
       if (planId) ownersByPath.set(normalized, [...(ownersByPath.get(normalized) ?? []), planId]);
+    }
+  }
+  const declarations = collectOracleDeclarationSites(repoRoot);
+  const formalIds = new Set(declarations.map((site) => site.id));
+  for (const citation of collectOracleCitationSites(repoRoot)) {
+    if (formalIds.has(citation.id) && isTestArtifactPath(citation.path)) {
+      tracedPaths.add(citation.path);
+    }
+  }
+  const candidateDeclarations = collectCandidateDeclarationSites(repoRoot);
+  const declarationsByCandidateId = new Map<string, CandidateDeclarationSite[]>();
+  for (const declaration of candidateDeclarations) {
+    const sites = declarationsByCandidateId.get(declaration.id) ?? [];
+    sites.push(declaration);
+    declarationsByCandidateId.set(declaration.id, sites);
+  }
+  for (const citation of collectCandidateOracleCitationSites(repoRoot)) {
+    if (
+      (declarationsByCandidateId.get(citation.id)?.length ?? 0) > 0 &&
+      isTestArtifactPath(citation.path)
+    ) {
+      tracedPaths.add(citation.path);
     }
   }
   const ledger = loadLedger(
