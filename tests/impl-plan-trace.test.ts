@@ -1,12 +1,44 @@
 // PLAN-REVERSE-40 塊A: impl→PLAN トレーサビリティ検査 (IMP-088)。
 // src module/CLI/lint/doctor check が PLAN generates に紐づくか。NEW orphan を fail-close。
 // 既存 untraced 8 件は baseline (known-debt)、IMP-087 の 4 件は REVERSE-40 へ back-fill 済。
-import { describe, expect, it } from "vitest";
+
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   analyzeImplPlanTrace,
   IMPL_PLAN_TRACE_BASELINE,
   loadImplPlanTraceInput,
 } from "../src/lint/impl-plan-trace.ts";
+
+function makeImplPlanTraceFixture(options: {
+  sourcePaths: string[];
+  planPaths?: string[];
+  designPaths?: string[];
+}): string {
+  const root = mkdtempSync(join(tmpdir(), "impl-plan-trace-"));
+  mkdirSync(join(root, "docs", "plans"), { recursive: true });
+  mkdirSync(join(root, "docs", "design", "harness", "L6-function-design"), {
+    recursive: true,
+  });
+  for (const sourcePath of options.sourcePaths) {
+    const absolutePath = join(root, sourcePath);
+    mkdirSync(join(absolutePath, ".."), { recursive: true });
+    writeFileSync(absolutePath, "export {};\n", "utf8");
+  }
+  writeFileSync(
+    join(root, "docs", "plans", "PLAN-fixture.md"),
+    (options.planPaths ?? []).join("\n"),
+    "utf8",
+  );
+  writeFileSync(
+    join(root, "docs", "design", "harness", "L6-function-design", "fixture.md"),
+    (options.designPaths ?? []).join("\n"),
+    "utf8",
+  );
+  return root;
+}
 
 describe("analyzeImplPlanTrace (U-IPT-001..003)", () => {
   const base = {
@@ -46,5 +78,71 @@ describe("loadImplPlanTraceInput real repo (U-IPT-004/005)", () => {
     // IMP-087 orphan は baseline でなく back-fill (trace) で解消
     expect(IMPL_PLAN_TRACE_BASELINE.has("src/lint/rule-drift.ts")).toBe(false);
     expect(IMPL_PLAN_TRACE_BASELINE.has("src/gate/review-tier.ts")).toBe(false);
+  });
+});
+
+describe("loadImplPlanTraceInput design-source trace candidate", () => {
+  const root = makeImplPlanTraceFixture({
+    sourcePaths: ["src/runtime/windows-hide.ts", "src/doctor/windows-hide.ts"],
+    planPaths: ["no implementation path is declared here"],
+    designPaths: ["src/runtime/windows-hide.ts", "src/doctor/windows-hide.ts"],
+  });
+
+  beforeAll(() => {
+    expect(existsSync(join(root, "src/runtime/windows-hide.ts"))).toBe(true);
+    expect(existsSync(join(root, "src/doctor/windows-hide.ts"))).toBe(true);
+    expect(existsSync(join(root, "docs/plans/PLAN-fixture.md"))).toBe(true);
+    expect(existsSync(join(root, "docs/design/harness/L6-function-design/fixture.md"))).toBe(true);
+  });
+
+  afterAll(() => rmSync(root, { recursive: true, force: true }));
+
+  it("the isolated fixture has both source files and their design references", () => {
+    expect([...loadImplPlanTraceInput(root).srcFiles].sort()).toEqual([
+      "src/doctor/windows-hide.ts",
+      "src/runtime/windows-hide.ts",
+    ]);
+  });
+
+  it("PLAN-only source references remain traced", () => {
+    const root = makeImplPlanTraceFixture({
+      sourcePaths: ["src/plan-only.ts"],
+      planPaths: ["src/plan-only.ts"],
+    });
+    try {
+      const input = loadImplPlanTraceInput(root);
+      const result = analyzeImplPlanTrace(input);
+      expect(input.tracedPaths.has("src/plan-only.ts")).toBe(true);
+      expect(result.orphans).toEqual([]);
+      expect(result.ok).toBe(true);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it.fails("CANDIDATE-U-IPT-006: design-only source references cover new src", () => {
+    const input = loadImplPlanTraceInput(root);
+    const result = analyzeImplPlanTrace(input);
+    expect(input.tracedPaths.has("src/runtime/windows-hide.ts")).toBe(true);
+    expect(input.tracedPaths.has("src/doctor/windows-hide.ts")).toBe(true);
+    expect(result.orphans).toEqual([]);
+    expect(result.ok).toBe(true);
+  });
+
+  it("src absent from PLAN and design remains an orphan", () => {
+    const root = makeImplPlanTraceFixture({
+      sourcePaths: ["src/unowned.ts"],
+      planPaths: ["no implementation path is declared here"],
+      designPaths: ["no implementation path is declared here"],
+    });
+    try {
+      const input = loadImplPlanTraceInput(root);
+      const result = analyzeImplPlanTrace(input);
+      expect(input.tracedPaths.has("src/unowned.ts")).toBe(false);
+      expect(result.orphans).toEqual(["src/unowned.ts"]);
+      expect(result.ok).toBe(false);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 });

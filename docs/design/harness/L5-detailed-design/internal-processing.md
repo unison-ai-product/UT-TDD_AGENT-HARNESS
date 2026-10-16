@@ -57,6 +57,8 @@ module-decomposition の公開 IF に処理ロジックと Design by Contract �
 
 > 共通: 入力 → **zod validate** → state 読込 → 処理 → state 書込 → 出力/exit。副作用は cli/hook 端点に隔離 (module-decomposition §4)。
 
+`doctor` の `impl-plan-trace` は、実装 source の path を PLAN と設計文書から追跡する。入力は `docs/plans/*.md` と `docs/design/**/*.md` の本文にある同じ `src/...ts` path 表記の和集合とし、既存の PLAN 入力も維持する。設計文書が source path を名指すとその source は traced である。どちらにも無く baseline にも含まれない `src/**/*.ts` は従来どおり orphan として fail-close し、baseline は縮小のみとする。
+
 ## §3 DbC precondition (事前条件 = 呼び出し側保証)
 
 | 操作 | Precondition |
