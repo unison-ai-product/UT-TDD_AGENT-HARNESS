@@ -21,7 +21,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { buildDoctorCheckDefinitionGroups } from "../src/doctor/check-definition-groups.ts";
 import type { DoctorDeps } from "../src/doctor/runtime-state.ts";
 import { loadCanonicalLiveReviewRequest } from "../src/feedback/live-review-projection.ts";
@@ -917,51 +917,93 @@ describe("Issue #1062: runtime notifications are memory-free", () => {
     });
   });
 
-  it.fails("CANDIDATE-U-STCHAN-018: notify does not read the memory directory", () => {
-    const root = tempRepo();
-    const memoryPath = join(root, ".ut-tdd", "memory");
-    const memoryFile = join(memoryPath, "protected.md");
-    const protectedBytes = "permission-denied memory fixture\n";
-    mkdirSync(memoryPath, { recursive: true });
-    writeFileSync(memoryFile, protectedBytes);
-    let permissionAttempted = false;
-    try {
-      permissionAttempted = true;
-      if (process.platform === "win32") {
-        const deny = spawnSync(
-          "icacls",
-          [memoryPath, "/deny", `${process.env.USERNAME}:(OI)(CI)(RX)`, "/T", "/C"],
-          {
-            encoding: "utf8",
-            windowsHide: true,
-          },
-        );
-        expect(deny.status, String(deny.stderr)).toBe(0);
-      } else {
-        chmodSync(memoryPath, 0);
-      }
-      expect(() => readdirSync(memoryPath)).toThrow();
-      const result = runCli(root, [
-        "notify",
-        "claude",
-        "--ref",
-        "https://github.com/example/repo/pull/283#issuecomment-1",
-        "--body",
-        "review is ready",
-      ]);
-      expectStarted(result);
-      expect(result.status).toBe(0);
-    } finally {
-      if (permissionAttempted && process.platform === "win32") {
-        const reset = spawnSync("icacls", [memoryPath, "/reset", "/T", "/C"], {
-          encoding: "utf8",
-          windowsHide: true,
-        });
-        expect(reset.status, reset.stderr).toBe(0);
-      } else if (permissionAttempted) chmodSync(memoryPath, 0o700);
-    }
-    expect(readFileSync(memoryFile, "utf8")).toBe(protectedBytes);
-  });
+  describe.skipIf(!(process.platform === "win32" || process.getuid?.() !== 0))(
+    "CANDIDATE-U-STCHAN-018 permission-denied fixture",
+    () => {
+      let root: string | undefined;
+      let memoryPath: string | undefined;
+      let memoryFile: string | undefined;
+      let permissionMayBeConfigured = false;
+      let notificationResult: ReturnType<typeof runCli> | undefined;
+      const protectedBytes = "permission-denied memory fixture\n";
+      beforeAll(() => {
+        const setupRoot = mkdtempSync(join(tmpdir(), "ut-tdd-state-channel-"));
+        const setupMemoryPath = join(setupRoot, ".ut-tdd", "memory");
+        const setupMemoryFile = join(setupMemoryPath, "protected.md");
+        root = setupRoot;
+        memoryPath = setupMemoryPath;
+        memoryFile = setupMemoryFile;
+        permissionMayBeConfigured = false;
+        ensureTrackedProjectIdentity(setupRoot, "example/repo");
+        mkdirSync(setupMemoryPath, { recursive: true });
+        writeFileSync(setupMemoryFile, protectedBytes);
+
+        if (process.platform === "win32") {
+          // Set the cleanup flag first: even a partially applied ACL is reset by
+          // afterAll, and setup failures cannot be swallowed by `it.fails`.
+          permissionMayBeConfigured = true;
+          const deny = spawnSync(
+            "icacls",
+            [setupMemoryPath, "/deny", `${process.env.USERNAME}:(OI)(CI)(RX)`, "/T", "/C"],
+            {
+              encoding: "utf8",
+              windowsHide: true,
+            },
+          );
+          expect(deny.error?.message ?? "", "icacls deny must start").toBe("");
+          expect(deny.signal, "icacls deny must exit normally").toBeNull();
+          expect(deny.status, String(deny.stderr)).toBe(0);
+        } else {
+          permissionMayBeConfigured = true;
+          chmodSync(setupMemoryPath, 0);
+        }
+
+        expect(
+          () => readdirSync(setupMemoryPath),
+          "memory directory read must be denied",
+        ).toThrow();
+        notificationResult = runCli(setupRoot, [
+          "notify",
+          "claude",
+          "--ref",
+          "https://github.com/example/repo/pull/283#issuecomment-1",
+          "--body",
+          "review is ready",
+        ]);
+        // Process-spawn / signal failures are setup failures, not accepted Red.
+        expectStarted(notificationResult);
+        expect(notificationResult.status, "CLI must exit normally").not.toBeNull();
+      });
+
+      afterAll(() => {
+        try {
+          if (memoryPath && memoryFile && permissionMayBeConfigured) {
+            if (process.platform === "win32") {
+              const reset = spawnSync("icacls", [memoryPath, "/reset", "/T", "/C"], {
+                encoding: "utf8",
+                windowsHide: true,
+              });
+              expect(reset.error?.message ?? "", "icacls reset must start").toBe("");
+              expect(reset.signal, "icacls reset must exit normally").toBeNull();
+              expect(reset.status, reset.stderr).toBe(0);
+            } else {
+              chmodSync(memoryPath, 0o700);
+            }
+            expect(readFileSync(memoryFile, "utf8")).toBe(protectedBytes);
+          }
+        } finally {
+          if (root) removeTestTree(root);
+        }
+      });
+
+      it.fails("CANDIDATE-U-STCHAN-018: notify succeeds with the memory directory unreadable", () => {
+        // Before the notify command exists, this is only a command-surface Red:
+        // the expected failure is this success assertion. Once implemented,
+        // a zero exit under the verified deny fixture is the non-reference oracle.
+        expect(notificationResult?.status).toBe(0);
+      });
+    },
+  );
 });
 
 describe("Issue #1062: handover prose is retired", () => {
