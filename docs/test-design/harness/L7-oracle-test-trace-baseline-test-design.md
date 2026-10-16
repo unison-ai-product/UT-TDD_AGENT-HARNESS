@@ -43,21 +43,21 @@ JSON 値を要素単位で完全一致させ、oracle の削除・分類替え�
 
 ## 3. 候補 oracle 表
 
-| 候補 ID | 入力 / fixture | 期待 oracle |
-|---|---|---|
-| `CANDIDATE-U-OIDBASE-001` | 初回 migration に限り、§4 の不変比較組の `B` の Git tree にある旧 `legacy` / `widened` constants と、`H` の Git tree にある JSON authority を比較 | 両集合が要素単位で完全一致し、legacy は89件、widened は317件。citation 状態や宣言を変更しない。migration 限定であり、migration 後の source-free oracle-retirement contract PR で宣言と test label を同期して退役させる |
-| `CANDIDATE-U-OIDBASE-002` | runtime JSON欠落、JSONのopen/read権限またはI/O失敗、JSON parse不能、schemaVersion違い、必須field欠落、未知field、field型違いを各1つ独立に注入 | すべてfail-closeし、TS constant / 空集合への fallback は起きない |
-| `CANDIDATE-U-OIDBASE-003` | 不正oracle ID、同じ配列内のID重複、legacy/widened間のID重複をそれぞれ注入 | 各入力をfail-closeで拒否し、重複や無効IDを集合化で隠さない |
-| `CANDIDATE-U-OIDBASE-004` | 実 subject repository と、同一件数だが要素を1件置換した JSON-backed widened authority | 既存 `U-OIDGATE-005` の完全集合比較が不一致を示し、件数一致をGreenとしない。この mutation は `U-OIDGATE-005` が所有し、独立した継続 oracle にはしない |
-| `CANDIDATE-U-OIDBASE-005` | 信頼済みPR baseに対し、headのlegacy/widenedから既存IDだけを取り除き、同IDのdebtを解消する入力（宣言を退役するか、対応するtest citationを追加する） | `headSet ⊆ trustedBaseSet` が成立し、同じIDがhead baselineとderived debtの双方から縮小する。削除に伴うanalyzer集合一致も成立し、subset検査がIDを追加しない |
-| `CANDIDATE-U-OIDBASE-006` | baseに無い未citation oracleをheadのwidenedとfixture上のderived debtへ加える。また、これとは独立したcaseでbaseに無いIDをheadのlegacyへ加える | 各caseでderived集合と対応するhead baselineの完全一致が成立しても、widened / legacyそれぞれの `headSet ⊆ trustedBaseSet` 違反で拒否 |
-| `CANDIDATE-U-OIDBASE-007` | 通常のPRでbase SHA欠落/解決不能、base JSON破損・読取不能、head JSON読取不能 | subset証明をPASS扱いせずfail-close。`origin/main`、branch ref、working-tree値へのfallbackなし |
-| `CANDIDATE-U-OIDBASE-008` | 1つの harness package asset root と別の subject repo root を与え、process cwdだけを変更 | 同じbaseline authorityを読み、明示subject rootだけを走査。cwdやconsumer rootの内容によりbaselineが変わらない |
-| `CANDIDATE-U-OIDBASE-009` | 実際に生成・展開したclean Pack asset。source checkoutと同じfixtureを使い、Windows/Linuxで異なるcwdから実行 | baseline JSONが配布物に一度含まれ、両OS/両cwdで同じauthorityとして読み込まれる。欠落時はfail-close |
-| `CANDIDATE-U-OIDBASE-010` | 旧TS baseline削除とgovernance JSON追加を含む実Git PR diff | 実際のname-status/rename判定を記録する。`src/`→`docs/governance/` moveとして拒否された場合も、design-protectionを弱める例外を追加して通さない |
-| `CANDIDATE-U-OIDBASE-011` | 初回移行PRの trusted base `B` の Git tree に JSON がなく、旧 TS 定数ファイルと正規宣言があり、検証対象 `H` に strict decode 可能な JSON があるケース。併せて base 側 JSON 欠落以外の構造不一致・読取不能・旧集合不一致を注入 | bootstrap route は構造条件を満たす初回移行だけで選ばれ、head JSON と旧 TS 集合の要素完全一致（legacy 89 / widened 317）で成功する。それ以外は fail-close し、branch/cwd/自己申告による route 選択を許さない。初回移行後の source-free oracle-retirement contract PR で宣言と test label を同期して退役させる |
-| `CANDIDATE-U-OIDBASE-012` | migration merge 後、bootstrap route の削除前後を比較する。JSON が base に存在する通常 PR で旧 TS 定数が残っていてもよい | 通常 PR は JSON-backed trusted-base subset check を使い、初回 bootstrap route はソースから削除されている。route の削除は Refactor に含めず、migration 後の独立 bootstrap-retirement Green PR がこの候補だけを所有する |
-| `CANDIDATE-U-OIDBASE-013` | `docs/governance/oracle-test-trace-baseline.json` だけを変更するdocs-only PR、PR base情報が不明または解決不能なCI event | change classificationにかかわらずrequired ratchet checkが起動し、base不明・解決不能をFAILにする。check未実行、skip、neutralを成功扱いしない |
+| 候補 ID | 入力 / fixture | 期待 oracle | 主な観測点 |
+|---|---|---|---|
+| `CANDIDATE-U-OIDBASE-001` | 初回 migration に限り、§4 の不変比較組の `B` の Git tree にある旧 `legacy` / `widened` constants と、`H` の Git tree にある JSON authority を比較 | 両集合が要素単位で完全一致し、legacy は89件、widened は317件。citation 状態や宣言を変更しない。migration 限定であり、migration 後の source-free oracle-retirement contract PR で宣言と test label を同期して退役させる | `readFirstParent` と固定 path の `readTextAt(B/H)`。旧定数 blob は限定 bootstrap reader、件数と完全集合差分を証跡化 |
+| `CANDIDATE-U-OIDBASE-002` | runtime JSON欠落、JSONのopen/read権限またはI/O失敗、JSON parse不能、schemaVersion違い、必須field欠落、未知field、field型違いを各1つ独立に注入 | すべてfail-closeし、TS constant / 空集合への fallback は起きない | `authority.readText(BASELINE_JSON_PATH)` の `null` と typed `authority_read_failed` を別々に観測し、parse/schema failure reasonも確認 |
+| `CANDIDATE-U-OIDBASE-003` | 不正oracle ID、同じ配列内のID重複、legacy/widened間のID重複をそれぞれ注入 | 各入力をfail-closeで拒否し、重複や無効IDを集合化で隠さない | strict decoder の `baseline_id_invalid` / `baseline_id_duplicate` / `baseline_sets_overlap`。集合化前の raw array を入力 |
+| `CANDIDATE-U-OIDBASE-004` | 実 subject repository と、同一件数だが要素を1件置換した JSON-backed widened authority | 既存 `U-OIDGATE-005` の完全集合比較が不一致を示し、件数一致をGreenとしない。この mutation は `U-OIDGATE-005` が所有し、独立した継続 oracle にはしない | production `loadOracleTestTraceInput(subjectRoot, ports)` → 既存 `analyzeOracleTestTrace` の stale/orphan result。CI subset reasonを混ぜない |
+| `CANDIDATE-U-OIDBASE-005` | 信頼済みPR baseに対し、headのlegacy/widenedから既存IDだけを取り除き、同IDのdebtを解消する入力（宣言を退役するか、対応するtest citationを追加する） | `headSet ⊆ trustedBaseSet` が成立し、同じIDがhead baselineとderived debtの双方から縮小する。削除に伴うanalyzer集合一致も成立し、subset検査がIDを追加しない | CI-only ratchet boundaryのlegacy/widened subset passと既存 analyzer の current-derived equality passを別々に観測 |
+| `CANDIDATE-U-OIDBASE-006` | baseに無い未citation oracleをheadのwidenedとfixture上のderived debtへ加える。また、これとは独立したcaseでbaseに無いIDをheadのlegacyへ加える | 各caseでderived集合と対応するhead baselineの完全一致が成立しても、widened / legacyそれぞれの `headSet ⊆ trustedBaseSet` 違反で拒否 | CI-only ratchet boundaryが `baseline_growth` を返す。既存 analyzer の complete-set equality がpassする対照は独立して維持 |
+| `CANDIDATE-U-OIDBASE-007` | 通常のPRでbase SHA欠落/解決不能、base JSON破損・読取不能、head JSON読取不能 | subset証明をPASS扱いせずfail-close。`origin/main`、branch ref、working-tree値へのfallbackなし | CI-only portの `eventName` / `mergeSha=github.sha`、`readFirstParent` / `readTextAt`; `pr_context_invalid`、`git_first_parent_missing`、`git_first_parent_read_failed`、`git_baseline_missing`、`git_object_read_failed`、`trusted_baseline_invalid` を個別確認 |
+| `CANDIDATE-U-OIDBASE-008` | 1つの harness package asset root と別の subject repo root を与え、process cwdだけを変更 | 同じbaseline authorityを読み、明示subject rootだけを走査。cwdやconsumer rootの内容によりbaselineが変わらない | `subjectRoot` の宣言/citation と `authority.readText(BASELINE_JSON_PATH)` を別 root に束縛し、cwd変更前後のloader outputを比較 |
+| `CANDIDATE-U-OIDBASE-009` | 実際に生成・展開したclean Pack asset。source checkoutと同じfixtureを使い、Windows/Linuxで異なるcwdから実行 | baseline JSONが配布物に一度含まれ、両OS/両cwdで同じauthorityとして読み込まれる。欠落時はfail-close | build asset inventory / bundle receipt の JSON inclusion と packaged default authority reader の同一 bytes / digest。Pack consumer root は subject のみ |
+| `CANDIDATE-U-OIDBASE-010` | 旧TS baseline削除とgovernance JSON追加を含む実Git PR diff | 実際のname-status/rename判定を記録する。`src/`→`docs/governance/` moveとして拒否された場合も、design-protectionを弱める例外を追加して通さない | `git diff --name-status B H` の実分類と既存 `design-protection-diff-gate` 結果。新しい例外・checker は設けない |
+| `CANDIDATE-U-OIDBASE-011` | 初回移行PRの trusted base `B` の Git tree に JSON がなく、旧 TS 定数ファイルと正規宣言があり、検証対象 `H` に strict decode 可能な JSON があるケース。併せて base 側 JSON 欠落以外の構造不一致・読取不能・旧集合不一致を注入 | bootstrap route は構造条件を満たす初回移行だけで選ばれ、head JSON と旧 TS 集合の要素完全一致（legacy 89 / widened 317）で成功する。それ以外は fail-close し、branch/cwd/自己申告による route 選択を許さない。初回移行後の source-free oracle-retirement contract PR で宣言と test label を同期して退役させる | `B` blob の JSON-only absence と2旧定数の存在/正規宣言をGit readerで観測。`bootstrap_base_invalid` / `bootstrap_value_mismatch` を負例で確認 |
+| `CANDIDATE-U-OIDBASE-012` | migration merge 後、bootstrap route の削除前後を比較する。JSON が base に存在する通常 PR で旧 TS 定数が残っていてもよい | 通常 PR は JSON-backed trusted-base subset check を使い、初回 bootstrap route はソースから削除されている。route の削除は Refactor に含めず、migration 後の独立 bootstrap-retirement Green PR がこの候補だけを所有する | JSON が `B` に存在する pair で旧定数の有無にかかわらず bootstrap branch が到達不能であることを実 source route と candidate-specific test で観測 |
+| `CANDIDATE-U-OIDBASE-013` | `docs/governance/oracle-test-trace-baseline.json` だけを変更するdocs-only PR、PR base情報が不明または解決不能なCI event | change classificationにかかわらずrequired ratchet checkが起動し、base不明・解決不能をFAILにする。check未実行、skip、neutralを成功扱いしない | workflow required-check の non-skipped run と fail result。CI-only `eventName` / `mergeSha=github.sha` 不在または不正を `pr_context_invalid` として観測し、workflow policy/configは既存 checkerで確認 |
 
 `CANDIDATE-U-OIDBASE-005` と `-006` は subset 検査の正負を固定し、集合一致だけでは縮小専用を証明できないことを
 示す。`-004` は逆に集合一致自体が引き続き必要であることを固定する。これらを1つのassertに集約して片方の機構を
@@ -106,8 +106,8 @@ merge tree から読む。両方の集合について subset を比較する。�
 `design-protection-diff-gate.md` §7 および `.github/workflows/harness-check.yml` の `BASE_SHA=${{ github.sha }}^1`,
 `--head "${{ github.sha }}"` と同一の組である。PR context の信頼元は Actions の `github.event_name == pull_request`
 と immutable `github.sha` のみで、event payload の `pull_request.base.sha`、PR branch HEAD、branch 名から推測しない。
-ローカル実行では同じ役割の immutable `(B,H)` を明示指定した場合だけ subset を検証できる。PR context または明示 pair が
-無い場合は通常の strict decode と current-derived equality のみを行い、subset 証明を主張しない。
+subset ratchet は GitHub Actions の required PR CI boundary に限る。通常のローカル loader / doctor / static run は
+subset pair を受け付けず、strict decode と current-derived equality のみを行い、subset 証明を主張しない。
 
 ## 5. 設計保護境界と移行
 
