@@ -24,6 +24,8 @@ Windows では、Node の `child_process` で起動した子プロセスに `win
 
 単一の module `src/runtime/windows-hide.ts` (計画。本 PR では実装しない) を置く。この module は **import した時点で** `node:child_process` の次の 7 関数を差し替える: `spawn` / `spawnSync` / `execFile` / `execFileSync` / `exec` / `execSync` / `fork`。
 
+doctor の `windows-hide` check は `src/doctor/windows-hide.ts` に置き、§5 の静的検査を担当する。
+
 - **既定規則**: 呼び出しの options の `windowsHide` が `undefined` (キー無しを含む) なら `true` にする。明示の `false` は変えない。`true` はそのまま。
 - **引数形の正規化**: 引数の型で overload を判別する (配列 = args、function = callback、`null` / `undefined` 以外の object = options、`null` / `undefined` = 無し)。`windowsHide` を足した options を、次の表の位置に挿入する。callback は常に最後の引数のまま保つ。
   - `spawn` / `spawnSync` / `execFileSync` / `fork`: `(file)` → `(file, [], {windowsHide:true})`、`(file, args)` → `(file, args, {windowsHide:true})`、`(file, options)` → `(file, copy(options))`、`(file, null|undefined, options)` と `(file, args, options)` は options の copy に足す、`(file, null|undefined)` → `(file, [], {windowsHide:true})`。

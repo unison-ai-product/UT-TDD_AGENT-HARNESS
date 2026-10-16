@@ -168,7 +168,7 @@ PLAN-L6-35 closes the L5 module-integration slice for FR-L1-03's descent-complet
 | obligation generator | upstream requirement + matrix から obligations を drive する (downstream self-declaration には依存しない)。second graph ではなく `relation-graph.ts` node/edge substrate (`requirement`/`design`/`test-design`/`source`/`test`) を reuse する。 | loaded artifacts 上の pure analyzer。relation-graph projection を consume する。 | L6 が `generateObligations` / `analyzeDescentObligations` signatures と DbC を定義する。 |
 | defer ledger + impl-ahead | open defers (`explicit_l7_defer` / `placeholder_deps`, physical-data §7) を read し、src-landed + undischarged design/test-design defer を impl-ahead violation として扱う。 | Pure。defers は input であり mutate しない。 | L6 が defer validity と impl-ahead rule を定義し、L7 が `descent_obligations` projection + `runDoctor` を wire する。 |
 
-これは relation-graph substrate を reuse する新しい `lint/descent-obligation` module を具体化する。pair-freeze (document-driven subset になる) や impl-plan-trace (PLAN-ID coverage) は duplicate しない。Function-level algorithm は L6 に残し、lint/projection/doctor wiring は L7 (add-impl, Codex 委譲) とする。
+これは relation-graph substrate を reuse する新しい `lint/descent-obligation` module を具体化する。pair-freeze (document-driven subset になる) や impl-plan-trace (PLAN-ID coverage) は duplicate しない。impl-plan-trace の source path trace は `docs/plans/*.md` と `docs/design/**/*.md` の本文に現れる同じ `src/...ts` 表記の和集合を入力とし、PLAN 入力を保持したまま設計文書からも辿れるようにする。baseline は既存どおり縮小のみとする。Function-level algorithm は L6 に残し、lint/projection/doctor wiring は L7 (add-impl, Codex 委譲) とする。
 
 ## Appendix B: Harness DB feedback module（feedback モジュール） (PLAN-L5-08)
 
