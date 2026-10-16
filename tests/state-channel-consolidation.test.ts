@@ -4,9 +4,8 @@
  * Unimplemented candidate oracles are intentionally `it.fails` until the
  * later promotion and Green PRs; 004/005 remain ordinary tests because the
  * current CLI already satisfies those acceptance cases.
- * Candidate 017 remains incomplete; candidates 023 and 025–028 remain deferred
- * until the execution-mouth contract is merged. This Red batch does not claim
- * completion of those rows.
+ * Candidate 017 remains incomplete; candidates 027–028 remain deferred.
+ * This Red batch does not claim completion of those rows.
  */
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -17,10 +16,14 @@ import {
   mkdtempSync,
   readdirSync,
   readFileSync,
+  statSync,
+  unlinkSync,
+  utimesSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { buildDoctorCheckDefinitionGroups } from "../src/doctor/check-definition-groups.ts";
 import type { DoctorDeps } from "../src/doctor/runtime-state.ts";
@@ -160,6 +163,38 @@ function freezeTargetSnapshot(
     },
   );
   expect(stagedEvidence.status).toBe(0);
+}
+
+function readIndexedMemoryRows(root: string): Record<string, unknown>[] {
+  const path = join(root, ".ut-tdd", "harness.db");
+  if (!existsSync(path)) return [];
+  const db = new DatabaseSync(path, { readOnly: true });
+  try {
+    return db.prepare("SELECT * FROM memory_entries ORDER BY memory_id").all() as Record<
+      string,
+      unknown
+    >[];
+  } finally {
+    db.close();
+  }
+}
+
+function rewriteTargetSnapshotRows(
+  root: string,
+  rows: readonly { memory_id: string; content_sha256: string }[],
+): void {
+  const lines = [...rows]
+    .sort((left, right) => left.memory_id.localeCompare(right.memory_id))
+    .map((row) => {
+      const encoded = canonicalize(row);
+      if (!encoded.ok) throw new Error("snapshot fixture row must canonicalize");
+      return encoded.value;
+    });
+  writeFileSync(
+    join(root, ".ut-tdd", "archive", "memory-episodes", "target-snapshot.jsonl"),
+    lines.length === 0 ? "" : `${lines.join("\n")}\n`,
+    "utf8",
+  );
 }
 
 afterEach(() => {
@@ -1337,6 +1372,371 @@ describe("Issue #1062: migration is frozen, verifiable, and atomic", () => {
     });
   });
 
-  // CANDIDATE-U-STCHAN-023 / 025–028 are intentionally deferred until the
-  // execution-mouth clarification in L6 §7.1 is merged; do not guess an API.
+  describe("CANDIDATE-U-STCHAN-023: handover prose archive", () => {
+    let root: string;
+    let month: string;
+    let oldPath: string;
+    let recentPath: string;
+    let oldBytes: string;
+    let dryRun: ReturnType<typeof runCli>;
+    let beforeDryRun: string[];
+    let afterDryRun: string[];
+    let archiveRootExistsAfterDryRun: boolean;
+    let archiveRun: ReturnType<typeof runCli>;
+    let afterArchive: string[];
+
+    beforeAll(() => {
+      root = tempRepo();
+      const handoverRoot = join(root, ".ut-tdd", "handover");
+      mkdirSync(join(handoverRoot, "provider"), { recursive: true });
+      mkdirSync(join(handoverRoot, "archive"), { recursive: true });
+      writeFileSync(join(handoverRoot, "CURRENT.json"), '{"active_plan":"PLAN-L7-04"}\n');
+      writeFileSync(join(handoverRoot, ".gitkeep"), "");
+      writeFileSync(join(handoverRoot, "provider", "current.json"), "{}\n");
+      writeFileSync(join(handoverRoot, "archive", "keep.md"), "nested files are not scanned\n");
+      oldPath = join(handoverRoot, "closed-session.md");
+      oldBytes = "historical handover prose\n";
+      writeFileSync(oldPath, oldBytes);
+      recentPath = join(handoverRoot, "running-watch.sh");
+      writeFileSync(recentPath, "#!/bin/sh\nwhile true; do sleep 60; done\n");
+
+      const now = new Date();
+      month = now.toISOString().slice(0, 7);
+      const oldTime = new Date(now.getTime() - 48 * 60 * 60 * 1000);
+      const recentTime = new Date(now.getTime() - 60 * 60 * 1000);
+      utimesSync(oldPath, oldTime, oldTime);
+      utimesSync(recentPath, recentTime, recentTime);
+      expect(statSync(oldPath).mtimeMs).toBeLessThan(now.getTime() - 24 * 60 * 60 * 1000);
+      expect(statSync(recentPath).mtimeMs).toBeGreaterThan(now.getTime() - 24 * 60 * 60 * 1000);
+
+      const archiveRoot = join(root, ".ut-tdd", "archive", "handover-prose");
+      beforeDryRun = snapshotTree(handoverRoot);
+      dryRun = runCli(root, ["handover", "archive", "--dry-run"]);
+      expectStarted(dryRun);
+      expect(dryRun.status).not.toBeNull();
+      afterDryRun = snapshotTree(handoverRoot);
+      archiveRootExistsAfterDryRun = existsSync(archiveRoot);
+
+      archiveRun = runCli(root, ["handover", "archive", "--archive"]);
+      expectStarted(archiveRun);
+      expect(archiveRun.status).not.toBeNull();
+      afterArchive = snapshotTree(root);
+    }, 30_000);
+
+    it.fails("CANDIDATE-U-STCHAN-023: moves only old direct prose with a done manifest and keeps dry-run read-only", () => {
+      expect(dryRun.status).toBe(0);
+      expect(afterDryRun).toEqual(beforeDryRun);
+      expect(archiveRootExistsAfterDryRun).toBe(false);
+      expect(archiveRun.status).toBe(0);
+
+      const destination = join(
+        root,
+        ".ut-tdd",
+        "archive",
+        "handover-prose",
+        month,
+        "closed-session.md",
+      );
+      const manifestPath = join(root, ".ut-tdd", "archive", "handover-prose", "manifest.jsonl");
+      expect(existsSync(oldPath)).toBe(false);
+      expect(readFileSync(destination, "utf8")).toBe(oldBytes);
+      expect(existsSync(recentPath)).toBe(true);
+      expect(readFileSync(recentPath, "utf8")).toContain("while true");
+      for (const path of [
+        ".ut-tdd/handover/CURRENT.json",
+        ".ut-tdd/handover/.gitkeep",
+        ".ut-tdd/handover/provider/current.json",
+        ".ut-tdd/handover/archive/keep.md",
+      ])
+        expect(existsSync(join(root, path))).toBe(true);
+      const manifest = readFileSync(manifestPath, "utf8")
+        .trim()
+        .split(/\r?\n/)
+        .map((line) => JSON.parse(line) as Record<string, unknown>);
+      expect(manifest).toHaveLength(2);
+      expect(manifest.map((row) => row.state)).toEqual(["intent", "done"]);
+      expect(
+        manifest.every(
+          (row) =>
+            Object.keys(row).sort().join(",") ===
+              "destination_path,recorded_at,schema,sha256,source_path,state" &&
+            row.schema === "ut-tdd.handover-prose-archive/v1" &&
+            row.sha256 === createHash("sha256").update(oldBytes, "utf8").digest("hex") &&
+            row.source_path === ".ut-tdd/handover/closed-session.md" &&
+            row.destination_path === `.ut-tdd/archive/handover-prose/${month}/closed-session.md` &&
+            typeof row.recorded_at === "string" &&
+            Number.isFinite(Date.parse(row.recorded_at)),
+        ),
+      ).toBe(true);
+      expect(afterArchive).toContain(
+        `.ut-tdd/archive/handover-prose/${month}/file:closed-session.md:${createHash("sha256").update(oldBytes, "utf8").digest("hex")}`,
+      );
+    });
+  });
+
+  function defineSnapshotMismatchCase(
+    label: string,
+    expectedReason: "target_snapshot_digest_mismatch" | "target_snapshot_missing",
+    mutate: (root: string) => void,
+  ): void {
+    describe(label, () => {
+      let root: string;
+      let result: ReturnType<typeof runCli>;
+      let before: Record<string, unknown>;
+      let after: Record<string, unknown>;
+
+      beforeAll(() => {
+        root = tempRepo();
+        const entries = ["One frozen episode", "Two frozen episode", "Three frozen episode"].map(
+          (title) =>
+            writeMemory({
+              repoRoot: root,
+              input: { kind: "project", title, body: `fixture body for ${title}` },
+            }),
+        );
+        const rebuild = runCli(root, ["db", "rebuild", "--json"]);
+        expectStarted(rebuild);
+        expect(rebuild.status).toBe(0);
+        expect(readIndexedMemoryRows(root)).toHaveLength(entries.length);
+        freezeTargetSnapshot(root, entries);
+        mutate(root);
+        const snapshotPath = join(
+          root,
+          ".ut-tdd",
+          "archive",
+          "memory-episodes",
+          "target-snapshot.jsonl",
+        );
+        const evidencePath = join(root, "docs", "migration", "state-channel-target-snapshot.json");
+        before = {
+          memory: snapshotTree(join(root, ".ut-tdd", "memory")),
+          rows: readIndexedMemoryRows(root),
+          snapshotExists: existsSync(snapshotPath),
+          snapshot: existsSync(snapshotPath) ? readFileSync(snapshotPath, "utf8") : null,
+          evidence: readFileSync(evidencePath, "utf8"),
+          archive: snapshotTree(join(root, ".ut-tdd", "archive", "memory-episodes")),
+          tracked: trackedPaths(
+            root,
+            ".ut-tdd/memory",
+            ".ut-tdd/archive/memory-episodes",
+            "docs/migration/state-channel-target-snapshot.json",
+          ),
+        };
+        result = runCli(root, [
+          "memory",
+          "retire",
+          "--selector",
+          "state-channel-snapshot",
+          "--archive",
+        ]);
+        expectStarted(result);
+        expect(result.status).not.toBeNull();
+        after = {
+          memory: snapshotTree(join(root, ".ut-tdd", "memory")),
+          rows: readIndexedMemoryRows(root),
+          snapshotExists: existsSync(snapshotPath),
+          snapshot: existsSync(snapshotPath) ? readFileSync(snapshotPath, "utf8") : null,
+          evidence: readFileSync(evidencePath, "utf8"),
+          archive: snapshotTree(join(root, ".ut-tdd", "archive", "memory-episodes")),
+          tracked: trackedPaths(
+            root,
+            ".ut-tdd/memory",
+            ".ut-tdd/archive/memory-episodes",
+            "docs/migration/state-channel-target-snapshot.json",
+          ),
+        };
+      }, 30_000);
+
+      it.fails("CANDIDATE-U-STCHAN-025: rejects a frozen target snapshot before moving files or changing index rows", () => {
+        expect(result.status).toBe(1);
+        expect(`${result.stdout}\n${result.stderr}`).toContain(expectedReason);
+        expect(after).toEqual(before);
+      });
+    });
+  }
+
+  function appendCanonicalSnapshotRow(root: string): void {
+    const path = join(root, ".ut-tdd", "archive", "memory-episodes", "target-snapshot.jsonl");
+    const rows = readFileSync(path, "utf8")
+      .trim()
+      .split(/\r?\n/)
+      .map((line) => JSON.parse(line) as { memory_id: string; content_sha256: string });
+    rewriteTargetSnapshotRows(root, [
+      ...rows,
+      { memory_id: "memory:project:added-after-freeze", content_sha256: "a".repeat(64) },
+    ]);
+  }
+
+  function removeCanonicalSnapshotRow(root: string): void {
+    const path = join(root, ".ut-tdd", "archive", "memory-episodes", "target-snapshot.jsonl");
+    const rows = readFileSync(path, "utf8")
+      .trim()
+      .split(/\r?\n/)
+      .map((line) => JSON.parse(line) as { memory_id: string; content_sha256: string });
+    rewriteTargetSnapshotRows(root, rows.slice(1));
+  }
+
+  function replaceCanonicalSnapshotRow(root: string): void {
+    const path = join(root, ".ut-tdd", "archive", "memory-episodes", "target-snapshot.jsonl");
+    const rows = readFileSync(path, "utf8")
+      .trim()
+      .split(/\r?\n/)
+      .map((line) => JSON.parse(line) as { memory_id: string; content_sha256: string });
+    const first = rows[0];
+    if (!first) throw new Error("snapshot fixture row missing");
+    rewriteTargetSnapshotRows(root, [
+      { ...first, content_sha256: "f".repeat(64) },
+      ...rows.slice(1),
+    ]);
+  }
+
+  defineSnapshotMismatchCase(
+    "CANDIDATE-U-STCHAN-025 add row",
+    "target_snapshot_digest_mismatch",
+    appendCanonicalSnapshotRow,
+  );
+  defineSnapshotMismatchCase(
+    "CANDIDATE-U-STCHAN-025 remove row",
+    "target_snapshot_digest_mismatch",
+    removeCanonicalSnapshotRow,
+  );
+  defineSnapshotMismatchCase(
+    "CANDIDATE-U-STCHAN-025 replace row digest",
+    "target_snapshot_digest_mismatch",
+    replaceCanonicalSnapshotRow,
+  );
+  defineSnapshotMismatchCase(
+    "CANDIDATE-U-STCHAN-025 missing snapshot",
+    "target_snapshot_missing",
+    (root) => {
+      const path = join(root, ".ut-tdd", "archive", "memory-episodes", "target-snapshot.jsonl");
+      if (!existsSync(path)) throw new Error("snapshot fixture missing before mutation");
+      unlinkSync(path);
+    },
+  );
+
+  function defineWriterExistsCase(
+    label: string,
+    setup: (root: string, base: ReturnType<typeof writeMemory>) => void,
+  ): void {
+    describe(label, () => {
+      let root: string;
+      let result: ReturnType<typeof runCli>;
+      let before: Record<string, unknown>;
+      let after: Record<string, unknown>;
+
+      beforeAll(() => {
+        root = tempRepo();
+        const base = writeMemory({
+          repoRoot: root,
+          input: {
+            kind: "project",
+            title: "Frozen writer fixture",
+            body: "A valid project memory before the writer retry.",
+          },
+        });
+        setup(root, base);
+        const rebuild = runCli(root, ["db", "rebuild", "--json"]);
+        expectStarted(rebuild);
+        expect(rebuild.status).toBe(0);
+        before = {
+          memory: snapshotTree(join(root, ".ut-tdd", "memory")),
+          rows: readIndexedMemoryRows(root),
+          snapshot: existsSync(
+            join(root, ".ut-tdd", "archive", "memory-episodes", "target-snapshot.jsonl"),
+          )
+            ? readFileSync(
+                join(root, ".ut-tdd", "archive", "memory-episodes", "target-snapshot.jsonl"),
+                "utf8",
+              )
+            : null,
+          evidence: existsSync(
+            join(root, "docs", "migration", "state-channel-target-snapshot.json"),
+          )
+            ? readFileSync(
+                join(root, "docs", "migration", "state-channel-target-snapshot.json"),
+                "utf8",
+              )
+            : null,
+          tracked: trackedPaths(
+            root,
+            ".ut-tdd/memory",
+            ".ut-tdd/archive/memory-episodes",
+            "docs/migration/state-channel-target-snapshot.json",
+          ),
+        };
+        if (!base.memory_id) throw new Error("writer fixture memory was not created");
+        result = runCli(root, [
+          "memory",
+          "retire",
+          "--record-target-snapshot",
+          "--recorded-at",
+          "2026-10-16T00:10:00.000Z",
+        ]);
+        expectStarted(result);
+        expect(result.status).not.toBeNull();
+        after = {
+          memory: snapshotTree(join(root, ".ut-tdd", "memory")),
+          rows: readIndexedMemoryRows(root),
+          snapshot: existsSync(
+            join(root, ".ut-tdd", "archive", "memory-episodes", "target-snapshot.jsonl"),
+          )
+            ? readFileSync(
+                join(root, ".ut-tdd", "archive", "memory-episodes", "target-snapshot.jsonl"),
+                "utf8",
+              )
+            : null,
+          evidence: existsSync(
+            join(root, "docs", "migration", "state-channel-target-snapshot.json"),
+          )
+            ? readFileSync(
+                join(root, "docs", "migration", "state-channel-target-snapshot.json"),
+                "utf8",
+              )
+            : null,
+          tracked: trackedPaths(
+            root,
+            ".ut-tdd/memory",
+            ".ut-tdd/archive/memory-episodes",
+            "docs/migration/state-channel-target-snapshot.json",
+          ),
+        };
+      }, 30_000);
+
+      it.fails("CANDIDATE-U-STCHAN-026: refuses to replace an existing frozen snapshot or evidence file", () => {
+        expect(result.status).toBe(1);
+        expect(`${result.stdout}\n${result.stderr}`).toContain("target_snapshot_exists");
+        expect(after).toEqual(before);
+      });
+    });
+  }
+
+  defineWriterExistsCase("CANDIDATE-U-STCHAN-026 same snapshot content", (root, base) => {
+    freezeTargetSnapshot(root, [base]);
+  });
+
+  defineWriterExistsCase("CANDIDATE-U-STCHAN-026 new project memory after freeze", (root, base) => {
+    freezeTargetSnapshot(root, [base]);
+    writeMemory({
+      repoRoot: root,
+      input: {
+        kind: "project",
+        title: "Added after freeze",
+        body: "A later episode must not permit re-freezing.",
+      },
+    });
+  });
+
+  defineWriterExistsCase("CANDIDATE-U-STCHAN-026 evidence without snapshot", (root) => {
+    const evidencePath = join(root, "docs", "migration", "state-channel-target-snapshot.json");
+    mkdirSync(join(root, "docs", "migration"), { recursive: true });
+    const evidence = canonicalize({
+      schema: "ut-tdd.state-channel-target-snapshot/v1",
+      sha256: createHash("sha256").update("", "utf8").digest("hex"),
+      count: 0,
+      recorded_at: "2026-10-16T00:00:00.000Z",
+    });
+    if (!evidence.ok) throw new Error("snapshot evidence fixture must canonicalize");
+    writeFileSync(evidencePath, `${evidence.value}\n`, "utf8");
+  });
 });
