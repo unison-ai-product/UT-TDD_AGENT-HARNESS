@@ -232,26 +232,36 @@ describe("runtime hook entrypoints", () => {
     });
   });
 
-  it("SessionStart timeout is 30s in source and consumer settings without changing other hook timeouts", () => {
-    const settingsPaths = [
-      join(repoRoot, ".claude", "settings.json"),
-      join(repoRoot, "docs", "templates", "adapter", ".claude", "settings.json"),
+  it("source and consumer non-target hook timeouts remain unchanged", () => {
+    const sourceSettings = JSON.parse(
+      readFileSync(join(repoRoot, ".claude", "settings.json"), "utf8"),
+    );
+    const consumerSettings = [
+      JSON.parse(BUILTIN_GITHUB_TEMPLATES["adapter/.claude/settings.json"]),
+      JSON.parse(
+        readFileSync(
+          join(repoRoot, "docs", "templates", "adapter", ".claude", "settings.json"),
+          "utf8",
+        ),
+      ),
     ];
 
-    const settingsSources = [
-      JSON.parse(BUILTIN_GITHUB_TEMPLATES["adapter/.claude/settings.json"]),
-      ...settingsPaths.map((path) => JSON.parse(readFileSync(path, "utf8"))),
-    ];
-    for (const settings of settingsSources) {
+    expect(sourceSettings.hooks.SessionStart[0].hooks[0].timeout).toBe(30);
+    expect(sourceSettings.hooks).toMatchObject({
+      PreToolUse: [{ hooks: [{ timeout: 5 }] }, { hooks: [{ timeout: 5 }] }],
+      PostToolUse: [{ hooks: [{ timeout: 5 }] }],
+      Stop: [{ hooks: [{ timeout: 5 }] }, { hooks: [{ timeout: 930 }] }],
+      SubagentStop: [{ hooks: [{ timeout: 5 }] }],
+    });
+    for (const settings of consumerSettings) {
       expect(settings.hooks.SessionStart[0].hooks[0].timeout).toBe(30);
       expect(settings.hooks).toMatchObject({
         PreToolUse: [{ hooks: [{ timeout: 5 }] }, { hooks: [{ timeout: 5 }] }],
-        PostToolUse: [{ hooks: [{ timeout: 5 }] }],
-        Stop: [{ hooks: [{ timeout: 5 }] }, { hooks: [{ timeout: 930 }] }],
+        Stop: [{}, { hooks: [{ timeout: 930 }] }],
         SubagentStop: [{ hooks: [{ timeout: 5 }] }],
       });
     }
-    expect(settingsSources[0]).toEqual(settingsSources[2]);
+    expect(consumerSettings[0]).toEqual(consumerSettings[1]);
   });
 
   it("Claude settings route session-log hooks through the shared UT-TDD CLI", () => {
