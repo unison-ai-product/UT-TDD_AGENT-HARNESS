@@ -34,9 +34,6 @@ orphan と duplicate ownership を別集合として双方向突合し、remedia
 | `scripts/git-hooks/pre-push` | orphan-deliverable | `PLAN-REVERSE-450-test-traceability-detector-backfill` | W3/W4 機械生成の棚卸し: 過去の未追跡成果物 | 2026-08-31 |
 | `scripts/git-hooks/secret-scan-diff.ts` | orphan-deliverable | `PLAN-REVERSE-450-test-traceability-detector-backfill` | W3/W4 機械生成の棚卸し: 過去の未追跡成果物 | 2026-08-31 |
 | `scripts/ut-tdd` | orphan-deliverable | `PLAN-REVERSE-450-test-traceability-detector-backfill` | W3/W4 機械生成の棚卸し: 過去の未追跡成果物 | 2026-08-31 |
-| `tests/delegation-routing.test.ts` | orphan-deliverable | `PLAN-REVERSE-450-test-traceability-detector-backfill` | W3/W4 機械生成の棚卸し: 過去の未追跡成果物 | 2026-08-31 |
-| `tests/plan-asset/evidence-policy.test.ts` | orphan-deliverable | `PLAN-REVERSE-450-test-traceability-detector-backfill` | W3/W4 機械生成の棚卸し: 過去の未追跡成果物 | 2026-08-31 |
-| `tests/secret-scan-diff.test.ts` | orphan-deliverable | `PLAN-REVERSE-450-test-traceability-detector-backfill` | W3/W4 機械生成の棚卸し: 過去の未追跡成果物 | 2026-08-31 |
 | `tests/setup-agent-floor.test.ts` | orphan-deliverable | `PLAN-REVERSE-450-test-traceability-detector-backfill` | W3/W4 機械生成の棚卸し: 過去の未追跡成果物 | 2026-08-31 |
 | `tests/vmodel-source-assets.test.ts` | orphan-deliverable | `PLAN-REVERSE-450-test-traceability-detector-backfill` | W3/W4 機械生成の棚卸し: 過去の未追跡成果物 | 2026-08-31 |
 | `.claude/agents/ut-tdd-tl.md` | duplicate-artifact-ownership | `PLAN-REVERSE-450-test-traceability-detector-backfill` | W2 機械生成の棚卸し: 複数 PLAN による generates 宣言 | 2026-08-31 |
