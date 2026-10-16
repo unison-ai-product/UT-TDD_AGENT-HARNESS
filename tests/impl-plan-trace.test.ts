@@ -64,7 +64,7 @@ describe("analyzeImplPlanTrace (U-IPT-001..003)", () => {
   });
 });
 
-describe("loadImplPlanTraceInput real repo (U-IPT-004/005)", () => {
+describe("loadImplPlanTraceInput real repo (U-IPT-004/U-IPT-005)", () => {
   it("U-IPT-004: 実 repo の orphan は 0 (4 PLAN back-fill + 3 design trace + 5 baseline 適用後)", () => {
     const r = analyzeImplPlanTrace(loadImplPlanTraceInput(process.cwd()));
     expect(r.orphans).toEqual([]);
