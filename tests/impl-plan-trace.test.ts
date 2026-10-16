@@ -70,17 +70,20 @@ describe("loadImplPlanTraceInput real repo (U-IPT-004/U-IPT-005)", () => {
     expect(r.orphans).toEqual([]);
   });
 
-  it.fails("U-IPT-005: baselineはdesign-source traceを反映して8件から5件へ縮小する", () => {
-    expect(IMPL_PLAN_TRACE_BASELINE.size).toBe(5);
-    expect(IMPL_PLAN_TRACE_BASELINE.has("src/lint/asset-drift.ts")).toBe(false);
-    expect(IMPL_PLAN_TRACE_BASELINE.has("src/lint/g3-trace.ts")).toBe(false);
-    expect(IMPL_PLAN_TRACE_BASELINE.has("src/lint/readability.ts")).toBe(false);
+  it("U-IPT-005: baselineは shrink-only の既存負の回帰網を維持する", () => {
     // 縮小のみ可の回帰網: 新規モジュールを baseline へ足して gate を黙らせない
     // (2026-08-05 に一度 9 件化した実例の再発防止。trace は PLAN 側で持つ)。
     expect(IMPL_PLAN_TRACE_BASELINE.has("src/plan/parent-drive-mismatch-baseline.ts")).toBe(false);
     // IMP-087 orphan は baseline でなく back-fill (trace) で解消
     expect(IMPL_PLAN_TRACE_BASELINE.has("src/lint/rule-drift.ts")).toBe(false);
     expect(IMPL_PLAN_TRACE_BASELINE.has("src/gate/review-tier.ts")).toBe(false);
+  });
+
+  it.fails("U-IPT-005: design-source traceでbaselineは8件から5件へ縮小する", () => {
+    expect(IMPL_PLAN_TRACE_BASELINE.size).toBe(5);
+    expect(IMPL_PLAN_TRACE_BASELINE.has("src/lint/asset-drift.ts")).toBe(false);
+    expect(IMPL_PLAN_TRACE_BASELINE.has("src/lint/g3-trace.ts")).toBe(false);
+    expect(IMPL_PLAN_TRACE_BASELINE.has("src/lint/readability.ts")).toBe(false);
   });
 });
 

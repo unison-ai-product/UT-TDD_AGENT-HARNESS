@@ -129,11 +129,13 @@ analyzeModuleDrift(docs: { listed, actual }) -> { orphans, listedCount, actualCo
 
 ### Impl-Plan-Trace 追補 (IMP-088 / FR-L1-18 descent / PLAN-REVERSE-40)
 
-`module-drift` (src⇔architecture §3.1) と `pair-freeze` (design⇔test-design) はいずれも **PLAN を見ない**ため、「設計 doc に名前が載れば PLAN 無しでも通る」穴 (A-108 orphan の根因) が残る。本 addendum は FR-L1-18 (横断検出・**接続欠損**) の descent として impl→PLAN トレーサビリティを定義する。
+本追補は FR-L1-18 (横断検出・**接続欠損**) の descent として、実装から契約文書へのトレーサビリティを定義する。PLAN 退役中も既存の PLAN reader を残し、`docs/plans/*.md` と再帰的な `docs/design/**/*.md` の本文から、同じ正規表現 `/src\/[A-Za-z0-9_./-]+\.ts/g` で得る src パスの和集合を正本入力とする。設計の module 名だけでなく、実装ファイルの具体的なパスとの接続を検査する。
 
 | 関数 | Signature | pre | post | invariant | oracle |
 |---|---|---|---|---|---|
-| `analyzeImplPlanTrace` | analyzeImplPlanTrace(input: ImplPlanTraceInput) => ImplPlanTraceResult | `src/**.ts` 集合 + PLAN generates/本文に出現した src パス集合 + baseline allowlist が供給される。 | traced でも baseline でもない src を `orphans` に返し、NEW orphan 有無で `ok` を決める。 | baseline は known-debt の段階導入であり**縮小のみ可**。IMP-087 の 4 orphan は baseline でなく PLAN generates への back-fill で trace 解消する。 | U-IPT-001..005 |
+| `analyzeImplPlanTrace` | analyzeImplPlanTrace(input: ImplPlanTraceInput) => ImplPlanTraceResult | `src/**.ts` 集合 + PLAN 本文と設計本文に出現した src パスの和集合 + baseline allowlist が供給される。`loadImplPlanTraceInput` は上記の同一正規表現で両方を読む。 | traced でも baseline でもない src を `orphans` に返し、NEW orphan 有無で `ok` を決める。 | baseline は known-debt の段階導入であり**縮小のみ可**。新たに設計から trace できる既存 3 件は baseline から除外して 8 件から 5 件へ縮小する。既存 PLAN-only の trace と、どちらにも未記載の src の拒否を維持する。 | U-IPT-001..005 |
+
+- **候補 Red**: `CANDIDATE-U-IPT-006` は、深い階層の設計文書だけに記載した src パスを実 loader が読むことを固定する。候補 Red の merge 後、source-free の正式昇格 PR で `U-IPT-006` の宣言とテスト引用を同時に更新し、その後の Green PR で実装する。
 
 - **baseline 根拠**: 2026-06-10 実測 (`find src -name '*.ts'` vs PLAN generates) で 12 孤児。うち 4 (IMP-087: review-tier/rule-drift/team-run/provider-handover) は PLAN-REVERSE-40 generates へ back-fill、残 8 (asset-drift/change-impact/doc-consistency/entity-coverage/g3-trace/improvement-backlog/readability/shared) を baseline。
 - **doctor 配線**: `checkImplPlanTrace(repoRoot)` を **hard/fail-close** で配線。CI 回帰網 `U-IPT-004` と doctor の両方で実 repo orphan 0 を維持する。
