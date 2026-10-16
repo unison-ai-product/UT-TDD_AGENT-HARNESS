@@ -408,13 +408,14 @@ export function collectOracleIds(repoRoot: string): {
   declarationSites: OracleDeclarationSite[];
   citationSites: OracleCitationSite[];
 } {
-  const declared = new Set(collectOracleDeclarationSites(repoRoot).map((site) => site.id));
+  const declarationSites = collectOracleDeclarationSites(repoRoot);
+  const declared = new Set(declarationSites.map((site) => site.id));
   const referenced = new Set<string>();
   collectIds(join(repoRoot, "tests"), ".ts", referenced);
   return {
     declared,
     referenced,
-    declarationSites: collectOracleDeclarationSites(repoRoot),
+    declarationSites,
     citationSites: collectOracleCitationSites(repoRoot),
   };
 }
