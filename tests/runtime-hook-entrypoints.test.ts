@@ -198,6 +198,7 @@ describe("runtime hook entrypoints", () => {
       JSON.parse(BUILTIN_GITHUB_TEMPLATES["adapter/.claude/settings.json"]),
     ];
     for (const settings of claudeSettings) {
+      expect(settings.hooks.SessionStart[0].hooks[0].timeout).toBe(30);
       expect(settings.hooks.PostToolUse[0].hooks[0].timeout).toBe(30);
       expect(settings.hooks.Stop[0].hooks[0].timeout).toBe(30);
       expect(
