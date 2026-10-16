@@ -40,6 +40,7 @@ import { checkHandoverBypass, type HandoverDeps } from "../src/handover/index.ts
 import type { MemoryEntry } from "../src/memory/index.ts";
 import { readMemory, writeMemory } from "../src/memory/service.ts";
 import { buildClaudeProviderReviewInboxEntry } from "../src/runtime/claude-provider-envelope.ts";
+import { resolveProjectMemoryRoot } from "../src/runtime/project-memory-root.ts";
 import { defaultHarnessDbPath, openReadOnlyHarnessDb } from "../src/state-db/index.ts";
 import { ensureTrackedProjectIdentity } from "./support/project-identity-fixture.ts";
 import { removeTestTree } from "./support/temp-tree.ts";
@@ -79,6 +80,76 @@ function requireOnly<T>(values: readonly T[], context: string): T {
   if (values.length !== 1)
     throw new Error(`${context}: expected one value, received ${values.length}`);
   return requireDefined(values[0], context);
+}
+
+function notificationEnvelopeDigest(projectId: string, operationId: string): string {
+  const preimage = JSON.stringify({
+    schemaVersion: "ut-tdd.notification/v1",
+    projectId,
+    operationId,
+    producer: { provider: "codex", sessionId: "producer" },
+    target: { scope: "session", provider: "claude", sessionId: "target" },
+  });
+  return createHash("sha256").update(preimage, "utf8").digest("hex");
+}
+
+function notificationFileStem(entryId: string): string {
+  const safeId = entryId.replace(/[^A-Za-z0-9._-]/g, "_").slice(0, 160);
+  const suffix = createHash("sha256").update(entryId).digest("hex").slice(0, 12);
+  return `${safeId.slice(0, 147)}_${suffix}`;
+}
+
+function writeRawNotificationEntry(
+  repoRoot: string,
+  entry: Record<string, unknown>,
+  binding?: Record<string, unknown>,
+): void {
+  const project = resolveProjectMemoryRoot(repoRoot);
+  if (!project.ok) throw new Error(`notification fixture project root: ${project.reason}`);
+  const runtimeRoot = join(project.runtimeBusRoot, "claude-memory-wake");
+  const stem = notificationFileStem(String(entry.id));
+  const inbox = join(runtimeRoot, "inbox");
+  mkdirSync(inbox, { recursive: true });
+  writeFileSync(join(inbox, `${stem}.json`), `${JSON.stringify(entry)}\n`, "utf8");
+  if (binding) {
+    const bindings = join(runtimeRoot, "envelope-bindings");
+    mkdirSync(bindings, { recursive: true });
+    writeFileSync(join(bindings, `${stem}.json`), `${JSON.stringify(binding)}\n`, "utf8");
+  }
+}
+
+function readRawNotificationEntry(repoRoot: string, operationId: string): Record<string, unknown> {
+  const project = resolveProjectMemoryRoot(repoRoot);
+  if (!project.ok) throw new Error(`notification fixture project root: ${project.reason}`);
+  const inbox = join(project.runtimeBusRoot, "claude-memory-wake", "inbox");
+  const entries = readdirSync(inbox)
+    .filter((file) => file.endsWith(".json"))
+    .map((file) => JSON.parse(readFileSync(join(inbox, file), "utf8")) as Record<string, unknown>);
+  return requireOnly(
+    entries.filter((entry) => entry.operationId === operationId),
+    `notification entry ${operationId}`,
+  );
+}
+
+function expectNotificationClaimAbsent(repoRoot: string, entry: Record<string, unknown>): void {
+  const project = resolveProjectMemoryRoot(repoRoot);
+  if (!project.ok) throw new Error(`notification fixture project root: ${project.reason}`);
+  const runtimeRoot = join(project.runtimeBusRoot, "claude-memory-wake");
+  expect(existsSync(join(runtimeRoot, `${notificationFileStem(String(entry.id))}.claim`))).toBe(
+    false,
+  );
+}
+
+function notificationBinding(entry: Record<string, unknown>): Record<string, unknown> {
+  return {
+    schemaVersion: "ut-tdd.notification-binding/v1",
+    entryId: entry.id,
+    projectId: entry.projectId,
+    operationId: entry.operationId,
+    producer: entry.producer,
+    target: entry.target,
+    envelopeDigest: entry.envelopeDigest,
+  };
 }
 
 function snapshotTree(root: string): string[] {
@@ -882,7 +953,7 @@ describe("Issue #1062: runtime notifications are memory-free", () => {
     }
   });
 
-  it.fails("CANDIDATE-U-STCHAN-017: legacy inbox entry versions remain readable beside notification v1", async () => {
+  it("CANDIDATE-U-STCHAN-017: legacy v3/v4 inbox entries remain readable", async () => {
     const module = await import("../src/runtime/claude-memory-wake.ts");
     const decode = module.decodeClaudeInboxEntry;
     const select = module.selectClaudeInboxEntry;
@@ -915,40 +986,560 @@ describe("Issue #1062: runtime notifications are memory-free", () => {
       target: { scope: "session", provider: "claude", sessionId: "target" },
       now: "2026-10-15T00:00:01.000Z",
     });
-    const notificationV1 = {
-      schemaVersion: "ut-tdd.notification/v1",
-      purpose: "note",
-      id: `note:${"c".repeat(64)}:workspace:${"a".repeat(64)}:op:op-note`,
-      operationId: "op-note",
-      projectId: "fixture-project",
-      producer: { provider: "codex", sessionId: "producer" },
-      target: { scope: "session", provider: "claude", sessionId: "target" },
-      // Shape-valid only: L6 does not define a memory-free v1 digest recipe.
-      // Do not treat this as integrity-valid until that contract is clarified.
-      envelopeDigest: "d".repeat(64),
-      ref: "https://github.com/example/repo/pull/283#issuecomment-1",
-      body: "memory-free notification",
-      targetWorkspaceId: "a".repeat(64),
-      createdAt: "2026-10-15T00:00:02.000Z",
-    };
-    const entries = [oldV3, oldV4, notificationV1].map((entry) => decode(JSON.stringify(entry)));
+    const entries = [oldV3, oldV4].map((entry) => decode(JSON.stringify(entry)));
     expect(entries.every((entry) => entry !== undefined)).toBe(true);
     if (entries.some((entry) => entry === undefined)) return;
     const decoded = entries as NonNullable<(typeof entries)[number]>[];
-    expect(select(decoded, new Set())?.id).toBe("old-v3");
+    expect(select(decoded, new Set())?.id).toBe(oldV3.id);
     const legacyDecision = terminal({
       entry: requireDefined(decoded[0], "v3 entry"),
       claimed: true,
     });
     expect(legacyDecision).toEqual({ terminal: true, reason: "claimed" });
-    expect(select(decoded, new Set(["old-v3"]))?.id).toBe("old-v4");
+    expect(select(decoded, new Set([oldV3.id]))?.id).toBe(oldV4.id);
     expect(terminal({ entry: requireDefined(decoded[1], "v4 entry"), claimed: true })).toEqual({
       terminal: true,
       reason: "claimed",
     });
-    expect(select(decoded, new Set(["old-v3", "old-v4"]))?.id).toBe(notificationV1.id);
-    expect(terminal({ entry: requireDefined(decoded[2], "v1 notification entry") })).toEqual({
-      terminal: false,
+  });
+
+  it("CANDIDATE-U-STCHAN-017: frozen v1 note digest fixture is independently reproducible", () => {
+    const preimage =
+      '{"schemaVersion":"ut-tdd.notification/v1","projectId":"fixture-project","operationId":"op-note","producer":{"provider":"codex","sessionId":"producer"},"target":{"scope":"session","provider":"claude","sessionId":"target"}}';
+    expect(createHash("sha256").update(preimage, "utf8").digest("hex")).toBe(
+      "97f5c919948ab92a1cfb4006674323b57a3609c0c3f4c5bf068196cf41c8f4e1",
+    );
+    const reviewPreimage =
+      '{"schemaVersion":"ut-tdd.notification/v1","projectId":"fixture-project","operationId":"op-review","producer":{"provider":"codex","sessionId":"producer"},"target":{"scope":"session","provider":"claude","sessionId":"target"}}';
+    expect(createHash("sha256").update(reviewPreimage, "utf8").digest("hex")).toBe(
+      "1517dc861f07fc839ff5e17549a570081f462864de318227d3fd624837b3a623",
+    );
+  });
+
+  it.fails("CANDIDATE-U-STCHAN-017: raw v1 note fixture decodes", async () => {
+    const module = await import("../src/runtime/claude-memory-wake.ts");
+    const digest = "97f5c919948ab92a1cfb4006674323b57a3609c0c3f4c5bf068196cf41c8f4e1";
+    const workspaceId = "a".repeat(64);
+    const notificationV1 = {
+      schemaVersion: "ut-tdd.notification/v1",
+      purpose: "note",
+      id: `note:${digest}:workspace:${workspaceId}:op:op-note`,
+      body: "fixture note",
+      originRuntime: "codex",
+      operationId: "op-note",
+      targetWorkspaceId: workspaceId,
+      createdAt: "2026-10-16T00:00:00.000Z",
+      projectId: "fixture-project",
+      producer: { provider: "codex", sessionId: "producer" },
+      target: { scope: "session", provider: "claude", sessionId: "target" },
+      envelopeDigest: digest,
+      ref: "https://github.com/example/repo/issues/1062#issuecomment-1",
+    };
+    const decoded = module.decodeClaudeInboxEntry(JSON.stringify(notificationV1));
+    expect(decoded).toBeDefined();
+    expect(decoded).toEqual(notificationV1);
+    expect(Object.keys(notificationV1).sort()).toEqual([
+      "body",
+      "createdAt",
+      "envelopeDigest",
+      "id",
+      "operationId",
+      "originRuntime",
+      "producer",
+      "projectId",
+      "purpose",
+      "ref",
+      "schemaVersion",
+      "target",
+      "targetWorkspaceId",
+    ]);
+  });
+
+  describe("CANDIDATE-U-STCHAN-017 v1 filesystem consumers", () => {
+    const fixtureRoots: Record<string, string> = {};
+    const noteOperation = "op-note-integration";
+
+    const makeNote = (repoRoot: string, operationId: string) => {
+      const project = resolveProjectMemoryRoot(repoRoot);
+      if (!project.ok) throw new Error(`notification fixture root: ${project.reason}`);
+      const workspaceId = project.projectNamespace;
+      const projectId = project.projectId;
+      const digest = notificationEnvelopeDigest(projectId, operationId);
+      return {
+        schemaVersion: "ut-tdd.notification/v1",
+        purpose: "note",
+        id: `note:${digest}:workspace:${workspaceId}:op:${operationId}`,
+        body: "isolated v1 notification fixture",
+        originRuntime: "codex",
+        operationId,
+        targetWorkspaceId: workspaceId,
+        createdAt: "2026-10-16T00:00:00.000Z",
+        projectId,
+        producer: { provider: "codex", sessionId: "producer" },
+        target: { scope: "session", provider: "claude", sessionId: "target" },
+        envelopeDigest: digest,
+        ref: `https://github.com/${projectId}/issues/1062#issuecomment-1`,
+      };
+    };
+
+    beforeAll(() => {
+      for (const name of [
+        "note",
+        "note-memoryid",
+        "note-entry-memoryid",
+        "note-v4id",
+        "note-project",
+        "terminals",
+      ]) {
+        const root = mkdtempSync(join(tmpdir(), "ut-tdd-state-channel-v1-"));
+        fixtureRoots[name] = root;
+        ensureTrackedProjectIdentity(
+          root,
+          name === "note-project" ? "fixture/tampered-project" : "fixture/project",
+        );
+      }
+
+      const valid = makeNote(fixtureRoots.note, noteOperation);
+      writeRawNotificationEntry(fixtureRoots.note, valid, notificationBinding(valid));
+
+      const memoryIdEntry = makeNote(fixtureRoots["note-memoryid"], noteOperation);
+      const memoryIdControl = makeNote(fixtureRoots["note-memoryid"], "op-memoryid-control");
+      memoryIdControl.createdAt = "2026-10-15T23:59:59.000Z";
+      memoryIdEntry.createdAt = "2026-10-16T00:00:01.000Z";
+      writeRawNotificationEntry(
+        fixtureRoots["note-memoryid"],
+        memoryIdControl,
+        notificationBinding(memoryIdControl),
+      );
+      writeRawNotificationEntry(fixtureRoots["note-memoryid"], memoryIdEntry, {
+        ...notificationBinding(memoryIdEntry),
+        memoryId: "memory:must-not-be-bound",
+      });
+
+      const entryMemoryIdControl = makeNote(
+        fixtureRoots["note-entry-memoryid"],
+        "op-entry-memoryid-control",
+      );
+      entryMemoryIdControl.createdAt = "2026-10-15T23:59:59.000Z";
+      writeRawNotificationEntry(
+        fixtureRoots["note-entry-memoryid"],
+        entryMemoryIdControl,
+        notificationBinding(entryMemoryIdControl),
+      );
+      const entryMemoryIdEntry = makeNote(fixtureRoots["note-entry-memoryid"], "op-entry-memoryid");
+      entryMemoryIdEntry.createdAt = "2026-10-16T00:00:01.000Z";
+      const entryWithMemoryId = { ...entryMemoryIdEntry, memoryId: "memory:must-not-be-bound" };
+      writeRawNotificationEntry(
+        fixtureRoots["note-entry-memoryid"],
+        entryWithMemoryId,
+        notificationBinding(entryWithMemoryId),
+      );
+
+      const v4IdEntry = makeNote(fixtureRoots["note-v4id"], noteOperation);
+      const v4IdControl = makeNote(fixtureRoots["note-v4id"], "op-v4id-control");
+      v4IdControl.createdAt = "2026-10-15T23:59:59.000Z";
+      v4IdEntry.createdAt = "2026-10-16T00:00:01.000Z";
+      writeRawNotificationEntry(
+        fixtureRoots["note-v4id"],
+        v4IdControl,
+        notificationBinding(v4IdControl),
+      );
+      const legacyId = "fixture-memory:project:fixture-project:op:op-note:env:c891c7d73afce9a3";
+      const v4IdTamper = { ...v4IdEntry, id: legacyId };
+      writeRawNotificationEntry(fixtureRoots["note-v4id"], v4IdTamper, {
+        ...notificationBinding(v4IdTamper),
+        entryId: legacyId,
+      });
+
+      const projectControl = makeNote(fixtureRoots["note-project"], "op-project-control");
+      projectControl.createdAt = "2026-10-15T23:59:59.000Z";
+      writeRawNotificationEntry(
+        fixtureRoots["note-project"],
+        projectControl,
+        notificationBinding(projectControl),
+      );
+      const projectEntry = makeNote(fixtureRoots["note-project"], noteOperation);
+      projectEntry.createdAt = "2026-10-16T00:00:01.000Z";
+      const originalDigest = notificationEnvelopeDigest("fixture/project", noteOperation);
+      const projectTamper = {
+        ...projectEntry,
+        id: `note:${originalDigest}:workspace:${projectEntry.targetWorkspaceId}:op:${noteOperation}`,
+        envelopeDigest: originalDigest,
+      };
+      writeRawNotificationEntry(
+        fixtureRoots["note-project"],
+        projectTamper,
+        notificationBinding(projectTamper),
+      );
+
+      const project = resolveProjectMemoryRoot(fixtureRoots.terminals);
+      if (!project.ok) throw new Error(`notification terminal fixture root: ${project.reason}`);
+      const workspaceId = "a".repeat(64);
+      const noteDigest = "97f5c919948ab92a1cfb4006674323b57a3609c0c3f4c5bf068196cf41c8f4e1";
+      const note = {
+        schemaVersion: "ut-tdd.notification/v1",
+        purpose: "note",
+        id: `note:${noteDigest}:workspace:${workspaceId}:op:op-note`,
+        body: "fixture note",
+        originRuntime: "codex",
+        operationId: "op-note",
+        targetWorkspaceId: workspaceId,
+        createdAt: "2026-10-16T00:00:01.000Z",
+        projectId: "fixture-project",
+        producer: { provider: "codex", sessionId: "producer" },
+        target: { scope: "session", provider: "claude", sessionId: "target" },
+        envelopeDigest: noteDigest,
+        ref: "https://github.com/example/repo/issues/1062#issuecomment-1",
+      };
+      const reviewDigest = "1517dc861f07fc839ff5e17549a570081f462864de318227d3fd624837b3a623";
+      const review = {
+        schemaVersion: "ut-tdd.notification/v1",
+        purpose: "review",
+        id: `review:${reviewDigest}:workspace:${workspaceId}:op:op-review`,
+        body: "fixture review",
+        originRuntime: "codex",
+        operationId: "op-review",
+        targetWorkspaceId: workspaceId,
+        createdAt: "2026-10-16T00:00:02.000Z",
+        projectId: "fixture-project",
+        producer: { provider: "codex", sessionId: "producer" },
+        target: { scope: "session", provider: "claude", sessionId: "target" },
+        envelopeDigest: reviewDigest,
+        requestDigest: "b".repeat(64),
+        requestPath: `.ut-tdd/review/requests/${"b".repeat(64)}.json`,
+        pr: 283,
+        exactHead: "c".repeat(40),
+        reviewRevision: "revision-1",
+        authorFamily: "claude",
+      };
+      const claimedReviewDigest = notificationEnvelopeDigest(
+        "fixture-project",
+        "op-review-claimed",
+      );
+      const claimedReview = {
+        ...review,
+        id: `review:${claimedReviewDigest}:workspace:${workspaceId}:op:op-review-claimed`,
+        operationId: "op-review-claimed",
+        envelopeDigest: claimedReviewDigest,
+      };
+      writeRawNotificationEntry(fixtureRoots.terminals, note, notificationBinding(note));
+      writeRawNotificationEntry(fixtureRoots.terminals, review, notificationBinding(review));
+      writeRawNotificationEntry(
+        fixtureRoots.terminals,
+        claimedReview,
+        notificationBinding(claimedReview),
+      );
+      const runtimeRoot = join(project.runtimeBusRoot, "claude-memory-wake");
+      mkdirSync(runtimeRoot, { recursive: true });
+      writeFileSync(join(runtimeRoot, "note.claim"), `${JSON.stringify({ id: note.id })}\n`);
+      writeFileSync(
+        join(runtimeRoot, "review-claimed.claim"),
+        `${JSON.stringify({ id: claimedReview.id })}\n`,
+      );
+    }, 30_000);
+
+    afterAll(() => {
+      for (const root of Object.values(fixtureRoots)) removeTestTree(root);
+    }, 30_000);
+
+    it("017 integration fixture preconditions resolve identity, workspace, digest, and binding", () => {
+      for (const name of [
+        "note",
+        "note-memoryid",
+        "note-entry-memoryid",
+        "note-v4id",
+        "note-project",
+      ]) {
+        const root = fixtureRoots[name];
+        const project = resolveProjectMemoryRoot(root);
+        expect(project.ok, `${name} tracked project identity`).toBe(true);
+        if (!project.ok) continue;
+        const inbox = join(project.runtimeBusRoot, "claude-memory-wake", "inbox");
+        const entries = readdirSync(inbox)
+          .filter((file) => file.endsWith(".json"))
+          .map(
+            (file) =>
+              JSON.parse(readFileSync(join(inbox, file), "utf8")) as Record<string, unknown>,
+          );
+        const control = requireOnly(
+          entries.filter(
+            (entry) =>
+              entry.operationId ===
+              (name === "note-project"
+                ? "op-project-control"
+                : name === "note-memoryid"
+                  ? "op-memoryid-control"
+                  : name === "note-entry-memoryid"
+                    ? "op-entry-memoryid-control"
+                    : name === "note-v4id"
+                      ? "op-v4id-control"
+                      : noteOperation),
+          ),
+          `${name} valid control entry`,
+        );
+        expect(control.projectId).toBe(project.projectId);
+        expect(control.targetWorkspaceId).toBe(project.projectNamespace);
+        expect(control.envelopeDigest).toBe(
+          notificationEnvelopeDigest(project.projectId, String(control.operationId)),
+        );
+        const bindingPath = join(
+          project.runtimeBusRoot,
+          "claude-memory-wake",
+          "envelope-bindings",
+          `${notificationFileStem(String(control.id))}.json`,
+        );
+        const binding = JSON.parse(readFileSync(bindingPath, "utf8")) as Record<string, unknown>;
+        expect(Object.keys(binding).sort()).toEqual([
+          "envelopeDigest",
+          "entryId",
+          "operationId",
+          "producer",
+          "projectId",
+          "schemaVersion",
+          "target",
+        ]);
+        expect(binding).toEqual(notificationBinding(control));
+      }
+    });
+
+    it.fails("CANDIDATE-U-STCHAN-017: v1 binding authorizes the valid memory-free note", async () => {
+      const module = await import("../src/runtime/claude-memory-wake.ts");
+      const result = await module.waitForClaudeMemory({
+        repoRoot: fixtureRoots.note,
+        sessionId: "target",
+        pollIntervalMs: 10,
+        maxWaitMs: 100,
+      });
+      expect(result.kind).toBe("delivered");
+      expect(result.entry?.id).toBe(makeNote(fixtureRoots.note, noteOperation).id);
+    });
+
+    it.fails("CANDIDATE-U-STCHAN-017: changed preimage with coherent binding is rejected", async () => {
+      const module = await import("../src/runtime/claude-memory-wake.ts");
+      const validControl = await module.waitForClaudeMemory({
+        repoRoot: fixtureRoots["note-project"],
+        sessionId: "target",
+        pollIntervalMs: 10,
+        maxWaitMs: 100,
+      });
+      expect(validControl.kind).toBe("delivered");
+      expect(validControl.entry?.id).toBe(
+        readRawNotificationEntry(fixtureRoots["note-project"], "op-project-control").id,
+      );
+      const badEntry = readRawNotificationEntry(fixtureRoots["note-project"], noteOperation);
+      expect(module.decodeClaudeInboxEntry(JSON.stringify(badEntry))).toBeDefined();
+      const result = await module.waitForClaudeMemory({
+        repoRoot: fixtureRoots["note-project"],
+        sessionId: "target",
+        pollIntervalMs: 10,
+        maxWaitMs: 100,
+      });
+      expect(result.kind).toBe("denied");
+      expectNotificationClaimAbsent(fixtureRoots["note-project"], badEntry);
+    });
+
+    it.fails("CANDIDATE-U-STCHAN-017: v1 binding rejects an added memoryId key", async () => {
+      const module = await import("../src/runtime/claude-memory-wake.ts");
+      const validControl = await module.waitForClaudeMemory({
+        repoRoot: fixtureRoots["note-memoryid"],
+        sessionId: "target",
+        pollIntervalMs: 10,
+        maxWaitMs: 100,
+      });
+      expect(validControl.kind).toBe("delivered");
+      expect(validControl.entry?.id).toBe(
+        readRawNotificationEntry(fixtureRoots["note-memoryid"], "op-memoryid-control").id,
+      );
+      const badEntry = readRawNotificationEntry(fixtureRoots["note-memoryid"], noteOperation);
+      expect(module.decodeClaudeInboxEntry(JSON.stringify(badEntry))).toBeDefined();
+      const result = await module.waitForClaudeMemory({
+        repoRoot: fixtureRoots["note-memoryid"],
+        sessionId: "target",
+        pollIntervalMs: 10,
+        maxWaitMs: 100,
+      });
+      expect(result.kind).toBe("denied");
+      expectNotificationClaimAbsent(
+        fixtureRoots["note-memoryid"],
+        readRawNotificationEntry(fixtureRoots["note-memoryid"], noteOperation),
+      );
+    });
+
+    it.fails("CANDIDATE-U-STCHAN-017: v1 entry rejects an added memoryId key", async () => {
+      const module = await import("../src/runtime/claude-memory-wake.ts");
+      const repoRoot = fixtureRoots["note-entry-memoryid"];
+      const validControl = await module.waitForClaudeMemory({
+        repoRoot,
+        sessionId: "target",
+        pollIntervalMs: 10,
+        maxWaitMs: 100,
+      });
+      expect(validControl.kind).toBe("delivered");
+      expect(validControl.entry?.id).toBe(
+        readRawNotificationEntry(repoRoot, "op-entry-memoryid-control").id,
+      );
+      const badEntry = readRawNotificationEntry(repoRoot, "op-entry-memoryid");
+      expect(module.decodeClaudeInboxEntry(JSON.stringify(badEntry))).toBeUndefined();
+      const result = await module.waitForClaudeMemory({
+        repoRoot,
+        sessionId: "target",
+        pollIntervalMs: 10,
+        maxWaitMs: 100,
+      });
+      expect(result.kind).not.toBe("delivered");
+      expectNotificationClaimAbsent(repoRoot, badEntry);
+    });
+
+    it.fails("CANDIDATE-U-STCHAN-017: v1 rejects a v4-format id even when binding entryId agrees", async () => {
+      const module = await import("../src/runtime/claude-memory-wake.ts");
+      const validControl = await module.waitForClaudeMemory({
+        repoRoot: fixtureRoots["note-v4id"],
+        sessionId: "target",
+        pollIntervalMs: 10,
+        maxWaitMs: 100,
+      });
+      expect(validControl.kind).toBe("delivered");
+      expect(validControl.entry?.id).toBe(
+        readRawNotificationEntry(fixtureRoots["note-v4id"], "op-v4id-control").id,
+      );
+      const badEntry = readRawNotificationEntry(fixtureRoots["note-v4id"], noteOperation);
+      expect(module.decodeClaudeInboxEntry(JSON.stringify(badEntry))).toBeUndefined();
+      const result = await module.waitForClaudeMemory({
+        repoRoot: fixtureRoots["note-v4id"],
+        sessionId: "target",
+        pollIntervalMs: 10,
+        maxWaitMs: 100,
+      });
+      expect(result.kind).not.toBe("delivered");
+      expectNotificationClaimAbsent(fixtureRoots["note-v4id"], badEntry);
+    });
+
+    it.fails("CANDIDATE-U-STCHAN-017: claimed and merged v1 terminal markers record, reload, and reject extra keys", async () => {
+      const module = await import("../src/runtime/claude-memory-wake.ts");
+      const root = fixtureRoots.terminals;
+      const pullRequests = [{ pr: 283, state: "MERGED" as const, headSha: "c".repeat(40) }];
+      const project = resolveProjectMemoryRoot(root);
+      if (!project.ok) throw new Error(`notification terminal fixture root: ${project.reason}`);
+      const runtimeRoot = join(project.runtimeBusRoot, "claude-memory-wake");
+      const inbox = join(runtimeRoot, "inbox");
+      const rawEntries = readdirSync(inbox)
+        .filter((name) => name.endsWith(".json"))
+        .map(
+          (name) => JSON.parse(readFileSync(join(inbox, name), "utf8")) as Record<string, unknown>,
+        );
+      const noteEntry = requireOnly(
+        rawEntries.filter((entry) => entry.operationId === "op-note"),
+        "fixed v1 note",
+      );
+      const mergedReviewEntry = requireOnly(
+        rawEntries.filter((entry) => entry.operationId === "op-review"),
+        "fixed v1 review",
+      );
+      const claimedReviewEntry = requireOnly(
+        rawEntries.filter((entry) => entry.operationId === "op-review-claimed"),
+        "claimed v1 review",
+      );
+      const first = module.recoverClaudeInboxBacklog({
+        repoRoot: root,
+        pullRequests,
+        dryRun: false,
+        now: "2026-10-16T00:00:05.000Z",
+      });
+      expect(first.inspected).toBe(3);
+      expect(first.terminalized).toBe(3);
+      const markers = readdirSync(runtimeRoot)
+        .filter((name) => name.endsWith(".terminal.json"))
+        .map(
+          (name) =>
+            JSON.parse(readFileSync(join(runtimeRoot, name), "utf8")) as Record<string, unknown>,
+        );
+      const noteMarker = requireOnly(
+        markers.filter((marker) => marker.entryId === noteEntry.id),
+        "v1 note marker",
+      );
+      const claimedReviewMarker = requireOnly(
+        markers.filter((marker) => marker.entryId === claimedReviewEntry.id),
+        "v1 claimed review marker",
+      );
+      const mergedReviewMarker = requireOnly(
+        markers.filter((marker) => marker.entryId === mergedReviewEntry.id),
+        "v1 merged review marker",
+      );
+      expect(noteMarker.entryId).toBe(noteEntry.id);
+      expect(claimedReviewMarker.entryId).toBe(claimedReviewEntry.id);
+      expect(mergedReviewMarker.entryId).toBe(mergedReviewEntry.id);
+      expect(Object.keys(noteMarker).sort()).toEqual([
+        "entryId",
+        "purpose",
+        "reason",
+        "schema",
+        "terminalAt",
+      ]);
+      expect(noteMarker).toMatchObject({
+        schema: "ut-tdd.notification-terminal/v1",
+        purpose: "note",
+        reason: "claimed",
+        terminalAt: "2026-10-16T00:00:05.000Z",
+      });
+      for (const marker of [claimedReviewMarker, mergedReviewMarker]) {
+        expect(Object.keys(marker).sort()).toEqual([
+          "authorFamily",
+          "entryId",
+          "exactHead",
+          "pr",
+          "purpose",
+          "reason",
+          "requestDigest",
+          "requestPath",
+          "reviewRevision",
+          "schema",
+          "terminalAt",
+        ]);
+        expect(marker).toMatchObject({
+          schema: "ut-tdd.notification-terminal/v1",
+          purpose: "review",
+          terminalAt: "2026-10-16T00:00:05.000Z",
+          requestDigest: "b".repeat(64),
+          requestPath: `.ut-tdd/review/requests/${"b".repeat(64)}.json`,
+          pr: 283,
+          exactHead: "c".repeat(40),
+          reviewRevision: "revision-1",
+          authorFamily: "claude",
+        });
+        expect(marker).not.toHaveProperty("memoryPath");
+      }
+      expect(claimedReviewMarker.reason).toBe("claimed");
+      expect(mergedReviewMarker.reason).toBe("pr_merged");
+      const reloaded = module.recoverClaudeInboxBacklog({
+        repoRoot: root,
+        pullRequests,
+        dryRun: false,
+      });
+      expect(reloaded.inspected).toBe(3);
+      expect(reloaded.terminalized).toBe(0);
+      expect(readdirSync(inbox).filter((name) => name.endsWith(".json"))).toHaveLength(3);
+
+      const noteMarkerPath = join(
+        runtimeRoot,
+        `${notificationFileStem(String(noteEntry.id))}.terminal.json`,
+      );
+      writeFileSync(
+        noteMarkerPath,
+        `${JSON.stringify({ ...noteMarker, memoryId: "unexpected" })}\n`,
+      );
+      const malformedReload = module.recoverClaudeInboxBacklog({
+        repoRoot: root,
+        pullRequests,
+        dryRun: false,
+      });
+      expect(malformedReload.terminalized).toBe(1);
+      expect(malformedReload.entries).toEqual([
+        { entryId: noteEntry.id, reason: "claimed", markerPath: noteMarkerPath },
+      ]);
+      expect(JSON.parse(readFileSync(noteMarkerPath, "utf8"))).toHaveProperty(
+        "memoryId",
+        "unexpected",
+      );
     });
   });
 
