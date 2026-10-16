@@ -4,8 +4,8 @@
  * Unimplemented candidate oracles are intentionally `it.fails` until the
  * later promotion and Green PRs; 004/005 remain ordinary tests because the
  * current CLI already satisfies those acceptance cases.
- * Candidate 017 remains incomplete; candidates 027–028 remain deferred.
- * This Red batch does not claim completion of those rows.
+ * Candidate 017 remains incomplete; these Red oracles do not claim that the
+ * corresponding implementation work is complete.
  */
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -23,7 +23,6 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { DatabaseSync } from "node:sqlite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { buildDoctorCheckDefinitionGroups } from "../src/doctor/check-definition-groups.ts";
 import type { DoctorDeps } from "../src/doctor/runtime-state.ts";
@@ -39,8 +38,9 @@ import { analyzeReviewDispatch } from "../src/feedback/review-dispatch.ts";
 import { runPrMerge } from "../src/feedback/review-merge-gate.ts";
 import { checkHandoverBypass, type HandoverDeps } from "../src/handover/index.ts";
 import type { MemoryEntry } from "../src/memory/index.ts";
-import { writeMemory } from "../src/memory/service.ts";
+import { readMemory, writeMemory } from "../src/memory/service.ts";
 import { buildClaudeProviderReviewInboxEntry } from "../src/runtime/claude-provider-envelope.ts";
+import { defaultHarnessDbPath, openReadOnlyHarnessDb } from "../src/state-db/index.ts";
 import { ensureTrackedProjectIdentity } from "./support/project-identity-fixture.ts";
 import { removeTestTree } from "./support/temp-tree.ts";
 
@@ -168,7 +168,7 @@ function freezeTargetSnapshot(
 function readIndexedMemoryRows(root: string): Record<string, unknown>[] {
   const path = join(root, ".ut-tdd", "harness.db");
   if (!existsSync(path)) return [];
-  const db = new DatabaseSync(path, { readOnly: true });
+  const db = openReadOnlyHarnessDb(path, { repoRoot: root });
   try {
     return db.prepare("SELECT * FROM memory_entries ORDER BY memory_id").all() as Record<
       string,
@@ -1738,5 +1738,304 @@ describe("Issue #1062: migration is frozen, verifiable, and atomic", () => {
     });
     if (!evidence.ok) throw new Error("snapshot evidence fixture must canonicalize");
     writeFileSync(evidencePath, `${evidence.value}\n`, "utf8");
+  });
+
+  function filesBelow(root: string): string[] {
+    if (!existsSync(root)) return [];
+    return readdirSync(root, { withFileTypes: true }).flatMap((entry) => {
+      const path = join(root, entry.name);
+      return entry.isDirectory() ? filesBelow(path) : entry.isFile() ? [path] : [];
+    });
+  }
+
+  function defineChangedTargetBytesCase(
+    label: string,
+    targetIndex: number,
+    mutate: (root: string, entry: ReturnType<typeof writeMemory>) => void,
+  ): void {
+    describe(label, () => {
+      let root: string;
+      let targets: ReturnType<typeof writeMemory>[];
+      let originalBytes: Buffer;
+      let targetBytes: Map<string, Buffer>;
+      let result: ReturnType<typeof runCli>;
+      let before: Record<string, unknown>;
+      let afterFailure: Record<string, unknown>;
+
+      beforeAll(() => {
+        root = tempRepo();
+        targets = [
+          "First frozen byte target",
+          "Second frozen byte target",
+          "Third frozen byte target",
+        ].map((title) =>
+          writeMemory({
+            repoRoot: root,
+            input: { kind: "project", title, body: `fixture body for ${title}` },
+          }),
+        );
+        const rebuild = runCli(root, ["db", "rebuild", "--json"]);
+        expectStarted(rebuild);
+        expect(rebuild.status).toBe(0);
+        expect(readIndexedMemoryRows(root)).toHaveLength(targets.length);
+        freezeTargetSnapshot(root, targets);
+        targetBytes = new Map(
+          targets.map((entry) => [entry.memory_id, readFileSync(join(root, entry.source_path))]),
+        );
+        const target = requireDefined(targets[targetIndex], "selected frozen target");
+        originalBytes = requireDefined(targetBytes.get(target.memory_id), "original target bytes");
+        mutate(root, target);
+        expect(readFileSync(join(root, target.source_path))).not.toEqual(originalBytes);
+        const snapshotPath = join(
+          root,
+          ".ut-tdd",
+          "archive",
+          "memory-episodes",
+          "target-snapshot.jsonl",
+        );
+        const evidencePath = join(root, "docs", "migration", "state-channel-target-snapshot.json");
+        before = {
+          memory: snapshotTree(join(root, ".ut-tdd", "memory")),
+          rows: readIndexedMemoryRows(root),
+          snapshot: readFileSync(snapshotPath, "utf8"),
+          evidence: readFileSync(evidencePath, "utf8"),
+          archive: snapshotTree(join(root, ".ut-tdd", "archive", "memory-episodes")),
+        };
+        result = runCli(root, [
+          "memory",
+          "retire",
+          "--selector",
+          "state-channel-snapshot",
+          "--archive",
+        ]);
+        expectStarted(result);
+        expect(result.status).not.toBeNull();
+        afterFailure = {
+          memory: snapshotTree(join(root, ".ut-tdd", "memory")),
+          rows: readIndexedMemoryRows(root),
+          snapshot: readFileSync(snapshotPath, "utf8"),
+          evidence: readFileSync(evidencePath, "utf8"),
+          archive: snapshotTree(join(root, ".ut-tdd", "archive", "memory-episodes")),
+        };
+      }, 30_000);
+
+      it.fails("CANDIDATE-U-STCHAN-027: fails closed on changed frozen bytes and succeeds after exact restore", () => {
+        expect(result.status).toBe(1);
+        expect(`${result.stdout}\n${result.stderr}`).toContain("target_bytes_changed");
+        expect(afterFailure).toEqual(before);
+
+        const target = requireDefined(targets[targetIndex], "selected frozen target");
+        writeFileSync(join(root, target.source_path), originalBytes);
+        const restoredRun = runCli(root, [
+          "memory",
+          "retire",
+          "--selector",
+          "state-channel-snapshot",
+          "--archive",
+        ]);
+        expectStarted(restoredRun);
+        expect(restoredRun.status).toBe(0);
+        for (const entry of targets) {
+          const source = join(root, entry.source_path);
+          const expectedBytes = requireDefined(targetBytes.get(entry.memory_id), "target bytes");
+          const expectedDigest = createHash("sha256").update(expectedBytes).digest("hex");
+          expect(existsSync(source)).toBe(false);
+          const archivedMatches = filesBelow(
+            join(root, ".ut-tdd", "archive", "memory-episodes"),
+          ).filter(
+            (path) =>
+              createHash("sha256").update(readFileSync(path)).digest("hex") === expectedDigest,
+          );
+          expect(archivedMatches).toHaveLength(1);
+        }
+        expect(readIndexedMemoryRows(root)).toHaveLength(0);
+      });
+    });
+  }
+
+  defineChangedTargetBytesCase(
+    "CANDIDATE-U-STCHAN-027 one-byte body mutation",
+    0,
+    (root, entry) => {
+      const path = join(root, entry.source_path);
+      const bytes = readFileSync(path);
+      const bodyOffset = bytes.indexOf(Buffer.from("fixture body for"));
+      if (bodyOffset < 0) throw new Error("memory fixture body marker missing");
+      bytes[bodyOffset] = bytes[bodyOffset] === 0x66 ? 0x67 : 0x66;
+      writeFileSync(path, bytes);
+    },
+  );
+
+  defineChangedTargetBytesCase(
+    "CANDIDATE-U-STCHAN-027 post-freeze durable reason mutation",
+    1,
+    (root, entry) => {
+      addDurableReason(root, entry.source_path, "added after the frozen snapshot");
+    },
+  );
+
+  describe("CANDIDATE-U-STCHAN-028: isolated actual archive keeps rows and search aligned", () => {
+    let root: string;
+    let targets: ReturnType<typeof writeMemory>[];
+    let durableBeforeFreeze: ReturnType<typeof writeMemory>;
+    let durableAfterFreeze: ReturnType<typeof writeMemory>;
+    let untrackedFeedback: ReturnType<typeof writeMemory>;
+    let trackedFeedback: ReturnType<typeof writeMemory>;
+    let entries: ReturnType<typeof writeMemory>[];
+    let originalBytes: Map<string, Buffer>;
+    let beforeRows: Record<string, unknown>[];
+    let archiveRun: ReturnType<typeof runCli>;
+    let afterRows: Record<string, unknown>[];
+    let statusRun: ReturnType<typeof runCli>;
+    let sourceFilesAfter: string[];
+
+    beforeAll(() => {
+      root = tempRepo();
+      targets = ["First archived episode", "Second archived episode"].map((title) =>
+        writeMemory({
+          repoRoot: root,
+          input: { kind: "project", title, body: `episode body for ${title}` },
+        }),
+      );
+      durableBeforeFreeze = writeMemory({
+        repoRoot: root,
+        input: {
+          kind: "project",
+          title: "R1 frozen durable",
+          body: "Keep this frozen constraint.",
+        },
+      });
+      addDurableReason(root, durableBeforeFreeze.source_path, "durable before snapshot");
+      freezeTargetSnapshot(root, [...targets, durableBeforeFreeze]);
+
+      // Candidate 028 exercises archive retention of R2's persisted shape only;
+      // admission through the cutover memory-add policy is a separate oracle.
+      durableAfterFreeze = writeMemory({
+        repoRoot: root,
+        input: { kind: "project", title: "R2 later durable", body: "Keep this later constraint." },
+      });
+      addDurableReason(root, durableAfterFreeze.source_path, "accepted after snapshot");
+      untrackedFeedback = writeMemory({
+        repoRoot: root,
+        input: { kind: "feedback", title: "Untracked feedback lesson", body: "Keep searchable." },
+      });
+      trackedFeedback = writeMemory({
+        repoRoot: root,
+        input: {
+          kind: "feedback",
+          title: "Tracked feedback lesson",
+          body: "Keep tracked and searchable.",
+        },
+      });
+      const staged = spawnSync("git", ["add", trackedFeedback.source_path], {
+        cwd: root,
+        encoding: "utf8",
+        windowsHide: true,
+      });
+      expect(staged.status).toBe(0);
+      entries = [
+        ...targets,
+        durableBeforeFreeze,
+        durableAfterFreeze,
+        untrackedFeedback,
+        trackedFeedback,
+      ];
+      originalBytes = new Map(
+        entries.map((entry) => [entry.memory_id, readFileSync(join(root, entry.source_path))]),
+      );
+
+      const rebuild = runCli(root, ["db", "rebuild", "--json"]);
+      expectStarted(rebuild);
+      expect(rebuild.status).toBe(0);
+      beforeRows = readIndexedMemoryRows(root);
+      expect(beforeRows).toHaveLength(entries.length);
+      const beforeDbStatus = runCli(root, ["db", "status", "--json"]);
+      expectStarted(beforeDbStatus);
+      expect(beforeDbStatus.status).toBe(0);
+
+      archiveRun = runCli(root, [
+        "memory",
+        "retire",
+        "--selector",
+        "state-channel-snapshot",
+        "--archive",
+      ]);
+      expectStarted(archiveRun);
+      expect(archiveRun.status).not.toBeNull();
+      afterRows = readIndexedMemoryRows(root);
+      sourceFilesAfter = filesBelow(join(root, ".ut-tdd", "memory"));
+      statusRun = runCli(root, ["db", "status", "--json"]);
+      expectStarted(statusRun);
+      expect(statusRun.status).not.toBeNull();
+    }, 30_000);
+
+    it.fails("CANDIDATE-U-STCHAN-028: archives two target rows while retained memories remain searchable", () => {
+      expect(archiveRun.status).toBe(0);
+      const movedIds = new Set(targets.map((entry) => entry.memory_id));
+      const retainedEntries = entries.filter((entry) => !movedIds.has(entry.memory_id));
+      const expectedRetainedRows = beforeRows.filter((row) => !movedIds.has(String(row.memory_id)));
+      expect(afterRows).toEqual(expectedRetainedRows);
+      expect(afterRows).toHaveLength(4);
+      expect(sourceFilesAfter.sort()).toEqual(
+        retainedEntries.map((entry) => join(root, entry.source_path)).sort(),
+      );
+
+      const archiveFiles = filesBelow(join(root, ".ut-tdd", "archive", "memory-episodes"));
+      for (const entry of targets) {
+        const source = join(root, entry.source_path);
+        const bytes = requireDefined(originalBytes.get(entry.memory_id), "target source bytes");
+        const digest = createHash("sha256").update(bytes).digest("hex");
+        expect(existsSync(source)).toBe(false);
+        expect(
+          archiveFiles.filter(
+            (path) => createHash("sha256").update(readFileSync(path)).digest("hex") === digest,
+          ),
+        ).toHaveLength(1);
+      }
+
+      for (const entry of retainedEntries) {
+        const source = join(root, entry.source_path);
+        expect(readFileSync(source)).toEqual(
+          requireDefined(originalBytes.get(entry.memory_id), "retained source bytes"),
+        );
+        const search = runCli(root, ["memory", "list", "--query", entry.title]);
+        expectStarted(search);
+        expect(search.status).toBe(0);
+        expect(search.stdout).toContain(entry.title);
+      }
+      for (const entry of targets) {
+        const search = runCli(root, ["memory", "list", "--query", entry.title]);
+        expectStarted(search);
+        expect(search.status).toBe(0);
+        expect(search.stdout).not.toContain(entry.title);
+      }
+
+      expect(trackedPaths(root, trackedFeedback.source_path)).toEqual([
+        trackedFeedback.source_path,
+      ]);
+      expect(trackedPaths(root, untrackedFeedback.source_path)).toEqual([]);
+      expect(durableBeforeFreeze.memory_id).not.toBe(durableAfterFreeze.memory_id);
+      const dbStatus = JSON.parse(statusRun.stdout) as {
+        initialized: boolean;
+        schemaVersion: number;
+        expectedVersion: number;
+        missingTables: string[];
+      };
+      expect(dbStatus.initialized).toBe(true);
+      expect(dbStatus.schemaVersion).toBe(dbStatus.expectedVersion);
+      expect(dbStatus.missingTables).toEqual([]);
+      const db = openReadOnlyHarnessDb(defaultHarnessDbPath(root), { repoRoot: root });
+      let memoryRead: ReturnType<typeof readMemory>;
+      try {
+        memoryRead = readMemory({ repoRoot: root, db });
+      } finally {
+        db.close();
+      }
+      expect(memoryRead.freshness).toBe("fresh");
+      expect(memoryRead.entries.map((entry) => entry.memory_id).sort()).toEqual(
+        retainedEntries.map((entry) => entry.memory_id).sort(),
+      );
+      expect(afterRows.length + movedIds.size).toBe(beforeRows.length);
+    }, 30_000);
   });
 });
