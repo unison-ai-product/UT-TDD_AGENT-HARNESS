@@ -881,7 +881,8 @@ PR2 (`add-feature`) は昇格 PR merge 後の main から開始し、PLAN-L7-423
 
 - U-FR-L1-01..U-FR-L1-50 are defined by `docs/design/harness/L6-function-design/fr-unit-coverage.md`.
 - U-FR-L1-51 covers artifact progress red/yellow/green derivation from linked test evidence, dependency impact, and recovery/fullback evidence.
-- U-FR-L1-48 covers command catalog generation from the actual CLI surface. After PLAN-REVERSE-395, the oracle must distinguish top-level/subcommand paths, JSON-capable commands, expected exit profiles (0/1/2/provider-propagated), and registrar-owned command families (`codex`/`claude`, `distribution`, `feedback`). Shell completion design must consume this catalog and must not invent unregistered command paths.
+- U-FR-L1-34 / U-FR-L1-35 / U-FR-L1-40 の対象 (`prioritizeCapabilityGaps` / `renderFoundationReadiness` / `resolveDriveStatePartition` と `validateDriveStatePartitions`、`src/workflow/contracts-extras.ts`) は #1084 で退役する。src から import する live な呼び出し元が無く、`tests/workflow-contracts.test.ts` の対応ケースは自分が渡した入力を照合するだけである。oracle ID は削除せず退役扱いにし、後続の実装 PR が実装とテストを撤去する (退役は oracle-test-trace の baseline を増やさない)。契約は未配線の設計済み範囲として残る。
+- U-FR-L1-48 は command catalog の生成を扱う。`buildCommandCatalog` と `ut-tdd builder catalog` は #1084 で退役した (固定配列を自分自身に照合するだけで、実際の CLI 面を読まない自己検証だったため)。live な範囲は `catalogAutomationAssets` (`ut-tdd asset catalog`、`tests/asset-catalog.test.ts`) である。下記の CLI 面 oracle は未配線の設計済み範囲として残り (external-if.md §(g)、PLAN-L6-64 / PLAN-L7-449)、live な実装はまだ満たしていない。 PLAN-REVERSE-395 以降、この oracle は top-level と subcommand の path、JSON 出力に対応する command、想定する exit profile (0/1/2/provider から伝播)、registrar が所有する command family (`codex`/`claude`、`distribution`、`feedback`) を区別しなければならない。shell completion の設計はこの catalog を使い、登録されていない command path を作り出してはならない。
 - The executable guard is `src/lint/l6-fr-coverage.ts`: it parses the L1 FR registry and fails when any registered FR lacks an L6 spec path, deterministic unit contract, or U-* oracle.
 - This addendum is the L7 Red entry contract for L6 completion: each U-FR-L1-* row must become a focused unit test or be explicitly re-routed by a later confirmed PLAN.
 
@@ -1654,6 +1655,8 @@ identity は `(memoryId, pr, exactHead, reviewRevision)` とし、入力順・re
 
 実行対応: `tests/review-dispatch.test.ts` (`U-RVDISP-001`〜`052`) と
 `tests/review-projection-reconciliation.test.ts` (`U-RVDISP-053`〜`063`)。
+
+**退役予定 (#1084)**: `reconcileReviewProjection` (`src/feedback/review-projection-reconciliation.ts`) は production の呼び出し元が無い (`src/` の import 0 件)。request / receipt の identity 照合と fail-close は live の `analyzeReviewDispatch` (`src/feedback/review-merge-gate.ts` の `evaluateMergeGate` → `ut-tdd pr merge`、`src/feedback/post-merge-backstop.ts`) が担い、`U-RVDISP-001`〜`052` と `U-RVMG-*` が検証する。`U-RVDISP-053`〜`063` は、実装 PR が `src/feedback/review-projection-reconciliation.ts` と `tests/review-projection-reconciliation.test.ts` を撤去するときに撤回する。それまでは `oracle-test-trace` (宣言と test citation の対) のため行を残す。filename digest を権限としない境界 (`U-RVDISP-057`・`063`) は live の経路に対応物が無く、退役とともに失われる。
 
 Issue #412 実測 (2026-08-26): Red `a5250930` で timestamp-only replay の旧競合挙動を再現し、
 Green `6e8e14bb` で U-RVDISP-021 を更新した。Node detached snapshotでreview-dispatch 52件と
