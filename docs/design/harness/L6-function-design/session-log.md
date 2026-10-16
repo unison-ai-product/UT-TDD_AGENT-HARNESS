@@ -120,6 +120,36 @@ compressPlanDigest(events, planId, prev):
 - `.gitignore` に `.ut-tdd/logs/` を追加。
 - `.claude/settings.json`: `SessionStart` / `PostToolUse(Edit|Write|MultiEdit|Bash|PowerShell)` / `Stop` に登録。**`blockOnFailure` を付けない (fail-open)**。Windows ネイティブ Claude Code の主シェルツール `PowerShell` を matcher に含める (PLAN-RECOVERY-13 / issue #86: 除外時は Windows セッションのシェル操作が session log / hook_events から構造的に欠落する)。
 
+### consumer記録hookのtimeout予算 (Issue #1057)
+
+Pack が consumer に生成する設定では、従来5秒だった記録hookを30秒にする。対象は
+Claude の `PostToolUse` と `Stop`、Codex の `SessionStart`・`PostToolUse`・`Stop`。
+Claude `SessionStart` は既存の30秒を維持する。ソース開発repoの設定はこの契約の対象外とし、
+guard hook と Claude 非同期 memory-wake hook の予算も変更しない。
+
+30秒はhost側の上限であり、すべてのeventが永続化される保証ではない。hostが期限で
+hookを強制終了した場合、eventは記録されないか途中までになる可能性がある。session-logは
+引き続きbest-effort/fail-openでworkflowをblockしない。期限切れeventを自動再実行したり、
+queueへ積んだりしない。通常returnとI/O failureの既存exit-0挙動を維持し、exactly-onceや
+timeout recoveryは保証しない。
+
+timeoutが束縛するのはforegroundのhook processだけである。Stop handlerが明示的にdetach
+するwork（harness DB refreshを含む）はhookのwall-clock durationに含めず、このbudgetを
+延長・消費しない。
+
+予算の根拠と計測境界: Issue #1057はWindows consumerのPostToolUse 5,443ms、Stop 7,181msを
+報告した。別のwarm Windows計測では、DB初期化済みの隔離fixtureでNode v24.13.0と
+project-local bundled `.mjs` consumerを使った。直接SessionStartを3回起動した時間は
+5,598ms（CPU Load 96→9%）、4,694ms（0→13%）、5,057ms（15→4%）。直接PostToolUseは
+1,033ms（1→17%）、690ms（3→51%）、1,001ms（87→82%）だった。これは直接Node entrypointの
+時間であり、Codex shell wrapperの時間ではない。また、Issue #1057のPostToolUse観測値とも
+異なる。Node/CLI/Git各phaseの費用は未特定であり、独立した計測値を単純減算してphase内訳を
+主張しない。隔離fixtureでStop hook本体は791msでreturnし、別detachのDB refresh workerは
+140.5秒動いた。このworker時間はIssue #1057の7,181ms hook計測に含めない。
+
+後続Greenでは、既存のtimeout parity testを対象外hookのみ不変とする検査へ更新する。Pack
+consumer templateだけを変更するため、source開発repo設定との全面一致は要求しない。
+
 ## §6 fail-open 設計 (agent-guard fail-close との対比)
 
 | 比較項目 | agent-guard | session-log |
