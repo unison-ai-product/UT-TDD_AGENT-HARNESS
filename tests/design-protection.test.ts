@@ -1,9 +1,9 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
-import { pathToFileURL } from "node:url";
+import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
+import * as designProtection from "../src/github/design-protection.ts";
 import {
   type GitCommandPort,
   GitDiffAdapterError,
@@ -73,10 +73,7 @@ interface GateApi {
 }
 
 async function loadGate(): Promise<GateApi> {
-  // Resolve at test time so this file compiles before the production subject exists.
-  // If it is absent, that import failure is deliberately not treated as per-guard proof.
-  const subjectUrl = pathToFileURL(resolve(REPO_ROOT, "src/github/design-protection.ts")).href;
-  return (await import(subjectUrl)) as unknown as GateApi;
+  return designProtection as unknown as GateApi;
 }
 
 function nul(...fields: string[]): Uint8Array {
@@ -196,7 +193,7 @@ function repoState(root: string): string[] {
 }
 
 describe("design-protection contract Red", () => {
-  it.fails("U-DPROT-001: implementation PR の design M を拒否する", async () => {
+  it("U-DPROT-001: implementation PR の design M を拒否する", async () => {
     const result = await check([
       { kind: "modified", path: "src/a.ts" },
       { kind: "modified", path: "docs/design/harness/x.md" },
@@ -208,7 +205,7 @@ describe("design-protection contract Red", () => {
     });
   });
 
-  it.fails("U-DPROT-002: implementation PR の design D を拒否する", async () => {
+  it("U-DPROT-002: implementation PR の design D を拒否する", async () => {
     const result = await check([
       { kind: "modified", path: "src/a.ts" },
       { kind: "deleted", path: "docs/design/harness/x.md" },
@@ -218,7 +215,7 @@ describe("design-protection contract Red", () => {
     ]);
   });
 
-  it.fails("U-DPROT-003: protected design 内外への rename は旧pathを理由に拒否する", async () => {
+  it("U-DPROT-003: protected design 内外への rename は旧pathを理由に拒否する", async () => {
     const api = await loadGate();
     const cases: Change[][] = [
       [
@@ -242,7 +239,7 @@ describe("design-protection contract Red", () => {
     }
   });
 
-  it.fails("U-DPROT-004: protected への新規追加/外部からのrenameは許可する", async () => {
+  it("U-DPROT-004: protected への新規追加/外部からのrenameは許可する", async () => {
     const result = await check([
       { kind: "modified", path: "src/a.ts" },
       { kind: "added", path: "docs/design/harness/new.md" },
@@ -251,7 +248,7 @@ describe("design-protection contract Red", () => {
     expect(result).toMatchObject({ ok: true, classification: "implementation", violations: [] });
   });
 
-  it.fails("U-DPROT-005: implementation PR の test-design M を拒否する", async () => {
+  it("U-DPROT-005: implementation PR の test-design M を拒否する", async () => {
     const result = await check([
       { kind: "modified", path: "src/a.ts" },
       { kind: "modified", path: "docs/test-design/harness/y.md" },
@@ -264,7 +261,7 @@ describe("design-protection contract Red", () => {
     );
   });
 
-  it.fails("U-DPROT-006: scripts-only change もimplementationに分類する", async () => {
+  it("U-DPROT-006: scripts-only change もimplementationに分類する", async () => {
     const api = await loadGate();
     expect(api.classifyPullRequestChanges([{ kind: "modified", path: "scripts/b.sh" }])).toBe(
       "implementation",
@@ -284,7 +281,7 @@ describe("design-protection contract Red", () => {
     );
   });
 
-  it.fails("U-DPROT-007: rename from 側のsrc pathもimplementation判定に含める", async () => {
+  it("U-DPROT-007: rename from 側のsrc pathもimplementation判定に含める", async () => {
     const api = await loadGate();
     const changes: Change[] = [
       { kind: "renamed", from: "src/a.ts", path: "lib/a.ts" },
@@ -301,7 +298,7 @@ describe("design-protection contract Red", () => {
     );
   });
 
-  it.fails("U-DPROT-008: contract+Red PR のdesign/test-design/tests変更は通す", async () => {
+  it("U-DPROT-008: contract+Red PR のdesign/test-design/tests変更は通す", async () => {
     const result = await check([
       { kind: "modified", path: "docs/design/harness/x.md" },
       { kind: "modified", path: "docs/test-design/harness/y.md" },
@@ -316,7 +313,7 @@ describe("design-protection contract Red", () => {
     });
   });
 
-  it.fails("U-DPROT-009: non-implementation分類とhooks/workflow非保証境界を保つ", async () => {
+  it("U-DPROT-009: non-implementation分類とhooks/workflow非保証境界を保つ", async () => {
     const cases: Change[][] = [
       [
         { kind: "modified", path: "README.md" },
@@ -341,7 +338,7 @@ describe("design-protection contract Red", () => {
     }
   });
 
-  it.fails("U-DPROT-010: 読み取れたempty diffをnon-implementation PASSにする", async () => {
+  it("U-DPROT-010: 読み取れたempty diffをnon-implementation PASSにする", async () => {
     const result = await check([]);
     expect(result).toMatchObject({
       ok: true,
@@ -352,7 +349,7 @@ describe("design-protection contract Red", () => {
     expect(result.error).toBeUndefined();
   });
 
-  it.fails("U-DPROT-011: noncanonical pathを拒否しprefix照合はcase-sensitive", async () => {
+  it("U-DPROT-011: noncanonical pathを拒否しprefix照合はcase-sensitive", async () => {
     const invalid = ["docs\\design\\harness\\x.md", "C:/x", "../x"];
     for (const path of invalid) {
       const result = await check([{ kind: "modified", path }]);
@@ -373,7 +370,7 @@ describe("design-protection contract Red", () => {
     });
   });
 
-  it.fails("U-DPROT-012: unknown status / malformed NUL / missing rename pathはfail-close", async () => {
+  it("U-DPROT-012: unknown status / malformed NUL / missing rename pathはfail-close", async () => {
     const api = await loadGate();
     const fixtures: Array<[Uint8Array, GitDiffAdapterErrorCode]> = [
       [nul("T", "docs/design/harness/x.md"), "git-status-unknown"],
@@ -395,7 +392,7 @@ describe("design-protection contract Red", () => {
     }
   });
 
-  it.fails("U-DPROT-013: 実CLIがargvで運べるinvalid refをtyped BLOCKにする", () => {
+  it("U-DPROT-013: 実CLIがargvで運べるinvalid refをtyped BLOCKにする", () => {
     const { root, base } = initRepo({ "README.md": "seed\n" });
     try {
       const refs = ["refs/heads/nope", "", "bad\tref"];
@@ -426,7 +423,7 @@ describe("design-protection contract Red", () => {
     }
   });
 
-  it.fails("U-DPROT-014: 実CLIはM/D/R違反をJSON/plainで全件path順に返す", () => {
+  it("U-DPROT-014: 実CLIはM/D/R違反をJSON/plainで全件path順に返す", () => {
     const { root, base } = initRepo({
       "src/a.ts": "before\n",
       "docs/design/harness/a-modified.md": "before\n",
@@ -482,7 +479,7 @@ describe("design-protection contract Red", () => {
     }
   });
 
-  it.fails("U-DPROT-015: change順序とPLANの有無で分類/違反は変わらない", async () => {
+  it("U-DPROT-015: change順序とPLANの有無で分類/違反は変わらない", async () => {
     const api = await loadGate();
     const changes: Change[] = [
       { kind: "modified", path: "src/a.ts" },
@@ -516,7 +513,7 @@ describe("design-protection contract Red", () => {
     expect(relevant(resultWithPlan)).toEqual(relevant(resultA));
   });
 
-  it.fails("U-DPROT-017: gate実行とoverride試行はrepo stateを書き換えない", () => {
+  it("U-DPROT-017: gate実行とoverride試行はrepo stateを書き換えない", () => {
     const { root, base } = initRepo({
       "src/a.ts": "before\n",
       "docs/design/harness/x.md": "before\n",
@@ -553,7 +550,7 @@ describe("design-protection contract Red", () => {
     }
   });
 
-  it.fails("U-DPROT-018: implementation PR のtest-design Dを拒否する", async () => {
+  it("U-DPROT-018: implementation PR のtest-design Dを拒否する", async () => {
     const result = await check([
       { kind: "modified", path: "src/a.ts" },
       { kind: "deleted", path: "docs/test-design/harness/y.md" },
@@ -563,7 +560,7 @@ describe("design-protection contract Red", () => {
     );
   });
 
-  it.fails("U-DPROT-019: protected test-design 内外へのrenameを拒否する", async () => {
+  it("U-DPROT-019: protected test-design 内外へのrenameを拒否する", async () => {
     const api = await loadGate();
     const cases: Change[][] = [
       [
@@ -594,7 +591,7 @@ describe("design-protection contract Red", () => {
     }
   });
 
-  it.fails("U-DPROT-020: diff失敗はunit結果unknown/git-command-failedでfail-close", async () => {
+  it("U-DPROT-020: diff失敗はunit結果unknown/git-command-failedでfail-close", async () => {
     const api = await loadGate();
     const result = await api.checkDesignProtection({
       baseRef: "base",
@@ -612,7 +609,7 @@ describe("design-protection contract Red", () => {
     });
   });
 
-  it.fails("U-DPROT-021: C75/C90 copy statusはunknownとして拒否する", async () => {
+  it("U-DPROT-021: C75/C90 copy statusはunknownとして拒否する", async () => {
     const api = await loadGate();
     const fixtures = [
       nul("C75", "src/a.ts", "docs/design/harness/c.md"),
@@ -633,7 +630,7 @@ describe("design-protection contract Red", () => {
     }
   });
 
-  it.fails("U-DPROT-022:実gitのmode-only Mは実装PRで拒否しnon-implementationでは許可", () => {
+  it("U-DPROT-022:実gitのmode-only Mは実装PRで拒否しnon-implementationでは許可", () => {
     const { root, base } = initRepo({
       "src/a.ts": "src\n",
       "docs/design/harness/x.md": "unchanged bytes\n",
@@ -697,7 +694,7 @@ describe("design-protection contract Red", () => {
     }
   });
 
-  it.fails("U-DPROT-023: 実gitはbase/headのtwo-point結果でdelete+re-addを正規化する", () => {
+  it("U-DPROT-023: 実gitはbase/headのtwo-point結果でdelete+re-addを正規化する", () => {
     const changed = initRepo({ "src/a.ts": "before\n", "docs/design/harness/x.md": "original\n" });
     try {
       writeRepoFile(changed.root, "src/a.ts", "after\n");
@@ -753,7 +750,7 @@ describe("design-protection contract Red", () => {
     }
   });
 
-  it.fails("U-DPROT-028: injected pathsがclassificationとprotectionの両方を制御する", async () => {
+  it("U-DPROT-028: injected pathsがclassificationとprotectionの両方を制御する", async () => {
     const paths = { implementation: ["product/"], protected: ["spec/design/"] };
     const blocked = await check(
       [
@@ -795,7 +792,7 @@ describe("design-protection contract Red", () => {
     });
   });
 
-  it.fails("U-DPROT-029: implementation path外renameを拒否し内側renameとcustom prefixを許可", async () => {
+  it("U-DPROT-029: implementation path外renameを拒否し内側renameとcustom prefixを許可", async () => {
     const api = await loadGate();
     const cases: Array<{
       change: Change;
@@ -845,7 +842,7 @@ describe("design-protection contract Red", () => {
     }
   });
 
-  it.fails("U-DPROT-031: NUL/LF/CR refはGitCommandPortを呼ぶ前に拒否する", async () => {
+  it("U-DPROT-031: NUL/LF/CR refはGitCommandPortを呼ぶ前に拒否する", async () => {
     const api = await loadGate();
     for (const baseRef of ["bad\0ref", "bad\nref", "bad\rref"]) {
       const git = new FakeGit(nul());
@@ -859,7 +856,7 @@ describe("design-protection contract Red", () => {
     }
   });
 
-  it.fails("U-DPROT-032: injected CLI handlerはokだけからexit codeとtyped outputを決める", async () => {
+  it("U-DPROT-032: injected CLI handlerはokだけからexit codeとtyped outputを決める", async () => {
     const api = await loadGate();
     const errorGit = new FakeGit(
       nul(),
