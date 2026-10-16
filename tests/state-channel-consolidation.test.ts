@@ -36,7 +36,7 @@ import {
 } from "../src/feedback/review-custody-runner.ts";
 import { analyzeReviewDispatch } from "../src/feedback/review-dispatch.ts";
 import { runPrMerge } from "../src/feedback/review-merge-gate.ts";
-import { checkHandoverBypass, type HandoverDeps } from "../src/handover/index.ts";
+import { checkHandoverBypass, type HandoverDeps, readPointer } from "../src/handover/index.ts";
 import type { MemoryEntry } from "../src/memory/index.ts";
 import { readMemory, writeMemory } from "../src/memory/service.ts";
 import { buildClaudeProviderReviewInboxEntry } from "../src/runtime/claude-provider-envelope.ts";
@@ -1290,8 +1290,8 @@ describe("Issue #1062: runtime notifications are memory-free", () => {
         );
         const binding = JSON.parse(readFileSync(bindingPath, "utf8")) as Record<string, unknown>;
         expect(Object.keys(binding).sort()).toEqual([
-          "envelopeDigest",
           "entryId",
+          "envelopeDigest",
           "operationId",
           "producer",
           "projectId",
@@ -1717,12 +1717,14 @@ describe("Issue #1062: handover prose is retired", () => {
     );
   });
 
-  it.fails("CANDIDATE-U-STCHAN-021: pointer without doc_entry_count does not trigger a handover bypass warning", () => {
+  describe("CANDIDATE-U-STCHAN-021 pointer fixture", () => {
+    const repoRoot = "/repo";
+    const pointer = { active_plan: "PLAN-L7-04" };
     const files = new Map<string, string>([
-      ["/repo/.ut-tdd/handover/CURRENT.json", '{"active_plan":"PLAN-L7-04"}\n'],
+      [join(repoRoot, ".ut-tdd", "handover", "CURRENT.json"), `${JSON.stringify(pointer)}\n`],
     ]);
     const deps: HandoverDeps = {
-      repoRoot: "/repo",
+      repoRoot,
       now: () => "2026-10-16T00:00:00.000Z",
       readText: (path) => files.get(path) ?? null,
       writeText: (path, text) => files.set(path, text),
@@ -1731,7 +1733,14 @@ describe("Issue #1062: handover prose is retired", () => {
           .filter((entry) => entry.startsWith(`${path}/`))
           .map((entry) => entry.slice(path.length + 1)),
     };
-    expect(checkHandoverBypass(deps)).toEqual([]);
+
+    beforeAll(() => {
+      expect(readPointer(deps)).toEqual(pointer);
+    });
+
+    it.fails("CANDIDATE-U-STCHAN-021: pointer without doc_entry_count does not trigger a handover bypass warning", () => {
+      expect(checkHandoverBypass(deps)).toEqual([]);
+    });
   });
 });
 
