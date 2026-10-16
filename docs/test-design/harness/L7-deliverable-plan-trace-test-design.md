@@ -19,7 +19,9 @@ citation の結び付きを使う契約を検証する候補 oracle を定義す
 候補 ID は `docs/test-design/` に宣言する未実装 oracle であり、formal oracle として扱わない。candidate label の
 所有用途は `deliverable-plan-trace` に限られ、`oracle-test-trace` の formal declaration/citation collection や
 formal oracle ID 集合へ混入させない。候補宣言元文書 path と static citation の test file path を結び付け、
-test file path は `tracedPaths` だけに加える。宣言表に test path 文字列を重ねて要求しない。
+test file path は `tracedPaths` だけに加える。候補宣言は formal 宣言と同じ canonical table row/cell 境界に従い、
+ID 専用セル全体との完全一致だけを認める。本文、ID 範囲、再引用、他セル中の部分文字列は宣言ではない。
+宣言表に test path 文字列を重ねて要求しない。
 
 ## 2. 所有証拠の候補 oracle
 
@@ -36,6 +38,7 @@ test label として置く。正式昇格前は candidate ID を formal oracle �
 | `CANDIDATE-U-DPTOWN-006` | PLAN `generates` owner と formal または candidate test-design citation owner の両方を持つ test path | `tracedPaths` projection と既存 duplicate analyzer | test-design citation により test path は traced。`ownersByPath` はPLAN ownerのままで、既存duplicate結果を変えない。複数test-design引用も重複所有でない |
 | `CANDIDATE-U-DPTOWN-007` | `tests/**/*.test.ts` ではない `tests/**/*.ts` path | deliverable artifact classifier | 本契約の test-file owner 補完対象にしない |
 | `CANDIDATE-U-DPTOWN-008` | `scripts/` または `.claude/` の artifact path | deliverable ownership analyzer | 本契約の oracle owner 補完対象にしない。scope は Issue #1088 に委ねる |
+| `CANDIDATE-U-DPTOWN-009` | 隔離 fixture の static test label はあるが、対応する candidate ID は (a) test-design 本文にだけある、または (b) canonical 宣言表の ID 専用セルでなく別セル内の部分文字列にだけある。fixture probe ID は本書の oracle ID と別の合成 ID とする | candidate declaration/citation projection | どちらも宣言として認めず、対象 test path を trace しない。PLAN ownerも無ければ orphan を fail-close する |
 
 ## 3. 境界
 
@@ -49,6 +52,8 @@ test label として置く。正式昇格前は candidate ID を formal oracle �
 - 複数の test-design 文書による同じ test path への citation は許容する。同一 formal ID の重複宣言は既存 `oracle-test-trace` が判定する。
 - formal ID は既存 `collectOracleDeclarationSites` / `collectOracleCitationSites` の exact-ID 規則を再利用する。
   test-design の正式宣言が無い citation を所有証拠に読み替えない。
+- candidate 宣言も canonical table row/cell の ID 専用セル全体との完全一致に限る。本文、範囲、再引用、他セルへの
+  埋め込み・部分一致を宣言として収集しない。
 - `CANDIDATE-*` は deliverable-owner 用途のみに分離し、formal oracle として宣言・引用済みとは扱わない。
 - 既存 duplicate 判定、既存 ledger、test artifact 集合、scripts/.claude の扱いは別責務である。baseline debt は
   縮小のみとし、expired `promote_by` の処理は Issue #1089 に委ねる。

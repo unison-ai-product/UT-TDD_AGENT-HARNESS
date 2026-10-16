@@ -87,8 +87,11 @@ duplicate / baseline 規則に従う。
 
 候補 ID (`CANDIDATE-*`) は未実装 oracle のままであり、formal oracle の宣言集合・citation 集合・
 `OracleCitationSite` へ混ぜない。候補 label が所有証拠になるのは、この gate に限り、`docs/test-design/`
-内の候補宣言と対象 file の同じ候補 ID を持つ static test label が対応する場合だけである。宣言元文書 path と
-static citation の test file path を対応付け、test file path を `tracedPaths` に加える。候補専用経路では、
+内の canonical な候補宣言表で ID 専用セル全体が候補 ID と完全一致し、対象 file の同じ候補 ID を持つ
+static test label citation が対応する場合だけである。候補宣言も formal 宣言と同じ canonical table row/cell
+境界で認定し、本文の記述、ID 範囲、再引用、他セルへの埋め込み、部分文字列一致は宣言に数えない。
+候補専用 collection は候補 ID を formal declaration sites に混ぜない。宣言元文書 path と static citation の
+test file path を対応付け、test file path を `tracedPaths` に加える。候補専用経路では、
 既存の `describe` / `it` / `test` static-label surface と §2 の chained/modifier label の lexical boundary を使い、
 さらに Red の `it.fails("...")` / `test.fails("...")` の静的 label も所有証拠として認める。この追加は候補専用で、
 既存 formal collector の結果を変えず、候補の形式的な昇格・実装完了も意味しない。
