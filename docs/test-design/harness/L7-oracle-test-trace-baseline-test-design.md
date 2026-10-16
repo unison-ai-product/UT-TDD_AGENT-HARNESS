@@ -71,10 +71,10 @@ formal test を既存 production `loadOracleTestTraceInput` の戻り値へ付�
 
 | 既存 formal ID | JSON-backed input に対する既存 assertion (意味は不変) | 候補との関係 |
 |---|---|---|
-| `U-OIDGATE-005` | `input.widenedBaseline` と再導出 widened debt の完全な要素集合一致 | `CANDIDATE-U-OIDBASE-004` の同件数置換 mutation を所有する。004 は独立した継続 oracle ではない |
-| `U-OIDGATE-006` | `input.widenedBaseline` に citation 済み実宣言 ID を混入し、既存集合比較が不一致を検出する | JSON-backed widened を通す既存の stale-baseline assertion を維持する |
-| `U-OIDGATE-007` | `input.baseline.size === 89` と、legacy / widened の交差 0 | 初回 migration の旧定数と JSON の一時的な完全一致だけを `CANDIDATE-U-OIDBASE-001` が担う |
-| `U-OTT-006` | production `loadOracleTestTraceInput` の `input.baseline.size === 89` のみ | 既存の 89 件維持 assertion のみを保持する。例外適用など新しい期待は追加しない |
+| 既存宣言への参照: `U-OIDGATE-005` | `input.widenedBaseline` と再導出 widened debt の完全な要素集合一致 | `CANDIDATE-U-OIDBASE-004` の同件数置換 mutation を所有する。004 は独立した継続 oracle ではない |
+| 既存宣言への参照: `U-OIDGATE-006` | `input.widenedBaseline` に citation 済み実宣言 ID を混入し、既存集合比較が不一致を検出する | JSON-backed widened を通す既存の stale-baseline assertion を維持する |
+| 既存宣言への参照: `U-OIDGATE-007` | `input.baseline.size === 89` と、legacy / widened の交差 0 | 初回 migration の旧定数と JSON の一時的な完全一致だけを `CANDIDATE-U-OIDBASE-001` が担う |
+| 既存宣言への参照: `U-OTT-006` | production `loadOracleTestTraceInput` の `input.baseline.size === 89` のみ | 既存の 89 件維持 assertion のみを保持する。例外適用など新しい期待は追加しない |
 
 候補の独立した主張は `-002/-003` (strict schema/token rejection)、`-005/-006` (subset ratchet)、`-007` (trusted
 base / file read fail-close)、`-008/-009` (明示 root と Pack/OS/cwd)、`-013` (必須 CI 起動) である。`-010` は実 Git
