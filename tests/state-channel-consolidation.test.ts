@@ -1126,7 +1126,7 @@ describe("Issue #1062: runtime notifications are memory-free", () => {
     ]);
   });
 
-  describe("CANDIDATE-U-STCHAN-017 v1 filesystem consumers", () => {
+  describe("U-STCHAN-017 v1 filesystem consumers", () => {
     const fixtureRoots: Record<string, string> = {};
     const terminalWorkspaceIds: Record<string, string> = {};
     const terminalMarkerPaths: Record<string, string> = {};
@@ -1720,7 +1720,7 @@ describe("Issue #1062: runtime notifications are memory-free", () => {
   });
 
   describe.skipIf(!(process.platform === "win32" || process.getuid?.() !== 0))(
-    "CANDIDATE-U-STCHAN-018 permission-denied fixture",
+    "U-STCHAN-018 permission-denied fixture",
     () => {
       let root: string | undefined;
       let memoryPath: string | undefined;
@@ -1893,7 +1893,7 @@ describe("Issue #1062: handover prose is retired", () => {
     );
   });
 
-  describe("CANDIDATE-U-STCHAN-021 pointer fixture", () => {
+  describe("U-STCHAN-021 pointer fixture", () => {
     const repoRoot = "/repo";
     const pointer = { active_plan: "PLAN-L7-04" };
     const files = new Map<string, string>([
@@ -2196,7 +2196,7 @@ describe("Issue #1062: migration is frozen, verifiable, and atomic", () => {
     });
   });
 
-  describe("CANDIDATE-U-STCHAN-023: handover prose archive", () => {
+  describe("U-STCHAN-023: handover prose archive", () => {
     let root: string;
     let month: string;
     let oldPath: string;
@@ -2415,29 +2415,25 @@ describe("Issue #1062: migration is frozen, verifiable, and atomic", () => {
   }
 
   defineSnapshotMismatchCase(
-    "CANDIDATE-U-STCHAN-025 add row",
+    "U-STCHAN-025 add row",
     "target_snapshot_digest_mismatch",
     appendCanonicalSnapshotRow,
   );
   defineSnapshotMismatchCase(
-    "CANDIDATE-U-STCHAN-025 remove row",
+    "U-STCHAN-025 remove row",
     "target_snapshot_digest_mismatch",
     removeCanonicalSnapshotRow,
   );
   defineSnapshotMismatchCase(
-    "CANDIDATE-U-STCHAN-025 replace row digest",
+    "U-STCHAN-025 replace row digest",
     "target_snapshot_digest_mismatch",
     replaceCanonicalSnapshotRow,
   );
-  defineSnapshotMismatchCase(
-    "CANDIDATE-U-STCHAN-025 missing snapshot",
-    "target_snapshot_missing",
-    (root) => {
-      const path = join(root, ".ut-tdd", "archive", "memory-episodes", "target-snapshot.jsonl");
-      if (!existsSync(path)) throw new Error("snapshot fixture missing before mutation");
-      unlinkSync(path);
-    },
-  );
+  defineSnapshotMismatchCase("U-STCHAN-025 missing snapshot", "target_snapshot_missing", (root) => {
+    const path = join(root, ".ut-tdd", "archive", "memory-episodes", "target-snapshot.jsonl");
+    if (!existsSync(path)) throw new Error("snapshot fixture missing before mutation");
+    unlinkSync(path);
+  });
 
   function defineWriterExistsCase(
     label: string,
@@ -2535,11 +2531,11 @@ describe("Issue #1062: migration is frozen, verifiable, and atomic", () => {
     });
   }
 
-  defineWriterExistsCase("CANDIDATE-U-STCHAN-026 same snapshot content", (root, base) => {
+  defineWriterExistsCase("U-STCHAN-026 same snapshot content", (root, base) => {
     freezeTargetSnapshot(root, [base]);
   });
 
-  defineWriterExistsCase("CANDIDATE-U-STCHAN-026 new project memory after freeze", (root, base) => {
+  defineWriterExistsCase("U-STCHAN-026 new project memory after freeze", (root, base) => {
     freezeTargetSnapshot(root, [base]);
     writeMemory({
       repoRoot: root,
@@ -2551,7 +2547,7 @@ describe("Issue #1062: migration is frozen, verifiable, and atomic", () => {
     });
   });
 
-  defineWriterExistsCase("CANDIDATE-U-STCHAN-026 evidence without snapshot", (root) => {
+  defineWriterExistsCase("U-STCHAN-026 evidence without snapshot", (root) => {
     const evidencePath = join(root, "docs", "migration", "state-channel-target-snapshot.json");
     mkdirSync(join(root, "docs", "migration"), { recursive: true });
     const evidence = canonicalize({
@@ -2677,28 +2673,24 @@ describe("Issue #1062: migration is frozen, verifiable, and atomic", () => {
     });
   }
 
-  defineChangedTargetBytesCase(
-    "CANDIDATE-U-STCHAN-027 one-byte body mutation",
-    0,
-    (root, entry) => {
-      const path = join(root, entry.source_path);
-      const bytes = readFileSync(path);
-      const bodyOffset = bytes.indexOf(Buffer.from("fixture body for"));
-      if (bodyOffset < 0) throw new Error("memory fixture body marker missing");
-      bytes[bodyOffset] = bytes[bodyOffset] === 0x66 ? 0x67 : 0x66;
-      writeFileSync(path, bytes);
-    },
-  );
+  defineChangedTargetBytesCase("U-STCHAN-027 one-byte body mutation", 0, (root, entry) => {
+    const path = join(root, entry.source_path);
+    const bytes = readFileSync(path);
+    const bodyOffset = bytes.indexOf(Buffer.from("fixture body for"));
+    if (bodyOffset < 0) throw new Error("memory fixture body marker missing");
+    bytes[bodyOffset] = bytes[bodyOffset] === 0x66 ? 0x67 : 0x66;
+    writeFileSync(path, bytes);
+  });
 
   defineChangedTargetBytesCase(
-    "CANDIDATE-U-STCHAN-027 post-freeze durable reason mutation",
+    "U-STCHAN-027 post-freeze durable reason mutation",
     1,
     (root, entry) => {
       addDurableReason(root, entry.source_path, "added after the frozen snapshot");
     },
   );
 
-  describe("CANDIDATE-U-STCHAN-028: isolated actual archive keeps rows and search aligned", () => {
+  describe("U-STCHAN-028: isolated actual archive keeps rows and search aligned", () => {
     let root: string;
     let targets: ReturnType<typeof writeMemory>[];
     let durableBeforeFreeze: ReturnType<typeof writeMemory>;
