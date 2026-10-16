@@ -190,48 +190,40 @@ doctor 専用経路を追加しない。authority reader と CI-only ratchet rea
 ```ts
 const BASELINE_JSON_PATH = "docs/governance/oracle-test-trace-baseline.json" as const;
 
-type OracleTraceIoFailureReason =
-  | "authority_read_failed"
+type OracleTraceAuthorityFailureReason = "authority_read_failed";
+
+type OracleTraceGitIoFailureReason =
   | "git_first_parent_read_failed"
   | "git_object_read_failed";
 
 type OracleTraceFailureReason =
-  | OracleTraceIoFailureReason
+  | OracleTraceAuthorityFailureReason
   | "baseline_asset_missing"
   | "baseline_json_malformed"
   | "baseline_schema_invalid"
   | "baseline_id_invalid"
   | "baseline_id_duplicate"
-  | "baseline_sets_overlap"
-  | "pr_context_invalid"
-  | "git_first_parent_missing"
-  | "git_baseline_missing"
-  | "trusted_baseline_invalid"
-  | "baseline_growth"
-  | "bootstrap_base_invalid"
-  | "bootstrap_value_mismatch";
+  | "baseline_sets_overlap";
 
 type OracleTracePortResult<T> =
   | { ok: true; value: T }
-  | { ok: false; reason: OracleTraceIoFailureReason };
+  | { ok: false; reason: OracleTraceAuthorityFailureReason };
+
+type OracleTraceGitPortResult<T> =
+  | { ok: true; value: T }
+  | { ok: false; reason: OracleTraceGitIoFailureReason };
 
 type OracleTraceGitPath =
   | typeof BASELINE_JSON_PATH
   | "src/lint/oracle-test-trace-baseline.ts"
   | "src/lint/oracle-test-trace-widened-baseline.ts";
 
+interface OracleTraceAuthority {
+  readText(path: typeof BASELINE_JSON_PATH): OracleTracePortResult<string | null>;
+}
+
 interface OracleTestTracePorts {
-  authority?: {
-    readText(path: typeof BASELINE_JSON_PATH): OracleTracePortResult<string | null>;
-  };
-  ci?: {
-    eventName: string;
-    mergeSha: string;
-    git: {
-      readTextAt(commitSha: string, path: OracleTraceGitPath): OracleTracePortResult<string | null>;
-      readFirstParent(mergeSha: string): OracleTracePortResult<string | null>;
-    };
-  };
+  authority?: OracleTraceAuthority;
 }
 
 loadOracleTestTraceInput(subjectRoot: string, ports?: OracleTestTracePorts)
@@ -239,23 +231,65 @@ loadOracleTestTraceInput(subjectRoot: string, ports?: OracleTestTracePorts)
 
 `authority.readText(BASELINE_JSON_PATH)` はsource checkoutでは既存module-root、clean Packでは既存bundle asset bindingを使う。
 既定adapterも同じ解決規則に従い、consumerの `subjectRoot`、process cwd、任意環境変数をauthority rootにしない。
-呼出し側が任意pathを選べるreaderにはしない。readerの `{ok:true,value:null}` は対象file/blobの不存在、
-`{ok:false,reason:"authority_read_failed"|"git_object_read_failed"}` はI/O失敗を表す。missingとI/Oを同じ理由に畳まない。
+呼出し側が任意pathを選べるreaderにはしない。readerの `{ok:true,value:null}` は対象assetの不存在、
+`{ok:false,reason:"authority_read_failed"}` はI/O失敗を表す。missingとI/Oを同じ理由に畳まない。
 JSON decode後のschema/token/重複検証も上記 `OracleTraceFailureReason` でtypedに失敗し、例外文面を解析しない。
+この optional loader port は authority reader だけを受け取り、Git pair / CI context を受け取らない。
 
-CI port は必須ratchet checkだけが渡し、check境界では省略を `pr_context_invalid` として拒否する。PRでは `eventName` は
-GitHub Actionsの `github.event_name`、`mergeSha` は
-immutable `github.sha` そのものであり、別のevent payloadやbranch名から作らない。eventが `pull_request` の場合は
-`readFirstParent(mergeSha)` でBを解決し、`readTextAt(B, BASELINE_JSON_PATH)` / `readTextAt(mergeSha, BASELINE_JSON_PATH)`
-でbase/head blobを読む。結果のnullは `git_first_parent_missing` / `git_baseline_missing`、reader失敗は
-`git_first_parent_read_failed` / `git_object_read_failed`、不正blobは `trusted_baseline_invalid` とする。明示CI contextが
-不完全・不正なら `pr_context_invalid` でfail-closeする。localからCI portを省略した一引数呼出しはsubsetを実行・主張せず、
-strict current JSON decode と既存analyzerのcomplete-set equalityだけを行う。explicit local pair portは設けない。
+縮小専用比較の独立入口は次のとおりとする。これは既存 loader の option ではなく、既存
+`OracleTestTraceInput` / `OracleTestTraceResult` / `analyzeOracleTestTrace` の集合・出力を変更しない。
 
-subset比較は既存 `OracleTestTraceInput` / `OracleTestTraceResult` / `analyzeOracleTestTrace` を変更せず、required CI ratchet
-boundaryで独立して行う。ここでの `baseline_growth` はそのCI boundaryのtyped failure reasonであり、既存 analyzer の
-orphan・duplicate・stale-citation 出力や messages / `ok` projection に追加しない。CI failureもreason literalとして返し、
-汎用booleanや例外messageから種類を推定しない。
+```ts
+type OracleBaselineRatchetFailureReason =
+  | "pr_context_invalid"
+  | "git_first_parent_missing"
+  | "git_first_parent_read_failed"
+  | "git_baseline_missing"
+  | "git_object_read_failed"
+  | "trusted_baseline_invalid"
+  | "baseline_growth"
+  | "bootstrap_base_invalid"
+  | "bootstrap_value_mismatch";
+
+type OracleBaselineRatchetResult =
+  | { ok: true }
+  | { ok: false; reason: OracleBaselineRatchetFailureReason };
+
+interface OracleBaselineRatchetInput {
+  authority: OracleTraceAuthority;
+  ci: {
+    eventName: string;
+    mergeSha: string;
+    git: {
+      readTextAt(commitSha: string, path: OracleTraceGitPath):
+        OracleTraceGitPortResult<string | null>;
+      readFirstParent(mergeSha: string):
+        OracleTraceGitPortResult<string | null>;
+    };
+  };
+}
+
+checkOracleBaselineRatchet(input: OracleBaselineRatchetInput): OracleBaselineRatchetResult
+```
+
+`checkOracleBaselineRatchet` は source checkout / Pack の同じ authority 解決境界と、明示された CI Git reader を受け取る。
+PR用 required check は GitHub Actions の `harness-check` workflow の専用 step からこの関数を呼び、
+`eventName = github.event_name`、`mergeSha = github.sha` をそのまま渡す。step は `{ok:false, reason}` を
+non-zero で失敗させ、reason literal を結果として保持する。関数は例外を投げず、成功は `{ok:true}`、失敗は
+`{ok:false, reason: OracleBaselineRatchetFailureReason}` を返す。event payload、branch名、可変 ref、working tree から
+context や比較 pair を補わない。
+
+PRでは `readFirstParent(mergeSha)` で B を解決し、`readTextAt(B, BASELINE_JSON_PATH)` /
+`readTextAt(mergeSha, BASELINE_JSON_PATH)` でbase/head blobを読む。結果のnullは `git_first_parent_missing` /
+`git_baseline_missing`、reader失敗は `git_first_parent_read_failed` / `git_object_read_failed`、不正blobは
+`trusted_baseline_invalid` とする。明示CI contextが不完全・不正なら `pr_context_invalid` でfail-closeする。
+初回移行だけの構造不一致は `bootstrap_base_invalid`、旧集合との値不一致は `bootstrap_value_mismatch` とする。
+有効な組における legacy / widened いずれかの head-only ID は `baseline_growth` とする。
+
+localからCI portを省略した一引数 loader 呼出しはsubsetを実行・主張せず、strict current JSON decode と既存analyzerの
+complete-set equalityだけを行う。explicit local pair portは設けない。`baseline_growth` とその他の ratchet reason は
+独立関数のtyped resultにのみ現れ、既存 analyzer の orphan・duplicate・stale-citation 出力や messages / `ok` projection
+には追加しない。汎用booleanや例外messageから種類を推定しない。
 
 **初回移行だけに限定した bootstrap route を許す。** 必須 PR check は上記の不変比較組 `(B, H) = (M^1, M)` を使い、
 `B` の Git tree を調べる。base tree に baseline JSON がなく、旧 TS 定数ファイル 2 つと正規の定数宣言が存在し、
