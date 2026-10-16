@@ -1,5 +1,5 @@
-import { analyzeWindowsHide, loadWindowsHideInput } from "../lint/windows-hide.ts";
 import type { LintResult } from "../plan/lint.ts";
+import { analyzeWindowsHide, loadWindowsHideInput } from "../runtime/windows-hide.ts";
 
 export function checkWindowsHide(repoRoot: string): LintResult {
   try {
