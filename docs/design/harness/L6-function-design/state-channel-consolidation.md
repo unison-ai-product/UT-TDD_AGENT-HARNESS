@@ -100,7 +100,10 @@ issue: 1062
 | `purpose` | `"review"` \| `"note"` | `review` = review request の起動合図、`note` = lane への合図 |
 | `id` | string | `<purpose>:<digest>:workspace:<id>:op:<operationId>` 形式。memory id を含めない |
 | `operationId` | string | 冪等キー |
-| `projectId` / `producer` / `target` / `envelopeDigest` | 現行 provider envelope と同じ | v4 の検証 (`validateClaudeProviderConsumerEnvelope`) を流用 |
+| `targetWorkspaceId` | lower-case hex 64桁 | `id` の `workspace:<id>` に使う consumer workspace identity |
+| `originRuntime` | `"codex"` \| `"system"` | 現行 inbox の配送 metadata を維持 |
+| `createdAt` | UTC ISO 8601 timestamp | 現行 inbox の配送順序 metadata を維持 |
+| `projectId` / `producer` / `target` / `envelopeDigest` | 現行 provider envelope と同じ | 下記 §3.1 の v1 envelope / binding 検証 |
 | `ref` | string (GitHub の Issue / PR / コメントの URL) | `purpose=note` で必須。`ut-tdd.project.json` の `repository_identity` と同じ repo だけ受理 (`memory.md` §4.2 の `bound_to` と同じ検査) |
 | `body` | string ≤ 8,000 | 現行の `CLAUDE_WAKE_BODY_MAX_CHARS`。要約だけを置き、判断材料は `ref` 先の GitHub コメントを正とする |
 | `requestDigest` / `requestPath` / `pr` / `exactHead` / `reviewRevision` / `authorFamily` | `purpose=review` のみ | 現行と同じ。`requestPath` は `.ut-tdd/review/requests/<digest>.json` だけを受理 |
@@ -109,6 +112,28 @@ issue: 1062
 - 発行口は `ut-tdd notify claude --ref <url> --body <text> [--operation-id <id>]` を 1 つだけ足す (`purpose=note`)。`purpose=review` は `review live-dispatch` が発行する (現行どおり)。
 - 配送 (Stop hook の選択・claim・terminal 判定・backlog 要約) は変えない。`decodeClaudeInboxEntry` は 移行期間 の間、v3 / v4 の旧 entry も復号する (§4.3)。
 - 受信側は `ref` を読んで GitHub のコメントを確認する。通知の本文だけで判断を進めない (現行の描画文言「現行契約・HEAD・CI を再確認して処理してください」を維持し、「共有HARNESSメモリからの通知」を「通知レコードからの通知」に直す)。
+
+### 3.1 memory-free v1 envelope と binding の整合性
+
+`ut-tdd.notification/v1` の `envelopeDigest` は、v4 の `computeClaudeProviderEnvelopeDigest` が使う serialization recipe と同じく、以下の literal object を列挙順のまま `JSON.stringify` し、その UTF-8 bytes に SHA-256 を適用した lowercase 64-hex (prefix なし) とする。これは v4 の実際の `JSON.stringify` recipe を指し、JCS、`canonicalJson`、field の並べ替えは使わない。
+
+```js
+{
+  schemaVersion: "ut-tdd.notification/v1",
+  projectId,
+  operationId,
+  producer: { provider, sessionId },
+  target: { scope, provider, sessionId },
+}
+```
+
+この preimage は v4 の `{ schemaVersion, projectId, memoryId, operationId, producer, target }` から `memoryId` を除き、`schemaVersion` を `ut-tdd.notification/v1` にしたもの。nested key も上記順序で固定する。notification entry の `id` は `<purpose>:<envelopeDigest>:workspace:<targetWorkspaceId>:op:<operationId>` とし、`id` 内の digest は `envelopeDigest` と同一値にする。別の id digest を計算しない。
+
+provider binding は v4 binding (`schemaVersion: "ut-tdd.claude-provider-binding/v1"`) と混在させず、binding 自身の schema discriminator で分岐する。v1 binding は `schemaVersion: "ut-tdd.notification-binding/v1"`、exact keys `{ schemaVersion, entryId, projectId, operationId, producer, target, envelopeDigest }` とする。v4 binding は既存の schema discriminator と v4 exact key 集合 (`memoryId` を含む) を維持する。いずれの経路も schema と exact keys を検査し、unknown / missing key を受理しない。v1 entry も exact keys を検査し、未定義・欠落 key を受理しない。`purpose=note` の key 集合は `{ schemaVersion, purpose, id, body, originRuntime, operationId, targetWorkspaceId, createdAt, projectId, producer, target, envelopeDigest, ref }`、`purpose=review` はこの集合から `ref` を除いて `{ requestDigest, requestPath, pr, exactHead, reviewRevision, authorFamily }` を加えた集合とする。
+
+v1 では `expectedMemoryId` の照合だけを行わない。trusted consumer context から得る `projectId`, `operationId`, `producer`, `target.provider`, `target.sessionId` の照合、target scope / nested shape の検査、envelope digest と `id` の再計算一致、および v1 用 binding の `entryId` / identity / digest 一致は引き続き必須とする。したがって v1 の受理は memory identity の撤去で他の binding / integrity guard を省略することを意味しない。
+
+terminal marker の再読込も marker の `schema` で分岐する。notification v1 用 schema は `ut-tdd.notification-terminal/v1` とし、`entryId` には v1 entry の完全な `id` (`<purpose>:<envelopeDigest>:workspace:<targetWorkspaceId>:op:<operationId>`) を記録する。v1 の `purpose=note` / `reason=claimed` marker の exact keys は `{ schema, entryId, reason, terminalAt, purpose }`。v1 の `purpose=review` marker は reason によらず、entry 由来の `{ requestDigest, requestPath, pr, exactHead, reviewRevision, authorFamily }` を保持し、exact keys を `{ schema, entryId, reason, terminalAt, purpose, requestDigest, requestPath, pr, exactHead, reviewRevision, authorFamily }` に固定する。`note` に `claimed` 以外の terminal reason は認めない。v1 marker は `memoryPath` を持たず、代用の偽値も置かない。旧 `ut-tdd.claude-inbox-terminal/v1` marker の parser (review で `memoryPath` 必須) は変更せず、新 parser は schema で振り分ける。claim / terminal の判定条件、配送抑止、inbox 保持の意味は変えず、schema ごとの記録・再読込 key shape だけを定義する。
 
 ## 4. review custody の差し替え
 
