@@ -1,3 +1,4 @@
+import "../src/runtime/windows-hide.ts";
 import { createHash, randomUUID } from "node:crypto";
 import {
   chmodSync,
