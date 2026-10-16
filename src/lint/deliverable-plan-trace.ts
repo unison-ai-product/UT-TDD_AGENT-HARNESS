@@ -28,6 +28,15 @@ export interface DeliverablePlanTraceResult {
   ok: boolean;
 }
 
+export interface TestDesignOwnershipSite {
+  id: string;
+  declarationPath: string;
+  declarationLine: number;
+  testPath: string;
+  citationLine: number;
+  kind: "formal" | "candidate";
+}
+
 export function analyzeDeliverablePlanTrace(input: {
   artifactFiles: readonly string[];
   tracedPaths: ReadonlySet<string>;
@@ -52,6 +61,7 @@ export interface DeliverablePlanTraceInput {
   ownersByPath: Map<string, string[]>;
   baseline: Map<string, string>;
   ownershipBaseline: Set<string>;
+  testDesignOwnershipSites?: TestDesignOwnershipSite[];
 }
 
 /**
@@ -211,10 +221,27 @@ export function loadDeliverablePlanTraceInput(repoRoot: string): DeliverablePlan
     }
   }
   const declarations = collectOracleDeclarationSites(repoRoot);
-  const formalIds = new Set(declarations.map((site) => site.id));
+  const declarationsById = new Map<string, typeof declarations>();
+  for (const declaration of declarations) {
+    const sites = declarationsById.get(declaration.id) ?? [];
+    sites.push(declaration);
+    declarationsById.set(declaration.id, sites);
+  }
+  const testDesignOwnershipSites: TestDesignOwnershipSite[] = [];
   for (const citation of collectOracleCitationSites(repoRoot)) {
-    if (formalIds.has(citation.id) && isTestArtifactPath(citation.path)) {
+    const matchingDeclarations = declarationsById.get(citation.id) ?? [];
+    if (matchingDeclarations.length > 0 && isTestArtifactPath(citation.path)) {
       tracedPaths.add(citation.path);
+      for (const declaration of matchingDeclarations) {
+        testDesignOwnershipSites.push({
+          id: citation.id,
+          declarationPath: declaration.path,
+          declarationLine: declaration.line,
+          testPath: citation.path,
+          citationLine: citation.line,
+          kind: "formal",
+        });
+      }
     }
   }
   const candidateDeclarations = collectCandidateDeclarationSites(repoRoot);
@@ -225,11 +252,18 @@ export function loadDeliverablePlanTraceInput(repoRoot: string): DeliverablePlan
     declarationsByCandidateId.set(declaration.id, sites);
   }
   for (const citation of collectCandidateOracleCitationSites(repoRoot)) {
-    if (
-      (declarationsByCandidateId.get(citation.id)?.length ?? 0) > 0 &&
-      isTestArtifactPath(citation.path)
-    ) {
-      tracedPaths.add(citation.path);
+    const matchingDeclarations = declarationsByCandidateId.get(citation.id) ?? [];
+    if (matchingDeclarations.length === 0 || !isTestArtifactPath(citation.path)) continue;
+    tracedPaths.add(citation.path);
+    for (const declaration of matchingDeclarations) {
+      testDesignOwnershipSites.push({
+        id: citation.id,
+        declarationPath: declaration.path,
+        declarationLine: declaration.line,
+        testPath: citation.path,
+        citationLine: citation.line,
+        kind: "candidate",
+      });
     }
   }
   const ledger = loadLedger(
@@ -241,6 +275,7 @@ export function loadDeliverablePlanTraceInput(repoRoot: string): DeliverablePlan
     ownersByPath,
     baseline: new Map([...ledger.baseline].filter(([path]) => isDeliverableArtifactPath(path))),
     ownershipBaseline: ledger.ownershipBaseline,
+    testDesignOwnershipSites,
   };
 }
 
