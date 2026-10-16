@@ -137,7 +137,7 @@ describe("宣言 provenance の一意性 (Issue #206)", () => {
 });
 
 describe("宣言 site 収集 (Issue #206)", () => {
-  it.fails("退役表中の既存ID参照は宣言にせず、正確なIDセル宣言は orphan に残す", () => {
+  it("退役表中の既存ID参照は宣言にせず、正確なIDセル宣言は orphan に残す", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-retired-id-"));
     try {
       mkdirSync(join(root, "docs", "test-design"), { recursive: true });
@@ -173,7 +173,7 @@ describe("宣言 site 収集 (Issue #206)", () => {
     }
   });
 
-  it.fails("ST-ID / AC 複合セルは ST oracle を宣言として収集する", () => {
+  it("ST-ID / AC 複合セルは ST oracle を宣言として収集する", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-system-oracle-"));
     try {
       mkdirSync(join(root, "docs", "test-design"), { recursive: true });

@@ -74,7 +74,8 @@ export interface OracleDeclarationSite {
  */
 type DeclarationMirror =
   | { kind: "it-case"; role: "summary" | "canonical" }
-  | { kind: "resource-kernel"; role: "summary" | "canonical" };
+  | { kind: "resource-kernel"; role: "summary" | "canonical" }
+  | { kind: "system-oracle"; role: "canonical" };
 
 interface RawOracleDeclarationSite extends OracleDeclarationSite {
   mirror: DeclarationMirror | null;
@@ -259,6 +260,16 @@ function declarationMirror(headers: readonly string[]): DeclarationMirror | null
     return { kind: "it-case", role: "canonical" };
   }
 
+  // L9 system-oracle matrix pairs an ST oracle with its AC contract in one cell.
+  if (
+    has("st-id / ac") &&
+    has("system fixture / fault") &&
+    (has("positive expected") || hasContaining("正oracle")) &&
+    (has("negative expected") || hasContaining("負oracle"))
+  ) {
+    return { kind: "system-oracle", role: "canonical" };
+  }
+
   // Resource Kernel overview and its freeze-attribute table.
   if (has("id") && has("boundary / fault injection") && has("expected")) {
     return { kind: "resource-kernel", role: "summary" };
@@ -305,10 +316,17 @@ function collectDeclarationSitesFromFile(
       tableHeaders = cells;
       continue;
     }
+    const mirror = declarationMirror(tableHeaders ?? []);
     const idCells = cells.flatMap((cell, cellIndex) => {
       const matches = oracleMatches(cell);
       const normalized = cell.replace(/`/g, "").trim();
-      return matches.length === 1 && normalized === matches[0]
+      const systemOraclePair =
+        mirror?.kind === "system-oracle" && cellIndex === 0
+          ? normalized.match(
+              /^(ST-([A-Z0-9]+-[0-9]{2,3}))\s*\/\s*AC-\2(?:\s+\*\*DEFERRED\*\*)?$/u,
+            )?.[1]
+          : undefined;
+      return matches.length === 1 && (normalized === matches[0] || systemOraclePair === matches[0])
         ? [{ cellIndex, id: matches[0] }]
         : [];
     });
@@ -326,7 +344,7 @@ function collectDeclarationSitesFromFile(
         path: relativePath,
         line: index + 1,
         description,
-        mirror: declarationMirror(tableHeaders ?? []),
+        mirror,
       });
     }
   }
@@ -390,8 +408,7 @@ export function collectOracleIds(repoRoot: string): {
   declarationSites: OracleDeclarationSite[];
   citationSites: OracleCitationSite[];
 } {
-  const declared = new Set<string>();
-  collectIds(join(repoRoot, "docs", "test-design"), ".md", declared);
+  const declared = new Set(collectOracleDeclarationSites(repoRoot).map((site) => site.id));
   const referenced = new Set<string>();
   collectIds(join(repoRoot, "tests"), ".ts", referenced);
   return {
