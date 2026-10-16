@@ -16,29 +16,31 @@ updated: 2026-10-16
 citation の結び付きを使う契約を検証する候補 oracle を定義する。L6 の既存 `pair_artifact` は共有
 `docs/test-design/harness/L7-unit-test-design.md` を指すままとし、共有 index には変更を要求しない。
 
-候補 ID は `docs/test-design/` に宣言する未実装 oracle であり、formal oracle として扱わない。candidate label の
+未昇格の候補 ID は `docs/test-design/` に宣言する未実装 oracle であり、formal oracle として扱わない。candidate label の
 所有用途は `deliverable-plan-trace` に限られ、`oracle-test-trace` の formal declaration/citation collection や
-formal oracle ID 集合へ混入させない。候補宣言元文書 path と static citation の test file path を結び付け、
-test file path は `tracedPaths` だけに加える。候補宣言は formal 宣言と同じ canonical table row/cell 境界に従い、
-ID 専用セル全体との完全一致だけを認める。本文、ID 範囲、再引用、他セル中の部分文字列は宣言ではない。
-宣言表に test path 文字列を重ねて要求しない。
+formal oracle ID 集合へ混入させない。本書の `U-DPTOWN-001`〜`U-DPTOWN-009` は本工程で正式昇格した oracle であり、
+表の正式 ID と test label を対応させる。テスト内の `CANDIDATE-*` 文字列は隔離 fixture 入力として残し、実 test label や
+formal oracle として扱わない。候補宣言元文書 path と static citation の test file path を結び付け、test file path は
+`tracedPaths` だけに加える。候補宣言は formal 宣言と同じ canonical table row/cell 境界に従い、ID 専用セル全体との
+完全一致だけを認める。本文、ID 範囲、再引用、他セル中の部分文字列は宣言ではない。宣言表に test path 文字列を重ねて
+要求しない。
 
-## 2. 所有証拠の候補 oracle
+## 2. 所有証拠の oracle
 
-全候補の Red fixture は `tests/deliverable-plan-trace.test.ts` を使う。候補 label は test file 内の static
-test label として置く。正式昇格前は candidate ID を formal oracle の期待集合に足さない。
+各 oracle の Red fixture は `tests/deliverable-plan-trace.test.ts` を使う。正式昇格済み ID は test file 内の static
+test label に対応する。隔離入力内の候補 label は fixture としてだけ読み、formal oracle の期待集合には足さない。
 
-| 候補 ID | fixture / 入力 | command / query | 期待結果 |
+| oracle ID | fixture / 入力 | command / query | 期待結果 |
 |---|---|---|---|
-| `CANDIDATE-U-DPTOWN-001` | 対象 `tests/new.test.ts` は PLAN `generates` にだけ宣言される | deliverable ownership analyzer | PLAN owner で所有され、orphan にならない |
-| `CANDIDATE-U-DPTOWN-002` | formal oracle ID を宣言する test-design 文書と、同じ ID の static label citation を持つ `tests/new.test.ts`。PLAN `generates` は無い | existing declaration/citation collectors と deliverable ownership analyzer | cited ID の宣言元文書 path を provenance として保持し、test path を `tracedPaths` に加える。新規 orphan なし |
-| `CANDIDATE-U-DPTOWN-003` | 本書に候補 ID を宣言し、その ID を static `it.fails("CANDIDATE-U-DPTOWN-003: ...")` label に持つ `tests/deliverable-plan-trace.test.ts` | candidate-only ownership collection | 候補宣言元と `it.fails` citation path を結び、test path を `tracedPaths` に加える。formal oracle collection は不変 |
-| `CANDIDATE-U-DPTOWN-004` | 2つの独立負例: (a) candidate static label はあるがその ID を宣言する test-design 文書がない、(b) formal static label はあるがその ID の formal declaration がない | candidate/formal ownership projection | いずれも owner evidence にならず、新規 orphan を fail-close する。formal側の未宣言 citation finding も既存 `oracle-test-trace` のまま |
-| `CANDIDATE-U-DPTOWN-005` | candidate 宣言はあるが、対応 test file に同じ ID の static label がなく、fixture/body/comment/dynamic label にだけ存在する | candidate-only ownership collection | owner evidence にならず、新規 orphan を fail-close する |
-| `CANDIDATE-U-DPTOWN-006` | PLAN `generates` owner と formal または candidate test-design citation owner の両方を持つ test path | `tracedPaths` projection と既存 duplicate analyzer | test-design citation により test path は traced。`ownersByPath` はPLAN ownerのままで、既存duplicate結果を変えない。複数test-design引用も重複所有でない |
-| `CANDIDATE-U-DPTOWN-007` | `tests/**/*.test.ts` ではない `tests/**/*.ts` path | deliverable artifact classifier | 本契約の test-file owner 補完対象にしない |
-| `CANDIDATE-U-DPTOWN-008` | `scripts/` または `.claude/` の artifact path | deliverable ownership analyzer | 本契約の oracle owner 補完対象にしない。scope は Issue #1088 に委ねる |
-| `CANDIDATE-U-DPTOWN-009` | 隔離 fixture の static test label はあるが、対応する candidate ID は (a) test-design 本文にだけある、または (b) canonical 宣言表の ID 専用セルでなく別セル内の部分文字列にだけある。fixture probe ID は本書の oracle ID と別の合成 ID とする | candidate declaration/citation projection | どちらも宣言として認めず、対象 test path を trace しない。PLAN ownerも無ければ orphan を fail-close する |
+| `U-DPTOWN-001` | 対象 `tests/new.test.ts` は PLAN `generates` にだけ宣言される | deliverable ownership analyzer | PLAN owner で所有され、orphan にならない |
+| `U-DPTOWN-002` | formal oracle ID を宣言する test-design 文書と、同じ ID の static label citation を持つ `tests/new.test.ts`。PLAN `generates` は無い | existing declaration/citation collectors と deliverable ownership analyzer | cited ID の宣言元文書 path を provenance として保持し、test path を `tracedPaths` に加える。新規 orphan なし |
+| `U-DPTOWN-003` | 隔離 fixture の test-design 文書に合成候補 ID を宣言し、その ID を static `it.fails("CANDIDATE-U-DPTOWN-003: ...")` label に持つ fixture test file | candidate-only ownership collection | 候補宣言元と `it.fails` citation path を結び、test path を `tracedPaths` に加える。formal oracle collection は不変 |
+| `U-DPTOWN-004` | 2つの独立負例: (a) candidate static label はあるがその ID を宣言する test-design 文書がない、(b) formal static label はあるがその ID の formal declaration がない | candidate/formal ownership projection | いずれも owner evidence にならず、新規 orphan を fail-close する。formal側の未宣言 citation finding も既存 `oracle-test-trace` のまま |
+| `U-DPTOWN-005` | candidate 宣言はあるが、対応 test file に同じ ID の static label がなく、fixture/body/comment/dynamic label にだけ存在する | candidate-only ownership collection | owner evidence にならず、新規 orphan を fail-close する |
+| `U-DPTOWN-006` | PLAN `generates` owner と formal または candidate test-design citation owner の両方を持つ test path | `tracedPaths` projection と既存 duplicate analyzer | test-design citation により test path は traced。`ownersByPath` はPLAN ownerのままで、既存duplicate結果を変えない。複数test-design引用も重複所有でない |
+| `U-DPTOWN-007` | `tests/**/*.test.ts` ではない `tests/**/*.ts` path | deliverable artifact classifier | 本契約の test-file owner 補完対象にしない |
+| `U-DPTOWN-008` | `scripts/` または `.claude/` の artifact path | deliverable ownership analyzer | 本契約の oracle owner 補完対象にしない。scope は Issue #1088 に委ねる |
+| `U-DPTOWN-009` | 隔離 fixture の static test label はあるが、対応する candidate ID は (a) test-design 本文にだけある、または (b) canonical 宣言表の ID 専用セルでなく別セル内の部分文字列にだけある。fixture probe ID は本書の oracle ID と別の合成 ID とする | candidate declaration/citation projection | どちらも宣言として認めず、対象 test path を trace しない。PLAN ownerも無ければ orphan を fail-close する |
 
 ## 3. 境界
 
