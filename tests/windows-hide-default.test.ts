@@ -103,6 +103,10 @@ function entrySource(path: string, content?: string) {
   return { path, content };
 }
 
+function wrapperSource(): WindowsHideSource {
+  return { path: "src/runtime/windows-hide.ts", content: "export {};\n" };
+}
+
 function writeFixtureFile(fixtureRoot: string, path: string, content: string): void {
   const destination = join(fixtureRoot, path);
   mkdirSync(join(destination, ".."), { recursive: true });
@@ -119,6 +123,8 @@ function windowsHideCheck(repoRoot: string) {
 }
 
 function writeValidWindowsHideFixture(fixtureRoot: string, omitCliImport = false): void {
+  const wrapper = wrapperSource();
+  writeFixtureFile(fixtureRoot, wrapper.path, wrapper.content);
   for (const path of STATIC_ENTRIES)
     writeFixtureFile(
       fixtureRoot,
@@ -407,7 +413,7 @@ describe("issue #693 子プロセス windowsHide 既定 (Red)", () => {
       "tests/windows-hide-setup.ts",
       "scripts/build-node.mjs",
     ];
-    const good = entries.map((path) => entrySource(path));
+    const good = [wrapperSource(), ...entries.map((path) => entrySource(path))];
     expect(analyze(mod, good, entries).ok).toBe(true);
 
     const missingHook = good.map((file) =>
@@ -433,6 +439,7 @@ describe("issue #693 子プロセス windowsHide 既定 (Red)", () => {
     const setupFiles = analyze(
       mod,
       [
+        wrapperSource(),
         entrySource("src/cli.ts"),
         {
           path: "vitest.config.ts",
@@ -447,6 +454,7 @@ describe("issue #693 子プロセス windowsHide 既定 (Red)", () => {
     const globalSetupOnly = analyze(
       mod,
       [
+        wrapperSource(),
         entrySource("src/cli.ts"),
         {
           path: "vitest.config.ts",
@@ -466,6 +474,7 @@ describe("issue #693 子プロセス windowsHide 既定 (Red)", () => {
     const valid = analyze(
       mod,
       [
+        wrapperSource(),
         entrySource("src/cli.ts"),
         {
           path: "src/options.ts",
@@ -484,6 +493,7 @@ describe("issue #693 子プロセス windowsHide 既定 (Red)", () => {
     const invalid = analyze(
       mod,
       [
+        wrapperSource(),
         entrySource("src/cli.ts"),
         {
           path: "src/options.ts",
@@ -508,6 +518,7 @@ describe("issue #693 子プロセス windowsHide 既定 (Red)", () => {
   it.fails("CANDIDATE-U-WHIDE-011: 入力順を変えても違反順と集計が決定的", async () => {
     const mod = await loadWindowsHide();
     const sources = [
+      wrapperSource(),
       { path: "src/second.ts", content: "const x = { windowsHide: false };" },
       { path: "src/cli.ts", content: "export {};" },
       { path: "src/first.ts", content: "const x = { windowsHide: false };" },
@@ -516,7 +527,7 @@ describe("issue #693 子プロセス windowsHide 既定 (Red)", () => {
     const first = analyze(mod, sources, entries);
     const second = analyze(mod, [...sources].reverse(), [...entries].reverse());
     expect(first.messages).toEqual(second.messages);
-    expect(first.messages.at(-1)).toContain("checked=3 entries=1 falses=2 violations=3");
+    expect(first.messages.at(-1)).toContain("checked=4 entries=1 falses=2 violations=3");
   });
 
   it.fails("CANDIDATE-U-WHIDE-012: 実 repo と doctor の clean/違反 fixture を fail-close する", () => {
@@ -528,7 +539,7 @@ describe("issue #693 子プロセス windowsHide 既定 (Red)", () => {
     writeValidWindowsHideFixture(validRoot);
     const valid = windowsHideCheck(validRoot);
     expect(valid.ok).toBe(true);
-    expect(valid.messages.at(-1)).toContain("checked=11 entries=10 falses=0 violations=0");
+    expect(valid.messages.at(-1)).toContain("checked=12 entries=10 falses=0 violations=0");
 
     const invalidRoot = mkdtempSync(join(tmpdir(), "ut-tdd-windows-hide-invalid-"));
     FIXTURE_ROOTS.push(invalidRoot);
@@ -540,7 +551,7 @@ describe("issue #693 子プロセス windowsHide 既定 (Red)", () => {
       expect.arrayContaining([
         expect.stringMatching(/src\/cli\.ts:1:.*windows-hide-entry-missing/),
         expect.stringMatching(/src\/options\.ts:1:.*windows-hide-false-unexplained/),
-        expect.stringContaining("checked=12 entries=10 falses=1 violations=2"),
+        expect.stringContaining("checked=13 entries=10 falses=1 violations=2"),
       ]),
     );
   });
