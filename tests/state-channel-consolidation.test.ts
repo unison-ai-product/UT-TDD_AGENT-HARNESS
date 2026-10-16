@@ -924,20 +924,22 @@ describe("Issue #1062: runtime notifications are memory-free", () => {
     const protectedBytes = "permission-denied memory fixture\n";
     mkdirSync(memoryPath, { recursive: true });
     writeFileSync(memoryFile, protectedBytes);
-    const deny =
-      process.platform === "win32"
-        ? spawnSync(
-            "icacls",
-            [memoryPath, "/deny", `${process.env.USERNAME}:(OI)(CI)(RX)`, "/T", "/C"],
-            {
-              encoding: "utf8",
-              windowsHide: true,
-            },
-          )
-        : null;
-    if (deny) expect(deny.status, deny.stderr).toBe(0);
-    else chmodSync(memoryPath, 0);
+    let permissionAttempted = false;
     try {
+      permissionAttempted = true;
+      if (process.platform === "win32") {
+        const deny = spawnSync(
+          "icacls",
+          [memoryPath, "/deny", `${process.env.USERNAME}:(OI)(CI)(RX)`, "/T", "/C"],
+          {
+            encoding: "utf8",
+            windowsHide: true,
+          },
+        );
+        expect(deny.status, String(deny.stderr)).toBe(0);
+      } else {
+        chmodSync(memoryPath, 0);
+      }
       expect(() => readdirSync(memoryPath)).toThrow();
       const result = runCli(root, [
         "notify",
@@ -950,13 +952,13 @@ describe("Issue #1062: runtime notifications are memory-free", () => {
       expectStarted(result);
       expect(result.status).toBe(0);
     } finally {
-      if (deny) {
+      if (permissionAttempted && process.platform === "win32") {
         const reset = spawnSync("icacls", [memoryPath, "/reset", "/T", "/C"], {
           encoding: "utf8",
           windowsHide: true,
         });
         expect(reset.status, reset.stderr).toBe(0);
-      } else chmodSync(memoryPath, 0o700);
+      } else if (permissionAttempted) chmodSync(memoryPath, 0o700);
     }
     expect(readFileSync(memoryFile, "utf8")).toBe(protectedBytes);
   });
