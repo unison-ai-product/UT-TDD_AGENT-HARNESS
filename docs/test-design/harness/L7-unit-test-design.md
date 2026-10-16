@@ -1737,9 +1737,14 @@ Issue #926 の custody oracle 行は契約上の候補宣言であり、実装�
 | `U-RVMG-036` | 同じ check 名の古い SUCCESS run と新しい FAILURE run | 最新が SUCCESS 以外なので `checksGreen=false` |
 | `U-RVMG-037` | 開始順と完了順が逆転: 旧 run は startedAt が早く completedAt が遅い SUCCESS、新 run は startedAt が遅く未完了 (conclusion 空) | 開始順で新 run を最新とし、未完了なので `checksGreen=false` |
 | `U-RVMG-038` | run 間で最早 startedAt が同時刻、または startedAt 欠落 | 最新を決められず `checksGreen=false` |
-| `U-RVMG-039` | 同じ run id・同じ workflow の同名 job が FAILURE と、後から完了した SUCCESS | 識別不能として統合せず全件判定、`checksGreen=false` |
-| `U-RVMG-040` | `workflowName` 欠落の同名 2 エントリ (run id は異なる) | 識別不能として統合せず全件判定、`checksGreen=false` |
-| `U-RVMG-041` | StatusContext (commit status) の同名エントリと CheckRun の混在 | 統合せず全件判定、`checksGreen=false` |
+| `U-RVMG-039` | 同じ run id・同じ workflow の同名 job が FAILURE と、後から完了した SUCCESS | 識別不能な重複として `checksGreen=false` |
+| `U-RVMG-040` | `workflowName` 欠落の同名 2 エントリ (run id は異なる、一方 FAILURE) | 識別不能な重複として `checksGreen=false` |
+| `U-RVMG-041` | StatusContext (commit status) の同名エントリと CheckRun の混在 | 識別不能な重複として `checksGreen=false` |
+| `U-RVMG-042` | 同じ check 名・異なる有効な run id・両方 SUCCESS で、一方の startedAt が欠落 | 順序を決められない重複は全件 SUCCESS でも `checksGreen=false` |
+| `U-RVMG-043` | 同じ check 名・異なる run id・両方 SUCCESS で、一方の startedAt が parse 不能な文字列 | 同上、`checksGreen=false` |
+| `U-RVMG-044` | 同じ check 名・異なる run id・両方 SUCCESS で、最早 startedAt が同時刻 | 最新を決められず `checksGreen=false` |
+| `U-RVMG-045` | 同じ run id・同じ workflow の同名 job が両方 SUCCESS | 識別不能な重複として `checksGreen=false` |
+| `U-RVMG-046` | `workflowName` 欠落・異なる run id・両方 SUCCESS の同名エントリ | 識別不能な重複として `checksGreen=false` |
 
 ## Claude HARNESS memory async wake oracle (2026-08-03)
 
