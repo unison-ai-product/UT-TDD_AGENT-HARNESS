@@ -181,8 +181,8 @@ v4 R05 で `src/plan-admission/` を削除するとき、本 gate が import し
 
 - 位置: `plan admission-check (PLAN 編集の receipt 照合、fail-close)` step の直後、`typecheck (tsc --noEmit)` step の前。
 - 実行条件: step の `if` を `${{ github.event_name == 'pull_request' }}` にする。main への push の diff は複数 PR にまたがり、契約 PR と実装 PR が 1 つの diff に混ざって誤って拒否されるからである。lane (`steps.classify.outputs.lane`) による skip は付けない。
-- 呼び出し: `env.BASE_SHA` に `${{ github.event.pull_request.base.sha }}` を置き、`run` を `node src/cli.ts github design-protection --base "$BASE_SHA" --head "${{ github.sha }}"` にする。`shell`、`id`、`continue-on-error` は付けない。
-- `github.sha` は PR の merge commit で、その第 1 親が base.sha である。2 点 diff は「この PR が main に入れる変更」と一致する。
+- 呼び出し: `env.BASE_SHA` に `${{ github.sha }}^1` を置き、`run` を `node src/cli.ts github design-protection --base "$BASE_SHA" --head "${{ github.sha }}"` にする。`shell`、`id`、`continue-on-error` は付けない。
+- `github.sha` は PR の検証用 merge commit である。その第 1 親を比較元にし、その merge commit との 2 点 diff を「この PR が main に入れる変更」とする。第 1 親を解決できなければ既存の ref 解決で fail-close にする。event の `pull_request.base.sha` は merge commit の第 1 親と一致するとは限らないため使わない。main が先行して設計文書を更新しても、その変更を本 PR の変更へ混ぜない。一方、本 PR 自身の保護対象変更は拒否する。
 
 workflow だけを直しても CI policy は通らない。`src/lint/github-ci-policy.ts` の `checkLaneSkipSafety` は、各 runtime leg の
 `steps` を `RUNTIME_STEP_MANIFESTS` と、順序込みの完全一致 (`canonicalSemantic` で正規化した JSON の比較) で照合する。
