@@ -7812,17 +7812,17 @@
     {
       "sequence": 489,
       "previous_record_digest": "sha256:ab97975cd3d30142903b1eaf3ef45c357a0b1f31f395622a2b1aa0352711186d",
-      "record_digest": "sha256:9e41ec1eb128c9fabb76bc268e29d50644f331212247f0cd50451d075248dd63",
-      "command_id": "issue1062-split-PLAN-L7-143-harness-db-warn-remediation-r2-20261019",
-      "receipt_id": "certificate:5ff7e27bbf5ae674b360a2cfd9fb4f67",
-      "receipt_digest": "sha256:aef8e487dd3ea82a852aac7e721aeb7c6e8400ddac5a535f47dc12d4f70f3587",
-      "decision_digest": "sha256:fdc9d2f149c072860b2766581a2fa9c073385a5f95ccac987b09678f7cd36ed9",
+      "record_digest": "sha256:8615eaf2855c3052c4d9b56a9e27ac0ac74622d0d772c8442256b3a086193eeb",
+      "command_id": "issue1062-split-PLAN-L7-173-handover-type-constant-split-r2-20261019",
+      "receipt_id": "certificate:4a46547fb055c669d801c11b9b4ba486",
+      "receipt_digest": "sha256:dae42f5960514a11444c2f302f70cf17c40541b677482b1bf234688ae34be2c2",
+      "decision_digest": "sha256:531b05e7e02f98ec860d2e933f119d54de5fdb03bc26c4c911eb5641ff4c2052",
       "binding": {
-        "path": "docs/plans/PLAN-L7-143-harness-db-warn-remediation.md",
-        "plan_id": "PLAN-L7-143-harness-db-warn-remediation",
-        "asset_id": "plan:legacy:7cd63d22ca6a28419ccc4e0c943418471efe021a3412253859b0233a5498c5e4",
+        "path": "docs/plans/PLAN-L7-173-handover-type-constant-split.md",
+        "plan_id": "PLAN-L7-173-handover-type-constant-split",
+        "asset_id": "plan:legacy:063e24c8d60ab421324c422d22990b91dd25ca57bc904f6900501a9ee9d5deac",
         "revision": 2,
-        "content_digest": "sha256:503c26e46b3f03ef17860ea836be8f33a7e73c3bc215aff14c73037bfd7338d8"
+        "content_digest": "sha256:7211514120312718a5878c9e28bc25fe27be038253b0718aaf08287cff10d5b3"
       }
     }
   ]
