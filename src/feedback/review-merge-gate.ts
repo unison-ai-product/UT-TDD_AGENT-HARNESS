@@ -485,7 +485,10 @@ interface RollupEntry {
 
 function checkRunId(entry: RollupEntry): string | undefined {
   if (typeof entry.detailsUrl !== "string") return undefined;
-  return /\/actions\/runs\/(\d+)/.exec(entry.detailsUrl)?.[1];
+  // L6 §2: https://github.com/<owner>/<repo>/actions/runs/<run id>/job/<job id> に終端まで一致するものだけ。
+  return /^https:\/\/github\.com\/[^/]+\/[^/]+\/actions\/runs\/(\d+)\/job\/\d+$/.exec(
+    entry.detailsUrl,
+  )?.[1];
 }
 
 /** 同じ check 名の重複から最新 run のエントリだけを選ぶ。順序を決められなければ undefined (fail-close)。 */
