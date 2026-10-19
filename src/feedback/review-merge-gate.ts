@@ -485,10 +485,29 @@ interface RollupEntry {
 
 function checkRunId(entry: RollupEntry): string | undefined {
   if (typeof entry.detailsUrl !== "string") return undefined;
-  // L6 §2: https://github.com/<owner>/<repo>/actions/runs/<run id>/job/<job id> に終端まで一致するものだけ。
-  return /^https:\/\/github\.com\/[^/]+\/[^/]+\/actions\/runs\/(\d+)\/job\/\d+$/.exec(
-    entry.detailsUrl,
-  )?.[1];
+  // L6 §2: https://github.com/<owner>/<repo>/actions/runs/<run id>/job/<job id> だけを、URL の構造として解析する。
+  let url: URL;
+  try {
+    url = new URL(entry.detailsUrl);
+  } catch {
+    return undefined;
+  }
+  if (
+    url.protocol !== "https:" ||
+    url.hostname !== "github.com" ||
+    url.port !== "" ||
+    url.username !== "" ||
+    url.password !== "" ||
+    url.search !== "" ||
+    url.hash !== ""
+  ) {
+    return undefined;
+  }
+  // 正規化で形が変わる入力 (大文字の host / ".." 等) と、パーセントエンコードを含む path は拒否する。
+  if (entry.detailsUrl !== `https://github.com${url.pathname}` || url.pathname.includes("%")) {
+    return undefined;
+  }
+  return /^\/[^/]+\/[^/]+\/actions\/runs\/(\d+)\/job\/\d+$/.exec(url.pathname)?.[1];
 }
 
 /** 同じ check 名の重複から最新 run のエントリだけを選ぶ。順序を決められなければ undefined (fail-close)。 */
