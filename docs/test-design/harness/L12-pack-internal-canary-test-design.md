@@ -99,6 +99,8 @@ Candidate は pair-freeze 時点の設計候補である。PR-1 の第 1 層で�
 review receipt / merge gate / 登録済み hook まで通す一つの破壊的 E2E で観測する。
 005・006 (実 Release 受入)・008・009・010 (第 2 層) は PR-2 まで Candidate のまま保持し、
 第 1 層 Green を公開 asset の受入証拠へ読み替えない。
+`CANDIDATE-ST-PACKCANARY-020` は PR-1 第 1 層の runner callsite oracle
+`U-ST-PACKCANARY-020` として昇格し、所有テストは `tests/pack-canary-acceptance.test.ts` とする。
 
 ### PR-1 第 1 層へ昇格した oracle
 
@@ -111,6 +113,7 @@ review receipt / merge gate / 登録済み hook まで通す一つの破壊的 E
 | `U-ST-PACKCANARY-006` | unit境界とPR-2 runnerの双方でexact tag以外、5 assetの欠落・余剰・別名を拒否し、runner側は`setup` spawn 0を観測する | `tests/pack-internal-canary-boundary.test.ts`、`tests/pack-canary-acceptance.test.ts` |
 | `U-ST-PACKCANARY-007` | 別process/cwd/envでPLAN・DB・doctor・reviewを再現しBun trace 0 | `tests/pack-internal-canary-boundary.test.ts` |
 | `U-ST-PACKCANARY-010` | 登録済みhookの正常系 exit 0・禁止系 block exit 2・launcher欠落の非block失敗 exit 1 を区別する。生成登録を欠落pathへ変える変異は正常系の exact exit 0 でRed | `tests/pack-internal-canary-boundary.test.ts` |
+| `U-ST-PACKCANARY-020` | Pack acceptance runner の `child_process` invocation 解決と options 順序を検査する。現行4形のうち passthrough / alias fallback / default argument は Red、literal `windowsHide: true` の直接呼出しは Green。named / namespace / dynamic import / `createRequire` の解決も owner test で固定する | `tests/pack-canary-acceptance.test.ts` |
 
 ### PR-2 公開 Release 接合 oracle
 

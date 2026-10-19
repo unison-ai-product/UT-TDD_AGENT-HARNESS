@@ -559,7 +559,7 @@ describe("issue #693 子プロセス windowsHide 既定 (Red)", () => {
       writeValidWindowsHideFixture(validRoot);
       const valid = windowsHideCheck(validRoot);
       expect(valid.ok).toBe(true);
-      expect(valid.messages.at(-1)).toContain("checked=12 entries=10 falses=0 violations=0");
+      expect(valid.messages.at(-1)).toContain("checked=12 entries=9 falses=0 violations=0");
 
       const invalidRoot = mkdtempSync(join(tmpdir(), "ut-tdd-windows-hide-invalid-"));
       FIXTURE_ROOTS.push(invalidRoot);
@@ -571,7 +571,7 @@ describe("issue #693 子プロセス windowsHide 既定 (Red)", () => {
         expect.arrayContaining([
           expect.stringMatching(/src\/cli\.ts:1:.*windows-hide-entry-missing/),
           expect.stringMatching(/src\/options\.ts:1:.*windows-hide-false-unexplained/),
-          expect.stringContaining("checked=13 entries=10 falses=1 violations=2"),
+          expect.stringContaining("checked=13 entries=9 falses=1 violations=2"),
         ]),
       );
     }));
