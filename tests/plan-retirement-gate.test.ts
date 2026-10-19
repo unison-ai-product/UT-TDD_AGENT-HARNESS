@@ -1,5 +1,13 @@
-import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { execFileSync, spawnSync } from "node:child_process";
+import {
+  cpSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -150,6 +158,40 @@ function input(records: Rec[], over: Partial<Input> = {}): Input {
     fileTexts: { [EVID]: `${EVID_ID} の三者照合は一致した。` },
     ...over,
   };
+}
+
+/**
+ * 実 JSON の記録から、テスト内で独立に期待 reason を数える (analyzer の実装を使わない)。
+ * 規則 2 の失敗後に規則 3・4 を続けるかは契約が固定しないため、打ち切りと継続の 2 通りを許容する。
+ * reconciliation が実在する最終化済み記録は証跡の中身まで数えないので、下限 (規則 3・4 の構造欠落) だけを見る。
+ */
+function independentReasons(matches: Rec[]): { allowed: string[][]; exact: boolean } {
+  if (matches.length === 0) return { allowed: [["plan_not_in_disposition"]], exact: true };
+  if (matches.length > 1) return { allowed: [["duplicate_disposition"]], exact: true };
+  const r = matches[0];
+  const w = r.wholeSourceDisposition as string;
+  const rule2 =
+    w === "not-finalized"
+      ? ["not_finalized"]
+      : ["transferred", "merged", "retired"].includes(w)
+        ? []
+        : ["invalid_disposition"];
+  const dests = (Array.isArray(r.destinations) ? r.destinations : []) as Rec[];
+  const hasDest = dests.some((d) => d.kind === "design" || d.kind === "issue");
+  const reason = typeof r.retirementReason === "string" ? r.retirementReason.trim() : "";
+  const rule3 = rule2.length
+    ? []
+    : w === "retired"
+      ? reason
+        ? []
+        : ["missing_retirement_reason"]
+      : hasDest
+        ? []
+        : ["missing_destination"];
+  const rc = r.reconciliation as Rec | undefined;
+  const hasRc = !!rc && (rc.kind === "three-way" || rc.kind === "supersedes-two-sided");
+  const full = [...rule2, ...rule3, ...(hasRc ? [] : ["missing_reconciliation"])];
+  return { allowed: rule2.length ? [rule2, full] : [full], exact: rule2.length > 0 || !hasRc };
 }
 
 const reasonsAt = (r: Result, path: string): Reason[] =>
@@ -542,24 +584,65 @@ describe("Issue #1078 PLAN retirement gate (CANDIDATE-U-PLRET, Red)", () => {
       ...tracked.filter((p) => !real.plans.some((r) => r.sourcePath === p)),
     ];
     for (const path of candidates) {
-      const matches = real.plans.filter((r) => r.sourcePath === path);
-      const independentlyProblematic =
-        matches.length !== 1 || matches[0].wholeSourceDisposition === "not-finalized";
       const r = a.analyzePlanRetirement({
         ...input([]),
         deletedPlanPaths: [path],
         disposition: real,
       });
-      expect(r.ok).toBe(!independentlyProblematic);
-      expect(r.violations.length === 0).toBe(!independentlyProblematic);
-      if (matches.length === 0) expect(reasonsAt(r, path)).toContain("plan_not_in_disposition");
-      else if (independentlyProblematic) expect(reasonsAt(r, path)).toContain("not_finalized");
+      const { allowed, exact } = independentReasons(
+        real.plans.filter((p) => p.sourcePath === path),
+      );
+      const got = r.violations.map((v) => v.reason).sort();
       expect(r.violations.every((v) => v.path === path)).toBe(true);
+      expect(r.ok).toBe(got.length === 0);
+      if (exact) {
+        // 規則 2 の失敗後に規則 3・4 を続けるかは契約が固定しないので、許容する 2 通りのどちらかと一致させる
+        expect(allowed.map((x) => [...x].sort())).toContainEqual(got);
+      } else {
+        expect(got).toEqual(expect.arrayContaining(allowed[allowed.length - 1]));
+      }
     }
   });
 
-  // CANDIDATE-U-PLRET-016 は書けない (生成スクリプトを temp で実行できる fixture がテスト設計に無い)。
-  // 理由は PR 本文 (未実施の検証) に記録する。
+  it.fails("CANDIDATE-U-PLRET-016: --write-json refuses to overwrite once any record is finalized", () => {
+    const script =
+      "docs/governance/candidates/v4-roadmap/migration/06_PLAN_DISPOSITION_FIRST_PASS.mjs";
+    const sourceRef = "3ca0692d6c6a180b058c492475080be2a140e667";
+    const work = mkdtempSync(join(tmpdir(), "ut-tdd-plret016-"));
+    tmpRoots.push(work);
+    const clone = join(work, "repo");
+    // 隔離複製: スクリプトが固定する source commit を checkout した複製に、検証対象のスクリプト source と
+    // 処分 JSON の temp 複製だけを重ねる (開発 repo の JSON は書き換えない)。依存の yaml だけを複製する。
+    git(work, "clone", "--quiet", "--local", "--no-checkout", REPO_ROOT, clone);
+    git(clone, "checkout", "--quiet", sourceRef);
+    cpSync(join(REPO_ROOT, "node_modules", "yaml"), join(clone, "node_modules", "yaml"), {
+      recursive: true,
+    });
+    put(clone, script, readFileSync(join(REPO_ROOT, script), "utf8"));
+    const original = readFileSync(join(REPO_ROOT, DISP_PATH), "utf8");
+    const run = (): { status: number | null; bytes: Buffer } => {
+      const r = spawnSync(process.execPath, [join(clone, script), "--write-json"], {
+        cwd: clone,
+        encoding: "utf8",
+        timeout: 100_000,
+      });
+      return { status: r.status, bytes: readFileSync(join(clone, DISP_PATH)) };
+    };
+
+    // 双子: 全件 not-finalized なら従来どおり書き込める
+    put(clone, DISP_PATH, original);
+    expect(run().status).toBe(0);
+
+    // 最終化済みが 1 件ある JSON では、非 0 で終了し bytes を変えない
+    const doc = JSON.parse(original) as { plans: Rec[] };
+    doc.plans[0].wholeSourceDisposition = "retired";
+    const finalized = `${JSON.stringify(doc, null, 2)}
+`;
+    put(clone, DISP_PATH, finalized);
+    const refused = run();
+    expect(refused.status).not.toBe(0);
+    expect(refused.bytes.toString("utf8")).toBe(finalized);
+  }, 180_000);
 
   it.fails("CANDIDATE-U-PLRET-017: analysis is offline, deterministic and ignores issue existence", async () => {
     const a = await api();
@@ -797,9 +880,19 @@ describe("Issue #1078 PLAN retirement gate (CANDIDATE-U-PLRET, Red)", () => {
   it.fails("CANDIDATE-U-PLRET-025: chains that stay open or end in retired are rejected", async () => {
     const a = await api();
     await expectTwinOk(a, [twoSidedRec(X, Z), rec(Z)], { supersessionFacts: facts(X, Z) });
+    const W = "docs/plans/PLAN-L6-905-chain-w.md";
     const zRecords: Rec[] = [
+      // (a) 未最終化
       rec(Z, { wholeSourceDisposition: "not-finalized" }),
-      retiredRec(Z, { reconciliation: { kind: "supersedes-two-sided" } }),
+      // (b) 連鎖が PLAN のまま続く: Z は transferred だが行き先が無く、後継 W も存在しない
+      rec(Z, {
+        destinations: [],
+        reconciliation: { kind: "supersedes-two-sided" },
+        confirmedSupersededBy: [link(Z, W)],
+      }),
+      // (b2) transferred だが行き先が空 (retired の拒否とは別経路)
+      rec(Z, { destinations: [] }),
+      // (c) retired
       retiredRec(Z),
     ];
     for (const z of zRecords) {
