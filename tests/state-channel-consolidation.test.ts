@@ -1922,6 +1922,23 @@ describe("Issue #1062: handover prose is retired", () => {
 
     it.fails("U-STCHAN-021: pointer without doc_entry_count does not trigger a handover bypass warning", () => {
       expect(checkHandoverBypass(deps)).toEqual([]);
+      // 署名照合は残る: 署名欠落 / 不正値の pointer は md の有無に関係なく手書き警告になる。
+      for (const unsigned of [
+        { active_plan: "PLAN-L7-04" },
+        { active_plan: "PLAN-L7-04", generated_by: "hand-written" },
+      ]) {
+        const signatureDeps: HandoverDeps = {
+          ...deps,
+          readText: (path) =>
+            path === join(repoRoot, ".ut-tdd", "handover", "CURRENT.json")
+              ? `${JSON.stringify(unsigned)}\n`
+              : null,
+        };
+        const warnings = checkHandoverBypass(signatureDeps);
+        expect(warnings).toHaveLength(1);
+        expect(warnings[0]).toContain("handover bypass: CURRENT.json");
+        expect(warnings[0]).toContain("手書き");
+      }
     });
   });
 });
