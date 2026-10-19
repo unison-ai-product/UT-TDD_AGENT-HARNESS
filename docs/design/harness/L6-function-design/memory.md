@@ -2,6 +2,7 @@
 layer: L6
 artifact_type: design_doc
 status: confirmed
+updated: 2026-10-19
 sub_doc: function-spec
 artifact_role: topic_memory
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
@@ -201,10 +202,9 @@ memoryは永続知識だけを保存し、進捗や次の一手を保存する�
 (2026-10-13 実測: 1865 本中 git 追跡は 46 本、名前に `pr-N` を含むもの 1435 本、1 日約 100 本増)。
 本節はエピソードを分類し、対象が閉じたら archive へ退避する契約を定める。削除はしない。
 
-置き場を分ける案 (エピソードを #424 の transient runtime bus へ書く) は v4 で扱う。review dispatch・通知・
-Codex 経路の 3 面を変えることになり、工程 ② の設計凍結と #424 の未決を踏むためである
-(advisor `claude-fable-5-1`、design、2026-10-13)。本節の `bound_to` の形式は bus 側が読める形で凍結し、
-bus の着地時に archive を bus の receipt 側へ畳む。
+新規の連絡・review custody を memory から分離する現在の契約は
+`state-channel-consolidation.md` (issue #1062) が正本である。本節は #963 が担当する既存 memory の回収部品を定める。
+#1062 が置き換えた旧書き込み・配送契約と、引き継がれていない受入責務は、下記のとおり別ownerの未完項目として残す。
 
 ### 分類
 
@@ -216,6 +216,10 @@ bus の着地時に archive を bus の receipt 側へ畳む。
   `https://github.com/<owner>/<repo>/pull/<N>` または `/issues/<N>` だけを受理する。別 repo の URL は拒否する。
 
 ### 書き込み時 (`memory add`)
+
+> **旧契約 / 別owner**: 以下は #963 の回収実装の受入範囲ではない。新規 episode を memory に書かない規則は
+> #1062 §6 が置き換える。旧 CANDIDATE-U-MEMEPI-001 / 006 / 011〜013 の write-time 契約は、#1062 の対応する
+> 拒否規則の実装・受入で移管先が明示されるまで未完として追跡する。番号推定・episode 追加をこの回収実装に含めない。
 
 1. `--lifecycle` / `--bound-to` の明示が最優先。
 2. 明示が無く `kind=project` のとき、title と tags から `pr-?<N>` / `PR ?<N>` / `issue-?<N>` / `Issue ?<N>`
@@ -251,27 +255,111 @@ bus の着地時に archive を bus の receipt 側へ畳む。
 ### 退避 (`ut-tdd memory retire`)
 
 - 既定は dry-run で、下の集計と、`retirable` の一覧 (出自 `declared` / `inferred` つき) を出す。
-- **集計**は `.ut-tdd/memory` の全ファイルを次の区分のどれか 1 つに入れ、区分の合計 = 全ファイル数とする。
+- **API / composition point**: 現行 `src/memory/service.ts` の named-function 構成に合わせ、回収入口を
+  `retireMemoryEpisodes({ repoRoot, nowISO, dryRun?, includeInferred? }, ports?)` とする。`nowISO` は有効な UTC
+  ISO-8601 timestamp とし、移し先 month (`<UTC YYYY-MM>`) と初回 manifest `recorded_at` に使う。`dryRun` の既定は
+  `true`、`includeInferred` の既定は `false`。追加する `ut-tdd memory retire` CLI handler が呼ぶ service operation
+  であり、別 CLI や storage primitive の export ではない。返却値は同期 I/O の処理完了後の typed result とする。
+  service class は新設せず、既存 `writeMemory` signature は変更しない。
+- **success report** は `{ ok: true, dryRun, total, counts, retirable, moved }`。`counts` は次の10キーをすべて持つ
+  整数 record とする: `tracked_durable`, `untracked_durable`, `episode_retirable_declared`, `episode_ok_declared`,
+  `episode_unknown_declared`, `episode_retirable_inferred`, `episode_ok_inferred`, `episode_unknown_inferred`,
+  `parse_failed`, `not_memory_entry`。`total` は `.ut-tdd/memory/` の直下にある全 directory entry 数で、全 count の合計と
+  一致する。再帰せず、symlink をたどらない。追跡済みの直下 entry は file type / extension を問わず常に
+  `tracked_durable` とし、tracked symlink や tracked submodule directory も follow / recurse せず保持する。
+  untracked regular `.md` (拡張子比較は case-insensitive) は frontmatter を解析する。untracked non-`.md` regular file、directory、symlink、その他
+  non-regular entry は `not_memory_entry` として保持し、移動しない。`.md` の読み取り/frontmatter parse failure は
+  `parse_failed` に一度だけ計上し (tracked direct entry は tracked_durable を優先)、解析不能時に対象範囲を縮めない。directory 列挙自体の failure は
+  `memory_archive_io_failed` とする。
+  `counts` と `retirable` は operation 開始時の一つの read snapshot から算出する。`retirable` は候補全件を
+  `memory_id` 昇順で含み、各 row は `{ memory_id, source_path, lifecycle_source, bound_to }` (`bound_to` も URL 昇順)。
+  `moved` は dry-run では移動予定、archive 成功時は実移動済みの一覧であり、各 row は
+  `{ memory_id, source_path, destination_path, sha256 }`、同じく `memory_id` 昇順とする。従って dry-run の `moved`
+  は実移動済みを意味しない。tracked は必ず `tracked_durable`、parse 失敗は必ず `parse_failed` に一度だけ計上し、
+  どちらも `retirable` / `moved` に現れない。
+- **typed failure** は `{ ok: false, reason }` とし、archive manifest / source-destination / recovery の不整合は
+  `memory_archive_recovery_conflict`、その他 I/O failure は `memory_archive_io_failed`。GitHub 到達不能は失敗ではなく
+  対象の `unknown` 判定であり、doctor advisory を含め exit 0 を保つ。`nowISO` が不正な場合は filesystem / DB I/O
+  前に `TypeError` とし、filesystem / DB のどちらにも I/O を行わない。CLI は `ok:false` を exit 1、成功を exit 0 に写像する。
+- `ports` は同じ production operation の外部境界だけを差し替え、省略した port は production adapter を使う。
+  ```ts
+  ports?: {
+    resolveGitHubStatus?: (input: { url: string }) => { state: "open" | "closed" | "unknown" };
+    checkpoint?: (input: {
+      point: "beforeIntentAppend" | "afterIntentAppendBeforeRename" | "afterRenameBeforeDbDelete" | "afterDbDeleteBeforeDoneAppend";
+      memoryId: string;
+      sourcePath: string;
+      destinationPath: string;
+      sha256: string;
+    }) => void;
+  }
+  ```
+  両 port は同期関数である。status resolver は GitHub PR / issue 状態のみを注入し、throw または不正 result は `unknown`
+  とする。PR の `git log --first-parent <default branch>` merge-commit 検査は実 repository 上で必ず行い、merge commit が
+  あれば外部 port を呼ばず `git_first_parent_merge` 根拠で closed とする。fixture は checkpoint callback から sentinel
+  exception を送出でき、その exception は `retireMemoryEpisodes` から**そのまま propagate**し `{ ok:false }` に変換しない。
+  checkpoint を除き、分類・manifest・rename・DB 更新は実 operation を通す。CLI/env test knob、偽 archive 実装、未実装
+  export import は認めない。
+- **集計**は `.ut-tdd/memory` 直下の全 directory entry を次の区分のどれか1つに入れ、区分の合計 = entry 数とする。
   `tracked_durable` / `untracked_durable` (宣言または kind による) / `episode_<retirable|ok|unknown>_<declared|inferred>`
-  (6 区分) / `parse_failed` (frontmatter が読めないもの。退避しない)。tracked のファイルは常に `tracked_durable` に入る。
+  (6 区分) / `parse_failed` (untracked regular `.md` の読み取り/frontmatter が失敗したもの。退避しない) / `not_memory_entry`
+  (untracked non-`.md` regular file、directory、symlink、その他 non-regular entry。保持し、再帰 / follow しない)。
+  tracked direct entry は常に `tracked_durable` に入る。
 - `--archive` は `retirable` かつ `declared` だけを移す。`inferred` を移すには `--include-inferred` を足す。
   これは dry-run の一覧を人が見て、引用の教訓が混ざっていないことを確かめてから流す 1 回限りの操作であり、
   EOD では使わない。
 - 移し先は `.ut-tdd/archive/memory-episodes/<YYYY-MM>/` (`.ut-tdd/archive/` は gitignore 済み)。
 - **manifest** は `.ut-tdd/archive/memory-episodes/manifest.jsonl` に置く独自形式 (`ut-tdd.memory-episode-archive/v1`) で、
-  1 行 1 イベントの追記専用とする。`src/memory/legacy-archive-manifest.ts` の形式 (固定の legacy root、untracked は件数と
-  集合 digest だけ) は変えず、流用するのは sha256 の計算部品だけにする。
+  1 行 1 イベントの追記専用とする。#1062 が同じ path を使う state-channel selector とは別 schema discriminator を使い、
+  `ut-tdd.state-channel-memory-archive/v1` row は #1062 §7.1 の closed schema で検証したうえで、#963 selector の選別・
+  recovery input には使わず、#963 の処理対象から除外する (逆方向も同じ)。有効な foreign row の存在は #963 operation に影響せず、
+  row bytes・関連 file・DB row を変更しない。未知 schema row と、既知 schema でも malformed な row は黙って無視せず
+  `memory_archive_recovery_conflict` で全体停止する。`src/memory/legacy-archive-manifest.ts`
+  の形式 (固定の legacy root、untracked は件数と集合 digest だけ) は変えず、流用するのは sha256 の計算部品だけにする。
 - 1 件の手順は write-ahead とする: (1) `state: intent` の行 (`memory_id`、元 path、移し先 path、sha256、bytes、`bound_to`、
   判定の根拠 = merge commit または GitHub の状態、出自、時刻) を追記 → (2) rename → (3) `memory_entries` から当該行を削除 →
-  (4) `state: done` の行を追記。
-- 再実行時の復旧: `intent` だけの行について、元 path にあれば (2) からやり直し、移し先にあって sha256 が一致すれば (3) から
-  やり直す。どちらにも無い、または sha256 が合わなければ、その entry で処理全体を止めて報告し exit 1 とする
-  (`done` を書かず、db 行も消さない。推測で埋めない)。`done` の行は再処理しない。
+  (4) `state: done` の行を追記。event は exact keys `{ schema, state, memory_id, source_path, destination_path, sha256,
+  bytes, bound_to, selection_basis, recorded_at }`、`schema` は `ut-tdd.memory-episode-archive/v1`、`state` は `intent` /
+  `done`、digest は prefix なし lower-case SHA-256 64桁とする。`selection_basis` は exact keys
+  `{ kind, lifecycle_source, closed_evidence }`、`kind` は `memory-episode-closure/v1`、`lifecycle_source` は
+  `declared` / `inferred`、`closed_evidence` は `bound_to` の全 URL を URL 昇順に持つ discriminated union 配列とする。
+  Git 根拠は exact keys `{ url, via, commit_sha }`、`via` は `git_first_parent_merge`、`commit_sha` は実際の default
+  branch first-parent merge commit の 40桁 lower-case hex SHA-1。GitHub 根拠は exact keys
+  `{ url, via, observed_state }`、`via` は `github_closed`、`observed_state` は resolver が返した `closed`。PR merge commit
+  があるときは Git root の実 commit SHA を記録し、外部 resolver の値で置き換えない。open / unknown entry は archive
+  対象でないため intent を書かない。`intent` と対応する `done` は
+  同じ intent payload (state 以外の field) と `recorded_at` / destination / sha256 を再利用する。
+- recovery は**新規 entry の書き込み前に全 entry を preflight**する。既存 `intent` について元 path のみ存在し hash
+  一致なら rename から、移し先のみ存在し hash 一致なら DB row 削除から再開する。両 path が存在、両方不在、既存側 hash
+  不一致、manifest row の schema / identity 不正のいずれかなら `{ ok:false, reason:"memory_archive_recovery_conflict" }`
+  とし、`done` を追記せず、当該 DB row を消さず、他 entry の新規処理も開始しない。その他の archive I/O failure は
+  `memory_archive_io_failed`。既存 `done` row は source が無く移し先だけが存在し、その内容の digest が row の
+  `sha256` と一致するときに限り処理済みとして受理する。それ以外 (source が残る、移し先が無い、両方ある、両方無い、
+  digest 不一致) は `memory_archive_recovery_conflict` で全体停止する。正当な `done` row は再処理せず、重複 `done` を追記しない。
+  新規選択 entry の移し先が既に存在する場合、または新規選択 entry の `memory_id` が既存 row と衝突し、回復可能な既存
+  `intent` に結び付かない場合も、上書き・黙示 skip をせず `memory_archive_recovery_conflict` で全体停止する。回復可能な既存
+  `intent` は上記の recovery 手順で再開し、この新規 destination 衝突規則によって拒否しない。failure は成功扱いへ丸めない。
+- archive は選別・全直接 entry の列挙・project identity・manifest 全行・既存 recovery state・全選択 source bytes/hash・
+  isolated projection DB readiness を preflight し、成功するまで file / manifest / DB に書かない。どれかの preflight
+  conflict / failure は他 entry の intent append、rename、DB delete を一切開始しない。dry-run も同じ read / classify /
+  report 経路を使うが file / manifest / DB write は常に0である。
+- **fault checkpoints** は `beforeIntentAppend`, `afterIntentAppendBeforeRename`, `afterRenameBeforeDbDelete`,
+  `afterDbDeleteBeforeDoneAppend` の4点だけ。checkpoint は各境界で実 WAL operation から呼ぶ同期 test port であり、
+  production の sequence を置き換えない。L7 は callback を throw させた直後、再実行前に実 manifest bytes・source / target
+  path と sha256・isolated `memory_entries` row を直接観測する。その後同じ実 operation を再実行し、各 checkpoint から
+  `done` 1件・移し先 hash 一致・DB row 不在・二重 rename なしへ回復することを確かめる。
+- #1062 の `archiveStateChannelMemoryEpisodes({ repoRoot, nowISO, dryRun? })` は snapshot selector 専用の composition
+  point として保ち、#963 の `retireMemoryEpisodes` と selector / selection basis を混ぜない。両 operation は同じ実 WAL
+  processor と checkpoint 境界を使えるが、各々の result contract と manifest discriminator を維持する。
 - ファイルを削除する経路は持たない。git 追跡済みのファイルは対象外。
 - doctor の `memory-retirable` row は dry-run と同じ集計を出す advisory で、doctor を fail させない。
 - EOD の閉店処理で `memory retire --archive` (declared のみ) を 1 回流す。
 
 ### 配送側
+
+> **旧契約 / 別owner**: 以下の新規 episode 配送抑止は #1062 が置き換える。CANDIDATE-U-MEMEPI-009 / 010 / 018 の
+> 受入責務は未完として残り、#1062 の通知実装 / 受入へ移管先が明示されるまで完了扱いにしない。この #963 回収差分では
+> `claude-memory-wake`、`memory add --notify-claude` を変更しない。
 
 - Claude への即時配送 (claude-memory-wake) は、`episode` かつ `lifecycle_source: declared` かつ判定が `retirable`
   (確定的に closed) のものを配送しない。`inferred` は判定にかかわらず配送する (番号の引用だけの恒久教訓を、配送面でも
@@ -279,6 +367,9 @@ bus の着地時に archive を bus の receipt 側へ畳む。
   理由ごと凍結する (PLAN-L6-97 §3.6)。
 
 ### review dispatch との関係
+
+> **旧契約 / 別owner**: この段落の memory に review anchor を残す仕様は #1062 が置き換える。CANDIDATE-U-MEMEPI-009
+> の責務を #963 の退避実装で完了扱いにせず、#1062 の custody / notification implementation で移管状態を明示する。
 
 PLAN-L6-97 §3.7 は「レビュー依頼や進捗連絡は memory に書かない」としていたが、現行の review dispatch は
 `--review-memory-id` を必須とし、依頼の錨を memory に書く。本節はこの錨を正当な `episode` として扱い、
@@ -303,6 +394,14 @@ PLAN-L6-97 §3.7 は「レビュー依頼や進捗連絡は memory に書かな�
 | 12 | 集計 | 区分の合計 = 全ファイル数、tracked は全件 `tracked_durable` | CANDIDATE-U-MEMEPI-016 |
 | 13 | 推定 episode (引用だけの恒久教訓) の即時配送 | 配送する | CANDIDATE-U-MEMEPI-018 |
 | 14 | 中断後に移し先の bytes が変わった、または両方の path から消えた | 止めて報告、exit 1、`done` なし、db 行は残る | CANDIDATE-U-MEMEPI-019 |
+| 15 | 既存 `done` row の source absent / destination present / row digest一致、および各不整合状態 | 正当な1状態だけ受理。不整合は全体conflict | CANDIDATE-U-MEMEPI-020 |
+| 16 | 新規選択 entry の destination が既に存在、または新規選択 entry の同一 `memory_id` row 衝突 (回復可能な既存 `intent` ではない) | 上書き・黙示skipなしで全体conflict。回復可能な既存 `intent` は再開 | CANDIDATE-U-MEMEPI-021 |
+| 17 | invalid UTC ISO `nowISO` | filesystem / DB I/O 前に `TypeError`、I/O 0 | CANDIDATE-U-MEMEPI-022 |
+| 18 | Git first-parent merge を根拠にした manifest event | exact keys、実 commit SHA、resolver未呼出し、intent/done payload・時刻一致 | CANDIDATE-U-MEMEPI-023 |
+| 19 | GitHub closed を根拠にした manifest event | exact keys、全 `bound_to` evidence、URL順、intent/done一致 | CANDIDATE-U-MEMEPI-024 |
+| 20 | manifest の (a) unknown schema row、(b) 既知 schema の malformed row (foreign state-channel row の不正形を含む) を独立 fixture で検証 | 各々 `memory_archive_recovery_conflict`、他entryも変更しない | CANDIDATE-U-MEMEPI-025 (a)/(b) |
+| 21 | valid `ut-tdd.state-channel-memory-archive/v1` row が同じ manifest にある | #963 で選別・recoveryに使わず、foreign row / 関連file / DBを変更しない | CANDIDATE-U-MEMEPI-027 |
+| 22 | status resolver が throw / invalid result を返す | `unknown`、archive対象外、対象の file / DB / manifest 不変 | CANDIDATE-U-MEMEPI-026 |
 
 ## §5 検証接続
 
