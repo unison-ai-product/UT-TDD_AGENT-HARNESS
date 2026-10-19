@@ -1,4 +1,3 @@
-import { checkHandoverOutstandingAnchor } from "../handover/index.ts";
 import { checkAdvisoryGateAging } from "../lint/advisory-strict-gate-aging.ts";
 import { checkErasableSyntax } from "../lint/erasable-syntax.ts";
 import { checkGreenCommandDigests } from "../lint/green-command-digest.ts";
@@ -91,7 +90,7 @@ import {
   checkSecretScan,
 } from "./rule-quality.ts";
 import type { DoctorCheckDefinition, DoctorOptions } from "./runner.ts";
-import { type DoctorDeps, handoverDeps } from "./runtime-state.ts";
+import { checkHandoverProse, type DoctorDeps } from "./runtime-state.ts";
 import { checkRuntimeStateLocation } from "./runtime-state-location.ts";
 import {
   checkCodexHookAdapter,
@@ -299,7 +298,7 @@ export function buildDoctorCheckDefinitionGroups(
         full("lint-wiring", () => checkLintWiring(deps.repoRoot)),
         full("proposal-document-coverage", () => checkProposalDocumentCoverage(deps.repoRoot)),
         full("frontend-design-coverage", () => checkFrontendDesignCoverage(deps.repoRoot)),
-        full("handover-outstanding", () => checkHandoverOutstandingAnchor(handoverDeps(deps))),
+        full("handover-prose", () => checkHandoverProse(deps)),
         full("green-command-digest", () => {
           const result = checkGreenCommandDigests(deps.repoRoot);
           return {
