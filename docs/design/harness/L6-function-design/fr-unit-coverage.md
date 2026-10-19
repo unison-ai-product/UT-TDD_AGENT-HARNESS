@@ -46,7 +46,7 @@ plan: docs/plans/PLAN-L6-21-fr-unit-coverage.md
 退役分岐は設計のみで未達である。次の4条件がすべて満たされるまで、退役分岐を完了済みとして扱わない。既存の通常FR coverage（FR-L1 全件の L6 spec / unit contract / U-FR oracle）の完了は、この4条件を満たした証拠にならない。
 
 1. 本節を含む L6 設計（本書と `function-spec.md`）が設計検収を受けている。
-2. L7 の候補テスト設計（`CANDIDATE-U-FRCOV-007〜023`）が本契約の各条件に対応し、独立した負例と正例を持つ。候補設計は実test実行や Red 結果の証跡ではない。
+2. L7 のテスト設計（正式 `U-FRCOV-007〜023`）が本契約の各条件に対応し、独立した負例と正例を持つ。候補設計は実test実行や Red 結果の証跡ではない。
 3. 通常FRの既存 coverage と正式 oracle を維持することと、後続の Red 登録→formal 昇格→実装 Green の順序が、L6 と L7 の間で一致している。
 4. 検収対象の exact revision に対する文書検査と、成果物を書いていない family の reviewer による review が記録されている。
 
