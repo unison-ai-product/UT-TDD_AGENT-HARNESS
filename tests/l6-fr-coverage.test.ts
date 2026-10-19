@@ -289,10 +289,9 @@ function runFx(fx: RetFx): L6FrCoverageResult {
   return analyzeL6FrCoverage(materialize(fx).docs);
 }
 
-/** 双子 (有効 fixture) が受理され、1条件だけ変えた fixture が拒否されること。 */
-function expectPairRejected(valid: RetFx, mutated: RetFx): void {
-  expect(runFx(valid).ok).toBe(true);
-  expect(runFx(mutated).ok).toBe(false);
+/** 双子 (有効 fixture) と、1条件だけ変えた fixture の判定 [valid.ok, mutated.ok] を返す。 */
+function pairOutcome(valid: RetFx, mutated: RetFx): [boolean, boolean] {
+  return [runFx(valid).ok, runFx(mutated).ok];
 }
 
 describe("Issue #848 FR retirement coverage (U-FRCOV-007..023, Red)", () => {
@@ -330,14 +329,13 @@ describe("Issue #848 FR retirement coverage (U-FRCOV-007..023, Red)", () => {
   });
 
   it.fails("U-FRCOV-010: retired row without retirement_plan is rejected", () => {
-    expectPairRejected(candidateFx(), candidateFx({ plan: "" }));
+    expect(pairOutcome(candidateFx(), candidateFx({ plan: "" }))).toEqual([true, false]);
   });
 
   it.fails("U-FRCOV-011: retirement_plan that does not resolve is rejected", () => {
-    expectPairRejected(
-      candidateFx(),
-      candidateFx({ plan: "docs/plans/PLAN-L6-RET-99-missing.md" }),
-    );
+    expect(
+      pairOutcome(candidateFx(), candidateFx({ plan: "docs/plans/PLAN-L6-RET-99-missing.md" })),
+    ).toEqual([true, false]);
   });
 
   it.fails("U-FRCOV-012: ambiguous or shortened plan references are rejected", () => {
@@ -352,37 +350,43 @@ describe("Issue #848 FR retirement coverage (U-FRCOV-007..023, Red)", () => {
   });
 
   it.fails("U-FRCOV-013: candidate id without a declaration row is rejected even if prose mentions it", () => {
-    expectPairRejected(
-      candidateFx(),
-      candidateFx({ candDecls: [], prose: `${CAND} は本文で言及されるだけ。` }),
-    );
+    expect(
+      pairOutcome(
+        candidateFx(),
+        candidateFx({ candDecls: [], prose: `${CAND} は本文で言及されるだけ。` }),
+      ),
+    ).toEqual([true, false]);
   });
 
   it.fails("U-FRCOV-014: formal id without a declaration row is rejected even if prose and candidate row mention it", () => {
-    expectPairRejected(
-      formalFx(),
-      formalFx({
-        formalDecls: [],
-        candDecls: [retDecl(CAND)],
-        prose: `${FORMAL} は本文で言及されるだけ。`,
-      }),
-    );
+    expect(
+      pairOutcome(
+        formalFx(),
+        formalFx({
+          formalDecls: [],
+          candDecls: [retDecl(CAND)],
+          prose: `${FORMAL} は本文で言及されるだけ。`,
+        }),
+      ),
+    ).toEqual([true, false]);
   });
 
   it.fails("U-FRCOV-015: declaration whose real test file is missing is rejected", () => {
-    expectPairRejected(candidateFx(), candidateFx({ testFiles: {} }));
+    expect(pairOutcome(candidateFx(), candidateFx({ testFiles: {} }))).toEqual([true, false]);
   });
 
   it.fails("U-FRCOV-016: test file citing a different oracle id is rejected", () => {
-    expectPairRejected(
-      candidateFx(),
-      candidateFx({
-        testFiles: {
-          [RET_TEST_REL]:
-            'it("CANDIDATE-U-RET-0010 prefix lookalike", () => {});\nit("CANDIDATE-U-RET-002", () => {});\n',
-        },
-      }),
-    );
+    expect(
+      pairOutcome(
+        candidateFx(),
+        candidateFx({
+          testFiles: {
+            [RET_TEST_REL]:
+              'it("CANDIDATE-U-RET-0010 prefix lookalike", () => {});\nit("CANDIDATE-U-RET-002", () => {});\n',
+          },
+        }),
+      ),
+    ).toEqual([true, false]);
   });
 
   it.fails("U-FRCOV-017: partial promotion (one or two surfaces to formal) is rejected in all 6 cases", () => {
@@ -448,40 +452,130 @@ describe("Issue #848 FR retirement coverage (U-FRCOV-007..023, Red)", () => {
       coverageOracle: "U-FR-L1-05",
       candDecls: [],
     });
-    expectPairRejected(active, { ...active, plan: RET_PLAN_ID });
+    expect(pairOutcome(active, { ...active, plan: RET_PLAN_ID })).toEqual([true, false]);
   });
 
   it.fails("U-FRCOV-020: ambiguous double declaration of the exact oracle id is rejected", () => {
-    expectPairRejected(
-      candidateFx(),
-      candidateFx({
-        candDecls: [retDecl(CAND), retDecl(CAND, RET_TEST_REL_2)],
-        testFiles: {
-          [RET_TEST_REL]: `it("${CAND}", () => {});\n`,
-          [RET_TEST_REL_2]: `it("${CAND} second", () => {});\n`,
-        },
-      }),
-    );
+    expect(
+      pairOutcome(
+        candidateFx(),
+        candidateFx({
+          candDecls: [retDecl(CAND), retDecl(CAND, RET_TEST_REL_2)],
+          testFiles: {
+            [RET_TEST_REL]: `it("${CAND}", () => {});\n`,
+            [RET_TEST_REL_2]: `it("${CAND} second", () => {});\n`,
+          },
+        }),
+      ),
+    ).toEqual([true, false]);
   });
 
   it.fails("U-FRCOV-021: resolved plan document whose frontmatter plan_id differs is rejected", () => {
-    expectPairRejected(
-      candidateFx({ plan: RET_PLAN_REL }),
-      candidateFx({ plan: RET_PLAN_REL, plans: { [RET_PLAN_REL]: "PLAN-L6-RET-77-other" } }),
-    );
+    expect(
+      pairOutcome(
+        candidateFx({ plan: RET_PLAN_REL }),
+        candidateFx({ plan: RET_PLAN_REL, plans: { [RET_PLAN_REL]: "PLAN-L6-RET-77-other" } }),
+      ),
+    ).toEqual([true, false]);
   });
 
   it.fails("U-FRCOV-022: declaration row without the target FR id is rejected", () => {
-    expectPairRejected(
-      candidateFx(),
-      candidateFx({ candDecls: [retDecl(CAND, RET_TEST_REL, "")] }),
-    );
+    expect(
+      pairOutcome(candidateFx(), candidateFx({ candDecls: [retDecl(CAND, RET_TEST_REL, "")] })),
+    ).toEqual([true, false]);
   });
 
   it.fails("U-FRCOV-023: declaration row targeting a different FR id is rejected", () => {
-    expectPairRejected(
-      candidateFx(),
-      candidateFx({ candDecls: [retDecl(CAND, RET_TEST_REL, "FR-L1-06")] }),
-    );
+    expect(
+      pairOutcome(
+        candidateFx(),
+        candidateFx({ candDecls: [retDecl(CAND, RET_TEST_REL, "FR-L1-06")] }),
+      ),
+    ).toEqual([true, false]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Issue #848 oracle 宣言行の識別規則の Red (CANDIDATE-U-FRCOV-024..026)。
+// 契約: L6 fr-unit-coverage.md「宣言行の識別規則」/ L7 §1.20 追補。
+// 宣言は fixture の L7 文書へ `prose` として自由形式の表で与える (宣言表は空)。
+// 現行実装は退役状態を読まず先頭の正例 (有効 fixture) を拒否するので assertion で落ちる。
+// ---------------------------------------------------------------------------
+
+/** 宣言行を自由形式の表 (`prose`) だけで与えた candidate fixture の判定。 */
+function declOk(prose: string, over: Partial<RetFx> = {}): boolean {
+  return runFx(candidateFx({ candDecls: [], prose, ...over })).ok;
+}
+
+function freeTable(head: string, row: string, title = "無関係な節"): string {
+  return [`## ${title}`, "", head, "|---|---|---|", row, ""].join("\n");
+}
+
+const DECL_HEAD_ID = "| ID | 観点 | 実装テスト |";
+const DECL_ROW = `| ${CAND} | FR-L1-05 の退役 oracle | ${RET_TEST_REL} |`;
+
+describe("Issue #848 declaration-row identification (CANDIDATE-U-FRCOV-024..026, Red)", () => {
+  afterEach(() => {
+    for (const root of tmpRoots.splice(0)) rmSync(root, { recursive: true, force: true });
+  });
+
+  it.fails("CANDIDATE-U-FRCOV-024: any >=3-column table row whose first cell is the exact id is a declaration, independent of heading and header", () => {
+    const outcomes = [
+      declOk(freeTable(DECL_HEAD_ID, DECL_ROW)),
+      declOk(freeTable("| oracle | 観点 | 実装テスト |", DECL_ROW)),
+      declOk(freeTable("| test_id | 観点 | 実装テスト |", DECL_ROW)),
+      declOk(
+        freeTable(DECL_HEAD_ID, `| \`${CAND}\` | FR-L1-05 の退役 oracle | \`${RET_TEST_REL}\` |`),
+      ),
+      // 負例: 2列表に畳む / 第1セルが prose / fenced code block 内の表
+      declOk(
+        [
+          "## 無関係な節",
+          "",
+          "| ID | 内容 |",
+          "|---|---|",
+          `| ${CAND} | FR-L1-05 ${RET_TEST_REL} |`,
+          "",
+        ].join("\n"),
+      ),
+      declOk(freeTable(DECL_HEAD_ID, `| 本文 | ${CAND} FR-L1-05 | ${RET_TEST_REL} |`)),
+      declOk(`\`\`\`\n${freeTable(DECL_HEAD_ID, DECL_ROW)}\`\`\`\n`),
+    ];
+    expect(outcomes).toEqual([true, true, true, true, false, false, false]);
+  });
+
+  it.fails("CANDIDATE-U-FRCOV-025: target FR id is matched on an exact boundary and must be the only FR id", () => {
+    const withTarget = (cell: string) =>
+      declOk(freeTable(DECL_HEAD_ID, `| ${CAND} | ${cell} | ${RET_TEST_REL} |`));
+    const outcomes = [
+      withTarget("FR-L1-05"),
+      withTarget("`FR-L1-05` の退役 oracle"),
+      withTarget("XFR-L1-05"),
+      withTarget("FR-L1-050"),
+      withTarget("FR-L1-5"),
+      withTarget("FR-L1-05 と FR-L1-06"),
+    ];
+    expect(outcomes).toEqual([true, true, false, false, false, false]);
+  });
+
+  it.fails("CANDIDATE-U-FRCOV-026: every tests path token must resolve and cite the exact oracle id", () => {
+    const both = {
+      [RET_TEST_REL]: `it("${CAND} a", () => {});\n`,
+      [RET_TEST_REL_2]: `it("${CAND} b", () => {});\n`,
+    };
+    const withPath = (cell: string, testFiles?: Record<string, string>) =>
+      declOk(
+        freeTable(DECL_HEAD_ID, `| ${CAND} | FR-L1-05 の退役 oracle | ${cell} |`),
+        testFiles ? { testFiles } : {},
+      );
+    const outcomes = [
+      withPath(`\`${RET_TEST_REL}:12\``),
+      withPath(`${RET_TEST_REL}, ${RET_TEST_REL_2}`, both),
+      withPath("path なし"),
+      withPath(`${RET_TEST_REL}, tests/fixture/missing.test.ts`),
+      withPath("tests/fixture/../fixture/retired.test.ts"),
+      withPath(RET_TEST_REL, { [RET_TEST_REL]: 'it("unrelated", () => {});\n' }),
+    ];
+    expect(outcomes).toEqual([true, true, false, false, false, false]);
   });
 });

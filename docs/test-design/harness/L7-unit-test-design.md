@@ -140,18 +140,14 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 |---|---|---|
 | U-HOVER-001 | `resolveHandoverScope` | **never throws**。current-plan state 有 → `active_plan` 解決 / `.ut-tdd/logs/plan/*.digest.json` を `listDir` で集約 / **壊れ JSON 行・不在は skip** / 無 → `{active_plan:null, digests:[]}` |
 | U-HOVER-002 | `buildPointer` | **純関数**。`digest_summary` = 対象 digest の commits/files/failures **件数**集計 / **`digests` 非空なら active_plan の null/非 null に関わらず集計 / `digests` 空のときのみ `digest_summary=null`** / `active_plan` は scope 値を透過 (null 可) / `updated_at=now`。**edge: `active_plan=null` だが `digests` 非空 → digest_summary は集計値 (null にしない)** |
-| U-HOVER-003 | `scaffoldFromDigests` | **純関数**。digest.commits/files_touched → `deliverables` / planMeta.kind/title → `plans.summary` / **`next_actions`/`carry`/`po_decisions`/`do_not_break` が空配列 (human 未記入)** |
-| U-HOVER-004 | `renderHandoverScaffold` | **純関数**。§6.8.5 の 6 セクション (①-⑥) を含む / ③-⑥ に `TODO(human)` placeholder / **具体 oracle: 入力 `HandoverDoc.plans[0].summary` に `token=secret123` を含めると出力は `secret123` を含まず `token=***` を含む (render 時 `sanitize` 適用の defense-in-depth、tracked md への流出ゼロ)** |
 | U-HOVER-005 | `handoverStale` | **純関数**。`updated_at=null`/parse 不能 → true / 24h 超 → true / 24h 以内 → false / **境界 (now-updated_at=24h ちょうど) は stale でない (`>` 判定)** / **具体 oracle: `now`/`updated_at` を UTC ISO8601 で与え `Date.parse` 数値差分で判定 (辞書順比較でない)** |
 | U-HOVER-006 | `setActivePlan` + `inferPlanFromCommit` | `setActivePlan` が `.ut-tdd/state/current-plan` を書き `resolveActivePlan` が同値を読む (**round-trip**) / **`null`+`removeFile` 有 → file 削除で clear / `null`+`removeFile` 無 → 空文字書込 → `resolveActivePlan` が空文字を null 相当に落とす (両 clear 経路を検証)** / `inferPlanFromCommit`: `PLAN-L6-06-...` 抽出 / 非該当文字列 → null / **`-F -` heredoc 様 (本文に PLAN 文字列なし) → null** |
-| U-HOVER-007 | `runHandover` (orchestration) | **`dryRun=true` → md/CURRENT.json を書かず `content` を返す (`written=[]`、非破壊)** / 通常 → md **追記** (既存上書きしない) + CURRENT.json 更新 / **`complete=true` → CURRENT.json の `status==="completed"` かつ `active_plan === (args.planId ?? scope.active_plan)`** |
+| U-HOVER-007 | `runHandover` (orchestration) | **`dryRun=true` → 何も書かない (`written=[]`、非破壊)** / 通常 → CURRENT.json 更新 (md の追記・`content` の返却は §5.1 で撤去。散文を作らない契約は U-STCHAN-019 が持つ) / **`complete=true` → CURRENT.json の `status==="completed"` かつ `active_plan === (args.planId ?? scope.active_plan)`** |
 | U-HOVER-008 | `sameFamilyPlan` / `dedupeDigests` (IMP-048) | `sameFamilyPlan`: 同一 id → true / bare ⊂ slug (`-` 境界付き prefix) → true / `bare が slug の prefix だが `-` 境界でない (例: `PLAN-L7-0` vs `PLAN-L7-04`) → false (誤マッチ防止)` / 無関係 → false / **対称 (a,b)=(b,a)**。`dedupeDigests`: 同 family の bare/slug ゴーストを **最長 id** へ union 集約 (commits/files_touched/sessions の union、files_touched は重複除去) / 無関係 PLAN は別 group のまま残す / **推移的マージ: bare 無しで slug 2 種 + bare が後着でも全部 1 group へ収束 (順序非依存)** |
 | U-HOVER-009 | `resolveHandoverScope` scopeToActive (IMP-048) | 既定 (option 無し): `dedupeDigests` のみ → bare/slug は 1 件に畳まれ別 PLAN は残る (digest 数 = family 数 + 無関係 PLAN 数) / `scopeToActive: true`: **active family の digest のみへ絞る** / **scopeToActive だが active family が digest に無い → 全件 fallback (空 handover 回避)** |
 | U-HOVER-010 | `readPointer` / `checkHandoverDiscipline` (IMP-047) | `readPointer`: 不在 → null / 壊れ JSON → null / 正常 → object。`checkHandoverDiscipline`: **活動なし (digest 空) → 警告ゼロ (規律対象外)** / 活動あり + CURRENT.json 不在 → `"handover 未生成"` warn / 活動あり + fresh pointer (同 family) → 警告ゼロ / 活動あり + stale pointer → `"stale"` を含む warn / 活動あり + pointer が別 plan → `"drift"` を含む warn / **活動あり + fresh pointer だが `active_plan=null` (完了済正常形) → drift 無音 (I-2: null は family 比較から除外)** |
-| U-HOVER-011 | `checkHandoverBypass` / `countHandoverEntries` (IMP-078 gap①) | pointer 不在 → 警告ゼロ (discipline 担当) / `generated_by` 欠落 (手書き pointer) → `"bypass"` warn / `generated_by` 一致 + entry 数一致 → 警告ゼロ / latest_doc の `# Session Handover` 数 > `doc_entry_count` (手書き追記) → `"mismatch"` warn。`countHandoverEntries`: 見出し数を数える / null→0 |
-| U-HOVER-012 | `resolveHandoverScope` scopeToSession / `latestSessionId` (IMP-078 gap④) | `scopeToSession`: 指定 session が触れた digest のみへ絞る / 該当無し → 全件 fallback (空 handover 回避)。`latestSessionId`: session jsonl 群から最新 event ts の session_id を返す / 不在 → null / 壊れ行 skip。**runHandover の readPlanMeta family 解決 (gap⑤): bare plan_id digest でも slug PLAN file を解決し kind を埋める (unknown 防止)** |
-| U-HOVER-013 | `renderHandoverScaffold` slimSummary / `runHandover` 同日累積 (A-138 ITEM-4) | `slimSummary=true` → §1/§2 を「同日 first entry 参照」stub に縮約し plan list / deliverables 本体を省く (`§3-§6` は全文維持) / **`# Session Handover` header は 1 個維持** (`countHandoverEntries` 不変)。`runHandover`: 同日 2 件目 (existing 非 null) は slim render + 追記、`doc_entry_count` は header 数と一致 (bypass 照合契約不変) |
-| U-HOVER-014 | `boundSameDayEntries` / `runHandover` 累積上限 (PLAN-L7-83) | **純関数**。entry 数 ≤ `maxEntries-1` / `# Session Handover` header 不在 → 入力をそのまま返す (圧縮不要) / 超過 → **anchor (entry[0]) + 直近 (maxEntries-2) を残し中間を 1 行 breadcrumb へ畳む** (`countHandoverEntries` = `maxEntries-1`) / **breadcrumb は header に一致せず `countHandoverEntries`/`doc_entry_count` 契約を壊さない** / breadcrumb 文言で剪定件数を明示 (no silent cap)。`runHandover`: 反復 append でも同日 doc の header 数 ≤ `MAX_SAME_DAY_ENTRIES`・定常で上限ちょうど・`doc_entry_count` は md header 数と一致 |
+| U-HOVER-011 | `checkHandoverBypass` の署名照合 (IMP-078 gap①、state-channel-consolidation §5.2) | pointer 不在 → 警告ゼロ (discipline 担当) / `generated_by` 欠落 (手書き pointer) → `"bypass"` warn / `generated_by` 一致 + `latest_doc` なしの pointer → 警告ゼロ。md 照合 (`latest_doc` の `# Session Handover` 数 > `doc_entry_count` → `"mismatch"` warn) と `countHandoverEntries` は §5.1 の撤去対象 (`latest_doc` / `doc_entry_count` の廃止に伴い oracle から外す。旧 pointer の残骸が md を持っていても警告しない契約は U-STCHAN-021 が持つ) |
+| U-HOVER-012 | `resolveHandoverScope` scopeToSession / `latestSessionId` (IMP-078 gap④) | `scopeToSession`: 指定 session が触れた digest のみへ絞る / 該当無し → 全件 fallback (空 handover 回避)。`latestSessionId`: session jsonl 群から最新 event ts の session_id を返す / 不在 → null / 壊れ行 skip。runHandover の readPlanMeta family 解決 (gap⑤) は、`readPlanMeta` が scaffold の §1 を描く専用部品で §5.1 の撤去対象のため oracle から外した |
 | U-HOVER-015 | `runHandover` marker reconcile (drift 恒久解消、PLAN-L7-83) | **`complete=true` → `current-plan` marker を clear** (`resolveActivePlan→null`) し `checkHandoverDiscipline` が drift を出さない / **`--plan X` の in_progress → marker = X へ同期** (override 由来 drift 解消) / **plain in_progress (`--plan` 無し) → marker 無変更** (無駄書き回避) / **`dryRun=true` → marker を書かない** (非破壊不変)。reconcile した marker path は `written` に計上 (透明性) |
 
 ### §1.8.1 U-MEMORY (共有 memory / PLAN-L7-189)
@@ -654,6 +650,19 @@ SMB/NFS/OneDrive をまたぐ strict lease、heartbeat、clock-skew 耐性は主
 | U-FRCOV-022 | oracle declaration resolver; `tests/l6-fr-coverage.test.ts` のmissing-target-FR test予定 | retired row、解決PLAN、coverage oracle、宣言されたexact oracle ID、同IDを引用する実testを有効に保ち、oracle declaration行の対象/期待欄に対象FR完全IDが欠ける点だけを変えて拒否する。実test本文のoracle ID引用を維持し、FR引用を要求しない。 |
 | U-FRCOV-023 | oracle declaration resolver; `tests/l6-fr-coverage.test.ts` のwrong-target-FR test予定 | retired row、解決PLAN、coverage oracle、宣言されたexact oracle ID、同IDを引用する実testを有効に保ち、oracle declaration行の対象/期待欄だけを別FRの完全IDに変えて拒否する。実test本文のoracle ID引用を維持し、FR引用を要求しない。 |
 
+#### Issue #848: oracle 宣言行の識別規則 (candidate、Red)
+
+> 正本は L6 `fr-unit-coverage.md` の「宣言行の識別規則」。上記 U-FRCOV-007..023 の「candidate対応表」「formal対応表」「宣言表」は、表や見出しの種別ではなく、同規則の **宣言行** を指す。状態はIDの接頭辞 (`CANDIDATE-U-` = candidate、`U-` = formal) だけで決まり、節の見出しと表ヘッダ第1列名には依存しない。実L7を全件走査した実測: 第1セルが `U-*` / `CANDIDATE-U-*` の表行は1306行・1305 ID、ヘッダ第1列は10種以上、列数は2〜5、IDの重複は `U-PHOVER-002` の1件のみ（退役と無関係）。
+>
+> 下記3件は識別規則を殺すmutantを持つcandidate oracleである。実装 (Green) が入るまで `tests/l6-fr-coverage.test.ts` の `it.fails` がRedを保持する。既存U-FRCOV-007..023のtest本体と期待値は変えない。
+
+| ID | 入力 / 独立変異 | 期待 / 実行対応 |
+|---|---|---|
+| CANDIDATE-U-FRCOV-024 | 有効candidate-positive fixtureの宣言行を、見出しが無関係な節に置き、ヘッダ第1列を `ID` / `oracle` / `test_id` へ変えた3 caseと、第1セルをcode記法で囲んだcase。負例は、(a) 2列表に同じ内容を畳んだ行、(b) 第1セルがproseでIDは第2セルだけの行、(c) fenced code block内の表 | 正例は全て受理、負例は全て拒否。`tests/l6-fr-coverage.test.ts` |
+| CANDIDATE-U-FRCOV-025 | 宣言行の第2列以降のFR IDだけを変える。正例は `FR-L1-05`（code記法あり・prose内）。負例は `XFR-L1-05`、`FR-L1-050`、`FR-L1-5`、`FR-L1-05` と `FR-L1-06` の併記 | 正例は受理、負例は全て拒否（完全境界、別FR併記もfail-close）。`tests/l6-fr-coverage.test.ts` |
+| CANDIDATE-U-FRCOV-026 | 宣言行の実test path欄だけを変える。正例は `:行番号` 接尾辞付きとcode記法付き、および同じIDを引用する2つの実test file。負例は、tests path tokenが無い、2つのtokenの一方が未解決、正規化すると実在してIDを引用するfileへ届く `..` 入りtoken（例: `tests/fixture/../fixture/retired.test.ts`、`..` だけが拒否理由）、実fileがIDを引用しない | 正例は受理、負例は全て拒否（全tokenが解決可能で全fileがIDを引用）。`tests/l6-fr-coverage.test.ts` |
+
+
 ### §1.21 U-FR-L1-21 (test perspective gate)
 
 > ペア = `vmodel-pair-freeze.md` §7.3.1。pair presence だけではなく、設計層ごとに必要な test perspective が欠けていないことを検査する。
@@ -789,10 +798,10 @@ SMB/NFS/OneDrive をまたぐ strict lease、heartbeat、clock-skew 耐性は主
 - **forced-stop-feedback.md §2.3 関数 (detectDanglingTurn/recordForcedStop/classifyFeedback/recordFeedback/pendingRecoveryProposals/scanDanglingStops/emitClassifyRequest) → U-FSF-001〜007** (add-feature 差分、PLAN-L6-04。孤児 0)
 - **setup-solo-team.md §2.3 契約関数 7 本 (detectProjectScale/recommendPhase/planSetup/emitSetup/recordSetupState/applyBranchProtection/runSetup) → U-SETUP-001〜007** (add-feature 差分、PLAN-L6-05。renderArtifacts は emitSetup 内部 helper = U-SETUP-004 に内包。孤児 0)
 - **skill-index.md §7 配布 repo の skill 配置 / runtime asset 境界 → U-SETUP-009a / U-MODELID-SSOT** (配布 adapter の `model:` frontmatter と `MODEL_IDS` SSoT drift を unit test で固定。孤児 0)
-- **handover-mechanism.md §2.3 関数 (resolveHandoverScope/buildPointer/scaffoldFromDigests/renderHandoverScaffold/handoverStale/writePointer/setActivePlan/inferPlanFromCommit/runHandover) → U-HOVER-001〜007** (add-feature 差分、PLAN-L6-06。writePointer は U-HOVER-007 orchestration 経路で被覆。session-log への限定 amendment = setActivePlan/inferPlanFromCommit 配線は U-HOVER-006 で被覆。孤児 0)
+- **handover-mechanism.md §2.3 関数 (resolveHandoverScope/buildPointer/handoverStale/writePointer/setActivePlan/inferPlanFromCommit/runHandover) → U-HOVER-001〜002 / 005〜007** (scaffoldFromDigests / renderHandoverScaffold は state-channel-consolidation §5.1 で撤去対象。003 / 004 の宣言を撤去した) (add-feature 差分、PLAN-L6-06。writePointer は U-HOVER-007 orchestration 経路で被覆。session-log への限定 amendment = setActivePlan/inferPlanFromCommit 配線は U-HOVER-006 で被覆。孤児 0)
 - **handover IMP-048/047 差分 (sameFamilyPlan/dedupeDigests/resolveHandoverScope scopeToActive/readPointer/checkHandoverDiscipline) → U-HOVER-008〜010** (IMP-048 dedup + scopeToActive、IMP-047 readPointer/discipline。孤児 0)
-- **handover IMP-078 品質増分 (checkHandoverBypass/countHandoverEntries/resolveHandoverScope scopeToSession/latestSessionId/readPlanMeta family 解決/活性化 activePlanStale 連動) → U-HOVER-011〜012 + U-SLOG-006** (gap① bypass / gap② stale / gap③ commit hash / gap④ session-scope / gap⑤ unknown-kind。PLAN-L6-16/L7-17。readPlanMeta は U-HOVER-012 runHandover 経路に内包。孤児 0)
-- **handover A-138 ITEM-4 + PLAN-L7-83 累積/drift 増分 (renderHandoverScaffold slimSummary / boundSameDayEntries 累積上限 / runHandover marker reconcile) → U-HOVER-013〜015** (slim stub・bounded entries (anchor+直近保持/breadcrumb)・marker reconcile (complete→clear / --plan→sync / dryRun 非破壊)。PLAN-L7-83。孤児 0)
+- **handover IMP-078 品質増分 (checkHandoverBypass 署名照合/resolveHandoverScope scopeToSession/latestSessionId/活性化 activePlanStale 連動) → U-HOVER-011〜012 + U-SLOG-006** (gap① bypass / gap② stale / gap③ commit hash / gap④ session-scope。gap⑤ unknown-kind の oracle (readPlanMeta family 解決) は scaffold の停止に伴い state-channel-consolidation §5.1 で撤去した。PLAN-L6-16/L7-17。孤児 0)
+- **handover PLAN-L7-83 drift 増分 (runHandover marker reconcile) → U-HOVER-015** (marker reconcile (complete→clear / --plan→sync / dryRun 非破壊)。PLAN-L7-83。孤児 0。A-138 ITEM-4 の slim stub と累積上限の oracle U-HOVER-013 / 014 は、scaffold の停止に伴い state-channel-consolidation §5.1 で撤去した)
 - **agent-slots.md §2.3 関数 (loadSlots/fireSlot/releaseSlot/releaseOldestGuardSlot/sweepStaleGuardSlots/listActiveSlots/listStaleSlots/peakParallel/exceedsParallelLimit/recordGuardFire) → U-SLOT-001〜008** (add-feature 差分、IMP-050 + IMP-106 SubagentStop release。nodeAgentSlotsDeps は実 I/O deps で unit では mock 代替。孤児 0)
 - **module-drift.md §2-§3 関数 (parseListedModules/scanActualModules/analyzeModuleDrift/loadModuleDocs/moduleDriftMessages) → U-MDRIFT-001〜005** (add-feature 差分、PLAN-L7-16/IMP-075。moduleDriftMessages は U-MDRIFT-003/004 経路 + 専用 assert で被覆、loadModuleDocs は U-MDRIFT-005 実 repo ガードに内包。孤児 0)
 - **module-drift.md asset-drift alias (loadAssetDriftInput/analyzeAssetDrift/assetDriftMessages/checkAssetDrift) → U-ASSETDRIFT-001〜006** (内部資産 + prompt template cutover 差分、FR-L1-49。legacy source path residue / legacy command residue / docs-skills vacancy / guard allowlist missing を doctor hard guard。孤児 0)
@@ -1039,7 +1048,7 @@ This addendum pairs `screen-spec.md` with L7 unit-test oracles. It covers the L6
 | session-log.md | resolveActivePlan/recordEvent/compressPlanDigest/onStop/onSessionStart | tests/session-log.test.ts | covered |
 | forced-stop-feedback.md | detectDanglingTurn/recordForcedStop/classifyFeedback/recordFeedback/scanDanglingStops | tests/forced-stop.test.ts | covered |
 | setup-solo-team.md | detectProjectScale/recommendPhase/planSetup/emitSetup/recordSetupState/applyBranchProtection/runSetup | tests/setup.test.ts | covered |
-| handover-mechanism.md | resolveHandoverScope/buildPointer/scaffoldFromDigests/renderHandoverScaffold/handoverStale/runHandover | tests/handover.test.ts | covered |
+| handover-mechanism.md | resolveHandoverScope/buildPointer/handoverStale/runHandover | tests/handover.test.ts | covered |
 | agent-slots.md | loadSlots/fireSlot/releaseSlot/releaseOldestGuardSlot/sweepStaleGuardSlots/peakParallel/exceedsParallelLimit | tests/agent-slots.test.ts | covered |
 | governance-enforcement.md | scrum-reverse (pocOrphans/badReverseRefs) + propagation (signal 語彙一致) | tests/scrum-reverse.test.ts, tests/propagation.test.ts | covered |
 | backfill-pairing.md | parseRequires/parseGlossaryTerms/analyzeBackfill/loadBackfillDocs/checkBackfill | tests/backfill-pairing.test.ts | covered |
@@ -3213,7 +3222,24 @@ oracle の詳細 (入力・期待・殺す mutant) は専用の
 | CANDIDATE-U-PLRET-012〜014 | 照合証跡 (三者照合・supersedes 双方向) と完備 fixture・決定的な出力順 | 専用文書 §3 |
 | CANDIDATE-U-PLRET-015〜016、027 | 実 repo の処分 JSON との独立集計の一致、生成スクリプトの上書き拒否、実 JSON の link schema (開発 repo を読む検査) | 専用文書 §3 |
 | CANDIDATE-U-PLRET-017〜020 | 純粋性 (外部呼び出し 0)、loader の削除判定と非破壊読み取り、`path:reason` の出力形式 | 専用文書 §3 |
+| CANDIDATE-U-PLRET-032〜037 | supersede の coverage (full / partial の明示、disposition との整合、見出し集合の被覆、置換先の実在)、governance の行き先と終端 | 専用文書 §3 |
 | CANDIDATE-U-PLRET-021〜026、028〜031 | 参照の残存 (frontmatter の各欄・設計文書の owning-plan 欄・本文の言及は止めない)、supersedes の連鎖の終端、自己申告の偽造・同時編集の拒否、base blob からの実体検証 | 専用文書 §3 |
 
 上表の ID は backtick 無し表記である。候補台帳への再掲ではなく専用文書への参照であり、U-VMSRC-009 の一意性検査の対象外とする。
 正規 `U-PLRET-*` への昇格は、`design-protection-diff-gate.md` §10.3 の三段階 (登録 + Red、src/ を含まない昇格、実装 PR) に従う。開発 repo を読む oracle (015・016・027。実 JSON の読み取りは 015 と 027 で共有し、1 行で登録する) があるので、Red を先に入れ、昇格はその後の別 PR にする。
+
+## snapshot runner の寿命 (Issue #1129) — 索引
+
+L6 契約は `docs/design/harness/L6-function-design/snapshot-runner-lifecycle.md` (未実装の目標契約)。
+oracle の詳細 (入力・期待・殺す mutant) は専用の
+`docs/test-design/harness/L7-snapshot-runner-lifecycle-test-design.md` に置き、本節は索引だけを持つ。
+
+| 範囲 | 検証面 | 詳細 |
+| --- | --- | --- |
+| CANDIDATE-U-SNAPLC-001〜002、021 | identity による liveness 判定 (pid 再利用・unknown) と親監視の判定 (観測不能の上限) | 専用文書 §3 |
+| CANDIDATE-U-SNAPLC-003〜012 | sweeper の純粋な計画 (取得失敗・runner 生存・identity 証明・pid 再利用・root 削除の範囲・決定性・名前で選ばない) | 専用文書 §3 |
+| CANDIDATE-U-SNAPLC-013〜017、020 | 実プロセス (親喪失での停止・強制終了後の回収と他 lane の保護・stage 切替・unknown・起動時 fail-close・hook 入口) | 専用文書 §3 |
+| CANDIDATE-U-SNAPLC-018〜019 | 自分自身に tree kill を掛けない・出力文面を解析しない | 専用文書 §3 |
+
+上表の ID は backtick 無し表記である。候補台帳への再掲ではなく専用文書への参照であり、U-VMSRC-009 の一意性検査の対象外とする。
+正規 `U-SNAPLC-*` への昇格は、実プロセスの oracle (013〜017・020) の Red を追加する PR の後に、src/ を含まない別 PR で行う (正式宣言を citation より先に作らない)。

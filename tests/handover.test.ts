@@ -8,7 +8,6 @@ import {
 } from "../src/handover/handover-constants.ts";
 import type { HandoverDoc as SidecarHandoverDoc } from "../src/handover/handover-types.ts";
 import {
-  boundSameDayEntries,
   buildPointer,
   capWithBreadcrumb,
   checkHandoverBypass,
@@ -28,8 +27,6 @@ import {
   MAX_SUMMARY_PLANS,
   type PlanDigestRef,
   readPointer,
-  relativizeDeliverableFiles,
-  relativizeTouchedFile,
   renderHandoverScaffold,
   resolveHandoverScope,
   runHandover,
@@ -105,83 +102,6 @@ function digest(over: Partial<PlanDigestRef> = {}): PlanDigestRef {
   };
 }
 
-describe("PLAN-L7-145 handover #1: relativizeTouchedFile (absolute-path leak fix)", () => {
-  const WINROOT = "C:\\Users\\example\\OneDrive\\Desktop\\UT-TDD-agent-harness";
-
-  it("relativizes a Windows abs path whose casing MISMATCHES repoRoot (lowercase entry vs uppercase cwd)", () => {
-    // process.cwd() returns uppercase 'C:\\...'; on-disk digests store lowercase 'c:\\...'.
-    // A case-sensitive compare would leave the leak intact — this is the regression that matters.
-    const entry = "Write c:\\Users\\example\\OneDrive\\Desktop\\UT-TDD-agent-harness\\src\\a.ts";
-    expect(relativizeTouchedFile(entry, WINROOT)).toBe("Write src/a.ts");
-  });
-
-  it("relativizes when casing mismatches the other direction (uppercase entry vs lowercase root)", () => {
-    const entry = "Edit C:\\Users\\example\\OneDrive\\Desktop\\UT-TDD-agent-harness\\src\\b.ts";
-    const lowerRoot = "c:\\Users\\example\\OneDrive\\Desktop\\UT-TDD-agent-harness";
-    expect(relativizeTouchedFile(entry, lowerRoot)).toBe("Edit src/b.ts");
-  });
-
-  it("relativizes a POSIX abs path with verb, and a bare path without verb", () => {
-    expect(relativizeTouchedFile("Edit /repo/src/cli.ts", "/repo")).toBe("Edit src/cli.ts");
-    expect(relativizeTouchedFile("/repo/src/cli.ts", "/repo")).toBe("src/cli.ts");
-  });
-
-  it("leaves already-relative / sibling-prefix / empty-root / non-home-abs entries untouched", () => {
-    expect(relativizeTouchedFile("Edit src/cli.ts", "/repo")).toBe("Edit src/cli.ts");
-    // sibling-prefix false match guarded by the trailing "/"
-    expect(relativizeTouchedFile("/repo-other/x.ts", "/repo")).toBe("/repo-other/x.ts");
-    expect(relativizeTouchedFile("Edit /repo/src/a.ts", "")).toBe("Edit /repo/src/a.ts");
-    // an absolute path NOT under a user home and NOT under repo stays as-is
-    expect(relativizeTouchedFile("/opt/tool/x.ts", "/repo")).toBe("/opt/tool/x.ts");
-  });
-
-  it("masks the user-home prefix of out-of-repo personal paths (no username leak)", () => {
-    // outside repo but under the user home (Temp scratch, ~/.codex) -> home prefix masked to ~
-    expect(relativizeTouchedFile("Write c:\\Users\\example\\.codex\\config.toml", WINROOT)).toBe(
-      "Write ~/.codex/config.toml",
-    );
-    expect(
-      relativizeTouchedFile("Write c:\\Users\\example\\AppData\\Local\\Temp\\dbq.ts", WINROOT),
-    ).toBe("Write ~/AppData/Local/Temp/dbq.ts");
-    expect(relativizeTouchedFile("Edit /Users/example/scratch/y.ts", "/repo")).toBe(
-      "Edit ~/scratch/y.ts",
-    );
-    expect(relativizeTouchedFile("/home/example/scratch/z.ts", "/repo")).toBe("~/scratch/z.ts");
-  });
-
-  it("is fail-open on odd input (never throws)", () => {
-    expect(relativizeTouchedFile("", "/repo")).toBe("");
-    expect(relativizeTouchedFile("   ", "/repo")).toBe("   ");
-  });
-
-  it("relativizeDeliverableFiles renders NO drive-letter home-dir path and dedupes mixed casing (negative assertion)", () => {
-    const doc = scaffoldFromDigests(
-      [
-        digest({
-          plan_id: "PLAN-X",
-          files_touched: [
-            "Write c:\\Users\\example\\OneDrive\\Desktop\\UT-TDD-agent-harness\\src\\a.ts",
-            "Write C:\\Users\\example\\OneDrive\\Desktop\\UT-TDD-agent-harness\\src\\a.ts",
-            "Write c:\\Users\\example\\.codex\\config.toml",
-          ],
-        }),
-      ],
-      [],
-      "2026-06-24",
-    );
-    relativizeDeliverableFiles(doc, WINROOT);
-    const serialized = JSON.stringify(doc);
-    // NO username-bearing personal path (drive-letter home or /Users|/home) survives anywhere
-    expect(/[A-Za-z]:[\\/]Users[\\/]example/.test(serialized)).toBe(false);
-    expect(serialized.includes("Users/example")).toBe(false);
-    const files = doc.deliverables[0]?.files ?? [];
-    // both casings of src/a.ts collapse to one relativized entry (dedup)
-    expect(files.filter((f) => f === "Write src/a.ts").length).toBe(1);
-    // out-of-repo path keeps its shape but the home prefix is masked
-    expect(files).toContain("Write ~/.codex/config.toml");
-  });
-});
-
 describe("U-HOVER-001 resolveHandoverScope", () => {
   it("current-plan 有 → active_plan 解決 / digest 群を集約", () => {
     const deps = mockDeps();
@@ -242,78 +162,6 @@ describe("U-HOVER-002 buildPointer", () => {
       now: NOW,
     });
     expect(p.digest_summary).toBeNull();
-  });
-});
-
-describe("U-HOVER-003 scaffoldFromDigests", () => {
-  it("digest→deliverables / planMeta→summary / ③-⑥ は空配列", () => {
-    const doc = scaffoldFromDigests(
-      [digest()],
-      [{ plan_id: "PLAN-L7-04-handover-mechanism", kind: "add-impl", title: "handover 実装" }],
-      "2026-06-04",
-    );
-    expect(doc.deliverables[0].commits).toEqual(["a413d25"]);
-    expect(doc.plans[0].summary).toBe("handover 実装");
-    expect(doc.next_actions).toEqual([]);
-    expect(doc.carry).toEqual([]);
-    expect(doc.po_decisions).toEqual([]);
-    expect(doc.do_not_break).toEqual([]);
-  });
-});
-
-describe("U-HOVER-004 renderHandoverScaffold", () => {
-  it("6 セクション + ③-⑥ TODO placeholder", () => {
-    const doc = scaffoldFromDigests([digest()], [], "2026-06-04");
-    const md = renderHandoverScaffold(doc);
-    for (const s of [
-      "§1 PLAN サマリ",
-      "§2 成果物",
-      "§3 Next Action",
-      "§4 carry",
-      "§5 未了 PO 判断",
-      "§6 壊さない",
-    ]) {
-      expect(md).toContain(s);
-    }
-    expect(md).toContain("TODO(human)");
-  });
-
-  it("sanitize defense-in-depth: summary の token=secret123 が出力に出ず ***", () => {
-    const doc = scaffoldFromDigests(
-      [digest()],
-      [
-        {
-          plan_id: "PLAN-L7-04-handover-mechanism",
-          kind: "add-impl",
-          title: "token=secret123 を含む",
-        },
-      ],
-      "2026-06-04",
-    );
-    const md = renderHandoverScaffold(doc);
-    expect(md).not.toContain("secret123");
-    expect(md).toContain("token=***");
-  });
-
-  // A-138 ITEM-4: slimSummary は §1/§2 を参照 stub に縮約 (同日累積の肥大抑制)。
-  it("U-HOVER-013: slimSummary=true で §1/§2 は参照 stub・plan list 省略・§3-§6 全文・header 1 個", () => {
-    const doc = scaffoldFromDigests(
-      [digest()],
-      [{ plan_id: "PLAN-L7-04-handover-mechanism", kind: "add-impl", title: "FULL TITLE TOKEN" }],
-      "2026-06-04",
-    );
-    const full = renderHandoverScaffold(doc);
-    const slim = renderHandoverScaffold(doc, { slimSummary: true });
-    // full は plan サマリ本体を含むが slim は参照 stub に縮約 (title が出ない)。
-    expect(full).toContain("FULL TITLE TOKEN");
-    expect(slim).not.toContain("FULL TITLE TOKEN");
-    expect(slim).toContain("同日 first entry 参照");
-    // §1/§2 の見出しと §3-§6 は slim でも維持。
-    for (const s of ["§1 PLAN サマリ", "§2 成果物", "§3 Next Action", "§6 壊さない"]) {
-      expect(slim).toContain(s);
-    }
-    // bypass 検知契約: `# Session Handover` header は slim でも 1 個 (countHandoverEntries 不変)。
-    expect(countHandoverEntries(slim)).toBe(1);
   });
 });
 
@@ -686,123 +534,12 @@ describe("U-HOVER-007 runHandover", () => {
     expect(pointer.active_plan).toBe("PLAN-L7-04-handover-mechanism");
   });
 
-  // A-138 ITEM-4: 同日 2 件目 (existing 非 null) は slim 化、doc_entry_count は header 数と整合。
-  it("U-HOVER-013: 同日 2 件目エントリは §1/§2 slim 化、doc_entry_count=2 (header 数一致)", () => {
-    const deps = seeded();
-    const docRel = join("docs", "handover", "session-handover-2026-06-04.md");
-    // 1 件目を runHandover 自身で生成 (full)。
-    const first = runHandover({ date: "2026-06-04" }, deps);
-    expect(first.pointer.doc_entry_count).toBe(1);
-    // 2 件目を追記 (slim)。
-    const second = runHandover({ date: "2026-06-04" }, deps);
-    const md = deps.files.get(join("/repo", docRel)) ?? "";
-    expect(countHandoverEntries(md)).toBe(2); // header 2 個
-    expect(second.pointer.doc_entry_count).toBe(2); // pointer も 2 (bypass 照合不変)
-    expect(md).toContain("同日 first entry 参照"); // 2 件目は slim stub
-    // 2 件目の content は plan サマリ本体 (kind 行) を持たない = 縮約済。
-    expect(second.content).toContain("同日 first entry 参照");
-    expect(second.content).toContain("§3 Next Action");
-  });
-
   // IMP-078 gap①: runHandover は generated_by 署名 + doc_entry_count を刻む。
   it("gap①: runHandover が CURRENT.json に generated_by + doc_entry_count を刻む", () => {
     const deps = seeded();
     const r = runHandover({ date: "2026-06-08", complete: true }, deps);
     expect(r.pointer.generated_by).toBe(GENERATED_BY);
     expect(r.pointer.doc_entry_count).toBe(1); // 新規 md = entry 1
-  });
-
-  // IMP-078 gap⑤: bare plan_id digest でも slug PLAN file を family 解決し kind を埋める。
-  it("gap⑤: bare plan_id の digest を slug PLAN file へ family 解決し kind を埋める (unknown 防止)", () => {
-    const deps = mockDeps();
-    deps.files.set(currentPlanPath, "PLAN-L7-16-module-drift");
-    deps.files.set(
-      join(digestDir, "PLAN-L7-16.digest.json"),
-      JSON.stringify(digest({ plan_id: "PLAN-L7-16", sessions: ["s1"] })),
-    );
-    deps.files.set(
-      join("/repo", "docs", "plans", "PLAN-L7-16-module-drift.md"),
-      '---\nplan_id: PLAN-L7-16-module-drift\nkind: add-impl\ntitle: "X"\n---\n',
-    );
-    const r = runHandover({ date: "2026-06-08", dryRun: true }, deps);
-    expect(r.content).toContain("(add-impl)"); // unknown でなく実 kind
-  });
-});
-
-describe("U-HOVER-014 boundSameDayEntries / runHandover 累積上限 (PLAN-L7-83)", () => {
-  /** n エントリの同日 md を組む (anchor=entry[0] に一意 marker)。 */
-  function makeMd(n: number): string {
-    const entries: string[] = [];
-    for (let i = 0; i < n; i++) {
-      entries.push(
-        `# Session Handover — 2026-06-04\n\n## §1 PLAN サマリ\n\nENTRY-${i}-BODY\n\n## §3 Next Action\n\n- e${i}`,
-      );
-    }
-    return `${entries.join("\n\n---\n\n")}\n`;
-  }
-
-  it("entry 数 ≤ MAX-1 → 無変更 (剪定しない)", () => {
-    const md = makeMd(MAX_SAME_DAY_ENTRIES - 1);
-    expect(boundSameDayEntries(md, MAX_SAME_DAY_ENTRIES)).toBe(md);
-  });
-
-  it("# Session Handover header が無い md → 無変更", () => {
-    const md = "# 既存 entry\n\n本文\n";
-    expect(boundSameDayEntries(md, MAX_SAME_DAY_ENTRIES)).toBe(md);
-  });
-
-  it("超過 → anchor(entry[0]) + 直近(MAX-2) 保持・中間を breadcrumb へ畳む・header 数 = MAX-1", () => {
-    const n = MAX_SAME_DAY_ENTRIES + 2; // 確実に超過
-    const out = boundSameDayEntries(makeMd(n), MAX_SAME_DAY_ENTRIES);
-    // 追記前に MAX-1 まで圧縮 (このあと runHandover が 1 件 append して MAX になる)。
-    expect(countHandoverEntries(out)).toBe(MAX_SAME_DAY_ENTRIES - 1);
-    expect(out).toContain("ENTRY-0-BODY"); // anchor 保持
-    expect(out).toContain(`ENTRY-${n - 1}-BODY`); // 直近保持
-    expect(out).toContain(`ENTRY-${n - 2}-BODY`); // 直近保持
-    expect(out).not.toContain("ENTRY-1-BODY"); // 中間は剪定
-    expect(out).toContain("累積抑制のため剪定"); // breadcrumb 明示 (silent cap でない)
-  });
-
-  it("breadcrumb は # Session Handover に一致せず countHandoverEntries 契約を壊さない", () => {
-    const out = boundSameDayEntries(makeMd(MAX_SAME_DAY_ENTRIES + 3), MAX_SAME_DAY_ENTRIES);
-    // breadcrumb 行を含んでも header count は保持エントリ数のみ。
-    expect(countHandoverEntries(out)).toBe(MAX_SAME_DAY_ENTRIES - 1);
-  });
-
-  // cross_agent review 指摘 (PLAN-L7-83): 既存 breadcrumb が anchor へ吸収され線形累積しないこと。
-  it("idempotent: 既存 breadcrumb を含む md を再 prune しても breadcrumb は 1 個のまま", () => {
-    const bc = /累積抑制のため剪定/g;
-    // 1 回目の prune (breadcrumb 1 個挿入)。
-    const once = boundSameDayEntries(makeMd(MAX_SAME_DAY_ENTRIES + 2), MAX_SAME_DAY_ENTRIES);
-    expect((once.match(bc) ?? []).length).toBe(1);
-    // once に新エントリを append して再び超過させ、2 回目の prune。
-    const grown = `${once.replace(/\s*$/, "")}\n\n---\n\n# Session Handover — 2026-06-04\n\n## §3 Next Action\n\n- new\n`;
-    const twice = boundSameDayEntries(grown, MAX_SAME_DAY_ENTRIES);
-    // 旧 breadcrumb は除去され新 breadcrumb 1 個のみ (累積しない)。
-    expect((twice.match(bc) ?? []).length).toBe(1);
-    expect(countHandoverEntries(twice)).toBe(MAX_SAME_DAY_ENTRIES - 1);
-  });
-
-  it("runHandover を反復しても同日 doc は MAX_SAME_DAY_ENTRIES を超えない", () => {
-    const deps = mockDeps();
-    deps.files.set(currentPlanPath, "PLAN-L7-04-handover-mechanism");
-    deps.files.set(
-      join(digestDir, "PLAN-L7-04-handover-mechanism.digest.json"),
-      JSON.stringify(digest()),
-    );
-    const docRel = join("docs", "handover", "session-handover-2026-06-04.md");
-    for (let i = 0; i < MAX_SAME_DAY_ENTRIES + 4; i++) {
-      const r = runHandover({ date: "2026-06-04" }, deps);
-      const md = deps.files.get(join("/repo", docRel)) ?? "";
-      expect(countHandoverEntries(md)).toBeLessThanOrEqual(MAX_SAME_DAY_ENTRIES);
-      // pointer.doc_entry_count は md の header 数と一致 (bypass 照合契約不変)。
-      expect(r.pointer.doc_entry_count).toBe(countHandoverEntries(md));
-    }
-    const finalMd = deps.files.get(join("/repo", docRel)) ?? "";
-    expect(countHandoverEntries(finalMd)).toBe(MAX_SAME_DAY_ENTRIES); // 定常 = 上限
-    expect(finalMd).toContain("累積抑制のため剪定"); // 剪定が起きた証跡
-    // breadcrumb は累積せず常に 1 個 (idempotent、cross_agent review 指摘)。
-    expect((finalMd.match(/累積抑制のため剪定/g) ?? []).length).toBe(1);
   });
 });
 
@@ -860,13 +597,11 @@ describe("U-HOVER-015 runHandover marker reconcile (drift 恒久解消、PLAN-L7
   });
 });
 
-describe("U-HOVER-011 checkHandoverBypass (IMP-078 gap①)", () => {
-  const docRel = join("docs", "handover", "x.md");
+describe("U-HOVER-011 checkHandoverBypass 署名照合 (IMP-078 gap①、state-channel-consolidation §5.2)", () => {
   function pointerJson(over: Record<string, unknown> = {}): string {
     return JSON.stringify({
       active_plan: "P",
       status: "completed",
-      latest_doc: docRel,
       digest_summary: null,
       updated_at: NOW,
       ...over,
@@ -880,31 +615,14 @@ describe("U-HOVER-011 checkHandoverBypass (IMP-078 gap①)", () => {
     expect(w.some((m) => m.includes("bypass"))).toBe(true);
   });
 
-  it("generated_by 一致 + entry 数一致 → 警告ゼロ", () => {
+  it("generated_by 一致の pointer → 警告ゼロ", () => {
     const deps = mockDeps();
-    deps.files.set(join("/repo", docRel), "# Session Handover — 2026-06-08\n");
-    deps.files.set(pointerPath, pointerJson({ generated_by: GENERATED_BY, doc_entry_count: 1 }));
+    deps.files.set(pointerPath, pointerJson({ generated_by: GENERATED_BY }));
     expect(checkHandoverBypass(deps)).toEqual([]);
-  });
-
-  it("entry 数 mismatch (手書き追記) → bypass warn", () => {
-    const deps = mockDeps();
-    deps.files.set(
-      join("/repo", docRel),
-      "# Session Handover — a\n\n---\n\n# Session Handover — b\n",
-    );
-    deps.files.set(pointerPath, pointerJson({ generated_by: GENERATED_BY, doc_entry_count: 1 }));
-    const w = checkHandoverBypass(deps);
-    expect(w.some((m) => m.includes("mismatch"))).toBe(true);
   });
 
   it("pointer 不在 → 警告ゼロ (discipline 担当)", () => {
     expect(checkHandoverBypass(mockDeps())).toEqual([]);
-  });
-
-  it("countHandoverEntries: `# Session Handover` 見出し数を数える / null→0", () => {
-    expect(countHandoverEntries("# Session Handover — a\n# Session Handover — b")).toBe(2);
-    expect(countHandoverEntries(null)).toBe(0);
   });
 });
 
