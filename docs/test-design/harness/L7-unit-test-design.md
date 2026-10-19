@@ -3208,11 +3208,12 @@ oracle の詳細 (入力・期待・殺す mutant) は専用の
 
 | 範囲 | 検証面 | 詳細 |
 | --- | --- | --- |
-| CANDIDATE-U-PLRET-001〜005 | 処分 JSON の読み取り・削除なし PR の素通り・全件検査・重複・最終処分の列挙 | 専用文書 §3 |
+| CANDIDATE-U-PLRET-001〜005 | 処分 JSON の読み取り・削除なし PR の素通り・削除対象だけの検査・重複・最終処分の列挙 | 専用文書 §3 |
 | CANDIDATE-U-PLRET-006〜011 | 行き先 (設計文書の path と節・issue 番号)・廃止理由の検査 | 専用文書 §3 |
 | CANDIDATE-U-PLRET-012〜014 | 照合証跡 (三者照合・supersedes 双方向) と完備 fixture・決定的な出力順 | 専用文書 §3 |
 | CANDIDATE-U-PLRET-015〜016 | 実 repo の処分 JSON との独立集計の一致、生成スクリプトの上書き拒否 | 専用文書 §3 |
 | CANDIDATE-U-PLRET-017〜020 | 純粋性 (外部呼び出し 0)、loader の削除判定と非破壊読み取り、`path:reason` の出力形式 | 専用文書 §3 |
+| CANDIDATE-U-PLRET-021〜026 | 参照の残存 (frontmatter の各欄・設計文書の owning-plan 欄・本文の言及は止めない)、supersedes の連鎖の終端 | 専用文書 §3 |
 
 上表の ID は backtick 無し表記である。候補台帳への再掲ではなく専用文書への参照であり、U-VMSRC-009 の一意性検査の対象外とする。
 正規 `U-PLRET-*` への昇格は、`design-protection-diff-gate.md` §10.3 の三段階 (登録 + Red、src/ を含まない昇格、実装 PR) に従う。開発 repo を読む oracle (015・016) があるので、Red を先に入れ、昇格はその後の別 PR にする。
