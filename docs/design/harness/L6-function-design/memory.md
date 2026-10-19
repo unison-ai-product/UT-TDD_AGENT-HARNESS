@@ -280,7 +280,7 @@ memoryは永続知識だけを保存し、進捗や次の一手を保存する�
 - **typed failure** は `{ ok: false, reason }` とし、archive manifest / source-destination / recovery の不整合は
   `memory_archive_recovery_conflict`、その他 I/O failure は `memory_archive_io_failed`。GitHub 到達不能は失敗ではなく
   対象の `unknown` 判定であり、doctor advisory を含め exit 0 を保つ。`nowISO` が不正な場合は filesystem / DB I/O
-  前に `TypeError`。CLI は `ok:false` を exit 1、成功を exit 0 に写像する。
+  前に `TypeError` とし、filesystem / DB のどちらにも I/O を行わない。CLI は `ok:false` を exit 1、成功を exit 0 に写像する。
 - `ports` は同じ production operation の外部境界だけを差し替え、省略した port は production adapter を使う。
   ```ts
   ports?: {
@@ -311,8 +311,10 @@ memoryは永続知識だけを保存し、進捗や次の一手を保存する�
 - 移し先は `.ut-tdd/archive/memory-episodes/<YYYY-MM>/` (`.ut-tdd/archive/` は gitignore 済み)。
 - **manifest** は `.ut-tdd/archive/memory-episodes/manifest.jsonl` に置く独自形式 (`ut-tdd.memory-episode-archive/v1`) で、
   1 行 1 イベントの追記専用とする。#1062 が同じ path を使う state-channel selector とは別 schema discriminator を使い、
-  #963 selector は `ut-tdd.state-channel-memory-archive/v1` 行を選別・recovery input として扱わない (逆方向も同じ)。
-  未知または破損 row は黙って無視せず `memory_archive_recovery_conflict` で全体停止する。`src/memory/legacy-archive-manifest.ts`
+  `ut-tdd.state-channel-memory-archive/v1` row は #1062 §7.1 の closed schema で検証したうえで、#963 selector の選別・
+  recovery input には使わず、#963 の処理対象から除外する (逆方向も同じ)。有効な foreign row の存在は #963 operation に影響せず、
+  row bytes・関連 file・DB row を変更しない。未知 schema row と、既知 schema でも malformed な row は黙って無視せず
+  `memory_archive_recovery_conflict` で全体停止する。`src/memory/legacy-archive-manifest.ts`
   の形式 (固定の legacy root、untracked は件数と集合 digest だけ) は変えず、流用するのは sha256 の計算部品だけにする。
 - 1 件の手順は write-ahead とする: (1) `state: intent` の行 (`memory_id`、元 path、移し先 path、sha256、bytes、`bound_to`、
   判定の根拠 = merge commit または GitHub の状態、出自、時刻) を追記 → (2) rename → (3) `memory_entries` から当該行を削除 →
@@ -331,7 +333,12 @@ memoryは永続知識だけを保存し、進捗や次の一手を保存する�
   一致なら rename から、移し先のみ存在し hash 一致なら DB row 削除から再開する。両 path が存在、両方不在、既存側 hash
   不一致、manifest row の schema / identity 不正のいずれかなら `{ ok:false, reason:"memory_archive_recovery_conflict" }`
   とし、`done` を追記せず、当該 DB row を消さず、他 entry の新規処理も開始しない。その他の archive I/O failure は
-  `memory_archive_io_failed`。`done` row は再処理せず、重複 `done` を追記しない。failure は成功扱いへ丸めない。
+  `memory_archive_io_failed`。既存 `done` row は source が無く移し先だけが存在し、その内容の digest が row の
+  `sha256` と一致するときに限り処理済みとして受理する。それ以外 (source が残る、移し先が無い、両方ある、両方無い、
+  digest 不一致) は `memory_archive_recovery_conflict` で全体停止する。正当な `done` row は再処理せず、重複 `done` を追記しない。
+  新規選択 entry の移し先が既に存在する場合、または新規選択 entry の `memory_id` が既存 row と衝突し、回復可能な既存
+  `intent` に結び付かない場合も、上書き・黙示 skip をせず `memory_archive_recovery_conflict` で全体停止する。回復可能な既存
+  `intent` は上記の recovery 手順で再開し、この新規 destination 衝突規則によって拒否しない。failure は成功扱いへ丸めない。
 - archive は選別・全直接 entry の列挙・project identity・manifest 全行・既存 recovery state・全選択 source bytes/hash・
   isolated projection DB readiness を preflight し、成功するまで file / manifest / DB に書かない。どれかの preflight
   conflict / failure は他 entry の intent append、rename、DB delete を一切開始しない。dry-run も同じ read / classify /
@@ -387,6 +394,14 @@ PLAN-L6-97 §3.7 は「レビュー依頼や進捗連絡は memory に書かな�
 | 12 | 集計 | 区分の合計 = 全ファイル数、tracked は全件 `tracked_durable` | CANDIDATE-U-MEMEPI-016 |
 | 13 | 推定 episode (引用だけの恒久教訓) の即時配送 | 配送する | CANDIDATE-U-MEMEPI-018 |
 | 14 | 中断後に移し先の bytes が変わった、または両方の path から消えた | 止めて報告、exit 1、`done` なし、db 行は残る | CANDIDATE-U-MEMEPI-019 |
+| 15 | 既存 `done` row の source absent / destination present / row digest一致、および各不整合状態 | 正当な1状態だけ受理。不整合は全体conflict | CANDIDATE-U-MEMEPI-020 |
+| 16 | 新規選択 entry の destination が既に存在、または新規選択 entry の同一 `memory_id` row 衝突 (回復可能な既存 `intent` ではない) | 上書き・黙示skipなしで全体conflict。回復可能な既存 `intent` は再開 | CANDIDATE-U-MEMEPI-021 |
+| 17 | invalid UTC ISO `nowISO` | filesystem / DB I/O 前に `TypeError`、I/O 0 | CANDIDATE-U-MEMEPI-022 |
+| 18 | Git first-parent merge を根拠にした manifest event | exact keys、実 commit SHA、resolver未呼出し、intent/done payload・時刻一致 | CANDIDATE-U-MEMEPI-023 |
+| 19 | GitHub closed を根拠にした manifest event | exact keys、全 `bound_to` evidence、URL順、intent/done一致 | CANDIDATE-U-MEMEPI-024 |
+| 20 | manifest の (a) unknown schema row、(b) 既知 schema の malformed row (foreign state-channel row の不正形を含む) を独立 fixture で検証 | 各々 `memory_archive_recovery_conflict`、他entryも変更しない | CANDIDATE-U-MEMEPI-025 (a)/(b) |
+| 21 | valid `ut-tdd.state-channel-memory-archive/v1` row が同じ manifest にある | #963 で選別・recoveryに使わず、foreign row / 関連file / DBを変更しない | CANDIDATE-U-MEMEPI-027 |
+| 22 | status resolver が throw / invalid result を返す | `unknown`、archive対象外、対象の file / DB / manifest 不変 | CANDIDATE-U-MEMEPI-026 |
 
 ## §5 検証接続
 

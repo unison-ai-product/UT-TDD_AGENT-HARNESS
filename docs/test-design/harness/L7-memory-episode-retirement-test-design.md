@@ -16,10 +16,11 @@ updated: 2026-10-19
 本書は §4.2 の分類・読み取り時の既存分の扱い・回収の三値判定・退避の冪等性・配送側の抑止を検証する oracle を定義する。
 共有の `docs/test-design/harness/L7-unit-test-design.md` には索引だけを置き、
 本書が詳細の正本である。この pair-freeze では候補 ID (`CANDIDATE-U-MEMEPI-*`) だけを宣言し、実装 PR で Red を
-追加してから `U-MEMEPI-*` へ昇格する。001〜011 は PLAN-L6-97 (2026-08-05) の候補を引き継ぎ、012〜019 を足す。
+追加してから `U-MEMEPI-*` へ昇格する。001〜011 は PLAN-L6-97 (2026-08-05) の候補を引き継ぎ、012〜019 に加えて、
+退避 recovery / destination collision / archive manifest / resolver / selector 分離の境界を閉じる 020〜027 を足す。
 
-`CANDIDATE-U-MEMEPI-001..019` の既存 acceptance responsibility は記録から削除しない。ただし #963 の archive slice で実装・
-受入するのは既存 entry の分類 / 回収 / recovery (002〜005、007〜008、014〜017、019) に限る。新規 write 規則
+既存 `CANDIDATE-U-MEMEPI-001..019` の acceptance responsibility は記録から削除せず、020..027 を追加する。ただし #963 の archive slice で実装・
+受入するのは既存 entry の分類 / 回収 / recovery (002〜005、007〜008、014〜017、019〜027) に限る。新規 write 規則
 (001、006、011〜013) と即時 delivery / review-anchor 規則 (009〜010、018) は #1062 が置き換えた旧契約として別ownerの
 未完責務に留め、対応する実装・受入で移管先が明示されるまで完了扱いにしない。候補行はその責務を追跡する証跡として残す。
 
@@ -70,6 +71,14 @@ updated: 2026-10-19
 | CANDIDATE-U-MEMEPI-017 | 既存 untracked inferred episode「PR 949 で学んだ恒久の設計制約」、PR 949 merge 済み。dry-run と archive を各々実呼び出し | `episode_retirable_inferred`。通常 archive では `moved` に入らず source / DB / manifest 不変。`includeInferred:true` の archive のみ対象にする | inferred を既定 archive 対象に含める |
 | CANDIDATE-U-MEMEPI-018 | 新規 `memory add --kind project`、明示なし、title `Permanent project invariant learned from PR 949` (および `pr-949` / `Issue 898` の変種)、PR 949 は merge 済み、即時配送に渡す | `lifecycle_source: inferred` で保存され、配送される | 配送抑止で `lifecycle_source` を見ない |
 | CANDIDATE-U-MEMEPI-019 | 実 operation を checkpoint `afterRenameBeforeDbDelete` で止め、再実行前に (1) destination bytes を1 byte改変 (2) source / destination両方を欠落させる | 両方とも全entry recovery preflight が `memory_archive_recovery_conflict` / CLI exit 1。`done` 無し、対象 DB row 残存、他 entry の新規 append / rename / DB delete なし | hash検証を外す / missingを成功扱い / conflict後に他entryを処理 |
+| CANDIDATE-U-MEMEPI-020 | 既存 `done` row を持つ各 recovery fixture で source absent + destination present + destination SHA=row SHA の正当形、および source present / destination absent / both present / both absent / hash mismatch の各不正形を実 operation に渡す | 正当形だけを処理済みとして受理し二重移動・重複 `done` を行わない。不正形は全 entry preflight で `memory_archive_recovery_conflict`、対象 DB rowを保持し他 entryの新規処理をしない | `done` を無条件 skip / 不正な source-destination 状態を成功扱い |
+| CANDIDATE-U-MEMEPI-021 | 新規選択 entry の destination を事前作成する、または回復可能な既存 `intent` には結び付かない同一 `memory_id` の archive row と新規 source を共存させる | rename / manifest append / DB delete 前に `memory_archive_recovery_conflict`。既存 destination bytes と source bytes を保持し、黙示上書き・黙示 skip をしない。回復可能な既存 `intent` はCANDIDATE-U-MEMEPI-014どおり再開する | POSIX rename 上書き / 同じ `memory_id` の新規登録を既存 `done` として無条件 skip / valid intent recovery の誤拒否 |
+| CANDIDATE-U-MEMEPI-022 | `retireMemoryEpisodes` に不正な UTC ISO `nowISO` を渡し filesystem / DB I/O を観測する | `TypeError` が同期的に送出され、filesystem と DB の I/O は 0 | invalid clock の検査を I/O 後に行う / typed failure に丸める |
+| CANDIDATE-U-MEMEPI-023 | first-parent merge がある PR を archive し、実 manifest event と resolver 呼出しを観測する | event / `selection_basis` / `closed_evidence` が各 exact keys。Git evidence は `{url, via:"git_first_parent_merge", commit_sha}`、commit_sha は Git root の実 merge commit SHA。resolver は呼ばれず、intent/done は同一 payload (state以外) と `recorded_at` を持つ | SHAを合成・短縮する / resolverでmerge根拠を置換 / extra keys / done payload を再 mint |
+| CANDIDATE-U-MEMEPI-024 | merge commit がない PR と closed issue を fake resolver が closed と返す状態で各々 archive し、manifest を直接読む | GitHub evidence は exact keys `{url, via:"github_closed", observed_state}`、`observed_state:"closed"`。`bound_to` URL 昇順で全 evidence が入り、intent/done payload と `recorded_at` は一致 | GitHub evidence を異なる schema で記録 / bound_to の一部省略 / event に余剰 key |
+| CANDIDATE-U-MEMEPI-025 | 独立した2 fixture: (a) manifest に unknown schema row、(b) #963 または #1062 の既知 schema を名乗る malformed row (foreign state-channel schema の不正形を含む)。各々他に処理可能な entry を用意する | 各fixtureが独立に `memory_archive_recovery_conflict` で全体停止。追加 intent / rename / DB delete / done なし。他 entry の source・DB row も維持 | unknown / malformed row を黙って無視 / conflict 後に部分処理 |
+| CANDIDATE-U-MEMEPI-026 | merge commit のない PR / issue の status resolver が throw または `{state:...}` の不正値を返す | `unknown` bucket に入り、archive 対象外。成功 report は exit 0、対象の manifest intent / file / DB 変更なし | resolver failure を `closed` / `open` に推定、typed archive failure として全 operation を誤停止 |
+| CANDIDATE-U-MEMEPI-027 | 同一 manifest に有効な `ut-tdd.state-channel-memory-archive/v1` event があり、#963 selector に処理可能な自身の entry を用意する | foreign event は #1062 §7.1 の closed schema で検証され、#963 の selection/recovery input に使われない。#963 は自身の entry だけを処理し、foreign row bytes / 関連 file / DB row は不変 | foreign eventを#963のselection/recoveryへ混入、または有効foreign rowの存在だけで誤conflict |
 
 ## 5. 範囲外
 
