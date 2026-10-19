@@ -87,7 +87,7 @@ describe("loadImplPlanTraceInput real repo (U-IPT-004/U-IPT-005)", () => {
   });
 });
 
-describe("loadImplPlanTraceInput design-source trace candidate", () => {
+describe("U-IPT-006: loadImplPlanTraceInput design-source trace", () => {
   const root = makeImplPlanTraceFixture({
     sourcePaths: ["src/runtime/windows-hide.ts", "src/doctor/windows-hide.ts"],
     planPaths: ["no implementation path is declared here"],
@@ -126,7 +126,7 @@ describe("loadImplPlanTraceInput design-source trace candidate", () => {
     }
   });
 
-  it.fails("CANDIDATE-U-IPT-006: design-only source references cover new src", () => {
+  it.fails("U-IPT-006: design-only source references cover new src", () => {
     const input = loadImplPlanTraceInput(root);
     const result = analyzeImplPlanTrace(input);
     expect(input.tracedPaths.has("src/runtime/windows-hide.ts")).toBe(true);
