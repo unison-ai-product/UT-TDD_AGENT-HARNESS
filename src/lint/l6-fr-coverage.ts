@@ -146,25 +146,32 @@ function citesId(text: string, id: string): boolean {
   return new RegExp(`(?<![A-Za-z0-9-])${escapeRe(id)}(?![A-Za-z0-9-])`).test(text);
 }
 
-/** L7 unit-test design の宣言表行 (本文の言及は宣言ではない)。 */
+/**
+ * L7 unit-test design の宣言表行 (本文の言及は宣言ではない)。
+ * candidate ID は見出しに "candidate" を含む表、正式 ID は見出しに "正式" を含む表の行だけが宣言になる。
+ */
 function declarationRows(repoRoot: string, oracle: string): string[][] {
   const path = join(repoRoot, L7_UNIT_REL);
   if (!existsSync(path)) return [];
-  return readFileSync(path, "utf8")
-    .split(/\r?\n/)
-    .filter((l) => l.trimStart().startsWith("|"))
-    .map(markdownCells)
-    .filter((c) => stripMark(c[0] ?? "") === oracle);
+  const sectionRe = CANDIDATE_ORACLE_RE.test(oracle) ? /candidate/i : /正式/;
+  const rows: string[][] = [];
+  let inSection = false;
+  for (const line of readFileSync(path, "utf8").split(/\r?\n/)) {
+    if (/^#{1,6}\s/.test(line)) inSection = sectionRe.test(line);
+    else if (inSection && line.trimStart().startsWith("|")) {
+      const cells = markdownCells(line);
+      if (stripMark(cells[0] ?? "") === oracle) rows.push(cells);
+    }
+  }
+  return rows;
 }
 
 /** 退役行の oracle 証拠 (宣言行 + target FR + 実 test 引用) を検証し、欠落キーを返す。 */
 function retiredOracleFailures(repoRoot: string, frId: string, oracle: string): string[] {
   const rows = declarationRows(repoRoot, oracle);
   if (rows.length !== 1) return ["unit_oracle_declaration"];
-  const [, pathCell = "", ...rest] = rows[0];
-  if (!new RegExp(`${escapeRe(frId)}(?!\\d)`).test(rest.join(" "))) {
-    return ["unit_oracle_declaration_target"];
-  }
+  const [, pathCell = "", expectedCell = ""] = rows[0];
+  if (!citesId(expectedCell, frId)) return ["unit_oracle_declaration_target"];
   const testPath = stripMark(pathCell);
   const safe = testPath !== "" && !testPath.startsWith("/") && !testPath.split("/").includes("..");
   const abs = join(repoRoot, testPath);
