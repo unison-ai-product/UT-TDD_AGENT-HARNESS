@@ -157,6 +157,8 @@ describe("snapshot runner lifecycle L7 candidate Red (issue #1129)", () => {
     const table = [entry(200, 1, { startToken: "other-process" })];
     const r = plan(api, [lease()], table);
     expect(r.kill).toEqual([]);
+    expect(r.removePaths).toEqual([]);
+    expect(r.reapedRunIds).toEqual([]);
     expect(r.skipped).toEqual([{ runId: "run-a", reason: "identity_unproven" }]);
   });
 
@@ -178,6 +180,8 @@ describe("snapshot runner lifecycle L7 candidate Red (issue #1129)", () => {
     for (const table of tables) {
       const r = plan(api, [l], table);
       expect(r.kill).toEqual([]);
+      expect(r.removePaths).toEqual([]);
+      expect(r.reapedRunIds).toEqual([]);
       expect(r.skipped).toEqual([{ runId: "run-a", reason: "identity_unproven" }]);
     }
   });
@@ -194,6 +198,8 @@ describe("snapshot runner lifecycle L7 candidate Red (issue #1129)", () => {
     expect(plan(api, [l], leaderAlive, "posix").kill.map((k) => k.pid)).toEqual([200, 301, 302]);
     const r = plan(api, [l], members, "posix");
     expect(r.kill).toEqual([]);
+    expect(r.removePaths).toEqual([]);
+    expect(r.reapedRunIds).toEqual([]);
     expect(r.skipped).toEqual([{ runId: "run-a", reason: "identity_unproven" }]);
   });
 
@@ -215,7 +221,7 @@ describe("snapshot runner lifecycle L7 candidate Red (issue #1129)", () => {
       join(TMP, "deep", "ut-tdd-vitest-100-3"),
       join(TMP, "..", "ut-tdd-vitest-100-4"),
     ];
-    const r = plan(api, [lease({ roots })], []);
+    const r = plan(api, [lease({ roots, stage: null })], []);
     expect(r.removePaths).toEqual([good]);
   });
 

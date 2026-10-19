@@ -11,7 +11,7 @@ created: 2026-10-19
 issue: 1129
 ---
 
-> **L6 contract marker**: 本書は snapshot runner (`scripts/run-vitest-snapshot.ts`) の**プロセス寿命**の契約である。判定は `src/runtime/snapshot-run-lease.ts` の純関数 (`classifyLiveness` / `decideParentWatch` / `planSweep`) が持ち、OS への問い合わせ (プロセス表の取得・kill) は port 越しに注入する。DbC は §8 にまとめる。oracle の索引は共有の `docs/test-design/harness/L7-unit-test-design.md` (§snapshot runner の寿命) に置き、詳細 (`CANDIDATE-U-SNAPLC-001`〜) は専用の `docs/test-design/harness/L7-snapshot-runner-lifecycle-test-design.md` が固定する。
+> **L6 contract marker**: 本書は snapshot runner (`scripts/run-vitest-snapshot.ts`) の**プロセス寿命**の契約である。判定は `src/runtime/snapshot-run-lease.ts` の純関数 (`classifyLiveness(recorded, observed) => Liveness` / `decideParentWatch(input) => WatchDecision` / `planSweep(input) => SweepPlan`。型は §4.2、DbC は §8、oracle は `U-SNAPLC-*` として昇格する) が持ち、OS への問い合わせ (プロセス表の取得・kill) は port 越しに注入する。DbC は §8 にまとめる。oracle の索引は共有の `docs/test-design/harness/L7-unit-test-design.md` (§snapshot runner の寿命) に置き、詳細 (`CANDIDATE-U-SNAPLC-001`〜) は専用の `docs/test-design/harness/L7-snapshot-runner-lifecycle-test-design.md` が固定する。
 
 > **状態**: 本書は **未実装の目標契約** である (issue #1129、親 #1141)。§1 の「現状」は 2026-10-19 時点の実測で、§2 以降の「目標」はまだ実装されていない。実装は §9 の順に別 PR で入れる。実装 PR は本書の方式を変えない (方式変更が要るなら PR を止めて本書の改訂へ戻る)。
 
@@ -73,10 +73,10 @@ subagent (または親 shell) が終わった後も、その配下で起動さ�
 | S2 | `runner` が `alive` (同 pid で同 startToken) | 触らない (`skipped: runner_alive`)。B が担当する |
 | S3 | `runner` が `dead` | stale。残骸の回収に進む (owner の生死は見ない。runner が死んだ run は誰も結果を読めず、cleanup も誰も実行しないため) |
 | S4 | stale lease の `stage.child` が `alive` で startToken 一致 | child と、その子孫 (Windows は ParentProcessId の連鎖、POSIX は同じ pgid) を victim にする。child の pid は child が生きている間は再利用されないので、連鎖は本物である |
-| S5 | `stage.child` が `dead` (不在、または同 pid で startToken 違い) | **孫・group の生存者を victim にしない** (`skipped: identity_unproven`)。記録した child が連続して存在していたことを、古い lease と現在のプロセス表だけでは証明できない (child の死亡 → 同 pid の別プロセスの起動 → その子の起動、という履歴や、元の group の全滅 → 同じ pgid の新 group、という履歴が、現在の表では本物の孫・group と区別できない)。ただし child が死んでいる run には証明できる生存部分が無いので、S7 の root 削除と S8 の lease 削除は行う |
-| S6 | identity を証明できない (startToken を取得できない、Windows で順序が決まらない 等) | victim にしない (`skipped: identity_unproven`) |
-| S7 | 回収後の root 削除 | lease の `roots` に載っていて、かつ tmp root 直下で名前が `ut-tdd-vitest-(head-\|cache-)?\d+-\d+` に一致するものだけ。リンクは辿らない。削除に失敗したら lease を残す |
-| S8 | victim の終了を再観測で確認でき、root が消えた | lease を削除する。それ以外は残す |
+| S5 | `stage.child` が `dead` (不在、または同 pid で startToken 違い) | 孫・group の生存者を victim にしない。記録した child が連続して存在していたことを、古い lease と現在のプロセス表だけでは証明できない (child の死亡 → 同 pid の別プロセスの起動 → その子の起動、という履歴や、元の group の全滅 → 同じ pgid の新 group、という履歴が、現在の表では本物の孫・group と区別できない)。**所有を証明できないので kill も root の削除も lease の削除もしない** (`skipped: identity_unproven`)。本物の孫が生存している場合に、その作業領域と追跡用の lease を消さないためである (§6、I4 と一致) |
+| S6 | identity を証明できない (startToken を取得できない、child が dead で所有を引き継げない 等) | victim にしない。root も lease も削除しない (`skipped: identity_unproven`、`removePaths` と `reapedRunIds` に載せない)。回収されないまま残ることは既知の限界で、報告だけを行う |
+| S7 | root の削除。対象は、runner が dead で、S4 の victim を全て停止できた lease、または `stage` が null (stage の間で child が無い) の lease だけ。S5・S6 で `identity_unproven` の lease は対象外 | lease の `roots` に載っていて、かつ tmp root 直下で名前が `ut-tdd-vitest-(head-\|cache-)?\d+-\d+` に一致するものだけ。リンクは辿らない。削除に失敗したら lease を残す |
+| S8 | S4 の victim の終了を再観測で確認でき、root が消えた | lease を削除する (`reapedRunIds` に載せる)。それ以外 (S5・S6 の `identity_unproven`、停止の失敗、root の削除失敗) は lease も root も残す |
 
 型 (実装 PR で `snapshot-run-lease.ts` に置く。ここで形を固定する):
 
