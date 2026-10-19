@@ -109,9 +109,7 @@ export function loadImplPlanTraceInput(repoRoot: string): ImplPlanTraceInput {
 
 export function implPlanTraceMessages(r: ImplPlanTraceResult): string[] {
   if (r.orphans.length === 0) {
-    return [
-      "impl-plan-trace — OK (src 全件 PLAN / design source trace / baseline に被覆、NEW orphan 0)",
-    ];
+    return ["impl-plan-trace — OK (src 全件 PLAN generates / baseline に被覆、NEW orphan 0)"];
   }
   return [
     `impl-plan-trace — ⚠ PLAN / design source trace 無き src ${r.orphans.length} 件 (trace/baseline 不在): ${r.orphans.join(", ")}`,
