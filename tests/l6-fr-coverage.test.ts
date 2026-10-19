@@ -178,6 +178,8 @@ interface RetFx {
   testFiles: Record<string, string>;
   /** 退役根拠の設計文書: repo-relative path -> その文書が持つ見出し text の列 (重複可)。 */
   refDocs: Record<string, string[]>;
+  /** 指定した文書は見出し列ではなくこの本文をそのまま書く (fenced / setext の変異用)。 */
+  refBodies?: Record<string, string>;
   /** L7 test-design 文書へ追記する prose (宣言ではない言及)。 */
   prose: string;
 }
@@ -272,7 +274,9 @@ function materialize(fx: RetFx): { docs: L6FrCoverageDocs; root: string } {
     "docs/test-design/harness/L7-unit-test-design.md",
     `# L7 fixture\n\n${fx.prose}\n\n${declTable("candidate oracle 宣言表", fx.candDecls)}\n${declTable("正式 oracle 宣言表", fx.formalDecls)}`,
   );
+  for (const [rel, body] of Object.entries(fx.refBodies ?? {})) put(rel, body);
   for (const [rel, headings] of Object.entries(fx.refDocs)) {
+    if (fx.refBodies?.[rel] !== undefined) continue;
     put(rel, `# fixture\n\n${headings.map((h) => `## ${h}\n\n本文\n`).join("\n")}`);
   }
   for (const [rel, text] of Object.entries(fx.testFiles)) put(rel, text);
@@ -492,6 +496,57 @@ describe("Issue #848 FR retirement coverage (U-FRCOV-007..023, Red)", () => {
     expect(
       pairOutcome(candidateFx(), candidateFx({ refDocs: { [RET_DOC_REL]: ["別の節"] } })),
     ).toEqual([true, false]);
+    // 見出し resolver の変異: 通常の `## 見出し` が1つだけの双子は受理 (上の valid)。
+    // 見出し行に見えるが ATX 見出しとして数えない形だけの文書は拒否する。
+    const only = (body: string) =>
+      candidateFx({
+        refBodies: {
+          [RET_DOC_REL]: `# fixture
+
+${body}`,
+        },
+      });
+    const withHeading = only(`## ${RET_HEADING}
+
+本文
+`);
+    expect(runFx(withHeading).ok).toBe(true);
+    // fenced code block 内 (``` と ~~~ の両方) にしか無い見出しは数えない。
+    expect(
+      runFx(
+        only(`\`\`\`
+## ${RET_HEADING}
+\`\`\`
+`),
+      ).ok,
+    ).toBe(false);
+    expect(
+      runFx(
+        only(`~~~
+## ${RET_HEADING}
+~~~
+`),
+      ).ok,
+    ).toBe(false);
+    // setext 見出し (下線形式) は対象外。
+    expect(
+      runFx(
+        only(`${RET_HEADING}
+=====
+
+本文
+`),
+      ).ok,
+    ).toBe(false);
+    expect(
+      runFx(
+        only(`${RET_HEADING}
+-----
+
+本文
+`),
+      ).ok,
+    ).toBe(false);
   });
 
   it.fails("U-FRCOV-022: declaration row without the target FR id is rejected", () => {
