@@ -13,7 +13,7 @@ import { basename, dirname, join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 /*
- * Issue #1078 PLAN 退役 gate の候補 Red (CANDIDATE-U-PLRET-001..035、016 を除く)。
+ * Issue #1078 PLAN 退役 gate の候補 Red (CANDIDATE-U-PLRET-001..037、016 を除く)。
  * 契約: docs/design/harness/L6-function-design/plan-retirement-gate.md
  * テスト設計: docs/test-design/harness/L7-plan-retirement-gate-test-design.md
  *
@@ -49,6 +49,7 @@ interface Input {
     { successorDeclaresTarget: boolean; targetBodyBackref: boolean }
   >;
   planHeadings: Record<string, string[] | null>;
+  successorPlanHeadings: Record<string, string[] | null>;
   fileHeadings: Record<string, string[] | null>;
   fileTexts: Record<string, string | null>;
 }
@@ -132,10 +133,15 @@ function retiredRec(path: string, over: Rec = {}): Rec {
 }
 
 /** 全面 supersede の coverage (旧 PLAN の見出し「概要」を全て覆う。契約改訂 #1078 の記録形式への追従)。 */
-const FULL_COVERAGE = {
-  coverage: "full",
-  coverageBasis: [{ anchor: "概要", successorLocation: "後継 PLAN の概要" }],
-};
+function fullCoverageFor(succ: string): Rec {
+  return {
+    coverage: "full",
+    coverageBasis: [
+      { anchor: "概要", successorLocation: { kind: "plan", planId: id(succ), section: "概要" } },
+    ],
+  };
+}
+const FULL_COVERAGE = fullCoverageFor(Z);
 
 /** supersedes-two-sided で後継 Z (存続) を指す完備記録。 */
 function twoSidedRec(path: string, succ: string, over: Rec = {}): Rec {
@@ -162,6 +168,7 @@ function input(records: Rec[], over: Partial<Input> = {}): Input {
     dispositionChangedInPr: false,
     supersessionFacts: {},
     planHeadings: { [X]: ["概要"], [Y]: ["概要"] },
+    successorPlanHeadings: { [Z]: ["概要"] },
     fileHeadings: { [DESIGN]: ["§4 判定規則", "判定規則 (DbC)"] },
     fileTexts: { [EVID]: `${EVID_ID} の三者照合は一致した。` },
     ...over,
@@ -1017,7 +1024,7 @@ describe("Issue #1078 PLAN retirement gate (CANDIDATE-U-PLRET, Red)", () => {
     const succ = `docs/plans/${el.successorPlanId as string}.md`;
     const record = retiredRec(target, {
       planId: sample.planId,
-      reconciliation: { kind: "supersedes-two-sided", ...FULL_COVERAGE },
+      reconciliation: { kind: "supersedes-two-sided", ...fullCoverageFor(succ) },
       confirmedSupersededBy: [el],
     });
     const r = a.analyzePlanRetirement(
@@ -1025,6 +1032,7 @@ describe("Issue #1078 PLAN retirement gate (CANDIDATE-U-PLRET, Red)", () => {
         deletedPlanPaths: [target],
         headPlanPaths: [succ],
         planHeadings: { [target]: ["概要"] },
+        successorPlanHeadings: { [succ]: ["概要"] },
         supersessionFacts: facts(target, succ),
       }),
     );
@@ -1174,6 +1182,8 @@ describe("Issue #1078 PLAN retirement gate (CANDIDATE-U-PLRET, Red)", () => {
     const cases: Partial<Input>[] = [
       { planHeadings: { [X]: ["概要", "残った契約"] } },
       { planHeadings: { [X]: null } },
+      // 見出し (level 2〜3) が無い PLAN は H4 だけに契約があっても full を名乗れない
+      { planHeadings: { [X]: [] } },
       { planHeadings: {} },
     ];
     for (const extra of cases) {
@@ -1220,5 +1230,84 @@ describe("Issue #1078 PLAN retirement gate (CANDIDATE-U-PLRET, Red)", () => {
       input([rec(X, { destinations: dest(GOV, "存在しない節") })], { fileHeadings: headings }),
     );
     expect(reasonsAt(r, X)).toContain("destination_section_missing");
+  });
+
+  it.fails("CANDIDATE-U-PLRET-036: full coverage successorLocation must be a structured reference that actually exists", async () => {
+    const a = await api();
+    const GOV = "docs/governance/fixture-canon.md";
+    const cand = "docs/governance/candidates/fixture-candidate.md";
+    const over = { headPlanPaths: [Z], supersessionFacts: facts(X, Z) };
+    const withLocation = (successorLocation: unknown): Rec =>
+      twoSidedRec(X, Z, {
+        reconciliation: {
+          kind: "supersedes-two-sided",
+          coverage: "full",
+          coverageBasis: [{ anchor: "概要", successorLocation }],
+        },
+      });
+    // 双子の受理: plan / design / governance の構造化参照
+    for (const loc of [
+      { kind: "plan", planId: id(Z), section: "概要" },
+      { kind: "design", path: DESIGN, section: "§4 判定規則" },
+      { kind: "governance", path: GOV, section: "§4 判定規則" },
+    ]) {
+      await expectTwinOk(a, [withLocation(loc)], {
+        ...over,
+        fileHeadings: { [DESIGN]: ["§4 判定規則"], [GOV]: ["§4 判定規則"] },
+      });
+    }
+    const bad: unknown[] = [
+      "後継 PLAN の概要",
+      { kind: "plan", planId: id(Z), section: "存在しない節" },
+      { kind: "plan", planId: "PLAN-L6-999-not-a-link-successor", section: "概要" },
+      { kind: "design", path: "docs/design/harness/missing.md", section: "§4 判定規則" },
+      { kind: "design", path: DESIGN, section: "存在しない節" },
+      { kind: "governance", path: cand, section: "§4 判定規則" },
+      { kind: "url", href: "x" },
+    ];
+    for (const loc of bad) {
+      const r = a.analyzePlanRetirement(
+        input([withLocation(loc)], {
+          ...over,
+          fileHeadings: { [DESIGN]: ["§4 判定規則"], [cand]: ["§4 判定規則"] },
+        }),
+      );
+      expect(reasonsAt(r, X)).toContain("coverage_basis_incomplete");
+    }
+    // 後継 PLAN の見出しを読めない (blob 不在) 場合も plan 参照は実在と言えない
+    const r = a.analyzePlanRetirement(
+      input([withLocation({ kind: "plan", planId: id(Z), section: "概要" })], {
+        ...over,
+        successorPlanHeadings: { [Z]: null },
+      }),
+    );
+    expect(reasonsAt(r, X)).toContain("coverage_basis_incomplete");
+  });
+
+  it.fails("CANDIDATE-U-PLRET-037: a successor finalized into governance closes the chain like design or issue", async () => {
+    const a = await api();
+    const GOV = "docs/governance/fixture-canon.md";
+    const govRec = (path: string): Rec =>
+      rec(path, { destinations: [{ kind: "governance", path: GOV, section: "§4 判定規則" }] });
+    const files = { fileHeadings: { [DESIGN]: ["§4 判定規則"], [GOV]: ["§4 判定規則"] } };
+    // 後継 Z は head に無いが governance へ transferred 済み
+    await expectTwinOk(a, [twoSidedRec(X, Z), govRec(Z)], {
+      ...files,
+      supersessionFacts: facts(X, Z),
+    });
+    // 後継 Z が同じ PR で削除され、governance へ merged 済み
+    await expectTwinOk(a, [twoSidedRec(X, Z), { ...govRec(Z), wholeSourceDisposition: "merged" }], {
+      ...files,
+      deletedPlanPaths: [X, Z],
+      supersessionFacts: facts(X, Z),
+    });
+    // 双子の否定: governance の行き先の節が無ければ Z の最終化が成立せず連鎖は閉じない
+    const open = a.analyzePlanRetirement(
+      input([twoSidedRec(X, Z), govRec(Z)], {
+        fileHeadings: { [DESIGN]: ["§4 判定規則"], [GOV]: ["別の節"] },
+        supersessionFacts: facts(X, Z),
+      }),
+    );
+    expect(reasonsAt(open, X)).toContain("supersedes_chain_open");
   });
 });

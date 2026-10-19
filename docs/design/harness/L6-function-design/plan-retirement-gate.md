@@ -19,6 +19,8 @@ issue: 1078
 
 ## 1. 目的
 
+**gate の保証範囲** (§11 と対): gate が保証するのは **構造と実在** (記録の形、行き先・置換先の path と見出しの実在、見出し集合の被覆、base blob による link の実体) である。見出しを全て写しても本文の意味が保存されたことは証明できないので、**意味の照合は最終化 PR の非著者 review の責務**である。
+
 `docs/plans/` の PLAN を物理削除する PR に対して、**削除される各 PLAN** の意味 (契約・規則・判断理由・作業単位) が行き先へ移ったことを機械で確かめ、欠けていれば fail-close する。#958 の出口条件 (d)「ずれ判定が全件終わる」の機械化であり、PLAN にしかない契約を残したまま削除する事故 (意味の落下) を、削除 PR の merge 前に止める。検査の対象は「全 PLAN」ではなく「この PR で削除される PLAN」に限る (案B。issue #1078 の 2026-10-19 設計判断。ロット単位で順に削除できる)。全件の最終化率は gate に混ぜず、EOD の棚卸しのコマンドで見る (案C は不採用)。
 
 新しい台帳は作らない。既存の処分 JSON (§3) を正本とし、gate はそれを**読むだけ**である。人手の最終化 (ロット単位) は本 gate の範囲外で、gate が通ることがその完了の機械的な証明になる。
@@ -71,7 +73,7 @@ issue: 1078
 | `kind` | 形 | 意味 |
 |---|---|---|
 | `three-way` | `{ kind, verdict, evidencePath, evidenceId }` | PLAN ⇔ 設計文書 ⇔ コードの三者照合 (#648 の手順) の結果。`verdict` は `consistent` (3 者が一致) か `plan-stale` (PLAN 側だけが古く、設計文書とコードが正しい) のみ有効。`evidencePath` は照合の記録 (`docs/` 配下の tracked file) で、本文に `evidenceId` の文字列を含むこと (例: #977 の `CD-01`、#959 lot の `planId`)。 |
-| `supersedes-two-sided` | `{ kind, coverage, coverageBasis? }` | 後継 PLAN との supersedes が双方向 (後継の宣言 + 対象本文の back-reference) で確認済みであること。JSON の記録 (§3.4) を**自己申告として信用せず**、base の PLAN ファイルの実体 (Git blob) で再検証する (§4 規則 4)。さらに**連鎖が PLAN 以外の行き先で閉じていること** (終端条件) を要する。`coverage` は必須で、`"full"` (後継が旧 PLAN の契約を**全て**置き換えた) か `"partial"` (一部だけで、残りが旧 PLAN に存続していた) のいずれか。`full` は `coverageBasis: { anchor, successorLocation }[]` を要し、`anchor` は旧 PLAN (base の blob) の level 2〜3 見出し本文 (コードフェンス内を除く)、`successorLocation` は後継側の置換先 (非空 string)。anchor の集合が旧 PLAN の見出し集合を**全て覆う**こと (§4 規則 4)。`partial` は残った契約を `transferred` / `merged` の行き先 (規則 3) へ移すことを要し、`coverageBasis` は不要。**coverage が無い記録を `full` とみなす既定は無い** (fail-close)。 |
+| `supersedes-two-sided` | `{ kind, coverage, coverageBasis? }` | 後継 PLAN との supersedes が双方向 (後継の宣言 + 対象本文の back-reference) で確認済みであること。JSON の記録 (§3.4) を**自己申告として信用せず**、base の PLAN ファイルの実体 (Git blob) で再検証する (§4 規則 4)。さらに**連鎖が PLAN 以外の行き先で閉じていること** (終端条件) を要する。`coverage` は必須で、`"full"` (後継が旧 PLAN の契約を**全て**置き換えた) か `"partial"` (一部だけで、残りが旧 PLAN に存続していた) のいずれか。`full` は `coverageBasis: { anchor, successorLocation }[]` を要し、`anchor` は旧 PLAN (base の blob) の level 2〜3 見出し本文 (コードフェンス内を除く)、`successorLocation` は後継側の置換先を指す**構造化した参照**で、`{ kind: "design" | "governance", path, section }` (§3.2 の `Destination` と同じ形・同じ path 制限・同じ節の一致規則) か、`{ kind: "plan", planId, section }` (後継 PLAN 自身の節)。`plan` の `planId` は有効な link 要素 (§3.4) の `successorPlanId` のどれかと一致し、その `section` は後継 PLAN の base の blob の見出し (level 2〜3) に一致すること。string は受理しない。anchor の集合が旧 PLAN の見出し集合を**全て覆う**こと (§4 規則 4)。`partial` は残った契約を `transferred` / `merged` の行き先 (規則 3) へ移すことを要し、`coverageBasis` は不要。**coverage が無い記録を `full` とみなす既定は無い** (fail-close)。 |
 
 **retired の三者照合の定義**: 設計文書もコードも残らない廃止では、PLAN が主張する結び付け先が実在しない (PLAN だけが宣言している) 状態を `plan-stale` とする。`consistent` は PLAN・設計文書・コードの 3 者が「廃止済み」で一致している場合に限る (PLAN が主張する結び付け先が実在する、という解釈では使わない)。どちらも有効な verdict で、有効値は狭めない。
 
@@ -93,7 +95,7 @@ issue: 1078
 | 1 | `S` の各 PLAN に、`sourcePath` が一致する記録がちょうど 1 件ある (欠落・重複の両方を落とす)。処分 JSON に無い PLAN (§2 の欠落 1 件) は、削除される PR でこの規則により落ちる。 | `plan_not_in_disposition` / `duplicate_disposition` |
 | 2 | 記録の `wholeSourceDisposition` が `transferred` / `merged` / `retired` のいずれか。`not-finalized` や未知値は落とす。 | `not_finalized` / `invalid_disposition` |
 | 3 | 行き先。`transferred` / `merged` は `destinations` が §3.2 の条件を満たす。`design` / `governance` の `path` が実在しない (`design` は `docs/design/` `docs/test-design/` 外、`governance` は `docs/governance/` 外または `docs/governance/candidates/` 配下も含む)、または `section` が一致する見出しを持たない場合も落とす。`issue` の `number` が正の整数でない場合も落とす。`retired` は `retirementReason` が非空。 | `missing_destination` / `destination_path_missing` / `destination_section_missing` / `invalid_issue_ref` / `missing_retirement_reason` |
-| 4 | 照合証跡。`reconciliation` が §3.3 のいずれかで、`three-way` は `verdict` が有効、`evidencePath` が実在し、`evidenceId` が string かつ trim 後非空で、本文にそれを含む (空文字は任意の本文に含まれるので非空を要する)。`supersedes-two-sided` は、§3.4 の有効な link 要素のうち 1 件以上が、(A) **PLAN ファイルの実体で検証済み**: base の Git blob で、後継 PLAN の frontmatter `supersedes` が当該 PLAN を指し (`planCoreId` で比較、自己参照は数えない)、かつ当該 PLAN の本文 (frontmatter 除く) に後継の core ID が現れる。JSON の `confirmedTwoSidedLink` は自己申告であって証跡ではなく、(A) を満たさない要素は無効。(B) さらに**終端条件**を満たす: いずれかの後継 PLAN が (i) head の tree に存在し、この PR で削除されない、または (ii) 後継自身の記録が `transferred` / `merged` で、`design` / `issue` の行き先を持ち規則 2・3 を満たす (後継がこの PR で同時に削除される場合も (ii) で受理する)。後継の `supersedes-two-sided` や `retired` は終端に数えない (連鎖は PLAN 以外の行き先で閉じる。再帰しない)。(C) **coverage**: `coverage` が `full` / `partial` 以外は `coverage_missing`。`full` は `wholeSourceDisposition` が `retired` かつ `destinations` が空であること、`partial` は `transferred` / `merged` であることを要し、外れれば `coverage_disposition_mismatch`。`full` は `coverageBasis` の anchor 集合 (trim 後) が旧 PLAN の base blob の見出し集合 (`planHeadings`、level 2〜3) を全て含み、各 `successorLocation` が非空であること。見出しが 1 つでも欠ける・`planHeadings` が null・`coverageBasis` が不正なら `coverage_basis_incomplete`。 | `missing_reconciliation` / `reconciliation_unresolved` / `reconciliation_evidence_missing` / `supersedes_chain_open` / `coverage_missing` / `coverage_disposition_mismatch` / `coverage_basis_incomplete` |
+| 4 | 照合証跡。`reconciliation` が §3.3 のいずれかで、`three-way` は `verdict` が有効、`evidencePath` が実在し、`evidenceId` が string かつ trim 後非空で、本文にそれを含む (空文字は任意の本文に含まれるので非空を要する)。`supersedes-two-sided` は、§3.4 の有効な link 要素のうち 1 件以上が、(A) **PLAN ファイルの実体で検証済み**: base の Git blob で、後継 PLAN の frontmatter `supersedes` が当該 PLAN を指し (`planCoreId` で比較、自己参照は数えない)、かつ当該 PLAN の本文 (frontmatter 除く) に後継の core ID が現れる。JSON の `confirmedTwoSidedLink` は自己申告であって証跡ではなく、(A) を満たさない要素は無効。(B) さらに**終端条件**を満たす: いずれかの後継 PLAN が (i) head の tree に存在し、この PR で削除されない、または (ii) 後継自身の記録が `transferred` / `merged` で、`design` / `governance` / `issue` の行き先を持ち規則 2・3 を満たす (後継がこの PR で同時に削除される場合も (ii) で受理する)。後継の `supersedes-two-sided` や `retired` は終端に数えない (連鎖は PLAN 以外の行き先で閉じる。再帰しない)。(C) **coverage**: `coverage` が `full` / `partial` 以外は `coverage_missing`。`full` は `wholeSourceDisposition` が `retired` かつ `destinations` が空であること、`partial` は `transferred` / `merged` であることを要し、外れれば `coverage_disposition_mismatch`。`full` は `coverageBasis` の anchor 集合 (trim 後) が旧 PLAN の base blob の見出し集合 (`planHeadings`、level 2〜3) を全て含み、各 `successorLocation` が上記の構造化参照として**実在する**こと (design / governance は `fileHeadings`、plan は `successorPlanHeadings` で検査)。見出しが 1 つでも欠ける・`planHeadings` が null または**空** (level 2〜3 の見出しが無い PLAN は見出しで被覆を証明できないので full を名乗れない。`partial` か `three-way` を使う)・`coverageBasis` が不正・`successorLocation` が実在しない (string・kind 不正・path 配下違反・節不一致・`plan` の `planId` が link の後継でない) なら `coverage_basis_incomplete`。 | `missing_reconciliation` / `reconciliation_unresolved` / `reconciliation_evidence_missing` / `supersedes_chain_open` / `coverage_missing` / `coverage_disposition_mismatch` / `coverage_basis_incomplete` |
 | 5 | 参照の残存。**削除されない** PLAN の frontmatter の `requires` / `parent` / `supersedes` / `references`、および `docs/design/` `docs/test-design/` の文書 frontmatter の owning-plan 欄 (`plan:`) が、`S` の PLAN (`plan_id` または `docs/plans/<file>.md` の path) を指していれば落とす。violation の `path` は参照元の file。**本文中の PLAN ID の言及は履歴参照であり、対象外 (止めない)**。 | `dangling_plan_reference` |
 
 規則 5 と後継の `supersedes` (運用): 旧 PLAN を削除する PR では、後継 PLAN の frontmatter から旧 PLAN を指す `supersedes` を**同じ PR で外す** (外さないと規則 5 の `dangling_plan_reference`)。規則 4 は base の blob、規則 5 は head の tree を読むので、この手順と矛盾しない。後継側の back-reference を失う分は、処分 JSON の記録 (base 済み) が担う。
@@ -112,7 +114,7 @@ issue: 1078
 | 削除が 0 件 (追加・変更・新 path も PLAN パターンに一致する rename だけを含む) | **何も検査せず pass**。削除を含まない PR には影響しない。 |
 | 処分 JSON を同じ PR で変更・削除する | 削除を含む PR なので発火し、規則 0 の `disposition_changed_with_deletion` で落ちる (JSON は base の blob から読むので、同じ PR の編集は判定に影響しない)。 |
 
-loader は削除対象 PLAN の見出し (level 2〜3、`planHeadings`) も base の blob から読み、`governance` の行き先も `design` と同様に先読みする。`loadPlanRetirementInput` は `git diff --name-status -M <base>...<head> -- docs/plans/` で削除 (`S`) を読み、**base の Git blob から処分 JSON と、規則 4 (A) の supersedes 実体 (後継 PLAN の frontmatter と旧 PLAN の本文) を**、head の作業ツリーで行き先文書・証跡文書、削除されない PLAN の frontmatter、設計文書の `plan:` 欄を読む。base / head の解決は設計保護 gate (`src/github/design-protection.ts`) の `readDesignProtectionChanges` と同じ解決 (同じ引数形式) に揃える。起動点 (CI への配線、`ut-tdd` コマンド化) は実装 PR で design-protection と同じ層に置き、本書は配線の形を固定しない。
+loader は削除対象 PLAN の見出し (level 2〜3、`planHeadings`) と、`coverageBasis` が指す後継 PLAN の見出し (`successorPlanHeadings`) も base の blob から読み、`coverageBasis` の design / governance 参照の path も先読みし、`governance` の行き先も `design` と同様に先読みする。`loadPlanRetirementInput` は `git diff --name-status -M <base>...<head> -- docs/plans/` で削除 (`S`) を読み、**base の Git blob から処分 JSON と、規則 4 (A) の supersedes 実体 (後継 PLAN の frontmatter と旧 PLAN の本文) を**、head の作業ツリーで行き先文書・証跡文書、削除されない PLAN の frontmatter、設計文書の `plan:` 欄を読む。base / head の解決は設計保護 gate (`src/github/design-protection.ts`) の `readDesignProtectionChanges` と同じ解決 (同じ引数形式) に揃える。起動点 (CI への配線、`ut-tdd` コマンド化) は実装 PR で design-protection と同じ層に置き、本書は配線の形を固定しない。
 
 ## 6. 関数 (シグネチャ)
 
@@ -137,6 +139,7 @@ export interface PlanRetirementInput {
   disposition: unknown | null;         // base の blob の処分 JSON の parse 結果 (読めなければ null)
   dispositionChangedInPr: boolean;     // この PR の差分が処分 JSON を変更・削除しているか
   supersessionFacts: Record<string, { successorDeclaresTarget: boolean; targetBodyBackref: boolean }>; // key = `<旧 planId>-><successorPlanId>`、base の blob から loader が算出 (blob 不在は両方 false)
+  successorPlanHeadings: Record<string, string[] | null>; // coverageBasis の plan 参照の後継 PLAN の path (docs/plans/<planId>.md) -> base blob の level 2〜3 見出し本文 (blob 不在は null)
   planHeadings: Record<string, string[] | null>; // 削除対象 PLAN の path -> base blob の level 2〜3 見出し本文 (コードフェンス内を除く。blob 不在は null)
   fileHeadings: Record<string, string[] | null>; // 参照された path -> 見出し本文 (不在は null)
   fileTexts: Record<string, string | null>;      // 証跡 path -> 本文 (不在は null)
@@ -209,6 +212,7 @@ docs/plans/PLAN-L7-02-keep.md:dangling_plan_reference
 
 ## 11. 非目標
 
+- 置換先の**内容の正しさ**・意味の保存の判定。gate は構造と実在までで、意味の照合は先行する最終化 PR の非著者 review が担う (§1)。見出し (level 2〜3) の外にある契約 (H4 以下・見出しの無い本文) は被覆の対象外で、gate の保証範囲外である (見出しが空の PLAN は `full` を名乗れない。規則 4 (C))。
 - PLAN 本文の意味の自動抽出・自動分類。
 - 処分 JSON 以外の台帳・projection (harness.db への投影を含む) の新設。
 - `docs/plans/` 以外の削除 (設計文書・テスト設計の削除) の検査。
