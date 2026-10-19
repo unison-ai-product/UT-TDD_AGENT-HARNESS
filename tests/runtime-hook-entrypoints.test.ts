@@ -188,7 +188,7 @@ function writeFakeClaude(binDir: string): string {
 
 describe("runtime hook entrypoints", () => {
   describe("U-SLOG-011: source開発repo自身の5記録hookを30秒にする", () => {
-    it.fails("U-SLOG-011: source開発repo自身の5記録hookを30秒にする", () => {
+    it("U-SLOG-011: source開発repo自身の5記録hookを30秒にする", () => {
       const claude = JSON.parse(readFileSync(join(repoRoot, ".claude", "settings.json"), "utf8"));
       const codex = JSON.parse(readFileSync(join(repoRoot, ".codex", "hooks.json"), "utf8"));
 
