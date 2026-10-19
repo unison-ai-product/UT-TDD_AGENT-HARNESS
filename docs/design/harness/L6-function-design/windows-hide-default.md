@@ -60,7 +60,7 @@ wrapper はプロセスごとに 1 回効けばよい。子プロセスを起動
 
 doctor の check 名は `windows-hide`、CI の doctor (governance hard gates) で fail-close する。検査は次の 2 つだけである。per-call の literal 規則・baseline・縮小のみの比較元・5 PR の分割は廃止する。
 
-(a) **入口の import**: §3 の入口 (src/cli.ts、`.claude/hooks/*.ts` の全件、`scripts/` の node 入口のうち `child_process` を使うもの、`vitest.config.ts` の `setupFiles` が指す entry) が、wrapper を import していること。欠けたら finding `windows-hide-entry-missing` を `path:line:reason` で出す。判定は静的で、import 文 (`import "…/windows-hide.ts"` の副作用 import) の有無だけを見る。他の import より前に置くことは、先頭の import 文であるかで確かめる。
+(a) **入口の import**: §3 の入口 (src/cli.ts、`.claude/hooks/*.ts` の全件、`scripts/` の node 入口のうち `child_process` を使うもの (ただし §3 の単独起動 runner 例外を除く)、`vitest.config.ts` の `setupFiles` が指す entry) が、wrapper を import していること。欠けたら finding `windows-hide-entry-missing` を `path:line:reason` で出す。判定は静的で、import 文 (`import "…/windows-hide.ts"` の副作用 import) の有無だけを見る。他の import より前に置くことは、先頭の import 文であるかで確かめる。
 
 (b) **`windowsHide: false` の理由**: ソース中の `windowsHide: false` は、同じ行または直前の行に、空でない理由コメント (`// windows-hide: <理由>`) が必要である。無ければ finding `windows-hide-false-unexplained`。
 
