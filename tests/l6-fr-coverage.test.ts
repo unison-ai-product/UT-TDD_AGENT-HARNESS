@@ -564,7 +564,7 @@ describe("Issue #848 declaration-row identification (CANDIDATE-U-FRCOV-024..026,
       withPath(`${RET_TEST_REL}, ${RET_TEST_REL_2}`, both),
       withPath("path なし"),
       withPath(`${RET_TEST_REL}, tests/fixture/missing.test.ts`),
-      withPath("tests/../escape.test.ts"),
+      withPath("tests/fixture/../fixture/retired.test.ts"),
       withPath(RET_TEST_REL, { [RET_TEST_REL]: 'it("unrelated", () => {});\n' }),
     ];
     expect(outcomes).toEqual([true, true, false, false, false, false]);

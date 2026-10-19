@@ -664,7 +664,7 @@ SMB/NFS/OneDrive をまたぐ strict lease、heartbeat、clock-skew 耐性は主
 |---|---|---|
 | CANDIDATE-U-FRCOV-024 | 有効candidate-positive fixtureの宣言行を、見出しが無関係な節に置き、ヘッダ第1列を `ID` / `oracle` / `test_id` へ変えた3 caseと、第1セルをcode記法で囲んだcase。負例は、(a) 2列表に同じ内容を畳んだ行、(b) 第1セルがproseでIDは第2セルだけの行、(c) fenced code block内の表 | 正例は全て受理、負例は全て拒否。`tests/l6-fr-coverage.test.ts` |
 | CANDIDATE-U-FRCOV-025 | 宣言行の第2列以降のFR IDだけを変える。正例は `FR-L1-05`（code記法あり・prose内）。負例は `XFR-L1-05`、`FR-L1-050`、`FR-L1-5`、`FR-L1-05` と `FR-L1-06` の併記 | 正例は受理、負例は全て拒否（完全境界、別FR併記もfail-close）。`tests/l6-fr-coverage.test.ts` |
-| CANDIDATE-U-FRCOV-026 | 宣言行の実test path欄だけを変える。正例は `:行番号` 接尾辞付きとcode記法付き、および同じIDを引用する2つの実test file。負例は、tests path tokenが無い、2つのtokenの一方が未解決、`tests/../` を含むtoken、実fileがIDを引用しない | 正例は受理、負例は全て拒否（全tokenが解決可能で全fileがIDを引用）。`tests/l6-fr-coverage.test.ts` |
+| CANDIDATE-U-FRCOV-026 | 宣言行の実test path欄だけを変える。正例は `:行番号` 接尾辞付きとcode記法付き、および同じIDを引用する2つの実test file。負例は、tests path tokenが無い、2つのtokenの一方が未解決、正規化すると実在してIDを引用するfileへ届く `..` 入りtoken（例: `tests/fixture/../fixture/retired.test.ts`、`..` だけが拒否理由）、実fileがIDを引用しない | 正例は受理、負例は全て拒否（全tokenが解決可能で全fileがIDを引用）。`tests/l6-fr-coverage.test.ts` |
 
 
 ### §1.21 U-FR-L1-21 (test perspective gate)
