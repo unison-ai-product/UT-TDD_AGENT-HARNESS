@@ -807,7 +807,7 @@ describe("D2-B PR merge gate", () => {
     ...extra,
   });
 
-  it.fails("U-RVMG-035: 同じ check 名は古い FAILURE run より新しい SUCCESS run を採り checksGreen=true とする", () => {
+  it("U-RVMG-035: 同じ check 名は古い FAILURE run より新しい SUCCESS run を採り checksGreen=true とする", () => {
     const result = rollupFacts([
       run("FAILURE", "2026-10-16T01:00:00Z", 1),
       run("SUCCESS", "2026-10-16T02:00:00Z", 2),
@@ -872,7 +872,7 @@ describe("D2-B PR merge gate", () => {
     expect(result.checksGreen).toBe(false);
   });
 
-  it.fails("U-RVMG-042: 全件 SUCCESS でも一方の startedAt 欠落で順序を決められない重複は checksGreen=false とする", () => {
+  it("U-RVMG-042: 全件 SUCCESS でも一方の startedAt 欠落で順序を決められない重複は checksGreen=false とする", () => {
     const result = rollupFacts([
       run("SUCCESS", undefined, 1),
       run("SUCCESS", "2026-10-16T02:00:00Z", 2),
@@ -880,7 +880,7 @@ describe("D2-B PR merge gate", () => {
     expect(result.checksGreen).toBe(false);
   });
 
-  it.fails("U-RVMG-043: 全件 SUCCESS でも startedAt が parse 不能な重複は checksGreen=false とする", () => {
+  it("U-RVMG-043: 全件 SUCCESS でも startedAt が parse 不能な重複は checksGreen=false とする", () => {
     const result = rollupFacts([
       run("SUCCESS", "not-a-time", 1),
       run("SUCCESS", "2026-10-16T02:00:00Z", 2),
@@ -888,7 +888,7 @@ describe("D2-B PR merge gate", () => {
     expect(result.checksGreen).toBe(false);
   });
 
-  it.fails("U-RVMG-044: 全件 SUCCESS でも最早 startedAt が同時刻の重複は checksGreen=false とする", () => {
+  it("U-RVMG-044: 全件 SUCCESS でも最早 startedAt が同時刻の重複は checksGreen=false とする", () => {
     const result = rollupFacts([
       run("SUCCESS", "2026-10-16T01:00:00Z", 1),
       run("SUCCESS", "2026-10-16T01:00:00Z", 2),
@@ -896,7 +896,7 @@ describe("D2-B PR merge gate", () => {
     expect(result.checksGreen).toBe(false);
   });
 
-  it.fails("U-RVMG-045: 全件 SUCCESS でも同じ run 内の同名 job は識別不能な重複として checksGreen=false とする", () => {
+  it("U-RVMG-045: 全件 SUCCESS でも同じ run 内の同名 job は識別不能な重複として checksGreen=false とする", () => {
     const result = rollupFacts([
       run("SUCCESS", "2026-10-16T01:00:00Z", 1),
       run("SUCCESS", "2026-10-16T01:05:00Z", 1),
@@ -904,7 +904,7 @@ describe("D2-B PR merge gate", () => {
     expect(result.checksGreen).toBe(false);
   });
 
-  it.fails("U-RVMG-046: 全件 SUCCESS でも workflowName 欠落の同名エントリは checksGreen=false とする", () => {
+  it("U-RVMG-046: 全件 SUCCESS でも workflowName 欠落の同名エントリは checksGreen=false とする", () => {
     const result = rollupFacts([
       run("SUCCESS", "2026-10-16T01:00:00Z", 1, { workflowName: "" }),
       run("SUCCESS", "2026-10-16T02:00:00Z", 2, { workflowName: "" }),
