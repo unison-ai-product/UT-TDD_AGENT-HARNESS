@@ -53,4 +53,23 @@ describe("V-model physical schema definitions", () => {
     ).toThrow();
     db.close();
   });
+
+  // #1168: plan_id は来歴の文字列であり、PLAN 撤去後も ledger 投影が通ること (Green で FK を削除し it に戻す)。
+  it.fails("accepts an item-target edge whose plan_id is absent from plan_registry", () => {
+    const db = openHarnessDb(":memory:");
+    db.exec("PRAGMA foreign_keys=ON");
+    db.exec("CREATE TABLE plan_registry (plan_id TEXT PRIMARY KEY)");
+    for (const table of HARNESS_DB_VMODEL_TABLES) db.exec(createTableSql(table));
+    db.exec("INSERT INTO vmodel_categories VALUES ('c','n','d')");
+    db.exec("INSERT INTO vmodel_semantic_items VALUES ('i','n','c','s','r','f','d')");
+    try {
+      expect(() =>
+        db.exec(
+          "INSERT INTO vmodel_item_target_edges VALUES ('e','i','pending_review',NULL,NULL,'PLAN-REMOVED','r','d')",
+        ),
+      ).not.toThrow();
+    } finally {
+      db.close();
+    }
+  });
 });
