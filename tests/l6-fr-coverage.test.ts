@@ -427,6 +427,18 @@ describe("Issue #848 FR retirement coverage (CANDIDATE-U-FRCOV-007..023, Red)", 
     // loadFrUnitCoverageOracles (descent reader) は doctor と同じ有効 / 無効判定を返す。
     expect([...loadFrUnitCoverageOracles(materialize(valid).root)]).toContain("FR-L1-05");
     expect([...loadFrUnitCoverageOracles(materialize(hollow).root)]).not.toContain("FR-L1-05");
+    // reader も unknown / noPlan を通常 FR へ fallback させない。
+    // 双子: 有効な通常 FR (active + 通常 oracle) の受理を先に確かめ、
+    // 1 条件 (state 未知 / 退役根拠欠落) だけ変えたものが除外されることを確かめる。
+    const normal = candidateFx({
+      frState: "active",
+      plan: "",
+      coverageOracle: "U-FR-L1-05",
+      candDecls: [],
+    });
+    expect([...loadFrUnitCoverageOracles(materialize(normal).root)]).toContain("FR-L1-05");
+    expect([...loadFrUnitCoverageOracles(materialize(unknown).root)]).not.toContain("FR-L1-05");
+    expect([...loadFrUnitCoverageOracles(materialize(noPlan).root)]).not.toContain("FR-L1-05");
   });
 
   it.fails("CANDIDATE-U-FRCOV-019: active row carrying retirement_plan is rejected", () => {
