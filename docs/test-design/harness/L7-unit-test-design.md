@@ -3217,3 +3217,19 @@ oracle の詳細 (入力・期待・殺す mutant) は専用の
 
 上表の ID は backtick 無し表記である。候補台帳への再掲ではなく専用文書への参照であり、U-VMSRC-009 の一意性検査の対象外とする。
 正規 `U-PLRET-*` への昇格は、`design-protection-diff-gate.md` §10.3 の三段階 (登録 + Red、src/ を含まない昇格、実装 PR) に従う。開発 repo を読む oracle (015・016・027。実 JSON の読み取りは 015 と 027 で共有し、1 行で登録する) があるので、Red を先に入れ、昇格はその後の別 PR にする。
+
+## snapshot runner の寿命 (Issue #1129) — 索引
+
+L6 契約は `docs/design/harness/L6-function-design/snapshot-runner-lifecycle.md` (未実装の目標契約)。
+oracle の詳細 (入力・期待・殺す mutant) は専用の
+`docs/test-design/harness/L7-snapshot-runner-lifecycle-test-design.md` に置き、本節は索引だけを持つ。
+
+| 範囲 | 検証面 | 詳細 |
+| --- | --- | --- |
+| CANDIDATE-U-SNAPLC-001〜002 | identity による liveness 判定 (pid 再利用・unknown) と親監視の判定 | 専用文書 §3 |
+| CANDIDATE-U-SNAPLC-003〜012 | sweeper の純粋な計画 (取得失敗・runner 生存・identity 証明・pid 再利用・root 削除の範囲・決定性・名前で選ばない) | 専用文書 §3 |
+| CANDIDATE-U-SNAPLC-013〜017、020 | 実プロセス (親喪失での停止・強制終了後の回収と他 lane の保護・stage 切替・unknown・起動時 fail-close・hook 入口) | 専用文書 §3 |
+| CANDIDATE-U-SNAPLC-018〜019 | 自分自身に tree kill を掛けない・出力文面を解析しない | 専用文書 §3 |
+
+上表の ID は backtick 無し表記である。候補台帳への再掲ではなく専用文書への参照であり、U-VMSRC-009 の一意性検査の対象外とする。
+正規 `U-SNAPLC-*` への昇格は、契約 PR の後に src/ を含まない別 PR で行い、実プロセスの oracle (013〜017・020) は Green 2 / 3 の実装 PR でテストを追加する。
