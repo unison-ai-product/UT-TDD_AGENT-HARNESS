@@ -289,10 +289,9 @@ function runFx(fx: RetFx): L6FrCoverageResult {
   return analyzeL6FrCoverage(materialize(fx).docs);
 }
 
-/** 双子 (有効 fixture) が受理され、1条件だけ変えた fixture が拒否されること。 */
-function expectPairRejected(valid: RetFx, mutated: RetFx): void {
-  expect(runFx(valid).ok).toBe(true);
-  expect(runFx(mutated).ok).toBe(false);
+/** 双子 (有効 fixture) と、1条件だけ変えた fixture の判定 [valid.ok, mutated.ok] を返す。 */
+function pairOutcome(valid: RetFx, mutated: RetFx): [boolean, boolean] {
+  return [runFx(valid).ok, runFx(mutated).ok];
 }
 
 describe("Issue #848 FR retirement coverage (U-FRCOV-007..023, Red)", () => {
@@ -330,14 +329,13 @@ describe("Issue #848 FR retirement coverage (U-FRCOV-007..023, Red)", () => {
   });
 
   it("U-FRCOV-010: retired row without retirement_plan is rejected", () => {
-    expectPairRejected(candidateFx(), candidateFx({ plan: "" }));
+    expect(pairOutcome(candidateFx(), candidateFx({ plan: "" }))).toEqual([true, false]);
   });
 
   it("U-FRCOV-011: retirement_plan that does not resolve is rejected", () => {
-    expectPairRejected(
-      candidateFx(),
-      candidateFx({ plan: "docs/plans/PLAN-L6-RET-99-missing.md" }),
-    );
+    expect(
+      pairOutcome(candidateFx(), candidateFx({ plan: "docs/plans/PLAN-L6-RET-99-missing.md" })),
+    ).toEqual([true, false]);
   });
 
   it("U-FRCOV-012: ambiguous or shortened plan references are rejected", () => {
@@ -352,37 +350,43 @@ describe("Issue #848 FR retirement coverage (U-FRCOV-007..023, Red)", () => {
   });
 
   it("U-FRCOV-013: candidate id without a declaration row is rejected even if prose mentions it", () => {
-    expectPairRejected(
-      candidateFx(),
-      candidateFx({ candDecls: [], prose: `${CAND} は本文で言及されるだけ。` }),
-    );
+    expect(
+      pairOutcome(
+        candidateFx(),
+        candidateFx({ candDecls: [], prose: `${CAND} は本文で言及されるだけ。` }),
+      ),
+    ).toEqual([true, false]);
   });
 
   it("U-FRCOV-014: formal id without a declaration row is rejected even if prose and candidate row mention it", () => {
-    expectPairRejected(
-      formalFx(),
-      formalFx({
-        formalDecls: [],
-        candDecls: [retDecl(CAND)],
-        prose: `${FORMAL} は本文で言及されるだけ。`,
-      }),
-    );
+    expect(
+      pairOutcome(
+        formalFx(),
+        formalFx({
+          formalDecls: [],
+          candDecls: [retDecl(CAND)],
+          prose: `${FORMAL} は本文で言及されるだけ。`,
+        }),
+      ),
+    ).toEqual([true, false]);
   });
 
   it("U-FRCOV-015: declaration whose real test file is missing is rejected", () => {
-    expectPairRejected(candidateFx(), candidateFx({ testFiles: {} }));
+    expect(pairOutcome(candidateFx(), candidateFx({ testFiles: {} }))).toEqual([true, false]);
   });
 
   it("U-FRCOV-016: test file citing a different oracle id is rejected", () => {
-    expectPairRejected(
-      candidateFx(),
-      candidateFx({
-        testFiles: {
-          [RET_TEST_REL]:
-            'it("CANDIDATE-U-RET-0010 prefix lookalike", () => {});\nit("CANDIDATE-U-RET-002", () => {});\n',
-        },
-      }),
-    );
+    expect(
+      pairOutcome(
+        candidateFx(),
+        candidateFx({
+          testFiles: {
+            [RET_TEST_REL]:
+              'it("CANDIDATE-U-RET-0010 prefix lookalike", () => {});\nit("CANDIDATE-U-RET-002", () => {});\n',
+          },
+        }),
+      ),
+    ).toEqual([true, false]);
   });
 
   it("U-FRCOV-017: partial promotion (one or two surfaces to formal) is rejected in all 6 cases", () => {
@@ -448,40 +452,45 @@ describe("Issue #848 FR retirement coverage (U-FRCOV-007..023, Red)", () => {
       coverageOracle: "U-FR-L1-05",
       candDecls: [],
     });
-    expectPairRejected(active, { ...active, plan: RET_PLAN_ID });
+    expect(pairOutcome(active, { ...active, plan: RET_PLAN_ID })).toEqual([true, false]);
   });
 
   it("U-FRCOV-020: ambiguous double declaration of the exact oracle id is rejected", () => {
-    expectPairRejected(
-      candidateFx(),
-      candidateFx({
-        candDecls: [retDecl(CAND), retDecl(CAND, RET_TEST_REL_2)],
-        testFiles: {
-          [RET_TEST_REL]: `it("${CAND}", () => {});\n`,
-          [RET_TEST_REL_2]: `it("${CAND} second", () => {});\n`,
-        },
-      }),
-    );
+    expect(
+      pairOutcome(
+        candidateFx(),
+        candidateFx({
+          candDecls: [retDecl(CAND), retDecl(CAND, RET_TEST_REL_2)],
+          testFiles: {
+            [RET_TEST_REL]: `it("${CAND}", () => {});\n`,
+            [RET_TEST_REL_2]: `it("${CAND} second", () => {});\n`,
+          },
+        }),
+      ),
+    ).toEqual([true, false]);
   });
 
   it("U-FRCOV-021: resolved plan document whose frontmatter plan_id differs is rejected", () => {
-    expectPairRejected(
-      candidateFx({ plan: RET_PLAN_REL }),
-      candidateFx({ plan: RET_PLAN_REL, plans: { [RET_PLAN_REL]: "PLAN-L6-RET-77-other" } }),
-    );
+    expect(
+      pairOutcome(
+        candidateFx({ plan: RET_PLAN_REL }),
+        candidateFx({ plan: RET_PLAN_REL, plans: { [RET_PLAN_REL]: "PLAN-L6-RET-77-other" } }),
+      ),
+    ).toEqual([true, false]);
   });
 
   it("U-FRCOV-022: declaration row without the target FR id is rejected", () => {
-    expectPairRejected(
-      candidateFx(),
-      candidateFx({ candDecls: [retDecl(CAND, RET_TEST_REL, "")] }),
-    );
+    expect(
+      pairOutcome(candidateFx(), candidateFx({ candDecls: [retDecl(CAND, RET_TEST_REL, "")] })),
+    ).toEqual([true, false]);
   });
 
   it("U-FRCOV-023: declaration row targeting a different FR id is rejected", () => {
-    expectPairRejected(
-      candidateFx(),
-      candidateFx({ candDecls: [retDecl(CAND, RET_TEST_REL, "FR-L1-06")] }),
-    );
+    expect(
+      pairOutcome(
+        candidateFx(),
+        candidateFx({ candDecls: [retDecl(CAND, RET_TEST_REL, "FR-L1-06")] }),
+      ),
+    ).toEqual([true, false]);
   });
 });
