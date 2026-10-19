@@ -24,13 +24,17 @@ plan: docs/plans/PLAN-L6-21-fr-unit-coverage.md
 
 ## Issue #848: FR registry の退役行 coverage 契約（設計のみ・未実装）
 
-この分岐は、FR-L1 自身の明示的な状態を起点に coverage を判定する。PLAN の status、`generates`、実装やtestの存在だけから FR の退役を推定してはならない。
+この分岐は、FR-L1 自身の明示的な状態を起点に coverage を判定する。PLAN の status、`generates`、実装やtestの存在だけから FR の退役を推定してはならない。退役の根拠は PLAN ではなく Issue または設計文書に置く（PLAN の撤去後も成り立つこと、オフラインで決定的に検査できること、最小実装であることが方式の基準。方式判断は Issue #848 / #1166 / #1078、advisor `claude-fable-5-1` の合意形成を経た）。
 
 ### 入力と状態
 
-- 将来、L1 FR registry §1 の既存7列の末尾へ `fr_state` と `retirement_plan` を任意列として追加する。現在の7列だけで記載された行、および `fr_state` が未指定または空欄の行は後方互換のため `active` と解釈する。この契約PRでは列の追加、実FR状態の設定、既存FR行の変更を行わない。
-- `fr_state` の許容値は `active` と `retired`。空欄／未指定は後方互換のため `active`。その他の値はfail-closeする。`active` 行では `retirement_plan` は空欄／未指定でなければならず、非空ならfail-closeする。
-- `retired` 行は `retirement_plan` に完全なPLAN ID、またはcanonicalな `docs/plans/<完全なPLAN-ID>.md` repo-relative pathを必須とする。短縮形や数値suffixだけの参照は認めない。path参照では `.md` を除いたfilename stemが完全なPLAN IDであり、文書frontmatterの `plan_id` と完全一致しなければならない。ID参照・path参照のいずれもrepo内で一意に解決し、参照するPLAN ID、filename stem（path参照の場合）、frontmatter `plan_id` が該当する範囲で一致すること。欠落、未解決、曖昧、参照／filename／frontmatter間の不一致はfail-closeする。PLANのstatusやartifact列挙はこの判定の代替にならない。
+- 将来、L1 FR registry §1 の既存7列の末尾へ `fr_state` と `retirement_ref` を任意列として追加する。現在の7列だけで記載された行、および `fr_state` が未指定または空欄の行は後方互換のため `active` と解釈する。この契約PRでは列の追加、実FR状態の設定、既存FR行の変更を行わない。
+- `fr_state` の許容値は `active` と `retired`。空欄／未指定は後方互換のため `active`。その他の値はfail-closeする。`active` 行では `retirement_ref` は空欄／未指定でなければならず、非空ならfail-closeする。
+- `retired` 行は `retirement_ref` に、次の **2 形式だけ** からなる閉じた文法の参照を必須とする。2 形式以外（PLAN ID、`docs/plans/` 配下の path、短縮形、空白入りの表記など）は **文法外として全て拒否** する。PLAN 専用の検知規則は設けない。前後の空白は除いて判定する。
+  - **設計文書参照（推奨）**: `<repo相対path>#<見出し text>`。`.md` 直後の最初の `#` で path と見出しに分け、以降は `#` を含めて丸ごと見出し text とする。path は `docs/design/` または `docs/adr/` で始まり `.md` で終わり、`..`・絶対path・バックスラッシュを含まず、実在するファイルであること。見出し照合は次のとおり。fenced code block 内の行は数えない。ATX 見出し行（行頭が `#` を 1〜6 個＋空白）だけを対象とし、setext 見出し（`===` の下線）は対象外。先頭の `#` 群と前後の空白（全角空白を含む）を除いた text を、level を無視して完全一致で比較する。CRLF は LF と同一視する。`{#id}` 等の接尾辞は除かない。**完全一致する見出しがちょうど 1 つ** であること。
+  - **Issue 参照（許容）**: `#<正の整数>`（正規表現 `^#[1-9][0-9]*$`）。検査は書式だけで、ネットワークを使わない。存在しない Issue 番号や close 済みの Issue も書式が正しければ受理する。これはオフライン決定性を取る設計判断として明示的に受容する。根拠の恒久性は設計文書参照のほうが高いため、設計文書参照を推奨する。
+  - **拒否の分類**（互いに素）: (a) 空欄／未指定、(b) 文法外（上記の 2 形式以外、許可prefix外の path を含む）、(c) path が実在しない、(d) path は実在するが見出しが 0 個、(e) 見出しが 2 個以上（曖昧）。いずれもfail-closeし、推測して解決しない。PLAN の status やartifact列挙はこの判定の代替にならない。
+- **移行**: 退役行は現時点で 0 件であり移行対象が無いため、PLAN 参照を受理する移行期間は設けない（PLAN への参照を新たに足さない方針、Issue #1166）。
 
 ### coverage 分岐
 
@@ -43,10 +47,10 @@ plan: docs/plans/PLAN-L6-21-fr-unit-coverage.md
   4. **対象FR**: 第2列以降のセルに現れるFR IDの集合が、対象FRの完全IDちょうど1つと一致すること。FR IDは `FR-L1-<数字>` で、直前直後が英数字または `-` でない完全境界で照合する（`XFR-L1-05`・`FR-L1-050` は `FR-L1-05` と照合しない）。対象FRの欠落、別FRのID、対象FRと別FRの併記はfail-closeする。
   5. **実test path**: 第2列以降のセルから、`tests/` で始まり `.ts` で終わるrepo相対path token（任意の `:行番号` 接尾辞とcode記法は除く）を全て取り出す。1つ以上あり、全てが `..` や絶対pathを含まず解決可能な実test fileであり、全てのfile本文が同じoracle IDを完全境界で引用すること。1つも無い、未解決のtokenがある、引用が無い場合はfail-closeする。
   6. **二重宣言**: 同じoracle IDを第1セルに持つ条件1〜2の行が、L7全体で1行でなければならない。対象外のoracle IDの重複は検査しない。0行または2行以上はfail-closeする（宣言と参照を同じIDの表行で重ねない）。
-- candidate oracleはCANDIDATE接頭辞を持つ間は候補のままであり、正式IDとして扱わない。昇格PRは (1)本matrixの退役行、(2)L7 test-designの宣言行のID（`CANDIDATE-U-*` から `U-*`）、(3)実test file内のID引用、の3面を同一PRで切り替える。途中の混在状態は不一致としてfail-closeし、coverage判定を通過させない。退役PLANへの参照はそのまま保持する。
+- candidate oracleはCANDIDATE接頭辞を持つ間は候補のままであり、正式IDとして扱わない。昇格PRは (1)本matrixの退役行、(2)L7 test-designの宣言行のID（`CANDIDATE-U-*` から `U-*`）、(3)実test file内のID引用、の3面を同一PRで切り替える。途中の混在状態は不一致としてfail-closeし、coverage判定を通過させない。退役根拠の参照（`retirement_ref`）はそのまま保持する。
 - `ut-tdd doctor` とL6 descent／closure readerは同じ `analyzeL6FrCoverage` の退役判定結果を用いる。別々の解釈や重複した判定規則を持たない。
 
-この契約は機械実装、test追加、L1 registry状態変更を含まない。FR-L1-38を含む現在のregistry行・formal U-FR対応は契約PR後も変更されない。後続実装PRがRed oracleを追加し、契約に従う判定を実装するまで、この分岐は未実装である。`function-spec`へFR退役markerを置く旧CFAC案は採用せず、FR registryの状態と退役PLAN参照を唯一の判定起点とする。
+この契約は機械実装、test追加、L1 registry状態変更を含まない。FR-L1-38を含む現在のregistry行・formal U-FR対応は契約PR後も変更されない。後続実装PRがRed oracleを追加し、契約に従う判定を実装するまで、この分岐は未実装である。`function-spec`へFR退役markerを置く旧CFAC案は採用せず、FR registryの状態と退役根拠参照を唯一の判定起点とする。
 
 ### Issue #848 の完了条件と後続工程の責務（未達の目標条件）
 
