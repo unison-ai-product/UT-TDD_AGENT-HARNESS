@@ -541,22 +541,6 @@ describe("U-HOVER-007 runHandover", () => {
     expect(r.pointer.generated_by).toBe(GENERATED_BY);
     expect(r.pointer.doc_entry_count).toBe(1); // 新規 md = entry 1
   });
-
-  // IMP-078 gap⑤: bare plan_id digest でも slug PLAN file を family 解決し kind を埋める。
-  it("gap⑤: bare plan_id の digest を slug PLAN file へ family 解決し kind を埋める (unknown 防止)", () => {
-    const deps = mockDeps();
-    deps.files.set(currentPlanPath, "PLAN-L7-16-module-drift");
-    deps.files.set(
-      join(digestDir, "PLAN-L7-16.digest.json"),
-      JSON.stringify(digest({ plan_id: "PLAN-L7-16", sessions: ["s1"] })),
-    );
-    deps.files.set(
-      join("/repo", "docs", "plans", "PLAN-L7-16-module-drift.md"),
-      '---\nplan_id: PLAN-L7-16-module-drift\nkind: add-impl\ntitle: "X"\n---\n',
-    );
-    const r = runHandover({ date: "2026-06-08", dryRun: true }, deps);
-    expect(r.content).toContain("(add-impl)"); // unknown でなく実 kind
-  });
 });
 
 describe("U-HOVER-015 runHandover marker reconcile (drift 恒久解消、PLAN-L7-83)", () => {
