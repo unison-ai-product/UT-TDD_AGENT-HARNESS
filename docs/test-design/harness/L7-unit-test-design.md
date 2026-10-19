@@ -3213,6 +3213,7 @@ oracle の詳細 (入力・期待・殺す mutant) は専用の
 | CANDIDATE-U-PLRET-012〜014 | 照合証跡 (三者照合・supersedes 双方向) と完備 fixture・決定的な出力順 | 専用文書 §3 |
 | CANDIDATE-U-PLRET-015〜016、027 | 実 repo の処分 JSON との独立集計の一致、生成スクリプトの上書き拒否、実 JSON の link schema (開発 repo を読む検査) | 専用文書 §3 |
 | CANDIDATE-U-PLRET-017〜020 | 純粋性 (外部呼び出し 0)、loader の削除判定と非破壊読み取り、`path:reason` の出力形式 | 専用文書 §3 |
+| CANDIDATE-U-PLRET-032〜035 | supersede の coverage (full / partial の明示、disposition との整合、見出し集合の被覆)、governance の行き先 | 専用文書 §3 |
 | CANDIDATE-U-PLRET-021〜026、028〜031 | 参照の残存 (frontmatter の各欄・設計文書の owning-plan 欄・本文の言及は止めない)、supersedes の連鎖の終端、自己申告の偽造・同時編集の拒否、base blob からの実体検証 | 専用文書 §3 |
 
 上表の ID は backtick 無し表記である。候補台帳への再掲ではなく専用文書への参照であり、U-VMSRC-009 の一意性検査の対象外とする。

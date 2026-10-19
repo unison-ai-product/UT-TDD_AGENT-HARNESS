@@ -13,7 +13,7 @@ import { basename, dirname, join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 /*
- * Issue #1078 PLAN 退役 gate の候補 Red (CANDIDATE-U-PLRET-001..031、016 を除く)。
+ * Issue #1078 PLAN 退役 gate の候補 Red (CANDIDATE-U-PLRET-001..035、016 を除く)。
  * 契約: docs/design/harness/L6-function-design/plan-retirement-gate.md
  * テスト設計: docs/test-design/harness/L7-plan-retirement-gate-test-design.md
  *
@@ -48,6 +48,7 @@ interface Input {
     string,
     { successorDeclaresTarget: boolean; targetBodyBackref: boolean }
   >;
+  planHeadings: Record<string, string[] | null>;
   fileHeadings: Record<string, string[] | null>;
   fileTexts: Record<string, string | null>;
 }
@@ -130,10 +131,16 @@ function retiredRec(path: string, over: Rec = {}): Rec {
   });
 }
 
+/** 全面 supersede の coverage (旧 PLAN の見出し「概要」を全て覆う。契約改訂 #1078 の記録形式への追従)。 */
+const FULL_COVERAGE = {
+  coverage: "full",
+  coverageBasis: [{ anchor: "概要", successorLocation: "後継 PLAN の概要" }],
+};
+
 /** supersedes-two-sided で後継 Z (存続) を指す完備記録。 */
 function twoSidedRec(path: string, succ: string, over: Rec = {}): Rec {
   return retiredRec(path, {
-    reconciliation: { kind: "supersedes-two-sided" },
+    reconciliation: { kind: "supersedes-two-sided", ...FULL_COVERAGE },
     confirmedSupersededBy: [link(path, succ)],
     ...over,
   });
@@ -154,6 +161,7 @@ function input(records: Rec[], over: Partial<Input> = {}): Input {
     disposition: { schemaVersion: 1, plans: records },
     dispositionChangedInPr: false,
     supersessionFacts: {},
+    planHeadings: { [X]: ["概要"], [Y]: ["概要"] },
     fileHeadings: { [DESIGN]: ["§4 判定規則", "判定規則 (DbC)"] },
     fileTexts: { [EVID]: `${EVID_ID} の三者照合は一致した。` },
     ...over,
@@ -1009,13 +1017,14 @@ describe("Issue #1078 PLAN retirement gate (CANDIDATE-U-PLRET, Red)", () => {
     const succ = `docs/plans/${el.successorPlanId as string}.md`;
     const record = retiredRec(target, {
       planId: sample.planId,
-      reconciliation: { kind: "supersedes-two-sided" },
+      reconciliation: { kind: "supersedes-two-sided", ...FULL_COVERAGE },
       confirmedSupersededBy: [el],
     });
     const r = a.analyzePlanRetirement(
       input([record], {
         deletedPlanPaths: [target],
         headPlanPaths: [succ],
+        planHeadings: { [target]: ["概要"] },
         supersessionFacts: facts(target, succ),
       }),
     );
@@ -1109,5 +1118,107 @@ describe("Issue #1078 PLAN retirement gate (CANDIDATE-U-PLRET, Red)", () => {
       successorDeclaresTarget: true,
       targetBodyBackref: false,
     });
+  });
+
+  it.fails("CANDIDATE-U-PLRET-032: supersedes-two-sided requires an explicit coverage of full or partial", async () => {
+    const a = await api();
+    await expectTwinOk(a, [twoSidedRec(X, Z)], {
+      headPlanPaths: [Z],
+      supersessionFacts: facts(X, Z),
+    });
+    for (const coverage of [undefined, null, "all", "FULL", 1]) {
+      const record = twoSidedRec(X, Z, {
+        reconciliation: { kind: "supersedes-two-sided", ...FULL_COVERAGE, coverage },
+      });
+      const r = a.analyzePlanRetirement(
+        input([record], { headPlanPaths: [Z], supersessionFacts: facts(X, Z) }),
+      );
+      expect(reasonsAt(r, X)).toContain("coverage_missing");
+    }
+  });
+
+  it.fails("CANDIDATE-U-PLRET-033: coverage must agree with the disposition (full=retired, partial=transferred or merged)", async () => {
+    const a = await api();
+    const over = { headPlanPaths: [Z], supersessionFacts: facts(X, Z) };
+    const partialRec = (extra: Rec): Rec =>
+      twoSidedRec(X, Z, {
+        wholeSourceDisposition: "transferred",
+        destinations: [{ kind: "design", path: DESIGN, section: "§4 判定規則" }],
+        reconciliation: { kind: "supersedes-two-sided", coverage: "partial" },
+        ...extra,
+      });
+    await expectTwinOk(a, [partialRec({})], over);
+    await expectTwinOk(a, [partialRec({ wholeSourceDisposition: "merged" })], over);
+    const bad: Rec[] = [
+      // full なのに残った契約を移している
+      twoSidedRec(X, Z, {
+        wholeSourceDisposition: "transferred",
+        destinations: [{ kind: "design", path: DESIGN, section: "§4 判定規則" }],
+      }),
+      // partial なのに retired (残った契約の行き先が無い)
+      partialRec({ wholeSourceDisposition: "retired", destinations: [] }),
+    ];
+    for (const record of bad) {
+      const r = a.analyzePlanRetirement(input([record], over));
+      expect(reasonsAt(r, X)).toContain("coverage_disposition_mismatch");
+    }
+  });
+
+  it.fails("CANDIDATE-U-PLRET-034: full coverage must cover every heading of the old plan", async () => {
+    const a = await api();
+    const over = { headPlanPaths: [Z], supersessionFacts: facts(X, Z) };
+    await expectTwinOk(a, [twoSidedRec(X, Z)], {
+      ...over,
+      planHeadings: { [X]: ["  概要 "] },
+    });
+    const cases: Partial<Input>[] = [
+      { planHeadings: { [X]: ["概要", "残った契約"] } },
+      { planHeadings: { [X]: null } },
+      { planHeadings: {} },
+    ];
+    for (const extra of cases) {
+      const r = a.analyzePlanRetirement(input([twoSidedRec(X, Z)], { ...over, ...extra }));
+      expect(reasonsAt(r, X)).toContain("coverage_basis_incomplete");
+    }
+    for (const coverageBasis of [
+      [{ anchor: "概要", successorLocation: " " }],
+      [{ anchor: "概要" }],
+      "概要",
+      undefined,
+    ]) {
+      const record = twoSidedRec(X, Z, {
+        reconciliation: { kind: "supersedes-two-sided", coverage: "full", coverageBasis },
+      });
+      const r = a.analyzePlanRetirement(input([record], over));
+      expect(reasonsAt(r, X)).toContain("coverage_basis_incomplete");
+    }
+  });
+
+  it.fails("CANDIDATE-U-PLRET-035: governance destination is accepted only under docs/governance excluding candidates", async () => {
+    const a = await api();
+    const GOV = "docs/governance/fixture-canon.md";
+    const dest = (path: string, section = "§4 判定規則"): Rec[] => [
+      { kind: "governance", path, section },
+    ];
+    const headings = { [GOV]: ["§4 判定規則"] };
+    await expectTwinOk(a, [rec(X, { destinations: dest(GOV) })], { fileHeadings: headings });
+    const cand = "docs/governance/candidates/fixture-candidate.md";
+    const outside = "docs/design/harness/fixture-dest.md";
+    for (const path of [cand, outside, "docs/governance/missing.md"]) {
+      const r = a.analyzePlanRetirement(
+        input([rec(X, { destinations: dest(path) })], {
+          fileHeadings: {
+            [GOV]: ["§4 判定規則"],
+            [cand]: ["§4 判定規則"],
+            [outside]: ["§4 判定規則"],
+          },
+        }),
+      );
+      expect(reasonsAt(r, X)).toContain("destination_path_missing");
+    }
+    const r = a.analyzePlanRetirement(
+      input([rec(X, { destinations: dest(GOV, "存在しない節") })], { fileHeadings: headings }),
+    );
+    expect(reasonsAt(r, X)).toContain("destination_section_missing");
   });
 });

@@ -24,7 +24,7 @@ pair_artifact: docs/design/harness/L6-function-design/plan-retirement-gate.md
 
 ## 2. fixture
 
-- 001〜014・017・020〜026・028〜030 は `analyzePlanRetirement` / `planRetirementMessages` を直接呼ぶ純粋関数のテストで、ファイルシステムも環境変数も使わない。入力は `PlanRetirementInput` を手で組む (最小の完備 fixture を基準に 1 点だけ壊す)。
+- 001〜014・017・020〜026・028〜030・032〜035 は `analyzePlanRetirement` / `planRetirementMessages` を直接呼ぶ純粋関数のテストで、ファイルシステムも環境変数も使わない。入力は `PlanRetirementInput` を手で組む (最小の完備 fixture を基準に 1 点だけ壊す)。
 - 031 と 018・019 は temp directory に `git init` した最小 repo (base commit に `docs/plans/PLAN-*.md` と処分 JSON、head commit に削除 / rename / 追加) を作り `loadPlanRetirementInput` を呼ぶ。
 - 015・016・027 は開発 repo を読む実 repo の検査で、純粋関数テストではない。015 と 027 は実 JSON (`06_PLAN_DISPOSITION_FIRST_PASS.json`) の読み取りを同じテストファイルの 1 つの helper で共有し、016 は生成スクリプトの source を読んで temp 複製の JSON に実行する。`test-repository-isolation` の `repositoryReadContracts` には、この 3 件を含むテストファイルを 1 行で登録する (§1 の段階 1。実 JSON の読み取り (015・027) と生成スクリプトの読み取り (016) の両方を登録の範囲に含め、登録漏れは段階 1 の Red で検出する)。他の oracle は開発 repo を読まない (018・019・031 は temp repo だけを読む)。
 
@@ -64,6 +64,13 @@ pair_artifact: docs/design/harness/L6-function-design/plan-retirement-gate.md
 | `CANDIDATE-U-PLRET-030` | 不正な link 要素: (a) 要素が文字列、(b) `successorPlanId` 欠落・空白、(c) `supersedesTarget` が記録の `planId` と不一致、(d) `confirmedTwoSidedLink: false`、(e) `selfSupersedesExcluded: true` | (a)〜(e) すべて有効な要素が 0 件で `reconciliation_unresolved` | 要素の形・target 一致・boolean を検査しない |
 | `CANDIDATE-U-PLRET-031` | temp repo で (a) base の blob に後継 Z の `supersedes: [X]` があり X の本文に Z の core ID がある、(b) Z の宣言が同じ PR で追加された (base に無い)、(c) Z は宣言するが X の本文に back-reference が無い。`loadPlanRetirementInput` を呼ぶ | `supersessionFacts` は (a) が両方 true、(b) は両方 false、(c) は `successorDeclaresTarget: true` かつ `targetBodyBackref: false`。facts は head ではなく base の blob から算出される | head の作業ツリーから facts を読む (同じ PR で追加した宣言が通る) / back-reference を検査しない |
 
+| `CANDIDATE-U-PLRET-032` | `supersedes-two-sided` の記録の `coverage` が欠落・null・`"all"`・`"FULL"`・数値 / `"full"` の完備 fixture | 不正・欠落は `coverage_missing` (既定で full とみなさない)。完備は通る (L6 §3.3・§4 規則 4 (C)) | coverage が無い記録を full として通す / 値の列挙を検査しない |
+| `CANDIDATE-U-PLRET-033` | (a) `full` なのに `transferred` + design 行き先、(b) `partial` なのに `retired` + 行き先なし / `partial` + `transferred` または `merged` + design 行き先 | (a)(b) は `coverage_disposition_mismatch`。後者は通る (L6 §4 規則 4 (C)) | partial を retired で通し、残った契約の行き先なしに削除する (A 区分 11 件の抜け穴) |
+| `CANDIDATE-U-PLRET-034` | `full` で (a) `planHeadings` に `coverageBasis` が覆わない見出しがある、(b) `planHeadings` が null / キー無し、(c) `successorLocation` が空白・欠落、`coverageBasis` が配列でない・欠落 / 前後空白付きの見出しが一致する完備 | (a)〜(c) は `coverage_basis_incomplete`。完備は通る (見出し集合の trim 後の包含。L6 §4 規則 4 (C)) | full を自己申告で通す (見出し 1 つの抜けを見逃す) / trim しない |
+| `CANDIDATE-U-PLRET-035` | `governance` 行き先が (a) `docs/governance/` 配下の実在 file、(b) `docs/governance/candidates/` 配下、(c) `docs/design/` 配下、(d) 不在の path、(e) 節が不一致 | (a) は通る。(b)(c)(d) は `destination_path_missing`、(e) は `destination_section_missing` (L6 §3.2・§4 規則 3) | governance を行き先として認めない / candidates や他配下を通す / 節の一致を見ない |
+
 ## 4. 既存 oracle への影響
 
-既存の oracle の改訂表は無い。本 gate は PLAN が削除されるときだけ発火する新規の gate で、`merged-plan-status` / `plan-supersession` / 設計保護 gate の既存 oracle の入力・出力を変えない (L6 §8)。
+既存の候補 oracle 001〜031 の**期待値は変えない** (reason 集合も ok も同じ)。ただし `supersedes-two-sided` の記録形式が変わる (coverage / coverageBasis / `planHeadings` 入力、L6 §3.3・§6) ので、test の fixture を追従させる: `twoSidedRec` helper に全面 supersede の coverage を、`input()` helper に `planHeadings` の既定値を足し、027 の本体は記録に同じ coverage の 2 欄と `planHeadings` を足す。これは記録形式への追従だけで、判定の期待を変えない (Red の `it.fails` のまま)。
+
+本 gate は PLAN が削除されるときだけ発火する新規の gate で、`merged-plan-status` / `plan-supersession` / 設計保護 gate の既存 oracle の入力・出力を変えない (L6 §8)。

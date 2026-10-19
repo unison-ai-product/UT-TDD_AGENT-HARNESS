@@ -44,6 +44,7 @@ issue: 1078
 - path: `docs/governance/candidates/v4-roadmap/migration/06_PLAN_DISPOSITION_FIRST_PASS.json` (定数 `PLAN_DISPOSITION_PATH`)。
 - 構造: `{ schemaVersion, source, primaryReviewIsIncomplete, finalDispositionsClassified, summary, supersessionAudit, plans[] }`。`plans[]` の 1 要素が 1 PLAN。gate が読む既存フィールドは `planId` / `sourcePath` / `wholeSourceDisposition` / `confirmedSupersededBy` (§3.4)。
 - **gate は処分 JSON を base の Git blob から読む** (head の作業ツリーの値は読まない。§4 規則 0・§5)。同じ PR で JSON を編集して判定を通すことを構造的に不可能にするためで、最終化は先行 PR (review 済み) で base に入れておく。
+- `holdReason` / `preliminaryState` は gate が**読まない**。最終化した後も一次インベントリの履歴として残してよく、削除を求めない (消すと生成スクリプトとの差分が増えるだけで、判定に影響しない。§9 の凍結と同じく記録を書き換えない側に倒す)。
 - 既存の `wholeSourceDisposition` は現在 `not-finalized` の 1 値だけである。本設計は、最終化のときにこれと次の 2 フィールドを同じ要素へ書き足す形式を決める (新しいファイルは作らない)。
 
 ### 3.2 最終化の記録形式 (本書が固定する)
@@ -55,19 +56,24 @@ issue: 1078
 | `retirementReason` | `string` | `retired` は非空 (空白のみは空とみなす) 必須。他の処分では任意。 |
 | `reconciliation` | `Reconciliation` | 全処分で必須 (§3.3)。 |
 
+(`supersedes-two-sided` の記録は `coverage` / `coverageBasis` も持つ。§3.3)
+
 `Destination` は次のいずれか。
 
 - `{ kind: "design", path, section }` — 設計文書への移管。`path` は `docs/design/` または `docs/test-design/` 配下の tracked file、`section` は見出し文字列 (§4 規則 3 の一致規則)。
+- `{ kind: "governance", path, section }` — governance 正本への移管 (登録だけの PLAN など、実体が governance にあるもの)。`path` は `docs/governance/` 配下の tracked file で、`docs/governance/candidates/` 配下は**含めない** (候補は正本ではなく、採択されると移るため行き先として不安定)。`section` の一致規則は `design` と同じ。
 - `{ kind: "issue", number }` — 作業単位の行き先となる GitHub issue。`number` は 1 以上の整数。
 
-`transferred` / `merged` の `destinations` は `design` か `issue` を少なくとも 1 件含む (どちらでも可。契約が設計文書へ、作業単位が issue へ移るのが通常で、両方を要求しない)。
+`transferred` / `merged` の `destinations` は `design` / `governance` / `issue` のいずれかを少なくとも 1 件含む (どれでも可。契約が設計文書または governance 正本へ、作業単位が issue へ移るのが通常で、複数を要求しない。`merged` の統合先 PLAN を記録する欄は設けない: 統合先 PLAN も退役対象で行き先にならず、必要なら `retirementReason` に書く)。
 
 ### 3.3 照合証跡 `Reconciliation`
 
 | `kind` | 形 | 意味 |
 |---|---|---|
 | `three-way` | `{ kind, verdict, evidencePath, evidenceId }` | PLAN ⇔ 設計文書 ⇔ コードの三者照合 (#648 の手順) の結果。`verdict` は `consistent` (3 者が一致) か `plan-stale` (PLAN 側だけが古く、設計文書とコードが正しい) のみ有効。`evidencePath` は照合の記録 (`docs/` 配下の tracked file) で、本文に `evidenceId` の文字列を含むこと (例: #977 の `CD-01`、#959 lot の `planId`)。 |
-| `supersedes-two-sided` | `{ kind }` | 後継 PLAN との supersedes が双方向 (後継の宣言 + 対象本文の back-reference) で確認済みであること。JSON の記録 (§3.4) を**自己申告として信用せず**、base の PLAN ファイルの実体 (Git blob) で再検証する (§4 規則 4)。さらに**連鎖が PLAN 以外の行き先で閉じていること** (終端条件) を要する。 |
+| `supersedes-two-sided` | `{ kind, coverage, coverageBasis? }` | 後継 PLAN との supersedes が双方向 (後継の宣言 + 対象本文の back-reference) で確認済みであること。JSON の記録 (§3.4) を**自己申告として信用せず**、base の PLAN ファイルの実体 (Git blob) で再検証する (§4 規則 4)。さらに**連鎖が PLAN 以外の行き先で閉じていること** (終端条件) を要する。`coverage` は必須で、`"full"` (後継が旧 PLAN の契約を**全て**置き換えた) か `"partial"` (一部だけで、残りが旧 PLAN に存続していた) のいずれか。`full` は `coverageBasis: { anchor, successorLocation }[]` を要し、`anchor` は旧 PLAN (base の blob) の level 2〜3 見出し本文 (コードフェンス内を除く)、`successorLocation` は後継側の置換先 (非空 string)。anchor の集合が旧 PLAN の見出し集合を**全て覆う**こと (§4 規則 4)。`partial` は残った契約を `transferred` / `merged` の行き先 (規則 3) へ移すことを要し、`coverageBasis` は不要。**coverage が無い記録を `full` とみなす既定は無い** (fail-close)。 |
+
+**retired の三者照合の定義**: 設計文書もコードも残らない廃止では、PLAN が主張する結び付け先が実在しない (PLAN だけが宣言している) 状態を `plan-stale` とする。`consistent` は PLAN・設計文書・コードの 3 者が「廃止済み」で一致している場合に限る (PLAN が主張する結び付け先が実在する、という解釈では使わない)。どちらも有効な verdict で、有効値は狭めない。
 
 `verdict` が `consistent` / `plan-stale` 以外 (例: `conflict` / `pending` / 欠落) は照合が解決していない。この場合、処分は最終化できない (設計または実装の齟齬を先に直す)。
 
@@ -86,9 +92,11 @@ issue: 1078
 | 0 | base の処分 JSON が存在し parse でき、`plans` が配列である。かつ、この PR の差分が処分 JSON を**変更していない** (削除と最終化の記録を同じ PR に混ぜない)。 | `disposition_unreadable` / `disposition_changed_with_deletion` |
 | 1 | `S` の各 PLAN に、`sourcePath` が一致する記録がちょうど 1 件ある (欠落・重複の両方を落とす)。処分 JSON に無い PLAN (§2 の欠落 1 件) は、削除される PR でこの規則により落ちる。 | `plan_not_in_disposition` / `duplicate_disposition` |
 | 2 | 記録の `wholeSourceDisposition` が `transferred` / `merged` / `retired` のいずれか。`not-finalized` や未知値は落とす。 | `not_finalized` / `invalid_disposition` |
-| 3 | 行き先。`transferred` / `merged` は `destinations` が §3.2 の条件を満たす。`design` の `path` が実在しない、または `section` が一致する見出しを持たない場合も落とす。`issue` の `number` が正の整数でない場合も落とす。`retired` は `retirementReason` が非空。 | `missing_destination` / `destination_path_missing` / `destination_section_missing` / `invalid_issue_ref` / `missing_retirement_reason` |
-| 4 | 照合証跡。`reconciliation` が §3.3 のいずれかで、`three-way` は `verdict` が有効、`evidencePath` が実在し、`evidenceId` が string かつ trim 後非空で、本文にそれを含む (空文字は任意の本文に含まれるので非空を要する)。`supersedes-two-sided` は、§3.4 の有効な link 要素のうち 1 件以上が、(A) **PLAN ファイルの実体で検証済み**: base の Git blob で、後継 PLAN の frontmatter `supersedes` が当該 PLAN を指し (`planCoreId` で比較、自己参照は数えない)、かつ当該 PLAN の本文 (frontmatter 除く) に後継の core ID が現れる。JSON の `confirmedTwoSidedLink` は自己申告であって証跡ではなく、(A) を満たさない要素は無効。(B) さらに**終端条件**を満たす: いずれかの後継 PLAN が (i) head の tree に存在し、この PR で削除されない、または (ii) 後継自身の記録が `transferred` / `merged` で、`design` / `issue` の行き先を持ち規則 2・3 を満たす (後継がこの PR で同時に削除される場合も (ii) で受理する)。後継の `supersedes-two-sided` や `retired` は終端に数えない (連鎖は PLAN 以外の行き先で閉じる。再帰しない)。 | `missing_reconciliation` / `reconciliation_unresolved` / `reconciliation_evidence_missing` / `supersedes_chain_open` |
+| 3 | 行き先。`transferred` / `merged` は `destinations` が §3.2 の条件を満たす。`design` / `governance` の `path` が実在しない (`design` は `docs/design/` `docs/test-design/` 外、`governance` は `docs/governance/` 外または `docs/governance/candidates/` 配下も含む)、または `section` が一致する見出しを持たない場合も落とす。`issue` の `number` が正の整数でない場合も落とす。`retired` は `retirementReason` が非空。 | `missing_destination` / `destination_path_missing` / `destination_section_missing` / `invalid_issue_ref` / `missing_retirement_reason` |
+| 4 | 照合証跡。`reconciliation` が §3.3 のいずれかで、`three-way` は `verdict` が有効、`evidencePath` が実在し、`evidenceId` が string かつ trim 後非空で、本文にそれを含む (空文字は任意の本文に含まれるので非空を要する)。`supersedes-two-sided` は、§3.4 の有効な link 要素のうち 1 件以上が、(A) **PLAN ファイルの実体で検証済み**: base の Git blob で、後継 PLAN の frontmatter `supersedes` が当該 PLAN を指し (`planCoreId` で比較、自己参照は数えない)、かつ当該 PLAN の本文 (frontmatter 除く) に後継の core ID が現れる。JSON の `confirmedTwoSidedLink` は自己申告であって証跡ではなく、(A) を満たさない要素は無効。(B) さらに**終端条件**を満たす: いずれかの後継 PLAN が (i) head の tree に存在し、この PR で削除されない、または (ii) 後継自身の記録が `transferred` / `merged` で、`design` / `issue` の行き先を持ち規則 2・3 を満たす (後継がこの PR で同時に削除される場合も (ii) で受理する)。後継の `supersedes-two-sided` や `retired` は終端に数えない (連鎖は PLAN 以外の行き先で閉じる。再帰しない)。(C) **coverage**: `coverage` が `full` / `partial` 以外は `coverage_missing`。`full` は `wholeSourceDisposition` が `retired` かつ `destinations` が空であること、`partial` は `transferred` / `merged` であることを要し、外れれば `coverage_disposition_mismatch`。`full` は `coverageBasis` の anchor 集合 (trim 後) が旧 PLAN の base blob の見出し集合 (`planHeadings`、level 2〜3) を全て含み、各 `successorLocation` が非空であること。見出しが 1 つでも欠ける・`planHeadings` が null・`coverageBasis` が不正なら `coverage_basis_incomplete`。 | `missing_reconciliation` / `reconciliation_unresolved` / `reconciliation_evidence_missing` / `supersedes_chain_open` / `coverage_missing` / `coverage_disposition_mismatch` / `coverage_basis_incomplete` |
 | 5 | 参照の残存。**削除されない** PLAN の frontmatter の `requires` / `parent` / `supersedes` / `references`、および `docs/design/` `docs/test-design/` の文書 frontmatter の owning-plan 欄 (`plan:`) が、`S` の PLAN (`plan_id` または `docs/plans/<file>.md` の path) を指していれば落とす。violation の `path` は参照元の file。**本文中の PLAN ID の言及は履歴参照であり、対象外 (止めない)**。 | `dangling_plan_reference` |
+
+規則 5 と後継の `supersedes` (運用): 旧 PLAN を削除する PR では、後継 PLAN の frontmatter から旧 PLAN を指す `supersedes` を**同じ PR で外す** (外さないと規則 5 の `dangling_plan_reference`)。規則 4 は base の blob、規則 5 は head の tree を読むので、この手順と矛盾しない。後継側の back-reference を失う分は、処分 JSON の記録 (base 済み) が担う。
 
 規則 5 の範囲の注記: `references` は既存の lint では未検査 (advisory) だが、削除後に指す先が消える点は他の欄と同じなので対象に含める。CLAUDE.md §PLAN Filing Rules の「draft への依存は `references` へ」は**どこへ書くか**の規則で、本規則は**削除時に残さない**規則であり、両立する (削除する側が参照元を先に直す)。
 
@@ -104,7 +112,7 @@ issue: 1078
 | 削除が 0 件 (追加・変更・新 path も PLAN パターンに一致する rename だけを含む) | **何も検査せず pass**。削除を含まない PR には影響しない。 |
 | 処分 JSON を同じ PR で変更・削除する | 削除を含む PR なので発火し、規則 0 の `disposition_changed_with_deletion` で落ちる (JSON は base の blob から読むので、同じ PR の編集は判定に影響しない)。 |
 
-`loadPlanRetirementInput` は `git diff --name-status -M <base>...<head> -- docs/plans/` で削除 (`S`) を読み、**base の Git blob から処分 JSON と、規則 4 (A) の supersedes 実体 (後継 PLAN の frontmatter と旧 PLAN の本文) を**、head の作業ツリーで行き先文書・証跡文書、削除されない PLAN の frontmatter、設計文書の `plan:` 欄を読む。base / head の解決は設計保護 gate (`src/github/design-protection.ts`) の `readDesignProtectionChanges` と同じ解決 (同じ引数形式) に揃える。起動点 (CI への配線、`ut-tdd` コマンド化) は実装 PR で design-protection と同じ層に置き、本書は配線の形を固定しない。
+loader は削除対象 PLAN の見出し (level 2〜3、`planHeadings`) も base の blob から読み、`governance` の行き先も `design` と同様に先読みする。`loadPlanRetirementInput` は `git diff --name-status -M <base>...<head> -- docs/plans/` で削除 (`S`) を読み、**base の Git blob から処分 JSON と、規則 4 (A) の supersedes 実体 (後継 PLAN の frontmatter と旧 PLAN の本文) を**、head の作業ツリーで行き先文書・証跡文書、削除されない PLAN の frontmatter、設計文書の `plan:` 欄を読む。base / head の解決は設計保護 gate (`src/github/design-protection.ts`) の `readDesignProtectionChanges` と同じ解決 (同じ引数形式) に揃える。起動点 (CI への配線、`ut-tdd` コマンド化) は実装 PR で design-protection と同じ層に置き、本書は配線の形を固定しない。
 
 ## 6. 関数 (シグネチャ)
 
@@ -116,7 +124,8 @@ export type PlanRetirementReason =
   | "missing_destination" | "destination_path_missing" | "destination_section_missing"
   | "invalid_issue_ref" | "missing_retirement_reason"
   | "missing_reconciliation" | "reconciliation_unresolved" | "reconciliation_evidence_missing"
-  | "supersedes_chain_open" | "dangling_plan_reference" | "disposition_changed_with_deletion";
+  | "supersedes_chain_open" | "coverage_missing" | "coverage_disposition_mismatch" | "coverage_basis_incomplete"
+  | "dangling_plan_reference" | "disposition_changed_with_deletion";
 
 export interface PlanRetirementViolation { path: string; reason: PlanRetirementReason }
 
@@ -128,6 +137,7 @@ export interface PlanRetirementInput {
   disposition: unknown | null;         // base の blob の処分 JSON の parse 結果 (読めなければ null)
   dispositionChangedInPr: boolean;     // この PR の差分が処分 JSON を変更・削除しているか
   supersessionFacts: Record<string, { successorDeclaresTarget: boolean; targetBodyBackref: boolean }>; // key = `<旧 planId>-><successorPlanId>`、base の blob から loader が算出 (blob 不在は両方 false)
+  planHeadings: Record<string, string[] | null>; // 削除対象 PLAN の path -> base blob の level 2〜3 見出し本文 (コードフェンス内を除く。blob 不在は null)
   fileHeadings: Record<string, string[] | null>; // 参照された path -> 見出し本文 (不在は null)
   fileTexts: Record<string, string | null>;      // 証跡 path -> 本文 (不在は null)
 }
@@ -190,6 +200,12 @@ docs/plans/PLAN-L7-02-keep.md:dangling_plan_reference
 4. **実装 PR**: `it.fails` を `it` に戻す最小実装 (`src/lint/plan-retirement-gate.ts` + §9 のガード + 最小配線)。実装 PR は `docs/test-design/` を変えない。
 5. **処分 JSON の最終化** (人手、ロット単位。別 issue / PR)。
 6. gate が通った状態で PLAN 削除 PR。**5 の最終化は先行 PR で merge して base に入れる**。削除 PR は処分 JSON を変更できない (規則 0)。
+
+### 10.1 運用順序 (最終化・削除のロット規則、gate は検査しない)
+
+- **設計文書とコードの撤去が先、`retired` の最終化はその後**: 画面カットのように設計文書やコードを撤去する作業 (#1084 の段 2〜4) がある PLAN は、撤去が merge されてから三者照合し最終化する (撤去前は PLAN・設計文書・コードの 3 者が揃わず、`consistent` にも `plan-stale` にも当たらない)。gate は撤去済みかを検査しないので、順序は運用で守る。
+- **設計文書がコードより古い PLAN**: 設計文書を先に改訂して追従させ、その後に最終化する (改訂前は `consistent` にも `plan-stale` にも当たらず、最終化できない)。
+- **連鎖 (旧 PLAN X → 後継 Z) の削除順**: 規則 4 (B) は `retired` / 連鎖中の後継を終端に数えない。X を先に削除し (Z は存続、(i) で受理)、Z は X の削除 PR の後に自分の最終化と削除へ進む。同じロットで Z も `retired` にする場合は、Z を `transferred` / `merged` で最終化するか、Z の削除を X の削除より後の PR にする。
 
 ## 11. 非目標
 
