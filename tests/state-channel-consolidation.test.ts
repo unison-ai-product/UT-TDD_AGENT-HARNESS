@@ -1895,9 +1895,15 @@ describe("Issue #1062: handover prose is retired", () => {
 
   describe("U-STCHAN-021 pointer fixture", () => {
     const repoRoot = "/repo";
-    const pointer = { active_plan: "PLAN-L7-04" };
+    const legacyDoc = join("docs", "handover", "session-handover-2026-10-15.md");
+    const pointer = {
+      active_plan: "PLAN-L7-04",
+      generated_by: "ut-tdd-handover",
+      latest_doc: legacyDoc,
+    };
     const files = new Map<string, string>([
       [join(repoRoot, ".ut-tdd", "handover", "CURRENT.json"), `${JSON.stringify(pointer)}\n`],
+      [join(repoRoot, legacyDoc), "# Session Handover — 2026-10-15\n"],
     ]);
     const deps: HandoverDeps = {
       repoRoot,

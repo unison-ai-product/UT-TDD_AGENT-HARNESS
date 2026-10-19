@@ -188,11 +188,12 @@ reviewRevision = "rv1-" + sha256(canonicalJson(reviewIdentityObjectV2))
 
 ### 5.2 `checkHandoverBypass` の残す振る舞い
 
-`checkHandoverBypass` は、md 照合 (`doc_entry_count`) の撤去後に**常に空配列を返す no-op** とする。残す検査は無い。
+`checkHandoverBypass` は **`generated_by` の署名照合を残し、md 照合 (`latest_doc` / `doc_entry_count` に依存する部分) だけを撤去する**。
 
-- 現行のもう一つの検査は `generated_by` 署名の照合 (手書き pointer の検知) である。しかし U-STCHAN-021 の fixture (`{ active_plan: "PLAN-L7-04" }`) は `generated_by` を持たず、期待は「警告しない」である。署名照合を残すと 021 と矛盾する。
-- 署名照合の目的は、手書き pointer が md 照合を信用させることの防止だった。md 照合が無くなれば、手書き pointer の害は (`discipline` の stale / drift 検査が拾う範囲を除いて) 無い。よって署名照合も廃止し、fixture の変更 (L7 側の改訂) は要らない。
-- 関数と呼び出し側 (cli の handover 警告、doctor の `checkHandoverDisciplineMessages`) は 021 が直接呼ぶため段階 6 では残し、呼び出しの除去は段階 7 の cutover で行う。
+- 残す: `CURRENT.json` が `generated_by` 署名 (`ut-tdd-handover`) を持たない場合の「手書き pointer」警告。根拠は `handover-mechanism.md` §gap ① (213 行) で、手書きの `CURRENT.json` が discipline を素通りすることは md の有無と独立した gap である。新契約でも `CURRENT.json` は機械ポインタとして残るので、この gap は消えない。pointer 不在は警告しない (従来どおり discipline が担当)。
+- 撤去する: `pointer.latest_doc` の md を読み、entry 数が `doc_entry_count` を超えたら警告する部分。`countHandoverEntries` と同時に消える。移行期に `latest_doc` / `doc_entry_count` を持つ旧 pointer が残っていても、md を読まず警告しない。
+- U-STCHAN-021 の入力は、署名付きの pointer (`generated_by` あり、`doc_entry_count` なし) とする。`latest_doc` は旧 pointer の残骸として持たせ、その md に `# Session Handover` 見出しを置く。現行実装は entry 数 1 > 0 で警告を出すので、021 は Red になる。
+- 関数と呼び出し側 (cli の handover 警告、doctor の `checkHandoverDisciplineMessages`) は段階 6 で残す。
 
 ## 6. `memory add` の拒否規則
 
