@@ -161,11 +161,15 @@ function input(records: Rec[], over: Partial<Input> = {}): Input {
 }
 
 /**
- * 実 JSON の記録から、テスト内で独立に期待 reason を数える (analyzer の実装を使わない)。
- * 規則 2 の失敗後に規則 3・4 を続けるかは契約が固定しないため、打ち切りと継続の 2 通りを許容する。
- * reconciliation が実在する最終化済み記録は証跡の中身まで数えないので、下限 (規則 3・4 の構造欠落) だけを見る。
+ * 記録から、テスト内で独立に期待 reason と ok を算出する (analyzer の実装を使わない)。
+ * 規則 2 が失敗した後に規則 3・4 を続けるかは契約が固定しないため、その分岐だけ打ち切りと継続の 2 通りを許容する。
+ * 規則 2 を通った (最終化済み) 記録は、行き先・理由・照合証跡まで独立に数えて完全一致で比べる。
+ * supersedes-two-sided は supersessionFacts と後継の存在に依存するので 024〜030 が担い、ここでは下限だけを見る。
  */
-function independentReasons(matches: Rec[]): { allowed: string[][]; exact: boolean } {
+function independentReasons(
+  matches: Rec[],
+  files: Pick<Input, "fileHeadings" | "fileTexts">,
+): { allowed: string[][]; exact: boolean } {
   if (matches.length === 0) return { allowed: [["plan_not_in_disposition"]], exact: true };
   if (matches.length > 1) return { allowed: [["duplicate_disposition"]], exact: true };
   const r = matches[0];
@@ -176,22 +180,51 @@ function independentReasons(matches: Rec[]): { allowed: string[][]; exact: boole
       : ["transferred", "merged", "retired"].includes(w)
         ? []
         : ["invalid_disposition"];
-  const dests = (Array.isArray(r.destinations) ? r.destinations : []) as Rec[];
-  const hasDest = dests.some((d) => d.kind === "design" || d.kind === "issue");
-  const reason = typeof r.retirementReason === "string" ? r.retirementReason.trim() : "";
-  const rule3 = rule2.length
-    ? []
-    : w === "retired"
-      ? reason
-        ? []
-        : ["missing_retirement_reason"]
-      : hasDest
-        ? []
-        : ["missing_destination"];
+  const rule3: string[] = [];
+  if (!rule2.length) {
+    const dests = (Array.isArray(r.destinations) ? r.destinations : []) as Rec[];
+    if (w === "retired") {
+      const reason = typeof r.retirementReason === "string" ? r.retirementReason.trim() : "";
+      if (!reason) rule3.push("missing_retirement_reason");
+    } else if (!dests.some((d) => d.kind === "design" || d.kind === "issue")) {
+      rule3.push("missing_destination");
+    }
+    for (const d of dests) {
+      if (d.kind === "issue") {
+        if (!Number.isInteger(d.number) || (d.number as number) <= 0)
+          rule3.push("invalid_issue_ref");
+      } else if (d.kind === "design") {
+        const p = d.path;
+        const headings = typeof p === "string" ? files.fileHeadings[p] : null;
+        const underDocs =
+          typeof p === "string" &&
+          (p.startsWith("docs/design/") || p.startsWith("docs/test-design/"));
+        if (!underDocs || !Array.isArray(headings)) rule3.push("destination_path_missing");
+        else {
+          const sec = typeof d.section === "string" ? d.section.trim() : "";
+          if (!sec || !headings.some((h) => h.trim().startsWith(sec)))
+            rule3.push("destination_section_missing");
+        }
+      }
+    }
+  }
   const rc = r.reconciliation as Rec | undefined;
-  const hasRc = !!rc && (rc.kind === "three-way" || rc.kind === "supersedes-two-sided");
-  const full = [...rule2, ...rule3, ...(hasRc ? [] : ["missing_reconciliation"])];
-  return { allowed: rule2.length ? [rule2, full] : [full], exact: rule2.length > 0 || !hasRc };
+  const rule4: string[] = [];
+  let exact = true;
+  if (!rc || (rc.kind !== "three-way" && rc.kind !== "supersedes-two-sided")) {
+    rule4.push("missing_reconciliation");
+  } else if (rc.kind === "three-way") {
+    if (rc.verdict !== "consistent" && rc.verdict !== "plan-stale")
+      rule4.push("reconciliation_unresolved");
+    const text = typeof rc.evidencePath === "string" ? files.fileTexts[rc.evidencePath] : null;
+    const evId = typeof rc.evidenceId === "string" ? rc.evidenceId.trim() : "";
+    if (typeof text !== "string" || !evId || !text.includes(evId))
+      rule4.push("reconciliation_evidence_missing");
+  } else {
+    exact = false;
+  }
+  const full = [...rule2, ...rule3, ...rule4];
+  return { allowed: rule2.length ? [rule2, full] : [full], exact: rule2.length > 0 || exact };
 }
 
 const reasonsAt = (r: Result, path: string): Reason[] =>
@@ -583,25 +616,46 @@ describe("Issue #1078 PLAN retirement gate (CANDIDATE-U-PLRET, Red)", () => {
       tracked[0],
       ...tracked.filter((p) => !real.plans.some((r) => r.sourcePath === p)),
     ];
-    for (const path of candidates) {
-      const r = a.analyzePlanRetirement({
-        ...input([]),
-        deletedPlanPaths: [path],
-        disposition: real,
-      });
+    const base = input([]);
+    const check = (path: string, disposition: { plans: Rec[] }): void => {
+      const r = a.analyzePlanRetirement({ ...base, deletedPlanPaths: [path], disposition });
       const { allowed, exact } = independentReasons(
-        real.plans.filter((p) => p.sourcePath === path),
+        disposition.plans.filter((p) => p.sourcePath === path),
+        base,
       );
       const got = r.violations.map((v) => v.reason).sort();
       expect(r.violations.every((v) => v.path === path)).toBe(true);
       expect(r.ok).toBe(got.length === 0);
       if (exact) {
-        // 規則 2 の失敗後に規則 3・4 を続けるかは契約が固定しないので、許容する 2 通りのどちらかと一致させる
+        // 規則 2 が失敗した後の打ち切り / 継続だけを許容し、それ以外は完全一致 (件数と ok を含む)
         expect(allowed.map((x) => [...x].sort())).toContainEqual(got);
       } else {
         expect(got).toEqual(expect.arrayContaining(allowed[allowed.length - 1]));
       }
-    }
+    };
+    for (const path of candidates) check(path, real);
+
+    // 最終化が進んだ状態でも式が成り立つこと: 実 JSON の 1 件をメモリ上で最終化して同じ集計と比べる
+    const target = tracked[0];
+    const finalize = (over: Rec): { plans: Rec[] } => ({
+      ...real,
+      plans: real.plans.map((p) =>
+        p.sourcePath === target ? { ...rec(target), planId: p.planId, ...over } : p,
+      ),
+    });
+    const complete = finalize({});
+    const done = a.analyzePlanRetirement({
+      ...base,
+      deletedPlanPaths: [target],
+      disposition: complete,
+    });
+    expect(done.violations).toEqual([]);
+    expect(done.ok).toBe(true);
+    check(target, complete);
+    check(target, finalize({ destinations: [] }));
+    check(target, finalize({ reconciliation: { ...THREE_WAY, evidenceId: "ABSENT-ID" } }));
+    check(target, finalize({ reconciliation: { ...THREE_WAY, verdict: "pending" } }));
+    check(target, finalize({ wholeSourceDisposition: "retired", destinations: [] }));
   });
 
   it.fails("CANDIDATE-U-PLRET-016: --write-json refuses to overwrite once any record is finalized", () => {
