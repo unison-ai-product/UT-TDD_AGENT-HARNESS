@@ -1,37 +1,23 @@
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import {
-  GENERATED_BY as SIDECAR_GENERATED_BY,
-  HANDOVER_OUTSTANDING_MARKER as SIDECAR_HANDOVER_OUTSTANDING_MARKER,
-  MAX_SAME_DAY_ENTRIES as SIDECAR_MAX_SAME_DAY_ENTRIES,
-  MAX_SUMMARY_PLANS as SIDECAR_MAX_SUMMARY_PLANS,
-} from "../src/handover/handover-constants.ts";
-import type { HandoverDoc as SidecarHandoverDoc } from "../src/handover/handover-types.ts";
+import { GENERATED_BY as SIDECAR_GENERATED_BY } from "../src/handover/handover-constants.ts";
 import {
   buildPointer,
-  capWithBreadcrumb,
   checkHandoverBypass,
   checkHandoverDiscipline,
-  checkHandoverOutstandingAnchor,
-  countHandoverEntries,
   dedupeDigests,
   GENERATED_BY,
-  HANDOVER_OUTSTANDING_MARKER,
   type HandoverDeps,
   type HandoverPointer,
   type HandoverScope,
   handoverStale,
   inferPlanFromCommit,
   latestSessionId,
-  MAX_SAME_DAY_ENTRIES,
-  MAX_SUMMARY_PLANS,
   type PlanDigestRef,
   readPointer,
-  renderHandoverScaffold,
   resolveHandoverScope,
   runHandover,
   sameFamilyPlan,
-  scaffoldFromDigests,
   setActivePlan,
 } from "../src/handover/index.ts";
 import { resolveActivePlan, type SessionLogDeps } from "../src/runtime/session-log.ts";
@@ -79,14 +65,8 @@ const currentPlanPath = join("/repo", ".ut-tdd", "state", "current-plan");
 const pointerPath = join("/repo", ".ut-tdd", "handover", "CURRENT.json");
 
 describe("PLAN-L7-173 handover sidecars", () => {
-  it("re-exported constants and sidecar document type stay aligned", () => {
+  it("re-exported constant stays aligned", () => {
     expect(SIDECAR_GENERATED_BY).toBe(GENERATED_BY);
-    expect(SIDECAR_HANDOVER_OUTSTANDING_MARKER).toBe(HANDOVER_OUTSTANDING_MARKER);
-    expect(SIDECAR_MAX_SAME_DAY_ENTRIES).toBe(MAX_SAME_DAY_ENTRIES);
-    expect(SIDECAR_MAX_SUMMARY_PLANS).toBe(MAX_SUMMARY_PLANS);
-
-    const doc: SidecarHandoverDoc = scaffoldFromDigests([digest()], [], "2026-06-24");
-    expect(doc.plans[0]?.plan_id).toBe("PLAN-L7-04-handover-mechanism");
   });
 });
 
@@ -139,7 +119,6 @@ describe("U-HOVER-002 buildPointer", () => {
     };
     const p = buildPointer({
       scope,
-      latestDoc: "docs/handover/x.md",
       status: "in_progress",
       now: NOW,
     });
@@ -149,7 +128,7 @@ describe("U-HOVER-002 buildPointer", () => {
 
   it("edge: active_plan=null だが digests 非空 → digest_summary は集計値 (null にしない)", () => {
     const scope: HandoverScope = { active_plan: null, digests: [digest()] };
-    const p = buildPointer({ scope, latestDoc: null, status: "in_progress", now: NOW });
+    const p = buildPointer({ scope, status: "in_progress", now: NOW });
     expect(p.active_plan).toBeNull();
     expect(p.digest_summary).toEqual({ commits: 1, files: 1, failures: 0 });
   });
@@ -157,7 +136,6 @@ describe("U-HOVER-002 buildPointer", () => {
   it("digests 空 → digest_summary=null", () => {
     const p = buildPointer({
       scope: { active_plan: "P", digests: [] },
-      latestDoc: null,
       status: "in_progress",
       now: NOW,
     });
@@ -166,127 +144,7 @@ describe("U-HOVER-002 buildPointer", () => {
 });
 
 // PLAN-L7-98 (Q1): §5 未了 PO 判断 を outstanding surface (機械事実) で seed + fail-close anchor。
-describe("U-HOVER-017 §5 outstanding seed + anchor gate (PLAN-L7-98)", () => {
-  const outstanding = {
-    nonTerminalPlansByLayer: { L7: 2 },
-    nonTerminalPlansTotal: 2,
-    versionUpParked: 0,
-    activeDraftTotal: 2,
-    openDefers: 1,
-  };
-
-  it("outstanding 指定で §5 に機械集計 marker + 件数を出力する", () => {
-    const doc = scaffoldFromDigests([digest()], [], "2026-06-04");
-    const md = renderHandoverScaffold(doc, { outstanding });
-    expect(md).toContain(HANDOVER_OUTSTANDING_MARKER);
-    expect(md).toContain("non-terminal PLANs=2");
-    expect(md).toContain("open defers=1");
-  });
-
-  it("outstanding 未指定なら従来の §5 TODO (後方互換、marker なし)", () => {
-    const md = renderHandoverScaffold(scaffoldFromDigests([digest()], [], "2026-06-04"));
-    expect(md).not.toContain(HANDOVER_OUTSTANDING_MARKER);
-    expect(md).toContain("§5 未了 PO 判断");
-  });
-
-  function withDoc(md: string | null): ReturnType<typeof mockDeps> {
-    const deps = mockDeps();
-    deps.files.set(pointerPath, JSON.stringify({ latest_doc: "docs/handover/h.md" }));
-    if (md != null) deps.files.set(join("/repo", "docs", "handover", "h.md"), md);
-    return deps;
-  }
-
-  it("pointer 不在は skip (ok)", () => {
-    expect(checkHandoverOutstandingAnchor(mockDeps()).ok).toBe(true);
-  });
-
-  it("§5 に marker があれば ok", () => {
-    const md = `# Session Handover — 2026-06-04\n\n## §5 未了 PO 判断\n\n> ${HANDOVER_OUTSTANDING_MARKER}: non-terminal PLANs=0; open defers=1\n\n## §6 x\n`;
-    expect(checkHandoverOutstandingAnchor(withDoc(md)).ok).toBe(true);
-  });
-
-  it("§5 に marker が無ければ fail-close (前任 prose 転記の false-state 防止)", () => {
-    const md = `# Session Handover — 2026-06-04\n\n## §5 未了 PO 判断\n\n- DISCOVERY-03 PO サインオフ待ち\n\n## §6 x\n`;
-    const r = checkHandoverOutstandingAnchor(withDoc(md));
-    expect(r.ok).toBe(false);
-    expect(r.messages[0]).toContain("機械集計行");
-  });
-
-  it("複数 entry は最後の entry の §5 を見る (古い entry の marker では通さない)", () => {
-    const md = `# Session Handover — 2026-06-04\n\n## §5 未了 PO 判断\n\n> ${HANDOVER_OUTSTANDING_MARKER}: x\n\n---\n\n# Session Handover — 2026-06-04\n\n## §5 未了 PO 判断\n\n- 待ち prose のみ\n\n## §6 x\n`;
-    expect(checkHandoverOutstandingAnchor(withDoc(md)).ok).toBe(false);
-  });
-});
-
 // PLAN-L7-88: 1 エントリの §1/§2 に載せる PLAN 件数の上限 (注入コントロール / 圧縮)。
-describe("U-HOVER-016 capWithBreadcrumb + renderHandoverScaffold summary cap (PLAN-L7-88)", () => {
-  const cb = {
-    renderItem: (x: string) => [`- ${x}`],
-    breadcrumb: (n: number) => `- (+ ${n} more)`,
-  };
-
-  it("capWithBreadcrumb: 上限超は先頭 N + breadcrumb 1 行 (no silent cap)、件数は残数を明示", () => {
-    const out = capWithBreadcrumb(["a", "b", "c", "d", "e"], 2, cb);
-    expect(out).toEqual(["- a", "- b", "- (+ 3 more)"]);
-  });
-
-  it("capWithBreadcrumb: 上限以下は全件・breadcrumb なし / max<=0 は無制限", () => {
-    const items = ["a", "b"];
-    expect(capWithBreadcrumb(items, 5, cb)).toEqual(["- a", "- b"]);
-    expect(capWithBreadcrumb(items, 0, cb)).toEqual(["- a", "- b"]);
-  });
-
-  function bigDoc(planCount: number) {
-    const digests: PlanDigestRef[] = [];
-    const meta: { plan_id: string; kind: string; title: string }[] = [];
-    for (let i = 0; i < planCount; i++) {
-      const id = `PLAN-CAP-${String(i).padStart(2, "0")}-x`;
-      digests.push(digest({ plan_id: id, commits: [`c${i}`], files_touched: [`src/f${i}.ts`] }));
-      meta.push({ plan_id: id, kind: "impl", title: `title ${i}` });
-    }
-    return scaffoldFromDigests(digests, meta, "2026-06-22");
-  }
-
-  it("renderHandoverScaffold: PLAN 数が上限超 (= scope fallback で全 registry) なら §1/§2 が cap + breadcrumb", () => {
-    const doc = bigDoc(MAX_SUMMARY_PLANS + 8);
-    const md = renderHandoverScaffold(doc);
-    // §1 breadcrumb に残数 8 が出る (full registry はダンプしない)。
-    expect(md).toContain("+ 8 more PLAN");
-    expect(md).toContain("ut-tdd status");
-    // 末尾 (上限外) の PLAN id は本文に出ない = 肥大しない。
-    const lastId = `PLAN-CAP-${String(MAX_SUMMARY_PLANS + 7).padStart(2, "0")}-x`;
-    expect(md).not.toContain(lastId);
-    // 先頭 PLAN は残る。
-    expect(md).toContain("PLAN-CAP-00-x");
-  });
-
-  it("renderHandoverScaffold: session-scope が効いた通常時 (PLAN 少) は cap 不発・全件・breadcrumb なし", () => {
-    const doc = bigDoc(3);
-    const md = renderHandoverScaffold(doc);
-    expect(md).not.toContain("more PLAN");
-    for (let i = 0; i < 3; i++) expect(md).toContain(`PLAN-CAP-0${i}-x`);
-  });
-
-  it("renderHandoverScaffold: maxSummaryPlans=0 は cap 無効 (後方互換 escape hatch)", () => {
-    const doc = bigDoc(MAX_SUMMARY_PLANS + 5);
-    const md = renderHandoverScaffold(doc, { maxSummaryPlans: 0 });
-    expect(md).not.toContain("more PLAN");
-    const lastId = `PLAN-CAP-${String(MAX_SUMMARY_PLANS + 4).padStart(2, "0")}-x`;
-    expect(md).toContain(lastId);
-  });
-
-  // reviewer I-1: slimSummary と cap の合成 — slim は §1/§2 を stub 化するので cap は不発
-  // (plan list 自体を描かない)。branch 順が将来反転しても回帰で検知できるよう明示する。
-  it("renderHandoverScaffold: slimSummary=true は plans > 上限でも stub・cap 不発・header 1 個", () => {
-    const doc = bigDoc(MAX_SUMMARY_PLANS + 5);
-    const md = renderHandoverScaffold(doc, { slimSummary: true });
-    expect(md).toContain("同日 first entry 参照");
-    expect(md).not.toContain("more PLAN");
-    expect(md).not.toContain("PLAN-CAP-00-x");
-    expect(countHandoverEntries(md)).toBe(1);
-  });
-});
-
 describe("U-HOVER-005 handoverStale", () => {
   it("null → true / 24h 超 → true / 以内 → false / 境界(=24h) は stale でない", () => {
     expect(handoverStale(null, NOW)).toBe(true);
@@ -427,7 +285,6 @@ describe("U-HOVER-010 readPointer / checkHandoverDiscipline (IMP-047)", () => {
     return {
       active_plan: "PLAN-L7-04-handover-mechanism",
       status: "in_progress",
-      latest_doc: "docs/handover/x.md",
       digest_summary: { commits: 1, files: 1, failures: 0 },
       updated_at: NOW,
       ...over,
@@ -503,24 +360,20 @@ describe("U-HOVER-007 runHandover", () => {
     return deps;
   }
 
-  it("dryRun → 何も書かず content を返す (written=[]、非破壊)", () => {
+  it("dryRun → 何も書かず pointer を返す (written=[]、非破壊)", () => {
     const deps = seeded();
     const before = new Map(deps.files);
     const r = runHandover({ date: "2026-06-04", dryRun: true }, deps);
     expect(r.written).toEqual([]);
-    expect(r.content).toContain("§1 PLAN サマリ");
+    expect(r.pointer.active_plan).toBe("PLAN-L7-04-handover-mechanism");
     expect(deps.files).toEqual(before); // 非破壊
   });
 
-  it("通常 → md 追記 (既存上書きしない) + CURRENT.json 更新", () => {
+  it("通常 → CURRENT.json だけを書く (docs/handover に散文を作らない)", () => {
     const deps = seeded();
-    const docRel = join("docs", "handover", "session-handover-2026-06-04.md");
-    deps.files.set(join("/repo", docRel), "# 既存 entry\n");
     const r = runHandover({ date: "2026-06-04" }, deps);
-    const md = deps.files.get(join("/repo", docRel)) ?? "";
-    expect(md).toContain("# 既存 entry"); // 既存を残す
-    expect(md).toContain("§3 Next Action"); // 追記される
-    expect(r.written).toContain(join(".ut-tdd", "handover", "CURRENT.json"));
+    expect(r.written).toEqual([join(".ut-tdd", "handover", "CURRENT.json")]);
+    expect([...deps.files.keys()].some((p) => p.includes(join("docs", "handover")))).toBe(false);
   });
 
   it("complete=true → CURRENT.json status=completed かつ active_plan=planId", () => {
@@ -534,12 +387,13 @@ describe("U-HOVER-007 runHandover", () => {
     expect(pointer.active_plan).toBe("PLAN-L7-04-handover-mechanism");
   });
 
-  // IMP-078 gap①: runHandover は generated_by 署名 + doc_entry_count を刻む。
-  it("gap①: runHandover が CURRENT.json に generated_by + doc_entry_count を刻む", () => {
+  // IMP-078 gap①: runHandover は generated_by 署名を刻む。
+  it("gap①: runHandover が CURRENT.json に generated_by を刻み、散文用の項目は持たない", () => {
     const deps = seeded();
     const r = runHandover({ date: "2026-06-08", complete: true }, deps);
     expect(r.pointer.generated_by).toBe(GENERATED_BY);
-    expect(r.pointer.doc_entry_count).toBe(1); // 新規 md = entry 1
+    expect(r.pointer).not.toHaveProperty("latest_doc");
+    expect(r.pointer).not.toHaveProperty("doc_entry_count");
   });
 });
 
