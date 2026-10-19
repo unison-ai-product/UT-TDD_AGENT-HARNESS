@@ -35,8 +35,15 @@ plan: docs/plans/PLAN-L6-21-fr-unit-coverage.md
 ### coverage 分岐
 
 - **active**: 現行規則をそのまま適用する。coverage matrixに1行あり、L6 spec pathと名前付きunit contractが解決し、unit oracleは当該FRの正式ID `U-<FR-L1-ID>` と完全一致すること。候補IDはactive FRのoracleとして認めない。
-- **retired**: 通常の `U-<FR-L1-ID>` 要求だけを免除し、退役証拠を同じcoverage行に要求する。行の `unit_oracle` は、次のどちらか一方の宣言IDと完全一致すること: (a) L7 unit-test designのcandidate oracle表に宣言された `CANDIDATE-U-*`、または (b) 同designの正式oracle表に宣言された `U-*`。candidate／formal oracle宣言行のtargetまたはexpected欄は、対象となるFRの完全IDを明示しなければならず、欠落や別FRのIDはfail-closeする。別FRを対象とした宣言を流用してはならない。宣言には当該oracle IDを引用する実test pathが結び付き、そのpathが解決可能な実test fileであり、file本文が同じoracle IDを明示的に引用すること。test本文でのFR ID引用は追加要件としない。未宣言ID、曖昧な二重宣言、target／expected欄のFR ID欠落または不一致、path欠落／未解決、test側oracle ID不一致はfail-closeする。引用の無いIDや宣言だけのIDは退役oracleにならない。
-- candidate oracleはcandidate表にある間は候補のままであり、正式IDとして扱わない。昇格PRは (1)本matrixの退役行、(2)L7 test-designのcandidate表から正式表への宣言、(3)実test file内のID引用、の3面を同一PRで切り替える。途中の混在状態は不一致としてfail-closeし、coverage判定を通過させない。退役PLANへの参照はそのまま保持する。
+- **retired**: 通常の `U-<FR-L1-ID>` 要求だけを免除し、退役証拠を同じcoverage行に要求する。行の `unit_oracle` は、L7 unit-test designに宣言された `CANDIDATE-U-*`（candidate）または `U-*`（formal）のoracle IDと完全一致すること。candidate／formalの状態は **IDの接頭辞だけ** で決める（`CANDIDATE-U-` で始まれば candidate、それ以外の `U-` は formal）。宣言を置く節の見出しや表ヘッダの第1列名には依存しない。宣言には当該oracle IDを引用する実test pathが結び付き、そのpathが解決可能な実test fileであり、file本文が同じoracle IDを明示的に引用すること。test本文でのFR ID引用は追加要件としない。引用の無いIDや宣言だけのIDは退役oracleにならない。
+- **宣言行の識別規則**（#848 契約改訂、識別規則を実装側で発明しない）: coverageが参照するoracle IDに対する **宣言行** とは、L7 unit-test design（`docs/test-design/harness/L7-unit-test-design.md`）中の、次のすべてを満たす表行である。
+  1. 行が、ヘッダ行と区切り行を持つMarkdown表の本体行であり、表が3列以上であること。2列表（例: 昇格ID と実測範囲の対応）の行は宣言にならない。fenced code block内の行は表として数えない。
+  2. 第1セルが、セル全体を囲むcode記法（バッククォート）と前後空白を除いて、oracle IDと完全一致すること。他のセルや本文のproseに同じIDが現れても宣言ではない。
+  3. 表ヘッダの第1列名（`U-ID` / `ID` / `Test ID` / `test_id` / `oracle` / `候補ID` など実L7で混在している名称）、節の見出し、表の前後の文には **依存しない**。この規則は「条件1〜2を満たす任意の表行は宣言である」ことを意味し、意図した契約である（実L7の第1セルが `U-*` または `CANDIDATE-U-*` の表行は1306行、ヘッダ第1列は10種以上に分かれるため、名称の列挙や見出しの部分一致では実在する宣言を取りこぼす）。誤受理は条件4〜6の三つの結び付きと二重宣言の拒否で抑える。
+  4. **対象FR**: 第2列以降のセルに現れるFR IDの集合が、対象FRの完全IDちょうど1つと一致すること。FR IDは `FR-L1-<数字>` で、直前直後が英数字または `-` でない完全境界で照合する（`XFR-L1-05`・`FR-L1-050` は `FR-L1-05` と照合しない）。対象FRの欠落、別FRのID、対象FRと別FRの併記はfail-closeする。
+  5. **実test path**: 第2列以降のセルから、`tests/` で始まり `.ts` で終わるrepo相対path token（任意の `:行番号` 接尾辞とcode記法は除く）を全て取り出す。1つ以上あり、全てが `..` や絶対pathを含まず解決可能な実test fileであり、全てのfile本文が同じoracle IDを完全境界で引用すること。1つも無い、未解決のtokenがある、引用が無い場合はfail-closeする。
+  6. **二重宣言**: 同じoracle IDを第1セルに持つ条件1〜2の行が、L7全体で1行でなければならない。対象外のoracle IDの重複は検査しない。0行または2行以上はfail-closeする（宣言と参照を同じIDの表行で重ねない）。
+- candidate oracleはCANDIDATE接頭辞を持つ間は候補のままであり、正式IDとして扱わない。昇格PRは (1)本matrixの退役行、(2)L7 test-designの宣言行のID（`CANDIDATE-U-*` から `U-*`）、(3)実test file内のID引用、の3面を同一PRで切り替える。途中の混在状態は不一致としてfail-closeし、coverage判定を通過させない。退役PLANへの参照はそのまま保持する。
 - `ut-tdd doctor` とL6 descent／closure readerは同じ `analyzeL6FrCoverage` の退役判定結果を用いる。別々の解釈や重複した判定規則を持たない。
 
 この契約は機械実装、test追加、L1 registry状態変更を含まない。FR-L1-38を含む現在のregistry行・formal U-FR対応は契約PR後も変更されない。後続実装PRがRed oracleを追加し、契約に従う判定を実装するまで、この分岐は未実装である。`function-spec`へFR退役markerを置く旧CFAC案は採用せず、FR registryの状態と退役PLAN参照を唯一の判定起点とする。
