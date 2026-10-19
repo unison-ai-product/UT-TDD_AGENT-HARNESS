@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { loadFrDocs, parseFrRows } from "./fr-registry-audit.ts";
 import { hasDbcTable } from "./shared.ts";
@@ -94,6 +94,115 @@ function hasSubstanceMarker(specText: string, ref: string): boolean {
     });
 }
 
+const REGISTRY_REL = "docs/design/harness/L1-requirements/functional-requirements.md";
+const L7_UNIT_REL = "docs/test-design/harness/L7-unit-test-design.md";
+const CANDIDATE_ORACLE_RE = /^CANDIDATE-U-[A-Z0-9-]+$/;
+const FORMAL_ORACLE_RE = /^U-[A-Z0-9-]+$/;
+const PLAN_ID_RE = /^PLAN-[A-Za-z0-9][A-Za-z0-9-]*$/;
+
+interface RegistryState {
+  state: string;
+  plan: string;
+}
+
+function stripMark(cell: string): string {
+  return cell.replace(/[*`]/g, "").trim();
+}
+
+/** FR registry 行の末尾任意列 (fr_state / retirement_plan)。列なし = 空 = active。 */
+function loadRegistryStates(repoRoot: string | undefined): Map<string, RegistryState> {
+  const states = new Map<string, RegistryState>();
+  const path = repoRoot ? join(repoRoot, REGISTRY_REL) : "";
+  if (!path || !existsSync(path)) return states;
+  for (const line of readFileSync(path, "utf8").split(/\r?\n/)) {
+    const id = line.match(/^\|\s*\*\*(FR-L1-\d{2})\*\*\s*\|/)?.[1];
+    if (!id || states.has(id)) continue;
+    const c = markdownCells(line);
+    states.set(id, { state: stripMark(c[7] ?? ""), plan: stripMark(c[8] ?? "") });
+  }
+  return states;
+}
+
+function planIdOf(text: string): string | null {
+  const fm = text.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+  return fm?.[1].match(/^plan_id:\s*(\S+)/m)?.[1] ?? null;
+}
+
+/** 退役 PLAN 参照を一意に解決できたときだけ true。短縮形・曖昧・不一致は false。 */
+function resolveRetirementPlan(repoRoot: string, ref: string): boolean {
+  const pathRef = ref.match(/^docs\/plans\/([^/]+)\.md$/);
+  const id = pathRef ? pathRef[1] : ref;
+  if (!PLAN_ID_RE.test(id)) return false;
+  const dir = join(repoRoot, "docs", "plans");
+  if (!existsSync(dir)) return false;
+  const owners = readdirSync(dir)
+    .filter((f) => f.endsWith(".md"))
+    .filter((f) => planIdOf(readFileSync(join(dir, f), "utf8")) === id);
+  if (owners.length !== 1) return false;
+  return !pathRef || owners[0] === `${id}.md`;
+}
+
+function citesId(text: string, id: string): boolean {
+  return new RegExp(`(?<![A-Za-z0-9-])${escapeRe(id)}(?![A-Za-z0-9-])`).test(text);
+}
+
+/** L7 unit-test design の宣言表行 (本文の言及は宣言ではない)。 */
+function declarationRows(repoRoot: string, oracle: string): string[][] {
+  const path = join(repoRoot, L7_UNIT_REL);
+  if (!existsSync(path)) return [];
+  return readFileSync(path, "utf8")
+    .split(/\r?\n/)
+    .filter((l) => l.trimStart().startsWith("|"))
+    .map(markdownCells)
+    .filter((c) => stripMark(c[0] ?? "") === oracle);
+}
+
+/** 退役行の oracle 証拠 (宣言行 + target FR + 実 test 引用) を検証し、欠落キーを返す。 */
+function retiredOracleFailures(repoRoot: string, frId: string, oracle: string): string[] {
+  const rows = declarationRows(repoRoot, oracle);
+  if (rows.length !== 1) return ["unit_oracle_declaration"];
+  const [, pathCell = "", ...rest] = rows[0];
+  if (!new RegExp(`${escapeRe(frId)}(?!\\d)`).test(rest.join(" "))) {
+    return ["unit_oracle_declaration_target"];
+  }
+  const testPath = stripMark(pathCell);
+  const safe = testPath !== "" && !testPath.startsWith("/") && !testPath.split("/").includes("..");
+  const abs = join(repoRoot, testPath);
+  if (!safe || !existsSync(abs) || !statSync(abs).isFile()) return ["unit_oracle_test_file"];
+  return citesId(readFileSync(abs, "utf8"), oracle) ? [] : ["unit_oracle_test_citation"];
+}
+
+/** fr_state 別の oracle / 退役根拠の欠落キー。未知 state は通常 FR へ fallback しない。 */
+function stateFailures(
+  row: L6FrCoverageRow,
+  reg: RegistryState,
+  repoRoot: string | undefined,
+): string[] {
+  if (reg.state !== "" && reg.state !== "active" && reg.state !== "retired") return ["fr_state"];
+  const fails: string[] = [];
+  if (reg.state !== "retired") {
+    if (reg.plan !== "") fails.push("retirement_plan");
+    if (row.unit_oracle && row.unit_oracle !== expectedOracle(row.fr_id)) {
+      fails.push("unit_oracle_match");
+    }
+    return fails;
+  }
+  if (reg.plan === "" || !repoRoot || !resolveRetirementPlan(repoRoot, reg.plan)) {
+    fails.push("retirement_plan");
+  }
+  const oracle = row.unit_oracle;
+  if (!CANDIDATE_ORACLE_RE.test(oracle) && !FORMAL_ORACLE_RE.test(oracle)) {
+    fails.push("unit_oracle_match");
+  } else {
+    fails.push(
+      ...(repoRoot
+        ? retiredOracleFailures(repoRoot, row.fr_id, oracle)
+        : ["unit_oracle_declaration"]),
+    );
+  }
+  return fails;
+}
+
 export function parseL6FrCoverageRows(coverageText: string): L6FrCoverageRow[] {
   const rows: L6FrCoverageRow[] = [];
   for (const match of coverageText.matchAll(FR_ROW_RE)) {
@@ -121,6 +230,7 @@ export function analyzeL6FrCoverage(docs: L6FrCoverageDocs): L6FrCoverageResult 
   const missingSpecFiles: L6FrCoverageResult["missingSpecFiles"] = [];
   const weakContracts: L6FrCoverageResult["weakContracts"] = [];
   const missingSubstance: L6FrCoverageResult["missingSubstance"] = [];
+  const registry = loadRegistryStates(docs.repoRoot);
 
   for (const row of rows) {
     const missingFields: string[] = [];
@@ -128,9 +238,9 @@ export function analyzeL6FrCoverage(docs: L6FrCoverageDocs): L6FrCoverageResult 
     const refs = contractRefs(row.unit_contract);
     if (!row.unit_contract || refs.length === 0) missingFields.push("unit_contract");
     if (!/\bU-[A-Z0-9-]+/.test(row.unit_oracle)) missingFields.push("unit_oracle");
-    if (row.unit_oracle && row.unit_oracle !== expectedOracle(row.fr_id)) {
-      missingFields.push("unit_oracle_match");
-    }
+    missingFields.push(
+      ...stateFailures(row, registry.get(row.fr_id) ?? { state: "", plan: "" }, docs.repoRoot),
+    );
     if (missingFields.length > 0) {
       incomplete.push({ fr_id: row.fr_id, missing: missingFields });
     }
