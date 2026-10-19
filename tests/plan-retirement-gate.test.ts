@@ -1259,7 +1259,6 @@ describe("Issue #1078 PLAN retirement gate (CANDIDATE-U-PLRET, Red)", () => {
     const bad: unknown[] = [
       "後継 PLAN の概要",
       { kind: "plan", planId: id(Z), section: "存在しない節" },
-      { kind: "plan", planId: "PLAN-L6-999-not-a-link-successor", section: "概要" },
       { kind: "design", path: "docs/design/harness/missing.md", section: "§4 判定規則" },
       { kind: "design", path: DESIGN, section: "存在しない節" },
       { kind: "governance", path: cand, section: "§4 判定規則" },
@@ -1270,6 +1269,18 @@ describe("Issue #1078 PLAN retirement gate (CANDIDATE-U-PLRET, Red)", () => {
         input([withLocation(loc)], {
           ...over,
           fileHeadings: { [DESIGN]: ["§4 判定規則"], [cand]: ["§4 判定規則"] },
+        }),
+      );
+      expect(reasonsAt(r, X)).toContain("coverage_basis_incomplete");
+    }
+    // (c1)(c2) 実在するが有効な後継ではない置換先: link の後継 Z は有効なまま (facts も維持)、
+    // 別 PLAN と自己参照先 X の見出しを実在させ、所属検査だけが拒否理由になるようにする
+    const other = "docs/plans/PLAN-L6-999-not-a-link-successor.md";
+    for (const target of [other, X]) {
+      const r = a.analyzePlanRetirement(
+        input([withLocation({ kind: "plan", planId: id(target), section: "概要" })], {
+          ...over,
+          successorPlanHeadings: { [Z]: ["概要"], [target]: ["概要"] },
         }),
       );
       expect(reasonsAt(r, X)).toContain("coverage_basis_incomplete");
