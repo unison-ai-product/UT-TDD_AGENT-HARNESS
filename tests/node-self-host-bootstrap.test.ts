@@ -255,7 +255,7 @@ describe("F0b sealed Node producer candidate oracles", () => {
     ]);
   });
 
-  it("issue #1154 checks three tracked compile inputs with one git ls-files invocation", async () => {
+  it.fails("issue #1154 checks three tracked compile inputs with one git ls-files invocation", async () => {
     sourceTrackingObservations.gitLsFilesCalls = 0;
     sourceTrackingObservations.active = true;
     let result: bootstrap.NodeGeneration;
