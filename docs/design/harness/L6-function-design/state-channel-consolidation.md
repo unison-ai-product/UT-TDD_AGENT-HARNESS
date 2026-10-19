@@ -172,6 +172,28 @@ reviewRevision = "rv1-" + sha256(canonicalJson(reviewIdentityObjectV2))
 - **既存ファイルの扱い**: 削除しない。`.ut-tdd/archive/handover-prose/<YYYY-MM>/` へ移し、sha256 の manifest (`.ut-tdd/archive/handover-prose/manifest.jsonl`、`memory.md` §4.2 の write-ahead 形式を流用) を残す。移す対象は許可リスト外のエントリのうち、最終更新が 24 時間より古いもの (進行中の監視スクリプトを動かし続ける)。移動は可逆で (移し先は同じ repo の gitignore 済みの置き場)、削除ではないので PO 承認の対象外とする。**archive の削除は破壊的操作であり、PO 承認が要る**。本書は archive の削除を契約しない (CLAUDE.md の bulk deletion 規則: 20 件/回超は一括で消さない)。
 - 追跡済みの `docs/handover/*.md` 8 件と `provider/*.json` は本書の範囲外 (履歴と構造化 JSON)。
 
+### 5.1 `latest_doc` 撤去に伴う撤去対象 (§8 の 6 の範囲)
+
+`CURRENT.json` の `latest_doc` を消すと、その先の md を読む検査と、scaffold だけが使う部品は使い道を失う。段階 6 の実装 PR は、次を**同じ PR で**撤去する (残すと常に skip / 未使用になる死んだ経路になる)。
+
+| 撤去するもの | 理由 |
+|---|---|
+| `checkHandoverCompletionWording` と `tests/handover-completion-wording.test.ts` | `latest_doc` の md を読む検査で、`latest_doc` が無ければ常に空を返す |
+| `checkHandoverOutstandingAnchor`、`latestEntrySection`、doctor row `handover-outstanding` (`handover-prose` row に置き換える)、U-HOVER-016 / 017 | 最新 md の §5 を読む検査と scaffold の §5 seed に依存し、md が無ければ常に skip になる |
+| `relativizeTouchedFile` / `relativizeDeliverableFiles` と PLAN-L7-145 の該当テスト | scaffold の §2 を描画する専用部品で、scaffold の停止で使い道が消える |
+| `scaffoldFromDigests`、`capWithBreadcrumb`、`readPlanMeta`、定数 `HANDOVER_OUTSTANDING_MARKER` / `MAX_SAME_DAY_ENTRIES` / `MAX_SUMMARY_PLANS`、型 `HandoverDoc` / `PlanMeta` / `CapRender` / `HandoverRenderOpts` | scaffold の入出力と上限制御だけが使う。`HandoverResult.content` も scaffold 本文なので外す (CLI の `--dry-run` は pointer を表示する) |
+
+- U-HOVER-016 / 017 は test-design で宣言されておらず、`src/lint/oracle-test-citation-baseline.ts` の「未宣言 citation の負債」にだけ載っている。テストの削除と baseline の 2 行の削除は実装 PR (src) で一緒に行い、test-design の変更は不要とする。
+- `outstanding` (`computeOutstandingWork` の集計) は `CURRENT.json` に残す。機械ポインタの内容であり scaffold 専用ではない。
+
+### 5.2 `checkHandoverBypass` の残す振る舞い
+
+`checkHandoverBypass` は、md 照合 (`doc_entry_count`) の撤去後に**常に空配列を返す no-op** とする。残す検査は無い。
+
+- 現行のもう一つの検査は `generated_by` 署名の照合 (手書き pointer の検知) である。しかし U-STCHAN-021 の fixture (`{ active_plan: "PLAN-L7-04" }`) は `generated_by` を持たず、期待は「警告しない」である。署名照合を残すと 021 と矛盾する。
+- 署名照合の目的は、手書き pointer が md 照合を信用させることの防止だった。md 照合が無くなれば、手書き pointer の害は (`discipline` の stale / drift 検査が拾う範囲を除いて) 無い。よって署名照合も廃止し、fixture の変更 (L7 側の改訂) は要らない。
+- 関数と呼び出し側 (cli の handover 警告、doctor の `checkHandoverDisciplineMessages`) は 021 が直接呼ぶため段階 6 では残し、呼び出しの除去は段階 7 の cutover で行う。
+
 ## 6. `memory add` の拒否規則
 
 ```text

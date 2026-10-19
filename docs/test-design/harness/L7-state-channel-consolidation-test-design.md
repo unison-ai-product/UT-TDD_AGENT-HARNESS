@@ -110,7 +110,7 @@ terminal marker は L6 §3.1 の schema discriminator ごとの exact keys で�
 
 | 既存 oracle | 影響 |
 | --- | --- |
-| U-HOVER-003 / 004 / 007 / 011 / 013 / 014 | scaffold と md 照合の撤去で削除または縮約する。置き換えは 019 / 021。Refactor 相当の撤去は実装 PR (§8 の 6) で行い、削除する oracle の ID を PR 本文に列挙する |
+| U-HOVER-003 / 004 / 007 / 011 / 013 / 014 | scaffold と md 照合の撤去で削除または縮約する。置き換えは 019 / 021。Refactor 相当の撤去は実装 PR (§8 の 6) で行い、削除する oracle の ID を PR 本文に列挙する。`latest_doc` 撤去に伴う追加の撤去 (U-HOVER-016 / 017、completion-wording の検査・テストなど) の範囲は L6 §5.1 が正本 |
 | U-MEMWAKE-* | 通知レコードの変更後も回帰として維持する (017) |
 | CANDIDATE-U-MEMEPI-009 / 010 / 011 / 012 / 013 / 017 / 018 | 新規 episode の書き込み・配送に関する行は本書が置き換える。実装 PR で `memory.md` §4.2 の該当節と同時に整理し、削除する oracle を PR 本文に列挙する |
 | review custody 系 (`review-dispatch` / `review-merge-gate` / `review-attestation` のテスト) | `memoryId` を含むフィクスチャは v1 の読み取りとして残し、v2 の行を足す (009) |
