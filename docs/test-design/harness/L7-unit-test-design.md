@@ -298,6 +298,14 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 | U-ASSETDRIFT-006 | `loadAssetDriftInput` + `analyzeAssetDrift` (実 repo guard) | 実 repo の active internal assets と prompt templates は legacy source path residue 0 / legacy command residue 0 / docs-skills non-empty / missing allowlisted agent 0 |
 | U-ASSETDRIFT-007 | `loadAssetDriftInput` nested `.claude/agent-memory` scan | nested agent memory markdown is enrolled recursively; legacy runtime name/env residue in stale local memory fails `asset-drift` instead of bypassing doctor |
 
+### §1.16.0b U-IPT (implementation-to-design source trace / PLAN-REVERSE-40)
+
+> ペア = `module-drift.md` §3.2 の `analyzeImplPlanTrace` addendum。PLAN と再帰的な設計文書本文から実装 path への trace を検証する。
+
+| U-ID | 対象関数 | DbC oracle |
+|---|---|---|
+| U-IPT-006 | `loadImplPlanTraceInput` + `analyzeImplPlanTrace` (recursive design-source trace) | 孤立 fixture に `src/runtime/windows-hide.ts` と `src/doctor/windows-hide.ts` の source files を置き、PLAN に path を含めず、深い階層の `docs/design/harness/L6-function-design/fixture.md` だけに両 path を記載する → 両 path が `tracedPaths` に含まれ、`orphans=[]` / `ok=true`。loader が再帰的な設計本文を読まないと path が欠落し、orphan が出て失敗する。 |
+
 ### §1.16.1 U-CHGIMPACT (code change impact lint = コード変更時の設計・テスト更新漏れ検出)
 
 > ペア = `module-drift.md` change-impact addendum。`src/**` 変更を含む change set が design PLAN/doc と test/test-design の更新を同時に持つか検査する。
@@ -3139,11 +3147,11 @@ oracle の詳細 (入力・期待・殺す mutation) は専用の
 
 | 範囲 | 検証面 | 詳細 |
 | --- | --- | --- |
-| CANDIDATE-U-STCHAN-001〜006 | `memory add` の拒否規則 (kind による線引き、理由付き project、既存の正本を落とさない) | 専用文書 §3 |
-| CANDIDATE-U-STCHAN-007〜014 | review custody の identity v2・v1 の読み取り・`--review-memory-id` の無視化と廃止・memory 非依存の dispatch | 専用文書 §3 |
-| CANDIDATE-U-STCHAN-015〜018 | 通知レコード `ut-tdd.notification/v1`・旧 entry の復号・memory に触れない発行 | 専用文書 §3 |
-| CANDIDATE-U-STCHAN-019〜021 | handover prose の生成停止・doctor `handover-prose`・md 照合の撤去 | 専用文書 §3 |
-| CANDIDATE-U-STCHAN-022〜028 | memory と handover の既存分の退避・real-repo 集計・凍結一覧の改ざん検知・隔離 fixture での実行時の db 整合 | 専用文書 §3 |
+| U-STCHAN-001〜006 | `memory add` の拒否規則 (kind による線引き、理由付き project、既存の正本を落とさない) | 専用文書 §3 |
+| U-STCHAN-007〜014 | review custody の identity v2・v1 の読み取り・`--review-memory-id` の無視化と廃止・memory 非依存の dispatch | 専用文書 §3 |
+| U-STCHAN-015〜018 | 通知レコード `ut-tdd.notification/v1`・旧 entry の復号・memory に触れない発行 | 専用文書 §3 |
+| U-STCHAN-019〜021 | handover prose の生成停止・doctor `handover-prose`・md 照合の撤去 | 専用文書 §3 |
+| U-STCHAN-022〜028 | memory と handover の既存分の退避・real-repo 集計・凍結一覧の改ざん検知・隔離 fixture での実行時の db 整合 | 専用文書 §3 |
 
 上表の ID は backtick 無し表記である。候補台帳への再掲ではなく専用文書への参照であり、U-VMSRC-009 の一意性検査の対象外とする。
 

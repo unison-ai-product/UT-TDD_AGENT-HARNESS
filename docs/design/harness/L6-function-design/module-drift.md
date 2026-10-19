@@ -133,9 +133,9 @@ analyzeModuleDrift(docs: { listed, actual }) -> { orphans, listedCount, actualCo
 
 | 関数 | Signature | pre | post | invariant | oracle |
 |---|---|---|---|---|---|
-| `analyzeImplPlanTrace` | analyzeImplPlanTrace(input: ImplPlanTraceInput) => ImplPlanTraceResult | `src/**.ts` 集合 + PLAN 本文と設計本文に出現した src パスの和集合 + baseline allowlist が供給される。`loadImplPlanTraceInput` は上記の同一正規表現で両方を読む。 | traced でも baseline でもない src を `orphans` に返し、NEW orphan 有無で `ok` を決める。 | baseline は known-debt の段階導入であり**縮小のみ可**。新たに設計から trace できる既存 3 件は baseline から除外して 8 件から 5 件へ縮小する。既存 PLAN-only の trace と、どちらにも未記載の src の拒否を維持する。 | U-IPT-001..005、CANDIDATE-U-IPT-006 (Red merge 直後の昇格 PR で正式 U-IPT-006 へ同期) |
+| `analyzeImplPlanTrace` | analyzeImplPlanTrace(input: ImplPlanTraceInput) => ImplPlanTraceResult | `src/**.ts` 集合 + PLAN 本文と設計本文に出現した src パスの和集合 + baseline allowlist が供給される。`loadImplPlanTraceInput` は上記の同一正規表現で両方を読む。 | traced でも baseline でもない src を `orphans` に返し、NEW orphan 有無で `ok` を決める。 | baseline は known-debt の段階導入であり**縮小のみ可**。新たに設計から trace できる既存 3 件は baseline から除外して 8 件から 5 件へ縮小する。既存 PLAN-only の trace と、どちらにも未記載の src の拒否を維持する。 | U-IPT-001..006 |
 
-- **候補 Red**: `CANDIDATE-U-IPT-006` は、深い階層の設計文書だけに記載した src パスを実 loader が読むことを固定する。候補 Red の merge 後、source-free の正式昇格 PR で `U-IPT-006` の宣言とテスト引用を同時に更新し、その後の Green PR で実装する。
+- **U-IPT-006**: `loadImplPlanTraceInput` は、PLAN に記載がなく深い階層の `docs/design/**/*.md` だけに記載された `src/**.ts` パスも再帰的に読み、trace 集合へ含める。これにより known-debt baseline を増やさず orphan を防ぐ。
 
 - **baseline 根拠**: 2026-06-10 実測 (`find src -name '*.ts'` vs PLAN generates) で 12 孤児。うち 4 (IMP-087: review-tier/rule-drift/team-run/provider-handover) は PLAN-REVERSE-40 generates へ back-fill、残 8 (asset-drift/change-impact/doc-consistency/entity-coverage/g3-trace/improvement-backlog/readability/shared) を baseline。
 - **doctor 配線**: `checkImplPlanTrace(repoRoot)` を **hard/fail-close** で配線。CI 回帰網 `U-IPT-004` と doctor の両方で実 repo orphan 0 を維持する。
