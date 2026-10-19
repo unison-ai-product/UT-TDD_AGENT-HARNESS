@@ -1,57 +1,80 @@
 ---
 plan_id: PLAN-L7-143-harness-db-warn-remediation
-title: "PLAN-L7-143 (troubleshoot): harness.db actionable-warn remediation — document-export over-redaction (\\b), guardrail same-provider advisory projection-gate parity, and missing-test-plan-id registration backfill"
+title: "PLAN-L7-143 (troubleshoot): harness.db actionable-warn remediation —
+  document-export over-redaction (\\b), guardrail same-provider advisory
+  projection-gate parity, and missing-test-plan-id registration backfill"
 kind: troubleshoot
 layer: L7
 drive: db
-status: confirmed
 created: 2026-06-24
 updated: 2026-06-24
 owner: PM (Opus) / PO (人間)
 backprop_decision: not_required
-backprop_decision_reason: "Harness self-application false-positive remediation + retroactive traceability registration. (1) document-export redact regex over-matched innocent hyphenated words; (2) the guardrail invariant PROJECTION advisory is aligned to the EXISTING doctor hard gate's review_kind scoping (the SSoT inspectGuardrailInvariants and the doctor fail-close gate are unchanged — only the non-blocking warn projection); (3) 16 pre-discipline harness-gate test files are registered for V-model traceability. No product requirement / design / test-design contract changes."
+backprop_decision_reason: Harness self-application false-positive remediation +
+  retroactive traceability registration. (1) document-export redact regex
+  over-matched innocent hyphenated words; (2) the guardrail invariant PROJECTION
+  advisory is aligned to the EXISTING doctor hard gate's review_kind scoping
+  (the SSoT inspectGuardrailInvariants and the doctor fail-close gate are
+  unchanged — only the non-blocking warn projection); (3) 16 pre-discipline
+  harness-gate test files are registered for V-model traceability. No product
+  requirement / design / test-design contract changes.
 review_evidence:
   - reviewer: claude-opus-4-8
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-06-24T17:46:00+09:00"
-    tests_green_at: "2026-06-24T17:44:30+09:00"
+    reviewed_at: 2026-06-24T17:46:00+09:00
+    tests_green_at: 2026-06-24T17:44:30+09:00
     verdict: pass
-    scope: "PM (Opus) self-review of the three fixes: (Fix1) \\b word-boundary on the sk- redact pattern eliminates the 16 over-redactions while keeping a real standalone sk- key redacted (U-DOCEXPORT-005 + new U-DOCEXPORT-005b); (Fix3) same-provider-cross-review advisory scoped to review_kind=cross_agent to match the doctor hard gate (concept §2.1.2.1), same-model-self-review intentionally left unscoped; (Fix2) 16 unregistered harness-gate test files registered to this PLAN as their single traceability anchor. Verified via targeted vitest (19 pass), db rebuild (16/101/111 -> 0), typecheck, biome, doctor."
+    scope: "PM (Opus) self-review of the three fixes: (Fix1) \\b word-boundary on
+      the sk- redact pattern eliminates the 16 over-redactions while keeping a
+      real standalone sk- key redacted (U-DOCEXPORT-005 + new U-DOCEXPORT-005b);
+      (Fix3) same-provider-cross-review advisory scoped to
+      review_kind=cross_agent to match the doctor hard gate (concept §2.1.2.1),
+      same-model-self-review intentionally left unscoped; (Fix2) 16 unregistered
+      harness-gate test files registered to this PLAN as their single
+      traceability anchor. Verified via targeted vitest (19 pass), db rebuild
+      (16/101/111 -> 0), typecheck, biome, doctor."
     worker_model: claude-opus-4-8
     reviewer_model: claude-opus-4-8
     green_commands:
       - kind: unit_test
-        command: "bun run vitest run tests/document-export.test.ts tests/guardrail-invariant-advisory.test.ts"
+        command: bun run vitest run tests/document-export.test.ts
+          tests/guardrail-invariant-advisory.test.ts
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-06-24T17:44:00+09:00"
+        completed_at: 2026-06-24T17:44:00+09:00
         evidence_path: tests/guardrail-invariant-advisory.test.ts
-        output_digest: "sha256:6db39c54697b5f638deb7972368e178458385cdb68a047d5da5e362e97c5ae23"
+        output_digest: sha256:6db39c54697b5f638deb7972368e178458385cdb68a047d5da5e362e97c5ae23
         anchor_commit: 1543931b0c5d4566988514a14e394af985260f0f
   - reviewer: codex-gpt-5.x
     review_kind: cross_agent
-    reviewed_at: "2026-06-24T17:57:00+09:00"
-    tests_green_at: "2026-06-24T17:44:30+09:00"
+    reviewed_at: 2026-06-24T17:57:00+09:00
+    tests_green_at: 2026-06-24T17:44:30+09:00
     verdict: approve
-    scope: "Cross-runtime (codex/gpt-5.x) desk review of Fix1/Fix3/Fix2 via `ut-tdd codex --role qa --execute`. Q1 (Fix1 \\b no false-negative, sk-ant- still matches) TRUE; Q2 (same-provider scoped, same-model unscoped asymmetry sound) TRUE; Q3 (single-anchor retroactive registration is cleanest closure) TRUE; Q4 (SSoT + doctor hard gate + write-path fail-close unchanged, only non-blocking surfaces moved) TRUE. Verdict approve."
+    scope: Cross-runtime (codex/gpt-5.x) desk review of Fix1/Fix3/Fix2 via `ut-tdd
+      codex --role qa --execute`. Q1 (Fix1 \b no false-negative, sk-ant- still
+      matches) TRUE; Q2 (same-provider scoped, same-model unscoped asymmetry
+      sound) TRUE; Q3 (single-anchor retroactive registration is cleanest
+      closure) TRUE; Q4 (SSoT + doctor hard gate + write-path fail-close
+      unchanged, only non-blocking surfaces moved) TRUE. Verdict approve.
     worker_model: claude-opus-4-8
     reviewer_model: codex-gpt-5.x
     green_commands:
       - kind: unit_test
-        command: "bun run vitest run tests/document-export.test.ts tests/guardrail-invariant-advisory.test.ts"
+        command: bun run vitest run tests/document-export.test.ts
+          tests/guardrail-invariant-advisory.test.ts
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-06-24T17:44:00+09:00"
+        completed_at: 2026-06-24T17:44:00+09:00
         evidence_path: tests/guardrail-invariant-advisory.test.ts
-        output_digest: "sha256:6db39c54697b5f638deb7972368e178458385cdb68a047d5da5e362e97c5ae23"
+        output_digest: sha256:6db39c54697b5f638deb7972368e178458385cdb68a047d5da5e362e97c5ae23
         anchor_commit: 1543931b0c5d4566988514a14e394af985260f0f
 agent_slots:
   - role: tl
-    slot_label: "TL — document-export redact + guardrail advisory scoping"
+    slot_label: TL — document-export redact + guardrail advisory scoping
   - role: aim
-    slot_label: "AIM — detection triage + test-registration backfill + cross-runtime review"
+    slot_label: AIM — detection triage + test-registration backfill + cross-runtime review
 generates:
   - artifact_path: docs/plans/PLAN-L7-143-harness-db-warn-remediation.md
     artifact_type: markdown_doc
@@ -77,8 +100,6 @@ generates:
     artifact_type: test_code
   - artifact_path: tests/gate-review-tier.test.ts
     artifact_type: test_code
-  - artifact_path: tests/handover-completion-wording.test.ts
-    artifact_type: test_code
   - artifact_path: tests/placeholder-deps.test.ts
     artifact_type: test_code
   - artifact_path: tests/plan-id-naming.test.ts
@@ -100,6 +121,43 @@ dependencies:
     - docs/plans/PLAN-L7-74-task-risk-whole-word-match.md
     - docs/plans/PLAN-L7-48-readiness-guardrail.md
     - docs/plans/PLAN-L7-142-relation-graph-requirement-nodes.md
+route_signal: incident
+route_mode: incident
+status: confirmed
+github_issue_id: 1062
+admission_receipt:
+  schema_version: v2
+  receipt_id: certificate:b30f4159f0548ade5c796a06a3dbdca2
+  command_id: issue1062-split-PLAN-L7-143-harness-db-warn-remediation-r2b-20261019
+  admitted_at: 2026-10-19T10:02:26.233Z
+  source_digest: sha256:503c26e46b3f03ef17860ea836be8f33a7e73c3bc215aff14c73037bfd7338d8
+  decision_digest: sha256:fdc9d2f149c072860b2766581a2fa9c073385a5f95ccac987b09678f7cd36ed9
+  receipt_digest: sha256:9b123ca44fa2fc85a3b6709ed14b3af89d66fcb2c2985455032225de62d36006
+  binding:
+    path: docs/plans/PLAN-L7-143-harness-db-warn-remediation.md
+    plan_id: PLAN-L7-143-harness-db-warn-remediation
+    asset_id: plan:legacy:7cd63d22ca6a28419ccc4e0c943418471efe021a3412253859b0233a5498c5e4
+    revision: 2
+    content_digest: sha256:503c26e46b3f03ef17860ea836be8f33a7e73c3bc215aff14c73037bfd7338d8
+  route:
+    signal: incident
+    mode: incident
+  issue:
+    provider: github
+    issue_id: 1062
+    episode_id: issue-1062
+    projection_state: unprojected
+  origin:
+    plan_id: PLAN-L7-143-harness-db-warn-remediation
+    revision: 1
+    digest: sha256:5a0d7d2504cd5ed452baa64d55e3d03b1722e9cd4cb7561d76ee7b9fdba7d72b
+  reentry:
+    target_plan_id: PLAN-L7-143-harness-db-warn-remediation
+    target_revision: 2
+    phase: forward_merge
+  escape_reason: "Issue #1062 段階6bの契約改訂。L6 state-channel-consolidation §5.1 の撤去対象に
+    tests/handover-completion-wording.test.ts を追加したため、既存PLANの generates /
+    証跡参照を外す。"
 ---
 
 # PLAN-L7-143 (troubleshoot): harness.db actionable-warn remediation
@@ -178,7 +236,7 @@ registration」であることを本節で明記する (落とさない仕組み
 
 対象16ファイル: agent-guard / asset-drift / doc-consistency / drive-model-passage /
 entity-coverage / fr-registry-audit / g3-trace / gate-review-tier /
-handover-completion-wording / placeholder-deps / plan-id-naming / rule-automation-closure /
+placeholder-deps / plan-id-naming / rule-automation-closure /
 rule-drift / schema / sub-doc-catalog-drift / sub-doc-section-structure (`tests/*.test.ts`)。
 
 **追加 backfill (2026-07-09)**: HARNESS メモリ再監査で `tests/context-doc-router.test.ts` が

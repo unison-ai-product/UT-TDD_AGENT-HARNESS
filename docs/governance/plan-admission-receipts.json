@@ -7824,6 +7824,22 @@
         "revision": 2,
         "content_digest": "sha256:7211514120312718a5878c9e28bc25fe27be038253b0718aaf08287cff10d5b3"
       }
+    },
+    {
+      "sequence": 490,
+      "previous_record_digest": "sha256:8615eaf2855c3052c4d9b56a9e27ac0ac74622d0d772c8442256b3a086193eeb",
+      "record_digest": "sha256:bac8a3835ae0f0b881f746acd9581661be78eaa8855990c200839dc0a3bdef36",
+      "command_id": "issue1062-split-PLAN-L7-143-harness-db-warn-remediation-r2b-20261019",
+      "receipt_id": "certificate:b30f4159f0548ade5c796a06a3dbdca2",
+      "receipt_digest": "sha256:9b123ca44fa2fc85a3b6709ed14b3af89d66fcb2c2985455032225de62d36006",
+      "decision_digest": "sha256:fdc9d2f149c072860b2766581a2fa9c073385a5f95ccac987b09678f7cd36ed9",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-143-harness-db-warn-remediation.md",
+        "plan_id": "PLAN-L7-143-harness-db-warn-remediation",
+        "asset_id": "plan:legacy:7cd63d22ca6a28419ccc4e0c943418471efe021a3412253859b0233a5498c5e4",
+        "revision": 2,
+        "content_digest": "sha256:503c26e46b3f03ef17860ea836be8f33a7e73c3bc215aff14c73037bfd7338d8"
+      }
     }
   ]
 }
