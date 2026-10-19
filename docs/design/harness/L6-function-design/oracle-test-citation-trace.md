@@ -171,15 +171,142 @@ working tree 上の複製を `B` または `H` の代わりに使ってはなら
 できない場合、またはデータが不正な場合は fail-close とする。`M` を検証対象 HEAD とする点は、既存
 `design-protection-diff-gate.md` §7 の CI pair (`BASE_SHA=${{ github.sha }}^1`, `--head "${{ github.sha }}"`) と一致させる。
 必須 check の PR context は GitHub Actions の `github.event_name == pull_request` と immutable `github.sha` を信頼元とし、
-branch 名・本文・任意の environment variable から推測しない。ローカル実行では同じ役割の immutable SHA 組 `(B, H)` を
-明示引数で渡した場合に限り同じ比較を再現できる。信頼できる PR event context または明示された immutable SHA 組が無い
-通常の doctor / static run は subset 証明を実行・主張せず、strict JSON authority と current-derived set の完全一致だけを
+branch 名・本文・任意の environment variable から推測しない。subset ratchet は required CI boundary に限る。
+通常の local doctor / static run は subset 証明を実行・主張せず、strict JSON authority と current-derived set の完全一致だけを
 検証する。現在の derived set との完全一致は subset 証明の代わりにならない。未 citation の oracle を新たに宣言し、
 同じ ID を head baseline と derived debt の双方へ足すと、完全一致を保ったまま縮小専用規則に違反し得るためである。
 
 PR 外の doctor / static-analysis path は、現在の strict JSON authority を検証・利用し analyzer の集合一致を強制する。
-不変の trusted base が明示されない限り、履歴に対する subset 証明を行ったとは主張しない。baseline JSON が変更される
+通常の local doctor / static-analysis は履歴に対する subset 証明を行わない。baseline JSON が変更される
 すべての PR に対して、変更分類が docs-only であっても PR ratchet check を必須にする。
+
+**既存 loader の optional port と typed failure**
+
+subject と authority の境界は既存 `loadOracleTestTraceInput(subjectRoot)` を保ち、必要な依存だけを第2引数の
+optional `ports` から注入できる形にする。既存1引数呼出しは後方互換であり、local doctor / static run は strict JSON
+authority と subject の complete-set equality だけを検査する。port は読取依存を差し替える seam であり、別 loader や
+doctor 専用経路を追加しない。authority reader と CI-only ratchet reader は別 port とする。最小形は次のとおり。
+
+```ts
+const BASELINE_JSON_PATH = "docs/governance/oracle-test-trace-baseline.json" as const;
+
+type OracleTraceAuthorityFailureReason = "authority_read_failed";
+
+type OracleTraceGitIoFailureReason =
+  | "git_first_parent_read_failed"
+  | "git_object_read_failed";
+
+type OracleTraceFailureReason =
+  | OracleTraceAuthorityFailureReason
+  | "baseline_asset_missing"
+  | "baseline_json_malformed"
+  | "baseline_schema_invalid"
+  | "baseline_id_invalid"
+  | "baseline_id_duplicate"
+  | "baseline_sets_overlap";
+
+type OracleTracePortResult<T> =
+  | { ok: true; value: T }
+  | { ok: false; reason: OracleTraceAuthorityFailureReason };
+
+type OracleTraceGitPortResult<T> =
+  | { ok: true; value: T }
+  | { ok: false; reason: OracleTraceGitIoFailureReason };
+
+type OracleTraceGitPath =
+  | typeof BASELINE_JSON_PATH
+  | "src/lint/oracle-test-trace-baseline.ts"
+  | "src/lint/oracle-test-trace-widened-baseline.ts";
+
+interface OracleTraceAuthority {
+  readText(path: typeof BASELINE_JSON_PATH): OracleTracePortResult<string | null>;
+}
+
+interface OracleTestTracePorts {
+  authority?: OracleTraceAuthority;
+}
+
+loadOracleTestTraceInput(subjectRoot: string, ports?: OracleTestTracePorts)
+```
+
+`authority.readText(BASELINE_JSON_PATH)` はsource checkoutでは既存module-root、clean Packでは既存bundle asset bindingを使う。
+既定adapterも同じ解決規則に従い、consumerの `subjectRoot`、process cwd、任意環境変数をauthority rootにしない。
+呼出し側が任意pathを選べるreaderにはしない。readerの `{ok:true,value:null}` は対象assetの不存在、
+`{ok:false,reason:"authority_read_failed"}` はI/O失敗を表す。missingとI/Oを同じ理由に畳まない。
+JSON decode後のschema/token/重複検証も上記 `OracleTraceFailureReason` でtypedに失敗し、例外文面を解析しない。
+この optional loader port は authority reader だけを受け取り、Git pair / CI context を受け取らない。
+loader の成功値は従来どおり `OracleTestTraceInput` のままとし、失敗時は次の名前付き typed error を throw する。
+既存の成功出力型や analyzer の入力・結果 shape は変更しない。
+
+```ts
+export class OracleTestTraceLoadError extends Error {
+  readonly reason: OracleTraceFailureReason;
+}
+```
+
+この型は `src/lint/oracle-test-trace.ts` から名前付き export として公開する。`OracleTestTraceLoadError.reason` は欠落・読取・decode/schema/token の既存 literal を保持する。
+呼出側は `instanceof OracleTestTraceLoadError` と `reason` を確認し、例外 message から分類を推定しない。
+
+縮小専用比較の独立入口は次のとおりとする。これは既存 loader の option ではなく、既存
+`OracleTestTraceInput` / `OracleTestTraceResult` / `analyzeOracleTestTrace` の集合・出力を変更しない。
+
+```ts
+type OracleBaselineRatchetFailureReason =
+  | "pr_context_invalid"
+  | "git_first_parent_missing"
+  | "git_first_parent_read_failed"
+  | "git_baseline_missing"
+  | "git_object_read_failed"
+  | "trusted_baseline_invalid"
+  | "baseline_growth"
+  | "bootstrap_base_invalid"
+  | "bootstrap_value_mismatch";
+
+type OracleBaselineRatchetResult =
+  | { ok: true }
+  | { ok: false; reason: OracleBaselineRatchetFailureReason };
+
+interface OracleBaselineRatchetInput {
+  /**
+   * Loader と同じ authority binding を composition で受け取る。
+   * CI ratchet はこの reader の readText を呼ばず、比較対象 blob は git port だけから読む。
+   */
+  authority: OracleTraceAuthority;
+  ci: {
+    eventName: string;
+    mergeSha: string;
+    git: {
+      readTextAt(commitSha: string, path: OracleTraceGitPath):
+        OracleTraceGitPortResult<string | null>;
+      readFirstParent(mergeSha: string):
+        OracleTraceGitPortResult<string | null>;
+    };
+  };
+}
+
+checkOracleBaselineRatchet(input: OracleBaselineRatchetInput): OracleBaselineRatchetResult
+```
+
+`checkOracleBaselineRatchet` は loader と同じ authority binding を composition で受け取り、明示された CI Git reader を使う。
+ただし ratchet は `authority.readText` を呼ばず、base/head JSON は immutable な Git tree の `B` / `H` からだけ読む。
+PR用 required check は GitHub Actions の `harness-check` workflow の専用 step からこの関数を呼び、
+`eventName = github.event_name`、`mergeSha = github.sha` をそのまま渡す。step は `{ok:false, reason}` を
+non-zero で失敗させ、reason literal を結果として保持する。関数は例外を投げず、成功は `{ok:true}`、失敗は
+`{ok:false, reason: OracleBaselineRatchetFailureReason}` を返す。event payload、branch名、可変 ref、working tree から
+context や比較 pair を補わない。
+
+PRでは `readFirstParent(mergeSha)` で B を解決し、`readTextAt(B, BASELINE_JSON_PATH)` /
+`readTextAt(mergeSha, BASELINE_JSON_PATH)` でbase/head blobを読む。Git reader の結果のnullは `git_first_parent_missing` /
+`git_baseline_missing`、I/O failure は ratchet 側の `git_first_parent_read_failed` /
+`git_object_read_failed`、不正blobは
+`trusted_baseline_invalid` とする。明示CI contextが不完全・不正なら `pr_context_invalid` でfail-closeする。
+初回移行だけの構造不一致は `bootstrap_base_invalid`、旧集合との値不一致は `bootstrap_value_mismatch` とする。
+有効な組における legacy / widened いずれかの head-only ID は `baseline_growth` とする。
+
+localからCI portを省略した一引数 loader 呼出しはsubsetを実行・主張せず、strict current JSON decode と既存analyzerの
+complete-set equalityだけを行う。explicit local pair portは設けない。`baseline_growth` とその他の ratchet reason は
+独立関数のtyped resultにのみ現れ、既存 analyzer の orphan・duplicate・stale-citation 出力や messages / `ok` projection
+には追加しない。汎用booleanや例外messageから種類を推定しない。
 
 **初回移行だけに限定した bootstrap route を許す。** 必須 PR check は上記の不変比較組 `(B, H) = (M^1, M)` を使い、
 `B` の Git tree を調べる。base tree に baseline JSON がなく、旧 TS 定数ファイル 2 つと正規の定数宣言が存在し、

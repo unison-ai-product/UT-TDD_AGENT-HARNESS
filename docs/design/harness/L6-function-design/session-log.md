@@ -124,8 +124,15 @@ compressPlanDigest(events, planId, prev):
 
 Pack が consumer に生成する設定では、従来5秒だった記録hookを30秒にする。対象は
 Claude の `PostToolUse` と `Stop`、Codex の `SessionStart`・`PostToolUse`・`Stop`。
-Claude `SessionStart` は既存の30秒を維持する。ソース開発repoの設定はこの契約の対象外とし、
-guard hook と Claude 非同期 memory-wake hook の予算も変更しない。
+Claude `SessionStart` は既存の30秒を維持する。guard hook と Claude 非同期 memory-wake hook、
+`SubagentStop` の予算は変更しない。
+
+ソース開発repo自身の記録hookも consumer と同じ30秒にする (2026-10-16 改訂、U-SLOG-011)。
+対象は `.claude/settings.json` の `PostToolUse`(post-tool-use) と `Stop`(session summary)、
+`.codex/hooks.json` の `SessionStart` / `PostToolUse` / `Stop` の計5本である。改訂の理由は、
+2026-10-16 に PO の Codex 画面で source repo の SessionStart と Stop が
+`hook timed out after 5s` で失敗した (実行2・失敗2) 実測である。agent-guard / work-guard、
+`SubagentStop`、memory-wake 930、Claude `SessionStart` 30 は変えない。
 
 30秒はhost側の上限であり、すべてのeventが永続化される保証ではない。hostが期限で
 hookを強制終了した場合、eventは記録されないか途中までになる可能性がある。session-logは
@@ -147,8 +154,8 @@ project-local bundled `.mjs` consumerを使った。直接SessionStartを3回起
 主張しない。隔離fixtureでStop hook本体は791msでreturnし、別detachのDB refresh workerは
 140.5秒動いた。このworker時間はIssue #1057の7,181ms hook計測に含めない。
 
-後続Greenでは、既存のtimeout parity testを対象外hookのみ不変とする検査へ更新する。Pack
-consumer templateだけを変更するため、source開発repo設定との全面一致は要求しない。
+後続Greenでは、既存のtimeout parity testを対象外hookのみ不変とする検査へ更新する。source開発repo設定と
+consumer templateは記録hookの30秒で揃えるが、guard等の対象外hookを含む全面一致は要求しない。
 
 ## §6 fail-open 設計 (agent-guard fail-close との対比)
 

@@ -96,7 +96,8 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 | U-SLOG-007 | `src/cli.ts session start` / `hook post-tool-use` / `session summary` + `.claude/settings.json` + `ut-tdd codex --execute` | Claude settings の SessionStart/PostToolUse/Stop が `.claude/hooks/session-log.ts` 直接実装ではなく package-local `src/cli.ts` entrypoint を指す / temp repo で `ut-tdd plan use` → `session start` → `hook post-tool-use` → `session summary` を実行すると `.ut-tdd/logs/plan/<plan_id>.digest.json` が生成され、session_start/tool_use と touched file が集計される / fake `codex` を PATH に置いた temp repo で `ut-tdd codex --execute` と `ut-tdd codex --task-file <path> --execute` を実行すると、Codex wrapper も同じ session lifecycle を記録し、legacy source raw Codex guard との共存用に `legacy source_ALLOW_RAW_CODEX=1` + `legacy source_RAW_CODEX_REASON=ut-tdd-runtime-adapter-wrapper` を渡す / `ut-tdd codex --plan <id> --execute` は `<id>` を session-log の plan_id に使い、provider CLI へ `--plan-id` を渡さない |
 | U-SLOG-008 | `compressPlanDigest` (event 単位 high-watermark、PLAN-L7-80) | `session_watermarks[sid]` = その session の matching event を畳み済み件数として持ち、同一 session が複数回 summarize (複数 Stop) されてもログ伸長分の増分のみ計上する (旧 session 単位 fold は 2 回目以降を全 skip = 過少計上) / 増分なし再適用は idempotent / pre-L7-80 digest (session_watermarks 無し) は migration として既計上分 (ts <= updated_at) を再計上せず新規分のみ計上する |
 | U-SLOG-009 | `renderEscalationSignals` (SessionStart surface cap) | escalation signal が 0 件なら空文字 / total 件数は header に保持 / 既定上限または指定 `maxSignals` 件だけを列挙 / `maxSignals<=0` は無制限 escape hatch / 残件は breadcrumb で示し、直前 session log 調査へ誘導する / STOP・root cause 文言は維持 |
-| U-SLOG-010 | Pack consumer lifecycle hook timeout budget (Issue #1057) | consumer template と built-in asset の Claude PostToolUse/Stop、Codex SessionStart/PostToolUse/Stop を30秒にする。Claude SessionStartは既存30秒。source開発repo設定、agent/work guards、Claude memory-wakeは対象外。host deadlineによる強制終了時は記録未保証・fail-openで、自動retry/queueを設けない。`tests/runtime-hook-entrypoints.test.ts` の静的な外側 `describe` がformal citationを提供し、内側 `it.fails` は対象5 hookの設定値をRedで固定する。hostの強制終了自体はunit testで再現せず、durabilityを保証しない。 |
+| U-SLOG-010 | Pack consumer lifecycle hook timeout budget (Issue #1057) | consumer template と built-in asset の Claude PostToolUse/Stop、Codex SessionStart/PostToolUse/Stop を30秒にする。Claude SessionStartは既存30秒。source開発repo設定の記録hookはU-SLOG-011が扱う。agent/work guards、SubagentStop、Claude memory-wakeは対象外で不変。host deadlineによる強制終了時は記録未保証・fail-openで、自動retry/queueを設けない。`tests/runtime-hook-entrypoints.test.ts` の静的な外側 `describe` がformal citationを提供し、内側 `it.fails` は対象5 hookの設定値をRedで固定する。hostの強制終了自体はunit testで再現せず、durabilityを保証しない。 |
+| U-SLOG-011 | source開発repo自身の記録hook timeout (Issue #1057) | source の `.claude/settings.json` の PostToolUse(post-tool-use) と Stop(session summary)、`.codex/hooks.json` の SessionStart/PostToolUse/Stop の計5本が30秒。対象外 (agent-guard / work-guard の5秒、SubagentStop 5、memory-wake 930、Claude SessionStart 30) は不変で、U-SLOG-010 の対象外不変テストが守る。`tests/runtime-hook-entrypoints.test.ts` の静的な外側 `describe` がformal citationを提供し、内側 `it.fails` が対象5 hookの設定値をRedで固定する (Greenは別PR)。 |
 
 ### §1.5a U-FEEDBACK-SURFACE (takeover feedback surface 由来、PLAN-L7-400)
 | U-ID | 検証対象 | oracle (DbC) |
@@ -296,6 +297,14 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 | U-ASSETDRIFT-005 | `analyzeAssetDrift` (isolated fixture) | enrolled roots が無い isolated test fixture は unrelated doctor tests を落とさず skip (`checkedAssets=0`, `ok=true`) |
 | U-ASSETDRIFT-006 | `loadAssetDriftInput` + `analyzeAssetDrift` (実 repo guard) | 実 repo の active internal assets と prompt templates は legacy source path residue 0 / legacy command residue 0 / docs-skills non-empty / missing allowlisted agent 0 |
 | U-ASSETDRIFT-007 | `loadAssetDriftInput` nested `.claude/agent-memory` scan | nested agent memory markdown is enrolled recursively; legacy runtime name/env residue in stale local memory fails `asset-drift` instead of bypassing doctor |
+
+### §1.16.0b U-IPT (implementation-to-design source trace / PLAN-REVERSE-40)
+
+> ペア = `module-drift.md` §3.2 の `analyzeImplPlanTrace` addendum。PLAN と再帰的な設計文書本文から実装 path への trace を検証する。
+
+| U-ID | 対象関数 | DbC oracle |
+|---|---|---|
+| U-IPT-006 | `loadImplPlanTraceInput` + `analyzeImplPlanTrace` (recursive design-source trace) | 孤立 fixture に `src/runtime/windows-hide.ts` と `src/doctor/windows-hide.ts` の source files を置き、PLAN に path を含めず、深い階層の `docs/design/harness/L6-function-design/fixture.md` だけに両 path を記載する → 両 path が `tracedPaths` に含まれ、`orphans=[]` / `ok=true`。loader が再帰的な設計本文を読まないと path が欠落し、orphan が出て失敗する。 |
 
 ### §1.16.1 U-CHGIMPACT (code change impact lint = コード変更時の設計・テスト更新漏れ検出)
 
@@ -776,6 +785,7 @@ SMB/NFS/OneDrive をまたぐ strict lease、heartbeat、clock-skew 耐性は主
 - edge-case 4 観点 → U-EDGE-01〜03
 - **session-log.md §3 関数 (resolveActivePlan/recordEvent/compressPlanDigest/onStop/onSessionStart) + CLI hook entrypoints → U-SLOG-001〜009** (add-feature 差分、PLAN-L6-03。孤児 0)
 - **session-log.md §5 consumer記録hookのtimeout予算 (Issue #1057) → U-SLOG-010** (対象5 consumer hookの30秒予算。静的test citationを持つRedは `it.fails` のまま維持し、後続の実装PRでsettingsを実装)
+- **session-log.md §5 source開発repo記録hookのtimeout (Issue #1057 改訂) → U-SLOG-011** (source 5 hookの30秒予算。Redは `it.fails`、Greenは別PR)
 - **forced-stop-feedback.md §2.3 関数 (detectDanglingTurn/recordForcedStop/classifyFeedback/recordFeedback/pendingRecoveryProposals/scanDanglingStops/emitClassifyRequest) → U-FSF-001〜007** (add-feature 差分、PLAN-L6-04。孤児 0)
 - **setup-solo-team.md §2.3 契約関数 7 本 (detectProjectScale/recommendPhase/planSetup/emitSetup/recordSetupState/applyBranchProtection/runSetup) → U-SETUP-001〜007** (add-feature 差分、PLAN-L6-05。renderArtifacts は emitSetup 内部 helper = U-SETUP-004 に内包。孤児 0)
 - **skill-index.md §7 配布 repo の skill 配置 / runtime asset 境界 → U-SETUP-009a / U-MODELID-SSOT** (配布 adapter の `model:` frontmatter と `MODEL_IDS` SSoT drift を unit test で固定。孤児 0)
@@ -1726,6 +1736,25 @@ Issue #926 の custody oracle 行は契約上の候補宣言であり、実装�
 | `CANDIDATE-U-RVMG-032` | 正常系 fixtureへ対象 attempt の superseded / outcome-conflict event を1件追加 | 当該 attempt は terminal として消費せず deny、merge 0 |
 | `CANDIDATE-U-RVMG-033` | 許可正常系 fixtureの allowlisted receipt raw bytes を1 byteだけ変更し、変更後 digest が allowlist にない fixture | allowlist digest の完全一致を要求し、1-byte mutation を deny、merge 0 |
 | `CANDIDATE-U-RVMG-034` | allowlist 外 receipt の `at` だけを cutoff より前へ backdate し、attempt terminal event を欠く fixture | 自己申告時刻だけでは grandfather せず wrapper が deny、merge 0 |
+
+#### 同じ head の古い check run (Issue #1104)
+
+設計正本は `docs/design/harness/L6-function-design/merge-gate-check-run-selection.md`。実テストは `tests/review-merge-gate.test.ts`。
+
+| ID | mutation / fixture | expected |
+|---|---|---|
+| `U-RVMG-035` | 同じ check 名で run id が異なる古い FAILURE run と新しい SUCCESS run (`startedAt` 付き) | 最新 run だけで判定し `checksGreen=true` |
+| `U-RVMG-036` | 同じ check 名の古い SUCCESS run と新しい FAILURE run | 最新が SUCCESS 以外なので `checksGreen=false` |
+| `U-RVMG-037` | 開始順と完了順が逆転: 旧 run は startedAt が早く completedAt が遅い SUCCESS、新 run は startedAt が遅く未完了 (conclusion 空) | 開始順で新 run を最新とし、未完了なので `checksGreen=false` |
+| `U-RVMG-038` | run 間で最早 startedAt が同時刻、または startedAt 欠落 | 最新を決められず `checksGreen=false` |
+| `U-RVMG-039` | 同じ run id・同じ workflow の同名 job が FAILURE と、後から完了した SUCCESS | 識別不能な重複として `checksGreen=false` |
+| `U-RVMG-040` | `workflowName` 欠落の同名 2 エントリ (run id は異なる、一方 FAILURE) | 識別不能な重複として `checksGreen=false` |
+| `U-RVMG-041` | StatusContext (commit status) の同名エントリと CheckRun の混在 | 識別不能な重複として `checksGreen=false` |
+| `U-RVMG-042` | 同じ check 名・異なる有効な run id・両方 SUCCESS で、一方の startedAt が欠落 | 順序を決められない重複は全件 SUCCESS でも `checksGreen=false` |
+| `U-RVMG-043` | 同じ check 名・異なる run id・両方 SUCCESS で、一方の startedAt が parse 不能な文字列 | 同上、`checksGreen=false` |
+| `U-RVMG-044` | 同じ check 名・異なる run id・両方 SUCCESS で、最早 startedAt が同時刻 | 最新を決められず `checksGreen=false` |
+| `U-RVMG-045` | 同じ run id・同じ workflow の同名 job が両方 SUCCESS | 識別不能な重複として `checksGreen=false` |
+| `U-RVMG-046` | `workflowName` 欠落・異なる run id・両方 SUCCESS の同名エントリ | 識別不能な重複として `checksGreen=false` |
 
 ## Claude HARNESS memory async wake oracle (2026-08-03)
 
@@ -3118,11 +3147,11 @@ oracle の詳細 (入力・期待・殺す mutation) は専用の
 
 | 範囲 | 検証面 | 詳細 |
 | --- | --- | --- |
-| CANDIDATE-U-STCHAN-001〜006 | `memory add` の拒否規則 (kind による線引き、理由付き project、既存の正本を落とさない) | 専用文書 §3 |
-| CANDIDATE-U-STCHAN-007〜014 | review custody の identity v2・v1 の読み取り・`--review-memory-id` の無視化と廃止・memory 非依存の dispatch | 専用文書 §3 |
-| CANDIDATE-U-STCHAN-015〜018 | 通知レコード `ut-tdd.notification/v1`・旧 entry の復号・memory に触れない発行 | 専用文書 §3 |
-| CANDIDATE-U-STCHAN-019〜021 | handover prose の生成停止・doctor `handover-prose`・md 照合の撤去 | 専用文書 §3 |
-| CANDIDATE-U-STCHAN-022〜028 | memory と handover の既存分の退避・real-repo 集計・凍結一覧の改ざん検知・隔離 fixture での実行時の db 整合 | 専用文書 §3 |
+| U-STCHAN-001〜006 | `memory add` の拒否規則 (kind による線引き、理由付き project、既存の正本を落とさない) | 専用文書 §3 |
+| U-STCHAN-007〜014 | review custody の identity v2・v1 の読み取り・`--review-memory-id` の無視化と廃止・memory 非依存の dispatch | 専用文書 §3 |
+| U-STCHAN-015〜018 | 通知レコード `ut-tdd.notification/v1`・旧 entry の復号・memory に触れない発行 | 専用文書 §3 |
+| U-STCHAN-019〜021 | handover prose の生成停止・doctor `handover-prose`・md 照合の撤去 | 専用文書 §3 |
+| U-STCHAN-022〜028 | memory と handover の既存分の退避・real-repo 集計・凍結一覧の改ざん検知・隔離 fixture での実行時の db 整合 | 専用文書 §3 |
 
 上表の ID は backtick 無し表記である。候補台帳への再掲ではなく専用文書への参照であり、U-VMSRC-009 の一意性検査の対象外とする。
 
