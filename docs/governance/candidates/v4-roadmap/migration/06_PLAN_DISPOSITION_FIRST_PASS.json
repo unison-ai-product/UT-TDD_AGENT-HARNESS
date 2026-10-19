@@ -62631,21 +62631,8 @@
       },
       "confirmedSupersededBy": [],
       "preliminaryState": "hold",
-      "wholeSourceDisposition": "merged",
-      "holdReason": "No two-sided supersession link is established; live-contract and owner review remains pending.",
-      "destinations": [
-        {
-          "kind": "design",
-          "path": "docs/design/harness/L6-function-design/function-spec.md",
-          "section": "2026-06-23 feedback surface taxonomy 追補"
-        }
-      ],
-      "reconciliation": {
-        "kind": "three-way",
-        "verdict": "consistent",
-        "evidencePath": "docs/governance/candidates/v4-roadmap/migration/issue1149-t3-lot-reconciliation-20261019.md",
-        "evidenceId": "PLAN-L7-401-attempt-escalation-surface-cap"
-      }
+      "wholeSourceDisposition": "not-finalized",
+      "holdReason": "No two-sided supersession link is established; live-contract and owner review remains pending."
     },
     {
       "planId": "PLAN-L7-402-agent-definition-allowlist-coverage-check",

@@ -1,7 +1,7 @@
 # T3 ロット 照合記録 (issue #1149 / #1078、2026-10-19)
 
 処分 JSON `06_PLAN_DISPOSITION_FIRST_PASS.json` で `status` が `completed` の 26 件と `archived` の 3 件のうち、
-三者照合 (PLAN ⇔ 設計文書 ⇔ コード) を実施し、最終化できた 8 件の記録である。正本は
+三者照合 (PLAN ⇔ 設計文書 ⇔ コード) を実施し、最終化できた 7 件の記録である。正本は
 `docs/design/harness/L6-function-design/plan-retirement-gate.md` §3.3。
 
 - `consistent`: PLAN・設計文書・コードの三者が一致する。
@@ -111,24 +111,9 @@ evidenceId: `PLAN-L7-400-feedback-surface-group-before-slice`。処分: `merged`
 - コード: `src/feedback/surface.ts` の `selectTakeoverFeedback` が group を作ってから `.slice(0, limit)` する。
 - テスト: `tests/feedback-surface.test.ts` の「selects diverse signal groups before applying the takeover surface limit」。
 
-## PLAN-L7-401 の照合
-
-evidenceId: `PLAN-L7-401-attempt-escalation-surface-cap`。処分: `merged`、verdict: `consistent`。
-
-- PLAN の契約: `renderEscalationSignals` に上限 (既定 10) と breadcrumb を付ける。実装は
-  `PLAN-L7-403-feedback-surface-context-efficiency` へ統合済みで、本 PLAN は archived の分解起票。
-- 設計文書: `docs/design/harness/L6-function-design/function-spec.md` の
-  「2026-06-23 feedback surface taxonomy 追補」の末尾の段落が、既定 10 件の列挙と残件 breadcrumb を定める。
-  oracle `U-SLOG-009` は `docs/test-design/harness/L7-unit-test-design.md` にある。
-- コード: `src/runtime/attempt-escalation.ts` の `DEFAULT_ESCALATION_SURFACE_LIMIT = 10` と
-  `renderEscalationSignals` (`maxSignals` と `+N more escalation signals`)。
-- テスト: `tests/attempt-escalation.test.ts` の「caps displayed escalation signals and leaves a breadcrumb」。
-  注記: `U-SLOG-009` の ID は `tests/session-log.test.ts` では別のテストに使われており、oracle ID とテスト名の
-  引用が食い違っている (契約の曖昧点として報告)。
-
 ## 見送った PLAN の一覧と理由
 
-最終化していない 21 件。いずれも処分 JSON は `not-finalized` のまま変更していない。
+最終化していない 22 件。いずれも処分 JSON は `not-finalized` のまま変更していない。
 
 | PLAN | 見送り理由 |
 |---|---|
@@ -152,4 +137,5 @@ evidenceId: `PLAN-L7-401-attempt-escalation-surface-cap`。処分: `merged`、ve
 | PLAN-DISCOVERY-04-process-workflows | 同上 |
 | PLAN-DISCOVERY-06-orchestrator-rule-parity | PoC の S4 判断記録。「SSoT + materializer + rule-drift 拡張」の採否の行き先を確認できていない |
 | PLAN-L7-462-bun-runtime-withdrawal | 大きな troubleshoot PLAN。段階移行の残差が複数あり、確実に照合できていない |
+| PLAN-L7-401-attempt-escalation-surface-cap | PLAN にしか書かれていない規則が残っている。表示の既定閾値を下げたいときは PO 承認で定数を変更する規則 (PLAN 本文 §2) が、function-spec.md の該当節にも統合先 PLAN-L7-403 にも無い。コードと設計文書の cap 契約 (既定 10 件、total 維持、breadcrumb) 自体は一致している (Sol r1 の指摘で見送りへ戻した) |
 | PLAN-L7-102-web-dashboard-phase-b | 後継 (PLAN-L7-141) への部分 supersede の疑い。部分 supersede は契約上、最終化しない |
