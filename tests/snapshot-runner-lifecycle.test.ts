@@ -1,5 +1,4 @@
-import { dirname, join, resolve } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 /*
@@ -65,10 +64,10 @@ interface LeaseApi {
 }
 
 async function loadSubject(): Promise<LeaseApi> {
-  // Resolve at test time so this file compiles before the production subject exists.
-  const here = dirname(fileURLToPath(import.meta.url));
-  const url = pathToFileURL(resolve(here, "..", "src", "runtime", "snapshot-run-lease.ts")).href;
-  return (await import(url)) as unknown as LeaseApi;
+  // Non-literal specifier so this file transforms before the production subject exists.
+  // No repository path is read here (test-repository-isolation forbids import.meta / cwd roots).
+  const specifier = ["..", "src", "runtime", "snapshot-run-lease.ts"].join("/");
+  return (await import(/* @vite-ignore */ specifier)) as unknown as LeaseApi;
 }
 
 const TMP = join("tmp-root");

@@ -122,7 +122,7 @@ sweeper は例外を投げない (never throws)。結果は `{ reaped: runId[]; 
 
 どちらの OS でも、Job Object のような「親が死ねば OS が子孫を殺す」仕組みは使えない (Node に API が無く、PowerShell 経由の job は PowerShell と一緒に死ぬ)。
 
-## 6. fail-close / fail-open
+## 6. 失敗時の方針 (fail-close / fail-open)
 
 | 場面 | 方針 |
 |---|---|
