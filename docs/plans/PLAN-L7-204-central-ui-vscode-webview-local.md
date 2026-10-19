@@ -4,12 +4,9 @@ title: "PLAN-L7-204: 中央 UI のローカル VS Code Webview 配布方針"
 kind: impl
 layer: L7
 drive: fullstack
-status: draft
-version_target: future
-route_signal: version_deferral
-route_mode: version-up
+status: archived
 created: 2026-06-30
-updated: 2026-07-01
+updated: 2026-10-19
 owner: PM / PO
 parent_design: docs/design/harness/L2-screen/screen-list.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
@@ -36,15 +33,21 @@ dependencies:
 
 ## Status
 
-本 PLAN は **future parked** である。中央 UI の近い将来の配布方向を記録するが、現在の L7 配布 close には含めない。したがって、この close cycle で VS Code extension 実装を承認するものではない。
+本 PLAN は **archived (撤回)** である (2026-10-19、Issue #1084 グループ 13)。ローカル VS Code Webview 配布方針を
+将来版へ保全する draft (`version_target: future`) だったが、ハーネス自身の中央 UI は現行の製品範囲に無く、
+前提の PLAN-L7-141 も同時に撤回したため、本 PLAN も撤回する。
 
-parked する方向性は、ローカル VS Code Webview extension である。
+撤回は削除ではなく `status: archived` で行う。本 PLAN は PLAN-L7-141 / L7-146 / L7-248 から参照されており、
+削除すると dangling 参照になるためである。再開する場合は新規 PLAN を起票し、本 PLAN は参照に留める。
+
+以下は撤回前に保全していた方向性の記録である。
 
 - hosted server を立てない。
 - Cloudflare、DNS、webhook、外部 account、public URL setup を要求しない。
 - VPS を要求しない。
 - UI は read-only に限定する。
-- 実装が明示的に再開された場合のみ、L2 screen inventory、L4 UI standard、PLAN-L7-141 の read-only SPA track を再利用する。
+
+以下の本文も撤回前の保全記録として残す。
 
 ## Rationale
 

@@ -4,12 +4,9 @@ title: "PLAN-L7-141 (impl): src/web 中央 UI 再実装 — ui-element §2 設�
 kind: impl
 layer: L7
 drive: fe
-status: draft
-version_target: future
-route_signal: version_deferral
-route_mode: version-up
+status: archived
 created: 2026-06-24
-updated: 2026-07-01
+updated: 2026-10-19
 owner: PM / PO
 parent_design: docs/design/harness/L2-screen/screen-list.md
 supersedes:
@@ -38,11 +35,16 @@ dependencies:
 
 ## Status
 
-本 PLAN は **future parked** である。中央 UI の実装 track を将来版へ保全するが、現在の L7 配布 close には含めない。
+本 PLAN は **archived (撤回)** である (2026-10-19、Issue #1084 グループ 13)。`src/web` は空で実装は存在せず、
+本 PLAN は中央 UI の実装 track を将来版へ保全する draft (`version_target: future`) だったが、ハーネス自身の
+中央 UI は現行の製品範囲に無いため、撤回して `versionUpParked` から外す。
 
-PO 決定 (2026-06-26): 現在の close では clean distribution channel と consumer setup の成立を優先し、中央 UI 実装は後回しにする。よって本 PLAN は `status: draft` と `version_target: future` を維持する。これは archived ではなく、将来版で再開するための明示保全である。
+撤回は削除ではなく `status: archived` で行う。本 PLAN は他の PLAN (L7-146 / L7-157 / L7-248 / PLAN-DISCOVERY-07/08/09 /
+L3-06 / L4-14 / L5-09 / L6-36) の `references` / `requires`、および `src/lint/l14-close-audit.ts` から参照されており、
+削除すると dangling 参照になるためである。以前の PO 決定 (2026-06-26「archived ではなく将来版で再開するための
+明示保全」) はこの撤回で置き換わる。再開する場合は新規 PLAN を起票し、本 PLAN は参照に留める。
 
-current close では、Pack に `src/web` UI runtime、画面実装、Webview extension、hosted deployment artifact を含めてはならない。`status --json` では `versionUpParked` として残るが、active draft ではない。
+以下の本文は撤回前の保全記録として残す。
 
 ## 背景
 
