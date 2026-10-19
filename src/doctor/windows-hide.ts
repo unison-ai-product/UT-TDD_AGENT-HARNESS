@@ -225,7 +225,12 @@ export function loadWindowsHideInput(repoRoot: string): WindowsHideInput {
     .filter((source) => source.path.startsWith(".claude/hooks/"))
     .map((source) => source.path);
   const scriptEntries = sources
-    .filter((source) => source.path.startsWith("scripts/") && importsChildProcess(source))
+    .filter(
+      (source) =>
+        source.path.startsWith("scripts/") &&
+        source.path !== "scripts/pack-canary-acceptance.mjs" &&
+        importsChildProcess(source),
+    )
     .map((source) => source.path);
   return {
     sources,

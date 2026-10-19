@@ -1,4 +1,3 @@
-import "../src/runtime/windows-hide.ts";
 import { createHash, randomUUID } from "node:crypto";
 import {
   chmodSync,
@@ -229,7 +228,8 @@ export function runAgentAuthoringAndGates(input) {
   if (!agentEvidenceObject(input) || typeof input.consumerRoot !== "string")
     throw new Error("agent-authoring-input-invalid");
   const root = realpathSync.native(resolve(input.consumerRoot));
-  const run = input.run ?? ((binary, args, options) => spawnSync(binary, args, options));
+  const run = input.run ?? ((binary, args, options) =>
+    spawnSync(binary, args, { ...options, windowsHide: true }));
   const cliPath = realpathSync.native(resolve(root, ".ut-tdd", "bin", "ut-tdd.mjs"));
   if (!isInside(root, cliPath)) throw new Error("consumer_runtime_external_path");
   const git = (...args) => {
@@ -472,7 +472,7 @@ function readCanonicalJson(path, root, label) {
 
 function runGitBuffer(root, args) {
   return execFileSync("git", ["-C", root, ...args], {
-    encoding: "buffer", stdio: ["ignore", "pipe", "ignore"],
+    encoding: "buffer", stdio: ["ignore", "pipe", "ignore"], windowsHide: true,
   });
 }
 
@@ -740,7 +740,8 @@ function parseArgs(argv) {
 
 export function main(argv = process.argv.slice(2), deps = {}) {
   const now = deps.now ?? (() => new Date().toISOString());
-  const run = deps.spawnSync ?? spawnSync;
+  const run = deps.spawnSync ?? ((binary, args, options) =>
+    spawnSync(binary, args, { ...options, windowsHide: true }));
   const parsed = parseArgs(argv);
   if (parsed.phase === "verify") return verifySmoke(parsed, { now, run });
   const args = parsed.values;
@@ -846,7 +847,12 @@ export function main(argv = process.argv.slice(2), deps = {}) {
 }
 
 /** Observe the released installer fail before any consumer write on a wrong anchor. */
-export function verifyWrongAnchorDenial(releaseDirectory, expectedAnchor, run = spawnSync, tag = CANARY_TAG) {
+export function verifyWrongAnchorDenial(
+  releaseDirectory,
+  expectedAnchor,
+  run = (binary, args, options) => spawnSync(binary, args, { ...options, windowsHide: true }),
+  tag = CANARY_TAG,
+) {
   if (!digestPattern.test(expectedAnchor)) throw new Error("wrong-anchor-input-invalid");
   const wrongAnchor = `sha256:${expectedAnchor[7] === "0" ? "1" : "0"}${expectedAnchor.slice(8)}`;
   const denyRoot = mkdtempSync(join(tmpdir(), "ut-canary-anchor-deny-"));
