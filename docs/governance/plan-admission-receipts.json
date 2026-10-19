@@ -7808,6 +7808,22 @@
         "revision": 4,
         "content_digest": "sha256:a0853d9e6858693f644ceba590c43c178e95698903639a60bcd510f80110df8f"
       }
+    },
+    {
+      "sequence": 489,
+      "previous_record_digest": "sha256:ab97975cd3d30142903b1eaf3ef45c357a0b1f31f395622a2b1aa0352711186d",
+      "record_digest": "sha256:8615eaf2855c3052c4d9b56a9e27ac0ac74622d0d772c8442256b3a086193eeb",
+      "command_id": "issue1062-split-PLAN-L7-173-handover-type-constant-split-r2-20261019",
+      "receipt_id": "certificate:4a46547fb055c669d801c11b9b4ba486",
+      "receipt_digest": "sha256:dae42f5960514a11444c2f302f70cf17c40541b677482b1bf234688ae34be2c2",
+      "decision_digest": "sha256:531b05e7e02f98ec860d2e933f119d54de5fdb03bc26c4c911eb5641ff4c2052",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-173-handover-type-constant-split.md",
+        "plan_id": "PLAN-L7-173-handover-type-constant-split",
+        "asset_id": "plan:legacy:063e24c8d60ab421324c422d22990b91dd25ca57bc904f6900501a9ee9d5deac",
+        "revision": 2,
+        "content_digest": "sha256:7211514120312718a5878c9e28bc25fe27be038253b0718aaf08287cff10d5b3"
+      }
     }
   ]
 }
