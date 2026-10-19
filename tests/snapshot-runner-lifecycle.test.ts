@@ -41,7 +41,10 @@ interface LeaseApi {
     owner: Identity;
     observed: Observation;
     consecutiveUnknown: number;
-  }): { action: "continue" | "stop_parent_lost"; emitUnknownDiagnostic: boolean };
+  }): {
+    action: "continue" | "stop_parent_lost" | "stop_parent_unobservable";
+    emitUnknownDiagnostic: boolean;
+  };
   planSweep(input: {
     leases: Lease[];
     table: Entry[] | "query_failed";
@@ -117,7 +120,7 @@ describe("snapshot runner lifecycle L7 candidate Red (issue #1129)", () => {
     expect(api.decideParentWatch({ owner, observed: owner, consecutiveUnknown: 0 }).action).toBe(
       "continue",
     );
-    for (const n of [0, 2, 3, 10]) {
+    for (const n of [1, 2, 3, 10]) {
       const r = api.decideParentWatch({ owner, observed: "query_failed", consecutiveUnknown: n });
       expect(r.action).toBe("continue");
       expect(r.emitUnknownDiagnostic).toBe(n === 3);
@@ -158,35 +161,41 @@ describe("snapshot runner lifecycle L7 candidate Red (issue #1129)", () => {
     expect(r.skipped).toEqual([{ runId: "run-a", reason: "identity_unproven" }]);
   });
 
-  it.fails("CANDIDATE-U-SNAPLC-007: win32 orphan grandchildren are selected by start order", async () => {
+  it.fails("CANDIDATE-U-SNAPLC-007: win32 grandchildren of a dead child are never reaped from a stale lease", async () => {
     const api = await loadSubject();
     const l = lease({
       stage: { name: "vitest", child: { pid: 200, startToken: "c", startOrder: 10 } },
     });
-    const free = plan(api, [l], [entry(300, 200, { startOrder: 20 })]);
-    expect(free.kill.map((k) => k.pid)).toEqual([300]);
-    const occupantAfter = [
-      entry(200, 1, { startToken: "x", startOrder: 30 }),
-      entry(300, 200, { startOrder: 20 }),
+    const tables: Entry[][] = [
+      // (a) child.pid is free; same table as "child died, pid reused, its child started, reuser died"
+      [entry(300, 200, { startOrder: 20 })],
+      // (b) child.pid occupied by another process that started after the grandchild
+      [entry(200, 1, { startToken: "x", startOrder: 30 }), entry(300, 200, { startOrder: 20 })],
+      // (c) occupant started before the grandchild
+      [entry(200, 1, { startToken: "x", startOrder: 15 }), entry(300, 200, { startOrder: 20 })],
+      // (d) grandchild started before the recorded child
+      [entry(300, 200, { startOrder: 5 })],
     ];
-    expect(plan(api, [l], occupantAfter).kill.map((k) => k.pid)).toContain(300);
-    const occupantBefore = [
-      entry(200, 1, { startToken: "x", startOrder: 15 }),
-      entry(300, 200, { startOrder: 20 }),
-    ];
-    expect(plan(api, [l], occupantBefore).kill.map((k) => k.pid)).not.toContain(300);
-    expect(plan(api, [l], [entry(300, 200, { startOrder: 5 })]).kill).toEqual([]);
+    for (const table of tables) {
+      const r = plan(api, [l], table);
+      expect(r.kill).toEqual([]);
+      expect(r.skipped).toEqual([{ runId: "run-a", reason: "identity_unproven" }]);
+    }
   });
 
-  it.fails("CANDIDATE-U-SNAPLC-008: posix reaps by process group only", async () => {
+  it.fails("CANDIDATE-U-SNAPLC-008: posix reaps a group only while its leader is the proven live child", async () => {
     const api = await loadSubject();
     const l = lease({ stage: { name: "vitest", child: { pid: 200, startToken: "c", pgid: 200 } } });
-    const table = [
+    const members = [
       entry(301, 1, { pgid: 200 }),
       entry(302, 1, { pgid: 200 }),
       entry(303, 1, { pgid: 999 }),
     ];
-    expect(plan(api, [l], table, "posix").kill.map((k) => k.pid)).toEqual([301, 302]);
+    const leaderAlive = [entry(200, 1, { startToken: "c", pgid: 200 }), ...members];
+    expect(plan(api, [l], leaderAlive, "posix").kill.map((k) => k.pid)).toEqual([200, 301, 302]);
+    const r = plan(api, [l], members, "posix");
+    expect(r.kill).toEqual([]);
+    expect(r.skipped).toEqual([{ runId: "run-a", reason: "identity_unproven" }]);
   });
 
   it.fails("CANDIDATE-U-SNAPLC-009: identities without a startToken are never killed", async () => {
@@ -266,5 +275,17 @@ describe("snapshot runner lifecycle L7 candidate Red (issue #1129)", () => {
     expect(api.judgeTreeStop({ exitCode: 0, stdout: "成功しました", survivorsAfter: 2 })).toBe(
       "survivors",
     );
+  });
+
+  it.fails("CANDIDATE-U-SNAPLC-021: unobservable parent stops the run only at the consecutive-unknown limit", async () => {
+    const api = await loadSubject();
+    const owner = id(50);
+    const at = (observed: Observation, n: number) =>
+      api.decideParentWatch({ owner, observed, consecutiveUnknown: n }).action;
+    expect(at("query_failed", 14)).toBe("continue");
+    expect(at("query_failed", 15)).toBe("stop_parent_unobservable");
+    expect(at("query_failed", 16)).toBe("stop_parent_unobservable");
+    expect(at(null, 15)).toBe("stop_parent_lost");
+    expect(at(owner, 15)).toBe("continue");
   });
 });

@@ -49,9 +49,9 @@ subagent (または親 shell) が終わった後も、その配下で起動さ�
 1. **起動前の準備**: runner は重い stage を始める前に、(i) 自分と直接の親の identity を取得し、(ii) lease を書き (§4.1)、(iii) sweeper を 1 回走らせる (§4.2)。(i)(ii) のどれかが成立しなければ重い stage を始めず、`lifecycle_unavailable` で終了する (fail-close)。
 2. **identity**: `ProcessIdentity = { pid: number; startToken: string }`。`startToken` は OS が与える開始時刻を表す不透明な文字列で、**等価比較だけに使う** (Windows は CIM `CreationDate` の FILETIME、Linux は `/proc/<pid>/stat` の starttime、その他の POSIX は `LC_ALL=C ps -o lstart=` の原文)。pid の再利用は「同じ pid で startToken が違う」ことで検出する。
 3. **親の定義**: 親 = 起動時の `process.ppid`。runner は `UT_TDD_SNAPSHOT_PARENT_POLL_MS` (既定 2000) ごとに親の liveness を観測する。stage の child は非同期 `spawn` で動かし、event loop を塞がない (実測 1 の是正)。
-4. **判定 (`decideParentWatch`)**: 観測が `dead` (pid が無い、または同じ pid で startToken が違う) なら `stop_parent_lost`。`alive` なら `continue`。`unknown` (観測の失敗) は `continue` で、連続 3 回以上の unknown は診断行 (`snapshot-lifecycle parent-liveness-unknown`) を 1 回出す。**unknown を dead とみなして殺さない**。
+4. **判定 (`decideParentWatch`)**: 観測が `dead` (pid が無い、または同じ pid で startToken が違う) なら `stop_parent_lost`。`alive` なら `continue`。`unknown` (観測の失敗) は、`consecutiveUnknown` (今回の観測を含む連続 unknown 回数) が `MAX_CONSECUTIVE_UNKNOWN` (15) 未満なら `continue` で、3 のときだけ診断行 (`snapshot-lifecycle parent-liveness-unknown`) を 1 回出す。**15 回連続して観測できないときは fail-close で `stop_parent_unobservable`** とし、§3.5 の停止手順を `stop_parent_lost` と同じに実行する (親が生きているか分からないまま重い run を無期限に続けない)。1 回の観測 (Windows は PowerShell) はタイムアウト 5 秒・再試行なしとする。**1 回の unknown を dead とみなして殺さない**。
 5. **`stop_parent_lost` の手順** (順序は固定): ① 新しい stage を起動しない (以後の stage はスキップする)。② 現在の stage の child の木を止める (§5)。③ 木が消えたことを再観測で確かめる。④ 既存の cleanup (reference の unseal と 3 つの root の削除) を実行する。⑤ lease を削除する (④ と ③ が成功したときだけ。失敗したら lease を残し、次の sweeper に委ねる)。⑥ 終了コード `75` (`EXIT_PARENT_LOST`) で終了する。**runner は自分自身に tree kill を掛けない** (掛けると ④⑤ が走らない)。
-6. **回収の期限 (B)**: 親の死から `PARENT_POLL_MS` + 木の停止 (猶予 5 秒、POSIX は SIGTERM→猶予後 SIGKILL) 以内。
+6. **回収の期限 (B、条件付き)**: 保証するのは**観測に成功し続ける場合だけ**で、親の死から `PARENT_POLL_MS` (2 秒) + 観測 5 秒 + 木の停止 (猶予 5 秒、POSIX は SIGTERM→猶予後 SIGKILL) = 約 12 秒以内である。観測が失敗し続ける場合は、最悪でも `MAX_CONSECUTIVE_UNKNOWN` × (`PARENT_POLL_MS` + 観測 5 秒) = 105 秒の後に `stop_parent_unobservable` で停止を始め、さらに停止猶予 5 秒を足した時間で打ち切る。親の死と観測不能が重なっても、この上限を超えて続けない。
 7. **正常終了と失敗**: 従来どおり (stage の終了コードを伝え、cleanup は `finishSnapshotCleanup` の規則のまま)。lease は cleanup の成功後に削除する。
 
 ## 4. lease と sweeper (C)
@@ -73,7 +73,7 @@ subagent (または親 shell) が終わった後も、その配下で起動さ�
 | S2 | `runner` が `alive` (同 pid で同 startToken) | 触らない (`skipped: runner_alive`)。B が担当する |
 | S3 | `runner` が `dead` | stale。残骸の回収に進む (owner の生死は見ない。runner が死んだ run は誰も結果を読めず、cleanup も誰も実行しないため) |
 | S4 | stale lease の `stage.child` が `alive` で startToken 一致 | child と、その子孫 (Windows は ParentProcessId の連鎖、POSIX は同じ pgid) を victim にする。child の pid は child が生きている間は再利用されないので、連鎖は本物である |
-| S5 | `stage.child` が `dead` で孫が残っている (Windows) | `ppid == child.pid` かつ `child.start <= victim.start` を満たし、かつ child.pid を別の生きたプロセスが占有していない、または `victim.start < 占有者.start` のものだけを victim にする (FILETIME は数値で順序比較できる)。POSIX は group が存在する限り pgid は再利用されないので、同じ pgid の生存者を victim にする |
+| S5 | `stage.child` が `dead` (不在、または同 pid で startToken 違い) | **孫・group の生存者を victim にしない** (`skipped: identity_unproven`)。記録した child が連続して存在していたことを、古い lease と現在のプロセス表だけでは証明できない (child の死亡 → 同 pid の別プロセスの起動 → その子の起動、という履歴や、元の group の全滅 → 同じ pgid の新 group、という履歴が、現在の表では本物の孫・group と区別できない)。ただし child が死んでいる run には証明できる生存部分が無いので、S7 の root 削除と S8 の lease 削除は行う |
 | S6 | identity を証明できない (startToken を取得できない、Windows で順序が決まらない 等) | victim にしない (`skipped: identity_unproven`) |
 | S7 | 回収後の root 削除 | lease の `roots` に載っていて、かつ tmp root 直下で名前が `ut-tdd-vitest-(head-\|cache-)?\d+-\d+` に一致するものだけ。リンクは辿らない。削除に失敗したら lease を残す |
 | S8 | victim の終了を再観測で確認でき、root が消えた | lease を削除する。それ以外は残す |
@@ -92,7 +92,7 @@ export type ProcessObservation = ProcessIdentity | null | "query_failed";
 export function classifyLiveness(recorded: ProcessIdentity, observed: ProcessObservation): Liveness;
 export function decideParentWatch(
   input: { owner: ProcessIdentity; observed: ProcessObservation; consecutiveUnknown: number },
-): { action: "continue" | "stop_parent_lost"; emitUnknownDiagnostic: boolean };
+): { action: "continue" | "stop_parent_lost" | "stop_parent_unobservable"; emitUnknownDiagnostic: boolean };
 export function planSweep(
   input: { leases: SnapshotLease[]; table: ProcessEntry[] | "query_failed"; tmpRoot: string; platform: "win32" | "posix" },
 ): { kill: ProcessIdentity[]; removePaths: string[]; skipped: { runId: string; reason: SweepSkipReason }[]; reapedRunIds: string[] };
@@ -113,12 +113,12 @@ sweeper は例外を投げない (never throws)。結果は `{ reaped: runId[]; 
 
 | 項目 | Windows | POSIX |
 |---|---|---|
-| プロセス表 | `Get-CimInstance Win32_Process` の `ProcessId` / `ParentProcessId` / `CreationDate` (PowerShell。タイムアウト 10 秒、1 回再試行) | Linux は `/proc`、その他は `LC_ALL=C ps -A -o pid=,ppid=,pgid=,lstart=` |
+| プロセス表 | `Get-CimInstance Win32_Process` の `ProcessId` / `ParentProcessId` / `CreationDate` (PowerShell。sweeper の表取得はタイムアウト 10 秒・1 回再試行、親の liveness の観測は 5 秒・再試行なし) | Linux は `/proc`、その他は `LC_ALL=C ps -A -o pid=,ppid=,pgid=,lstart=` |
 | child の起動 | `detached: false` (木は `ParentProcessId` で辿る) | `detached: true` で child を自分の process group の長にする (`pgid == child.pid`) |
 | 木の停止 | `taskkill /PID <child> /T /F`。**判定は終了コードと再観測で行い、出力は解析しない** (表示言語依存、実測 7)。runner 自身の pid には使わない | `kill(-pgid, SIGTERM)` → 猶予後 `kill(-pgid, SIGKILL)` |
-| runner 死亡後の孫 | `ParentProcessId` が死んだ pid のまま残る (実測 5)。S5 で pid 再利用を順序で除く | init に re-parent されるので ppid は辿れない。pgid で辿る |
+| runner 死亡後の孫 | `ParentProcessId` が死んだ pid のまま残る (実測 5)。ただし S5 のとおり、child が死んだ後の孫は**所有を証明できないので回収しない** | init に re-parent されるので ppid は辿れない。leader (child) が生存して token 一致のときだけ pgid で辿る。leader が死んだ group は回収しない |
 | 親喪失の挙動 (素の状態) | 子孫は生き続ける | 子孫は生き続ける (SIGHUP は端末の無い実行では来ない) |
-| 限界 | 照合と `taskkill` の間の競合が残る。S5 の占有判定で窓を狭めるが、ゼロにはならない | pgid を離脱して setsid した子孫は辿れない |
+| 限界 | 照合と `taskkill` の間の競合が残る (child の生存と token は §4.2 S4 の判定時点のもの) | pgid を離脱して setsid した子孫は辿れない。child の死後に残った group は回収されない |
 
 どちらの OS でも、Job Object のような「親が死ねば OS が子孫を殺す」仕組みは使えない (Node に API が無く、PowerShell 経由の job は PowerShell と一緒に死ぬ)。
 
@@ -128,7 +128,7 @@ sweeper は例外を投げない (never throws)。結果は `{ reaped: runId[]; 
 |---|---|
 | 起動時に lease を書けない、親または自分の identity を取れない | **fail-close**: 重い stage を始めず `lifecycle_unavailable` で終了。警告だけで続行しない (続行すると今回の事故の条件を作る) |
 | 実行中、親が `dead` と確認できた | **fail-close**: 手順 §3.5 で止める |
-| 実行中、親の liveness が `unknown` | **fail-open**: 続行し診断を残す。不明を死亡扱いしない |
+| 実行中、親の liveness が `unknown` | `MAX_CONSECUTIVE_UNKNOWN` (15) 未満は **fail-open** (続行し診断を残す。1 回の不明を死亡扱いしない)。15 回連続したら **fail-close** (`stop_parent_unobservable`、§3.5 の手順、終了コード 75) |
 | sweeper がプロセス表を取れない / identity を証明できない | **fail-open で何もしない**: kill も削除もせず、`skipped` に理由を残す |
 | sweeper 自体の失敗 (例外) | never throws。runner 起動は止めない (診断を 1 行出す) |
 | 木の停止後も生存者が残る | lease を残して終了コード 75。次の sweeper が再試行する |
@@ -150,21 +150,23 @@ sweeper は例外を投げない (never throws)。結果は `{ reaped: runId[]; 
 | 事前 | `classifyLiveness(recorded, observed)`: `observed` は `ProcessIdentity` / `null` (不在) / `"query_failed"` のいずれか。`decideParentWatch` の `consecutiveUnknown` は 0 以上の整数 |
 | 事後 | `classifyLiveness`: 不在、または同 pid で startToken 違いは `dead`、同 pid・同 startToken は `alive`、`query_failed` は `unknown`。`planSweep`: `kill` に載る identity は必ず §4.2 の S4 / S5 を満たす。`removePaths` は S7 を満たす |
 | I1 | identity (pid + startToken) を証明できないプロセスを kill しない (名前・コマンド文字列・pid だけの一致では kill しない) |
-| I2 | `unknown` は `dead` ではない。不明から kill も削除も起きない |
+| I2 | 1 回の `unknown` は `dead` ではなく、kill も削除も起こさない。連続 `MAX_CONSECUTIVE_UNKNOWN` 回の unknown だけが自分の run の停止 (`stop_parent_unobservable`) を起こし、他のプロセスの kill には繋がらない |
 | I3 | `stop_parent_lost` の後に新しい stage を spawn しない |
 | I4 | lease を削除するのは、木の消滅を再観測で確認し、root の削除に成功した後だけ |
 | I5 | 生きている runner の lease・root・child に sweeper は触れない (S2) |
 | I6 | runner は自分自身に tree kill を掛けない。終了は cleanup の後の `process.exit` である |
 | I7 | 判定関数 (`classifyLiveness` / `decideParentWatch` / `planSweep`) は純粋で、OS・時刻・環境変数を読まない |
 | I8 | 外部コマンドの出力文面を解析しない (終了コードと再観測だけを使う) |
+| I9 | kill の根拠は「記録した identity が現在まで連続して生存している」ことだけで、現在の表の ppid / pgid / 開始時刻の整合は根拠にならない。連続生存を証明できない子孫・group は回収しない (S5、S6) |
 
 ## 9. 実装 PR の順序 (1 PR = 1 論点)
 
-1. **契約 PR (本 PR)**: 本書 + `L7-snapshot-runner-lifecycle-test-design.md` + 候補 Red (`it.fails`)。`src/` と `scripts/` を変えない。
-2. **昇格 (src/ を含まない)**: 候補を正式 ID `U-SNAPLC-*` へ昇格し、テスト名の引用を書き換える。
-3. **Green 1**: `src/runtime/snapshot-run-lease.ts` の純関数 + `process-port.ts` (Windows / POSIX) + その単体テスト。
-4. **Green 2**: runner の非同期化・lease 書き込み・親監視・§3.5 の停止手順 (実プロセスの oracle `CANDIDATE-U-SNAPLC-013`〜)。
-5. **Green 3**: SubagentStop hook からの sweeper 呼び出し。
+1. **契約 PR (本 PR)**: 本書 + `L7-snapshot-runner-lifecycle-test-design.md` + 純関数分の候補 Red (`it.fails`)。`src/` と `scripts/` を変えない。実プロセスの oracle (013〜017・020) は**候補のまま**で、テストも昇格もここでは行わない。
+2. **実プロセスの Red 追加 (src/ を含まない)**: 013〜017・020 の `it.fails` を `CANDIDATE-U-SNAPLC-*` の引用で追加する。
+3. **昇格 (src/ を含まない)**: 引用の揃った候補 (全件) を正式 ID `U-SNAPLC-*` へ昇格し、テスト名の引用を書き換える。正式宣言を citation より先に作らない (`oracle-test-trace` と設計保護 gate §10.2 / §10.3)。
+4. **Green 1**: `src/runtime/snapshot-run-lease.ts` の純関数 + `process-port.ts` (Windows / POSIX) + その単体テスト。
+5. **Green 2**: runner の非同期化・lease 書き込み・親監視・§3.5 の停止手順 (実プロセスの oracle `CANDIDATE-U-SNAPLC-013`〜)。
+6. **Green 3**: SubagentStop hook からの sweeper 呼び出し。
 
 各 Green PR は `it.fails` を `it` に戻す最小実装で、Refactor commit または「Refactor なし (理由)」を PR 本文に書く。
 
@@ -178,7 +180,7 @@ sweeper は例外を投げない (never throws)。結果は `{ reaped: runId[]; 
 | lease に pid を記録するだけでは安全でない (pid 再利用) | **採用**: identity = pid + startToken (§3.2、I1) |
 | 木の停止順序: 新規 spawn を止める → 木を止める → 消滅を確認 → 一時領域を削除 → 終了。自分自身に `taskkill /T /F` しない | **採用** (§3.5、I6) |
 | fail-open / fail-close: 死亡が確認できたら fail-close、不明は fail-open、起動時に監視を準備できなければ fail-close、ownership を証明できない sweeper は何もしない | **採用** (§6) |
-| 「`taskkill /T` は runner 死亡後の任意の孤児を確実に列挙する仕組みではない」 | **部分的に実測で修正**: 死んだ runner の pid を起点にはできない (実測 7) が、Windows では孫の `ParentProcessId` が残り、生き残った**子の pid** からなら `/T` で木を止められる (実測 5)。そのため lease に stage の child の identity を記録する設計にした (S4 / S5)。POSIX は pgid で辿る |
+| 「`taskkill /T` は runner 死亡後の任意の孤児を確実に列挙する仕組みではない」 | **採用 (実測で補強)**: 死んだ runner の pid を起点にはできない (実測 7)。生き残った**子の pid** からなら Windows では `/T` で木を止められる (実測 5) が、それは child が**連続して生存し token が一致するとき**に限る。Sol r1 の指摘で、child 死亡後の孫・group は pid / pgid の再利用と区別できないため S5 で回収しないことにした |
 | 不足する証拠: ① Claude / Codex 各経路の直接の親の寿命 ② Windows の creation time の取得方法 ③ runner 強制終了後の tinypool の実際の木 ④ 回収期限 | ② は `Get-CimInstance Win32_Process` の `CreationDate` で取得できることを実測 (実測 5)。④ は §3.6 (B) と §4.3 (C) で分けて定義。① ③ は未確定で §11 に残す |
 
 ## 11. 未確定事項 (Green PR で実測する)
