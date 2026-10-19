@@ -1,7 +1,7 @@
 {
   "schema": "issue959-confirmed-machine-pass/v1",
   "generatedFor": "2026-10-19",
-  "sourceHead": "7e8d67be71afa78bf1ed2c175fea4915314cec47",
+  "sourceHead": "0110b3cabeb3005d8b4b0fb715822bdedfdfb5ca",
   "inputs": {
     "planFiles": 1008,
     "confirmed": 679
@@ -9,7 +9,7 @@
   "retireSets": [
     {
       "id": "R-1002",
-      "tier": "A",
+      "tier": "B",
       "issue": "#1002",
       "label": "subagent 定義 20 本の撤廃",
       "paths": [
@@ -20,7 +20,7 @@
     },
     {
       "id": "R-762",
-      "tier": "A",
+      "tier": "B",
       "issue": "#762",
       "label": "team run / team definition の廃止",
       "paths": [
@@ -36,23 +36,17 @@
     },
     {
       "id": "R-789",
-      "tier": "A",
+      "tier": "B",
       "issue": "#789",
-      "label": "常時の token 取り込みの退役 (退役する契約 = PLAN-L7-57 / PLAN-L7-454)",
-      "paths": [
-        "src/state-db/token-tracker.ts",
-        "tests/token-tracker.test.ts"
-      ],
-      "planIds": [
-        "PLAN-L7-57",
-        "PLAN-L7-454"
-      ]
+      "label": "常時の token 取り込みの退役 (部分退役: 取得層・schema・表示経路は存続するため path では判定しない)",
+      "paths": [],
+      "planIds": []
     },
     {
       "id": "R-1062",
-      "tier": "A",
+      "tier": "B",
       "issue": "#1062 / #1084 群1",
-      "label": "連絡経路 (memory wake / provider-handover / memory-sync lint) の退役",
+      "label": "連絡経路の退役 (部分退役: wake 基盤の inbox・CAS・project 束縛・envelope digest・Stop hook は state-channel-consolidation.md A3 で存続)",
       "paths": [
         "src/runtime/claude-memory-wake.ts",
         "src/runtime/claude-wake-generation-upgrade.ts",
@@ -120,26 +114,21 @@
   ],
   "summary": {
     "byDisposition": {
-      "supersede済み": 1,
-      "保留": 340,
-      "廃止予定": 3,
-      "生きている": 335
+      "保留": 342,
+      "生きている": 337
     },
     "byRule": {
       "H:docs-only": 182,
-      "H:retire-candidate": 1,
-      "H:retire-overlap-majority": 24,
-      "H:retire-overlap-partial": 48,
+      "H:partial-retire-named": 1,
+      "H:retire-candidate": 3,
+      "H:retire-overlap-majority": 23,
+      "H:retire-overlap-partial": 47,
       "H:self-only": 76,
-      "H:supersede-partial": 9,
-      "L1": 335,
-      "R1:R-1062": 1,
-      "R1:R-762": 1,
-      "R1:R-789": 1,
-      "S": 1
+      "H:supersede-partial": 10,
+      "L1": 337
     },
-    "removableNow": 4,
-    "retireCandidateOnHold": 1
+    "removableNow": 0,
+    "retireCandidateOnHold": 3
   },
   "plans": [
     {
@@ -8796,15 +8785,12 @@
       "kind": "refactor",
       "layer": "L7",
       "status": "confirmed",
-      "disposition": "廃止予定",
-      "rule": "R1:R-762",
-      "reason": "生成物がすべて #762 の退役対象か削除済み",
+      "disposition": "保留",
+      "rule": "H:retire-candidate",
+      "reason": "退役候補 (R-762) だが契約が未凍結。凍結後に廃止予定へ昇格する候補",
       "evidence": {
         "retireSets": [
           "R-762"
-        ],
-        "issues": [
-          "#762"
         ]
       },
       "artifacts": [
@@ -10342,15 +10328,12 @@
       "kind": "impl",
       "layer": "L7",
       "status": "confirmed",
-      "disposition": "保留",
-      "rule": "H:retire-overlap-partial",
-      "reason": "生成物 7 件のうち 1 件が退役対象 (R-789) と重なる。実在していても生きている確証が弱いので人が読んで決める",
+      "disposition": "生きている",
+      "rule": "L1",
+      "reason": "生成物 7 件が tree に実在 (契約が設計文書へ移っていないかの三者照合は未実施)",
       "evidence": {
-        "retireSets": [
-          "R-789"
-        ],
-        "overlap": 1,
-        "total": 7
+        "present": 7,
+        "tripartiteCheck": "pending"
       },
       "artifacts": [
         {
@@ -13882,13 +13865,12 @@
       "status": "confirmed",
       "disposition": "保留",
       "rule": "H:retire-overlap-partial",
-      "reason": "生成物 7 件のうち 2 件が退役対象 (R-789, R-762) と重なる。実在していても生きている確証が弱いので人が読んで決める",
+      "reason": "生成物 7 件のうち 1 件が退役対象 (R-762) と重なる。実在していても生きている確証が弱いので人が読んで決める",
       "evidence": {
         "retireSets": [
-          "R-789",
           "R-762"
         ],
-        "overlap": 2,
+        "overlap": 1,
         "total": 7
       },
       "artifacts": [
@@ -18617,13 +18599,12 @@
       "status": "confirmed",
       "disposition": "保留",
       "rule": "H:retire-overlap-partial",
-      "reason": "生成物 9 件のうち 3 件が退役対象 (R-789, R-762) と重なる。実在していても生きている確証が弱いので人が読んで決める",
+      "reason": "生成物 9 件のうち 1 件が退役対象 (R-762) と重なる。実在していても生きている確証が弱いので人が読んで決める",
       "evidence": {
         "retireSets": [
-          "R-789",
           "R-762"
         ],
-        "overlap": 3,
+        "overlap": 1,
         "total": 9
       },
       "artifacts": [
@@ -20169,13 +20150,12 @@
       "status": "confirmed",
       "disposition": "保留",
       "rule": "H:retire-overlap-partial",
-      "reason": "生成物 11 件のうち 5 件が退役対象 (R-762, R-789) と重なる。実在していても生きている確証が弱いので人が読んで決める",
+      "reason": "生成物 11 件のうち 3 件が退役対象 (R-762) と重なる。実在していても生きている確証が弱いので人が読んで決める",
       "evidence": {
         "retireSets": [
-          "R-762",
-          "R-789"
+          "R-762"
         ],
-        "overlap": 5,
+        "overlap": 3,
         "total": 11
       },
       "artifacts": [
@@ -21078,12 +21058,11 @@
       "kind": "troubleshoot",
       "layer": "L7",
       "status": "confirmed",
-      "disposition": "廃止予定",
-      "rule": "R1:R-789",
-      "reason": "#789 本文が退役する契約として本 PLAN を名指しする (常時の token 取り込みの退役 (退役する契約 = PLAN-L7-57 / PLAN-L7-454))",
+      "disposition": "保留",
+      "rule": "H:partial-retire-named",
+      "reason": "#789 が退役する契約として名指しするが、PLAN-L7-454 §表示経路 と PLAN-L6-789 §3 が loadRepoScopedRuntimeSessionUsage (telemetry scan の表示経路) の継承を明記する部分退役。存続する責務の切り分けを人が読んで決める",
       "evidence": {
-        "issue": "#789",
-        "byPlanId": true
+        "namedBy": "#789 / PLAN-L6-789"
       },
       "artifacts": [
         {
@@ -21919,15 +21898,12 @@
       "kind": "add-impl",
       "layer": "L7",
       "status": "confirmed",
-      "disposition": "廃止予定",
-      "rule": "R1:R-1062",
-      "reason": "生成物がすべて #1062 / #1084 群1 の退役対象か削除済み",
+      "disposition": "保留",
+      "rule": "H:retire-candidate",
+      "reason": "退役候補 (R-1062) だが契約が未凍結。凍結後に廃止予定へ昇格する候補",
       "evidence": {
         "retireSets": [
           "R-1062"
-        ],
-        "issues": [
-          "#1062 / #1084 群1"
         ]
       },
       "artifacts": [
@@ -23815,9 +23791,9 @@
       "kind": "impl",
       "layer": "L7",
       "status": "confirmed",
-      "disposition": "supersede済み",
-      "rule": "S",
-      "reason": "後継 PLAN-L6-789-token-ingest-retirement が supersedes で指し、本文の訂正注記で双方向に確認できる",
+      "disposition": "保留",
+      "rule": "H:supersede-partial",
+      "reason": "後継 PLAN-L6-789-token-ingest-retirement との双方向 link はあるが、後継が旧 PLAN の生成物を引き取っていない、または訂正注記が部分 supersede を示す (errata 型の疑い)。残る契約の有無を人が読んで決める",
       "evidence": {
         "successors": [
           {
@@ -23826,7 +23802,7 @@
             "partialSuspected": false
           }
         ],
-        "ownedBySuccessor": true
+        "ownedBySuccessor": false
       },
       "artifacts": [
         {
@@ -23851,15 +23827,12 @@
       "kind": "impl",
       "layer": "L7",
       "status": "confirmed",
-      "disposition": "保留",
-      "rule": "H:retire-overlap-majority",
-      "reason": "生成物 4 件のうち 2 件が退役対象 (R-789) と重なる。残りの存続可否は人が読んで決める",
+      "disposition": "生きている",
+      "rule": "L1",
+      "reason": "生成物 4 件が tree に実在 (契約が設計文書へ移っていないかの三者照合は未実施)",
       "evidence": {
-        "retireSets": [
-          "R-789"
-        ],
-        "overlap": 2,
-        "total": 4
+        "present": 4,
+        "tripartiteCheck": "pending"
       },
       "artifacts": [
         {

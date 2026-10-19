@@ -14,13 +14,14 @@ const OUTPUT_PATH = resolve(SCRIPT_DIR, "issue959-confirmed-machine-pass-2026101
 const TARGET_STATUS = "confirmed";
 
 // ---- 退役対象の定義 -------------------------------------------------------
-// tierA: issue 本文と契約で退役が裏付く (廃止予定へ判定してよい)。
-// tierB: 退役候補だが契約が未凍結 (保留に残し、理由で区別する)。
+// tierA: 退役契約が設計文書へ凍結済みで、かつ「何を残すか」が PLAN 全体の撤去と矛盾しないもの (廃止予定へ判定してよい)。
+// tierB: 退役候補だが、契約が未凍結、または部分退役 (存続する責務がある) のため保留に残す。
+// 現時点で tierA に当たる集合は無い (PR #1132 r1 の FLAG: 部分退役を PLAN 全体の退役へ広げない)。
 // pattern は repo 相対 path。末尾 "/" は配下すべて。
 const RETIRE_SETS = [
   {
     id: "R-1002",
-    tier: "A",
+    tier: "B",
     issue: "#1002",
     label: "subagent 定義 20 本の撤廃",
     paths: [".claude/agents/", "docs/templates/adapter/.claude/agents/"],
@@ -28,7 +29,7 @@ const RETIRE_SETS = [
   },
   {
     id: "R-762",
-    tier: "A",
+    tier: "B",
     issue: "#762",
     label: "team run / team definition の廃止",
     paths: [
@@ -44,17 +45,17 @@ const RETIRE_SETS = [
   },
   {
     id: "R-789",
-    tier: "A",
+    tier: "B",
     issue: "#789",
-    label: "常時の token 取り込みの退役 (退役する契約 = PLAN-L7-57 / PLAN-L7-454)",
-    paths: ["src/state-db/token-tracker.ts", "tests/token-tracker.test.ts"],
-    planIds: ["PLAN-L7-57", "PLAN-L7-454"],
+    label: "常時の token 取り込みの退役 (部分退役: 取得層・schema・表示経路は存続するため path では判定しない)",
+    paths: [],
+    planIds: [],
   },
   {
     id: "R-1062",
-    tier: "A",
+    tier: "B",
     issue: "#1062 / #1084 群1",
-    label: "連絡経路 (memory wake / provider-handover / memory-sync lint) の退役",
+    label: "連絡経路の退役 (部分退役: wake 基盤の inbox・CAS・project 束縛・envelope digest・Stop hook は state-channel-consolidation.md A3 で存続)",
     paths: [
       "src/runtime/claude-memory-wake.ts",
       "src/runtime/claude-wake-generation-upgrade.ts",
@@ -132,6 +133,11 @@ const EXECUTABLE_TYPES = new Set([
   "github_config",
   "template",
   "skill_doc",
+]);
+
+// 退役 issue が名指しするが、契約が「存続させる責務」を明記している PLAN。廃止予定にも生きているにも倒さず保留にする。
+const PARTIAL_RETIRE_NAMED = new Map([
+  ["PLAN-L7-454", "#789 が退役する契約として名指しするが、PLAN-L7-454 §表示経路 と PLAN-L6-789 §3 が loadRepoScopedRuntimeSessionUsage (telemetry scan の表示経路) の継承を明記する部分退役。存続する責務の切り分けを人が読んで決める"],
 ]);
 
 // 多数の PLAN が共通で触るハブ。退役判定では「存在していても判定に影響しない」扱いにする。
@@ -370,12 +376,11 @@ function main() {
     const core = entries.filter((e) => !e.hub);
     const retireA = core.map((e) => retireMatch(e.path, "A"));
     const retireB = core.map((e) => retireMatch(e.path, "B"));
-    const idSet = RETIRE_SETS.find((s) => s.planIds.includes(coreId(p.planId)));
 
     // 全面 supersede の機械証拠: 旧 PLAN の生成物 (自身を除く) をすべて後継の generates が引き取っている
     const ownedBySuccessor =
       inc?.length && entries.length > 0 && entries.every((e) => inc.some((i) => i.successorGenerates.has(e.path)));
-    if (inc?.length && !(idSet && idSet.tier === "A") && (inc.every((i) => i.partialSuspected) || !ownedBySuccessor)) {
+    if (inc?.length && (inc.every((i) => i.partialSuspected) || !ownedBySuccessor)) {
       row.rule = "H:supersede-partial";
       row.reason = `後継 ${inc.map((i) => i.successor).join(", ")} との双方向 link はあるが、後継が旧 PLAN の生成物を引き取っていない、または訂正注記が部分 supersede を示す (errata 型の疑い)。残る契約の有無を人が読んで決める`;
       row.evidence = { successors: inc.map(({ successorGenerates, ...r }) => r), ownedBySuccessor: Boolean(ownedBySuccessor) };
@@ -384,11 +389,10 @@ function main() {
       row.rule = "S";
       row.reason = `後継 ${inc.map((i) => i.successor).join(", ")} が supersedes で指し、本文の訂正注記で双方向に確認できる`;
       row.evidence = { successors: inc.map(({ successorGenerates, ...r }) => r), ownedBySuccessor: true };
-    } else if (idSet && idSet.tier === "A") {
-      row.disposition = "廃止予定";
-      row.rule = `R1:${idSet.id}`;
-      row.reason = `${idSet.issue} 本文が退役する契約として本 PLAN を名指しする (${idSet.label})`;
-      row.evidence = { issue: idSet.issue, byPlanId: true };
+    } else if (PARTIAL_RETIRE_NAMED.has(coreId(p.planId))) {
+      row.rule = "H:partial-retire-named";
+      row.reason = PARTIAL_RETIRE_NAMED.get(coreId(p.planId));
+      row.evidence = { namedBy: "#789 / PLAN-L6-789" };
     } else if (
       core.length > 0 &&
       core.every((e, i) => retireA[i] || e.history === "deleted") &&
