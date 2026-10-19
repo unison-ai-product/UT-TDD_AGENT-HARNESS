@@ -62491,8 +62491,21 @@
       },
       "confirmedSupersededBy": [],
       "preliminaryState": "hold",
-      "wholeSourceDisposition": "not-finalized",
-      "holdReason": "No two-sided supersession link is established; live-contract and owner review remains pending."
+      "wholeSourceDisposition": "merged",
+      "holdReason": "No two-sided supersession link is established; live-contract and owner review remains pending.",
+      "destinations": [
+        {
+          "kind": "design",
+          "path": "docs/design/harness/L6-function-design/function-spec.md",
+          "section": "2026-06-23 feedback surface taxonomy 追補"
+        }
+      ],
+      "reconciliation": {
+        "kind": "three-way",
+        "verdict": "consistent",
+        "evidencePath": "docs/governance/candidates/v4-roadmap/migration/issue1149-t3-lot-reconciliation-20261019.md",
+        "evidenceId": "PLAN-L7-400-feedback-surface-group-before-slice"
+      }
     },
     {
       "planId": "PLAN-L7-401-attempt-escalation-surface-cap",
@@ -83435,8 +83448,21 @@
       },
       "confirmedSupersededBy": [],
       "preliminaryState": "hold",
-      "wholeSourceDisposition": "not-finalized",
-      "holdReason": "No two-sided supersession link is established; live-contract and owner review remains pending."
+      "wholeSourceDisposition": "transferred",
+      "holdReason": "No two-sided supersession link is established; live-contract and owner review remains pending.",
+      "destinations": [
+        {
+          "kind": "design",
+          "path": "docs/design/harness/L6-function-design/function-spec.md",
+          "section": "D.4 `src/lint/drive-db-registration.ts`"
+        }
+      ],
+      "reconciliation": {
+        "kind": "three-way",
+        "verdict": "consistent",
+        "evidencePath": "docs/governance/candidates/v4-roadmap/migration/issue1149-t3-lot-reconciliation-20261019.md",
+        "evidenceId": "PLAN-L7-63-plan-registry-fingerprint"
+      }
     },
     {
       "planId": "PLAN-L7-64-team-runner-launch",
@@ -83545,8 +83571,26 @@
       },
       "confirmedSupersededBy": [],
       "preliminaryState": "hold",
-      "wholeSourceDisposition": "not-finalized",
-      "holdReason": "No two-sided supersession link is established; live-contract and owner review remains pending."
+      "wholeSourceDisposition": "transferred",
+      "holdReason": "No two-sided supersession link is established; live-contract and owner review remains pending.",
+      "destinations": [
+        {
+          "kind": "design",
+          "path": "docs/design/harness/L6-function-design/agent-slots.md",
+          "section": "§4 carry / 次工程"
+        },
+        {
+          "kind": "design",
+          "path": "docs/design/harness/L4-basic-design/architecture.md",
+          "section": "§3.1 Level 1 — サブシステム"
+        }
+      ],
+      "reconciliation": {
+        "kind": "three-way",
+        "verdict": "consistent",
+        "evidencePath": "docs/governance/candidates/v4-roadmap/migration/issue1149-t3-lot-reconciliation-20261019.md",
+        "evidenceId": "PLAN-L7-64-team-runner-launch"
+      }
     },
     {
       "planId": "PLAN-L7-65-deterministic-model-policy",
@@ -83786,8 +83830,21 @@
       },
       "confirmedSupersededBy": [],
       "preliminaryState": "hold",
-      "wholeSourceDisposition": "not-finalized",
-      "holdReason": "No two-sided supersession link is established; live-contract and owner review remains pending."
+      "wholeSourceDisposition": "transferred",
+      "holdReason": "No two-sided supersession link is established; live-contract and owner review remains pending.",
+      "destinations": [
+        {
+          "kind": "design",
+          "path": "docs/design/harness/L6-function-design/setup-solo-team.md",
+          "section": "§2.6 ストレージ / 配置 / hook"
+        }
+      ],
+      "reconciliation": {
+        "kind": "three-way",
+        "verdict": "plan-stale",
+        "evidencePath": "docs/governance/candidates/v4-roadmap/migration/issue1149-t3-lot-reconciliation-20261019.md",
+        "evidenceId": "PLAN-L7-66-existing-repo-onboarding-readme"
+      }
     },
     {
       "planId": "PLAN-L7-668-codex-hook-command-schema",
@@ -84035,8 +84092,21 @@
       },
       "confirmedSupersededBy": [],
       "preliminaryState": "hold",
-      "wholeSourceDisposition": "not-finalized",
-      "holdReason": "No two-sided supersession link is established; live-contract and owner review remains pending."
+      "wholeSourceDisposition": "transferred",
+      "holdReason": "No two-sided supersession link is established; live-contract and owner review remains pending.",
+      "destinations": [
+        {
+          "kind": "design",
+          "path": "docs/design/harness/L6-function-design/agent-slots.md",
+          "section": "§2.2 team.ts (zod single source 設計)"
+        }
+      ],
+      "reconciliation": {
+        "kind": "three-way",
+        "verdict": "consistent",
+        "evidencePath": "docs/governance/candidates/v4-roadmap/migration/issue1149-t3-lot-reconciliation-20261019.md",
+        "evidenceId": "PLAN-L7-67-team-launch-policy"
+      }
     },
     {
       "planId": "PLAN-L7-676-release-consumer-dev-start",
@@ -108447,8 +108517,16 @@
       },
       "confirmedSupersededBy": [],
       "preliminaryState": "hold",
-      "wholeSourceDisposition": "not-finalized",
-      "holdReason": "No two-sided supersession link is established; live-contract and owner review remains pending."
+      "wholeSourceDisposition": "retired",
+      "holdReason": "No two-sided supersession link is established; live-contract and owner review remains pending.",
+      "destinations": [],
+      "retirementReason": "Reverse 登録 (簿記) だけの PLAN で、契約本体を持たない。結び付け先の docs/design/harness/L6-function-design/descent-obligation.md §1、oracle U-DESC-*、src/lint/descent-obligation.ts に実体が直接実在し、PLAN を残す理由は backfill-pairing gate への登録だけだった。PLAN 退役方針 (#958 出口条件 (d)、#1078 の gate) により不要。照合は issue1149-t3-lot-reconciliation-20261019.md の該当節。",
+      "reconciliation": {
+        "kind": "three-way",
+        "verdict": "consistent",
+        "evidencePath": "docs/governance/candidates/v4-roadmap/migration/issue1149-t3-lot-reconciliation-20261019.md",
+        "evidenceId": "PLAN-REVERSE-45-descent-obligation"
+      }
     },
     {
       "planId": "PLAN-REVERSE-450-test-traceability-detector-backfill",
@@ -108929,8 +109007,16 @@
       },
       "confirmedSupersededBy": [],
       "preliminaryState": "hold",
-      "wholeSourceDisposition": "not-finalized",
-      "holdReason": "No two-sided supersession link is established; live-contract and owner review remains pending."
+      "wholeSourceDisposition": "retired",
+      "holdReason": "No two-sided supersession link is established; live-contract and owner review remains pending.",
+      "destinations": [],
+      "retirementReason": "Reverse 登録 (簿記) だけの PLAN で、契約本体を持たない。back-fill の実体は requirements_v1.2 §G.1、document-system-map §1b、src/schema/index.ts の VALID_SUB_DOCS (src/plan/lint.ts は import のみ) に実在する。PLAN 退役方針 (#958 出口条件 (d)、#1078 の gate) により不要。照合は issue1149-t3-lot-reconciliation-20261019.md の該当節。",
+      "reconciliation": {
+        "kind": "three-way",
+        "verdict": "consistent",
+        "evidencePath": "docs/governance/candidates/v4-roadmap/migration/issue1149-t3-lot-reconciliation-20261019.md",
+        "evidenceId": "PLAN-REVERSE-46-deliverable-catalog-extension"
+      }
     },
     {
       "planId": "PLAN-REVERSE-460-db-refresh-guardrail-backfill",
