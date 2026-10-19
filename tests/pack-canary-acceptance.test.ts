@@ -736,7 +736,7 @@ function inspectPackCanaryChildProcessCalls(source: string): { ok: boolean; mess
 }
 
 describe("manual canary acceptance publish-record boundary", () => {
-  it.fails("CANDIDATE-ST-PACKCANARY-020: every real child_process invocation sets windowsHide true", () => {
+  it("CANDIDATE-ST-PACKCANARY-020: every real child_process invocation sets windowsHide true", () => {
     const source = readFileSync(
       join(process.cwd(), "scripts", "pack-canary-acceptance.mjs"),
       "utf8",
