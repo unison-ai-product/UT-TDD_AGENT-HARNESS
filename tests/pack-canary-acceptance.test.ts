@@ -429,8 +429,13 @@ function inspectPackCanaryChildProcessCalls(source: string): { ok: boolean; mess
   const file = program.getSourceFile(fileName);
   if (!file) throw new Error("pack-canary-contract-source-not-loaded");
   const checker = program.getTypeChecker();
-  const symbolAt = (node: ts.Node): ts.Symbol | undefined =>
-    ts.isIdentifier(node) ? checker.getSymbolAtLocation(node) : undefined;
+  const symbolAt = (node: ts.Node): ts.Symbol | undefined => {
+    if (!ts.isIdentifier(node)) return undefined;
+    const parent = node.parent;
+    if (ts.isShorthandPropertyAssignment(parent) && parent.name === node)
+      return checker.getShorthandAssignmentValueSymbol(parent) ?? checker.getSymbolAtLocation(node);
+    return checker.getSymbolAtLocation(node);
+  };
   const hasSymbol = (symbols: ReadonlySet<ts.Symbol>, node: ts.Node): boolean => {
     const symbol = symbolAt(node);
     return symbol !== undefined && symbols.has(symbol);
@@ -537,6 +542,48 @@ function inspectPackCanaryChildProcessCalls(source: string): { ok: boolean; mess
     const message = `${line(node)}:${reason}`;
     if (!messages.includes(message)) messages.push(message);
   };
+  const isNamespaceDefinition = (node: ts.Node): boolean => {
+    let current = node;
+    let parent = current.parent;
+    while (
+      parent &&
+      (ts.isParenthesizedExpression(parent) ||
+        ts.isAsExpression(parent) ||
+        ts.isTypeAssertionExpression(parent) ||
+        ts.isAwaitExpression(parent) ||
+        ts.isNonNullExpression(parent)) &&
+      parent.expression === current
+    ) {
+      current = parent;
+      parent = current.parent;
+    }
+    return (
+      parent !== undefined && ts.isVariableDeclaration(parent) && parent.initializer === current
+    );
+  };
+  const isNamespaceReceiver = (node: ts.Node): boolean => {
+    let current = node;
+    let parent = current.parent;
+    while (
+      parent &&
+      (ts.isParenthesizedExpression(parent) ||
+        ts.isAsExpression(parent) ||
+        ts.isTypeAssertionExpression(parent) ||
+        ts.isAwaitExpression(parent) ||
+        ts.isNonNullExpression(parent)) &&
+      parent.expression === current
+    ) {
+      current = parent;
+      parent = current.parent;
+    }
+    return (
+      parent !== undefined &&
+      (ts.isPropertyAccessExpression(parent) || ts.isElementAccessExpression(parent)) &&
+      parent.expression === current
+    );
+  };
+  const isNamespaceBindingName = (node: ts.Node): boolean =>
+    node.parent !== undefined && ts.isVariableDeclaration(node.parent) && node.parent.name === node;
 
   for (const statement of file.statements) {
     if (!ts.isImportDeclaration(statement) || !ts.isStringLiteralLike(statement.moduleSpecifier))
@@ -729,6 +776,25 @@ function inspectPackCanaryChildProcessCalls(source: string): { ok: boolean; mess
       !isPropertyName
     )
       note(node, "child-process-binding-escaped-or-forwarded");
+    if (ts.isIdentifier(node) && symbol && namespaces.has(symbol) && !insideImport) {
+      if (!isNamespaceReceiver(node) && !isNamespaceBindingName(node))
+        note(node, "child-process-namespace-escaped-or-forwarded");
+    }
+    if (ts.isPropertyAccessExpression(node) || ts.isElementAccessExpression(node)) {
+      const target = member(node);
+      if (
+        target.namespace &&
+        !(ts.isCallExpression(node.parent) && node.parent.expression === node)
+      )
+        note(node, "child-process-namespace-member-escaped-or-forwarded");
+    }
+    if (
+      ts.isExpression(node) &&
+      moduleValue(node) === "child" &&
+      !isNamespaceDefinition(node) &&
+      !isNamespaceReceiver(node)
+    )
+      note(node, "child-process-namespace-escaped-or-forwarded");
     ts.forEachChild(node, visit);
   };
   visit(file);
@@ -760,6 +826,16 @@ describe("manual canary acceptance publish-record boundary", () => {
       [
         "namespace import and optional args",
         'import * as cp from "node:child_process"; cp.spawnSync("git", { windowsHide: true });',
+        true,
+      ],
+      [
+        "namespace import with computed literal direct call",
+        'import * as cp from "node:child_process"; cp["spawnSync"]("git", [], { windowsHide: true });',
+        true,
+      ],
+      [
+        "unused namespace import remains a normal definition",
+        'import * as cp from "node:child_process";',
         true,
       ],
       [
@@ -840,6 +916,76 @@ describe("manual canary acceptance publish-record boundary", () => {
       [
         "computed namespace member fails closed",
         'import * as cp from "node:child_process"; cp[api]("git", [], { windowsHide: true });',
+        false,
+      ],
+      [
+        "namespace call member forwarded through call",
+        'import * as cp from "node:child_process"; cp.spawnSync.call(null, "git", [], { windowsHide: true });',
+        false,
+      ],
+      [
+        "namespace call member forwarded through apply",
+        'import * as cp from "node:child_process"; cp.spawnSync.apply(null, ["git", [], { windowsHide: true }]);',
+        false,
+      ],
+      [
+        "namespace call member forwarded through bind",
+        'import * as cp from "node:child_process"; const run = cp.spawnSync.bind(cp); run("git", [], { windowsHide: true });',
+        false,
+      ],
+      [
+        "namespace member passed to helper",
+        'import * as cp from "node:child_process"; helper(cp.spawnSync);',
+        false,
+      ],
+      [
+        "computed literal namespace member passed to helper",
+        'import * as cp from "node:child_process"; helper(cp["spawnSync"]);',
+        false,
+      ],
+      [
+        "namespace object passed to helper",
+        'import * as cp from "node:child_process"; helper(cp);',
+        false,
+      ],
+      [
+        "namespace object shorthand passed to helper",
+        'import * as cp from "node:child_process"; helper({ cp });',
+        false,
+      ],
+      [
+        "namespace object assigned to alias",
+        'import * as cp from "node:child_process"; const child = cp; child.spawnSync("git", [], { windowsHide: true });',
+        false,
+      ],
+      [
+        "namespace member assigned to alias",
+        'import * as cp from "node:child_process"; const run = cp.spawnSync; run("git", [], { windowsHide: true });',
+        false,
+      ],
+      [
+        "namespace member destructured to alias",
+        'import * as cp from "node:child_process"; const { spawnSync } = cp; spawnSync("git", [], { windowsHide: true });',
+        false,
+      ],
+      [
+        "dynamic import namespace passed to helper",
+        'helper(await import("node:child_process"));',
+        false,
+      ],
+      [
+        "dynamic import member passed to helper",
+        'helper((await import("node:child_process")).spawnSync);',
+        false,
+      ],
+      [
+        "createRequire namespace passed to helper",
+        'import { createRequire } from "node:module"; helper(createRequire(import.meta.url)("node:child_process"));',
+        false,
+      ],
+      [
+        "createRequire member passed to helper",
+        'import { createRequire } from "node:module"; helper(createRequire(import.meta.url)("node:child_process").spawnSync);',
         false,
       ],
       [
