@@ -18,6 +18,7 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import ts from "typescript";
 import { afterEach, describe, expect, it } from "vitest";
 import { parse as parseYaml } from "yaml";
 import { resolveDelegationRouting } from "../src/team/delegation-routing.ts";
@@ -395,7 +396,534 @@ function agentReleaseDir(assetBytes: Record<string, string>, tag = AGENT_E2E_TAG
   return root;
 }
 
+const PACK_CANARY_CHILD_PROCESS_APIS = new Set([
+  "spawn",
+  "spawnSync",
+  "execFile",
+  "execFileSync",
+  "exec",
+  "execSync",
+  "fork",
+]);
+
+function inspectPackCanaryChildProcessCalls(source: string): { ok: boolean; messages: string[] } {
+  const fileName = resolve("pack-canary-acceptance-contract.mjs");
+  const normalize = (path: string) => resolve(path).toLowerCase();
+  const options: ts.CompilerOptions = {
+    allowJs: true,
+    noLib: true,
+    noResolve: true,
+    types: [],
+    target: ts.ScriptTarget.ES2022,
+    module: ts.ModuleKind.ESNext,
+  };
+  const host = ts.createCompilerHost(options);
+  const isVirtualSource = (path: string) => normalize(path) === normalize(fileName);
+  host.fileExists = isVirtualSource;
+  host.readFile = (path) => (isVirtualSource(path) ? source : undefined);
+  host.getSourceFile = (path, languageVersion, _onError, _shouldCreateNewSourceFile) =>
+    isVirtualSource(path)
+      ? ts.createSourceFile(path, source, languageVersion, true, ts.ScriptKind.JS)
+      : undefined;
+  const program = ts.createProgram([fileName], options, host);
+  const file = program.getSourceFile(fileName);
+  if (!file) throw new Error("pack-canary-contract-source-not-loaded");
+  const checker = program.getTypeChecker();
+  const symbolAt = (node: ts.Node): ts.Symbol | undefined =>
+    ts.isIdentifier(node) ? checker.getSymbolAtLocation(node) : undefined;
+  const hasSymbol = (symbols: ReadonlySet<ts.Symbol>, node: ts.Node): boolean => {
+    const symbol = symbolAt(node);
+    return symbol !== undefined && symbols.has(symbol);
+  };
+  const functions = new Map<ts.Symbol, string>();
+  const aliases = new Set<ts.Symbol>();
+  const namespaces = new Set<ts.Symbol>();
+  const moduleNamespaces = new Set<ts.Symbol>();
+  const requireAliases = new Set<ts.Symbol>();
+  const createRequireAliases = new Set<ts.Symbol>();
+  const messages: string[] = [];
+  const childModule = (value: string | undefined) =>
+    value === "node:child_process" || value === "child_process";
+  const unwrapped = (value: ts.Expression): ts.Expression => {
+    while (
+      ts.isParenthesizedExpression(value) ||
+      ts.isAsExpression(value) ||
+      ts.isTypeAssertionExpression(value) ||
+      ts.isAwaitExpression(value) ||
+      ts.isNonNullExpression(value)
+    )
+      value = value.expression;
+    return value;
+  };
+  const isRequire = (value: ts.Expression): boolean => {
+    if (!ts.isIdentifier(value)) return false;
+    const symbol = symbolAt(value);
+    return symbol ? requireAliases.has(symbol) : value.text === "require";
+  };
+  const moduleValue = (expression: ts.Expression): "child" | "unresolved" | null => {
+    const value = unwrapped(expression);
+    if (!ts.isCallExpression(value)) return null;
+    if (value.expression.kind === ts.SyntaxKind.ImportKeyword) {
+      const arg = value.arguments[0];
+      return !arg || !ts.isStringLiteralLike(arg)
+        ? "unresolved"
+        : childModule(arg.text)
+          ? "child"
+          : null;
+    }
+    if (isRequire(value.expression)) {
+      const arg = value.arguments[0];
+      return !arg || !ts.isStringLiteralLike(arg)
+        ? "unresolved"
+        : childModule(arg.text)
+          ? "child"
+          : null;
+    }
+    const isCreateRequireFactory = (factory: ts.Expression): boolean =>
+      (ts.isIdentifier(factory) && hasSymbol(createRequireAliases, factory)) ||
+      (ts.isPropertyAccessExpression(factory) &&
+        factory.name.text === "createRequire" &&
+        hasSymbol(moduleNamespaces, factory.expression));
+    if (
+      ts.isCallExpression(value.expression) &&
+      isCreateRequireFactory(value.expression.expression)
+    ) {
+      const arg = value.arguments[0];
+      return !arg || !ts.isStringLiteralLike(arg)
+        ? "unresolved"
+        : childModule(arg.text)
+          ? "child"
+          : null;
+    }
+    return null;
+  };
+  const member = (expression: ts.Expression): { namespace?: boolean; api?: string } => {
+    if (ts.isIdentifier(expression)) {
+      const symbol = symbolAt(expression);
+      return { api: symbol ? functions.get(symbol) : undefined };
+    }
+    if (ts.isPropertyAccessExpression(expression)) {
+      const base = expression.expression;
+      if (hasSymbol(namespaces, base) || moduleValue(base) === "child")
+        return { namespace: true, api: expression.name.text };
+    }
+    if (
+      ts.isElementAccessExpression(expression) &&
+      (hasSymbol(namespaces, expression.expression) ||
+        moduleValue(expression.expression) === "child")
+    ) {
+      const key = expression.argumentExpression;
+      return {
+        namespace: true,
+        api: key && ts.isStringLiteralLike(key) ? key.text : undefined,
+      };
+    }
+    return {};
+  };
+  const capturedApi = (expression: ts.Expression): string | undefined => {
+    const value = unwrapped(expression);
+    if (ts.isArrowFunction(value) || ts.isFunctionExpression(value)) return undefined;
+    const direct = member(value).api;
+    if (direct) return direct;
+    if (ts.isBinaryExpression(value)) return capturedApi(value.left) ?? capturedApi(value.right);
+    if (ts.isConditionalExpression(value))
+      return (
+        capturedApi(value.condition) ?? capturedApi(value.whenTrue) ?? capturedApi(value.whenFalse)
+      );
+    return undefined;
+  };
+  const line = (node: ts.Node) => file.getLineAndCharacterOfPosition(node.getStart(file)).line + 1;
+  const note = (node: ts.Node, reason: string) => {
+    const message = `${line(node)}:${reason}`;
+    if (!messages.includes(message)) messages.push(message);
+  };
+
+  for (const statement of file.statements) {
+    if (!ts.isImportDeclaration(statement) || !ts.isStringLiteralLike(statement.moduleSpecifier))
+      continue;
+    const specifier = statement.moduleSpecifier.text;
+    const bindings = statement.importClause?.namedBindings;
+    if (childModule(specifier) && bindings) {
+      if (ts.isNamespaceImport(bindings)) {
+        const symbol = symbolAt(bindings.name);
+        if (symbol) namespaces.add(symbol);
+      } else
+        for (const element of bindings.elements) {
+          const api = element.propertyName?.text ?? element.name.text;
+          const symbol = symbolAt(element.name);
+          if (symbol && PACK_CANARY_CHILD_PROCESS_APIS.has(api)) functions.set(symbol, api);
+        }
+    }
+    if (childModule(specifier) && statement.importClause?.name) {
+      const symbol = symbolAt(statement.importClause.name);
+      if (symbol) namespaces.add(symbol);
+    }
+    if (specifier === "node:module" || specifier === "module") {
+      if (bindings && ts.isNamespaceImport(bindings)) {
+        const symbol = symbolAt(bindings.name);
+        if (symbol) moduleNamespaces.add(symbol);
+      }
+      if (bindings && ts.isNamedImports(bindings))
+        for (const element of bindings.elements) {
+          const symbol = symbolAt(element.name);
+          if (symbol && (element.propertyName?.text ?? element.name.text) === "createRequire")
+            createRequireAliases.add(symbol);
+        }
+    }
+  }
+
+  const resolveBindings = (node: ts.Node): void => {
+    if (ts.isVariableDeclaration(node) && node.initializer) {
+      const init = unwrapped(node.initializer);
+      const resolvedModule = moduleValue(node.initializer);
+      if (resolvedModule === "unresolved")
+        note(node.initializer, "unresolved-child-process-module");
+      if (ts.isIdentifier(node.name)) {
+        const name = symbolAt(node.name);
+        if (!name) return;
+        const initSymbol = symbolAt(init);
+        if (resolvedModule === "child") namespaces.add(name);
+        if (
+          ts.isCallExpression(init) &&
+          ts.isIdentifier(init.expression) &&
+          hasSymbol(createRequireAliases, init.expression)
+        )
+          requireAliases.add(name);
+        if (ts.isIdentifier(init) && hasSymbol(namespaces, init)) namespaces.add(name);
+        if (ts.isIdentifier(init) && isRequire(init)) requireAliases.add(name);
+        if (
+          ts.isPropertyAccessExpression(init) &&
+          hasSymbol(moduleNamespaces, init.expression) &&
+          init.name.text === "createRequire"
+        ) {
+          createRequireAliases.add(name);
+        }
+        const target = member(init);
+        if (target.api && PACK_CANARY_CHILD_PROCESS_APIS.has(target.api)) {
+          functions.set(name, target.api);
+          aliases.add(name);
+        }
+        const captured = capturedApi(init);
+        if (captured && PACK_CANARY_CHILD_PROCESS_APIS.has(captured)) {
+          functions.set(name, captured);
+          aliases.add(name);
+        }
+        const inheritedApi = initSymbol ? functions.get(initSymbol) : undefined;
+        if (ts.isIdentifier(init) && inheritedApi) {
+          functions.set(name, inheritedApi);
+          aliases.add(name);
+        }
+      } else if (ts.isObjectBindingPattern(node.name)) {
+        const fromNamespace =
+          resolvedModule === "child" || (ts.isIdentifier(init) && hasSymbol(namespaces, init));
+        for (const element of node.name.elements) {
+          const api = element.propertyName?.getText(file) ?? element.name.getText(file);
+          const symbol = symbolAt(element.name);
+          if (fromNamespace && PACK_CANARY_CHILD_PROCESS_APIS.has(api) && symbol) {
+            functions.set(symbol, api);
+            if (resolvedModule !== "child") aliases.add(symbol);
+          }
+        }
+      }
+    }
+    if (ts.isParameter(node) && node.initializer && ts.isIdentifier(node.name)) {
+      const target = member(unwrapped(node.initializer));
+      const symbol = symbolAt(node.name);
+      if (target.api && symbol) {
+        functions.set(symbol, target.api);
+        aliases.add(symbol);
+      }
+    }
+    ts.forEachChild(node, resolveBindings);
+  };
+  for (let pass = 0; pass < 4; pass += 1) resolveBindings(file);
+
+  const applyOptionProperties = (
+    object: ts.ObjectLiteralExpression,
+    initial: boolean | undefined,
+  ): boolean | undefined => {
+    let value = initial;
+    for (const property of object.properties) {
+      if (ts.isSpreadAssignment(property)) {
+        const spread = unwrapped(property.expression);
+        value = ts.isObjectLiteralExpression(spread)
+          ? applyOptionProperties(spread, value)
+          : undefined;
+        continue;
+      }
+      const name = property.name;
+      const staticName =
+        ts.isIdentifier(name) || ts.isStringLiteralLike(name) || ts.isNumericLiteral(name)
+          ? name.text
+          : ts.isComputedPropertyName(name) && ts.isStringLiteralLike(name.expression)
+            ? name.expression.text
+            : undefined;
+      if (staticName === undefined) {
+        value = undefined;
+        continue;
+      }
+      if (staticName !== "windowsHide") continue;
+      value =
+        ts.isPropertyAssignment(property) && property.initializer.kind === ts.SyntaxKind.TrueKeyword
+          ? true
+          : ts.isPropertyAssignment(property) &&
+              property.initializer.kind === ts.SyntaxKind.FalseKeyword
+            ? false
+            : undefined;
+    }
+    return value;
+  };
+  const finalWindowsHide = (options: ts.Expression | undefined): boolean => {
+    if (!options) return false;
+    const object = unwrapped(options);
+    if (!ts.isObjectLiteralExpression(object)) return false;
+    const value = applyOptionProperties(object, undefined);
+    return value === true;
+  };
+  const optionsArgument = (api: string, call: ts.CallExpression): ts.Expression | undefined => {
+    if (api === "exec" || api === "execSync") return call.arguments[1];
+    const second = call.arguments[1];
+    if (!second) return undefined;
+    if (ts.isObjectLiteralExpression(unwrapped(second))) return second;
+    return call.arguments.length >= 3 ? call.arguments[2] : second;
+  };
+  const visit = (node: ts.Node): void => {
+    if (ts.isCallExpression(node)) {
+      if (
+        node.expression.kind === ts.SyntaxKind.ImportKeyword &&
+        moduleValue(node) === "unresolved"
+      )
+        note(node, "unresolved-child-process-module");
+      const target = member(node.expression);
+      if (target.namespace || target.api) {
+        if (!target.api || !PACK_CANARY_CHILD_PROCESS_APIS.has(target.api))
+          note(node, "unresolved-child-process-call");
+        else if (ts.isIdentifier(node.expression) && hasSymbol(aliases, node.expression))
+          note(node, "child-process-binding-escaped-to-alias");
+        else if (!finalWindowsHide(optionsArgument(target.api, node)))
+          note(node, "child-process-windowsHide-not-literal-true");
+      }
+    }
+    let insideImport = false;
+    for (let current: ts.Node | undefined = node; current; current = current.parent)
+      if (ts.isImportDeclaration(current)) {
+        insideImport = true;
+        break;
+      }
+    const parent = node.parent;
+    const isPropertyName =
+      parent !== undefined &&
+      ((ts.isPropertyAccessExpression(parent) && parent.name === node) ||
+        ((ts.isPropertyAssignment(parent) ||
+          ts.isMethodDeclaration(parent) ||
+          ts.isGetAccessorDeclaration(parent) ||
+          ts.isSetAccessorDeclaration(parent)) &&
+          parent.name === node));
+    const symbol = symbolAt(node);
+    if (
+      ts.isIdentifier(node) &&
+      symbol &&
+      functions.has(symbol) &&
+      !(ts.isCallExpression(node.parent) && node.parent.expression === node) &&
+      !insideImport &&
+      !isPropertyName
+    )
+      note(node, "child-process-binding-escaped-or-forwarded");
+    ts.forEachChild(node, visit);
+  };
+  visit(file);
+  return { ok: messages.length === 0, messages };
+}
+
 describe("manual canary acceptance publish-record boundary", () => {
+  it.fails("CANDIDATE-ST-PACKCANARY-020: every real child_process invocation sets windowsHide true", () => {
+    const source = readFileSync(
+      join(process.cwd(), "scripts", "pack-canary-acceptance.mjs"),
+      "utf8",
+    );
+    const result = inspectPackCanaryChildProcessCalls(source);
+    expect(result.ok, result.messages.join("\n")).toBe(true);
+  });
+
+  it("CANDIDATE-ST-PACKCANARY-020: resolves import forms and applies options in source order", () => {
+    const cases: Array<[string, string, boolean]> = [
+      [
+        "named import and API options position",
+        'import { spawnSync } from "node:child_process"; spawnSync("git", [], { windowsHide: true, env: process.env });',
+        true,
+      ],
+      [
+        "current runner literal options with array variable",
+        'import { spawnSync } from "node:child_process"; spawnSync(binary, args, { cwd: root, windowsHide: true, env: process.env });',
+        true,
+      ],
+      [
+        "namespace import and optional args",
+        'import * as cp from "node:child_process"; cp.spawnSync("git", { windowsHide: true });',
+        true,
+      ],
+      [
+        "dynamic import",
+        'const cp = await import("node:child_process"); cp.spawnSync("git", [], { ...options, windowsHide: true });',
+        true,
+      ],
+      [
+        "dynamic import element access",
+        'const result = (await import("node:child_process"))["spawnSync"]("git", [], { windowsHide: true });',
+        true,
+      ],
+      [
+        "dynamic import unknown element access fails closed",
+        'const result = (await import("node:child_process"))[api]("git", [], { windowsHide: true });',
+        false,
+      ],
+      [
+        "createRequire",
+        'import { createRequire } from "node:module"; const cp = createRequire(import.meta.url)("node:child_process"); cp.execFileSync("git", [], { windowsHide: true });',
+        true,
+      ],
+      [
+        "createRequire direct namespace factory",
+        'import * as module from "node:module"; module.createRequire(import.meta.url)("node:child_process").spawnSync("git", [], { windowsHide: true });',
+        true,
+      ],
+      [
+        "createRequire variable",
+        'import { createRequire } from "node:module"; const require = createRequire(import.meta.url); const cp = require("node:child_process"); cp.spawnSync("git", [], { windowsHide: true });',
+        true,
+      ],
+      [
+        "createRequire namespace",
+        'import * as module from "node:module"; const createRequire = module.createRequire; const require = createRequire(import.meta.url); const cp = require("node:child_process"); cp.spawnSync("git", [], { windowsHide: true });',
+        true,
+      ],
+      [
+        "createRequire unresolved module fails closed",
+        'import { createRequire } from "node:module"; const require = createRequire(import.meta.url); const cp = require(moduleName); cp.spawnSync("git", [], { windowsHide: true });',
+        false,
+      ],
+      [
+        "exec options position",
+        'import { execSync } from "node:child_process"; execSync("git status", { windowsHide: true });',
+        true,
+      ],
+      [
+        "execFile options overload before callback",
+        'import { execFile } from "node:child_process"; execFile("git", { windowsHide: true }, callback);',
+        true,
+      ],
+      [
+        "execFile options after args",
+        'import { execFile } from "node:child_process"; execFile("git", [], { windowsHide: true });',
+        true,
+      ],
+      [
+        "execFile options after null args",
+        'import { execFile } from "node:child_process"; execFile("git", null, { windowsHide: true });',
+        true,
+      ],
+      [
+        "execFile callback is not options",
+        'import { execFile } from "node:child_process"; execFile("git", [], callback);',
+        false,
+      ],
+      [
+        "computed literal key",
+        'import { spawnSync } from "node:child_process"; spawnSync("git", [], { ["windowsHide"]: true });',
+        true,
+      ],
+      [
+        "literal spread without windowsHide preserves true",
+        'import { spawnSync } from "node:child_process"; spawnSync("git", [], { windowsHide: true, ...{ env: process.env } });',
+        true,
+      ],
+      [
+        "computed namespace member fails closed",
+        'import * as cp from "node:child_process"; cp[api]("git", [], { windowsHide: true });',
+        false,
+      ],
+      [
+        "injected object method is not imported binding use",
+        'import { spawnSync } from "node:child_process"; const injected = { spawnSync: () => true }; injected.spawnSync("git", [], options);',
+        true,
+      ],
+      [
+        "injected runner remains an allowed test port",
+        'const run = input.run ?? ((...args) => input.exec(...args)); run("git", [], options);',
+        true,
+      ],
+      [
+        "missing option",
+        'import { spawnSync } from "node:child_process"; spawnSync("git", [], { cwd: root });',
+        false,
+      ],
+      [
+        "options passthrough",
+        'import { spawnSync } from "node:child_process"; spawnSync("git", [], options);',
+        false,
+      ],
+      [
+        "later spread may override true",
+        'import { spawnSync } from "node:child_process"; spawnSync("git", [], { windowsHide: true, ...options });',
+        false,
+      ],
+      [
+        "dynamic key is unknown",
+        'import { spawnSync } from "node:child_process"; spawnSync("git", [], { [key]: true });',
+        false,
+      ],
+      [
+        "local binding escape",
+        'import { spawnSync } from "node:child_process"; const run = spawnSync; run("git", [], { windowsHide: true });',
+        false,
+      ],
+      [
+        "dependency fallback escape",
+        'import { spawnSync } from "node:child_process"; const run = deps.spawnSync ?? spawnSync; run("git", [], { windowsHide: true });',
+        false,
+      ],
+      [
+        "default parameter escape",
+        'import { spawnSync } from "node:child_process"; function run(child = spawnSync) { child("git", [], { windowsHide: true }); }',
+        false,
+      ],
+      [
+        "unresolved dynamic import fails closed",
+        'const cp = await import(moduleName); cp.spawnSync("git", [], { windowsHide: true });',
+        false,
+      ],
+    ];
+    for (const [label, source, expected] of cases)
+      expect(inspectPackCanaryChildProcessCalls(source).ok, label).toBe(expected);
+
+    const portOnly = [
+      'import { spawnSync } from "node:child_process";',
+      "function testPort(input) {",
+      "  const run = input.run ?? ((...args) => input.exec(...args));",
+      '  run("git", [], options);',
+      "}",
+    ].join("\n");
+    expect(
+      inspectPackCanaryChildProcessCalls(portOnly).ok,
+      "unused import does not classify an injected port",
+    ).toBe(true);
+
+    const scopedBindings = [
+      'import { spawnSync } from "node:child_process";',
+      "function importedRunner() {",
+      "  const run = spawnSync;",
+      '  run("git", [], { windowsHide: true });',
+      "}",
+      "function injectedRunner(input) {",
+      "  const run = input.run ?? ((...args) => input.exec(...args));",
+      '  run("git", [], options);',
+      "}",
+    ].join("\n");
+    const scopedResult = inspectPackCanaryChildProcessCalls(scopedBindings);
+    expect(scopedResult.ok).toBe(false);
+    expect(scopedResult.messages.some((message) => message.startsWith("8:"))).toBe(false);
+  });
+
   it("U-ST-PACKCANARY-011: generated hook registrations must allow and block on both providers", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-canary-hook-smoke-"));
     tempRoots.push(root);
