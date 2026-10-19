@@ -4,18 +4,19 @@ title: "PLAN-L7-173: handover type and constant split"
 kind: refactor
 layer: L7
 drive: db
-status: confirmed
 created: 2026-06-25
 updated: 2026-06-25
 owner: Codex
 parent_design: docs/process/modes/refactor.md
 backprop_decision: not_required
-backprop_decision_reason: "Behavior-invariant extraction of handover type and constant declarations. Runtime logic and public handover exports are preserved."
+backprop_decision_reason: Behavior-invariant extraction of handover type and
+  constant declarations. Runtime logic and public handover exports are
+  preserved.
 agent_slots:
   - role: se
-    slot_label: "SE - handover sidecar split"
+    slot_label: SE - handover sidecar split
   - role: tl
-    slot_label: "TL - handover invariant review"
+    slot_label: TL - handover invariant review
 generates:
   - artifact_path: docs/plans/PLAN-L7-173-handover-type-constant-split.md
     artifact_type: markdown_doc
@@ -34,51 +35,82 @@ dependencies:
 review_evidence:
   - reviewer: codex-intra-runtime
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-06-25T22:21:41+09:00"
-    tests_green_at: "2026-06-25T22:17:00+09:00"
+    reviewed_at: 2026-06-25T22:21:41+09:00
+    tests_green_at: 2026-06-25T22:17:00+09:00
     verdict: approve
-    scope: "Split handover type and constant declarations into sidecar modules while keeping src/handover/index.ts as the compatibility export surface."
+    scope: Split handover type and constant declarations into sidecar modules while
+      keeping src/handover/index.ts as the compatibility export surface.
     worker_model: codex
     reviewer_model: codex-intra-runtime
     green_commands:
       - kind: unit_test
-        command: "bun run vitest run tests\\handover.test.ts --reporter=dot"
+        command: bun run vitest run tests\handover.test.ts --reporter=dot
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-06-25T22:10:36+09:00"
+        completed_at: 2026-06-25T22:10:36+09:00
         evidence_path: tests/handover.test.ts
-        output_digest: "sha256:a8880464cc076556fa02321fb205e95af3c1908155f125861cd23b8560f8f9f8"
+        output_digest: sha256:a8880464cc076556fa02321fb205e95af3c1908155f125861cd23b8560f8f9f8
         anchor_commit: 1676993a19a70090f804cade9d5553584e45704f
-      - kind: unit_test
-        command: "bun run vitest run tests\\handover-completion-wording.test.ts --reporter=dot"
-        runner: bun
-        scope: targeted
-        exit_code: 0
-        completed_at: "2026-06-25T22:10:56+09:00"
-        evidence_path: tests/handover-completion-wording.test.ts
-        output_digest: "sha256:87d7e25d5201fdb018cc1109490f22c81e44aaa06c8eec2ec14ee6a4d41ba3b9"
-        anchor_commit: e2244a1508fc5f1fefb896b3c673d75a4f35038a
       - kind: typecheck
-        command: "bun run typecheck"
+        command: bun run typecheck
         runner: bun
         scope: full
         exit_code: 0
-        completed_at: "2026-06-25T22:16:58+09:00"
+        completed_at: 2026-06-25T22:16:58+09:00
         evidence_path: src/handover/index.ts
-        output_digest: "sha256:8284061b8e1dcc8e089b784f51f39f32cbd91ddfeb3452d8a96a07f54158bc25"
+        output_digest: sha256:8284061b8e1dcc8e089b784f51f39f32cbd91ddfeb3452d8a96a07f54158bc25
         anchor_commit: 6df9a823a9de546e394f5224c80eb740d73a7993
       - kind: lint
-        command: "bun run lint"
+        command: bun run lint
         runner: bun
         scope: full
         exit_code: 0
-        completed_at: "2026-06-25T22:16:49+09:00"
+        completed_at: 2026-06-25T22:16:49+09:00
         evidence_path: src/handover/handover-types.ts
-        output_digest: "sha256:ac848a981e1843998d9a219a8209a4458195b89bc1c4bfe90dfd3696163c5160"
+        output_digest: sha256:ac848a981e1843998d9a219a8209a4458195b89bc1c4bfe90dfd3696163c5160
         anchor_commit: 6df9a823a9de546e394f5224c80eb740d73a7993
     notes:
-      - "bun run vitest run tests\\doctor.test.ts timed out before test output in this environment; retained as residual verification risk and covered by subsequent doctor CLI gate."
+      - bun run vitest run tests\doctor.test.ts timed out before test output in
+        this environment; retained as residual verification risk and covered by
+        subsequent doctor CLI gate.
+route_signal: debt
+route_mode: refactor
+status: confirmed
+github_issue_id: 1062
+admission_receipt:
+  schema_version: v2
+  receipt_id: certificate:bb11e6041280c167bb29c1e4ad5de347
+  command_id: issue1062-stage6b-PLAN-L7-173-handover-type-constant-split-r2-20261019
+  admitted_at: 2026-10-19T07:48:44.932Z
+  source_digest: sha256:7211514120312718a5878c9e28bc25fe27be038253b0718aaf08287cff10d5b3
+  decision_digest: sha256:36e3577e6f2e87403e8caf455c96953b3e4b159052a56dbd99e805cb53bc5fa1
+  receipt_digest: sha256:4acbf563c0bc4b8948b7ba4b34b5ee4e47c48401b47567b7faa5abee11097eb9
+  binding:
+    path: docs/plans/PLAN-L7-173-handover-type-constant-split.md
+    plan_id: PLAN-L7-173-handover-type-constant-split
+    asset_id: plan:legacy:063e24c8d60ab421324c422d22990b91dd25ca57bc904f6900501a9ee9d5deac
+    revision: 2
+    content_digest: sha256:7211514120312718a5878c9e28bc25fe27be038253b0718aaf08287cff10d5b3
+  route:
+    signal: debt
+    mode: refactor
+  issue:
+    provider: github
+    issue_id: 1062
+    episode_id: issue-1062
+    projection_state: unprojected
+  origin:
+    plan_id: PLAN-L7-173-handover-type-constant-split
+    revision: 1
+    digest: sha256:af6d3ee2a050b75a25d363bff92980813cc225e440f96489dd7eec6cf670c652
+  reentry:
+    target_plan_id: PLAN-L7-173-handover-type-constant-split
+    target_revision: 2
+    phase: forward_merge
+  escape_reason: "Issue #1062 段階6bの契約改訂。L6 state-channel-consolidation §5.1 の撤去対象に
+    tests/handover-completion-wording.test.ts を追加したため、既存PLANの generates /
+    証跡参照を外す。"
 ---
 
 # PLAN-L7-173: handover type and constant split
@@ -97,8 +129,7 @@ changing handover behavior or public imports.
 
 ## Acceptance Criteria
 
-- `tests/handover.test.ts`, `tests/handover-completion-wording.test.ts`,
-  typecheck, lint, DB rebuild, and doctor pass.
+- `tests/handover.test.ts`, typecheck, lint, DB rebuild, and doctor pass.
 - The refactor detector no longer reports `src/handover/index.ts` as an
   untested sidecar split.
 - Any remaining `split-module` candidates are limited to larger modules that

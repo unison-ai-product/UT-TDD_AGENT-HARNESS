@@ -7808,6 +7808,38 @@
         "revision": 4,
         "content_digest": "sha256:a0853d9e6858693f644ceba590c43c178e95698903639a60bcd510f80110df8f"
       }
+    },
+    {
+      "sequence": 489,
+      "previous_record_digest": "sha256:ab97975cd3d30142903b1eaf3ef45c357a0b1f31f395622a2b1aa0352711186d",
+      "record_digest": "sha256:d361fe4f342f6bdd0af0c4a658694929094ba5cd0d98083c2ab4b0a14ab91ba1",
+      "command_id": "issue1062-stage6b-PLAN-L7-143-harness-db-warn-remediation-r2-20261019",
+      "receipt_id": "certificate:9fa7fc49b5d6870a64ed5c20fdf48f54",
+      "receipt_digest": "sha256:2e80ade32a5f579cb311d0686eb9d4950170c7fc117538f9986cd87101ffe1d5",
+      "decision_digest": "sha256:b4be3533ff190787d4f2504ae1bb849161e116025c089b83d4dd167c30a5e2f4",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-143-harness-db-warn-remediation.md",
+        "plan_id": "PLAN-L7-143-harness-db-warn-remediation",
+        "asset_id": "plan:legacy:7cd63d22ca6a28419ccc4e0c943418471efe021a3412253859b0233a5498c5e4",
+        "revision": 2,
+        "content_digest": "sha256:503c26e46b3f03ef17860ea836be8f33a7e73c3bc215aff14c73037bfd7338d8"
+      }
+    },
+    {
+      "sequence": 490,
+      "previous_record_digest": "sha256:d361fe4f342f6bdd0af0c4a658694929094ba5cd0d98083c2ab4b0a14ab91ba1",
+      "record_digest": "sha256:ee465adcb433b9d2a101b5f66bf55917c21ae3d899a711076fbd95614583f3e5",
+      "command_id": "issue1062-stage6b-PLAN-L7-173-handover-type-constant-split-r2-20261019",
+      "receipt_id": "certificate:bb11e6041280c167bb29c1e4ad5de347",
+      "receipt_digest": "sha256:4acbf563c0bc4b8948b7ba4b34b5ee4e47c48401b47567b7faa5abee11097eb9",
+      "decision_digest": "sha256:36e3577e6f2e87403e8caf455c96953b3e4b159052a56dbd99e805cb53bc5fa1",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-173-handover-type-constant-split.md",
+        "plan_id": "PLAN-L7-173-handover-type-constant-split",
+        "asset_id": "plan:legacy:063e24c8d60ab421324c422d22990b91dd25ca57bc904f6900501a9ee9d5deac",
+        "revision": 2,
+        "content_digest": "sha256:7211514120312718a5878c9e28bc25fe27be038253b0718aaf08287cff10d5b3"
+      }
     }
   ]
 }
