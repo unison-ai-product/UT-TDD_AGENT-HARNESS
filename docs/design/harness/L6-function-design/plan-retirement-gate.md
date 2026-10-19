@@ -1,12 +1,13 @@
 ---
 layer: L6
 artifact_type: design_doc
-status: draft
+status: confirmed
 sub_doc: function-spec
 artifact_role: topic_plan_retirement_gate
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 next_pair_freeze: L7
+created: 2026-10-19
 issue: 1078
 ---
 
@@ -41,7 +42,8 @@ issue: 1078
 ### 3.1 処分 JSON
 
 - path: `docs/governance/candidates/v4-roadmap/migration/06_PLAN_DISPOSITION_FIRST_PASS.json` (定数 `PLAN_DISPOSITION_PATH`)。
-- 構造: `{ schemaVersion, source, primaryReviewIsIncomplete, finalDispositionsClassified, summary, supersessionAudit, plans[] }`。`plans[]` の 1 要素が 1 PLAN。gate が読む既存フィールドは `planId` / `sourcePath` / `wholeSourceDisposition` / `confirmedSupersededBy` (後継 PLAN の `planId` 配列。非自己の双方向 link が確認できた分だけ入る)。
+- 構造: `{ schemaVersion, source, primaryReviewIsIncomplete, finalDispositionsClassified, summary, supersessionAudit, plans[] }`。`plans[]` の 1 要素が 1 PLAN。gate が読む既存フィールドは `planId` / `sourcePath` / `wholeSourceDisposition` / `confirmedSupersededBy` (§3.4)。
+- **gate は処分 JSON を base の Git blob から読む** (head の作業ツリーの値は読まない。§4 規則 0・§5)。同じ PR で JSON を編集して判定を通すことを構造的に不可能にするためで、最終化は先行 PR (review 済み) で base に入れておく。
 - 既存の `wholeSourceDisposition` は現在 `not-finalized` の 1 値だけである。本設計は、最終化のときにこれと次の 2 フィールドを同じ要素へ書き足す形式を決める (新しいファイルは作らない)。
 
 ### 3.2 最終化の記録形式 (本書が固定する)
@@ -65,26 +67,32 @@ issue: 1078
 | `kind` | 形 | 意味 |
 |---|---|---|
 | `three-way` | `{ kind, verdict, evidencePath, evidenceId }` | PLAN ⇔ 設計文書 ⇔ コードの三者照合 (#648 の手順) の結果。`verdict` は `consistent` (3 者が一致) か `plan-stale` (PLAN 側だけが古く、設計文書とコードが正しい) のみ有効。`evidencePath` は照合の記録 (`docs/` 配下の tracked file) で、本文に `evidenceId` の文字列を含むこと (例: #977 の `CD-01`、#959 lot の `planId`)。 |
-| `supersedes-two-sided` | `{ kind }` | 後継 PLAN との supersedes が双方向 (後継の宣言 + 対象本文の back-reference) で確認済みであること。値は JSON の `confirmedSupersededBy` が 1 件以上であることに加え、**連鎖が PLAN 以外の行き先で閉じていること** (§4 規則 4 の終端条件) で判定する。 |
+| `supersedes-two-sided` | `{ kind }` | 後継 PLAN との supersedes が双方向 (後継の宣言 + 対象本文の back-reference) で確認済みであること。JSON の記録 (§3.4) を**自己申告として信用せず**、base の PLAN ファイルの実体 (Git blob) で再検証する (§4 規則 4)。さらに**連鎖が PLAN 以外の行き先で閉じていること** (終端条件) を要する。 |
 
 `verdict` が `consistent` / `plan-stale` 以外 (例: `conflict` / `pending` / 欠落) は照合が解決していない。この場合、処分は最終化できない (設計または実装の齟齬を先に直す)。
 
+### 3.4 `confirmedSupersededBy` の実在 schema (実測)
+
+実測 (`06_PLAN_DISPOSITION_FIRST_PASS.json`): 12 PLAN が非空で、全要素がオブジェクトである。確認コマンド: `node -e "const j=JSON.parse(require('fs').readFileSync('docs/governance/candidates/v4-roadmap/migration/06_PLAN_DISPOSITION_FIRST_PASS.json','utf8'));console.log(j.plans.filter(p=>p.confirmedSupersededBy.length).length)"` (12)。要素の key は `successorPlanId` (string) / `successorStatus` / `supersedesTarget` (string、この記録の `planId`) / `targetExistsAtSourceCommit` / `targetBodyBackrefCore` / `targetBodyBackrefLines` / `selfSupersedesExcluded` / `confirmedTwoSidedLink` (boolean) の 8 つ。
+
+**抽出規則**: 後継 PLAN の ID は各要素の `successorPlanId` から取る (要素自体は ID 文字列ではない)。**有効な link 要素**は、オブジェクトで、`successorPlanId` が trim 後非空の string、`supersedesTarget` が当該記録の `planId` と等しく、`confirmedTwoSidedLink === true`、`selfSupersedesExcluded` が `true` でないもの。有効な要素が 0 件なら `reconciliation_unresolved`。
+
 ## 4. 判定規則
 
-`records` = 処分 JSON の `plans[]`。対象 PLAN 集合 `S` = **この PR で削除される** `docs/plans/PLAN-*.md` (§5)。規則 1〜4 は `S` の各 PLAN だけを検査し、削除しない PLAN の欠落・未最終化は落とさない。規則 5 は削除しない側の残存参照を検査する。規則と reason は次のとおり。
+`records` = **base の Git blob の**処分 JSON の `plans[]`。対象 PLAN 集合 `S` = **この PR で削除される** `docs/plans/PLAN-*.md` (§5)。規則 1〜4 は `S` の各 PLAN だけを検査し、削除しない PLAN の欠落・未最終化は落とさない。規則 5 は削除しない側の残存参照を検査する。規則と reason は次のとおり。
 
 | # | 規則 | reason |
 |---|---|---|
-| 0 | 処分 JSON が存在し parse でき、`plans` が配列である。 | `disposition_unreadable` |
+| 0 | base の処分 JSON が存在し parse でき、`plans` が配列である。かつ、この PR の差分が処分 JSON を**変更していない** (削除と最終化の記録を同じ PR に混ぜない)。 | `disposition_unreadable` / `disposition_changed_with_deletion` |
 | 1 | `S` の各 PLAN に、`sourcePath` が一致する記録がちょうど 1 件ある (欠落・重複の両方を落とす)。処分 JSON に無い PLAN (§2 の欠落 1 件) は、削除される PR でこの規則により落ちる。 | `plan_not_in_disposition` / `duplicate_disposition` |
 | 2 | 記録の `wholeSourceDisposition` が `transferred` / `merged` / `retired` のいずれか。`not-finalized` や未知値は落とす。 | `not_finalized` / `invalid_disposition` |
 | 3 | 行き先。`transferred` / `merged` は `destinations` が §3.2 の条件を満たす。`design` の `path` が実在しない、または `section` が一致する見出しを持たない場合も落とす。`issue` の `number` が正の整数でない場合も落とす。`retired` は `retirementReason` が非空。 | `missing_destination` / `destination_path_missing` / `destination_section_missing` / `invalid_issue_ref` / `missing_retirement_reason` |
-| 4 | 照合証跡。`reconciliation` が §3.3 のいずれかで、`three-way` は `verdict` が有効、`evidencePath` が実在し本文に `evidenceId` を含む。`supersedes-two-sided` は `confirmedSupersededBy` が 1 件以上で、かつ**終端条件**を満たす: いずれかの後継 PLAN が (i) head の tree に存在し、この PR で削除されない、または (ii) 後継自身の記録が `transferred` / `merged` で、`design` / `issue` の行き先を持ち規則 2・3 を満たす (後継がこの PR で同時に削除される場合も (ii) で受理する)。後継の `supersedes-two-sided` や `retired` は終端に数えない (連鎖は PLAN 以外の行き先で閉じる。再帰しない)。 | `missing_reconciliation` / `reconciliation_unresolved` / `reconciliation_evidence_missing` / `supersedes_chain_open` |
+| 4 | 照合証跡。`reconciliation` が §3.3 のいずれかで、`three-way` は `verdict` が有効、`evidencePath` が実在し、`evidenceId` が string かつ trim 後非空で、本文にそれを含む (空文字は任意の本文に含まれるので非空を要する)。`supersedes-two-sided` は、§3.4 の有効な link 要素のうち 1 件以上が、(A) **PLAN ファイルの実体で検証済み**: base の Git blob で、後継 PLAN の frontmatter `supersedes` が当該 PLAN を指し (`planCoreId` で比較、自己参照は数えない)、かつ当該 PLAN の本文 (frontmatter 除く) に後継の core ID が現れる。JSON の `confirmedTwoSidedLink` は自己申告であって証跡ではなく、(A) を満たさない要素は無効。(B) さらに**終端条件**を満たす: いずれかの後継 PLAN が (i) head の tree に存在し、この PR で削除されない、または (ii) 後継自身の記録が `transferred` / `merged` で、`design` / `issue` の行き先を持ち規則 2・3 を満たす (後継がこの PR で同時に削除される場合も (ii) で受理する)。後継の `supersedes-two-sided` や `retired` は終端に数えない (連鎖は PLAN 以外の行き先で閉じる。再帰しない)。 | `missing_reconciliation` / `reconciliation_unresolved` / `reconciliation_evidence_missing` / `supersedes_chain_open` |
 | 5 | 参照の残存。**削除されない** PLAN の frontmatter の `requires` / `parent` / `supersedes` / `references`、および `docs/design/` `docs/test-design/` の文書 frontmatter の owning-plan 欄 (`plan:`) が、`S` の PLAN (`plan_id` または `docs/plans/<file>.md` の path) を指していれば落とす。violation の `path` は参照元の file。**本文中の PLAN ID の言及は履歴参照であり、対象外 (止めない)**。 | `dangling_plan_reference` |
 
 規則 5 の範囲の注記: `references` は既存の lint では未検査 (advisory) だが、削除後に指す先が消える点は他の欄と同じなので対象に含める。CLAUDE.md §PLAN Filing Rules の「draft への依存は `references` へ」は**どこへ書くか**の規則で、本規則は**削除時に残さない**規則であり、両立する (削除する側が参照元を先に直す)。
 
-「節が一致する」の規則: 行き先文書の markdown 見出し行 (`^#{1,6}\s+(.+)$`) の本文を trim したものが、`section` を trim した文字列で**始まる**ものが 1 つ以上あること。見出しの装飾 (`§` 番号等) を含めて指定してよい。コードフェンス内の行は見出しとして数えない。
+「節が一致する」の規則: `section` は string かつ trim 後非空であること (空・空白のみは前方一致が常に成立するため `destination_section_missing`)。行き先文書の markdown 見出し行 (`^#{1,6}\s+(.+)$`) の本文を trim したものが、`section` を trim した文字列で**始まる**ものが 1 つ以上あること。見出しの装飾 (`§` 番号等) を含めて指定してよい。コードフェンス内の行は見出しとして数えない。
 
 出力順は決定的にする: `path` の辞書順、同一 path は規則番号順。
 
@@ -92,11 +100,11 @@ issue: 1078
 
 | 条件 | 動作 |
 |---|---|
-| PR の base...head の差分に `docs/plans/PLAN-*.md` の**削除** (name-status が `D`、または `R` で旧 path が `docs/plans/PLAN-*.md` かつ新 path が `docs/plans/` 外) が 1 件以上ある | 削除された PLAN を `S` とし、§4 を適用する。violation が 1 件でもあれば fail-close。 |
-| 削除が 0 件 (追加・変更・`docs/plans/` 内の rename だけを含む) | **何も検査せず pass**。削除を含まない PR には影響しない。 |
-| 処分 JSON 自体を同じ PR で削除する | 削除を含む PR なので発火し、規則 0 で落ちる (head 側に JSON が無い)。 |
+| PR の base...head の差分に `docs/plans/PLAN-*.md` の**削除** (name-status が `D`、または `R` / `C` で旧 path が PLAN パターン `^docs/plans/PLAN-[^/]+\.md$` に一致し、**新 path が同じパターンに一致しない** もの。`PLAN-X.md` → `retired-X.txt` のような同一 directory 内のパターン外への rename も削除として扱う) が 1 件以上ある | 削除された PLAN を `S` とし、§4 を適用する。violation が 1 件でもあれば fail-close。 |
+| 削除が 0 件 (追加・変更・新 path も PLAN パターンに一致する rename だけを含む) | **何も検査せず pass**。削除を含まない PR には影響しない。 |
+| 処分 JSON を同じ PR で変更・削除する | 削除を含む PR なので発火し、規則 0 の `disposition_changed_with_deletion` で落ちる (JSON は base の blob から読むので、同じ PR の編集は判定に影響しない)。 |
 
-`loadPlanRetirementInput` は `git diff --name-status -M <base>...<head> -- docs/plans/` で削除 (`S`) を読み、head の作業ツリーで処分 JSON・行き先文書・証跡文書、削除されない PLAN の frontmatter、設計文書の `plan:` 欄を読む。base / head の解決は設計保護 gate (`src/github/design-protection.ts`) の `readDesignProtectionChanges` と同じ解決 (同じ引数形式) に揃える。起動点 (CI への配線、`ut-tdd` コマンド化) は実装 PR で design-protection と同じ層に置き、本書は配線の形を固定しない。
+`loadPlanRetirementInput` は `git diff --name-status -M <base>...<head> -- docs/plans/` で削除 (`S`) を読み、**base の Git blob から処分 JSON と、規則 4 (A) の supersedes 実体 (後継 PLAN の frontmatter と旧 PLAN の本文) を**、head の作業ツリーで行き先文書・証跡文書、削除されない PLAN の frontmatter、設計文書の `plan:` 欄を読む。base / head の解決は設計保護 gate (`src/github/design-protection.ts`) の `readDesignProtectionChanges` と同じ解決 (同じ引数形式) に揃える。起動点 (CI への配線、`ut-tdd` コマンド化) は実装 PR で design-protection と同じ層に置き、本書は配線の形を固定しない。
 
 ## 6. 関数 (シグネチャ)
 
@@ -108,7 +116,7 @@ export type PlanRetirementReason =
   | "missing_destination" | "destination_path_missing" | "destination_section_missing"
   | "invalid_issue_ref" | "missing_retirement_reason"
   | "missing_reconciliation" | "reconciliation_unresolved" | "reconciliation_evidence_missing"
-  | "supersedes_chain_open" | "dangling_plan_reference";
+  | "supersedes_chain_open" | "dangling_plan_reference" | "disposition_changed_with_deletion";
 
 export interface PlanRetirementViolation { path: string; reason: PlanRetirementReason }
 
@@ -117,7 +125,9 @@ export interface PlanRetirementInput {
   headPlanPaths: string[];             // head の tree に残る docs/plans/PLAN-*.md (後継の存在判定用)
   planReferrers: { path: string; refs: string[] }[]; // 削除されない PLAN の requires/parent/supersedes/references の値
   designOwners: { path: string; plan: string | null }[]; // docs/design・docs/test-design 文書の plan: 欄
-  disposition: unknown | null;         // 処分 JSON の parse 結果 (読めなければ null)
+  disposition: unknown | null;         // base の blob の処分 JSON の parse 結果 (読めなければ null)
+  dispositionChangedInPr: boolean;     // この PR の差分が処分 JSON を変更・削除しているか
+  supersessionFacts: Record<string, { successorDeclaresTarget: boolean; targetBodyBackref: boolean }>; // key = `<旧 planId>-><successorPlanId>`、base の blob から loader が算出 (blob 不在は両方 false)
   fileHeadings: Record<string, string[] | null>; // 参照された path -> 見出し本文 (不在は null)
   fileTexts: Record<string, string | null>;      // 証跡 path -> 本文 (不在は null)
 }
@@ -138,7 +148,7 @@ DbC:
 | post-2 | 規則 0 が落ちるときは他の規則を評価せず、`path` を処分 JSON の path とする violation 1 件だけを返す。 |
 | post-3 | 規則 1〜4 の violation の `path` は `deletedPlanPaths` の要素だけ、規則 5 の `path` は削除されない参照元だけである。削除しない PLAN の処分記録の欠落・未最終化は violation にならない。 |
 | invariant-1 | 削除を含まない入力では常に `ok: true` (処分 JSON が壊れていても)。 |
-| invariant-2 | 判定は `disposition` と引数だけから導く。実行時の `Date`・環境変数・network (gh) を使わない。`issue.number` の実在確認は行わない (形式のみ。issue の実在は人手最終化と review が担う。§8)。 |
+| invariant-2 | 判定は引数だけから導く (処分 JSON は base の値のみ。`disposition` 内の `confirmedTwoSidedLink` 等は自己申告で、`supersessionFacts` と矛盾すれば `supersessionFacts` が正)。実行時の `Date`・環境変数・network (gh) を使わない。`issue.number` の実在確認は行わない (形式のみ。issue の実在は人手最終化と review が担う。§8)。 |
 | invariant-3 | loader は処分 JSON を**書き換えない**。生成スクリプト (`06_PLAN_DISPOSITION_FIRST_PASS.mjs`) は最終化後に `--write-json` で上書きしてはならない (§9)。 |
 
 ## 7. fail-close の出力
@@ -162,9 +172,10 @@ docs/plans/PLAN-L7-02-keep.md:dangling_plan_reference
 | 行き先の**内容の正しさ** (その節が本当に PLAN の意味を担っているか) | 機械では判定しない。非著者 review と三者照合の `verdict` が担う。gate は path・節・証跡の存在と形式の検査に留まる。 |
 | issue の実在・状態 | 検査しない (offline・決定的な gate を保つ)。 |
 | 設計保護 gate (`design-protection.ts`) | 別の軸。向こうは `docs/design/` `docs/test-design/` と `src/` の混在を扱い、本 gate は `docs/plans/` の削除だけを扱う。互いの入力・出力を共有しない。 |
-| `merged-plan-status` / `duplicate-artifact-ownership` / `plan-supersession` | PLAN が存在する間の整合を見る lint。本 gate は PLAN が消えるときだけ発火し、重ならない。`supersedes-two-sided` の判定は処分 JSON の記録値を使い、`plan-supersession` を再実行しない。 |
+| `merged-plan-status` / `duplicate-artifact-ownership` / `plan-supersession` | PLAN が存在する間の整合を見る lint。本 gate は PLAN が消えるときだけ発火し、重ならない。`supersedes-two-sided` は base の blob から本 gate が独自に再検証する (規則 4 (A))。`plan-supersession` は再実行しない。 |
 | PLAN 本文中の PLAN ID の言及 | 履歴参照として止めない (規則 5 の対象外)。削除後も本文の言及は文字列として残る。 |
 | 削除しない PLAN の最終化率 (全件の進捗) | gate に混ぜない (案C 不採用)。EOD の棚卸しのコマンドで数える。 |
+| 自己申告の扱い (L6 §3.4・§4 規則 0・4) | 処分 JSON は base の blob だけを信頼し、同じ PR の編集を拒否する (選択肢は「同時編集の禁止」と「blob からの実体再検証」で、**両方**を採る。既存の「exact head に束縛し、author の主張を証跡にしない」規律から一意に決まり、互いに排他でない)。link の実体は PLAN ファイルで検証する。 |
 | 新規 PLAN の発行 | 範囲外 (停止の方向)。本 PR・実装 PR とも PLAN を起票しない。 |
 
 ## 9. 処分 JSON の凍結
@@ -178,7 +189,7 @@ docs/plans/PLAN-L7-02-keep.md:dangling_plan_reference
 3. **昇格 (src/ を含まない)**: 候補を正式 `U-PLRET-*` へ昇格し、テスト名の引用を書き換える。
 4. **実装 PR**: `it.fails` を `it` に戻す最小実装 (`src/lint/plan-retirement-gate.ts` + §9 のガード + 最小配線)。実装 PR は `docs/test-design/` を変えない。
 5. **処分 JSON の最終化** (人手、ロット単位。別 issue / PR)。
-6. gate が通った状態で PLAN 削除 PR。
+6. gate が通った状態で PLAN 削除 PR。**5 の最終化は先行 PR で merge して base に入れる**。削除 PR は処分 JSON を変更できない (規則 0)。
 
 ## 11. 非目標
 
