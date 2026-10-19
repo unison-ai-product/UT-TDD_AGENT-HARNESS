@@ -16,7 +16,7 @@ pair_artifact: docs/design/harness/L6-function-design/plan-retirement-gate.md
 本書はその §3 入力形式、§4 判定規則、§5 発火条件、§6 関数の DbC、§7 出力形式、§9 処分 JSON の凍結を検証する oracle を定める。
 共有の `docs/test-design/harness/L7-unit-test-design.md` には索引 (§PLAN 退役 gate) だけを置き、本書が詳細の正本である。
 
-この pair-freeze では候補 ID (`CANDIDATE-U-PLRET-*`) だけを宣言する。工程は設計保護 gate の L6 `design-protection-diff-gate.md` §10.3 の三段階に揃える。015・016 は開発 repo (処分 JSON と生成スクリプト) を読むので `test-repository-isolation` の登録行が要り、次の順になる。
+この pair-freeze では候補 ID (`CANDIDATE-U-PLRET-*`) だけを宣言する。工程は設計保護 gate の L6 `design-protection-diff-gate.md` §10.3 の三段階に揃える。015・016・027 は開発 repo (処分 JSON と生成スクリプト) を読むので `test-repository-isolation` の登録行が要り、次の順になる。
 
 1. **登録 + Red (src/ は登録行だけ)**: Red のテスト (`it.fails`) を候補 ID で引用して入れる。開発 repo を読むテストファイルには、同じ PR に `src/doctor/test-repository-isolation.ts` の `repositoryReadContracts` の登録行だけを足す。design / test-design は変えない。
 2. **昇格 (src/ を含まない)**: 候補の正式 ID `U-PLRET-*` への昇格 (全件) と、テスト名の引用の書き換えを同じ PR で入れる。
@@ -24,9 +24,9 @@ pair_artifact: docs/design/harness/L6-function-design/plan-retirement-gate.md
 
 ## 2. fixture
 
-- 001〜014・017・020〜030 は `analyzePlanRetirement` / `planRetirementMessages` を直接呼ぶ純粋関数のテストで、ファイルシステムも環境変数も使わない。入力は `PlanRetirementInput` を手で組む (最小の完備 fixture を基準に 1 点だけ壊す)。
+- 001〜014・017・020〜026・028〜030 は `analyzePlanRetirement` / `planRetirementMessages` を直接呼ぶ純粋関数のテストで、ファイルシステムも環境変数も使わない。入力は `PlanRetirementInput` を手で組む (最小の完備 fixture を基準に 1 点だけ壊す)。
 - 031 と 018・019 は temp directory に `git init` した最小 repo (base commit に `docs/plans/PLAN-*.md` と処分 JSON、head commit に削除 / rename / 追加) を作り `loadPlanRetirementInput` を呼ぶ。
-- 015・016 は開発 repo の処分 JSON と生成スクリプトを読む static 検査で、`test-repository-isolation` の登録行が要る (§1 の段階 1)。
+- 015・016・027 は開発 repo を読む実 repo の検査で、純粋関数テストではない。015 と 027 は実 JSON (`06_PLAN_DISPOSITION_FIRST_PASS.json`) の読み取りを同じテストファイルの 1 つの helper で共有し、016 は生成スクリプトの source を読んで temp 複製の JSON に実行する。`test-repository-isolation` の `repositoryReadContracts` には、この 3 件を含むテストファイルを 1 行で登録する (§1 の段階 1。実 JSON の読み取り (015・027) と生成スクリプトの読み取り (016) の両方を登録の範囲に含め、登録漏れは段階 1 の Red で検出する)。他の oracle は開発 repo を読まない (018・019・031 は temp repo だけを読む)。
 
 ## 3. 候補 oracle
 
@@ -58,7 +58,7 @@ pair_artifact: docs/design/harness/L6-function-design/plan-retirement-gate.md
 | `CANDIDATE-U-PLRET-024` | 削除 1 件 (X)。X は `supersedes-two-sided`、`confirmedSupersededBy` の後継 Z が (a) head の tree に存在し削除されない、(b) head に存在しないが Z の記録が `transferred` で `design` の行き先を持ち規則 2・3 を満たす | (a)(b) とも終端を満たし violation 無し (L6 §4 規則 4) | 後継の存在を `confirmedSupersededBy` の件数だけで判定する / 非 PLAN で最終化済みの後継を拒否する |
 | `CANDIDATE-U-PLRET-025` | 削除 1 件 (X)。`confirmedSupersededBy` の後継 Z が (a) head に存在せず、Z の記録は `not-finalized`、(b) Z の記録が `supersedes-two-sided` だけで行き先を持たない (連鎖が PLAN のまま続く)、(c) Z の記録が `retired` | (a)(b)(c) すべて `supersedes_chain_open` | 連鎖を再帰的に辿って PLAN どうしの link で閉じたことにする / `retired` の後継を終端に数える |
 | `CANDIDATE-U-PLRET-026` | 削除 2 件 (X と後継 Z を同じ PR で削除)。Z の記録が (a) `merged` で `issue` の行き先を持ち規則 2・3 を満たす、(b) `not-finalized` | (a) は X の終端を満たし violation 無し、(b) は Z に `not_finalized`、X に `supersedes_chain_open` (L6 §4 規則 4 の (ii)) | 後継が削除対象だと存在扱いにして通す / 後継の最終化を見ない |
-| `CANDIDATE-U-PLRET-027` | 開発 repo の**実 JSON** から `confirmedSupersededBy` が非空の記録を全件 (12 件) 取り出し、各要素を L6 §3.4 の抽出規則に通す。さらにその 1 件を analyzer へ `supersedes-two-sided` の記録として渡す (`supersessionFacts` は両方 true、後継は存続) | 全要素がオブジェクトで、`successorPlanId` が非空 string、`supersedesTarget` が記録の `planId` と一致、`confirmedTwoSidedLink === true`。analyzer は後継 ID を要素から取り出して受理する。要素を ID 文字列として扱う実装は後継を解決できず Red | `confirmedSupersededBy` を planId 配列と仮定する (実 schema との不一致。任意の 1 PLAN でなく、非空の実データで検出する) |
+| `CANDIDATE-U-PLRET-027` (実 repo の検査。純粋 fixture では代替しない) | 開発 repo の**実 JSON** から `confirmedSupersededBy` が非空の記録を全件 (12 件) 取り出し、各要素を L6 §3.4 の抽出規則に通す。さらにその 1 件を analyzer へ `supersedes-two-sided` の記録として渡す (`supersessionFacts` は両方 true、後継は存続) | 全要素がオブジェクトで、`successorPlanId` が非空 string、`supersedesTarget` が記録の `planId` と一致、`confirmedTwoSidedLink === true`。analyzer は後継 ID を要素から取り出して受理する。要素を ID 文字列として扱う実装は後継を解決できず Red | `confirmedSupersededBy` を planId 配列と仮定する (実 schema との不一致。任意の 1 PLAN でなく、非空の実データで検出する) |
 | `CANDIDATE-U-PLRET-028` | 偽造した link: 削除 X の記録を `retired`・理由あり・`supersedes-two-sided` とし、無関係な存続 PLAN Z を有効形の `confirmedSupersededBy` 要素 (`confirmedTwoSidedLink: true`) で指す。`supersessionFacts` は `successorDeclaresTarget: false` または `targetBodyBackref: false`、あるいは key 自体が無い | `reconciliation_unresolved` (JSON の自己申告ではなく blob 由来の facts が正。L6 invariant-2) | JSON の `confirmedTwoSidedLink` を信用して通す |
 | `CANDIDATE-U-PLRET-029` | 同時編集: (a) `dispositionChangedInPr: true` で削除 1 件、(b) 渡した `disposition` (base 値) は `not-finalized`、head では finalized 済みに編集されている状況を表す入力 | (a) は処分 JSON の path で `disposition_changed_with_deletion` 1 件 (L6 規則 0)、(b) は X に `not_finalized` (head の編集は判定に使われない) | 削除と最終化の記録を同じ PR で通す / head の JSON を読む |
 | `CANDIDATE-U-PLRET-030` | 不正な link 要素: (a) 要素が文字列、(b) `successorPlanId` 欠落・空白、(c) `supersedesTarget` が記録の `planId` と不一致、(d) `confirmedTwoSidedLink: false`、(e) `selfSupersedesExcluded: true` | (a)〜(e) すべて有効な要素が 0 件で `reconciliation_unresolved` | 要素の形・target 一致・boolean を検査しない |

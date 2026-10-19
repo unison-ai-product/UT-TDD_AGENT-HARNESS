@@ -185,7 +185,7 @@ docs/plans/PLAN-L7-02-keep.md:dangling_plan_reference
 ## 10. 実装順序
 
 1. **契約 PR (本書 + 専用 L7 + 共有 L7 の索引)**: docs だけ。
-2. **登録 + Red**: `tests/` に `it.fails` を `CANDIDATE-U-PLRET-*` で引用して入れる。開発 repo を読む oracle (`CANDIDATE-U-PLRET-015` / `016`) があるので、`test-repository-isolation` の登録行 (`src/doctor/test-repository-isolation.ts` の `repositoryReadContracts`) をこの PR の `src/` 変更として入れる (設計保護 gate の L6 `design-protection-diff-gate.md` §10.3 の三段階に従う)。
+2. **登録 + Red**: `tests/` に `it.fails` を `CANDIDATE-U-PLRET-*` で引用して入れる。開発 repo を読む oracle (`CANDIDATE-U-PLRET-015` / `016` / `027`。実 JSON の読み取りを 015 と共有する) があるので、`test-repository-isolation` の登録行 (`src/doctor/test-repository-isolation.ts` の `repositoryReadContracts`) をこの PR の `src/` 変更として入れる (設計保護 gate の L6 `design-protection-diff-gate.md` §10.3 の三段階に従う)。
 3. **昇格 (src/ を含まない)**: 候補を正式 `U-PLRET-*` へ昇格し、テスト名の引用を書き換える。
 4. **実装 PR**: `it.fails` を `it` に戻す最小実装 (`src/lint/plan-retirement-gate.ts` + §9 のガード + 最小配線)。実装 PR は `docs/test-design/` を変えない。
 5. **処分 JSON の最終化** (人手、ロット単位。別 issue / PR)。
