@@ -29,6 +29,7 @@ type WindowsHideModule = {
 
 const root = process.cwd();
 const WINDOWS_HIDE_MODULE: string = "../src/runtime/windows-hide.ts";
+const WINDOWS_HIDE_DOCTOR_MODULE: string = "../src/doctor/windows-hide.ts";
 const WRAPPED = Symbol.for("ut-tdd.windowsHide.wrapped");
 const CHILD_PROCESS_FUNCTIONS = [
   "spawn",
@@ -61,7 +62,14 @@ afterEach(() => {
 });
 
 async function loadWindowsHide(): Promise<WindowsHideModule> {
-  return (await import(WINDOWS_HIDE_MODULE)) as WindowsHideModule;
+  const [runtime, doctor] = await Promise.all([
+    import(WINDOWS_HIDE_MODULE),
+    import(WINDOWS_HIDE_DOCTOR_MODULE),
+  ]);
+  return {
+    applyWindowsHideDefault: runtime.applyWindowsHideDefault,
+    analyzeWindowsHide: doctor.analyzeWindowsHide,
+  };
 }
 
 function fakeChildProcess() {
