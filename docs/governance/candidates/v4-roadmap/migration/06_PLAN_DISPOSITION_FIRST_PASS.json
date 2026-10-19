@@ -1916,8 +1916,16 @@
       },
       "confirmedSupersededBy": [],
       "preliminaryState": "hold",
-      "wholeSourceDisposition": "not-finalized",
-      "holdReason": "No two-sided supersession link is established; live-contract and owner review remains pending."
+      "wholeSourceDisposition": "retired",
+      "holdReason": "No two-sided supersession link is established; live-contract and owner review remains pending.",
+      "destinations": [],
+      "retirementReason": "ハーネス自身の画面 (中央 UI、15 画面) を作らない決定 (#1084 グループ 13、PO 2026-10-19) に基づく廃止。 PLAN の契約は設計文書とともに撤去され、移管先は無い (#1084 グループ 13)。",
+      "reconciliation": {
+        "kind": "three-way",
+        "verdict": "consistent",
+        "evidencePath": "docs/governance/candidates/v4-roadmap/migration/issue1078-pilot-lot-reconciliation-20261019.md",
+        "evidenceId": "PLAN-L1-03-screen-requirements"
+      }
     },
     {
       "planId": "PLAN-L1-04-technical-requirements",
@@ -3221,8 +3229,16 @@
       },
       "confirmedSupersededBy": [],
       "preliminaryState": "hold",
-      "wholeSourceDisposition": "not-finalized",
-      "holdReason": "No two-sided supersession link is established; live-contract and owner review remains pending."
+      "wholeSourceDisposition": "retired",
+      "holdReason": "No two-sided supersession link is established; live-contract and owner review remains pending.",
+      "destinations": [],
+      "retirementReason": "ハーネス自身の画面 (中央 UI、15 画面) を作らない決定 (#1084 グループ 13、PO 2026-10-19) に基づく廃止。 PLAN の契約は設計文書とともに撤去され、移管先は無い (#1084 グループ 13)。",
+      "reconciliation": {
+        "kind": "three-way",
+        "verdict": "consistent",
+        "evidencePath": "docs/governance/candidates/v4-roadmap/migration/issue1078-pilot-lot-reconciliation-20261019.md",
+        "evidenceId": "PLAN-L2-01-screen-list"
+      }
     },
     {
       "planId": "PLAN-L2-02-screen-flow",
@@ -3322,8 +3338,16 @@
       },
       "confirmedSupersededBy": [],
       "preliminaryState": "hold",
-      "wholeSourceDisposition": "not-finalized",
-      "holdReason": "No two-sided supersession link is established; live-contract and owner review remains pending."
+      "wholeSourceDisposition": "retired",
+      "holdReason": "No two-sided supersession link is established; live-contract and owner review remains pending.",
+      "destinations": [],
+      "retirementReason": "ハーネス自身の画面 (中央 UI、15 画面) を作らない決定 (#1084 グループ 13、PO 2026-10-19) に基づく廃止。 PLAN の契約は設計文書とともに撤去され、移管先は無い (#1084 グループ 13)。",
+      "reconciliation": {
+        "kind": "three-way",
+        "verdict": "consistent",
+        "evidencePath": "docs/governance/candidates/v4-roadmap/migration/issue1078-pilot-lot-reconciliation-20261019.md",
+        "evidenceId": "PLAN-L2-02-screen-flow"
+      }
     },
     {
       "planId": "PLAN-L2-03-ui-element",
@@ -3425,8 +3449,16 @@
       },
       "confirmedSupersededBy": [],
       "preliminaryState": "hold",
-      "wholeSourceDisposition": "not-finalized",
-      "holdReason": "No two-sided supersession link is established; live-contract and owner review remains pending."
+      "wholeSourceDisposition": "retired",
+      "holdReason": "No two-sided supersession link is established; live-contract and owner review remains pending.",
+      "destinations": [],
+      "retirementReason": "ハーネス自身の画面 (中央 UI、15 画面) を作らない決定 (#1084 グループ 13、PO 2026-10-19) に基づく廃止。 PLAN の契約は設計文書とともに撤去され、移管先は無い (#1084 グループ 13)。",
+      "reconciliation": {
+        "kind": "three-way",
+        "verdict": "consistent",
+        "evidencePath": "docs/governance/candidates/v4-roadmap/migration/issue1078-pilot-lot-reconciliation-20261019.md",
+        "evidenceId": "PLAN-L2-03-ui-element"
+      }
     },
     {
       "planId": "PLAN-L2-04-wireframe",
@@ -3522,8 +3554,16 @@
       },
       "confirmedSupersededBy": [],
       "preliminaryState": "hold",
-      "wholeSourceDisposition": "not-finalized",
-      "holdReason": "No two-sided supersession link is established; live-contract and owner review remains pending."
+      "wholeSourceDisposition": "retired",
+      "holdReason": "No two-sided supersession link is established; live-contract and owner review remains pending.",
+      "destinations": [],
+      "retirementReason": "ハーネス自身の画面 (中央 UI、15 画面) を作らない決定 (#1084 グループ 13、PO 2026-10-19) に基づく廃止。 PLAN の契約は設計文書とともに撤去され、移管先は無い (#1084 グループ 13)。",
+      "reconciliation": {
+        "kind": "three-way",
+        "verdict": "consistent",
+        "evidencePath": "docs/governance/candidates/v4-roadmap/migration/issue1078-pilot-lot-reconciliation-20261019.md",
+        "evidenceId": "PLAN-L2-04-wireframe"
+      }
     },
     {
       "planId": "PLAN-L3-00-master",
@@ -4369,8 +4409,16 @@
       },
       "confirmedSupersededBy": [],
       "preliminaryState": "hold",
-      "wholeSourceDisposition": "not-finalized",
-      "holdReason": "No two-sided supersession link is established; live-contract and owner review remains pending."
+      "wholeSourceDisposition": "retired",
+      "holdReason": "No two-sided supersession link is established; live-contract and owner review remains pending.",
+      "destinations": [],
+      "retirementReason": "ハーネス自身の画面 (中央 UI、15 画面) を作らない決定 (#1084 グループ 13、PO 2026-10-19) に基づく廃止。 PLAN の契約は設計文書とともに撤去され、移管先は無い (#1084 グループ 13)。",
+      "reconciliation": {
+        "kind": "three-way",
+        "verdict": "consistent",
+        "evidencePath": "docs/governance/candidates/v4-roadmap/migration/issue1078-pilot-lot-reconciliation-20261019.md",
+        "evidenceId": "PLAN-L3-06-screen-functional-body"
+      }
     },
     {
       "planId": "PLAN-L3-07-design-decision-elicitation-format",
@@ -6055,8 +6103,16 @@
       },
       "confirmedSupersededBy": [],
       "preliminaryState": "hold",
-      "wholeSourceDisposition": "not-finalized",
-      "holdReason": "No two-sided supersession link is established; live-contract and owner review remains pending."
+      "wholeSourceDisposition": "retired",
+      "holdReason": "No two-sided supersession link is established; live-contract and owner review remains pending.",
+      "destinations": [],
+      "retirementReason": "ハーネス自身の画面 (中央 UI、15 画面) を作らない決定 (#1084 グループ 13、PO 2026-10-19) に基づく廃止。 PLAN の契約は設計文書とともに撤去され、移管先は無い (#1084 グループ 13)。",
+      "reconciliation": {
+        "kind": "three-way",
+        "verdict": "consistent",
+        "evidencePath": "docs/governance/candidates/v4-roadmap/migration/issue1078-pilot-lot-reconciliation-20261019.md",
+        "evidenceId": "PLAN-L4-14-ui-standard"
+      }
     },
     {
       "planId": "PLAN-L4-15-nfr-grade-ac-landing",
@@ -9617,8 +9673,16 @@
       },
       "confirmedSupersededBy": [],
       "preliminaryState": "hold",
-      "wholeSourceDisposition": "not-finalized",
-      "holdReason": "No two-sided supersession link is established; live-contract and owner review remains pending."
+      "wholeSourceDisposition": "retired",
+      "holdReason": "No two-sided supersession link is established; live-contract and owner review remains pending.",
+      "destinations": [],
+      "retirementReason": "ハーネス自身の画面 (中央 UI、15 画面) を作らない決定 (#1084 グループ 13、PO 2026-10-19) に基づく廃止。 PLAN の契約は設計文書とともに撤去され、移管先は無い (#1084 グループ 13)。",
+      "reconciliation": {
+        "kind": "three-way",
+        "verdict": "consistent",
+        "evidencePath": "docs/governance/candidates/v4-roadmap/migration/issue1078-pilot-lot-reconciliation-20261019.md",
+        "evidenceId": "PLAN-L5-09-ui-detail-body"
+      }
     },
     {
       "planId": "PLAN-L5-10-drive-model-router-redesign",
@@ -15945,8 +16009,16 @@
       },
       "confirmedSupersededBy": [],
       "preliminaryState": "hold",
-      "wholeSourceDisposition": "not-finalized",
-      "holdReason": "No two-sided supersession link is established; live-contract and owner review remains pending."
+      "wholeSourceDisposition": "retired",
+      "holdReason": "No two-sided supersession link is established; live-contract and owner review remains pending.",
+      "destinations": [],
+      "retirementReason": "ハーネス自身の画面 (中央 UI、15 画面) を作らない決定 (#1084 グループ 13、PO 2026-10-19) に基づく廃止。 PLAN の契約は設計文書とともに撤去され、移管先は無い (#1084 グループ 13)。",
+      "reconciliation": {
+        "kind": "three-way",
+        "verdict": "consistent",
+        "evidencePath": "docs/governance/candidates/v4-roadmap/migration/issue1078-pilot-lot-reconciliation-20261019.md",
+        "evidenceId": "PLAN-L6-36-screen-spec-body"
+      }
     },
     {
       "planId": "PLAN-L6-37-skill-index-category",
@@ -25441,8 +25513,16 @@
         }
       ],
       "preliminaryState": "superseded-link-confirmed",
-      "wholeSourceDisposition": "not-finalized",
-      "holdReason": "The two-sided successor link is confirmed, but full responsibility transfer and retirement scope remain for human review."
+      "wholeSourceDisposition": "retired",
+      "holdReason": "The two-sided successor link is confirmed, but full responsibility transfer and retirement scope remain for human review.",
+      "destinations": [],
+      "retirementReason": "ハーネス自身の画面 (中央 UI、15 画面) を作らない決定 (#1084 グループ 13、PO 2026-10-19) に基づく廃止。 PLAN の契約は設計文書とともに撤去され、移管先は無い (#1084 グループ 13)。",
+      "reconciliation": {
+        "kind": "three-way",
+        "verdict": "plan-stale",
+        "evidencePath": "docs/governance/candidates/v4-roadmap/migration/issue1078-pilot-lot-reconciliation-20261019.md",
+        "evidenceId": "PLAN-L7-102-web-dashboard-phase-b"
+      }
     },
     {
       "planId": "PLAN-L7-103-reverse-fullback-backprop-gate",
@@ -30597,8 +30677,16 @@
       },
       "confirmedSupersededBy": [],
       "preliminaryState": "hold",
-      "wholeSourceDisposition": "not-finalized",
-      "holdReason": "No two-sided supersession link is established; live-contract and owner review remains pending."
+      "wholeSourceDisposition": "retired",
+      "holdReason": "No two-sided supersession link is established; live-contract and owner review remains pending.",
+      "destinations": [],
+      "retirementReason": "ハーネス自身の画面 (中央 UI、15 画面) を作らない決定 (#1084 グループ 13、PO 2026-10-19) に基づく廃止。 PLAN の契約は設計文書とともに撤去され、移管先は無い (#1084 グループ 13)。",
+      "reconciliation": {
+        "kind": "three-way",
+        "verdict": "plan-stale",
+        "evidencePath": "docs/governance/candidates/v4-roadmap/migration/issue1078-pilot-lot-reconciliation-20261019.md",
+        "evidenceId": "PLAN-L7-141-web-dashboard-component-derived"
+      }
     },
     {
       "planId": "PLAN-L7-142-relation-graph-requirement-nodes",
@@ -39678,8 +39766,16 @@
       },
       "confirmedSupersededBy": [],
       "preliminaryState": "hold",
-      "wholeSourceDisposition": "not-finalized",
-      "holdReason": "No two-sided supersession link is established; live-contract and owner review remains pending."
+      "wholeSourceDisposition": "retired",
+      "holdReason": "No two-sided supersession link is established; live-contract and owner review remains pending.",
+      "destinations": [],
+      "retirementReason": "ハーネス自身の画面 (中央 UI、15 画面) を作らない決定 (#1084 グループ 13、PO 2026-10-19) に基づく廃止。 PLAN の契約は設計文書とともに撤去され、移管先は無い (#1084 グループ 13)。",
+      "reconciliation": {
+        "kind": "three-way",
+        "verdict": "plan-stale",
+        "evidencePath": "docs/governance/candidates/v4-roadmap/migration/issue1078-pilot-lot-reconciliation-20261019.md",
+        "evidenceId": "PLAN-L7-204-central-ui-vscode-webview-local"
+      }
     },
     {
       "planId": "PLAN-L7-205-strict-telemetry-provenance-doctor",
@@ -89104,8 +89200,16 @@
       },
       "confirmedSupersededBy": [],
       "preliminaryState": "hold",
-      "wholeSourceDisposition": "not-finalized",
-      "holdReason": "No two-sided supersession link is established; live-contract and owner review remains pending."
+      "wholeSourceDisposition": "retired",
+      "holdReason": "No two-sided supersession link is established; live-contract and owner review remains pending.",
+      "destinations": [],
+      "retirementReason": "ハーネス自身の画面 (中央 UI、15 画面) を作らない決定 (#1084 グループ 13、PO 2026-10-19) に基づく廃止。 PLAN の契約は設計文書とともに撤去され、移管先は無い (#1084 グループ 13)。",
+      "reconciliation": {
+        "kind": "three-way",
+        "verdict": "consistent",
+        "evidencePath": "docs/governance/candidates/v4-roadmap/migration/issue1078-pilot-lot-reconciliation-20261019.md",
+        "evidenceId": "PLAN-L7-96-screen-db-projection"
+      }
     },
     {
       "planId": "PLAN-L7-97-deliverable-catalog-extension",
