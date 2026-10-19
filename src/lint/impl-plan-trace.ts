@@ -1,12 +1,12 @@
 /**
  * impl→PLAN トレーサビリティ検査 (IMP-088、PLAN-REVERSE-40 塊A)。
  *
- * src module / 公開 CLI / lint / doctor check が、いずれかの PLAN の generates (または本文参照) に
- * 紐づくことを検証する。module-drift (src⇔architecture §3.1) / pair-freeze (design⇔test-design) は
- * いずれも PLAN を見ないため、「設計 doc に名前が載れば PLAN 無しでも通る」穴 (A-108 orphan の根因)
- * を塞ぐ。FR-L1-18 (横断検出・接続欠損) の descent。
+ * src module / 公開 CLI / lint / doctor check が、PLAN の generates (または本文参照) または
+ * 設計 doc の source-path 参照に紐づくことを検証する。module-drift (src⇔architecture §3.1) /
+ * pair-freeze (design⇔test-design) はいずれも実装 trace の入力を統合しないため、PLAN と設計 doc の
+ * source-path 参照を合わせて確認し、未 trace の orphan を検出する。FR-L1-18 (横断検出・接続欠損) の descent。
  *
- * baseline = A-108 検出前から存在し未 trace だった既存 lint 8 件 (known-debt)。NEW orphan のみ
+ * baseline = 設計 doc source trace で縮小後も残る既存 lint 5 件 (known-debt)。NEW orphan のみ
  * fail-close する段階導入 (ddd-tdd-rules の baseline debt と同型)。IMP-087 の 4 orphan は baseline
  * でなく PLAN-REVERSE-40 generates への back-fill で trace 解消する (baseline には含めない)。
  * 根拠 = 2026-06-10 実測 (`find src -name '*.ts'` vs PLAN generates) で 12 孤児 (= 4 + 8)。
@@ -18,20 +18,17 @@ import { normalizePath } from "./shared.ts";
 
 /** A-108 以前からの既存 untraced lint (known-debt)。段階 back-fill で縮小する。 */
 export const IMPL_PLAN_TRACE_BASELINE: ReadonlySet<string> = new Set([
-  "src/lint/asset-drift.ts",
   "src/lint/change-impact.ts",
   "src/lint/doc-consistency.ts",
   "src/lint/entity-coverage.ts",
-  "src/lint/g3-trace.ts",
   "src/lint/improvement-backlog.ts",
-  "src/lint/readability.ts",
   "src/lint/shared.ts",
 ]);
 
 export interface ImplPlanTraceInput {
   /** repo-relative src/**.ts (normalized `/`)。 */
   srcFiles: string[];
-  /** いずれかの PLAN の generates / 本文に出現した src パス集合。 */
+  /** PLAN の generates / 本文と設計 doc の source-path 参照に出現した src パス集合。 */
   tracedPaths: Set<string>;
   /** known-debt allowlist。 */
   baseline: ReadonlySet<string>;
@@ -61,6 +58,24 @@ function listSrcTs(dir: string, repoRoot: string, acc: string[]): void {
   }
 }
 
+function listMarkdownFiles(dir: string, acc: string[]): void {
+  for (const e of readdirSync(dir)) {
+    const full = join(dir, e);
+    if (statSync(full).isDirectory()) {
+      listMarkdownFiles(full, acc);
+    } else if (e.endsWith(".md")) {
+      acc.push(full);
+    }
+  }
+}
+
+function addTracedPaths(file: string, tracedPaths: Set<string>): void {
+  const content = readFileSync(file, "utf8");
+  for (const m of content.matchAll(/src\/[A-Za-z0-9_./-]+\.ts/g)) {
+    tracedPaths.add(m[0]);
+  }
+}
+
 export function loadImplPlanTraceInput(repoRoot: string): ImplPlanTraceInput {
   const srcFiles: string[] = [];
   try {
@@ -82,14 +97,23 @@ export function loadImplPlanTraceInput(repoRoot: string): ImplPlanTraceInput {
   } catch {
     // plans 不在は空集合 (fail-open)
   }
+  try {
+    const designFiles: string[] = [];
+    listMarkdownFiles(join(repoRoot, "docs", "design"), designFiles);
+    for (const file of designFiles) addTracedPaths(file, tracedPaths);
+  } catch {
+    // design 不在は空集合 (fail-open)。PLAN の読み取り結果は保持する。
+  }
   return { srcFiles, tracedPaths, baseline: IMPL_PLAN_TRACE_BASELINE };
 }
 
 export function implPlanTraceMessages(r: ImplPlanTraceResult): string[] {
   if (r.orphans.length === 0) {
-    return ["impl-plan-trace — OK (src 全件 PLAN generates / baseline に被覆、NEW orphan 0)"];
+    return [
+      "impl-plan-trace — OK (src 全件 PLAN / design source trace / baseline に被覆、NEW orphan 0)",
+    ];
   }
   return [
-    `impl-plan-trace — ⚠ PLAN 無き src ${r.orphans.length} 件 (generates/baseline 不在): ${r.orphans.join(", ")}`,
+    `impl-plan-trace — ⚠ PLAN / design source trace 無き src ${r.orphans.length} 件 (trace/baseline 不在): ${r.orphans.join(", ")}`,
   ];
 }

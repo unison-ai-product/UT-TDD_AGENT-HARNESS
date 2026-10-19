@@ -79,7 +79,7 @@ describe("loadImplPlanTraceInput real repo (U-IPT-004/U-IPT-005)", () => {
     expect(IMPL_PLAN_TRACE_BASELINE.has("src/gate/review-tier.ts")).toBe(false);
   });
 
-  it.fails("U-IPT-005: design-source traceでbaselineは8件から5件へ縮小する", () => {
+  it("U-IPT-005: design-source traceでbaselineは8件から5件へ縮小する", () => {
     expect(IMPL_PLAN_TRACE_BASELINE.size).toBe(5);
     expect(IMPL_PLAN_TRACE_BASELINE.has("src/lint/asset-drift.ts")).toBe(false);
     expect(IMPL_PLAN_TRACE_BASELINE.has("src/lint/g3-trace.ts")).toBe(false);
@@ -126,7 +126,7 @@ describe("U-IPT-006: loadImplPlanTraceInput design-source trace", () => {
     }
   });
 
-  it.fails("U-IPT-006: design-only source references cover new src", () => {
+  it("U-IPT-006: design-only source references cover new src", () => {
     const input = loadImplPlanTraceInput(root);
     const result = analyzeImplPlanTrace(input);
     expect(input.tracedPaths.has("src/runtime/windows-hide.ts")).toBe(true);
