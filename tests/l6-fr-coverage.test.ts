@@ -316,29 +316,29 @@ describe("Issue #848 FR retirement coverage (U-FRCOV-007..023, Red)", () => {
     });
   });
 
-  it.fails("U-FRCOV-008: retired row with resolved plan, candidate declaration and test citation is accepted as candidate", () => {
+  it("U-FRCOV-008: retired row with resolved plan, candidate declaration and test citation is accepted as candidate", () => {
     const result = runFx(candidateFx());
     expect(result.incomplete).toEqual([]);
     expect(result.ok).toBe(true);
   });
 
-  it.fails("U-FRCOV-009: formal state is accepted only when coverage, declaration and test citation are all formal", () => {
+  it("U-FRCOV-009: formal state is accepted only when coverage, declaration and test citation are all formal", () => {
     const result = runFx(formalFx());
     expect(result.incomplete).toEqual([]);
     expect(result.ok).toBe(true);
   });
 
-  it.fails("U-FRCOV-010: retired row without retirement_plan is rejected", () => {
+  it("U-FRCOV-010: retired row without retirement_plan is rejected", () => {
     expect(pairOutcome(candidateFx(), candidateFx({ plan: "" }))).toEqual([true, false]);
   });
 
-  it.fails("U-FRCOV-011: retirement_plan that does not resolve is rejected", () => {
+  it("U-FRCOV-011: retirement_plan that does not resolve is rejected", () => {
     expect(
       pairOutcome(candidateFx(), candidateFx({ plan: "docs/plans/PLAN-L6-RET-99-missing.md" })),
     ).toEqual([true, false]);
   });
 
-  it.fails("U-FRCOV-012: ambiguous or shortened plan references are rejected", () => {
+  it("U-FRCOV-012: ambiguous or shortened plan references are rejected", () => {
     const dupRel = "docs/plans/PLAN-L6-RET-01-fixture-copy.md";
     expect(runFx(candidateFx()).ok).toBe(true);
     // 同じ frontmatter plan_id を持つ文書が2つ: ID 参照は一意に解決しない。
@@ -349,7 +349,7 @@ describe("Issue #848 FR retirement coverage (U-FRCOV-007..023, Red)", () => {
     expect(runFx(candidateFx({ plan: "01" })).ok).toBe(false);
   });
 
-  it.fails("U-FRCOV-013: candidate id without a declaration row is rejected even if prose mentions it", () => {
+  it("U-FRCOV-013: candidate id without a declaration row is rejected even if prose mentions it", () => {
     expect(
       pairOutcome(
         candidateFx(),
@@ -358,7 +358,7 @@ describe("Issue #848 FR retirement coverage (U-FRCOV-007..023, Red)", () => {
     ).toEqual([true, false]);
   });
 
-  it.fails("U-FRCOV-014: formal id without a declaration row is rejected even if prose and candidate row mention it", () => {
+  it("U-FRCOV-014: formal id without a declaration row is rejected even if prose and candidate row mention it", () => {
     expect(
       pairOutcome(
         formalFx(),
@@ -371,11 +371,11 @@ describe("Issue #848 FR retirement coverage (U-FRCOV-007..023, Red)", () => {
     ).toEqual([true, false]);
   });
 
-  it.fails("U-FRCOV-015: declaration whose real test file is missing is rejected", () => {
+  it("U-FRCOV-015: declaration whose real test file is missing is rejected", () => {
     expect(pairOutcome(candidateFx(), candidateFx({ testFiles: {} }))).toEqual([true, false]);
   });
 
-  it.fails("U-FRCOV-016: test file citing a different oracle id is rejected", () => {
+  it("U-FRCOV-016: test file citing a different oracle id is rejected", () => {
     expect(
       pairOutcome(
         candidateFx(),
@@ -389,7 +389,7 @@ describe("Issue #848 FR retirement coverage (U-FRCOV-007..023, Red)", () => {
     ).toEqual([true, false]);
   });
 
-  it.fails("U-FRCOV-017: partial promotion (one or two surfaces to formal) is rejected in all 6 cases", () => {
+  it("U-FRCOV-017: partial promotion (one or two surfaces to formal) is rejected in all 6 cases", () => {
     expect(runFx(candidateFx()).ok).toBe(true);
     const candTest = { [RET_TEST_REL]: `it("${CAND}", () => {});\n` };
     const formalTest = { [RET_TEST_REL]: `it("${FORMAL}", () => {});\n` };
@@ -410,7 +410,7 @@ describe("Issue #848 FR retirement coverage (U-FRCOV-007..023, Red)", () => {
     }
   });
 
-  it.fails("U-FRCOV-018: unknown or evidence-less state never falls back to a normal FR, and retired labels do not hide substance errors", () => {
+  it("U-FRCOV-018: unknown or evidence-less state never falls back to a normal FR, and retired labels do not hide substance errors", () => {
     // 未知 state: 通常 oracle U-FR-L1-05 が揃っていても通常 FR へ fallback しない。
     const unknown = candidateFx({
       frState: "suspended",
@@ -445,7 +445,7 @@ describe("Issue #848 FR retirement coverage (U-FRCOV-007..023, Red)", () => {
     expect([...loadFrUnitCoverageOracles(materialize(noPlan).root)]).not.toContain("FR-L1-05");
   });
 
-  it.fails("U-FRCOV-019: active row carrying retirement_plan is rejected", () => {
+  it("U-FRCOV-019: active row carrying retirement_plan is rejected", () => {
     const active = candidateFx({
       frState: "active",
       plan: "",
@@ -455,7 +455,7 @@ describe("Issue #848 FR retirement coverage (U-FRCOV-007..023, Red)", () => {
     expect(pairOutcome(active, { ...active, plan: RET_PLAN_ID })).toEqual([true, false]);
   });
 
-  it.fails("U-FRCOV-020: ambiguous double declaration of the exact oracle id is rejected", () => {
+  it("U-FRCOV-020: ambiguous double declaration of the exact oracle id is rejected", () => {
     expect(
       pairOutcome(
         candidateFx(),
@@ -470,7 +470,7 @@ describe("Issue #848 FR retirement coverage (U-FRCOV-007..023, Red)", () => {
     ).toEqual([true, false]);
   });
 
-  it.fails("U-FRCOV-021: resolved plan document whose frontmatter plan_id differs is rejected", () => {
+  it("U-FRCOV-021: resolved plan document whose frontmatter plan_id differs is rejected", () => {
     expect(
       pairOutcome(
         candidateFx({ plan: RET_PLAN_REL }),
@@ -479,13 +479,13 @@ describe("Issue #848 FR retirement coverage (U-FRCOV-007..023, Red)", () => {
     ).toEqual([true, false]);
   });
 
-  it.fails("U-FRCOV-022: declaration row without the target FR id is rejected", () => {
+  it("U-FRCOV-022: declaration row without the target FR id is rejected", () => {
     expect(
       pairOutcome(candidateFx(), candidateFx({ candDecls: [retDecl(CAND, RET_TEST_REL, "")] })),
     ).toEqual([true, false]);
   });
 
-  it.fails("U-FRCOV-023: declaration row targeting a different FR id is rejected", () => {
+  it("U-FRCOV-023: declaration row targeting a different FR id is rejected", () => {
     expect(
       pairOutcome(
         candidateFx(),
@@ -519,7 +519,7 @@ describe("Issue #848 declaration-row identification (CANDIDATE-U-FRCOV-024..026,
     for (const root of tmpRoots.splice(0)) rmSync(root, { recursive: true, force: true });
   });
 
-  it.fails("CANDIDATE-U-FRCOV-024: any >=3-column table row whose first cell is the exact id is a declaration, independent of heading and header", () => {
+  it("CANDIDATE-U-FRCOV-024: any >=3-column table row whose first cell is the exact id is a declaration, independent of heading and header", () => {
     const outcomes = [
       declOk(freeTable(DECL_HEAD_ID, DECL_ROW)),
       declOk(freeTable("| oracle | 観点 | 実装テスト |", DECL_ROW)),
@@ -544,7 +544,7 @@ describe("Issue #848 declaration-row identification (CANDIDATE-U-FRCOV-024..026,
     expect(outcomes).toEqual([true, true, true, true, false, false, false]);
   });
 
-  it.fails("CANDIDATE-U-FRCOV-025: target FR id is matched on an exact boundary and must be the only FR id", () => {
+  it("CANDIDATE-U-FRCOV-025: target FR id is matched on an exact boundary and must be the only FR id", () => {
     const withTarget = (cell: string) =>
       declOk(freeTable(DECL_HEAD_ID, `| ${CAND} | ${cell} | ${RET_TEST_REL} |`));
     const outcomes = [
@@ -558,7 +558,7 @@ describe("Issue #848 declaration-row identification (CANDIDATE-U-FRCOV-024..026,
     expect(outcomes).toEqual([true, true, false, false, false, false]);
   });
 
-  it.fails("CANDIDATE-U-FRCOV-026: every tests path token must resolve and cite the exact oracle id", () => {
+  it("CANDIDATE-U-FRCOV-026: every tests path token must resolve and cite the exact oracle id", () => {
     const both = {
       [RET_TEST_REL]: `it("${CAND} a", () => {});\n`,
       [RET_TEST_REL_2]: `it("${CAND} b", () => {});\n`,
