@@ -281,7 +281,8 @@ memoryは永続知識だけを保存し、進捗や次の一手を保存する�
   `memory_archive_recovery_conflict`、その他 I/O failure は `memory_archive_io_failed`。GitHub 到達不能は失敗ではなく
   対象の `unknown` 判定であり、doctor advisory を含め exit 0 を保つ。`nowISO` が不正な場合は filesystem / DB I/O
   前に `TypeError` とし、filesystem / DB のどちらにも I/O を行わない。CLI は `ok:false` を exit 1、成功を exit 0 に写像する。
-- `ports` は同じ production operation の外部境界だけを差し替え、省略した port は production adapter を使う。
+- `ports` は同じ production operation の外部境界だけを差し替える。`resolveGitHubStatus` / `checkpoint` は省略できるが、
+  **`db` は必須であり、省略時に production adapter へ fallback しない** (下の「DB 操作の port」)。
   ```ts
   ports?: {
     resolveGitHubStatus?: (input: { url: string }) => { state: "open" | "closed" | "unknown" };
@@ -292,14 +293,54 @@ memoryは永続知識だけを保存し、進捗や次の一手を保存する�
       destinationPath: string;
       sha256: string;
     }) => void;
+    db: MemoryArchiveDbPort;
   }
   ```
-  両 port は同期関数である。status resolver は GitHub PR / issue 状態のみを注入し、throw または不正 result は `unknown`
+  `resolveGitHubStatus` / `checkpoint` は同期関数、`db` は同期 method だけを持つ構造的 object である (`db` 自体は関数ではない)。status resolver は GitHub PR / issue 状態のみを注入し、throw または不正 result は `unknown`
   とする。PR の `git log --first-parent <default branch>` merge-commit 検査は実 repository 上で必ず行い、merge commit が
   あれば外部 port を呼ばず `git_first_parent_merge` 根拠で closed とする。fixture は checkpoint callback から sentinel
   exception を送出でき、その exception は `retireMemoryEpisodes` から**そのまま propagate**し `{ ok:false }` に変換しない。
-  checkpoint を除き、分類・manifest・rename・DB 更新は実 operation を通す。CLI/env test knob、偽 archive 実装、未実装
-  export import は認めない。
+  `resolveGitHubStatus` の省略は従来どおり production の GitHub 照会 (state-db を import しない)、`checkpoint` の省略は
+  no-op とする。この 2 つの省略規則は state-db 依存を含まない。checkpoint と `db` を除き、分類・manifest・rename は
+  実 operation を通す。CLI/env test knob、偽 archive 実装、未実装 export import は認めない。
+
+#### DB 操作の port (`ports.db`、issue #963)
+
+memory は state-db を import しない (§canonical memory root resolver の配置)。`memory_entries` の行操作は、memory が所有する
+次の構造的 port として定義し、実装は呼び出し側が注入する。port は現行 scaffold が `node:sqlite` で行っている操作
+(read-only の preflight 検査と、WAL 手順 (3) の行削除) だけを覆い、他の操作を足さない。
+
+```ts
+interface MemoryArchiveDbPort {
+  inspectEntry(input: { memoryId: string; sourcePath: string; contentHash: string }):
+    | { status: "match" }
+    | { status: "row_absent" }
+    | { status: "row_mismatch" }
+    | { status: "schema_unready" };
+  deleteEntryRow(input: { memoryId: string; sourcePath: string }): { deleted: number };
+}
+```
+
+- `inspectEntry` は read-only の同期検査で、preflight (全 entry の事前検査、dry-run を含む) と回復時に呼ぶ。DB file が通常 file
+  でない (不在・symlink・非 regular)、`PRAGMA user_version` が現行 `SCHEMA_VERSION` と異なる、`memory_entries` table が
+  無いのいずれかは `schema_unready`。行が無ければ `row_absent`、`source_path` または `content_hash` が入力と異なれば
+  `row_mismatch`、すべて一致すれば `match`。DB file の検査 (lstat) と schema 検査は adapter の責務であり、memory 側は DB path を持たない。
+- memory の写像: `schema_unready` と `row_mismatch` は `memory_archive_recovery_conflict` (全体停止、他 entry の intent / rename /
+  DB delete を開始しない)。`row_absent` は、既存 `intent` の回復で移し先のみ存在し hash 一致のとき (= DB 削除済み、done 未追記) に
+  限り受理し、それ以外 (新規選択 entry など) は `memory_archive_recovery_conflict`。`match` は通常経路。
+- `deleteEntryRow` は WAL 手順 (3) だけで呼ぶ書き込みで、`memory_id` と `source_path` の両方が一致する行を削除し、削除件数を返す。
+  `deleted === 1` 以外は `memory_archive_recovery_conflict` とし、`done` を追記しない。
+- port 呼び出しが throw したときは `memory_archive_io_failed` の typed failure とする (checkpoint の sentinel exception とは
+  別で、こちらは `{ ok:false }` に変換する)。freshness の再計算や DB の再投影は port に含めない。
+- **省略は fail-close**: `ports` が未指定、`ports.db` が未指定、または `ports.db.inspectEntry` / `ports.db.deleteEntryRow` のいずれかが関数でないとき (検証対象は `db` の 2 method であり、`typeof ports.db` を関数かどうかで判定しない。2 method を持つ有効な object は受理する)、`nowISO` 検査 (不正なら従来どおり `TypeError`) の後、
+  filesystem / manifest / DB の I/O を一切行わず `{ ok:false, reason:"memory_archive_io_failed" }` を返す。production adapter
+  への fallback も、service 内の SQL も持たない。dry-run でも同じ (preflight が `inspectEntry` を要するため)。
+- **production adapter と composition root**: production adapter は `src/state-db/` に置き、SQL と transaction はそこに閉じる。
+  CLI の composition root (`ut-tdd memory retire` handler) が adapter を作って `ports.db` に注入し、adapter の DB 対象
+  (`<canonicalProjectRoot>/.ut-tdd/harness.db`) が resolver の `canonicalProjectRoot` と一致することを `retireMemoryEpisodes`
+  の呼び出し前に検証する。一致しなければ I/O 前に fail-close し (`memory_archive_io_failed`、exit 1)、adapter は作らない。
+- テストは isolated sqlite の test adapter を `ports.db` に注入する。共有 harness DB は開かない。
+
 - **集計**は `.ut-tdd/memory` 直下の全 directory entry を次の区分のどれか1つに入れ、区分の合計 = entry 数とする。
   `tracked_durable` / `untracked_durable` (宣言または kind による) / `episode_<retirable|ok|unknown>_<declared|inferred>`
   (6 区分) / `parse_failed` (untracked regular `.md` の読み取り/frontmatter が失敗したもの。退避しない) / `not_memory_entry`
@@ -317,7 +358,7 @@ memoryは永続知識だけを保存し、進捗や次の一手を保存する�
   `memory_archive_recovery_conflict` で全体停止する。`src/memory/legacy-archive-manifest.ts`
   の形式 (固定の legacy root、untracked は件数と集合 digest だけ) は変えず、流用するのは sha256 の計算部品だけにする。
 - 1 件の手順は write-ahead とする: (1) `state: intent` の行 (`memory_id`、元 path、移し先 path、sha256、bytes、`bound_to`、
-  判定の根拠 = merge commit または GitHub の状態、出自、時刻) を追記 → (2) rename → (3) `memory_entries` から当該行を削除 →
+  判定の根拠 = merge commit または GitHub の状態、出自、時刻) を追記 → (2) rename → (3) `ports.db.deleteEntryRow` で `memory_entries` から当該行を削除 →
   (4) `state: done` の行を追記。event は exact keys `{ schema, state, memory_id, source_path, destination_path, sha256,
   bytes, bound_to, selection_basis, recorded_at }`、`schema` は `ut-tdd.memory-episode-archive/v1`、`state` は `intent` /
   `done`、digest は prefix なし lower-case SHA-256 64桁とする。`selection_basis` は exact keys
@@ -354,6 +395,17 @@ memoryは永続知識だけを保存し、進捗や次の一手を保存する�
 - ファイルを削除する経路は持たない。git 追跡済みのファイルは対象外。
 - doctor の `memory-retirable` row は dry-run と同じ集計を出す advisory で、doctor を fail させない。
 - EOD の閉店処理で `memory retire --archive` (declared のみ) を 1 回流す。
+
+### canonical memory root resolver の配置 (issue #963)
+
+memory module が canonical root の解決を所有する。解決部品は `src/memory/project-memory-root.ts` に置く。
+canonical root、HEAD identity、worktree topology の判定と、symlink / escape の拒否は現行の挙動のまま移し、簡略化しない。
+`src/runtime/project-memory-root.ts` は互換のための re-export だけを持ち、実装を複製しない。
+
+- `src/memory/service.ts` は runtime と state-db を import しない (module cycle を作らない)。
+- DB の削除操作は memory が所有する構造的 port として定義し、CLI の composition root が注入する。
+  composition root は DB の対象が resolver の `canonicalProjectRoot` と一致することを検証し、
+  一致しなければ fail-close する。
 
 ### 配送側
 
