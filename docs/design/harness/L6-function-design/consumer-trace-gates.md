@@ -162,6 +162,7 @@ consumer 分岐の lint 関数は次を返す。`src/plan/lint.ts` の handler �
 
 - `ok` は `violations` が 0 件のときだけ `true`。
 - message は、OK なら `g1-trace - OK (consumer column trace: requirements=<n>, screens=<n>, functions=<n>)`、違反なら `g1-trace - violation (consumer column trace): <理由>; <理由>...`。G3 も同じ形で `g3-trace` とする。`consumer column trace` を必ず含め、harness の OT-45 と区別する (§4)。
+- A4 後の harness G1 が OK の場合、message は `g1-trace - OK (business=<n>, screens=<n>, p0Fr=<n>)` とする。現 repo での実例は `g1-trace - OK (business=13, screens=15, p0Fr=19)`。PLAN 由来の件数は含めない。既存 oracle `tests/gate-static.test.ts:53` / `tests/pack-canary-acceptance.test.ts:2017` の期待と `scripts/pack-canary-acceptance.mjs:215` の parser はこの形式へ追従し、parser は business / screens / p0Fr の各件数を引き続き `>=1` とする。A4 で退役する PLAN 専用判定を除き、BR / UX・画面・P0 FR の orphan fail-close、G3、共有 gate serialization の形式と合否は変更しない。
 - 読み取り例外を「required docs could not be read」に丸めない。core 文書の欠落は §5 の `missing_core_doc` で返す。
 
 ## 9. 実装方式

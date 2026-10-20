@@ -64,7 +64,7 @@ U-RCDEV-027 (v)(vi) の改訂も同じ契約 PR + Red で行う (設計文書 §
 ## 4. Gate and scope fence
 
 - 本書の oracle は consumer 分岐の G1-trace / G3-trace と、harness 分岐の挙動不変だけを扱う。layer pair gate、doctor、projection-writer、L1 第5章 非機能要求、L3 の ZIP-DOC-043 節は対象外 (設計文書 §11)。
-- harness 分岐の保持対象は 001 と `tests/g1-trace.test.ts` / `tests/g3-trace.test.ts` で確かめる。A4 の PLAN 専用 G1 退役に伴い U-G1 の `missingL3Requires` 期待と `l3Plans` 出力期待は意図的に改訂する。一方、BR / screen / P0 FR trace の orphan fail-close と OT-45 R1〜R3 の件数条件は保持し、G3 の既存 oracle は変更しない。これは後続の consumer trace 実装による変更と分けて扱う。
+- harness 分岐の保持対象は 001 と `tests/g1-trace.test.ts` / `tests/g3-trace.test.ts` で確かめる。A4 の PLAN 専用 G1 退役に伴い U-G1 の `missingL3Requires` 期待と `l3Plans` 出力期待は意図的に改訂する。G1 OK message は設計文書 §8 の3件形式に固定し、`tests/g1-trace.test.ts` の U-G1 と既存 oracle `tests/gate-static.test.ts:53` / `tests/pack-canary-acceptance.test.ts:2017` の期待を更新する。`scripts/pack-canary-acceptance.mjs:215` は business / screens / p0Fr の各件数を `>=1` とする既存ガードを保つ。一方、BR / screen / P0 FR trace の orphan fail-close と OT-45 R1〜R3 の件数条件は保持し、G3 の既存 oracle は変更しない。これは後続の consumer trace 実装による変更と分けて扱う。
 - consumer 分岐の PASS は、件数の下限を持たない列参照 trace の PASS である。OT-45 の PASS の証拠に流用しない (設計文書 §4)。
 - 契約 PR + Red で `src/lint/consumer-trace.ts` がまだ無いために import が失敗して `it.fails` が成立しても、各規則の Red の証拠にならない。実装 PR は、候補ごとに規則を 1 本だけ殺す mutation を入れて Red になることを確かめ、そのログを §5 に残す。
 
@@ -74,10 +74,12 @@ U-RCDEV-027 (v)(vi) の改訂も同じ契約 PR + Red で行う (設計文書 §
 
 - 各 candidate の Red→Green ログ (mutation を入れた Red の再現を含む)。
 - A4 Red→Green 後の `tests/g1-trace.test.ts` で、PLAN なし / 不完全 PLAN によって有効な G1 trace が変わらず、BR / screen / P0 FR の orphan は引き続き fail-close すること。`tests/g3-trace.test.ts` は無変更で green であること。改訂後の U-RCDEV-027 が green であること。これらは後続の consumer trace 実装 PR での挙動変更と混同しない。
+- A4 Red→Green では、実 repo の非PLAN件数が13 / 15 / 19と表示され、canary parser の3件すべてが `>=1` のままであることを確認する。共有 gate serialization の形式・合否を保ち、退役対象の PLAN 専用判定を除いて G3 と BR / screen / P0 FR の orphan fail-close は変わらないことを確認する。
 - typecheck / Biome、Linux / Windows / aggregate CI の run ID、exact HEAD、非著者 closing receipt digest。
 
 ### A4 の移行: PLAN 専用 G1 検査の退役
 
 - 契約変更の対象は U-G1 の L3 PLAN `requires` 判定と `l3Plans` / `missingL3Requires` の API・message surface だけである。代替の L1→L3 全件 trace lint は追加しない。
 - 契約 PR + Red で、PLAN が無い / 不完全でも有効な G1 trace が pass し、BR / screen / P0 FR の orphan は fail-close する期待を先行させる。OT-45 R1〜R3 の 13 / 15 / 19 件条件を保持する。
+- G1 OK message から `l3Plans` を除き、非PLAN件数3値を設計文書 §8 の順序で残す。これ以外に G1 の退役範囲を広げない。共有テスト `gate-static.test.ts` の改訂は他 PR と直列にする。
 - 本契約 PR は docs-only であり実装しない。Green ではじめて G1 の PLAN reader と retired fields / messages を除く。
