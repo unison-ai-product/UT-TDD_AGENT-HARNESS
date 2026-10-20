@@ -528,11 +528,9 @@ export interface RetireMemoryEpisodesFailure {
 }
 
 export interface MemoryArchiveDbPort {
-  inspectEntry(input: {
-    memoryId: string;
-    sourcePath: string;
-    contentHash: string;
-  }): { status: "match" | "row_absent" | "row_mismatch" | "schema_unready" };
+  inspectEntry(input: { memoryId: string; sourcePath: string; contentHash: string }): {
+    status: "match" | "row_absent" | "row_mismatch" | "schema_unready";
+  };
   deleteEntryRow(input: { memoryId: string; sourcePath: string }): { deleted: number };
 }
 
