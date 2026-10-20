@@ -1,11 +1,12 @@
 /**
- * Issue #963 Red oracles. Candidate IDs and expected behavior are frozen in
+ * Issue #963 archive oracles and expected behavior are frozen in
  * docs/test-design/harness/L7-memory-episode-retirement-test-design.md.
- * Each `it.fails` below reaches its target assertion on the minimal scaffold
- * (PR #1180) and fails there; they are promoted to U-MEMEPI-* and turned
- * Green by the later implementation PR. Oracles the scaffold already satisfies
- * (021 / 022 / 025 / 026 and the single bound_to half of 024) are kept as plain
- * `it` regression fences so Green cannot silently drop them.
+ * This change promotes only 020-027 to formal U-MEMEPI-* IDs in the design and
+ * test citations; 001-019 and 028-029 remain candidates. The four `it.fails`
+ * cases (020 / 023 / 024 multi-bound_to / 027) reached their target assertions
+ * on the minimal scaffold (PR #1180) and merged as Red in PR #1184. Oracles the
+ * scaffold already satisfies (021 / 022 / 025 / 026 and the single bound_to
+ * half of 024) remain plain `it` regression fences until Green.
  * Every fixture is an isolated temp git repo with an isolated projection DB;
  * neither the shared harness.db nor the real memory corpus is opened.
  */
@@ -273,7 +274,7 @@ function memoryRowsJson(root: string, memoryId: string): string {
 const closedResolver = () => ({ state: "closed" as const });
 
 describe("memory episode archive Red oracles (#963)", () => {
-  it.fails("CANDIDATE-U-MEMEPI-020 accepts a valid done row only and conflicts on every invalid state", () => {
+  it.fails("U-MEMEPI-020 accepts a valid done row only and conflicts on every invalid state", () => {
     const root = tempRepo();
     const a = seedEpisode(root, "Episode A", [`https://github.com/${REPO}/pull/11`]);
     const first = retire(
@@ -331,7 +332,7 @@ describe("memory episode archive Red oracles (#963)", () => {
     }
   });
 
-  it.fails("CANDIDATE-U-MEMEPI-023 records the real first-parent merge SHA with identical intent/done payload and no resolver call", () => {
+  it.fails("U-MEMEPI-023 records the real first-parent merge SHA with identical intent/done payload and no resolver call", () => {
     const root = tempRepo();
     const sha = addMergeCommit(root, 10);
     expect(sha).toMatch(/^[0-9a-f]{40}$/);
@@ -377,7 +378,7 @@ describe("memory episode archive Red oracles (#963)", () => {
     expect(done?.state).toBe("done");
   });
 
-  it.fails("CANDIDATE-U-MEMEPI-024 records github_closed evidence for every bound_to URL in URL order with exact event keys", () => {
+  it.fails("U-MEMEPI-024 records github_closed evidence for every bound_to URL in URL order with exact event keys", () => {
     const pull = `https://github.com/${REPO}/pull/11`;
     const issue = `https://github.com/${REPO}/issues/20`;
     // PR + issue の複数 bound_to: 宣言順に依らず URL 昇順で全 evidence を記録する。
@@ -416,7 +417,7 @@ describe("memory episode archive Red oracles (#963)", () => {
     expect({ ...done, state: "intent" }).toEqual(intent);
   });
 
-  it.fails("CANDIDATE-U-MEMEPI-027 keeps a valid foreign state-channel row, file and DB row out of #963 selection and recovery", () => {
+  it.fails("U-MEMEPI-027 keeps a valid foreign state-channel row, file and DB row out of #963 selection and recovery", () => {
     const root = tempRepo();
     const entry = seedEpisode(root, "Episode own", [`https://github.com/${REPO}/pull/11`]);
     const foreignId = "memory:project:foreign";
@@ -501,7 +502,7 @@ describe("memory episode archive Red oracles (#963)", () => {
  * 黙示 skip / 未知 row の無視 / I/O 前停止の崩れを捕まえる。
  */
 describe("memory episode archive regression fences satisfied by the scaffold (#963)", () => {
-  it("CANDIDATE-U-MEMEPI-021 conflicts when the destination already exists and keeps every byte", () => {
+  it("U-MEMEPI-021 conflicts when the destination already exists and keeps every byte", () => {
     const root = tempRepo();
     const e = seedEpisode(root, "Episode D", [`https://github.com/${REPO}/pull/11`]);
     const dest = join(
@@ -527,7 +528,7 @@ describe("memory episode archive regression fences satisfied by the scaffold (#9
     expect(existsSync(join(root, MANIFEST))).toBe(false);
   });
 
-  it("CANDIDATE-U-MEMEPI-021 conflicts, not silently skips, when a new source reuses an archived memory_id", () => {
+  it("U-MEMEPI-021 conflicts, not silently skips, when a new source reuses an archived memory_id", () => {
     const root = tempRepo();
     const url = `https://github.com/${REPO}/pull/11`;
     const first = seedEpisode(root, "Episode E", [url]);
@@ -558,7 +559,7 @@ describe("memory episode archive regression fences satisfied by the scaffold (#9
     expect(readFileSync(join(root, MANIFEST), "utf8")).toBe(manifestBefore);
   });
 
-  it("CANDIDATE-U-MEMEPI-022 throws TypeError synchronously for an invalid nowISO before any I/O", () => {
+  it("U-MEMEPI-022 throws TypeError synchronously for an invalid nowISO before any I/O", () => {
     for (const dryRun of [true, false]) {
       for (const nowISO of ["", "not-a-date", "2026-13-40", "2026-10-20T00:00:00+09:00"]) {
         const root = tempRepo();
@@ -589,7 +590,7 @@ describe("memory episode archive regression fences satisfied by the scaffold (#9
       '{"schema":"ut-tdd.state-channel-memory-archive/v1","state":"done"}',
     ],
   ] as const) {
-    it(`CANDIDATE-U-MEMEPI-025 stops the whole run on a ${label} and leaves everything unchanged`, () => {
+    it(`U-MEMEPI-025 stops the whole run on a ${label} and leaves everything unchanged`, () => {
       const root = tempRepo();
       const url = `https://github.com/${REPO}/pull/11`;
       const a = seedEpisode(root, "Episode F1", [url]);
@@ -628,7 +629,7 @@ describe("memory episode archive regression fences satisfied by the scaffold (#9
     ["returns null", () => null],
     ["returns a non-object", () => "closed"],
   ] as const) {
-    it(`CANDIDATE-U-MEMEPI-026 maps a resolver that ${label} to unknown without any write`, () => {
+    it(`U-MEMEPI-026 maps a resolver that ${label} to unknown without any write`, () => {
       const root = tempRepo();
       const e = seedEpisode(root, "Episode G", [`https://github.com/${REPO}/pull/11`]);
       const sourceBefore = readFileSync(e.absolute);
@@ -648,7 +649,7 @@ describe("memory episode archive regression fences satisfied by the scaffold (#9
     });
   }
 
-  it("CANDIDATE-U-MEMEPI-024 (single bound_to) records the exact intent/done event keys and github_closed evidence", () => {
+  it("U-MEMEPI-024 (single bound_to) records the exact intent/done event keys and github_closed evidence", () => {
     const pull = `https://github.com/${REPO}/pull/11`;
     const single = tempRepo();
     const e = seedEpisode(single, "Episode single", [pull]);
