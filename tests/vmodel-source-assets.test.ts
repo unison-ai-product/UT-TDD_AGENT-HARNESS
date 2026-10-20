@@ -1,12 +1,73 @@
-import { existsSync, readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import YAML from "yaml";
+import { removeTestTree } from "./support/temp-tree.ts";
 
 const repoRoot = process.cwd();
 
 function read(relativePath: string): string {
   return readFileSync(resolve(repoRoot, relativePath), "utf8");
+}
+
+function collectCandidateIds(text: string): string[] {
+  return [...text.matchAll(/`(CANDIDATE-[A-Z0-9-]+-[0-9]{3})`/g)].map((match) => match[1]);
+}
+
+function readCandidateDocuments(root: string): [string, ...string[]] {
+  return [readFileSync(resolve(root, "docs/test-design/harness/L7-unit-test-design.md"), "utf8")];
+}
+
+function withCandidateDocuments(
+  files: Record<string, string>,
+  assert: (root: string) => void,
+): void {
+  const root = mkdtempSync(join(tmpdir(), "vmsrc009-"));
+  try {
+    for (const [relativePath, content] of Object.entries(files)) {
+      const path = resolve(root, relativePath);
+      mkdirSync(resolve(path, ".."), { recursive: true });
+      writeFileSync(path, content, "utf8");
+    }
+    assert(root);
+  } finally {
+    removeTestTree(root);
+  }
+}
+
+type CandidateMarker = "bare" | "quoted";
+type CandidateDeclarationKind = "table" | "heading";
+type CandidateTableShape = "plain" | "ascii-parens" | "fullwidth-parens" | "em-dash";
+
+function candidateDeclaration(
+  id: string,
+  kind: CandidateDeclarationKind,
+  marker: CandidateMarker,
+  shape: CandidateTableShape = "plain",
+): string {
+  const token = marker === "quoted" ? `\`${id}\`` : id;
+  if (kind === "heading") return `## ${token} description`;
+  if (shape === "ascii-parens") return `| ${token} (note) | description |`;
+  if (shape === "fullwidth-parens") return `| ${token}（note） | description |`;
+  if (shape === "em-dash") return `| ${token} — description |`;
+  return `| ${token} | description |`;
+}
+
+function candidateIndex(content: string[] = []): string {
+  return [
+    "| Test ID | Description |",
+    "|---|---|",
+    "| `P-FSM-001` | existing formal oracle |",
+    "| `I-DISP-001` | existing formal oracle |",
+    "| `CANDIDATE-I-SP-001` | existing candidate |",
+    "| `CANDIDATE-M-SP-001` | existing candidate |",
+    ...content,
+  ].join("\n");
+}
+
+function expectedCandidateIds(...additional: string[]): string[] {
+  return ["CANDIDATE-I-SP-001", "CANDIDATE-M-SP-001", ...additional].sort();
 }
 
 function clean(value: string): string {
@@ -231,10 +292,9 @@ describe("checked Vモデル source assets", () => {
   });
 
   it("U-VMSRC-009: planned oracle candidates keep kind-qualified unique identities", () => {
-    const unitDesign = read("docs/test-design/harness/L7-unit-test-design.md");
-    const candidateIds = [...unitDesign.matchAll(/`(CANDIDATE-[A-Z0-9-]+-[0-9]{3})`/g)].map(
-      (match) => match[1],
-    );
+    const candidateDocuments = readCandidateDocuments(repoRoot);
+    const unitDesign = candidateDocuments[0];
+    const candidateIds = candidateDocuments.flatMap(collectCandidateIds);
     expect(candidateIds.length).toBeGreaterThan(0);
     expect(new Set(candidateIds).size).toBe(candidateIds.length);
     expect(candidateIds).not.toContain("CANDIDATE-P-FSM-001");
@@ -242,6 +302,264 @@ describe("checked Vモデル source assets", () => {
     expect(unitDesign).toContain("| `I-DISP-001` |");
     expect(candidateIds).toContain("CANDIDATE-I-SP-001");
     expect(candidateIds).toContain("CANDIDATE-M-SP-001");
+  });
+
+  it("preserves repeated declaration IDs so U-VMSRC-009 can detect duplicates", () => {
+    const id = "CANDIDATE-U-DOCSPLIT-900";
+    const markdown = candidateIndex([
+      candidateDeclaration(id, "table", "quoted"),
+      candidateDeclaration(id, "table", "quoted"),
+    ]);
+    withCandidateDocuments(
+      { "docs/test-design/harness/L7-unit-test-design.md": markdown },
+      (root) => {
+        expect(readCandidateDocuments(root).flatMap(collectCandidateIds).sort()).toEqual(
+          expectedCandidateIds(id, id),
+        );
+      },
+    );
+  });
+
+  it.fails("CANDIDATE-U-DOCSPLIT-026: repeated citations are not candidate declarations", () => {
+    const id = "CANDIDATE-U-DOCSPLIT-900";
+    const markdown = candidateIndex([
+      `| \`${id}\` | declared once |`,
+      `| Another row | \`${id}\` |`,
+      `\`${id}\` is repeated in prose and as a reference.`,
+      `参照: \`${id}\``,
+    ]);
+    withCandidateDocuments(
+      { "docs/test-design/harness/L7-unit-test-design.md": markdown },
+      (root) => {
+        const candidates = readCandidateDocuments(root).flatMap(collectCandidateIds).sort();
+        expect(candidates).toEqual(expectedCandidateIds(id));
+      },
+    );
+  });
+
+  const tableShapes: CandidateTableShape[] = [
+    "plain",
+    "ascii-parens",
+    "fullwidth-parens",
+    "em-dash",
+  ];
+  for (const marker of ["quoted", "bare"] as const) {
+    for (const shape of tableShapes) {
+      const id = "CANDIDATE-U-DOCSPLIT-900";
+      const markdown = candidateIndex([candidateDeclaration(id, "table", marker, shape)]);
+      const title = `CANDIDATE-U-DOCSPLIT-026: table ${marker} ${shape} declaration is collected`;
+      const check = () =>
+        withCandidateDocuments(
+          { "docs/test-design/harness/L7-unit-test-design.md": markdown },
+          (root) => {
+            expect(readCandidateDocuments(root).flatMap(collectCandidateIds).sort()).toEqual(
+              expectedCandidateIds(id),
+            );
+          },
+        );
+      if (marker === "quoted") it(title, check);
+      else it.fails(title, check);
+    }
+  }
+
+  for (const marker of ["quoted", "bare"] as const) {
+    const id = "CANDIDATE-U-DOCSPLIT-900";
+    const markdown = candidateIndex([candidateDeclaration(id, "heading", marker)]);
+    const title = `CANDIDATE-U-DOCSPLIT-026: heading ${marker} declaration is collected`;
+    const check = () =>
+      withCandidateDocuments(
+        { "docs/test-design/harness/L7-unit-test-design.md": markdown },
+        (root) => {
+          expect(readCandidateDocuments(root).flatMap(collectCandidateIds).sort()).toEqual(
+            expectedCandidateIds(id),
+          );
+        },
+      );
+    if (marker === "quoted") it(title, check);
+    else it.fails(title, check);
+  }
+
+  it.fails("CANDIDATE-U-DOCSPLIT-026: adjacent direct-child L7 files are read", () => {
+    const splitCandidate = "CANDIDATE-U-DOCSPLIT-900";
+    const index = candidateIndex();
+    const splitDoc = [
+      candidateDeclaration(splitCandidate, "table", "quoted"),
+      `| another cell | \`${splitCandidate}\` |`,
+      `\`${splitCandidate}\` is repeated in body prose and a reference.`,
+      `参照: \`${splitCandidate}\``,
+    ].join("\n");
+    withCandidateDocuments(
+      {
+        "docs/test-design/harness/L7-unit-test-design.md": index,
+        "docs/test-design/harness/L7-split-x-test-design.md": splitDoc,
+      },
+      (root) => {
+        const candidates = readCandidateDocuments(root).flatMap(collectCandidateIds).sort();
+        expect(candidates).toEqual(expectedCandidateIds(splitCandidate));
+      },
+    );
+  });
+
+  const declarationPairs: Array<[CandidateDeclarationKind, CandidateDeclarationKind]> = [
+    ["table", "table"],
+    ["heading", "heading"],
+    ["table", "heading"],
+  ];
+  const markerPairs: Array<[CandidateMarker, CandidateMarker]> = [
+    ["bare", "bare"],
+    ["quoted", "quoted"],
+    ["bare", "quoted"],
+    ["quoted", "bare"],
+  ];
+  for (const [firstKind, secondKind] of declarationPairs) {
+    for (const placement of ["same-file", "cross-file"] as const) {
+      for (const [firstMarker, secondMarker] of markerPairs) {
+        const id = "CANDIDATE-U-DOCSPLIT-900";
+        const first = candidateDeclaration(id, firstKind, firstMarker);
+        const second = candidateDeclaration(id, secondKind, secondMarker);
+        const files: Record<string, string> =
+          placement === "same-file"
+            ? { "docs/test-design/harness/L7-unit-test-design.md": candidateIndex([first, second]) }
+            : {
+                "docs/test-design/harness/L7-unit-test-design.md": candidateIndex([first]),
+                "docs/test-design/harness/L7-split-x-test-design.md": second,
+              };
+        const title = `CANDIDATE-U-DOCSPLIT-026: duplicate ${firstKind}/${secondKind}, ${placement}, ${firstMarker}/${secondMarker} stays visible`;
+        const check = () =>
+          withCandidateDocuments(files, (root) => {
+            expect(readCandidateDocuments(root).flatMap(collectCandidateIds).sort()).toEqual(
+              expectedCandidateIds(id, id),
+            );
+          });
+        if (placement === "same-file" && firstMarker === "quoted" && secondMarker === "quoted") {
+          it(title, check);
+        } else {
+          it.fails(title, check);
+        }
+      }
+    }
+  }
+
+  for (const shape of ["ascii-parens", "fullwidth-parens"] as const) {
+    for (const placement of ["same-file", "cross-file"] as const) {
+      for (const [firstMarker, secondMarker] of markerPairs) {
+        const id = "CANDIDATE-U-DOCSPLIT-900";
+        const first = candidateDeclaration(id, "table", firstMarker, shape);
+        const second = candidateDeclaration(id, "table", secondMarker, "plain");
+        const files: Record<string, string> =
+          placement === "same-file"
+            ? { "docs/test-design/harness/L7-unit-test-design.md": candidateIndex([first, second]) }
+            : {
+                "docs/test-design/harness/L7-unit-test-design.md": candidateIndex([first]),
+                "docs/test-design/harness/L7-split-x-test-design.md": second,
+              };
+        const title = `CANDIDATE-U-DOCSPLIT-026: ${shape} and plain are duplicate declarations, ${placement}, ${firstMarker}/${secondMarker}`;
+        const check = () =>
+          withCandidateDocuments(files, (root) => {
+            expect(readCandidateDocuments(root).flatMap(collectCandidateIds).sort()).toEqual(
+              expectedCandidateIds(id, id),
+            );
+          });
+        if (placement === "same-file" && firstMarker === "quoted" && secondMarker === "quoted") {
+          it(title, check);
+        } else {
+          it.fails(title, check);
+        }
+      }
+    }
+  }
+
+  const excludedReferences: Array<{ name: string; lines: string[] }> = [
+    {
+      name: "candidate in a non-leading table cell",
+      lines: ["| Description | Reference |", "|---|---|", "| note | `CANDIDATE-U-DOCSPLIT-900` |"],
+    },
+    {
+      name: "prefixed first cell is a reference",
+      lines: [
+        "| Test ID | Description |",
+        "|---|---|",
+        "| 参照: `CANDIDATE-U-DOCSPLIT-900` | note |",
+      ],
+    },
+    {
+      name: "fenced example is not a declaration",
+      lines: ["```md", "| `CANDIDATE-U-DOCSPLIT-900` | note |", "```"],
+    },
+    {
+      name: "range and enumeration in body prose are references",
+      lines: [
+        "候補 `CANDIDATE-U-DOCSPLIT-900`..`CANDIDATE-U-DOCSPLIT-901` and `CANDIDATE-U-DOCSPLIT-900 / CANDIDATE-U-DOCSPLIT-901`",
+      ],
+    },
+    {
+      name: "ID after heading prose is a reference",
+      lines: ["## Existing candidates include `CANDIDATE-U-DOCSPLIT-900`"],
+    },
+  ];
+  for (const excluded of excludedReferences) {
+    const markdown = candidateIndex(excluded.lines);
+    const title = `CANDIDATE-U-DOCSPLIT-026: ${excluded.name}`;
+    const check = () =>
+      withCandidateDocuments(
+        { "docs/test-design/harness/L7-unit-test-design.md": markdown },
+        (root) => {
+          expect(readCandidateDocuments(root).flatMap(collectCandidateIds).sort()).toEqual(
+            expectedCandidateIds(),
+          );
+        },
+      );
+    it.fails(title, check);
+  }
+
+  for (const kind of ["range", "enumeration"] as const) {
+    for (const marker of ["quoted", "bare"] as const) {
+      const ids = ["CANDIDATE-U-DOCSPLIT-900", "CANDIDATE-U-DOCSPLIT-901"];
+      const tokens = ids.map((id) => (marker === "quoted" ? `\`${id}\`` : id));
+      const separator = kind === "range" ? ".." : " / ";
+      const markdown = candidateIndex([`| ${tokens.join(separator)} | note |`]);
+      const title = `CANDIDATE-U-DOCSPLIT-026: ${marker} table-cell ${kind} is a reference`;
+      const check = () =>
+        withCandidateDocuments(
+          { "docs/test-design/harness/L7-unit-test-design.md": markdown },
+          (root) => {
+            expect(readCandidateDocuments(root).flatMap(collectCandidateIds).sort()).toEqual(
+              expectedCandidateIds(),
+            );
+          },
+        );
+      if (marker === "quoted") it.fails(title, check);
+      else it(title, check);
+    }
+  }
+
+  it("does not collect a non-three-digit candidate suffix", () => {
+    const markdown = candidateIndex(["| `CANDIDATE-U-DOCSPLIT-900A` | note |"]);
+    withCandidateDocuments(
+      { "docs/test-design/harness/L7-unit-test-design.md": markdown },
+      (root) =>
+        expect(readCandidateDocuments(root).flatMap(collectCandidateIds).sort()).toEqual(
+          expectedCandidateIds(),
+        ),
+    );
+  });
+
+  it("excludes non-direct-child, non-L7, and other-tree documents", () => {
+    const id = "CANDIDATE-U-DOCSPLIT-900";
+    const declaration = candidateDeclaration(id, "table", "quoted");
+    withCandidateDocuments(
+      {
+        "docs/test-design/harness/L7-unit-test-design.md": candidateIndex(),
+        "docs/test-design/harness/sub/L7-nested-test-design.md": declaration,
+        "docs/test-design/other/L7-out-test-design.md": declaration,
+        "docs/test-design/harness/not-l7-test-design.md": declaration,
+      },
+      (root) => {
+        expect(readCandidateDocuments(root).flatMap(collectCandidateIds).sort()).toEqual(
+          expectedCandidateIds(),
+        );
+      },
+    );
   });
 
   it("U-VMSRC-010: all 163 semantic items have an explicit non-inferred target decision record", () => {
