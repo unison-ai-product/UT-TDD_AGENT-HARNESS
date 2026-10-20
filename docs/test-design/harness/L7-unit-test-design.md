@@ -436,8 +436,7 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 
 | ID | Target | Oracle |
 |---|---|---|
-| U-VTRIG-005-L7 | `VERIFICATION_GROUPS` L0-L7 | real repo guard surface includes `実装検証サイクルゲート` and the L0-L7 group is frozen. frozen は pair-doc の状態 (draft 0 かつ pair 孤児 0 かつ confirmed ≥ 1) だけから決まり、automation PLAN の証跡を入力にしない。 |
-| U-VTRIG-006 | `analyzeVerificationGroups` (L0-L7、PLAN 証跡なし) | confirmed のみの L1〜L6 pair doc を `(docs, orphans)` だけで渡すと L0-L7 は frozen=true (`requiredPlanIds` / `missingPlanIds` / PLAN 証跡 map を使わない)。負の対照: draft が 1 件、または pair 孤児が 1 件あると L0-L7 は frozen=false。 |
+| U-VTRIG-005-L7 | `VERIFICATION_GROUPS` L0-L7 | real repo guard surface includes `実装検証サイクルゲート` and the L0-L7 group is frozen. frozen は pair-doc の状態 (draft 0 かつ pair 孤児 0 かつ confirmed ≥ 1) だけから決まり、automation PLAN の証跡を入力にしない。`requiredPlanIds` / `missingPlanIds` / PLAN 証跡 map を使わずに `(docs, orphans)` だけを渡しても、confirmed だけの L1〜L6 なら frozen=true になる。負の対照: draft が 1 件、または pair 孤児が 1 件あると frozen=false になる。 |
 
 > **Status (PLAN-L7-43, 2026-06-11)**: U-VTRIG-005 now asserts L0-L7 / `実装検証サイクルゲート` in `tests/vmodel-pair.test.ts`; `doctor` surfaces the implementation verification cycle gate.
 
