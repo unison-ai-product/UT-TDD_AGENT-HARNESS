@@ -129,7 +129,7 @@ ledger 外の `duplicate-artifact-ownership` が 140 件増える。これは2�
 pair の次は contract → Red → Green → Refactor の順とする。Red は専用 L7 test-design の候補だけを引用し、
 正式 oracle への昇格は別の後続工程とする。`it.fails` の Red 登録を formal oracle citation と見なさない。
 
-## 7. Forward baseline の正本と縮小専用 ratchet（Issue #1099 草案）
+## 7. Forward / reverse citation baseline の正本と縮小専用 ratchet（Issue #1099 草案）
 
 > **状態**: Issue #1099 の契約 draft。専用の supplemental 候補設計は
 > `docs/test-design/harness/L7-oracle-test-trace-baseline-test-design.md` に置く。
@@ -139,17 +139,21 @@ pair の次は contract → Red → Green → Refactor の順とする。Red は
 
 ### 7.1 Baseline データの正本
 
-Forward oracle tracing の既存規則を維持する。test-design で宣言され tests に citation のない ID は、該当する
-legacy または widened の debt set に含まれる場合だけ許容する。analyzer の完全な集合一致を包含比較や件数比較へ
-弱めてはならない。2 つの set は意味を分け、相互に重複させない。
+Forward oracle tracing と reverse citation の既存規則を維持する。test-design で宣言され tests に citation のない ID は、該当する
+legacy または widened の debt set に含まれる場合だけ許容する。reverse 側で test label にあり canonical declaration がない ID は、
+citations debt set に含まれる場合だけ許容する。analyzer の完全な集合一致を包含比較や件数比較へ弱めてはならない。
+正本には legacy / widened / citations の3集合を置き、legacy と widened は意味を分けて相互に重複させない。
+citations は既存 `ORACLE_TEST_CITATION_BASELINE` の集合をそのまま移す独立軸であり、legacy / widened との交差は許可する
+（実例: `U-RDRIFT-004`）。各配列内の重複は拒否する。`ORACLE_ID_DUPLICATE_BASELINE` は既存どおり別の重複宣言
+provenance debt として扱い、本JSON・3集合 ratchet の対象にしない。
 
-正本データは `docs/governance/oracle-test-trace-baseline.json` とし、field は `schemaVersion`、`legacy`、
-`widened` の 3 つだけとする。`legacy` と `widened` は文章や範囲表記ではなく、oracle ID の完全な文字列配列である。
+正本データは `docs/governance/oracle-test-trace-baseline.json` とし、schemaVersion 2 の field は `schemaVersion`、`legacy`、
+`widened`、`citations` の4つだけとする。各集合は文章や範囲表記ではなく、oracle ID の完全な文字列配列である。
 strict decode を行い、ファイルの欠落・読取不能、JSON 不正、version または値型の不正、未知 field、不正な ID token、
-各配列内の重複 ID、2 集合間の重複を拒否する。TS 定数や空集合への fallback は設けない。初回移行では移行前 main の
-定数から両集合を要素単位で同一に複写し、oracle の退役・再分類を同時に行わない。初回 main 値を維持し、legacy は
-正確に 89 件、widened は 317 件とする（件数だけでなく各旧定数との要素集合一致を要求する）。#1097 が提案する
-315 件を初回 seed にしてはならない。この変更では legacy debt の後続退役も行わない。
+各配列内の重複 ID、legacy / widened 間の重複を拒否する。citations と他の2集合との交差は拒否しない。TS 定数や空集合への
+fallback は設けない。初回移行では移行前 main の3定数から各集合を要素単位で同一に複写し、oracle の退役・再分類を同時に行わない。
+初回 main 値を維持し、legacy は正確に 89 件、widened は 317 件、citations は 582 件とする（件数だけでなく各旧定数との
+要素集合一致を要求する）。#1097 が提案する 315 件を初回 seed にしてはならない。この変更ではどの debt の後続退役も行わない。
 
 既存関数の `repoRoot` 引数は、`docs/test-design` と `tests` を走査する subject repository を示す。
 baseline authority root も明示し、開発時は source checkout、clean Pack 実行時は配布済み harness asset root を
@@ -161,11 +165,13 @@ subject scan root が consumer project だからという理由で、その root
 
 analyzer は引き続き、現在の subject から再導出した widened debt 集合と、現在の authority JSON から読み込んだ
 widened 集合との完全な要素集合一致を要求する。これにより U-OIDGATE-005/006 を維持し、欠落した免除と stale
-免除の両方を検出する。
+免除の両方を検出する。reverse 側では、既存の undeclared static citation から再導出する集合と JSON の `citations` の
+完全な要素集合一致を要求し、既存の未宣言 citation / stale citation の意味を維持する。既存 `input.citationBaseline` は
+この JSON-backed 集合を受け取り、formal citation を baseline へ追加しない。
 
 これとは別に、必須 PR check は GitHub Actions が PR 用に固定した検証 merge commit `M = github.sha` を使って
 縮小専用の進化を証明する。信頼する比較組は常に `B = M^1` (merge commit の第 1 親) と `H = M` である。
-各集合について `headSet(H) ⊆ trustedBaseSet(B)` を確認し、base JSON は `B` の Git tree から、head JSON は
+legacy / widened / citations の各集合について `headSet(H) ⊆ trustedBaseSet(B)` を独立に確認し、base JSON は `B` の Git tree から、head JSON は
 `H` の Git tree から読む。`pull_request.base.sha`、PR branch HEAD、`origin/main`、可変 branch 名、analyzer 導出集合、
 working tree 上の複製を `B` または `H` の代わりに使ってはならない。`M`、その第 1 親、Git object、各 JSON を解決・読取
 できない場合、またはデータが不正な場合は fail-close とする。`M` を検証対象 HEAD とする点は、既存
@@ -216,7 +222,8 @@ type OracleTraceGitPortResult<T> =
 type OracleTraceGitPath =
   | typeof BASELINE_JSON_PATH
   | "src/lint/oracle-test-trace-baseline.ts"
-  | "src/lint/oracle-test-trace-widened-baseline.ts";
+  | "src/lint/oracle-test-trace-widened-baseline.ts"
+  | "src/lint/oracle-test-citation-baseline.ts";
 
 interface OracleTraceAuthority {
   readText(path: typeof BASELINE_JSON_PATH): OracleTracePortResult<string | null>;
@@ -300,8 +307,8 @@ PRでは `readFirstParent(mergeSha)` で B を解決し、`readTextAt(B, BASELIN
 `git_baseline_missing`、I/O failure は ratchet 側の `git_first_parent_read_failed` /
 `git_object_read_failed`、不正blobは
 `trusted_baseline_invalid` とする。明示CI contextが不完全・不正なら `pr_context_invalid` でfail-closeする。
-初回移行だけの構造不一致は `bootstrap_base_invalid`、旧集合との値不一致は `bootstrap_value_mismatch` とする。
-有効な組における legacy / widened いずれかの head-only ID は `baseline_growth` とする。
+初回移行だけの構造不一致は `bootstrap_base_invalid`、3つの旧集合との値不一致は `bootstrap_value_mismatch` とする。
+有効な組における3集合のいずれかの head-only ID は `baseline_growth` とする。
 
 localからCI portを省略した一引数 loader 呼出しはsubsetを実行・主張せず、strict current JSON decode と既存analyzerの
 complete-set equalityだけを行う。explicit local pair portは設けない。`baseline_growth` とその他の ratchet reason は
@@ -309,8 +316,8 @@ complete-set equalityだけを行う。explicit local pair portは設けない�
 には追加しない。汎用booleanや例外messageから種類を推定しない。
 
 **初回移行だけに限定した bootstrap route を許す。** 必須 PR check は上記の不変比較組 `(B, H) = (M^1, M)` を使い、
-`B` の Git tree を調べる。base tree に baseline JSON がなく、旧 TS 定数ファイル 2 つと正規の定数宣言が存在し、
-そこから得る legacy=89 / widened=317 の値が完全に認識・検証できる場合に限り、head JSON と旧 TS 集合を要素単位で完全一致
+`B` の Git tree を調べる。base tree に baseline JSON がなく、旧 TS 定数ファイル 3 つと正規の定数宣言が存在し、
+そこから得る legacy=89 / widened=317 / citations=582 の値が完全に認識・検証できる場合に限り、head JSON と旧 TS 集合を要素単位で完全一致
 させる。head JSON は通常の strict decode を通ることも必要である。ファイル欠落、宣言形の不一致、値の不正、要素差異は
 fail-close とする。任意 branch、cwd、自己申告 bootstrap flag によってこの route に入ってはならない。
 
@@ -321,7 +328,7 @@ JSON を trusted base とする subset check を使う。#1099 の初回 migrati
 要求する `-012` は未実装 Red のまま残し、#1099 全 oracle の closure と称してはならない。migration 後、source を変更しない
 oracle retirement contract PR が `-001` / `-011` の宣言と test label を同期して退役させる。その後の独立した bootstrap
 retirement Green PR が source route を削除し、`-012` だけを完了する。Refactor に route 削除を混ぜず、Refactor の
-`tests/` 差分は 0 のままとする。初回 JSON は旧 main の legacy=89 / widened=317 と完全一致させ、#1097 の 315 件には
+`tests/` 差分は 0 のままとする。初回 JSON は旧 main の legacy=89 / widened=317 / citations=582 と完全一致させ、#1097 の 315 件には
 置き換えない。
 
 ### 7.3 design-protection と配布の境界
@@ -331,16 +338,18 @@ retirement Green PR が source route を削除し、`-012` だけを完了する
 data であり、implementation PR で保護対象の design / test-design を変更する許可にはならない。JSON の編集可能性は、
 strict decoder、必須の trusted-base shrink-only check、analyzer の集合一致で拘束する。
 
-既存 `U-OIDGATE-005/006/007` と `U-OTT-006` の意味・期待値は増やさない。source を変更しない Red / 正式 oracle 工程で、
+既存 `U-OIDGATE-005/006/007/011/012` と `U-OTT-006` の意味・期待値は増やさない。source を変更しない Red / 正式 oracle 工程で、
 TS 定数を直接参照している既存 test を、production `loadOracleTestTraceInput` の戻り値へ付け替える。具体的には
 `U-OIDGATE-005/006` は JSON-backed `input.widenedBaseline`、`U-OIDGATE-007` は JSON-backed `input.baseline.size === 89`
 と既存の widened との交差 0、`U-OTT-006` は同じ loader の `input.baseline.size === 89` だけを維持する。付け替えの
-所有表は supplemental L7 §3 に置き、loader が debt を適用する等の新しい oracle は追加しない。初回 migration の旧定数と
-JSON の一時的な完全一致証明は candidate `-001` だけが所有し、継続する JSON 集合の assertion と混同しない。
+所有表は supplemental L7 §3 に置き、loader が debt を適用する等の新しい oracle は追加しない。`U-OIDGATE-011` の
+direct citation baseline assertion は JSON-backed `input.citationBaseline` に付け替え、`U-OIDGATE-012` の stale-citation
+検出を維持する。初回 migration の旧定数と JSON の一時的な完全一致証明は candidate `-001` だけが所有し、継続する JSON 集合の
+assertion と混同しない。
 
 JSON は runtime authority であるため、oracle checker が利用する clean Pack の asset inventory / bundle に明示的に
 含める。source checkout と Pack は、現在の working directory に依存せず、Windows / Linux で同じ versioned content を
-読み込む。移行では 2 つの TS 定数削除に対する Git の実際の name-status / rename 判定を確認する。Git がいずれかを
+読み込む。移行では 3 つの TS 定数削除に対する Git の実際の name-status / rename 判定を確認する。Git がいずれかを
 `src/` から `docs/governance/` への move と分類し、既存 `implementation-moved-out` 規則が拒否する場合は、
 design-protection を弱めたり move 例外を足したりせず、移行順序または表現を改めて解決する。
 
