@@ -355,6 +355,17 @@ memoryは永続知識だけを保存し、進捗や次の一手を保存する�
 - doctor の `memory-retirable` row は dry-run と同じ集計を出す advisory で、doctor を fail させない。
 - EOD の閉店処理で `memory retire --archive` (declared のみ) を 1 回流す。
 
+### canonical memory root resolver の配置 (issue #963)
+
+memory module が canonical root の解決を所有する。解決部品は `src/memory/project-memory-root.ts` に置く。
+canonical root、HEAD identity、worktree topology の判定と、symlink / escape の拒否は現行の挙動のまま移し、簡略化しない。
+`src/runtime/project-memory-root.ts` は互換のための re-export だけを持ち、実装を複製しない。
+
+- `src/memory/service.ts` は runtime と state-db を import しない (module cycle を作らない)。
+- DB の削除操作は memory が所有する構造的 port として定義し、CLI の composition root が注入する。
+  composition root は DB の対象が resolver の `canonicalProjectRoot` と一致することを検証し、
+  一致しなければ fail-close する。
+
 ### 配送側
 
 > **旧契約 / 別owner**: 以下の新規 episode 配送抑止は #1062 が置き換える。CANDIDATE-U-MEMEPI-009 / 010 / 018 の
