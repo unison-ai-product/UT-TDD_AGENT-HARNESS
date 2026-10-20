@@ -690,7 +690,8 @@ export function retireMemoryEpisodes(
     const projectDbPath = join(repoRoot, ".ut-tdd", "harness.db");
     const dbStat = lstatSync(projectDbPath);
     if (!dbStat.isFile() || dbStat.isSymbolicLink()) failRecovery();
-    inspectMemoryProjection(projectDbPath, entry.memory_id, sourcePath, entry.content_hash);
+    const projection = { memoryId: entry.memory_id, sourcePath, contentHash: entry.content_hash };
+    inspectMemoryProjection(projectDbPath, projection);
     const month = input.nowISO.slice(0, 7);
     assertSafeArchiveParents(repoRoot, month);
 
@@ -761,7 +762,7 @@ export function retireMemoryEpisodes(
     if (!currentStat.isFile() || currentStat.isSymbolicLink()) failRecovery();
     const currentBytes = readFileSync(sourceAbsolute);
     if (!currentBytes.equals(rawBytes)) failRecovery();
-    inspectMemoryProjection(projectDbPath, entry.memory_id, sourcePath, entry.content_hash);
+    inspectMemoryProjection(projectDbPath, projection);
     const event: MemoryEpisodeArchiveEvent = {
       schema: MEMORY_EPISODE_MANIFEST_SCHEMA,
       state: "intent",
@@ -925,9 +926,7 @@ function assertSafeArchiveParents(repoRoot: string, month: string): void {
 
 function inspectMemoryProjection(
   dbPath: string,
-  memoryId: string,
-  sourcePath: string,
-  contentHash: string,
+  expected: { memoryId: string; sourcePath: string; contentHash: string },
 ): void {
   const { DatabaseSync } = nodeRequire("node:sqlite") as {
     DatabaseSync: new (
@@ -951,12 +950,12 @@ function inspectMemoryProjection(
       .prepare(
         "SELECT memory_id, source_path, content_hash FROM memory_entries WHERE memory_id = ?",
       )
-      .get(memoryId);
+      .get(expected.memoryId);
     if (
       !row ||
-      row.memory_id !== memoryId ||
-      row.source_path !== sourcePath ||
-      row.content_hash !== contentHash
+      row.memory_id !== expected.memoryId ||
+      row.source_path !== expected.sourcePath ||
+      row.content_hash !== expected.contentHash
     ) {
       throw new MemoryArchiveFailure("memory_archive_recovery_conflict");
     }
