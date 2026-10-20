@@ -292,6 +292,11 @@ calls.
 
 ## PLAN Rules
 
+**PLAN freeze (#1166, #1078 A2)**: new PLAN filing, `plan revise`, and adding new references to PLANs are
+stopped except where PLAN retirement itself requires it; design docs and GitHub Issues are the canonical
+source for new work. The rule lives in `CLAUDE.md` §PLAN Filing Rules (PLAN 凍結); do not restate it here.
+The filing rules below apply only when touching an existing PLAN until retirement completes.
+
 These filing rules previously existed only in `.claude/CLAUDE.md`, so this
 runtime never received them (measured 2026-07-28: `route_signal` / `generates` /
 `plan_id` appeared 0 times in this file). They are shared workflow, not

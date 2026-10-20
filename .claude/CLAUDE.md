@@ -54,6 +54,11 @@ concurrent run fail-fasts with exit 2 and the holder's pid. Rules:
 
 ## PLAN Rules
 
+**PLAN freeze (#1166, #1078 A2)**: new PLAN filing, `plan revise`, and adding new references to PLANs are
+stopped except where PLAN retirement itself requires it; design docs and GitHub Issues are the canonical
+source for new work. The rule lives in `../CLAUDE.md` §PLAN Filing Rules (PLAN 凍結); do not restate it here.
+The rules below apply only when touching an existing PLAN until retirement completes.
+
 Before creating or updating PLAN files, inspect existing `docs/plans/` entries.
 Prefer extending an existing PLAN over creating an overlapping one.
 
