@@ -28,7 +28,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 import { memoryFileNameFor, memoryIdFor, parseMemoryFile } from "../src/memory/index.ts";
-import { retireMemoryEpisodes } from "../src/memory/service.ts";
+import { type MemoryArchiveDbPort, retireMemoryEpisodes } from "../src/memory/service.ts";
 import {
   createTableSql,
   HARNESS_DB_TABLE_BY_NAME,
@@ -46,6 +46,67 @@ const tempRoots: string[] = [];
 afterAll(() => {
   for (const root of tempRoots) removeTestTree(root);
 });
+
+type RetireInput = Parameters<typeof retireMemoryEpisodes>[0];
+type RetirePorts = NonNullable<Parameters<typeof retireMemoryEpisodes>[1]>;
+
+/** temp repo 自身の隔離 harness.db に束縛した MemoryArchiveDbPort (実 repo の DB は開かない)。 */
+function isolatedDbPort(root: string): MemoryArchiveDbPort {
+  const dbPath = join(root, ".ut-tdd", "harness.db");
+  const { DatabaseSync } = nodeRequire("node:sqlite") as {
+    DatabaseSync: new (
+      path: string,
+      options?: { readOnly: boolean },
+    ) => {
+      prepare(sql: string): {
+        get(...args: unknown[]): Record<string, unknown> | undefined;
+        run(...args: unknown[]): { changes: number | bigint };
+      };
+      close(): void;
+    };
+  };
+  return {
+    inspectEntry({ memoryId, sourcePath, contentHash }) {
+      const db = new DatabaseSync(dbPath, { readOnly: true });
+      try {
+        const version = Number(db.prepare("PRAGMA user_version").get()?.user_version ?? 0);
+        if (version !== SCHEMA_VERSION) return { status: "schema_unready" };
+        const table = db
+          .prepare(
+            "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'memory_entries'",
+          )
+          .get();
+        if (!table) return { status: "schema_unready" };
+        const row = db
+          .prepare(
+            "SELECT memory_id, source_path, content_hash FROM memory_entries WHERE memory_id = ?",
+          )
+          .get(memoryId);
+        if (!row) return { status: "row_absent" };
+        return row.source_path === sourcePath && row.content_hash === contentHash
+          ? { status: "match" }
+          : { status: "row_mismatch" };
+      } finally {
+        db.close();
+      }
+    },
+    deleteEntryRow({ memoryId, sourcePath }) {
+      const db = new DatabaseSync(dbPath);
+      try {
+        const result = db
+          .prepare("DELETE FROM memory_entries WHERE memory_id = ? AND source_path = ?")
+          .run(memoryId, sourcePath);
+        return { deleted: Number(result.changes) };
+      } finally {
+        db.close();
+      }
+    },
+  };
+}
+
+function retire(input: RetireInput, ports: RetirePorts = {}) {
+  return retireMemoryEpisodes(input, { ...ports, db: isolatedDbPort(input.repoRoot) });
+}
 
 function git(root: string, args: string[]): string {
   return execFileSync("git", ["-C", root, ...args], {
@@ -215,7 +276,7 @@ describe("memory episode archive Red oracles (#963)", () => {
   it.fails("CANDIDATE-U-MEMEPI-020 accepts a valid done row only and conflicts on every invalid state", () => {
     const root = tempRepo();
     const a = seedEpisode(root, "Episode A", [`https://github.com/${REPO}/pull/11`]);
-    const first = retireMemoryEpisodes(
+    const first = retire(
       { repoRoot: root, nowISO: NOW, dryRun: false },
       { resolveGitHubStatus: closedResolver },
     );
@@ -229,7 +290,7 @@ describe("memory episode archive Red oracles (#963)", () => {
     const manifestBefore = readFileSync(join(root, MANIFEST), "utf8");
 
     // 正当形: source absent + destination present + SHA 一致 -> 処理済みとして受理、重複 done なし。
-    const valid = retireMemoryEpisodes({ repoRoot: root, nowISO: NOW, dryRun: false });
+    const valid = retire({ repoRoot: root, nowISO: NOW, dryRun: false });
     expect(valid).toMatchObject({ ok: true });
     expect(readFileSync(join(root, MANIFEST), "utf8")).toBe(manifestBefore);
     expect(readFileSync(destination).equals(goodBytes)).toBe(true);
@@ -258,7 +319,7 @@ describe("memory episode archive Red oracles (#963)", () => {
     ];
     for (const [label, mutate, restore] of forms) {
       mutate();
-      const result = retireMemoryEpisodes(
+      const result = retire(
         { repoRoot: root, nowISO: NOW, dryRun: false },
         { resolveGitHubStatus: closedResolver },
       );
@@ -277,7 +338,7 @@ describe("memory episode archive Red oracles (#963)", () => {
     const url = `https://github.com/${REPO}/pull/10`;
     const entry = seedEpisode(root, "Episode merged", [url]);
     let resolverCalls = 0;
-    const result = retireMemoryEpisodes(
+    const result = retire(
       { repoRoot: root, nowISO: NOW, dryRun: false },
       {
         resolveGitHubStatus: () => {
@@ -322,7 +383,7 @@ describe("memory episode archive Red oracles (#963)", () => {
     // PR + issue の複数 bound_to: 宣言順に依らず URL 昇順で全 evidence を記録する。
     const multi = tempRepo();
     const entry = seedEpisode(multi, "Episode multi", [pull, issue]);
-    const result = retireMemoryEpisodes(
+    const result = retire(
       { repoRoot: multi, nowISO: NOW, dryRun: false },
       { resolveGitHubStatus: closedResolver },
     );
@@ -418,7 +479,7 @@ describe("memory episode archive Red oracles (#963)", () => {
     const foreignDbBefore = memoryRowsJson(root, foreignId);
     expect(foreignDbBefore).not.toBe("[]");
 
-    const result = retireMemoryEpisodes(
+    const result = retire(
       { repoRoot: root, nowISO: NOW, dryRun: false },
       { resolveGitHubStatus: closedResolver },
     );
@@ -455,7 +516,7 @@ describe("memory episode archive regression fences satisfied by the scaffold (#9
     writeFileSync(dest, "pre-existing destination", "utf8");
     const sourceBefore = readFileSync(e.absolute);
     const dbBefore = memoryRowsJson(root, e.memoryId);
-    const result = retireMemoryEpisodes(
+    const result = retire(
       { repoRoot: root, nowISO: NOW, dryRun: false },
       { resolveGitHubStatus: closedResolver },
     );
@@ -471,7 +532,7 @@ describe("memory episode archive regression fences satisfied by the scaffold (#9
     const url = `https://github.com/${REPO}/pull/11`;
     const first = seedEpisode(root, "Episode E", [url]);
     expect(
-      retireMemoryEpisodes(
+      retire(
         { repoRoot: root, nowISO: NOW, dryRun: false },
         { resolveGitHubStatus: closedResolver },
       ),
@@ -486,7 +547,7 @@ describe("memory episode archive regression fences satisfied by the scaffold (#9
     const sourceBefore = readFileSync(second.absolute);
     const dbBefore = memoryRowsJson(root, second.memoryId);
     const manifestBefore = readFileSync(join(root, MANIFEST), "utf8");
-    const result = retireMemoryEpisodes(
+    const result = retire(
       { repoRoot: root, nowISO: NOW, dryRun: false },
       { resolveGitHubStatus: closedResolver },
     );
@@ -507,11 +568,7 @@ describe("memory episode archive regression fences satisfied by the scaffold (#9
         const memoryDirBefore = readdirSync(join(root, ".ut-tdd", "memory"));
         const label = `${nowISO} dryRun=${dryRun}`;
         expect(
-          () =>
-            retireMemoryEpisodes(
-              { repoRoot: root, nowISO, dryRun },
-              { resolveGitHubStatus: closedResolver },
-            ),
+          () => retire({ repoRoot: root, nowISO, dryRun }, { resolveGitHubStatus: closedResolver }),
           label,
         ).toThrow(TypeError);
         expect(existsSync(join(root, ".ut-tdd", "archive")), label).toBe(false);
@@ -544,7 +601,7 @@ describe("memory episode archive regression fences satisfied by the scaffold (#9
         bytes: readFileSync(s.absolute),
         db: memoryRowsJson(root, s.memoryId),
       }));
-      const result = retireMemoryEpisodes(
+      const result = retire(
         { repoRoot: root, nowISO: NOW, dryRun: false },
         { resolveGitHubStatus: closedResolver },
       );
@@ -576,7 +633,7 @@ describe("memory episode archive regression fences satisfied by the scaffold (#9
       const e = seedEpisode(root, "Episode G", [`https://github.com/${REPO}/pull/11`]);
       const sourceBefore = readFileSync(e.absolute);
       const dbBefore = memoryRowsJson(root, e.memoryId);
-      const result = retireMemoryEpisodes(
+      const result = retire(
         { repoRoot: root, nowISO: NOW, dryRun: false },
         { resolveGitHubStatus: resolver as never },
       );
@@ -596,7 +653,7 @@ describe("memory episode archive regression fences satisfied by the scaffold (#9
     const single = tempRepo();
     const e = seedEpisode(single, "Episode single", [pull]);
     expect(
-      retireMemoryEpisodes(
+      retire(
         { repoRoot: single, nowISO: NOW, dryRun: false },
         { resolveGitHubStatus: closedResolver },
       ),
