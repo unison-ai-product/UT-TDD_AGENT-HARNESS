@@ -1,3 +1,4 @@
+import "../src/runtime/windows-hide.ts";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {

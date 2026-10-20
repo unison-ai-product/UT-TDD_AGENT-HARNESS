@@ -4,6 +4,7 @@
  * 薄い OS 別 entrypoint (scripts/ut-tdd, ut-tdd.ps1) が本 core を呼ぶ。
  * status / doctor / plan lint / vmodel lint / gate / runtime adapter を集約する。
  */
+import "./runtime/windows-hide.ts";
 import { execFileSync, spawn } from "node:child_process";
 import {
   appendFileSync,

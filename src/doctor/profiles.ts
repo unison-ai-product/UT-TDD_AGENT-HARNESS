@@ -111,6 +111,7 @@ export const FULL_DOCTOR_OUTPUT_IDS = [
   "github-ci-policy",
   "codex-hook-adapter",
   "codex-wrapper-parity",
+  "windows-hide",
   "toolchain-pin",
   "l6-fr-coverage",
   "readability",

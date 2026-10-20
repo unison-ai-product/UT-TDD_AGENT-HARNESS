@@ -10,6 +10,7 @@
  * This file remains only for older settings or manual invocations.
  * It is fail-open: hook failures must not block Claude Code work.
  */
+import "../../src/runtime/windows-hide.ts";
 import { spawnSync } from "node:child_process";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";

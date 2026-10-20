@@ -109,6 +109,7 @@ import {
 } from "./source-trace.ts";
 import { checkTestRepositoryIsolation } from "./test-repository-isolation.ts";
 import { checkToolchainPin } from "./toolchain.ts";
+import { checkWindowsHide } from "./windows-hide.ts";
 import {
   checkFrontendDesignCoverage,
   checkG8IntegrationWorkflow,
@@ -216,6 +217,7 @@ export function buildDoctorCheckDefinitionGroups(
         full("github-ci-policy", () => checkGithubCiPolicy(deps.repoRoot)),
         full("codex-hook-adapter", () => checkCodexHookAdapter(deps.repoRoot)),
         full("codex-wrapper-parity", () => checkCodexWrapperParity(deps)),
+        full("windows-hide", () => checkWindowsHide(deps.repoRoot)),
         fullAndToolchain("toolchain-pin", () => checkToolchainPin(deps.repoRoot)),
       ],
     },
