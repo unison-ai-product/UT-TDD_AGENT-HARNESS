@@ -566,7 +566,7 @@ ${body}`,
 });
 
 // ---------------------------------------------------------------------------
-// Issue #848 oracle 宣言行の識別規則の Red (CANDIDATE-U-FRCOV-024..026)。
+// Issue #848 oracle 宣言行の識別規則の Red (U-FRCOV-024..026)。
 // 契約: L6 fr-unit-coverage.md「宣言行の識別規則」/ L7 §1.20 追補。
 // 宣言は fixture の L7 文書へ `prose` として自由形式の表で与える (宣言表は空)。
 // 現行実装は退役状態を読まず先頭の正例 (有効 fixture) を拒否するので assertion で落ちる。
@@ -584,12 +584,12 @@ function freeTable(head: string, row: string, title = "無関係な節"): string
 const DECL_HEAD_ID = "| ID | 観点 | 実装テスト |";
 const DECL_ROW = `| ${CAND} | FR-L1-05 の退役 oracle | ${RET_TEST_REL} |`;
 
-describe("Issue #848 declaration-row identification (CANDIDATE-U-FRCOV-024..026, Red)", () => {
+describe("Issue #848 declaration-row identification (U-FRCOV-024..026, Red)", () => {
   afterEach(() => {
     for (const root of tmpRoots.splice(0)) rmSync(root, { recursive: true, force: true });
   });
 
-  it("CANDIDATE-U-FRCOV-024: any >=3-column table row whose first cell is the exact id is a declaration, independent of heading and header", () => {
+  it("U-FRCOV-024: any >=3-column table row whose first cell is the exact id is a declaration, independent of heading and header", () => {
     const outcomes = [
       declOk(freeTable(DECL_HEAD_ID, DECL_ROW)),
       declOk(freeTable("| oracle | 観点 | 実装テスト |", DECL_ROW)),
@@ -614,7 +614,7 @@ describe("Issue #848 declaration-row identification (CANDIDATE-U-FRCOV-024..026,
     expect(outcomes).toEqual([true, true, true, true, false, false, false]);
   });
 
-  it("CANDIDATE-U-FRCOV-025: target FR id is matched on an exact boundary and must be the only FR id", () => {
+  it("U-FRCOV-025: target FR id is matched on an exact boundary and must be the only FR id", () => {
     const withTarget = (cell: string) =>
       declOk(freeTable(DECL_HEAD_ID, `| ${CAND} | ${cell} | ${RET_TEST_REL} |`));
     const outcomes = [
@@ -630,7 +630,7 @@ describe("Issue #848 declaration-row identification (CANDIDATE-U-FRCOV-024..026,
     expect(outcomes).toEqual([true, true, false, false, false, false, false]);
   });
 
-  it("CANDIDATE-U-FRCOV-026: every tests path token must resolve and cite the exact oracle id", () => {
+  it("U-FRCOV-026: every tests path token must resolve and cite the exact oracle id", () => {
     const both = {
       [RET_TEST_REL]: `it("${CAND} a", () => {});\n`,
       [RET_TEST_REL_2]: `it("${CAND} b", () => {});\n`,
