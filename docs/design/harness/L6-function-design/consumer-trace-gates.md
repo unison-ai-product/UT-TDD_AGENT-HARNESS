@@ -156,7 +156,7 @@ consumer 分岐の lint 関数は次を返す。`src/plan/lint.ts` の handler �
 
 | field | 内容 |
 |---|---|
-| `branch` | `"consumer"` (harness 分岐の結果型は現行のまま) |
+| `branch` | `"consumer"` (harness G1 は §3.1 の PLAN 由来の項目だけを除き、その他の結果型は維持する。harness G3 の結果型は現行のまま) |
 | `violations` | §5〜§7 の理由文字列の配列。辞書順で全件返し、最初の 1 件で打ち切らない |
 | `totals` | `requirements` / `screens` / `functions` (G1)、`requirements` / `functions` / `tests` (G3) の件数 |
 
