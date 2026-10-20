@@ -536,7 +536,7 @@ export interface MemoryArchiveDbPort {
 
 export interface RetireMemoryEpisodesPorts {
   resolveGitHubStatus?: (input: { url: string }) => { state: "open" | "closed" | "unknown" };
-  // Green で削除: optionality only preserves the pre-injection footing.
+  // Green で削除: optional typing permits negative callers; omission fails closed below.
   db?: MemoryArchiveDbPort;
   checkpoint?: (input: {
     point: MemoryArchiveCheckpointPoint;
@@ -614,6 +614,14 @@ export function retireMemoryEpisodes(
 ): RetireMemoryEpisodesResult | RetireMemoryEpisodesFailure {
   if (!isUtcIsoTimestamp(input.nowISO))
     throw new TypeError("nowISO must be a valid UTC ISO-8601 timestamp");
+
+  if (
+    !ports?.db ||
+    typeof ports.db.inspectEntry !== "function" ||
+    typeof ports.db.deleteEntryRow !== "function"
+  ) {
+    return { ok: false, reason: "memory_archive_io_failed" };
+  }
 
   const dryRun = input.dryRun ?? true;
   function failRecovery(): never {
