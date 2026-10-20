@@ -1,3 +1,6 @@
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   analyzeDddTddRules,
@@ -5,6 +8,40 @@ import {
   dddTddRulesMessages,
   loadDddTddInputs,
 } from "../src/lint/ddd-tdd-rules.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
+
+function createDddTddSplitL7Fixture(): string {
+  const root = mkdtempSync(join(tmpdir(), "ddd-tdd-split-l7-"));
+  const governance = join(root, "docs", "governance");
+  const harness = join(root, "docs", "test-design", "harness");
+  mkdirSync(governance, { recursive: true });
+  mkdirSync(harness, { recursive: true });
+  writeFileSync(
+    join(governance, "ddd-tdd-rules.md"),
+    [
+      "- id: domain-boundary",
+      "- id: invariant-test-trace",
+      "- id: red-first-evidence",
+      "- id: test-oracle-strength",
+      "- id: integration-gwt",
+      "- id: unit-oracle-substance",
+      "- id: DDD-INV-002 oracle: U-DDDTDD-002 - The invariant has an explicit L7 oracle.",
+    ].join("\n"),
+    "utf8",
+  );
+  writeFileSync(join(harness, "L7-unit-test-design.md"), "PRIMARY-L7-SENTINEL\n", "utf8");
+  writeFileSync(
+    join(harness, "L7-split-x-test-design.md"),
+    [
+      "| ID | Target | Oracle |",
+      "|---|---|---|",
+      "| U-DDDTDD-002 | invariant trace | DDD-INV-002 remains discoverable when its substantive oracle row exists only in the split L7 test design. |",
+    ].join("\n"),
+    "utf8",
+  );
+  writeFileSync(join(harness, "README.md"), "NON-L7-SENTINEL\n", "utf8");
+  return root;
+}
 
 function baseInputs(overrides: Partial<DddTddInputs> = {}): DddTddInputs {
   return {
@@ -112,6 +149,40 @@ describe("U-DDDTDD DDD/TDD strictness lint", () => {
     const result = analyzeDddTddRules(baseInputs({ l7Text: "" }));
     expect(result.ok).toBe(false);
     expect(result.violations.map((v) => v.rule)).toContain("invariant-test-trace");
+  });
+
+  it("keeps the primary L7 document in loaded input", () => {
+    const root = createDddTddSplitL7Fixture();
+    try {
+      expect(loadDddTddInputs(root).l7Text).toContain("PRIMARY-L7-SENTINEL");
+    } finally {
+      removeTestTree(root);
+    }
+  });
+
+  it("excludes non-L7 Markdown from loaded L7 input", () => {
+    const root = createDddTddSplitL7Fixture();
+    try {
+      expect(loadDddTddInputs(root).l7Text).not.toContain("NON-L7-SENTINEL");
+    } finally {
+      removeTestTree(root);
+    }
+  });
+
+  it.fails("finds U-DDDTDD-002 when only a split L7 document defines it", () => {
+    const root = createDddTddSplitL7Fixture();
+    try {
+      const result = analyzeDddTddRules(loadDddTddInputs(root));
+      expect(
+        result.violations.filter(
+          (violation) =>
+            violation.rule === "invariant-test-trace" &&
+            violation.message.includes("Invariant DDD-INV-002"),
+        ),
+      ).toEqual([]);
+    } finally {
+      removeTestTree(root);
+    }
   });
 
   it("detects confirmed TDD plans without red-first evidence or with inverted evidence", () => {
