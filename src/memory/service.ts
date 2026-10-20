@@ -12,16 +12,24 @@
  * 旧経路 (`selectMemoryEntries(db)`) は DB 側 body を読む read model だった。本 service が
  * 読み路を引き継ぐため、呼び元は service を通す (境界は tests/memory-service.test.ts が固定)。
  */
+
+import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
+  appendFileSync,
   existsSync,
   lstatSync,
   readdirSync,
   readFileSync,
   realpathSync,
+  renameSync,
   writeFileSync,
 } from "node:fs";
-import { dirname, isAbsolute, join, relative, resolve } from "node:path";
+import { createRequire } from "node:module";
+import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { parse as parseYaml } from "yaml";
+import { loadProjectIdentityFromHead } from "../kernel/project-identity.ts";
+import { SCHEMA_VERSION } from "../schema/harness-db.ts";
 import { isSecretLike } from "../secret.ts";
 import { ensureDir } from "../shared/fs.ts";
 import {
@@ -472,4 +480,503 @@ export function renderMemoryHealth(result: MemoryReadResult): string {
     lines.push(`  memory unreadable: ${finding.source_path} — ${finding.reason}`);
   }
   return lines.length > 0 ? `${lines.join("\n")}\n` : "";
+}
+
+export type MemoryArchiveCheckpointPoint =
+  | "beforeIntentAppend"
+  | "afterIntentAppendBeforeRename"
+  | "afterRenameBeforeDbDelete"
+  | "afterDbDeleteBeforeDoneAppend";
+
+export interface MemoryEpisodeRetirable {
+  memory_id: string;
+  source_path: string;
+  lifecycle_source: "declared" | "inferred";
+  bound_to: string[];
+}
+
+export interface MemoryEpisodeMove {
+  memory_id: string;
+  source_path: string;
+  destination_path: string;
+  sha256: string;
+}
+
+export interface RetireMemoryEpisodesResult {
+  ok: true;
+  dryRun: boolean;
+  total: number;
+  counts: {
+    tracked_durable: number;
+    untracked_durable: number;
+    episode_retirable_declared: number;
+    episode_ok_declared: number;
+    episode_unknown_declared: number;
+    episode_retirable_inferred: number;
+    episode_ok_inferred: number;
+    episode_unknown_inferred: number;
+    parse_failed: number;
+    not_memory_entry: number;
+  };
+  retirable: MemoryEpisodeRetirable[];
+  moved: MemoryEpisodeMove[];
+}
+
+export interface RetireMemoryEpisodesFailure {
+  ok: false;
+  reason: "memory_archive_recovery_conflict" | "memory_archive_io_failed";
+}
+
+export interface RetireMemoryEpisodesPorts {
+  resolveGitHubStatus?: (input: { url: string }) => { state: "open" | "closed" | "unknown" };
+  checkpoint?: (input: {
+    point: MemoryArchiveCheckpointPoint;
+    memoryId: string;
+    sourcePath: string;
+    destinationPath: string;
+    sha256: string;
+  }) => void;
+}
+
+interface MemoryEpisodeArchiveEvent {
+  schema: "ut-tdd.memory-episode-archive/v1";
+  state: "intent" | "done";
+  memory_id: string;
+  source_path: string;
+  destination_path: string;
+  sha256: string;
+  bytes: number;
+  bound_to: string[];
+  selection_basis: {
+    kind: "memory-episode-closure/v1";
+    lifecycle_source: "declared" | "inferred";
+    closed_evidence: Array<
+      | { url: string; via: "git_first_parent_merge"; commit_sha: string }
+      | { url: string; via: "github_closed"; observed_state: "closed" }
+    >;
+  };
+  recorded_at: string;
+}
+
+const MEMORY_EPISODE_MANIFEST_SCHEMA = "ut-tdd.memory-episode-archive/v1" as const;
+const MEMORY_EPISODE_MANIFEST_RELATIVE = join(
+  ".ut-tdd",
+  "archive",
+  "memory-episodes",
+  "manifest.jsonl",
+);
+const nodeRequire = createRequire(import.meta.url);
+
+interface ArchiveSqliteStatement {
+  get(...params: unknown[]): Record<string, unknown> | undefined;
+  run(...params: unknown[]): { changes?: number } | undefined;
+}
+
+interface ArchiveSqliteDb {
+  prepare(sql: string): ArchiveSqliteStatement;
+  close(): void;
+}
+
+class MemoryArchiveFailure extends Error {
+  readonly reason: RetireMemoryEpisodesFailure["reason"];
+
+  constructor(reason: RetireMemoryEpisodesFailure["reason"]) {
+    super(reason);
+    this.reason = reason;
+  }
+}
+
+class MemoryArchiveCheckpointThrown extends Error {
+  readonly original: unknown;
+
+  constructor(original: unknown) {
+    super("memory archive checkpoint threw");
+    this.original = original;
+  }
+}
+
+/**
+ * Retire the deliberately narrow, explicitly declared single-episode case.
+ * Broader classification and all recovery/manifest interpretation remain Green work.
+ */
+export function retireMemoryEpisodes(
+  input: { repoRoot: string; nowISO: string; dryRun?: boolean; includeInferred?: boolean },
+  ports: RetireMemoryEpisodesPorts = {},
+): RetireMemoryEpisodesResult | RetireMemoryEpisodesFailure {
+  if (!isUtcIsoTimestamp(input.nowISO))
+    throw new TypeError("nowISO must be a valid UTC ISO-8601 timestamp");
+
+  const dryRun = input.dryRun ?? true;
+  function failRecovery(): never {
+    throw new MemoryArchiveFailure("memory_archive_recovery_conflict");
+  }
+  const emptyCounts = (): RetireMemoryEpisodesResult["counts"] => ({
+    tracked_durable: 0,
+    untracked_durable: 0,
+    episode_retirable_declared: 0,
+    episode_ok_declared: 0,
+    episode_unknown_declared: 0,
+    episode_retirable_inferred: 0,
+    episode_ok_inferred: 0,
+    episode_unknown_inferred: 0,
+    parse_failed: 0,
+    not_memory_entry: 0,
+  });
+
+  try {
+    // Green で置き換える: inferred-episode selection is not part of this footing.
+    if (input.includeInferred === true) failRecovery();
+    const repoRoot = canonicalMainRepositoryRoot(input.repoRoot);
+    const manifestPath = join(repoRoot, MEMORY_EPISODE_MANIFEST_RELATIVE);
+    if (pathExistsNoFollow(manifestPath)) {
+      // Green で置き換える: closed-schema manifest validation and intent/done recovery preflight.
+      failRecovery();
+    }
+    const memoryDir = join(repoRoot, MEMORY_SOURCE_ROOT);
+    const memoryDirStat = lstatSync(memoryDir);
+    if (!memoryDirStat.isDirectory() || memoryDirStat.isSymbolicLink()) failRecovery();
+    const memoryDirReal = realpathSync(memoryDir);
+    if (!isContainedWithin(repoRoot, memoryDirReal)) failRecovery();
+
+    const directoryEntries = readdirSync(memoryDir).sort();
+    // Green で置き換える: full corpus classification, tracked-entry accounting, and multi-entry processing.
+    if (directoryEntries.length !== 1 || !directoryEntries[0].toLowerCase().endsWith(".md")) {
+      failRecovery();
+    }
+
+    const sourceName = directoryEntries[0];
+    const sourcePath = join(MEMORY_SOURCE_ROOT, sourceName).replaceAll("\\", "/");
+    if (isTrackedMemoryPath(repoRoot, sourcePath)) failRecovery();
+    const sourceAbsolute = resolve(repoRoot, sourcePath);
+    const sourceStat = lstatSync(sourceAbsolute);
+    if (!sourceStat.isFile() || sourceStat.isSymbolicLink()) failRecovery();
+    const sourceReal = realpathSync(sourceAbsolute);
+    if (!isContainedWithin(memoryDirReal, sourceReal) || dirname(sourceReal) !== memoryDirReal) {
+      failRecovery();
+    }
+
+    const rawBytes = readFileSync(sourceAbsolute);
+    const rawText = rawBytes.toString("utf8");
+    const entry = parseMemoryFile(repoRoot, sourcePath, rawText);
+    if (
+      resolveMemoryTaskFile({ repoRoot, memoryId: entry.memory_id, memoryPath: sourcePath }) !==
+      sourceAbsolute
+    ) {
+      failRecovery();
+    }
+    const frontmatterMatch = rawText.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?/);
+    if (!frontmatterMatch) failRecovery();
+    const frontmatter = parseYaml(frontmatterMatch[1]) as Record<string, unknown> | null;
+    if (!frontmatter || typeof frontmatter !== "object" || Array.isArray(frontmatter))
+      failRecovery();
+
+    // Green で置き換える: inferred lifecycle and undeclared-entry classification.
+    if (
+      frontmatter.lifecycle !== "episode" ||
+      frontmatter.lifecycle_source !== "declared" ||
+      !Array.isArray(frontmatter.bound_to) ||
+      frontmatter.bound_to.length !== 1 ||
+      typeof frontmatter.bound_to[0] !== "string"
+    ) {
+      failRecovery();
+    }
+
+    const identity = loadProjectIdentityFromHead({ repoRoot });
+    if (!identity.ok) failRecovery();
+    const boundTo = frontmatter.bound_to as string[];
+    const boundUrl = boundTo[0];
+    if (!parseBoundGitHubUrl(boundUrl, identity.value.repositoryIdentity)) failRecovery();
+
+    const projectDbPath = join(repoRoot, ".ut-tdd", "harness.db");
+    const dbStat = lstatSync(projectDbPath);
+    if (!dbStat.isFile() || dbStat.isSymbolicLink()) failRecovery();
+    inspectMemoryProjection(projectDbPath, entry.memory_id, sourcePath, entry.content_hash);
+    const month = input.nowISO.slice(0, 7);
+    assertSafeArchiveParents(repoRoot, month);
+
+    const destinationPath = join(
+      ".ut-tdd",
+      "archive",
+      "memory-episodes",
+      month,
+      sourceName,
+    ).replaceAll("\\", "/");
+    const destinationAbsolute = resolve(repoRoot, destinationPath);
+    if (pathExistsNoFollow(destinationAbsolute)) failRecovery();
+    if (!isContainedWithin(repoRoot, destinationAbsolute)) failRecovery();
+
+    let githubState: "open" | "closed" | "unknown" = "unknown";
+    // Green で置き換える: default-branch first-parent merge evidence; closure here uses the injected resolver only.
+    if (ports.resolveGitHubStatus) {
+      try {
+        const resolved = ports.resolveGitHubStatus({ url: boundUrl });
+        if (
+          resolved &&
+          typeof resolved === "object" &&
+          (resolved.state === "open" || resolved.state === "closed" || resolved.state === "unknown")
+        ) {
+          githubState = resolved.state;
+        }
+      } catch {
+        githubState = "unknown";
+      }
+    }
+    const closedEvidence: MemoryEpisodeArchiveEvent["selection_basis"]["closed_evidence"] =
+      githubState === "closed"
+        ? [{ url: boundUrl, via: "github_closed", observed_state: "closed" }]
+        : [];
+    const closed = closedEvidence.length === 1;
+    const counts = emptyCounts();
+    counts[
+      closed
+        ? "episode_retirable_declared"
+        : githubState === "open"
+          ? "episode_ok_declared"
+          : "episode_unknown_declared"
+    ] = 1;
+    const retirable: MemoryEpisodeRetirable[] = closed
+      ? [
+          {
+            memory_id: entry.memory_id,
+            source_path: sourcePath,
+            lifecycle_source: "declared",
+            bound_to: [boundUrl],
+          },
+        ]
+      : [];
+    const move: MemoryEpisodeMove = {
+      memory_id: entry.memory_id,
+      source_path: sourcePath,
+      destination_path: destinationPath,
+      sha256: createHash("sha256").update(rawBytes).digest("hex"),
+    };
+    const moved = closed ? [move] : [];
+    if (dryRun || !closed) {
+      return { ok: true, dryRun, total: 1, counts, retirable, moved };
+    }
+
+    // Repeat path and projection checks at the mutation boundary; no file/DB writes occurred above.
+    if (pathExistsNoFollow(manifestPath) || pathExistsNoFollow(destinationAbsolute)) failRecovery();
+    const currentStat = lstatSync(sourceAbsolute);
+    if (!currentStat.isFile() || currentStat.isSymbolicLink()) failRecovery();
+    const currentBytes = readFileSync(sourceAbsolute);
+    if (!currentBytes.equals(rawBytes)) failRecovery();
+    inspectMemoryProjection(projectDbPath, entry.memory_id, sourcePath, entry.content_hash);
+    const event: MemoryEpisodeArchiveEvent = {
+      schema: MEMORY_EPISODE_MANIFEST_SCHEMA,
+      state: "intent",
+      memory_id: entry.memory_id,
+      source_path: sourcePath,
+      destination_path: destinationPath,
+      sha256: move.sha256,
+      bytes: rawBytes.byteLength,
+      bound_to: [boundUrl],
+      selection_basis: {
+        kind: "memory-episode-closure/v1",
+        lifecycle_source: "declared",
+        closed_evidence: closedEvidence,
+      },
+      recorded_at: input.nowISO,
+    };
+    const checkpointInput = (point: MemoryArchiveCheckpointPoint) => ({
+      point,
+      memoryId: entry.memory_id,
+      sourcePath,
+      destinationPath,
+      sha256: move.sha256,
+    });
+    const checkpoint = (point: MemoryArchiveCheckpointPoint): void => {
+      if (!ports.checkpoint) return;
+      try {
+        ports.checkpoint(checkpointInput(point));
+      } catch (error) {
+        throw new MemoryArchiveCheckpointThrown(error);
+      }
+    };
+
+    checkpoint("beforeIntentAppend");
+    ensureDir(dirname(manifestPath), { recursive: true });
+    writeFileSync(manifestPath, `${JSON.stringify(event)}\n`, { encoding: "utf8", flag: "wx" });
+    checkpoint("afterIntentAppendBeforeRename");
+    ensureDir(dirname(destinationAbsolute), { recursive: true });
+    renameSync(sourceAbsolute, destinationAbsolute);
+    checkpoint("afterRenameBeforeDbDelete");
+    deleteMemoryProjectionRow(projectDbPath, entry.memory_id, sourcePath);
+    checkpoint("afterDbDeleteBeforeDoneAppend");
+    appendFileSync(
+      manifestPath,
+      `${JSON.stringify({ ...event, state: "done" } satisfies MemoryEpisodeArchiveEvent)}\n`,
+      "utf8",
+    );
+    return { ok: true, dryRun, total: 1, counts, retirable, moved };
+  } catch (error) {
+    if (error instanceof MemoryArchiveCheckpointThrown) throw error.original;
+    if (error instanceof MemoryArchiveFailure) return { ok: false, reason: error.reason };
+    return { ok: false, reason: "memory_archive_io_failed" };
+  }
+}
+
+function isUtcIsoTimestamp(value: string): boolean {
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,3}))?Z$/.exec(value);
+  if (!match) return false;
+  const [, year, month, day, hour, minute, second, fraction = ""] = match;
+  const milliseconds = Number(fraction.padEnd(3, "0"));
+  const date = new Date(value);
+  return (
+    Number.isFinite(date.getTime()) &&
+    date.toISOString() ===
+      `${year}-${month}-${day}T${hour}:${minute}:${second}.${String(milliseconds).padStart(3, "0")}Z`
+  );
+}
+
+function canonicalMainRepositoryRoot(repoRoot: string): string {
+  const root = realpathSync(repoRoot);
+  const gitDirectory = lstatSync(join(root, ".git"));
+  if (!gitDirectory.isDirectory() || gitDirectory.isSymbolicLink()) {
+    throw new MemoryArchiveFailure("memory_archive_recovery_conflict");
+  }
+  const gitRoot = execFileSync("git", ["-C", root, "rev-parse", "--show-toplevel"], {
+    encoding: "utf8",
+    windowsHide: true,
+    stdio: ["ignore", "pipe", "ignore"],
+  }).trim();
+  const commonDir = execFileSync(
+    "git",
+    ["-C", root, "rev-parse", "--path-format=absolute", "--git-common-dir"],
+    {
+      encoding: "utf8",
+      windowsHide: true,
+      stdio: ["ignore", "pipe", "ignore"],
+    },
+  ).trim();
+  if (
+    realpathSync(gitRoot) !== root ||
+    realpathSync(commonDir) !== realpathSync(join(root, ".git"))
+  ) {
+    throw new MemoryArchiveFailure("memory_archive_recovery_conflict");
+  }
+  return root;
+}
+
+function isContainedWithin(root: string, candidate: string): boolean {
+  const rel = relative(root, candidate);
+  return (
+    rel !== "" && rel !== "." && !rel.startsWith(`..${sep}`) && rel !== ".." && !isAbsolute(rel)
+  );
+}
+
+function isTrackedMemoryPath(repoRoot: string, sourcePath: string): boolean {
+  try {
+    execFileSync("git", ["-C", repoRoot, "ls-files", "--error-unmatch", "--", sourcePath], {
+      stdio: ["ignore", "ignore", "ignore"],
+      windowsHide: true,
+    });
+    return true;
+  } catch (error) {
+    if ((error as { status?: number }).status === 1) return false;
+    throw error;
+  }
+}
+
+function parseBoundGitHubUrl(
+  value: string,
+  repositoryIdentity: string,
+): { kind: "pull" | "issue"; number: number } | null {
+  const escapedIdentity = repositoryIdentity.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = new RegExp(
+    `^https://github\\.com/${escapedIdentity}/(pull|issues)/([1-9][0-9]*)$`,
+  ).exec(value);
+  if (!match) return null;
+  const number = Number(match[2]);
+  if (!Number.isSafeInteger(number)) return null;
+  return { kind: match[1] === "pull" ? "pull" : "issue", number };
+}
+
+function pathExistsNoFollow(path: string): boolean {
+  try {
+    lstatSync(path);
+    return true;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return false;
+    throw error;
+  }
+}
+
+function assertSafeArchiveParents(repoRoot: string, month: string): void {
+  const parts = [".ut-tdd", "archive", "memory-episodes", month];
+  let current = repoRoot;
+  for (const part of parts) {
+    current = join(current, part);
+    try {
+      const stat = lstatSync(current);
+      if (
+        !stat.isDirectory() ||
+        stat.isSymbolicLink() ||
+        !isContainedWithin(repoRoot, realpathSync(current))
+      ) {
+        throw new MemoryArchiveFailure("memory_archive_recovery_conflict");
+      }
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") break;
+      throw error;
+    }
+  }
+}
+
+function inspectMemoryProjection(
+  dbPath: string,
+  memoryId: string,
+  sourcePath: string,
+  contentHash: string,
+): void {
+  const { DatabaseSync } = nodeRequire("node:sqlite") as {
+    DatabaseSync: new (
+      path: string,
+      options: { readOnly: true },
+    ) => {
+      prepare(sql: string): ArchiveSqliteStatement;
+      close(): void;
+    };
+  };
+  const db = new DatabaseSync(dbPath, { readOnly: true });
+  try {
+    const version = Number(db.prepare("PRAGMA user_version").get()?.user_version ?? 0);
+    if (version !== SCHEMA_VERSION)
+      throw new MemoryArchiveFailure("memory_archive_recovery_conflict");
+    const table = db
+      .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'memory_entries'")
+      .get();
+    if (!table) throw new MemoryArchiveFailure("memory_archive_recovery_conflict");
+    const row = db
+      .prepare(
+        "SELECT memory_id, source_path, content_hash FROM memory_entries WHERE memory_id = ?",
+      )
+      .get(memoryId);
+    if (
+      !row ||
+      row.memory_id !== memoryId ||
+      row.source_path !== sourcePath ||
+      row.content_hash !== contentHash
+    ) {
+      throw new MemoryArchiveFailure("memory_archive_recovery_conflict");
+    }
+  } finally {
+    db.close();
+  }
+}
+
+function deleteMemoryProjectionRow(dbPath: string, memoryId: string, sourcePath: string): void {
+  const { DatabaseSync } = nodeRequire("node:sqlite") as {
+    DatabaseSync: new (path: string) => ArchiveSqliteDb;
+  };
+  const db = new DatabaseSync(dbPath);
+  try {
+    const result = db
+      .prepare("DELETE FROM memory_entries WHERE memory_id = ? AND source_path = ?")
+      .run(memoryId, sourcePath);
+    if (!result || result.changes !== 1)
+      throw new MemoryArchiveFailure("memory_archive_recovery_conflict");
+  } finally {
+    db.close();
+  }
 }
