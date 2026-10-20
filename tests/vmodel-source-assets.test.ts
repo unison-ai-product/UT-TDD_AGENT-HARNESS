@@ -440,7 +440,7 @@ describe("checked Vモデル source assets", () => {
     }
   }
 
-  for (const shape of ["ascii-parens", "fullwidth-parens"] as const) {
+  for (const shape of ["ascii-parens", "fullwidth-parens", "em-dash"] as const) {
     for (const placement of ["same-file", "cross-file"] as const) {
       for (const [firstMarker, secondMarker] of markerPairs) {
         const id = "CANDIDATE-U-DOCSPLIT-900";
