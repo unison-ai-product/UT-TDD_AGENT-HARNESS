@@ -18,13 +18,14 @@ import {
   mkdtempSync,
   readdirSync,
   readFileSync,
+  realpathSync,
   renameSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 import { memoryFileNameFor, memoryIdFor, parseMemoryFile } from "../src/memory/index.ts";
 import { retireMemoryEpisodes } from "../src/memory/service.ts";
@@ -36,7 +37,7 @@ import {
 import { ensureTrackedProjectIdentity } from "./support/project-identity-fixture.ts";
 import { removeTestTree } from "./support/temp-tree.ts";
 
-const nodeRequire = createRequire(import.meta.url);
+const nodeRequire = createRequire(resolve("package.json"));
 const NOW = "2026-10-20T00:00:00.000Z";
 const REPO = "example/repo";
 const MANIFEST = join(".ut-tdd", "archive", "memory-episodes", "manifest.jsonl");
@@ -58,7 +59,8 @@ function sha256(text: string): string {
 }
 
 function tempRepo(): string {
-  const root = mkdtempSync(join(tmpdir(), "ut-tdd-memepi-archive-"));
+  // Windows CI の tmpdir は 8.3 短縮名 (RUNNER~1) を返し git の toplevel (長名) と不一致になるため native で正規化する。
+  const root = realpathSync.native(mkdtempSync(join(tmpdir(), "ut-tdd-memepi-archive-")));
   tempRoots.push(root);
   ensureTrackedProjectIdentity(root, REPO);
   git(root, ["branch", "-M", "main"]);
