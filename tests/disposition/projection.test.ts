@@ -974,7 +974,25 @@ function createDocsGitFixture(fixtureOptions: {
     const legacyPlanPath = "docs/plans/PLAN-L7-417-source-disposition-profile-projection.md";
     const destination = join(root, legacyPlanPath);
     mkdirSync(dirname(destination), { recursive: true });
-    cpSync(join(repoRoot, legacyPlanPath), destination);
+    // This legacy PLAN is fixture-only; keep the test independent of the source-repo copy.
+    writeFileSync(
+      destination,
+      [
+        "---",
+        "plan_id: PLAN-L7-417-source-disposition-profile-projection",
+        'title: "PLAN-L7-417 (add-impl): source disposition / semantic catalog / profile projection"',
+        "kind: add-impl",
+        "layer: L7",
+        "drive: db",
+        "status: confirmed",
+        "route_mode: add-feature",
+        "created: 2026-07-10",
+        "updated: 2026-07-10",
+        "---",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
   }
   if (fixtureOptions.ensureTracked) {
     const extraPath = join(root, fixtureOptions.ensureTracked);
