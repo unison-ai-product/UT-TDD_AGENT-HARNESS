@@ -43,7 +43,7 @@ updated: 2026-10-19
 - `.ut-tdd/memory` に tracked / untracked、kind 別のファイルを置く。分母は直下の全 entry 数とし、拡張子外 regular
   file と direct directory を少なくとも1件ずつ fixture に置き、`not_memory_entry` として保持・計数されることを確認する。
 - `retireMemoryEpisodes` は実 service operation と実 file / isolated projection DB で呼ぶ。共有 harness DB は開かない。
-  DB 操作は fixture が isolated sqlite の test adapter を `ports.db` (`inspectEntry` / `deleteEntryRow`、設計 §4.2 DB port) に注入して通す。
+  DB 操作は fixture が isolated sqlite の test adapter を `ports.db` (`inspectEntry` / `deleteEntryRow`、設計 §4.2 DB 操作の port) に注入して通す。
   `ports.db` が未指定、または `inspectEntry` / `deleteEntryRow` が関数でない呼び出しは production adapter へ fallback せず fail-close する。2 method を持つ有効な object は受理する (CANDIDATE-U-MEMEPI-029)。
 - fault は実 operation の同期 checkpoint port だけに注入し、status resolver fake は GitHub 外部状態だけに使う。
   PR の first-parent merge 証拠、分類、manifest append、rename、DB delete と recovery は実処理を観測する。

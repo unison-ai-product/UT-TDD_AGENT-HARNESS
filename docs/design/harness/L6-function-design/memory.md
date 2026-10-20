@@ -282,7 +282,7 @@ memoryは永続知識だけを保存し、進捗や次の一手を保存する�
   対象の `unknown` 判定であり、doctor advisory を含め exit 0 を保つ。`nowISO` が不正な場合は filesystem / DB I/O
   前に `TypeError` とし、filesystem / DB のどちらにも I/O を行わない。CLI は `ok:false` を exit 1、成功を exit 0 に写像する。
 - `ports` は同じ production operation の外部境界だけを差し替える。`resolveGitHubStatus` / `checkpoint` は省略できるが、
-  **`db` は必須であり、省略時に production adapter へ fallback しない** (下の「DB port」)。
+  **`db` は必須であり、省略時に production adapter へ fallback しない** (下の「DB 操作の port」)。
   ```ts
   ports?: {
     resolveGitHubStatus?: (input: { url: string }) => { state: "open" | "closed" | "unknown" };
@@ -304,7 +304,7 @@ memoryは永続知識だけを保存し、進捗や次の一手を保存する�
   no-op とする。この 2 つの省略規則は state-db 依存を含まない。checkpoint と `db` を除き、分類・manifest・rename は
   実 operation を通す。CLI/env test knob、偽 archive 実装、未実装 export import は認めない。
 
-#### DB port (`ports.db`、issue #963)
+#### DB 操作の port (`ports.db`、issue #963)
 
 memory は state-db を import しない (§canonical memory root resolver の配置)。`memory_entries` の行操作は、memory が所有する
 次の構造的 port として定義し、実装は呼び出し側が注入する。port は現行 scaffold が `node:sqlite` で行っている操作
