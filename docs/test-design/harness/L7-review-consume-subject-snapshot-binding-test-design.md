@@ -24,7 +24,7 @@ test側で読み直す。
 
 | Candidate | Stimulus / mutation | 独立oracle |
 | --- | --- | --- |
-| `CANDIDATE-U-RVATT-046` | `before_review`でcurrent HEADを別commitへ移動。HEAD比較削除mutationも適用 | `consume_head_moved`、review execution 0、canonical receipt/comment/Memory 0 |
+| `CANDIDATE-U-RVATT-052` | `before_review`でcurrent HEADを別commitへ移動。HEAD比較削除mutationも適用 | `consume_head_moved`、review execution 0、canonical receipt/comment/Memory 0 |
 | `CANDIDATE-U-RVATT-047` | exact HEADのtracked fileをindex、worktree、rename、unmerged、submodule dirtyの各形で1点変更。dirty比較削除mutationも適用 | `consume_tree_dirty`、review execution 0、全publish 0。tracked `.ut-tdd/**`変更もdeny |
 | `CANDIDATE-U-RVATT-048` | `.ut-tdd/**`外のuntracked file、absolute/`..`相当の不正status pathを入力。許可範囲拡張mutationを適用 | `consume_tree_dirty`、review execution 0、全publish 0 |
 | `CANDIDATE-U-RVATT-049` | untracked `.ut-tdd/review/verdicts/...`と`.ut-tdd/memory/...`だけを生成。一律untracked deny mutationを適用 | 正常reviewへ進み、mutationだけがRed。tracked `.ut-tdd/**`許可とは混同しない |

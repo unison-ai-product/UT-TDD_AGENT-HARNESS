@@ -156,12 +156,16 @@ path は `/` 区切りに正規化する。内容は CRLF を LF に直してか
 | 同 189〜203 行 `loadL6CompletionInputs` / `canLoadL6CompletionInputs` | `L7-unit-test-design.md` 1 本を `l7Text` に読み、`status` と、各 L6 文書のファイル名が含まれるか (`missingL7DocRefs`) を見る | `docs/test-design/harness/L7-*.md` を全て連結して `l7Text` にし、`status` は `L7-unit-test-design.md` が残るなら従来どおり、ファイル名の参照は連結した全文で探す |
 | 同 `DOC_PLAN_RE` と `missingDocPlans` | 各 L6 文書に `plan:` 欄が必須 | 本書は PLAN を持たず `issue:` で出典を指す (PO の方針: 契約の置き場は設計文書と test-design だけ)。`plan:` か `issue:` のどちらかを満たせばよい、に直す |
 | `src/lint/ddd-tdd-rules.ts` 191 行 `loadDddTddInputs` と 470 行 `unitOracleSubstanceViolations` | `L7-unit-test-design.md` を `l7Text` に読み、policy の不変条件 oracle が含まれるか (`invariantTraceViolations`) と、`U-` の行の substance を見る | `docs/test-design/harness/L7-*.md` を全て連結して `l7Text` にする。substance の検査は連結後の全行に掛ける |
-| `tests/vmodel-source-assets.test.ts` 239〜256 行 (`U-VMSRC-009`) | `L7-unit-test-design.md` 1 本だけから `CANDIDATE-*` の ID を集めて一意性を検査し、`CANDIDATE-P-FSM-001` が無いこと、`P-FSM-001` / `I-DISP-001` の行があること、`CANDIDATE-I-SP-001` / `CANDIDATE-M-SP-001` があることを要求する | `docs/test-design/harness/L7-*.md` を全て連結して検査する。一意性は連結後の全 ID に掛けるので、分割先の文書の候補 ID も同じ集合で一意性を検査され、特定の ID の存在要求は移動先の文書でも満たされる。この広げ方を入れないと、移した節ではテストが失敗し、移さなくても新しい文書の候補 ID が一意性の検査から漏れる |
+| `tests/vmodel-source-assets.test.ts` 239〜256 行 (`U-VMSRC-009`) | `L7-unit-test-design.md` 1 本だけから `CANDIDATE-*` の ID を集めて一意性を検査し、集合が空でないこと、`CANDIDATE-P-FSM-001` が無いこと、`P-FSM-001` / `I-DISP-001` の行があること、`CANDIDATE-I-SP-001` / `CANDIDATE-M-SP-001` があることを要求する | `docs/test-design/harness/` 直下の通常ファイル `L7-*.md` 全てを対象にし、宣言箇所だけから候補 ID を収集して一意性を検査する。分割先の候補宣言も検査対象になり、集合非空・P-FSM 不在・P-FSM / I-DISP の行・I-SP / M-SP の存在条件は維持する |
 | `src/doctor/runtime-surface.ts` 94 行 | 必須ファイルとして存在だけを確認する | 分割後も `L7-unit-test-design.md` は残る (縮むだけで消えない) ので変更不要。残さない場合は、必須ファイルの一覧を分割後の文書に直す |
 | `tests/l6-completion.test.ts` 171 行 | 実 repo の `L7-unit-test-design.md` を読む | 連結した `l7Text` に直す |
 | `src/handover/index.ts` 7 行、`src/runtime/session-log.ts` 5 行、`src/setup/index.ts` 6 行、`src/runtime/forced-stop.ts` 6 行 | コメントが `§1.x` の節を指すだけ (読まない) | 節が別文書へ移ったら、コメントの path を移動先に直す (分割 PR が `src/` を含まないよう、コメントの path は手順 1 の PR で「`L7-*.md` のいずれか」の書き方に直しておく) |
 | `src/task/classify-policy.ts` 72 行、`src/task/proposal-document-packs-core.ts`、`src/task/proposal-document-packs-operations.ts` | 提案文書の path 一覧に固定で書く (存在は確認しない) | 分割後も `L7-unit-test-design.md` は残るため壊れない。新しい対の文書を提案に含めたいときは一覧に足す |
 | `src/setup/vmodel-template-assets.ts` 68〜69 行 | consumer 向け template の `L7-unit-test-design.md` (別の文書) | 変更不要 (本 repo の文書ではない) |
+
+候補 ID の宣言箇所は、既存形式 `CANDIDATE-[A-Z0-9-]+-[0-9]{3}` の ID を、バッククォートの対で囲んだ形 (quoted) または囲まない形 (bare) で認識する。(1) Markdown 表の先頭セルは、ID だけ、ID に括弧書き注記 (`(...)` または `（...）`) を続けた形、または ID の後に空白・`—`・空白・説明を続けた形を宣言とする。最後の形は既存の `L7-session-start-order-test-design.md` の受入候補に使われている。(2) 1〜6 段の ATX 見出しは、その ID で始まり、その後に見出し説明が続く行を宣言とする (いずれも先頭の空白は許す)。`参照: ID` のように ID より前に文字がある先頭セル、表の他セル、本文中の引用、§3 のコードフェンス内の例、L7 以外や直下でない文書は宣言に数えない。同じ宣言 ID が同一文書内または別文書に複数あれば重複として失敗させ、集合化による重複除去や除外リストは使わない。この収集規則は U-VMSRC-009 の候補宣言一意性専用であり、§3 の `l7-topic` 責務数 (表の全セルに現れる ID family 数) は変更しない。
+
+単一 ID の宣言と、既存宣言群を指す範囲・列挙 (`001..008`、`001〜005`、`001 / 002`) は区別し、後者は参照とする。ID の前に説明がある見出しも宣言済み ID の説明・参照であり、宣言には数えない。本検査の対象 ID は上記の末尾3桁形式を維持し、末尾に英字等を足した枝番・変異識別子は含めない。これは従来の U-VMSRC-009 の ID 形式を変える改訂ではなく、枝番の新しい一意性検査や参照先存在検査を追加しない。これらの対象外条件は、quoted / bare の書式差を理由に宣言を落とすこととは区別する。
 
 `function-spec.md` を名指しで読む箇所も、手順 1 の PR で次のように直す。
 
