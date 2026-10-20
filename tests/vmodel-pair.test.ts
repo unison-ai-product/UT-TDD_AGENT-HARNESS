@@ -8,7 +8,6 @@ import {
   analyzePairFreeze,
   analyzeVerificationGroups,
   loadPairDocs,
-  loadVerificationPlanEvidence,
   type PairDoc,
   pairFreezeMessages,
   parsePairDoc,
@@ -415,15 +414,34 @@ describe("verification trigger (U-VTRIG、層群 freeze の機械発火、IMP-06
   it("U-VTRIG-005: 実 repo ガード — L0-L3 と L4-L6 は freeze 完了", () => {
     const docs = loadPairDocs();
     const { orphans } = analyzePairFreeze(docs);
-    const groups = analyzeVerificationGroups(docs, orphans, loadVerificationPlanEvidence());
-    expect(groups.find((g) => g.id === "L0-L3")?.frozen).toBe(true);
-    expect(groups.find((g) => g.id === "L4-L6")?.frozen).toBe(true);
+    const groups = analyzeVerificationGroups(docs, orphans);
+    const upstream = groups.find((g) => g.id === "L0-L3");
+    const design = groups.find((g) => g.id === "L4-L6");
+    expect(upstream).toBeDefined();
+    expect(upstream?.confirmed).toBeGreaterThan(0);
+    expect(upstream?.draft).toBe(0);
+    expect(upstream?.hasOrphan).toBe(false);
+    expect(upstream?.frozen).toBe(true);
+    expect(design).toBeDefined();
+    expect(design?.confirmed).toBeGreaterThan(0);
+    expect(design?.draft).toBe(0);
+    expect(design?.hasOrphan).toBe(false);
+    expect(design?.frozen).toBe(true);
     // 全 3 検証サイクルゲート名が実 repo の surface に出る (PLAN-REVERSE-36、命名の壊れを CI で検知)。
     const surface = verificationGroupMessages(groups).join("\n");
     expect(surface).toContain("L3 検証サイクルゲート");
     expect(surface).toContain("L6 検証サイクルゲート");
     expect(surface).toContain("設計検証サイクルゲート");
     expect(surface).toContain("実装検証サイクルゲート");
-    expect(groups.find((g) => g.id === "L0-L7")?.frozen).toBe(true);
+  });
+
+  it.fails("U-VTRIG-005-L7: 実 repo の L0-L7 はpair-doc状態だけでfreezeする", () => {
+    const docs = loadPairDocs();
+    const { orphans } = analyzePairFreeze(docs);
+    const groups = analyzeVerificationGroups(docs, orphans);
+    const implementation = groups.find((g) => g.id === "L0-L7");
+    expect(implementation).toBeDefined();
+    expect(implementation?.frozen).toBe(true);
+    expect(verificationGroupMessages(groups).join("\n")).toContain("実装検証サイクルゲート");
   });
 });
