@@ -514,22 +514,28 @@ describe("checked Vモデル source assets", () => {
 
   for (const kind of ["range", "enumeration"] as const) {
     for (const marker of ["quoted", "bare"] as const) {
-      const ids = ["CANDIDATE-U-DOCSPLIT-900", "CANDIDATE-U-DOCSPLIT-901"];
-      const tokens = ids.map((id) => (marker === "quoted" ? `\`${id}\`` : id));
-      const separator = kind === "range" ? ".." : " / ";
-      const markdown = candidateIndex([`| ${tokens.join(separator)} | note |`]);
-      const title = `CANDIDATE-U-DOCSPLIT-026: ${marker} table-cell ${kind} is a reference`;
-      const check = () =>
-        withCandidateDocuments(
-          { "docs/test-design/harness/L7-unit-test-design.md": markdown },
-          (root) => {
-            expect(readCandidateDocuments(root).flatMap(collectCandidateIds).sort()).toEqual(
-              expectedCandidateIds(),
-            );
-          },
-        );
-      if (marker === "quoted") it.fails(title, check);
-      else it(title, check);
+      for (const surface of ["table-cell", "heading"] as const) {
+        const ids = ["CANDIDATE-U-DOCSPLIT-900", "CANDIDATE-U-DOCSPLIT-901"];
+        const tokens = ids.map((id) => (marker === "quoted" ? `\`${id}\`` : id));
+        const separator = kind === "range" ? ".." : " / ";
+        const line =
+          surface === "heading"
+            ? `## ${tokens.join(separator)} description`
+            : `| ${tokens.join(separator)} | note |`;
+        const markdown = candidateIndex([line]);
+        const title = `CANDIDATE-U-DOCSPLIT-026: ${marker} ${surface} ${kind} is a reference`;
+        const check = () =>
+          withCandidateDocuments(
+            { "docs/test-design/harness/L7-unit-test-design.md": markdown },
+            (root) => {
+              expect(readCandidateDocuments(root).flatMap(collectCandidateIds).sort()).toEqual(
+                expectedCandidateIds(),
+              );
+            },
+          );
+        if (marker === "quoted") it.fails(title, check);
+        else it(title, check);
+      }
     }
   }
 
