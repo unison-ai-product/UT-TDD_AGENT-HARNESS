@@ -49,7 +49,7 @@ afterAll(() => {
 });
 
 type RetireInput = Parameters<typeof retireMemoryEpisodes>[0];
-type RetirePorts = NonNullable<Parameters<typeof retireMemoryEpisodes>[1]>;
+type RetirePorts = Omit<NonNullable<Parameters<typeof retireMemoryEpisodes>[1]>, "db">;
 
 /** temp repo 自身の隔離 harness.db に束縛した MemoryArchiveDbPort (実 repo の DB は開かない)。 */
 function isolatedDbPort(root: string): MemoryArchiveDbPort {
@@ -149,12 +149,7 @@ function tempRepo(): string {
 
 function addMergeCommit(root: string, pr: number): string {
   git(root, ["checkout", "-qb", `branch-${pr}`]);
-  git(root, [
-    "commit",
-    "--allow-empty",
-    "-qm",
-    `branch work for pull request #${pr}`,
-  ]);
+  git(root, ["commit", "--allow-empty", "-qm", `branch work for pull request #${pr}`]);
   git(root, ["checkout", "-q", "main"]);
   git(root, [
     "merge",
@@ -283,7 +278,7 @@ function memoryRowsJson(root: string, memoryId: string): string {
 const closedResolver = () => ({ state: "closed" as const });
 
 describe("memory episode archive Red oracles (#963)", () => {
-  it.fails("U-MEMEPI-020 accepts a valid done row only and conflicts on every invalid state", () => {
+  it("U-MEMEPI-020 accepts a valid done row only and conflicts on every invalid state", () => {
     const root = tempRepo();
     const a = seedEpisode(root, "Episode A", [`https://github.com/${REPO}/pull/11`]);
     const first = retire(
@@ -341,7 +336,7 @@ describe("memory episode archive Red oracles (#963)", () => {
     }
   });
 
-  it.fails("U-MEMEPI-023 records the real first-parent merge SHA with identical intent/done payload and no resolver call", () => {
+  it("U-MEMEPI-023 records the real first-parent merge SHA with identical intent/done payload and no resolver call", () => {
     const root = tempRepo();
     const sha = addMergeCommit(root, 10);
     expect(sha).toMatch(/^[0-9a-f]{40}$/);
@@ -387,7 +382,7 @@ describe("memory episode archive Red oracles (#963)", () => {
     expect(done?.state).toBe("done");
   });
 
-  it.fails("U-MEMEPI-024 records github_closed evidence for every bound_to URL in URL order with exact event keys", () => {
+  it("U-MEMEPI-024 records github_closed evidence for every bound_to URL in URL order with exact event keys", () => {
     const pull = `https://github.com/${REPO}/pull/11`;
     const issue = `https://github.com/${REPO}/issues/20`;
     // PR + issue の複数 bound_to: 宣言順に依らず URL 昇順で全 evidence を記録する。
@@ -426,7 +421,7 @@ describe("memory episode archive Red oracles (#963)", () => {
     expect({ ...done, state: "intent" }).toEqual(intent);
   });
 
-  it.fails("U-MEMEPI-027 keeps a valid foreign state-channel row, file and DB row out of #963 selection and recovery", () => {
+  it("U-MEMEPI-027 keeps a valid foreign state-channel row, file and DB row out of #963 selection and recovery", () => {
     const root = tempRepo();
     const entry = seedEpisode(root, "Episode own", [`https://github.com/${REPO}/pull/11`]);
     const foreignId = "memory:project:foreign";
