@@ -148,11 +148,20 @@ function tempRepo(): string {
 }
 
 function addMergeCommit(root: string, pr: number): string {
+  git(root, ["checkout", "-qb", `branch-${pr}`]);
   git(root, [
     "commit",
     "--allow-empty",
     "-qm",
+    `branch work for pull request #${pr}`,
+  ]);
+  git(root, ["checkout", "-q", "main"]);
+  git(root, [
+    "merge",
+    "--no-ff",
+    "-m",
     `Merge pull request #${pr} from example/branch-${pr}`,
+    `branch-${pr}`,
   ]);
   return git(root, ["rev-parse", "HEAD"]);
 }
