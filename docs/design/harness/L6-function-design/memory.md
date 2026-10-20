@@ -446,14 +446,14 @@ PLAN-L6-97 §3.7 は「レビュー依頼や進捗連絡は memory に書かな�
 | 12 | 集計 | 区分の合計 = 全ファイル数、tracked は全件 `tracked_durable` | CANDIDATE-U-MEMEPI-016 |
 | 13 | 推定 episode (引用だけの恒久教訓) の即時配送 | 配送する | CANDIDATE-U-MEMEPI-018 |
 | 14 | 中断後に移し先の bytes が変わった、または両方の path から消えた | 止めて報告、exit 1、`done` なし、db 行は残る | CANDIDATE-U-MEMEPI-019 |
-| 15 | 既存 `done` row の source absent / destination present / row digest一致、および各不整合状態 | 正当な1状態だけ受理。不整合は全体conflict | CANDIDATE-U-MEMEPI-020 |
-| 16 | 新規選択 entry の destination が既に存在、または新規選択 entry の同一 `memory_id` row 衝突 (回復可能な既存 `intent` ではない) | 上書き・黙示skipなしで全体conflict。回復可能な既存 `intent` は再開 | CANDIDATE-U-MEMEPI-021 |
-| 17 | invalid UTC ISO `nowISO` | filesystem / DB I/O 前に `TypeError`、I/O 0 | CANDIDATE-U-MEMEPI-022 |
-| 18 | Git first-parent merge を根拠にした manifest event | exact keys、実 commit SHA、resolver未呼出し、intent/done payload・時刻一致 | CANDIDATE-U-MEMEPI-023 |
-| 19 | GitHub closed を根拠にした manifest event | exact keys、全 `bound_to` evidence、URL順、intent/done一致 | CANDIDATE-U-MEMEPI-024 |
-| 20 | manifest の (a) unknown schema row、(b) 既知 schema の malformed row (foreign state-channel row の不正形を含む) を独立 fixture で検証 | 各々 `memory_archive_recovery_conflict`、他entryも変更しない | CANDIDATE-U-MEMEPI-025 (a)/(b) |
-| 21 | valid `ut-tdd.state-channel-memory-archive/v1` row が同じ manifest にある | #963 で選別・recoveryに使わず、foreign row / 関連file / DBを変更しない | CANDIDATE-U-MEMEPI-027 |
-| 22 | status resolver が throw / invalid result を返す | `unknown`、archive対象外、対象の file / DB / manifest 不変 | CANDIDATE-U-MEMEPI-026 |
+| 15 | 既存 `done` row の source absent / destination present / row digest一致、および各不整合状態 | 正当な1状態だけ受理。不整合は全体conflict | U-MEMEPI-020 |
+| 16 | 新規選択 entry の destination が既に存在、または新規選択 entry の同一 `memory_id` row 衝突 (回復可能な既存 `intent` ではない) | 上書き・黙示skipなしで全体conflict。回復可能な既存 `intent` は再開 | U-MEMEPI-021 |
+| 17 | invalid UTC ISO `nowISO` | filesystem / DB I/O 前に `TypeError`、I/O 0 | U-MEMEPI-022 |
+| 18 | Git first-parent merge を根拠にした manifest event | exact keys、実 commit SHA、resolver未呼出し、intent/done payload・時刻一致 | U-MEMEPI-023 |
+| 19 | GitHub closed を根拠にした manifest event | exact keys、全 `bound_to` evidence、URL順、intent/done一致 | U-MEMEPI-024 |
+| 20 | manifest の (a) unknown schema row、(b) 既知 schema の malformed row (foreign state-channel row の不正形を含む) を独立 fixture で検証 | 各々 `memory_archive_recovery_conflict`、他entryも変更しない | U-MEMEPI-025 (a)/(b) |
+| 21 | valid `ut-tdd.state-channel-memory-archive/v1` row が同じ manifest にある | #963 で選別・recoveryに使わず、foreign row / 関連file / DBを変更しない | U-MEMEPI-027 |
+| 22 | status resolver が throw / invalid result を返す | `unknown`、archive対象外、対象の file / DB / manifest 不変 | U-MEMEPI-026 |
 
 ## §5 検証接続
 
