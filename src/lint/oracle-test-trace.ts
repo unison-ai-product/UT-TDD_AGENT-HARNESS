@@ -61,6 +61,93 @@ export interface OracleTestTraceInput {
   citationBaseline?: ReadonlySet<string>;
 }
 
+const BASELINE_JSON_PATH = "docs/governance/oracle-test-trace-baseline.json" as const;
+
+export type OracleTraceFailureReason =
+  | "authority_read_failed"
+  | "baseline_asset_missing"
+  | "baseline_json_malformed"
+  | "baseline_schema_invalid"
+  | "baseline_id_invalid"
+  | "baseline_id_duplicate"
+  | "baseline_sets_overlap";
+
+export class OracleTestTraceLoadError extends Error {
+  readonly reason: OracleTraceFailureReason;
+
+  constructor(reason: OracleTraceFailureReason) {
+    super(reason);
+    this.name = "OracleTestTraceLoadError";
+    this.reason = reason;
+  }
+}
+
+export type OracleTracePortResult<T> =
+  | { ok: true; value: T }
+  | { ok: false; reason: "authority_read_failed" };
+
+export interface OracleTraceAuthority {
+  readText(path: typeof BASELINE_JSON_PATH): OracleTracePortResult<string | null>;
+}
+
+export interface OracleTestTracePorts {
+  authority?: OracleTraceAuthority;
+}
+
+export type OracleTraceGitIoFailureReason =
+  | "git_first_parent_read_failed"
+  | "git_object_read_failed";
+
+export type OracleTraceGitPortResult<T> =
+  | { ok: true; value: T }
+  | { ok: false; reason: OracleTraceGitIoFailureReason };
+
+export type OracleTraceGitPath =
+  | typeof BASELINE_JSON_PATH
+  | "src/lint/oracle-test-trace-baseline.ts"
+  | "src/lint/oracle-test-trace-widened-baseline.ts"
+  | "src/lint/oracle-test-citation-baseline.ts";
+
+export type OracleBaselineRatchetFailureReason =
+  | "pr_context_invalid"
+  | "git_first_parent_missing"
+  | "git_first_parent_read_failed"
+  | "git_baseline_missing"
+  | "git_object_read_failed"
+  | "trusted_baseline_invalid"
+  | "baseline_growth"
+  | "bootstrap_base_invalid"
+  | "bootstrap_value_mismatch";
+
+export interface OracleBaselineRatchetInput {
+  /** Loader と同じ authority binding を composition で受け取る。 */
+  authority: OracleTraceAuthority;
+  ci: {
+    eventName: string;
+    mergeSha: string;
+    git: {
+      readTextAt(
+        commitSha: string,
+        path: OracleTraceGitPath,
+      ): OracleTraceGitPortResult<string | null>;
+      readFirstParent(mergeSha: string): OracleTraceGitPortResult<string | null>;
+    };
+  };
+}
+
+export type OracleBaselineRatchetResult =
+  | { ok: true }
+  | { ok: false; reason: OracleBaselineRatchetFailureReason }
+  // TODO(#1099 Green): remove this temporary unimplemented result.
+  | { ok: false; reason: "not_implemented" };
+
+/** TODO(#1099 Green): replace this scaffold with the trusted-base ratchet. */
+export function checkOracleBaselineRatchet(
+  _input: OracleBaselineRatchetInput,
+): OracleBaselineRatchetResult {
+  return { ok: false, reason: "not_implemented" };
+}
+
 export interface OracleDeclarationSite {
   id: string;
   path: string;
@@ -420,17 +507,47 @@ export function collectOracleIds(repoRoot: string): {
   };
 }
 
-export function loadOracleTestTraceInput(repoRoot: string): OracleTestTraceInput {
+function parseInjectedBaseline(text: string | null): {
+  legacy: Set<string>;
+  widened: Set<string>;
+  citations: Set<string>;
+} {
+  if (text === null) throw new Error("baseline_asset_missing");
+  const value = JSON.parse(text) as {
+    legacy: string[];
+    widened: string[];
+    citations: string[];
+  };
+  return {
+    legacy: new Set(value.legacy),
+    widened: new Set(value.widened),
+    citations: new Set(value.citations),
+  };
+}
+
+export function loadOracleTestTraceInput(
+  repoRoot: string,
+  ports?: OracleTestTracePorts,
+): OracleTestTraceInput {
   const { declared, referenced, declarationSites, citationSites } = collectOracleIds(repoRoot);
+  const authority = ports?.authority;
+  // Keep the one-argument path unchanged until the JSON authority Green migration.
+  const injected = authority
+    ? (() => {
+        const result = authority.readText(BASELINE_JSON_PATH);
+        if (!result.ok) throw new Error(result.reason);
+        return parseInjectedBaseline(result.value);
+      })()
+    : undefined;
   return {
     declared: [...declared],
     referenced,
-    baseline: ORACLE_TEST_TRACE_BASELINE,
-    widenedBaseline: ORACLE_TEST_TRACE_WIDENED_BASELINE,
+    baseline: injected?.legacy ?? ORACLE_TEST_TRACE_BASELINE,
+    widenedBaseline: injected?.widened ?? ORACLE_TEST_TRACE_WIDENED_BASELINE,
     declarationSites,
     duplicateBaseline: ORACLE_ID_DUPLICATE_BASELINE,
     citationSites,
-    citationBaseline: ORACLE_TEST_CITATION_BASELINE,
+    citationBaseline: injected?.citations ?? ORACLE_TEST_CITATION_BASELINE,
   };
 }
 
