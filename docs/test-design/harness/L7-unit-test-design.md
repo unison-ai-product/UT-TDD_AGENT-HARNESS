@@ -1787,31 +1787,31 @@ docs/test-design/harness/L7-claude-inbox-explicit-ack-test-design.md を参照�
 
 | ID | 対象境界 | 詳細 |
 | --- | --- | --- |
-| CANDIDATE-U-INBOXACK-001 | ID 指定の exact entry ACK | 詳細 pair 001 |
-| CANDIDATE-U-INBOXACK-002 | foreign project / workspace / session deny | 詳細 pair 002 |
-| CANDIDATE-U-INBOXACK-003 | generation / session authority deny | 詳細 pair 003 |
-| CANDIDATE-U-INBOXACK-004 | preview 後の entry bytes drift | 詳細 pair 004 |
-| CANDIDATE-U-INBOXACK-005 | before 境界と不正日時 | 詳細 pair 005 |
-| CANDIDATE-U-INBOXACK-006 | 承認前の inbox 追加 | 詳細 pair 006 |
-| CANDIDATE-U-INBOXACK-007 | 欠落・malformed・重複・束縛不能 | 詳細 pair 007 |
-| CANDIDATE-U-INBOXACK-008 | 同一 ACK retry と既存 v1 terminal | 詳細 pair 008 |
-| CANDIDATE-U-INBOXACK-009 | 異identity / malformed terminal | 詳細 pair 009 |
-| CANDIDATE-U-INBOXACK-010 | review ACK と通常 Memory ACK | 詳細 pair 010 |
-| CANDIDATE-U-INBOXACK-011 | ACK 対象外 artifact 不変 | 詳細 pair 011 |
-| CANDIDATE-U-INBOXACK-012 | claim 後 crash と terminal recovery | 詳細 pair 012 |
-| CANDIDATE-U-INBOXACK-013 | v1 / v2 schema と未知値 | 詳細 pair 013 |
-| CANDIDATE-U-INBOXACK-014 | delivery と ACK の共有 claim CAS | 詳細 pair 014 |
-| CANDIDATE-U-INBOXACK-015 | preview canonicalization / digest | 詳細 pair 015 |
-| CANDIDATE-U-INBOXACK-016 | actor / approvedAt / digest audit | 詳細 pair 016 |
-| CANDIDATE-U-INBOXACK-017 | 対象外 entry を含む全 inbox drift | 詳細 pair 017 |
-| CANDIDATE-U-INBOXACK-018 | 既存 claim disposition | 詳細 pair 018 |
-| CANDIDATE-U-INBOXACK-019 | 並行 Stop と anchor claim CAS | 詳細 pair 019 |
-| CANDIDATE-U-INBOXACK-020 | anchor crash / replay / old waiter | 詳細 pair 020 |
-| CANDIDATE-U-INBOXACK-021 | schema と identity binding | 詳細 pair 021 |
-| CANDIDATE-U-INBOXACK-022 | immutable approval descriptor | 詳細 pair 022 |
-| CANDIDATE-U-INBOXACK-023 | snapshot / preview JSON validation | 詳細 pair 023 |
-| CANDIDATE-U-INBOXACK-024 | CLI surface と hook 限定 claim | 詳細 pair 024 |
-| CANDIDATE-U-INBOXACK-025 | descriptor selection・terminal-conflict skip / 7日 cleanup | 詳細 pair 025 |
+| 参照: CANDIDATE-U-INBOXACK-001 | ID 指定の exact entry ACK | 詳細 pair 001 |
+| 参照: CANDIDATE-U-INBOXACK-002 | foreign project / workspace / session deny | 詳細 pair 002 |
+| 参照: CANDIDATE-U-INBOXACK-003 | generation / session authority deny | 詳細 pair 003 |
+| 参照: CANDIDATE-U-INBOXACK-004 | preview 後の entry bytes drift | 詳細 pair 004 |
+| 参照: CANDIDATE-U-INBOXACK-005 | before 境界と不正日時 | 詳細 pair 005 |
+| 参照: CANDIDATE-U-INBOXACK-006 | 承認前の inbox 追加 | 詳細 pair 006 |
+| 参照: CANDIDATE-U-INBOXACK-007 | 欠落・malformed・重複・束縛不能 | 詳細 pair 007 |
+| 参照: CANDIDATE-U-INBOXACK-008 | 同一 ACK retry と既存 v1 terminal | 詳細 pair 008 |
+| 参照: CANDIDATE-U-INBOXACK-009 | 異identity / malformed terminal | 詳細 pair 009 |
+| 参照: CANDIDATE-U-INBOXACK-010 | review ACK と通常 Memory ACK | 詳細 pair 010 |
+| 参照: CANDIDATE-U-INBOXACK-011 | ACK 対象外 artifact 不変 | 詳細 pair 011 |
+| 参照: CANDIDATE-U-INBOXACK-012 | claim 後 crash と terminal recovery | 詳細 pair 012 |
+| 参照: CANDIDATE-U-INBOXACK-013 | v1 / v2 schema と未知値 | 詳細 pair 013 |
+| 参照: CANDIDATE-U-INBOXACK-014 | delivery と ACK の共有 claim CAS | 詳細 pair 014 |
+| 参照: CANDIDATE-U-INBOXACK-015 | preview canonicalization / digest | 詳細 pair 015 |
+| 参照: CANDIDATE-U-INBOXACK-016 | actor / approvedAt / digest audit | 詳細 pair 016 |
+| 参照: CANDIDATE-U-INBOXACK-017 | 対象外 entry を含む全 inbox drift | 詳細 pair 017 |
+| 参照: CANDIDATE-U-INBOXACK-018 | 既存 claim disposition | 詳細 pair 018 |
+| 参照: CANDIDATE-U-INBOXACK-019 | 並行 Stop と anchor claim CAS | 詳細 pair 019 |
+| 参照: CANDIDATE-U-INBOXACK-020 | anchor crash / replay / old waiter | 詳細 pair 020 |
+| 参照: CANDIDATE-U-INBOXACK-021 | schema と identity binding | 詳細 pair 021 |
+| 参照: CANDIDATE-U-INBOXACK-022 | immutable approval descriptor | 詳細 pair 022 |
+| 参照: CANDIDATE-U-INBOXACK-023 | snapshot / preview JSON validation | 詳細 pair 023 |
+| 参照: CANDIDATE-U-INBOXACK-024 | CLI surface と hook 限定 claim | 詳細 pair 024 |
+| 参照: CANDIDATE-U-INBOXACK-025 | descriptor selection・terminal-conflict skip / 7日 cleanup | 詳細 pair 025 |
 
 ### Issue #444 terminal GC backfill (PLAN-REVERSE-600)
 
@@ -3131,7 +3131,7 @@ oracle の詳細 (入力・期待・殺す mutation・fixture・required evidenc
 |---|---|---|
 | `CANDIDATE-U-PH-001..008` | `docs/design/harness/L6-function-design/confirmed-document-placeholder-detection.md` | `docs/test-design/harness/L7-confirmed-document-placeholder-detection-test-design.md` §3 |
 | `CANDIDATE-U-PH-010..024` | `docs/design/harness/L6-function-design/confirmed-document-placeholder-detection.md` | `docs/test-design/harness/L7-confirmed-document-placeholder-detection-test-design.md` §4 |
-| `CANDIDATE-U-PH-025` | `docs/design/harness/L6-function-design/confirmed-document-placeholder-detection.md` | `docs/test-design/harness/L7-confirmed-document-placeholder-detection-test-design.md` §4 |
+| 参照: `CANDIDATE-U-PH-025` | `docs/design/harness/L6-function-design/confirmed-document-placeholder-detection.md` | `docs/test-design/harness/L7-confirmed-document-placeholder-detection-test-design.md` §4 |
 
 ## 共有メモリのエピソード回収 (Issue #963 / PLAN-L6-97) — 索引
 
