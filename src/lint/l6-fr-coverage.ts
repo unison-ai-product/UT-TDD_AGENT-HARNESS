@@ -125,21 +125,37 @@ function loadRegistryStates(repoRoot: string | undefined): Map<string, RegistryS
 const ISSUE_REF_RE = /^#[1-9][0-9]*$/;
 const REF_DOC_RE = /^(docs\/design\/|docs\/adr\/)[^#]*\.md$/;
 
-/** ATX 見出し行 (fence 外) の text 一覧。level は無視し、前後空白 (全角含む) と先頭 # 群を除く。 */
-function atxHeadings(text: string): string[] {
-  const out: string[] = [];
+/**
+ * CommonMark の fenced code block を行ごとに追跡する。開きの文字と長さを保持し、同じ文字で
+ * 開き以上の長さの閉じ fence だけで終える。返す関数は、その行が fence (開き・閉じ行を含む) なら true。
+ */
+function fenceTracker(): (line: string) => boolean {
   let fence = "";
-  for (const line of text.split(/\r?\n/)) {
+  return (line) => {
     if (fence !== "") {
       const close = line.match(/^ {0,3}(`{3,}|~{3,})\s*$/)?.[1];
       if (close?.[0] === fence[0] && close.length >= fence.length) fence = "";
-      continue;
+      return true;
     }
     const open = line.match(/^ {0,3}(`{3,}|~{3,})(.*)$/);
     if (open && !(open[1][0] === "`" && open[2].includes("`"))) {
       fence = open[1];
-      continue;
+      return true;
     }
+    return false;
+  };
+}
+
+function isRegularFile(abs: string): boolean {
+  return existsSync(abs) && statSync(abs).isFile();
+}
+
+/** ATX 見出し行 (fence 外) の text 一覧。level は無視し、前後空白 (全角含む) と先頭 # 群を除く。 */
+function atxHeadings(text: string): string[] {
+  const out: string[] = [];
+  const inFence = fenceTracker();
+  for (const line of text.split(/\r?\n/)) {
+    if (inFence(line)) continue;
     const h = line.match(/^#{1,6}[ \t\u3000]+(.*)$/);
     if (h) out.push(h[1].trim());
   }
@@ -158,7 +174,7 @@ function resolveRetirementRef(repoRoot: string, rawRef: string): boolean {
     return false;
   }
   const abs = join(repoRoot, rel);
-  if (!existsSync(abs) || !statSync(abs).isFile()) return false;
+  if (!isRegularFile(abs)) return false;
   return atxHeadings(readFileSync(abs, "utf8")).filter((h) => h === heading).length === 1;
 }
 
@@ -187,19 +203,11 @@ function declarationRows(repoRoot: string, oracle: string): string[][] {
   if (!existsSync(path)) return [];
   const lines = readFileSync(path, "utf8").split(/\r?\n/);
   const rows: string[][] = [];
-  let fence = "";
+  const inFence = fenceTracker();
   let tableCols = 0;
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    // CommonMark の fence: 開きの文字と長さを保持し、同じ文字で開き以上の長さの閉じ fence だけで終える。
-    if (fence !== "") {
-      const close = line.match(/^ {0,3}(`{3,}|~{3,})\s*$/)?.[1];
-      if (close?.[0] === fence[0] && close.length >= fence.length) fence = "";
-      continue;
-    }
-    const open = line.match(/^ {0,3}(`{3,}|~{3,})(.*)$/);
-    if (open && !(open[1][0] === "`" && open[2].includes("`"))) {
-      fence = open[1];
+    if (inFence(line)) {
       tableCols = 0;
       continue;
     }
@@ -242,10 +250,7 @@ function retiredOracleFailures(repoRoot: string, frId: string, oracle: string): 
   if (targets.size !== 1 || !targets.has(frId)) return ["unit_oracle_declaration_target"];
   const tokens = testPathTokens(cells);
   const resolved = tokens.map((t) => (t.includes("..") ? null : join(repoRoot, t)));
-  if (
-    tokens.length === 0 ||
-    resolved.some((abs) => abs === null || !existsSync(abs) || !statSync(abs).isFile())
-  ) {
+  if (tokens.length === 0 || resolved.some((abs) => abs === null || !isRegularFile(abs))) {
     return ["unit_oracle_test_file"];
   }
   return resolved.every((abs) => citesId(readFileSync(abs as string, "utf8"), oracle))
