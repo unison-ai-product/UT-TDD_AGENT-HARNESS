@@ -160,6 +160,17 @@ function maybeRead(repoRoot: string, relPath: string): string {
   return existsSync(absPath) ? readFileSync(absPath, "utf8") : "";
 }
 
+function collectL7Text(repoRoot: string): string {
+  const dir = join(repoRoot, "docs", "test-design", "harness");
+  if (!existsSync(dir)) return "";
+  return readdirSync(dir, { withFileTypes: true })
+    .filter((entry) => entry.isFile() && /^L7-.*\.md$/.test(entry.name))
+    .map((entry) => entry.name)
+    .sort()
+    .map((name) => readFileSync(join(dir, name), "utf8"))
+    .join("\n");
+}
+
 export function loadDddTddPolicy(repoRoot: string = process.cwd()): DddTddPolicy | null {
   const path = normalizePath(join("docs", "governance", "ddd-tdd-rules.md"));
   const absPath = join(repoRoot, path);
@@ -186,10 +197,7 @@ export function loadDddTddInputs(repoRoot: string = process.cwd()): DddTddInputs
     policy: loadDddTddPolicy(repoRoot),
     workflowDocs: loadDddTddWorkflowDocs(repoRoot),
     docs: [...collectDocs(repoRoot, "src", "source"), ...collectDocs(repoRoot, "tests", "test")],
-    l7Text: maybeRead(
-      repoRoot,
-      normalizePath(join("docs", "test-design", "harness", "L7-unit-test-design.md")),
-    ),
+    l7Text: collectL7Text(repoRoot),
     l8Text: maybeRead(
       repoRoot,
       normalizePath(join("docs", "test-design", "harness", "L8-integration-test-design.md")),
