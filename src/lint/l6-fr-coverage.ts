@@ -45,10 +45,13 @@ function contractRefs(contract: string): string[] {
   return [...contract.matchAll(/`([A-Za-z][A-Za-z0-9_]*)`/g)].map((m) => m[1]);
 }
 
+/** 表の行をセルへ分ける。先頭・末尾の pipe は省略されていてもよい (末尾 pipe 無しでも最終セルを捨てない)。 */
 function markdownCells(row: string): string[] {
   return row
+    .trim()
+    .replace(/^\|/, "")
+    .replace(/\|$/, "")
     .split("|")
-    .slice(1, -1)
     .map((cell) => cell.trim());
 }
 
