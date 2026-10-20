@@ -127,18 +127,29 @@ analyzeModuleDrift(docs: { listed, actual }) -> { orphans, listedCount, actualCo
 - **unit-oracle-substance (IMP-083 残差、2026-06-19)**: `integration-gwt` が L8 IT-* 行の Given/When/Then 非空を見るのと対に、`unitOracleSubstanceViolations` は **L7 unit test-design の `U-XXX-NNN` 行** (末尾数字必須 = `U-ID` ヘッダ除外) の expected-behavior セルが**実ケース**を持つ (空 / trivial < 6 字 / skeleton marker `-`/TODO/骨格 でない) ことを検査する。pair-freeze (link) / oracle-test-trace (citation) / test-oracle-strength (test コード assert) は U-* 行の**期待結果セル中身**を見ないため、freeze 時の骨格凍結を素通りさせていた穴 (IMP-083) を FR-L1-50 配下で塞ぐ。oracle U-DDDTDD-009。**IMP-082 (descent substance) は別途 IMP-090/092 の `l6-fr-coverage` (FR→L6 type body + pseudocode) で被覆済 = superseded**。
 - **doctor contract**: `checkDddTddRules(repoRoot)` は SSoT、workflow docs、PLAN docs、L7/L8 test-design docs、TS source/test file を load する。DDD/TDD strictness violation がある場合、`runDoctor.ok` は fail する。
 
-### Impl-Plan-Trace 追補 (IMP-088 / FR-L1-18 descent / PLAN-REVERSE-40)
+### Impl-Plan-Trace 追補 (IMP-088 / FR-L1-18 descent / PLAN-REVERSE-40、module 単位への改訂: issue #1169 / #1078 A5)
 
-本追補は FR-L1-18 (横断検出・**接続欠損**) の descent として、実装から契約文書へのトレーサビリティを定義する。PLAN 退役中も既存の PLAN reader を残し、`docs/plans/*.md` と再帰的な `docs/design/**/*.md` の本文から、同じ正規表現 `/src\/[A-Za-z0-9_./-]+\.ts/g` で得る src パスの和集合を正本入力とする。設計の module 名だけでなく、実装ファイルの具体的なパスとの接続を検査する。
+本追補は FR-L1-18 (横断検出・**接続欠損**) の descent として、実装から設計文書へのトレーサビリティを定義する。PLAN 機構の撤去 (#1078) により、PLAN の本文は入力に使えなくなる。そこで検査の粒度を **ファイル単位の path 一致から module 単位の所有** へ改める (方式判断: #1169 comment 6289671147 の判断 2。advisor claude-fable-5-1 に相談して決定)。新しい機構は作らず、既存の正規表現と baseline の仕組みだけで行う。
+
+**凍結する規則 (matcher の定義)**
+
+1. **入力は設計文書だけ**。再帰的な `docs/design/**/*.md` の本文を読む。`docs/plans/*.md` は入力にしない (PLAN の本文にだけ書かれた path は trace に数えない。ただし、その src の module が設計文書で名指しされていれば、規則 5 (a) により所有される)。
+2. **module の名指し**: 設計文書の本文に、正規表現 `(^|[^A-Za-z0-9_./-])src/([A-Za-z0-9_-]+)/` が一致すれば、その第 2 群 `<module>` を「名指しされた module」とする。つまり `src/<module>/` という文字列が現れれば足りる。`src/<module>/*.ts` や `src/<module>/<file>.ts` のような後続付きの形も、先頭が `src/<module>/` なので同じ規則で名指しに数える (glob 形を別扱いにしない)。直前の文字の条件は、`foo/src/<module>/` のような別 path の一部を数えないためである。
+3. **module の定義**: `src/` 直下の第 1 階層のディレクトリ名とする。`src/vmodel-contract/domain/x.ts` の module は `vmodel-contract` である。
+4. **top-level の単体ファイル** (`src/cli.ts` のように `src/` 直下に置かれた `.ts`) は module を持たない。従来の正規表現 `/src\/[A-Za-z0-9_./-]+\.ts/g` による **path の完全一致**で、設計文書に名指しされているときだけ所有されているとみなす。
+5. **所有の判定**: src の `.ts` ファイルは、(a) その module が名指しされている、または (b) top-level 単体ファイルで path が設計文書に完全一致で現れる、のどちらかで所有される。どちらでもなく baseline にも無いファイルは `orphans` に返し、NEW orphan が 1 件でもあれば `ok=false` (fail-close)。
+6. **baseline は縮小のみ可**。現行の 5 件 (`src/lint/` の change-impact / doc-consistency / entity-coverage / improvement-backlog / shared) は、いずれも名指し済みの module `lint` に属するため、新しい規則では所有されており stale になる。Green で 5 件とも baseline から外し、集合は空にする。baseline の仕組み自体は残し、追加は認めない。
 
 | 関数 | Signature | pre | post | invariant | oracle |
 |---|---|---|---|---|---|
-| `analyzeImplPlanTrace` | analyzeImplPlanTrace(input: ImplPlanTraceInput) => ImplPlanTraceResult | `src/**.ts` 集合 + PLAN 本文と設計本文に出現した src パスの和集合 + baseline allowlist が供給される。`loadImplPlanTraceInput` は上記の同一正規表現で両方を読む。 | traced でも baseline でもない src を `orphans` に返し、NEW orphan 有無で `ok` を決める。 | baseline は known-debt の段階導入であり**縮小のみ可**。新たに設計から trace できる既存 3 件は baseline から除外して 8 件から 5 件へ縮小する。既存 PLAN-only の trace と、どちらにも未記載の src の拒否を維持する。 | U-IPT-001..006 |
+| `analyzeImplPlanTrace` | analyzeImplPlanTrace(input: ImplPlanTraceInput) => ImplPlanTraceResult | `src/**.ts` 集合 + 設計文書から得た名指し module 集合 + 設計文書に完全一致で現れた src path 集合 + baseline allowlist が供給される。`loadImplPlanTraceInput` は設計文書だけを上記の規則で読み、PLAN を読まない。 | 所有されておらず baseline でもない src を `orphans` に返し、NEW orphan 有無で `ok` を決める。 | baseline は**縮小のみ可** (空集合へ縮小し、追加しない)。module が名指しされていない src は、path が PLAN の本文に書かれていても orphan のまま (PLAN は入力ではない)。名指し済みの module に属する src は、個別の path がどこに書かれているか (PLAN の本文だけ、または無記載) によらず所有される。 | U-IPT-001..006 (既存) と CANDIDATE-U-IPT-007..011 (本改訂) |
 
-- **U-IPT-006**: `loadImplPlanTraceInput` は、PLAN に記載がなく深い階層の `docs/design/**/*.md` だけに記載された `src/**.ts` パスも再帰的に読み、trace 集合へ含める。これにより known-debt baseline を増やさず orphan を防ぐ。
-
-- **baseline 根拠**: 2026-06-10 実測 (`find src -name '*.ts'` vs PLAN generates) で 12 孤児。うち 4 (IMP-087: review-tier/rule-drift/team-run/provider-handover) は PLAN-REVERSE-40 generates へ back-fill、残 8 (asset-drift/change-impact/doc-consistency/entity-coverage/g3-trace/improvement-backlog/readability/shared) を baseline。
-- **doctor 配線**: `checkImplPlanTrace(repoRoot)` を **hard/fail-close** で配線。CI 回帰網 `U-IPT-004` と doctor の両方で実 repo orphan 0 を維持する。
+- **U-IPT-006 (既存)**: `loadImplPlanTraceInput` は深い階層の `docs/design/**/*.md` を再帰的に読む。この性質は module 単位でも変わらず、Green で fixture を module の名指しに合わせて書き直す。
+- **意図的に失う検出力**: 名指し済みの module の中にある「設計から個別には言及されていないファイル」は、もう orphan にならない。許容する理由は、L5 (`module-decomposition.md`) がファイル単位の列挙を最初から放棄し、「`src/lint/` の実数は `src/lint/` が正本」としているためである。ファイル単位の列挙を設計に写すと、rename のたびに古くなる (機械が強制することを文書に写す形になる)。検出が残るのは、設計から名指しされない module の新設と、top-level 単体ファイルの追加である。
+- **実測 (origin/main `28ab6b138ed33b29654e5b3535eb7f44b000ad9b`、read-only の node script で測定)**: tracked の `.ts` を持つ `src/` 直下のディレクトリは 40 module。上記 2 の正規表現で設計文書に名指しされていない module は 0 件 (40/40 が名指し済み。例: document-disposition / disposition / audit / trace / vmodel-contract / export / search は `architecture.md` §3.1 の表に `src/<module>/` で載っている)。top-level 単体ファイルは `src/cli.ts` / `src/secret.ts` / `src/stable-id.ts` の 3 件で、3 件とも設計文書に path が完全一致で現れる。測定は `git ls-files src` と `git ls-files docs/design` を対象に、上記の規則を適用して数えた。このため、L5 `module-decomposition.md` へ足す module 単位の行は **0 件** である。
+- **Green の範囲 (本書の範囲外、Codex)**: `loadImplPlanTraceInput` から PLAN の読み取りを外し、module 名指しの集合を得る処理を足す。`IMPL_PLAN_TRACE_BASELINE` を空にする。`ImplPlanTraceInput` の形は実装側で最小に決める。PLAN 本文にだけ依存していた 278 件は、module の名指しで所有されるので orphan にならない。これにより A6 (docs/plans の物理撤去) で U-IPT-004 / doctor / gate-static が赤にならない。
+- **baseline 根拠 (履歴)**: 2026-06-10 実測で 12 孤児。うち 4 は back-fill、残 8 を baseline とし、設計 path の trace で 5 件へ縮小した。本改訂で 0 件になる。
+- **doctor 配線**: `checkImplPlanTrace(repoRoot)` を **hard/fail-close** で配線する点は変えない。CI 回帰網 `U-IPT-004` と doctor の両方で実 repo orphan 0 を維持する。
 
 ## §4 doctor 配線 (hard/fail-close)
 
