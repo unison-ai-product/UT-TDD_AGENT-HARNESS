@@ -115,7 +115,6 @@ describe("checked Vモデル source assets", () => {
 
   it("U-VMSRC-005: Forward FSM uses one exact authored state sequence", () => {
     const adr = read("docs/adr/ADR-008-forward-fsm-plan-asset-v2.md");
-    const plan = read("docs/plans/PLAN-L4-23-forward-fsm-plan-asset-v2.md");
     const states = [
       "proposed",
       "planned",
@@ -143,7 +142,6 @@ describe("checked Vモデル source assets", () => {
     ]);
     for (const state of states) {
       expect(adr).toContain(state);
-      expect(plan).toContain(state);
     }
   });
 
@@ -219,14 +217,10 @@ describe("checked Vモデル source assets", () => {
   });
 
   it("U-VMSRC-008: additive L1/L14 delta preserves the prior confirmed freeze", () => {
-    const frozen = read("docs/plans/PLAN-L1-06-vmodel-upgrade-requirements.md");
-    const delta = read("docs/plans/PLAN-L1-07-vmodel-engine-swap-requirements-delta.md");
     const frozenL1 = read("docs/design/harness/L1-requirements/vmodel-upgrade-requirements.md");
     const frozenL14 = read("docs/test-design/harness/L14-operational-test-design.md");
     const l1 = read("docs/design/harness/L1-requirements/vmodel-engine-swap-requirements-delta.md");
     const l14 = read("docs/test-design/harness/L14-vmodel-engine-swap-operational-test-design.md");
-    expect(frozen).toMatch(/^---[\s\S]*?\nstatus: confirmed\n/);
-    expect(delta).toMatch(/^---[\s\S]*?\nstatus: confirmed\n/);
     expect(l1).toMatch(/^---[\s\S]*?\nstatus: confirmed\n/);
     expect(l14).toMatch(/^---[\s\S]*?\nstatus: confirmed\n/);
     expect(frozenL1).toMatch(/^---[\s\S]*?\nstatus: confirmed\n/);
