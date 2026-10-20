@@ -4,6 +4,7 @@
  * 薄い OS 別 entrypoint (scripts/ut-tdd, ut-tdd.ps1) が本 core を呼ぶ。
  * status / doctor / plan lint / vmodel lint / gate / runtime adapter を集約する。
  */
+import "./runtime/windows-hide.ts";
 import { execFileSync, spawn } from "node:child_process";
 import {
   appendFileSync,
@@ -1630,7 +1631,7 @@ plan
 const handover = program
   .command("handover")
   .description(
-    "session-log PLAN digest から handover を生成 (機械ポインタ CURRENT.json + 人間判断 markdown scaffold、要件 §6.8.5)",
+    "session-log PLAN digest から機械ポインタ CURRENT.json を生成 (要件 §6.8.5。散文 scaffold の生成は停止)",
   )
   .option("--dry-run", "書き込まず内容のみ表示")
   .option("--complete", "status=completed として記録 (PLAN 完了時)")
@@ -1673,7 +1674,9 @@ const handover = program
         `handover: active=${r.pointer.active_plan ?? "-"} status=${r.pointer.status}${opts.dryRun ? " (dry-run)" : ""}\n`,
       );
       for (const w of r.written) process.stdout.write(`  + ${w}\n`);
-      if (opts.dryRun) process.stdout.write(`\n--- scaffold ---\n${r.content}\n`);
+      if (opts.dryRun) {
+        process.stdout.write(`\n--- pointer ---\n${JSON.stringify(r.pointer, null, 2)}\n`);
+      }
     },
   );
 

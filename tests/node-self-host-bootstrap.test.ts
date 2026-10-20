@@ -13,8 +13,29 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import * as bootstrap from "../src/runtime/node-bootstrap.ts";
+
+const sourceTrackingObservations = vi.hoisted(() => ({ active: false, gitLsFilesCalls: 0 }));
+
+vi.mock("node:child_process", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("node:child_process")>();
+  return {
+    ...actual,
+    execFileSync: (...args: Parameters<typeof actual.execFileSync>) => {
+      const commandArgs = args[1];
+      if (
+        sourceTrackingObservations.active &&
+        args[0] === "git" &&
+        Array.isArray(commandArgs) &&
+        commandArgs.some((argument) => String(argument) === "ls-files")
+      ) {
+        sourceTrackingObservations.gitLsFilesCalls += 1;
+      }
+      return actual.execFileSync(...args);
+    },
+  };
+});
 
 const root = process.cwd();
 
@@ -189,6 +210,72 @@ describe("F0b sealed Node producer candidate oracles", () => {
     await expect(build({ compileInputs: { "../untracked.ts": {} } })).rejects.toThrow(
       /source-path-escape|source-untracked/,
     );
+  });
+
+  it("issue #1154 rejects an in-root untracked compile input with its typed error", async () => {
+    await expect(
+      build({ compileInputs: { "src/__issue1154_untracked_input__.ts": {} } }),
+    ).rejects.toMatchObject({
+      name: "NodeBootstrapError",
+      code: "node-bootstrap-source-untracked",
+    });
+  });
+
+  it("issue #1154 rejects an in-root untracked input even beside a tracked input", async () => {
+    await expect(
+      build({
+        compileInputs: {
+          "src/cli.ts": {},
+          "src/__issue1154_untracked_among_tracked__.ts": {},
+        },
+      }),
+    ).rejects.toMatchObject({
+      name: "NodeBootstrapError",
+      code: "node-bootstrap-source-untracked",
+    });
+  });
+
+  it("issue #1154 rejects a case-variant compile input as untracked", async () => {
+    await expect(build({ compileInputs: { "src/CLI.ts": {} } })).rejects.toMatchObject({
+      name: "NodeBootstrapError",
+      code: "node-bootstrap-source-untracked",
+    });
+  });
+
+  it("issue #1154 normalizes native separators in tracked compile inputs", async () => {
+    const result = await build({
+      compileInputs: {
+        [join("src", "cli.ts")]: {},
+        "package.json": {},
+      },
+    });
+    expect(result.receipt.source_files.map(({ path }) => path)).toEqual([
+      "package.json",
+      "src/cli.ts",
+    ]);
+  });
+
+  it("issue #1154 checks three tracked compile inputs with one git ls-files invocation", async () => {
+    sourceTrackingObservations.gitLsFilesCalls = 0;
+    sourceTrackingObservations.active = true;
+    let result: bootstrap.NodeGeneration;
+    try {
+      result = await build({
+        compileInputs: {
+          "src/cli.ts": {},
+          "package.json": {},
+          "tsconfig.node.json": {},
+        },
+      });
+    } finally {
+      sourceTrackingObservations.active = false;
+    }
+    expect(result.receipt.source_files.map(({ path }) => path)).toEqual([
+      "package.json",
+      "src/cli.ts",
+      "tsconfig.node.json",
+    ]);
+    expect(sourceTrackingObservations.gitLsFilesCalls).toBe(1);
   });
 
   it("CAND-NODEBOOT-B1 real bundle seals its external dependency closure", async () => {

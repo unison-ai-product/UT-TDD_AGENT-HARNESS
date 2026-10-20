@@ -10,6 +10,7 @@
  * exit:  0 = pass / 2 = block (Claude Code が Agent 呼び出しを抑止)。
  * bypass: 環境変数 UT_TDD_ALLOW_RAW_AGENT=1。
  */
+import "../../src/runtime/windows-hide.ts";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";

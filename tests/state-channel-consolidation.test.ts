@@ -1809,7 +1809,7 @@ describe("Issue #1062: runtime notifications are memory-free", () => {
 });
 
 describe("Issue #1062: handover prose is retired", () => {
-  it.fails("U-STCHAN-019: handover writes only CURRENT.json and dry-run is non-mutating", () => {
+  it("U-STCHAN-019: handover writes only CURRENT.json and dry-run is non-mutating", () => {
     const root = tempRepo();
     mkdirSync(join(root, ".ut-tdd", "handover", "provider"), { recursive: true });
     mkdirSync(join(root, ".ut-tdd", "handover", "archive"), { recursive: true });
@@ -1862,7 +1862,7 @@ describe("Issue #1062: handover prose is retired", () => {
     expect(pointer).not.toHaveProperty("doc_entry_count");
   });
 
-  it.fails("U-STCHAN-020: the isolated doctor handover-prose definition reports an advisory count", () => {
+  it("U-STCHAN-020: the isolated doctor handover-prose definition reports an advisory count", () => {
     const root = tempRepo();
     const handover = join(root, ".ut-tdd", "handover");
     mkdirSync(join(handover, "provider"), { recursive: true });
@@ -1920,7 +1920,7 @@ describe("Issue #1062: handover prose is retired", () => {
       expect(readPointer(deps)).toEqual(pointer);
     });
 
-    it.fails("U-STCHAN-021: pointer without doc_entry_count does not trigger a handover bypass warning", () => {
+    it("U-STCHAN-021: pointer without doc_entry_count does not trigger a handover bypass warning", () => {
       expect(checkHandoverBypass(deps)).toEqual([]);
       // 署名照合は残る: 署名欠落 / 不正値の pointer は md の有無に関係なく手書き警告になる。
       for (const unsigned of [

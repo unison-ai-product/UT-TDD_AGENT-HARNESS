@@ -29,6 +29,7 @@ type WindowsHideModule = {
 
 const root = process.cwd();
 const WINDOWS_HIDE_MODULE: string = "../src/runtime/windows-hide.ts";
+const WINDOWS_HIDE_DOCTOR_MODULE: string = "../src/doctor/windows-hide.ts";
 const WRAPPED = Symbol.for("ut-tdd.windowsHide.wrapped");
 const CHILD_PROCESS_FUNCTIONS = [
   "spawn",
@@ -61,7 +62,14 @@ afterEach(() => {
 });
 
 async function loadWindowsHide(): Promise<WindowsHideModule> {
-  return (await import(WINDOWS_HIDE_MODULE)) as WindowsHideModule;
+  const [runtime, doctor] = await Promise.all([
+    import(WINDOWS_HIDE_MODULE),
+    import(WINDOWS_HIDE_DOCTOR_MODULE),
+  ]);
+  return {
+    applyWindowsHideDefault: runtime.applyWindowsHideDefault,
+    analyzeWindowsHide: doctor.analyzeWindowsHide,
+  };
 }
 
 function fakeChildProcess() {
@@ -156,7 +164,7 @@ function packPlan(sourcePaths: string[]) {
 
 describe("issue #693 子プロセス windowsHide 既定 (Red)", () => {
   describe("U-WHIDE-001", () =>
-    it.fails("U-WHIDE-001: 7 関数すべてが未指定時 true と他 options を保つ", async () => {
+    it("U-WHIDE-001: 7 関数すべてが未指定時 true と他 options を保つ", async () => {
       const { applyWindowsHideDefault } = await loadWindowsHide();
       const { module, calls } = fakeChildProcess();
       applyWindowsHideDefault(module);
@@ -180,7 +188,7 @@ describe("issue #693 子プロセス windowsHide 既定 (Red)", () => {
     }));
 
   describe("U-WHIDE-002", () =>
-    it.fails("U-WHIDE-002: syncBuiltinESMExports 後の named import に既定が届く", async () => {
+    it("U-WHIDE-002: syncBuiltinESMExports 後の named import に既定が届く", async () => {
       const script = `
       import childProcess from "node:child_process";
       import { spawnSync } from "node:child_process";
@@ -201,7 +209,7 @@ describe("issue #693 子プロセス windowsHide 既定 (Red)", () => {
     }));
 
   describe("U-WHIDE-003", () =>
-    it.fails("U-WHIDE-003: overload の options と callback の位置を正規化する", async () => {
+    it("U-WHIDE-003: overload の options と callback の位置を正規化する", async () => {
       const { applyWindowsHideDefault } = await loadWindowsHide();
       const { module, calls } = fakeChildProcess();
       applyWindowsHideDefault(module);
@@ -329,7 +337,7 @@ describe("issue #693 子プロセス windowsHide 既定 (Red)", () => {
     }));
 
   describe("U-WHIDE-004", () =>
-    it.fails("U-WHIDE-004: 7 関数で明示 false と true を上書きしない", async () => {
+    it("U-WHIDE-004: 7 関数で明示 false と true を上書きしない", async () => {
       const { applyWindowsHideDefault } = await loadWindowsHide();
       const { module, calls } = fakeChildProcess();
       applyWindowsHideDefault(module);
@@ -348,7 +356,7 @@ describe("issue #693 子プロセス windowsHide 既定 (Red)", () => {
     }));
 
   describe("U-WHIDE-005", () =>
-    it.fails("U-WHIDE-005: 適用と module 再評価の両方で wrapper は一段だけ", async () => {
+    it("U-WHIDE-005: 適用と module 再評価の両方で wrapper は一段だけ", async () => {
       const first = (await import(`${WINDOWS_HIDE_MODULE}?first`)) as WindowsHideModule;
       const second = (await import(`${WINDOWS_HIDE_MODULE}?second`)) as WindowsHideModule;
       const { module } = fakeChildProcess();
@@ -370,7 +378,7 @@ describe("issue #693 子プロセス windowsHide 既定 (Red)", () => {
     }));
 
   describe("U-WHIDE-006", () =>
-    it.fails("U-WHIDE-006: caller options は書き換えず、同じ object を再利用できる", async () => {
+    it("U-WHIDE-006: caller options は書き換えず、同じ object を再利用できる", async () => {
       const { applyWindowsHideDefault } = await loadWindowsHide();
       const { module, calls } = fakeChildProcess();
       applyWindowsHideDefault(module);
@@ -387,7 +395,7 @@ describe("issue #693 子プロセス windowsHide 既定 (Red)", () => {
     }));
 
   describe("U-WHIDE-007", () =>
-    it.fails("U-WHIDE-007: 戻り値・例外・this は下位関数と同一", async () => {
+    it("U-WHIDE-007: 戻り値・例外・this は下位関数と同一", async () => {
       const { applyWindowsHideDefault } = await loadWindowsHide();
       const returned = { exact: true };
       const thrown = new Error("same error");
@@ -421,7 +429,7 @@ describe("issue #693 子プロセス windowsHide 既定 (Red)", () => {
     }));
 
   describe("U-WHIDE-008", () =>
-    it.fails("U-WHIDE-008: 入口 import の欠落と先頭以外を finding にする", async () => {
+    it("U-WHIDE-008: 入口 import の欠落と先頭以外を finding にする", async () => {
       const mod = await loadWindowsHide();
       const entries = [
         "src/cli.ts",
@@ -450,7 +458,7 @@ describe("issue #693 子プロセス windowsHide 既定 (Red)", () => {
     }));
 
   describe("U-WHIDE-009", () =>
-    it.fails("U-WHIDE-009: vitest setupFiles は有効、globalSetup 単独は不足", async () => {
+    it("U-WHIDE-009: vitest setupFiles は有効、globalSetup 単独は不足", async () => {
       const mod = await loadWindowsHide();
       const entries = ["src/cli.ts", "tests/windows-hide-setup.ts"];
       const setupFiles = analyze(
@@ -486,7 +494,7 @@ describe("issue #693 子プロセス windowsHide 既定 (Red)", () => {
     }));
 
   describe("U-WHIDE-010", () =>
-    it.fails("U-WHIDE-010: false だけに非空の同一行/直前理由を要求する", async () => {
+    it("U-WHIDE-010: false だけに非空の同一行/直前理由を要求する", async () => {
       const mod = await loadWindowsHide();
       const entries = ["src/cli.ts"];
       const valid = analyze(
@@ -534,7 +542,7 @@ describe("issue #693 子プロセス windowsHide 既定 (Red)", () => {
     }));
 
   describe("U-WHIDE-011", () =>
-    it.fails("U-WHIDE-011: 入力順を変えても違反順と集計が決定的", async () => {
+    it("U-WHIDE-011: 入力順を変えても違反順と集計が決定的", async () => {
       const mod = await loadWindowsHide();
       const sources = [
         wrapperSource(),
@@ -550,7 +558,7 @@ describe("issue #693 子プロセス windowsHide 既定 (Red)", () => {
     }));
 
   describe("U-WHIDE-012", () =>
-    it.fails("U-WHIDE-012: 実 repo と doctor の clean/違反 fixture を fail-close する", () => {
+    it("U-WHIDE-012: 実 repo と doctor の clean/違反 fixture を fail-close する", () => {
       const actual = windowsHideCheck(root);
       expect(actual.ok).toBe(true);
 
@@ -577,7 +585,7 @@ describe("issue #693 子プロセス windowsHide 既定 (Red)", () => {
     }));
 
   describe("U-WHIDE-013", () =>
-    it.fails("U-WHIDE-013: 実 Pack 配布集合の CLI/template に wrapper が含まれ、除外時は検知する", async () => {
+    it("U-WHIDE-013: 実 Pack 配布集合の CLI/template に wrapper が含まれ、除外時は検知する", async () => {
       const mod = await loadWindowsHide();
       const sourcePaths = execFileSync("git", ["ls-files"], {
         cwd: root,
@@ -681,7 +689,7 @@ describe("issue #693 子プロセス windowsHide 既定 (Red)", () => {
     }));
 
   describe("U-WHIDE-014", () =>
-    it.fails("U-WHIDE-014: setupFiles 下で既存 spawn 検証と child_process mock が通る", async () => {
+    it("U-WHIDE-014: setupFiles 下で既存 spawn 検証と child_process mock が通る", async () => {
       await loadWindowsHide();
       const files = [
         "tests/node-plan-revision-runner.test.ts",
