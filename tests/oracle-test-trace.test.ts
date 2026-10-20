@@ -154,7 +154,6 @@ if (
   new Set(RATC_OLD_SETS.citations).size !== RATC_OLD_SETS.citations.length ||
   RATC_OLD_SETS.legacy.some((id) => RATC_OLD_SETS.widened.includes(id)) ||
   !RATC_OLD_SETS.legacy.includes("U-ASSETDRIFT-001") ||
-  !RATC_OLD_SETS.widened.includes("IT-ASSESS-01") ||
   !RATC_OLD_SETS.citations.includes("U-ADAPTER-005") ||
   !RATC_OLD_SETS.legacy.includes("U-RDRIFT-004") ||
   !RATC_OLD_SETS.citations.includes("U-RDRIFT-004")
@@ -872,7 +871,7 @@ describe("three independent subset axes (CANDIDATE-U-OIDBASE-005/006)", () => {
   });
 
   it.fails("CANDIDATE-U-OIDBASE-005: widened debtと対応derived IDの同時縮小を受理する", () => {
-    const id = "IT-ASSESS-01";
+    const id = RATC_OLD_SETS.widened[0];
     const head = updateRatchetBaseline({ widened: { remove: [id] } });
     const observed = runRatchetFixture({ headJson: ratchetBaselineJson(head) });
     expectRatchetResultAndReads(observed, { ok: true }, [RATC_MERGE_SHA], jsonPairReads);
@@ -936,7 +935,7 @@ describe("three independent subset axes (CANDIDATE-U-OIDBASE-005/006)", () => {
   });
 
   it("widened debt shrinkのfixtureではderived equalityとanalyzer cleanが独立して成立する", () => {
-    const id = "IT-ASSESS-01";
+    const id = RATC_OLD_SETS.widened[0];
     const head = updateRatchetBaseline({ widened: { remove: [id] } });
     expectForwardAxisAnalyzerFixture("widened", head, new Set([id]));
   });
