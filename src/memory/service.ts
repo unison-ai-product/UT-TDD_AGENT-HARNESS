@@ -615,11 +615,8 @@ export function retireMemoryEpisodes(
   if (!isUtcIsoTimestamp(input.nowISO))
     throw new TypeError("nowISO must be a valid UTC ISO-8601 timestamp");
 
-  if (
-    !ports?.db ||
-    typeof ports.db.inspectEntry !== "function" ||
-    typeof ports.db.deleteEntryRow !== "function"
-  ) {
+  const db = ports?.db;
+  if (!db || typeof db.inspectEntry !== "function" || typeof db.deleteEntryRow !== "function") {
     return { ok: false, reason: "memory_archive_io_failed" };
   }
 
@@ -705,8 +702,8 @@ export function retireMemoryEpisodes(
     if (!parseBoundGitHubUrl(boundUrl, identity.value.repositoryIdentity)) failRecovery();
 
     const projection = { memoryId: entry.memory_id, sourcePath, contentHash: entry.content_hash };
-    if (ports.db !== undefined) {
-      if (ports.db.inspectEntry(projection).status !== "match") failRecovery();
+    if (db !== undefined) {
+      if (db.inspectEntry(projection).status !== "match") failRecovery();
     } else {
       // Green で削除: omitted-port direct sqlite fallback is transitional only.
       const projectDbPath = join(repoRoot, ".ut-tdd", "harness.db");
@@ -784,8 +781,8 @@ export function retireMemoryEpisodes(
     if (!currentStat.isFile() || currentStat.isSymbolicLink()) failRecovery();
     const currentBytes = readFileSync(sourceAbsolute);
     if (!currentBytes.equals(rawBytes)) failRecovery();
-    if (ports.db !== undefined) {
-      if (ports.db.inspectEntry(projection).status !== "match") failRecovery();
+    if (db !== undefined) {
+      if (db.inspectEntry(projection).status !== "match") failRecovery();
     } else {
       // Green で削除: omitted-port direct sqlite fallback is transitional only.
       const projectDbPath = join(repoRoot, ".ut-tdd", "harness.db");
@@ -830,8 +827,8 @@ export function retireMemoryEpisodes(
     ensureDir(dirname(destinationAbsolute), { recursive: true });
     renameSync(sourceAbsolute, destinationAbsolute);
     checkpoint("afterRenameBeforeDbDelete");
-    if (ports.db !== undefined) {
-      const result = ports.db.deleteEntryRow({ memoryId: entry.memory_id, sourcePath });
+    if (db !== undefined) {
+      const result = db.deleteEntryRow({ memoryId: entry.memory_id, sourcePath });
       if (result.deleted !== 1) failRecovery();
     } else {
       // Green で削除: omitted-port direct sqlite fallback is transitional only.
