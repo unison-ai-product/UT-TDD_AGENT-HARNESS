@@ -2,13 +2,13 @@ import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { removeTestTree } from "./support/temp-tree.ts";
 import {
   analyzeDddTddRules,
   type DddTddInputs,
   dddTddRulesMessages,
   loadDddTddInputs,
 } from "../src/lint/ddd-tdd-rules.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 
 function createDddTddSplitL7Fixture(): string {
   const root = mkdtempSync(join(tmpdir(), "ddd-tdd-split-l7-"));
@@ -29,11 +29,7 @@ function createDddTddSplitL7Fixture(): string {
     ].join("\n"),
     "utf8",
   );
-  writeFileSync(
-    join(harness, "L7-unit-test-design.md"),
-    "PRIMARY-L7-SENTINEL\n",
-    "utf8",
-  );
+  writeFileSync(join(harness, "L7-unit-test-design.md"), "PRIMARY-L7-SENTINEL\n", "utf8");
   writeFileSync(
     join(harness, "L7-split-x-test-design.md"),
     [
@@ -43,11 +39,7 @@ function createDddTddSplitL7Fixture(): string {
     ].join("\n"),
     "utf8",
   );
-  writeFileSync(
-    join(harness, "README.md"),
-    "NON-L7-SENTINEL\n",
-    "utf8",
-  );
+  writeFileSync(join(harness, "README.md"), "NON-L7-SENTINEL\n", "utf8");
   return root;
 }
 
