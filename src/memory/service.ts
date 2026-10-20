@@ -527,8 +527,19 @@ export interface RetireMemoryEpisodesFailure {
   reason: "memory_archive_recovery_conflict" | "memory_archive_io_failed";
 }
 
+export interface MemoryArchiveDbPort {
+  inspectEntry(input: {
+    memoryId: string;
+    sourcePath: string;
+    contentHash: string;
+  }): { status: "match" | "row_absent" | "row_mismatch" | "schema_unready" };
+  deleteEntryRow(input: { memoryId: string; sourcePath: string }): { deleted: number };
+}
+
 export interface RetireMemoryEpisodesPorts {
   resolveGitHubStatus?: (input: { url: string }) => { state: "open" | "closed" | "unknown" };
+  // Green で削除: optionality only preserves the pre-injection footing.
+  db?: MemoryArchiveDbPort;
   checkpoint?: (input: {
     point: MemoryArchiveCheckpointPoint;
     memoryId: string;
@@ -687,11 +698,16 @@ export function retireMemoryEpisodes(
     const boundUrl = boundTo[0];
     if (!parseBoundGitHubUrl(boundUrl, identity.value.repositoryIdentity)) failRecovery();
 
-    const projectDbPath = join(repoRoot, ".ut-tdd", "harness.db");
-    const dbStat = lstatSync(projectDbPath);
-    if (!dbStat.isFile() || dbStat.isSymbolicLink()) failRecovery();
     const projection = { memoryId: entry.memory_id, sourcePath, contentHash: entry.content_hash };
-    inspectMemoryProjection(projectDbPath, projection);
+    if (ports.db !== undefined) {
+      if (ports.db.inspectEntry(projection).status !== "match") failRecovery();
+    } else {
+      // Green で削除: omitted-port direct sqlite fallback is transitional only.
+      const projectDbPath = join(repoRoot, ".ut-tdd", "harness.db");
+      const dbStat = lstatSync(projectDbPath);
+      if (!dbStat.isFile() || dbStat.isSymbolicLink()) failRecovery();
+      inspectMemoryProjection(projectDbPath, projection);
+    }
     const month = input.nowISO.slice(0, 7);
     assertSafeArchiveParents(repoRoot, month);
 
@@ -762,7 +778,13 @@ export function retireMemoryEpisodes(
     if (!currentStat.isFile() || currentStat.isSymbolicLink()) failRecovery();
     const currentBytes = readFileSync(sourceAbsolute);
     if (!currentBytes.equals(rawBytes)) failRecovery();
-    inspectMemoryProjection(projectDbPath, projection);
+    if (ports.db !== undefined) {
+      if (ports.db.inspectEntry(projection).status !== "match") failRecovery();
+    } else {
+      // Green で削除: omitted-port direct sqlite fallback is transitional only.
+      const projectDbPath = join(repoRoot, ".ut-tdd", "harness.db");
+      inspectMemoryProjection(projectDbPath, projection);
+    }
     const event: MemoryEpisodeArchiveEvent = {
       schema: MEMORY_EPISODE_MANIFEST_SCHEMA,
       state: "intent",
@@ -802,7 +824,14 @@ export function retireMemoryEpisodes(
     ensureDir(dirname(destinationAbsolute), { recursive: true });
     renameSync(sourceAbsolute, destinationAbsolute);
     checkpoint("afterRenameBeforeDbDelete");
-    deleteMemoryProjectionRow(projectDbPath, entry.memory_id, sourcePath);
+    if (ports.db !== undefined) {
+      const result = ports.db.deleteEntryRow({ memoryId: entry.memory_id, sourcePath });
+      if (result.deleted !== 1) failRecovery();
+    } else {
+      // Green で削除: omitted-port direct sqlite fallback is transitional only.
+      const projectDbPath = join(repoRoot, ".ut-tdd", "harness.db");
+      deleteMemoryProjectionRow(projectDbPath, entry.memory_id, sourcePath);
+    }
     checkpoint("afterDbDeleteBeforeDoneAppend");
     appendFileSync(
       manifestPath,
