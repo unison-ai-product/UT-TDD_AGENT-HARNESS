@@ -46,13 +46,13 @@ consumer (clean Pack を入れた製品 repo) で `ut-tdd gate G1` / `G3` と `u
 - `resolveDesignRoot(repoRoot) === "docs/design/harness"` なら **harness 分岐**、それ以外なら **consumer 分岐**。`resolveDesignRoot` は `docs/design/harness` が存在すればそれを優先する (`src/shared/design-root.ts` の `DESIGN_ROOT_CANDIDATES` と `firstExistingRoot`)。
 - 分岐は文書の中身・PLAN の有無・profile では決めない。
 
-### 3.1 harness 分岐 (現行のまま)
+### 3.1 harness 分岐 (A4 G1 退役境界)
 
-harness 分岐は現行の検査を 1 つも変えない。
+consumer 分岐の導入に伴う変更対象外である点は維持する。ただし A4 (#1168) では PLAN 専用の G1 検査を退役する。残す harness G1 契約は BR / UX / P0 FR と画面の trace だけであり、L3 PLAN の読み込みや `requires` の欠落検査は契約しない。L1→L3 の全件降下を証明する代替 lint は追加しない。
 
-- G1-trace: L3 PLAN の `requires` 3 軸 (`REQUIRED_L3_REQUIRES`、`src/lint/g1-trace.ts:25`)、screen-requirements §5.1 / §5.3 / §5.5 の BR / UX / P0 FR ↔ 画面 trace、`(?:PM|HM|GD)-\d{2}` の画面 ID。
+- G1-trace: screen-requirements §5.1 / §5.3 / §5.5 の BR / UX / P0 FR ↔ 画面 trace、`(?:PM|HM|GD)-\d{2}` の画面 ID。BR / UX 13 件・15 画面・P0 FR 19 件の全件条件は OT-45 R1〜R3 で保持する。PLAN を読み込まず、`l3Plans` / `missingL3Requires` を API または message に出さない。
 - G3-trace: L1 FR-L1 → L3 FR (carry 宣言を含む)、L3 FR → AC (business-detail の `AC-FR-BR21-*` を含む)、AC → AT、AT-FR → AC の逆引き、L1 NFR 15 件 → L3 nfr-grade。
-- 非空の保証は従来どおり OT-45 (`docs/test-design/harness/L14-operational-test-design.md:87`、BR / UX 13 件・15 画面・P0 19 件) が持つ。harness 分岐には §7 の空集合規則を足さない。
+- harness G1 の件数・全件保証は OT-45 (`docs/test-design/harness/L14-operational-test-design.md:87`) の R1〜R3 が持つ。harness 分岐には §7 の空集合規則を足さない。
 - 既存の抽出関数 (`extractL3FrIds` / `extractAcIds` / `extractAtIds` / `extractL3NfrIds`) は `src/gate/right-arm-static.ts:3` からも使われている。本契約はこれらの挙動を変えない。
 
 ### 3.2 consumer 分岐
@@ -65,7 +65,7 @@ consumer 分岐の G1 / G3 は、表の列の参照 trace である。harness �
 
 | 分岐 | G1-trace の保証 | G3-trace の保証 |
 |---|---|---|
-| harness | OT-45 の R1〜R4 (件数を含む業務 ⇔ 画面 ⇔ P0 FR の trace と L3 PLAN の requires) | L1 FR-L1 → L3 FR → AC → AT と L1 NFR → L3 nfr-grade の孤児 0 |
+| harness | OT-45 の R1〜R3 (BR / UX 13 件・15 画面・P0 FR 19 件の業務 ⇔ 画面 trace) | L1 FR-L1 → L3 FR → AC → AT と L1 NFR → L3 nfr-grade の孤児 0 |
 | consumer | §6 の T1 / T2 (L1 要求の展開先と L2 画面の関連機能が実在する) と §7 の空集合拒否 | §6 の T3 / T4 (L3 機能のトレース元と L12 テストのトレース元が実在する) と §7 の空集合拒否 |
 
 - 出力の 1 行目に分岐を書く (§8)。consumer の PASS を harness の OT-45 の PASS と読み違えないためである。
@@ -147,7 +147,7 @@ consumer 分岐では、必須集合が空なら違反とし、理由 `empty_req
 | `F` (L3 機能) | `empty_required_set:DOC-L3-FUNCTIONAL:機能ID` | G1、G3 |
 
 - placeholder 行だけのテンプレートをそのまま置いた状態は、3 集合とも空なので赤になる。
-- `l3Plans=0` は consumer 分岐では正常である。L3 PLAN の `requires` 検査は harness 専用 (§3.1) であり、consumer 分岐では行わない。
+- consumer 分岐は PLAN を読み込まず、PLAN 件数・`requires` を G1 の結果に含めない。harness 分岐でも A4 により G1 は PLAN を読み込まず、`l3Plans` / `missingL3Requires` を返さない (§3.1)。
 - harness 分岐の非空の保証は OT-45 が持ち、本節は harness 分岐に適用しない。
 
 ## 8. 出力
@@ -156,12 +156,13 @@ consumer 分岐の lint 関数は次を返す。`src/plan/lint.ts` の handler �
 
 | field | 内容 |
 |---|---|
-| `branch` | `"consumer"` (harness 分岐の結果型は現行のまま) |
+| `branch` | `"consumer"` (harness G1 は §3.1 の PLAN 由来の項目だけを除き、その他の結果型は維持する。harness G3 の結果型は現行のまま) |
 | `violations` | §5〜§7 の理由文字列の配列。辞書順で全件返し、最初の 1 件で打ち切らない |
 | `totals` | `requirements` / `screens` / `functions` (G1)、`requirements` / `functions` / `tests` (G3) の件数 |
 
 - `ok` は `violations` が 0 件のときだけ `true`。
 - message は、OK なら `g1-trace - OK (consumer column trace: requirements=<n>, screens=<n>, functions=<n>)`、違反なら `g1-trace - violation (consumer column trace): <理由>; <理由>...`。G3 も同じ形で `g3-trace` とする。`consumer column trace` を必ず含め、harness の OT-45 と区別する (§4)。
+- A4 後の harness G1 が OK の場合、message は `g1-trace - OK (business=<n>, screens=<n>, p0Fr=<n>)` とする。現 repo での実例は `g1-trace - OK (business=13, screens=15, p0Fr=19)`。PLAN 由来の件数は含めない。既存 oracle `tests/gate-static.test.ts:53` / `tests/pack-canary-acceptance.test.ts:2017` の期待と `scripts/pack-canary-acceptance.mjs:215` の parser はこの形式へ追従し、parser は business / screens / p0Fr の各件数を引き続き `>=1` とする。A4 で退役する PLAN 専用判定を除き、BR / UX・画面・P0 FR の orphan fail-close、G3、共有 gate serialization の形式と合否は変更しない。
 - 読み取り例外を「required docs could not be read」に丸めない。core 文書の欠落は §5 の `missing_core_doc` で返す。
 
 ## 9. 実装方式
@@ -182,7 +183,7 @@ consumer 分岐の lint 関数は次を返す。`src/plan/lint.ts` の handler �
 | contract point | 不変条件 |
 |---|---|
 | pre | `repoRoot` は directory である (既存 `evaluateStaticGate` の検査) |
-| post (分岐) | 分岐は `resolveDesignRoot(repoRoot)` だけで決まる。harness 分岐の結果は本契約の前後で同一である |
+| post (分岐) | 分岐は `resolveDesignRoot(repoRoot)` だけで決まる。A4後の harness G1 は PLAN を読み込まず、`l3Plans` / `missingL3Requires` を API / message に含めない。BR / UX / P0 FR ↔ 画面 trace は本契約どおり fail-close し、件数条件は OT-45 R1〜R3 が担う。harness G3 の結果と messages は変更しない |
 | post (読み取り) | consumer 分岐は §5 の 4 文書 (G1 は L1 / L2 / L3、G3 は 4 つ全て) だけを要求する。harness 専用の文書を要求しない |
 | post (fail-close) | core 文書の欠落、`doc_type_id` の不一致、表の欠落、範囲表記の不正、必須集合の空は、いずれも `ok=false` |
 | post (trace) | §7.1 の各規則の違反 1 件 (token 1 個または参照 0 個の行 1 件) につき理由 1 件 |
