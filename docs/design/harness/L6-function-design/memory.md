@@ -296,7 +296,7 @@ memoryは永続知識だけを保存し、進捗や次の一手を保存する�
     db: MemoryArchiveDbPort;
   }
   ```
-  3 port とも同期関数である。status resolver は GitHub PR / issue 状態のみを注入し、throw または不正 result は `unknown`
+  `resolveGitHubStatus` / `checkpoint` は同期関数、`db` は同期 method だけを持つ構造的 object である (`db` 自体は関数ではない)。status resolver は GitHub PR / issue 状態のみを注入し、throw または不正 result は `unknown`
   とする。PR の `git log --first-parent <default branch>` merge-commit 検査は実 repository 上で必ず行い、merge commit が
   あれば外部 port を呼ばず `git_first_parent_merge` 根拠で closed とする。fixture は checkpoint callback から sentinel
   exception を送出でき、その exception は `retireMemoryEpisodes` から**そのまま propagate**し `{ ok:false }` に変換しない。
@@ -332,7 +332,7 @@ interface MemoryArchiveDbPort {
   `deleted === 1` 以外は `memory_archive_recovery_conflict` とし、`done` を追記しない。
 - port 呼び出しが throw したときは `memory_archive_io_failed` の typed failure とする (checkpoint の sentinel exception とは
   別で、こちらは `{ ok:false }` に変換する)。freshness の再計算や DB の再投影は port に含めない。
-- **省略は fail-close**: `ports` または `ports.db` が省略 / 非関数のとき、`nowISO` 検査 (不正なら従来どおり `TypeError`) の後、
+- **省略は fail-close**: `ports` が未指定、`ports.db` が未指定、または `ports.db.inspectEntry` / `ports.db.deleteEntryRow` のいずれかが関数でないとき (検証対象は `db` の 2 method であり、`typeof ports.db` を関数かどうかで判定しない。2 method を持つ有効な object は受理する)、`nowISO` 検査 (不正なら従来どおり `TypeError`) の後、
   filesystem / manifest / DB の I/O を一切行わず `{ ok:false, reason:"memory_archive_io_failed" }` を返す。production adapter
   への fallback も、service 内の SQL も持たない。dry-run でも同じ (preflight が `inspectEntry` を要するため)。
 - **production adapter と composition root**: production adapter は `src/state-db/` に置き、SQL と transaction はそこに閉じる。

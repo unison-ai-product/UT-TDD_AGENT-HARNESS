@@ -44,7 +44,7 @@ updated: 2026-10-19
   file と direct directory を少なくとも1件ずつ fixture に置き、`not_memory_entry` として保持・計数されることを確認する。
 - `retireMemoryEpisodes` は実 service operation と実 file / isolated projection DB で呼ぶ。共有 harness DB は開かない。
   DB 操作は fixture が isolated sqlite の test adapter を `ports.db` (`inspectEntry` / `deleteEntryRow`、設計 §4.2 DB port) に注入して通す。
-  `ports.db` を省略した呼び出しは production adapter へ fallback せず fail-close する (CANDIDATE-U-MEMEPI-029)。
+  `ports.db` が未指定、または `inspectEntry` / `deleteEntryRow` が関数でない呼び出しは production adapter へ fallback せず fail-close する。2 method を持つ有効な object は受理する (CANDIDATE-U-MEMEPI-029)。
 - fault は実 operation の同期 checkpoint port だけに注入し、status resolver fake は GitHub 外部状態だけに使う。
   PR の first-parent merge 証拠、分類、manifest append、rename、DB delete と recovery は実処理を観測する。
 - checkpoint 例外直後の on-disk / DB 状態を recovery 再実行の**前に**直接 assert する。unimplemented export import、CLI
@@ -82,7 +82,7 @@ updated: 2026-10-19
 | CANDIDATE-U-MEMEPI-026 | merge commit のない PR / issue の status resolver が throw または `{state:...}` の不正値を返す | `unknown` bucket に入り、archive 対象外。成功 report は exit 0、対象の manifest intent / file / DB 変更なし | resolver failure を `closed` / `open` に推定、typed archive failure として全 operation を誤停止 |
 | CANDIDATE-U-MEMEPI-027 | 同一 manifest に有効な `ut-tdd.state-channel-memory-archive/v1` event があり、#963 selector に処理可能な自身の entry を用意する | foreign event は #1062 §7.1 の closed schema で検証され、#963 の selection/recovery input に使われない。#963 は自身の entry だけを処理し、foreign row bytes / 関連 file / DB row は不変 | foreign eventを#963のselection/recoveryへ混入、または有効foreign rowの存在だけで誤conflict |
 | CANDIDATE-U-MEMEPI-028 | composition root (`ut-tdd memory retire` handler) が構築する production adapter の DB 対象を、resolver の `canonicalProjectRoot` と (a) 一致、(b) 不一致 (別 worktree / 別 root の harness.db) にして handler を実呼び出し。(b) は filesystem / manifest / DB の I/O 前後を観測 | (a) は adapter が注入され通常どおり成功。(b) は `retireMemoryEpisodes` 呼び出し前に fail-close し (`memory_archive_io_failed`、CLI exit 1)、source / manifest / 両 DB の bytes と row は不変、adapter は作られない | 一致検証を外す / 検証を呼び出し後に行う / 不一致を warning で続行し別 DB の row を削除する |
-| CANDIDATE-U-MEMEPI-029 | `retireMemoryEpisodes` を `ports` 省略、および `ports.db` 省略 (他 port のみ) で、`dryRun:true` / `false` の双方で呼び、filesystem / manifest / DB の I/O を観測。不正 `nowISO` との併用も確認 | 有効 `nowISO` では `{ ok:false, reason:"memory_archive_io_failed" }`、I/O は 0 で file / manifest / DB 不変。不正 `nowISO` は従来どおり `TypeError` が先 (CANDIDATE-U-MEMEPI-022)。production adapter / service 内 SQL への fallback で行を削除しない | `db` 省略時に production adapter を既定で使う / service 内で SQL を直接実行する / 省略を成功・空 report に丸める |
+| CANDIDATE-U-MEMEPI-029 | `retireMemoryEpisodes` を、(i) `inspectEntry` / `deleteEntryRow` の両 method を持つ有効な object を `ports.db` に注入した正例、(ii) 独立した負例 6 件 (`ports` 省略 / `ports.db` 省略 / `inspectEntry` 欠落 / `inspectEntry` が非関数 / `deleteEntryRow` 欠落 / `deleteEntryRow` が非関数) で、各々 `dryRun:true` / `false` の双方で呼び、filesystem / manifest / DB の I/O を観測。不正 `nowISO` との併用も確認 | (i) 正例は省略検査による `memory_archive_io_failed` にならず通常経路 (CANDIDATE-U-MEMEPI-028(a) の成功) へ進む。(ii) 各負例は有効 `nowISO` では `{ ok:false, reason:"memory_archive_io_failed" }`、I/O は 0 で file / manifest / DB 不変。不正 `nowISO` は従来どおり `TypeError` が先 (CANDIDATE-U-MEMEPI-022)。production adapter / service 内 SQL への fallback で行を削除しない | `typeof ports.db !== "function"` と誤読して有効な object を拒否する / method 単位でなく `db` の有無だけを検査して片 method 欠落・非関数を通す / `db` 省略時に production adapter を既定で使う / service 内で SQL を直接実行する / 省略を成功・空 report に丸める |
 
 ## 5. 範囲外
 
