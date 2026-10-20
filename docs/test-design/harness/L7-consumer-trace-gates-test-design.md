@@ -59,6 +59,8 @@ U-RCDEV-027 (v)(vi) の改訂も同じ契約 PR + Red で行う (設計文書 §
 | `CANDIDATE-U-CTRACE-025` | 4 テンプレートを何も書き足さずに consumer layout に置く | G1 / G3 とも `ok=false`。理由は `empty_required_set` の 3 種 (G1) / 2 種 (G3) | placeholder だけの文書を green にする |
 | `CANDIDATE-U-CTRACE-026` | 003 と同じ有効な consumer fixture で (a) `docs/plans/PLAN-L3-01-x.md` (`related_l1_screen` を含み `requires` を欠く) を置く版、(b) `docs/plans/` 自体が無い版を作る | 両方の consumer G1 trace が `ok=true` であり、messages も (a)(b) で同一。PLAN 由来の `l3Plans` / `missingL3Requires` を API / message に含めない | consumer G1 が PLAN directory / PLAN file を読む、または PLAN の有無 / `requires` 内容で結果を変える。両方を失敗させて同一とする実装も拒否する |
 
+001(c) の各版は、全て `ok=true` であり、PLAN 由来の `l3Plans` / `missingL3Requires` を API / message に含めず、同じ trace 結果と messages を返すことを要求する。全版を `ok=false` にして同一性だけを満たす実装は拒否する。
+
 ## 4. Gate and scope fence
 
 - 本書の oracle は consumer 分岐の G1-trace / G3-trace と、harness 分岐の挙動不変だけを扱う。layer pair gate、doctor、projection-writer、L1 第5章 非機能要求、L3 の ZIP-DOC-043 節は対象外 (設計文書 §11)。
