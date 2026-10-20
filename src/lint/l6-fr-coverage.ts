@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { loadFrDocs, parseFrRows } from "./fr-registry-audit.ts";
 import { hasDbcTable } from "./shared.ts";
@@ -98,18 +98,17 @@ const REGISTRY_REL = "docs/design/harness/L1-requirements/functional-requirement
 const L7_UNIT_REL = "docs/test-design/harness/L7-unit-test-design.md";
 const CANDIDATE_ORACLE_RE = /^CANDIDATE-U-[A-Z0-9-]+$/;
 const FORMAL_ORACLE_RE = /^U-[A-Z0-9-]+$/;
-const PLAN_ID_RE = /^PLAN-[A-Za-z0-9][A-Za-z0-9-]*$/;
 
 interface RegistryState {
   state: string;
-  plan: string;
+  ref: string;
 }
 
 function stripMark(cell: string): string {
   return cell.replace(/[*`]/g, "").trim();
 }
 
-/** FR registry 行の末尾任意列 (fr_state / retirement_plan)。列なし = 空 = active。 */
+/** FR registry 行の末尾任意列 (fr_state / retirement_ref)。列なし = 空 = active。 */
 function loadRegistryStates(repoRoot: string | undefined): Map<string, RegistryState> {
   const states = new Map<string, RegistryState>();
   const path = repoRoot ? join(repoRoot, REGISTRY_REL) : "";
@@ -118,28 +117,51 @@ function loadRegistryStates(repoRoot: string | undefined): Map<string, RegistryS
     const id = line.match(/^\|\s*\*\*(FR-L1-\d{2})\*\*\s*\|/)?.[1];
     if (!id || states.has(id)) continue;
     const c = markdownCells(line);
-    states.set(id, { state: stripMark(c[7] ?? ""), plan: stripMark(c[8] ?? "") });
+    states.set(id, { state: stripMark(c[7] ?? ""), ref: unwrapCode(c[8] ?? "") });
   }
   return states;
 }
 
-function planIdOf(text: string): string | null {
-  const fm = text.match(/^---\r?\n([\s\S]*?)\r?\n---/);
-  return fm?.[1].match(/^plan_id:\s*(\S+)/m)?.[1] ?? null;
+const ISSUE_REF_RE = /^#[1-9][0-9]*$/;
+const REF_DOC_RE = /^(docs\/design\/|docs\/adr\/)[^#]*\.md$/;
+
+/** ATX 見出し行 (fence 外) の text 一覧。level は無視し、前後空白 (全角含む) と先頭 # 群を除く。 */
+function atxHeadings(text: string): string[] {
+  const out: string[] = [];
+  let fence = "";
+  for (const line of text.split(/
+?
+/)) {
+    if (fence !== "") {
+      const close = line.match(/^ {0,3}(`{3,}|~{3,})\s*$/)?.[1];
+      if (close?.[0] === fence[0] && close.length >= fence.length) fence = "";
+      continue;
+    }
+    const open = line.match(/^ {0,3}(`{3,}|~{3,})(.*)$/);
+    if (open && !(open[1][0] === "`" && open[2].includes("`"))) {
+      fence = open[1];
+      continue;
+    }
+    const h = line.match(/^#{1,6}[ 	　]+(.*)$/);
+    if (h) out.push(h[1].trim());
+  }
+  return out;
 }
 
-/** 退役 PLAN 参照を一意に解決できたときだけ true。短縮形・曖昧・不一致は false。 */
-function resolveRetirementPlan(repoRoot: string, ref: string): boolean {
-  const pathRef = ref.match(/^docs\/plans\/([^/]+)\.md$/);
-  const id = pathRef ? pathRef[1] : ref;
-  if (!PLAN_ID_RE.test(id)) return false;
-  const dir = join(repoRoot, "docs", "plans");
-  if (!existsSync(dir)) return false;
-  const owners = readdirSync(dir)
-    .filter((f) => f.endsWith(".md"))
-    .filter((f) => planIdOf(readFileSync(join(dir, f), "utf8")) === id);
-  if (owners.length !== 1) return false;
-  return !pathRef || owners[0] === `${id}.md`;
+/** 退役根拠 (Issue 参照 / 設計文書見出し参照) の閉じた文法で一意に解決できたときだけ true。 */
+function resolveRetirementRef(repoRoot: string, rawRef: string): boolean {
+  const ref = rawRef.trim();
+  if (ISSUE_REF_RE.test(ref)) return true;
+  const hash = ref.indexOf(".md#");
+  if (hash < 0) return false;
+  const rel = ref.slice(0, hash + 3);
+  const heading = ref.slice(hash + 4);
+  if (!REF_DOC_RE.test(rel) || rel.includes("..") || rel.includes("\\") || heading === "") {
+    return false;
+  }
+  const abs = join(repoRoot, rel);
+  if (!existsSync(abs) || !statSync(abs).isFile()) return false;
+  return atxHeadings(readFileSync(abs, "utf8")).filter((h) => h === heading).length === 1;
 }
 
 function citesId(text: string, id: string): boolean {
@@ -242,14 +264,14 @@ function stateFailures(
   if (reg.state !== "" && reg.state !== "active" && reg.state !== "retired") return ["fr_state"];
   const fails: string[] = [];
   if (reg.state !== "retired") {
-    if (reg.plan !== "") fails.push("retirement_plan");
+    if (reg.ref !== "") fails.push("retirement_ref");
     if (row.unit_oracle && row.unit_oracle !== expectedOracle(row.fr_id)) {
       fails.push("unit_oracle_match");
     }
     return fails;
   }
-  if (reg.plan === "" || !repoRoot || !resolveRetirementPlan(repoRoot, reg.plan)) {
-    fails.push("retirement_plan");
+  if (reg.ref === "" || !repoRoot || !resolveRetirementRef(repoRoot, reg.ref)) {
+    fails.push("retirement_ref");
   }
   const oracle = row.unit_oracle;
   if (!CANDIDATE_ORACLE_RE.test(oracle) && !FORMAL_ORACLE_RE.test(oracle)) {
@@ -300,7 +322,7 @@ export function analyzeL6FrCoverage(docs: L6FrCoverageDocs): L6FrCoverageResult 
     if (!row.unit_contract || refs.length === 0) missingFields.push("unit_contract");
     if (!/\bU-[A-Z0-9-]+/.test(row.unit_oracle)) missingFields.push("unit_oracle");
     missingFields.push(
-      ...stateFailures(row, registry.get(row.fr_id) ?? { state: "", plan: "" }, docs.repoRoot),
+      ...stateFailures(row, registry.get(row.fr_id) ?? { state: "", ref: "" }, docs.repoRoot),
     );
     if (missingFields.length > 0) {
       incomplete.push({ fr_id: row.fr_id, missing: missingFields });
