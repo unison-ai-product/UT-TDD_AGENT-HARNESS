@@ -133,7 +133,7 @@ analyzeModuleDrift(docs: { listed, actual }) -> { orphans, listedCount, actualCo
 
 **凍結する規則 (matcher の定義)**
 
-1. **入力は設計文書だけ**。再帰的な `docs/design/**/*.md` の本文を読む。`docs/plans/*.md` は入力にしない (PLAN の本文にだけ書かれた path は trace に数えない)。
+1. **入力は設計文書だけ**。再帰的な `docs/design/**/*.md` の本文を読む。`docs/plans/*.md` は入力にしない (PLAN の本文にだけ書かれた path は trace に数えない。ただし、その src の module が設計文書で名指しされていれば、規則 5 (a) により所有される)。
 2. **module の名指し**: 設計文書の本文に、正規表現 `(^|[^A-Za-z0-9_./-])src/([A-Za-z0-9_-]+)/` が一致すれば、その第 2 群 `<module>` を「名指しされた module」とする。つまり `src/<module>/` という文字列が現れれば足りる。`src/<module>/*.ts` や `src/<module>/<file>.ts` のような後続付きの形も、先頭が `src/<module>/` なので同じ規則で名指しに数える (glob 形を別扱いにしない)。直前の文字の条件は、`foo/src/<module>/` のような別 path の一部を数えないためである。
 3. **module の定義**: `src/` 直下の第 1 階層のディレクトリ名とする。`src/vmodel-contract/domain/x.ts` の module は `vmodel-contract` である。
 4. **top-level の単体ファイル** (`src/cli.ts` のように `src/` 直下に置かれた `.ts`) は module を持たない。従来の正規表現 `/src\/[A-Za-z0-9_./-]+\.ts/g` による **path の完全一致**で、設計文書に名指しされているときだけ所有されているとみなす。
@@ -142,7 +142,7 @@ analyzeModuleDrift(docs: { listed, actual }) -> { orphans, listedCount, actualCo
 
 | 関数 | Signature | pre | post | invariant | oracle |
 |---|---|---|---|---|---|
-| `analyzeImplPlanTrace` | analyzeImplPlanTrace(input: ImplPlanTraceInput) => ImplPlanTraceResult | `src/**.ts` 集合 + 設計文書から得た名指し module 集合 + 設計文書に完全一致で現れた src path 集合 + baseline allowlist が供給される。`loadImplPlanTraceInput` は設計文書だけを上記の規則で読み、PLAN を読まない。 | 所有されておらず baseline でもない src を `orphans` に返し、NEW orphan 有無で `ok` を決める。 | baseline は**縮小のみ可** (空集合へ縮小し、追加しない)。module が名指しされていない src と、PLAN の本文にだけ path がある src は orphan のまま。 | U-IPT-001..006 (既存) と CANDIDATE-U-IPT-007..011 (本改訂) |
+| `analyzeImplPlanTrace` | analyzeImplPlanTrace(input: ImplPlanTraceInput) => ImplPlanTraceResult | `src/**.ts` 集合 + 設計文書から得た名指し module 集合 + 設計文書に完全一致で現れた src path 集合 + baseline allowlist が供給される。`loadImplPlanTraceInput` は設計文書だけを上記の規則で読み、PLAN を読まない。 | 所有されておらず baseline でもない src を `orphans` に返し、NEW orphan 有無で `ok` を決める。 | baseline は**縮小のみ可** (空集合へ縮小し、追加しない)。module が名指しされていない src は、path が PLAN の本文に書かれていても orphan のまま (PLAN は入力ではない)。名指し済みの module に属する src は、個別の path がどこに書かれているか (PLAN の本文だけ、または無記載) によらず所有される。 | U-IPT-001..006 (既存) と CANDIDATE-U-IPT-007..011 (本改訂) |
 
 - **U-IPT-006 (既存)**: `loadImplPlanTraceInput` は深い階層の `docs/design/**/*.md` を再帰的に読む。この性質は module 単位でも変わらず、Green で fixture を module の名指しに合わせて書き直す。
 - **意図的に失う検出力**: 名指し済みの module の中にある「設計から個別には言及されていないファイル」は、もう orphan にならない。許容する理由は、L5 (`module-decomposition.md`) がファイル単位の列挙を最初から放棄し、「`src/lint/` の実数は `src/lint/` が正本」としているためである。ファイル単位の列挙を設計に写すと、rename のたびに古くなる (機械が強制することを文書に写す形になる)。検出が残るのは、設計から名指しされない module の新設と、top-level 単体ファイルの追加である。
