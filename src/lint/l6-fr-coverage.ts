@@ -129,9 +129,7 @@ const REF_DOC_RE = /^(docs\/design\/|docs\/adr\/)[^#]*\.md$/;
 function atxHeadings(text: string): string[] {
   const out: string[] = [];
   let fence = "";
-  for (const line of text.split(/
-?
-/)) {
+  for (const line of text.split(/\r?\n/)) {
     if (fence !== "") {
       const close = line.match(/^ {0,3}(`{3,}|~{3,})\s*$/)?.[1];
       if (close?.[0] === fence[0] && close.length >= fence.length) fence = "";
@@ -142,7 +140,7 @@ function atxHeadings(text: string): string[] {
       fence = open[1];
       continue;
     }
-    const h = line.match(/^#{1,6}[ 	　]+(.*)$/);
+    const h = line.match(/^#{1,6}[ \t\u3000]+(.*)$/);
     if (h) out.push(h[1].trim());
   }
   return out;
