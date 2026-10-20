@@ -35,15 +35,15 @@ append試行は維持し、event durable性は実配布受入で別に検証す�
 
 設定回帰の補助テスト `SessionStart timeout is 30s in source and consumer settings without changing other hook timeouts` は `tests/runtime-hook-entrypoints.test.ts` に置く。新しい正式oracle IDは追加しない。
 
-| 正式オラクルID | 既存テストラベル / trace対象 |
-|---|---|
-| U-835-001 | `U-835-001 / CANDIDATE-U-RCDEV-007: bundled setup/session materialization is digest checked and ignored` in `tests/release-consumer-skills.test.ts`; shared generation fixture only |
-| U-835-002 | `U-835-002: blocks hook state writes when no repository root can be resolved` in `tests/runtime-hook-entrypoints.test.ts` |
-| U-835-003 | `U-835-003: the real session-start action appends before its materialize side-effect boundary` in `tests/runtime-hook-entrypoints.test.ts` |
-| U-835-004 | `U-835-004: the exact session event remains readable during a bounded side-effect barrier` in `tests/runtime-hook-entrypoints.test.ts` |
-| U-835-005 | `U-835-005: a side-effect error does not roll back the already-appended session event` in `tests/runtime-hook-entrypoints.test.ts` |
-| U-835-006 | `U-835-006: the real session-start action preserves its explicit session ID and current plan` in `tests/runtime-hook-entrypoints.test.ts` |
-| U-835-007 | `U-835-007 / U-FSF-007: scanDanglingStops は dangling session のみ forced_stop 記録 / idempotent / current 除外 / fail-open` in `tests/forced-stop.test.ts`; `U-835-007: shared CLI session/hook commands record a PLAN digest in a temp repo` in `tests/runtime-hook-entrypoints.test.ts` |
+| 正式オラクルID | 既存テストラベル / trace対象 | 期待結果の要旨 (RED / Green の詳細は下表) |
+|---|---|---|
+| U-835-001 | `U-835-001 / CANDIDATE-U-RCDEV-007: bundled setup/session materialization is digest checked and ignored` in `tests/release-consumer-skills.test.ts`; shared generation fixture only | 実sealed Node bundleで、materialize faultより前に同じsession IDの `session_start` が保存される |
+| U-835-002 | `U-835-002: blocks hook state writes when no repository root can be resolved` in `tests/runtime-hook-entrypoints.test.ts` | root拒否時は既存recovery diagnosticで拒否し、session event appendは0件 |
+| U-835-003 | `U-835-003: the real session-start action appends before its materialize side-effect boundary` in `tests/runtime-hook-entrypoints.test.ts` | side-effect入口へ到達した時点で、同期append済みのeventが実fileで読める |
+| U-835-004 | `U-835-004: the exact session event remains readable during a bounded side-effect barrier` in `tests/runtime-hook-entrypoints.test.ts` | bounded barrier待機中も同じIDのeventが実fileで読め、解放後も残る |
+| U-835-005 | `U-835-005: a side-effect error does not roll back the already-appended session event` in `tests/runtime-hook-entrypoints.test.ts` | side-effectのerror後も、既にappend済みのeventはrollbackされず残る |
+| U-835-006 | `U-835-006: the real session-start action preserves its explicit session ID and current plan` in `tests/runtime-hook-entrypoints.test.ts` | event.session_idが指定IDと完全一致し、plan_idがevent時点のcurrent-planになる |
+| U-835-007 | `U-835-007 / U-FSF-007: scanDanglingStops は dangling session のみ forced_stop 記録 / idempotent / current 除外 / fail-open` in `tests/forced-stop.test.ts`; `U-835-007: shared CLI session/hook commands record a PLAN digest in a temp repo` in `tests/runtime-hook-entrypoints.test.ts` | current IDはforced-stop対象外で、prior danglingは維持され、Stop digestはstartを1件だけ集約する |
 
 ### オラクル設計詳細
 
