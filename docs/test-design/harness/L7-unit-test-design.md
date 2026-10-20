@@ -628,7 +628,7 @@ SMB/NFS/OneDrive をまたぐ strict lease、heartbeat、clock-skew 耐性は主
 >
 > 既存U-FRCOV-001..006とactive/通常FRの `U-FR-L1-NN` 完全一致は不変。L6の退役分岐が免除するのはこの通常formal-oracle一致要件だけで、L6 spec path・named unit contract・type body/pseudocodeまたは有効な `explicit_l7_defer` のsubstance要件を退役ラベルで迂回しない。退役状態の根拠欠落・未知状態は通常FRの例外経路にしない。doctor gateとdescent-obligationの `loadFrUnitCoverageOracles` readerは同じ退役行を同じ基準で受理/拒否する。readerの表面上の行一致だけでtyped/substance欠落を覆い隠してはならない。
 >
-> **状態**: 下記 `U-FRCOV-007..023` は正式IDへ昇格済みで、`tests/l6-fr-coverage.test.ts` が各IDを実testとして引用する。`it.fails` は実装 (Green) が入るまでの Red 状態であり、実装は未着手である。既存の正式U-FRCOV-001..006を変更・置換しない。
+> **状態**: 下記 `U-FRCOV-007..026` は正式IDへ昇格済みで、`tests/l6-fr-coverage.test.ts` が各IDを実testとして引用する。`it.fails` は実装 (Green) が入るまでの Red 状態であり、実装は未着手である。既存の正式U-FRCOV-001..006を変更・置換しない。
 
 | Test ID | 対象 / 実test引用予定 | 期待 (各negativeは記載した条件だけを変え、他条件は有効fixtureのまま保つ) |
 |---|---|---|
@@ -650,17 +650,17 @@ SMB/NFS/OneDrive をまたぐ strict lease、heartbeat、clock-skew 耐性は主
 | U-FRCOV-022 | oracle declaration resolver; `tests/l6-fr-coverage.test.ts` のmissing-target-FR test予定 | retired row、解決済の退役根拠、coverage oracle、宣言されたexact oracle ID、同IDを引用する実testを有効に保ち、oracle declaration行の対象/期待欄に対象FR完全IDが欠ける点だけを変えて拒否する。実test本文のoracle ID引用を維持し、FR引用を要求しない。 |
 | U-FRCOV-023 | oracle declaration resolver; `tests/l6-fr-coverage.test.ts` のwrong-target-FR test予定 | retired row、解決済の退役根拠、coverage oracle、宣言されたexact oracle ID、同IDを引用する実testを有効に保ち、oracle declaration行の対象/期待欄だけを別FRの完全IDに変えて拒否する。実test本文のoracle ID引用を維持し、FR引用を要求しない。 |
 
-#### Issue #848: oracle 宣言行の識別規則 (candidate、Red)
+#### Issue #848: oracle 宣言行の識別規則 (formal、Red)
 
 > 正本は L6 `fr-unit-coverage.md` の「宣言行の識別規則」。上記 U-FRCOV-007..023 の「candidate対応表」「formal対応表」「宣言表」は、表や見出しの種別ではなく、同規則の **宣言行** を指す。状態はIDの接頭辞 (`CANDIDATE-U-` = candidate、`U-` = formal) だけで決まり、節の見出しと表ヘッダ第1列名には依存しない。実L7を全件走査した実測: 第1セルが `U-*` / `CANDIDATE-U-*` の表行は1306行・1305 ID、ヘッダ第1列は10種以上、列数は2〜5、IDの重複は `U-PHOVER-002` の1件のみ（退役と無関係）。
 >
-> 下記3件は識別規則を殺すmutantを持つcandidate oracleである。実装 (Green) が入るまで `tests/l6-fr-coverage.test.ts` の `it.fails` がRedを保持する。既存U-FRCOV-007..023のtest本体と期待値は変えない。
+> 下記3件 (U-FRCOV-024..026) は正式IDへ昇格済みで、識別規則を殺すmutantを持つoracleである。実装 (Green) が入るまで `tests/l6-fr-coverage.test.ts` の `it.fails` がRedを保持する。既存U-FRCOV-007..023のtest本体と期待値は変えない。
 
 | ID | 入力 / 独立変異 | 期待 / 実行対応 |
 |---|---|---|
-| CANDIDATE-U-FRCOV-024 | 有効candidate-positive fixtureの宣言行を、見出しが無関係な節に置き、ヘッダ第1列を `ID` / `oracle` / `test_id` へ変えた3 caseと、第1セルをcode記法で囲んだcase。負例は、(a) 2列表に同じ内容を畳んだ行、(b) 第1セルがproseでIDは第2セルだけの行、(c) fenced code block内の表 | 正例は全て受理、負例は全て拒否。`tests/l6-fr-coverage.test.ts` |
-| CANDIDATE-U-FRCOV-025 | 宣言行の第2列以降のFR IDだけを変える。正例は `FR-L1-05`（code記法あり・prose内）。負例は `XFR-L1-05`、`FR-L1-050`、`FR-L1-5`、`FR-L1-05` と `FR-L1-06` の併記 | 正例は受理、負例は全て拒否（完全境界、別FR併記もfail-close）。`tests/l6-fr-coverage.test.ts` |
-| CANDIDATE-U-FRCOV-026 | 宣言行の実test path欄だけを変える。正例は `:行番号` 接尾辞付きとcode記法付き、および同じIDを引用する2つの実test file。負例は、tests path tokenが無い、2つのtokenの一方が未解決、正規化すると実在してIDを引用するfileへ届く `..` 入りtoken（例: `tests/fixture/../fixture/retired.test.ts`、`..` だけが拒否理由）、実fileがIDを引用しない | 正例は受理、負例は全て拒否（全tokenが解決可能で全fileがIDを引用）。`tests/l6-fr-coverage.test.ts` |
+| U-FRCOV-024 | 有効candidate-positive fixtureの宣言行を、見出しが無関係な節に置き、ヘッダ第1列を `ID` / `oracle` / `test_id` へ変えた3 caseと、第1セルをcode記法で囲んだcase。負例は、(a) 2列表に同じ内容を畳んだ行、(b) 第1セルがproseでIDは第2セルだけの行、(c) fenced code block内の表 | 正例は全て受理、負例は全て拒否。`tests/l6-fr-coverage.test.ts` |
+| U-FRCOV-025 | 宣言行の第2列以降のFR IDだけを変える。正例は `FR-L1-05`（code記法あり・prose内）。負例は `XFR-L1-05`、`FR-L1-050`、`FR-L1-5`、`FR-L1-05` と `FR-L1-06` の併記 | 正例は受理、負例は全て拒否（完全境界、別FR併記もfail-close）。`tests/l6-fr-coverage.test.ts` |
+| U-FRCOV-026 | 宣言行の実test path欄だけを変える。正例は `:行番号` 接尾辞付きとcode記法付き、および同じIDを引用する2つの実test file。負例は、tests path tokenが無い、2つのtokenの一方が未解決、正規化すると実在してIDを引用するfileへ届く `..` 入りtoken（例: `tests/fixture/../fixture/retired.test.ts`、`..` だけが拒否理由）、実fileがIDを引用しない | 正例は受理、負例は全て拒否（全tokenが解決可能で全fileがIDを引用）。`tests/l6-fr-coverage.test.ts` |
 
 
 ### §1.21 U-FR-L1-21 (test perspective gate)
