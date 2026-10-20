@@ -624,8 +624,10 @@ describe("Issue #848 declaration-row identification (CANDIDATE-U-FRCOV-024..026,
       withTarget("FR-L1-050"),
       withTarget("FR-L1-5"),
       withTarget("FR-L1-05 と FR-L1-06"),
+      // 末尾 pipe の無い行でも最終セルの別 FR 併記を見落とさない (#1181 r1)
+      declOk(freeTable(DECL_HEAD_ID, `| ${CAND} | FR-L1-05 ${RET_TEST_REL} | FR-L1-06`)),
     ];
-    expect(outcomes).toEqual([true, true, false, false, false, false]);
+    expect(outcomes).toEqual([true, true, false, false, false, false, false]);
   });
 
   it("CANDIDATE-U-FRCOV-026: every tests path token must resolve and cite the exact oracle id", () => {
@@ -645,7 +647,14 @@ describe("Issue #848 declaration-row identification (CANDIDATE-U-FRCOV-024..026,
       withPath(`${RET_TEST_REL}, tests/fixture/missing.test.ts`),
       withPath("tests/fixture/../fixture/retired.test.ts"),
       withPath(RET_TEST_REL, { [RET_TEST_REL]: 'it("unrelated", () => {});\n' }),
+      // 末尾 pipe の無い行でも最終セルの未解決 test path を検証から落とさない (#1181 r1)
+      declOk(
+        freeTable(
+          DECL_HEAD_ID,
+          `| ${CAND} | FR-L1-05 の退役 oracle ${RET_TEST_REL} | tests/fixture/missing.test.ts`,
+        ),
+      ),
     ];
-    expect(outcomes).toEqual([true, true, false, false, false, false]);
+    expect(outcomes).toEqual([true, true, false, false, false, false, false]);
   });
 });
