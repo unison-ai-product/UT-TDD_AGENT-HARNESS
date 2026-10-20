@@ -322,23 +322,23 @@ describe("Issue #848 FR retirement coverage (U-FRCOV-007..023, Red)", () => {
     });
   });
 
-  it.fails("U-FRCOV-008: retired row with resolved retirement_ref, candidate declaration and test citation is accepted as candidate", () => {
+  it("U-FRCOV-008: retired row with resolved retirement_ref, candidate declaration and test citation is accepted as candidate", () => {
     const result = runFx(candidateFx());
     expect(result.incomplete).toEqual([]);
     expect(result.ok).toBe(true);
   });
 
-  it.fails("U-FRCOV-009: formal state is accepted only when coverage, declaration and test citation are all formal", () => {
+  it("U-FRCOV-009: formal state is accepted only when coverage, declaration and test citation are all formal", () => {
     const result = runFx(formalFx());
     expect(result.incomplete).toEqual([]);
     expect(result.ok).toBe(true);
   });
 
-  it.fails("U-FRCOV-010: retired row without retirement_ref is rejected", () => {
+  it("U-FRCOV-010: retired row without retirement_ref is rejected", () => {
     expect(pairOutcome(candidateFx(), candidateFx({ ref: "" }))).toEqual([true, false]);
   });
 
-  it.fails("U-FRCOV-011: retirement_ref whose design document path does not exist is rejected", () => {
+  it("U-FRCOV-011: retirement_ref whose design document path does not exist is rejected", () => {
     expect(
       pairOutcome(
         candidateFx(),
@@ -349,7 +349,7 @@ describe("Issue #848 FR retirement coverage (U-FRCOV-007..023, Red)", () => {
     ).toEqual([true, false]);
   });
 
-  it.fails("U-FRCOV-012: out-of-grammar or ambiguous retirement_ref is rejected", () => {
+  it("U-FRCOV-012: out-of-grammar or ambiguous retirement_ref is rejected", () => {
     expect(runFx(candidateFx()).ok).toBe(true);
     // 閉じた文法の正例: Issue 番号 (書式のみ検査) も受理する。
     expect(runFx(candidateFx({ ref: "#848" })).ok).toBe(true);
@@ -371,7 +371,7 @@ describe("Issue #848 FR retirement coverage (U-FRCOV-007..023, Red)", () => {
     expect(runFx(planDoc).ok).toBe(false);
   });
 
-  it.fails("U-FRCOV-013: candidate id without a declaration row is rejected even if prose mentions it", () => {
+  it("U-FRCOV-013: candidate id without a declaration row is rejected even if prose mentions it", () => {
     expect(
       pairOutcome(
         candidateFx(),
@@ -380,7 +380,7 @@ describe("Issue #848 FR retirement coverage (U-FRCOV-007..023, Red)", () => {
     ).toEqual([true, false]);
   });
 
-  it.fails("U-FRCOV-014: formal id without a declaration row is rejected even if prose and candidate row mention it", () => {
+  it("U-FRCOV-014: formal id without a declaration row is rejected even if prose and candidate row mention it", () => {
     expect(
       pairOutcome(
         formalFx(),
@@ -393,11 +393,11 @@ describe("Issue #848 FR retirement coverage (U-FRCOV-007..023, Red)", () => {
     ).toEqual([true, false]);
   });
 
-  it.fails("U-FRCOV-015: declaration whose real test file is missing is rejected", () => {
+  it("U-FRCOV-015: declaration whose real test file is missing is rejected", () => {
     expect(pairOutcome(candidateFx(), candidateFx({ testFiles: {} }))).toEqual([true, false]);
   });
 
-  it.fails("U-FRCOV-016: test file citing a different oracle id is rejected", () => {
+  it("U-FRCOV-016: test file citing a different oracle id is rejected", () => {
     expect(
       pairOutcome(
         candidateFx(),
@@ -411,7 +411,7 @@ describe("Issue #848 FR retirement coverage (U-FRCOV-007..023, Red)", () => {
     ).toEqual([true, false]);
   });
 
-  it.fails("U-FRCOV-017: partial promotion (one or two surfaces to formal) is rejected in all 6 cases", () => {
+  it("U-FRCOV-017: partial promotion (one or two surfaces to formal) is rejected in all 6 cases", () => {
     expect(runFx(candidateFx()).ok).toBe(true);
     const candTest = { [RET_TEST_REL]: `it("${CAND}", () => {});\n` };
     const formalTest = { [RET_TEST_REL]: `it("${FORMAL}", () => {});\n` };
@@ -432,7 +432,7 @@ describe("Issue #848 FR retirement coverage (U-FRCOV-007..023, Red)", () => {
     }
   });
 
-  it.fails("U-FRCOV-018: unknown or evidence-less state never falls back to a normal FR, and retired labels do not hide substance errors", () => {
+  it("U-FRCOV-018: unknown or evidence-less state never falls back to a normal FR, and retired labels do not hide substance errors", () => {
     // 未知 state: 通常 oracle U-FR-L1-05 が揃っていても通常 FR へ fallback しない。
     const unknown = candidateFx({
       frState: "suspended",
@@ -467,7 +467,7 @@ describe("Issue #848 FR retirement coverage (U-FRCOV-007..023, Red)", () => {
     expect([...loadFrUnitCoverageOracles(materialize(noRef).root)]).not.toContain("FR-L1-05");
   });
 
-  it.fails("U-FRCOV-019: active row carrying retirement_ref is rejected", () => {
+  it("U-FRCOV-019: active row carrying retirement_ref is rejected", () => {
     const active = candidateFx({
       frState: "active",
       ref: "",
@@ -477,7 +477,7 @@ describe("Issue #848 FR retirement coverage (U-FRCOV-007..023, Red)", () => {
     expect(pairOutcome(active, { ...active, ref: RET_REF })).toEqual([true, false]);
   });
 
-  it.fails("U-FRCOV-020: ambiguous double declaration of the exact oracle id is rejected", () => {
+  it("U-FRCOV-020: ambiguous double declaration of the exact oracle id is rejected", () => {
     expect(
       pairOutcome(
         candidateFx(),
@@ -492,7 +492,7 @@ describe("Issue #848 FR retirement coverage (U-FRCOV-007..023, Red)", () => {
     ).toEqual([true, false]);
   });
 
-  it.fails("U-FRCOV-021: design document exists but the referenced heading is absent is rejected", () => {
+  it("U-FRCOV-021: design document exists but the referenced heading is absent is rejected", () => {
     expect(
       pairOutcome(candidateFx(), candidateFx({ refDocs: { [RET_DOC_REL]: ["別の節"] } })),
     ).toEqual([true, false]);
@@ -549,13 +549,13 @@ ${body}`,
     ).toBe(false);
   });
 
-  it.fails("U-FRCOV-022: declaration row without the target FR id is rejected", () => {
+  it("U-FRCOV-022: declaration row without the target FR id is rejected", () => {
     expect(
       pairOutcome(candidateFx(), candidateFx({ candDecls: [retDecl(CAND, RET_TEST_REL, "")] })),
     ).toEqual([true, false]);
   });
 
-  it.fails("U-FRCOV-023: declaration row targeting a different FR id is rejected", () => {
+  it("U-FRCOV-023: declaration row targeting a different FR id is rejected", () => {
     expect(
       pairOutcome(
         candidateFx(),
@@ -589,7 +589,7 @@ describe("Issue #848 declaration-row identification (U-FRCOV-024..026, Red)", ()
     for (const root of tmpRoots.splice(0)) rmSync(root, { recursive: true, force: true });
   });
 
-  it.fails("U-FRCOV-024: any >=3-column table row whose first cell is the exact id is a declaration, independent of heading and header", () => {
+  it("U-FRCOV-024: any >=3-column table row whose first cell is the exact id is a declaration, independent of heading and header", () => {
     const outcomes = [
       declOk(freeTable(DECL_HEAD_ID, DECL_ROW)),
       declOk(freeTable("| oracle | 観点 | 実装テスト |", DECL_ROW)),
@@ -614,7 +614,7 @@ describe("Issue #848 declaration-row identification (U-FRCOV-024..026, Red)", ()
     expect(outcomes).toEqual([true, true, true, true, false, false, false]);
   });
 
-  it.fails("U-FRCOV-025: target FR id is matched on an exact boundary and must be the only FR id", () => {
+  it("U-FRCOV-025: target FR id is matched on an exact boundary and must be the only FR id", () => {
     const withTarget = (cell: string) =>
       declOk(freeTable(DECL_HEAD_ID, `| ${CAND} | ${cell} | ${RET_TEST_REL} |`));
     const outcomes = [
@@ -624,11 +624,13 @@ describe("Issue #848 declaration-row identification (U-FRCOV-024..026, Red)", ()
       withTarget("FR-L1-050"),
       withTarget("FR-L1-5"),
       withTarget("FR-L1-05 と FR-L1-06"),
+      // 末尾 pipe の無い行でも最終セルの別 FR 併記を見落とさない (#1181 r1)
+      declOk(freeTable(DECL_HEAD_ID, `| ${CAND} | FR-L1-05 ${RET_TEST_REL} | FR-L1-06`)),
     ];
-    expect(outcomes).toEqual([true, true, false, false, false, false]);
+    expect(outcomes).toEqual([true, true, false, false, false, false, false]);
   });
 
-  it.fails("U-FRCOV-026: every tests path token must resolve and cite the exact oracle id", () => {
+  it("U-FRCOV-026: every tests path token must resolve and cite the exact oracle id", () => {
     const both = {
       [RET_TEST_REL]: `it("${CAND} a", () => {});\n`,
       [RET_TEST_REL_2]: `it("${CAND} b", () => {});\n`,
@@ -645,7 +647,14 @@ describe("Issue #848 declaration-row identification (U-FRCOV-024..026, Red)", ()
       withPath(`${RET_TEST_REL}, tests/fixture/missing.test.ts`),
       withPath("tests/fixture/../fixture/retired.test.ts"),
       withPath(RET_TEST_REL, { [RET_TEST_REL]: 'it("unrelated", () => {});\n' }),
+      // 末尾 pipe の無い行でも最終セルの未解決 test path を検証から落とさない (#1181 r1)
+      declOk(
+        freeTable(
+          DECL_HEAD_ID,
+          `| ${CAND} | FR-L1-05 の退役 oracle ${RET_TEST_REL} | tests/fixture/missing.test.ts`,
+        ),
+      ),
     ];
-    expect(outcomes).toEqual([true, true, false, false, false, false]);
+    expect(outcomes).toEqual([true, true, false, false, false, false, false]);
   });
 });
