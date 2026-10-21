@@ -7,9 +7,9 @@
  "counts": {
   "redesign": 0,
   "red_green_fix": 0,
-  "design_follow": 6,
-  "hold": 9,
-  "retire_or_planned": 25,
+  "design_follow": 13,
+  "hold": 0,
+  "retire_or_planned": 27,
   "false_positive": 25
  },
  "judgments": [
@@ -35,7 +35,7 @@
    "id": "CD-02",
    "design_path": "docs/design/harness/L4-basic-design/data.md",
    "symbol": "ClosureReceipt",
-   "verdict": "hold",
+   "verdict": "retire_or_planned",
    "implementation_paths": [
     "src/document-disposition/domain/analyze-repository-document-closure.ts:52"
    ],
@@ -47,7 +47,19 @@
     "docs/plans/PLAN-L4-25-repository-docs-engine-swap-audit.md — status draft (L4 §11 の上流)"
    ],
    "rationale": "run 単位の ClosureReceipt は、L6 で後続候補とされた reference closure slice に依存する。現行の DocumentClosureResult がその部分実装なのか別物なのかは、本調査では判定できない。confirmed の PLAN-L7-467 が planned deliverables をすべて満たしていない点も整理されていない。",
-   "follow_up": "PLAN-L7-467 の完了範囲と、PLAN-L4-25/L5-19 (draft) の reference closure slice の所有を照合する。そのうえで ClosureReceipt を後続 slice の予定とするか、DocumentClosureResult への design_follow とするかを決める。"
+   "follow_up": "PLAN-L7-467 の完了範囲と、PLAN-L4-25/L5-19 (draft) の reference closure slice の所有を照合する。そのうえで ClosureReceipt を後続 slice の予定とするか、DocumentClosureResult への design_follow とするかを決める。",
+   "initial_verdict": "hold",
+   "final_disposition": {
+    "disposition": "PLAN 凍結 (#1166) により PLAN 訂正注記は行わない。PLAN 本文は #1078 の撤去で扱う。ClosureReceipt は後続 slice の予定であり、現行の DocumentClosureResult は部分実装ではない",
+    "source": "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/977 (control 判断 2026-10-13、PLAN 凍結の経緯は #1166 / #1078)",
+    "issue": "#1166",
+    "evidence": [
+     "#1166 — PLAN の新規起票・改訂・参照追加を止める。訂正注記のための plan revise は行わない",
+     "#1165 — PLAN 本文はタグ plans-archive-20261021 に退避済み"
+    ],
+    "decided_at": "2026-10-13",
+    "recorded_at": "2026-10-21"
+   }
   },
   {
    "id": "CD-03",
@@ -208,7 +220,7 @@
    "id": "CD-12",
    "design_path": "docs/design/harness/L5-detailed-design/if-detail.md",
    "symbol": "InvokeResult",
-   "verdict": "hold",
+   "verdict": "design_follow",
    "implementation_paths": [
     "src/runtime/adapter.ts:69",
     "src/runtime/adapter.ts:411"
@@ -220,7 +232,19 @@
     "tests/runtime-adapter.test.ts:434 — IT-ADAPTER-01 の正規化テスト"
    ],
    "rationale": "型自体は存在する。しかし設計の audit_ref と重複排除の契約に対応する実装が見つからない。監査との連結が別経路 (session log) で満たされていれば design_follow、未実装なら red_green_fix になるが、本調査では判別できない。",
-   "follow_up": "invoke の監査記録と重複実行防止がどこで担保されているか (src/runtime の session log 書き込み) を確認し、design_follow か red_green_fix かを決める。"
+   "follow_up": "invoke の監査記録と重複実行防止がどこで担保されているか (src/runtime の session log 書き込み) を確認し、design_follow か red_green_fix かを決める。",
+   "initial_verdict": "hold",
+   "final_disposition": {
+    "disposition": "設計の追従。audit_ref による dedup を退役し、session log の session_id に置き換えた",
+    "source": "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/977 (control 判断 2026-10-13「保留 9 件の処遇」)",
+    "pr": "#983",
+    "evidence": [
+     "docs/design/harness/L5-detailed-design/if-detail.md:53 — 汎用の invoke dedup 契約を退役。拒否するのは同一 exact head への重複 review request だけ",
+     "docs/design/harness/L5-detailed-design/if-detail.md の InvokeResult 行を adapter.ts の判別共用体へ合わせた"
+    ],
+    "decided_at": "2026-10-13",
+    "recorded_at": "2026-10-21"
+   }
   },
   {
    "id": "CD-13",
@@ -336,7 +360,7 @@
    "id": "CD-20",
    "design_path": "docs/design/harness/L5-detailed-design/internal-processing.md",
    "symbol": "ReviewLaneReceipt",
-   "verdict": "hold",
+   "verdict": "design_follow",
    "implementation_paths": [
     "src/schema/cutover-transition.ts",
     "src/runtime/cutover-transition.ts",
@@ -353,13 +377,24 @@
     "gh issue view 487 / 153 / 540 — いずれも CLOSED (Bun 撤去完了、sealed edge 未実装のまま)"
    ],
    "rationale": "ReviewLaneReceipt を含む typed review/identity receipt 群は confirmed 設計 (PLAN-L5-26/L6-93) に残るが、実装は review.bundle を不透明 digest として扱うだけで当該 receipt は存在しない。Bun 撤去 (#487) は sealed edge 無しで close 済みのため、実装すべき残契約か退役すべき設計かを repo 実測だけでは決められない。",
-   "follow_up": "cutover chain の sealed edge と typed review lane/session/work-provenance receipt を実装するか退役するかを #134 系で判断し (advisor progress)、退役なら L5 §Node切替receipt chain に退役注記を入れる design PR、実装なら Red/Green PR を起こす。"
+   "follow_up": "cutover chain の sealed edge と typed review lane/session/work-provenance receipt を実装するか退役するかを #134 系で判断し (advisor progress)、退役なら L5 §Node切替receipt chain に退役注記を入れる design PR、実装なら Red/Green PR を起こす。",
+   "initial_verdict": "hold",
+   "final_disposition": {
+    "disposition": "設計の追従 (退役注記)。節単位の注記で退役を明示した。モジュール削除は #592 (D2 / D3) の所管",
+    "source": "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/977 (control 判断 2026-10-13「保留 9 件の処遇」)",
+    "pr": "#983",
+    "evidence": [
+     "docs/design/harness/L5-detailed-design/internal-processing.md:587 — Node切替receipt chain の退役注記 (#977)。ReviewLaneReceipt は退役済みの設計"
+    ],
+    "decided_at": "2026-10-13",
+    "recorded_at": "2026-10-21"
+   }
   },
   {
    "id": "CD-21",
    "design_path": "docs/design/harness/L5-detailed-design/internal-processing.md",
    "symbol": "SessionIdentityReceipt",
-   "verdict": "hold",
+   "verdict": "design_follow",
    "implementation_paths": [
     "src/schema/cutover-transition.ts",
     "src/runtime/cutover-transition.ts",
@@ -377,13 +412,24 @@
     "git grep -n -e ManagedSessionAttestation -e MANAGED-SESSION-TRUST-REGISTRY 3ca0692d -- src tests — 0 件"
    ],
    "rationale": "SessionIdentityReceipt を含む typed review/identity receipt 群は confirmed 設計 (PLAN-L5-26/L6-93) に残るが、実装は review.bundle を不透明 digest として扱うだけで当該 receipt は存在しない。Bun 撤去 (#487) は sealed edge 無しで close 済みのため、実装すべき残契約か退役すべき設計かを repo 実測だけでは決められない。",
-   "follow_up": "cutover chain の sealed edge と typed review lane/session/work-provenance receipt を実装するか退役するかを #134 系で判断し (advisor progress)、退役なら L5 §Node切替receipt chain に退役注記を入れる design PR、実装なら Red/Green PR を起こす。"
+   "follow_up": "cutover chain の sealed edge と typed review lane/session/work-provenance receipt を実装するか退役するかを #134 系で判断し (advisor progress)、退役なら L5 §Node切替receipt chain に退役注記を入れる design PR、実装なら Red/Green PR を起こす。",
+   "initial_verdict": "hold",
+   "final_disposition": {
+    "disposition": "設計の追従 (退役注記)",
+    "source": "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/977 (control 判断 2026-10-13「保留 9 件の処遇」)",
+    "pr": "#983",
+    "evidence": [
+     "docs/design/harness/L5-detailed-design/internal-processing.md:587 — 同上の退役注記。SessionIdentityReceipt は退役済みの設計"
+    ],
+    "decided_at": "2026-10-13",
+    "recorded_at": "2026-10-21"
+   }
   },
   {
    "id": "CD-22",
    "design_path": "docs/design/harness/L5-detailed-design/internal-processing.md",
    "symbol": "WorkProvenanceEventReceipt",
-   "verdict": "hold",
+   "verdict": "design_follow",
    "implementation_paths": [
     "src/schema/cutover-transition.ts",
     "src/runtime/cutover-transition.ts",
@@ -401,7 +447,18 @@
     "git grep -n CandidateAuthorshipReceipt 3ca0692d -- src tests — 0 件"
    ],
    "rationale": "WorkProvenanceEventReceipt を含む typed review/identity receipt 群は confirmed 設計 (PLAN-L5-26/L6-93) に残るが、実装は review.bundle を不透明 digest として扱うだけで当該 receipt は存在しない。Bun 撤去 (#487) は sealed edge 無しで close 済みのため、実装すべき残契約か退役すべき設計かを repo 実測だけでは決められない。",
-   "follow_up": "cutover chain の sealed edge と typed review lane/session/work-provenance receipt を実装するか退役するかを #134 系で判断し (advisor progress)、退役なら L5 §Node切替receipt chain に退役注記を入れる design PR、実装なら Red/Green PR を起こす。"
+   "follow_up": "cutover chain の sealed edge と typed review lane/session/work-provenance receipt を実装するか退役するかを #134 系で判断し (advisor progress)、退役なら L5 §Node切替receipt chain に退役注記を入れる design PR、実装なら Red/Green PR を起こす。",
+   "initial_verdict": "hold",
+   "final_disposition": {
+    "disposition": "設計の追従 (退役注記)",
+    "source": "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/977 (control 判断 2026-10-13「保留 9 件の処遇」)",
+    "pr": "#983",
+    "evidence": [
+     "docs/design/harness/L5-detailed-design/internal-processing.md:587 — 同上の退役注記。WorkProvenanceEventReceipt は退役済みの設計"
+    ],
+    "decided_at": "2026-10-13",
+    "recorded_at": "2026-10-21"
+   }
   },
   {
    "id": "CD-23",
@@ -654,7 +711,7 @@
    "id": "CD-37",
    "design_path": "docs/design/harness/L6-function-design/function-spec.md",
    "symbol": "L6ConfirmationReceipt",
-   "verdict": "hold",
+   "verdict": "design_follow",
    "implementation_paths": [
     "src/runtime/cutover-transition.ts"
    ],
@@ -666,13 +723,25 @@
     "git grep -n -e validateDirectReceipt -e L6Confirmation -e l6ConfirmationReceipt 3ca0692d -- src tests — production adapter も L6ConfirmationReceipt record 型 (plan/revision/status/content/head/tracked digest/owner/attestation の封印) も無い"
    ],
    "rationale": "CutoverAdmission 側の direct ref と検証 port は実装されているが、function-spec.md:2259-2263 が定める L6ConfirmationReceipt の record 構造と PLAN-L6-93 exact 再検証を行う production adapter は src に見当たらない。production cutover が未着地の計画段階なのか実装欠落なのかを判別する証拠が足りない。",
-   "follow_up": "Issue #152 系の cutover 実装 PLAN の generates/残 DoD を確認し、production 用 validateDirectReceipt(\"l6-confirmation\") adapter が計画済みなら retire_or_planned、計画外なら red_green_fix (adapter + record 型) に確定する。"
+   "follow_up": "Issue #152 系の cutover 実装 PLAN の generates/残 DoD を確認し、production 用 validateDirectReceipt(\"l6-confirmation\") adapter が計画済みなら retire_or_planned、計画外なら red_green_fix (adapter + record 型) に確定する。",
+   "initial_verdict": "hold",
+   "final_disposition": {
+    "disposition": "設計の追従 (退役注記)",
+    "source": "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/977 (control 判断 2026-10-13「保留 9 件の処遇」)",
+    "pr": "#983",
+    "evidence": [
+     "docs/design/harness/L5-detailed-design/internal-processing.md:587 — 同上の退役注記",
+     "docs/design/harness/L6-function-design/function-spec.md:2522 — L6ConfirmationReceipt の退役注記 (正本は internal-processing.md 側)"
+    ],
+    "decided_at": "2026-10-13",
+    "recorded_at": "2026-10-21"
+   }
   },
   {
    "id": "CD-38",
    "design_path": "docs/design/harness/L6-function-design/function-spec.md",
    "symbol": "PlanAssetInput",
-   "verdict": "hold",
+   "verdict": "design_follow",
    "implementation_paths": [
     "src/plan-asset/domain/plan-asset.ts"
    ],
@@ -684,13 +753,24 @@
     "docs/plans/PLAN-L7-418-plan-asset-v2-adapter-migration-ledger.md — status confirmed、dependency 検証の言及なし"
    ],
    "rationale": "PlanAsset.create は確定実装 (PLAN-L7-418 confirmed) だが、DTO 表の dependencies[] 重複拒否と payload digest 不一致拒否は実装にもテスト設計にも無い。dependencies を payload 内に畳む現行形が意図どおりで設計が古いのか、domain 検証の欠落なのかを決める根拠が無い。",
-   "follow_up": "PLAN-L6-71 の設計 owner に dependencies 検証の所在 (domain か plan lint か) を確認する。前者なら red_green_fix、後者なら DTO 表を PlanAsset.create の現行入力へ合わせる design_follow。"
+   "follow_up": "PLAN-L6-71 の設計 owner に dependencies 検証の所在 (domain か plan lint か) を確認する。前者なら red_green_fix、後者なら DTO 表を PlanAsset.create の現行入力へ合わせる design_follow。",
+   "initial_verdict": "hold",
+   "final_disposition": {
+    "disposition": "設計の追従。DTO 表を現行入力へ合わせた",
+    "source": "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/977 (control 判断 2026-10-13「保留 9 件の処遇」)",
+    "pr": "#983",
+    "evidence": [
+     "docs/design/harness/L6-function-design/function-spec.md:1849 — PlanAssetInput の DTO 行を PlanAsset.create の現行入力に合わせた"
+    ],
+    "decided_at": "2026-10-13",
+    "recorded_at": "2026-10-21"
+   }
   },
   {
    "id": "CD-39",
    "design_path": "docs/design/harness/L6-function-design/function-spec.md",
    "symbol": "ProjectionContext",
-   "verdict": "hold",
+   "verdict": "retire_or_planned",
    "implementation_paths": [
     "src/projection/domain/plan-projection.ts",
     "src/state-db/sqlite-projection-store.ts"
@@ -703,7 +783,18 @@
     "docs/design/harness/L6-function-design/function-spec.md:1593 — 節見出しが「PLAN-L6-75 / L7-423残DoD」で残作業であることを示す"
    ],
    "rationale": "PLAN projector だけが部分的に契約形 (PlanProjectionContext) で実装され、immutable ProjectionContext・ProjectionIdFactory・rebuild application 群は未実装。節自体が残 DoD と明記しており、残 DoD の追跡先 (PLAN/issue) が確認できないため保留する。",
-   "follow_up": "PLAN-L7-423 (confirmed) の残 DoD がどの後継 PLAN/issue に引き継がれているかを確認する。引き継ぎ先があれば retire_or_planned、無ければ追跡 issue 起票のうえ red_green_fix。PlanProjectionContext の名前差は実装時に揃える。"
+   "follow_up": "PLAN-L7-423 (confirmed) の残 DoD がどの後継 PLAN/issue に引き継がれているかを確認する。引き継ぎ先があれば retire_or_planned、無ければ追跡 issue 起票のうえ red_green_fix。PlanProjectionContext の名前差は実装時に揃える。",
+   "initial_verdict": "hold",
+   "final_disposition": {
+    "disposition": "予定済み: 追跡先は #982。DEBT-L7-423-01 は実装の修理 (Red / Green)、DEBT-02〜04 (transaction port、branded ID、architecture gate) は振る舞い不変の責務分割で工程 ⑤",
+    "source": "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/977 (control 判断 2026-10-13「保留 9 件の処遇」)",
+    "issue": "#982",
+    "evidence": [
+     "#982 — PLAN-L7-423 の残り DoD (DEBT-01〜04) を追跡する issue。01 は修理、02〜04 は工程 ⑤"
+    ],
+    "decided_at": "2026-10-13",
+    "recorded_at": "2026-10-21"
+   }
   },
   {
    "id": "CD-40",
@@ -1007,7 +1098,7 @@
   {
    "id": "DWI-05",
    "design_path": "docs/design/harness/L6-function-design/edge-case.md",
-   "verdict": "hold",
+   "verdict": "design_follow",
    "implementation_paths": [
     "src/runtime/agent-guard.ts",
     "src/runtime/detect.ts",
@@ -1023,7 +1114,19 @@
     "docs/design/harness/L3-functional/functional-requirements.md:99,108 — AC-FR-02-01/03 が `ut-tdd sprint check` を要求しており、上流 FR 側でも未実装"
    ],
    "rationale": "§1 の関数は実装済みなので、§1 は false positive。一方 §2 の `sprint check` / `trace check` は上流 L3 FR-02 の AC ごと未実装で、retire・planned・未実装のどれなのかを本 doc だけでは判定できない。marker の oracle ID も本文と食い違っている。",
-   "follow_up": "L3 FR-02 (sprint check) の処遇を FR registry / PLAN で確定させてから判定する。retire なら edge-case §2 と marker の ID を design-follow PR で直し、存続なら sprint check を Red/Green 実装 PR に回す。"
+   "follow_up": "L3 FR-02 (sprint check) の処遇を FR registry / PLAN で確定させてから判定する。retire なら edge-case §2 と marker の ID を design-follow PR で直し、存続なら sprint check を Red/Green 実装 PR に回す。",
+   "initial_verdict": "hold",
+   "final_disposition": {
+    "disposition": "設計の追従。注記と oracle ID の修正",
+    "source": "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/977 (control 判断 2026-10-13「保留 9 件の処遇」)",
+    "pr": "#983",
+    "evidence": [
+     "docs/design/harness/L6-function-design/edge-case.md:13 — marker の oracle ID を U-EDGE-01..03 に修正",
+     "docs/design/harness/L6-function-design/edge-case.md:68 — sprint check を将来形 (未実装) として明記"
+    ],
+    "decided_at": "2026-10-13",
+    "recorded_at": "2026-10-21"
+   }
   },
   {
    "id": "DWI-06",
@@ -1145,5 +1248,6 @@
    "rationale": "screen-spec は中央 dashboard の画面機能仕様であり、その L7 実装は PLAN-L7-141 で将来版として明示保全されている。",
    "follow_up": ""
   }
- ]
+ ],
+ "final_disposition_note": "2026-10-21: 保留 9 件を最終処遇へ更新した (hold = 0)。元の verdict は initial_verdict に残す"
 }
