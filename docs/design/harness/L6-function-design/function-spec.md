@@ -818,7 +818,7 @@ oracle: `tests/change-impact.test.ts` の describe `change-impact lint` 内の 4
 | | `hook-non-typescript-file` | `.claude/hooks/` 配下で `.ts` 以外 |
 | | `disallowed-runtime-language` | `src/` または `.claude/hooks/` 配下の `.py` / `.sh` / `.bash` / `.js` / `.mjs` / `.cjs` |
 | | `script-wrapper-unapproved` | `scripts/` 配下で、承認集合 (薄い wrapper `scripts/ut-tdd` / `scripts/ut-tdd.ps1` / `scripts/run-vitest-snapshot.ts`、build `scripts/build-node.mjs`、CI `scripts/node-generation-ci.mjs` / `scripts/node-generation-ci-aggregate.mjs` / `scripts/pack-canary-acceptance.mjs`、git hook `scripts/git-hooks/pre-push` / `scripts/git-hooks/secret-scan-diff.ts`) 外のファイル |
-| | `script-wrapper-not-thin` | wrapper (`run-vitest-snapshot.ts` を除く) の非コメント行が 12 行超、または `src/cli.ts` / `dist/ut-tdd` への dispatch を含まない |
+| | `script-wrapper-not-thin` | wrapper (`run-vitest-snapshot.ts` を除く) の非コメント行が 12 行超、または `src/cli.ts` と `dist/ut-tdd` の 2 つの文字列のうち、いずれか一方でも含まない (両方の dispatch 先を含むことが必須) |
 | | `script-wrapper-python` | wrapper が `python` / `python3` を含む |
 | | `git-hook-entrypoint-python` | `scripts/git-hooks/pre-push` が `python` / `python3` を含む |
 | | `git-hook-entrypoint-not-thin` | `scripts/git-hooks/pre-push` が `node` と `secret-scan-diff.ts` の両方を含まない |
@@ -826,7 +826,7 @@ oracle: `tests/change-impact.test.ts` の describe `change-impact lint` 内の 4
 | | `source-shell-runtime` | `src/` (`src/runtime/` を除く) が `spawn` / `exec` 系の第 1 引数に `bash` / `sh` / `python` / `python3` / `powershell` / `pwsh` / `cmd` を直接渡す |
 | | `bun-runtime-spawn` | `src/` / `.claude/hooks/` / `scripts/` / `tests/` で bun の child-process 起動 (`spawn*` / `exec*` への `"bun"`、`findBun(`、`?? "bun"`、`"/c", "bun"`、`["bun", [`、`exec bun`) |
 | | `bun-module-import` | 同範囲で `"bun:<英小文字>"` 形の import 文字列 |
-| | `bun-global-reference` | 同範囲で `Bun.` / `Bun[` / `typeof Bun` / `).Bun` / `globalThis.Bun` / `process.versions.bun` |
+| | `bun-global-reference` | 同範囲で `Bun.` / `Bun[` / `Bun?.` / `Bun?.[` (optional chaining を含む) / `typeof Bun` / `).Bun` / `globalThis.Bun` / `process.versions.bun` |
 | | `local-absolute-path` | `tests/` 以外で利用者ローカルの絶対 path (`<ドライブ>:\Users\`、`/home/`、`/Users/`、`~/ai-dev-kit-vscode`) を含む |
 | | `legacy-runtime-marker` | `src/` / `.claude/hooks/` / `scripts/` が旧 runtime の env / 状態ディレクトリ / コマンド / agent 接頭辞の marker を含む |
 | `src/state-db/index.ts` | `sqlite-driver-fallback-missing` | `node:sqlite` の文字列を含まない (`bun:sqlite` は任意の残存) |
