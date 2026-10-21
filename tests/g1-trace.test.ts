@@ -168,7 +168,6 @@ describe("G1-trace coverage (business/screen/functional)", () => {
         "| **PM-01** | BR-01 |",
         "### §5.6 Details",
       ].join("\n"),
-      plans: [],
     };
 
     const result = analyzeG1Trace(plainDocs);
@@ -221,22 +220,22 @@ describe("G1-trace coverage (business/screen/functional)", () => {
     expect(g1TraceOk(analyzed)).toBe(false);
   });
 
-  it.fails("U-CTRACE-001: retires plans from loaded docs", () => {
+  it("U-CTRACE-001: retires plans from loaded docs", () => {
     const loaded = loadG1TraceDocs();
     expect("plans" in loaded).toBe(false);
   });
 
-  it.fails("U-CTRACE-001: retires missingL3Requires from trace result", () => {
+  it("U-CTRACE-001: retires missingL3Requires from trace result", () => {
     const analyzed = analyzeG1Trace(docs);
     expect("missingL3Requires" in analyzed).toBe(false);
   });
 
-  it.fails("U-CTRACE-001: retires totals.l3Plans from trace result", () => {
+  it("U-CTRACE-001: retires totals.l3Plans from trace result", () => {
     const analyzed = analyzeG1Trace(docs);
     expect("l3Plans" in analyzed.totals).toBe(false);
   });
 
-  it.fails("U-CTRACE-001: preserves the exact non-PLAN OK message", () => {
+  it("U-CTRACE-001: preserves the exact non-PLAN OK message", () => {
     expect(g1TraceMessages(result)).toEqual(["g1-trace - OK (business=13, screens=15, p0Fr=19)"]);
   });
 
@@ -269,7 +268,7 @@ describe("G1-trace coverage (business/screen/functional)", () => {
     expect(analyzed.totals.p0Fr).toBe(19);
   });
 
-  it.fails.each(loaderCases)("U-CTRACE-001: $label never probes docs/plans", ({ plan }) => {
+  it.each(loaderCases)("U-CTRACE-001: $label never probes docs/plans", ({ plan }) => {
     const observed = observeLoader(fixtureRoot(docs, plan));
     const planCalls = observed.calls.filter((call) =>
       /(?:^|\/)docs\/plans(?:\/|$)/.test(normalized(call.path)),
@@ -277,7 +276,7 @@ describe("G1-trace coverage (business/screen/functional)", () => {
     expect(planCalls).toEqual([]);
   });
 
-  it.fails("U-CTRACE-001: valid trace is equivalent with no, complete, or incomplete PLAN", () => {
+  it("U-CTRACE-001: valid trace is equivalent with no, complete, or incomplete PLAN", () => {
     const completePlan = [
       "related_l1_screen: docs/design/harness/L1-requirements/screen-requirements.md",
       "PLAN-L1-01-business-requirements",

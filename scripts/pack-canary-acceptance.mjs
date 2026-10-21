@@ -212,7 +212,7 @@ function parseAgentGateResult(result, label) {
     throw new Error(`${label}-static-gate-result-invalid`);
   if (gate.passed) {
     const trace = gate.messages.find((message) => typeof message === "string" && message.startsWith("g1-trace - OK ("));
-    const counts = trace?.match(/business=(\d+), screens=(\d+), p0Fr=(\d+), l3Plans=(\d+)/);
+    const counts = trace?.match(/business=(\d+), screens=(\d+), p0Fr=(\d+)/);
     if (!counts || Number(counts[1]) < 1 || Number(counts[2]) < 1 || Number(counts[3]) < 1)
       throw new Error(`${label}-g1-trace-baseline-empty`);
   }

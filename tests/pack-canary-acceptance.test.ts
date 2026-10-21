@@ -2012,10 +2012,7 @@ describe("manual canary acceptance publish-record boundary", () => {
               gate: "G1",
               applicable: true,
               passed: true,
-              messages: [
-                "G1 pair - OK",
-                "g1-trace - OK (business=1, screens=1, p0Fr=1, l3Plans=0)",
-              ],
+              messages: ["G1 pair - OK", "g1-trace - OK (business=1, screens=1, p0Fr=1)"],
             };
         return { status: negative ? 1 : 0, stdout: JSON.stringify({ static_gate }), stderr: "" };
       }
