@@ -77,6 +77,8 @@ analyzeModuleDrift(docs: { listed, actual }) -> { orphans, listedCount, actualCo
 | `exportRelationDiagram` | exportRelationDiagram(snapshot: RelationGraphSnapshot, format: "mermaid" \| "dot" \| "d2") => DiagramArtifact | graph snapshot と requested format を与える。Mermaid は常に利用可能、DOT/D2 は installed tooling で gate される optional adapter とする。 | stable node ID と edge label を持つ deterministic diagram text を返す。利用できない optional adapter は implicit tool invocation ではなく finding を返す。 | diagram export は review/handover の evidence であり、source doc や DB state を mutate してはならない。 | U-RELGRAPH-007..008 |
 | `collectVerificationEvidenceProjection` | collectVerificationEvidenceProjection(input: VerificationEvidenceRecord[]) => VerificationProfileProjection | `.ut-tdd/evidence/verification-profiles/*.json` の saved A-125 evidence record を schema validation 後に与える。 | evidence path 付きの `verification_profiles`、`verification_recommendations`、`mcp_server_runs`、`external_tool_findings` projection row を返す。 | external execution は opt-in のままにする。projection は raw external payload ではなく summary と classification を保存する。 | U-RELGRAPH-009..010 |
 
+**PLAN `generates` の実在境界（#1168、未実装の目標契約）**: relation graph は既存どおり PLAN metadata を読み込み、projection を再構築する。完了を主張する PLAN (`confirmed` / `completed` / `accepted`) に記載された `generates` path が現在の checkout に存在しないことだけを理由に、missing-artifact / stale-edge finding を返したり graph を fail にしたりしない。この退役は `generates` の実在確認だけに限る。loader / projection 自体と、他の relation edge に対する stale 検知および missing-projection の fail-close は維持する。PLAN の lifecycle、status field、path 例外は追加しない。
+
 **必須 impact classes**:
 
 - source の影響先 -> sibling test、L6 design contract、L7 oracle、PLAN、reverse/backprop guard。
