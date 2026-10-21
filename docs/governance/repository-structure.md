@@ -103,7 +103,7 @@ UT-TDD-agent-harness/
 | enum / 契約 | `src/schema/` | **zod 単一正本**。enum を複数箇所に再定義しない (drift 防止、requirements §1.10 F) |
 | 現行正本 doc | `docs/governance/` | concept v3.1 / requirements v1.2 / README / extraction-plan / 本書 |
 | 決定記録 | `docs/adr/` | `ADR-NNN-slug.md` |
-| 実装計画 | `docs/plans/` | `PLAN-NNN-slug.md`。superseded は `status: archived` |
+| 実装計画 | `docs/plans/` | `PLAN-NNN-slug.md`。superseded は `status: archived`。撤去前の全文は §11 のアーカイブ tag が保持する |
 | 移行資料 | `docs/migration/` | source capability reference。code-port 計画は ADR-001 で superseded |
 | runtime state | `.ut-tdd/` (state/cache/logs/handover CURRENT/tmp/local*) | generated。**docs 目的で追跡しない** (CLAUDE.md 禁止事項) |
 | 監査証跡 | `.ut-tdd/audit/*.md` / `.ut-tdd/audit/reports/*.md` / `.ut-tdd/evidence/` / `.ut-tdd/handover/provider/` | **tracked** (PO 決定 2026-06-10、A-128 F-1)。audit = A-NNN 監査記録、evidence = 正規化 JSON (secret/PII/raw transcript 禁止)。runtime state と区別する |
@@ -204,3 +204,32 @@ harness の配置は 3 層で分離する。本書 §1 canonical ツリーは **
 - receiptはsubject revision、実Node/npm executable identity、lock/build policy、external dependency closure、source graph、compiled CLI digestを封印する。
 - `src/runtime/node-bootstrap.ts`以外からproduction Node imageを直接解決しない。Bun、bunx、tsx、TS直実行、shell fallbackは禁止する。
 - Resource Kernel / Rust companionの配置は別設計sliceとし、D0-Nのbuild、review、F0開始条件へ混入させない。
+
+## 11. PLAN アーカイブ tag (Issue #1165、PLAN 撤去 A1)
+
+PLAN 機構の撤去 (#1078) に先立ち、撤去前の PLAN 全文を Git tag に固定した。今後は設計文書と GitHub Issue を正本とし、PLAN ID を新たな要件として参照しない (#1166 の PLAN 凍結に従う)。
+
+| 項目 | 値 |
+|------|----|
+| tag 名 | `plans-archive-20261021` (annotated tag) |
+| tag object SHA | `fa18faa788ef2eb3de7b9fbecc59a4432263068d` |
+| 対象 commit SHA | `57611b422f228c2c4464c60615c60d02a1f17e10` |
+| 作成日 | 2026-10-21 |
+| PLAN 件数 | 1,008 件 |
+
+件数は次のコマンドで数える (`git fetch origin tag plans-archive-20261021` の後に実行する)。
+
+```bash
+git ls-tree -r --name-only plans-archive-20261021 docs/plans | grep -c '^docs/plans/PLAN-.*\.md$'
+```
+
+### 読み方
+
+- 一覧: `git ls-tree -r --name-only plans-archive-20261021 docs/plans`
+- 本文: `git show plans-archive-20261021:docs/plans/<file>`
+
+### 物理削除との関係
+
+`docs/plans/` の物理削除 (#1170、A6) の後は、この tag が PLAN 本文を参照できる唯一の手段になる。削除 PR を出す前に、`git diff plans-archive-20261021 <削除の base> -- docs/plans` が空であることを確かめる。差分が残る場合は、その時点の commit に tag を付け直してから削除する。この確認が「撤去の直前に tag を打つ」ことの代わりの条件である。
+
+関連: #1165 / #1078 / #1166。
