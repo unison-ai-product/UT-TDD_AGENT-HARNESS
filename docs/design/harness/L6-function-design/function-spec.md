@@ -1997,38 +1997,43 @@ typed edgeのcanonical集合を比較し、文字列近似やfilesystem探索に
 
 #### Forward FSM完全遷移表
 
-正常系の各行は隣接遷移だけを許す。`expectedFrom`不一致、sequence欠番、同一`commandId`で異なるpayloadはそれぞれ
-`forward-expected-state-mismatch`、`forward-sequence-invalid`、`forward-command-conflict`とする。
+`expectedFrom`不一致は`forward-transition-illegal`、sequence欠番は`forward-sequence-invalid`、同一`commandId`で異なるpayloadは
+`forward-command-conflict`とする。
 
 event空集合の初期stateはrevisionごとの`proposed`、次sequenceは1とする。sequenceは1始まりで連続し、event IDと
 command IDはsubject横断で一意、同一event ID異payloadは`forward-event-conflict`、同一command ID+同一payloadは既存eventを返す。
 reducer入力は`sequence,eventId`の順でcanonicalizeせず、受領順がsequence昇順でない場合もfail-closeする。event digestは
 subject/revision/sequence/command payload digest/from/to/resume/reason/source commit/evidence IDのcanonical JSONから生成し、clockやDB rowidを含めない。
 
-| command | from | to | 必須guard/evidence | finding / 備考 |
+| event | from | to | 必須evidence (requirementId) | 欠落時のrule |
 |---|---|---|---|---|
-| `plan` | proposed | planned | 承認済みscope / PLAN identity | `forward-plan-evidence-missing` |
-| `prepare_pair_freeze` | planned | pair_freeze_ready | 左右artifact宣言済み | `forward-pair-artifact-missing` |
-| `freeze_pair` | pair_freeze_ready | pair_frozen | pair reciprocity合格 | `forward-pair-freeze-missing` |
-| `freeze_red` | pair_frozen | red_frozen | 実行時に期待finding/exitで失敗したRed evidence | `forward-red-evidence-missing`。todo/skip不可 |
-| `start_implementation` | red_frozen | implementing | Red revision一致 | `forward-red-revision-mismatch` |
-| `complete_implementation` | implementing | implementation_complete | 実装digest / targeted Green | `forward-implementation-evidence-missing` |
-| `prepare_trace_freeze` | implementation_complete | trace_freeze_ready | generates/requirement/test edgeをmaterialize済み | `forward-trace-evidence-missing` |
-| `freeze_trace` | trace_freeze_ready | trace_frozen | orphan/stale edge 0件 | `forward-trace-freeze-missing` |
-| `prepare_review` | trace_frozen | review_ready | tests_green_atとreview scope | `forward-review-evidence-missing` |
-| `approve_review` | review_ready | reviewed | 独立reviewer / approve verdict | `forward-review-not-approved` |
-| `accept` | reviewed | accepted | 必須test/gate/PO acceptance evidence | `forward-accept-evidence-missing` |
-| `archive` | accepted | archived | replacement/retention reason | `forward-archive-context-missing`。archivedはterminal |
-| `block` | proposed〜reviewedの正常状態 | blocked | `resumeState=from`、actor/reason/revision/commit/evidence | `forward-exception-context-missing` |
-| `reject` | planned〜review_readyの正常状態またはblocked | rejected | `resumeState=from`、reviewer/actor/reason/revision/evidence | accepted/archiveからreject不可 |
-| `supersede` | proposed〜reviewedの正常状態またはblocked/rejected | superseded | replacement asset/revision、reason、evidence | supersededはterminal |
-| `reopen` | blockedまたはrejected | reopened | `resumeState`、reason、new evidence、同一subject revision | `forward-resume-state-invalid` |
-| `resume` | reopened | reopen eventの`resumeState` | resume先guardを再評価 | 過去guardを流用せず、accepted/archived/supersededへresume不可 |
+| `plan` | proposed | planned | scope-approval (producer: po/human) | `forward-evidence-missing` |
+| `prepare-pair-freeze` | planned | pair_freeze_ready | pair-artifact-declaration + design-pair-review | `forward-evidence-missing` |
+| `freeze-pair` | pair_freeze_ready | pair_frozen | pair-artifact-declaration + design-pair-review | `forward-evidence-missing` |
+| `freeze-red` | pair_frozen | red_frozen | red-test-run (exitは非0、24時間以内) | `forward-evidence-missing` |
+| `begin-implementation` | red_frozen | implementing | pair-artifact-declaration + red-test-run | `forward-red-evidence-missing` |
+| `complete-implementation` | implementing | implementation_complete | implementation-digest + targeted-test-run | `forward-evidence-missing` |
+| `prepare-trace-freeze` | implementation_complete | trace_freeze_ready | trace-materialization | `forward-evidence-missing` |
+| `freeze-trace` | trace_freeze_ready | trace_frozen | trace-closure + green-test-run | `forward-evidence-missing` |
+| `prepare-review` | trace_frozen | review_ready | trace-closure + green-test-run | `forward-trace-freeze-missing` |
+| `submit-review` | review_ready | reviewed | independent-review | `forward-evidence-missing` |
+| `accept` | reviewed | accepted | independent-review + gate-run | `forward-accept-evidence-missing` |
+| `archive` | accepted | archived | acceptance-decision + retention-decision (producer: po/human) | `forward-evidence-missing`。archivedはterminal |
+| `block` | proposed〜reviewedの正常state (accepted / archivedを除く) | blocked | exception-context | `forward-exception-context-missing` |
+| `supersede` | proposed〜acceptedの正常state (archivedを除く。acceptedを含む) | superseded | exception-context | `forward-exception-context-missing` |
+| `reject` | review_ready または reviewed | rejected | exception-context | `forward-exception-context-missing` |
+| `reopen` | blocked / superseded / rejected | reopened | exception-context | `forward-exception-context-missing` |
+| `resume` | reopened | planned | exception-context | `forward-exception-context-missing` |
 
-例外contextはnormal state 1件だけを`resumeState`として保持し、例外stackを作らない。blockedからrejectする場合はblockedを
-resume先にせず、block eventが保持した元normal stateをrejectedへ継承する。reopenはblocked/rejectedをreopenedへ写し、
-resumeだけが元normal stateへ戻す。reopenの同一revisionはstate復帰だけに使用し、意味変更は`PlanAsset.revise`で新revisionを作り
-新revisionの`proposed`から開始する。superseded/archivedはterminal、acceptedはarchive以外不可とする。
+正本は`src/forward/domain/transition-policy.ts`の`TRANSITION_POLICY`であり、この表はその写しである (検査は`tests/forward/fsm.test.ts`の`U-FSM-001`〜`009`)。
+表に無いeventと、表のfrom以外のstateからのeventは`forward-transition-illegal`とする。正常系の各行は隣接遷移だけを許す。
+必須evidenceの各行は、kind・accepted producer・exit規則・期限をsrcのrequirement定義が持ち、下の「Forward evidence policy表」はその
+policy単位の整理である。
+
+例外eventは`exception-context`だけを必須evidenceとする。blockはaccepted / archivedから出せず、rejectは`review_ready` / `reviewed`からだけ出せる。
+supersedeはacceptedを含むarchived以外の全正常stateから出せ、supersededは`reopen`で`reopened`へ戻せる。
+`resume`は`reopened`から`planned`へ戻し、元のnormal stateへは戻さない (resume後は`planned`から表のとおり再度進める)。
+archivedだけがterminalで、acceptedから許されるeventは`archive` / `supersede`である。
 
 #### Forward evidence policy表
 
@@ -2058,15 +2063,15 @@ command→policyは次の完全表を正本とし、実装switchに暗黙default
 | command | policy ID |
 |---|---|
 | `plan` | `scope-approval/v1` |
-| `prepare_pair_freeze` | `pair-artifact/v1` |
-| `freeze_pair` | `pair-freeze/v1` |
-| `freeze_red` | `red-freeze/v1` |
-| `start_implementation` | `red-freeze/v1` |
-| `complete_implementation` | `implementation/v1` |
-| `prepare_trace_freeze` | `trace-materialization/v1` |
-| `freeze_trace` | `trace-freeze/v1` |
-| `prepare_review` | `green-review-ready/v1` |
-| `approve_review` | `review/v1` |
+| `prepare-pair-freeze` | `pair-artifact/v1` |
+| `freeze-pair` | `pair-freeze/v1` |
+| `freeze-red` | `red-freeze/v1` |
+| `begin-implementation` | `red-freeze/v1` |
+| `complete-implementation` | `implementation/v1` |
+| `prepare-trace-freeze` | `trace-materialization/v1` |
+| `freeze-trace` | `trace-freeze/v1` |
+| `prepare-review` | `green-review-ready/v1` |
+| `submit-review` | `review/v1` |
 | `accept` | `accept/v1` |
 | `archive` | `retention/v1` |
 | `block|reject|supersede|reopen|resume` | `exception-context/v1` |
