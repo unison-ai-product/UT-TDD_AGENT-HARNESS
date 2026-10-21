@@ -729,7 +729,7 @@ describe("trusted-base baseline ratchet bootstrap (CANDIDATE-U-OIDBASE-001/011/0
     [RATC_MERGE_SHA, RATC_JSON_PATH],
   ] as const;
 
-  it.fails("CANDIDATE-U-OIDBASE-001: 初回migrationは旧TS blobとhead JSONの全集合一致で成功する", () => {
+  it.fails("CANDIDATE-U-OIDBASE-001: initial migration accepts old TS blobs only when every set matches head JSON", () => {
     const headJson = ratchetBaselineJson(baselineFromOldSources());
     const observed = runRatchetFixture({
       baseJson: null,
@@ -798,7 +798,7 @@ describe("trusted-base baseline ratchet bootstrap (CANDIDATE-U-OIDBASE-001/011/0
     );
   });
 
-  it.fails("CANDIDATE-U-OIDBASE-011: 旧source blobのGit I/O失敗はobject read failureで返る", () => {
+  it.fails("CANDIDATE-U-OIDBASE-011: old source blob Git I/O failure returns an object read failure", () => {
     const observed = runRatchetFixture({
       baseJson: null,
       headJson: ratchetBaselineJson(baselineFromOldSources()),
@@ -837,7 +837,7 @@ describe("trusted-base baseline ratchet bootstrap (CANDIDATE-U-OIDBASE-001/011/0
     expect(JSON.parse(headJson).legacy).toContain("U-ZZBASE-901");
   });
 
-  it.fails("CANDIDATE-U-OIDBASE-012: 通常JSON pairは成功し、旧bootstrapだけの入力は拒否する", () => {
+  it.fails("CANDIDATE-U-OIDBASE-012: accept a normal JSON pair and reject old-bootstrap-only input", () => {
     const normalPair = runRatchetFixture({ includeOldSourceBlobs: true });
     expectRatchetResultAndReads(normalPair, { ok: true }, [RATC_MERGE_SHA], jsonPairReads);
 
@@ -931,33 +931,45 @@ describe("three independent subset axes (CANDIDATE-U-OIDBASE-005/006)", () => {
   it("legacy debt shrinkのfixtureではderived equalityとanalyzer cleanが独立して成立する", () => {
     const id = "U-ASSETDRIFT-001";
     const head = updateRatchetBaseline({ legacy: { remove: [id] } });
-    expectForwardAxisAnalyzerFixture("legacy", head, new Set([id]));
+    const fixture = forwardAxisAnalyzerFixture("legacy", head, new Set([id]));
+    expect(fixture.derived).toEqual([...head.legacy].sort());
+    expectAnalyzerClean(fixture.analysis);
   });
 
   it("widened debt shrinkのfixtureではderived equalityとanalyzer cleanが独立して成立する", () => {
     const id = RATC_OLD_SETS.widened[0];
     const head = updateRatchetBaseline({ widened: { remove: [id] } });
-    expectForwardAxisAnalyzerFixture("widened", head, new Set([id]));
+    const fixture = forwardAxisAnalyzerFixture("widened", head, new Set([id]));
+    expect(fixture.derived).toEqual([...head.widened].sort());
+    expectAnalyzerClean(fixture.analysis);
   });
 
   it("citation debt shrinkのfixtureではderived equalityとanalyzer cleanが独立して成立する", () => {
     const head = updateRatchetBaseline({ citations: { remove: ["U-ADAPTER-005"] } });
-    expectCitationAxisAnalyzerFixture(head);
+    const fixture = citationAxisAnalyzerFixture(head);
+    expect(fixture.derived).toEqual([...head.citations].sort());
+    expectAnalyzerClean(fixture.analysis);
   });
 
   it("legacy debt growthのfixtureではderived equalityとanalyzer cleanが独立して成立する", () => {
     const head = updateRatchetBaseline({ legacy: { add: ["U-ZZBASE-901"] } });
-    expectForwardAxisAnalyzerFixture("legacy", head, new Set());
+    const fixture = forwardAxisAnalyzerFixture("legacy", head, new Set());
+    expect(fixture.derived).toEqual([...head.legacy].sort());
+    expectAnalyzerClean(fixture.analysis);
   });
 
   it("widened debt growthのfixtureではderived equalityとanalyzer cleanが独立して成立する", () => {
     const head = updateRatchetBaseline({ widened: { add: ["U-ZZBASE-901"] } });
-    expectForwardAxisAnalyzerFixture("widened", head, new Set());
+    const fixture = forwardAxisAnalyzerFixture("widened", head, new Set());
+    expect(fixture.derived).toEqual([...head.widened].sort());
+    expectAnalyzerClean(fixture.analysis);
   });
 
   it("citation debt growthのfixtureではderived equalityとanalyzer cleanが独立して成立する", () => {
     const head = updateRatchetBaseline({ citations: { add: ["U-ZZBASE-901"] } });
-    expectCitationAxisAnalyzerFixture(head);
+    const fixture = citationAxisAnalyzerFixture(head);
+    expect(fixture.derived).toEqual([...head.citations].sort());
+    expectAnalyzerClean(fixture.analysis);
   });
 });
 
@@ -987,7 +999,7 @@ describe("trusted PR pair fail-close reasons (CANDIDATE-U-OIDBASE-007)", () => {
     expectRatchetResultAndReads(observed, { ok: false, reason: "pr_context_invalid" }, [], []);
   });
 
-  it.fails("CANDIDATE-U-OIDBASE-007: first parent欠落は専用reasonで失敗する", () => {
+  it.fails("CANDIDATE-U-OIDBASE-007: missing first parent returns its dedicated failure reason", () => {
     const observed = runRatchetFixture({ firstParentResult: { ok: true, value: null } });
     expectRatchetResultAndReads(
       observed,
@@ -997,7 +1009,7 @@ describe("trusted PR pair fail-close reasons (CANDIDATE-U-OIDBASE-007)", () => {
     );
   });
 
-  it.fails("CANDIDATE-U-OIDBASE-007: first parent Git I/O failureは専用reasonで失敗する", () => {
+  it.fails("CANDIDATE-U-OIDBASE-007: first-parent Git I/O failure returns its dedicated failure reason", () => {
     const observed = runRatchetFixture({
       firstParentResult: { ok: false, reason: "git_first_parent_read_failed" },
     });
