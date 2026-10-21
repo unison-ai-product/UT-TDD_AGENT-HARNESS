@@ -666,7 +666,7 @@ interface DriveDbRegistrationResult {
 | `stale_plan_registry` / `stale_plan_registry_fingerprint` | `docs/plans/*.md` の件数と frontmatter hash | `drive-db-registration.ts:74-85`, `drive-registration.ts:34-59,173-174,206-207` | 退役 (0 件同士は一致するが、検査自体を置かない) |
 | `missing_drive_runs` / `plans_without_drive_run` | `drive_runs` は projectPlans が返した PLAN ごとに投入する | `drive-db-registration.ts:86-89`, `src/state-db/projection-writer.ts:440-470` | 退役 |
 | `missing_workflow_runs` | `workflow_runs` は PLAN ID を持つ gate 実行と固定の検証帯 PLAN から投入する | `drive-db-registration.ts:90`, `projection-writer.ts:1096,1242-1252` | 退役 |
-| `workflow_orphans` | `workflow_runs` → `drive_runs` の JOIN。`plan_registry` を経由しない | `drive-db-registration.ts:91-93`, `drive-registration.ts:110-116` | **維持 (変更なし)**。0 件なら 0 になる |
+| `workflow_orphans` | `workflow_runs` → `drive_runs` の JOIN。式は `plan_registry` を経由しないが、`workflow_runs` は PLAN ID を持つ gate 証跡から作られ、`drive_runs` は PLAN のループ内でしか作られないため、PLAN を撤去すると orphan が残る(実質 PLAN 由来) | `drive-db-registration.ts:91-93`, `drive-registration.ts:110-116`, `projection-writer.ts:443,475-477,1225-1253` | `planCount` が 1 以上のときだけ維持 (下記 c)。0 件のときは評価しない |
 | `missing_model_runs` | レビュー証跡のある PLAN の `crossEntries` から投入 (token 計測の session 行は別経路で、fallback rebuild は `skipTokenTelemetry`) | `drive-db-registration.ts:94`, `projection-writer.ts:663-690,705,203` | 退役 |
 | `model_orphans` | `plan_registry` への JOIN (PLAN の所属に依存)。`role='session'` の行は除外済み | `drive-db-registration.ts:95-97`, `drive-registration.ts:123-129` | `planCount` が 1 以上のときだけ維持 (下記 c) |
 | `missing_skill_recommendations` / `missing_skill_invocations` | PLAN ごとの推薦と、そのレビュー受理・runtime hook の PLAN から投入 | `drive-db-registration.ts:98-109`, `src/state-db/skill-projections.ts:115,131`, `src/state-db/runtime-projections.ts:173` | 退役 |
@@ -679,11 +679,11 @@ interface DriveDbRegistrationResult {
 
 (a) 退役する検査: 入力が PLAN 由来のものは、`docs/plans/` が無い・空のときに違反にしてはならない。`stats.planCount` が 0 の入力に対して、上の「退役」の行は違反を返さない。
 
-(b) 変更しない検査: `missing_db`、`mode_catalog_unmapped`、`workflow_orphans` (`workflow_runs` → `drive_runs` の JOIN)。いずれも `plan_registry` を経由しない。`planCount` が 1 以上のときの全検査も、現行の振る舞いを変えない。
+(b) 変更しない検査: `missing_db` と `mode_catalog_unmapped`。どちらも PLAN の有無に関係しない。`planCount` が 0 のときに残る違反はこの 2 つだけである。`planCount` が 1 以上のときの全検査も、現行の振る舞いを変えない。
 
 (c) 入力が混在する検査の変更:
 
-- **PLAN 所属を見る orphan (`model_orphans` / `skill_recommendation_orphans` / `skill_invocation_orphans`)**: `plan_registry` に所属する行かどうかを見る検査で、orphan 検査を一括で残すことはしない。`planCount` が 1 以上のときは JOIN を消さず現行どおり評価する。`planCount` が 0 のときは所属先が存在しないので評価しない (違反にしない)。`model_orphans` で `role='session'` を除外する条件は変えない。
+- **PLAN 由来の orphan (`workflow_orphans` / `model_orphans` / `skill_recommendation_orphans` / `skill_invocation_orphans`)**: `plan_registry` に所属する行かどうかを見る検査で、orphan 検査を一括で残すことはしない。`planCount` が 1 以上のときは JOIN を消さず現行どおり評価する。`planCount` が 0 のときは所属先が存在しないので評価しない (違反にしない)。`model_orphans` で `role='session'` を除外する条件は変えない。
 - **期待 mode**: `expectedModes` は `plan_registry` から導出する。`planCount` が 0 なら空集合となり `missing_required_mode` は出ない。`expectedModes` が未提供 (legacy DB) のときの `LEGACY_REQUIRED_MODES` 照合は、`planCount` が 0 のときは行わない。
 - **必須統計の件数 (`missing_*`)**: PLAN 非依存の源 (session の token 計測、hook の生ログ) だけで数えた値で「1 件以上」を要求する検査は置かない。現行の件数は PLAN に紐づく投入のみを数えており、PLAN 非依存の件数を要求すると、計測が無い clone で恒常的に赤くなるため。
 
