@@ -5,7 +5,7 @@ executed_at_layer: L7
 artifact_type: test_design
 pair_artifact: docs/design/harness/L6-function-design/doc-split-gate.md
 status: confirmed
-updated: 2026-10-14
+updated: 2026-10-21
 ---
 
 # 設計文書の肥大検査 (doc-split gate) テスト設計 (issue #1032)
@@ -16,7 +16,7 @@ updated: 2026-10-14
 本書はその §2 対象と種別、§3 測る量、§4 閾値、§5 baseline、§6 判定規則と finding、§7 関数、§8.1 配線、§8.3 読み先の直し、§9 不変条件を検証する oracle を定義する。
 共有の `docs/test-design/harness/L7-unit-test-design.md` は肥大の当事者なので、索引行を足さない。本書が詳細の正本である。
 
-この pair-freeze では候補 ID (`CANDIDATE-U-DOCSPLIT-*`) だけを宣言する。正式 ID への昇格は、設計書保護 gate §10.3 の三段階で入れる。
+この pair-freeze では候補 ID (`CANDIDATE-U-DOCSPLIT-*`) を宣言した。本改訂では `U-DOCSPLIT-026` だけを正式昇格し、`CANDIDATE-U-DOCSPLIT-001`〜`025` は候補のまま維持する。新しい ID は追加しない。未昇格候補の正式化は、設計書保護 gate §10.3 の三段階で入れる。
 (1) 020 と 021 は実 repo を読むので、`repositoryReadContracts` の登録行 (src の変更はそれだけ) と、候補 ID を引用する Red (`it.fails`) を入れる。
 (2) src/ を含まない PR で、`U-DOCSPLIT-*` への 1:1 の昇格とテスト名の引用の書き換えを同時に入れる。
 (3) 実装 PR が `it.fails` を `it` に戻して Green にする。実装 PR は本書に触れない (src を含む PR は `docs/test-design/` の M / D / R を拒否される)。
@@ -31,9 +31,9 @@ updated: 2026-10-14
 - 020 と 021 は実 repo の走査であり、開発 repo を読むテストとして `test-repository-isolation` の登録が要る (上の (1))。
 - 025 と 026 は既存の `l6-fr-coverage` / `l6-completion` の関数へ fixture (temp の repo か文字列) を渡す。実 repo は読まない。
 
-## 3. 候補 oracle の一覧
+## 3. oracle 宣言の一覧
 
-| Candidate | 入力 | 期待 | 殺す mutation |
+| ID | 入力 | 期待 | 殺す mutation |
 | --- | --- | --- | --- |
 | `CANDIDATE-U-DOCSPLIT-001` | `measureDoc` に、(a) 空の内容、(b) `"a\nb\n"`、(c) `"a\nb"`、(d) `"a\r\nb\r\n"`、(e) `"\n"` を渡す | `lines` は (a) 0、(b) 2、(c) 2、(d) 2、(e) 1 | 末尾の改行の後ろの空要素を数える / CRLF を 2 行に数える / 空の内容を 1 行にする |
 | `CANDIDATE-U-DOCSPLIT-002` | 3 個のバッククォートで開閉するフェンスの内側に `## 偽の節` と、ID 形式のセルを持つ表の行を置いた `l6-topic` と `l7-topic` の内容 | フェンス内の行は `lines` に含まれるが、`responsibilities` と `names` には含まれない。閉じないフェンスは以降の全行をフェンス内とみなす | フェンスの内側の見出しや ID を責務に数える / フェンスの行を `lines` から除く |
@@ -60,7 +60,7 @@ updated: 2026-10-14
 | `CANDIDATE-U-DOCSPLIT-023` | path の回避を試す。`analyzeDocSplit` に rename の列を渡す。baseline に `docs/design/harness/L6-function-design/big.md` が `{ 500, 20 }` で、比較元も同じ。(a) `big.md` を `sub/big.md` へ rename し、baseline の行も `sub/big.md` に付け替える (値は同じ、`from` の行は消す)、(b) (a) で値を `{ 501, 20 }` に増やす、(c) (a) で `from` の行を消さない、(d) `big.md` を `docs/design/harness/L5-detailed-design/big.md` へ rename (baseline は付け替えない)、(e) `L7-x-test-design.md` を `L7-` の無い名前へ rename、(f) `L7-x-test-design.md` を `docs/archive/x.md` (走査対象の外) へ rename、(g) 走査対象の外の文書を `L6-function-design/y.md` へ rename (取り込み)、(h) rename なしで baseline の行だけを `previousBaseline` に無い path へ足す | (a) finding 0 件 (旧 path の baseline を引き継げる)。(b) `doc-split-baseline-grown`。(c) `from` の行が残るので `doc-split-stale-baseline` (`missing-file`)。(d)(e)(f) は `doc-split-class-changed`。(g) は取り込みで finding 0 件 (400 行以内のとき)。(h) は `doc-split-baseline-grown` | 子ディレクトリへ動かすだけで baseline を失う / 種別が変わる rename で上限を緩められる / 引き継ぎで値を増やせる / baseline に行を足して通せる |
 | `CANDIDATE-U-DOCSPLIT-024` | 実 git repository (temp) で、merge-base の commit に旧 path (`docs/design/harness/L6-function-design/big.md`、500 行 / 見出し 20 個) の文書と、旧 path の実測値 `{ lines: 500, responsibilities: 20 }` だけを持つ `docs/governance/doc-split-baseline.json` を置く。その後に、(a) 旧 path の文書を `L6-function-design/sub/big.md` へ `git mv` し (内容は同じ)、現在の baseline を旧 path の行を消して新 path の行を同じ値 `{ 500, 20 }` で足したものにして commit (比較元は merge-base の baseline、現在は作業木の baseline)、(b) `L7-` の prefix を外して `git mv`、(c) 何も rename しない、(d) git が起動できない (`origin/main` が無い) | `loadRenamedDocs` は (a)(b) の R 行を `found` で返す。`checkDocSplit` は (b) を `doc-split-class-changed` で止め、(a) は止めない (finding 0 件。旧 path の baseline を新 path へ引き継ぐので `new-doc-over-limit` / `missing-file` / `doc-split-baseline-grown` のいずれも出ない。対照として、(a) で baseline を付け替えない入力は `missing-file`、baseline が空の入力は `new-doc-over-limit` になる)。(c) は空の列で `found`。(d) は `unreadable` で `doc-split-baseline-base-unreadable` | rename の検出を使わず path の変更が素通りする / 読めない git を「rename なし」と取り違える |
 | `CANDIDATE-U-DOCSPLIT-025` | (`l6-fr-coverage` の既存関数を fixture で呼ぶ。L6 §8.3 の読み先の直しの検証) FR registry の `l6_spec` が (a) `function-spec.md`、(b) `artifact_role: fr_contract` の新しい L6 文書を指し、どちらも DbC 表を持つ内容、(c) (b) から DbC 表を消した内容、(d) (b) から `fr_contract` を外し DbC 表も消した内容 | (a)(b) は緑。(c) は `function_spec_missing_structured_dbc_table` で赤。(d) は `fr_contract` の付け忘れとして、FR 契約表を持つのに `fr_contract` が無い L6 文書を赤にする | 分割で移した FR 契約の DbC 表の検査が移動先に付いていかない / 検査対象を path の名前で固定する |
-| `CANDIDATE-U-DOCSPLIT-026` | (`l6-completion` / `ddd-tdd-rules` / vmodel-source-assets の読み先の回帰。L6 §8.3) temp の repo で `docs/test-design/harness/` 直下に `L7-unit-test-design.md` と別の `L7-split-x-test-design.md` を置き、(a) 後者だけに前者に無い候補 ID (`CANDIDATE-U-DOCSPLIT-900`) の宣言を置き、同じ ID を本文・他セル・「参照」記載で繰り返す、(b) 同じ ID の宣言を、表の先頭セルどうし、見出しどうし、先頭セルと見出しの各組み合わせで重ねる。各組み合わせは同一文書内と文書間の両方で試し、bare/bare、バッククォート付き/バッククォート付き、bare の後にバッククォート付き、バッククォート付きの後に bare の全形式を含める。括弧注記付き先頭セル (ASCII `(...)` と全角 `（...）` の両方) も重複宣言の対象とする、(c) 候補 ID を fenced example、直下外の L7 文書、および L7 以外の文書にだけ置く、(d) 新しい L6 文書が後者だけを `pair_artifact` で指し、`L7-unit-test-design.md` からは参照されない | (a) 分割先だけの宣言も収集され、引用の反復は重複にならず緑。(b) 各宣言箇所の重複は赤となり、括弧注記で回避できない。(c) fenced example と対象外文書は宣言として収集されない。(d) `l6-completion` が緑 (相手が実在し、相手がその L6 文書を指す)。候補宣言の一意性検査は直下にある `L7-*.md` の宣言箇所だけに掛かる | 一意性の検査が `L7-unit-test-design.md` だけに掛かる / 引用を宣言と誤認する、または重複宣言を集合化で隠す / 分割先の文書を指す L6 文書を拒否する / bare 宣言を収集しない / quoted だけを収集する |
+| `U-DOCSPLIT-026` | (`l6-completion` / `ddd-tdd-rules` / vmodel-source-assets の読み先の回帰。L6 §8.3) temp の repo で `docs/test-design/harness/` 直下に `L7-unit-test-design.md` と別の `L7-split-x-test-design.md` を置き、(a) 後者だけに前者に無い候補 ID (`CANDIDATE-U-DOCSPLIT-900`) の宣言を置き、同じ ID を本文・他セル・「参照」記載で繰り返す、(b) 同じ ID の宣言を、表の先頭セルどうし、見出しどうし、先頭セルと見出しの各組み合わせで重ねる。各組み合わせは同一文書内と文書間の両方で試し、bare/bare、バッククォート付き/バッククォート付き、bare の後にバッククォート付き、バッククォート付きの後に bare の全形式を含める。括弧注記付き先頭セル (ASCII `(...)` と全角 `（...）` の両方) も重複宣言の対象とする、(c) 候補 ID を fenced example、直下外の L7 文書、および L7 以外の文書にだけ置く、(d) 新しい L6 文書が後者だけを `pair_artifact` で指し、`L7-unit-test-design.md` からは参照されない | (a) 分割先だけの宣言も収集され、引用の反復は重複にならず緑。(b) 各宣言箇所の重複は赤となり、括弧注記で回避できない。(c) fenced example と対象外文書は宣言として収集されない。(d) `l6-completion` が緑 (相手が実在し、相手がその L6 文書を指す)。候補宣言の一意性検査は直下にある `L7-*.md` の宣言箇所だけに掛かる | 一意性の検査が `L7-unit-test-design.md` だけに掛かる / 引用を宣言と誤認する、または重複宣言を集合化で隠す / 分割先の文書を指す L6 文書を拒否する / bare 宣言を収集しない / quoted だけを収集する |
 
 026 の候補収集は、U-VMSRC-009 と同じ読取・宣言抽出処理に temp repo を渡して観測する。fixture 用の別 collector だけを検証してはならない。900 は temp 内の例示値であり、新しい oracle の宣言ではない。先頭セルは ID だけの plain form と ASCII / 全角括弧注記付きの各形を、quoted と bare のそれぞれについて単独で収集する。見出しも説明付き quoted / bare のそれぞれを単独で収集し、各 fixture の結果にその ID が含まれることを正の対照とする。先頭セルの `参照:` は宣言とせず、コードフェンスの扱いは設計文書 §3 に合わせる。
 
@@ -68,7 +68,7 @@ updated: 2026-10-14
 
 ## 4. 昇格と引用の方針
 
-- 候補 ID は `CANDIDATE-U-DOCSPLIT-*` のまま Red のテストが引用する。正式 ID `U-DOCSPLIT-*` への昇格は、src/ を含まない昇格 PR で、正式 ID を先頭セルに書き直す変更とテスト名の引用の書き換えを同時に入れる (§1、L6 §8.2 の手順 3)。025 と 026 は `l6-fr-coverage` / `l6-completion` / `U-VMSRC-009` の読み先の直し (L6 §8.2 の手順 1) と同じ PR で、既存関数への fixture のテストとして入れる (実 repo は読まない)。026 の候補一意性は宣言箇所だけに掛け、本文・他セル・明示的な参照を数えず、重複宣言は同一ファイル内も含めて fail-close する。これは §3 の `l7-topic` 責務数 (表の全セルにある ID family 数) を変更しない。
+- `CANDIDATE-U-DOCSPLIT-001`〜`025` は候補 ID のまま Red のテストが引用する。これらの正式 ID への昇格は、src/ を含まない昇格 PR で、正式 ID を先頭セルに書き直す変更とテスト名の引用の書き換えを同時に入れる (§1、L6 §8.2 の手順 3)。`U-DOCSPLIT-026` は本改訂で正式宣言する。026 の既存テスト対応は、Red の `tests/vmodel-source-assets.test.ts:323`、alternate L7 pair の受入 `tests/l6-completion.test.ts:348`、split L7 文書の DDD oracle を読む通常テスト `tests/ddd-tdd-rules.test.ts:172` である。これらは本文からの静的参照であり、新しい oracle 宣言ではない。025 は引き続き `l6-fr-coverage` / `l6-completion` / `U-VMSRC-009` の読み先の直し (L6 §8.2 の手順 1) と同じ PR で、既存関数への fixture のテストとして扱う (実 repo は読まない)。026 の一意性は宣言箇所だけに掛け、本文・他セル・明示的な参照を数えず、重複宣言は同一ファイル内も含めて fail-close する。これは §3 の `l7-topic` 責務数 (表の全セルにある ID family 数) を変更しない。
 - 014 の `found` / `absent` / `unreadable` の 3 値は `loadPreviousDocSplitBaseline` の戻り値の型 (L6 §7) と 1:1 に対応する。
 - 020 は baseline の文書数や特定の値を期待値に持たない (L6 §5: 初期値は Green の base commit で実測して記録する)。分割 PR で文書が上限の内側に入ると baseline の行が消えるが、020 の期待値 (「記録が実測と一致し、各行が上限超え」) は変わらないので、020 は改訂不要である。baseline の初期値を本文の数値で検証する oracle は置かない: 数値が古くなる原因を作らないためである。fixture による成長・縮小・古さの検証は 008〜013 が担う。baseline が `docs/governance/` にあるのは、分割 PR が `src/` を含まず設計書保護 gate (§4) に当たらないようにするためである。
 

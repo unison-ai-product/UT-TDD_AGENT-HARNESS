@@ -345,7 +345,7 @@ describe("L6 completion readiness", () => {
     expect(result.ready).toBe(false);
   });
 
-  it("U-L6COMP-008: accepts an existing eligible alternate L7 pair", () => {
+  it("U-L6COMP-008 / U-DOCSPLIT-026: accepts an existing eligible alternate L7 pair", () => {
     withFixtureRoot((root) => {
       writeL6CompletionFixture(root, {
         docs: [

@@ -169,7 +169,7 @@ describe("U-DDDTDD DDD/TDD strictness lint", () => {
     }
   });
 
-  it("finds U-DDDTDD-002 when only a split L7 document defines it", () => {
+  it("U-DOCSPLIT-026: finds U-DDDTDD-002 when only a split L7 document defines it", () => {
     const root = createDddTddSplitL7Fixture();
     try {
       const result = analyzeDddTddRules(loadDddTddInputs(root));
