@@ -727,6 +727,123 @@ parent PLAN = PLAN-L7-48 / PLAN-L7-52。L7-48 監査で唯一の機能リスク 
 
 invariant: option C は authz outcome を一切変えない (advisory のみ)。実ブロックする **hard-gate (option A)** は authorization/human-signoff の仕様確定に該当し PO 留保 (CLAUDE.md Guard Rule)。advisory は warn-first phased rollout の Phase 0 (descent-obligation §7 と同型)。U-* = IT-GUARDRAIL-ADVISORY-01。`same-model-self-review` の空文字非該当は blank evidence の false-positive を防ぐための必須不変条件。
 
+## 2026-10-21 lint gate 契約 back-fill (#1169 A5-C04 / C05 / C06)
+
+実装が正本。契約が設計文書に無く、起票時の記述だけに残っていた 3 つの doctor hard gate を、現行 src から書き起こして固定する (出典: #1169 の移管表 A5-C04 / C05 / C06)。いずれも `src/doctor/check-definition-groups.ts` の `full(...)` 登録 (profile = `full` のみ) で、check の `ok=false` は doctor 全体の失敗になる (advisory ではなく hard gate)。
+
+### D.7 `analyzeVerificationProfileGate` (A5-C04、`src/lint/verification-profile.ts`)
+
+| 関数 (実 export) | signature | 入力 | 出力 |
+|---|---|---|---|
+| `analyzeVerificationProfileGate` | `(recommendation: VerificationRecommendationResult) => VerificationProfileGateResult` | `recommendVerificationProfiles(changedFiles)` の結果 (`changedFiles` / `recommendations` / `edges` / `missingProfiles` / `ok`)。純粋関数 | `{ recommendation, activationPlan, defaultRunnableProfiles, externalProfiles, findings, ok }` |
+| `verificationProfileGateMessages` | `(result: VerificationProfileGateResult) => string[]` | 上の結果 | `ok` なら `verification-profile - OK (N profiles recommended; default_runnable=N; external_gated=N)` の 1 行。違反なら `verification-profile - violation` + finding ごとに `<code>[ <profileId>]: <message>` |
+| `loadVerificationRecommendation` | `(repoRoot?: string) => VerificationRecommendationResult` | `loadChangedFiles(repoRoot)` (`git status --porcelain`) の変更ファイル | `recommendVerificationProfiles` の結果 |
+
+判定 (finding の `code` は `VerificationProfileGateFindingCode` の全 4 値):
+
+| code | 条件 |
+|---|---|
+| `recommendation-without-signal` | 推奨された profile の `signals` が空 |
+| `missing-default-profile` | 推奨が 1 件以上あるのに `defaultEnabled` の profile が 0 件 |
+| `unrunnable-default-profile` | `defaultEnabled` の推奨 profile に具体 runner (`PROFILE_RUNNERS[id]`) が無い |
+| `external-without-activation-plan` | `defaultEnabled=false` の推奨 profile について、`planExternalProfileActivation({ allowExternal: false })` の step に `human-approval` と `refuse-run` の両方が無い |
+
+- `ok = recommendation.ok && findings.length === 0`。推奨が 0 件 (変更ファイルに該当 profile なし) なら finding は出ず、`recommendation.ok` に従う。
+- `defaultRunnableProfiles` は runner を持つ default 推奨 profile の id 昇順、`externalProfiles` は外部 / 既定無効の推奨 profile の id 昇順。`findings` は `code:profileId` の昇順。
+- 外部 profile は既定で無効のまま、承認と拒否の経路を持つことだけを証明する。このゲートは profile を実行しない。
+
+doctor 配線: `checkVerificationProfile(repoRoot)` (`src/doctor/lint-gates.ts`) が `loadVerificationRecommendation` → `analyzeVerificationProfileGate` → `verificationProfileGateMessages` を委譲し `{ messages, ok: r.ok }` を返す。check 名 `verification-profile`、`full` profile、hard gate。`repoRoot` が存在しない場合は `verification-profile - violation: repo root could not be read`、読み取り中の例外は `verification-profile - violation: changed file graph could not be read` で、どちらも `ok=false` (fail-close)。非 git の skip は無い (change-impact 系と異なり、`git status` が失敗すれば fail-close)。
+
+oracle: `tests/verification-profile.test.ts` の「hard-gates default runnable profiles while routing external profiles to approval/refusal」(正常系: `ok=true` / `defaultRunnableProfiles` / `externalProfiles` / `human-approval` と `refuse-run` の step / メッセージ内 `default_runnable=2`) と、`tests/doctor.test.ts` の repo root 不在時の fail-close 検査 (`checkVerificationProfile(missingRoot)`)。テスト設計の oracle ID は未登録 (`docs/test-design/` に本関数の ID は無い)。4 つの finding code を個別に落とす異常系のテストは、現時点で存在しない。
+
+### D.8 `analyzeChangeSetIntegrity` (A5-C05、`src/lint/change-impact.ts`)
+
+| 関数 (実 export) | signature | 入力 | 出力 |
+|---|---|---|---|
+| `analyzeChangeSetIntegrity` | `(input: ChangeSetIntegrityInput) => ChangeSetIntegrityResult` | `{ changedFiles: string[]; dependencyDrift?: DependencyDriftResult \| null }`。純粋関数 | `{ changedFiles, sourceFiles, designFiles, testFiles, categories, warnings, blockers, ok }` |
+| `changeSetIntegrityMessages` | `(result: ChangeSetIntegrityResult) => string[]` | 上の結果 | 1 行目 `change-set-integrity - OK\|violation (categories=...; warnings=N; blockers=N)`、続けて blocker ごとに `change-set-integrity - block <code>: <message>[ (<modules>)]`、warning ごとに `change-set-integrity - warn <code>: <message>` |
+| `isGitRepository` | `(repoRoot?: string) => boolean` | `git rev-parse --is-inside-work-tree` | `true` のときのみ true (失敗は false) |
+
+型: `ChangeSetCategory = "source" | "design" | "test"`。`ChangeSetIntegrityFindingCode = "incomplete-artifact-set" | "singleton-artifact-set" | "dependent-regression-untouched"`。`ChangeSetIntegrityFinding = { code; severity: "warn" | "error"; message; files?; modules? }`。
+
+分類 (path は `\` を `/` に正規化し、重複除去して昇順):
+
+- source = `^src/.+\.(ts|tsx)$`
+- design = `^docs/design/harness/.+\.md$` または `^docs/plans/PLAN-.+\.md$` (実装の正規表現どおり。後者は PLAN 凍結後も実装が数えている分類であり、本節が新規に要件とするものではない)
+- test = `^tests/.+\.test\.ts$` または `^docs/test-design/harness/.+\.md$`
+- `.ut-tdd/harness.db-journal|shm|wal` は `parseGitPorcelain` が変更集合から除外する。rename は新 path を採る。
+
+判定:
+
+| code | severity | 出力先 | 条件 |
+|---|---|---|---|
+| `singleton-artifact-set` | `warn` | `warnings` | 該当 category がちょうど 1 種 (source のみ / design のみ / test のみ) |
+| `incomplete-artifact-set` | `warn` | `warnings` | category が 1〜2 種 (全体で欠ける category を列挙)。さらに source があり design か test が無い場合は、source files を対象にもう 1 件 (`source changes are missing design/plan + test/test-design` の欠落分) |
+| `dependent-regression-untouched` | `error` | `blockers` | `dependencyDrift` が非 null かつ source 変更あり、変更 module を `moduleEdges` の `to` とする依存元 module (変更 module 自身を除く) が 1 つ以上あり、その変更 module または依存元 module を対象とする `testCoverage` の `from` のうち変更集合に含まれる test が 0 件 |
+
+- 変更 module は `src/<dir>/...` なら `<dir>`、`src/<name>.ts(x)` なら `<name>`。
+- `ok = blockers.length === 0`。warning は非ブロックで、`ok` に影響しない (warn-first)。変更集合が空なら category 0 で finding なし、`ok=true`。source のみの変更は上の 2 規則に同時に該当するため `singleton-artifact-set` 1 件 + `incomplete-artifact-set` 2 件の warning になる。
+
+doctor 配線: `checkChangeSetIntegrity(repoRoot)` (`src/doctor/lint-gates.ts`)。`repoRoot` 不在は `change-set-integrity - violation: repo root could not be read` で `ok=false`。`isGitRepository` が false なら `change-set-integrity — skipped (not a git repository)` で `ok=true` (非 git の fail-open。ZIP 展開の配布物で変更集合を確定できないため)。git がある場合は `analyzeDependencyDrift(loadDependencyDriftInput(repoRoot))` と `loadChangedFiles(repoRoot)` を入力に委譲し、読み取り中の例外は `change-set-integrity - violation: change/dependency graph could not be read` で `ok=false` (fail-close)。check 名 `change-set-integrity`、`full` profile、hard gate (blockers だけが落とす)。
+
+oracle: `tests/change-impact.test.ts` の describe `change-impact lint` 内の 4 件、すなわち「warns when only one artifact category is touched」「warns when a change set has only a partial artifact set」「blocks when dependent modules exist and mapped regression tests are untouched」「passes dependency block when a mapped regression test is part of the change set」 (いずれもテスト設計の oracle ID は未登録)。非 git の skip と root 不在の fail-close は `U-CHGIMPACT-NONGIT-01` (`docs/test-design/harness/L7-unit-test-design.md`、`tests/doctor.test.ts` の「skips change-impact / change-set-integrity in a non-git directory instead of failing closed」)。同一ファイル内の `U-CHGIMPACT-001`〜`004` は `analyzeChangeImpact` / `parseGitPorcelain` の oracle であり、`analyzeChangeSetIntegrity` の oracle ではない。
+
+### D.9 `analyzeRuntimePortability` (A5-C06、`src/lint/runtime-portability.ts`)
+
+| 関数 (実 export) | signature | 入力 | 出力 |
+|---|---|---|---|
+| `analyzeRuntimePortability` | `(docs: RuntimePortabilityDoc[]) => RuntimePortabilityResult` | `RuntimePortabilityDoc = { path: string; text: string }` の配列。純粋関数 (fs なし) | `{ checked: docs.length, violations: RuntimePortabilityViolation[], ok }`。`RuntimePortabilityViolation = { path; line; rule: string; message }` (`rule` は union ではなく文字列。下表が現行の全値) |
+| `loadRuntimePortabilityDocs` | `(repoRoot?: string) => RuntimePortabilityDoc[]` | `git ls-files --cached --others --exclude-standard` (tracked + untracked かつ ignore 外)。git が失敗する場合は `package.json` / `tsconfig.json` / `package-lock.json` と `src` / `.claude/hooks` / `scripts` 配下を filesystem 走査する fallback | 走査面 = `package.json` / `tsconfig.json` / `package-lock.json` と `src/` / `.claude/hooks/` / `scripts/` / `tests/` 配下のうち実在するファイル (`src/web/` は `.gitkeep` 以外除外)、path 昇順 |
+| `runtimePortabilityMessages` | `(result: RuntimePortabilityResult) => string[]` | 上の結果 | OK なら `runtime-portability - OK (checked=N, TS/Bun/Node surfaces clean)`。違反なら `runtime-portability - violation N (<path>:<line>:<rule>, ...最大 8 件)` |
+
+判定 (violation の `rule` 全値、`ok = violations.length === 0`):
+
+| 対象 | rule | 条件 |
+|---|---|---|
+| `package.json` | `package-json-invalid` | JSON として読めない (以降の package 検査は行わない) |
+| | `package-missing-esm` | `type` が `module` でない |
+| | `package-missing-node-engine` | `engines.node` が無い (`engines.bun` は任意) |
+| | `package-missing-compiled-build` | `scripts.build` が `node scripts/build-node.mjs` を呼ばない |
+| | `package-bin-not-source-cli` | `bin["ut-tdd"]` (または文字列 `bin`) が `./src/cli.ts` でない |
+| | `package-missing-typecheck` | `scripts.typecheck` が `tsc --noEmit` を含まない |
+| | `package-missing-vitest-full-suite` | `scripts.test` が Vitest runner (`vitest run` または `scripts/run-vitest-snapshot.ts`、`npm run test:vitest-snapshot` 経由の間接参照も可) を指さない |
+| | `package-missing-fast-test-lane` | `test:fast` が Vitest runner を指さない、または `--exclude tests/projection-writer.test.ts` / `--exclude tests/cli-surface.test.ts` を欠く |
+| | `package-missing-db-test-lane` | `test:db` が Vitest runner を指さない、または `tests/db-projection-ingestion.test.ts` / `tests/drive-db-registration.test.ts` / `tests/projection-writer.test.ts` を欠く |
+| | `package-missing-cli-test-lane` | `test:cli` が Vitest runner を指さない、または `tests/cli-surface.test.ts` / `tests/runtime-hook-entrypoints.test.ts` を欠く |
+| | `package-missing-node-fallback-smoke` | `test:node-fallback` が Vitest runner を指さない、または `tests/state-db.test.ts` / `tests/runtime-portability.test.ts` を欠く |
+| `tsconfig.json` | `tsconfig-invalid` | JSON として読めない |
+| | `tsconfig-not-strict` | `compilerOptions.strict !== true` |
+| | `tsconfig-missing-node-types` | `compilerOptions.types` に `node` が無い |
+| 各ファイル | `core-non-typescript-file` | `src/` 配下で拡張子が `.ts` / `.gitkeep` 以外 |
+| | `hook-non-typescript-file` | `.claude/hooks/` 配下で `.ts` 以外 |
+| | `disallowed-runtime-language` | `src/` または `.claude/hooks/` 配下の `.py` / `.sh` / `.bash` / `.js` / `.mjs` / `.cjs` |
+| | `script-wrapper-unapproved` | `scripts/` 配下で、承認集合 (薄い wrapper `scripts/ut-tdd` / `scripts/ut-tdd.ps1` / `scripts/run-vitest-snapshot.ts`、build `scripts/build-node.mjs`、CI `scripts/node-generation-ci.mjs` / `scripts/node-generation-ci-aggregate.mjs` / `scripts/pack-canary-acceptance.mjs`、git hook `scripts/git-hooks/pre-push` / `scripts/git-hooks/secret-scan-diff.ts`) 外のファイル |
+| | `script-wrapper-not-thin` | wrapper (`run-vitest-snapshot.ts` を除く) の非コメント行が 12 行超、または `src/cli.ts` / `dist/ut-tdd` への dispatch を含まない |
+| | `script-wrapper-python` | wrapper が `python` / `python3` を含む |
+| | `git-hook-entrypoint-python` | `scripts/git-hooks/pre-push` が `python` / `python3` を含む |
+| | `git-hook-entrypoint-not-thin` | `scripts/git-hooks/pre-push` が `node` と `secret-scan-diff.ts` の両方を含まない |
+| | `git-hook-scanner-not-reusing-core` | `scripts/git-hooks/secret-scan-diff.ts` が `src/lint/secret-scan` を参照しない |
+| | `source-shell-runtime` | `src/` (`src/runtime/` を除く) が `spawn` / `exec` 系の第 1 引数に `bash` / `sh` / `python` / `python3` / `powershell` / `pwsh` / `cmd` を直接渡す |
+| | `bun-runtime-spawn` | `src/` / `.claude/hooks/` / `scripts/` / `tests/` で bun の child-process 起動 (`spawn*` / `exec*` への `"bun"`、`findBun(`、`?? "bun"`、`"/c", "bun"`、`["bun", [`、`exec bun`) |
+| | `bun-module-import` | 同範囲で `"bun:<英小文字>"` 形の import 文字列 |
+| | `bun-global-reference` | 同範囲で `Bun.` / `Bun[` / `typeof Bun` / `).Bun` / `globalThis.Bun` / `process.versions.bun` |
+| | `local-absolute-path` | `tests/` 以外で利用者ローカルの絶対 path (`<ドライブ>:\Users\`、`/home/`、`/Users/`、`~/ai-dev-kit-vscode`) を含む |
+| | `legacy-runtime-marker` | `src/` / `.claude/hooks/` / `scripts/` が旧 runtime の env / 状態ディレクトリ / コマンド / agent 接頭辞の marker を含む |
+| `src/state-db/index.ts` | `sqlite-driver-fallback-missing` | `node:sqlite` の文字列を含まない (`bun:sqlite` は任意の残存) |
+
+- bun 系 3 rule は行単位で数え、`BUN_SPAWN_DEBT_ALLOWLIST` / `BUN_IMPORT_DEBT_ALLOWLIST` / `BUN_GLOBAL_DEBT_ALLOWLIST` (path 完全一致 + 許容行数 pin) に載る path は pin までの行を許し、pin を超えた行だけを違反にする。載らない path は pin=0 で全行 fail-close。pin は検出語彙の fixture と本 lint 自身の定義行だけを対象とし、増加は Issue #134 の帰属を要する (恒久 bypass ではない)。同数の入れ替えは静的には検出できない (実装注記の限界)。
+- 検出は repo に実在するイディオムの再流入を止める網であり、変数経由の間接 spawn やテンプレート補間の `bun:${...}` は対象外。
+
+doctor 配線: `checkRuntimePortability(repoRoot)` (`src/doctor/rule-quality.ts`) が `loadRuntimePortabilityDocs` → `analyzeRuntimePortability` → `runtimePortabilityMessages` を委譲する。check 名 `runtime-portability`、`full` profile (`rules-and-process` group)、hard gate。`repoRoot` 不在は `runtime-portability - violation: repo root could not be read`、実行中の例外は `runtime-portability - violation: TS/Bun/Node portability lint could not run` で `ok=false`。git 不在は loader が filesystem 走査へ縮退するため skip せず検査を続ける (`U-CHGIMPACT-NONGIT-01` の記述が言う runtime-portability の非 git 方針と一致)。
+
+oracle: `tests/runtime-portability.test.ts` の `U-RPORT-001`〜`U-RPORT-018` (`004A` を含む)。ただしテスト設計 (`docs/test-design/`) には `U-RPORT-*` の登録が無く、ID はテストファイル内の命名のみ。対応は、正常系 = 001 / 004 / 004A / 015、非 TS・shell 系 = 002、package / tsconfig / test lane = 003 / 008 / 009、untracked 走査 = 005、旧 marker = 006、git 不在 fallback = 007、git-hooks = 010〜014、bun 3 rule と allowlist の範囲・pin = 016 / 017 / 018。
+
+### 注記 (実装と起票時記述の差分)
+
+- A5-C04: 起票時の記述は「`verification-profile` を doctor hard gate にする」までで、4 つの finding code と `recommendation.ok` との AND は実装側にだけある。実装を正本とした。
+- A5-C05: 起票時の記述は `runDoctor.ok` への直接配線だった。現行は `check-definition-groups.ts` の `full("change-set-integrity", ...)` 登録 (hard gate) で、非 git の skip (`isGitRepository`) は後から入った実装であり起票時記述に無い。
+- A5-C06: 起票時の記述は「TS/Bun core」前提で、bun 系 3 rule (`bun-runtime-spawn` / `bun-module-import` / `bun-global-reference`) と debt allowlist、`node:sqlite` 主ドライバ必須、`engines.node` 必須、git-hooks entrypoint の 3 rule、`script-wrapper-unapproved` の承認集合 (build / CI / git hook) は実装側にだけある。runtime 正本は Node で、`engines.bun` は任意の残存宣言である。
+
 ## 2026-06-17 コスト階層 Dual-Provider Role Router 追補 (PLAN-L7-75 back-fill)
 
 この addendum は §7.8.7.1 (hybrid 機能分散 MUST) / §1.8 (VALID_ROLES) / FR-L1-39 (classifyTask) を
