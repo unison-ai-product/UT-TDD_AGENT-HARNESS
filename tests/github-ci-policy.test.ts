@@ -1605,7 +1605,7 @@ describe("Issue #472 S1-c: source CI Bun removal", () => {
 });
 
 describe("U-OIDBASE-013: Issue #1099 必須PR baseline ratchet", () => {
-  it.fails("U-OIDBASE-013: docs-onlyでも固定CI contextのratchetを実行し、不明なcontextをnon-zeroへ投影する", () => {
+  it("U-OIDBASE-013: docs-onlyでも固定CI contextのratchetを実行し、不明なcontextをnon-zeroへ投影する", () => {
     type Step = {
       run?: string;
       if?: string;
