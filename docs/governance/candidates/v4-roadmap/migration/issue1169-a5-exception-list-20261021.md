@@ -160,7 +160,7 @@ L6-104 / L7-565 / L6-789) も、旧 PLAN の残った規定を落とさない。
 
 **処置の決め方**: 1 行 = 1 旧 PLAN。残った規定がすべて例外なら `例外`、1 つでも移管があれば `移管`。今回は判断待ちが残らなかった。
 結果は 11 行のうち 例外 6 行 (C29 / C33 / C34 / C36 / C37 / C38)、移管 5 行 (C28 / C30 / C31 / C32 / C35)、判断待ち 0 行である。
-規定の単位では、確認した 63 規定のうち、移管は 5 規定 (C28 / C30 / C31 / C32 / C35 に 1 規定ずつ。C32 は 4 検査と関連 AC をまとめて 1 規定と数えた)、例外は 58 規定、判断待ちは 0 規定である。
+規定の単位では、確認した 65 規定のうち、移管は 5 規定 (C28 / C30 / C31 / C32 / C35 に 1 規定ずつ。C32 は 4 検査と関連 AC をまとめて 1 規定と数えた)、例外は 60 規定、判断待ちは 0 規定である。
 詳細は表の下の小節に置く。
 
 | ID | 候補 (旧 PLAN) | 後継 PLAN (status) | 処置 | 行き先 | 根拠 |
@@ -173,7 +173,7 @@ L6-104 / L7-565 / L6-789) も、旧 PLAN の残った規定を落とさない。
 | A5-C33 | PLAN-L7-492-pf5-release-aggregate-admission-pair-freeze | PLAN-L7-742 (confirmed) | 例外 | - | 残った規定 5 はすべて `release-channel-manifest.md` §4-§6、§8 と `U-RELMAN-014`〜`017` にある。詳細は `#### A5-C33 の残った規定` |
 | A5-C34 | PLAN-L7-494-release-promotion-rollback-gate | PLAN-L7-742 (confirmed) | 例外 | - | 残った規定 4 はすべて test-design の oracle `U-RELMAN-003/004/010/019〜023` と、それを検査する `tests/release-promotion-rollback-gate.test.ts` にある。詳細は `#### A5-C34 の残った規定` |
 | A5-C35 | PLAN-L7-512-project-scoped-memory-root | PLAN-L6-104 (draft) | 移管 | `docs/design/harness/L6-function-design/memory.md` へ「global 領域に Memory 本文を置かない」を 1 文で追記する | 残った規定 4 のうち 1 が移管、3 が例外。詳細は `#### A5-C35 の残った規定` |
-| A5-C36 | PLAN-L7-515-pack-remote-canary-publication | PLAN-L7-565 (draft) | 例外 | - | 残った規定 4 はすべて `L7-pack-publication-remote-test-design.md` にある。詳細は `#### A5-C36 の残った規定` |
+| A5-C36 | PLAN-L7-515-pack-remote-canary-publication | PLAN-L7-565 (draft) | 例外 | - | 残った規定 6 のうち 5 は `L7-pack-publication-remote-test-design.md` にあり、1 (Bun を持ち込まない実行経路) は runtime-portability gate が担保する。詳細は `#### A5-C36 の残った規定` |
 | A5-C37 | PLAN-L7-57-token-telemetry-tracker | PLAN-L6-789 (draft) | 例外 | - (#789 の退役実行は C07 / C39 が持つ) | 継承された規定 4 は、取得層の関数は src と test、table schema は設計文書と src にある。詳細は `#### A5-C37 の残った規定` |
 | A5-C38 | PLAN-L7-86-merged-plan-status-deliverable-scope | PLAN-L7-87 (confirmed) | 例外 | - | 残った規定 4 はすべて src と test にある。詳細は `#### A5-C38 の残った規定` |
 
@@ -281,6 +281,8 @@ L6-104 / L7-565 / L6-789) も、旧 PLAN の残った規定を落とさない。
 - **stable rollback の自動化は実装しない。回復は別の human-approved supersede-forward intent だけ** → 例外 (test-design)。`L7-pack-publication-remote-test-design.md:130` (supersede-forward は別 intent の参照境界)、`:152` (完全自動 rollback は範囲外)、`L7-pack-publication-driver-test-design.md:81` (`CANDIDATE-PACKPUB-004`)。
 - **tag / Release / assets の全監査と visibility transition が完了するまで canary pointer の after snapshot を append しない。観測不能は `unavailable` / `indeterminate`** → 例外 (test-design)。`:83-86` (`CANDIDATE-PACKPUB-003-J`・`K`・`L`・`M1`)、`:87` (`003-M-late`)。
 - **cleanup 失敗は publication の成否を上書きせず、独立した typed observation にする** → 例外 (test-design)。`:89` (`CANDIDATE-PACKPUB-003-N`)。
+- **入力は sealed staging identity、明示された Pack commit entries、control manifest sidecar、決定論的 tarball と checksum の exact 2 assets だけ。source repository、current worktree、開発用 DB / PLAN / evidence、local Pack checkout、directory walk、glob、環境変数から実行時入力を補完しない** (旧 PLAN :138-143) → 例外 (test-design)。`L7-pack-publication-remote-test-design.md:27-35` (fixture は immutable な `SealedPackPublicationPlan` 相当の値で、source worktree・directory walk・Pack checkout・開発 DB・PLAN 本文・環境変数から entry を補完しない) と `:77` (`CANDIDATE-PACKPUB-003-E`: 暗黙の補完を注入すると fallback を拒否し、最初の remote write が 0)。機構の担保 (Green) はまだ無い。
+- **実装言語・実行経路は Node/npm。Bun、`bun`/`bunx`、`setup-bun`、`bun:sqlite`、Bun を暗黙に起動する fallback を持ち込まない** (旧 PLAN :145-146) → 例外 (機構)。repo 全体を対象にする runtime-portability gate (`src/lint/runtime-portability.ts`、function-spec の D.9) が、allowlist の外の Bun spawn・`bun:` import・Bun global を fail-close する。テストは `tests/runtime-portability.test.ts:141` (`U-RPORT-016`)、`:194` (`U-RPORT-017`)、`:209` (`U-RPORT-018`)。publication の実装 (`src/setup/pack-publication-*.ts`) もこの gate の走査範囲に入る。
 
 #### A5-C37 の残った規定
 
