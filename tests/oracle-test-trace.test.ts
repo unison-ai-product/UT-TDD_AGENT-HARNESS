@@ -390,8 +390,8 @@ function expectCitationAxisAnalyzerFixture(head: RatchetBaseline): void {
   expectAnalyzerClean(fixture.analysis);
 }
 
-describe("oracle baseline authority decode (CANDIDATE-U-OIDBASE-002/003)", () => {
-  it.fails("CANDIDATE-U-OIDBASE-002: 欠落したJSON authorityはtyped missing errorで拒否される", () => {
+describe("oracle baseline authority decode (U-OIDBASE-002/003)", () => {
+  it.fails("U-OIDBASE-002: 欠落したJSON authorityはtyped missing errorで拒否される", () => {
     expectBaselineLoadFailure(
       baselineSubjectFixture(),
       fixedBaselineAuthority(null),
@@ -399,7 +399,7 @@ describe("oracle baseline authority decode (CANDIDATE-U-OIDBASE-002/003)", () =>
     );
   });
 
-  it.fails("CANDIDATE-U-OIDBASE-002: authority reader I/O失敗はtyped errorで拒否される", () => {
+  it.fails("U-OIDBASE-002: authority reader I/O失敗はtyped errorで拒否される", () => {
     expectBaselineLoadFailure(
       baselineSubjectFixture(),
       failedBaselineAuthority(),
@@ -407,7 +407,7 @@ describe("oracle baseline authority decode (CANDIDATE-U-OIDBASE-002/003)", () =>
     );
   });
 
-  it.fails("CANDIDATE-U-OIDBASE-002: malformed JSONはtyped decode errorで拒否される", () => {
+  it.fails("U-OIDBASE-002: malformed JSONはtyped decode errorで拒否される", () => {
     expectBaselineLoadFailure(
       baselineSubjectFixture(),
       fixedBaselineAuthority("{"),
@@ -415,7 +415,7 @@ describe("oracle baseline authority decode (CANDIDATE-U-OIDBASE-002/003)", () =>
     );
   });
 
-  it.fails("CANDIDATE-U-OIDBASE-002: schemaVersion不一致はschema errorで拒否される", () => {
+  it.fails("U-OIDBASE-002: schemaVersion不一致はschema errorで拒否される", () => {
     expectBaselineLoadFailure(
       baselineSubjectFixture(),
       fixedBaselineAuthority(
@@ -425,7 +425,7 @@ describe("oracle baseline authority decode (CANDIDATE-U-OIDBASE-002/003)", () =>
     );
   });
 
-  it.fails("CANDIDATE-U-OIDBASE-002: schemaVersion欠落はschema errorで拒否される", () => {
+  it.fails("U-OIDBASE-002: schemaVersion欠落はschema errorで拒否される", () => {
     expectBaselineLoadFailure(
       baselineSubjectFixture(),
       fixedBaselineAuthority(JSON.stringify({ legacy: [], widened: [], citations: [] })),
@@ -433,7 +433,7 @@ describe("oracle baseline authority decode (CANDIDATE-U-OIDBASE-002/003)", () =>
     );
   });
 
-  it.fails("CANDIDATE-U-OIDBASE-002: legacy欠落はschema errorで拒否される", () => {
+  it.fails("U-OIDBASE-002: legacy欠落はschema errorで拒否される", () => {
     expectBaselineLoadFailure(
       baselineSubjectFixture(),
       fixedBaselineAuthority(JSON.stringify({ schemaVersion: 2, widened: [], citations: [] })),
@@ -441,7 +441,7 @@ describe("oracle baseline authority decode (CANDIDATE-U-OIDBASE-002/003)", () =>
     );
   });
 
-  it.fails("CANDIDATE-U-OIDBASE-002: widened欠落はschema errorで拒否される", () => {
+  it.fails("U-OIDBASE-002: widened欠落はschema errorで拒否される", () => {
     expectBaselineLoadFailure(
       baselineSubjectFixture(),
       fixedBaselineAuthority(JSON.stringify({ schemaVersion: 2, legacy: [], citations: [] })),
@@ -449,7 +449,7 @@ describe("oracle baseline authority decode (CANDIDATE-U-OIDBASE-002/003)", () =>
     );
   });
 
-  it.fails("CANDIDATE-U-OIDBASE-002: citations欠落はschema errorで拒否される", () => {
+  it.fails("U-OIDBASE-002: citations欠落はschema errorで拒否される", () => {
     expectBaselineLoadFailure(
       baselineSubjectFixture(),
       fixedBaselineAuthority(JSON.stringify({ schemaVersion: 2, legacy: [], widened: [] })),
@@ -457,7 +457,7 @@ describe("oracle baseline authority decode (CANDIDATE-U-OIDBASE-002/003)", () =>
     );
   });
 
-  it.fails("CANDIDATE-U-OIDBASE-002: schemaVersionの型違いはschema errorで拒否される", () => {
+  it.fails("U-OIDBASE-002: schemaVersionの型違いはschema errorで拒否される", () => {
     expectBaselineLoadFailure(
       baselineSubjectFixture(),
       fixedBaselineAuthority(
@@ -467,7 +467,7 @@ describe("oracle baseline authority decode (CANDIDATE-U-OIDBASE-002/003)", () =>
     );
   });
 
-  it.fails("CANDIDATE-U-OIDBASE-002: legacyの型違いはschema errorで拒否される", () => {
+  it.fails("U-OIDBASE-002: legacyの型違いはschema errorで拒否される", () => {
     expectBaselineLoadFailure(
       baselineSubjectFixture(),
       fixedBaselineAuthority(
@@ -477,7 +477,7 @@ describe("oracle baseline authority decode (CANDIDATE-U-OIDBASE-002/003)", () =>
     );
   });
 
-  it.fails("CANDIDATE-U-OIDBASE-002: widenedの型違いはschema errorで拒否される", () => {
+  it.fails("U-OIDBASE-002: widenedの型違いはschema errorで拒否される", () => {
     expectBaselineLoadFailure(
       baselineSubjectFixture(),
       fixedBaselineAuthority(
@@ -487,7 +487,7 @@ describe("oracle baseline authority decode (CANDIDATE-U-OIDBASE-002/003)", () =>
     );
   });
 
-  it.fails("CANDIDATE-U-OIDBASE-002: 未知fieldはschema errorで拒否される", () => {
+  it.fails("U-OIDBASE-002: 未知fieldはschema errorで拒否される", () => {
     expectBaselineLoadFailure(
       baselineSubjectFixture(),
       fixedBaselineAuthority(
@@ -497,7 +497,7 @@ describe("oracle baseline authority decode (CANDIDATE-U-OIDBASE-002/003)", () =>
     );
   });
 
-  it.fails("CANDIDATE-U-OIDBASE-002: citationsの型違いはschema errorで拒否される", () => {
+  it.fails("U-OIDBASE-002: citationsの型違いはschema errorで拒否される", () => {
     expectBaselineLoadFailure(
       baselineSubjectFixture(),
       fixedBaselineAuthority(
@@ -507,7 +507,7 @@ describe("oracle baseline authority decode (CANDIDATE-U-OIDBASE-002/003)", () =>
     );
   });
 
-  it.fails("CANDIDATE-U-OIDBASE-003: legacy内の不正ID tokenは集合化前に拒否される", () => {
+  it.fails("U-OIDBASE-003: legacy内の不正ID tokenは集合化前に拒否される", () => {
     expectBaselineLoadFailure(
       baselineSubjectFixture(),
       fixedBaselineAuthority(baselineJson({ legacy: ["not-an-oracle-id"] })),
@@ -515,7 +515,7 @@ describe("oracle baseline authority decode (CANDIDATE-U-OIDBASE-002/003)", () =>
     );
   });
 
-  it.fails("CANDIDATE-U-OIDBASE-003: widened内の不正ID tokenは集合化前に拒否される", () => {
+  it.fails("U-OIDBASE-003: widened内の不正ID tokenは集合化前に拒否される", () => {
     expectBaselineLoadFailure(
       baselineSubjectFixture(),
       fixedBaselineAuthority(baselineJson({ widened: ["not-an-oracle-id"] })),
@@ -523,7 +523,7 @@ describe("oracle baseline authority decode (CANDIDATE-U-OIDBASE-002/003)", () =>
     );
   });
 
-  it.fails("CANDIDATE-U-OIDBASE-003: citations内の不正ID tokenは集合化前に拒否される", () => {
+  it.fails("U-OIDBASE-003: citations内の不正ID tokenは集合化前に拒否される", () => {
     expectBaselineLoadFailure(
       baselineSubjectFixture(),
       fixedBaselineAuthority(baselineJson({ citations: ["not-an-oracle-id"] })),
@@ -531,7 +531,7 @@ describe("oracle baseline authority decode (CANDIDATE-U-OIDBASE-002/003)", () =>
     );
   });
 
-  it.fails("CANDIDATE-U-OIDBASE-003: legacy内の重複IDは集合化前に拒否される", () => {
+  it.fails("U-OIDBASE-003: legacy内の重複IDは集合化前に拒否される", () => {
     expectBaselineLoadFailure(
       baselineSubjectFixture(),
       fixedBaselineAuthority(baselineJson({ legacy: ["U-ZZBASE-001", "U-ZZBASE-001"] })),
@@ -539,7 +539,7 @@ describe("oracle baseline authority decode (CANDIDATE-U-OIDBASE-002/003)", () =>
     );
   });
 
-  it.fails("CANDIDATE-U-OIDBASE-003: widened内の重複IDは集合化前に拒否される", () => {
+  it.fails("U-OIDBASE-003: widened内の重複IDは集合化前に拒否される", () => {
     expectBaselineLoadFailure(
       baselineSubjectFixture(),
       fixedBaselineAuthority(baselineJson({ widened: ["U-ZZBASE-001", "U-ZZBASE-001"] })),
@@ -547,7 +547,7 @@ describe("oracle baseline authority decode (CANDIDATE-U-OIDBASE-002/003)", () =>
     );
   });
 
-  it.fails("CANDIDATE-U-OIDBASE-003: citations内の重複IDは集合化前に拒否される", () => {
+  it.fails("U-OIDBASE-003: citations内の重複IDは集合化前に拒否される", () => {
     expectBaselineLoadFailure(
       baselineSubjectFixture(),
       fixedBaselineAuthority(baselineJson({ citations: ["U-ZZBASE-001", "U-ZZBASE-001"] })),
@@ -555,7 +555,7 @@ describe("oracle baseline authority decode (CANDIDATE-U-OIDBASE-002/003)", () =>
     );
   });
 
-  it.fails("CANDIDATE-U-OIDBASE-003: legacyとwidenedの重複は拒否される", () => {
+  it.fails("U-OIDBASE-003: legacyとwidenedの重複は拒否される", () => {
     expectBaselineLoadFailure(
       baselineSubjectFixture(),
       fixedBaselineAuthority(baselineJson({ legacy: ["U-ZZBASE-001"], widened: ["U-ZZBASE-001"] })),
@@ -563,7 +563,7 @@ describe("oracle baseline authority decode (CANDIDATE-U-OIDBASE-002/003)", () =>
     );
   });
 
-  it("CANDIDATE-U-OIDBASE-003: citationsとlegacyのcross-set overlapは許可される", () => {
+  it("U-OIDBASE-003: citationsとlegacyのcross-set overlapは許可される", () => {
     const subjectRoot = baselineSubjectFixture();
     try {
       const input = loadOracleTestTraceInput(subjectRoot, {
@@ -579,7 +579,7 @@ describe("oracle baseline authority decode (CANDIDATE-U-OIDBASE-002/003)", () =>
     }
   });
 
-  it("CANDIDATE-U-OIDBASE-003: citationsとwidenedのcross-set overlapは許可される", () => {
+  it("U-OIDBASE-003: citationsとwidenedのcross-set overlapは許可される", () => {
     const subjectRoot = baselineSubjectFixture();
     try {
       const input = loadOracleTestTraceInput(subjectRoot, {
@@ -595,7 +595,7 @@ describe("oracle baseline authority decode (CANDIDATE-U-OIDBASE-002/003)", () =>
     }
   });
 
-  it("CANDIDATE-U-OIDBASE-008: explicit authorityはsubject rootやprocess cwdに依存しない", () => {
+  it("U-OIDBASE-008: explicit authorityはsubject rootやprocess cwdに依存しない", () => {
     const subjectRoot = baselineSubjectFixture();
     let cwdOne: string | undefined;
     let cwdTwo: string | undefined;
@@ -855,13 +855,13 @@ describe("trusted-base baseline ratchet bootstrap (CANDIDATE-U-OIDBASE-001/011/0
   });
 });
 
-describe("three independent subset axes (CANDIDATE-U-OIDBASE-005/006)", () => {
+describe("three independent subset axes (U-OIDBASE-005 / U-OIDBASE-006)", () => {
   const jsonPairReads = [
     [RATC_BASE_SHA, RATC_JSON_PATH],
     [RATC_MERGE_SHA, RATC_JSON_PATH],
   ] as const;
 
-  it.fails("CANDIDATE-U-OIDBASE-005: legacy debtと対応derived IDの同時縮小を受理する", () => {
+  it.fails("U-OIDBASE-005: legacy debtと対応derived IDの同時縮小を受理する", () => {
     const id = "U-ASSETDRIFT-001";
     const head = updateRatchetBaseline({ legacy: { remove: [id] } });
     const observed = runRatchetFixture({ headJson: ratchetBaselineJson(head) });
@@ -870,7 +870,7 @@ describe("three independent subset axes (CANDIDATE-U-OIDBASE-005/006)", () => {
     expectForwardAxisAnalyzerFixture("legacy", head, new Set([id]));
   });
 
-  it.fails("CANDIDATE-U-OIDBASE-005: widened debtと対応derived IDの同時縮小を受理する", () => {
+  it.fails("U-OIDBASE-005: widened debtと対応derived IDの同時縮小を受理する", () => {
     const id = RATC_OLD_SETS.widened[0];
     const head = updateRatchetBaseline({ widened: { remove: [id] } });
     const observed = runRatchetFixture({ headJson: ratchetBaselineJson(head) });
@@ -879,7 +879,7 @@ describe("three independent subset axes (CANDIDATE-U-OIDBASE-005/006)", () => {
     expectForwardAxisAnalyzerFixture("widened", head, new Set([id]));
   });
 
-  it.fails("CANDIDATE-U-OIDBASE-005: citation siteとhead citation debtの同時縮小を受理する", () => {
+  it.fails("U-OIDBASE-005: citation siteとhead citation debtの同時縮小を受理する", () => {
     const id = "U-ADAPTER-005";
     const head = updateRatchetBaseline({ citations: { remove: [id] } });
     const observed = runRatchetFixture({ headJson: ratchetBaselineJson(head) });
@@ -887,7 +887,7 @@ describe("three independent subset axes (CANDIDATE-U-OIDBASE-005/006)", () => {
     expectCitationAxisAnalyzerFixture(head);
   });
 
-  it.fails("CANDIDATE-U-OIDBASE-006: derived equality passでもbase外legacy growthは拒否する", () => {
+  it.fails("U-OIDBASE-006: derived equality passでもbase外legacy growthは拒否する", () => {
     const id = "U-ZZBASE-901";
     const head = updateRatchetBaseline({ legacy: { add: [id] } });
     const observed = runRatchetFixture({ headJson: ratchetBaselineJson(head) });
@@ -901,7 +901,7 @@ describe("three independent subset axes (CANDIDATE-U-OIDBASE-005/006)", () => {
     expectForwardAxisAnalyzerFixture("legacy", head, new Set());
   });
 
-  it.fails("CANDIDATE-U-OIDBASE-006: derived equality passでもbase外widened growthは拒否する", () => {
+  it.fails("U-OIDBASE-006: derived equality passでもbase外widened growthは拒否する", () => {
     const id = "U-ZZBASE-901";
     const head = updateRatchetBaseline({ widened: { add: [id] } });
     const observed = runRatchetFixture({ headJson: ratchetBaselineJson(head) });
@@ -915,7 +915,7 @@ describe("three independent subset axes (CANDIDATE-U-OIDBASE-005/006)", () => {
     expectForwardAxisAnalyzerFixture("widened", head, new Set());
   });
 
-  it.fails("CANDIDATE-U-OIDBASE-006: derived equality passでもbase外citation growthは拒否する", () => {
+  it.fails("U-OIDBASE-006: derived equality passでもbase外citation growthは拒否する", () => {
     const id = "U-ZZBASE-901";
     const head = updateRatchetBaseline({ citations: { add: [id] } });
     const observed = runRatchetFixture({ headJson: ratchetBaselineJson(head) });
@@ -973,33 +973,33 @@ describe("three independent subset axes (CANDIDATE-U-OIDBASE-005/006)", () => {
   });
 });
 
-describe("trusted PR pair fail-close reasons (CANDIDATE-U-OIDBASE-007)", () => {
+describe("trusted PR pair fail-close reasons (U-OIDBASE-007)", () => {
   const jsonPairReads = [
     [RATC_BASE_SHA, RATC_JSON_PATH],
     [RATC_MERGE_SHA, RATC_JSON_PATH],
   ] as const;
 
-  it.fails("CANDIDATE-U-OIDBASE-007: pull_request以外のeventはPR context invalid", () => {
+  it.fails("U-OIDBASE-007: pull_request以外のeventはPR context invalid", () => {
     const observed = runRatchetFixture({ eventName: "push" });
     expectRatchetResultAndReads(observed, { ok: false, reason: "pr_context_invalid" }, [], []);
   });
 
-  it.fails("CANDIDATE-U-OIDBASE-007: event name欠落はPR context invalid", () => {
+  it.fails("U-OIDBASE-007: event name欠落はPR context invalid", () => {
     const observed = runRatchetFixture({ eventName: undefined });
     expectRatchetResultAndReads(observed, { ok: false, reason: "pr_context_invalid" }, [], []);
   });
 
-  it.fails("CANDIDATE-U-OIDBASE-007: merge SHA欠落はPR context invalid", () => {
+  it.fails("U-OIDBASE-007: merge SHA欠落はPR context invalid", () => {
     const observed = runRatchetFixture({ mergeSha: undefined });
     expectRatchetResultAndReads(observed, { ok: false, reason: "pr_context_invalid" }, [], []);
   });
 
-  it.fails("CANDIDATE-U-OIDBASE-007: merge SHA不正形式はPR context invalid", () => {
+  it.fails("U-OIDBASE-007: merge SHA不正形式はPR context invalid", () => {
     const observed = runRatchetFixture({ mergeSha: "not-a-40-hex-sha" });
     expectRatchetResultAndReads(observed, { ok: false, reason: "pr_context_invalid" }, [], []);
   });
 
-  it.fails("CANDIDATE-U-OIDBASE-007: missing first parent returns its dedicated failure reason", () => {
+  it.fails("U-OIDBASE-007: missing first parent returns its dedicated failure reason", () => {
     const observed = runRatchetFixture({ firstParentResult: { ok: true, value: null } });
     expectRatchetResultAndReads(
       observed,
@@ -1009,7 +1009,7 @@ describe("trusted PR pair fail-close reasons (CANDIDATE-U-OIDBASE-007)", () => {
     );
   });
 
-  it.fails("CANDIDATE-U-OIDBASE-007: first-parent Git I/O failure returns its dedicated failure reason", () => {
+  it.fails("U-OIDBASE-007: first-parent Git I/O failure returns its dedicated failure reason", () => {
     const observed = runRatchetFixture({
       firstParentResult: { ok: false, reason: "git_first_parent_read_failed" },
     });
@@ -1021,7 +1021,7 @@ describe("trusted PR pair fail-close reasons (CANDIDATE-U-OIDBASE-007)", () => {
     );
   });
 
-  it.fails("CANDIDATE-U-OIDBASE-007: base JSON Git I/O failureはobject read failure", () => {
+  it.fails("U-OIDBASE-007: base JSON Git I/O failureはobject read failure", () => {
     const observed = runRatchetFixture({
       blobOverrides: [
         [RATC_BASE_SHA, RATC_JSON_PATH, { ok: false, reason: "git_object_read_failed" }],
@@ -1035,7 +1035,7 @@ describe("trusted PR pair fail-close reasons (CANDIDATE-U-OIDBASE-007)", () => {
     );
   });
 
-  it.fails("CANDIDATE-U-OIDBASE-007: malformed base JSONはtrusted baseline invalid", () => {
+  it.fails("U-OIDBASE-007: malformed base JSONはtrusted baseline invalid", () => {
     const observed = runRatchetFixture({ baseJson: "{" });
     expectRatchetResultAndReads(
       observed,
@@ -1045,7 +1045,7 @@ describe("trusted PR pair fail-close reasons (CANDIDATE-U-OIDBASE-007)", () => {
     );
   });
 
-  it.fails("CANDIDATE-U-OIDBASE-007: schema不正なbase JSONはtrusted baseline invalid", () => {
+  it.fails("U-OIDBASE-007: schema不正なbase JSONはtrusted baseline invalid", () => {
     const observed = runRatchetFixture({
       baseJson: JSON.stringify({ schemaVersion: 1, legacy: [], widened: [], citations: [] }),
     });
@@ -1057,7 +1057,7 @@ describe("trusted PR pair fail-close reasons (CANDIDATE-U-OIDBASE-007)", () => {
     );
   });
 
-  it.fails("CANDIDATE-U-OIDBASE-007: head JSON欠落はgit baseline missing", () => {
+  it.fails("U-OIDBASE-007: head JSON欠落はgit baseline missing", () => {
     const observed = runRatchetFixture({ headJson: null });
     expectRatchetResultAndReads(
       observed,
@@ -1067,7 +1067,7 @@ describe("trusted PR pair fail-close reasons (CANDIDATE-U-OIDBASE-007)", () => {
     );
   });
 
-  it.fails("CANDIDATE-U-OIDBASE-007: head JSON Git I/O failureはobject read failure", () => {
+  it.fails("U-OIDBASE-007: head JSON Git I/O failureはobject read failure", () => {
     const observed = runRatchetFixture({
       blobOverrides: [
         [RATC_MERGE_SHA, RATC_JSON_PATH, { ok: false, reason: "git_object_read_failed" }],
@@ -1081,7 +1081,7 @@ describe("trusted PR pair fail-close reasons (CANDIDATE-U-OIDBASE-007)", () => {
     );
   });
 
-  it.fails("CANDIDATE-U-OIDBASE-007: malformed head JSONはtrusted baseline invalid", () => {
+  it.fails("U-OIDBASE-007: malformed head JSONはtrusted baseline invalid", () => {
     const observed = runRatchetFixture({ headJson: "{" });
     expectRatchetResultAndReads(
       observed,
@@ -1091,7 +1091,7 @@ describe("trusted PR pair fail-close reasons (CANDIDATE-U-OIDBASE-007)", () => {
     );
   });
 
-  it.fails("CANDIDATE-U-OIDBASE-007: schema不正なhead JSONはtrusted baseline invalid", () => {
+  it.fails("U-OIDBASE-007: schema不正なhead JSONはtrusted baseline invalid", () => {
     const observed = runRatchetFixture({
       headJson: JSON.stringify({ schemaVersion: 1, legacy: [], widened: [], citations: [] }),
     });

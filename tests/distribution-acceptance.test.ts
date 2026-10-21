@@ -705,7 +705,7 @@ describe("clean distribution local acceptance smoke", () => {
   }, 420_000);
 });
 
-describe("CANDIDATE-U-OIDBASE-009 packaged default baseline authority", () => {
+describe("U-OIDBASE-009 packaged default baseline authority", () => {
   it.fails("loads the tracked JSON baseline from the real clean Pack independent of subject and cwd", () => {
     const outputRoot = mkdtempSync(join(tmpdir(), "ut-tdd-oidbase-009-assets-"));
     const packRoot = mkdtempSync(join(tmpdir(), "ut-tdd-oidbase-009-pack-"));
