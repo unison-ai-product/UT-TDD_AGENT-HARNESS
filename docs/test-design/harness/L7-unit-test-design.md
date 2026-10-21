@@ -3197,6 +3197,7 @@ oracle の詳細 (入力・期待・殺す mutation・fixture・required evidenc
 | CANDIDATE-U-CTRACE-016〜018、025 | 必須集合 (要求・画面・機能) の空集合拒否 (#880) | 専用文書 §3 |
 | CANDIDATE-U-CTRACE-019〜022、026 | harness 専用文書を読まないこと、2 つの入口の一致、core 文書の欠落と doc_type_id 不一致の fail-close、L3 PLAN 検査をしないこと | 専用文書 §3 |
 | CANDIDATE-U-CTRACE-023〜024 | 章見出しと必須列の freeze、章の範囲外の表を読まないこと | 専用文書 §3 |
+| CANDIDATE-U-CTRACE-027〜041 | L1 の BR / UX / 画面 / consumer の要求と画面が L3 の設計文書へ降りていること (降下検査、#1196)、除外台帳、退役 ID、空集合 | 専用文書 §3 |
 
 上表の ID は backtick 無し表記である。候補台帳への再掲ではなく専用文書への参照であり、U-VMSRC-009 の一意性検査の対象外とする。
 正規 `U-CTRACE-*` への昇格と Red test は、src/ も scripts/ も含まない PR (契約 PR + Red) で入れる (`design-protection-diff-gate.md` §10.2)。
