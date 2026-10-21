@@ -4,8 +4,8 @@
  *
  * 背景: PLAN は frontmatter (declare) だけでなく本文 (進め方/設計/根拠) を持つ実体であるべき
  * (concept §3.6 AP-13)。frontmatter + タイトルだけで本文が空の PLAN は「中身空っぽ」= declare-only
- * の hollow PLAN で、coverage (登録) はあるが substance (中身) が無い ([[plan-artifact-existence]]
- * の deliverable hollow / [[plan-supersession]] と同系の substance gate)。
+ * の hollow PLAN で、coverage (登録) はあるが substance (中身) が無い
+ * ([[plan-supersession]] と同系の substance gate)。
  *
  * 検出規則: frontmatter を除いた本文に、**タイトル (先頭 h1) / 空行 / HTML コメントを除く実体行が
  * 1 行も無い** PLAN を violation とする。archived は対象外 (完了後の整理)。閾値は AP-13 の literal

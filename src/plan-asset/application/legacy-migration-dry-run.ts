@@ -246,10 +246,7 @@ function record(input: {
 }): MigrationDryRunRecord {
   const { item, proposal, headArtifacts, roleContracts } = input;
   const delegation = delegationProjection(item, roleContracts, headArtifacts);
-  const findings: MigrationDryRunFinding[] = [
-    ...artifactFindings(item, headArtifacts),
-    ...delegation.findings,
-  ];
+  const findings: MigrationDryRunFinding[] = [...artifactFindings(item), ...delegation.findings];
   if (proposal.legacyPlanId !== item.legacyPlanId) {
     findings.push(
       finding(
@@ -317,10 +314,7 @@ function delegationProjection(
   return { targets: Object.freeze(projected), findings };
 }
 
-function artifactFindings(
-  item: LegacyPlanInventoryItem,
-  headArtifacts: HeadTargetRegistry,
-): MigrationDryRunFinding[] {
+function artifactFindings(item: LegacyPlanInventoryItem): MigrationDryRunFinding[] {
   if (!["confirmed", "completed", "accepted"].includes(String(item.frontmatter.status))) return [];
   const generates = Array.isArray(item.frontmatter.generates) ? item.frontmatter.generates : [];
   return generates.flatMap((entry) => {
@@ -335,15 +329,7 @@ function artifactFindings(
         ),
       ];
     }
-    return headArtifacts.hasNonEmpty(path)
-      ? []
-      : [
-          finding(
-            "plan-generated-target-missing",
-            item.legacyPlanId,
-            `HEAD target is missing or hollow: ${path}`,
-          ),
-        ];
+    return [];
   });
 }
 

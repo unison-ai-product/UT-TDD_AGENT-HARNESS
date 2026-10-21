@@ -132,8 +132,7 @@ interface PlanFrontmatterGenerates {
 }
 
 function generatesMergedDeliverablePaths(content: string): string[] {
-  // CRLF 許容 (Windows-first)。`\n` 固定だと CRLF 保存の PLAN を無言 skip し検出漏れ (PLAN-L7-55
-  // review I-1、plan-artifact-existence と同一様式)。
+  // CRLF 許容 (Windows-first)。`\n` 固定だと CRLF 保存の PLAN を無言 skip し検出漏れになる。
   const m = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
   if (!m) return [];
   let fm: PlanFrontmatterGenerates;
