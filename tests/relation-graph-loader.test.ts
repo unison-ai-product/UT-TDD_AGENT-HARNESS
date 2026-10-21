@@ -232,7 +232,11 @@ describe("loadRelationGraphSourceSet", () => {
     }
   });
 
-  it.fails("CANDIDATE-U-PAEXRET-002: confirmed PLAN generates targets are not stale-edge requirements", () => {
+  it.fails.each([
+    "confirmed",
+    "completed",
+    "accepted",
+  ])("CANDIDATE-U-PAEXRET-002: PLAN generates targets are not stale-edge requirements ($0)", (status) => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-graph-loader-plan-target-retirement-"));
     try {
       buildRepo(root);
@@ -242,7 +246,7 @@ describe("loadRelationGraphSourceSet", () => {
         [
           "---",
           "plan_id: PLAN-TEST-01-widget",
-          "status: confirmed",
+          `status: ${status}`,
           "kind: impl",
           "generates:",
           `  - artifact_path: ${generatedPath}`,
@@ -276,7 +280,7 @@ describe("loadRelationGraphSourceSet", () => {
       expect(plan).toMatchObject({
         id: "PLAN-TEST-01-widget",
         path: "docs/plans/PLAN-TEST-01-widget.md",
-        status: "confirmed",
+        status,
         generates: [generatedPath],
       });
       expect(plan?.availability).toBeUndefined();
