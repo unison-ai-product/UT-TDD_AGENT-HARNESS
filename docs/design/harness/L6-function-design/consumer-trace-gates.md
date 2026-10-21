@@ -48,7 +48,7 @@ consumer (clean Pack を入れた製品 repo) で `ut-tdd gate G1` / `G3` と `u
 
 ### 3.1 harness 分岐 (A4 G1 退役境界)
 
-consumer 分岐の導入に伴う変更対象外である点は維持する。ただし A4 (#1168) では PLAN 専用の G1 検査を退役する。残す harness G1 契約は BR / UX / P0 FR と画面の trace だけであり、L3 PLAN の読み込みや `requires` の欠落検査は契約しない。L1→L3 の全件降下を証明する代替 lint は追加しない。
+consumer 分岐の導入に伴う変更対象外である点は維持する。ただし A4 (#1168) では PLAN 専用の G1 検査を退役する。残す harness G1 契約は BR / UX / P0 FR と画面の trace だけであり、L3 PLAN の読み込みや `requires` の欠落検査は契約しない。L1→L3 の全件降下は、PLAN を使わない別の検査 (§13、issue #1196) が持つ。G1-trace の PLAN 専用判定を退役した代わりに降下の保証を G1 側へ戻すことはしない。
 
 - G1-trace: screen-requirements §5.1 / §5.3 / §5.5 の BR / UX / P0 FR ↔ 画面 trace、`(?:PM|HM|GD)-\d{2}` の画面 ID。BR / UX 13 件・15 画面・P0 FR 19 件の全件条件は OT-45 R1〜R3 で保持する。PLAN を読み込まず、`l3Plans` / `missingL3Requires` を API または message に出さない。
 - G3-trace: L1 FR-L1 → L3 FR (carry 宣言を含む)、L3 FR → AC (business-detail の `AC-FR-BR21-*` を含む)、AC → AT、AT-FR → AC の逆引き、L1 NFR 15 件 → L3 nfr-grade。
@@ -207,3 +207,116 @@ consumer 分岐の lint 関数は次を返す。`src/plan/lint.ts` の handler �
 - issue #971 / #972 / #880 と control の決定 (advisor `claude-fable-5-1`、design。A1 / B2 / C1)。
 - `docs/governance/vmodel-document-catalog.md` §1 と `docs/templates/vmodel/` の 4 テンプレート。
 - G9 / G10 の harness / consumer 分岐の先例 (`src/gate/static.ts:316`、`:338`、`src/gate/right-arm-static.ts:192`、`:615-637`)。
+
+## 13. L1 から L3 への降下検査 (issue #1196)
+
+### 13.1 目的と既存検査との境界
+
+L1 の BR / UX / FR / 画面の ID が 1 件でも L3 の設計文書に現れなくても、G1 は通る。A4 (#1168) が PLAN 専用の G1 判定を退役した後は、この穴を埋める検査が `analyzeG1Trace` の側には無い。本節は降下を確かめる検査 (`analyzeL1L3Descent`) の契約である。方式は既存の検査を再利用し、新しい ID の抽出器を作らない (最小実装)。
+
+| 検査対象 | 降下の検査 | 担当 |
+|---|---|---|
+| FR-L1 (51 件、P0 は 19 件) | L1 から L3 への active obligation | 既存の `descent-obligation` (doctor hard gate)。本節では再実装しない |
+| BR / UX (13 件) | L3 の設計文書での引用 | 本節 (§13.2〜§13.7) |
+| 画面 (PM / HM / GD、15 件) | L3 の設計文書での引用 | 本節 (§13.2〜§13.7) |
+| consumer の要求 / 画面 | L3 機能表での引用 | 本節 (§13.8) |
+
+- FR-L1 の降下は `src/lint/descent-obligation.ts` の `generateObligations` が `DEFAULT_DESCENT_ADJACENCY` の L1 から L3 の規則で持つ。本節の検査は FR を二重に数えない。実 repo で FR の降下が 0 件欠落であることは、テスト設計の `CANDIDATE-U-CTRACE-033` が実 repo に対して固定する。
+- 本検査は `analyzeG1Trace` の結果型と message を変えない。G1 の OK message の 3 件形式 (§8) もそのままである。
+
+### 13.2 入力 (harness 分岐)
+
+- L1: `docs/design/harness/L1-requirements/business-requirements.md` から BR / UX、`docs/design/harness/L1-requirements/screen-requirements.md` から画面。抽出は `src/lint/g1-trace.ts` の `extractG1BusinessIds` と `extractG1ScreenIds` をそのまま呼ぶ。ID の形 (`BR-NN` / `UX-NN` / `PM|HM|GD-NN`) を本節で再定義しない。
+- L3: `docs/design/harness/L3-functional/` の `*.md` のうち `README.md` と `roadmap.md` を除く 5 文書 (`functional-requirements.md` / `business-detail.md` / `nfr-grade.md` / `screen-functional.md` / `upstream-schedule-reconciliation.md`)。`README.md` は索引、`roadmap.md` は検証の工程表であり、設計の降下先ではない。
+- 画面の ID 集合は harness 分岐では現行の `PM|HM|GD` 固定のままである。#971 の consumer の画面 ID は §13.8 で扱う。
+
+### 13.3 降下したとみなす条件
+
+- ID が L3 の対象文書のどれかに、単独の ID として 1 回以上現れること。照合は単語境界つきの完全一致で行い、`BR-1` と `BR-10` を取り違えない。
+- `BR-01〜05` のような範囲表記は、範囲の端点も途中も降下に数えない。`descent-obligation` が範囲展開だけに由来する trace key を薄い被覆として扱う方針と揃える。範囲の裏にある ID は、単独の引用か除外台帳 (§13.5) で扱う。
+- 現れる場所は問わない。表のセルか本文かは区別しない。区別する案は §13.9 の未決事項とする。
+- 引用が現れる文書が `status: placeholder` / `park` の場合は数えない。
+
+### 13.4 出力と fail-close
+
+`analyzeL1L3Descent(reader)` は次を返す。`reader` は §5 と同じ注入可能な読み取り関数である。
+
+| field | 内容 |
+|---|---|
+| `branch` | `"harness"` または `"consumer"` |
+| `violations` | 理由文字列の配列。辞書順で全件を返し、最初の 1 件で打ち切らない |
+| `totals` | 検査した件数 (`br` / `ux` / `screens`、consumer は `requirements` / `screens`) |
+
+違反の理由は次のとおり。1 件の欠落につき 1 件を返す。
+
+| 理由 | 条件 |
+|---|---|
+| `l3_descent_missing:<kind>:<id>` | L3 に降りていない ID (`kind` は `br` / `ux` / `screen`) |
+| `empty_l1_set:<kind>` | L1 から取れた ID 集合が空 (空集合を PASS にしない。§7.2 と同じ考え方) |
+| `missing_l3_docs` | L3 の対象文書が 1 本も読めない |
+| `exclusion_invalid:<id>:<列名>` | 除外台帳の行に必須列が欠ける |
+| `exclusion_stale:<id>` | 除外された ID が、L1 に存在しない、または L3 に既に降りている |
+
+- `ok` は `violations` が 0 件のときだけ `true`。
+- message は、OK なら `l1-l3-descent - OK (br=<n>, ux=<n>, screens=<n>, excluded=<n>)`、違反なら `l1-l3-descent - violation: <理由>; <理由>...`。
+- 読み取り例外を丸めない。L1 文書が無いときは `missing_core_doc:<doc_type_id>` ではなく `required doc not created: <path>` を harness の既存形式のまま返す。
+
+### 13.5 除外の宣言と退役 ID
+
+- 退役した ID は、L1 の抽出対象から外れていれば検査対象にならない。例: `screen-requirements.md` の旧 `SCR-NN` は `extractG1ScreenIds` が拾わないので対象外である。
+- 意図的に L3 へ降ろさない現役の ID は、下の除外台帳に 1 行ずつ書く。宣言先は本設計文書であり、PLAN・`src/` の許可リスト・テストの fixture に置かない。
+
+| 除外 ID | 種別 | 理由 | 解除条件 | owner |
+|---|---|---|---|---|
+| (現在 0 件) | | | | |
+
+- 検査は本節の台帳の表を `除外 ID` `種別` `理由` `解除条件` `owner` の見出しで同定して読む。5 列のどれかが空の行は `exclusion_invalid` とする。先例は `descent-obligation` の `validDefer` (解除条件と owner が空の defer を免責しない) である。
+- 台帳の行が L1 に存在しない ID、または L3 に既に降りている ID を指すときは `exclusion_stale` とする。台帳が腐って除外の根拠が消えるのを止める。
+- 台帳に行を足す変更は設計文書の変更であり、設計書保護 diff gate (`design-protection-diff-gate.md` §10.2) と非著者の review の対象になる。
+
+### 13.6 現状の測定値と Green の前提
+
+契約 PR の時点 (HEAD `a01d2d680`) で、L3 の対象 5 文書に対して測定した値。
+
+| 集合 | 件数 | L3 に降りていない件数 | 降りていない ID |
+|---|---|---|---|
+| BR | 10 | 7 | `BR-01` `BR-02` `BR-03` `BR-04` `BR-05` `BR-06` `BR-07` |
+| UX | 3 | 2 | `UX-02` `UX-03` |
+| 画面 | 15 | 0 | なし |
+| FR-L1 (参考、既存 `descent-obligation` の範囲) | 51 | 0 | なし |
+
+- `BR-01` は `nfr-grade.md` の範囲表記 `BR-01〜05` にしか現れず、§13.3 では降下に数えない。範囲を数える場合の欠落は BR 2 件 (`BR-06` `BR-07`) と UX 2 件である (未決事項 Q2)。
+- 実装の Green より前に、この 9 件を (a) L3 の設計文書へ単独の ID で降ろす、または (b) §13.5 の台帳へ理由つきで除外する、のどちらかで 0 件にする。実装側に許可リストを置いて通さない。(a)(b) のどちらにするかは ID ごとの設計判断であり、本契約 PR では決めない。
+- 測定は 1 回限りの使い捨て script で行った。lint 本体の出力と照合するのは `CANDIDATE-U-CTRACE-033` の実 repo テストである。
+
+### 13.7 実装方式
+
+- 新規 `src/lint/l1-l3-descent.ts` に、`analyzeL1L3Descent(reader)` を純粋関数として置く。L1 の ID 抽出は `extractG1BusinessIds` / `extractG1ScreenIds` を呼び、consumer の表の抽出は §9 の `src/lint/consumer-trace.ts` の関数を呼ぶ。新しい正規表現の抽出器は持たない。
+- FR-L1 は呼ばない (§13.1)。
+- 入口の配線 (doctor の検査として置くか、G1-trace の追加の規則として置くか) は未決事項 Q1 とする。どちらの場合も、結果の `violations` と message は §13.4 と同じである。
+
+### 13.8 consumer の ID 体系 (#971 / #972)
+
+consumer 分岐は prefix を仮定せず、§5〜§6 の表の列から ID を取る。降下の規則は次の 2 つで、harness の BR / UX / 画面の規則に対応する。
+
+| 規則 | 内容 | 理由の形 |
+|---|---|---|
+| D1 | L1 の各 `要求ID` が、L3 `機能一覧` のいずれかの `トレース元` の token に現れる (§6.3 の分解と範囲展開を使う) | `l3_descent_missing:DOC-L1-REQUIREMENTS:<要求ID>` |
+| D2 | L2 の各 `画面ID` の `関連機能` に、L3 の `機能ID` の token が 1 つ以上ある | `l3_descent_missing:DOC-L2-SCREEN:<画面ID>` |
+
+- consumer は §6.3 により範囲表記を展開する。参照セルは列で固定された表の中の宣言であり、範囲の裏の ID も意図した参照だからである。harness の本文照合 (§13.3) とは入力の性質が違うので、扱いが異なることを意図して残す。
+- D2 は L3 が画面を引用する形ではなく、L2 が L3 機能を引く形で降下を見る。T3 の参照先が `R` だけであり (§7.1)、L3 の `トレース元` に画面 ID を書くと `dangling_reference` になるためである。この方向を変えるかどうかは未決事項 Q3 とする。
+- 必須集合が空のときは §7.2 の `empty_required_set` が先に赤になるので、本節の規則は空集合に対して追加の理由を返さない。
+- consumer 分岐は除外台帳を持たない (consumer の文書に宣言先が無い)。除外を許すかどうかは未決事項 Q4 とする。当面は欠落を全件違反とする。
+- harness 専用の文書は読まない。§5 の reader で 4 文書だけを要求する不変条件 (§10) は保つ。
+- 必須の列と見出しは §6.1 のままで、新しい列を要求しない。
+
+### 13.9 未決事項 (Green の前に決める)
+
+| ID | 論点 | 既定 (契約の書き方) | trade-off |
+|---|---|---|---|
+| Q1 | 入口の配線: doctor の hard 検査にするか、G1-trace の追加規則にするか | 純粋関数だけ契約し、配線は未決 | G1 に足すと consumer の gate と同じ入口で見えるが、harness の G1 の件数条件 (OT-45) と message を触る。doctor に置くと G1 の契約を触らないが、consumer の doctor は toolchain 系だけで届かない (§11) |
+| Q2 | 範囲表記 (`BR-01〜05`) を降下に数えるか | 数えない (薄い被覆) | 数えないと現状の欠落が 9 件、数えると 4 件。数えると、範囲の裏に隠れた ID の降下が 1 回も確かめられない |
+| Q3 | consumer の画面の降下を、L2 の `関連機能` で見るか、L3 の `トレース元` に画面を許して見るか | L2 の `関連機能` | 後者は T3 の参照先を `R ∪ S` に広げる契約改訂が要り、`CANDIDATE-U-CTRACE-014` の期待が変わる |
+| Q4 | consumer に除外を認めるか | 認めない | 認めないと、意図して降ろさない要求を持つ consumer は文書を変えるしかない。認めるなら宣言先 (consumer の設計文書の節) と雛形の変更が要る |
+| Q5 | 引用の場所を表のセルに限るか | 場所を問わない | 限ると、本文で言及しただけの偽の降下を防げるが、harness の L3 文書ごとに表の列の同定が要り、実装が重くなる |
