@@ -36,10 +36,10 @@ doctorとL6 descent／closure readerは同じanalyzer判定を共有する。fun
 | `rebuildHarnessDb` | `(input: RebuildInput, deps: HarnessDbDeps) => RebuildResult` | repo root は読込可能で、DB path は `.ut-tdd/` 配下にある。 | projection tables を truncate し、正規化済み docs/state/log digest を replay して `search_index` と `quality_signals` を再計算する。同一入力では deterministic。 |
 | `stableId` | `(prefix: string, value: string) => string` | prefix は空でない projection namespace、value は raw subject ID または空文字を許容する。 | ASCII safe な value は既存 ID を維持し、正規化で情報が落ちる場合は `--<sha256 12hex>` suffix を付ける。空 value は `unknown` sentinel に正規化する。projection / feedback / skill / workflow の row ID 生成はこの helper を共有し、local regex copy を増やさない。 |
 | `computeSkillMetrics` | `(rows: SkillMetricInput) => QualitySignal[]` | recommendation / invocation rows が与えられ、分母 0 は明示される。 | layer/drive/plan/model ごとに `fired/recommended` と `accepted/fired` を算出する。欠落 row は findings とし、成功を捏造しない。 |
-| `findReference` | `(query: ReferenceQuery, deps: HarnessDbDeps) => ReferenceHit[]` | DB が存在する、または caller が先に rebuild を要求している。 | `search_index` と直接 ID tables を検索し、path、ID、reason、source table、evidence path を返す。read-only とする。 |
+| `findReference` | `(db: HarnessDb, query: string) => SearchReferenceResult[]`（型は `src/search/index.ts` 正本、#1169 A5-C11 で実装に整合化） | `db` は開いた harness DB で、`search_index` が rebuild 済みである。`query` は空白のみでもよい（trim 後に空なら検索しない）。 | `search_index` の行を token 一致で採点し、`subject_type`、`subject_id`、`path`、`title`、`tokens`、`summary`、`updated_at`、`evidence_path`、`reason`（`exact-id` / `token-match`）、`score` を持つ行を score 降順で返す（`subject_id` が query と完全一致すれば `exact-id`）。空 query と score 0 の行は返さない。read-only とする。 |
 | `emitFeedbackEvents` | `(findings: FindingRow[], signals: QualitySignal[]) => FeedbackEvent[]` | findings / signals は正規化済みである。 | 反復 gap、未解決 blocker、dependency stall、品質 regression pattern を feedback events に集約する。PLAN 変更は自動承認しない。 |
 | `recordGuardrailDecision` | `(decision: GuardrailDecision, deps: HarnessDbDeps) => ProjectionRowRef` | guardrail 名、decision、evidence path が存在する。 | block/allow/human-required を evidence 付きで保存する。`human-required` は projection rebuild で downgrade できない。 |
-| `catalogAutomationAssets` | `(input: CatalogAutomationAssetsInput) => AssetCatalogResult`（`input = { repoRoot?: string; db: HarnessDb }`、型は `src/assets/catalog.ts` 正本、PLAN-L7-52 C-4 で実装に整合化 2026-06-15） | 承認 root は実装内定数 `SOURCES`（`docs/skills` / `.claude/agents` / `docs/commands`）を単一正本とする（caller は roots を渡さない） | skill/roster/command doc を path・trigger/capability・search token・drift status で catalog 化し `{ ok, assets: string[], findings }` を返す; prompt 本文・secret・provider transcript は copy しない; drift / empty-catalog / invalid-root は `findings` として可視化 |
+| `catalogAutomationAssets` | `(input: CatalogAutomationAssetsInput) => AssetCatalogResult`（`input = { repoRoot?: string; db: HarnessDb }`、型は `src/assets/catalog.ts` 正本、PLAN-L7-52 C-4 で実装に整合化 2026-06-15） | 承認 root は実装内の `assetSources()` を単一正本とする（caller は roots を渡さない）。skill root は `DEFAULT_SKILL_ROOTS`（`skills` → `docs/skills` の順で、repo に最初に存在するもの。どちらも無ければ `docs/skills`）、roster root は `.claude/agents`、command root は `docs/commands`（#1169 A5-C12） | skill/roster/command doc を path・trigger/capability・search token・drift status で catalog 化し `{ ok, assets: string[], findings }` を返す; prompt 本文・secret・provider transcript は copy しない; drift / empty-catalog / invalid-root は `findings` として可視化 |
 | `recordTestRunEvidence` | `(input: TestRunEvidenceInput, deps: HarnessDbDeps) => ProjectionRowRef[]` | command evidence は runner/scope/timestamps/exit code/evidence path を持つ。repo root と DB path は `.ut-tdd/` 配下に解決される。 | `test_runs` と任意の `test_cases`、`test_results`、`test_artifact_edges` を upsert する。`plan_id` / `oracle_id` 欠落は findings とし、silent pass にしない。 |
 | `projectRuntimeTestRunFromSessionEvent` | `(input: RuntimeTestRunProjectionInput) => void` | session event は `.ut-tdd/logs/session/*.jsonl` 由来で、`session_id`、`plan_id`、`ts` が存在する。 | sanitized target が既知 verification verb の Bash `tool_use` event なら、非空 `session_id`、`runtime=hook-session-log`、`scope=runtime-hook`、session JSONL evidence path、hook outcome 由来 pass/fail を持つ `test_runs` row を 1 件 upsert する。verification 以外は無視する。 |
 | `projectRuntimeGuardrailDecisionFromSessionEvent` | `(input: RuntimeGuardrailDecisionProjectionInput) => void` | session event は `.ut-tdd/logs/session/*.jsonl` 由来で、`session_id`、`plan_id`、`ts` が存在する。 | `forced_stop` event なら、非空 `session_id`、`guardrail=forced-stop`、`decision=block`、`mode=runtime-hook`、session JSONL evidence path を持つ `guardrail_decisions` row を 1 件 upsert する。guardrail 以外は無視する。 |
@@ -75,7 +75,7 @@ human-facing feedback surfaces は stored severity を変えずに、open rows �
 `selectTakeoverFeedback` と text `ut-tdd feedback list` output はこの taxonomy を使う。個別 queue rows が必要な consumers 向けには、`ut-tdd feedback list --json` を raw audit path として残す。
 SessionStart takeover surface は **group-first cap** とする。open rows を `bucket/severity/signal_type` で先に group 化し、gate/actionable group を上位 N 群だけ表示対象にする。単一 `signal_type` が多数行を占有しても他の actionable cluster を不可視にしてはいけない。表示 group の count は group 内の実件数を示し、隠れた group/row は breadcrumb で `ut-tdd feedback list --json` へ誘導する。
 
-attempt escalation surface は直前 session の連続失敗 loop を上限付きで表示する。`renderEscalationSignals` は total 件数を header に保持しつつ、既定 10 件だけを列挙し、残件は breadcrumb とする。これは SessionStart の固定予算を守るための surface cap であり、`evaluateAttemptEscalation` の検出件数は削らない。
+attempt escalation surface は直前 session の連続失敗 loop を上限付きで表示する。`renderEscalationSignals` は total 件数を header に保持しつつ、既定 10 件だけを列挙し、残件は breadcrumb とする。これは SessionStart の固定予算を守るための surface cap であり、`evaluateAttemptEscalation` の検出件数は削らない。既定の表示上限 (cap、`src/runtime/attempt-escalation.ts` の `DEFAULT_ESCALATION_SURFACE_LIMIT`) を下げるときは、PO 承認を得て定数を変更する（#1169 A5-C01）。
 
 ### 2026-06-23 read-only quality / branch audit 追補
 
@@ -643,7 +643,8 @@ interface DriveDbRegistrationViolation {
         | "missing_workflow_runs" | "workflow_orphans" | "missing_model_runs" | "model_orphans"
         | "missing_skill_recommendations" | "skill_recommendation_orphans"
         | "missing_skill_invocations" | "skill_invocation_orphans"
-        | "missing_registered_hook_events" | "missing_required_mode";
+        | "missing_registered_hook_events" | "missing_required_mode"
+        | "mode_catalog_unmapped";   // docs/process/modes/ にあるが写像 (MODE_CATALOG_DOC_FILES) に無い mode doc。doc 名は `mode` に入る (#1169 A5-C13)
   count?: number; mode?: string;
 }
 interface DriveDbRegistrationResult {
@@ -791,6 +792,8 @@ effort 既定:
 - review / critical judgement は一段上げ、GPT frontier review は `xhigh`、Claude/Opus review は `middle` とする。
 - spark / mini など軽量モデル lane は `high` を標準にする。
 - UI/UX は `xhigh` を指定する。
+
+Codex への effort は stdin ではなく argv で注入する。`buildAdapterPlan`（`src/runtime/adapter.ts`）は provider 向けに正規化した effort（`middle` は `medium`）を `-c model_reasoning_effort=<effort>` として渡す。oracle: U-DELEG-005（`docs/test-design/harness/L7-unit-test-design.md`、#1169 A5-C14）。
 
 `ReasoningEffort` は後方互換の `medium` を残しつつ、PO 語彙の `middle` と `xhigh` を追加する。
 team proposal lane の mini/spark は `effort=high` で生成し、review aggregator は `high`、critical aggregator は
