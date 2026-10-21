@@ -78,8 +78,8 @@ E2 ∩ E4 = 1 (L2-01)。E1 ∩ E3 = 0。E2 ∩ E3 = 0。したがって E1〜E4 
 |---|---|
 | PLAN-REVERSE-533-memory-completion-fence-backfill (draft) | Reverse 本文に未実装撤回の明記。後継 PLAN-L6-104 が名指しされ、Issue #550 は not planned で close |
 | PLAN-DISCOVERY-01-workflow-metamodel | S0-S4 の PoC 工程。S4 の promote 先は PLAN-REVERSE-08 と concept §2.5 |
-| PLAN-DISCOVERY-03-skill-design | skill の PoC 工程。score 飽和 / category carry の discharge 先は PLAN-L6-37 |
-| PLAN-DISCOVERY-04-process-workflows | PoC 工程。process の正本化は PLAN-REVERSE-01 へ移管済み |
+| PLAN-DISCOVERY-03-skill-design | skill の PoC 工程。score 飽和 / category carry の discharge 先は PLAN-L6-37。f の reason は「他の残 carry の消滅を意味しない」と書く。本 PLAN の §6 が挙げる残 carry は 2 つで、どちらも設計側に記録がある: score の de-saturate は `docs/design/harness/L6-function-design/skill-index.md:79` (`scoreSkill`) と U-SKILL-IDX-006 (`docs/test-design/harness/L7-unit-test-design.md:761`)、injector の layer 別注入セット定義は L6 carry として `docs/design/harness/L5-detailed-design/internal-processing.md:152` と `module-decomposition.md:144` (A5-C51) |
+| PLAN-DISCOVERY-04-process-workflows | PoC 工程。process の正本化は PLAN-REVERSE-01 へ移管済み。f の reason が「別途残る」と書く cross-mode walkthrough の作成時期 (PO 判断) は、PLAN-REVERSE-01 §2.3 C にしか無く、設計文書と governance に無い (`git grep -i walkthrough` が 0 件)。この残 carry は A5-C52 で移管する。PLAN 自体は例外とする |
 | PLAN-DISCOVERY-06-orchestrator-rule-parity | L7-139 が Codex hook を実装、REVERSE-139 が採用モデルを L4 architecture へ移管 (第 4 節 A5-C10) |
 | PLAN-DISCOVERY-08-forward-convergence-invariant | invariant は現行の契約として存続し、REVERSE-140 が S4 を正本化。退役候補は PoC 運用面だけ |
 | PLAN-DISCOVERY-09-version-up-mode | mode 契約は REVERSE-140 / concept / process へ backfill 済み |
@@ -184,22 +184,23 @@ A 区分 (`superseded-link-confirmed`) は 12 件で、#1078 は 11 件を部分
 | A5-C48 | PLAN-RECOVERY-02-vmodel-canonical | 同上 | 例外 | - | 同上 |
 | A5-C49 | PLAN-DISCOVERY-02-roster-design | 同上 | 例外 | - | 同上 |
 | A5-C50 | PLAN-L7-462-bun-runtime-withdrawal | T3 見送り (大きな troubleshoot、段階移行の残差が複数) | 例外 | - | 同上の理由でリスク 1 として受け入れる。加えて、Bun 撤去の拘束は `.claude/CLAUDE.md` §Hooks (Bun permanent ban、#134) と `package.json` の `utTdd.nodeToolchain.nodeAuthority` にあり、ADR-007 が PLAN-L7-462 を履歴として参照する (`docs/adr/ADR-007-harness-db-sqlite-projection.md:24`)。段階移行の残差の契約が設計側にあるかは照合していない |
-| A5-C51 | PLAN-DISCOVERY-03-skill-design / PLAN-DISCOVERY-04-process-workflows | T3 見送り | 例外 | - (E2 に既出) | PoC 工程の履歴。discharge 先と移管先が E2 の表 (L6-37、REVERSE-01) に記録済み |
+| A5-C51 | PLAN-DISCOVERY-03-skill-design | T3 見送り | 例外 | - (E2 に既出) | PoC 工程の履歴。残 carry 2 つの所在: score の de-saturate = `skill-index.md:79` と U-SKILL-IDX-006 (`L7-unit-test-design.md:761`)。injector の注入セット定義 = `internal-processing.md:152` が L6 carry と明記し、`module-decomposition.md:144` が injector の責務を持つ |
+| A5-C52 | cross-mode walkthrough (複数 mode を横断する走行例) の作成時期を PO 判断の carry として持つ | PLAN-DISCOVERY-04 → PLAN-REVERSE-01 §2.3 C | 移管 | 新規 Issue (carry の記録。番号は未採番で、control が起票する) | PLAN-REVERSE-01 (confirmed) §2.3 C が「欠陥ではなく未着手の予定作業。作成時期は PO 判断」と書き、最初の 3 本の候補を挙げる。設計文書・governance・`docs/process` に walkthrough の記述は 0 件 (`git grep -n -i walkthrough d4e82e2e -- docs/design docs/governance/*.md docs/process`)。REVERSE-01 も撤去対象なので、Issue へ移す |
 
 ## 集計
 
-名指しの候補 51 行 (A5-C01〜C51)。1 行が複数の PLAN を含むものがある (C08、C51)。件数は第 4 節の表を再現コマンド 6 で数えた値である。
+名指しの候補 52 行 (A5-C01〜C52)。1 行が複数の PLAN を含むものがある (C08)。件数は第 4 節の表を再現コマンド 6 で数えた値である。
 
 | 処置 | 行数 | 行 ID |
 |---|---|---|
-| 移管 | 10 | C01, C02, C04, C05, C06, C11, C12, C13, C14, C26 |
+| 移管 | 11 | C01, C02, C04, C05, C06, C11, C12, C13, C14, C26, C52 |
 | 例外 | 22 | C08, C09, C10, C15, C16, C17, C18, C19, C20, C22, C23, C24, C25, C27, C40, C43, C44, C47, C48, C49, C50, C51 |
 | 判断待ち | 19 | C03, C07, C21, C28〜C39, C41, C42, C45, C46 |
-| 合計 | 51 | |
+| 合計 | 52 | |
 
 読み方:
 
-- 移管 10 行のうち、設計文書への追記で閉じるものは 8 行 (C01 / C04 / C05 / C06 / C11 / C12 / C13 / C14)。新規 Issue の起票が要るものは 2 行 (C02、C26)。C02 の Issue は defer の記録であり、配線の実施 (高影響境界、PO 承認が要る) とは別である。
+- 移管 11 行のうち、設計文書への追記で閉じるものは 8 行 (C01 / C04 / C05 / C06 / C11 / C12 / C13 / C14)。新規 Issue の起票が要るものは 3 行 (C02、C26、C52)。C02 の Issue は defer の記録であり、配線の実施 (高影響境界、PO 承認が要る) とは別である。
 - 判断待ち 19 行の内訳: 部分 supersede の範囲確定待ち 10 行 (C28〜C36、C38)、#789 の退役実行待ち 3 行 (C07 / C37 / C39。C37 は部分 supersede でもある)、#762 / #1083 の範囲確定待ち 2 行 (C41 / C42)、governance の改訂手続き 1 行 (C45)、移し先の決定 2 行 (C03 / C46)、#977 の所有照合 1 行 (C21)。10 + 3 + 2 + 1 + 2 + 1 = 19。
 - 例外 22 行のうち 17 行は「設計文書に既に書かれていた」ものである。C44 は、PLAN 機構の規約として PLAN と共に退役させる文言である。C47〜C50 の 4 行は、T3 で照合が量的に終わらなかったが名指しの根拠が無いもので、リスク 1 として受け入れる。
 - 棚卸しの時点で未決とされていた #977 の CD-20 / 21 / 22 (C23) は、例外にした。`internal-processing.md:588-591` に退役注記が既にあるためである。
