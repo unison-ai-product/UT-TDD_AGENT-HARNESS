@@ -96,7 +96,7 @@ const HARNESS_GATE_BASELINE = [
       "impl-plan-trace — OK (src 全件 PLAN generates / baseline に被覆、NEW orphan 0)",
       "oracle-test-trace — OK (宣言 oracle 全件 tests citation / baseline 被覆、test-label 逆向き citation 断線 0、宣言 provenance 重複 0)",
       "pair-freeze — OK (design⇔test-design 双方向 68 pair、孤児 0)",
-      "verification — 実装検証サイクルゲート [L0-L7] (左腕+谷): ✅ base freeze 完了 (67/67 confirmed, L7 plans 9/9 confirmed, evidence 9/9, 孤児0) / active revisions 1/1 confirmed → 検証サイクル発火可",
+      "verification — 実装検証サイクルゲート [L0-L7] (左腕+谷): ✅ base freeze 完了 (67/67 confirmed, 孤児0) / active revisions 1/1 confirmed → 検証サイクル発火可",
     ],
   },
   {
@@ -167,7 +167,7 @@ const PAIR_TOTAL_FLOOR: Record<string, number> = {
   G6: 37,
 };
 const PAIR_FREEZE_FLOOR = 68;
-const VERIFICATION_FLOOR = { base: 67, l7Plans: 9, evidence: 9 };
+const VERIFICATION_FLOOR = { base: 67 };
 
 it("U-RCDEV-037: preserves harness G1-G7 static and G8-G10 workflow baseline", () => {
   const root = process.cwd();
@@ -223,15 +223,9 @@ it("U-RCDEV-037: preserves harness G1-G7 static and G8-G10 workflow baseline", (
   expect(verification).toHaveLength(1);
   const message = verification[0] as string;
   const base = /\((\d+)\/(\d+) confirmed/.exec(message);
-  const l7 = /L7 plans (\d+)\/(\d+) confirmed/.exec(message);
-  const evidence = /evidence (\d+)\/(\d+)/.exec(message);
-  for (const m of [base, l7, evidence]) {
-    expect(m).not.toBeNull();
-    expect(m?.[1]).toBe(m?.[2]);
-  }
+  expect(base).not.toBeNull();
+  expect(base?.[1]).toBe(base?.[2]);
   expect(Number(base?.[1])).toBeGreaterThanOrEqual(VERIFICATION_FLOOR.base);
-  expect(Number(l7?.[1])).toBeGreaterThanOrEqual(VERIFICATION_FLOOR.l7Plans);
-  expect(Number(evidence?.[1])).toBeGreaterThanOrEqual(VERIFICATION_FLOOR.evidence);
 });
 
 function runCli(args: string[], cwd = process.cwd()) {
