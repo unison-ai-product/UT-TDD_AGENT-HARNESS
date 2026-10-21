@@ -2007,23 +2007,23 @@ subject/revision/sequence/command payload digest/from/to/resume/reason/source co
 
 | event | from | to | 必須evidence (requirementId) | 欠落時のrule |
 |---|---|---|---|---|
-| `plan` | proposed | planned | scope-approval (producer: po/human) | `forward-evidence-missing` |
-| `prepare-pair-freeze` | planned | pair_freeze_ready | pair-artifact-declaration + design-pair-review | `forward-evidence-missing` |
-| `freeze-pair` | pair_freeze_ready | pair_frozen | pair-artifact-declaration + design-pair-review | `forward-evidence-missing` |
-| `freeze-red` | pair_frozen | red_frozen | red-test-run (exitは非0、24時間以内) | `forward-evidence-missing` |
-| `begin-implementation` | red_frozen | implementing | pair-artifact-declaration + red-test-run | `forward-red-evidence-missing` |
-| `complete-implementation` | implementing | implementation_complete | implementation-digest + targeted-test-run | `forward-evidence-missing` |
-| `prepare-trace-freeze` | implementation_complete | trace_freeze_ready | trace-materialization | `forward-evidence-missing` |
-| `freeze-trace` | trace_freeze_ready | trace_frozen | trace-closure + green-test-run | `forward-evidence-missing` |
-| `prepare-review` | trace_frozen | review_ready | trace-closure + green-test-run | `forward-trace-freeze-missing` |
-| `submit-review` | review_ready | reviewed | independent-review | `forward-evidence-missing` |
-| `accept` | reviewed | accepted | independent-review + gate-run | `forward-accept-evidence-missing` |
-| `archive` | accepted | archived | acceptance-decision + retention-decision (producer: po/human) | `forward-evidence-missing`。archivedはterminal |
-| `block` | proposed〜reviewedの正常state (accepted / archivedを除く) | blocked | exception-context | `forward-exception-context-missing` |
-| `supersede` | proposed〜acceptedの正常state (archivedを除く。acceptedを含む) | superseded | exception-context | `forward-exception-context-missing` |
-| `reject` | review_ready または reviewed | rejected | exception-context | `forward-exception-context-missing` |
-| `reopen` | blocked / superseded / rejected | reopened | exception-context | `forward-exception-context-missing` |
-| `resume` | reopened | planned | exception-context | `forward-exception-context-missing` |
+| `plan` | `proposed` | `planned` | `scope-approval` (producer: po/human) | `forward-evidence-missing` |
+| `prepare-pair-freeze` | `planned` | `pair_freeze_ready` | `pair-artifact-declaration` + `design-pair-review` | `forward-evidence-missing` |
+| `freeze-pair` | `pair_freeze_ready` | `pair_frozen` | `pair-artifact-declaration` + `design-pair-review` | `forward-evidence-missing` |
+| `freeze-red` | `pair_frozen` | `red_frozen` | `red-test-run` (exitは非0、24時間以内) | `forward-evidence-missing` |
+| `begin-implementation` | `red_frozen` | `implementing` | `pair-artifact-declaration` + `red-test-run` | `forward-red-evidence-missing` |
+| `complete-implementation` | `implementing` | `implementation_complete` | `implementation-digest` + `targeted-test-run` | `forward-evidence-missing` |
+| `prepare-trace-freeze` | `implementation_complete` | `trace_freeze_ready` | `trace-materialization` | `forward-evidence-missing` |
+| `freeze-trace` | `trace_freeze_ready` | `trace_frozen` | `trace-closure` + `green-test-run` | `forward-evidence-missing` |
+| `prepare-review` | `trace_frozen` | `review_ready` | `trace-closure` + `green-test-run` | `forward-trace-freeze-missing` |
+| `submit-review` | `review_ready` | `reviewed` | `independent-review` | `forward-evidence-missing` |
+| `accept` | `reviewed` | `accepted` | `independent-review` + `gate-run` | `forward-accept-evidence-missing` |
+| `archive` | `accepted` | `archived` | `acceptance-decision` + `retention-decision` (producer: po/human) | `forward-evidence-missing`。`archived`は`terminal` |
+| `block` | `proposed`〜`reviewed`の正常state (`accepted` / `archived`を除く) | `blocked` | `exception-context` | `forward-exception-context-missing` |
+| `supersede` | `proposed`〜`accepted`の正常state (`archived`を除く。`accepted`を含む) | `superseded` | `exception-context` | `forward-exception-context-missing` |
+| `reject` | `review_ready` または `reviewed` | `rejected` | `exception-context` | `forward-exception-context-missing` |
+| `reopen` | `blocked` / `superseded` / `rejected` | `reopened` | `exception-context` | `forward-exception-context-missing` |
+| `resume` | `reopened` | `planned` | `exception-context` | `forward-exception-context-missing` |
 
 正本は`src/forward/domain/transition-policy.ts`の`TRANSITION_POLICY`であり、この表はその写しである (検査は`tests/forward/fsm.test.ts`の`U-FSM-001`〜`009`)。
 拒否の優先順位は、表に無いeventを`forward-transition-illegal`とした上で、(1) 例外commandのcontext、(2) 必須evidence、(3) 表のfrom / `expectedFrom`の順とし、
