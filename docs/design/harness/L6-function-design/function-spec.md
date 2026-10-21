@@ -2027,7 +2027,7 @@ subject/revision/sequence/command payload digest/from/to/resume/reason/source co
 
 正本は`src/forward/domain/transition-policy.ts`の`TRANSITION_POLICY`であり、この表はその写しである (検査は`tests/forward/fsm.test.ts`の`U-FSM-001`〜`009`)。
 拒否の優先順位は、表に無いeventを`forward-transition-illegal`とした上で、(1) 例外commandのcontext、(2) 必須evidence、(3) 表のfrom / `expectedFrom`の順とし、
-最初に失敗した検査のruleを返す。`forward-transition-illegal`となるのは、context・evidenceを満たしたうえでfromのstateが許可されない場合と、表に無いeventの場合だけである
+最初に失敗した検査のruleを返す。`forward-transition-illegal`(exit 1)となるのは、表に無いeventの場合と、context・evidenceを満たしたうえで、現在のstateが表のfromに無い場合、または指定された`expectedFrom`が現在のstateと一致しない場合である
 (例: contextの無い`archived`からの`block`は`forward-exception-context-missing`でexit 2、`U-FSM-006`)。正常系の各行は隣接遷移だけを許す。
 各eventの必須evidenceはこの遷移表 (`TRANSITION_POLICY`と一致) を正本とする。下の「Forward evidence policy表」とcommand→policyの対応は
 まだ遷移表と整合しておらず、食い違う箇所は遷移表が優先する。この整合は#1169 の後続で整合させる。
