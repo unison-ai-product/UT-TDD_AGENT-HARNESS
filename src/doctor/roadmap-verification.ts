@@ -18,7 +18,6 @@ import {
   forwardFreezeContractMessages,
   loadPairDocs,
   loadRefactorQaReleaseContractInput,
-  loadVerificationPlanEvidence,
   refactorQaReleaseContractMessages,
   verificationGroupMessages,
   verificationGroupsOk,
@@ -116,7 +115,7 @@ export function checkVerificationGroupsResult(repoRoot: string): {
     if (!statSync(repoRoot).isDirectory()) throw new Error("repo root is not a directory");
     const docs = loadPairDocs(repoRoot);
     const { orphans } = analyzePairFreeze(docs);
-    const groups = analyzeVerificationGroups(docs, orphans, loadVerificationPlanEvidence(repoRoot));
+    const groups = analyzeVerificationGroups(docs, orphans);
     return { messages: verificationGroupMessages(groups), ok: verificationGroupsOk(groups) };
   } catch {
     return {

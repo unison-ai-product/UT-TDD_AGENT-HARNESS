@@ -35,7 +35,6 @@ import {
   designLayerFromPath,
   isDesignSubDoc,
   loadPairDocs,
-  loadVerificationPlanEvidence,
   type PairDoc,
   pairFreezeMessages,
   verificationGroupMessages,
@@ -222,11 +221,7 @@ export function readCoverageSummary(path: string, threshold = 80): CoverageSumma
 function evaluateG7(input: StaticGateInput, repoRoot: string): StaticGateResult {
   const docs = loadPairDocs(repoRoot);
   const pair = analyzePairFreeze(docs);
-  const groups = analyzeVerificationGroups(
-    docs,
-    pair.orphans,
-    loadVerificationPlanEvidence(repoRoot),
-  );
+  const groups = analyzeVerificationGroups(docs, pair.orphans);
   const l0l7 = groups.find((g) => g.id === "L0-L7");
 
   const impl = analyzeImplPlanTrace(loadImplPlanTraceInput(repoRoot));

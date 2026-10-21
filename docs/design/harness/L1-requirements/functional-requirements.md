@@ -11,7 +11,7 @@ v2_import: docs/migration/v2-import-ledger.md
 
 > **SSoT 参照**: ユビキタス言語 = [L0 概念層 §10 用語集](../../../governance/ut-tdd-agent-harness-concept_v3.1.md#10-用語集) / 業界標準整合 = L0 §11 / Bounded Context = L0 §2.5 9-mode。本 doc は L0 を parent_doc reference とし、用語独自定義は行わない (anti-corruption layer)。
 > **件数確定**: functional は **FR-L1-51 件で確定 (P0: 19 / P1: 24 / P2: 8)** (A-49 ledger で FR-L1-45 doc-reviewer back-propagation 追加、2026-05-28)。内訳: FR-L1-01〜35 は v2 source snapshot reference 設計概念参照 (v2-import-ledger §5.1 A-24 / §6)、FR-L1-37/39/40/41/42/44 は PO directed 新規 6 件 (2026-05-28)、**FR-L1-45 は L3 back-propagation 由来 (A-47 Critical C-02 → A-49 で L1 反映、BR-08 派生 P0)**、**FR-L1-50 は DDD/TDD strictness automation 追加 (PO directed 2026-06-09、IMP-097..101)**、**FR-L1-51 は artifact progress color projection 追加 (PLAN-L7-56 / PLAN-REVERSE-56、2026-06-22)**、**FR-L1-36 は P2 から昇格 (skill evaluation 実装済み、PLAN-L7-53、2026-06-15)**、**FR-L1-43 は P2 から昇格 (PoC success measurement 実装済み、PLAN-L7-53、2026-06-15)**、**FR-L1-38 は P2 から昇格 (model evaluation 実装済み、PLAN-L7-53、2026-06-15)**。
-> **L3 接続規約**: `next_pair_freeze: L3`。L3 PLAN は本 sub-doc 全件を `dependencies.requires` に列挙する。
+> **L3 接続規約**: `next_pair_freeze: L3`。「L3 PLAN が本 sub-doc 全件を `dependencies.requires` に列挙する」規約は、PLAN 撤去（#1078）で退役した。L1 → L3 の降下の確認は #1196 の降下検査へ移る。
 
 # UT-TDD Agent Harness — L1 機能要求 (functional)
 
