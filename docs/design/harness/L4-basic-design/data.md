@@ -290,7 +290,7 @@ renameはdelete+addの推測ではなく、旧新pathを一つのdeltaとしてa
 | `DocumentReferenceEdge` | source member、syntax/byte span、raw/canonical target、reader identity/revision、semantic responsibility/applicability conditionを保持する |
 | `DocumentReferenceParseReceipt` | snapshot/source blob/input bytes、reader registry、edge/error集合digestを束縛。source×required readerでexactly once |
 | `SnapshotIdentity` | commit、repository root tree OID、selector revision/digest、zone別tree/member集合digest、raw NUL path digest、count。working tree identityを拒否 |
-| `ClosureReceipt` | baseline/delta/final/reference集合digest、finding counts、run time、tool version |
+| `ClosureReceipt` | baseline/delta/final/reference集合digest、finding counts、run time、tool version。**run 単位の receipt は予定で未実装**である。`DocumentClosureResult` (L6 function-spec、`src/document-disposition/domain/analyze-repository-document-closure.ts`) はその部分実装ではなく別の型である (#977 CD-02) |
 
 集約のapplication stateは`pending | ready | applied | verified | rejected`とする。disposition決定だけでは
 `verified`にならず、target適用後blobとreference closure receiptが必要である。`retain`も比較根拠を欠けばpending、
