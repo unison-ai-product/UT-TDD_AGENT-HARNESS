@@ -116,7 +116,7 @@ describe("legacy migration dry-run", () => {
     "confirmed",
     "completed",
     "accepted",
-  ])("CANDIDATE-U-PAEXRET-003: ($0) PLAN の absent / hollow generates target は missing finding にしない", (status) => {
+  ])("U-PAEXRET-003: ($0) PLAN の absent / hollow generates target は missing finding にしない", (status) => {
     const roots: string[] = [];
     try {
       const invalidPathRoot = createMigrationFixture(

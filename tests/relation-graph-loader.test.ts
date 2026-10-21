@@ -236,7 +236,7 @@ describe("loadRelationGraphSourceSet", () => {
     "confirmed",
     "completed",
     "accepted",
-  ])("CANDIDATE-U-PAEXRET-002: PLAN generates targets are not stale-edge requirements ($0)", (status) => {
+  ])("U-PAEXRET-002: PLAN generates targets are not stale-edge requirements ($0)", (status) => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-graph-loader-plan-target-retirement-"));
     try {
       buildRepo(root);
