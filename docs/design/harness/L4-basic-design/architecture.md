@@ -154,7 +154,7 @@ data.md の 5 集約 (構造) を src/ building block (実行) に配置する�
 | legacy absolute path residue | `.claude/agents/*.md` が `~/ai-dev-kit-vscode/` / `C:\Users\micro` を含む → fail |
 | legacy runtime command direct call | subagent 本文に legacy runtime command direct call が残存 → fail |
 | `docs/skills/` 空 (curate 未着手) | skill pack が `.gitkeep` のみ → fail (curate 完了を強制) |
-| roster ↔ guard allowlist 整合 | `.claude/agents/*.md` の model family と agent-guard allowlist (15) が乖離 → fail |
+| roster ↔ guard allowlist 整合 | `.claude/agents/*.md` の model family と agent-guard allowlist (正本は `SUBAGENT_ALLOWLIST`、`src/runtime/agent-guard-policy.ts`。件数はそこに従う) が乖離 → fail |
 
 > **既存 `dependency-drift` (ADR-002) と並置**: gate-design §5 rule registry に `dependency-drift` が既存。内部資産 `asset-drift` を同列追加 (両方 IMP-033 rule)。Current hard gate sliceは legacy path residue / legacy command residue / docs-skills vacancy / guard allowlist missing agent docs を doctor 経路で fail-close 済み。active design/test-design に残った L7 待ち `placeholder_deps` は `placeholder-deps` doctor gate で fail-close する。
 >
