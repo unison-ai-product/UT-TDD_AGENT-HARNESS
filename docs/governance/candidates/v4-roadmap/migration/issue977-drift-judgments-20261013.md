@@ -10,17 +10,39 @@
 |---|---|---|
 | 設計を直す (Redesign) | 設計に欠陥がある。既存設計を supersede して設計から作り直す | 0 |
 | 実装を直す (Red / Green) | 設計は正しく、実装が無いか誤っている | 0 |
-| 設計を実装に合わせる | 実装は正しく、設計の記述が古い | 6 |
-| 保留 | repo の証拠だけでは決められない。理由と、決めるために要るものを書く | 9 |
-| 予定済み・退役済み | draft の契約・後続 slice・将来版など、実装が後に来ると明記されている | 25 |
+| 設計を実装に合わせる | 実装は正しく、設計の記述が古い | 13 |
+| 保留 | repo の証拠だけでは決められない。理由と、決めるために要るものを書く | 0 |
+| 予定済み・退役済み | draft の契約・後続 slice・将来版など、実装が後に来ると明記されている | 27 |
 | 誤検出 | 実装がある。字句の照合が別名・別 module・否定文を拾った | 25 |
 | 合計 | | 65 |
+
+最終処遇 (2026-10-21) の件数です。初版 (2026-10-13) は設計を実装に合わせる 6 件、保留 9 件、予定済み・退役済み 25 件でした。保留 9 件の移り先は下の「最終処遇」節にあります。
 
 設計を直すものと実装を直すものは 0 件でした。実装の不具合として直すべきずれは、この 65 件の中には見つかっていません。
 
 下書きは Claude Opus の subagent 4 本が作り、control (Claude) が確かめました。DWI-03 は下書きの「実装を直す」を「予定済み」へ変えました (理由は表に記載)。誤検出のうち CD-01 / CD-10 / CD-24 / CD-30 は、control が引用先を開いて実装を確かめました。
 
-## 設計を実装に合わせる (6 件)
+## 最終処遇 (2026-10-21)
+
+初版で保留だった 9 件は、issue #977 の control 判断コメント「保留 9 件の処遇」(2026-10-13) で処遇が決まり、設計の追従は #983 で反映済みです。この表と JSON を、その最終処遇へ更新しました。保留は 0 件です。元の区分は JSON の `initial_verdict` に残し、最終処遇と根拠は `final_disposition` に記録しています。
+
+| ID | 対象 | 最終区分 | 最終処遇と根拠 |
+|---|---|---|---|
+| CD-20 | `ReviewLaneReceipt` | 設計を実装に合わせる | #983 で退役注記を反映。`L5-detailed-design/internal-processing.md:587`。モジュール削除は #592 (D2 / D3) の所管 |
+| CD-21 | `SessionIdentityReceipt` | 設計を実装に合わせる | 同上 (`internal-processing.md:587`) |
+| CD-22 | `WorkProvenanceEventReceipt` | 設計を実装に合わせる | 同上 (`internal-processing.md:587`) |
+| CD-37 | `L6ConfirmationReceipt` | 設計を実装に合わせる | 同上 (`internal-processing.md:587`、`L6-function-design/function-spec.md:2522`) |
+| CD-12 | `InvokeResult` | 設計を実装に合わせる | #983 で反映。`L5-detailed-design/if-detail.md:53` で汎用の dedup 契約を退役し、`audit_ref` を session log の `session_id` に置き換えた |
+| CD-38 | `PlanAssetInput` | 設計を実装に合わせる | #983 で反映。`L6-function-design/function-spec.md:1849` の DTO 行を `PlanAsset.create` の現行入力へ合わせた |
+| DWI-05 | edge-case | 設計を実装に合わせる | #983 で反映。`L6-function-design/edge-case.md:13` の oracle ID を修正し、`edge-case.md:68` で `sprint check` を将来形と明記した |
+| CD-39 | `ProjectionContext` | 予定済み | #982 で追跡。DEBT-L7-423-01 は実装の修理、DEBT-02〜04 は工程 ⑤ |
+| CD-02 | `ClosureReceipt` | 予定済み | 後続 slice の予定。PLAN 凍結 (#1166) により PLAN 訂正注記は行わない。PLAN 本文は #1078 の撤去で扱う (本文は #1165 のタグ `plans-archive-20261021` に退避済み) |
+
+最終件数は、設計を実装に合わせる 13 件、予定済み・退役済み 27 件、誤検出 25 件、保留 0 件で、合計 65 件です。
+
+## 設計を実装に合わせる (初版 6 件、最終処遇で 13 件)
+
+以下の 6 件は初版の判定です。保留から移った 7 件は「最終処遇」節にあります。
 
 | ID | 設計文書 | 対象 | 実装 | 判定理由 | 次の一手 |
 |---|---|---|---|---|---|
@@ -31,7 +53,9 @@
 | CD-53 | `L6-function-design/setup-solo-team.md` | `onPath` | `src/setup/index.ts`<br>`src/runtime/detect.ts` | gh 不在時の安全側フォールバック (unknown → solo) は GhRunner の失敗吸収で実装されており正しく動くが、設計が参照する detect.ts の onPath は 873112115 で削除済み。設計の再利用記述が古い。 | docs-only PR で setup-solo-team.md:133 の onPath 再利用記述を「gh の有無は GhRunner (nodeGh) の実行失敗を ok:false として扱い unknown→solo へ倒す」へ書き換える。 |
 | DWI-10 | `L6-function-design/release-channel-manifest.md` |  | `src/schema/release-manifest.ts`<br>`src/setup/release-materializer.ts` | 段階リリースの部品は実装済みだが、設計 doc の関数名 (parseCanonicalReleaseManifest、§4 の buildCleanDistributionPlan) が実装と食い違っている。後者は既存の別関数を指しており、errata が記録済みのまま doc に反映されていない。 | design-follow PR で release-channel-manifest.md の DbC 表と §3/§4 を parseReleaseManifest / parsePublicationManifest と admitReleaseAggregate に合わせ、oracle 割当 (U-RELMAN-001/014-016) との対応を確認する。 |
 
-## 保留 (9 件)
+## 保留 (初版 9 件、元の判定理由)
+
+以下は 2026-10-13 時点の判定理由で、最終処遇は上の節のとおりです。
 
 | ID | 設計文書 | 対象 | 実装 | 判定理由 | 次の一手 |
 |---|---|---|---|---|---|
@@ -107,7 +131,7 @@
 
 ## 後続の進め方
 
-- **設計を実装に合わせる (6 件)**: 設計文書だけを直す契約 PR にまとめます (src を含まない)。設計書保護 gate の対象なので、実装 PR には混ぜません。
-- **保留 (9 件)**: 表の「次の一手」にある判断材料をそろえてから、別の判定に移します。review receipt 3 種 (CD-20〜22) は #134 系の進め方と合わせて control が判断します。
-- **予定済み・退役済み (25 件)**: 対応する PLAN / issue の進行に任せます。この表では追跡しません。
+- **設計を実装に合わせる (13 件)**: 初版の 6 件は設計文書だけを直す契約 PR にまとめます (src を含まない)。設計書保護 gate の対象なので、実装 PR には混ぜません。保留から移った 7 件は #983 で反映済みです。
+- **保留 (0 件)**: 初版の 9 件は最終処遇で解消しました。追跡は #982 (CD-39) と #1166 / #1078 (CD-02) にあります。
+- **予定済み・退役済み (27 件)**: 対応する PLAN / issue の進行に任せます。この表では追跡しません。
 - **誤検出 (25 件)**: 対応は不要です。照合の対象 module から `src/doctor` や `src/runtime` が漏れていた件は、次に対応表を作り直すときの改善点です。
