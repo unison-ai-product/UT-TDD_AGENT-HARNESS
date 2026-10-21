@@ -320,7 +320,7 @@ describe("checked Vモデル source assets", () => {
     );
   });
 
-  it.fails("CANDIDATE-U-DOCSPLIT-026: repeated citations are not candidate declarations", () => {
+  it.fails("U-DOCSPLIT-026: repeated citations are not candidate declarations", () => {
     const id = "CANDIDATE-U-DOCSPLIT-900";
     const markdown = candidateIndex([
       `| \`${id}\` | declared once |`,
@@ -347,7 +347,7 @@ describe("checked Vモデル source assets", () => {
     for (const shape of tableShapes) {
       const id = "CANDIDATE-U-DOCSPLIT-900";
       const markdown = candidateIndex([candidateDeclaration(id, "table", marker, shape)]);
-      const title = `CANDIDATE-U-DOCSPLIT-026: table ${marker} ${shape} declaration is collected`;
+      const title = `U-DOCSPLIT-026: table ${marker} ${shape} declaration is collected`;
       const check = () =>
         withCandidateDocuments(
           { "docs/test-design/harness/L7-unit-test-design.md": markdown },
@@ -365,7 +365,7 @@ describe("checked Vモデル source assets", () => {
   for (const marker of ["quoted", "bare"] as const) {
     const id = "CANDIDATE-U-DOCSPLIT-900";
     const markdown = candidateIndex([candidateDeclaration(id, "heading", marker)]);
-    const title = `CANDIDATE-U-DOCSPLIT-026: heading ${marker} declaration is collected`;
+    const title = `U-DOCSPLIT-026: heading ${marker} declaration is collected`;
     const check = () =>
       withCandidateDocuments(
         { "docs/test-design/harness/L7-unit-test-design.md": markdown },
@@ -379,7 +379,7 @@ describe("checked Vモデル source assets", () => {
     else it.fails(title, check);
   }
 
-  it.fails("CANDIDATE-U-DOCSPLIT-026: adjacent direct-child L7 files are read", () => {
+  it.fails("U-DOCSPLIT-026: adjacent direct-child L7 files are read", () => {
     const splitCandidate = "CANDIDATE-U-DOCSPLIT-900";
     const index = candidateIndex();
     const splitDoc = [
@@ -424,7 +424,7 @@ describe("checked Vモデル source assets", () => {
                 "docs/test-design/harness/L7-unit-test-design.md": candidateIndex([first]),
                 "docs/test-design/harness/L7-split-x-test-design.md": second,
               };
-        const title = `CANDIDATE-U-DOCSPLIT-026: duplicate ${firstKind}/${secondKind}, ${placement}, ${firstMarker}/${secondMarker} stays visible`;
+        const title = `U-DOCSPLIT-026: duplicate ${firstKind}/${secondKind}, ${placement}, ${firstMarker}/${secondMarker} stays visible`;
         const check = () =>
           withCandidateDocuments(files, (root) => {
             expect(readCandidateDocuments(root).flatMap(collectCandidateIds).sort()).toEqual(
@@ -453,7 +453,7 @@ describe("checked Vモデル source assets", () => {
                 "docs/test-design/harness/L7-unit-test-design.md": candidateIndex([first]),
                 "docs/test-design/harness/L7-split-x-test-design.md": second,
               };
-        const title = `CANDIDATE-U-DOCSPLIT-026: ${shape} and plain are duplicate declarations, ${placement}, ${firstMarker}/${secondMarker}`;
+        const title = `U-DOCSPLIT-026: ${shape} and plain are duplicate declarations, ${placement}, ${firstMarker}/${secondMarker}`;
         const check = () =>
           withCandidateDocuments(files, (root) => {
             expect(readCandidateDocuments(root).flatMap(collectCandidateIds).sort()).toEqual(
@@ -499,7 +499,7 @@ describe("checked Vモデル source assets", () => {
   ];
   for (const excluded of excludedReferences) {
     const markdown = candidateIndex(excluded.lines);
-    const title = `CANDIDATE-U-DOCSPLIT-026: ${excluded.name}`;
+    const title = `U-DOCSPLIT-026: ${excluded.name}`;
     const check = () =>
       withCandidateDocuments(
         { "docs/test-design/harness/L7-unit-test-design.md": markdown },
@@ -523,7 +523,7 @@ describe("checked Vモデル source assets", () => {
             ? `## ${tokens.join(separator)} description`
             : `| ${tokens.join(separator)} | note |`;
         const markdown = candidateIndex([line]);
-        const title = `CANDIDATE-U-DOCSPLIT-026: ${marker} ${surface} ${kind} is a reference`;
+        const title = `U-DOCSPLIT-026: ${marker} ${surface} ${kind} is a reference`;
         const check = () =>
           withCandidateDocuments(
             { "docs/test-design/harness/L7-unit-test-design.md": markdown },
@@ -550,7 +550,7 @@ describe("checked Vモデル source assets", () => {
     );
   });
 
-  it("excludes non-direct-child, non-L7, and other-tree documents", () => {
+  it("U-DOCSPLIT-026: excludes non-direct-child, non-L7, and other-tree documents", () => {
     const id = "CANDIDATE-U-DOCSPLIT-900";
     const declaration = candidateDeclaration(id, "table", "quoted");
     withCandidateDocuments(
