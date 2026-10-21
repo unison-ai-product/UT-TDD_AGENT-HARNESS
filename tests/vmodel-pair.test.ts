@@ -319,7 +319,7 @@ describe("verification trigger (U-VTRIG、層群 freeze の機械発火、IMP-06
     expect(g?.hasOrphan).toBe(true);
   });
 
-  it.fails("U-VTRIG-006: L0-L7はconfirmedのpair-doc状態だけでfreezeする", () => {
+  it("U-VTRIG-006: L0-L7はconfirmedのpair-doc状態だけでfreezeする", () => {
     const docs = [
       doc("docs/design/harness/L1-requirements/a.md", "L1", "x", "confirmed"),
       doc("docs/design/harness/L2-screen/b.md", "L2", "x", "confirmed"),
@@ -373,11 +373,6 @@ describe("verification trigger (U-VTRIG、層群 freeze の機械発火、IMP-06
         activeRevisionConfirmed: 0,
         activeRevisionDraft: 0,
         activeRevisionHasOrphan: false,
-        requiredPlanIds: [],
-        confirmedPlanIds: [],
-        missingPlanIds: [],
-        evidenceReadyPlanIds: [],
-        evidenceMissingPlanIds: [],
         frozen: true,
       },
     ]);
@@ -400,11 +395,6 @@ describe("verification trigger (U-VTRIG、層群 freeze の機械発火、IMP-06
         activeRevisionConfirmed: 0,
         activeRevisionDraft: 0,
         activeRevisionHasOrphan: false,
-        requiredPlanIds: [],
-        confirmedPlanIds: [],
-        missingPlanIds: [],
-        evidenceReadyPlanIds: [],
-        evidenceMissingPlanIds: [],
         frozen: false,
       },
     ]);
@@ -435,7 +425,7 @@ describe("verification trigger (U-VTRIG、層群 freeze の機械発火、IMP-06
     expect(surface).toContain("実装検証サイクルゲート");
   });
 
-  it.fails("U-VTRIG-005-L7: 実 repo の L0-L7 はpair-doc状態だけでfreezeする", () => {
+  it("U-VTRIG-005-L7: 実 repo の L0-L7 はpair-doc状態だけでfreezeする", () => {
     const docs = loadPairDocs();
     const { orphans } = analyzePairFreeze(docs);
     const groups = analyzeVerificationGroups(docs, orphans);
