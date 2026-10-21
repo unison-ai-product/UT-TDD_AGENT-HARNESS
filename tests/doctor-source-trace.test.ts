@@ -48,7 +48,7 @@ describe("doctor source trace adapters", () => {
     expect(checkOracleTestTrace).toBe(checkOracleTestTraceAdapter);
   });
 
-  it.fails("CANDIDATE-U-PAEXRET-001: full doctorからPLAN成果物検査を退役し代表gateを保持する", () => {
+  it.fails("U-PAEXRET-001: full doctorからPLAN成果物検査を退役し代表gateを保持する", () => {
     const deps: DoctorDeps = {
       repoRoot: "C:/fixture/no-repository-reads",
       now: "2026-10-21T00:00:00.000Z",
