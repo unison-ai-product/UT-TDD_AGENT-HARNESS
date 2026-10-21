@@ -1,6 +1,7 @@
+import { execFileSync, spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { parse as parseYaml } from "yaml";
 import {
@@ -1600,5 +1601,72 @@ describe("Issue #472 S1-c: source CI Bun removal", () => {
         expect(step.name ?? "").not.toMatch(/\bbun\b/i);
       }
     }
+  });
+});
+
+describe("Issue #1099: 必須PR baseline ratchet", () => {
+  it.fails("CANDIDATE-U-OIDBASE-013: docs-onlyでも固定CI contextのratchetを実行し、不明なcontextをnon-zeroへ投影する", () => {
+    type Step = {
+      run?: string;
+      if?: string;
+      env?: Record<string, string>;
+      "continue-on-error"?: boolean;
+    };
+    const workflow = parseYaml(SOURCE_WORKFLOW) as {
+      jobs: Record<string, { if?: string; steps?: Step[] }>;
+    };
+    const job = workflow.jobs["harness-check-linux"];
+    const ratchetSteps = (job.steps ?? []).filter((step) =>
+      step.run?.includes("checkOracleBaselineRatchet"),
+    );
+    // 足場ではこのassertionがRed。存在しないscriptの実行失敗をRedと数えない。
+    expect(ratchetSteps).toHaveLength(1);
+    const step = ratchetSteps[0];
+    if (!step || typeof step.run !== "string") throw new Error("ratchet run step is missing");
+    const run = step.run;
+    for (const condition of [job.if, step.if]) {
+      const expression = (condition ?? "true").trim().replace(/^\$\{\{\s*|\s*\}\}$/g, "");
+      expect([
+        "true",
+        "always()",
+        "github.event_name == 'pull_request'",
+        'github.event_name == "pull_request"',
+      ]).toContain(expression);
+    }
+    expect(step["continue-on-error"] ?? false).toBe(false);
+    const executableRun = run
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .split(/\r?\n/)
+      .filter((line) => !/^\s*(?:#|\/\/)/.test(line))
+      .join("\n");
+    expect(executableRun).toMatch(/\bcheckOracleBaselineRatchet\s*\(/);
+    const binding = JSON.stringify(step);
+    expect(binding).toContain("$" + "{{ github.event_name }}");
+    expect(binding).toContain("$" + "{{ github.sha }}");
+    expect(binding).not.toContain("github.event.pull_request.base.sha");
+
+    const bindInvalidContext = (text: string): string =>
+      text
+        .replace(/\$\{\{\s*github\.event_name\s*\}\}/g, "pull_request")
+        .replace(/\$\{\{\s*github\.sha\s*\}\}/g, "");
+    const env = { ...process.env };
+    for (const [key, value] of Object.entries(step.env ?? {})) {
+      env[key] = bindInvalidContext(value);
+    }
+    // Linux required legの実run本文を、同じGit Bash/POSIX shellで実行する。
+    // merge SHA欠落はGit I/O以前のtyped rejectionであり、remoteへは接続しない。
+    const gitExecPath = execFileSync("git", ["--exec-path"], { encoding: "utf8" }).trim();
+    const bash =
+      process.platform === "win32" ? resolve(gitExecPath, "../../../bin/bash.exe") : "bash";
+    const result = spawnSync(bash, ["--noprofile", "--norc", "-c", bindInvalidContext(run)], {
+      cwd: REPO_ROOT,
+      env,
+      encoding: "utf8",
+      timeout: 30_000,
+    });
+    expect(result.error).toBeUndefined();
+    expect(result.status).not.toBeNull();
+    expect(result.status).not.toBe(0);
+    expect(`${result.stdout}${result.stderr}`).toContain("pr_context_invalid");
   });
 });
