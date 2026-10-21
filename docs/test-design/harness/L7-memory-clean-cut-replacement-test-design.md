@@ -7,7 +7,7 @@ status: draft
 pair_artifact: docs/plans/PLAN-L6-104-memory-clean-cut-replacement.md
 parent_doc: docs/design/harness/L6-function-design/memory.md
 created: 2026-09-15
-updated: 2026-09-15
+updated: 2026-10-21
 ---
 
 # PLAN-L6-104 memory clean-cut replacement — L7 test design
@@ -83,8 +83,9 @@ updated: 2026-09-15
 | `U-MEMCUT-012` | PR-1 | `src/`・`scripts/`・`.claude/hooks/` の import graph を、TypeScript の module 解決で走査する。mutation として、任意の production module に migration module の import を 1 行戻す | `project-memory-migration` への edge が 0、module file が不在、`ProjectMemoryMigration` symbol の出現が 0。mutation で Red |
 | `U-MEMCUT-013` | PR-1 | `src/doctor/test-repository-isolation.ts` の `CONTRACT_ROWS` を test file の集合と照合する。負例として、test file だけを削除して行を残す | 行が 0 件で `test-repository-isolation` が OK。負例は `stale-contract:tests/project-memory-migration.test.ts` で Red |
 | `U-MEMCUT-014` | PR-1 | migration test の削除後に、oracle-test-trace を実 repository に対して実行する。負例として、test だけを削除して宣言を残す | `U-PMEMINV-*` (8 件) と `U-PMEMQUAR-*` (5 件) の宣言 site が 0、orphan が 0、baseline への退避が 0 (baseline は縮小のみ)。負例は該当 13 件の orphan で Red |
-| `U-MEMCUT-015` | PR-1 | migration file の削除後に plan-artifact-existence を実行する (`PLAN-L7-512` は confirmed で、`generates` に削除対象の 2 path を持つ) | phantom-artifact が 0。`generates` の整合は canonical な `plan revise --manifest` 経路で行い、receipt を手で編集しない。負例 (generates を据え置く) は 2 path の phantom-artifact で Red |
 | `U-MEMCUT-016` | PR-1 | PR-1 の diff と継承 test を検査する | `src/runtime/project-memory-root.ts` と `src/runtime/claude-provider-envelope.ts` の diff が 0。`tests/project-memory-root.test.ts`・`tests/project-memory-pack-parity.test.ts`・`tests/claude-memory-wake.test.ts` の label 集合が不変で、かつ Green。`src/`・`tests/`・`scripts/` での `project-memory-migration` の出現が 0 (docs に残るのは correction note / 非適用注記 / archive だけ) |
+
+履歴注記: 旧 `U-MEMCUT-015` は plan-artifact-existence 検査自体の A4 退役に伴い、本 matrix の宣言から退役する。既存 `tests/memory-clean-cut-removal.test.ts` の本文・期待値・import は A4 Green まで旧回帰として保持するが、formal oracle citation には数えない。§9 の新候補は検査の退役を証明する別の oracle であり、旧015の意味を引き継ぐものではない。
 
 ### 4.3 corpus 置換: rename digest manifest と untracked の非 commit (PR-2)
 
@@ -155,3 +156,13 @@ updated: 2026-09-15
 - targeted command の終了コードと、typecheck / Biome の結果。
 - Linux / Windows / aggregate の CI run ID。
 - 非著者の closing receipt の digest。
+
+## 9. A4: plan-artifact-existence doctor check の退役 (bounded)
+
+この節は A4 の `plan-artifact-existence` doctor check 全体の退役だけを扱う。PLAN artifact の存在検査を部分的に残す代替 gate、stub、例外は追加しない。memory corpus の置換・migration 契約には広げない。
+
+| Candidate | 所有 PR | Stimulus / mutation | 独立 oracle |
+| --- | --- | --- | --- |
+| `CANDIDATE-U-PAEXRET-001` | A4 contract → formal promotion → Green | 既存 `DoctorDeps` 形の純粋 fixture (`readText` と `listDir` は呼出時に throw し、definition の `run` closure は実行しない) を production `buildFullDoctorCheckDefinitions` と `buildDoctorCheckDefinitionGroups` に渡す。得た定義、group 定義、`FULL_DOCTOR_OUTPUT_IDS`、production `selectDoctorCheckDefinitions` の full-scope 選択を観測する。 | `plan-artifact-existence` が全定義・全 group 定義・doctor output ID・選択結果のいずれにも存在しない。対照として `coding-rules`、`oracle-test-trace`、`g1-trace` は定義・出力に存在し、full-scope で選択できる。fixture の I/O 関数が呼ばれず、個別 check の run closure も呼ばれない。 |
+
+Red は本契約 PR と同時に、既存の `tests/doctor-source-trace.test.ts` へ候補 assertion として置き、現行 production registry に対する実 assertion failure を確認する。候補があるだけでは formal citation や Green の証拠ではない。実 Red の後に別 PR で候補を `U-PAEXRET-001` へ正式昇格し、その後の Green PR で doctor 登録・output から check を退役する。旧 §6 の memory PR-1/PR-2 内昇格規律はこの A4 手順には適用せず、この節の候補 → 別 formal promotion → Green の順を守る。Green PR は本節や test-design を変更しない。

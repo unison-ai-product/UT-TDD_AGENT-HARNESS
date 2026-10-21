@@ -139,7 +139,7 @@ describe("memory clean-cut PR-1: migration removal (U-MEMCUT-012..016)", () => {
     expect(kept.orphans).toContain(`${WITHDRAWN_PREFIXES[0]}001`);
   });
 
-  it("U-MEMCUT-015: PLAN-L7-512 generates has no phantom after the deletion; kept entries would be phantom", () => {
+  it("A4 Greenまでの旧回帰: PLAN-L7-512 generates has no phantom after the deletion; kept entries would be phantom", () => {
     const input = loadPlanArtifactExistenceInput(root);
     const row = input.plans.find((p) => p.planId === "PLAN-L7-512-project-scoped-memory-root");
     expect(row?.missingArtifacts ?? []).toEqual([]);

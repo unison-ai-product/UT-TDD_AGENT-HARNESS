@@ -10,7 +10,7 @@ next_pair_freeze: L7
 issue: 1062
 ---
 
-> **L6 contract marker**: 本書は「状態を相手へ伝える経路」の正本割当と、それを機械で守る 4 つの契約を凍結する。(1) `memory add` の拒否規則 `classifyMemoryAdd(input) => accept | reject(reason)`、(2) review request の identity v2 `reviewIdentityObjectV2(request)`、(3) 通知レコード `ut-tdd.notification/v1`、(4) handover prose の退役。oracle の索引は共有の `docs/test-design/harness/L7-unit-test-design.md` (§状態を伝える経路の一本化) に置き、詳細 (CANDIDATE-U-STCHAN-001〜028) は専用の `docs/test-design/harness/L7-state-channel-consolidation-test-design.md` が固定する。
+> **L6 contract marker**: 本書は「状態を相手へ伝える経路」の正本割当と、それを機械で守る 4 つの契約を凍結する。(1) `memory add` の拒否規則 `classifyMemoryAdd(input) => accept | reject(reason)`、(2) review request の identity v2 `reviewIdentityObjectV2(request)`、(3) 通知レコード `ut-tdd.notification/v1`、(4) handover prose の退役。これらに加え、§11 は issue #1168 の A4 bounded retirement slice を定める。oracle の索引は共有の `docs/test-design/harness/L7-unit-test-design.md` (§状態を伝える経路の一本化) に置き、詳細 (CANDIDATE-U-STCHAN-001〜028) は専用の `docs/test-design/harness/L7-state-channel-consolidation-test-design.md` が固定する。
 
 # 状態を伝える経路の一本化 — 関数設計 (issue #1062)
 
@@ -186,7 +186,7 @@ reviewRevision = "rv1-" + sha256(canonicalJson(reviewIdentityObjectV2))
 | 宣言済み oracle U-HOVER-011 の md 照合部分 (`countHandoverEntries`、`latest_doc` の entry 数と `doc_entry_count` の照合) | §5.2 のとおり md 照合は撤去する。署名照合 (`generated_by` 欠落の警告、pointer 不在は警告なし) は残るので、U-HOVER-011 は署名照合の oracle に書き換えて残す (宣言と citation テストを残す) |
 | 宣言済み oracle U-HOVER-012 の gap⑤ 部分 (`runHandover` の `readPlanMeta` family 解決、kind を埋める) | `readPlanMeta` は §1 の PLAN サマリを描く scaffold 専用部品で、この表で撤去する。session scope の検査 (`scopeToSession` / `latestSessionId`) は残るので、U-HOVER-012 はその部分の oracle として残し、gap⑤ のテストは契約 PR で撤去する (残すと関数が消えた時点で未検証の宣言になる。#1163 の Sol r1 P1)。L7 の被覆表 (IMP-078 の行) も同時に縮約する |
 | 宣言済み oracle U-HOVER-007 の md 追記・`content` 返却部分 | `runHandover` は md を書かず `HandoverResult.content` も返さない (本 §5)。U-HOVER-007 は「dry-run は書かない」「CURRENT.json 更新」「`complete` の status と `active_plan`」の oracle に縮約して残す。散文を作らない契約は U-STCHAN-019 が持つ。契約 PR で宣言を縮約し、md 追記と `content` を見るテストの書き換えは src の撤去と同時に変わるので Green で行う |
-| PLAN-L7-143 の `generates` (`tests/handover-completion-wording.test.ts`)、PLAN-L7-173 の `green_commands` (同テストの実行コマンドと evidence_path)、および本文の同テストへの言及 | 撤去するテストを指したままだと doctor の plan-artifact-existence (U-PA-035 / 042) が落ちる。`plan revise` (strict manifest → revision N+1) で参照を外す。`generates` と証跡を黙って書き換えず、正規改訂の receipt を残す |
+| PLAN-L7-143 の `generates` (`tests/handover-completion-wording.test.ts`)、PLAN-L7-173 の `green_commands` (同テストの実行コマンドと evidence_path)、および本文の同テストへの言及 | A4 の bounded retirement 契約で `plan-artifact-existence` を退役する対象とする。この契約では PLAN 本文・履歴を変更せず、`plan revise`、phantom 集計、例外追加を要求しない。専用の Red oracle は `L7-memory-clean-cut-replacement-test-design.md` の `CANDIDATE-U-PAEXRET-001` に置く |
 
 - U-HOVER-016 / 017 は test-design の `L7-unit-test-design.md` で宣言されておらず (grep で確認済み)、`src/lint/oracle-test-citation-baseline.ts` の「未宣言 citation の負債」にだけ載っている。この 2 件だけは test-design の変更が不要で、テストの削除と baseline の 2 行の削除は実装 PR (src) で一緒に行う。上の表の宣言済み oracle (U-HOVER-003 / 004 / 011 / 013 / 014) は宣言があるので、宣言の撤去または書き換えと citation テストの撤去を、実装 PR より前の契約 PR (段階 6b) で原子的に行う。`tests/handover-completion-wording.test.ts` と PLAN-L7-145 系の relativize テストも、同じ契約 PR で撤去する。
 - `outstanding` (`computeOutstandingWork` の集計) は `CURRENT.json` に残す。機械ポインタの内容であり scaffold 専用ではない。
@@ -283,3 +283,12 @@ classifyMemoryAdd({ kind, durableReason }) =
 | `.ut-tdd/handover/` への書き込みを hook で block | Bash で回避でき、fail-open の guard が増えるだけ。advisory + 規律で足りる (§5) |
 | handover の既存ファイルを削除 | 破壊的操作で PO 承認が要る。移動で目的 (一覧を空にする) は満たせる (§5) |
 | `--review-memory-id` を即時廃止 | 動いている lane のコマンドが壊れる。window を置く (§4.2) |
+
+## 11. A4 bounded slice: `plan-artifact-existence` の退役 (issue #1168)
+
+これは A4 の PLAN 専用検査退役方針を適用する未実装の bounded slice である。実装後に次を満たす。
+
+- doctor の registry・出力・選択経路から `plan-artifact-existence` を除く。専用 lint 本体、専用テスト、adapter/re-export、および `U-MEMCUT-015` を含む当該検査への依存も、後続 Green で除去する。
+- PLAN ファイルとその履歴は変更しない。phantom 例外、allowlist、stub、skip は追加しない。
+- `plan-dod` と `plan-completion-drift` を含む他の gate の挙動は変更しない。それらを成果物存在・非空の保証とみなさない。
+- source-free の Red と正式 oracle の昇格を先行し、その後に実装 Green を行う。この節だけでは実装済みとも退役済みとも扱わない。
