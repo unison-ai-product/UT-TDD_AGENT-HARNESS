@@ -9,7 +9,7 @@ The current repo now has row-level closure for the feature-list residuals that o
 
 `doctor` passes both registered-roadmap checks and feature-list closure checks: `fr-roadmap-coverage` closes R1-R9, `drive-model-passage` closes the 9-mode passage certificate table, `drive-db-registration` closes current DB projection registration, `plan-dod` blocks unchecked completed L7 work, and `placeholder-deps` blocks active L7 waiting placeholders.
 
-The original overclaim came from treating `PLAN-L7-44-harness-db-master` completion as "all L7 complete". That is corrected: `PLAN-L7-44` remains the harness.db segment, while `PLAN-L7-50` and `PLAN-L7-51` are the residual closure / doctor precision completion records.
+The original overclaim came from treating `PLAN-L7-44-harness-db-master` completion as "all L7 complete". That is corrected: `PLAN-L7-44` remains the harness.db segment, while the residual closure and doctor precision work were originally managed as `PLAN-L7-50` and `PLAN-L7-51` (history: after PLAN retirement (#1078), the closure evidence moved to the upstream sources in the `PLAN / WBS` column of the evidence table below).
 
 ## Absolute No-Omission Principle
 
@@ -38,11 +38,11 @@ Legend: `Closed` means current machine checks cover this edge for the row-level 
 | Layer / artifact | Scope this repo can show | Current evidence | Status | Closure condition |
 |---|---|---|---|---|
 | L1 requirement definition | `FR-L1` registry 47 items and upstream baton notes | `g3-trace` + `fr-roadmap-coverage` | Closed | FR/carry/addenda residuals must map to closed R1-R9 rows or an explicit non-closed status |
-| L3 requirement definition | 26 L3 FR plus explicit P1/P2/Phase B carry | `docs/design/harness/L3-functional/functional-requirements.md`; `doctor l6-fr-coverage`; `fr-roadmap-coverage` | Closed | Residual carry buckets are represented by `PLAN-L7-50` WBS rows |
+| L3 requirement definition | 26 L3 FR plus explicit P1/P2/Phase B carry | `docs/design/harness/L3-functional/functional-requirements.md`; `doctor l6-fr-coverage`; `fr-roadmap-coverage` | Closed | Residual carry buckets are represented by the R1-R9 closure evidence rows (history: originally the `PLAN-L7-50` WBS rows) |
 | L4 basic design | architecture/module boundaries and system concepts | `pair-freeze`, `module-drift`, L4 roadmap, A-133 residual rows | Closed | Unscheduled extensions must be surfaced by `fr-roadmap-coverage`, not inferred |
 | L5 detailed design | D-DB/D-CONTRACT/D-STATE and physical-data extensions | L5 roadmap, L8 integration test design, PLAN-L5-08 references, `drive-db-registration` | Closed | A-124/A-125/A-126 residual implementation evidence is represented in R7-R9 |
 | L6 function design | unit-level contracts and U-* oracle mapping | `l6-fr-coverage - OK (FR registry 47...)` | Closed for declared L6 matrix | Closure is FR-to-L6/U-*; it does not by itself prove implementation shipped |
-| Test design | L7 unit, L8 integration, L9 system test docs paired | `vmodel lint` pair-freeze 38 pair / orphan 0; `PLAN-L7-50` R10/R11 closes explicit L7 defer discharge | Closed | Explicit defer rows must remain linked to PLAN/L7 source/test evidence and checked by L6/impl/oracle trace gates |
+| Test design | L7 unit, L8 integration, L9 system test docs paired | `vmodel lint` pair-freeze 38 pair / orphan 0; R10/R11 explicit L7 defer discharge (history: closed under `PLAN-L7-50`) | Closed | Explicit defer rows must remain linked to L7 source/test evidence and checked by L6/impl/oracle trace gates (history: the PLAN link was part of this condition until PLAN retirement in #1078; it is no longer required) |
 | L7 plan groups | confirmed/completed L7 PLAN files plus residual closure plans | `plan-dod`, `fr-roadmap-coverage`, `roadmap-rollup`, `impl-plan-trace` | Closed | Completed/confirmed L7 PLANs cannot keep unchecked DoD or missing residual evidence |
 | Code | `src` modules mapped to PLAN generates and architecture | `impl-plan-trace`, `module-drift`, `dependency-drift` | Closed | New source without PLAN coverage is fail-closed |
 | Tests | Vitest tests cite oracle IDs; regression expansion maps source to tests | `oracle-test-trace`, `ddd-tdd-rules`, `dependency-drift` | Closed for current declared oracles | No coverage percentage threshold is configured; coverage is trace/substance, not Istanbul line coverage |
@@ -52,29 +52,31 @@ Legend: `Closed` means current machine checks cover this edge for the row-level 
 
 | Bucket | Upstream source | Current route | V-model state | Required next artifact | Status |
 |---|---|---|---|---|---|
-| R1 Learning / observability | FR-L1-19/20 | Phase B / L4 carry | L1/L5 references exist; L7 feedback/search metrics implemented | PLAN-L7-50 WBS-L7-50-R1 closes learning/observability metrics | `closed` |
-| R2 FE / W-gate workflow | FR-L1-21/22/28 | L4 carry | Upstream requirement known; L7 readiness gate implemented | PLAN-L7-50 WBS-L7-50-R2 closes readiness/W-gate workflow evidence | `closed` |
-| R3 P2 readiness and infra | FR-L1-31-35 | L4/Phase B carry | Known P2; guardrail/issue queue evidence implemented | PLAN-L7-50 WBS-L7-50-R3 closes P2 readiness/infra routing | `closed` |
-| R4 model/drive/onboarding/provider | FR-L1-37/39/40/41/42/44 | L4 carry / Phase B | Runtime provider handover and drive-skill injection tests exist | PLAN-L7-50 WBS-L7-50-R4 closes provider/model/drive concern | `closed` |
-| R5 internal assets | FR-L1-46-49 | L4-L6 carry; asset-drift/catalog slices implemented | L7 asset catalog and asset drift tests exist | PLAN-L7-50 WBS-L7-50-R5 closes roster/skill/command asset residuals | `closed` |
-| R6 DDD/TDD strictness | FR-L1-50 | L6-L8 add-feature carry; lint slices implemented | DDD/TDD hardening lint and tests exist | PLAN-L7-50 WBS-L7-50-R6 closes hardening matrix evidence | `closed` |
-| R7 relation graph | A-124 addendum | L6/L7 plans 32/36 and projection support | Relation graph lint and tests exist | PLAN-L7-50 WBS-L7-50-R7 closes relation graph residual matrix link | `closed` |
-| R8 external verification/MCP | A-125 addendum | L7-33/34 slices implemented | Tool adapter and verification profile tests exist | PLAN-L7-50 WBS-L7-50-R8 closes must-tool versus insight-only profile gate | `closed` |
-| R9 document export | A-126 addendum | L7-35 implemented slice | Document export lint and tests exist | PLAN-L7-50 WBS-L7-50-R9 closes export derivative and non-SSOT guard | `closed` |
+| R1 Learning / observability | FR-L1-19/20 | Phase B / L4 carry | L1/L5 references exist; L7 feedback/search metrics implemented | The R1 closure evidence row (historically managed as PLAN-L7-50 WBS-L7-50-R1) closes learning/observability metrics | `closed` |
+| R2 FE / W-gate workflow | FR-L1-21/22/28 | L4 carry | Upstream requirement known; L7 readiness gate implemented | The R2 closure evidence row (historically managed as PLAN-L7-50 WBS-L7-50-R2) closes readiness/W-gate workflow evidence | `closed` |
+| R3 P2 readiness and infra | FR-L1-31-35 | L4/Phase B carry | Known P2; guardrail/issue queue evidence implemented | The R3 closure evidence row (historically managed as PLAN-L7-50 WBS-L7-50-R3) closes P2 readiness/infra routing | `closed` |
+| R4 model/drive/onboarding/provider | FR-L1-37/39/40/41/42/44 | L4 carry / Phase B | Runtime provider handover and drive-skill injection tests exist | The R4 closure evidence row (historically managed as PLAN-L7-50 WBS-L7-50-R4) closes provider/model/drive concern | `closed` |
+| R5 internal assets | FR-L1-46-49 | L4-L6 carry; asset-drift/catalog slices implemented | L7 asset catalog and asset drift tests exist | The R5 closure evidence row (historically managed as PLAN-L7-50 WBS-L7-50-R5) closes roster/skill/command asset residuals | `closed` |
+| R6 DDD/TDD strictness | FR-L1-50 | L6-L8 add-feature carry; lint slices implemented | DDD/TDD hardening lint and tests exist | The R6 closure evidence row (historically managed as PLAN-L7-50 WBS-L7-50-R6) closes hardening matrix evidence | `closed` |
+| R7 relation graph | A-124 addendum | L6/L7 plans 32/36 and projection support | Relation graph lint and tests exist | The R7 closure evidence row (historically managed as PLAN-L7-50 WBS-L7-50-R7) closes relation graph residual matrix link | `closed` |
+| R8 external verification/MCP | A-125 addendum | L7-33/34 slices implemented | Tool adapter and verification profile tests exist | The R8 closure evidence row (historically managed as PLAN-L7-50 WBS-L7-50-R8) closes must-tool versus insight-only profile gate | `closed` |
+| R9 document export | A-126 addendum | L7-35 implemented slice | Document export lint and tests exist | The R9 closure evidence row (historically managed as PLAN-L7-50 WBS-L7-50-R9) closes export derivative and non-SSOT guard | `closed` |
 
 ## Residual Feature Closure Evidence
 
 | Bucket | PLAN / WBS | L7 source | test file / oracle citation | coverage gate | Status |
 |---|---|---|---|---|---|
-| R1 | docs/plans/PLAN-L7-50-feature-list-residual-closure.md#WBS-L7-50-R1 | src/feedback/engine.ts | tests/search-feedback.test.ts | doctor fr-roadmap-coverage + npm test | `closed` |
-| R2 | docs/plans/PLAN-L7-50-feature-list-residual-closure.md#WBS-L7-50-R2 | src/workflow/readiness.ts | tests/readiness-guardrail.test.ts | doctor fr-roadmap-coverage + npm test | `closed` |
-| R3 | docs/plans/PLAN-L7-50-feature-list-residual-closure.md#WBS-L7-50-R3 | src/guardrail/ledger.ts | tests/issue-queue.test.ts | doctor fr-roadmap-coverage + npm test | `closed` |
-| R4 | docs/plans/PLAN-L7-50-feature-list-residual-closure.md#WBS-L7-50-R4 | src/runtime/provider-handover.ts | tests/provider-handover.test.ts | doctor fr-roadmap-coverage + npm test | `closed` |
-| R5 | docs/plans/PLAN-L7-50-feature-list-residual-closure.md#WBS-L7-50-R5 | src/assets/catalog.ts | tests/asset-catalog.test.ts | doctor fr-roadmap-coverage + npm test | `closed` |
-| R6 | docs/plans/PLAN-L7-50-feature-list-residual-closure.md#WBS-L7-50-R6 | src/lint/ddd-tdd-rules.ts | tests/ddd-tdd-rules.test.ts | doctor fr-roadmap-coverage + npm test | `closed` |
-| R7 | docs/plans/PLAN-L7-50-feature-list-residual-closure.md#WBS-L7-50-R7 | src/lint/relation-graph.ts | tests/relation-graph.test.ts | doctor fr-roadmap-coverage + npm test | `closed` |
-| R8 | docs/plans/PLAN-L7-50-feature-list-residual-closure.md#WBS-L7-50-R8 | src/lint/tool-adapter.ts | tests/tool-adapter.test.ts | doctor fr-roadmap-coverage + npm test | `closed` |
-| R9 | docs/plans/PLAN-L7-50-feature-list-residual-closure.md#WBS-L7-50-R9 | src/export/document-export.ts | tests/document-export.test.ts | doctor fr-roadmap-coverage + npm test | `closed` |
+| R1 | docs/design/harness/L3-functional/functional-requirements.md#§3 | src/feedback/engine.ts | tests/search-feedback.test.ts | doctor fr-roadmap-coverage + npm test | `closed` |
+| R2 | docs/design/harness/L3-functional/functional-requirements.md#§3 | src/workflow/readiness.ts | tests/readiness-guardrail.test.ts | doctor fr-roadmap-coverage + npm test | `closed` |
+| R3 | docs/design/harness/L3-functional/functional-requirements.md#§3 | src/guardrail/ledger.ts | tests/issue-queue.test.ts | doctor fr-roadmap-coverage + npm test | `closed` |
+| R4 | docs/design/harness/L3-functional/functional-requirements.md#§3 | src/runtime/provider-handover.ts | tests/provider-handover.test.ts | doctor fr-roadmap-coverage + npm test | `closed` |
+| R5 | docs/design/harness/L3-functional/functional-requirements.md#§3 | src/assets/catalog.ts | tests/asset-catalog.test.ts | doctor fr-roadmap-coverage + npm test | `closed` |
+| R6 | docs/design/harness/L3-functional/functional-requirements.md#§3 | src/lint/ddd-tdd-rules.ts | tests/ddd-tdd-rules.test.ts | doctor fr-roadmap-coverage + npm test | `closed` |
+| R7 | .ut-tdd/audit/A-124-cross-artifact-graph-tooling.md | src/lint/relation-graph.ts | tests/relation-graph.test.ts | doctor fr-roadmap-coverage + npm test | `closed` |
+| R8 | .ut-tdd/audit/A-125-mcp-external-verification-profile-scope.md | src/lint/tool-adapter.ts | tests/tool-adapter.test.ts | doctor fr-roadmap-coverage + npm test | `closed` |
+| R9 | .ut-tdd/audit/A-126-canonical-document-export.md | src/export/document-export.ts | tests/document-export.test.ts | doctor fr-roadmap-coverage + npm test | `closed` |
+
+The `PLAN / WBS` column header is kept for compatibility with `fr-roadmap-coverage`; for a closed row it points to the upstream basis (a design document, or a tracked audit document), not a PLAN (#1169 decision 4). R1-R6 point to the carry declarations in L3 `functional-requirements.md` §3, and R7-R9 point to the A-124 / A-125 / A-126 addenda. Rollback: if a row's evidence is found wrong, set that row back to `scheduled` in the bucket and evidence tables and keep the residual as carry until it is re-closed (history: the former PLAN-L7-50 WBS held the same per-row rollback, e.g. "Revert A-133 row to `scheduled`").
 
 ## Required Table Shape
 
@@ -92,7 +94,7 @@ Legend: `Closed` means current machine checks cover this edge for the row-level 
 | `coverage gate` | Machine check that proves the row |
 | `status` | `closed`, `scheduled`, `parked`, or `gap` |
 
-Because this table now exists and is checked by `fr-roadmap-coverage`, unqualified `L7 complete` is allowed only when the A-133 residual rows and `PLAN-L7-50` / `PLAN-L7-51` gates are green.
+Because this table now exists and is checked by `fr-roadmap-coverage`, unqualified `L7 complete` is allowed only when the A-133 residual rows and the `fr-roadmap-coverage` / doctor precision gates are green (history: originally managed as `PLAN-L7-50` / `PLAN-L7-51`).
 
 ## Drive-model Passage Certificate
 
@@ -107,7 +109,7 @@ This is the required certificate table for closing a non-Forward drive model bac
 | Incident | `production_incident`, `hotfix_required`, `regression_prod` | triage, hotfix evidence, recovery plan, postmortem | L12/L13 for stabilization; permanent fix through Reverse to L1-L6; postmortem to L14 | production impact, approvals, hotfix, verification, permanent route, postmortem | Defined; no current incident row in this audit scope |
 | Refactor | `debt_degradation`, `code_smell`, `structural` | behavior-preserving test evidence, affected design unchanged or explicit escalation | L7 internal closure; if behavior changes, route to Add-feature/Reverse | unchanged behavior proof, test green, no requirement/design delta, or escalation | Defined; conditional back-fill only, not a full passage certificate |
 | Retrofit | `dependency_outdated`, `upgrade`, `config_drift` | impact matrix, migration plan, regression/perf/data-integrity evidence | L7, or L4/L5 for architecture/DB changes, or L1/L3 for requirement changes | impact scope, rollback, migration evidence, changed design/requirement route | Defined; conditional back-fill only |
-| Add-feature | `feature_addition`, `scope_extension` | parent PLAN, add-design/add-impl split, tests, V-model trace, Reverse back-fill when bottom-up | existing parent PLAN; route B holds G7 trace until Reverse/G3 closure | parent, requirement/design/test row, WBS, implementation target, Reverse back-fill state, residual status | Consolidated in `PLAN-L3-04` Section 2.1; R1-R9 residuals are closed by `PLAN-L7-50` |
+| Add-feature | `feature_addition`, `scope_extension` | parent PLAN, add-design/add-impl split, tests, V-model trace, Reverse back-fill when bottom-up (history: PLAN-based inputs of the pre-#1078 workflow; after PLAN retirement the parent is the design document section or the GitHub Issue) | existing parent PLAN; route B holds G7 trace until Reverse/G3 closure (history: same as the previous column) | parent, requirement/design/test row, WBS, implementation target, Reverse back-fill state, residual status | Consolidated in `PLAN-L3-04` Section 2.1; R1-R9 residuals are closed by the evidence table above (history: originally `PLAN-L7-50`) |
 | Research | `tech_decision_required`, `option_comparison_needed`, `adr_required` | ADR, research memo, explicit Forward connection | L1 or L4 decision input; Discovery if feasibility remains unknown | decision options, selected ADR, rejected options, Forward target, next action | Consolidated in `PLAN-L3-04` Section 2.1; unresolved feasibility must switch to Discovery |
 
 Passage rule: a drive-model row is not allowed to close with only mode-local evidence. It must either re-enter Forward with a named layer/gate and table row, or remain `gap`, `parked`, or `PO decision`.
