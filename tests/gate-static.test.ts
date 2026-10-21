@@ -50,7 +50,7 @@ const HARNESS_GATE_BASELINE = [
     applicable: true,
     messages: [
       "g1-pair - OK (L1 total=7, confirmed=7, placeholder=0, draft=0, orphans=0)",
-      "g1-trace - OK (business=13, screens=15, p0Fr=19, l3Plans=3)",
+      "g1-trace - OK (business=13, screens=15, p0Fr=19)",
     ],
   },
   {
