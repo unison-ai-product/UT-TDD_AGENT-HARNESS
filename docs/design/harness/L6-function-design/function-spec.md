@@ -2026,9 +2026,11 @@ subject/revision/sequence/command payload digest/from/to/resume/reason/source co
 | `resume` | reopened | planned | exception-context | `forward-exception-context-missing` |
 
 正本は`src/forward/domain/transition-policy.ts`の`TRANSITION_POLICY`であり、この表はその写しである (検査は`tests/forward/fsm.test.ts`の`U-FSM-001`〜`009`)。
-表に無いeventと、表のfrom以外のstateからのeventは`forward-transition-illegal`とする。正常系の各行は隣接遷移だけを許す。
-必須evidenceの各行は、kind・accepted producer・exit規則・期限をsrcのrequirement定義が持ち、下の「Forward evidence policy表」はその
-policy単位の整理である。
+拒否の優先順位は、表に無いeventを`forward-transition-illegal`とした上で、(1) 例外commandのcontext、(2) 必須evidence、(3) 表のfrom / `expectedFrom`の順とし、
+最初に失敗した検査のruleを返す。`forward-transition-illegal`となるのは、context・evidenceを満たしたうえでfromのstateが許可されない場合と、表に無いeventの場合だけである
+(例: contextの無い`archived`からの`block`は`forward-exception-context-missing`でexit 2、`U-FSM-006`)。正常系の各行は隣接遷移だけを許す。
+各eventの必須evidenceはこの遷移表 (`TRANSITION_POLICY`と一致) を正本とする。下の「Forward evidence policy表」とcommand→policyの対応は
+まだ遷移表と整合しておらず、食い違う箇所は遷移表が優先する。この整合は#1169 の後続で整合させる。
 
 例外eventは`exception-context`だけを必須evidenceとする。blockはaccepted / archivedから出せず、rejectは`review_ready` / `reviewed`からだけ出せる。
 supersedeはacceptedを含むarchived以外の全正常stateから出せ、supersededは`reopen`で`reopened`へ戻せる。
