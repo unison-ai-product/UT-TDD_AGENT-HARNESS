@@ -654,6 +654,49 @@ interface DriveDbRegistrationResult {
 
 共通 invariant: `analyzeDriveDbRegistration` は純粋関数 (DB アクセスは呼び出し元の `checkDriveDbRegistration` が担う)。必須 mode 集合はハードコード定数を廃止し (PLAN-L7-243)、stats 収集側が plan_registry (route_mode 正本 + legacy フォールバック、`src/schema/mode-catalog.ts` の `workflowModeForPlan`) から導出した `expectedModes` を突合する。`docs/process/modes/` の mode doc に `MODE_CATALOG_DOC_FILES` 写像が無い場合は `mode_catalog_unmapped` で fail-close する (新 mode 追加の取りこぼし防止)。legacy stats (expectedModes 未提供) のみ `LEGACY_REQUIRED_MODES` (`Discovery/Forward/Recovery/Reverse/Verification`) で従来水準を維持。orphan 検査は stats フィールドの正値チェックで行い、DB クエリを直接発行しない。
 
+#### PLAN 撤去後の扱い (#1168 A4)
+
+`docs/plans/` を物理撤去する (#1078 / #1170) と、`plan_registry` と、そこから導出する `drive_runs` / `workflow_runs` / `model_runs` / `skill_recommendations` / `skill_invocations` が 0 件になる。現行の検査は次の 3 種に分かれる。この節は既存の検査を狭めるだけで、新しい検査や機構は足さない。
+
+入力の由来 (実装の根拠):
+
+| 検査 / 統計 | 入力の由来 | 根拠 (file:line) | 処遇 |
+|---|---|---|---|
+| `empty_plan_registry` | `plan_registry` の行数。PLAN ファイル由来 | `src/lint/drive-db-registration.ts:73`, `src/state-db/drive-registration.ts:100` | 退役 |
+| `stale_plan_registry` / `stale_plan_registry_fingerprint` | `docs/plans/*.md` の件数と frontmatter hash | `drive-db-registration.ts:74-85`, `drive-registration.ts:34-59,173-174,206-207` | 退役 (0 件同士は一致するが、検査自体を置かない) |
+| `missing_drive_runs` / `plans_without_drive_run` | `drive_runs` は projectPlans が返した PLAN ごとに投入する | `drive-db-registration.ts:86-89`, `src/state-db/projection-writer.ts:440-470` | 退役 |
+| `missing_workflow_runs` | `workflow_runs` は PLAN ID を持つ gate 実行と固定の検証帯 PLAN から投入する | `drive-db-registration.ts:90`, `projection-writer.ts:1096,1242-1252` | 退役 |
+| `workflow_orphans` | `workflow_runs` → `drive_runs` の JOIN。`plan_registry` を経由しない | `drive-db-registration.ts:91-93`, `drive-registration.ts:110-116` | **維持 (変更なし)**。0 件なら 0 になる |
+| `missing_model_runs` | レビュー証跡のある PLAN の `crossEntries` から投入 (token 計測の session 行は別経路で、fallback rebuild は `skipTokenTelemetry`) | `drive-db-registration.ts:94`, `projection-writer.ts:663-690,705,203` | 退役 |
+| `model_orphans` | `plan_registry` への JOIN (PLAN の所属に依存)。`role='session'` の行は除外済み | `drive-db-registration.ts:95-97`, `drive-registration.ts:123-129` | `planCount` が 1 以上のときだけ維持 (下記 c) |
+| `missing_skill_recommendations` / `missing_skill_invocations` | PLAN ごとの推薦と、そのレビュー受理・runtime hook の PLAN から投入 | `drive-db-registration.ts:98-109`, `src/state-db/skill-projections.ts:115,131`, `src/state-db/runtime-projections.ts:173` | 退役 |
+| `skill_recommendation_orphans` / `skill_invocation_orphans` | `plan_registry` への JOIN (PLAN の所属に依存) | `drive-db-registration.ts:101-105,107-109`, `drive-registration.ts:131-145` | `planCount` が 1 以上のときだけ維持 (下記 c) |
+| `missing_registered_hook_events` | `hook_events` を `plan_registry` に JOIN した件数。session log の `plan_id` が PLAN に解決できる行だけ数える | `drive-db-registration.ts:110-112`, `drive-registration.ts:146-151`, `projection-writer.ts:500-516` | 退役 |
+| `missing_required_mode` | 期待 mode は `plan_registry` の `route_mode` / `kind` から導出する (`workflowModeForPlan`) | `drive-registration.ts:71-86`, `drive-db-registration.ts:113-115` | 退役 (c の「期待 mode が空」で自然に 0 件になる。`LEGACY_REQUIRED_MODES` は PLAN 無しの経路で使わない) |
+| `mode_catalog_unmapped` | `docs/process/modes/` と `MODE_CATALOG_DOC_FILES` の差分。PLAN 非依存 | `drive-registration.ts:90-96`, `drive-db-registration.ts:116-118` | **維持 (変更なし)** |
+| `missing_db` | `.ut-tdd/harness.db` の有無。PLAN 非依存 | `drive-db-registration.ts:67-72` | **維持 (変更なし)** |
+| `hookOrphans` (統計のみ。違反理由にしない) | 現行でも違反に使わない | `drive-db-registration.ts:30` の合格メッセージ | 変更なし |
+
+(a) 退役する検査: 入力が PLAN 由来のものは、`docs/plans/` が無い・空のときに違反にしてはならない。`stats.planCount` が 0 の入力に対して、上の「退役」の行は違反を返さない。
+
+(b) 変更しない検査: `missing_db`、`mode_catalog_unmapped`、`workflow_orphans` (`workflow_runs` → `drive_runs` の JOIN)。いずれも `plan_registry` を経由しない。`planCount` が 1 以上のときの全検査も、現行の振る舞いを変えない。
+
+(c) 入力が混在する検査の変更:
+
+- **PLAN 所属を見る orphan (`model_orphans` / `skill_recommendation_orphans` / `skill_invocation_orphans`)**: `plan_registry` に所属する行かどうかを見る検査で、orphan 検査を一括で残すことはしない。`planCount` が 1 以上のときは JOIN を消さず現行どおり評価する。`planCount` が 0 のときは所属先が存在しないので評価しない (違反にしない)。`model_orphans` で `role='session'` を除外する条件は変えない。
+- **期待 mode**: `expectedModes` は `plan_registry` から導出する。`planCount` が 0 なら空集合となり `missing_required_mode` は出ない。`expectedModes` が未提供 (legacy DB) のときの `LEGACY_REQUIRED_MODES` 照合は、`planCount` が 0 のときは行わない。
+- **必須統計の件数 (`missing_*`)**: PLAN 非依存の源 (session の token 計測、hook の生ログ) だけで数えた値で「1 件以上」を要求する検査は置かない。現行の件数は PLAN に紐づく投入のみを数えており、PLAN 非依存の件数を要求すると、計測が無い clone で恒常的に赤くなるため。
+
+`planCount` が 0 のときの期待動作 (`analyzeDriveDbRegistration`):
+
+- `stats` が `null` なら従来どおり `violations=[{reason:"missing_db"}]`, `ok=false`。
+- `stats.planCount === 0` かつ `unmappedCatalogDocs` が空なら `violations=[]`, `ok=true`。`driveRuns` / `workflowRuns` / `modelRuns` / `skillRecommendations` / `skillInvocations` / `registeredHookEvents` / `modes` が全て 0・空でも同じ。
+- `stats.planCount === 0` でも `unmappedCatalogDocs` があれば `mode_catalog_unmapped` だけを返し `ok=false`。
+- 合格メッセージ (`driveDbRegistrationMessages`) は `plans=0` を含めて出す。
+- 実装は PLAN 撤去前でも成立する: `planCount` が 1 以上の入力と、その検査結果は変えない。変えるのは `planCount` が 0 の入力だけである。
+
+この変更は既存の検査を狭める撤去であり、新しい契約ではない。PLAN ID を要件にしない (#1166)。
+
 ### D.5 `src/lint/fr-roadmap-coverage.ts`
 
 parent PLAN = PLAN-L7-50。L6 契約なし着地分の後追い明文化。oracle ID 宣言は L7 oracle slice で別途行うため本サブセクションでは省略し、関数 signature + DbC + doctor 配線のみを記録する。
