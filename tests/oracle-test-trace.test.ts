@@ -19,7 +19,6 @@ import {
   type OracleBaselineRatchetResult,
   OracleTestTraceLoadError,
   type OracleTraceAuthority,
-  type OracleTraceFailureReason,
   type OracleTraceGitPath,
 } from "../src/lint/oracle-test-trace.ts";
 import { removeTestTree } from "./support/temp-tree.ts";
@@ -56,10 +55,10 @@ function baselineJson(overrides: Partial<BaselineValues> = {}): string {
   });
 }
 
-function expectBaselineLoadFailure(
+function observeBaselineLoadFailure(
   subjectRoot: string,
   authority: OracleTraceAuthority,
-  reason: OracleTraceFailureReason,
+  assert: (reads: string[], caught: unknown) => void,
 ): void {
   try {
     const reads: string[] = [];
@@ -76,9 +75,7 @@ function expectBaselineLoadFailure(
     } catch (error) {
       caught = error;
     }
-    expect(reads).toEqual(["docs/governance/oracle-test-trace-baseline.json"]);
-    expect(caught).toBeInstanceOf(OracleTestTraceLoadError);
-    expect((caught as OracleTestTraceLoadError | undefined)?.reason).toBe(reason);
+    assert(reads, caught);
   } finally {
     removeTestTree(subjectRoot);
   }
@@ -280,24 +277,6 @@ function expectRatchetResultAndReads(
   expect(observation.authorityReadCount).toBe(0);
 }
 
-function expectRatchetResultAndAllowedReads(
-  observation: RatchetObservation,
-  expectedResult: OracleBaselineRatchetResult,
-  expectedParents: readonly string[],
-  requiredBlobs: readonly (readonly [string, OracleTraceGitPath])[],
-  allowedBlobs: readonly (readonly [string, OracleTraceGitPath])[],
-): void {
-  expect(observation.result).toEqual(expectedResult);
-  expect(observation.firstParentCalls).toEqual(expectedParents);
-  const actual = observation.blobCalls.map(([sha, path]) => `${sha}:${path}`);
-  const allowed = new Set(allowedBlobs.map(([sha, path]) => `${sha}:${path}`));
-  expect(actual.every((call) => allowed.has(call))).toBe(true);
-  for (const [sha, path] of requiredBlobs) {
-    expect(actual).toContain(`${sha}:${path}`);
-  }
-  expect(observation.authorityReadCount).toBe(0);
-}
-
 function expectMigrationJsonMatchesOldSources(text: string): void {
   const value = JSON.parse(text) as RatchetBaseline & { schemaVersion: number };
   expect(value.schemaVersion).toBe(2);
@@ -374,192 +353,304 @@ function citationAxisAnalyzerFixture(head: RatchetBaseline) {
   };
 }
 
-function expectForwardAxisAnalyzerFixture(
-  axis: "legacy" | "widened",
-  head: RatchetBaseline,
-  referenced: ReadonlySet<string>,
-): void {
-  const fixture = forwardAxisAnalyzerFixture(axis, head, referenced);
-  expect(fixture.derived).toEqual([...head[axis]].sort());
-  expectAnalyzerClean(fixture.analysis);
-}
-
-function expectCitationAxisAnalyzerFixture(head: RatchetBaseline): void {
-  const fixture = citationAxisAnalyzerFixture(head);
-  expect(fixture.derived).toEqual([...head.citations].sort());
-  expectAnalyzerClean(fixture.analysis);
-}
-
 describe("oracle baseline authority decode (U-OIDBASE-002/003)", () => {
   it.fails("U-OIDBASE-002: 欠落したJSON authorityはtyped missing errorで拒否される", () => {
-    expectBaselineLoadFailure(
-      baselineSubjectFixture(),
-      fixedBaselineAuthority(null),
-      "baseline_asset_missing",
-    );
+    const subjectRoot = baselineSubjectFixture();
+    observeBaselineLoadFailure(subjectRoot, fixedBaselineAuthority(null), (reads, caught) => {
+      expect(reads).toEqual(["docs/governance/oracle-test-trace-baseline.json"]);
+      expect(caught).toBeInstanceOf(OracleTestTraceLoadError);
+      expect((caught as OracleTestTraceLoadError | undefined)?.reason).toBe(
+        "baseline_asset_missing",
+      );
+    });
   });
 
   it.fails("U-OIDBASE-002: authority reader I/O失敗はtyped errorで拒否される", () => {
-    expectBaselineLoadFailure(
-      baselineSubjectFixture(),
-      failedBaselineAuthority(),
-      "authority_read_failed",
-    );
+    const subjectRoot = baselineSubjectFixture();
+    observeBaselineLoadFailure(subjectRoot, failedBaselineAuthority(), (reads, caught) => {
+      expect(reads).toEqual(["docs/governance/oracle-test-trace-baseline.json"]);
+      expect(caught).toBeInstanceOf(OracleTestTraceLoadError);
+      expect((caught as OracleTestTraceLoadError | undefined)?.reason).toBe(
+        "authority_read_failed",
+      );
+    });
   });
 
   it.fails("U-OIDBASE-002: malformed JSONはtyped decode errorで拒否される", () => {
-    expectBaselineLoadFailure(
-      baselineSubjectFixture(),
-      fixedBaselineAuthority("{"),
-      "baseline_json_malformed",
-    );
+    const subjectRoot = baselineSubjectFixture();
+    observeBaselineLoadFailure(subjectRoot, fixedBaselineAuthority("{"), (reads, caught) => {
+      expect(reads).toEqual(["docs/governance/oracle-test-trace-baseline.json"]);
+      expect(caught).toBeInstanceOf(OracleTestTraceLoadError);
+      expect((caught as OracleTestTraceLoadError | undefined)?.reason).toBe(
+        "baseline_json_malformed",
+      );
+    });
   });
 
   it.fails("U-OIDBASE-002: schemaVersion不一致はschema errorで拒否される", () => {
-    expectBaselineLoadFailure(
-      baselineSubjectFixture(),
+    const subjectRoot = baselineSubjectFixture();
+    observeBaselineLoadFailure(
+      subjectRoot,
       fixedBaselineAuthority(
         JSON.stringify({ schemaVersion: 1, legacy: [], widened: [], citations: [] }),
       ),
-      "baseline_schema_invalid",
+      (reads, caught) => {
+        expect(reads).toEqual(["docs/governance/oracle-test-trace-baseline.json"]);
+        expect(caught).toBeInstanceOf(OracleTestTraceLoadError);
+        expect((caught as OracleTestTraceLoadError | undefined)?.reason).toBe(
+          "baseline_schema_invalid",
+        );
+      },
     );
   });
 
   it.fails("U-OIDBASE-002: schemaVersion欠落はschema errorで拒否される", () => {
-    expectBaselineLoadFailure(
-      baselineSubjectFixture(),
+    const subjectRoot = baselineSubjectFixture();
+    observeBaselineLoadFailure(
+      subjectRoot,
       fixedBaselineAuthority(JSON.stringify({ legacy: [], widened: [], citations: [] })),
-      "baseline_schema_invalid",
+      (reads, caught) => {
+        expect(reads).toEqual(["docs/governance/oracle-test-trace-baseline.json"]);
+        expect(caught).toBeInstanceOf(OracleTestTraceLoadError);
+        expect((caught as OracleTestTraceLoadError | undefined)?.reason).toBe(
+          "baseline_schema_invalid",
+        );
+      },
     );
   });
 
   it.fails("U-OIDBASE-002: legacy欠落はschema errorで拒否される", () => {
-    expectBaselineLoadFailure(
-      baselineSubjectFixture(),
+    const subjectRoot = baselineSubjectFixture();
+    observeBaselineLoadFailure(
+      subjectRoot,
       fixedBaselineAuthority(JSON.stringify({ schemaVersion: 2, widened: [], citations: [] })),
-      "baseline_schema_invalid",
+      (reads, caught) => {
+        expect(reads).toEqual(["docs/governance/oracle-test-trace-baseline.json"]);
+        expect(caught).toBeInstanceOf(OracleTestTraceLoadError);
+        expect((caught as OracleTestTraceLoadError | undefined)?.reason).toBe(
+          "baseline_schema_invalid",
+        );
+      },
     );
   });
 
   it.fails("U-OIDBASE-002: widened欠落はschema errorで拒否される", () => {
-    expectBaselineLoadFailure(
-      baselineSubjectFixture(),
+    const subjectRoot = baselineSubjectFixture();
+    observeBaselineLoadFailure(
+      subjectRoot,
       fixedBaselineAuthority(JSON.stringify({ schemaVersion: 2, legacy: [], citations: [] })),
-      "baseline_schema_invalid",
+      (reads, caught) => {
+        expect(reads).toEqual(["docs/governance/oracle-test-trace-baseline.json"]);
+        expect(caught).toBeInstanceOf(OracleTestTraceLoadError);
+        expect((caught as OracleTestTraceLoadError | undefined)?.reason).toBe(
+          "baseline_schema_invalid",
+        );
+      },
     );
   });
 
   it.fails("U-OIDBASE-002: citations欠落はschema errorで拒否される", () => {
-    expectBaselineLoadFailure(
-      baselineSubjectFixture(),
+    const subjectRoot = baselineSubjectFixture();
+    observeBaselineLoadFailure(
+      subjectRoot,
       fixedBaselineAuthority(JSON.stringify({ schemaVersion: 2, legacy: [], widened: [] })),
-      "baseline_schema_invalid",
+      (reads, caught) => {
+        expect(reads).toEqual(["docs/governance/oracle-test-trace-baseline.json"]);
+        expect(caught).toBeInstanceOf(OracleTestTraceLoadError);
+        expect((caught as OracleTestTraceLoadError | undefined)?.reason).toBe(
+          "baseline_schema_invalid",
+        );
+      },
     );
   });
 
   it.fails("U-OIDBASE-002: schemaVersionの型違いはschema errorで拒否される", () => {
-    expectBaselineLoadFailure(
-      baselineSubjectFixture(),
+    const subjectRoot = baselineSubjectFixture();
+    observeBaselineLoadFailure(
+      subjectRoot,
       fixedBaselineAuthority(
         JSON.stringify({ schemaVersion: "2", legacy: [], widened: [], citations: [] }),
       ),
-      "baseline_schema_invalid",
+      (reads, caught) => {
+        expect(reads).toEqual(["docs/governance/oracle-test-trace-baseline.json"]);
+        expect(caught).toBeInstanceOf(OracleTestTraceLoadError);
+        expect((caught as OracleTestTraceLoadError | undefined)?.reason).toBe(
+          "baseline_schema_invalid",
+        );
+      },
     );
   });
 
   it.fails("U-OIDBASE-002: legacyの型違いはschema errorで拒否される", () => {
-    expectBaselineLoadFailure(
-      baselineSubjectFixture(),
+    const subjectRoot = baselineSubjectFixture();
+    observeBaselineLoadFailure(
+      subjectRoot,
       fixedBaselineAuthority(
         JSON.stringify({ schemaVersion: 2, legacy: "U-ZZBASE-001", widened: [], citations: [] }),
       ),
-      "baseline_schema_invalid",
+      (reads, caught) => {
+        expect(reads).toEqual(["docs/governance/oracle-test-trace-baseline.json"]);
+        expect(caught).toBeInstanceOf(OracleTestTraceLoadError);
+        expect((caught as OracleTestTraceLoadError | undefined)?.reason).toBe(
+          "baseline_schema_invalid",
+        );
+      },
     );
   });
 
   it.fails("U-OIDBASE-002: widenedの型違いはschema errorで拒否される", () => {
-    expectBaselineLoadFailure(
-      baselineSubjectFixture(),
+    const subjectRoot = baselineSubjectFixture();
+    observeBaselineLoadFailure(
+      subjectRoot,
       fixedBaselineAuthority(
         JSON.stringify({ schemaVersion: 2, legacy: [], widened: "U-ZZBASE-001", citations: [] }),
       ),
-      "baseline_schema_invalid",
+      (reads, caught) => {
+        expect(reads).toEqual(["docs/governance/oracle-test-trace-baseline.json"]);
+        expect(caught).toBeInstanceOf(OracleTestTraceLoadError);
+        expect((caught as OracleTestTraceLoadError | undefined)?.reason).toBe(
+          "baseline_schema_invalid",
+        );
+      },
     );
   });
 
   it.fails("U-OIDBASE-002: 未知fieldはschema errorで拒否される", () => {
-    expectBaselineLoadFailure(
-      baselineSubjectFixture(),
+    const subjectRoot = baselineSubjectFixture();
+    observeBaselineLoadFailure(
+      subjectRoot,
       fixedBaselineAuthority(
         JSON.stringify({ schemaVersion: 2, legacy: [], widened: [], citations: [], extra: true }),
       ),
-      "baseline_schema_invalid",
+      (reads, caught) => {
+        expect(reads).toEqual(["docs/governance/oracle-test-trace-baseline.json"]);
+        expect(caught).toBeInstanceOf(OracleTestTraceLoadError);
+        expect((caught as OracleTestTraceLoadError | undefined)?.reason).toBe(
+          "baseline_schema_invalid",
+        );
+      },
     );
   });
 
   it.fails("U-OIDBASE-002: citationsの型違いはschema errorで拒否される", () => {
-    expectBaselineLoadFailure(
-      baselineSubjectFixture(),
+    const subjectRoot = baselineSubjectFixture();
+    observeBaselineLoadFailure(
+      subjectRoot,
       fixedBaselineAuthority(
         JSON.stringify({ schemaVersion: 2, legacy: [], widened: [], citations: "U-ZZBASE-001" }),
       ),
-      "baseline_schema_invalid",
+      (reads, caught) => {
+        expect(reads).toEqual(["docs/governance/oracle-test-trace-baseline.json"]);
+        expect(caught).toBeInstanceOf(OracleTestTraceLoadError);
+        expect((caught as OracleTestTraceLoadError | undefined)?.reason).toBe(
+          "baseline_schema_invalid",
+        );
+      },
     );
   });
 
   it.fails("U-OIDBASE-003: legacy内の不正ID tokenは集合化前に拒否される", () => {
-    expectBaselineLoadFailure(
-      baselineSubjectFixture(),
+    const subjectRoot = baselineSubjectFixture();
+    observeBaselineLoadFailure(
+      subjectRoot,
       fixedBaselineAuthority(baselineJson({ legacy: ["not-an-oracle-id"] })),
-      "baseline_id_invalid",
+      (reads, caught) => {
+        expect(reads).toEqual(["docs/governance/oracle-test-trace-baseline.json"]);
+        expect(caught).toBeInstanceOf(OracleTestTraceLoadError);
+        expect((caught as OracleTestTraceLoadError | undefined)?.reason).toBe(
+          "baseline_id_invalid",
+        );
+      },
     );
   });
 
   it.fails("U-OIDBASE-003: widened内の不正ID tokenは集合化前に拒否される", () => {
-    expectBaselineLoadFailure(
-      baselineSubjectFixture(),
+    const subjectRoot = baselineSubjectFixture();
+    observeBaselineLoadFailure(
+      subjectRoot,
       fixedBaselineAuthority(baselineJson({ widened: ["not-an-oracle-id"] })),
-      "baseline_id_invalid",
+      (reads, caught) => {
+        expect(reads).toEqual(["docs/governance/oracle-test-trace-baseline.json"]);
+        expect(caught).toBeInstanceOf(OracleTestTraceLoadError);
+        expect((caught as OracleTestTraceLoadError | undefined)?.reason).toBe(
+          "baseline_id_invalid",
+        );
+      },
     );
   });
 
   it.fails("U-OIDBASE-003: citations内の不正ID tokenは集合化前に拒否される", () => {
-    expectBaselineLoadFailure(
-      baselineSubjectFixture(),
+    const subjectRoot = baselineSubjectFixture();
+    observeBaselineLoadFailure(
+      subjectRoot,
       fixedBaselineAuthority(baselineJson({ citations: ["not-an-oracle-id"] })),
-      "baseline_id_invalid",
+      (reads, caught) => {
+        expect(reads).toEqual(["docs/governance/oracle-test-trace-baseline.json"]);
+        expect(caught).toBeInstanceOf(OracleTestTraceLoadError);
+        expect((caught as OracleTestTraceLoadError | undefined)?.reason).toBe(
+          "baseline_id_invalid",
+        );
+      },
     );
   });
 
   it.fails("U-OIDBASE-003: legacy内の重複IDは集合化前に拒否される", () => {
-    expectBaselineLoadFailure(
-      baselineSubjectFixture(),
+    const subjectRoot = baselineSubjectFixture();
+    observeBaselineLoadFailure(
+      subjectRoot,
       fixedBaselineAuthority(baselineJson({ legacy: ["U-ZZBASE-001", "U-ZZBASE-001"] })),
-      "baseline_id_duplicate",
+      (reads, caught) => {
+        expect(reads).toEqual(["docs/governance/oracle-test-trace-baseline.json"]);
+        expect(caught).toBeInstanceOf(OracleTestTraceLoadError);
+        expect((caught as OracleTestTraceLoadError | undefined)?.reason).toBe(
+          "baseline_id_duplicate",
+        );
+      },
     );
   });
 
   it.fails("U-OIDBASE-003: widened内の重複IDは集合化前に拒否される", () => {
-    expectBaselineLoadFailure(
-      baselineSubjectFixture(),
+    const subjectRoot = baselineSubjectFixture();
+    observeBaselineLoadFailure(
+      subjectRoot,
       fixedBaselineAuthority(baselineJson({ widened: ["U-ZZBASE-001", "U-ZZBASE-001"] })),
-      "baseline_id_duplicate",
+      (reads, caught) => {
+        expect(reads).toEqual(["docs/governance/oracle-test-trace-baseline.json"]);
+        expect(caught).toBeInstanceOf(OracleTestTraceLoadError);
+        expect((caught as OracleTestTraceLoadError | undefined)?.reason).toBe(
+          "baseline_id_duplicate",
+        );
+      },
     );
   });
 
   it.fails("U-OIDBASE-003: citations内の重複IDは集合化前に拒否される", () => {
-    expectBaselineLoadFailure(
-      baselineSubjectFixture(),
+    const subjectRoot = baselineSubjectFixture();
+    observeBaselineLoadFailure(
+      subjectRoot,
       fixedBaselineAuthority(baselineJson({ citations: ["U-ZZBASE-001", "U-ZZBASE-001"] })),
-      "baseline_id_duplicate",
+      (reads, caught) => {
+        expect(reads).toEqual(["docs/governance/oracle-test-trace-baseline.json"]);
+        expect(caught).toBeInstanceOf(OracleTestTraceLoadError);
+        expect((caught as OracleTestTraceLoadError | undefined)?.reason).toBe(
+          "baseline_id_duplicate",
+        );
+      },
     );
   });
 
   it.fails("U-OIDBASE-003: legacyとwidenedの重複は拒否される", () => {
-    expectBaselineLoadFailure(
-      baselineSubjectFixture(),
+    const subjectRoot = baselineSubjectFixture();
+    observeBaselineLoadFailure(
+      subjectRoot,
       fixedBaselineAuthority(baselineJson({ legacy: ["U-ZZBASE-001"], widened: ["U-ZZBASE-001"] })),
-      "baseline_sets_overlap",
+      (reads, caught) => {
+        expect(reads).toEqual(["docs/governance/oracle-test-trace-baseline.json"]);
+        expect(caught).toBeInstanceOf(OracleTestTraceLoadError);
+        expect((caught as OracleTestTraceLoadError | undefined)?.reason).toBe(
+          "baseline_sets_overlap",
+        );
+      },
     );
   });
 
@@ -750,8 +841,20 @@ describe("trusted-base baseline ratchet bootstrap (CANDIDATE-U-OIDBASE-001/011/0
       headJson,
       includeOldSourceBlobs: true,
     });
-    expectRatchetResultAndReads(observed, { ok: true }, [RATC_MERGE_SHA], bootstrapReads);
-    expectMigrationJsonMatchesOldSources(headJson);
+    expect(observed.result).toEqual({ ok: true });
+    expect(observed.firstParentCalls).toEqual([RATC_MERGE_SHA]);
+    expect(observed.blobCalls.map(([sha, path]) => `${sha}:${path}`).sort()).toEqual(
+      bootstrapReads.map(([sha, path]) => `${sha}:${path}`).sort(),
+    );
+    expect(observed.authorityReadCount).toBe(0);
+    const value = JSON.parse(headJson) as RatchetBaseline & { schemaVersion: number };
+    expect(value.schemaVersion).toBe(2);
+    expect(value.legacy.length).toBe(89);
+    expect(value.widened.length).toBe(317);
+    expect(value.citations.length).toBe(582);
+    expect([...value.legacy].sort()).toEqual([...RATC_OLD_SETS.legacy].sort());
+    expect([...value.widened].sort()).toEqual([...RATC_OLD_SETS.widened].sort());
+    expect([...value.citations].sort()).toEqual([...RATC_OLD_SETS.citations].sort());
   });
 
   it.fails("CANDIDATE-U-OIDBASE-011: bootstrapに必要な旧blobの欠落はbase invalidで拒否される", () => {
@@ -761,16 +864,14 @@ describe("trusted-base baseline ratchet bootstrap (CANDIDATE-U-OIDBASE-001/011/0
       includeOldSourceBlobs: true,
       blobOverrides: [[RATC_BASE_SHA, RATC_OLD_SOURCE_PATHS[0], { ok: true, value: null }]],
     });
-    expectRatchetResultAndAllowedReads(
-      observed,
-      { ok: false, reason: "bootstrap_base_invalid" },
-      [RATC_MERGE_SHA],
-      [
-        [RATC_BASE_SHA, RATC_JSON_PATH],
-        [RATC_BASE_SHA, RATC_OLD_SOURCE_PATHS[0]],
-      ],
-      bootstrapReads,
-    );
+    expect(observed.result).toEqual({ ok: false, reason: "bootstrap_base_invalid" });
+    expect(observed.firstParentCalls).toEqual([RATC_MERGE_SHA]);
+    const actualBlobCalls = observed.blobCalls.map(([sha, path]) => `${sha}:${path}`);
+    const allowedBlobCalls = new Set(bootstrapReads.map(([sha, path]) => `${sha}:${path}`));
+    expect(actualBlobCalls.every((call) => allowedBlobCalls.has(call))).toBe(true);
+    expect(actualBlobCalls).toContain(`${RATC_BASE_SHA}:${RATC_JSON_PATH}`);
+    expect(actualBlobCalls).toContain(`${RATC_BASE_SHA}:${RATC_OLD_SOURCE_PATHS[0]}`);
+    expect(observed.authorityReadCount).toBe(0);
   });
 
   it.fails("CANDIDATE-U-OIDBASE-011: 非正規の旧export shapeはbase invalidで拒否される", () => {
@@ -786,16 +887,14 @@ describe("trusted-base baseline ratchet bootstrap (CANDIDATE-U-OIDBASE-001/011/0
         ],
       ],
     });
-    expectRatchetResultAndAllowedReads(
-      observed,
-      { ok: false, reason: "bootstrap_base_invalid" },
-      [RATC_MERGE_SHA],
-      [
-        [RATC_BASE_SHA, RATC_JSON_PATH],
-        [RATC_BASE_SHA, RATC_OLD_SOURCE_PATHS[0]],
-      ],
-      bootstrapReads,
-    );
+    expect(observed.result).toEqual({ ok: false, reason: "bootstrap_base_invalid" });
+    expect(observed.firstParentCalls).toEqual([RATC_MERGE_SHA]);
+    const actualBlobCalls = observed.blobCalls.map(([sha, path]) => `${sha}:${path}`);
+    const allowedBlobCalls = new Set(bootstrapReads.map(([sha, path]) => `${sha}:${path}`));
+    expect(actualBlobCalls.every((call) => allowedBlobCalls.has(call))).toBe(true);
+    expect(actualBlobCalls).toContain(`${RATC_BASE_SHA}:${RATC_JSON_PATH}`);
+    expect(actualBlobCalls).toContain(`${RATC_BASE_SHA}:${RATC_OLD_SOURCE_PATHS[0]}`);
+    expect(observed.authorityReadCount).toBe(0);
   });
 
   it.fails("CANDIDATE-U-OIDBASE-011: old source blob Git I/O failure returns an object read failure", () => {
@@ -807,16 +906,14 @@ describe("trusted-base baseline ratchet bootstrap (CANDIDATE-U-OIDBASE-001/011/0
         [RATC_BASE_SHA, RATC_OLD_SOURCE_PATHS[0], { ok: false, reason: "git_object_read_failed" }],
       ],
     });
-    expectRatchetResultAndAllowedReads(
-      observed,
-      { ok: false, reason: "git_object_read_failed" },
-      [RATC_MERGE_SHA],
-      [
-        [RATC_BASE_SHA, RATC_JSON_PATH],
-        [RATC_BASE_SHA, RATC_OLD_SOURCE_PATHS[0]],
-      ],
-      bootstrapReads,
-    );
+    expect(observed.result).toEqual({ ok: false, reason: "git_object_read_failed" });
+    expect(observed.firstParentCalls).toEqual([RATC_MERGE_SHA]);
+    const actualBlobCalls = observed.blobCalls.map(([sha, path]) => `${sha}:${path}`);
+    const allowedBlobCalls = new Set(bootstrapReads.map(([sha, path]) => `${sha}:${path}`));
+    expect(actualBlobCalls.every((call) => allowedBlobCalls.has(call))).toBe(true);
+    expect(actualBlobCalls).toContain(`${RATC_BASE_SHA}:${RATC_JSON_PATH}`);
+    expect(actualBlobCalls).toContain(`${RATC_BASE_SHA}:${RATC_OLD_SOURCE_PATHS[0]}`);
+    expect(observed.authorityReadCount).toBe(0);
   });
 
   it.fails("CANDIDATE-U-OIDBASE-011: 有効旧blobに対する同件数要素差分はvalue mismatch", () => {
@@ -865,67 +962,124 @@ describe("three independent subset axes (U-OIDBASE-005 / U-OIDBASE-006)", () => 
     const id = "U-ASSETDRIFT-001";
     const head = updateRatchetBaseline({ legacy: { remove: [id] } });
     const observed = runRatchetFixture({ headJson: ratchetBaselineJson(head) });
-    expectRatchetResultAndReads(observed, { ok: true }, [RATC_MERGE_SHA], jsonPairReads);
+    expect(observed.result).toEqual({ ok: true });
+    expect(observed.firstParentCalls).toEqual([RATC_MERGE_SHA]);
+    expect(observed.blobCalls.map(([sha, path]) => `${sha}:${path}`).sort()).toEqual(
+      jsonPairReads.map(([sha, path]) => `${sha}:${path}`).sort(),
+    );
+    expect(observed.authorityReadCount).toBe(0);
 
-    expectForwardAxisAnalyzerFixture("legacy", head, new Set([id]));
+    const fixture = forwardAxisAnalyzerFixture("legacy", head, new Set([id]));
+    expect(fixture.derived).toEqual([...head.legacy].sort());
+    expect(fixture.analysis.orphans).toEqual([]);
+    expect(fixture.analysis.duplicates).toEqual([]);
+    expect(fixture.analysis.staleDuplicateBaseline).toEqual([]);
+    expect(fixture.analysis.undeclaredCitations).toEqual([]);
+    expect(fixture.analysis.staleCitationBaseline).toEqual([]);
+    expect(fixture.analysis.ok).toBe(true);
   });
 
   it.fails("U-OIDBASE-005: widened debtと対応derived IDの同時縮小を受理する", () => {
     const id = RATC_OLD_SETS.widened[0];
     const head = updateRatchetBaseline({ widened: { remove: [id] } });
     const observed = runRatchetFixture({ headJson: ratchetBaselineJson(head) });
-    expectRatchetResultAndReads(observed, { ok: true }, [RATC_MERGE_SHA], jsonPairReads);
+    expect(observed.result).toEqual({ ok: true });
+    expect(observed.firstParentCalls).toEqual([RATC_MERGE_SHA]);
+    expect(observed.blobCalls.map(([sha, path]) => `${sha}:${path}`).sort()).toEqual(
+      jsonPairReads.map(([sha, path]) => `${sha}:${path}`).sort(),
+    );
+    expect(observed.authorityReadCount).toBe(0);
 
-    expectForwardAxisAnalyzerFixture("widened", head, new Set([id]));
+    const fixture = forwardAxisAnalyzerFixture("widened", head, new Set([id]));
+    expect(fixture.derived).toEqual([...head.widened].sort());
+    expect(fixture.analysis.orphans).toEqual([]);
+    expect(fixture.analysis.duplicates).toEqual([]);
+    expect(fixture.analysis.staleDuplicateBaseline).toEqual([]);
+    expect(fixture.analysis.undeclaredCitations).toEqual([]);
+    expect(fixture.analysis.staleCitationBaseline).toEqual([]);
+    expect(fixture.analysis.ok).toBe(true);
   });
 
   it.fails("U-OIDBASE-005: citation siteとhead citation debtの同時縮小を受理する", () => {
     const id = "U-ADAPTER-005";
     const head = updateRatchetBaseline({ citations: { remove: [id] } });
     const observed = runRatchetFixture({ headJson: ratchetBaselineJson(head) });
-    expectRatchetResultAndReads(observed, { ok: true }, [RATC_MERGE_SHA], jsonPairReads);
-    expectCitationAxisAnalyzerFixture(head);
+    expect(observed.result).toEqual({ ok: true });
+    expect(observed.firstParentCalls).toEqual([RATC_MERGE_SHA]);
+    expect(observed.blobCalls.map(([sha, path]) => `${sha}:${path}`).sort()).toEqual(
+      jsonPairReads.map(([sha, path]) => `${sha}:${path}`).sort(),
+    );
+    expect(observed.authorityReadCount).toBe(0);
+    const fixture = citationAxisAnalyzerFixture(head);
+    expect(fixture.derived).toEqual([...head.citations].sort());
+    expect(fixture.analysis.orphans).toEqual([]);
+    expect(fixture.analysis.duplicates).toEqual([]);
+    expect(fixture.analysis.staleDuplicateBaseline).toEqual([]);
+    expect(fixture.analysis.undeclaredCitations).toEqual([]);
+    expect(fixture.analysis.staleCitationBaseline).toEqual([]);
+    expect(fixture.analysis.ok).toBe(true);
   });
 
   it.fails("U-OIDBASE-006: derived equality passでもbase外legacy growthは拒否する", () => {
     const id = "U-ZZBASE-901";
     const head = updateRatchetBaseline({ legacy: { add: [id] } });
     const observed = runRatchetFixture({ headJson: ratchetBaselineJson(head) });
-    expectRatchetResultAndReads(
-      observed,
-      { ok: false, reason: "baseline_growth" },
-      [RATC_MERGE_SHA],
-      jsonPairReads,
+    expect(observed.result).toEqual({ ok: false, reason: "baseline_growth" });
+    expect(observed.firstParentCalls).toEqual([RATC_MERGE_SHA]);
+    expect(observed.blobCalls.map(([sha, path]) => `${sha}:${path}`).sort()).toEqual(
+      jsonPairReads.map(([sha, path]) => `${sha}:${path}`).sort(),
     );
+    expect(observed.authorityReadCount).toBe(0);
 
-    expectForwardAxisAnalyzerFixture("legacy", head, new Set());
+    const fixture = forwardAxisAnalyzerFixture("legacy", head, new Set());
+    expect(fixture.derived).toEqual([...head.legacy].sort());
+    expect(fixture.analysis.orphans).toEqual([]);
+    expect(fixture.analysis.duplicates).toEqual([]);
+    expect(fixture.analysis.staleDuplicateBaseline).toEqual([]);
+    expect(fixture.analysis.undeclaredCitations).toEqual([]);
+    expect(fixture.analysis.staleCitationBaseline).toEqual([]);
+    expect(fixture.analysis.ok).toBe(true);
   });
 
   it.fails("U-OIDBASE-006: derived equality passでもbase外widened growthは拒否する", () => {
     const id = "U-ZZBASE-901";
     const head = updateRatchetBaseline({ widened: { add: [id] } });
     const observed = runRatchetFixture({ headJson: ratchetBaselineJson(head) });
-    expectRatchetResultAndReads(
-      observed,
-      { ok: false, reason: "baseline_growth" },
-      [RATC_MERGE_SHA],
-      jsonPairReads,
+    expect(observed.result).toEqual({ ok: false, reason: "baseline_growth" });
+    expect(observed.firstParentCalls).toEqual([RATC_MERGE_SHA]);
+    expect(observed.blobCalls.map(([sha, path]) => `${sha}:${path}`).sort()).toEqual(
+      jsonPairReads.map(([sha, path]) => `${sha}:${path}`).sort(),
     );
+    expect(observed.authorityReadCount).toBe(0);
 
-    expectForwardAxisAnalyzerFixture("widened", head, new Set());
+    const fixture = forwardAxisAnalyzerFixture("widened", head, new Set());
+    expect(fixture.derived).toEqual([...head.widened].sort());
+    expect(fixture.analysis.orphans).toEqual([]);
+    expect(fixture.analysis.duplicates).toEqual([]);
+    expect(fixture.analysis.staleDuplicateBaseline).toEqual([]);
+    expect(fixture.analysis.undeclaredCitations).toEqual([]);
+    expect(fixture.analysis.staleCitationBaseline).toEqual([]);
+    expect(fixture.analysis.ok).toBe(true);
   });
 
   it.fails("U-OIDBASE-006: derived equality passでもbase外citation growthは拒否する", () => {
     const id = "U-ZZBASE-901";
     const head = updateRatchetBaseline({ citations: { add: [id] } });
     const observed = runRatchetFixture({ headJson: ratchetBaselineJson(head) });
-    expectRatchetResultAndReads(
-      observed,
-      { ok: false, reason: "baseline_growth" },
-      [RATC_MERGE_SHA],
-      jsonPairReads,
+    expect(observed.result).toEqual({ ok: false, reason: "baseline_growth" });
+    expect(observed.firstParentCalls).toEqual([RATC_MERGE_SHA]);
+    expect(observed.blobCalls.map(([sha, path]) => `${sha}:${path}`).sort()).toEqual(
+      jsonPairReads.map(([sha, path]) => `${sha}:${path}`).sort(),
     );
-    expectCitationAxisAnalyzerFixture(head);
+    expect(observed.authorityReadCount).toBe(0);
+    const fixture = citationAxisAnalyzerFixture(head);
+    expect(fixture.derived).toEqual([...head.citations].sort());
+    expect(fixture.analysis.orphans).toEqual([]);
+    expect(fixture.analysis.duplicates).toEqual([]);
+    expect(fixture.analysis.staleDuplicateBaseline).toEqual([]);
+    expect(fixture.analysis.undeclaredCitations).toEqual([]);
+    expect(fixture.analysis.staleCitationBaseline).toEqual([]);
+    expect(fixture.analysis.ok).toBe(true);
   });
 
   it("legacy debt shrinkのfixtureではderived equalityとanalyzer cleanが独立して成立する", () => {
@@ -981,44 +1135,70 @@ describe("trusted PR pair fail-close reasons (U-OIDBASE-007)", () => {
 
   it.fails("U-OIDBASE-007: pull_request以外のeventはPR context invalid", () => {
     const observed = runRatchetFixture({ eventName: "push" });
-    expectRatchetResultAndReads(observed, { ok: false, reason: "pr_context_invalid" }, [], []);
+    expect(observed.result).toEqual({ ok: false, reason: "pr_context_invalid" });
+    expect(observed.firstParentCalls).toEqual([]);
+    const expectedBlobs: readonly (readonly [string, OracleTraceGitPath])[] = [];
+    expect(observed.blobCalls.map(([sha, path]) => `${sha}:${path}`).sort()).toEqual(
+      expectedBlobs.map(([sha, path]) => `${sha}:${path}`).sort(),
+    );
+    expect(observed.authorityReadCount).toBe(0);
   });
 
   it.fails("U-OIDBASE-007: event name欠落はPR context invalid", () => {
     const observed = runRatchetFixture({ eventName: undefined });
-    expectRatchetResultAndReads(observed, { ok: false, reason: "pr_context_invalid" }, [], []);
+    expect(observed.result).toEqual({ ok: false, reason: "pr_context_invalid" });
+    expect(observed.firstParentCalls).toEqual([]);
+    const expectedBlobs: readonly (readonly [string, OracleTraceGitPath])[] = [];
+    expect(observed.blobCalls.map(([sha, path]) => `${sha}:${path}`).sort()).toEqual(
+      expectedBlobs.map(([sha, path]) => `${sha}:${path}`).sort(),
+    );
+    expect(observed.authorityReadCount).toBe(0);
   });
 
   it.fails("U-OIDBASE-007: merge SHA欠落はPR context invalid", () => {
     const observed = runRatchetFixture({ mergeSha: undefined });
-    expectRatchetResultAndReads(observed, { ok: false, reason: "pr_context_invalid" }, [], []);
+    expect(observed.result).toEqual({ ok: false, reason: "pr_context_invalid" });
+    expect(observed.firstParentCalls).toEqual([]);
+    const expectedBlobs: readonly (readonly [string, OracleTraceGitPath])[] = [];
+    expect(observed.blobCalls.map(([sha, path]) => `${sha}:${path}`).sort()).toEqual(
+      expectedBlobs.map(([sha, path]) => `${sha}:${path}`).sort(),
+    );
+    expect(observed.authorityReadCount).toBe(0);
   });
 
   it.fails("U-OIDBASE-007: merge SHA不正形式はPR context invalid", () => {
     const observed = runRatchetFixture({ mergeSha: "not-a-40-hex-sha" });
-    expectRatchetResultAndReads(observed, { ok: false, reason: "pr_context_invalid" }, [], []);
+    expect(observed.result).toEqual({ ok: false, reason: "pr_context_invalid" });
+    expect(observed.firstParentCalls).toEqual([]);
+    const expectedBlobs: readonly (readonly [string, OracleTraceGitPath])[] = [];
+    expect(observed.blobCalls.map(([sha, path]) => `${sha}:${path}`).sort()).toEqual(
+      expectedBlobs.map(([sha, path]) => `${sha}:${path}`).sort(),
+    );
+    expect(observed.authorityReadCount).toBe(0);
   });
 
   it.fails("U-OIDBASE-007: missing first parent returns its dedicated failure reason", () => {
     const observed = runRatchetFixture({ firstParentResult: { ok: true, value: null } });
-    expectRatchetResultAndReads(
-      observed,
-      { ok: false, reason: "git_first_parent_missing" },
-      [RATC_MERGE_SHA],
-      [],
+    expect(observed.result).toEqual({ ok: false, reason: "git_first_parent_missing" });
+    expect(observed.firstParentCalls).toEqual([RATC_MERGE_SHA]);
+    const expectedBlobs: readonly (readonly [string, OracleTraceGitPath])[] = [];
+    expect(observed.blobCalls.map(([sha, path]) => `${sha}:${path}`).sort()).toEqual(
+      expectedBlobs.map(([sha, path]) => `${sha}:${path}`).sort(),
     );
+    expect(observed.authorityReadCount).toBe(0);
   });
 
   it.fails("U-OIDBASE-007: first-parent Git I/O failure returns its dedicated failure reason", () => {
     const observed = runRatchetFixture({
       firstParentResult: { ok: false, reason: "git_first_parent_read_failed" },
     });
-    expectRatchetResultAndReads(
-      observed,
-      { ok: false, reason: "git_first_parent_read_failed" },
-      [RATC_MERGE_SHA],
-      [],
+    expect(observed.result).toEqual({ ok: false, reason: "git_first_parent_read_failed" });
+    expect(observed.firstParentCalls).toEqual([RATC_MERGE_SHA]);
+    const expectedBlobs: readonly (readonly [string, OracleTraceGitPath])[] = [];
+    expect(observed.blobCalls.map(([sha, path]) => `${sha}:${path}`).sort()).toEqual(
+      expectedBlobs.map(([sha, path]) => `${sha}:${path}`).sort(),
     );
+    expect(observed.authorityReadCount).toBe(0);
   });
 
   it.fails("U-OIDBASE-007: base JSON Git I/O failureはobject read failure", () => {
@@ -1027,44 +1207,47 @@ describe("trusted PR pair fail-close reasons (U-OIDBASE-007)", () => {
         [RATC_BASE_SHA, RATC_JSON_PATH, { ok: false, reason: "git_object_read_failed" }],
       ],
     });
-    expectRatchetResultAndReads(
-      observed,
-      { ok: false, reason: "git_object_read_failed" },
-      [RATC_MERGE_SHA],
-      [[RATC_BASE_SHA, RATC_JSON_PATH]],
+    expect(observed.result).toEqual({ ok: false, reason: "git_object_read_failed" });
+    expect(observed.firstParentCalls).toEqual([RATC_MERGE_SHA]);
+    const expectedBlobs = [[RATC_BASE_SHA, RATC_JSON_PATH]] as const;
+    expect(observed.blobCalls.map(([sha, path]) => `${sha}:${path}`).sort()).toEqual(
+      expectedBlobs.map(([sha, path]) => `${sha}:${path}`).sort(),
     );
+    expect(observed.authorityReadCount).toBe(0);
   });
 
   it.fails("U-OIDBASE-007: malformed base JSONはtrusted baseline invalid", () => {
     const observed = runRatchetFixture({ baseJson: "{" });
-    expectRatchetResultAndReads(
-      observed,
-      { ok: false, reason: "trusted_baseline_invalid" },
-      [RATC_MERGE_SHA],
-      [[RATC_BASE_SHA, RATC_JSON_PATH]],
+    expect(observed.result).toEqual({ ok: false, reason: "trusted_baseline_invalid" });
+    expect(observed.firstParentCalls).toEqual([RATC_MERGE_SHA]);
+    const expectedBlobs = [[RATC_BASE_SHA, RATC_JSON_PATH]] as const;
+    expect(observed.blobCalls.map(([sha, path]) => `${sha}:${path}`).sort()).toEqual(
+      expectedBlobs.map(([sha, path]) => `${sha}:${path}`).sort(),
     );
+    expect(observed.authorityReadCount).toBe(0);
   });
 
   it.fails("U-OIDBASE-007: schema不正なbase JSONはtrusted baseline invalid", () => {
     const observed = runRatchetFixture({
       baseJson: JSON.stringify({ schemaVersion: 1, legacy: [], widened: [], citations: [] }),
     });
-    expectRatchetResultAndReads(
-      observed,
-      { ok: false, reason: "trusted_baseline_invalid" },
-      [RATC_MERGE_SHA],
-      [[RATC_BASE_SHA, RATC_JSON_PATH]],
+    expect(observed.result).toEqual({ ok: false, reason: "trusted_baseline_invalid" });
+    expect(observed.firstParentCalls).toEqual([RATC_MERGE_SHA]);
+    const expectedBlobs = [[RATC_BASE_SHA, RATC_JSON_PATH]] as const;
+    expect(observed.blobCalls.map(([sha, path]) => `${sha}:${path}`).sort()).toEqual(
+      expectedBlobs.map(([sha, path]) => `${sha}:${path}`).sort(),
     );
+    expect(observed.authorityReadCount).toBe(0);
   });
 
   it.fails("U-OIDBASE-007: head JSON欠落はgit baseline missing", () => {
     const observed = runRatchetFixture({ headJson: null });
-    expectRatchetResultAndReads(
-      observed,
-      { ok: false, reason: "git_baseline_missing" },
-      [RATC_MERGE_SHA],
-      jsonPairReads,
+    expect(observed.result).toEqual({ ok: false, reason: "git_baseline_missing" });
+    expect(observed.firstParentCalls).toEqual([RATC_MERGE_SHA]);
+    expect(observed.blobCalls.map(([sha, path]) => `${sha}:${path}`).sort()).toEqual(
+      jsonPairReads.map(([sha, path]) => `${sha}:${path}`).sort(),
     );
+    expect(observed.authorityReadCount).toBe(0);
   });
 
   it.fails("U-OIDBASE-007: head JSON Git I/O failureはobject read failure", () => {
@@ -1073,34 +1256,34 @@ describe("trusted PR pair fail-close reasons (U-OIDBASE-007)", () => {
         [RATC_MERGE_SHA, RATC_JSON_PATH, { ok: false, reason: "git_object_read_failed" }],
       ],
     });
-    expectRatchetResultAndReads(
-      observed,
-      { ok: false, reason: "git_object_read_failed" },
-      [RATC_MERGE_SHA],
-      jsonPairReads,
+    expect(observed.result).toEqual({ ok: false, reason: "git_object_read_failed" });
+    expect(observed.firstParentCalls).toEqual([RATC_MERGE_SHA]);
+    expect(observed.blobCalls.map(([sha, path]) => `${sha}:${path}`).sort()).toEqual(
+      jsonPairReads.map(([sha, path]) => `${sha}:${path}`).sort(),
     );
+    expect(observed.authorityReadCount).toBe(0);
   });
 
   it.fails("U-OIDBASE-007: malformed head JSONはtrusted baseline invalid", () => {
     const observed = runRatchetFixture({ headJson: "{" });
-    expectRatchetResultAndReads(
-      observed,
-      { ok: false, reason: "trusted_baseline_invalid" },
-      [RATC_MERGE_SHA],
-      jsonPairReads,
+    expect(observed.result).toEqual({ ok: false, reason: "trusted_baseline_invalid" });
+    expect(observed.firstParentCalls).toEqual([RATC_MERGE_SHA]);
+    expect(observed.blobCalls.map(([sha, path]) => `${sha}:${path}`).sort()).toEqual(
+      jsonPairReads.map(([sha, path]) => `${sha}:${path}`).sort(),
     );
+    expect(observed.authorityReadCount).toBe(0);
   });
 
   it.fails("U-OIDBASE-007: schema不正なhead JSONはtrusted baseline invalid", () => {
     const observed = runRatchetFixture({
       headJson: JSON.stringify({ schemaVersion: 1, legacy: [], widened: [], citations: [] }),
     });
-    expectRatchetResultAndReads(
-      observed,
-      { ok: false, reason: "trusted_baseline_invalid" },
-      [RATC_MERGE_SHA],
-      jsonPairReads,
+    expect(observed.result).toEqual({ ok: false, reason: "trusted_baseline_invalid" });
+    expect(observed.firstParentCalls).toEqual([RATC_MERGE_SHA]);
+    expect(observed.blobCalls.map(([sha, path]) => `${sha}:${path}`).sort()).toEqual(
+      jsonPairReads.map(([sha, path]) => `${sha}:${path}`).sort(),
     );
+    expect(observed.authorityReadCount).toBe(0);
   });
 });
 
