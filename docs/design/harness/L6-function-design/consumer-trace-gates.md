@@ -190,6 +190,7 @@ consumer 分岐の lint 関数は次を返す。`src/plan/lint.ts` の handler �
 | invariant (prefix 非依存) | ID の抽出と照合は prefix に依存しない。ID の文字列を変えても、列の位置関係が同じなら結果は変わらない |
 | invariant (入口の一致) | 同じ repo に対して、gate と `plan lint --gate` の trace 部分の `ok` と messages は一致する |
 | invariant (読み取り専用) | lint は文書を書き換えない |
+| invariant (降下検査の読み取り) | 降下検査 (§13) は、consumer 分岐では §5 の文書だけを読む。harness 分岐では、§13.2 の L1 / L3 文書に加え、除外台帳を持つ本設計文書 (`docs/design/harness/L6-function-design/consumer-trace-gates.md`) を 1 path 読む。上の「harness 専用の文書を要求しない」は consumer 分岐に限る |
 
 ## 11. 範囲外と後続
 
@@ -212,7 +213,7 @@ consumer 分岐の lint 関数は次を返す。`src/plan/lint.ts` の handler �
 
 ### 13.1 目的と既存検査との境界
 
-L1 の BR / UX / FR / 画面の ID が 1 件でも L3 の設計文書に現れなくても、G1 は通る。A4 (#1168) が PLAN 専用の G1 判定を退役した後は、この穴を埋める検査が `analyzeG1Trace` の側には無い。本節は降下を確かめる検査 (`analyzeL1L3Descent`) の契約である。方式は既存の検査を再利用し、新しい ID の抽出器を作らない (最小実装)。
+L1 の BR / UX / FR / 画面の ID が 1 件でも L3 の設計文書に現れなくても、G1 は通る。この穴は A4 (#1168) の前からあった。BR から L3 への降下は、PLAN の `requires` を見る `missingL3Requires` を通してしか確かめられておらず、L1 の ID が L3 の設計文書に降りることは一度も直接には確かめられていない。A4 が PLAN 専用の判定を退役しても保証は減らないが、この穴を埋める検査は `analyzeG1Trace` の側に無いままである。本節は降下を確かめる検査 (`analyzeL1L3Descent`) の契約である。方式は既存の検査を再利用し、新しい ID の抽出器を作らない (最小実装)。
 
 | 検査対象 | 降下の検査 | 担当 |
 |---|---|---|
@@ -232,9 +233,9 @@ L1 の BR / UX / FR / 画面の ID が 1 件でも L3 の設計文書に現れ�
 
 ### 13.3 降下したとみなす条件
 
-- ID が L3 の対象文書のどれかに、単独の ID として 1 回以上現れること。照合は単語境界つきの完全一致で行い、`BR-1` と `BR-10` を取り違えない。
+- ID が L3 の対象文書のどれかに、単独の ID として 1 回以上現れること。照合は単語境界つきの完全一致で行い、`BR-1` と `BR-10` を取り違えない。単語境界だけでは `BR-01〜05` の `BR-01` に一致してしまう (`〜` は単語を構成しない文字) ので、次の照合規則を本節が持つ: ID の出現の直後が `〜` / `～` / `~` である場合 (範囲の先頭) と、範囲の末尾側の ID は、引用に数えない。
 - `BR-01〜05` のような範囲表記は、範囲の端点も途中も降下に数えない。`descent-obligation` が範囲展開だけに由来する trace key を薄い被覆として扱う方針と揃える。範囲の裏にある ID は、単独の引用か除外台帳 (§13.5) で扱う。
-- 現れる場所は問わない。表のセルか本文かは区別しない。区別する案は §13.9 の未決事項とする。
+- 現れる場所は問わない。表のセルか本文かは区別しない (§13.9 の決定 DEC-5)。
 - 引用が現れる文書が `status: placeholder` / `park` の場合は数えない。
 
 ### 13.4 出力と fail-close
@@ -285,15 +286,15 @@ L1 の BR / UX / FR / 画面の ID が 1 件でも L3 の設計文書に現れ�
 | 画面 | 15 | 0 | なし |
 | FR-L1 (参考、既存 `descent-obligation` の範囲) | 51 | 0 | なし |
 
-- `BR-01` は `nfr-grade.md` の範囲表記 `BR-01〜05` にしか現れず、§13.3 では降下に数えない。範囲を数える場合の欠落は BR 2 件 (`BR-06` `BR-07`) と UX 2 件である (未決事項 Q2)。
+- `BR-01` は `nfr-grade.md` の範囲表記 `BR-01〜05` にしか現れず、§13.3 では降下に数えない。範囲を数える場合の欠落は BR 2 件 (`BR-06` `BR-07`) と UX 2 件だが、範囲は数えないと決めた (§13.9 の決定 DEC-2)。
 - 実装の Green より前に、この 9 件を (a) L3 の設計文書へ単独の ID で降ろす、または (b) §13.5 の台帳へ理由つきで除外する、のどちらかで 0 件にする。実装側に許可リストを置いて通さない。(a)(b) のどちらにするかは ID ごとの設計判断であり、本契約 PR では決めない。
 - 測定は 1 回限りの使い捨て script で行った。lint 本体の出力と照合するのは `CANDIDATE-U-CTRACE-033` の実 repo テストである。
 
 ### 13.7 実装方式
 
-- 新規 `src/lint/l1-l3-descent.ts` に、`analyzeL1L3Descent(reader)` を純粋関数として置く。L1 の ID 抽出は `extractG1BusinessIds` / `extractG1ScreenIds` を呼び、consumer の表の抽出は §9 の `src/lint/consumer-trace.ts` の関数を呼ぶ。新しい正規表現の抽出器は持たない。
+- 新規 `src/lint/l1-l3-descent.ts` に、`analyzeL1L3Descent(reader)` を純粋関数として置く。L1 の ID 抽出は `extractG1BusinessIds` / `extractG1ScreenIds` を呼び、consumer の表の抽出は §9 の `src/lint/consumer-trace.ts` の関数を呼ぶ。新しい ID の抽出器は追加しない。範囲表記を引用に数えない照合規則 (§13.3) は本節が持つ。
 - FR-L1 は呼ばない (§13.1)。
-- 入口の配線 (doctor の検査として置くか、G1-trace の追加の規則として置くか) は未決事項 Q1 とする。どちらの場合も、結果の `violations` と message は §13.4 と同じである。
+- 入口の配線は G1-trace の追加の規則とする (§13.9 の決定 DEC-1)。`src/plan/lint.ts` の G1-trace handler が `analyzeG1Trace` に続けて `analyzeL1L3Descent` を呼び、§13.4 の `l1-l3-descent - ...` の message を別の行として足す。`g1-trace - OK (...)` の行は変えない。doctor の full profile は `checkPlanTraceGate(root, "G1-trace")` で G1-trace を呼ぶので、harness では doctor からも同じ検査に届く。gate-static の基準となる message 配列は 1 行増える。その更新は実装 PR の範囲である。
 
 ### 13.8 consumer の ID 体系 (#971 / #972)
 
@@ -301,22 +302,22 @@ consumer 分岐は prefix を仮定せず、§5〜§6 の表の列から ID を�
 
 | 規則 | 内容 | 理由の形 |
 |---|---|---|
-| D1 | L1 の各 `要求ID` が、L3 `機能一覧` のいずれかの `トレース元` の token に現れる (§6.3 の分解と範囲展開を使う) | `l3_descent_missing:DOC-L1-REQUIREMENTS:<要求ID>` |
-| D2 | L2 の各 `画面ID` の `関連機能` に、L3 の `機能ID` の token が 1 つ以上ある | `l3_descent_missing:DOC-L2-SCREEN:<画面ID>` |
+| DEC-1 | L1 の各 `要求ID` が、L3 `機能一覧` のいずれかの `トレース元` の token に現れる (§6.3 の分解と範囲展開を使う) | `l3_descent_missing:DOC-L1-REQUIREMENTS:<要求ID>` |
+| DEC-2 | L2 の各 `画面ID` の `関連機能` に、L3 の `機能ID` の token が 1 つ以上ある | `l3_descent_missing:DOC-L2-SCREEN:<画面ID>` |
 
 - consumer は §6.3 により範囲表記を展開する。参照セルは列で固定された表の中の宣言であり、範囲の裏の ID も意図した参照だからである。harness の本文照合 (§13.3) とは入力の性質が違うので、扱いが異なることを意図して残す。
-- D2 は L3 が画面を引用する形ではなく、L2 が L3 機能を引く形で降下を見る。T3 の参照先が `R` だけであり (§7.1)、L3 の `トレース元` に画面 ID を書くと `dangling_reference` になるためである。この方向を変えるかどうかは未決事項 Q3 とする。
+- D2 は L3 が画面を引用する形ではなく、L2 が L3 機能を引く形で降下を見る。T3 の参照先が `R` だけであり (§7.1)、L3 の `トレース元` に画面 ID を書くと `dangling_reference` になるためである。この方向は決定 DEC-3 のとおりである。D2 は T2 に「`機能ID` の token が 1 つ以上ある」を足したもので、T2 の理由 (`dangling_reference` / `missing_reference`) と重なる理由を返さない。
 - 必須集合が空のときは §7.2 の `empty_required_set` が先に赤になるので、本節の規則は空集合に対して追加の理由を返さない。
-- consumer 分岐は除外台帳を持たない (consumer の文書に宣言先が無い)。除外を許すかどうかは未決事項 Q4 とする。当面は欠落を全件違反とする。
+- consumer 分岐は除外台帳を持たない (consumer のテンプレートに宣言の表が無い)。欠落は全件違反とする (§13.9 の決定 DEC-4)。必要になれば後続の Issue で扱う。
 - harness 専用の文書は読まない。§5 の reader で 4 文書だけを要求する不変条件 (§10) は保つ。
 - 必須の列と見出しは §6.1 のままで、新しい列を要求しない。
 
-### 13.9 未決事項 (Green の前に決める)
+### 13.9 決定 (control の決定、advisor claude-fable-5-1、2026-10-21)
 
-| ID | 論点 | 既定 (契約の書き方) | trade-off |
-|---|---|---|---|
-| Q1 | 入口の配線: doctor の hard 検査にするか、G1-trace の追加規則にするか | 純粋関数だけ契約し、配線は未決 | G1 に足すと consumer の gate と同じ入口で見えるが、harness の G1 の件数条件 (OT-45) と message を触る。doctor に置くと G1 の契約を触らないが、consumer の doctor は toolchain 系だけで届かない (§11) |
-| Q2 | 範囲表記 (`BR-01〜05`) を降下に数えるか | 数えない (薄い被覆) | 数えないと現状の欠落が 9 件、数えると 4 件。数えると、範囲の裏に隠れた ID の降下が 1 回も確かめられない |
-| Q3 | consumer の画面の降下を、L2 の `関連機能` で見るか、L3 の `トレース元` に画面を許して見るか | L2 の `関連機能` | 後者は T3 の参照先を `R ∪ S` に広げる契約改訂が要り、`CANDIDATE-U-CTRACE-014` の期待が変わる |
-| Q4 | consumer に除外を認めるか | 認めない | 認めないと、意図して降ろさない要求を持つ consumer は文書を変えるしかない。認めるなら宣言先 (consumer の設計文書の節) と雛形の変更が要る |
-| Q5 | 引用の場所を表のセルに限るか | 場所を問わない | 限ると、本文で言及しただけの偽の降下を防げるが、harness の L3 文書ごとに表の列の同定が要り、実装が重くなる |
+| ID | 決定 | 理由 |
+|---|---|---|
+| DEC-1 | 入口は G1-trace の追加の規則にする | doctor の full profile は G1-trace を呼び、consumer は `ut-tdd gate G1` でしか届かないため。`g1-trace - OK (...)` の行と OT-45 の件数条件は変えない |
+| DEC-2 | 範囲表記は降下に数えない (§13.3 の照合規則) | 範囲の裏の ID の降下が一度も確かめられなくなるのを避ける。`descent-obligation` の薄い被覆と揃う |
+| DEC-3 | consumer の画面の降下は L2 の `関連機能` で見る | T3 の参照先を広げる契約改訂を避ける。降下規則 D2 は T2 の理由と重ならない |
+| DEC-4 | consumer に除外台帳を認めない | テンプレートに宣言の表が無い。必要になれば後続の Issue |
+| DEC-5 | 引用の場所は表のセルに限らない | 最小の実装。`status: placeholder` / `park` の文書を数えないことを最小の防御とする |
