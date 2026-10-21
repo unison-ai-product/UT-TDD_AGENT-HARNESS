@@ -777,15 +777,64 @@ describe("CANDIDATE-U-OIDBASE-009 packaged default baseline authority", () => {
         plan.artifactPaths.filter((path) => path !== "release/manifest.yaml").sort(),
       );
 
+      // The Pack producer consumes a Git tree. Build that tree from the exact
+      // materialized output so each Pack path has its own Git identity; the
+      // original source tree remains the input to the real materializer above.
+      const packGitRoot = mkdtempSync(join(outputRoot, "pack-git-"));
+      for (const entry of materialized.entries) {
+        if (entry.mode !== "100644" && entry.mode !== "100755")
+          throw new Error(`OIDBASE-009 Pack mode is unsupported: ${entry.path}:${entry.mode}`);
+        const destination = join(packGitRoot, ...entry.path.split("/"));
+        mkdirSync(dirname(destination), { recursive: true });
+        writeFileSync(destination, entry.content);
+        chmodSync(destination, entry.mode === "100755" ? 0o755 : 0o644);
+      }
+      runGit(packGitRoot, ["init"]);
+      runGit(packGitRoot, ["config", "user.name", "UT-TDD OIDBASE-009 fixture"]);
+      runGit(packGitRoot, ["config", "user.email", "oidbase-009-fixture@example.invalid"]);
+      runGit(packGitRoot, ["config", "core.autocrlf", "false"]);
+      runGit(packGitRoot, ["config", "core.filemode", "true"]);
+      execFileSync(
+        "git",
+        ["--literal-pathspecs", "add", "--pathspec-from-file=-", "--pathspec-file-nul"],
+        {
+          cwd: packGitRoot,
+          input: Buffer.from(`${materialized.entries.map((entry) => entry.path).join("\0")}\0`),
+        },
+      );
+      const executablePackPaths = materialized.entries
+        .filter((entry) => entry.mode === "100755")
+        .map((entry) => entry.path);
+      if (executablePackPaths.length > 0) {
+        execFileSync("git", ["update-index", "--chmod=+x", "-z", "--stdin"], {
+          cwd: packGitRoot,
+          input: Buffer.from(`${executablePackPaths.join("\0")}\0`),
+        });
+      }
+      runGit(packGitRoot, ["commit", "-m", "OIDBASE-009 materialized Pack fixture"]);
+      const packTree = readCandidate009HeadTree(packGitRoot);
+      expect([...packTree.keys()].sort()).toEqual(
+        materialized.entries.map((entry) => entry.path).sort(),
+      );
+      for (const entry of materialized.entries) {
+        const raw = packTree.get(entry.path);
+        if (!raw) throw new Error(`OIDBASE-009 Pack Git blob is missing: ${entry.path}`);
+        expect(raw.mode, `OIDBASE-009 Pack Git mode changed: ${entry.path}`).toBe(entry.mode);
+        expect(
+          raw.bytes.equals(Buffer.from(entry.content)),
+          `OIDBASE-009 Pack Git bytes changed (possible .gitattributes clean conversion): ${entry.path}`,
+        ).toBe(true);
+      }
+
       const publicationEntries = materialized.entries.map((entry) => {
-        const sourcePath = cleanDistributionSourcePath(entry.path, sourcePaths);
-        const raw = rawTree.get(sourcePath);
-        if (!raw) throw new Error(`OIDBASE-009 tracked source is missing: ${sourcePath}`);
+        const sourcePath = entry.path;
+        const raw = packTree.get(sourcePath);
+        if (!raw) throw new Error(`OIDBASE-009 Pack Git source is missing: ${sourcePath}`);
         if (entry.mode !== "100644" && entry.mode !== "100755")
           throw new Error(
             `OIDBASE-009 publication mode is unsupported: ${entry.path}:${entry.mode}`,
           );
-        const content = Buffer.from(entry.content);
+        const content = raw.bytes;
         return {
           sourcePath,
           destinationPath: entry.path,
@@ -797,7 +846,7 @@ describe("CANDIDATE-U-OIDBASE-009 packaged default baseline authority", () => {
       });
       const artifacts = publicationEntries.map(({ content: _content, ...artifact }) => artifact);
       const artifactSourceCommit = execFileSync("git", ["rev-parse", "HEAD"], {
-        cwd: repoRoot,
+        cwd: packGitRoot,
         encoding: "utf8",
       }).trim();
       const artifactInventoryDigest = deriveArtifactInventoryDigest(artifacts);
@@ -821,7 +870,7 @@ describe("CANDIDATE-U-OIDBASE-009 packaged default baseline authority", () => {
         release: provisionalRelease,
         entries: publicationEntries,
       });
-      expect(provisionalPack.ok).toBe(true);
+      expect(provisionalPack.ok, provisionalPack.ok ? undefined : provisionalPack.error).toBe(true);
       if (!provisionalPack.ok)
         throw new Error(`OIDBASE-009 provisional Pack producer failed: ${provisionalPack.error}`);
       const release = {
@@ -836,7 +885,7 @@ describe("CANDIDATE-U-OIDBASE-009 packaged default baseline authority", () => {
         }),
       };
       const packed = derivePackPublicationAssets({ release, entries: publicationEntries });
-      expect(packed.ok).toBe(true);
+      expect(packed.ok, packed.ok ? undefined : packed.error).toBe(true);
       if (!packed.ok) throw new Error(`OIDBASE-009 Pack producer failed: ${packed.error}`);
       const tarballName = "oidbase-009.tar.gz";
       writeFileSync(join(outputRoot, tarballName), packed.value.tarball.bytes);
