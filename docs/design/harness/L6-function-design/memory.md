@@ -21,6 +21,8 @@ plan: docs/plans/PLAN-L6-01-function-spec.md
 
 secret-like payload を含む memory は authoring / parsing 時点で fail-close し、runtime surface は DB 不在や lock で session start を止めない。
 
+Memory 本文は repo の `.ut-tdd/memory` だけに置き、global / home 領域には置かない。global lessons、semantic ranking、cloud memory service は本 module の扱う範囲外である。
+
 ## §2 IF 契約
 
 | 関数 | Signature | pre | post | invariant | oracle |

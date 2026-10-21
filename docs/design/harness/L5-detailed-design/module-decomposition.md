@@ -61,6 +61,7 @@ architecture.md §3 の 7 building block を実装単位のモジュール (関�
 | `fr-registry-audit.ts` | `loadFrDocs` / `parseFrRows` / `extractReferencedFrL1Nums` / `extractExplainedGapNums` / `extractDeclaredCounts` / `analyzeFrRegistry` (+ 4 interface) |
 | `doc-consistency.ts` | `loadDocConsistencyDocs` / `expandFrL1Refs` / `checkCarryConsistency` / `checkScreenIdValidity` / `checkNfrCount` / `analyzeDocConsistency` (+ 2 interface) |
 | `improvement-backlog.ts` | `VALID_STATUS` / `VALID_CANDIDATE` / `loadBacklog` / `parseBacklogEntries` / `analyzeImprovementBacklog` (+ 2 interface) |
+| `sub-doc-section-structure.ts` | `STANDARD_DELIVERABLE_SECTIONS` / `analyzeSubDocSectionStructure` / `extractPlanSections` / `loadSubDocSectionStructureInput` / `subDocSectionStructureMessages` (+ 3 interface)。責務 = L4 標準成果物 4 型 (report / batch / notification / code-value) の sub_doc を持つ design PLAN が必須 § を h2 として持つかを fail-close 検証する |
 
 ### §2.3 runtime
 - `detect.ts`: `ExecutionMode` 型 / `RuntimeDetection` interface / `detectMode()` (binary+probe+env → mode)
