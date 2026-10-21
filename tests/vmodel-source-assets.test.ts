@@ -550,7 +550,7 @@ describe("checked Vモデル source assets", () => {
     );
   });
 
-  it("excludes non-direct-child, non-L7, and other-tree documents", () => {
+  it("U-DOCSPLIT-026: excludes non-direct-child, non-L7, and other-tree documents", () => {
     const id = "CANDIDATE-U-DOCSPLIT-900";
     const declaration = candidateDeclaration(id, "table", "quoted");
     withCandidateDocuments(
