@@ -13,10 +13,10 @@
 本書は非著者の review を受ける。本書が PASS しても、「判断待ち」と「移管」の行が実際に閉じるまでは (2) は満たされない。
 本書の位置づけは「閉じていない行の一覧」であり、「閉じた」という主張ではない。
 
-前提 (A1、#1165): PLAN 1,008 件は固定 SHA の Git tag (`plans-archive-<日付>`) で読み取り専用に残る。参照は
-`git show <tag>:docs/plans/<file>` で行う。**この tag はまだ無い** (`git tag -l 'plans-archive*'` も origin も 0 件を返した)。
-A6 (物理削除) の直前に付ける。本書の「回復経路」は、すべてこの tag が付くことを前提にしている。tag が付くまでは
-`docs/plans/` 自体が回復経路である。
+前提 (A1、#1165): PLAN 1,008 件は固定 SHA の Git tag `plans-archive-20261021` (対象 commit `57611b422f22`、2026-10-21 付与) で
+読み取り専用に残る。参照は `git show plans-archive-20261021:docs/plans/<file>` で行う。記録の正本は
+`docs/governance/repository-structure.md` §11 である。A6 (物理削除) の直前に `git diff plans-archive-20261021 <削除の base> -- docs/plans`
+が空であることを確かめ、空でなければ tag を付け直す。本書の「回復経路」は、すべてこの tag を指す。
 
 方針の出典は #1078 の次の 2 コメントである。
 
@@ -59,7 +59,7 @@ draft・廃止予定・T3 最終化済みなどの区分である。区分の対
 
 | 区分 | 件数 | 対象の特定方法 | 移管しない理由 | 回復経路 |
 |---|---|---|---|---|
-| E1 draft | 300 | `git ls-files 'docs/plans/PLAN-*.md'` の各 frontmatter で `status: draft` (再現コマンド 1) | 判断 1。draft は未着手の計画であり、status で切って移管対象にしない。再審査もしない。例外一覧に載せて review を受けることが安全弁である。reverse の draft 90 件の漏れは、判断 2 (src 所有を設計側に閉じる) で塞ぐ | A1 の固定 SHA アーカイブ (`git show <tag>:docs/plans/<file>`)。それまでは `docs/plans/` |
+| E1 draft | 300 | `git ls-files 'docs/plans/PLAN-*.md'` の各 frontmatter で `status: draft` (再現コマンド 1) | 判断 1。draft は未着手の計画であり、status で切って移管対象にしない。再審査もしない。例外一覧に載せて review を受けることが安全弁である。reverse の draft 90 件の漏れは、判断 2 (src 所有を設計側に閉じる) で塞ぐ | A1 の固定 SHA アーカイブ (`git show plans-archive-20261021:docs/plans/<file>`) |
 | E2 b/d/f の廃止予定 | 15 (うち draft と重なるのは 1) | `issue959-human-disposition-{d,f}-20261013.json` の `records[]` で `dispositionCandidate == "廃止予定"` (再現コマンド 2)。b には 0 件 | PLAN 運用面の限定責務で、契約本体は設計・governance・コードに実在すると各 md が記録。ただし `classificationIsFinal: false` で、各 md は「廃止や削除許可ではない」と明記している。ここでは「移管しなくてよい」という判定を review に出す | 同上 |
 | E3 T3 で最終化済み | 7 | `issue1149-t3-lot-reconciliation-20261019.md` の L7-63 / L7-64 / L7-67 / L7-66 / L7-400 / REVERSE-45 / REVERSE-46 | 三者照合済み (consistent 6 / plan-stale 1)。契約は設計文書・governance・schema に実在し、移す契約が残っていない | 同上 + 照合記録 |
 | E4 画面カット (#1084 group 13) | 11 (L4-14 を除く。うち draft 2、E2 と重なるのは L2-01 の 1) | L1-03 / L2-01〜04 / L3-06 / L5-09 / L6-36 / L7-96、draft の L7-141 / L7-204 (再現コマンド 3) | 画面の設計文書と、画面 ID に依存するコードが #1084 段 2〜4 で撤去される。契約は設計ごと消える (#1147 の順序変更コメント) | 同上。画面の設計文書自体は #1084 の撤去前なら git history |
