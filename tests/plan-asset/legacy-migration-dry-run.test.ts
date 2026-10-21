@@ -112,7 +112,7 @@ describe("legacy migration dry-run", () => {
     expect(second).toEqual(first);
   });
 
-  it.fails.each([
+  it.each([
     "confirmed",
     "completed",
     "accepted",

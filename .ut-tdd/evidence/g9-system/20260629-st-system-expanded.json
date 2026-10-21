@@ -208,13 +208,12 @@
       "st_id": "ST-DATA-03",
       "status": "passed",
       "evidence_paths": [
-        "tests/impl-plan-trace.test.ts",
-        "tests/plan-artifact-existence.test.ts"
+        "tests/impl-plan-trace.test.ts"
       ],
       "command_ids": [
         "cmd-st-data-targeted"
       ],
-      "notes": "Plan generated artifacts and implementation trace remain machine-checked by doctor."
+      "notes": "Implementation trace remains machine-checked by doctor."
     },
     {
       "st_id": "ST-DATA-04",

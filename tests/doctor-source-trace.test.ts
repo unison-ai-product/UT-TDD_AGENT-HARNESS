@@ -11,7 +11,6 @@ import {
   checkImplPlanTrace,
   checkMergedPlanStatus,
   checkOracleTestTrace,
-  checkPlanArtifactExistence,
   checkTrackedCanonical,
 } from "../src/doctor/index.ts";
 import type { DoctorDeps } from "../src/doctor/runtime-state.ts";
@@ -19,7 +18,6 @@ import {
   checkImplPlanTrace as checkImplPlanTraceAdapter,
   checkMergedPlanStatus as checkMergedPlanStatusAdapter,
   checkOracleTestTrace as checkOracleTestTraceAdapter,
-  checkPlanArtifactExistence as checkPlanArtifactExistenceAdapter,
   checkTrackedCanonical as checkTrackedCanonicalAdapter,
 } from "../src/doctor/source-trace.ts";
 
@@ -28,13 +26,12 @@ describe("doctor source trace adapters", () => {
     const missingRoot = join(tmpdir(), `ut-tdd-source-trace-missing-${Date.now()}-nope`);
     const checks = [
       checkMergedPlanStatusAdapter(missingRoot),
-      checkPlanArtifactExistenceAdapter(missingRoot),
       checkImplPlanTraceAdapter(missingRoot),
       checkTrackedCanonicalAdapter(missingRoot),
       checkOracleTestTraceAdapter(missingRoot),
     ];
 
-    expect(checks.map((result) => result.ok)).toEqual([false, false, false, false, false]);
+    expect(checks.map((result) => result.ok)).toEqual([false, false, false, false]);
     for (const result of checks) {
       expect(result.messages.join("\n")).toMatch(/violation/i);
     }
@@ -42,13 +39,12 @@ describe("doctor source trace adapters", () => {
 
   it("preserves the public doctor/index re-export surface", () => {
     expect(checkMergedPlanStatus).toBe(checkMergedPlanStatusAdapter);
-    expect(checkPlanArtifactExistence).toBe(checkPlanArtifactExistenceAdapter);
     expect(checkImplPlanTrace).toBe(checkImplPlanTraceAdapter);
     expect(checkTrackedCanonical).toBe(checkTrackedCanonicalAdapter);
     expect(checkOracleTestTrace).toBe(checkOracleTestTraceAdapter);
   });
 
-  it.fails("U-PAEXRET-001: full doctorからPLAN成果物検査を退役し代表gateを保持する", () => {
+  it("U-PAEXRET-001: full doctorからPLAN成果物検査を退役し代表gateを保持する", () => {
     const deps: DoctorDeps = {
       repoRoot: "C:/fixture/no-repository-reads",
       now: "2026-10-21T00:00:00.000Z",
