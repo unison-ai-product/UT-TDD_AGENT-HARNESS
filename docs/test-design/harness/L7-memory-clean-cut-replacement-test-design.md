@@ -157,12 +157,16 @@ updated: 2026-10-21
 - Linux / Windows / aggregate の CI run ID。
 - 非著者の closing receipt の digest。
 
-## 9. A4: plan-artifact-existence doctor check の退役 (bounded)
+## 9. A4: PLAN `generates` の成果物実在要求の退役 (bounded)
 
-この節は A4 の `plan-artifact-existence` doctor check 全体の退役だけを扱う。PLAN artifact の存在検査を部分的に残す代替 gate、stub、例外は追加しない。memory corpus の置換・migration 契約には広げない。
+この節は A4 の PLAN `generates` の成果物実在要求を、doctor・relation graph・legacy migration dry-run の 3 面から退役する。`plan-artifact-existence` doctor check は全体を退役し、他の 2 面は該当する判定だけを退役する。代替 gate、stub、特定 path の例外は追加しない。memory corpus の置換契約、graph loader / projection 自体、他種の edge の stale 判定、role/design target の missing/hollow 拒否には広げない。`plan-generated-target-invalid` と一般の `HeadTargetRegistry` の意味は保持する。
 
 | Candidate | 所有 PR | Stimulus / mutation | 独立 oracle |
 | --- | --- | --- | --- |
 | `CANDIDATE-U-PAEXRET-001` | A4 contract → formal promotion → Green | 既存 `DoctorDeps` 形の純粋 fixture (`readText` と `listDir` は呼出時に throw し、definition の `run` closure は実行しない) を production `buildFullDoctorCheckDefinitions` と `buildDoctorCheckDefinitionGroups` に渡す。得た定義、group 定義、`FULL_DOCTOR_OUTPUT_IDS`、production `selectDoctorCheckDefinitions` の full-scope 選択を観測する。 | `plan-artifact-existence` が全定義・全 group 定義・doctor output ID・選択結果のいずれにも存在しない。対照として `coding-rules`、`oracle-test-trace`、`g1-trace` は定義・出力に存在し、full-scope で選択できる。fixture の I/O 関数が呼ばれず、個別 check の run closure も呼ばれない。 |
+| `CANDIDATE-U-PAEXRET-002` | 同上 | 合成 repository の confirmed PLAN が宣言した任意の source path を不在とし、実 `loadRelationGraphSourceSet` → `collectRelationGraphProjection` → `analyzeRelationImpact` を通す。 | PLAN metadata / projection は維持するが、`generates` の target 不在だけでは stale-edge finding を出さない。他の relation edge の端点欠落は既存どおり拒否する。旧 baseline 3 path への例外ではなく判定の退役を確かめる。 |
+| `CANDIDATE-U-PAEXRET-003` | 同上 | 合成 Git HEAD の完了を主張する PLAN に、形は正しいが不在または空の `generates` target を与え、実 `LegacyMigrationDryRun` を呼ぶ。 | `plan-generated-target-missing` が発生しない。一方、path の形の不正による `plan-generated-target-invalid`、role/design target の missing/hollow 拒否は残る。一般 `HeadTargetRegistry` の非空判定、inventory/record bijection・identity・collision・pending 判定を変更しない。 |
 
-Red は本契約 PR と同時に、既存の `tests/doctor-source-trace.test.ts` へ候補 assertion として置き、現行 production registry に対する実 assertion failure を確認する。候補があるだけでは formal citation や Green の証拠ではない。実 Red の後に別 PR で候補を `U-PAEXRET-001` へ正式昇格し、その後の Green PR で doctor 登録・output から check を退役する。旧 §6 の memory PR-1/PR-2 内昇格規律はこの A4 手順には適用せず、この節の候補 → 別 formal promotion → Green の順を守る。Green PR は本節や test-design を変更しない。
+Red は既存の `tests/doctor-source-trace.test.ts`、`tests/relation-graph-loader.test.ts`、`tests/plan-asset/legacy-migration-dry-run.test.ts` へ対応する候補 assertion として置き、現行 production に対する実 assertion failure をそれぞれ確認する。001/002 は本契約 PR と同時に入れる。003 は合成 Git fixture の入力に開発 repo の文書を追加で読むため、設計書保護 gate §10.3 に従い、本契約の後の別 PR で Red と `repositoryReadContracts` の読取登録行だけを同時に入れる。保護対象の設計書と src の登録行を同じ PR へ混在させない。
+
+候補があるだけでは formal citation や Green の証拠ではない。3 面すべての実 Red の後に別 PR で候補を `U-PAEXRET-001..003` へ正式昇格し、その後の Green PR で 3 面の判定を退役する。旧 §6 の memory PR-1/PR-2 内昇格規律はこの A4 手順には適用せず、この節の候補 → 別 formal promotion → Green の順を守る。Green PR は本節や test-design を変更しない。

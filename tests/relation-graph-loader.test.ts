@@ -232,6 +232,87 @@ describe("loadRelationGraphSourceSet", () => {
     }
   });
 
+  it.fails("CANDIDATE-U-PAEXRET-002: confirmed PLAN generates targets are not stale-edge requirements", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-graph-loader-plan-target-retirement-"));
+    try {
+      buildRepo(root);
+      const generatedPath = "src/widget/declared-but-absent.ts";
+      writeFileSync(
+        join(root, "docs", "plans", "PLAN-TEST-01-widget.md"),
+        [
+          "---",
+          "plan_id: PLAN-TEST-01-widget",
+          "status: confirmed",
+          "kind: impl",
+          "generates:",
+          `  - artifact_path: ${generatedPath}`,
+          "    artifact_type: source_module",
+          "dependencies:",
+          "  requires:",
+          "    - FR-L1-99",
+          "---",
+          "",
+        ].join("\n"),
+        "utf8",
+      );
+      const missingTestDesign = "docs/test-design/harness/missing-widget-test-design.md";
+      writeFileSync(
+        join(root, "docs", "design", "harness", "widget-design.md"),
+        [
+          "---",
+          "layer: L6",
+          "status: confirmed",
+          `pair_artifact: ${missingTestDesign}`,
+          "---",
+          "",
+          "design body",
+          "",
+        ].join("\n"),
+        "utf8",
+      );
+
+      const sourceSet = loadRelationGraphSourceSet(root);
+      const plan = sourceSet.plans?.find((item) => item.id === "PLAN-TEST-01-widget");
+      expect(plan).toMatchObject({
+        id: "PLAN-TEST-01-widget",
+        path: "docs/plans/PLAN-TEST-01-widget.md",
+        status: "confirmed",
+        generates: [generatedPath],
+      });
+      expect(plan?.availability).toBeUndefined();
+
+      const projection = collectRelationGraphProjection(sourceSet);
+      expect(projection.nodes.map((node) => node.id)).toContain("plan:PLAN-TEST-01-widget");
+      expect(projection.nodes.map((node) => node.id)).not.toContain(`source:${generatedPath}`);
+      expect(projection.edges).toContainEqual({
+        from: "plan:PLAN-TEST-01-widget",
+        to: `source:${generatedPath}`,
+        kind: "generates",
+        lifecycle: "materialized",
+      });
+      const result = analyzeRelationImpact({ changedPaths: [], projection });
+      const staleEdges = result.findings.filter((finding) => finding.code === "stale-edge");
+      expect(staleEdges).toContainEqual(
+        expect.objectContaining({
+          nodeId: "design:docs/design/harness/widget-design.md",
+          message: expect.stringContaining(
+            `design:docs/design/harness/widget-design.md -[pairs]-> test-design:${missingTestDesign}`,
+          ),
+        }),
+      );
+      expect(staleEdges).not.toContainEqual(
+        expect.objectContaining({
+          nodeId: "plan:PLAN-TEST-01-widget",
+          message: expect.stringContaining(
+            `plan:PLAN-TEST-01-widget -[generates]-> source:${generatedPath}`,
+          ),
+        }),
+      );
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it("builds a source set with plan→source, source→test, design→test-design edges", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-graph-loader-"));
     try {

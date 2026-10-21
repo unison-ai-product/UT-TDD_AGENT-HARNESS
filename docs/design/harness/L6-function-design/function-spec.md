@@ -1938,7 +1938,7 @@ receipt-only streamはすべて`plan-ledger-unavailable`とし、reducer replay�
 `LegacyMigrationDryRun.run(repoRoot)`はsource commitのtracked PLAN全件とdecision manifestをexactly-onceで結合し、
 `total=emitted`、legacy ID一意、decision field matrix、collision manifestの欠落・余剰・group不一致を検査する。
 各recordはsource path/commit/blob OID/content digest、delegation targetを持ち、reportはinventory/report digestを返す。
-完了PLANの`generates`はHEADの非空fileまたは配下に非空blobを持つdirectory familyへ突合する。
+未実装のA4 bounded retirement (#1168)では、完了PLANの`generates`をHEADの非空fileまたは配下に非空blobを持つdirectory familyへ突合する`plan-generated-target-missing`判定を退役する（特定pathの例外ではなく判定全体）。Red/formal oracleを先行し、Greenでこの判定を除く。PLAN本文・履歴は変更しない。`plan-generated-target-invalid`、role/design contractのmissing・hollow検査、および一般の`HeadTargetRegistry`検査は維持する。
 snapshotは`commit:path`から取得した実blob bytesで再検証し、working tree再hashやreport内自己比較を証拠にしない。
 role delegationは`vmodel-role-contracts.md`の7 role全単射をHEADからstrict loadし、既存slotを
 `role + slotLabel + contractRef`へlossless projectionする。target slotはHEAD item ledgerとHEAD document catalogを
