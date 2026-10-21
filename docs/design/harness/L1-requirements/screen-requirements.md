@@ -11,7 +11,7 @@ v2_import: docs/migration/v2-import-ledger.md
 
 > **SSoT 参照**: ユビキタス言語 = [L0 概念層 §10 用語集](../../../governance/ut-tdd-agent-harness-concept_v3.1.md#10-用語集) / 業界標準整合 = L0 §11 / Bounded Context = L0 §2.5 9-mode。本 doc は L0 を parent_doc reference とし、用語独自定義は行わない (anti-corruption layer)。
 > **件数確定**: screen は画面 15 件 (PM 6 + HM 8 + GD 1)、3 カテゴリ Bounded Context (PM/HM/GD)。PO 承認 2026-05-28 全件 AI 推奨採用 (14 件)。**PM-06 設計書ビューアを 2026-06-22 PO 指示で追加** (設計書 Markdown/YAML/Mermaid を見やすくレンダリングしプレビュー、プロジェクト単位)。根拠: UX-02 / BR-06 / FR-L1-20/FR-L1-29 から導出。旧 SCR-NN 体系は廃止 (移行注記は §6 参照)。
-> **L3 接続規約**: `next_pair_freeze: L3`。L3 PLAN は本 sub-doc 全件を `dependencies.requires` に列挙する。
+> **L3 接続規約**: `next_pair_freeze: L3`。「L3 PLAN が本 sub-doc 全件を `dependencies.requires` に列挙する」規約は、PLAN 撤去（#1078）で退役した。L1 → L3 の降下の確認は #1196 の降下検査へ移る。
 
 # UT-TDD Agent Harness — L1 画面要求 (screen)
 
@@ -369,19 +369,19 @@ L3 機能要件 PLAN (PLAN-L3-NN) 起票時、本 screen sub-doc との接続は
 
 | 規約 | 内容 | 検証 |
 |------|------|------|
-| **R4-screen-requires** | L3 PLAN frontmatter `dependencies.requires` に本 sub-doc (`docs/design/harness/L1-requirements/screen-requirements.md`) + business + functional の 3 軸を全件列挙する (§5 R4 注記と整合) | `ut-tdd plan lint --gate G1-trace` で機械検証 (requirements §1.10.H R4) |
+| **R4-screen-requires** | 退役: L3 PLAN が `dependencies.requires` に本 sub-doc + business + functional の 3 軸を全件列挙する規約は、PLAN 撤去（#1078）で退役した | 機械検証は無効。L1 → L3 の降下の確認は #1196 の降下検査へ移る |
 | **画面 ID 引用** | L3 PLAN 本文で対象画面 (PM/HM/GD-NN) を ID 引用する場合、本 §1 で宣言した 15 画面のみ許可 (旧 SCR-NN 体系は §7.3 移行表で廃止確認) | doc-reviewer (BR-08) でレビュー |
-| **L2 carry 接続** | L3 PLAN は L2 画面設計 4 sub-doc (`docs/design/harness/L2-screen/*.md`) を `dependencies.requires` に列挙する。L2 が placeholder の場合は L2 PLAN-L2-01/02/04 起票を先行させる (PLAN-L1-03 §7 carry と整合) | L3 起票時に手動確認、L2 確定後に `ut-tdd plan lint` |
+| **L2 carry 接続** | 退役: L3 PLAN が L2 画面設計 4 sub-doc (`docs/design/harness/L2-screen/*.md`) を `dependencies.requires` に列挙する規約は、PLAN 撤去（#1078）で退役した | L1 → L3 の降下の確認は #1196 の降下検査へ移る |
 | **横断原則 4 件継承** | §3.1 横断原則 (人間主導 + AI 補助 / 詳細データテーブル必須 / AI copy-paste UI / 問題箇所視覚化) は L3 全機能要件で「人間判断点」明示として forward carry (business §3.3.2 CC2 連動) | L3 PLAN review で確認 (CC2 carry) |
 | **G1-trace 継承** | L3 PLAN 起票時、本 sub-doc §5 trace マトリクス R1-R4 検証結果を継承し、L3 FR 追加・拡張時に再検証 (requirements §1.10.H lint ルール) | `ut-tdd plan lint --gate G1-trace` 再実行 |
 
-> **L3 起票時の最低 PLAN セット**: PLAN-L3-01 (FR 詳細化 / L2 deep-link) + PLAN-L3-02 (BR-21 詳細化 / HM-08 連動) + PLAN-L3-03 (NFR グレード値確定) が screen sub-doc を `requires` に列挙する想定 (G1 readiness §3 L3 forward carry 連動)。
+> **L3 起票時の最低 PLAN セット (退役)**: PLAN-L3-01 / L3-02 / L3-03 が screen sub-doc を `requires` に列挙する想定は、上の R4-screen-requires と同じ規約の具体化であり、PLAN 撤去（#1078）で退役した。L1 → L3 の降下の確認は #1196 の降下検査へ移る。
 
 ---
 
 ## §5 BR/UX/FR-L1 ⇔ 画面 trace マトリクス (G1-trace pair)
 
-> **R4 注記 (L3 PLAN 起票時必須)**: L3 PLAN は `dependencies.requires` に business (BR/UX) + functional (FR-L1) + screen (PM/HM/GD-NN) の全件を列挙すること。本 L1 sub-doc の frontmatter は `related_br` のみ保持するが、L3 PLAN が業務・機能・画面の 3 軸を `requires` で宣言することで R4 を充足する。
+> **R4 注記 (退役)**: L3 PLAN が `dependencies.requires` に business (BR/UX) + functional (FR-L1) + screen (PM/HM/GD-NN) の全件を列挙して R4 を充足する規約は、PLAN 撤去（#1078）で退役した。本 L1 sub-doc の frontmatter は `related_br` のみ保持する。L1 → L3 の降下の確認は #1196 の降下検査へ移る。
 
 ### §5.1 BR ⇔ 画面 trace 表 (R1 検証用)
 
@@ -494,7 +494,7 @@ R2: 全 15 画面が最低 1 つの BR/UX/FR-L1 に紐付く (孤児画面禁止
 | **R1** (BR/UX → 画面): 孤児 BR 禁止 (block) | BR-01〜08 + BR-21 + BR-22 + UX-01〜03 = 13 件全て最低 1 画面に紐付き | PASS — 孤児 0 件 |
 | **R2** (画面 → BR/UX/FR-L1): 孤児画面禁止 (block) | 15 画面 (PM 6 + HM 8 + GD 1) 全て最低 1 件紐付き (PM-06 = BR-01/BR-07 + FR-L1-01/FR-L1-32) | PASS — 孤児 0 件 |
 | **R3** (FR-L1 P0 → 画面 必須): 孤児 P0 FR-L1 禁止 (block) | FR-L1 P0 19 件全て最低 1 画面に紐付き (P1/P2 は warn、A-49 で FR-L1-45 追加) | PASS — P0 孤児 0 件 |
-| **R4** (`dependencies.requires` 整合): business + functional 必須 | L3 PLAN 起票時に BR/UX + FR-L1 + screen 全件 requires 列挙 (§5 冒頭注記) | 宣言済 — L3 起票時に充足 |
+| **R4** (`dependencies.requires` 整合): business + functional 必須 | 退役 — PLAN 撤去（#1078）で規約ごと退役 (§5 冒頭注記) | 無効 — 降下の確認は #1196 の降下検査へ移る |
 
 ---
 
