@@ -333,7 +333,7 @@ L3 sub-doc 本起草 (functional / business-detail / nfr-grade + L12 受入テ�
 
 > **L2 必須実施判定 (2026-05-28 PO 指摘で修正、A-37 反映)**: ut-tdd は dashboard (15 画面 PM/HM/GD) を持つ「**UI を持つ be**」のため、drive=be であっても L2 画面設計 3 sub-doc (画面一覧 / 遷移 / UI 要素) は必須実施。wireframe (High-Fi モック) のみ省略可 (Low-Fi で代替、High-Fi は L10 UX refinement)。旧 concept §3.7「be (BE-only) = L2 全 skip 可」を撤回し、BE-only (UI 完全不在) と「UI を持つ be」を区別する規約に修正済。画面要求の機械検証義務は drive 非依存。
 
-> **G1-trace 機械検証連動 (2026-05-28 PO 承認、DD1=a / DD2=a、A-38 反映、2026-06-02 BR-22 fullback 更新)**: 業務要求 (BR/UX/BR-21/BR-22) と画面要求 (PM/HM/GD-NN) の双方向 trace 整合は G1 内 sub-gate「G1-trace」で機械強制する (requirements §1.10.H 参照)。検証ルール 4 件: R1 (BR/UX → 画面、13 件 block) / R2 (画面 → BR/UX/FR-L1、15 画面 block) / R3 (FR-L1 P0 → 画面、19 件 block / P1-P2 warn) / R4 (screen sub-doc `requires` 整合、warn)。SSoT: screen §5 trace マトリクス。**2026-06-22 PM-06 設計書ビューア追加で R2 対象 15 画面**。lint: `ut-tdd plan lint --gate G1-trace`。
+> **G1-trace 機械検証連動 (2026-05-28 PO 承認、DD1=a / DD2=a、A-38 反映、2026-06-02 BR-22 fullback 更新)**: 業務要求 (BR/UX/BR-21/BR-22) と画面要求 (PM/HM/GD-NN) の双方向 trace 整合は G1 内 sub-gate「G1-trace」で機械強制する (requirements §1.10.H 参照)。検証ルール 4 件: R1 (BR/UX → 画面、13 件 block) / R2 (画面 → BR/UX/FR-L1、15 画面 block) / R3 (FR-L1 P0 → 画面、19 件 block / P1-P2 warn) / R4 (screen sub-doc `requires` 整合、warn。R4 は PLAN 撤去（#1078）で退役し、L1 → L3 の降下の確認は #1196 の降下検査へ移る。R1〜R3 は維持)。SSoT: screen §5 trace マトリクス。**2026-06-22 PM-06 設計書ビューア追加で R2 対象 15 画面**。lint: `ut-tdd plan lint --gate G1-trace`。
 
 ### §10.4 skill / detector entity 参照注記 (B9=c)
 
