@@ -15,8 +15,7 @@ updated: 2026-10-13
 本書はその §3 分岐、§5 読む文書、§6 表の固定と抽出、§7 trace 規則と空集合、§8 出力、§10 不変条件を検証する oracle を定義する。
 共有の `docs/test-design/harness/L7-unit-test-design.md` には索引 (§consumer trace gate) だけを置き、本書が詳細の正本である。
 
-この pair-freeze では候補 ID (`CANDIDATE-U-CTRACE-*`) だけを宣言する。
-正式 ID `U-CTRACE-*` への 1:1 の昇格と Red のテスト (`it.fails`) は、src/ も scripts/ も含まない契約 PR + Red で入れる (`design-protection-diff-gate.md` §10.2)。実装 PR は `it.fails` を `it` に戻して Green にするだけで、本書には触れない。
+この pair-freeze では候補 ID (`CANDIDATE-U-CTRACE-*`) を宣言した。本変更では旧候補 `CANDIDATE-U-CTRACE-001` だけを正式 ID `U-CTRACE-001` へ 1:1 で昇格し、対応する Red テスト (`it.fails`) を記録する。他の候補 ID は候補のまま維持する。実装 PR は `it.fails` を `it` に戻して Green にするだけで、本書には触れない。
 U-RCDEV-027 (v)(vi) の改訂も同じ契約 PR + Red で行う (設計文書 §9.1)。
 
 ## 2. fixture
@@ -32,7 +31,7 @@ U-RCDEV-027 (v)(vi) の改訂も同じ契約 PR + Red で行う (設計文書 §
 
 | Candidate | 入力 | 期待 | 殺す mutation |
 | --- | --- | --- | --- |
-| `CANDIDATE-U-CTRACE-001` | (a) 実 repo (harness layout) に G1-trace と G3-trace をかける。(b) temp の harness layout fixture で、harness 分岐の検査を 1 つずつだけ欠かせた 3 通りの入力を作る: (b1) L1 screen-requirements §5.1 に画面へ対応しない BR が 1 件ある、(b2) L3 functional-requirements に見出し `### FR-99:` の FR を 1 件足し、`AC-FR-99-*` をどの文書 (L3 functional-requirements / business-detail / nfr-grade) にも置かない (L1 に `FR-L1-99` は置かない)、(b3) L1 NFR のうち 1 件が L3 nfr-grade に無い。(c) 有効な G1 trace を保ったまま、L3 PLAN の requires が欠落 / 不完全な版と `docs/plans/` が無い版を作る | (a) G1 の結果は BR / UX 13 件、15 画面、P0 FR 19 件のまま pass し、PLAN 由来の `l3Plans` / `missingL3Requires` を API / message に含めない。G3 は既存の `ok` と messages を保つ。(b1)〜(b3) はそれぞれ `ok=false` で、対応する違反を 1 件だけ返す: orphan business、`orphanL3Fr = [FR-99]` (`src/lint/g3-trace.ts` の R2、FR→AC の検査)、orphan NFR。(c) requires 欠落 / 不完全でも G1 の trace 結果は PLAN あり / なしで同一 | 実 repo を consumer 分岐へ流す ((a) が変わる) / harness 分岐の残る検査を 1 つでも落とす (対応する (b1)〜(b3) が `ok=true`) / G1 が PLAN を読むか、PLAN の有無または requires 内容で G1 結果を変える ((c) が不一致)。正常な実 repo だけでは retired PLAN dependency の再導入を検出できないため (b)(c) を置く |
+| `U-CTRACE-001` | (a) 実 repo (harness layout) に G1-trace と G3-trace をかける。(b) temp の harness layout fixture で、harness 分岐の検査を 1 つずつだけ欠かせた 3 通りの入力を作る: (b1) L1 screen-requirements §5.1 に画面へ対応しない BR が 1 件ある、(b2) L3 functional-requirements に見出し `### FR-99:` の FR を 1 件足し、`AC-FR-99-*` をどの文書 (L3 functional-requirements / business-detail / nfr-grade) にも置かない (L1 に `FR-L1-99` は置かない)、(b3) L1 NFR のうち 1 件が L3 nfr-grade に無い。(c) 有効な G1 trace を保ったまま、L3 PLAN の requires が欠落 / 不完全な版と `docs/plans/` が無い版を作る | (a) G1 の結果は BR / UX 13 件、15 画面、P0 FR 19 件のまま pass し、PLAN 由来の `l3Plans` / `missingL3Requires` を API / message に含めない。G3 は既存の `ok` と messages を保つ。(b1)〜(b3) はそれぞれ `ok=false` で、対応する違反を 1 件だけ返す: orphan business、`orphanL3Fr = [FR-99]` (`src/lint/g3-trace.ts` の R2、FR→AC の検査)、orphan NFR。(c) requires 欠落 / 不完全でも G1 の trace 結果は PLAN あり / なしで同一 | 実 repo を consumer 分岐へ流す ((a) が変わる) / harness 分岐の残る検査を 1 つでも落とす (対応する (b1)〜(b3) が `ok=true`) / G1 が PLAN を読むか、PLAN の有無または requires 内容で G1 結果を変える ((c) が不一致)。正常な実 repo だけでは retired PLAN dependency の再導入を検出できないため (b)(c) を置く |
 | `CANDIDATE-U-CTRACE-002` | temp に `docs/design/harness/` と consumer の 4 文書の両方を置く | harness 分岐になる (harness 専用文書が無いので現行どおり `required doc not created` で赤) | 分岐を consumer 文書の有無で決める (consumer 分岐で green になる) |
 | `CANDIDATE-U-CTRACE-003` | consumer layout、L1 `REQ-01`〜`03`、L2 `SC-001`〜`003`、L3 `F-01`〜`03`、L12 `AT-01`〜`03`、全参照が実在 | G1 / G3 とも `ok=true`。G1 message は `requirements=3, screens=3, functions=3`、G3 は `requirements=3, functions=3, tests=3`、いずれも `consumer column trace` を含む | 画面 ID を `(?:PM\|HM\|GD)-\d{2}` で抽出する (#971、screens=0 で赤) |
 | `CANDIDATE-U-CTRACE-004` | 003 と同じ形で ID を `要求A`、`画面-あ1`、`FUNC_x`、`受入9` にする | 003 と同じ `ok=true` と件数 | 抽出に prefix の正規表現を使う |
@@ -64,7 +63,7 @@ U-RCDEV-027 (v)(vi) の改訂も同じ契約 PR + Red で行う (設計文書 §
 ## 4. Gate and scope fence
 
 - 本書の oracle は consumer 分岐の G1-trace / G3-trace と、harness 分岐の挙動不変だけを扱う。layer pair gate、doctor、projection-writer、L1 第5章 非機能要求、L3 の ZIP-DOC-043 節は対象外 (設計文書 §11)。
-- harness 分岐の保持対象は 001 と `tests/g1-trace.test.ts` / `tests/g3-trace.test.ts` で確かめる。A4 の PLAN 専用 G1 退役に伴い U-G1 の `missingL3Requires` 期待と `l3Plans` 出力期待は意図的に改訂する。G1 OK message は設計文書 §8 の3件形式に固定し、`tests/g1-trace.test.ts` の U-G1 と既存 oracle `tests/gate-static.test.ts:53` / `tests/pack-canary-acceptance.test.ts:2017` の期待を更新する。`scripts/pack-canary-acceptance.mjs:215` は business / screens / p0Fr の各件数を `>=1` とする既存ガードを保つ。一方、BR / screen / P0 FR trace の orphan fail-close と OT-45 R1〜R3 の件数条件は保持し、G3 の既存 oracle は変更しない。これは後続の consumer trace 実装による変更と分けて扱う。
+- harness 分岐の保持対象は 001 と `tests/g1-trace.test.ts` / `tests/g3-trace.test.ts` で確かめる。A4 の PLAN 専用 G1 退役に伴い U-G1 の `missingL3Requires` 期待と `l3Plans` 出力期待は意図的に改訂する。G1 OK message は設計文書 §8 の3件形式に固定し、`tests/g1-trace.test.ts` の U-G1 と既存 oracle `tests/gate-static.test.ts:53` / `tests/pack-canary-acceptance.test.ts:2017` の期待を更新する。`scripts/pack-canary-acceptance.mjs:215` は business / screens / p0Fr の各件数を `>=1` とする既存ガードを保つ。一方、BR / screen / P0 FR trace の orphan fail-close と OT-45 R1〜R3 の件数条件は保持し、G3 の既存 oracle / expectation は変更しない。U-CTRACE-001 の (b2)(b3) を保持するため、既存 G3 test を変更せず通常の独立負例2件だけ `tests/g3-trace.test.ts` に追加する。これは後続の consumer trace 実装による変更と分けて扱う。
 - consumer 分岐の PASS は、件数の下限を持たない列参照 trace の PASS である。OT-45 の PASS の証拠に流用しない (設計文書 §4)。
 - 契約 PR + Red で `src/lint/consumer-trace.ts` がまだ無いために import が失敗して `it.fails` が成立しても、各規則の Red の証拠にならない。実装 PR は、候補ごとに規則を 1 本だけ殺す mutation を入れて Red になることを確かめ、そのログを §5 に残す。
 
@@ -73,7 +72,7 @@ U-RCDEV-027 (v)(vi) の改訂も同じ契約 PR + Red で行う (設計文書 §
 実装 PR は次を残す。
 
 - 各 candidate の Red→Green ログ (mutation を入れた Red の再現を含む)。
-- A4 Red→Green 後の `tests/g1-trace.test.ts` で、PLAN なし / 不完全 PLAN によって有効な G1 trace が変わらず、BR / screen / P0 FR の orphan は引き続き fail-close すること。`tests/g3-trace.test.ts` は無変更で green であること。改訂後の U-RCDEV-027 が green であること。これらは後続の consumer trace 実装 PR での挙動変更と混同しない。
+- A4 Red→Green 後の `tests/g1-trace.test.ts` で、PLAN なし / 不完全 PLAN によって有効な G1 trace が変わらず、BR / screen / P0 FR の orphan は引き続き fail-close すること。`tests/g3-trace.test.ts` の既存テストは変更せず green を保ち、U-CTRACE-001 の (b2)(b3) に対応する通常負例2件も green であること。改訂後の U-RCDEV-027 が green であること。これらは後続の consumer trace 実装 PR での挙動変更と混同しない。
 - A4 Red→Green では、実 repo の非PLAN件数が13 / 15 / 19と表示され、canary parser の3件すべてが `>=1` のままであることを確認する。共有 gate serialization の形式・合否を保ち、退役対象の PLAN 専用判定を除いて G3 と BR / screen / P0 FR の orphan fail-close は変わらないことを確認する。
 - typecheck / Biome、Linux / Windows / aggregate CI の run ID、exact HEAD、非著者 closing receipt digest。
 

@@ -208,22 +208,35 @@ describe("G1-trace coverage (business/screen/functional)", () => {
     expect(g1TraceOk(result)).toBe(true);
   });
 
-  it.fails("CANDIDATE-U-CTRACE-001: retires plans from loaded docs", () => {
+  it("U-CTRACE-001: missing BR-22 screen trace is one harness-fixture orphanBusiness", () => {
+    const brokenScreen = docs.screen.replace("| **BR-22** |", "| **BR-XX** |");
+    expect(brokenScreen).not.toBe(docs.screen);
+    const root = fixtureRoot({ ...docs, screen: brokenScreen });
+    const loaded = loadG1TraceDocs(root);
+    const analyzed = analyzeG1Trace(loaded);
+
+    expect(analyzed.orphanBusiness).toEqual(["BR-22"]);
+    expect(analyzed.orphanScreen).toEqual([]);
+    expect(analyzed.orphanP0Fr).toEqual([]);
+    expect(g1TraceOk(analyzed)).toBe(false);
+  });
+
+  it.fails("U-CTRACE-001: retires plans from loaded docs", () => {
     const loaded = loadG1TraceDocs();
     expect("plans" in loaded).toBe(false);
   });
 
-  it.fails("CANDIDATE-U-CTRACE-001: retires missingL3Requires from trace result", () => {
+  it.fails("U-CTRACE-001: retires missingL3Requires from trace result", () => {
     const analyzed = analyzeG1Trace(docs);
     expect("missingL3Requires" in analyzed).toBe(false);
   });
 
-  it.fails("CANDIDATE-U-CTRACE-001: retires totals.l3Plans from trace result", () => {
+  it.fails("U-CTRACE-001: retires totals.l3Plans from trace result", () => {
     const analyzed = analyzeG1Trace(docs);
     expect("l3Plans" in analyzed.totals).toBe(false);
   });
 
-  it.fails("CANDIDATE-U-CTRACE-001: preserves the exact non-PLAN OK message", () => {
+  it.fails("U-CTRACE-001: preserves the exact non-PLAN OK message", () => {
     expect(g1TraceMessages(result)).toEqual(["g1-trace - OK (business=13, screens=15, p0Fr=19)"]);
   });
 
@@ -238,9 +251,7 @@ describe("G1-trace coverage (business/screen/functional)", () => {
     { label: "no PLAN", plan: undefined },
   ];
 
-  it.each(loaderCases)("CANDIDATE-U-CTRACE-001: $label preserves required G1 reads and trace", ({
-    plan,
-  }) => {
+  it.each(loaderCases)("U-CTRACE-001: $label preserves required G1 reads and trace", ({ plan }) => {
     const observed = observeLoader(fixtureRoot(docs, plan));
     const analyzed = analyzeG1Trace(observed.docs);
     const requiredReads = REQUIRED_DOCS.map(([, relativePath]) =>
@@ -258,9 +269,7 @@ describe("G1-trace coverage (business/screen/functional)", () => {
     expect(analyzed.totals.p0Fr).toBe(19);
   });
 
-  it.fails.each(loaderCases)("CANDIDATE-U-CTRACE-001: $label never probes docs/plans", ({
-    plan,
-  }) => {
+  it.fails.each(loaderCases)("U-CTRACE-001: $label never probes docs/plans", ({ plan }) => {
     const observed = observeLoader(fixtureRoot(docs, plan));
     const planCalls = observed.calls.filter((call) =>
       /(?:^|\/)docs\/plans(?:\/|$)/.test(normalized(call.path)),
@@ -268,7 +277,7 @@ describe("G1-trace coverage (business/screen/functional)", () => {
     expect(planCalls).toEqual([]);
   });
 
-  it.fails("CANDIDATE-U-CTRACE-001: valid trace is equivalent with no, complete, or incomplete PLAN", () => {
+  it.fails("U-CTRACE-001: valid trace is equivalent with no, complete, or incomplete PLAN", () => {
     const completePlan = [
       "related_l1_screen: docs/design/harness/L1-requirements/screen-requirements.md",
       "PLAN-L1-01-business-requirements",
