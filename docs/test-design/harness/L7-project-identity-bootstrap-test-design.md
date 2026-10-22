@@ -48,7 +48,7 @@ canonical bytes比較 (§3.1.3)、`origin` remote由来のrepository binding (§
 | CANDIDATE-U-PROJID-014 | `origin` remoteが既知形式に一致しない文字列 | 作成せずdeny |
 | CANDIDATE-U-PROJID-015 | 同一originに対しcreateを2回連続実行 | byte-identical (field順・改行・BOM無し・末尾改行1個が同一) |
 | CANDIDATE-U-PROJID-016 | 既にHEADにidentityがあるrepoで再実行 | no-op read。ファイルを書き換えない |
-| CANDIDATE-U-PROJID-017 | `doctor`/`node-plan-revision-runner`/`legacy-plan-inventory` などread専用呼び出し元がidentity欠落時に呼ばれる | createを試みず既存のdenyをそのまま返す |
+| CANDIDATE-U-PROJID-017 | `doctor`/`node-plan-revision-runner` などread専用呼び出し元がidentity欠落時に呼ばれる | createを試みず既存のdenyをそのまま返す |
 | CANDIDATE-U-PROJID-018 | working-tree-onlyの未commit生成物がある状態で再実行 | 同じ入力から同じbytesを再生成するのみ。read側はHEAD未到達のためmissingのまま |
 
 Setup orchestration integration (not a project-identity candidate):
