@@ -57,6 +57,10 @@ module-decomposition の公開 IF に処理ロジックと Design by Contract �
 
 > 共通: 入力 → **zod validate** → state 読込 → 処理 → state 書込 → 出力/exit。副作用は cli/hook 端点に隔離 (module-decomposition §4)。
 
+`doctor` の `impl-plan-trace` は、実装 source の path を PLAN と設計文書から追跡する。入力は `docs/plans/*.md` と `docs/design/**/*.md` の本文にある同じ `src/...ts` path 表記の和集合とし、既存の PLAN 入力も維持する。設計文書が source path を名指すとその source は traced である。どちらにも無く baseline にも含まれない `src/**/*.ts` は従来どおり orphan として fail-close し、baseline は縮小のみとする。
+
+設計文書入力の追加で既存 baseline のうち `src/lint/asset-drift.ts`、`src/lint/g3-trace.ts`、`src/lint/readability.ts` は既存の `docs/design/**/*.md` に明示済みとなるため、baseline から除く。残る known-debt は lint の `change-impact.ts`、`doc-consistency.ts`、`entity-coverage.ts`、`improvement-backlog.ts`、`shared.ts` の5件とし、新規 baseline 追加は認めない。これら残債の説明は source path の所有宣言ではない。これは旧8件からの縮小であり、IMP-087の4件は従来どおり PLAN back-fill のまま baseline に含めない。
+
 ## §3 DbC precondition (事前条件 = 呼び出し側保証)
 
 | 操作 | Precondition |

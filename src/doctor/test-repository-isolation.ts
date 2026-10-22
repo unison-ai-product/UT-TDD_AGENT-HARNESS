@@ -13,15 +13,15 @@ export interface RepositoryReadContract {
 
 const CONTRACT_ROWS = `
 agent-guard-delegation-boundary:1
-asset-catalog:3 asset-drift:1 backfill-pairing:2 cited-command-existence:1 cli-surface:2 cli:1
+asset-catalog:3 asset-drift:1 backfill-pairing:2 cited-command-existence:1 cli-surface:1 cli:1
 advisory-strict-gate-aging:4
-codex-hook-adapter:5 coding-rules:1 context-doc-router:2 cycle-p4-verification:5 db-currency:1 db-projection-coverage:1 db-projection-ingestion:3
+codex-hook-adapter:5 coding-rules:1 context-doc-router:2 cycle-p4-verification:3 db-currency:1 db-projection-coverage:1 db-projection-ingestion:3
 dependency-drift:4 descent-obligation:3 distribution-acceptance:1 distribution-scratch-ignore:1 doctor-runtime-surface:2 doctor:25
 drive-model-passage:2 fr-roadmap-coverage:4 frontend-design-coverage:1 g10-ux-workflow:5 g8-integration-workflow:6 g9-system-workflow:7
-erasable-syntax:1 gate-static:10 impl-plan-trace:1 import-specifier:2 l14-close-audit:8 l6-completion:2 l6-fr-coverage:2 mode-catalog:1 model-id-ssot:1 model-id-ssot-drift:1 module-drift:2 oracle-test-trace:5
-plan-id-naming:1 plan-lint:10 projection-writer:13 proposal-document-coverage:2 readability:5 relation-graph-loader:1 review-green-command-projection:1
+erasable-syntax:1 gate-static:10 import-specifier:2 l14-close-audit:8 l6-completion:2 l6-fr-coverage:2 mode-catalog:1 model-id-ssot:1 model-id-ssot-drift:1 module-drift:2 oracle-test-trace:13
+plan-lint:8 projection-writer:13 proposal-document-coverage:2 readability:5 relation-graph-loader:1 review-green-command-projection:1
 release-artifact-resolver:1 release-consumer-skills:4
-right-arm-gate-planning:1 right-lung-doc-governance:1 roadmap:1 rule-automation-closure:1 rule-drift:4 runtime-hook-entrypoints:1
+right-lung-doc-governance:1 rule-drift:4 runtime-hook-entrypoints:1
 review-live-cli:4
 review-delegation-root:1
 runtime-portability:2 screen-impl-pair-freeze:1 setup-bun-removal:2 ban-lint-detection-power:3 bun-permanent-ban:14 self-pair-normative-guard:1 setup-agent-floor:2 setup:8 skill-assignment:1 state-db:1
@@ -41,13 +41,13 @@ global-setup.ts:1 support/workspace-roots.ts:3
 global-setup-fence:1 vitest-snapshot-runner:3
 hook-native-launcher:1 claude-memory-terminal-gc:1 release-version-identity:2 windows-ci-single-snapshot:2 pack-authoring-template-scope:2
 profile/tracked-loader:2
-plan-asset/ledger-schema:4 plan-asset/legacy-inventory:5 plan-asset/legacy-migration-dry-run:13 plan-asset/project-identity-loader:1
+plan-asset/ledger-schema:4 plan-asset/project-identity-loader:1
 disposition/git-authoring-provenance:3 disposition/projection:6 disposition/tracked-target-registry:2
   forward-escape-issue-contract:2
   pack-consumer-runtime-release:4 release-consumer-vmodel-template:1
   release-consumer-setup-artifacts:1
   pack-internal-canary-boundary:1 support/pack-internal-canary.ts:1
-  pack-canary-acceptance:2
+  pack-canary-acceptance:3
   `;
 
 const repositoryReadContracts: Record<string, RepositoryReadContract> = Object.fromEntries(
@@ -76,7 +76,6 @@ for (const [path, calls] of Object.entries({
   "tests/github-pr-trace.test.ts": 1,
   "tests/model-id-ssot-drift.test.ts": 1,
   "tests/model-id-ssot.test.ts": 1,
-  "tests/plan-id-naming.test.ts": 1,
   "tests/setup-project-identity-bootstrap.test.ts": 2,
   "tests/sub-doc-schema-integrity.test.ts": 3,
 }))
@@ -190,6 +189,16 @@ repositoryReadContracts["tests/upstream-schedule-reader.test.ts"] = {
   calls: 1,
   reason:
     "upstream-schedule reader oracles seed isolated filesystem fixtures from the immutable L3 topic",
+};
+repositoryReadContracts["tests/state-channel-consolidation.test.ts"] = {
+  mode_calls: { isolated_fixture: 1 },
+  reason:
+    "state-channel migration oracles read the exact execution snapshot and write only to isolated repositories",
+};
+repositoryReadContracts["tests/windows-hide-default.test.ts"] = {
+  mode_calls: { isolated_fixture: 1 },
+  reason:
+    "windows-hide doctor and Pack checks inspect the writable execution snapshot and isolated fixture roots",
 };
 
 export const REPOSITORY_READ_CONTRACTS: Readonly<Record<string, RepositoryReadContract>> =

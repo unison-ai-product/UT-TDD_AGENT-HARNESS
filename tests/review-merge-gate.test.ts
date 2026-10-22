@@ -785,6 +785,133 @@ describe("D2-B PR merge gate", () => {
     }
   });
 
+  const rollupFacts = (statusCheckRollup: unknown[]) => {
+    const output = JSON.stringify({ headRefOid: head, state: "OPEN", statusCheckRollup });
+    const exec = ((..._args: unknown[]) => output) as never;
+    return createGhPrMergePorts({ execFileSync: exec }).getPullRequest(465);
+  };
+  const run = (
+    conclusion: string,
+    startedAt: string | undefined,
+    runId: number,
+    extra: Record<string, unknown> = {},
+  ) => ({
+    __typename: "CheckRun",
+    workflowName: "harness-check",
+    name: "harness-check-linux",
+    status: conclusion ? "COMPLETED" : "IN_PROGRESS",
+    conclusion,
+    ...(startedAt ? { startedAt } : {}),
+    completedAt: conclusion ? "2026-10-16T09:00:00Z" : "0001-01-01T00:00:00Z",
+    detailsUrl: `https://github.com/o/r/actions/runs/${runId}/job/${runId}9`,
+    ...extra,
+  });
+
+  it("U-RVMG-035: 同じ check 名は古い FAILURE run より新しい SUCCESS run を採り checksGreen=true とする", () => {
+    const result = rollupFacts([
+      run("FAILURE", "2026-10-16T01:00:00Z", 1),
+      run("SUCCESS", "2026-10-16T02:00:00Z", 2),
+    ]);
+    expect(result.checksGreen).toBe(true);
+  });
+
+  it("U-RVMG-036: 最新 run が FAILURE なら古い SUCCESS があっても checksGreen=false とする", () => {
+    const result = rollupFacts([
+      run("SUCCESS", "2026-10-16T01:00:00Z", 1),
+      run("FAILURE", "2026-10-16T02:00:00Z", 2),
+    ]);
+    expect(result.checksGreen).toBe(false);
+  });
+
+  it("U-RVMG-037: 開始順と完了順が逆転しても開始が新しい未完了 run を最新とし checksGreen=false とする", () => {
+    const old = {
+      ...run("SUCCESS", "2026-10-16T01:00:00Z", 1),
+      completedAt: "2026-10-16T03:00:00Z",
+    };
+    const result = rollupFacts([old, run("", "2026-10-16T02:00:00Z", 2)]);
+    expect(result.checksGreen).toBe(false);
+  });
+
+  it("U-RVMG-038: 最新 run を開始時刻で決められなければ checksGreen=false とする", () => {
+    const tied = rollupFacts([
+      run("FAILURE", "2026-10-16T01:00:00Z", 1),
+      run("SUCCESS", "2026-10-16T01:00:00Z", 2),
+    ]);
+    const missing = rollupFacts([
+      run("FAILURE", undefined, 1),
+      run("SUCCESS", "2026-10-16T02:00:00Z", 2),
+    ]);
+    expect(tied.checksGreen).toBe(false);
+    expect(missing.checksGreen).toBe(false);
+  });
+
+  it("U-RVMG-039: 同じ run 内の同名 job は統合せず FAILURE が残れば checksGreen=false とする", () => {
+    const result = rollupFacts([
+      run("FAILURE", "2026-10-16T01:00:00Z", 1),
+      run("SUCCESS", "2026-10-16T01:05:00Z", 1),
+    ]);
+    expect(result.checksGreen).toBe(false);
+  });
+
+  it("U-RVMG-040: workflowName 欠落の同名エントリは統合せず checksGreen=false とする", () => {
+    const result = rollupFacts([
+      run("FAILURE", "2026-10-16T01:00:00Z", 1, { workflowName: "" }),
+      run("SUCCESS", "2026-10-16T02:00:00Z", 2, { workflowName: "" }),
+    ]);
+    expect(result.checksGreen).toBe(false);
+  });
+
+  it("U-RVMG-041: StatusContext 混在の同名エントリは統合せず checksGreen=false とする", () => {
+    const status = {
+      __typename: "StatusContext",
+      context: "harness-check-linux",
+      state: "SUCCESS",
+      startedAt: "2026-10-16T02:00:00Z",
+    };
+    const result = rollupFacts([run("FAILURE", "2026-10-16T01:00:00Z", 1), status]);
+    expect(result.checksGreen).toBe(false);
+  });
+
+  it("U-RVMG-042: 全件 SUCCESS でも一方の startedAt 欠落で順序を決められない重複は checksGreen=false とする", () => {
+    const result = rollupFacts([
+      run("SUCCESS", undefined, 1),
+      run("SUCCESS", "2026-10-16T02:00:00Z", 2),
+    ]);
+    expect(result.checksGreen).toBe(false);
+  });
+
+  it("U-RVMG-043: 全件 SUCCESS でも startedAt が parse 不能な重複は checksGreen=false とする", () => {
+    const result = rollupFacts([
+      run("SUCCESS", "not-a-time", 1),
+      run("SUCCESS", "2026-10-16T02:00:00Z", 2),
+    ]);
+    expect(result.checksGreen).toBe(false);
+  });
+
+  it("U-RVMG-044: 全件 SUCCESS でも最早 startedAt が同時刻の重複は checksGreen=false とする", () => {
+    const result = rollupFacts([
+      run("SUCCESS", "2026-10-16T01:00:00Z", 1),
+      run("SUCCESS", "2026-10-16T01:00:00Z", 2),
+    ]);
+    expect(result.checksGreen).toBe(false);
+  });
+
+  it("U-RVMG-045: 全件 SUCCESS でも同じ run 内の同名 job は識別不能な重複として checksGreen=false とする", () => {
+    const result = rollupFacts([
+      run("SUCCESS", "2026-10-16T01:00:00Z", 1),
+      run("SUCCESS", "2026-10-16T01:05:00Z", 1),
+    ]);
+    expect(result.checksGreen).toBe(false);
+  });
+
+  it("U-RVMG-046: 全件 SUCCESS でも workflowName 欠落の同名エントリは checksGreen=false とする", () => {
+    const result = rollupFacts([
+      run("SUCCESS", "2026-10-16T01:00:00Z", 1, { workflowName: "" }),
+      run("SUCCESS", "2026-10-16T02:00:00Z", 2, { workflowName: "" }),
+    ]);
+    expect(result.checksGreen).toBe(false);
+  });
+
   it("U-RVMG-011: adapter の第二観測と gh merge は exact HEAD に束縛される", () => {
     const snapshots = [
       JSON.stringify({ headRefOid: head, state: "OPEN", statusCheckRollup: [] }),

@@ -10,7 +10,7 @@ next_pair_freeze: L7
 issue: 693
 ---
 
-> **L6 contract marker**: `applyWindowsHideDefault(childProcessModule) => void` と `analyzeWindowsHide(sources) => WindowsHideResult` は unit-test-granularity contract である。DbC pre/post/invariant は §7 にまとめる。oracle の索引は共有の `docs/test-design/harness/L7-unit-test-design.md` (§子プロセスの windowsHide 既定) に置き、詳細 (CANDIDATE-U-WHIDE-001〜014) は専用の `docs/test-design/harness/L7-windows-hide-default-test-design.md` が固定する。
+> **L6 contract marker**: `applyWindowsHideDefault(childProcessModule) => void` と `analyzeWindowsHide(sources) => WindowsHideResult` は unit-test-granularity contract である。DbC pre/post/invariant は §7 にまとめる。oracle の索引は共有の `docs/test-design/harness/L7-unit-test-design.md` (§子プロセスの windowsHide 既定) に置き、詳細 (`U-WHIDE-001〜014`) は専用の `docs/test-design/harness/L7-windows-hide-default-test-design.md` が固定する。
 
 # 子プロセスの windowsHide 既定 — 関数設計 (issue #693)
 
@@ -23,6 +23,8 @@ Windows では、Node の `child_process` で起動した子プロセスに `win
 ## 2. wrapper の契約
 
 単一の module `src/runtime/windows-hide.ts` (計画。本 PR では実装しない) を置く。この module は **import した時点で** `node:child_process` の次の 7 関数を差し替える: `spawn` / `spawnSync` / `execFile` / `execFileSync` / `exec` / `execSync` / `fork`。
+
+doctor の `windows-hide` check は `src/doctor/windows-hide.ts` に置き、§5 の静的検査を担当する。
 
 - **既定規則**: 呼び出しの options の `windowsHide` が `undefined` (キー無しを含む) なら `true` にする。明示の `false` は変えない。`true` はそのまま。
 - **引数形の正規化**: 引数の型で overload を判別する (配列 = args、function = callback、`null` / `undefined` 以外の object = options、`null` / `undefined` = 無し)。`windowsHide` を足した options を、次の表の位置に挿入する。callback は常に最後の引数のまま保つ。
@@ -41,9 +43,11 @@ wrapper はプロセスごとに 1 回効けばよい。子プロセスを起動
 1. `src/cli.ts`
 2. `.claude/hooks/*.ts` の各 hook (現在は `agent-guard.ts` / `session-log.ts` / `work-guard.ts`。hook は CLI を経由せず直接 `node` で起動されるので個別に要る)
 3. vitest の `setupFiles` (現在の `vitest.config.ts` は `globalSetup` だけを持つ。worker プロセスは `globalSetup` の差し替えを引き継がないので、`setupFiles` に wrapper を import する entry を足す)
-4. `scripts/` の node 入口のうち子プロセスを起動するもの (現在は `build-node.mjs` / `node-generation-ci.mjs` / `pack-canary-acceptance.mjs` / `run-vitest-snapshot.ts` / `git-hooks/secret-scan-diff.ts`)
+4. `scripts/` の node 入口のうち子プロセスを起動するもの (現在は `build-node.mjs` / `node-generation-ci.mjs` / `run-vitest-snapshot.ts` / `git-hooks/secret-scan-diff.ts`)
 
-**Pack 配布**: 利用先の Pack でも同じ効果が要るので、wrapper (`src/runtime/windows-hide.ts`) と上記の入口の import を Pack に含める。確認は `ut-tdd distribution sync-pack` が作る Pack のファイル集合に wrapper が含まれ、Pack 内の入口 (`src/cli.ts`・hook・`scripts/` の該当ファイル) が同じ import を持つことで行う。含まれなければ検査 (§5) と同じ finding で失敗させる。
+**単独起動 runner の例外**: `scripts/pack-canary-acceptance.mjs` は U-ST-PACKCANARY-009 で source tree 外へ単独コピーして起動するため、wrapper を import せず、§5(a) の wrapper import 対象にも含めない。この runner 内の各 `child_process` 呼び出しには `windowsHide: true` を literal で指定し、owner 側の offline test で全呼び出しを静的に検査する。
+
+**Pack 配布 (契約訂正)**: Pack の確認対象は、実際に出荷する bundled CLI と consumer adapter template に限る。`ut-tdd distribution sync-pack` の出荷集合で wrapper と CLI の入力 (`src/runtime/windows-hide.ts` / `src/cli.ts`) が揃い、CLI の副作用 import と consumer template の hook command が `.ut-tdd/bin/ut-tdd.mjs` を指すことを静的に確認する。これは bundle 入力と consumer template の配線確認であり、compiled bytes への wrapper 混入を証明しない。compiled artifact への混入は Green 工程で実 build/metafile を確認する。source repo の `.claude/hooks/*.ts` は Pack へ出荷しない。これらと、前段の単独起動 runner 例外を除く `scripts/` の source entry は §5(a) の source 検査で確認し、Pack の出荷集合には要求しない。欠落時は §5(a) と同じ finding で失敗させる。
 
 ## 4. 既知の限界
 
@@ -56,7 +60,7 @@ wrapper はプロセスごとに 1 回効けばよい。子プロセスを起動
 
 doctor の check 名は `windows-hide`、CI の doctor (governance hard gates) で fail-close する。検査は次の 2 つだけである。per-call の literal 規則・baseline・縮小のみの比較元・5 PR の分割は廃止する。
 
-(a) **入口の import**: §3 の入口 (src/cli.ts、`.claude/hooks/*.ts` の全件、`scripts/` の node 入口のうち `child_process` を使うもの、`vitest.config.ts` の `setupFiles` が指す entry) が、wrapper を import していること。欠けたら finding `windows-hide-entry-missing` を `path:line:reason` で出す。判定は静的で、import 文 (`import "…/windows-hide.ts"` の副作用 import) の有無だけを見る。他の import より前に置くことは、先頭の import 文であるかで確かめる。
+(a) **入口の import**: §3 の入口 (src/cli.ts、`.claude/hooks/*.ts` の全件、`scripts/` の node 入口のうち `child_process` を使うもの (ただし §3 の単独起動 runner 例外を除く)、`vitest.config.ts` の `setupFiles` が指す entry) が、wrapper を import していること。欠けたら finding `windows-hide-entry-missing` を `path:line:reason` で出す。判定は静的で、import 文 (`import "…/windows-hide.ts"` の副作用 import) の有無だけを見る。他の import より前に置くことは、先頭の import 文であるかで確かめる。
 
 (b) **`windowsHide: false` の理由**: ソース中の `windowsHide: false` は、同じ行または直前の行に、空でない理由コメント (`// windows-hide: <理由>`) が必要である。無ければ finding `windows-hide-false-unexplained`。
 

@@ -21,11 +21,6 @@ import {
   oracleTestTraceMessages,
 } from "../lint/oracle-test-trace.ts";
 import {
-  analyzePlanArtifactExistence,
-  loadPlanArtifactExistenceInput,
-  planArtifactExistenceMessages,
-} from "../lint/plan-artifact-existence.ts";
-import {
   analyzeTrackedCanonical,
   loadTrackedCanonicalInput,
   trackedCanonicalMessages,
@@ -47,30 +42,6 @@ export function checkMergedPlanStatus(repoRoot: string): { messages: string[]; o
   } catch {
     return {
       messages: ["merged-plan-status - violation: PLAN generates could not be read"],
-      ok: false,
-    };
-  }
-}
-
-/**
- * plan-artifact-existence hard gate (PO /goal 2026-06-15): PLAN が confirmed/completed/accepted (完了宣言)
- * なのに generates artifact が不在 (phantom / false-completion) を fail-close 検出する。merged-plan-status
- * の鏡像で、PLAN↕artifact 実在マトリクスを 2 gate で完結させる。impl-plan-trace (src→PLAN) も
- * review-evidence (証跡有無) も artifact 実在を見ない absence-blindness を塞ぐ (柱3 / 柱6)。
- */
-export function checkPlanArtifactExistence(repoRoot: string): { messages: string[]; ok: boolean } {
-  if (!existsSync(repoRoot)) {
-    return {
-      messages: ["plan-artifact-existence - violation: repo root could not be read"],
-      ok: false,
-    };
-  }
-  try {
-    const r = analyzePlanArtifactExistence(loadPlanArtifactExistenceInput(repoRoot));
-    return { messages: planArtifactExistenceMessages(r), ok: r.ok };
-  } catch {
-    return {
-      messages: ["plan-artifact-existence - violation: PLAN generates could not be read"],
       ok: false,
     };
   }

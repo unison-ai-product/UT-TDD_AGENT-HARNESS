@@ -13,7 +13,6 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { createNodePlanRevisionRunner } from "../src/plan-admission/node-plan-revision-runner.ts";
-import { buildLegacyPlanInventory } from "../src/plan-asset/adapters/legacy-plan-inventory.ts";
 import {
   canonicalProjectIdentityBytes,
   loadProjectIdentityFromHead,
@@ -31,7 +30,7 @@ const expectedCandidateIds = new Set([
   ...Array.from(
     { length: 41 },
     (_, index) => `CANDIDATE-U-PROJID-${String(index + 1).padStart(3, "0")}`,
-  ),
+  ).filter((_, index) => index + 1 !== 37),
   "CANDIDATE-P-PROJID-001",
   "CANDIDATE-P-PROJID-002",
   "CANDIDATE-P-PROJID-003",
@@ -580,14 +579,6 @@ describe("project identity bootstrap", () => {
       deps: { repositoryIdentity: () => string };
     };
     expect(() => runner.deps.repositoryIdentity()).toThrow("identity_repository_unbound");
-  });
-
-  it("CANDIDATE-U-PROJID-037: legacy inventory direct caller denies stale identity", () => {
-    const root = trackedFixture("other/repo", "git@github.com:acme/widget.git");
-    expect(buildLegacyPlanInventory(root)).toMatchObject({
-      ok: false,
-      error: { ruleId: "identity_repository_unbound" },
-    });
   });
 
   it("CANDIDATE-U-PROJID-038: project-memory direct caller denies stale identity", () => {

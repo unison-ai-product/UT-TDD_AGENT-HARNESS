@@ -113,13 +113,15 @@ function analyzePairFreeze(docs):
 
 ### §7.1 検証発火単位 (層群)
 
-`VERIFICATION_GROUPS` = **L0-L3 (上流: 要求〜要件) / L4-L6 (設計: 基本〜機能) / L0-L6 (全設計層) / L0-L7 (左腕+谷、実装検証サイクルゲート)**。L0 = 価値検証で design doc なし、L7 は実装 band として PLAN-L7-43 で追加。
+`VERIFICATION_GROUPS` = **L0-L3 (上流: 要求〜要件) / L4-L6 (設計: 基本〜機能) / L0-L6 (全設計層) / L0-L7 (左腕+谷、実装検証サイクルゲート)**。L0 = 価値検証で design doc なし、L7 は実装 band として PLAN-L7-43 で追加 (freeze 判定は他の層群と同じ §7.2 の条件のみ)。
 
 ### §7.2 freeze 完了判定 (発火条件)
 
 - 層群の全 design sub-doc が **draft 0 かつ pair 孤児 0 かつ confirmed ≥ 1** → **freeze 完了 (検証サイクル発火可)**。
 - **placeholder は park (意図的保留、例: L2 screen track の G2 DEFER) として発火を妨げない** (A-100 の L0-L3 core freeze と整合)。
 - draft (未着手/作業中) が 1 件でもあれば **Forward 進行中** (検証発火しない = 定常)。
+- **L0-L7 を含む全層群の freeze は、上記の設計文書の状態 (draft 0 かつ pair 孤児 0 かつ confirmed ≥ 1) だけで判定する**。automation PLAN の status / review_evidence / generates を freeze の条件にしない。
+- L0-L7 に automation PLAN の証跡を求めていたのは、導入時の一度きりの bootstrap 条件である。この条件は `ec6bb2185295f769bf420e2f353750d26f310f0d` の時点で満たされている (必須とした PLAN はすべて `status: confirmed`、review_evidence と generates を持つ)。当時の証跡は #1165 (A1) の固定 SHA 読み取り専用 archive に残るので、以後 freeze 判定からは参照しない。
 
 ### §7.3 関数
 

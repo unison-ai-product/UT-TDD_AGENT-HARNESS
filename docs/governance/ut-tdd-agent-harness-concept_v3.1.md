@@ -588,7 +588,7 @@ V2 source snapshot reference の業務要求 doc §10 を採用し、UT-TDD は 
 |---|---|---|
 | **SSoT 参照宣言ブロック** | `ユビキタス言語 = L0 §10 用語集 / 業界標準整合 = L0 §11 / Bounded Context = §2.5 9-mode。本 doc は L0 を parent_doc reference とし、用語独自定義は行わない (anti-corruption layer)` を明示 | `ut-tdd plan lint` (sub_doc 指定 PLAN 全件) |
 | **件数確定宣言** | 当該 sub-doc が確定する要求の件数 (例: business なら BR-NN 件、functional なら FR-L1-NN 件) + 確定根拠 (TL/PMO レビュー record) | doctor で要求 ID の連番性 + 件数整合検証 |
-| **L3 接続規約** | `next_pair_freeze:` フィールドが指す L3 doc + `dependencies.requires` で L3 PLAN が本 sub-doc 全件を列挙する接続条件 | L3 PLAN 起票時の機械検証 |
+| **L3 接続規約** | `next_pair_freeze:` フィールドが指す L3 doc + `dependencies.requires` で L3 PLAN が本 sub-doc 全件を列挙する接続条件 | L3 PLAN 起票時の機械検証 （撤去: PLAN 撤去（#1078）で退役。この規約の機械検証は無効。L1 → L3 の降下の確認は #1196 の降下検査へ移る） |
 | **pair / parent / related フィールド** | frontmatter に `pair_artifact:` (L14 運用テスト設計 path) / `related_l0:` (L0 概念層 path) / `related_br:` (NFR/技術要求 sub-doc のみ、業務要求への参照) を必須 | requirements §1.10.G.2 拡張 |
 
 ### 3.1.3 設計の 3 段分割 (L4 基本 / L5 詳細 / L6 機能)
@@ -697,7 +697,7 @@ G1 exit → L2 画面設計 (G2) へ進行
 | **R1** | BR-01〜08 + UX-01〜03 + BR-21 + BR-22 (計 13 件) が最低 1 画面に紐付く | block |
 | **R2** | 全 15 画面 (PM/HM/GD-NN) が最低 1 つの BR/UX/FR-L1 に紐付く | block |
 | **R3** | FR-L1 P0 19 件のみ最低 1 画面に紐付く (P1/P2 は warn、DD2=a) | block (P0) / warn (P1-P2) |
-| **R4** | screen 関連 PLAN `dependencies.requires` に business + functional を明示列挙 | warn |
+| **R4** | screen 関連 PLAN `dependencies.requires` に business + functional を明示列挙 （撤去: PLAN 撤去（#1078）で退役。この規約の機械検証は無効。L1 → L3 の降下の確認は #1196 の降下検査へ移る） | warn |
 
 SSoT: screen sub-doc §5 trace マトリクス (Step J で起票)。`ut-tdd plan lint --gate G1-trace` で machine 一次判定する。
 

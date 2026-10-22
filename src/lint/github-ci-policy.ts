@@ -388,6 +388,100 @@ const nodeGenerationUploadStep = (lane: (typeof NODE_GENERATION_LEGS)[number]) =
 const RUNTIME_STEP_MANIFESTS: Record<(typeof RUNTIME_LEGS)[number], readonly object[]> = {
   "harness-check-linux": [
     ...commonRuntimeSteps,
+    step("oracle baseline ratchet (required on every PR)", {
+      if: githubExpression("github.event_name == 'pull_request'"),
+      env: {
+        ORACLE_RATCHET_EVENT_NAME: githubExpression("github.event_name"),
+        ORACLE_RATCHET_MERGE_SHA: githubExpression("github.sha"),
+      },
+      run: `\
+          node --input-type=module <<'NODE'
+          import { execFileSync } from "node:child_process";
+          import { readFileSync } from "node:fs";
+          import { dirname, resolve } from "node:path";
+          import { fileURLToPath } from "node:url";
+          import { checkOracleBaselineRatchet } from "./src/lint/oracle-test-trace.ts";
+
+          const repoRoot = process.env.GITHUB_WORKSPACE;
+          const baselinePath = "docs/governance/oracle-test-trace-baseline.json";
+          const oracleTraceGitPaths = new Set([
+            baselinePath,
+            "src/lint/oracle-test-trace-baseline.ts",
+            "src/lint/oracle-test-trace-widened-baseline.ts",
+            "src/lint/oracle-test-citation-baseline.ts",
+          ]);
+          const sourceModule = fileURLToPath(import.meta.resolve("./src/lint/oracle-test-trace.ts"));
+          const moduleRoot = resolve(dirname(sourceModule), "../..");
+          const decodeUtf8 = (bytes) => new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+          const gitBytes = (args) => {
+            if (!repoRoot) throw new Error("github_workspace_missing");
+            return execFileSync("git", ["-C", repoRoot, ...args], {
+              encoding: "buffer",
+              maxBuffer: 64 * 1024 * 1024,
+              stdio: ["ignore", "pipe", "ignore"],
+              windowsHide: true,
+            });
+          };
+          const gitText = (args) => decodeUtf8(gitBytes(args));
+          const authority = {
+            readText(path) {
+              if (path !== baselinePath) return { ok: false, reason: "authority_read_failed" };
+              try {
+                return { ok: true, value: decodeUtf8(readFileSync(resolve(moduleRoot, path))) };
+              } catch (error) {
+                if (error && typeof error === "object" && error.code === "ENOENT")
+                  return { ok: true, value: null };
+                return { ok: false, reason: "authority_read_failed" };
+              }
+            },
+          };
+          const git = {
+            readFirstParent(mergeSha) {
+              try {
+                const commit = gitText(["cat-file", "-p", mergeSha]);
+                const headers = commit.split(/\\r?\\n\\r?\\n/u, 1)[0] ?? "";
+                const parent = headers.split(/\\r?\\n/u).find((line) => line.startsWith("parent "));
+                if (!parent) return { ok: true, value: null };
+                const parentSha = parent.slice("parent ".length);
+                if (!/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/u.test(parentSha))
+                  return { ok: false, reason: "git_first_parent_read_failed" };
+                return { ok: true, value: parentSha };
+              } catch {
+                return { ok: false, reason: "git_first_parent_read_failed" };
+              }
+            },
+            readTextAt(commitSha, path) {
+              if (!oracleTraceGitPaths.has(path)) return { ok: false, reason: "git_object_read_failed" };
+              try {
+                const records = gitText(["ls-tree", "-z", "--full-tree", commitSha, "--", path])
+                  .split("\\0")
+                  .filter(Boolean);
+                if (records.length === 0) return { ok: true, value: null };
+                if (records.length !== 1)
+                  return { ok: false, reason: "git_object_read_failed" };
+                const entry = /^(?:100644|100755|120000) blob ([0-9a-f]{40}|[0-9a-f]{64})\\t(.+)$/u.exec(records[0]);
+                if (!entry || entry[2] !== path)
+                  return { ok: false, reason: "git_object_read_failed" };
+                return { ok: true, value: gitText(["cat-file", "blob", entry[1]]) };
+              } catch {
+                return { ok: false, reason: "git_object_read_failed" };
+              }
+            },
+          };
+          const result = checkOracleBaselineRatchet({
+            authority,
+            ci: {
+              eventName: process.env.ORACLE_RATCHET_EVENT_NAME ?? "",
+              mergeSha: process.env.ORACLE_RATCHET_MERGE_SHA ?? "",
+              git,
+            },
+          });
+          if (!result.ok) {
+            console.error(\`checkOracleBaselineRatchet: \${result.reason}\`);
+            process.exitCode = 1;
+          }
+          NODE`.replace(/^ {10}/gm, ""),
+    }),
     step("classify changed files (doc lane vs full, fail-close)", classifyFields),
     step("branch-type guard (commitlint / poc / hotfix)", {
       env: {
@@ -401,14 +495,6 @@ const RUNTIME_STEP_MANIFESTS: Record<(typeof RUNTIME_LEGS)[number], readonly obj
       run: `printf '%s\\n' "$PR_BODY" > .ut-tdd-pr-body.txt
 git log --format=%s -n 20 > .ut-tdd-commit-subjects.txt
 node src/cli.ts github guard --head-ref "$HEAD_REF" --base-ref "$BASE_REF" --pr-title "$PR_TITLE" --pr-body-file .ut-tdd-pr-body.txt --commit-file .ut-tdd-commit-subjects.txt`,
-    }),
-    // Issue #598 (一時措置): source repository の PLAN admission receipt を全実行で照合する。
-    // consumer template は genesis projection 未生成のため対象外。v4 R05 で本 step と共に削除する。
-    step("plan admission-check (PLAN 編集の receipt 照合、fail-close)", {
-      env: {
-        BASE_SHA: githubExpression("github.event.pull_request.base.sha || github.event.before"),
-      },
-      run: `node src/cli.ts plan admission-check --base "$BASE_SHA" --head "${githubExpression("github.sha")}"`,
     }),
     step("design-protection (実装 PR の設計書書き換え拒否、fail-close)", {
       if: githubExpression("github.event_name == 'pull_request'"),
@@ -437,11 +523,7 @@ node src/cli.ts github guard --head-ref "$HEAD_REF" --base-ref "$BASE_REF" --pr-
       },
       run: "npm run test",
     }),
-    run(
-      "doc lane checks (plan lint / readability / rule-drift)",
-      "node src/cli.ts plan lint\nnpm run test:doc-lane",
-      LANE_DOC_ONLY_IF,
-    ),
+    run("doc lane checks (readability / rule-drift)", "npm run test:doc-lane", LANE_DOC_ONLY_IF),
     run(
       "doc lane source doctor",
       "node src/cli.ts doctor --profile source-doc-lane",

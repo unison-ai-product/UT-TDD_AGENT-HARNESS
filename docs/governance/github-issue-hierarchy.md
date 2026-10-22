@@ -47,3 +47,20 @@ GitHub の正式な親子関係で追跡する。`Related #N` や本文中の `P
 
 監査は新規 Issue を自動生成しない。既存 Issue の親子設定、canonical successor、close 理由を
 先に整理する。
+
+## 6. 作業チケット (暫定定義)
+
+PO 判断 (2026-10-22)。通常の Forward 作業は、使い捨ての作業チケット (Issue Form `Work`、
+`.github/ISSUE_TEMPLATE/work.yml`) で運ぶ。チケットの役目は、作業 (task) と経過 (episode) を
+見える状態にすることだけである。
+
+- **本文は 4 項目**: 上流の設計 revision / 引き渡し物 / 検証の対 / 完了条件。
+  上流の設計 revision は設計文書 1 本につき 1 行、`<path>@<commit>` で書く。
+  sha256 は暫定の間は任意とする。
+- **契約を書かない**: 方式判断・API / schema・受入条件の本文・不変条件はチケットに書かず、
+  `docs/design/` または `docs/test-design/` に置いて path と revision で指す。
+  使い捨ての記録へ契約文を写すと、正本とずれた複製が残るためである。
+- **経過の記録**: 何をしたか、何が起きたかは、Issue コメントと紐づく PR で残す。
+- **親子関係と close**: 第 2〜4 節の規則 (親子・close 条件) をそのまま使う。
+- **暫定である**: 機械検査 (lint や harness.db への Issue projection) は今は足さない。
+  運用して不足を計測してから追加する。改善はこの節の改訂で行う。

@@ -38,7 +38,7 @@ architecture.md §3 の 7 building block を実装単位のモジュール (関�
 | **telemetry** | `src/feedback/engine.ts` + `src/state-db/projection-writer.ts` | 実装済 (Phase B web 集約は別範囲) | Evaluation 集計 (Phase B、function §5) |
 | **hook** | `src/runtime/session-log.ts` + `src/runtime/agent-slots.ts` | 実装済 | 5 イベント hook (function §4) |
 | **review** | `ut-tdd review --uncommitted` + `src/lint/review-evidence.ts` | 実装済 | doc-reviewer 召喚 (FR-45) |
-| **skill** | `src/skill-engine/recommend.ts` + `src/workflow/contracts.ts#suggestSkillInjection` | 実装済 | L 別 skill 注入 (FR-12) |
+| **skill** | `src/skill-engine/recommend.ts` | 実装済 | L 別 skill 注入 (FR-12)。`src/workflow/contracts.ts#suggestSkillInjection` は配線が無く #1084 で退役 |
 | **roster** | `src/runtime/agent-slots.ts#resolveRosterCapability` + `src/lint/asset-drift.ts` | 実装済 | 内部資産 subagent registry + capability/model 解決 + guard allowlist 整合 (FR-L1-46/48) |
 | **cutover** | `ut-tdd cutover --to --dry-run` | 実装済 (approval gate) | ロールバック (FR-10/26) |
 | **adapter** | `src/runtime/adapter.ts` + `src/runtime/provider-handover.ts` | 実装済 | 外部 service 隔離 (external-if §6) |
@@ -61,6 +61,7 @@ architecture.md §3 の 7 building block を実装単位のモジュール (関�
 | `fr-registry-audit.ts` | `loadFrDocs` / `parseFrRows` / `extractReferencedFrL1Nums` / `extractExplainedGapNums` / `extractDeclaredCounts` / `analyzeFrRegistry` (+ 4 interface) |
 | `doc-consistency.ts` | `loadDocConsistencyDocs` / `expandFrL1Refs` / `checkCarryConsistency` / `checkScreenIdValidity` / `checkNfrCount` / `analyzeDocConsistency` (+ 2 interface) |
 | `improvement-backlog.ts` | `VALID_STATUS` / `VALID_CANDIDATE` / `loadBacklog` / `parseBacklogEntries` / `analyzeImprovementBacklog` (+ 2 interface) |
+| `sub-doc-section-structure.ts` | `STANDARD_DELIVERABLE_SECTIONS` / `analyzeSubDocSectionStructure` / `extractPlanSections` / `loadSubDocSectionStructureInput` / `subDocSectionStructureMessages` (+ 3 interface)。責務 = L4 標準成果物 4 型 (report / batch / notification / code-value) の sub_doc を持つ design PLAN が必須 § を h2 として持つかを fail-close 検証する |
 
 ### §2.3 runtime
 - `detect.ts`: `ExecutionMode` 型 / `RuntimeDetection` interface / `detectMode()` (binary+probe+env → mode)
@@ -168,7 +169,7 @@ PLAN-L6-35 closes the L5 module-integration slice for FR-L1-03's descent-complet
 | obligation generator | upstream requirement + matrix から obligations を drive する (downstream self-declaration には依存しない)。second graph ではなく `relation-graph.ts` node/edge substrate (`requirement`/`design`/`test-design`/`source`/`test`) を reuse する。 | loaded artifacts 上の pure analyzer。relation-graph projection を consume する。 | L6 が `generateObligations` / `analyzeDescentObligations` signatures と DbC を定義する。 |
 | defer ledger + impl-ahead | open defers (`explicit_l7_defer` / `placeholder_deps`, physical-data §7) を read し、src-landed + undischarged design/test-design defer を impl-ahead violation として扱う。 | Pure。defers は input であり mutate しない。 | L6 が defer validity と impl-ahead rule を定義し、L7 が `descent_obligations` projection + `runDoctor` を wire する。 |
 
-これは relation-graph substrate を reuse する新しい `lint/descent-obligation` module を具体化する。pair-freeze (document-driven subset になる) や impl-plan-trace (PLAN-ID coverage) は duplicate しない。Function-level algorithm は L6 に残し、lint/projection/doctor wiring は L7 (add-impl, Codex 委譲) とする。
+これは relation-graph substrate を reuse する新しい `lint/descent-obligation` module を具体化する。pair-freeze (document-driven subset になる) や impl-plan-trace (PLAN-ID coverage) は duplicate しない。impl-plan-trace の source path trace は `docs/plans/*.md` と `docs/design/**/*.md` の本文に現れる同じ `src/...ts` 表記の和集合を入力とし、PLAN 入力を保持したまま設計文書からも辿れるようにする。baseline は既存どおり縮小のみとする。Function-level algorithm は L6 に残し、lint/projection/doctor wiring は L7 (add-impl, Codex 委譲) とする。
 
 ## Appendix B: Harness DB feedback module（feedback モジュール） (PLAN-L5-08)
 

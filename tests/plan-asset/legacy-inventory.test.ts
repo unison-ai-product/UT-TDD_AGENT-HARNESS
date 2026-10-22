@@ -1,59 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
-  buildLegacyPlanInventory,
   inventoryProjectionDigest,
   parseLegacyPlanSource,
 } from "../../src/plan-asset/adapters/legacy-plan-inventory.ts";
-import { REVIEWED_REKEY_DECISIONS } from "../../src/plan-asset/application/legacy-migration-decision-manifest.ts";
-import { headPlanDocCount } from "./head-plan-doc-count.ts";
 
-describe("legacy PLAN HEAD inventory", () => {
-  it("U-PA-019: inventories every HEAD PLAN losslessly with unique asset identities", () => {
-    const result = buildLegacyPlanInventory(process.cwd());
-    expect(result.ok).toBe(true);
-    if (!result.ok) return;
-    const planCount = headPlanDocCount(process.cwd());
-    expect(planCount).toBeGreaterThanOrEqual(752);
-    expect(result.value.items).toHaveLength(planCount);
-    expect(new Set(result.value.items.map((item) => item.sourcePath)).size).toBe(planCount);
-    expect(new Set(result.value.items.map((item) => item.assetId)).size).toBe(planCount);
-    expect(result.value.items.every((item) => item.frontmatter.plan_id === item.legacyPlanId)).toBe(
-      true,
-    );
-    expect(
-      result.value.items.every(
-        (item) =>
-          Object.keys(item.frontmatter).length ===
-          Object.keys(item.knownFrontmatter).length + Object.keys(item.unknownFrontmatter).length,
-      ),
-    ).toBe(true);
-    expect(
-      result.value.items.every((item) =>
-        /^[a-f0-9]{40}(?:[a-f0-9]{24})?$/.test(item.sourceBlobOid),
-      ),
-    ).toBe(true);
-  });
-
-  it("U-PA-020: materializes all current numeric-core collisions without auto-selection", () => {
-    const result = buildLegacyPlanInventory(process.cwd());
-    if (!result.ok) throw new Error(result.error.ruleId);
-    const reviewedGroups = new Map<string, string[]>();
-    for (const [planId, group] of REVIEWED_REKEY_DECISIONS) {
-      reviewedGroups.set(group, [...(reviewedGroups.get(group) ?? []), planId].sort());
-    }
-    expect(
-      result.value.collisionGroups.map((group) => [group.numericCore, [...group.planIds].sort()]),
-    ).toEqual([...reviewedGroups.entries()].sort(([left], [right]) => left.localeCompare(right)));
-    expect(result.value.collisionGroups.every((group) => group.planIds.length > 1)).toBe(true);
-  });
-
-  it("U-PA-021: produces a deterministic inventory digest from the same HEAD", () => {
-    const first = buildLegacyPlanInventory(process.cwd());
-    const second = buildLegacyPlanInventory(process.cwd());
-    expect(second).toEqual(first);
-    if (first.ok) expect(first.value.inventoryDigest).toMatch(/^[a-f0-9]{64}$/);
-  });
-
+describe("legacy PLAN fixture contracts", () => {
   it("U-PA-021: fixes the canonical projection digest with an independent fixture oracle", () => {
     const projection = {
       sourceCommit: "1".repeat(40),

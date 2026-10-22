@@ -77,7 +77,7 @@ issue: 1019
 | `docs/design/harness/L6-function-design/consumer-trace-gates.md` | L6 | L7 | `docs/test-design/harness/L7-unit-test-design.md` : 節「consumer trace gate (Issue #971 / #972 /」内の言及 (3093 行) | 対あり |
 | `docs/design/harness/L6-function-design/context.md` | L6 | L7 | `docs/test-design/harness/L7-unit-test-design.md` : U-CONTEXT-001..005 (31 行、対の索引の行) | 対あり |
 | `docs/design/harness/L6-function-design/cross-review-enforcement.md` | L6 | L7 | `docs/test-design/harness/L7-unit-test-design.md` : §5 対応表の行 (1027 行); 「§2 量閉じ一覧 (L6 設計 → U 被覆、孤児チェック)」の項 (800 行) | 対あり |
-| `docs/design/harness/L6-function-design/descent-obligation.md` | L6 | L7 | `docs/test-design/harness/L7-unit-test-design.md` : 見出し「§1.22 U-DESC (descent-obligation ledger 由来、PLAN-」(678 行); CANDIDATE-U-FRCOV-018 (640 行); §5 対応表の行 (1030 行) | 対あり |
+| `docs/design/harness/L6-function-design/descent-obligation.md` | L6 | L7 | `docs/test-design/harness/L7-unit-test-design.md` : 見出し「§1.22 U-DESC (descent-obligation ledger 由来、PLAN-」(678 行); U-FRCOV-018 (640 行); §5 対応表の行 (1030 行) | 対あり |
 | `docs/design/harness/L6-function-design/design-protection-diff-gate.md` | L6 | L7 | `docs/test-design/harness/L7-unit-test-design.md` : 節「設計書保護 diff gate (Issue #898) — 索引」内の言及 (3047 行) | 対あり |
 | `docs/design/harness/L6-function-design/doctor-result-envelope-measurement.md` | L6 | L7 | `docs/test-design/harness/L7-unit-test-design.md` : 節「doctor result envelope 実測面 (Issue #193 /」内の言及 (2820 行) | 対あり |
 | `docs/design/harness/L6-function-design/edge-case.md` | L6 | L7 | `docs/test-design/harness/L7-unit-test-design.md` : 見出し「§1.4 U-EDGE (edge-case 由来)」(80 行); §5 対応表の行 (1016 行); 「§0 量閉じ原則 (L6 ↔ L7)」の項 (50 行) | 対あり |
@@ -96,7 +96,7 @@ issue: 1019
 | `docs/design/harness/L6-function-design/review-evidence-stale.md` | L6 | L7 | `docs/test-design/harness/L7-unit-test-design.md` : §5 対応表の行 (1026 行); 「§2 量閉じ一覧 (L6 設計 → U 被覆、孤児チェック)」の項 (799 行) | 対あり |
 | `docs/design/harness/L6-function-design/review-evidence.md` | L6 | L7 | `docs/test-design/harness/L7-unit-test-design.md` : §5 対応表の行 (1025 行); §5 対応表の行 (1026 行); §5 対応表の行 (1027 行) | 対あり |
 | `docs/design/harness/L6-function-design/screen-spec.md` | L6 | L7 | `docs/test-design/harness/L7-unit-test-design.md` : §5 対応表の行 (1035 行) | 対あり |
-| `docs/design/harness/L6-function-design/secret.md` | L6 | L7 | `docs/test-design/harness/L7-unit-test-design.md` : 見出し「PLAN-L6-62 docs 横断 secret-scan oracle (2026-07-0」(1328 行); U-HOVER-004 (142 行); U-MEMORY-002 (160 行) | 対あり |
+| `docs/design/harness/L6-function-design/secret.md` | L6 | L7 | `docs/test-design/harness/L7-unit-test-design.md` : 見出し「PLAN-L6-62 docs 横断 secret-scan oracle (2026-07-0」(1346 行); U-MEMORY-002 (158 行) | 対あり |
 | `docs/design/harness/L6-function-design/session-log.md` | L6 | L7 | `docs/test-design/harness/L7-unit-test-design.md` : 見出し「§1.5 U-SLOG (session-log 由来、PLAN-L6-03 add-desig」(87 行); U-SLOG-007 (96 行); U-DBPROJ-PROV-02 (913 行) | 対あり |
 | `docs/design/harness/L6-function-design/setup-solo-team.md` | L6 | L7 | `docs/test-design/harness/L7-unit-test-design.md` : 見出し「§1.7 U-SETUP (ut-tdd setup solo/team 由来、PLAN-L6-」(117 行); §5 対応表の行 (1019 行); 「§2 量閉じ一覧 (L6 設計 → U 被覆、孤児チェック)」の項 (778 行) | 対あり |
 | `docs/design/harness/L6-function-design/skill-admission.md` | L6 | L7 | `docs/test-design/harness/L7-unit-test-design.md` : 見出し「§1.24b U-SKILL-ADMIT (skill admission gate 由来、PL」(752 行); 「§2 量閉じ一覧 (L6 設計 → U 被覆、孤児チェック)」の項 (789 行) | 対あり |

@@ -21,7 +21,7 @@ v2_import: docs/migration/v2-import-ledger.md
 
 ### Issue #848: FR registry 退役行の判定分岐（契約のみ・未実装）
 
-`analyzeL6FrCoverage` の退役分岐は `fr-unit-coverage.md` の Issue #848 節を唯一の詳細契約とする。判定起点はFR registry側の `fr_state` であり、registryの既存7列だけの行および `fr_state` 欠落／空欄行は後方互換でactiveとなる。active rowの `retirement_plan` は空欄／未指定に限り、非空ならfail-closeする。通常のactive rowには従来どおり正式な `U-<FR-L1-ID>` の完全一致を要求し、候補oracleで代替しない。退役rowの `retirement_plan` は完全なPLAN IDまたはcanonicalな `docs/plans/<完全なPLAN-ID>.md` repo-relative pathとし、短縮・数値suffix参照を認めず、path filename stemとfrontmatter `plan_id` は完全一致かつ一意に解決する。退役rowに限り、L7 test-design候補表または正式表の宣言を認めるが、宣言行target／expected欄に当該FRの完全IDが必要で、別FR宣言の流用やID欠落はfail-closeする。対応する実test fileはoracle IDを完全一致で引用する（test本文でのFR ID引用は要求しない）。candidateから正式oracleへの昇格はcoverage matrix、test-design表、実test引用の3面を同一PRで変更し、混在状態は通過させない。
+`analyzeL6FrCoverage` の退役分岐は `fr-unit-coverage.md` の Issue #848 節を唯一の詳細契約とする。判定起点はFR registry側の `fr_state` であり、registryの既存7列だけの行および `fr_state` 欠落／空欄行は後方互換でactiveとなる。active rowの `retirement_ref` は空欄／未指定に限り、非空ならfail-closeする。通常のactive rowには従来どおり正式な `U-<FR-L1-ID>` の完全一致を要求し、候補oracleで代替しない。退役rowの `retirement_ref` は、設計文書参照（`docs/design/` または `docs/adr/` 配下の実在するpathと、その文書内に完全一致でちょうど1つ存在する見出し）またはIssue参照（`#<正の整数>`、書式のみ検査）の閉じた文法に限り、PLAN参照を含む文法外はfail-closeする。退役rowに限り、L7 test-design候補表または正式表の宣言を認めるが、宣言行target／expected欄に当該FRの完全IDが必要で、別FR宣言の流用やID欠落はfail-closeする。対応する実test fileはoracle IDを完全一致で引用する（test本文でのFR ID引用は要求しない）。candidateから正式oracleへの昇格はcoverage matrix、test-design表、実test引用の3面を同一PRで変更し、混在状態は通過させない。
 
 doctorとL6 descent／closure readerは同じanalyzer判定を共有する。function-specへretired markerを追加する旧CFAC案は採用しない。この契約PRでは `FR-L1-38` を含むregistry row、source、testsを変更せず、退役分岐は未実装の設計契約として残す。`PLAN-L6-21` の正規改訂と必要なprojection／ledger記録は、この契約文書の所有・参照・検証追跡に限る。これらの追跡更新は退役分岐の実装・検証済みの根拠ではなく、契約本文の代替にもならない。候補IDはformal IDへ昇格するまで候補のままである。
 
@@ -36,10 +36,10 @@ doctorとL6 descent／closure readerは同じanalyzer判定を共有する。fun
 | `rebuildHarnessDb` | `(input: RebuildInput, deps: HarnessDbDeps) => RebuildResult` | repo root は読込可能で、DB path は `.ut-tdd/` 配下にある。 | projection tables を truncate し、正規化済み docs/state/log digest を replay して `search_index` と `quality_signals` を再計算する。同一入力では deterministic。 |
 | `stableId` | `(prefix: string, value: string) => string` | prefix は空でない projection namespace、value は raw subject ID または空文字を許容する。 | ASCII safe な value は既存 ID を維持し、正規化で情報が落ちる場合は `--<sha256 12hex>` suffix を付ける。空 value は `unknown` sentinel に正規化する。projection / feedback / skill / workflow の row ID 生成はこの helper を共有し、local regex copy を増やさない。 |
 | `computeSkillMetrics` | `(rows: SkillMetricInput) => QualitySignal[]` | recommendation / invocation rows が与えられ、分母 0 は明示される。 | layer/drive/plan/model ごとに `fired/recommended` と `accepted/fired` を算出する。欠落 row は findings とし、成功を捏造しない。 |
-| `findReference` | `(query: ReferenceQuery, deps: HarnessDbDeps) => ReferenceHit[]` | DB が存在する、または caller が先に rebuild を要求している。 | `search_index` と直接 ID tables を検索し、path、ID、reason、source table、evidence path を返す。read-only とする。 |
+| `findReference` | `(db: HarnessDb, query: string) => SearchReferenceResult[]`（型は `src/search/index.ts` 正本、#1169 A5-C11 で実装に整合化） | `db` は開いた harness DB で、`search_index` が rebuild 済みである。`query` は空白のみでもよい（trim 後に空なら検索しない）。 | `search_index` の行を token 一致で採点し、`subject_type`、`subject_id`、`path`、`title`、`tokens`、`summary`、`updated_at`、`evidence_path`、`reason`（`exact-id` / `token-match`）、`score` を持つ行を score 降順で返す（`subject_id` が query と完全一致すれば `exact-id`）。空 query と score 0 の行は返さない。read-only とする。 |
 | `emitFeedbackEvents` | `(findings: FindingRow[], signals: QualitySignal[]) => FeedbackEvent[]` | findings / signals は正規化済みである。 | 反復 gap、未解決 blocker、dependency stall、品質 regression pattern を feedback events に集約する。PLAN 変更は自動承認しない。 |
 | `recordGuardrailDecision` | `(decision: GuardrailDecision, deps: HarnessDbDeps) => ProjectionRowRef` | guardrail 名、decision、evidence path が存在する。 | block/allow/human-required を evidence 付きで保存する。`human-required` は projection rebuild で downgrade できない。 |
-| `catalogAutomationAssets` | `(input: CatalogAutomationAssetsInput) => AssetCatalogResult`（`input = { repoRoot?: string; db: HarnessDb }`、型は `src/assets/catalog.ts` 正本、PLAN-L7-52 C-4 で実装に整合化 2026-06-15） | 承認 root は実装内定数 `SOURCES`（`docs/skills` / `.claude/agents` / `docs/commands`）を単一正本とする（caller は roots を渡さない） | skill/roster/command doc を path・trigger/capability・search token・drift status で catalog 化し `{ ok, assets: string[], findings }` を返す; prompt 本文・secret・provider transcript は copy しない; drift / empty-catalog / invalid-root は `findings` として可視化 |
+| `catalogAutomationAssets` | `(input: CatalogAutomationAssetsInput) => AssetCatalogResult`（`input = { repoRoot?: string; db: HarnessDb }`、型は `src/assets/catalog.ts` 正本、PLAN-L7-52 C-4 で実装に整合化 2026-06-15） | caller は roots を渡さない。roster root は `.claude/agents`、command root は `docs/commands` とする（`assetSources()`）。skill の走査は `resolveSkillFiles(repoRoot)`（`src/shared/embedded-skills.ts`）に委ねる。consumer root は、`skills/` があればそれ、無ければ埋め込み skill asset が 0 件のときに限り `docs/skills/` とし、どちらでもなければ consumer root は無い。埋め込み skill は `.ut-tdd/assets/skills/` から読む（対象 path は埋め込み asset の一覧、一覧が空なら同ディレクトリの実ファイル）。同じ相対 path が consumer root にあれば consumer 側を採り（override）、無ければ埋め込み側を採る。consumer root にだけある skill も加える（#1169 A5-C12） | skill/roster/command doc を path・trigger/capability・search token・drift status で catalog 化し `{ ok, assets: string[], findings }` を返す; prompt 本文・secret・provider transcript は copy しない; drift / empty-catalog / invalid-root は `findings` として可視化 |
 | `recordTestRunEvidence` | `(input: TestRunEvidenceInput, deps: HarnessDbDeps) => ProjectionRowRef[]` | command evidence は runner/scope/timestamps/exit code/evidence path を持つ。repo root と DB path は `.ut-tdd/` 配下に解決される。 | `test_runs` と任意の `test_cases`、`test_results`、`test_artifact_edges` を upsert する。`plan_id` / `oracle_id` 欠落は findings とし、silent pass にしない。 |
 | `projectRuntimeTestRunFromSessionEvent` | `(input: RuntimeTestRunProjectionInput) => void` | session event は `.ut-tdd/logs/session/*.jsonl` 由来で、`session_id`、`plan_id`、`ts` が存在する。 | sanitized target が既知 verification verb の Bash `tool_use` event なら、非空 `session_id`、`runtime=hook-session-log`、`scope=runtime-hook`、session JSONL evidence path、hook outcome 由来 pass/fail を持つ `test_runs` row を 1 件 upsert する。verification 以外は無視する。 |
 | `projectRuntimeGuardrailDecisionFromSessionEvent` | `(input: RuntimeGuardrailDecisionProjectionInput) => void` | session event は `.ut-tdd/logs/session/*.jsonl` 由来で、`session_id`、`plan_id`、`ts` が存在する。 | `forced_stop` event なら、非空 `session_id`、`guardrail=forced-stop`、`decision=block`、`mode=runtime-hook`、session JSONL evidence path を持つ `guardrail_decisions` row を 1 件 upsert する。guardrail 以外は無視する。 |
@@ -75,7 +75,7 @@ human-facing feedback surfaces は stored severity を変えずに、open rows �
 `selectTakeoverFeedback` と text `ut-tdd feedback list` output はこの taxonomy を使う。個別 queue rows が必要な consumers 向けには、`ut-tdd feedback list --json` を raw audit path として残す。
 SessionStart takeover surface は **group-first cap** とする。open rows を `bucket/severity/signal_type` で先に group 化し、gate/actionable group を上位 N 群だけ表示対象にする。単一 `signal_type` が多数行を占有しても他の actionable cluster を不可視にしてはいけない。表示 group の count は group 内の実件数を示し、隠れた group/row は breadcrumb で `ut-tdd feedback list --json` へ誘導する。
 
-attempt escalation surface は直前 session の連続失敗 loop を上限付きで表示する。`renderEscalationSignals` は total 件数を header に保持しつつ、既定 10 件だけを列挙し、残件は breadcrumb とする。これは SessionStart の固定予算を守るための surface cap であり、`evaluateAttemptEscalation` の検出件数は削らない。
+attempt escalation surface は直前 session の連続失敗 loop を上限付きで表示する。`renderEscalationSignals` は total 件数を header に保持しつつ、既定 10 件だけを列挙し、残件は breadcrumb とする。これは SessionStart の固定予算を守るための surface cap であり、`evaluateAttemptEscalation` の検出件数は削らない。既定の表示上限 (cap、`src/runtime/attempt-escalation.ts` の `DEFAULT_ESCALATION_SURFACE_LIMIT`) を下げるときは、PO 承認を得て定数を変更する（#1169 A5-C01）。
 
 ### 2026-06-23 read-only quality / branch audit 追補
 
@@ -146,7 +146,7 @@ export default:
 | FR-L1-08 | `routeSignalToMode` | routeSignalToMode(input: RouteSignalToModeInput, deps: RouteSignalToModeDeps) => RouteSignalToModeResult | signal type、evidence path、current plan/mode context が存在する。 | reason 付き candidate mode(s) を返し、workflow state は mutate しない。 | unknown signal は finding または no-route result とし、silent success にしない。 | U-FR-L1-08 |
 | FR-L1-09 | `evaluateAgentGuard` | evaluateAgentGuard(input: EvaluateAgentGuardInput, deps: EvaluateAgentGuardDeps) => EvaluateAgentGuardResult | subagent/model family と allow-raw context を与える。 | evidence 付き allow/block/bypass decision を返す。禁止された same-model または raw call は明示許可がない限り block する。 | credential や provider transcript は永続化しない。 | U-FR-L1-09 |
 | FR-L1-11 | `recordCrossCuttingEvent` | recordCrossCuttingEvent(input: RecordCrossCuttingEventInput, deps: RecordCrossCuttingEventDeps) => RecordCrossCuttingEventResult | event は type、severity、subject、evidence path を持つ。 | interrupt/debt/drift/readiness event を記録、または validation violation を返す。 | recording は append/projection のみであり、gate approval はできない。 | U-FR-L1-11 |
-| FR-L1-12 | `suggestSkillInjection` | suggestSkillInjection(input: SuggestSkillInjectionInput, deps: SuggestSkillInjectionDeps) => SuggestSkillInjectionResult | task text、layer、kind/drive、catalog snapshot を与える。 | reason 付き deterministic ranked skill/command candidates を返す。 | missing catalog rows は findings とする。recommendations は prompt bodies を copy しない。 | U-FR-L1-12 |
+| FR-L1-12 | `recommendSkillsForText`, `recommendSkillsForPlan` | recommendSkillsForText(db: HarnessDb, taskText: string, options?: { limit?: number; recordedAt?: string }) => SkillRecommendation[]<br>recommendSkillsForPlan(db: HarnessDb, planId: string, options?: { limit?: number; recordedAt?: string }) => SkillRecommendation[] | task text または PLAN、layer、kind/drive、catalog snapshot (harness.db) を与える。 | reason 付き deterministic ranked skill candidates を返す (skill 部分は再接続済み。推奨 command 候補は未配線の設計済み範囲で、`rankSkills` は `asset_type=skill` だけを読む。L1 FR-L1-12 の 5 要素は縮小しない)。 | missing catalog rows は空の結果とする。recommendations は prompt bodies を copy しない。 | U-FR-L1-12 |
 | FR-L1-13 | `enforceForwardOrder` | enforceForwardOrder(input: EnforceForwardOrderInput, deps: EnforceForwardOrderDeps) => EnforceForwardOrderResult | current layer/gate と prior gate statuses が既知である。 | Forward order と required gates が満たされる場合だけ pass を返す。 | exceptions は explicit evidence を要求し、blocked gates を黙って skip できない。 | U-FR-L1-13 |
 | FR-L1-14 | `routeReverseR4` | routeReverseR4(input: RouteReverseR4Input, deps: RouteReverseR4Deps) => RouteReverseR4Result | reverse type、R4 evidence、`forward_routing`、`promotion_strategy` が存在する。 | Forward target または blocking violation を返す。 | confirmed reverse evidence だけが Forward へ merge できる。 | U-FR-L1-14 |
 | FR-L1-15 | `decideDiscoveryS4` | decideDiscoveryS4(input: DecideDiscoveryS4Input, deps: DecideDiscoveryS4Deps) => DecideDiscoveryS4Result | hypothesis、PoC verification evidence、outcome が存在する。 | routing requirements 付きの confirmed/rejected/pivot decision を返す。 | rejected/pivot を confirmed として扱えない。 | U-FR-L1-15 |
@@ -166,19 +166,19 @@ proposal-stage subagent lane names は advisory であり、`tierFor` / `routeTe
 
 `team suggest --design-docs` はこれら advisory lanes を proposal coverage team definition へ橋渡しする。Non-closing lanes (`T2-mini`, `T2-spark`, `T1-worker`) は model override、ownership shard、low/medium effort を持つ具体的な `TeamMember` rows になる。`T0-frontier` は judgement guidance のままで executable member として emit しないため、frontier approval は `team run` 経由で bypass できない。cross-provider review を保持するため、最初の parallel shard 後に Claude-side TL review member を追加する。
 | FR-L1-32 | `validateFolderRules` | validateFolderRules(input: ValidateFolderRulesInput, deps: ValidateFolderRulesDeps) => ValidateFolderRulesResult | path registry と artifact kind を与える。 | misplaced process docs/tests/state に対する violations を返す。 | folder policy は file rewrite なしで検査する。 | U-FR-L1-32 |
-| FR-L1-33 | `catalogExistingAssets` | catalogExistingAssets(input: CatalogExistingAssetsInput, deps: CatalogExistingAssetsDeps) => CatalogExistingAssetsResult | approved asset roots を与える。 | command/skill/detector/template/state/hook/doc/test assets を coverage status で分類する。 | catalog は metadata だけを保存し、prompt bodies と secrets は source docs に残す。 | U-FR-L1-33 |
-| FR-L1-34 | `prioritizeCapabilityGaps` | prioritizeCapabilityGaps(input: PrioritizeCapabilityGapsInput, deps: PrioritizeCapabilityGapsDeps) => PrioritizeCapabilityGapsResult | asset catalog、workflow impact、missing route/recover signals を与える。 | reason 付き deterministic priority order を返す。 | priority は PLAN 化されるまで advisory とする。 | U-FR-L1-34 |
-| FR-L1-35 | `renderFoundationReadiness` | renderFoundationReadiness(input: RenderFoundationReadinessInput, deps: RenderFoundationReadinessDeps) => RenderFoundationReadinessResult | infrastructure category inventory を与える。 | implemented/designed/missing categories を報告する。 | report は missing categories を implemented として扱えない。 | U-FR-L1-35 |
+| FR-L1-33 | `catalogAutomationAssets` | catalogAutomationAssets(input: CatalogAutomationAssetsInput) => AssetCatalogResult | 承認 root（roster / command は `assetSources()`、skill は `resolveSkillFiles()`。行 `catalogAutomationAssets` を参照）を走査する。 | skill/roster/command doc を catalog 化し drift を findings にする。 | catalog は metadata だけを保存し、prompt bodies と secrets は source docs に残す。 | U-FR-L1-33 |
+| FR-L1-34 | `prioritizeCapabilityGaps` | prioritizeCapabilityGaps(input: PrioritizeCapabilityGapsInput, deps: PrioritizeCapabilityGapsDeps) => PrioritizeCapabilityGapsResult | asset catalog、workflow impact、missing route/recover signals を与える。 | reason 付き deterministic priority order を返す。 | priority は PLAN 化されるまで advisory とする。**退役 (#1084)**: 実装は live な呼び出し元が無く削除予定。契約は未配線の設計済み範囲。 | U-FR-L1-34 |
+| FR-L1-35 | `renderFoundationReadiness` | renderFoundationReadiness(input: RenderFoundationReadinessInput, deps: RenderFoundationReadinessDeps) => RenderFoundationReadinessResult | infrastructure category inventory を与える。 | implemented/designed/missing categories を報告する。 | report は missing categories を implemented として扱えない。**退役 (#1084)**: 実装は live な呼び出し元が無く削除予定。契約は未配線の設計済み範囲。 | U-FR-L1-35 |
 | FR-L1-36 | `projectSkillEvaluations` | projectSkillEvaluations(db: HarnessDb, opts?: { asOf?: string }) => void | skill_invocations と plan_registry rows が存在する。asOf は ISO timestamp (default = nowIso())。 | accepted=1 invocation を持つ skill_id ごとに `skill_evaluations` row を 1 件書く。skill_rating = success_count / adoption_count。asOf から 30 日以内に invocation がなければ unused_flag = 1。cold-start (0 invocations) は 0 rows で throw しない。 | unused skills は auto-delete しない。削除は human-only。success states ("confirmed"/"completed") は source に記録し、single-source-of-truth hardcoded とする理由を持つ。 | U-FR-L1-36 |
 | FR-L1-43 | `projectPocEvaluations` | projectPocEvaluations(db: HarnessDb, opts?: { asOf?: string }) => void | plan_registry は PLAN frontmatter 由来の decision_outcome を持つ kind="poc" rows を含む。 | `poc_evaluations` summary row (id="poc-evaluation:summary") を 1 件書く。poc_success_rate = confirmed_count / total_count、confirmed_count、rejected_count、pivot_count、total_count、evaluated_at を保持する。decision_outcome 空の PoC PLANs は分母から除外し、cold-start (0 decided PoC PLANs) は 0 rows で throw しない。 | pivot は non-success と数える。decision_outcome values は理由付き single-source-hardcoded。row id は常に "poc-evaluation:summary" (rebuild ごとに summary row 1 件)。 | U-FR-L1-43 |
 | FR-L1-38 | `projectModelEvaluations` | projectModelEvaluations(db: HarnessDb, repoRoot: string) => void | **退役予定 (PLAN-L6-789 / Issue #789)**: 本契約 PR は実装を変更しない。退役完了時の目標は評価行の生成 0 と表示専用 scan であり、PR1 / 昇格 / PR2 の順に実装と引用を切り替える。現時点の正式 oracle は U-FR-L1-38、退役候補は CANDIDATE-U-TOKRET-001..005。現行契約: model_runs table は projectReviewModelRuns と、token/cost telemetry 用の `projectTokenUsage` で populate 済み。evaluation 実行には .ut-tdd/config/model-opt-in.yaml が enabled:true で存在する。PLAN_SUCCESS_STATUSES は success inference の single-source constant。 | opt-in disabled (file absent または enabled!=true) なら 0 rows を書いて return。有効なら distinct model ごとに success_rate = success_count / run_count (`model_runs.plan_id` → `plan_registry.status IN PLAN_SUCCESS_STATUSES`) を持つ `model_evaluations` row を書く。cold-start (0 model_runs) は 0 rows で throw しない。token/cost rows は file-scan のみで `ut-tdd telemetry scan` が取り込む。 | cost-efficiency (tokens_per_success/cost_per_success) は PLAN-L7-57 と PLAN-L7-58 で discharge 済み。cost は既知 model の local pricing tables だけで計算し、未公開/unknown models は cost_usd=null のまま (cost 捏造なし)。success states は PLAN_SUCCESS_STATUSES で single-source-hardcoded。 | U-FR-L1-38 |
 | FR-L1-37 | `recommendModelEffort` | recommendModelEffort(input: RecommendModelEffortInput, deps: RecommendModelEffortDeps) => RecommendModelEffortResult | task、drive、layer、size、uncertainty signals を与える。 | model family と reasoning effort recommendation を返す。 | model recommendation は evidence として記録し、hidden prompt state にしない。 | U-FR-L1-37 |
 | FR-L1-39 | `scoreTaskComplexity` | scoreTaskComplexity(input: ScoreTaskComplexityInput, deps: ScoreTaskComplexityDeps) => ScoreTaskComplexityResult | size、dependency、uncertainty、affected artifact signals を与える。 | deterministic score と class を返す。 | unknown inputs は explicit uncertainty を生み、low complexity と捏造しない。 | U-FR-L1-39 |
-| FR-L1-40 | `resolveDriveStatePartition` | resolveDriveStatePartition(input: ResolveDriveStatePartitionInput, deps: ResolveDriveStatePartitionDeps) => ResolveDriveStatePartitionResult | drive/mode/kind/layer を与える。 | `.ut-tdd/drive/<drive>` partition と skip/defer rules を返す。 | drive state は plan/session で join し、他 drive partitions を汚染しない。 | U-FR-L1-40 |
+| FR-L1-40 | `resolveDriveStatePartition` | resolveDriveStatePartition(input: ResolveDriveStatePartitionInput, deps: ResolveDriveStatePartitionDeps) => ResolveDriveStatePartitionResult | drive/mode/kind/layer を与える。 | `.ut-tdd/drive/<drive>` partition と skip/defer rules を返す。 | drive state は plan/session で join し、他 drive partitions を汚染しない。**退役 (#1084)**: `resolveDriveStatePartition` / `validateDriveStatePartitions` は live な呼び出し元が無く削除予定。契約は未配線の設計済み範囲。 | U-FR-L1-40 |
 | FR-L1-41 | `classifyDrive` | classifyDrive(input: ClassifyDriveInput, deps: ClassifyDriveDeps) => ClassifyDriveResult | PLAN/code/dependency evidence を与える。 | drive と orchestration mode input を confidence 付きで分類する。 | low confidence は finding/confirmation need とし、certainty を捏造しない。 | U-FR-L1-41 |
 | FR-L1-42 | `buildAdapterPlan` | buildAdapterPlan(input: BuildAdapterPlanInput, deps: BuildAdapterPlanDeps) => BuildAdapterPlanResult | provider、role、task、plan、execution mode を与える。 | UT-TDD-only plan flags を provider に転送せず、provider command plan と boundary flags を返す。 | provider boundary separation と handover context を保持する。 | U-FR-L1-42 |
-| FR-L1-47 | `catalogSkills`, `recommendSkills` | catalogSkills(input: CatalogSkillsInput, deps: CatalogSkillsDeps) => CatalogSkillsResult<br>recommendSkills(input: RecommendSkillsInput, deps: RecommendSkillsDeps) => RecommendSkillsResult | skill docs と task/layer/drive context を与える。 | catalog entry と deterministic recommendation を返す。 | missing metadata は finding にする。skill source docs は rewrite しない。 | U-FR-L1-47 |
-| FR-L1-48 | `buildCommandCatalog` | buildCommandCatalog(input: BuildCommandCatalogInput, deps: BuildCommandCatalogDeps) => BuildCommandCatalogResult | command docs と CLI surface inputs を与える。 | command assets を UT-TDD CLI subcommand contracts に対応づける。 | search rows は rebuildable であり、authoring source にはならない。 | U-FR-L1-48 |
+| FR-L1-47 | `scanSkillCatalog`, `recommendSkillsForPlan` | scanSkillCatalog(input?: { repoRoot?: string; root?: string; optionalRoots?: string[] }) => SkillCatalogResult<br>recommendSkillsForPlan(db: HarnessDb, planId: string, options?: { limit?: number; recordedAt?: string }) => SkillRecommendation[] | skill docs と PLAN の layer/drive context を与える。 | catalog entry と deterministic recommendation を返す。 | missing metadata は finding にする。skill source docs は rewrite しない。 | U-FR-L1-47 |
+| FR-L1-48 | `catalogAutomationAssets` | catalogAutomationAssets(input: CatalogAutomationAssetsInput) => AssetCatalogResult | command doc を承認 root から走査する。 | command doc を catalog 化し drift を findings にする。 | search rows は rebuildable であり、authoring source にはならない。 | U-FR-L1-48 |
 | FR-L1-51 | `deriveArtifactProgressDecision`, `projectArtifactProgress` | deriveArtifactProgressDecision(input: ArtifactProgressDecisionInput) => ArtifactProgressDecision<br>projectArtifactProgress(db: HarnessDb, graph?: RelationGraphProjection) => void | source artifact nodes、covered-by test edges、impact results、recovery PLAN IDs は正規化済み。 | red/yellow/green color と linked test/dependency reason を持つ rebuildable `artifact_progress` rows を書く。 | DB rows は derived state のみ。green には linked test evidence と dependency clear が必要。missing dependency/back-propagation では red が残る。 | U-FR-L1-51 |
 
 ### FR registry 型本体 / pseudocode 実体
@@ -253,7 +253,10 @@ type QualitySignal = { signal_type: string; subject_id: string; score?: number; 
 | `routeSignalToMode` | `RouteSignalToModeInput { signal; current_plan?; drive? } -> RouteSignalToModeResult extends ContractResult { candidates[] }` | implemented pseudocode: `src/workflow/contracts.ts` に実装済み。signal を classify し、allowed modes を rank する。unknown signal は finding にする。 |
 | `evaluateAgentGuard` | `AgentGuardInput + AgentGuardContext -> GuardDecision` | runtime guard として実装済み。pseudocode = model family を normalize し、worker/reviewer boundaries を compare して allow/block を返す。 |
 | `recordCrossCuttingEvent` | `RecordCrossCuttingEventInput { type; subject_id; severity; evidence_path } -> RecordCrossCuttingEventResult { ref: ProjectionRef }` | implemented pseudocode: `src/workflow/contracts.ts` に実装済み。projection event を append し、gate approve はしない。 |
-| `suggestSkillInjection` | `SuggestSkillInjectionInput { task; layer; drive; catalog } -> SuggestSkillInjectionResult extends ContractResult { candidates[] }` | implemented pseudocode: `src/workflow/contracts.ts` に実装済み。catalog を filter し、triggers を score して deterministic ranked skills を返す。 |
+| `recommendSkillsForText` | `(db: HarnessDb, taskText: string, options?: RecommendSkillsOptions { limit?: number; recordedAt?: string }) -> SkillRecommendation[] (Result 型は配列そのもの)` | implemented: `src/skill-engine/recommend.ts` に実装済み。`classifyTask` で kind/drive/risk を導き、`ut-tdd skill suggest --text` (`src/cli.ts`) が呼ぶ。 |
+| `recommendSkillsForPlan` | `(db: HarnessDb, planId: string, options?: RecommendSkillsOptions { limit?: number; recordedAt?: string }) -> SkillRecommendation[] (Result 型は配列そのもの)` | implemented: `src/skill-engine/recommend.ts` に実装済み。`ut-tdd skill suggest --plan` (`src/cli.ts`) が呼ぶ。 |
+| `catalogAutomationAssets` | `(input: { repoRoot?: string; db: HarnessDb }) -> AssetCatalogResult { ok; assets: string[]; findings }` | implemented: `src/assets/catalog.ts` に実装済み。`ut-tdd asset catalog` (`src/cli.ts`) が呼ぶ。skill/roster/command doc の catalog 化と drift 判定を担う。 |
+| `scanSkillCatalog` | `(input?: { repoRoot?: string; root?: string; optionalRoots?: string[] }) -> SkillCatalogResult { ok; entries; findings; scannedRoots; optionalRoots }` | implemented: `src/assets/catalog.ts` に実装済み。skill 本文は保存せず metadata だけを扱う。 |
 | `enforceForwardOrder` | `EnforceForwardOrderInput { layer; gate; prior_gates } -> EnforceForwardOrderResult extends ContractResult { allowed }` | implemented pseudocode: `src/workflow/contracts.ts` に実装済み。prior PASS または explicit exception evidence を要求する。 |
 | `routeReverseR4` | `RouteReverseR4Input { reverse_type; r4_evidence; forward_routing } -> RouteReverseR4Result extends ContractResult { target_plan? }` | implemented pseudocode: `src/workflow/contracts.ts` に実装済み。Forward merge 前に confirmed reverse evidence を validate する。 |
 | `decideDiscoveryS4` | `DecideDiscoveryS4Input { hypothesis; poc_evidence; outcome } -> DecideDiscoveryS4Result extends ContractResult { decision }` | implemented pseudocode: `src/workflow/contracts.ts` に実装済み。pivot/confirmed ambiguity を reject し、routing を記録する。 |
@@ -270,18 +273,15 @@ type QualitySignal = { signal_type: string; subject_id: string; score?: number; 
 | `classifyProposalDocumentCoverage` | `ClassifyTaskInput { text; affected_files?; dependencies? } -> ProposalDocumentCoverage { granularity; patterns[]; required_design_docs[]; required_test_docs[]; required_evidence[]; required_gates[]; research_adoption[]; research_rejections[]; escalators[]; guardrails[]; findings[] }` | implemented pseudocode: `src/task/classify.ts` に実装済み。proposal text を screen/UI、UX/usability、API/IF、data/DB、batch/report、report output、async/job flow、notification/message、common component、security/privacy、error/observability/audit、ops/release/migration、NFR、test design、workflow/gate、agent orchestration、discovery 向けの additive required document packs に map する。 |
 | `analyzeProposalDocumentCoverage` | `ProposalDocumentCoverageLintInput { repoRoot; routingDocText; classifyCoverage; scenarios? } -> ProposalDocumentCoverageLintResult { ok; checkedScenarios; checkedPatterns[]; violations[] }` | implemented pseudocode: `src/lint/proposal-document-coverage.ts` に実装済み。representative proposal scenarios、required document path existence、cross-layer routing doc inclusion、routing pattern markers、cross-artifact trace escalation、shrinkage guard behavior を検証する。classifier は注入し、lint dependency direction を neutral に保つ。 |
 | `validateFolderRules` | `ValidateFolderRulesInput { path; artifact_kind; registry } -> ValidateFolderRulesResult extends ContractResult { violations[] }` | implemented pseudocode: `src/workflow/contracts.ts` に実装済み。files を rewrite せず placement を check する。 |
-| `catalogExistingAssets` | `CatalogExistingAssetsInput { roots: string[] } -> CatalogExistingAssetsResult extends ContractResult { assets: AssetCatalogEntry[] }` | implemented pseudocode: `src/workflow/contracts.ts` に実装済み。catalog metadata のみで、prompt bodies/secrets は保持しない。 |
-| `prioritizeCapabilityGaps` | `PrioritizeCapabilityGapsInput { assets; workflow_impact; missing_routes } -> PrioritizeCapabilityGapsResult { priorities[] }` | implemented pseudocode: `src/workflow/contracts.ts` に実装済み。priority は PLAN 化されるまで advisory。 |
-| `renderFoundationReadiness` | `RenderFoundationReadinessInput { categories[] } -> RenderFoundationReadinessResult extends ContractResult { implemented; designed; missing }` | `src/workflow/contracts.ts` に実装済み。missing categories を implemented と報告できない。 |
+| `prioritizeCapabilityGaps` | `PrioritizeCapabilityGapsInput { assets; workflow_impact; missing_routes } -> PrioritizeCapabilityGapsResult { priorities[] }` | **退役 (#1084)** (pseudocode 状態は未配線の設計済み範囲): src から import する live な呼び出し元が無く、テストが渡した入力を並べ替えるだけ。契約は未配線の設計済み範囲として残し、実装とテストは後続の実装 PR で撤去する (oracle ID は削除せず退役扱い)。 |
+| `renderFoundationReadiness` | `RenderFoundationReadinessInput { categories[] } -> RenderFoundationReadinessResult extends ContractResult { implemented; designed; missing }` | **退役 (#1084)** (pseudocode 状態は未配線の設計済み範囲): src から import する live な呼び出し元が無く、テストが渡した category を数え直すだけ。契約は未配線の設計済み範囲として残し、実装とテストは後続の実装 PR で撤去する (oracle ID は削除せず退役扱い)。 |
 | `recommendModelEffort` | `RecommendModelEffortInput { task; drive; layer; size; uncertainty } -> RecommendModelEffortResult { model_family; reasoning_effort; evidence_path }` | implemented pseudocode: `src/workflow/contracts.ts` に実装済み。recommendation は recorded evidence であり hidden prompt state ではない。 |
 | `scoreTaskComplexity` | `ScoreTaskComplexityInput { size; dependencies; uncertainty; affected_artifacts } -> ScoreTaskComplexityResult { score; class; findings[] }` | implemented pseudocode: `src/workflow/contracts.ts` に実装済み。unknowns は uncertainty を生み、low complexity と扱わない。 |
-| `resolveDriveStatePartition` | `ResolveDriveStatePartitionInput { drive; mode; kind; layer; plan_id?; session_id? } -> ResolveDriveStatePartitionResult { partition_path; skip_sub_doc[] }` | implemented pseudocode: `src/workflow/contracts.ts` に実装済み。drive state は plan/session で join し、他 drives を汚染しない。 |
+| `resolveDriveStatePartition` | `ResolveDriveStatePartitionInput { drive; mode; kind; layer; plan_id?; session_id? } -> ResolveDriveStatePartitionResult { partition_path; skip_sub_doc[] }` | **退役 (#1084)** (pseudocode 状態は未配線の設計済み範囲): src から import する live な呼び出し元が無く、組み立てた path を自分で照合するだけ (対の `validateDriveStatePartitions` も同様)。契約は未配線の設計済み範囲として残し、実装とテストは後続の実装 PR で撤去する (oracle ID は削除せず退役扱い)。 |
 | `classifyDrive` | `ClassifyDriveInput { plan; code_delta?; dependency_delta? } -> ClassifyDriveResult { drive; confidence; findings[] }` | implemented pseudocode: `src/workflow/contracts.ts` に実装済み。low confidence は finding/human confirmation を要求する。 |
 | `buildAdapterPlan` | `BuildAdapterPlanInput { provider; role; task; plan; execution_mode } -> BuildAdapterPlanResult extends ContractResult { command_plan; boundary_flags[] }` | implemented pseudocode: `src/runtime/adapter.ts` に実装済み。provider boundary flags を保持する。 |
 | `checkCodexWrapperParity` | `DoctorDeps -> { messages: string[]; ok: boolean }` | implemented pseudocode: `src/doctor/index.ts` に実装済み。Claude hooks が project-settings based であることを検証し、Codex parity は `ut-tdd codex --execute` wrapper lifecycle tests と stdin adapter oracles で提供される。 |
-| `catalogSkills` | `CatalogSkillsInput { skill_docs: SkillDocRef[] } -> CatalogSkillsResult extends ContractResult { skills: SkillCatalogEntry[] }` | implemented pseudocode: `src/workflow/contracts.ts` に実装済み。metadata のみを扱い、source docs は SSoT のままにする。 |
-| `recommendSkills` | `RecommendSkillsInput { task; layer; drive; catalog } -> RecommendSkillsResult { recommendations[]; findings[] }` | implemented pseudocode: `src/workflow/contracts.ts` に実装済み。missing metadata は finding にする。 |
-| `buildCommandCatalog` | `BuildCommandCatalogInput { command_docs[]; cli_surface } -> BuildCommandCatalogResult extends ContractResult { commands[] }` | implemented pseudocode: `src/workflow/contracts.ts` に実装済み。search rows は rebuildable projection。PLAN-REVERSE-395 の as-is CLI 復元により、`commands[]` は `command` (例: `ut-tdd trace impact`)、source path、required/optional args、options、`hasJson` / json alias、expected exit profile (0/1/2/provider-propagated)、category (core/delegation/distribution/feedback) を持つ command registry として扱う。`src/cli.ts` と registrar (`src/cli/delegation.ts` / `src/cli/distribution.ts` / `src/cli/feedback.ts`) が SSoT 生成元であり、`builder catalog` や prose 代表導線だけで完全集合を再構成してはならない。PLAN-L6-64 shell completion はこの registry を入力にし、未登録 command path を候補化しない。 |
+| ~~`buildCommandCatalog`~~ | (退役、#1084) | **退役 (#1084)**: `ut-tdd builder catalog` からだけ呼ばれ、固定配列を自分自身へ照合する自己検証で常に成功した。CLI 面の registry (`command`、source path、args、options、`hasJson`、exit profile、category) は external-if.md §(g) と PLAN-L6-64 / PLAN-L7-449 が持つ未配線の設計であり、この退役は registry の設計を取り消さない。 |
 | `projectSkillEvaluations` | `SkillEvaluationsInput { asOf?: string } -> void` | implemented pseudocode: `src/state-db/skill-projections.ts` に core 実装、`src/state-db/projection-writer.ts` に既存 public signature の wrapper を保持。skill_invocations + plan_registry から per-skill rating/adoption/success/unused を算出し、cold-start は zero rows。 |
 | `projectPocEvaluations` | `PocEvaluationsInput { asOf?: string } -> void` | implemented pseudocode: pure集計coreは `src/projection/domain/poc-evaluations.ts`、meaningful read/store portを結ぶapplicationは `src/projection/application/project-poc-evaluations.ts`、SQLite read/persistは`src/state-db/sqlite-projection-store.ts`、既存public APIの互換facadeは `src/state-db/projection-writer.ts`。summary row は 1 件で、poc_success_rate = confirmed/(confirmed+rejected+pivot)。decided PoC PLANs がなければ zero rows。pivot は non-success。 |
 | `projectModelEvaluations` | `ModelEvaluationsInput { repoRoot: string } -> void` | implementation_state: implemented; retirement staged per PLAN-L6-789 (PR1 / promotion / PR2)。現時点では rebuild / doctor / telemetry scan からの caller が存在する。PR1 で caller / SQLite read、PR2 で domain / application / adapter / port を撤去する予定であり、撤去済みとは扱わない。現行 implemented pseudocode: repository opt-in adapterは`src/projection/adapters/model-evaluation-config.ts`、application/pure計算は`src/projection/application/project-model-evaluations.ts`と`domain/model-evaluations.ts`、grouped SQLite read/persistは`src/state-db/sqlite-projection-store.ts`、旧public facadeは`projection-writer.ts`。.ut-tdd/config/model-opt-in.yaml (enabled:true) で opt-inする。per-model success_rate = success_count/run_count、cold-startはzero rows。**cost-efficiency DISCHARGED** (PLAN-L7-57 token telemetry + PLAN-L7-58 cost enrichment): cross-runtime session JSONLからtoken efficiencyを取り込み、published pricingのないmodelはcost=nullのまま捏造しない。分子=全model run token/cost、分母=PLAN成功数の意図的な非対称を維持する。取り込みは`ut-tdd telemetry scan`。 |
@@ -643,7 +643,8 @@ interface DriveDbRegistrationViolation {
         | "missing_workflow_runs" | "workflow_orphans" | "missing_model_runs" | "model_orphans"
         | "missing_skill_recommendations" | "skill_recommendation_orphans"
         | "missing_skill_invocations" | "skill_invocation_orphans"
-        | "missing_registered_hook_events" | "missing_required_mode";
+        | "missing_registered_hook_events" | "missing_required_mode"
+        | "mode_catalog_unmapped";   // docs/process/modes/ にあるが写像 (MODE_CATALOG_DOC_FILES) に無い mode doc。doc 名は `mode` に入る (#1169 A5-C13)
   count?: number; mode?: string;
 }
 interface DriveDbRegistrationResult {
@@ -652,6 +653,49 @@ interface DriveDbRegistrationResult {
 ```
 
 共通 invariant: `analyzeDriveDbRegistration` は純粋関数 (DB アクセスは呼び出し元の `checkDriveDbRegistration` が担う)。必須 mode 集合はハードコード定数を廃止し (PLAN-L7-243)、stats 収集側が plan_registry (route_mode 正本 + legacy フォールバック、`src/schema/mode-catalog.ts` の `workflowModeForPlan`) から導出した `expectedModes` を突合する。`docs/process/modes/` の mode doc に `MODE_CATALOG_DOC_FILES` 写像が無い場合は `mode_catalog_unmapped` で fail-close する (新 mode 追加の取りこぼし防止)。legacy stats (expectedModes 未提供) のみ `LEGACY_REQUIRED_MODES` (`Discovery/Forward/Recovery/Reverse/Verification`) で従来水準を維持。orphan 検査は stats フィールドの正値チェックで行い、DB クエリを直接発行しない。
+
+#### PLAN 撤去後の扱い (#1168 A4)
+
+`docs/plans/` を物理撤去する (#1078 / #1170) と、`plan_registry` と、そこから導出する `drive_runs` / `workflow_runs` / `model_runs` / `skill_recommendations` / `skill_invocations` が 0 件になる。現行の検査は次の 3 種に分かれる。この節は既存の検査を狭めるだけで、新しい検査や機構は足さない。
+
+入力の由来 (実装の根拠):
+
+| 検査 / 統計 | 入力の由来 | 根拠 (file:line) | 処遇 |
+|---|---|---|---|
+| `empty_plan_registry` | `plan_registry` の行数。PLAN ファイル由来 | `src/lint/drive-db-registration.ts:73`, `src/state-db/drive-registration.ts:100` | 退役 |
+| `stale_plan_registry` / `stale_plan_registry_fingerprint` | `docs/plans/*.md` の件数と frontmatter hash | `drive-db-registration.ts:74-85`, `drive-registration.ts:34-59,173-174,206-207` | 退役 (0 件同士は一致するが、検査自体を置かない) |
+| `missing_drive_runs` / `plans_without_drive_run` | `drive_runs` は projectPlans が返した PLAN ごとに投入する | `drive-db-registration.ts:86-89`, `src/state-db/projection-writer.ts:440-470` | 退役 |
+| `missing_workflow_runs` | `workflow_runs` は PLAN ID を持つ gate 実行と固定の検証帯 PLAN から投入する | `drive-db-registration.ts:90`, `projection-writer.ts:1096,1242-1252` | 退役 |
+| `workflow_orphans` | `workflow_runs` → `drive_runs` の JOIN。式は `plan_registry` を経由しないが、`workflow_runs` は PLAN ID を持つ gate 証跡から作られ、`drive_runs` は PLAN のループ内でしか作られないため、PLAN を撤去すると orphan が残る(実質 PLAN 由来) | `drive-db-registration.ts:91-93`, `drive-registration.ts:110-116`, `projection-writer.ts:443,475-477,1225-1253` | `planCount` が 1 以上のときだけ維持 (下記 c)。0 件のときは評価しない |
+| `missing_model_runs` | レビュー証跡のある PLAN の `crossEntries` から投入 (token 計測の session 行は別経路で、fallback rebuild は `skipTokenTelemetry`) | `drive-db-registration.ts:94`, `projection-writer.ts:663-690,705,203` | 退役 |
+| `model_orphans` | `plan_registry` への JOIN (PLAN の所属に依存)。`role='session'` の行は除外済み | `drive-db-registration.ts:95-97`, `drive-registration.ts:123-129` | `planCount` が 1 以上のときだけ維持 (下記 c) |
+| `missing_skill_recommendations` / `missing_skill_invocations` | PLAN ごとの推薦と、そのレビュー受理・runtime hook の PLAN から投入 | `drive-db-registration.ts:98-109`, `src/state-db/skill-projections.ts:115,131`, `src/state-db/runtime-projections.ts:173` | 退役 |
+| `skill_recommendation_orphans` / `skill_invocation_orphans` | `plan_registry` への JOIN (PLAN の所属に依存) | `drive-db-registration.ts:101-105,107-109`, `drive-registration.ts:131-145` | `planCount` が 1 以上のときだけ維持 (下記 c) |
+| `missing_registered_hook_events` | `hook_events` を `plan_registry` に JOIN した件数。session log の `plan_id` が PLAN に解決できる行だけ数える | `drive-db-registration.ts:110-112`, `drive-registration.ts:146-151`, `projection-writer.ts:500-516` | 退役 |
+| `missing_required_mode` | 期待 mode は `plan_registry` の `route_mode` / `kind` から導出する (`workflowModeForPlan`) | `drive-registration.ts:71-86`, `drive-db-registration.ts:113-115` | 退役 (c の「期待 mode が空」で自然に 0 件になる。`LEGACY_REQUIRED_MODES` は PLAN 無しの経路で使わない) |
+| `mode_catalog_unmapped` | `docs/process/modes/` と `MODE_CATALOG_DOC_FILES` の差分。PLAN 非依存 | `drive-registration.ts:90-96`, `drive-db-registration.ts:116-118` | **維持 (変更なし)** |
+| `missing_db` | `.ut-tdd/harness.db` の有無。PLAN 非依存 | `drive-db-registration.ts:67-72` | **維持 (変更なし)** |
+| `hookOrphans` (統計のみ。違反理由にしない) | 現行でも違反に使わない | `drive-db-registration.ts:30` の合格メッセージ | 変更なし |
+
+(a) 退役する検査: 入力が PLAN 由来のものは、`docs/plans/` が無い・空のときに違反にしてはならない。`stats.planCount` が 0 の入力に対して、上の「退役」の行は違反を返さない。
+
+(b) 変更しない検査: `missing_db` と `mode_catalog_unmapped`。どちらも PLAN の有無に関係しない。`planCount` が 0 のときに残る違反はこの 2 つだけである。`planCount` が 1 以上のときの全検査も、現行の振る舞いを変えない。
+
+(c) 入力が混在する検査の変更:
+
+- **PLAN 由来の orphan (`workflow_orphans` / `model_orphans` / `skill_recommendation_orphans` / `skill_invocation_orphans`)**: `plan_registry` に所属する行かどうかを見る検査で、orphan 検査を一括で残すことはしない。`planCount` が 1 以上のときは JOIN を消さず現行どおり評価する。`planCount` が 0 のときは所属先が存在しないので評価しない (違反にしない)。`model_orphans` で `role='session'` を除外する条件は変えない。
+- **期待 mode**: `expectedModes` は `plan_registry` から導出する。`planCount` が 0 なら空集合となり `missing_required_mode` は出ない。`expectedModes` が未提供 (legacy DB) のときの `LEGACY_REQUIRED_MODES` 照合は、`planCount` が 0 のときは行わない。
+- **必須統計の件数 (`missing_*`)**: PLAN 非依存の源 (session の token 計測、hook の生ログ) だけで数えた値で「1 件以上」を要求する検査は置かない。現行の件数は PLAN に紐づく投入のみを数えており、PLAN 非依存の件数を要求すると、計測が無い clone で恒常的に赤くなるため。
+
+`planCount` が 0 のときの期待動作 (`analyzeDriveDbRegistration`):
+
+- `stats` が `null` なら従来どおり `violations=[{reason:"missing_db"}]`, `ok=false`。
+- `stats.planCount === 0` かつ `unmappedCatalogDocs` が空なら `violations=[]`, `ok=true`。`driveRuns` / `workflowRuns` / `modelRuns` / `skillRecommendations` / `skillInvocations` / `registeredHookEvents` / `modes` が全て 0・空でも同じ。
+- `stats.planCount === 0` でも `unmappedCatalogDocs` があれば `mode_catalog_unmapped` だけを返し `ok=false`。
+- 合格メッセージ (`driveDbRegistrationMessages`) は `plans=0` を含めて出す。
+- 実装は PLAN 撤去前でも成立する: `planCount` が 1 以上の入力と、その検査結果は変えない。変えるのは `planCount` が 0 の入力だけである。
+
+この変更は既存の検査を狭める撤去であり、新しい契約ではない。PLAN ID を要件にしない (#1166)。
 
 ### D.5 `src/lint/fr-roadmap-coverage.ts`
 
@@ -663,6 +707,8 @@ parent PLAN = PLAN-L7-50。L6 契約なし着地分の後追い明文化。oracl
 | `analyzeFrRoadmapCoverageWithRoot` | `(docs: FrRoadmapCoverageDoc[], repoRoot: string) => FrRoadmapCoverageResult` | `docs` は取得済み; `repoRoot` は fs 実在確認の基点パス; `analyzeFrRoadmapCoverage` の実装委譲先 (repoRoot を明示渡し) | 同上; closure evidence の plan/source/test 参照先は `join(repoRoot, path)` で存在検証; `missing_evidence_file` 違反はファイルが実在しない場合に積む; 純粋性の例外 = fs 実在確認 (`existsSync`) を内部で呼ぶ | `checkFrRoadmapCoverage` の内部委譲先 |
 | `loadFrRoadmapCoverageDocs` | `(repoRoot?: string) => FrRoadmapCoverageDoc[]` | `repoRoot` 省略時は `process.cwd()` を使用; fs 端点; 対象ファイルが存在しない場合は空配列を返す (fail-open) | `.ut-tdd/audit/A-133-upstream-vmodel-coverage-audit.md` を読み込み `FrRoadmapCoverageDoc[]` として返す; `file` フィールドは `join(".ut-tdd", "audit", "A-133-upstream-vmodel-coverage-audit.md")` (repo 相対) | `checkFrRoadmapCoverage` の唯一の fs 端点 |
 | `frRoadmapCoverageMessages` | `(result: FrRoadmapCoverageResult) => string[]` | `result` は `analyzeFrRoadmapCoverage` / `analyzeFrRoadmapCoverageWithRoot` の返り値; 純粋関数 | `checked=0` のとき bucket テーブル不在を示す単一違反メッセージを返す; violations > 0 のとき最大 8 件のサンプル (`file[:bucket]:reason`) を含む違反メッセージを返す; open rows > 0 のとき status 別カウントと bucket 一覧を含むメッセージを返す; すべて解決済みのとき `OK (checked=N, buckets=N, closure=N)` 形式の合格メッセージを返す | `checkFrRoadmapCoverage` → `runDoctor.messages` |
+
+closure evidence 表の `PLAN / WBS` 列は、closed の行の上流の根拠 (設計文書か、tracked の audit 文書の path) を指す。header の文字列 `PLAN / WBS` は互換のために維持し、検査は path 部分 (`#` より前) の fs 実在だけを見る (出典: #1169 判断 4)。
 
 型定義:
 
@@ -725,6 +771,123 @@ parent PLAN = PLAN-L7-48 / PLAN-L7-52。L7-48 監査で唯一の機能リスク 
 | `projectGuardrailInvariantAdvisories` (projection-writer.ts) | `(db) => void` | `rebuildHarnessDb` 内で `projectReviewEvidenceRegistry` の後に呼ぶ (= CLI 再構築時、**非 API 前提に整合**); committed `review_evidence_registry` 行を読む | 各行を `GuardrailDecisionInput` (空 model は `undefined` 化) に写像し `inspectGuardrailInvariants` で検査; 各 violation を **非ブロックの advisory finding** (`kind=guardrail-invariant-advisory:<rule>`, severity=`warn`, source=`guardrail-invariant-advisory`) として `recordFinding`。subject は `advisorySubject(rule, reviewEvidenceId)` = `guardrail-self-review:<rule>:<sha1(12)>` で **plan-id-free** (readiness の `subject_id LIKE '%plan_id%'` に非合致 → automation readiness を flip しない); 追跡用 plan 参照は `evidence_path` に保持 (readiness は evidence_path を走査しない)。projected decision は不変 |
 
 invariant: option C は authz outcome を一切変えない (advisory のみ)。実ブロックする **hard-gate (option A)** は authorization/human-signoff の仕様確定に該当し PO 留保 (CLAUDE.md Guard Rule)。advisory は warn-first phased rollout の Phase 0 (descent-obligation §7 と同型)。U-* = IT-GUARDRAIL-ADVISORY-01。`same-model-self-review` の空文字非該当は blank evidence の false-positive を防ぐための必須不変条件。
+
+## 2026-10-21 lint gate 契約 back-fill (#1169 A5-C04 / C05 / C06)
+
+実装が正本。契約が設計文書に無く、起票時の記述だけに残っていた 3 つの doctor hard gate を、現行 src から書き起こして固定する (出典: #1169 の移管表 A5-C04 / C05 / C06)。いずれも `src/doctor/check-definition-groups.ts` の `full(...)` 登録 (profile = `full` のみ) で、check の `ok=false` は doctor 全体の失敗になる (advisory ではなく hard gate)。
+
+### D.7 `analyzeVerificationProfileGate` (A5-C04、`src/lint/verification-profile.ts`)
+
+| 関数 (実 export) | signature | 入力 | 出力 |
+|---|---|---|---|
+| `analyzeVerificationProfileGate` | `(recommendation: VerificationRecommendationResult) => VerificationProfileGateResult` | `recommendVerificationProfiles(changedFiles)` の結果 (`changedFiles` / `recommendations` / `edges` / `missingProfiles` / `ok`)。純粋関数 | `{ recommendation, activationPlan, defaultRunnableProfiles, externalProfiles, findings, ok }` |
+| `verificationProfileGateMessages` | `(result: VerificationProfileGateResult) => string[]` | 上の結果 | `ok` なら `verification-profile - OK (N profiles recommended; default_runnable=N; external_gated=N)` の 1 行。違反なら `verification-profile - violation` + finding ごとに `<code>[ <profileId>]: <message>` |
+| `loadVerificationRecommendation` | `(repoRoot?: string) => VerificationRecommendationResult` | `loadChangedFiles(repoRoot)` (`git status --porcelain`) の変更ファイル | `recommendVerificationProfiles` の結果 |
+
+判定 (finding の `code` は `VerificationProfileGateFindingCode` の全 4 値):
+
+| code | 条件 |
+|---|---|
+| `recommendation-without-signal` | 推奨された profile の `signals` が空 |
+| `missing-default-profile` | 推奨が 1 件以上あるのに `defaultEnabled` の profile が 0 件 |
+| `unrunnable-default-profile` | `defaultEnabled` の推奨 profile に具体 runner (`PROFILE_RUNNERS[id]`) が無い |
+| `external-without-activation-plan` | `defaultEnabled=false` の推奨 profile について、`planExternalProfileActivation({ allowExternal: false })` の step に `human-approval` と `refuse-run` の両方が無い |
+
+- `ok = recommendation.ok && findings.length === 0`。推奨が 0 件 (変更ファイルに該当 profile なし) なら finding は出ず、`recommendation.ok` に従う。
+- `defaultRunnableProfiles` は runner を持つ default 推奨 profile の id 昇順、`externalProfiles` は外部 / 既定無効の推奨 profile の id 昇順。`findings` は `code:profileId` の昇順。
+- 外部 profile は既定で無効のまま、承認と拒否の経路を持つことだけを証明する。このゲートは profile を実行しない。
+
+doctor 配線: `checkVerificationProfile(repoRoot)` (`src/doctor/lint-gates.ts`) が `loadVerificationRecommendation` → `analyzeVerificationProfileGate` → `verificationProfileGateMessages` を委譲し `{ messages, ok: r.ok }` を返す。check 名 `verification-profile`、`full` profile、hard gate。`repoRoot` が存在しない場合は `verification-profile - violation: repo root could not be read`、読み取り中の例外は `verification-profile - violation: changed file graph could not be read` で、どちらも `ok=false` (fail-close)。非 git の skip は無い (change-impact 系と異なり、`git status` が失敗すれば fail-close)。
+
+oracle: `tests/verification-profile.test.ts` の「hard-gates default runnable profiles while routing external profiles to approval/refusal」(正常系: `ok=true` / `defaultRunnableProfiles` / `externalProfiles` / `human-approval` と `refuse-run` の step / メッセージ内 `default_runnable=2`) と、`tests/doctor.test.ts` の repo root 不在時の fail-close 検査 (`checkVerificationProfile(missingRoot)`)。テスト設計の oracle ID は未登録 (`docs/test-design/` に本関数の ID は無い)。4 つの finding code を個別に落とす異常系のテストは、現時点で存在しない。
+
+### D.8 `analyzeChangeSetIntegrity` (A5-C05、`src/lint/change-impact.ts`)
+
+| 関数 (実 export) | signature | 入力 | 出力 |
+|---|---|---|---|
+| `analyzeChangeSetIntegrity` | `(input: ChangeSetIntegrityInput) => ChangeSetIntegrityResult` | `{ changedFiles: string[]; dependencyDrift?: DependencyDriftResult \| null }`。純粋関数 | `{ changedFiles, sourceFiles, designFiles, testFiles, categories, warnings, blockers, ok }` |
+| `changeSetIntegrityMessages` | `(result: ChangeSetIntegrityResult) => string[]` | 上の結果 | 1 行目 `change-set-integrity - OK\|violation (categories=...; warnings=N; blockers=N)`、続けて blocker ごとに `change-set-integrity - block <code>: <message>[ (<modules>)]`、warning ごとに `change-set-integrity - warn <code>: <message>` |
+| `isGitRepository` | `(repoRoot?: string) => boolean` | `git rev-parse --is-inside-work-tree` | `true` のときのみ true (失敗は false) |
+
+型: `ChangeSetCategory = "source" | "design" | "test"`。`ChangeSetIntegrityFindingCode = "incomplete-artifact-set" | "singleton-artifact-set" | "dependent-regression-untouched"`。`ChangeSetIntegrityFinding = { code; severity: "warn" | "error"; message; files?; modules? }`。
+
+分類 (path は `\` を `/` に正規化し、重複除去して昇順):
+
+- source = `^src/.+\.(ts|tsx)$`
+- design = `^docs/design/harness/.+\.md$` または `^docs/plans/PLAN-.+\.md$` (実装の正規表現どおり。後者は PLAN 凍結後も実装が数えている分類であり、本節が新規に要件とするものではない)
+- test = `^tests/.+\.test\.ts$` または `^docs/test-design/harness/.+\.md$`
+- `.ut-tdd/harness.db-journal|shm|wal` は `parseGitPorcelain` が変更集合から除外する。rename は新 path を採る。
+
+判定:
+
+| code | severity | 出力先 | 条件 |
+|---|---|---|---|
+| `singleton-artifact-set` | `warn` | `warnings` | 該当 category がちょうど 1 種 (source のみ / design のみ / test のみ) |
+| `incomplete-artifact-set` | `warn` | `warnings` | category が 1〜2 種 (全体で欠ける category を列挙)。さらに source があり design か test が無い場合は、source files を対象にもう 1 件 (`source changes are missing design/plan + test/test-design` の欠落分) |
+| `dependent-regression-untouched` | `error` | `blockers` | `dependencyDrift` が非 null かつ source 変更あり、変更 module を `moduleEdges` の `to` とする依存元 module (変更 module 自身を除く) が 1 つ以上あり、その変更 module または依存元 module を対象とする `testCoverage` の `from` のうち変更集合に含まれる test が 0 件 |
+
+- 変更 module は `src/<dir>/...` なら `<dir>`、`src/<name>.ts(x)` なら `<name>`。
+- `ok = blockers.length === 0`。warning は非ブロックで、`ok` に影響しない (warn-first)。変更集合が空なら category 0 で finding なし、`ok=true`。source のみの変更は上の 2 規則に同時に該当するため `singleton-artifact-set` 1 件 + `incomplete-artifact-set` 2 件の warning になる。
+
+doctor 配線: `checkChangeSetIntegrity(repoRoot)` (`src/doctor/lint-gates.ts`)。`repoRoot` 不在は `change-set-integrity - violation: repo root could not be read` で `ok=false`。`isGitRepository` が false なら `change-set-integrity — skipped (not a git repository)` で `ok=true` (非 git の fail-open。ZIP 展開の配布物で変更集合を確定できないため)。git がある場合は `analyzeDependencyDrift(loadDependencyDriftInput(repoRoot))` と `loadChangedFiles(repoRoot)` を入力に委譲し、読み取り中の例外は `change-set-integrity - violation: change/dependency graph could not be read` で `ok=false` (fail-close)。check 名 `change-set-integrity`、`full` profile、hard gate (blockers だけが落とす)。
+
+oracle: `tests/change-impact.test.ts` の describe `change-impact lint` 内の 4 件、すなわち「warns when only one artifact category is touched」「warns when a change set has only a partial artifact set」「blocks when dependent modules exist and mapped regression tests are untouched」「passes dependency block when a mapped regression test is part of the change set」 (いずれもテスト設計の oracle ID は未登録)。非 git の skip と root 不在の fail-close は `U-CHGIMPACT-NONGIT-01` (`docs/test-design/harness/L7-unit-test-design.md`、`tests/doctor.test.ts` の「skips change-impact / change-set-integrity in a non-git directory instead of failing closed」)。同一ファイル内の `U-CHGIMPACT-001`〜`004` は `analyzeChangeImpact` / `parseGitPorcelain` の oracle であり、`analyzeChangeSetIntegrity` の oracle ではない。
+
+### D.9 `analyzeRuntimePortability` (A5-C06、`src/lint/runtime-portability.ts`)
+
+| 関数 (実 export) | signature | 入力 | 出力 |
+|---|---|---|---|
+| `analyzeRuntimePortability` | `(docs: RuntimePortabilityDoc[]) => RuntimePortabilityResult` | `RuntimePortabilityDoc = { path: string; text: string }` の配列。純粋関数 (fs なし) | `{ checked: docs.length, violations: RuntimePortabilityViolation[], ok }`。`RuntimePortabilityViolation = { path; line; rule: string; message }` (`rule` は union ではなく文字列。下表が現行の全値) |
+| `loadRuntimePortabilityDocs` | `(repoRoot?: string) => RuntimePortabilityDoc[]` | `git ls-files --cached --others --exclude-standard` (tracked + untracked かつ ignore 外)。git が失敗する場合は `package.json` / `tsconfig.json` / `package-lock.json` と `src` / `.claude/hooks` / `scripts` 配下を filesystem 走査する fallback | 走査面 = `package.json` / `tsconfig.json` / `package-lock.json` と `src/` / `.claude/hooks/` / `scripts/` / `tests/` 配下のうち実在するファイル (`src/web/` は `.gitkeep` 以外除外)、path 昇順 |
+| `runtimePortabilityMessages` | `(result: RuntimePortabilityResult) => string[]` | 上の結果 | OK なら `runtime-portability - OK (checked=N, TS/Bun/Node surfaces clean)`。違反なら `runtime-portability - violation N (<path>:<line>:<rule>, ...最大 8 件)` |
+
+判定 (violation の `rule` 全値、`ok = violations.length === 0`):
+
+| 対象 | rule | 条件 |
+|---|---|---|
+| `package.json` | `package-json-invalid` | JSON として読めない (以降の package 検査は行わない) |
+| | `package-missing-esm` | `type` が `module` でない |
+| | `package-missing-node-engine` | `engines.node` が無い (`engines.bun` は任意) |
+| | `package-missing-compiled-build` | `scripts.build` が `node scripts/build-node.mjs` を呼ばない |
+| | `package-bin-not-source-cli` | `bin["ut-tdd"]` (または文字列 `bin`) が `./src/cli.ts` でない |
+| | `package-missing-typecheck` | `scripts.typecheck` が `tsc --noEmit` を含まない |
+| | `package-missing-vitest-full-suite` | `scripts.test` が Vitest runner (`vitest run` または `scripts/run-vitest-snapshot.ts`、`npm run test:vitest-snapshot` 経由の間接参照も可) を指さない |
+| | `package-missing-fast-test-lane` | `test:fast` が Vitest runner を指さない、または `--exclude tests/projection-writer.test.ts` / `--exclude tests/cli-surface.test.ts` を欠く |
+| | `package-missing-db-test-lane` | `test:db` が Vitest runner を指さない、または `tests/db-projection-ingestion.test.ts` / `tests/drive-db-registration.test.ts` / `tests/projection-writer.test.ts` を欠く |
+| | `package-missing-cli-test-lane` | `test:cli` が Vitest runner を指さない、または `tests/cli-surface.test.ts` / `tests/runtime-hook-entrypoints.test.ts` を欠く |
+| | `package-missing-node-fallback-smoke` | `test:node-fallback` が Vitest runner を指さない、または `tests/state-db.test.ts` / `tests/runtime-portability.test.ts` を欠く |
+| `tsconfig.json` | `tsconfig-invalid` | JSON として読めない |
+| | `tsconfig-not-strict` | `compilerOptions.strict !== true` |
+| | `tsconfig-missing-node-types` | `compilerOptions.types` に `node` が無い |
+| 各ファイル | `core-non-typescript-file` | `src/` 配下で拡張子が `.ts` / `.gitkeep` 以外 |
+| | `hook-non-typescript-file` | `.claude/hooks/` 配下で `.ts` 以外 |
+| | `disallowed-runtime-language` | `src/` または `.claude/hooks/` 配下の `.py` / `.sh` / `.bash` / `.js` / `.mjs` / `.cjs` |
+| | `script-wrapper-unapproved` | `scripts/` 配下で、承認集合 (薄い wrapper `scripts/ut-tdd` / `scripts/ut-tdd.ps1` / `scripts/run-vitest-snapshot.ts`、build `scripts/build-node.mjs`、CI `scripts/node-generation-ci.mjs` / `scripts/node-generation-ci-aggregate.mjs` / `scripts/pack-canary-acceptance.mjs`、git hook `scripts/git-hooks/pre-push` / `scripts/git-hooks/secret-scan-diff.ts`) 外のファイル |
+| | `script-wrapper-not-thin` | wrapper (`run-vitest-snapshot.ts` を除く) の非コメント行が 12 行超、または `src/cli.ts` と `dist/ut-tdd` の 2 つの文字列のうち、いずれか一方でも含まない (両方の dispatch 先を含むことが必須) |
+| | `script-wrapper-python` | wrapper が `python` / `python3` を含む |
+| | `git-hook-entrypoint-python` | `scripts/git-hooks/pre-push` が `python` / `python3` を含む |
+| | `git-hook-entrypoint-not-thin` | `scripts/git-hooks/pre-push` が `node` と `secret-scan-diff.ts` の両方を含まない |
+| | `git-hook-scanner-not-reusing-core` | `scripts/git-hooks/secret-scan-diff.ts` が `src/lint/secret-scan` を参照しない |
+| | `source-shell-runtime` | `src/` (`src/runtime/` を除く) が `spawn` / `exec` 系の第 1 引数に `bash` / `sh` / `python` / `python3` / `powershell` / `pwsh` / `cmd` を直接渡す |
+| | `bun-runtime-spawn` | `src/` / `.claude/hooks/` / `scripts/` / `tests/` で bun の child-process 起動 (`spawn*` / `exec*` への `"bun"`、`findBun(`、`?? "bun"`、`"/c", "bun"`、`["bun", [`、`exec bun`) |
+| | `bun-module-import` | 同範囲で `"bun:<英小文字>"` 形の import 文字列 |
+| | `bun-global-reference` | 同範囲で `Bun.` / `Bun[` / `Bun?.` / `Bun?.[` (optional chaining を含む) / `typeof Bun` / `).Bun` / `globalThis.Bun` / `process.versions.bun` |
+| | `local-absolute-path` | `tests/` 以外で利用者ローカルの絶対 path (`<ドライブ>:\Users\`、`/home/`、`/Users/`、`~/ai-dev-kit-vscode`) を含む |
+| | `legacy-runtime-marker` | `src/` / `.claude/hooks/` / `scripts/` が旧 runtime の env / 状態ディレクトリ / コマンド / agent 接頭辞の marker を含む |
+| `src/state-db/index.ts` | `sqlite-driver-fallback-missing` | `node:sqlite` の文字列を含まない (`bun:sqlite` は任意の残存) |
+
+- bun 系 3 rule は行単位で数え、`BUN_SPAWN_DEBT_ALLOWLIST` / `BUN_IMPORT_DEBT_ALLOWLIST` / `BUN_GLOBAL_DEBT_ALLOWLIST` (path 完全一致 + 許容行数 pin) に載る path は pin までの行を許し、pin を超えた行だけを違反にする。載らない path は pin=0 で全行 fail-close。pin は検出語彙の fixture と本 lint 自身の定義行だけを対象とし、増加は Issue #134 の帰属を要する (恒久 bypass ではない)。同数の入れ替えは静的には検出できない (実装注記の限界)。
+- 検出は repo に実在するイディオムの再流入を止める網であり、変数経由の間接 spawn やテンプレート補間の `bun:${...}` は対象外。
+
+doctor 配線: `checkRuntimePortability(repoRoot)` (`src/doctor/rule-quality.ts`) が `loadRuntimePortabilityDocs` → `analyzeRuntimePortability` → `runtimePortabilityMessages` を委譲する。check 名 `runtime-portability`、`full` profile (`rules-and-process` group)、hard gate。`repoRoot` 不在は `runtime-portability - violation: repo root could not be read`、実行中の例外は `runtime-portability - violation: TS/Bun/Node portability lint could not run` で `ok=false`。git 不在は loader が filesystem 走査へ縮退するため skip せず検査を続ける (`U-CHGIMPACT-NONGIT-01` の記述が言う runtime-portability の非 git 方針と一致)。
+
+oracle: `tests/runtime-portability.test.ts` の `U-RPORT-001`〜`U-RPORT-018` (`004A` を含む)。ただしテスト設計 (`docs/test-design/`) には `U-RPORT-*` の登録が無く、ID はテストファイル内の命名のみ。対応は、正常系 = 001 / 004 / 004A / 015、非 TS・shell 系 = 002、package / tsconfig / test lane = 003 / 008 / 009、untracked 走査 = 005、旧 marker = 006、git 不在 fallback = 007、git-hooks = 010〜014、bun 3 rule と allowlist の範囲・pin = 016 / 017 / 018。
+
+### 注記 (実装と起票時記述の差分)
+
+- A5-C04: 起票時の記述は「`verification-profile` を doctor hard gate にする」までで、4 つの finding code と `recommendation.ok` との AND は実装側にだけある。実装を正本とした。
+- A5-C05: 起票時の記述は `runDoctor.ok` への直接配線だった。現行は `check-definition-groups.ts` の `full("change-set-integrity", ...)` 登録 (hard gate) で、非 git の skip (`isGitRepository`) は後から入った実装であり起票時記述に無い。
+- A5-C06: 起票時の記述は「TS/Bun core」前提で、bun 系 3 rule (`bun-runtime-spawn` / `bun-module-import` / `bun-global-reference`) と debt allowlist、`node:sqlite` 主ドライバ必須、`engines.node` 必須、git-hooks entrypoint の 3 rule、`script-wrapper-unapproved` の承認集合 (build / CI / git hook) は実装側にだけある。runtime 正本は Node で、`engines.bun` は任意の残存宣言である。
 
 ## 2026-06-17 コスト階層 Dual-Provider Role Router 追補 (PLAN-L7-75 back-fill)
 
@@ -791,6 +954,8 @@ effort 既定:
 - review / critical judgement は一段上げ、GPT frontier review は `xhigh`、Claude/Opus review は `middle` とする。
 - spark / mini など軽量モデル lane は `high` を標準にする。
 - UI/UX は `xhigh` を指定する。
+
+Codex への effort は stdin ではなく argv で注入する。`buildAdapterPlan`（`src/runtime/adapter.ts`）は provider 向けに正規化した effort（`middle` は `medium`）を `-c model_reasoning_effort=<effort>` として渡す。oracle: U-DELEG-005（`docs/test-design/harness/L7-unit-test-design.md`、#1169 A5-C14）。
 
 `ReasoningEffort` は後方互換の `medium` を残しつつ、PO 語彙の `middle` と `xhigh` を追加する。
 team proposal lane の mini/spark は `effort=high` で生成し、review aggregator は `high`、critical aggregator は
@@ -1816,7 +1981,7 @@ receipt-only streamはすべて`plan-ledger-unavailable`とし、reducer replay�
 `LegacyMigrationDryRun.run(repoRoot)`はsource commitのtracked PLAN全件とdecision manifestをexactly-onceで結合し、
 `total=emitted`、legacy ID一意、decision field matrix、collision manifestの欠落・余剰・group不一致を検査する。
 各recordはsource path/commit/blob OID/content digest、delegation targetを持ち、reportはinventory/report digestを返す。
-完了PLANの`generates`はHEADの非空fileまたは配下に非空blobを持つdirectory familyへ突合する。
+未実装のA4 bounded retirement (#1168)では、完了PLANの`generates`をHEADの非空fileまたは配下に非空blobを持つdirectory familyへ突合する`plan-generated-target-missing`判定を退役する（特定pathの例外ではなく判定全体）。Red/formal oracleを先行し、Greenでこの判定を除く。PLAN本文・履歴は変更しない。`plan-generated-target-invalid`、role/design contractのmissing・hollow検査、および一般の`HeadTargetRegistry`検査は維持する。
 snapshotは`commit:path`から取得した実blob bytesで再検証し、working tree再hashやreport内自己比較を証拠にしない。
 role delegationは`vmodel-role-contracts.md`の7 role全単射をHEADからstrict loadし、既存slotを
 `role + slotLabel + contractRef`へlossless projectionする。target slotはHEAD item ledgerとHEAD document catalogを
@@ -1875,82 +2040,76 @@ typed edgeのcanonical集合を比較し、文字列近似やfilesystem探索に
 
 #### Forward FSM完全遷移表
 
-正常系の各行は隣接遷移だけを許す。`expectedFrom`不一致、sequence欠番、同一`commandId`で異なるpayloadはそれぞれ
-`forward-expected-state-mismatch`、`forward-sequence-invalid`、`forward-command-conflict`とする。
+`expectedFrom`不一致は`forward-transition-illegal`、sequence欠番は`forward-sequence-invalid`、同一`commandId`で異なるpayloadは
+`forward-command-conflict`とする。
 
 event空集合の初期stateはrevisionごとの`proposed`、次sequenceは1とする。sequenceは1始まりで連続し、event IDと
 command IDはsubject横断で一意、同一event ID異payloadは`forward-event-conflict`、同一command ID+同一payloadは既存eventを返す。
 reducer入力は`sequence,eventId`の順でcanonicalizeせず、受領順がsequence昇順でない場合もfail-closeする。event digestは
 subject/revision/sequence/command payload digest/from/to/resume/reason/source commit/evidence IDのcanonical JSONから生成し、clockやDB rowidを含めない。
 
-| command | from | to | 必須guard/evidence | finding / 備考 |
+| event | from | to | 必須evidence (requirementId) | 欠落時のrule |
 |---|---|---|---|---|
-| `plan` | proposed | planned | 承認済みscope / PLAN identity | `forward-plan-evidence-missing` |
-| `prepare_pair_freeze` | planned | pair_freeze_ready | 左右artifact宣言済み | `forward-pair-artifact-missing` |
-| `freeze_pair` | pair_freeze_ready | pair_frozen | pair reciprocity合格 | `forward-pair-freeze-missing` |
-| `freeze_red` | pair_frozen | red_frozen | 実行時に期待finding/exitで失敗したRed evidence | `forward-red-evidence-missing`。todo/skip不可 |
-| `start_implementation` | red_frozen | implementing | Red revision一致 | `forward-red-revision-mismatch` |
-| `complete_implementation` | implementing | implementation_complete | 実装digest / targeted Green | `forward-implementation-evidence-missing` |
-| `prepare_trace_freeze` | implementation_complete | trace_freeze_ready | generates/requirement/test edgeをmaterialize済み | `forward-trace-evidence-missing` |
-| `freeze_trace` | trace_freeze_ready | trace_frozen | orphan/stale edge 0件 | `forward-trace-freeze-missing` |
-| `prepare_review` | trace_frozen | review_ready | tests_green_atとreview scope | `forward-review-evidence-missing` |
-| `approve_review` | review_ready | reviewed | 独立reviewer / approve verdict | `forward-review-not-approved` |
-| `accept` | reviewed | accepted | 必須test/gate/PO acceptance evidence | `forward-accept-evidence-missing` |
-| `archive` | accepted | archived | replacement/retention reason | `forward-archive-context-missing`。archivedはterminal |
-| `block` | proposed〜reviewedの正常状態 | blocked | `resumeState=from`、actor/reason/revision/commit/evidence | `forward-exception-context-missing` |
-| `reject` | planned〜review_readyの正常状態またはblocked | rejected | `resumeState=from`、reviewer/actor/reason/revision/evidence | accepted/archiveからreject不可 |
-| `supersede` | proposed〜reviewedの正常状態またはblocked/rejected | superseded | replacement asset/revision、reason、evidence | supersededはterminal |
-| `reopen` | blockedまたはrejected | reopened | `resumeState`、reason、new evidence、同一subject revision | `forward-resume-state-invalid` |
-| `resume` | reopened | reopen eventの`resumeState` | resume先guardを再評価 | 過去guardを流用せず、accepted/archived/supersededへresume不可 |
+| `plan` | `proposed` | `planned` | `scope-approval` (producer: po/human) | `forward-evidence-missing` |
+| `prepare-pair-freeze` | `planned` | `pair_freeze_ready` | `pair-artifact-declaration` + `design-pair-review` | `forward-evidence-missing` |
+| `freeze-pair` | `pair_freeze_ready` | `pair_frozen` | `pair-artifact-declaration` + `design-pair-review` | `forward-evidence-missing` |
+| `freeze-red` | `pair_frozen` | `red_frozen` | `red-test-run` (exitは非0、24時間以内) | `forward-evidence-missing` |
+| `begin-implementation` | `red_frozen` | `implementing` | `pair-artifact-declaration` + `red-test-run` | `forward-red-evidence-missing` |
+| `complete-implementation` | `implementing` | `implementation_complete` | `implementation-digest` + `targeted-test-run` | `forward-evidence-missing` |
+| `prepare-trace-freeze` | `implementation_complete` | `trace_freeze_ready` | `trace-materialization` | `forward-evidence-missing` |
+| `freeze-trace` | `trace_freeze_ready` | `trace_frozen` | `trace-closure` + `green-test-run` | `forward-evidence-missing` |
+| `prepare-review` | `trace_frozen` | `review_ready` | `trace-closure` + `green-test-run` | `forward-trace-freeze-missing` |
+| `submit-review` | `review_ready` | `reviewed` | `independent-review` | `forward-evidence-missing` |
+| `accept` | `reviewed` | `accepted` | `independent-review` + `gate-run` | `forward-accept-evidence-missing` |
+| `archive` | `accepted` | `archived` | `acceptance-decision` + `retention-decision` (producer: po/human) | `forward-evidence-missing`。`archived`は`terminal` |
+| `block` | `proposed`〜`reviewed`の正常state (`accepted` / `archived`を除く) | `blocked` | `exception-context` | `forward-exception-context-missing` |
+| `supersede` | `proposed`〜`accepted`の正常state (`archived`を除く。`accepted`を含む) | `superseded` | `exception-context` | `forward-exception-context-missing` |
+| `reject` | `review_ready` または `reviewed` | `rejected` | `exception-context` | `forward-exception-context-missing` |
+| `reopen` | `blocked` / `superseded` / `rejected` | `reopened` | `exception-context` | `forward-exception-context-missing` |
+| `resume` | `reopened` | `planned` | `exception-context` | `forward-exception-context-missing` |
 
-例外contextはnormal state 1件だけを`resumeState`として保持し、例外stackを作らない。blockedからrejectする場合はblockedを
-resume先にせず、block eventが保持した元normal stateをrejectedへ継承する。reopenはblocked/rejectedをreopenedへ写し、
-resumeだけが元normal stateへ戻す。reopenの同一revisionはstate復帰だけに使用し、意味変更は`PlanAsset.revise`で新revisionを作り
-新revisionの`proposed`から開始する。superseded/archivedはterminal、acceptedはarchive以外不可とする。
+正本は`src/forward/domain/transition-policy.ts`の`TRANSITION_POLICY`であり、この表はその写しである (検査は`tests/forward/fsm.test.ts`の`U-FSM-001`〜`009`)。
+拒否の優先順位は、表に無いeventを`forward-transition-illegal`とした上で、(1) 例外commandのcontext、(2) 必須evidence、(3) 表のfrom / `expectedFrom`の順とし、
+最初に失敗した検査のruleを返す。`forward-transition-illegal`(exit 1)となるのは、表に無いeventの場合と、context・evidenceを満たしたうえで、現在のstateが表のfromに無い場合、または指定された`expectedFrom`が現在のstateと一致しない場合である
+(例: contextの無い`archived`からの`block`は`forward-exception-context-missing`でexit 2、`U-FSM-006`)。正常系の各行は隣接遷移だけを許す。
+上の遷移表と下の要件定義表は`TRANSITION_POLICY`と一致する。evidenceの要件定義はeventごとに`transition-policy.ts`が持ち、policy IDやcommand→policyの対応表はsrcに存在しない。
 
-#### Forward evidence policy表
+例外eventは`exception-context`だけを必須evidenceとする。blockはaccepted / archivedから出せず、rejectは`review_ready` / `reviewed`からだけ出せる。
+supersedeはacceptedを含むarchived以外の全正常stateから出せ、supersededは`reopen`で`reopened`へ戻せる。
+`resume`は`reopened`から`planned`へ戻し、元のnormal stateへは戻さない (resume後は`planned`から表のとおり再度進める)。
+archivedだけがterminalで、acceptedから許されるeventは`archive` / `supersede`である。
 
-| policy / transition | required kind | cardinality | subject/expiry/producer条件 |
-|---|---|---:|---|
-| `pair-freeze/v1` | `design-pair-review` | 1以上 | 同asset/revision、exit 0、expiryなし、review producer |
-| `red-freeze/v1` | `red-test-run` | 1以上 | policyの`expectedExit`（非0可）+expected finding一致、todo/skip禁止、同revision/source commit |
-| `implementation/v1` | `targeted-test-run`, `implementation-digest` | 各1以上 | exit 0、同revision、accepted runner |
-| `trace-freeze/v1` | `trace-closure` | 1以上 | orphan/stale 0、同revision/source commit |
-| `review/v1` | `green-test-run`, `independent-review` | 各1以上 | tests_green_at≤reviewed_at、reviewer policy適合 |
-| `accept/v1` | `green-test-run`, `gate-run`, `acceptance-decision` | 各1以上 | 非期限切れ、exit 0、同revision/commit、PO/human要件をprofileから適用 |
-| exception command | `exception-context` | 1以上 | actor/reason/source commit/resumeまたはreplacementを同recordで拘束 |
+#### Forward evidence要件定義表
 
-`EvidencePolicy`はkind、min/max cardinality、maxAge、accepted producers、`exitRule=exact|nonzero|any`、`expectedExit?`、`claimsRule=recorded|review-approved|red-observed|trace-clean|gate-passed|decision(expected)`、subject revision/source commit一致をtyped fieldで持つ。
-不足kindと不適格record IDをstable順で返し、別revision・policyのexitRule不適合・期限切れrecordを件数へ数えない。
+srcにはevent横断で共有するpolicy ID (`review/v1`等) の表は無い。必須evidenceは、`TRANSITION_POLICY`の各eventが持つ`EvidenceRequirementSpec` (`requirementId` / `requiredKind` / `acceptedProducers` / `exitRule` / `claimsRule` / `maxAgeMs?`) の列挙だけで定義される。
+下表は`src/forward/domain/transition-policy.ts`の要件生成関数 (`requirement` / `pair` / `review` / `red` / `test` / `implementation` / `trace` / `decision` / `exception`) の写しである。
+`exitRule`の既定は`exact 0`、`claimsRule`の既定は無し (各行が明示する)。`期限`は`maxAgeMs`で、`24時間`は`24 * 60 * 60 * 1000`ミリ秒、`なし`は未設定である。
 
-| ポリシーID | 必須証跡kind | 必要件数 | exit規則 | 許可producer |
-|---|---|---:|---|---|
-| `scope-approval/v1` | `scope-approval` | 1以上 | exact 0 | `human|po` |
-| `pair-artifact/v1` | `pair-artifact-declaration` | 1以上 | exact 0 | `codex|claude|human` |
-| `trace-materialization/v1` | `trace-materialization` | 1以上 | exact 0 | `codex|claude|ci` |
-| `green-review-ready/v1` | `green-test-run` | 1以上 | exact 0 | `ci|codex|claude` |
-| `retention/v1` | `retention-decision` | 1以上 | exact 0 | `human|po` |
+| requirementId | required kind | 許可producer | exitRule | claimsRule | 期限 | 使用event |
+|---|---|---|---|---|---|---|
+| `scope` | `scope-approval` | `po` / `human` | `exact 0` | `recorded` | なし | `plan` |
+| `pair-artifact` | `pair-artifact-declaration` | `codex` / `claude` / `human` | `exact 0` | `recorded` | なし | `prepare-pair-freeze` / `freeze-pair` / `begin-implementation` |
+| `design-pair-review` | `design-pair-review` | `codex` / `claude` | `exact 0` | `review-approved` | なし | `prepare-pair-freeze` / `freeze-pair` |
+| `red` | `red-test-run` | `codex` / `claude` / `ci` | `nonzero` | `red-observed` | 24時間 | `freeze-red` / `begin-implementation` |
+| `implementation` | `implementation-digest` | `codex` / `claude` | `exact 0` | `recorded` | なし | `complete-implementation` |
+| `targeted` | `targeted-test-run` | `codex` / `claude` / `ci` | `exact 0` | `recorded` | 24時間 | `complete-implementation` |
+| `trace-materialization` | `trace-materialization` | `codex` / `claude` / `ci` | `exact 0` | `recorded` | なし | `prepare-trace-freeze` |
+| `trace-closure` | `trace-closure` | `codex` / `claude` / `ci` | `exact 0` | `trace-clean` | 24時間 | `freeze-trace` / `prepare-review` |
+| `green` | `green-test-run` | `ci` | `exact 0` | `recorded` | 24時間 | `freeze-trace` / `prepare-review` |
+| `independent-review` | `independent-review` | `codex` / `claude` (著者familyを除く) | `exact 0` | `review-approved` | なし | `submit-review` / `accept` |
+| `gate` | `gate-run` | `ci` | `exact 0` | `gate-passed` | 24時間 | `accept` |
+| `acceptance` | `acceptance-decision` | `po` / `human` | `exact 0` | `decision` (expected=`accepted`) | なし | `archive` |
+| `retention` | `retention-decision` | `po` / `human` | `exact 0` | `decision` (expected=`archive`) | なし | `archive` |
+| `exception` | `exception-context` | `po` / `human` / `codex` / `claude` | `exact 0` | `recorded` | なし | `block` / `supersede` / `reject` / `reopen` / `resume` |
 
-command→policyは次の完全表を正本とし、実装switchに暗黙defaultを持たない。
+`red`の`claimsRule=red-observed`は、`todoCount`と`skipCount`が0で、`expectedFindingIds`と`observedFindingIds`が(順序を除いて)一致することを要求する。
+`trace-closure`の`claimsRule=trace-clean`は`orphanCount`と`staleCount`が共に0であることを、`gate`の`claimsRule=gate-passed`は`failedGateIds`が空であることを要求する。
 
-| command | policy ID |
-|---|---|
-| `plan` | `scope-approval/v1` |
-| `prepare_pair_freeze` | `pair-artifact/v1` |
-| `freeze_pair` | `pair-freeze/v1` |
-| `freeze_red` | `red-freeze/v1` |
-| `start_implementation` | `red-freeze/v1` |
-| `complete_implementation` | `implementation/v1` |
-| `prepare_trace_freeze` | `trace-materialization/v1` |
-| `freeze_trace` | `trace-freeze/v1` |
-| `prepare_review` | `green-review-ready/v1` |
-| `approve_review` | `review/v1` |
-| `accept` | `accept/v1` |
-| `archive` | `retention/v1` |
-| `block|reject|supersede|reopen|resume` | `exception-context/v1` |
-
-`scope-approval`、`pair-artifact`、`trace-materialization`、`green-review-ready`、`retention`は各遷移表の必須fieldを
-kind 1以上・同revision・accepted producerで要求する。policy ID未登録は`forward-policy-missing`でfail-closeする。
+評価は`ForwardEvidencePolicy` (`src/forward/application/forward-evidence-policy.ts`) が行う。要件ごとに、`policyId=forward/<requirementId>`・revision 1の単一要件`EvidencePolicy` (`src/plan-asset/domain/evidence-policy.ts`) を組み立てて評価する。
+- cardinalityは`targeted-test-run`だけ`minCount=1` (上限なし)、それ以外は`minCount=1` / `maxCount=1`とする。適格recordが2件以上あると`excessCount`により不適格となる。
+- `independent-review`の許可producerは、評価contextの`authorFamily`が与えられたときだけ著者familyを除いた集合になり、`authorFamily`が無いときは空集合になる (適格recordは0件)。
+- 適格なrecordは、有効 (supersedeされていない) で、attestationの検証に通り、`requiredKind`・subject・revision・source commitが一致し、許可producerのrecordで、`expiresAt`前で、`exitRule`と`claimsRule`を満たし、`maxAgeMs`以内のものだけである。別revision・期限切れ・`exitRule`不適合のrecordは件数に数えない。
+- 不足は`<requirementId>:missing`として返し、適格・不適格のevidence IDはbytewiseの昇順で返す。
 
 #### workflow CLI共通envelope
 

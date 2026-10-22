@@ -10,7 +10,7 @@ next_pair_freeze: L7
 issue: 1062
 ---
 
-> **L6 contract marker**: 本書は「状態を相手へ伝える経路」の正本割当と、それを機械で守る 4 つの契約を凍結する。(1) `memory add` の拒否規則 `classifyMemoryAdd(input) => accept | reject(reason)`、(2) review request の identity v2 `reviewIdentityObjectV2(request)`、(3) 通知レコード `ut-tdd.notification/v1`、(4) handover prose の退役。oracle の索引は共有の `docs/test-design/harness/L7-unit-test-design.md` (§状態を伝える経路の一本化) に置き、詳細 (CANDIDATE-U-STCHAN-001〜028) は専用の `docs/test-design/harness/L7-state-channel-consolidation-test-design.md` が固定する。
+> **L6 contract marker**: 本書は「状態を相手へ伝える経路」の正本割当と、それを機械で守る 4 つの契約を凍結する。(1) `memory add` の拒否規則 `classifyMemoryAdd(input) => accept | reject(reason)`、(2) review request の identity v2 `reviewIdentityObjectV2(request)`、(3) 通知レコード `ut-tdd.notification/v1`、(4) handover prose の退役。これらに加え、§11 は issue #1168 の A4 bounded retirement slice を定める。oracle の索引は共有の `docs/test-design/harness/L7-unit-test-design.md` (§状態を伝える経路の一本化) に置き、詳細 (CANDIDATE-U-STCHAN-001〜028) は専用の `docs/test-design/harness/L7-state-channel-consolidation-test-design.md` が固定する。
 
 # 状態を伝える経路の一本化 — 関数設計 (issue #1062)
 
@@ -172,6 +172,34 @@ reviewRevision = "rv1-" + sha256(canonicalJson(reviewIdentityObjectV2))
 - **既存ファイルの扱い**: 削除しない。`.ut-tdd/archive/handover-prose/<YYYY-MM>/` へ移し、sha256 の manifest (`.ut-tdd/archive/handover-prose/manifest.jsonl`、`memory.md` §4.2 の write-ahead 形式を流用) を残す。移す対象は許可リスト外のエントリのうち、最終更新が 24 時間より古いもの (進行中の監視スクリプトを動かし続ける)。移動は可逆で (移し先は同じ repo の gitignore 済みの置き場)、削除ではないので PO 承認の対象外とする。**archive の削除は破壊的操作であり、PO 承認が要る**。本書は archive の削除を契約しない (CLAUDE.md の bulk deletion 規則: 20 件/回超は一括で消さない)。
 - 追跡済みの `docs/handover/*.md` 8 件と `provider/*.json` は本書の範囲外 (履歴と構造化 JSON)。
 
+### 5.1 `latest_doc` 撤去に伴う撤去対象 (§8 の 6 の範囲)
+
+`CURRENT.json` の `latest_doc` を消すと、その先の md を読む検査と、scaffold だけが使う部品は使い道を失う。段階 6 の実装 PR は、次を**同じ PR で**撤去する (残すと常に skip / 未使用になる死んだ経路になる)。
+
+| 撤去するもの | 理由 |
+|---|---|
+| `checkHandoverCompletionWording` と `tests/handover-completion-wording.test.ts` | `latest_doc` の md を読む検査で、`latest_doc` が無ければ常に空を返す |
+| `checkHandoverOutstandingAnchor`、`latestEntrySection`、doctor row `handover-outstanding` (`handover-prose` row に置き換える)、U-HOVER-016 / 017 | 最新 md の §5 を読む検査と scaffold の §5 seed に依存し、md が無ければ常に skip になる |
+| `relativizeTouchedFile` / `relativizeDeliverableFiles` と PLAN-L7-145 の該当テスト | scaffold の §2 を描画する専用部品で、scaffold の停止で使い道が消える |
+| `scaffoldFromDigests`、`capWithBreadcrumb`、`readPlanMeta`、定数 `HANDOVER_OUTSTANDING_MARKER` / `MAX_SAME_DAY_ENTRIES` / `MAX_SUMMARY_PLANS`、型 `HandoverDoc` / `PlanMeta` / `CapRender` / `HandoverRenderOpts` | scaffold の入出力と上限制御だけが使う。`HandoverResult.content` も scaffold 本文なので外す (CLI の `--dry-run` は pointer を表示する) |
+| 宣言済み oracle U-HOVER-003 / 004 / 013 / 014 (`docs/test-design/harness/L7-unit-test-design.md` §1.8) | 被試験対象が `scaffoldFromDigests` / `renderHandoverScaffold` / `boundSameDayEntries` で、いずれもこの表で撤去する。宣言と citation テストを残すと、関数が消えた時点で orphan になる (U-OTT-004、U-MEMCUT-014、U-OIDGATE-005、U-RCDEV-037。#1136 の CI 失敗の実測) |
+| 宣言済み oracle U-HOVER-011 の md 照合部分 (`countHandoverEntries`、`latest_doc` の entry 数と `doc_entry_count` の照合) | §5.2 のとおり md 照合は撤去する。署名照合 (`generated_by` 欠落の警告、pointer 不在は警告なし) は残るので、U-HOVER-011 は署名照合の oracle に書き換えて残す (宣言と citation テストを残す) |
+| 宣言済み oracle U-HOVER-012 の gap⑤ 部分 (`runHandover` の `readPlanMeta` family 解決、kind を埋める) | `readPlanMeta` は §1 の PLAN サマリを描く scaffold 専用部品で、この表で撤去する。session scope の検査 (`scopeToSession` / `latestSessionId`) は残るので、U-HOVER-012 はその部分の oracle として残し、gap⑤ のテストは契約 PR で撤去する (残すと関数が消えた時点で未検証の宣言になる。#1163 の Sol r1 P1)。L7 の被覆表 (IMP-078 の行) も同時に縮約する |
+| 宣言済み oracle U-HOVER-007 の md 追記・`content` 返却部分 | `runHandover` は md を書かず `HandoverResult.content` も返さない (本 §5)。U-HOVER-007 は「dry-run は書かない」「CURRENT.json 更新」「`complete` の status と `active_plan`」の oracle に縮約して残す。散文を作らない契約は U-STCHAN-019 が持つ。契約 PR で宣言を縮約し、md 追記と `content` を見るテストの書き換えは src の撤去と同時に変わるので Green で行う |
+| PLAN-L7-143 の `generates` (`tests/handover-completion-wording.test.ts`)、PLAN-L7-173 の `green_commands` (同テストの実行コマンドと evidence_path)、および本文の同テストへの言及 | A4 の bounded retirement 契約で `plan-artifact-existence` を退役する対象とする。この契約では PLAN 本文・履歴を変更せず、`plan revise`、phantom 集計、例外追加を要求しない。doctor 登録の退役は `L7-memory-clean-cut-replacement-test-design.md` の `U-PAEXRET-001` で検証し、独立した graph / legacy migration 経路は §11 と同書の 002 / 003 で扱う |
+
+- U-HOVER-016 / 017 は test-design の `L7-unit-test-design.md` で宣言されておらず (grep で確認済み)、`src/lint/oracle-test-citation-baseline.ts` の「未宣言 citation の負債」にだけ載っている。この 2 件だけは test-design の変更が不要で、テストの削除と baseline の 2 行の削除は実装 PR (src) で一緒に行う。上の表の宣言済み oracle (U-HOVER-003 / 004 / 011 / 013 / 014) は宣言があるので、宣言の撤去または書き換えと citation テストの撤去を、実装 PR より前の契約 PR (段階 6b) で原子的に行う。`tests/handover-completion-wording.test.ts` と PLAN-L7-145 系の relativize テストも、同じ契約 PR で撤去する。
+- `outstanding` (`computeOutstandingWork` の集計) は `CURRENT.json` に残す。機械ポインタの内容であり scaffold 専用ではない。
+
+### 5.2 `checkHandoverBypass` の残す振る舞い
+
+`checkHandoverBypass` は **`generated_by` の署名照合を残し、md 照合 (`latest_doc` / `doc_entry_count` に依存する部分) だけを撤去する**。
+
+- 残す: `CURRENT.json` が `generated_by` 署名 (`ut-tdd-handover`) を持たない場合の「手書き pointer」警告。根拠は `handover-mechanism.md` §gap ① (213 行) で、手書きの `CURRENT.json` が discipline を素通りすることは md の有無と独立した gap である。新契約でも `CURRENT.json` は機械ポインタとして残るので、この gap は消えない。pointer 不在は警告しない (従来どおり discipline が担当)。
+- 撤去する: `pointer.latest_doc` の md を読み、entry 数が `doc_entry_count` を超えたら警告する部分。`countHandoverEntries` と同時に消える。移行期に `latest_doc` / `doc_entry_count` を持つ旧 pointer が残っていても、md を読まず警告しない。
+- U-STCHAN-021 の入力は、署名付きの pointer (`generated_by` あり、`doc_entry_count` なし) とする。`latest_doc` は旧 pointer の残骸として持たせ、その md に `# Session Handover` 見出しを置く。現行実装は entry 数 1 > 0 で警告を出すので、021 は Red になる。
+- 関数と呼び出し側 (cli の handover 警告、doctor の `checkHandoverDisciplineMessages`) は段階 6 で残す。
+
 ## 6. `memory add` の拒否規則
 
 ```text
@@ -255,3 +283,14 @@ classifyMemoryAdd({ kind, durableReason }) =
 | `.ut-tdd/handover/` への書き込みを hook で block | Bash で回避でき、fail-open の guard が増えるだけ。advisory + 規律で足りる (§5) |
 | handover の既存ファイルを削除 | 破壊的操作で PO 承認が要る。移動で目的 (一覧を空にする) は満たせる (§5) |
 | `--review-memory-id` を即時廃止 | 動いている lane のコマンドが壊れる。window を置く (§4.2) |
+
+## 11. A4 bounded slice: PLAN `generates` の成果物実在要求の退役 (issue #1168)
+
+これは A4 の PLAN 専用検査退役方針を適用する未実装の bounded slice である。実装後に次を満たす。
+
+- doctor の registry・出力・選択経路から `plan-artifact-existence` を除く。専用 lint 本体、専用テスト、adapter/re-export、および `U-MEMCUT-015` を含む当該検査への依存も、後続 Green で除去する。
+- relation graph の完了を主張する PLAN (`confirmed` / `completed` / `accepted`) の `generates` 先の不在だけを理由とする stale 判定、および `LegacyMigrationDryRun` の `plan-generated-target-missing` 判定も退役する。graph loader/projection と他の edge の stale 判定、generated path の形の検査 (`plan-generated-target-invalid`)、role/design target に対する一般の missing/hollow 拒否は残す。対の契約は `module-drift.md` と `function-spec.md`、oracle 境界は共有 `L7-unit-test-design.md` に置く。
+- 判定そのものを退役するため、旧 `LegacyMigrationDryRun` が完了主張として扱う `confirmed` / `completed` / `accepted` のいずれにも `plan-generated-target-missing` を残さない。graph でも既存 `generates` edge の実在要求を退役し、status 別の代替検査は追加しない。
+- PLAN ファイルとその履歴は変更しない。phantom 例外、allowlist、stub、skip は追加しない。
+- `plan-dod` と `plan-completion-drift` を含む他の gate の挙動は変更しない。それらを成果物存在・非空の保証とみなさない。
+- source-free の Red と正式 oracle の昇格を先行し、その後に実装 Green を行う。この節だけでは実装済みとも退役済みとも扱わない。
