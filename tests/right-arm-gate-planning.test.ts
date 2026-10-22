@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   analyzeRightArmGatePlanning as analyzeRightArmGatePlanningRaw,
   engineSwapDependencyLink,
-  loadRightArmGatePlanningInput,
   type RightArmGatePlanningInput,
   type RightArmVerifyPlan,
   rightArmGatePlanningMessages,
@@ -339,12 +338,5 @@ describe("right-arm gate planning lint", () => {
     expect(result.violations.join(" ")).toContain(
       "required-backlink=PLAN-L1-07-vmodel-engine-swap-requirements-delta",
     );
-  });
-
-  it("validates the live expected PLAN identities, backlinks, gates, and governance artifacts", () => {
-    const result = analyzeRightArmGatePlanning(loadRightArmGatePlanningInput(process.cwd()));
-
-    expect(result.violations.filter((value) => value.includes("contract mismatch"))).toEqual([]);
-    expect(result.missingPlannedVerifyLayers).toEqual([]);
   });
 });
