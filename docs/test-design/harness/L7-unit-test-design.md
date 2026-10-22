@@ -206,7 +206,7 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 | U-SCRUMREV-002 | `analyzeScrumReverse` (pocOrphans) | confirmed poc (reuse-with-hardening) を指す reverse 無 → `pocOrphans` 1件/`ok=false` / reverse 有 → 0件/`ok=true` / `promotion_strategy=redesign` → 孤児にしない / 非 confirmed (pivot) → 対象外 |
 | U-SCRUMREV-003 | `analyzeScrumReverse` (badReverseRefs) | reverse が confirmed でない poc (pivot) を参照 → `badReverseRefs` 1件/`ok=false` / `status=archived` → 対象外 |
 | U-SCRUMREV-004 | `scrumReverseMessages` | 孤児なし → `"OK"` / 孤児あり → `"Reverse 合流が無い"` 文言 |
-| U-SCRUMREV-005 | `loadSrPlans`+`analyzeScrumReverse` (実 repo 回帰ガード) | 実 `docs/plans/` で `pocOrphans=[]` / `badReverseRefs=[]` (confirmed poc は Reverse 合流済、redesign 除く) |
+| U-SCRUMREV-005 | `loadSrPlans`+`analyzeScrumReverse` (実 repo 回帰ガード) | **退役 (PLAN 機構撤去 = #1168 A4 / #1078)**: 実 `docs/plans/` を読んで `pocOrphans=[]` / `badReverseRefs=[]` を要求する live guard は要求から外す。維持するのは合成入力による U-SCRUMREV-001..004 (parse / pocOrphans / badReverseRefs / messages) の製品回帰のみで、実 PLAN コーパスには依存させない |
 | U-PROP-001 | `extractSignals` | `\| signal \| mode \|` ヘッダのテーブルのみから signal 列 token 抽出 / 別表 (reverse/fullstack) と interrupt subtype は除外 |
 | U-PROP-002 | `analyzePropagation` | 両 doc 一致 → `ok=true` / concept のみ → `conceptOnly`+`ok=false` / requirements のみ → `requirementsOnly`+`ok=false` |
 | U-PROP-003 | `propagationMessages` | 一致 → `"OK"` / 不一致 → `"未伝播"` 文言 |
@@ -861,11 +861,11 @@ SMB/NFS/OneDrive をまたぐ strict lease、heartbeat、clock-skew 耐性は主
 
 ### 2026-06-29 L14 Close Audit Oracle Addendum
 
-- U-L14CLOSE-001: `analyzeL14CloseAudit` accepts a complete A-143 matrix only when all expected close rows exist, including L10 UX, L11 UAT, L12 release acceptance, L13 post-deploy, and L14 operations feedback boundaries.
+- U-L14CLOSE-001: `analyzeL14CloseAudit` accepts a complete A-143 matrix only when all expected close rows exist, including L10 UX, L11 UAT, L12 release acceptance, L13 post-deploy, and L14 operations feedback boundaries. 検証は隔離 fixture 上の matrix と path-existence 回帰として維持し、fixture の証跡 path は `docs/plans/` を指さない (PLAN 機構撤去 = #1168 A4 / #1078 により、実 PLAN を証跡 path に混ぜる入力は退役)。
 - U-L14CLOSE-002: missing expected rows produce `missing_expected_item` instead of allowing broad prose close claims.
 - U-L14CLOSE-003: open boundary rows (`partial`, `human_required`, `external_required`, `parked_future`) require a non-empty next action.
 - U-L14CLOSE-004: evidence cells must contain existing repo-relative paths under approved evidence roots.
-- U-L14CLOSE-005: the live repository A-143 audit loads through `loadL14CloseAuditDocs` and matches the required row order.
+- U-L14CLOSE-005: **live 部分を退役 (PLAN 機構撤去 = #1168 A4 / #1078)**: 実 repo の A-143 audit を `loadL14CloseAuditDocs` で読み、必須 row 順と照合する live-corpus 検査は要求から外す。過去監査 (A-143) の内容は書き換えない。ただし `loadL14CloseAuditDocs` → `analyzeL14CloseAudit` が返す `rows` の item 順が必須の close row 順 (workflow-definition から始まる 17 行) と一致することの検査は、PLAN 撤去と独立の保証なので維持する。U-L14CLOSE-005 はこの順序 assertion を、証跡 path が `docs/plans/` を指さない隔離 fixture の audit 文書に対して行う形へ改める (001..003 / 007 は順序を検査しないため、代替にしない)。
 - U-L14CLOSE-006: item-specific hardening evidence for workflow definition, system foundation, Claude/Codex parity, clean distribution, version-up, brownfield onboarding, cross-project workflow, L1/L2 mock roundtrip, L10 UX, drive-model bookbinding, and green evidence integrity must be present, not only generic existing paths.
 - U-L14CLOSE-007: missing A-143 audit source is a hard violation message, not a silent skip.
 - U-L14CLOSE-008: non-closed external/human/release boundary rows must keep item-specific markers in gap and next-action cells. After Pack tag/release publication, the release boundary marker is signed tarball signature rather than stale tag-push absence; PO UAT/signoff, post-deploy, operations feedback, hosted/API Codex, and signature boundaries cannot be replaced by vague prose.
@@ -2222,7 +2222,7 @@ cross-provider比較除去、E9/E11いずれかのgate除去を全てkillする�
 | `U-HOOKEXEC-007` | doctor fail-close | shell-form command、argv 欠落/追加/並替え、command spoofing、argv の shell operator を個別に検出する。 |
 | `U-HOOKEXEC-008` | Windows native smoke | project-local Node wrapper (`.ut-tdd/bin/ut-tdd.mjs`) が `spawnSync(process.execPath, ...)` の直接 executable spawn と `windowsHide: true` を使い、shell host token (`sh.exe` / `bash.exe` / `cmd.exe` / `powershell.exe` / `pwsh.exe` / dispatch 用 `conhost.exe`) を含まない。process-tree ancestry の実測はこの oracle の主張に含めない。entrypoint 欠落時は exit 127 で fail-close し、hook outcome は既存契約どおりである。 |
 | `U-HOOKEXEC-009` | Node TypeScript launcher floor | `package.json#engines.node` は無フラグ TypeScript execution が有効な `>=22.18` を要求し、22.6〜22.17を対応済みと宣言しない。 |
-| `U-HOOKEXEC-010` | Windows custody debt boundary | hook PLAN は `windowsHide` / shell-free Greenをprocess-tree custody証拠へ流用せず、Issue #134 / Windows Job Object / 未解消境界を明記する。 |
+| `U-HOOKEXEC-010` | Windows custody debt boundary | **退役 (PLAN 機構撤去 = #1168 A4 / #1078)**: hook PLAN の Windows debt 注記 (Issue #134 / Windows Job Object / 未解消境界) を読んで照合する検査は要求から外す。既存の非 PLAN 設計文書に同 debt 事実の記述は無いため、移管先は設けない。維持するのは U-HOOKEXEC-001..009 の launcher argv / Node floor / native spawn (`windowsHide: true`) の製品回帰。 |
 
 実行対応は `tests/hook-native-launcher.test.ts`、`tests/project-hook.test.ts`、
 `tests/codex-hook-adapter.test.ts`、`tests/setup.test.ts` である。主検証となる

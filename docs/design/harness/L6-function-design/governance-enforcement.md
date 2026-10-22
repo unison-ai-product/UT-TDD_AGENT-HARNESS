@@ -61,7 +61,7 @@ Type/pseudocode substance（型と擬似コードの実体）:
 ## §3 統合点
 
 - `src/doctor/index.ts`: 3 lint を `runDoctor` に hard-fail 連動 (warn-only の handover/agent-slots と分離)。
-- 各 lint に実 repo vitest ガード (U-SCRUMREV-005 / U-PROP-004 / 既存 U-BACKFILL-006) → CI (vitest) で fail-close。
+- 各 lint に実 repo vitest ガード (U-PROP-004 / 既存 U-BACKFILL-006) → CI (vitest) で fail-close。U-SCRUMREV-005 の実 `docs/plans/` live guard は PLAN 機構撤去 (#1168 A4 / #1078) により退役し、scrum-reverse の回帰は合成入力の U-SCRUMREV-001..004 が担う。
 
 ## §4 fail-close 段階
 
