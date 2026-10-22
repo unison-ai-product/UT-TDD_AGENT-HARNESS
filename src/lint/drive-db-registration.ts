@@ -70,6 +70,13 @@ export function analyzeDriveDbRegistration(
     };
   }
 
+  if (stats.planCount === 0) {
+    for (const doc of stats.unmappedCatalogDocs ?? []) {
+      violations.push({ reason: "mode_catalog_unmapped", mode: doc });
+    }
+    return { stats, violations, ok: violations.length === 0 };
+  }
+
   if (stats.planCount <= 0) violations.push({ reason: "empty_plan_registry" });
   if (stats.expectedPlanCount !== undefined && stats.planCount !== stats.expectedPlanCount) {
     violations.push({
