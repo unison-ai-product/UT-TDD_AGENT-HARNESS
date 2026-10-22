@@ -496,14 +496,6 @@ const RUNTIME_STEP_MANIFESTS: Record<(typeof RUNTIME_LEGS)[number], readonly obj
 git log --format=%s -n 20 > .ut-tdd-commit-subjects.txt
 node src/cli.ts github guard --head-ref "$HEAD_REF" --base-ref "$BASE_REF" --pr-title "$PR_TITLE" --pr-body-file .ut-tdd-pr-body.txt --commit-file .ut-tdd-commit-subjects.txt`,
     }),
-    // Issue #598 (一時措置): source repository の PLAN admission receipt を全実行で照合する。
-    // consumer template は genesis projection 未生成のため対象外。v4 R05 で本 step と共に削除する。
-    step("plan admission-check (PLAN 編集の receipt 照合、fail-close)", {
-      env: {
-        BASE_SHA: githubExpression("github.event.pull_request.base.sha || github.event.before"),
-      },
-      run: `node src/cli.ts plan admission-check --base "$BASE_SHA" --head "${githubExpression("github.sha")}"`,
-    }),
     step("design-protection (実装 PR の設計書書き換え拒否、fail-close)", {
       if: githubExpression("github.event_name == 'pull_request'"),
       env: { BASE_SHA: `${githubExpression("github.sha")}^1` },
@@ -532,8 +524,8 @@ node src/cli.ts github guard --head-ref "$HEAD_REF" --base-ref "$BASE_REF" --pr-
       run: "npm run test",
     }),
     run(
-      "doc lane checks (plan lint / readability / rule-drift)",
-      "node src/cli.ts plan lint\nnpm run test:doc-lane",
+      "doc lane checks (readability / rule-drift)",
+      "npm run test:doc-lane",
       LANE_DOC_ONLY_IF,
     ),
     run(
