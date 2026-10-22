@@ -19,6 +19,15 @@ const projectionPath = "docs/governance/plan-admission-receipts.json";
 const sourceSeed = `---
 plan_id: PLAN-L7-435-drive-plan-admission-impl
 title: tracked receipt renderer fixture
+kind: impl
+drive: agent
+layer: L7
+parent_design: PLAN-L6-435-renderer-design-fixture
+confirmed_reverse_type: code
+agent_slots:
+  - role: tl
+    slot_label: renderer-fixture
+dependencies: {}
 ---
 Synthetic source seed for tracked receipt renderer tests.
 `;
