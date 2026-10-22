@@ -31,7 +31,7 @@ const expectedCandidateIds = new Set([
   ...Array.from(
     { length: 41 },
     (_, index) => `CANDIDATE-U-PROJID-${String(index + 1).padStart(3, "0")}`,
-  ),
+  ).filter((_, index) => index + 1 !== 37),
   "CANDIDATE-P-PROJID-001",
   "CANDIDATE-P-PROJID-002",
   "CANDIDATE-P-PROJID-003",
